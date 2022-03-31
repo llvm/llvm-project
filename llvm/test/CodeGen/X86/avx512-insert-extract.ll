@@ -668,7 +668,6 @@ define <32 x i16> @insert_v32i16(<32 x i16> %x, i16 %y, i16* %ptr) {
 ; KNL-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm1
 ; KNL-NEXT:    vmovd %edi, %xmm0
 ; KNL-NEXT:    vpbroadcastw %xmm0, %ymm0
-; KNL-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm0
 ; KNL-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm0
 ; KNL-NEXT:    retq
 ;
@@ -1634,23 +1633,12 @@ define zeroext i8 @test_extractelement_varible_v16i1(<16 x i32> %a, <16 x i32> %
 define zeroext i8 @test_extractelement_varible_v32i1(<32 x i8> %a, <32 x i8> %b, i32 %index) {
 ; KNL-LABEL: test_extractelement_varible_v32i1:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    pushq %rbp
-; KNL-NEXT:    .cfi_def_cfa_offset 16
-; KNL-NEXT:    .cfi_offset %rbp, -16
-; KNL-NEXT:    movq %rsp, %rbp
-; KNL-NEXT:    .cfi_def_cfa_register %rbp
-; KNL-NEXT:    andq $-32, %rsp
-; KNL-NEXT:    subq $64, %rsp
-; KNL-NEXT:    ## kill: def $edi killed $edi def $rdi
 ; KNL-NEXT:    vpminub %ymm1, %ymm0, %ymm1
 ; KNL-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm0
-; KNL-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
-; KNL-NEXT:    vmovdqa %ymm0, (%rsp)
-; KNL-NEXT:    andl $31, %edi
-; KNL-NEXT:    movzbl (%rsp,%rdi), %eax
-; KNL-NEXT:    andl $1, %eax
-; KNL-NEXT:    movq %rbp, %rsp
-; KNL-NEXT:    popq %rbp
+; KNL-NEXT:    vpmovmskb %ymm0, %ecx
+; KNL-NEXT:    xorl %eax, %eax
+; KNL-NEXT:    btl %edi, %ecx
+; KNL-NEXT:    setae %al
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
 ;

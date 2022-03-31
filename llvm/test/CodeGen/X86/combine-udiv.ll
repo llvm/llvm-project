@@ -638,10 +638,7 @@ define <16 x i8> @combine_vec_udiv_nonuniform4(<16 x i8> %x) {
 ; SSE2-NEXT:    pxor %xmm3, %xmm3
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1],xmm0[2],xmm3[2],xmm0[3],xmm3[3],xmm0[4],xmm3[4],xmm0[5],xmm3[5],xmm0[6],xmm3[6],xmm0[7],xmm3[7]
 ; SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE2-NEXT:    psrlw $8, %xmm0
-; SSE2-NEXT:    packuswb %xmm0, %xmm0
-; SSE2-NEXT:    psrlw $7, %xmm0
-; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    psrlw $15, %xmm0
 ; SSE2-NEXT:    pandn %xmm0, %xmm1
 ; SSE2-NEXT:    por %xmm2, %xmm1
 ; SSE2-NEXT:    movdqa %xmm1, %xmm0
@@ -675,10 +672,11 @@ define <16 x i8> @combine_vec_udiv_nonuniform4(<16 x i8> %x) {
 ;
 ; XOP-LABEL: combine_vec_udiv_nonuniform4:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; XOP-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; XOP-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; XOP-NEXT:    vpperm {{.*#+}} xmm1 = xmm1[1,3,5,7,9,11,13,15],xmm2[1,3,5,7,9,11,13,15]
+; XOP-NEXT:    movl $171, %eax
+; XOP-NEXT:    vmovd %eax, %xmm1
+; XOP-NEXT:    vpmovzxbw {{.*#+}} xmm2 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; XOP-NEXT:    vpmullw %xmm1, %xmm2, %xmm1
+; XOP-NEXT:    vpsrlw $8, %xmm1, %xmm1
 ; XOP-NEXT:    movl $249, %eax
 ; XOP-NEXT:    vmovd %eax, %xmm2
 ; XOP-NEXT:    vpshlb %xmm2, %xmm1, %xmm1

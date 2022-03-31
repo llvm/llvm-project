@@ -11,10 +11,10 @@
 
 // using months = duration<signed integer type of at least 20 bits, ratio_divide<years::period, ratio<12>>>;
 
-
 #include <chrono>
-#include <type_traits>
 #include <limits>
+#include <ratio>
+#include <type_traits>
 
 #include "test_macros.h"
 

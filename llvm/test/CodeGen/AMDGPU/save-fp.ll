@@ -11,16 +11,14 @@ bb:
 
 ; GCN-LABEL: {{^}}caller:
 
-; GFX900:     s_mov_b32 [[SAVED_FP:s[0-9]+]], s33
-; GFX900:     s_mov_b32 s33, s32
-; GFX908-NOT: s_mov_b32 s33, s32
+; GCN:     v_writelane_b32 v2, s33, 2
+; GCN:     s_mov_b32 s33, s32
 ; GFX900:     buffer_store_dword
-; GFX908-DAG: s_mov_b32 [[SAVED_FP:s[0-9]+]], s33
 ; GFX908-DAG: v_accvgpr_write_b32
 ; GCN:        s_swappc_b64
 ; GFX900:     buffer_load_dword
 ; GFX908:     v_accvgpr_read_b32
-; GCN:        s_mov_b32 s33, [[SAVED_FP]]
+; GCN:        v_readlane_b32 s33, v2, 2
 define i64 @caller() {
 bb:
   call void asm sideeffect "", "~{v40}" ()

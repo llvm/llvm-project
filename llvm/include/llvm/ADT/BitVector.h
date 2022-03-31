@@ -5,9 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file implements the BitVector class.
-//
+///
+/// \file
+/// This file implements the BitVector class.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_BITVECTOR_H
@@ -444,6 +445,12 @@ public:
     return (Bits[Idx / BITWORD_SIZE] & Mask) != 0;
   }
 
+  /// Return the last element in the vector.
+  bool back() const {
+    assert(!empty() && "Getting last element of empty vector.");
+    return (*this)[size() - 1];
+  }
+
   bool test(unsigned Idx) const {
     return (*this)[Idx];
   }
@@ -463,6 +470,12 @@ public:
     // If true, set single bit.
     if (Val)
       set(OldSize);
+  }
+
+  /// Pop one bit from the end of the vector.
+  void pop_back() {
+    assert(!empty() && "Empty vector has no element to pop.");
+    resize(size() - 1);
   }
 
   /// Test if any common bits are set.

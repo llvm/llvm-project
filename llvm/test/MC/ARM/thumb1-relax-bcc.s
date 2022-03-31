@@ -5,8 +5,8 @@
 
         .global func1
 _func1:
+@ CHECK-ERROR: :[[#@LINE+1]]:9: error: unsupported relocation on symbol
         bne _func2
-@ CHECK-ERROR: unsupported relocation on symbol
 
 @ CHECK-ELF: 7f f4 fe af        bne.w {{.+}} @ imm = #-4
 @ CHECK-ELF-NEXT: R_ARM_THM_JUMP19 _func2

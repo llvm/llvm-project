@@ -8,6 +8,7 @@
 
 #include "lldb/Core/Module.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -49,8 +50,7 @@ CompilerType ClangASTImporter::CopyType(TypeSystemClang &dst_ast,
 
   llvm::Expected<QualType> ret_or_error = delegate_sp->Import(src_qual_type);
   if (!ret_or_error) {
-    Log *log =
-      lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS);
+    Log *log = GetLog(LLDBLog::Expressions);
     LLDB_LOG_ERROR(log, ret_or_error.takeError(),
         "Couldn't import type: {0}");
     return CompilerType();
@@ -77,7 +77,7 @@ clang::Decl *ClangASTImporter::CopyDecl(clang::ASTContext *dst_ast,
 
   llvm::Expected<clang::Decl *> result = delegate_sp->Import(decl);
   if (!result) {
-    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+    Log *log = GetLog(LLDBLog::Expressions);
     LLDB_LOG_ERROR(log, result.takeError(), "Couldn't import decl: {0}");
     if (log) {
       lldb::user_id_t user_id = LLDB_INVALID_UID;
@@ -170,7 +170,7 @@ private:
 
   void Override(clang::Decl *decl) {
     if (clang::Decl *escaped_child = GetEscapedChild(decl)) {
-      Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+      Log *log = GetLog(LLDBLog::Expressions);
 
       LLDB_LOG(log,
                "    [ClangASTImporter] DeclContextOverride couldn't "
@@ -293,7 +293,7 @@ public:
 
     NamedDecl *to_named_decl = dyn_cast<NamedDecl>(to);
     // Check if we already completed this type.
-    if (m_decls_already_completed.count(to_named_decl) != 0)
+    if (m_decls_already_completed.contains(to_named_decl))
       return;
     // Queue this type to be completed.
     m_decls_to_complete.insert(to_named_decl);
@@ -303,7 +303,7 @@ public:
 
 CompilerType ClangASTImporter::DeportType(TypeSystemClang &dst,
                                           const CompilerType &src_type) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   TypeSystemClang *src_ctxt =
       llvm::cast<TypeSystemClang>(src_type.GetTypeSystem());
@@ -326,7 +326,7 @@ CompilerType ClangASTImporter::DeportType(TypeSystemClang &dst,
 
 clang::Decl *ClangASTImporter::DeportDecl(clang::ASTContext *dst_ctx,
                                           clang::Decl *decl) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   clang::ASTContext *src_ctx = &decl->getASTContext();
   LLDB_LOG(log,
@@ -615,7 +615,7 @@ bool ClangASTImporter::CompleteAndFetchChildren(clang::QualType type) {
   if (!RequireCompleteType(type))
     return false;
 
-  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS);
+  Log *log = GetLog(LLDBLog::Expressions);
 
   if (const TagType *tag_type = type->getAs<TagType>()) {
     TagDecl *tag_decl = tag_type->getDecl();
@@ -779,7 +779,7 @@ void ClangASTImporter::BuildNamespaceMap(const clang::NamespaceDecl *decl) {
 }
 
 void ClangASTImporter::ForgetDestination(clang::ASTContext *dst_ast) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   LLDB_LOG(log,
            "    [ClangASTImporter] Forgetting destination (ASTContext*){0}",
@@ -792,7 +792,7 @@ void ClangASTImporter::ForgetSource(clang::ASTContext *dst_ast,
                                     clang::ASTContext *src_ast) {
   ASTContextMetadataSP md = MaybeGetContextMetadata(dst_ast);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   LLDB_LOG(log,
            "    [ClangASTImporter] Forgetting source->dest "
@@ -806,7 +806,7 @@ void ClangASTImporter::ForgetSource(clang::ASTContext *dst_ast,
   md->removeOriginsWithContext(src_ast);
 }
 
-ClangASTImporter::MapCompleter::~MapCompleter() { return; }
+ClangASTImporter::MapCompleter::~MapCompleter() {}
 
 llvm::Expected<Decl *>
 ClangASTImporter::ASTImporterDelegate::ImportImpl(Decl *From) {
@@ -865,7 +865,7 @@ ClangASTImporter::ASTImporterDelegate::ImportImpl(Decl *From) {
   const ClangASTMetadata *md = m_main.GetDeclMetadata(From);
   auto *td = dyn_cast<TagDecl>(From);
   if (td && md && md->IsForcefullyCompleted()) {
-    Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS);
+    Log *log = GetLog(LLDBLog::Expressions);
     LLDB_LOG(log,
              "[ClangASTImporter] Searching for a complete definition of {0} in "
              "other modules",
@@ -903,7 +903,7 @@ void ClangASTImporter::ASTImporterDelegate::ImportDefinitionTo(
   MapImported(from, to);
   ASTImporter::Imported(from, to);
 
-  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS);
+  Log *log = GetLog(LLDBLog::Expressions);
 
   if (llvm::Error err = ImportDefinition(from)) {
     LLDB_LOG_ERROR(log, std::move(err),
@@ -915,8 +915,7 @@ void ClangASTImporter::ASTImporterDelegate::ImportDefinitionTo(
     if (clang::TagDecl *from_tag = dyn_cast<clang::TagDecl>(from)) {
       to_tag->setCompleteDefinition(from_tag->isCompleteDefinition());
 
-      if (Log *log_ast =
-              lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_AST)) {
+      if (Log *log_ast = GetLog(LLDBLog::AST)) {
         std::string name_string;
         if (NamedDecl *from_named_decl = dyn_cast<clang::NamedDecl>(from)) {
           llvm::raw_string_ostream name_stream(name_string);
@@ -1023,7 +1022,7 @@ RemapModule(OptionalClangModuleID from_id,
 
 void ClangASTImporter::ASTImporterDelegate::Imported(clang::Decl *from,
                                                      clang::Decl *to) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   // Some decls shouldn't be tracked here because they were not created by
   // copying 'from' to 'to'. Just exit early for those.

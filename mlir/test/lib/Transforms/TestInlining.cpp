@@ -13,30 +13,30 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestDialect.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/InliningUtils.h"
-#include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/StringSet.h"
 
 using namespace mlir;
 using namespace test;
 
 namespace {
-struct Inliner : public PassWrapper<Inliner, FunctionPass> {
+struct Inliner : public PassWrapper<Inliner, OperationPass<FuncOp>> {
   StringRef getArgument() const final { return "test-inline"; }
   StringRef getDescription() const final {
     return "Test inlining region calls";
   }
 
-  void runOnFunction() override {
-    auto function = getFunction();
+  void runOnOperation() override {
+    auto function = getOperation();
 
     // Collect each of the direct function calls within the module.
-    SmallVector<CallIndirectOp, 16> callers;
-    function.walk([&](CallIndirectOp caller) { callers.push_back(caller); });
+    SmallVector<func::CallIndirectOp, 16> callers;
+    function.walk(
+        [&](func::CallIndirectOp caller) { callers.push_back(caller); });
 
     // Build the inliner interface.
     InlinerInterface interface(&getContext());
@@ -64,7 +64,7 @@ struct Inliner : public PassWrapper<Inliner, FunctionPass> {
     }
   }
 };
-} // end anonymous namespace
+} // namespace
 
 namespace mlir {
 namespace test {

@@ -15,16 +15,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "VPlan.h"
-#include "llvm/ADT/DepthFirstIterator.h"
-#include "llvm/ADT/PostOrderIterator.h"
+#include "VPlanValue.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/Twine.h"
-#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
-#include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CFG.h"
-#include "llvm/IR/Dominators.h"
-#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Type.h"
@@ -32,12 +26,9 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <algorithm>
 #include <cassert>
-#include <iterator>
 #include <utility>
 
 using namespace llvm;
@@ -467,8 +458,9 @@ VPInstruction *VPlanSlp::buildGraph(ArrayRef<VPValue *> Values) {
     return markFailed();
 
   assert(CombinedOperands.size() > 0 && "Need more some operands");
-  auto *VPI = new VPInstruction(Opcode, CombinedOperands);
-  VPI->setUnderlyingInstr(cast<VPInstruction>(Values[0])->getUnderlyingInstr());
+  auto *Inst = cast<VPInstruction>(Values[0])->getUnderlyingInstr();
+  auto *VPI = new VPInstruction(Opcode, CombinedOperands, Inst->getDebugLoc());
+  VPI->setUnderlyingInstr(Inst);
 
   LLVM_DEBUG(dbgs() << "Create VPInstruction " << *VPI << " "
                     << *cast<VPInstruction>(Values[0]) << "\n");

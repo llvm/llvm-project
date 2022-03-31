@@ -11,7 +11,6 @@
 #include "TestingSupport/SubsystemRAII.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
-#include "llvm/Support/SmallVectorMemoryBuffer.h"
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"

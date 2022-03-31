@@ -34,14 +34,12 @@ class SystemZMachineFunctionInfo : public MachineFunctionInfo {
   unsigned VarArgsFrameIndex;
   unsigned RegSaveFrameIndex;
   int FramePointerSaveIndex;
-  bool ManipulatesSP;
   unsigned NumLocalDynamics;
 
 public:
   explicit SystemZMachineFunctionInfo(MachineFunction &MF)
     : VarArgsFirstGPR(0), VarArgsFirstFPR(0), VarArgsFrameIndex(0),
-      RegSaveFrameIndex(0), FramePointerSaveIndex(0), ManipulatesSP(false),
-      NumLocalDynamics(0) {}
+      RegSaveFrameIndex(0), FramePointerSaveIndex(0), NumLocalDynamics(0) {}
 
   // Get and set the first and last call-saved GPR that should be saved by
   // this function and the SP offset for the STMG.  These are 0 if no GPRs
@@ -84,11 +82,6 @@ public:
   // Get and set the frame index of where the old frame pointer is stored.
   int getFramePointerSaveIndex() const { return FramePointerSaveIndex; }
   void setFramePointerSaveIndex(int Idx) { FramePointerSaveIndex = Idx; }
-
-  // Get and set whether the function directly manipulates the stack pointer,
-  // e.g. through STACKSAVE or STACKRESTORE.
-  bool getManipulatesSP() const { return ManipulatesSP; }
-  void setManipulatesSP(bool MSP) { ManipulatesSP = MSP; }
 
   // Count number of local-dynamic TLS symbols used.
   unsigned getNumLocalDynamicTLSAccesses() const { return NumLocalDynamics; }

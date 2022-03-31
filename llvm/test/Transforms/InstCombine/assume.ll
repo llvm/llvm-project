@@ -486,7 +486,7 @@ define i1 @nonnull3B(i32** %a, i1 %control) {
 ; CHECK:       taken:
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32*, i32** [[A:%.*]], align 8
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32* [[LOAD]], null
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]]) [ "nonnull"(i32* [[LOAD]]), "nonnull"(i1 [[CMP]]) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]]) [ "nonnull"(i32* [[LOAD]]) ]
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       not_taken:
 ; CHECK-NEXT:    ret i1 [[CONTROL]]
@@ -496,10 +496,10 @@ entry:
   %cmp = icmp ne i32* %load, null
   br i1 %control, label %taken, label %not_taken
 taken:
-  call void @llvm.assume(i1 %cmp) ["nonnull"(i32* %load), "nonnull"(i1 %cmp)]
+  call void @llvm.assume(i1 %cmp) ["nonnull"(i32* %load)]
   ret i1 %cmp
 not_taken:
-  call void @llvm.assume(i1 %cmp) ["nonnull"(i32* %load), "nonnull"(i1 %cmp)]
+  call void @llvm.assume(i1 %cmp) ["nonnull"(i32* %load)]
   ret i1 %control
 }
 
@@ -528,7 +528,7 @@ taken:
   br label %exit
 exit:
   ; FIXME: this shouldn't be dropped because it is still dominated by the new position of %load
-  call void @llvm.assume(i1 %cmp) ["nonnull"(i32* %load), "nonnull"(i1 %cmp)]
+  call void @llvm.assume(i1 %cmp) ["nonnull"(i32* %load)]
   ret i1 %cmp2
 not_taken:
   call void @llvm.assume(i1 %cmp)
@@ -547,7 +547,6 @@ define i1 @nonnull3D(i32** %a, i1 %control) {
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ; CHECK:       not_taken:
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "ignore"(i32* undef), "ignore"(i1 undef), "nonnull"(i1 [[CONTROL]]) ]
 ; CHECK-NEXT:    ret i1 [[CONTROL]]
 ;
 entry:
@@ -560,7 +559,7 @@ taken:
 exit:
   ret i1 %cmp2
 not_taken:
-  call void @llvm.assume(i1 %cmp) ["nonnull"(i32* %load), "nonnull"(i1 %cmp), "nonnull"(i1 %control)]
+  call void @llvm.assume(i1 %cmp) ["nonnull"(i32* %load)]
   ret i1 %control
 }
 

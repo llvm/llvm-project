@@ -1,11 +1,11 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-output=text -verify %s
 typedef struct { float b; } c;
-void *a();
-void *d() {
+void *a(void);
+void *d(void) {
   return a();
 }
 
-void no_find_last_store() {
+void no_find_last_store(void) {
   c *e = d(); // expected-note{{'e' initialized here}}
 
   (void)(e || e->b); // expected-note{{Assuming 'e' is null}}

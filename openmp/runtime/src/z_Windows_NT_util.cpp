@@ -568,7 +568,8 @@ void __kmp_gtid_set_specific(int gtid) {
   if (__kmp_init_gtid) {
     KA_TRACE(50, ("__kmp_gtid_set_specific: T#%d key:%d\n", gtid,
                   __kmp_gtid_threadprivate_key));
-    if (!TlsSetValue(__kmp_gtid_threadprivate_key, (LPVOID)(gtid + 1)))
+    kmp_intptr_t g = (kmp_intptr_t)gtid;
+    if (!TlsSetValue(__kmp_gtid_threadprivate_key, (LPVOID)(g + 1)))
       KMP_FATAL(TLSSetValueFailed);
   } else {
     KA_TRACE(50, ("__kmp_gtid_set_specific: runtime shutdown, returning\n"));
@@ -934,9 +935,8 @@ void __kmp_terminate_thread(int gtid) {
 }
 
 void __kmp_clear_system_time(void) {
-  BOOL status;
   LARGE_INTEGER time;
-  status = QueryPerformanceCounter(&time);
+  QueryPerformanceCounter(&time);
   __kmp_win32_time = (kmp_int64)time.QuadPart;
 }
 
@@ -960,9 +960,8 @@ void __kmp_initialize_system_tick(void) {
 /* Calculate the elapsed wall clock time for the user */
 
 void __kmp_elapsed(double *t) {
-  BOOL status;
   LARGE_INTEGER now;
-  status = QueryPerformanceCounter(&now);
+  QueryPerformanceCounter(&now);
   *t = ((double)now.QuadPart) * __kmp_win32_tick;
 }
 
@@ -972,11 +971,8 @@ void __kmp_elapsed_tick(double *t) { *t = __kmp_win32_tick; }
 
 void __kmp_read_system_time(double *delta) {
   if (delta != NULL) {
-    BOOL status;
     LARGE_INTEGER now;
-
-    status = QueryPerformanceCounter(&now);
-
+    QueryPerformanceCounter(&now);
     *delta = ((double)(((kmp_int64)now.QuadPart) - __kmp_win32_time)) *
              __kmp_win32_tick;
   }
@@ -1020,6 +1016,7 @@ extern "C" void *__stdcall __kmp_launch_worker(void *arg) {
 
   if (__kmp_stkoffset > 0 && gtid > 0) {
     padding = KMP_ALLOCA(gtid * __kmp_stkoffset);
+    (void)padding;
   }
 
   KMP_FSYNC_RELEASING(&this_thr->th.th_info.ds.ds_alive);
@@ -1327,16 +1324,18 @@ static void __kmp_reap_common(kmp_info_t *th) {
     // KMP_WAIT to cover this usage also.
     void *obj = NULL;
     kmp_uint32 spins;
+    kmp_uint64 time;
 #if USE_ITT_BUILD
     KMP_FSYNC_SPIN_INIT(obj, (void *)&th->th.th_info.ds.ds_alive);
 #endif /* USE_ITT_BUILD */
     KMP_INIT_YIELD(spins);
+    KMP_INIT_BACKOFF(time);
     do {
 #if USE_ITT_BUILD
       KMP_FSYNC_SPIN_PREPARE(obj);
 #endif /* USE_ITT_BUILD */
       __kmp_is_thread_alive(th, &exit_val);
-      KMP_YIELD_OVERSUB_ELSE_SPIN(spins);
+      KMP_YIELD_OVERSUB_ELSE_SPIN(spins, time);
     } while (exit_val == STILL_ACTIVE && TCR_4(th->th.th_info.ds.ds_alive));
 #if USE_ITT_BUILD
     if (exit_val == STILL_ACTIVE) {
@@ -1352,9 +1351,10 @@ static void __kmp_reap_common(kmp_info_t *th) {
   /* NOTE:  The ExitProcess(code) system call causes all threads to Terminate
      with a exit_val = code.  Because of this we can not rely on exit_val having
      any particular value. */
+  kmp_intptr_t e = (kmp_intptr_t)exit_val;
   if (exit_val == STILL_ACTIVE) {
     KA_TRACE(1, ("__kmp_reap_common: thread still active.\n"));
-  } else if ((void *)exit_val != (void *)th) {
+  } else if ((void *)e != (void *)th) {
     KA_TRACE(1, ("__kmp_reap_common: ExitProcess / TerminateThread used?\n"));
   }
 
@@ -1517,13 +1517,12 @@ void __kmp_thread_sleep(int millis) {
 
 // Determine whether the given address is mapped into the current address space.
 int __kmp_is_address_mapped(void *addr) {
-  DWORD status;
   MEMORY_BASIC_INFORMATION lpBuffer;
   SIZE_T dwLength;
 
   dwLength = sizeof(MEMORY_BASIC_INFORMATION);
 
-  status = VirtualQuery(addr, &lpBuffer, dwLength);
+  VirtualQuery(addr, &lpBuffer, dwLength);
 
   return !(((lpBuffer.State == MEM_RESERVE) || (lpBuffer.State == MEM_FREE)) ||
            ((lpBuffer.Protect == PAGE_NOACCESS) ||

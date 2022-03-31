@@ -9,9 +9,11 @@
 // CHECK-NEXT: async
 // CHECK-NEXT: bufferization
 // CHECK-NEXT: builtin
+// CHECK-NEXT: cf
 // CHECK-NEXT: complex
 // CHECK-NEXT: dlti
 // CHECK-NEXT: emitc
+// CHECK-NEXT: func
 // CHECK-NEXT: gpu
 // CHECK-NEXT: linalg
 // CHECK-NEXT: llvm
@@ -27,7 +29,6 @@
 // CHECK-NEXT: shape
 // CHECK-NEXT: sparse_tensor
 // CHECK-NEXT: spv
-// CHECK-NEXT: std
 // CHECK-NEXT: tensor
 // CHECK-NEXT: test
 // CHECK-NEXT: tosa

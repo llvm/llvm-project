@@ -11,6 +11,8 @@ arrays, see the `-Warray-bounds` Clang diagnostic.
 This rule is part of the "Bounds safety" profile of the C++ Core Guidelines, see
 https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#Pro-bounds-arrayindex.
 
+Optionally, this check can generate fixes using ``gsl::at`` for indexing.
+
 Options
 -------
 

@@ -46,19 +46,19 @@ static SmallVector<Value> getCycle(const DenseMap<Value, Value> &parents,
 /// cycle, u \in C, are replaced with a single edge (v_C, v), and the selected
 /// node u is marked in the ouptut map actualSource[v].
 static void contract(RootOrderingGraph &graph, ArrayRef<Value> cycle,
-                     const DenseMap<Value, unsigned> &parentCosts,
+                     const DenseMap<Value, unsigned> &parentDepths,
                      DenseMap<Value, Value> &actualSource,
                      DenseMap<Value, Value> &actualTarget) {
   Value rep = cycle.front();
   DenseSet<Value> cycleSet(cycle.begin(), cycle.end());
 
   // Now, contract the cycle, marking the actual sources and targets.
-  DenseMap<Value, RootOrderingCost> repCosts;
+  DenseMap<Value, RootOrderingEntry> repEntries;
   for (auto outer = graph.begin(), e = graph.end(); outer != e; ++outer) {
     Value target = outer->first;
     if (cycleSet.contains(target)) {
       // Target in the cycle => edges incoming to the cycle or within the cycle.
-      unsigned parentCost = parentCosts.lookup(target);
+      unsigned parentDepth = parentDepths.lookup(target);
       for (const auto &inner : outer->second) {
         Value source = inner.first;
         // Ignore edges within the cycle.
@@ -67,31 +67,31 @@ static void contract(RootOrderingGraph &graph, ArrayRef<Value> cycle,
 
         // Edge incoming to the cycle.
         std::pair<unsigned, unsigned> cost = inner.second.cost;
-        assert(parentCost <= cost.first && "invalid parent cost");
+        assert(parentDepth <= cost.first && "invalid parent depth");
 
         // Subtract the cost of the parent within the cycle from the cost of
         // the edge incoming to the cycle. This update ensures that the cost
         // of the minimum-weight spanning arborescence of the entire graph is
         // the cost of arborescence for the contracted graph plus the cost of
         // the cycle, no matter which edge in the cycle we choose to drop.
-        cost.first -= parentCost;
-        auto it = repCosts.find(source);
-        if (it == repCosts.end() || it->second.cost > cost) {
+        cost.first -= parentDepth;
+        auto it = repEntries.find(source);
+        if (it == repEntries.end() || it->second.cost > cost) {
           actualTarget[source] = target;
           // Do not bother populating the connector (the connector is only
           // relevant for the final traversal, not for the optimal branching).
-          repCosts[source].cost = cost;
+          repEntries[source].cost = cost;
         }
       }
       // Erase the node in the cycle.
       graph.erase(outer);
     } else {
       // Target not in cycle => edges going away from or unrelated to the cycle.
-      DenseMap<Value, RootOrderingCost> &costs = outer->second;
+      DenseMap<Value, RootOrderingEntry> &entries = outer->second;
       Value bestSource;
       std::pair<unsigned, unsigned> bestCost;
-      auto inner = costs.begin(), inner_e = costs.end();
-      while (inner != inner_e) {
+      auto inner = entries.begin(), innerE = entries.end();
+      while (inner != innerE) {
         Value source = inner->first;
         if (cycleSet.contains(source)) {
           // Going-away edge => get its cost and erase it.
@@ -99,7 +99,7 @@ static void contract(RootOrderingGraph &graph, ArrayRef<Value> cycle,
             bestSource = source;
             bestCost = inner->second.cost;
           }
-          costs.erase(inner++);
+          entries.erase(inner++);
         } else {
           ++inner;
         }
@@ -107,14 +107,14 @@ static void contract(RootOrderingGraph &graph, ArrayRef<Value> cycle,
 
       // There were going-away edges, contract them.
       if (bestSource) {
-        costs[rep].cost = bestCost;
+        entries[rep].cost = bestCost;
         actualSource[target] = bestSource;
       }
     }
   }
 
   // Store the edges to the representative.
-  graph[rep] = std::move(repCosts);
+  graph[rep] = std::move(repEntries);
 }
 
 OptimalBranching::OptimalBranching(RootOrderingGraph graph, Value root)
@@ -128,8 +128,8 @@ unsigned OptimalBranching::solve() {
 
   // A map that stores the cost of the optimal local choice for each node
   // in a directed cycle. This map is cleared every time we seed the search.
-  DenseMap<Value, unsigned> parentCosts;
-  parentCosts.reserve(graph.size());
+  DenseMap<Value, unsigned> parentDepths;
+  parentDepths.reserve(graph.size());
 
   // Determine if the optimal local choice results in an acyclic graph. This is
   // done by computing the optimal local choice and traversing up the computed
@@ -142,27 +142,30 @@ unsigned OptimalBranching::solve() {
     // Follow the trail of best sources until we reach an already visited node.
     // The code will assert if we cannot reach an already visited node, i.e.,
     // the graph is not strongly connected.
-    parentCosts.clear();
+    parentDepths.clear();
     do {
       auto it = graph.find(node);
       assert(it != graph.end() && "the graph is not strongly connected");
 
+      // Find the best local parent, taking into account both the depth and the
+      // tie breaking rules.
       Value &bestSource = parents[node];
-      unsigned &bestCost = parentCosts[node];
+      std::pair<unsigned, unsigned> bestCost;
       for (const auto &inner : it->second) {
-        const RootOrderingCost &cost = inner.second;
-        if (!bestSource /* initial */ || bestCost > cost.cost.first) {
+        const RootOrderingEntry &entry = inner.second;
+        if (!bestSource /* initial */ || bestCost > entry.cost) {
           bestSource = inner.first;
-          bestCost = cost.cost.first;
+          bestCost = entry.cost;
         }
       }
       assert(bestSource && "the graph is not strongly connected");
+      parentDepths[node] = bestCost.first;
       node = bestSource;
-      totalCost += bestCost;
+      totalCost += bestCost.first;
     } while (!parents.count(node));
 
     // If we reached a non-root node, we have a cycle.
-    if (parentCosts.count(node)) {
+    if (parentDepths.count(node)) {
       // Determine the cycle starting at the representative node.
       SmallVector<Value> cycle = getCycle(parents, node);
 
@@ -171,7 +174,7 @@ unsigned OptimalBranching::solve() {
       DenseMap<Value, Value> actualSource, actualTarget;
 
       // Contract the cycle and recurse.
-      contract(graph, cycle, parentCosts, actualSource, actualTarget);
+      contract(graph, cycle, parentDepths, actualSource, actualTarget);
       totalCost = solve();
 
       // Redirect the going-away edges.
@@ -186,7 +189,7 @@ unsigned OptimalBranching::solve() {
       Value entry = actualTarget.lookup(parent);
       cycle.push_back(node); // complete the cycle
       for (size_t i = 0, e = cycle.size() - 1; i < e; ++i) {
-        totalCost += parentCosts.lookup(cycle[i]);
+        totalCost += parentDepths.lookup(cycle[i]);
         if (cycle[i] == entry)
           parents[cycle[i]] = parent; // break the cycle
         else

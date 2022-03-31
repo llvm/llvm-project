@@ -14,14 +14,50 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/SampleProfileInference.h"
+#include "llvm/ADT/BitVector.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include <queue>
 #include <set>
+#include <stack>
 
 using namespace llvm;
 #define DEBUG_TYPE "sample-profile-inference"
 
 namespace {
+
+static cl::opt<bool> SampleProfileEvenCountDistribution(
+    "sample-profile-even-count-distribution", cl::init(true), cl::Hidden,
+    cl::ZeroOrMore,
+    cl::desc("Try to evenly distribute counts when there are multiple equally "
+             "likely options."));
+
+static cl::opt<unsigned> SampleProfileMaxDfsCalls(
+    "sample-profile-max-dfs-calls", cl::init(10), cl::Hidden, cl::ZeroOrMore,
+    cl::desc("Maximum number of dfs iterations for even count distribution."));
+
+static cl::opt<unsigned> SampleProfileProfiCostInc(
+    "sample-profile-profi-cost-inc", cl::init(10), cl::Hidden, cl::ZeroOrMore,
+    cl::desc("A cost of increasing a block's count by one."));
+
+static cl::opt<unsigned> SampleProfileProfiCostDec(
+    "sample-profile-profi-cost-dec", cl::init(20), cl::Hidden, cl::ZeroOrMore,
+    cl::desc("A cost of decreasing a block's count by one."));
+
+static cl::opt<unsigned> SampleProfileProfiCostIncZero(
+    "sample-profile-profi-cost-inc-zero", cl::init(11), cl::Hidden,
+    cl::ZeroOrMore,
+    cl::desc("A cost of increasing a count of zero-weight block by one."));
+
+static cl::opt<unsigned> SampleProfileProfiCostIncEntry(
+    "sample-profile-profi-cost-inc-entry", cl::init(40), cl::Hidden,
+    cl::ZeroOrMore,
+    cl::desc("A cost of increasing the entry block's count by one."));
+
+static cl::opt<unsigned> SampleProfileProfiCostDecEntry(
+    "sample-profile-profi-cost-dec-entry", cl::init(10), cl::Hidden,
+    cl::ZeroOrMore,
+    cl::desc("A cost of decreasing the entry block's count by one."));
 
 /// A value indicating an infinite flow/capacity/weight of a block/edge.
 /// Not using numeric_limits<int64_t>::max(), as the values can be summed up
@@ -51,16 +87,16 @@ public:
 
     Nodes = std::vector<Node>(NodeCount);
     Edges = std::vector<std::vector<Edge>>(NodeCount, std::vector<Edge>());
+    if (SampleProfileEvenCountDistribution)
+      AugmentingEdges =
+          std::vector<std::vector<Edge *>>(NodeCount, std::vector<Edge *>());
   }
 
   // Run the algorithm.
   int64_t run() {
-    // Find an augmenting path and update the flow along the path
-    size_t AugmentationIters = 0;
-    while (findAugmentingPath()) {
-      augmentFlowAlongPath();
-      AugmentationIters++;
-    }
+    // Iteratively find an augmentation path/dag in the network and send the
+    // flow along its edges
+    size_t AugmentationIters = applyFlowAugmentation();
 
     // Compute the total flow and its cost
     int64_t TotalCost = 0;
@@ -78,6 +114,7 @@ public:
                       << " iterations with " << TotalFlow << " total flow"
                       << " of " << TotalCost << " cost\n");
     (void)TotalFlow;
+    (void)AugmentationIters;
     return TotalCost;
   }
 
@@ -133,20 +170,61 @@ public:
     return Flow;
   }
 
-  /// A cost of increasing a block's count by one.
-  static constexpr int64_t AuxCostInc = 10;
-  /// A cost of decreasing a block's count by one.
-  static constexpr int64_t AuxCostDec = 20;
-  /// A cost of increasing a count of zero-weight block by one.
-  static constexpr int64_t AuxCostIncZero = 11;
-  /// A cost of increasing the entry block's count by one.
-  static constexpr int64_t AuxCostIncEntry = 40;
-  /// A cost of decreasing the entry block's count by one.
-  static constexpr int64_t AuxCostDecEntry = 10;
   /// A cost of taking an unlikely jump.
-  static constexpr int64_t AuxCostUnlikely = ((int64_t)1) << 20;
+  static constexpr int64_t AuxCostUnlikely = ((int64_t)1) << 30;
+  /// Minimum BaseDistance for the jump distance values in island joining.
+  static constexpr uint64_t MinBaseDistance = 10000;
 
 private:
+  /// Iteratively find an augmentation path/dag in the network and send the
+  /// flow along its edges. The method returns the number of applied iterations.
+  size_t applyFlowAugmentation() {
+    size_t AugmentationIters = 0;
+    while (findAugmentingPath()) {
+      uint64_t PathCapacity = computeAugmentingPathCapacity();
+      while (PathCapacity > 0) {
+        bool Progress = false;
+        if (SampleProfileEvenCountDistribution) {
+          // Identify node/edge candidates for augmentation
+          identifyShortestEdges(PathCapacity);
+
+          // Find an augmenting DAG
+          auto AugmentingOrder = findAugmentingDAG();
+
+          // Apply the DAG augmentation
+          Progress = augmentFlowAlongDAG(AugmentingOrder);
+          PathCapacity = computeAugmentingPathCapacity();
+        }
+
+        if (!Progress) {
+          augmentFlowAlongPath(PathCapacity);
+          PathCapacity = 0;
+        }
+
+        AugmentationIters++;
+      }
+    }
+    return AugmentationIters;
+  }
+
+  /// Compute the capacity of the cannonical augmenting path. If the path is
+  /// saturated (that is, no flow can be sent along the path), then return 0.
+  uint64_t computeAugmentingPathCapacity() {
+    uint64_t PathCapacity = INF;
+    uint64_t Now = Target;
+    while (Now != Source) {
+      uint64_t Pred = Nodes[Now].ParentNode;
+      auto &Edge = Edges[Pred][Nodes[Now].ParentEdgeIndex];
+
+      assert(Edge.Capacity >= Edge.Flow && "incorrect edge flow");
+      uint64_t EdgeCapacity = uint64_t(Edge.Capacity - Edge.Flow);
+      PathCapacity = std::min(PathCapacity, EdgeCapacity);
+
+      Now = Pred;
+    }
+    return PathCapacity;
+  }
+
   /// Check for existence of an augmenting path with a positive capacity.
   bool findAugmentingPath() {
     // Initialize data structures
@@ -179,7 +257,7 @@ private:
       //    from Source to Target; it follows from inequalities
       //    Dist[Source, Target] >= Dist[Source, V] + Dist[V, Target]
       //                         >= Dist[Source, V]
-      if (Nodes[Target].Distance == 0)
+      if (!SampleProfileEvenCountDistribution && Nodes[Target].Distance == 0)
         break;
       if (Nodes[Src].Distance > Nodes[Target].Distance)
         continue;
@@ -209,21 +287,9 @@ private:
   }
 
   /// Update the current flow along the augmenting path.
-  void augmentFlowAlongPath() {
-    // Find path capacity
-    int64_t PathCapacity = INF;
-    uint64_t Now = Target;
-    while (Now != Source) {
-      uint64_t Pred = Nodes[Now].ParentNode;
-      auto &Edge = Edges[Pred][Nodes[Now].ParentEdgeIndex];
-      PathCapacity = std::min(PathCapacity, Edge.Capacity - Edge.Flow);
-      Now = Pred;
-    }
-
+  void augmentFlowAlongPath(uint64_t PathCapacity) {
     assert(PathCapacity > 0 && "found an incorrect augmenting path");
-
-    // Update the flow along the path
-    Now = Target;
+    uint64_t Now = Target;
     while (Now != Source) {
       uint64_t Pred = Nodes[Now].ParentNode;
       auto &Edge = Edges[Pred][Nodes[Now].ParentEdgeIndex];
@@ -236,7 +302,221 @@ private:
     }
   }
 
-  /// An node in a flow network.
+  /// Find an Augmenting DAG order using a modified version of DFS in which we
+  /// can visit a node multiple times. In the DFS search, when scanning each
+  /// edge out of a node, continue search at Edge.Dst endpoint if it has not
+  /// been discovered yet and its NumCalls < MaxDfsCalls. The algorithm
+  /// runs in O(MaxDfsCalls * |Edges| + |Nodes|) time.
+  /// It returns an Augmenting Order (Taken nodes in decreasing Finish time)
+  /// that starts with Source and ends with Target.
+  std::vector<uint64_t> findAugmentingDAG() {
+    // We use a stack based implemenation of DFS to avoid recursion.
+    // Defining DFS data structures:
+    // A pair (NodeIdx, EdgeIdx) at the top of the Stack denotes that
+    //  - we are currently visiting Nodes[NodeIdx] and
+    //  - the next edge to scan is Edges[NodeIdx][EdgeIdx]
+    typedef std::pair<uint64_t, uint64_t> StackItemType;
+    std::stack<StackItemType> Stack;
+    std::vector<uint64_t> AugmentingOrder;
+
+    // Phase 0: Initialize Node attributes and Time for DFS run
+    for (auto &Node : Nodes) {
+      Node.Discovery = 0;
+      Node.Finish = 0;
+      Node.NumCalls = 0;
+      Node.Taken = false;
+    }
+    uint64_t Time = 0;
+    // Mark Target as Taken
+    // Taken attribute will be propagated backwards from Target towards Source
+    Nodes[Target].Taken = true;
+
+    // Phase 1: Start DFS traversal from Source
+    Stack.emplace(Source, 0);
+    Nodes[Source].Discovery = ++Time;
+    while (!Stack.empty()) {
+      auto NodeIdx = Stack.top().first;
+      auto EdgeIdx = Stack.top().second;
+
+      // If we haven't scanned all edges out of NodeIdx, continue scanning
+      if (EdgeIdx < Edges[NodeIdx].size()) {
+        auto &Edge = Edges[NodeIdx][EdgeIdx];
+        auto &Dst = Nodes[Edge.Dst];
+        Stack.top().second++;
+
+        if (Edge.OnShortestPath) {
+          // If we haven't seen Edge.Dst so far, continue DFS search there
+          if (Dst.Discovery == 0 && Dst.NumCalls < SampleProfileMaxDfsCalls) {
+            Dst.Discovery = ++Time;
+            Stack.emplace(Edge.Dst, 0);
+            Dst.NumCalls++;
+          } else if (Dst.Taken && Dst.Finish != 0) {
+            // Else, if Edge.Dst already have a path to Target, so that NodeIdx
+            Nodes[NodeIdx].Taken = true;
+          }
+        }
+      } else {
+        // If we are done scanning all edge out of NodeIdx
+        Stack.pop();
+        // If we haven't found a path from NodeIdx to Target, forget about it
+        if (!Nodes[NodeIdx].Taken) {
+          Nodes[NodeIdx].Discovery = 0;
+        } else {
+          // If we have found a path from NodeIdx to Target, then finish NodeIdx
+          // and propagate Taken flag to DFS parent unless at the Source
+          Nodes[NodeIdx].Finish = ++Time;
+          // NodeIdx == Source if and only if the stack is empty
+          if (NodeIdx != Source) {
+            assert(!Stack.empty() && "empty stack while running dfs");
+            Nodes[Stack.top().first].Taken = true;
+          }
+          AugmentingOrder.push_back(NodeIdx);
+        }
+      }
+    }
+    // Nodes are collected decreasing Finish time, so the order is reversed
+    std::reverse(AugmentingOrder.begin(), AugmentingOrder.end());
+
+    // Phase 2: Extract all forward (DAG) edges and fill in AugmentingEdges
+    for (size_t Src : AugmentingOrder) {
+      AugmentingEdges[Src].clear();
+      for (auto &Edge : Edges[Src]) {
+        uint64_t Dst = Edge.Dst;
+        if (Edge.OnShortestPath && Nodes[Src].Taken && Nodes[Dst].Taken &&
+            Nodes[Dst].Finish < Nodes[Src].Finish) {
+          AugmentingEdges[Src].push_back(&Edge);
+        }
+      }
+      assert((Src == Target || !AugmentingEdges[Src].empty()) &&
+             "incorrectly constructed augmenting edges");
+    }
+
+    return AugmentingOrder;
+  }
+
+  /// Update the current flow along the given (acyclic) subgraph specified by
+  /// the vertex order, AugmentingOrder. The objective is to send as much flow
+  /// as possible while evenly distributing flow among successors of each node.
+  /// After the update at least one edge is saturated.
+  bool augmentFlowAlongDAG(const std::vector<uint64_t> &AugmentingOrder) {
+    // Phase 0: Initialization
+    for (uint64_t Src : AugmentingOrder) {
+      Nodes[Src].FracFlow = 0;
+      Nodes[Src].IntFlow = 0;
+      for (auto &Edge : AugmentingEdges[Src]) {
+        Edge->AugmentedFlow = 0;
+      }
+    }
+
+    // Phase 1: Send a unit of fractional flow along the DAG
+    uint64_t MaxFlowAmount = INF;
+    Nodes[Source].FracFlow = 1.0;
+    for (uint64_t Src : AugmentingOrder) {
+      assert((Src == Target || Nodes[Src].FracFlow > 0.0) &&
+             "incorrectly computed fractional flow");
+      // Distribute flow evenly among successors of Src
+      uint64_t Degree = AugmentingEdges[Src].size();
+      for (auto &Edge : AugmentingEdges[Src]) {
+        double EdgeFlow = Nodes[Src].FracFlow / Degree;
+        Nodes[Edge->Dst].FracFlow += EdgeFlow;
+        if (Edge->Capacity == INF)
+          continue;
+        uint64_t MaxIntFlow = double(Edge->Capacity - Edge->Flow) / EdgeFlow;
+        MaxFlowAmount = std::min(MaxFlowAmount, MaxIntFlow);
+      }
+    }
+    // Stop early if we cannot send any (integral) flow from Source to Target
+    if (MaxFlowAmount == 0)
+      return false;
+
+    // Phase 2: Send an integral flow of MaxFlowAmount
+    Nodes[Source].IntFlow = MaxFlowAmount;
+    for (uint64_t Src : AugmentingOrder) {
+      if (Src == Target)
+        break;
+      // Distribute flow evenly among successors of Src, rounding up to make
+      // sure all flow is sent
+      uint64_t Degree = AugmentingEdges[Src].size();
+      // We are guaranteeed that Node[Src].IntFlow <= SuccFlow * Degree
+      uint64_t SuccFlow = (Nodes[Src].IntFlow + Degree - 1) / Degree;
+      for (auto &Edge : AugmentingEdges[Src]) {
+        uint64_t Dst = Edge->Dst;
+        uint64_t EdgeFlow = std::min(Nodes[Src].IntFlow, SuccFlow);
+        EdgeFlow = std::min(EdgeFlow, uint64_t(Edge->Capacity - Edge->Flow));
+        Nodes[Dst].IntFlow += EdgeFlow;
+        Nodes[Src].IntFlow -= EdgeFlow;
+        Edge->AugmentedFlow += EdgeFlow;
+      }
+    }
+    assert(Nodes[Target].IntFlow <= MaxFlowAmount);
+    Nodes[Target].IntFlow = 0;
+
+    // Phase 3: Send excess flow back traversing the nodes backwards.
+    // Because of rounding, not all flow can be sent along the edges of Src.
+    // Hence, sending the remaining flow back to maintain flow conservation
+    for (size_t Idx = AugmentingOrder.size() - 1; Idx > 0; Idx--) {
+      uint64_t Src = AugmentingOrder[Idx - 1];
+      // Try to send excess flow back along each edge.
+      // Make sure we only send back flow we just augmented (AugmentedFlow).
+      for (auto &Edge : AugmentingEdges[Src]) {
+        uint64_t Dst = Edge->Dst;
+        if (Nodes[Dst].IntFlow == 0)
+          continue;
+        uint64_t EdgeFlow = std::min(Nodes[Dst].IntFlow, Edge->AugmentedFlow);
+        Nodes[Dst].IntFlow -= EdgeFlow;
+        Nodes[Src].IntFlow += EdgeFlow;
+        Edge->AugmentedFlow -= EdgeFlow;
+      }
+    }
+
+    // Phase 4: Update flow values along all edges
+    bool HasSaturatedEdges = false;
+    for (uint64_t Src : AugmentingOrder) {
+      // Verify that we have sent all the excess flow from the node
+      assert(Src == Source || Nodes[Src].IntFlow == 0);
+      for (auto &Edge : AugmentingEdges[Src]) {
+        assert(uint64_t(Edge->Capacity - Edge->Flow) >= Edge->AugmentedFlow);
+        // Update flow values along the edge and its reverse copy
+        auto &RevEdge = Edges[Edge->Dst][Edge->RevEdgeIndex];
+        Edge->Flow += Edge->AugmentedFlow;
+        RevEdge.Flow -= Edge->AugmentedFlow;
+        if (Edge->Capacity == Edge->Flow && Edge->AugmentedFlow > 0)
+          HasSaturatedEdges = true;
+      }
+    }
+
+    // The augmentation is successful iff at least one edge becomes saturated
+    return HasSaturatedEdges;
+  }
+
+  /// Identify candidate (shortest) edges for augmentation.
+  void identifyShortestEdges(uint64_t PathCapacity) {
+    assert(PathCapacity > 0 && "found an incorrect augmenting DAG");
+    // To make sure the augmentation DAG contains only edges with large residual
+    // capacity, we prune all edges whose capacity is below a fraction of
+    // the capacity of the augmented path.
+    // (All edges of the path itself are always in the DAG)
+    uint64_t MinCapacity = std::max(PathCapacity / 2, uint64_t(1));
+
+    // Decide which edges are on a shortest path from Source to Target
+    for (size_t Src = 0; Src < Nodes.size(); Src++) {
+      // An edge cannot be augmenting if the endpoint has large distance
+      if (Nodes[Src].Distance > Nodes[Target].Distance)
+        continue;
+
+      for (auto &Edge : Edges[Src]) {
+        uint64_t Dst = Edge.Dst;
+        Edge.OnShortestPath =
+            Src != Target && Dst != Source &&
+            Nodes[Dst].Distance <= Nodes[Target].Distance &&
+            Nodes[Dst].Distance == Nodes[Src].Distance + Edge.Cost &&
+            Edge.Capacity > Edge.Flow &&
+            uint64_t(Edge.Capacity - Edge.Flow) >= MinCapacity;
+      }
+    }
+  }
+
+  /// A node in a flow network.
   struct Node {
     /// The cost of the cheapest path from the source to the current node.
     int64_t Distance;
@@ -246,7 +526,20 @@ private:
     uint64_t ParentEdgeIndex;
     /// An indicator of whether the current node is in a queue.
     bool Taken;
+
+    /// Data fields utilized in DAG-augmentation:
+    /// Fractional flow.
+    double FracFlow;
+    /// Integral flow.
+    uint64_t IntFlow;
+    /// Discovery time.
+    uint64_t Discovery;
+    /// Finish time.
+    uint64_t Finish;
+    /// NumCalls.
+    uint64_t NumCalls;
   };
+
   /// An edge in a flow network.
   struct Edge {
     /// The cost of the edge.
@@ -259,6 +552,12 @@ private:
     uint64_t Dst;
     /// The index of the reverse edge between Dst and the current node.
     uint64_t RevEdgeIndex;
+
+    /// Data fields utilized in DAG-augmentation:
+    /// Whether the edge is currently on a shortest path from Source to Target.
+    bool OnShortestPath;
+    /// Extra flow along the edge.
+    uint64_t AugmentedFlow;
   };
 
   /// The set of network nodes.
@@ -269,7 +568,12 @@ private:
   uint64_t Source;
   /// Target (sink) node of the flow.
   uint64_t Target;
+  /// Augmenting edges.
+  std::vector<std::vector<Edge *>> AugmentingEdges;
 };
+
+constexpr int64_t MinCostMaxFlow::AuxCostUnlikely;
+constexpr uint64_t MinCostMaxFlow::MinBaseDistance;
 
 /// A post-processing adjustment of control flow. It applies two steps by
 /// rerouting some flow and making it more realistic:
@@ -303,13 +607,10 @@ public:
     rebalanceUnknownSubgraphs();
   }
 
-  /// The probability for the first successor of a unknown subgraph
-  static constexpr double UnknownFirstSuccProbability = 0.5;
-
 private:
   void joinIsolatedComponents() {
     // Find blocks that are reachable from the source
-    auto Visited = std::vector<bool>(NumBlocks(), false);
+    auto Visited = BitVector(NumBlocks(), false);
     findReachable(Func.Entry, Visited);
 
     // Iterate over all non-reachable blocks and adjust their weights
@@ -334,7 +635,7 @@ private:
 
   /// Run BFS from a given block along the jumps with a positive flow and mark
   /// all reachable blocks.
-  void findReachable(uint64_t Src, std::vector<bool> &Visited) {
+  void findReachable(uint64_t Src, BitVector &Visited) {
     if (Visited[Src])
       return;
     std::queue<uint64_t> Queue;
@@ -435,61 +736,90 @@ private:
   /// A distance of a path for a given jump.
   /// In order to incite the path to use blocks/jumps with large positive flow,
   /// and avoid changing branch probability of outgoing edges drastically,
-  /// set the distance as follows:
-  ///   if Jump.Flow > 0, then distance = max(100 - Jump->Flow, 0)
-  ///   if Block.Weight > 0, then distance = 1
-  ///   otherwise distance >> 1
+  /// set the jump distance so as:
+  ///   - to minimize the number of unlikely jumps used and subject to that,
+  ///   - to minimize the number of Flow == 0 jumps used and subject to that,
+  ///   - minimizes total multiplicative Flow increase for the remaining edges.
+  /// To capture this objective with integer distances, we round off fractional
+  /// parts to a multiple of 1 / BaseDistance.
   int64_t jumpDistance(FlowJump *Jump) const {
-    int64_t BaseDistance = 100;
+    uint64_t BaseDistance =
+        std::max(static_cast<uint64_t>(MinCostMaxFlow::MinBaseDistance),
+                 std::min(Func.Blocks[Func.Entry].Flow,
+                          MinCostMaxFlow::AuxCostUnlikely / NumBlocks()));
     if (Jump->IsUnlikely)
       return MinCostMaxFlow::AuxCostUnlikely;
     if (Jump->Flow > 0)
-      return std::max(BaseDistance - (int64_t)Jump->Flow, (int64_t)0);
-    if (Func.Blocks[Jump->Target].Weight > 0)
-      return BaseDistance;
-    return BaseDistance * (NumBlocks() + 1);
+      return BaseDistance + BaseDistance / Jump->Flow;
+    return BaseDistance * NumBlocks();
   };
 
   uint64_t NumBlocks() const { return Func.Blocks.size(); }
 
-  /// Rebalance unknown subgraphs so as each branch splits with probabilities
-  /// UnknownFirstSuccProbability and 1 - UnknownFirstSuccProbability
+  /// Rebalance unknown subgraphs so that the flow is split evenly across the
+  /// outgoing branches of every block of the subgraph. The method iterates over
+  /// blocks with known weight and identifies unknown subgraphs rooted at the
+  /// blocks. Then it verifies if flow rebalancing is feasible and applies it.
   void rebalanceUnknownSubgraphs() {
-    assert(UnknownFirstSuccProbability >= 0.0 &&
-           UnknownFirstSuccProbability <= 1.0 &&
-           "the share of the unknown successor should be between 0 and 1");
-    // Try to find unknown subgraphs from each non-unknown block
+    // Try to find unknown subgraphs from each block
     for (uint64_t I = 0; I < Func.Blocks.size(); I++) {
       auto SrcBlock = &Func.Blocks[I];
-      // Do not attempt to find unknown successors from a unknown or a
-      // zero-flow block
-      if (SrcBlock->UnknownWeight || SrcBlock->Flow == 0)
+      // Verify if rebalancing rooted at SrcBlock is feasible
+      if (!canRebalanceAtRoot(SrcBlock))
         continue;
 
-      std::vector<FlowBlock *> UnknownSuccs;
+      // Find an unknown subgraphs starting at SrcBlock. Along the way,
+      // fill in known destinations and intermediate unknown blocks.
+      std::vector<FlowBlock *> UnknownBlocks;
+      std::vector<FlowBlock *> KnownDstBlocks;
+      findUnknownSubgraph(SrcBlock, KnownDstBlocks, UnknownBlocks);
+
+      // Verify if rebalancing of the subgraph is feasible. If the search is
+      // successful, find the unique destination block (which can be null)
       FlowBlock *DstBlock = nullptr;
-      // Find a unknown subgraphs starting at block SrcBlock
-      if (!findUnknownSubgraph(SrcBlock, DstBlock, UnknownSuccs))
+      if (!canRebalanceSubgraph(SrcBlock, KnownDstBlocks, UnknownBlocks,
+                                DstBlock))
         continue;
-      // At the moment, we do not rebalance subgraphs containing cycles among
-      // unknown blocks
-      if (!isAcyclicSubgraph(SrcBlock, DstBlock, UnknownSuccs))
+
+      // We cannot rebalance subgraphs containing cycles among unknown blocks
+      if (!isAcyclicSubgraph(SrcBlock, DstBlock, UnknownBlocks))
         continue;
 
       // Rebalance the flow
-      rebalanceUnknownSubgraph(SrcBlock, DstBlock, UnknownSuccs);
+      rebalanceUnknownSubgraph(SrcBlock, DstBlock, UnknownBlocks);
     }
   }
 
-  /// Find a unknown subgraph starting at block SrcBlock.
-  /// If the search is successful, the method sets DstBlock and UnknownSuccs.
-  bool findUnknownSubgraph(FlowBlock *SrcBlock, FlowBlock *&DstBlock,
-                           std::vector<FlowBlock *> &UnknownSuccs) {
+  /// Verify if rebalancing rooted at a given block is possible.
+  bool canRebalanceAtRoot(const FlowBlock *SrcBlock) {
+    // Do not attempt to find unknown subgraphs from an unknown or a
+    // zero-flow block
+    if (SrcBlock->UnknownWeight || SrcBlock->Flow == 0)
+      return false;
+
+    // Do not attempt to process subgraphs from a block w/o unknown sucessors
+    bool HasUnknownSuccs = false;
+    for (auto Jump : SrcBlock->SuccJumps) {
+      if (Func.Blocks[Jump->Target].UnknownWeight) {
+        HasUnknownSuccs = true;
+        break;
+      }
+    }
+    if (!HasUnknownSuccs)
+      return false;
+
+    return true;
+  }
+
+  /// Find an unknown subgraph starting at block SrcBlock. The method sets
+  /// identified destinations, KnownDstBlocks, and intermediate UnknownBlocks.
+  void findUnknownSubgraph(const FlowBlock *SrcBlock,
+                           std::vector<FlowBlock *> &KnownDstBlocks,
+                           std::vector<FlowBlock *> &UnknownBlocks) {
     // Run BFS from SrcBlock and make sure all paths are going through unknown
-    // blocks and end at a non-unknown DstBlock
-    auto Visited = std::vector<bool>(NumBlocks(), false);
+    // blocks and end at a known DstBlock
+    auto Visited = BitVector(NumBlocks(), false);
     std::queue<uint64_t> Queue;
-    DstBlock = nullptr;
 
     Queue.push(SrcBlock->Index);
     Visited[SrcBlock->Index] = true;
@@ -498,52 +828,105 @@ private:
       Queue.pop();
       // Process blocks reachable from Block
       for (auto Jump : Block.SuccJumps) {
+        // If Jump can be ignored, skip it
+        if (ignoreJump(SrcBlock, nullptr, Jump))
+          continue;
+
         uint64_t Dst = Jump->Target;
+        // If Dst has been visited, skip Jump
         if (Visited[Dst])
           continue;
+        // Process block Dst
         Visited[Dst] = true;
         if (!Func.Blocks[Dst].UnknownWeight) {
-          // If we see non-unique non-unknown block reachable from SrcBlock,
-          // stop processing and skip rebalancing
-          FlowBlock *CandidateDstBlock = &Func.Blocks[Dst];
-          if (DstBlock != nullptr && DstBlock != CandidateDstBlock)
-            return false;
-          DstBlock = CandidateDstBlock;
+          KnownDstBlocks.push_back(&Func.Blocks[Dst]);
         } else {
           Queue.push(Dst);
-          UnknownSuccs.push_back(&Func.Blocks[Dst]);
+          UnknownBlocks.push_back(&Func.Blocks[Dst]);
         }
       }
     }
+  }
 
+  /// Verify if rebalancing of the subgraph is feasible. If the checks are
+  /// successful, set the unique destination block, DstBlock (can be null).
+  bool canRebalanceSubgraph(const FlowBlock *SrcBlock,
+                            const std::vector<FlowBlock *> &KnownDstBlocks,
+                            const std::vector<FlowBlock *> &UnknownBlocks,
+                            FlowBlock *&DstBlock) {
     // If the list of unknown blocks is empty, we don't need rebalancing
-    if (UnknownSuccs.empty())
+    if (UnknownBlocks.empty())
       return false;
-    // If all reachable nodes from SrcBlock are unknown, skip rebalancing
-    if (DstBlock == nullptr)
+
+    // If there are multiple known sinks, we can't rebalance
+    if (KnownDstBlocks.size() > 1)
       return false;
-    // If any of the unknown blocks is an exit block, skip rebalancing
-    for (auto Block : UnknownSuccs) {
-      if (Block->isExit())
+    DstBlock = KnownDstBlocks.empty() ? nullptr : KnownDstBlocks.front();
+
+    // Verify sinks of the subgraph
+    for (auto Block : UnknownBlocks) {
+      if (Block->SuccJumps.empty()) {
+        // If there are multiple (known and unknown) sinks, we can't rebalance
+        if (DstBlock != nullptr)
+          return false;
+        continue;
+      }
+      size_t NumIgnoredJumps = 0;
+      for (auto Jump : Block->SuccJumps) {
+        if (ignoreJump(SrcBlock, DstBlock, Jump))
+          NumIgnoredJumps++;
+      }
+      // If there is a non-sink block in UnknownBlocks with all jumps ignored,
+      // then we can't rebalance
+      if (NumIgnoredJumps == Block->SuccJumps.size())
         return false;
     }
 
     return true;
   }
 
+  /// Decide whether the Jump is ignored while processing an unknown subgraphs
+  /// rooted at basic block SrcBlock with the destination block, DstBlock.
+  bool ignoreJump(const FlowBlock *SrcBlock, const FlowBlock *DstBlock,
+                  const FlowJump *Jump) {
+    // Ignore unlikely jumps with zero flow
+    if (Jump->IsUnlikely && Jump->Flow == 0)
+      return true;
+
+    auto JumpSource = &Func.Blocks[Jump->Source];
+    auto JumpTarget = &Func.Blocks[Jump->Target];
+
+    // Do not ignore jumps coming into DstBlock
+    if (DstBlock != nullptr && JumpTarget == DstBlock)
+      return false;
+
+    // Ignore jumps out of SrcBlock to known blocks
+    if (!JumpTarget->UnknownWeight && JumpSource == SrcBlock)
+      return true;
+
+    // Ignore jumps to known blocks with zero flow
+    if (!JumpTarget->UnknownWeight && JumpTarget->Flow == 0)
+      return true;
+
+    return false;
+  }
+
   /// Verify if the given unknown subgraph is acyclic, and if yes, reorder
-  /// UnknownSuccs in the topological order (so that all jumps are "forward").
-  bool isAcyclicSubgraph(FlowBlock *SrcBlock, FlowBlock *DstBlock,
-                         std::vector<FlowBlock *> &UnknownSuccs) {
+  /// UnknownBlocks in the topological order (so that all jumps are "forward").
+  bool isAcyclicSubgraph(const FlowBlock *SrcBlock, const FlowBlock *DstBlock,
+                         std::vector<FlowBlock *> &UnknownBlocks) {
     // Extract local in-degrees in the considered subgraph
     auto LocalInDegree = std::vector<uint64_t>(NumBlocks(), 0);
-    for (auto Jump : SrcBlock->SuccJumps) {
-      LocalInDegree[Jump->Target]++;
-    }
-    for (uint64_t I = 0; I < UnknownSuccs.size(); I++) {
-      for (auto Jump : UnknownSuccs[I]->SuccJumps) {
+    auto fillInDegree = [&](const FlowBlock *Block) {
+      for (auto Jump : Block->SuccJumps) {
+        if (ignoreJump(SrcBlock, DstBlock, Jump))
+          continue;
         LocalInDegree[Jump->Target]++;
       }
+    };
+    fillInDegree(SrcBlock);
+    for (auto Block : UnknownBlocks) {
+      fillInDegree(Block);
     }
     // A loop containing SrcBlock
     if (LocalInDegree[SrcBlock->Index] > 0)
@@ -553,15 +936,20 @@ private:
     std::queue<uint64_t> Queue;
     Queue.push(SrcBlock->Index);
     while (!Queue.empty()) {
-      auto &Block = Func.Blocks[Queue.front()];
+      FlowBlock *Block = &Func.Blocks[Queue.front()];
       Queue.pop();
-      // Stop propagation once we reach DstBlock
-      if (Block.Index == DstBlock->Index)
+      // Stop propagation once we reach DstBlock, if any
+      if (DstBlock != nullptr && Block == DstBlock)
         break;
 
-      AcyclicOrder.push_back(&Block);
+      // Keep an acyclic order of unknown blocks
+      if (Block->UnknownWeight && Block != SrcBlock)
+        AcyclicOrder.push_back(Block);
+
       // Add to the queue all successors with zero local in-degree
-      for (auto Jump : Block.SuccJumps) {
+      for (auto Jump : Block->SuccJumps) {
+        if (ignoreJump(SrcBlock, DstBlock, Jump))
+          continue;
         uint64_t Dst = Jump->Target;
         LocalInDegree[Dst]--;
         if (LocalInDegree[Dst] == 0) {
@@ -572,42 +960,69 @@ private:
 
     // If there is a cycle in the subgraph, AcyclicOrder contains only a subset
     // of all blocks
-    if (UnknownSuccs.size() + 1 != AcyclicOrder.size())
+    if (UnknownBlocks.size() != AcyclicOrder.size())
       return false;
-    UnknownSuccs = AcyclicOrder;
+    UnknownBlocks = AcyclicOrder;
     return true;
   }
 
-  /// Rebalance a given subgraph.
-  void rebalanceUnknownSubgraph(FlowBlock *SrcBlock, FlowBlock *DstBlock,
-                                std::vector<FlowBlock *> &UnknownSuccs) {
+  /// Rebalance a given subgraph rooted at SrcBlock, ending at DstBlock and
+  /// having UnknownBlocks intermediate blocks.
+  void rebalanceUnknownSubgraph(const FlowBlock *SrcBlock,
+                                const FlowBlock *DstBlock,
+                                const std::vector<FlowBlock *> &UnknownBlocks) {
     assert(SrcBlock->Flow > 0 && "zero-flow block in unknown subgraph");
-    assert(UnknownSuccs.front() == SrcBlock && "incorrect order of unknowns");
 
-    for (auto Block : UnknownSuccs) {
-      // Block's flow is the sum of incoming flows
-      uint64_t TotalFlow = 0;
-      if (Block == SrcBlock) {
-        TotalFlow = Block->Flow;
-      } else {
-        for (auto Jump : Block->PredJumps) {
-          TotalFlow += Jump->Flow;
-        }
-        Block->Flow = TotalFlow;
-      }
-
-      // Process all successor jumps and update corresponding flow values
-      for (uint64_t I = 0; I < Block->SuccJumps.size(); I++) {
-        auto Jump = Block->SuccJumps[I];
-        if (I + 1 == Block->SuccJumps.size()) {
-          Jump->Flow = TotalFlow;
-          continue;
-        }
-        uint64_t Flow = uint64_t(TotalFlow * UnknownFirstSuccProbability);
-        Jump->Flow = Flow;
-        TotalFlow -= Flow;
-      }
+    // Ditribute flow from the source block
+    uint64_t BlockFlow = 0;
+    // SrcBlock's flow is the sum of outgoing flows along non-ignored jumps
+    for (auto Jump : SrcBlock->SuccJumps) {
+      if (ignoreJump(SrcBlock, DstBlock, Jump))
+        continue;
+      BlockFlow += Jump->Flow;
     }
+    rebalanceBlock(SrcBlock, DstBlock, SrcBlock, BlockFlow);
+
+    // Ditribute flow from the remaining blocks
+    for (auto Block : UnknownBlocks) {
+      assert(Block->UnknownWeight && "incorrect unknown subgraph");
+      uint64_t BlockFlow = 0;
+      // Block's flow is the sum of incoming flows
+      for (auto Jump : Block->PredJumps) {
+        BlockFlow += Jump->Flow;
+      }
+      Block->Flow = BlockFlow;
+      rebalanceBlock(SrcBlock, DstBlock, Block, BlockFlow);
+    }
+  }
+
+  /// Redistribute flow for a block in a subgraph rooted at SrcBlock,
+  /// and ending at DstBlock.
+  void rebalanceBlock(const FlowBlock *SrcBlock, const FlowBlock *DstBlock,
+                      const FlowBlock *Block, uint64_t BlockFlow) {
+    // Process all successor jumps and update corresponding flow values
+    size_t BlockDegree = 0;
+    for (auto Jump : Block->SuccJumps) {
+      if (ignoreJump(SrcBlock, DstBlock, Jump))
+        continue;
+      BlockDegree++;
+    }
+    // If all successor jumps of the block are ignored, skip it
+    if (DstBlock == nullptr && BlockDegree == 0)
+      return;
+    assert(BlockDegree > 0 && "all outgoing jumps are ignored");
+
+    // Each of the Block's successors gets the following amount of flow.
+    // Rounding the value up so that all flow is propagated
+    uint64_t SuccFlow = (BlockFlow + BlockDegree - 1) / BlockDegree;
+    for (auto Jump : Block->SuccJumps) {
+      if (ignoreJump(SrcBlock, DstBlock, Jump))
+        continue;
+      uint64_t Flow = std::min(SuccFlow, BlockFlow);
+      Jump->Flow = Flow;
+      BlockFlow -= Flow;
+    }
+    assert(BlockFlow == 0 && "not all flow is propagated");
   }
 
   /// A constant indicating an arbitrary exit block of a function.
@@ -669,8 +1084,8 @@ void initializeNetwork(MinCostMaxFlow &Network, FlowFunction &Func) {
     // We assume that decreasing block counts is more expensive than increasing,
     // and thus, setting separate costs here. In the future we may want to tune
     // the relative costs so as to maximize the quality of generated profiles.
-    int64_t AuxCostInc = MinCostMaxFlow::AuxCostInc;
-    int64_t AuxCostDec = MinCostMaxFlow::AuxCostDec;
+    int64_t AuxCostInc = SampleProfileProfiCostInc;
+    int64_t AuxCostDec = SampleProfileProfiCostDec;
     if (Block.UnknownWeight) {
       // Do not penalize changing weights of blocks w/o known profile count
       AuxCostInc = 0;
@@ -679,12 +1094,12 @@ void initializeNetwork(MinCostMaxFlow &Network, FlowFunction &Func) {
       // Increasing the count for "cold" blocks with zero initial count is more
       // expensive than for "hot" ones
       if (Block.Weight == 0) {
-        AuxCostInc = MinCostMaxFlow::AuxCostIncZero;
+        AuxCostInc = SampleProfileProfiCostIncZero;
       }
       // Modifying the count of the entry block is expensive
       if (Block.isEntry()) {
-        AuxCostInc = MinCostMaxFlow::AuxCostIncEntry;
-        AuxCostDec = MinCostMaxFlow::AuxCostDecEntry;
+        AuxCostInc = SampleProfileProfiCostIncEntry;
+        AuxCostDec = SampleProfileProfiCostDecEntry;
       }
     }
     // For blocks with self-edges, do not penalize a reduction of the count,
@@ -799,7 +1214,7 @@ void verifyWeights(const FlowFunction &Func) {
 
   // Run BFS from the source along edges with positive flow
   std::queue<uint64_t> Queue;
-  auto Visited = std::vector<bool>(NumBlocks, false);
+  auto Visited = BitVector(NumBlocks, false);
   Queue.push(Func.Entry);
   Visited[Func.Entry] = true;
   while (!Queue.empty()) {

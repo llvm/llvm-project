@@ -40,7 +40,7 @@ entry:
 
 define void @test7(i1 zeroext %desired, i32* %p) nounwind {
 entry:
-  %0 = tail call i8 asm sideeffect "xchg $0, $1", "=r,*m,0,~{memory},~{dirflag},~{fpsr},~{flags}"(i32* %p, i1 %desired) nounwind
+  %0 = tail call i8 asm sideeffect "xchg $0, $1", "=r,*m,0,~{memory},~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) %p, i1 %desired) nounwind
   ret void
 }
 

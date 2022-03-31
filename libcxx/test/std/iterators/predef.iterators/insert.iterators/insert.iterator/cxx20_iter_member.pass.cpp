@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // insert_iterator
@@ -22,16 +21,26 @@
 
 struct NoIteratorAlias {
     double data_[3] = {};
-    using value_type = int;
     double *begin();
-    constexpr double *insert(double *pos, int value) {
+
+    struct value_type {
+        constexpr value_type(double d) : x(static_cast<int>(d)) {}
+        constexpr operator double() const { return x; }
+
+        int x;
+    };
+
+    template <class T>
+    constexpr double *insert(double *pos, T value) {
+        static_assert(std::is_same_v<T, value_type>);
         *pos = value;
         return pos;
     }
 };
 
 static_assert(std::is_constructible_v<std::insert_iterator<NoIteratorAlias>, NoIteratorAlias&, double*>);
-static_assert(!std::is_constructible_v<std::insert_iterator<NoIteratorAlias>, NoIteratorAlias&, int*>);
+static_assert(
+    !std::is_constructible_v<std::insert_iterator<NoIteratorAlias>, NoIteratorAlias&, NoIteratorAlias::value_type*>);
 
 constexpr bool test() {
     NoIteratorAlias c;

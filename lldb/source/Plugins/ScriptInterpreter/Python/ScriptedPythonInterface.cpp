@@ -8,7 +8,6 @@
 
 #include "lldb/Host/Config.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/Logging.h"
 #include "lldb/lldb-enumerations.h"
 
 #if LLDB_ENABLE_PYTHON
@@ -33,6 +32,14 @@ ScriptedPythonInterface::GetStatusFromMethod(llvm::StringRef method_name) {
   Dispatch<Status>(method_name, error);
 
   return error;
+}
+
+template <>
+StructuredData::ArraySP
+ScriptedPythonInterface::ExtractValueFromPythonObject<StructuredData::ArraySP>(
+    python::PythonObject &p, Status &error) {
+  python::PythonList result_list(python::PyRefType::Borrowed, p.get());
+  return result_list.CreateStructuredArray();
 }
 
 template <>

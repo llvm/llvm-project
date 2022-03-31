@@ -64,7 +64,7 @@ static std::string collapseConsecutive(StringRef Str, char C) {
 static bool hasReservedDoubleUnderscore(StringRef Name,
                                         const LangOptions &LangOpts) {
   if (LangOpts.CPlusPlus)
-    return Name.find("__") != StringRef::npos;
+    return Name.contains("__");
   return Name.startswith("__");
 }
 

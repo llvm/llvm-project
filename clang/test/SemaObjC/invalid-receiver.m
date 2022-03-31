@@ -4,6 +4,6 @@ typedef struct NotAClass {
   int a, b;
 } NotAClass;
 
-void foo() {
+void foo(void) {
   [NotAClass nonexistent_method]; // expected-error {{receiver type 'NotAClass' (aka 'struct NotAClass') is not an Objective-C class}}
 }

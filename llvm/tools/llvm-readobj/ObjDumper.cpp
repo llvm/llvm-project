@@ -13,6 +13,7 @@
 
 #include "ObjDumper.h"
 #include "llvm-readobj.h"
+#include "llvm/Object/Archive.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -83,6 +84,18 @@ void ObjDumper::printAsStringList(StringRef StringContent,
     W.startLine() << '\n';
     CurrentWord += WordSize + 1;
   }
+}
+
+void ObjDumper::printFileSummary(StringRef FileStr, object::ObjectFile &Obj,
+                                 ArrayRef<std::string> InputFilenames,
+                                 const object::Archive *A) {
+  W.startLine() << "\n";
+  W.printString("File", FileStr);
+  W.printString("Format", Obj.getFileFormatName());
+  W.printString("Arch", Triple::getArchTypeName(Obj.getArch()));
+  W.printString("AddressSize",
+                std::string(formatv("{0}bit", 8 * Obj.getBytesInAddress())));
+  this->printLoadName();
 }
 
 static std::vector<object::SectionRef>

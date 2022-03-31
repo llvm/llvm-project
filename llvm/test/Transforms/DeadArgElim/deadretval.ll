@@ -1,4 +1,4 @@
-; RUN: opt < %s -deadargelim -S | FileCheck %s
+; RUN: opt < %s -passes=deadargelim -S | FileCheck %s
 
 @g0 = global i8 0, align 8
 

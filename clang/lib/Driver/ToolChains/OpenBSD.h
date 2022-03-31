@@ -82,6 +82,8 @@ public:
   std::string getCompilerRT(const llvm::opt::ArgList &Args, StringRef Component,
                             FileType Type = ToolChain::FT_Static) const override;
 
+  bool IsUnwindTablesDefault(const llvm::opt::ArgList &Args) const override;
+
   LangOptions::StackProtectorMode
   GetDefaultStackProtectorLevel(bool KernelOrKext) const override {
     return LangOptions::SSPStrong;

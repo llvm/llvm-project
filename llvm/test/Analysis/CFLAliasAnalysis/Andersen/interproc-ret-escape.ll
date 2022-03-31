@@ -1,7 +1,6 @@
 ; This testcase ensures that CFL AA answers queries soundly when callee tries 
 ; to return an escaped pointer
 
-; RUN: opt < %s -disable-basic-aa -cfl-anders-aa -aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s
 ; RUN: opt < %s -aa-pipeline=cfl-anders-aa -passes=aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s
 
 declare noalias i8* @malloc(i64)
@@ -28,6 +27,10 @@ define void @test_return_escape(i32** %x) {
   %b = call i32* @return_escaped_callee()
   %c = call i32* @return_escaped_callee()
   %d = load i32*, i32** %x
+  load i32, i32* %a
+  load i32, i32* %b
+  load i32, i32* %c
+  load i32, i32* %d
 
   ret void
 }

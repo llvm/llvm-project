@@ -109,7 +109,7 @@ class LinuxCoreTestCase(TestBase):
         error = lldb.SBError()
         F = altprocess.ReadCStringFromMemory(
             altframe.FindVariable("F").GetValueAsUnsigned(), 256, error)
-        self.assertTrue(error.Success())
+        self.assertSuccess(error)
         self.assertEqual(F, "_start")
 
         # without destroying this process, run the test which opens another core file with the
@@ -132,6 +132,29 @@ class LinuxCoreTestCase(TestBase):
         # read only 16 bytes without zero bytes filling
         self.assertEqual(len(bytesread), 16)
         self.dbg.DeleteTarget(target)
+
+    @skipIfLLVMTargetMissing("X86")
+    def test_write_register(self):
+        """Test that writing to register results in an error and that error
+           message is set."""
+        target = self.dbg.CreateTarget("linux-x86_64.out")
+        process = target.LoadCore("linux-x86_64.core")
+        self.assertTrue(process, PROCESS_IS_VALID)
+
+        thread = process.GetSelectedThread()
+        self.assertTrue(thread)
+
+        frame = thread.GetSelectedFrame()
+        self.assertTrue(frame)
+
+        reg_value = frame.FindRegister('eax')
+        self.assertTrue(reg_value)
+
+        error = lldb.SBError()
+        success = reg_value.SetValueFromCString('10', error)
+        self.assertFalse(success)
+        self.assertTrue(error.Fail())
+        self.assertIsNotNone(error.GetCString())
 
     @skipIfLLVMTargetMissing("X86")
     def test_FPR_SSE(self):

@@ -24,35 +24,12 @@ define <vscale x 16 x i8> @splice_nxv16i8_first_idx(<vscale x 16 x i8> %a, <vsca
   ret <vscale x 16 x i8> %res
 }
 
-define <vscale x 16 x i8> @splice_nxv16i8_last_idx(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
+define <vscale x 16 x i8> @splice_nxv16i8_last_idx(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) vscale_range(16,16) #0 {
 ; CHECK-LABEL: splice_nxv16i8_last_idx:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #255
 ; CHECK-NEXT:    ret
   %res = call <vscale x 16 x i8> @llvm.experimental.vector.splice.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, i32 255)
-  ret <vscale x 16 x i8> %res
-}
-
-; Ensure index is clamped when we cannot prove it's less than 2048-bit.
-define <vscale x 16 x i8> @splice_nxv16i8_clamped_idx(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
-; CHECK-LABEL: splice_nxv16i8_clamped_idx:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-2
-; CHECK-NEXT:    mov x8, #-1
-; CHECK-NEXT:    mov w9, #256
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    st1b { z0.b }, p0, [sp]
-; CHECK-NEXT:    st1b { z1.b }, p0, [sp, #1, mul vl]
-; CHECK-NEXT:    addvl x8, x8, #1
-; CHECK-NEXT:    cmp x8, #256
-; CHECK-NEXT:    csel x8, x8, x9, lo
-; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x9, x8]
-; CHECK-NEXT:    addvl sp, sp, #2
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
-  %res = call <vscale x 16 x i8> @llvm.experimental.vector.splice.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, i32 256)
   ret <vscale x 16 x i8> %res
 }
 
@@ -65,38 +42,6 @@ define <vscale x 8 x i16> @splice_nxv8i16_first_idx(<vscale x 8 x i16> %a, <vsca
   ret <vscale x 8 x i16> %res
 }
 
-define <vscale x 8 x i16> @splice_nxv8i16_last_idx(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) #0 {
-; CHECK-LABEL: splice_nxv8i16_last_idx:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #254
-; CHECK-NEXT:    ret
-  %res = call <vscale x 8 x i16> @llvm.experimental.vector.splice.nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, i32 127)
-  ret <vscale x 8 x i16> %res
-}
-
-; Ensure index is clamped when we cannot prove it's less than 2048-bit.
-define <vscale x 8 x i16> @splice_nxv8i16_clamped_idx(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) #0 {
-; CHECK-LABEL: splice_nxv8i16_clamped_idx:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-2
-; CHECK-NEXT:    cnth x8
-; CHECK-NEXT:    mov w9, #128
-; CHECK-NEXT:    sub x8, x8, #1
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    cmp x8, #128
-; CHECK-NEXT:    st1h { z0.h }, p0, [sp]
-; CHECK-NEXT:    csel x8, x8, x9, lo
-; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    st1h { z1.h }, p0, [sp, #1, mul vl]
-; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x9, x8, lsl #1]
-; CHECK-NEXT:    addvl sp, sp, #2
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
-  %res = call <vscale x 8 x i16> @llvm.experimental.vector.splice.nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, i32 128)
-  ret <vscale x 8 x i16> %res
-}
-
 define <vscale x 4 x i32> @splice_nxv4i32_first_idx(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
 ; CHECK-LABEL: splice_nxv4i32_first_idx:
 ; CHECK:       // %bb.0:
@@ -106,35 +51,12 @@ define <vscale x 4 x i32> @splice_nxv4i32_first_idx(<vscale x 4 x i32> %a, <vsca
   ret <vscale x 4 x i32> %res
 }
 
-define <vscale x 4 x i32> @splice_nxv4i32_last_idx(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
+define <vscale x 4 x i32> @splice_nxv4i32_last_idx(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) vscale_range(16,16) #0 {
 ; CHECK-LABEL: splice_nxv4i32_last_idx:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #252
 ; CHECK-NEXT:    ret
   %res = call <vscale x 4 x i32> @llvm.experimental.vector.splice.nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, i32 63)
-  ret <vscale x 4 x i32> %res
-}
-
-; Ensure index is clamped when we cannot prove it's less than 2048-bit.
-define <vscale x 4 x i32> @splice_nxv4i32_clamped_idx(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
-; CHECK-LABEL: splice_nxv4i32_clamped_idx:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-2
-; CHECK-NEXT:    cntw x8
-; CHECK-NEXT:    mov w9, #64
-; CHECK-NEXT:    sub x8, x8, #1
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    cmp x8, #64
-; CHECK-NEXT:    st1w { z0.s }, p0, [sp]
-; CHECK-NEXT:    csel x8, x8, x9, lo
-; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    st1w { z1.s }, p0, [sp, #1, mul vl]
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x9, x8, lsl #2]
-; CHECK-NEXT:    addvl sp, sp, #2
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
-  %res = call <vscale x 4 x i32> @llvm.experimental.vector.splice.nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, i32 64)
   ret <vscale x 4 x i32> %res
 }
 
@@ -147,7 +69,7 @@ define <vscale x 2 x i64> @splice_nxv2i64_first_idx(<vscale x 2 x i64> %a, <vsca
   ret <vscale x 2 x i64> %res
 }
 
-define <vscale x 2 x i64> @splice_nxv2i64_last_idx(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) #0 {
+define <vscale x 2 x i64> @splice_nxv2i64_last_idx(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) vscale_range(16,16) #0 {
 ; CHECK-LABEL: splice_nxv2i64_last_idx:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #248
@@ -156,36 +78,12 @@ define <vscale x 2 x i64> @splice_nxv2i64_last_idx(<vscale x 2 x i64> %a, <vscal
   ret <vscale x 2 x i64> %res
 }
 
-; Ensure index is clamped when we cannot prove it's less than 2048-bit.
-define <vscale x 2 x i64> @splice_nxv2i64_clamped_idx(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) #0 {
-; CHECK-LABEL: splice_nxv2i64_clamped_idx:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-2
-; CHECK-NEXT:    cntd x8
-; CHECK-NEXT:    mov w9, #32
-; CHECK-NEXT:    sub x8, x8, #1
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    cmp x8, #32
-; CHECK-NEXT:    st1d { z0.d }, p0, [sp]
-; CHECK-NEXT:    csel x8, x8, x9, lo
-; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    st1d { z1.d }, p0, [sp, #1, mul vl]
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x9, x8, lsl #3]
-; CHECK-NEXT:    addvl sp, sp, #2
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
-  %res = call <vscale x 2 x i64> @llvm.experimental.vector.splice.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, i32 32)
-  ret <vscale x 2 x i64> %res
-}
-
 define <vscale x 2 x half> @splice_nxv2f16_neg_idx(<vscale x 2 x half> %a, <vscale x 2 x half> %b) #0 {
 ; CHECK-LABEL: splice_nxv2f16_neg_idx:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    lastb d0, p0, z0.d
-; CHECK-NEXT:    insr z1.d, d0
-; CHECK-NEXT:    mov z0.d, z1.d
+; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    rev p0.d, p0.d
+; CHECK-NEXT:    splice z0.d, p0, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %res = call <vscale x 2 x half> @llvm.experimental.vector.splice.nxv2f16(<vscale x 2 x half> %a, <vscale x 2 x half> %b, i32 -1)
   ret <vscale x 2 x half> %res
@@ -194,17 +92,9 @@ define <vscale x 2 x half> @splice_nxv2f16_neg_idx(<vscale x 2 x half> %a, <vsca
 define <vscale x 2 x half> @splice_nxv2f16_neg2_idx(<vscale x 2 x half> %a, <vscale x 2 x half> %b) #0 {
 ; CHECK-LABEL: splice_nxv2f16_neg2_idx:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-2
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    mov x9, #-8
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    st1h { z0.h }, p0, [sp]
-; CHECK-NEXT:    st1h { z1.h }, p0, [sp, #1, mul vl]
-; CHECK-NEXT:    addvl x8, x8, #1
-; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x8, x9, lsl #1]
-; CHECK-NEXT:    addvl sp, sp, #2
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    rev p0.d, p0.d
+; CHECK-NEXT:    splice z0.d, p0, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %res = call <vscale x 2 x half> @llvm.experimental.vector.splice.nxv2f16(<vscale x 2 x half> %a, <vscale x 2 x half> %b, i32 -2)
   ret <vscale x 2 x half> %res
@@ -219,7 +109,7 @@ define <vscale x 2 x half> @splice_nxv2f16_first_idx(<vscale x 2 x half> %a, <vs
   ret <vscale x 2 x half> %res
 }
 
-define <vscale x 2 x half> @splice_nxv2f16_last_idx(<vscale x 2 x half> %a, <vscale x 2 x half> %b) #0 {
+define <vscale x 2 x half> @splice_nxv2f16_last_idx(<vscale x 2 x half> %a, <vscale x 2 x half> %b) vscale_range(16,16) #0 {
 ; CHECK-LABEL: splice_nxv2f16_last_idx:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #248
@@ -228,38 +118,12 @@ define <vscale x 2 x half> @splice_nxv2f16_last_idx(<vscale x 2 x half> %a, <vsc
   ret <vscale x 2 x half> %res
 }
 
-; Ensure index is clamped when we cannot prove it's less than 2048-bit.
-define <vscale x 2 x half> @splice_nxv2f16_clamped_idx(<vscale x 2 x half> %a, <vscale x 2 x half> %b) #0 {
-; CHECK-LABEL: splice_nxv2f16_clamped_idx:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-2
-; CHECK-NEXT:    cntd x8
-; CHECK-NEXT:    mov w9, #32
-; CHECK-NEXT:    sub x8, x8, #1
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    cmp x8, #32
-; CHECK-NEXT:    st1h { z0.h }, p0, [sp]
-; CHECK-NEXT:    csel x8, x8, x9, lo
-; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    lsl x8, x8, #3
-; CHECK-NEXT:    st1h { z1.h }, p0, [sp, #1, mul vl]
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x9, x8]
-; CHECK-NEXT:    addvl sp, sp, #2
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
-  %res = call <vscale x 2 x half> @llvm.experimental.vector.splice.nxv2f16(<vscale x 2 x half> %a, <vscale x 2 x half> %b, i32 32)
-  ret <vscale x 2 x half> %res
-}
-
 define <vscale x 4 x half> @splice_nxv4f16_neg_idx(<vscale x 4 x half> %a, <vscale x 4 x half> %b) #0 {
 ; CHECK-LABEL: splice_nxv4f16_neg_idx:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    lastb s0, p0, z0.s
-; CHECK-NEXT:    insr z1.s, s0
-; CHECK-NEXT:    mov z0.d, z1.d
+; CHECK-NEXT:    ptrue p0.s, vl1
+; CHECK-NEXT:    rev p0.s, p0.s
+; CHECK-NEXT:    splice z0.s, p0, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %res = call <vscale x 4 x half> @llvm.experimental.vector.splice.nxv4f16(<vscale x 4 x half> %a, <vscale x 4 x half> %b, i32 -1)
   ret <vscale x 4 x half> %res
@@ -268,17 +132,9 @@ define <vscale x 4 x half> @splice_nxv4f16_neg_idx(<vscale x 4 x half> %a, <vsca
 define <vscale x 4 x half> @splice_nxv4f16_neg3_idx(<vscale x 4 x half> %a, <vscale x 4 x half> %b) #0 {
 ; CHECK-LABEL: splice_nxv4f16_neg3_idx:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-2
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    mov x9, #-6
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    st1h { z0.h }, p0, [sp]
-; CHECK-NEXT:    st1h { z1.h }, p0, [sp, #1, mul vl]
-; CHECK-NEXT:    addvl x8, x8, #1
-; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x8, x9, lsl #1]
-; CHECK-NEXT:    addvl sp, sp, #2
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ptrue p0.s, vl3
+; CHECK-NEXT:    rev p0.s, p0.s
+; CHECK-NEXT:    splice z0.s, p0, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %res = call <vscale x 4 x half> @llvm.experimental.vector.splice.nxv4f16(<vscale x 4 x half> %a, <vscale x 4 x half> %b, i32 -3)
   ret <vscale x 4 x half> %res
@@ -293,37 +149,12 @@ define <vscale x 4 x half> @splice_nxv4f16_first_idx(<vscale x 4 x half> %a, <vs
   ret <vscale x 4 x half> %res
 }
 
-define <vscale x 4 x half> @splice_nxv4f16_last_idx(<vscale x 4 x half> %a, <vscale x 4 x half> %b) #0 {
+define <vscale x 4 x half> @splice_nxv4f16_last_idx(<vscale x 4 x half> %a, <vscale x 4 x half> %b) vscale_range(16,16) #0 {
 ; CHECK-LABEL: splice_nxv4f16_last_idx:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #252
 ; CHECK-NEXT:    ret
   %res = call <vscale x 4 x half> @llvm.experimental.vector.splice.nxv4f16(<vscale x 4 x half> %a, <vscale x 4 x half> %b, i32 63)
-  ret <vscale x 4 x half> %res
-}
-
-; Ensure index is clamped when we cannot prove it's less than 2048-bit.
-define <vscale x 4 x half> @splice_nxv4f16_clamped_idx(<vscale x 4 x half> %a, <vscale x 4 x half> %b) #0 {
-; CHECK-LABEL: splice_nxv4f16_clamped_idx:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-2
-; CHECK-NEXT:    cntw x8
-; CHECK-NEXT:    mov w9, #64
-; CHECK-NEXT:    sub x8, x8, #1
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    cmp x8, #64
-; CHECK-NEXT:    st1h { z0.h }, p0, [sp]
-; CHECK-NEXT:    csel x8, x8, x9, lo
-; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    lsl x8, x8, #2
-; CHECK-NEXT:    st1h { z1.h }, p0, [sp, #1, mul vl]
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x9, x8]
-; CHECK-NEXT:    addvl sp, sp, #2
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
-  %res = call <vscale x 4 x half> @llvm.experimental.vector.splice.nxv4f16(<vscale x 4 x half> %a, <vscale x 4 x half> %b, i32 64)
   ret <vscale x 4 x half> %res
 }
 
@@ -336,7 +167,7 @@ define <vscale x 8 x half> @splice_nxv8f16_first_idx(<vscale x 8 x half> %a, <vs
   ret <vscale x 8 x half> %res
 }
 
-define <vscale x 8 x half> @splice_nxv8f16_last_idx(<vscale x 8 x half> %a, <vscale x 8 x half> %b) #0 {
+define <vscale x 8 x half> @splice_nxv8f16_last_idx(<vscale x 8 x half> %a, <vscale x 8 x half> %b) vscale_range(16,16) #0 {
 ; CHECK-LABEL: splice_nxv8f16_last_idx:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #254
@@ -345,36 +176,12 @@ define <vscale x 8 x half> @splice_nxv8f16_last_idx(<vscale x 8 x half> %a, <vsc
   ret <vscale x 8 x half> %res
 }
 
-; Ensure index is clamped when we cannot prove it's less than 2048-bit.
-define <vscale x 8 x half> @splice_nxv8f16_clamped_idx(<vscale x 8 x half> %a, <vscale x 8 x half> %b) #0 {
-; CHECK-LABEL: splice_nxv8f16_clamped_idx:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-2
-; CHECK-NEXT:    cnth x8
-; CHECK-NEXT:    mov w9, #128
-; CHECK-NEXT:    sub x8, x8, #1
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    cmp x8, #128
-; CHECK-NEXT:    st1h { z0.h }, p0, [sp]
-; CHECK-NEXT:    csel x8, x8, x9, lo
-; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    st1h { z1.h }, p0, [sp, #1, mul vl]
-; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x9, x8, lsl #1]
-; CHECK-NEXT:    addvl sp, sp, #2
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
-  %res = call <vscale x 8 x half> @llvm.experimental.vector.splice.nxv8f16(<vscale x 8 x half> %a, <vscale x 8 x half> %b, i32 128)
-  ret <vscale x 8 x half> %res
-}
-
 define <vscale x 2 x float> @splice_nxv2f32_neg_idx(<vscale x 2 x float> %a, <vscale x 2 x float> %b) #0 {
 ; CHECK-LABEL: splice_nxv2f32_neg_idx:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    lastb d0, p0, z0.d
-; CHECK-NEXT:    insr z1.d, d0
-; CHECK-NEXT:    mov z0.d, z1.d
+; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    rev p0.d, p0.d
+; CHECK-NEXT:    splice z0.d, p0, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %res = call <vscale x 2 x float> @llvm.experimental.vector.splice.nxv2f32(<vscale x 2 x float> %a, <vscale x 2 x float> %b, i32 -1)
   ret <vscale x 2 x float> %res
@@ -383,17 +190,9 @@ define <vscale x 2 x float> @splice_nxv2f32_neg_idx(<vscale x 2 x float> %a, <vs
 define <vscale x 2 x float> @splice_nxv2f32_neg2_idx(<vscale x 2 x float> %a, <vscale x 2 x float> %b) #0 {
 ; CHECK-LABEL: splice_nxv2f32_neg2_idx:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-2
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    mov x9, #-4
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    st1w { z0.s }, p0, [sp]
-; CHECK-NEXT:    st1w { z1.s }, p0, [sp, #1, mul vl]
-; CHECK-NEXT:    addvl x8, x8, #1
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x8, x9, lsl #2]
-; CHECK-NEXT:    addvl sp, sp, #2
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    rev p0.d, p0.d
+; CHECK-NEXT:    splice z0.d, p0, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %res = call <vscale x 2 x float> @llvm.experimental.vector.splice.nxv2f32(<vscale x 2 x float> %a, <vscale x 2 x float> %b, i32 -2)
   ret <vscale x 2 x float> %res
@@ -408,37 +207,12 @@ define <vscale x 2 x float> @splice_nxv2f32_first_idx(<vscale x 2 x float> %a, <
   ret <vscale x 2 x float> %res
 }
 
-define <vscale x 2 x float> @splice_nxv2f32_last_idx(<vscale x 2 x float> %a, <vscale x 2 x float> %b) #0 {
+define <vscale x 2 x float> @splice_nxv2f32_last_idx(<vscale x 2 x float> %a, <vscale x 2 x float> %b) vscale_range(16,16) #0 {
 ; CHECK-LABEL: splice_nxv2f32_last_idx:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #248
 ; CHECK-NEXT:    ret
   %res = call <vscale x 2 x float> @llvm.experimental.vector.splice.nxv2f32(<vscale x 2 x float> %a, <vscale x 2 x float> %b, i32 31)
-  ret <vscale x 2 x float> %res
-}
-
-; Ensure index is clamped when we cannot prove it's less than 2048-bit.
-define <vscale x 2 x float> @splice_nxv2f32_clamped_idx(<vscale x 2 x float> %a, <vscale x 2 x float> %b) #0 {
-; CHECK-LABEL: splice_nxv2f32_clamped_idx:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-2
-; CHECK-NEXT:    cntd x8
-; CHECK-NEXT:    mov w9, #32
-; CHECK-NEXT:    sub x8, x8, #1
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    cmp x8, #32
-; CHECK-NEXT:    st1w { z0.s }, p0, [sp]
-; CHECK-NEXT:    csel x8, x8, x9, lo
-; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    lsl x8, x8, #3
-; CHECK-NEXT:    st1w { z1.s }, p0, [sp, #1, mul vl]
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x9, x8]
-; CHECK-NEXT:    addvl sp, sp, #2
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
-  %res = call <vscale x 2 x float> @llvm.experimental.vector.splice.nxv2f32(<vscale x 2 x float> %a, <vscale x 2 x float> %b, i32 32)
   ret <vscale x 2 x float> %res
 }
 
@@ -451,35 +225,12 @@ define <vscale x 4 x float> @splice_nxv4f32_first_idx(<vscale x 4 x float> %a, <
   ret <vscale x 4 x float> %res
 }
 
-define <vscale x 4 x float> @splice_nxv4f32_last_idx(<vscale x 4 x float> %a, <vscale x 4 x float> %b) #0 {
+define <vscale x 4 x float> @splice_nxv4f32_last_idx(<vscale x 4 x float> %a, <vscale x 4 x float> %b) vscale_range(16,16) #0 {
 ; CHECK-LABEL: splice_nxv4f32_last_idx:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #252
 ; CHECK-NEXT:    ret
   %res = call <vscale x 4 x float> @llvm.experimental.vector.splice.nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x float> %b, i32 63)
-  ret <vscale x 4 x float> %res
-}
-
-; Ensure index is clamped when we cannot prove it's less than 2048-bit.
-define <vscale x 4 x float> @splice_nxv4f32_clamped_idx(<vscale x 4 x float> %a, <vscale x 4 x float> %b) #0 {
-; CHECK-LABEL: splice_nxv4f32_clamped_idx:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-2
-; CHECK-NEXT:    cntw x8
-; CHECK-NEXT:    mov w9, #64
-; CHECK-NEXT:    sub x8, x8, #1
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    cmp x8, #64
-; CHECK-NEXT:    st1w { z0.s }, p0, [sp]
-; CHECK-NEXT:    csel x8, x8, x9, lo
-; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    st1w { z1.s }, p0, [sp, #1, mul vl]
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x9, x8, lsl #2]
-; CHECK-NEXT:    addvl sp, sp, #2
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
-  %res = call <vscale x 4 x float> @llvm.experimental.vector.splice.nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x float> %b, i32 64)
   ret <vscale x 4 x float> %res
 }
 
@@ -492,35 +243,12 @@ define <vscale x 2 x double> @splice_nxv2f64_first_idx(<vscale x 2 x double> %a,
   ret <vscale x 2 x double> %res
 }
 
-define <vscale x 2 x double> @splice_nxv2f64_last_idx(<vscale x 2 x double> %a, <vscale x 2 x double> %b) #0 {
+define <vscale x 2 x double> @splice_nxv2f64_last_idx(<vscale x 2 x double> %a, <vscale x 2 x double> %b) vscale_range(16,16) #0 {
 ; CHECK-LABEL: splice_nxv2f64_last_idx:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #248
 ; CHECK-NEXT:    ret
   %res = call <vscale x 2 x double> @llvm.experimental.vector.splice.nxv2f64(<vscale x 2 x double> %a, <vscale x 2 x double> %b, i32 31)
-  ret <vscale x 2 x double> %res
-}
-
-; Ensure index is clamped when we cannot prove it's less than 2048-bit.
-define <vscale x 2 x double> @splice_nxv2f64_clamped_idx(<vscale x 2 x double> %a, <vscale x 2 x double> %b) #0 {
-; CHECK-LABEL: splice_nxv2f64_clamped_idx:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-2
-; CHECK-NEXT:    cntd x8
-; CHECK-NEXT:    mov w9, #32
-; CHECK-NEXT:    sub x8, x8, #1
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    cmp x8, #32
-; CHECK-NEXT:    st1d { z0.d }, p0, [sp]
-; CHECK-NEXT:    csel x8, x8, x9, lo
-; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    st1d { z1.d }, p0, [sp, #1, mul vl]
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x9, x8, lsl #3]
-; CHECK-NEXT:    addvl sp, sp, #2
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
-  %res = call <vscale x 2 x double> @llvm.experimental.vector.splice.nxv2f64(<vscale x 2 x double> %a, <vscale x 2 x double> %b, i32 32)
   ret <vscale x 2 x double> %res
 }
 
@@ -617,8 +345,8 @@ define <vscale x 8 x i32> @splice_nxv8i32_idx(<vscale x 8 x i32> %a, <vscale x 8
 }
 
 ; Verify splitvec type legalisation works as expected.
-define <vscale x 16 x float> @splice_nxv16f32_clamped_idx(<vscale x 16 x float> %a, <vscale x 16 x float> %b) #0 {
-; CHECK-LABEL: splice_nxv16f32_clamped_idx:
+define <vscale x 16 x float> @splice_nxv16f32_16(<vscale x 16 x float> %a, <vscale x 16 x float> %b) vscale_range(2,16) #0 {
+; CHECK-LABEL: splice_nxv16f32_16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-8
@@ -656,37 +384,71 @@ define <vscale x 16 x float> @splice_nxv16f32_clamped_idx(<vscale x 16 x float> 
 define <vscale x 16 x i8> @splice_nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
 ; CHECK-LABEL: splice_nxv16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-2
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    mov x9, #-16
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    st1b { z0.b }, p0, [sp]
-; CHECK-NEXT:    st1b { z1.b }, p0, [sp, #1, mul vl]
-; CHECK-NEXT:    addvl x8, x8, #1
-; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x8, x9]
-; CHECK-NEXT:    addvl sp, sp, #2
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ptrue p0.b, vl16
+; CHECK-NEXT:    rev p0.b, p0.b
+; CHECK-NEXT:    splice z0.b, p0, z0.b, z1.b
 ; CHECK-NEXT:    ret
   %res = call <vscale x 16 x i8> @llvm.experimental.vector.splice.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, i32 -16)
+  ret <vscale x 16 x i8> %res
+}
+
+define <vscale x 16 x i8> @splice_nxv16i8_neg32(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) vscale_range(2,16) #0 {
+; CHECK-LABEL: splice_nxv16i8_neg32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b, vl32
+; CHECK-NEXT:    rev p0.b, p0.b
+; CHECK-NEXT:    splice z0.b, p0, z0.b, z1.b
+; CHECK-NEXT:    ret
+  %res = call <vscale x 16 x i8> @llvm.experimental.vector.splice.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, i32 -32)
+  ret <vscale x 16 x i8> %res
+}
+
+define <vscale x 16 x i8> @splice_nxv16i8_neg64(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) vscale_range(4,16) #0 {
+; CHECK-LABEL: splice_nxv16i8_neg64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b, vl64
+; CHECK-NEXT:    rev p0.b, p0.b
+; CHECK-NEXT:    splice z0.b, p0, z0.b, z1.b
+; CHECK-NEXT:    ret
+  %res = call <vscale x 16 x i8> @llvm.experimental.vector.splice.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, i32 -64)
+  ret <vscale x 16 x i8> %res
+}
+
+define <vscale x 16 x i8> @splice_nxv16i8_neg128(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) vscale_range(8,16) #0 {
+; CHECK-LABEL: splice_nxv16i8_neg128:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b, vl128
+; CHECK-NEXT:    rev p0.b, p0.b
+; CHECK-NEXT:    splice z0.b, p0, z0.b, z1.b
+; CHECK-NEXT:    ret
+  %res = call <vscale x 16 x i8> @llvm.experimental.vector.splice.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, i32 -128)
+  ret <vscale x 16 x i8> %res
+}
+
+define <vscale x 16 x i8> @splice_nxv16i8_neg256(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) vscale_range(16,16) #0 {
+; CHECK-LABEL: splice_nxv16i8_neg256:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b, vl256
+; CHECK-NEXT:    rev p0.b, p0.b
+; CHECK-NEXT:    splice z0.b, p0, z0.b, z1.b
+; CHECK-NEXT:    ret
+  %res = call <vscale x 16 x i8> @llvm.experimental.vector.splice.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, i32 -256)
   ret <vscale x 16 x i8> %res
 }
 
 define <vscale x 16 x i8> @splice_nxv16i8_1(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
 ; CHECK-LABEL: splice_nxv16i8_1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    lastb b0, p0, z0.b
-; CHECK-NEXT:    insr z1.b, b0
-; CHECK-NEXT:    mov z0.d, z1.d
+; CHECK-NEXT:    ptrue p0.b, vl1
+; CHECK-NEXT:    rev p0.b, p0.b
+; CHECK-NEXT:    splice z0.b, p0, z0.b, z1.b
 ; CHECK-NEXT:    ret
   %res = call <vscale x 16 x i8> @llvm.experimental.vector.splice.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, i32 -1)
   ret <vscale x 16 x i8> %res
 }
 
-; Ensure number of trailing elements is clamped when we cannot prove it's less than VL.
-define <vscale x 16 x i8> @splice_nxv16i8_clamped(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
-; CHECK-LABEL: splice_nxv16i8_clamped:
+define <vscale x 16 x i8> @splice_nxv16i8_neg17(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) vscale_range(2,16) #0 {
+; CHECK-LABEL: splice_nxv16i8_neg17:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-2
@@ -711,17 +473,9 @@ define <vscale x 16 x i8> @splice_nxv16i8_clamped(<vscale x 16 x i8> %a, <vscale
 define <vscale x 8 x i16> @splice_nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) #0 {
 ; CHECK-LABEL: splice_nxv8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-2
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    mov x9, #-8
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    st1h { z0.h }, p0, [sp]
-; CHECK-NEXT:    st1h { z1.h }, p0, [sp, #1, mul vl]
-; CHECK-NEXT:    addvl x8, x8, #1
-; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x8, x9, lsl #1]
-; CHECK-NEXT:    addvl sp, sp, #2
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    rev p0.h, p0.h
+; CHECK-NEXT:    splice z0.h, p0, z0.h, z1.h
 ; CHECK-NEXT:    ret
   %res = call <vscale x 8 x i16> @llvm.experimental.vector.splice.nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, i32 -8)
   ret <vscale x 8 x i16> %res
@@ -730,18 +484,16 @@ define <vscale x 8 x i16> @splice_nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i
 define <vscale x 8 x i16> @splice_nxv8i16_1(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) #0 {
 ; CHECK-LABEL: splice_nxv8i16_1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    lastb h0, p0, z0.h
-; CHECK-NEXT:    insr z1.h, h0
-; CHECK-NEXT:    mov z0.d, z1.d
+; CHECK-NEXT:    ptrue p0.h, vl1
+; CHECK-NEXT:    rev p0.h, p0.h
+; CHECK-NEXT:    splice z0.h, p0, z0.h, z1.h
 ; CHECK-NEXT:    ret
   %res = call <vscale x 8 x i16> @llvm.experimental.vector.splice.nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, i32 -1)
   ret <vscale x 8 x i16> %res
 }
 
-; Ensure number of trailing elements is clamped when we cannot prove it's less than VL.
-define <vscale x 8 x i16> @splice_nxv8i16_clamped(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) #0 {
-; CHECK-LABEL: splice_nxv8i16_clamped:
+define <vscale x 8 x i16> @splice_nxv8i16_neg9(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) vscale_range(2,16) #0 {
+; CHECK-LABEL: splice_nxv8i16_neg9:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-2
@@ -766,17 +518,9 @@ define <vscale x 8 x i16> @splice_nxv8i16_clamped(<vscale x 8 x i16> %a, <vscale
 define <vscale x 4 x i32> @splice_nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
 ; CHECK-LABEL: splice_nxv4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-2
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    mov x9, #-4
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    st1w { z0.s }, p0, [sp]
-; CHECK-NEXT:    st1w { z1.s }, p0, [sp, #1, mul vl]
-; CHECK-NEXT:    addvl x8, x8, #1
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x8, x9, lsl #2]
-; CHECK-NEXT:    addvl sp, sp, #2
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    rev p0.s, p0.s
+; CHECK-NEXT:    splice z0.s, p0, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %res = call <vscale x 4 x i32> @llvm.experimental.vector.splice.nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, i32 -4)
   ret <vscale x 4 x i32> %res
@@ -785,34 +529,20 @@ define <vscale x 4 x i32> @splice_nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i
 define <vscale x 4 x i32> @splice_nxv4i32_1(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
 ; CHECK-LABEL: splice_nxv4i32_1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    lastb s0, p0, z0.s
-; CHECK-NEXT:    insr z1.s, s0
-; CHECK-NEXT:    mov z0.d, z1.d
+; CHECK-NEXT:    ptrue p0.s, vl1
+; CHECK-NEXT:    rev p0.s, p0.s
+; CHECK-NEXT:    splice z0.s, p0, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %res = call <vscale x 4 x i32> @llvm.experimental.vector.splice.nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, i32 -1)
   ret <vscale x 4 x i32> %res
 }
 
-; Ensure number of trailing elements is clamped when we cannot prove it's less than VL.
-define <vscale x 4 x i32> @splice_nxv4i32_clamped(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
-; CHECK-LABEL: splice_nxv4i32_clamped:
+define <vscale x 4 x i32> @splice_nxv4i32_neg5(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) vscale_range(2,16) #0 {
+; CHECK-LABEL: splice_nxv4i32_neg5:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-2
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    rdvl x9, #1
-; CHECK-NEXT:    cmp x9, #20
-; CHECK-NEXT:    mov w10, #20
-; CHECK-NEXT:    csel x9, x9, x10, lo
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    addvl x8, x8, #1
-; CHECK-NEXT:    st1w { z0.s }, p0, [sp]
-; CHECK-NEXT:    sub x8, x8, x9
-; CHECK-NEXT:    st1w { z1.s }, p0, [sp, #1, mul vl]
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x8]
-; CHECK-NEXT:    addvl sp, sp, #2
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ptrue p0.s, vl5
+; CHECK-NEXT:    rev p0.s, p0.s
+; CHECK-NEXT:    splice z0.s, p0, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %res = call <vscale x 4 x i32> @llvm.experimental.vector.splice.nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, i32 -5)
   ret <vscale x 4 x i32> %res
@@ -821,17 +551,9 @@ define <vscale x 4 x i32> @splice_nxv4i32_clamped(<vscale x 4 x i32> %a, <vscale
 define <vscale x 2 x i64> @splice_nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) #0 {
 ; CHECK-LABEL: splice_nxv2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-2
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    mov x9, #-2
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    st1d { z0.d }, p0, [sp]
-; CHECK-NEXT:    st1d { z1.d }, p0, [sp, #1, mul vl]
-; CHECK-NEXT:    addvl x8, x8, #1
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8, x9, lsl #3]
-; CHECK-NEXT:    addvl sp, sp, #2
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    rev p0.d, p0.d
+; CHECK-NEXT:    splice z0.d, p0, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %res = call <vscale x 2 x i64> @llvm.experimental.vector.splice.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, i32 -2)
   ret <vscale x 2 x i64> %res
@@ -840,34 +562,20 @@ define <vscale x 2 x i64> @splice_nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i
 define <vscale x 2 x i64> @splice_nxv2i64_1(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) #0 {
 ; CHECK-LABEL: splice_nxv2i64_1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    lastb d0, p0, z0.d
-; CHECK-NEXT:    insr z1.d, d0
-; CHECK-NEXT:    mov z0.d, z1.d
+; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    rev p0.d, p0.d
+; CHECK-NEXT:    splice z0.d, p0, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %res = call <vscale x 2 x i64> @llvm.experimental.vector.splice.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, i32 -1)
   ret <vscale x 2 x i64> %res
 }
 
-; Ensure number of trailing elements is clamped when we cannot prove it's less than VL.
-define <vscale x 2 x i64> @splice_nxv2i64_clamped(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) #0 {
-; CHECK-LABEL: splice_nxv2i64_clamped:
+define <vscale x 2 x i64> @splice_nxv2i64_neg3(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) vscale_range(2,16) #0 {
+; CHECK-LABEL: splice_nxv2i64_neg3:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-2
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    rdvl x9, #1
-; CHECK-NEXT:    cmp x9, #24
-; CHECK-NEXT:    mov w10, #24
-; CHECK-NEXT:    csel x9, x9, x10, lo
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    addvl x8, x8, #1
-; CHECK-NEXT:    st1d { z0.d }, p0, [sp]
-; CHECK-NEXT:    sub x8, x8, x9
-; CHECK-NEXT:    st1d { z1.d }, p0, [sp, #1, mul vl]
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8]
-; CHECK-NEXT:    addvl sp, sp, #2
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ptrue p0.d, vl3
+; CHECK-NEXT:    rev p0.d, p0.d
+; CHECK-NEXT:    splice z0.d, p0, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %res = call <vscale x 2 x i64> @llvm.experimental.vector.splice.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, i32 -3)
   ret <vscale x 2 x i64> %res
@@ -876,17 +584,9 @@ define <vscale x 2 x i64> @splice_nxv2i64_clamped(<vscale x 2 x i64> %a, <vscale
 define <vscale x 8 x half> @splice_nxv8f16(<vscale x 8 x half> %a, <vscale x 8 x half> %b) #0 {
 ; CHECK-LABEL: splice_nxv8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-2
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    mov x9, #-8
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    st1h { z0.h }, p0, [sp]
-; CHECK-NEXT:    st1h { z1.h }, p0, [sp, #1, mul vl]
-; CHECK-NEXT:    addvl x8, x8, #1
-; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x8, x9, lsl #1]
-; CHECK-NEXT:    addvl sp, sp, #2
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    rev p0.h, p0.h
+; CHECK-NEXT:    splice z0.h, p0, z0.h, z1.h
 ; CHECK-NEXT:    ret
   %res = call <vscale x 8 x half> @llvm.experimental.vector.splice.nxv8f16(<vscale x 8 x half> %a, <vscale x 8 x half> %b, i32 -8)
   ret <vscale x 8 x half> %res
@@ -895,18 +595,16 @@ define <vscale x 8 x half> @splice_nxv8f16(<vscale x 8 x half> %a, <vscale x 8 x
 define <vscale x 8 x half> @splice_nxv8f16_1(<vscale x 8 x half> %a, <vscale x 8 x half> %b) #0 {
 ; CHECK-LABEL: splice_nxv8f16_1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    lastb h0, p0, z0.h
-; CHECK-NEXT:    insr z1.h, h0
-; CHECK-NEXT:    mov z0.d, z1.d
+; CHECK-NEXT:    ptrue p0.h, vl1
+; CHECK-NEXT:    rev p0.h, p0.h
+; CHECK-NEXT:    splice z0.h, p0, z0.h, z1.h
 ; CHECK-NEXT:    ret
   %res = call <vscale x 8 x half> @llvm.experimental.vector.splice.nxv8f16(<vscale x 8 x half> %a, <vscale x 8 x half> %b, i32 -1)
   ret <vscale x 8 x half> %res
 }
 
-; Ensure number of trailing elements is clamped when we cannot prove it's less than VL.
-define <vscale x 8 x half> @splice_nxv8f16_clamped(<vscale x 8 x half> %a, <vscale x 8 x half> %b) #0 {
-; CHECK-LABEL: splice_nxv8f16_clamped:
+define <vscale x 8 x half> @splice_nxv8f16_neg9(<vscale x 8 x half> %a, <vscale x 8 x half> %b) vscale_range(2,16) #0 {
+; CHECK-LABEL: splice_nxv8f16_neg9:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-2
@@ -931,17 +629,9 @@ define <vscale x 8 x half> @splice_nxv8f16_clamped(<vscale x 8 x half> %a, <vsca
 define <vscale x 4 x float> @splice_nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x float> %b) #0 {
 ; CHECK-LABEL: splice_nxv4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-2
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    mov x9, #-4
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    st1w { z0.s }, p0, [sp]
-; CHECK-NEXT:    st1w { z1.s }, p0, [sp, #1, mul vl]
-; CHECK-NEXT:    addvl x8, x8, #1
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x8, x9, lsl #2]
-; CHECK-NEXT:    addvl sp, sp, #2
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    rev p0.s, p0.s
+; CHECK-NEXT:    splice z0.s, p0, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %res = call <vscale x 4 x float> @llvm.experimental.vector.splice.nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x float> %b, i32 -4)
   ret <vscale x 4 x float> %res
@@ -950,34 +640,20 @@ define <vscale x 4 x float> @splice_nxv4f32(<vscale x 4 x float> %a, <vscale x 4
 define <vscale x 4 x float> @splice_nxv4f32_1(<vscale x 4 x float> %a, <vscale x 4 x float> %b) #0 {
 ; CHECK-LABEL: splice_nxv4f32_1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    lastb s0, p0, z0.s
-; CHECK-NEXT:    insr z1.s, s0
-; CHECK-NEXT:    mov z0.d, z1.d
+; CHECK-NEXT:    ptrue p0.s, vl1
+; CHECK-NEXT:    rev p0.s, p0.s
+; CHECK-NEXT:    splice z0.s, p0, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %res = call <vscale x 4 x float> @llvm.experimental.vector.splice.nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x float> %b, i32 -1)
   ret <vscale x 4 x float> %res
 }
 
-; Ensure number of trailing elements is clamped when we cannot prove it's less than VL.
-define <vscale x 4 x float> @splice_nxv4f32_clamped(<vscale x 4 x float> %a, <vscale x 4 x float> %b) #0 {
-; CHECK-LABEL: splice_nxv4f32_clamped:
+define <vscale x 4 x float> @splice_nxv4f32_neg5(<vscale x 4 x float> %a, <vscale x 4 x float> %b) vscale_range(2,16) #0 {
+; CHECK-LABEL: splice_nxv4f32_neg5:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-2
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    rdvl x9, #1
-; CHECK-NEXT:    cmp x9, #20
-; CHECK-NEXT:    mov w10, #20
-; CHECK-NEXT:    csel x9, x9, x10, lo
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    addvl x8, x8, #1
-; CHECK-NEXT:    st1w { z0.s }, p0, [sp]
-; CHECK-NEXT:    sub x8, x8, x9
-; CHECK-NEXT:    st1w { z1.s }, p0, [sp, #1, mul vl]
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x8]
-; CHECK-NEXT:    addvl sp, sp, #2
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ptrue p0.s, vl5
+; CHECK-NEXT:    rev p0.s, p0.s
+; CHECK-NEXT:    splice z0.s, p0, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %res = call <vscale x 4 x float> @llvm.experimental.vector.splice.nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x float> %b, i32 -5)
   ret <vscale x 4 x float> %res
@@ -986,17 +662,9 @@ define <vscale x 4 x float> @splice_nxv4f32_clamped(<vscale x 4 x float> %a, <vs
 define <vscale x 2 x double> @splice_nxv2f64(<vscale x 2 x double> %a, <vscale x 2 x double> %b) #0 {
 ; CHECK-LABEL: splice_nxv2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-2
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    mov x9, #-2
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    st1d { z0.d }, p0, [sp]
-; CHECK-NEXT:    st1d { z1.d }, p0, [sp, #1, mul vl]
-; CHECK-NEXT:    addvl x8, x8, #1
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8, x9, lsl #3]
-; CHECK-NEXT:    addvl sp, sp, #2
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    rev p0.d, p0.d
+; CHECK-NEXT:    splice z0.d, p0, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %res = call <vscale x 2 x double> @llvm.experimental.vector.splice.nxv2f64(<vscale x 2 x double> %a, <vscale x 2 x double> %b, i32 -2)
   ret <vscale x 2 x double> %res
@@ -1005,34 +673,20 @@ define <vscale x 2 x double> @splice_nxv2f64(<vscale x 2 x double> %a, <vscale x
 define <vscale x 2 x double> @splice_nxv2f64_1(<vscale x 2 x double> %a, <vscale x 2 x double> %b) #0 {
 ; CHECK-LABEL: splice_nxv2f64_1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    lastb d0, p0, z0.d
-; CHECK-NEXT:    insr z1.d, d0
-; CHECK-NEXT:    mov z0.d, z1.d
+; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    rev p0.d, p0.d
+; CHECK-NEXT:    splice z0.d, p0, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %res = call <vscale x 2 x double> @llvm.experimental.vector.splice.nxv2f64(<vscale x 2 x double> %a, <vscale x 2 x double> %b, i32 -1)
   ret <vscale x 2 x double> %res
 }
 
-; Ensure number of trailing elements is clamped when we cannot prove it's less than VL.
-define <vscale x 2 x double> @splice_nxv2f64_clamped(<vscale x 2 x double> %a, <vscale x 2 x double> %b) #0 {
-; CHECK-LABEL: splice_nxv2f64_clamped:
+define <vscale x 2 x double> @splice_nxv2f64_neg3(<vscale x 2 x double> %a, <vscale x 2 x double> %b) vscale_range(2,16) #0 {
+; CHECK-LABEL: splice_nxv2f64_neg3:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-2
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    rdvl x9, #1
-; CHECK-NEXT:    cmp x9, #24
-; CHECK-NEXT:    mov w10, #24
-; CHECK-NEXT:    csel x9, x9, x10, lo
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    addvl x8, x8, #1
-; CHECK-NEXT:    st1d { z0.d }, p0, [sp]
-; CHECK-NEXT:    sub x8, x8, x9
-; CHECK-NEXT:    st1d { z1.d }, p0, [sp, #1, mul vl]
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8]
-; CHECK-NEXT:    addvl sp, sp, #2
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ptrue p0.d, vl3
+; CHECK-NEXT:    rev p0.d, p0.d
+; CHECK-NEXT:    splice z0.d, p0, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %res = call <vscale x 2 x double> @llvm.experimental.vector.splice.nxv2f64(<vscale x 2 x double> %a, <vscale x 2 x double> %b, i32 -3)
   ret <vscale x 2 x double> %res
@@ -1042,13 +696,14 @@ define <vscale x 2 x double> @splice_nxv2f64_clamped(<vscale x 2 x double> %a, <
 define <vscale x 2 x i1> @splice_nxv2i1(<vscale x 2 x i1> %a, <vscale x 2 x i1> %b) #0 {
 ; CHECK-LABEL: splice_nxv2i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p2.d
-; CHECK-NEXT:    mov z0.d, p0/z, #1 // =0x1
-; CHECK-NEXT:    lastb d0, p2, z0.d
-; CHECK-NEXT:    mov z1.d, p1/z, #1 // =0x1
-; CHECK-NEXT:    insr z1.d, d0
+; CHECK-NEXT:    ptrue p2.d, vl1
+; CHECK-NEXT:    mov z0.d, p1/z, #1 // =0x1
+; CHECK-NEXT:    rev p2.d, p2.d
+; CHECK-NEXT:    mov z1.d, p0/z, #1 // =0x1
+; CHECK-NEXT:    splice z1.d, p2, z1.d, z0.d
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    and z1.d, z1.d, #0x1
-; CHECK-NEXT:    cmpne p0.d, p2/z, z1.d, #0
+; CHECK-NEXT:    cmpne p0.d, p0/z, z1.d, #0
 ; CHECK-NEXT:    ret
   %res = call <vscale x 2 x i1> @llvm.experimental.vector.splice.nxv2i1(<vscale x 2 x i1> %a, <vscale x 2 x i1> %b, i32 -1)
   ret <vscale x 2 x i1> %res
@@ -1058,13 +713,14 @@ define <vscale x 2 x i1> @splice_nxv2i1(<vscale x 2 x i1> %a, <vscale x 2 x i1> 
 define <vscale x 4 x i1> @splice_nxv4i1(<vscale x 4 x i1> %a, <vscale x 4 x i1> %b) #0 {
 ; CHECK-LABEL: splice_nxv4i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p2.s
-; CHECK-NEXT:    mov z0.s, p0/z, #1 // =0x1
-; CHECK-NEXT:    lastb s0, p2, z0.s
-; CHECK-NEXT:    mov z1.s, p1/z, #1 // =0x1
-; CHECK-NEXT:    insr z1.s, s0
+; CHECK-NEXT:    ptrue p2.s, vl1
+; CHECK-NEXT:    mov z0.s, p1/z, #1 // =0x1
+; CHECK-NEXT:    rev p2.s, p2.s
+; CHECK-NEXT:    mov z1.s, p0/z, #1 // =0x1
+; CHECK-NEXT:    splice z1.s, p2, z1.s, z0.s
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    and z1.s, z1.s, #0x1
-; CHECK-NEXT:    cmpne p0.s, p2/z, z1.s, #0
+; CHECK-NEXT:    cmpne p0.s, p0/z, z1.s, #0
 ; CHECK-NEXT:    ret
   %res = call <vscale x 4 x i1> @llvm.experimental.vector.splice.nxv4i1(<vscale x 4 x i1> %a, <vscale x 4 x i1> %b, i32 -1)
   ret <vscale x 4 x i1> %res
@@ -1074,13 +730,14 @@ define <vscale x 4 x i1> @splice_nxv4i1(<vscale x 4 x i1> %a, <vscale x 4 x i1> 
 define <vscale x 8 x i1> @splice_nxv8i1(<vscale x 8 x i1> %a, <vscale x 8 x i1> %b) #0 {
 ; CHECK-LABEL: splice_nxv8i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p2.h
-; CHECK-NEXT:    mov z0.h, p0/z, #1 // =0x1
-; CHECK-NEXT:    lastb h0, p2, z0.h
-; CHECK-NEXT:    mov z1.h, p1/z, #1 // =0x1
-; CHECK-NEXT:    insr z1.h, h0
+; CHECK-NEXT:    ptrue p2.h, vl1
+; CHECK-NEXT:    mov z0.h, p1/z, #1 // =0x1
+; CHECK-NEXT:    rev p2.h, p2.h
+; CHECK-NEXT:    mov z1.h, p0/z, #1 // =0x1
+; CHECK-NEXT:    splice z1.h, p2, z1.h, z0.h
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    and z1.h, z1.h, #0x1
-; CHECK-NEXT:    cmpne p0.h, p2/z, z1.h, #0
+; CHECK-NEXT:    cmpne p0.h, p0/z, z1.h, #0
 ; CHECK-NEXT:    ret
   %res = call <vscale x 8 x i1> @llvm.experimental.vector.splice.nxv8i1(<vscale x 8 x i1> %a, <vscale x 8 x i1> %b, i32 -1)
   ret <vscale x 8 x i1> %res
@@ -1090,13 +747,14 @@ define <vscale x 8 x i1> @splice_nxv8i1(<vscale x 8 x i1> %a, <vscale x 8 x i1> 
 define <vscale x 16 x i1> @splice_nxv16i1(<vscale x 16 x i1> %a, <vscale x 16 x i1> %b) #0 {
 ; CHECK-LABEL: splice_nxv16i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p2.b
-; CHECK-NEXT:    mov z0.b, p0/z, #1 // =0x1
-; CHECK-NEXT:    lastb b0, p2, z0.b
-; CHECK-NEXT:    mov z1.b, p1/z, #1 // =0x1
-; CHECK-NEXT:    insr z1.b, b0
+; CHECK-NEXT:    ptrue p2.b, vl1
+; CHECK-NEXT:    mov z0.b, p1/z, #1 // =0x1
+; CHECK-NEXT:    rev p2.b, p2.b
+; CHECK-NEXT:    mov z1.b, p0/z, #1 // =0x1
+; CHECK-NEXT:    splice z1.b, p2, z1.b, z0.b
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    and z1.b, z1.b, #0x1
-; CHECK-NEXT:    cmpne p0.b, p2/z, z1.b, #0
+; CHECK-NEXT:    cmpne p0.b, p0/z, z1.b, #0
 ; CHECK-NEXT:    ret
   %res = call <vscale x 16 x i1> @llvm.experimental.vector.splice.nxv16i1(<vscale x 16 x i1> %a, <vscale x 16 x i1> %b, i32 -1)
   ret <vscale x 16 x i1> %res
@@ -1106,17 +764,9 @@ define <vscale x 16 x i1> @splice_nxv16i1(<vscale x 16 x i1> %a, <vscale x 16 x 
 define <vscale x 2 x i8> @splice_nxv2i8(<vscale x 2 x i8> %a, <vscale x 2 x i8> %b) #0 {
 ; CHECK-LABEL: splice_nxv2i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-2
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    mov x9, #-2
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    st1d { z0.d }, p0, [sp]
-; CHECK-NEXT:    st1d { z1.d }, p0, [sp, #1, mul vl]
-; CHECK-NEXT:    addvl x8, x8, #1
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8, x9, lsl #3]
-; CHECK-NEXT:    addvl sp, sp, #2
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    rev p0.d, p0.d
+; CHECK-NEXT:    splice z0.d, p0, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %res = call <vscale x 2 x i8> @llvm.experimental.vector.splice.nxv2i8(<vscale x 2 x i8> %a, <vscale x 2 x i8> %b, i32 -2)
   ret <vscale x 2 x i8> %res
@@ -1147,8 +797,8 @@ define <vscale x 8 x i32> @splice_nxv8i32(<vscale x 8 x i32> %a, <vscale x 8 x i
 }
 
 ; Verify splitvec type legalisation works as expected.
-define <vscale x 16 x float> @splice_nxv16f32_clamped(<vscale x 16 x float> %a, <vscale x 16 x float> %b) #0 {
-; CHECK-LABEL: splice_nxv16f32_clamped:
+define <vscale x 16 x float> @splice_nxv16f32_neg17(<vscale x 16 x float> %a, <vscale x 16 x float> %b) vscale_range(2,16) #0 {
+; CHECK-LABEL: splice_nxv16f32_neg17:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-8

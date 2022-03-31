@@ -24,6 +24,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
+#include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
@@ -45,6 +46,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "mips"
 
+static cl::opt<bool>
+    EnableMulMulFix("mfix4300", cl::init(false),
+                    cl::desc("Enable the VR4300 mulmul bug fix."), cl::Hidden);
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsTarget() {
   // Register the target.
   RegisterTargetMachine<MipsebTargetMachine> X(getTheMipsTarget());
@@ -58,6 +63,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsTarget() {
   initializeMipsBranchExpansionPass(*PR);
   initializeMicroMipsSizeReducePass(*PR);
   initializeMipsPreLegalizerCombinerPass(*PR);
+  initializeMipsMulMulBugFixPass(*PR);
 }
 
 static std::string computeDataLayout(const Triple &TT, StringRef CPU,
@@ -271,7 +277,7 @@ void MipsPassConfig::addPreRegAlloc() {
 }
 
 TargetTransformInfo
-MipsTargetMachine::getTargetTransformInfo(const Function &F) {
+MipsTargetMachine::getTargetTransformInfo(const Function &F) const {
   if (Subtarget->allowMixed16_32()) {
     LLVM_DEBUG(errs() << "No Target Transform Info Pass Added\n");
     // FIXME: This is no longer necessary as the TTI returned is per-function.
@@ -291,6 +297,11 @@ void MipsPassConfig::addPreEmitPass() {
   // The microMIPS size reduction pass performs instruction reselection for
   // instructions which can be remapped to a 16 bit instruction.
   addPass(createMicroMipsSizeReducePass());
+
+  // This pass inserts a nop instruction between two back-to-back multiplication
+  // instructions when the "mfix4300" flag is passed.
+  if (EnableMulMulFix)
+    addPass(createMipsMulMulBugPass());
 
   // The delay slot filler pass can potientially create forbidden slot hazards
   // for MIPSR6 and therefore it should go before MipsBranchExpansion pass.

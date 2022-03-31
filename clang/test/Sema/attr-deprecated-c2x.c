@@ -1,13 +1,13 @@
 // RUN: %clang_cc1 %s -verify -fsyntax-only -std=c2x
 
-[[deprecated]] int f(); // expected-note 2 {{'f' has been explicitly marked deprecated here}}
-[[deprecated]] void g();// expected-note {{'g' has been explicitly marked deprecated here}}
-void g();
+[[deprecated]] int f(void); // expected-note 2 {{'f' has been explicitly marked deprecated here}}
+[[deprecated]] void g(void);// expected-note {{'g' has been explicitly marked deprecated here}}
+void g(void);
 
 extern int var [[deprecated]]; // expected-note 2 {{'var' has been explicitly marked deprecated here}}
 
-int a() {
-  int (*ptr)() = f; // expected-warning {{'f' is deprecated}}
+int a(void) {
+  int (*ptr)(void) = f; // expected-warning {{'f' is deprecated}}
   f(); // expected-warning {{'f' is deprecated}}
 
   // test if attributes propagate to functions
@@ -18,15 +18,15 @@ int a() {
 
 // test if attributes propagate to variables
 extern int var;
-int w() {
+int w(void) {
   return var; // expected-warning {{'var' is deprecated}}
 }
 
-[[deprecated]] int old_fn();// expected-note {{'old_fn' has been explicitly marked deprecated here}}
-int old_fn();
-int (*fn_ptr)() = old_fn; // expected-warning {{'old_fn' is deprecated}}
+[[deprecated]] int old_fn(void);// expected-note {{'old_fn' has been explicitly marked deprecated here}}
+int old_fn(void);
+int (*fn_ptr)(void) = old_fn; // expected-warning {{'old_fn' is deprecated}}
 
-int old_fn() {
+int old_fn(void) {
   return old_fn()+1;  // no warning, deprecated functions can use deprecated symbols.
 }
 

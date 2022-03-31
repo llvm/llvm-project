@@ -143,7 +143,7 @@ public:
     }
 
     if (Opts->PrintStats || Opts->ShouldSerializeStats) {
-      llvm::EnableStatistics(/* PrintOnExit= */ false);
+      llvm::EnableStatistics(/* DoPrintOnExit= */ false);
     }
 
     if (Opts->ShouldDisplayMacroExpansions)
@@ -383,14 +383,14 @@ void AnalysisConsumer::HandleTopLevelDeclInObjCContainer(DeclGroupRef DG) {
 }
 
 void AnalysisConsumer::storeTopLevelDecls(DeclGroupRef DG) {
-  for (DeclGroupRef::iterator I = DG.begin(), E = DG.end(); I != E; ++I) {
+  for (auto &I : DG) {
 
     // Skip ObjCMethodDecl, wait for the objc container to avoid
     // analyzing twice.
-    if (isa<ObjCMethodDecl>(*I))
+    if (isa<ObjCMethodDecl>(I))
       continue;
 
-    LocalTUDecls.push_back(*I);
+    LocalTUDecls.push_back(I);
   }
 }
 
@@ -462,11 +462,9 @@ void AnalysisConsumer::HandleDeclsCallGraph(const unsigned LocalTUDeclsSize) {
   SetOfConstDecls Visited;
   SetOfConstDecls VisitedAsTopLevel;
   llvm::ReversePostOrderTraversal<clang::CallGraph*> RPOT(&CG);
-  for (llvm::ReversePostOrderTraversal<clang::CallGraph*>::rpo_iterator
-         I = RPOT.begin(), E = RPOT.end(); I != E; ++I) {
+  for (auto &N : RPOT) {
     NumFunctionTopLevel++;
 
-    CallGraphNode *N = *I;
     Decl *D = N->getDecl();
 
     // Skip the abstract root node.
@@ -499,6 +497,28 @@ static bool fileContainsString(StringRef Substring, ASTContext &C) {
   FileID FID = SM.getMainFileID();
   StringRef Buffer = SM.getBufferOrFake(FID).getBuffer();
   return Buffer.contains(Substring);
+}
+
+static void reportAnalyzerFunctionMisuse(const AnalyzerOptions &Opts,
+                                         const ASTContext &Ctx) {
+  llvm::errs() << "Every top-level function was skipped.\n";
+
+  if (!Opts.AnalyzerDisplayProgress)
+    llvm::errs() << "Pass the -analyzer-display-progress for tracking which "
+                    "functions are analyzed.\n";
+
+  bool HasBrackets =
+      Opts.AnalyzeSpecificFunction.find("(") != std::string::npos;
+
+  if (Ctx.getLangOpts().CPlusPlus && !HasBrackets) {
+    llvm::errs()
+        << "For analyzing C++ code you need to pass the function parameter "
+           "list: -analyze-function=\"foobar(int, _Bool)\"\n";
+  } else if (!Ctx.getLangOpts().CPlusPlus && HasBrackets) {
+    llvm::errs() << "For analyzing C code you shouldn't pass the function "
+                    "parameter list, only the name of the function: "
+                    "-analyze-function=foobar\n";
+  }
 }
 
 void AnalysisConsumer::runAnalysisOnTranslationUnit(ASTContext &C) {
@@ -537,6 +557,14 @@ void AnalysisConsumer::runAnalysisOnTranslationUnit(ASTContext &C) {
 
   BR.FlushReports();
   RecVisitorBR = nullptr;
+
+  // If the user wanted to analyze a specific function and the number of basic
+  // blocks analyzed is zero, than the user might not specified the function
+  // name correctly.
+  // FIXME: The user might have analyzed the requested function in Syntax mode,
+  // but we are unaware of that.
+  if (!Opts->AnalyzeSpecificFunction.empty() && NumFunctionsAnalyzed == 0)
+    reportAnalyzerFunctionMisuse(*Opts, *Ctx);
 }
 
 void AnalysisConsumer::reportAnalyzerProgress(StringRef S) {

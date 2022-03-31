@@ -23,12 +23,9 @@ namespace llvm {
 
 class AssumptionCache;
 class DominatorTree;
-class Instruction;
-class Value;
 class ScalarEvolution;
 class SCEV;
 class IVUsers;
-class DataLayout;
 
 /// IVStrideUse - Keep track of one use of a strided induction variable.
 /// The Expr member keeps track of the expression, User is the actual user

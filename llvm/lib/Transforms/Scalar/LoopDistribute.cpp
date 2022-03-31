@@ -47,7 +47,6 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
@@ -770,7 +769,7 @@ public:
 
     // Don't distribute the loop if we need too many SCEV run-time checks, or
     // any if it's illegal.
-    const SCEVUnionPredicate &Pred = LAI->getPSE().getUnionPredicate();
+    const SCEVPredicate &Pred = LAI->getPSE().getPredicate();
     if (LAI->hasConvergentOp() && !Pred.isAlwaysTrue()) {
       return fail("RuntimeCheckWithConvergent",
                   "may not insert runtime check with convergent operation");

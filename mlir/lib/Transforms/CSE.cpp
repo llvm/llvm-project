@@ -15,7 +15,6 @@
 #include "mlir/IR/Dominance.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/Passes.h"
-#include "mlir/Transforms/Utils.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/ScopedHashTable.h"
@@ -49,7 +48,7 @@ struct SimpleOperationInfo : public llvm::DenseMapInfo<Operation *> {
         OperationEquivalence::IgnoreLocations);
   }
 };
-} // end anonymous namespace
+} // namespace
 
 namespace {
 /// Simple common sub-expression elimination.
@@ -64,8 +63,7 @@ struct CSE : public CSEBase<CSE> {
   /// Represents a single entry in the depth first traversal of a CFG.
   struct CFGStackNode {
     CFGStackNode(ScopedMapTy &knownValues, DominanceInfoNode *node)
-        : scope(knownValues), node(node), childIterator(node->begin()),
-          processed(false) {}
+        : scope(knownValues), node(node), childIterator(node->begin()) {}
 
     /// Scope for the known values.
     ScopedMapTy::ScopeTy scope;
@@ -74,7 +72,7 @@ struct CSE : public CSEBase<CSE> {
     DominanceInfoNode::const_iterator childIterator;
 
     /// If this node has been fully processed yet or not.
-    bool processed;
+    bool processed = false;
   };
 
   /// Attempt to eliminate a redundant operation. Returns success if the
@@ -91,7 +89,7 @@ private:
   std::vector<Operation *> opsToErase;
   DominanceInfo *domInfo = nullptr;
 };
-} // end anonymous namespace
+} // namespace
 
 /// Attempt to eliminate a redundant operation.
 LogicalResult CSE::simplifyOperation(ScopedMapTy &knownValues, Operation *op,

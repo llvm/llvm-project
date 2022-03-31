@@ -14,12 +14,12 @@ typedef int kern_return_t;
 
 @implementation I
 - (kern_return_t)foo {
-  kern_return_t (^block)() = ^ __attribute__((mig_server_routine)) { // no-warning
+  kern_return_t (^block)(void) = ^ __attribute__((mig_server_routine)) { // no-warning
     return KERN_SUCCESS;
   };
 
   // FIXME: Warn that this block doesn't return a kern_return_t.
-  void (^invalid_block)() = ^ __attribute__((mig_server_routine)) {};
+  void (^invalid_block)(void) = ^ __attribute__((mig_server_routine)) {};
 
   return block();
 }

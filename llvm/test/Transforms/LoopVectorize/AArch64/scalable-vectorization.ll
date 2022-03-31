@@ -1,22 +1,19 @@
 ; REQUIRES: asserts
-; RUN: opt -mtriple=aarch64-none-linux-gnu -mattr=+sve -force-target-instruction-cost=1 -loop-vectorize -S -debug-only=loop-vectorize -scalable-vectorization=on        < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK_SCALABLE_ON
-; RUN: opt -mtriple=aarch64-none-linux-gnu -mattr=+sve -force-target-instruction-cost=1 -loop-vectorize -S -debug-only=loop-vectorize -scalable-vectorization=preferred < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK_SCALABLE_PREFERRED
-; RUN: opt -mtriple=aarch64-none-linux-gnu -mattr=+sve -force-target-instruction-cost=1 -loop-vectorize -S -debug-only=loop-vectorize -scalable-vectorization=off       < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK_SCALABLE_DISABLED
-; RUN: opt -mtriple=aarch64-none-linux-gnu -mattr=+sve -force-target-instruction-cost=1 -loop-vectorize -S -debug-only=loop-vectorize -vectorizer-maximize-bandwidth -scalable-vectorization=preferred < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK_SCALABLE_PREFERRED_MAXBW
+; RUN: opt -mtriple=aarch64-none-linux-gnu -mattr=+sve -force-target-instruction-cost=1 -loop-vectorize -S -debug-only=loop-vectorize -scalable-vectorization=off < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK_SCALABLE_DISABLED
+; RUN: opt -mtriple=aarch64-none-linux-gnu -mattr=+sve -force-target-instruction-cost=1 -loop-vectorize -S -debug-only=loop-vectorize -scalable-vectorization=on < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK_SCALABLE_ON
+; RUN: opt -mtriple=aarch64-none-linux-gnu -mattr=+sve -force-target-instruction-cost=1 -loop-vectorize -S -debug-only=loop-vectorize -vectorizer-maximize-bandwidth -scalable-vectorization=on < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK_SCALABLE_ON_MAXBW
 
 ; Test that the MaxVF for the following loop, that has no dependence distances,
 ; is calculated as vscale x 4 (max legal SVE vector size) or vscale x 16
 ; (maximized bandwidth for i8 in the loop).
 define void @test0(i32* %a, i8* %b, i32* %c) #0 {
-; CHECK: LV: Checking a loop in "test0"
+; CHECK: LV: Checking a loop in 'test0'
 ; CHECK_SCALABLE_ON: LV: Found feasible scalable VF = vscale x 4
 ; CHECK_SCALABLE_ON: LV: Selecting VF: vscale x 4
-; CHECK_SCALABLE_PREFERRED: LV: Found feasible scalable VF = vscale x 4
-; CHECK_SCALABLE_PREFERRED: LV: Selecting VF: vscale x 4
 ; CHECK_SCALABLE_DISABLED-NOT: LV: Found feasible scalable VF
 ; CHECK_SCALABLE_DISABLED: LV: Selecting VF: 4
-; CHECK_SCALABLE_PREFERRED_MAXBW: LV: Found feasible scalable VF = vscale x 16
-; CHECK_SCALABLE_PREFERRED_MAXBW: LV: Selecting VF: vscale x 16
+; CHECK_SCALABLE_ON_MAXBW: LV: Found feasible scalable VF = vscale x 16
+; CHECK_SCALABLE_ON_MAXBW: LV: Selecting VF: vscale x 16
 entry:
   br label %loop
 
@@ -41,15 +38,13 @@ exit:
 ; Test that the MaxVF for the following loop, with a dependence distance
 ; of 64 elements, is calculated as (maxvscale = 16) * 4.
 define void @test1(i32* %a, i8* %b) #0 {
-; CHECK: LV: Checking a loop in "test1"
+; CHECK: LV: Checking a loop in 'test1'
 ; CHECK_SCALABLE_ON: LV: Found feasible scalable VF = vscale x 4
 ; CHECK_SCALABLE_ON: LV: Selecting VF: vscale x 4
-; CHECK_SCALABLE_PREFERRED: LV: Found feasible scalable VF = vscale x 4
-; CHECK_SCALABLE_PREFERRED: LV: Selecting VF: vscale x 4
 ; CHECK_SCALABLE_DISABLED-NOT: LV: Found feasible scalable VF
 ; CHECK_SCALABLE_DISABLED: LV: Selecting VF: 4
-; CHECK_SCALABLE_PREFERRED_MAXBW: LV: Found feasible scalable VF = vscale x 4
-; CHECK_SCALABLE_PREFERRED_MAXBW: LV: Selecting VF: 16
+; CHECK_SCALABLE_ON_MAXBW: LV: Found feasible scalable VF = vscale x 4
+; CHECK_SCALABLE_ON_MAXBW: LV: Selecting VF: 16
 entry:
   br label %loop
 
@@ -75,15 +70,13 @@ exit:
 ; Test that the MaxVF for the following loop, with a dependence distance
 ; of 32 elements, is calculated as (maxvscale = 16) * 2.
 define void @test2(i32* %a, i8* %b) #0 {
-; CHECK: LV: Checking a loop in "test2"
+; CHECK: LV: Checking a loop in 'test2'
 ; CHECK_SCALABLE_ON: LV: Found feasible scalable VF = vscale x 2
-; CHECK_SCALABLE_ON: LV: Selecting VF: 4
-; CHECK_SCALABLE_PREFERRED: LV: Found feasible scalable VF = vscale x 2
-; CHECK_SCALABLE_PREFERRED: LV: Selecting VF: vscale x 2
+; CHECK_SCALABLE_ON: LV: Selecting VF: vscale x 2
 ; CHECK_SCALABLE_DISABLED-NOT: LV: Found feasible scalable VF
 ; CHECK_SCALABLE_DISABLED: LV: Selecting VF: 4
-; CHECK_SCALABLE_PREFERRED_MAXBW: LV: Found feasible scalable VF = vscale x 2
-; CHECK_SCALABLE_PREFERRED_MAXBW: LV: Selecting VF: 16
+; CHECK_SCALABLE_ON_MAXBW: LV: Found feasible scalable VF = vscale x 2
+; CHECK_SCALABLE_ON_MAXBW: LV: Selecting VF: 16
 entry:
   br label %loop
 
@@ -109,15 +102,13 @@ exit:
 ; Test that the MaxVF for the following loop, with a dependence distance
 ; of 16 elements, is calculated as (maxvscale = 16) * 1.
 define void @test3(i32* %a, i8* %b) #0 {
-; CHECK: LV: Checking a loop in "test3"
+; CHECK: LV: Checking a loop in 'test3'
 ; CHECK_SCALABLE_ON: LV: Found feasible scalable VF = vscale x 1
 ; CHECK_SCALABLE_ON: LV: Selecting VF: 4
-; CHECK_SCALABLE_PREFERRED: LV: Found feasible scalable VF = vscale x 1
-; CHECK_SCALABLE_PREFERRED: LV: Selecting VF: 4
 ; CHECK_SCALABLE_DISABLED-NOT: LV: Found feasible scalable VF
 ; CHECK_SCALABLE_DISABLED: LV: Selecting VF: 4
-; CHECK_SCALABLE_PREFERRED_MAXBW: LV: Found feasible scalable VF = vscale x 1
-; CHECK_SCALABLE_PREFERRED_MAXBW: LV: Selecting VF: 16
+; CHECK_SCALABLE_ON_MAXBW: LV: Found feasible scalable VF = vscale x 1
+; CHECK_SCALABLE_ON_MAXBW: LV: Selecting VF: 16
 entry:
   br label %loop
 
@@ -143,15 +134,14 @@ exit:
 ; Test the fallback mechanism when scalable vectors are not feasible due
 ; to e.g. dependence distance.
 define void @test4(i32* %a, i32* %b) #0 {
-; CHECK: LV: Checking a loop in "test4"
+; CHECK: LV: Checking a loop in 'test4'
+; CHECK_SCALABLE_ON-NOT: LV: Found feasible scalable VF
 ; CHECK_SCALABLE_ON-NOT: LV: Found feasible scalable VF
 ; CHECK_SCALABLE_ON: LV: Selecting VF: 4
-; CHECK_SCALABLE_PREFERRED-NOT: LV: Found feasible scalable VF
-; CHECK_SCALABLE_PREFERRED: LV: Selecting VF: 4
 ; CHECK_SCALABLE_DISABLED-NOT: LV: Found feasible scalable VF
 ; CHECK_SCALABLE_DISABLED: LV: Selecting VF: 4
-; CHECK_SCALABLE_PREFERRED_MAXBW-NOT: LV: Found feasible scalable VF
-; CHECK_SCALABLE_PREFERRED_MAXBW: LV: Selecting VF: 4
+; CHECK_SCALABLE_ON_MAXBW-NOT: LV: Found feasible scalable VF
+; CHECK_SCALABLE_ON_MAXBW: LV: Selecting VF: 4
 entry:
   br label %loop
 
@@ -173,4 +163,4 @@ exit:
   ret void
 }
 
-attributes #0 = { vscale_range(0, 16) }
+attributes #0 = { vscale_range(1, 16) }

@@ -10,6 +10,7 @@
 
 #include "llvm/Analysis/RegionInfo.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/DominanceFrontier.h"
 #include "llvm/InitializePasses.h"
 #ifndef NDEBUG
 #include "llvm/Analysis/RegionPrinter.h"

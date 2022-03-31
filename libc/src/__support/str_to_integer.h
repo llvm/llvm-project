@@ -92,16 +92,16 @@ static inline T strtointeger(const char *__restrict src,
     src = src + 2;
   }
 
-  constexpr bool is_unsigned = (__llvm_libc::cpp::NumericLimits<T>::min() == 0);
+  constexpr bool IS_UNSIGNED = (__llvm_libc::cpp::NumericLimits<T>::min() == 0);
   const bool is_positive = (result_sign == '+');
   unsigned long long constexpr NEGATIVE_MAX =
-      !is_unsigned ? static_cast<unsigned long long>(
+      !IS_UNSIGNED ? static_cast<unsigned long long>(
                          __llvm_libc::cpp::NumericLimits<T>::max()) +
                          1
                    : __llvm_libc::cpp::NumericLimits<T>::max();
-  unsigned long long const ABS_MAX =
+  unsigned long long const abs_max =
       (is_positive ? __llvm_libc::cpp::NumericLimits<T>::max() : NEGATIVE_MAX);
-  unsigned long long const ABS_MAX_DIV_BY_BASE = ABS_MAX / base;
+  unsigned long long const abs_max_div_by_base = abs_max / base;
   while (isalnum(*src)) {
     int cur_digit = b36_char_to_int(*src);
     if (cur_digit >= base)
@@ -113,19 +113,19 @@ static inline T strtointeger(const char *__restrict src,
     // If the number has already hit the maximum value for the current type then
     // the result cannot change, but we still need to advance src to the end of
     // the number.
-    if (result == ABS_MAX) {
+    if (result == abs_max) {
       errno = ERANGE;
       continue;
     }
 
-    if (result > ABS_MAX_DIV_BY_BASE) {
-      result = ABS_MAX;
+    if (result > abs_max_div_by_base) {
+      result = abs_max;
       errno = ERANGE;
     } else {
       result = result * base;
     }
-    if (result > ABS_MAX - cur_digit) {
-      result = ABS_MAX;
+    if (result > abs_max - cur_digit) {
+      result = abs_max;
       errno = ERANGE;
     } else {
       result = result + cur_digit;
@@ -135,8 +135,8 @@ static inline T strtointeger(const char *__restrict src,
   if (str_end != nullptr)
     *str_end = const_cast<char *>(is_number ? src : original_src);
 
-  if (result == ABS_MAX) {
-    if (is_positive || is_unsigned)
+  if (result == abs_max) {
+    if (is_positive || IS_UNSIGNED)
       return __llvm_libc::cpp::NumericLimits<T>::max();
     else // T is signed and there is a negative overflow
       return __llvm_libc::cpp::NumericLimits<T>::min();

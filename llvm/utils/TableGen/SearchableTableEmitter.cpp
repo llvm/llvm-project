@@ -16,9 +16,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/SourceMgr.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include <algorithm>
@@ -31,8 +28,6 @@ using namespace llvm;
 #define DEBUG_TYPE "searchable-table-emitter"
 
 namespace {
-
-struct GenericTable;
 
 int getAsInt(Init *B) {
   return cast<IntInit>(B->convertInitializerTo(IntRecTy::get()))->getValue();
@@ -649,6 +644,12 @@ void SearchableTableEmitter::collectTableEntries(
         Field.IsInstruction = true;
     }
   }
+
+  SearchIndex Idx;
+  std::copy(Table.Fields.begin(), Table.Fields.end(),
+            std::back_inserter(Idx.Fields));
+  std::sort(Table.Entries.begin(), Table.Entries.end(),
+            [&](Record *LHS, Record *RHS) { return compareBy(LHS, RHS, Idx); });
 }
 
 void SearchableTableEmitter::run(raw_ostream &OS) {

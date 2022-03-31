@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/fenv/fegetround.h"
-#include "src/__support/FPUtil/FEnvUtils.h"
+#include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/common.h"
 
 namespace __llvm_libc {
 
-LLVM_LIBC_FUNCTION(int, fegetround, ()) { return fputil::getRound(); }
+LLVM_LIBC_FUNCTION(int, fegetround, ()) { return fputil::get_round(); }
 
 } // namespace __llvm_libc

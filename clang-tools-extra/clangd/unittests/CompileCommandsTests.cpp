@@ -53,6 +53,18 @@ TEST(CommandMangler, Everything) {
                                "foo.cc"));
 }
 
+TEST(CommandMangler, FilenameMismatch) {
+  auto Mangler = CommandMangler::forTests();
+  Mangler.ClangPath = testPath("clang");
+  // Our compile flags refer to foo.cc...
+  std::vector<std::string> Cmd = {"clang", "foo.cc"};
+  // but we're applying it to foo.h...
+  Mangler.adjust(Cmd, "foo.h");
+  // so transferCompileCommand should add -x c++-header to preserve semantics.
+  EXPECT_THAT(
+      Cmd, ElementsAre(testPath("clang"), "-x", "c++-header", "--", "foo.h"));
+}
+
 TEST(CommandMangler, ResourceDir) {
   auto Mangler = CommandMangler::forTests();
   Mangler.ResourceDir = testPath("fake/resources");
@@ -95,7 +107,7 @@ TEST(CommandMangler, ClangPath) {
 // Only run the PATH/symlink resolving test on unix, we need to fiddle
 // with permissions and environment variables...
 #ifdef LLVM_ON_UNIX
-MATCHER(Ok, "") {
+MATCHER(ok, "") {
   if (arg) {
     *result_listener << arg.message();
     return false;
@@ -112,20 +124,20 @@ TEST(CommandMangler, ClangPathResolve) {
   //       bar
   llvm::SmallString<256> TempDir;
   ASSERT_THAT(llvm::sys::fs::createUniqueDirectory("ClangPathResolve", TempDir),
-              Ok());
+              ok());
   // /var/tmp is a symlink on Mac. Resolve it so we're asserting the right path.
-  ASSERT_THAT(llvm::sys::fs::real_path(TempDir.str(), TempDir), Ok());
+  ASSERT_THAT(llvm::sys::fs::real_path(TempDir.str(), TempDir), ok());
   auto CleanDir = llvm::make_scope_exit(
       [&] { llvm::sys::fs::remove_directories(TempDir); });
-  ASSERT_THAT(llvm::sys::fs::create_directory(TempDir + "/bin"), Ok());
-  ASSERT_THAT(llvm::sys::fs::create_directory(TempDir + "/lib"), Ok());
+  ASSERT_THAT(llvm::sys::fs::create_directory(TempDir + "/bin"), ok());
+  ASSERT_THAT(llvm::sys::fs::create_directory(TempDir + "/lib"), ok());
   int FD;
-  ASSERT_THAT(llvm::sys::fs::openFileForWrite(TempDir + "/lib/bar", FD), Ok());
-  ASSERT_THAT(llvm::sys::Process::SafelyCloseFileDescriptor(FD), Ok());
+  ASSERT_THAT(llvm::sys::fs::openFileForWrite(TempDir + "/lib/bar", FD), ok());
+  ASSERT_THAT(llvm::sys::Process::SafelyCloseFileDescriptor(FD), ok());
   ::chmod((TempDir + "/lib/bar").str().c_str(), 0755); // executable
   ASSERT_THAT(
       llvm::sys::fs::create_link(TempDir + "/lib/bar", TempDir + "/bin/foo"),
-      Ok());
+      ok());
 
   // Test the case where the driver is an absolute path to a symlink.
   auto Mangler = CommandMangler::forTests();

@@ -32,8 +32,8 @@
 ;     A[i] = A[B[i]];
 ; }
 ; CHECK: remark: source.cpp:19:5: loop not vectorized: cannot identify array bounds
-; CHECK: remark: source.cpp:19:5: loop not vectorized
-; CHECK: warning: source.cpp:19:5: loop not vectorized: the optimizer was unable to perform the requested transformation; the transformation might be disabled or specified as part of an unsupported transformation ordering
+; CHECK: remark: source.cpp:18:8: loop not vectorized (Force=true)
+; CHECK: warning: source.cpp:18:8: loop not vectorized: the optimizer was unable to perform the requested transformation; the transformation might be disabled or specified as part of an unsupported transformation ordering
 
 ; int foo();
 ; void test_multiple_failures(int *A) {
@@ -85,7 +85,7 @@
 ; YAML-NEXT: --- !Missed
 ; YAML-NEXT: Pass:            loop-vectorize
 ; YAML-NEXT: Name:            MissedDetails
-; YAML-NEXT: DebugLoc:        { File: source.cpp, Line: 19, Column: 5 }
+; YAML-NEXT: DebugLoc:        { File: source.cpp, Line: 18, Column: 8 }
 ; YAML-NEXT: Function:        _Z17test_array_boundsPiS_i
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          loop not vectorized
@@ -96,7 +96,7 @@
 ; YAML-NEXT: --- !Failure
 ; YAML-NEXT: Pass:            transform-warning
 ; YAML-NEXT: Name:            FailedRequestedVectorization
-; YAML-NEXT: DebugLoc:        { File: source.cpp, Line: 19, Column: 5 }
+; YAML-NEXT: DebugLoc:        { File: source.cpp, Line: 18, Column: 8 }
 ; YAML-NEXT: Function:        _Z17test_array_boundsPiS_i
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'loop not vectorized: the optimizer was unable to perform the requested transformation; the transformation might be disabled or specified as part of an unsupported transformation ordering'
@@ -197,7 +197,7 @@ entry:
   br i1 %cmp9, label %for.body.preheader, label %for.end, !dbg !32, !llvm.loop !34
 
 for.body.preheader:                               ; preds = %entry
-  br label %for.body, !dbg !35
+  br label %for.body, !dbg !32
 
 for.body:                                         ; preds = %for.body.preheader, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]

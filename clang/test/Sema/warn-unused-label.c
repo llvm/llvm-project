@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -Wunused-label -verify %s
 
-void f() {
+void f(void) {
   a:
   goto a;
   b: // expected-warning{{unused}}
@@ -10,6 +10,6 @@ void f() {
   return;
 }
 
-void PR8455() {
+void PR8455(void) {
   L: __attribute__((unused)) return; // ok, no semicolon required
 }

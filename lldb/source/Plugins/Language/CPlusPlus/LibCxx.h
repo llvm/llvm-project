@@ -34,6 +34,22 @@ bool LibcxxWStringSummaryProvider(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions &options); // libc++ std::wstring
 
+bool LibcxxStringViewSummaryProviderASCII(
+    ValueObject &valueObj, Stream &stream,
+    const TypeSummaryOptions &summary_options); // libc++ std::string_view
+
+bool LibcxxStringViewSummaryProviderUTF16(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &summary_options); // libc++ std::u16string_view
+
+bool LibcxxStringViewSummaryProviderUTF32(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &summary_options); // libc++ std::u32string_view
+
+bool LibcxxWStringViewSummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &options); // libc++ std::wstring_view
+
 bool LibcxxOptionalSummaryProvider(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions &options); // libc++ std::optional<>
@@ -170,8 +186,8 @@ SyntheticChildrenFrontEnd *LibcxxTupleFrontEndCreator(CXXSyntheticChildren *,
                                                       lldb::ValueObjectSP);
 
 SyntheticChildrenFrontEnd *
-LibcxxOptionalFrontEndCreator(CXXSyntheticChildren *,
-                              lldb::ValueObjectSP valobj_sp);
+LibcxxOptionalSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                       lldb::ValueObjectSP valobj_sp);
 
 SyntheticChildrenFrontEnd *
 LibcxxVariantFrontEndCreator(CXXSyntheticChildren *,

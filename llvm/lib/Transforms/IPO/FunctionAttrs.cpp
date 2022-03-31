@@ -30,7 +30,6 @@
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/LazyCallGraph.h"
-#include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
@@ -45,6 +44,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
@@ -69,6 +69,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "function-attrs"
 
+STATISTIC(NumArgMemOnly, "Number of functions marked argmemonly");
 STATISTIC(NumReadNone, "Number of functions marked readnone");
 STATISTIC(NumReadOnly, "Number of functions marked readonly");
 STATISTIC(NumWriteOnly, "Number of functions marked writeonly");
@@ -121,28 +122,28 @@ using SCCNodeSet = SmallSetVector<Function *, 8>;
 /// result will be based only on AA results for the function declaration; it
 /// will be assumed that some other (perhaps less optimized) version of the
 /// function may be selected at link time.
-static MemoryAccessKind checkFunctionMemoryAccess(Function &F, bool ThisBody,
-                                                  AAResults &AAR,
-                                                  const SCCNodeSet &SCCNodes) {
+static FunctionModRefBehavior
+checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
+                          const SCCNodeSet &SCCNodes) {
   FunctionModRefBehavior MRB = AAR.getModRefBehavior(&F);
   if (MRB == FMRB_DoesNotAccessMemory)
     // Already perfect!
-    return MAK_ReadNone;
+    return MRB;
 
-  if (!ThisBody) {
-    if (AliasAnalysis::onlyReadsMemory(MRB))
-      return MAK_ReadOnly;
-
-    if (AliasAnalysis::doesNotReadMemory(MRB))
-      return MAK_WriteOnly;
-
-    // Conservatively assume it reads and writes to memory.
-    return MAK_MayWrite;
-  }
+  if (!ThisBody)
+    return MRB;
 
   // Scan the function body for instructions that may read or write memory.
   bool ReadsMemory = false;
   bool WritesMemory = false;
+  // Track if the function accesses memory not based on pointer arguments or
+  // allocas.
+  bool AccessesNonArgsOrAlloca = false;
+  // Returns true if Ptr is not based on a function argument.
+  auto IsArgumentOrAlloca = [](const Value *Ptr) {
+    const Value *UO = getUnderlyingObject(Ptr);
+    return isa<Argument>(UO) || isa<AllocaInst>(UO);
+  };
   for (Instruction &I : instructions(F)) {
     // Some instructions can be ignored even if they read or write memory.
     // Detect these now, skipping to the next instruction if one is found.
@@ -175,6 +176,7 @@ static MemoryAccessKind checkFunctionMemoryAccess(Function &F, bool ThisBody,
         // If it reads, note it.
         if (isRefSet(MRI))
           ReadsMemory = true;
+        AccessesNonArgsOrAlloca = true;
         continue;
       }
 
@@ -187,11 +189,12 @@ static MemoryAccessKind checkFunctionMemoryAccess(Function &F, bool ThisBody,
 
         MemoryLocation Loc =
             MemoryLocation::getBeforeOrAfter(Arg, I.getAAMetadata());
-
         // Skip accesses to local or constant memory as they don't impact the
         // externally visible mod/ref behavior.
         if (AAR.pointsToConstantMemory(Loc, /*OrLocal=*/true))
           continue;
+
+        AccessesNonArgsOrAlloca |= !IsArgumentOrAlloca(Loc.Ptr);
 
         if (isModSet(MRI))
           // Writes non-local memory.
@@ -202,24 +205,29 @@ static MemoryAccessKind checkFunctionMemoryAccess(Function &F, bool ThisBody,
       }
       continue;
     } else if (LoadInst *LI = dyn_cast<LoadInst>(&I)) {
+      MemoryLocation Loc = MemoryLocation::get(LI);
       // Ignore non-volatile loads from local memory. (Atomic is okay here.)
-      if (!LI->isVolatile()) {
-        MemoryLocation Loc = MemoryLocation::get(LI);
-        if (AAR.pointsToConstantMemory(Loc, /*OrLocal=*/true))
-          continue;
-      }
+      if (!LI->isVolatile() &&
+          AAR.pointsToConstantMemory(Loc, /*OrLocal=*/true))
+        continue;
+      AccessesNonArgsOrAlloca |= !IsArgumentOrAlloca(Loc.Ptr);
     } else if (StoreInst *SI = dyn_cast<StoreInst>(&I)) {
+      MemoryLocation Loc = MemoryLocation::get(SI);
       // Ignore non-volatile stores to local memory. (Atomic is okay here.)
-      if (!SI->isVolatile()) {
-        MemoryLocation Loc = MemoryLocation::get(SI);
-        if (AAR.pointsToConstantMemory(Loc, /*OrLocal=*/true))
-          continue;
-      }
+      if (!SI->isVolatile() &&
+          AAR.pointsToConstantMemory(Loc, /*OrLocal=*/true))
+        continue;
+      AccessesNonArgsOrAlloca |= !IsArgumentOrAlloca(Loc.Ptr);
     } else if (VAArgInst *VI = dyn_cast<VAArgInst>(&I)) {
       // Ignore vaargs on local memory.
       MemoryLocation Loc = MemoryLocation::get(VI);
       if (AAR.pointsToConstantMemory(Loc, /*OrLocal=*/true))
         continue;
+      AccessesNonArgsOrAlloca |= !IsArgumentOrAlloca(Loc.Ptr);
+    } else {
+      // If AccessesNonArgsOrAlloca has not been updated above, set it
+      // conservatively.
+      AccessesNonArgsOrAlloca |= I.mayReadOrWriteMemory();
     }
 
     // Any remaining instructions need to be taken seriously!  Check if they
@@ -232,61 +240,74 @@ static MemoryAccessKind checkFunctionMemoryAccess(Function &F, bool ThisBody,
     ReadsMemory |= I.mayReadFromMemory();
   }
 
-  if (WritesMemory) { 
-    if (!ReadsMemory)
-      return MAK_WriteOnly;
-    else
-      return MAK_MayWrite;
-  }
+  if (!WritesMemory && !ReadsMemory)
+    return FMRB_DoesNotAccessMemory;
 
-  return ReadsMemory ? MAK_ReadOnly : MAK_ReadNone;
+  FunctionModRefBehavior Result = FunctionModRefBehavior(FMRL_Anywhere);
+  if (!AccessesNonArgsOrAlloca)
+    Result = FunctionModRefBehavior(FMRL_ArgumentPointees);
+  if (WritesMemory)
+    Result = FunctionModRefBehavior(Result | static_cast<int>(ModRefInfo::Mod));
+  if (ReadsMemory)
+    Result = FunctionModRefBehavior(Result | static_cast<int>(ModRefInfo::Ref));
+  return Result;
 }
 
-MemoryAccessKind llvm::computeFunctionBodyMemoryAccess(Function &F,
-                                                       AAResults &AAR) {
+FunctionModRefBehavior llvm::computeFunctionBodyMemoryAccess(Function &F,
+                                                             AAResults &AAR) {
   return checkFunctionMemoryAccess(F, /*ThisBody=*/true, AAR, {});
 }
 
-/// Deduce readonly/readnone attributes for the SCC.
+/// Deduce readonly/readnone/writeonly attributes for the SCC.
 template <typename AARGetterT>
-static void addReadAttrs(const SCCNodeSet &SCCNodes, AARGetterT &&AARGetter,
-                         SmallSet<Function *, 8> &Changed) {
+static void addMemoryAttrs(const SCCNodeSet &SCCNodes, AARGetterT &&AARGetter,
+                           SmallSet<Function *, 8> &Changed) {
   // Check if any of the functions in the SCC read or write memory.  If they
   // write memory then they can't be marked readnone or readonly.
   bool ReadsMemory = false;
   bool WritesMemory = false;
+  // Check if all functions only access memory through their arguments.
+  bool ArgMemOnly = true;
   for (Function *F : SCCNodes) {
     // Call the callable parameter to look up AA results for this function.
     AAResults &AAR = AARGetter(*F);
-
     // Non-exact function definitions may not be selected at link time, and an
     // alternative version that writes to memory may be selected.  See the
     // comment on GlobalValue::isDefinitionExact for more details.
-    switch (checkFunctionMemoryAccess(*F, F->hasExactDefinition(),
-                                      AAR, SCCNodes)) {
-    case MAK_MayWrite:
+    FunctionModRefBehavior FMRB =
+        checkFunctionMemoryAccess(*F, F->hasExactDefinition(), AAR, SCCNodes);
+    if (FMRB == FMRB_DoesNotAccessMemory)
+      continue;
+    ModRefInfo MR = createModRefInfo(FMRB);
+    ReadsMemory |= isRefSet(MR);
+    WritesMemory |= isModSet(MR);
+    ArgMemOnly &= AliasAnalysis::onlyAccessesArgPointees(FMRB);
+    // Reached neither readnone, readonly, writeonly nor argmemonly can be
+    // inferred. Exit.
+    if (ReadsMemory && WritesMemory && !ArgMemOnly)
       return;
-    case MAK_ReadOnly:
-      ReadsMemory = true;
-      break;
-    case MAK_WriteOnly:
-      WritesMemory = true;
-      break;
-    case MAK_ReadNone:
-      // Nothing to do!
-      break;
-    }
   }
 
-  // If the SCC contains both functions that read and functions that write, then
-  // we cannot add readonly attributes.
-  if (ReadsMemory && WritesMemory)
-    return;
-
-  // Success!  Functions in this SCC do not access memory, or only read memory.
-  // Give them the appropriate attribute.
+  assert((!ReadsMemory || !WritesMemory || ArgMemOnly) &&
+         "no memory attributes can be added for this SCC, should have exited "
+         "earlier");
+  // Success!  Functions in this SCC do not access memory, only read memory,
+  // only write memory, or only access memory through its arguments. Give them
+  // the appropriate attribute.
 
   for (Function *F : SCCNodes) {
+    // If possible add argmemonly attribute to F, if it accesses memory.
+    if (ArgMemOnly && !F->onlyAccessesArgMemory() &&
+        (ReadsMemory || WritesMemory)) {
+      NumArgMemOnly++;
+      F->addFnAttr(Attribute::ArgMemOnly);
+      Changed.insert(F);
+    }
+
+    // The SCC contains functions both writing and reading from memory. We
+    // cannot add readonly or writeonline attributes.
+    if (ReadsMemory && WritesMemory)
+      continue;
     if (F->doesNotAccessMemory())
       // Already perfect!
       continue;
@@ -295,13 +316,13 @@ static void addReadAttrs(const SCCNodeSet &SCCNodes, AARGetterT &&AARGetter,
       // No change.
       continue;
 
-    if (F->doesNotReadMemory() && WritesMemory)
+    if (F->onlyWritesMemory() && WritesMemory)
       continue;
 
     Changed.insert(F);
 
     // Clear out any existing attributes.
-    AttrBuilder AttrsToRemove;
+    AttributeMask AttrsToRemove;
     AttrsToRemove.addAttribute(Attribute::ReadOnly);
     AttrsToRemove.addAttribute(Attribute::ReadNone);
     AttrsToRemove.addAttribute(Attribute::WriteOnly);
@@ -581,16 +602,8 @@ struct ArgumentUsesTracker : public CaptureTracker {
       return true;
     }
 
-    // Note: the callee and the two successor blocks *follow* the argument
-    // operands.  This means there is no need to adjust UseIndex to account for
-    // these.
-
-    unsigned UseIndex =
-        std::distance(const_cast<const Use *>(CB->arg_begin()), U);
-
-    assert(UseIndex < CB->data_operands_size() &&
-           "Indirect function calls should have been filtered above!");
-
+    assert(!CB->isCallee(U) && "callee operand reported captured?");
+    const unsigned UseIndex = CB->getDataOperandNo(U);
     if (UseIndex >= CB->arg_size()) {
       // Data operand, but not a argument operand -- must be a bundle operand
       assert(CB->hasOperandBundles() && "Must be!");
@@ -689,73 +702,55 @@ determinePointerAccessAttrs(Argument *A,
 
     case Instruction::Call:
     case Instruction::Invoke: {
-      bool Captures = true;
-
-      if (I->getType()->isVoidTy())
-        Captures = false;
-
-      auto AddUsersToWorklistIfCapturing = [&] {
-        if (Captures)
-          for (Use &UU : I->uses())
-            if (Visited.insert(&UU).second)
-              Worklist.push_back(&UU);
-      };
-
       CallBase &CB = cast<CallBase>(*I);
-      if (CB.doesNotAccessMemory()) {
-        AddUsersToWorklistIfCapturing();
+      if (CB.isCallee(U)) {
+        IsRead = true;
+        // Note that indirect calls do not capture, see comment in
+        // CaptureTracking for context
         continue;
       }
 
-      Function *F = CB.getCalledFunction();
-      if (!F) {
-        if (CB.onlyReadsMemory()) {
-          IsRead = true;
-          AddUsersToWorklistIfCapturing();
-          continue;
-        }
-        return Attribute::None;
-      }
+      // Given we've explictily handled the callee operand above, what's left
+      // must be a data operand (e.g. argument or operand bundle)
+      const unsigned UseIndex = CB.getDataOperandNo(U);
 
-      // Note: the callee and the two successor blocks *follow* the argument
-      // operands.  This means there is no need to adjust UseIndex to account
-      // for these.
-
-      unsigned UseIndex = std::distance(CB.arg_begin(), U);
-
-      // U cannot be the callee operand use: since we're exploring the
-      // transitive uses of an Argument, having such a use be a callee would
-      // imply the call site is an indirect call or invoke; and we'd take the
-      // early exit above.
-      assert(UseIndex < CB.data_operands_size() &&
-             "Data operand use expected!");
-
-      bool IsOperandBundleUse = UseIndex >= CB.arg_size();
-
-      if (UseIndex >= F->arg_size() && !IsOperandBundleUse) {
-        assert(F->isVarArg() && "More params than args in non-varargs call");
-        return Attribute::None;
-      }
-
-      Captures &= !CB.doesNotCapture(UseIndex);
-
-      // Since the optimizer (by design) cannot see the data flow corresponding
-      // to a operand bundle use, these cannot participate in the optimistic SCC
-      // analysis.  Instead, we model the operand bundle uses as arguments in
-      // call to a function external to the SCC.
-      if (IsOperandBundleUse ||
-          !SCCNodes.count(&*std::next(F->arg_begin(), UseIndex))) {
-
-        // The accessors used on call site here do the right thing for calls and
-        // invokes with operand bundles.
-
-        if (!CB.onlyReadsMemory() && !CB.onlyReadsMemory(UseIndex))
+      if (!CB.doesNotCapture(UseIndex)) {
+        if (!CB.onlyReadsMemory())
+          // If the callee can save a copy into other memory, then simply
+          // scanning uses of the call is insufficient.  We have no way
+          // of tracking copies of the pointer through memory to see
+          // if a reloaded copy is written to, thus we must give up.
           return Attribute::None;
-        if (!CB.doesNotAccessMemory(UseIndex))
-          IsRead = true;
+        // Push users for processing once we finish this one
+        if (!I->getType()->isVoidTy())
+          for (Use &UU : I->uses())
+            if (Visited.insert(&UU).second)
+              Worklist.push_back(&UU);
       }
+      
+      if (CB.doesNotAccessMemory())
+        continue;
 
-      AddUsersToWorklistIfCapturing();
+      if (Function *F = CB.getCalledFunction())
+        if (CB.isArgOperand(U) && UseIndex < F->arg_size() &&
+            SCCNodes.count(F->getArg(UseIndex)))
+          // This is an argument which is part of the speculative SCC.  Note
+          // that only operands corresponding to formal arguments of the callee
+          // can participate in the speculation.
+          break;
+
+      // The accessors used on call site here do the right thing for calls and
+      // invokes with operand bundles.
+      if (CB.doesNotAccessMemory(UseIndex)) {
+        /* nop */
+      } else if (CB.onlyReadsMemory() || CB.onlyReadsMemory(UseIndex)) {
+        IsRead = true;
+      } else if (CB.hasFnAttr(Attribute::WriteOnly) ||
+                 CB.dataOperandHasImpliedAttr(UseIndex, Attribute::WriteOnly)) {
+        IsWrite = true;
+      } else {
+        return Attribute::None;
+      }
       break;
     }
 
@@ -1010,6 +1005,13 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
         A->addAttr(Attribute::NoCapture);
         ++NumNoCapture;
         Changed.insert(A->getParent());
+
+        // Infer the access attributes given the new nocapture one
+        SmallPtrSet<Argument *, 8> Self;
+        Self.insert(&*A);
+        Attribute::AttrKind R = determinePointerAccessAttrs(&*A, Self);
+        if (R != Attribute::None)
+          addAccessAttr(A, R);
       }
       continue;
     }
@@ -1633,6 +1635,26 @@ static bool basicBlockCanReturn(BasicBlock &BB) {
   return none_of(BB, instructionDoesNotReturn);
 }
 
+// FIXME: this doesn't handle recursion.
+static bool canReturn(Function &F) {
+  SmallVector<BasicBlock *, 16> Worklist;
+  SmallPtrSet<BasicBlock *, 16> Visited;
+
+  Visited.insert(&F.front());
+  Worklist.push_back(&F.front());
+
+  do {
+    BasicBlock *BB = Worklist.pop_back_val();
+    if (basicBlockCanReturn(*BB))
+      return true;
+    for (BasicBlock *Succ : successors(BB))
+      if (Visited.insert(Succ).second)
+        Worklist.push_back(Succ);
+  } while (!Worklist.empty());
+
+  return false;
+}
+
 // Set the noreturn function attribute if possible.
 static void addNoReturnAttrs(const SCCNodeSet &SCCNodes,
                              SmallSet<Function *, 8> &Changed) {
@@ -1641,9 +1663,7 @@ static void addNoReturnAttrs(const SCCNodeSet &SCCNodes,
         F->doesNotReturn())
       continue;
 
-    // The function can return if any basic blocks can return.
-    // FIXME: this doesn't handle recursion or unreachable blocks.
-    if (none_of(*F, basicBlockCanReturn)) {
+    if (!canReturn(*F)) {
       F->setDoesNotReturn();
       Changed.insert(F);
     }
@@ -1811,7 +1831,7 @@ deriveAttrsInPostOrder(ArrayRef<Function *> Functions, AARGetterT &&AARGetter) {
   SmallSet<Function *, 8> Changed;
 
   addArgumentReturnedAttrs(Nodes.SCCNodes, Changed);
-  addReadAttrs(Nodes.SCCNodes, AARGetter, Changed);
+  addMemoryAttrs(Nodes.SCCNodes, AARGetter, Changed);
   addArgumentAttrs(Nodes.SCCNodes, Changed);
   inferConvergent(Nodes.SCCNodes, Changed);
   addNoReturnAttrs(Nodes.SCCNodes, Changed);

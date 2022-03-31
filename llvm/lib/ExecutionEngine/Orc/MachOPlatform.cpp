@@ -22,14 +22,46 @@ using namespace llvm;
 using namespace llvm::orc;
 using namespace llvm::orc::shared;
 
+namespace llvm {
+namespace orc {
+namespace shared {
+
+using SPSMachOJITDylibDepInfo = SPSTuple<bool, SPSSequence<SPSExecutorAddr>>;
+using SPSMachOJITDylibDepInfoMap =
+    SPSSequence<SPSTuple<SPSExecutorAddr, SPSMachOJITDylibDepInfo>>;
+
+template <>
+class SPSSerializationTraits<SPSMachOJITDylibDepInfo,
+                             MachOPlatform::MachOJITDylibDepInfo> {
+public:
+  static size_t size(const MachOPlatform::MachOJITDylibDepInfo &DDI) {
+    return SPSMachOJITDylibDepInfo::AsArgList::size(DDI.Sealed, DDI.DepHeaders);
+  }
+
+  static bool serialize(SPSOutputBuffer &OB,
+                        const MachOPlatform::MachOJITDylibDepInfo &DDI) {
+    return SPSMachOJITDylibDepInfo::AsArgList::serialize(OB, DDI.Sealed,
+                                                         DDI.DepHeaders);
+  }
+
+  static bool deserialize(SPSInputBuffer &IB,
+                          MachOPlatform::MachOJITDylibDepInfo &DDI) {
+    return SPSMachOJITDylibDepInfo::AsArgList::deserialize(IB, DDI.Sealed,
+                                                           DDI.DepHeaders);
+  }
+};
+
+} // namespace shared
+} // namespace orc
+} // namespace llvm
+
 namespace {
 
 class MachOHeaderMaterializationUnit : public MaterializationUnit {
 public:
   MachOHeaderMaterializationUnit(MachOPlatform &MOP,
                                  const SymbolStringPtr &HeaderStartSymbol)
-      : MaterializationUnit(createHeaderSymbols(MOP, HeaderStartSymbol),
-                            HeaderStartSymbol),
+      : MaterializationUnit(createHeaderInterface(MOP, HeaderStartSymbol)),
         MOP(MOP) {}
 
   StringRef getName() const override { return "MachOHeaderMU"; }
@@ -107,12 +139,13 @@ private:
     auto HeaderContent = G.allocateString(
         StringRef(reinterpret_cast<const char *>(&Hdr), sizeof(Hdr)));
 
-    return G.createContentBlock(HeaderSection, HeaderContent, 0, 8, 0);
+    return G.createContentBlock(HeaderSection, HeaderContent, ExecutorAddr(), 8,
+                                0);
   }
 
-  static SymbolFlagsMap
-  createHeaderSymbols(MachOPlatform &MOP,
-                      const SymbolStringPtr &HeaderStartSymbol) {
+  static MaterializationUnit::Interface
+  createHeaderInterface(MachOPlatform &MOP,
+                        const SymbolStringPtr &HeaderStartSymbol) {
     SymbolFlagsMap HeaderSymbolFlags;
 
     HeaderSymbolFlags[HeaderStartSymbol] = JITSymbolFlags::Exported;
@@ -120,7 +153,8 @@ private:
       HeaderSymbolFlags[MOP.getExecutionSession().intern(HS.Name)] =
           JITSymbolFlags::Exported;
 
-    return HeaderSymbolFlags;
+    return MaterializationUnit::Interface(std::move(HeaderSymbolFlags),
+                                          HeaderStartSymbol);
   }
 
   MachOPlatform &MOP;
@@ -198,8 +232,24 @@ MachOPlatform::Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
 }
 
 Error MachOPlatform::setupJITDylib(JITDylib &JD) {
-  return JD.define(std::make_unique<MachOHeaderMaterializationUnit>(
-      *this, MachOHeaderStartSymbol));
+  if (auto Err = JD.define(std::make_unique<MachOHeaderMaterializationUnit>(
+          *this, MachOHeaderStartSymbol)))
+    return Err;
+
+  return ES.lookup({&JD}, MachOHeaderStartSymbol).takeError();
+}
+
+Error MachOPlatform::teardownJITDylib(JITDylib &JD) {
+  std::lock_guard<std::mutex> Lock(PlatformMutex);
+  auto I = JITDylibToHeaderAddr.find(&JD);
+  if (I != JITDylibToHeaderAddr.end()) {
+    assert(HeaderAddrToJITDylib.count(I->second) &&
+           "HeaderAddrToJITDylib missing entry");
+    HeaderAddrToJITDylib.erase(I->second);
+    JITDylibToHeaderAddr.erase(I);
+  }
+  JITDylibToPThreadKey.erase(&JD);
+  return Error::success();
 }
 
 Error MachOPlatform::notifyAdding(ResourceTracker &RT,
@@ -302,16 +352,6 @@ MachOPlatform::MachOPlatform(
 
   State = BootstrapPhase2;
 
-  // PlatformJD hasn't been 'set-up' by the platform yet (since we're creating
-  // the platform now), so set it up.
-  if (auto E2 = setupJITDylib(PlatformJD)) {
-    Err = std::move(E2);
-    return;
-  }
-
-  RegisteredInitSymbols[&PlatformJD].add(
-      MachOHeaderStartSymbol, SymbolLookupFlags::WeaklyReferencedSymbol);
-
   // Associate wrapper function tags with JIT-side function implementations.
   if (auto E2 = associateRuntimeSupportFunctions(PlatformJD)) {
     Err = std::move(E2);
@@ -326,23 +366,24 @@ MachOPlatform::MachOPlatform(
     return;
   }
 
+  // PlatformJD hasn't been set up by the platform yet (since we're creating
+  // the platform now), so set it up.
+  if (auto E2 = setupJITDylib(PlatformJD)) {
+    Err = std::move(E2);
+    return;
+  }
+
   State = Initialized;
 }
 
 Error MachOPlatform::associateRuntimeSupportFunctions(JITDylib &PlatformJD) {
   ExecutionSession::JITDispatchHandlerAssociationMap WFs;
 
-  using GetInitializersSPSSig =
-      SPSExpected<SPSMachOJITDylibInitializerSequence>(SPSString);
-  WFs[ES.intern("___orc_rt_macho_get_initializers_tag")] =
-      ES.wrapAsyncWithSPS<GetInitializersSPSSig>(
-          this, &MachOPlatform::rt_getInitializers);
-
-  using GetDeinitializersSPSSig =
-      SPSExpected<SPSMachOJITDylibDeinitializerSequence>(SPSExecutorAddr);
-  WFs[ES.intern("___orc_rt_macho_get_deinitializers_tag")] =
-      ES.wrapAsyncWithSPS<GetDeinitializersSPSSig>(
-          this, &MachOPlatform::rt_getDeinitializers);
+  using PushInitializersSPSSig =
+      SPSExpected<SPSMachOJITDylibDepInfoMap>(SPSExecutorAddr);
+  WFs[ES.intern("___orc_rt_macho_push_initializers_tag")] =
+      ES.wrapAsyncWithSPS<PushInitializersSPSSig>(
+          this, &MachOPlatform::rt_pushInitializers);
 
   using LookupSymbolSPSSig =
       SPSExpected<SPSExecutorAddr>(SPSExecutorAddr, SPSString);
@@ -353,48 +394,83 @@ Error MachOPlatform::associateRuntimeSupportFunctions(JITDylib &PlatformJD) {
   return ES.registerJITDispatchHandlers(PlatformJD, std::move(WFs));
 }
 
-void MachOPlatform::getInitializersBuildSequencePhase(
-    SendInitializerSequenceFn SendResult, JITDylib &JD,
-    std::vector<JITDylibSP> DFSLinkOrder) {
-  MachOJITDylibInitializerSequence FullInitSeq;
-  {
-    std::lock_guard<std::mutex> Lock(PlatformMutex);
-    for (auto &InitJD : reverse(DFSLinkOrder)) {
-      LLVM_DEBUG({
-        dbgs() << "MachOPlatform: Appending inits for \"" << InitJD->getName()
-               << "\" to sequence\n";
-      });
-      auto ISItr = InitSeqs.find(InitJD.get());
-      if (ISItr != InitSeqs.end()) {
-        FullInitSeq.emplace_back(std::move(ISItr->second));
-        InitSeqs.erase(ISItr);
-      }
-    }
-  }
-
-  SendResult(std::move(FullInitSeq));
-}
-
-void MachOPlatform::getInitializersLookupPhase(
-    SendInitializerSequenceFn SendResult, JITDylib &JD) {
-
-  auto DFSLinkOrder = JD.getDFSLinkOrder();
+void MachOPlatform::pushInitializersLoop(
+    PushInitializersSendResultFn SendResult, JITDylibSP JD) {
   DenseMap<JITDylib *, SymbolLookupSet> NewInitSymbols;
+  DenseMap<JITDylib *, SmallVector<JITDylib *>> JDDepMap;
+  SmallVector<JITDylib *, 16> Worklist({JD.get()});
+
   ES.runSessionLocked([&]() {
-    for (auto &InitJD : DFSLinkOrder) {
-      auto RISItr = RegisteredInitSymbols.find(InitJD.get());
+    while (!Worklist.empty()) {
+      // FIXME: Check for defunct dylibs.
+
+      auto DepJD = Worklist.back();
+      Worklist.pop_back();
+
+      // If we've already visited this JITDylib on this iteration then continue.
+      if (JDDepMap.count(DepJD))
+        continue;
+
+      // Add dep info.
+      auto &DM = JDDepMap[DepJD];
+      DepJD->withLinkOrderDo([&](const JITDylibSearchOrder &O) {
+        for (auto &KV : O) {
+          if (KV.first == DepJD)
+            continue;
+          DM.push_back(KV.first);
+          Worklist.push_back(KV.first);
+        }
+      });
+
+      // Add any registered init symbols.
+      auto RISItr = RegisteredInitSymbols.find(DepJD);
       if (RISItr != RegisteredInitSymbols.end()) {
-        NewInitSymbols[InitJD.get()] = std::move(RISItr->second);
+        NewInitSymbols[DepJD] = std::move(RISItr->second);
         RegisteredInitSymbols.erase(RISItr);
       }
     }
   });
 
-  // If there are no further init symbols to look up then move on to the next
-  // phase.
+  // If there are no further init symbols to look up then send the link order
+  // (as a list of header addresses) to the caller.
   if (NewInitSymbols.empty()) {
-    getInitializersBuildSequencePhase(std::move(SendResult), JD,
-                                      std::move(DFSLinkOrder));
+
+    // To make the list intelligible to the runtime we need to convert all
+    // JITDylib pointers to their header addresses.
+    DenseMap<JITDylib *, ExecutorAddr> HeaderAddrs;
+    HeaderAddrs.reserve(JDDepMap.size());
+    {
+      std::lock_guard<std::mutex> Lock(PlatformMutex);
+      for (auto &KV : JDDepMap) {
+        auto I = JITDylibToHeaderAddr.find(KV.first);
+        if (I == JITDylibToHeaderAddr.end()) {
+          // The header address should have been materialized by the previous
+          // round, but we need to handle the pathalogical case where someone
+          // removes the symbol on another thread while we're running.
+          SendResult(
+              make_error<StringError>("JITDylib " + KV.first->getName() +
+                                          " has no registered header address",
+                                      inconvertibleErrorCode()));
+          return;
+        }
+        HeaderAddrs[KV.first] = I->second;
+      }
+    }
+
+    // Build the dep info map to return.
+    MachOJITDylibDepInfoMap DIM;
+    DIM.reserve(JDDepMap.size());
+    for (auto &KV : JDDepMap) {
+      assert(HeaderAddrs.count(KV.first) && "Missing header addr");
+      auto H = HeaderAddrs[KV.first];
+      MachOJITDylibDepInfo DepInfo;
+      for (auto &Dep : KV.second) {
+        assert(HeaderAddrs.count(Dep) && "Missing header addr");
+        DepInfo.DepHeaders.push_back(HeaderAddrs[Dep]);
+      }
+      DIM.push_back(std::make_pair(H, std::move(DepInfo)));
+    }
+    SendResult(DIM);
     return;
   }
 
@@ -404,58 +480,38 @@ void MachOPlatform::getInitializersLookupPhase(
         if (Err)
           SendResult(std::move(Err));
         else
-          getInitializersLookupPhase(std::move(SendResult), JD);
+          pushInitializersLoop(std::move(SendResult), JD);
       },
       ES, std::move(NewInitSymbols));
 }
 
-void MachOPlatform::rt_getInitializers(SendInitializerSequenceFn SendResult,
-                                       StringRef JDName) {
-  LLVM_DEBUG({
-    dbgs() << "MachOPlatform::rt_getInitializers(\"" << JDName << "\")\n";
-  });
-
-  JITDylib *JD = ES.getJITDylibByName(JDName);
-  if (!JD) {
-    LLVM_DEBUG({
-      dbgs() << "  No such JITDylib \"" << JDName << "\". Sending error.\n";
-    });
-    SendResult(make_error<StringError>("No JITDylib named " + JDName,
-                                       inconvertibleErrorCode()));
-    return;
-  }
-
-  getInitializersLookupPhase(std::move(SendResult), *JD);
-}
-
-void MachOPlatform::rt_getDeinitializers(SendDeinitializerSequenceFn SendResult,
-                                         ExecutorAddr Handle) {
-  LLVM_DEBUG({
-    dbgs() << "MachOPlatform::rt_getDeinitializers(\""
-           << formatv("{0:x}", Handle.getValue()) << "\")\n";
-  });
-
-  JITDylib *JD = nullptr;
-
+void MachOPlatform::rt_pushInitializers(PushInitializersSendResultFn SendResult,
+                                        ExecutorAddr JDHeaderAddr) {
+  JITDylibSP JD;
   {
     std::lock_guard<std::mutex> Lock(PlatformMutex);
-    auto I = HeaderAddrToJITDylib.find(Handle.getValue());
+    auto I = HeaderAddrToJITDylib.find(JDHeaderAddr);
     if (I != HeaderAddrToJITDylib.end())
       JD = I->second;
   }
 
+  LLVM_DEBUG({
+    dbgs() << "MachOPlatform::rt_pushInitializers(" << JDHeaderAddr << ") ";
+    if (JD)
+      dbgs() << "pushing initializers for " << JD->getName() << "\n";
+    else
+      dbgs() << "No JITDylib for header address.\n";
+  });
+
   if (!JD) {
-    LLVM_DEBUG({
-      dbgs() << "  No JITDylib for handle "
-             << formatv("{0:x}", Handle.getValue()) << "\n";
-    });
-    SendResult(make_error<StringError>("No JITDylib associated with handle " +
-                                           formatv("{0:x}", Handle.getValue()),
-                                       inconvertibleErrorCode()));
+    SendResult(
+        make_error<StringError>("No JITDylib with header addr " +
+                                    formatv("{0:x}", JDHeaderAddr.getValue()),
+                                inconvertibleErrorCode()));
     return;
   }
 
-  SendResult(MachOJITDylibDeinitializerSequence());
+  pushInitializersLoop(std::move(SendResult), JD);
 }
 
 void MachOPlatform::rt_lookupSymbol(SendSymbolAddressFn SendResult,
@@ -469,7 +525,7 @@ void MachOPlatform::rt_lookupSymbol(SendSymbolAddressFn SendResult,
 
   {
     std::lock_guard<std::mutex> Lock(PlatformMutex);
-    auto I = HeaderAddrToJITDylib.find(Handle.getValue());
+    auto I = HeaderAddrToJITDylib.find(Handle);
     if (I != HeaderAddrToJITDylib.end())
       JD = I->second;
   }
@@ -518,54 +574,19 @@ Error MachOPlatform::bootstrapMachORuntime(JITDylib &PlatformJD) {
             &orc_rt_macho_platform_bootstrap},
            {ES.intern("___orc_rt_macho_platform_shutdown"),
             &orc_rt_macho_platform_shutdown},
-           {ES.intern("___orc_rt_macho_register_thread_data_section"),
-            &orc_rt_macho_register_thread_data_section},
-           {ES.intern("___orc_rt_macho_deregister_thread_data_section"),
-            &orc_rt_macho_deregister_thread_data_section},
+           {ES.intern("___orc_rt_macho_register_jitdylib"),
+            &orc_rt_macho_register_jitdylib},
+           {ES.intern("___orc_rt_macho_deregister_jitdylib"),
+            &orc_rt_macho_deregister_jitdylib},
+           {ES.intern("___orc_rt_macho_register_object_platform_sections"),
+            &orc_rt_macho_register_object_platform_sections},
+           {ES.intern("___orc_rt_macho_deregister_object_platform_sections"),
+            &orc_rt_macho_deregister_object_platform_sections},
            {ES.intern("___orc_rt_macho_create_pthread_key"),
             &orc_rt_macho_create_pthread_key}}))
     return Err;
 
   return ES.callSPSWrapper<void()>(orc_rt_macho_platform_bootstrap);
-}
-
-Error MachOPlatform::registerInitInfo(
-    JITDylib &JD, ExecutorAddr ObjCImageInfoAddr,
-    ArrayRef<jitlink::Section *> InitSections) {
-
-  std::unique_lock<std::mutex> Lock(PlatformMutex);
-
-  MachOJITDylibInitializers *InitSeq = nullptr;
-  {
-    auto I = InitSeqs.find(&JD);
-    if (I == InitSeqs.end()) {
-      // If there's no init sequence entry yet then we need to look up the
-      // header symbol to force creation of one.
-      Lock.unlock();
-
-      auto SearchOrder =
-          JD.withLinkOrderDo([](const JITDylibSearchOrder &SO) { return SO; });
-      if (auto Err = ES.lookup(SearchOrder, MachOHeaderStartSymbol).takeError())
-        return Err;
-
-      Lock.lock();
-      I = InitSeqs.find(&JD);
-      assert(I != InitSeqs.end() &&
-             "Entry missing after header symbol lookup?");
-    }
-    InitSeq = &I->second;
-  }
-
-  InitSeq->ObjCImageInfoAddress = ObjCImageInfoAddr;
-
-  for (auto *Sec : InitSections) {
-    // FIXME: Avoid copy here.
-    jitlink::SectionRange R(*Sec);
-    InitSeq->InitSections[Sec->getName()].push_back(
-        {ExecutorAddr(R.getStart()), ExecutorAddr(R.getEnd())});
-  }
-
-  return Error::success();
 }
 
 Expected<uint64_t> MachOPlatform::createPThreadKey() {
@@ -609,11 +630,6 @@ void MachOPlatform::MachOPlatformPlugin::modifyPassConfig(
         return Err;
       return processObjCImageInfo(G, MR);
     });
-
-    Config.PostFixupPasses.push_back(
-        [this, &JD = MR.getTargetJITDylib()](jitlink::LinkGraph &G) {
-          return registerInitSections(G, JD);
-        });
   }
 
   // --- Add passes for eh-frame and TLV support ---
@@ -631,10 +647,12 @@ void MachOPlatform::MachOPlatformPlugin::modifyPassConfig(
         return fixTLVSectionsAndEdges(G, JD);
       });
 
-  // Add a pass to register the final addresses of the eh-frame and TLV sections
-  // with the runtime.
-  Config.PostFixupPasses.push_back(
-      [this](jitlink::LinkGraph &G) { return registerEHAndTLVSections(G); });
+  // Add a pass to register the final addresses of any special sections in the
+  // object with the runtime.
+  Config.PostAllocationPasses.push_back(
+      [this, &JD = MR.getTargetJITDylib()](jitlink::LinkGraph &G) {
+        return registerObjectPlatformSections(G, JD);
+      });
 }
 
 ObjectLinkingLayer::Plugin::SyntheticSymbolDependenciesMap
@@ -653,7 +671,6 @@ MachOPlatform::MachOPlatformPlugin::getSyntheticSymbolDependencies(
 
 Error MachOPlatform::MachOPlatformPlugin::associateJITDylibHeaderSymbol(
     jitlink::LinkGraph &G, MaterializationResponsibility &MR) {
-
   auto I = llvm::find_if(G.defined_symbols(), [this](jitlink::Symbol *Sym) {
     return Sym->getName() == *MP.MachOHeaderStartSymbol;
   });
@@ -661,11 +678,15 @@ Error MachOPlatform::MachOPlatformPlugin::associateJITDylibHeaderSymbol(
 
   auto &JD = MR.getTargetJITDylib();
   std::lock_guard<std::mutex> Lock(MP.PlatformMutex);
-  JITTargetAddress HeaderAddr = (*I)->getAddress();
+  auto HeaderAddr = (*I)->getAddress();
+  MP.JITDylibToHeaderAddr[&JD] = HeaderAddr;
   MP.HeaderAddrToJITDylib[HeaderAddr] = &JD;
-  assert(!MP.InitSeqs.count(&JD) && "InitSeq entry for JD already exists");
-  MP.InitSeqs.insert(std::make_pair(
-      &JD, MachOJITDylibInitializers(JD.getName(), ExecutorAddr(HeaderAddr))));
+  G.allocActions().push_back(
+      {cantFail(
+           WrapperFunctionCall::Create<SPSArgList<SPSString, SPSExecutorAddr>>(
+               MP.orc_rt_macho_register_jitdylib, JD.getName(), HeaderAddr)),
+       cantFail(WrapperFunctionCall::Create<SPSArgList<SPSExecutorAddr>>(
+           MP.orc_rt_macho_deregister_jitdylib, HeaderAddr))});
   return Error::success();
 }
 
@@ -784,37 +805,6 @@ Error MachOPlatform::MachOPlatformPlugin::processObjCImageInfo(
   return Error::success();
 }
 
-Error MachOPlatform::MachOPlatformPlugin::registerInitSections(
-    jitlink::LinkGraph &G, JITDylib &JD) {
-
-  ExecutorAddr ObjCImageInfoAddr;
-  SmallVector<jitlink::Section *> InitSections;
-
-  if (auto *ObjCImageInfoSec = G.findSectionByName(ObjCImageInfoSectionName)) {
-    if (auto Addr = jitlink::SectionRange(*ObjCImageInfoSec).getStart())
-      ObjCImageInfoAddr.setValue(Addr);
-  }
-
-  for (auto InitSectionName : InitSectionNames)
-    if (auto *Sec = G.findSectionByName(InitSectionName))
-      InitSections.push_back(Sec);
-
-  // Dump the scraped inits.
-  LLVM_DEBUG({
-    dbgs() << "MachOPlatform: Scraped " << G.getName() << " init sections:\n";
-    if (ObjCImageInfoAddr)
-      dbgs() << "  " << ObjCImageInfoSectionName << ": "
-             << formatv("{0:x}", ObjCImageInfoAddr.getValue()) << "\n";
-    for (auto *Sec : InitSections) {
-      jitlink::SectionRange R(*Sec);
-      dbgs() << "  " << Sec->getName() << ": "
-             << formatv("[ {0:x} -- {1:x} ]", R.getStart(), R.getEnd()) << "\n";
-    }
-  });
-
-  return MP.registerInitInfo(JD, ObjCImageInfoAddr, InitSections);
-}
-
 Error MachOPlatform::MachOPlatformPlugin::fixTLVSectionsAndEdges(
     jitlink::LinkGraph &G, JITDylib &JD) {
 
@@ -871,19 +861,20 @@ Error MachOPlatform::MachOPlatformPlugin::fixTLVSectionsAndEdges(
   return Error::success();
 }
 
-Error MachOPlatform::MachOPlatformPlugin::registerEHAndTLVSections(
-    jitlink::LinkGraph &G) {
+Error MachOPlatform::MachOPlatformPlugin::registerObjectPlatformSections(
+    jitlink::LinkGraph &G, JITDylib &JD) {
 
-  // Add a pass to register the final addresses of the eh-frame and TLV sections
-  // with the runtime.
+  // Add an action to register the eh-frame.
   if (auto *EHFrameSection = G.findSectionByName(EHFrameSectionName)) {
     jitlink::SectionRange R(*EHFrameSection);
     if (!R.empty())
       G.allocActions().push_back(
-          {{MP.orc_rt_macho_register_ehframe_section.getValue(), R.getStart(),
-            R.getSize()},
-           {MP.orc_rt_macho_deregister_ehframe_section.getValue(), R.getStart(),
-            R.getSize()}});
+          {cantFail(
+               WrapperFunctionCall::Create<SPSArgList<SPSExecutorAddrRange>>(
+                   MP.orc_rt_macho_register_ehframe_section, R.getRange())),
+           cantFail(
+               WrapperFunctionCall::Create<SPSArgList<SPSExecutorAddrRange>>(
+                   MP.orc_rt_macho_deregister_ehframe_section, R.getRange()))});
   }
 
   // Get a pointer to the thread data section if there is one. It will be used
@@ -902,6 +893,8 @@ Error MachOPlatform::MachOPlatformPlugin::registerEHAndTLVSections(
       ThreadDataSection = ThreadBSSSection;
   }
 
+  SmallVector<std::pair<StringRef, ExecutorAddrRange>, 8> MachOPlatformSecs;
+
   // Having merged thread BSS (if present) and thread data (if present),
   // record the resulting section range.
   if (ThreadDataSection) {
@@ -912,13 +905,64 @@ Error MachOPlatform::MachOPlatformPlugin::registerEHAndTLVSections(
                                        "MachOPlatform has not finished booting",
                                        inconvertibleErrorCode());
 
-      G.allocActions().push_back(
-          {{MP.orc_rt_macho_register_thread_data_section.getValue(),
-            R.getStart(), R.getSize()},
-           {MP.orc_rt_macho_deregister_thread_data_section.getValue(),
-            R.getStart(), R.getSize()}});
+      MachOPlatformSecs.push_back({ThreadDataSectionName, R.getRange()});
     }
   }
+
+  // If any platform sections were found then add an allocation action to call
+  // the registration function.
+  StringRef PlatformSections[] = {
+      ModInitFuncSectionName,   ObjCClassListSectionName,
+      ObjCImageInfoSectionName, ObjCSelRefsSectionName,
+      Swift5ProtoSectionName,   Swift5ProtosSectionName,
+      Swift5TypesSectionName,
+  };
+
+  for (auto &SecName : PlatformSections) {
+    auto *Sec = G.findSectionByName(SecName);
+    if (!Sec)
+      continue;
+    jitlink::SectionRange R(*Sec);
+    if (R.empty())
+      continue;
+
+    MachOPlatformSecs.push_back({SecName, R.getRange()});
+  }
+
+  if (!MachOPlatformSecs.empty()) {
+    Optional<ExecutorAddr> HeaderAddr;
+    {
+      std::lock_guard<std::mutex> Lock(MP.PlatformMutex);
+      auto I = MP.JITDylibToHeaderAddr.find(&JD);
+      if (I != MP.JITDylibToHeaderAddr.end())
+        HeaderAddr = I->second;
+    }
+
+    if (!HeaderAddr)
+      return make_error<StringError>("Missing header for " + JD.getName(),
+                                     inconvertibleErrorCode());
+
+    // Dump the scraped inits.
+    LLVM_DEBUG({
+      dbgs() << "MachOPlatform: Scraped " << G.getName() << " init sections:\n";
+      for (auto &KV : MachOPlatformSecs)
+        dbgs() << "  " << KV.first << ": " << KV.second << "\n";
+    });
+
+    using SPSRegisterObjectPlatformSectionsArgs =
+        SPSArgList<SPSExecutorAddr,
+                   SPSSequence<SPSTuple<SPSString, SPSExecutorAddrRange>>>;
+    G.allocActions().push_back(
+        {cantFail(
+             WrapperFunctionCall::Create<SPSRegisterObjectPlatformSectionsArgs>(
+                 MP.orc_rt_macho_register_object_platform_sections, *HeaderAddr,
+                 MachOPlatformSecs)),
+         cantFail(
+             WrapperFunctionCall::Create<SPSRegisterObjectPlatformSectionsArgs>(
+                 MP.orc_rt_macho_deregister_object_platform_sections,
+                 *HeaderAddr, MachOPlatformSecs))});
+  }
+
   return Error::success();
 }
 
@@ -963,10 +1007,10 @@ Error MachOPlatform::MachOPlatformPlugin::registerEHSectionsPhase1(
   // Otherwise, add allocation actions to the graph to register eh-frames for
   // this object.
   G.allocActions().push_back(
-      {{orc_rt_macho_register_ehframe_section.getValue(), R.getStart(),
-        R.getSize()},
-       {orc_rt_macho_deregister_ehframe_section.getValue(), R.getStart(),
-        R.getSize()}});
+      {cantFail(WrapperFunctionCall::Create<SPSArgList<SPSExecutorAddrRange>>(
+           orc_rt_macho_register_ehframe_section, R.getRange())),
+       cantFail(WrapperFunctionCall::Create<SPSArgList<SPSExecutorAddrRange>>(
+           orc_rt_macho_deregister_ehframe_section, R.getRange()))});
 
   return Error::success();
 }

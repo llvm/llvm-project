@@ -505,12 +505,12 @@ func @test_identity(%arg0: tensor<13x21x3xi32>) -> tensor<13x21x3xi32> {
 // -----
 // CHECK-LABEL: cond_if
 func @test_cond_if(%arg0: tensor<f32>, %arg1: tensor<f32>, %arg2: tensor<i1>) -> tensor<f32> {
-  %0 = "tosa.cond_if"(%arg2, %arg0, %arg1) ( {
-  ^bb0(%arg3: tensor<f32>, %arg4: tensor<f32>):  // no predecessors
+  %0 = "tosa.cond_if"(%arg2, %arg0, %arg1) ({
+  ^bb0(%arg3: tensor<f32>, %arg4: tensor<f32>):  
     %1 = "tosa.add"(%arg3, %arg4) : (tensor<f32>, tensor<f32>) -> tensor<f32>
     "tosa.yield"(%1) : (tensor<f32>) -> ()
   },  {
-  ^bb0(%arg3: tensor<f32>, %arg4: tensor<f32>):  // no predecessors
+  ^bb0(%arg3: tensor<f32>, %arg4: tensor<f32>):  
     %1 = "tosa.sub"(%arg3, %arg4) : (tensor<f32>, tensor<f32>) -> tensor<f32>
     "tosa.yield"(%1) : (tensor<f32>) -> ()
   }) : (tensor<i1>, tensor<f32>, tensor<f32>) -> tensor<f32>
@@ -521,13 +521,13 @@ func @test_cond_if(%arg0: tensor<f32>, %arg1: tensor<f32>, %arg2: tensor<i1>) ->
 // CHECK-LABEL: while_loop
 func @test_while_loop(%arg0: tensor<10xi32>, %arg1: tensor<i32>) {
   %0 = "tosa.const"() {value = dense<0> : tensor<i32>} : () -> tensor<i32>
-  %1:3 = "tosa.while_loop"(%0, %0, %arg0) ( {
-  ^bb0(%arg2: tensor<i32>, %arg3: tensor<i32>, %arg4: tensor<10xi32>):  // no predecessors
+  %1:3 = "tosa.while_loop"(%0, %0, %arg0) ({
+  ^bb0(%arg2: tensor<i32>, %arg3: tensor<i32>, %arg4: tensor<10xi32>):  
     %2 = "tosa.greater_equal"(%arg3, %arg1) : (tensor<i32>, tensor<i32>) -> tensor<i1>
     %3 = "tosa.logical_not"(%2) : (tensor<i1>) -> tensor<i1>
     "tosa.yield"(%3) : (tensor<i1>) -> ()
   },  {
-  ^bb0(%arg2: tensor<i32>, %arg3: tensor<i32>, %arg4: tensor<10xi32>):  // no predecessors
+  ^bb0(%arg2: tensor<i32>, %arg3: tensor<i32>, %arg4: tensor<10xi32>):  
     %2 = "tosa.const"() {value = dense<1> : tensor<i32>} : () -> tensor<i32>
     %3 = "tosa.add"(%arg3, %2) : (tensor<i32>, tensor<i32>) -> tensor<i32>
     %4 = "tosa.reshape"(%2) {new_shape = [1]} : (tensor<i32>) -> tensor<1xi32>

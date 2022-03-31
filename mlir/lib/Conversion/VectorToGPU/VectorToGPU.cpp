@@ -21,8 +21,8 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
-#include "mlir/Dialect/Vector/VectorOps.h"
-#include "mlir/Dialect/Vector/VectorUtils.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -32,14 +32,14 @@ using namespace mlir;
 
 // Return true if the contract op can be convert to MMA matmul.
 static bool contractSupportsMMAMatrixType(vector::ContractionOp contract) {
-  if (llvm::size(contract.masks()) != 0)
+  if (llvm::size(contract.getMasks()) != 0)
     return false;
 
   using MapList = ArrayRef<ArrayRef<AffineExpr>>;
   auto infer = [](MapList m) { return AffineMap::inferFromExprList(m); };
   AffineExpr m, n, k;
   bindDims(contract.getContext(), m, n, k);
-  auto iteratorTypes = contract.iterator_types().getValue();
+  auto iteratorTypes = contract.getIteratorTypes().getValue();
   if (!(isParallelIterator(iteratorTypes[0]) &&
         isParallelIterator(iteratorTypes[1]) &&
         isReductionIterator(iteratorTypes[2])))
@@ -60,23 +60,28 @@ getMemrefConstantHorizontalStride(ShapedType type) {
   auto memrefType = type.dyn_cast<MemRefType>();
   if (!memrefType)
     return false;
+  // If the memref is 0 or 1D the horizontal stride is 0.
+  if(memrefType.getRank() < 2)
+    return 0;
   int64_t offset = 0;
   SmallVector<int64_t, 2> strides;
-  if (failed(getStridesAndOffset(memrefType, strides, offset)))
+  if (failed(getStridesAndOffset(memrefType, strides, offset)) ||
+      strides.back() != 1)
     return llvm::None;
-  if (strides[0] == ShapedType::kDynamicStrideOrOffset)
+  int64_t stride = strides[strides.size() - 2];
+  if (stride == ShapedType::kDynamicStrideOrOffset)
     return llvm::None;
-  return strides[0];
+  return stride;
 }
 
 // Return true if the transfer op can be converted to a MMA matrix load.
 static bool transferReadSupportsMMAMatrixType(vector::TransferReadOp readOp) {
-  if (readOp.mask() || readOp.hasOutOfBoundsDim() ||
+  if (readOp.getMask() || readOp.hasOutOfBoundsDim() ||
       readOp.getVectorType().getRank() != 2)
     return false;
   if (!getMemrefConstantHorizontalStride(readOp.getShapedType()))
     return false;
-  AffineMap map = readOp.permutation_map();
+  AffineMap map = readOp.getPermutationMap();
   OpBuilder b(readOp.getContext());
   AffineExpr innerDim = b.getAffineDimExpr(map.getNumDims() - 1);
   AffineExpr zero = b.getAffineConstantExpr(0);
@@ -84,9 +89,7 @@ static bool transferReadSupportsMMAMatrixType(vector::TransferReadOp readOp) {
                                           readOp.getContext());
   // TODO: Support transpose once it is added to GPU dialect ops.
   // For now we only support (d0, d1) -> (d0, d1) and (d0, d1) -> (0, d1).
-  if (!map.isMinorIdentity() && map != broadcastInnerDim)
-    return false;
-  return true;
+  return !(!map.isMinorIdentity() && map != broadcastInnerDim);
 }
 
 // Return true if the transfer op can be converted to a MMA matrix store.
@@ -96,13 +99,13 @@ transferWriteSupportsMMAMatrixType(vector::TransferWriteOp writeOp) {
   if (writeOp.getTransferRank() == 0)
     return false;
 
-  if (writeOp.mask() || writeOp.hasOutOfBoundsDim() ||
+  if (writeOp.getMask() || writeOp.hasOutOfBoundsDim() ||
       writeOp.getVectorType().getRank() != 2)
     return false;
   if (!getMemrefConstantHorizontalStride(writeOp.getShapedType()))
     return false;
   // TODO: Support transpose once it is added to GPU dialect ops.
-  if (!writeOp.permutation_map().isMinorIdentity())
+  if (!writeOp.getPermutationMap().isMinorIdentity())
     return false;
   return true;
 }
@@ -119,7 +122,7 @@ static bool constantSupportsMMAMatrixType(arith::ConstantOp constantOp) {
 /// Return true if this is a broadcast from scalar to a 2D vector.
 static bool broadcastSupportsMMAMatrixType(vector::BroadcastOp broadcastOp) {
   return broadcastOp.getVectorType().getRank() == 2 &&
-         broadcastOp.source().getType().isa<FloatType>();
+         broadcastOp.getSource().getType().isa<FloatType>();
 }
 
 /// Return the MMA elementwise enum associated with `op` if it is supported.
@@ -237,7 +240,7 @@ struct PrepareContractToGPUMMA
   LogicalResult matchAndRewrite(vector::ContractionOp op,
                                 PatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
-    Value lhs = op.lhs(), rhs = op.rhs(), res = op.acc();
+    Value lhs = op.getLhs(), rhs = op.getRhs(), res = op.getAcc();
 
     // Set up the parallel/reduction structure in right form.
     using MapList = ArrayRef<ArrayRef<AffineExpr>>;
@@ -245,7 +248,7 @@ struct PrepareContractToGPUMMA
     AffineExpr m, n, k;
     bindDims(rewriter.getContext(), m, n, k);
     static constexpr std::array<int64_t, 2> perm = {1, 0};
-    auto iteratorTypes = op.iterator_types().getValue();
+    auto iteratorTypes = op.getIteratorTypes().getValue();
     SmallVector<AffineMap, 4> maps = op.getIndexingMaps();
     if (!(isParallelIterator(iteratorTypes[0]) &&
           isParallelIterator(iteratorTypes[1]) &&
@@ -283,7 +286,7 @@ struct PrepareContractToGPUMMA
     rewriter.replaceOpWithNewOp<vector::ContractionOp>(
         op, lhs, rhs, res,
         rewriter.getAffineMapArrayAttr(infer({{m, k}, {k, n}, {m, n}})),
-        op.iterator_types());
+        op.getIteratorTypes());
     return success();
   }
 };
@@ -296,7 +299,8 @@ struct CombineTransferReadOpTranspose final
 
   LogicalResult matchAndRewrite(vector::TransposeOp op,
                                 PatternRewriter &rewriter) const override {
-    auto transferReadOp = op.vector().getDefiningOp<vector::TransferReadOp>();
+    auto transferReadOp =
+        op.getVector().getDefiningOp<vector::TransferReadOp>();
     if (!transferReadOp)
       return failure();
 
@@ -304,7 +308,7 @@ struct CombineTransferReadOpTranspose final
     if (transferReadOp.getTransferRank() == 0)
       return failure();
 
-    if (transferReadOp.mask() || transferReadOp.hasOutOfBoundsDim())
+    if (transferReadOp.getMask() || transferReadOp.hasOutOfBoundsDim())
       return failure();
     SmallVector<int64_t, 2> perm;
     op.getTransp(perm);
@@ -313,11 +317,13 @@ struct CombineTransferReadOpTranspose final
       permU.push_back(unsigned(o));
     AffineMap permutationMap =
         AffineMap::getPermutationMap(permU, op.getContext());
-    AffineMap newMap = permutationMap.compose(transferReadOp.permutation_map());
+    AffineMap newMap =
+        permutationMap.compose(transferReadOp.getPermutationMap());
     rewriter.replaceOpWithNewOp<vector::TransferReadOp>(
-        op, op.getType(), transferReadOp.source(), transferReadOp.indices(),
-        AffineMapAttr::get(newMap), transferReadOp.padding(),
-        transferReadOp.mask(), transferReadOp.in_boundsAttr());
+        op, op.getType(), transferReadOp.getSource(),
+        transferReadOp.getIndices(), AffineMapAttr::get(newMap),
+        transferReadOp.getPadding(), transferReadOp.getMask(),
+        transferReadOp.getInBoundsAttr());
     return success();
   }
 };
@@ -334,9 +340,9 @@ static const char *inferFragType(OpTy op) {
     auto contract = dyn_cast<vector::ContractionOp>(users);
     if (!contract)
       continue;
-    if (contract.lhs() == op.getResult())
+    if (contract.getLhs() == op.getResult())
       return "AOp";
-    if (contract.rhs() == op.getResult())
+    if (contract.getRhs() == op.getResult())
       return "BOp";
   }
   return "COp";
@@ -348,7 +354,7 @@ static void convertTransferReadOp(vector::TransferReadOp op,
   assert(transferReadSupportsMMAMatrixType(op));
   Optional<int64_t> stride =
       getMemrefConstantHorizontalStride(op.getShapedType());
-  AffineMap map = op.permutation_map();
+  AffineMap map = op.getPermutationMap();
   // Handle broadcast by setting the stride to 0.
   if (map.getResult(0).isa<AffineConstantExpr>()) {
     assert(map.getResult(0).cast<AffineConstantExpr>().getValue() == 0);
@@ -361,7 +367,8 @@ static void convertTransferReadOp(vector::TransferReadOp op,
                               op.getVectorType().getElementType(), fragType);
   OpBuilder b(op);
   Value load = b.create<gpu::SubgroupMmaLoadMatrixOp>(
-      op.getLoc(), type, op.source(), op.indices(), b.getIndexAttr(*stride));
+      op.getLoc(), type, op.getSource(), op.getIndices(),
+      b.getIndexAttr(*stride));
   valueMapping[op.getResult()] = load;
 }
 
@@ -372,18 +379,19 @@ static void convertTransferWriteOp(vector::TransferWriteOp op,
       getMemrefConstantHorizontalStride(op.getShapedType());
   assert(stride);
   OpBuilder b(op);
-  Value matrix = valueMapping.find(op.vector())->second;
-  b.create<gpu::SubgroupMmaStoreMatrixOp>(
-      op.getLoc(), matrix, op.source(), op.indices(), b.getIndexAttr(*stride));
+  Value matrix = valueMapping.find(op.getVector())->second;
+  b.create<gpu::SubgroupMmaStoreMatrixOp>(op.getLoc(), matrix, op.getSource(),
+                                          op.getIndices(),
+                                          b.getIndexAttr(*stride));
   op.erase();
 }
 
 static void convertContractOp(vector::ContractionOp op,
                               llvm::DenseMap<Value, Value> &valueMapping) {
   OpBuilder b(op);
-  Value opA = valueMapping.find(op.lhs())->second;
-  Value opB = valueMapping.find(op.rhs())->second;
-  Value opC = valueMapping.find(op.acc())->second;
+  Value opA = valueMapping.find(op.getLhs())->second;
+  Value opB = valueMapping.find(op.getRhs())->second;
+  Value opC = valueMapping.find(op.getAcc())->second;
   Value matmul = b.create<gpu::SubgroupMmaComputeOp>(op.getLoc(), opC.getType(),
                                                      opA, opB, opC);
   valueMapping[op.getResult()] = matmul;
@@ -417,7 +425,7 @@ static void convertBroadcastOp(vector::BroadcastOp op,
   gpu::MMAMatrixType type = gpu::MMAMatrixType::get(
       vecType.getShape(), vecType.getElementType(), llvm::StringRef(fragType));
   auto matrix = b.create<gpu::SubgroupMmaConstantMatrixOp>(op.getLoc(), type,
-                                                           op.source());
+                                                           op.getSource());
   valueMapping[op.getResult()] = matrix;
 }
 
@@ -431,14 +439,14 @@ static scf::ForOp replaceForOpWithNewSignature(OpBuilder &b, scf::ForOp loop,
   auto operands = llvm::to_vector<4>(loop.getIterOperands());
   operands.append(newIterOperands.begin(), newIterOperands.end());
   scf::ForOp newLoop =
-      b.create<scf::ForOp>(loop.getLoc(), loop.lowerBound(), loop.upperBound(),
-                           loop.step(), operands);
+      b.create<scf::ForOp>(loop.getLoc(), loop.getLowerBound(),
+                           loop.getUpperBound(), loop.getStep(), operands);
   newLoop.getBody()->erase();
   newLoop.getLoopBody().getBlocks().splice(
       newLoop.getLoopBody().getBlocks().begin(),
       loop.getLoopBody().getBlocks());
-  for (auto operand : newIterOperands)
-    newLoop.getBody()->addArgument(operand.getType());
+  for (Value operand : newIterOperands)
+    newLoop.getBody()->addArgument(operand.getType(), operand.getLoc());
 
   for (auto it : llvm::zip(loop.getResults(), newLoop.getResults().take_front(
                                                   loop.getNumResults())))
@@ -451,7 +459,7 @@ static void convertForOp(scf::ForOp op,
                          llvm::DenseMap<Value, Value> &valueMapping) {
   SmallVector<Value> newOperands;
   SmallVector<std::pair<size_t, size_t>> argMapping;
-  for (auto operand : llvm::enumerate(op.getIterOperands())) {
+  for (const auto &operand : llvm::enumerate(op.getIterOperands())) {
     auto it = valueMapping.find(operand.value());
     if (it == valueMapping.end())
       continue;
@@ -476,7 +484,7 @@ static void convertYieldOp(scf::YieldOp op,
   OpBuilder b(op);
   auto loop = cast<scf::ForOp>(op->getParentOp());
   auto yieldOperands = llvm::to_vector<4>(op.getOperands());
-  for (auto operand : llvm::enumerate(op.getOperands())) {
+  for (const auto &operand : llvm::enumerate(op.getOperands())) {
     auto it = valueMapping.find(operand.value());
     if (it == valueMapping.end())
       continue;
@@ -501,15 +509,13 @@ static void convertElementwiseOp(Operation *op, gpu::MMAElementwiseOp opType,
   valueMapping[op->getResult(0)] = newOp;
 }
 
-namespace mlir {
-
-void populatePrepareVectorToMMAPatterns(RewritePatternSet &patterns) {
+void mlir::populatePrepareVectorToMMAPatterns(RewritePatternSet &patterns) {
   patterns.add<PrepareContractToGPUMMA, CombineTransferReadOpTranspose>(
       patterns.getContext());
 }
 
-void convertVectorToMMAOps(FuncOp funcOp) {
-  SetVector<Operation *> ops = getOpToConvert(funcOp);
+void mlir::convertVectorToMMAOps(Operation *rootOp) {
+  SetVector<Operation *> ops = getOpToConvert(rootOp);
   llvm::DenseMap<Value, Value> valueMapping;
   for (Operation *op : ops) {
     if (auto transferRead = dyn_cast<vector::TransferReadOp>(op)) {
@@ -532,17 +538,16 @@ void convertVectorToMMAOps(FuncOp funcOp) {
   }
 }
 
-} // namespace mlir
 namespace {
 
 struct ConvertVectorToGPUPass
     : public ConvertVectorToGPUBase<ConvertVectorToGPUPass> {
-  void runOnFunction() override {
-    RewritePatternSet patterns(getFunction().getContext());
+  void runOnOperation() override {
+    RewritePatternSet patterns(&getContext());
     populatePrepareVectorToMMAPatterns(patterns);
-    (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
 
-    convertVectorToMMAOps(getFunction());
+    convertVectorToMMAOps(getOperation());
   }
 };
 

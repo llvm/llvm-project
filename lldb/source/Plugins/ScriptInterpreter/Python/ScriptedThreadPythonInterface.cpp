@@ -8,7 +8,6 @@
 
 #include "lldb/Host/Config.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/Logging.h"
 #include "lldb/lldb-enumerations.h"
 
 #if LLDB_ENABLE_PYTHON
@@ -31,31 +30,32 @@ ScriptedThreadPythonInterface::ScriptedThreadPythonInterface(
 
 StructuredData::GenericSP ScriptedThreadPythonInterface::CreatePluginObject(
     const llvm::StringRef class_name, ExecutionContext &exe_ctx,
-    StructuredData::DictionarySP args_sp) {
-
-  if (class_name.empty())
+    StructuredData::DictionarySP args_sp, StructuredData::Generic *script_obj) {
+  if (class_name.empty() && !script_obj)
     return {};
 
   ProcessSP process_sp = exe_ctx.GetProcessSP();
-  StructuredDataImpl *args_impl = nullptr;
-  if (args_sp) {
-    args_impl = new StructuredDataImpl();
-    args_impl->SetObjectSP(args_sp);
-  }
+  StructuredDataImpl args_impl(args_sp);
   std::string error_string;
 
   Locker py_lock(&m_interpreter, Locker::AcquireLock | Locker::NoSTDIN,
                  Locker::FreeLock);
 
-  void *ret_val = LLDBSwigPythonCreateScriptedThread(
-      class_name.str().c_str(), m_interpreter.GetDictionaryName(), process_sp,
-      args_impl, error_string);
+  PythonObject ret_val;
+
+  if (!script_obj)
+    ret_val = LLDBSwigPythonCreateScriptedThread(
+        class_name.str().c_str(), m_interpreter.GetDictionaryName(), process_sp,
+        args_impl, error_string);
+  else
+    ret_val = PythonObject(PyRefType::Borrowed,
+                           static_cast<PyObject *>(script_obj->GetValue()));
 
   if (!ret_val)
     return {};
 
   m_object_instance_sp =
-      StructuredData::GenericSP(new StructuredPythonObject(ret_val));
+      StructuredData::GenericSP(new StructuredPythonObject(std::move(ret_val)));
 
   return m_object_instance_sp;
 }
@@ -112,7 +112,14 @@ StructuredData::DictionarySP ScriptedThreadPythonInterface::GetStopReason() {
 }
 
 StructuredData::ArraySP ScriptedThreadPythonInterface::GetStackFrames() {
-  return nullptr;
+  Status error;
+  StructuredData::ArraySP arr =
+      Dispatch<StructuredData::ArraySP>("get_stackframes", error);
+
+  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, arr, error))
+    return {};
+
+  return arr;
 }
 
 StructuredData::DictionarySP ScriptedThreadPythonInterface::GetRegisterInfo() {

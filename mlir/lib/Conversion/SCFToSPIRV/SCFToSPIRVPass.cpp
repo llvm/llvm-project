@@ -14,9 +14,9 @@
 
 #include "../PassDetail.h"
 #include "mlir/Conversion/ArithmeticToSPIRV/ArithmeticToSPIRV.h"
+#include "mlir/Conversion/FuncToSPIRV/FuncToSPIRV.h"
 #include "mlir/Conversion/MemRefToSPIRV/MemRefToSPIRV.h"
 #include "mlir/Conversion/SCFToSPIRV/SCFToSPIRV.h"
-#include "mlir/Conversion/StandardToSPIRV/StandardToSPIRV.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
@@ -45,7 +45,7 @@ void SCFToSPIRVPass::runOnOperation() {
   // TODO: Change SPIR-V conversion to be progressive and remove the following
   // patterns.
   mlir::arith::populateArithmeticToSPIRVPatterns(typeConverter, patterns);
-  populateStandardToSPIRVPatterns(typeConverter, patterns);
+  populateFuncToSPIRVPatterns(typeConverter, patterns);
   populateMemRefToSPIRVPatterns(typeConverter, patterns);
   populateBuiltinFuncToSPIRVPatterns(typeConverter, patterns);
 

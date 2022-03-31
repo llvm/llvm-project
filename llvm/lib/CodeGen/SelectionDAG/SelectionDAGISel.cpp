@@ -15,11 +15,9 @@
 #include "SelectionDAGBuilder.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
@@ -29,6 +27,7 @@
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/LazyBlockFrequencyInfo.h"
 #include "llvm/Analysis/LegacyDivergenceAnalysis.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -69,7 +68,6 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstIterator.h"
-#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -82,7 +80,6 @@
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/MCInstrDesc.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/Casting.h"
@@ -319,7 +316,7 @@ SelectionDAGISel::SelectionDAGISel(TargetMachine &tm, CodeGenOpt::Level OL)
       CurDAG(new SelectionDAG(tm, OL)),
       SDB(std::make_unique<SelectionDAGBuilder>(*CurDAG, *FuncInfo, *SwiftError,
                                                 OL)),
-      AA(), GFI(), OptLevel(OL), DAGSize(0) {
+      OptLevel(OL) {
   initializeGCModuleInfoPass(*PassRegistry::getPassRegistry());
   initializeBranchProbabilityInfoWrapperPassPass(
       *PassRegistry::getPassRegistry());
@@ -1784,27 +1781,25 @@ SelectionDAGISel::FinishBasicBlock() {
     }
 
     // Update PHI Nodes
-    for (unsigned pi = 0, pe = FuncInfo->PHINodesToUpdate.size();
-         pi != pe; ++pi) {
-      MachineInstrBuilder PHI(*MF, FuncInfo->PHINodesToUpdate[pi].first);
+    for (const std::pair<MachineInstr *, unsigned> &P :
+         FuncInfo->PHINodesToUpdate) {
+      MachineInstrBuilder PHI(*MF, P.first);
       MachineBasicBlock *PHIBB = PHI->getParent();
       assert(PHI->isPHI() &&
              "This is not a machine PHI node that we are updating!");
       // This is "default" BB. We have two jumps to it. From "header" BB and
       // from last "case" BB, unless the latter was skipped.
       if (PHIBB == BTB.Default) {
-        PHI.addReg(FuncInfo->PHINodesToUpdate[pi].second).addMBB(BTB.Parent);
+        PHI.addReg(P.second).addMBB(BTB.Parent);
         if (!BTB.ContiguousRange) {
-          PHI.addReg(FuncInfo->PHINodesToUpdate[pi].second)
-              .addMBB(BTB.Cases.back().ThisBB);
+          PHI.addReg(P.second).addMBB(BTB.Cases.back().ThisBB);
          }
       }
       // One of "cases" BB.
-      for (unsigned j = 0, ej = BTB.Cases.size();
-           j != ej; ++j) {
-        MachineBasicBlock* cBB = BTB.Cases[j].ThisBB;
+      for (const SwitchCG::BitTestCase &BT : BTB.Cases) {
+        MachineBasicBlock* cBB = BT.ThisBB;
         if (cBB->isSuccessor(PHIBB))
-          PHI.addReg(FuncInfo->PHINodesToUpdate[pi].second).addMBB(cBB);
+          PHI.addReg(P.second).addMBB(cBB);
       }
     }
   }

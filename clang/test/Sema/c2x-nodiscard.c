@@ -25,7 +25,7 @@ struct S4 get_s(void);
 enum [[nodiscard]] E2 { Two };
 enum E2 get_e(void);
 
-[[nodiscard]] int get_i();
+[[nodiscard]] int get_i(void);
 
 void f2(void) {
   get_s(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}

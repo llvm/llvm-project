@@ -154,7 +154,8 @@ using namespace line_editor;
 class Editline {
 public:
   Editline(const char *editor_name, FILE *input_file, FILE *output_file,
-           FILE *error_file, bool color_prompts);
+           FILE *error_file, std::recursive_mutex &output_mutex,
+           bool color_prompts);
 
   ~Editline();
 
@@ -208,6 +209,14 @@ public:
                                  const char *indent_chars) {
     m_fix_indentation_callback = std::move(callback);
     m_fix_indentation_callback_chars = indent_chars;
+  }
+
+  void SetSuggestionAnsiPrefix(std::string prefix) {
+    m_suggestion_ansi_prefix = std::move(prefix);
+  }
+
+  void SetSuggestionAnsiSuffix(std::string suffix) {
+    m_suggestion_ansi_suffix = std::move(suffix);
   }
 
   /// Prompts for and reads a single line of user input.
@@ -388,11 +397,13 @@ private:
   const char *m_fix_indentation_callback_chars = nullptr;
 
   CompleteCallbackType m_completion_callback;
-
   SuggestionCallbackType m_suggestion_callback;
 
+  std::string m_suggestion_ansi_prefix;
+  std::string m_suggestion_ansi_suffix;
+
   std::size_t m_previous_autosuggestion_size = 0;
-  std::mutex m_output_mutex;
+  std::recursive_mutex &m_output_mutex;
 };
 }
 

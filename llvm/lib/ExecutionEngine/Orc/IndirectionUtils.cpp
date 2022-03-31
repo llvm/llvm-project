@@ -31,8 +31,8 @@ public:
 
   CompileCallbackMaterializationUnit(SymbolStringPtr Name,
                                      CompileFunction Compile)
-      : MaterializationUnit(SymbolFlagsMap({{Name, JITSymbolFlags::Exported}}),
-                            nullptr),
+      : MaterializationUnit(Interface(
+            SymbolFlagsMap({{Name, JITSymbolFlags::Exported}}), nullptr)),
         Name(std::move(Name)), Compile(std::move(Compile)) {}
 
   StringRef getName() const override { return "<Compile Callbacks>"; }
@@ -59,7 +59,7 @@ private:
 namespace llvm {
 namespace orc {
 
-TrampolinePool::~TrampolinePool() {}
+TrampolinePool::~TrampolinePool() = default;
 void IndirectStubsManager::anchor() {}
 
 Expected<JITTargetAddress>
@@ -410,7 +410,7 @@ Error addFunctionPointerRelocationsToCurrentSymbol(jitlink::Symbol &Sym,
   while (I < Content.size()) {
     MCInst Instr;
     uint64_t InstrSize = 0;
-    uint64_t InstrStart = SymAddress + I;
+    uint64_t InstrStart = SymAddress.getValue() + I;
     auto DecodeStatus = Disassembler.getInstruction(
         Instr, InstrSize, Content.drop_front(I), InstrStart, CommentStream);
     if (DecodeStatus != MCDisassembler::Success) {
@@ -426,7 +426,7 @@ Error addFunctionPointerRelocationsToCurrentSymbol(jitlink::Symbol &Sym,
     // Check for a PC-relative address equal to the symbol itself.
     auto PCRelAddr =
         MIA.evaluateMemoryOperandAddress(Instr, &STI, InstrStart, InstrSize);
-    if (!PCRelAddr.hasValue() || PCRelAddr.getValue() != SymAddress)
+    if (!PCRelAddr || *PCRelAddr != SymAddress.getValue())
       continue;
 
     auto RelocOffInInstr =
@@ -438,8 +438,8 @@ Error addFunctionPointerRelocationsToCurrentSymbol(jitlink::Symbol &Sym,
       continue;
     }
 
-    auto RelocOffInBlock =
-        InstrStart + *RelocOffInInstr - SymAddress + Sym.getOffset();
+    auto RelocOffInBlock = orc::ExecutorAddr(InstrStart) + *RelocOffInInstr -
+                           SymAddress + Sym.getOffset();
     if (ExistingRelocations.contains(RelocOffInBlock))
       continue;
 

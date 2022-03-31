@@ -13,8 +13,12 @@
 #include "llvm/Support/ThreadPool.h"
 
 #include "llvm/Config/llvm-config.h"
+
+#if LLVM_ENABLE_THREADS
 #include "llvm/Support/Threading.h"
+#else
 #include "llvm/Support/raw_ostream.h"
+#endif
 
 using namespace llvm;
 
@@ -115,6 +119,10 @@ void ThreadPool::wait() {
     Tasks.pop();
     Task();
   }
+}
+
+bool ThreadPool::isWorkerThread() const {
+  report_fatal_error("LLVM compiled without multithreading");
 }
 
 ThreadPool::~ThreadPool() { wait(); }

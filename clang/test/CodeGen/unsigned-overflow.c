@@ -9,7 +9,7 @@ extern void opaquelong(unsigned long);
 extern void opaqueint(unsigned int);
 
 // CHECK-LABEL: define{{.*}} void @testlongadd()
-void testlongadd() {
+void testlongadd(void) {
 
   // CHECK:      [[T1:%.*]] = load i64, i64* @lj
   // CHECK-NEXT: [[T2:%.*]] = load i64, i64* @lk
@@ -21,7 +21,7 @@ void testlongadd() {
 }
 
 // CHECK-LABEL: define{{.*}} void @testlongsub()
-void testlongsub() {
+void testlongsub(void) {
 
   // CHECK:      [[T1:%.*]] = load i64, i64* @lj
   // CHECK-NEXT: [[T2:%.*]] = load i64, i64* @lk
@@ -33,7 +33,7 @@ void testlongsub() {
 }
 
 // CHECK-LABEL: define{{.*}} void @testlongmul()
-void testlongmul() {
+void testlongmul(void) {
 
   // CHECK:      [[T1:%.*]] = load i64, i64* @lj
   // CHECK-NEXT: [[T2:%.*]] = load i64, i64* @lk
@@ -45,7 +45,7 @@ void testlongmul() {
 }
 
 // CHECK-LABEL: define{{.*}} void @testlongpostinc()
-void testlongpostinc() {
+void testlongpostinc(void) {
   opaquelong(li++);
 
   // CHECK:      [[T1:%.*]] = load i64, i64* @li
@@ -56,7 +56,7 @@ void testlongpostinc() {
 }
 
 // CHECK-LABEL: define{{.*}} void @testlongpreinc()
-void testlongpreinc() {
+void testlongpreinc(void) {
   opaquelong(++li);
 
   // CHECK:      [[T1:%.*]] = load i64, i64* @li
@@ -67,7 +67,7 @@ void testlongpreinc() {
 }
 
 // CHECK-LABEL: define{{.*}} void @testintadd()
-void testintadd() {
+void testintadd(void) {
 
   // CHECK:      [[T1:%.*]] = load i32, i32* @ij
   // CHECK-NEXT: [[T2:%.*]] = load i32, i32* @ik
@@ -79,7 +79,7 @@ void testintadd() {
 }
 
 // CHECK-LABEL: define{{.*}} void @testintsub()
-void testintsub() {
+void testintsub(void) {
 
   // CHECK:      [[T1:%.*]] = load i32, i32* @ij
   // CHECK-NEXT: [[T2:%.*]] = load i32, i32* @ik
@@ -91,7 +91,7 @@ void testintsub() {
 }
 
 // CHECK-LABEL: define{{.*}} void @testintmul()
-void testintmul() {
+void testintmul(void) {
 
   // CHECK:      [[T1:%.*]] = load i32, i32* @ij
   // CHECK-NEXT: [[T2:%.*]] = load i32, i32* @ik
@@ -103,7 +103,7 @@ void testintmul() {
 }
 
 // CHECK-LABEL: define{{.*}} void @testintpostinc()
-void testintpostinc() {
+void testintpostinc(void) {
   opaqueint(ii++);
 
   // CHECK:      [[T1:%.*]] = load i32, i32* @ii
@@ -114,7 +114,7 @@ void testintpostinc() {
 }
 
 // CHECK-LABEL: define{{.*}} void @testintpreinc()
-void testintpreinc() {
+void testintpreinc(void) {
   opaqueint(++ii);
 
   // CHECK:      [[T1:%.*]] = load i32, i32* @ii

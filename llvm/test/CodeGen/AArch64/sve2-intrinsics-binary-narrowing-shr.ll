@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve2 < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+streaming-sve < %s | FileCheck %s
 
 ;
 ; SHRNB

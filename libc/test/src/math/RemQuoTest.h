@@ -24,10 +24,10 @@ class RemQuoTestTemplate : public __llvm_libc::testing::Test {
   using UIntType = typename FPBits::UIntType;
 
   const T zero = T(__llvm_libc::fputil::FPBits<T>::zero());
-  const T negZero = T(__llvm_libc::fputil::FPBits<T>::negZero());
+  const T neg_zero = T(__llvm_libc::fputil::FPBits<T>::neg_zero());
   const T inf = T(__llvm_libc::fputil::FPBits<T>::inf());
-  const T negInf = T(__llvm_libc::fputil::FPBits<T>::negInf());
-  const T nan = T(__llvm_libc::fputil::FPBits<T>::buildNaN(1));
+  const T neg_inf = T(__llvm_libc::fputil::FPBits<T>::neg_inf());
+  const T nan = T(__llvm_libc::fputil::FPBits<T>::build_nan(1));
 
 public:
   typedef T (*RemQuoFunc)(T, T, int *);
@@ -39,13 +39,13 @@ public:
     y = T(1.0);
     x = inf;
     EXPECT_FP_EQ(nan, func(x, y, &quotient));
-    x = negInf;
+    x = neg_inf;
     EXPECT_FP_EQ(nan, func(x, y, &quotient));
 
     x = T(1.0);
     y = zero;
     EXPECT_FP_EQ(nan, func(x, y, &quotient));
-    y = negZero;
+    y = neg_zero;
     EXPECT_FP_EQ(nan, func(x, y, &quotient));
 
     y = nan;
@@ -64,9 +64,9 @@ public:
     y = T(1.0);
     EXPECT_FP_EQ(func(x, y, &quotient), zero);
 
-    x = negZero;
+    x = neg_zero;
     y = T(1.0);
-    EXPECT_FP_EQ(func(x, y, &quotient), negZero);
+    EXPECT_FP_EQ(func(x, y, &quotient), neg_zero);
 
     x = T(1.125);
     y = inf;
@@ -87,20 +87,20 @@ public:
     EXPECT_FP_EQ(func(x, -y, &q), zero);
     EXPECT_EQ(q, -1);
 
-    EXPECT_FP_EQ(func(-x, y, &q), negZero);
+    EXPECT_FP_EQ(func(-x, y, &q), neg_zero);
     EXPECT_EQ(q, -1);
 
-    EXPECT_FP_EQ(func(-x, -y, &q), negZero);
+    EXPECT_FP_EQ(func(-x, -y, &q), neg_zero);
     EXPECT_EQ(q, 1);
   }
 
   void testSubnormalRange(RemQuoFunc func) {
-    constexpr UIntType count = 1000001;
-    constexpr UIntType step =
-        (FPBits::maxSubnormal - FPBits::minSubnormal) / count;
-    for (UIntType v = FPBits::minSubnormal, w = FPBits::maxSubnormal;
-         v <= FPBits::maxSubnormal && w >= FPBits::minSubnormal;
-         v += step, w -= step) {
+    constexpr UIntType COUNT = 1000001;
+    constexpr UIntType STEP =
+        (FPBits::MAX_SUBNORMAL - FPBits::MIN_SUBNORMAL) / COUNT;
+    for (UIntType v = FPBits::MIN_SUBNORMAL, w = FPBits::MAX_SUBNORMAL;
+         v <= FPBits::MAX_SUBNORMAL && w >= FPBits::MIN_SUBNORMAL;
+         v += STEP, w -= STEP) {
       T x = T(FPBits(v)), y = T(FPBits(w));
       mpfr::BinaryOutput<T> result;
       mpfr::BinaryInput<T> input{x, y};
@@ -110,11 +110,11 @@ public:
   }
 
   void testNormalRange(RemQuoFunc func) {
-    constexpr UIntType count = 1000001;
-    constexpr UIntType step = (FPBits::maxNormal - FPBits::minNormal) / count;
-    for (UIntType v = FPBits::minNormal, w = FPBits::maxNormal;
-         v <= FPBits::maxNormal && w >= FPBits::minNormal;
-         v += step, w -= step) {
+    constexpr UIntType COUNT = 1000001;
+    constexpr UIntType STEP = (FPBits::MAX_NORMAL - FPBits::MIN_NORMAL) / COUNT;
+    for (UIntType v = FPBits::MIN_NORMAL, w = FPBits::MAX_NORMAL;
+         v <= FPBits::MAX_NORMAL && w >= FPBits::MIN_NORMAL;
+         v += STEP, w -= STEP) {
       T x = T(FPBits(v)), y = T(FPBits(w));
       mpfr::BinaryOutput<T> result;
       mpfr::BinaryInput<T> input{x, y};

@@ -1,4 +1,4 @@
-; RUN: opt < %s -instsimplify -S | FileCheck %s
+; RUN: opt < %s -passes=instsimplify -S | FileCheck %s
 
 define i32* @test1() {
         %X = inttoptr i64 0 to i32*             ; <i32*> [#uses=1]

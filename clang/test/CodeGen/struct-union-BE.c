@@ -4,7 +4,7 @@
 
 #include <stdarg.h>
 
-extern void abort() __attribute__((noreturn));
+extern void abort(void) __attribute__((noreturn));
 
 struct tiny {
   char c;
@@ -40,7 +40,7 @@ void funi(int n, ...) {
 // ARM-NOT: %{{[0-9]+}} = getelementptr inbounds i8, i8* %argp.cur, i32 3
 }
 
-void foo() {
+void foo(void) {
   struct tiny x[3];
   union data y;
   x[0].c = 10;

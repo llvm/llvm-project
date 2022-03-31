@@ -7179,12 +7179,12 @@ define <16 x i64> @load_one_mask_bit_set6(<16 x i64>* %addr, <16 x i64> %val) {
 ; SSE2-NEXT:    movsd {{.*#+}} xmm8 = mem[0],zero
 ; SSE2-NEXT:    movlhps {{.*#+}} xmm6 = xmm6[0],xmm8[0]
 ; SSE2-NEXT:    movaps %xmm7, 112(%rdi)
+; SSE2-NEXT:    movaps %xmm5, 80(%rdi)
 ; SSE2-NEXT:    movaps %xmm4, 64(%rdi)
 ; SSE2-NEXT:    movaps %xmm3, 48(%rdi)
 ; SSE2-NEXT:    movaps %xmm2, 32(%rdi)
-; SSE2-NEXT:    movaps %xmm0, (%rdi)
-; SSE2-NEXT:    movaps %xmm5, 80(%rdi)
 ; SSE2-NEXT:    movaps %xmm1, 16(%rdi)
+; SSE2-NEXT:    movaps %xmm0, (%rdi)
 ; SSE2-NEXT:    movaps %xmm6, 96(%rdi)
 ; SSE2-NEXT:    retq
 ;
@@ -7195,13 +7195,13 @@ define <16 x i64> @load_one_mask_bit_set6(<16 x i64>* %addr, <16 x i64> %val) {
 ; SSE42-NEXT:    pinsrq $0, 80(%rsi), %xmm5
 ; SSE42-NEXT:    pinsrq $1, 104(%rsi), %xmm6
 ; SSE42-NEXT:    movaps %xmm7, 112(%rdi)
+; SSE42-NEXT:    movdqa %xmm6, 96(%rdi)
+; SSE42-NEXT:    movdqa %xmm5, 80(%rdi)
 ; SSE42-NEXT:    movaps %xmm4, 64(%rdi)
 ; SSE42-NEXT:    movaps %xmm3, 48(%rdi)
 ; SSE42-NEXT:    movaps %xmm2, 32(%rdi)
-; SSE42-NEXT:    movaps %xmm0, (%rdi)
-; SSE42-NEXT:    movdqa %xmm6, 96(%rdi)
-; SSE42-NEXT:    movdqa %xmm5, 80(%rdi)
 ; SSE42-NEXT:    movdqa %xmm1, 16(%rdi)
+; SSE42-NEXT:    movaps %xmm0, (%rdi)
 ; SSE42-NEXT:    retq
 ;
 ; AVX1-LABEL: load_one_mask_bit_set6:

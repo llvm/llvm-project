@@ -66,15 +66,17 @@ define void @f_gc_transition(i32* %ptr) {
 }
 
 define void @f_clang_arc_attachedcall() {
-; CHECK: Multiple "clang.arc.attachedcall" operand bundles
+; CHECK: requires one function as an argument
+; CHECK-NEXT: call %0* @foo0() [ "clang.arc.attachedcall"() ]
+; CHECK-NEXT: Multiple "clang.arc.attachedcall" operand bundles
 ; CHECK-NEXT: call %0* @foo0() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue), "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
 ; CHECK-NEXT: must call a function returning a pointer
 ; CHECK-NEXT: call i8 @foo1() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
 ; CHECK-NEXT: or a non-returning function
 ; CHECK-NEXT: call void @g() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
-; CHECK-NEXT: can take either no arguments
+; CHECK-NEXT: requires one function as an argument
 ; CHECK-NEXT: call %0* @foo0() [ "clang.arc.attachedcall"(i8* (i8*)* null) ]
-; CHECK-NEXT: can take either no arguments
+; CHECK-NEXT: requires one function as an argument
 ; CHECK-NEXT: call %0* @foo0() [ "clang.arc.attachedcall"(i64 0) ]
 ; CHECK-NEXT: invalid function argument
 ; CHECK-NEXT: call %0* @foo0() [ "clang.arc.attachedcall"(i8 ()* @foo1) ]

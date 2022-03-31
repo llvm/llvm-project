@@ -121,6 +121,7 @@ class PPCAsmParser : public MCTargetAsmParser {
   bool ParseDirectiveMachine(SMLoc L);
   bool ParseDirectiveAbiVersion(SMLoc L);
   bool ParseDirectiveLocalEntry(SMLoc L);
+  bool ParseGNUAttribute(SMLoc L);
 
   bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
@@ -201,7 +202,8 @@ struct PPCOperand : public MCParsedAsmOperand {
     struct TLSRegOp TLSReg;
   };
 
-  PPCOperand(KindTy K) : MCParsedAsmOperand(), Kind(K) {}
+  PPCOperand(KindTy K) : Kind(K) {}
+
 public:
   PPCOperand(const PPCOperand &o) : MCParsedAsmOperand() {
     Kind = o.Kind;
@@ -339,31 +341,11 @@ public:
 
   bool isU10Imm() const { return Kind == Immediate && isUInt<10>(getImm()); }
   bool isU12Imm() const { return Kind == Immediate && isUInt<12>(getImm()); }
-  bool isU16Imm() const {
-    switch (Kind) {
-      case Expression:
-        return true;
-      case Immediate:
-      case ContextImmediate:
-        return isUInt<16>(getImmU16Context());
-      default:
-        return false;
-    }
-  }
-  bool isS16Imm() const {
-    switch (Kind) {
-      case Expression:
-        return true;
-      case Immediate:
-      case ContextImmediate:
-        return isInt<16>(getImmS16Context());
-      default:
-        return false;
-    }
-  }
-  bool isS16ImmX4() const { return Kind == Expression ||
-                                   (Kind == Immediate && isInt<16>(getImm()) &&
-                                    (getImm() & 3) == 0); }
+  bool isU16Imm() const { return isExtImm<16>(/*Signed*/ false, 1); }
+  bool isS16Imm() const { return isExtImm<16>(/*Signed*/ true, 1); }
+  bool isS16ImmX4() const { return isExtImm<16>(/*Signed*/ true, 4); }
+  bool isS16ImmX16() const { return isExtImm<16>(/*Signed*/ true, 16); }
+  bool isS17Imm() const { return isExtImm<17>(/*Signed*/ true, 1); }
 
   bool isHashImmX8() const {
     // The Hash Imm form is used for instructions that check or store a hash.
@@ -373,9 +355,6 @@ public:
             (getImm() & 7) == 0);
   }
 
-  bool isS16ImmX16() const { return Kind == Expression ||
-                                    (Kind == Immediate && isInt<16>(getImm()) &&
-                                     (getImm() & 15) == 0); }
   bool isS34ImmX16() const {
     return Kind == Expression ||
            (Kind == Immediate && isInt<34>(getImm()) && (getImm() & 15) == 0);
@@ -386,17 +365,6 @@ public:
     return Kind == Expression || (Kind == Immediate && isInt<34>(getImm()));
   }
 
-  bool isS17Imm() const {
-    switch (Kind) {
-      case Expression:
-        return true;
-      case Immediate:
-      case ContextImmediate:
-        return isInt<17>(getImmS16Context());
-      default:
-        return false;
-    }
-  }
   bool isTLSReg() const { return Kind == TLSRegister; }
   bool isDirectBr() const {
     if (Kind == Expression)
@@ -709,6 +677,25 @@ public:
     }
 
     return CreateExpr(Val, S, E, IsPPC64);
+  }
+
+private:
+  template <unsigned Width>
+  bool isExtImm(bool Signed, unsigned Multiple) const {
+    switch (Kind) {
+    default:
+      return false;
+    case Expression:
+      return true;
+    case Immediate:
+    case ContextImmediate:
+      if (Signed)
+        return isInt<Width>(getImmS16Context()) &&
+               (getImmS16Context() & (Multiple - 1)) == 0;
+      else
+        return isUInt<Width>(getImmU16Context()) &&
+               (getImmU16Context() & (Multiple - 1)) == 0;
+    }
   }
 };
 
@@ -1604,6 +1591,8 @@ bool PPCAsmParser::ParseDirective(AsmToken DirectiveID) {
     ParseDirectiveAbiVersion(DirectiveID.getLoc());
   else if (IDVal == ".localentry")
     ParseDirectiveLocalEntry(DirectiveID.getLoc());
+  else if (IDVal.startswith(".gnu_attribute"))
+    ParseGNUAttribute(DirectiveID.getLoc());
   else
     return true;
   return false;
@@ -1719,7 +1708,16 @@ bool PPCAsmParser::ParseDirectiveLocalEntry(SMLoc L) {
   return false;
 }
 
+bool PPCAsmParser::ParseGNUAttribute(SMLoc L) {
+  int64_t Tag;
+  int64_t IntegerValue;
+  if (!getParser().parseGNUAttribute(L, Tag, IntegerValue))
+    return false;
 
+  getParser().getStreamer().emitGNUAttribute(Tag, IntegerValue);
+
+  return true;
+}
 
 /// Force static initialization.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCAsmParser() {

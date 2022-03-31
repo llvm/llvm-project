@@ -14,7 +14,6 @@
 #include "llvm/Transforms/IPO/PartialInlining.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -40,6 +39,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/User.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -55,8 +55,6 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
-#include <functional>
-#include <iterator>
 #include <memory>
 #include <tuple>
 #include <vector>
@@ -169,8 +167,7 @@ struct FunctionOutliningInfo {
 };
 
 struct FunctionOutliningMultiRegionInfo {
-  FunctionOutliningMultiRegionInfo()
-      : ORI() {}
+  FunctionOutliningMultiRegionInfo() = default;
 
   // Container for outline regions
   struct OutlineRegionInfo {
@@ -742,7 +739,7 @@ BranchProbability PartialInlinerImpl::getOutliningCallBBRelativeFreq(
   auto OutlineRegionRelFreq = BranchProbability::getBranchProbability(
       OutliningCallFreq.getFrequency(), EntryFreq.getFrequency());
 
-  if (hasProfileData(*Cloner.OrigFunc, *Cloner.ClonedOI.get()))
+  if (hasProfileData(*Cloner.OrigFunc, *Cloner.ClonedOI))
     return OutlineRegionRelFreq;
 
   // When profile data is not available, we need to be conservative in
@@ -971,6 +968,9 @@ void PartialInlinerImpl::computeCallsiteToProfCountMap(
   };
 
   for (User *User : Users) {
+    // Don't bother with BlockAddress used by CallBr for asm goto.
+    if (isa<BlockAddress>(User))
+      continue;
     CallBase *CB = getSupportedCallBase(User);
     Function *Caller = CB->getCaller();
     if (CurrentCaller != Caller) {
@@ -1414,6 +1414,10 @@ bool PartialInlinerImpl::tryPartialInline(FunctionCloner &Cloner) {
 
   bool AnyInline = false;
   for (User *User : Users) {
+    // Don't bother with BlockAddress used by CallBr for asm goto.
+    if (isa<BlockAddress>(User))
+      continue;
+
     CallBase *CB = getSupportedCallBase(User);
 
     if (isLimitReached())

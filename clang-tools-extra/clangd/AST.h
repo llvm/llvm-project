@@ -17,9 +17,9 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/TypeLoc.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/MacroInfo.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
 #include <string>
 #include <vector>
@@ -74,6 +74,12 @@ std::string printObjCMethod(const ObjCMethodDecl &Method);
 // `MyClass()`, `MyClass(Category)`, and `MyProtocol`.
 std::string printObjCContainer(const ObjCContainerDecl &C);
 
+/// Returns true if this is a NamedDecl with a reserved name.
+bool hasReservedName(const Decl &);
+/// Returns true if this scope would be written with a reserved name.
+/// This does not include unwritten scope elements like __1 in std::__1::vector.
+bool hasReservedScope(const DeclContext &);
+
 /// Gets the symbol ID for a declaration. Returned SymbolID might be null.
 SymbolID getSymbolID(const Decl *D);
 
@@ -121,6 +127,17 @@ QualType declaredType(const TypeDecl *D);
 /// It will return the underlying type.
 /// If the type is an undeduced auto, returns the type itself.
 llvm::Optional<QualType> getDeducedType(ASTContext &, SourceLocation Loc);
+
+// Find the abbreviated-function-template `auto` within a type, or returns null.
+// Similar to getContainedAutoTypeLoc, but these `auto`s are
+// TemplateTypeParmTypes for implicit TTPs, instead of AutoTypes.
+// Also we don't look very hard, just stripping const, references, pointers.
+// FIXME: handle more type patterns.
+TemplateTypeParmTypeLoc getContainedAutoParamType(TypeLoc TL);
+
+// If TemplatedDecl is the generic body of a template, and the template has
+// exactly one visible instantiation, return the instantiated body.
+NamedDecl *getOnlyInstantiation(NamedDecl *TemplatedDecl);
 
 /// Return attributes attached directly to a node.
 std::vector<const Attr *> getAttributes(const DynTypedNode &);

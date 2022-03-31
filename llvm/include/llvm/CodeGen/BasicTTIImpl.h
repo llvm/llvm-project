@@ -871,18 +871,23 @@ public:
 
   InstructionCost getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
                                  ArrayRef<int> Mask, int Index,
-                                 VectorType *SubTp) {
+                                 VectorType *SubTp,
+                                 ArrayRef<Value *> Args = None) {
 
     switch (improveShuffleKindFromMask(Kind, Mask)) {
     case TTI::SK_Broadcast:
-      return getBroadcastShuffleOverhead(cast<FixedVectorType>(Tp));
+      if (auto *FVT = dyn_cast<FixedVectorType>(Tp))
+        return getBroadcastShuffleOverhead(FVT);
+      return InstructionCost::getInvalid();
     case TTI::SK_Select:
     case TTI::SK_Splice:
     case TTI::SK_Reverse:
     case TTI::SK_Transpose:
     case TTI::SK_PermuteSingleSrc:
     case TTI::SK_PermuteTwoSrc:
-      return getPermuteShuffleOverhead(cast<FixedVectorType>(Tp));
+      if (auto *FVT = dyn_cast<FixedVectorType>(Tp))
+        return getPermuteShuffleOverhead(FVT);
+      return InstructionCost::getInvalid();
     case TTI::SK_ExtractSubvector:
       return getExtractSubvectorOverhead(Tp, Index,
                                          cast<FixedVectorType>(SubTp));
@@ -1506,6 +1511,29 @@ public:
             thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
                                         CmpInst::ICMP_EQ, CostKind);
       }
+      return Cost;
+    }
+    case Intrinsic::get_active_lane_mask: {
+      EVT ResVT = getTLI()->getValueType(DL, RetTy, true);
+      EVT ArgType = getTLI()->getValueType(DL, ICA.getArgTypes()[0], true);
+
+      // If we're not expanding the intrinsic then we assume this is cheap
+      // to implement.
+      if (!getTLI()->shouldExpandGetActiveLaneMask(ResVT, ArgType)) {
+        std::pair<InstructionCost, MVT> LT =
+            getTLI()->getTypeLegalizationCost(DL, RetTy);
+        return LT.first;
+      }
+
+      // Create the expanded types that will be used to calculate the uadd_sat
+      // operation.
+      Type *ExpRetTy = VectorType::get(
+          ICA.getArgTypes()[0], cast<VectorType>(RetTy)->getElementCount());
+      IntrinsicCostAttributes Attrs(Intrinsic::uadd_sat, ExpRetTy, {}, FMF);
+      InstructionCost Cost =
+          thisT()->getTypeBasedIntrinsicInstrCost(Attrs, CostKind);
+      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, ExpRetTy, RetTy,
+                                          CmpInst::ICMP_ULT, CostKind);
       return Cost;
     }
     }

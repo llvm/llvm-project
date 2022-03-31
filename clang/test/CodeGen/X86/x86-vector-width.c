@@ -3,8 +3,8 @@
 typedef signed long long V2LLi __attribute__((vector_size(16)));
 typedef signed long long V4LLi __attribute__((vector_size(32)));
 
-V2LLi ret_128();
-V4LLi ret_256();
+V2LLi ret_128(void);
+V4LLi ret_256(void);
 void arg_128(V2LLi);
 void arg_256(V4LLi);
 

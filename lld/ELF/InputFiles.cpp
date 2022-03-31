@@ -7,25 +7,25 @@
 //===----------------------------------------------------------------------===//
 
 #include "InputFiles.h"
+#include "Config.h"
+#include "DWARF.h"
 #include "Driver.h"
 #include "InputSection.h"
 #include "LinkerScript.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
+#include "Target.h"
+#include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/DWARF.h"
-#include "lld/Common/ErrorHandler.h"
-#include "lld/Common/Memory.h"
+#include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/CodeGen/Analysis.h"
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Module.h"
 #include "llvm/LTO/LTO.h"
-#include "llvm/MC/StringTableBuilder.h"
-#include "llvm/Object/ELFObjectFile.h"
+#include "llvm/Object/IRObjectFile.h"
 #include "llvm/Support/ARMAttributeParser.h"
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/RISCVAttributeParser.h"
 #include "llvm/Support/TarWriter.h"
@@ -43,12 +43,12 @@ using namespace lld::elf;
 bool InputFile::isInGroup;
 uint32_t InputFile::nextGroupId;
 
-std::vector<ArchiveFile *> elf::archiveFiles;
-std::vector<BinaryFile *> elf::binaryFiles;
-std::vector<BitcodeFile *> elf::bitcodeFiles;
-std::vector<LazyObjFile *> elf::lazyObjFiles;
-std::vector<InputFile *> elf::objectFiles;
-std::vector<SharedFile *> elf::sharedFiles;
+SmallVector<std::unique_ptr<MemoryBuffer>> elf::memoryBuffers;
+SmallVector<BinaryFile *, 0> elf::binaryFiles;
+SmallVector<BitcodeFile *, 0> elf::bitcodeFiles;
+SmallVector<BitcodeFile *, 0> elf::lazyBitcodeFiles;
+SmallVector<ELFFileBase *, 0> elf::objectFiles;
+SmallVector<SharedFile *, 0> elf::sharedFiles;
 
 std::unique_ptr<TarWriter> elf::tar;
 
@@ -59,11 +59,11 @@ std::string lld::toString(const InputFile *f) {
 
   if (f->toStringCache.empty()) {
     if (f->archiveName.empty())
-      f->toStringCache = std::string(f->getName());
+      f->toStringCache = f->getName();
     else
-      f->toStringCache = (f->archiveName + "(" + f->getName() + ")").str();
+      (f->archiveName + "(" + f->getName() + ")").toVector(f->toStringCache);
   }
-  return f->toStringCache;
+  return std::string(f->toStringCache);
 }
 
 static ELFKind getELFKind(MemoryBufferRef mb, StringRef archiveName) {
@@ -110,7 +110,7 @@ Optional<MemoryBufferRef> elf::readFile(StringRef path) {
   // The --chroot option changes our virtual root directory.
   // This is useful when you are dealing with files created by --reproduce.
   if (!config->chroot.empty() && path.startswith("/"))
-    path = saver.save(config->chroot + path);
+    path = saver().save(config->chroot + path);
 
   log(path);
   config->dependencyFiles.insert(llvm::CachedHashString(path));
@@ -122,9 +122,8 @@ Optional<MemoryBufferRef> elf::readFile(StringRef path) {
     return None;
   }
 
-  std::unique_ptr<MemoryBuffer> &mb = *mbOrErr;
-  MemoryBufferRef mbref = mb->getMemBufferRef();
-  make<std::unique_ptr<MemoryBuffer>>(std::move(mb)); // take MB ownership
+  MemoryBufferRef mbref = (*mbOrErr)->getMemBufferRef();
+  memoryBuffers.push_back(std::move(*mbOrErr)); // take MB ownership
 
   if (tar)
     tar->append(relativeToRoot(path), mbref.getBuffer());
@@ -152,18 +151,17 @@ static bool isCompatible(InputFile *file) {
     return false;
   }
 
-  InputFile *existing;
+  InputFile *existing = nullptr;
   if (!objectFiles.empty())
     existing = objectFiles[0];
   else if (!sharedFiles.empty())
     existing = sharedFiles[0];
   else if (!bitcodeFiles.empty())
     existing = bitcodeFiles[0];
-  else
-    llvm_unreachable("Must have -m, OUTPUT_FORMAT or existing input file to "
-                     "determine target emulation");
-
-  error(toString(file) + " is incompatible with " + toString(existing));
+  std::string with;
+  if (existing)
+    with = " with " + toString(existing);
+  error(toString(file) + " is incompatible" + with);
   return false;
 }
 
@@ -178,17 +176,14 @@ template <class ELFT> static void doParseFile(InputFile *file) {
     return;
   }
 
-  // .a file
-  if (auto *f = dyn_cast<ArchiveFile>(file)) {
-    archiveFiles.push_back(f);
-    f->parse();
-    return;
-  }
-
   // Lazy object file
-  if (auto *f = dyn_cast<LazyObjFile>(file)) {
-    lazyObjFiles.push_back(f);
-    f->parse<ELFT>();
+  if (file->lazy) {
+    if (auto *f = dyn_cast<BitcodeFile>(file)) {
+      lazyBitcodeFiles.push_back(f);
+      f->parseLazy();
+    } else {
+      cast<ObjFile<ELFT>>(file)->parseLazy();
+    }
     return;
   }
 
@@ -209,29 +204,12 @@ template <class ELFT> static void doParseFile(InputFile *file) {
   }
 
   // Regular object file
-  objectFiles.push_back(file);
+  objectFiles.push_back(cast<ELFFileBase>(file));
   cast<ObjFile<ELFT>>(file)->parse();
 }
 
 // Add symbols in File to the symbol table.
-void elf::parseFile(InputFile *file) {
-  switch (config->ekind) {
-  case ELF32LEKind:
-    doParseFile<ELF32LE>(file);
-    return;
-  case ELF32BEKind:
-    doParseFile<ELF32BE>(file);
-    return;
-  case ELF64LEKind:
-    doParseFile<ELF64LE>(file);
-    return;
-  case ELF64BEKind:
-    doParseFile<ELF64BE>(file);
-    return;
-  default:
-    llvm_unreachable("unknown ELFT");
-  }
-}
+void elf::parseFile(InputFile *file) { invokeELFT(doParseFile, file); }
 
 // Concatenates arguments to construct a string representing an error location.
 static std::string createFileLineMsg(StringRef path, unsigned line) {
@@ -366,6 +344,8 @@ template <class ELFT> void ELFFileBase::init() {
   abiVersion = obj.getHeader().e_ident[llvm::ELF::EI_ABIVERSION];
 
   ArrayRef<Elf_Shdr> sections = CHECK(obj.sections(), this);
+  elfShdrs = sections.data();
+  numELFShdrs = sections.size();
 
   // Find a symbol table.
   bool isDSO =
@@ -384,7 +364,7 @@ template <class ELFT> void ELFFileBase::init() {
     fatal(toString(this) + ": invalid sh_info in symbol table");
 
   elfSyms = reinterpret_cast<const void *>(eSyms.data());
-  numELFSyms = eSyms.size();
+  numELFSyms = uint32_t(eSyms.size());
   stringTable = CHECK(obj.getStringTableForSymtab(*symtabSec, sections), this);
 }
 
@@ -396,14 +376,15 @@ uint32_t ObjFile<ELFT>::getSectionIndex(const Elf_Sym &sym) const {
 }
 
 template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
+  object::ELFFile<ELFT> obj = this->getObj();
   // Read a section table. justSymbols is usually false.
   if (this->justSymbols)
     initializeJustSymbols();
   else
-    initializeSections(ignoreComdats);
+    initializeSections(ignoreComdats, obj);
 
   // Read a symbol table.
-  initializeSymbols();
+  initializeSymbols(obj);
 }
 
 // Sections with SHT_GROUP and comdat bits define comdat section groups.
@@ -421,9 +402,6 @@ StringRef ObjFile<ELFT>::getShtGroupSignature(ArrayRef<Elf_Shdr> sections,
 
 template <class ELFT>
 bool ObjFile<ELFT>::shouldMerge(const Elf_Shdr &sec, StringRef name) {
-  if (!(sec.sh_flags & SHF_MERGE))
-    return false;
-
   // On a regular link we don't merge sections if -O0 (default is -O1). This
   // sometimes makes the linker significantly faster, although the output will
   // be bigger.
@@ -476,8 +454,7 @@ bool ObjFile<ELFT>::shouldMerge(const Elf_Shdr &sec, StringRef name) {
 // When the option is given, we link "just symbols". The section table is
 // initialized with null pointers.
 template <class ELFT> void ObjFile<ELFT>::initializeJustSymbols() {
-  ArrayRef<Elf_Shdr> sections = CHECK(this->getObj().sections(), this);
-  this->sections.resize(sections.size());
+  sections.resize(numELFShdrs);
 }
 
 // An ELF object file may contain a `.deplibs` section. If it exists, the
@@ -489,12 +466,12 @@ template <class ELFT> void ObjFile<ELFT>::initializeJustSymbols() {
 static void addDependentLibrary(StringRef specifier, const InputFile *f) {
   if (!config->dependentLibraries)
     return;
-  if (fs::exists(specifier))
-    driver->addFile(specifier, /*withLOption=*/false);
+  if (Optional<std::string> s = searchLibraryBaseName(specifier))
+    driver->addFile(*s, /*withLOption=*/true);
   else if (Optional<std::string> s = findFromSearchPaths(specifier))
     driver->addFile(*s, /*withLOption=*/true);
-  else if (Optional<std::string> s = searchLibraryBaseName(specifier))
-    driver->addFile(*s, /*withLOption=*/true);
+  else if (fs::exists(specifier))
+    driver->addFile(specifier, /*withLOption=*/false);
   else
     error(toString(f) +
           ": unable to find library from dependent library specifier: " +
@@ -540,28 +517,26 @@ static void handleSectionGroup(ArrayRef<InputSectionBase *> sections,
 }
 
 template <class ELFT>
-void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
-  const ELFFile<ELFT> &obj = this->getObj();
-
-  ArrayRef<Elf_Shdr> objSections = CHECK(obj.sections(), this);
+void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
+                                       const llvm::object::ELFFile<ELFT> &obj) {
+  ArrayRef<Elf_Shdr> objSections = getELFShdrs<ELFT>();
   StringRef shstrtab = CHECK(obj.getSectionStringTable(objSections), this);
   uint64_t size = objSections.size();
   this->sections.resize(size);
 
   std::vector<ArrayRef<Elf_Word>> selectedGroups;
 
-  for (size_t i = 0, e = objSections.size(); i < e; ++i) {
+  for (size_t i = 0; i != size; ++i) {
     if (this->sections[i] == &InputSection::discarded)
       continue;
     const Elf_Shdr &sec = objSections[i];
-
-    if (sec.sh_type == ELF::SHT_LLVM_CALL_GRAPH_PROFILE)
-      cgProfileSectionIndex = i;
 
     // SHF_EXCLUDE'ed sections are discarded by the linker. However,
     // if -r is given, we'll let the final link discard such sections.
     // This is compatible with GNU.
     if ((sec.sh_flags & SHF_EXCLUDE) && !config->relocatable) {
+      if (sec.sh_type == SHT_LLVM_CALL_GRAPH_PROFILE)
+        cgProfileSectionIndex = i;
       if (sec.sh_type == SHT_LLVM_ADDRSIG) {
         // We ignore the address-significance table if we know that the object
         // file was created by objcopy or ld -r. This is because these tools
@@ -602,7 +577,8 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
               .second;
       if (keepGroup) {
         if (config->relocatable)
-          this->sections[i] = createInputSection(i, sec, shstrtab);
+          this->sections[i] = createInputSection(
+              i, sec, check(obj.getSectionName(sec, shstrtab)));
         selectedGroups.push_back(entries);
         continue;
       }
@@ -625,8 +601,12 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
     case SHT_RELA:
     case SHT_NULL:
       break;
+    case SHT_LLVM_SYMPART:
+      ctx->hasSympart.store(true, std::memory_order_relaxed);
+      LLVM_FALLTHROUGH;
     default:
-      this->sections[i] = createInputSection(i, sec, shstrtab);
+      this->sections[i] =
+          createInputSection(i, sec, check(obj.getSectionName(sec, shstrtab)));
     }
   }
 
@@ -637,21 +617,61 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
   //    such cases, the relocation section would attempt to reference a target
   //    section that has not yet been created. For simplicity, delay creation of
   //    relocation sections until now.
-  for (size_t i = 0, e = objSections.size(); i < e; ++i) {
+  for (size_t i = 0; i != size; ++i) {
     if (this->sections[i] == &InputSection::discarded)
       continue;
     const Elf_Shdr &sec = objSections[i];
 
-    if (sec.sh_type == SHT_REL || sec.sh_type == SHT_RELA)
-      this->sections[i] = createInputSection(i, sec, shstrtab);
+    if (sec.sh_type == SHT_REL || sec.sh_type == SHT_RELA) {
+      // Find a relocation target section and associate this section with that.
+      // Target may have been discarded if it is in a different section group
+      // and the group is discarded, even though it's a violation of the spec.
+      // We handle that situation gracefully by discarding dangling relocation
+      // sections.
+      const uint32_t info = sec.sh_info;
+      InputSectionBase *s = getRelocTarget(i, sec, info);
+      if (!s)
+        continue;
+
+      // ELF spec allows mergeable sections with relocations, but they are rare,
+      // and it is in practice hard to merge such sections by contents, because
+      // applying relocations at end of linking changes section contents. So, we
+      // simply handle such sections as non-mergeable ones. Degrading like this
+      // is acceptable because section merging is optional.
+      if (auto *ms = dyn_cast<MergeInputSection>(s)) {
+        s = make<InputSection>(ms->file, ms->flags, ms->type, ms->alignment,
+                               ms->data(), ms->name);
+        sections[info] = s;
+      }
+
+      if (s->relSecIdx != 0)
+        error(
+            toString(s) +
+            ": multiple relocation sections to one section are not supported");
+      s->relSecIdx = i;
+
+      // Relocation sections are usually removed from the output, so return
+      // `nullptr` for the normal case. However, if -r or --emit-relocs is
+      // specified, we need to copy them to the output. (Some post link analysis
+      // tools specify --emit-relocs to obtain the information.)
+      if (config->copyRelocs) {
+        auto *isec = make<InputSection>(
+            *this, sec, check(obj.getSectionName(sec, shstrtab)));
+        // If the relocated section is discarded (due to /DISCARD/ or
+        // --gc-sections), the relocation section should be discarded as well.
+        s->dependentSections.push_back(isec);
+        sections[i] = isec;
+      }
+      continue;
+    }
 
     // A SHF_LINK_ORDER section with sh_link=0 is handled as if it did not have
     // the flag.
-    if (!(sec.sh_flags & SHF_LINK_ORDER) || !sec.sh_link)
+    if (!sec.sh_link || !(sec.sh_flags & SHF_LINK_ORDER))
       continue;
 
     InputSectionBase *linkSec = nullptr;
-    if (sec.sh_link < this->sections.size())
+    if (sec.sh_link < size)
       linkSec = this->sections[sec.sh_link];
     if (!linkSec)
       fatal(toString(this) + ": invalid sh_link index: " + Twine(sec.sh_link));
@@ -773,10 +793,10 @@ template <class ELFT> static uint32_t readAndFeatures(const InputSection &sec) {
   using Elf_Note = typename ELFT::Note;
 
   uint32_t featuresSet = 0;
-  ArrayRef<uint8_t> data = sec.data();
+  ArrayRef<uint8_t> data = sec.rawData;
   auto reportFatal = [&](const uint8_t *place, const char *msg) {
     fatal(toString(sec.file) + ":(" + sec.name + "+0x" +
-          Twine::utohexstr(place - sec.data().data()) + "): " + msg);
+          Twine::utohexstr(place - sec.rawData.data()) + "): " + msg);
   };
   while (!data.empty()) {
     // Read one NOTE record.
@@ -827,9 +847,9 @@ template <class ELFT> static uint32_t readAndFeatures(const InputSection &sec) {
 }
 
 template <class ELFT>
-InputSectionBase *ObjFile<ELFT>::getRelocTarget(uint32_t idx, StringRef name,
-                                                const Elf_Shdr &sec) {
-  uint32_t info = sec.sh_info;
+InputSectionBase *ObjFile<ELFT>::getRelocTarget(uint32_t idx,
+                                                const Elf_Shdr &sec,
+                                                uint32_t info) {
   if (info < this->sections.size()) {
     InputSectionBase *target = this->sections[info];
 
@@ -843,25 +863,16 @@ InputSectionBase *ObjFile<ELFT>::getRelocTarget(uint32_t idx, StringRef name,
       return target;
   }
 
-  error(toString(this) + Twine(": relocation section ") + name + " (index " +
-        Twine(idx) + ") has invalid sh_info (" + Twine(info) + ")");
+  error(toString(this) + Twine(": relocation section (index ") + Twine(idx) +
+        ") has invalid sh_info (" + Twine(info) + ")");
   return nullptr;
-}
-
-// Create a regular InputSection class that has the same contents
-// as a given section.
-static InputSection *toRegularSection(MergeInputSection *sec) {
-  return make<InputSection>(sec->file, sec->flags, sec->type, sec->alignment,
-                            sec->data(), sec->name);
 }
 
 template <class ELFT>
 InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
                                                     const Elf_Shdr &sec,
-                                                    StringRef shstrtab) {
-  StringRef name = CHECK(getObj().getSectionName(sec, shstrtab), this);
-
-  if (config->emachine == EM_ARM && sec.sh_type == SHT_ARM_ATTRIBUTES) {
+                                                    StringRef name) {
+  if (sec.sh_type == SHT_ARM_ATTRIBUTES && config->emachine == EM_ARM) {
     ARMAttributeParser attributes;
     ArrayRef<uint8_t> contents = check(this->getObj().getSectionContents(sec));
     if (Error e = attributes.parse(contents, config->ekind == ELF32LEKind
@@ -878,14 +889,14 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
       // to work. In a full implementation we would merge all attribute
       // sections.
       if (in.attributes == nullptr) {
-        in.attributes = make<InputSection>(*this, sec, name);
-        return in.attributes;
+        in.attributes = std::make_unique<InputSection>(*this, sec, name);
+        return in.attributes.get();
       }
       return &InputSection::discarded;
     }
   }
 
-  if (config->emachine == EM_RISCV && sec.sh_type == SHT_RISCV_ATTRIBUTES) {
+  if (sec.sh_type == SHT_RISCV_ATTRIBUTES && config->emachine == EM_RISCV) {
     RISCVAttributeParser attributes;
     ArrayRef<uint8_t> contents = check(this->getObj().getSectionContents(sec));
     if (Error e = attributes.parse(contents, support::little)) {
@@ -900,17 +911,14 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
       // standard extensions to enable. In a full implementation we would merge
       // all attribute sections.
       if (in.attributes == nullptr) {
-        in.attributes = make<InputSection>(*this, sec, name);
-        return in.attributes;
+        in.attributes = std::make_unique<InputSection>(*this, sec, name);
+        return in.attributes.get();
       }
       return &InputSection::discarded;
     }
   }
 
-  switch (sec.sh_type) {
-  case SHT_LLVM_DEPENDENT_LIBRARIES: {
-    if (config->relocatable)
-      break;
+  if (sec.sh_type == SHT_LLVM_DEPENDENT_LIBRARIES && !config->relocatable) {
     ArrayRef<char> data =
         CHECK(this->getObj().template getSectionContentsAsArray<char>(sec), this);
     if (!data.empty() && data.back() != '\0') {
@@ -926,111 +934,67 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
     }
     return &InputSection::discarded;
   }
-  case SHT_RELA:
-  case SHT_REL: {
-    // Find a relocation target section and associate this section with that.
-    // Target may have been discarded if it is in a different section group
-    // and the group is discarded, even though it's a violation of the
-    // spec. We handle that situation gracefully by discarding dangling
-    // relocation sections.
-    InputSectionBase *target = getRelocTarget(idx, name, sec);
-    if (!target)
-      return nullptr;
 
-    // ELF spec allows mergeable sections with relocations, but they are
-    // rare, and it is in practice hard to merge such sections by contents,
-    // because applying relocations at end of linking changes section
-    // contents. So, we simply handle such sections as non-mergeable ones.
-    // Degrading like this is acceptable because section merging is optional.
-    if (auto *ms = dyn_cast<MergeInputSection>(target)) {
-      target = toRegularSection(ms);
-      this->sections[sec.sh_info] = target;
-    }
+  if (name.startswith(".n")) {
+    // The GNU linker uses .note.GNU-stack section as a marker indicating
+    // that the code in the object file does not expect that the stack is
+    // executable (in terms of NX bit). If all input files have the marker,
+    // the GNU linker adds a PT_GNU_STACK segment to tells the loader to
+    // make the stack non-executable. Most object files have this section as
+    // of 2017.
+    //
+    // But making the stack non-executable is a norm today for security
+    // reasons. Failure to do so may result in a serious security issue.
+    // Therefore, we make LLD always add PT_GNU_STACK unless it is
+    // explicitly told to do otherwise (by -z execstack). Because the stack
+    // executable-ness is controlled solely by command line options,
+    // .note.GNU-stack sections are simply ignored.
+    if (name == ".note.GNU-stack")
+      return &InputSection::discarded;
 
-    if (target->relSecIdx != 0)
-      fatal(toString(this) +
-            ": multiple relocation sections to one section are not supported");
-    target->relSecIdx = idx;
-
-    // Relocation sections are usually removed from the output, so return
-    // `nullptr` for the normal case. However, if -r or --emit-relocs is
-    // specified, we need to copy them to the output. (Some post link analysis
-    // tools specify --emit-relocs to obtain the information.)
-    if (!config->copyRelocs)
-      return nullptr;
-    InputSection *relocSec = make<InputSection>(*this, sec, name);
-    // If the relocated section is discarded (due to /DISCARD/ or
-    // --gc-sections), the relocation section should be discarded as well.
-    target->dependentSections.push_back(relocSec);
-    return relocSec;
-  }
-  }
-
-  // The GNU linker uses .note.GNU-stack section as a marker indicating
-  // that the code in the object file does not expect that the stack is
-  // executable (in terms of NX bit). If all input files have the marker,
-  // the GNU linker adds a PT_GNU_STACK segment to tells the loader to
-  // make the stack non-executable. Most object files have this section as
-  // of 2017.
-  //
-  // But making the stack non-executable is a norm today for security
-  // reasons. Failure to do so may result in a serious security issue.
-  // Therefore, we make LLD always add PT_GNU_STACK unless it is
-  // explicitly told to do otherwise (by -z execstack). Because the stack
-  // executable-ness is controlled solely by command line options,
-  // .note.GNU-stack sections are simply ignored.
-  if (name == ".note.GNU-stack")
-    return &InputSection::discarded;
-
-  // Object files that use processor features such as Intel Control-Flow
-  // Enforcement (CET) or AArch64 Branch Target Identification BTI, use a
-  // .note.gnu.property section containing a bitfield of feature bits like the
-  // GNU_PROPERTY_X86_FEATURE_1_IBT flag. Read a bitmap containing the flag.
-  //
-  // Since we merge bitmaps from multiple object files to create a new
-  // .note.gnu.property containing a single AND'ed bitmap, we discard an input
-  // file's .note.gnu.property section.
-  if (name == ".note.gnu.property") {
-    this->andFeatures = readAndFeatures<ELFT>(InputSection(*this, sec, name));
-    return &InputSection::discarded;
-  }
-
-  // Split stacks is a feature to support a discontiguous stack,
-  // commonly used in the programming language Go. For the details,
-  // see https://gcc.gnu.org/wiki/SplitStacks. An object file compiled
-  // for split stack will include a .note.GNU-split-stack section.
-  if (name == ".note.GNU-split-stack") {
-    if (config->relocatable) {
-      error("cannot mix split-stack and non-split-stack in a relocatable link");
+    // Object files that use processor features such as Intel Control-Flow
+    // Enforcement (CET) or AArch64 Branch Target Identification BTI, use a
+    // .note.gnu.property section containing a bitfield of feature bits like the
+    // GNU_PROPERTY_X86_FEATURE_1_IBT flag. Read a bitmap containing the flag.
+    //
+    // Since we merge bitmaps from multiple object files to create a new
+    // .note.gnu.property containing a single AND'ed bitmap, we discard an input
+    // file's .note.gnu.property section.
+    if (name == ".note.gnu.property") {
+      this->andFeatures = readAndFeatures<ELFT>(InputSection(*this, sec, name));
       return &InputSection::discarded;
     }
-    this->splitStack = true;
-    return &InputSection::discarded;
+
+    // Split stacks is a feature to support a discontiguous stack,
+    // commonly used in the programming language Go. For the details,
+    // see https://gcc.gnu.org/wiki/SplitStacks. An object file compiled
+    // for split stack will include a .note.GNU-split-stack section.
+    if (name == ".note.GNU-split-stack") {
+      if (config->relocatable) {
+        error(
+            "cannot mix split-stack and non-split-stack in a relocatable link");
+        return &InputSection::discarded;
+      }
+      this->splitStack = true;
+      return &InputSection::discarded;
+    }
+
+    // An object file cmpiled for split stack, but where some of the
+    // functions were compiled with the no_split_stack_attribute will
+    // include a .note.GNU-no-split-stack section.
+    if (name == ".note.GNU-no-split-stack") {
+      this->someNoSplitStack = true;
+      return &InputSection::discarded;
+    }
+
+    // Strip existing .note.gnu.build-id sections so that the output won't have
+    // more than one build-id. This is not usually a problem because input
+    // object files normally don't have .build-id sections, but you can create
+    // such files by "ld.{bfd,gold,lld} -r --build-id", and we want to guard
+    // against it.
+    if (name == ".note.gnu.build-id")
+      return &InputSection::discarded;
   }
-
-  // An object file cmpiled for split stack, but where some of the
-  // functions were compiled with the no_split_stack_attribute will
-  // include a .note.GNU-no-split-stack section.
-  if (name == ".note.GNU-no-split-stack") {
-    this->someNoSplitStack = true;
-    return &InputSection::discarded;
-  }
-
-  // The linkonce feature is a sort of proto-comdat. Some glibc i386 object
-  // files contain definitions of symbol "__x86.get_pc_thunk.bx" in linkonce
-  // sections. Drop those sections to avoid duplicate symbol errors.
-  // FIXME: This is glibc PR20543, we should remove this hack once that has been
-  // fixed for a while.
-  if (name == ".gnu.linkonce.t.__x86.get_pc_thunk.bx" ||
-      name == ".gnu.linkonce.t.__i686.get_pc_thunk.bx")
-    return &InputSection::discarded;
-
-  // Strip existing .note.gnu.build-id sections so that the output won't have
-  // more than one build-id. This is not usually a problem because input object
-  // files normally don't have .build-id sections, but you can create such files
-  // by "ld.{bfd,gold,lld} -r --build-id", and we want to guard against it.
-  if (name == ".note.gnu.build-id")
-    return &InputSection::discarded;
 
   // The linker merges EH (exception handling) frames and creates a
   // .eh_frame_hdr section for runtime. So we handle them with a special
@@ -1038,131 +1002,56 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
   if (name == ".eh_frame" && !config->relocatable)
     return make<EhInputSection>(*this, sec, name);
 
-  if (shouldMerge(sec, name))
+  if ((sec.sh_flags & SHF_MERGE) && shouldMerge(sec, name))
     return make<MergeInputSection>(*this, sec, name);
   return make<InputSection>(*this, sec, name);
 }
 
 // Initialize this->Symbols. this->Symbols is a parallel array as
 // its corresponding ELF symbol table.
-template <class ELFT> void ObjFile<ELFT>::initializeSymbols() {
+template <class ELFT>
+void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
+  SymbolTable &symtab = *elf::symtab;
+
   ArrayRef<Elf_Sym> eSyms = this->getELFSyms<ELFT>();
-  this->symbols.resize(eSyms.size());
+  symbols.resize(eSyms.size());
 
-  // Fill in InputFile::symbols. Some entries have been initialized
-  // because of LazyObjFile.
-  for (size_t i = 0, end = eSyms.size(); i != end; ++i) {
-    if (this->symbols[i])
-      continue;
-    const Elf_Sym &eSym = eSyms[i];
-    uint32_t secIdx = getSectionIndex(eSym);
-    if (secIdx >= this->sections.size())
-      fatal(toString(this) + ": invalid section index: " + Twine(secIdx));
-    if (eSym.getBinding() != STB_LOCAL) {
-      if (i < firstGlobal)
-        error(toString(this) + ": non-local symbol (" + Twine(i) +
-              ") found at index < .symtab's sh_info (" + Twine(firstGlobal) +
-              ")");
-      this->symbols[i] =
-          symtab->insert(CHECK(eSyms[i].getName(this->stringTable), this));
-      continue;
-    }
+  // Some entries have been filled by LazyObjFile.
+  for (size_t i = firstGlobal, end = eSyms.size(); i != end; ++i)
+    if (!symbols[i])
+      symbols[i] = symtab.insert(CHECK(eSyms[i].getName(stringTable), this));
 
-    // Handle local symbols. Local symbols are not added to the symbol
-    // table because they are not visible from other object files. We
-    // allocate symbol instances and add their pointers to symbols.
-    if (i >= firstGlobal)
-      errorOrWarn(toString(this) + ": STB_LOCAL symbol (" + Twine(i) +
-                  ") found at index >= .symtab's sh_info (" +
-                  Twine(firstGlobal) + ")");
-
-    InputSectionBase *sec = this->sections[secIdx];
-    uint8_t type = eSym.getType();
-    if (type == STT_FILE)
-      sourceFile = CHECK(eSym.getName(this->stringTable), this);
-    if (this->stringTable.size() <= eSym.st_name)
-      fatal(toString(this) + ": invalid symbol name offset");
-    StringRefZ name = this->stringTable.data() + eSym.st_name;
-
-    if (eSym.st_shndx == SHN_UNDEF)
-      this->symbols[i] =
-          make<Undefined>(this, name, STB_LOCAL, eSym.st_other, type);
-    else if (sec == &InputSection::discarded)
-      this->symbols[i] =
-          make<Undefined>(this, name, STB_LOCAL, eSym.st_other, type,
-                          /*discardedSecIdx=*/secIdx);
-    else
-      this->symbols[i] = make<Defined>(this, name, STB_LOCAL, eSym.st_other,
-                                       type, eSym.st_value, eSym.st_size, sec);
-  }
-
-  // Symbol resolution of non-local symbols.
+  // Perform symbol resolution on non-local symbols.
   SmallVector<unsigned, 32> undefineds;
   for (size_t i = firstGlobal, end = eSyms.size(); i != end; ++i) {
     const Elf_Sym &eSym = eSyms[i];
-    uint8_t binding = eSym.getBinding();
-    if (binding == STB_LOCAL)
-      continue; // Errored above.
-
-    uint32_t secIdx = getSectionIndex(eSym);
-    InputSectionBase *sec = this->sections[secIdx];
-    uint8_t stOther = eSym.st_other;
-    uint8_t type = eSym.getType();
-    uint64_t value = eSym.st_value;
-    uint64_t size = eSym.st_size;
-    StringRefZ name = this->stringTable.data() + eSym.st_name;
-
-    // Handle global undefined symbols.
-    if (eSym.st_shndx == SHN_UNDEF) {
+    uint32_t secIdx = eSym.st_shndx;
+    if (secIdx == SHN_UNDEF) {
       undefineds.push_back(i);
       continue;
     }
 
-    // Handle global common symbols.
-    if (eSym.st_shndx == SHN_COMMON) {
+    uint8_t binding = eSym.getBinding();
+    uint8_t stOther = eSym.st_other;
+    uint8_t type = eSym.getType();
+    uint64_t value = eSym.st_value;
+    uint64_t size = eSym.st_size;
+
+    Symbol *sym = symbols[i];
+    sym->isUsedInRegularObj = true;
+    if (LLVM_UNLIKELY(eSym.st_shndx == SHN_COMMON)) {
       if (value == 0 || value >= UINT32_MAX)
-        fatal(toString(this) + ": common symbol '" + StringRef(name.data) +
+        fatal(toString(this) + ": common symbol '" + sym->getName() +
               "' has invalid alignment: " + Twine(value));
-      this->symbols[i]->resolve(
-          CommonSymbol{this, name, binding, stOther, type, value, size});
+      hasCommonSyms = true;
+      sym->resolve(
+          CommonSymbol{this, StringRef(), binding, stOther, type, value, size});
       continue;
     }
 
-    // If a defined symbol is in a discarded section, handle it as if it
-    // were an undefined symbol. Such symbol doesn't comply with the
-    // standard, but in practice, a .eh_frame often directly refer
-    // COMDAT member sections, and if a comdat group is discarded, some
-    // defined symbol in a .eh_frame becomes dangling symbols.
-    if (sec == &InputSection::discarded) {
-      Undefined und{this, name, binding, stOther, type, secIdx};
-      Symbol *sym = this->symbols[i];
-      // !ArchiveFile::parsed or LazyObjFile::extracted means that the file
-      // containing this object has not finished processing, i.e. this symbol is
-      // a result of a lazy symbol extract. We should demote the lazy symbol to
-      // an Undefined so that any relocations outside of the group to it will
-      // trigger a discarded section error.
-      if ((sym->symbolKind == Symbol::LazyArchiveKind &&
-           !cast<ArchiveFile>(sym->file)->parsed) ||
-          (sym->symbolKind == Symbol::LazyObjectKind &&
-           cast<LazyObjFile>(sym->file)->extracted)) {
-        sym->replace(und);
-        // Prevent LTO from internalizing the symbol in case there is a
-        // reference to this symbol from this file.
-        sym->isUsedInRegularObj = true;
-      } else
-        sym->resolve(und);
-      continue;
-    }
-
-    // Handle global defined symbols.
-    if (binding == STB_GLOBAL || binding == STB_WEAK ||
-        binding == STB_GNU_UNIQUE) {
-      this->symbols[i]->resolve(
-          Defined{this, name, binding, stOther, type, value, size, sec});
-      continue;
-    }
-
-    fatal(toString(this) + ": unexpected binding: " + Twine((int)binding));
+    // Handle global defined symbols. Defined::section will be set in postParse.
+    sym->resolve(Defined{this, StringRef(), binding, stOther, type, value, size,
+                         nullptr});
   }
 
   // Undefined symbols (excluding those defined relative to non-prevailing
@@ -1173,48 +1062,113 @@ template <class ELFT> void ObjFile<ELFT>::initializeSymbols() {
   // being resolved to different files.
   for (unsigned i : undefineds) {
     const Elf_Sym &eSym = eSyms[i];
-    StringRefZ name = this->stringTable.data() + eSym.st_name;
-    this->symbols[i]->resolve(Undefined{this, name, eSym.getBinding(),
-                                        eSym.st_other, eSym.getType()});
-    this->symbols[i]->referenced = true;
+    Symbol *sym = symbols[i];
+    sym->resolve(Undefined{this, StringRef(), eSym.getBinding(), eSym.st_other,
+                           eSym.getType()});
+    sym->isUsedInRegularObj = true;
+    sym->referenced = true;
   }
 }
 
-ArchiveFile::ArchiveFile(std::unique_ptr<Archive> &&file)
-    : InputFile(ArchiveKind, file->getMemoryBufferRef()),
-      file(std::move(file)) {}
+template <class ELFT> void ObjFile<ELFT>::initializeLocalSymbols() {
+  if (!firstGlobal)
+    return;
+  localSymStorage = std::make_unique<SymbolUnion[]>(firstGlobal);
+  SymbolUnion *locals = localSymStorage.get();
 
-void ArchiveFile::parse() {
-  for (const Archive::Symbol &sym : file->symbols())
-    symtab->addSymbol(LazyArchive{*this, sym});
+  ArrayRef<Elf_Sym> eSyms = this->getELFSyms<ELFT>();
+  for (size_t i = 0, end = firstGlobal; i != end; ++i) {
+    const Elf_Sym &eSym = eSyms[i];
+    uint32_t secIdx = eSym.st_shndx;
+    if (LLVM_UNLIKELY(secIdx == SHN_XINDEX))
+      secIdx = check(getExtendedSymbolTableIndex<ELFT>(eSym, i, shndxTable));
+    else if (secIdx >= SHN_LORESERVE)
+      secIdx = 0;
+    if (LLVM_UNLIKELY(secIdx >= sections.size()))
+      fatal(toString(this) + ": invalid section index: " + Twine(secIdx));
+    if (LLVM_UNLIKELY(eSym.getBinding() != STB_LOCAL))
+      error(toString(this) + ": non-local symbol (" + Twine(i) +
+            ") found at index < .symtab's sh_info (" + Twine(end) + ")");
 
-  // Inform a future invocation of ObjFile<ELFT>::initializeSymbols() that this
-  // archive has been processed.
-  parsed = true;
+    InputSectionBase *sec = sections[secIdx];
+    uint8_t type = eSym.getType();
+    if (type == STT_FILE)
+      sourceFile = CHECK(eSym.getName(stringTable), this);
+    if (LLVM_UNLIKELY(stringTable.size() <= eSym.st_name))
+      fatal(toString(this) + ": invalid symbol name offset");
+    StringRef name(stringTable.data() + eSym.st_name);
+
+    symbols[i] = reinterpret_cast<Symbol *>(locals + i);
+    if (eSym.st_shndx == SHN_UNDEF || sec == &InputSection::discarded)
+      new (symbols[i]) Undefined(this, name, STB_LOCAL, eSym.st_other, type,
+                                 /*discardedSecIdx=*/secIdx);
+    else
+      new (symbols[i]) Defined(this, name, STB_LOCAL, eSym.st_other, type,
+                               eSym.st_value, eSym.st_size, sec);
+    symbols[i]->isUsedInRegularObj = true;
+  }
 }
 
-// Returns a buffer pointing to a member file containing a given symbol.
-void ArchiveFile::extract(const Archive::Symbol &sym) {
-  Archive::Child c =
-      CHECK(sym.getMember(), toString(this) +
-                                 ": could not get the member for symbol " +
-                                 toELFString(sym));
+// Called after all ObjFile::parse is called for all ObjFiles. This checks
+// duplicate symbols and may do symbol property merge in the future.
+template <class ELFT> void ObjFile<ELFT>::postParse() {
+  static std::mutex mu;
+  ArrayRef<Elf_Sym> eSyms = this->getELFSyms<ELFT>();
+  for (size_t i = firstGlobal, end = eSyms.size(); i != end; ++i) {
+    const Elf_Sym &eSym = eSyms[i];
+    Symbol &sym = *symbols[i];
+    uint32_t secIdx = eSym.st_shndx;
+    uint8_t binding = eSym.getBinding();
+    if (LLVM_UNLIKELY(binding != STB_GLOBAL && binding != STB_WEAK &&
+                      binding != STB_GNU_UNIQUE))
+      errorOrWarn(toString(this) + ": symbol (" + Twine(i) +
+                  ") has invalid binding: " + Twine((int)binding));
 
-  if (!seen.insert(c.getChildOffset()).second)
-    return;
+    // st_value of STT_TLS represents the assigned offset, not the actual
+    // address which is used by STT_FUNC and STT_OBJECT. STT_TLS symbols can
+    // only be referenced by special TLS relocations. It is usually an error if
+    // a STT_TLS symbol is replaced by a non-STT_TLS symbol, vice versa.
+    if (LLVM_UNLIKELY(sym.isTls()) && eSym.getType() != STT_TLS &&
+        eSym.getType() != STT_NOTYPE)
+      errorOrWarn("TLS attribute mismatch: " + toString(sym) + "\n>>> in " +
+                  toString(sym.file) + "\n>>> in " + toString(this));
 
-  MemoryBufferRef mb =
-      CHECK(c.getMemoryBufferRef(),
-            toString(this) +
-                ": could not get the buffer for the member defining symbol " +
-                toELFString(sym));
+    // Handle non-COMMON defined symbol below. !sym.file allows a symbol
+    // assignment to redefine a symbol without an error.
+    if (!sym.file || !sym.isDefined() || secIdx == SHN_UNDEF ||
+        secIdx == SHN_COMMON)
+      continue;
 
-  if (tar && c.getParent()->isThin())
-    tar->append(relativeToRoot(CHECK(c.getFullName(), this)), mb.getBuffer());
+    if (LLVM_UNLIKELY(secIdx == SHN_XINDEX))
+      secIdx = check(getExtendedSymbolTableIndex<ELFT>(eSym, i, shndxTable));
+    else if (secIdx >= SHN_LORESERVE)
+      secIdx = 0;
+    if (LLVM_UNLIKELY(secIdx >= sections.size()))
+      fatal(toString(this) + ": invalid section index: " + Twine(secIdx));
+    InputSectionBase *sec = sections[secIdx];
+    if (sec == &InputSection::discarded) {
+      if (sym.traced) {
+        printTraceSymbol(Undefined{this, sym.getName(), sym.binding,
+                                   sym.stOther, sym.type, secIdx},
+                         sym.getName());
+      }
+      if (sym.file == this) {
+        std::lock_guard<std::mutex> lock(mu);
+        ctx->nonPrevailingSyms.emplace_back(&sym, secIdx);
+      }
+      continue;
+    }
 
-  InputFile *file = createObjectFile(mb, getName(), c.getChildOffset());
-  file->groupId = groupId;
-  parseFile(file);
+    if (sym.file == this) {
+      cast<Defined>(sym).section = sec;
+      continue;
+    }
+
+    if (binding == STB_WEAK)
+      continue;
+    std::lock_guard<std::mutex> lock(mu);
+    ctx->duplicates.push_back({&sym, this, sec, eSym.st_value});
+  }
 }
 
 // The handling of tentative definitions (COMMON symbols) in archives is murky.
@@ -1283,62 +1237,27 @@ static bool isNonCommonDef(MemoryBufferRef mb, StringRef symName,
   }
 }
 
-bool ArchiveFile::shouldExtractForCommon(const Archive::Symbol &sym) {
-  Archive::Child c =
-      CHECK(sym.getMember(), toString(this) +
-                                 ": could not get the member for symbol " +
-                                 toELFString(sym));
-  MemoryBufferRef mb =
-      CHECK(c.getMemoryBufferRef(),
-            toString(this) +
-                ": could not get the buffer for the member defining symbol " +
-                toELFString(sym));
-
-  if (isBitcode(mb))
-    return isBitcodeNonCommonDef(mb, sym.getName(), getName());
-
-  return isNonCommonDef(mb, sym.getName(), getName());
-}
-
-size_t ArchiveFile::getMemberCount() const {
-  size_t count = 0;
-  Error err = Error::success();
-  for (const Archive::Child &c : file->children(err)) {
-    (void)c;
-    ++count;
-  }
-  // This function is used by --print-archive-stats=, where an error does not
-  // really matter.
-  consumeError(std::move(err));
-  return count;
-}
-
 unsigned SharedFile::vernauxNum;
 
 // Parse the version definitions in the object file if present, and return a
 // vector whose nth element contains a pointer to the Elf_Verdef for version
 // identifier n. Version identifiers that are not definitions map to nullptr.
 template <typename ELFT>
-static std::vector<const void *> parseVerdefs(const uint8_t *base,
-                                              const typename ELFT::Shdr *sec) {
+static SmallVector<const void *, 0>
+parseVerdefs(const uint8_t *base, const typename ELFT::Shdr *sec) {
   if (!sec)
     return {};
 
-  // We cannot determine the largest verdef identifier without inspecting
-  // every Elf_Verdef, but both bfd and gold assign verdef identifiers
-  // sequentially starting from 1, so we predict that the largest identifier
-  // will be verdefCount.
-  unsigned verdefCount = sec->sh_info;
-  std::vector<const void *> verdefs(verdefCount + 1);
-
   // Build the Verdefs array by following the chain of Elf_Verdef objects
   // from the start of the .gnu.version_d section.
+  SmallVector<const void *, 0> verdefs;
   const uint8_t *verdef = base + sec->sh_offset;
-  for (unsigned i = 0; i != verdefCount; ++i) {
+  for (unsigned i = 0, e = sec->sh_info; i != e; ++i) {
     auto *curVerdef = reinterpret_cast<const typename ELFT::Verdef *>(verdef);
     verdef += curVerdef->vd_next;
     unsigned verdefIndex = curVerdef->vd_ndx;
-    verdefs.resize(verdefIndex + 1);
+    if (verdefIndex >= verdefs.size())
+      verdefs.resize(verdefIndex + 1);
     verdefs[verdefIndex] = curVerdef;
   }
   return verdefs;
@@ -1417,7 +1336,7 @@ template <class ELFT> void SharedFile::parse() {
 
   ArrayRef<Elf_Dyn> dynamicTags;
   const ELFFile<ELFT> obj = this->getObj<ELFT>();
-  ArrayRef<Elf_Shdr> sections = CHECK(obj.sections(), this);
+  ArrayRef<Elf_Shdr> sections = getELFShdrs<ELFT>();
 
   const Elf_Shdr *versymSec = nullptr;
   const Elf_Shdr *verdefSec = nullptr;
@@ -1465,9 +1384,10 @@ template <class ELFT> void SharedFile::parse() {
   }
 
   // DSOs are uniquified not by filename but by soname.
-  DenseMap<StringRef, SharedFile *>::iterator it;
+  DenseMap<CachedHashStringRef, SharedFile *>::iterator it;
   bool wasInserted;
-  std::tie(it, wasInserted) = symtab->soNames.try_emplace(soName, this);
+  std::tie(it, wasInserted) =
+      symtab->soNames.try_emplace(CachedHashStringRef(soName), this);
 
   // If a DSO appears more than once on the command line with and without
   // --as-needed, --no-as-needed takes precedence over --as-needed because a
@@ -1502,15 +1422,16 @@ template <class ELFT> void SharedFile::parse() {
   SmallString<0> versionedNameBuffer;
 
   // Add symbols to the symbol table.
+  SymbolTable &symtab = *elf::symtab;
   ArrayRef<Elf_Sym> syms = this->getGlobalELFSyms<ELFT>();
-  for (size_t i = 0; i < syms.size(); ++i) {
+  for (size_t i = 0, e = syms.size(); i != e; ++i) {
     const Elf_Sym &sym = syms[i];
 
     // ELF spec requires that all local symbols precede weak or global
     // symbols in each symbol table, and the index of first non-local symbol
     // is stored to sh_info. If a local symbol appears after some non-local
     // symbol, that's a violation of the spec.
-    StringRef name = CHECK(sym.getName(this->stringTable), this);
+    StringRef name = CHECK(sym.getName(stringTable), this);
     if (sym.getBinding() == STB_LOCAL) {
       warn("found local symbol '" + name +
            "' in global part of symbol table in file " + toString(this));
@@ -1528,15 +1449,15 @@ template <class ELFT> void SharedFile::parse() {
                 toString(this));
           continue;
         }
-        StringRef verName = this->stringTable.data() + verneeds[idx];
+        StringRef verName = stringTable.data() + verneeds[idx];
         versionedNameBuffer.clear();
-        name =
-            saver.save((name + "@" + verName).toStringRef(versionedNameBuffer));
+        name = saver().save(
+            (name + "@" + verName).toStringRef(versionedNameBuffer));
       }
-      Symbol *s = symtab->addSymbol(
+      Symbol *s = symtab.addSymbol(
           Undefined{this, name, sym.getBinding(), sym.st_other, sym.getType()});
       s->exportDynamic = true;
-      if (s->isUndefined() && !s->isWeak() &&
+      if (s->isUndefined() && sym.getBinding() != STB_WEAK &&
           config->unresolvedSymbolsInShlib != UnresolvedPolicy::Ignore)
         requiredSymbols.push_back(s);
       continue;
@@ -1551,9 +1472,11 @@ template <class ELFT> void SharedFile::parse() {
 
     uint32_t alignment = getAlignment<ELFT>(sections, sym);
     if (!(versyms[i] & VERSYM_HIDDEN)) {
-      symtab->addSymbol(SharedSymbol{*this, name, sym.getBinding(),
-                                     sym.st_other, sym.getType(), sym.st_value,
-                                     sym.st_size, alignment, idx});
+      auto *s = symtab.addSymbol(
+          SharedSymbol{*this, name, sym.getBinding(), sym.st_other,
+                       sym.getType(), sym.st_value, sym.st_size, alignment});
+      if (s->file == this)
+        s->verdefIndex = idx;
     }
 
     // Also add the symbol with the versioned name to handle undefined symbols
@@ -1569,13 +1492,15 @@ template <class ELFT> void SharedFile::parse() {
     }
 
     StringRef verName =
-        this->stringTable.data() +
+        stringTable.data() +
         reinterpret_cast<const Elf_Verdef *>(verdefs[idx])->getAux()->vda_name;
     versionedNameBuffer.clear();
     name = (name + "@" + verName).toStringRef(versionedNameBuffer);
-    symtab->addSymbol(SharedSymbol{*this, saver.save(name), sym.getBinding(),
-                                   sym.st_other, sym.getType(), sym.st_value,
-                                   sym.st_size, alignment, idx});
+    auto *s = symtab.addSymbol(
+        SharedSymbol{*this, saver().save(name), sym.getBinding(), sym.st_other,
+                     sym.getType(), sym.st_value, sym.st_size, alignment});
+    if (s->file == this)
+      s->verdefIndex = idx;
   }
 }
 
@@ -1641,9 +1566,10 @@ static uint8_t getOsAbi(const Triple &t) {
 }
 
 BitcodeFile::BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
-                         uint64_t offsetInArchive)
+                         uint64_t offsetInArchive, bool lazy)
     : InputFile(BitcodeKind, mb) {
-  this->archiveName = std::string(archiveName);
+  this->archiveName = archiveName;
+  this->lazy = lazy;
 
   std::string path = mb.getBufferIdentifier().str();
   if (config->thinLTOIndexOnly)
@@ -1655,11 +1581,10 @@ BitcodeFile::BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
   // into consideration at LTO time (which very likely causes undefined
   // symbols later in the link stage). So we append file offset to make
   // filename unique.
-  StringRef name =
-      archiveName.empty()
-          ? saver.save(path)
-          : saver.save(archiveName + "(" + path::filename(path) + " at " +
-                       utostr(offsetInArchive) + ")");
+  StringRef name = archiveName.empty()
+                       ? saver().save(path)
+                       : saver().save(archiveName + "(" + path::filename(path) +
+                                      " at " + utostr(offsetInArchive) + ")");
   MemoryBufferRef mbref(mb.getBuffer(), name);
 
   obj = CHECK(lto::InputFile::create(mbref), this);
@@ -1683,38 +1608,37 @@ static uint8_t mapVisibility(GlobalValue::VisibilityTypes gvVisibility) {
 }
 
 template <class ELFT>
-static Symbol *createBitcodeSymbol(const std::vector<bool> &keptComdats,
-                                   const lto::InputFile::Symbol &objSym,
-                                   BitcodeFile &f) {
-  StringRef name = saver.save(objSym.getName());
+static void
+createBitcodeSymbol(Symbol *&sym, const std::vector<bool> &keptComdats,
+                    const lto::InputFile::Symbol &objSym, BitcodeFile &f) {
   uint8_t binding = objSym.isWeak() ? STB_WEAK : STB_GLOBAL;
   uint8_t type = objSym.isTLS() ? STT_TLS : STT_NOTYPE;
   uint8_t visibility = mapVisibility(objSym.getVisibility());
-  bool canOmitFromDynSym = objSym.canBeOmittedFromSymbolTable();
+
+  if (!sym)
+    sym = symtab->insert(saver().save(objSym.getName()));
 
   int c = objSym.getComdatIndex();
   if (objSym.isUndefined() || (c != -1 && !keptComdats[c])) {
-    Undefined newSym(&f, name, binding, visibility, type);
-    if (canOmitFromDynSym)
-      newSym.exportDynamic = false;
-    Symbol *ret = symtab->addSymbol(newSym);
-    ret->referenced = true;
-    return ret;
+    Undefined newSym(&f, StringRef(), binding, visibility, type);
+    sym->resolve(newSym);
+    sym->referenced = true;
+    return;
   }
 
-  if (objSym.isCommon())
-    return symtab->addSymbol(
-        CommonSymbol{&f, name, binding, visibility, STT_OBJECT,
-                     objSym.getCommonAlignment(), objSym.getCommonSize()});
-
-  Defined newSym(&f, name, binding, visibility, type, 0, 0, nullptr);
-  if (canOmitFromDynSym)
-    newSym.exportDynamic = false;
-  return symtab->addSymbol(newSym);
+  if (objSym.isCommon()) {
+    sym->resolve(CommonSymbol{&f, StringRef(), binding, visibility, STT_OBJECT,
+                              objSym.getCommonAlignment(),
+                              objSym.getCommonSize()});
+  } else {
+    Defined newSym(&f, StringRef(), binding, visibility, type, 0, 0, nullptr);
+    if (objSym.canBeOmittedFromSymbolTable())
+      newSym.exportDynamic = false;
+    sym->resolve(newSym);
+  }
 }
 
 template <class ELFT> void BitcodeFile::parse() {
-  std::vector<bool> keptComdats;
   for (std::pair<StringRef, Comdat::SelectionKind> s : obj->getComdatTable()) {
     keptComdats.push_back(
         s.second == Comdat::NoDeduplicate ||
@@ -1722,11 +1646,47 @@ template <class ELFT> void BitcodeFile::parse() {
             .second);
   }
 
-  for (const lto::InputFile::Symbol &objSym : obj->symbols())
-    symbols.push_back(createBitcodeSymbol<ELFT>(keptComdats, objSym, *this));
+  symbols.resize(obj->symbols().size());
+  // Process defined symbols first. See the comment in
+  // ObjFile<ELFT>::initializeSymbols.
+  for (auto it : llvm::enumerate(obj->symbols()))
+    if (!it.value().isUndefined()) {
+      Symbol *&sym = symbols[it.index()];
+      createBitcodeSymbol<ELFT>(sym, keptComdats, it.value(), *this);
+    }
+  for (auto it : llvm::enumerate(obj->symbols()))
+    if (it.value().isUndefined()) {
+      Symbol *&sym = symbols[it.index()];
+      createBitcodeSymbol<ELFT>(sym, keptComdats, it.value(), *this);
+    }
 
   for (auto l : obj->getDependentLibraries())
     addDependentLibrary(l, this);
+}
+
+void BitcodeFile::parseLazy() {
+  SymbolTable &symtab = *elf::symtab;
+  symbols.resize(obj->symbols().size());
+  for (auto it : llvm::enumerate(obj->symbols()))
+    if (!it.value().isUndefined()) {
+      auto *sym = symtab.insert(saver().save(it.value().getName()));
+      sym->resolve(LazyObject{*this});
+      symbols[it.index()] = sym;
+    }
+}
+
+void BitcodeFile::postParse() {
+  for (auto it : llvm::enumerate(obj->symbols())) {
+    const Symbol &sym = *symbols[it.index()];
+    const auto &objSym = it.value();
+    if (sym.file == this || !sym.isDefined() || objSym.isUndefined() ||
+        objSym.isCommon() || objSym.isWeak())
+      continue;
+    int c = objSym.getComdatIndex();
+    if (c != -1 && !keptComdats[c])
+      continue;
+    reportDuplicate(sym, this, nullptr, 0);
+  }
 }
 
 void BinaryFile::parse() {
@@ -1744,18 +1704,23 @@ void BinaryFile::parse() {
     if (!isAlnum(s[i]))
       s[i] = '_';
 
-  symtab->addSymbol(Defined{nullptr, saver.save(s + "_start"), STB_GLOBAL,
-                            STV_DEFAULT, STT_OBJECT, 0, 0, section});
-  symtab->addSymbol(Defined{nullptr, saver.save(s + "_end"), STB_GLOBAL,
-                            STV_DEFAULT, STT_OBJECT, data.size(), 0, section});
-  symtab->addSymbol(Defined{nullptr, saver.save(s + "_size"), STB_GLOBAL,
-                            STV_DEFAULT, STT_OBJECT, data.size(), 0, nullptr});
+  llvm::StringSaver &saver = lld::saver();
+
+  symtab->addAndCheckDuplicate(Defined{nullptr, saver.save(s + "_start"),
+                                       STB_GLOBAL, STV_DEFAULT, STT_OBJECT, 0,
+                                       0, section});
+  symtab->addAndCheckDuplicate(Defined{nullptr, saver.save(s + "_end"),
+                                       STB_GLOBAL, STV_DEFAULT, STT_OBJECT,
+                                       data.size(), 0, section});
+  symtab->addAndCheckDuplicate(Defined{nullptr, saver.save(s + "_size"),
+                                       STB_GLOBAL, STV_DEFAULT, STT_OBJECT,
+                                       data.size(), 0, nullptr});
 }
 
 InputFile *elf::createObjectFile(MemoryBufferRef mb, StringRef archiveName,
                                  uint64_t offsetInArchive) {
   if (isBitcode(mb))
-    return make<BitcodeFile>(mb, archiveName, offsetInArchive);
+    return make<BitcodeFile>(mb, archiveName, offsetInArchive, /*lazy=*/false);
 
   switch (getELFKind(mb, archiveName)) {
   case ELF32LEKind:
@@ -1771,80 +1736,40 @@ InputFile *elf::createObjectFile(MemoryBufferRef mb, StringRef archiveName,
   }
 }
 
-void LazyObjFile::extract() {
-  if (extracted)
-    return;
-  extracted = true;
+InputFile *elf::createLazyFile(MemoryBufferRef mb, StringRef archiveName,
+                               uint64_t offsetInArchive) {
+  if (isBitcode(mb))
+    return make<BitcodeFile>(mb, archiveName, offsetInArchive, /*lazy=*/true);
 
-  InputFile *file = createObjectFile(mb, archiveName, offsetInArchive);
-  file->groupId = groupId;
-
-  // Copy symbol vector so that the new InputFile doesn't have to
-  // insert the same defined symbols to the symbol table again.
-  file->symbols = std::move(symbols);
-
-  parseFile(file);
+  auto *file =
+      cast<ELFFileBase>(createObjectFile(mb, archiveName, offsetInArchive));
+  file->lazy = true;
+  return file;
 }
 
-template <class ELFT> void LazyObjFile::parse() {
-  using Elf_Sym = typename ELFT::Sym;
+template <class ELFT> void ObjFile<ELFT>::parseLazy() {
+  const ArrayRef<typename ELFT::Sym> eSyms = this->getELFSyms<ELFT>();
+  SymbolTable &symtab = *elf::symtab;
 
-  // A lazy object file wraps either a bitcode file or an ELF file.
-  if (isBitcode(this->mb)) {
-    std::unique_ptr<lto::InputFile> obj =
-        CHECK(lto::InputFile::create(this->mb), this);
-    for (const lto::InputFile::Symbol &sym : obj->symbols()) {
-      if (sym.isUndefined())
-        continue;
-      symtab->addSymbol(LazyObject{*this, saver.save(sym.getName())});
-    }
-    return;
-  }
+  symbols.resize(eSyms.size());
+  for (size_t i = firstGlobal, end = eSyms.size(); i != end; ++i)
+    if (eSyms[i].st_shndx != SHN_UNDEF)
+      symbols[i] = symtab.insert(CHECK(eSyms[i].getName(stringTable), this));
 
-  if (getELFKind(this->mb, archiveName) != config->ekind) {
-    error("incompatible file: " + this->mb.getBufferIdentifier());
-    return;
-  }
-
-  // Find a symbol table.
-  ELFFile<ELFT> obj = check(ELFFile<ELFT>::create(mb.getBuffer()));
-  ArrayRef<typename ELFT::Shdr> sections = CHECK(obj.sections(), this);
-
-  for (const typename ELFT::Shdr &sec : sections) {
-    if (sec.sh_type != SHT_SYMTAB)
-      continue;
-
-    // A symbol table is found.
-    ArrayRef<Elf_Sym> eSyms = CHECK(obj.symbols(&sec), this);
-    uint32_t firstGlobal = sec.sh_info;
-    StringRef strtab = CHECK(obj.getStringTableForSymtab(sec, sections), this);
-    this->symbols.resize(eSyms.size());
-
-    // Get existing symbols or insert placeholder symbols.
-    for (size_t i = firstGlobal, end = eSyms.size(); i != end; ++i)
-      if (eSyms[i].st_shndx != SHN_UNDEF)
-        this->symbols[i] = symtab->insert(CHECK(eSyms[i].getName(strtab), this));
-
-    // Replace existing symbols with LazyObject symbols.
-    //
-    // resolve() may trigger this->extract() if an existing symbol is an
-    // undefined symbol. If that happens, this LazyObjFile has served
-    // its purpose, and we can exit from the loop early.
-    for (Symbol *sym : this->symbols) {
-      if (!sym)
-        continue;
-      sym->resolve(LazyObject{*this, sym->getName()});
-
-      // If extracted, stop iterating because this->symbols has been transferred
-      // to the instantiated ObjFile.
-      if (extracted)
+  // Replace existing symbols with LazyObject symbols.
+  //
+  // resolve() may trigger this->extract() if an existing symbol is an undefined
+  // symbol. If that happens, this function has served its purpose, and we can
+  // exit from the loop early.
+  for (Symbol *sym : makeArrayRef(symbols).slice(firstGlobal))
+    if (sym) {
+      sym->resolve(LazyObject{*this});
+      if (!lazy)
         return;
     }
-    return;
-  }
 }
 
-bool LazyObjFile::shouldExtractForCommon(const StringRef &name) {
+bool InputFile::shouldExtractForCommon(StringRef name) {
   if (isBitcode(mb))
     return isBitcodeNonCommonDef(mb, name, archiveName);
 
@@ -1864,11 +1789,6 @@ template void BitcodeFile::parse<ELF32LE>();
 template void BitcodeFile::parse<ELF32BE>();
 template void BitcodeFile::parse<ELF64LE>();
 template void BitcodeFile::parse<ELF64BE>();
-
-template void LazyObjFile::parse<ELF32LE>();
-template void LazyObjFile::parse<ELF32BE>();
-template void LazyObjFile::parse<ELF64LE>();
-template void LazyObjFile::parse<ELF64BE>();
 
 template class elf::ObjFile<ELF32LE>;
 template class elf::ObjFile<ELF32BE>;

@@ -1,4 +1,4 @@
-# Check if compile-rt library file path exists.
+# Check if the compiler-rt library file path exists.
 # If found, cache the path in:
 #    COMPILER_RT_LIBRARY-<name>-<target>
 # If err_flag is true OR path not found, emit a message and set:
@@ -20,8 +20,26 @@ function(get_component_name name variable)
     if(NOT name MATCHES "builtins.*")
       set(component_name "${name}_")
     endif()
-    # TODO: Support ios, tvos and watchos as well.
-    set(component_name "${component_name}osx")
+    if (CMAKE_OSX_SYSROOT MATCHES ".+MacOSX.+")
+      set(component_name "${component_name}osx")
+
+    elseif (CMAKE_OSX_SYSROOT MATCHES ".+iPhoneOS.+")
+      set(component_name "${component_name}ios")
+    elseif (CMAKE_OSX_SYSROOT MATCHES ".+iPhoneSimulator.+")
+      set(component_name "${component_name}iossim")
+
+      elseif (CMAKE_OSX_SYSROOT MATCHES ".+AppleTVOS.+")
+      set(component_name "${component_name}tvos")
+    elseif (CMAKE_OSX_SYSROOT MATCHES ".+AppleTVSimulator.+")
+      set(component_name "${component_name}tvossim")
+
+    elseif (CMAKE_OSX_SYSROOT MATCHES ".+WatchOS.+")
+      set(component_name "${component_name}watchos")
+    elseif (CMAKE_OSX_SYSROOT MATCHES ".+WatchSimulator.+")
+      set(component_name "${component_name}watchossim")
+    else()
+      message(WARNING "Unknown Apple SDK ${CMAKE_OSX_SYSROOT}, we don't know which compiler-rt library suffix to use.")
+    endif()
   else()
     set(component_name "${name}")
   endif()
@@ -54,8 +72,12 @@ function(find_compiler_rt_library name variable)
     get_property(cxx_flags CACHE CMAKE_CXX_FLAGS PROPERTY VALUE)
     string(REPLACE " " ";" cxx_flags "${cxx_flags}")
     list(APPEND clang_command ${cxx_flags})
+    set(cmd_prefix "")
+    if(MSVC AND ${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")
+      set(cmd_prefix "/clang:")
+    endif()
     execute_process(
-      COMMAND ${clang_command} "--rtlib=compiler-rt" "-print-libgcc-file-name"
+      COMMAND ${clang_command} "${cmd_prefix}--rtlib=compiler-rt" "${cmd_prefix}-print-libgcc-file-name"
       RESULT_VARIABLE had_error
       OUTPUT_VARIABLE library_file
     )
@@ -72,7 +94,7 @@ function(find_compiler_rt_library name variable)
       set(dirname "${resource_dir}/lib/darwin")
     endif()
     get_filename_component(basename ${library_file} NAME)
-    if(basename MATCHES "libclang_rt\.([a-z0-9_\-]+)\.a")
+    if(basename MATCHES ".*clang_rt\.([a-z0-9_\-]+)\.(a|lib)")
       set(from_name ${CMAKE_MATCH_1})
       get_component_name(${CMAKE_MATCH_1} to_name)
       string(REPLACE "${from_name}" "${to_name}" basename "${basename}")
@@ -90,7 +112,7 @@ function(find_compiler_rt_library name variable)
     # path and then checking if the resultant path exists. The result of
     # this check is also cached by cache_compiler_rt_library.
     set(library_file "${COMPILER_RT_LIBRARY_builtins_${target}}")
-    if(library_file MATCHES ".*libclang_rt\.([a-z0-9_\-]+)\.a")
+    if(library_file MATCHES ".*clang_rt\.([a-z0-9_\-]+)\.(a|lib)")
       set(from_name ${CMAKE_MATCH_0})
       get_component_name(${name} to_name)
       string(REPLACE "${from_name}" "${to_name}" library_file "${library_file}")

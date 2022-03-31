@@ -14,7 +14,6 @@
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptorBuilder.h"
-#include "llvm/DebugInfo/PDB/Native/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Native/RawError.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/BinaryStreamWriter.h"
@@ -30,7 +29,7 @@ DbiStreamBuilder::DbiStreamBuilder(msf::MSFBuilder &Msf)
       PdbDllVersion(0), PdbDllRbld(0), Flags(0), MachineType(PDB_Machine::x86),
       Header(nullptr) {}
 
-DbiStreamBuilder::~DbiStreamBuilder() {}
+DbiStreamBuilder::~DbiStreamBuilder() = default;
 
 void DbiStreamBuilder::setVersionHeader(PdbRaw_DbiVer V) { VerHeader = V; }
 

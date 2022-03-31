@@ -21,13 +21,13 @@ void basic_finally(void) {
 //
 // CHECK: [[invoke_cont]]
 // CHECK: %[[fp:[^ ]*]] = call i8* @llvm.localaddress()
-// CHECK: call void @"?fin$0@0@basic_finally@@"({{i8( zeroext)?}} 0, i8* %[[fp]])
+// CHECK: call void @"?fin$0@0@basic_finally@@"({{i8 noundef( zeroext)?}} 0, i8* noundef %[[fp]])
 // CHECK-NEXT: ret void
 //
 // CHECK: [[lpad]]
 // CHECK-NEXT: %[[pad:[^ ]*]] = cleanuppad
 // CHECK: %[[fp:[^ ]*]] = call i8* @llvm.localaddress()
-// CHECK: call void @"?fin$0@0@basic_finally@@"({{i8( zeroext)?}} 1, i8* %[[fp]])
+// CHECK: call void @"?fin$0@0@basic_finally@@"({{i8 noundef( zeroext)?}} 1, i8* noundef %[[fp]])
 // CHECK-NEXT: cleanupret from %[[pad]] unwind to caller
 
 // CHECK: define internal void @"?fin$0@0@basic_finally@@"({{.*}})
@@ -61,7 +61,7 @@ l:
 //
 // CHECK: [[invoke_cont]]
 // CHECK: %[[fp:[^ ]*]] = call i8* @llvm.localaddress()
-// CHECK: call void @"?fin$0@0@label_in_finally@@"({{i8( zeroext)?}} 0, i8* %[[fp]])
+// CHECK: call void @"?fin$0@0@label_in_finally@@"({{i8 noundef( zeroext)?}} 0, i8* noundef %[[fp]])
 // CHECK: ret void
 
 // CHECK: define internal void @"?fin$0@0@label_in_finally@@"({{.*}})
@@ -89,22 +89,22 @@ void use_abnormal_termination(void) {
 //
 // CHECK: [[invoke_cont]]
 // CHECK: %[[fp:[^ ]*]] = call i8* @llvm.localaddress()
-// CHECK: call void @"?fin$0@0@use_abnormal_termination@@"({{i8( zeroext)?}} 0, i8* %[[fp]])
+// CHECK: call void @"?fin$0@0@use_abnormal_termination@@"({{i8 noundef( zeroext)?}} 0, i8* noundef %[[fp]])
 // CHECK: ret void
 //
 // CHECK: [[lpad]]
 // CHECK-NEXT: %[[pad:[^ ]*]] = cleanuppad
 // CHECK: %[[fp:[^ ]*]] = call i8* @llvm.localaddress()
-// CHECK: call void @"?fin$0@0@use_abnormal_termination@@"({{i8( zeroext)?}} 1, i8* %[[fp]])
+// CHECK: call void @"?fin$0@0@use_abnormal_termination@@"({{i8 noundef( zeroext)?}} 1, i8* noundef %[[fp]])
 // CHECK-NEXT: cleanupret from %[[pad]] unwind to caller
 
-// CHECK: define internal void @"?fin$0@0@use_abnormal_termination@@"({{i8( zeroext)?}} %[[abnormal:abnormal_termination]], i8* %frame_pointer)
+// CHECK: define internal void @"?fin$0@0@use_abnormal_termination@@"({{i8 noundef( zeroext)?}} %[[abnormal:abnormal_termination]], i8* noundef %frame_pointer)
 // CHECK-SAME: [[finally_attrs]]
 // CHECK: %[[abnormal_zext:[^ ]*]] = zext i8 %[[abnormal]] to i32
 // CHECK: store i32 %[[abnormal_zext]], i32* @crashed
 // CHECK-NEXT: ret void
 
-void noreturn_noop_finally() {
+void noreturn_noop_finally(void) {
   __try {
     __noop();
   } __finally {
@@ -121,7 +121,7 @@ void noreturn_noop_finally() {
 // CHECK: call void @abort()
 // CHECK: unreachable
 
-void noreturn_finally() {
+void noreturn_finally(void) {
   __try {
     might_crash();
   } __finally {
@@ -147,7 +147,7 @@ void noreturn_finally() {
 // CHECK: call void @abort()
 // CHECK: unreachable
 
-int finally_with_return() {
+int finally_with_return(void) {
   __try {
     return 42;
   } __finally {
@@ -163,7 +163,7 @@ int finally_with_return() {
 // CHECK-NOT: br label
 // CHECK: ret void
 
-int nested___finally___finally() {
+int nested___finally___finally(void) {
   __try {
     __try {
     } __finally {
@@ -198,7 +198,7 @@ int nested___finally___finally() {
 
 // FIXME: Our behavior seems suspiciously different.
 
-int nested___finally___finally_with_eh_edge() {
+int nested___finally___finally_with_eh_edge(void) {
   __try {
     __try {
       might_crash();
@@ -243,7 +243,7 @@ int nested___finally___finally_with_eh_edge() {
 // CHECK-SAME: [[finally_attrs]]
 // CHECK: unreachable
 
-void finally_within_finally() {
+void finally_within_finally(void) {
   __try {
     might_crash();
   } __finally {
@@ -271,7 +271,7 @@ void finally_within_finally() {
 // CHECK-SAME: [[finally_attrs]]
 
 void cleanup_with_func(const char *);
-void finally_with_func() {
+void finally_with_func(void) {
   __try {
     might_crash();
   } __finally {
@@ -280,7 +280,7 @@ void finally_with_func() {
 }
 
 // CHECK-LABEL: define internal void @"?fin$0@0@finally_with_func@@"({{[^)]*}})
-// CHECK: call void @cleanup_with_func(i8* getelementptr inbounds ([18 x i8], [18 x i8]* @"??_C@_0BC@COAGBPGM@finally_with_func?$AA@", i{{32|64}} 0, i{{32|64}} 0))
+// CHECK: call void @cleanup_with_func(i8* noundef getelementptr inbounds ([18 x i8], [18 x i8]* @"??_C@_0BC@COAGBPGM@finally_with_func?$AA@", i{{32|64}} 0, i{{32|64}} 0))
 
 // Look for the absence of noinline.  nounwind is expected; any further
 // attributes should be string attributes.

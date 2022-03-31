@@ -111,7 +111,7 @@ def dumpbin_is_32bit_windows(lib):
 def objdump_is_32bit_windows(lib):
     output = subprocess.check_output(['objdump','-f',lib],
                                      universal_newlines=True)
-    for line in output:
+    for line in output.splitlines():
         match = re.match('.+file format (\S+)', line)
         if match:
             return (match.group(1) == 'pe-i386')
@@ -120,7 +120,7 @@ def objdump_is_32bit_windows(lib):
 def readobj_is_32bit_windows(lib):
     output = subprocess.check_output(['llvm-readobj','--file-header',lib],
                                      universal_newlines=True)
-    for line in output:
+    for line in output.splitlines():
         match = re.match('Format: (\S+)', line)
         if match:
             return (match.group(1) == 'COFF-i386')

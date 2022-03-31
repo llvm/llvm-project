@@ -31,6 +31,7 @@ class TestingConfig(object):
                      'WindowsSDKLibVersion', 'SOURCE_DATE_EPOCH']
 
         if sys.platform == 'win32':
+            pass_vars.append('COMSPEC')
             pass_vars.append('INCLUDE')
             pass_vars.append('LIB')
             pass_vars.append('PATHEXT')

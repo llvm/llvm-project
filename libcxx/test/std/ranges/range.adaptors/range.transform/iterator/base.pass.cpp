@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // transform_view::<iterator>::base
@@ -17,30 +16,33 @@
 #include "test_macros.h"
 #include "../types.h"
 
-template<class V, class F>
-concept BaseInvocable = requires(std::ranges::iterator_t<std::ranges::transform_view<V, F>> iter) {
-  iter.base();
-};
-
 constexpr bool test() {
   {
-    std::ranges::transform_view<MoveOnlyView, PlusOneMutable> transformView;
-    auto iter = std::move(transformView).begin();
-    ASSERT_SAME_TYPE(int*, decltype(iter.base()));
-    assert(iter.base() == globalBuff);
-    ASSERT_SAME_TYPE(int*, decltype(std::move(iter).base()));
-    assert(std::move(iter).base() == globalBuff);
+    using TransformView = std::ranges::transform_view<MoveOnlyView, PlusOneMutable>;
+    TransformView tv;
+    auto it = tv.begin();
+    using It = decltype(it);
+    ASSERT_SAME_TYPE(decltype(static_cast<It&>(it).base()), int* const&);
+    ASSERT_SAME_TYPE(decltype(static_cast<It&&>(it).base()), int*);
+    ASSERT_SAME_TYPE(decltype(static_cast<const It&>(it).base()), int* const&);
+    ASSERT_SAME_TYPE(decltype(static_cast<const It&&>(it).base()), int* const&);
+    ASSERT_NOEXCEPT(it.base());
+    assert(base(it.base()) == globalBuff);
+    assert(base(std::move(it).base()) == globalBuff);
   }
-
   {
-    std::ranges::transform_view<InputView, PlusOneMutable> transformView;
-    auto iter = transformView.begin();
-    assert(std::move(iter).base() == globalBuff);
-    ASSERT_SAME_TYPE(cpp20_input_iterator<int *>, decltype(std::move(iter).base()));
+    using TransformView = std::ranges::transform_view<InputView, PlusOneMutable>;
+    TransformView tv;
+    auto it = tv.begin();
+    using It = decltype(it);
+    ASSERT_SAME_TYPE(decltype(static_cast<It&>(it).base()), const cpp20_input_iterator<int*>&);
+    ASSERT_SAME_TYPE(decltype(static_cast<It&&>(it).base()), cpp20_input_iterator<int*>);
+    ASSERT_SAME_TYPE(decltype(static_cast<const It&>(it).base()), const cpp20_input_iterator<int*>&);
+    ASSERT_SAME_TYPE(decltype(static_cast<const It&&>(it).base()), const cpp20_input_iterator<int*>&);
+    ASSERT_NOEXCEPT(it.base());
+    assert(base(it.base()) == globalBuff);
+    assert(base(std::move(it).base()) == globalBuff);
   }
-
-  static_assert(!BaseInvocable<InputView, PlusOneMutable>);
-
   return true;
 }
 

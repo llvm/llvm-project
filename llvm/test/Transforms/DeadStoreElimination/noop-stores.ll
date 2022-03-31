@@ -378,7 +378,7 @@ define i8* @notmalloc_memset(i64 %size, i8*(i64)* %notmalloc) {
 }
 
 ; This should not create recursive call to calloc.
-define i8* @calloc(i64 %nmemb, i64 %size) {
+define i8* @calloc(i64 %nmemb, i64 %size) inaccessiblememonly {
 ; CHECK-LABEL: @calloc(
 ; CHECK:       entry:
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[SIZE:%.*]], [[NMEMB:%.*]]
@@ -488,7 +488,6 @@ cleanup:
 define i8* @store_zero_after_calloc_inaccessiblememonly() {
 ; CHECK-LABEL: @store_zero_after_calloc_inaccessiblememonly(
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call i8* @calloc(i64 1, i64 10) #[[ATTR6:[0-9]+]]
-; CHECK-NEXT:    store i8 0, i8* [[CALL]], align 1
 ; CHECK-NEXT:    ret i8* [[CALL]]
 ;
   %call = tail call i8* @calloc(i64 1, i64 10)  inaccessiblememonly
@@ -582,7 +581,6 @@ define i8* @partial_zero_memset_and_store_with_dyn_index_after_calloc(i8 %v, i64
 define i8* @zero_memset_after_calloc_inaccessiblememonly()  {
 ; CHECK-LABEL: @zero_memset_after_calloc_inaccessiblememonly(
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call i8* @calloc(i64 10000, i64 4) #[[ATTR6]]
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[CALL]], i8 0, i64 40000, i1 false)
 ; CHECK-NEXT:    ret i8* [[CALL]]
 ;
   %call = tail call i8* @calloc(i64 10000, i64 4) inaccessiblememonly

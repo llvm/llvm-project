@@ -20,6 +20,7 @@
     __cpp_lib_gcd_lcm               201606L [C++17]
     __cpp_lib_interpolate           201902L [C++20]
     __cpp_lib_parallel_algorithm    201603L [C++17]
+    __cpp_lib_ranges_iota           202202L [C++2b]
 */
 
 #include <numeric>
@@ -43,6 +44,10 @@
 #   error "__cpp_lib_parallel_algorithm should not be defined before c++17"
 # endif
 
+# ifdef __cpp_lib_ranges_iota
+#   error "__cpp_lib_ranges_iota should not be defined before c++2b"
+# endif
+
 #elif TEST_STD_VER == 14
 
 # ifdef __cpp_lib_constexpr_numeric
@@ -59,6 +64,10 @@
 
 # ifdef __cpp_lib_parallel_algorithm
 #   error "__cpp_lib_parallel_algorithm should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_ranges_iota
+#   error "__cpp_lib_ranges_iota should not be defined before c++2b"
 # endif
 
 #elif TEST_STD_VER == 17
@@ -89,6 +98,10 @@
 #   ifdef __cpp_lib_parallel_algorithm
 #     error "__cpp_lib_parallel_algorithm should not be defined because it is unimplemented in libc++!"
 #   endif
+# endif
+
+# ifdef __cpp_lib_ranges_iota
+#   error "__cpp_lib_ranges_iota should not be defined before c++2b"
 # endif
 
 #elif TEST_STD_VER == 20
@@ -127,6 +140,10 @@
 #   endif
 # endif
 
+# ifdef __cpp_lib_ranges_iota
+#   error "__cpp_lib_ranges_iota should not be defined before c++2b"
+# endif
+
 #elif TEST_STD_VER > 20
 
 # ifndef __cpp_lib_constexpr_numeric
@@ -160,6 +177,19 @@
 # else // _LIBCPP_VERSION
 #   ifdef __cpp_lib_parallel_algorithm
 #     error "__cpp_lib_parallel_algorithm should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_ranges_iota
+#     error "__cpp_lib_ranges_iota should be defined in c++2b"
+#   endif
+#   if __cpp_lib_ranges_iota != 202202L
+#     error "__cpp_lib_ranges_iota should have the value 202202L in c++2b"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_ranges_iota
+#     error "__cpp_lib_ranges_iota should not be defined because it is unimplemented in libc++!"
 #   endif
 # endif
 

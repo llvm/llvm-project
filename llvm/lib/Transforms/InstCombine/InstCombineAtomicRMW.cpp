@@ -12,7 +12,6 @@
 
 #include "InstCombineInternal.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/Transforms/InstCombine/InstCombiner.h"
 
 using namespace llvm;
 

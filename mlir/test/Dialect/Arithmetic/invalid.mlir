@@ -168,7 +168,7 @@ func @func_with_ops(i32, i32) {
 func @func_with_ops() {
 ^bb0:
   %c = arith.constant dense<0> : vector<42 x i32>
-  // expected-error@+1 {{all non-scalar operands/results must have the same shape and base type}}
+  // expected-error@+1 {{op failed to verify that result type has i1 element type and same shape as operands}}
   %r = "arith.cmpi"(%c, %c) {predicate = 0} : (vector<42 x i32>, vector<42 x i32>) -> vector<41 x i1>
 }
 
@@ -249,7 +249,7 @@ func @cmpf_canonical_wrong_result_type(%a : f32, %b : f32) -> f32 {
 // -----
 
 func @cmpf_result_shape_mismatch(%a : vector<42xf32>) {
-  // expected-error@+1 {{all non-scalar operands/results must have the same shape and base type}}
+  // expected-error@+1 {{op failed to verify that result type has i1 element type and same shape as operands}}
   %r = "arith.cmpf"(%a, %a) {predicate = 0} : (vector<42 x f32>, vector<42 x f32>) -> vector<41 x i1>
 }
 
@@ -285,7 +285,7 @@ func @index_cast_index_to_index(%arg0: index) {
 // -----
 
 func @index_cast_float(%arg0: index, %arg1: f32) {
-  // expected-error@+1 {{are cast incompatible}}
+  // expected-error@+1 {{op result #0 must be signless-integer-like or memref of signless-integer, but got 'f32'}}
   %0 = arith.index_cast %arg0 : index to f32
   return
 }
@@ -293,7 +293,7 @@ func @index_cast_float(%arg0: index, %arg1: f32) {
 // -----
 
 func @index_cast_float_to_index(%arg0: f32) {
-  // expected-error@+1 {{are cast incompatible}}
+  // expected-error@+1 {{op operand #0 must be signless-integer-like or memref of signless-integer, but got 'f32'}}
   %0 = arith.index_cast %arg0 : f32 to index
   return
 }
@@ -301,7 +301,7 @@ func @index_cast_float_to_index(%arg0: f32) {
 // -----
 
 func @sitofp_i32_to_i64(%arg0 : i32) {
-  // expected-error@+1 {{are cast incompatible}}
+  // expected-error@+1 {{op result #0 must be floating-point-like, but got 'i64'}}
   %0 = arith.sitofp %arg0 : i32 to i64
   return
 }
@@ -309,7 +309,7 @@ func @sitofp_i32_to_i64(%arg0 : i32) {
 // -----
 
 func @sitofp_f32_to_i32(%arg0 : f32) {
-  // expected-error@+1 {{are cast incompatible}}
+  // expected-error@+1 {{op operand #0 must be signless-fixed-width-integer-like, but got 'f32'}}
   %0 = arith.sitofp %arg0 : f32 to i32
   return
 }
@@ -333,7 +333,7 @@ func @fpext_f16_to_f16(%arg0 : f16) {
 // -----
 
 func @fpext_i32_to_f32(%arg0 : i32) {
-  // expected-error@+1 {{are cast incompatible}}
+  // expected-error@+1 {{op operand #0 must be floating-point-like, but got 'i32'}}
   %0 = arith.extf %arg0 : i32 to f32
   return
 }
@@ -341,7 +341,7 @@ func @fpext_i32_to_f32(%arg0 : i32) {
 // -----
 
 func @fpext_f32_to_i32(%arg0 : f32) {
-  // expected-error@+1 {{are cast incompatible}}
+  // expected-error@+1 {{op result #0 must be floating-point-like, but got 'i32'}}
   %0 = arith.extf %arg0 : f32 to i32
   return
 }
@@ -373,7 +373,7 @@ func @fpext_vec_f16_to_f16(%arg0 : vector<2xf16>) {
 // -----
 
 func @fpext_vec_i32_to_f32(%arg0 : vector<2xi32>) {
-  // expected-error@+1 {{are cast incompatible}}
+  // expected-error@+1 {{op operand #0 must be floating-point-like, but got 'vector<2xi32>'}}
   %0 = arith.extf %arg0 : vector<2xi32> to vector<2xf32>
   return
 }
@@ -381,7 +381,7 @@ func @fpext_vec_i32_to_f32(%arg0 : vector<2xi32>) {
 // -----
 
 func @fpext_vec_f32_to_i32(%arg0 : vector<2xf32>) {
-  // expected-error@+1 {{are cast incompatible}}
+  // expected-error@+1 {{op result #0 must be floating-point-like, but got 'vector<2xi32>'}}
   %0 = arith.extf %arg0 : vector<2xf32> to vector<2xi32>
   return
 }
@@ -405,7 +405,7 @@ func @fptrunc_f32_to_f32(%arg0 : f32) {
 // -----
 
 func @fptrunc_i32_to_f32(%arg0 : i32) {
-  // expected-error@+1 {{are cast incompatible}}
+  // expected-error@+1 {{op operand #0 must be floating-point-like, but got 'i32'}}
   %0 = arith.truncf %arg0 : i32 to f32
   return
 }
@@ -413,7 +413,7 @@ func @fptrunc_i32_to_f32(%arg0 : i32) {
 // -----
 
 func @fptrunc_f32_to_i32(%arg0 : f32) {
-  // expected-error@+1 {{are cast incompatible}}
+  // expected-error@+1 {{op result #0 must be floating-point-like, but got 'i32'}}
   %0 = arith.truncf %arg0 : f32 to i32
   return
 }
@@ -445,7 +445,7 @@ func @fptrunc_vec_f32_to_f32(%arg0 : vector<2xf32>) {
 // -----
 
 func @fptrunc_vec_i32_to_f32(%arg0 : vector<2xi32>) {
-  // expected-error@+1 {{are cast incompatible}}
+  // expected-error@+1 {{op operand #0 must be floating-point-like, but got 'vector<2xi32>'}}
   %0 = arith.truncf %arg0 : vector<2xi32> to vector<2xf32>
   return
 }
@@ -453,7 +453,7 @@ func @fptrunc_vec_i32_to_f32(%arg0 : vector<2xi32>) {
 // -----
 
 func @fptrunc_vec_f32_to_i32(%arg0 : vector<2xf32>) {
-  // expected-error@+1 {{are cast incompatible}}
+  // expected-error@+1 {{op result #0 must be floating-point-like, but got 'vector<2xi32>'}}
   %0 = arith.truncf %arg0 : vector<2xf32> to vector<2xi32>
   return
 }
@@ -461,7 +461,7 @@ func @fptrunc_vec_f32_to_i32(%arg0 : vector<2xf32>) {
 // -----
 
 func @sexti_index_as_operand(%arg0 : index) {
-  // expected-error@+1 {{are cast incompatible}}
+  // expected-error@+1 {{op operand #0 must be signless-fixed-width-integer-like, but got 'index'}}
   %0 = arith.extsi %arg0 : index to i128
   return
 }
@@ -469,7 +469,7 @@ func @sexti_index_as_operand(%arg0 : index) {
 // -----
 
 func @zexti_index_as_operand(%arg0 : index) {
-  // expected-error@+1 {{operand type 'index' and result type}}
+  // expected-error@+1 {{op operand #0 must be signless-fixed-width-integer-like, but got 'index'}}
   %0 = arith.extui %arg0 : index to i128
   return
 }
@@ -477,7 +477,7 @@ func @zexti_index_as_operand(%arg0 : index) {
 // -----
 
 func @trunci_index_as_operand(%arg0 : index) {
-  // expected-error@+1 {{operand type 'index' and result type}}
+  // expected-error@+1 {{op operand #0 must be signless-fixed-width-integer-like, but got 'index'}}
   %2 = arith.trunci %arg0 : index to i128
   return
 }
@@ -485,7 +485,7 @@ func @trunci_index_as_operand(%arg0 : index) {
 // -----
 
 func @sexti_index_as_result(%arg0 : i1) {
-  // expected-error@+1 {{result type 'index' are cast incompatible}}
+  // expected-error@+1 {{op result #0 must be signless-fixed-width-integer-like, but got 'index'}}
   %0 = arith.extsi %arg0 : i1 to index
   return
 }
@@ -493,7 +493,7 @@ func @sexti_index_as_result(%arg0 : i1) {
 // -----
 
 func @zexti_index_as_operand(%arg0 : i1) {
-  // expected-error@+1 {{result type 'index' are cast incompatible}}
+  // expected-error@+1 {{op result #0 must be signless-fixed-width-integer-like, but got 'index'}}
   %0 = arith.extui %arg0 : i1 to index
   return
 }
@@ -501,7 +501,7 @@ func @zexti_index_as_operand(%arg0 : i1) {
 // -----
 
 func @trunci_index_as_result(%arg0 : i128) {
-  // expected-error@+1 {{result type 'index' are cast incompatible}}
+  // expected-error@+1 {{op result #0 must be signless-fixed-width-integer-like, but got 'index'}}
   %2 = arith.trunci %arg0 : i128 to index
   return
 }
@@ -551,5 +551,165 @@ func @zexti_cast_to_same_width(%arg0 : i16) {
 func @trunci_cast_to_same_width(%arg0 : i16) {
   // expected-error@+1 {{are cast incompatible}}
   %0 = arith.trunci %arg0 : i16 to i16
+  return
+}
+
+// -----
+
+func @trunci_scalable_to_fl(%arg0 : vector<[4]xi32>) {
+  // expected-error@+1 {{'arith.trunci' op requires the same shape for all operands and results}}
+  %0 = arith.trunci %arg0 : vector<[4]xi32> to vector<4xi8>
+  return
+}
+
+// -----
+
+func @truncf_scalable_to_fl(%arg0 : vector<[4]xf64>) {
+  // expected-error@+1 {{'arith.truncf' op requires the same shape for all operands and results}}
+  %0 = arith.truncf %arg0 : vector<[4]xf64> to vector<4xf32>
+  return
+}
+
+// -----
+
+func @extui_scalable_to_fl(%arg0 : vector<[4]xi32>) {
+  // expected-error@+1 {{'arith.extui' op requires the same shape for all operands and results}}
+  %0 = arith.extui %arg0 : vector<[4]xi32> to vector<4xi64>
+  return
+}
+
+// -----
+
+func @extsi_scalable_to_fl(%arg0 : vector<[4]xi32>) {
+  // expected-error@+1 {{'arith.extsi' op requires the same shape for all operands and results}}
+  %0 = arith.extsi %arg0 : vector<[4]xi32> to vector<4xi64>
+  return
+}
+
+// -----
+
+func @extf_scalable_to_fl(%arg0 : vector<[4]xf32>) {
+  // expected-error@+1 {{'arith.extf' op requires the same shape for all operands and results}}
+  %0 = arith.extf %arg0 : vector<[4]xf32> to vector<4xf64>
+  return
+}
+
+// -----
+
+func @fptoui_scalable_to_fl(%arg0 : vector<[4]xf64>) {
+  // expected-error@+1 {{'arith.fptoui' op requires the same shape for all operands and results}}
+  %0 = arith.fptoui %arg0 : vector<[4]xf64> to vector<4xi32>
+  return
+}
+
+// -----
+
+func @fptosi_scalable_to_fl(%arg0 : vector<[4]xf32>) {
+  // expected-error@+1 {{'arith.fptosi' op requires the same shape for all operands and results}}
+  %0 = arith.fptosi %arg0 : vector<[4]xf32> to vector<4xi32>
+  return
+}
+
+// -----
+
+func @uitofp_scalable_to_fl(%arg0 : vector<[4]xi32>) {
+  // expected-error@+1 {{'arith.uitofp' op requires the same shape for all operands and results}}
+  %0 = arith.uitofp %arg0 : vector<[4]xi32> to vector<4xf32>
+  return
+}
+
+// -----
+
+func @sitofp_scalable_to_fl(%arg0 : vector<[4]xi32>) {
+  // expected-error@+1 {{'arith.sitofp' op requires the same shape for all operands and results}}
+  %0 = arith.sitofp %arg0 : vector<[4]xi32> to vector<4xf32>
+  return
+}
+
+// -----
+
+func @bitcast_scalable_to_fl(%arg0 : vector<[4]xf32>) {
+  // expected-error@+1 {{'arith.bitcast' op requires the same shape for all operands and results}}
+  %0 = arith.bitcast %arg0 : vector<[4]xf32> to vector<4xi32>
+  return
+}
+
+// -----
+
+func @trunci_fl_to_scalable(%arg0 : vector<4xi32>) {
+  // expected-error@+1 {{'arith.trunci' op requires the same shape for all operands and results}}
+  %0 = arith.trunci %arg0 : vector<4xi32> to vector<[4]xi8>
+  return
+}
+
+// -----
+
+func @truncf_fl_to_scalable(%arg0 : vector<4xf64>) {
+  // expected-error@+1 {{'arith.truncf' op requires the same shape for all operands and results}}
+  %0 = arith.truncf %arg0 : vector<4xf64> to vector<[4]xf32>
+  return
+}
+
+// -----
+
+func @extui_fl_to_scalable(%arg0 : vector<4xi32>) {
+  // expected-error@+1 {{'arith.extui' op requires the same shape for all operands and results}}
+  %0 = arith.extui %arg0 : vector<4xi32> to vector<[4]xi64>
+  return
+}
+
+// -----
+
+func @extsi_fl_to_scalable(%arg0 : vector<4xi32>) {
+  // expected-error@+1 {{'arith.extsi' op requires the same shape for all operands and results}}
+  %0 = arith.extsi %arg0 : vector<4xi32> to vector<[4]xi64>
+  return
+}
+
+// -----
+
+func @extf_fl_to_scalable(%arg0 : vector<4xf32>) {
+  // expected-error@+1 {{'arith.extf' op requires the same shape for all operands and results}}
+  %0 = arith.extf %arg0 : vector<4xf32> to vector<[4]xf64>
+  return
+}
+
+// -----
+
+func @fptoui_fl_to_scalable(%arg0 : vector<4xf64>) {
+  // expected-error@+1 {{'arith.fptoui' op requires the same shape for all operands and results}}
+  %0 = arith.fptoui %arg0 : vector<4xf64> to vector<[4]xi32>
+  return
+}
+
+// -----
+
+func @fptosi_fl_to_scalable(%arg0 : vector<4xf32>) {
+  // expected-error@+1 {{'arith.fptosi' op requires the same shape for all operands and results}}
+  %0 = arith.fptosi %arg0 : vector<4xf32> to vector<[4]xi32>
+  return
+}
+
+// -----
+
+func @uitofp_fl_to_scalable(%arg0 : vector<4xi32>) {
+  // expected-error@+1 {{'arith.uitofp' op requires the same shape for all operands and results}}
+  %0 = arith.uitofp %arg0 : vector<4xi32> to vector<[4]xf32>
+  return
+}
+
+// -----
+
+func @sitofp_fl_to_scalable(%arg0 : vector<4xi32>) {
+  // expected-error@+1 {{'arith.sitofp' op requires the same shape for all operands and results}}
+  %0 = arith.sitofp %arg0 : vector<4xi32> to vector<[4]xf32>
+  return
+}
+
+// -----
+
+func @bitcast_fl_to_scalable(%arg0 : vector<4xf32>) {
+  // expected-error@+1 {{'arith.bitcast' op requires the same shape for all operands and results}}
+  %0 = arith.bitcast %arg0 : vector<4xf32> to vector<[4]xi32>
   return
 }

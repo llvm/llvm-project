@@ -21,11 +21,11 @@
 #include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCAsmParserExtension.h"
+#include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolWasm.h"
-#include "llvm/Support/MachineValueType.h"
+#include "llvm/Support/Casting.h"
 
 using namespace llvm;
 
@@ -53,6 +53,7 @@ public:
     this->MCAsmParserExtension::Initialize(*Parser);
 
     addDirectiveHandler<&WasmAsmParser::parseSectionDirectiveText>(".text");
+    addDirectiveHandler<&WasmAsmParser::parseSectionDirectiveData>(".data");
     addDirectiveHandler<&WasmAsmParser::parseSectionDirective>(".section");
     addDirectiveHandler<&WasmAsmParser::parseDirectiveSize>(".size");
     addDirectiveHandler<&WasmAsmParser::parseDirectiveType>(".type");
@@ -87,6 +88,12 @@ public:
 
   bool parseSectionDirectiveText(StringRef, SMLoc) {
     // FIXME: .text currently no-op.
+    return false;
+  }
+
+  bool parseSectionDirectiveData(StringRef, SMLoc) {
+    auto *S = getContext().getObjectFileInfo()->getDataSection();
+    getStreamer().SwitchSection(S);
     return false;
   }
 

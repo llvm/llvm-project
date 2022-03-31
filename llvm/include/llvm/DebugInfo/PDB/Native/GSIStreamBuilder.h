@@ -10,18 +10,20 @@
 #define LLVM_DEBUGINFO_PDB_NATIVE_GSISTREAMBUILDER_H
 
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/DebugInfo/CodeView/SymbolRecord.h"
+#include "llvm/DebugInfo/CodeView/CVRecord.h"
+#include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/PDB/Native/GlobalsStream.h"
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
-#include "llvm/DebugInfo/PDB/Native/RawTypes.h"
-#include "llvm/Support/BinaryByteStream.h"
-#include "llvm/Support/BinaryItemStream.h"
 #include "llvm/Support/BinaryStreamRef.h"
-#include "llvm/Support/BinaryStreamWriter.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
+namespace codeview {
+class ConstantSym;
+class DataSym;
+class ProcRefSym;
+} // namespace codeview
+template <typename T> struct BinaryItemTraits;
 
 template <> struct BinaryItemTraits<codeview::CVSymbol> {
   static size_t length(const codeview::CVSymbol &Item) {

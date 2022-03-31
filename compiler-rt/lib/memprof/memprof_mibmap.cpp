@@ -11,10 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "memprof_mibmap.h"
+#include "profile/MemProfData.inc"
 #include "sanitizer_common/sanitizer_allocator_internal.h"
 #include "sanitizer_common/sanitizer_mutex.h"
 
 namespace __memprof {
+using ::llvm::memprof::MemInfoBlock;
 
 void InsertOrMerge(const uptr Id, const MemInfoBlock &Block, MIBMapTy &Map) {
   MIBMapTy::Handle h(&Map, static_cast<uptr>(Id), /*remove=*/false,

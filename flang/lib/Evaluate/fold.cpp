@@ -36,12 +36,13 @@ std::optional<Constant<SubscriptInteger>> GetConstantSubscript(
             auto lower{triplet.lower()}, upper{triplet.upper()};
             std::optional<ConstantSubscript> stride{ToInt64(triplet.stride())};
             if (!lower) {
-              lower = GetLowerBound(context, base, dim);
+              lower = GetLBOUND(context, base, dim);
             }
             if (!upper) {
-              upper =
-                  ComputeUpperBound(context, GetLowerBound(context, base, dim),
-                      GetExtent(context, base, dim));
+              if (auto lb{GetLBOUND(context, base, dim)}) {
+                upper = ComputeUpperBound(
+                    context, std::move(*lb), GetExtent(context, base, dim));
+              }
             }
             auto lbi{ToInt64(lower)}, ubi{ToInt64(upper)};
             if (lbi && ubi && stride && *stride != 0) {
@@ -65,29 +66,32 @@ std::optional<Constant<SubscriptInteger>> GetConstantSubscript(
 Expr<SomeDerived> FoldOperation(
     FoldingContext &context, StructureConstructor &&structure) {
   StructureConstructor ctor{structure.derivedTypeSpec()};
-  bool constantExtents{true};
+  bool isConstant{true};
   for (auto &&[symbol, value] : std::move(structure)) {
     auto expr{Fold(context, std::move(value.value()))};
-    if (!IsPointer(symbol)) {
-      bool ok{false};
+    if (IsPointer(symbol)) {
+      if (IsProcedure(symbol)) {
+        isConstant &= IsInitialProcedureTarget(expr);
+      } else {
+        isConstant &= IsInitialDataTarget(expr);
+      }
+    } else {
+      isConstant &= IsActuallyConstant(expr);
       if (auto valueShape{GetConstantExtents(context, expr)}) {
         if (auto componentShape{GetConstantExtents(context, symbol)}) {
           if (GetRank(*componentShape) > 0 && GetRank(*valueShape) == 0) {
             expr = ScalarConstantExpander{std::move(*componentShape)}.Expand(
                 std::move(expr));
-            ok = expr.Rank() > 0;
+            isConstant &= expr.Rank() > 0;
           } else {
-            ok = *valueShape == *componentShape;
+            isConstant &= *valueShape == *componentShape;
           }
         }
       }
-      if (!ok) {
-        constantExtents = false;
-      }
     }
-    ctor.Add(symbol, Fold(context, std::move(expr)));
+    ctor.Add(symbol, std::move(expr));
   }
-  if (constantExtents && IsConstantExpr(ctor)) {
+  if (isConstant) {
     return Expr<SomeDerived>{Constant<SomeDerived>{std::move(ctor)}};
   } else {
     return Expr<SomeDerived>{std::move(ctor)};

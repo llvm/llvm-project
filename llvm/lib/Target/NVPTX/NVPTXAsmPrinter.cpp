@@ -329,7 +329,7 @@ MCOperand NVPTXAsmPrinter::GetSymbolRef(const MCSymbol *Symbol) {
 void NVPTXAsmPrinter::printReturnValStr(const Function *F, raw_ostream &O) {
   const DataLayout &DL = getDataLayout();
   const NVPTXSubtarget &STI = TM.getSubtarget<NVPTXSubtarget>(*F);
-  const TargetLowering *TLI = STI.getTargetLowering();
+  const auto *TLI = cast<NVPTXTargetLowering>(STI.getTargetLowering());
 
   Type *Ty = F->getReturnType();
 
@@ -363,7 +363,7 @@ void NVPTXAsmPrinter::printReturnValStr(const Function *F, raw_ostream &O) {
       unsigned totalsz = DL.getTypeAllocSize(Ty);
       unsigned retAlignment = 0;
       if (!getAlign(*F, 0, retAlignment))
-        retAlignment = DL.getABITypeAlignment(Ty);
+        retAlignment = TLI->getFunctionParamOptimizedAlign(F, Ty, DL).value();
       O << ".param .align " << retAlignment << " .b8 func_retval0[" << totalsz
         << "]";
     } else
@@ -888,17 +888,18 @@ bool NVPTXAsmPrinter::doFinalization(Module &M) {
 
   clearAnnotationCache(&M);
 
-  // Close the last emitted section
-  if (HasDebugInfo) {
-    static_cast<NVPTXTargetStreamer *>(OutStreamer->getTargetStreamer())
-        ->closeLastSection();
-    // Emit empty .debug_loc section for better support of the empty files.
-    OutStreamer->emitRawText("\t.section\t.debug_loc\t{\t}");
-  }
+  if (auto *TS = static_cast<NVPTXTargetStreamer *>(
+          OutStreamer->getTargetStreamer())) {
+    // Close the last emitted section
+    if (HasDebugInfo) {
+      TS->closeLastSection();
+      // Emit empty .debug_loc section for better support of the empty files.
+      OutStreamer->emitRawText("\t.section\t.debug_loc\t{\t}");
+    }
 
-  // Output last DWARF .file directives, if any.
-  static_cast<NVPTXTargetStreamer *>(OutStreamer->getTargetStreamer())
-      ->outputDwarfFileDirectives();
+    // Output last DWARF .file directives, if any.
+    TS->outputDwarfFileDirectives();
+  }
 
   return ret;
 
@@ -1098,10 +1099,10 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
     O << " .attribute(.managed)";
   }
 
-  if (GVar->getAlignment() == 0)
-    O << " .align " << (int)DL.getPrefTypeAlignment(ETy);
+  if (MaybeAlign A = GVar->getAlign())
+    O << " .align " << A->value();
   else
-    O << " .align " << GVar->getAlignment();
+    O << " .align " << (int)DL.getPrefTypeAlignment(ETy);
 
   if (ETy->isFloatingPointTy() || ETy->isPointerTy() ||
       (ETy->isIntegerTy() && ETy->getScalarSizeInBits() <= 64)) {
@@ -1214,9 +1215,9 @@ void NVPTXAsmPrinter::emitDemotedVars(const Function *f, raw_ostream &O) {
 
   std::vector<const GlobalVariable *> &gvars = localDecls[f];
 
-  for (unsigned i = 0, e = gvars.size(); i != e; ++i) {
+  for (const GlobalVariable *GV : gvars) {
     O << "\t// demoted variable\n\t";
-    printModuleLevelGV(gvars[i], O, true);
+    printModuleLevelGV(GV, O, true);
   }
 }
 
@@ -1290,10 +1291,12 @@ void NVPTXAsmPrinter::emitPTXGlobalVariable(const GlobalVariable *GVar,
 
   O << ".";
   emitPTXAddressSpace(GVar->getType()->getAddressSpace(), O);
-  if (GVar->getAlignment() == 0)
-    O << " .align " << (int)DL.getPrefTypeAlignment(ETy);
+  if (isManaged(*GVar))
+    O << " .attribute(.managed)";
+  if (MaybeAlign A = GVar->getAlign())
+    O << " .align " << A->value();
   else
-    O << " .align " << GVar->getAlignment();
+    O << " .align " << (int)DL.getPrefTypeAlignment(ETy);
 
   // Special case for i128
   if (ETy->isIntegerTy(128)) {
@@ -1335,34 +1338,6 @@ void NVPTXAsmPrinter::emitPTXGlobalVariable(const GlobalVariable *GVar,
   }
 }
 
-static unsigned int getOpenCLAlignment(const DataLayout &DL, Type *Ty) {
-  if (Ty->isSingleValueType())
-    return DL.getPrefTypeAlignment(Ty);
-
-  auto *ATy = dyn_cast<ArrayType>(Ty);
-  if (ATy)
-    return getOpenCLAlignment(DL, ATy->getElementType());
-
-  auto *STy = dyn_cast<StructType>(Ty);
-  if (STy) {
-    unsigned int alignStruct = 1;
-    // Go through each element of the struct and find the
-    // largest alignment.
-    for (unsigned i = 0, e = STy->getNumElements(); i != e; i++) {
-      Type *ETy = STy->getElementType(i);
-      unsigned int align = getOpenCLAlignment(DL, ETy);
-      if (align > alignStruct)
-        alignStruct = align;
-    }
-    return alignStruct;
-  }
-
-  auto *FTy = dyn_cast<FunctionType>(Ty);
-  if (FTy)
-    return DL.getPointerPrefAlignment().value();
-  return DL.getPrefTypeAlignment(Ty);
-}
-
 void NVPTXAsmPrinter::printParamName(Function::const_arg_iterator I,
                                      int paramIndex, raw_ostream &O) {
   getSymbol(I->getParent())->print(O, MAI);
@@ -1373,7 +1348,8 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
   const DataLayout &DL = getDataLayout();
   const AttributeList &PAL = F->getAttributes();
   const NVPTXSubtarget &STI = TM.getSubtarget<NVPTXSubtarget>(*F);
-  const TargetLowering *TLI = STI.getTargetLowering();
+  const auto *TLI = cast<NVPTXTargetLowering>(STI.getTargetLowering());
+
   Function::const_arg_iterator I, E;
   unsigned paramIndex = 0;
   bool first = true;
@@ -1430,18 +1406,24 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
       }
     }
 
+    auto getOptimalAlignForParam = [TLI, &DL, &PAL, F,
+                                    paramIndex](Type *Ty) -> Align {
+      Align TypeAlign = TLI->getFunctionParamOptimizedAlign(F, Ty, DL);
+      MaybeAlign ParamAlign = PAL.getParamAlignment(paramIndex);
+      return max(TypeAlign, ParamAlign);
+    };
+
     if (!PAL.hasParamAttr(paramIndex, Attribute::ByVal)) {
       if (Ty->isAggregateType() || Ty->isVectorTy() || Ty->isIntegerTy(128)) {
         // Just print .param .align <a> .b8 .param[size];
-        // <a> = PAL.getparamalignment
+        // <a>  = optimal alignment for the element type; always multiple of
+        //        PAL.getParamAlignment
         // size = typeallocsize of element type
-        const Align align = DL.getValueOrABITypeAlignment(
-            PAL.getParamAlignment(paramIndex), Ty);
+        Align OptimalAlign = getOptimalAlignForParam(Ty);
 
-        unsigned sz = DL.getTypeAllocSize(Ty);
-        O << "\t.param .align " << align.value() << " .b8 ";
+        O << "\t.param .align " << OptimalAlign.value() << " .b8 ";
         printParamName(I, paramIndex, O);
-        O << "[" << sz << "]";
+        O << "[" << DL.getTypeAllocSize(Ty) << "]";
 
         continue;
       }
@@ -1454,7 +1436,6 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
 
           if (static_cast<NVPTXTargetMachine &>(TM).getDrvInterface() !=
               NVPTX::CUDA) {
-            Type *ETy = PTy->getElementType();
             int addrSpace = PTy->getAddressSpace();
             switch (addrSpace) {
             default:
@@ -1470,7 +1451,8 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
               O << ".ptr .global ";
               break;
             }
-            O << ".align " << (int)getOpenCLAlignment(DL, ETy) << " ";
+            Align ParamAlign = I->getParamAlign().valueOrOne();
+            O << ".align " << ParamAlign.value() << " ";
           }
           printParamName(I, paramIndex, O);
           continue;
@@ -1511,17 +1493,17 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
       continue;
     }
 
-    // param has byVal attribute. So should be a pointer
-    auto *PTy = dyn_cast<PointerType>(Ty);
-    assert(PTy && "Param with byval attribute should be a pointer type");
-    Type *ETy = PTy->getElementType();
+    // param has byVal attribute.
+    Type *ETy = PAL.getParamByValType(paramIndex);
+    assert(ETy && "Param should have byval type");
 
     if (isABI || isKernelFunc) {
       // Just print .param .align <a> .b8 .param[size];
-      // <a> = PAL.getparamalignment
+      // <a>  = optimal alignment for the element type; always multiple of
+      //        PAL.getParamAlignment
       // size = typeallocsize of element type
-      Align align =
-          DL.getValueOrABITypeAlignment(PAL.getParamAlignment(paramIndex), ETy);
+      Align OptimalAlign = getOptimalAlignForParam(ETy);
+
       // Work around a bug in ptxas. When PTX code takes address of
       // byval parameter with alignment < 4, ptxas generates code to
       // spill argument into memory. Alas on sm_50+ ptxas generates
@@ -1533,10 +1515,10 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
       // TODO: this will need to be undone when we get to support multi-TU
       // device-side compilation as it breaks ABI compatibility with nvcc.
       // Hopefully ptxas bug is fixed by then.
-      if (!isKernelFunc && align < Align(4))
-        align = Align(4);
+      if (!isKernelFunc && OptimalAlign < Align(4))
+        OptimalAlign = Align(4);
       unsigned sz = DL.getTypeAllocSize(ETy);
-      O << "\t.param .align " << align.value() << " .b8 ";
+      O << "\t.param .align " << OptimalAlign.value() << " .b8 ";
       printParamName(I, paramIndex, O);
       O << "[" << sz << "]";
       continue;
@@ -1613,7 +1595,7 @@ void NVPTXAsmPrinter::setAndEmitFunctionVirtualRegisters(
   // We use the per class virtual register number in the ptx output.
   unsigned int numVRs = MRI->getNumVirtRegs();
   for (unsigned i = 0; i < numVRs; i++) {
-    unsigned int vr = Register::index2VirtReg(i);
+    Register vr = Register::index2VirtReg(i);
     const TargetRegisterClass *RC = MRI->getRegClass(vr);
     DenseMap<unsigned, unsigned> &regmap = VRegMapping[RC];
     int n = regmap.size();

@@ -245,8 +245,8 @@ demanglePointerCVQualifiers(StringView &MangledName) {
 }
 
 StringView Demangler::copyString(StringView Borrowed) {
-  char *Stable = Arena.allocUnalignedBuffer(Borrowed.size() + 1);
-  std::strcpy(Stable, Borrowed.begin());
+  char *Stable = Arena.allocUnalignedBuffer(Borrowed.size());
+  std::memcpy(Stable, Borrowed.begin(), Borrowed.size());
 
   return {Stable, Borrowed.size()};
 }
@@ -970,12 +970,9 @@ void Demangler::memorizeIdentifier(IdentifierNode *Identifier) {
     // FIXME: Propagate out-of-memory as an error?
     std::terminate();
   Identifier->output(OB, OF_Default);
-  OB << '\0';
-  char *Name = OB.getBuffer();
-
-  StringView Owned = copyString(Name);
+  StringView Owned = copyString(OB);
   memorizeString(Owned);
-  std::free(Name);
+  std::free(OB.getBuffer());
 }
 
 IdentifierNode *
@@ -1279,7 +1276,6 @@ Demangler::demangleStringLiteral(StringView &MangledName) {
   bool IsWcharT = false;
   bool IsNegative = false;
   size_t CrcEndPos = 0;
-  char *ResultBuffer = nullptr;
 
   EncodedStringLiteralNode *Result = Arena.alloc<EncodedStringLiteralNode>();
 
@@ -1375,10 +1371,8 @@ Demangler::demangleStringLiteral(StringView &MangledName) {
     }
   }
 
-  OB << '\0';
-  ResultBuffer = OB.getBuffer();
-  Result->DecodedString = copyString(ResultBuffer);
-  std::free(ResultBuffer);
+  Result->DecodedString = copyString(OB);
+  std::free(OB.getBuffer());
   return Result;
 
 StringLiteralError:
@@ -1455,10 +1449,9 @@ Demangler::demangleLocallyScopedNamePiece(StringView &MangledName) {
   Scope->output(OB, OF_Default);
   OB << '\'';
   OB << "::`" << Number << "'";
-  OB << '\0';
-  char *Result = OB.getBuffer();
-  Identifier->Name = copyString(Result);
-  std::free(Result);
+
+  Identifier->Name = copyString(OB);
+  std::free(OB.getBuffer());
   return Identifier;
 }
 
@@ -2322,8 +2315,8 @@ void Demangler::dumpBackReferences() {
     TypeNode *T = Backrefs.FunctionParams[I];
     T->output(OB, OF_Default);
 
-    std::printf("  [%d] - %.*s\n", (int)I, (int)OB.getCurrentPosition(),
-                OB.getBuffer());
+    StringView B = OB;
+    std::printf("  [%d] - %.*s\n", (int)I, (int)B.size(), B.begin());
   }
   std::free(OB.getBuffer());
 

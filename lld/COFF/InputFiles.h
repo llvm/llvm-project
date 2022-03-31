@@ -95,13 +95,17 @@ public:
   COFFLinkerContext &ctx;
 
 protected:
-  InputFile(COFFLinkerContext &c, Kind k, MemoryBufferRef m)
-      : mb(m), ctx(c), fileKind(k) {}
+  InputFile(COFFLinkerContext &c, Kind k, MemoryBufferRef m, bool lazy = false)
+      : mb(m), ctx(c), fileKind(k), lazy(lazy) {}
 
   StringRef directives;
 
 private:
   const Kind fileKind;
+
+public:
+  // True if this is a lazy ObjFile or BitcodeFile.
+  bool lazy = false;
 };
 
 // .lib or .a file.
@@ -121,33 +125,14 @@ private:
   llvm::DenseSet<uint64_t> seen;
 };
 
-// .obj or .o file between -start-lib and -end-lib.
-class LazyObjFile : public InputFile {
-public:
-  explicit LazyObjFile(COFFLinkerContext &ctx, MemoryBufferRef m)
-      : InputFile(ctx, LazyObjectKind, m) {}
-  static bool classof(const InputFile *f) {
-    return f->kind() == LazyObjectKind;
-  }
-  // Makes this object file part of the link.
-  void fetch();
-  // Adds the symbols in this file to the symbol table as LazyObject symbols.
-  void parse() override;
-
-private:
-  std::vector<Symbol *> symbols;
-};
-
 // .obj or .o file. This may be a member of an archive file.
 class ObjFile : public InputFile {
 public:
-  explicit ObjFile(COFFLinkerContext &ctx, MemoryBufferRef m)
-      : InputFile(ctx, ObjectKind, m) {}
-  explicit ObjFile(COFFLinkerContext &ctx, MemoryBufferRef m,
-                   std::vector<Symbol *> &&symbols)
-      : InputFile(ctx, ObjectKind, m), symbols(std::move(symbols)) {}
+  explicit ObjFile(COFFLinkerContext &ctx, MemoryBufferRef m, bool lazy = false)
+      : InputFile(ctx, ObjectKind, m, lazy) {}
   static bool classof(const InputFile *f) { return f->kind() == ObjectKind; }
   void parse() override;
+  void parseLazy();
   MachineTypes getMachineType() override;
   ArrayRef<Chunk *> getChunks() { return chunks; }
   ArrayRef<SectionChunk *> getDebugChunks() { return debugChunks; }
@@ -380,15 +365,14 @@ public:
 // Used for LTO.
 class BitcodeFile : public InputFile {
 public:
-  BitcodeFile(COFFLinkerContext &ctx, MemoryBufferRef mb, StringRef archiveName,
-              uint64_t offsetInArchive);
-  explicit BitcodeFile(COFFLinkerContext &ctx, MemoryBufferRef m,
+  explicit BitcodeFile(COFFLinkerContext &ctx, MemoryBufferRef mb,
                        StringRef archiveName, uint64_t offsetInArchive,
-                       std::vector<Symbol *> &&symbols);
+                       bool lazy);
   ~BitcodeFile();
   static bool classof(const InputFile *f) { return f->kind() == BitcodeKind; }
   ArrayRef<Symbol *> getSymbols() { return symbols; }
   MachineTypes getMachineType() override;
+  void parseLazy();
   std::unique_ptr<llvm::lto::InputFile> obj;
 
 private:

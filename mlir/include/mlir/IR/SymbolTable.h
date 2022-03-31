@@ -302,7 +302,7 @@ public:
   }
 
   /// Return true if the given symbol has no uses.
-  bool use_empty(Operation *symbol) const {
+  bool useEmpty(Operation *symbol) const {
     return !symbolToUsers.count(symbol);
   }
 
@@ -337,7 +337,7 @@ namespace OpTrait {
 template <typename ConcreteType>
 class SymbolTable : public TraitBase<ConcreteType, SymbolTable> {
 public:
-  static LogicalResult verifyTrait(Operation *op) {
+  static LogicalResult verifyRegionTrait(Operation *op) {
     return ::mlir::detail::verifySymbolTable(op);
   }
 
@@ -368,7 +368,7 @@ public:
   }
 };
 
-} // end namespace OpTrait
+} // namespace OpTrait
 
 //===----------------------------------------------------------------------===//
 // Visibility parsing implementation.
@@ -379,9 +379,9 @@ namespace impl {
 /// nested) without quotes in a string attribute named 'attrName'.
 ParseResult parseOptionalVisibilityKeyword(OpAsmParser &parser,
                                            NamedAttrList &attrs);
-} // end namespace impl
+} // namespace impl
 
-} // end namespace mlir
+} // namespace mlir
 
 /// Include the generated symbol interfaces.
 #include "mlir/IR/SymbolInterfaces.h.inc"

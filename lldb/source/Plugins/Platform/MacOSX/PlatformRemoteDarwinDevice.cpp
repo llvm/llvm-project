@@ -19,6 +19,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
@@ -90,9 +91,10 @@ Status PlatformRemoteDarwinDevice::ResolveExecutable(
     // so ask the platform for the architectures that we should be using (in
     // the correct order) and see if we can find a match that way
     StreamString arch_names;
-    for (uint32_t idx = 0; GetSupportedArchitectureAtIndex(
-             idx, resolved_module_spec.GetArchitecture());
-         ++idx) {
+    llvm::ListSeparator LS;
+    ArchSpec process_host_arch;
+    for (const ArchSpec &arch : GetSupportedArchitectures(process_host_arch)) {
+      resolved_module_spec.GetArchitecture() = arch;
       error = ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
                                           nullptr, nullptr, nullptr);
       // Did we find an executable using one of the
@@ -103,10 +105,7 @@ Status PlatformRemoteDarwinDevice::ResolveExecutable(
           error.SetErrorToGenericError();
       }
 
-      if (idx > 0)
-        arch_names.PutCString(", ");
-      arch_names.PutCString(
-          resolved_module_spec.GetArchitecture().GetArchitectureName());
+      arch_names << LS << arch.GetArchitectureName();
     }
 
     if (error.Fail() || !exe_module_sp) {
@@ -139,7 +138,7 @@ PlatformRemoteDarwinDevice::GetContainedFilesIntoVectorOfStringsCallback(
 }
 
 bool PlatformRemoteDarwinDevice::UpdateSDKDirectoryInfosIfNeeded() {
-  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
+  Log *log = GetLog(LLDBLog::Host);
   std::lock_guard<std::mutex> guard(m_sdk_dir_mutex);
   if (m_sdk_directory_infos.empty()) {
     // A --sysroot option was supplied - add it to our list of SDKs to check
@@ -385,7 +384,7 @@ const char *PlatformRemoteDarwinDevice::GetDeviceSupportDirectoryForOSVersion() 
 
 uint32_t PlatformRemoteDarwinDevice::FindFileInAllSDKs(const char *platform_file_path,
                                               FileSpecList &file_list) {
-  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
+  Log *log = GetLog(LLDBLog::Host);
   if (platform_file_path && platform_file_path[0] &&
       UpdateSDKDirectoryInfosIfNeeded()) {
     const uint32_t num_sdk_infos = m_sdk_directory_infos.size();
@@ -405,7 +404,7 @@ uint32_t PlatformRemoteDarwinDevice::FindFileInAllSDKs(const char *platform_file
 bool PlatformRemoteDarwinDevice::GetFileInSDK(const char *platform_file_path,
                                      uint32_t sdk_idx,
                                      lldb_private::FileSpec &local_file) {
-  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
+  Log *log = GetLog(LLDBLog::Host);
   if (sdk_idx < m_sdk_directory_infos.size()) {
     std::string sdkroot_path =
         m_sdk_directory_infos[sdk_idx].directory.GetPath();
@@ -438,7 +437,7 @@ bool PlatformRemoteDarwinDevice::GetFileInSDK(const char *platform_file_path,
 Status PlatformRemoteDarwinDevice::GetSymbolFile(const FileSpec &platform_file,
                                                  const UUID *uuid_ptr,
                                                  FileSpec &local_file) {
-  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
+  Log *log = GetLog(LLDBLog::Host);
   Status error;
   char platform_file_path[PATH_MAX];
   if (platform_file.GetPath(platform_file_path, sizeof(platform_file_path))) {
@@ -503,7 +502,7 @@ Status PlatformRemoteDarwinDevice::GetSharedModule(
   // we ask for the file in the cached SDK, then we attempt to get a shared
   // module for the right architecture with the right UUID.
   const FileSpec &platform_file = module_spec.GetFileSpec();
-  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
+  Log *log = GetLog(LLDBLog::Host);
 
   Status error;
   char platform_file_path[PATH_MAX];

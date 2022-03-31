@@ -7,7 +7,7 @@
 #
 # The DWARF looks like:
 # 0x0000000b: DW_TAG_compile_unit
-#              DW_AT_name        ("/tmp/main.c")
+#               DW_AT_name        [DW_FORM_strp] ("/tmp/main.c")
 #               DW_AT_language    (DW_LANG_C)
 #               DW_AT_low_pc      (0x0000000000000000)
 #               DW_AT_ranges      (0x00000000
@@ -37,32 +37,32 @@
 # CHECK: Verifying .debug_info Unit Header Chain...
 # CHECK: error: DIE address ranges are not contained in its parent's ranges:
 # CHECK: 0x0000001e: DW_TAG_subprogram
-# CHECK:               DW_AT_name	("main")
-# CHECK:               DW_AT_low_pc	(0x0000000000000000)
-# CHECK:               DW_AT_high_pc	(0x0000000000000000)
+# CHECK:               DW_AT_name	[DW_FORM_strp] ( .debug_str[0x0000000d] = "main")
+# CHECK:               DW_AT_low_pc	[DW_FORM_addr] (0x0000000000000000)
+# CHECK:               DW_AT_high_pc	[DW_FORM_addr] (0x0000000000000000)
 
 # CHECK: 0x00000033:   DW_TAG_lexical_block
-# CHECK:                 DW_AT_low_pc	(0x0000000000001000)
-# CHECK:                 DW_AT_high_pc	(0x0000000000002000)
+# CHECK:                 DW_AT_low_pc	[DW_FORM_addr] (0x0000000000001000)
+# CHECK:                 DW_AT_high_pc	[DW_FORM_addr] (0x0000000000002000)
 
 # CHECK: error: DIEs have overlapping address ranges:
 # CHECK: 0x00000044: DW_TAG_lexical_block
-# CHECK:               DW_AT_low_pc	(0x0000000000001000)
-# CHECK:               DW_AT_high_pc	(0x0000000000002000)
+# CHECK:               DW_AT_low_pc	[DW_FORM_addr] (0x0000000000001000)
+# CHECK:               DW_AT_high_pc	[DW_FORM_addr] (0x0000000000002000)
 
 # CHECK: 0x00000033: DW_TAG_lexical_block
-# CHECK:               DW_AT_low_pc	(0x0000000000001000)
-# CHECK:               DW_AT_high_pc	(0x0000000000002000)
+# CHECK:               DW_AT_low_pc	[DW_FORM_addr] (0x0000000000001000)
+# CHECK:               DW_AT_high_pc	[DW_FORM_addr] (0x0000000000002000)
 
 # CHECK: error: DIE address ranges are not contained in its parent's ranges:
 # CHECK: 0x0000001e: DW_TAG_subprogram
-# CHECK:               DW_AT_name	("main")
-# CHECK:               DW_AT_low_pc	(0x0000000000000000)
-# CHECK:               DW_AT_high_pc	(0x0000000000000000)
+# CHECK:               DW_AT_name	[DW_FORM_strp] ( .debug_str[0x0000000d] = "main")
+# CHECK:               DW_AT_low_pc	[DW_FORM_addr] (0x0000000000000000)
+# CHECK:               DW_AT_high_pc	[DW_FORM_addr] (0x0000000000000000)
 
 # CHECK: 0x00000044:   DW_TAG_lexical_block
-# CHECK:                 DW_AT_low_pc	(0x0000000000001000)
-# CHECK:                 DW_AT_high_pc	(0x0000000000002000)
+# CHECK:                 DW_AT_low_pc	[DW_FORM_addr] (0x0000000000001000)
+# CHECK:                 DW_AT_high_pc	[DW_FORM_addr] (0x0000000000002000)
 
 
 --- !mach-o

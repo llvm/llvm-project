@@ -63,7 +63,8 @@ public:
                          lldb_private::Target *target,
                          lldb_private::Status &error) override;
 
-  std::vector<ArchSpec> GetSupportedArchitectures() override {
+  std::vector<ArchSpec>
+  GetSupportedArchitectures(const ArchSpec &process_host_arch) override {
     return m_supported_architectures;
   }
 

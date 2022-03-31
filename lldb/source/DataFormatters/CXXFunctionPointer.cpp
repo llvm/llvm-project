@@ -9,6 +9,7 @@
 #include "lldb/DataFormatters/CXXFunctionPointer.h"
 
 #include "lldb/Core/ValueObject.h"
+#include "lldb/Target/ABI.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Stream.h"
@@ -38,8 +39,34 @@ bool lldb_private::formatters::CXXFunctionPointerSummaryProvider(
       Address so_addr;
       Target *target = exe_ctx.GetTargetPtr();
       if (target && !target->GetSectionLoadList().IsEmpty()) {
-        if (target->GetSectionLoadList().ResolveLoadAddress(func_ptr_address,
-                                                            so_addr)) {
+        target->GetSectionLoadList().ResolveLoadAddress(func_ptr_address,
+                                                        so_addr);
+        if (so_addr.GetSection() == nullptr) {
+          // If we have an address that doesn't correspond to any symbol,
+          // it might have authentication bits.  Strip them & see if it
+          // now points to a symbol -- if so, do the SymbolContext lookup
+          // based on the stripped address.
+          // If we find a symbol with the ptrauth bits stripped, print the
+          // raw value into the stream, and replace the Address with the
+          // one that points to a symbol for a fuller description.
+          if (Process *process = exe_ctx.GetProcessPtr()) {
+            if (ABISP abi_sp = process->GetABI()) {
+              addr_t fixed_addr = abi_sp->FixCodeAddress(func_ptr_address);
+              if (fixed_addr != func_ptr_address) {
+                Address test_address;
+                test_address.SetLoadAddress(fixed_addr, target);
+                if (test_address.GetSection() != nullptr) {
+                  int addrsize = target->GetArchitecture().GetAddressByteSize();
+                  sstr.Printf("actual=0x%*.*" PRIx64 " ", addrsize * 2,
+                              addrsize * 2, fixed_addr);
+                  so_addr = test_address;
+                }
+              }
+            }
+          }
+        }
+
+        if (so_addr.IsValid()) {
           so_addr.Dump(&sstr, exe_ctx.GetBestExecutionContextScope(),
                        Address::DumpStyleResolvedDescription,
                        Address::DumpStyleSectionNameOffset);

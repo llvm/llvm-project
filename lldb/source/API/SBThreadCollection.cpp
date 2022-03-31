@@ -7,32 +7,27 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBThreadCollection.h"
-#include "SBReproducerPrivate.h"
 #include "lldb/API/SBThread.h"
 #include "lldb/Target/ThreadList.h"
+#include "lldb/Utility/Instrumentation.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
-SBThreadCollection::SBThreadCollection() : m_opaque_sp() {
-  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBThreadCollection);
-}
+SBThreadCollection::SBThreadCollection() { LLDB_INSTRUMENT_VA(this); }
 
 SBThreadCollection::SBThreadCollection(const SBThreadCollection &rhs)
     : m_opaque_sp(rhs.m_opaque_sp) {
-  LLDB_RECORD_CONSTRUCTOR(SBThreadCollection,
-                          (const lldb::SBThreadCollection &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 }
 
 const SBThreadCollection &SBThreadCollection::
 operator=(const SBThreadCollection &rhs) {
-  LLDB_RECORD_METHOD(
-      const lldb::SBThreadCollection &,
-      SBThreadCollection, operator=,(const lldb::SBThreadCollection &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   if (this != &rhs)
     m_opaque_sp = rhs.m_opaque_sp;
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 SBThreadCollection::SBThreadCollection(const ThreadCollectionSP &threads)
@@ -61,17 +56,17 @@ const lldb::ThreadCollectionSP &SBThreadCollection::operator*() const {
 }
 
 bool SBThreadCollection::IsValid() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBThreadCollection, IsValid);
+  LLDB_INSTRUMENT_VA(this);
   return this->operator bool();
 }
 SBThreadCollection::operator bool() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBThreadCollection, operator bool);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_sp.get() != nullptr;
 }
 
 size_t SBThreadCollection::GetSize() {
-  LLDB_RECORD_METHOD_NO_ARGS(size_t, SBThreadCollection, GetSize);
+  LLDB_INSTRUMENT_VA(this);
 
   if (m_opaque_sp)
     return m_opaque_sp->GetSize();
@@ -79,32 +74,10 @@ size_t SBThreadCollection::GetSize() {
 }
 
 SBThread SBThreadCollection::GetThreadAtIndex(size_t idx) {
-  LLDB_RECORD_METHOD(lldb::SBThread, SBThreadCollection, GetThreadAtIndex,
-                     (size_t), idx);
+  LLDB_INSTRUMENT_VA(this, idx);
 
   SBThread thread;
   if (m_opaque_sp && idx < m_opaque_sp->GetSize())
     thread = m_opaque_sp->GetThreadAtIndex(idx);
-  return LLDB_RECORD_RESULT(thread);
-}
-
-namespace lldb_private {
-namespace repro {
-
-template <>
-void RegisterMethods<SBThreadCollection>(Registry &R) {
-  LLDB_REGISTER_CONSTRUCTOR(SBThreadCollection, ());
-  LLDB_REGISTER_CONSTRUCTOR(SBThreadCollection,
-                            (const lldb::SBThreadCollection &));
-  LLDB_REGISTER_METHOD(
-      const lldb::SBThreadCollection &,
-      SBThreadCollection, operator=,(const lldb::SBThreadCollection &));
-  LLDB_REGISTER_METHOD_CONST(bool, SBThreadCollection, IsValid, ());
-  LLDB_REGISTER_METHOD_CONST(bool, SBThreadCollection, operator bool, ());
-  LLDB_REGISTER_METHOD(size_t, SBThreadCollection, GetSize, ());
-  LLDB_REGISTER_METHOD(lldb::SBThread, SBThreadCollection, GetThreadAtIndex,
-                       (size_t));
-}
-
-}
+  return thread;
 }

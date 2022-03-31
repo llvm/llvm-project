@@ -5,9 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file defines the SmallPtrSet class.  See the doxygen comment for
-// SmallPtrSetImplBase for more details on the algorithm used.
+///
+/// \file
+/// This file defines the SmallPtrSet class.  See the doxygen comment for
+/// SmallPtrSetImplBase for more details on the algorithm used.
 //
 //===----------------------------------------------------------------------===//
 

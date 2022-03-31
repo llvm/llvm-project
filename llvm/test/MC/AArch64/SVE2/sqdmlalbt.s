@@ -13,19 +13,19 @@
 sqdmlalbt z0.h, z1.b, z31.b
 // CHECK-INST: sqdmlalbt	z0.h, z1.b, z31.b
 // CHECK-ENCODING: [0x20,0x08,0x5f,0x44]
-// CHECK-ERROR: instruction requires: streaming-sve or sve2
+// CHECK-ERROR: instruction requires: sve2 or sme
 // CHECK-UNKNOWN: 20 08 5f 44 <unknown>
 
 sqdmlalbt z0.s, z1.h, z31.h
 // CHECK-INST: sqdmlalbt	z0.s, z1.h, z31.h
 // CHECK-ENCODING: [0x20,0x08,0x9f,0x44]
-// CHECK-ERROR: instruction requires: streaming-sve or sve2
+// CHECK-ERROR: instruction requires: sve2 or sme
 // CHECK-UNKNOWN: 20 08 9f 44 <unknown>
 
 sqdmlalbt z0.d, z1.s, z31.s
 // CHECK-INST: sqdmlalbt	z0.d, z1.s, z31.s
 // CHECK-ENCODING: [0x20,0x08,0xdf,0x44]
-// CHECK-ERROR: instruction requires: streaming-sve or sve2
+// CHECK-ERROR: instruction requires: sve2 or sme
 // CHECK-UNKNOWN: 20 08 df 44 <unknown>
 
 // --------------------------------------------------------------------------//
@@ -34,11 +34,11 @@ sqdmlalbt z0.d, z1.s, z31.s
 movprfx z21, z28
 // CHECK-INST: movprfx	z21, z28
 // CHECK-ENCODING: [0x95,0xbf,0x20,0x04]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: 95 bf 20 04 <unknown>
 
 sqdmlalbt z21.d, z1.s, z31.s
 // CHECK-INST: sqdmlalbt	z21.d, z1.s, z31.s
 // CHECK-ENCODING: [0x35,0x08,0xdf,0x44]
-// CHECK-ERROR: instruction requires: streaming-sve or sve2
+// CHECK-ERROR: instruction requires: sve2 or sme
 // CHECK-UNKNOWN: 35 08 df 44 <unknown>

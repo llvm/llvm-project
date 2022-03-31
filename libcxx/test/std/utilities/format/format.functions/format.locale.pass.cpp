@@ -6,7 +6,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: libcpp-has-no-localization
 // UNSUPPORTED: libcpp-has-no-incomplete-format
 // TODO FMT Evaluate gcc-11 status
@@ -27,33 +26,31 @@
 #include "test_macros.h"
 #include "format_tests.h"
 
-auto test = []<class CharT, class... Args>(std::basic_string<CharT> expected,
-                                           std::basic_string<CharT> fmt,
+auto test = []<class CharT, class... Args>(std::basic_string_view<CharT> expected, std::basic_string_view<CharT> fmt,
                                            const Args&... args) {
   std::basic_string<CharT> out = std::format(std::locale(), fmt, args...);
   if constexpr (std::same_as<CharT, char>)
     if (out != expected)
-      std::cerr << "\nFormat string   " << fmt << "\nExpected output "
-                << expected << "\nActual output   " << out << '\n';
+      std::cerr << "\nFormat string   " << fmt << "\nExpected output " << expected << "\nActual output   " << out
+                << '\n';
   assert(out == expected);
 };
 
-auto test_exception = []<class CharT, class... Args>(
-    std::string_view what, std::basic_string<CharT> fmt, const Args&... args) {
+auto test_exception = []<class CharT, class... Args>(std::string_view what, std::basic_string_view<CharT> fmt,
+                                                     const Args&... args) {
 #ifndef TEST_HAS_NO_EXCEPTIONS
   try {
     std::format(std::locale(), fmt, args...);
     if constexpr (std::same_as<CharT, char>)
-      std::cerr << "\nFormat string   " << fmt
-                << "\nDidn't throw an exception.\n";
+      std::cerr << "\nFormat string   " << fmt << "\nDidn't throw an exception.\n";
     assert(false);
-  } catch (std::format_error& e) {
-#ifdef _LIBCPP_VERSION
+  } catch (const std::format_error& e) {
+#  ifdef _LIBCPP_VERSION
     if constexpr (std::same_as<CharT, char>)
       if (e.what() != what)
-        std::cerr << "\nFormat string   " << fmt << "\nExpected exception "
-                  << what << "\nActual exception   " << e.what() << '\n';
-#endif
+        std::cerr << "\nFormat string   " << fmt << "\nExpected exception " << what << "\nActual exception   "
+                  << e.what() << '\n';
+#  endif
     LIBCPP_ASSERT(e.what() == what);
     return;
   }

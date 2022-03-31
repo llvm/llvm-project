@@ -1094,6 +1094,31 @@ TEST(ForEachArgumentWithParamType, MatchesMemberFunctionPtrCalls) {
       S, CallExpr, std::make_unique<VerifyIdIsBoundTo<DeclRefExpr>>("arg")));
 }
 
+TEST(ForEachArgumentWithParamType, MatchesVariadicFunctionPtrCalls) {
+  StatementMatcher ArgumentY =
+      declRefExpr(to(varDecl(hasName("y")))).bind("arg");
+  TypeMatcher IntType = qualType(builtinType()).bind("type");
+  StatementMatcher CallExpr =
+      callExpr(forEachArgumentWithParamType(ArgumentY, IntType));
+
+  StringRef S = R"cpp(
+    void fcntl(int fd, int cmd, ...) {}
+
+    template <typename Func>
+    void f(Func F) {
+      int y = 42;
+      F(y, 1, 3);
+    }
+
+    void g() { f(fcntl); }
+  )cpp";
+
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      S, CallExpr, std::make_unique<VerifyIdIsBoundTo<QualType>>("type")));
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      S, CallExpr, std::make_unique<VerifyIdIsBoundTo<DeclRefExpr>>("arg")));
+}
+
 TEST(QualType, hasCanonicalType) {
   EXPECT_TRUE(notMatches("typedef int &int_ref;"
                            "int a;"

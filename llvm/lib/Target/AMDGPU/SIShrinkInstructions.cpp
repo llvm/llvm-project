@@ -297,7 +297,7 @@ void SIShrinkInstructions::shrinkMIMG(MachineInstr &MI) {
   MI.getOperand(VAddr0Idx).setIsKill(IsKill);
 
   for (unsigned i = 1; i < Info->VAddrDwords; ++i)
-    MI.RemoveOperand(VAddr0Idx + 1);
+    MI.removeOperand(VAddr0Idx + 1);
 
   if (ToUntie >= 0) {
     MI.tieOperands(
@@ -352,12 +352,6 @@ static bool shrinkScalarLogicOp(const GCNSubtarget &ST,
     }
   } else {
     llvm_unreachable("unexpected opcode");
-  }
-
-  if ((Opc == AMDGPU::S_ANDN2_B32 || Opc == AMDGPU::S_ORN2_B32) &&
-      SrcImm == Src0) {
-    if (!TII->commuteInstruction(MI, false, 1, 2))
-      NewImm = 0;
   }
 
   if (NewImm != 0) {
@@ -464,11 +458,11 @@ static void dropInstructionKeepingImpDefs(MachineInstr &MI,
 // Returns next valid instruction pointer if was able to create v_swap_b32.
 //
 // This shall not be done too early not to prevent possible folding which may
-// remove matched moves, and this should prefereably be done before RA to
+// remove matched moves, and this should preferably be done before RA to
 // release saved registers and also possibly after RA which can insert copies
 // too.
 //
-// This is really just a generic peephole that is not a canocical shrinking,
+// This is really just a generic peephole that is not a canonical shrinking,
 // although requirements match the pass placement and it reduces code size too.
 static MachineInstr* matchSwap(MachineInstr &MovT, MachineRegisterInfo &MRI,
                                const SIInstrInfo *TII) {
@@ -570,7 +564,7 @@ static MachineInstr* matchSwap(MachineInstr &MovT, MachineRegisterInfo &MRI,
         .addReg(X1.Reg, 0, X1.SubReg).getInstr();
       if (MovX->hasRegisterImplicitUseOperand(AMDGPU::EXEC)) {
         // Drop implicit EXEC.
-        MIB->RemoveOperand(MIB->getNumExplicitOperands());
+        MIB->removeOperand(MIB->getNumExplicitOperands());
         MIB->copyImplicitOps(*MBB.getParent(), *MovX);
       }
     }
@@ -586,7 +580,7 @@ static MachineInstr* matchSwap(MachineInstr &MovT, MachineRegisterInfo &MRI,
         unsigned OpNo = MovT.getNumExplicitOperands() + I;
         const MachineOperand &Op = MovT.getOperand(OpNo);
         if (Op.isKill() && TRI.regsOverlap(X, Op.getReg()))
-          MovT.RemoveOperand(OpNo);
+          MovT.removeOperand(OpNo);
       }
     }
 
@@ -731,29 +725,30 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
           continue;
       }
 
-      // getVOPe32 could be -1 here if we started with an instruction that had
-      // a 32-bit encoding and then commuted it to an instruction that did not.
-      if (!TII->hasVALU32BitEncoding(MI.getOpcode()))
-        continue;
-
       int Op32 = AMDGPU::getVOPe32(MI.getOpcode());
 
       if (TII->isVOPC(Op32)) {
-        Register DstReg = MI.getOperand(0).getReg();
-        if (DstReg.isVirtual()) {
-          // VOPC instructions can only write to the VCC register. We can't
-          // force them to use VCC here, because this is only one register and
-          // cannot deal with sequences which would require multiple copies of
-          // VCC, e.g. S_AND_B64 (vcc = V_CMP_...), (vcc = V_CMP_...)
-          //
-          // So, instead of forcing the instruction to write to VCC, we provide
-          // a hint to the register allocator to use VCC and then we will run
-          // this pass again after RA and shrink it if it outputs to VCC.
-          MRI.setRegAllocationHint(MI.getOperand(0).getReg(), 0, VCCReg);
-          continue;
+        MachineOperand &Op0 = MI.getOperand(0);
+        if (Op0.isReg()) {
+          // Exclude VOPCX instructions as these don't explicitly write a
+          // dst.
+          Register DstReg = Op0.getReg();
+          if (DstReg.isVirtual()) {
+            // VOPC instructions can only write to the VCC register. We can't
+            // force them to use VCC here, because this is only one register and
+            // cannot deal with sequences which would require multiple copies of
+            // VCC, e.g. S_AND_B64 (vcc = V_CMP_...), (vcc = V_CMP_...)
+            //
+            // So, instead of forcing the instruction to write to VCC, we
+            // provide a hint to the register allocator to use VCC and then we
+            // will run this pass again after RA and shrink it if it outputs to
+            // VCC.
+            MRI.setRegAllocationHint(DstReg, 0, VCCReg);
+            continue;
+          }
+          if (DstReg != VCCReg)
+            continue;
         }
-        if (DstReg != VCCReg)
-          continue;
       }
 
       if (Op32 == AMDGPU::V_CNDMASK_B32_e32) {
@@ -776,10 +771,6 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
       const MachineOperand *SDst = TII->getNamedOperand(MI,
                                                         AMDGPU::OpName::sdst);
 
-      // Check the carry-in operand for v_addc_u32_e64.
-      const MachineOperand *Src2 = TII->getNamedOperand(MI,
-                                                        AMDGPU::OpName::src2);
-
       if (SDst) {
         bool Next = false;
 
@@ -791,6 +782,8 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
 
         // All of the instructions with carry outs also have an SGPR input in
         // src2.
+        const MachineOperand *Src2 = TII->getNamedOperand(MI,
+                                                          AMDGPU::OpName::src2);
         if (Src2 && Src2->getReg() != VCCReg) {
           if (Src2->getReg().isVirtual())
             MRI.setRegAllocationHint(Src2->getReg(), 0, VCCReg);

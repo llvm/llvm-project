@@ -1,4 +1,4 @@
-; RUN: opt < %s -lint -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=lint -disable-output 2>&1 | FileCheck %s
 
 declare void @f1(i8* noalias readonly, i8*)
 

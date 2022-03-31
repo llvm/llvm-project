@@ -7,7 +7,7 @@ const double other_value = DBL_MAX;
 // Supplied by compiler, but referenced from the "/usr/include" module map.
 @import cstd.float_constants;
 
-float getFltMax() { return FLT_MAX; }
+float getFltMax(void) { return FLT_MAX; }
 
 // Supplied by the "/usr/include" module map.
 @import cstd.stdio;

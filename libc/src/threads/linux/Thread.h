@@ -11,14 +11,13 @@
 
 #include "thread_start_args.h"
 
-#include <stdatomic.h>
 #include <stdint.h>
 
 namespace __llvm_libc {
 
 struct ThreadParams {
-  static constexpr uintptr_t DefaultStackSize = 1 << 16; // 64 KB
-  static constexpr uint32_t ClearTIDValue = 0xABCD1234;
+  static constexpr uintptr_t DEFAULT_STACK_SIZE = 1 << 16; // 64 KB
+  static constexpr uint32_t CLEAR_TID_VALUE = 0xABCD1234;
 };
 
 } // namespace __llvm_libc

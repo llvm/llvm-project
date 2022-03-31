@@ -26,6 +26,8 @@ const char *Action::getClassName(ActionClass AC) {
   case PreprocessJobClass: return "preprocessor";
   case PrecompileJobClass: return "precompiler";
   case HeaderModulePrecompileJobClass: return "header-module-precompiler";
+  case ExtractAPIJobClass:
+    return "api-extractor";
   case AnalyzeJobClass: return "analyzer";
   case MigrateJobClass: return "migrator";
   case CompileJobClass: return "compiler";
@@ -43,6 +45,8 @@ const char *Action::getClassName(ActionClass AC) {
     return "clang-offload-unbundler";
   case OffloadWrapperJobClass:
     return "clang-offload-wrapper";
+  case LinkerWrapperJobClass:
+    return "clang-linker-wrapper";
   case StaticLibJobClass:
     return "static-lib-linker";
   }
@@ -337,6 +341,11 @@ HeaderModulePrecompileJobAction::HeaderModulePrecompileJobAction(
     : PrecompileJobAction(HeaderModulePrecompileJobClass, Input, OutputType),
       ModuleName(ModuleName) {}
 
+void ExtractAPIJobAction::anchor() {}
+
+ExtractAPIJobAction::ExtractAPIJobAction(Action *Inputs, types::ID OutputType)
+    : JobAction(ExtractAPIJobClass, Inputs, OutputType) {}
+
 void AnalyzeJobAction::anchor() {}
 
 AnalyzeJobAction::AnalyzeJobAction(Action *Input, types::ID OutputType)
@@ -417,6 +426,12 @@ void OffloadWrapperJobAction::anchor() {}
 OffloadWrapperJobAction::OffloadWrapperJobAction(ActionList &Inputs,
                                                  types::ID Type)
   : JobAction(OffloadWrapperJobClass, Inputs, Type) {}
+
+void LinkerWrapperJobAction::anchor() {}
+
+LinkerWrapperJobAction::LinkerWrapperJobAction(ActionList &Inputs,
+                                               types::ID Type)
+    : JobAction(LinkerWrapperJobClass, Inputs, Type) {}
 
 void StaticLibJobAction::anchor() {}
 

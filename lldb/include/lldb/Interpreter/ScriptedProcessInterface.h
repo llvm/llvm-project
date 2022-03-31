@@ -10,7 +10,6 @@
 #define LLDB_INTERPRETER_SCRIPTEDPROCESSINTERFACE_H
 
 #include "lldb/Core/StructuredDataImpl.h"
-#include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Interpreter/ScriptedInterface.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 
@@ -23,7 +22,8 @@ class ScriptedProcessInterface : virtual public ScriptedInterface {
 public:
   StructuredData::GenericSP
   CreatePluginObject(llvm::StringRef class_name, ExecutionContext &exe_ctx,
-                     StructuredData::DictionarySP args_sp) override {
+                     StructuredData::DictionarySP args_sp,
+                     StructuredData::Generic *script_obj = nullptr) override {
     return nullptr;
   }
 
@@ -41,6 +41,8 @@ public:
     return {};
   }
 
+  virtual StructuredData::DictionarySP GetThreadsInfo() { return nullptr; }
+
   virtual StructuredData::DictionarySP GetThreadWithID(lldb::tid_t tid) {
     return nullptr;
   }
@@ -54,7 +56,7 @@ public:
     return nullptr;
   }
 
-  virtual StructuredData::DictionarySP GetLoadedImages() { return nullptr; }
+  virtual StructuredData::ArraySP GetLoadedImages() { return nullptr; }
 
   virtual lldb::pid_t GetProcessID() { return LLDB_INVALID_PROCESS_ID; }
 
@@ -66,18 +68,17 @@ public:
 
 protected:
   friend class ScriptedThread;
-  virtual lldb::ScriptedThreadInterfaceSP GetScriptedThreadInterface() {
+  virtual lldb::ScriptedThreadInterfaceSP CreateScriptedThreadInterface() {
     return nullptr;
   }
-
-  lldb::ScriptedThreadInterfaceSP m_scripted_thread_interface_sp = nullptr;
 };
 
 class ScriptedThreadInterface : virtual public ScriptedInterface {
 public:
   StructuredData::GenericSP
   CreatePluginObject(llvm::StringRef class_name, ExecutionContext &exe_ctx,
-                     StructuredData::DictionarySP args_sp) override {
+                     StructuredData::DictionarySP args_sp,
+                     StructuredData::Generic *script_obj = nullptr) override {
     return nullptr;
   }
 

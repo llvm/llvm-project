@@ -10,16 +10,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/TableGen/Record.h"
+#include "RecordContext.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
@@ -29,11 +29,10 @@
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
-#include "llvm/TableGen/Record.h"
 #include <cassert>
 #include <cstdint>
-#include <memory>
 #include <map>
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
@@ -94,6 +93,8 @@ struct RecordContext {
 } // namespace llvm
 
 ManagedStatic<detail::RecordContext> Context;
+
+void llvm::detail::resetTablegenRecordContext() { Context.destroy(); }
 
 //===----------------------------------------------------------------------===//
 //    Type implementations
@@ -2289,8 +2290,8 @@ bool RecordVal::setValue(Init *V, SMLoc NewLoc) {
   return false;
 }
 
-#include "llvm/TableGen/Record.h"
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#include "llvm/TableGen/Record.h"
 LLVM_DUMP_METHOD void RecordVal::dump() const { errs() << *this; }
 #endif
 
@@ -2735,11 +2736,10 @@ void RecordKeeper::stopBackendTimer() {
   }
 }
 
-// We cache the record vectors for single classes. Many backends request
-// the same vectors multiple times.
-std::vector<Record *> RecordKeeper::getAllDerivedDefinitions(
-    StringRef ClassName) const {
-
+std::vector<Record *>
+RecordKeeper::getAllDerivedDefinitions(StringRef ClassName) const {
+  // We cache the record vectors for single classes. Many backends request
+  // the same vectors multiple times.
   auto Pair = ClassRecordsMap.try_emplace(ClassName);
   if (Pair.second)
     Pair.first->second = getAllDerivedDefinitions(makeArrayRef(ClassName));
@@ -2768,6 +2768,12 @@ std::vector<Record *> RecordKeeper::getAllDerivedDefinitions(
   }
 
   return Defs;
+}
+
+std::vector<Record *>
+RecordKeeper::getAllDerivedDefinitionsIfDefined(StringRef ClassName) const {
+  return getClass(ClassName) ? getAllDerivedDefinitions(ClassName)
+                             : std::vector<Record *>();
 }
 
 Init *MapResolver::resolve(Init *VarName) {

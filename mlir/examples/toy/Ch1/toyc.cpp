@@ -27,7 +27,7 @@ static cl::opt<std::string> inputFilename(cl::Positional,
                                           cl::value_desc("filename"));
 namespace {
 enum Action { None, DumpAST };
-}
+} // namespace
 
 static cl::opt<enum Action>
     emitAction("emit", cl::desc("Select the kind of output desired"),

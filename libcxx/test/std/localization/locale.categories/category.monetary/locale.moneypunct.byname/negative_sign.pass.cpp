@@ -11,8 +11,6 @@
 // REQUIRES: locale.ru_RU.UTF-8
 // REQUIRES: locale.zh_CN.UTF-8
 
-// XFAIL: LIBCXX-WINDOWS-FIXME
-
 // <locale>
 
 // class moneypunct_byname<charT, International>
@@ -83,20 +81,36 @@ int main(int, char**)
 
     {
         Fnf f(LOCALE_en_US_UTF_8, 1);
+#if defined(_WIN32)
+        assert(f.negative_sign() == "()");
+#else
         assert(f.negative_sign() == "-");
+#endif
     }
     {
         Fnt f(LOCALE_en_US_UTF_8, 1);
+#if defined(_WIN32)
+        assert(f.negative_sign() == "()");
+#else
         assert(f.negative_sign() == "-");
+#endif
     }
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         Fwf f(LOCALE_en_US_UTF_8, 1);
+#if defined(_WIN32)
+        assert(f.negative_sign() == L"()");
+#else
         assert(f.negative_sign() == L"-");
+#endif
     }
     {
         Fwt f(LOCALE_en_US_UTF_8, 1);
+#if defined(_WIN32)
+        assert(f.negative_sign() == L"()");
+#else
         assert(f.negative_sign() == L"-");
+#endif
     }
 #endif
 

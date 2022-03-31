@@ -57,6 +57,7 @@
 #include "lldb/Host/ProcessLaunchInfo.h"
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
@@ -135,8 +136,7 @@ bool Host::ResolveExecutableInBundle(FileSpec &file) {
 
 #if TARGET_OS_OSX
 
-static void *AcceptPIDFromInferior(void *arg) {
-  const char *connect_url = (const char *)arg;
+static void *AcceptPIDFromInferior(const char *connect_url) {
   ConnectionFileDescriptor file_conn;
   Status error;
   if (file_conn.Connect(connect_url, &error) == eConnectionStatusSuccess) {
@@ -285,7 +285,7 @@ LaunchInNewTerminalWithAppleScript(const char *exe_path,
   // to the process that we wanted to launch. So when our process actually
   // gets launched, we will handshake with it and get the process ID for it.
   llvm::Expected<HostThread> accept_thread = ThreadLauncher::LaunchThread(
-      unix_socket_name, AcceptPIDFromInferior, connect_url);
+      unix_socket_name, [&] { return AcceptPIDFromInferior(connect_url); });
 
   if (!accept_thread)
     return Status(accept_thread.takeError());
@@ -322,7 +322,7 @@ bool Host::OpenFileInExternalEditor(const FileSpec &file_spec,
     uint32_t reserved2; // must be zero
   } BabelAESelInfo;
 
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_HOST));
+  Log *log = GetLog(LLDBLog::Host);
   char file_path[PATH_MAX];
   file_spec.GetPath(file_path, PATH_MAX);
   CFCString file_cfstr(file_path, kCFStringEncodingUTF8);
@@ -721,8 +721,7 @@ static void PackageXPCEnvironment(xpc_object_t message, llvm::StringRef prefix,
 static AuthorizationRef authorizationRef = NULL;
 static Status getXPCAuthorization(ProcessLaunchInfo &launch_info) {
   Status error;
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST |
-                                                  LIBLLDB_LOG_PROCESS));
+  Log *log(GetLog(LLDBLog::Host | LLDBLog::Process));
 
   if ((launch_info.GetUserID() == 0) && !authorizationRef) {
     OSStatus createStatus =
@@ -843,8 +842,7 @@ static Status LaunchProcessXPC(const char *exe_path,
   if (error.Fail())
     return error;
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST |
-                                                  LIBLLDB_LOG_PROCESS));
+  Log *log(GetLog(LLDBLog::Host | LLDBLog::Process));
 
   uid_t requested_uid = launch_info.GetUserID();
   const char *xpc_service = nil;
@@ -1053,8 +1051,7 @@ static Status LaunchProcessPosixSpawn(const char *exe_path,
                                       const ProcessLaunchInfo &launch_info,
                                       lldb::pid_t &pid) {
   Status error;
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST |
-                                                  LIBLLDB_LOG_PROCESS));
+  Log *log(GetLog(LLDBLog::Host | LLDBLog::Process));
 
   posix_spawnattr_t attr;
   error.SetError(::posix_spawnattr_init(&attr), eErrorTypePOSIX);
@@ -1308,15 +1305,12 @@ Status Host::LaunchProcess(ProcessLaunchInfo &launch_info) {
 
   lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
 
-  // From now on we'll deal with the external (devirtualized) path.
-  auto exe_path = fs.GetExternalPath(exe_spec);
-  if (!exe_path)
-    return Status(exe_path.getError());
+  auto exe_path = exe_spec.GetPath();
 
   if (ShouldLaunchUsingXPC(launch_info))
-    error = LaunchProcessXPC(exe_path->c_str(), launch_info, pid);
+    error = LaunchProcessXPC(exe_path.c_str(), launch_info, pid);
   else
-    error = LaunchProcessPosixSpawn(exe_path->c_str(), launch_info, pid);
+    error = LaunchProcessPosixSpawn(exe_path.c_str(), launch_info, pid);
 
   if (pid != LLDB_INVALID_PROCESS_ID) {
     // If all went well, then set the process ID into the launch info
@@ -1430,25 +1424,18 @@ Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
 }
 
 llvm::Expected<HostThread> Host::StartMonitoringChildProcess(
-    const Host::MonitorChildProcessCallback &callback, lldb::pid_t pid,
-    bool monitor_signals) {
+    const Host::MonitorChildProcessCallback &callback, lldb::pid_t pid) {
   unsigned long mask = DISPATCH_PROC_EXIT;
-  if (monitor_signals)
-    mask |= DISPATCH_PROC_SIGNAL;
 
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_HOST |
-                                                  LIBLLDB_LOG_PROCESS));
+  Log *log(GetLog(LLDBLog::Host | LLDBLog::Process));
 
   dispatch_source_t source = ::dispatch_source_create(
       DISPATCH_SOURCE_TYPE_PROC, pid, mask,
       ::dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0));
 
   LLDB_LOGF(log,
-            "Host::StartMonitoringChildProcess "
-            "(callback, pid=%i, monitor_signals=%i) "
-            "source = %p\n",
-            static_cast<int>(pid), monitor_signals,
-            static_cast<void *>(source));
+            "Host::StartMonitoringChildProcess(callback, pid=%i) source = %p\n",
+            static_cast<int>(pid), static_cast<void *>(source));
 
   if (source) {
     Host::MonitorChildProcessCallback callback_copy = callback;
@@ -1459,27 +1446,20 @@ llvm::Expected<HostThread> Host::StartMonitoringChildProcess(
 
       int status = 0;
       int wait_pid = 0;
-      bool cancel = false;
-      bool exited = false;
       wait_pid = llvm::sys::RetryAfterSignal(-1, ::waitpid, pid, &status, 0);
       if (wait_pid >= 0) {
         int signal = 0;
         int exit_status = 0;
         const char *status_cstr = NULL;
-        if (WIFSTOPPED(status)) {
-          signal = WSTOPSIG(status);
-          status_cstr = "STOPPED";
-        } else if (WIFEXITED(status)) {
+        if (WIFEXITED(status)) {
           exit_status = WEXITSTATUS(status);
           status_cstr = "EXITED";
-          exited = true;
         } else if (WIFSIGNALED(status)) {
           signal = WTERMSIG(status);
           status_cstr = "SIGNALED";
-          exited = true;
           exit_status = -1;
         } else {
-          status_cstr = "???";
+          llvm_unreachable("Unknown status");
         }
 
         LLDB_LOGF(log,
@@ -1488,11 +1468,9 @@ llvm::Expected<HostThread> Host::StartMonitoringChildProcess(
                   pid, wait_pid, status, status_cstr, signal, exit_status);
 
         if (callback_copy)
-          cancel = callback_copy(pid, exited, signal, exit_status);
+          callback_copy(pid, signal, exit_status);
 
-        if (exited || cancel) {
-          ::dispatch_source_cancel(source);
-        }
+        ::dispatch_source_cancel(source);
       }
     });
 

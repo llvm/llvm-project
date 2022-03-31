@@ -13,9 +13,9 @@
 #include "ARMRegisterBankInfo.h"
 #include "ARMInstrInfo.h" // For the register classes
 #include "ARMSubtarget.h"
-#include "llvm/CodeGen/GlobalISel/RegisterBank.h"
-#include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterBank.h"
+#include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 
 #define GET_TARGET_REGBANK_IMPL
@@ -129,8 +129,7 @@ static void checkValueMappings() {
 } // end namespace arm
 } // end namespace llvm
 
-ARMRegisterBankInfo::ARMRegisterBankInfo(const TargetRegisterInfo &TRI)
-    : ARMGenRegisterBankInfo() {
+ARMRegisterBankInfo::ARMRegisterBankInfo(const TargetRegisterInfo &TRI) {
   // We have only one set of register banks, whatever the subtarget
   // is. Therefore, the initialization of the RegBanks table should be
   // done only once. Indeed the table of all register banks

@@ -1,11 +1,11 @@
 ; When constant propogating terminator instructions, the basic block iterator
 ; was not updated to refer to the final position of the new terminator.  This
-; can be bad, f.e. because constproping a terminator can lead to the 
+; can be bad, f.e. because constproping a terminator can lead to the
 ; destruction of PHI nodes, which invalidates the iterator!
 ;
 ; Fixed by adding new arguments to ConstantFoldTerminator
 ;
-; RUN: opt < %s -instsimplify
+; RUN: opt < %s -passes=instsimplify
 
 define void @build_tree(i32 %ml) {
 ; <label>:0

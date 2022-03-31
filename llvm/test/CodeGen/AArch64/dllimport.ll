@@ -37,7 +37,7 @@ define i32* @get_var_pointer() {
 
 ; CHECK-LABEL: get_var_pointer
 ; CHECK: adrp [[REG1:x[0-9]+]], __imp_var
-; CHECK: ldr {{x[0-9]+}}, {{\[}}[[REG1]], :lo12:__imp_var]
+; CHECK: ldr {{x[0-9]+}}, [[[REG1]], :lo12:__imp_var]
 ; CHECK: ret
 
 define i32 @call_external() {

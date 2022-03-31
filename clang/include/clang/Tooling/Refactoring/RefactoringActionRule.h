@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_REFACTOR_REFACTORING_ACTION_RULE_H
-#define LLVM_CLANG_TOOLING_REFACTOR_REFACTORING_ACTION_RULE_H
+#ifndef LLVM_CLANG_TOOLING_REFACTORING_REFACTORINGACTIONRULE_H
+#define LLVM_CLANG_TOOLING_REFACTORING_REFACTORINGACTIONRULE_H
 
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/Optional.h"
@@ -69,4 +69,4 @@ public:
 } // end namespace tooling
 } // end namespace clang
 
-#endif // LLVM_CLANG_TOOLING_REFACTOR_REFACTORING_ACTION_RULE_H
+#endif // LLVM_CLANG_TOOLING_REFACTORING_REFACTORINGACTIONRULE_H

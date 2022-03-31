@@ -1,4 +1,4 @@
-; RUN: opt -cost-model -analyze -mtriple=aarch64--linux-gnu -mattr=+sve  < %s | FileCheck %s
+; RUN: opt -passes='print<cost-model>' 2>&1 -disable-output -mtriple=aarch64--linux-gnu -mattr=+sve  < %s | FileCheck %s
 
 ; Check icmp for legal integer vectors.
 define void @cmp_legal_int() {

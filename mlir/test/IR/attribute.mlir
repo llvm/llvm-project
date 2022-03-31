@@ -150,8 +150,54 @@ func @int_attrs_pass() {
   } : () -> ()
   return
 }
+
 // -----
 
+//===----------------------------------------------------------------------===//
+// Check that i0 is parsed and verified correctly. It can only have value 0.
+// We check it explicitly because there are various special cases for it that
+// are good to verify.
+//===----------------------------------------------------------------------===//
+
+func @int0_attrs_pass() {
+  "test.i0_attr"() {
+    // CHECK: attr_00 = 0 : i0
+    attr_00 = 0 : i0,
+    // CHECK: attr_01 = 0 : si0
+    attr_01 = 0 : si0,
+    // CHECK: attr_02 = 0 : ui0
+    attr_02 = 0 : ui0,
+    // CHECK: attr_03 = 0 : i0
+    attr_03 = 0x0000 : i0,
+    // CHECK: attr_04 = 0 : si0
+    attr_04 = 0x0000 : si0,
+    // CHECK: attr_05 = 0 : ui0
+    attr_05 = 0x0000 : ui0
+  } : () -> ()
+  return
+}
+
+// -----
+
+func @int0_attrs_negative_fail() {
+  "test.i0_attr"() {
+    // expected-error @+1 {{integer constant out of range for attribute}}
+    attr_00 = -1 : i0
+  } : () -> ()
+  return
+}
+
+// -----
+
+func @int0_attrs_positive_fail() {
+  "test.i0_attr"() {
+    // expected-error @+1 {{integer constant out of range for attribute}}
+    attr_00 = 1 : i0
+  } : () -> ()
+  return
+}
+
+// -----
 
 func @wrong_int_attrs_signedness_fail() {
   // expected-error @+1 {{'si32_attr' failed to satisfy constraint: 32-bit signed integer attribute}}
@@ -599,3 +645,7 @@ func @erroneous_fields() {
   return
 }
 
+// -----
+
+// expected-error @+1 {{invalid dialect namespace '"string with space"'}}
+#invalid_dialect = opaque<"string with space", "0xDEADBEEF"> : tensor<100xi32>

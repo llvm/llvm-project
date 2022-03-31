@@ -247,12 +247,8 @@ R600TargetLowering::R600TargetLowering(const TargetMachine &TM,
 
   setSchedulingPreference(Sched::Source);
 
-  setTargetDAGCombine(ISD::FP_ROUND);
-  setTargetDAGCombine(ISD::FP_TO_SINT);
-  setTargetDAGCombine(ISD::EXTRACT_VECTOR_ELT);
-  setTargetDAGCombine(ISD::SELECT_CC);
-  setTargetDAGCombine(ISD::INSERT_VECTOR_ELT);
-  setTargetDAGCombine(ISD::LOAD);
+  setTargetDAGCombine({ISD::FP_ROUND, ISD::FP_TO_SINT, ISD::EXTRACT_VECTOR_ELT,
+                       ISD::SELECT_CC, ISD::INSERT_VECTOR_ELT, ISD::LOAD});
 }
 
 static inline bool isEOP(MachineBasicBlock::iterator I) {
@@ -995,7 +991,7 @@ SDValue R600TargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const 
 /// LLVM generates byte-addressed pointers.  For indirect addressing, we need to
 /// convert these pointers to a register index.  Each register holds
 /// 16 bytes, (4 x 32bit sub-register), but we need to take into account the
-/// \p StackWidth, which tells us how many of the 4 sub-registrers will be used
+/// \p StackWidth, which tells us how many of the 4 sub-registers will be used
 /// for indirect addressing.
 SDValue R600TargetLowering::stackPtrToRegIndex(SDValue Ptr,
                                                unsigned StackWidth,
@@ -1100,7 +1096,7 @@ SDValue R600TargetLowering::lowerPrivateTruncStore(StoreSDNode *Store,
   SDValue ShiftAmt = DAG.getNode(ISD::SHL, DL, MVT::i32, ByteIdx,
                                  DAG.getConstant(3, DL, MVT::i32));
 
-  // TODO: Contrary to the name of the functiom,
+  // TODO: Contrary to the name of the function,
   // it also handles sub i32 non-truncating stores (like i1)
   SDValue SExtValue = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i32,
                                   Store->getValue());
@@ -1610,7 +1606,7 @@ static SDValue CompactSwizzlableVector(
     if (NewBldVec[i].isUndef())
       // We mask write here to teach later passes that the ith element of this
       // vector is undef. Thus we can use it to reduce 128 bits reg usage,
-      // break false dependencies and additionnaly make assembly easier to read.
+      // break false dependencies and additionally make assembly easier to read.
       RemapSwizzle[i] = 7; // SEL_MASK_WRITE
     if (ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(NewBldVec[i])) {
       if (C->isZero()) {

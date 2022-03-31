@@ -5,7 +5,9 @@
 ; RUN: opt -disable-output -debug-pass-manager -passes-ep-vectorizer-start=no-op-function -passes='default<O0>' 2>&1 < %s | FileCheck %s
 ; RUN: opt -disable-output -debug-pass-manager -passes-ep-pipeline-start=no-op-module -passes='default<O0>' 2>&1 < %s | FileCheck %s
 ; RUN: opt -disable-output -debug-pass-manager -passes-ep-pipeline-early-simplification=no-op-module -passes='default<O0>' 2>&1 < %s | FileCheck %s
-; RUN: opt -disable-output -debug-pass-manager -passes-ep-optimizer-last=no-op-function -passes='default<O0>' 2>&1 < %s | FileCheck %s
+; RUN: opt -disable-output -debug-pass-manager -passes-ep-optimizer-last=no-op-module -passes='default<O0>' 2>&1 < %s | FileCheck %s
+; RUN: opt -disable-output -debug-pass-manager -passes-ep-full-link-time-optimization-early=no-op-module -passes='lto<O0>' 2>&1 < %s | FileCheck %s
+; RUN: opt -disable-output -debug-pass-manager -passes-ep-full-link-time-optimization-last=no-op-module -passes='lto<O0>' 2>&1 < %s | FileCheck %s
 
 ; CHECK: Running pass: NoOp
 

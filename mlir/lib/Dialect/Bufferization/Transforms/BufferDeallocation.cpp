@@ -18,12 +18,12 @@
 // (using the BufferViewFlowAnalysis class). Consider the following example:
 //
 // ^bb0(%arg0):
-//   cond_br %cond, ^bb1, ^bb2
+//   cf.cond_br %cond, ^bb1, ^bb2
 // ^bb1:
-//   br ^exit(%arg0)
+//   cf.br ^exit(%arg0)
 // ^bb2:
 //   %new_value = ...
-//   br ^exit(%new_value)
+//   cf.br ^exit(%new_value)
 // ^exit(%arg1):
 //   return %arg1;
 //
@@ -54,17 +54,18 @@
 
 #include "mlir/Dialect/Bufferization/IR/AllocationOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/Bufferization/Transforms/BufferUtils.h"
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Transforms/BufferUtils.h"
 #include "llvm/ADT/SetOperations.h"
 
 using namespace mlir;
+using namespace mlir::bufferization;
 
 /// Walks over all immediate return-like terminators in the given region.
 static LogicalResult
 walkReturnOperations(Region *region,
-                     std::function<LogicalResult(Operation *)> func) {
+                     llvm::function_ref<LogicalResult(Operation *)> func) {
   for (Block &block : *region) {
     Operation *terminator = block.getTerminator();
     // Skip non region-return-like terminators.
@@ -76,13 +77,15 @@ walkReturnOperations(Region *region,
   return success();
 }
 
-/// Checks if all operations in a given region that have at least one attached
-/// region implement the RegionBranchOpInterface. This is not required in edge
-/// cases, where we have a single attached region and the parent operation has
-/// no results.
-static bool validateSupportedControlFlow(Region &region) {
-  bool success = true;
-  region.walk([&success](Operation *operation) {
+/// Checks if all operations that have at least one attached region implement
+/// the RegionBranchOpInterface. This is not required in edge cases, where we
+/// have a single attached region and the parent operation has no results.
+static bool validateSupportedControlFlow(Operation *op) {
+  WalkResult result = op->walk([&](Operation *operation) {
+    // Only check ops that are inside a function.
+    if (!operation->getParentOfType<FuncOp>())
+      return WalkResult::advance();
+
     auto regions = operation->getRegions();
     // Walk over all operations in a region and check if the operation has at
     // least one region and implements the RegionBranchOpInterface. If there
@@ -95,10 +98,11 @@ static bool validateSupportedControlFlow(Region &region) {
         !dyn_cast<RegionBranchOpInterface>(operation)) {
       operation->emitError("All operations with attached regions need to "
                            "implement the RegionBranchOpInterface.");
-      success = false;
     }
+
+    return WalkResult::advance();
   });
-  return success;
+  return !result.wasSkipped();
 }
 
 namespace {
@@ -349,7 +353,7 @@ private:
     Region *argRegion = block->getParent();
     Operation *parentOp = argRegion->getParentOp();
     RegionBranchOpInterface regionInterface;
-    if (!argRegion || &argRegion->front() != block ||
+    if (&argRegion->front() != block ||
         !(regionInterface = dyn_cast<RegionBranchOpInterface>(parentOp)))
       return success();
 
@@ -375,17 +379,20 @@ private:
 
     // Determine the actual operand to introduce a clone for and rewire the
     // operand to point to the clone instead.
-    Value operand =
-        regionInterface.getSuccessorEntryOperands(argRegion->getRegionNumber())
-            [llvm::find(it->getSuccessorInputs(), blockArg).getIndex()];
+    auto operands =
+        regionInterface.getSuccessorEntryOperands(argRegion->getRegionNumber());
+    size_t operandIndex =
+        llvm::find(it->getSuccessorInputs(), blockArg).getIndex() +
+        operands.getBeginOperandIndex();
+    Value operand = parentOp->getOperand(operandIndex);
+    assert(operand ==
+               operands[operandIndex - operands.getBeginOperandIndex()] &&
+           "region interface operands don't match parentOp operands");
     auto clone = introduceCloneBuffers(operand, parentOp);
     if (failed(clone))
       return failure();
 
-    auto op = llvm::find(parentOp->getOperands(), operand);
-    assert(op != parentOp->getOperands().end() &&
-           "parentOp does not contain operand");
-    parentOp->setOperand(op.getIndex(), *clone);
+    parentOp->setOperand(operandIndex, *clone);
     return success();
   }
 
@@ -635,37 +642,63 @@ struct BufferDeallocationPass : BufferDeallocationBase<BufferDeallocationPass> {
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<bufferization::BufferizationDialect>();
     registry.insert<memref::MemRefDialect>();
-    registry.addOpInterface<memref::AllocOp, DefaultAllocationInterface>();
+    registerAllocationOpInterfaceExternalModels(registry);
   }
 
-  void runOnFunction() override {
-    // Ensure that there are supported loops only.
-    FuncOp func = getFunction();
-    Backedges backedges(func);
-    if (backedges.size()) {
-      func.emitError("Only structured control-flow loops are supported.");
-      return signalPassFailure();
-    }
+  void runOnOperation() override {
+    FuncOp func = getOperation();
+    if (func.isExternal())
+      return;
 
-    // Check that the control flow structures are supported.
-    if (!validateSupportedControlFlow(func.getRegion()))
-      return signalPassFailure();
-
-    // Gather all required allocation nodes and prepare the deallocation phase.
-    BufferDeallocation deallocation(func);
-
-    // Check for supported AllocationOpInterface implementations and prepare the
-    // internal deallocation pass.
-    if (failed(deallocation.prepare()))
-      return signalPassFailure();
-
-    // Place all required temporary clone and dealloc nodes.
-    if (failed(deallocation.deallocate()))
-      return signalPassFailure();
+    if (failed(deallocateBuffers(func)))
+      signalPassFailure();
   }
 };
 
-} // end anonymous namespace
+} // namespace
+
+LogicalResult bufferization::deallocateBuffers(Operation *op) {
+  if (isa<ModuleOp>(op)) {
+    WalkResult result = op->walk([&](FuncOp funcOp) {
+      if (failed(deallocateBuffers(funcOp)))
+        return WalkResult::interrupt();
+      return WalkResult::advance();
+    });
+    return success(!result.wasInterrupted());
+  }
+
+  // Ensure that there are supported loops only.
+  Backedges backedges(op);
+  if (backedges.size()) {
+    op->emitError("Only structured control-flow loops are supported.");
+    return failure();
+  }
+
+  // Check that the control flow structures are supported.
+  if (!validateSupportedControlFlow(op))
+    return failure();
+
+  // Gather all required allocation nodes and prepare the deallocation phase.
+  BufferDeallocation deallocation(op);
+
+  // Check for supported AllocationOpInterface implementations and prepare the
+  // internal deallocation pass.
+  if (failed(deallocation.prepare()))
+    return failure();
+
+  // Place all required temporary clone and dealloc nodes.
+  if (failed(deallocation.deallocate()))
+    return failure();
+
+  return success();
+}
+
+void bufferization::registerAllocationOpInterfaceExternalModels(
+    DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, memref::MemRefDialect *dialect) {
+    memref::AllocOp::attachInterface<DefaultAllocationInterface>(*ctx);
+  });
+}
 
 //===----------------------------------------------------------------------===//
 // BufferDeallocationPass construction

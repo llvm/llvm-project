@@ -7,8 +7,7 @@
 #===----------------------------------------------------------------------===##
 """GDB pretty-printers for libc++.
 
-These should work for objects compiled when _LIBCPP_ABI_UNSTABLE is defined
-and when it is undefined.
+These should work for objects compiled with either the stable ABI or the unstable ABI.
 """
 
 from __future__ import print_function
@@ -146,6 +145,8 @@ class StdTuplePrinter(object):
             child = self.val["__base_"][field_name]["__value_"]
             self.count += 1
             return ("[%d]" % self.count, child)
+
+        next = __next__  # Needed for GDB built against Python 2.7.
 
     def __init__(self, val):
         self.val = val
@@ -356,6 +357,8 @@ class StdVectorPrinter(object):
                 self.offset = 0
             return ("[%d]" % self.count, outbit)
 
+        next = __next__  # Needed for GDB built against Python 2.7.
+
     class _VectorIterator(object):
         """Class to iterate over the non-bool vector's children."""
 
@@ -374,6 +377,8 @@ class StdVectorPrinter(object):
             entry = self.item.dereference()
             self.item += 1
             return ("[%d]" % self.count, entry)
+
+        next = __next__  # Needed for GDB built against Python 2.7.
 
     def __init__(self, val):
         """Set val, length, capacity, and iterator for bool and normal vectors."""

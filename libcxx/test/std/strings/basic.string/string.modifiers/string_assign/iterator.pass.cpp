@@ -19,7 +19,7 @@
 #include "min_allocator.h"
 
 template <class S, class It>
-void
+TEST_CONSTEXPR_CXX20 void
 test(S s, It first, It last, S expected)
 {
     s.assign(first, last);
@@ -52,9 +52,8 @@ test_exceptions(S s, It first, It last)
 }
 #endif
 
-int main(int, char**)
-{
-    {
+bool test() {
+  {
     typedef std::string S;
     const char* s = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
     test(S(), s, s, S());
@@ -111,9 +110,9 @@ int main(int, char**)
          S("ABCDEFGHIJ"));
     test(S("12345678901234567890"), cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+52),
          S("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"));
-    }
+  }
 #if TEST_STD_VER >= 11
-    {
+  {
     typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
     const char* s = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
     test(S(), s, s, S());
@@ -170,17 +169,17 @@ int main(int, char**)
          S("ABCDEFGHIJ"));
     test(S("12345678901234567890"), cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+52),
          S("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"));
-    }
+  }
 #endif
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    { // test iterator operations that throw
+  if (!TEST_IS_CONSTANT_EVALUATED) { // test iterator operations that throw
     typedef std::string S;
     typedef ThrowingIterator<char> TIter;
     typedef cpp17_input_iterator<TIter> IIter;
     const char* s = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-    test_exceptions(S(), IIter(TIter(s, s+10, 4, TIter::TAIncrement)), IIter());
-    test_exceptions(S(), IIter(TIter(s, s+10, 5, TIter::TADereference)), IIter());
-    test_exceptions(S(), IIter(TIter(s, s+10, 6, TIter::TAComparison)), IIter());
+    test_exceptions(S(), IIter(TIter(s, s+10, 4, TIter::TAIncrement)), IIter(TIter()));
+    test_exceptions(S(), IIter(TIter(s, s+10, 5, TIter::TADereference)), IIter(TIter()));
+    test_exceptions(S(), IIter(TIter(s, s+10, 6, TIter::TAComparison)), IIter(TIter()));
 
     test_exceptions(S(), TIter(s, s+10, 4, TIter::TAIncrement), TIter());
     test_exceptions(S(), TIter(s, s+10, 5, TIter::TADereference), TIter());
@@ -188,10 +187,10 @@ int main(int, char**)
 
     Widget w[100];
     test_exceptions(S(), w, w+100);
-    }
+  }
 #endif
 
-    { // test assigning to self
+  { // test assigning to self
     typedef std::string S;
     S s_short = "123/";
     S s_long  = "Lorem ipsum dolor sit amet, consectetur/";
@@ -206,23 +205,33 @@ int main(int, char**)
 
     s_long.assign(s_long.begin() + 30, s_long.end());
     assert(s_long == "nsectetur/");
-    }
+  }
 
-    { // test assigning a different type
+  { // test assigning a different type
     typedef std::string S;
     const uint8_t p[] = "ABCD";
 
     S s;
     s.assign(p, p + 4);
     assert(s == "ABCD");
-    }
+  }
 
-    { // regression-test assigning to self in sneaky ways
+  { // regression-test assigning to self in sneaky ways
     std::string sneaky = "hello";
     sneaky.resize(sneaky.capacity(), 'x');
     std::string expected = sneaky + std::string(1, '\0');
     test(sneaky, sneaky.data(), sneaky.data() + sneaky.size() + 1, expected);
-    }
+  }
+
+  return true;
+}
+
+int main(int, char**)
+{
+  test();
+#if TEST_STD_VER > 17
+  // static_assert(test());
+#endif
 
     return 0;
 }

@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -rewrite-objc -fobjc-runtime=macosx-fragile-10.5 -fobjc-exceptions -verify %s -o -
 
-int main() {
+int main(void) {
   @try {
     printf("executing try"); // expected-warning{{implicitly declaring library function 'printf' with type 'int (const char *, ...)'}} \
         // expected-note{{include the header <stdio.h> or explicitly provide a declaration for 'printf'}}
@@ -25,14 +25,14 @@ int main() {
   return 0;
 }
 
-void test_sync_with_implicit_finally() {
+void test_sync_with_implicit_finally(void) {
     id foo;
     @synchronized (foo) {
         return; // The rewriter knows how to generate code for implicit finally
     }
 }
 
-void test2_try_with_implicit_finally() {
+void test2_try_with_implicit_finally(void) {
     @try {
         return; // The rewriter knows how to generate code for implicit finally
     } @catch (id e) {

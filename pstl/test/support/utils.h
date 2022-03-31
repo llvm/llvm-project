@@ -1305,7 +1305,11 @@ static void
 invoke_if(Policy&&, F f)
 {
 #if defined(_PSTL_ICC_16_VC14_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN) || defined(_PSTL_ICC_17_VC141_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN)
-    __pstl::__internal::invoke_if_not(__pstl::__internal::allow_unsequenced<Policy>(), f);
+    using decay_policy = typename std::decay<Policy>::type;
+    using allow_unsequenced =
+        std::integral_constant<bool, (std::is_same<decay_policy, std::execution::unsequenced_policy>::value ||
+                                      std::is_same<decay_policy, std::execution::parallel_unsequenced_policy>::value)>;
+    __pstl::__internal::__invoke_if_not(allow_unsequenced{}, f);
 #else
     f();
 #endif

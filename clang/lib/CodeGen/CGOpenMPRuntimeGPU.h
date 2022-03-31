@@ -257,10 +257,13 @@ public:
   /// variables used in \a OutlinedFn function.
   /// \param IfCond Condition in the associated 'if' clause, if it was
   /// specified, nullptr otherwise.
+  /// \param NumThreads The value corresponding to the num_threads clause, if
+  /// any,
+  ///                   or nullptr.
   void emitParallelCall(CodeGenFunction &CGF, SourceLocation Loc,
                         llvm::Function *OutlinedFn,
                         ArrayRef<llvm::Value *> CapturedVars,
-                        const Expr *IfCond) override;
+                        const Expr *IfCond, llvm::Value *NumThreads) override;
 
   /// Emit an implicit/explicit barrier for OpenMP threads.
   /// \param Kind Directive for which this implicit barrier call must be

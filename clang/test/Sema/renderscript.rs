@@ -4,7 +4,7 @@
 #ifndef __RENDERSCRIPT__
 // expected-warning@+2 {{'kernel' attribute ignored}}
 #endif
-void __attribute__((kernel)) kernel() {}
+void __attribute__((kernel)) kernel(void) {}
 
 #ifndef __RENDERSCRIPT__
 // expected-warning@+4 {{'kernel' attribute ignored}}
@@ -16,7 +16,7 @@ int __attribute__((kernel)) global;
 #ifndef __RENDERSCRIPT__
 // expected-error@+2 {{function return value cannot have __fp16 type; did you forget * ?}}
 #endif
-__fp16 fp16_return();
+__fp16 fp16_return(void);
 
 #ifndef __RENDERSCRIPT__
 // expected-error@+2 {{parameters cannot have __fp16 type; did you forget * ?}}

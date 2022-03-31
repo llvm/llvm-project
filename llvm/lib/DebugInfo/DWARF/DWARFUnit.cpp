@@ -14,9 +14,14 @@
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugInfoEntry.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRnglists.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
+#include "llvm/DebugInfo/DWARF/DWARFListTable.h"
+#include "llvm/DebugInfo/DWARF/DWARFObject.h"
+#include "llvm/DebugInfo/DWARF/DWARFSection.h"
 #include "llvm/DebugInfo/DWARF/DWARFTypeUnit.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Errc.h"
@@ -25,7 +30,6 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
-#include <cstdio>
 #include <utility>
 #include <vector>
 
@@ -214,13 +218,17 @@ DWARFUnit::getAddrOffsetSectionItem(uint32_t Index) const {
   return {{Address, Section}};
 }
 
-Optional<uint64_t> DWARFUnit::getStringOffsetSectionItem(uint32_t Index) const {
+Expected<uint64_t> DWARFUnit::getStringOffsetSectionItem(uint32_t Index) const {
   if (!StringOffsetsTableContribution)
-    return None;
+    return make_error<StringError>(
+        "DW_FORM_strx used without a valid string offsets table",
+        inconvertibleErrorCode());
   unsigned ItemSize = getDwarfStringOffsetsByteSize();
   uint64_t Offset = getStringOffsetsBase() + Index * ItemSize;
   if (StringOffsetSection.Data.size() < Offset + ItemSize)
-    return None;
+    return make_error<StringError>("DW_FORM_strx uses index " + Twine(Index) +
+                                       ", which is too large",
+                                   inconvertibleErrorCode());
   DWARFDataExtractor DA(Context.getDWARFObj(), StringOffsetSection,
                         isLittleEndian, 0);
   return DA.getRelocatedValue(ItemSize, &Offset);
@@ -403,7 +411,7 @@ void DWARFUnit::extractDIEsToVector(
     assert((Parents.back() == UINT32_MAX || Parents.back() <= Dies.size()) &&
            "Wrong parent index");
 
-    // Extract die. Stop if any error occured.
+    // Extract die. Stop if any error occurred.
     if (!DIE.extractFast(*this, &DIEOffset, DebugInfoData, NextCUOffset,
                          Parents.back()))
       break;
@@ -603,7 +611,7 @@ bool DWARFUnit::parseDWO() {
     DWO->setAddrOffsetSection(AddrOffsetSection, *AddrOffsetSectionBase);
   if (getVersion() == 4) {
     auto DWORangesBase = UnitDie.getRangesBaseAttribute();
-    DWO->setRangesSection(RangeSection, DWORangesBase ? *DWORangesBase : 0);
+    DWO->setRangesSection(RangeSection, DWORangesBase.getValueOr(0));
   }
 
   return true;

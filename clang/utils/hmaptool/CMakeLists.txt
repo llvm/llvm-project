@@ -10,7 +10,7 @@ add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/${CLANG_HM
 
 list(APPEND Depends ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/${CLANG_HMAPTOOL})
 install(PROGRAMS ${CLANG_HMAPTOOL}
-        DESTINATION bin
+        DESTINATION "${CMAKE_INSTALL_BINDIR}"
         COMPONENT hmaptool)
 
 add_custom_target(hmaptool ALL DEPENDS ${Depends})

@@ -51,6 +51,15 @@ TEST_F(HeaderIncludesTest, NoExistingIncludeWithoutDefine) {
   EXPECT_EQ(Expected, insert(Code, "\"a.h\""));
 }
 
+TEST_F(HeaderIncludesTest, RepeatedIncludes) {
+  std::string Code;
+  for (int i = 0; i < 100; ++i) {
+    Code += "#include \"a.h\"\n";
+  }
+  std::string Expected = Code + "#include \"a2.h\"\n";
+  EXPECT_EQ(Expected, insert(Code, "\"a2.h\""));
+}
+
 TEST_F(HeaderIncludesTest, NoExistingIncludeWithDefine) {
   std::string Code = "#ifndef A_H\n"
                      "#define A_H\n"

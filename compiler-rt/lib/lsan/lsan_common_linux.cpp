@@ -122,12 +122,9 @@ void HandleLeaks() {
 
 static int LockStuffAndStopTheWorldCallback(struct dl_phdr_info *info,
                                             size_t size, void *data) {
-  LockThreadRegistry();
-  LockAllocator();
+  ScopedStopTheWorldLock lock;
   DoStopTheWorldParam *param = reinterpret_cast<DoStopTheWorldParam *>(data);
   StopTheWorld(param->callback, param->argument);
-  UnlockAllocator();
-  UnlockThreadRegistry();
   return 1;
 }
 

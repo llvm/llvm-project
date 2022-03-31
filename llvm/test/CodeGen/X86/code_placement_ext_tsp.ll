@@ -1,5 +1,5 @@
-; RUN: llc -enable-ext-tsp-block-placement=1 < %s | FileCheck %s
-; RUN: llc -enable-ext-tsp-block-placement=1 -ext-tsp-chain-split-threshold=0 -ext-tsp-enable-chain-split-along-jumps=0 < %s | FileCheck %s -check-prefix=CHECK2
+; RUN: llc -mcpu=corei7 -mtriple=x86_64-linux -enable-ext-tsp-block-placement=1 < %s | FileCheck %s
+; RUN: llc -mcpu=corei7 -mtriple=x86_64-linux -enable-ext-tsp-block-placement=1 -ext-tsp-chain-split-threshold=0 -ext-tsp-enable-chain-split-along-jumps=0 < %s | FileCheck %s -check-prefix=CHECK2
 
 define void @func1a()  {
 ; Test that the algorithm positions the most likely successor first

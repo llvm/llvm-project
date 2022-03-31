@@ -135,6 +135,26 @@ llvm.func @bitreverse_test(%arg0: i32, %arg1: vector<8xi32>) {
   llvm.return
 }
 
+// CHECK-LABEL: @ctlz_test
+llvm.func @ctlz_test(%arg0: i32, %arg1: vector<8xi32>) {
+  %i1 = llvm.mlir.constant(false) : i1
+  // CHECK: call i32 @llvm.ctlz.i32
+  "llvm.intr.ctlz"(%arg0, %i1) : (i32, i1) -> i32
+  // CHECK: call <8 x i32> @llvm.ctlz.v8i32
+  "llvm.intr.ctlz"(%arg1, %i1) : (vector<8xi32>, i1) -> vector<8xi32>
+  llvm.return
+}
+
+// CHECK-LABEL: @cttz_test
+llvm.func @cttz_test(%arg0: i32, %arg1: vector<8xi32>) {
+  %i1 = llvm.mlir.constant(false) : i1
+  // CHECK: call i32 @llvm.cttz.i32
+  "llvm.intr.cttz"(%arg0, %i1) : (i32, i1) -> i32
+  // CHECK: call <8 x i32> @llvm.cttz.v8i32
+  "llvm.intr.cttz"(%arg1, %i1) : (vector<8xi32>, i1) -> vector<8xi32>
+  llvm.return
+}
+
 // CHECK-LABEL: @ctpop_test
 llvm.func @ctpop_test(%arg0: i32, %arg1: vector<8xi32>) {
   // CHECK: call i32 @llvm.ctpop.i32
@@ -195,6 +215,24 @@ llvm.func @smin_test(%arg0: i32, %arg1: i32, %arg2: vector<8xi32>, %arg3: vector
   "llvm.intr.smin"(%arg0, %arg1) : (i32, i32) -> i32
   // CHECK: call <8 x i32> @llvm.smin.v8i32
   "llvm.intr.smin"(%arg2, %arg3) : (vector<8xi32>, vector<8xi32>) -> vector<8xi32>
+  llvm.return
+}
+
+// CHECK-LABEL: @umax_test
+llvm.func @umax_test(%arg0: i32, %arg1: i32, %arg2: vector<8xi32>, %arg3: vector<8xi32>) {
+  // CHECK: call i32 @llvm.umax.i32
+  "llvm.intr.umax"(%arg0, %arg1) : (i32, i32) -> i32
+  // CHECK: call <8 x i32> @llvm.umax.v8i32
+  "llvm.intr.umax"(%arg2, %arg3) : (vector<8xi32>, vector<8xi32>) -> vector<8xi32>
+  llvm.return
+}
+
+// CHECK-LABEL: @umin_test
+llvm.func @umin_test(%arg0: i32, %arg1: i32, %arg2: vector<8xi32>, %arg3: vector<8xi32>) {
+  // CHECK: call i32 @llvm.umin.i32
+  "llvm.intr.umin"(%arg0, %arg1) : (i32, i32) -> i32
+  // CHECK: call <8 x i32> @llvm.umin.v8i32
+  "llvm.intr.umin"(%arg2, %arg3) : (vector<8xi32>, vector<8xi32>) -> vector<8xi32>
   llvm.return
 }
 
@@ -312,6 +350,14 @@ llvm.func @memcpy_test(%arg0: i32, %arg2: !llvm.ptr<i8>, %arg3: !llvm.ptr<i8>) {
   llvm.return
 }
 
+// CHECK-LABEL: @memmove_test
+llvm.func @memmove_test(%arg0: i32, %arg2: !llvm.ptr<i8>, %arg3: !llvm.ptr<i8>) {
+  %i1 = llvm.mlir.constant(false) : i1
+  // CHECK: call void @llvm.memmove.p0i8.p0i8.i32(i8* %{{.*}}, i8* %{{.*}}, i32 %{{.*}}, i1 {{.*}})
+  "llvm.intr.memmove"(%arg2, %arg3, %arg0, %i1) : (!llvm.ptr<i8>, !llvm.ptr<i8>, i32, i1) -> ()
+  llvm.return
+}
+
 // CHECK-LABEL: @memset_test
 llvm.func @memset_test(%arg0: i32, %arg2: !llvm.ptr<i8>, %arg3: i8) {
   %i1 = llvm.mlir.constant(false) : i1
@@ -400,6 +446,15 @@ llvm.func @coro_size() {
   llvm.return
 }
 
+// CHECK-LABEL: @coro_align
+llvm.func @coro_align() {
+  // CHECK: call i64 @llvm.coro.align.i64
+  %0 = llvm.intr.coro.align : i64
+  // CHECK: call i32 @llvm.coro.align.i32
+  %1 = llvm.intr.coro.align : i32
+  llvm.return
+}
+
 // CHECK-LABEL: @coro_save
 llvm.func @coro_save(%arg0: !llvm.ptr<i8>) {
   // CHECK: call token @llvm.coro.save
@@ -437,6 +492,13 @@ llvm.func @coro_resume(%arg0: !llvm.ptr<i8>) {
   // CHECK: call void @llvm.coro.resume
   llvm.intr.coro.resume %arg0
   llvm.return
+}
+
+// CHECK-LABEL: @eh_typeid_for
+llvm.func @eh_typeid_for(%arg0 : !llvm.ptr<i8>) {
+    // CHECK: call i32 @llvm.eh.typeid.for
+    %0 = llvm.intr.eh.typeid.for %arg0 : i32
+    llvm.return
 }
 
 // CHECK-LABEL: @stack_save

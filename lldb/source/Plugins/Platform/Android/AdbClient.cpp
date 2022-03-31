@@ -584,14 +584,13 @@ AdbClient::SyncService::~SyncService() = default;
 Status AdbClient::SyncService::SendSyncRequest(const char *request_id,
                                                const uint32_t data_len,
                                                const void *data) {
-  const DataBufferSP data_sp(new DataBufferHeap(kSyncPacketLen, 0));
-  DataEncoder encoder(data_sp, eByteOrderLittle, sizeof(void *));
-  auto offset = encoder.PutData(0, request_id, strlen(request_id));
-  encoder.PutUnsigned(offset, 4, data_len);
-
+  DataEncoder encoder(eByteOrderLittle, sizeof(void *));
+  encoder.AppendData(llvm::StringRef(request_id));
+  encoder.AppendU32(data_len);
+  llvm::ArrayRef<uint8_t> bytes = encoder.GetData();
   Status error;
   ConnectionStatus status;
-  m_conn->Write(data_sp->GetBytes(), kSyncPacketLen, status, &error);
+  m_conn->Write(bytes.data(), kSyncPacketLen, status, &error);
   if (error.Fail())
     return error;
 

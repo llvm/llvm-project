@@ -1,5 +1,5 @@
 =========================================
-Libc++ 14.0.0 (In-Progress) Release Notes
+Libc++ 15.0.0 (In-Progress) Release Notes
 =========================================
 
 .. contents::
@@ -10,7 +10,7 @@ Written by the `Libc++ Team <https://libcxx.llvm.org>`_
 
 .. warning::
 
-   These are in-progress notes for the upcoming libc++ 14 release.
+   These are in-progress notes for the upcoming libc++ 15 release.
    Release notes for previous releases can be found on
    `the Download Page <https://releases.llvm.org/download.html>`_.
 
@@ -18,7 +18,7 @@ Introduction
 ============
 
 This document contains the release notes for the libc++ C++ Standard Library,
-part of the LLVM Compiler Infrastructure, release 14.0.0. Here we describe the
+part of the LLVM Compiler Infrastructure, release 15.0.0. Here we describe the
 status of libc++ in some detail, including major improvements from the previous
 release and new feature work. For the general LLVM release notes, see `the LLVM
 documentation <https://llvm.org/docs/ReleaseNotes.html>`_. All LLVM releases may
@@ -32,132 +32,93 @@ main Libc++ web page, this document applies to the *next* release, not
 the current one. To see the release notes for a specific release, please
 see the `releases page <https://llvm.org/releases/>`_.
 
-What's New in Libc++ 14.0.0?
+What's New in Libc++ 15.0.0?
 ============================
 
 New Features
 ------------
 
-- There's initial support for the C++20 header ``<format>``. The implementation
-  is incomplete. Some functions are known to be inefficient; both in memory
-  usage and performance. The implementation is considered experimental and isn't
-  considered ABI stable.
+- Implemented P0627R6 (Function to mark unreachable code)
 
-- There's a new CMake option ``LIBCXX_ENABLE_UNICODE`` to disable Unicode
-  support in the ``<format>`` header. This only affects the estimation of the
-  output width of the format functions.
+- Implemented P1165R1 (Make stateful allocator propagation more consistent for ``operator+(basic_string)``)
 
-- Support for building libc++ on top of a C Standard Library that does not support ``wchar_t`` was
-  added. This is useful for building libc++ in an embedded setting, and it adds itself to the various
-  freestanding-friendly options provided by libc++.
+- `pop_heap` now uses an algorithm known as "bottom-up heapsort" or
+  "heapsort with bounce" to reduce the number of comparisons, and rearranges
+  elements using move-assignment instead of `swap`.
 
-- ``_LIBCPP_DEBUG`` equals to ``1`` enables the randomization of unspecified
-  behavior of standard algorithms (e.g. equal elements in ``std::sort`` or
-  randomization of both sides of partition for ``std::nth_element``)
-
-- Floating-point support for ``std::to_chars`` support has been added.
-  Thanks to Stephan T. Lavavej and Microsoft for providing their implemention
-  to libc++.
+ - Libc++ now supports a variety of assertions that can be turned on to help catch
+   undefined behavior in user code. This new support is now separate from the old
+   (and incomplete) Debug Mode. Vendors can select whether the library they ship
+   should include assertions or not by default. For details, see
+   :ref:`the documentation <assertions-mode>` about this new feature.
 
 API Changes
 -----------
 
-- The functions ``std::atomic<T*>::fetch_(add|sub)`` and
-  ``std::atomic_fetch_(add|sub)`` no longer accept a function pointer. While
-  this is technically an API break, the invalid syntax isn't supported by
-  libstc++ and MSVC STL.  See https://godbolt.org/z/49fvzz98d.
+- The ``_LIBCPP_ABI_UNSTABLE`` macro has been removed in favour of setting
+  ``_LIBCPP_ABI_VERSION=2``. This should not have any impact on users because
+  they were not supposed to set ``_LIBCPP_ABI_UNSTABLE`` manually, however we
+  still feel that it is worth mentioning in the release notes in case some users
+  had been doing it.
 
-- The call of the functions ``std::atomic_(add|sub)(std::atomic<T*>*, ...)``
-  with the explicit template argument ``T`` are now ill-formed. While this is
-  technically an API break, the invalid syntax isn't supported by libstc++ and
-  MSVC STL. See https://godbolt.org/z/v9959re3v.
+- The header ``<experimental/filesystem>`` has been removed. Instead, use
+  ``<filesystem>`` header. The associated macro
+  ``_LIBCPP_DEPRECATED_EXPERIMENTAL_FILESYSTEM`` has also been removed.
 
-  Due to this change it's now possible to call these functions with the
-  explicit template argument ``T*``. This allows using the same syntax on the
-  major Standard library implementations.
-  See https://godbolt.org/z/oEfzPhTTb.
+- Some libc++ headers no longer transitively include all of ``<algorithm>``, ``<chrono>`` and ``<utility>``.
+  If, after updating libc++, you see compiler errors related to missing declarations in
+  namespace ``std``, it might be because one of your source files now needs to
+  ``#include <algorithm>``, ``#include <chrono>`` and/or ``#include <utility>``.
 
-  Calls to these functions where the template argument was deduced by the
-  compiler are unaffected by this change.
+- The integer distributions ``binomial_distribution``, ``discrete_distribution``,
+  ``geometric_distribution``, ``negative_binomial_distribution``, ``poisson_distribution``,
+  and ``uniform_int_distribution`` now conform to the Standard by rejecting
+  template parameter types other than ``short``, ``int``, ``long``, ``long long``,
+  (as an extension) ``__int128_t``, and the unsigned versions thereof.
+  In particular, ``uniform_int_distribution<int8_t>`` is no longer supported.
 
-- The functions ``std::allocator<T>::allocate`` and
-  ``std::experimental::pmr::polymorphic_allocator<T>::allocate`` now throw
-  an exception of type ``std::bad_array_new_length`` when the requested size
-  exceeds the maximum supported size, as required by the C++ standard.
-  Previously the type ``std::length_error`` was used.
+- The C++14 function ``std::quoted(const char*)`` is no longer supported in
+  C++03 or C++11 modes.
 
-- Removed the nonstandard methods ``std::chrono::file_clock::to_time_t`` and
-  ``std::chrono::file_clock::from_time_t``; neither libstdc++ nor MSVC STL
-  had such methods. Instead, in C++20, you can use ``std::chrono::file_clock::from_sys``
-  and ``std::chrono::file_clock::to_sys``, which are specified in the Standard.
-  If you are not using C++20, you should move to it.
-
-- The declarations of functions ``declare_reachable``, ``undeclare_reachable``, ``declare_no_pointers``,
-  ``undeclare_no_pointers``, and ``get_pointer_safety`` have been removed not only from C++2b but
-  from all modes. Their symbols are still provided by the dynamic library for the benefit of
-  existing compiled code. All of these functions have always behaved as no-ops.
+- Setting a custom debug handler with ``std::__libcpp_debug_function`` is not
+  supported anymore. Please migrate to using the new support for
+  :ref:`assertions <assertions-mode>` instead.
 
 ABI Changes
 -----------
 
-- The C++17 variable templates ``is_error_code_enum_v`` and
-  ``is_error_condition_enum_v`` are now of type ``bool`` instead of ``size_t``.
-
-- The C++03 emulation type for ``std::nullptr_t`` has been removed in favor of
-  using ``decltype(nullptr)`` in all standard modes. This is an ABI break for
-  anyone compiling in C++03 mode and who has ``std::nullptr_t`` as part of their
-  ABI. However, previously, these users' ABI would be incompatible with any other
-  binary or static archive compiled with C++11 or later. If you start seeing linker
-  errors involving ``std::nullptr_t`` against previously compiled binaries, this may
-  be the cause. You can define the ``_LIBCPP_ABI_USE_CXX03_NULLPTR_EMULATION`` macro
-  to return to the previous behavior. That macro will be removed in LLVM 15. Please
-  comment `here <https://reviews.llvm.org/D109459>`_ if you are broken by this change
-  and need to define the macro.
+- The ``_LIBCPP_ABI_USE_CXX03_NULLPTR_EMULATION`` macro controlling whether we use an
+  emulation for ``std::nullptr_t`` in C++03 mode has been removed. After this change,
+  ``_LIBCPP_ABI_USE_CXX03_NULLPTR_EMULATION`` will not be honoured anymore and there
+  will be no way to opt back into the C++03 emulation of ``std::nullptr_t``.
 
 Build System Changes
 --------------------
 
-- Building the libc++ shared or static library requires a C++ 20 capable compiler.
-  Consider using a Bootstrapping build to build libc++ with a fresh Clang if you
-  can't use the system compiler to build libc++ anymore.
+- Support for standalone builds have been entirely removed from libc++, libc++abi and
+  libunwind. Please use :ref:`these instructions <build instructions>` for building
+  libc++, libc++abi and/or libunwind.
 
-- Historically, there has been numerous ways of building libc++ and libc++abi. This has
-  culminated in over 5 different ways to build the runtimes, which made it impossible to
-  maintain with a good level of support. Starting with this release, the runtimes support
-  exactly two ways of being built, which should cater to all use-cases. Furthermore,
-  these builds are as lightweight as possible and will work consistently even when targetting
-  embedded platforms, which used not to be the case. Please see the documentation on building
-  libc++ to see those two ways of building and migrate over to the appropriate build instructions
-  as soon as possible.
+- The ``{LIBCXX,LIBCXXABI,LIBUNWIND}_TARGET_TRIPLE``, ``{LIBCXX,LIBCXXABI,LIBUNWIND}_SYSROOT`` and
+  ``{LIBCXX,LIBCXXABI,LIBUNWIND}_GCC_TOOLCHAIN`` CMake variables have been removed. Instead, please
+  use the ``CMAKE_CXX_COMPILER_TARGET``, ``CMAKE_SYSROOT`` and ``CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN``
+  variables provided by CMake.
 
-  All other ways to build are deprecated and will not be supported in the next release.
-  We understand that making these changes can be daunting. For that reason, here's a
-  summary of how to migrate from the two most common ways to build:
+- When building for Windows, vendors who want to avoid dll-exporting symbols from the static libc++abi
+  library should set ``LIBCXXABI_HERMETIC_STATIC_LIBRARY=ON`` when configuring CMake. The current
+  behavior, which tries to guess the correct dll-export semantics based on whether we're building
+  the libc++ shared library, will be removed in LLVM 16.
 
-  - If you were rooting your CMake invocation at ``<monorepo>/llvm`` and passing ``-DLLVM_ENABLE_PROJECTS=<...>``
-    (which was the previously advertised way to build the runtimes), please simply root your CMake invocation at
-    ``<monorepo>/runtimes`` and pass ``-DLLVM_ENABLE_RUNTIMES=<...>``.
+- Previously, the C++ ABI library headers would be installed inside ``<prefix>/include/c++/v1``
+  alongside the libc++ headers as part of building libc++. This is not the case anymore -- the
+  ABI library is expected to install its headers where it wants them as part of its own build.
+  Note that no action is required for most users, who build libc++ against libc++abi, since
+  libc++abi already installs its headers in the right location. However, vendors building
+  libc++ against alternate ABI libraries should make sure that their ABI library installs
+  its own headers.
 
-  - If you were doing two CMake invocations, one rooted at ``<monorepo>/libcxx`` and one rooted at
-    ``<monorepo>/libcxxabi`` (this used to be called a "Standalone build"), please move them to a
-    single invocation like so:
-
-    .. code-block:: bash
-
-        $ cmake -S <monorepo>/libcxx -B libcxx-build <LIBCXX-OPTIONS>
-        $ cmake -S <monorepo>/libcxxabi -B libcxxabi-build <LIBCXXABI-OPTIONS>
-
-    should become
-
-    .. code-block:: bash
-
-        $ cmake -S <monorepo>/runtimes -B build -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" <LIBCXX-OPTIONS> <LIBCXXABI-OPTIONS>
-
-- Support for building the runtimes using the GCC 32 bit multilib flag (``-m32``) has been removed. Support
-  for this had been flaky for a while, and we didn't know of anyone depending on this. Instead, please perform
-  a normal cross-compilation of the runtimes using the appropriate target, such as passing the following to
-  your bootstrapping build:
-
-  .. code-block:: bash
-
-      -DLLVM_RUNTIME_TARGETS=i386-unknown-linux
+- The legacy testing configuration is now deprecated and will be removed in the next release. For
+  most users, this should not have any impact. However, if you are testing libc++ in a configuration
+  or on a platform that used to be supported by the legacy testing configuration and isn't supported
+  by one of the configurations in ``libcxx/test/configs``, please reach out to the libc++ developers
+  to get your configuration supported officially.

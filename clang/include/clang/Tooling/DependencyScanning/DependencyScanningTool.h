@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_DEPENDENCY_SCANNING_TOOL_H
-#define LLVM_CLANG_TOOLING_DEPENDENCY_SCANNING_TOOL_H
+#ifndef LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_DEPENDENCYSCANNINGTOOL_H
+#define LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_DEPENDENCYSCANNINGTOOL_H
 
 #include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
@@ -16,9 +16,9 @@
 #include "llvm/ADT/StringSet.h"
 #include <string>
 
-namespace clang{
-namespace tooling{
-namespace dependencies{
+namespace clang {
+namespace tooling {
+namespace dependencies {
 
 /// The full dependencies and module graph for a specific input.
 struct FullDependencies {
@@ -42,24 +42,23 @@ struct FullDependencies {
   /// determined that the differences are benign for this compilation.
   std::vector<ModuleID> ClangModuleDeps;
 
-  /// Get additional arguments suitable for appending to the original Clang
-  /// command line.
+  /// The original command line of the TU (excluding the compiler executable).
+  std::vector<std::string> OriginalCommandLine;
+
+  /// Get the full command line.
   ///
   /// \param LookupPCMPath This function is called to fill in "-fmodule-file="
   ///                      arguments and the "-o" argument. It needs to return
   ///                      a path for where the PCM for the given module is to
   ///                      be located.
-  /// \param LookupModuleDeps This function is called to collect the full
-  ///                         transitive set of dependencies for this
-  ///                         compilation and fill in "-fmodule-map-file="
-  ///                         arguments.
-  std::vector<std::string> getAdditionalArgs(
-      std::function<StringRef(ModuleID)> LookupPCMPath,
-      std::function<const ModuleDeps &(ModuleID)> LookupModuleDeps) const;
+  std::vector<std::string>
+  getCommandLine(std::function<StringRef(ModuleID)> LookupPCMPath) const;
+
+  /// Get the full command line, excluding -fmodule-file=" arguments.
+  std::vector<std::string> getCommandLineWithoutModulePaths() const;
 
   /// Get additional arguments suitable for appending to the original Clang
-  /// command line, excluding arguments containing modules-related paths:
-  /// "-fmodule-file=", "-fmodule-map-file=".
+  /// command line, excluding "-fmodule-file=" arguments.
   std::vector<std::string> getAdditionalArgsWithoutModulePaths() const;
 };
 
@@ -111,4 +110,4 @@ private:
 } // end namespace tooling
 } // end namespace clang
 
-#endif // LLVM_CLANG_TOOLING_DEPENDENCY_SCANNING_TOOL_H
+#endif // LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_DEPENDENCYSCANNINGTOOL_H

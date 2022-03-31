@@ -144,3 +144,18 @@ bool r40 = requires { requires (int i) { i; }; };
 
 bool r41 = requires { requires (); };
 // expected-error@-1 {{expected expression}}
+
+bool r42 = requires { typename long; }; // expected-error {{expected a qualified name after 'typename'}}
+
+template <int N>
+requires requires {
+ typename _BitInt(N); // expected-error {{expected a qualified name after 'typename'}}
+} using r43 = void;
+
+template <int N>
+using BitInt = _BitInt(N);
+
+template <int N>
+requires requires {
+ typename BitInt<N>; // ok
+} using r44 = void;

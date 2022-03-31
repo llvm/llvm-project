@@ -7,10 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/ARMAttributeParser.h"
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLArrayExtras.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/Errc.h"
-#include "llvm/Support/LEB128.h"
 #include "llvm/Support/ScopedPrinter.h"
 
 using namespace llvm;
@@ -70,7 +68,7 @@ const ARMAttributeParser::DisplayHandler ARMAttributeParser::displayRoutines[] =
 
 Error ARMAttributeParser::stringAttribute(AttrType tag) {
   StringRef tagName =
-      ELFAttrs::attrTypeAsString(tag, tagToStringMap, /*TagPrefix=*/false);
+      ELFAttrs::attrTypeAsString(tag, tagToStringMap, /*hasTagPrefix=*/false);
   StringRef desc = de.getCStrRef(cursor);
 
   if (sw) {

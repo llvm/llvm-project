@@ -16,7 +16,7 @@ void f() {
   new (auto) (1,2,3); // expected-error{{new expression for type 'auto' contains multiple constructor arguments}}
   new auto {}; // expected-error{{new expression for type 'auto' requires a constructor argument}}
   new auto {1,2,3}; // expected-error{{new expression for type 'auto' contains multiple constructor arguments}}
-  new auto ({1,2,3}); // expected-error{{new expression for type 'auto' contains multiple constructor arguments}}
+  new auto ({1,2,3}); // expected-error{{cannot deduce actual type for 'auto' from parenthesized initializer list}}
 }
 
 void p2example() {

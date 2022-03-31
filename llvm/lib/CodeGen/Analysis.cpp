@@ -21,12 +21,9 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Transforms/Utils/GlobalStatus.h"
 
 using namespace llvm;
 
@@ -577,15 +574,15 @@ bool llvm::attributesPermitTailCall(const Function *F, const Instruction *I,
   bool &ADS = AllowDifferingSizes ? *AllowDifferingSizes : DummyADS;
   ADS = true;
 
-  AttrBuilder CallerAttrs(F->getAttributes(), AttributeList::ReturnIndex);
-  AttrBuilder CalleeAttrs(cast<CallInst>(I)->getAttributes(),
-                          AttributeList::ReturnIndex);
+  AttrBuilder CallerAttrs(F->getContext(), F->getAttributes().getRetAttrs());
+  AttrBuilder CalleeAttrs(F->getContext(),
+                          cast<CallInst>(I)->getAttributes().getRetAttrs());
 
   // Following attributes are completely benign as far as calling convention
   // goes, they shouldn't affect whether the call is a tail call.
   for (const auto &Attr : {Attribute::Alignment, Attribute::Dereferenceable,
                            Attribute::DereferenceableOrNull, Attribute::NoAlias,
-                           Attribute::NonNull}) {
+                           Attribute::NonNull, Attribute::NoUndef}) {
     CallerAttrs.removeAttribute(Attr);
     CalleeAttrs.removeAttribute(Attr);
   }
@@ -712,8 +709,8 @@ bool llvm::returnTypeIsEligibleForTailCall(const Function *F,
     // The manipulations performed when we're looking through an insertvalue or
     // an extractvalue would happen at the front of the RetPath list, so since
     // we have to copy it anyway it's more efficient to create a reversed copy.
-    SmallVector<unsigned, 4> TmpRetPath(RetPath.rbegin(), RetPath.rend());
-    SmallVector<unsigned, 4> TmpCallPath(CallPath.rbegin(), CallPath.rend());
+    SmallVector<unsigned, 4> TmpRetPath(llvm::reverse(RetPath));
+    SmallVector<unsigned, 4> TmpCallPath(llvm::reverse(CallPath));
 
     // Finally, we can check whether the value produced by the tail call at this
     // index is compatible with the value we return.

@@ -11,7 +11,7 @@ func @ceildivi(%arg0: i32, %arg1: i32) -> (i32) {
 // CHECK:           [[ZERO:%.+]] = arith.constant 0 : i32
 // CHECK:           [[MINONE:%.+]] = arith.constant -1 : i32
 // CHECK:           [[CMP1:%.+]] = arith.cmpi sgt, [[ARG1]], [[ZERO]] : i32
-// CHECK:           [[X:%.+]] = select [[CMP1]], [[MINONE]], [[ONE]] : i32
+// CHECK:           [[X:%.+]] = arith.select [[CMP1]], [[MINONE]], [[ONE]] : i32
 // CHECK:           [[TRUE1:%.+]] = arith.addi [[X]], [[ARG0]] : i32
 // CHECK:           [[TRUE2:%.+]] = arith.divsi [[TRUE1]], [[ARG1]] : i32
 // CHECK:           [[TRUE3:%.+]] = arith.addi [[ONE]], [[TRUE2]] : i32
@@ -25,7 +25,7 @@ func @ceildivi(%arg0: i32, %arg1: i32) -> (i32) {
 // CHECK:           [[TERM1:%.+]] = arith.andi [[NNEG]], [[MNEG]] : i1
 // CHECK:           [[TERM2:%.+]] = arith.andi [[NPOS]], [[MPOS]] : i1
 // CHECK:           [[CMP2:%.+]] = arith.ori [[TERM1]], [[TERM2]] : i1
-// CHECK:           [[RES:%.+]] = select [[CMP2]], [[TRUE3]], [[FALSE3]] : i32
+// CHECK:           [[RES:%.+]] = arith.select [[CMP2]], [[TRUE3]], [[FALSE3]] : i32
 }
 
 // -----
@@ -41,7 +41,7 @@ func @ceildivi_index(%arg0: index, %arg1: index) -> (index) {
 // CHECK:           [[ZERO:%.+]] = arith.constant 0 : index
 // CHECK:           [[MINONE:%.+]] = arith.constant -1 : index
 // CHECK:           [[CMP1:%.+]] = arith.cmpi sgt, [[ARG1]], [[ZERO]] : index
-// CHECK:           [[X:%.+]] = select [[CMP1]], [[MINONE]], [[ONE]] : index
+// CHECK:           [[X:%.+]] = arith.select [[CMP1]], [[MINONE]], [[ONE]] : index
 // CHECK:           [[TRUE1:%.+]] = arith.addi [[X]], [[ARG0]] : index
 // CHECK:           [[TRUE2:%.+]] = arith.divsi [[TRUE1]], [[ARG1]] : index
 // CHECK:           [[TRUE3:%.+]] = arith.addi [[ONE]], [[TRUE2]] : index
@@ -55,7 +55,7 @@ func @ceildivi_index(%arg0: index, %arg1: index) -> (index) {
 // CHECK:           [[TERM1:%.+]] = arith.andi [[NNEG]], [[MNEG]] : i1
 // CHECK:           [[TERM2:%.+]] = arith.andi [[NPOS]], [[MPOS]] : i1
 // CHECK:           [[CMP2:%.+]] = arith.ori [[TERM1]], [[TERM2]] : i1
-// CHECK:           [[RES:%.+]] = select [[CMP2]], [[TRUE3]], [[FALSE3]] : index
+// CHECK:           [[RES:%.+]] = arith.select [[CMP2]], [[TRUE3]], [[FALSE3]] : index
 }
 
 // -----
@@ -70,7 +70,7 @@ func @floordivi(%arg0: i32, %arg1: i32) -> (i32) {
 // CHECK:           [[ZERO:%.+]] = arith.constant 0 : i32
 // CHECK:           [[MIN1:%.+]] = arith.constant -1 : i32
 // CHECK:           [[CMP1:%.+]] = arith.cmpi slt, [[ARG1]], [[ZERO]] : i32
-// CHECK:           [[X:%.+]] = select [[CMP1]], [[ONE]], [[MIN1]] : i32
+// CHECK:           [[X:%.+]] = arith.select [[CMP1]], [[ONE]], [[MIN1]] : i32
 // CHECK:           [[TRUE1:%.+]] = arith.subi [[X]], [[ARG0]] : i32
 // CHECK:           [[TRUE2:%.+]] = arith.divsi [[TRUE1]], [[ARG1]] : i32
 // CHECK:           [[TRUE3:%.+]] = arith.subi [[MIN1]], [[TRUE2]] : i32
@@ -82,7 +82,7 @@ func @floordivi(%arg0: i32, %arg1: i32) -> (i32) {
 // CHECK:           [[TERM1:%.+]] = arith.andi [[NNEG]], [[MPOS]] : i1
 // CHECK:           [[TERM2:%.+]] = arith.andi [[NPOS]], [[MNEG]] : i1
 // CHECK:           [[CMP2:%.+]] = arith.ori [[TERM1]], [[TERM2]] : i1
-// CHECK:           [[RES:%.+]] = select [[CMP2]], [[TRUE3]], [[FALSE]] : i32
+// CHECK:           [[RES:%.+]] = arith.select [[CMP2]], [[TRUE3]], [[FALSE]] : i32
 }
 
 // -----
@@ -97,7 +97,7 @@ func @floordivi_index(%arg0: index, %arg1: index) -> (index) {
 // CHECK:           [[ZERO:%.+]] = arith.constant 0 : index
 // CHECK:           [[MIN1:%.+]] = arith.constant -1 : index
 // CHECK:           [[CMP1:%.+]] = arith.cmpi slt, [[ARG1]], [[ZERO]] : index
-// CHECK:           [[X:%.+]] = select [[CMP1]], [[ONE]], [[MIN1]] : index
+// CHECK:           [[X:%.+]] = arith.select [[CMP1]], [[ONE]], [[MIN1]] : index
 // CHECK:           [[TRUE1:%.+]] = arith.subi [[X]], [[ARG0]] : index
 // CHECK:           [[TRUE2:%.+]] = arith.divsi [[TRUE1]], [[ARG1]] : index
 // CHECK:           [[TRUE3:%.+]] = arith.subi [[MIN1]], [[TRUE2]] : index
@@ -109,7 +109,7 @@ func @floordivi_index(%arg0: index, %arg1: index) -> (index) {
 // CHECK:           [[TERM1:%.+]] = arith.andi [[NNEG]], [[MPOS]] : i1
 // CHECK:           [[TERM2:%.+]] = arith.andi [[NPOS]], [[MNEG]] : i1
 // CHECK:           [[CMP2:%.+]] = arith.ori [[TERM1]], [[TERM2]] : i1
-// CHECK:           [[RES:%.+]] = select [[CMP2]], [[TRUE3]], [[FALSE]] : index
+// CHECK:           [[RES:%.+]] = arith.select [[CMP2]], [[TRUE3]], [[FALSE]] : index
 }
 
 // -----
@@ -126,7 +126,7 @@ func @ceildivui(%arg0: i32, %arg1: i32) -> (i32) {
 // CHECK:           [[SUB:%.+]] = arith.subi %arg0, [[ONE]] : i32
 // CHECK:           [[DIV:%.+]] = arith.divui [[SUB]], %arg1 : i32
 // CHECK:           [[REM:%.+]] = arith.addi [[DIV]], [[ONE]] : i32
-// CHECK:           [[RES:%.+]] = select [[ISZERO]], [[ZERO]], [[REM]] : i32
+// CHECK:           [[RES:%.+]] = arith.select [[ISZERO]], [[ZERO]], [[REM]] : i32
 }
 
 // -----
@@ -143,7 +143,7 @@ func @ceildivui_index(%arg0: index, %arg1: index) -> (index) {
 // CHECK:           [[SUB:%.+]] = arith.subi %arg0, [[ONE]] : index
 // CHECK:           [[DIV:%.+]] = arith.divui [[SUB]], %arg1 : index
 // CHECK:           [[REM:%.+]] = arith.addi [[DIV]], [[ONE]] : index
-// CHECK:           [[RES:%.+]] = select [[ISZERO]], [[ZERO]], [[REM]] : index
+// CHECK:           [[RES:%.+]] = arith.select [[ISZERO]], [[ZERO]], [[REM]] : index
 }
 
 // -----
@@ -154,11 +154,10 @@ func @maxf(%a: f32, %b: f32) -> f32 {
   return %result : f32
 }
 // CHECK-SAME: %[[LHS:.*]]: f32, %[[RHS:.*]]: f32)
-// CHECK-NEXT: %[[CMP:.*]] = arith.cmpf ogt, %[[LHS]], %[[RHS]] : f32
-// CHECK-NEXT: %[[SELECT:.*]] = select %[[CMP]], %[[LHS]], %[[RHS]] : f32
-// CHECK-NEXT: %[[IS_NAN:.*]] = arith.cmpf uno, %[[LHS]], %[[RHS]] : f32
-// CHECK-NEXT: %[[NAN:.*]] = arith.constant 0x7FC00000 : f32
-// CHECK-NEXT: %[[RESULT:.*]] = select %[[IS_NAN]], %[[NAN]], %[[SELECT]] : f32
+// CHECK-NEXT: %[[CMP:.*]] = arith.cmpf ugt, %[[LHS]], %[[RHS]] : f32
+// CHECK-NEXT: %[[SELECT:.*]] = arith.select %[[CMP]], %[[LHS]], %[[RHS]] : f32
+// CHECK-NEXT: %[[IS_NAN:.*]] = arith.cmpf uno, %[[RHS]], %[[RHS]] : f32
+// CHECK-NEXT: %[[RESULT:.*]] = arith.select %[[IS_NAN]], %[[RHS]], %[[SELECT]] : f32
 // CHECK-NEXT: return %[[RESULT]] : f32
 
 // -----
@@ -169,12 +168,10 @@ func @maxf_vector(%a: vector<4xf16>, %b: vector<4xf16>) -> vector<4xf16> {
   return %result : vector<4xf16>
 }
 // CHECK-SAME: %[[LHS:.*]]: vector<4xf16>, %[[RHS:.*]]: vector<4xf16>)
-// CHECK-NEXT: %[[CMP:.*]] = arith.cmpf ogt, %[[LHS]], %[[RHS]] : vector<4xf16>
-// CHECK-NEXT: %[[SELECT:.*]] = select %[[CMP]], %[[LHS]], %[[RHS]]
-// CHECK-NEXT: %[[IS_NAN:.*]] = arith.cmpf uno, %[[LHS]], %[[RHS]] : vector<4xf16>
-// CHECK-NEXT: %[[NAN:.*]] = arith.constant 0x7E00 : f16
-// CHECK-NEXT: %[[SPLAT_NAN:.*]] = splat %[[NAN]] : vector<4xf16>
-// CHECK-NEXT: %[[RESULT:.*]] = select %[[IS_NAN]], %[[SPLAT_NAN]], %[[SELECT]]
+// CHECK-NEXT: %[[CMP:.*]] = arith.cmpf ugt, %[[LHS]], %[[RHS]] : vector<4xf16>
+// CHECK-NEXT: %[[SELECT:.*]] = arith.select %[[CMP]], %[[LHS]], %[[RHS]]
+// CHECK-NEXT: %[[IS_NAN:.*]] = arith.cmpf uno, %[[RHS]], %[[RHS]] : vector<4xf16>
+// CHECK-NEXT: %[[RESULT:.*]] = arith.select %[[IS_NAN]], %[[RHS]], %[[SELECT]]
 // CHECK-NEXT: return %[[RESULT]] : vector<4xf16>
 
 // -----
@@ -185,11 +182,10 @@ func @minf(%a: f32, %b: f32) -> f32 {
   return %result : f32
 }
 // CHECK-SAME: %[[LHS:.*]]: f32, %[[RHS:.*]]: f32)
-// CHECK-NEXT: %[[CMP:.*]] = arith.cmpf olt, %[[LHS]], %[[RHS]] : f32
-// CHECK-NEXT: %[[SELECT:.*]] = select %[[CMP]], %[[LHS]], %[[RHS]] : f32
-// CHECK-NEXT: %[[IS_NAN:.*]] = arith.cmpf uno, %[[LHS]], %[[RHS]] : f32
-// CHECK-NEXT: %[[NAN:.*]] = arith.constant 0x7FC00000 : f32
-// CHECK-NEXT: %[[RESULT:.*]] = select %[[IS_NAN]], %[[NAN]], %[[SELECT]] : f32
+// CHECK-NEXT: %[[CMP:.*]] = arith.cmpf ult, %[[LHS]], %[[RHS]] : f32
+// CHECK-NEXT: %[[SELECT:.*]] = arith.select %[[CMP]], %[[LHS]], %[[RHS]] : f32
+// CHECK-NEXT: %[[IS_NAN:.*]] = arith.cmpf uno, %[[RHS]], %[[RHS]] : f32
+// CHECK-NEXT: %[[RESULT:.*]] = arith.select %[[IS_NAN]], %[[RHS]], %[[SELECT]] : f32
 // CHECK-NEXT: return %[[RESULT]] : f32
 
 

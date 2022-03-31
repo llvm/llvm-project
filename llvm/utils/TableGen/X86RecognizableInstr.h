@@ -16,12 +16,15 @@
 #ifndef LLVM_UTILS_TABLEGEN_X86RECOGNIZABLEINSTR_H
 #define LLVM_UTILS_TABLEGEN_X86RECOGNIZABLEINSTR_H
 
-#include "CodeGenTarget.h"
-#include "X86DisassemblerTables.h"
+#include "CodeGenInstruction.h"
 #include "llvm/Support/DataTypes.h"
-#include "llvm/TableGen/Record.h"
+#include "llvm/Support/X86DisassemblerDecoderCommon.h"
+
+struct InstructionSpecifier;
 
 namespace llvm {
+
+class Record;
 
 #define X86_INSTR_MRM_MAPPING     \
   MAP(C0, 64)                     \
@@ -153,16 +156,10 @@ namespace X86Local {
 
 namespace X86Disassembler {
 
-/// RecognizableInstr - Encapsulates all information required to decode a single
-///   instruction, as extracted from the LLVM instruction tables.  Has methods
-///   to interpret the information available in the LLVM tables, and to emit the
-///   instruction into DisassemblerTables.
-class RecognizableInstr {
-private:
-  /// The opcode of the instruction, as used in an MCInst
-  InstrUID UID;
-  /// The record from the .td files corresponding to this instruction
-  const Record* Rec;
+class DisassemblerTables;
+
+/// Extract common fields of a single X86 instruction from a CodeGenInstruction
+struct RecognizableInstrBase {
   /// The OpPrefix field from the record
   uint8_t OpPrefix;
   /// The OpMap field from the record
@@ -178,20 +175,20 @@ private:
   uint8_t OpSize;
   /// The AdSize field from the record
   uint8_t AdSize;
-  /// The hasREX_WPrefix field from the record
-  bool HasREX_WPrefix;
+  /// The hasREX_W field from the record
+  bool HasREX_W;
   /// The hasVEX_4V field from the record
   bool HasVEX_4V;
   /// The HasVEX_WPrefix field from the record
   bool HasVEX_W;
   /// The IgnoresVEX_W field from the record
   bool IgnoresVEX_W;
-  /// Inferred from the operands; indicates whether the L bit in the VEX prefix is set
-  bool HasVEX_LPrefix;
+  /// The hasVEX_L field from the record
+  bool HasVEX_L;
   /// The ignoreVEX_L field from the record
   bool IgnoresVEX_L;
   /// The hasEVEX_L2Prefix field from the record
-  bool HasEVEX_L2Prefix;
+  bool HasEVEX_L2;
   /// The hasEVEX_K field from the record
   bool HasEVEX_K;
   /// The hasEVEX_KZ field from the record
@@ -202,27 +199,39 @@ private:
   bool EncodeRC;
   /// The isCodeGenOnly field from the record
   bool IsCodeGenOnly;
+  /// The isAsmParserOnly field from the record
+  bool IsAsmParserOnly;
   /// The ForceDisassemble field from the record
   bool ForceDisassemble;
   // The CD8_Scale field from the record
   uint8_t CD8_Scale;
-  // Whether the instruction has the predicate "In64BitMode"
-  bool Is64Bit;
-  // Whether the instruction has the predicate "In32BitMode"
-  bool Is32Bit;
+  /// \param insn The CodeGenInstruction to extract information from.
+  RecognizableInstrBase(const CodeGenInstruction &insn);
+  /// \returns true if this instruction should be emitted
+  bool shouldBeEmitted() const;
+};
 
+/// RecognizableInstr - Encapsulates all information required to decode a single
+///   instruction, as extracted from the LLVM instruction tables.  Has methods
+///   to interpret the information available in the LLVM tables, and to emit the
+///   instruction into DisassemblerTables.
+class RecognizableInstr : public RecognizableInstrBase {
+private:
+  /// The record from the .td files corresponding to this instruction
+  const Record* Rec;
   /// The instruction name as listed in the tables
   std::string Name;
-
-  /// Indicates whether the instruction should be emitted into the decode
-  /// tables; regardless, it will be emitted into the instruction info table
-  bool ShouldBeEmitted;
-
+  // Whether the instruction has the predicate "In32BitMode"
+  bool Is32Bit;
+  // Whether the instruction has the predicate "In64BitMode"
+  bool Is64Bit;
   /// The operands of the instruction, as listed in the CodeGenInstruction.
   /// They are not one-to-one with operands listed in the MCInst; for example,
   /// memory operands expand to 5 operands in the MCInst
   const std::vector<CGIOperandList::OperandInfo>* Operands;
 
+  /// The opcode of the instruction, as used in an MCInst
+  InstrUID UID;
   /// The description of the instruction that is emitted into the instruction
   /// info table
   InstructionSpecifier* Spec;
@@ -238,7 +247,7 @@ private:
   ///
   /// @param s              - The string, as extracted by calling Rec->getName()
   ///                         on a CodeGenInstruction::OperandInfo.
-  /// @param hasREX_WPrefix - Indicates whether the instruction has a REX.W
+  /// @param hasREX_W - Indicates whether the instruction has a REX.W
   ///                         prefix.  If it does, 32-bit register operands stay
   ///                         32-bit regardless of the operand size.
   /// @param OpSize           Indicates the operand size of the instruction.
@@ -246,7 +255,7 @@ private:
   ///                         register sizes keep their size.
   /// @return               - The operand's type.
   static OperandType typeFromString(const std::string& s,
-                                    bool hasREX_WPrefix, uint8_t OpSize);
+                                    bool hasREX_W, uint8_t OpSize);
 
   /// immediateEncodingFromString - Translates an immediate encoding from the
   ///   string provided in the LLVM tables to an OperandEncoding for use in
@@ -309,19 +318,6 @@ private:
                        (const std::string&,
                         uint8_t OpSize));
 
-  /// shouldBeEmitted - Returns the shouldBeEmitted field.  Although filter()
-  ///   filters out many instructions, at various points in decoding we
-  ///   determine that the instruction should not actually be decodable.  In
-  ///   particular, MMX MOV instructions aren't emitted, but they're only
-  ///   identified during operand parsing.
-  ///
-  /// @return - true if at this point we believe the instruction should be
-  ///   emitted; false if not.  This will return false if filter() returns false
-  ///   once emitInstructionSpecifier() has been called.
-  bool shouldBeEmitted() const {
-    return ShouldBeEmitted;
-  }
-
   /// emitInstructionSpecifier - Loads the instruction specifier for the current
   ///   instruction into a DisassemblerTables.
   ///
@@ -334,6 +330,7 @@ private:
   ///               decode information for the current instruction.
   void emitDecodePath(DisassemblerTables &tables) const;
 
+public:
   /// Constructor - Initializes a RecognizableInstr with the appropriate fields
   ///   from a CodeGenInstruction.
   ///
@@ -343,7 +340,6 @@ private:
   RecognizableInstr(DisassemblerTables &tables,
                     const CodeGenInstruction &insn,
                     InstrUID uid);
-public:
   /// processInstr - Accepts a CodeGenInstruction and loads decode information
   ///   for it into a DisassemblerTables if appropriate.
   ///
@@ -357,6 +353,12 @@ public:
                            InstrUID uid);
 };
 
+std::string getMnemonic(const CodeGenInstruction *I, unsigned Variant);
+bool isRegisterOperand(const Record *Rec);
+bool isMemoryOperand(const Record *Rec);
+bool isImmediateOperand(const Record *Rec);
+unsigned getRegOperandSize(const Record *RegRec);
+unsigned getMemOperandSize(const Record *MemRec);
 } // namespace X86Disassembler
 
 } // namespace llvm

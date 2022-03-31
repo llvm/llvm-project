@@ -7,6 +7,8 @@
 
 ; We explicitly set the unroll count so that expensiveTripCount computation is allowed.
 
+declare i1 @unknown(i32) readonly nounwind willreturn
+
 ; mergedexit block has edges from loop exit blocks.
 define i64 @test1() {
 ; CHECK-LABEL: @test1(
@@ -366,7 +368,7 @@ otherexit:                                           ; preds = %exiting
 
 ; exit block (%exitB) has an exiting block and another exit block as predecessors.
 ; exiting block comes from inner loop.
-define void @test5(i1 %c) {
+define void @test5() {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP:%.*]] = icmp sgt i32 undef, 79
@@ -380,27 +382,35 @@ define void @test5(i1 %c) {
 ; CHECK-NEXT:    [[PROL_ITER:%.*]] = phi i32 [ 0, [[OUTERH_PROL_PREHEADER]] ], [ [[PROL_ITER_NEXT:%.*]], [[OUTERLATCH_PROL]] ]
 ; CHECK-NEXT:    br label [[INNERH_PROL:%.*]]
 ; CHECK:       innerH.prol:
-; CHECK-NEXT:    br i1 [[C:%.*]], label [[INNEREXITING_PROL:%.*]], label [[OTHEREXITB_LOOPEXIT1:%.*]]
+; CHECK-NEXT:    [[C1_PROL:%.*]] = call i1 @unknown(i32 0)
+; CHECK-NEXT:    br i1 [[C1_PROL]], label [[INNEREXITING_PROL:%.*]], label [[OTHEREXITB_LOOPEXIT1:%.*]]
 ; CHECK:       innerexiting.prol:
-; CHECK-NEXT:    br i1 [[C]], label [[INNERLATCH_PROL:%.*]], label [[EXITB_LOOPEXIT_LOOPEXIT2:%.*]]
+; CHECK-NEXT:    [[C2_PROL:%.*]] = call i1 @unknown(i32 0)
+; CHECK-NEXT:    br i1 [[C2_PROL]], label [[INNERLATCH_PROL:%.*]], label [[EXITB_LOOPEXIT_LOOPEXIT2:%.*]]
 ; CHECK:       innerLatch.prol:
 ; CHECK-NEXT:    br i1 false, label [[INNERH_1_PROL:%.*]], label [[OUTERLATCH_PROL]]
 ; CHECK:       innerH.1.prol:
-; CHECK-NEXT:    br i1 [[C]], label [[INNEREXITING_1_PROL:%.*]], label [[OTHEREXITB_LOOPEXIT1]]
+; CHECK-NEXT:    [[C1_1_PROL:%.*]] = call i1 @unknown(i32 0)
+; CHECK-NEXT:    br i1 [[C1_1_PROL]], label [[INNEREXITING_1_PROL:%.*]], label [[OTHEREXITB_LOOPEXIT1]]
 ; CHECK:       innerexiting.1.prol:
-; CHECK-NEXT:    br i1 [[C]], label [[INNERLATCH_1_PROL:%.*]], label [[EXITB_LOOPEXIT_LOOPEXIT2]]
+; CHECK-NEXT:    [[C2_1_PROL:%.*]] = call i1 @unknown(i32 0)
+; CHECK-NEXT:    br i1 [[C2_1_PROL]], label [[INNERLATCH_1_PROL:%.*]], label [[EXITB_LOOPEXIT_LOOPEXIT2]]
 ; CHECK:       innerLatch.1.prol:
 ; CHECK-NEXT:    br i1 false, label [[INNERH_2_PROL:%.*]], label [[OUTERLATCH_PROL]]
 ; CHECK:       innerH.2.prol:
-; CHECK-NEXT:    br i1 [[C]], label [[INNEREXITING_2_PROL:%.*]], label [[OTHEREXITB_LOOPEXIT1]]
+; CHECK-NEXT:    [[C1_2_PROL:%.*]] = call i1 @unknown(i32 0)
+; CHECK-NEXT:    br i1 [[C1_2_PROL]], label [[INNEREXITING_2_PROL:%.*]], label [[OTHEREXITB_LOOPEXIT1]]
 ; CHECK:       innerexiting.2.prol:
-; CHECK-NEXT:    br i1 [[C]], label [[INNERLATCH_2_PROL:%.*]], label [[EXITB_LOOPEXIT_LOOPEXIT2]]
+; CHECK-NEXT:    [[C2_2_PROL:%.*]] = call i1 @unknown(i32 0)
+; CHECK-NEXT:    br i1 [[C2_2_PROL]], label [[INNERLATCH_2_PROL:%.*]], label [[EXITB_LOOPEXIT_LOOPEXIT2]]
 ; CHECK:       innerLatch.2.prol:
 ; CHECK-NEXT:    br i1 false, label [[INNERH_3_PROL:%.*]], label [[OUTERLATCH_PROL]]
 ; CHECK:       innerH.3.prol:
-; CHECK-NEXT:    br i1 [[C]], label [[INNEREXITING_3_PROL:%.*]], label [[OTHEREXITB_LOOPEXIT1]]
+; CHECK-NEXT:    [[C1_3_PROL:%.*]] = call i1 @unknown(i32 0)
+; CHECK-NEXT:    br i1 [[C1_3_PROL]], label [[INNEREXITING_3_PROL:%.*]], label [[OTHEREXITB_LOOPEXIT1]]
 ; CHECK:       innerexiting.3.prol:
-; CHECK-NEXT:    br i1 [[C]], label [[INNERLATCH_3_PROL:%.*]], label [[EXITB_LOOPEXIT_LOOPEXIT2]]
+; CHECK-NEXT:    [[C2_3_PROL:%.*]] = call i1 @unknown(i32 0)
+; CHECK-NEXT:    br i1 [[C2_3_PROL]], label [[INNERLATCH_3_PROL:%.*]], label [[EXITB_LOOPEXIT_LOOPEXIT2]]
 ; CHECK:       innerLatch.3.prol:
 ; CHECK-NEXT:    br i1 false, label [[INNERH_PROL]], label [[OUTERLATCH_PROL]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       outerLatch.prol:
@@ -421,110 +431,142 @@ define void @test5(i1 %c) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi i32 [ [[TMP4_UNR]], [[BB1_NEW]] ], [ [[TMP6_3:%.*]], [[OUTERLATCH_3:%.*]] ]
 ; CHECK-NEXT:    br label [[INNERH:%.*]]
 ; CHECK:       innerH:
-; CHECK-NEXT:    br i1 [[C]], label [[INNEREXITING:%.*]], label [[OTHEREXITB_LOOPEXIT_LOOPEXIT:%.*]]
+; CHECK-NEXT:    [[C1:%.*]] = call i1 @unknown(i32 0)
+; CHECK-NEXT:    br i1 [[C1]], label [[INNEREXITING:%.*]], label [[OTHEREXITB_LOOPEXIT_LOOPEXIT:%.*]]
 ; CHECK:       innerexiting:
-; CHECK-NEXT:    br i1 [[C]], label [[INNERLATCH:%.*]], label [[EXITB_LOOPEXIT_LOOPEXIT_LOOPEXIT:%.*]]
+; CHECK-NEXT:    [[C2:%.*]] = call i1 @unknown(i32 0)
+; CHECK-NEXT:    br i1 [[C2]], label [[INNERLATCH:%.*]], label [[EXITB_LOOPEXIT_LOOPEXIT_LOOPEXIT:%.*]]
 ; CHECK:       innerLatch:
 ; CHECK-NEXT:    br i1 false, label [[INNERH_1:%.*]], label [[OUTERLATCH:%.*]]
 ; CHECK:       innerH.1:
-; CHECK-NEXT:    br i1 [[C]], label [[INNEREXITING_1:%.*]], label [[OTHEREXITB_LOOPEXIT_LOOPEXIT]]
+; CHECK-NEXT:    [[C1_1:%.*]] = call i1 @unknown(i32 0)
+; CHECK-NEXT:    br i1 [[C1_1]], label [[INNEREXITING_1:%.*]], label [[OTHEREXITB_LOOPEXIT_LOOPEXIT]]
 ; CHECK:       innerexiting.1:
-; CHECK-NEXT:    br i1 [[C]], label [[INNERLATCH_1:%.*]], label [[EXITB_LOOPEXIT_LOOPEXIT_LOOPEXIT]]
+; CHECK-NEXT:    [[C2_1:%.*]] = call i1 @unknown(i32 0)
+; CHECK-NEXT:    br i1 [[C2_1]], label [[INNERLATCH_1:%.*]], label [[EXITB_LOOPEXIT_LOOPEXIT_LOOPEXIT]]
 ; CHECK:       innerLatch.1:
 ; CHECK-NEXT:    br i1 false, label [[INNERH_2:%.*]], label [[OUTERLATCH]]
 ; CHECK:       innerH.2:
-; CHECK-NEXT:    br i1 [[C]], label [[INNEREXITING_2:%.*]], label [[OTHEREXITB_LOOPEXIT_LOOPEXIT]]
+; CHECK-NEXT:    [[C1_2:%.*]] = call i1 @unknown(i32 0)
+; CHECK-NEXT:    br i1 [[C1_2]], label [[INNEREXITING_2:%.*]], label [[OTHEREXITB_LOOPEXIT_LOOPEXIT]]
 ; CHECK:       innerexiting.2:
-; CHECK-NEXT:    br i1 [[C]], label [[INNERLATCH_2:%.*]], label [[EXITB_LOOPEXIT_LOOPEXIT_LOOPEXIT]]
+; CHECK-NEXT:    [[C2_2:%.*]] = call i1 @unknown(i32 0)
+; CHECK-NEXT:    br i1 [[C2_2]], label [[INNERLATCH_2:%.*]], label [[EXITB_LOOPEXIT_LOOPEXIT_LOOPEXIT]]
 ; CHECK:       innerLatch.2:
 ; CHECK-NEXT:    br i1 false, label [[INNERH_3:%.*]], label [[OUTERLATCH]]
 ; CHECK:       innerH.3:
-; CHECK-NEXT:    br i1 [[C]], label [[INNEREXITING_3:%.*]], label [[OTHEREXITB_LOOPEXIT_LOOPEXIT]]
+; CHECK-NEXT:    [[C1_3:%.*]] = call i1 @unknown(i32 0)
+; CHECK-NEXT:    br i1 [[C1_3]], label [[INNEREXITING_3:%.*]], label [[OTHEREXITB_LOOPEXIT_LOOPEXIT]]
 ; CHECK:       innerexiting.3:
-; CHECK-NEXT:    br i1 [[C]], label [[INNERLATCH_3:%.*]], label [[EXITB_LOOPEXIT_LOOPEXIT_LOOPEXIT]]
+; CHECK-NEXT:    [[C2_3:%.*]] = call i1 @unknown(i32 0)
+; CHECK-NEXT:    br i1 [[C2_3]], label [[INNERLATCH_3:%.*]], label [[EXITB_LOOPEXIT_LOOPEXIT_LOOPEXIT]]
 ; CHECK:       innerLatch.3:
 ; CHECK-NEXT:    br i1 false, label [[INNERH]], label [[OUTERLATCH]], !llvm.loop [[LOOP6]]
 ; CHECK:       outerLatch:
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[TMP4]], 1
-; CHECK-NEXT:    br label [[INNERH_13:%.*]]
-; CHECK:       innerH.13:
-; CHECK-NEXT:    br i1 [[C]], label [[INNEREXITING_14:%.*]], label [[OTHEREXITB_LOOPEXIT_LOOPEXIT12:%.*]]
-; CHECK:       innerexiting.14:
-; CHECK-NEXT:    br i1 [[C]], label [[INNERLATCH_15:%.*]], label [[EXITB_LOOPEXIT_LOOPEXIT_LOOPEXIT13:%.*]]
-; CHECK:       innerLatch.15:
+; CHECK-NEXT:    br label [[INNERH_14:%.*]]
+; CHECK:       innerH.14:
+; CHECK-NEXT:    [[C1_13:%.*]] = call i1 @unknown(i32 0)
+; CHECK-NEXT:    br i1 [[C1_13]], label [[INNEREXITING_16:%.*]], label [[OTHEREXITB_LOOPEXIT_LOOPEXIT18:%.*]]
+; CHECK:       innerexiting.16:
+; CHECK-NEXT:    [[C2_15:%.*]] = call i1 @unknown(i32 0)
+; CHECK-NEXT:    br i1 [[C2_15]], label [[INNERLATCH_17:%.*]], label [[EXITB_LOOPEXIT_LOOPEXIT_LOOPEXIT19:%.*]]
+; CHECK:       innerLatch.17:
 ; CHECK-NEXT:    br i1 false, label [[INNERH_1_1:%.*]], label [[OUTERLATCH_1:%.*]]
 ; CHECK:       innerH.1.1:
-; CHECK-NEXT:    br i1 [[C]], label [[INNEREXITING_1_1:%.*]], label [[OTHEREXITB_LOOPEXIT_LOOPEXIT12]]
+; CHECK-NEXT:    [[C1_1_1:%.*]] = call i1 @unknown(i32 0)
+; CHECK-NEXT:    br i1 [[C1_1_1]], label [[INNEREXITING_1_1:%.*]], label [[OTHEREXITB_LOOPEXIT_LOOPEXIT18]]
 ; CHECK:       innerexiting.1.1:
-; CHECK-NEXT:    br i1 [[C]], label [[INNERLATCH_1_1:%.*]], label [[EXITB_LOOPEXIT_LOOPEXIT_LOOPEXIT13]]
+; CHECK-NEXT:    [[C2_1_1:%.*]] = call i1 @unknown(i32 0)
+; CHECK-NEXT:    br i1 [[C2_1_1]], label [[INNERLATCH_1_1:%.*]], label [[EXITB_LOOPEXIT_LOOPEXIT_LOOPEXIT19]]
 ; CHECK:       innerLatch.1.1:
 ; CHECK-NEXT:    br i1 false, label [[INNERH_2_1:%.*]], label [[OUTERLATCH_1]]
 ; CHECK:       innerH.2.1:
-; CHECK-NEXT:    br i1 [[C]], label [[INNEREXITING_2_1:%.*]], label [[OTHEREXITB_LOOPEXIT_LOOPEXIT12]]
+; CHECK-NEXT:    [[C1_2_1:%.*]] = call i1 @unknown(i32 0)
+; CHECK-NEXT:    br i1 [[C1_2_1]], label [[INNEREXITING_2_1:%.*]], label [[OTHEREXITB_LOOPEXIT_LOOPEXIT18]]
 ; CHECK:       innerexiting.2.1:
-; CHECK-NEXT:    br i1 [[C]], label [[INNERLATCH_2_1:%.*]], label [[EXITB_LOOPEXIT_LOOPEXIT_LOOPEXIT13]]
+; CHECK-NEXT:    [[C2_2_1:%.*]] = call i1 @unknown(i32 0)
+; CHECK-NEXT:    br i1 [[C2_2_1]], label [[INNERLATCH_2_1:%.*]], label [[EXITB_LOOPEXIT_LOOPEXIT_LOOPEXIT19]]
 ; CHECK:       innerLatch.2.1:
 ; CHECK-NEXT:    br i1 false, label [[INNERH_3_1:%.*]], label [[OUTERLATCH_1]]
 ; CHECK:       innerH.3.1:
-; CHECK-NEXT:    br i1 [[C]], label [[INNEREXITING_3_1:%.*]], label [[OTHEREXITB_LOOPEXIT_LOOPEXIT12]]
+; CHECK-NEXT:    [[C1_3_1:%.*]] = call i1 @unknown(i32 0)
+; CHECK-NEXT:    br i1 [[C1_3_1]], label [[INNEREXITING_3_1:%.*]], label [[OTHEREXITB_LOOPEXIT_LOOPEXIT18]]
 ; CHECK:       innerexiting.3.1:
-; CHECK-NEXT:    br i1 [[C]], label [[INNERLATCH_3_1:%.*]], label [[EXITB_LOOPEXIT_LOOPEXIT_LOOPEXIT13]]
+; CHECK-NEXT:    [[C2_3_1:%.*]] = call i1 @unknown(i32 0)
+; CHECK-NEXT:    br i1 [[C2_3_1]], label [[INNERLATCH_3_1:%.*]], label [[EXITB_LOOPEXIT_LOOPEXIT_LOOPEXIT19]]
 ; CHECK:       innerLatch.3.1:
-; CHECK-NEXT:    br i1 false, label [[INNERH_13]], label [[OUTERLATCH_1]], !llvm.loop [[LOOP6]]
+; CHECK-NEXT:    br i1 false, label [[INNERH_14]], label [[OUTERLATCH_1]], !llvm.loop [[LOOP6]]
 ; CHECK:       outerLatch.1:
 ; CHECK-NEXT:    [[TMP6_1:%.*]] = add i32 [[TMP6]], 1
-; CHECK-NEXT:    br label [[INNERH_26:%.*]]
-; CHECK:       innerH.26:
-; CHECK-NEXT:    br i1 [[C]], label [[INNEREXITING_27:%.*]], label [[OTHEREXITB_LOOPEXIT_LOOPEXIT14:%.*]]
-; CHECK:       innerexiting.27:
-; CHECK-NEXT:    br i1 [[C]], label [[INNERLATCH_28:%.*]], label [[EXITB_LOOPEXIT_LOOPEXIT_LOOPEXIT15:%.*]]
-; CHECK:       innerLatch.28:
+; CHECK-NEXT:    br label [[INNERH_29:%.*]]
+; CHECK:       innerH.29:
+; CHECK-NEXT:    [[C1_28:%.*]] = call i1 @unknown(i32 0)
+; CHECK-NEXT:    br i1 [[C1_28]], label [[INNEREXITING_211:%.*]], label [[OTHEREXITB_LOOPEXIT_LOOPEXIT20:%.*]]
+; CHECK:       innerexiting.211:
+; CHECK-NEXT:    [[C2_210:%.*]] = call i1 @unknown(i32 0)
+; CHECK-NEXT:    br i1 [[C2_210]], label [[INNERLATCH_212:%.*]], label [[EXITB_LOOPEXIT_LOOPEXIT_LOOPEXIT21:%.*]]
+; CHECK:       innerLatch.212:
 ; CHECK-NEXT:    br i1 false, label [[INNERH_1_2:%.*]], label [[OUTERLATCH_2:%.*]]
 ; CHECK:       innerH.1.2:
-; CHECK-NEXT:    br i1 [[C]], label [[INNEREXITING_1_2:%.*]], label [[OTHEREXITB_LOOPEXIT_LOOPEXIT14]]
+; CHECK-NEXT:    [[C1_1_2:%.*]] = call i1 @unknown(i32 0)
+; CHECK-NEXT:    br i1 [[C1_1_2]], label [[INNEREXITING_1_2:%.*]], label [[OTHEREXITB_LOOPEXIT_LOOPEXIT20]]
 ; CHECK:       innerexiting.1.2:
-; CHECK-NEXT:    br i1 [[C]], label [[INNERLATCH_1_2:%.*]], label [[EXITB_LOOPEXIT_LOOPEXIT_LOOPEXIT15]]
+; CHECK-NEXT:    [[C2_1_2:%.*]] = call i1 @unknown(i32 0)
+; CHECK-NEXT:    br i1 [[C2_1_2]], label [[INNERLATCH_1_2:%.*]], label [[EXITB_LOOPEXIT_LOOPEXIT_LOOPEXIT21]]
 ; CHECK:       innerLatch.1.2:
 ; CHECK-NEXT:    br i1 false, label [[INNERH_2_2:%.*]], label [[OUTERLATCH_2]]
 ; CHECK:       innerH.2.2:
-; CHECK-NEXT:    br i1 [[C]], label [[INNEREXITING_2_2:%.*]], label [[OTHEREXITB_LOOPEXIT_LOOPEXIT14]]
+; CHECK-NEXT:    [[C1_2_2:%.*]] = call i1 @unknown(i32 0)
+; CHECK-NEXT:    br i1 [[C1_2_2]], label [[INNEREXITING_2_2:%.*]], label [[OTHEREXITB_LOOPEXIT_LOOPEXIT20]]
 ; CHECK:       innerexiting.2.2:
-; CHECK-NEXT:    br i1 [[C]], label [[INNERLATCH_2_2:%.*]], label [[EXITB_LOOPEXIT_LOOPEXIT_LOOPEXIT15]]
+; CHECK-NEXT:    [[C2_2_2:%.*]] = call i1 @unknown(i32 0)
+; CHECK-NEXT:    br i1 [[C2_2_2]], label [[INNERLATCH_2_2:%.*]], label [[EXITB_LOOPEXIT_LOOPEXIT_LOOPEXIT21]]
 ; CHECK:       innerLatch.2.2:
 ; CHECK-NEXT:    br i1 false, label [[INNERH_3_2:%.*]], label [[OUTERLATCH_2]]
 ; CHECK:       innerH.3.2:
-; CHECK-NEXT:    br i1 [[C]], label [[INNEREXITING_3_2:%.*]], label [[OTHEREXITB_LOOPEXIT_LOOPEXIT14]]
+; CHECK-NEXT:    [[C1_3_2:%.*]] = call i1 @unknown(i32 0)
+; CHECK-NEXT:    br i1 [[C1_3_2]], label [[INNEREXITING_3_2:%.*]], label [[OTHEREXITB_LOOPEXIT_LOOPEXIT20]]
 ; CHECK:       innerexiting.3.2:
-; CHECK-NEXT:    br i1 [[C]], label [[INNERLATCH_3_2:%.*]], label [[EXITB_LOOPEXIT_LOOPEXIT_LOOPEXIT15]]
+; CHECK-NEXT:    [[C2_3_2:%.*]] = call i1 @unknown(i32 0)
+; CHECK-NEXT:    br i1 [[C2_3_2]], label [[INNERLATCH_3_2:%.*]], label [[EXITB_LOOPEXIT_LOOPEXIT_LOOPEXIT21]]
 ; CHECK:       innerLatch.3.2:
-; CHECK-NEXT:    br i1 false, label [[INNERH_26]], label [[OUTERLATCH_2]], !llvm.loop [[LOOP6]]
+; CHECK-NEXT:    br i1 false, label [[INNERH_29]], label [[OUTERLATCH_2]], !llvm.loop [[LOOP6]]
 ; CHECK:       outerLatch.2:
 ; CHECK-NEXT:    [[TMP6_2:%.*]] = add i32 [[TMP6_1]], 1
-; CHECK-NEXT:    br label [[INNERH_39:%.*]]
-; CHECK:       innerH.39:
-; CHECK-NEXT:    br i1 [[C]], label [[INNEREXITING_310:%.*]], label [[OTHEREXITB_LOOPEXIT_LOOPEXIT16:%.*]]
-; CHECK:       innerexiting.310:
-; CHECK-NEXT:    br i1 [[C]], label [[INNERLATCH_311:%.*]], label [[EXITB_LOOPEXIT_LOOPEXIT_LOOPEXIT17:%.*]]
-; CHECK:       innerLatch.311:
+; CHECK-NEXT:    br label [[INNERH_314:%.*]]
+; CHECK:       innerH.314:
+; CHECK-NEXT:    [[C1_313:%.*]] = call i1 @unknown(i32 0)
+; CHECK-NEXT:    br i1 [[C1_313]], label [[INNEREXITING_316:%.*]], label [[OTHEREXITB_LOOPEXIT_LOOPEXIT22:%.*]]
+; CHECK:       innerexiting.316:
+; CHECK-NEXT:    [[C2_315:%.*]] = call i1 @unknown(i32 0)
+; CHECK-NEXT:    br i1 [[C2_315]], label [[INNERLATCH_317:%.*]], label [[EXITB_LOOPEXIT_LOOPEXIT_LOOPEXIT23:%.*]]
+; CHECK:       innerLatch.317:
 ; CHECK-NEXT:    br i1 false, label [[INNERH_1_3:%.*]], label [[OUTERLATCH_3]]
 ; CHECK:       innerH.1.3:
-; CHECK-NEXT:    br i1 [[C]], label [[INNEREXITING_1_3:%.*]], label [[OTHEREXITB_LOOPEXIT_LOOPEXIT16]]
+; CHECK-NEXT:    [[C1_1_3:%.*]] = call i1 @unknown(i32 0)
+; CHECK-NEXT:    br i1 [[C1_1_3]], label [[INNEREXITING_1_3:%.*]], label [[OTHEREXITB_LOOPEXIT_LOOPEXIT22]]
 ; CHECK:       innerexiting.1.3:
-; CHECK-NEXT:    br i1 [[C]], label [[INNERLATCH_1_3:%.*]], label [[EXITB_LOOPEXIT_LOOPEXIT_LOOPEXIT17]]
+; CHECK-NEXT:    [[C2_1_3:%.*]] = call i1 @unknown(i32 0)
+; CHECK-NEXT:    br i1 [[C2_1_3]], label [[INNERLATCH_1_3:%.*]], label [[EXITB_LOOPEXIT_LOOPEXIT_LOOPEXIT23]]
 ; CHECK:       innerLatch.1.3:
 ; CHECK-NEXT:    br i1 false, label [[INNERH_2_3:%.*]], label [[OUTERLATCH_3]]
 ; CHECK:       innerH.2.3:
-; CHECK-NEXT:    br i1 [[C]], label [[INNEREXITING_2_3:%.*]], label [[OTHEREXITB_LOOPEXIT_LOOPEXIT16]]
+; CHECK-NEXT:    [[C1_2_3:%.*]] = call i1 @unknown(i32 0)
+; CHECK-NEXT:    br i1 [[C1_2_3]], label [[INNEREXITING_2_3:%.*]], label [[OTHEREXITB_LOOPEXIT_LOOPEXIT22]]
 ; CHECK:       innerexiting.2.3:
-; CHECK-NEXT:    br i1 [[C]], label [[INNERLATCH_2_3:%.*]], label [[EXITB_LOOPEXIT_LOOPEXIT_LOOPEXIT17]]
+; CHECK-NEXT:    [[C2_2_3:%.*]] = call i1 @unknown(i32 0)
+; CHECK-NEXT:    br i1 [[C2_2_3]], label [[INNERLATCH_2_3:%.*]], label [[EXITB_LOOPEXIT_LOOPEXIT_LOOPEXIT23]]
 ; CHECK:       innerLatch.2.3:
 ; CHECK-NEXT:    br i1 false, label [[INNERH_3_3:%.*]], label [[OUTERLATCH_3]]
 ; CHECK:       innerH.3.3:
-; CHECK-NEXT:    br i1 [[C]], label [[INNEREXITING_3_3:%.*]], label [[OTHEREXITB_LOOPEXIT_LOOPEXIT16]]
+; CHECK-NEXT:    [[C1_3_3:%.*]] = call i1 @unknown(i32 0)
+; CHECK-NEXT:    br i1 [[C1_3_3]], label [[INNEREXITING_3_3:%.*]], label [[OTHEREXITB_LOOPEXIT_LOOPEXIT22]]
 ; CHECK:       innerexiting.3.3:
-; CHECK-NEXT:    br i1 [[C]], label [[INNERLATCH_3_3:%.*]], label [[EXITB_LOOPEXIT_LOOPEXIT_LOOPEXIT17]]
+; CHECK-NEXT:    [[C2_3_3:%.*]] = call i1 @unknown(i32 0)
+; CHECK-NEXT:    br i1 [[C2_3_3]], label [[INNERLATCH_3_3:%.*]], label [[EXITB_LOOPEXIT_LOOPEXIT_LOOPEXIT23]]
 ; CHECK:       innerLatch.3.3:
-; CHECK-NEXT:    br i1 false, label [[INNERH_39]], label [[OUTERLATCH_3]], !llvm.loop [[LOOP6]]
+; CHECK-NEXT:    br i1 false, label [[INNERH_314]], label [[OUTERLATCH_3]], !llvm.loop [[LOOP6]]
 ; CHECK:       outerLatch.3:
 ; CHECK-NEXT:    [[TMP6_3]] = add i32 [[TMP6_2]], 1
 ; CHECK-NEXT:    [[TMP7_3:%.*]] = icmp sgt i32 [[TMP6_3]], 79
@@ -537,11 +579,11 @@ define void @test5(i1 %c) {
 ; CHECK-NEXT:    ret void
 ; CHECK:       exitB.loopexit.loopexit.loopexit:
 ; CHECK-NEXT:    br label [[EXITB_LOOPEXIT_LOOPEXIT:%.*]]
-; CHECK:       exitB.loopexit.loopexit.loopexit13:
+; CHECK:       exitB.loopexit.loopexit.loopexit19:
 ; CHECK-NEXT:    br label [[EXITB_LOOPEXIT_LOOPEXIT]]
-; CHECK:       exitB.loopexit.loopexit.loopexit15:
+; CHECK:       exitB.loopexit.loopexit.loopexit21:
 ; CHECK-NEXT:    br label [[EXITB_LOOPEXIT_LOOPEXIT]]
-; CHECK:       exitB.loopexit.loopexit.loopexit17:
+; CHECK:       exitB.loopexit.loopexit.loopexit23:
 ; CHECK-NEXT:    br label [[EXITB_LOOPEXIT_LOOPEXIT]]
 ; CHECK:       exitB.loopexit.loopexit:
 ; CHECK-NEXT:    br label [[EXITB_LOOPEXIT:%.*]]
@@ -553,11 +595,11 @@ define void @test5(i1 %c) {
 ; CHECK-NEXT:    ret void
 ; CHECK:       otherexitB.loopexit.loopexit:
 ; CHECK-NEXT:    br label [[OTHEREXITB_LOOPEXIT:%.*]]
-; CHECK:       otherexitB.loopexit.loopexit12:
+; CHECK:       otherexitB.loopexit.loopexit18:
 ; CHECK-NEXT:    br label [[OTHEREXITB_LOOPEXIT]]
-; CHECK:       otherexitB.loopexit.loopexit14:
+; CHECK:       otherexitB.loopexit.loopexit20:
 ; CHECK-NEXT:    br label [[OTHEREXITB_LOOPEXIT]]
-; CHECK:       otherexitB.loopexit.loopexit16:
+; CHECK:       otherexitB.loopexit.loopexit22:
 ; CHECK-NEXT:    br label [[OTHEREXITB_LOOPEXIT]]
 ; CHECK:       otherexitB.loopexit:
 ; CHECK-NEXT:    br label [[OTHEREXITB:%.*]]
@@ -578,10 +620,12 @@ outerH:                                              ; preds = %outerLatch, %bb1
   br label %innerH
 
 innerH:                                              ; preds = %innerLatch, %outerH
-  br i1 %c, label %innerexiting, label %otherexitB
+  %c1 = call i1 @unknown(i32 0)
+  br i1 %c1, label %innerexiting, label %otherexitB
 
 innerexiting:                                             ; preds = %innerH
-  br i1 %c, label %innerLatch, label %exitB
+  %c2 = call i1 @unknown(i32 0)
+  br i1 %c2, label %innerLatch, label %exitB
 
 innerLatch:                                             ; preds = %innerexiting
   %tmp13 = fcmp olt double undef, 2.000000e+00
@@ -605,26 +649,29 @@ otherexitB:                                              ; preds = %innerH
 
 ; Blocks reachable from exits (not_zero44) have the IDom as the block within the loop (Header).
 ; Update the IDom to the preheader.
-define void @test6(i1 %c) {
+define void @test6(i64 %start) {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 undef, i64 616)
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[SMAX]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], undef
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = add nuw i64 [[TMP2]], 1
-; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[TMP3]], 3
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[START:%.*]], 2
+; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[TMP0]], i64 616)
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[SMAX]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], [[START]]
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = add nuw i64 [[TMP3]], 1
+; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[TMP4]], 3
 ; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
 ; CHECK-NEXT:    br i1 [[LCMP_MOD]], label [[HEADER_PROL_PREHEADER:%.*]], label [[HEADER_PROL_LOOPEXIT:%.*]]
 ; CHECK:       header.prol.preheader:
 ; CHECK-NEXT:    br label [[HEADER_PROL:%.*]]
 ; CHECK:       header.prol:
-; CHECK-NEXT:    [[INDVARS_IV_PROL:%.*]] = phi i64 [ undef, [[HEADER_PROL_PREHEADER]] ], [ [[INDVARS_IV_NEXT_PROL:%.*]], [[LATCH_PROL:%.*]] ]
+; CHECK-NEXT:    [[INDVARS_IV_PROL:%.*]] = phi i64 [ [[START]], [[HEADER_PROL_PREHEADER]] ], [ [[INDVARS_IV_NEXT_PROL:%.*]], [[LATCH_PROL:%.*]] ]
 ; CHECK-NEXT:    [[PROL_ITER:%.*]] = phi i64 [ 0, [[HEADER_PROL_PREHEADER]] ], [ [[PROL_ITER_NEXT:%.*]], [[LATCH_PROL]] ]
-; CHECK-NEXT:    br i1 [[C:%.*]], label [[LATCH_PROL]], label [[OTHEREXIT_LOOPEXIT1:%.*]]
+; CHECK-NEXT:    [[IV_I32_PROL:%.*]] = trunc i64 [[INDVARS_IV_PROL]] to i32
+; CHECK-NEXT:    [[C1_PROL:%.*]] = call i1 @unknown(i32 [[IV_I32_PROL]])
+; CHECK-NEXT:    br i1 [[C1_PROL]], label [[LATCH_PROL]], label [[OTHEREXIT_LOOPEXIT1:%.*]]
 ; CHECK:       latch.prol:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_PROL]] = add nsw i64 [[INDVARS_IV_PROL]], 2
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT_PROL]], 616
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT_PROL]], 616
 ; CHECK-NEXT:    [[PROL_ITER_NEXT]] = add i64 [[PROL_ITER]], 1
 ; CHECK-NEXT:    [[PROL_ITER_CMP:%.*]] = icmp ne i64 [[PROL_ITER_NEXT]], [[XTRAITER]]
 ; CHECK-NEXT:    br i1 [[PROL_ITER_CMP]], label [[HEADER_PROL]], label [[HEADER_PROL_LOOPEXIT_UNR_LCSSA:%.*]], !llvm.loop [[LOOP9:![0-9]+]]
@@ -632,27 +679,35 @@ define void @test6(i1 %c) {
 ; CHECK-NEXT:    [[INDVARS_IV_UNR_PH:%.*]] = phi i64 [ [[INDVARS_IV_NEXT_PROL]], [[LATCH_PROL]] ]
 ; CHECK-NEXT:    br label [[HEADER_PROL_LOOPEXIT]]
 ; CHECK:       header.prol.loopexit:
-; CHECK-NEXT:    [[INDVARS_IV_UNR:%.*]] = phi i64 [ undef, [[ENTRY:%.*]] ], [ [[INDVARS_IV_UNR_PH]], [[HEADER_PROL_LOOPEXIT_UNR_LCSSA]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP2]], 3
-; CHECK-NEXT:    br i1 [[TMP5]], label [[LATCHEXIT:%.*]], label [[ENTRY_NEW:%.*]]
+; CHECK-NEXT:    [[INDVARS_IV_UNR:%.*]] = phi i64 [ [[START]], [[ENTRY:%.*]] ], [ [[INDVARS_IV_UNR_PH]], [[HEADER_PROL_LOOPEXIT_UNR_LCSSA]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult i64 [[TMP3]], 3
+; CHECK-NEXT:    br i1 [[TMP6]], label [[LATCHEXIT:%.*]], label [[ENTRY_NEW:%.*]]
 ; CHECK:       entry.new:
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_UNR]], [[ENTRY_NEW]] ], [ [[INDVARS_IV_NEXT_3:%.*]], [[LATCH_3:%.*]] ]
-; CHECK-NEXT:    br i1 [[C]], label [[LATCH:%.*]], label [[OTHEREXIT_LOOPEXIT:%.*]]
+; CHECK-NEXT:    [[IV_I32:%.*]] = trunc i64 [[INDVARS_IV]] to i32
+; CHECK-NEXT:    [[C1:%.*]] = call i1 @unknown(i32 [[IV_I32]])
+; CHECK-NEXT:    br i1 [[C1]], label [[LATCH:%.*]], label [[OTHEREXIT_LOOPEXIT:%.*]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT:%.*]] = add nsw i64 [[INDVARS_IV]], 2
-; CHECK-NEXT:    br i1 [[C]], label [[LATCH_1:%.*]], label [[OTHEREXIT_LOOPEXIT]]
+; CHECK-NEXT:    [[IV_I32_1:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
+; CHECK-NEXT:    [[C1_1:%.*]] = call i1 @unknown(i32 [[IV_I32_1]])
+; CHECK-NEXT:    br i1 [[C1_1]], label [[LATCH_1:%.*]], label [[OTHEREXIT_LOOPEXIT]]
 ; CHECK:       latch.1:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_1:%.*]] = add nsw i64 [[INDVARS_IV_NEXT]], 2
-; CHECK-NEXT:    br i1 [[C]], label [[LATCH_2:%.*]], label [[OTHEREXIT_LOOPEXIT]]
+; CHECK-NEXT:    [[IV_I32_2:%.*]] = trunc i64 [[INDVARS_IV_NEXT_1]] to i32
+; CHECK-NEXT:    [[C1_2:%.*]] = call i1 @unknown(i32 [[IV_I32_2]])
+; CHECK-NEXT:    br i1 [[C1_2]], label [[LATCH_2:%.*]], label [[OTHEREXIT_LOOPEXIT]]
 ; CHECK:       latch.2:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_2:%.*]] = add nsw i64 [[INDVARS_IV_NEXT_1]], 2
-; CHECK-NEXT:    br i1 [[C]], label [[LATCH_3]], label [[OTHEREXIT_LOOPEXIT]]
+; CHECK-NEXT:    [[IV_I32_3:%.*]] = trunc i64 [[INDVARS_IV_NEXT_2]] to i32
+; CHECK-NEXT:    [[C1_3:%.*]] = call i1 @unknown(i32 [[IV_I32_3]])
+; CHECK-NEXT:    br i1 [[C1_3]], label [[LATCH_3]], label [[OTHEREXIT_LOOPEXIT]]
 ; CHECK:       latch.3:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_3]] = add nsw i64 [[INDVARS_IV_NEXT_2]], 2
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT_3]], 616
-; CHECK-NEXT:    br i1 [[TMP6]], label [[HEADER]], label [[LATCHEXIT_UNR_LCSSA:%.*]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT_3]], 616
+; CHECK-NEXT:    br i1 [[TMP7]], label [[HEADER]], label [[LATCHEXIT_UNR_LCSSA:%.*]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       latchexit.unr-lcssa:
 ; CHECK-NEXT:    br label [[LATCHEXIT]]
 ; CHECK:       latchexit:
@@ -674,8 +729,10 @@ entry:
   br label %header
 
 header:                                          ; preds = %latch, %entry
-  %indvars.iv = phi i64 [ undef, %entry ], [ %indvars.iv.next, %latch ]
-  br i1 %c, label %latch, label %otherexit
+  %indvars.iv = phi i64 [ %start, %entry ], [ %indvars.iv.next, %latch ]
+  %iv.i32 = trunc i64 %indvars.iv to i32
+  %c1 = call i1 @unknown(i32 %iv.i32)
+  br i1 %c1, label %latch, label %otherexit
 
 latch:                                         ; preds = %header
   %indvars.iv.next = add nsw i64 %indvars.iv, 2

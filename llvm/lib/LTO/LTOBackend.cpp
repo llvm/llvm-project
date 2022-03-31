@@ -37,8 +37,8 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
-#include "llvm/Support/SmallVectorMemoryBuffer.h"
 #include "llvm/Support/ThreadPool.h"
+#include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/IPO.h"
@@ -145,7 +145,7 @@ Error Config::addSaveTemps(std::string OutputFileName,
         // directly and exit.
         if (EC)
           reportOpenError(Path, EC.message());
-        WriteIndexToFile(Index, OS);
+        writeIndexToFile(Index, OS);
 
         Path = OutputFileName + "index.dot";
         raw_fd_ostream OSDot(Path, EC, sys::fs::OpenFlags::OF_None);
@@ -230,8 +230,7 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
     PGOOpt = PGOOptions("", "", "", PGOOptions::NoAction,
                         PGOOptions::NoCSAction, true);
   }
-  if (TM)
-    TM->setPGOOption(PGOOpt);
+  TM->setPGOOption(PGOOpt);
 
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;
@@ -299,6 +298,8 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
       report_fatal_error(Twine("unable to parse pass pipeline description '") +
                          Conf.OptPipeline + "': " + toString(std::move(Err)));
     }
+  } else if (Conf.UseDefaultPipeline) {
+    MPM.addPass(PB.buildPerModuleDefaultPipeline(OL));
   } else if (IsThinLTO) {
     MPM.addPass(PB.buildThinLTODefaultPipeline(OL, ImportSummary));
   } else {
@@ -361,7 +362,7 @@ bool lto::opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
       LLVM_DEBUG(
           dbgs() << "Post-(Thin)LTO merge bitcode embedding was requested, but "
                     "command line arguments are not available");
-    llvm::EmbedBitcodeInModule(Mod, llvm::MemoryBufferRef(),
+    llvm::embedBitcodeInModule(Mod, llvm::MemoryBufferRef(),
                                /*EmbedBitcode*/ true, /*EmbedCmdline*/ true,
                                /*Cmdline*/ CmdArgs);
   }
@@ -382,7 +383,7 @@ static void codegen(const Config &Conf, TargetMachine *TM,
     return;
 
   if (EmbedBitcode == LTOBitcodeEmbedding::EmbedOptimized)
-    llvm::EmbedBitcodeInModule(Mod, llvm::MemoryBufferRef(),
+    llvm::embedBitcodeInModule(Mod, llvm::MemoryBufferRef(),
                                /*EmbedBitcode*/ true,
                                /*EmbedCmdline*/ false,
                                /*CmdArgs*/ std::vector<uint8_t>());
@@ -413,7 +414,11 @@ static void codegen(const Config &Conf, TargetMachine *TM,
   if (Error Err = StreamOrErr.takeError())
     report_fatal_error(std::move(Err));
   std::unique_ptr<CachedFileStream> &Stream = *StreamOrErr;
+  TM->Options.ObjectFilenameForDebug = Stream->ObjectPathName;
+
   legacy::PassManager CodeGenPasses;
+  TargetLibraryInfoImpl TLII(Triple(Mod.getTargetTriple()));
+  CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
   CodeGenPasses.add(
       createImmutableModuleSummaryIndexWrapperPass(&CombinedIndex));
   if (Conf.PreCodeGenPassesHook)

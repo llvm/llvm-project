@@ -142,8 +142,8 @@ define void @test4(i32 %n) personality i32 (...)* @__FrameHandler {
 ; CHECK-NEXT:    .cfi_lsda 0, .Lexception0
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    stp x30, x21, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w21, -24
@@ -214,10 +214,9 @@ define void @test5([65536 x i32]** %s, i32 %n) {
 ; CHECK-LABEL: test5:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr x9, [x0]
-; CHECK-NEXT:    mov w10, #14464
-; CHECK-NEXT:    movk w10, #1, lsl #16
 ; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:    add x9, x9, x10
+; CHECK-NEXT:    add x9, x9, #19, lsl #12 // =77824
+; CHECK-NEXT:    add x9, x9, #2176
 ; CHECK-NEXT:    cmp w8, w1
 ; CHECK-NEXT:    b.ge .LBB4_2
 ; CHECK-NEXT:  .LBB4_1: // %while_body

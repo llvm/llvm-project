@@ -30,6 +30,6 @@
 
 // expected-no-diagnostics
 @import module_a;
-int test() {
+int test(void) {
   return a;
 }

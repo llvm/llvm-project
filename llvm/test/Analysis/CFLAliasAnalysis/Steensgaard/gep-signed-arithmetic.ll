@@ -1,4 +1,4 @@
-; RUN: opt < %s -disable-basic-aa -cfl-steens-aa -aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -aa-pipeline=cfl-steens-aa -passes=aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s
 ; Derived from BasicAA/2010-09-15-GEP-SignedArithmetic.ll
 
 target datalayout = "e-p:32:32:32"

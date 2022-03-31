@@ -1,13 +1,13 @@
 ; Skip dead MemoryPhis when performing memory congruency verification
 ; in NewGVN.
-; RUN: opt -S -newgvn %s | FileCheck %s
+; RUN: opt -S -passes=newgvn %s | FileCheck %s
 ; REQUIRES: asserts
 
 ; CHECK: define void @tinkywinky() {
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT:   br i1 false, label %body, label %end
 ; CHECK:      body:
-; CHECK-NEXT:   store i8 undef, i8* null
+; CHECK-NEXT:   store i8 poison, i8* null
 ; CHECK-NEXT:   br label %end
 ; CHECK:      end:
 ; CHECK-NEXT:   ret void

@@ -1,4 +1,4 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -verify-machineinstrs < %s | FileCheck %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck %s
 
 ; CHECK-LABEL: {{^}}phi1:
@@ -213,13 +213,13 @@ ENDIF:                                            ; preds = %LOOP
 ; CHECK-LABEL: {{^}}sample_v3:
 ; CHECK: v_mov_b32_e32 v[[SAMPLE_LO:[0-9]+]], 5
 ; CHECK: v_mov_b32_e32 v[[SAMPLE_HI:[0-9]+]], 7
-; CHECK: s_branch
+; CHECK: s_cbranch
 
 ; CHECK: BB{{[0-9]+_[0-9]+}}:
 ; CHECK-DAG: v_mov_b32_e32 v[[SAMPLE_LO:[0-9]+]], 11
 ; CHECK-DAG: v_mov_b32_e32 v[[SAMPLE_HI:[0-9]+]], 13
 
-; CHECK: image_sample v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[SAMPLE_LO]]:[[SAMPLE_HI]]{{\]}}
+; CHECK: image_sample v{{\[[0-9]+:[0-9]+\]}}, v[[[SAMPLE_LO]]:[[SAMPLE_HI]]]
 ; CHECK: exp
 ; CHECK: s_endpgm
 define amdgpu_ps void @sample_v3([17 x <4 x i32>] addrspace(4)* inreg %arg, [32 x <4 x i32>] addrspace(4)* inreg %arg1, [16 x <8 x i32>] addrspace(4)* inreg %arg2, float inreg %arg3, i32 inreg %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <3 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19, float %arg20) #0 {
@@ -315,13 +315,15 @@ ENDIF69:                                          ; preds = %LOOP68
 ; CHECK-LABEL:{{^}}sample_rsrc
 
 ; CHECK: s_cmp_eq_u32
-; CHECK: s_cbranch_scc0 [[END:.LBB[0-9]+_[0-9]+]]
+; CHECK: s_cbranch_scc1 [[END:.LBB[0-9]+_[0-9]+]]
 
-; CHECK: v_add_{{[iu]}}32_e32 v[[ADD:[0-9]+]], vcc, 1, v{{[0-9]+}}
+; CHECK: image_sample v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}
+; CHECK: s_endpgm
 
 ; [[END]]:
-; CHECK: image_sample v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+}}:[[ADD]]{{\]}}
-; CHECK: s_endpgm
+; CHECK: v_add_{{[iu]}}32_e32 v[[ADD:[0-9]+]], vcc, 1, v{{[0-9]+}}
+; CHECK: image_sample v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+}}:[[ADD]]]
+; CHECK: s_branch
 define amdgpu_ps void @sample_rsrc([6 x <4 x i32>] addrspace(4)* inreg %arg, [17 x <4 x i32>] addrspace(4)* inreg %arg1, [16 x <4 x i32>] addrspace(4)* inreg %arg2, [32 x <8 x i32>] addrspace(4)* inreg %arg3, float inreg %arg4, i32 inreg %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <2 x i32> %arg8, <3 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, <2 x i32> %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, i32 %arg19, float %arg20, float %arg21) #0 {
 bb:
   %tmp = getelementptr [17 x <4 x i32>], [17 x <4 x i32>] addrspace(4)* %arg1, i32 0, i32 0

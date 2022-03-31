@@ -17,7 +17,7 @@ Clang Formatted Status
 ======================
 
 :doc:`ClangFormattedStatus` describes the state of LLVM source
-tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:36:33 (`976bb4724c04 <https://github.com/llvm/llvm-project/commit/976bb4724c04>`_).
+tree in terms of conformance to :doc:`ClangFormat` as of: March 06, 2022 17:32:26 (`830ba4cebe79 <https://github.com/llvm/llvm-project/commit/830ba4cebe79>`_).
 
 
 .. list-table:: LLVM Clang-Format Status
@@ -29,6 +29,106 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - Formatted Files
      - Unformatted Files
      - % Complete
+   * - bolt/include/bolt/Core
+     - `15`
+     - `10`
+     - `5`
+     - :part:`66%`
+   * - bolt/include/bolt/Passes
+     - `47`
+     - `47`
+     - `0`
+     - :good:`100%`
+   * - bolt/include/bolt/Profile
+     - `8`
+     - `8`
+     - `0`
+     - :good:`100%`
+   * - bolt/include/bolt/Rewrite
+     - `5`
+     - `4`
+     - `1`
+     - :part:`80%`
+   * - bolt/include/bolt/RuntimeLibs
+     - `3`
+     - `3`
+     - `0`
+     - :good:`100%`
+   * - bolt/include/bolt/Utils
+     - `4`
+     - `4`
+     - `0`
+     - :good:`100%`
+   * - bolt/lib/Core
+     - `14`
+     - `5`
+     - `9`
+     - :part:`35%`
+   * - bolt/lib/Passes
+     - `45`
+     - `21`
+     - `24`
+     - :part:`46%`
+   * - bolt/lib/Profile
+     - `7`
+     - `3`
+     - `4`
+     - :part:`42%`
+   * - bolt/lib/Rewrite
+     - `6`
+     - `0`
+     - `6`
+     - :none:`0%`
+   * - bolt/lib/RuntimeLibs
+     - `3`
+     - `3`
+     - `0`
+     - :good:`100%`
+   * - bolt/lib/Target/AArch64
+     - `1`
+     - `0`
+     - `1`
+     - :none:`0%`
+   * - bolt/lib/Target/X86
+     - `1`
+     - `0`
+     - `1`
+     - :none:`0%`
+   * - bolt/lib/Utils
+     - `2`
+     - `1`
+     - `1`
+     - :part:`50%`
+   * - bolt/runtime
+     - `3`
+     - `0`
+     - `3`
+     - :none:`0%`
+   * - bolt/tools/driver
+     - `1`
+     - `0`
+     - `1`
+     - :none:`0%`
+   * - bolt/tools/heatmap
+     - `1`
+     - `1`
+     - `0`
+     - :good:`100%`
+   * - bolt/tools/llvm-bolt-fuzzer
+     - `1`
+     - `1`
+     - `0`
+     - :good:`100%`
+   * - bolt/tools/merge-fdata
+     - `1`
+     - `0`
+     - `1`
+     - :none:`0%`
+   * - bolt/unittests/Core
+     - `1`
+     - `1`
+     - `0`
+     - :good:`100%`
    * - clang/bindings/python/tests/cindex/INPUTS
      - `5`
      - `3`
@@ -80,10 +180,10 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `2`
      - :none:`0%`
    * - clang/include/clang/Analysis/FlowSensitive
-     - `2`
+     - `16`
+     - `15`
      - `1`
-     - `1`
-     - :part:`50%`
+     - :part:`93%`
    * - clang/include/clang/Analysis/Support
      - `1`
      - `0`
@@ -251,12 +351,12 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :none:`0%`
    * - clang/include/clang/Tooling/DependencyScanning
      - `5`
-     - `4`
-     - `1`
-     - :part:`80%`
+     - `5`
+     - `0`
+     - :good:`100%`
    * - clang/include/clang/Tooling/Inclusions
-     - `2`
-     - `2`
+     - `3`
+     - `3`
      - `0`
      - :good:`100%`
    * - clang/include/clang/Tooling/Refactoring
@@ -266,15 +366,20 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :part:`80%`
    * - clang/include/clang/Tooling/Refactoring/Extract
      - `2`
-     - `1`
-     - `1`
-     - :part:`50%`
+     - `2`
+     - `0`
+     - :good:`100%`
    * - clang/include/clang/Tooling/Refactoring/Rename
      - `6`
      - `5`
      - `1`
      - :part:`83%`
    * - clang/include/clang/Tooling/Syntax
+     - `5`
+     - `5`
+     - `0`
+     - :good:`100%`
+   * - clang/include/clang/Tooling/Syntax/Pseudo
      - `5`
      - `5`
      - `0`
@@ -296,9 +401,14 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :none:`0%`
    * - clang/lib/Analysis
      - `28`
-     - `4`
-     - `24`
-     - :part:`14%`
+     - `3`
+     - `25`
+     - :part:`10%`
+   * - clang/lib/Analysis/FlowSensitive
+     - `7`
+     - `7`
+     - `0`
+     - :good:`100%`
    * - clang/lib/Analysis/plugins/CheckerDependencyHandling
      - `1`
      - `1`
@@ -356,9 +466,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :part:`50%`
    * - clang/lib/CodeGen
      - `87`
-     - `10`
-     - `77`
-     - :part:`11%`
+     - `9`
+     - `78`
+     - :part:`10%`
    * - clang/lib/CrossTU
      - `1`
      - `0`
@@ -395,10 +505,10 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `12`
      - :part:`14%`
    * - clang/lib/Driver/ToolChains
-     - `91`
-     - `36`
-     - `55`
-     - :part:`39%`
+     - `94`
+     - `41`
+     - `53`
+     - :part:`43%`
    * - clang/lib/Driver/ToolChains/Arch
      - `20`
      - `7`
@@ -410,15 +520,15 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `3`
      - :none:`0%`
    * - clang/lib/Format
-     - `33`
-     - `33`
+     - `35`
+     - `35`
      - `0`
      - :good:`100%`
    * - clang/lib/Frontend
      - `32`
-     - `3`
-     - `29`
-     - :part:`9%`
+     - `4`
+     - `28`
+     - :part:`12%`
    * - clang/lib/Frontend/Rewrite
      - `8`
      - `0`
@@ -430,10 +540,10 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `1`
      - :none:`0%`
    * - clang/lib/Headers
-     - `145`
-     - `15`
-     - `130`
-     - :part:`10%`
+     - `146`
+     - `14`
+     - `132`
+     - :part:`9%`
    * - clang/lib/Headers/openmp_wrappers
      - `5`
      - `4`
@@ -460,9 +570,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - clang/lib/Lex
-     - `23`
+     - `24`
      - `1`
-     - `22`
+     - `23`
      - :part:`4%`
    * - clang/lib/Parse
      - `15`
@@ -485,10 +595,10 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `15`
      - :part:`11%`
    * - clang/lib/StaticAnalyzer/Checkers
-     - `118`
-     - `16`
-     - `102`
-     - :part:`13%`
+     - `122`
+     - `19`
+     - `103`
+     - :part:`15%`
    * - clang/lib/StaticAnalyzer/Checkers/cert
      - `2`
      - `2`
@@ -546,17 +656,17 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :none:`0%`
    * - clang/lib/Tooling/DependencyScanning
      - `5`
-     - `2`
-     - `3`
-     - :part:`40%`
+     - `4`
+     - `1`
+     - :part:`80%`
    * - clang/lib/Tooling/DumpTool
      - `4`
      - `3`
      - `1`
      - :part:`75%`
    * - clang/lib/Tooling/Inclusions
-     - `2`
-     - `2`
+     - `3`
+     - `3`
      - `0`
      - :good:`100%`
    * - clang/lib/Tooling/Refactoring
@@ -579,6 +689,11 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `6`
      - `1`
      - :part:`85%`
+   * - clang/lib/Tooling/Syntax/Pseudo
+     - `8`
+     - `8`
+     - `0`
+     - :good:`100%`
    * - clang/lib/Tooling/Transformer
      - `7`
      - `4`
@@ -664,6 +779,11 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - `1`
      - :none:`0%`
+   * - clang/tools/clang-linker-wrapper
+     - `3`
+     - `2`
+     - `1`
+     - :part:`66%`
    * - clang/tools/clang-nvlink-wrapper
      - `1`
      - `1`
@@ -675,6 +795,11 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `1`
      - :none:`0%`
    * - clang/tools/clang-offload-wrapper
+     - `1`
+     - `1`
+     - `0`
+     - :good:`100%`
+   * - clang/tools/clang-pseudo
      - `1`
      - `1`
      - `0`
@@ -729,6 +854,11 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `2`
      - `4`
      - :part:`33%`
+   * - clang/unittests/Analysis/FlowSensitive
+     - `14`
+     - `13`
+     - `1`
+     - :part:`92%`
    * - clang/unittests/AST
      - `30`
      - `8`
@@ -770,8 +900,8 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `4`
      - :part:`20%`
    * - clang/unittests/Format
-     - `23`
-     - `23`
+     - `24`
+     - `24`
      - `0`
      - :good:`100%`
    * - clang/unittests/Frontend
@@ -800,10 +930,10 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `1`
      - :none:`0%`
    * - clang/unittests/Lex
-     - `7`
-     - `3`
+     - `8`
      - `4`
-     - :part:`42%`
+     - `4`
+     - :part:`50%`
    * - clang/unittests/libclang
      - `2`
      - `0`
@@ -840,10 +970,10 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `9`
      - :part:`43%`
    * - clang/unittests/Tooling
-     - `29`
-     - `8`
-     - `21`
-     - :part:`27%`
+     - `30`
+     - `10`
+     - `20`
+     - :part:`33%`
    * - clang/unittests/Tooling/RecursiveASTVisitorTests
      - `30`
      - `12`
@@ -854,6 +984,11 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `3`
      - `4`
      - :part:`42%`
+   * - clang/unittests/Tooling/Syntax/Pseudo
+     - `4`
+     - `4`
+     - `0`
+     - :good:`100%`
    * - clang/utils/perf-training/cxx
      - `1`
      - `0`
@@ -901,9 +1036,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :good:`100%`
    * - clang-tools-extra/clang-include-fixer
      - `13`
-     - `7`
-     - `6`
-     - :part:`53%`
+     - `8`
+     - `5`
+     - :part:`61%`
    * - clang-tools-extra/clang-include-fixer/find-all-symbols
      - `17`
      - `13`
@@ -955,15 +1090,15 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `1`
      - :none:`0%`
    * - clang-tools-extra/clang-tidy
-     - `18`
-     - `11`
-     - `7`
-     - :part:`61%`
+     - `20`
+     - `14`
+     - `6`
+     - :part:`70%`
    * - clang-tools-extra/clang-tidy/abseil
      - `42`
-     - `30`
-     - `12`
-     - :part:`71%`
+     - `31`
+     - `11`
+     - :part:`73%`
    * - clang-tools-extra/clang-tidy/altera
      - `11`
      - `9`
@@ -980,10 +1115,10 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - clang-tools-extra/clang-tidy/bugprone
-     - `119`
-     - `99`
-     - `20`
-     - :part:`83%`
+     - `125`
+     - `106`
+     - `19`
+     - :part:`84%`
    * - clang-tools-extra/clang-tidy/cert
      - `29`
      - `28`
@@ -996,9 +1131,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :part:`80%`
    * - clang-tools-extra/clang-tidy/cppcoreguidelines
      - `45`
-     - `41`
-     - `4`
-     - :part:`91%`
+     - `42`
+     - `3`
+     - :part:`93%`
    * - clang-tools-extra/clang-tidy/darwin
      - `5`
      - `2`
@@ -1035,25 +1170,25 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - clang-tools-extra/clang-tidy/misc
-     - `31`
-     - `28`
+     - `33`
+     - `30`
      - `3`
      - :part:`90%`
    * - clang-tools-extra/clang-tidy/modernize
      - `67`
-     - `49`
-     - `18`
-     - :part:`73%`
+     - `48`
+     - `19`
+     - :part:`71%`
    * - clang-tools-extra/clang-tidy/mpi
      - `5`
      - `5`
      - `0`
      - :good:`100%`
    * - clang-tools-extra/clang-tidy/objc
-     - `15`
-     - `10`
+     - `17`
+     - `12`
      - `5`
-     - :part:`66%`
+     - :part:`70%`
    * - clang-tools-extra/clang-tidy/openmp
      - `5`
      - `5`
@@ -1075,10 +1210,10 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `2`
      - :part:`60%`
    * - clang-tools-extra/clang-tidy/readability
-     - `83`
-     - `70`
-     - `13`
-     - :part:`84%`
+     - `88`
+     - `76`
+     - `12`
+     - :part:`86%`
    * - clang-tools-extra/clang-tidy/tool
      - `3`
      - `2`
@@ -1096,9 +1231,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :good:`100%`
    * - clang-tools-extra/clangd
      - `97`
-     - `83`
-     - `14`
-     - :part:`85%`
+     - `81`
+     - `16`
+     - :part:`83%`
    * - clang-tools-extra/clangd/benchmarks
      - `1`
      - `1`
@@ -1116,14 +1251,14 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :good:`100%`
    * - clang-tools-extra/clangd/index
      - `39`
-     - `37`
-     - `2`
-     - :part:`94%`
+     - `36`
+     - `3`
+     - :part:`92%`
    * - clang-tools-extra/clangd/index/dex
      - `9`
-     - `8`
-     - `1`
-     - :part:`88%`
+     - `7`
+     - `2`
+     - :part:`77%`
    * - clang-tools-extra/clangd/index/dex/dexp
      - `1`
      - `1`
@@ -1160,10 +1295,10 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - clang-tools-extra/clangd/refactor
-     - `4`
-     - `3`
+     - `6`
+     - `5`
      - `1`
-     - :part:`75%`
+     - :part:`83%`
    * - clang-tools-extra/clangd/refactor/tweaks
      - `14`
      - `10`
@@ -1201,9 +1336,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :good:`100%`
    * - clang-tools-extra/clangd/unittests/tweaks
      - `20`
-     - `20`
-     - `0`
-     - :good:`100%`
+     - `19`
+     - `1`
+     - :part:`95%`
    * - clang-tools-extra/clangd/unittests/xpc
      - `1`
      - `1`
@@ -1276,9 +1411,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :none:`0%`
    * - clang-tools-extra/unittests/clang-tidy
      - `16`
-     - `7`
      - `9`
-     - :part:`43%`
+     - `7`
+     - :part:`56%`
    * - clang-tools-extra/unittests/include/common
      - `1`
      - `0`
@@ -1300,10 +1435,10 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `1`
      - :part:`66%`
    * - compiler-rt/lib/asan
-     - `56`
-     - `3`
-     - `53`
-     - :part:`5%`
+     - `57`
+     - `5`
+     - `52`
+     - :part:`8%`
    * - compiler-rt/lib/asan/tests
      - `17`
      - `1`
@@ -1336,9 +1471,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :none:`0%`
    * - compiler-rt/lib/dfsan
      - `14`
-     - `10`
-     - `4`
-     - :part:`71%`
+     - `9`
+     - `5`
+     - :part:`64%`
    * - compiler-rt/lib/fuzzer
      - `47`
      - `9`
@@ -1385,10 +1520,10 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - compiler-rt/lib/hwasan
-     - `29`
-     - `8`
+     - `30`
+     - `9`
      - `21`
-     - :part:`27%`
+     - :part:`30%`
    * - compiler-rt/lib/interception
      - `8`
      - `1`
@@ -1401,14 +1536,14 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :part:`33%`
    * - compiler-rt/lib/lsan
      - `20`
-     - `2`
-     - `18`
-     - :part:`10%`
+     - `4`
+     - `16`
+     - :part:`20%`
    * - compiler-rt/lib/memprof
-     - `32`
      - `31`
-     - `1`
-     - :part:`96%`
+     - `29`
+     - `2`
+     - :part:`93%`
    * - compiler-rt/lib/memprof/tests
      - `2`
      - `2`
@@ -1425,10 +1560,10 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `4`
      - :none:`0%`
    * - compiler-rt/lib/orc
-     - `19`
-     - `14`
+     - `21`
+     - `16`
      - `5`
-     - :part:`73%`
+     - :part:`76%`
    * - compiler-rt/lib/orc/unittests
      - `10`
      - `9`
@@ -1445,20 +1580,20 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `2`
      - :part:`33%`
    * - compiler-rt/lib/sanitizer_common
-     - `164`
-     - `24`
-     - `140`
-     - :part:`14%`
+     - `167`
+     - `29`
+     - `138`
+     - :part:`17%`
    * - compiler-rt/lib/sanitizer_common/symbolizer
      - `2`
      - `2`
      - `0`
      - :good:`100%`
    * - compiler-rt/lib/sanitizer_common/tests
-     - `44`
-     - `9`
-     - `35`
-     - :part:`20%`
+     - `46`
+     - `12`
+     - `34`
+     - :part:`26%`
    * - compiler-rt/lib/scudo
      - `20`
      - `0`
@@ -1466,9 +1601,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :none:`0%`
    * - compiler-rt/lib/scudo/standalone
      - `49`
-     - `49`
-     - `0`
-     - :good:`100%`
+     - `48`
+     - `1`
+     - :part:`97%`
    * - compiler-rt/lib/scudo/standalone/benchmarks
      - `1`
      - `1`
@@ -1515,6 +1650,11 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `1`
      - :none:`0%`
    * - compiler-rt/lib/tsan/rtl
+     - `59`
+     - `14`
+     - `45`
+     - :part:`23%`
+   * - compiler-rt/lib/tsan/rtl-old
      - `61`
      - `13`
      - `48`
@@ -1525,10 +1665,10 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `10`
      - :none:`0%`
    * - compiler-rt/lib/tsan/tests/unit
-     - `12`
+     - `11`
      - `3`
-     - `9`
-     - :part:`25%`
+     - `8`
+     - :part:`27%`
    * - compiler-rt/lib/ubsan
      - `27`
      - `7`
@@ -1540,10 +1680,10 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `1`
      - :none:`0%`
    * - compiler-rt/lib/xray
-     - `39`
+     - `40`
      - `27`
-     - `12`
-     - :part:`69%`
+     - `13`
+     - :part:`67%`
    * - compiler-rt/lib/xray/tests/unit
      - `10`
      - `8`
@@ -1555,19 +1695,24 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - cross-project-tests/debuginfo-tests/clang_llvm_roundtrip
+     - `2`
      - `1`
-     - `0`
      - `1`
-     - :none:`0%`
+     - :part:`50%`
    * - cross-project-tests/debuginfo-tests/dexter/feature_tests/commands/penalty
-     - `7`
+     - `10`
      - `0`
-     - `7`
+     - `10`
      - :none:`0%`
    * - cross-project-tests/debuginfo-tests/dexter/feature_tests/commands/perfect
-     - `5`
+     - `7`
      - `0`
-     - `5`
+     - `7`
+     - :none:`0%`
+   * - cross-project-tests/debuginfo-tests/dexter/feature_tests/commands/perfect/dex_declare_address
+     - `7`
+     - `0`
+     - `7`
      - :none:`0%`
    * - cross-project-tests/debuginfo-tests/dexter/feature_tests/commands/perfect/dex_declare_file/dex_and_source
      - `1`
@@ -1610,9 +1755,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `1`
      - :none:`0%`
    * - cross-project-tests/debuginfo-tests/dexter/feature_tests/subtools/clang-opt-bisect
-     - `1`
+     - `2`
      - `0`
-     - `1`
+     - `2`
      - :none:`0%`
    * - cross-project-tests/debuginfo-tests/dexter-tests
      - `15`
@@ -1626,15 +1771,15 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :none:`0%`
    * - cross-project-tests/debuginfo-tests/llvm-prettyprinters/gdb
      - `2`
-     - `2`
-     - `0`
-     - :good:`100%`
+     - `1`
+     - `1`
+     - :part:`50%`
    * - flang/examples
      - `1`
      - `1`
      - `0`
      - :good:`100%`
-   * - flang/examples/flang-omp-report-plugin
+   * - flang/examples/FlangOmpReport
      - `3`
      - `3`
      - `0`
@@ -1650,8 +1795,8 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - flang/include/flang/Common
-     - `20`
-     - `20`
+     - `21`
+     - `21`
      - `0`
      - :good:`100%`
    * - flang/include/flang/Decimal
@@ -1665,8 +1810,8 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - flang/include/flang/Frontend
+     - `11`
      - `10`
-     - `9`
      - `1`
      - :part:`90%`
    * - flang/include/flang/FrontendTool
@@ -1675,18 +1820,23 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - flang/include/flang/Lower
-     - `19`
-     - `19`
-     - `0`
-     - :good:`100%`
+     - `25`
+     - `24`
+     - `1`
+     - :part:`96%`
    * - flang/include/flang/Lower/Support
      - `2`
      - `2`
      - `0`
      - :good:`100%`
    * - flang/include/flang/Optimizer/Builder
-     - `6`
-     - `6`
+     - `7`
+     - `7`
+     - `0`
+     - :good:`100%`
+   * - flang/include/flang/Optimizer/Builder/Runtime
+     - `10`
+     - `10`
      - `0`
      - :good:`100%`
    * - flang/include/flang/Optimizer/CodeGen
@@ -1715,10 +1865,10 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `1`
      - :part:`94%`
    * - flang/include/flang/Runtime
-     - `24`
-     - `23`
+     - `28`
+     - `27`
      - `1`
-     - :part:`95%`
+     - :part:`96%`
    * - flang/include/flang/Semantics
      - `9`
      - `8`
@@ -1750,33 +1900,38 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - flang/lib/Lower
-     - `17`
-     - `16`
-     - `1`
-     - :part:`94%`
+     - `20`
+     - `20`
+     - `0`
+     - :good:`100%`
    * - flang/lib/Optimizer/Builder
      - `6`
      - `6`
      - `0`
      - :good:`100%`
+   * - flang/lib/Optimizer/Builder/Runtime
+     - `9`
+     - `9`
+     - `0`
+     - :good:`100%`
    * - flang/lib/Optimizer/CodeGen
      - `10`
-     - `9`
-     - `1`
-     - :part:`90%`
+     - `10`
+     - `0`
+     - :good:`100%`
    * - flang/lib/Optimizer/Dialect
-     - `4`
-     - `3`
-     - `1`
-     - :part:`75%`
+     - `5`
+     - `5`
+     - `0`
+     - :good:`100%`
    * - flang/lib/Optimizer/Support
-     - `3`
-     - `3`
+     - `4`
+     - `4`
      - `0`
      - :good:`100%`
    * - flang/lib/Optimizer/Transforms
-     - `8`
-     - `8`
+     - `10`
+     - `10`
      - `0`
      - :good:`100%`
    * - flang/lib/Parser
@@ -1786,19 +1941,24 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :good:`100%`
    * - flang/lib/Semantics
      - `78`
-     - `73`
-     - `5`
-     - :part:`93%`
+     - `69`
+     - `9`
+     - :part:`88%`
    * - flang/module
      - `1`
      - `1`
      - `0`
      - :good:`100%`
    * - flang/runtime
-     - `70`
-     - `69`
+     - `74`
+     - `72`
+     - `2`
+     - :part:`97%`
+   * - flang/tools/bbc
      - `1`
-     - :part:`98%`
+     - `1`
+     - `0`
+     - :good:`100%`
    * - flang/tools/f18
      - `1`
      - `1`
@@ -1820,6 +1980,11 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - flang/tools/tco
+     - `1`
+     - `1`
+     - `0`
+     - :good:`100%`
+   * - flang/unittests/Common
      - `1`
      - `1`
      - `0`
@@ -1849,9 +2014,14 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `4`
      - `0`
      - :good:`100%`
+   * - flang/unittests/Optimizer/Builder/Runtime
+     - `10`
+     - `10`
+     - `0`
+     - :good:`100%`
    * - flang/unittests/Runtime
-     - `20`
-     - `20`
+     - `22`
+     - `22`
      - `0`
      - :good:`100%`
    * - libc/AOR_v20.02/math
@@ -1925,8 +2095,28 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `1`
      - :part:`66%`
    * - libc/include
-     - `3`
-     - `3`
+     - `1`
+     - `1`
+     - `0`
+     - :good:`100%`
+   * - libc/include/llvm-libc-macros
+     - `2`
+     - `2`
+     - `0`
+     - :good:`100%`
+   * - libc/include/llvm-libc-macros/linux
+     - `1`
+     - `1`
+     - `0`
+     - :good:`100%`
+   * - libc/include/llvm-libc-types
+     - `28`
+     - `28`
+     - `0`
+     - :good:`100%`
+   * - libc/loader/linux/aarch64
+     - `1`
+     - `1`
      - `0`
      - :good:`100%`
    * - libc/loader/linux/x86_64
@@ -1945,8 +2135,18 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - libc/src/errno
-     - `5`
-     - `5`
+     - `4`
+     - `4`
+     - `0`
+     - :good:`100%`
+   * - libc/src/fcntl
+     - `3`
+     - `3`
+     - `0`
+     - :good:`100%`
+   * - libc/src/fcntl/linux
+     - `3`
+     - `3`
      - `0`
      - :good:`100%`
    * - libc/src/fenv
@@ -1960,8 +2160,8 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - libc/src/math
-     - `87`
-     - `87`
+     - `91`
+     - `91`
      - `0`
      - :good:`100%`
    * - libc/src/math/aarch64
@@ -1970,13 +2170,13 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - libc/src/math/generic
-     - `88`
-     - `88`
+     - `94`
+     - `94`
      - `0`
      - :good:`100%`
    * - libc/src/math/x86_64
-     - `6`
-     - `6`
+     - `3`
+     - `3`
      - `0`
      - :good:`100%`
    * - libc/src/signal
@@ -1995,13 +2195,13 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - libc/src/stdlib
-     - `39`
-     - `39`
+     - `46`
+     - `46`
      - `0`
      - :good:`100%`
    * - libc/src/stdlib/linux
-     - `1`
-     - `1`
+     - `2`
+     - `2`
      - `0`
      - :good:`100%`
    * - libc/src/string
@@ -2010,10 +2210,10 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - libc/src/string/memory_utils
+     - `8`
      - `7`
-     - `7`
-     - `0`
-     - :good:`100%`
+     - `1`
+     - :part:`87%`
    * - libc/src/sys/mman
      - `2`
      - `2`
@@ -2021,32 +2221,42 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :good:`100%`
    * - libc/src/sys/mman/linux
      - `2`
+     - `1`
+     - `1`
+     - :part:`50%`
+   * - libc/src/sys/stat
+     - `2`
+     - `2`
+     - `0`
+     - :good:`100%`
+   * - libc/src/sys/stat/linux
+     - `2`
      - `2`
      - `0`
      - :good:`100%`
    * - libc/src/threads
-     - `12`
-     - `12`
+     - `16`
+     - `16`
      - `0`
      - :good:`100%`
    * - libc/src/threads/linux
-     - `16`
-     - `8`
-     - `8`
-     - :part:`50%`
+     - `11`
+     - `7`
+     - `4`
+     - :part:`63%`
    * - libc/src/time
      - `12`
      - `12`
      - `0`
      - :good:`100%`
    * - libc/src/unistd
-     - `1`
-     - `1`
+     - `7`
+     - `7`
      - `0`
      - :good:`100%`
    * - libc/src/unistd/linux
-     - `1`
-     - `1`
+     - `7`
+     - `7`
      - `0`
      - :good:`100%`
    * - libc/src/__support
@@ -2055,28 +2265,63 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - libc/src/__support/CPP
-     - `7`
-     - `7`
+     - `11`
+     - `10`
+     - `1`
+     - :part:`90%`
+   * - libc/src/__support/File
+     - `2`
+     - `2`
      - `0`
      - :good:`100%`
    * - libc/src/__support/FPUtil
-     - `19`
-     - `19`
-     - `0`
-     - :good:`100%`
+     - `15`
+     - `14`
+     - `1`
+     - :part:`93%`
    * - libc/src/__support/FPUtil/aarch64
-     - `2`
-     - `2`
+     - `3`
+     - `3`
      - `0`
      - :good:`100%`
    * - libc/src/__support/FPUtil/generic
+     - `3`
+     - `3`
+     - `0`
+     - :good:`100%`
+   * - libc/src/__support/FPUtil/x86_64
+     - `6`
+     - `5`
+     - `1`
+     - :part:`83%`
+   * - libc/src/__support/OSUtil
+     - `3`
+     - `3`
+     - `0`
+     - :good:`100%`
+   * - libc/src/__support/OSUtil/linux
+     - `3`
+     - `2`
+     - `1`
+     - :part:`66%`
+   * - libc/src/__support/OSUtil/linux/aarch64
      - `1`
      - `1`
      - `0`
      - :good:`100%`
-   * - libc/src/__support/FPUtil/x86_64
-     - `2`
-     - `2`
+   * - libc/src/__support/OSUtil/linux/x86_64
+     - `1`
+     - `1`
+     - `0`
+     - :good:`100%`
+   * - libc/src/__support/threads
+     - `1`
+     - `1`
+     - `0`
+     - :good:`100%`
+   * - libc/src/__support/threads/linux
+     - `1`
+     - `1`
      - `0`
      - :good:`100%`
    * - libc/utils/HdrGen
@@ -2110,10 +2355,10 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - libc/utils/UnitTest
-     - `10`
-     - `10`
-     - `0`
-     - :good:`100%`
+     - `12`
+     - `11`
+     - `1`
+     - :part:`91%`
    * - libclc/generic/include
      - `2`
      - `1`
@@ -2255,20 +2500,20 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `1`
      - :none:`0%`
    * - libcxx/benchmarks
-     - `23`
-     - `5`
+     - `28`
+     - `10`
      - `18`
-     - :part:`21%`
+     - :part:`35%`
    * - libcxx/include
-     - `23`
+     - `22`
      - `0`
-     - `23`
+     - `22`
      - :none:`0%`
    * - libcxx/include/__algorithm
-     - `93`
-     - `0`
-     - `93`
-     - :none:`0%`
+     - `102`
+     - `15`
+     - `87`
+     - :part:`14%`
    * - libcxx/include/__bit
      - `2`
      - `0`
@@ -2279,11 +2524,16 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - `3`
      - :none:`0%`
-   * - libcxx/include/__compare
-     - `10`
+   * - libcxx/include/__chrono
+     - `8`
      - `0`
-     - `10`
+     - `8`
      - :none:`0%`
+   * - libcxx/include/__compare
+     - `13`
+     - `1`
+     - `12`
+     - :part:`7%`
    * - libcxx/include/__concepts
      - `22`
      - `0`
@@ -2294,36 +2544,51 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - `4`
      - :none:`0%`
+   * - libcxx/include/__filesystem
+     - `16`
+     - `3`
+     - `13`
+     - :part:`18%`
    * - libcxx/include/__format
+     - `17`
+     - `2`
      - `15`
-     - `0`
-     - `15`
-     - :none:`0%`
+     - :part:`11%`
    * - libcxx/include/__functional
      - `27`
      - `0`
      - `27`
      - :none:`0%`
-   * - libcxx/include/__iterator
-     - `32`
+   * - libcxx/include/__ios
+     - `1`
      - `0`
-     - `32`
+     - `1`
+     - :none:`0%`
+   * - libcxx/include/__iterator
+     - `36`
+     - `0`
+     - `36`
      - :none:`0%`
    * - libcxx/include/__memory
-     - `15`
-     - `0`
-     - `15`
-     - :none:`0%`
+     - `19`
+     - `1`
+     - `18`
+     - :part:`5%`
+   * - libcxx/include/__numeric
+     - `13`
+     - `4`
+     - `9`
+     - :part:`30%`
    * - libcxx/include/__random
+     - `37`
+     - `2`
      - `35`
-     - `0`
-     - `35`
-     - :none:`0%`
+     - :part:`5%`
    * - libcxx/include/__ranges
-     - `25`
-     - `0`
-     - `25`
-     - :none:`0%`
+     - `29`
+     - `2`
+     - `27`
+     - :part:`6%`
    * - libcxx/include/__support/android
      - `1`
      - `0`
@@ -2370,40 +2635,50 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `3`
      - :none:`0%`
    * - libcxx/include/__thread
-     - `1`
+     - `2`
      - `0`
-     - `1`
+     - `2`
      - :none:`0%`
    * - libcxx/include/__utility
-     - `15`
-     - `0`
-     - `15`
-     - :none:`0%`
+     - `17`
+     - `5`
+     - `12`
+     - :part:`29%`
    * - libcxx/include/__variant
      - `1`
      - `0`
      - `1`
      - :none:`0%`
    * - libcxx/src
-     - `39`
-     - `3`
+     - `42`
+     - `6`
      - `36`
-     - :part:`7%`
+     - :part:`14%`
    * - libcxx/src/experimental
+     - `2`
      - `1`
-     - `0`
      - `1`
-     - :none:`0%`
+     - :part:`50%`
    * - libcxx/src/filesystem
      - `5`
      - `0`
      - `5`
      - :none:`0%`
    * - libcxx/src/include
+     - `6`
+     - `1`
      - `5`
+     - :part:`16%`
+   * - libcxx/src/include/ryu
+     - `9`
+     - `8`
+     - `1`
+     - :part:`88%`
+   * - libcxx/src/ryu
+     - `3`
+     - `3`
      - `0`
-     - `5`
-     - :none:`0%`
+     - :good:`100%`
    * - libcxx/src/support/ibm
      - `3`
      - `0`
@@ -2419,21 +2694,6 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - `3`
      - :none:`0%`
-   * - libcxx/utils/google-benchmark/cmake
-     - `5`
-     - `1`
-     - `4`
-     - :part:`20%`
-   * - libcxx/utils/google-benchmark/include/benchmark
-     - `1`
-     - `0`
-     - `1`
-     - :none:`0%`
-   * - libcxx/utils/google-benchmark/src
-     - `21`
-     - `18`
-     - `3`
-     - :part:`85%`
    * - libcxxabi/fuzz
      - `1`
      - `0`
@@ -2475,63 +2735,33 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `24`
      - :part:`35%`
    * - lld/Common
-     - `10`
-     - `8`
+     - `11`
+     - `9`
      - `2`
-     - :part:`80%`
+     - :part:`81%`
    * - lld/ELF
      - `48`
-     - `24`
-     - `24`
-     - :part:`50%`
+     - `25`
+     - `23`
+     - :part:`52%`
    * - lld/ELF/Arch
      - `14`
      - `4`
      - `10`
      - :part:`28%`
    * - lld/include/lld/Common
-     - `13`
+     - `14`
+     - `8`
      - `6`
-     - `7`
-     - :part:`46%`
+     - :part:`57%`
    * - lld/include/lld/Core
      - `20`
      - `4`
      - `16`
      - :part:`20%`
-   * - lld/include/lld/ReaderWriter
-     - `2`
-     - `0`
-     - `2`
-     - :none:`0%`
-   * - lld/lib/Core
-     - `8`
-     - `2`
-     - `6`
-     - :part:`25%`
-   * - lld/lib/Driver
-     - `1`
-     - `0`
-     - `1`
-     - :none:`0%`
-   * - lld/lib/ReaderWriter
-     - `1`
-     - `0`
-     - `1`
-     - :none:`0%`
-   * - lld/lib/ReaderWriter/MachO
-     - `30`
-     - `1`
-     - `29`
-     - :part:`3%`
-   * - lld/lib/ReaderWriter/YAML
-     - `1`
-     - `0`
-     - `1`
-     - :none:`0%`
    * - lld/MachO
+     - `45`
      - `43`
-     - `41`
      - `2`
      - :part:`95%`
    * - lld/MachO/Arch
@@ -2549,16 +2779,6 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `1`
      - `0`
      - :good:`100%`
-   * - lld/unittests/DriverTests
-     - `1`
-     - `0`
-     - `1`
-     - :none:`0%`
-   * - lld/unittests/MachOTests
-     - `4`
-     - `0`
-     - `4`
-     - :none:`0%`
    * - lld/wasm
      - `29`
      - `15`
@@ -2615,10 +2835,10 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `16`
      - :part:`36%`
    * - lldb/include/lldb/Core
-     - `60`
+     - `61`
      - `31`
-     - `29`
-     - :part:`51%`
+     - `30`
+     - :part:`50%`
    * - lldb/include/lldb/DataFormatters
      - `18`
      - `10`
@@ -2695,40 +2915,40 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `21`
      - :part:`40%`
    * - lldb/include/lldb/Target
-     - `77`
-     - `50`
+     - `78`
+     - `51`
      - `27`
-     - :part:`64%`
+     - :part:`65%`
    * - lldb/include/lldb/Utility
      - `63`
-     - `40`
-     - `23`
-     - :part:`63%`
-   * - lldb/source
+     - `41`
+     - `22`
+     - :part:`65%`
+   * - lldb/include/lldb/Version
      - `1`
      - `1`
      - `0`
      - :good:`100%`
    * - lldb/source/API
-     - `74`
-     - `6`
-     - `68`
-     - :part:`8%`
+     - `73`
+     - `36`
+     - `37`
+     - :part:`49%`
    * - lldb/source/Breakpoint
      - `24`
-     - `5`
-     - `19`
-     - :part:`20%`
+     - `6`
+     - `18`
+     - :part:`25%`
    * - lldb/source/Commands
      - `70`
      - `57`
      - `13`
      - :part:`81%`
    * - lldb/source/Core
-     - `48`
+     - `49`
      - `26`
-     - `22`
-     - :part:`54%`
+     - `23`
+     - :part:`53%`
    * - lldb/source/DataFormatters
      - `16`
      - `3`
@@ -2756,9 +2976,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :good:`100%`
    * - lldb/source/Host/linux
      - `5`
-     - `4`
-     - `1`
-     - :part:`80%`
+     - `5`
+     - `0`
+     - :good:`100%`
    * - lldb/source/Host/macosx/cfcpp
      - `14`
      - `12`
@@ -2781,9 +3001,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :part:`50%`
    * - lldb/source/Host/posix
      - `9`
-     - `5`
-     - `4`
-     - :part:`55%`
+     - `6`
+     - `3`
+     - :part:`66%`
    * - lldb/source/Host/windows
      - `11`
      - `7`
@@ -2960,10 +3180,10 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - lldb/source/Plugins/Language/CPlusPlus
-     - `29`
-     - `18`
+     - `30`
+     - `19`
      - `11`
-     - :part:`62%`
+     - :part:`63%`
    * - lldb/source/Plugins/Language/ObjC
      - `21`
      - `14`
@@ -2991,9 +3211,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :none:`0%`
    * - lldb/source/Plugins/LanguageRuntime/ObjC/AppleObjCRuntime
      - `16`
-     - `6`
-     - `10`
-     - :part:`37%`
+     - `5`
+     - `11`
+     - :part:`31%`
    * - lldb/source/Plugins/LanguageRuntime/RenderScript/RenderScriptRuntime
      - `8`
      - `3`
@@ -3104,6 +3324,11 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - `2`
      - :none:`0%`
+   * - lldb/source/Plugins/Platform/QemuUser
+     - `2`
+     - `2`
+     - `0`
+     - :good:`100%`
    * - lldb/source/Plugins/Platform/Windows
      - `2`
      - `1`
@@ -3119,11 +3344,16 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `12`
      - `4`
      - :part:`75%`
+   * - lldb/source/Plugins/Process/FreeBSDKernel
+     - `10`
+     - `8`
+     - `2`
+     - :part:`80%`
    * - lldb/source/Plugins/Process/gdb-remote
      - `26`
-     - `14`
-     - `12`
-     - :part:`53%`
+     - `15`
+     - `11`
+     - :part:`57%`
    * - lldb/source/Plugins/Process/Linux
      - `21`
      - `11`
@@ -3151,9 +3381,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :part:`50%`
    * - lldb/source/Plugins/Process/POSIX
      - `8`
-     - `5`
-     - `3`
-     - :part:`62%`
+     - `7`
+     - `1`
+     - :part:`87%`
    * - lldb/source/Plugins/Process/scripted
      - `4`
      - `4`
@@ -3195,10 +3425,10 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `1`
      - :part:`50%`
    * - lldb/source/Plugins/ScriptInterpreter/Lua
-     - `4`
-     - `3`
-     - `1`
-     - :part:`75%`
+     - `5`
+     - `5`
+     - `0`
+     - :good:`100%`
    * - lldb/source/Plugins/ScriptInterpreter/None
      - `2`
      - `2`
@@ -3206,9 +3436,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :good:`100%`
    * - lldb/source/Plugins/ScriptInterpreter/Python
      - `16`
-     - `11`
-     - `5`
-     - :part:`68%`
+     - `12`
+     - `4`
+     - :part:`75%`
    * - lldb/source/Plugins/StructuredData/DarwinLog
      - `2`
      - `0`
@@ -3221,14 +3451,14 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :none:`0%`
    * - lldb/source/Plugins/SymbolFile/DWARF
      - `65`
-     - `37`
-     - `28`
-     - :part:`56%`
+     - `39`
+     - `26`
+     - :part:`60%`
    * - lldb/source/Plugins/SymbolFile/NativePDB
      - `20`
-     - `11`
-     - `9`
-     - :part:`55%`
+     - `10`
+     - `10`
+     - :part:`50%`
    * - lldb/source/Plugins/SymbolFile/PDB
      - `6`
      - `4`
@@ -3296,19 +3526,24 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :part:`50%`
    * - lldb/source/Symbol
      - `31`
-     - `17`
-     - `14`
-     - :part:`54%`
+     - `18`
+     - `13`
+     - :part:`58%`
    * - lldb/source/Target
-     - `68`
-     - `33`
+     - `69`
+     - `34`
      - `35`
-     - :part:`48%`
+     - :part:`49%`
    * - lldb/source/Utility
      - `58`
-     - `45`
-     - `13`
-     - :part:`77%`
+     - `46`
+     - `12`
+     - :part:`79%`
+   * - lldb/source/Version
+     - `1`
+     - `1`
+     - `0`
+     - :good:`100%`
    * - lldb/tools/argdumper
      - `1`
      - `1`
@@ -3381,9 +3616,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :part:`40%`
    * - lldb/tools/lldb-vscode
      - `27`
-     - `25`
-     - `2`
-     - :part:`92%`
+     - `24`
+     - `3`
+     - :part:`88%`
    * - lldb/unittests
      - `1`
      - `1`
@@ -3401,9 +3636,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :good:`100%`
    * - lldb/unittests/Core
      - `10`
-     - `8`
-     - `2`
-     - :part:`80%`
+     - `9`
+     - `1`
+     - :part:`90%`
    * - lldb/unittests/DataFormatter
      - `3`
      - `3`
@@ -3426,14 +3661,14 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :good:`100%`
    * - lldb/unittests/Expression
      - `5`
-     - `2`
      - `3`
-     - :part:`40%`
+     - `2`
+     - :part:`60%`
    * - lldb/unittests/Host
-     - `15`
-     - `10`
+     - `16`
+     - `11`
      - `5`
-     - :part:`66%`
+     - :part:`68%`
    * - lldb/unittests/Host/linux
      - `2`
      - `2`
@@ -3450,10 +3685,10 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `1`
      - :none:`0%`
    * - lldb/unittests/Interpreter
-     - `5`
-     - `1`
+     - `6`
+     - `2`
      - `4`
-     - :part:`20%`
+     - :part:`33%`
    * - lldb/unittests/Language/CLanguages
      - `1`
      - `1`
@@ -3490,10 +3725,10 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `1`
      - :none:`0%`
    * - lldb/unittests/Platform
+     - `3`
      - `2`
      - `1`
-     - `1`
-     - :part:`50%`
+     - :part:`66%`
    * - lldb/unittests/Platform/Android
      - `1`
      - `0`
@@ -3536,29 +3771,29 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :part:`66%`
    * - lldb/unittests/ScriptInterpreter/Lua
      - `2`
-     - `1`
-     - `1`
-     - :part:`50%`
+     - `2`
+     - `0`
+     - :good:`100%`
    * - lldb/unittests/ScriptInterpreter/Python
      - `3`
-     - `1`
      - `2`
-     - :part:`33%`
+     - `1`
+     - :part:`66%`
    * - lldb/unittests/Signals
      - `1`
      - `1`
      - `0`
      - :good:`100%`
    * - lldb/unittests/Symbol
-     - `8`
+     - `11`
+     - `7`
      - `4`
-     - `4`
-     - :part:`50%`
+     - :part:`63%`
    * - lldb/unittests/SymbolFile/DWARF
-     - `5`
-     - `3`
+     - `6`
+     - `4`
      - `2`
-     - :part:`60%`
+     - :part:`66%`
    * - lldb/unittests/SymbolFile/DWARF/Inputs
      - `1`
      - `1`
@@ -3580,10 +3815,10 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - lldb/unittests/Target
-     - `9`
-     - `5`
+     - `10`
+     - `6`
      - `4`
-     - :part:`55%`
+     - :part:`60%`
    * - lldb/unittests/TestingSupport
      - `5`
      - `4`
@@ -3610,9 +3845,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `2`
      - :none:`0%`
    * - lldb/unittests/tools/lldb-server/tests
-     - `8`
+     - `7`
      - `0`
-     - `8`
+     - `7`
      - :none:`0%`
    * - lldb/unittests/UnwindAssembly/ARM64
      - `1`
@@ -3865,15 +4100,15 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `6`
      - :part:`25%`
    * - llvm/include/llvm/ADT
-     - `88`
-     - `24`
-     - `64`
-     - :part:`27%`
+     - `93`
+     - `25`
+     - `68`
+     - :part:`26%`
    * - llvm/include/llvm/Analysis
-     - `125`
-     - `46`
-     - `79`
-     - :part:`36%`
+     - `130`
+     - `52`
+     - `78`
+     - :part:`40%`
    * - llvm/include/llvm/Analysis/Utils
      - `3`
      - `1`
@@ -3885,30 +4120,30 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `3`
      - :part:`40%`
    * - llvm/include/llvm/BinaryFormat
-     - `14`
+     - `15`
      - `8`
-     - `6`
-     - :part:`57%`
+     - `7`
+     - :part:`53%`
    * - llvm/include/llvm/Bitcode
      - `7`
-     - `3`
-     - `4`
-     - :part:`42%`
+     - `2`
+     - `5`
+     - :part:`28%`
    * - llvm/include/llvm/Bitstream
      - `3`
      - `0`
      - `3`
      - :none:`0%`
    * - llvm/include/llvm/CodeGen
-     - `153`
-     - `47`
-     - `106`
-     - :part:`30%`
+     - `158`
+     - `51`
+     - `107`
+     - :part:`32%`
    * - llvm/include/llvm/CodeGen/GlobalISel
-     - `29`
-     - `9`
-     - `20`
-     - :part:`31%`
+     - `27`
+     - `8`
+     - `19`
+     - :part:`29%`
    * - llvm/include/llvm/CodeGen/MIRParser
      - `2`
      - `1`
@@ -3931,9 +4166,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :part:`70%`
    * - llvm/include/llvm/DebugInfo/DWARF
      - `32`
-     - `15`
-     - `17`
-     - :part:`46%`
+     - `14`
+     - `18`
+     - :part:`43%`
    * - llvm/include/llvm/DebugInfo/GSYM
      - `14`
      - `4`
@@ -3946,9 +4181,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :part:`80%`
    * - llvm/include/llvm/DebugInfo/PDB
      - `50`
-     - `7`
-     - `43`
-     - :part:`14%`
+     - `30`
+     - `20`
+     - :part:`60%`
    * - llvm/include/llvm/DebugInfo/PDB/DIA
      - `20`
      - `9`
@@ -3960,10 +4195,15 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `19`
      - :part:`64%`
    * - llvm/include/llvm/DebugInfo/Symbolize
+     - `5`
      - `3`
      - `2`
-     - `1`
-     - :part:`66%`
+     - :part:`60%`
+   * - llvm/include/llvm/Debuginfod
+     - `3`
+     - `3`
+     - `0`
+     - :good:`100%`
    * - llvm/include/llvm/Demangle
      - `7`
      - `3`
@@ -3990,15 +4230,15 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `2`
      - :part:`87%`
    * - llvm/include/llvm/ExecutionEngine/Orc
-     - `37`
-     - `27`
-     - `10`
-     - :part:`72%`
+     - `38`
+     - `29`
+     - `9`
+     - :part:`76%`
    * - llvm/include/llvm/ExecutionEngine/Orc/Shared
-     - `7`
+     - `8`
      - `4`
-     - `3`
-     - :part:`57%`
+     - `4`
+     - :part:`50%`
    * - llvm/include/llvm/ExecutionEngine/Orc/TargetProcess
      - `7`
      - `7`
@@ -4010,10 +4250,10 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - llvm/include/llvm/Frontend/OpenMP
+     - `5`
      - `4`
-     - `4`
-     - `0`
-     - :good:`100%`
+     - `1`
+     - :part:`80%`
    * - llvm/include/llvm/FuzzMutate
      - `6`
      - `0`
@@ -4025,10 +4265,10 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - llvm/include/llvm/IR
-     - `91`
-     - `25`
-     - `66`
-     - :part:`27%`
+     - `93`
+     - `28`
+     - `65`
+     - :part:`30%`
    * - llvm/include/llvm/IRReader
      - `1`
      - `0`
@@ -4056,9 +4296,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :none:`0%`
    * - llvm/include/llvm/MC
      - `74`
-     - `22`
-     - `52`
-     - :part:`29%`
+     - `24`
+     - `50`
+     - :part:`32%`
    * - llvm/include/llvm/MC/MCDisassembler
      - `4`
      - `1`
@@ -4081,9 +4321,39 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :part:`66%`
    * - llvm/include/llvm/MCA/Stages
      - `8`
-     - `7`
+     - `8`
+     - `0`
+     - :good:`100%`
+   * - llvm/include/llvm/ObjCopy
+     - `4`
+     - `3`
      - `1`
-     - :part:`87%`
+     - :part:`75%`
+   * - llvm/include/llvm/ObjCopy/COFF
+     - `2`
+     - `2`
+     - `0`
+     - :good:`100%`
+   * - llvm/include/llvm/ObjCopy/ELF
+     - `2`
+     - `2`
+     - `0`
+     - :good:`100%`
+   * - llvm/include/llvm/ObjCopy/MachO
+     - `2`
+     - `2`
+     - `0`
+     - :good:`100%`
+   * - llvm/include/llvm/ObjCopy/wasm
+     - `2`
+     - `2`
+     - `0`
+     - :good:`100%`
+   * - llvm/include/llvm/ObjCopy/XCOFF
+     - `2`
+     - `2`
+     - `0`
+     - :good:`100%`
    * - llvm/include/llvm/Object
      - `31`
      - `12`
@@ -4105,10 +4375,10 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `2`
      - :part:`50%`
    * - llvm/include/llvm/ProfileData
-     - `8`
-     - `3`
+     - `11`
      - `5`
-     - :part:`37%`
+     - `6`
+     - :part:`45%`
    * - llvm/include/llvm/ProfileData/Coverage
      - `3`
      - `2`
@@ -4120,10 +4390,10 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `1`
      - :part:`91%`
    * - llvm/include/llvm/Support
-     - `182`
-     - `65`
-     - `117`
-     - :part:`35%`
+     - `186`
+     - `68`
+     - `118`
+     - :part:`36%`
    * - llvm/include/llvm/Support/FileSystem
      - `1`
      - `1`
@@ -4140,10 +4410,10 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `1`
      - :none:`0%`
    * - llvm/include/llvm/TableGen
-     - `8`
-     - `2`
+     - `9`
+     - `3`
      - `6`
-     - :part:`25%`
+     - :part:`33%`
    * - llvm/include/llvm/Target
      - `6`
      - `2`
@@ -4196,24 +4466,29 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :part:`58%`
    * - llvm/include/llvm/Transforms/IPO
      - `38`
-     - `27`
-     - `11`
-     - :part:`71%`
+     - `28`
+     - `10`
+     - :part:`73%`
    * - llvm/include/llvm/Transforms/Scalar
-     - `74`
-     - `46`
+     - `75`
+     - `47`
      - `28`
      - :part:`62%`
    * - llvm/include/llvm/Transforms/Utils
-     - `71`
-     - `41`
+     - `74`
+     - `44`
      - `30`
-     - :part:`57%`
+     - :part:`59%`
    * - llvm/include/llvm/Transforms/Vectorize
      - `5`
      - `1`
      - `4`
      - :part:`20%`
+   * - llvm/include/llvm/WindowsDriver
+     - `2`
+     - `1`
+     - `1`
+     - :part:`50%`
    * - llvm/include/llvm/WindowsManifest
      - `1`
      - `1`
@@ -4230,35 +4505,35 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `4`
      - :part:`76%`
    * - llvm/include/llvm-c
-     - `26`
+     - `27`
      - `12`
-     - `14`
-     - :part:`46%`
+     - `15`
+     - :part:`44%`
    * - llvm/include/llvm-c/Transforms
      - `9`
      - `3`
      - `6`
      - :part:`33%`
    * - llvm/lib/Analysis
-     - `117`
-     - `38`
+     - `119`
+     - `40`
      - `79`
-     - :part:`32%`
+     - :part:`33%`
    * - llvm/lib/AsmParser
      - `3`
      - `1`
      - `2`
      - :part:`33%`
    * - llvm/lib/BinaryFormat
-     - `12`
-     - `9`
+     - `13`
+     - `10`
      - `3`
-     - :part:`75%`
+     - :part:`76%`
    * - llvm/lib/Bitcode/Reader
      - `7`
-     - `1`
-     - `6`
-     - :part:`14%`
+     - `2`
+     - `5`
+     - :part:`28%`
    * - llvm/lib/Bitcode/Writer
      - `5`
      - `0`
@@ -4270,25 +4545,25 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `1`
      - :none:`0%`
    * - llvm/lib/CodeGen
-     - `209`
-     - `51`
-     - `158`
-     - :part:`24%`
+     - `220`
+     - `60`
+     - `160`
+     - :part:`27%`
    * - llvm/lib/CodeGen/AsmPrinter
      - `45`
-     - `17`
-     - `28`
-     - :part:`37%`
+     - `18`
+     - `27`
+     - :part:`40%`
    * - llvm/lib/CodeGen/GlobalISel
-     - `26`
+     - `24`
      - `9`
-     - `17`
-     - :part:`34%`
+     - `15`
+     - :part:`37%`
    * - llvm/lib/CodeGen/LiveDebugValues
      - `5`
-     - `2`
-     - `3`
-     - :part:`40%`
+     - `1`
+     - `4`
+     - :part:`20%`
    * - llvm/lib/CodeGen/MIRParser
      - `4`
      - `1`
@@ -4321,9 +4596,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :part:`75%`
    * - llvm/lib/DebugInfo/PDB
      - `40`
-     - `34`
-     - `6`
-     - :part:`85%`
+     - `35`
+     - `5`
+     - :part:`87%`
    * - llvm/lib/DebugInfo/PDB/DIA
      - `18`
      - `15`
@@ -4336,9 +4611,14 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :part:`74%`
    * - llvm/lib/DebugInfo/Symbolize
      - `4`
-     - `2`
-     - `2`
-     - :part:`50%`
+     - `3`
+     - `1`
+     - :part:`75%`
+   * - llvm/lib/Debuginfod
+     - `3`
+     - `3`
+     - `0`
+     - :good:`100%`
    * - llvm/lib/Demangle
      - `6`
      - `4`
@@ -4346,9 +4626,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :part:`66%`
    * - llvm/lib/DWARFLinker
      - `4`
-     - `4`
-     - `0`
-     - :good:`100%`
+     - `3`
+     - `1`
+     - :part:`75%`
    * - llvm/lib/DWP
      - `2`
      - `2`
@@ -4371,9 +4651,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :none:`0%`
    * - llvm/lib/ExecutionEngine/JITLink
      - `23`
-     - `17`
-     - `6`
-     - :part:`73%`
+     - `15`
+     - `8`
+     - :part:`65%`
    * - llvm/lib/ExecutionEngine/MCJIT
      - `2`
      - `0`
@@ -4385,13 +4665,13 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `2`
      - :none:`0%`
    * - llvm/lib/ExecutionEngine/Orc
-     - `36`
-     - `20`
-     - `16`
-     - :part:`55%`
+     - `37`
+     - `22`
+     - `15`
+     - :part:`59%`
    * - llvm/lib/ExecutionEngine/Orc/Shared
-     - `3`
-     - `3`
+     - `4`
+     - `4`
      - `0`
      - :good:`100%`
    * - llvm/lib/ExecutionEngine/Orc/TargetProcess
@@ -4445,10 +4725,10 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - llvm/lib/IR
-     - `68`
-     - `19`
+     - `69`
+     - `20`
      - `49`
-     - :part:`27%`
+     - :part:`28%`
    * - llvm/lib/IRReader
      - `1`
      - `0`
@@ -4499,11 +4779,41 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `7`
      - `1`
      - :part:`87%`
+   * - llvm/lib/ObjCopy
+     - `4`
+     - `3`
+     - `1`
+     - :part:`75%`
+   * - llvm/lib/ObjCopy/COFF
+     - `7`
+     - `7`
+     - `0`
+     - :good:`100%`
+   * - llvm/lib/ObjCopy/ELF
+     - `3`
+     - `3`
+     - `0`
+     - :good:`100%`
+   * - llvm/lib/ObjCopy/MachO
+     - `9`
+     - `9`
+     - `0`
+     - :good:`100%`
+   * - llvm/lib/ObjCopy/wasm
+     - `7`
+     - `7`
+     - `0`
+     - :good:`100%`
+   * - llvm/lib/ObjCopy/XCOFF
+     - `6`
+     - `3`
+     - `3`
+     - :part:`50%`
    * - llvm/lib/Object
      - `31`
-     - `15`
      - `16`
-     - :part:`48%`
+     - `15`
+     - :part:`51%`
    * - llvm/lib/ObjectYAML
      - `23`
      - `9`
@@ -4516,14 +4826,14 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :none:`0%`
    * - llvm/lib/Passes
      - `6`
-     - `4`
-     - `2`
-     - :part:`66%`
+     - `3`
+     - `3`
+     - :part:`50%`
    * - llvm/lib/ProfileData
-     - `8`
-     - `2`
-     - `6`
-     - :part:`25%`
+     - `11`
+     - `4`
+     - `7`
+     - :part:`36%`
    * - llvm/lib/ProfileData/Coverage
      - `3`
      - `0`
@@ -4535,25 +4845,25 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `3`
      - :part:`76%`
    * - llvm/lib/Support
-     - `141`
-     - `57`
-     - `84`
-     - :part:`40%`
+     - `144`
+     - `61`
+     - `83`
+     - :part:`42%`
    * - llvm/lib/Support/Unix
      - `1`
      - `0`
      - `1`
      - :none:`0%`
    * - llvm/lib/TableGen
-     - `13`
-     - `1`
+     - `15`
+     - `3`
      - `12`
-     - :part:`7%`
+     - :part:`20%`
    * - llvm/lib/Target
      - `5`
-     - `0`
-     - `5`
-     - :none:`0%`
+     - `1`
+     - `4`
+     - :part:`20%`
    * - llvm/lib/Target/AArch64
      - `60`
      - `7`
@@ -4591,9 +4901,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :none:`0%`
    * - llvm/lib/Target/AMDGPU
      - `169`
-     - `39`
-     - `130`
-     - :part:`23%`
+     - `38`
+     - `131`
+     - :part:`22%`
    * - llvm/lib/Target/AMDGPU/AsmParser
      - `1`
      - `0`
@@ -4611,9 +4921,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :good:`100%`
    * - llvm/lib/Target/AMDGPU/MCTargetDesc
      - `21`
-     - `6`
-     - `15`
-     - :part:`28%`
+     - `5`
+     - `16`
+     - :part:`23%`
    * - llvm/lib/Target/AMDGPU/TargetInfo
      - `2`
      - `1`
@@ -4645,10 +4955,10 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - llvm/lib/Target/ARM
-     - `75`
-     - `8`
-     - `67`
-     - :part:`10%`
+     - `76`
+     - `10`
+     - `66`
+     - :part:`13%`
    * - llvm/lib/Target/ARM/AsmParser
      - `1`
      - `0`
@@ -4676,9 +4986,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :none:`0%`
    * - llvm/lib/Target/AVR
      - `24`
-     - `24`
-     - `0`
-     - :good:`100%`
+     - `23`
+     - `1`
+     - :part:`95%`
    * - llvm/lib/Target/AVR/AsmParser
      - `1`
      - `1`
@@ -4691,9 +5001,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :good:`100%`
    * - llvm/lib/Target/AVR/MCTargetDesc
      - `20`
-     - `20`
-     - `0`
-     - :good:`100%`
+     - `18`
+     - `2`
+     - :part:`90%`
    * - llvm/lib/Target/AVR/TargetInfo
      - `2`
      - `2`
@@ -4701,9 +5011,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :good:`100%`
    * - llvm/lib/Target/BPF
      - `32`
-     - `8`
-     - `24`
-     - :part:`25%`
+     - `9`
+     - `23`
+     - :part:`28%`
    * - llvm/lib/Target/BPF/AsmParser
      - `1`
      - `0`
@@ -4725,8 +5035,8 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `1`
      - :part:`50%`
    * - llvm/lib/Target/CSKY
-     - `20`
-     - `20`
+     - `23`
+     - `23`
      - `0`
      - :good:`100%`
    * - llvm/lib/Target/CSKY/AsmParser
@@ -4734,11 +5044,16 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `1`
      - `0`
      - :good:`100%`
-   * - llvm/lib/Target/CSKY/MCTargetDesc
-     - `15`
-     - `15`
+   * - llvm/lib/Target/CSKY/Disassembler
+     - `1`
+     - `1`
      - `0`
      - :good:`100%`
+   * - llvm/lib/Target/CSKY/MCTargetDesc
+     - `15`
+     - `14`
+     - `1`
+     - :part:`93%`
    * - llvm/lib/Target/CSKY/TargetInfo
      - `2`
      - `2`
@@ -4746,9 +5061,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :good:`100%`
    * - llvm/lib/Target/Hexagon
      - `80`
-     - `4`
-     - `76`
-     - :part:`5%`
+     - `6`
+     - `74`
+     - :part:`7%`
    * - llvm/lib/Target/Hexagon/AsmParser
      - `1`
      - `0`
@@ -4794,6 +5109,21 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `2`
      - `0`
      - :good:`100%`
+   * - llvm/lib/Target/LoongArch
+     - `19`
+     - `19`
+     - `0`
+     - :good:`100%`
+   * - llvm/lib/Target/LoongArch/MCTargetDesc
+     - `12`
+     - `12`
+     - `0`
+     - :good:`100%`
+   * - llvm/lib/Target/LoongArch/TargetInfo
+     - `2`
+     - `2`
+     - `0`
+     - :good:`100%`
    * - llvm/lib/Target/M68k
      - `26`
      - `25`
@@ -4816,19 +5146,19 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :part:`85%`
    * - llvm/lib/Target/M68k/MCTargetDesc
      - `12`
-     - `12`
-     - `0`
-     - :good:`100%`
+     - `11`
+     - `1`
+     - :part:`91%`
    * - llvm/lib/Target/M68k/TargetInfo
      - `2`
      - `2`
      - `0`
      - :good:`100%`
    * - llvm/lib/Target/Mips
-     - `69`
-     - `11`
+     - `70`
+     - `12`
      - `58`
-     - :part:`15%`
+     - :part:`17%`
    * - llvm/lib/Target/Mips/AsmParser
      - `1`
      - `0`
@@ -4890,10 +5220,10 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - llvm/lib/Target/PowerPC
-     - `53`
-     - `4`
+     - `54`
+     - `5`
      - `49`
-     - :part:`7%`
+     - :part:`9%`
    * - llvm/lib/Target/PowerPC/AsmParser
      - `1`
      - `0`
@@ -4920,10 +5250,10 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - llvm/lib/Target/RISCV
-     - `34`
-     - `18`
-     - `16`
-     - :part:`52%`
+     - `36`
+     - `17`
+     - `19`
+     - :part:`47%`
    * - llvm/lib/Target/RISCV/AsmParser
      - `1`
      - `0`
@@ -4946,9 +5276,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :good:`100%`
    * - llvm/lib/Target/Sparc
      - `23`
-     - `2`
-     - `21`
-     - :part:`8%`
+     - `3`
+     - `20`
+     - :part:`13%`
    * - llvm/lib/Target/Sparc/AsmParser
      - `1`
      - `0`
@@ -4995,10 +5325,10 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - llvm/lib/Target/VE
-     - `21`
-     - `17`
-     - `4`
-     - :part:`80%`
+     - `24`
+     - `19`
+     - `5`
+     - :part:`79%`
    * - llvm/lib/Target/VE/AsmParser
      - `1`
      - `1`
@@ -5011,9 +5341,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :good:`100%`
    * - llvm/lib/Target/VE/MCTargetDesc
      - `14`
-     - `13`
-     - `1`
-     - :part:`92%`
+     - `14`
+     - `0`
+     - :good:`100%`
    * - llvm/lib/Target/VE/TargetInfo
      - `2`
      - `1`
@@ -5051,9 +5381,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :good:`100%`
    * - llvm/lib/Target/X86
      - `82`
-     - `18`
-     - `64`
-     - :part:`21%`
+     - `19`
+     - `63`
+     - :part:`23%`
    * - llvm/lib/Target/X86/AsmParser
      - `3`
      - `0`
@@ -5064,6 +5394,11 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - `2`
      - :none:`0%`
+   * - llvm/lib/Target/X86/MCA
+     - `2`
+     - `2`
+     - `0`
+     - :good:`100%`
    * - llvm/lib/Target/X86/MCTargetDesc
      - `25`
      - `5`
@@ -5101,9 +5436,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :good:`100%`
    * - llvm/lib/TextAPI
      - `11`
-     - `11`
-     - `0`
-     - :good:`100%`
+     - `9`
+     - `2`
+     - :part:`81%`
    * - llvm/lib/ToolDrivers/llvm-dlltool
      - `1`
      - `0`
@@ -5140,15 +5475,15 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `15`
      - :part:`6%`
    * - llvm/lib/Transforms/Instrumentation
-     - `22`
-     - `8`
+     - `21`
+     - `7`
      - `14`
-     - :part:`36%`
+     - :part:`33%`
    * - llvm/lib/Transforms/IPO
      - `44`
-     - `11`
-     - `33`
-     - :part:`25%`
+     - `9`
+     - `35`
+     - :part:`20%`
    * - llvm/lib/Transforms/ObjCARC
      - `15`
      - `4`
@@ -5156,19 +5491,24 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :part:`26%`
    * - llvm/lib/Transforms/Scalar
      - `79`
-     - `15`
-     - `64`
-     - :part:`18%`
-   * - llvm/lib/Transforms/Utils
-     - `75`
      - `16`
+     - `63`
+     - :part:`20%`
+   * - llvm/lib/Transforms/Utils
+     - `78`
+     - `19`
      - `59`
-     - :part:`21%`
+     - :part:`24%`
    * - llvm/lib/Transforms/Vectorize
      - `22`
      - `13`
      - `9`
      - :part:`59%`
+   * - llvm/lib/WindowsDriver
+     - `1`
+     - `1`
+     - `0`
+     - :good:`100%`
    * - llvm/lib/WindowsManifest
      - `1`
      - `1`
@@ -5271,9 +5611,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :none:`0%`
    * - llvm/tools/llvm-cxxdump
      - `4`
-     - `2`
-     - `2`
-     - :part:`50%`
+     - `1`
+     - `3`
+     - :part:`25%`
    * - llvm/tools/llvm-cxxfilt
      - `1`
      - `1`
@@ -5284,6 +5624,11 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - `1`
      - :none:`0%`
+   * - llvm/tools/llvm-debuginfod-find
+     - `1`
+     - `1`
+     - `0`
+     - :good:`100%`
    * - llvm/tools/llvm-diff
      - `1`
      - `0`
@@ -5299,6 +5644,11 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - `1`
      - :none:`0%`
+   * - llvm/tools/llvm-dis-fuzzer
+     - `1`
+     - `1`
+     - `0`
+     - :good:`100%`
    * - llvm/tools/llvm-dlang-demangle-fuzzer
      - `2`
      - `2`
@@ -5465,30 +5815,10 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `1`
      - :none:`0%`
    * - llvm/tools/llvm-objcopy
-     - `6`
-     - `5`
-     - `1`
-     - :part:`83%`
-   * - llvm/tools/llvm-objcopy/COFF
-     - `9`
-     - `9`
-     - `0`
-     - :good:`100%`
-   * - llvm/tools/llvm-objcopy/ELF
-     - `5`
-     - `2`
      - `3`
-     - :part:`40%`
-   * - llvm/tools/llvm-objcopy/MachO
-     - `11`
-     - `11`
-     - `0`
-     - :good:`100%`
-   * - llvm/tools/llvm-objcopy/wasm
-     - `9`
-     - `9`
-     - `0`
-     - :good:`100%`
+     - `2`
+     - `1`
+     - :part:`66%`
    * - llvm/tools/llvm-objdump
      - `15`
      - `10`
@@ -5516,9 +5846,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :none:`0%`
    * - llvm/tools/llvm-profgen
      - `11`
-     - `8`
-     - `3`
-     - :part:`72%`
+     - `6`
+     - `5`
+     - :part:`54%`
    * - llvm/tools/llvm-rc
      - `12`
      - `6`
@@ -5531,14 +5861,19 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :part:`15%`
    * - llvm/tools/llvm-reduce
      - `7`
-     - `7`
-     - `0`
-     - :good:`100%`
+     - `6`
+     - `1`
+     - :part:`85%`
    * - llvm/tools/llvm-reduce/deltas
      - `40`
      - `39`
      - `1`
      - :part:`97%`
+   * - llvm/tools/llvm-remark-size-diff
+     - `1`
+     - `1`
+     - `0`
+     - :good:`100%`
    * - llvm/tools/llvm-rtdyld
      - `1`
      - `0`
@@ -5571,9 +5906,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :good:`100%`
    * - llvm/tools/llvm-split
      - `1`
-     - `1`
      - `0`
-     - :good:`100%`
+     - `1`
+     - :none:`0%`
    * - llvm/tools/llvm-stress
      - `1`
      - `0`
@@ -5670,15 +6005,15 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - llvm/unittests/ADT
-     - `78`
-     - `32`
-     - `46`
-     - :part:`41%`
+     - `77`
+     - `29`
+     - `48`
+     - :part:`37%`
    * - llvm/unittests/Analysis
-     - `37`
-     - `11`
-     - `26`
-     - :part:`29%`
+     - `38`
+     - `13`
+     - `25`
+     - :part:`34%`
    * - llvm/unittests/AsmParser
      - `1`
      - `1`
@@ -5700,10 +6035,10 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `1`
      - :part:`50%`
    * - llvm/unittests/CodeGen
-     - `18`
-     - `8`
+     - `20`
      - `10`
-     - :part:`44%`
+     - `10`
+     - :part:`50%`
    * - llvm/unittests/CodeGen/GlobalISel
      - `13`
      - `2`
@@ -5716,9 +6051,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :part:`50%`
    * - llvm/unittests/DebugInfo/DWARF
      - `17`
-     - `12`
-     - `5`
-     - :part:`70%`
+     - `13`
+     - `4`
+     - :part:`76%`
    * - llvm/unittests/DebugInfo/GSYM
      - `1`
      - `0`
@@ -5737,6 +6072,11 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
    * - llvm/unittests/DebugInfo/PDB/Inputs
      - `1`
      - `1`
+     - `0`
+     - :good:`100%`
+   * - llvm/unittests/Debuginfod
+     - `2`
+     - `2`
      - `0`
      - :good:`100%`
    * - llvm/unittests/Demangle
@@ -5786,9 +6126,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :good:`100%`
    * - llvm/unittests/IR
      - `36`
-     - `5`
-     - `31`
-     - :part:`13%`
+     - `6`
+     - `30`
+     - :part:`16%`
    * - llvm/unittests/LineEditor
      - `1`
      - `0`
@@ -5824,6 +6164,11 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - `1`
      - :none:`0%`
+   * - llvm/unittests/ObjCopy
+     - `1`
+     - `1`
+     - `0`
+     - :good:`100%`
    * - llvm/unittests/Object
      - `9`
      - `6`
@@ -5845,20 +6190,20 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - llvm/unittests/ProfileData
-     - `4`
-     - `1`
+     - `5`
+     - `2`
      - `3`
-     - :part:`25%`
+     - :part:`40%`
    * - llvm/unittests/Remarks
      - `8`
      - `5`
      - `3`
      - :part:`62%`
    * - llvm/unittests/Support
-     - `97`
-     - `32`
+     - `100`
+     - `35`
      - `65`
-     - :part:`32%`
+     - :part:`35%`
    * - llvm/unittests/Support/CommandLineInit
      - `1`
      - `1`
@@ -5870,10 +6215,10 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `4`
      - :none:`0%`
    * - llvm/unittests/TableGen
+     - `3`
+     - `1`
      - `2`
-     - `0`
-     - `2`
-     - :none:`0%`
+     - :part:`33%`
    * - llvm/unittests/Target/AArch64
      - `3`
      - `1`
@@ -5885,10 +6230,10 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - llvm/unittests/Target/ARM
+     - `2`
      - `1`
-     - `0`
      - `1`
-     - :none:`0%`
+     - :part:`50%`
    * - llvm/unittests/Target/PowerPC
      - `1`
      - `1`
@@ -5904,6 +6249,11 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - `1`
      - :none:`0%`
+   * - llvm/unittests/Testing/Support
+     - `1`
+     - `1`
+     - `0`
+     - :good:`100%`
    * - llvm/unittests/TextAPI
      - `5`
      - `3`
@@ -5979,21 +6329,6 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `7`
      - `1`
      - :part:`87%`
-   * - llvm/utils/benchmark/cmake
-     - `5`
-     - `3`
-     - `2`
-     - :part:`60%`
-   * - llvm/utils/benchmark/include/benchmark
-     - `1`
-     - `0`
-     - `1`
-     - :none:`0%`
-   * - llvm/utils/benchmark/src
-     - `19`
-     - `0`
-     - `19`
-     - :none:`0%`
    * - llvm/utils/FileCheck
      - `1`
      - `0`
@@ -6020,15 +6355,15 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `1`
      - :none:`0%`
    * - llvm/utils/TableGen
-     - `76`
-     - `11`
+     - `78`
+     - `13`
      - `65`
-     - :part:`14%`
+     - :part:`16%`
    * - llvm/utils/TableGen/GlobalISel
      - `17`
-     - `8`
-     - `9`
-     - :part:`47%`
+     - `10`
+     - `7`
+     - :part:`58%`
    * - llvm/utils/unittest/googlemock/include/gmock
      - `12`
      - `0`
@@ -6250,18 +6585,18 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - mlir/include/mlir/Analysis
-     - `15`
-     - `13`
+     - `7`
+     - `5`
      - `2`
-     - :part:`86%`
+     - :part:`71%`
    * - mlir/include/mlir/Analysis/AliasAnalysis
      - `1`
      - `1`
      - `0`
      - :good:`100%`
    * - mlir/include/mlir/Analysis/Presburger
-     - `3`
-     - `3`
+     - `9`
+     - `9`
      - `0`
      - :good:`100%`
    * - mlir/include/mlir/Bindings/Python
@@ -6304,6 +6639,11 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `1`
      - `0`
      - :good:`100%`
+   * - mlir/include/mlir/Conversion/BufferizationToMemRef
+     - `1`
+     - `1`
+     - `0`
+     - :good:`100%`
    * - mlir/include/mlir/Conversion/ComplexToLLVM
      - `1`
      - `1`
@@ -6314,6 +6654,21 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `1`
      - `0`
      - :good:`100%`
+   * - mlir/include/mlir/Conversion/ControlFlowToLLVM
+     - `1`
+     - `1`
+     - `0`
+     - :good:`100%`
+   * - mlir/include/mlir/Conversion/ControlFlowToSPIRV
+     - `2`
+     - `2`
+     - `0`
+     - :good:`100%`
+   * - mlir/include/mlir/Conversion/FuncToSPIRV
+     - `2`
+     - `2`
+     - `0`
+     - :good:`100%`
    * - mlir/include/mlir/Conversion/GPUCommon
      - `1`
      - `1`
@@ -6321,12 +6676,12 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :good:`100%`
    * - mlir/include/mlir/Conversion/GPUToNVVM
      - `1`
+     - `1`
      - `0`
-     - `1`
-     - :none:`0%`
+     - :good:`100%`
    * - mlir/include/mlir/Conversion/GPUToROCDL
-     - `1`
-     - `1`
+     - `2`
+     - `2`
      - `0`
      - :good:`100%`
    * - mlir/include/mlir/Conversion/GPUToSPIRV
@@ -6409,6 +6764,11 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `1`
      - `0`
      - :good:`100%`
+   * - mlir/include/mlir/Conversion/SCFToControlFlow
+     - `1`
+     - `1`
+     - `0`
+     - :good:`100%`
    * - mlir/include/mlir/Conversion/SCFToGPU
      - `2`
      - `2`
@@ -6422,11 +6782,6 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
    * - mlir/include/mlir/Conversion/SCFToSPIRV
      - `2`
      - `2`
-     - `0`
-     - :good:`100%`
-   * - mlir/include/mlir/Conversion/SCFToStandard
-     - `1`
-     - `1`
      - `0`
      - :good:`100%`
    * - mlir/include/mlir/Conversion/ShapeToStandard
@@ -6444,7 +6799,7 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `2`
      - `0`
      - :good:`100%`
-   * - mlir/include/mlir/Conversion/StandardToSPIRV
+   * - mlir/include/mlir/Conversion/TensorToSPIRV
      - `2`
      - `2`
      - `0`
@@ -6495,8 +6850,13 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - mlir/include/mlir/Dialect/Affine
-     - `2`
-     - `2`
+     - `4`
+     - `4`
+     - `0`
+     - :good:`100%`
+   * - mlir/include/mlir/Dialect/Affine/Analysis
+     - `5`
+     - `5`
      - `0`
      - :good:`100%`
    * - mlir/include/mlir/Dialect/Affine/IR
@@ -6515,6 +6875,11 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - mlir/include/mlir/Dialect/Arithmetic/Transforms
+     - `2`
+     - `2`
+     - `0`
+     - :good:`100%`
+   * - mlir/include/mlir/Dialect/Arithmetic/Utils
      - `1`
      - `1`
      - `0`
@@ -6530,8 +6895,8 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - mlir/include/mlir/Dialect/Async
-     - `1`
-     - `1`
+     - `2`
+     - `2`
      - `0`
      - :good:`100%`
    * - mlir/include/mlir/Dialect/Async/IR
@@ -6540,13 +6905,23 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - mlir/include/mlir/Dialect/Bufferization/IR
-     - `2`
-     - `2`
+     - `3`
+     - `3`
+     - `0`
+     - :good:`100%`
+   * - mlir/include/mlir/Dialect/Bufferization/Transforms
+     - `4`
+     - `4`
      - `0`
      - :good:`100%`
    * - mlir/include/mlir/Dialect/Complex/IR
      - `1`
      - `1`
+     - `0`
+     - :good:`100%`
+   * - mlir/include/mlir/Dialect/ControlFlow/IR
+     - `2`
+     - `2`
      - `0`
      - :good:`100%`
    * - mlir/include/mlir/Dialect/DLTI
@@ -6557,6 +6932,16 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
    * - mlir/include/mlir/Dialect/EmitC/IR
      - `1`
      - `1`
+     - `0`
+     - :good:`100%`
+   * - mlir/include/mlir/Dialect/Func/IR
+     - `1`
+     - `1`
+     - `0`
+     - :good:`100%`
+   * - mlir/include/mlir/Dialect/Func/Transforms
+     - `3`
+     - `3`
      - `0`
      - :good:`100%`
    * - mlir/include/mlir/Dialect/GPU
@@ -6575,18 +6960,18 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - mlir/include/mlir/Dialect/Linalg/ComprehensiveBufferize
-     - `7`
-     - `7`
+     - `2`
+     - `2`
      - `0`
      - :good:`100%`
    * - mlir/include/mlir/Dialect/Linalg/IR
-     - `3`
-     - `3`
+     - `2`
+     - `2`
      - `0`
      - :good:`100%`
    * - mlir/include/mlir/Dialect/Linalg/Transforms
-     - `4`
-     - `4`
+     - `5`
+     - `5`
      - `0`
      - :good:`100%`
    * - mlir/include/mlir/Dialect/Linalg/Utils
@@ -6620,8 +7005,8 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - mlir/include/mlir/Dialect/MemRef/Transforms
-     - `1`
-     - `1`
+     - `2`
+     - `2`
      - `0`
      - :good:`100%`
    * - mlir/include/mlir/Dialect/MemRef/Utils
@@ -6656,9 +7041,14 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :good:`100%`
    * - mlir/include/mlir/Dialect/SCF
      - `4`
-     - `3`
-     - `1`
-     - :part:`75%`
+     - `4`
+     - `0`
+     - :good:`100%`
+   * - mlir/include/mlir/Dialect/SCF/Utils
+     - `2`
+     - `2`
+     - `0`
+     - :good:`100%`
    * - mlir/include/mlir/Dialect/Shape/IR
      - `1`
      - `1`
@@ -6670,6 +7060,11 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - mlir/include/mlir/Dialect/SparseTensor/IR
+     - `1`
+     - `1`
+     - `0`
+     - :good:`100%`
+   * - mlir/include/mlir/Dialect/SparseTensor/Pipelines
      - `1`
      - `1`
      - `0`
@@ -6704,27 +7099,17 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `1`
      - `0`
      - :good:`100%`
-   * - mlir/include/mlir/Dialect/StandardOps/IR
-     - `1`
-     - `1`
-     - `0`
-     - :good:`100%`
-   * - mlir/include/mlir/Dialect/StandardOps/Transforms
-     - `4`
-     - `4`
-     - `0`
-     - :good:`100%`
-   * - mlir/include/mlir/Dialect/StandardOps/Utils
-     - `1`
-     - `1`
-     - `0`
-     - :good:`100%`
    * - mlir/include/mlir/Dialect/Tensor/IR
-     - `1`
-     - `1`
+     - `3`
+     - `3`
      - `0`
      - :good:`100%`
    * - mlir/include/mlir/Dialect/Tensor/Transforms
+     - `3`
+     - `3`
+     - `0`
+     - :good:`100%`
+   * - mlir/include/mlir/Dialect/Tensor/Utils
      - `1`
      - `1`
      - `0`
@@ -6740,18 +7125,28 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - mlir/include/mlir/Dialect/Tosa/Utils
-     - `2`
-     - `2`
+     - `3`
+     - `3`
      - `0`
      - :good:`100%`
    * - mlir/include/mlir/Dialect/Utils
-     - `3`
-     - `3`
+     - `4`
+     - `4`
      - `0`
      - :good:`100%`
-   * - mlir/include/mlir/Dialect/Vector
+   * - mlir/include/mlir/Dialect/Vector/IR
+     - `1`
+     - `1`
+     - `0`
+     - :good:`100%`
+   * - mlir/include/mlir/Dialect/Vector/Transforms
      - `4`
      - `4`
+     - `0`
+     - :good:`100%`
+   * - mlir/include/mlir/Dialect/Vector/Utils
+     - `1`
+     - `1`
      - `0`
      - :good:`100%`
    * - mlir/include/mlir/Dialect/X86Vector
@@ -6761,19 +7156,19 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :good:`100%`
    * - mlir/include/mlir/ExecutionEngine
      - `8`
-     - `6`
-     - `2`
-     - :part:`75%`
+     - `7`
+     - `1`
+     - :part:`87%`
    * - mlir/include/mlir/Interfaces
      - `14`
      - `13`
      - `1`
      - :part:`92%`
    * - mlir/include/mlir/IR
-     - `50`
+     - `49`
      - `29`
-     - `21`
-     - :part:`57%`
+     - `20`
+     - :part:`59%`
    * - mlir/include/mlir/Parser
      - `1`
      - `1`
@@ -6801,9 +7196,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :part:`60%`
    * - mlir/include/mlir/TableGen
      - `21`
-     - `18`
-     - `3`
-     - :part:`85%`
+     - `19`
+     - `2`
+     - :part:`90%`
    * - mlir/include/mlir/Target/Cpp
      - `1`
      - `1`
@@ -6879,11 +7274,31 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `1`
      - `0`
      - :good:`100%`
-   * - mlir/include/mlir/Transforms
-     - `13`
-     - `11`
+   * - mlir/include/mlir/Tools/PDLL/AST
+     - `4`
      - `2`
-     - :part:`84%`
+     - `2`
+     - :part:`50%`
+   * - mlir/include/mlir/Tools/PDLL/CodeGen
+     - `2`
+     - `2`
+     - `0`
+     - :good:`100%`
+   * - mlir/include/mlir/Tools/PDLL/ODS
+     - `4`
+     - `4`
+     - `0`
+     - :good:`100%`
+   * - mlir/include/mlir/Tools/PDLL/Parser
+     - `1`
+     - `1`
+     - `0`
+     - :good:`100%`
+   * - mlir/include/mlir/Transforms
+     - `9`
+     - `7`
+     - `2`
+     - :part:`77%`
    * - mlir/include/mlir-c
      - `15`
      - `15`
@@ -6895,13 +7310,13 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - mlir/include/mlir-c/Dialect
-     - `9`
-     - `9`
+     - `11`
+     - `11`
      - `0`
      - :good:`100%`
    * - mlir/lib/Analysis
-     - `15`
-     - `15`
+     - `7`
+     - `7`
      - `0`
      - :good:`100%`
    * - mlir/lib/Analysis/AliasAnalysis
@@ -6910,13 +7325,13 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - mlir/lib/Analysis/Presburger
-     - `2`
-     - `2`
+     - `8`
+     - `8`
      - `0`
      - :good:`100%`
    * - mlir/lib/Bindings/Python
-     - `22`
-     - `22`
+     - `23`
+     - `23`
      - `0`
      - :good:`100%`
    * - mlir/lib/Bindings/Python/Conversions
@@ -6940,8 +7355,8 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - mlir/lib/CAPI/Dialect
-     - `13`
-     - `13`
+     - `15`
+     - `15`
      - `0`
      - :good:`100%`
    * - mlir/lib/CAPI/ExecutionEngine
@@ -6999,6 +7414,11 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `1`
      - `0`
      - :good:`100%`
+   * - mlir/lib/Conversion/BufferizationToMemRef
+     - `1`
+     - `0`
+     - `1`
+     - :none:`0%`
    * - mlir/lib/Conversion/ComplexToLLVM
      - `1`
      - `1`
@@ -7009,11 +7429,26 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `1`
      - `0`
      - :good:`100%`
-   * - mlir/lib/Conversion/GPUCommon
-     - `5`
-     - `5`
+   * - mlir/lib/Conversion/ControlFlowToLLVM
+     - `1`
+     - `1`
      - `0`
      - :good:`100%`
+   * - mlir/lib/Conversion/ControlFlowToSPIRV
+     - `2`
+     - `2`
+     - `0`
+     - :good:`100%`
+   * - mlir/lib/Conversion/FuncToSPIRV
+     - `2`
+     - `2`
+     - `0`
+     - :good:`100%`
+   * - mlir/lib/Conversion/GPUCommon
+     - `5`
+     - `4`
+     - `1`
+     - :part:`80%`
    * - mlir/lib/Conversion/GPUToNVVM
      - `2`
      - `2`
@@ -7036,9 +7471,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :good:`100%`
    * - mlir/lib/Conversion/LinalgToLLVM
      - `1`
-     - `0`
      - `1`
-     - :none:`0%`
+     - `0`
+     - :good:`100%`
    * - mlir/lib/Conversion/LinalgToSPIRV
      - `2`
      - `1`
@@ -7046,9 +7481,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :part:`50%`
    * - mlir/lib/Conversion/LinalgToStandard
      - `1`
-     - `1`
      - `0`
-     - :good:`100%`
+     - `1`
+     - :none:`0%`
    * - mlir/lib/Conversion/LLVMCommon
      - `8`
      - `8`
@@ -7095,11 +7530,16 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - mlir/lib/Conversion/PDLToPDLInterp
-     - `5`
-     - `5`
+     - `7`
+     - `7`
      - `0`
      - :good:`100%`
    * - mlir/lib/Conversion/ReconcileUnrealizedCasts
+     - `1`
+     - `1`
+     - `0`
+     - :good:`100%`
+   * - mlir/lib/Conversion/SCFToControlFlow
      - `1`
      - `1`
      - `0`
@@ -7117,11 +7557,6 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
    * - mlir/lib/Conversion/SCFToSPIRV
      - `2`
      - `2`
-     - `0`
-     - :good:`100%`
-   * - mlir/lib/Conversion/SCFToStandard
-     - `1`
-     - `1`
      - `0`
      - :good:`100%`
    * - mlir/lib/Conversion/ShapeToStandard
@@ -7144,14 +7579,14 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `1`
      - `0`
      - :good:`100%`
-   * - mlir/lib/Conversion/StandardToSPIRV
+   * - mlir/lib/Conversion/TensorToSPIRV
      - `2`
      - `2`
      - `0`
      - :good:`100%`
    * - mlir/lib/Conversion/TosaToLinalg
-     - `2`
-     - `2`
+     - `4`
+     - `4`
      - `0`
      - :good:`100%`
    * - mlir/lib/Conversion/TosaToSCF
@@ -7166,9 +7601,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :good:`100%`
    * - mlir/lib/Conversion/VectorToGPU
      - `1`
-     - `1`
      - `0`
-     - :good:`100%`
+     - `1`
+     - :none:`0%`
    * - mlir/lib/Conversion/VectorToLLVM
      - `2`
      - `2`
@@ -7194,19 +7629,24 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `1`
      - `0`
      - :good:`100%`
+   * - mlir/lib/Dialect/Affine/Analysis
+     - `5`
+     - `5`
+     - `0`
+     - :good:`100%`
    * - mlir/lib/Dialect/Affine/IR
      - `3`
      - `2`
      - `1`
      - :part:`66%`
    * - mlir/lib/Dialect/Affine/Transforms
-     - `11`
-     - `11`
+     - `14`
+     - `14`
      - `0`
      - :good:`100%`
    * - mlir/lib/Dialect/Affine/Utils
-     - `1`
-     - `1`
+     - `3`
+     - `3`
      - `0`
      - :good:`100%`
    * - mlir/lib/Dialect/AMX/IR
@@ -7221,12 +7661,17 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :good:`100%`
    * - mlir/lib/Dialect/Arithmetic/IR
      - `2`
-     - `2`
-     - `0`
-     - :good:`100%`
+     - `1`
+     - `1`
+     - :part:`50%`
    * - mlir/lib/Dialect/Arithmetic/Transforms
+     - `4`
      - `3`
-     - `3`
+     - `1`
+     - :part:`75%`
+   * - mlir/lib/Dialect/Arithmetic/Utils
+     - `1`
+     - `1`
      - `0`
      - :good:`100%`
    * - mlir/lib/Dialect/ArmNeon/IR
@@ -7255,13 +7700,23 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - mlir/lib/Dialect/Bufferization/IR
-     - `3`
-     - `3`
+     - `4`
+     - `4`
+     - `0`
+     - :good:`100%`
+   * - mlir/lib/Dialect/Bufferization/Transforms
+     - `7`
+     - `7`
      - `0`
      - :good:`100%`
    * - mlir/lib/Dialect/Complex/IR
      - `2`
      - `2`
+     - `0`
+     - :good:`100%`
+   * - mlir/lib/Dialect/ControlFlow/IR
+     - `1`
+     - `1`
      - `0`
      - :good:`100%`
    * - mlir/lib/Dialect/DLTI
@@ -7272,6 +7727,16 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
    * - mlir/lib/Dialect/EmitC/IR
      - `1`
      - `1`
+     - `0`
+     - :good:`100%`
+   * - mlir/lib/Dialect/Func/IR
+     - `1`
+     - `1`
+     - `0`
+     - :good:`100%`
+   * - mlir/lib/Dialect/Func/Transforms
+     - `4`
+     - `4`
      - `0`
      - :good:`100%`
    * - mlir/lib/Dialect/GPU/IR
@@ -7290,8 +7755,8 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - mlir/lib/Dialect/Linalg/ComprehensiveBufferize
-     - `7`
-     - `7`
+     - `2`
+     - `2`
      - `0`
      - :good:`100%`
    * - mlir/lib/Dialect/Linalg/IR
@@ -7300,8 +7765,8 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - mlir/lib/Dialect/Linalg/Transforms
-     - `22`
-     - `22`
+     - `25`
+     - `25`
      - `0`
      - :good:`100%`
    * - mlir/lib/Dialect/Linalg/Utils
@@ -7311,9 +7776,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :good:`100%`
    * - mlir/lib/Dialect/LLVMIR/IR
      - `7`
-     - `7`
-     - `0`
-     - :good:`100%`
+     - `5`
+     - `2`
+     - :part:`71%`
    * - mlir/lib/Dialect/LLVMIR/Transforms
      - `2`
      - `2`
@@ -7335,10 +7800,10 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - mlir/lib/Dialect/MemRef/Transforms
-     - `2`
-     - `2`
-     - `0`
-     - :good:`100%`
+     - `7`
+     - `6`
+     - `1`
+     - :part:`85%`
    * - mlir/lib/Dialect/MemRef/Utils
      - `1`
      - `1`
@@ -7385,10 +7850,15 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - mlir/lib/Dialect/SCF/Transforms
+     - `12`
      - `11`
-     - `10`
      - `1`
-     - :part:`90%`
+     - :part:`91%`
+   * - mlir/lib/Dialect/SCF/Utils
+     - `2`
+     - `2`
+     - `0`
+     - :good:`100%`
    * - mlir/lib/Dialect/Shape/IR
      - `1`
      - `1`
@@ -7404,11 +7874,16 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `1`
      - `0`
      - :good:`100%`
-   * - mlir/lib/Dialect/SparseTensor/Transforms
-     - `3`
-     - `3`
+   * - mlir/lib/Dialect/SparseTensor/Pipelines
+     - `1`
+     - `1`
      - `0`
      - :good:`100%`
+   * - mlir/lib/Dialect/SparseTensor/Transforms
+     - `5`
+     - `4`
+     - `1`
+     - :part:`80%`
    * - mlir/lib/Dialect/SparseTensor/Utils
      - `1`
      - `1`
@@ -7425,65 +7900,65 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - mlir/lib/Dialect/SPIRV/Transforms
+     - `7`
      - `6`
-     - `5`
      - `1`
-     - :part:`83%`
+     - :part:`85%`
    * - mlir/lib/Dialect/SPIRV/Utils
      - `1`
      - `1`
      - `0`
      - :good:`100%`
-   * - mlir/lib/Dialect/StandardOps/IR
-     - `1`
-     - `1`
-     - `0`
-     - :good:`100%`
-   * - mlir/lib/Dialect/StandardOps/Transforms
-     - `8`
-     - `8`
-     - `0`
-     - :good:`100%`
-   * - mlir/lib/Dialect/StandardOps/Utils
-     - `1`
-     - `1`
-     - `0`
-     - :good:`100%`
    * - mlir/lib/Dialect/Tensor/IR
-     - `2`
-     - `2`
+     - `4`
+     - `4`
      - `0`
      - :good:`100%`
    * - mlir/lib/Dialect/Tensor/Transforms
-     - `2`
-     - `2`
+     - `4`
+     - `4`
+     - `0`
+     - :good:`100%`
+   * - mlir/lib/Dialect/Tensor/Utils
+     - `1`
+     - `1`
      - `0`
      - :good:`100%`
    * - mlir/lib/Dialect/Tosa/IR
      - `1`
-     - `0`
      - `1`
-     - :none:`0%`
+     - `0`
+     - :good:`100%`
    * - mlir/lib/Dialect/Tosa/Transforms
-     - `3`
-     - `3`
+     - `6`
+     - `6`
      - `0`
      - :good:`100%`
    * - mlir/lib/Dialect/Tosa/Utils
-     - `1`
-     - `1`
+     - `2`
+     - `2`
      - `0`
      - :good:`100%`
    * - mlir/lib/Dialect/Utils
-     - `3`
-     - `3`
+     - `4`
+     - `4`
      - `0`
      - :good:`100%`
-   * - mlir/lib/Dialect/Vector
-     - `8`
-     - `7`
+   * - mlir/lib/Dialect/Vector/IR
      - `1`
-     - :part:`87%`
+     - `0`
+     - `1`
+     - :none:`0%`
+   * - mlir/lib/Dialect/Vector/Transforms
+     - `11`
+     - `11`
+     - `0`
+     - :good:`100%`
+   * - mlir/lib/Dialect/Vector/Utils
+     - `1`
+     - `1`
+     - `0`
+     - :good:`100%`
    * - mlir/lib/Dialect/X86Vector/IR
      - `1`
      - `1`
@@ -7496,29 +7971,29 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :good:`100%`
    * - mlir/lib/ExecutionEngine
      - `9`
-     - `8`
-     - `1`
-     - :part:`88%`
+     - `9`
+     - `0`
+     - :good:`100%`
    * - mlir/lib/Interfaces
      - `12`
      - `12`
      - `0`
      - :good:`100%`
    * - mlir/lib/IR
-     - `37`
-     - `35`
-     - `2`
-     - :part:`94%`
+     - `38`
+     - `31`
+     - `7`
+     - :part:`81%`
    * - mlir/lib/Parser
      - `14`
-     - `14`
-     - `0`
-     - :good:`100%`
+     - `10`
+     - `4`
+     - :part:`71%`
    * - mlir/lib/Pass
      - `8`
-     - `7`
-     - `1`
-     - :part:`87%`
+     - `6`
+     - `2`
+     - :part:`75%`
    * - mlir/lib/Reducer
      - `4`
      - `4`
@@ -7546,9 +8021,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :good:`100%`
    * - mlir/lib/Target/LLVMIR
      - `7`
-     - `7`
-     - `0`
-     - :good:`100%`
+     - `6`
+     - `1`
+     - :part:`85%`
    * - mlir/lib/Target/LLVMIR/Dialect/AMX
      - `1`
      - `1`
@@ -7611,9 +8086,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :part:`75%`
    * - mlir/lib/Tools/mlir-lsp-server
      - `5`
-     - `5`
-     - `0`
-     - :good:`100%`
+     - `4`
+     - `1`
+     - :part:`80%`
    * - mlir/lib/Tools/mlir-lsp-server/lsp
      - `6`
      - `4`
@@ -7624,16 +8099,36 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `1`
      - `0`
      - :good:`100%`
-   * - mlir/lib/Transforms
-     - `21`
-     - `17`
-     - `4`
-     - :part:`80%`
-   * - mlir/lib/Transforms/Utils
-     - `8`
-     - `7`
+   * - mlir/lib/Tools/PDLL/AST
+     - `6`
+     - `5`
      - `1`
-     - :part:`87%`
+     - :part:`83%`
+   * - mlir/lib/Tools/PDLL/CodeGen
+     - `2`
+     - `1`
+     - `1`
+     - :part:`50%`
+   * - mlir/lib/Tools/PDLL/ODS
+     - `3`
+     - `3`
+     - `0`
+     - :good:`100%`
+   * - mlir/lib/Tools/PDLL/Parser
+     - `3`
+     - `1`
+     - `2`
+     - :part:`33%`
+   * - mlir/lib/Transforms
+     - `13`
+     - `11`
+     - `2`
+     - :part:`84%`
+   * - mlir/lib/Transforms/Utils
+     - `6`
+     - `6`
+     - `0`
+     - :good:`100%`
    * - mlir/lib/Translation
      - `1`
      - `1`
@@ -7646,15 +8141,20 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :good:`100%`
    * - mlir/tools/mlir-linalg-ods-gen
      - `1`
-     - `0`
      - `1`
-     - :none:`0%`
+     - `0`
+     - :good:`100%`
    * - mlir/tools/mlir-lsp-server
      - `1`
      - `1`
      - `0`
      - :good:`100%`
    * - mlir/tools/mlir-opt
+     - `1`
+     - `1`
+     - `0`
+     - :good:`100%`
+   * - mlir/tools/mlir-pdll
      - `1`
      - `1`
      - `0`
@@ -7675,8 +8175,8 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - mlir/tools/mlir-tblgen
-     - `27`
-     - `26`
+     - `29`
+     - `28`
      - `1`
      - :part:`96%`
    * - mlir/tools/mlir-translate
@@ -7689,19 +8189,24 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `4`
      - `0`
      - :good:`100%`
-   * - mlir/unittests/Analysis
-     - `6`
-     - `6`
+   * - mlir/unittests/Analysis/Presburger
+     - `8`
+     - `8`
      - `0`
      - :good:`100%`
-   * - mlir/unittests/Analysis/Presburger
-     - `2`
-     - `2`
+   * - mlir/unittests/Conversion/PDLToPDLInterp
+     - `1`
+     - `1`
      - `0`
      - :good:`100%`
    * - mlir/unittests/Dialect
      - `1`
      - `1`
+     - `0`
+     - :good:`100%`
+   * - mlir/unittests/Dialect/Affine/Analysis
+     - `3`
+     - `3`
      - `0`
      - :good:`100%`
    * - mlir/unittests/Dialect/Quant
@@ -7735,13 +8240,13 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - mlir/unittests/IR
-     - `6`
-     - `6`
+     - `7`
+     - `7`
      - `0`
      - :good:`100%`
    * - mlir/unittests/Pass
-     - `2`
-     - `2`
+     - `3`
+     - `3`
      - `0`
      - :good:`100%`
    * - mlir/unittests/Rewrite
@@ -7760,8 +8265,8 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `2`
      - :part:`60%`
    * - mlir/unittests/Transforms
-     - `1`
-     - `1`
+     - `2`
+     - `2`
      - `0`
      - :good:`100%`
    * - openmp/libompd/src
@@ -7776,54 +8281,19 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :good:`100%`
    * - openmp/libomptarget/DeviceRTL/src
      - `12`
-     - `11`
-     - `1`
-     - :part:`91%`
-   * - openmp/libomptarget/deviceRTLs
-     - `2`
-     - `2`
-     - `0`
-     - :good:`100%`
-   * - openmp/libomptarget/deviceRTLs/amdgcn/src
-     - `2`
-     - `2`
-     - `0`
-     - :good:`100%`
-   * - openmp/libomptarget/deviceRTLs/common
-     - `7`
-     - `6`
-     - `1`
-     - :part:`85%`
-   * - openmp/libomptarget/deviceRTLs/common/include
-     - `1`
-     - `1`
-     - `0`
-     - :good:`100%`
-   * - openmp/libomptarget/deviceRTLs/common/include/target
-     - `1`
-     - `1`
-     - `0`
-     - :good:`100%`
-   * - openmp/libomptarget/deviceRTLs/common/src
-     - `1`
-     - `1`
-     - `0`
-     - :good:`100%`
-   * - openmp/libomptarget/deviceRTLs/nvptx/src
-     - `2`
-     - `2`
-     - `0`
-     - :good:`100%`
+     - `9`
+     - `3`
+     - :part:`75%`
    * - openmp/libomptarget/include
-     - `6`
-     - `6`
-     - `0`
-     - :good:`100%`
+     - `9`
+     - `8`
+     - `1`
+     - :part:`88%`
    * - openmp/libomptarget/plugins/amdgpu/dynamic_hsa
      - `3`
-     - `3`
-     - `0`
-     - :good:`100%`
+     - `2`
+     - `1`
+     - :part:`66%`
    * - openmp/libomptarget/plugins/amdgpu/impl
      - `13`
      - `10`
@@ -7851,9 +8321,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :good:`100%`
    * - openmp/libomptarget/plugins/cuda/src
      - `1`
-     - `1`
      - `0`
-     - :good:`100%`
+     - `1`
+     - :none:`0%`
    * - openmp/libomptarget/plugins/generic-elf-64bit/src
      - `1`
      - `1`
@@ -7866,9 +8336,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :good:`100%`
    * - openmp/libomptarget/plugins/remote/lib
      - `1`
-     - `1`
      - `0`
-     - :good:`100%`
+     - `1`
+     - :none:`0%`
    * - openmp/libomptarget/plugins/remote/server
      - `3`
      - `3`
@@ -7885,10 +8355,10 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `0`
      - :good:`100%`
    * - openmp/libomptarget/src
-     - `8`
+     - `7`
      - `6`
-     - `2`
-     - :part:`75%`
+     - `1`
+     - :part:`85%`
    * - openmp/libomptarget/tools/deviceinfo
      - `1`
      - `1`
@@ -7901,9 +8371,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :good:`100%`
    * - openmp/runtime/src
      - `75`
-     - `66`
-     - `9`
-     - :part:`88%`
+     - `65`
+     - `10`
+     - :part:`86%`
    * - openmp/runtime/src/thirdparty/ittnotify
      - `6`
      - `5`
@@ -8061,14 +8531,29 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - :good:`100%`
    * - pstl/include/pstl/internal
      - `23`
-     - `12`
-     - `11`
-     - :part:`52%`
+     - `16`
+     - `7`
+     - :part:`69%`
    * - pstl/include/pstl/internal/omp
      - `11`
      - `8`
      - `3`
      - :part:`72%`
+   * - third-party/benchmark/cmake
+     - `5`
+     - `1`
+     - `4`
+     - :part:`20%`
+   * - third-party/benchmark/include/benchmark
+     - `1`
+     - `0`
+     - `1`
+     - :none:`0%`
+   * - third-party/benchmark/src
+     - `21`
+     - `21`
+     - `0`
+     - :good:`100%`
    * - utils/bazel/llvm-project-overlay/clang/include/clang/Config
      - `1`
      - `1`
@@ -8080,7 +8565,7 @@ tree in terms of conformance to :doc:`ClangFormat` as of: November 25, 2021 16:3
      - `1`
      - :part:`50%`
    * - Total
-     - :total:`15667`
-     - :total:`8139`
-     - :total:`7528`
-     - :total:`51%`
+     - :total:`16432`
+     - :total:`8857`
+     - :total:`7575`
+     - :total:`53%`

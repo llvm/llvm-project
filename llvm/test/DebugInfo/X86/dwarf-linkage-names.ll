@@ -17,10 +17,10 @@
 
 ; This assumes the variable will appear before the function.
 ; LINKAGE1: .section .debug_info
-; LINKAGE1: DW_TAG_subprogram
+; LINKAGE1: DW_TAG_variable
 ; LINKAGE1-NOT: DW_TAG
 ; LINKAGE1: {{DW_AT_(MIPS_)?linkage_name}}
-; LINKAGE1: DW_TAG_variable
+; LINKAGE1: DW_TAG_subprogram
 ; LINKAGE1-NOT: DW_TAG
 ; LINKAGE1: {{DW_AT_(MIPS_)?linkage_name}}
 ; LINKAGE1: .section

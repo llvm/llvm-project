@@ -1,4 +1,4 @@
-; RUN: opt -instsimplify -S < %s | FileCheck %s
+; RUN: opt -passes=instsimplify -S < %s | FileCheck %s
 
 ; Verify that we don't crash with an assertion failure when constant folding
 ; a call to intrinsic 'convert.from.fp16' if the return type is not 'float'.

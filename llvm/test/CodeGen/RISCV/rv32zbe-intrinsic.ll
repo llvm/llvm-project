@@ -10,7 +10,7 @@ define i32 @bcompress32(i32 %a, i32 %b) nounwind {
 ; RV32ZBE-NEXT:    bcompress a0, a0, a1
 ; RV32ZBE-NEXT:    ret
   %tmp = call i32 @llvm.riscv.bcompress.i32(i32 %a, i32 %b)
- ret i32 %tmp
+  ret i32 %tmp
 }
 
 declare i32 @llvm.riscv.bdecompress.i32(i32 %a, i32 %b)
@@ -21,5 +21,5 @@ define i32 @bdecompress32(i32 %a, i32 %b) nounwind {
 ; RV32ZBE-NEXT:    bdecompress a0, a0, a1
 ; RV32ZBE-NEXT:    ret
   %tmp = call i32 @llvm.riscv.bdecompress.i32(i32 %a, i32 %b)
- ret i32 %tmp
+  ret i32 %tmp
 }

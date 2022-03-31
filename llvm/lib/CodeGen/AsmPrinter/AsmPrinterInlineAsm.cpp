@@ -17,8 +17,8 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
-#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -26,9 +26,10 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -115,7 +116,7 @@ void AsmPrinter::emitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
     report_fatal_error("Inline asm not supported by this streamer because"
                        " we don't have an asm parser for this target\n");
   Parser->setAssemblerDialect(Dialect);
-  Parser->setTargetParser(*TAP.get());
+  Parser->setTargetParser(*TAP);
   // Enable lexing Masm binary and hex integer literals in intel inline
   // assembly.
   if (Dialect == InlineAsm::AD_Intel)
@@ -398,9 +399,9 @@ void AsmPrinter::emitInlineAsm(const MachineInstr *MI) const {
   if (!RestrRegs.empty()) {
     std::string Msg = "inline asm clobber list contains reserved registers: ";
     ListSeparator LS;
-    for (const Register &RR : RestrRegs) {
+    for (const Register RR : RestrRegs) {
       Msg += LS;
-      Msg += TRI->getName(RR);
+      Msg += TRI->getRegAsmName(RR);
     }
     const char *Note =
         "Reserved registers on the clobber list may not be "

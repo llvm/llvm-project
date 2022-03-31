@@ -31,6 +31,7 @@
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/Status.h"
@@ -46,9 +47,6 @@
 
 using namespace lldb;
 using namespace lldb_private;
-
-/// Default Constructor
-PlatformDarwin::PlatformDarwin(bool is_host) : PlatformPOSIX(is_host) {}
 
 /// Destructor.
 ///
@@ -87,8 +85,8 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResources(
         if (objfile) {
           FileSpec symfile_spec(objfile->GetFileSpec());
           if (symfile_spec &&
-              strcasestr(symfile_spec.GetPath().c_str(),
-                         ".dSYM/Contents/Resources/DWARF") != nullptr &&
+              llvm::StringRef(symfile_spec.GetPath())
+                  .contains_insensitive(".dSYM/Contents/Resources/DWARF") &&
               FileSystem::Instance().Exists(symfile_spec)) {
             while (module_spec.GetFilename()) {
               std::string module_basename(
@@ -223,7 +221,7 @@ lldb_private::Status PlatformDarwin::GetSharedModuleWithLocalCache(
     const lldb_private::FileSpecList *module_search_paths_ptr,
     llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr) {
 
-  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM));
+  Log *log = GetLog(LLDBLog::Platform);
   LLDB_LOGF(log,
             "[%s] Trying to find module %s/%s - platform path %s/%s symbol "
             "path %s/%s",
@@ -237,7 +235,7 @@ lldb_private::Status PlatformDarwin::GetSharedModuleWithLocalCache(
 
   Status err;
 
-  if (IsHost()) {
+  if (CheckLocalSharedCache()) {
     // When debugging on the host, we are most likely using the same shared
     // cache as our inferior. The dylibs from the shared cache might not
     // exist on the filesystem, so let's use the images in our own memory
@@ -283,7 +281,7 @@ lldb_private::Status PlatformDarwin::GetSharedModuleWithLocalCache(
         if (err.Fail())
           return err;
         if (FileSystem::Instance().Exists(module_cache_spec)) {
-          Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM));
+          Log *log = GetLog(LLDBLog::Platform);
           LLDB_LOGF(log, "[%s] module %s/%s was rsynced and is now there",
                     (IsHost() ? "host" : "remote"),
                     module_spec.GetFileSpec().GetDirectory().AsCString(),
@@ -313,7 +311,7 @@ lldb_private::Status PlatformDarwin::GetSharedModuleWithLocalCache(
                                              low_remote, high_remote);
           if (low_local != low_remote || high_local != high_remote) {
             // bring in the remote file
-            Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM));
+            Log *log = GetLog(LLDBLog::Platform);
             LLDB_LOGF(log,
                       "[%s] module %s/%s needs to be replaced from remote copy",
                       (IsHost() ? "host" : "remote"),
@@ -329,7 +327,7 @@ lldb_private::Status PlatformDarwin::GetSharedModuleWithLocalCache(
         ModuleSpec local_spec(module_cache_spec, module_spec.GetArchitecture());
         module_sp = std::make_shared<Module>(local_spec);
         module_sp->SetPlatformFileSpec(module_spec.GetFileSpec());
-        Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM));
+        Log *log = GetLog(LLDBLog::Platform);
         LLDB_LOGF(log, "[%s] module %s/%s was found in the cache",
                   (IsHost() ? "host" : "remote"),
                   module_spec.GetFileSpec().GetDirectory().AsCString(),
@@ -346,7 +344,7 @@ lldb_private::Status PlatformDarwin::GetSharedModuleWithLocalCache(
       if (err.Fail())
         return err;
       if (FileSystem::Instance().Exists(module_cache_spec)) {
-        Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM));
+        Log *log = GetLog(LLDBLog::Platform);
         LLDB_LOGF(log, "[%s] module %s/%s is now cached and fine",
                   (IsHost() ? "host" : "remote"),
                   module_spec.GetFileSpec().GetDirectory().AsCString(),
@@ -514,45 +512,19 @@ bool PlatformDarwin::ModuleIsExcludedForUnconstrainedSearches(
   return obj_type == ObjectFile::eTypeDynamicLinker;
 }
 
-bool PlatformDarwin::x86GetSupportedArchitectureAtIndex(uint32_t idx,
-                                                        ArchSpec &arch) {
+void PlatformDarwin::x86GetSupportedArchitectures(
+    std::vector<ArchSpec> &archs) {
   ArchSpec host_arch = HostInfo::GetArchitecture(HostInfo::eArchKindDefault);
+  archs.push_back(host_arch);
+
   if (host_arch.GetCore() == ArchSpec::eCore_x86_64_x86_64h) {
-    switch (idx) {
-    case 0:
-      arch = host_arch;
-      return true;
-
-    case 1:
-      arch.SetTriple("x86_64-apple-macosx");
-      return true;
-
-    case 2:
-      arch = HostInfo::GetArchitecture(HostInfo::eArchKind32);
-      return true;
-
-    default:
-      return false;
-    }
+    archs.push_back(ArchSpec("x86_64-apple-macosx"));
+    archs.push_back(HostInfo::GetArchitecture(HostInfo::eArchKind32));
   } else {
-    if (idx == 0) {
-      arch = HostInfo::GetArchitecture(HostInfo::eArchKindDefault);
-      return arch.IsValid();
-    } else if (idx == 1) {
-      ArchSpec platform_arch(
-          HostInfo::GetArchitecture(HostInfo::eArchKindDefault));
-      ArchSpec platform_arch64(
-          HostInfo::GetArchitecture(HostInfo::eArchKind64));
-      if (platform_arch.IsExactMatch(platform_arch64)) {
-        // This macosx platform supports both 32 and 64 bit. Since we already
-        // returned the 64 bit arch for idx == 0, return the 32 bit arch for
-        // idx == 1
-        arch = HostInfo::GetArchitecture(HostInfo::eArchKind32);
-        return arch.IsValid();
-      }
-    }
+    ArchSpec host_arch64 = HostInfo::GetArchitecture(HostInfo::eArchKind64);
+    if (host_arch.IsExactMatch(host_arch64))
+      archs.push_back(HostInfo::GetArchitecture(HostInfo::eArchKind32));
   }
-  return false;
 }
 
 static llvm::ArrayRef<const char *> GetCompatibleArchs(ArchSpec::Core core) {
@@ -657,33 +629,21 @@ static llvm::ArrayRef<const char *> GetCompatibleArchs(ArchSpec::Core core) {
   return {};
 }
 
-const char *PlatformDarwin::GetCompatibleArch(ArchSpec::Core core, size_t idx) {
-  llvm::ArrayRef<const char *> compatible_archs = GetCompatibleArchs(core);
-  if (!compatible_archs.data())
-    return nullptr;
-  if (idx < compatible_archs.size())
-    return compatible_archs[idx];
-  return nullptr;
-}
-
 /// The architecture selection rules for arm processors These cpu subtypes have
 /// distinct names (e.g. armv7f) but armv7 binaries run fine on an armv7f
 /// processor.
-bool PlatformDarwin::ARMGetSupportedArchitectureAtIndex(uint32_t idx,
-                                                        ArchSpec &arch) {
+void PlatformDarwin::ARMGetSupportedArchitectures(
+    std::vector<ArchSpec> &archs, llvm::Optional<llvm::Triple::OSType> os) {
   const ArchSpec system_arch = GetSystemArchitecture();
   const ArchSpec::Core system_core = system_arch.GetCore();
-
-  if (const char *compatible_arch = GetCompatibleArch(system_core, idx)) {
+  for (const char *arch : GetCompatibleArchs(system_core)) {
     llvm::Triple triple;
-    triple.setArchName(compatible_arch);
+    triple.setArchName(arch);
     triple.setVendor(llvm::Triple::VendorType::Apple);
-    arch.SetTriple(triple);
-    return true;
+    if (os)
+      triple.setOS(*os);
+    archs.push_back(ArchSpec(triple));
   }
-
-  arch.Clear();
-  return false;
 }
 
 static FileSpec GetXcodeSelectPath() {
@@ -780,9 +740,8 @@ lldb::ProcessSP PlatformDarwin::DebugProcess(ProcessLaunchInfo &launch_info,
     // charge of setting the exit status.  However, we still need to reap it
     // from lldb. So, make sure we use a exit callback which does not set exit
     // status.
-    const bool monitor_signals = false;
     launch_info.SetMonitorProcessCallback(
-        &ProcessLaunchInfo::NoOpMonitorCallback, monitor_signals);
+        &ProcessLaunchInfo::NoOpMonitorCallback);
     process_sp = Platform::DebugProcess(launch_info, debugger, target, error);
   } else {
     if (m_remote_platform_sp)
@@ -930,7 +889,7 @@ PlatformDarwin::ParseVersionBuildDir(llvm::StringRef dir) {
 
 llvm::Expected<StructuredData::DictionarySP>
 PlatformDarwin::FetchExtendedCrashInformation(Process &process) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
+  Log *log = GetLog(LLDBLog::Process);
 
   StructuredData::ArraySP annotations = ExtractCrashInfoAnnotations(process);
 
@@ -949,7 +908,7 @@ PlatformDarwin::FetchExtendedCrashInformation(Process &process) {
 
 StructuredData::ArraySP
 PlatformDarwin::ExtractCrashInfoAnnotations(Process &process) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
+  Log *log = GetLog(LLDBLog::Process);
 
   ConstString section_name("__crash_info");
   Target &target = process.GetTarget();
@@ -1127,11 +1086,10 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
     case XcodeSDK::Type::bridgeOS:
     case XcodeSDK::Type::Linux:
     case XcodeSDK::Type::unknown:
-      if (lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST)) {
+      if (Log *log = GetLog(LLDBLog::Host)) {
         XcodeSDK::Info info;
         info.type = sdk_type;
-        LLDB_LOGF(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST),
-                  "Clang modules on %s are not supported",
+        LLDB_LOGF(log, "Clang modules on %s are not supported",
                   XcodeSDK::GetCanonicalName(info).c_str());
       }
       return;
@@ -1294,7 +1252,7 @@ lldb_private::Status PlatformDarwin::FindBundleBinaryInExecSearchPaths(
 
     size_t num_module_search_paths = module_search_paths_ptr->GetSize();
     for (size_t i = 0; i < num_module_search_paths; ++i) {
-      Log *log_verbose = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
+      Log *log_verbose = GetLog(LLDBLog::Host);
       LLDB_LOGF(
           log_verbose,
           "PlatformRemoteDarwinDevice::GetSharedModule searching for binary in "
@@ -1368,10 +1326,22 @@ FileSpec PlatformDarwin::GetCurrentCommandLineToolsDirectory() {
   return {};
 }
 
-std::vector<ArchSpec> PlatformDarwin::GetSupportedArchitectures() {
-  std::vector<ArchSpec> result;
-  ArchSpec arch;
-  for (uint32_t idx = 0; GetSupportedArchitectureAtIndex(idx, arch); ++idx)
-    result.push_back(arch);
-  return result;
+llvm::Triple::OSType PlatformDarwin::GetHostOSType() {
+#if !defined(__APPLE__)
+  return llvm::Triple::MacOSX;
+#else
+#if TARGET_OS_OSX
+  return llvm::Triple::MacOSX;
+#elif TARGET_OS_IOS
+  return llvm::Triple::IOS;
+#elif TARGET_OS_WATCH
+  return llvm::Triple::WatchOS;
+#elif TARGET_OS_TV
+  return llvm::Triple::TvOS;
+#elif TARGET_OS_BRIDGE
+  return llvm::Triple::BridgeOS;
+#else
+#error "LLDB being compiled for an unrecognized Darwin OS"
+#endif
+#endif // __APPLE__
 }

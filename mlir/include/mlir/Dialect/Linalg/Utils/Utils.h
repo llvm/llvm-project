@@ -6,13 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_LINALG_UTILS_H_
-#define MLIR_DIALECT_LINALG_UTILS_H_
+#ifndef MLIR_DIALECT_LINALG_UTILS_UTILS_H
+#define MLIR_DIALECT_LINALG_UTILS_UTILS_H
 
 #include "mlir/Dialect/Linalg/Analysis/DependenceAnalysis.h"
-#include "mlir/Dialect/Linalg/IR/LinalgOps.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/SCF/SCF.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 
@@ -32,19 +31,6 @@ class LinalgDependenceGraph;
 /// Check if `permutation` is a permutation of the range
 /// `[0, permutation.size())`.
 bool isPermutation(ArrayRef<int64_t> permutation);
-
-/// Apply the permutation defined by `permutation` to `inVec`.
-/// Element `i` in `inVec` is mapped to location `j = permutation[i]`.
-/// E.g.: for an input vector `inVec = ['a', 'b', 'c']` and a permutation vector
-/// `permutation = [2, 0, 1]`, this function leaves `inVec = ['c', 'a', 'b']`.
-template <typename T, unsigned N>
-void applyPermutationToVector(SmallVector<T, N> &inVec,
-                              ArrayRef<int64_t> permutation) {
-  SmallVector<T, N> auxVec(inVec.size());
-  for (auto en : enumerate(permutation))
-    auxVec[en.index()] = inVec[en.value()];
-  inVec = auxVec;
-}
 
 /// Helper function that creates a memref::DimOp or tensor::DimOp depending on
 /// the type of `source`.
@@ -107,27 +93,38 @@ tensor::ExtractSliceOp makeComposedExtractSliceOp(
     OpBuilder &b, Location loc, Value source, ArrayRef<OpFoldResult> offsets,
     ArrayRef<OpFoldResult> sizes, ArrayRef<OpFoldResult> strides);
 
-/// Create a PadTensorOp that pads `source` to the size of the statically sized
-/// `type` whose static sizes are assumed to be greater than the dynamic
+/// Create a tensor::PadOp that pads `source` to the size of the statically
+/// sized `type` whose static sizes are assumed to be greater than the dynamic
 /// `source` size. The padding introduces trailing `pad` values until the target
 /// size is met. If `source` is defined by one or more LinalgOps that have been
 /// padded with the same value and sizes, return their padded result instead of
-/// creating a PadTensorOp.
+/// creating a tensor::PadOp.
 ///
 /// Example:
 /// ```
 /// %0 = tensor.extract_slice %arg0 [%iv0, %iv1] [%sz0, %sz1]
-/// %1 = linalg.pad_tensor %0 low[0, 0] high[...] { linalg.yield %cst }
+/// %1 = tensor.pad %0 low[0, 0] high[...] { tensor.yield %cst }
 /// %2 = linalg.matmul ins(...) outs(%1)
 /// %3 = tensor.extract_slice %2 [0, 0] [%sz0, %sz1]
 /// ```
 /// makeComposedPadHighOp(source=%3, pad=%cst) returns %2
 /// makeComposedPadHighOp(source=%3, pad=%other_cst) returns %4
 /// ```
-/// %4 = linalg.pad_tensor %3 low[0, 0] high[...] { linalg.yield %other_cst }
+/// %4 = tensor.pad %3 low[0, 0] high[...] { tensor.yield %other_cst }
 /// ```
 Value makeComposedPadHighOp(OpBuilder &b, Location loc, RankedTensorType type,
                             Value source, Value pad, bool nofold);
+
+/// Returns a GenericOp that tansposes `inputTensor` into `outputTensor` using
+/// `transposeVector` to permute the `inputTensor` dimensions.
+GenericOp makeTransposeOp(OpBuilder &b, Location loc, Value inputTensor,
+                          Value outputTensor,
+                          ArrayRef<int64_t> transposeVector);
+
+/// Returns GenericOp that copies an n-D memref. Unlike the current
+/// implementation of memref::CopyOp, this op can further tile, lower to loops
+/// or vectorize.
+GenericOp makeMemRefCopyOp(OpBuilder &b, Location loc, Value from, Value to);
 
 //===----------------------------------------------------------------------===//
 // Fusion / Tiling utilities
@@ -235,73 +232,6 @@ FailureOr<FusionInfo> fuseProducerOfTensor(OpBuilder &b,
                                            OpOperand &consumerOpOperand);
 
 //===----------------------------------------------------------------------===//
-// Fusion on tensor utilities
-//===----------------------------------------------------------------------===//
-
-/// A struct to manage the tile loop nest specific information.
-class TileLoopNest {
-public:
-  TileLoopNest(LinalgOp rootOp) : rootOp(rootOp) {}
-
-  /// Tile the root operation using the given `tileSizes` and `tileInterchange`.
-  LogicalResult tileRootOp(OpBuilder &b, ArrayRef<int64_t> tileSizes,
-                           ArrayRef<int64_t> tileInterchange);
-
-  /// Fuse the producer of `consumerOpOperand` into the tile loop nest. Returns
-  /// the fused producer or fails if fusion is not possible.
-  FailureOr<LinalgOp> fuseProducer(OpBuilder &b, OpOperand *consumerOpOperand);
-
-  /// Returns the replacement results for the original untiled root operation.
-  ValueRange getRootOpReplacementResults();
-
-  /// Returns the tiled root operation.
-  LinalgOp getRootOp() { return rootOp; }
-
-  /// Returns the tiled root operation and the fused producers.
-  SmallVector<LinalgOp> getAllTiledAndFusedOps();
-
-  /// Returns the loop ops generated from tiling.
-  ArrayRef<scf::ForOp> getLoopOps() { return tileLoopOps; }
-
-private:
-  /// Returns true if the tile loop nest has no tile loops.
-  bool isEmpty();
-
-  /// Returns true if the tile loop nest invariants are satisfied:
-  /// - The `rootOp` has been tiled at least once.
-  /// - The number of tile loop operations and dimensions match.
-  /// - The innermost tile loop is the parent of `tiledOp`.
-  /// - The tile loops are directly nested.
-  // TODO: relax to support additional control flow, e.g., IfOp.
-  bool isValid();
-
-  /// Searches the block arguments tied to a block argument `bbArg` of the
-  /// innermost tile loop. Returns the block argument from outermost to
-  /// innermost or an empty vector if none are found.
-  SmallVector<BlockArgument> getTiedBBArgs(BlockArgument bbArg);
-
-  /// Returns the iteration argument of the outermost tile loop mapped to a
-  /// block argument `bbArg` of the innermost tile loop.
-  OpOperand *getTiedIterArg(BlockArgument bbArg);
-
-  /// Returns true if `bbArg` has other used than `sliceOp` and its
-  /// dependencies. Only if there are no other uses, the producer output
-  /// iteration argument may reused to pass the producer result after fusion.
-  bool hasOtherUses(BlockArgument bbArg, tensor::ExtractSliceOp sliceOp);
-
-  LinalgOp rootOp;
-  SmallVector<scf::ForOp> tileLoopOps;
-  DenseMap<Operation *, SmallVector<int64_t>> tiledRootAndFusedOpsLoops;
-};
-
-/// Tiles `consumerOp` and fuses its dependencies if possible. Uses the
-/// `tileSizes` and `tileInterchange` parameters to control the tiling.
-FailureOr<TileLoopNest>
-tileConsumerAndFuseProducers(OpBuilder &b, LinalgOp consumerOp,
-                             ArrayRef<int64_t> tileSizes,
-                             ArrayRef<int64_t> tileInterchange);
-
-//===----------------------------------------------------------------------===//
 // Distribution utilities
 //===----------------------------------------------------------------------===//
 
@@ -386,6 +316,77 @@ void updateBoundsForCyclicDistribution(OpBuilder &builder, Location loc,
                                        Value &ub, Value &step);
 
 //===----------------------------------------------------------------------===//
+// Fusion on tensor utilities
+//===----------------------------------------------------------------------===//
+
+/// A struct to manage the tile loop nest specific information.
+class TileLoopNest {
+public:
+  TileLoopNest(LinalgOp rootOp) : rootOp(rootOp) {}
+
+  /// Tile the root operation using the given `tileSizes` and `tileInterchange`,
+  /// and `tileDistribution`.
+  LogicalResult
+  tileRootOp(OpBuilder &b, ArrayRef<int64_t> tileSizes,
+             ArrayRef<int64_t> tileInterchange,
+             Optional<LinalgLoopDistributionOptions> tileDistribution);
+
+  /// Fuse the producer of `consumerOpOperand` into the tile loop nest. Returns
+  /// the fused producer or fails if fusion is not possible.
+  FailureOr<LinalgOp> fuseProducer(OpBuilder &b, OpOperand *consumerOpOperand);
+
+  /// Returns the replacement results for the original untiled root operation.
+  ValueRange getRootOpReplacementResults();
+
+  /// Returns the tiled root operation.
+  LinalgOp getRootOp() { return rootOp; }
+
+  /// Returns the tiled root operation and the fused producers.
+  SmallVector<LinalgOp> getAllTiledAndFusedOps();
+
+  /// Returns the loop ops generated from tiling.
+  ArrayRef<scf::ForOp> getLoopOps() { return tileLoopOps; }
+
+  /// Returns true if the tile loop nest has no tile loops.
+  bool isEmpty();
+
+private:
+  /// Returns true if the tile loop nest invariants are satisfied:
+  /// - The `rootOp` has been tiled at least once.
+  /// - The number of tile loop operations and dimensions match.
+  /// - The innermost tile loop is the parent of `tiledOp`.
+  /// - The tile loops are directly nested.
+  // TODO: relax to support additional control flow, e.g., IfOp.
+  bool isValid();
+
+  /// Searches the block arguments tied to a block argument `bbArg` of the
+  /// innermost tile loop. Returns the block argument from outermost to
+  /// innermost or an empty vector if none are found.
+  SmallVector<BlockArgument> getTiedBBArgs(BlockArgument bbArg);
+
+  /// Returns the iteration argument of the outermost tile loop mapped to a
+  /// block argument `bbArg` of the innermost tile loop.
+  OpOperand *getTiedIterArg(BlockArgument bbArg);
+
+  /// Returns true if `bbArg` has other used than `sliceOp` and its
+  /// dependencies. Only if there are no other uses, the producer output
+  /// iteration argument may reused to pass the producer result after fusion.
+  bool hasOtherUses(BlockArgument bbArg, tensor::ExtractSliceOp sliceOp);
+
+  LinalgOp rootOp;
+  SmallVector<scf::ForOp> tileLoopOps;
+  DenseMap<Operation *, SmallVector<int64_t>> tiledRootAndFusedOpsLoops;
+};
+
+/// Tiles `consumerOp` and fuses its dependencies if possible. Uses the
+/// `tileSizes`, `tileInterchange`, and `tileDistribution` parameters to control
+/// the tiling.
+FailureOr<TileLoopNest> tileConsumerAndFuseProducers(
+    OpBuilder &b, LinalgOp consumerOp, ArrayRef<int64_t> tileSizes,
+    ArrayRef<int64_t> tileInterchange,
+    const Optional<LinalgLoopDistributionOptions> &tileDistribution);
+
+//===----------------------------------------------------------------------===//
 // Generic op region utilities
 //===----------------------------------------------------------------------===//
 
@@ -431,4 +432,4 @@ struct GenerateLoopNest {
 } // namespace linalg
 } // namespace mlir
 
-#endif // MLIR_DIALECT_LINALG_UTILS_H_
+#endif // MLIR_DIALECT_LINALG_UTILS_UTILS_H

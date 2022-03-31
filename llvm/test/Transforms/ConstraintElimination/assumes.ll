@@ -152,6 +152,112 @@ else:
   ret i1 %res.4
 }
 
+; Test case from PR54217.
+define i1 @assume_does_not_dominates_successor_with_may_unwind_call_before_assume(i16 %a, i1 %i.0) {
+; CHECK-LABEL: @assume_does_not_dominates_successor_with_may_unwind_call_before_assume(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[I_0:%.*]], label [[EXIT:%.*]], label [[IF_THEN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    call void @may_unwind()
+; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i16 [[A:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[C_2:%.*]] = icmp eq i16 [[A]], 0
+; CHECK-NEXT:    ret i1 [[C_2]]
+;
+entry:
+  br i1 %i.0, label %exit, label %if.then
+
+if.then:
+  call void @may_unwind()
+  %c.1 = icmp eq i16 %a, 0
+  call void @llvm.assume(i1 %c.1)
+  br label %exit
+
+exit:
+  %c.2 = icmp eq i16 %a, 0
+  ret i1 %c.2
+}
+
+define i1 @assume_dominates_successor_with_may_unwind_call_before_assume_uncond_branch(i16 %a) {
+; CHECK-LABEL: @assume_dominates_successor_with_may_unwind_call_before_assume_uncond_branch(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @may_unwind()
+; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i16 [[A:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[C_2:%.*]] = icmp eq i16 [[A]], 0
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  call void @may_unwind()
+  %c.1 = icmp eq i16 %a, 0
+  call void @llvm.assume(i1 %c.1)
+  br label %exit
+
+exit:
+  %c.2 = icmp eq i16 %a, 0
+  ret i1 %c.2
+}
+
+define i1 @assume_dominates_successor_with_may_unwind_call_before_assume_uncond_branch_2(i16 %a, i1 %c) {
+; CHECK-LABEL: @assume_dominates_successor_with_may_unwind_call_before_assume_uncond_branch_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[EXIT:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    call void @may_unwind()
+; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i16 [[A:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[C_2:%.*]] = icmp eq i16 [[A]], 0
+; CHECK-NEXT:    ret i1 [[C_2]]
+;
+entry:
+  br i1 %c, label %then, label %exit
+
+then:
+  call void @may_unwind()
+  %c.1 = icmp eq i16 %a, 0
+  call void @llvm.assume(i1 %c.1)
+  br label %exit
+
+exit:
+  %c.2 = icmp eq i16 %a, 0
+  ret i1 %c.2
+}
+
+define i1 @assume_dominates_successor_with_may_unwind_call_before_assume_uncond_branch_cycle(i16 %a, i1 %c) {
+; CHECK-LABEL: @assume_dominates_successor_with_may_unwind_call_before_assume_uncond_branch_cycle(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[EXIT:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    call void @may_unwind()
+; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i16 [[A:%.*]], 0
+; CHECK-NEXT:    call void @use(i1 [[C_1]])
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
+; CHECK-NEXT:    br label [[THEN]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[C_2:%.*]] = icmp eq i16 [[A]], 0
+; CHECK-NEXT:    ret i1 [[C_2]]
+;
+entry:
+  br i1 %c, label %then, label %exit
+
+then:
+  call void @may_unwind()
+  %c.1 = icmp eq i16 %a, 0
+  call void @use(i1 %c.1)
+  call void @llvm.assume(i1 %c.1)
+  br label %then
+
+exit:
+  %c.2 = icmp eq i16 %a, 0
+  ret i1 %c.2
+}
+
 define i1 @assume_single_bb(i8 %a, i8 %b, i1 %c) {
 ; CHECK-LABEL: @assume_single_bb(
 ; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw nsw i8 [[A:%.*]], 1

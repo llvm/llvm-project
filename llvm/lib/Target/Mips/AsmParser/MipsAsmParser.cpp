@@ -25,6 +25,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrDesc.h"
+#include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
@@ -827,8 +828,7 @@ private:
   } Kind;
 
 public:
-  MipsOperand(KindTy K, MipsAsmParser &Parser)
-      : MCParsedAsmOperand(), Kind(K), AsmParser(Parser) {}
+  MipsOperand(KindTy K, MipsAsmParser &Parser) : Kind(K), AsmParser(Parser) {}
 
   ~MipsOperand() override {
     switch (Kind) {

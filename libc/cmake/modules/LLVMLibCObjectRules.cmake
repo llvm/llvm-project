@@ -5,6 +5,15 @@ function(_get_common_compile_options output_var)
   if(NOT ${LIBC_TARGET_OS} STREQUAL "windows")
     set(compile_options ${compile_options} -fpie -ffreestanding)
   endif()
+  if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
+    list(APPEND compile_options "-fno-exceptions")
+    list(APPEND compile_options "-fno-unwind-tables")
+    list(APPEND compile_options "-fno-asynchronous-unwind-tables")
+    list(APPEND compile_options "-fno-rtti")
+  elseif(MSVC)
+    list(APPEND compile_options "/EHs-c-")
+    list(APPEND compile_options "/GR-")
+  endif()
   set(${output_var} ${compile_options} PARENT_SCOPE)
 endfunction()
 
@@ -20,8 +29,8 @@ endfunction()
 function(add_object_library target_name)
   cmake_parse_arguments(
     "ADD_OBJECT"
-    "" # No option arguments
-    "" # Single value arguments
+    "" # No optional arguments
+    "CXX_STANDARD" # Single value arguments
     "SRCS;HDRS;COMPILE_OPTIONS;DEPENDS" # Multivalue arguments
     ${ARGN}
   )
@@ -53,6 +62,14 @@ function(add_object_library target_name)
     add_dependencies(${fq_target_name} ${fq_deps_list})
   endif()
 
+  if(ADD_OBJECT_CXX_STANDARD)
+    set_target_properties(
+      ${fq_target_name}
+      PROPERTIES
+        CXX_STANDARD ${ADD_OBJECT_CXX_STANDARD}
+    )
+  endif()
+
   set_target_properties(
     ${fq_target_name}
     PROPERTIES
@@ -80,7 +97,7 @@ function(add_entrypoint_object target_name)
   cmake_parse_arguments(
     "ADD_ENTRYPOINT_OBJ"
     "ALIAS;REDIRECTED" # Optional argument
-    "NAME" # Single value arguments
+    "NAME;CXX_STANDARD" # Single value arguments
     "SRCS;HDRS;DEPENDS;COMPILE_OPTIONS"  # Multi value arguments
     ${ARGN}
   )
@@ -184,6 +201,14 @@ function(add_entrypoint_object target_name)
   target_include_directories(${fq_target_name} PRIVATE ${include_dirs})
   add_dependencies(${fq_target_name} ${full_deps_list})
 
+  if(ADD_ENTRYPOINT_OBJ_CXX_STANDARD)
+    set_target_properties(
+      ${fq_target_name} ${internal_target_name}
+      PROPERTIES
+        CXX_STANDARD ${ADD_ENTRYPOINT_OBJ_CXX_STANDARD}
+    )
+  endif()
+
   set_target_properties(
     ${fq_target_name}
     PROPERTIES
@@ -197,6 +222,10 @@ function(add_entrypoint_object target_name)
   )
 
   if(LLVM_LIBC_ENABLE_LINTING)
+    if(NOT LLVM_LIBC_CLANG_TIDY)
+      message(FATAL_ERROR "Something is wrong!  LLVM_LIBC_ENABLE_LINTING is "
+              "ON but LLVM_LIBC_CLANG_TIDY is not set.")
+    endif()
 
     # We only want a second invocation of clang-tidy to run
     # restrict-system-libc-headers if the compiler-resource-dir was set in
@@ -206,7 +235,7 @@ function(add_entrypoint_object target_name)
       # We run restrict-system-libc-headers with --system-headers to prevent
       # transitive inclusion through compler provided headers.
       set(restrict_system_headers_check_invocation
-        COMMAND $<TARGET_FILE:clang-tidy> --system-headers
+        COMMAND ${LLVM_LIBC_CLANG_TIDY} --system-headers
         --checks="-*,llvmlibc-restrict-system-libc-headers"
         # We explicitly set the resource dir here to match the
         # resource dir of the host compiler.
@@ -230,7 +259,7 @@ function(add_entrypoint_object target_name)
       #     X warnings generated.
       # Until this is fixed upstream, we use -fno-caret-diagnostics to surpress
       # these.
-      COMMAND $<TARGET_FILE:clang-tidy>
+      COMMAND ${LLVM_LIBC_CLANG_TIDY}
               "--extra-arg=-fno-caret-diagnostics" --quiet
               # Path to directory containing compile_commands.json
               -p ${PROJECT_BINARY_DIR}
@@ -249,11 +278,6 @@ function(add_entrypoint_object target_name)
       DEPENDS clang-tidy ${internal_target_name} ${ADD_ENTRYPOINT_OBJ_SRCS}
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
-
-    add_custom_target(${fq_target_name}.__lint__
-      DEPENDS ${lint_timestamp})
-    add_dependencies(lint-libc ${fq_target_name}.__lint__)
-    add_dependencies(${fq_target_name} ${fq_target_name}.__lint__)
   endif()
 
 endfunction(add_entrypoint_object)

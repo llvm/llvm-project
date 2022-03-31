@@ -96,11 +96,56 @@ public:
 };
 
 char FlattenSchedule::ID;
+
+/// Print result from FlattenSchedule.
+class FlattenSchedulePrinterLegacyPass : public ScopPass {
+public:
+  static char ID;
+
+  FlattenSchedulePrinterLegacyPass()
+      : FlattenSchedulePrinterLegacyPass(outs()){};
+  explicit FlattenSchedulePrinterLegacyPass(llvm::raw_ostream &OS)
+      : ScopPass(ID), OS(OS) {}
+
+  bool runOnScop(Scop &S) override {
+    FlattenSchedule &P = getAnalysis<FlattenSchedule>();
+
+    OS << "Printing analysis '" << P.getPassName() << "' for region: '"
+       << S.getRegion().getNameStr() << "' in function '"
+       << S.getFunction().getName() << "':\n";
+    P.printScop(OS, S);
+
+    return false;
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    ScopPass::getAnalysisUsage(AU);
+    AU.addRequired<FlattenSchedule>();
+    AU.setPreservesAll();
+  }
+
+private:
+  llvm::raw_ostream &OS;
+};
+
+char FlattenSchedulePrinterLegacyPass::ID = 0;
 } // anonymous namespace
 
 Pass *polly::createFlattenSchedulePass() { return new FlattenSchedule(); }
+
+Pass *polly::createFlattenSchedulePrinterLegacyPass(llvm::raw_ostream &OS) {
+  return new FlattenSchedulePrinterLegacyPass(OS);
+}
 
 INITIALIZE_PASS_BEGIN(FlattenSchedule, "polly-flatten-schedule",
                       "Polly - Flatten schedule", false, false)
 INITIALIZE_PASS_END(FlattenSchedule, "polly-flatten-schedule",
                     "Polly - Flatten schedule", false, false)
+
+INITIALIZE_PASS_BEGIN(FlattenSchedulePrinterLegacyPass,
+                      "polly-print-flatten-schedule",
+                      "Polly - Print flattened schedule", false, false)
+INITIALIZE_PASS_DEPENDENCY(FlattenSchedule)
+INITIALIZE_PASS_END(FlattenSchedulePrinterLegacyPass,
+                    "polly-print-flatten-schedule",
+                    "Polly - Print flattened schedule", false, false)

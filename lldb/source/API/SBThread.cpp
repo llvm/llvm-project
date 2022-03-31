@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBThread.h"
-#include "SBReproducerPrivate.h"
 #include "Utils.h"
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBDebugger.h"
@@ -40,6 +39,7 @@
 #include "lldb/Target/ThreadPlanStepInstruction.h"
 #include "lldb/Target/ThreadPlanStepOut.h"
 #include "lldb/Target/ThreadPlanStepRange.h"
+#include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StructuredData.h"
@@ -51,24 +51,23 @@ using namespace lldb;
 using namespace lldb_private;
 
 const char *SBThread::GetBroadcasterClassName() {
-  LLDB_RECORD_STATIC_METHOD_NO_ARGS(const char *, SBThread,
-                                    GetBroadcasterClassName);
+  LLDB_INSTRUMENT();
 
   return Thread::GetStaticBroadcasterClass().AsCString();
 }
 
 // Constructors
 SBThread::SBThread() : m_opaque_sp(new ExecutionContextRef()) {
-  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBThread);
+  LLDB_INSTRUMENT_VA(this);
 }
 
 SBThread::SBThread(const ThreadSP &lldb_object_sp)
     : m_opaque_sp(new ExecutionContextRef(lldb_object_sp)) {
-  LLDB_RECORD_CONSTRUCTOR(SBThread, (const lldb::ThreadSP &), lldb_object_sp);
+  LLDB_INSTRUMENT_VA(this, lldb_object_sp);
 }
 
-SBThread::SBThread(const SBThread &rhs) : m_opaque_sp() {
-  LLDB_RECORD_CONSTRUCTOR(SBThread, (const lldb::SBThread &), rhs);
+SBThread::SBThread(const SBThread &rhs) {
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   m_opaque_sp = clone(rhs.m_opaque_sp);
 }
@@ -76,19 +75,18 @@ SBThread::SBThread(const SBThread &rhs) : m_opaque_sp() {
 // Assignment operator
 
 const lldb::SBThread &SBThread::operator=(const SBThread &rhs) {
-  LLDB_RECORD_METHOD(const lldb::SBThread &,
-                     SBThread, operator=,(const lldb::SBThread &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   if (this != &rhs)
     m_opaque_sp = clone(rhs.m_opaque_sp);
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 // Destructor
 SBThread::~SBThread() = default;
 
 lldb::SBQueue SBThread::GetQueue() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::SBQueue, SBThread, GetQueue);
+  LLDB_INSTRUMENT_VA(this);
 
   SBQueue sb_queue;
   QueueSP queue_sp;
@@ -105,15 +103,15 @@ lldb::SBQueue SBThread::GetQueue() const {
     }
   }
 
-  return LLDB_RECORD_RESULT(sb_queue);
+  return sb_queue;
 }
 
 bool SBThread::IsValid() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBThread, IsValid);
+  LLDB_INSTRUMENT_VA(this);
   return this->operator bool();
 }
 SBThread::operator bool() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBThread, operator bool);
+  LLDB_INSTRUMENT_VA(this);
 
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
@@ -130,13 +128,13 @@ SBThread::operator bool() const {
 }
 
 void SBThread::Clear() {
-  LLDB_RECORD_METHOD_NO_ARGS(void, SBThread, Clear);
+  LLDB_INSTRUMENT_VA(this);
 
   m_opaque_sp->Clear();
 }
 
 StopReason SBThread::GetStopReason() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::StopReason, SBThread, GetStopReason);
+  LLDB_INSTRUMENT_VA(this);
 
   StopReason reason = eStopReasonInvalid;
   std::unique_lock<std::recursive_mutex> lock;
@@ -153,7 +151,7 @@ StopReason SBThread::GetStopReason() {
 }
 
 size_t SBThread::GetStopReasonDataCount() {
-  LLDB_RECORD_METHOD_NO_ARGS(size_t, SBThread, GetStopReasonDataCount);
+  LLDB_INSTRUMENT_VA(this);
 
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
@@ -210,8 +208,7 @@ size_t SBThread::GetStopReasonDataCount() {
 }
 
 uint64_t SBThread::GetStopReasonDataAtIndex(uint32_t idx) {
-  LLDB_RECORD_METHOD(uint64_t, SBThread, GetStopReasonDataAtIndex, (uint32_t),
-                     idx);
+  LLDB_INSTRUMENT_VA(this, idx);
 
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
@@ -280,8 +277,7 @@ uint64_t SBThread::GetStopReasonDataAtIndex(uint32_t idx) {
 }
 
 bool SBThread::GetStopReasonExtendedInfoAsJSON(lldb::SBStream &stream) {
-  LLDB_RECORD_METHOD(bool, SBThread, GetStopReasonExtendedInfoAsJSON,
-                     (lldb::SBStream &), stream);
+  LLDB_INSTRUMENT_VA(this, stream);
 
   Stream &strm = stream.ref();
 
@@ -303,9 +299,7 @@ bool SBThread::GetStopReasonExtendedInfoAsJSON(lldb::SBStream &stream) {
 
 SBThreadCollection
 SBThread::GetStopReasonExtendedBacktraces(InstrumentationRuntimeType type) {
-  LLDB_RECORD_METHOD(lldb::SBThreadCollection, SBThread,
-                     GetStopReasonExtendedBacktraces,
-                     (lldb::InstrumentationRuntimeType), type);
+  LLDB_INSTRUMENT_VA(this, type);
 
   SBThreadCollection threads;
 
@@ -313,23 +307,22 @@ SBThread::GetStopReasonExtendedBacktraces(InstrumentationRuntimeType type) {
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
 
   if (!exe_ctx.HasThreadScope())
-    return LLDB_RECORD_RESULT(SBThreadCollection());
+    return SBThreadCollection();
 
   ProcessSP process_sp = exe_ctx.GetProcessSP();
 
   StopInfoSP stop_info = exe_ctx.GetThreadPtr()->GetStopInfo();
   StructuredData::ObjectSP info = stop_info->GetExtendedInfo();
   if (!info)
-    return LLDB_RECORD_RESULT(threads);
+    return threads;
 
   threads = process_sp->GetInstrumentationRuntime(type)
                 ->GetBacktracesFromExtendedStopInfo(info);
-  return LLDB_RECORD_RESULT(threads);
+  return threads;
 }
 
 size_t SBThread::GetStopDescription(char *dst, size_t dst_len) {
-  LLDB_RECORD_CHAR_PTR_METHOD(size_t, SBThread, GetStopDescription,
-                              (char *, size_t), dst, "", dst_len);
+  LLDB_INSTRUMENT_VA(this, dst, dst_len);
 
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
@@ -357,7 +350,7 @@ size_t SBThread::GetStopDescription(char *dst, size_t dst_len) {
 }
 
 SBValue SBThread::GetStopReturnValue() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBValue, SBThread, GetStopReturnValue);
+  LLDB_INSTRUMENT_VA(this);
 
   ValueObjectSP return_valobj_sp;
   std::unique_lock<std::recursive_mutex> lock;
@@ -373,7 +366,7 @@ SBValue SBThread::GetStopReturnValue() {
     }
   }
 
-  return LLDB_RECORD_RESULT(SBValue(return_valobj_sp));
+  return SBValue(return_valobj_sp);
 }
 
 void SBThread::SetThread(const ThreadSP &lldb_object_sp) {
@@ -381,7 +374,7 @@ void SBThread::SetThread(const ThreadSP &lldb_object_sp) {
 }
 
 lldb::tid_t SBThread::GetThreadID() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::tid_t, SBThread, GetThreadID);
+  LLDB_INSTRUMENT_VA(this);
 
   ThreadSP thread_sp(m_opaque_sp->GetThreadSP());
   if (thread_sp)
@@ -390,7 +383,7 @@ lldb::tid_t SBThread::GetThreadID() const {
 }
 
 uint32_t SBThread::GetIndexID() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(uint32_t, SBThread, GetIndexID);
+  LLDB_INSTRUMENT_VA(this);
 
   ThreadSP thread_sp(m_opaque_sp->GetThreadSP());
   if (thread_sp)
@@ -399,7 +392,7 @@ uint32_t SBThread::GetIndexID() const {
 }
 
 const char *SBThread::GetName() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(const char *, SBThread, GetName);
+  LLDB_INSTRUMENT_VA(this);
 
   const char *name = nullptr;
   std::unique_lock<std::recursive_mutex> lock;
@@ -416,7 +409,7 @@ const char *SBThread::GetName() const {
 }
 
 const char *SBThread::GetQueueName() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(const char *, SBThread, GetQueueName);
+  LLDB_INSTRUMENT_VA(this);
 
   const char *name = nullptr;
   std::unique_lock<std::recursive_mutex> lock;
@@ -433,7 +426,7 @@ const char *SBThread::GetQueueName() const {
 }
 
 lldb::queue_id_t SBThread::GetQueueID() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::queue_id_t, SBThread, GetQueueID);
+  LLDB_INSTRUMENT_VA(this);
 
   queue_id_t id = LLDB_INVALID_QUEUE_ID;
   std::unique_lock<std::recursive_mutex> lock;
@@ -450,8 +443,7 @@ lldb::queue_id_t SBThread::GetQueueID() const {
 }
 
 bool SBThread::GetInfoItemByPathAsString(const char *path, SBStream &strm) {
-  LLDB_RECORD_METHOD(bool, SBThread, GetInfoItemByPathAsString,
-                     (const char *, lldb::SBStream &), path, strm);
+  LLDB_INSTRUMENT_VA(this, path, strm);
 
   bool success = false;
   std::unique_lock<std::recursive_mutex> lock;
@@ -532,16 +524,14 @@ SBError SBThread::ResumeNewPlan(ExecutionContext &exe_ctx,
 }
 
 void SBThread::StepOver(lldb::RunMode stop_other_threads) {
-  LLDB_RECORD_METHOD(void, SBThread, StepOver, (lldb::RunMode),
-                     stop_other_threads);
+  LLDB_INSTRUMENT_VA(this, stop_other_threads);
 
   SBError error; // Ignored
   StepOver(stop_other_threads, error);
 }
 
 void SBThread::StepOver(lldb::RunMode stop_other_threads, SBError &error) {
-  LLDB_RECORD_METHOD(void, SBThread, StepOver, (lldb::RunMode, lldb::SBError &),
-                     stop_other_threads, error);
+  LLDB_INSTRUMENT_VA(this, stop_other_threads, error);
 
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
@@ -573,16 +563,14 @@ void SBThread::StepOver(lldb::RunMode stop_other_threads, SBError &error) {
 }
 
 void SBThread::StepInto(lldb::RunMode stop_other_threads) {
-  LLDB_RECORD_METHOD(void, SBThread, StepInto, (lldb::RunMode),
-                     stop_other_threads);
+  LLDB_INSTRUMENT_VA(this, stop_other_threads);
 
   StepInto(nullptr, stop_other_threads);
 }
 
 void SBThread::StepInto(const char *target_name,
                         lldb::RunMode stop_other_threads) {
-  LLDB_RECORD_METHOD(void, SBThread, StepInto, (const char *, lldb::RunMode),
-                     target_name, stop_other_threads);
+  LLDB_INSTRUMENT_VA(this, target_name, stop_other_threads);
 
   SBError error; // Ignored
   StepInto(target_name, LLDB_INVALID_LINE_NUMBER, error, stop_other_threads);
@@ -590,10 +578,7 @@ void SBThread::StepInto(const char *target_name,
 
 void SBThread::StepInto(const char *target_name, uint32_t end_line,
                         SBError &error, lldb::RunMode stop_other_threads) {
-  LLDB_RECORD_METHOD(void, SBThread, StepInto,
-                     (const char *, uint32_t, lldb::SBError &, lldb::RunMode),
-                     target_name, end_line, error, stop_other_threads);
-
+  LLDB_INSTRUMENT_VA(this, target_name, end_line, error, stop_other_threads);
 
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
@@ -640,14 +625,14 @@ void SBThread::StepInto(const char *target_name, uint32_t end_line,
 }
 
 void SBThread::StepOut() {
-  LLDB_RECORD_METHOD_NO_ARGS(void, SBThread, StepOut);
+  LLDB_INSTRUMENT_VA(this);
 
   SBError error; // Ignored
   StepOut(error);
 }
 
 void SBThread::StepOut(SBError &error) {
-  LLDB_RECORD_METHOD(void, SBThread, StepOut, (lldb::SBError &), error);
+  LLDB_INSTRUMENT_VA(this, error);
 
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
@@ -675,17 +660,14 @@ void SBThread::StepOut(SBError &error) {
 }
 
 void SBThread::StepOutOfFrame(SBFrame &sb_frame) {
-  LLDB_RECORD_METHOD(void, SBThread, StepOutOfFrame, (lldb::SBFrame &),
-                     sb_frame);
+  LLDB_INSTRUMENT_VA(this, sb_frame);
 
   SBError error; // Ignored
   StepOutOfFrame(sb_frame, error);
 }
 
 void SBThread::StepOutOfFrame(SBFrame &sb_frame, SBError &error) {
-  LLDB_RECORD_METHOD(void, SBThread, StepOutOfFrame,
-                     (lldb::SBFrame &, lldb::SBError &), sb_frame, error);
-
+  LLDB_INSTRUMENT_VA(this, sb_frame, error);
 
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
@@ -722,15 +704,14 @@ void SBThread::StepOutOfFrame(SBFrame &sb_frame, SBError &error) {
 }
 
 void SBThread::StepInstruction(bool step_over) {
-  LLDB_RECORD_METHOD(void, SBThread, StepInstruction, (bool), step_over);
+  LLDB_INSTRUMENT_VA(this, step_over);
 
   SBError error; // Ignored
   StepInstruction(step_over, error);
 }
 
 void SBThread::StepInstruction(bool step_over, SBError &error) {
-  LLDB_RECORD_METHOD(void, SBThread, StepInstruction, (bool, lldb::SBError &),
-                     step_over, error);
+  LLDB_INSTRUMENT_VA(this, step_over, error);
 
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
@@ -752,15 +733,14 @@ void SBThread::StepInstruction(bool step_over, SBError &error) {
 }
 
 void SBThread::RunToAddress(lldb::addr_t addr) {
-  LLDB_RECORD_METHOD(void, SBThread, RunToAddress, (lldb::addr_t), addr);
+  LLDB_INSTRUMENT_VA(this, addr);
 
   SBError error; // Ignored
   RunToAddress(addr, error);
 }
 
 void SBThread::RunToAddress(lldb::addr_t addr, SBError &error) {
-  LLDB_RECORD_METHOD(void, SBThread, RunToAddress,
-                     (lldb::addr_t, lldb::SBError &), addr, error);
+  LLDB_INSTRUMENT_VA(this, addr, error);
 
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
@@ -789,9 +769,7 @@ void SBThread::RunToAddress(lldb::addr_t addr, SBError &error) {
 
 SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
                                 lldb::SBFileSpec &sb_file_spec, uint32_t line) {
-  LLDB_RECORD_METHOD(lldb::SBError, SBThread, StepOverUntil,
-                     (lldb::SBFrame &, lldb::SBFileSpec &, uint32_t), sb_frame,
-                     sb_file_spec, line);
+  LLDB_INSTRUMENT_VA(this, sb_frame, sb_file_spec, line);
 
   SBError sb_error;
   char path[PATH_MAX];
@@ -807,7 +785,7 @@ SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
 
     if (line == 0) {
       sb_error.SetErrorString("invalid line argument");
-      return LLDB_RECORD_RESULT(sb_error);
+      return sb_error;
     }
 
     if (!frame_sp) {
@@ -819,7 +797,7 @@ SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
     SymbolContext frame_sc;
     if (!frame_sp) {
       sb_error.SetErrorString("no valid frames in thread to step");
-      return LLDB_RECORD_RESULT(sb_error);
+      return sb_error;
     }
 
     // If we have a frame, get its line
@@ -830,7 +808,7 @@ SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
     if (frame_sc.comp_unit == nullptr) {
       sb_error.SetErrorStringWithFormat(
           "frame %u doesn't have debug information", frame_sp->GetFrameIndex());
-      return LLDB_RECORD_RESULT(sb_error);
+      return sb_error;
     }
 
     FileSpec step_file_spec;
@@ -842,7 +820,7 @@ SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
         step_file_spec = frame_sc.line_entry.file;
       else {
         sb_error.SetErrorString("invalid file argument or no file for frame");
-        return LLDB_RECORD_RESULT(sb_error);
+        return sb_error;
       }
     }
 
@@ -904,34 +882,28 @@ SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
   } else {
     sb_error.SetErrorString("this SBThread object is invalid");
   }
-  return LLDB_RECORD_RESULT(sb_error);
+  return sb_error;
 }
 
 SBError SBThread::StepUsingScriptedThreadPlan(const char *script_class_name) {
-  LLDB_RECORD_METHOD(lldb::SBError, SBThread, StepUsingScriptedThreadPlan,
-                     (const char *), script_class_name);
+  LLDB_INSTRUMENT_VA(this, script_class_name);
 
-  return LLDB_RECORD_RESULT(
-      StepUsingScriptedThreadPlan(script_class_name, true));
+  return StepUsingScriptedThreadPlan(script_class_name, true);
 }
 
 SBError SBThread::StepUsingScriptedThreadPlan(const char *script_class_name,
                                             bool resume_immediately) {
-  LLDB_RECORD_METHOD(lldb::SBError, SBThread, StepUsingScriptedThreadPlan,
-                     (const char *, bool), script_class_name,
-                     resume_immediately);
+  LLDB_INSTRUMENT_VA(this, script_class_name, resume_immediately);
 
   lldb::SBStructuredData no_data;
-  return LLDB_RECORD_RESULT(StepUsingScriptedThreadPlan(
-      script_class_name, no_data, resume_immediately));
+  return StepUsingScriptedThreadPlan(script_class_name, no_data,
+                                     resume_immediately);
 }
 
 SBError SBThread::StepUsingScriptedThreadPlan(const char *script_class_name,
                                               SBStructuredData &args_data,
                                               bool resume_immediately) {
-  LLDB_RECORD_METHOD(lldb::SBError, SBThread, StepUsingScriptedThreadPlan,
-                     (const char *, lldb::SBStructuredData &, bool),
-                     script_class_name, args_data, resume_immediately);
+  LLDB_INSTRUMENT_VA(this, script_class_name, args_data, resume_immediately);
 
   SBError error;
 
@@ -940,7 +912,7 @@ SBError SBThread::StepUsingScriptedThreadPlan(const char *script_class_name,
 
   if (!exe_ctx.HasThreadScope()) {
     error.SetErrorString("this SBThread object is invalid");
-    return LLDB_RECORD_RESULT(error);
+    return error;
   }
 
   Thread *thread = exe_ctx.GetThreadPtr();
@@ -952,23 +924,22 @@ SBError SBThread::StepUsingScriptedThreadPlan(const char *script_class_name,
 
   if (new_plan_status.Fail()) {
     error.SetErrorString(new_plan_status.AsCString());
-    return LLDB_RECORD_RESULT(error);
+    return error;
   }
 
   if (!resume_immediately)
-    return LLDB_RECORD_RESULT(error);
+    return error;
 
   if (new_plan_status.Success())
     error = ResumeNewPlan(exe_ctx, new_plan_sp.get());
   else
     error.SetErrorString(new_plan_status.AsCString());
 
-  return LLDB_RECORD_RESULT(error);
+  return error;
 }
 
 SBError SBThread::JumpToLine(lldb::SBFileSpec &file_spec, uint32_t line) {
-  LLDB_RECORD_METHOD(lldb::SBError, SBThread, JumpToLine,
-                     (lldb::SBFileSpec &, uint32_t), file_spec, line);
+  LLDB_INSTRUMENT_VA(this, file_spec, line);
 
   SBError sb_error;
 
@@ -977,19 +948,18 @@ SBError SBThread::JumpToLine(lldb::SBFileSpec &file_spec, uint32_t line) {
 
   if (!exe_ctx.HasThreadScope()) {
     sb_error.SetErrorString("this SBThread object is invalid");
-    return LLDB_RECORD_RESULT(sb_error);
+    return sb_error;
   }
 
   Thread *thread = exe_ctx.GetThreadPtr();
 
   Status err = thread->JumpToLine(file_spec.ref(), line, true);
   sb_error.SetError(err);
-  return LLDB_RECORD_RESULT(sb_error);
+  return sb_error;
 }
 
 SBError SBThread::ReturnFromFrame(SBFrame &frame, SBValue &return_value) {
-  LLDB_RECORD_METHOD(lldb::SBError, SBThread, ReturnFromFrame,
-                     (lldb::SBFrame &, lldb::SBValue &), frame, return_value);
+  LLDB_INSTRUMENT_VA(this, frame, return_value);
 
   SBError sb_error;
 
@@ -1002,12 +972,11 @@ SBError SBThread::ReturnFromFrame(SBFrame &frame, SBValue &return_value) {
         thread->ReturnFromFrame(frame.GetFrameSP(), return_value.GetSP()));
   }
 
-  return LLDB_RECORD_RESULT(sb_error);
+  return sb_error;
 }
 
 SBError SBThread::UnwindInnermostExpression() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBError, SBThread,
-                             UnwindInnermostExpression);
+  LLDB_INSTRUMENT_VA(this);
 
   SBError sb_error;
 
@@ -1021,18 +990,18 @@ SBError SBThread::UnwindInnermostExpression() {
       thread->SetSelectedFrameByIndex(0, false);
   }
 
-  return LLDB_RECORD_RESULT(sb_error);
+  return sb_error;
 }
 
 bool SBThread::Suspend() {
-  LLDB_RECORD_METHOD_NO_ARGS(bool, SBThread, Suspend);
+  LLDB_INSTRUMENT_VA(this);
 
   SBError error; // Ignored
   return Suspend(error);
 }
 
 bool SBThread::Suspend(SBError &error) {
-  LLDB_RECORD_METHOD(bool, SBThread, Suspend, (lldb::SBError &), error);
+  LLDB_INSTRUMENT_VA(this, error);
 
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
@@ -1052,14 +1021,14 @@ bool SBThread::Suspend(SBError &error) {
 }
 
 bool SBThread::Resume() {
-  LLDB_RECORD_METHOD_NO_ARGS(bool, SBThread, Resume);
+  LLDB_INSTRUMENT_VA(this);
 
   SBError error; // Ignored
   return Resume(error);
 }
 
 bool SBThread::Resume(SBError &error) {
-  LLDB_RECORD_METHOD(bool, SBThread, Resume, (lldb::SBError &), error);
+  LLDB_INSTRUMENT_VA(this, error);
 
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
@@ -1080,7 +1049,7 @@ bool SBThread::Resume(SBError &error) {
 }
 
 bool SBThread::IsSuspended() {
-  LLDB_RECORD_METHOD_NO_ARGS(bool, SBThread, IsSuspended);
+  LLDB_INSTRUMENT_VA(this);
 
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
@@ -1091,7 +1060,7 @@ bool SBThread::IsSuspended() {
 }
 
 bool SBThread::IsStopped() {
-  LLDB_RECORD_METHOD_NO_ARGS(bool, SBThread, IsStopped);
+  LLDB_INSTRUMENT_VA(this);
 
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
@@ -1102,7 +1071,7 @@ bool SBThread::IsStopped() {
 }
 
 SBProcess SBThread::GetProcess() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBProcess, SBThread, GetProcess);
+  LLDB_INSTRUMENT_VA(this);
 
   SBProcess sb_process;
   std::unique_lock<std::recursive_mutex> lock;
@@ -1114,11 +1083,11 @@ SBProcess SBThread::GetProcess() {
     sb_process.SetSP(exe_ctx.GetProcessSP());
   }
 
-  return LLDB_RECORD_RESULT(sb_process);
+  return sb_process;
 }
 
 uint32_t SBThread::GetNumFrames() {
-  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBThread, GetNumFrames);
+  LLDB_INSTRUMENT_VA(this);
 
   uint32_t num_frames = 0;
   std::unique_lock<std::recursive_mutex> lock;
@@ -1135,7 +1104,7 @@ uint32_t SBThread::GetNumFrames() {
 }
 
 SBFrame SBThread::GetFrameAtIndex(uint32_t idx) {
-  LLDB_RECORD_METHOD(lldb::SBFrame, SBThread, GetFrameAtIndex, (uint32_t), idx);
+  LLDB_INSTRUMENT_VA(this, idx);
 
   SBFrame sb_frame;
   StackFrameSP frame_sp;
@@ -1150,11 +1119,11 @@ SBFrame SBThread::GetFrameAtIndex(uint32_t idx) {
     }
   }
 
-  return LLDB_RECORD_RESULT(sb_frame);
+  return sb_frame;
 }
 
 lldb::SBFrame SBThread::GetSelectedFrame() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBFrame, SBThread, GetSelectedFrame);
+  LLDB_INSTRUMENT_VA(this);
 
   SBFrame sb_frame;
   StackFrameSP frame_sp;
@@ -1169,12 +1138,11 @@ lldb::SBFrame SBThread::GetSelectedFrame() {
     }
   }
 
-  return LLDB_RECORD_RESULT(sb_frame);
+  return sb_frame;
 }
 
 lldb::SBFrame SBThread::SetSelectedFrame(uint32_t idx) {
-  LLDB_RECORD_METHOD(lldb::SBFrame, SBThread, SetSelectedFrame, (uint32_t),
-                     idx);
+  LLDB_INSTRUMENT_VA(this, idx);
 
   SBFrame sb_frame;
   StackFrameSP frame_sp;
@@ -1193,51 +1161,43 @@ lldb::SBFrame SBThread::SetSelectedFrame(uint32_t idx) {
     }
   }
 
-  return LLDB_RECORD_RESULT(sb_frame);
+  return sb_frame;
 }
 
 bool SBThread::EventIsThreadEvent(const SBEvent &event) {
-  LLDB_RECORD_STATIC_METHOD(bool, SBThread, EventIsThreadEvent,
-                            (const lldb::SBEvent &), event);
+  LLDB_INSTRUMENT_VA(event);
 
   return Thread::ThreadEventData::GetEventDataFromEvent(event.get()) != nullptr;
 }
 
 SBFrame SBThread::GetStackFrameFromEvent(const SBEvent &event) {
-  LLDB_RECORD_STATIC_METHOD(lldb::SBFrame, SBThread, GetStackFrameFromEvent,
-                            (const lldb::SBEvent &), event);
+  LLDB_INSTRUMENT_VA(event);
 
-  return LLDB_RECORD_RESULT(
-      Thread::ThreadEventData::GetStackFrameFromEvent(event.get()));
+  return Thread::ThreadEventData::GetStackFrameFromEvent(event.get());
 }
 
 SBThread SBThread::GetThreadFromEvent(const SBEvent &event) {
-  LLDB_RECORD_STATIC_METHOD(lldb::SBThread, SBThread, GetThreadFromEvent,
-                            (const lldb::SBEvent &), event);
+  LLDB_INSTRUMENT_VA(event);
 
-  return LLDB_RECORD_RESULT(
-      Thread::ThreadEventData::GetThreadFromEvent(event.get()));
+  return Thread::ThreadEventData::GetThreadFromEvent(event.get());
 }
 
 bool SBThread::operator==(const SBThread &rhs) const {
-  LLDB_RECORD_METHOD_CONST(bool, SBThread, operator==,(const lldb::SBThread &),
-                           rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   return m_opaque_sp->GetThreadSP().get() ==
          rhs.m_opaque_sp->GetThreadSP().get();
 }
 
 bool SBThread::operator!=(const SBThread &rhs) const {
-  LLDB_RECORD_METHOD_CONST(bool, SBThread, operator!=,(const lldb::SBThread &),
-                           rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   return m_opaque_sp->GetThreadSP().get() !=
          rhs.m_opaque_sp->GetThreadSP().get();
 }
 
 bool SBThread::GetStatus(SBStream &status) const {
-  LLDB_RECORD_METHOD_CONST(bool, SBThread, GetStatus, (lldb::SBStream &),
-                           status);
+  LLDB_INSTRUMENT_VA(this, status);
 
   Stream &strm = status.ref();
 
@@ -1253,15 +1213,13 @@ bool SBThread::GetStatus(SBStream &status) const {
 }
 
 bool SBThread::GetDescription(SBStream &description) const {
-  LLDB_RECORD_METHOD_CONST(bool, SBThread, GetDescription, (lldb::SBStream &),
-                           description);
+  LLDB_INSTRUMENT_VA(this, description);
 
   return GetDescription(description, false);
 }
 
 bool SBThread::GetDescription(SBStream &description, bool stop_format) const {
-  LLDB_RECORD_METHOD_CONST(bool, SBThread, GetDescription,
-                           (lldb::SBStream &, bool), description, stop_format);
+  LLDB_INSTRUMENT_VA(this, description, stop_format);
 
   Stream &strm = description.ref();
 
@@ -1281,8 +1239,7 @@ bool SBThread::GetDescription(SBStream &description, bool stop_format) const {
 }
 
 SBThread SBThread::GetExtendedBacktraceThread(const char *type) {
-  LLDB_RECORD_METHOD(lldb::SBThread, SBThread, GetExtendedBacktraceThread,
-                     (const char *), type);
+  LLDB_INSTRUMENT_VA(this, type);
 
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
@@ -1312,12 +1269,11 @@ SBThread SBThread::GetExtendedBacktraceThread(const char *type) {
     }
   }
 
-  return LLDB_RECORD_RESULT(sb_origin_thread);
+  return sb_origin_thread;
 }
 
 uint32_t SBThread::GetExtendedBacktraceOriginatingIndexID() {
-  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBThread,
-                             GetExtendedBacktraceOriginatingIndexID);
+  LLDB_INSTRUMENT_VA(this);
 
   ThreadSP thread_sp(m_opaque_sp->GetThreadSP());
   if (thread_sp)
@@ -1326,29 +1282,27 @@ uint32_t SBThread::GetExtendedBacktraceOriginatingIndexID() {
 }
 
 SBValue SBThread::GetCurrentException() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBValue, SBThread, GetCurrentException);
+  LLDB_INSTRUMENT_VA(this);
 
   ThreadSP thread_sp(m_opaque_sp->GetThreadSP());
   if (!thread_sp)
-    return LLDB_RECORD_RESULT(SBValue());
+    return SBValue();
 
-  return LLDB_RECORD_RESULT(SBValue(thread_sp->GetCurrentException()));
+  return SBValue(thread_sp->GetCurrentException());
 }
 
 SBThread SBThread::GetCurrentExceptionBacktrace() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBThread, SBThread,
-                             GetCurrentExceptionBacktrace);
+  LLDB_INSTRUMENT_VA(this);
 
   ThreadSP thread_sp(m_opaque_sp->GetThreadSP());
   if (!thread_sp)
-    return LLDB_RECORD_RESULT(SBThread());
+    return SBThread();
 
-  return LLDB_RECORD_RESULT(
-      SBThread(thread_sp->GetCurrentExceptionBacktrace()));
+  return SBThread(thread_sp->GetCurrentExceptionBacktrace());
 }
 
 bool SBThread::SafeToCallFunctions() {
-  LLDB_RECORD_METHOD_NO_ARGS(bool, SBThread, SafeToCallFunctions);
+  LLDB_INSTRUMENT_VA(this);
 
   ThreadSP thread_sp(m_opaque_sp->GetThreadSP());
   if (thread_sp)
@@ -1364,109 +1318,11 @@ lldb_private::Thread *SBThread::get() {
   return m_opaque_sp->GetThreadSP().get();
 }
 
-namespace lldb_private {
-namespace repro {
+SBValue SBThread::GetSiginfo() {
+  LLDB_INSTRUMENT_VA(this);
 
-template <>
-void RegisterMethods<SBThread>(Registry &R) {
-  LLDB_REGISTER_STATIC_METHOD(const char *, SBThread, GetBroadcasterClassName,
-                              ());
-  LLDB_REGISTER_CONSTRUCTOR(SBThread, ());
-  LLDB_REGISTER_CONSTRUCTOR(SBThread, (const lldb::ThreadSP &));
-  LLDB_REGISTER_CONSTRUCTOR(SBThread, (const lldb::SBThread &));
-  LLDB_REGISTER_METHOD(const lldb::SBThread &,
-                       SBThread, operator=,(const lldb::SBThread &));
-  LLDB_REGISTER_METHOD_CONST(lldb::SBQueue, SBThread, GetQueue, ());
-  LLDB_REGISTER_METHOD_CONST(bool, SBThread, IsValid, ());
-  LLDB_REGISTER_METHOD_CONST(bool, SBThread, operator bool, ());
-  LLDB_REGISTER_METHOD(void, SBThread, Clear, ());
-  LLDB_REGISTER_METHOD(lldb::StopReason, SBThread, GetStopReason, ());
-  LLDB_REGISTER_METHOD(size_t, SBThread, GetStopReasonDataCount, ());
-  LLDB_REGISTER_METHOD(uint64_t, SBThread, GetStopReasonDataAtIndex,
-                       (uint32_t));
-  LLDB_REGISTER_METHOD(bool, SBThread, GetStopReasonExtendedInfoAsJSON,
-                       (lldb::SBStream &));
-  LLDB_REGISTER_METHOD(lldb::SBThreadCollection, SBThread,
-                       GetStopReasonExtendedBacktraces,
-                       (lldb::InstrumentationRuntimeType));
-  LLDB_REGISTER_METHOD(lldb::SBValue, SBThread, GetStopReturnValue, ());
-  LLDB_REGISTER_METHOD_CONST(lldb::tid_t, SBThread, GetThreadID, ());
-  LLDB_REGISTER_METHOD_CONST(uint32_t, SBThread, GetIndexID, ());
-  LLDB_REGISTER_METHOD_CONST(const char *, SBThread, GetName, ());
-  LLDB_REGISTER_METHOD_CONST(const char *, SBThread, GetQueueName, ());
-  LLDB_REGISTER_METHOD_CONST(lldb::queue_id_t, SBThread, GetQueueID, ());
-  LLDB_REGISTER_METHOD(bool, SBThread, GetInfoItemByPathAsString,
-                       (const char *, lldb::SBStream &));
-  LLDB_REGISTER_METHOD(void, SBThread, StepOver, (lldb::RunMode));
-  LLDB_REGISTER_METHOD(void, SBThread, StepOver,
-                       (lldb::RunMode, lldb::SBError &));
-  LLDB_REGISTER_METHOD(void, SBThread, StepInto, (lldb::RunMode));
-  LLDB_REGISTER_METHOD(void, SBThread, StepInto,
-                       (const char *, lldb::RunMode));
-  LLDB_REGISTER_METHOD(
-      void, SBThread, StepInto,
-      (const char *, uint32_t, lldb::SBError &, lldb::RunMode));
-  LLDB_REGISTER_METHOD(void, SBThread, StepOut, ());
-  LLDB_REGISTER_METHOD(void, SBThread, StepOut, (lldb::SBError &));
-  LLDB_REGISTER_METHOD(void, SBThread, StepOutOfFrame, (lldb::SBFrame &));
-  LLDB_REGISTER_METHOD(void, SBThread, StepOutOfFrame,
-                       (lldb::SBFrame &, lldb::SBError &));
-  LLDB_REGISTER_METHOD(void, SBThread, StepInstruction, (bool));
-  LLDB_REGISTER_METHOD(void, SBThread, StepInstruction,
-                       (bool, lldb::SBError &));
-  LLDB_REGISTER_METHOD(void, SBThread, RunToAddress, (lldb::addr_t));
-  LLDB_REGISTER_METHOD(void, SBThread, RunToAddress,
-                       (lldb::addr_t, lldb::SBError &));
-  LLDB_REGISTER_METHOD(lldb::SBError, SBThread, StepOverUntil,
-                       (lldb::SBFrame &, lldb::SBFileSpec &, uint32_t));
-  LLDB_REGISTER_METHOD(lldb::SBError, SBThread, StepUsingScriptedThreadPlan,
-                       (const char *));
-  LLDB_REGISTER_METHOD(lldb::SBError, SBThread, StepUsingScriptedThreadPlan,
-                       (const char *, bool));
-  LLDB_REGISTER_METHOD(lldb::SBError, SBThread, StepUsingScriptedThreadPlan,
-                       (const char *, SBStructuredData &, bool));
-  LLDB_REGISTER_METHOD(lldb::SBError, SBThread, JumpToLine,
-                       (lldb::SBFileSpec &, uint32_t));
-  LLDB_REGISTER_METHOD(lldb::SBError, SBThread, ReturnFromFrame,
-                       (lldb::SBFrame &, lldb::SBValue &));
-  LLDB_REGISTER_METHOD(lldb::SBError, SBThread, UnwindInnermostExpression,
-                       ());
-  LLDB_REGISTER_METHOD(bool, SBThread, Suspend, ());
-  LLDB_REGISTER_METHOD(bool, SBThread, Suspend, (lldb::SBError &));
-  LLDB_REGISTER_METHOD(bool, SBThread, Resume, ());
-  LLDB_REGISTER_METHOD(bool, SBThread, Resume, (lldb::SBError &));
-  LLDB_REGISTER_METHOD(bool, SBThread, IsSuspended, ());
-  LLDB_REGISTER_METHOD(bool, SBThread, IsStopped, ());
-  LLDB_REGISTER_METHOD(lldb::SBProcess, SBThread, GetProcess, ());
-  LLDB_REGISTER_METHOD(uint32_t, SBThread, GetNumFrames, ());
-  LLDB_REGISTER_METHOD(lldb::SBFrame, SBThread, GetFrameAtIndex, (uint32_t));
-  LLDB_REGISTER_METHOD(lldb::SBFrame, SBThread, GetSelectedFrame, ());
-  LLDB_REGISTER_METHOD(lldb::SBFrame, SBThread, SetSelectedFrame, (uint32_t));
-  LLDB_REGISTER_STATIC_METHOD(bool, SBThread, EventIsThreadEvent,
-                              (const lldb::SBEvent &));
-  LLDB_REGISTER_STATIC_METHOD(lldb::SBFrame, SBThread, GetStackFrameFromEvent,
-                              (const lldb::SBEvent &));
-  LLDB_REGISTER_STATIC_METHOD(lldb::SBThread, SBThread, GetThreadFromEvent,
-                              (const lldb::SBEvent &));
-  LLDB_REGISTER_METHOD_CONST(bool,
-                             SBThread, operator==,(const lldb::SBThread &));
-  LLDB_REGISTER_METHOD_CONST(bool,
-                             SBThread, operator!=,(const lldb::SBThread &));
-  LLDB_REGISTER_METHOD_CONST(bool, SBThread, GetStatus, (lldb::SBStream &));
-  LLDB_REGISTER_METHOD_CONST(bool, SBThread, GetDescription,
-                             (lldb::SBStream &));
-  LLDB_REGISTER_METHOD_CONST(bool, SBThread, GetDescription,
-                             (lldb::SBStream &, bool));
-  LLDB_REGISTER_METHOD(lldb::SBThread, SBThread, GetExtendedBacktraceThread,
-                       (const char *));
-  LLDB_REGISTER_METHOD(uint32_t, SBThread,
-                       GetExtendedBacktraceOriginatingIndexID, ());
-  LLDB_REGISTER_METHOD(lldb::SBValue, SBThread, GetCurrentException, ());
-  LLDB_REGISTER_METHOD(lldb::SBThread, SBThread, GetCurrentExceptionBacktrace,
-                       ());
-  LLDB_REGISTER_METHOD(bool, SBThread, SafeToCallFunctions, ());
-  LLDB_REGISTER_CHAR_PTR_METHOD(size_t, SBThread, GetStopDescription);
-}
-
-}
+  ThreadSP thread_sp = m_opaque_sp->GetThreadSP();
+  if (!thread_sp)
+    return SBValue();
+  return thread_sp->GetSiginfoValue();
 }

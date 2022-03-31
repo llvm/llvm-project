@@ -1,14 +1,14 @@
 // REQUIRES: x86-registered-target
 // RUN: %clang_cc1 %s -triple i386-apple-darwin10 -fasm-blocks -emit-llvm -o - | FileCheck %s
 
-void t1() {
+void t1(void) {
 // CHECK: @t1
 // CHECK: call void asm sideeffect inteldialect "", "~{dirflag},~{fpsr},~{flags}"()
 // CHECK: ret void
   __asm {}
 }
 
-void t2() {
+void t2(void) {
 // CHECK: @t2
 // CHECK: call void asm sideeffect inteldialect "nop\0A\09nop\0A\09nop", "~{dirflag},~{fpsr},~{flags}"()
 // CHECK: ret void
@@ -17,7 +17,7 @@ void t2() {
   __asm nop
 }
 
-void t3() {
+void t3(void) {
 // CHECK: @t3
 // CHECK: call void asm sideeffect inteldialect "nop\0A\09nop\0A\09nop", "~{dirflag},~{fpsr},~{flags}"()
 // CHECK: ret void
@@ -45,7 +45,7 @@ void t6(void) {
 // CHECK: call void asm sideeffect inteldialect "int $$44", "~{dirflag},~{fpsr},~{flags}"()
 }
 
-void t7() {
+void t7(void) {
   __asm {
     int 0x2cU ; } asm comments are fun! }{
   }
@@ -66,7 +66,7 @@ void t7() {
 // CHECK: call void asm sideeffect inteldialect "mov eax, ebx", "~{eax},~{dirflag},~{fpsr},~{flags}"()
 }
 
-int t8() {
+int t8(void) {
   __asm int 4 ; } comments for single-line asm
   __asm {}
   __asm { int 5}
@@ -85,7 +85,7 @@ int t8() {
 // CHECK: ret i32 10
 }
 
-void t9() {
+void t9(void) {
   __asm {
     push ebx
     { mov ebx, 0x07 }
@@ -114,7 +114,7 @@ unsigned t10(void) {
 // CHECK: call i32 asm sideeffect inteldialect
 // CHECK-SAME: mov eax, $2
 // CHECK-SAME: mov $0, eax
-// CHECK-SAME: "=*m,=&{eax},*m,~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}}, i32* %{{.*}})
+// CHECK-SAME: "=*m,=&{eax},*m,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) %{{.*}}, i32* elementtype(i32) %{{.*}})
 // CHECK: [[RET:%[a-zA-Z0-9]+]] = load i32, i32* [[J]], align 4
 // CHECK: ret i32 [[RET]]
 }
@@ -140,10 +140,10 @@ unsigned t12(void) {
 // CHECK-SAME: mov $0, eax
 // CHECK-SAME: mov eax, $4
 // CHECK-SAME: mov $1, eax
-// CHECK-SAME: "=*m,=*m,=&{eax},*m,*m,~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}}, i32* %{{.*}}, i32* %{{.*}}, i32* %{{.*}})
+// CHECK-SAME: "=*m,=*m,=&{eax},*m,*m,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) %{{.*}}, i32* elementtype(i32) %{{.*}}, i32* elementtype(i32) %{{.*}}, i32* elementtype(i32) %{{.*}})
 }
 
-void t13() {
+void t13(void) {
   char i = 1;
   short j = 2;
   __asm movzx eax, i
@@ -152,10 +152,10 @@ void t13() {
 // CHECK: call void asm sideeffect inteldialect
 // CHECK-SAME: movzx eax, byte ptr $0
 // CHECK-SAME: movzx eax, word ptr $1
-// CHECK-SAME: "*m,*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i8* %{{.*}}i, i16* %{{.*}}j)
+// CHECK-SAME: "*m,*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i8* elementtype(i8) %{{.*}}i, i16* elementtype(i16) %{{.*}}j)
 }
 
-void t13_brac() {
+void t13_brac(void) {
   char i = 1;
   short j = 2;
   __asm movzx eax, [i]
@@ -164,10 +164,10 @@ void t13_brac() {
 // CHECK: call void asm sideeffect inteldialect
 // CHECK-SAME: movzx eax, byte ptr $0
 // CHECK-SAME: movzx eax, word ptr $1
-// CHECK-SAME: "*m,*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i8* %{{.*}}i, i16* %{{.*}}j)
+// CHECK-SAME: "*m,*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i8* elementtype(i8) %{{.*}}i, i16* elementtype(i16) %{{.*}}j)
 }
 
-void t14() {
+void t14(void) {
   unsigned i = 1, j = 2;
   __asm {
     .if 1
@@ -177,11 +177,11 @@ void t14() {
     .endif
   }
 // CHECK: t14
-// CHECK: call void asm sideeffect inteldialect ".if 1\0A\09mov eax, $0\0A\09.else\0A\09mov ebx, j\0A\09.endif", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect ".if 1\0A\09mov eax, $0\0A\09.else\0A\09mov ebx, j\0A\09.endif", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) %{{.*}})
 }
 
 int gvar = 10;
-void t15() {
+void t15(void) {
 // CHECK: t15
   int lvar = 10;
   __asm mov eax, lvar        ; eax = 10
@@ -196,17 +196,17 @@ void t15() {
 // CHECK: mov eax, $4 + $$1
   __asm mov eax, 1+offset gvar+1 ; eax = 2 + address of gvar
 // CHECK: mov eax, $5 + $$2
-// CHECK: "*m,r,i,i,i,i,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}}, i32* %{{.*}}, i32* @{{.*}}, i32* @{{.*}}, i32* @{{.*}}, i32* @{{.*}})
+// CHECK: "*m,r,i,i,i,i,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) %{{.*}}, i32* %{{.*}}, i32* @{{.*}}, i32* @{{.*}}, i32* @{{.*}}, i32* @{{.*}})
 }
 
-void t16() {
+void t16(void) {
   int var = 10;
   __asm mov dword ptr [eax], offset var
 // CHECK: t16
 // CHECK: call void asm sideeffect inteldialect "mov dword ptr [eax], $0", "r,~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
 }
 
-void t17() {
+void t17(void) {
 // CHECK: t17
   __asm _emit 0x4A
 // CHECK: .byte 0x4A
@@ -219,7 +219,7 @@ void t17() {
 // CHECK:  "~{dirflag},~{fpsr},~{flags}"()
 }
 
-void t20() {
+void t20(void) {
 // CHECK: t20
   char bar;
   int foo;
@@ -262,7 +262,7 @@ void t20() {
 
 }
 
-void t21() {
+void t21(void) {
   __asm {
     __asm push ebx
     __asm mov ebx, 07H
@@ -277,7 +277,7 @@ void t21() {
 }
 
 extern void t22_helper(int x);
-void t22() {
+void t22(void) {
   int x = 0;
   __asm {
     __asm push ebx
@@ -300,7 +300,7 @@ void t22() {
 // CHECK-SAME: "~{ebx},~{esp},~{dirflag},~{fpsr},~{flags}"()
 }
 
-void t23() {
+void t23(void) {
   __asm {
   the_label:
   }
@@ -309,13 +309,13 @@ void t23() {
 }
 
 void t24_helper(void) {}
-void t24() {
+void t24(void) {
   __asm call t24_helper
 // CHECK: t24
-// CHECK: call void asm sideeffect inteldialect "call dword ptr ${0:P}", "*m,~{dirflag},~{fpsr},~{flags}"(void ()* @t24_helper)
+// CHECK: call void asm sideeffect inteldialect "call dword ptr ${0:P}", "*m,~{dirflag},~{fpsr},~{flags}"(void ()* elementtype(void ()) @t24_helper)
 }
 
-void t25() {
+void t25(void) {
 // CHECK: t25
   __asm mov eax, 0ffffffffh
 // CHECK: mov eax, $$4294967295
@@ -330,7 +330,7 @@ void t25() {
 // CHECK: "~{eax},~{dirflag},~{fpsr},~{flags}"()
 }
 
-void t26() {
+void t26(void) {
 // CHECK: t26
   __asm pushad
 // CHECK: pushad
@@ -347,13 +347,13 @@ void t26() {
 // CHECK: "~{eax},~{ebp},~{ebx},~{ecx},~{edi},~{edx},~{esi},~{esp},~{dirflag},~{fpsr},~{flags}"()
 }
 
-void t27() {
+void t27(void) {
   __asm mov eax, fs:[0h]
 // CHECK: t27
 // CHECK: call void asm sideeffect inteldialect "mov eax, fs:[$$0]", "~{eax},~{dirflag},~{fpsr},~{flags}"()
 }
 
-void t28() {
+void t28(void) {
 // CHECK: t28
   __asm align 8
 // CHECK: .align 3
@@ -366,7 +366,7 @@ void t28() {
 // CHECK: "~{dirflag},~{fpsr},~{flags}"()
 }
 
-void t29() {
+void t29(void) {
 // CHECK: t29
   int arr[2] = {0, 0};
   int olen = 0, osize = 0, otype = 0;
@@ -376,11 +376,11 @@ void t29() {
 // CHECK: mov dword ptr $1, $$8
   __asm mov otype, TYPE arr
 // CHECK: mov dword ptr $2, $$4
-// CHECK: "=*m,=*m,=*m,~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}}, i32* %{{.*}}, i32* %{{.*}})
+// CHECK: "=*m,=*m,=*m,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) %{{.*}}, i32* elementtype(i32) %{{.*}}, i32* elementtype(i32) %{{.*}})
 }
 
 int results[2] = {13, 37};
-int *t30()
+int *t30(void)
 // CHECK: t30
 {
   int *res;
@@ -389,10 +389,10 @@ int *t30()
   __asm mov res, edi
 // CHECK: mov $0, edi
   return res;
-// CHECK: "=*m,={eax},*m,~{edi},~{dirflag},~{fpsr},~{flags}"(i32** %{{.*}}, [2 x i32]* @{{.*}})
+// CHECK: "=*m,={eax},*m,~{edi},~{dirflag},~{fpsr},~{flags}"(i32** elementtype(i32*) %{{.*}}, [2 x i32]* elementtype([2 x i32]) @{{.*}})
 }
 
-void t31() {
+void t31(void) {
 // CHECK: t31
   __asm pushad
 // CHECK: pushad
@@ -401,7 +401,7 @@ void t31() {
 // CHECK: "~{eax},~{ebp},~{ebx},~{ecx},~{edi},~{edx},~{esi},~{esp},~{dirflag},~{fpsr},~{flags}"()
 }
 
-void t32() {
+void t32(void) {
 // CHECK: t32
   int i;
   __asm mov eax, i
@@ -412,10 +412,10 @@ void t32() {
 // CHECK: mov ax, word ptr $2
   __asm mov al, byte ptr i
 // CHECK: mov al, byte ptr $3
-// CHECK: "*m,*m,*m,*m,~{al},~{ax},~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}}, i32* %{{.*}}, i32* %{{.*}}, i32* %{{.*}})
+// CHECK: "*m,*m,*m,*m,~{al},~{ax},~{eax},~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) %{{.*}}, i32* elementtype(i32) %{{.*}}, i32* elementtype(i32) %{{.*}}, i32* elementtype(i32) %{{.*}})
 }
 
-void t33() {
+void t33(void) {
 // CHECK: t33
   int i;
   __asm mov eax, [i]
@@ -426,10 +426,10 @@ void t33() {
 // CHECK: mov ax, word ptr $2
   __asm mov al, byte ptr [i]
 // CHECK: mov al, byte ptr $3
-// CHECK: "*m,*m,*m,*m,~{al},~{ax},~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}}, i32* %{{.*}}, i32* %{{.*}}, i32* %{{.*}})
+// CHECK: "*m,*m,*m,*m,~{al},~{ax},~{eax},~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) %{{.*}}, i32* elementtype(i32) %{{.*}}, i32* elementtype(i32) %{{.*}}, i32* elementtype(i32) %{{.*}})
 }
 
-void t34() {
+void t34(void) {
 // CHECK: t34
   __asm prefetchnta 64[eax]
 // CHECK: prefetchnta [eax + $$64]
@@ -438,7 +438,7 @@ void t34() {
 // CHECK: "~{eax},~{dirflag},~{fpsr},~{flags}"()
 }
 
-void t35() {
+void t35(void) {
 // CHECK: t35
   __asm prefetchnta [eax + (200*64)]
 // CHECK: prefetchnta [eax + $$12800]
@@ -447,39 +447,39 @@ void t35() {
 // CHECK: "~{eax},~{dirflag},~{fpsr},~{flags}"()
 }
 
-void t36() {
+void t36(void) {
 // CHECK: t36
   int arr[4];
   // Work around PR20368: These should be single line blocks
   __asm { mov eax, 4[arr] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$4]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$4]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* elementtype([4 x i32]) %{{.*}})
   __asm { mov eax, 4[arr + 4] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$8]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$8]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* elementtype([4 x i32]) %{{.*}})
   __asm { mov eax, 8[arr + 4 + 32*2 - 4] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$72]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$72]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* elementtype([4 x i32]) %{{.*}})
   __asm { mov eax, 12[4 + arr] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$16]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$16]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* elementtype([4 x i32]) %{{.*}})
   __asm { mov eax, 4[4 + arr + 4] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$12]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$12]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* elementtype([4 x i32]) %{{.*}})
   __asm { mov eax, 4[64 + arr + (2*32)] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$132]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$132]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* elementtype([4 x i32]) %{{.*}})
   __asm { mov eax, 4[64 + arr - 2*32] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$4]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$4]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* elementtype([4 x i32]) %{{.*}})
   __asm { mov eax, [arr + 4] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$4]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$4]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* elementtype([4 x i32]) %{{.*}})
   __asm { mov eax, [arr + 4 + 32*2 - 4] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$64]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$64]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* elementtype([4 x i32]) %{{.*}})
   __asm { mov eax, [4 + arr] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$4]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$4]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* elementtype([4 x i32]) %{{.*}})
   __asm { mov eax, [4 + arr + 4] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$8]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$8]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* elementtype([4 x i32]) %{{.*}})
   __asm { mov eax, [64 + arr + (2*32)] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$128]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$128]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* elementtype([4 x i32]) %{{.*}})
   __asm { mov eax, [64 + arr - 2*32] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $0", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* elementtype([4 x i32]) %{{.*}})
 }
 
-void t37() {
+void t37(void) {
 // CHECK: t37
   __asm mov eax, 4 + 8
 // CHECK: mov eax, $$12
@@ -502,29 +502,29 @@ void t37() {
 // CHECK: "~{eax},~{dirflag},~{fpsr},~{flags}"()
 }
 
-void t38() {
+void t38(void) {
 // CHECK: t38
   int arr[4];
   // Work around PR20368: These should be single line blocks
   __asm { mov eax, 4+4[arr] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$8]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$8]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* elementtype([4 x i32]) %{{.*}})
   __asm { mov eax, (4+4)[arr + 4] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$12]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$12]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* elementtype([4 x i32]) %{{.*}})
   __asm { mov eax, 8*2[arr + 4 + 32*2 - 4] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$80]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$80]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* elementtype([4 x i32]) %{{.*}})
   __asm { mov eax, 12+20[4 + arr] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$36]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$36]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* elementtype([4 x i32]) %{{.*}})
   __asm { mov eax, 4*16+4[4 + arr + 4] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$76]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$76]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* elementtype([4 x i32]) %{{.*}})
   __asm { mov eax, 4*4[64 + arr + (2*32)] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$144]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$144]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* elementtype([4 x i32]) %{{.*}})
   __asm { mov eax, 4*(4-2)[64 + arr - 2*32] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$8]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$8]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* elementtype([4 x i32]) %{{.*}})
   __asm { mov eax, 32*(4-2)[arr - 2*32] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $0", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* elementtype([4 x i32]) %{{.*}})
 }
 
-void cpuid() {
+void cpuid(void) {
   __asm cpuid
 // CHECK-LABEL: define{{.*}} void @cpuid
 // CHECK: call void asm sideeffect inteldialect "cpuid", "~{eax},~{ebx},~{ecx},~{edx},~{dirflag},~{fpsr},~{flags}"()
@@ -547,7 +547,7 @@ typedef struct {
   B   c4;
 } C, *pC;
 
-void t39() {
+void t39(void) {
 // CHECK-LABEL: define{{.*}} void @t39
   __asm mov eax, [eax].A.b
 // CHECK: mov eax, [eax + $$4]
@@ -577,11 +577,11 @@ void t40(float a) {
 // CHECK: fld dword ptr $1
   __asm fistp i
 // CHECK: fistp dword ptr $0
-// CHECK: "=*m,*m,~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}}, float* %{{.*}})
+// CHECK: "=*m,*m,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) %{{.*}}, float* elementtype(float) %{{.*}})
 }
 
 void t41(unsigned short a) {
-// CHECK-LABEL: define{{.*}} void @t41(i16 zeroext %a)
+// CHECK-LABEL: define{{.*}} void @t41(i16 noundef zeroext %a)
   __asm mov cs, a;
 // CHECK: mov cs, $0
   __asm mov ds, a;
@@ -597,55 +597,55 @@ void t41(unsigned short a) {
 // CHECK: "*m,*m,*m,*m,*m,*m,~{dirflag},~{fpsr},~{flags}"(i16* {{.*}}, i16* {{.*}}, i16* {{.*}}, i16* {{.*}}, i16* {{.*}}, i16* {{.*}})
 }
 
-void t42() {
+void t42(void) {
 // CHECK-LABEL: define{{.*}} void @t42(
   int flags;
   __asm mov flags, eax
 // CHECK: mov $0, eax
-// CHECK: "=*m,~{dirflag},~{fpsr},~{flags}"(i32* %flags)
+// CHECK: "=*m,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) %flags)
 }
 
-void t42b() {
+void t42b(void) {
 // CHECK-LABEL: define{{.*}} void @t42b(
   int mxcsr;
   __asm mov mxcsr, eax
 // CHECK: mov $0, eax
-// CHECK: "=*m,~{dirflag},~{fpsr},~{flags}"(i32* %mxcsr)
+// CHECK: "=*m,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) %mxcsr)
 }
 
-void t43() {
+void t43(void) {
 // CHECK-LABEL: define{{.*}} void @t43
   C strct;
 // Work around PR20368: These should be single line blocks
  __asm { mov eax, 4[strct.c1] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$4]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$4]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) %{{.*}})
   __asm { mov eax, 4[strct.c3 + 4] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$8]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$8]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) %{{.*}})
   __asm { mov eax, 8[strct.c2.a + 4 + 32*2 - 4] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$72]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$72]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) %{{.*}})
   __asm { mov eax, 12[4 + strct.c2.b] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$16]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$16]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) %{{.*}})
   __asm { mov eax, 4[4 + strct.c4.b2.b + 4] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$12]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$12]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) %{{.*}})
   __asm { mov eax, 4[64 + strct.c1 + (2*32)] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$132]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$132]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) %{{.*}})
   __asm { mov eax, 4[64 + strct.c2.a - 2*32] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$4]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$4]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) %{{.*}})
   __asm { mov eax, [strct.c4.b1 + 4] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$4]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$4]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) %{{.*}})
   __asm { mov eax, [strct.c4.b2.a + 4 + 32*2 - 4] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$64]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$64]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) %{{.*}})
   __asm { mov eax, [4 + strct.c1] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$4]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$4]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) %{{.*}})
   __asm { mov eax, [4 + strct.c2.b + 4] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$8]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$8]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) %{{.*}})
   __asm { mov eax, [64 + strct.c3 + (2*32)] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$128]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$128]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) %{{.*}})
   __asm { mov eax, [64 + strct.c4.b2.b - 2*32] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $0", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) %{{.*}})
 }
 
-void t44() {
+void t44(void) {
   // CHECK-LABEL: define{{.*}} void @t44
   __asm {
     mov cr0, eax
@@ -656,7 +656,7 @@ void t44() {
   // CHECK: call void asm sideeffect inteldialect "mov cr0, eax\0A\09mov cr2, ebx\0A\09mov cr3, ecx\0A\09mov cr4, edx", "~{cr0},~{cr2},~{cr3},~{cr4},~{dirflag},~{fpsr},~{flags}"()
 }
 
-void t45() {
+void t45(void) {
   // CHECK-LABEL: define{{.*}} void @t45
   __asm {
     mov dr0, eax
@@ -669,31 +669,31 @@ void t45() {
   // CHECK: call void asm sideeffect inteldialect "mov dr0, eax\0A\09mov dr1, ebx\0A\09mov dr2, ebx\0A\09mov dr3, ecx\0A\09mov dr6, edx\0A\09mov dr7, ecx", "~{dr0},~{dr1},~{dr2},~{dr3},~{dr6},~{dr7},~{dirflag},~{fpsr},~{flags}"()
 }
 
-void t46() {
+void t46(void) {
   // CHECK-LABEL: define{{.*}} void @t46
   __asm add eax, -128[eax]
   // CHECK: call void asm sideeffect inteldialect "add eax, [eax + $$-128]", "~{eax},~{flags},~{dirflag},~{fpsr},~{flags}"()
 }
 
-void dot_operator(){
+void dot_operator(void){
   // CHECK-LABEL: define{{.*}} void @dot_operator
 	__asm { mov eax, 3[ebx]A.b}
   // CHECK: call void asm sideeffect inteldialect "mov eax, [ebx + $$7]", "~{eax},~{dirflag},~{fpsr},~{flags}"
 }
 
-void call_clobber() {
+void call_clobber(void) {
   __asm call t41
   // CHECK-LABEL: define{{.*}} void @call_clobber
-  // CHECK: call void asm sideeffect inteldialect "call dword ptr ${0:P}", "*m,~{dirflag},~{fpsr},~{flags}"(void (i16)* @t41)
+  // CHECK: call void asm sideeffect inteldialect "call dword ptr ${0:P}", "*m,~{dirflag},~{fpsr},~{flags}"(void (i16)* elementtype(void (i16)) @t41)
 }
 
-void xgetbv() {
+void xgetbv(void) {
   __asm xgetbv
 }
 // CHECK-LABEL: define{{.*}} void @xgetbv()
 // CHECK: call void asm sideeffect inteldialect "xgetbv", "~{eax},~{edx},~{dirflag},~{fpsr},~{flags}"()
 
-void label1() {
+void label1(void) {
   __asm {
     label:
     jmp label
@@ -702,7 +702,7 @@ void label1() {
   // CHECK: call void asm sideeffect inteldialect "{{.*}}__MSASMLABEL_.${:uid}__label:\0A\09jmp {{.*}}__MSASMLABEL_.${:uid}__label", "~{dirflag},~{fpsr},~{flags}"() [[ATTR1:#[0-9]+]]
 }
 
-void label2() {
+void label2(void) {
   __asm {
     jmp label
     label:
@@ -711,7 +711,7 @@ void label2() {
   // CHECK: call void asm sideeffect inteldialect "jmp {{.*}}__MSASMLABEL_.${:uid}__label\0A\09{{.*}}__MSASMLABEL_.${:uid}__label:", "~{dirflag},~{fpsr},~{flags}"()
 }
 
-void label3() {
+void label3(void) {
   __asm {
     label:
     mov eax, label
@@ -720,7 +720,7 @@ void label3() {
   // CHECK: call void asm sideeffect inteldialect "{{.*}}__MSASMLABEL_.${:uid}__label:\0A\09mov eax, {{.*}}__MSASMLABEL_.${:uid}__label", "~{eax},~{dirflag},~{fpsr},~{flags}"()
 }
 
-void label4() {
+void label4(void) {
   __asm {
     label:
     mov eax, [label]
@@ -729,7 +729,7 @@ void label4() {
   // CHECK: call void asm sideeffect inteldialect "{{.*}}__MSASMLABEL_.${:uid}__label:\0A\09mov eax, {{.*}}__MSASMLABEL_.${:uid}__label", "~{eax},~{dirflag},~{fpsr},~{flags}"()
 }
 
-void label5() {
+void label5(void) {
   __asm {
     jmp dollar_label$
     dollar_label$:
@@ -738,7 +738,7 @@ void label5() {
   // CHECK: call void asm sideeffect inteldialect "jmp {{.*}}__MSASMLABEL_.${:uid}__dollar_label$$\0A\09{{.*}}__MSASMLABEL_.${:uid}__dollar_label$$:", "~{dirflag},~{fpsr},~{flags}"()
 }
 
-void label6(){
+void label6(void){
   __asm {
       jmp short label
       jc  short label
@@ -750,7 +750,7 @@ void label6(){
 }
 
 // Don't include mxcsr in the clobber list.
-void mxcsr() {
+void mxcsr(void) {
   char buf[4096];
   __asm fxrstor buf
 }
@@ -758,7 +758,7 @@ void mxcsr() {
 // CHECK: call void asm sideeffect inteldialect "fxrstor $0", "=*m,~{fpcr},~{dirflag},~{fpsr},~{flags}"
 
 // Make sure we can find the register for the dirflag for popfd
-void dirflag() {
+void dirflag(void) {
   __asm popfd
 }
 // CHECK-LABEL: define{{.*}} void @dirflag

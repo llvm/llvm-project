@@ -381,9 +381,14 @@ enum ConstantsCodes {
   CST_CODE_CE_UNOP = 25,                   // CE_UNOP:      [opcode, opval]
   CST_CODE_POISON = 26,                    // POISON
   CST_CODE_DSO_LOCAL_EQUIVALENT = 27,      // DSO_LOCAL_EQUIVALENT [gvty, gv]
-  CST_CODE_INLINEASM = 28, // INLINEASM:     [sideeffect|alignstack|
-                           //                 asmdialect|unwind,
-                           //                 asmstr,conststr]
+  CST_CODE_INLINEASM_OLD3 = 28,    // INLINEASM:     [sideeffect|alignstack|
+                                   //                 asmdialect|unwind,
+                                   //                 asmstr,conststr]
+  CST_CODE_NO_CFI_VALUE = 29, // NO_CFI [ fty, f ]
+  CST_CODE_INLINEASM = 30,    // INLINEASM:     [fnty,
+                              //                 sideeffect|alignstack|
+                              //                 asmdialect|unwind,
+                              //                 asmstr,conststr]
 };
 
 /// CastOpcodes - These are values used in the bitcode files to encode which
@@ -672,6 +677,8 @@ enum AttributeKindCodes {
   ATTR_KIND_NO_SANITIZE_COVERAGE = 76,
   ATTR_KIND_ELEMENTTYPE = 77,
   ATTR_KIND_DISABLE_SANITIZER_INSTRUMENTATION = 78,
+  ATTR_KIND_NO_SANITIZE_BOUNDS = 79,
+  ATTR_KIND_ALLOC_ALIGN = 80,
 };
 
 enum ComdatSelectionKindCodes {

@@ -875,14 +875,14 @@ multiclass BCRm<string opcStr, string opcStrAt, string opcStrAf, bits<8> opc,
 //   e.g. LCR
 let hasSideEffects = 1 in
 multiclass LOADCRm<string opcStr, bits<8>opc, RegisterClass RC> {
-  def rr : RR<opc, (outs RC:$sx), (ins RC:$sz, RC:$sy),
+  def rr : RR<opc, (outs RC:$sx), (ins RC:$sy, RC:$sz),
               !strconcat(opcStr, " $sx, $sy, $sz")>;
-  let cy = 0 in def ri : RR<opc, (outs RC:$sx), (ins RC:$sz, simm7:$sy),
+  let cy = 0 in def ir : RR<opc, (outs RC:$sx), (ins simm7:$sy, RC:$sz),
                             !strconcat(opcStr, " $sx, $sy, $sz")>;
-  let cz = 0 in def zr : RR<opc, (outs RC:$sx), (ins zero:$sz, RC:$sy),
+  let cz = 0 in def rz : RR<opc, (outs RC:$sx), (ins RC:$sy, zero:$sz),
                             !strconcat(opcStr, " $sx, $sy, $sz")>;
   let cy = 0, cz = 0 in
-  def zi : RR<opc, (outs RC:$sx), (ins zero:$sz, simm7:$sy),
+  def iz : RR<opc, (outs RC:$sx), (ins simm7:$sy, zero:$sz),
               !strconcat(opcStr, " $sx, $sy, $sz")>;
 }
 
@@ -890,16 +890,30 @@ multiclass LOADCRm<string opcStr, bits<8>opc, RegisterClass RC> {
 //   e.g. SCR
 let hasSideEffects = 1 in
 multiclass STORECRm<string opcStr, bits<8>opc, RegisterClass RC> {
-  def rr : RR<opc, (outs), (ins RC:$sz, RC:$sy, RC:$sx),
+  def rrr : RR<opc, (outs), (ins RC:$sy, RC:$sz, RC:$sx),
               !strconcat(opcStr, " $sx, $sy, $sz")>;
-  let cy = 0 in def ri : RR<opc, (outs), (ins RC:$sz, simm7:$sy, RC:$sx),
-                            !strconcat(opcStr, " $sx, $sy, $sz")>;
-  let cz = 0 in def zr : RR<opc, (outs), (ins zero:$sz, RC:$sy, RC:$sx),
-                            !strconcat(opcStr, " $sx, $sy, $sz")>;
+  let cy = 0 in def irr : RR<opc, (outs), (ins simm7:$sy, RC:$sz, RC:$sx),
+                             !strconcat(opcStr, " $sx, $sy, $sz")>;
+  let cz = 0 in def rzr : RR<opc, (outs), (ins RC:$sy, zero:$sz, RC:$sx),
+                             !strconcat(opcStr, " $sx, $sy, $sz")>;
   let cy = 0, cz = 0 in
-  def zi : RR<opc, (outs), (ins zero:$sz, simm7:$sy, RC:$sx),
-              !strconcat(opcStr, " $sx, $sy, $sz")>;
+  def izr : RR<opc, (outs), (ins simm7:$sy, zero:$sz, RC:$sx),
+               !strconcat(opcStr, " $sx, $sy, $sz")>;
 }
+
+let hasSideEffects = 1, Constraints = "$sx = $sx_in", DisableEncoding = "$sx_in" in
+multiclass TSCRm<string opcStr, bits<8>opc, RegisterClass RC> {
+  def rrr : RR<opc, (outs RC:$sx), (ins RC:$sy, RC:$sz, RC:$sx_in),
+               !strconcat(opcStr, " $sx, $sy, $sz")>;
+  let cy = 0 in def irr : RR<opc, (outs RC:$sx), (ins simm7:$sy, RC:$sz, RC:$sx_in),
+                             !strconcat(opcStr, " $sx, $sy, $sz")>;
+  let cz = 0 in def rzr : RR<opc, (outs RC:$sx), (ins RC:$sy, zero:$sz, RC:$sx_in),
+                             !strconcat(opcStr, " $sx, $sy, $sz")>;
+  let cy = 0, cz = 0 in
+  def izr : RR<opc, (outs RC:$sx), (ins simm7:$sy, zero:$sz, RC:$sx_in),
+               !strconcat(opcStr, " $sx, $sy, $sz")>;
+}
+
 
 // Multiclass for communication register instructions.
 //   e.g. FIDCR
@@ -1528,7 +1542,7 @@ defm LCR : LOADCRm<"lcr", 0x40, I64>;
 defm SCR : STORECRm<"scr", 0x50, I64>;
 
 // Section 8.19.11 - TSCR (Test & Set Communication Register)
-defm TSCR : LOADCRm<"tscr", 0x41, I64>;
+defm TSCR : TSCRm<"tscr", 0x41, I64>;
 
 // Section 8.19.12 - FIDCR (Fetch & Increment/Decrement CR)
 defm FIDCR : FIDCRm<"fidcr", 0x51, I64>;
@@ -1575,6 +1589,12 @@ def f2l : OutPatFrag<(ops node:$exp),
                      (INSERT_SUBREG (i64 (IMPLICIT_DEF)), $exp, sub_f32)>;
 def l2f : OutPatFrag<(ops node:$exp),
                      (EXTRACT_SUBREG $exp, sub_f32)>;
+
+// Zero out subregisters.
+def zero_i32 : OutPatFrag<(ops node:$expr),
+                          (ANDrm $expr, 32)>;
+def zero_f32 : OutPatFrag<(ops node:$expr),
+                          (ANDrm $expr, !add(32, 64))>;
 
 // Small immediates.
 def : Pat<(i32 simm7:$val), (EXTRACT_SUBREG (ORim (LO7 $val), 0), sub_i32)>;
@@ -2286,6 +2306,28 @@ def : Pat<(i64 (and i64:$val, 0xffffffff)),
 class IsVLVT<int OpIdx> : SDTCisVT<OpIdx,i32>;
 def vec_broadcast       : SDNode<"VEISD::VEC_BROADCAST", SDTypeProfile<1, 2,
                                  [SDTCisVec<0>, IsVLVT<2>]>>;
+
+///// Packed mode Support /////
+// unpack the lo part of this vector
+def vec_unpack_lo   : SDNode<"VEISD::VEC_UNPACK_LO", SDTypeProfile<1, 2,
+                             [SDTCisVec<0>, SDTCisVec<1>, IsVLVT<2>]>>;
+// unpack the hipart of this vector
+def vec_unpack_hi   : SDNode<"VEISD::VEC_UNPACK_HI", SDTypeProfile<1, 2,
+                             [SDTCisVec<0>, SDTCisVec<1>, IsVLVT<2>]>>;
+// re-pack v256i32, v256f32 back into tone v512.32
+def vec_pack        : SDNode<"VEISD::VEC_PACK", SDTypeProfile<1, 3,
+                             [SDTCisVec<0>, SDTCisVec<1>, SDTCisVec<2>,
+                              SDTCisSameNumEltsAs<1,2>, IsVLVT<3>]>>;
+
+// replicate lower 32bit to upper 32bit (f32 scalar replication).
+def repl_f32            : SDNode<"VEISD::REPL_F32",
+                            SDTypeProfile<1, 1,
+                              [SDTCisInt<0>, SDTCisFP<1>]>>;
+// replicate upper 32bit to lower 32 bit (i32 scalar replication).
+def repl_i32            : SDNode<"VEISD::REPL_I32",
+                            SDTypeProfile<1, 1,
+                              [SDTCisInt<0>, SDTCisInt<1>]>>;
+
 
 // Whether this is an all-true mask (assuming undef-bits above VL are all-true).
 def true_mask           : PatLeaf<

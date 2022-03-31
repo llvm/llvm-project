@@ -21,26 +21,18 @@
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/IR/Attributes.h"
-#include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/OperandTraits.h"
-#include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
-#include "llvm/IR/Value.h"
 #include "llvm/Support/AtomicOrdering.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cstddef>
@@ -49,10 +41,14 @@
 
 namespace llvm {
 
+class APFloat;
 class APInt;
+class BasicBlock;
 class ConstantInt;
 class DataLayout;
-class LLVMContext;
+class StringRef;
+class Type;
+class Value;
 
 //===----------------------------------------------------------------------===//
 //                                AllocaInst Class
@@ -103,6 +99,11 @@ public:
   /// Overload to return most specific pointer type.
   PointerType *getType() const {
     return cast<PointerType>(Instruction::getType());
+  }
+
+  /// Return the address space for the allocation.
+  unsigned getAddressSpace() const {
+    return getType()->getAddressSpace();
   }
 
   /// Get allocation size in bits. Returns None if size can't be determined,
@@ -1450,6 +1451,10 @@ public:
   /// Returns the sequence of all FCmp predicates.
   ///
   static auto predicates() { return FCmpPredicates(); }
+
+  /// Return result of `LHS Pred RHS` comparison.
+  static bool compare(const APFloat &LHS, const APFloat &RHS,
+                      FCmpInst::Predicate Pred);
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
@@ -5305,6 +5310,10 @@ public:
   }
 };
 
+//===----------------------------------------------------------------------===//
+//                          Helper functions
+//===----------------------------------------------------------------------===//
+
 /// A helper function that returns the pointer operand of a load or store
 /// instruction. Returns nullptr if not load or store.
 inline const Value *getLoadStorePointerOperand(const Value *V) {
@@ -5358,6 +5367,24 @@ inline Type *getLoadStoreType(Value *I) {
   if (auto *LI = dyn_cast<LoadInst>(I))
     return LI->getType();
   return cast<StoreInst>(I)->getValueOperand()->getType();
+}
+
+/// A helper function that returns an atomic operation's sync scope; returns
+/// None if it is not an atomic operation.
+inline Optional<SyncScope::ID> getAtomicSyncScopeID(const Instruction *I) {
+  if (!I->isAtomic())
+    return None;
+  if (auto *AI = dyn_cast<LoadInst>(I))
+    return AI->getSyncScopeID();
+  if (auto *AI = dyn_cast<StoreInst>(I))
+    return AI->getSyncScopeID();
+  if (auto *AI = dyn_cast<FenceInst>(I))
+    return AI->getSyncScopeID();
+  if (auto *AI = dyn_cast<AtomicCmpXchgInst>(I))
+    return AI->getSyncScopeID();
+  if (auto *AI = dyn_cast<AtomicRMWInst>(I))
+    return AI->getSyncScopeID();
+  llvm_unreachable("unhandled atomic operation");
 }
 
 //===----------------------------------------------------------------------===//

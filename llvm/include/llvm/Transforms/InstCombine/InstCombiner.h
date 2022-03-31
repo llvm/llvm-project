@@ -93,7 +93,7 @@ public:
         MinimizeSize(MinimizeSize), AA(AA), AC(AC), TLI(TLI), DT(DT), DL(DL),
         SQ(DL, &TLI, &DT, &AC), ORE(ORE), BFI(BFI), PSI(PSI), LI(LI) {}
 
-  virtual ~InstCombiner() {}
+  virtual ~InstCombiner() = default;
 
   /// Return the source operand of a potentially bitcasted value while
   /// optionally checking if it has one use. If there is no bitcast or the one
@@ -480,9 +480,9 @@ public:
     return llvm::ComputeNumSignBits(Op, DL, Depth, &AC, CxtI, &DT);
   }
 
-  unsigned ComputeMinSignedBits(const Value *Op, unsigned Depth = 0,
-                                const Instruction *CxtI = nullptr) const {
-    return llvm::ComputeMinSignedBits(Op, DL, Depth, &AC, CxtI, &DT);
+  unsigned ComputeMaxSignificantBits(const Value *Op, unsigned Depth = 0,
+                                     const Instruction *CxtI = nullptr) const {
+    return llvm::ComputeMaxSignificantBits(Op, DL, Depth, &AC, CxtI, &DT);
   }
 
   OverflowResult computeOverflowForUnsignedMul(const Value *LHS,

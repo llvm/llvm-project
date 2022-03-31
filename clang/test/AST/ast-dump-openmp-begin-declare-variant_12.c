@@ -50,7 +50,7 @@ int also_before(long l) {
 #pragma omp end declare variant
 
 
-int main() {
+int main(void) {
   // Should return 0.
   return also_before() + also_before(1) + also_before(2.0f) + also_before(3.0) + also_before(4L);
 }
@@ -120,7 +120,7 @@ int main() {
 // C-NEXT: | |   `-IntegerLiteral [[ADDR_58:0x[a-z0-9]*]] <col:10> 'int' 0
 // C-NEXT: | `-OverloadableAttr [[ADDR_59:0x[a-z0-9]*]] <line:8:37>
 // C-NEXT: `-FunctionDecl [[ADDR_60:0x[a-z0-9]*]] <line:53:1, line:56:1> line:53:5 main 'int ({{.*}})'
-// C-NEXT:   `-CompoundStmt [[ADDR_61:0x[a-z0-9]*]] <col:12, line:56:1>
+// C-NEXT:   `-CompoundStmt [[ADDR_61:0x[a-z0-9]*]] <col:16, line:56:1>
 // C-NEXT:     `-ReturnStmt [[ADDR_62:0x[a-z0-9]*]] <line:55:3, col:96>
 // C-NEXT:       `-BinaryOperator [[ADDR_63:0x[a-z0-9]*]] <col:10, col:96> 'int' '+'
 // C-NEXT:         |-BinaryOperator [[ADDR_64:0x[a-z0-9]*]] <col:10, col:78> 'int' '+'
@@ -217,7 +217,7 @@ int main() {
 // CXX-NEXT: |   `-ReturnStmt [[ADDR_49:0x[a-z0-9]*]] <line:48:3, col:10>
 // CXX-NEXT: |     `-IntegerLiteral [[ADDR_50:0x[a-z0-9]*]] <col:10> 'int' 0
 // CXX-NEXT: `-FunctionDecl [[ADDR_51:0x[a-z0-9]*]] <line:53:1, line:56:1> line:53:5 main 'int ({{.*}})'
-// CXX-NEXT:   `-CompoundStmt [[ADDR_52:0x[a-z0-9]*]] <col:12, line:56:1>
+// CXX-NEXT:   `-CompoundStmt [[ADDR_52:0x[a-z0-9]*]] <col:16, line:56:1>
 // CXX-NEXT:     `-ReturnStmt [[ADDR_53:0x[a-z0-9]*]] <line:55:3, col:96>
 // CXX-NEXT:       `-BinaryOperator [[ADDR_54:0x[a-z0-9]*]] <col:10, col:96> 'int' '+'
 // CXX-NEXT:         |-BinaryOperator [[ADDR_55:0x[a-z0-9]*]] <col:10, col:78> 'int' '+'

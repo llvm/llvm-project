@@ -14,8 +14,7 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Linalg/Analysis/DependenceAnalysis.h"
-#include "mlir/Dialect/Linalg/IR/LinalgOps.h"
-#include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
@@ -38,8 +37,6 @@
 
 using namespace mlir;
 using namespace mlir::linalg;
-
-using llvm::dbgs;
 
 /// Implements a simple high-level fusion pass on linalg structured operations.
 ///
@@ -90,7 +87,7 @@ getShapeDefiningLoopRange(LinalgOp op, unsigned loopDepth,
     LLVM_DEBUG(llvm::dbgs()
                << "getShapeDefiningLoopRange map: " << map << "\n");
     SmallVector<Value, 8> shapeRanges(map.getNumResults(), nullptr);
-    for (auto en : llvm::enumerate(map.getResults())) {
+    for (const auto &en : llvm::enumerate(map.getResults())) {
       auto dimExpr = en.value().dyn_cast<AffineDimExpr>();
       if (!dimExpr)
         continue;
@@ -107,63 +104,8 @@ getShapeDefiningLoopRange(LinalgOp op, unsigned loopDepth,
   llvm_unreachable("Expect to be able to extract a shape defining loop range");
 }
 
-// Return tiled operands for the fused producer op. When fusing into
-// `linalg.tiled_loop` one has to update `input` and `output` arguments of the
-// loop correspondingly.
-// Each input tensor of the producer op has to be added to `inputs` of the
-// `tiled_loop` if it is not present there already. Each output tensor has to
-// be added either to `inputs` or to `outputs` of `linalg.tiled_loop` depending
-// on whether the correponding result is an input or an output to the loop.
-//
-// NOTE: This way of updating the arguments of the `tiled_loop` assumes that the
-// intermediate result is not used by any other operation but the consumer. A
-// more generic way is to append all missing output tensors of the producer to
-// the tiled loop outputs and hence modify the number of the results, since we
-// would need to add the intermediate results to `linalg.yield`. After that a
-// canonicalization pass would move the unused output args of the `tiled_loop`
-// to the `input` section.
-static SmallVector<Value> getTiledOperands(OpBuilder &b, LinalgOp producer) {
-  auto tiledLoop = dyn_cast<TiledLoopOp>(b.getBlock()->getParentOp());
-  if (!tiledLoop)
-    return producer.getInputAndOutputOperands();
-
-  SmallVector<Value> tiledOperands;
-  assert(producer.hasTensorSemantics() &&
-         "only fusion on tensors is currently supported for TiledLinalgOp");
-
-  for (OpOperand *producerInput : producer.getInputOperands()) {
-    OpOperand *addedInput = tiledLoop.findInputOperand(producerInput->get());
-    if (addedInput == nullptr)
-      addedInput = &tiledLoop.appendInputOperand(b, producerInput->get());
-    BlockArgument addedBlockArg = tiledLoop.getTiedBlockArgument(*addedInput);
-    tiledOperands.push_back(addedBlockArg);
-  }
-  for (OpOperand *producerOutput : producer.getOutputOperands()) {
-    OpResult result = producer.getTiedOpResult(producerOutput);
-    OpOperand *resultInputOperand = tiledLoop.findInputOperand(result);
-    OpOperand *resultOutputOperand = tiledLoop.findOutputOperand(result);
-    assert((resultInputOperand != nullptr) ^ (resultOutputOperand != nullptr) &&
-           "The result should be present in `input` or `output` args of "
-           "`tiled_loop");
-
-    bool isInput = resultInputOperand;
-    int opNumber = isInput ? resultInputOperand->getOperandNumber()
-                           : resultOutputOperand->getOperandNumber();
-
-    OpOperand *addedOutput = tiledLoop.findOutputOperand(producerOutput->get());
-    if (addedOutput == nullptr)
-      addedOutput =
-          isInput ? &tiledLoop.appendInputOperand(b, producerOutput->get())
-                  : &tiledLoop.appendOutputOperand(b, producerOutput->get());
-
-    OpOperand &resultOperand = tiledLoop->getOpOperand(opNumber);
-    auto addedBlockArg = tiledLoop.getTiedBlockArgument(*addedOutput);
-    auto resultOperandBlockArg = tiledLoop.getTiedBlockArgument(resultOperand);
-    resultOperandBlockArg.replaceAllUsesWith(addedBlockArg);
-    tiledLoop.eraseOperand(b, resultOperand);
-    tiledOperands.push_back(addedBlockArg);
-  }
-  return tiledOperands;
+static SmallVector<Value> getTiledOperands(LinalgOp producer) {
+  return producer.getInputAndOutputOperands();
 }
 
 /// Fuses the producer by cloning the `producer`. The `fusedLoopsAndRanges`
@@ -201,7 +143,7 @@ static LinalgOp fuse(OpBuilder &b, LinalgOp producer,
 
   // Compute subranges for all tensor input/output operands.
   clonedShapes.append(makeTiledShapes(b, loc, producer,
-                                      getTiledOperands(b, producer), ivs,
+                                      getTiledOperands(producer), ivs,
                                       tileSizes, sizeBounds));
 
   // Iterate over the results in order.
@@ -253,7 +195,7 @@ static LinalgOp fuse(OpBuilder &b, LinalgOp producerOp, AffineMap producerMap,
   LLVM_DEBUG(llvm::dbgs() << "Producer map: " << producerMap << "\n");
   DenseMap<unsigned, Range> fusedLoopsAndRanges;
   Value shapedOperand = consumerOpOperand.get();
-  for (auto en : llvm::enumerate(producerMap.getResults())) {
+  for (const auto &en : llvm::enumerate(producerMap.getResults())) {
     unsigned posInProducerLoop = en.value().cast<AffineDimExpr>().getPosition();
     fusedLoopsAndRanges[posInProducerLoop] = getRangeFromOperandShape(
         b, consumerOpOperand.getOwner()->getLoc(), shapedOperand, en.index());
@@ -523,10 +465,10 @@ mlir::linalg::fuseProducerOfTensor(OpBuilder &b, OpResult producerOpResult,
 /// Prune all dimensions that are of reduction iterator type from `map`.
 static AffineMap pruneReductionDimsFromMap(ArrayRef<Attribute> iteratorTypes,
                                            AffineMap map) {
-  llvm::SmallDenseSet<unsigned> projectedDims;
-  for (auto attr : llvm::enumerate(iteratorTypes)) {
+  llvm::SmallBitVector projectedDims(iteratorTypes.size());
+  for (const auto &attr : llvm::enumerate(iteratorTypes)) {
     if (!isParallelIterator(attr.value()))
-      projectedDims.insert(attr.index());
+      projectedDims.set(attr.index());
   }
   return getProjectedMap(map, projectedDims);
 }
@@ -640,7 +582,7 @@ static bool doesTransposeAccess(AffineMap map,
 ///     Fused dimensions : i, j
 ///
 /// Example 3:
-///   linalg.copy(%s, %b)
+///   memref.copy(%s, %b)
 ///   linalg.matmul ins(%a, %b) outs(%c)
 ///
 ///   Number of parallel loops = 2
@@ -787,7 +729,9 @@ tileRootOperation(OpBuilder &b, LinalgOp op, ArrayRef<Value> tileSizeVector,
       tileSizes[i] = zero;
   LinalgTilingOptions tileFusedLoopsOptions = options;
   tileFusedLoopsOptions.setTileSizes(tileSizes);
-  return tileLinalgOp(b, op, tileFusedLoopsOptions);
+  // TODO: Propagate RewriterBase everywhere.
+  IRRewriter rewriter(b);
+  return tileLinalgOp(rewriter, op, tileFusedLoopsOptions);
 }
 
 /// Fuse the operations in `fusionCandidates` with `tiledOp`. Latter is expected
@@ -813,7 +757,7 @@ fuseOperations(OpBuilder &b, LinalgOp rootOp, TiledLinalgOp tiledLinalgOp,
   SmallVector<LinalgOp, 1> fusedOps(fusionCandidates.size());
   DenseMap<Operation *, LinalgOp> origOpToFusedOp;
   origOpToFusedOp[rootOp.getOperation()] = tiledOp;
-  for (auto candidate : enumerate(llvm::reverse(fusionCandidates))) {
+  for (const auto &candidate : enumerate(llvm::reverse(fusionCandidates))) {
     LinalgOp origOp = candidate.value();
     LinalgOp fusedOp = fuse(b, origOp, fusedLoopsAndRanges);
     origOpToFusedOp[origOp.getOperation()] = fusedOp;

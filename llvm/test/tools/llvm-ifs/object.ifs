@@ -1,7 +1,7 @@
-# RUN: llvm-ifs --input-format=IFS --output-format=IFS -o - %s | \
+# RUN: llvm-ifs --input-format=IFS --output-ifs - %s | \
 # RUN: FileCheck %s --check-prefixes=CHECK-IFS
 
-# RUN: llvm-ifs --input-format=IFS --output-format=ELF -o - %s | \
+# RUN: llvm-ifs --input-format=IFS --output-elf - %s | \
 # RUN: llvm-readelf --all - | FileCheck %s --check-prefixes=CHECK-ELF
 
 # CHECK-IFS: --- !ifs-v1

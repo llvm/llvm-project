@@ -24,7 +24,7 @@ class TestVarPath(TestBase):
 
     def verify_point(self, frame, var_name, var_typename, x_value, y_value):
         v = frame.GetValueForVariablePath(var_name)
-        self.assertTrue(v.GetError().Success(), "Make sure we find '%s'" % (var_name))
+        self.assertSuccess(v.GetError(), "Make sure we find '%s'" % (var_name))
         self.assertEquals(v.GetType().GetName(), var_typename,
                         "Make sure '%s' has type '%s'" % (var_name, var_typename))
 
@@ -42,14 +42,14 @@ class TestVarPath(TestBase):
         invalid_m_path = invalid_prefix + 'm'
 
         v = frame.GetValueForVariablePath(valid_x_path)
-        self.assertTrue(v.GetError().Success(), "Make sure we find '%s'" % (valid_x_path))
+        self.assertSuccess(v.GetError(), "Make sure we find '%s'" % (valid_x_path))
         self.assertEquals(v.GetValue(), str(x_value), "Make sure '%s' has a value of %i" % (valid_x_path, x_value))
         self.assertEquals(v.GetType().GetName(), "int", "Make sure '%s' has type 'int'" % (valid_x_path))
         v = frame.GetValueForVariablePath(invalid_x_path)
         self.assertTrue(v.GetError().Fail(), "Make sure we don't find '%s'" % (invalid_x_path))
 
         v = frame.GetValueForVariablePath(valid_y_path)
-        self.assertTrue(v.GetError().Success(), "Make sure we find '%s'" % (valid_y_path))
+        self.assertSuccess(v.GetError(), "Make sure we find '%s'" % (valid_y_path))
         self.assertEquals(v.GetValue(), str(y_value), "Make sure '%s' has a value of %i" % (valid_y_path, y_value))
         self.assertEquals(v.GetType().GetName(), "int", "Make sure '%s' has type 'int'" % (valid_y_path))
         v = frame.GetValueForVariablePath(invalid_y_path)
@@ -76,8 +76,7 @@ class TestVarPath(TestBase):
         self.verify_point(frame, 'pt_ptr[1]', 'Point', 5050, 6060)
         # Test arrays
         v = frame.GetValueForVariablePath('points')
-        self.assertTrue(v.GetError().Success(),
-                        "Make sure we find 'points'")
+        self.assertSuccess(v.GetError(), "Make sure we find 'points'")
         self.verify_point(frame, 'points[0]', 'Point', 1010, 2020)
         self.verify_point(frame, 'points[1]', 'Point', 3030, 4040)
         self.verify_point(frame, 'points[2]', 'Point', 5050, 6060)
@@ -87,7 +86,7 @@ class TestVarPath(TestBase):
         # Test a reference
         self.verify_point(frame, 'pt_ref', 'Point &', 1, 2)
         v = frame.GetValueForVariablePath('pt_sp')
-        self.assertTrue(v.GetError().Success(), "Make sure we find 'pt_sp'")
+        self.assertSuccess(v.GetError(), "Make sure we find 'pt_sp'")
         # Make sure we don't crash when looking for non existant child
         # in type with synthetic children. This used to cause a crash.
         v = frame.GetValueForVariablePath('pt_sp->not_valid_child')

@@ -83,3 +83,15 @@ TEST(TestProgramEnd, ExitTest) {
 }
 
 TEST(TestProgramEnd, AbortTest) { EXPECT_DEATH(RTNAME(Abort)(), ""); }
+
+TEST(TestProgramEnd, CrashTest) {
+  static const std::string crashMessage{"bad user code"};
+  static const std::string fileName{"file name"};
+  static const std::string headMessage{"fatal Fortran runtime error\\("};
+  static const std::string tailMessage{":343\\): "};
+  static const std::string fullMessage{
+      headMessage + fileName + tailMessage + crashMessage};
+  EXPECT_DEATH(
+      RTNAME(ReportFatalUserError)(crashMessage.c_str(), fileName.c_str(), 343),
+      fullMessage.c_str());
+}

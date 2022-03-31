@@ -20,17 +20,18 @@ template <size_t NumberOfBits> struct Bitset {
                 "Cannot create a __llvm_libc::cpp::Bitset of size 0.");
 
   constexpr void set(size_t Index) {
-    Data[Index / BitsPerUnit] |= (uintptr_t{1} << (Index % BitsPerUnit));
+    Data[Index / BITS_PER_UNIT] |= (uintptr_t{1} << (Index % BITS_PER_UNIT));
   }
 
   constexpr bool test(size_t Index) const {
-    return Data[Index / BitsPerUnit] & (uintptr_t{1} << (Index % BitsPerUnit));
+    return Data[Index / BITS_PER_UNIT] &
+           (uintptr_t{1} << (Index % BITS_PER_UNIT));
   }
 
 private:
-  static constexpr size_t BitsPerByte = 8;
-  static constexpr size_t BitsPerUnit = BitsPerByte * sizeof(uintptr_t);
-  uintptr_t Data[(NumberOfBits + BitsPerUnit - 1) / BitsPerUnit] = {0};
+  static constexpr size_t BITS_PER_BYTE = 8;
+  static constexpr size_t BITS_PER_UNIT = BITS_PER_BYTE * sizeof(uintptr_t);
+  uintptr_t Data[(NumberOfBits + BITS_PER_UNIT - 1) / BITS_PER_UNIT] = {0};
 };
 
 } // namespace cpp

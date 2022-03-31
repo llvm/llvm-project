@@ -8,17 +8,17 @@
 bfdot z0.S, z1.H, z2.H
 // CHECK-INST: bfdot z0.s, z1.h, z2.h
 // CHECK-ENCODING: [0x20,0x80,0x62,0x64]
-// CHECK-ERROR: instruction requires: bf16 streaming-sve or sve
+// CHECK-ERROR: instruction requires: bf16 sve or sme
 
 bfdot z0.S, z1.H, z2.H[0]
 // CHECK-INST: bfdot z0.s, z1.h, z2.h[0]
 // CHECK-ENCODING: [0x20,0x40,0x62,0x64]
-// CHECK-ERROR: instruction requires: bf16 streaming-sve or sve
+// CHECK-ERROR: instruction requires: bf16 sve or sme
 
 bfdot z0.S, z1.H, z2.H[3]
 // CHECK-INST: bfdot z0.s, z1.h, z2.h[3]
 // CHECK-ENCODING: [0x20,0x40,0x7a,0x64]
-// CHECK-ERROR: instruction requires: bf16 streaming-sve or sve
+// CHECK-ERROR: instruction requires: bf16 sve or sme
 
 // --------------------------------------------------------------------------//
 // Test compatibility with MOVPRFX instruction.
@@ -26,29 +26,29 @@ bfdot z0.S, z1.H, z2.H[3]
 movprfx z0, z7
 // CHECK-INST: movprfx z0, z7
 // CHECK-ENCODING: [0xe0,0xbc,0x20,0x04]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 
 bfdot z0.S, z1.H, z2.H
 // CHECK-INST: bfdot z0.s, z1.h, z2.h
 // CHECK-ENCODING: [0x20,0x80,0x62,0x64]
-// CHECK-ERROR: instruction requires: bf16 streaming-sve or sve
+// CHECK-ERROR: instruction requires: bf16 sve or sme
 
 movprfx z0, z7
 // CHECK-INST: movprfx z0, z7
 // CHECK-ENCODING: [0xe0,0xbc,0x20,0x04]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 
 bfdot z0.S, z1.H, z2.H[0]
 // CHECK-INST: bfdot z0.s, z1.h, z2.h[0]
 // CHECK-ENCODING: [0x20,0x40,0x62,0x64]
-// CHECK-ERROR: instruction requires: bf16 streaming-sve or sve
+// CHECK-ERROR: instruction requires: bf16 sve or sme
 
 movprfx z0, z7
 // CHECK-INST: movprfx z0, z7
 // CHECK-ENCODING: [0xe0,0xbc,0x20,0x04]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 
 bfdot z0.S, z1.H, z2.H[3]
 // CHECK-INST: bfdot z0.s, z1.h, z2.h[3]
 // CHECK-ENCODING: [0x20,0x40,0x7a,0x64]
-// CHECK-ERROR: instruction requires: bf16 streaming-sve or sve
+// CHECK-ERROR: instruction requires: bf16 sve or sme

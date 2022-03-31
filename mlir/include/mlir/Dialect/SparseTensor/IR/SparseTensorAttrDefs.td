@@ -9,6 +9,7 @@
 #ifndef SPARSETENSOR_ATTRDEFS
 #define SPARSETENSOR_ATTRDEFS
 
+include "mlir/IR/AttrTypeBase.td"
 include "mlir/Dialect/SparseTensor/IR/SparseTensorBase.td"
 include "mlir/IR/TensorEncoding.td"
 
@@ -79,6 +80,7 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
   );
 
   let genVerifyDecl = 1;
+  let hasCustomAssemblyFormat = 1;
 
   let extraClassDeclaration = [{
     // Dimension level types that define sparse tensors:

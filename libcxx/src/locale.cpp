@@ -12,20 +12,21 @@
 #define _LCONV_C99
 #endif
 
-#include "algorithm"
-#include "clocale"
-#include "codecvt"
-#include "cstdio"
-#include "cstdlib"
-#include "cstring"
-#include "locale"
-#include "string"
-#include "type_traits"
-#include "typeinfo"
-#include "vector"
+#include <__utility/unreachable.h>
+#include <algorithm>
+#include <clocale>
+#include <codecvt>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <locale>
+#include <string>
+#include <type_traits>
+#include <typeinfo>
+#include <vector>
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-#   include "cwctype"
+#   include <cwctype>
 #endif
 
 #if defined(_AIX)
@@ -44,13 +45,13 @@
 
 #include "include/atomic_support.h"
 #include "include/sso_allocator.h"
-#include "__undef_macros"
 
 // On Linux, wint_t and wchar_t have different signed-ness, and this causes
 // lots of noise in the build log, but no bugs that I know of.
-#if defined(__clang__)
-#pragma clang diagnostic ignored "-Wsign-conversion"
-#endif
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wsign-conversion")
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -126,11 +127,6 @@ _LIBCPP_NORETURN static void __throw_runtime_error(const string &msg)
 }
 
 }
-
-#if defined(_AIX)
-// Set priority to INT_MIN + 256 + 150
-# pragma priority ( -2147483242 )
-#endif
 
 const locale::category locale::none;
 const locale::category locale::collate;
@@ -898,7 +894,7 @@ ctype<wchar_t>::do_toupper(char_type c) const
 #ifdef _LIBCPP_HAS_DEFAULTRUNELOCALE
     return isascii(c) ? _DefaultRuneLocale.__mapupper[c] : c;
 #elif defined(__GLIBC__) || defined(__EMSCRIPTEN__) || \
-      defined(__NetBSD__)
+      defined(__NetBSD__) || defined(__MVS__)
     return isascii(c) ? ctype<char>::__classic_upper_table()[c] : c;
 #else
     return (isascii(c) && iswlower_l(c, _LIBCPP_GET_C_LOCALE)) ? c-L'a'+L'A' : c;
@@ -912,7 +908,7 @@ ctype<wchar_t>::do_toupper(char_type* low, const char_type* high) const
 #ifdef _LIBCPP_HAS_DEFAULTRUNELOCALE
         *low = isascii(*low) ? _DefaultRuneLocale.__mapupper[*low] : *low;
 #elif defined(__GLIBC__) || defined(__EMSCRIPTEN__) || \
-      defined(__NetBSD__)
+      defined(__NetBSD__) || defined(__MVS__)
         *low = isascii(*low) ? ctype<char>::__classic_upper_table()[*low]
                              : *low;
 #else
@@ -927,7 +923,7 @@ ctype<wchar_t>::do_tolower(char_type c) const
 #ifdef _LIBCPP_HAS_DEFAULTRUNELOCALE
     return isascii(c) ? _DefaultRuneLocale.__maplower[c] : c;
 #elif defined(__GLIBC__) || defined(__EMSCRIPTEN__) || \
-      defined(__NetBSD__)
+      defined(__NetBSD__) || defined(__MVS__)
     return isascii(c) ? ctype<char>::__classic_lower_table()[c] : c;
 #else
     return (isascii(c) && isupper_l(c, _LIBCPP_GET_C_LOCALE)) ? c-L'A'+'a' : c;
@@ -941,7 +937,7 @@ ctype<wchar_t>::do_tolower(char_type* low, const char_type* high) const
 #ifdef _LIBCPP_HAS_DEFAULTRUNELOCALE
         *low = isascii(*low) ? _DefaultRuneLocale.__maplower[*low] : *low;
 #elif defined(__GLIBC__) || defined(__EMSCRIPTEN__) || \
-      defined(__NetBSD__)
+      defined(__NetBSD__) || defined(__MVS__)
         *low = isascii(*low) ? ctype<char>::__classic_lower_table()[*low]
                              : *low;
 #else
@@ -1013,7 +1009,7 @@ ctype<char>::do_toupper(char_type c) const
       static_cast<char>(_DefaultRuneLocale.__mapupper[static_cast<ptrdiff_t>(c)]) : c;
 #elif defined(__NetBSD__)
     return static_cast<char>(__classic_upper_table()[static_cast<unsigned char>(c)]);
-#elif defined(__GLIBC__) || defined(__EMSCRIPTEN__)
+#elif defined(__GLIBC__) || defined(__EMSCRIPTEN__) || defined(__MVS__)
     return isascii(c) ?
       static_cast<char>(__classic_upper_table()[static_cast<unsigned char>(c)]) : c;
 #else
@@ -1030,7 +1026,7 @@ ctype<char>::do_toupper(char_type* low, const char_type* high) const
           static_cast<char>(_DefaultRuneLocale.__mapupper[static_cast<ptrdiff_t>(*low)]) : *low;
 #elif defined(__NetBSD__)
         *low = static_cast<char>(__classic_upper_table()[static_cast<unsigned char>(*low)]);
-#elif defined(__GLIBC__) || defined(__EMSCRIPTEN__)
+#elif defined(__GLIBC__) || defined(__EMSCRIPTEN__) || defined(__MVS__)
         *low = isascii(*low) ?
           static_cast<char>(__classic_upper_table()[static_cast<size_t>(*low)]) : *low;
 #else
@@ -1047,7 +1043,7 @@ ctype<char>::do_tolower(char_type c) const
       static_cast<char>(_DefaultRuneLocale.__maplower[static_cast<ptrdiff_t>(c)]) : c;
 #elif defined(__NetBSD__)
     return static_cast<char>(__classic_lower_table()[static_cast<unsigned char>(c)]);
-#elif defined(__GLIBC__) || defined(__EMSCRIPTEN__)
+#elif defined(__GLIBC__) || defined(__EMSCRIPTEN__) || defined(__MVS__)
     return isascii(c) ?
       static_cast<char>(__classic_lower_table()[static_cast<size_t>(c)]) : c;
 #else
@@ -1063,7 +1059,7 @@ ctype<char>::do_tolower(char_type* low, const char_type* high) const
         *low = isascii(*low) ? static_cast<char>(_DefaultRuneLocale.__maplower[static_cast<ptrdiff_t>(*low)]) : *low;
 #elif defined(__NetBSD__)
         *low = static_cast<char>(__classic_lower_table()[static_cast<unsigned char>(*low)]);
-#elif defined(__GLIBC__) || defined(__EMSCRIPTEN__)
+#elif defined(__GLIBC__) || defined(__EMSCRIPTEN__) || defined(__MVS__)
         *low = isascii(*low) ? static_cast<char>(__classic_lower_table()[static_cast<size_t>(*low)]) : *low;
 #else
         *low = (isascii(*low) && isupper_l(*low, _LIBCPP_GET_C_LOCALE)) ? *low-'A'+'a' : *low;
@@ -1211,6 +1207,12 @@ ctype<char>::classic_table() noexcept
     return _ctype_ + 1;
 #elif defined(_AIX)
     return (const unsigned int *)__lc_ctype_ptr->obj->mask;
+#elif defined(__MVS__)
+# if defined(__NATIVE_ASCII_F)
+    return const_cast<const ctype<char>::mask*> (__OBJ_DATA(__lc_ctype_a)->mask);
+# else
+    return const_cast<const ctype<char>::mask*> (__ctypec);
+# endif
 #else
     // Platform not supported: abort so the person doing the port knows what to
     // fix
@@ -1259,7 +1261,26 @@ ctype<char>::__classic_upper_table() noexcept
 {
     return *__ctype_toupper_loc();
 }
-#endif // __GLIBC__ || __NETBSD__ || __EMSCRIPTEN__
+#elif defined(__MVS__)
+const unsigned short*
+ctype<char>::__classic_lower_table() _NOEXCEPT
+{
+# if defined(__NATIVE_ASCII_F)
+  return const_cast<const unsigned short*>(__OBJ_DATA(__lc_ctype_a)->lower);
+# else
+  return const_cast<const unsigned short*>(__ctype + __TOLOWER_INDEX);
+# endif
+}
+const unsigned short *
+ctype<char>::__classic_upper_table() _NOEXCEPT
+{
+# if defined(__NATIVE_ASCII_F)
+  return const_cast<const unsigned short*>(__OBJ_DATA(__lc_ctype_a)->upper);
+# else
+  return const_cast<const unsigned short*>(__ctype + __TOUPPER_INDEX);
+# endif
+}
+#endif // __GLIBC__ || __NETBSD__ || __EMSCRIPTEN__ || __MVS__
 
 // template <> class ctype_byname<char>
 
@@ -1503,7 +1524,7 @@ char
 ctype_byname<wchar_t>::do_narrow(char_type c, char dfault) const
 {
     int r = __libcpp_wctob_l(c, __l);
-    return r != static_cast<int>(WEOF) ? static_cast<char>(r) : dfault;
+    return (r != EOF) ? static_cast<char>(r) : dfault;
 }
 
 const wchar_t*
@@ -1512,7 +1533,7 @@ ctype_byname<wchar_t>::do_narrow(const char_type* low, const char_type* high, ch
     for (; low != high; ++low, ++dest)
     {
         int r = __libcpp_wctob_l(*low, __l);
-        *dest = r != static_cast<int>(WEOF) ? static_cast<char>(r) : dfault;
+        *dest = (r != EOF) ? static_cast<char>(r) : dfault;
     }
     return low;
 }
@@ -4598,7 +4619,7 @@ static bool checked_string_to_char_convert(char& dest,
 
   return false;
 #endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
-  _LIBCPP_UNREACHABLE();
+  __libcpp_unreachable();
 }
 
 
@@ -5175,12 +5196,8 @@ __time_get::~__time_get()
 {
     freelocale(__loc_);
 }
-#if defined(__clang__)
-#pragma clang diagnostic ignored "-Wmissing-field-initializers"
-#endif
-#if defined(__GNUG__)
-#pragma GCC   diagnostic ignored "-Wmissing-field-initializers"
-#endif
+
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wmissing-field-initializers")
 
 template <>
 string
@@ -5326,9 +5343,7 @@ __time_get_storage<char>::__analyze(char fmt, const ctype<char>& ct)
     return result;
 }
 
-#if defined(__clang__)
-#pragma clang diagnostic ignored "-Wmissing-braces"
-#endif
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wmissing-braces")
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 template <>
@@ -6574,3 +6589,5 @@ template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS codecvt_byname<char32_t,
 #endif
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS

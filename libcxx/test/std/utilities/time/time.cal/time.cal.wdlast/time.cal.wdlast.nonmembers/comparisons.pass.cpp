@@ -32,7 +32,7 @@ int main(int, char**)
     static_assert(testComparisons2Values<weekday_last>(weekday{0}, weekday{0}), "");
     static_assert(testComparisons2Values<weekday_last>(weekday{0}, weekday{1}), "");
 
-//  Some 'ok' values as well
+    //  Some 'ok' values as well
     static_assert(testComparisons2Values<weekday_last>(weekday{2}, weekday{2}), "");
     static_assert(testComparisons2Values<weekday_last>(weekday{2}, weekday{3}), "");
 
@@ -40,5 +40,5 @@ int main(int, char**)
         for (unsigned j = 0; j < 6; ++j)
             assert(testComparisons2Values<weekday_last>(weekday{i}, weekday{j}));
 
-  return 0;
+    return 0;
 }

@@ -25,12 +25,12 @@ int ARBSizeOf(int n) {
   }();
 }
 
-// CHECK-LABEL: define internal i32 @"_ZZ9ARBSizeOfiENK3$_0clEv"
+// CHECK-LABEL: define internal noundef i32 @"_ZZ9ARBSizeOfiENK3$_0clEv"
 
 int a() { return []{ return 1; }(); }
 // CHECK-LABEL: define{{.*}} i32 @_Z1av
-// CHECK: call i32 @"_ZZ1avENK3$_1clEv"
-// CHECK-LABEL: define internal i32 @"_ZZ1avENK3$_1clEv"
+// CHECK: call noundef i32 @"_ZZ1avENK3$_1clEv"
+// CHECK-LABEL: define internal noundef i32 @"_ZZ1avENK3$_1clEv"
 // CHECK: ret i32 1
 
 int b(int x) { return [x]{return x;}(); }
@@ -38,8 +38,8 @@ int b(int x) { return [x]{return x;}(); }
 // CHECK: store i32
 // CHECK: load i32, i32*
 // CHECK: store i32
-// CHECK: call i32 @"_ZZ1biENK3$_2clEv"
-// CHECK-LABEL: define internal i32 @"_ZZ1biENK3$_2clEv"
+// CHECK: call noundef i32 @"_ZZ1biENK3$_2clEv"
+// CHECK-LABEL: define internal noundef i32 @"_ZZ1biENK3$_2clEv"
 // CHECK: load i32, i32*
 // CHECK: ret i32
 
@@ -47,8 +47,8 @@ int c(int x) { return [&x]{return x;}(); }
 // CHECK-LABEL: define{{.*}} i32 @_Z1ci
 // CHECK: store i32
 // CHECK: store i32*
-// CHECK: call i32 @"_ZZ1ciENK3$_3clEv"
-// CHECK-LABEL: define internal i32 @"_ZZ1ciENK3$_3clEv"
+// CHECK: call noundef i32 @"_ZZ1ciENK3$_3clEv"
+// CHECK-LABEL: define internal noundef i32 @"_ZZ1ciENK3$_3clEv"
 // CHECK: load i32*, i32**
 // CHECK: load i32, i32*
 // CHECK: ret i32
@@ -62,8 +62,8 @@ int d(int x) { D y[10]; return [x,y] { return y[x].x; }(); }
 // CHECK: call void @_ZN1DC1ERKS_
 // CHECK: icmp eq i64 %{{.*}}, 10
 // CHECK: br i1
-// CHECK: call i32 @"_ZZ1diENK3$_4clEv"
-// CHECK-LABEL: define internal i32 @"_ZZ1diENK3$_4clEv"
+// CHECK: call noundef i32 @"_ZZ1diENK3$_4clEv"
+// CHECK-LABEL: define internal noundef i32 @"_ZZ1diENK3$_4clEv"
 // CHECK: load i32, i32*
 // CHECK: load i32, i32*
 // CHECK: ret i32
@@ -73,11 +73,11 @@ int e(E a, E b, bool cond) { return [a,b,cond](){ return (cond ? a : b).x; }(); 
 // CHECK-LABEL: define{{.*}} i32 @_Z1e1ES_b
 // CHECK: call void @_ZN1EC1ERKS_
 // CHECK: invoke void @_ZN1EC1ERKS_
-// CHECK: invoke i32 @"_ZZ1e1ES_bENK3$_5clEv"
+// CHECK: invoke noundef i32 @"_ZZ1e1ES_bENK3$_5clEv"
 // CHECK: call void @"_ZZ1e1ES_bEN3$_5D1Ev"
 // CHECK: call void @"_ZZ1e1ES_bEN3$_5D1Ev"
 
-// CHECK-LABEL: define internal i32 @"_ZZ1e1ES_bENK3$_5clEv"
+// CHECK-LABEL: define internal noundef i32 @"_ZZ1e1ES_bENK3$_5clEv"
 // CHECK: trunc i8
 // CHECK: load i32, i32*
 // CHECK: ret i32
@@ -93,7 +93,7 @@ void f() {
 static int k;
 int g() {
   int &r = k;
-  // CHECK-LABEL: define internal i32 @"_ZZ1gvENK3$_7clEv"(
+  // CHECK-LABEL: define internal noundef i32 @"_ZZ1gvENK3$_7clEv"(
   // CHECK-NOT: }
   // CHECK: load i32, i32* @_ZL1k,
   return [] { return r; } ();
@@ -110,7 +110,7 @@ void staticarrayref(){
   }();
 }
 
-// CHECK-LABEL: define internal i32* @"_ZZ11PR22071_funvENK3$_9clEv"
+// CHECK-LABEL: define internal noundef i32* @"_ZZ11PR22071_funvENK3$_9clEv"
 // CHECK: ret i32* @PR22071_var
 int PR22071_var;
 int *PR22071_fun() {
@@ -186,12 +186,12 @@ namespace pr28595 {
 
 // CHECK-LABEL: define internal void @"_ZZ1e1ES_bEN3$_5D2Ev"
 
-// CHECK-LABEL: define internal i32 @"_ZZ1fvEN3$_68__invokeEii"
+// CHECK-LABEL: define internal noundef i32 @"_ZZ1fvEN3$_68__invokeEii"
 // CHECK: store i32
 // CHECK-NEXT: store i32
 // CHECK-NEXT: load i32, i32*
 // CHECK-NEXT: load i32, i32*
-// CHECK-NEXT: call i32 @"_ZZ1fvENK3$_6clEii"
+// CHECK-NEXT: call noundef i32 @"_ZZ1fvENK3$_6clEii"
 // CHECK-NEXT: ret i32
 
 // CHECK-LABEL: define internal void @"_ZZ1hvEN4$_118__invokeEv"(%struct.A* noalias sret(%struct.A) align 1 %agg.result) {{.*}} {

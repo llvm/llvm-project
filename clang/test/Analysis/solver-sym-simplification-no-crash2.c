@@ -10,7 +10,7 @@
 // expected-no-diagnostics
 
 int a, b, c, d;
-void f() {
+void f(void) {
   a = -1;
   d = b * a;
   a = d / c;

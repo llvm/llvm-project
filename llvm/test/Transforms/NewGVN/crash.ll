@@ -1,4 +1,4 @@
-; RUN: opt -newgvn -disable-output < %s
+; RUN: opt -passes=newgvn -disable-output < %s
 
 ; PR5631
 

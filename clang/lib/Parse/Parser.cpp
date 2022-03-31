@@ -279,7 +279,7 @@ bool Parser::SkipUntil(ArrayRef<tok::TokenKind> Toks, SkipUntilFlags Flags) {
   // We always want this function to skip at least one token if the first token
   // isn't T and if not at EOF.
   bool isFirstTokenSkipped = true;
-  while (1) {
+  while (true) {
     // If we found one of the tokens, stop and return true.
     for (unsigned i = 0, NumToks = Toks.size(); i != NumToks; ++i) {
       if (Tok.is(Toks[i])) {
@@ -581,15 +581,20 @@ void Parser::DestroyTemplateIds() {
 ///                 top-level-declaration-seq[opt] private-module-fragment[opt]
 ///
 /// Note that in C, it is an error if there is no first declaration.
-bool Parser::ParseFirstTopLevelDecl(DeclGroupPtrTy &Result) {
+bool Parser::ParseFirstTopLevelDecl(DeclGroupPtrTy &Result,
+                                    Sema::ModuleImportState &ImportState) {
   Actions.ActOnStartOfTranslationUnit();
+
+  // For C++20 modules, a module decl must be the first in the TU.  We also
+  // need to track module imports.
+  ImportState = Sema::ModuleImportState::FirstDecl;
+  bool NoTopLevelDecls = ParseTopLevelDecl(Result, ImportState);
 
   // C11 6.9p1 says translation units must have at least one top-level
   // declaration. C++ doesn't have this restriction. We also don't want to
   // complain if we have a precompiled header, although technically if the PCH
   // is empty we should still emit the (pedantic) diagnostic.
   // If the main file is a header, we're only pretending it's a TU; don't warn.
-  bool NoTopLevelDecls = ParseTopLevelDecl(Result, true);
   if (NoTopLevelDecls && !Actions.getASTContext().getExternalSource() &&
       !getLangOpts().CPlusPlus && !getLangOpts().IsHeaderFile)
     Diag(diag::ext_empty_translation_unit);
@@ -603,7 +608,8 @@ bool Parser::ParseFirstTopLevelDecl(DeclGroupPtrTy &Result) {
 ///   top-level-declaration:
 ///           declaration
 /// [C++20]   module-import-declaration
-bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result, bool IsFirstDecl) {
+bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
+                               Sema::ModuleImportState &ImportState) {
   DestroyTemplateIdAnnotationsRAIIObj CleanupRAII(*this);
 
   // Skip over the EOF token, flagging end of previous input for incremental
@@ -647,13 +653,12 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result, bool IsFirstDecl) {
 
   case tok::kw_module:
   module_decl:
-    Result = ParseModuleDecl(IsFirstDecl);
+    Result = ParseModuleDecl(ImportState);
     return false;
 
-  // tok::kw_import is handled by ParseExternalDeclaration. (Under the Modules
-  // TS, an import can occur within an export block.)
+  case tok::kw_import:
   import_decl: {
-    Decl *ImportDecl = ParseModuleImport(SourceLocation());
+    Decl *ImportDecl = ParseModuleImport(SourceLocation(), ImportState);
     Result = Actions.ConvertDeclToDeclGroup(ImportDecl);
     return false;
   }
@@ -669,12 +674,14 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result, bool IsFirstDecl) {
     Actions.ActOnModuleBegin(Tok.getLocation(), reinterpret_cast<Module *>(
                                                     Tok.getAnnotationValue()));
     ConsumeAnnotationToken();
+    ImportState = Sema::ModuleImportState::NotACXX20Module;
     return false;
 
   case tok::annot_module_end:
     Actions.ActOnModuleEnd(Tok.getLocation(), reinterpret_cast<Module *>(
                                                   Tok.getAnnotationValue()));
     ConsumeAnnotationToken();
+    ImportState = Sema::ModuleImportState::NotACXX20Module;
     return false;
 
   case tok::eof:
@@ -714,10 +721,20 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result, bool IsFirstDecl) {
     break;
   }
 
-  ParsedAttributesWithRange attrs(AttrFactory);
+  ParsedAttributes attrs(AttrFactory);
   MaybeParseCXX11Attributes(attrs);
 
   Result = ParseExternalDeclaration(attrs);
+  // An empty Result might mean a line with ';' or some parsing error, ignore
+  // it.
+  if (Result) {
+    if (ImportState == Sema::ModuleImportState::FirstDecl)
+      // First decl was not modular.
+      ImportState = Sema::ModuleImportState::NotACXX20Module;
+    else if (ImportState == Sema::ModuleImportState::ImportAllowed)
+      // Non-imports disallow further imports.
+      ImportState = Sema::ModuleImportState::ImportFinished;
+  }
   return false;
 }
 
@@ -747,9 +764,8 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result, bool IsFirstDecl) {
 ///
 /// [Modules-TS] module-import-declaration
 ///
-Parser::DeclGroupPtrTy
-Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
-                                 ParsingDeclSpec *DS) {
+Parser::DeclGroupPtrTy Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
+                                                        ParsingDeclSpec *DS) {
   DestroyTemplateIdAnnotationsRAIIObj CleanupRAII(*this);
   ParenBraceBracketBalancer BalancerRAIIObj(*this);
 
@@ -803,7 +819,7 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
   case tok::annot_attr_openmp:
   case tok::annot_pragma_openmp: {
     AccessSpecifier AS = AS_none;
-    return ParseOpenMPDeclarativeDirectiveWithExtDecl(AS, attrs);
+    return ParseOpenMPDeclarativeDirectiveWithExtDecl(AS, Attrs);
   }
   case tok::annot_pragma_ms_pointers_to_members:
     HandlePragmaMSPointersToMembers();
@@ -823,7 +839,7 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
   case tok::semi:
     // Either a C++11 empty-declaration or attribute-declaration.
     SingleDecl =
-        Actions.ActOnEmptyDeclaration(getCurScope(), attrs, Tok.getLocation());
+        Actions.ActOnEmptyDeclaration(getCurScope(), Attrs, Tok.getLocation());
     ConsumeExtraSemi(OutsideFunction);
     break;
   case tok::r_brace:
@@ -837,10 +853,10 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
     // __extension__ silences extension warnings in the subexpression.
     ExtensionRAIIObject O(Diags);  // Use RAII to do this.
     ConsumeToken();
-    return ParseExternalDeclaration(attrs);
+    return ParseExternalDeclaration(Attrs);
   }
   case tok::kw_asm: {
-    ProhibitAttributes(attrs);
+    ProhibitAttributes(Attrs);
 
     SourceLocation StartLoc = Tok.getLocation();
     SourceLocation EndLoc;
@@ -865,7 +881,7 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
     break;
   }
   case tok::at:
-    return ParseObjCAtDirectives(attrs);
+    return ParseObjCAtDirectives(Attrs);
   case tok::minus:
   case tok::plus:
     if (!getLangOpts().ObjC) {
@@ -887,11 +903,17 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
         getCurScope(),
         CurParsedObjCImpl ? Sema::PCC_ObjCImplementation : Sema::PCC_Namespace);
     return nullptr;
-  case tok::kw_import:
-    SingleDecl = ParseModuleImport(SourceLocation());
-    break;
+  case tok::kw_import: {
+    Sema::ModuleImportState IS = Sema::ModuleImportState::NotACXX20Module;
+    if (getLangOpts().CPlusPlusModules) {
+      llvm_unreachable("not expecting a c++20 import here");
+      ProhibitAttributes(Attrs);
+    }
+    SingleDecl = ParseModuleImport(SourceLocation(), IS);
+  } break;
   case tok::kw_export:
     if (getLangOpts().CPlusPlusModules || getLangOpts().ModulesTS) {
+      ProhibitAttributes(Attrs);
       SingleDecl = ParseExportDeclaration();
       break;
     }
@@ -907,7 +929,7 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
     // A function definition cannot start with any of these keywords.
     {
       SourceLocation DeclEnd;
-      return ParseDeclaration(DeclaratorContext::File, DeclEnd, attrs);
+      return ParseDeclaration(DeclaratorContext::File, DeclEnd, Attrs);
     }
 
   case tok::kw_static:
@@ -917,7 +939,7 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
       Diag(ConsumeToken(), diag::warn_static_inline_explicit_inst_ignored)
         << 0;
       SourceLocation DeclEnd;
-      return ParseDeclaration(DeclaratorContext::File, DeclEnd, attrs);
+      return ParseDeclaration(DeclaratorContext::File, DeclEnd, Attrs);
     }
     goto dont_know;
 
@@ -928,7 +950,7 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
       // Inline namespaces. Allowed as an extension even in C++03.
       if (NextKind == tok::kw_namespace) {
         SourceLocation DeclEnd;
-        return ParseDeclaration(DeclaratorContext::File, DeclEnd, attrs);
+        return ParseDeclaration(DeclaratorContext::File, DeclEnd, Attrs);
       }
 
       // Parse (then ignore) 'inline' prior to a template instantiation. This is
@@ -937,7 +959,7 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
         Diag(ConsumeToken(), diag::warn_static_inline_explicit_inst_ignored)
           << 1;
         SourceLocation DeclEnd;
-        return ParseDeclaration(DeclaratorContext::File, DeclEnd, attrs);
+        return ParseDeclaration(DeclaratorContext::File, DeclEnd, Attrs);
       }
     }
     goto dont_know;
@@ -952,7 +974,7 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
              diag::ext_extern_template) << SourceRange(ExternLoc, TemplateLoc);
       SourceLocation DeclEnd;
       return Actions.ConvertDeclToDeclGroup(ParseExplicitInstantiation(
-          DeclaratorContext::File, ExternLoc, TemplateLoc, DeclEnd, attrs));
+          DeclaratorContext::File, ExternLoc, TemplateLoc, DeclEnd, Attrs));
     }
     goto dont_know;
 
@@ -973,7 +995,7 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
       return nullptr;
     }
     // We can't tell whether this is a function-definition or declaration yet.
-    return ParseDeclarationOrFunctionDefinition(attrs, DS);
+    return ParseDeclarationOrFunctionDefinition(Attrs, DS);
   }
 
   // This routine returns a DeclGroup, if the thing we parsed only contains a
@@ -1037,10 +1059,8 @@ bool Parser::isStartOfFunctionDefinition(const ParsingDeclarator &Declarator) {
 /// [OMP]   threadprivate-directive
 /// [OMP]   allocate-directive                         [TODO]
 ///
-Parser::DeclGroupPtrTy
-Parser::ParseDeclOrFunctionDefInternal(ParsedAttributesWithRange &attrs,
-                                       ParsingDeclSpec &DS,
-                                       AccessSpecifier AS) {
+Parser::DeclGroupPtrTy Parser::ParseDeclOrFunctionDefInternal(
+    ParsedAttributes &Attrs, ParsingDeclSpec &DS, AccessSpecifier AS) {
   MaybeParseMicrosoftAttributes(DS.getAttributes());
   // Parse the common declaration-specifiers piece.
   ParseDeclarationSpecifiers(DS, ParsedTemplateInfo(), AS,
@@ -1079,7 +1099,7 @@ Parser::ParseDeclOrFunctionDefInternal(ParsedAttributesWithRange &attrs,
             ? DS.getTypeSpecTypeLoc().getLocWithOffset(
                   LengthOfTSTToken(DS.getTypeSpecType()))
             : SourceLocation();
-    ProhibitAttributes(attrs, CorrectLocationForAttributes);
+    ProhibitAttributes(Attrs, CorrectLocationForAttributes);
     ConsumeToken();
     RecordDecl *AnonRecord = nullptr;
     Decl *TheDecl = Actions.ParsedFreeStandingDeclSpec(getCurScope(), AS_none,
@@ -1092,7 +1112,7 @@ Parser::ParseDeclOrFunctionDefInternal(ParsedAttributesWithRange &attrs,
     return Actions.ConvertDeclToDeclGroup(TheDecl);
   }
 
-  DS.takeAttributesFrom(attrs);
+  DS.takeAttributesFrom(Attrs);
 
   // ObjC2 allows prefix attributes on class interfaces and protocols.
   // FIXME: This still needs better diagnostics. We should only accept
@@ -1138,12 +1158,10 @@ Parser::ParseDeclOrFunctionDefInternal(ParsedAttributesWithRange &attrs,
   return ParseDeclGroup(DS, DeclaratorContext::File);
 }
 
-Parser::DeclGroupPtrTy
-Parser::ParseDeclarationOrFunctionDefinition(ParsedAttributesWithRange &attrs,
-                                             ParsingDeclSpec *DS,
-                                             AccessSpecifier AS) {
+Parser::DeclGroupPtrTy Parser::ParseDeclarationOrFunctionDefinition(
+    ParsedAttributes &Attrs, ParsingDeclSpec *DS, AccessSpecifier AS) {
   if (DS) {
-    return ParseDeclOrFunctionDefInternal(attrs, *DS, AS);
+    return ParseDeclOrFunctionDefInternal(Attrs, *DS, AS);
   } else {
     ParsingDeclSpec PDS(*this);
     // Must temporarily exit the objective-c container scope for
@@ -1151,7 +1169,7 @@ Parser::ParseDeclarationOrFunctionDefinition(ParsedAttributesWithRange &attrs,
     // afterwards.
     ObjCDeclContextSwitch ObjCDC(*this);
 
-    return ParseDeclOrFunctionDefInternal(attrs, PDS, AS);
+    return ParseDeclOrFunctionDefInternal(Attrs, PDS, AS);
   }
 }
 
@@ -1448,7 +1466,7 @@ void Parser::ParseKNRParamDeclarations(Declarator &D) {
     ParseDeclarator(ParmDeclarator);
 
     // Handle the full declarator list.
-    while (1) {
+    while (true) {
       // If attributes are present, parse them.
       MaybeParseGNUAttributes(ParmDeclarator);
 
@@ -1634,7 +1652,7 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC) {
   CXXScopeSpec SS;
   if (getLangOpts().CPlusPlus &&
       ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
-                                     /*ObjectHadErrors=*/false,
+                                     /*ObjectHasErrors=*/false,
                                      EnteringContext))
     return ANK_Error;
 
@@ -1882,7 +1900,7 @@ bool Parser::TryAnnotateTypeOrScopeToken() {
     SourceLocation TypenameLoc = ConsumeToken();
     CXXScopeSpec SS;
     if (ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
-                                       /*ObjectHadErrors=*/false,
+                                       /*ObjectHasErrors=*/false,
                                        /*EnteringContext=*/false, nullptr,
                                        /*IsTypename*/ true))
       return true;
@@ -1953,7 +1971,7 @@ bool Parser::TryAnnotateTypeOrScopeToken() {
   CXXScopeSpec SS;
   if (getLangOpts().CPlusPlus)
     if (ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
-                                       /*ObjectHadErrors=*/false,
+                                       /*ObjectHasErrors=*/false,
                                        /*EnteringContext*/ false))
       return true;
 
@@ -2084,7 +2102,7 @@ bool Parser::TryAnnotateCXXScopeToken(bool EnteringContext) {
 
   CXXScopeSpec SS;
   if (ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
-                                     /*ObjectHadErrors=*/false,
+                                     /*ObjectHasErrors=*/false,
                                      EnteringContext))
     return true;
   if (SS.isEmpty())
@@ -2195,7 +2213,7 @@ bool Parser::ParseMicrosoftIfExistsCondition(IfExistsCondition& Result) {
   // Parse nested-name-specifier.
   if (getLangOpts().CPlusPlus)
     ParseOptionalCXXScopeSpecifier(Result.SS, /*ObjectType=*/nullptr,
-                                   /*ObjectHadErrors=*/false,
+                                   /*ObjectHasErrors=*/false,
                                    /*EnteringContext=*/false);
 
   // Check nested-name specifier.
@@ -2269,9 +2287,9 @@ void Parser::ParseMicrosoftIfExistsExternalDeclaration() {
   // Parse the declarations.
   // FIXME: Support module import within __if_exists?
   while (Tok.isNot(tok::r_brace) && !isEofOrEom()) {
-    ParsedAttributesWithRange attrs(AttrFactory);
-    MaybeParseCXX11Attributes(attrs);
-    DeclGroupPtrTy Result = ParseExternalDeclaration(attrs);
+    ParsedAttributes Attrs(AttrFactory);
+    MaybeParseCXX11Attributes(Attrs);
+    DeclGroupPtrTy Result = ParseExternalDeclaration(Attrs);
     if (Result && !getCurScope()->getParent())
       Actions.getASTConsumer().HandleTopLevelDecl(Result.get());
   }
@@ -2291,7 +2309,8 @@ void Parser::ParseMicrosoftIfExistsExternalDeclaration() {
 ///            attribute-specifier-seq[opt] ';'
 ///   private-module-fragment: [C++2a]
 ///     'module' ':' 'private' ';' top-level-declaration-seq[opt]
-Parser::DeclGroupPtrTy Parser::ParseModuleDecl(bool IsFirstDecl) {
+Parser::DeclGroupPtrTy
+Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
   SourceLocation StartLoc = Tok.getLocation();
 
   Sema::ModuleDeclKind MDK = TryConsumeToken(tok::kw_export)
@@ -2311,7 +2330,7 @@ Parser::DeclGroupPtrTy Parser::ParseModuleDecl(bool IsFirstDecl) {
   // Parse a global-module-fragment, if present.
   if (getLangOpts().CPlusPlusModules && Tok.is(tok::semi)) {
     SourceLocation SemiLoc = ConsumeToken();
-    if (!IsFirstDecl) {
+    if (ImportState != Sema::ModuleImportState::FirstDecl) {
       Diag(StartLoc, diag::err_global_module_introducer_not_at_start)
         << SourceRange(StartLoc, SemiLoc);
       return nullptr;
@@ -2320,6 +2339,7 @@ Parser::DeclGroupPtrTy Parser::ParseModuleDecl(bool IsFirstDecl) {
       Diag(StartLoc, diag::err_module_fragment_exported)
         << /*global*/0 << FixItHint::CreateRemoval(StartLoc);
     }
+    ImportState = Sema::ModuleImportState::GlobalFragment;
     return Actions.ActOnGlobalModuleFragmentDecl(ModuleLoc);
   }
 
@@ -2334,52 +2354,54 @@ Parser::DeclGroupPtrTy Parser::ParseModuleDecl(bool IsFirstDecl) {
     SourceLocation PrivateLoc = ConsumeToken();
     DiagnoseAndSkipCXX11Attributes();
     ExpectAndConsumeSemi(diag::err_private_module_fragment_expected_semi);
+    ImportState = Sema::ModuleImportState::PrivateFragment;
     return Actions.ActOnPrivateModuleFragmentDecl(ModuleLoc, PrivateLoc);
   }
 
   SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Path;
-  if (ParseModuleName(ModuleLoc, Path, /*IsImport*/false))
+  if (ParseModuleName(ModuleLoc, Path, /*IsImport*/ false))
     return nullptr;
 
   // Parse the optional module-partition.
+  SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Partition;
   if (Tok.is(tok::colon)) {
     SourceLocation ColonLoc = ConsumeToken();
-    SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Partition;
-    if (ParseModuleName(ModuleLoc, Partition, /*IsImport*/false))
+    if (!getLangOpts().CPlusPlusModules)
+      Diag(ColonLoc, diag::err_unsupported_module_partition)
+          << SourceRange(ColonLoc, Partition.back().second);
+    // Recover by ignoring the partition name.
+    else if (ParseModuleName(ModuleLoc, Partition, /*IsImport*/ false))
       return nullptr;
-
-    // FIXME: Support module partition declarations.
-    Diag(ColonLoc, diag::err_unsupported_module_partition)
-      << SourceRange(ColonLoc, Partition.back().second);
-    // Recover by parsing as a non-partition.
   }
 
   // We don't support any module attributes yet; just parse them and diagnose.
-  ParsedAttributesWithRange Attrs(AttrFactory);
+  ParsedAttributes Attrs(AttrFactory);
   MaybeParseCXX11Attributes(Attrs);
   ProhibitCXX11Attributes(Attrs, diag::err_attribute_not_module_attr);
 
   ExpectAndConsumeSemi(diag::err_module_expected_semi);
 
-  return Actions.ActOnModuleDecl(StartLoc, ModuleLoc, MDK, Path, IsFirstDecl);
+  return Actions.ActOnModuleDecl(StartLoc, ModuleLoc, MDK, Path, Partition,
+                                 ImportState);
 }
 
 /// Parse a module import declaration. This is essentially the same for
-/// Objective-C and the C++ Modules TS, except for the leading '@' (in ObjC)
-/// and the trailing optional attributes (in C++).
+/// Objective-C and C++20 except for the leading '@' (in ObjC) and the
+/// trailing optional attributes (in C++).
 ///
 /// [ObjC]  @import declaration:
 ///           '@' 'import' module-name ';'
 /// [ModTS] module-import-declaration:
 ///           'import' module-name attribute-specifier-seq[opt] ';'
-/// [C++2a] module-import-declaration:
+/// [C++20] module-import-declaration:
 ///           'export'[opt] 'import' module-name
 ///                   attribute-specifier-seq[opt] ';'
 ///           'export'[opt] 'import' module-partition
 ///                   attribute-specifier-seq[opt] ';'
 ///           'export'[opt] 'import' header-name
 ///                   attribute-specifier-seq[opt] ';'
-Decl *Parser::ParseModuleImport(SourceLocation AtLoc) {
+Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
+                                Sema::ModuleImportState &ImportState) {
   SourceLocation StartLoc = AtLoc.isInvalid() ? Tok.getLocation() : AtLoc;
 
   SourceLocation ExportLoc;
@@ -2391,9 +2413,10 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc) {
   bool IsObjCAtImport = Tok.isObjCAtKeyword(tok::objc_import);
   SourceLocation ImportLoc = ConsumeToken();
 
+  // For C++20 modules, we can have "name" or ":Partition name" as valid input.
   SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Path;
+  bool IsPartition = false;
   Module *HeaderUnit = nullptr;
-
   if (Tok.is(tok::header_name)) {
     // This is a header import that the preprocessor decided we should skip
     // because it was malformed in some way. Parse and ignore it; it's already
@@ -2403,21 +2426,22 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc) {
     // This is a header import that the preprocessor mapped to a module import.
     HeaderUnit = reinterpret_cast<Module *>(Tok.getAnnotationValue());
     ConsumeAnnotationToken();
-  } else if (getLangOpts().CPlusPlusModules && Tok.is(tok::colon)) {
+  } else if (Tok.is(tok::colon)) {
     SourceLocation ColonLoc = ConsumeToken();
-    if (ParseModuleName(ImportLoc, Path, /*IsImport*/true))
+    if (!getLangOpts().CPlusPlusModules)
+      Diag(ColonLoc, diag::err_unsupported_module_partition)
+          << SourceRange(ColonLoc, Path.back().second);
+    // Recover by leaving partition empty.
+    else if (ParseModuleName(ColonLoc, Path, /*IsImport*/ true))
       return nullptr;
-
-    // FIXME: Support module partition import.
-    Diag(ColonLoc, diag::err_unsupported_module_partition)
-      << SourceRange(ColonLoc, Path.back().second);
-    return nullptr;
+    else
+      IsPartition = true;
   } else {
-    if (ParseModuleName(ImportLoc, Path, /*IsImport*/true))
+    if (ParseModuleName(ImportLoc, Path, /*IsImport*/ true))
       return nullptr;
   }
 
-  ParsedAttributesWithRange Attrs(AttrFactory);
+  ParsedAttributes Attrs(AttrFactory);
   MaybeParseCXX11Attributes(Attrs);
   // We don't support any module import attributes yet.
   ProhibitCXX11Attributes(Attrs, diag::err_attribute_not_import_attr);
@@ -2428,12 +2452,51 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc) {
     return nullptr;
   }
 
+  // Diagnose mis-imports.
+  bool SeenError = true;
+  switch (ImportState) {
+  case Sema::ModuleImportState::ImportAllowed:
+    SeenError = false;
+    break;
+  case Sema::ModuleImportState::FirstDecl:
+  case Sema::ModuleImportState::NotACXX20Module:
+    // We can only import a partition within a module purview.
+    if (IsPartition)
+      Diag(ImportLoc, diag::err_partition_import_outside_module);
+    else
+      SeenError = false;
+    break;
+  case Sema::ModuleImportState::GlobalFragment:
+    // We can only have pre-processor directives in the global module
+    // fragment.  We cannot import a named modules here, however we have a
+    // header unit import.
+    if (!HeaderUnit || HeaderUnit->Kind != Module::ModuleKind::ModuleHeaderUnit)
+      Diag(ImportLoc, diag::err_import_in_wrong_fragment) << IsPartition << 0;
+    else
+      SeenError = false;
+    break;
+  case Sema::ModuleImportState::ImportFinished:
+    if (getLangOpts().CPlusPlusModules)
+      Diag(ImportLoc, diag::err_import_not_allowed_here);
+    else
+      SeenError = false;
+    break;
+  case Sema::ModuleImportState::PrivateFragment:
+    Diag(ImportLoc, diag::err_import_in_wrong_fragment) << IsPartition << 1;
+    break;
+  }
+  if (SeenError) {
+    ExpectAndConsumeSemi(diag::err_module_expected_semi);
+    return nullptr;
+  }
+
   DeclResult Import;
   if (HeaderUnit)
     Import =
         Actions.ActOnModuleImport(StartLoc, ExportLoc, ImportLoc, HeaderUnit);
   else if (!Path.empty())
-    Import = Actions.ActOnModuleImport(StartLoc, ExportLoc, ImportLoc, Path);
+    Import = Actions.ActOnModuleImport(StartLoc, ExportLoc, ImportLoc, Path,
+                                       IsPartition);
   ExpectAndConsumeSemi(diag::err_module_expected_semi);
   if (Import.isInvalid())
     return nullptr;

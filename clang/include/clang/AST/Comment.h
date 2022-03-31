@@ -424,19 +424,13 @@ public:
 
     Attribute() { }
 
-    Attribute(SourceLocation NameLocBegin, StringRef Name) :
-        NameLocBegin(NameLocBegin), Name(Name),
-        EqualsLoc(SourceLocation()),
-        ValueRange(SourceRange()), Value(StringRef())
-    { }
+    Attribute(SourceLocation NameLocBegin, StringRef Name)
+        : NameLocBegin(NameLocBegin), Name(Name), EqualsLoc(SourceLocation()) {}
 
     Attribute(SourceLocation NameLocBegin, StringRef Name,
-              SourceLocation EqualsLoc,
-              SourceRange ValueRange, StringRef Value) :
-        NameLocBegin(NameLocBegin), Name(Name),
-        EqualsLoc(EqualsLoc),
-        ValueRange(ValueRange), Value(Value)
-    { }
+              SourceLocation EqualsLoc, SourceRange ValueRange, StringRef Value)
+        : NameLocBegin(NameLocBegin), Name(Name), EqualsLoc(EqualsLoc),
+          ValueRange(ValueRange), Value(Value) {}
 
     SourceLocation getNameLocEnd() const {
       return NameLocBegin.getLocWithOffset(Name.size());

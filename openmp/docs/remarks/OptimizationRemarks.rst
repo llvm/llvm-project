@@ -3,9 +3,9 @@ OpenMP Optimization Remarks
 
 The :doc:`OpenMP-Aware optimization pass </optimizations/OpenMPOpt>` is able to
 generate compiler remarks for performed and missed optimisations. To emit them,
-pass ``-Rpass=openmp-opt``, ``-Rpass-analysis=openmp-opt``, and
-``-Rpass-missed=openmp-opt`` to the Clang invocation.  For more information and
-features of the remark system the clang documentation should be consulted:
+pass these options to the Clang invocation: ``-Rpass=openmp-opt
+-Rpass-analysis=openmp-opt -Rpass-missed=openmp-opt``.  For more information and
+features of the remark system, consult the clang documentation:
 
 + `Clang options to emit optimization reports <https://clang.llvm.org/docs/UsersManual.html#options-to-emit-optimization-reports>`_
 + `Clang diagnostic and remark flags <https://clang.llvm.org/docs/ClangCommandLineReference.html#diagnostic-flags>`_
@@ -40,6 +40,7 @@ OpenMP Remarks
    OMP160
    OMP170
    OMP180
+   OMP190
 
 .. list-table::
    :widths: 15 15 70
@@ -111,3 +112,6 @@ OpenMP Remarks
    * - :ref:`OMP180 <omp180>`
      - Optimization
      - Replacing OpenMP runtime call <call> with <value>.
+   * - :ref:`OMP190 <omp190>`
+     - Optimization
+     - Redundant barrier eliminated. (device only)

@@ -13,6 +13,7 @@ int __tsan_get_report_thread(void *report, unsigned long idx, int *tid,
                              unsigned long trace_size);
 }
 
+__attribute__((disable_sanitizer_instrumentation))
 void __tsan_on_report(void *report) {
   fprintf(stderr, "__tsan_on_report(%p)\n", report);
 

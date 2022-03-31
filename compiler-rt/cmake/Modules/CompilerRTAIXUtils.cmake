@@ -24,7 +24,7 @@ function(get_aix_libatomic_type type)
   endif()
 endfunction()
 
-macro(archive_aix_libatomic name)
+macro(archive_aix_libatomic name libname)
   cmake_parse_arguments(LIB
     ""
     ""
@@ -33,7 +33,7 @@ macro(archive_aix_libatomic name)
   set(objects_to_archive "")
   foreach (arch ${LIB_ARCHS})
     if(CAN_TARGET_${arch})
-      set(output_dir "${CMAKE_CURRENT_BINARY_DIR}/libatomic-${arch}.dir")
+      set(output_dir "${CMAKE_CURRENT_BINARY_DIR}/${libname}-${arch}.dir")
       # FIXME: Target name should be kept consistent with definition
       # in AddCompilerRT.cmake added by
       # add_compiler_rt_runtime(<name> SHARED ...)
@@ -67,14 +67,14 @@ macro(archive_aix_libatomic name)
       get_compiler_rt_output_dir(${COMPILER_RT_DEFAULT_TARGET_ARCH} output_dir)
       get_compiler_rt_install_dir(${COMPILER_RT_DEFAULT_TARGET_ARCH} install_dir)
     endif()
-    add_custom_command(OUTPUT "${output_dir}/libatomic.a"
-                       COMMAND ${CMAKE_AR} -X32_64 r "${output_dir}/libatomic.a"
+    add_custom_command(OUTPUT "${output_dir}/${libname}.a"
+                       COMMAND ${CMAKE_AR} -X32_64 r "${output_dir}/${libname}.a"
                        ${objects_to_archive}
                        DEPENDS ${objects_to_archive})
-    install(FILES "${output_dir}/libatomic.a"
+    install(FILES "${output_dir}/${libname}.a"
             DESTINATION ${install_dir})
-    add_custom_target(aix-libatomic
-                      DEPENDS "${output_dir}/libatomic.a")
+    add_custom_target(aix-${libname}
+                      DEPENDS "${output_dir}/${libname}.a")
   endif()
-  add_dependencies(${LIB_PARENT_TARGET} aix-libatomic)
+  add_dependencies(${LIB_PARENT_TARGET} aix-${libname})
 endmacro()

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c11 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -std=c99 -pedantic -fsyntax-only -verify=expected,ext %s
+// RUN: %clang_cc1 -std=c11 -fsyntax-only -Wno-strict-prototypes -verify %s
+// RUN: %clang_cc1 -std=c99 -pedantic -fsyntax-only -Wno-strict-prototypes -verify=expected,ext %s
 
 void g(void);
 

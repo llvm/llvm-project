@@ -21,6 +21,22 @@ void test_builtin_elementwise_abs() {
   static_assert(!is_const<decltype(__builtin_elementwise_abs(b))>::value);
 }
 
+void test_builtin_elementwise_add_sat() {
+  const int a = 2;
+  int b = 1;
+  static_assert(!is_const<decltype(__builtin_elementwise_add_sat(a, b))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_add_sat(b, a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_add_sat(a, a))>::value);
+}
+
+void test_builtin_elementwise_sub_sat() {
+  const int a = 2;
+  int b = 1;
+  static_assert(!is_const<decltype(__builtin_elementwise_sub_sat(a, b))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_sub_sat(b, a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_sub_sat(a, a))>::value);
+}
+
 void test_builtin_elementwise_max() {
   const int a = 2;
   int b = 1;
@@ -35,4 +51,11 @@ void test_builtin_elementwise_min() {
   static_assert(!is_const<decltype(__builtin_elementwise_min(a, b))>::value);
   static_assert(!is_const<decltype(__builtin_elementwise_min(b, a))>::value);
   static_assert(!is_const<decltype(__builtin_elementwise_min(a, a))>::value);
+}
+
+void test_builtin_elementwise_ceil() {
+  const float a = 42.0;
+  float b = 42.3;
+  static_assert(!is_const<decltype(__builtin_elementwise_ceil(a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_ceil(b))>::value);
 }

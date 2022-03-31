@@ -17,9 +17,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_CONFIGPROVIDER_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_CONFIGPROVIDER_H
 
-#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
 #include <chrono>
 #include <string>

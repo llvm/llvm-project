@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "TestDialect.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
@@ -21,14 +23,28 @@ struct TestModulePass
     return "Test a module pass in the pass manager";
   }
 };
-struct TestFunctionPass : public PassWrapper<TestFunctionPass, FunctionPass> {
-  void runOnFunction() final {}
+struct TestFunctionPass
+    : public PassWrapper<TestFunctionPass, OperationPass<FuncOp>> {
+  void runOnOperation() final {}
   StringRef getArgument() const final { return "test-function-pass"; }
   StringRef getDescription() const final {
     return "Test a function pass in the pass manager";
   }
 };
-class TestOptionsPass : public PassWrapper<TestOptionsPass, FunctionPass> {
+class TestInterfacePass
+    : public PassWrapper<TestInterfacePass,
+                         InterfacePass<FunctionOpInterface>> {
+  void runOnOperation() final {
+    getOperation()->emitRemark() << "Executing interface pass on operation";
+  }
+  StringRef getArgument() const final { return "test-interface-pass"; }
+  StringRef getDescription() const final {
+    return "Test an interface pass (running on FunctionOpInterface) in the "
+           "pass manager";
+  }
+};
+class TestOptionsPass
+    : public PassWrapper<TestOptionsPass, OperationPass<FuncOp>> {
 public:
   struct Options : public PassPipelineOptions<Options> {
     ListOption<int> listOption{*this, "list",
@@ -48,7 +64,7 @@ public:
     stringListOption = options.stringListOption;
   }
 
-  void runOnFunction() final {}
+  void runOnOperation() final {}
   StringRef getArgument() const final { return "test-options-pass"; }
   StringRef getDescription() const final {
     return "Test options parsing capabilities";
@@ -84,6 +100,27 @@ class TestFailurePass : public PassWrapper<TestFailurePass, OperationPass<>> {
   }
 };
 
+/// A test pass that always fails to enable testing the failure recovery
+/// mechanisms of the pass manager.
+class TestInvalidParentPass
+    : public PassWrapper<TestInvalidParentPass,
+                         InterfacePass<FunctionOpInterface>> {
+  StringRef getArgument() const final { return "test-pass-invalid-parent"; }
+  StringRef getDescription() const final {
+    return "Test a pass in the pass manager that makes the parent operation "
+           "invalid";
+  }
+  void getDependentDialects(DialectRegistry &registry) const final {
+    registry.insert<test::TestDialect>();
+  }
+  void runOnOperation() final {
+    FunctionOpInterface op = getOperation();
+    OpBuilder b(getOperation().getBody());
+    b.create<test::TestCallOp>(op.getLoc(), TypeRange(), "some_unknown_func",
+                               ValueRange());
+  }
+};
+
 /// A test pass that contains a statistic.
 struct TestStatisticPass
     : public PassWrapper<TestStatisticPass, OperationPass<>> {
@@ -98,7 +135,7 @@ struct TestStatisticPass
     getOperation()->walk([&](Operation *) { ++opCount; });
   }
 };
-} // end anonymous namespace
+} // namespace
 
 static void testNestedPipeline(OpPassManager &pm) {
   // Nest a module pipeline that contains:
@@ -126,8 +163,11 @@ void registerPassManagerTestPass() {
 
   PassRegistration<TestFunctionPass>();
 
+  PassRegistration<TestInterfacePass>();
+
   PassRegistration<TestCrashRecoveryPass>();
   PassRegistration<TestFailurePass>();
+  PassRegistration<TestInvalidParentPass>();
 
   PassRegistration<TestStatisticPass>();
 

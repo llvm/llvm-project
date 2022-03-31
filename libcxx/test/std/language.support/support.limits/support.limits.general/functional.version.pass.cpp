@@ -16,10 +16,13 @@
 // Test the feature test macros defined by <functional>
 
 /*  Constant                           Value
+    __cpp_lib_bind_back                202202L [C++2b]
     __cpp_lib_bind_front               201907L [C++20]
     __cpp_lib_boyer_moore_searcher     201603L [C++17]
     __cpp_lib_constexpr_functional     201907L [C++20]
     __cpp_lib_invoke                   201411L [C++17]
+    __cpp_lib_invoke_r                 202106L [C++2b]
+    __cpp_lib_move_only_function       202110L [C++2b]
     __cpp_lib_not_fn                   201603L [C++17]
     __cpp_lib_ranges                   201811L [C++20]
     __cpp_lib_result_of_sfinae         201210L [C++14]
@@ -32,6 +35,10 @@
 #include "test_macros.h"
 
 #if TEST_STD_VER < 14
+
+# ifdef __cpp_lib_bind_back
+#   error "__cpp_lib_bind_back should not be defined before c++2b"
+# endif
 
 # ifdef __cpp_lib_bind_front
 #   error "__cpp_lib_bind_front should not be defined before c++20"
@@ -47,6 +54,14 @@
 
 # ifdef __cpp_lib_invoke
 #   error "__cpp_lib_invoke should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_invoke_r
+#   error "__cpp_lib_invoke_r should not be defined before c++2b"
+# endif
+
+# ifdef __cpp_lib_move_only_function
+#   error "__cpp_lib_move_only_function should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_not_fn
@@ -71,6 +86,10 @@
 
 #elif TEST_STD_VER == 14
 
+# ifdef __cpp_lib_bind_back
+#   error "__cpp_lib_bind_back should not be defined before c++2b"
+# endif
+
 # ifdef __cpp_lib_bind_front
 #   error "__cpp_lib_bind_front should not be defined before c++20"
 # endif
@@ -85,6 +104,14 @@
 
 # ifdef __cpp_lib_invoke
 #   error "__cpp_lib_invoke should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_invoke_r
+#   error "__cpp_lib_invoke_r should not be defined before c++2b"
+# endif
+
+# ifdef __cpp_lib_move_only_function
+#   error "__cpp_lib_move_only_function should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_not_fn
@@ -115,6 +142,10 @@
 
 #elif TEST_STD_VER == 17
 
+# ifdef __cpp_lib_bind_back
+#   error "__cpp_lib_bind_back should not be defined before c++2b"
+# endif
+
 # ifdef __cpp_lib_bind_front
 #   error "__cpp_lib_bind_front should not be defined before c++20"
 # endif
@@ -141,6 +172,14 @@
 # endif
 # if __cpp_lib_invoke != 201411L
 #   error "__cpp_lib_invoke should have the value 201411L in c++17"
+# endif
+
+# ifdef __cpp_lib_invoke_r
+#   error "__cpp_lib_invoke_r should not be defined before c++2b"
+# endif
+
+# ifdef __cpp_lib_move_only_function
+#   error "__cpp_lib_move_only_function should not be defined before c++2b"
 # endif
 
 # ifndef __cpp_lib_not_fn
@@ -174,6 +213,10 @@
 
 #elif TEST_STD_VER == 20
 
+# ifdef __cpp_lib_bind_back
+#   error "__cpp_lib_bind_back should not be defined before c++2b"
+# endif
+
 # ifndef __cpp_lib_bind_front
 #   error "__cpp_lib_bind_front should be defined in c++20"
 # endif
@@ -206,6 +249,14 @@
 # endif
 # if __cpp_lib_invoke != 201411L
 #   error "__cpp_lib_invoke should have the value 201411L in c++20"
+# endif
+
+# ifdef __cpp_lib_invoke_r
+#   error "__cpp_lib_invoke_r should not be defined before c++2b"
+# endif
+
+# ifdef __cpp_lib_move_only_function
+#   error "__cpp_lib_move_only_function should not be defined before c++2b"
 # endif
 
 # ifndef __cpp_lib_not_fn
@@ -251,6 +302,19 @@
 
 #elif TEST_STD_VER > 20
 
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_bind_back
+#     error "__cpp_lib_bind_back should be defined in c++2b"
+#   endif
+#   if __cpp_lib_bind_back != 202202L
+#     error "__cpp_lib_bind_back should have the value 202202L in c++2b"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_bind_back
+#     error "__cpp_lib_bind_back should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
 # ifndef __cpp_lib_bind_front
 #   error "__cpp_lib_bind_front should be defined in c++2b"
 # endif
@@ -283,6 +347,32 @@
 # endif
 # if __cpp_lib_invoke != 201411L
 #   error "__cpp_lib_invoke should have the value 201411L in c++2b"
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_invoke_r
+#     error "__cpp_lib_invoke_r should be defined in c++2b"
+#   endif
+#   if __cpp_lib_invoke_r != 202106L
+#     error "__cpp_lib_invoke_r should have the value 202106L in c++2b"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_invoke_r
+#     error "__cpp_lib_invoke_r should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_move_only_function
+#     error "__cpp_lib_move_only_function should be defined in c++2b"
+#   endif
+#   if __cpp_lib_move_only_function != 202110L
+#     error "__cpp_lib_move_only_function should have the value 202110L in c++2b"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_move_only_function
+#     error "__cpp_lib_move_only_function should not be defined because it is unimplemented in libc++!"
+#   endif
 # endif
 
 # ifndef __cpp_lib_not_fn

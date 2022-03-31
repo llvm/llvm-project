@@ -239,8 +239,8 @@
 # SEG-NOT: segment$end$__WHAT
 # SEG-NOT: segment$start$__UFLAG_SEG
 # SEG-NOT: segment$start$__UFLAG_SEG
-# SEG: segment$start$REGULAR
-# SEG: segment$end$REGULAR
+# SEG-DAG: segment$end$REGULAR
+# SEG-DAG: segment$start$REGULAR
 
 # SEG:           cmd LC_SEGMENT_64
 # SEG-NEXT:  cmdsize
@@ -276,7 +276,7 @@
 # SEG-NEXT:   vmaddr 0x[[#%x, ASDFSTART:]]
 # SEG-NEXT:   vmsize 0x0000000000000000
 
-# SEG: _main
+# SEG: _main:
 
 ## segment$start$__TEXT / segment$end$__TEXT
 # SEG:      [[#%x, PC1:]]:

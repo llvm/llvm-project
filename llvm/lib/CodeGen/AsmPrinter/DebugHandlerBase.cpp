@@ -13,7 +13,6 @@
 
 #include "llvm/CodeGen/DebugHandlerBase.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -155,7 +154,8 @@ uint64_t DebugHandlerBase::getBaseTypeSize(const DIType *Ty) {
 
   if (Tag != dwarf::DW_TAG_member && Tag != dwarf::DW_TAG_typedef &&
       Tag != dwarf::DW_TAG_const_type && Tag != dwarf::DW_TAG_volatile_type &&
-      Tag != dwarf::DW_TAG_restrict_type && Tag != dwarf::DW_TAG_atomic_type)
+      Tag != dwarf::DW_TAG_restrict_type && Tag != dwarf::DW_TAG_atomic_type &&
+      Tag != dwarf::DW_TAG_immutable_type)
     return DDTy->getSizeInBits();
 
   DIType *BaseType = DDTy->getBaseType();
@@ -210,7 +210,8 @@ bool DebugHandlerBase::isUnsignedDIType(const DIType *Ty) {
       return true;
     assert(T == dwarf::DW_TAG_typedef || T == dwarf::DW_TAG_const_type ||
            T == dwarf::DW_TAG_volatile_type ||
-           T == dwarf::DW_TAG_restrict_type || T == dwarf::DW_TAG_atomic_type);
+           T == dwarf::DW_TAG_restrict_type || T == dwarf::DW_TAG_atomic_type ||
+           T == dwarf::DW_TAG_immutable_type);
     assert(DTy->getBaseType() && "Expected valid base type");
     return isUnsignedDIType(DTy->getBaseType());
   }

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // template<class R>
@@ -17,8 +16,6 @@
 
 #include "test_iterators.h"
 #include "test_range.h"
-
-
 
 template <template <class...> class I>
 constexpr bool check_forward_range() {
@@ -39,3 +36,21 @@ static_assert(check_forward_range<forward_iterator>());
 static_assert(check_forward_range<bidirectional_iterator>());
 static_assert(check_forward_range<random_access_iterator>());
 static_assert(check_forward_range<contiguous_iterator>());
+
+// Test ADL-proofing.
+struct Incomplete;
+template<class T> struct Holder { T t; };
+
+static_assert(!std::ranges::forward_range<Holder<Incomplete>*>);
+static_assert(!std::ranges::forward_range<Holder<Incomplete>*&>);
+static_assert(!std::ranges::forward_range<Holder<Incomplete>*&&>);
+static_assert(!std::ranges::forward_range<Holder<Incomplete>* const>);
+static_assert(!std::ranges::forward_range<Holder<Incomplete>* const&>);
+static_assert(!std::ranges::forward_range<Holder<Incomplete>* const&&>);
+
+static_assert( std::ranges::forward_range<Holder<Incomplete>*[10]>);
+static_assert( std::ranges::forward_range<Holder<Incomplete>*(&)[10]>);
+static_assert( std::ranges::forward_range<Holder<Incomplete>*(&&)[10]>);
+static_assert( std::ranges::forward_range<Holder<Incomplete>* const[10]>);
+static_assert( std::ranges::forward_range<Holder<Incomplete>* const(&)[10]>);
+static_assert( std::ranges::forward_range<Holder<Incomplete>* const(&&)[10]>);

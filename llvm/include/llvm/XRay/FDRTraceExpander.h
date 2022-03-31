@@ -36,7 +36,7 @@ class TraceExpander : public RecordVisitor {
 
 public:
   explicit TraceExpander(function_ref<void(const XRayRecord &)> F, uint16_t L)
-      : RecordVisitor(), C(std::move(F)), LogVersion(L) {}
+      : C(std::move(F)), LogVersion(L) {}
 
   Error visit(BufferExtents &) override;
   Error visit(WallclockRecord &) override;

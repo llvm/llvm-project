@@ -434,8 +434,7 @@ public:
         FS_noreturn_specified(false), Friend_specified(false),
         ConstexprSpecifier(
             static_cast<unsigned>(ConstexprSpecKind::Unspecified)),
-        FS_explicit_specifier(), Attrs(attrFactory), writtenBS(),
-        ObjCQualifiers(nullptr) {}
+        Attrs(attrFactory), writtenBS(), ObjCQualifiers(nullptr) {}
 
   // storage-class-specifier
   SCS getStorageClassSpec() const { return (SCS)StorageClassSpec; }
@@ -787,7 +786,7 @@ public:
   /// int __attribute__((may_alias)) __attribute__((aligned(16))) var;
   /// \endcode
   ///
-  void addAttributes(ParsedAttributesView &AL) {
+  void addAttributes(const ParsedAttributesView &AL) {
     Attrs.addAll(AL.begin(), AL.end());
   }
 
@@ -2514,11 +2513,11 @@ public:
   ///                                 __attribute__((common,deprecated));
   ///
   /// Also extends the range of the declarator.
-  void takeAttributes(ParsedAttributes &attrs, SourceLocation lastLoc) {
+  void takeAttributes(ParsedAttributes &attrs) {
     Attrs.takeAllFrom(attrs);
 
-    if (!lastLoc.isInvalid())
-      SetRangeEnd(lastLoc);
+    if (attrs.Range.getEnd().isValid())
+      SetRangeEnd(attrs.Range.getEnd());
   }
 
   const ParsedAttributes &getAttributes() const { return Attrs; }

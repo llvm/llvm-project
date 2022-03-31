@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-arith-to-llvm %s -split-input-file | FileCheck %s
+// RUN: mlir-opt -pass-pipeline="func.func(convert-arith-to-llvm)" %s -split-input-file | FileCheck %s
 
 // CHECK-LABEL: @vector_ops
 func @vector_ops(%arg0: vector<4xf32>, %arg1: vector<4xi1>, %arg2: vector<4xi64>, %arg3: vector<4xi64>) -> vector<4xf32> {
@@ -324,7 +324,7 @@ func @index_vector(%arg0: vector<4xindex>) {
   %0 = arith.constant dense<[0, 1, 2, 3]> : vector<4xindex>
   // CHECK: %[[V:.*]] = llvm.add %{{.*}}, %[[CST]] : vector<4xi64>
   %1 = arith.addi %arg0, %0 : vector<4xindex>
-  std.return
+  func.return
 }
 
 // -----
@@ -347,7 +347,18 @@ func @cmpf_2dvector(%arg0 : vector<4x3xf32>, %arg1 : vector<4x3xf32>) {
   // CHECK: %[[CMP:.*]] = llvm.fcmp "olt" %[[EXTRACT1]], %[[EXTRACT2]] : vector<3xf32>
   // CHECK: %[[INSERT:.*]] = llvm.insertvalue %[[CMP]], %2[0] : !llvm.array<4 x vector<3xi1>>
   %0 = arith.cmpf olt, %arg0, %arg1 : vector<4x3xf32>
-  std.return
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @cmpi_0dvector(
+func @cmpi_0dvector(%arg0 : vector<i32>, %arg1 : vector<i32>) {
+  // CHECK: %[[ARG0:.*]] = builtin.unrealized_conversion_cast
+  // CHECK: %[[ARG1:.*]] = builtin.unrealized_conversion_cast
+  // CHECK: %[[CMP:.*]] = llvm.icmp "ult" %[[ARG0]], %[[ARG1]] : vector<1xi32>
+  %0 = arith.cmpi ult, %arg0, %arg1 : vector<i32>
+  func.return
 }
 
 // -----
@@ -361,5 +372,14 @@ func @cmpi_2dvector(%arg0 : vector<4x3xi32>, %arg1 : vector<4x3xi32>) {
   // CHECK: %[[CMP:.*]] = llvm.icmp "ult" %[[EXTRACT1]], %[[EXTRACT2]] : vector<3xi32>
   // CHECK: %[[INSERT:.*]] = llvm.insertvalue %[[CMP]], %2[0] : !llvm.array<4 x vector<3xi1>>
   %0 = arith.cmpi ult, %arg0, %arg1 : vector<4x3xi32>
-  std.return
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: @select
+func @select(%arg0 : i1, %arg1 : i32, %arg2 : i32) -> i32 {
+  // CHECK: = llvm.select %arg0, %arg1, %arg2 : i1, i32
+  %0 = arith.select %arg0, %arg1, %arg2 : i32
+  return %0 : i32
 }

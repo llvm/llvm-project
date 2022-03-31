@@ -754,37 +754,11 @@ func @cmpf_inf() -> (i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1,
 
 // -----
 
-// CHECK-LABEL: func @fold_rank
-func @fold_rank() -> (index) {
-  %const_0 = arith.constant dense<[[[1, -2, 1, 36]], [[0, 2, -1, 64]]]> : tensor<2x1x4xi32>
-
-  // Fold a rank into a constant
-  // CHECK-NEXT: [[C3:%.+]] = arith.constant 3 : index
-  %rank_0 = rank %const_0 : tensor<2x1x4xi32>
-
-  // CHECK-NEXT: return [[C3]]
-  return %rank_0 : index
-}
-
-// -----
-
-// CHECK-LABEL: func @fold_rank_memref
-func @fold_rank_memref(%arg0 : memref<?x?xf32>) -> (index) {
-  // Fold a rank into a constant
-  // CHECK-NEXT: [[C2:%.+]] = arith.constant 2 : index
-  %rank_0 = rank %arg0 : memref<?x?xf32>
-
-  // CHECK-NEXT: return [[C2]]
-  return %rank_0 : index
-}
-
-// -----
-
 // CHECK-LABEL: func @nested_isolated_region
 func @nested_isolated_region() {
   // CHECK-NEXT: func @isolated_op
   // CHECK-NEXT: arith.constant 2
-  builtin.func @isolated_op() {
+  func.func @isolated_op() {
     %0 = arith.constant 1 : i32
     %2 = arith.addi %0, %0 : i32
     "foo.yield"(%2) : (i32) -> ()
@@ -813,18 +787,6 @@ func @custom_insertion_position() {
     "foo.yield"(%2) : (i32) -> ()
   }) : () -> ()
   return
-}
-
-// CHECK-LABEL: func @splat_fold
-func @splat_fold() -> (vector<4xf32>, tensor<4xf32>) {
-  %c = arith.constant 1.0 : f32
-  %v = splat %c : vector<4xf32>
-  %t = splat %c : tensor<4xf32>
-  return %v, %t : vector<4xf32>, tensor<4xf32>
-
-  // CHECK-NEXT: [[V:%.*]] = arith.constant dense<1.000000e+00> : vector<4xf32>
-  // CHECK-NEXT: [[T:%.*]] = arith.constant dense<1.000000e+00> : tensor<4xf32>
-  // CHECK-NEXT: return [[V]], [[T]] : vector<4xf32>, tensor<4xf32>
 }
 
 // -----

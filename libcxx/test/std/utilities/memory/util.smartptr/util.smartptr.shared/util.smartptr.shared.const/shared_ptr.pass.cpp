@@ -61,5 +61,11 @@ int main(int, char**)
     }
     assert(A::count == 0);
 
+    {
+        std::shared_ptr<A const> pA(new A);
+        std::shared_ptr<A const> pA2(pA);
+        assert(pA.get() == pA2.get());
+    }
+
   return 0;
 }

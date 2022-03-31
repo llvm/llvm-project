@@ -29,7 +29,7 @@ class TestUseClosestType(TestBase):
     def run_and_check_expr(self, num_children, child_type):
         frame = self.thread.GetFrameAtIndex(0)
         result = frame.EvaluateExpression("struct Foo *$mine = (struct Foo *) malloc(sizeof(struct Foo)); $mine")
-        self.assertTrue(result.GetError().Success(), "Failed to parse an expression using a multiply defined type: %s"%(result.GetError().GetCString()), )
+        self.assertSuccess(result.GetError(), "Failed to parse an expression using a multiply defined type")
         self.assertEqual(result.GetTypeName(), "struct Foo *", "The result has the right typename.")
         self.assertEqual(result.GetNumChildren(), num_children, "Got the right number of children")
         self.assertEqual(result.GetChildAtIndex(0).GetTypeName(), child_type, "Got the right type.")

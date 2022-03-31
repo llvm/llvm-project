@@ -11,6 +11,7 @@
 #include "lldb/DataFormatters/FormatManager.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/StringExtractor.h"
@@ -192,7 +193,7 @@ llvm::Expected<uint32_t> DynamicRegisterInfo::ByteOffsetFromRegInfoDict(
 size_t
 DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
                                      const ArchSpec &arch) {
-  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT);
+  Log *log = GetLog(LLDBLog::Object);
   assert(!m_finalized);
   StructuredData::Array *sets = nullptr;
   if (dict.GetValueForKeyAsArray("sets", sets)) {

@@ -18,10 +18,10 @@
 // CHECK: [[KMP_DIM:%.+]] = type { i64, i64, i64 }
 extern int n;
 int a[10], b[10], c[10], d[10];
-void foo();
+void foo(void);
 
 // CHECK-LABEL: @main()
-int main() {
+int main(void) {
   int i;
 // CHECK: [[DIMS:%.+]] = alloca [1 x [[KMP_DIM]]],
 // CHECK-NORMAL: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num([[IDENT:%.+]])
@@ -42,7 +42,7 @@ int main() {
   for (i = 0; i < n; ++i) {
     a[i] = b[i] + 1;
     foo();
-// CHECK: call void (...) [[FOO:.+]](
+// CHECK: call void @foo()
 // CHECK: load i32, i32* [[I:%.+]],
 // CHECK-NEXT: sub nsw i32 %{{.+}}, 0
 // CHECK-NEXT: sdiv i32 %{{.+}}, 1
@@ -56,7 +56,7 @@ int main() {
 #pragma omp ordered depend(source)
     c[i] = c[i] + 1;
     foo();
-// CHECK: call void (...) [[FOO]]
+// CHECK: call void @foo()
 // CHECK: load i32, i32* [[I]],
 // CHECK-NEXT: sub nsw i32 %{{.+}}, 2
 // CHECK-NEXT: sub nsw i32 %{{.+}}, 0

@@ -295,7 +295,6 @@ void AVRMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
 }
 
 MCCodeEmitter *createAVRMCCodeEmitter(const MCInstrInfo &MCII,
-                                      const MCRegisterInfo &MRI,
                                       MCContext &Ctx) {
   return new AVRMCCodeEmitter(MCII, Ctx);
 }

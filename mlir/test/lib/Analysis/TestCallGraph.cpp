@@ -29,7 +29,7 @@ struct TestCallGraphPass
     getAnalysis<CallGraph>().print(llvm::errs());
   }
 };
-} // end anonymous namespace
+} // namespace
 
 namespace mlir {
 namespace test {

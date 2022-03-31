@@ -76,7 +76,7 @@ TEST(CommunicationTest, WriteAll) {
   // Write 1 MiB of data into the pipe.
   lldb::ConnectionStatus conn_status;
   Status error;
-  std::vector<char> data(1024 * 1024, 0x80);
+  std::vector<uint8_t> data(1024 * 1024, 0x80);
   EXPECT_EQ(write_comm.WriteAll(data.data(), data.size(), conn_status, &error),
             data.size());
   EXPECT_EQ(conn_status, lldb::eConnectionStatusSuccess);

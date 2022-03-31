@@ -13,7 +13,7 @@ void GenericTest(_BitInt(3) a, unsigned _BitInt(3) b, _BitInt(4) c) {
   // CHECK: store i32 3
 }
 
-void VLATest(_BitInt(3) A, _BitInt(99) B, _BitInt(123456) C) {
+void VLATest(_BitInt(3) A, _BitInt(99) B, _BitInt(123) C) {
   // CHECK: define {{.*}}void @VLATest
   int AR1[A];
   // CHECK: %[[A:.+]] = zext i3 %{{.+}} to i[[INDXSIZE:[0-9]+]]
@@ -22,17 +22,17 @@ void VLATest(_BitInt(3) A, _BitInt(99) B, _BitInt(123456) C) {
   // CHECK: %[[B:.+]] = trunc i99 %{{.+}} to i[[INDXSIZE]]
   // CHECK: %[[VLA2:.+]] = alloca i32, i[[INDXSIZE]] %[[B]]
   int AR3[C];
-  // CHECK: %[[C:.+]] = trunc i123456 %{{.+}} to i[[INDXSIZE]]
+  // CHECK: %[[C:.+]] = trunc i123 %{{.+}} to i[[INDXSIZE]]
   // CHECK: %[[VLA3:.+]] = alloca i32, i[[INDXSIZE]] %[[C]]
 }
 
 struct S {
   _BitInt(17) A;
-  _BitInt(8388600) B;
+  _BitInt(128) B;
   _BitInt(17) C;
 };
 
-void OffsetOfTest() {
+void OffsetOfTest(void) {
   // CHECK: define {{.*}}void @OffsetOfTest
   int A = __builtin_offsetof(struct S,A);
   // CHECK: store i32 0, i32* %{{.+}}
@@ -41,9 +41,9 @@ void OffsetOfTest() {
   // LIN32: store i32 4, i32* %{{.+}}
   // WINCHECK32: store i32 8, i32* %{{.+}}
   int C = __builtin_offsetof(struct S,C);
-  // CHECK64: store i32 1048584, i32* %{{.+}}
-  // LIN32: store i32 1048580, i32* %{{.+}}
-  // WIN32: store i32 1048584, i32* %{{.+}}
+  // CHECK64: store i32 24, i32* %{{.+}}
+  // LIN32: store i32 20, i32* %{{.+}}
+  // WIN32: store i32 24, i32* %{{.+}}
 }
 
 void Size1ExtIntParam(unsigned _BitInt(1) A) {

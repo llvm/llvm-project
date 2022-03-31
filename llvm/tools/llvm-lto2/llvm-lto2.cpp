@@ -29,6 +29,7 @@
 #include "llvm/Support/PluginLoader.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Threading.h"
+#include <atomic>
 
 using namespace llvm;
 using namespace lto;
@@ -236,13 +237,6 @@ static int run(int argc, char **argv) {
   std::vector<std::unique_ptr<MemoryBuffer>> MBs;
 
   Config Conf;
-  Conf.DiagHandler = [](const DiagnosticInfo &DI) {
-    DiagnosticPrinterRawOStream DP(errs());
-    DI.print(DP);
-    errs() << '\n';
-    if (DI.getSeverity() == DS_Error)
-      exit(1);
-  };
 
   Conf.CPU = codegen::getMCPU();
   Conf.Options = codegen::InitTargetOptionsFromCodeGenFlags(Triple());
@@ -314,9 +308,25 @@ static int run(int argc, char **argv) {
   else
     Backend = createInProcessThinBackend(
         llvm::heavyweight_hardware_concurrency(Threads));
+  // Track whether we hit an error; in particular, in the multi-threaded case,
+  // we can't exit() early because the rest of the threads wouldn't have had a
+  // change to be join-ed, and that would result in a "terminate called without
+  // an active exception". Altogether, this results in nondeterministic
+  // behavior. Instead, we don't exit in the multi-threaded case, but we make
+  // sure to report the error and then at the end (after joining cleanly)
+  // exit(1).
+  std::atomic<bool> HasErrors;
+  std::atomic_init(&HasErrors, false);
+  Conf.DiagHandler = [&](const DiagnosticInfo &DI) {
+    DiagnosticPrinterRawOStream DP(errs());
+    DI.print(DP);
+    errs() << '\n';
+    if (DI.getSeverity() == DS_Error)
+      HasErrors = true;
+  };
+
   LTO Lto(std::move(Conf), std::move(Backend));
 
-  bool HasErrors = false;
   for (std::string F : InputFilenames) {
     std::unique_ptr<MemoryBuffer> MB = check(MemoryBuffer::getFile(F), F);
     std::unique_ptr<InputFile> Input =
@@ -368,7 +378,7 @@ static int run(int argc, char **argv) {
     std::error_code EC;
     auto S = std::make_unique<raw_fd_ostream>(Path, EC, sys::fs::OF_None);
     check(EC, Path);
-    return std::make_unique<CachedFileStream>(std::move(S));
+    return std::make_unique<CachedFileStream>(std::move(S), Path);
   };
 
   auto AddBuffer = [&](size_t Task, std::unique_ptr<MemoryBuffer> MB) {
@@ -381,7 +391,7 @@ static int run(int argc, char **argv) {
                   "failed to create cache");
 
   check(Lto.run(AddStream, Cache), "LTO::run failed");
-  return 0;
+  return static_cast<int>(HasErrors);
 }
 
 static int dumpSymtab(int argc, char **argv) {

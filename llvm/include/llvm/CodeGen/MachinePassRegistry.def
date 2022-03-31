@@ -47,6 +47,7 @@ FUNCTION_PASS("expand-reductions", ExpandReductionsPass, ())
 FUNCTION_PASS("expandvp", ExpandVectorPredicationPass, ())
 FUNCTION_PASS("lowerinvoke", LowerInvokePass, ())
 FUNCTION_PASS("scalarize-masked-mem-intrin", ScalarizeMaskedMemIntrinPass, ())
+FUNCTION_PASS("tlshoist", TLSVariableHoistPass, ())
 FUNCTION_PASS("verify", VerifierPass, ())
 #undef FUNCTION_PASS
 
@@ -197,4 +198,6 @@ DUMMY_MACHINE_FUNCTION_PASS("regbankselect", RegBankSelectPass, ())
 DUMMY_MACHINE_FUNCTION_PASS("instruction-select", InstructionSelectPass, ())
 DUMMY_MACHINE_FUNCTION_PASS("reset-machine-function", ResetMachineFunctionPass, ())
 DUMMY_MACHINE_FUNCTION_PASS("machineverifier", MachineVerifierPass, ())
+DUMMY_MACHINE_FUNCTION_PASS("machine-cycles", MachineCycleInfoWrapperPass, ())
+DUMMY_MACHINE_FUNCTION_PASS("print-machine-cycles", MachineCycleInfoPrinterPass, ())
 #undef DUMMY_MACHINE_FUNCTION_PASS

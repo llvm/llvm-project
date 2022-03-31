@@ -9,8 +9,8 @@
 ;PIC:   ldr [[R0:r[0-9]+]], [[LABEL0:LCPI[0-9_]+]]
 ;PIC: [[LABEL1:LPC0_1]]:
 ;PIC:   add [[R1:r[0-9]+]], pc, [[R0]]
-;PIC:   ldr [[R2:r[0-9]+]], {{\[}}[[R1]]{{\]}}
-;PIC:   ldr {{r[0-9]+}}, {{\[}}[[R2]]{{\]}}
+;PIC:   ldr [[R2:r[0-9]+]], [[[R1]]]
+;PIC:   ldr {{r[0-9]+}}, [[[R2]]]
 
 ;PIC:      [[LABEL0]]:
 ;PIC-NEXT:   .long L___stack_chk_guard$non_lazy_ptr-([[LABEL1]]+8)
@@ -18,7 +18,7 @@
 ;NO-PIC: foo2
 ;NO-PIC: ldr [[R0:r[0-9]+]], [[LABEL0:LCPI[0-9_]+]]
 ;NO-PIC-NOT: LPC
-;NO-PIC: ldr {{r[0-9]+}}, {{\[}}[[R0]]{{\]}}
+;NO-PIC: ldr {{r[0-9]+}}, [[[R0]]]
 
 ;STATIC:      [[LABEL0]]:
 ;STATIC-NEXT:   .long ___stack_chk_guard
@@ -29,20 +29,20 @@
 ;PIC-V7:   movw [[R0:r[0-9]+]], :lower16:(L___stack_chk_guard$non_lazy_ptr-([[LABEL0:LPC[0-9_]+]]+8))
 ;PIC-V7:   movt [[R0]], :upper16:(L___stack_chk_guard$non_lazy_ptr-([[LABEL0]]+8))
 ;PIC-V7: [[LABEL0]]:
-;PIC-V7:   ldr [[R0]], {{\[}}pc, [[R0]]{{\]}}
-;PIC-V7:   ldr [[R0]], {{\[}}[[R0]]{{\]}}
+;PIC-V7:   ldr [[R0]], [pc, [[R0]]]
+;PIC-V7:   ldr [[R0]], [[[R0]]]
 
 ;PIC-V7: L___stack_chk_guard$non_lazy_ptr:
 ;PIC-V7:   .indirect_symbol        ___stack_chk_guard
 
 ;STATIC-V7: movw [[R0:r[0-9]+]], :lower16:___stack_chk_guard
 ;STATIC-V7: movt [[R0]], :upper16:___stack_chk_guard
-;STATIC-V7: ldr  [[R0]], {{\[}}[[R0]]{{\]}}
+;STATIC-V7: ldr  [[R0]], [[[R0]]]
 
 ;DYNAMIC-NO-PIC-V7: movw [[R0:r[0-9]+]], :lower16:L___stack_chk_guard$non_lazy_ptr
 ;DYNAMIC-NO-PIC-V7: movt [[R0]], :upper16:L___stack_chk_guard$non_lazy_ptr
-;DYNAMIC-NO-PIC-V7: ldr  [[R0]], {{\[}}[[R0]]{{\]}}
-;DYNAMIC-NO-PIC-V7: ldr  [[R0]], {{\[}}[[R0]]{{\]}}
+;DYNAMIC-NO-PIC-V7: ldr  [[R0]], [[[R0]]]
+;DYNAMIC-NO-PIC-V7: ldr  [[R0]], [[[R0]]]
 
 ;DYNAMIC-NO-PIC-V7: L___stack_chk_guard$non_lazy_ptr:
 ;DYNAMIC-NO-PIC-V7:   .indirect_symbol        ___stack_chk_guard

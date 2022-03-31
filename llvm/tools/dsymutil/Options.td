@@ -38,8 +38,14 @@ def statistics: F<"statistics">,
   Group<grp_general>;
 
 def verify: F<"verify">,
-  HelpText<"Run the DWARF verifier on the linked DWARF debug info.">,
+  HelpText<"Alias for --verify-dwarf=output">,
   Group<grp_general>;
+
+def verify_dwarf: Separate<["--", "-"], "verify-dwarf">,
+  MetaVarName<"<verification mode>">,
+  HelpText<"Run the DWARF verifier on the input and/or output. Valid options are 'input', 'output', 'all' or 'none'.">,
+  Group<grp_general>;
+def: Joined<["--", "-"], "verify-dwarf=">, Alias<verify_dwarf>;
 
 def no_output: F<"no-output">,
   HelpText<"Do the link in memory, but do not emit the result file.">,
@@ -54,7 +60,7 @@ def no_odr: F<"no-odr">,
   Group<grp_general>;
 
 def dump_debug_map: F<"dump-debug-map">,
-  HelpText<"Parse and dump the debug map to standard output. Not DWARF link will take place.">,
+  HelpText<"Parse and dump the debug map to standard output. No DWARF link will take place.">,
   Group<grp_general>;
 
 def yaml_input: Flag<["-", "--"], "y">,

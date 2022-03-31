@@ -515,7 +515,7 @@ class ObjCARCOpt {
       Function &F, DenseMap<BasicBlock *, ColorVector> &BlockColors,
       Instruction *Inst, ARCInstKind Class, const Value *Arg);
 
-  /// Try to optimize an AutoreleaseRV with a RetainRV or ClaimRV.  If the
+  /// Try to optimize an AutoreleaseRV with a RetainRV or UnsafeClaimRV.  If the
   /// optimization occurs, returns true to indicate that the caller should
   /// assume the instructions are dead.
   bool OptimizeInlinedAutoreleaseRVCall(
@@ -705,14 +705,14 @@ bool ObjCARCOpt::OptimizeInlinedAutoreleaseRVCall(
     return true;
   }
 
-  // ClaimRV is a frontend peephole for RetainRV + Release.  Since the
-  // AutoreleaseRV and RetainRV cancel out, replace the ClaimRV with a Release.
-  assert(Class == ARCInstKind::ClaimRV);
+  // UnsafeClaimRV is a frontend peephole for RetainRV + Release.  Since the
+  // AutoreleaseRV and RetainRV cancel out, replace UnsafeClaimRV with Release.
+  assert(Class == ARCInstKind::UnsafeClaimRV);
   Value *CallArg = cast<CallInst>(Inst)->getArgOperand(0);
   CallInst *Release = CallInst::Create(
       EP.get(ARCRuntimeEntryPointKind::Release), CallArg, "", Inst);
-  assert(IsAlwaysTail(ARCInstKind::ClaimRV) &&
-         "Expected ClaimRV to be safe to tail call");
+  assert(IsAlwaysTail(ARCInstKind::UnsafeClaimRV) &&
+         "Expected UnsafeClaimRV to be safe to tail call");
   Release->setTailCall();
   Inst->replaceAllUsesWith(CallArg);
   EraseInstruction(Inst);
@@ -810,7 +810,7 @@ void ObjCARCOpt::OptimizeIndividualCalls(Function &F) {
     BlockColors = colorEHFunclets(F);
 
   // Store any delayed AutoreleaseRV intrinsics, so they can be easily paired
-  // with RetainRV and ClaimRV.
+  // with RetainRV and UnsafeClaimRV.
   Instruction *DelayedAutoreleaseRV = nullptr;
   const Value *DelayedAutoreleaseRVArg = nullptr;
   auto setDelayedAutoreleaseRV = [&](Instruction *AutoreleaseRV) {
@@ -837,7 +837,7 @@ void ObjCARCOpt::OptimizeIndividualCalls(Function &F) {
       return false;
 
     // Given the frontend rules for emitting AutoreleaseRV, RetainRV, and
-    // ClaimRV, it's probably safe to skip over even opaque function calls
+    // UnsafeClaimRV, it's probably safe to skip over even opaque function calls
     // here since OptimizeInlinedAutoreleaseRVCall will confirm that they
     // have the same RCIdentityRoot.  However, what really matters is
     // skipping instructions or intrinsics that the inliner could leave behind;
@@ -881,7 +881,7 @@ void ObjCARCOpt::OptimizeIndividualCalls(Function &F) {
       setDelayedAutoreleaseRV(Inst);
       continue;
     case ARCInstKind::RetainRV:
-    case ARCInstKind::ClaimRV:
+    case ARCInstKind::UnsafeClaimRV:
       if (DelayedAutoreleaseRV) {
         // We have a potential RV pair.  Check if they cancel out.
         if (OptimizeInlinedAutoreleaseRVCall(F, BlockColors, Inst, Arg, Class,
@@ -979,9 +979,8 @@ void ObjCARCOpt::OptimizeIndividualCallImpl(
     CallInst *CI = cast<CallInst>(Inst);
     if (IsNullOrUndef(CI->getArgOperand(0))) {
       Changed = true;
-      Type *Ty = CI->getArgOperand(0)->getType();
-      new StoreInst(UndefValue::get(cast<PointerType>(Ty)->getElementType()),
-                    Constant::getNullValue(Ty), CI);
+      new StoreInst(ConstantInt::getTrue(CI->getContext()),
+                    UndefValue::get(Type::getInt1PtrTy(CI->getContext())), CI);
       Value *NewValue = UndefValue::get(CI->getType());
       LLVM_DEBUG(
           dbgs() << "A null pointer-to-weak-pointer is undefined behavior."
@@ -999,9 +998,8 @@ void ObjCARCOpt::OptimizeIndividualCallImpl(
     if (IsNullOrUndef(CI->getArgOperand(0)) ||
         IsNullOrUndef(CI->getArgOperand(1))) {
       Changed = true;
-      Type *Ty = CI->getArgOperand(0)->getType();
-      new StoreInst(UndefValue::get(cast<PointerType>(Ty)->getElementType()),
-                    Constant::getNullValue(Ty), CI);
+      new StoreInst(ConstantInt::getTrue(CI->getContext()),
+                    UndefValue::get(Type::getInt1PtrTy(CI->getContext())), CI);
 
       Value *NewValue = UndefValue::get(CI->getType());
       LLVM_DEBUG(
@@ -1165,7 +1163,7 @@ void ObjCARCOpt::OptimizeIndividualCallImpl(
       DepInst = findSingleDependency(AutoreleasePoolBoundary, Arg,
                                      Inst->getParent(), Inst, PA);
       break;
-    case ARCInstKind::ClaimRV:
+    case ARCInstKind::UnsafeClaimRV:
     case ARCInstKind::RetainRV:
     case ARCInstKind::AutoreleaseRV:
       // Don't move these; the RV optimization depends on the autoreleaseRV
@@ -2461,7 +2459,7 @@ bool ObjCARCOpt::run(Function &F, AAResults &AA) {
     return false;
 
   Changed = CFGChanged = false;
-  BundledRetainClaimRVs BRV(false, objcarc::getRVInstMarker(*F.getParent()));
+  BundledRetainClaimRVs BRV(/*ContractPass=*/false);
   BundledInsts = &BRV;
 
   LLVM_DEBUG(dbgs() << "<<< ObjCARCOpt: Visiting Function: " << F.getName()

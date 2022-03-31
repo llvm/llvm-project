@@ -27,6 +27,7 @@ add_llvm_component_library(LLVMCore
   Globals.cpp
   IRBuilder.cpp
   IRPrintingPasses.cpp
+  SSAContext.cpp
   InlineAsm.cpp
   Instruction.cpp
   Instructions.cpp
@@ -60,6 +61,7 @@ add_llvm_component_library(LLVMCore
   User.cpp
   Value.cpp
   ValueSymbolTable.cpp
+  VectorBuilder.cpp
   Verifier.cpp
 
   ADDITIONAL_HEADER_DIRS

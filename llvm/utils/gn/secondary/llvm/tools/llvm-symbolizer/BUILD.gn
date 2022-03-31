@@ -33,6 +33,7 @@ executable("llvm-symbolizer") {
     "//llvm/lib/DebugInfo/DWARF",
     "//llvm/lib/DebugInfo/PDB",
     "//llvm/lib/DebugInfo/Symbolize",
+    "//llvm/lib/Debuginfod",
     "//llvm/lib/Demangle",
     "//llvm/lib/Object",
     "//llvm/lib/Option",

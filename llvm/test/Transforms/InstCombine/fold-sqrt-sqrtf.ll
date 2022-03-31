@@ -1,4 +1,4 @@
-; RUN: opt -instcombine -S -disable-simplify-libcalls < %s | FileCheck %s
+; RUN: opt -passes=instcombine -S -disable-simplify-libcalls < %s | FileCheck %s
 ; rdar://10466410
 
 ; Instcombine tries to fold (fptrunc (sqrt (fpext x))) -> (sqrtf x), but this

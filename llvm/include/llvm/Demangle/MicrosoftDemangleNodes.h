@@ -13,7 +13,6 @@
 #ifndef LLVM_DEMANGLE_MICROSOFTDEMANGLENODES_H
 #define LLVM_DEMANGLE_MICROSOFTDEMANGLENODES_H
 
-#include "llvm/Demangle/DemangleConfig.h"
 #include "llvm/Demangle/StringView.h"
 #include <array>
 #include <cstdint>
@@ -283,9 +282,7 @@ struct StructorIdentifierNode;
 struct ThunkSignatureNode;
 struct PointerTypeNode;
 struct ArrayTypeNode;
-struct CustomNode;
 struct TagTypeNode;
-struct IntrinsicTypeNode;
 struct NodeArrayNode;
 struct QualifiedNameNode;
 struct TemplateParameterReferenceNode;

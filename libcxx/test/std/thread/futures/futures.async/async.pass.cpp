@@ -20,17 +20,18 @@
 //     async(launch policy, F&& f, Args&&... args);
 
 
-#include <future>
 #include <atomic>
-#include <memory>
 #include <cassert>
+#include <chrono>
+#include <future>
+#include <memory>
 
 #include "test_macros.h"
 
 typedef std::chrono::high_resolution_clock Clock;
 typedef std::chrono::milliseconds ms;
 
-std::atomic_bool invoked = ATOMIC_VAR_INIT(false);
+std::atomic_bool invoked{false};
 
 int f0()
 {

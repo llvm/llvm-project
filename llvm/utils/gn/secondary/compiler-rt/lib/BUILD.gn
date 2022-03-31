@@ -1,5 +1,6 @@
 group("lib") {
   deps = [
+    "//compiler-rt/lib/asan:ignorelist($host_toolchain)",
     "//compiler-rt/lib/cfi:ignorelist($host_toolchain)",
     "//compiler-rt/lib/profile",
   ]
@@ -15,7 +16,7 @@ group("lib") {
       "//compiler-rt/lib/builtins",
     ]
     if (current_cpu == "x64" || current_cpu == "arm64") {
-      deps += [ "//compiler-rt/lib/tsan" ]
+      deps += [ "//compiler-rt/lib/tsan/rtl" ]
     }
   }
 }

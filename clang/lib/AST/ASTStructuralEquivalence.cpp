@@ -932,6 +932,13 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       return false;
     break;
 
+  case Type::BTFTagAttributed:
+    if (!IsStructurallyEquivalent(
+            Context, cast<BTFTagAttributedType>(T1)->getWrappedType(),
+            cast<BTFTagAttributedType>(T2)->getWrappedType()))
+      return false;
+    break;
+
   case Type::Paren:
     if (!IsStructurallyEquivalent(Context, cast<ParenType>(T1)->getInnerType(),
                                   cast<ParenType>(T2)->getInnerType()))
@@ -942,6 +949,12 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     if (!IsStructurallyEquivalent(
             Context, cast<MacroQualifiedType>(T1)->getUnderlyingType(),
             cast<MacroQualifiedType>(T2)->getUnderlyingType()))
+      return false;
+    break;
+
+  case Type::Using:
+    if (!IsStructurallyEquivalent(Context, cast<UsingType>(T1)->getFoundDecl(),
+                                  cast<UsingType>(T2)->getFoundDecl()))
       return false;
     break;
 

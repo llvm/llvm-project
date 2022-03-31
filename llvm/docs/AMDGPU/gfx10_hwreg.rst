@@ -47,7 +47,8 @@ Defined register *names* include:
     HW_REG_MODE         Shader writeable mode bits.
     HW_REG_STATUS       Shader read-only status.
     HW_REG_TRAPSTS      Trap status.
-    HW_REG_HW_ID        Id of wave, simd, compute unit, etc.
+    HW_REG_HW_ID1       Id of wave, simd, compute unit, etc.
+    HW_REG_HW_ID2       Id of queue, pipeline, etc.
     HW_REG_GPR_ALLOC    Per-wave SGPR and VGPR allocation.
     HW_REG_LDS_ALLOC    Per-wave LDS allocation.
     HW_REG_IB_STS       Counters of outstanding instructions.

@@ -27,7 +27,15 @@ enum NodeType : unsigned {
   NIE,
   NIR,
   RET,
-  BITCAST_TO_LOHI
+  CALL,
+  CALLReg,
+  TAIL,
+  TAILReg,
+  LOAD_ADDR,
+  // i32, i32 <-- f64
+  BITCAST_TO_LOHI,
+  // f64 < -- i32, i32
+  BITCAST_FROM_LOHI,
 };
 }
 
@@ -37,6 +45,8 @@ class CSKYTargetLowering : public TargetLowering {
 public:
   explicit CSKYTargetLowering(const TargetMachine &TM,
                               const CSKYSubtarget &STI);
+
+  SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
 
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
                          EVT VT) const override;
@@ -58,7 +68,101 @@ private:
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
                       SelectionDAG &DAG) const override;
 
+  SDValue LowerCall(TargetLowering::CallLoweringInfo &CLI,
+                    SmallVectorImpl<SDValue> &InVals) const override;
+
   const char *getTargetNodeName(unsigned Opcode) const override;
+
+  /// If a physical register, this returns the register that receives the
+  /// exception address on entry to an EH pad.
+  Register
+  getExceptionPointerRegister(const Constant *PersonalityFn) const override;
+
+  /// If a physical register, this returns the register that receives the
+  /// exception typeid on entry to a landing pad.
+  Register
+  getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
+
+  bool isSelectSupported(SelectSupportKind Kind) const override {
+    // CSKY does not support scalar condition selects on vectors.
+    return (Kind != ScalarCondVectorVal);
+  }
+
+  ConstraintType getConstraintType(StringRef Constraint) const override;
+
+  std::pair<unsigned, const TargetRegisterClass *>
+  getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
+                               StringRef Constraint, MVT VT) const override;
+
+  MachineBasicBlock *
+  EmitInstrWithCustomInserter(MachineInstr &MI,
+                              MachineBasicBlock *BB) const override;
+
+  SDValue getTargetNode(GlobalAddressSDNode *N, SDLoc DL, EVT Ty,
+                        SelectionDAG &DAG, unsigned Flags) const;
+
+  SDValue getTargetNode(ExternalSymbolSDNode *N, SDLoc DL, EVT Ty,
+                        SelectionDAG &DAG, unsigned Flags) const;
+
+  SDValue getTargetNode(JumpTableSDNode *N, SDLoc DL, EVT Ty, SelectionDAG &DAG,
+                        unsigned Flags) const;
+
+  SDValue getTargetNode(BlockAddressSDNode *N, SDLoc DL, EVT Ty,
+                        SelectionDAG &DAG, unsigned Flags) const;
+
+  SDValue getTargetConstantPoolValue(GlobalAddressSDNode *N, EVT Ty,
+                                     SelectionDAG &DAG, unsigned Flags) const;
+
+  SDValue getTargetConstantPoolValue(ExternalSymbolSDNode *N, EVT Ty,
+                                     SelectionDAG &DAG, unsigned Flags) const;
+
+  SDValue getTargetConstantPoolValue(JumpTableSDNode *N, EVT Ty,
+                                     SelectionDAG &DAG, unsigned Flags) const;
+
+  SDValue getTargetConstantPoolValue(BlockAddressSDNode *N, EVT Ty,
+                                     SelectionDAG &DAG, unsigned Flags) const;
+
+  template <class NodeTy, bool IsCall = false>
+  SDValue getAddr(NodeTy *N, SelectionDAG &DAG, bool IsLocal = true) const {
+    SDLoc DL(N);
+    EVT Ty = getPointerTy(DAG.getDataLayout());
+
+    unsigned Flag = CSKYII::MO_None;
+    bool IsPIC = isPositionIndependent();
+
+    if (IsPIC)
+      Flag = IsLocal  ? CSKYII::MO_GOTOFF
+             : IsCall ? CSKYII::MO_PLT32
+                      : CSKYII::MO_GOT32;
+
+    SDValue TCPV = getTargetConstantPoolValue(N, Ty, DAG, Flag);
+    SDValue TV = getTargetNode(N, DL, Ty, DAG, Flag);
+    SDValue Addr = DAG.getNode(CSKYISD::LOAD_ADDR, DL, Ty, {TV, TCPV});
+
+    if (!IsPIC)
+      return Addr;
+
+    SDValue Result =
+        DAG.getNode(ISD::ADD, DL, Ty, {DAG.getGLOBAL_OFFSET_TABLE(Ty), Addr});
+    if (IsLocal)
+      return Result;
+
+    return DAG.getLoad(Ty, DL, DAG.getEntryNode(), Result,
+                       MachinePointerInfo::getGOT(DAG.getMachineFunction()));
+  }
+
+  SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerExternalSymbol(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerVASTART(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue getStaticTLSAddr(GlobalAddressSDNode *N, SelectionDAG &DAG,
+                           bool UseGOT) const;
+  SDValue getDynamicTLSAddr(GlobalAddressSDNode *N, SelectionDAG &DAG) const;
 
   CCAssignFn *CCAssignFnForCall(CallingConv::ID CC, bool IsVarArg) const;
   CCAssignFn *CCAssignFnForReturn(CallingConv::ID CC, bool IsVarArg) const;

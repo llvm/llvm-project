@@ -10,9 +10,9 @@ body:             |
 
     ; GCN-LABEL: name: s_buffer_load_s32
     ; GCN: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-    ; GCN: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; GCN: [[AMDGPU_S_BUFFER_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_S_BUFFER_LOAD [[COPY]](<4 x s32>), [[C]](s32), 0 :: (dereferenceable invariant load (s32))
-    ; GCN: S_ENDPGM 0, implicit [[AMDGPU_S_BUFFER_LOAD]](s32)
+    ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; GCN-NEXT: [[AMDGPU_S_BUFFER_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_S_BUFFER_LOAD [[COPY]](<4 x s32>), [[C]](s32), 0 :: (dereferenceable invariant load (s32))
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[AMDGPU_S_BUFFER_LOAD]](s32)
     %0:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
     %1:_(s32) = G_CONSTANT i32 0
     %2:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.s.buffer.load), %0, %1, 0
@@ -28,12 +28,11 @@ body:             |
 
     ; GCN-LABEL: name: s_buffer_load_v3s32
     ; GCN: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-    ; GCN: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; GCN: [[AMDGPU_S_BUFFER_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_S_BUFFER_LOAD [[COPY]](<4 x s32>), [[C]](s32), 0 :: (dereferenceable invariant load (s96), align 4)
-    ; GCN: [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
-    ; GCN: [[CONCAT_VECTORS:%[0-9]+]]:_(<12 x s32>) = G_CONCAT_VECTORS [[AMDGPU_S_BUFFER_LOAD]](<4 x s32>), [[DEF]](<4 x s32>), [[DEF]](<4 x s32>)
-    ; GCN: [[UV:%[0-9]+]]:_(<3 x s32>), [[UV1:%[0-9]+]]:_(<3 x s32>), [[UV2:%[0-9]+]]:_(<3 x s32>), [[UV3:%[0-9]+]]:_(<3 x s32>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<12 x s32>)
-    ; GCN: S_ENDPGM 0, implicit [[UV]](<3 x s32>)
+    ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; GCN-NEXT: [[AMDGPU_S_BUFFER_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_S_BUFFER_LOAD [[COPY]](<4 x s32>), [[C]](s32), 0 :: (dereferenceable invariant load (s96), align 4)
+    ; GCN-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_S_BUFFER_LOAD]](<4 x s32>)
+    ; GCN-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[UV]](s32), [[UV1]](s32), [[UV2]](s32)
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[BUILD_VECTOR]](<3 x s32>)
     %0:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
     %1:_(s32) = G_CONSTANT i32 0
     %2:_(<3 x s32>) = G_INTRINSIC intrinsic(@llvm.amdgcn.s.buffer.load), %0, %1, 0
@@ -49,13 +48,12 @@ body:             |
 
     ; GCN-LABEL: name: s_buffer_load_v3p3
     ; GCN: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-    ; GCN: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; GCN: [[AMDGPU_S_BUFFER_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_S_BUFFER_LOAD [[COPY]](<4 x s32>), [[C]](s32), 0 :: (dereferenceable invariant load (s96), align 4)
-    ; GCN: [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
-    ; GCN: [[CONCAT_VECTORS:%[0-9]+]]:_(<12 x s32>) = G_CONCAT_VECTORS [[AMDGPU_S_BUFFER_LOAD]](<4 x s32>), [[DEF]](<4 x s32>), [[DEF]](<4 x s32>)
-    ; GCN: [[UV:%[0-9]+]]:_(<3 x s32>), [[UV1:%[0-9]+]]:_(<3 x s32>), [[UV2:%[0-9]+]]:_(<3 x s32>), [[UV3:%[0-9]+]]:_(<3 x s32>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<12 x s32>)
-    ; GCN: [[BITCAST:%[0-9]+]]:_(<3 x p3>) = G_BITCAST [[UV]](<3 x s32>)
-    ; GCN: S_ENDPGM 0, implicit [[BITCAST]](<3 x p3>)
+    ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; GCN-NEXT: [[AMDGPU_S_BUFFER_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_S_BUFFER_LOAD [[COPY]](<4 x s32>), [[C]](s32), 0 :: (dereferenceable invariant load (s96), align 4)
+    ; GCN-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_S_BUFFER_LOAD]](<4 x s32>)
+    ; GCN-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[UV]](s32), [[UV1]](s32), [[UV2]](s32)
+    ; GCN-NEXT: [[BITCAST:%[0-9]+]]:_(<3 x p3>) = G_BITCAST [[BUILD_VECTOR]](<3 x s32>)
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[BITCAST]](<3 x p3>)
     %0:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
     %1:_(s32) = G_CONSTANT i32 0
     %2:_(<3 x p3>) = G_INTRINSIC intrinsic(@llvm.amdgcn.s.buffer.load), %0, %1, 0
@@ -71,13 +69,12 @@ body:             |
 
     ; GCN-LABEL: name: s_buffer_load_v6s16
     ; GCN: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-    ; GCN: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; GCN: [[AMDGPU_S_BUFFER_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_S_BUFFER_LOAD [[COPY]](<4 x s32>), [[C]](s32), 0 :: (dereferenceable invariant load (s96), align 4)
-    ; GCN: [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
-    ; GCN: [[CONCAT_VECTORS:%[0-9]+]]:_(<12 x s32>) = G_CONCAT_VECTORS [[AMDGPU_S_BUFFER_LOAD]](<4 x s32>), [[DEF]](<4 x s32>), [[DEF]](<4 x s32>)
-    ; GCN: [[UV:%[0-9]+]]:_(<3 x s32>), [[UV1:%[0-9]+]]:_(<3 x s32>), [[UV2:%[0-9]+]]:_(<3 x s32>), [[UV3:%[0-9]+]]:_(<3 x s32>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<12 x s32>)
-    ; GCN: [[BITCAST:%[0-9]+]]:_(<6 x s16>) = G_BITCAST [[UV]](<3 x s32>)
-    ; GCN: S_ENDPGM 0, implicit [[BITCAST]](<6 x s16>)
+    ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; GCN-NEXT: [[AMDGPU_S_BUFFER_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_S_BUFFER_LOAD [[COPY]](<4 x s32>), [[C]](s32), 0 :: (dereferenceable invariant load (s96), align 4)
+    ; GCN-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_S_BUFFER_LOAD]](<4 x s32>)
+    ; GCN-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[UV]](s32), [[UV1]](s32), [[UV2]](s32)
+    ; GCN-NEXT: [[BITCAST:%[0-9]+]]:_(<6 x s16>) = G_BITCAST [[BUILD_VECTOR]](<3 x s32>)
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[BITCAST]](<6 x s16>)
     %0:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
     %1:_(s32) = G_CONSTANT i32 0
     %2:_(<6 x s16>) = G_INTRINSIC intrinsic(@llvm.amdgcn.s.buffer.load), %0, %1, 0
@@ -93,12 +90,11 @@ body:             |
 
     ; GCN-LABEL: name: s_buffer_load_v6s32
     ; GCN: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-    ; GCN: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; GCN: [[AMDGPU_S_BUFFER_LOAD:%[0-9]+]]:_(<8 x s32>) = G_AMDGPU_S_BUFFER_LOAD [[COPY]](<4 x s32>), [[C]](s32), 0 :: (dereferenceable invariant load (s192), align 4)
-    ; GCN: [[DEF:%[0-9]+]]:_(<8 x s32>) = G_IMPLICIT_DEF
-    ; GCN: [[CONCAT_VECTORS:%[0-9]+]]:_(<24 x s32>) = G_CONCAT_VECTORS [[AMDGPU_S_BUFFER_LOAD]](<8 x s32>), [[DEF]](<8 x s32>), [[DEF]](<8 x s32>)
-    ; GCN: [[UV:%[0-9]+]]:_(<6 x s32>), [[UV1:%[0-9]+]]:_(<6 x s32>), [[UV2:%[0-9]+]]:_(<6 x s32>), [[UV3:%[0-9]+]]:_(<6 x s32>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<24 x s32>)
-    ; GCN: S_ENDPGM 0, implicit [[UV]](<6 x s32>)
+    ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; GCN-NEXT: [[AMDGPU_S_BUFFER_LOAD:%[0-9]+]]:_(<8 x s32>) = G_AMDGPU_S_BUFFER_LOAD [[COPY]](<4 x s32>), [[C]](s32), 0 :: (dereferenceable invariant load (s192), align 4)
+    ; GCN-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_S_BUFFER_LOAD]](<8 x s32>)
+    ; GCN-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<6 x s32>) = G_BUILD_VECTOR [[UV]](s32), [[UV1]](s32), [[UV2]](s32), [[UV3]](s32), [[UV4]](s32), [[UV5]](s32)
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[BUILD_VECTOR]](<6 x s32>)
     %0:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
     %1:_(s32) = G_CONSTANT i32 0
     %2:_(<6 x s32>) = G_INTRINSIC intrinsic(@llvm.amdgcn.s.buffer.load), %0, %1, 0
@@ -114,12 +110,11 @@ body:             |
 
     ; GCN-LABEL: name: s_buffer_load_v3s64
     ; GCN: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-    ; GCN: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; GCN: [[AMDGPU_S_BUFFER_LOAD:%[0-9]+]]:_(<4 x s64>) = G_AMDGPU_S_BUFFER_LOAD [[COPY]](<4 x s32>), [[C]](s32), 0 :: (dereferenceable invariant load (s192), align 4)
-    ; GCN: [[DEF:%[0-9]+]]:_(<4 x s64>) = G_IMPLICIT_DEF
-    ; GCN: [[CONCAT_VECTORS:%[0-9]+]]:_(<12 x s64>) = G_CONCAT_VECTORS [[AMDGPU_S_BUFFER_LOAD]](<4 x s64>), [[DEF]](<4 x s64>), [[DEF]](<4 x s64>)
-    ; GCN: [[UV:%[0-9]+]]:_(<3 x s64>), [[UV1:%[0-9]+]]:_(<3 x s64>), [[UV2:%[0-9]+]]:_(<3 x s64>), [[UV3:%[0-9]+]]:_(<3 x s64>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<12 x s64>)
-    ; GCN: S_ENDPGM 0, implicit [[UV]](<3 x s64>)
+    ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; GCN-NEXT: [[AMDGPU_S_BUFFER_LOAD:%[0-9]+]]:_(<4 x s64>) = G_AMDGPU_S_BUFFER_LOAD [[COPY]](<4 x s32>), [[C]](s32), 0 :: (dereferenceable invariant load (s192), align 4)
+    ; GCN-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64), [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[AMDGPU_S_BUFFER_LOAD]](<4 x s64>)
+    ; GCN-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s64>) = G_BUILD_VECTOR [[UV]](s64), [[UV1]](s64), [[UV2]](s64)
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[BUILD_VECTOR]](<3 x s64>)
     %0:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
     %1:_(s32) = G_CONSTANT i32 0
     %2:_(<3 x s64>) = G_INTRINSIC intrinsic(@llvm.amdgcn.s.buffer.load), %0, %1, 0
@@ -135,57 +130,54 @@ body:             |
 
     ; GCN-LABEL: name: s_buffer_load_v12s8
     ; GCN: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-    ; GCN: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; GCN: [[AMDGPU_S_BUFFER_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_S_BUFFER_LOAD [[COPY]](<4 x s32>), [[C]](s32), 0 :: (dereferenceable invariant load (s96), align 4)
-    ; GCN: [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
-    ; GCN: [[CONCAT_VECTORS:%[0-9]+]]:_(<12 x s32>) = G_CONCAT_VECTORS [[AMDGPU_S_BUFFER_LOAD]](<4 x s32>), [[DEF]](<4 x s32>), [[DEF]](<4 x s32>)
-    ; GCN: [[UV:%[0-9]+]]:_(<3 x s32>), [[UV1:%[0-9]+]]:_(<3 x s32>), [[UV2:%[0-9]+]]:_(<3 x s32>), [[UV3:%[0-9]+]]:_(<3 x s32>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<12 x s32>)
-    ; GCN: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[UV]](<3 x s32>)
-    ; GCN: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; GCN: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[UV4]], [[C1]](s32)
-    ; GCN: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; GCN: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[UV4]], [[C2]](s32)
-    ; GCN: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
-    ; GCN: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[UV4]], [[C3]](s32)
-    ; GCN: [[LSHR3:%[0-9]+]]:_(s32) = G_LSHR [[UV5]], [[C1]](s32)
-    ; GCN: [[LSHR4:%[0-9]+]]:_(s32) = G_LSHR [[UV5]], [[C2]](s32)
-    ; GCN: [[LSHR5:%[0-9]+]]:_(s32) = G_LSHR [[UV5]], [[C3]](s32)
-    ; GCN: [[LSHR6:%[0-9]+]]:_(s32) = G_LSHR [[UV6]], [[C1]](s32)
-    ; GCN: [[LSHR7:%[0-9]+]]:_(s32) = G_LSHR [[UV6]], [[C2]](s32)
-    ; GCN: [[LSHR8:%[0-9]+]]:_(s32) = G_LSHR [[UV6]], [[C3]](s32)
-    ; GCN: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; GCN: [[AND:%[0-9]+]]:_(s32) = G_AND [[UV4]], [[C4]]
-    ; GCN: [[AND1:%[0-9]+]]:_(s32) = G_AND [[LSHR]], [[C4]]
-    ; GCN: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[C2]](s32)
-    ; GCN: [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[SHL]]
-    ; GCN: [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
-    ; GCN: [[AND2:%[0-9]+]]:_(s32) = G_AND [[LSHR1]], [[C4]]
-    ; GCN: [[AND3:%[0-9]+]]:_(s32) = G_AND [[LSHR2]], [[C4]]
-    ; GCN: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[AND3]], [[C2]](s32)
-    ; GCN: [[OR1:%[0-9]+]]:_(s32) = G_OR [[AND2]], [[SHL1]]
-    ; GCN: [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
-    ; GCN: [[AND4:%[0-9]+]]:_(s32) = G_AND [[UV5]], [[C4]]
-    ; GCN: [[AND5:%[0-9]+]]:_(s32) = G_AND [[LSHR3]], [[C4]]
-    ; GCN: [[SHL2:%[0-9]+]]:_(s32) = G_SHL [[AND5]], [[C2]](s32)
-    ; GCN: [[OR2:%[0-9]+]]:_(s32) = G_OR [[AND4]], [[SHL2]]
-    ; GCN: [[BITCAST2:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR2]](s32)
-    ; GCN: [[AND6:%[0-9]+]]:_(s32) = G_AND [[LSHR4]], [[C4]]
-    ; GCN: [[AND7:%[0-9]+]]:_(s32) = G_AND [[LSHR5]], [[C4]]
-    ; GCN: [[SHL3:%[0-9]+]]:_(s32) = G_SHL [[AND7]], [[C2]](s32)
-    ; GCN: [[OR3:%[0-9]+]]:_(s32) = G_OR [[AND6]], [[SHL3]]
-    ; GCN: [[BITCAST3:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR3]](s32)
-    ; GCN: [[AND8:%[0-9]+]]:_(s32) = G_AND [[UV6]], [[C4]]
-    ; GCN: [[AND9:%[0-9]+]]:_(s32) = G_AND [[LSHR6]], [[C4]]
-    ; GCN: [[SHL4:%[0-9]+]]:_(s32) = G_SHL [[AND9]], [[C2]](s32)
-    ; GCN: [[OR4:%[0-9]+]]:_(s32) = G_OR [[AND8]], [[SHL4]]
-    ; GCN: [[BITCAST4:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR4]](s32)
-    ; GCN: [[AND10:%[0-9]+]]:_(s32) = G_AND [[LSHR7]], [[C4]]
-    ; GCN: [[AND11:%[0-9]+]]:_(s32) = G_AND [[LSHR8]], [[C4]]
-    ; GCN: [[SHL5:%[0-9]+]]:_(s32) = G_SHL [[AND11]], [[C2]](s32)
-    ; GCN: [[OR5:%[0-9]+]]:_(s32) = G_OR [[AND10]], [[SHL5]]
-    ; GCN: [[BITCAST5:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR5]](s32)
-    ; GCN: [[CONCAT_VECTORS1:%[0-9]+]]:_(<12 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BITCAST1]](<2 x s16>), [[BITCAST2]](<2 x s16>), [[BITCAST3]](<2 x s16>), [[BITCAST4]](<2 x s16>), [[BITCAST5]](<2 x s16>)
-    ; GCN: S_ENDPGM 0, implicit [[CONCAT_VECTORS1]](<12 x s16>)
+    ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; GCN-NEXT: [[AMDGPU_S_BUFFER_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_S_BUFFER_LOAD [[COPY]](<4 x s32>), [[C]](s32), 0 :: (dereferenceable invariant load (s96), align 4)
+    ; GCN-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_S_BUFFER_LOAD]](<4 x s32>)
+    ; GCN-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+    ; GCN-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[UV]], [[C1]](s32)
+    ; GCN-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; GCN-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[UV]], [[C2]](s32)
+    ; GCN-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
+    ; GCN-NEXT: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[UV]], [[C3]](s32)
+    ; GCN-NEXT: [[LSHR3:%[0-9]+]]:_(s32) = G_LSHR [[UV1]], [[C1]](s32)
+    ; GCN-NEXT: [[LSHR4:%[0-9]+]]:_(s32) = G_LSHR [[UV1]], [[C2]](s32)
+    ; GCN-NEXT: [[LSHR5:%[0-9]+]]:_(s32) = G_LSHR [[UV1]], [[C3]](s32)
+    ; GCN-NEXT: [[LSHR6:%[0-9]+]]:_(s32) = G_LSHR [[UV2]], [[C1]](s32)
+    ; GCN-NEXT: [[LSHR7:%[0-9]+]]:_(s32) = G_LSHR [[UV2]], [[C2]](s32)
+    ; GCN-NEXT: [[LSHR8:%[0-9]+]]:_(s32) = G_LSHR [[UV2]], [[C3]](s32)
+    ; GCN-NEXT: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+    ; GCN-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[UV]], [[C4]]
+    ; GCN-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[LSHR]], [[C4]]
+    ; GCN-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[C2]](s32)
+    ; GCN-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[SHL]]
+    ; GCN-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
+    ; GCN-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[LSHR1]], [[C4]]
+    ; GCN-NEXT: [[AND3:%[0-9]+]]:_(s32) = G_AND [[LSHR2]], [[C4]]
+    ; GCN-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[AND3]], [[C2]](s32)
+    ; GCN-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[AND2]], [[SHL1]]
+    ; GCN-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
+    ; GCN-NEXT: [[AND4:%[0-9]+]]:_(s32) = G_AND [[UV1]], [[C4]]
+    ; GCN-NEXT: [[AND5:%[0-9]+]]:_(s32) = G_AND [[LSHR3]], [[C4]]
+    ; GCN-NEXT: [[SHL2:%[0-9]+]]:_(s32) = G_SHL [[AND5]], [[C2]](s32)
+    ; GCN-NEXT: [[OR2:%[0-9]+]]:_(s32) = G_OR [[AND4]], [[SHL2]]
+    ; GCN-NEXT: [[BITCAST2:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR2]](s32)
+    ; GCN-NEXT: [[AND6:%[0-9]+]]:_(s32) = G_AND [[LSHR4]], [[C4]]
+    ; GCN-NEXT: [[AND7:%[0-9]+]]:_(s32) = G_AND [[LSHR5]], [[C4]]
+    ; GCN-NEXT: [[SHL3:%[0-9]+]]:_(s32) = G_SHL [[AND7]], [[C2]](s32)
+    ; GCN-NEXT: [[OR3:%[0-9]+]]:_(s32) = G_OR [[AND6]], [[SHL3]]
+    ; GCN-NEXT: [[BITCAST3:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR3]](s32)
+    ; GCN-NEXT: [[AND8:%[0-9]+]]:_(s32) = G_AND [[UV2]], [[C4]]
+    ; GCN-NEXT: [[AND9:%[0-9]+]]:_(s32) = G_AND [[LSHR6]], [[C4]]
+    ; GCN-NEXT: [[SHL4:%[0-9]+]]:_(s32) = G_SHL [[AND9]], [[C2]](s32)
+    ; GCN-NEXT: [[OR4:%[0-9]+]]:_(s32) = G_OR [[AND8]], [[SHL4]]
+    ; GCN-NEXT: [[BITCAST4:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR4]](s32)
+    ; GCN-NEXT: [[AND10:%[0-9]+]]:_(s32) = G_AND [[LSHR7]], [[C4]]
+    ; GCN-NEXT: [[AND11:%[0-9]+]]:_(s32) = G_AND [[LSHR8]], [[C4]]
+    ; GCN-NEXT: [[SHL5:%[0-9]+]]:_(s32) = G_SHL [[AND11]], [[C2]](s32)
+    ; GCN-NEXT: [[OR5:%[0-9]+]]:_(s32) = G_OR [[AND10]], [[SHL5]]
+    ; GCN-NEXT: [[BITCAST5:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR5]](s32)
+    ; GCN-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<12 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BITCAST1]](<2 x s16>), [[BITCAST2]](<2 x s16>), [[BITCAST3]](<2 x s16>), [[BITCAST4]](<2 x s16>), [[BITCAST5]](<2 x s16>)
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[CONCAT_VECTORS]](<12 x s16>)
     %0:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
     %1:_(s32) = G_CONSTANT i32 0
     %2:_(<12 x s8>) = G_INTRINSIC intrinsic(@llvm.amdgcn.s.buffer.load), %0, %1, 0
@@ -202,12 +194,11 @@ body:             |
 
     ; GCN-LABEL: name: s_buffer_load_s96
     ; GCN: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-    ; GCN: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; GCN: [[AMDGPU_S_BUFFER_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_S_BUFFER_LOAD [[COPY]](<4 x s32>), [[C]](s32), 0 :: (dereferenceable invariant load (s96), align 4)
-    ; GCN: [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
-    ; GCN: [[CONCAT_VECTORS:%[0-9]+]]:_(<12 x s32>) = G_CONCAT_VECTORS [[AMDGPU_S_BUFFER_LOAD]](<4 x s32>), [[DEF]](<4 x s32>), [[DEF]](<4 x s32>)
-    ; GCN: [[UV:%[0-9]+]]:_(<3 x s32>), [[UV1:%[0-9]+]]:_(<3 x s32>), [[UV2:%[0-9]+]]:_(<3 x s32>), [[UV3:%[0-9]+]]:_(<3 x s32>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<12 x s32>)
-    ; GCN: S_ENDPGM 0, implicit [[UV]](<3 x s32>)
+    ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; GCN-NEXT: [[AMDGPU_S_BUFFER_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_S_BUFFER_LOAD [[COPY]](<4 x s32>), [[C]](s32), 0 :: (dereferenceable invariant load (s96), align 4)
+    ; GCN-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_S_BUFFER_LOAD]](<4 x s32>)
+    ; GCN-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[UV]](s32), [[UV1]](s32), [[UV2]](s32)
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[BUILD_VECTOR]](<3 x s32>)
     %0:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
     %1:_(s32) = G_CONSTANT i32 0
     %2:_(<3 x s32>) = G_INTRINSIC intrinsic(@llvm.amdgcn.s.buffer.load), %0, %1, 0

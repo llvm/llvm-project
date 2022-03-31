@@ -8,7 +8,7 @@ include "mlir/Interfaces/InferTypeOpInterface.td"
 def TestDialect : Dialect {
   let name = "test";
 }
-class TestFormat_Op<string fmt, list<OpTrait> traits = []>
+class TestFormat_Op<string fmt, list<Trait> traits = []>
     : Op<TestDialect, "format_op", traits> {
   let assemblyFormat = fmt;
 }
@@ -97,7 +97,7 @@ def DirectiveFunctionalTypeInvalidA : TestFormat_Op<[{
 def DirectiveFunctionalTypeInvalidB : TestFormat_Op<[{
   functional-type
 }]>;
-// CHECK: error: expected directive, literal, variable, or optional group
+// CHECK: error: expected literal, variable, directive, or optional group
 def DirectiveFunctionalTypeInvalidC : TestFormat_Op<[{
   functional-type(
 }]>;
@@ -105,7 +105,7 @@ def DirectiveFunctionalTypeInvalidC : TestFormat_Op<[{
 def DirectiveFunctionalTypeInvalidD : TestFormat_Op<[{
   functional-type(operands
 }]>;
-// CHECK: error: expected directive, literal, variable, or optional group
+// CHECK: error: expected literal, variable, directive, or optional group
 def DirectiveFunctionalTypeInvalidE : TestFormat_Op<[{
   functional-type(operands,
 }]>;
@@ -262,7 +262,7 @@ def DirectiveSuccessorsInvalidA : TestFormat_Op<[{
 def DirectiveTypeInvalidA : TestFormat_Op<[{
   type
 }]>;
-// CHECK: error: expected directive, literal, variable, or optional group
+// CHECK: error: expected literal, variable, directive, or optional group
 def DirectiveTypeInvalidB : TestFormat_Op<[{
   type(
 }]>;
@@ -278,7 +278,7 @@ def DirectiveTypeValid : TestFormat_Op<[{
 //===----------------------------------------------------------------------===//
 // functional-type/type operands
 
-// CHECK: error: literals may only be used in a top-level section of the format
+// CHECK: error: literals may only be used in the top-level section of the format
 def DirectiveTypeZOperandInvalidA : TestFormat_Op<[{
   type(`literal`)
 }]>;
@@ -334,7 +334,7 @@ def LiteralInvalidC : TestFormat_Op<[{
 }]>;
 
 // CHECK: error: unexpected end of file in literal
-// CHECK: error: expected directive, literal, variable, or optional group
+// CHECK: error: expected literal, variable, directive, or optional group
 def LiteralInvalidD : TestFormat_Op<[{
   `
 }]>;
@@ -345,6 +345,57 @@ def LiteralValid : TestFormat_Op<[{
 }]>;
 
 //===----------------------------------------------------------------------===//
+// OIList Element
+//===----------------------------------------------------------------------===//
+
+// CHECK: error: format ambiguity because bar is used in two adjacent oilist elements.
+def OIListAdjacentOIList : TestFormat_Op<[{
+  oilist ( `foo` | `bar` ) oilist ( `bar` | `buzz` ) attr-dict
+}]>;
+// CHECK: error: expected literal, but got ')'
+def OIListErrorExpectedLiteral : TestFormat_Op<[{
+  oilist( `keyword` | ) attr-dict
+}]>;
+// CHECK: error: expected literal, but got ')'
+def OIListErrorExpectedEmpty : TestFormat_Op<[{
+  oilist() attr-dict
+}]>;
+// CHECK: error: expected literal, but got '$arg0'
+def OIListErrorNoLiteral : TestFormat_Op<[{
+  oilist( $arg0 `:` type($arg0) | $arg1 `:` type($arg1) ) attr-dict
+}], [AttrSizedOperandSegments]>, Arguments<(ins Optional<AnyType>:$arg0, Optional<AnyType>:$arg1)>;
+// CHECK: error: format ambiguity because foo is used both in oilist element and the adjacent literal.
+def OIListLiteralAmbiguity : TestFormat_Op<[{
+  oilist( `foo` | `bar` ) `foo` attr-dict
+}]>;
+// CHECK: error: expected '(' before oilist argument list
+def OIListStartingToken : TestFormat_Op<[{
+  oilist `wrong` attr-dict
+}]>;
+
+// CHECK-NOT: error
+def OIListTrivial : TestFormat_Op<[{
+  oilist(`keyword` `(` `)` | `otherkeyword` `(` `)`) attr-dict
+}]>;
+def OIListSimple : TestFormat_Op<[{
+  oilist( `keyword` $arg0 `:` type($arg0)
+        | `otherkeyword` $arg1 `:` type($arg1)
+        | `thirdkeyword` $arg2 `:` type($arg2) )
+  attr-dict
+}], [AttrSizedOperandSegments]>, Arguments<(ins Optional<AnyType>:$arg0, Optional<AnyType>:$arg1, Optional<AnyType>:$arg2)>;
+def OIListVariadic : TestFormat_Op<[{
+  oilist( `keyword` `(` $args0 `:` type($args0) `)`
+        | `otherkeyword` `(` $args1 `:` type($args1) `)`
+        | `thirdkeyword` `(` $args2 `:` type($args2) `)`)
+  attr-dict
+}], [AttrSizedOperandSegments]>, Arguments<(ins Variadic<AnyType>:$args0, Variadic<AnyType>:$args1, Variadic<AnyType>:$args2)>;
+def OIListCustom : TestFormat_Op<[{
+  oilist( `private` `(` $arg0 `:` type($arg0) `)`
+        | `nowait`
+        | `reduction` custom<ReductionClause>($arg1, type($arg1))) attr-dict
+}], [AttrSizedOperandSegments]>, Arguments<(ins Optional<AnyType>:$arg0, Optional<AnyType>:$arg1)>;
+
+//===----------------------------------------------------------------------===//
 // Optional Groups
 //===----------------------------------------------------------------------===//
 
@@ -352,15 +403,15 @@ def LiteralValid : TestFormat_Op<[{
 def OptionalInvalidA : TestFormat_Op<[{
   type(($attr^)?) attr-dict
 }]>, Arguments<(ins OptionalAttr<I64Attr>:$attr)>;
-// CHECK: error: expected directive, literal, variable, or optional group
+// CHECK: error: expected literal, variable, directive, or optional group
 def OptionalInvalidB : TestFormat_Op<[{
   () attr-dict
 }]>, Arguments<(ins OptionalAttr<I64Attr>:$attr)>;
-// CHECK: error: optional group specified no anchor element
+// CHECK: error: optional group has no anchor element
 def OptionalInvalidC : TestFormat_Op<[{
   ($attr)? attr-dict
 }]>, Arguments<(ins OptionalAttr<I64Attr>:$attr)>;
-// CHECK: error: first parsable element of an operand group must be an attribute, literal, operand, or region
+// CHECK: error: first parsable element of an optional group must be a literal or variable
 def OptionalInvalidD : TestFormat_Op<[{
   (type($operand) $operand^)? attr-dict
 }]>, Arguments<(ins Optional<I64>:$operand)>;
@@ -370,15 +421,15 @@ def OptionalInvalidE : TestFormat_Op<[{
 }]>, Arguments<(ins OptionalAttr<I64Attr>:$attr)>;
 // CHECK: error: only one element can be marked as the anchor of an optional group
 def OptionalInvalidF : TestFormat_Op<[{
-  ($attr^ $attr2^) attr-dict
+  ($attr^ $attr2^)? attr-dict
 }]>, Arguments<(ins OptionalAttr<I64Attr>:$attr, OptionalAttr<I64Attr>:$attr2)>;
 // CHECK: error: only optional attributes can be used to anchor an optional group
 def OptionalInvalidG : TestFormat_Op<[{
-  ($attr^) attr-dict
+  ($attr^)? attr-dict
 }]>, Arguments<(ins I64Attr:$attr)>;
 // CHECK: error: only variable length operands can be used within an optional group
 def OptionalInvalidH : TestFormat_Op<[{
-  ($arg^) attr-dict
+  ($arg^)? attr-dict
 }]>, Arguments<(ins I64:$arg)>;
 // CHECK: error: only literals, types, and variables can be used within an optional group
 def OptionalInvalidI : TestFormat_Op<[{
@@ -386,7 +437,7 @@ def OptionalInvalidI : TestFormat_Op<[{
 }]>, Arguments<(ins Variadic<I64>:$arg)>;
 // CHECK: error: only literals, types, and variables can be used within an optional group
 def OptionalInvalidJ : TestFormat_Op<[{
-  (attr-dict)
+  (attr-dict^)?
 }]>;
 // CHECK: error: expected '?' after optional group
 def OptionalInvalidK : TestFormat_Op<[{
@@ -404,7 +455,7 @@ def OptionalInvalidM : TestFormat_Op<[{
 def OptionalInvalidN : TestFormat_Op<[{
   ($arg^):
 }]>, Arguments<(ins Variadic<I64>:$arg)>;
-// CHECK: error: expected directive, literal, variable, or optional group
+// CHECK: error: expected literal, variable, directive, or optional group
 def OptionalInvalidO : TestFormat_Op<[{
   ($arg^):(`test`
 }]>, Arguments<(ins Variadic<I64>:$arg)>;

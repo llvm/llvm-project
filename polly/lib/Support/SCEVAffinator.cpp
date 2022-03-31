@@ -465,6 +465,11 @@ PWACtx SCEVAffinator::visitUMinExpr(const SCEVUMinExpr *Expr) {
   llvm_unreachable("SCEVUMinExpr not yet supported");
 }
 
+PWACtx
+SCEVAffinator::visitSequentialUMinExpr(const SCEVSequentialUMinExpr *Expr) {
+  llvm_unreachable("SCEVSequentialUMinExpr not yet supported");
+}
+
 PWACtx SCEVAffinator::visitUDivExpr(const SCEVUDivExpr *Expr) {
   // The handling of unsigned division is basically the same as for signed
   // division, except the interpretation of the operands. As the divisor

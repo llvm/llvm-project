@@ -198,9 +198,7 @@ define i16 @uabd16b_rdx(<16 x i8>* %a, <16 x i8>* %b) {
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr q1, [x1]
 ; CHECK-NEXT:    uabd.16b v0, v0, v1
-; CHECK-NEXT:    ushll.8h v1, v0, #0
-; CHECK-NEXT:    uaddw2.8h v0, v1, v0
-; CHECK-NEXT:    addv.8h h0, v0
+; CHECK-NEXT:    uaddlv.16b h0, v0
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
   %aload = load <16 x i8>, <16 x i8>* %a, align 1
@@ -261,9 +259,7 @@ define i32 @uabd8h_rdx(<8 x i16>* %a, <8 x i16>* %b) {
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr q1, [x1]
 ; CHECK-NEXT:    uabd.8h v0, v0, v1
-; CHECK-NEXT:    ushll.4s v1, v0, #0
-; CHECK-NEXT:    uaddw2.4s v0, v1, v0
-; CHECK-NEXT:    addv.4s s0, v0
+; CHECK-NEXT:    uaddlv.8h s0, v0
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
   %aload = load <8 x i16>, <8 x i16>* %a, align 1
@@ -282,9 +278,7 @@ define i32 @sabd8h_rdx(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: sabd8h_rdx:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sabd.8h v0, v0, v1
-; CHECK-NEXT:    ushll.4s v1, v0, #0
-; CHECK-NEXT:    uaddw2.4s v0, v1, v0
-; CHECK-NEXT:    addv.4s s0, v0
+; CHECK-NEXT:    uaddlv.8h s0, v0
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
   %aext = sext <8 x i16> %a to <8 x i32>
@@ -338,9 +332,7 @@ define i64 @uabd4s_rdx(<4 x i32>* %a, <4 x i32>* %b, i32 %h) {
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr q1, [x1]
 ; CHECK-NEXT:    uabd.4s v0, v0, v1
-; CHECK-NEXT:    ushll.2d v1, v0, #0
-; CHECK-NEXT:    uaddw2.2d v0, v1, v0
-; CHECK-NEXT:    addp.2d d0, v0
+; CHECK-NEXT:    uaddlv.4s d0, v0
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
   %aload = load <4 x i32>, <4 x i32>* %a, align 1
@@ -359,9 +351,7 @@ define i64 @sabd4s_rdx(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: sabd4s_rdx:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sabd.4s v0, v0, v1
-; CHECK-NEXT:    ushll.2d v1, v0, #0
-; CHECK-NEXT:    uaddw2.2d v0, v1, v0
-; CHECK-NEXT:    addp.2d d0, v0
+; CHECK-NEXT:    uaddlv.4s d0, v0
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
   %aext = sext <4 x i32> %a to <4 x i64>

@@ -33,6 +33,7 @@
 
 #include "sanitizer_atomic.h"
 #include "sanitizer_common.h"
+#include "sanitizer_interface_internal.h"
 #include "sanitizer_internal_defs.h"
 #include "sanitizer_symbolizer_fuchsia.h"
 

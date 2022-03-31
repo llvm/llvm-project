@@ -3,7 +3,7 @@
 !----------
 ! RUN LINE
 !----------
-! RUN: %flang_fc1 -fsyntax-only -fdebug-measure-parse-tree %s  2>&1 | FileCheck %s --check-prefix=FRONTEND
+! RUN: %flang_fc1 -fdebug-measure-parse-tree %s  2>&1 | FileCheck %s --check-prefix=FRONTEND
 
 !-----------------
 ! EXPECTED OUTPUT

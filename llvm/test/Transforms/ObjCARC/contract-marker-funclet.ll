@@ -51,12 +51,12 @@ invoke.cont:                                      ; preds = %entry
 }
 
 ; CHECK-LABEL: define dso_local void @"?test_attr_claimRV@@YAXXZ"()
-; CHECK: %[[CALL4:.*]] = notail call i8* @"?noexcept_func@@YAPAUobjc_object@@XZ"() [ "clang.arc.attachedcall"() ]
-; CHECK: call i8* @llvm.objc.unsafeClaimAutoreleasedReturnValue(i8* %[[CALL4]])
+; CHECK: %[[CALL4:.*]] = notail call i8* @"?noexcept_func@@YAPAUobjc_object@@XZ"() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.unsafeClaimAutoreleasedReturnValue) ]
+; CHECK-NEXT: ret void
 
 ; CHECK: %[[V1:.*]] = cleanuppad
-; CHECK: %[[CALL:.*]] = notail call i8* @"?noexcept_func@@YAPAUobjc_object@@XZ"() [ "funclet"(token %[[V1]]), "clang.arc.attachedcall"() ]
-; CHECK: call i8* @llvm.objc.unsafeClaimAutoreleasedReturnValue(i8* %[[CALL]]) [ "funclet"(token %[[V1]]) ]
+; CHECK: %[[CALL:.*]] = notail call i8* @"?noexcept_func@@YAPAUobjc_object@@XZ"() [ "funclet"(token %[[V1]]), "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.unsafeClaimAutoreleasedReturnValue) ]
+; CHECK-NEXT: cleanupret from %[[V1]] unwind to caller
 
 define dso_local void @"?test_attr_claimRV@@YAXXZ"() local_unnamed_addr #0 personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) {
 entry:

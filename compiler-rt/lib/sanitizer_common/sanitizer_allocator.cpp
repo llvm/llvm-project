@@ -17,6 +17,7 @@
 #include "sanitizer_allocator_internal.h"
 #include "sanitizer_atomic.h"
 #include "sanitizer_common.h"
+#include "sanitizer_platform.h"
 
 namespace __sanitizer {
 
@@ -125,12 +126,12 @@ void InternalFree(void *addr, InternalAllocatorCache *cache) {
   RawInternalFree(addr, cache);
 }
 
-void InternalAllocatorLock() NO_THREAD_SAFETY_ANALYSIS {
+void InternalAllocatorLock() SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
   internal_allocator_cache_mu.Lock();
   internal_allocator()->ForceLock();
 }
 
-void InternalAllocatorUnlock() NO_THREAD_SAFETY_ANALYSIS {
+void InternalAllocatorUnlock() SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
   internal_allocator()->ForceUnlock();
   internal_allocator_cache_mu.Unlock();
 }

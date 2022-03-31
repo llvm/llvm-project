@@ -15,8 +15,12 @@ class Operation;
 
 /// Perform (potentially expensive) checks of invariants, used to detect
 /// compiler bugs, on this operation and any nested operations. On error, this
-/// reports the error through the MLIRContext and returns failure.
-LogicalResult verify(Operation *op);
-} //  end namespace mlir
+/// reports the error through the MLIRContext and returns failure. If
+/// `verifyRecursively` is false, this assumes that nested operations have
+/// already been properly verified, and does not recursively invoke the verifier
+/// on nested operations.
+LogicalResult verify(Operation *op, bool verifyRecursively = true);
+
+} // namespace mlir
 
 #endif

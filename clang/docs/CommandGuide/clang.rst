@@ -323,7 +323,11 @@ number of cross compilers, or may only support a native target.
 
 .. option:: -arch <architecture>
 
-  Specify the architecture to build for.
+  Specify the architecture to build for (Mac OS X specific).
+
+.. option:: -target <architecture>
+
+  Specify the architecture to build for (all platforms).
 
 .. option:: -mmacosx-version-min=<version>
 
@@ -662,7 +666,7 @@ ENVIRONMENT
 BUGS
 ----
 
-To report bugs, please visit <https://bugs.llvm.org/>.  Most bug reports should
+To report bugs, please visit <https://github.com/llvm/llvm-project/issues/>.  Most bug reports should
 include preprocessed source files (use the :option:`-E` option) and the full
 output of the compiler, along with information to reproduce.
 

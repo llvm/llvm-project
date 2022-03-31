@@ -12,11 +12,9 @@
 #include "Diagnostics.h"
 #include "TestFS.h"
 #include "index/FileIndex.h"
-#include "index/MemIndex.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Frontend/CompilerInvocation.h"
-#include "clang/Frontend/Utils.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
@@ -159,7 +157,7 @@ ParsedAST TestTU::build() const {
 SymbolSlab TestTU::headerSymbols() const {
   auto AST = build();
   return std::get<0>(indexHeaderSymbols(/*Version=*/"null", AST.getASTContext(),
-                                        AST.getPreprocessorPtr(),
+                                        AST.getPreprocessor(),
                                         AST.getCanonicalIncludes()));
 }
 
@@ -172,7 +170,7 @@ std::unique_ptr<SymbolIndex> TestTU::index() const {
   auto AST = build();
   auto Idx = std::make_unique<FileIndex>();
   Idx->updatePreamble(testPath(Filename), /*Version=*/"null",
-                      AST.getASTContext(), AST.getPreprocessorPtr(),
+                      AST.getASTContext(), AST.getPreprocessor(),
                       AST.getCanonicalIncludes());
   Idx->updateMain(testPath(Filename), AST);
   return std::move(Idx);
@@ -247,7 +245,7 @@ const NamedDecl &findDecl(ParsedAST &AST,
   Visitor.F = Filter;
   Visitor.TraverseDecl(AST.getASTContext().getTranslationUnitDecl());
   if (Visitor.Decls.size() != 1) {
-    llvm::errs() << Visitor.Decls.size() << " symbols matched.";
+    llvm::errs() << Visitor.Decls.size() << " symbols matched.\n";
     assert(Visitor.Decls.size() == 1);
   }
   return *Visitor.Decls.front();

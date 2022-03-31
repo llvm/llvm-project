@@ -8,9 +8,11 @@
 
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/AST/ASTConsumer.h"
+#include "clang/AST/Decl.h"
 #include "clang/Basic/FileManager.h"
-#include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/LangStandard.h"
+#include "clang/Basic/Module.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Frontend/ASTConsumers.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
@@ -23,6 +25,8 @@
 #include "clang/Sema/TemplateInstCallback.h"
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/ASTWriter.h"
+#include "clang/Serialization/ModuleFile.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -310,9 +314,8 @@ bool GenerateHeaderModuleAction::BeginSourceFileAction(
   auto &HS = CI.getPreprocessor().getHeaderSearchInfo();
   SmallVector<Module::Header, 16> Headers;
   for (StringRef Name : ModuleHeaders) {
-    const DirectoryLookup *CurDir = nullptr;
     Optional<FileEntryRef> FE = HS.LookupFile(
-        Name, SourceLocation(), /*Angled*/ false, nullptr, CurDir, None,
+        Name, SourceLocation(), /*Angled*/ false, nullptr, nullptr, None,
         nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
     if (!FE) {
       CI.getDiagnostics().Report(diag::err_module_header_file_not_found)
@@ -330,6 +333,21 @@ bool GenerateHeaderModuleAction::BeginSourceFileAction(
 std::unique_ptr<raw_pwrite_stream>
 GenerateHeaderModuleAction::CreateOutputFile(CompilerInstance &CI,
                                              StringRef InFile) {
+  return CI.createDefaultOutputFile(/*Binary=*/true, InFile, "pcm");
+}
+
+bool GenerateHeaderUnitAction::BeginSourceFileAction(CompilerInstance &CI) {
+  if (!CI.getLangOpts().CPlusPlusModules) {
+    CI.getDiagnostics().Report(diag::err_module_interface_requires_cpp_modules);
+    return false;
+  }
+  CI.getLangOpts().setCompilingModule(LangOptions::CMK_HeaderUnit);
+  return GenerateModuleAction::BeginSourceFileAction(CI);
+}
+
+std::unique_ptr<raw_pwrite_stream>
+GenerateHeaderUnitAction::CreateOutputFile(CompilerInstance &CI,
+                                           StringRef InFile) {
   return CI.createDefaultOutputFile(/*Binary=*/true, InFile, "pcm");
 }
 
@@ -481,25 +499,92 @@ private:
     Out << "---" << YAML << "\n";
   }
 
+  static void printEntryName(const Sema &TheSema, const Decl *Entity,
+                             llvm::raw_string_ostream &OS) {
+    auto *NamedTemplate = cast<NamedDecl>(Entity);
+
+    PrintingPolicy Policy = TheSema.Context.getPrintingPolicy();
+    // FIXME: Also ask for FullyQualifiedNames?
+    Policy.SuppressDefaultTemplateArgs = false;
+    NamedTemplate->getNameForDiagnostic(OS, Policy, true);
+
+    if (!OS.str().empty())
+      return;
+
+    Decl *Ctx = Decl::castFromDeclContext(NamedTemplate->getDeclContext());
+    NamedDecl *NamedCtx = dyn_cast_or_null<NamedDecl>(Ctx);
+
+    if (const auto *Decl = dyn_cast<TagDecl>(NamedTemplate)) {
+      if (const auto *R = dyn_cast<RecordDecl>(Decl)) {
+        if (R->isLambda()) {
+          OS << "lambda at ";
+          Decl->getLocation().print(OS, TheSema.getSourceManager());
+          return;
+        }
+      }
+      OS << "unnamed " << Decl->getKindName();
+      return;
+    }
+
+    if (const auto *Decl = dyn_cast<ParmVarDecl>(NamedTemplate)) {
+      OS << "unnamed function parameter " << Decl->getFunctionScopeIndex()
+         << " ";
+      if (Decl->getFunctionScopeDepth() > 0)
+        OS << "(at depth " << Decl->getFunctionScopeDepth() << ") ";
+      OS << "of ";
+      NamedCtx->getNameForDiagnostic(OS, TheSema.getLangOpts(), true);
+      return;
+    }
+
+    if (const auto *Decl = dyn_cast<TemplateTypeParmDecl>(NamedTemplate)) {
+      if (const Type *Ty = Decl->getTypeForDecl()) {
+        if (const auto *TTPT = dyn_cast_or_null<TemplateTypeParmType>(Ty)) {
+          OS << "unnamed template type parameter " << TTPT->getIndex() << " ";
+          if (TTPT->getDepth() > 0)
+            OS << "(at depth " << TTPT->getDepth() << ") ";
+          OS << "of ";
+          NamedCtx->getNameForDiagnostic(OS, TheSema.getLangOpts(), true);
+          return;
+        }
+      }
+    }
+
+    if (const auto *Decl = dyn_cast<NonTypeTemplateParmDecl>(NamedTemplate)) {
+      OS << "unnamed template non-type parameter " << Decl->getIndex() << " ";
+      if (Decl->getDepth() > 0)
+        OS << "(at depth " << Decl->getDepth() << ") ";
+      OS << "of ";
+      NamedCtx->getNameForDiagnostic(OS, TheSema.getLangOpts(), true);
+      return;
+    }
+
+    if (const auto *Decl = dyn_cast<TemplateTemplateParmDecl>(NamedTemplate)) {
+      OS << "unnamed template template parameter " << Decl->getIndex() << " ";
+      if (Decl->getDepth() > 0)
+        OS << "(at depth " << Decl->getDepth() << ") ";
+      OS << "of ";
+      NamedCtx->getNameForDiagnostic(OS, TheSema.getLangOpts(), true);
+      return;
+    }
+
+    llvm_unreachable("Failed to retrieve a name for this entry!");
+    OS << "unnamed identifier";
+  }
+
   template <bool BeginInstantiation>
   static TemplightEntry getTemplightEntry(const Sema &TheSema,
                                           const CodeSynthesisContext &Inst) {
     TemplightEntry Entry;
     Entry.Kind = toString(Inst.Kind);
     Entry.Event = BeginInstantiation ? "Begin" : "End";
-    if (auto *NamedTemplate = dyn_cast_or_null<NamedDecl>(Inst.Entity)) {
-      llvm::raw_string_ostream OS(Entry.Name);
-      PrintingPolicy Policy = TheSema.Context.getPrintingPolicy();
-      // FIXME: Also ask for FullyQualifiedNames?
-      Policy.SuppressDefaultTemplateArgs = false;
-      NamedTemplate->getNameForDiagnostic(OS, Policy, true);
-      const PresumedLoc DefLoc =
+    llvm::raw_string_ostream OS(Entry.Name);
+    printEntryName(TheSema, Inst.Entity, OS);
+    const PresumedLoc DefLoc =
         TheSema.getSourceManager().getPresumedLoc(Inst.Entity->getLocation());
-      if(!DefLoc.isInvalid())
-        Entry.DefinitionLocation = std::string(DefLoc.getFilename()) + ":" +
-                                   std::to_string(DefLoc.getLine()) + ":" +
-                                   std::to_string(DefLoc.getColumn());
-    }
+    if (!DefLoc.isInvalid())
+      Entry.DefinitionLocation = std::string(DefLoc.getFilename()) + ":" +
+                                 std::to_string(DefLoc.getLine()) + ":" +
+                                 std::to_string(DefLoc.getColumn());
     const PresumedLoc PoiLoc =
         TheSema.getSourceManager().getPresumedLoc(Inst.PointOfInstantiation);
     if (!PoiLoc.isInvalid()) {
@@ -738,7 +823,28 @@ bool DumpModuleInfoAction::BeginInvocation(CompilerInstance &CI) {
   return true;
 }
 
+static StringRef ModuleKindName(Module::ModuleKind MK) {
+  switch (MK) {
+  case Module::ModuleMapModule:
+    return "Module Map Module";
+  case Module::ModuleInterfaceUnit:
+    return "Interface Unit";
+  case Module::ModulePartitionInterface:
+    return "Partition Interface";
+  case Module::ModulePartitionImplementation:
+    return "Partition Implementation";
+  case Module::ModuleHeaderUnit:
+    return "Header Unit";
+  case Module::GlobalModuleFragment:
+    return "Global Module Fragment";
+  case Module::PrivateModuleFragment:
+    return "Private Module Fragment";
+  }
+  llvm_unreachable("unknown module kind!");
+}
+
 void DumpModuleInfoAction::ExecuteAction() {
+  assert(isCurrentFileAST() && "dumping non-AST?");
   // Set up the output file.
   std::unique_ptr<llvm::raw_fd_ostream> OutFile;
   StringRef OutputFileName = getCompilerInstance().getFrontendOpts().OutputFile;
@@ -759,8 +865,87 @@ void DumpModuleInfoAction::ExecuteAction() {
 
   Preprocessor &PP = getCompilerInstance().getPreprocessor();
   DumpModuleInfoListener Listener(Out);
-  HeaderSearchOptions &HSOpts =
-      PP.getHeaderSearchInfo().getHeaderSearchOpts();
+  HeaderSearchOptions &HSOpts = PP.getHeaderSearchInfo().getHeaderSearchOpts();
+
+  // The FrontendAction::BeginSourceFile () method loads the AST so that much
+  // of the information is already available and modules should have been
+  // loaded.
+
+  const LangOptions &LO = getCurrentASTUnit().getLangOpts();
+  if (LO.CPlusPlusModules && !LO.CurrentModule.empty()) {
+
+    ASTReader *R = getCurrentASTUnit().getASTReader().get();
+    unsigned SubModuleCount = R->getTotalNumSubmodules();
+    serialization::ModuleFile &MF = R->getModuleManager().getPrimaryModule();
+    Out << "  ====== C++20 Module structure ======\n";
+
+    if (MF.ModuleName != LO.CurrentModule)
+      Out << "  Mismatched module names : " << MF.ModuleName << " and "
+          << LO.CurrentModule << "\n";
+
+    struct SubModInfo {
+      unsigned Idx;
+      Module *Mod;
+      Module::ModuleKind Kind;
+      std::string &Name;
+      bool Seen;
+    };
+    std::map<std::string, SubModInfo> SubModMap;
+    auto PrintSubMapEntry = [&](std::string Name, Module::ModuleKind Kind) {
+      Out << "    " << ModuleKindName(Kind) << " '" << Name << "'";
+      auto I = SubModMap.find(Name);
+      if (I == SubModMap.end())
+        Out << " was not found in the sub modules!\n";
+      else {
+        I->second.Seen = true;
+        Out << " is at index #" << I->second.Idx << "\n";
+      }
+    };
+    Module *Primary = nullptr;
+    for (unsigned Idx = 0; Idx <= SubModuleCount; ++Idx) {
+      Module *M = R->getModule(Idx);
+      if (!M)
+        continue;
+      if (M->Name == LO.CurrentModule) {
+        Primary = M;
+        Out << "  " << ModuleKindName(M->Kind) << " '" << LO.CurrentModule
+            << "' is the Primary Module at index #" << Idx << "\n";
+        SubModMap.insert({M->Name, {Idx, M, M->Kind, M->Name, true}});
+      } else
+        SubModMap.insert({M->Name, {Idx, M, M->Kind, M->Name, false}});
+    }
+    if (Primary) {
+      if (!Primary->submodules().empty())
+        Out << "   Sub Modules:\n";
+      for (auto MI : Primary->submodules()) {
+        PrintSubMapEntry(MI->Name, MI->Kind);
+      }
+      if (!Primary->Imports.empty())
+        Out << "   Imports:\n";
+      for (auto IMP : Primary->Imports) {
+        PrintSubMapEntry(IMP->Name, IMP->Kind);
+      }
+      if (!Primary->Exports.empty())
+        Out << "   Exports:\n";
+      for (unsigned MN = 0, N = Primary->Exports.size(); MN != N; ++MN) {
+        if (Module *M = Primary->Exports[MN].getPointer()) {
+          PrintSubMapEntry(M->Name, M->Kind);
+        }
+      }
+    }
+    // Now let's print out any modules we did not see as part of the Primary.
+    for (auto SM : SubModMap) {
+      if (!SM.second.Seen && SM.second.Mod) {
+        Out << "  " << ModuleKindName(SM.second.Kind) << " '" << SM.first
+            << "' at index #" << SM.second.Idx
+            << " has no direct reference in the Primary\n";
+      }
+    }
+    Out << "  ====== ======\n";
+  }
+
+  // The reminder of the output is produced from the listener as the AST
+  // FileCcontrolBlock is (re-)parsed.
   ASTReader::readASTFileControlBlock(
       getCurrentFile(), FileMgr, getCompilerInstance().getPCHContainerReader(),
       /*FindModuleFileExtensions=*/true, Listener,
@@ -893,6 +1078,7 @@ void PrintPreambleAction::ExecuteAction() {
   case Language::OpenCLCXX:
   case Language::CUDA:
   case Language::HIP:
+  case Language::HLSL:
     break;
 
   case Language::Unknown:

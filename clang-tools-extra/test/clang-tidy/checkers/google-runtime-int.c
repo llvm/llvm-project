@@ -1,6 +1,6 @@
 // RUN: clang-tidy -checks=-*,google-runtime-int %s -- -x c 2>&1 | not grep 'warning:\|error:'
 
-long a();
+long a(void);
 
 long b(long x);
 
@@ -22,6 +22,6 @@ short bar(const short q, unsigned short w) {
   return q;
 }
 
-void qux() {
+void qux(void) {
   short port;
 }

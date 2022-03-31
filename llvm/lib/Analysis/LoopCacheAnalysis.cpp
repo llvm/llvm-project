@@ -477,9 +477,8 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const CacheCost &CC) {
 
 CacheCost::CacheCost(const LoopVectorTy &Loops, const LoopInfo &LI,
                      ScalarEvolution &SE, TargetTransformInfo &TTI,
-                     AAResults &AA, DependenceInfo &DI,
-                     Optional<unsigned> TRT)
-    : Loops(Loops), TripCounts(), LoopCosts(),
+                     AAResults &AA, DependenceInfo &DI, Optional<unsigned> TRT)
+    : Loops(Loops),
       TRT((TRT == None) ? Optional<unsigned>(TemporalReuseThreshold) : TRT),
       LI(LI), SE(SE), TTI(TTI), AA(AA), DI(DI) {
   assert(!Loops.empty() && "Expecting a non-empty loop vector.");
@@ -551,7 +550,7 @@ bool CacheCost::populateReferenceGroups(ReferenceGroupsTy &RefGroups) const {
 
       bool Added = false;
       for (ReferenceGroupTy &RefGroup : RefGroups) {
-        const IndexedReference &Representative = *RefGroup.front().get();
+        const IndexedReference &Representative = *RefGroup.front();
         LLVM_DEBUG({
           dbgs() << "References:\n";
           dbgs().indent(2) << *R << "\n";

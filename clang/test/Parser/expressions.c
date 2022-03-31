@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
-void test1() {
+void test1(void) {
   if (sizeof (int){ 1}) {}   // sizeof compound literal
   if (sizeof (int)) {}       // sizeof type
 
@@ -18,19 +18,19 @@ int test3(int a, int b, int c) {
   return a = b = c;
 }
 
-int test4() {
+int test4(void) {
   test4();
   return 0;
 }
 
 struct X0 { struct { struct { int c[10][9]; } b; } a; };
 
-int test_offsetof() {
+int test_offsetof(void) {
   (void)__builtin_offsetof(struct X0, a.b.c[4][5]);
   return 0;
 }
 
-void test_sizeof(){
+void test_sizeof(void){
         int arr[10];
         (void)sizeof arr[0];
         (void)sizeof(arr[0]);
@@ -38,7 +38,7 @@ void test_sizeof(){
 }
 
 // PR3418
-int test_leading_extension() {
+int test_leading_extension(void) {
   __extension__ (*(char*)0) = 1; // expected-warning {{indirection of non-volatile null pointer}} \
                                  // expected-note {{consider using __builtin_trap}}
   return 0;
@@ -53,7 +53,7 @@ int test6(void) {
 }
 
 // PR8394
-void test7() {
+void test7(void) {
     ({} // expected-note {{to match}}
     ;   // expected-error {{expected ')'}}
 }
@@ -61,7 +61,7 @@ void test7() {
 // PR16992
 struct pr16992 { int x; };
 
-void func_16992 () {
+void func_16992 (void) {
   int x1 = sizeof int;            // expected-error {{expected parentheses around type name in sizeof expression}}
   int x2 = sizeof struct pr16992; // expected-error {{expected parentheses around type name in sizeof expression}}
   int x3 = __alignof int;         // expected-error {{expected parentheses around type name in __alignof expression}}
@@ -69,7 +69,7 @@ void func_16992 () {
 }
 
 void callee(double, double);
-void test8() {
+void test8(void) {
   callee(foobar,   // expected-error {{use of undeclared identifier 'foobar'}}
          fizbin);  // expected-error {{use of undeclared identifier 'fizbin'}}
 }

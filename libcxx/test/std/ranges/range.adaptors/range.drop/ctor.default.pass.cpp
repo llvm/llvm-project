@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // drop_view() requires default_initializable<V> = default;
@@ -24,7 +23,7 @@ constexpr bool test() {
   static_assert( std::is_default_constructible_v<std::ranges::drop_view<ForwardView>>);
   static_assert(!std::is_default_constructible_v<std::ranges::drop_view<NoDefaultCtorForwardView>>);
 
-  static_assert( std::is_nothrow_default_constructible_v<std::ranges::drop_view<ForwardView>>);
+  LIBCPP_STATIC_ASSERT( std::is_nothrow_default_constructible_v<std::ranges::drop_view<ForwardView>>);
   static_assert(!std::is_nothrow_default_constructible_v<ThrowingDefaultCtorForwardView>);
   static_assert(!std::is_nothrow_default_constructible_v<std::ranges::drop_view<ThrowingDefaultCtorForwardView>>);
 

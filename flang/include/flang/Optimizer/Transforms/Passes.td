@@ -25,7 +25,7 @@ def AbstractResultOpt : Pass<"abstract-result-opt", "mlir::FuncOp"> {
   }];
   let constructor = "::fir::createAbstractResultOptPass()";
   let dependentDialects = [
-    "fir::FIROpsDialect", "mlir::StandardOpsDialect"
+    "fir::FIROpsDialect", "mlir::func::FuncDialect"
   ];
   let options = [
     Option<"passResultAsBox", "abstract-result-as-box",
@@ -35,7 +35,7 @@ def AbstractResultOpt : Pass<"abstract-result-opt", "mlir::FuncOp"> {
   ];
 }
 
-def AffineDialectPromotion : FunctionPass<"promote-to-affine"> {
+def AffineDialectPromotion : Pass<"promote-to-affine", "::mlir::FuncOp"> {
   let summary = "Promotes `fir.{do_loop,if}` to `affine.{for,if}`.";
   let description = [{
     Convert fir operations which satisfy affine constraints to the affine
@@ -56,11 +56,11 @@ def AffineDialectPromotion : FunctionPass<"promote-to-affine"> {
   }];
   let constructor = "::fir::createPromoteToAffinePass()";
   let dependentDialects = [
-    "fir::FIROpsDialect", "mlir::StandardOpsDialect", "mlir::AffineDialect"
+    "fir::FIROpsDialect", "mlir::func::FuncDialect", "mlir::AffineDialect"
   ];
 }
 
-def AffineDialectDemotion : FunctionPass<"demote-affine"> {
+def AffineDialectDemotion : Pass<"demote-affine", "::mlir::FuncOp"> {
   let summary = "Converts `affine.{load,store}` back to fir operations";
   let description = [{
     Affine dialect's default lowering for loads and stores is different from
@@ -70,11 +70,28 @@ def AffineDialectDemotion : FunctionPass<"demote-affine"> {
   }];
   let constructor = "::fir::createAffineDemotionPass()";
   let dependentDialects = [
-    "fir::FIROpsDialect", "mlir::StandardOpsDialect", "mlir::AffineDialect"
+    "fir::FIROpsDialect", "mlir::func::FuncDialect", "mlir::AffineDialect"
   ];
 }
 
-def ArrayValueCopy : FunctionPass<"array-value-copy"> {
+def AnnotateConstantOperands : Pass<"annotate-constant"> {
+  let summary = "Annotate constant operands to all FIR operations";
+  let description = [{
+    The MLIR canonicalizer makes a distinction between constants based on how
+    they are packaged in the IR. A constant value is wrapped in an Attr and that
+    Attr can be attached to an Op. There is a distinguished Op, ConstantOp, that
+    merely has one of these Attr attached.
+
+    The MLIR canonicalizer treats constants referenced by an Op and constants
+    referenced through a ConstantOp as having distinct semantics. This pass
+    eliminates that distinction, so hashconsing of Ops, basic blocks, etc.
+    behaves as one would expect.
+  }];
+  let constructor = "::fir::createAnnotateConstantOperandsPass()";
+  let dependentDialects = [ "fir::FIROpsDialect" ];
+}
+
+def ArrayValueCopy : Pass<"array-value-copy", "::mlir::FuncOp"> {
   let summary = "Convert array value operations to memory operations.";
   let description = [{
     Transform the set of array value primitives to a memory-based array
@@ -91,6 +108,7 @@ def ArrayValueCopy : FunctionPass<"array-value-copy"> {
     This pass is required before code gen to the LLVM IR dialect.
   }];
   let constructor = "::fir::createArrayValueCopyPass()";
+  let dependentDialects = [ "fir::FIROpsDialect" ];
 }
 
 def CharacterConversion : Pass<"character-conversion"> {
@@ -111,7 +129,7 @@ def CharacterConversion : Pass<"character-conversion"> {
   ];
 }
 
-def CFGConversion : FunctionPass<"cfg-conversion"> {
+def CFGConversion : Pass<"cfg-conversion", "::mlir::FuncOp"> {
   let summary = "Convert FIR structured control flow ops to CFG ops.";
   let description = [{
     Transform the `fir.do_loop`, `fir.if`, and `fir.iterate_while` ops into
@@ -122,7 +140,7 @@ def CFGConversion : FunctionPass<"cfg-conversion"> {
   }];
   let constructor = "::fir::createFirToCfgPass()";
   let dependentDialects = [
-    "fir::FIROpsDialect", "mlir::StandardOpsDialect"
+    "fir::FIROpsDialect", "mlir::func::FuncDialect"
   ];
   let options = [
     Option<"forceLoopToExecuteOnce", "always-execute-loop-body", "bool",
@@ -139,7 +157,7 @@ def ExternalNameConversion : Pass<"external-name-interop", "mlir::ModuleOp"> {
   let constructor = "::fir::createExternalNameConversionPass()";
 }
 
-def MemRefDataFlowOpt : FunctionPass<"fir-memref-dataflow-opt"> {
+def MemRefDataFlowOpt : Pass<"fir-memref-dataflow-opt", "::mlir::FuncOp"> {
   let summary =
     "Perform store/load forwarding and potentially removing dead stores.";
   let description = [{
@@ -148,8 +166,34 @@ def MemRefDataFlowOpt : FunctionPass<"fir-memref-dataflow-opt"> {
   }];
   let constructor = "::fir::createMemDataFlowOptPass()";
   let dependentDialects = [
-    "fir::FIROpsDialect", "mlir::StandardOpsDialect"
+    "fir::FIROpsDialect", "mlir::func::FuncDialect"
   ];
+}
+
+def MemoryAllocationOpt : Pass<"memory-allocation-opt", "mlir::FuncOp"> {
+  let summary = "Convert stack to heap allocations and vice versa.";
+  let description = [{
+    Convert stack allocations to heap allocations and vice versa based on
+    estimated size, lifetime, usage patterns, the call tree, etc.
+  }];
+  let dependentDialects = [ "fir::FIROpsDialect" ];
+  let options = [
+    Option<"dynamicArrayOnHeap", "dynamic-array-on-heap",
+           "bool", /*default=*/"false",
+           "Allocate all arrays with runtime determined size on heap.">,
+    Option<"maxStackArraySize", "maximum-array-alloc-size",
+           "std::size_t", /*default=*/"~static_cast<std::size_t>(0)",
+           "Set maximum number of elements of an array allocated on the stack.">
+  ];
+  let constructor = "::fir::createMemoryAllocationPass()";
+}
+
+def SimplifyRegionLite : Pass<"simplify-region-lite", "mlir::ModuleOp"> {
+  let summary = "Region simplification";
+  let description = [{
+    Run region DCE and erase unreachable blocks in regions.
+  }];
+  let constructor = "::fir::createSimplifyRegionLitePass()";
 }
 
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES

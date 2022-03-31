@@ -10,9 +10,8 @@
 
 #include "Annotations.h"
 #include "SourceCode.h"
-#include "TestFS.h"
+#include "TestTU.h"
 #include "refactor/Tweak.h"
-#include "clang/Tooling/Core/Replacement.h"
 #include "llvm/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"

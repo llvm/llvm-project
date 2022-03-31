@@ -60,7 +60,7 @@ std::string LoopHintAttr::getValueString(const PrintingPolicy &Policy) const {
   else
     OS << "disable";
   OS << ")";
-  return OS.str();
+  return ValueName;
 }
 
 // Return a string suitable for identifying this attribute in diagnostics.
@@ -139,6 +139,13 @@ void OMPDeclareTargetDeclAttr::printPrettyPragma(
     OS << " device_type(" << ConvertDevTypeTyToStr(getDevType()) << ")";
   if (getMapType() != MT_To)
     OS << ' ' << ConvertMapTypeTyToStr(getMapType());
+  if (Expr *E = getIndirectExpr()) {
+    OS << " indirect(";
+    E->printPretty(OS, nullptr, Policy);
+    OS << ")";
+  } else if (getIndirect()) {
+    OS << " indirect";
+  }
 }
 
 llvm::Optional<OMPDeclareTargetDeclAttr *>

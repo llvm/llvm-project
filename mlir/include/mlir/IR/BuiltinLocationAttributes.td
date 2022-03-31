@@ -13,6 +13,7 @@
 #ifndef BUILTIN_LOCATION_ATTRIBUTES_TD
 #define BUILTIN_LOCATION_ATTRIBUTES_TD
 
+include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinDialect.td"
 
 // Base class for Builtin dialect location attributes.
@@ -202,12 +203,12 @@ def OpaqueLoc : Builtin_LocationAttr<"OpaqueLoc"> {
     /// Returns an instance of opaque location which contains a given pointer to
     /// an object. The corresponding MLIR location is set to UnknownLoc.
     template <typename T>
-    static Location get(T underlyingLocation, MLIRContext *context);
+    static OpaqueLoc get(T underlyingLocation, MLIRContext *context);
 
     /// Returns an instance of opaque location which contains a given pointer to
     /// an object and an additional MLIR location.
     template <typename T>
-    static Location get(T underlyingLocation, Location fallbackLocation) {
+    static OpaqueLoc get(T underlyingLocation, Location fallbackLocation) {
       return get(reinterpret_cast<uintptr_t>(underlyingLocation),
                  TypeID::get<T>(), fallbackLocation);
     }

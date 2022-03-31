@@ -47,6 +47,10 @@ class StrBoolAttr<string S> : Attr<S, []>;
 /// 0 means unaligned (different from align(1)).
 def Alignment : IntAttr<"align", [ParamAttr, RetAttr]>;
 
+/// Parameter of a function that tells us the alignment of an allocation, as in 
+/// aligned_alloc and aligned ::operator::new.
+def AllocAlign: EnumAttr<"allocalign", [ParamAttr]>;
+
 /// The result of the function is guaranteed to point to a number of bytes that
 /// we can determine if we know the value of the function's arguments.
 def AllocSize : IntAttr<"allocsize", [FnAttr]>;
@@ -175,6 +179,9 @@ def NoProfile : EnumAttr<"noprofile", [FnAttr]>;
 /// Function doesn't unwind stack.
 def NoUnwind : EnumAttr<"nounwind", [FnAttr]>;
 
+/// No SanitizeBounds instrumentation.
+def NoSanitizeBounds : EnumAttr<"nosanitize_bounds", [FnAttr]>;
+
 /// No SanitizeCoverage instrumentation.
 def NoSanitizeCoverage : EnumAttr<"nosanitize_coverage", [FnAttr]>;
 
@@ -273,7 +280,7 @@ def SwiftSelf : EnumAttr<"swiftself", [ParamAttr]>;
 def SwiftAsync : EnumAttr<"swiftasync", [ParamAttr]>;
 
 /// Function must be in a unwind table.
-def UWTable : EnumAttr<"uwtable", [FnAttr]>;
+def UWTable : IntAttr<"uwtable", [FnAttr]>;
 
 /// Minimum/Maximum vscale value for function.
 def VScaleRange : IntAttr<"vscale_range", [FnAttr]>;
@@ -294,6 +301,7 @@ def MustProgress : EnumAttr<"mustprogress", [FnAttr]>;
 def LessPreciseFPMAD : StrBoolAttr<"less-precise-fpmad">;
 def NoInfsFPMath : StrBoolAttr<"no-infs-fp-math">;
 def NoNansFPMath : StrBoolAttr<"no-nans-fp-math">;
+def ApproxFuncFPMath : StrBoolAttr<"approx-func-fp-math">;
 def NoSignedZerosFPMath : StrBoolAttr<"no-signed-zeros-fp-math">;
 def UnsafeFPMath : StrBoolAttr<"unsafe-fp-math">;
 def NoJumpTables : StrBoolAttr<"no-jump-tables">;
@@ -333,6 +341,7 @@ class MergeRule<string F> {
 def : MergeRule<"setAND<LessPreciseFPMADAttr>">;
 def : MergeRule<"setAND<NoInfsFPMathAttr>">;
 def : MergeRule<"setAND<NoNansFPMathAttr>">;
+def : MergeRule<"setAND<ApproxFuncFPMathAttr>">;
 def : MergeRule<"setAND<NoSignedZerosFPMathAttr>">;
 def : MergeRule<"setAND<UnsafeFPMathAttr>">;
 def : MergeRule<"setOR<NoImplicitFloatAttr>">;

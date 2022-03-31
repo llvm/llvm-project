@@ -108,6 +108,7 @@ void ARMBranchTargets::addBTI(const ARMInstrInfo &TII, MachineBasicBlock &MBB,
                               bool IsFirstBB) {
   // Which instruction to insert: BTI or PACBTI
   unsigned OpCode = ARM::t2BTI;
+  unsigned MIFlags = 0;
 
   // Skip meta instructions, including EH labels
   auto MBBI = llvm::find_if_not(MBB.instrs(), [](const MachineInstr &MI) {
@@ -121,6 +122,7 @@ void ARMBranchTargets::addBTI(const ARMInstrInfo &TII, MachineBasicBlock &MBB,
       LLVM_DEBUG(dbgs() << "Removing a 'PAC' instr from BB '" << MBB.getName()
                         << "' to replace with PACBTI\n");
       OpCode = ARM::t2PACBTI;
+      MIFlags = MachineInstr::FrameSetup;
       auto NextMBBI = std::next(MBBI);
       MBBI->eraseFromParent();
       MBBI = NextMBBI;
@@ -131,5 +133,6 @@ void ARMBranchTargets::addBTI(const ARMInstrInfo &TII, MachineBasicBlock &MBB,
                     << (OpCode == ARM::t2BTI ? "BTI" : "PACBTI")
                     << "' instr into BB '" << MBB.getName() << "'\n");
   // Finally, insert a new instruction (either PAC or PACBTI)
-  BuildMI(MBB, MBBI, MBB.findDebugLoc(MBBI), TII.get(OpCode));
+  BuildMI(MBB, MBBI, MBB.findDebugLoc(MBBI), TII.get(OpCode))
+      .setMIFlags(MIFlags);
 }

@@ -30,7 +30,7 @@ def Standalone_Dialect : Dialect {
 // Base standalone operation definition.
 //===----------------------------------------------------------------------===//
 
-class Standalone_Op<string mnemonic, list<OpTrait> traits = []> :
+class Standalone_Op<string mnemonic, list<Trait> traits = []> :
         Op<Standalone_Dialect, mnemonic, traits>;
 
 #endif // STANDALONE_DIALECT

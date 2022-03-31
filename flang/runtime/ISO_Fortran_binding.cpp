@@ -72,7 +72,7 @@ int CFI_allocate(CFI_cdesc_t *descriptor, const CFI_index_t lower_bounds[],
     CFI_index_t lb{lower_bounds[j]};
     CFI_index_t ub{upper_bounds[j]};
     CFI_index_t extent{ub >= lb ? ub - lb + 1 : 0};
-    dim->lower_bound = lb;
+    dim->lower_bound = extent == 0 ? 1 : lb;
     dim->extent = extent;
     dim->sm = byteSize;
     byteSize *= extent;
@@ -178,14 +178,32 @@ static constexpr std::size_t MinElemLen(CFI_type_t type) {
   case CFI_type_ptrdiff_t:
     minElemLen = sizeof(std::ptrdiff_t);
     break;
+  case CFI_type_half_float:
+    minElemLen = 2;
+    break;
+  case CFI_type_bfloat:
+    minElemLen = 2;
+    break;
   case CFI_type_float:
     minElemLen = sizeof(float);
     break;
   case CFI_type_double:
     minElemLen = sizeof(double);
     break;
+  case CFI_type_extended_double:
+    minElemLen = 10;
+    break;
   case CFI_type_long_double:
     minElemLen = sizeof(long double);
+    break;
+  case CFI_type_float128:
+    minElemLen = 16;
+    break;
+  case CFI_type_half_float_Complex:
+    minElemLen = 2 * MinElemLen(CFI_type_half_float);
+    break;
+  case CFI_type_bfloat_Complex:
+    minElemLen = 2 * MinElemLen(CFI_type_bfloat);
     break;
   case CFI_type_float_Complex:
     minElemLen = 2 * sizeof(float);
@@ -193,8 +211,14 @@ static constexpr std::size_t MinElemLen(CFI_type_t type) {
   case CFI_type_double_Complex:
     minElemLen = 2 * sizeof(double);
     break;
+  case CFI_type_extended_double_Complex:
+    minElemLen = 2 * MinElemLen(CFI_type_extended_double);
+    break;
   case CFI_type_long_double_Complex:
     minElemLen = 2 * sizeof(long double);
+    break;
+  case CFI_type_float128_Complex:
+    minElemLen = 2 * MinElemLen(CFI_type_float128);
     break;
   case CFI_type_Bool:
     minElemLen = 1;
@@ -337,8 +361,10 @@ int CFI_section(CFI_cdesc_t *result, const CFI_cdesc_t *source,
   resRank = 0;
   for (int j{0}; j < source->rank; ++j) {
     if (actualStride[j] != 0) {
-      result->dim[resRank].lower_bound = 0;
       result->dim[resRank].extent = extent[j];
+      result->dim[resRank].lower_bound = extent[j] == 0 ? 1
+          : lower_bounds                                ? lower_bounds[j]
+                         : source->dim[j].lower_bound;
       result->dim[resRank].sm = actualStride[j] * source->dim[j].sm;
       ++resRank;
     }
@@ -413,10 +439,12 @@ int CFI_setpointer(CFI_cdesc_t *result, const CFI_cdesc_t *source,
   result->base_addr = source->base_addr;
   if (source->base_addr) {
     for (int j{0}; j < result->rank; ++j) {
-      result->dim[j].extent = source->dim[j].extent;
+      CFI_index_t extent{source->dim[j].extent};
+      result->dim[j].extent = extent;
       result->dim[j].sm = source->dim[j].sm;
-      result->dim[j].lower_bound =
-          copySrcLB ? source->dim[j].lower_bound : lower_bounds[j];
+      result->dim[j].lower_bound = extent == 0 ? 1
+          : copySrcLB                          ? source->dim[j].lower_bound
+                                               : lower_bounds[j];
     }
   }
   return CFI_SUCCESS;

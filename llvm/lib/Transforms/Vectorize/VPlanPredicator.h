@@ -16,10 +16,16 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLAN_PREDICATOR_H
 
 #include "LoopVectorizationPlanner.h"
-#include "VPlan.h"
 #include "VPlanDominatorTree.h"
+#include "VPlanLoopInfo.h"
+#include <list>
 
 namespace llvm {
+class VPBasicBlock;
+class VPBlockBase;
+class VPRegionBlock;
+class VPValue;
+class VPlan;
 
 class VPlanPredicator {
 private:
@@ -68,7 +74,7 @@ public:
   VPlanPredicator(VPlan &Plan);
 
   /// Predicate Plan's HCFG.
-  void predicate(void);
+  void predicate();
 };
 } // end namespace llvm
 #endif // LLVM_TRANSFORMS_VECTORIZE_VPLAN_PREDICATOR_H

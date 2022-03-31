@@ -838,6 +838,7 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
     case ExternCContext:
     case Decomposition:
     case MSGuid:
+    case UnnamedGlobalConstant:
     case TemplateParamObject:
 
     case UsingDirective:
@@ -993,6 +994,15 @@ bool Decl::AccessDeclContextCheck() const {
          "Access specifier is AS_none inside a record decl");
 #endif
   return true;
+}
+
+bool Decl::isInExportDeclContext() const {
+  const DeclContext *DC = getLexicalDeclContext();
+
+  while (DC && !isa<ExportDecl>(DC))
+    DC = DC->getLexicalParent();
+
+  return DC && isa<ExportDecl>(DC);
 }
 
 static Decl::Kind getKind(const Decl *D) { return D->getKind(); }
@@ -1152,6 +1162,8 @@ bool DeclContext::isDependentContext() const {
 
     if (Record->isDependentLambda())
       return true;
+    if (Record->isNeverDependentLambda())
+      return false;
   }
 
   if (const auto *Function = dyn_cast<FunctionDecl>(this)) {
@@ -1212,7 +1224,8 @@ bool DeclContext::Encloses(const DeclContext *DC) const {
     return getPrimaryContext()->Encloses(DC);
 
   for (; DC; DC = DC->getParent())
-    if (!isa<LinkageSpecDecl>(DC) && DC->getPrimaryContext() == this)
+    if (!isa<LinkageSpecDecl>(DC) && !isa<ExportDecl>(DC) &&
+        DC->getPrimaryContext() == this)
       return true;
   return false;
 }
@@ -1643,9 +1656,9 @@ void DeclContext::buildLookupImpl(DeclContext *DCtx, bool Internal) {
 
 DeclContext::lookup_result
 DeclContext::lookup(DeclarationName Name) const {
-  assert(getDeclKind() != Decl::LinkageSpec &&
-         getDeclKind() != Decl::Export &&
-         "should not perform lookups into transparent contexts");
+  // For transparent DeclContext, we should lookup in their enclosing context.
+  if (getDeclKind() == Decl::LinkageSpec || getDeclKind() == Decl::Export)
+    return getParent()->lookup(Name);
 
   const DeclContext *PrimaryContext = getPrimaryContext();
   if (PrimaryContext != this)

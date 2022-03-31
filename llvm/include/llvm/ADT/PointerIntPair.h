@@ -5,9 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file defines the PointerIntPair class.
-//
+///
+/// \file
+/// This file defines the PointerIntPair class.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_POINTERINTPAIR_H
@@ -60,19 +61,19 @@ public:
 
   IntType getInt() const { return (IntType)Info::getInt(Value); }
 
-  void setPointer(PointerTy PtrVal) LLVM_LVALUE_FUNCTION {
+  void setPointer(PointerTy PtrVal) & {
     Value = Info::updatePointer(Value, PtrVal);
   }
 
-  void setInt(IntType IntVal) LLVM_LVALUE_FUNCTION {
+  void setInt(IntType IntVal) & {
     Value = Info::updateInt(Value, static_cast<intptr_t>(IntVal));
   }
 
-  void initWithPointer(PointerTy PtrVal) LLVM_LVALUE_FUNCTION {
+  void initWithPointer(PointerTy PtrVal) & {
     Value = Info::updatePointer(0, PtrVal);
   }
 
-  void setPointerAndInt(PointerTy PtrVal, IntType IntVal) LLVM_LVALUE_FUNCTION {
+  void setPointerAndInt(PointerTy PtrVal, IntType IntVal) & {
     Value = Info::updateInt(Info::updatePointer(0, PtrVal),
                             static_cast<intptr_t>(IntVal));
   }
@@ -90,7 +91,7 @@ public:
 
   void *getOpaqueValue() const { return reinterpret_cast<void *>(Value); }
 
-  void setFromOpaqueValue(void *Val) LLVM_LVALUE_FUNCTION {
+  void setFromOpaqueValue(void *Val) & {
     Value = reinterpret_cast<intptr_t>(Val);
   }
 

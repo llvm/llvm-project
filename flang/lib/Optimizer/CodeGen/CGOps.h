@@ -14,9 +14,7 @@
 #define OPTIMIZER_CODEGEN_CGOPS_H
 
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
-
-using namespace mlir;
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 
 #define GET_OP_CLASSES
 #include "flang/Optimizer/CodeGen/CGOps.h.inc"

@@ -24,9 +24,8 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -116,11 +115,11 @@ class IRPromoter {
   SmallPtrSet<Value*, 8> Promoted;
 
   void ReplaceAllUsersOfWith(Value *From, Value *To);
-  void ExtendSources(void);
-  void ConvertTruncs(void);
-  void PromoteTree(void);
-  void TruncateSinks(void);
-  void Cleanup(void);
+  void ExtendSources();
+  void ConvertTruncs();
+  void PromoteTree();
+  void TruncateSinks();
+  void Cleanup();
 
 public:
   IRPromoter(LLVMContext &C, IntegerType *Ty, unsigned Width,

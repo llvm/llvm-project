@@ -7,7 +7,7 @@ struct AStruct {
   double d;
 };
 
-void f() {
+void f(void) {
   static int i = 42;
   static int is[] = { 1, 2, 3, 4 };
   static char* str = "forty-two";
@@ -15,7 +15,7 @@ void f() {
   static struct AStruct myStruct = { 1, "two", 3.0 };
 }
 
-void g() {
+void g(void) {
   static char a[10];
   static char *b = a;
 }

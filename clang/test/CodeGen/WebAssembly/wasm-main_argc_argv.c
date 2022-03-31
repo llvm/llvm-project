@@ -6,4 +6,4 @@ int main(int argc, char **argv) {
   return 0;
 }
 
-// CHECK-LABEL: define i32 @__main_argc_argv(i32 %argc, i8** %argv)
+// CHECK-LABEL: define i32 @__main_argc_argv(i32 noundef %argc, i8** noundef %argv)

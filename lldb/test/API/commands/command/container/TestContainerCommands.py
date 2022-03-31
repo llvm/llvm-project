@@ -68,7 +68,7 @@ class TestCmdContainer(TestBase):
         self.expect("test-multi test-multi-sub welcome friend", "Used the new command class",
                     substrs=["Hello friend, welcome again to LLDB"])
 
-        self.expect("apropos welcome", "welcome should show up in apropos", substrs=["Just a docstring for the second Welcome"])
+        self.expect("apropos welcome", "welcome should show up in apropos", substrs=["A docstring for the second Welcome"])
         
         # Make sure we give good errors when the input is wrong:
         self.expect("command script delete test-mult test-multi-sub welcome", "Delete script command - wrong first path component",

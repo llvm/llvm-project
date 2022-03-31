@@ -25,12 +25,12 @@ namespace detail {
 template <typename BaseT>
 class AsmParserImpl : public BaseT {
 public:
-  AsmParserImpl(llvm::SMLoc nameLoc, Parser &parser)
+  AsmParserImpl(SMLoc nameLoc, Parser &parser)
       : nameLoc(nameLoc), parser(parser) {}
-  ~AsmParserImpl() override {}
+  ~AsmParserImpl() override = default;
 
   /// Return the location of the original name token.
-  llvm::SMLoc getNameLoc() const override { return nameLoc; }
+  SMLoc getNameLoc() const override { return nameLoc; }
 
   //===--------------------------------------------------------------------===//
   // Utilities
@@ -40,7 +40,7 @@ public:
   bool didEmitError() const { return emittedError; }
 
   /// Emit a diagnostic at the specified location and return failure.
-  InFlightDiagnostic emitError(llvm::SMLoc loc, const Twine &message) override {
+  InFlightDiagnostic emitError(SMLoc loc, const Twine &message) override {
     emittedError = true;
     return parser.emitError(loc, message);
   }
@@ -51,12 +51,12 @@ public:
 
   /// Get the location of the next token and store it into the argument.  This
   /// always succeeds.
-  llvm::SMLoc getCurrentLocation() override {
+  SMLoc getCurrentLocation() override {
     return parser.getToken().getLoc();
   }
 
   /// Re-encode the given source location as an MLIR location and return it.
-  Location getEncodedSourceLoc(llvm::SMLoc loc) override {
+  Location getEncodedSourceLoc(SMLoc loc) override {
     return parser.getEncodedSourceLocation(loc);
   }
 
@@ -291,7 +291,7 @@ public:
   ParseResult parseFloat(double &result) override {
     bool isNegative = parser.consumeIf(Token::minus);
     Token curTok = parser.getToken();
-    llvm::SMLoc loc = curTok.getLoc();
+    SMLoc loc = curTok.getLoc();
 
     // Check for a floating point value.
     if (curTok.is(Token::floatliteral)) {
@@ -340,6 +340,29 @@ public:
   /// Parse an arbitrary attribute and return it in result.
   ParseResult parseAttribute(Attribute &result, Type type) override {
     result = parser.parseAttribute(type);
+    return success(static_cast<bool>(result));
+  }
+
+  /// Parse a custom attribute with the provided callback, unless the next
+  /// token is `#`, in which case the generic parser is invoked.
+  ParseResult parseCustomAttributeWithFallback(
+      Attribute &result, Type type,
+      function_ref<ParseResult(Attribute &result, Type type)> parseAttribute)
+      override {
+    if (parser.getToken().isNot(Token::hash_identifier))
+      return parseAttribute(result, type);
+    result = parser.parseAttribute(type);
+    return success(static_cast<bool>(result));
+  }
+
+  /// Parse a custom attribute with the provided callback, unless the next
+  /// token is `#`, in which case the generic parser is invoked.
+  ParseResult parseCustomTypeWithFallback(
+      Type &result,
+      function_ref<ParseResult(Type &result)> parseType) override {
+    if (parser.getToken().isNot(Token::exclamation_identifier))
+      return parseType(result);
+    result = parser.parseType();
     return success(static_cast<bool>(result));
   }
 
@@ -406,22 +429,6 @@ public:
     return success();
   }
 
-  /// Parse a loc(...) specifier if present, filling in result if so.
-  ParseResult
-  parseOptionalLocationSpecifier(Optional<Location> &result) override {
-    // If there is a 'loc' we parse a trailing location.
-    if (!parser.consumeIf(Token::kw_loc))
-      return success();
-    LocationAttr directLoc;
-    if (parser.parseToken(Token::l_paren, "expected '(' in location") ||
-        parser.parseLocationInstance(directLoc) ||
-        parser.parseToken(Token::r_paren, "expected ')' in location"))
-      return failure();
-
-    result = directLoc;
-    return success();
-  }
-
   //===--------------------------------------------------------------------===//
   // Type Parsing
   //===--------------------------------------------------------------------===//
@@ -484,7 +491,7 @@ public:
 
 protected:
   /// The source location of the dialect symbol.
-  llvm::SMLoc nameLoc;
+  SMLoc nameLoc;
 
   /// The main parser.
   Parser &parser;
@@ -493,6 +500,6 @@ protected:
   bool emittedError = false;
 };
 } // namespace detail
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_LIB_PARSER_ASMPARSERIMPL_H

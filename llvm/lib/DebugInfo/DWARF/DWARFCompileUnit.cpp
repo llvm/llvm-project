@@ -7,14 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
-#include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
+#include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
+
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
 void DWARFCompileUnit::dump(raw_ostream &OS, DIDumpOptions DumpOpts) {
+  if (DumpOpts.SummarizeTypes)
+    return;
   int OffsetDumpWidth = 2 * dwarf::getDwarfOffsetByteSize(getFormat());
   OS << format("0x%08" PRIx64, getOffset()) << ": Compile Unit:"
      << " length = " << format("0x%0*" PRIx64, OffsetDumpWidth, getLength())

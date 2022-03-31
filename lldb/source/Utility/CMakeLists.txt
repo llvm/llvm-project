@@ -41,15 +41,15 @@ add_lldb_library(lldbUtility
   GDBRemote.cpp
   IOObject.cpp
   LLDBAssert.cpp
+  LLDBLog.cpp
   Listener.cpp
   Log.cpp
-  Logging.cpp
   NameMatches.cpp
   ProcessInfo.cpp
   RegisterValue.cpp
   RegularExpression.cpp
   Reproducer.cpp
-  ReproducerInstrumentation.cpp
+  Instrumentation.cpp
   ReproducerProvider.cpp
   Scalar.cpp
   SelectHelper.cpp

@@ -1,5 +1,4 @@
-; RUN: opt %loadPolly -analyze -polly-use-llvm-names -polly-scops \
-; RUN: -polly-invariant-load-hoisting < %s | FileCheck %s -check-prefix=SCOP
+; RUN: opt %loadPolly -polly-invariant-load-hoisting -polly-print-scops -disable-output < %s | FileCheck %s -check-prefix=SCOP
 
 
 ; RUN: opt %loadPolly -S -polly-use-llvm-names -polly-codegen-ppcg \
@@ -21,7 +20,7 @@
 ; This declaration would not have been generated unless a kernel launch exists.
 ; HOST-IR: declare void @polly_launchKernel(i8*, i32, i32, i32, i32, i32, i8*)
 
-; 
+;
 ; void f(int *begin, int *arr) {
 ;     for (int i = *begin; i < 100; i++) {
 ;         arr[i] = 0;

@@ -41,7 +41,7 @@ void test_core(void) {
   // CHECK-ASM: vlvgg
 
   vd = vec_insert_and_zero(cptrd);
-  // CHECK: [[ZVEC:%[^ ]+]] = insertelement <2 x double> <double poison, double 0.000000e+00>, double {{.*}}, i32 0
+  // CHECK: [[ZVEC:%[^ ]+]] = insertelement <2 x double> <double poison, double 0.000000e+00>, double {{.*}}, i64 0
   // CHECK-ASM: vllezg
 
   vd = vec_revb(vd);

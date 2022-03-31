@@ -162,14 +162,14 @@ void matrix_struct(Matrix *a, Matrix *b) {
 }
 
 typedef double dx4x4_t __attribute__((matrix_type(4, 4)));
-void matrix_inline_asm_memory_readwrite() {
+void matrix_inline_asm_memory_readwrite(void) {
   // CHECK-LABEL: define{{.*}} void @matrix_inline_asm_memory_readwrite()
   // CHECK-NEXT:  entry:
   // CHECK-NEXT:    [[ALLOCA:%.+]] = alloca [16 x double], align 8
   // CHECK-NEXT:    [[PTR1:%.+]] = bitcast [16 x double]* [[ALLOCA]] to <16 x double>*
   // CHECK-NEXT:    [[PTR2:%.+]] = bitcast [16 x double]* [[ALLOCA]] to <16 x double>*
   // CHECK-NEXT:    [[VAL:%.+]] = load <16 x double>, <16 x double>* [[PTR2]], align 8
-  // CHECK-NEXT:    call void asm sideeffect "", "=*r|m,0,~{memory},~{dirflag},~{fpsr},~{flags}"(<16 x double>* [[PTR1]], <16 x double> [[VAL]])
+  // CHECK-NEXT:    call void asm sideeffect "", "=*r|m,0,~{memory},~{dirflag},~{fpsr},~{flags}"(<16 x double>* elementtype(<16 x double>) [[PTR1]], <16 x double> [[VAL]])
   // CHECK-NEXT:    ret void
 
   dx4x4_t m;

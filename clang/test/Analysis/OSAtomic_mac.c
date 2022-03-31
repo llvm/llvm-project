@@ -1,13 +1,13 @@
 // RUN: %clang_analyze_cc1 -w -analyzer-checker=core,debug.ExprInspection \
 // RUN:                    -analyzer-output=text -verify %s
 
-int OSAtomicCompareAndSwapPtrBarrier(*, *, **);
-int OSAtomicCompareAndSwapPtrBarrier() {
+int OSAtomicCompareAndSwapPtrBarrier(void *, void *, void **);
+int OSAtomicCompareAndSwapPtrBarrier(void *, void *, void **) {
   // There is some body in the actual header,
   // but we should trust our BodyFarm instead.
 }
 
-int *invalidSLocOnRedecl() {
+int *invalidSLocOnRedecl(void) {
   // Was crashing when trying to throw a report about returning an uninitialized
   // value to the caller. FIXME: We should probably still throw that report,
   // something like "The "compare" part of CompareAndSwap depends on an
@@ -17,7 +17,7 @@ int *invalidSLocOnRedecl() {
   return b;
 }
 
-void testThatItActuallyWorks() {
+void testThatItActuallyWorks(void) {
   void *x = 0;
   int res = OSAtomicCompareAndSwapPtrBarrier(0, &x, &x);
   clang_analyzer_eval(res); // expected-warning{{TRUE}}

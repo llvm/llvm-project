@@ -1,4 +1,4 @@
-; RUN: opt < %s  -instcombine -S | FileCheck %s
+; RUN: opt < %s  -passes=instcombine -S | FileCheck %s
 
 define void @test1(float* %a, float* readnone %a_end, i32* %b.i) {
 ; CHECK-LABEL: @test1

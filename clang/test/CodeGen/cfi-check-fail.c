@@ -3,11 +3,11 @@
 // RUN:     -fsanitize-trap=cfi-icall,cfi-nvcall -fsanitize-recover=cfi-vcall,cfi-unrelated-cast \
 // RUN:     -emit-llvm -o - %s | FileCheck %s
 
-void caller(void (*f)()) {
+void caller(void (*f)(void)) {
   f();
 }
 
-// CHECK: define weak_odr hidden void @__cfi_check_fail(i8* %0, i8* %1)
+// CHECK: define weak_odr hidden void @__cfi_check_fail(i8* noundef %0, i8* noundef %1)
 // CHECK: store i8* %0, i8** %[[ALLOCA0:.*]], align 8
 // CHECK: store i8* %1, i8** %[[ALLOCA1:.*]], align 8
 // CHECK: %[[DATA:.*]] = load i8*, i8** %[[ALLOCA0]], align 8

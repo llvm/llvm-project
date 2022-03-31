@@ -31,7 +31,7 @@ struct ARM64 : ARM64Common {
   ARM64();
   void writeStub(uint8_t *buf, const Symbol &) const override;
   void writeStubHelperHeader(uint8_t *buf) const override;
-  void writeStubHelperEntry(uint8_t *buf, const DylibSymbol &,
+  void writeStubHelperEntry(uint8_t *buf, const Symbol &,
                             uint64_t entryAddr) const override;
   const RelocAttrs &getRelocAttrs(uint8_t type) const override;
   void populateThunk(InputSection *thunk, Symbol *funcSym) override;
@@ -100,7 +100,7 @@ static constexpr uint32_t stubHelperEntryCode[] = {
     0x00000000, // 08: l0: .long 0
 };
 
-void ARM64::writeStubHelperEntry(uint8_t *buf8, const DylibSymbol &sym,
+void ARM64::writeStubHelperEntry(uint8_t *buf8, const Symbol &sym,
                                  uint64_t entryVA) const {
   ::writeStubHelperEntry(buf8, stubHelperEntryCode, sym, entryVA);
 }

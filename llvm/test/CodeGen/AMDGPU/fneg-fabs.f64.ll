@@ -55,12 +55,12 @@ define amdgpu_kernel void @fneg_fabs_fn_free_f64(double addrspace(1)* %out, i64 
 }
 
 ; GCN-LABEL: {{^}}fneg_fabs_f64:
-; SI-DAG: s_load_dwordx2 s{{\[}}[[LO_X:[0-9]+]]:[[HI_X:[0-9]+]]{{\]}}, s[{{[0-9]+:[0-9]+}}], 0x13
-; VI-DAG: s_load_dwordx2 s{{\[}}[[LO_X:[0-9]+]]:[[HI_X:[0-9]+]]{{\]}}, s[{{[0-9]+:[0-9]+}}], 0x4c
+; SI-DAG: s_load_dwordx2 s[[[LO_X:[0-9]+]]:[[HI_X:[0-9]+]]], s[{{[0-9]+:[0-9]+}}], 0x13
+; VI-DAG: s_load_dwordx2 s[[[LO_X:[0-9]+]]:[[HI_X:[0-9]+]]], s[{{[0-9]+:[0-9]+}}], 0x4c
 ; GCN-DAG: s_bitset1_b32 s[[HI_X]], 31
 ; GCN-DAG: v_mov_b32_e32 v[[LO_V:[0-9]+]], s[[LO_X]]
 ; GCN-DAG: v_mov_b32_e32 v[[HI_V:[0-9]+]], s[[HI_X]]
-; GCN: buffer_store_dwordx2 v{{\[}}[[LO_V]]:[[HI_V]]{{\]}}
+; GCN: buffer_store_dwordx2 v[[[LO_V]]:[[HI_V]]]
 define amdgpu_kernel void @fneg_fabs_f64(double addrspace(1)* %out, [8 x i32], double %in) {
   %fabs = call double @llvm.fabs.f64(double %in)
   %fsub = fsub double -0.000000e+00, %fabs

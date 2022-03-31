@@ -40,7 +40,7 @@ protected:
 
   std::string input() const { return InBuf; }
   std::string output() { return Out.str(); }
-  std::string input_mirror() { return Mirror.str(); }
+  std::string inputMirror() { return Mirror.str(); }
 };
 
 // Echo is a simple server running on a transport:
@@ -129,7 +129,7 @@ Notification exit: null
       "Content-Length: 77\r\n\r\n"
       R"({"error":{"code":88,"message":"trouble at mill"},"id":"wxyz","jsonrpc":"2.0"})";
   EXPECT_EQ(output(), WantOutput);
-  EXPECT_EQ(trim(input_mirror()), trim(input()));
+  EXPECT_EQ(trim(inputMirror()), trim(input()));
 }
 
 // Runs an Echo session using the "delimited" input and pretty-printed output
@@ -185,7 +185,7 @@ Notification exit: null
   "jsonrpc": "2.0"
 })";
   EXPECT_EQ(output(), WantOutput);
-  EXPECT_EQ(trim(input_mirror()), trim(input()));
+  EXPECT_EQ(trim(inputMirror()), trim(input()));
 }
 
 // IO errors such as EOF ane reported.
@@ -199,7 +199,7 @@ TEST_F(JSONTransportTest, EndOfFile) {
   EXPECT_EQ(trim(E.log()), "Notification call: 1234");
   EXPECT_TRUE(bool(Err)); // Ran into EOF with no handler signalling done.
   consumeError(std::move(Err));
-  EXPECT_EQ(trim(input_mirror()), trim(input()));
+  EXPECT_EQ(trim(inputMirror()), trim(input()));
 }
 
 #endif

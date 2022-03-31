@@ -294,6 +294,9 @@ enum CPol {
   SLC = 2,
   DLC = 4,
   SCC = 16,
+  SC0 = GLC,
+  SC1 = SCC,
+  NT = SLC,
   ALL = GLC | SLC | DLC | SCC
 };
 
@@ -302,7 +305,6 @@ enum CPol {
 namespace SendMsg { // Encoding of SIMM16 used in s_sendmsg* insns.
 
 enum Id { // Message ID, width(4) [3:0].
-  ID_UNKNOWN_ = -1,
   ID_INTERRUPT = 1,
   ID_GS = 2,
   ID_GS_DONE = 3,
@@ -315,8 +317,7 @@ enum Id { // Message ID, width(4) [3:0].
   ID_GET_DOORBELL = 10,      // added in GFX9
   ID_GET_DDID = 11,          // added in GFX10
   ID_SYSMSG = 15,
-  ID_GAPS_LAST_, // Indicate that sequence has gaps.
-  ID_GAPS_FIRST_ = ID_INTERRUPT,
+
   ID_SHIFT_ = 0,
   ID_WIDTH_ = 4,
   ID_MASK_ = (((1 << ID_WIDTH_) - 1) << ID_SHIFT_)
@@ -360,8 +361,6 @@ enum StreamId : unsigned { // Stream ID, (2) [9:8].
 namespace Hwreg { // Encoding of SIMM16 used in s_setreg/getreg* insns.
 
 enum Id { // HwRegCode, (6) [5:0]
-  ID_UNKNOWN_ = -1,
-  ID_SYMBOLIC_FIRST_ = 1, // There are corresponding symbolic names defined.
   ID_MODE = 1,
   ID_STATUS = 2,
   ID_TRAPSTS = 3,
@@ -370,19 +369,23 @@ enum Id { // HwRegCode, (6) [5:0]
   ID_LDS_ALLOC = 6,
   ID_IB_STS = 7,
   ID_MEM_BASES = 15,
-  ID_SYMBOLIC_FIRST_GFX9_ = ID_MEM_BASES,
   ID_TBA_LO = 16,
-  ID_SYMBOLIC_FIRST_GFX10_ = ID_TBA_LO,
   ID_TBA_HI = 17,
   ID_TMA_LO = 18,
   ID_TMA_HI = 19,
+  ID_XCC_ID = 20,
+  ID_SQ_PERF_SNAPSHOT_DATA = 21,
+  ID_SQ_PERF_SNAPSHOT_DATA1 = 22,
+  ID_SQ_PERF_SNAPSHOT_PC_LO = 23,
+  ID_SQ_PERF_SNAPSHOT_PC_HI = 24,
   ID_FLAT_SCR_LO = 20,
   ID_FLAT_SCR_HI = 21,
   ID_XNACK_MASK = 22,
+  ID_HW_ID1 = 23,
+  ID_HW_ID2 = 24,
   ID_POPS_PACKER = 25,
   ID_SHADER_CYCLES = 29,
-  ID_SYMBOLIC_FIRST_GFX1030_ = ID_SHADER_CYCLES,
-  ID_SYMBOLIC_LAST_ = 30,
+
   ID_SHIFT_ = 0,
   ID_WIDTH_ = 6,
   ID_MASK_ = (((1 << ID_WIDTH_) - 1) << ID_SHIFT_)
@@ -775,6 +778,17 @@ enum OpSel : uint64_t {
 
 } // namespace VOP3PEncoding
 
+namespace ImplicitArg {
+// Implicit kernel argument offset for code object version 5.
+enum Offset_COV5 : unsigned {
+  HOSTCALL_PTR_OFFSET = 80,
+  HEAP_PTR_OFFSET = 96,
+  PRIVATE_BASE_OFFSET = 192,
+  SHARED_BASE_OFFSET = 196,
+  QUEUE_PTR_OFFSET = 200,
+};
+
+} // namespace ImplicitArg
 } // namespace AMDGPU
 
 #define R_00B028_SPI_SHADER_PGM_RSRC1_PS                                0x00B028

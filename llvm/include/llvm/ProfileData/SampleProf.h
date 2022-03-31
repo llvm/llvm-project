@@ -18,15 +18,12 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
-#include "llvm/IR/Module.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cstdint>
 #include <list>
@@ -39,6 +36,9 @@
 #include <utility>
 
 namespace llvm {
+
+class DILocation;
+class raw_ostream;
 
 const std::error_category &sampleprof_category();
 
@@ -55,7 +55,6 @@ enum class sampleprof_error {
   not_implemented,
   counter_overflow,
   ostream_seek_unsupported,
-  compress_failed,
   uncompress_failed,
   zlib_unavailable,
   hash_mismatch
@@ -195,18 +194,21 @@ enum class SecProfSummaryFlags : uint32_t {
   /// The common profile is usually merged from profiles collected
   /// from running other targets.
   SecFlagPartial = (1 << 0),
-  /// SecFlagContext means this is context-sensitive profile for
+  /// SecFlagContext means this is context-sensitive flat profile for
   /// CSSPGO
   SecFlagFullContext = (1 << 1),
   /// SecFlagFSDiscriminator means this profile uses flow-sensitive
   /// discriminators.
-  SecFlagFSDiscriminator = (1 << 2)
+  SecFlagFSDiscriminator = (1 << 2),
+  /// SecFlagIsCSNested means this is context-sensitive nested profile for
+  /// CSSPGO
+  SecFlagIsCSNested = (1 << 4),
 };
 
 enum class SecFuncMetadataFlags : uint32_t {
   SecFlagInvalid = 0,
   SecFlagIsProbeBased = (1 << 0),
-  SecFlagHasAttribute = (1 << 1)
+  SecFlagHasAttribute = (1 << 1),
 };
 
 enum class SecFuncOffsetFlags : uint32_t {
@@ -410,6 +412,8 @@ enum ContextAttributeMask {
   ContextNone = 0x0,
   ContextWasInlined = 0x1,      // Leaf of context was inlined in previous build
   ContextShouldBeInlined = 0x2, // Leaf of context should be inlined
+  ContextDuplicatedIntoBase =
+      0x4, // Leaf of context is duplicated into the base profile
 };
 
 // Represents a context frame with function name and line location
@@ -447,7 +451,7 @@ static inline hash_code hash_value(const SampleContextFrame &arg) {
                       arg.Location.Discriminator);
 }
 
-using SampleContextFrameVector = SmallVector<SampleContextFrame, 10>;
+using SampleContextFrameVector = SmallVector<SampleContextFrame, 1>;
 using SampleContextFrames = ArrayRef<SampleContextFrame>;
 
 struct SampleContextFrameHash {
@@ -591,11 +595,11 @@ public:
                         : hash_value(getName());
   }
 
-  /// Set the name of the function.
+  /// Set the name of the function and clear the current context.
   void setName(StringRef FunctionName) {
-    assert(FullContext.empty() &&
-           "setName should only be called for non-CS profile");
     Name = FunctionName;
+    FullContext = SampleContextFrames();
+    State = UnknownContext;
   }
 
   void setContext(SampleContextFrames Context,
@@ -745,6 +749,16 @@ public:
     }
   }
 
+  // Set current context and all callee contexts to be synthetic.
+  void SetContextSynthetic() {
+    Context.setState(SyntheticContext);
+    for (auto &I : CallsiteSamples) {
+      for (auto &CS : I.second) {
+        CS.second.SetContextSynthetic();
+      }
+    }
+  }
+
   /// Return the number of samples collected at the given location.
   /// Each location is specified by \p LineOffset and \p Discriminator.
   /// If the location is not found in profile, return error.
@@ -816,7 +830,7 @@ public:
   /// Return the sample count of the first instruction of the function.
   /// The function can be either a standalone symbol or an inlined function.
   uint64_t getEntrySamples() const {
-    if (FunctionSamples::ProfileIsCS && getHeadSamples()) {
+    if (FunctionSamples::ProfileIsCSFlat && getHeadSamples()) {
       // For CS profile, if we already have more accurate head samples
       // counted by branch sample from caller, use them as entry samples.
       return getHeadSamples();
@@ -1008,7 +1022,13 @@ public:
   /// instruction. This is wrapper of two scenarios, the probe-based profile and
   /// regular profile, to hide implementation details from the sample loader and
   /// the context tracker.
-  static LineLocation getCallSiteIdentifier(const DILocation *DIL);
+  static LineLocation getCallSiteIdentifier(const DILocation *DIL,
+                                            bool ProfileIsFS = false);
+
+  /// Returns a unique hash code for a combination of a callsite location and
+  /// the callee function name.
+  static uint64_t getCallSiteHash(StringRef CalleeName,
+                                  const LineLocation &Callsite);
 
   /// Get the FunctionSamples of the inline instance where DIL originates
   /// from.
@@ -1027,13 +1047,13 @@ public:
 
   static bool ProfileIsProbeBased;
 
-  static bool ProfileIsCS;
+  static bool ProfileIsCSFlat;
+
+  static bool ProfileIsCSNested;
 
   SampleContext &getContext() const { return Context; }
 
   void setContext(const SampleContext &FContext) { Context = FContext; }
-
-  static SampleProfileFormat Format;
 
   /// Whether the profile uses MD5 to represent string.
   static bool UseMD5;
@@ -1159,6 +1179,40 @@ public:
 
 private:
   SampleProfileMap &ProfileMap;
+};
+
+// CSProfileConverter converts a full context-sensitive flat sample profile into
+// a nested context-sensitive sample profile.
+class CSProfileConverter {
+public:
+  CSProfileConverter(SampleProfileMap &Profiles);
+  void convertProfiles();
+  struct FrameNode {
+    FrameNode(StringRef FName = StringRef(),
+              FunctionSamples *FSamples = nullptr,
+              LineLocation CallLoc = {0, 0})
+        : FuncName(FName), FuncSamples(FSamples), CallSiteLoc(CallLoc){};
+
+    // Map line+discriminator location to child frame
+    std::map<uint64_t, FrameNode> AllChildFrames;
+    // Function name for current frame
+    StringRef FuncName;
+    // Function Samples for current frame
+    FunctionSamples *FuncSamples;
+    // Callsite location in parent context
+    LineLocation CallSiteLoc;
+
+    FrameNode *getOrCreateChildFrame(const LineLocation &CallSite,
+                                     StringRef CalleeName);
+  };
+
+private:
+  // Nest all children profiles into the profile of Node.
+  void convertProfiles(FrameNode &Node);
+  FrameNode *getOrCreateContextPath(const SampleContext &Context);
+
+  SampleProfileMap &ProfileMap;
+  FrameNode RootFrame;
 };
 
 /// ProfileSymbolList records the list of function symbols shown up

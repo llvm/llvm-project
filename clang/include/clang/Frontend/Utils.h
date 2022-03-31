@@ -32,12 +32,6 @@
 #include <utility>
 #include <vector>
 
-namespace llvm {
-
-class Triple;
-
-} // namespace llvm
-
 namespace clang {
 
 class ASTReader;
@@ -46,19 +40,10 @@ class CompilerInvocation;
 class DiagnosticsEngine;
 class ExternalSemaSource;
 class FrontendOptions;
-class HeaderSearch;
-class HeaderSearchOptions;
-class LangOptions;
 class PCHContainerReader;
 class Preprocessor;
 class PreprocessorOptions;
 class PreprocessorOutputOptions;
-
-/// Apply the header search options to get given HeaderSearch object.
-void ApplyHeaderSearchOptions(HeaderSearch &HS,
-                              const HeaderSearchOptions &HSOpts,
-                              const LangOptions &Lang,
-                              const llvm::Triple &triple);
 
 /// InitializePreprocessor - Initialize the preprocessor getting it and the
 /// environment ready to process a single file.

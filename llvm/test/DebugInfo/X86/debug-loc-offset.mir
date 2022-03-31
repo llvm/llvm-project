@@ -31,22 +31,6 @@
 #
 # Checking that we have two compile units with two sets of high/lo_pc.
 # CHECK: .debug_info contents
-#
-# CHECK: DW_TAG_compile_unit
-# CHECK: DW_AT_low_pc {{.*}} (0x00000000 ".text")
-# CHECK: DW_AT_high_pc
-#
-# CHECK: DW_TAG_subprogram
-# CHECK-NOT: DW_TAG
-# CHECK: DW_AT_linkage_name [DW_FORM_strp]{{.*}}"_Z3bari"
-# CHECK-NOT: {{DW_TAG|NULL}}
-# CHECK: DW_TAG_formal_parameter
-# CHECK-NOT: DW_TAG
-# CHECK:       DW_AT_location [DW_FORM_sec_offset]   ({{.*}}
-# CHECK-NEXT:    [0x00000000, 0x0000000a) ".text": DW_OP_consts +0, DW_OP_stack_value
-# CHECK-NEXT:    [0x0000000a, 0x00000017) ".text": DW_OP_consts +1, DW_OP_stack_value)
-# CHECK-NEXT:  DW_AT_name [DW_FORM_strp]{{.*}}"b"
-
 # CHECK: DW_TAG_compile_unit
 # CHECK: DW_AT_low_pc {{.*}} (0x00000020 ".text")
 # CHECK: DW_AT_high_pc
@@ -65,6 +49,21 @@
 # CHECK: DW_TAG_variable
 # CHECK: DW_AT_location [DW_FORM_exprloc]
 # CHECK-NOT: DW_AT_location
+#
+# CHECK: DW_TAG_compile_unit
+# CHECK: DW_AT_low_pc {{.*}} (0x00000000 ".text")
+# CHECK: DW_AT_high_pc
+#
+# CHECK: DW_TAG_subprogram
+# CHECK-NOT: DW_TAG
+# CHECK: DW_AT_linkage_name [DW_FORM_strp]{{.*}}"_Z3bari"
+# CHECK-NOT: {{DW_TAG|NULL}}
+# CHECK: DW_TAG_formal_parameter
+# CHECK-NOT: DW_TAG
+# CHECK:       DW_AT_location [DW_FORM_sec_offset]   ({{.*}}
+# CHECK-NEXT:    [0x00000000, 0x0000000a) ".text": DW_OP_consts +0, DW_OP_stack_value
+# CHECK-NEXT:    [0x0000000a, 0x00000017) ".text": DW_OP_consts +1, DW_OP_stack_value)
+# CHECK-NEXT:  DW_AT_name [DW_FORM_strp]{{.*}}"b"
 #
 # CHECK: .debug_loc contents:
 # CHECK:       0x00000000:

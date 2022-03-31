@@ -23,7 +23,7 @@ int printf(const char *, ...);
 // reduced.
 
 // CHECK-LABEL: define {{.*}}void @test()
-void test() {
+void test(void) {
   // CHECK: load volatile [[INT]], [[INT]]* @i
   i;
   // CHECK-NEXT: load volatile [[INT]], [[INT]]* getelementptr inbounds ([[CINT]], [[CINT]]* @ci, i32 0, i32 0), align 4
@@ -304,7 +304,7 @@ void test() {
 
 extern volatile enum X x;
 // CHECK-LABEL: define {{.*}}void @test1()
-void test1() {
+void test1(void) {
   extern void test1_helper(void);
   test1_helper();
   // CHECK: call {{.*}}void @test1_helper()
@@ -315,7 +315,7 @@ void test1() {
 }
 
 // CHECK: define {{.*}} @test2()
-int test2() {
+int test2(void) {
   // CHECK: load volatile i32, i32*
   // CHECK-NEXT: load volatile i32, i32*
   // CHECK-NEXT: load volatile i32, i32*

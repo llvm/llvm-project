@@ -280,11 +280,11 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
     if (auto attr = op.getAttrOfType<FlatSymbolRefAttr>("callee"))
       return builder.CreateCall(
           moduleTranslation.lookupFunction(attr.getValue()), operandsRef);
-    auto *calleePtrType =
-        cast<llvm::PointerType>(operandsRef.front()->getType());
-    auto *calleeType =
-        cast<llvm::FunctionType>(calleePtrType->getElementType());
-    return builder.CreateCall(calleeType, operandsRef.front(),
+    auto calleeType =
+        op.getOperands().front().getType().cast<LLVMPointerType>();
+    auto *calleeFunctionType = cast<llvm::FunctionType>(
+        moduleTranslation.convertType(calleeType.getElementType()));
+    return builder.CreateCall(calleeFunctionType, operandsRef.front(),
                               operandsRef.drop_front());
   };
 
@@ -304,9 +304,7 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
     // TODO: refactor function type creation which usually occurs in std-LLVM
     // conversion.
     SmallVector<Type, 8> operandTypes;
-    operandTypes.reserve(inlineAsmOp.getOperands().size());
-    for (auto t : inlineAsmOp.getOperands().getTypes())
-      operandTypes.push_back(t);
+    llvm::append_range(operandTypes, inlineAsmOp.getOperands().getTypes());
 
     Type resultType;
     if (inlineAsmOp.getNumResults() == 0) {
@@ -331,39 +329,69 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
                                    inlineAsmOp.getConstraints(),
                                    inlineAsmOp.getHasSideEffects(),
                                    inlineAsmOp.getIsAlignStack());
-    llvm::Value *result = builder.CreateCall(
+    llvm::CallInst *inst = builder.CreateCall(
         inlineAsmInst,
         moduleTranslation.lookupValues(inlineAsmOp.getOperands()));
+    if (auto maybeOperandAttrs = inlineAsmOp.getOperandAttrs()) {
+      llvm::AttributeList attrList;
+      for (const auto &it : llvm::enumerate(*maybeOperandAttrs)) {
+        Attribute attr = it.value();
+        if (!attr)
+          continue;
+        DictionaryAttr dAttr = attr.cast<DictionaryAttr>();
+        TypeAttr tAttr =
+            dAttr.get(InlineAsmOp::getElementTypeAttrName()).cast<TypeAttr>();
+        llvm::AttrBuilder b(moduleTranslation.getLLVMContext());
+        llvm::Type *ty = moduleTranslation.convertType(tAttr.getValue());
+        b.addTypeAttr(llvm::Attribute::ElementType, ty);
+        // shift to account for the returned value (this is always 1 aggregate
+        // value in LLVM).
+        int shift = (opInst.getNumResults() > 0) ? 1 : 0;
+        attrList = attrList.addAttributesAtIndex(
+            moduleTranslation.getLLVMContext(), it.index() + shift, b);
+      }
+      inst->setAttributes(attrList);
+    }
+
     if (opInst.getNumResults() != 0)
-      moduleTranslation.mapValue(opInst.getResult(0), result);
+      moduleTranslation.mapValue(opInst.getResult(0), inst);
     return success();
   }
 
   if (auto invOp = dyn_cast<LLVM::InvokeOp>(opInst)) {
-    auto operands = moduleTranslation.lookupValues(opInst.getOperands());
+    auto operands = moduleTranslation.lookupValues(invOp.getCalleeOperands());
     ArrayRef<llvm::Value *> operandsRef(operands);
+    llvm::Instruction *result;
     if (auto attr = opInst.getAttrOfType<FlatSymbolRefAttr>("callee")) {
-      builder.CreateInvoke(moduleTranslation.lookupFunction(attr.getValue()),
-                           moduleTranslation.lookupBlock(invOp.getSuccessor(0)),
-                           moduleTranslation.lookupBlock(invOp.getSuccessor(1)),
-                           operandsRef);
+      result = builder.CreateInvoke(
+          moduleTranslation.lookupFunction(attr.getValue()),
+          moduleTranslation.lookupBlock(invOp.getSuccessor(0)),
+          moduleTranslation.lookupBlock(invOp.getSuccessor(1)), operandsRef);
     } else {
-      auto *calleePtrType =
-          cast<llvm::PointerType>(operandsRef.front()->getType());
-      auto *calleeType =
-          cast<llvm::FunctionType>(calleePtrType->getElementType());
-      builder.CreateInvoke(calleeType, operandsRef.front(),
-                           moduleTranslation.lookupBlock(invOp.getSuccessor(0)),
-                           moduleTranslation.lookupBlock(invOp.getSuccessor(1)),
-                           operandsRef.drop_front());
+      auto calleeType =
+          invOp.getCalleeOperands().front().getType().cast<LLVMPointerType>();
+      auto *calleeFunctionType = cast<llvm::FunctionType>(
+          moduleTranslation.convertType(calleeType.getElementType()));
+      result = builder.CreateInvoke(
+          calleeFunctionType, operandsRef.front(),
+          moduleTranslation.lookupBlock(invOp.getSuccessor(0)),
+          moduleTranslation.lookupBlock(invOp.getSuccessor(1)),
+          operandsRef.drop_front());
     }
-    return success();
+    moduleTranslation.mapBranch(invOp, result);
+    // InvokeOp can only have 0 or 1 result
+    if (invOp->getNumResults() != 0) {
+      moduleTranslation.mapValue(opInst.getResult(0), result);
+      return success();
+    }
+    return success(result->getType()->isVoidTy());
   }
 
   if (auto lpOp = dyn_cast<LLVM::LandingpadOp>(opInst)) {
     llvm::Type *ty = moduleTranslation.convertType(lpOp.getType());
     llvm::LandingPadInst *lpi =
         builder.CreateLandingPad(ty, lpOp.getNumOperands());
+    lpi->setCleanup(lpOp.getCleanup());
 
     // Add clauses
     for (llvm::Value *operand :
@@ -471,12 +499,13 @@ public:
     return convertOperationImpl(*op, builder, moduleTranslation);
   }
 };
-} // end namespace
+} // namespace
 
 void mlir::registerLLVMDialectTranslation(DialectRegistry &registry) {
   registry.insert<LLVM::LLVMDialect>();
-  registry.addDialectInterface<LLVM::LLVMDialect,
-                               LLVMDialectLLVMIRTranslationInterface>();
+  registry.addExtension(+[](MLIRContext *ctx, LLVM::LLVMDialect *dialect) {
+    dialect->addInterfaces<LLVMDialectLLVMIRTranslationInterface>();
+  });
 }
 
 void mlir::registerLLVMDialectTranslation(MLIRContext &context) {

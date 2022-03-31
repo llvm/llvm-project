@@ -205,6 +205,11 @@ class VCMPXNoSDstTable <bit has_sdst, string Name> {
   string NoSDstOp = Name;
 }
 
+class VCMPVCMPXTable <string Name> {
+  bit IsVCMPX = 0;
+  string VCMPOp = Name;
+}
+
 multiclass VOPC_Pseudos <string opName,
                          VOPC_Profile P,
                          SDPatternOperator cond = COND_NULL,
@@ -213,7 +218,8 @@ multiclass VOPC_Pseudos <string opName,
 
   def _e32 : VOPC_Pseudo <opName, P>,
              Commutable_REV<revOp#"_e32", !eq(revOp, opName)>,
-             VCMPXNoSDstTable<1, opName#"_e32"> {
+             VCMPXNoSDstTable<1, opName#"_e32">,
+             VCMPVCMPXTable<opName#"_e32"> {
     let Defs = !if(DefExec, [VCC, EXEC], [VCC]);
     let SchedRW = P.Schedule;
     let isConvergent = DefExec;
@@ -223,7 +229,8 @@ multiclass VOPC_Pseudos <string opName,
 
   def _e64 : VOP3_Pseudo<opName, P, getVOPCPat64<cond, P>.ret>,
     Commutable_REV<revOp#"_e64", !eq(revOp, opName)>,
-    VCMPXNoSDstTable<1, opName#"_e64"> {
+    VCMPXNoSDstTable<1, opName#"_e64">,
+    VCMPVCMPXTable<opName#"_e64"> {
     let Defs = !if(DefExec, [EXEC], []);
     let SchedRW = P.Schedule;
     let isCompare = 1;
@@ -248,23 +255,27 @@ multiclass VOPCX_Pseudos <string opName,
 
   def _nosdst_e32 : VOPC_Pseudo <opName#"_nosdst", P_NoSDst, [], 0>,
              Commutable_REV<revOp#"_nosdst_e32", !eq(revOp, opName)>,
-             VCMPXNoSDstTable<0, opName#"_e32"> {
+             VCMPXNoSDstTable<0, opName#"_e32">,
+             VCMPVCMPXTable<!subst("v_cmpx", "v_cmp", opName#"_e32")> {
     let Defs = [EXEC];
     let SchedRW = P_NoSDst.Schedule;
     let isConvergent = 1;
     let isCompare = 1;
     let isCommutable = 1;
     let SubtargetPredicate = HasNoSdstCMPX;
+    let IsVCMPX = 1;
   }
 
   def _nosdst_e64 : VOP3_Pseudo<opName#"_nosdst", P_NoSDst>,
     Commutable_REV<revOp#"_nosdst_e64", !eq(revOp, opName)>,
-    VCMPXNoSDstTable<0, opName#"_e64"> {
+    VCMPXNoSDstTable<0, opName#"_e64">,
+    VCMPVCMPXTable<!subst("v_cmpx", "v_cmp", opName#"_e64")> {
     let Defs = [EXEC];
     let SchedRW = P_NoSDst.Schedule;
     let isCompare = 1;
     let isCommutable = 1;
     let SubtargetPredicate = HasNoSdstCMPX;
+    let IsVCMPX = 1;
   }
 
   foreach _ = BoolToList<P_NoSDst.HasExtSDWA>.ret in

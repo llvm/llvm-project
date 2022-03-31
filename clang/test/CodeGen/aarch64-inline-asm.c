@@ -17,13 +17,13 @@ void test_generic_constraints(int var32, long var64) {
 
     asm("ldr %0, %1" : "=r"(var32) : "m"(var));
     asm("ldr %0, [%1]" : "=r"(var64) : "r"(&var));
-// CHECK: call i32 asm "ldr $0, $1", "=r,*m"(i64* @var)
+// CHECK: call i32 asm "ldr $0, $1", "=r,*m"(i64* elementtype(i64) @var)
 // CHECK: call i64 asm "ldr $0, [$1]", "=r,r"(i64* @var)
 }
 
 float f;
 double d;
-void test_constraint_w() {
+void test_constraint_w(void) {
     asm("fadd %s0, %s1, %s1" : "=w"(f) : "w"(f));
 // CHECK: [[FLT_ARG:%[a-zA-Z_0-9]+]] = load float, float* @f
 // CHECK: call float asm "fadd ${0:s}, ${1:s}, ${1:s}", "=w,w"(float [[FLT_ARG]])
@@ -52,7 +52,7 @@ void test_constraint_S(void) {
 void test_constraint_Q(void) {
     int val;
     asm("ldxr %0, %1" : "=r"(val) : "Q"(var));
-// CHECK: call i32 asm "ldxr $0, $1", "=r,*Q"(i64* @var)
+// CHECK: call i32 asm "ldxr $0, $1", "=r,*Q"(i64* elementtype(i64) @var)
 }
 
 void test_gcc_registers(void) {

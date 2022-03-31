@@ -21,7 +21,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/FunctionAttrs.h"
@@ -87,7 +86,8 @@ void promoteInternals(Module &ExportM, Module &ImportM, StringRef ModuleId,
     if (isa<Function>(&ExportGV) && allowPromotionAlias(OldName)) {
       // Create a local alias with the original name to avoid breaking
       // references from inline assembly.
-      std::string Alias = ".set " + OldName + "," + NewName + "\n";
+      std::string Alias =
+          ".lto_set_conditional " + OldName + "," + NewName + "\n";
       ExportM.appendModuleInlineAsm(Alias);
     }
   }
@@ -310,7 +310,8 @@ void splitAndWriteThinLTOBitcode(
             return;
         }
         if (!F->isDeclaration() &&
-            computeFunctionBodyMemoryAccess(*F, AARGetter(*F)) == MAK_ReadNone)
+            computeFunctionBodyMemoryAccess(*F, AARGetter(*F)) ==
+                FMRB_DoesNotAccessMemory)
           EligibleVirtualFns.insert(F);
       });
     }
@@ -534,7 +535,7 @@ void writeThinLTOBitcode(raw_ostream &OS, raw_ostream *ThinLinkOS,
   // the information that is needed by thin link will be written in the
   // given OS.
   if (ThinLinkOS && Index)
-    WriteThinLinkBitcodeToFile(M, *ThinLinkOS, *Index, ModHash);
+    writeThinLinkBitcodeToFile(M, *ThinLinkOS, *Index, ModHash);
 }
 
 class WriteThinLTOBitcode : public ModulePass {

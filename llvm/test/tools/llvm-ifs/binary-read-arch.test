@@ -1,6 +1,6 @@
 # RUN: yaml2obj --docnum=1 %s -o %t
-# RUN: llvm-ifs --input-format=ELF --output-format=IFS --output=- %t | FileCheck %s -DTARGET="{ ObjectFormat: ELF, Arch: x86_64, Endianness: little, BitWidth: 64 }"
-# RUN: llvm-ifs --input-format=ELF --output-format=IFS --output=- --hint-ifs-target="x86_64-linux-gnu" %t | FileCheck %s -DTARGET="x86_64-linux-gnu"
+# RUN: llvm-ifs --input-format=ELF --output-ifs=- %t | FileCheck %s -DTARGET="{ ObjectFormat: ELF, Arch: x86_64, Endianness: little, BitWidth: 64 }"
+# RUN: llvm-ifs --input-format=ELF --output-ifs=- --hint-ifs-target="x86_64-linux-gnu" %t | FileCheck %s -DTARGET="x86_64-linux-gnu"
 
 --- !ELF
 FileHeader:
@@ -52,7 +52,7 @@ ProgramHeaders:
 # HINTERR: error: Triple hint does not match the actual [[MSG]]
 
 # RUN: yaml2obj --docnum=1 %s -o %t
-# RUN: not llvm-ifs --input-format=ELF --output-format=IFS --output=%t.tbe --hint-ifs-target="aarch64-linux-gnu" %t 2>&1 | FileCheck %s -DMSG=architecture --check-prefix=HINTERR
+# RUN: not llvm-ifs --input-format=ELF --output-ifs=%t.tbe --hint-ifs-target="aarch64-linux-gnu" %t 2>&1 | FileCheck %s -DMSG=architecture --check-prefix=HINTERR
 
 --- !ELF
 FileHeader:
@@ -96,7 +96,7 @@ ProgramHeaders:
     LastSec:  .dynamic
 
 # RUN: yaml2obj --docnum=2 %s -o %t
-# RUN: not llvm-ifs --input-format=ELF --output-format=IFS --output=%t.tbe --hint-ifs-target="x86_64-unknown-linux-gnu" %t 2>&1 | FileCheck %s -DMSG="endianness" --check-prefix=HINTERR
+# RUN: not llvm-ifs --input-format=ELF --output-ifs=%t.tbe --hint-ifs-target="x86_64-unknown-linux-gnu" %t 2>&1 | FileCheck %s -DMSG="endianness" --check-prefix=HINTERR
 
 --- !ELF
 FileHeader:
@@ -140,4 +140,4 @@ ProgramHeaders:
     LastSec:  .dynamic
 
 # RUN: yaml2obj --docnum=3 %s -o %t
-# RUN: not llvm-ifs --input-format=ELF --output-format=IFS --output=%t.tbe --hint-ifs-target="x86_64-unknown-linux-gnu" %t 2>&1 | FileCheck %s -DMSG="bit width" --check-prefix=HINTERR
+# RUN: not llvm-ifs --input-format=ELF --output-ifs=%t.tbe --hint-ifs-target="x86_64-unknown-linux-gnu" %t 2>&1 | FileCheck %s -DMSG="bit width" --check-prefix=HINTERR

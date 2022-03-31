@@ -70,7 +70,9 @@ def Sparsification : Pass<"sparsification", "ModuleOp"> {
     Option<"vectorLength", "vl", "int32_t", "1",
            "Set the vector length">,
     Option<"enableSIMDIndex32", "enable-simd-index32", "bool", "false",
-           "Enable i32 indexing into vectors (for efficiency)">
+           "Enable i32 indexing into vectors (for efficiency)">,
+    Option<"enableVLAVectorization", "enable-vla-vectorization", "bool",
+           "false", "Enable vector length agnostic vectorization">
   ];
 }
 
@@ -113,6 +115,10 @@ def SparseTensorConversion : Pass<"sparse-tensor-conversion", "ModuleOp"> {
     "scf::SCFDialect",
     "sparse_tensor::SparseTensorDialect",
     "vector::VectorDialect",
+  ];
+  let options = [
+    Option<"sparseToSparse", "s2s-strategy", "int32_t", "0",
+           "Set the strategy for sparse-to-sparse conversion">,
   ];
 }
 

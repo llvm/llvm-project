@@ -22,7 +22,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/Casting.h"
@@ -33,7 +32,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
-#include <type_traits>
 #include <vector>
 
 // Helper macros for defining get() overrides.
@@ -61,6 +59,10 @@
   DEFINE_MDNODE_GET_DISTINCT_TEMPORARY(CLASS, FORMAL, ARGS)
 
 namespace llvm {
+
+namespace dwarf {
+enum Tag : uint16_t;
+}
 
 extern cl::opt<bool> EnableFSDiscriminator;
 
@@ -157,7 +159,7 @@ protected:
   void setTag(unsigned Tag) { SubclassData16 = Tag; }
 
 public:
-  dwarf::Tag getTag() const { return (dwarf::Tag)SubclassData16; }
+  dwarf::Tag getTag() const;
 
   /// Debug info flags.
   ///
@@ -268,7 +270,7 @@ public:
   /// Return a (temporary) clone of this.
   TempGenericDINode clone() const { return cloneImpl(); }
 
-  dwarf::Tag getTag() const { return (dwarf::Tag)SubclassData16; }
+  dwarf::Tag getTag() const;
   StringRef getHeader() const { return getStringOperand(0); }
   MDString *getRawHeader() const { return getOperandAs<MDString>(0); }
 
@@ -299,8 +301,7 @@ class DISubrange : public DINode {
   friend class LLVMContextImpl;
   friend class MDNode;
 
-  DISubrange(LLVMContext &C, StorageType Storage, ArrayRef<Metadata *> Ops)
-      : DINode(C, DISubrangeKind, Storage, dwarf::DW_TAG_subrange_type, Ops) {}
+  DISubrange(LLVMContext &C, StorageType Storage, ArrayRef<Metadata *> Ops);
 
   ~DISubrange() = default;
 
@@ -364,9 +365,7 @@ class DIGenericSubrange : public DINode {
   friend class MDNode;
 
   DIGenericSubrange(LLVMContext &C, StorageType Storage,
-                    ArrayRef<Metadata *> Ops)
-      : DINode(C, DIGenericSubrangeKind, Storage,
-               dwarf::DW_TAG_generic_subrange, Ops) {}
+                    ArrayRef<Metadata *> Ops);
 
   ~DIGenericSubrange() = default;
 
@@ -415,11 +414,7 @@ class DIEnumerator : public DINode {
 
   APInt Value;
   DIEnumerator(LLVMContext &C, StorageType Storage, const APInt &Value,
-               bool IsUnsigned, ArrayRef<Metadata *> Ops)
-      : DINode(C, DIEnumeratorKind, Storage, dwarf::DW_TAG_enumerator, Ops),
-        Value(Value) {
-    SubclassData32 = IsUnsigned;
-  }
+               bool IsUnsigned, ArrayRef<Metadata *> Ops);
   DIEnumerator(LLVMContext &C, StorageType Storage, int64_t Value,
                bool IsUnsigned, ArrayRef<Metadata *> Ops)
       : DIEnumerator(C, Storage, APInt(64, Value, !IsUnsigned), IsUnsigned,
@@ -569,9 +564,7 @@ private:
 
   DIFile(LLVMContext &C, StorageType Storage,
          Optional<ChecksumInfo<MDString *>> CS, Optional<MDString *> Src,
-         ArrayRef<Metadata *> Ops)
-      : DIScope(C, DIFileKind, Storage, dwarf::DW_TAG_file_type, Ops),
-        Checksum(CS), Source(Src) {}
+         ArrayRef<Metadata *> Ops);
   ~DIFile() = default;
 
   static DIFile *getImpl(LLVMContext &Context, StringRef Filename,
@@ -852,42 +845,48 @@ class DIStringType : public DIType {
 
   static DIStringType *getImpl(LLVMContext &Context, unsigned Tag,
                                StringRef Name, Metadata *StringLength,
-                               Metadata *StrLenExp, uint64_t SizeInBits,
-                               uint32_t AlignInBits, unsigned Encoding,
-                               StorageType Storage, bool ShouldCreate = true) {
+                               Metadata *StrLenExp, Metadata *StrLocationExp,
+                               uint64_t SizeInBits, uint32_t AlignInBits,
+                               unsigned Encoding, StorageType Storage,
+                               bool ShouldCreate = true) {
     return getImpl(Context, Tag, getCanonicalMDString(Context, Name),
-                   StringLength, StrLenExp, SizeInBits, AlignInBits, Encoding,
-                   Storage, ShouldCreate);
+                   StringLength, StrLenExp, StrLocationExp, SizeInBits,
+                   AlignInBits, Encoding, Storage, ShouldCreate);
   }
   static DIStringType *getImpl(LLVMContext &Context, unsigned Tag,
                                MDString *Name, Metadata *StringLength,
-                               Metadata *StrLenExp, uint64_t SizeInBits,
-                               uint32_t AlignInBits, unsigned Encoding,
-                               StorageType Storage, bool ShouldCreate = true);
+                               Metadata *StrLenExp, Metadata *StrLocationExp,
+                               uint64_t SizeInBits, uint32_t AlignInBits,
+                               unsigned Encoding, StorageType Storage,
+                               bool ShouldCreate = true);
 
   TempDIStringType cloneImpl() const {
     return getTemporary(getContext(), getTag(), getRawName(),
                         getRawStringLength(), getRawStringLengthExp(),
-                        getSizeInBits(), getAlignInBits(), getEncoding());
+                        getRawStringLocationExp(), getSizeInBits(),
+                        getAlignInBits(), getEncoding());
   }
 
 public:
   DEFINE_MDNODE_GET(DIStringType,
                     (unsigned Tag, StringRef Name, uint64_t SizeInBits,
                      uint32_t AlignInBits),
-                    (Tag, Name, nullptr, nullptr, SizeInBits, AlignInBits, 0))
+                    (Tag, Name, nullptr, nullptr, nullptr, SizeInBits,
+                     AlignInBits, 0))
   DEFINE_MDNODE_GET(DIStringType,
                     (unsigned Tag, MDString *Name, Metadata *StringLength,
-                     Metadata *StringLengthExp, uint64_t SizeInBits,
-                     uint32_t AlignInBits, unsigned Encoding),
-                    (Tag, Name, StringLength, StringLengthExp, SizeInBits,
-                     AlignInBits, Encoding))
+                     Metadata *StringLengthExp, Metadata *StringLocationExp,
+                     uint64_t SizeInBits, uint32_t AlignInBits,
+                     unsigned Encoding),
+                    (Tag, Name, StringLength, StringLengthExp,
+                     StringLocationExp, SizeInBits, AlignInBits, Encoding))
   DEFINE_MDNODE_GET(DIStringType,
                     (unsigned Tag, StringRef Name, Metadata *StringLength,
-                     Metadata *StringLengthExp, uint64_t SizeInBits,
-                     uint32_t AlignInBits, unsigned Encoding),
-                    (Tag, Name, StringLength, StringLengthExp, SizeInBits,
-                     AlignInBits, Encoding))
+                     Metadata *StringLengthExp, Metadata *StringLocationExp,
+                     uint64_t SizeInBits, uint32_t AlignInBits,
+                     unsigned Encoding),
+                    (Tag, Name, StringLength, StringLengthExp,
+                     StringLocationExp, SizeInBits, AlignInBits, Encoding))
 
   TempDIStringType clone() const { return cloneImpl(); }
 
@@ -903,11 +902,17 @@ public:
     return cast_or_null<DIExpression>(getRawStringLengthExp());
   }
 
+  DIExpression *getStringLocationExp() const {
+    return cast_or_null<DIExpression>(getRawStringLocationExp());
+  }
+
   unsigned getEncoding() const { return Encoding; }
 
   Metadata *getRawStringLength() const { return getOperand(3); }
 
   Metadata *getRawStringLengthExp() const { return getOperand(4); }
+
+  Metadata *getRawStringLocationExp() const { return getOperand(5); }
 };
 
 /// Derived types.
@@ -1010,42 +1015,19 @@ public:
 
   /// Get casted version of extra data.
   /// @{
-  DIType *getClassType() const {
-    assert(getTag() == dwarf::DW_TAG_ptr_to_member_type);
-    return cast_or_null<DIType>(getExtraData());
-  }
+  DIType *getClassType() const;
 
   DIObjCProperty *getObjCProperty() const {
     return dyn_cast_or_null<DIObjCProperty>(getExtraData());
   }
 
-  uint32_t getVBPtrOffset() const {
-    assert(getTag() == dwarf::DW_TAG_inheritance);
-    if (auto *CM = cast_or_null<ConstantAsMetadata>(getExtraData()))
-      if (auto *CI = dyn_cast_or_null<ConstantInt>(CM->getValue()))
-        return static_cast<uint32_t>(CI->getZExtValue());
-    return 0;
-  }
+  uint32_t getVBPtrOffset() const;
 
-  Constant *getStorageOffsetInBits() const {
-    assert(getTag() == dwarf::DW_TAG_member && isBitField());
-    if (auto *C = cast_or_null<ConstantAsMetadata>(getExtraData()))
-      return C->getValue();
-    return nullptr;
-  }
+  Constant *getStorageOffsetInBits() const;
 
-  Constant *getConstant() const {
-    assert(getTag() == dwarf::DW_TAG_member && isStaticMember());
-    if (auto *C = cast_or_null<ConstantAsMetadata>(getExtraData()))
-      return C->getValue();
-    return nullptr;
-  }
-  Constant *getDiscriminantValue() const {
-    assert(getTag() == dwarf::DW_TAG_member && !isStaticMember());
-    if (auto *C = cast_or_null<ConstantAsMetadata>(getExtraData()))
-      return C->getValue();
-    return nullptr;
-  }
+  Constant *getConstant() const;
+
+  Constant *getDiscriminantValue() const;
   /// @}
 
   static bool classof(const Metadata *MD) {
@@ -1289,10 +1271,7 @@ class DISubroutineType : public DIType {
   uint8_t CC;
 
   DISubroutineType(LLVMContext &C, StorageType Storage, DIFlags Flags,
-                   uint8_t CC, ArrayRef<Metadata *> Ops)
-      : DIType(C, DISubroutineTypeKind, Storage, dwarf::DW_TAG_subroutine_type,
-               0, 0, 0, 0, Flags, Ops),
-        CC(CC) {}
+                   uint8_t CC, ArrayRef<Metadata *> Ops);
   ~DISubroutineType() = default;
 
   static DISubroutineType *getImpl(LLVMContext &Context, DIFlags Flags,
@@ -1374,15 +1353,7 @@ private:
                 bool IsOptimized, unsigned RuntimeVersion,
                 unsigned EmissionKind, uint64_t DWOId, bool SplitDebugInlining,
                 bool DebugInfoForProfiling, unsigned NameTableKind,
-                bool RangesBaseAddress, ArrayRef<Metadata *> Ops)
-      : DIScope(C, DICompileUnitKind, Storage, dwarf::DW_TAG_compile_unit, Ops),
-        SourceLanguage(SourceLanguage), IsOptimized(IsOptimized),
-        RuntimeVersion(RuntimeVersion), EmissionKind(EmissionKind),
-        DWOId(DWOId), SplitDebugInlining(SplitDebugInlining),
-        DebugInfoForProfiling(DebugInfoForProfiling),
-        NameTableKind(NameTableKind), RangesBaseAddress(RangesBaseAddress) {
-    assert(Storage != Uniqued);
-  }
+                bool RangesBaseAddress, ArrayRef<Metadata *> Ops);
   ~DICompileUnit() = default;
 
   static DICompileUnit *
@@ -1861,19 +1832,7 @@ public:
   static DISPFlags toSPFlags(bool IsLocalToUnit, bool IsDefinition,
                              bool IsOptimized,
                              unsigned Virtuality = SPFlagNonvirtual,
-                             bool IsMainSubprogram = false) {
-    // We're assuming virtuality is the low-order field.
-    static_assert(int(SPFlagVirtual) == int(dwarf::DW_VIRTUALITY_virtual) &&
-                      int(SPFlagPureVirtual) ==
-                          int(dwarf::DW_VIRTUALITY_pure_virtual),
-                  "Virtuality constant mismatch");
-    return static_cast<DISPFlags>(
-        (Virtuality & SPFlagVirtuality) |
-        (IsLocalToUnit ? SPFlagLocalToUnit : SPFlagZero) |
-        (IsDefinition ? SPFlagDefinition : SPFlagZero) |
-        (IsOptimized ? SPFlagOptimized : SPFlagZero) |
-        (IsMainSubprogram ? SPFlagMainSubprogram : SPFlagZero));
-  }
+                             bool IsMainSubprogram = false);
 
 private:
   DIFlags Flags;
@@ -1881,13 +1840,7 @@ private:
 
   DISubprogram(LLVMContext &C, StorageType Storage, unsigned Line,
                unsigned ScopeLine, unsigned VirtualIndex, int ThisAdjustment,
-               DIFlags Flags, DISPFlags SPFlags, ArrayRef<Metadata *> Ops)
-      : DILocalScope(C, DISubprogramKind, Storage, dwarf::DW_TAG_subprogram,
-                     Ops),
-        Line(Line), ScopeLine(ScopeLine), VirtualIndex(VirtualIndex),
-        ThisAdjustment(ThisAdjustment), Flags(Flags), SPFlags(SPFlags) {
-    static_assert(dwarf::DW_VIRTUALITY_max < 4, "Virtuality out of range");
-  }
+               DIFlags Flags, DISPFlags SPFlags, ArrayRef<Metadata *> Ops);
   ~DISubprogram() = default;
 
   static DISubprogram *
@@ -2097,8 +2050,7 @@ public:
 class DILexicalBlockBase : public DILocalScope {
 protected:
   DILexicalBlockBase(LLVMContext &C, unsigned ID, StorageType Storage,
-                     ArrayRef<Metadata *> Ops)
-      : DILocalScope(C, ID, Storage, dwarf::DW_TAG_lexical_block, Ops) {}
+                     ArrayRef<Metadata *> Ops);
   ~DILexicalBlockBase() = default;
 
 public:
@@ -2290,10 +2242,7 @@ class DINamespace : public DIScope {
   unsigned ExportSymbols : 1;
 
   DINamespace(LLVMContext &Context, StorageType Storage, bool ExportSymbols,
-              ArrayRef<Metadata *> Ops)
-      : DIScope(Context, DINamespaceKind, Storage, dwarf::DW_TAG_namespace,
-                Ops),
-        ExportSymbols(ExportSymbols) {}
+              ArrayRef<Metadata *> Ops);
   ~DINamespace() = default;
 
   static DINamespace *getImpl(LLVMContext &Context, DIScope *Scope,
@@ -2342,9 +2291,7 @@ class DIModule : public DIScope {
   bool IsDecl;
 
   DIModule(LLVMContext &Context, StorageType Storage, unsigned LineNo,
-           bool IsDecl, ArrayRef<Metadata *> Ops)
-      : DIScope(Context, DIModuleKind, Storage, dwarf::DW_TAG_module, Ops),
-        LineNo(LineNo), IsDecl(IsDecl) {}
+           bool IsDecl, ArrayRef<Metadata *> Ops);
   ~DIModule() = default;
 
   static DIModule *getImpl(LLVMContext &Context, DIFile *File, DIScope *Scope,
@@ -2438,10 +2385,7 @@ class DITemplateTypeParameter : public DITemplateParameter {
   friend class MDNode;
 
   DITemplateTypeParameter(LLVMContext &Context, StorageType Storage,
-                          bool IsDefault, ArrayRef<Metadata *> Ops)
-      : DITemplateParameter(Context, DITemplateTypeParameterKind, Storage,
-                            dwarf::DW_TAG_template_type_parameter, IsDefault,
-                            Ops) {}
+                          bool IsDefault, ArrayRef<Metadata *> Ops);
   ~DITemplateTypeParameter() = default;
 
   static DITemplateTypeParameter *getImpl(LLVMContext &Context, StringRef Name,
@@ -2530,10 +2474,8 @@ class DIVariable : public DINode {
   uint32_t AlignInBits;
 
 protected:
-  DIVariable(LLVMContext &C, unsigned ID, StorageType Storage, unsigned Line,
-             ArrayRef<Metadata *> Ops, uint32_t AlignInBits = 0)
-      : DINode(C, ID, Storage, dwarf::DW_TAG_variable, Ops), Line(Line),
-        AlignInBits(AlignInBits) {}
+  DIVariable(LLVMContext &C, unsigned ID, StorageType Storage, signed Line,
+             ArrayRef<Metadata *> Ops, uint32_t AlignInBits = 0);
   ~DIVariable() = default;
 
 public:
@@ -2752,9 +2694,7 @@ public:
   }
 
   /// Return whether the first element a DW_OP_deref.
-  bool startsWithDeref() const {
-    return getNumElements() > 0 && getElement(0) == dwarf::DW_OP_deref;
-  }
+  bool startsWithDeref() const;
 
   /// Holds the characteristics of one fragment of a larger variable.
   struct FragmentInfo {
@@ -2912,10 +2852,7 @@ public:
 
   /// Check if the expression consists of exactly one entry value operand.
   /// (This is the only configuration of entry values that is supported.)
-  bool isEntryValue() const {
-    return getNumElements() > 0 &&
-           getElement(0) == dwarf::DW_OP_LLVM_entry_value;
-  }
+  bool isEntryValue() const;
 
   /// Try to shorten an expression with an initial constant operand.
   /// Returns a new expression and constant on success, or the original
@@ -3046,10 +2983,7 @@ class DICommonBlock : public DIScope {
   friend class MDNode;
 
   DICommonBlock(LLVMContext &Context, StorageType Storage, unsigned LineNo,
-                ArrayRef<Metadata *> Ops)
-      : DIScope(Context, DICommonBlockKind, Storage, dwarf::DW_TAG_common_block,
-                Ops),
-        LineNo(LineNo) {}
+                ArrayRef<Metadata *> Ops);
 
   static DICommonBlock *getImpl(LLVMContext &Context, DIScope *Scope,
                                 DIGlobalVariable *Decl, StringRef Name,
@@ -3198,8 +3132,7 @@ class DILabel : public DINode {
   unsigned Line;
 
   DILabel(LLVMContext &C, StorageType Storage, unsigned Line,
-          ArrayRef<Metadata *> Ops)
-      : DINode(C, DILabelKind, Storage, dwarf::DW_TAG_label, Ops), Line(Line) {}
+          ArrayRef<Metadata *> Ops);
   ~DILabel() = default;
 
   static DILabel *getImpl(LLVMContext &Context, DIScope *Scope, StringRef Name,
@@ -3265,10 +3198,7 @@ class DIObjCProperty : public DINode {
   unsigned Attributes;
 
   DIObjCProperty(LLVMContext &C, StorageType Storage, unsigned Line,
-                 unsigned Attributes, ArrayRef<Metadata *> Ops)
-      : DINode(C, DIObjCPropertyKind, Storage, dwarf::DW_TAG_APPLE_property,
-               Ops),
-        Line(Line), Attributes(Attributes) {}
+                 unsigned Attributes, ArrayRef<Metadata *> Ops);
   ~DIObjCProperty() = default;
 
   static DIObjCProperty *

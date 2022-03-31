@@ -24,11 +24,11 @@ TEST(IndirectionUtilsTest, MakeStub) {
       Type::getVoidTy(Context), {ArgPtrTy, ArgPtrTy}, false);
   Function *F = MB.createFunctionDecl(FTy, "");
   AttributeSet FnAttrs = AttributeSet::get(
-      Context, AttrBuilder().addAttribute(Attribute::NoUnwind));
+      Context, AttrBuilder(Context).addAttribute(Attribute::NoUnwind));
   AttributeSet RetAttrs; // None
   AttributeSet ArgAttrs[2] = {
-      AttributeSet::get(Context, AttrBuilder().addStructRetAttr(ArgTy)),
-      AttributeSet::get(Context, AttrBuilder().addByValAttr(ArgTy)),
+      AttributeSet::get(Context, AttrBuilder(Context).addStructRetAttr(ArgTy)),
+      AttributeSet::get(Context, AttrBuilder(Context).addByValAttr(ArgTy)),
   };
   F->setAttributes(AttributeList::get(Context, FnAttrs, RetAttrs, ArgAttrs));
 

@@ -22,7 +22,6 @@
 #include <algorithm>
 #include <cassert>
 #include <cctype>
-#include <cstddef>
 #include <cstdlib>
 
 using namespace llvm;
@@ -262,12 +261,12 @@ bool InlineAsm::Verify(FunctionType *Ty, StringRef ConstStr) {
   unsigned NumOutputs = 0, NumInputs = 0, NumClobbers = 0;
   unsigned NumIndirect = 0;
 
-  for (unsigned i = 0, e = Constraints.size(); i != e; ++i) {
-    switch (Constraints[i].Type) {
+  for (const ConstraintInfo &Constraint : Constraints) {
+    switch (Constraint.Type) {
     case InlineAsm::isOutput:
       if ((NumInputs-NumIndirect) != 0 || NumClobbers != 0)
         return false;  // outputs before inputs and clobbers.
-      if (!Constraints[i].isIndirect) {
+      if (!Constraint.isIndirect) {
         ++NumOutputs;
         break;
       }

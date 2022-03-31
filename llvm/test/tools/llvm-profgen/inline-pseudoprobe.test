@@ -1,0 +1,46 @@
+; RUN: llvm-profgen --format=text --ignore-stack-samples --perfscript=%S/Inputs/inline-cs-pseudoprobe.perfscript --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin --output=%t --profile-summary-cold-count=0
+; RUN: FileCheck %s --input-file %t
+
+; CHECK:     main:88:0
+; CHECK-NEXT: 1: 0
+; CHECK-NEXT: 2: foo:88
+; CHECK-NEXT:  1: 0
+; CHECK-NEXT:  2: 15
+; CHECK-NEXT:  3: 15
+; CHECK-NEXT:  4: 14
+; CHECK-NEXT:  5: 1
+; CHECK-NEXT:  6: 15
+; CHECK-NEXT:  7: 0
+; CHECK-NEXT:  9: 0
+; CHECK-NEXT:  8: bar:28
+; CHECK-NEXT:   1: 14
+; CHECK-NEXT:   4: 14
+; CHECK-NEXT:   !CFGChecksum: 72617220756
+; CHECK-NEXT:  !CFGChecksum: 563088904013236
+; CHECK-NEXT: !CFGChecksum: 281479271677951
+
+
+; clang -O3 -fexperimental-new-pass-manager -fuse-ld=lld -fpseudo-probe-for-profiling
+; -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -Xclang -mdisable-tail-calls
+; -g test.c  -o a.out
+
+#include <stdio.h>
+
+int bar(int x, int y) {
+  if (x % 3) {
+    return x - y;
+  }
+  return x + y;
+}
+
+void foo() {
+  int s, i = 0;
+  while (i++ < 4000 * 4000)
+    if (i % 91) s = bar(i, s); else s += 30;
+  printf("sum is %d\n", s);
+}
+
+int main() {
+  foo();
+  return 0;
+}

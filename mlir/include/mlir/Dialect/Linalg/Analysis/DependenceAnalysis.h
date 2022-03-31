@@ -9,12 +9,14 @@
 #ifndef MLIR_DIALECT_LINALG_ANALYSIS_DEPENDENCEANALYSIS_H_
 #define MLIR_DIALECT_LINALG_ANALYSIS_DEPENDENCEANALYSIS_H_
 
-#include "mlir/Dialect/Linalg/IR/LinalgOps.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/OpDefinition.h"
 
 namespace mlir {
+namespace func {
 class FuncOp;
+} // namespace func
 
 namespace linalg {
 
@@ -155,7 +157,8 @@ public:
   static StringRef getDependenceTypeStr(DependenceType depType);
 
   // Builds a linalg dependence graph for the ops of type LinalgOp under `f`.
-  static LinalgDependenceGraph buildDependenceGraph(Aliases &aliases, FuncOp f);
+  static LinalgDependenceGraph buildDependenceGraph(Aliases &aliases,
+                                                    func::FuncOp f);
   LinalgDependenceGraph(Aliases &aliases, ArrayRef<LinalgOp> ops);
 
   /// Returns the X such that op -> X is a dependence of type dt.

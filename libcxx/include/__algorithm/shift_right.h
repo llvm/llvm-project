@@ -9,15 +9,16 @@
 #ifndef _LIBCPP___ALGORITHM_SHIFT_RIGHT_H
 #define _LIBCPP___ALGORITHM_SHIFT_RIGHT_H
 
-#include <__config>
 #include <__algorithm/move.h>
 #include <__algorithm/move_backward.h>
 #include <__algorithm/swap_ranges.h>
+#include <__config>
 #include <__iterator/iterator_traits.h>
-#include <type_traits> // swap
+#include <__utility/swap.h>
+#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD

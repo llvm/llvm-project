@@ -22,6 +22,7 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/CSEConfigBase.h"
+#include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
@@ -115,11 +116,6 @@ static cl::opt<bool>
     EnableCondOpt("aarch64-enable-condopt",
                   cl::desc("Enable the condition optimizer pass"),
                   cl::init(true), cl::Hidden);
-
-static cl::opt<bool>
-EnableA53Fix835769("aarch64-fix-cortex-a53-835769", cl::Hidden,
-                cl::desc("Work around Cortex-A53 erratum 835769"),
-                cl::init(false));
 
 static cl::opt<bool>
     EnableGEPOpt("aarch64-enable-gep-opt", cl::Hidden,
@@ -382,10 +378,9 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
   unsigned MaxSVEVectorSize = 0;
   Attribute VScaleRangeAttr = F.getFnAttribute(Attribute::VScaleRange);
   if (VScaleRangeAttr.isValid()) {
-    std::tie(MinSVEVectorSize, MaxSVEVectorSize) =
-        VScaleRangeAttr.getVScaleRangeArgs();
-    MinSVEVectorSize *= 128;
-    MaxSVEVectorSize *= 128;
+    Optional<unsigned> VScaleMax = VScaleRangeAttr.getVScaleRangeMax();
+    MinSVEVectorSize = VScaleRangeAttr.getVScaleRangeMin() * 128;
+    MaxSVEVectorSize = VScaleMax ? VScaleMax.getValue() * 128 : 0;
   } else {
     MinSVEVectorSize = SVEVectorBitsMinOpt;
     MaxSVEVectorSize = SVEVectorBitsMaxOpt;
@@ -510,7 +505,7 @@ public:
 } // end anonymous namespace
 
 TargetTransformInfo
-AArch64TargetMachine::getTargetTransformInfo(const Function &F) {
+AArch64TargetMachine::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(AArch64TTIImpl(this, F));
 }
 
@@ -537,6 +532,7 @@ void AArch64PassConfig::addIRPasses() {
   if (TM->getOptLevel() != CodeGenOpt::None && EnableAtomicTidy)
     addPass(createCFGSimplificationPass(SimplifyCFGOptions()
                                             .forwardSwitchCondToPhi(true)
+                                            .convertSwitchRangeToICmp(true)
                                             .convertSwitchToLookupTable(true)
                                             .needCanonicalLoops(false)
                                             .hoistCommonInsts(true)
@@ -580,6 +576,9 @@ void AArch64PassConfig::addIRPasses() {
   // Add Control Flow Guard checks.
   if (TM->getTargetTriple().isOSWindows())
     addPass(createCFGuardCheckPass());
+
+  if (TM->Options.JMCInstrument)
+    addPass(createJMCInstrumenterPass());
 }
 
 // Pass Pipeline Configuration
@@ -765,8 +764,7 @@ void AArch64PassConfig::addPreEmitPass() {
   if (TM->getOptLevel() >= CodeGenOpt::Aggressive && EnableLoadStoreOpt)
     addPass(createAArch64LoadStoreOptimizationPass());
 
-  if (EnableA53Fix835769)
-    addPass(createAArch64A53Fix835769());
+  addPass(createAArch64A53Fix835769());
 
   if (EnableBranchTargets)
     addPass(createAArch64BranchTargetsPass());

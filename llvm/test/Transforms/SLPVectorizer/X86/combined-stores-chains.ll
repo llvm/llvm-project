@@ -8,36 +8,26 @@ define void @foo(i8* %v0, i8* readonly %v1) {
 ; CHECK-NEXT:    [[T02:%.*]] = bitcast i8* [[V0]] to i64*
 ; CHECK-NEXT:    [[T12:%.*]] = bitcast i8* [[V1]] to i64*
 ; CHECK-NEXT:    [[T14:%.*]] = getelementptr inbounds i32, i32* [[T1]], i64 4
-; CHECK-NEXT:    [[T18:%.*]] = getelementptr inbounds i32, i32* [[T1]], i64 5
-; CHECK-NEXT:    [[T22:%.*]] = getelementptr inbounds i32, i32* [[T1]], i64 6
-; CHECK-NEXT:    [[T26:%.*]] = getelementptr inbounds i32, i32* [[T1]], i64 7
 ; CHECK-NEXT:    [[T142:%.*]] = getelementptr inbounds i64, i64* [[T12]], i64 8
-; CHECK-NEXT:    [[T182:%.*]] = getelementptr inbounds i64, i64* [[T12]], i64 9
 ; CHECK-NEXT:    [[T222:%.*]] = getelementptr inbounds i64, i64* [[T12]], i64 10
-; CHECK-NEXT:    [[T262:%.*]] = getelementptr inbounds i64, i64* [[T12]], i64 11
 ; CHECK-NEXT:    [[T21:%.*]] = getelementptr inbounds i32, i32* [[T0]], i64 4
-; CHECK-NEXT:    [[T25:%.*]] = getelementptr inbounds i32, i32* [[T0]], i64 5
-; CHECK-NEXT:    [[T29:%.*]] = getelementptr inbounds i32, i32* [[T0]], i64 6
-; CHECK-NEXT:    [[T32:%.*]] = getelementptr inbounds i32, i32* [[T0]], i64 7
 ; CHECK-NEXT:    [[T212:%.*]] = getelementptr inbounds i64, i64* [[T02]], i64 8
-; CHECK-NEXT:    [[T252:%.*]] = getelementptr inbounds i64, i64* [[T02]], i64 9
 ; CHECK-NEXT:    [[T292:%.*]] = getelementptr inbounds i64, i64* [[T02]], i64 10
-; CHECK-NEXT:    [[T322:%.*]] = getelementptr inbounds i64, i64* [[T02]], i64 11
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[T14]] to <4 x i32>*
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, <4 x i32>* [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i64* [[T142]] to <2 x i64>*
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i64>, <2 x i64>* [[TMP3]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64* [[T142]] to <2 x i64>*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, <2 x i64>* [[TMP1]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <2 x i64> [[TMP2]], <i64 4, i64 4>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i64* [[T212]] to <2 x i64>*
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i64* [[T222]] to <2 x i64>*
 ; CHECK-NEXT:    [[TMP6:%.*]] = load <2 x i64>, <2 x i64>* [[TMP5]], align 8
-; CHECK-NEXT:    [[TMP7:%.*]] = add nsw <4 x i32> [[TMP2]], <i32 4, i32 4, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP8:%.*]] = add nsw <2 x i64> [[TMP4]], <i64 4, i64 4>
-; CHECK-NEXT:    [[TMP9:%.*]] = add nsw <2 x i64> [[TMP6]], <i64 6, i64 7>
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i64* [[T212]] to <2 x i64>*
-; CHECK-NEXT:    store <2 x i64> [[TMP8]], <2 x i64>* [[TMP10]], align 8
-; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i64* [[T292]] to <2 x i64>*
-; CHECK-NEXT:    store <2 x i64> [[TMP9]], <2 x i64>* [[TMP11]], align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = add nsw <2 x i64> [[TMP6]], <i64 6, i64 7>
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i64* [[T292]] to <2 x i64>*
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i32* [[T14]] to <4 x i32>*
+; CHECK-NEXT:    [[TMP10:%.*]] = load <4 x i32>, <4 x i32>* [[TMP9]], align 4
+; CHECK-NEXT:    [[TMP11:%.*]] = add nsw <4 x i32> [[TMP10]], <i32 4, i32 4, i32 6, i32 7>
+; CHECK-NEXT:    store <2 x i64> [[TMP3]], <2 x i64>* [[TMP4]], align 8
+; CHECK-NEXT:    store <2 x i64> [[TMP7]], <2 x i64>* [[TMP8]], align 8
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast i32* [[T21]] to <4 x i32>*
-; CHECK-NEXT:    store <4 x i32> [[TMP7]], <4 x i32>* [[TMP12]], align 4
+; CHECK-NEXT:    store <4 x i32> [[TMP11]], <4 x i32>* [[TMP12]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %t0 = bitcast i8* %v0 to i32*

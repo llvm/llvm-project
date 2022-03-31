@@ -21,6 +21,7 @@
 #include "flang/ISO_Fortran_binding.h"
 #include "flang/Runtime/memory.h"
 #include "flang/Runtime/type-code.h"
+#include <algorithm>
 #include <cassert>
 #include <cinttypes>
 #include <cstddef>
@@ -49,10 +50,17 @@ public:
   SubscriptValue ByteStride() const { return raw_.sm; }
 
   Dimension &SetBounds(SubscriptValue lower, SubscriptValue upper) {
-    raw_.lower_bound = lower;
-    raw_.extent = upper >= lower ? upper - lower + 1 : 0;
+    if (upper >= lower) {
+      raw_.lower_bound = lower;
+      raw_.extent = upper - lower + 1;
+    } else {
+      raw_.lower_bound = 1;
+      raw_.extent = 0;
+    }
     return *this;
   }
+  // Do not use this API to cause the LB of an empty dimension
+  // to be anything other than 1.  Use SetBounds() instead if you can.
   Dimension &SetLowerBound(SubscriptValue lower) {
     raw_.lower_bound = lower;
     return *this;
@@ -339,7 +347,7 @@ public:
 
   // Deallocates storage, including allocatable and automatic
   // components.  Optionally invokes FINAL subroutines.
-  int Destroy(bool finalize = false);
+  int Destroy(bool finalize = false, bool destroyPointers = false);
 
   bool IsContiguous(int leadingDimensions = maxRank) const {
     auto bytes{static_cast<SubscriptValue>(ElementBytes())};

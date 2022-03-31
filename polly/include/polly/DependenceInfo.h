@@ -262,6 +262,9 @@ private:
   std::unique_ptr<Dependences> D[Dependences::NumAnalysisLevels];
 };
 
+llvm::Pass *createDependenceInfoPass();
+llvm::Pass *createDependenceInfoPrinterLegacyPass(llvm::raw_ostream &OS);
+
 /// Construct a new DependenceInfoWrapper pass.
 class DependenceInfoWrapperPass : public FunctionPass {
 public:
@@ -301,11 +304,19 @@ private:
   /// Scop to Dependence map for the current function.
   ScopToDepsMapTy ScopToDepsMap;
 };
+
+llvm::Pass *createDependenceInfoWrapperPassPass();
+llvm::Pass *
+createDependenceInfoPrinterLegacyFunctionPass(llvm::raw_ostream &OS);
+
 } // namespace polly
 
 namespace llvm {
 void initializeDependenceInfoPass(llvm::PassRegistry &);
+void initializeDependenceInfoPrinterLegacyPassPass(llvm::PassRegistry &);
 void initializeDependenceInfoWrapperPassPass(llvm::PassRegistry &);
+void initializeDependenceInfoPrinterLegacyFunctionPassPass(
+    llvm::PassRegistry &);
 } // namespace llvm
 
 #endif

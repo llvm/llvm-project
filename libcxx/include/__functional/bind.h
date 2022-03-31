@@ -11,30 +11,36 @@
 #define _LIBCPP___FUNCTIONAL_BIND_H
 
 #include <__config>
-#include <__functional/weak_result_type.h>
 #include <__functional/invoke.h>
+#include <__functional/weak_result_type.h>
 #include <cstddef>
 #include <tuple>
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template<class _Tp> struct __is_bind_expression : public false_type {};
-template<class _Tp> struct _LIBCPP_TEMPLATE_VIS is_bind_expression
-    : public __is_bind_expression<typename remove_cv<_Tp>::type> {};
+template<class _Tp>
+struct is_bind_expression : _If<
+    _IsSame<_Tp, __uncvref_t<_Tp> >::value,
+    false_type,
+    is_bind_expression<__uncvref_t<_Tp> >
+> {};
 
 #if _LIBCPP_STD_VER > 14
 template <class _Tp>
 inline constexpr size_t is_bind_expression_v = is_bind_expression<_Tp>::value;
 #endif
 
-template<class _Tp> struct __is_placeholder : public integral_constant<int, 0> {};
-template<class _Tp> struct _LIBCPP_TEMPLATE_VIS is_placeholder
-    : public __is_placeholder<typename remove_cv<_Tp>::type> {};
+template<class _Tp>
+struct is_placeholder : _If<
+    _IsSame<_Tp, __uncvref_t<_Tp> >::value,
+    integral_constant<int, 0>,
+    is_placeholder<__uncvref_t<_Tp> >
+> {};
 
 #if _LIBCPP_STD_VER > 14
 template <class _Tp>
@@ -73,7 +79,7 @@ _LIBCPP_FUNC_VIS extern const __ph<10> _10;
 } // namespace placeholders
 
 template<int _Np>
-struct __is_placeholder<placeholders::__ph<_Np> >
+struct is_placeholder<placeholders::__ph<_Np> >
     : public integral_constant<int, _Np> {};
 
 
@@ -304,7 +310,7 @@ public:
 };
 
 template<class _Fp, class ..._BoundArgs>
-struct __is_bind_expression<__bind<_Fp, _BoundArgs...> > : public true_type {};
+struct is_bind_expression<__bind<_Fp, _BoundArgs...> > : public true_type {};
 
 template<class _Rp, class _Fp, class ..._BoundArgs>
 class __bind_r
@@ -359,7 +365,7 @@ public:
 };
 
 template<class _Rp, class _Fp, class ..._BoundArgs>
-struct __is_bind_expression<__bind_r<_Rp, _Fp, _BoundArgs...> > : public true_type {};
+struct is_bind_expression<__bind_r<_Rp, _Fp, _BoundArgs...> > : public true_type {};
 
 template<class _Fp, class ..._BoundArgs>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17

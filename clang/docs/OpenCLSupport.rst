@@ -17,16 +17,17 @@
 OpenCL Support
 ==================
 
-Clang has complete support of OpenCL C versions from 1.0 to 2.0.
+Clang has complete support of OpenCL C versions from 1.0 to 3.0.
+Support for OpenCL 3.0 is in experimental phase (:ref:`OpenCL 3.0 <opencl_300>`).
 
 Clang also supports :ref:`the C++ for OpenCL kernel language <cxx_for_opencl_impl>`.
 
-There is an ongoing work to support :ref:`OpenCL 3.0 <opencl_300>`.
+There are also other :ref:`new and experimental features <opencl_experimenal>`
+available.
 
-There are also other :ref:`new and experimental features <opencl_experimenal>` available.
-
-For general issues and bugs with OpenCL in clang refer to `Bugzilla
-<https://bugs.llvm.org/buglist.cgi?component=OpenCL&list_id=172679&product=clang&resolution=--->`__.
+For general issues and bugs with OpenCL in clang refer to `the GitHub issue
+list
+<https://github.com/llvm/llvm-project/issues?q=is%3Aopen+is%3Aissue+label%3Aopencl>`__.
 
 Internals Manual
 ================
@@ -127,7 +128,7 @@ To enable modules for OpenCL:
 
    .. code-block:: console
 
-     $ clang -target spir-unknown-unknown -c -emit-llvm -Xclang -finclude-default-header -fmodules -fimplicit-module-maps -fm     odules-cache-path=<path to the generated module> test.cl
+     $ clang -target spir-unknown-unknown -c -emit-llvm -Xclang -finclude-default-header -fmodules -fimplicit-module-maps -fmodules-cache-path=<path to the generated module> test.cl
 
 Another way to circumvent long parsing latency for the OpenCL builtin
 declarations is to use mechanism enabled by :ref:`-fdeclare-opencl-builtins
@@ -319,23 +320,31 @@ specified in the Clang's source code.
 C++ for OpenCL Implementation Status
 ====================================
 
-Clang implements language version 1.0 published in `the official
+Clang implements language versions 1.0 and 2021 published in `the official
 release of C++ for OpenCL Documentation
-<https://github.com/KhronosGroup/OpenCL-Docs/releases/tag/cxxforopencl-v1.0-r2>`_.
+<https://github.com/KhronosGroup/OpenCL-Docs/releases/tag/cxxforopencl-docrev2021.12>`_.
 
 Limited support of experimental C++ libraries is described in the :ref:`experimental features <opencl_experimenal>`.
 
-Bugzilla bugs for this functionality are typically prefixed
+GitHub issues for this functionality are typically prefixed
 with '[C++4OpenCL]' - click `here
-<https://bugs.llvm.org/buglist.cgi?component=OpenCL&list_id=204139&product=clang&query_format=advanced&resolution=---&short_desc=%5BC%2B%2B4OpenCL%5D&short_desc_type=allwordssubstr>`__
+<https://github.com/llvm/llvm-project/issues?q=is%3Aissue+is%3Aopen+%5BC%2B%2B4OpenCL%5D>`__
 to view the full bug list.
 
 
 Missing features or with limited support
 ----------------------------------------
 
-- IR generation for global destructors is incomplete (See:
+- Support of C++ for OpenCL 2021 is currently in experimental phase. Refer to
+  :ref:`OpenCL 3.0 status <opencl_300>` for details of common missing
+  functionality from OpenCL 3.0.
+
+- IR generation for non-trivial global destructors is incomplete (See:
   `PR48047 <https://llvm.org/PR48047>`_).
+
+- Support of `destrutors with non-default address spaces
+  <https://www.khronos.org/opencl/assets/CXX_for_OpenCL.html#_construction_initialization_and_destruction>`_
+  is incomplete (See: `D109609 <https://reviews.llvm.org/D109609>`_).
 
 .. _opencl_300:
 
@@ -362,43 +371,43 @@ OpenCL C 3.0 Implementation Status
 The following table provides an overview of features in OpenCL C 3.0 and their
 implementation status.
 
-+------------------------------+-------------------------+-----------------------------------------+----------------------+----------------------------------------------------------------------------------------------+
-| Category                     | Feature                                                           | Status               | Reviews                                                                                      |
-+==============================+=========================+=========================================+======================+==============================================================================================+
-| Command line interface       | New value for ``-cl-std`` flag                                    | :good:`done`         | https://reviews.llvm.org/D88300                                                              |
-+------------------------------+-------------------------+-----------------------------------------+----------------------+----------------------------------------------------------------------------------------------+
-| Predefined macros            | New version macro                                                 | :good:`done`         | https://reviews.llvm.org/D88300                                                              |
-+------------------------------+-------------------------+-----------------------------------------+----------------------+----------------------------------------------------------------------------------------------+
-| Predefined macros            | Feature macros                                                    | :good:`done`         | https://reviews.llvm.org/D95776                                                              |
-+------------------------------+-------------------------+-----------------------------------------+----------------------+----------------------------------------------------------------------------------------------+
-| Feature optionality          | Generic address space                                             | :good:`done`         | https://reviews.llvm.org/D95778 and https://reviews.llvm.org/D103401                         |
-+------------------------------+-------------------------+-----------------------------------------+----------------------+----------------------------------------------------------------------------------------------+
-| Feature optionality          | Builtin function overloads with generic address space             | :good:`done`         | https://reviews.llvm.org/D105526                                                             |
-+------------------------------+-------------------------+-----------------------------------------+----------------------+----------------------------------------------------------------------------------------------+
-| Feature optionality          | Program scope variables in global memory                          | :good:`done`         | https://reviews.llvm.org/D103191                                                             |
-+------------------------------+-------------------------+-----------------------------------------+----------------------+----------------------------------------------------------------------------------------------+
-| Feature optionality          | 3D image writes including builtin functions                       | :part:`worked on`    | https://reviews.llvm.org/D106260 (frontend)                                                  |
-+------------------------------+-------------------------+-----------------------------------------+----------------------+----------------------------------------------------------------------------------------------+
-| Feature optionality          | read_write images including builtin functions                     | :part:`worked on`    | https://reviews.llvm.org/D104915 (frontend) and https://reviews.llvm.org/D107539 (functions) |
-+------------------------------+-------------------------+-----------------------------------------+----------------------+----------------------------------------------------------------------------------------------+
-| Feature optionality          | C11 atomics memory scopes, ordering and builtin function          | :good:`done`         | https://reviews.llvm.org/D106111                                                             |
-+------------------------------+-------------------------+-----------------------------------------+----------------------+----------------------------------------------------------------------------------------------+
-| Feature optionality          | Blocks and Device-side kernel enqueue including builtin functions | :none:`unclaimed`    |                                                                                              |
-+------------------------------+-------------------------+-----------------------------------------+----------------------+----------------------------------------------------------------------------------------------+
-| Feature optionality          | Pipes including builtin functions                                 | :good:`done`         | https://reviews.llvm.org/D107154 (frontend) and https://reviews.llvm.org/D105858 (functions) |
-+------------------------------+-------------------------+-----------------------------------------+----------------------+----------------------------------------------------------------------------------------------+
-| Feature optionality          | Work group collective builtin functions                           | :good:`done`         | https://reviews.llvm.org/D105858                                                             |
-+------------------------------+-------------------------+-----------------------------------------+----------------------+----------------------------------------------------------------------------------------------+
-| Feature optionality          | Image types and builtin functions                                 | :good:`done`         | https://reviews.llvm.org/D103911 (frontend) and https://reviews.llvm.org/D107539 (functions) |
-+------------------------------+-------------------------+-----------------------------------------+----------------------+----------------------------------------------------------------------------------------------+
-| Feature optionality          | Double precision floating point type                              | :good:`done`         | https://reviews.llvm.org/D96524                                                              |
-+------------------------------+-------------------------+-----------------------------------------+----------------------+----------------------------------------------------------------------------------------------+
-| New functionality            | RGBA vector components                                            | :good:`done`         | https://reviews.llvm.org/D99969                                                              |
-+------------------------------+-------------------------+-----------------------------------------+----------------------+----------------------------------------------------------------------------------------------+
-| New functionality            | Subgroup functions                                                | :part:`worked on`    | https://reviews.llvm.org/D105858                                                             |
-+------------------------------+-------------------------+-----------------------------------------+----------------------+----------------------------------------------------------------------------------------------+
-| New functionality            | Atomic mem scopes: subgroup, all devices including functions      | :part:`worked on`    |  https://reviews.llvm.org/D103241                                                            |
-+------------------------------+-------------------------+-----------------------------------------+----------------------+----------------------------------------------------------------------------------------------+
++------------------------------+-------------------------+-----------------------------------------+----------------------+--------------------------------------------------------------------------------------------------------------------------------+
+| Category                     | Feature                                                           | Status               | Reviews                                                                                                                        |
++==============================+=========================+=========================================+======================+================================================================================================================================+
+| Command line interface       | New value for ``-cl-std`` flag                                    | :good:`done`         | https://reviews.llvm.org/D88300                                                                                                |
++------------------------------+-------------------------+-----------------------------------------+----------------------+--------------------------------------------------------------------------------------------------------------------------------+
+| Predefined macros            | New version macro                                                 | :good:`done`         | https://reviews.llvm.org/D88300                                                                                                |
++------------------------------+-------------------------+-----------------------------------------+----------------------+--------------------------------------------------------------------------------------------------------------------------------+
+| Predefined macros            | Feature macros                                                    | :good:`done`         | https://reviews.llvm.org/D95776                                                                                                |
++------------------------------+-------------------------+-----------------------------------------+----------------------+--------------------------------------------------------------------------------------------------------------------------------+
+| Feature optionality          | Generic address space                                             | :good:`done`         | https://reviews.llvm.org/D95778 and https://reviews.llvm.org/D103401                                                           |
++------------------------------+-------------------------+-----------------------------------------+----------------------+--------------------------------------------------------------------------------------------------------------------------------+
+| Feature optionality          | Builtin function overloads with generic address space             | :good:`done`         | https://reviews.llvm.org/D105526, https://reviews.llvm.org/D107769                                                             |
++------------------------------+-------------------------+-----------------------------------------+----------------------+--------------------------------------------------------------------------------------------------------------------------------+
+| Feature optionality          | Program scope variables in global memory                          | :good:`done`         | https://reviews.llvm.org/D103191                                                                                               |
++------------------------------+-------------------------+-----------------------------------------+----------------------+--------------------------------------------------------------------------------------------------------------------------------+
+| Feature optionality          | 3D image writes including builtin functions                       | :good:`done`         | https://reviews.llvm.org/D106260 (frontend)                                                                                    |
++------------------------------+-------------------------+-----------------------------------------+----------------------+--------------------------------------------------------------------------------------------------------------------------------+
+| Feature optionality          | read_write images including builtin functions                     | :good:`done`         | https://reviews.llvm.org/D104915 (frontend) and https://reviews.llvm.org/D107539, https://reviews.llvm.org/D117899 (functions) |
++------------------------------+-------------------------+-----------------------------------------+----------------------+--------------------------------------------------------------------------------------------------------------------------------+
+| Feature optionality          | C11 atomics memory scopes, ordering and builtin function          | :good:`done`         | https://reviews.llvm.org/D106111, https://reviews.llvm.org/D119420                                                             |
++------------------------------+-------------------------+-----------------------------------------+----------------------+--------------------------------------------------------------------------------------------------------------------------------+
+| Feature optionality          | Blocks and Device-side kernel enqueue including builtin functions | :good:`done`         | https://reviews.llvm.org/D115640, https://reviews.llvm.org/D118605                                                             |
++------------------------------+-------------------------+-----------------------------------------+----------------------+--------------------------------------------------------------------------------------------------------------------------------+
+| Feature optionality          | Pipes including builtin functions                                 | :good:`done`         | https://reviews.llvm.org/D107154 (frontend) and https://reviews.llvm.org/D105858 (functions)                                   |
++------------------------------+-------------------------+-----------------------------------------+----------------------+--------------------------------------------------------------------------------------------------------------------------------+
+| Feature optionality          | Work group collective builtin functions                           | :good:`done`         | https://reviews.llvm.org/D105858                                                                                               |
++------------------------------+-------------------------+-----------------------------------------+----------------------+--------------------------------------------------------------------------------------------------------------------------------+
+| Feature optionality          | Image types and builtin functions                                 | :good:`done`         | https://reviews.llvm.org/D103911 (frontend) and https://reviews.llvm.org/D107539 (functions)                                   |
++------------------------------+-------------------------+-----------------------------------------+----------------------+--------------------------------------------------------------------------------------------------------------------------------+
+| Feature optionality          | Double precision floating point type                              | :good:`done`         | https://reviews.llvm.org/D96524                                                                                                |
++------------------------------+-------------------------+-----------------------------------------+----------------------+--------------------------------------------------------------------------------------------------------------------------------+
+| New functionality            | RGBA vector components                                            | :good:`done`         | https://reviews.llvm.org/D99969                                                                                                |
++------------------------------+-------------------------+-----------------------------------------+----------------------+--------------------------------------------------------------------------------------------------------------------------------+
+| New functionality            | Subgroup functions                                                | :good:`done`         | https://reviews.llvm.org/D105858, https://reviews.llvm.org/D118999                                                             |
++------------------------------+-------------------------+-----------------------------------------+----------------------+--------------------------------------------------------------------------------------------------------------------------------+
+| New functionality            | Atomic mem scopes: subgroup, all devices including functions      | :good:`done`         | https://reviews.llvm.org/D103241                                                                                               |
++------------------------------+-------------------------+-----------------------------------------+----------------------+--------------------------------------------------------------------------------------------------------------------------------+
 
 .. _opencl_experimenal:
 
@@ -408,8 +417,8 @@ Experimental features
 Clang provides the following new WIP features for the developers to experiment
 and provide early feedback or contribute with further improvements.
 Feel free to contact us on `cfe-dev
-<https://lists.llvm.org/mailman/listinfo/cfe-dev>`_ or via `Bugzilla
-<https://bugs.llvm.org/>`__.
+<https://lists.llvm.org/mailman/listinfo/cfe-dev>`_ or file `a GitHub issue
+<https://github.com/llvm/llvm-project/issues/new>`_.
 
 .. _opencl_experimental_cxxlibs:
 

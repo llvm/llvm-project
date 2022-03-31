@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ; The assumed context should be empty since the <nsw> flags on the IV
 ; increments already guarantee that there is no wrap in the loop trip

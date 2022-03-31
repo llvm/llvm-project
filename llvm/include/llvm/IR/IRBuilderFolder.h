@@ -26,11 +26,30 @@ public:
   virtual ~IRBuilderFolder();
 
   //===--------------------------------------------------------------------===//
+  // Value-based folders.
+  //
+  // Return an existing value or a constant if the operation can be simplified.
+  // Otherwise return nullptr.
+  //===--------------------------------------------------------------------===//
+  virtual Value *FoldAdd(Value *LHS, Value *RHS, bool HasNUW = false,
+                         bool HasNSW = false) const = 0;
+
+  virtual Value *FoldAnd(Value *LHS, Value *RHS) const = 0;
+
+  virtual Value *FoldOr(Value *LHS, Value *RHS) const = 0;
+
+  virtual Value *FoldICmp(CmpInst::Predicate P, Value *LHS,
+                          Value *RHS) const = 0;
+
+  virtual Value *FoldGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
+                         bool IsInBounds = false) const = 0;
+
+  virtual Value *FoldSelect(Value *C, Value *True, Value *False) const = 0;
+
+  //===--------------------------------------------------------------------===//
   // Binary Operators
   //===--------------------------------------------------------------------===//
 
-  virtual Value *CreateAdd(Constant *LHS, Constant *RHS,
-                           bool HasNUW = false, bool HasNSW = false) const = 0;
   virtual Value *CreateFAdd(Constant *LHS, Constant *RHS) const = 0;
   virtual Value *CreateSub(Constant *LHS, Constant *RHS,
                            bool HasNUW = false, bool HasNSW = false) const = 0;
@@ -52,8 +71,6 @@ public:
                             bool isExact = false) const = 0;
   virtual Value *CreateAShr(Constant *LHS, Constant *RHS,
                             bool isExact = false) const = 0;
-  virtual Value *CreateAnd(Constant *LHS, Constant *RHS) const = 0;
-  virtual Value *CreateOr(Constant *LHS, Constant *RHS) const = 0;
   virtual Value *CreateXor(Constant *LHS, Constant *RHS) const = 0;
   virtual Value *CreateBinOp(Instruction::BinaryOps Opc,
                              Constant *LHS, Constant *RHS) const = 0;
@@ -67,29 +84,6 @@ public:
   virtual Value *CreateFNeg(Constant *C) const = 0;
   virtual Value *CreateNot(Constant *C) const = 0;
   virtual Value *CreateUnOp(Instruction::UnaryOps Opc, Constant *C) const = 0;
-
-  //===--------------------------------------------------------------------===//
-  // Memory Instructions
-  //===--------------------------------------------------------------------===//
-
-  virtual Value *CreateGetElementPtr(Type *Ty, Constant *C,
-                                     ArrayRef<Constant *> IdxList) const = 0;
-  // This form of the function only exists to avoid ambiguous overload
-  // warnings about whether to convert Idx to ArrayRef<Constant *> or
-  // ArrayRef<Value *>.
-  virtual Value *CreateGetElementPtr(Type *Ty, Constant *C,
-                                     Constant *Idx) const = 0;
-  virtual Value *CreateGetElementPtr(Type *Ty, Constant *C,
-                                     ArrayRef<Value *> IdxList) const = 0;
-  virtual Value *CreateInBoundsGetElementPtr(
-      Type *Ty, Constant *C, ArrayRef<Constant *> IdxList) const = 0;
-  // This form of the function only exists to avoid ambiguous overload
-  // warnings about whether to convert Idx to ArrayRef<Constant *> or
-  // ArrayRef<Value *>.
-  virtual Value *CreateInBoundsGetElementPtr(Type *Ty, Constant *C,
-                                             Constant *Idx) const = 0;
-  virtual Value *CreateInBoundsGetElementPtr(
-      Type *Ty, Constant *C, ArrayRef<Value *> IdxList) const = 0;
 
   //===--------------------------------------------------------------------===//
   // Cast/Conversion Operators
@@ -114,8 +108,6 @@ public:
   // Compare Instructions
   //===--------------------------------------------------------------------===//
 
-  virtual Value *CreateICmp(CmpInst::Predicate P, Constant *LHS,
-                            Constant *RHS) const = 0;
   virtual Value *CreateFCmp(CmpInst::Predicate P, Constant *LHS,
                             Constant *RHS) const = 0;
 
@@ -123,8 +115,6 @@ public:
   // Other Instructions
   //===--------------------------------------------------------------------===//
 
-  virtual Value *CreateSelect(Constant *C, Constant *True,
-                              Constant *False) const = 0;
   virtual Value *CreateExtractElement(Constant *Vec, Constant *Idx) const = 0;
   virtual Value *CreateInsertElement(Constant *Vec, Constant *NewElt,
                                      Constant *Idx) const = 0;

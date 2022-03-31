@@ -313,7 +313,7 @@ unsigned MipsFastISel::emitLogicalOp(unsigned ISDOpc, MVT RetVT,
     llvm_unreachable("unexpected opcode");
   }
 
-  unsigned LHSReg = getRegForValue(LHS);
+  Register LHSReg = getRegForValue(LHS);
   if (!LHSReg)
     return 0;
 
@@ -325,7 +325,7 @@ unsigned MipsFastISel::emitLogicalOp(unsigned ISDOpc, MVT RetVT,
   if (!RHSReg)
     return 0;
 
-  unsigned ResultReg = createResultReg(&Mips::GPR32RegClass);
+  Register ResultReg = createResultReg(&Mips::GPR32RegClass);
   if (!ResultReg)
     return 0;
 
@@ -341,7 +341,7 @@ unsigned MipsFastISel::fastMaterializeAlloca(const AllocaInst *AI) {
       FuncInfo.StaticAllocaMap.find(AI);
 
   if (SI != FuncInfo.StaticAllocaMap.end()) {
-    unsigned ResultReg = createResultReg(&Mips::GPR32RegClass);
+    Register ResultReg = createResultReg(&Mips::GPR32RegClass);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(Mips::LEA_ADDiu),
             ResultReg)
         .addFrameIndex(SI->second)
@@ -362,7 +362,7 @@ unsigned MipsFastISel::materializeInt(const Constant *C, MVT VT) {
 
 unsigned MipsFastISel::materialize32BitInt(int64_t Imm,
                                            const TargetRegisterClass *RC) {
-  unsigned ResultReg = createResultReg(RC);
+  Register ResultReg = createResultReg(RC);
 
   if (isInt<16>(Imm)) {
     unsigned Opc = Mips::ADDiu;
@@ -376,7 +376,7 @@ unsigned MipsFastISel::materialize32BitInt(int64_t Imm,
   unsigned Hi = (Imm >> 16) & 0xFFFF;
   if (Lo) {
     // Both Lo and Hi have nonzero bits.
-    unsigned TmpReg = createResultReg(RC);
+    Register TmpReg = createResultReg(RC);
     emitInst(Mips::LUi, TmpReg).addImm(Hi);
     emitInst(Mips::ORi, ResultReg).addReg(TmpReg).addImm(Lo);
   } else {
@@ -391,13 +391,13 @@ unsigned MipsFastISel::materializeFP(const ConstantFP *CFP, MVT VT) {
   int64_t Imm = CFP->getValueAPF().bitcastToAPInt().getZExtValue();
   if (VT == MVT::f32) {
     const TargetRegisterClass *RC = &Mips::FGR32RegClass;
-    unsigned DestReg = createResultReg(RC);
+    Register DestReg = createResultReg(RC);
     unsigned TempReg = materialize32BitInt(Imm, &Mips::GPR32RegClass);
     emitInst(Mips::MTC1, DestReg).addReg(TempReg);
     return DestReg;
   } else if (VT == MVT::f64) {
     const TargetRegisterClass *RC = &Mips::AFGR64RegClass;
-    unsigned DestReg = createResultReg(RC);
+    Register DestReg = createResultReg(RC);
     unsigned TempReg1 = materialize32BitInt(Imm >> 32, &Mips::GPR32RegClass);
     unsigned TempReg2 =
         materialize32BitInt(Imm & 0xFFFFFFFF, &Mips::GPR32RegClass);
@@ -412,7 +412,7 @@ unsigned MipsFastISel::materializeGV(const GlobalValue *GV, MVT VT) {
   if (VT != MVT::i32)
     return 0;
   const TargetRegisterClass *RC = &Mips::GPR32RegClass;
-  unsigned DestReg = createResultReg(RC);
+  Register DestReg = createResultReg(RC);
   const GlobalVariable *GVar = dyn_cast<GlobalVariable>(GV);
   bool IsThreadLocal = GVar && GVar->isThreadLocal();
   // TLS not supported at this time.
@@ -423,7 +423,7 @@ unsigned MipsFastISel::materializeGV(const GlobalValue *GV, MVT VT) {
       .addGlobalAddress(GV, 0, MipsII::MO_GOT);
   if ((GV->hasInternalLinkage() ||
        (GV->hasLocalLinkage() && !isa<Function>(GV)))) {
-    unsigned TempReg = createResultReg(RC);
+    Register TempReg = createResultReg(RC);
     emitInst(Mips::ADDiu, TempReg)
         .addReg(DestReg)
         .addGlobalAddress(GV, 0, MipsII::MO_ABS_LO);
@@ -434,7 +434,7 @@ unsigned MipsFastISel::materializeGV(const GlobalValue *GV, MVT VT) {
 
 unsigned MipsFastISel::materializeExternalCallSym(MCSymbol *Sym) {
   const TargetRegisterClass *RC = &Mips::GPR32RegClass;
-  unsigned DestReg = createResultReg(RC);
+  Register DestReg = createResultReg(RC);
   emitInst(Mips::LW, DestReg)
       .addReg(MFI->getGlobalBaseReg(*MF))
       .addSym(Sym, MipsII::MO_GOT);
@@ -649,13 +649,13 @@ bool MipsFastISel::emitCmp(unsigned ResultReg, const CmpInst *CI) {
   default:
     return false;
   case CmpInst::ICMP_EQ: {
-    unsigned TempReg = createResultReg(&Mips::GPR32RegClass);
+    Register TempReg = createResultReg(&Mips::GPR32RegClass);
     emitInst(Mips::XOR, TempReg).addReg(LeftReg).addReg(RightReg);
     emitInst(Mips::SLTiu, ResultReg).addReg(TempReg).addImm(1);
     break;
   }
   case CmpInst::ICMP_NE: {
-    unsigned TempReg = createResultReg(&Mips::GPR32RegClass);
+    Register TempReg = createResultReg(&Mips::GPR32RegClass);
     emitInst(Mips::XOR, TempReg).addReg(LeftReg).addReg(RightReg);
     emitInst(Mips::SLTu, ResultReg).addReg(Mips::ZERO).addReg(TempReg);
     break;
@@ -667,13 +667,13 @@ bool MipsFastISel::emitCmp(unsigned ResultReg, const CmpInst *CI) {
     emitInst(Mips::SLTu, ResultReg).addReg(LeftReg).addReg(RightReg);
     break;
   case CmpInst::ICMP_UGE: {
-    unsigned TempReg = createResultReg(&Mips::GPR32RegClass);
+    Register TempReg = createResultReg(&Mips::GPR32RegClass);
     emitInst(Mips::SLTu, TempReg).addReg(LeftReg).addReg(RightReg);
     emitInst(Mips::XORi, ResultReg).addReg(TempReg).addImm(1);
     break;
   }
   case CmpInst::ICMP_ULE: {
-    unsigned TempReg = createResultReg(&Mips::GPR32RegClass);
+    Register TempReg = createResultReg(&Mips::GPR32RegClass);
     emitInst(Mips::SLTu, TempReg).addReg(RightReg).addReg(LeftReg);
     emitInst(Mips::XORi, ResultReg).addReg(TempReg).addImm(1);
     break;
@@ -685,13 +685,13 @@ bool MipsFastISel::emitCmp(unsigned ResultReg, const CmpInst *CI) {
     emitInst(Mips::SLT, ResultReg).addReg(LeftReg).addReg(RightReg);
     break;
   case CmpInst::ICMP_SGE: {
-    unsigned TempReg = createResultReg(&Mips::GPR32RegClass);
+    Register TempReg = createResultReg(&Mips::GPR32RegClass);
     emitInst(Mips::SLT, TempReg).addReg(LeftReg).addReg(RightReg);
     emitInst(Mips::XORi, ResultReg).addReg(TempReg).addImm(1);
     break;
   }
   case CmpInst::ICMP_SLE: {
-    unsigned TempReg = createResultReg(&Mips::GPR32RegClass);
+    Register TempReg = createResultReg(&Mips::GPR32RegClass);
     emitInst(Mips::SLT, TempReg).addReg(RightReg).addReg(LeftReg);
     emitInst(Mips::XORi, ResultReg).addReg(TempReg).addImm(1);
     break;
@@ -737,8 +737,8 @@ bool MipsFastISel::emitCmp(unsigned ResultReg, const CmpInst *CI) {
     default:
       llvm_unreachable("Only switching of a subset of CCs.");
     }
-    unsigned RegWithZero = createResultReg(&Mips::GPR32RegClass);
-    unsigned RegWithOne = createResultReg(&Mips::GPR32RegClass);
+    Register RegWithZero = createResultReg(&Mips::GPR32RegClass);
+    Register RegWithOne = createResultReg(&Mips::GPR32RegClass);
     emitInst(Mips::ADDiu, RegWithZero).addReg(Mips::ZERO).addImm(0);
     emitInst(Mips::ADDiu, RegWithOne).addReg(Mips::ZERO).addImm(1);
     emitInst(Opc).addReg(Mips::FCC0, RegState::Define).addReg(LeftReg)
@@ -964,7 +964,7 @@ bool MipsFastISel::selectBranch(const Instruction *I) {
 
   // For the general case, we need to mask with 1.
   if (ZExtCondReg == 0) {
-    unsigned CondReg = getRegForValue(BI->getCondition());
+    Register CondReg = getRegForValue(BI->getCondition());
     if (CondReg == 0)
       return false;
 
@@ -982,7 +982,7 @@ bool MipsFastISel::selectBranch(const Instruction *I) {
 
 bool MipsFastISel::selectCmp(const Instruction *I) {
   const CmpInst *CI = cast<CmpInst>(I);
-  unsigned ResultReg = createResultReg(&Mips::GPR32RegClass);
+  Register ResultReg = createResultReg(&Mips::GPR32RegClass);
   if (!emitCmp(ResultReg, CI))
     return false;
   updateValueMap(I, ResultReg);
@@ -1000,13 +1000,13 @@ bool MipsFastISel::selectFPExt(const Instruction *I) {
   if (SrcVT != MVT::f32 || DestVT != MVT::f64)
     return false;
 
-  unsigned SrcReg =
+  Register SrcReg =
       getRegForValue(Src); // this must be a 32bit floating point register class
                            // maybe we should handle this differently
   if (!SrcReg)
     return false;
 
-  unsigned DestReg = createResultReg(&Mips::AFGR64RegClass);
+  Register DestReg = createResultReg(&Mips::AFGR64RegClass);
   emitInst(Mips::CVT_D32_S, DestReg).addReg(SrcReg);
   updateValueMap(I, DestReg);
   return true;
@@ -1041,22 +1041,22 @@ bool MipsFastISel::selectSelect(const Instruction *I) {
 
   const SelectInst *SI = cast<SelectInst>(I);
   const Value *Cond = SI->getCondition();
-  unsigned Src1Reg = getRegForValue(SI->getTrueValue());
-  unsigned Src2Reg = getRegForValue(SI->getFalseValue());
-  unsigned CondReg = getRegForValue(Cond);
+  Register Src1Reg = getRegForValue(SI->getTrueValue());
+  Register Src2Reg = getRegForValue(SI->getFalseValue());
+  Register CondReg = getRegForValue(Cond);
 
   if (!Src1Reg || !Src2Reg || !CondReg)
     return false;
 
-  unsigned ZExtCondReg = createResultReg(&Mips::GPR32RegClass);
+  Register ZExtCondReg = createResultReg(&Mips::GPR32RegClass);
   if (!ZExtCondReg)
     return false;
 
   if (!emitIntExt(MVT::i1, CondReg, MVT::i32, ZExtCondReg, true))
     return false;
 
-  unsigned ResultReg = createResultReg(RC);
-  unsigned TempReg = createResultReg(RC);
+  Register ResultReg = createResultReg(RC);
+  Register TempReg = createResultReg(RC);
 
   if (!ResultReg || !TempReg)
     return false;
@@ -1079,11 +1079,11 @@ bool MipsFastISel::selectFPTrunc(const Instruction *I) {
   if (SrcVT != MVT::f64 || DestVT != MVT::f32)
     return false;
 
-  unsigned SrcReg = getRegForValue(Src);
+  Register SrcReg = getRegForValue(Src);
   if (!SrcReg)
     return false;
 
-  unsigned DestReg = createResultReg(&Mips::FGR32RegClass);
+  Register DestReg = createResultReg(&Mips::FGR32RegClass);
   if (!DestReg)
     return false;
 
@@ -1115,14 +1115,14 @@ bool MipsFastISel::selectFPToInt(const Instruction *I, bool IsSigned) {
   if (SrcVT != MVT::f32 && SrcVT != MVT::f64)
     return false;
 
-  unsigned SrcReg = getRegForValue(Src);
+  Register SrcReg = getRegForValue(Src);
   if (SrcReg == 0)
     return false;
 
   // Determine the opcode for the conversion, which takes place
   // entirely within FPRs.
-  unsigned DestReg = createResultReg(&Mips::GPR32RegClass);
-  unsigned TempReg = createResultReg(&Mips::FGR32RegClass);
+  Register DestReg = createResultReg(&Mips::GPR32RegClass);
+  Register TempReg = createResultReg(&Mips::FGR32RegClass);
   unsigned Opc = (SrcVT == MVT::f32) ? Mips::TRUNC_W_S : Mips::TRUNC_W_D32;
 
   // Generate the convert.
@@ -1196,7 +1196,7 @@ bool MipsFastISel::processCallArgs(CallLoweringInfo &CLI,
         break;
       }
     }
-    unsigned ArgReg = getRegForValue(ArgVal);
+    Register ArgReg = getRegForValue(ArgVal);
     if (!ArgReg)
       return false;
 
@@ -1294,7 +1294,7 @@ bool MipsFastISel::finishCall(CallLoweringInfo &CLI, MVT RetVT,
     if (RetVT == MVT::i1 || RetVT == MVT::i8 || RetVT == MVT::i16)
       CopyVT = MVT::i32;
 
-    unsigned ResultReg = createResultReg(TLI.getRegClassFor(CopyVT));
+    Register ResultReg = createResultReg(TLI.getRegClassFor(CopyVT));
     if (!ResultReg)
       return false;
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
@@ -1462,11 +1462,11 @@ bool MipsFastISel::fastLowerArguments() {
   for (const auto &FormalArg : F->args()) {
     unsigned ArgNo = FormalArg.getArgNo();
     unsigned SrcReg = Allocation[ArgNo].Reg;
-    unsigned DstReg = FuncInfo.MF->addLiveIn(SrcReg, Allocation[ArgNo].RC);
+    Register DstReg = FuncInfo.MF->addLiveIn(SrcReg, Allocation[ArgNo].RC);
     // FIXME: Unfortunately it's necessary to emit a copy from the livein copy.
     // Without this, EmitLiveInCopies may eliminate the livein if its only
     // use is a bitcast (which isn't turned into an instruction).
-    unsigned ResultReg = createResultReg(Allocation[ArgNo].RC);
+    Register ResultReg = createResultReg(Allocation[ArgNo].RC);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
             TII.get(TargetOpcode::COPY), ResultReg)
         .addReg(DstReg, getKillRegState(true));
@@ -1594,10 +1594,10 @@ bool MipsFastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     if (!isTypeSupported(RetTy, VT))
       return false;
 
-    unsigned SrcReg = getRegForValue(II->getOperand(0));
+    Register SrcReg = getRegForValue(II->getOperand(0));
     if (SrcReg == 0)
       return false;
-    unsigned DestReg = createResultReg(&Mips::GPR32RegClass);
+    Register DestReg = createResultReg(&Mips::GPR32RegClass);
     if (DestReg == 0)
       return false;
     if (VT == MVT::i16) {
@@ -1607,9 +1607,9 @@ bool MipsFastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
         return true;
       } else {
         unsigned TempReg[3];
-        for (int i = 0; i < 3; i++) {
-          TempReg[i] = createResultReg(&Mips::GPR32RegClass);
-          if (TempReg[i] == 0)
+        for (unsigned &R : TempReg) {
+          R = createResultReg(&Mips::GPR32RegClass);
+          if (R == 0)
             return false;
         }
         emitInst(Mips::SLL, TempReg[0]).addReg(SrcReg).addImm(8);
@@ -1621,16 +1621,16 @@ bool MipsFastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
       }
     } else if (VT == MVT::i32) {
       if (Subtarget->hasMips32r2()) {
-        unsigned TempReg = createResultReg(&Mips::GPR32RegClass);
+        Register TempReg = createResultReg(&Mips::GPR32RegClass);
         emitInst(Mips::WSBH, TempReg).addReg(SrcReg);
         emitInst(Mips::ROTR, DestReg).addReg(TempReg).addImm(16);
         updateValueMap(II, DestReg);
         return true;
       } else {
         unsigned TempReg[8];
-        for (int i = 0; i < 8; i++) {
-          TempReg[i] = createResultReg(&Mips::GPR32RegClass);
-          if (TempReg[i] == 0)
+        for (unsigned &R : TempReg) {
+          R = createResultReg(&Mips::GPR32RegClass);
+          if (R == 0)
             return false;
         }
 
@@ -1720,7 +1720,7 @@ bool MipsFastISel::selectRet(const Instruction *I) {
     if (!VA.isRegLoc())
       return false;
 
-    unsigned Reg = getRegForValue(RV);
+    Register Reg = getRegForValue(RV);
     if (Reg == 0)
       return false;
 
@@ -1788,7 +1788,7 @@ bool MipsFastISel::selectTrunc(const Instruction *I) {
   if (DestVT != MVT::i16 && DestVT != MVT::i8 && DestVT != MVT::i1)
     return false;
 
-  unsigned SrcReg = getRegForValue(Op);
+  Register SrcReg = getRegForValue(Op);
   if (!SrcReg)
     return false;
 
@@ -1804,7 +1804,7 @@ bool MipsFastISel::selectIntExt(const Instruction *I) {
   Type *SrcTy = Src->getType();
 
   bool isZExt = isa<ZExtInst>(I);
-  unsigned SrcReg = getRegForValue(Src);
+  Register SrcReg = getRegForValue(Src);
   if (!SrcReg)
     return false;
 
@@ -1818,7 +1818,7 @@ bool MipsFastISel::selectIntExt(const Instruction *I) {
 
   MVT SrcVT = SrcEVT.getSimpleVT();
   MVT DestVT = DestEVT.getSimpleVT();
-  unsigned ResultReg = createResultReg(&Mips::GPR32RegClass);
+  Register ResultReg = createResultReg(&Mips::GPR32RegClass);
 
   if (!emitIntExt(SrcVT, SrcReg, DestVT, ResultReg, isZExt))
     return false;
@@ -1839,7 +1839,7 @@ bool MipsFastISel::emitIntSExt32r1(MVT SrcVT, unsigned SrcReg, MVT DestVT,
     ShiftAmt = 16;
     break;
   }
-  unsigned TempReg = createResultReg(&Mips::GPR32RegClass);
+  Register TempReg = createResultReg(&Mips::GPR32RegClass);
   emitInst(Mips::SLL, TempReg).addReg(SrcReg).addImm(ShiftAmt);
   emitInst(Mips::SRA, DestReg).addReg(TempReg).addImm(ShiftAmt);
   return true;
@@ -1935,15 +1935,15 @@ bool MipsFastISel::selectDivRem(const Instruction *I, unsigned ISDOpcode) {
     break;
   }
 
-  unsigned Src0Reg = getRegForValue(I->getOperand(0));
-  unsigned Src1Reg = getRegForValue(I->getOperand(1));
+  Register Src0Reg = getRegForValue(I->getOperand(0));
+  Register Src1Reg = getRegForValue(I->getOperand(1));
   if (!Src0Reg || !Src1Reg)
     return false;
 
   emitInst(DivOpc).addReg(Src0Reg).addReg(Src1Reg);
   emitInst(Mips::TEQ).addReg(Src1Reg).addReg(Mips::ZERO).addImm(7);
 
-  unsigned ResultReg = createResultReg(&Mips::GPR32RegClass);
+  Register ResultReg = createResultReg(&Mips::GPR32RegClass);
   if (!ResultReg)
     return false;
 
@@ -1962,19 +1962,19 @@ bool MipsFastISel::selectShift(const Instruction *I) {
   if (!isTypeSupported(I->getType(), RetVT))
     return false;
 
-  unsigned ResultReg = createResultReg(&Mips::GPR32RegClass);
+  Register ResultReg = createResultReg(&Mips::GPR32RegClass);
   if (!ResultReg)
     return false;
 
   unsigned Opcode = I->getOpcode();
   const Value *Op0 = I->getOperand(0);
-  unsigned Op0Reg = getRegForValue(Op0);
+  Register Op0Reg = getRegForValue(Op0);
   if (!Op0Reg)
     return false;
 
   // If AShr or LShr, then we need to make sure the operand0 is sign extended.
   if (Opcode == Instruction::AShr || Opcode == Instruction::LShr) {
-    unsigned TempReg = createResultReg(&Mips::GPR32RegClass);
+    Register TempReg = createResultReg(&Mips::GPR32RegClass);
     if (!TempReg)
       return false;
 
@@ -2008,7 +2008,7 @@ bool MipsFastISel::selectShift(const Instruction *I) {
     return true;
   }
 
-  unsigned Op1Reg = getRegForValue(I->getOperand(1));
+  Register Op1Reg = getRegForValue(I->getOperand(1));
   if (!Op1Reg)
     return false;
 
@@ -2091,7 +2091,7 @@ bool MipsFastISel::fastSelectInstruction(const Instruction *I) {
 
 unsigned MipsFastISel::getRegEnsuringSimpleIntegerWidening(const Value *V,
                                                            bool IsUnsigned) {
-  unsigned VReg = getRegForValue(V);
+  Register VReg = getRegForValue(V);
   if (VReg == 0)
     return 0;
   MVT VMVT = TLI.getValueType(DL, V->getType(), true).getSimpleVT();
@@ -2100,7 +2100,7 @@ unsigned MipsFastISel::getRegEnsuringSimpleIntegerWidening(const Value *V,
     return 0;
 
   if ((VMVT == MVT::i8) || (VMVT == MVT::i16)) {
-    unsigned TempReg = createResultReg(&Mips::GPR32RegClass);
+    Register TempReg = createResultReg(&Mips::GPR32RegClass);
     if (!emitIntExt(VMVT, VReg, MVT::i32, TempReg, IsUnsigned))
       return 0;
     VReg = TempReg;
@@ -2112,7 +2112,7 @@ void MipsFastISel::simplifyAddress(Address &Addr) {
   if (!isInt<16>(Addr.getOffset())) {
     unsigned TempReg =
         materialize32BitInt(Addr.getOffset(), &Mips::GPR32RegClass);
-    unsigned DestReg = createResultReg(&Mips::GPR32RegClass);
+    Register DestReg = createResultReg(&Mips::GPR32RegClass);
     emitInst(Mips::ADDu, DestReg).addReg(TempReg).addReg(Addr.getReg());
     Addr.setReg(DestReg);
     Addr.setOffset(0);
@@ -2129,7 +2129,7 @@ unsigned MipsFastISel::fastEmitInst_rr(unsigned MachineInstOpcode,
   // followed by another instruction that defines the same registers too.
   // We can fix this by explicitly marking those registers as dead.
   if (MachineInstOpcode == Mips::MUL) {
-    unsigned ResultReg = createResultReg(RC);
+    Register ResultReg = createResultReg(RC);
     const MCInstrDesc &II = TII.get(MachineInstOpcode);
     Op0 = constrainOperandRegClass(II, Op0, II.getNumDefs());
     Op1 = constrainOperandRegClass(II, Op1, II.getNumDefs() + 1);

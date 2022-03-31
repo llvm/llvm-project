@@ -160,6 +160,25 @@ func @sparse_unannotated_insert(%arg0: tensor<128xf64>, %arg1: memref<?xindex>, 
 
 // -----
 
+func @sparse_unannotated_expansion(%arg0: tensor<128xf64>) {
+  // expected-error@+1 {{expected a sparse tensor for expansion}}
+  %values, %filled, %added, %count = sparse_tensor.expand %arg0
+    : tensor<128xf64> to memref<?xf64>, memref<?xi1>, memref<?xindex>, index
+  return
+}
+
+// -----
+
+func @sparse_unannotated_compression(%arg0: tensor<128xf64>, %arg1: memref<?xindex>,
+                                     %arg2: memref<?xf64>, %arg3: memref<?xi1>,
+				     %arg4: memref<?xindex>, %arg5: index) {
+  // expected-error@+1 {{expected a sparse tensor for compression}}
+  sparse_tensor.compress %arg0, %arg1, %arg2, %arg3, %arg4, %arg5
+    : tensor<128xf64>, memref<?xindex>, memref<?xf64>, memref<?xi1>, memref<?xindex>, index
+}
+
+// -----
+
 func @sparse_convert_unranked(%arg0: tensor<*xf32>) -> tensor<10xf32> {
   // expected-error@+1 {{unexpected type in convert}}
   %0 = sparse_tensor.convert %arg0 : tensor<*xf32> to tensor<10xf32>
@@ -184,4 +203,120 @@ func @sparse_convert_dim_mismatch(%arg0: tensor<10x?xf32>) -> tensor<10x10xf32, 
   // expected-error@+1 {{unexpected conversion mismatch in dimension 1}}
   %0 = sparse_tensor.convert %arg0 : tensor<10x?xf32> to tensor<10x10xf32, #CSR>
   return %0 : tensor<10x10xf32, #CSR>
+}
+
+// -----
+
+func @invalid_out_dense(%arg0: tensor<10xf64>, %arg1: !llvm.ptr<i8>) {
+  // expected-error@+1 {{expected a sparse tensor for output}}
+  sparse_tensor.out %arg0, %arg1 : tensor<10xf64>, !llvm.ptr<i8>
+  return
+}
+
+// -----
+
+func @invalid_binary_num_args_mismatch_overlap(%arg0: f64, %arg1: f64) -> f64 {
+  // expected-error@+1 {{overlap region must have exactly 2 arguments}}
+  %r = sparse_tensor.binary %arg0, %arg1 : f64, f64 to f64
+    overlap={
+      ^bb0(%x: f64):
+        sparse_tensor.yield %x : f64
+    }
+    left={}
+    right={}
+  return %r : f64
+}
+
+// -----
+
+func @invalid_binary_num_args_mismatch_right(%arg0: f64, %arg1: f64) -> f64 {
+  // expected-error@+1 {{right region must have exactly 1 arguments}}
+  %r = sparse_tensor.binary %arg0, %arg1 : f64, f64 to f64
+    overlap={}
+    left={}
+    right={
+      ^bb0(%x: f64, %y: f64):
+        sparse_tensor.yield %y : f64
+    }
+  return %r : f64
+}
+
+// -----
+
+func @invalid_binary_argtype_mismatch(%arg0: f64, %arg1: f64) -> f64 {
+  // expected-error@+1 {{overlap region argument 2 type mismatch}}
+  %r = sparse_tensor.binary %arg0, %arg1 : f64, f64 to f64
+    overlap={
+      ^bb0(%x: f64, %y: f32):
+        sparse_tensor.yield %x : f64
+    }
+    left=identity
+    right=identity
+  return %r : f64
+}
+
+// -----
+
+func @invalid_binary_wrong_return_type(%arg0: f64, %arg1: f64) -> f64 {
+  // expected-error@+1 {{left region yield type mismatch}}
+  %0 = sparse_tensor.binary %arg0, %arg1 : f64, f64 to f64
+    overlap={}
+    left={
+      ^bb0(%x: f64):
+        %1 = arith.constant 0.0 : f32
+        sparse_tensor.yield %1 : f32
+    }
+    right=identity
+  return %0 : f64
+}
+
+// -----
+
+func @invalid_binary_wrong_identity_type(%arg0: i64, %arg1: f64) -> f64 {
+  // expected-error@+1 {{left=identity requires first argument to have the same type as the output}}
+  %0 = sparse_tensor.binary %arg0, %arg1 : i64, f64 to f64
+    overlap={}
+    left=identity
+    right=identity
+  return %0 : f64
+}
+
+// -----
+
+func @invalid_unary_argtype_mismatch(%arg0: f64) -> f64 {
+  // expected-error@+1 {{present region argument 1 type mismatch}}
+  %r = sparse_tensor.unary %arg0 : f64 to f64
+    present={
+      ^bb0(%x: index):
+        sparse_tensor.yield %x : index
+    }
+    absent={}
+  return %r : f64
+}
+
+// -----
+
+func @invalid_unary_num_args_mismatch(%arg0: f64) -> f64 {
+  // expected-error@+1 {{absent region must have exactly 0 arguments}}
+  %r = sparse_tensor.unary %arg0 : f64 to f64
+    present={}
+    absent={
+      ^bb0(%x: f64):
+        sparse_tensor.yield %x : f64
+    }
+  return %r : f64
+}
+
+// -----
+
+func @invalid_unary_wrong_return_type(%arg0: f64) -> f64 {
+  // expected-error@+1 {{present region yield type mismatch}}
+  %0 = sparse_tensor.unary %arg0 : f64 to f64
+    present={
+      ^bb0(%x: f64):
+        %1 = arith.constant 0.0 : f32
+        sparse_tensor.yield %1 : f32
+    }
+    absent={}
+  return %0 : f64
 }

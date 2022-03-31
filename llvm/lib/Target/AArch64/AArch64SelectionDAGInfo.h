@@ -19,11 +19,30 @@ namespace llvm {
 
 class AArch64SelectionDAGInfo : public SelectionDAGTargetInfo {
 public:
+  SDValue EmitMOPS(AArch64ISD::NodeType SDOpcode, SelectionDAG &DAG,
+                   const SDLoc &DL, SDValue Chain, SDValue Dst,
+                   SDValue SrcOrValue, SDValue Size, Align Alignment,
+                   bool isVolatile, MachinePointerInfo DstPtrInfo,
+                   MachinePointerInfo SrcPtrInfo) const;
+
+  SDValue EmitTargetCodeForMemcpy(SelectionDAG &DAG, const SDLoc &dl,
+                                  SDValue Chain, SDValue Dst, SDValue Src,
+                                  SDValue Size, Align Alignment,
+                                  bool isVolatile, bool AlwaysInline,
+                                  MachinePointerInfo DstPtrInfo,
+                                  MachinePointerInfo SrcPtrInfo) const override;
   SDValue EmitTargetCodeForMemset(SelectionDAG &DAG, const SDLoc &dl,
                                   SDValue Chain, SDValue Dst, SDValue Src,
                                   SDValue Size, Align Alignment,
                                   bool isVolatile,
                                   MachinePointerInfo DstPtrInfo) const override;
+  SDValue
+  EmitTargetCodeForMemmove(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
+                           SDValue Dst, SDValue Src, SDValue Size,
+                           Align Alignment, bool isVolatile,
+                           MachinePointerInfo DstPtrInfo,
+                           MachinePointerInfo SrcPtrInfo) const override;
+
   SDValue EmitTargetCodeForSetTag(SelectionDAG &DAG, const SDLoc &dl,
                                   SDValue Chain, SDValue Op1, SDValue Op2,
                                   MachinePointerInfo DstPtrInfo,

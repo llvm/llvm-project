@@ -45,8 +45,8 @@ __parallel_reduce_body(_RandomAccessIterator __first, _RandomAccessIterator __la
 
 template <class _ExecutionPolicy, class _RandomAccessIterator, class _Value, typename _RealBody, typename _Reduction>
 _Value
-__parallel_reduce(_ExecutionPolicy&&, _RandomAccessIterator __first, _RandomAccessIterator __last, _Value __identity,
-                  _RealBody __real_body, _Reduction __reduction)
+__parallel_reduce(__pstl::__internal::__openmp_backend_tag, _ExecutionPolicy&&, _RandomAccessIterator __first,
+                  _RandomAccessIterator __last, _Value __identity, _RealBody __real_body, _Reduction __reduction)
 {
     // We don't create a nested parallel region in an existing parallel region:
     // just create tasks.

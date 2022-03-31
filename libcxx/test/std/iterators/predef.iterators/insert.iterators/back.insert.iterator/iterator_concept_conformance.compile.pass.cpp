@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
 
 // back_insert_iterator
 
@@ -25,4 +24,6 @@ static_assert(!std::sized_sentinel_for<iterator, iterator>);
 static_assert(!std::input_iterator<iterator>);
 static_assert(std::indirectly_movable<int*, iterator>);
 static_assert(std::indirectly_movable_storable<int*, iterator>);
+static_assert(std::indirectly_copyable<int*, iterator>);
+static_assert(std::indirectly_copyable_storable<int*, iterator>);
 static_assert(!std::indirectly_swappable<iterator, iterator>);

@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_STATICANALYZER_CORE_BUGREPORTER_PATHDIAGNOSTIC_H
-#define LLVM_CLANG_STATICANALYZER_CORE_BUGREPORTER_PATHDIAGNOSTIC_H
+#ifndef LLVM_CLANG_ANALYSIS_PATHDIAGNOSTIC_H
+#define LLVM_CLANG_ANALYSIS_PATHDIAGNOSTIC_H
 
 #include "clang/AST/Stmt.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
@@ -41,10 +41,8 @@ class AnalysisDeclContext;
 class BinaryOperator;
 class CallEnter;
 class CallExitEnd;
-class CallExpr;
 class ConditionalOperator;
 class Decl;
-class Expr;
 class LocationContext;
 class MemberExpr;
 class ProgramPoint;
@@ -905,4 +903,4 @@ public:
 } // namespace ento
 } // namespace clang
 
-#endif // LLVM_CLANG_STATICANALYZER_CORE_BUGREPORTER_PATHDIAGNOSTIC_H
+#endif // LLVM_CLANG_ANALYSIS_PATHDIAGNOSTIC_H

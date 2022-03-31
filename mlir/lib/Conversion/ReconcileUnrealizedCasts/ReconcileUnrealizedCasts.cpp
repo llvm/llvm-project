@@ -37,15 +37,15 @@ struct UnrealizedConversionCastPassthrough
     auto users = op->getUsers();
     if (!llvm::all_of(users, [&](Operation *user) {
           if (auto other = dyn_cast<UnrealizedConversionCastOp>(user))
-            return other.getResultTypes() == op.inputs().getTypes() &&
-                   other.inputs() == op.outputs();
+            return other.getResultTypes() == op.getInputs().getTypes() &&
+                   other.getInputs() == op.getOutputs();
           return false;
         })) {
       return rewriter.notifyMatchFailure(op, "live unrealized conversion cast");
     }
 
     for (Operation *user : users)
-      rewriter.replaceOp(user, op.inputs());
+      rewriter.replaceOp(user, op.getInputs());
 
     rewriter.eraseOp(op);
     return success();

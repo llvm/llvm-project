@@ -9,6 +9,9 @@
 // Test that headers are not tripped up by the surrounding code defining the
 // min() and max() macros.
 
+// The system-provided <uchar.h> seems to be broken on AIX
+// XFAIL: LIBCXX-AIX-FIXME
+
 // Prevent <ext/hash_map> from generating deprecated warnings for this test.
 #if defined(__DEPRECATED)
 #    undef __DEPRECATED
@@ -113,6 +116,8 @@ TEST_MACROS();
 #include <ctime>
 TEST_MACROS();
 #include <ctype.h>
+TEST_MACROS();
+#include <cuchar>
 TEST_MACROS();
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 #    include <cwchar>
@@ -296,6 +301,8 @@ TEST_MACROS();
 TEST_MACROS();
 #include <typeinfo>
 TEST_MACROS();
+#include <uchar.h>
+TEST_MACROS();
 #include <unordered_map>
 TEST_MACROS();
 #include <unordered_set>
@@ -329,10 +336,6 @@ TEST_MACROS();
 #    endif
 #    include <experimental/deque>
 TEST_MACROS();
-#    ifndef _LIBCPP_HAS_NO_FILESYSTEM_LIBRARY
-#        include <experimental/filesystem>
-TEST_MACROS();
-#    endif
 #    include <experimental/forward_list>
 TEST_MACROS();
 #    include <experimental/functional>
@@ -368,12 +371,6 @@ TEST_MACROS();
 #    include <experimental/vector>
 TEST_MACROS();
 #endif // __cplusplus >= 201103L
-
-// extended headers
-#include <ext/hash_map>
-TEST_MACROS();
-#include <ext/hash_set>
-TEST_MACROS();
 
 // clang-format on
 

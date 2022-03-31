@@ -146,41 +146,41 @@ body:             |
     BX_RET 14, $noreg
 
     ;CHECK: name:           OUTLINED_FUNCTION_[[I5]]
-    ;CHECK: early-clobber $sp = STR_PRE_IMM killed $lr, $sp, -8, 14 /* CC::al */, $noreg
+    ;CHECK: early-clobber $sp = frame-setup STR_PRE_IMM killed $lr, $sp, -8, 14 /* CC::al */, $noreg
     ;CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 8
     ;CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $lr, -8
     ;CHECK-NEXT: BL @foo, implicit-def dead $lr, implicit $sp
     ;CHECK-NEXT: $d0 = VLDRD $sp, 2, 14 /* CC::al */, $noreg
     ;CHECK-NEXT: $d1 = VLDRD $sp, 10, 14 /* CC::al */, $noreg
     ;CHECK-NEXT: $d4 = VLDRD $sp, 255, 14 /* CC::al */, $noreg
-    ;CHECK-NEXT: $lr, $sp = LDR_POST_IMM $sp, $noreg, 8, 14 /* CC::al */, $noreg
+    ;CHECK-NEXT: $lr, $sp = frame-destroy LDR_POST_IMM $sp, $noreg, 8, 14 /* CC::al */, $noreg
 
     ;CHECK: name:           OUTLINED_FUNCTION_[[I5FP16]]
-    ;CHECK: early-clobber $sp = STR_PRE_IMM killed $lr, $sp, -8, 14 /* CC::al */, $noreg
+    ;CHECK: early-clobber $sp = frame-setup STR_PRE_IMM killed $lr, $sp, -8, 14 /* CC::al */, $noreg
     ;CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 8
     ;CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $lr, -8
     ;CHECK-NEXT: BL @foo, implicit-def dead $lr, implicit $sp
     ;CHECK-NEXT: $s1 = VLDRH $sp, 4, 14, $noreg
     ;CHECK-NEXT: $s2 = VLDRH $sp, 12, 14, $noreg
     ;CHECK-NEXT: $s5 = VLDRH $sp, 244, 14, $noreg
-    ;CHECK-NEXT: $lr, $sp = LDR_POST_IMM $sp, $noreg, 8, 14 /* CC::al */, $noreg
+    ;CHECK-NEXT: $lr, $sp = frame-destroy LDR_POST_IMM $sp, $noreg, 8, 14 /* CC::al */, $noreg
 
     ;CHECK: name:           OUTLINED_FUNCTION_[[I12]]
-    ;CHECK: early-clobber $sp = STR_PRE_IMM killed $lr, $sp, -8, 14 /* CC::al */, $noreg
+    ;CHECK: early-clobber $sp = frame-setup STR_PRE_IMM killed $lr, $sp, -8, 14 /* CC::al */, $noreg
     ;CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 8
     ;CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $lr, -8
     ;CHECK-NEXT: BL @foo, implicit-def dead $lr, implicit $sp
     ;CHECK-NEXT: $r1 = LDRi12 $sp, 8, 14 /* CC::al */, $noreg
     ;CHECK-NEXT: $r2 = LDRi12 $sp, 16, 14 /* CC::al */, $noreg
     ;CHECK-NEXT: $r5 = LDRi12 $sp, 4094, 14 /* CC::al */, $noreg
-    ;CHECK-NEXT: $lr, $sp = LDR_POST_IMM $sp, $noreg, 8, 14 /* CC::al */, $noreg
+    ;CHECK-NEXT: $lr, $sp = frame-destroy LDR_POST_IMM $sp, $noreg, 8, 14 /* CC::al */, $noreg
 
     ;CHECK: name:           OUTLINED_FUNCTION_[[I3]]
-    ;CHECK: early-clobber $sp = STR_PRE_IMM killed $lr, $sp, -8, 14 /* CC::al */, $noreg
+    ;CHECK: early-clobber $sp = frame-setup STR_PRE_IMM killed $lr, $sp, -8, 14 /* CC::al */, $noreg
     ;CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 8
     ;CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $lr, -8
     ;CHECK-NEXT: BL @foo, implicit-def dead $lr, implicit $sp
     ;CHECK-NEXT: $r1 = LDRSH $sp, $noreg, 8, 14 /* CC::al */, $noreg
     ;CHECK-NEXT: $r2 = LDRSH $sp, $noreg, 16, 14 /* CC::al */, $noreg
     ;CHECK-NEXT: $r5 = LDRSH $sp, $noreg, 255, 14 /* CC::al */, $noreg
-    ;CHECK-NEXT: $lr, $sp = LDR_POST_IMM $sp, $noreg, 8, 14 /* CC::al */, $noreg
+    ;CHECK-NEXT: $lr, $sp = frame-destroy LDR_POST_IMM $sp, $noreg, 8, 14 /* CC::al */, $noreg

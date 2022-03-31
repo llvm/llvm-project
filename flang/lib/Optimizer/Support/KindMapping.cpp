@@ -87,7 +87,7 @@ static RT doLookup(std::function<RT(KindTy)> def,
   return def(kind);
 }
 
-// do a lookup for INTERGER, LOGICAL, or CHARACTER
+// do a lookup for INTEGER, LOGICAL, or CHARACTER
 template <char KEY, typename MAP>
 static Bitsize getIntegerLikeBitsize(KindTy kind, const MAP &map) {
   return doLookup<Bitsize, KEY>(defaultScalingKind, map, kind);

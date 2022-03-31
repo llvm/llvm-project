@@ -31,7 +31,7 @@ private:
 
 public:
   // Default construct Zero and One.
-  KnownBits() {}
+  KnownBits() = default;
 
   /// Create a known bits object of BitWidth bits initialized to unknown.
   KnownBits(unsigned BitWidth) : Zero(BitWidth, 0), One(BitWidth, 0) {}
@@ -249,7 +249,17 @@ public:
       return countMinLeadingZeros();
     if (isNegative())
       return countMinLeadingOnes();
-    return 0;
+    // Every value has at least 1 sign bit.
+    return 1;
+  }
+
+  /// Returns the maximum number of bits needed to represent all possible
+  /// signed values with these known bits. This is the inverse of the minimum
+  /// number of known sign bits. Examples for bitwidth 5:
+  /// 110?? --> 4
+  /// 0000? --> 2
+  unsigned countMaxSignificantBits() const {
+    return getBitWidth() - countMinSignBits() + 1;
   }
 
   /// Returns the maximum number of trailing zero bits possible.
@@ -282,6 +292,9 @@ public:
     return getBitWidth() - Zero.countPopulation();
   }
 
+  /// Returns the maximum number of bits needed to represent all possible
+  /// unsigned values with these known bits. This is the inverse of the
+  /// minimum number of leading zeros.
   unsigned countMaxActiveBits() const {
     return getBitWidth() - countMinLeadingZeros();
   }
@@ -311,7 +324,7 @@ public:
 
   /// Compute known bits resulting from multiplying LHS and RHS.
   static KnownBits mul(const KnownBits &LHS, const KnownBits &RHS,
-                       bool SelfMultiply = false);
+                       bool NoUndefSelfMultiply = false);
 
   /// Compute known bits from sign-extended multiply-hi.
   static KnownBits mulhs(const KnownBits &LHS, const KnownBits &RHS);

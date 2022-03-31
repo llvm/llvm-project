@@ -36,7 +36,7 @@ class RestrictedPtrType<Type type> : Type {
 }
 
 // Builtin types.
-def VarArgType : Type {}
+def VarArgType : NamedType<"...">;
 def VoidType : NamedType<"void">;
 def IntType : NamedType<"int">;
 def LongType : NamedType<"long">;
@@ -93,6 +93,8 @@ def TimeTType : NamedType<"time_t">;
 
 def BSearchCompareT : NamedType<"__bsearchcompare_t">;
 def QSortCompareT : NamedType<"__qsortcompare_t">;
+
+def AtexitHandlerT : NamedType<"__atexithandler_t">;
 
 //added because __assert_fail needs it.
 def UnsignedType : NamedType<"unsigned">;

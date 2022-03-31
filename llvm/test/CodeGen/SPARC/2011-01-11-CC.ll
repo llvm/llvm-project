@@ -182,7 +182,7 @@ entry:
    %4 = add i128 %2, %3
    %5 = bitcast i8* %sum to i128*
    store i128 %4, i128* %5
-   tail call void asm sideeffect "", "=*m,*m"(i128 *%0, i128* %5) nounwind
+   tail call void asm sideeffect "", "=*m,*m"(i128* elementtype(i128) %0, i128* elementtype(i128) %5) nounwind
    %6 = load i128, i128* %0
    %7 = sub i128 %2, %6
    %8 = bitcast i8* %diff to i128*

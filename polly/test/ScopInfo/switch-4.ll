@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-ast -analyze < %s | FileCheck %s --check-prefix=AST
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-ast -disable-output < %s | FileCheck %s --check-prefix=AST
 ;
 ;    void f(int *A, int N) {
 ;      for (int i = 0; i < N; i++)
@@ -51,7 +51,7 @@
 ; CHECK-NEXT:             [N] -> { Stmt_sw_bb_5[i0] -> MemRef_A[i0] };
 ; CHECK-NEXT:     Stmt_sw_bb_9
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             [N] -> { Stmt_sw_bb_9[i0] : (1 + i0) mod 4 = 0 and 3 <= i0 < N }; 
+; CHECK-NEXT:             [N] -> { Stmt_sw_bb_9[i0] : (1 + i0) mod 4 = 0 and 3 <= i0 < N };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             [N] -> { Stmt_sw_bb_9[i0] -> [i0, 0] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: +] [Scalar: 0]

@@ -81,11 +81,11 @@ define i32 @horiz_max_multiple_uses([32 x i32]* %x, i32* %p) {
 ; CHECK-NEXT:    [[T4:%.*]] = load i32, i32* [[X4]], align 4
 ; CHECK-NEXT:    [[T5:%.*]] = load i32, i32* [[X5]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> [[TMP2]])
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[TMP3]], [[T4]]
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i32 [[TMP3]], i32 [[T4]]
-; CHECK-NEXT:    [[C012345:%.*]] = icmp sgt i32 [[TMP5]], [[T5]]
-; CHECK-NEXT:    [[T17:%.*]] = select i1 [[C012345]], i32 [[TMP5]], i32 [[T5]]
-; CHECK-NEXT:    [[THREE_OR_FOUR:%.*]] = select i1 [[TMP4]], i32 3, i32 4
+; CHECK-NEXT:    [[MAX_ROOT_CMP:%.*]] = icmp sgt i32 [[TMP3]], [[T4]]
+; CHECK-NEXT:    [[MAX_ROOT_SEL:%.*]] = select i1 [[MAX_ROOT_CMP]], i32 [[TMP3]], i32 [[T4]]
+; CHECK-NEXT:    [[C012345:%.*]] = icmp sgt i32 [[MAX_ROOT_SEL]], [[T5]]
+; CHECK-NEXT:    [[T17:%.*]] = select i1 [[C012345]], i32 [[MAX_ROOT_SEL]], i32 [[T5]]
+; CHECK-NEXT:    [[THREE_OR_FOUR:%.*]] = select i1 [[MAX_ROOT_CMP]], i32 3, i32 4
 ; CHECK-NEXT:    store i32 [[THREE_OR_FOUR]], i32* [[P:%.*]], align 8
 ; CHECK-NEXT:    ret i32 [[T17]]
 ;

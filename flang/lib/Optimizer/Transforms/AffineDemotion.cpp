@@ -21,11 +21,11 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Transforms/Passes.h"
-#include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/Utils.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/Visitors.h"
@@ -39,6 +39,7 @@
 #define DEBUG_TYPE "flang-affine-demotion"
 
 using namespace fir;
+using namespace mlir;
 
 namespace {
 
@@ -92,23 +93,24 @@ public:
   mlir::LogicalResult
   matchAndRewrite(fir::ConvertOp op,
                   mlir::PatternRewriter &rewriter) const override {
-    if (op.res().getType().isa<mlir::MemRefType>()) {
+    if (op.getRes().getType().isa<mlir::MemRefType>()) {
       // due to index calculation moving to affine maps we still need to
       // add converts for sequence types this has a side effect of losing
       // some information about arrays with known dimensions by creating:
       // fir.convert %arg0 : (!fir.ref<!fir.array<5xi32>>) ->
       // !fir.ref<!fir.array<?xi32>>
-      if (auto refTy = op.value().getType().dyn_cast<fir::ReferenceType>())
+      if (auto refTy = op.getValue().getType().dyn_cast<fir::ReferenceType>())
         if (auto arrTy = refTy.getEleTy().dyn_cast<fir::SequenceType>()) {
           fir::SequenceType::Shape flatShape = {
               fir::SequenceType::getUnknownExtent()};
           auto flatArrTy = fir::SequenceType::get(flatShape, arrTy.getEleTy());
           auto flatTy = fir::ReferenceType::get(flatArrTy);
-          rewriter.replaceOpWithNewOp<fir::ConvertOp>(op, flatTy, op.value());
+          rewriter.replaceOpWithNewOp<fir::ConvertOp>(op, flatTy,
+                                                      op.getValue());
           return success();
         }
       rewriter.startRootUpdate(op->getParentOp());
-      op.getResult().replaceAllUsesWith(op.value());
+      op.getResult().replaceAllUsesWith(op.getValue());
       rewriter.finalizeRootUpdate(op->getParentOp());
       rewriter.eraseOp(op);
     }
@@ -137,13 +139,13 @@ public:
 class AffineDialectDemotion
     : public AffineDialectDemotionBase<AffineDialectDemotion> {
 public:
-  void runOnFunction() override {
+  void runOnOperation() override {
     auto *context = &getContext();
-    auto function = getFunction();
+    auto function = getOperation();
     LLVM_DEBUG(llvm::dbgs() << "AffineDemotion: running on function:\n";
                function.print(llvm::dbgs()););
 
-    mlir::OwningRewritePatternList patterns(context);
+    mlir::RewritePatternSet patterns(context);
     patterns.insert<ConvertConversion>(context);
     patterns.insert<AffineLoadConversion>(context);
     patterns.insert<AffineStoreConversion>(context);
@@ -151,13 +153,13 @@ public:
     mlir::ConversionTarget target(*context);
     target.addIllegalOp<memref::AllocOp>();
     target.addDynamicallyLegalOp<fir::ConvertOp>([](fir::ConvertOp op) {
-      if (op.res().getType().isa<mlir::MemRefType>())
+      if (op.getRes().getType().isa<mlir::MemRefType>())
         return false;
       return true;
     });
     target.addLegalDialect<FIROpsDialect, mlir::scf::SCFDialect,
                            mlir::arith::ArithmeticDialect,
-                           mlir::StandardOpsDialect>();
+                           mlir::func::FuncDialect>();
 
     if (mlir::failed(mlir::applyPartialConversion(function, target,
                                                   std::move(patterns)))) {

@@ -1235,10 +1235,12 @@ MIN_MAX_COMPXCHG(float8, max, kmp_real64, 64, <, 8r, 7,
                  KMP_ARCH_X86) // __kmpc_atomic_float8_max
 MIN_MAX_COMPXCHG(float8, min, kmp_real64, 64, >, 8r, 7,
                  KMP_ARCH_X86) // __kmpc_atomic_float8_min
+#if KMP_ARCH_X86 || KMP_ARCH_X86_64
 MIN_MAX_CRITICAL(float10, max, long double, <, 10r,
                  1) // __kmpc_atomic_float10_max
 MIN_MAX_CRITICAL(float10, min, long double, >, 10r,
                  1) // __kmpc_atomic_float10_min
+#endif // KMP_ARCH_X86 || KMP_ARCH_X86_64
 #if KMP_HAVE_QUAD
 MIN_MAX_CRITICAL(float16, max, QUAD_LEGACY, <, 16r,
                  1) // __kmpc_atomic_float16_max
@@ -1317,6 +1319,7 @@ ATOMIC_CMPX_EQV(fixed8, eqv, kmp_int64, 64, ^~, 8i, 7,
   }
 
 /* ------------------------------------------------------------------------- */
+#if KMP_ARCH_X86 || KMP_ARCH_X86_64
 // routines for long double type
 ATOMIC_CRITICAL(float10, add, long double, +, 10r,
                 1) // __kmpc_atomic_float10_add
@@ -1326,6 +1329,7 @@ ATOMIC_CRITICAL(float10, mul, long double, *, 10r,
                 1) // __kmpc_atomic_float10_mul
 ATOMIC_CRITICAL(float10, div, long double, /, 10r,
                 1) // __kmpc_atomic_float10_div
+#endif // KMP_ARCH_X86 || KMP_ARCH_X86_64
 #if KMP_HAVE_QUAD
 // routines for _Quad type
 ATOMIC_CRITICAL(float16, add, QUAD_LEGACY, +, 16r,
@@ -1371,6 +1375,7 @@ ATOMIC_CRITICAL(cmplx8, add, kmp_cmplx64, +, 16c, 1) // __kmpc_atomic_cmplx8_add
 ATOMIC_CRITICAL(cmplx8, sub, kmp_cmplx64, -, 16c, 1) // __kmpc_atomic_cmplx8_sub
 ATOMIC_CRITICAL(cmplx8, mul, kmp_cmplx64, *, 16c, 1) // __kmpc_atomic_cmplx8_mul
 ATOMIC_CRITICAL(cmplx8, div, kmp_cmplx64, /, 16c, 1) // __kmpc_atomic_cmplx8_div
+#if KMP_ARCH_X86 || KMP_ARCH_X86_64
 ATOMIC_CRITICAL(cmplx10, add, kmp_cmplx80, +, 20c,
                 1) // __kmpc_atomic_cmplx10_add
 ATOMIC_CRITICAL(cmplx10, sub, kmp_cmplx80, -, 20c,
@@ -1379,6 +1384,7 @@ ATOMIC_CRITICAL(cmplx10, mul, kmp_cmplx80, *, 20c,
                 1) // __kmpc_atomic_cmplx10_mul
 ATOMIC_CRITICAL(cmplx10, div, kmp_cmplx80, /, 20c,
                 1) // __kmpc_atomic_cmplx10_div
+#endif // KMP_ARCH_X86 || KMP_ARCH_X86_64
 #if KMP_HAVE_QUAD
 ATOMIC_CRITICAL(cmplx16, add, CPLX128_LEG, +, 32c,
                 1) // __kmpc_atomic_cmplx16_add
@@ -1797,6 +1803,7 @@ ATOMIC_CMPXCHG_MIX(float8, kmp_real64, mul, 64, *, fp, _Quad, 8r, 7,
 ATOMIC_CMPXCHG_MIX(float8, kmp_real64, div, 64, /, fp, _Quad, 8r, 7,
                    KMP_ARCH_X86) // __kmpc_atomic_float8_div_fp
 
+#if KMP_ARCH_X86 || KMP_ARCH_X86_64
 ATOMIC_CRITICAL_FP(float10, long double, add, +, fp, _Quad, 10r,
                    1) // __kmpc_atomic_float10_add_fp
 ATOMIC_CRITICAL_FP(float10, long double, sub, -, fp, _Quad, 10r,
@@ -1806,7 +1813,6 @@ ATOMIC_CRITICAL_FP(float10, long double, mul, *, fp, _Quad, 10r,
 ATOMIC_CRITICAL_FP(float10, long double, div, /, fp, _Quad, 10r,
                    1) // __kmpc_atomic_float10_div_fp
 
-#if KMP_ARCH_X86 || KMP_ARCH_X86_64
 // Reverse operations
 ATOMIC_CMPXCHG_REV_MIX(fixed1, char, sub_rev, 8, -, fp, _Quad, 1i, 0,
                        KMP_ARCH_X86) // __kmpc_atomic_fixed1_sub_rev_fp
@@ -2446,6 +2452,7 @@ ATOMIC_CMPXCHG_CPT(float8, mul_cpt, kmp_real64, 64, *,
                                RTYPE, LCK_ID, MASK, GOMP_FLAG)                 \
   ATOMIC_BEGIN_CPT_MIX(TYPE_ID, OP_ID, TYPE, RTYPE_ID, RTYPE)                  \
   TYPE new_value;                                                              \
+  (void)new_value;                                                             \
   OP_GOMP_CRITICAL_CPT(TYPE, OP, GOMP_FLAG)                                    \
   OP_CMPXCHG_CPT(TYPE, BITS, OP)                                               \
   }
@@ -2455,6 +2462,7 @@ ATOMIC_CMPXCHG_CPT(float8, mul_cpt, kmp_real64, 64, *,
                                 LCK_ID, GOMP_FLAG)                             \
   ATOMIC_BEGIN_CPT_MIX(TYPE_ID, OP_ID, TYPE, RTYPE_ID, RTYPE)                  \
   TYPE new_value;                                                              \
+  (void)new_value;                                                             \
   OP_GOMP_CRITICAL_CPT(TYPE, OP, GOMP_FLAG) /* send assignment */              \
   OP_UPDATE_CRITICAL_CPT(TYPE, OP, LCK_ID) /* send assignment */               \
   }
@@ -3156,6 +3164,7 @@ ATOMIC_CRITICAL_CPT_REV(cmplx16, div_a16_cpt_rev, kmp_cmplx128_a16_t, /, 32c,
                                    RTYPE, LCK_ID, MASK, GOMP_FLAG)             \
   ATOMIC_BEGIN_CPT_MIX(TYPE_ID, OP_ID, TYPE, RTYPE_ID, RTYPE)                  \
   TYPE new_value;                                                              \
+  (void)new_value;                                                             \
   OP_GOMP_CRITICAL_CPT_REV(TYPE, OP, GOMP_FLAG)                                \
   OP_CMPXCHG_CPT_REV(TYPE, BITS, OP)                                           \
   }
@@ -3165,6 +3174,7 @@ ATOMIC_CRITICAL_CPT_REV(cmplx16, div_a16_cpt_rev, kmp_cmplx128_a16_t, /, 32c,
                                     LCK_ID, GOMP_FLAG)                         \
   ATOMIC_BEGIN_CPT_MIX(TYPE_ID, OP_ID, TYPE, RTYPE_ID, RTYPE)                  \
   TYPE new_value;                                                              \
+  (void)new_value;                                                             \
   OP_GOMP_CRITICAL_CPT_REV(TYPE, OP, GOMP_FLAG) /* send assignment */          \
   OP_CRITICAL_CPT_REV(TYPE, OP, LCK_ID) /* send assignment */                  \
   }
@@ -3594,7 +3604,7 @@ void __kmpc_atomic_8(ident_t *id_ref, int gtid, void *lhs, void *rhs,
       __kmp_release_atomic_lock(&__kmp_atomic_lock_8i, gtid);
   }
 }
-
+#if KMP_ARCH_X86 || KMP_ARCH_X86_64
 void __kmpc_atomic_10(ident_t *id_ref, int gtid, void *lhs, void *rhs,
                       void (*f)(void *, void *, void *)) {
   KMP_DEBUG_ASSERT(__kmp_init_serial);
@@ -3615,6 +3625,7 @@ void __kmpc_atomic_10(ident_t *id_ref, int gtid, void *lhs, void *rhs,
 #endif /* KMP_GOMP_COMPAT */
     __kmp_release_atomic_lock(&__kmp_atomic_lock_10r, gtid);
 }
+#endif // KMP_ARCH_X86 || KMP_ARCH_X86_64
 
 void __kmpc_atomic_16(ident_t *id_ref, int gtid, void *lhs, void *rhs,
                       void (*f)(void *, void *, void *)) {
@@ -3636,7 +3647,7 @@ void __kmpc_atomic_16(ident_t *id_ref, int gtid, void *lhs, void *rhs,
 #endif /* KMP_GOMP_COMPAT */
     __kmp_release_atomic_lock(&__kmp_atomic_lock_16c, gtid);
 }
-
+#if KMP_ARCH_X86 || KMP_ARCH_X86_64
 void __kmpc_atomic_20(ident_t *id_ref, int gtid, void *lhs, void *rhs,
                       void (*f)(void *, void *, void *)) {
   KMP_DEBUG_ASSERT(__kmp_init_serial);
@@ -3657,7 +3668,7 @@ void __kmpc_atomic_20(ident_t *id_ref, int gtid, void *lhs, void *rhs,
 #endif /* KMP_GOMP_COMPAT */
     __kmp_release_atomic_lock(&__kmp_atomic_lock_20c, gtid);
 }
-
+#endif // KMP_ARCH_X86 || KMP_ARCH_X86_64
 void __kmpc_atomic_32(ident_t *id_ref, int gtid, void *lhs, void *rhs,
                       void (*f)(void *, void *, void *)) {
   KMP_DEBUG_ASSERT(__kmp_init_serial);

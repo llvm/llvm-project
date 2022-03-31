@@ -9,23 +9,26 @@
 #ifndef DIALECT_BUFFERIZATION_TRANSFORMS_PASSDETAIL_H_
 #define DIALECT_BUFFERIZATION_TRANSFORMS_PASSDETAIL_H_
 
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
 
-class StandardOpsDialect;
-
 namespace bufferization {
 class BufferizationDialect;
-} // end namespace bufferization
+} // namespace bufferization
+
+namespace func {
+class FuncDialect;
+} // namespace func
 
 namespace memref {
 class MemRefDialect;
-} // end namespace memref
+} // namespace memref
 
 #define GEN_PASS_CLASSES
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // DIALECT_BUFFERIZATION_TRANSFORMS_PASSDETAIL_H_

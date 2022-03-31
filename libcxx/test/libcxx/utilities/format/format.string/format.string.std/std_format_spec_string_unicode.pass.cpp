@@ -6,14 +6,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: libcpp-has-no-incomplete-format
-
-// Fails for 32-bit builds on AIX.
-// UNSUPPORTED: LIBCXX-AIX-FIXME
-
-// UTF-32 doesn't work properly
-// XFAIL: windows
 
 // <format>
 
@@ -260,7 +253,7 @@ constexpr bool test() {
 #ifndef _LIBCPP_HAS_NO_CHAR8_T
   test<char8_t>();
 #endif
-#ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
+#ifndef TEST_HAS_NO_UNICODE_CHARS
   test<char16_t>();
   test<char32_t>();
 #endif

@@ -40,7 +40,6 @@ using llvm::SmallVector;
 using llvm::SMLoc;
 using llvm::StringMap;
 using llvm::StringRef;
-using llvm::Twine;
 using mlir::tblgen::Attribute;
 using mlir::tblgen::EnumAttr;
 using mlir::tblgen::EnumAttrCase;
@@ -888,10 +887,9 @@ static void emitOperandDeserialization(const Operator &op, ArrayRef<SMLoc> loc,
                                        StringRef wordIndex, StringRef operands,
                                        StringRef attributes, raw_ostream &os) {
   // Process operands/attributes
-  unsigned operandNum = 0;
   for (unsigned i = 0, e = op.getNumArgs(); i < e; ++i) {
     auto argument = op.getArg(i);
-    if (auto valueArg = argument.dyn_cast<NamedTypeConstraint *>()) {
+    if (auto *valueArg = argument.dyn_cast<NamedTypeConstraint *>()) {
       if (valueArg->isVariableLength()) {
         if (i != e - 1) {
           PrintFatalError(loc, "SPIR-V ops can have Variadic<..> or "
@@ -917,11 +915,10 @@ static void emitOperandDeserialization(const Operator &op, ArrayRef<SMLoc> loc,
       if (!valueArg->isVariableLength()) {
         os << tabs << formatv("  {0}++;\n", wordIndex);
       }
-      operandNum++;
       os << tabs << "}\n";
     } else {
       os << tabs << formatv("if ({0} < {1}.size()) {{\n", wordIndex, words);
-      auto attr = argument.get<NamedAttribute *>();
+      auto *attr = argument.get<NamedAttribute *>();
       auto newtabs = tabs.str() + "  ";
       emitAttributeDeserialization(
           (attr->attr.isOptional() ? attr->attr.getBaseAttr() : attr->attr),
@@ -1103,7 +1100,7 @@ emitExtendedSetDeserializationDispatch(const RecordKeeper &recordKeeper,
     Operator op(def);
     auto setName = def->getValueAsString("extendedInstSetName");
     if (!extensionSets.count(setName)) {
-      extensionSetNames.push_back("");
+      extensionSetNames.emplace_back("");
       extensionSets.try_emplace(setName, extensionSetNames.back());
       auto &setos = extensionSets.find(setName)->second;
       setos << formatv("  if ({0} == \"{1}\") {{\n", extensionSetName, setName);

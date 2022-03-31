@@ -17,10 +17,10 @@
 #define LLVM_IR_CONSTANTFOLDER_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/InstrTypes.h"
-#include "llvm/IR/Instruction.h"
 #include "llvm/IR/IRBuilderFolder.h"
+#include "llvm/IR/Instruction.h"
 
 namespace llvm {
 
@@ -32,13 +32,71 @@ public:
   explicit ConstantFolder() = default;
 
   //===--------------------------------------------------------------------===//
+  // Value-based folders.
+  //
+  // Return an existing value or a constant if the operation can be simplified.
+  // Otherwise return nullptr.
+  //===--------------------------------------------------------------------===//
+  Value *FoldAdd(Value *LHS, Value *RHS, bool HasNUW = false,
+                 bool HasNSW = false) const override {
+    auto *LC = dyn_cast<Constant>(LHS);
+    auto *RC = dyn_cast<Constant>(RHS);
+    if (LC && RC)
+      return ConstantExpr::getAdd(LC, RC, HasNUW, HasNSW);
+    return nullptr;
+  }
+
+  Value *FoldAnd(Value *LHS, Value *RHS) const override {
+    auto *LC = dyn_cast<Constant>(LHS);
+    auto *RC = dyn_cast<Constant>(RHS);
+    if (LC && RC)
+      return ConstantExpr::getAnd(LC, RC);
+    return nullptr;
+  }
+
+  Value *FoldOr(Value *LHS, Value *RHS) const override {
+    auto *LC = dyn_cast<Constant>(LHS);
+    auto *RC = dyn_cast<Constant>(RHS);
+    if (LC && RC)
+      return ConstantExpr::getOr(LC, RC);
+    return nullptr;
+  }
+
+  Value *FoldICmp(CmpInst::Predicate P, Value *LHS, Value *RHS) const override {
+    auto *LC = dyn_cast<Constant>(LHS);
+    auto *RC = dyn_cast<Constant>(RHS);
+    if (LC && RC)
+      return ConstantExpr::getCompare(P, LC, RC);
+    return nullptr;
+  }
+
+  Value *FoldGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
+                 bool IsInBounds = false) const override {
+    if (auto *PC = dyn_cast<Constant>(Ptr)) {
+      // Every index must be constant.
+      if (any_of(IdxList, [](Value *V) { return !isa<Constant>(V); }))
+        return nullptr;
+
+      if (IsInBounds)
+        return ConstantExpr::getInBoundsGetElementPtr(Ty, PC, IdxList);
+      else
+        return ConstantExpr::getGetElementPtr(Ty, PC, IdxList);
+    }
+    return nullptr;
+  }
+
+  Value *FoldSelect(Value *C, Value *True, Value *False) const override {
+    auto *CC = dyn_cast<Constant>(C);
+    auto *TC = dyn_cast<Constant>(True);
+    auto *FC = dyn_cast<Constant>(False);
+    if (CC && TC && FC)
+      return ConstantExpr::getSelect(CC, TC, FC);
+    return nullptr;
+  }
+
+  //===--------------------------------------------------------------------===//
   // Binary Operators
   //===--------------------------------------------------------------------===//
-
-  Constant *CreateAdd(Constant *LHS, Constant *RHS,
-                      bool HasNUW = false, bool HasNSW = false) const override {
-    return ConstantExpr::getAdd(LHS, RHS, HasNUW, HasNSW);
-  }
 
   Constant *CreateFAdd(Constant *LHS, Constant *RHS) const override {
     return ConstantExpr::getFAdd(LHS, RHS);
@@ -103,11 +161,7 @@ public:
     return ConstantExpr::getAShr(LHS, RHS, isExact);
   }
 
-  Constant *CreateAnd(Constant *LHS, Constant *RHS) const override {
-    return ConstantExpr::getAnd(LHS, RHS);
-  }
-
-  Constant *CreateOr(Constant *LHS, Constant *RHS) const override {
+  Constant *CreateOr(Constant *LHS, Constant *RHS) const {
     return ConstantExpr::getOr(LHS, RHS);
   }
 
@@ -139,46 +193,6 @@ public:
 
   Constant *CreateUnOp(Instruction::UnaryOps Opc, Constant *C) const override {
     return ConstantExpr::get(Opc, C);
-  }
-
-  //===--------------------------------------------------------------------===//
-  // Memory Instructions
-  //===--------------------------------------------------------------------===//
-
-  Constant *CreateGetElementPtr(Type *Ty, Constant *C,
-                                ArrayRef<Constant *> IdxList) const override {
-    return ConstantExpr::getGetElementPtr(Ty, C, IdxList);
-  }
-
-  Constant *CreateGetElementPtr(Type *Ty, Constant *C,
-                                Constant *Idx) const override {
-    // This form of the function only exists to avoid ambiguous overload
-    // warnings about whether to convert Idx to ArrayRef<Constant *> or
-    // ArrayRef<Value *>.
-    return ConstantExpr::getGetElementPtr(Ty, C, Idx);
-  }
-
-  Constant *CreateGetElementPtr(Type *Ty, Constant *C,
-                                ArrayRef<Value *> IdxList) const override {
-    return ConstantExpr::getGetElementPtr(Ty, C, IdxList);
-  }
-
-  Constant *CreateInBoundsGetElementPtr(
-      Type *Ty, Constant *C, ArrayRef<Constant *> IdxList) const override {
-    return ConstantExpr::getInBoundsGetElementPtr(Ty, C, IdxList);
-  }
-
-  Constant *CreateInBoundsGetElementPtr(Type *Ty, Constant *C,
-                                        Constant *Idx) const override {
-    // This form of the function only exists to avoid ambiguous overload
-    // warnings about whether to convert Idx to ArrayRef<Constant *> or
-    // ArrayRef<Value *>.
-    return ConstantExpr::getInBoundsGetElementPtr(Ty, C, Idx);
-  }
-
-  Constant *CreateInBoundsGetElementPtr(
-      Type *Ty, Constant *C, ArrayRef<Value *> IdxList) const override {
-    return ConstantExpr::getInBoundsGetElementPtr(Ty, C, IdxList);
   }
 
   //===--------------------------------------------------------------------===//
@@ -236,11 +250,6 @@ public:
   // Compare Instructions
   //===--------------------------------------------------------------------===//
 
-  Constant *CreateICmp(CmpInst::Predicate P, Constant *LHS,
-                       Constant *RHS) const override {
-    return ConstantExpr::getCompare(P, LHS, RHS);
-  }
-
   Constant *CreateFCmp(CmpInst::Predicate P, Constant *LHS,
                        Constant *RHS) const override {
     return ConstantExpr::getCompare(P, LHS, RHS);
@@ -249,11 +258,6 @@ public:
   //===--------------------------------------------------------------------===//
   // Other Instructions
   //===--------------------------------------------------------------------===//
-
-  Constant *CreateSelect(Constant *C, Constant *True,
-                         Constant *False) const override {
-    return ConstantExpr::getSelect(C, True, False);
-  }
 
   Constant *CreateExtractElement(Constant *Vec, Constant *Idx) const override {
     return ConstantExpr::getExtractElement(Vec, Idx);

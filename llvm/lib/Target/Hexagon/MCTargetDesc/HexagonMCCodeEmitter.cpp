@@ -712,7 +712,6 @@ unsigned
 HexagonMCCodeEmitter::getMachineOpValue(MCInst const &MI, MCOperand const &MO,
                                         SmallVectorImpl<MCFixup> &Fixups,
                                         MCSubtargetInfo const &STI) const {
-#ifndef NDEBUG
   size_t OperandNumber = ~0U;
   for (unsigned i = 0, n = MI.getNumOperands(); i < n; ++i)
     if (&MI.getOperand(i) == &MO) {
@@ -720,7 +719,6 @@ HexagonMCCodeEmitter::getMachineOpValue(MCInst const &MI, MCOperand const &MO,
       break;
     }
   assert((OperandNumber != ~0U) && "Operand not found");
-#endif
 
   if (HexagonMCInstrInfo::isNewValue(MCII, MI) &&
       &MO == &HexagonMCInstrInfo::getNewValueOperand(MCII, MI)) {
@@ -777,9 +775,13 @@ HexagonMCCodeEmitter::getMachineOpValue(MCInst const &MI, MCOperand const &MO,
   assert(!MO.isImm());
   if (MO.isReg()) {
     unsigned Reg = MO.getReg();
-    if (HexagonMCInstrInfo::isSubInstruction(MI) ||
-        HexagonMCInstrInfo::getType(MCII, MI) == HexagonII::TypeCJ)
+    switch (HexagonMCInstrInfo::getDesc(MCII, MI).OpInfo[OperandNumber].RegClass) {
+    case GeneralSubRegsRegClassID:
+    case GeneralDoubleLow8RegsRegClassID:
       return HexagonMCInstrInfo::getDuplexRegisterNumbering(Reg);
+    default:
+      break;
+    }
     return MCT.getRegisterInfo()->getEncodingValue(Reg);
   }
 
@@ -787,7 +789,6 @@ HexagonMCCodeEmitter::getMachineOpValue(MCInst const &MI, MCOperand const &MO,
 }
 
 MCCodeEmitter *llvm::createHexagonMCCodeEmitter(MCInstrInfo const &MII,
-                                                MCRegisterInfo const &MRI,
                                                 MCContext &MCT) {
   return new HexagonMCCodeEmitter(MII, MCT);
 }

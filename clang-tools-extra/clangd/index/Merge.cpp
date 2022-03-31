@@ -10,12 +10,8 @@
 #include "index/Symbol.h"
 #include "index/SymbolLocation.h"
 #include "index/SymbolOrigin.h"
-#include "support/Logger.h"
 #include "support/Trace.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSet.h"
-#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <iterator>
 

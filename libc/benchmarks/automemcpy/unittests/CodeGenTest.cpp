@@ -59,77 +59,78 @@ TEST(Automemcpy, Codegen) {
 using llvm::libc_benchmarks::BzeroConfiguration;
 using llvm::libc_benchmarks::MemcmpOrBcmpConfiguration;
 using llvm::libc_benchmarks::MemcpyConfiguration;
+using llvm::libc_benchmarks::MemmoveConfiguration;
 using llvm::libc_benchmarks::MemsetConfiguration;
 
 namespace __llvm_libc {
 
 static void memcpy_0xE00E29EE73994E2B(char *__restrict dst, const char *__restrict src, size_t size) {
   using namespace __llvm_libc::x86;
-  return Copy<Accelerator>(dst, src, size);
+  return copy<Accelerator>(dst, src, size);
 }
 static void memcpy_0x7381B60C7BE75EF9(char *__restrict dst, const char *__restrict src, size_t size) {
   using namespace __llvm_libc::x86;
   if(size == 0) return;
-  if(size == 1) return Copy<_1>(dst, src);
-  if(size == 2) return Copy<_2>(dst, src);
-  if(size == 3) return Copy<_3>(dst, src);
-  if(size < 8) return Copy<HeadTail<_4>>(dst, src, size);
-  if(size < 16) return Copy<HeadTail<_8>>(dst, src, size);
-  if(size < 32) return Copy<HeadTail<_16>>(dst, src, size);
-  if(size < 64) return Copy<HeadTail<_32>>(dst, src, size);
-  if(size < 128) return Copy<HeadTail<_64>>(dst, src, size);
-  if(size < 256) return Copy<HeadTail<_128>>(dst, src, size);
-  return Copy<Loop<_64>>(dst, src, size);
+  if(size == 1) return copy<_1>(dst, src);
+  if(size == 2) return copy<_2>(dst, src);
+  if(size == 3) return copy<_3>(dst, src);
+  if(size < 8) return copy<HeadTail<_4>>(dst, src, size);
+  if(size < 16) return copy<HeadTail<_8>>(dst, src, size);
+  if(size < 32) return copy<HeadTail<_16>>(dst, src, size);
+  if(size < 64) return copy<HeadTail<_32>>(dst, src, size);
+  if(size < 128) return copy<HeadTail<_64>>(dst, src, size);
+  if(size < 256) return copy<HeadTail<_128>>(dst, src, size);
+  return copy<Loop<_64>>(dst, src, size);
 }
 static int memcmp_0x348D7BA6DB0EE033(const char * lhs, const char * rhs, size_t size) {
   using namespace __llvm_libc::x86;
   if(size == 0) return 0;
-  if(size == 1) return ThreeWayCompare<_1>(lhs, rhs);
-  if(size < 4) return ThreeWayCompare<HeadTail<_2>>(lhs, rhs, size);
-  if(size < 8) return ThreeWayCompare<HeadTail<_4>>(lhs, rhs, size);
-  if(size < 16) return ThreeWayCompare<HeadTail<_8>>(lhs, rhs, size);
-  if(size < 32) return ThreeWayCompare<HeadTail<_16>>(lhs, rhs, size);
-  if(size < 64) return ThreeWayCompare<HeadTail<_32>>(lhs, rhs, size);
-  return ThreeWayCompare<Align<_16,Arg::Lhs>::Then<Loop<_16>>>(lhs, rhs, size);
+  if(size == 1) return three_way_compare<_1>(lhs, rhs);
+  if(size < 4) return three_way_compare<HeadTail<_2>>(lhs, rhs, size);
+  if(size < 8) return three_way_compare<HeadTail<_4>>(lhs, rhs, size);
+  if(size < 16) return three_way_compare<HeadTail<_8>>(lhs, rhs, size);
+  if(size < 32) return three_way_compare<HeadTail<_16>>(lhs, rhs, size);
+  if(size < 64) return three_way_compare<HeadTail<_32>>(lhs, rhs, size);
+  return three_way_compare<Align<_16,Arg::Lhs>::Then<Loop<_16>>>(lhs, rhs, size);
 }
 static void memset_0x71E761699B999863(char * dst, int value, size_t size) {
   using namespace __llvm_libc::x86;
   if(size == 0) return;
-  if(size == 1) return SplatSet<_1>(dst, value);
-  if(size < 4) return SplatSet<HeadTail<_2>>(dst, value, size);
-  if(size < 8) return SplatSet<HeadTail<_4>>(dst, value, size);
-  if(size < 16) return SplatSet<HeadTail<_8>>(dst, value, size);
-  if(size < 32) return SplatSet<HeadTail<_16>>(dst, value, size);
-  if(size < 64) return SplatSet<HeadTail<_32>>(dst, value, size);
-  if(size < 128) return SplatSet<HeadTail<_64>>(dst, value, size);
-  if(size < 256) return SplatSet<HeadTail<_128>>(dst, value, size);
-  return SplatSet<Align<_16,Arg::Dst>::Then<Loop<_32>>>(dst, value, size);
+  if(size == 1) return splat_set<_1>(dst, value);
+  if(size < 4) return splat_set<HeadTail<_2>>(dst, value, size);
+  if(size < 8) return splat_set<HeadTail<_4>>(dst, value, size);
+  if(size < 16) return splat_set<HeadTail<_8>>(dst, value, size);
+  if(size < 32) return splat_set<HeadTail<_16>>(dst, value, size);
+  if(size < 64) return splat_set<HeadTail<_32>>(dst, value, size);
+  if(size < 128) return splat_set<HeadTail<_64>>(dst, value, size);
+  if(size < 256) return splat_set<HeadTail<_128>>(dst, value, size);
+  return splat_set<Align<_16,Arg::Dst>::Then<Loop<_32>>>(dst, value, size);
 }
 static void memset_0x3DF0F44E2ED6A50F(char * dst, int value, size_t size) {
   using namespace __llvm_libc::x86;
   if(size == 0) return;
-  if(size == 1) return SplatSet<_1>(dst, value);
-  if(size < 4) return SplatSet<HeadTail<_2>>(dst, value, size);
-  if(size < 8) return SplatSet<HeadTail<_4>>(dst, value, size);
-  if(size < 16) return SplatSet<HeadTail<_8>>(dst, value, size);
-  if(size < 32) return SplatSet<HeadTail<_16>>(dst, value, size);
-  if(size < 64) return SplatSet<HeadTail<_32>>(dst, value, size);
-  if(size < 128) return SplatSet<HeadTail<_64>>(dst, value, size);
-  if(size < 256) return SplatSet<HeadTail<_128>>(dst, value, size);
-  return SplatSet<Align<_32,Arg::Dst>::Then<Loop<_32>>>(dst, value, size);
+  if(size == 1) return splat_set<_1>(dst, value);
+  if(size < 4) return splat_set<HeadTail<_2>>(dst, value, size);
+  if(size < 8) return splat_set<HeadTail<_4>>(dst, value, size);
+  if(size < 16) return splat_set<HeadTail<_8>>(dst, value, size);
+  if(size < 32) return splat_set<HeadTail<_16>>(dst, value, size);
+  if(size < 64) return splat_set<HeadTail<_32>>(dst, value, size);
+  if(size < 128) return splat_set<HeadTail<_64>>(dst, value, size);
+  if(size < 256) return splat_set<HeadTail<_128>>(dst, value, size);
+  return splat_set<Align<_32,Arg::Dst>::Then<Loop<_32>>>(dst, value, size);
 }
 static void bzero_0x475977492C218AD4(char * dst, size_t size) {
   using namespace __llvm_libc::x86;
   if(size == 0) return;
-  if(size == 1) return SplatSet<_1>(dst, 0);
-  if(size == 2) return SplatSet<_2>(dst, 0);
-  if(size == 3) return SplatSet<_3>(dst, 0);
-  if(size < 8) return SplatSet<HeadTail<_4>>(dst, 0, size);
-  if(size < 16) return SplatSet<HeadTail<_8>>(dst, 0, size);
-  if(size < 32) return SplatSet<HeadTail<_16>>(dst, 0, size);
-  if(size < 64) return SplatSet<HeadTail<_32>>(dst, 0, size);
-  if(size < 128) return SplatSet<HeadTail<_64>>(dst, 0, size);
-  return SplatSet<Align<_32,Arg::Dst>::Then<Loop<_32>>>(dst, 0, size);
+  if(size == 1) return splat_set<_1>(dst, 0);
+  if(size == 2) return splat_set<_2>(dst, 0);
+  if(size == 3) return splat_set<_3>(dst, 0);
+  if(size < 8) return splat_set<HeadTail<_4>>(dst, 0, size);
+  if(size < 16) return splat_set<HeadTail<_8>>(dst, 0, size);
+  if(size < 32) return splat_set<HeadTail<_16>>(dst, 0, size);
+  if(size < 64) return splat_set<HeadTail<_32>>(dst, 0, size);
+  if(size < 128) return splat_set<HeadTail<_64>>(dst, 0, size);
+  return splat_set<Align<_32,Arg::Dst>::Then<Loop<_32>>>(dst, 0, size);
 }
 
 } // namespace __llvm_libc
@@ -210,6 +211,10 @@ llvm::ArrayRef<BzeroConfiguration> getBzeroConfigurations() {
     {Wrap<bzero_0x475977492C218AD4>, "bzero_0x475977492C218AD4"},
   };
   return llvm::makeArrayRef(kConfigurations);
+}
+
+llvm::ArrayRef<MemmoveConfiguration> getMemmoveConfigurations() {
+  return {};
 }
 // Functions : 6
 )");

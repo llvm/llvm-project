@@ -36,6 +36,20 @@ func @generalize_matmul_tensor_i16i64i32(%A : tensor<16x8xi16>, %B: tensor<8x32x
 // CHECK-NEXT:   linalg.yield %[[ADD]] : i32
 // CHECK-NEXT: -> tensor<16x32xi32>
 
+
+// -----
+
+// Verifies that cast attributes control the cast operations used.
+func @generalize_matmul_tensor_i16i64i32_unsigned(%A : tensor<16x8xi16>, %B: tensor<8x32xi64>, %C: tensor<16x32xi32>) -> tensor<16x32xi32> {
+  %0 = linalg.matmul {cast = #linalg.type_fn<cast_unsigned>}
+                     ins(%A, %B: tensor<16x8xi16>, tensor<8x32xi64>)
+                          outs(%C: tensor<16x32xi32>) -> tensor<16x32xi32>
+  return %0: tensor<16x32xi32>
+}
+
+// CHECK-LABEL: @generalize_matmul_tensor_i16i64i32_unsigned
+// CHECK:        = arith.extui
+
 // -----
 
 func @generalize_matmul_tensor_i16i64f32(%A : tensor<16x8xi16>, %B: tensor<8x32xi64>, %C: tensor<16x32xf32>) -> tensor<16x32xf32> {
@@ -207,58 +221,178 @@ func @generalize_pooling_nhwc_sum_i32(%input : tensor<1x4x16x1xi32>, %shape: ten
 
 // -----
 
-func @generalize_fill_rng_2d_f32(%min: f64, %max: f64, %seed: i32, %O: tensor<16x32xf32>) -> tensor<16x32xf32> {
+func @generalize_fill_0d(%value: f64, %O: tensor<f32>) -> tensor<f32> {
+  %0 = linalg.fill ins(%value: f64) outs(%O : tensor<f32>) -> tensor<f32>
+  return %0: tensor<f32>
+}
+
+// CHECK-DAG: #[[$MAP0:.+]] = affine_map<() -> ()>
+
+// CHECK-LABEL: @generalize_fill_0d
+// CHECK:      linalg.generic
+// CHECK-SAME: indexing_maps = [#[[$MAP0]], #[[$MAP0]]]
+// CHECK-SAME: iterator_types = []
+
+// -----
+
+func @generalize_fill_2d(%value: f64, %O: memref<16x32xf32>) {
+  linalg.fill ins(%value: f64) outs(%O : memref<16x32xf32>)
+  return
+}
+
+// CHECK-DAG: #[[$MAP0:.+]] = affine_map<(d0, d1) -> ()>
+// CHECK-DAG: #[[$MAP1:.+]] = affine_map<(d0, d1) -> (d0, d1)>
+
+// CHECK-LABEL: @generalize_fill
+// CHECK:      linalg.generic
+// CHECK-SAME: indexing_maps = [#[[$MAP0]], #[[$MAP1]]]
+// CHECK-SAME: iterator_types = ["parallel", "parallel"]
+
+// -----
+
+func @generalize_index(%min: f64, %max: f64, %seed: i32, %O: tensor<16x32xf32>) -> tensor<16x32xf32> {
   %0 = linalg.fill_rng_2d ins(%min, %max, %seed: f64, f64, i32) outs(%O : tensor<16x32xf32>) -> tensor<16x32xf32>
   return %0: tensor<16x32xf32>
 }
 
-// CHECK-LABEL: @generalize_fill_rng_2d_f32
-// CHECK-DAG:  ^{{.*}}(%[[MIN:.+]]: f64, %[[MAX:.+]]: f64, %[[SEED:.+]]: i32, %[[O:.+]]: f32
+// CHECK-LABEL: @generalize_index
 // CHECK-DAG:    %[[IDX0:.+]] = linalg.index 0 : index
 // CHECK-DAG:    %[[IDX1:.+]] = linalg.index 1 : index
 // CHECK-DAG:    %[[IDX0_CAST:.+]] = arith.index_cast %[[IDX0]] : index to i32
 // CHECK-DAG:    %[[IDX1_CAST:.+]] = arith.index_cast %[[IDX1]] : index to i32
-// CHECK-DAG:    %[[VAL0:.+]] = arith.addi %[[IDX0_CAST]], %[[SEED]] : i32
-// CHECK-DAG:    %[[CST0:.+]] = arith.constant 1103515245 : i32
-// CHECK-DAG:    %[[CST1:.+]] = arith.constant 12345 : i32
-// CHECK-DAG:    %[[VAL1:.+]] = arith.muli %[[VAL0]], %[[CST0]] : i32
-// CHECK-DAG:    %[[VAL2:.+]] = arith.addi %[[VAL1]], %[[CST1]] : i32
-// Skip random number computation for the second index.
-// CHECK-DAG:    %[[DIFF:.+]] = arith.subf %[[MAX]], %[[MIN]] : f64
-// CHECK-DAG:    %[[CST2:.+]] = arith.constant 2.3283063999999999E-10 : f64
-// CHECK-DAG:    %[[FACT:.+]] = arith.mulf %[[DIFF]], %[[CST2]] : f64
-// CHECK-DAG:    %[[VAL4:.+]] = arith.mulf %{{.+}}, %[[FACT]] : f64
-// CHECK-DAG:    %[[VAL5:.+]] = arith.addf %[[VAL4]], %[[MIN]] : f64
-// CHECK-DAG:    %[[VAL6:.+]] = arith.truncf %[[VAL5]] : f64 to f32
-// CHECK-NEXT:   linalg.yield %[[VAL6]] : f32
-// CHECK-NEXT: -> tensor<16x32xf32>
 
 // -----
 
-func @generalize_fill_rng_2d_i32(%min: f64, %max: f64, %seed: i32, %O: tensor<16x32xi32>) -> tensor<16x32xi32> {
-  %0 = linalg.fill_rng_2d ins(%min, %max, %seed: f64, f64, i32) outs(%O : tensor<16x32xi32>) -> tensor<16x32xi32>
-  return %0: tensor<16x32xi32>
-}
-
-// CHECK-LABEL: @generalize_fill_rng_2d_i32
-// CHECK: ^{{.*}}(%[[MIN:.+]]: f64, %[[MAX:.+]]: f64, %[[SEED:.+]]: i32, %[[O:.+]]: i32
-// Verifies floating point to integer cast.
-// CHECK:        %[[VAL6:.+]] = arith.fptosi %{{.+}} : f64 to i32
-// CHECK-NEXT:   linalg.yield %[[VAL6]] : i32
-// CHECK-NEXT: -> tensor<16x32xi32>
-
-// -----
-
-func @generalize_soft_plus_2d_f32(%input: tensor<16x32xf32>, %output: tensor<16x32xf32>) -> tensor<16x32xf32> {
-  %0 = linalg.soft_plus_2d ins(%input: tensor<16x32xf32>) outs(%output: tensor<16x32xf32>) -> tensor<16x32xf32>
+func @generalize_const(%min: f64, %max: f64, %seed: i32, %O: tensor<16x32xf32>) -> tensor<16x32xf32> {
+  %0 = linalg.fill_rng_2d ins(%min, %max, %seed: f64, f64, i32) outs(%O : tensor<16x32xf32>) -> tensor<16x32xf32>
   return %0: tensor<16x32xf32>
 }
 
-// CHECK-LABEL: @generalize_soft_plus_2d_f32
-//      CHECK: %[[C1:.+]] = arith.constant 1.000000e+00 : f32
-//      CHECK: ^{{.*}}(%[[IN:.+]]: f32, %[[OUT:.+]]: f32
-// CHECK-NEXT:   %[[EXP:.+]] = math.exp %[[IN]] : f32
-// CHECK-NEXT:   %[[SUM:.+]] = arith.addf %[[C1]], %[[EXP]] : f32
-// CHECK-NEXT:   %[[LOG:.+]] = math.log %[[SUM]] : f32
-// CHECK-NEXT:   linalg.yield %[[LOG]] : f32
-// CHECK-NEXT: -> tensor<16x32xf32>
+// CHECK-LABEL: @generalize_const
+// CHECK-DAG:    %[[CST0:.+]] = arith.constant 1103515245 : i32
+// CHECK-DAG:    %[[CST1:.+]] = arith.constant 12345 : i32
+// CHECK-DAG:    %[[CST2:.+]] = arith.constant 2.3283063999999999E-10 : f64
+
+// -----
+
+// Verifies the default value of the fun attribute is an exp op.
+func @generalize_elemwise_exp(%lhs : tensor<4x8xf32>, %output : tensor<4x8xf32>) -> tensor<4x8xf32> {
+  %0 = linalg.elemwise_unary ins(%lhs: tensor<4x8xf32>) outs(%output: tensor<4x8xf32>) -> tensor<4x8xf32>
+  return %0: tensor<4x8xf32>
+}
+
+// CHECK-LABEL: @generalize_elemwise_exp
+// CHECK:        = math.exp
+
+// -----
+
+// Verifies the fun attribute controls the unary function used.
+func @generalize_elemwise_log(%lhs : tensor<4x8xf32>, %output : tensor<4x8xf32>) -> tensor<4x8xf32> {
+  %0 = linalg.elemwise_unary {fun = #linalg.unary_fn<log>}
+                              ins(%lhs: tensor<4x8xf32>) outs(%output: tensor<4x8xf32>) -> tensor<4x8xf32>
+  return %0: tensor<4x8xf32>
+}
+
+// CHECK-LABEL: @generalize_elemwise_log
+// CHECK:        = math.log
+
+// -----
+
+// Verifies the fun attribute controls the unary function used.
+func @generalize_elemwise_abs(%lhs : tensor<4x8xf32>, %output : tensor<4x8xf32>) -> tensor<4x8xf32> {
+  %0 = linalg.elemwise_unary {fun = #linalg.unary_fn<abs>}
+                              ins(%lhs: tensor<4x8xf32>) outs(%output: tensor<4x8xf32>) -> tensor<4x8xf32>
+  return %0: tensor<4x8xf32>
+}
+
+// CHECK-LABEL: @generalize_elemwise_abs
+// CHECK:        = math.abs
+
+// -----
+
+// Verifies the fun attribute controls the unary function used.
+func @generalize_elemwise_ceil(%lhs : tensor<4x8xf32>, %output : tensor<4x8xf32>) -> tensor<4x8xf32> {
+  %0 = linalg.elemwise_unary {fun = #linalg.unary_fn<ceil>}
+                              ins(%lhs: tensor<4x8xf32>) outs(%output: tensor<4x8xf32>) -> tensor<4x8xf32>
+  return %0: tensor<4x8xf32>
+}
+
+// CHECK-LABEL: @generalize_elemwise_ceil
+// CHECK:        = math.ceil
+
+// -----
+
+// Verifies the fun attribute controls the unary function used.
+func @generalize_elemwise_floor(%lhs : tensor<4x8xf32>, %output : tensor<4x8xf32>) -> tensor<4x8xf32> {
+  %0 = linalg.elemwise_unary {fun = #linalg.unary_fn<floor>}
+                              ins(%lhs: tensor<4x8xf32>) outs(%output: tensor<4x8xf32>) -> tensor<4x8xf32>
+  return %0: tensor<4x8xf32>
+}
+
+// CHECK-LABEL: @generalize_elemwise_floor
+// CHECK:        = math.floor
+
+// -----
+
+// Verifies the fun attribute controls the unary function used.
+func @generalize_elemwise_negf(%lhs : tensor<4x8xf32>, %output : tensor<4x8xf32>) -> tensor<4x8xf32> {
+  %0 = linalg.elemwise_unary {fun = #linalg.unary_fn<negf>}
+                              ins(%lhs: tensor<4x8xf32>) outs(%output: tensor<4x8xf32>) -> tensor<4x8xf32>
+  return %0: tensor<4x8xf32>
+}
+
+// CHECK-LABEL: @generalize_elemwise_negf
+// CHECK:        = arith.negf
+
+// -----
+
+// Verifies the default value of the fun attribute is an add op.
+func @generalize_elemwise_add(%lhs : tensor<4x8xf32>, %rhs : tensor<4x8xf32>, %output : tensor<4x8xf32>) -> tensor<4x8xf32> {
+  %0 = linalg.elemwise_binary ins(%lhs, %rhs: tensor<4x8xf32>, tensor<4x8xf32>)
+                              outs(%output: tensor<4x8xf32>) -> tensor<4x8xf32>
+  return %0: tensor<4x8xf32>
+}
+
+// CHECK-LABEL: @generalize_elemwise_add
+// CHECK:        = arith.addf
+
+// -----
+
+// Verifies the fun attribute controls the binary function used.
+func @generalize_elemwise_mul(%lhs : tensor<4x8xf32>, %rhs : tensor<4x8xf32>, %output : tensor<4x8xf32>) -> tensor<4x8xf32> {
+  %0 = linalg.elemwise_binary {fun = #linalg.binary_fn<mul>}
+                              ins(%lhs, %rhs: tensor<4x8xf32>, tensor<4x8xf32>)
+                              outs(%output: tensor<4x8xf32>) -> tensor<4x8xf32>
+  return %0: tensor<4x8xf32>
+}
+
+// CHECK-LABEL: @generalize_elemwise_mul
+// CHECK:        = arith.mulf
+
+// -----
+
+// Verifies pointwise ops support rank zero input tensors
+func @generalize_elemwise_rank_zero(%lhs : tensor<f32>, %rhs : tensor<f32>, %output : tensor<4x8xf32>) -> tensor<4x8xf32> {
+  %0 = linalg.elemwise_binary {fun = #linalg.binary_fn<sub>}
+                              ins(%lhs, %rhs: tensor<f32>, tensor<f32>)
+                              outs(%output: tensor<4x8xf32>) -> tensor<4x8xf32>
+  return %0: tensor<4x8xf32>
+}
+
+// CHECK-LABEL: @generalize_elemwise_rank_zero
+// CHECK:       linalg.generic
+// CHECK-SAME:  iterator_types = ["parallel", "parallel"]
+// CHECK:        = arith.subf
+
+// -----
+
+// Verifies the fun attribute controls the binary function used.
+func @generalize_copy(%lhs : tensor<4x8xf32>, %output : tensor<4x8xf32>) -> tensor<4x8xf32> {
+  %0 = linalg.copy ins(%lhs: tensor<4x8xf32>) outs(%output: tensor<4x8xf32>) -> tensor<4x8xf32>
+  return %0: tensor<4x8xf32>
+}
+
+// CHECK-LABEL: @generalize_copy
+//       CHECK:   linalg.generic
+//  CHECK-NEXT:   ^bb0(%[[I:[0-9a-zA-Z]*]]: f32
+//  CHECK-NEXT:   linalg.yield %[[I]]

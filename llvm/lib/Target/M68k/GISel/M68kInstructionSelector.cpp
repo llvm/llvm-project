@@ -1,4 +1,4 @@
-//===- M68kInstructionSelector.cpp ------------------------------*- C++ -*-===//
+//===-- M68kInstructionSelector.cpp -----------------------------*- C++ -*-===//
 //===----------------------------------------------------------------------===//
 /// \file
 /// This file implements the targeting of the InstructionSelector class for

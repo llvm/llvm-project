@@ -18,6 +18,10 @@
 // RUN: llvm-mc -triple arm64-apple-tvos10-simulator %s -filetype=obj -o - | llvm-objdump --macho --private-headers - | FileCheck %s --check-prefix=CHECK-BUILD-TVOSSIM2
 // RUN: llvm-mc -triple arm64-apple-watchos3-simulator %s -filetype=obj -o - | llvm-objdump --macho --private-headers - | FileCheck %s --check-prefix=CHECK-BUILD-WATCHOSSIM2
 
+// RUN: llvm-mc -triple arm64-apple-driverkit19.0 %s -filetype=obj -o - | llvm-objdump --macho --private-headers - | FileCheck %s --check-prefix=CHECK-DRIVERKIT-ARM64
+// RUN: llvm-mc -triple arm64e-apple-driverkit19.0 %s -filetype=obj -o - | llvm-objdump --macho --private-headers - | FileCheck %s --check-prefix=CHECK-DRIVERKIT-ARM64
+// RUN: llvm-mc -triple arm64-apple-driverkit20.1 %s -filetype=obj -o - | llvm-objdump --macho --private-headers - | FileCheck %s --check-prefix=CHECK-DRIVERKIT-ARM64_1
+
 // CHECK-BUILD-IOS-ARM64E:           cmd LC_BUILD_VERSION
 // CHECK-BUILD-IOS-ARM64E-NEXT:  cmdsize 24
 // CHECK-BUILD-IOS-ARM64E-NEXT: platform ios
@@ -94,3 +98,17 @@
 // CHECK-MACCATALYST-ARM64_1-NEXT:      sdk n/a
 // CHECK-MACCATALYST-ARM64_1-NEXT:    minos 14.1
 // CHECK-MACCATALYST-ARM64_1-NEXT:   ntools 0
+
+// CHECK-DRIVERKIT-ARM64:            cmd LC_BUILD_VERSION
+// CHECK-DRIVERKIT-ARM64-NEXT:   cmdsize 24
+// CHECK-DRIVERKIT-ARM64-NEXT:  platform driverkit
+// CHECK-DRIVERKIT-ARM64-NEXT:       sdk n/a
+// CHECK-DRIVERKIT-ARM64-NEXT:     minos 20.0
+// CHECK-DRIVERKIT-ARM64-NEXT:    ntools 0
+
+// CHECK-DRIVERKIT-ARM64_1:            cmd LC_BUILD_VERSION
+// CHECK-DRIVERKIT-ARM64_1-NEXT:   cmdsize 24
+// CHECK-DRIVERKIT-ARM64_1-NEXT:  platform driverkit
+// CHECK-DRIVERKIT-ARM64_1-NEXT:       sdk n/a
+// CHECK-DRIVERKIT-ARM64_1-NEXT:     minos 20.1
+// CHECK-DRIVERKIT-ARM64_1-NEXT:    ntools 0

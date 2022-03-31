@@ -82,7 +82,7 @@ constexpr Space space;
 inline void MissingSpace(ParseState &state) {
   if (!state.inFixedForm()) {
     state.Nonstandard(
-        LanguageFeature::OptionalFreeFormSpace, "missing space"_en_US);
+        LanguageFeature::OptionalFreeFormSpace, "missing space"_port_en_US);
   }
 }
 
@@ -294,8 +294,8 @@ struct BOZLiteral {
       return std::nullopt;
     }
     if (**at == 'x' &&
-        !state.IsNonstandardOk(
-            LanguageFeature::BOZExtensions, "nonstandard BOZ literal"_en_US)) {
+        !state.IsNonstandardOk(LanguageFeature::BOZExtensions,
+            "nonstandard BOZ literal"_port_en_US)) {
       return std::nullopt;
     }
     if (baseChar(**at)) {
@@ -332,7 +332,7 @@ struct BOZLiteral {
       // extension: base allowed to appear as suffix, too
       if (!(at = nextCh.Parse(state)) || !baseChar(**at) ||
           !state.IsNonstandardOk(LanguageFeature::BOZExtensions,
-              "nonstandard BOZ literal"_en_US)) {
+              "nonstandard BOZ literal"_port_en_US)) {
         return std::nullopt;
       }
       spaceCheck.Parse(state);
@@ -634,7 +634,7 @@ struct SkipStuffBeforeStatement {
         }
       } else if (**at == ';' &&
           state.IsNonstandardOk(
-              LanguageFeature::EmptyStatement, "empty statement"_en_US)) {
+              LanguageFeature::EmptyStatement, "empty statement"_port_en_US)) {
         state.UncheckedAdvance();
       } else {
         break;
@@ -655,15 +655,20 @@ constexpr auto underscore{"_"_ch};
 // Cray and gfortran accept '$', but not as the first character.
 // Cray accepts '@' as well.
 constexpr auto otherIdChar{underscore / !"'\""_ch ||
-    extension<LanguageFeature::PunctuationInNames>("$@"_ch)};
+    extension<LanguageFeature::PunctuationInNames>(
+        "nonstandard usage: punctuation in name"_port_en_US, "$@"_ch)};
 
 constexpr auto logicalTRUE{
     (".TRUE."_tok ||
-        extension<LanguageFeature::LogicalAbbreviations>(".T."_tok)) >>
+        extension<LanguageFeature::LogicalAbbreviations>(
+            "nonstandard usage: .T. spelling of .TRUE."_port_en_US,
+            ".T."_tok)) >>
     pure(true)};
 constexpr auto logicalFALSE{
     (".FALSE."_tok ||
-        extension<LanguageFeature::LogicalAbbreviations>(".F."_tok)) >>
+        extension<LanguageFeature::LogicalAbbreviations>(
+            "nonstandard usage: .F. spelling of .FALSE."_port_en_US,
+            ".F."_tok)) >>
     pure(false)};
 
 // deprecated: Hollerith literals

@@ -5,8 +5,8 @@ declare void @sink(i32)
 
 define internal void @test(i32** %X) !dbg !2 {
 ; CHECK-LABEL: define {{[^@]+}}@test
-; CHECK-SAME: (i32 [[X_VAL_VAL:%.*]]) [[DBG3:!dbg !.*]] {
-; CHECK-NEXT:    call void @sink(i32 [[X_VAL_VAL]])
+; CHECK-SAME: (i32 [[X_0_VAL_0_VAL:%.*]]) !dbg [[DBG3:![0-9]+]] {
+; CHECK-NEXT:    call void @sink(i32 [[X_0_VAL_0_VAL]])
 ; CHECK-NEXT:    ret void
 ;
   %1 = load i32*, i32** %X, align 8
@@ -33,14 +33,14 @@ define internal void @test_byval(%struct.pair* byval(%struct.pair) align 4 %P) {
 define void @caller(i32** %Y, %struct.pair* %P) {
 ; CHECK-LABEL: define {{[^@]+}}@caller
 ; CHECK-SAME: (i32** [[Y:%.*]], %struct.pair* [[P:%.*]]) {
-; CHECK-NEXT:    [[Y_VAL:%.*]] = load i32*, i32** [[Y]], align 8, [[DBG4:!dbg !.*]]
-; CHECK-NEXT:    [[Y_VAL_VAL:%.*]] = load i32, i32* [[Y_VAL]], align 8, [[DBG4]]
-; CHECK-NEXT:    call void @test(i32 [[Y_VAL_VAL]]), [[DBG4]]
-; CHECK-NEXT:    [[P_0:%.*]] = getelementptr [[STRUCT_PAIR:%.*]], %struct.pair* [[P]], i32 0, i32 0, [[DBG5:!dbg !.*]]
-; CHECK-NEXT:    [[P_0_VAL:%.*]] = load i32, i32* [[P_0]], align 4, [[DBG5]]
-; CHECK-NEXT:    [[P_1:%.*]] = getelementptr [[STRUCT_PAIR]], %struct.pair* [[P]], i32 0, i32 1, [[DBG5]]
-; CHECK-NEXT:    [[P_1_VAL:%.*]] = load i32, i32* [[P_1]], align 4, [[DBG5]]
-; CHECK-NEXT:    call void @test_byval(i32 [[P_0_VAL]], i32 [[P_1_VAL]]), [[DBG5]]
+; CHECK-NEXT:    [[Y_VAL:%.*]] = load i32*, i32** [[Y]], align 8, !dbg [[DBG4:![0-9]+]]
+; CHECK-NEXT:    [[Y_VAL_VAL:%.*]] = load i32, i32* [[Y_VAL]], align 8, !dbg [[DBG4]]
+; CHECK-NEXT:    call void @test(i32 [[Y_VAL_VAL]]), !dbg [[DBG4]]
+; CHECK-NEXT:    [[P_0:%.*]] = getelementptr [[STRUCT_PAIR:%.*]], %struct.pair* [[P]], i32 0, i32 0, !dbg [[DBG5:![0-9]+]]
+; CHECK-NEXT:    [[P_0_VAL:%.*]] = load i32, i32* [[P_0]], align 4, !dbg [[DBG5]]
+; CHECK-NEXT:    [[P_1:%.*]] = getelementptr [[STRUCT_PAIR]], %struct.pair* [[P]], i32 0, i32 1, !dbg [[DBG5]]
+; CHECK-NEXT:    [[P_1_VAL:%.*]] = load i32, i32* [[P_1]], align 4, !dbg [[DBG5]]
+; CHECK-NEXT:    call void @test_byval(i32 [[P_0_VAL]], i32 [[P_1_VAL]]), !dbg [[DBG5]]
 ; CHECK-NEXT:    ret void
 ;
   call void @test(i32** %Y), !dbg !1

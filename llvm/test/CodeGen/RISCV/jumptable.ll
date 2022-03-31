@@ -239,11 +239,11 @@ define void @above_threshold(i32 %in, i32* %out) nounwind {
 ; RV64I-SMALL-NEXT:    li a2, 5
 ; RV64I-SMALL-NEXT:    bltu a2, a0, .LBB1_9
 ; RV64I-SMALL-NEXT:  # %bb.1: # %entry
-; RV64I-SMALL-NEXT:    slli a0, a0, 3
+; RV64I-SMALL-NEXT:    slli a0, a0, 2
 ; RV64I-SMALL-NEXT:    lui a2, %hi(.LJTI1_0)
 ; RV64I-SMALL-NEXT:    addi a2, a2, %lo(.LJTI1_0)
 ; RV64I-SMALL-NEXT:    add a0, a0, a2
-; RV64I-SMALL-NEXT:    ld a0, 0(a0)
+; RV64I-SMALL-NEXT:    lw a0, 0(a0)
 ; RV64I-SMALL-NEXT:    jr a0
 ; RV64I-SMALL-NEXT:  .LBB1_2: # %bb1
 ; RV64I-SMALL-NEXT:    li a0, 4

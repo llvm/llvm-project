@@ -144,10 +144,9 @@ ret <vscale x 4 x i32> %sel
 define <vscale x 2 x i64> @sel_64_illegal_wrong_extension(<vscale x 2 x i1> %p) {
 ; CHECK-LABEL: sel_64_illegal_wrong_extension:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #128
-; CHECK-NEXT:    mov z1.d, #0 // =0x0
-; CHECK-NEXT:    mov z0.d, x8
-; CHECK-NEXT:    sel z0.d, p0, z0.d, z1.d
+; CHECK-NEXT:    mov z0.d, #0 // =0x0
+; CHECK-NEXT:    mov z1.d, #128 // =0x80
+; CHECK-NEXT:    mov z0.d, p0/m, z1.d
 ; CHECK-NEXT:    ret
 %vec = shufflevector <vscale x 2 x i64> insertelement (<vscale x 2 x i64> undef, i64 128, i32 0), <vscale x 2 x i64> zeroinitializer, <vscale x 2 x i32> zeroinitializer
 %sel = select <vscale x 2 x i1> %p, <vscale x 2 x i64> %vec, <vscale x 2 x i64> zeroinitializer
@@ -370,8 +369,7 @@ ret <vscale x 4 x i32> %sel
 define <vscale x 2 x i64> @sel_merge_64_illegal_wrong_extension(<vscale x 2 x i1> %p, <vscale x 2 x i64> %in) {
 ; CHECK-LABEL: sel_merge_64_illegal_wrong_extension:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #128
-; CHECK-NEXT:    mov z1.d, x8
+; CHECK-NEXT:    mov z1.d, #128 // =0x80
 ; CHECK-NEXT:    mov z0.d, p0/m, z1.d
 ; CHECK-NEXT:    ret
 %vec = shufflevector <vscale x 2 x i64> insertelement (<vscale x 2 x i64> undef, i64 128, i32 0), <vscale x 2 x i64> zeroinitializer, <vscale x 2 x i32> zeroinitializer

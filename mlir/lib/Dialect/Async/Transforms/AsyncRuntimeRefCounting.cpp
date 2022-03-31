@@ -15,7 +15,8 @@
 #include "mlir/Analysis/Liveness.h"
 #include "mlir/Dialect/Async/IR/Async.h"
 #include "mlir/Dialect/Async/Passes.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -169,11 +170,11 @@ private:
   ///
   ///   ^entry:
   ///     %token = async.runtime.create : !async.token
-  ///     cond_br %cond, ^bb1, ^bb2
+  ///     cf.cond_br %cond, ^bb1, ^bb2
   ///   ^bb1:
   ///     async.runtime.await %token
   ///     async.runtime.drop_ref %token
-  ///     br ^bb2
+  ///     cf.br ^bb2
   ///   ^bb2:
   ///     return
   ///
@@ -185,14 +186,14 @@ private:
   ///
   ///   ^entry:
   ///     %token = async.runtime.create : !async.token
-  ///     cond_br %cond, ^bb1, ^reference_counting
+  ///     cf.cond_br %cond, ^bb1, ^reference_counting
   ///   ^bb1:
   ///     async.runtime.await %token
   ///     async.runtime.drop_ref %token
-  ///     br ^bb2
+  ///     cf.br ^bb2
   ///   ^reference_counting:
   ///     async.runtime.drop_ref %token
-  ///     br ^bb2
+  ///     cf.br ^bb2
   ///   ^bb2:
   ///     return
   ///
@@ -208,7 +209,7 @@ private:
   ///     async.coro.suspend %ret, ^suspend, ^resume, ^cleanup
   ///   ^resume:
   ///     %0 = async.runtime.load %value
-  ///     br ^cleanup
+  ///     cf.br ^cleanup
   ///   ^cleanup:
   ///     ...
   ///   ^suspend:
@@ -316,7 +317,7 @@ AsyncRuntimeRefCountingPass::addAddRefBeforeFunctionCall(Value value) {
   Location loc = value.getLoc();
 
   for (Operation *user : value.getUsers()) {
-    if (!isa<CallOp>(user))
+    if (!isa<func::CallOp>(user))
       continue;
 
     // Add a reference before the function call to pass the value at `+1`
@@ -406,7 +407,7 @@ AsyncRuntimeRefCountingPass::addDropRefInDivergentLivenessSuccessor(
         refCountingBlock = &successor->getParent()->emplaceBlock();
         refCountingBlock->moveBefore(successor);
         OpBuilder builder = OpBuilder::atBlockEnd(refCountingBlock);
-        builder.create<BranchOp>(value.getLoc(), successor);
+        builder.create<cf::BranchOp>(value.getLoc(), successor);
       }
 
       OpBuilder builder = OpBuilder::atBlockBegin(refCountingBlock);
@@ -418,7 +419,7 @@ AsyncRuntimeRefCountingPass::addDropRefInDivergentLivenessSuccessor(
         continue;
 
       // Update terminator `successor` block to `refCountingBlock`.
-      for (auto pair : llvm::enumerate(terminator->getSuccessors()))
+      for (const auto &pair : llvm::enumerate(terminator->getSuccessors()))
         if (pair.value() == successor)
           terminator->setSuccessor(refCountingBlock, pair.index());
     }

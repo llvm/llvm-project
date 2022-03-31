@@ -75,6 +75,47 @@ def testCallSite():
 run(testCallSite)
 
 
+# CHECK-LABEL: TEST: testFused
+def testFused():
+  with Context() as ctx:
+    loc_single = Location.fused([Location.name("apple")])
+    loc = Location.fused(
+        [Location.name("apple"), Location.name("banana")])
+    attr = Attribute.parse('"sauteed"')
+    loc_attr = Location.fused([Location.name("carrot"),
+                               Location.name("potatoes")], attr)
+    loc_empty = Location.fused([])
+    loc_empty_attr = Location.fused([], attr)
+    loc_single_attr = Location.fused([Location.name("apple")], attr)
+  ctx = None
+  # CHECK: file str: loc("apple")
+  print("file str:", str(loc_single))
+  # CHECK: file repr: loc("apple")
+  print("file repr:", repr(loc_single))
+  # CHECK: file str: loc(fused["apple", "banana"])
+  print("file str:", str(loc))
+  # CHECK: file repr: loc(fused["apple", "banana"])
+  print("file repr:", repr(loc))
+  # CHECK: file str: loc(fused<"sauteed">["carrot", "potatoes"])
+  print("file str:", str(loc_attr))
+  # CHECK: file repr: loc(fused<"sauteed">["carrot", "potatoes"])
+  print("file repr:", repr(loc_attr))
+  # CHECK: file str: loc(unknown)
+  print("file str:", str(loc_empty))
+  # CHECK: file repr: loc(unknown)
+  print("file repr:", repr(loc_empty))
+  # CHECK: file str: loc(fused<"sauteed">[unknown])
+  print("file str:", str(loc_empty_attr))
+  # CHECK: file repr: loc(fused<"sauteed">[unknown])
+  print("file repr:", repr(loc_empty_attr))
+  # CHECK: file str: loc(fused<"sauteed">["apple"])
+  print("file str:", str(loc_single_attr))
+  # CHECK: file repr: loc(fused<"sauteed">["apple"])
+  print("file repr:", repr(loc_single_attr))
+
+run(testFused)
+
+
 # CHECK-LABEL: TEST: testLocationCapsule
 def testLocationCapsule():
   with Context() as ctx:

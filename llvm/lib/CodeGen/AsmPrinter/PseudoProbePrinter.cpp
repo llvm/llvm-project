@@ -13,7 +13,7 @@
 #include "PseudoProbePrinter.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/IR/DebugInfoMetadata.h"
-#include "llvm/IR/Module.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/PseudoProbe.h"
 #include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/MC/MCStreamer.h"
@@ -47,7 +47,6 @@ void PseudoProbeHandler::emitPseudoProbe(uint64_t Guid, uint64_t Index,
     InlinedAt = InlinedAt->getInlinedAt();
   }
 
-  SmallVector<InlineSite, 8> InlineStack(ReversedInlineStack.rbegin(),
-                                         ReversedInlineStack.rend());
+  SmallVector<InlineSite, 8> InlineStack(llvm::reverse(ReversedInlineStack));
   Asm->OutStreamer->emitPseudoProbe(Guid, Index, Type, Attr, InlineStack);
 }

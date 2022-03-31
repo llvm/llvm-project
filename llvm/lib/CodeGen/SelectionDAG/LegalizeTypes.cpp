@@ -13,10 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LegalizeTypes.h"
-#include "SDNodeDbgValue.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -83,7 +80,7 @@ void DAGTypeLegalizer::PerformExpensiveChecks() {
       SDValue Res(&Node, i);
       bool Failed = false;
       // Don't create a value in map.
-      auto ResId = (ValueToIdMap.count(Res)) ? ValueToIdMap[Res] : 0;
+      auto ResId = ValueToIdMap.lookup(Res);
 
       unsigned Mapped = 0;
       if (ResId && (ReplacedValues.find(ResId) != ReplacedValues.end())) {
@@ -301,7 +298,7 @@ ScanOperands:
       if (IgnoreNodeResults(N->getOperand(i).getNode()))
         continue;
 
-      const auto Op = N->getOperand(i);
+      const auto &Op = N->getOperand(i);
       LLVM_DEBUG(dbgs() << "Analyzing operand: "; Op.dump(&DAG));
       EVT OpVT = Op.getValueType();
       switch (getTypeAction(OpVT)) {
@@ -1007,11 +1004,7 @@ SDValue DAGTypeLegalizer::JoinIntegers(SDValue Lo, SDValue Hi) {
 ///
 /// ValVT is the type of values that produced the boolean.
 SDValue DAGTypeLegalizer::PromoteTargetBoolean(SDValue Bool, EVT ValVT) {
-  SDLoc dl(Bool);
-  EVT BoolVT = getSetCCResultType(ValVT);
-  ISD::NodeType ExtendCode =
-      TargetLowering::getExtendForContent(TLI.getBooleanContents(ValVT));
-  return DAG.getNode(ExtendCode, dl, BoolVT, Bool);
+  return TLI.promoteTargetBoolean(DAG, Bool, ValVT);
 }
 
 /// Return the lower LoVT bits of Op in Lo and the upper HiVT bits in Hi.

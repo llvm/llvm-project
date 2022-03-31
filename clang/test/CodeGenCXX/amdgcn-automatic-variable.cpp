@@ -35,7 +35,7 @@ void func1(int *x) {
 // CHECK-NEXT:    store i32* [[LV1_ASCAST]], i32** [[LP1_ASCAST]], align 8
 // CHECK-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [100 x i32], [100 x i32]* [[LA_ASCAST]], i64 0, i64 0
 // CHECK-NEXT:    store i32* [[ARRAYDECAY]], i32** [[LP2_ASCAST]], align 8
-// CHECK-NEXT:    call void @_Z5func1Pi(i32* [[LV1_ASCAST]])
+// CHECK-NEXT:    call void @_Z5func1Pi(i32* noundef [[LV1_ASCAST]])
 // CHECK-NEXT:    store i32 4, i32* [[LVC_ASCAST]], align 4
 // CHECK-NEXT:    store i32 4, i32* [[LV1_ASCAST]], align 4
 // CHECK-NEXT:    ret void
@@ -74,8 +74,8 @@ public:
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[A:%.*]] = alloca [[CLASS_A:%.*]], align 4, addrspace(5)
 // CHECK-NEXT:    [[A_ASCAST:%.*]] = addrspacecast [[CLASS_A]] addrspace(5)* [[A]] to %class.A*
-// CHECK-NEXT:    call void @_ZN1AC1Ev(%class.A* nonnull align 4 dereferenceable(4) [[A_ASCAST]])
-// CHECK-NEXT:    call void @_ZN1AD1Ev(%class.A* nonnull align 4 dereferenceable(4) [[A_ASCAST]])
+// CHECK-NEXT:    call void @_ZN1AC1Ev(%class.A* noundef nonnull align 4 dereferenceable(4) [[A_ASCAST]])
+// CHECK-NEXT:    call void @_ZN1AD1Ev(%class.A* noundef nonnull align 4 dereferenceable(4) [[A_ASCAST]])
 // CHECK-NEXT:    ret void
 //
 void func3() {
@@ -87,7 +87,7 @@ void func3() {
 // CHECK-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[X_ADDR_ASCAST:%.*]] = addrspacecast i32 addrspace(5)* [[X_ADDR]] to i32*
 // CHECK-NEXT:    store i32 [[X:%.*]], i32* [[X_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    call void @_Z5func1Pi(i32* [[X_ADDR_ASCAST]])
+// CHECK-NEXT:    call void @_Z5func1Pi(i32* noundef [[X_ADDR_ASCAST]])
 // CHECK-NEXT:    ret void
 //
 void func4(int x) {
@@ -123,7 +123,7 @@ extern void use(int *);
 // CHECK-NEXT:    [[X_ASCAST:%.*]] = addrspacecast i32 addrspace(5)* [[X]] to i32*
 // CHECK-NEXT:    br label [[LATER:%.*]]
 // CHECK:       later:
-// CHECK-NEXT:    call void @_Z3usePi(i32* [[X_ASCAST]])
+// CHECK-NEXT:    call void @_Z3usePi(i32* noundef [[X_ASCAST]])
 // CHECK-NEXT:    ret void
 //
 void func7() {

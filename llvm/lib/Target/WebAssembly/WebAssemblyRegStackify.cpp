@@ -909,8 +909,8 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
                SubsequentUse != Use.getParent()->uses().end()) {
           if (!SubsequentDef->isReg() || !SubsequentUse->isReg())
             break;
-          unsigned DefReg = SubsequentDef->getReg();
-          unsigned UseReg = SubsequentUse->getReg();
+          Register DefReg = SubsequentDef->getReg();
+          Register UseReg = SubsequentUse->getReg();
           // TODO: This single-use restriction could be relaxed by using tees
           if (DefReg != UseReg || !MRI.hasOneUse(DefReg))
             break;

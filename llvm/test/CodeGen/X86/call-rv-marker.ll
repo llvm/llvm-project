@@ -38,8 +38,8 @@ entry:
   ret i8* %call
 }
 
-define i8* @rv_marker_1_claim() {
-; CHECK-LABEL:  rv_marker_1_claim:
+define i8* @rv_marker_1_unsafeClaim() {
+; CHECK-LABEL:  rv_marker_1_unsafeClaim:
 ; CHECK:         pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    callq   _foo1
@@ -55,17 +55,18 @@ entry:
 
 define void @rv_marker_2_select(i32 %c) {
 ; CHECK-LABEL: rv_marker_2_select:
-; CHECK:        pushq   %rax
-; CHECK-NEXT:   .cfi_def_cfa_offset 16
-; CHECK-NEXT:   cmpl    $1, %edi
-; CHECK-NEXT:   movl    $1, %edi
-; CHECK-NEXT:   adcl    $0, %edi
-; CHECK-NEXT:   callq   _foo0
-; CHECK-NEXT:   movq    %rax, %rdi
-; CHECK-NEXT:   callq   _objc_retainAutoreleasedReturnValue
-; CHECK-NEXT:   movq    %rax, %rdi
-; CHECK-NEXT:   popq    %rax
-; CHECK-NEXT:   jmp _foo2
+; CHECK:         pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpl $1, %edi
+; CHECK-NEXT:    adcl $1, %eax
+; CHECK-NEXT:    movl %eax, %edi
+; CHECK-NEXT:    callq _foo0
+; CHECK-NEXT:    movq %rax, %rdi
+; CHECK-NEXT:    callq _objc_retainAutoreleasedReturnValue
+; CHECK-NEXT:    movq %rax, %rdi
+; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    jmp _foo2
 ;
 entry:
   %tobool.not = icmp eq i32 %c, 0
@@ -219,3 +220,44 @@ declare i8* @foo_nonlazybind()  nonlazybind
 declare i8* @objc_retainAutoreleasedReturnValue(i8*)
 declare i8* @objc_unsafeClaimAutoreleasedReturnValue(i8*)
 declare i32 @__gxx_personality_v0(...)
+
+declare i8* @fn1()
+declare i8* @fn2()
+
+define i8* @rv_marker_block_placement(i1 %c.0) {
+; CHECK-LABEL: _rv_marker_block_placement:
+; CHECK:        pushq   %rax
+; CHECK-NEXT:   .cfi_def_cfa_offset 16
+; CHECK-NEXT:   testb   $1, %dil
+; CHECK-NEXT:   je  LBB8_2
+
+; CHECK-NEXT: ## %bb.1:
+; CHECK-NEXT:   callq   _fn1
+; CHECK-NEXT:   movq    %rax, %rdi
+; CHECK-NEXT:   callq   _objc_retainAutoreleasedReturnValue
+; CHECK-NEXT:   jmp LBB8_3
+
+; CHECK-NEXT: LBB8_2:
+; CHECK-NEXT:   callq   _fn2
+; CHECK-NEXT:   movq    %rax, %rdi
+; CHECK-NEXT:   callq   _objc_retainAutoreleasedReturnValue
+
+; CHECK-NEXT: LBB8_3:
+; CHECK-NEXT:   xorl    %eax, %eax
+; CHECK-NEXT:   popq    %rcx
+; CHECK-NEXT:   retq
+;
+entry:
+  br i1 %c.0, label %then, label %else
+
+then:
+  %call.0 = notail call i8* @fn1() [ "clang.arc.attachedcall"(i8* (i8*)* @objc_retainAutoreleasedReturnValue) ]
+  br label %exit
+
+else:
+  %call.1 = notail call i8* @fn2() [ "clang.arc.attachedcall"(i8* (i8*)* @objc_retainAutoreleasedReturnValue) ]
+  br label %exit
+
+exit:
+  ret i8* null
+}

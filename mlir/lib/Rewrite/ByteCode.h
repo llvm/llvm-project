@@ -19,7 +19,7 @@
 namespace mlir {
 namespace pdl_interp {
 class RecordMatchOp;
-} // end namespace pdl_interp
+} // namespace pdl_interp
 
 namespace detail {
 class PDLByteCode;
@@ -208,7 +208,7 @@ private:
   ByteCodeField maxLoopLevel = 0;
 };
 
-} // end namespace detail
-} // end namespace mlir
+} // namespace detail
+} // namespace mlir
 
 #endif // MLIR_REWRITE_BYTECODE_H_

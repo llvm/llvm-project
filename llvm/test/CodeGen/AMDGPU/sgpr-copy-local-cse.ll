@@ -4,7 +4,7 @@ target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:3
 target triple = "amdgcn-amd-amdhsa"
 
 ; CHECK-LABEL: {{^}}t0:
-; CHECK: s_load_dwordx2 s{{\[}}[[PTR_LO:[0-9]+]]:[[PTR_HI:[0-9]+]]], s[4:5], 0x0
+; CHECK: s_load_dwordx2 s[[[PTR_LO:[0-9]+]]:[[PTR_HI:[0-9]+]]], s[4:5], 0x0
 ; CHECK: v_mov_b32_e32 v{{[0-9]+}}, s[[PTR_HI]]
 ; There should be no redundant copies from PTR_HI.
 ; CHECK-NOT: v_mov_b32_e32 v{{[0-9]+}}, s[[PTR_HI]]

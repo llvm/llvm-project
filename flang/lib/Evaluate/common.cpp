@@ -16,20 +16,20 @@ namespace Fortran::evaluate {
 void RealFlagWarnings(
     FoldingContext &context, const RealFlags &flags, const char *operation) {
   if (flags.test(RealFlag::Overflow)) {
-    context.messages().Say("overflow on %s"_en_US, operation);
+    context.messages().Say("overflow on %s"_warn_en_US, operation);
   }
   if (flags.test(RealFlag::DivideByZero)) {
     if (std::strcmp(operation, "division") == 0) {
-      context.messages().Say("division by zero"_en_US);
+      context.messages().Say("division by zero"_warn_en_US);
     } else {
-      context.messages().Say("division on %s"_en_US);
+      context.messages().Say("division on %s"_warn_en_US);
     }
   }
   if (flags.test(RealFlag::InvalidArgument)) {
-    context.messages().Say("invalid argument on %s"_en_US, operation);
+    context.messages().Say("invalid argument on %s"_warn_en_US, operation);
   }
   if (flags.test(RealFlag::Underflow)) {
-    context.messages().Say("underflow on %s"_en_US, operation);
+    context.messages().Say("underflow on %s"_warn_en_US, operation);
   }
 }
 

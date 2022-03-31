@@ -1,0 +1,54 @@
+# Check that the llvm-bolt update the dwarf information correctly in case:
+#  - DW_AT_low_pc is nullified in case the DW_AT_ranges tag already exists.
+#  - DW_AT_high_pc is in the form of DW_FORM_addr.
+
+RUN: yaml2obj %p/Inputs/go_dwarf.yaml &> %t.exe
+RUN: llvm-bolt %t.exe -o %t.bolt -update-debug-sections
+
+# Check the original binary values.
+RUN: llvm-dwarfdump -debug-info %t.exe |& \
+RUN:   FileCheck %s -check-prefix=CHECKORIG
+
+CHECKORIG:         DW_TAG_compile_unit
+CHECKORIG-NEXT:        DW_AT_producer
+CHECKORIG-NEXT:        DW_AT_language
+CHECKORIG-NEXT:        DW_AT_name
+CHECKORIG-NEXT:        DW_AT_comp_dir
+CHECKORIG-NEXT:        DW_AT_ranges      (0x00000000
+CHECKORIG-NEXT:           [0x0000000000000660, 0x0000000000000684))
+CHECKORIG-NEXT:        DW_AT_low_pc      (0x0000000000000660)
+
+CHECKORIG:         DW_TAG_subprogram
+CHECKORIG-NEXT:        DW_AT_external  (true)
+CHECKORIG-NEXT:        DW_AT_name      ("main")
+CHECKORIG-NEXT:        DW_AT_decl_file
+CHECKORIG-NEXT:        DW_AT_decl_line (1)
+CHECKORIG-NEXT:        DW_AT_decl_column       (0x05)
+CHECKORIG-NEXT:        DW_AT_type
+CHECKORIG-NEXT:        DW_AT_low_pc    (0x0000000000000660)
+CHECKORIG-NEXT:        DW_AT_high_pc   (0x0000000000000684)
+
+
+# Check the bolted binary.
+RUN: llvm-dwarfdump -debug-info %t.bolt |& FileCheck %s
+
+CHECK:         DW_TAG_compile_unit
+CHECK-NEXT:        DW_AT_producer
+CHECK-NEXT:        DW_AT_language
+CHECK-NEXT:        DW_AT_name
+CHECK-NEXT:        DW_AT_comp_dir
+CHECK-NEXT:        DW_AT_ranges      (0x00000010
+CHECK-NEXT:           [0x0000000000000660, 0x0000000000000684))
+CHECK-NEXT:        DW_AT_low_pc      (0x0000000000000000)
+CHECK-NEXT:        DW_AT_stmt_list   (0x00000000)
+
+CHECK:         DW_TAG_subprogram
+CHECK-NEXT:        DW_AT_external  (true)
+CHECK-NEXT:        DW_AT_name      ("main")
+CHECK-NEXT:        DW_AT_decl_file
+CHECK-NEXT:        DW_AT_decl_line (1)
+CHECK-NEXT:        DW_AT_decl_column       (0x05)
+CHECK-NEXT:        DW_AT_type
+CHECK-NEXT:        DW_AT_low_pc    (0x0000000000000000)
+CHECK-NEXT:        DW_AT_ranges    (0x00000030
+CHECK-NEXT:           [0x0000000000000660, 0x0000000000000684))

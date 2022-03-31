@@ -22,7 +22,7 @@ void __fastcall f2(void) {}
 // ELF32: define{{.*}} x86_fastcallcc void @"\01@f2@0"
 // ELF64: define{{.*}} void @f2(
 
-void __stdcall f3() {}
+void __stdcall f3(void) {}
 // CHECK: define dso_local x86_stdcallcc void @"\01_f3@0"
 // X64: define dso_local void @f3(
 
@@ -47,7 +47,7 @@ void __fastcall f8(long long a) {}
 // X64: define dso_local void @f8(
 
 void __fastcall f9(long long a, char b, char c, short d) {}
-// CHECK: define dso_local x86_fastcallcc void @"\01@f9@20"(i64 %a, i8 signext %b, i8 signext %c, i16 signext %d)
+// CHECK: define dso_local x86_fastcallcc void @"\01@f9@20"(i64 noundef %a, i8 noundef signext %b, i8 noundef signext %c, i16 noundef signext %d)
 // X64: define dso_local void @f9(
 
 void f12(void) {}

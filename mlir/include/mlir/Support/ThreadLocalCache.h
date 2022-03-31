@@ -112,6 +112,6 @@ private:
   /// this object.
   llvm::sys::SmartMutex<true> instanceMutex;
 };
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_SUPPORT_THREADLOCALCACHE_H

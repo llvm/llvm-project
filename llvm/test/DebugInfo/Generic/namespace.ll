@@ -13,19 +13,6 @@
 ; CHECK-NOT: DW_AT_decl_file
 ; CHECK-NOT: DW_AT_decl_line
 
-; CHECK: DW_TAG_subprogram
-; CHECK:   DW_AT_MIPS_linkage_name
-; CHECK:   DW_AT_name ("f1")
-; CHECK: [[FUNC1:.*]]: DW_TAG_subprogram
-; CHECK:   DW_AT_MIPS_linkage_name
-; CHECK:   DW_AT_name ("f1")
-; CHECK:   DW_TAG_formal_parameter
-; CHECK:   NULL
-
-; CHECK: [[FUNC_FWD:0x[0-9a-f]*]]:{{.*}}DW_TAG_subprogram
-; CHECK:   DW_AT_name ("func_fwd")
-; CHECK-NOT: DW_AT_declaration
-
 ; CHECK: [[I:0x[0-9a-f]*]]:{{ *}}DW_TAG_variable
 ; CHECK:   DW_AT_name ("i")
 ; CHECK: [[VAR_FWD:0x[0-9a-f]*]]:{{ *}}DW_TAG_variable
@@ -37,6 +24,15 @@
 ; CHECK: [[BAR:0x[0-9a-f]*]]:{{ *}}DW_TAG_structure_type
 ; CHECK:   DW_AT_name ("bar")
 
+; CHECK: DW_TAG_subprogram
+; CHECK:   DW_AT_MIPS_linkage_name
+; CHECK:   DW_AT_name ("f1")
+; CHECK: [[FUNC1:.*]]: DW_TAG_subprogram
+; CHECK:   DW_AT_MIPS_linkage_name
+; CHECK:   DW_AT_name ("f1")
+; CHECK:   DW_TAG_formal_parameter
+; CHECK:   NULL
+
 ; CHECK: [[BAZ:0x[0-9a-f]*]]:{{.*}}DW_TAG_typedef
 ; CHECK:   DW_AT_name ("baz")
 
@@ -47,6 +43,10 @@
 ; CHECK: [[FUNC_DECL:0x[0-9a-f]*]]:{{.*}}DW_TAG_subprogram
 ; CHECK:   DW_AT_name ("func_decl")
 ; CHECK:   DW_AT_declaration
+
+; CHECK: [[FUNC_FWD:0x[0-9a-f]*]]:{{.*}}DW_TAG_subprogram
+; CHECK:   DW_AT_name ("func_fwd")
+; CHECK-NOT: DW_AT_declaration
 ; CHECK: NULL
 
 ; CHECK: DW_TAG_imported_module
@@ -56,17 +56,18 @@
 ; CHECK: DW_TAG_imported_declaration
 ; CHECK: NULL
 
+; CHECK: DW_TAG_base_type
+; CHECK: DW_TAG_imported_module
+; CHECK:   DW_AT_decl_file ([[F2:.*]])
+; CHECK:   DW_AT_decl_line (18)
+; CHECK:   DW_AT_import ([[NS1]])
+; CHECK: DW_TAG_imported_declaration
+
 ; CHECK: DW_TAG_subprogram
 ; CHECK: DW_TAG_subprogram
 ; CHECK:   DW_AT_MIPS_linkage_name
 ; CHECK:   DW_AT_name ("func")
 ; CHECK:   DW_TAG_formal_parameter
-; CHECK:   DW_TAG_lexical_block
-; CHECK:     DW_TAG_imported_module
-; CHECK:       DW_AT_decl_file ([[F2]])
-; CHECK:       DW_AT_decl_line (23)
-; CHECK:       DW_AT_import {{.*}}
-; CHECK:     NULL
 ; CHECK:   DW_TAG_imported_module
 ; CHECK:     DW_AT_decl_file ([[F2:.*]])
 ; CHECK:     DW_AT_decl_line (26)
@@ -117,15 +118,15 @@
 ; CHECK:     DW_AT_decl_file ([[F2]])
 ; CHECK:     DW_AT_decl_line (37)
 ; CHECK:     DW_AT_import ([[FUNC_FWD]])
+; CHECK:   DW_TAG_lexical_block
+; CHECK:     DW_TAG_imported_module
+; CHECK:       DW_AT_decl_file ([[F2]])
+; CHECK:       DW_AT_decl_line (23)
+; CHECK:       DW_AT_import {{.*}}
+; CHECK:     NULL
 ; CHECK:   NULL
 
 ; CHECK: DW_TAG_subprogram
-; CHECK: DW_TAG_base_type
-; CHECK: DW_TAG_imported_module
-; CHECK:   DW_AT_decl_file ([[F2:.*]])
-; CHECK:   DW_AT_decl_line (18)
-; CHECK:   DW_AT_import ([[NS1]])
-; CHECK: DW_TAG_imported_declaration
 ; CHECK: DW_TAG_base_type
 ; CHECK: NULL
 
@@ -328,7 +329,7 @@ attributes #1 = { nounwind readnone }
 !54 = !DIImportedEntity(tag: DW_TAG_imported_declaration, file: !5, line: 36, scope: !21, entity: !32)
 !55 = !DIImportedEntity(tag: DW_TAG_imported_declaration, file: !5, line: 37, scope: !21, entity: !26)
 !56 = !DIImportedEntity(tag: DW_TAG_imported_declaration, file: !5, line: 42, scope: !7, entity: !31)
-!57 = !{i32 2, !"Dwarf Version", i32 2}
+!57 = !{i32 2, !"Dwarf Version", i32 3}
 !58 = !{i32 2, !"Debug Info Version", i32 3}
 !59 = !{!"clang version 3.6.0 "}
 !60 = !DILocation(line: 3, column: 12, scope: !10)

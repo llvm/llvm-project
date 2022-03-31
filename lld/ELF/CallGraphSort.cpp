@@ -41,9 +41,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "CallGraphSort.h"
-#include "OutputSections.h"
-#include "SymbolTable.h"
+#include "InputFiles.h"
+#include "InputSection.h"
 #include "Symbols.h"
+#include "llvm/Support/FileSystem.h"
 
 #include <numeric>
 
@@ -114,8 +115,8 @@ CallGraphSort::CallGraphSort() {
 
   // Create the graph.
   for (std::pair<SectionPair, uint64_t> &c : profile) {
-    const auto *fromSB = cast<InputSectionBase>(c.first.first->repl);
-    const auto *toSB = cast<InputSectionBase>(c.first.second->repl);
+    const auto *fromSB = cast<InputSectionBase>(c.first.first);
+    const auto *toSB = cast<InputSectionBase>(c.first.second);
     uint64_t weight = c.second;
 
     // Ignore edges between input sections belonging to different output

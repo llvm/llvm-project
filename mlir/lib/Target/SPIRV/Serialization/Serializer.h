@@ -15,6 +15,7 @@
 
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/Target/SPIRV/Serialization.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/raw_ostream.h"
@@ -22,9 +23,8 @@
 namespace mlir {
 namespace spirv {
 
-LogicalResult encodeInstructionInto(SmallVectorImpl<uint32_t> &binary,
-                                    spirv::Opcode op,
-                                    ArrayRef<uint32_t> operands);
+void encodeInstructionInto(SmallVectorImpl<uint32_t> &binary, spirv::Opcode op,
+                           ArrayRef<uint32_t> operands);
 
 /// A SPIR-V module serializer.
 ///
@@ -42,7 +42,8 @@ LogicalResult encodeInstructionInto(SmallVectorImpl<uint32_t> &binary,
 class Serializer {
 public:
   /// Creates a serializer for the given SPIR-V `module`.
-  explicit Serializer(spirv::ModuleOp module, bool emitDebugInfo = false);
+  explicit Serializer(spirv::ModuleOp module,
+                      const SerializationOptions &options);
 
   /// Serializes the remembered SPIR-V module.
   LogicalResult serialize();
@@ -237,14 +238,18 @@ private:
   /// assigns the next available <id>
   uint32_t getOrCreateBlockID(Block *block);
 
+#ifndef NDEBUG
+  /// (For debugging) prints the block with its result <id>.
+  void printBlock(Block *block, raw_ostream &os);
+#endif
+
   /// Processes the given `block` and emits SPIR-V instructions for all ops
   /// inside. Does not emit OpLabel for this block if `omitLabel` is true.
-  /// `actionBeforeTerminator` is a callback that will be invoked before
-  /// handling the terminator op. It can be used to inject the Op*Merge
-  /// instruction if this is a SPIR-V selection/loop header block.
-  LogicalResult
-  processBlock(Block *block, bool omitLabel = false,
-               function_ref<void()> actionBeforeTerminator = nullptr);
+  /// `emitMerge` is a callback that will be invoked before handling the
+  /// terminator op to inject the Op*Merge instruction if this is a SPIR-V
+  /// selection/loop header block.
+  LogicalResult processBlock(Block *block, bool omitLabel = false,
+                             function_ref<LogicalResult()> emitMerge = nullptr);
 
   /// Emits OpPhi instructions for the given block if it has block arguments.
   LogicalResult emitPhiForBlockArguments(Block *block);
@@ -316,8 +321,8 @@ private:
   /// An MLIR builder for getting MLIR constructs.
   mlir::Builder mlirBuilder;
 
-  /// A flag which indicates if the debuginfo should be emitted.
-  bool emitDebugInfo = false;
+  /// Serialization options.
+  SerializationOptions options;
 
   /// A flag which indicates if the last processed instruction was a merge
   /// instruction.

@@ -1,0 +1,10 @@
+# Check that we handle GNU_args_size correctly.
+# It is generated for throwing functions with LP that have parameters on stack.
+
+RUN: %clangxx %cxxflags %p/Inputs/exc_args.s -o %t
+RUN: llvm-bolt %t -o /dev/null -print-finalized -print-only=main | FileCheck %s
+
+CHECK: Binary Function "main" after finalize-functions
+CHECK:      callq	_Z3fooiiiiiiii {{.*}} GNU_args_size = 16
+CHECK:      callq	printf@PLT {{.*}} GNU_args_size = 0
+CHECK: End of Function "main"

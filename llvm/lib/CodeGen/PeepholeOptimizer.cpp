@@ -90,7 +90,6 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
@@ -810,7 +809,7 @@ protected:
   unsigned CurrentSrcIdx = 0;   ///< The index of the source being rewritten.
 public:
   Rewriter(MachineInstr &CopyLike) : CopyLike(CopyLike) {}
-  virtual ~Rewriter() {}
+  virtual ~Rewriter() = default;
 
   /// Get the next rewritable source (SrcReg, SrcSubReg) and
   /// the related value that it affects (DstReg, DstSubReg).
@@ -1022,7 +1021,7 @@ public:
       CurrentSrcIdx = -1;
       // Rewrite the operation as a COPY.
       // Get rid of the sub-register index.
-      CopyLike.RemoveOperand(2);
+      CopyLike.removeOperand(2);
       // Morph the operation into a COPY.
       CopyLike.setDesc(TII.get(TargetOpcode::COPY));
       return true;

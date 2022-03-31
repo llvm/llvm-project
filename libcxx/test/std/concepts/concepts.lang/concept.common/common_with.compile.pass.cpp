@@ -7,13 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
 
 // template<class From, class To>
 // concept common_with;
 
 #include <concepts>
 #include <type_traits>
+
+#include "test_macros.h"
 
 template <class T, class U>
 constexpr bool CheckCommonWith() noexcept {
@@ -58,7 +59,7 @@ static_assert(std::common_with<void, void>);
 static_assert(CheckCommonWith<int, int>());
 static_assert(CheckCommonWith<int, long>());
 static_assert(CheckCommonWith<int, unsigned char>());
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
 static_assert(CheckCommonWith<int, __int128_t>());
 #endif
 static_assert(CheckCommonWith<int, double>());

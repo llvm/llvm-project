@@ -40,7 +40,6 @@ class ClassTemplateSpecializationDecl;
 class GlobalDecl;
 class ModuleMap;
 class ObjCInterfaceDecl;
-class ObjCIvarDecl;
 class UsingDecl;
 class VarDecl;
 enum class DynamicInitKind : unsigned;
@@ -178,19 +177,16 @@ class CGDebugInfo {
   llvm::DIType *CreateType(const ComplexType *Ty);
   llvm::DIType *CreateType(const AutoType *Ty);
   llvm::DIType *CreateType(const BitIntType *Ty);
-  llvm::DIType *CreateQualifiedType(QualType Ty, llvm::DIFile *Fg,
-                                    TypeLoc TL = TypeLoc());
+  llvm::DIType *CreateQualifiedType(QualType Ty, llvm::DIFile *Fg);
   llvm::DIType *CreateQualifiedType(const FunctionProtoType *Ty,
                                     llvm::DIFile *Fg);
   llvm::DIType *CreateType(const TypedefType *Ty, llvm::DIFile *Fg);
   llvm::DIType *CreateType(const TemplateSpecializationType *Ty,
                            llvm::DIFile *Fg);
   llvm::DIType *CreateType(const ObjCObjectPointerType *Ty, llvm::DIFile *F);
-  llvm::DIType *CreateType(const PointerType *Ty, llvm::DIFile *F,
-                           TypeLoc TL = TypeLoc());
+  llvm::DIType *CreateType(const PointerType *Ty, llvm::DIFile *F);
   llvm::DIType *CreateType(const BlockPointerType *Ty, llvm::DIFile *F);
-  llvm::DIType *CreateType(const FunctionType *Ty, llvm::DIFile *F,
-                           TypeLoc TL = TypeLoc());
+  llvm::DIType *CreateType(const FunctionType *Ty, llvm::DIFile *F);
   /// Get structure or union type.
   llvm::DIType *CreateType(const RecordType *Tyg);
   llvm::DIType *CreateTypeDefinition(const RecordType *Ty);
@@ -245,8 +241,7 @@ class CGDebugInfo {
   /// \return namespace descriptor for the given namespace decl.
   llvm::DINamespace *getOrCreateNamespace(const NamespaceDecl *N);
   llvm::DIType *CreatePointerLikeType(llvm::dwarf::Tag Tag, const Type *Ty,
-                                      QualType PointeeTy, llvm::DIFile *F,
-                                      TypeLoc TL = TypeLoc());
+                                      QualType PointeeTy, llvm::DIFile *F);
   llvm::DIType *getOrCreateStructPtrType(StringRef Name, llvm::DIType *&Cache);
 
   /// A helper function to create a subprogram for a single member
@@ -312,8 +307,7 @@ class CGDebugInfo {
                                 uint64_t offsetInBits, uint32_t AlignInBits,
                                 llvm::DIFile *tunit, llvm::DIScope *scope,
                                 const RecordDecl *RD = nullptr,
-                                llvm::DINodeArray Annotations = nullptr,
-                                TypeLoc TL = TypeLoc());
+                                llvm::DINodeArray Annotations = nullptr);
 
   llvm::DIType *createFieldType(StringRef name, QualType type,
                                 SourceLocation loc, AccessSpecifier AS,
@@ -363,7 +357,7 @@ class CGDebugInfo {
   /// Extended dereferencing mechanism is has the following format:
   ///     DW_OP_constu <DWARF Address Space> DW_OP_swap DW_OP_xderef
   void AppendAddressSpaceXDeref(unsigned AddressSpace,
-                                SmallVectorImpl<int64_t> &Expr) const;
+                                SmallVectorImpl<uint64_t> &Expr) const;
 
   /// A helper function to collect debug info for the default elements of a
   /// block.
@@ -584,6 +578,14 @@ private:
                                      CGBuilderTy &Builder,
                                      const bool UsePointerValue = false);
 
+  /// Emit call to llvm.dbg.declare for a binding declaration.
+  /// Returns a pointer to the DILocalVariable associated with the
+  /// llvm.dbg.declare, or nullptr otherwise.
+  llvm::DILocalVariable *EmitDeclare(const BindingDecl *decl, llvm::Value *AI,
+                                     llvm::Optional<unsigned> ArgNo,
+                                     CGBuilderTy &Builder,
+                                     const bool UsePointerValue = false);
+
   struct BlockByRefType {
     /// The wrapper struct used inside the __block_literal struct.
     llvm::DIType *BlockByRefWrapper;
@@ -633,8 +635,7 @@ private:
              Optional<StringRef> Source);
 
   /// Get the type from the cache or create a new type if necessary.
-  llvm::DIType *getOrCreateType(QualType Ty, llvm::DIFile *Fg,
-                                TypeLoc TL = TypeLoc());
+  llvm::DIType *getOrCreateType(QualType Ty, llvm::DIFile *Fg);
 
   /// Get a reference to a clang module.  If \p CreateSkeletonCU is true,
   /// this also creates a split dwarf skeleton compile unit.
@@ -649,8 +650,7 @@ private:
   llvm::DICompositeType *getOrCreateLimitedType(const RecordType *Ty);
 
   /// Create type metadata for a source language type.
-  llvm::DIType *CreateTypeNode(QualType Ty, llvm::DIFile *Fg,
-                               TypeLoc TL = TypeLoc());
+  llvm::DIType *CreateTypeNode(QualType Ty, llvm::DIFile *Fg);
 
   /// Create new member and increase Offset by FType's size.
   llvm::DIType *CreateMemberType(llvm::DIFile *Unit, QualType FType,

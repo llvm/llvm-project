@@ -16,7 +16,7 @@
 namespace llvm {
 class Init;
 class Record;
-} // end namespace llvm
+} // namespace llvm
 
 namespace mlir {
 namespace tblgen {
@@ -91,8 +91,16 @@ public:
   // Return the traits extra class declaration code.
   llvm::Optional<StringRef> getExtraTraitClassDeclaration() const;
 
+  // Return the extra class declaration code shared between the interface and
+  // trait classes.
+  llvm::Optional<StringRef> getExtraSharedClassDeclaration() const;
+
   // Return the verify method body if it has one.
   llvm::Optional<StringRef> getVerify() const;
+
+  // If there's a verify method, return if it needs to access the ops in the
+  // regions.
+  bool verifyWithRegions() const;
 
   // Returns the Tablegen definition this interface was constructed from.
   const llvm::Record &getDef() const { return *def; }
@@ -123,7 +131,7 @@ struct TypeInterface : public Interface {
 
   static bool classof(const Interface *interface);
 };
-} // end namespace tblgen
-} // end namespace mlir
+} // namespace tblgen
+} // namespace mlir
 
 #endif // MLIR_TABLEGEN_INTERFACES_H_

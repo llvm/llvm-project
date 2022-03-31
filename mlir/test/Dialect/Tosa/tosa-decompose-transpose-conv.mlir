@@ -1,4 +1,4 @@
-// RUN: mlir-opt --split-input-file --tosa-decompose-transpose-conv %s | FileCheck %s
+// RUN: mlir-opt --split-input-file --tosa-optional-decompositions %s | FileCheck %s
 
 // CHECK-LABEL: @transpose_conv2d
 func @transpose_conv2d(%arg0: tensor<2x16x14x3xf32>, %arg1: tensor<5x3x6x3xf32>, %arg2: tensor<5xf32>) -> tensor<2x?x?x5xf32> {

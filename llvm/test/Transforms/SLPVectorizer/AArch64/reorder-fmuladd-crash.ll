@@ -18,9 +18,6 @@ define i32 @foo() {
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.bb:
 ; CHECK-NEXT:    [[ARRAYIDX43:%.*]] = getelementptr inbounds [4 x [2 x double]], [4 x [2 x double]]* undef, i32 0, i64 1, i64 0
-; CHECK-NEXT:    [[ARRAYIDX45:%.*]] = getelementptr inbounds [4 x [2 x double]], [4 x [2 x double]]* undef, i32 0, i64 2, i64 0
-; CHECK-NEXT:    [[ARRAYIDX51:%.*]] = getelementptr inbounds [4 x [2 x double]], [4 x [2 x double]]* undef, i32 0, i64 2, i64 1
-; CHECK-NEXT:    [[ARRAYIDX58:%.*]] = getelementptr inbounds [4 x [2 x double]], [4 x [2 x double]]* undef, i32 0, i64 1, i64 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[ARRAYIDX43]] to <4 x double>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x double>, <4 x double>* [[TMP0]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul <4 x double> [[TMP1]], <double 0x7FF8000000000000, double 0x7FF8000000000000, double 0x7FF8000000000000, double 0x7FF8000000000000>

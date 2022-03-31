@@ -443,7 +443,7 @@ auto AlignVectors::createAdjustedPointer(IRBuilder<> &Builder, Value *Ptr,
   // we don't need to do pointer casts.
   auto *PtrTy = cast<PointerType>(Ptr->getType());
   if (!PtrTy->isOpaque()) {
-    Type *ElemTy = PtrTy->getElementType();
+    Type *ElemTy = PtrTy->getNonOpaquePointerElementType();
     int ElemSize = HVC.getAllocSizeOf(ElemTy);
     if (Adjust % ElemSize == 0 && Adjust != 0) {
       Value *Tmp0 =
@@ -536,7 +536,7 @@ auto AlignVectors::createAddressGroups() -> bool {
   erase_if(AddrGroups, [](auto &G) { return G.second.size() == 1; });
   // Remove groups that don't use HVX types.
   erase_if(AddrGroups, [&](auto &G) {
-    return !llvm::any_of(
+    return llvm::none_of(
         G.second, [&](auto &I) { return HVC.HST.isTypeForHVX(I.ValTy); });
   });
 
@@ -718,7 +718,7 @@ auto AlignVectors::realignGroup(const MoveGroup &Move) const -> bool {
 
   // Maximum alignment present in the whole address group.
   const AddrInfo &WithMaxAlign =
-      getMaxOf(BaseInfos, [](const AddrInfo &AI) { return AI.HaveAlign; });
+      getMaxOf(MoveInfos, [](const AddrInfo &AI) { return AI.HaveAlign; });
   Align MaxGiven = WithMaxAlign.HaveAlign;
 
   // Minimum alignment present in the move address group.
@@ -1181,12 +1181,15 @@ auto HexagonVectorCombine::rescale(IRBuilder<> &Builder, Value *Mask,
   int ToCount = (FromCount * FromSize) / ToSize;
   assert((FromCount * FromSize) % ToSize == 0);
 
+  auto *FromITy = IntegerType::get(F.getContext(), FromSize * 8);
+  auto *ToITy = IntegerType::get(F.getContext(), ToSize * 8);
+
   // Mask <N x i1> -> sext to <N x FromTy> -> bitcast to <M x ToTy> ->
   // -> trunc to <M x i1>.
   Value *Ext = Builder.CreateSExt(
-      Mask, VectorType::get(FromSTy, FromCount, /*Scalable*/ false));
+      Mask, VectorType::get(FromITy, FromCount, /*Scalable*/ false));
   Value *Cast = Builder.CreateBitCast(
-      Ext, VectorType::get(ToSTy, ToCount, /*Scalable*/ false));
+      Ext, VectorType::get(ToITy, ToCount, /*Scalable*/ false));
   return Builder.CreateTrunc(
       Cast, VectorType::get(getBoolTy(), ToCount, /*Scalable*/ false));
 }
@@ -1401,7 +1404,7 @@ auto HexagonVectorCombine::isSafeToMoveBeforeInBB(const Instruction &In,
   if (isa<PHINode>(In) || (To != Block.end() && isa<PHINode>(*To)))
     return false;
 
-  if (!mayBeMemoryDependent(In))
+  if (!mayHaveNonDefUseDependency(In))
     return true;
   bool MayWrite = In.mayWriteToMemory();
   auto MaybeLoc = getLocOrNone(In);

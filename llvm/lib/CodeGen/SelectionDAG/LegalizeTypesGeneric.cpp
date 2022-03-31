@@ -506,9 +506,10 @@ void DAGTypeLegalizer::SplitRes_MERGE_VALUES(SDNode *N, unsigned ResNo,
   GetSplitOp(Op, Lo, Hi);
 }
 
-void DAGTypeLegalizer::SplitRes_SELECT(SDNode *N, SDValue &Lo, SDValue &Hi) {
+void DAGTypeLegalizer::SplitRes_Select(SDNode *N, SDValue &Lo, SDValue &Hi) {
   SDValue LL, LH, RL, RH, CL, CH;
   SDLoc dl(N);
+  unsigned Opcode = N->getOpcode();
   GetSplitOp(N->getOperand(1), LL, LH);
   GetSplitOp(N->getOperand(2), RL, RH);
 
@@ -539,8 +540,18 @@ void DAGTypeLegalizer::SplitRes_SELECT(SDNode *N, SDValue &Lo, SDValue &Hi) {
       std::tie(CL, CH) = DAG.SplitVector(Cond, dl);
   }
 
-  Lo = DAG.getNode(N->getOpcode(), dl, LL.getValueType(), CL, LL, RL);
-  Hi = DAG.getNode(N->getOpcode(), dl, LH.getValueType(), CH, LH, RH);
+  if (Opcode != ISD::VP_SELECT && Opcode != ISD::VP_MERGE) {
+    Lo = DAG.getNode(Opcode, dl, LL.getValueType(), CL, LL, RL);
+    Hi = DAG.getNode(Opcode, dl, LH.getValueType(), CH, LH, RH);
+    return;
+  }
+
+  SDValue EVLLo, EVLHi;
+  std::tie(EVLLo, EVLHi) =
+      DAG.SplitEVL(N->getOperand(3), N->getValueType(0), dl);
+
+  Lo = DAG.getNode(Opcode, dl, LL.getValueType(), CL, LL, RL, EVLLo);
+  Hi = DAG.getNode(Opcode, dl, LH.getValueType(), CH, LH, RH, EVLHi);
 }
 
 void DAGTypeLegalizer::SplitRes_SELECT_CC(SDNode *N, SDValue &Lo,

@@ -6,9 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "Annotations.h"
-#include "ClangdServer.h"
 #include "FindSymbols.h"
-#include "SyncAPI.h"
 #include "TestFS.h"
 #include "TestTU.h"
 #include "llvm/ADT/StringRef.h"
@@ -28,20 +26,20 @@ using ::testing::IsEmpty;
 using ::testing::UnorderedElementsAre;
 
 // GMock helpers for matching SymbolInfos items.
-MATCHER_P(QName, Name, "") {
+MATCHER_P(qName, Name, "") {
   if (arg.containerName.empty())
     return arg.name == Name;
   return (arg.containerName + "::" + arg.name) == Name;
 }
-MATCHER_P(WithName, N, "") { return arg.name == N; }
-MATCHER_P(WithKind, Kind, "") { return arg.kind == Kind; }
-MATCHER_P(WithDetail, Detail, "") { return arg.detail == Detail; }
-MATCHER_P(SymRange, Range, "") { return arg.range == Range; }
+MATCHER_P(withName, N, "") { return arg.name == N; }
+MATCHER_P(withKind, Kind, "") { return arg.kind == Kind; }
+MATCHER_P(withDetail, Detail, "") { return arg.detail == Detail; }
+MATCHER_P(symRange, Range, "") { return arg.range == Range; }
 
 // GMock helpers for matching DocumentSymbol.
-MATCHER_P(SymNameRange, Range, "") { return arg.selectionRange == Range; }
+MATCHER_P(symNameRange, Range, "") { return arg.selectionRange == Range; }
 template <class... ChildMatchers>
-::testing::Matcher<DocumentSymbol> Children(ChildMatchers... ChildrenM) {
+::testing::Matcher<DocumentSymbol> children(ChildMatchers... ChildrenM) {
   return Field(&DocumentSymbol::children, UnorderedElementsAre(ChildrenM...));
 }
 
@@ -63,7 +61,7 @@ TEST(WorkspaceSymbols, Macros) {
   // indexSymbolKindToSymbolKind() currently maps macros
   // to SymbolKind::String.
   EXPECT_THAT(getSymbols(TU, "macro"),
-              ElementsAre(AllOf(QName("MACRO"), WithKind(SymbolKind::String))));
+              ElementsAre(AllOf(qName("MACRO"), withKind(SymbolKind::String))));
 }
 
 TEST(WorkspaceSymbols, NoLocals) {
@@ -73,7 +71,7 @@ TEST(WorkspaceSymbols, NoLocals) {
         struct LocalClass {};
         int local_var;
       })cpp";
-  EXPECT_THAT(getSymbols(TU, "l"), ElementsAre(QName("LocalClass")));
+  EXPECT_THAT(getSymbols(TU, "l"), ElementsAre(qName("LocalClass")));
   EXPECT_THAT(getSymbols(TU, "p"), IsEmpty());
 }
 
@@ -90,9 +88,9 @@ TEST(WorkspaceSymbols, Globals) {
       )cpp";
   EXPECT_THAT(getSymbols(TU, "global"),
               UnorderedElementsAre(
-                  AllOf(QName("GlobalStruct"), WithKind(SymbolKind::Struct)),
-                  AllOf(QName("global_func"), WithKind(SymbolKind::Function)),
-                  AllOf(QName("global_var"), WithKind(SymbolKind::Variable))));
+                  AllOf(qName("GlobalStruct"), withKind(SymbolKind::Struct)),
+                  AllOf(qName("global_func"), withKind(SymbolKind::Function)),
+                  AllOf(qName("global_var"), withKind(SymbolKind::Variable))));
 }
 
 TEST(WorkspaceSymbols, Unnamed) {
@@ -105,11 +103,11 @@ TEST(WorkspaceSymbols, Unnamed) {
       #include "foo.h"
       )cpp";
   EXPECT_THAT(getSymbols(TU, "UnnamedStruct"),
-              ElementsAre(AllOf(QName("UnnamedStruct"),
-                                WithKind(SymbolKind::Variable))));
+              ElementsAre(AllOf(qName("UnnamedStruct"),
+                                withKind(SymbolKind::Variable))));
   EXPECT_THAT(getSymbols(TU, "InUnnamed"),
-              ElementsAre(AllOf(QName("(anonymous struct)::InUnnamed"),
-                                WithKind(SymbolKind::Field))));
+              ElementsAre(AllOf(qName("(anonymous struct)::InUnnamed"),
+                                withKind(SymbolKind::Field))));
 }
 
 TEST(WorkspaceSymbols, InMainFile) {
@@ -119,7 +117,7 @@ TEST(WorkspaceSymbols, InMainFile) {
       static void test2() {}
       )cpp";
   EXPECT_THAT(getSymbols(TU, "test"),
-              ElementsAre(QName("test"), QName("test2")));
+              ElementsAre(qName("test"), qName("test2")));
 }
 
 TEST(WorkspaceSymbols, Namespaces) {
@@ -140,30 +138,30 @@ TEST(WorkspaceSymbols, Namespaces) {
       )cpp";
   EXPECT_THAT(getSymbols(TU, "a"),
               UnorderedElementsAre(
-                  QName("ans1"), QName("ans1::ai1"), QName("ans1::ans2"),
-                  QName("ans1::ans2::ai2"), QName("ans1::ans2::ans3"),
-                  QName("ans1::ans2::ans3::ai3")));
-  EXPECT_THAT(getSymbols(TU, "::"), ElementsAre(QName("ans1")));
-  EXPECT_THAT(getSymbols(TU, "::a"), ElementsAre(QName("ans1")));
+                  qName("ans1"), qName("ans1::ai1"), qName("ans1::ans2"),
+                  qName("ans1::ans2::ai2"), qName("ans1::ans2::ans3"),
+                  qName("ans1::ans2::ans3::ai3")));
+  EXPECT_THAT(getSymbols(TU, "::"), ElementsAre(qName("ans1")));
+  EXPECT_THAT(getSymbols(TU, "::a"), ElementsAre(qName("ans1")));
   EXPECT_THAT(getSymbols(TU, "ans1::"),
-              UnorderedElementsAre(QName("ans1::ai1"), QName("ans1::ans2"),
-                                   QName("ans1::ans2::ai2"),
-                                   QName("ans1::ans2::ans3"),
-                                   QName("ans1::ans2::ans3::ai3")));
+              UnorderedElementsAre(qName("ans1::ai1"), qName("ans1::ans2"),
+                                   qName("ans1::ans2::ai2"),
+                                   qName("ans1::ans2::ans3"),
+                                   qName("ans1::ans2::ans3::ai3")));
   EXPECT_THAT(getSymbols(TU, "ans2::"),
-              UnorderedElementsAre(QName("ans1::ans2::ai2"),
-                                   QName("ans1::ans2::ans3"),
-                                   QName("ans1::ans2::ans3::ai3")));
-  EXPECT_THAT(getSymbols(TU, "::ans1"), ElementsAre(QName("ans1")));
+              UnorderedElementsAre(qName("ans1::ans2::ai2"),
+                                   qName("ans1::ans2::ans3"),
+                                   qName("ans1::ans2::ans3::ai3")));
+  EXPECT_THAT(getSymbols(TU, "::ans1"), ElementsAre(qName("ans1")));
   EXPECT_THAT(getSymbols(TU, "::ans1::"),
-              UnorderedElementsAre(QName("ans1::ai1"), QName("ans1::ans2")));
-  EXPECT_THAT(getSymbols(TU, "::ans1::ans2"), ElementsAre(QName("ans1::ans2")));
+              UnorderedElementsAre(qName("ans1::ai1"), qName("ans1::ans2")));
+  EXPECT_THAT(getSymbols(TU, "::ans1::ans2"), ElementsAre(qName("ans1::ans2")));
   EXPECT_THAT(getSymbols(TU, "::ans1::ans2::"),
-              ElementsAre(QName("ans1::ans2::ai2"), QName("ans1::ans2::ans3")));
+              ElementsAre(qName("ans1::ans2::ai2"), qName("ans1::ans2::ans3")));
 
   // Ensure sub-sequence matching works.
   EXPECT_THAT(getSymbols(TU, "ans1::ans3::ai"),
-              UnorderedElementsAre(QName("ans1::ans2::ans3::ai3")));
+              UnorderedElementsAre(qName("ans1::ans2::ans3::ai3")));
 }
 
 TEST(WorkspaceSymbols, AnonymousNamespace) {
@@ -173,7 +171,7 @@ TEST(WorkspaceSymbols, AnonymousNamespace) {
       void test() {}
       }
       )cpp";
-  EXPECT_THAT(getSymbols(TU, "test"), ElementsAre(QName("test")));
+  EXPECT_THAT(getSymbols(TU, "test"), ElementsAre(qName("test")));
 }
 
 TEST(WorkspaceSymbols, MultiFile) {
@@ -191,7 +189,7 @@ TEST(WorkspaceSymbols, MultiFile) {
       #include "foo2.h"
       )cpp";
   EXPECT_THAT(getSymbols(TU, "foo"),
-              UnorderedElementsAre(QName("foo"), QName("foo2")));
+              UnorderedElementsAre(qName("foo"), qName("foo2")));
 }
 
 TEST(WorkspaceSymbols, GlobalNamespaceQueries) {
@@ -212,13 +210,13 @@ TEST(WorkspaceSymbols, GlobalNamespaceQueries) {
       )cpp";
   EXPECT_THAT(getSymbols(TU, "::"),
               UnorderedElementsAre(
-                  AllOf(QName("Foo"), WithKind(SymbolKind::Class)),
-                  AllOf(QName("foo"), WithKind(SymbolKind::Function)),
-                  AllOf(QName("ns"), WithKind(SymbolKind::Namespace))));
+                  AllOf(qName("Foo"), withKind(SymbolKind::Class)),
+                  AllOf(qName("foo"), withKind(SymbolKind::Function)),
+                  AllOf(qName("ns"), withKind(SymbolKind::Namespace))));
   EXPECT_THAT(getSymbols(TU, ":"), IsEmpty());
   EXPECT_THAT(getSymbols(TU, ""),
-              UnorderedElementsAre(QName("foo"), QName("Foo"), QName("Foo::a"),
-                                   QName("ns"), QName("ns::foo2")));
+              UnorderedElementsAre(qName("foo"), qName("Foo"), qName("Foo::a"),
+                                   qName("ns"), qName("ns::foo2")));
 }
 
 TEST(WorkspaceSymbols, Enums) {
@@ -248,18 +246,18 @@ TEST(WorkspaceSymbols, Enums) {
   TU.Code = R"cpp(
       #include "foo.h"
       )cpp";
-  EXPECT_THAT(getSymbols(TU, "Red"), ElementsAre(QName("Red")));
-  EXPECT_THAT(getSymbols(TU, "::Red"), ElementsAre(QName("Red")));
-  EXPECT_THAT(getSymbols(TU, "Green"), ElementsAre(QName("Green")));
-  EXPECT_THAT(getSymbols(TU, "Green"), ElementsAre(QName("Green")));
+  EXPECT_THAT(getSymbols(TU, "Red"), ElementsAre(qName("Red")));
+  EXPECT_THAT(getSymbols(TU, "::Red"), ElementsAre(qName("Red")));
+  EXPECT_THAT(getSymbols(TU, "Green"), ElementsAre(qName("Green")));
+  EXPECT_THAT(getSymbols(TU, "Green"), ElementsAre(qName("Green")));
   EXPECT_THAT(getSymbols(TU, "Color2::Yellow"),
-              ElementsAre(QName("Color2::Yellow")));
-  EXPECT_THAT(getSymbols(TU, "Yellow"), ElementsAre(QName("Color2::Yellow")));
+              ElementsAre(qName("Color2::Yellow")));
+  EXPECT_THAT(getSymbols(TU, "Yellow"), ElementsAre(qName("Color2::Yellow")));
 
-  EXPECT_THAT(getSymbols(TU, "ns::Black"), ElementsAre(QName("ns::Black")));
-  EXPECT_THAT(getSymbols(TU, "ns::Blue"), ElementsAre(QName("ns::Blue")));
+  EXPECT_THAT(getSymbols(TU, "ns::Black"), ElementsAre(qName("ns::Black")));
+  EXPECT_THAT(getSymbols(TU, "ns::Blue"), ElementsAre(qName("ns::Blue")));
   EXPECT_THAT(getSymbols(TU, "ns::Color4::White"),
-              ElementsAre(QName("ns::Color4::White")));
+              ElementsAre(qName("ns::Color4::White")));
 }
 
 TEST(WorkspaceSymbols, Ranking) {
@@ -271,7 +269,7 @@ TEST(WorkspaceSymbols, Ranking) {
   TU.Code = R"cpp(
       #include "foo.h"
       )cpp";
-  EXPECT_THAT(getSymbols(TU, "::"), ElementsAre(QName("func"), QName("ns")));
+  EXPECT_THAT(getSymbols(TU, "::"), ElementsAre(qName("func"), qName("ns")));
 }
 
 TEST(WorkspaceSymbols, RankingPartialNamespace) {
@@ -282,7 +280,7 @@ TEST(WorkspaceSymbols, RankingPartialNamespace) {
     }
     namespace ns2 { struct FooB {}; })cpp";
   EXPECT_THAT(getSymbols(TU, "ns2::f"),
-              ElementsAre(QName("ns2::FooB"), QName("ns1::ns2::Foo")));
+              ElementsAre(qName("ns2::FooB"), qName("ns1::ns2::Foo")));
 }
 
 TEST(WorkspaceSymbols, WithLimit) {
@@ -297,10 +295,10 @@ TEST(WorkspaceSymbols, WithLimit) {
   // Foo is higher ranked because of exact name match.
   EXPECT_THAT(getSymbols(TU, "foo"),
               UnorderedElementsAre(
-                  AllOf(QName("foo"), WithKind(SymbolKind::Variable)),
-                  AllOf(QName("foo2"), WithKind(SymbolKind::Variable))));
+                  AllOf(qName("foo"), withKind(SymbolKind::Variable)),
+                  AllOf(qName("foo2"), withKind(SymbolKind::Variable))));
 
-  EXPECT_THAT(getSymbols(TU, "foo", 1), ElementsAre(QName("foo")));
+  EXPECT_THAT(getSymbols(TU, "foo", 1), ElementsAre(qName("foo")));
 }
 
 TEST(WorkspaceSymbols, TempSpecs) {
@@ -316,10 +314,10 @@ TEST(WorkspaceSymbols, TempSpecs) {
   EXPECT_THAT(
       getSymbols(TU, "Foo"),
       UnorderedElementsAre(
-          AllOf(QName("Foo"), WithKind(SymbolKind::Class)),
-          AllOf(QName("Foo<int, T>"), WithKind(SymbolKind::Class)),
-          AllOf(QName("Foo<bool, int>"), WithKind(SymbolKind::Class)),
-          AllOf(QName("Foo<bool, int, 3>"), WithKind(SymbolKind::Class))));
+          AllOf(qName("Foo"), withKind(SymbolKind::Class)),
+          AllOf(qName("Foo<int, T>"), withKind(SymbolKind::Class)),
+          AllOf(qName("Foo<bool, int>"), withKind(SymbolKind::Class)),
+          AllOf(qName("Foo<bool, int, 3>"), withKind(SymbolKind::Class))));
 }
 
 std::vector<DocumentSymbol> getSymbols(ParsedAST AST) {
@@ -377,55 +375,55 @@ TEST(DocumentSymbols, BasicSymbols) {
   EXPECT_THAT(
       getSymbols(TU.build()),
       ElementsAreArray(
-          {AllOf(WithName("Foo"), WithKind(SymbolKind::Class),
-                 WithDetail("class"), Children()),
-           AllOf(WithName("Foo"), WithKind(SymbolKind::Class),
-                 WithDetail("class"),
-                 Children(
-                     AllOf(WithName("Foo"), WithKind(SymbolKind::Constructor),
-                           WithDetail("()"), Children()),
-                     AllOf(WithName("Foo"), WithKind(SymbolKind::Constructor),
-                           WithDetail("(int)"), Children()),
-                     AllOf(WithName("f"), WithKind(SymbolKind::Method),
-                           WithDetail("void ()"), Children()),
-                     AllOf(WithName("operator="), WithKind(SymbolKind::Method),
-                           WithDetail("Foo &(const Foo &)"), Children()),
-                     AllOf(WithName("~Foo"), WithKind(SymbolKind::Constructor),
-                           WithDetail(""), Children()),
-                     AllOf(WithName("Nested"), WithKind(SymbolKind::Class),
-                           WithDetail("class"),
-                           Children(AllOf(
-                               WithName("f"), WithKind(SymbolKind::Method),
-                               WithDetail("void ()"), Children()))))),
-           AllOf(WithName("Friend"), WithKind(SymbolKind::Class),
-                 WithDetail("class"), Children()),
-           AllOf(WithName("f1"), WithKind(SymbolKind::Function),
-                 WithDetail("void ()"), Children()),
-           AllOf(WithName("f2"), WithKind(SymbolKind::Function),
-                 WithDetail("void ()"), Children()),
-           AllOf(WithName("KInt"), WithKind(SymbolKind::Variable),
-                 WithDetail("const int"), Children()),
-           AllOf(WithName("kStr"), WithKind(SymbolKind::Variable),
-                 WithDetail("const char *"), Children()),
-           AllOf(WithName("f1"), WithKind(SymbolKind::Function),
-                 WithDetail("void ()"), Children()),
+          {AllOf(withName("Foo"), withKind(SymbolKind::Class),
+                 withDetail("class"), children()),
+           AllOf(withName("Foo"), withKind(SymbolKind::Class),
+                 withDetail("class"),
+                 children(
+                     AllOf(withName("Foo"), withKind(SymbolKind::Constructor),
+                           withDetail("()"), children()),
+                     AllOf(withName("Foo"), withKind(SymbolKind::Constructor),
+                           withDetail("(int)"), children()),
+                     AllOf(withName("f"), withKind(SymbolKind::Method),
+                           withDetail("void ()"), children()),
+                     AllOf(withName("operator="), withKind(SymbolKind::Method),
+                           withDetail("Foo &(const Foo &)"), children()),
+                     AllOf(withName("~Foo"), withKind(SymbolKind::Constructor),
+                           withDetail(""), children()),
+                     AllOf(withName("Nested"), withKind(SymbolKind::Class),
+                           withDetail("class"),
+                           children(AllOf(
+                               withName("f"), withKind(SymbolKind::Method),
+                               withDetail("void ()"), children()))))),
+           AllOf(withName("Friend"), withKind(SymbolKind::Class),
+                 withDetail("class"), children()),
+           AllOf(withName("f1"), withKind(SymbolKind::Function),
+                 withDetail("void ()"), children()),
+           AllOf(withName("f2"), withKind(SymbolKind::Function),
+                 withDetail("void ()"), children()),
+           AllOf(withName("KInt"), withKind(SymbolKind::Variable),
+                 withDetail("const int"), children()),
+           AllOf(withName("kStr"), withKind(SymbolKind::Variable),
+                 withDetail("const char *"), children()),
+           AllOf(withName("f1"), withKind(SymbolKind::Function),
+                 withDetail("void ()"), children()),
            AllOf(
-               WithName("foo"), WithKind(SymbolKind::Namespace), WithDetail(""),
-               Children(AllOf(WithName("int32"), WithKind(SymbolKind::Class),
-                              WithDetail("type alias"), Children()),
-                        AllOf(WithName("int32_t"), WithKind(SymbolKind::Class),
-                              WithDetail("type alias"), Children()),
-                        AllOf(WithName("v1"), WithKind(SymbolKind::Variable),
-                              WithDetail("int"), Children()),
-                        AllOf(WithName("bar"), WithKind(SymbolKind::Namespace),
-                              WithDetail(""),
-                              Children(AllOf(WithName("v2"),
-                                             WithKind(SymbolKind::Variable),
-                                             WithDetail("int"), Children()))),
-                        AllOf(WithName("baz"), WithKind(SymbolKind::Namespace),
-                              WithDetail(""), Children()),
-                        AllOf(WithName("v2"), WithKind(SymbolKind::Namespace),
-                              WithDetail(""))))}));
+               withName("foo"), withKind(SymbolKind::Namespace), withDetail(""),
+               children(AllOf(withName("int32"), withKind(SymbolKind::Class),
+                              withDetail("type alias"), children()),
+                        AllOf(withName("int32_t"), withKind(SymbolKind::Class),
+                              withDetail("type alias"), children()),
+                        AllOf(withName("v1"), withKind(SymbolKind::Variable),
+                              withDetail("int"), children()),
+                        AllOf(withName("bar"), withKind(SymbolKind::Namespace),
+                              withDetail(""),
+                              children(AllOf(withName("v2"),
+                                             withKind(SymbolKind::Variable),
+                                             withDetail("int"), children()))),
+                        AllOf(withName("baz"), withKind(SymbolKind::Namespace),
+                              withDetail(""), children()),
+                        AllOf(withName("v2"), withKind(SymbolKind::Namespace),
+                              withDetail(""))))}));
 }
 
 TEST(DocumentSymbols, DeclarationDefinition) {
@@ -442,13 +440,13 @@ TEST(DocumentSymbols, DeclarationDefinition) {
   EXPECT_THAT(
       getSymbols(TU.build()),
       ElementsAre(
-          AllOf(WithName("Foo"), WithKind(SymbolKind::Class),
-                WithDetail("class"),
-                Children(AllOf(WithName("f"), WithKind(SymbolKind::Method),
-                               WithDetail("void ()"),
-                               SymNameRange(Main.range("decl"))))),
-          AllOf(WithName("Foo::f"), WithKind(SymbolKind::Method),
-                WithDetail("void ()"), SymNameRange(Main.range("def")))));
+          AllOf(withName("Foo"), withKind(SymbolKind::Class),
+                withDetail("class"),
+                children(AllOf(withName("f"), withKind(SymbolKind::Method),
+                               withDetail("void ()"),
+                               symNameRange(Main.range("decl"))))),
+          AllOf(withName("Foo::f"), withKind(SymbolKind::Method),
+                withDetail("void ()"), symNameRange(Main.range("def")))));
 }
 
 TEST(DocumentSymbols, Concepts) {
@@ -457,7 +455,7 @@ TEST(DocumentSymbols, Concepts) {
   TU.Code = "template <typename T> concept C = requires(T t) { t.foo(); };";
 
   EXPECT_THAT(getSymbols(TU.build()),
-              ElementsAre(AllOf(WithName("C"), WithDetail("concept"))));
+              ElementsAre(AllOf(withName("C"), withDetail("concept"))));
 }
 
 TEST(DocumentSymbols, ExternSymbol) {
@@ -487,9 +485,9 @@ TEST(DocumentSymbols, ExternContext) {
       })cpp";
 
   EXPECT_THAT(getSymbols(TU.build()),
-              ElementsAre(WithName("foo"), WithName("Foo"),
-                          AllOf(WithName("ns"),
-                                Children(WithName("bar"), WithName("Bar")))));
+              ElementsAre(withName("foo"), withName("Foo"),
+                          AllOf(withName("ns"),
+                                children(withName("bar"), withName("Bar")))));
 }
 
 TEST(DocumentSymbols, ExportContext) {
@@ -503,7 +501,7 @@ TEST(DocumentSymbols, ExportContext) {
       })cpp";
 
   EXPECT_THAT(getSymbols(TU.build()),
-              ElementsAre(WithName("foo"), WithName("Foo")));
+              ElementsAre(withName("foo"), withName("Foo")));
 }
 
 TEST(DocumentSymbols, NoLocals) {
@@ -513,7 +511,7 @@ TEST(DocumentSymbols, NoLocals) {
         struct LocalClass {};
         int local_var;
       })cpp";
-  EXPECT_THAT(getSymbols(TU.build()), ElementsAre(WithName("test")));
+  EXPECT_THAT(getSymbols(TU.build()), ElementsAre(withName("test")));
 }
 
 TEST(DocumentSymbols, Unnamed) {
@@ -525,14 +523,14 @@ TEST(DocumentSymbols, Unnamed) {
       )cpp";
   EXPECT_THAT(
       getSymbols(TU.build()),
-      ElementsAre(AllOf(WithName("(anonymous struct)"),
-                        WithKind(SymbolKind::Struct), WithDetail("struct"),
-                        Children(AllOf(WithName("InUnnamed"),
-                                       WithKind(SymbolKind::Field),
-                                       WithDetail("int"), Children()))),
-                  AllOf(WithName("UnnamedStruct"),
-                        WithKind(SymbolKind::Variable),
-                        WithDetail("struct (unnamed)"), Children())));
+      ElementsAre(AllOf(withName("(anonymous struct)"),
+                        withKind(SymbolKind::Struct), withDetail("struct"),
+                        children(AllOf(withName("InUnnamed"),
+                                       withKind(SymbolKind::Field),
+                                       withDetail("int"), children()))),
+                  AllOf(withName("UnnamedStruct"),
+                        withKind(SymbolKind::Variable),
+                        withDetail("struct (unnamed)"), children())));
 }
 
 TEST(DocumentSymbols, InHeaderFile) {
@@ -548,7 +546,7 @@ TEST(DocumentSymbols, InHeaderFile) {
       }
       )cpp";
   EXPECT_THAT(getSymbols(TU.build()),
-              ElementsAre(WithName("i"), WithName("test")));
+              ElementsAre(withName("i"), withName("test")));
 }
 
 TEST(DocumentSymbols, Template) {
@@ -574,23 +572,23 @@ TEST(DocumentSymbols, Template) {
   EXPECT_THAT(
       getSymbols(TU.build()),
       ElementsAre(
-          AllOf(WithName("Tmpl"), WithKind(SymbolKind::Struct),
-                WithDetail("template struct"),
-                Children(AllOf(WithName("x"), WithKind(SymbolKind::Field),
-                               WithDetail("T")))),
-          AllOf(WithName("Tmpl<int>"), WithKind(SymbolKind::Struct),
-                WithDetail("struct"),
-                Children(AllOf(WithName("y"), WithDetail("int")))),
-          AllOf(WithName("Tmpl<float>"), WithKind(SymbolKind::Struct),
-                WithDetail("struct"), Children()),
-          AllOf(WithName("Tmpl<double>"), WithKind(SymbolKind::Struct),
-                WithDetail("struct"), Children()),
-          AllOf(WithName("funcTmpl"), WithDetail("template int (U)"),
-                Children()),
-          AllOf(WithName("funcTmpl<int>"), WithDetail("int (double)"),
-                Children()),
-          AllOf(WithName("varTmpl"), WithDetail("template int"), Children()),
-          AllOf(WithName("varTmpl<int>"), WithDetail("double"), Children())));
+          AllOf(withName("Tmpl"), withKind(SymbolKind::Struct),
+                withDetail("template struct"),
+                children(AllOf(withName("x"), withKind(SymbolKind::Field),
+                               withDetail("T")))),
+          AllOf(withName("Tmpl<int>"), withKind(SymbolKind::Struct),
+                withDetail("struct"),
+                children(AllOf(withName("y"), withDetail("int")))),
+          AllOf(withName("Tmpl<float>"), withKind(SymbolKind::Struct),
+                withDetail("struct"), children()),
+          AllOf(withName("Tmpl<double>"), withKind(SymbolKind::Struct),
+                withDetail("struct"), children()),
+          AllOf(withName("funcTmpl"), withDetail("template int (U)"),
+                children()),
+          AllOf(withName("funcTmpl<int>"), withDetail("int (double)"),
+                children()),
+          AllOf(withName("varTmpl"), withDetail("template int"), children()),
+          AllOf(withName("varTmpl<int>"), withDetail("double"), children())));
 }
 
 TEST(DocumentSymbols, Namespaces) {
@@ -621,14 +619,14 @@ TEST(DocumentSymbols, Namespaces) {
   EXPECT_THAT(
       getSymbols(TU.build()),
       ElementsAreArray<::testing::Matcher<DocumentSymbol>>(
-          {AllOf(WithName("ans1"),
-                 Children(AllOf(WithName("ai1"), Children()),
-                          AllOf(WithName("ans2"), Children(WithName("ai2"))))),
-           AllOf(WithName("(anonymous namespace)"), Children(WithName("test"))),
-           AllOf(WithName("na"),
-                 Children(AllOf(WithName("nb"), Children(WithName("Foo"))))),
-           AllOf(WithName("na"),
-                 Children(AllOf(WithName("nb"), Children(WithName("Bar")))))}));
+          {AllOf(withName("ans1"),
+                 children(AllOf(withName("ai1"), children()),
+                          AllOf(withName("ans2"), children(withName("ai2"))))),
+           AllOf(withName("(anonymous namespace)"), children(withName("test"))),
+           AllOf(withName("na"),
+                 children(AllOf(withName("nb"), children(withName("Foo"))))),
+           AllOf(withName("na"),
+                 children(AllOf(withName("nb"), children(withName("Bar")))))}));
 }
 
 TEST(DocumentSymbols, Enums) {
@@ -652,16 +650,16 @@ TEST(DocumentSymbols, Enums) {
   EXPECT_THAT(
       getSymbols(TU.build()),
       ElementsAre(
-          AllOf(WithName("(anonymous enum)"), WithDetail("enum"), 
-                Children(AllOf(WithName("Red"), WithDetail("(unnamed)")))),
-          AllOf(WithName("Color"), WithDetail("enum"),
-                Children(AllOf(WithName("Green"), WithDetail("Color")))),
-          AllOf(WithName("Color2"), WithDetail("enum"),
-                Children(AllOf(WithName("Yellow"), WithDetail("Color2")))),
-          AllOf(WithName("ns"),
-                Children(AllOf(WithName("(anonymous enum)"), WithDetail("enum"),
-                               Children(AllOf(WithName("Black"),
-                                              WithDetail("(unnamed)"))))))));
+          AllOf(withName("(anonymous enum)"), withDetail("enum"),
+                children(AllOf(withName("Red"), withDetail("(unnamed)")))),
+          AllOf(withName("Color"), withDetail("enum"),
+                children(AllOf(withName("Green"), withDetail("Color")))),
+          AllOf(withName("Color2"), withDetail("enum"),
+                children(AllOf(withName("Yellow"), withDetail("Color2")))),
+          AllOf(withName("ns"),
+                children(AllOf(withName("(anonymous enum)"), withDetail("enum"),
+                               children(AllOf(withName("Black"),
+                                              withDetail("(unnamed)"))))))));
 }
 
 TEST(DocumentSymbols, Macro) {
@@ -675,8 +673,8 @@ TEST(DocumentSymbols, Macro) {
             #define DEFINE_FLAG(X) bool FLAGS_##X; bool FLAGS_no##X
             DEFINE_FLAG(pretty);
           )cpp",
-          AllOf(WithName("DEFINE_FLAG"), WithDetail("(pretty)"),
-                Children(WithName("FLAGS_pretty"), WithName("FLAGS_nopretty"))),
+          AllOf(withName("DEFINE_FLAG"), withDetail("(pretty)"),
+                children(withName("FLAGS_pretty"), withName("FLAGS_nopretty"))),
       },
       {
           R"cpp(
@@ -684,10 +682,10 @@ TEST(DocumentSymbols, Macro) {
             #define ID(X) X
             namespace ID(ns) { int ID(y); }
           )cpp",
-          AllOf(WithName("ID"), WithDetail("(ns)"),
-                Children(AllOf(WithName("ns"),
-                               Children(AllOf(WithName("ID"), WithDetail("(y)"),
-                                              Children(WithName("y"))))))),
+          AllOf(withName("ID"), withDetail("(ns)"),
+                children(AllOf(withName("ns"),
+                               children(AllOf(withName("ID"), withDetail("(y)"),
+                                              children(withName("y"))))))),
       },
       {
           R"cpp(
@@ -695,10 +693,10 @@ TEST(DocumentSymbols, Macro) {
             #define TEST(A, B) class A##_##B { void go(); }; void A##_##B::go()
             TEST(DocumentSymbols, Macro) { }
           )cpp",
-          AllOf(WithName("TEST"), WithDetail("(DocumentSymbols, Macro)"),
-                Children(AllOf(WithName("DocumentSymbols_Macro"),
-                               Children(WithName("go"))),
-                         WithName("DocumentSymbols_Macro::go"))),
+          AllOf(withName("TEST"), withDetail("(DocumentSymbols, Macro)"),
+                children(AllOf(withName("DocumentSymbols_Macro"),
+                               children(withName("go"))),
+                         withName("DocumentSymbols_Macro::go"))),
       },
       {
           R"cpp(
@@ -707,14 +705,14 @@ TEST(DocumentSymbols, Macro) {
             NAMESPACE(a, NAMESPACE(b, int x;))
           )cpp",
           AllOf(
-              WithName("NAMESPACE"), WithDetail("(a, NAMESPACE(b, int x;))"),
-              Children(AllOf(
-                  WithName("a"),
-                  Children(AllOf(WithName("NAMESPACE"),
+              withName("NAMESPACE"), withDetail("(a, NAMESPACE(b, int x;))"),
+              children(AllOf(
+                  withName("a"),
+                  children(AllOf(withName("NAMESPACE"),
                                  // FIXME: nested expansions not in TokenBuffer
-                                 WithDetail(""),
-                                 Children(AllOf(WithName("b"),
-                                                Children(WithName("x"))))))))),
+                                 withDetail(""),
+                                 children(AllOf(withName("b"),
+                                                children(withName("x"))))))))),
       },
       {
           R"cpp(
@@ -723,8 +721,8 @@ TEST(DocumentSymbols, Macro) {
             #define OUTER(X) INNER(X)
             OUTER(foo);
           )cpp",
-          AllOf(WithName("OUTER"), WithDetail("(foo)"),
-                Children(WithName("foo"))),
+          AllOf(withName("OUTER"), withDetail("(foo)"),
+                children(withName("foo"))),
       },
   };
   for (const Test &T : Tests) {
@@ -757,18 +755,18 @@ TEST(DocumentSymbols, RangeFromMacro) {
   EXPECT_THAT(
       getSymbols(TU.build()),
       ElementsAre(
-          AllOf(WithName("FF"), WithDetail("(abc)"),
-                Children(AllOf(WithName("abc_Test"), WithDetail("class"),
-                               SymNameRange(Main.range("expansion1"))))),
-          AllOf(WithName("FF2"), WithDetail("()"),
-                SymNameRange(Main.range("expansion2")),
-                SymRange(Main.range("expansion2parens")),
-                Children(AllOf(WithName("Test"), WithDetail("class"),
-                               SymNameRange(Main.range("expansion2"))))),
-          AllOf(WithName("FF3"), WithDetail("()"),
-                SymRange(Main.range("fullDef")),
-                Children(AllOf(WithName("waldo"), WithDetail("void ()"),
-                               SymRange(Main.range("fullDef")))))));
+          AllOf(withName("FF"), withDetail("(abc)"),
+                children(AllOf(withName("abc_Test"), withDetail("class"),
+                               symNameRange(Main.range("expansion1"))))),
+          AllOf(withName("FF2"), withDetail("()"),
+                symNameRange(Main.range("expansion2")),
+                symRange(Main.range("expansion2parens")),
+                children(AllOf(withName("Test"), withDetail("class"),
+                               symNameRange(Main.range("expansion2"))))),
+          AllOf(withName("FF3"), withDetail("()"),
+                symRange(Main.range("fullDef")),
+                children(AllOf(withName("waldo"), withDetail("void ()"),
+                               symRange(Main.range("fullDef")))))));
 }
 
 TEST(DocumentSymbols, FuncTemplates) {
@@ -783,9 +781,9 @@ TEST(DocumentSymbols, FuncTemplates) {
   TU.Code = Source.code().str();
   // Make sure we only see the template declaration, not instantiations.
   EXPECT_THAT(getSymbols(TU.build()),
-              ElementsAre(AllOf(WithName("foo"), WithDetail("template T ()")),
-                          AllOf(WithName("x"), WithDetail("int")),
-                          AllOf(WithName("y"), WithDetail("double"))));
+              ElementsAre(AllOf(withName("foo"), withDetail("template T ()")),
+                          AllOf(withName("x"), withDetail("int")),
+                          AllOf(withName("y"), withDetail("double"))));
 }
 
 TEST(DocumentSymbols, UsingDirectives) {
@@ -802,9 +800,9 @@ TEST(DocumentSymbols, UsingDirectives) {
   )cpp");
   TU.Code = Source.code().str();
   EXPECT_THAT(getSymbols(TU.build()),
-              ElementsAre(WithName("ns"), WithName("ns_alias"),
-                          WithName("using namespace ::ns"),
-                          WithName("using namespace ns_alias")));
+              ElementsAre(withName("ns"), withName("ns_alias"),
+                          withName("using namespace ::ns"),
+                          withName("using namespace ns_alias")));
 }
 
 TEST(DocumentSymbols, TempSpecs) {
@@ -818,14 +816,14 @@ TEST(DocumentSymbols, TempSpecs) {
   // Foo is higher ranked because of exact name match.
   EXPECT_THAT(getSymbols(TU.build()),
               UnorderedElementsAre(
-                  AllOf(WithName("Foo"), WithKind(SymbolKind::Class),
-                        WithDetail("template class")),
-                  AllOf(WithName("Foo<int, T>"), WithKind(SymbolKind::Class),
-                        WithDetail("template class")),
-                  AllOf(WithName("Foo<bool, int>"), WithKind(SymbolKind::Class),
-                        WithDetail("class")),
-                  AllOf(WithName("Foo<bool, int, 3>"),
-                        WithKind(SymbolKind::Class), WithDetail("class"))));
+                  AllOf(withName("Foo"), withKind(SymbolKind::Class),
+                        withDetail("template class")),
+                  AllOf(withName("Foo<int, T>"), withKind(SymbolKind::Class),
+                        withDetail("template class")),
+                  AllOf(withName("Foo<bool, int>"), withKind(SymbolKind::Class),
+                        withDetail("class")),
+                  AllOf(withName("Foo<bool, int, 3>"),
+                        withKind(SymbolKind::Class), withDetail("class"))));
 }
 
 TEST(DocumentSymbols, Qualifiers) {
@@ -855,10 +853,10 @@ TEST(DocumentSymbols, Qualifiers) {
   // All the qualifiers should be preserved exactly as written.
   EXPECT_THAT(getSymbols(TU.build()),
               UnorderedElementsAre(
-                  WithName("foo"), WithName("foo::bar::Cls"),
-                  WithName("foo::bar::func1"), WithName("::foo::bar::func2"),
-                  WithName("using namespace foo"), WithName("bar::func3"),
-                  WithName("alias"), WithName("::alias::func4")));
+                  withName("foo"), withName("foo::bar::Cls"),
+                  withName("foo::bar::func1"), withName("::foo::bar::func2"),
+                  withName("using namespace foo"), withName("bar::func3"),
+                  withName("alias"), withName("::alias::func4")));
 }
 
 TEST(DocumentSymbols, QualifiersWithTemplateArgs) {
@@ -887,14 +885,14 @@ TEST(DocumentSymbols, QualifiersWithTemplateArgs) {
       )cpp";
   EXPECT_THAT(getSymbols(TU.build()),
               UnorderedElementsAre(
-                  AllOf(WithName("Foo"), WithDetail("template class")),
-                  AllOf(WithName("Foo<int, double>"), WithDetail("class")),
-                  AllOf(WithName("int_type"), WithDetail("type alias")),
-                  AllOf(WithName("Foo<int_type, double>::method1"),
-                        WithDetail("int ()")),
-                  AllOf(WithName("Foo<int>::method2"), WithDetail("int ()")),
-                  AllOf(WithName("Foo_type"), WithDetail("type alias")),
-                  AllOf(WithName("Foo_type::method3"), WithDetail("int ()"))));
+                  AllOf(withName("Foo"), withDetail("template class")),
+                  AllOf(withName("Foo<int, double>"), withDetail("class")),
+                  AllOf(withName("int_type"), withDetail("type alias")),
+                  AllOf(withName("Foo<int_type, double>::method1"),
+                        withDetail("int ()")),
+                  AllOf(withName("Foo<int>::method2"), withDetail("int ()")),
+                  AllOf(withName("Foo_type"), withDetail("type alias")),
+                  AllOf(withName("Foo_type::method3"), withDetail("int ()"))));
 }
 
 TEST(DocumentSymbolsTest, Ranges) {
@@ -932,39 +930,39 @@ TEST(DocumentSymbolsTest, Ranges) {
   EXPECT_THAT(
       getSymbols(TU.build()),
       UnorderedElementsAre(
-          AllOf(WithName("foo"), WithKind(SymbolKind::Function),
-                WithDetail("int (bool)"), SymRange(Main.range("foo"))),
-          AllOf(WithName("GLOBAL_VARIABLE"), WithKind(SymbolKind::Variable),
-                WithDetail("char"), SymRange(Main.range("variable"))),
+          AllOf(withName("foo"), withKind(SymbolKind::Function),
+                withDetail("int (bool)"), symRange(Main.range("foo"))),
+          AllOf(withName("GLOBAL_VARIABLE"), withKind(SymbolKind::Variable),
+                withDetail("char"), symRange(Main.range("variable"))),
           AllOf(
-              WithName("ns"), WithKind(SymbolKind::Namespace),
-              SymRange(Main.range("ns")),
-              Children(AllOf(
-                  WithName("Bar"), WithKind(SymbolKind::Class),
-                  WithDetail("class"), SymRange(Main.range("bar")),
-                  Children(
-                      AllOf(WithName("Bar"), WithKind(SymbolKind::Constructor),
-                            WithDetail("()"), SymRange(Main.range("ctor"))),
-                      AllOf(WithName("~Bar"), WithKind(SymbolKind::Constructor),
-                            WithDetail(""), SymRange(Main.range("dtor"))),
-                      AllOf(WithName("Baz"), WithKind(SymbolKind::Field),
-                            WithDetail("unsigned int"),
-                            SymRange(Main.range("field"))),
-                      AllOf(WithName("getBaz"), WithKind(SymbolKind::Method),
-                            WithDetail("unsigned int ()"),
-                            SymRange(Main.range("getbaz"))))))),
-          AllOf(WithName("ForwardClassDecl"), WithKind(SymbolKind::Class),
-                WithDetail("class"), SymRange(Main.range("forwardclass"))),
-          AllOf(WithName("StructDefinition"), WithKind(SymbolKind::Struct),
-                WithDetail("struct"), SymRange(Main.range("struct")),
-                Children(AllOf(WithName("Pointer"), WithKind(SymbolKind::Field),
-                               WithDetail("int *"),
-                               SymRange(Main.range("structfield"))))),
-          AllOf(WithName("StructDeclaration"), WithKind(SymbolKind::Struct),
-                WithDetail("struct"), SymRange(Main.range("forwardstruct"))),
-          AllOf(WithName("forwardFunctionDecl"), WithKind(SymbolKind::Function),
-                WithDetail("void (int)"),
-                SymRange(Main.range("forwardfunc")))));
+              withName("ns"), withKind(SymbolKind::Namespace),
+              symRange(Main.range("ns")),
+              children(AllOf(
+                  withName("Bar"), withKind(SymbolKind::Class),
+                  withDetail("class"), symRange(Main.range("bar")),
+                  children(
+                      AllOf(withName("Bar"), withKind(SymbolKind::Constructor),
+                            withDetail("()"), symRange(Main.range("ctor"))),
+                      AllOf(withName("~Bar"), withKind(SymbolKind::Constructor),
+                            withDetail(""), symRange(Main.range("dtor"))),
+                      AllOf(withName("Baz"), withKind(SymbolKind::Field),
+                            withDetail("unsigned int"),
+                            symRange(Main.range("field"))),
+                      AllOf(withName("getBaz"), withKind(SymbolKind::Method),
+                            withDetail("unsigned int ()"),
+                            symRange(Main.range("getbaz"))))))),
+          AllOf(withName("ForwardClassDecl"), withKind(SymbolKind::Class),
+                withDetail("class"), symRange(Main.range("forwardclass"))),
+          AllOf(withName("StructDefinition"), withKind(SymbolKind::Struct),
+                withDetail("struct"), symRange(Main.range("struct")),
+                children(AllOf(withName("Pointer"), withKind(SymbolKind::Field),
+                               withDetail("int *"),
+                               symRange(Main.range("structfield"))))),
+          AllOf(withName("StructDeclaration"), withKind(SymbolKind::Struct),
+                withDetail("struct"), symRange(Main.range("forwardstruct"))),
+          AllOf(withName("forwardFunctionDecl"), withKind(SymbolKind::Function),
+                withDetail("void (int)"),
+                symRange(Main.range("forwardfunc")))));
 }
 
 TEST(DocumentSymbolsTest, DependentType) {
@@ -982,13 +980,13 @@ TEST(DocumentSymbolsTest, DependentType) {
   EXPECT_THAT(
       getSymbols(TU.build()),
       ElementsAre(
-          AllOf(WithName("plus"),
-                WithDetail("template auto (T, T) -> decltype(x + y)")),
-          AllOf(WithName("Pair"), WithDetail("template class")),
-          AllOf(WithName("Context"), WithDetail("template struct"),
-                Children(AllOf(
-                    WithName("Pair<type-parameter-0-0, type-parameter-0-1>"),
-                    WithDetail("<dependent type>"))))));
+          AllOf(withName("plus"),
+                withDetail("template auto (T, T) -> decltype(x + y)")),
+          AllOf(withName("Pair"), withDetail("template class")),
+          AllOf(withName("Context"), withDetail("template struct"),
+                children(AllOf(
+                    withName("Pair<type-parameter-0-0, type-parameter-0-1>"),
+                    withDetail("<dependent type>"))))));
 }
 
 TEST(DocumentSymbolsTest, ObjCCategoriesAndClassExtensions) {
@@ -1013,18 +1011,18 @@ TEST(DocumentSymbolsTest, ObjCCategoriesAndClassExtensions) {
   EXPECT_THAT(
       getSymbols(TU.build()),
       ElementsAre(
-          AllOf(WithName("Cat"), SymRange(Main.range("Cat")),
-                Children(AllOf(WithName("+sharedCat"),
-                               WithKind(SymbolKind::Method)))),
-          AllOf(WithName("Cat(Sneaky)"), SymRange(Main.range("SneakyCat")),
-                Children(
-                    AllOf(WithName("-sneak:"), WithKind(SymbolKind::Method)))),
+          AllOf(withName("Cat"), symRange(Main.range("Cat")),
+                children(AllOf(withName("+sharedCat"),
+                               withKind(SymbolKind::Method)))),
+          AllOf(withName("Cat(Sneaky)"), symRange(Main.range("SneakyCat")),
+                children(
+                    AllOf(withName("-sneak:"), withKind(SymbolKind::Method)))),
           AllOf(
-              WithName("Cat()"), SymRange(Main.range("MeowCat")),
-              Children(AllOf(WithName("-meow"), WithKind(SymbolKind::Method)))),
-          AllOf(WithName("Cat()"), SymRange(Main.range("PurCat")),
-                Children(
-                    AllOf(WithName("-pur"), WithKind(SymbolKind::Method))))));
+              withName("Cat()"), symRange(Main.range("MeowCat")),
+              children(AllOf(withName("-meow"), withKind(SymbolKind::Method)))),
+          AllOf(withName("Cat()"), symRange(Main.range("PurCat")),
+                children(
+                    AllOf(withName("-pur"), withKind(SymbolKind::Method))))));
 }
 
 TEST(DocumentSymbolsTest, PragmaMarkGroups) {
@@ -1059,21 +1057,21 @@ TEST(DocumentSymbolsTest, PragmaMarkGroups) {
   EXPECT_THAT(
       getSymbols(TU.build()),
       UnorderedElementsAre(
-          AllOf(WithName("Dog"), SymRange(Main.range("DogDef"))),
-          AllOf(WithName("Dog"), SymRange(Main.range("DogImpl")),
-                Children(AllOf(WithName("+sharedDoggo"),
-                               WithKind(SymbolKind::Method)),
-                         AllOf(WithName("Overrides"),
-                               SymRange(Main.range("Overrides")),
-                               Children(AllOf(WithName("-init"),
-                                              WithKind(SymbolKind::Method)),
-                                        AllOf(WithName("-bark"),
-                                              WithKind(SymbolKind::Method)))),
-                         AllOf(WithName("Dog Specifics"),
-                               SymRange(Main.range("Specifics")),
-                               Children(AllOf(WithName("-isAGoodBoy"),
-                                              WithKind(SymbolKind::Method)))))),
-          AllOf(WithName("End"), SymRange(Main.range("End")))));
+          AllOf(withName("Dog"), symRange(Main.range("DogDef"))),
+          AllOf(withName("Dog"), symRange(Main.range("DogImpl")),
+                children(AllOf(withName("+sharedDoggo"),
+                               withKind(SymbolKind::Method)),
+                         AllOf(withName("Overrides"),
+                               symRange(Main.range("Overrides")),
+                               children(AllOf(withName("-init"),
+                                              withKind(SymbolKind::Method)),
+                                        AllOf(withName("-bark"),
+                                              withKind(SymbolKind::Method)))),
+                         AllOf(withName("Dog Specifics"),
+                               symRange(Main.range("Specifics")),
+                               children(AllOf(withName("-isAGoodBoy"),
+                                              withKind(SymbolKind::Method)))))),
+          AllOf(withName("End"), symRange(Main.range("End")))));
 }
 
 TEST(DocumentSymbolsTest, PragmaMarkGroupsNesting) {
@@ -1093,13 +1091,13 @@ TEST(DocumentSymbolsTest, PragmaMarkGroupsNesting) {
   EXPECT_THAT(
       getSymbols(TU.build()),
       UnorderedElementsAre(AllOf(
-          WithName("Foo"),
-          Children(AllOf(WithName("Foo"),
-                         Children(AllOf(WithName("Bar"),
-                                        Children(AllOf(WithName("bar"),
-                                                       Children(WithName(
+          withName("Foo"),
+          children(AllOf(withName("Foo"),
+                         children(AllOf(withName("Bar"),
+                                        children(AllOf(withName("bar"),
+                                                       children(withName(
                                                            "NotTopDecl"))))))),
-                   WithName("bar")))));
+                   withName("bar")))));
 }
 
 TEST(DocumentSymbolsTest, PragmaMarkGroupsNoNesting) {
@@ -1116,9 +1114,9 @@ TEST(DocumentSymbolsTest, PragmaMarkGroupsNoNesting) {
     )cpp");
   TU.Code = Main.code().str();
   EXPECT_THAT(getSymbols(TU.build()),
-              UnorderedElementsAre(WithName("Helpers"), WithName("helpA"),
-                                   WithName("(unnamed group)"),
-                                   WithName("Core"), WithName("coreMethod")));
+              UnorderedElementsAre(withName("Helpers"), withName("helpA"),
+                                   withName("(unnamed group)"),
+                                   withName("Core"), withName("coreMethod")));
 }
 
 } // namespace

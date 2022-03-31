@@ -35,7 +35,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
           context, std::move(funcRef), *callable);
     } else {
       context.messages().Say(
-          "%s(real(kind=%d)) cannot be folded on host"_en_US, name, KIND);
+          "%s(real(kind=%d)) cannot be folded on host"_warn_en_US, name, KIND);
     }
   } else if (name == "amax0" || name == "amin0" || name == "amin1" ||
       name == "amax1" || name == "dmin1" || name == "dmax1") {
@@ -48,7 +48,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
           context, std::move(funcRef), *callable);
     } else {
       context.messages().Say(
-          "%s(real(kind=%d), real(kind%d)) cannot be folded on host"_en_US,
+          "%s(real(kind=%d), real(kind%d)) cannot be folded on host"_warn_en_US,
           name, KIND, KIND);
     }
   } else if (name == "bessel_jn" || name == "bessel_yn") {
@@ -60,11 +60,11 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
             context, std::move(funcRef), *callable);
       } else {
         context.messages().Say(
-            "%s(integer(kind=4), real(kind=%d)) cannot be folded on host"_en_US,
+            "%s(integer(kind=4), real(kind=%d)) cannot be folded on host"_warn_en_US,
             name, KIND);
       }
     }
-  } else if (name == "abs") {
+  } else if (name == "abs") { // incl. zabs & cdabs
     // Argument can be complex or real
     if (auto *x{UnwrapExpr<Expr<SomeReal>>(args[0])}) {
       return FoldElementalIntrinsic<T, T>(
@@ -90,7 +90,8 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
                              const Scalar<T> &x) -> Scalar<T> {
           ValueWithRealFlags<Scalar<T>> y{x.ToWholeNumber(mode)};
           if (y.flags.test(RealFlag::Overflow)) {
-            context.messages().Say("%s intrinsic folding overflow"_en_US, name);
+            context.messages().Say(
+                "%s intrinsic folding overflow"_warn_en_US, name);
           }
           return y.value;
         }));
@@ -118,6 +119,31 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
         RelationalOperator::GT, T::Scalar::HUGE().Negate());
   } else if (name == "merge") {
     return FoldMerge<T>(context, std::move(funcRef));
+  } else if (name == "nearest") {
+    if (const auto *sExpr{UnwrapExpr<Expr<SomeReal>>(args[1])}) {
+      return std::visit(
+          [&](const auto &sVal) {
+            using TS = ResultType<decltype(sVal)>;
+            return FoldElementalIntrinsic<T, T, TS>(context, std::move(funcRef),
+                ScalarFunc<T, T, TS>([&](const Scalar<T> &x,
+                                         const Scalar<TS> &s) -> Scalar<T> {
+                  if (s.IsZero()) {
+                    context.messages().Say(
+                        "NEAREST: S argument is zero"_warn_en_US);
+                  }
+                  auto result{x.NEAREST(!s.IsNegative())};
+                  if (result.flags.test(RealFlag::Overflow)) {
+                    context.messages().Say(
+                        "NEAREST intrinsic folding overflow"_warn_en_US);
+                  } else if (result.flags.test(RealFlag::InvalidArgument)) {
+                    context.messages().Say(
+                        "NEAREST intrinsic folding: bad argument"_warn_en_US);
+                  }
+                  return result.value;
+                }));
+          },
+          sExpr->u);
+    }
   } else if (name == "min") {
     return FoldMINorMAX(context, std::move(funcRef), Ordering::Less);
   } else if (name == "minval") {
@@ -126,9 +152,34 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
   } else if (name == "product") {
     auto one{Scalar<T>::FromInteger(value::Integer<8>{1}).value};
     return FoldProduct<T>(context, std::move(funcRef), one);
-  } else if (name == "real") {
+  } else if (name == "real" || name == "dble") {
     if (auto *expr{args[0].value().UnwrapExpr()}) {
       return ToReal<KIND>(context, std::move(*expr));
+    }
+  } else if (name == "scale") {
+    if (const auto *byExpr{UnwrapExpr<Expr<SomeInteger>>(args[1])}) {
+      return std::visit(
+          [&](const auto &byVal) {
+            using TBY = ResultType<decltype(byVal)>;
+            return FoldElementalIntrinsic<T, T, TBY>(context,
+                std::move(funcRef),
+                ScalarFunc<T, T, TBY>(
+                    [&](const Scalar<T> &x, const Scalar<TBY> &y) -> Scalar<T> {
+                      ValueWithRealFlags<Scalar<T>> result{x.
+// MSVC chokes on the keyword "template" here in a call to a
+// member function template.
+#ifndef _MSC_VER
+                                                           template
+#endif
+                                                           SCALE(y)};
+                      if (result.flags.test(RealFlag::Overflow)) {
+                        context.messages().Say(
+                            "SCALE intrinsic folding overflow"_warn_en_US);
+                      }
+                      return result.value;
+                    }));
+          },
+          byExpr->u);
     }
   } else if (name == "sign") {
     return FoldElementalIntrinsic<T, T, T>(
@@ -141,10 +192,58 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
     return FoldSum<T>(context, std::move(funcRef));
   } else if (name == "tiny") {
     return Expr<T>{Scalar<T>::TINY()};
+  } else if (name == "__builtin_ieee_next_after") {
+    if (const auto *yExpr{UnwrapExpr<Expr<SomeReal>>(args[1])}) {
+      return std::visit(
+          [&](const auto &yVal) {
+            using TY = ResultType<decltype(yVal)>;
+            return FoldElementalIntrinsic<T, T, TY>(context, std::move(funcRef),
+                ScalarFunc<T, T, TY>([&](const Scalar<T> &x,
+                                         const Scalar<TY> &y) -> Scalar<T> {
+                  bool upward{true};
+                  switch (x.Compare(Scalar<T>::Convert(y).value)) {
+                  case Relation::Unordered:
+                    context.messages().Say(
+                        "IEEE_NEXT_AFTER intrinsic folding: bad argument"_warn_en_US);
+                    return x;
+                  case Relation::Equal:
+                    return x;
+                  case Relation::Less:
+                    upward = true;
+                    break;
+                  case Relation::Greater:
+                    upward = false;
+                    break;
+                  }
+                  auto result{x.NEAREST(upward)};
+                  if (result.flags.test(RealFlag::Overflow)) {
+                    context.messages().Say(
+                        "IEEE_NEXT_AFTER intrinsic folding overflow"_warn_en_US);
+                  }
+                  return result.value;
+                }));
+          },
+          yExpr->u);
+    }
+  } else if (name == "__builtin_ieee_next_up" ||
+      name == "__builtin_ieee_next_down") {
+    bool upward{name == "__builtin_ieee_next_up"};
+    const char *iName{upward ? "IEEE_NEXT_UP" : "IEEE_NEXT_DOWN"};
+    return FoldElementalIntrinsic<T, T>(context, std::move(funcRef),
+        ScalarFunc<T, T>([&](const Scalar<T> &x) -> Scalar<T> {
+          auto result{x.NEAREST(upward)};
+          if (result.flags.test(RealFlag::Overflow)) {
+            context.messages().Say(
+                "%s intrinsic folding overflow"_warn_en_US, iName);
+          } else if (result.flags.test(RealFlag::InvalidArgument)) {
+            context.messages().Say(
+                "%s intrinsic folding: bad argument"_warn_en_US, iName);
+          }
+          return result.value;
+        }));
   }
   // TODO: dim, dot_product, fraction, matmul,
-  // modulo, nearest, norm2, rrspacing, scale,
-  // __builtin_next_after/down/up,
+  // modulo, norm2, rrspacing,
   // set_exponent, spacing, transfer,
   // bessel_jn (transformational) and bessel_yn (transformational)
   return Expr<T>{std::move(funcRef)};
@@ -175,6 +274,9 @@ Expr<Type<TypeCategory::Real, KIND>> FoldOperation(
   return Expr<Part>{std::move(x)};
 }
 
+#ifdef _MSC_VER // disable bogus warning about missing definitions
+#pragma warning(disable : 4661)
+#endif
 FOR_EACH_REAL_KIND(template class ExpressionBase, )
 template class ExpressionBase<SomeReal>;
 } // namespace Fortran::evaluate

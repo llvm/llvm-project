@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
 
 // template<class T>
 // concept movable = see below;
@@ -22,8 +21,10 @@
 #include <unordered_map>
 #include <vector>
 
-#ifndef _LIBCPP_HAS_NO_THREADS
-#   include <mutex>
+#include "test_macros.h"
+
+#ifndef TEST_HAS_NO_THREADS
+#  include <mutex>
 #endif
 
 #include "type_classification/moveconstructible.h"
@@ -72,7 +73,6 @@ static_assert(std::movable<std::list<int> >);
 static_assert(std::movable<std::optional<std::vector<int> > >);
 static_assert(std::movable<std::vector<int> >);
 
-static_assert(std::movable<traditional_copy_assignment_only>);
 static_assert(std::movable<has_volatile_member>);
 static_assert(std::movable<has_array_member>);
 
@@ -108,9 +108,9 @@ static_assert(std::movable<cv_move_ctor>);
 static_assert(std::movable<multi_param_move_ctor>);
 static_assert(!std::movable<not_quite_multi_param_move_ctor>);
 
-static_assert(!std::assignable_from<copy_assign_with_mutable_parameter&,
-                                    copy_assign_with_mutable_parameter>);
-static_assert(!std::movable<copy_assign_with_mutable_parameter>);
+static_assert(!std::assignable_from<copy_with_mutable_parameter&,
+                                    copy_with_mutable_parameter>);
+static_assert(!std::movable<copy_with_mutable_parameter>);
 
 static_assert(!std::movable<const_move_assignment>);
 static_assert(std::movable<volatile_move_assignment>);

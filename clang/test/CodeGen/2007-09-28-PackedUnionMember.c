@@ -20,11 +20,11 @@ struct E {
   unsigned long f2;
 };
 
-typedef long (*FuncPtr) ();
+typedef long (*FuncPtr) (void);
 
 extern long bork(FuncPtr handler, const struct E *list);
 
-static long hndlr()
+static long hndlr(void)
 {
   struct H cmd = { 4, 412 };
   struct H cmd2 = { 4, 412, 0 };

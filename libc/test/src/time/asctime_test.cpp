@@ -13,8 +13,8 @@
 static inline char *call_asctime(struct tm *tm_data, int year, int month,
                                  int mday, int hour, int min, int sec, int wday,
                                  int yday) {
-  __llvm_libc::tmhelper::testing::InitializeTmData(tm_data, year, month, mday,
-                                                   hour, min, sec, wday, yday);
+  __llvm_libc::tmhelper::testing::initialize_tm_data(
+      tm_data, year, month, mday, hour, min, sec, wday, yday);
   return __llvm_libc::asctime(tm_data);
 }
 

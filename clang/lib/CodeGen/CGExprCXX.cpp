@@ -548,11 +548,12 @@ static void EmitNullBaseClassInitialization(CodeGenFunction &CGF,
         /*isConstant=*/true, llvm::GlobalVariable::PrivateLinkage,
         NullConstantForBase, Twine());
 
-    CharUnits Align = std::max(Layout.getNonVirtualAlignment(),
-                               DestPtr.getAlignment());
+    CharUnits Align =
+        std::max(Layout.getNonVirtualAlignment(), DestPtr.getAlignment());
     NullVariable->setAlignment(Align.getAsAlign());
 
-    Address SrcPtr = Address(CGF.EmitCastToVoidPtr(NullVariable), Align);
+    Address SrcPtr =
+        Address(CGF.EmitCastToVoidPtr(NullVariable), CGF.Int8Ty, Align);
 
     // Get and call the appropriate llvm.memcpy overload.
     for (std::pair<CharUnits, CharUnits> Store : Stores) {
@@ -1052,13 +1053,8 @@ void CodeGenFunction::EmitNewArrayInitializer(
       InitListElements =
           cast<ConstantArrayType>(ILE->getType()->getAsArrayTypeUnsafe())
               ->getSize().getZExtValue();
-      CurPtr =
-          Address(Builder.CreateInBoundsGEP(CurPtr.getElementType(),
-                                            CurPtr.getPointer(),
-                                            Builder.getSize(InitListElements),
-                                            "string.init.end"),
-                  CurPtr.getAlignment().alignmentAtOffset(InitListElements *
-                                                          ElementSize));
+      CurPtr = Builder.CreateConstInBoundsGEP(
+          CurPtr, InitListElements, "string.init.end");
 
       // Zero out the rest, if any remain.
       llvm::ConstantInt *ConstNum = dyn_cast<llvm::ConstantInt>(NumElements);
@@ -1113,10 +1109,10 @@ void CodeGenFunction::EmitNewArrayInitializer(
       StoreAnyExprIntoOneUnit(*this, ILE->getInit(i),
                               ILE->getInit(i)->getType(), CurPtr,
                               AggValueSlot::DoesNotOverlap);
-      CurPtr = Address(Builder.CreateInBoundsGEP(CurPtr.getElementType(),
-                                                 CurPtr.getPointer(),
-                                                 Builder.getSize(1),
-                                                 "array.exp.next"),
+      CurPtr = Address(Builder.CreateInBoundsGEP(
+                           CurPtr.getElementType(), CurPtr.getPointer(),
+                           Builder.getSize(1), "array.exp.next"),
+                       CurPtr.getElementType(),
                        StartAlign.alignmentAtOffset((i + 1) * ElementSize));
     }
 
@@ -1135,7 +1131,7 @@ void CodeGenFunction::EmitNewArrayInitializer(
     }
 
     // Switch back to initializing one base element at a time.
-    CurPtr = Builder.CreateBitCast(CurPtr, BeginPtr.getType());
+    CurPtr = Builder.CreateElementBitCast(CurPtr, BeginPtr.getElementType());
   }
 
   // If all elements have already been initialized, skip any further
@@ -1249,10 +1245,10 @@ void CodeGenFunction::EmitNewArrayInitializer(
 
   // Set up the current-element phi.
   llvm::PHINode *CurPtrPhi =
-    Builder.CreatePHI(CurPtr.getType(), 2, "array.cur");
+      Builder.CreatePHI(CurPtr.getType(), 2, "array.cur");
   CurPtrPhi->addIncoming(CurPtr.getPointer(), EntryBB);
 
-  CurPtr = Address(CurPtrPhi, ElementAlign);
+  CurPtr = Address(CurPtrPhi, CurPtr.getElementType(), ElementAlign);
 
   // Store the new Cleanup position for irregular Cleanups.
   if (EndOfInit.isValid())
@@ -1594,7 +1590,7 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
     // In these cases, discard the computed alignment and use the
     // formal alignment of the allocated type.
     if (BaseInfo.getAlignmentSource() != AlignmentSource::Decl)
-      allocation = Address(allocation.getPointer(), allocAlign);
+      allocation = allocation.withAlignment(allocAlign);
 
     // Set up allocatorArgs for the call to operator delete if it's not
     // the reserved global operator.
@@ -1664,7 +1660,7 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
           allocationAlign, getContext().toCharUnitsFromBits(AllocatorAlign));
     }
 
-    allocation = Address(RV.getScalarVal(), allocationAlign);
+    allocation = Address(RV.getScalarVal(), Int8Ty, allocationAlign);
   }
 
   // Emit a null check on the allocation result if the allocation
@@ -1725,8 +1721,7 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
   // of optimization level.
   if (CGM.getCodeGenOpts().StrictVTablePointers &&
       allocator->isReservedGlobalPlacementOperator())
-    result = Address(Builder.CreateLaunderInvariantGroup(result.getPointer()),
-                     result.getAlignment());
+    result = Builder.CreateLaunderInvariantGroup(result);
 
   // Emit sanitizer checks for pointer value now, so that in the case of an
   // array it was checked only once and not at each constructor call. We may
@@ -1742,13 +1737,14 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
 
   EmitNewInitializer(*this, E, allocType, elementTy, result, numElements,
                      allocSizeWithoutCookie);
+  llvm::Value *resultPtr = result.getPointer();
   if (E->isArray()) {
     // NewPtr is a pointer to the base element type.  If we're
     // allocating an array of arrays, we'll need to cast back to the
     // array pointer type.
     llvm::Type *resultType = ConvertTypeForMem(E->getType());
-    if (result.getType() != resultType)
-      result = Builder.CreateBitCast(result, resultType);
+    if (resultPtr->getType() != resultType)
+      resultPtr = Builder.CreateBitCast(resultPtr, resultType);
   }
 
   // Deactivate the 'operator delete' cleanup if we finished
@@ -1758,7 +1754,6 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
     cleanupDominator->eraseFromParent();
   }
 
-  llvm::Value *resultPtr = result.getPointer();
   if (nullCheck) {
     conditional.end(*this);
 
@@ -1802,7 +1797,8 @@ void CodeGenFunction::EmitDeleteCall(const FunctionDecl *DeleteFD,
     CharUnits Align = CGM.getNaturalTypeAlignment(DDTag);
     DestroyingDeleteTag = CreateTempAlloca(Ty, "destroying.delete.tag");
     DestroyingDeleteTag->setAlignment(Align.getAsAlign());
-    DeleteArgs.add(RValue::getAggregate(Address(DestroyingDeleteTag, Align)), DDTag);
+    DeleteArgs.add(
+        RValue::getAggregate(Address(DestroyingDeleteTag, Ty, Align)), DDTag);
   }
 
   // Pass the size if the delete function has a size_t parameter.
@@ -2107,7 +2103,7 @@ void CodeGenFunction::EmitCXXDeleteExpr(const CXXDeleteExpr *E) {
 
     Ptr = Address(Builder.CreateInBoundsGEP(Ptr.getElementType(),
                                             Ptr.getPointer(), GEP, "del.first"),
-                  Ptr.getAlignment());
+                  ConvertTypeForMem(DeleteTy), Ptr.getAlignment());
   }
 
   assert(ConvertTypeForMem(DeleteTy) == Ptr.getElementType());

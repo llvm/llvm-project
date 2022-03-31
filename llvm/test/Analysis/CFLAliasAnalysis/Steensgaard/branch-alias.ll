@@ -13,7 +13,7 @@
 ;    int* ShouldAliasA = *AliasA1;
 ;  }
 
-; RUN: opt < %s -disable-basic-aa -cfl-steens-aa -aa-eval -print-may-aliases -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -aa-pipeline=cfl-steens-aa -passes=aa-eval -print-may-aliases -disable-output 2>&1 | FileCheck %s
 
 ; CHECK: Function: ptr_test
 define void @ptr_test() #0 {
@@ -25,6 +25,7 @@ entry:
   %i = alloca i32, align 4
   %AliasA1 = alloca i32**, align 8
   %ShouldAliasA = alloca i32*, align 8
+  %ignore1 = load i32*, i32** %A
   store i64 0, i64* %RefCopy, align 8
   store i32 0, i32* %i, align 4
   br label %for.cond

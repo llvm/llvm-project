@@ -164,8 +164,9 @@ IncrementalParser::ParseOrWrapTopLevelDecl() {
   }
 
   Parser::DeclGroupPtrTy ADecl;
-  for (bool AtEOF = P->ParseFirstTopLevelDecl(ADecl); !AtEOF;
-       AtEOF = P->ParseTopLevelDecl(ADecl)) {
+  Sema::ModuleImportState ImportState;
+  for (bool AtEOF = P->ParseFirstTopLevelDecl(ADecl, ImportState); !AtEOF;
+       AtEOF = P->ParseTopLevelDecl(ADecl, ImportState)) {
     // If we got a null return and something *was* parsed, ignore it.  This
     // is due to a top-level semicolon, an action override, or a parse error
     // skipping something.
@@ -256,7 +257,7 @@ IncrementalParser::Parse(llvm::StringRef input) {
                                /*LoadedOffset=*/0, NewLoc);
 
   // NewLoc only used for diags.
-  if (PP.EnterSourceFile(FID, /*DirLookup=*/0, NewLoc))
+  if (PP.EnterSourceFile(FID, /*DirLookup=*/nullptr, NewLoc))
     return llvm::make_error<llvm::StringError>("Parsing failed. "
                                                "Cannot enter source file.",
                                                std::error_code());

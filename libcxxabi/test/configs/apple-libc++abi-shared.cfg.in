@@ -1,21 +1,19 @@
 # Testing configuration for Apple's system libc++abi.
 
-import sys
-
 lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
 
 config.substitutions.append(('%{flags}',
     '-isysroot {}'.format('@CMAKE_OSX_SYSROOT@') if '@CMAKE_OSX_SYSROOT@' else ''
 ))
 config.substitutions.append(('%{compile_flags}',
-    '-nostdinc++ -isystem %{install}/include/c++/v1 -DLIBCXXABI_NO_TIMER -D_LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS ' +
+    '-nostdinc++ -I %{include} -DLIBCXXABI_NO_TIMER -D_LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS ' +
     '-I %{libcxx}/test/support -I %{libcxx}/src'
 ))
 config.substitutions.append(('%{link_flags}',
-    '-nostdlib++ -L %{install}/lib -lc++ -lc++abi'
+    '-nostdlib++ -L %{lib} -lc++ -lc++abi'
 ))
 config.substitutions.append(('%{exec}',
-    '{} %{{libcxx}}/utils/run.py --execdir %T --env DYLD_LIBRARY_PATH=%{{install}}/lib -- '.format(sys.executable)
+    '%{executor} --execdir %T --env DYLD_LIBRARY_PATH=%{lib} -- '
 ))
 
 import os, site

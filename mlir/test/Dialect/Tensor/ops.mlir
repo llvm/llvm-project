@@ -38,21 +38,26 @@ func @insert(%arg0: f32, %arg1: index, %arg2: tensor<?x?x?xf32>, %arg3: tensor<*
 // CHECK-LABEL: func @tensor.from_elements() {
 func @tensor.from_elements() {
   %c0 = "arith.constant"() {value = 0: index} : () -> index
-  // CHECK: %0 = tensor.from_elements %c0 : tensor<1xindex>
+  // CHECK: tensor.from_elements %c0 : tensor<1xindex>
   %0 = tensor.from_elements %c0 : tensor<1xindex>
 
   %c1 = "arith.constant"() {value = 1: index} : () -> index
-  // CHECK: %1 = tensor.from_elements %c0, %c1 : tensor<2xindex>
+  // CHECK: tensor.from_elements %c0, %c1 : tensor<2xindex>
   %1 = tensor.from_elements %c0, %c1 : tensor<2xindex>
 
   %c0_f32 = "arith.constant"() {value = 0.0: f32} : () -> f32
   // CHECK: [[C0_F32:%.*]] = arith.constant
-  // CHECK: %2 = tensor.from_elements [[C0_F32]] : tensor<1xf32>
+  // CHECK: tensor.from_elements [[C0_F32]] : tensor<1xf32>
   %2 = tensor.from_elements %c0_f32 : tensor<1xf32>
 
   // CHECK: tensor.from_elements : tensor<0xindex>
   %3 = tensor.from_elements : tensor<0xindex>
 
+  // CHECK: tensor.from_elements %c0, %c1, %c0, %c1, %c0, %c1 : tensor<2x3xindex>
+  %4 = tensor.from_elements %c0, %c1, %c0, %c1, %c0, %c1 : tensor<2x3xindex>
+
+  // CHECK: tensor.from_elements %c0 : tensor<index>
+  %5 = tensor.from_elements %c0 : tensor<index>
   return
 }
 
@@ -102,6 +107,8 @@ func @slice(%t: tensor<8x16x4xf32>, %idx : index) {
   return
 }
 
+// -----
+
 // CHECK-LABEL: func @insert_slice({{.*}}) {
 func @insert_slice(
     %t: tensor<8x16x4xf32>,
@@ -133,5 +140,123 @@ func @insert_slice(
   %4 = tensor.insert_slice %td into %t[0, %idx, 0][8, %sz, 4][1, 1, 1]
     : tensor<8x?x4xf32> into tensor<8x16x4xf32>
 
+  return
+}
+
+// -----
+
+func @tensor_reshape_zero_dim(%arg0 : tensor<1x1xf32>, %arg1 : tensor<f32>)
+    -> (tensor<f32>, tensor<1x1xf32>) {
+  %0 = tensor.collapse_shape %arg0 [] : tensor<1x1xf32> into tensor<f32>
+  %1 = tensor.expand_shape %0 [] : tensor<f32> into tensor<1x1xf32>
+  return %0, %1 : tensor<f32>, tensor<1x1xf32>
+}
+// CHECK-LABEL: func @tensor_reshape_zero_dim
+//       CHECK:   tensor.collapse_shape %{{.*}} [] : tensor<1x1xf32> into tensor<f32>
+//       CHECK:   tensor.expand_shape %{{.*}} [] : tensor<f32> into tensor<1x1xf32>
+
+func @legal_collapsing_reshape_dynamic_tensor
+  (%arg0: tensor<?x?x?x4x?xf32>) -> tensor<?x?x?xf32>
+{
+  %0 = tensor.collapse_shape %arg0 [[0], [1], [2, 3, 4]] :
+    tensor<?x?x?x4x?xf32> into tensor<?x?x?xf32>
+  return %0 : tensor<?x?x?xf32>
+}
+//      CHECK: func @legal_collapsing_reshape_dynamic_tensor
+//      CHECK:   tensor.collapse_shape
+// CHECK-SAME:    [0], [1], [2, 3, 4]
+
+// -----
+
+func @rank(%t : tensor<4x4x?xf32>) {
+  // CHECK: %{{.*}} = tensor.rank %{{.*}} : tensor<4x4x?xf32>
+  %0 = "tensor.rank"(%t) : (tensor<4x4x?xf32>) -> index
+
+  // CHECK: %{{.*}} = tensor.rank %{{.*}} : tensor<4x4x?xf32>
+  %1 = tensor.rank %t : tensor<4x4x?xf32>
+  return
+}
+
+// -----
+
+func @pad_dynamic(%arg0: tensor<1x2x2x?xf32>, %low: index, %high: index,
+                  %pad_value: f32) -> tensor<6x?x?x?xf32> {
+  %0 = tensor.pad %arg0 low[2, %low, 3, 3] high[3, 3, %high, 2] {
+    ^bb0(%arg1: index, %arg2: index, %arg3: index, %arg4: index):
+      tensor.yield %pad_value : f32
+    } : tensor<1x2x2x?xf32> to tensor<6x?x?x?xf32>
+  return %0 : tensor<6x?x?x?xf32>
+}
+// CHECK-LABEL: func @pad_dynamic
+//  CHECK-SAME: %[[ARG0:[a-zA-Z0-9_]*]]
+//  CHECK-SAME: %[[LOW:[a-zA-Z0-9_]*]]
+//  CHECK-SAME: %[[HIGH:[a-zA-Z0-9_]*]]
+//       CHECK:   tensor.pad %[[ARG0]]
+//  CHECK-SAME:     low[2, %[[LOW]], 3, 3]
+//  CHECK-SAME:     high[3, 3, %[[HIGH]], 2]
+//       CHECK:    : tensor<1x2x2x?xf32> to tensor<6x?x?x?xf32>
+
+// -----
+
+func @pad_static(%arg0: tensor<3x4xf32>, %pad_value: f32) -> tensor<6x9xf32> {
+  %0 = tensor.pad %arg0 low[1, 2] high[2, 3] {
+    ^bb0(%arg1 : index, %arg2 : index):
+      tensor.yield %pad_value : f32
+    } : tensor<3x4xf32> to tensor<6x9xf32>
+  return %0 : tensor<6x9xf32>
+}
+// CHECK-LABEL: func @pad_static
+//  CHECK-SAME: %[[ARG0:[a-zA-Z0-9_]*]]
+//       CHECK:   tensor.pad %[[ARG0]] low[1, 2] high[2, 3]
+//       CHECK:    : tensor<3x4xf32> to tensor<6x9xf32>
+
+// -----
+
+func @pad_asymmetrical(%arg0: tensor<2x3xf32>, %ub0: index, %ub1: index,
+                       %pad_value: f32) -> tensor<?x?xf32> {
+  %0 = tensor.pad %arg0 low[0, 0] high[%ub0, %ub1] {
+    ^bb0(%arg1: index, %arg2: index):
+      tensor.yield %pad_value : f32
+    } : tensor<2x3xf32> to tensor<?x?xf32>
+  return %0 : tensor<?x?xf32>
+}
+// CHECK-LABEL: func @pad_asymmetrical
+//  CHECK-SAME: %[[ARG0:[a-zA-Z0-9_]*]]
+//  CHECK-SAME: %[[UB0:[a-zA-Z0-9_]*]]
+//  CHECK-SAME: %[[UB1:[a-zA-Z0-9_]*]]
+//       CHECK:   tensor.pad %[[ARG0]]
+//  CHECK-SAME:     low[0, 0]
+//  CHECK-SAME:     high[%[[UB0]], %[[UB1]]]
+//       CHECK:    : tensor<2x3xf32> to tensor<?x?xf32>
+
+// -----
+
+func @pad_to_static_size(%arg0: tensor<?x?xf32>, %ub0: index, %ub1: index,
+                         %pad_value: f32) -> tensor<2x3xf32> {
+  %0 = tensor.pad %arg0 low[0, 0] high[%ub0, %ub1] {
+    ^bb0(%arg1: index, %arg2: index):
+      tensor.yield %pad_value : f32
+    } : tensor<?x?xf32> to tensor<2x3xf32>
+  return %0 : tensor<2x3xf32>
+}
+// CHECK-LABEL: func @pad_to_static_size
+//  CHECK-SAME: %[[ARG0:[a-zA-Z0-9_]*]]
+//  CHECK-SAME: %[[UB0:[a-zA-Z0-9_]*]]
+//  CHECK-SAME: %[[UB1:[a-zA-Z0-9_]*]]
+//       CHECK:   tensor.pad %[[ARG0]]
+//  CHECK-SAME:     low[0, 0]
+//  CHECK-SAME:     high[%[[UB0]], %[[UB1]]]
+//       CHECK:    : tensor<?x?xf32> to tensor<2x3xf32>
+
+// -----
+
+// CHECK-LABEL: func @test_splat_op
+// CHECK-SAME: [[S:%arg[0-9]+]]: f32
+func @test_splat_op(%s : f32) {
+  // CHECK: tensor.splat [[S]] : tensor<8xf32>
+  %v = tensor.splat %s : tensor<8xf32>
+  
+  // CHECK: tensor.splat [[S]] : tensor<4xf32>
+  %u = "tensor.splat"(%s) : (f32) -> tensor<4xf32>
   return
 }

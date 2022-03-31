@@ -21,6 +21,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Expression/IRExecutionUnit.h"
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/SymbolFile.h"
@@ -32,6 +33,7 @@
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 
 #include "lldb/../../source/Plugins/ObjectFile/JIT/ObjectFileJIT.h"
@@ -70,8 +72,7 @@ lldb::addr_t IRExecutionUnit::WriteNow(const uint8_t *bytes, size_t size,
     return LLDB_INVALID_ADDRESS;
   }
 
-  if (Log *log =
-          lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS)) {
+  if (Log *log = GetLog(LLDBLog::Expressions)) {
     DataBufferHeap my_buffer(size, 0);
     Status err;
     ReadMemory(my_buffer.GetBytes(), allocation_process_addr, size, err);
@@ -99,7 +100,7 @@ void IRExecutionUnit::FreeNow(lldb::addr_t allocation) {
 
 Status IRExecutionUnit::DisassembleFunction(Stream &stream,
                                             lldb::ProcessSP &process_wp) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   ExecutionContext exe_ctx(process_wp);
 
@@ -254,7 +255,7 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
 
   m_did_jit = true;
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   std::string error_string;
 
@@ -306,27 +307,37 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
 
   class ObjectDumper : public llvm::ObjectCache {
   public:
+    ObjectDumper(FileSpec output_dir)  : m_out_dir(output_dir) {}
     void notifyObjectCompiled(const llvm::Module *module,
                               llvm::MemoryBufferRef object) override {
       int fd = 0;
       llvm::SmallVector<char, 256> result_path;
       std::string object_name_model =
           "jit-object-" + module->getModuleIdentifier() + "-%%%.o";
-      (void)llvm::sys::fs::createUniqueFile(object_name_model, fd, result_path);
-      llvm::raw_fd_ostream fds(fd, true);
-      fds.write(object.getBufferStart(), object.getBufferSize());
-    }
+      FileSpec model_spec 
+          = m_out_dir.CopyByAppendingPathComponent(object_name_model);
+      std::string model_path = model_spec.GetPath();
 
+      std::error_code result 
+        = llvm::sys::fs::createUniqueFile(model_path, fd, result_path);
+      if (!result) {
+          llvm::raw_fd_ostream fds(fd, true);
+          fds.write(object.getBufferStart(), object.getBufferSize());
+      }
+    }
     std::unique_ptr<llvm::MemoryBuffer>
-    getObject(const llvm::Module *module) override {
+    getObject(const llvm::Module *module) override  {
       // Return nothing - we're just abusing the object-cache mechanism to dump
       // objects.
       return nullptr;
-    }
+  }
+  private:
+    FileSpec m_out_dir;
   };
 
-  if (process_sp->GetTarget().GetEnableSaveObjects()) {
-    m_object_cache_up = std::make_unique<ObjectDumper>();
+  FileSpec save_objects_dir = process_sp->GetTarget().GetSaveJITObjectsDir();
+  if (save_objects_dir) {
+    m_object_cache_up = std::make_unique<ObjectDumper>(save_objects_dir);
     m_execution_engine_up->setObjectCache(m_object_cache_up.get());
   }
 
@@ -483,8 +494,6 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
 
   func_addr = m_function_load_addr;
   func_end = m_function_end_load_addr;
-
-  return;
 }
 
 IRExecutionUnit::~IRExecutionUnit() {
@@ -594,7 +603,7 @@ lldb::SectionType IRExecutionUnit::GetSectionTypeFromSectionName(
 uint8_t *IRExecutionUnit::MemoryManager::allocateCodeSection(
     uintptr_t Size, unsigned Alignment, unsigned SectionID,
     llvm::StringRef SectionName) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   uint8_t *return_value = m_default_mm_up->allocateCodeSection(
       Size, Alignment, SectionID, SectionName);
@@ -624,7 +633,7 @@ uint8_t *IRExecutionUnit::MemoryManager::allocateCodeSection(
 uint8_t *IRExecutionUnit::MemoryManager::allocateDataSection(
     uintptr_t Size, unsigned Alignment, unsigned SectionID,
     llvm::StringRef SectionName, bool IsReadOnly) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   uint8_t *return_value = m_default_mm_up->allocateDataSection(
       Size, Alignment, SectionID, SectionName, IsReadOnly);
@@ -884,7 +893,7 @@ lldb::addr_t IRExecutionUnit::FindSymbol(lldb_private::ConstString name,
 
 void IRExecutionUnit::GetStaticInitializers(
     std::vector<lldb::addr_t> &static_initializers) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   llvm::GlobalVariable *global_ctors =
       m_module->getNamedGlobal("llvm.global_ctors");
@@ -952,7 +961,7 @@ IRExecutionUnit::MemoryManager::getSymbolAddress(const std::string &Name) {
 uint64_t 
 IRExecutionUnit::MemoryManager::GetSymbolAddressAndPresence(
     const std::string &Name, bool &missing_weak) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   ConstString name_cs(Name.c_str());
 
@@ -979,7 +988,7 @@ void *IRExecutionUnit::MemoryManager::getPointerToNamedFunction(
 
 lldb::addr_t
 IRExecutionUnit::GetRemoteAddressForLocal(lldb::addr_t local_address) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   for (AllocationRecord &record : m_records) {
     if (local_address >= record.m_host_address &&

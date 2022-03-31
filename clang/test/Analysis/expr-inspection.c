@@ -6,8 +6,8 @@
 
 void clang_analyzer_dump(int x);
 void clang_analyzer_dump_pointer(int *p);
-void clang_analyzer_printState();
-void clang_analyzer_numTimesReached();
+void clang_analyzer_printState(void);
+void clang_analyzer_numTimesReached(void);
 
 void foo(int x) {
   clang_analyzer_dump(x); // expected-warning{{reg_$0<int x>}}
@@ -27,7 +27,7 @@ void foo(int x) {
 // CHECK:      "program_state": {
 // CHECK-NEXT:   "store": { "pointer": "{{0x[0-9a-f]+}}", "items": [
 // CHECK-NEXT:     { "cluster": "y", "pointer": "{{0x[0-9a-f]+}}", "items": [
-// CHECK-NEXT:       { "kind": "Direct", "offset": 0, "value": "2 S32b" }
+// CHECK-NEXT:       { "kind": "Direct", "offset": {{[0-9]+}}, "value": "2 S32b" }
 // CHECK-NEXT:     ]}
 // CHECK-NEXT:   ]},
 // CHECK-NEXT:   "environment": { "pointer": "{{0x[0-9a-f]+}}", "items": [

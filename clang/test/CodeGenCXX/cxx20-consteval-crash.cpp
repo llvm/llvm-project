@@ -24,3 +24,35 @@ void f() { g(); }
 // CHECK:  ret void
 // CHECK: }
 }
+
+namespace Issue54578 {
+inline consteval unsigned char operator""_UC(const unsigned long long n) {
+  return static_cast<unsigned char>(n);
+}
+
+inline constexpr char f1(const auto octet) {
+  return 4_UC;
+}
+
+template <typename Ty>
+inline constexpr char f2(const Ty octet) {
+  return 4_UC;
+}
+
+int foo() {
+  return f1('a') + f2('a');
+}
+
+// Because the consteval functions are inline (implicitly as well as
+// explicitly), we need to defer the CHECK lines until this point to get the
+// order correct. We want to ensure there is no definition of the consteval
+// UDL function, and that the constexpr f1 and f2 functions both return a
+// constant value.
+
+// CHECK-NOT: define{{.*}} zeroext i8 @_ZN10Issue54578li3_UCEy
+// CHECK: define{{.*}} i32 @_ZN10Issue545783fooEv(
+// CHECK: define{{.*}} signext i8 @_ZN10Issue545782f1IcEEcT_(
+// CHECK: ret i8 4
+// CHECK: define{{.*}} signext i8 @_ZN10Issue545782f2IcEEcT_(
+// CHECK: ret i8 4
+}

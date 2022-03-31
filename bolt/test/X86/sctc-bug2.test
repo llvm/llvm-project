@@ -1,0 +1,8 @@
+# Check that conditional tail call is not treated as a regular tail call by SCTC.
+
+RUN: %clang %cflags %S/Inputs/sctc_bug2.s -o %t
+RUN: llvm-bolt %t -o /dev/null -funcs=main -print-after-lowering \
+RUN:   -sequential-disassembly 2>&1 | FileCheck %s
+
+CHECK: .LFT1
+CHECK:   ja      .Ltmp0

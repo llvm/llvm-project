@@ -20,7 +20,7 @@
 #include <x86intrin.h>
 #endif
 
-void f() {
+void f(void) {
   // Intrinsic headers contain macros and inline functions.
   // Inline assembly in both are checked only when they are
   // referenced, so reference a few intrinsics here.

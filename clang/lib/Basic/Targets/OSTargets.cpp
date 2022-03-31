@@ -48,12 +48,12 @@ void getDarwinDefines(MacroBuilder &Builder, const LangOptions &Opts,
     Builder.defineMacro("_REENTRANT");
 
   // Get the platform type and version number from the triple.
-  unsigned Maj, Min, Rev;
+  VersionTuple OsVersion;
   if (Triple.isMacOSX()) {
-    Triple.getMacOSXVersion(Maj, Min, Rev);
+    Triple.getMacOSXVersion(OsVersion);
     PlatformName = "macos";
   } else {
-    Triple.getOSVersion(Maj, Min, Rev);
+    OsVersion = Triple.getOSVersion();
     PlatformName = llvm::Triple::getOSTypeName(Triple.getOS());
     if (PlatformName == "ios" && Triple.isMacCatalystEnvironment())
       PlatformName = "maccatalyst";
@@ -63,29 +63,29 @@ void getDarwinDefines(MacroBuilder &Builder, const LangOptions &Opts,
   // generating code for Win32 ABI. No need to emit
   // __ENVIRONMENT_XX_OS_VERSION_MIN_REQUIRED__.
   if (PlatformName == "win32") {
-    PlatformMinVersion = VersionTuple(Maj, Min, Rev);
+    PlatformMinVersion = OsVersion;
     return;
   }
 
   // Set the appropriate OS version define.
   if (Triple.isiOS()) {
-    assert(Maj < 100 && Min < 100 && Rev < 100 && "Invalid version!");
+    assert(OsVersion < VersionTuple(100) && "Invalid version!");
     char Str[7];
-    if (Maj < 10) {
-      Str[0] = '0' + Maj;
-      Str[1] = '0' + (Min / 10);
-      Str[2] = '0' + (Min % 10);
-      Str[3] = '0' + (Rev / 10);
-      Str[4] = '0' + (Rev % 10);
+    if (OsVersion.getMajor() < 10) {
+      Str[0] = '0' + OsVersion.getMajor();
+      Str[1] = '0' + (OsVersion.getMinor().getValueOr(0) / 10);
+      Str[2] = '0' + (OsVersion.getMinor().getValueOr(0) % 10);
+      Str[3] = '0' + (OsVersion.getSubminor().getValueOr(0) / 10);
+      Str[4] = '0' + (OsVersion.getSubminor().getValueOr(0) % 10);
       Str[5] = '\0';
     } else {
       // Handle versions >= 10.
-      Str[0] = '0' + (Maj / 10);
-      Str[1] = '0' + (Maj % 10);
-      Str[2] = '0' + (Min / 10);
-      Str[3] = '0' + (Min % 10);
-      Str[4] = '0' + (Rev / 10);
-      Str[5] = '0' + (Rev % 10);
+      Str[0] = '0' + (OsVersion.getMajor() / 10);
+      Str[1] = '0' + (OsVersion.getMajor() % 10);
+      Str[2] = '0' + (OsVersion.getMinor().getValueOr(0) / 10);
+      Str[3] = '0' + (OsVersion.getMinor().getValueOr(0) % 10);
+      Str[4] = '0' + (OsVersion.getSubminor().getValueOr(0) / 10);
+      Str[5] = '0' + (OsVersion.getSubminor().getValueOr(0) % 10);
       Str[6] = '\0';
     }
     if (Triple.isTvOS())
@@ -95,13 +95,13 @@ void getDarwinDefines(MacroBuilder &Builder, const LangOptions &Opts,
                           Str);
 
   } else if (Triple.isWatchOS()) {
-    assert(Maj < 10 && Min < 100 && Rev < 100 && "Invalid version!");
+    assert(OsVersion < VersionTuple(10) && "Invalid version!");
     char Str[6];
-    Str[0] = '0' + Maj;
-    Str[1] = '0' + (Min / 10);
-    Str[2] = '0' + (Min % 10);
-    Str[3] = '0' + (Rev / 10);
-    Str[4] = '0' + (Rev % 10);
+    Str[0] = '0' + OsVersion.getMajor();
+    Str[1] = '0' + (OsVersion.getMinor().getValueOr(0) / 10);
+    Str[2] = '0' + (OsVersion.getMinor().getValueOr(0) % 10);
+    Str[3] = '0' + (OsVersion.getSubminor().getValueOr(0) / 10);
+    Str[4] = '0' + (OsVersion.getSubminor().getValueOr(0) % 10);
     Str[5] = '\0';
     Builder.defineMacro("__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__", Str);
   } else if (Triple.isMacOSX()) {
@@ -109,22 +109,22 @@ void getDarwinDefines(MacroBuilder &Builder, const LangOptions &Opts,
     // define (because we only get a single digit for the minor and micro
     // revision numbers). So, we limit them to the maximum representable
     // version.
-    assert(Maj < 100 && Min < 100 && Rev < 100 && "Invalid version!");
+    assert(OsVersion < VersionTuple(100) && "Invalid version!");
     char Str[7];
-    if (Maj < 10 || (Maj == 10 && Min < 10)) {
-      Str[0] = '0' + (Maj / 10);
-      Str[1] = '0' + (Maj % 10);
-      Str[2] = '0' + std::min(Min, 9U);
-      Str[3] = '0' + std::min(Rev, 9U);
+    if (OsVersion < VersionTuple(10, 10)) {
+      Str[0] = '0' + (OsVersion.getMajor() / 10);
+      Str[1] = '0' + (OsVersion.getMajor() % 10);
+      Str[2] = '0' + std::min(OsVersion.getMinor().getValueOr(0), 9U);
+      Str[3] = '0' + std::min(OsVersion.getSubminor().getValueOr(0), 9U);
       Str[4] = '\0';
     } else {
       // Handle versions > 10.9.
-      Str[0] = '0' + (Maj / 10);
-      Str[1] = '0' + (Maj % 10);
-      Str[2] = '0' + (Min / 10);
-      Str[3] = '0' + (Min % 10);
-      Str[4] = '0' + (Rev / 10);
-      Str[5] = '0' + (Rev % 10);
+      Str[0] = '0' + (OsVersion.getMajor() / 10);
+      Str[1] = '0' + (OsVersion.getMajor() % 10);
+      Str[2] = '0' + (OsVersion.getMinor().getValueOr(0) / 10);
+      Str[3] = '0' + (OsVersion.getMinor().getValueOr(0) % 10);
+      Str[4] = '0' + (OsVersion.getSubminor().getValueOr(0) / 10);
+      Str[5] = '0' + (OsVersion.getSubminor().getValueOr(0) % 10);
       Str[6] = '\0';
     }
     Builder.defineMacro("__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__", Str);
@@ -134,7 +134,7 @@ void getDarwinDefines(MacroBuilder &Builder, const LangOptions &Opts,
   if (Triple.isOSDarwin())
     Builder.defineMacro("__MACH__");
 
-  PlatformMinVersion = VersionTuple(Maj, Min, Rev);
+  PlatformMinVersion = OsVersion;
 }
 
 static void addMinGWDefines(const llvm::Triple &Triple, const LangOptions &Opts,
@@ -203,6 +203,7 @@ static void addVisualCDefines(const LangOptions &Opts, MacroBuilder &Builder) {
   }
 
   Builder.defineMacro("_INTEGRAL_MAX_BITS", "64");
+  Builder.defineMacro("__STDC_NO_THREADS__");
 
   // Starting with VS 2022 17.1, MSVC predefines the below macro to inform
   // users of the execution character set defined at compile time.

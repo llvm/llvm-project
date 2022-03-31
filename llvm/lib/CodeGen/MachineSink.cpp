@@ -16,14 +16,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/CFG.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
@@ -429,6 +431,16 @@ bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   RegClassInfo.runOnMachineFunction(MF);
 
+  // MachineSink currently uses MachineLoopInfo, which only recognizes natural
+  // loops. As such, we could sink instructions into irreducible cycles, which
+  // would be non-profitable.
+  // WARNING: The current implementation of hasStoreBetween() is incorrect for
+  // sinking into irreducible cycles (PR53990), this bailout is currently
+  // necessary for correctness, not just profitability.
+  ReversePostOrderTraversal<MachineBasicBlock *> RPOT(&*MF.begin());
+  if (containsIrreducibleCFG<MachineBasicBlock *>(RPOT, *LI))
+    return false;
+
   bool EverMadeChange = false;
 
   while (true) {
@@ -796,9 +808,14 @@ bool MachineSinking::isProfitableToSinkTo(Register Reg, MachineInstr &MI,
     if (Reg == 0)
       continue;
 
-    // Don't handle physical register.
-    if (Register::isPhysicalRegister(Reg))
+    if (Register::isPhysicalRegister(Reg)) {
+      if (MO.isUse() &&
+          (MRI->isConstantPhysReg(Reg) || TII->isIgnorableUse(MO)))
+        continue;
+
+      // Don't handle non-constant and non-ignorable physical register.
       return false;
+    }
 
     // Users for the defs are all dominated by SuccToSinkTo.
     if (MO.isDef()) {
@@ -898,7 +915,7 @@ MachineSinking::FindSuccToSinkTo(MachineInstr &MI, MachineBasicBlock *MBB,
         // If the physreg has no defs anywhere, it's just an ambient register
         // and we can freely move its uses. Alternatively, if it's allocatable,
         // it could get allocated to something with a def during allocation.
-        if (!MRI->isConstantPhysReg(Reg))
+        if (!MRI->isConstantPhysReg(Reg) && !TII->isIgnorableUse(MO))
           return nullptr;
       } else if (!MO.isDead()) {
         // A def that isn't dead. We can't move it.
@@ -1076,8 +1093,7 @@ using MIRegs = std::pair<MachineInstr *, SmallVector<unsigned, 2>>;
 /// Sink an instruction and its associated debug instructions.
 static void performSink(MachineInstr &MI, MachineBasicBlock &SuccToSinkTo,
                         MachineBasicBlock::iterator InsertPos,
-                        SmallVectorImpl<MIRegs> &DbgValuesToSink) {
-
+                        ArrayRef<MIRegs> DbgValuesToSink) {
   // If we cannot find a location to use (merge with), then we erase the debug
   // location to prevent debug-info driven tools from potentially reporting
   // wrong location information.
@@ -1096,7 +1112,7 @@ static void performSink(MachineInstr &MI, MachineBasicBlock &SuccToSinkTo,
   // DBG_VALUE location as 'undef', indicating that any earlier variable
   // location should be terminated as we've optimised away the value at this
   // point.
-  for (auto DbgValueToSink : DbgValuesToSink) {
+  for (const auto &DbgValueToSink : DbgValuesToSink) {
     MachineInstr *DbgMI = DbgValueToSink.first;
     MachineInstr *NewDbgMI = DbgMI->getMF()->CloneMachineInstr(DbgMI);
     SuccToSinkTo.insert(InsertPos, NewDbgMI);
@@ -1268,13 +1284,53 @@ bool MachineSinking::SinkIntoLoop(MachineLoop *L, MachineInstr &I) {
   }
 
   LLVM_DEBUG(dbgs() << "LoopSink: Sinking instruction!\n");
-  SinkBlock->splice(SinkBlock->getFirstNonPHI(), Preheader, I);
+  SinkBlock->splice(SinkBlock->SkipPHIsAndLabels(SinkBlock->begin()), Preheader,
+                    I);
 
   // The instruction is moved from its basic block, so do not retain the
   // debug information.
   assert(!I.isDebugInstr() && "Should not sink debug inst");
   I.setDebugLoc(DebugLoc());
   return true;
+}
+
+/// Return true if a target defined block prologue instruction interferes
+/// with a sink candidate.
+static bool blockPrologueInterferes(MachineBasicBlock *BB,
+                                    MachineBasicBlock::iterator End,
+                                    MachineInstr &MI,
+                                    const TargetRegisterInfo *TRI,
+                                    const TargetInstrInfo *TII,
+                                    const MachineRegisterInfo *MRI) {
+  if (BB->begin() == End)
+    return false; // no prologue
+  for (MachineBasicBlock::iterator PI = BB->getFirstNonPHI(); PI != End; ++PI) {
+    // Only check target defined prologue instructions
+    if (!TII->isBasicBlockPrologue(*PI))
+      continue;
+    for (auto &MO : MI.operands()) {
+      if (!MO.isReg())
+        continue;
+      Register Reg = MO.getReg();
+      if (!Reg)
+        continue;
+      if (MO.isUse()) {
+        if (Register::isPhysicalRegister(Reg) &&
+            (TII->isIgnorableUse(MO) || (MRI && MRI->isConstantPhysReg(Reg))))
+          continue;
+        if (PI->modifiesRegister(Reg, TRI))
+          return true;
+      } else {
+        if (PI->readsRegister(Reg, TRI))
+          return true;
+        // Check for interference with non-dead defs
+        auto *DefOp = PI->findRegisterDefOperand(Reg, false, true, TRI);
+        if (DefOp && !DefOp->isDead())
+          return true;
+      }
+    }
+  }
+  return false;
 }
 
 /// SinkInstruction - Determine whether it is safe to sink the specified machine
@@ -1388,9 +1444,12 @@ bool MachineSinking::SinkInstruction(MachineInstr &MI, bool &SawStore,
   }
 
   // Determine where to insert into. Skip phi nodes.
-  MachineBasicBlock::iterator InsertPos = SuccToSinkTo->begin();
-  while (InsertPos != SuccToSinkTo->end() && InsertPos->isPHI())
-    ++InsertPos;
+  MachineBasicBlock::iterator InsertPos =
+      SuccToSinkTo->SkipPHIsAndLabels(SuccToSinkTo->begin());
+  if (blockPrologueInterferes(SuccToSinkTo, InsertPos, MI, TRI, TII, MRI)) {
+    LLVM_DEBUG(dbgs() << " *** Not sinking: prologue interference\n");
+    return false;
+  }
 
   // Collect debug users of any vreg that this inst defines.
   SmallVector<MIRegs, 4> DbgUsersToSink;
@@ -1679,14 +1738,6 @@ static bool hasRegisterDependency(MachineInstr *MI,
   return HasRegDependency;
 }
 
-static SmallSet<MCRegister, 4> getRegUnits(MCRegister Reg,
-                                           const TargetRegisterInfo *TRI) {
-  SmallSet<MCRegister, 4> RegUnits;
-  for (auto RI = MCRegUnitIterator(Reg, TRI); RI.isValid(); ++RI)
-    RegUnits.insert(*RI);
-  return RegUnits;
-}
-
 bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
                                          MachineFunction &MF,
                                          const TargetRegisterInfo *TRI,
@@ -1732,14 +1783,15 @@ bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
           }
 
           // Record debug use of each reg unit.
-          SmallSet<MCRegister, 4> RegUnits = getRegUnits(MO.getReg(), TRI);
-          for (MCRegister Reg : RegUnits)
-            MIUnits[Reg].push_back(MO.getReg());
+          for (auto RI = MCRegUnitIterator(MO.getReg(), TRI); RI.isValid();
+               ++RI)
+            MIUnits[*RI].push_back(MO.getReg());
         }
       }
       if (IsValid) {
-        for (auto RegOps : MIUnits)
-          SeenDbgInstrs[RegOps.first].push_back({&MI, RegOps.second});
+        for (auto &RegOps : MIUnits)
+          SeenDbgInstrs[RegOps.first].emplace_back(&MI,
+                                                   std::move(RegOps.second));
       }
       continue;
     }
@@ -1786,22 +1838,29 @@ bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
       if (!MO.isReg() || !MO.isDef())
         continue;
 
-      SmallSet<MCRegister, 4> Units = getRegUnits(MO.getReg(), TRI);
-      for (MCRegister Reg : Units) {
-        for (auto MIRegs : SeenDbgInstrs.lookup(Reg)) {
+      for (auto RI = MCRegUnitIterator(MO.getReg(), TRI); RI.isValid(); ++RI) {
+        for (const auto &MIRegs : SeenDbgInstrs.lookup(*RI)) {
           auto &Regs = DbgValsToSinkMap[MIRegs.first];
           for (unsigned Reg : MIRegs.second)
             Regs.push_back(Reg);
         }
       }
     }
-    SmallVector<MIRegs, 4> DbgValsToSink(DbgValsToSinkMap.begin(),
-                                         DbgValsToSinkMap.end());
+    auto DbgValsToSink = DbgValsToSinkMap.takeVector();
+
+    LLVM_DEBUG(dbgs() << "Sink instr " << MI << "\tinto block " << *SuccBB);
+
+    MachineBasicBlock::iterator InsertPos =
+        SuccBB->SkipPHIsAndLabels(SuccBB->begin());
+    if (blockPrologueInterferes(SuccBB, InsertPos, MI, TRI, TII, nullptr)) {
+      LLVM_DEBUG(
+          dbgs() << " *** Not sinking: prologue interference\n");
+      continue;
+    }
 
     // Clear the kill flag if SrcReg is killed between MI and the end of the
     // block.
     clearKillFlags(&MI, CurBB, UsedOpsInCopy, UsedRegUnits, TRI);
-    MachineBasicBlock::iterator InsertPos = SuccBB->getFirstNonPHI();
     performSink(MI, *SuccBB, InsertPos, DbgValsToSink);
     updateLiveIn(&MI, SuccBB, UsedOpsInCopy, DefedRegsInCopy);
 

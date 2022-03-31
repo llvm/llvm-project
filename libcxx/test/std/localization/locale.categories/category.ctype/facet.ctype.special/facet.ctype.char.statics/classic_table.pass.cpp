@@ -12,8 +12,6 @@
 
 // static const mask* classic_table() throw();
 
-// XFAIL: LIBCXX-WINDOWS-FIXME
-
 #include <locale>
 #include <cassert>
 
@@ -27,36 +25,48 @@ int main(int, char**)
 
     typedef F::mask mask;
     const mask *p = F::classic_table();
-    const mask defined = F::space | F::print | F::cntrl | F::upper | F::lower
-                    | F::alpha | F::digit | F::punct | F::xdigit | F::blank;
 
     for ( size_t i = 0; i < 128; ++i ) // values above 128 are not consistent
     {
-        mask set = 0;
 
-        if ( i  < 32  || i  > 126 ) set |= F::cntrl;
-        if ( i >= 32  && i <= 126 ) set |= F::print;
+        bool expect_cntrl = (i < 32 || 126 < i);
+        bool expect_print = (32 <= i && i <= 126);
 
-        if (( i >= 9 && i <= 13) || i == 32 ) set |= F::space;
-        if ( i == 9 || i == 32 ) set |= F::blank;
+        bool expect_space = (9 <= i && i <= 13) || (i == ' ');
+#if defined(_MSVC_STL_VERSION)
+        // MS STL includes the _SPACE bit in F::blank
+        bool expect_blank = (9 <= i && i <= 13) || (i == ' ');
+#elif defined(_WIN32)
+        // The _BLANK bit isn't set for '\t' on Windows
+        bool expect_blank = (i == ' ');
+#else
+        bool expect_blank = (i == '\t' || i == ' ');
+#endif
 
-        if ( i >= 'A' && i <= 'Z' ) set |= F::alpha;
-        if ( i >= 'a' && i <= 'z' ) set |= F::alpha;
-        if ( i >= 'A' && i <= 'Z' ) set |= F::upper;
-        if ( i >= 'a' && i <= 'z' ) set |= F::lower;
+        bool expect_upper = ('A' <= i && i <= 'Z');
+        bool expect_lower = ('a' <= i && i <= 'z');
+        bool expect_alpha = expect_upper || expect_lower;
 
-        if ( i >= '0' && i <= '9' ) set |= F::digit;
-        if ( i >= '0' && i <= '9' ) set |= F::xdigit;
-        if ( i >= 'A' && i <= 'F' ) set |= F::xdigit;
-        if ( i >= 'a' && i <= 'f' ) set |= F::xdigit;
+        bool expect_digit = ('0' <= i && i <= '9');
+        bool expect_xdigit = ('A' <= i && i <= 'F')
+                          || ('a' <= i && i <= 'f')
+                          || expect_digit;
 
-        if ( i >=  33 && i <=  47 ) set |= F::punct;    // ' ' .. '/'
-        if ( i >=  58 && i <=  64 ) set |= F::punct;    // ':' .. '@'
-        if ( i >=  91 && i <=  96 ) set |= F::punct;    // '[' .. '`'
-        if ( i >= 123 && i <= 126 ) set |= F::punct;    // '{' .. '~'    }
+        bool expect_punct = (33 <= i && i <= 47)     // ' ' .. '/'
+                         || (58 <= i && i <= 64)     // ':' .. '@'
+                         || (91 <= i && i <= 96)     // '[' .. '`'
+                         || (123 <= i && i <= 126);  // '{' .. '~'
 
-        assert(( p[i] &  set) == set);            // all the right bits set
-        assert(((p[i] & ~set) & defined) == 0);   // no extra ones
+        assert(bool(p[i] & F::cntrl) == expect_cntrl);
+        assert(bool(p[i] & F::print) == expect_print);
+        assert(bool(p[i] & F::space) == expect_space);
+        assert(bool(p[i] & F::blank) == expect_blank);
+        assert(bool(p[i] & F::lower) == expect_lower);
+        assert(bool(p[i] & F::upper) == expect_upper);
+        assert(bool(p[i] & F::alpha) == expect_alpha);
+        assert(bool(p[i] & F::digit) == expect_digit);
+        assert(bool(p[i] & F::xdigit) == expect_xdigit);
+        assert(bool(p[i] & F::punct) == expect_punct);
     }
 
 

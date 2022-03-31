@@ -116,13 +116,13 @@ void __llvm_profile_initialize(void) {
 
   const __llvm_profile_data *DataBegin = __llvm_profile_begin_data();
   const __llvm_profile_data *DataEnd = __llvm_profile_end_data();
-  const uint64_t *CountersBegin = __llvm_profile_begin_counters();
-  const uint64_t *CountersEnd = __llvm_profile_end_counters();
+  const char *CountersBegin = __llvm_profile_begin_counters();
+  const char *CountersEnd = __llvm_profile_end_counters();
   const uint64_t DataSize = __llvm_profile_get_data_size(DataBegin, DataEnd);
   const uint64_t CountersOffset =
-      sizeof(__llvm_profile_header) + __llvm_write_binary_ids(NULL) +
-      (DataSize * sizeof(__llvm_profile_data));
-  uint64_t CountersSize = CountersEnd - CountersBegin;
+      sizeof(__llvm_profile_header) + __llvm_write_binary_ids(NULL) + DataSize;
+  uint64_t CountersSize =
+      __llvm_profile_get_counters_size(CountersBegin, CountersEnd);
 
   /* Don't publish a VMO if there are no counters. */
   if (!CountersSize)

@@ -15,11 +15,8 @@
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
-#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/Metadata.h"
-#include "llvm/MC/MCAsmInfo.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCStreamer.h"
 
@@ -27,9 +24,9 @@
 
 using namespace llvm;
 
-WinCFGuard::WinCFGuard(AsmPrinter *A) : AsmPrinterHandler(), Asm(A) {}
+WinCFGuard::WinCFGuard(AsmPrinter *A) : Asm(A) {}
 
-WinCFGuard::~WinCFGuard() {}
+WinCFGuard::~WinCFGuard() = default;
 
 void WinCFGuard::endFunction(const MachineFunction *MF) {
 

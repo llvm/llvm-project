@@ -2600,7 +2600,23 @@ enum CXCursorKind {
    */
   CXCursor_OMPGenericLoopDirective = 295,
 
-  CXCursor_LastStmt = CXCursor_OMPGenericLoopDirective,
+  /** OpenMP teams loop directive.
+   */
+  CXCursor_OMPTeamsGenericLoopDirective = 296,
+
+  /** OpenMP target teams loop directive.
+   */
+  CXCursor_OMPTargetTeamsGenericLoopDirective = 297,
+
+  /** OpenMP parallel loop directive.
+   */
+  CXCursor_OMPParallelGenericLoopDirective = 298,
+
+  /** OpenMP target parallel loop directive.
+   */
+  CXCursor_OMPTargetParallelGenericLoopDirective = 299,
+
+  CXCursor_LastStmt = CXCursor_OMPTargetParallelGenericLoopDirective,
 
   /**
    * Cursor that represents the translation unit itself.
@@ -3401,7 +3417,8 @@ enum CXTypeKind {
   CXType_OCLIntelSubgroupAVCImeDualRefStreamin = 175,
 
   CXType_ExtVector = 176,
-  CXType_Atomic = 177
+  CXType_Atomic = 177,
+  CXType_BTFTagAttributed = 178
 };
 
 /**
@@ -3900,7 +3917,7 @@ enum CXTypeNullabilityKind {
   /**
    * Generally behaves like Nullable, except when used in a block parameter that
    * was imported into a swift async method. There, swift will assume that the
-   * parameter can get null even if no error occured. _Nullable parameters are
+   * parameter can get null even if no error occurred. _Nullable parameters are
    * assumed to only get null on error.
    */
   CXTypeNullability_NullableResult = 4

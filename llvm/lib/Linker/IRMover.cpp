@@ -9,19 +9,23 @@
 #include "llvm/Linker/IRMover.h"
 #include "LinkDiagnosticInfo.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DiagnosticPrinter.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/GVMaterializer.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PseudoProbe.h"
 #include "llvm/IR/TypeFinder.h"
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
 #include <utility>
 using namespace llvm;
 
@@ -381,7 +385,7 @@ class IRLinker {
   std::unique_ptr<Module> SrcM;
 
   /// See IRMover::move().
-  std::function<void(GlobalValue &, IRMover::ValueAdder)> AddLazyFor;
+  IRMover::LazyCallback AddLazyFor;
 
   TypeMapTy TypeMap;
   GlobalValueMaterializer GValMaterializer;
@@ -524,8 +528,7 @@ public:
   IRLinker(Module &DstM, MDMapT &SharedMDs,
            IRMover::IdentifiedStructTypeSet &Set, std::unique_ptr<Module> SrcM,
            ArrayRef<GlobalValue *> ValuesToLink,
-           std::function<void(GlobalValue &, IRMover::ValueAdder)> AddLazyFor,
-           bool IsPerformingImport)
+           IRMover::LazyCallback AddLazyFor, bool IsPerformingImport)
       : DstM(DstM), SrcM(std::move(SrcM)), AddLazyFor(std::move(AddLazyFor)),
         TypeMap(Set), GValMaterializer(*this), LValMaterializer(*this),
         SharedMDs(SharedMDs), IsPerformingImport(IsPerformingImport),
@@ -646,7 +649,7 @@ GlobalVariable *IRLinker::copyGlobalVariableProto(const GlobalVariable *SGVar) {
                          /*init*/ nullptr, SGVar->getName(),
                          /*insertbefore*/ nullptr, SGVar->getThreadLocalMode(),
                          SGVar->getAddressSpace());
-  NewDGV->setAlignment(MaybeAlign(SGVar->getAlignment()));
+  NewDGV->setAlignment(SGVar->getAlign());
   NewDGV->copyAttributesFrom(SGVar);
   return NewDGV;
 }
@@ -877,7 +880,7 @@ IRLinker::linkAppendingVarProto(GlobalVariable *DstGV,
     if (DstGV->isConstant() != SrcGV->isConstant())
       return stringErr("Appending variables linked with different const'ness!");
 
-    if (DstGV->getAlignment() != SrcGV->getAlignment())
+    if (DstGV->getAlign() != SrcGV->getAlign())
       return stringErr(
           "Appending variables with different alignment need to be linked!");
 
@@ -987,10 +990,11 @@ bool IRLinker::shouldLink(GlobalValue *DGV, GlobalValue &SGV) {
   // Callback to the client to give a chance to lazily add the Global to the
   // list of value to link.
   bool LazilyAdded = false;
-  AddLazyFor(SGV, [this, &LazilyAdded](GlobalValue &GV) {
-    maybeAdd(&GV);
-    LazilyAdded = true;
-  });
+  if (AddLazyFor)
+    AddLazyFor(SGV, [this, &LazilyAdded](GlobalValue &GV) {
+      maybeAdd(&GV);
+      LazilyAdded = true;
+    });
   return LazilyAdded;
 }
 
@@ -1229,8 +1233,15 @@ void IRLinker::linkNamedMDNodes() {
       continue;
     // Don't import pseudo probe descriptors here for thinLTO. They will be
     // emitted by the originating module.
-    if (IsPerformingImport && NMD.getName() == PseudoProbeDescMetadataName)
+    if (IsPerformingImport && NMD.getName() == PseudoProbeDescMetadataName) {
+      if (!DstM.getNamedMetadata(NMD.getName()))
+        emitWarning("Pseudo-probe ignored: source module '" +
+                    SrcM->getModuleIdentifier() +
+                    "' is compiled with -fpseudo-probe-for-profiling while "
+                    "destination module '" +
+                    DstM.getModuleIdentifier() + "' is not\n");
       continue;
+    }
     NamedMDNode *DestNMD = DstM.getOrInsertNamedMetadata(NMD.getName());
     // Add Src elements into Dest node.
     for (const MDNode *Op : NMD.operands())
@@ -1673,10 +1684,9 @@ IRMover::IRMover(Module &M) : Composite(M) {
   }
 }
 
-Error IRMover::move(
-    std::unique_ptr<Module> Src, ArrayRef<GlobalValue *> ValuesToLink,
-    std::function<void(GlobalValue &, ValueAdder Add)> AddLazyFor,
-    bool IsPerformingImport) {
+Error IRMover::move(std::unique_ptr<Module> Src,
+                    ArrayRef<GlobalValue *> ValuesToLink,
+                    LazyCallback AddLazyFor, bool IsPerformingImport) {
   IRLinker TheIRLinker(Composite, SharedMDs, IdentifiedStructTypes,
                        std::move(Src), ValuesToLink, std::move(AddLazyFor),
                        IsPerformingImport);

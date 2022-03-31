@@ -92,8 +92,9 @@ CodeGenFunction::EmitObjCBoxedExpr(const ObjCBoxedExpr *E) {
     // and cast value to correct type
     Address Temporary = CreateMemTemp(SubExpr->getType());
     EmitAnyExprToMem(SubExpr, Temporary, Qualifiers(), /*isInit*/ true);
-    Address BitCast = Builder.CreateBitCast(Temporary, ConvertType(ArgQT));
-    Args.add(RValue::get(BitCast.getPointer()), ArgQT);
+    llvm::Value *BitCast =
+        Builder.CreateBitCast(Temporary.getPointer(), ConvertType(ArgQT));
+    Args.add(RValue::get(BitCast), ArgQT);
 
     // Create char array to store type encoding
     std::string Str;
@@ -816,19 +817,20 @@ static void emitStructGetterCall(CodeGenFunction &CGF, ObjCIvarDecl *ivar,
                                  bool isAtomic, bool hasStrong) {
   ASTContext &Context = CGF.getContext();
 
-  Address src =
+  llvm::Value *src =
       CGF.EmitLValueForIvar(CGF.TypeOfSelfObject(), CGF.LoadObjCSelf(), ivar, 0)
-          .getAddress(CGF);
+          .getPointer(CGF);
 
   // objc_copyStruct (ReturnValue, &structIvar,
   //                  sizeof (Type of Ivar), isAtomic, false);
   CallArgList args;
 
-  Address dest = CGF.Builder.CreateBitCast(CGF.ReturnValue, CGF.VoidPtrTy);
-  args.add(RValue::get(dest.getPointer()), Context.VoidPtrTy);
+  llvm::Value *dest =
+      CGF.Builder.CreateBitCast(CGF.ReturnValue.getPointer(), CGF.VoidPtrTy);
+  args.add(RValue::get(dest), Context.VoidPtrTy);
 
   src = CGF.Builder.CreateBitCast(src, CGF.VoidPtrTy);
-  args.add(RValue::get(src.getPointer()), Context.VoidPtrTy);
+  args.add(RValue::get(src), Context.VoidPtrTy);
 
   CharUnits size = CGF.getContext().getTypeSizeInChars(ivar->getType());
   args.add(RValue::get(CGF.CGM.getSize(size)), Context.getSizeType());
@@ -847,7 +849,7 @@ static void emitStructGetterCall(CodeGenFunction &CGF, ObjCIvarDecl *ivar,
 static bool hasUnalignedAtomics(llvm::Triple::ArchType arch) {
   // FIXME: Allow unaligned atomic load/store on x86.  (It is not
   // currently supported by the backend.)
-  return 0;
+  return false;
 }
 
 /// Return the maximum size that permits atomic accesses for the given
@@ -1149,11 +1151,10 @@ CodeGenFunction::generateObjCGetterBody(const ObjCImplementationDecl *classImpl,
     // types, so there's no point in trying to pick a prettier type.
     uint64_t ivarSize = getContext().toBits(strategy.getIvarSize());
     llvm::Type *bitcastType = llvm::Type::getIntNTy(getLLVMContext(), ivarSize);
-    bitcastType = bitcastType->getPointerTo(); // addrspace 0 okay
 
     // Perform an atomic load.  This does not impose ordering constraints.
     Address ivarAddr = LV.getAddress(*this);
-    ivarAddr = Builder.CreateBitCast(ivarAddr, bitcastType);
+    ivarAddr = Builder.CreateElementBitCast(ivarAddr, bitcastType);
     llvm::LoadInst *load = Builder.CreateLoad(ivarAddr, "load");
     load->setAtomic(llvm::AtomicOrdering::Unordered);
 
@@ -1164,12 +1165,11 @@ CodeGenFunction::generateObjCGetterBody(const ObjCImplementationDecl *classImpl,
     uint64_t retTySize = CGM.getDataLayout().getTypeSizeInBits(retTy);
     llvm::Value *ivarVal = load;
     if (ivarSize > retTySize) {
-      llvm::Type *newTy = llvm::Type::getIntNTy(getLLVMContext(), retTySize);
-      ivarVal = Builder.CreateTrunc(load, newTy);
-      bitcastType = newTy->getPointerTo();
+      bitcastType = llvm::Type::getIntNTy(getLLVMContext(), retTySize);
+      ivarVal = Builder.CreateTrunc(load, bitcastType);
     }
     Builder.CreateStore(ivarVal,
-                        Builder.CreateBitCast(ReturnValue, bitcastType));
+                        Builder.CreateElementBitCast(ReturnValue, bitcastType));
 
     // Make sure we don't do an autorelease.
     AutoreleaseResult = false;
@@ -1911,8 +1911,7 @@ void CodeGenFunction::EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S){
 
   // Fetch the value at the current index from the buffer.
   llvm::Value *CurrentItemPtr = Builder.CreateGEP(
-      EnumStateItems->getType()->getPointerElementType(), EnumStateItems, index,
-      "currentitem.ptr");
+      ObjCIdType, EnumStateItems, index, "currentitem.ptr");
   llvm::Value *CurrentItem =
     Builder.CreateAlignedLoad(ObjCIdType, CurrentItemPtr, getPointerAlign());
 
@@ -2156,7 +2155,7 @@ static llvm::Value *emitARCLoadOperation(CodeGenFunction &CGF, Address addr,
 
   // Cast the argument to 'id*'.
   llvm::Type *origType = addr.getElementType();
-  addr = CGF.Builder.CreateBitCast(addr, CGF.Int8PtrPtrTy);
+  addr = CGF.Builder.CreateElementBitCast(addr, CGF.Int8PtrTy);
 
   // Call the function.
   llvm::Value *result = CGF.EmitNounwindRuntimeCall(fn, addr.getPointer());
@@ -2610,7 +2609,7 @@ void CodeGenFunction::EmitARCDestroyWeak(Address addr) {
     fn = getARCIntrinsic(llvm::Intrinsic::objc_destroyWeak, CGM);
 
   // Cast the argument to 'id*'.
-  addr = Builder.CreateBitCast(addr, Int8PtrPtrTy);
+  addr = Builder.CreateElementBitCast(addr, Int8PtrTy);
 
   EmitNounwindRuntimeCall(fn, addr.getPointer());
 }
@@ -3845,15 +3844,14 @@ CodeGenFunction::GenerateObjCAtomicGetterCopyHelperFunction(
                       SourceLocation());
 
   RValue DV = EmitAnyExpr(&DstExpr);
-  CharUnits Alignment
-    = getContext().getTypeAlignInChars(TheCXXConstructExpr->getType());
+  CharUnits Alignment =
+      getContext().getTypeAlignInChars(TheCXXConstructExpr->getType());
   EmitAggExpr(TheCXXConstructExpr,
-              AggValueSlot::forAddr(Address(DV.getScalarVal(), Alignment),
-                                    Qualifiers(),
-                                    AggValueSlot::IsDestructed,
-                                    AggValueSlot::DoesNotNeedGCBarriers,
-                                    AggValueSlot::IsNotAliased,
-                                    AggValueSlot::DoesNotOverlap));
+              AggValueSlot::forAddr(
+                  Address(DV.getScalarVal(), ConvertTypeForMem(Ty), Alignment),
+                  Qualifiers(), AggValueSlot::IsDestructed,
+                  AggValueSlot::DoesNotNeedGCBarriers,
+                  AggValueSlot::IsNotAliased, AggValueSlot::DoesNotOverlap));
 
   FinishFunction();
   HelperFn = llvm::ConstantExpr::getBitCast(Fn, VoidPtrTy);
@@ -3915,8 +3913,8 @@ static llvm::Value *emitIsPlatformVersionAtLeast(CodeGenFunction &CGF,
     Args.push_back(
         llvm::ConstantInt::get(CGM.Int32Ty, getBaseMachOPlatformID(TT)));
     Args.push_back(llvm::ConstantInt::get(CGM.Int32Ty, Version.getMajor()));
-    Args.push_back(llvm::ConstantInt::get(CGM.Int32Ty, Min ? *Min : 0));
-    Args.push_back(llvm::ConstantInt::get(CGM.Int32Ty, SMin ? *SMin : 0));
+    Args.push_back(llvm::ConstantInt::get(CGM.Int32Ty, Min.getValueOr(0)));
+    Args.push_back(llvm::ConstantInt::get(CGM.Int32Ty, SMin.getValueOr(0)));
   };
 
   assert(!Version.empty() && "unexpected empty version");
@@ -3952,8 +3950,8 @@ CodeGenFunction::EmitBuiltinAvailable(const VersionTuple &Version) {
   Optional<unsigned> Min = Version.getMinor(), SMin = Version.getSubminor();
   llvm::Value *Args[] = {
       llvm::ConstantInt::get(CGM.Int32Ty, Version.getMajor()),
-      llvm::ConstantInt::get(CGM.Int32Ty, Min ? *Min : 0),
-      llvm::ConstantInt::get(CGM.Int32Ty, SMin ? *SMin : 0),
+      llvm::ConstantInt::get(CGM.Int32Ty, Min.getValueOr(0)),
+      llvm::ConstantInt::get(CGM.Int32Ty, SMin.getValueOr(0))
   };
 
   llvm::Value *CallRes =

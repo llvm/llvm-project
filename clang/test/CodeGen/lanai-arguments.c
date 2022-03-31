@@ -3,7 +3,7 @@
 
 // Basic argument/attribute tests for Lanai.
 
-// CHECK: define{{.*}} void @f0(i32 inreg %i, i32 inreg %j, i64 inreg %k)
+// CHECK: define{{.*}} void @f0(i32 inreg noundef %i, i32 inreg noundef %j, i64 inreg noundef %k)
 void f0(int i, long j, long long k) {}
 
 typedef struct {
@@ -17,7 +17,7 @@ typedef struct {
   int cc;
 } s2;
 // CHECK: define{{.*}} void @f2(%struct.s2* noalias sret(%struct.s2) align 4 %agg.result)
-s2 f2() {
+s2 f2(void) {
   s2 foo;
   return foo;
 }
@@ -27,18 +27,18 @@ typedef struct {
   int dd;
 } s3;
 // CHECK: define{{.*}} void @f3(%struct.s3* noalias sret(%struct.s3) align 4 %agg.result)
-s3 f3() {
+s3 f3(void) {
   s3 foo;
   return foo;
 }
 
-// CHECK: define{{.*}} void @f4(i64 inreg %i)
+// CHECK: define{{.*}} void @f4(i64 inreg noundef %i)
 void f4(long long i) {}
 
-// CHECK: define{{.*}} void @f5(i8 inreg %a, i16 inreg %b)
+// CHECK: define{{.*}} void @f5(i8 inreg noundef %a, i16 inreg noundef %b)
 void f5(char a, short b) {}
 
-// CHECK: define{{.*}} void @f6(i8 inreg %a, i16 inreg %b)
+// CHECK: define{{.*}} void @f6(i8 inreg noundef %a, i16 inreg noundef %b)
 void f6(unsigned char a, unsigned short b) {}
 
 enum my_enum {
@@ -47,14 +47,14 @@ enum my_enum {
   ENUM3,
 };
 // Enums should be treated as the underlying i32.
-// CHECK: define{{.*}} void @f7(i32 inreg %a)
+// CHECK: define{{.*}} void @f7(i32 inreg noundef %a)
 void f7(enum my_enum a) {}
 
 enum my_big_enum {
   ENUM4 = 0xFFFFFFFFFFFFFFFF,
 };
 // Big enums should be treated as the underlying i64.
-// CHECK: define{{.*}} void @f8(i64 inreg %a)
+// CHECK: define{{.*}} void @f8(i64 inreg noundef %a)
 void f8(enum my_big_enum a) {}
 
 union simple_union {

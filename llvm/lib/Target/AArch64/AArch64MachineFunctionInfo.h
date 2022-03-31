@@ -19,6 +19,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/Function.h"
 #include "llvm/MC/MCLinkerOptimizationHint.h"
@@ -172,6 +173,12 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
 
   /// The stack slot where the Swift asynchronous context is stored.
   int SwiftAsyncContextFrameIdx = std::numeric_limits<int>::max();
+
+  /// True if the function need unwind information.
+  mutable Optional<bool> NeedsDwarfUnwindInfo;
+
+  /// True if the function need asynchronous unwind information.
+  mutable Optional<bool> NeedsDwarfAsyncUnwindInfo;
 
 public:
   explicit AArch64FunctionInfo(MachineFunction &MF);
@@ -407,6 +414,9 @@ public:
     SwiftAsyncContextFrameIdx = FI;
   }
   int getSwiftAsyncContextFrameIdx() const { return SwiftAsyncContextFrameIdx; }
+
+  bool needsDwarfUnwindInfo() const;
+  bool needsAsyncDwarfUnwindInfo() const;
 
 private:
   // Hold the lists of LOHs.

@@ -19,7 +19,7 @@
 #include "min_allocator.h"
 
 template <class S, class It>
-void
+TEST_CONSTEXPR_CXX20 void
 test(S s, typename S::difference_type pos, It first, It last, S expected)
 {
     typename S::const_iterator p = s.cbegin() + pos;
@@ -33,7 +33,7 @@ test(S s, typename S::difference_type pos, It first, It last, S expected)
 struct Widget { operator char() const { throw 42; } };
 
 template <class S, class It>
-void
+TEST_CONSTEXPR_CXX20 void
 test_exceptions(S s, typename S::difference_type pos, It first, It last)
 {
     typename S::const_iterator p = s.cbegin() + pos;
@@ -56,9 +56,8 @@ test_exceptions(S s, typename S::difference_type pos, It first, It last)
 }
 #endif
 
-int main(int, char**)
-{
-    {
+bool test() {
+  {
     typedef std::string S;
     const char* s = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
     test(S(), 0, s, s, S());
@@ -102,9 +101,9 @@ int main(int, char**)
     test(S("12345678901234567890"), 15, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+10), S("123456789012345ABCDEFGHIJ67890"));
     test(S("12345678901234567890"), 20, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+52),
          S("12345678901234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"));
-    }
+  }
 #if TEST_STD_VER >= 11
-    {
+  {
     typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
     const char* s = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
     test(S(), 0, s, s, S());
@@ -148,17 +147,17 @@ int main(int, char**)
     test(S("12345678901234567890"), 15, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+10), S("123456789012345ABCDEFGHIJ67890"));
     test(S("12345678901234567890"), 20, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+52),
          S("12345678901234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"));
-    }
+  }
 #endif
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    { // test iterator operations that throw
+  { // test iterator operations that throw
     typedef std::string S;
     typedef ThrowingIterator<char> TIter;
     typedef cpp17_input_iterator<TIter> IIter;
     const char* s = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-    test_exceptions(S(), 0, IIter(TIter(s, s+10, 4, TIter::TAIncrement)), IIter());
-    test_exceptions(S(), 0, IIter(TIter(s, s+10, 5, TIter::TADereference)), IIter());
-    test_exceptions(S(), 0, IIter(TIter(s, s+10, 6, TIter::TAComparison)), IIter());
+    test_exceptions(S(), 0, IIter(TIter(s, s+10, 4, TIter::TAIncrement)), IIter(TIter()));
+    test_exceptions(S(), 0, IIter(TIter(s, s+10, 5, TIter::TADereference)), IIter(TIter()));
+    test_exceptions(S(), 0, IIter(TIter(s, s+10, 6, TIter::TAComparison)), IIter(TIter()));
 
     test_exceptions(S(), 0, TIter(s, s+10, 4, TIter::TAIncrement), TIter());
     test_exceptions(S(), 0, TIter(s, s+10, 5, TIter::TADereference), TIter());
@@ -166,10 +165,10 @@ int main(int, char**)
 
     Widget w[100];
     test_exceptions(S(), 0, w, w+100);
-    }
+  }
 #endif
 
-    { // test inserting into self
+  { // test inserting into self
     typedef std::string S;
     S s_short = "123/";
     S s_long  = "Lorem ipsum dolor sit amet, consectetur/";
@@ -183,18 +182,18 @@ int main(int, char**)
 
     s_long.insert(s_long.begin(), s_long.begin(), s_long.end());
     assert(s_long == "Lorem ipsum dolor sit amet, consectetur/Lorem ipsum dolor sit amet, consectetur/");
-    }
+  }
 
-    { // test assigning a different type
+  { // test assigning a different type
     typedef std::string S;
     const uint8_t p[] = "ABCD";
 
     S s;
     s.insert(s.begin(), p, p + 4);
     assert(s == "ABCD");
-    }
+  }
 
-    { // regression-test inserting into self in sneaky ways
+  { // regression-test inserting into self in sneaky ways
     std::string s_short = "hello";
     std::string s_long = "Lorem ipsum dolor sit amet, consectetur/";
     std::string s_othertype = "hello";
@@ -205,7 +204,7 @@ int main(int, char**)
     test(s_long, 0, s_long.data() + s_long.size(), s_long.data() + s_long.size() + 1,
          std::string("\0Lorem ipsum dolor sit amet, consectetur/", 41));
     test(s_othertype, 1, first + 2, first + 5, std::string("hlloello"));
-    }
+  }
 
   { // test with a move iterator that returns char&&
     typedef cpp17_input_iterator<const char*> It;
@@ -231,6 +230,16 @@ int main(int, char**)
     s.insert(s.begin(), MoveIt(It(std::begin(p))), MoveIt(It(std::end(p) - 1)));
     assert(s == "ABCD");
   }
+
+  return true;
+}
+
+int main(int, char**)
+{
+  test();
+#if TEST_STD_VER > 17
+  // static_assert(test());
+#endif
 
   return 0;
 }

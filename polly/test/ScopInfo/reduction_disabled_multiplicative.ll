@@ -1,4 +1,4 @@
-; RUN: opt -basic-aa %loadPolly -polly-stmt-granularity=bb -polly-scops -analyze -polly-disable-multiplicative-reductions < %s | FileCheck %s
+; RUN: opt -basic-aa %loadPolly -polly-stmt-granularity=bb -polly-print-scops -polly-disable-multiplicative-reductions -disable-output < %s | FileCheck %s
 ;
 ; CHECK: ReadAccess :=       [Reduction Type: +
 ; CHECK:     { Stmt_for_body[i0] -> MemRef_sum[0] };
@@ -10,7 +10,7 @@
 ; CHECK:     { Stmt_for_body[i0] -> MemRef_prod[0] };
 ;
 ; int sum, prod;
-; 
+;
 ; void f() {
 ;   int i;
 ;   for (int i = 0; i < 100; i++) {

@@ -9,7 +9,6 @@
 #include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -45,7 +44,7 @@ static void printName(raw_ostream &OS, StringRef Name) {
   OS << '"';
 }
 
-void MCSectionWasm::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
+void MCSectionWasm::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                                          raw_ostream &OS,
                                          const MCExpr *Subsection) const {
 
@@ -102,6 +101,6 @@ void MCSectionWasm::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
   }
 }
 
-bool MCSectionWasm::UseCodeAlign() const { return false; }
+bool MCSectionWasm::useCodeAlign() const { return false; }
 
 bool MCSectionWasm::isVirtualSection() const { return false; }

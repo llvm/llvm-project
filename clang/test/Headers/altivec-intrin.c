@@ -7,7 +7,7 @@
 
 __attribute__((__aligned__(16))) float x[20];
 
-int main()
+int main(void)
 {
   vector unsigned char l = vec_lvsl (0, &x[1]); // expected-warning {{is deprecated: use assignment for unaligned little endian loads/stores}}
   vector unsigned char r = vec_lvsr (0, &x[1]); // expected-warning {{is deprecated: use assignment for unaligned little endian loads/stores}}

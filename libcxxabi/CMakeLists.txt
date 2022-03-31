@@ -10,13 +10,14 @@ endif()
 
 cmake_minimum_required(VERSION 3.13.4)
 
+set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
+
 # Add path for custom modules
-set(CMAKE_MODULE_PATH
+list(INSERT CMAKE_MODULE_PATH 0
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules"
-  "${CMAKE_CURRENT_SOURCE_DIR}/../cmake"
-  "${CMAKE_CURRENT_SOURCE_DIR}/../cmake/Modules"
-  ${CMAKE_MODULE_PATH}
+  "${LLVM_COMMON_CMAKE_UTILS}"
+  "${LLVM_COMMON_CMAKE_UTILS}/Modules"
   )
 
 set(CMAKE_FOLDER "libc++")
@@ -27,6 +28,10 @@ set(LIBCXXABI_LIBCXX_PATH "${CMAKE_CURRENT_LIST_DIR}/../libcxx" CACHE PATH
         "Specify path to libc++ source.")
 
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR LIBCXXABI_STANDALONE_BUILD)
+  message(FATAL_ERROR "The Standalone build has been deprecated since LLVM 14, and it is not supported anymore. "
+                      "Please use one of the ways described at https://libcxx.llvm.org/BuildingLibcxx.html for "
+                      "building libc++abi.")
+
   project(libcxxabi CXX C)
 
   set(PACKAGE_NAME libcxxabi)
@@ -34,21 +39,21 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR LIBCXXABI_STANDALONE_B
   set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
   set(PACKAGE_BUGREPORT "llvm-bugs@lists.llvm.org")
 
-  # Add the CMake module path of libcxx so we can reuse HandleOutOfTreeLLVM.cmake
-  set(LIBCXXABI_LIBCXX_CMAKE_PATH "${LIBCXXABI_LIBCXX_PATH}/cmake/Modules")
-  list(APPEND CMAKE_MODULE_PATH "${LIBCXXABI_LIBCXX_CMAKE_PATH}")
+  set(LIBCXXABI_STANDALONE_BUILD TRUE)
 
   # In a standalone build, we don't have llvm to automatically generate the
   # llvm-lit script for us.  So we need to provide an explicit directory that
   # the configurator should write the script into.
-  set(LIBCXXABI_STANDALONE_BUILD 1)
   set(LLVM_LIT_OUTPUT_DIR "${LIBCXXABI_BINARY_DIR}/bin")
-
-  # Find the LLVM sources and simulate LLVM CMake options.
-  include(HandleOutOfTreeLLVM)
 endif()
 
+# Must go below project(..)
+include(GNUInstallDirs)
+
 if (LIBCXXABI_STANDALONE_BUILD)
+  # Find the LLVM sources and simulate LLVM CMake options.
+  include(HandleOutOfTreeLLVM)
+
   find_package(Python3 COMPONENTS Interpreter)
   if(NOT Python3_Interpreter_FOUND)
     message(WARNING "Python3 not found, using python2 as a fallback")
@@ -116,16 +121,14 @@ endif()
 option(LIBCXXABI_INCLUDE_TESTS "Generate build targets for the libc++abi unit tests." ${LLVM_INCLUDE_TESTS})
 set(LIBCXXABI_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}" CACHE STRING
     "Define suffix of library directory name (32/64)")
+option(LIBCXXABI_INSTALL_HEADERS "Install the libc++abi headers." ON)
 option(LIBCXXABI_INSTALL_LIBRARY "Install the libc++abi library." ON)
+set(LIBCXXABI_INSTALL_INCLUDE_DIR "include/c++/v1" CACHE PATH "Path to install the libc++abi headers at.")
 
-if(CMAKE_CXX_COMPILER_TARGET)
-  set(LIBCXXABI_DEFAULT_TARGET_TRIPLE "${CMAKE_CXX_COMPILER_TARGET}")
-else()
-  set(LIBCXXABI_DEFAULT_TARGET_TRIPLE "${LLVM_DEFAULT_TARGET_TRIPLE}")
+# TODO: Remove this after branching for LLVM 15
+if(LIBCXXABI_SYSROOT OR LIBCXXABI_TARGET_TRIPLE OR LIBCXXABI_GCC_TOOLCHAIN)
+  message(WARNING "LIBCXXABI_SYSROOT, LIBCXXABI_TARGET_TRIPLE and LIBCXXABI_GCC_TOOLCHAIN are not supported anymore, please use the native CMake equivalents instead")
 endif()
-set(LIBCXXABI_TARGET_TRIPLE "${LIBCXXABI_DEFAULT_TARGET_TRIPLE}" CACHE STRING "Target triple for cross compiling.")
-set(LIBCXXABI_GCC_TOOLCHAIN "${CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN}" CACHE PATH "GCC toolchain for cross compiling.")
-set(LIBCXXABI_SYSROOT "${CMAKE_SYSROOT}" CACHE PATH "Sysroot for cross compiling.")
 
 set(LIBCXXABI_LIBCXX_LIBRARY_PATH "" CACHE PATH "The path to libc++ library.")
 set(LIBCXXABI_LIBRARY_VERSION "1.0" CACHE STRING
@@ -209,31 +212,28 @@ set(CMAKE_MODULE_PATH
   ${CMAKE_MODULE_PATH}
   )
 
+set(LIBCXXABI_INSTALL_RUNTIME_DIR "${CMAKE_INSTALL_BINDIR}" CACHE PATH
+    "Path where built libc++abi runtime libraries should be installed.")
+
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   set(LIBCXXABI_HEADER_DIR ${LLVM_BINARY_DIR})
   set(LIBCXXABI_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
   set(LIBCXXABI_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE} CACHE PATH
       "Path where built libc++abi libraries should be installed.")
-  set(LIBCXXABI_INSTALL_RUNTIME_DIR bin CACHE PATH
-      "Path where built libc++abi runtime libraries should be installed.")
   if(LIBCXX_LIBDIR_SUBDIR)
     string(APPEND LIBCXXABI_LIBRARY_DIR /${LIBCXXABI_LIBDIR_SUBDIR})
     string(APPEND LIBCXXABI_INSTALL_LIBRARY_DIR /${LIBCXXABI_LIBDIR_SUBDIR})
   endif()
-elseif(LLVM_LIBRARY_OUTPUT_INTDIR)
-  set(LIBCXXABI_HEADER_DIR ${LLVM_BINARY_DIR})
-  set(LIBCXXABI_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
-  set(LIBCXXABI_INSTALL_LIBRARY_DIR lib${LIBCXXABI_LIBDIR_SUFFIX} CACHE PATH
-      "Path where built libc++abi libraries should be installed.")
-  set(LIBCXXABI_INSTALL_RUNTIME_DIR bin CACHE PATH
-      "Path where built libc++abi runtime libraries should be installed.")
 else()
-  set(LIBCXXABI_HEADER_DIR ${CMAKE_BINARY_DIR})
-  set(LIBCXXABI_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LIBCXXABI_LIBDIR_SUFFIX})
+  if(LLVM_LIBRARY_OUTPUT_INTDIR)
+    set(LIBCXXABI_HEADER_DIR ${LLVM_BINARY_DIR})
+    set(LIBCXXABI_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
+  else()
+    set(LIBCXXABI_HEADER_DIR ${CMAKE_BINARY_DIR})
+    set(LIBCXXABI_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LIBCXXABI_LIBDIR_SUFFIX})
+  endif()
   set(LIBCXXABI_INSTALL_LIBRARY_DIR lib${LIBCXXABI_LIBDIR_SUFFIX} CACHE PATH
       "Path where built libc++abi libraries should be installed.")
-  set(LIBCXXABI_INSTALL_RUNTIME_DIR bin CACHE PATH
-      "Path where built libc++abi runtime libraries should be installed.")
 endif()
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LIBCXXABI_LIBRARY_DIR})
@@ -269,14 +269,8 @@ include(HandleLibcxxabiFlags)
 #===============================================================================
 
 # Configure target flags
-if(LIBCXXABI_TARGET_TRIPLE)
-  add_target_flags_if_supported("--target=${LIBCXXABI_TARGET_TRIPLE}")
-endif()
-if(LIBCXXABI_GCC_TOOLCHAIN)
-  add_target_flags_if_supported("--gcc-toolchain=${LIBCXXABI_GCC_TOOLCHAIN}")
-endif()
-if(LIBCXXABI_SYSROOT)
-  add_target_flags_if_supported("--sysroot=${LIBCXXABI_SYSROOT}")
+if(ZOS)
+  add_target_flags_if_supported("-fzos-le-char-mode=ebcdic")
 endif()
 
 # Configure compiler. Must happen after setting the target flags.
@@ -308,13 +302,20 @@ add_definitions(-D_LIBCPP_BUILDING_LIBRARY)
 
 # Disable DLL annotations on Windows for static builds.
 if (WIN32 AND LIBCXXABI_ENABLE_STATIC AND NOT LIBCXXABI_ENABLE_SHARED)
-  if (LIBCXX_ENABLE_SHARED AND LIBCXX_ENABLE_STATIC_ABI_LIBRARY)
+  # If LIBCXX_ENABLE_SHARED isn't set (by the user on the cmake command
+  # line or via a cache file), use its expected default value (enabled).
+  if ((LIBCXX_ENABLE_SHARED OR NOT DEFINED LIBCXX_ENABLE_SHARED) AND LIBCXX_ENABLE_STATIC_ABI_LIBRARY)
     # Building libcxxabi statically, but intending for it to be statically
     # linked into a shared libcxx; keep dllexport enabled within libcxxabi,
     # as the symbols will need to be exported from libcxx.
   else()
     # Regular static build; disable dllexports.
     add_definitions(-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS)
+    if (NOT LIBCXXABI_HERMETIC_STATIC_LIBRARY)
+      # TODO: Enable this warning message as soon as we're sure this is the solution.
+      # message(WARNING "Implicitly disabling dllexport on Win32 is not supported anymore. Please build with "
+      #                 "LIBCXXABI_HERMETIC_STATIC_LIBRARY=ON instead. This will become an error in LLVM 16.")
+    endif()
   endif()
 endif()
 
@@ -484,11 +485,6 @@ if (MSVC)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 endif()
 
-# Define LIBCXXABI_USE_LLVM_UNWINDER for conditional compilation.
-if (LIBCXXABI_USE_LLVM_UNWINDER)
-  add_definitions(-DLIBCXXABI_USE_LLVM_UNWINDER)
-endif()
-
 if (LIBCXXABI_SILENT_TERMINATE)
   add_definitions(-DLIBCXXABI_SILENT_TERMINATE)
 endif()
@@ -526,7 +522,6 @@ set(LIBCXXABI_LIBUNWIND_INCLUDES "${LIBCXXABI_LIBUNWIND_INCLUDES}" CACHE PATH
 set(LIBCXXABI_LIBUNWIND_PATH "${LIBCXXABI_LIBUNWIND_PATH}" CACHE PATH
     "Specify path to libunwind source." FORCE)
 
-include_directories(include)
 if (LIBCXXABI_USE_LLVM_UNWINDER OR LLVM_NATIVE_ARCH MATCHES ARM)
   find_path(LIBCXXABI_LIBUNWIND_INCLUDES_INTERNAL libunwind.h
     PATHS ${LIBCXXABI_LIBUNWIND_INCLUDES}
@@ -550,6 +545,7 @@ endif()
 
 # Add source code. This also contains all of the logic for deciding linker flags
 # soname, etc...
+add_subdirectory(include)
 add_subdirectory(src)
 
 if (LIBCXXABI_INCLUDE_TESTS)

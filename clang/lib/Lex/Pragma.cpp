@@ -263,7 +263,12 @@ void Preprocessor::Handle_Pragma(Token &Tok) {
   }
 
   SourceLocation RParenLoc = Tok.getLocation();
-  std::string StrVal = getSpelling(StrTok);
+  bool Invalid = false;
+  std::string StrVal = getSpelling(StrTok, &Invalid);
+  if (Invalid) {
+    Diag(PragmaLoc, diag::err__Pragma_malformed);
+    return;
+  }
 
   // The _Pragma is lexically sound.  Destringize according to C11 6.10.9.1:
   // "The string literal is destringized by deleting any encoding prefix,
@@ -526,9 +531,8 @@ static llvm::Optional<Token> LexHeader(Preprocessor &PP,
     return llvm::None;
 
   // Search include directories for this file.
-  const DirectoryLookup *CurDir;
   File = PP.LookupFile(FilenameTok.getLocation(), Filename, isAngled, nullptr,
-                       nullptr, CurDir, nullptr, nullptr, nullptr, nullptr,
+                       nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
                        nullptr);
   if (!File) {
     if (!SuppressIncludeNotFoundError)

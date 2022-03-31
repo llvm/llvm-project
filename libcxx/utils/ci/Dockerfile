@@ -12,7 +12,7 @@
 # can also just start the image with a shell to debug CI failures.
 #
 # To start a Buildkite Agent, run it as:
-#   $ docker run --env-file <secrets> -it $(docker build -q .)
+#   $ docker run --env-file <secrets> -it $(docker build -q libcxx/utils/ci)
 #
 # The environment variables in `<secrets>` should be the ones necessary
 # to run a BuildKite agent.
@@ -37,13 +37,12 @@ ENV DEBIAN_FRONTEND=noninteractive
 # CI builders to rebuild their copy of the Docker image. This is not a great
 # solution, however without that, the CI builders will keep the same cached
 # Docker image forever.
-RUN echo 3
+RUN echo 6
 
 RUN apt-get update && apt-get install -y bash curl
 
 # Install various tools used by the build or the test suite
-RUN apt-get update && apt-get install -y ninja-build python3 python3-sphinx python3-distutils git gdb
-RUN apt-get update && apt-get install -y libc6-dev-i386 # Required to cross-compile to 32 bits
+RUN apt-get update && apt-get install -y ninja-build python3 python3-sphinx python3-distutils python3-psutil git gdb
 
 # Locales for gdb and localization tests
 RUN apt-get update && apt-get install -y language-pack-en language-pack-fr \
@@ -55,21 +54,29 @@ RUN printf "fr_CA ISO-8859-1\ncs_CZ ISO-8859-2" >> /usr/local/share/i1en/SUPPORT
 RUN locale-gen
 
 # Install Clang <latest>, <latest-1> and ToT, which are the ones we support.
-ENV LLVM_LATEST_VERSION=13
+# We also install <latest-2> to allow smooth CI transitions around release points.
+ENV LLVM_LATEST_VERSION=14
 RUN apt-get update && apt-get install -y lsb-release wget software-properties-common
 RUN wget https://apt.llvm.org/llvm.sh -O /tmp/llvm.sh
+RUN bash /tmp/llvm.sh $(($LLVM_LATEST_VERSION - 2)) # for CI transitions
 RUN bash /tmp/llvm.sh $(($LLVM_LATEST_VERSION - 1)) # previous release
 RUN bash /tmp/llvm.sh $LLVM_LATEST_VERSION          # latest release
 RUN bash /tmp/llvm.sh $(($LLVM_LATEST_VERSION + 1)) # current ToT
 
-# Make the ToT Clang the "default" compiler on the system
-RUN ln -fs /usr/bin/clang++-$(($LLVM_LATEST_VERSION + 1)) /usr/bin/c++ && [ -e $(readlink /usr/bin/c++) ]
-RUN ln -fs /usr/bin/clang-$(($LLVM_LATEST_VERSION + 1)) /usr/bin/cc && [ -e $(readlink /usr/bin/cc) ]
+# Make the latest version of Clang the "default" compiler on the system
+# TODO: In the future, all jobs should be using an explicitly-versioned version of Clang instead,
+#       and we can get rid of this entirely.
+RUN ln -fs /usr/bin/clang++-$LLVM_LATEST_VERSION /usr/bin/c++ && [ -e $(readlink /usr/bin/c++) ]
+RUN ln -fs /usr/bin/clang-$LLVM_LATEST_VERSION /usr/bin/cc && [ -e $(readlink /usr/bin/cc) ]
 
 # Install clang-format
 RUN apt-get install -y clang-format-$LLVM_LATEST_VERSION
 RUN ln -s /usr/bin/clang-format-$LLVM_LATEST_VERSION /usr/bin/clang-format && [ -e $(readlink /usr/bin/clang-format) ]
 RUN ln -s /usr/bin/git-clang-format-$LLVM_LATEST_VERSION /usr/bin/git-clang-format && [ -e $(readlink /usr/bin/git-clang-format) ]
+
+# Install clang-tidy
+RUN apt-get install -y clang-tidy-$LLVM_LATEST_VERSION
+RUN ln -s /usr/bin/clang-tidy-$LLVM_LATEST_VERSION /usr/bin/clang-tidy && [ -e $(readlink /usr/bin/clang-tidy) ]
 
 # Install the most recent GCC
 ENV GCC_LATEST_VERSION=11

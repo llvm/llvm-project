@@ -2225,7 +2225,7 @@ _mm_add_epi64(__m128i __a, __m128i __b)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_adds_epi8(__m128i __a, __m128i __b)
 {
-  return (__m128i)__builtin_ia32_paddsb128((__v16qi)__a, (__v16qi)__b);
+  return (__m128i)__builtin_elementwise_add_sat((__v16qs)__a, (__v16qs)__b);
 }
 
 /// Adds, with saturation, the corresponding elements of two 128-bit
@@ -2247,7 +2247,7 @@ _mm_adds_epi8(__m128i __a, __m128i __b)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_adds_epi16(__m128i __a, __m128i __b)
 {
-  return (__m128i)__builtin_ia32_paddsw128((__v8hi)__a, (__v8hi)__b);
+  return (__m128i)__builtin_elementwise_add_sat((__v8hi)__a, (__v8hi)__b);
 }
 
 /// Adds, with saturation, the corresponding elements of two 128-bit
@@ -2268,7 +2268,7 @@ _mm_adds_epi16(__m128i __a, __m128i __b)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_adds_epu8(__m128i __a, __m128i __b)
 {
-  return (__m128i)__builtin_ia32_paddusb128((__v16qi)__a, (__v16qi)__b);
+  return (__m128i)__builtin_elementwise_add_sat((__v16qu)__a, (__v16qu)__b);
 }
 
 /// Adds, with saturation, the corresponding elements of two 128-bit
@@ -2289,7 +2289,7 @@ _mm_adds_epu8(__m128i __a, __m128i __b)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_adds_epu16(__m128i __a, __m128i __b)
 {
-  return (__m128i)__builtin_ia32_paddusw128((__v8hi)__a, (__v8hi)__b);
+  return (__m128i)__builtin_elementwise_add_sat((__v8hu)__a, (__v8hu)__b);
 }
 
 /// Computes the rounded averages of corresponding elements of two
@@ -2375,7 +2375,7 @@ _mm_madd_epi16(__m128i __a, __m128i __b)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_max_epi16(__m128i __a, __m128i __b)
 {
-  return (__m128i)__builtin_ia32_pmaxsw128((__v8hi)__a, (__v8hi)__b);
+  return (__m128i)__builtin_elementwise_max((__v8hi)__a, (__v8hi)__b);
 }
 
 /// Compares corresponding elements of two 128-bit unsigned [16 x i8]
@@ -2395,7 +2395,7 @@ _mm_max_epi16(__m128i __a, __m128i __b)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_max_epu8(__m128i __a, __m128i __b)
 {
-  return (__m128i)__builtin_ia32_pmaxub128((__v16qi)__a, (__v16qi)__b);
+  return (__m128i)__builtin_elementwise_max((__v16qu)__a, (__v16qu)__b);
 }
 
 /// Compares corresponding elements of two 128-bit signed [8 x i16]
@@ -2415,7 +2415,7 @@ _mm_max_epu8(__m128i __a, __m128i __b)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_min_epi16(__m128i __a, __m128i __b)
 {
-  return (__m128i)__builtin_ia32_pminsw128((__v8hi)__a, (__v8hi)__b);
+  return (__m128i)__builtin_elementwise_min((__v8hi)__a, (__v8hi)__b);
 }
 
 /// Compares corresponding elements of two 128-bit unsigned [16 x i8]
@@ -2435,7 +2435,7 @@ _mm_min_epi16(__m128i __a, __m128i __b)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_min_epu8(__m128i __a, __m128i __b)
 {
-  return (__m128i)__builtin_ia32_pminub128((__v16qi)__a, (__v16qi)__b);
+  return (__m128i)__builtin_elementwise_min((__v16qu)__a, (__v16qu)__b);
 }
 
 /// Multiplies the corresponding elements of two signed [8 x i16]
@@ -2667,7 +2667,7 @@ _mm_sub_epi64(__m128i __a, __m128i __b)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_subs_epi8(__m128i __a, __m128i __b)
 {
-  return (__m128i)__builtin_ia32_psubsb128((__v16qi)__a, (__v16qi)__b);
+  return (__m128i)__builtin_elementwise_sub_sat((__v16qs)__a, (__v16qs)__b);
 }
 
 /// Subtracts corresponding 16-bit signed integer values in the input and
@@ -2688,7 +2688,7 @@ _mm_subs_epi8(__m128i __a, __m128i __b)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_subs_epi16(__m128i __a, __m128i __b)
 {
-  return (__m128i)__builtin_ia32_psubsw128((__v8hi)__a, (__v8hi)__b);
+  return (__m128i)__builtin_elementwise_sub_sat((__v8hi)__a, (__v8hi)__b);
 }
 
 /// Subtracts corresponding 8-bit unsigned integer values in the input
@@ -2708,7 +2708,7 @@ _mm_subs_epi16(__m128i __a, __m128i __b)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_subs_epu8(__m128i __a, __m128i __b)
 {
-  return (__m128i)__builtin_ia32_psubusb128((__v16qi)__a, (__v16qi)__b);
+  return (__m128i)__builtin_elementwise_sub_sat((__v16qu)__a, (__v16qu)__b);
 }
 
 /// Subtracts corresponding 16-bit unsigned integer values in the input
@@ -2728,7 +2728,7 @@ _mm_subs_epu8(__m128i __a, __m128i __b)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_subs_epu16(__m128i __a, __m128i __b)
 {
-  return (__m128i)__builtin_ia32_psubusw128((__v8hi)__a, (__v8hi)__b);
+  return (__m128i)__builtin_elementwise_sub_sat((__v8hu)__a, (__v8hu)__b);
 }
 
 /// Performs a bitwise AND of two 128-bit integer vectors.

@@ -20,4 +20,3 @@ lea	(-1,%a1), %a0
 ; CHECK:      lea  (-1,%a1), %a0
 ; CHECK-SAME: encoding: [0x41,0xe9,0xff,0xff]
 lea	(-1,%a1), %a0
-

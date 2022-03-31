@@ -19,8 +19,8 @@ template <typename T> class LogbTest : public __llvm_libc::testing::Test {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 
-  static constexpr UIntType HiddenBit =
-      UIntType(1) << __llvm_libc::fputil::MantissaWidth<T>::value;
+  static constexpr UIntType HIDDEN_BIT =
+      UIntType(1) << __llvm_libc::fputil::MantissaWidth<T>::VALUE;
 
 public:
   typedef T (*LogbFunc)(T);
@@ -28,9 +28,9 @@ public:
   void testSpecialNumbers(LogbFunc func) {
     ASSERT_FP_EQ(aNaN, func(aNaN));
     ASSERT_FP_EQ(inf, func(inf));
-    ASSERT_FP_EQ(inf, func(negInf));
-    ASSERT_FP_EQ(negInf, func(0.0));
-    ASSERT_FP_EQ(negInf, func(-0.0));
+    ASSERT_FP_EQ(inf, func(neg_inf));
+    ASSERT_FP_EQ(neg_inf, func(0.0));
+    ASSERT_FP_EQ(neg_inf, func(-0.0));
   }
 
   void testPowersOfTwo(LogbFunc func) {
@@ -72,9 +72,9 @@ public:
 
   void testRange(LogbFunc func) {
     using UIntType = typename FPBits::UIntType;
-    constexpr UIntType count = 10000000;
-    constexpr UIntType step = UIntType(-1) / count;
-    for (UIntType i = 0, v = 0; i <= count; ++i, v += step) {
+    constexpr UIntType COUNT = 10000000;
+    constexpr UIntType STEP = UIntType(-1) / COUNT;
+    for (UIntType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
       T x = static_cast<T>(FPBits(v));
       if (isnan(x) || isinf(x) || x == 0.0l)
         continue;

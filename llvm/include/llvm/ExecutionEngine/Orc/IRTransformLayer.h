@@ -19,7 +19,6 @@
 #include <memory>
 
 namespace llvm {
-class Module;
 namespace orc {
 
 /// A layer that applies a transform to emitted modules.

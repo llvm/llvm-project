@@ -424,8 +424,8 @@ private:
   SmallVector<MemberInitializer> initializers;
 };
 
-} // end namespace tblgen
-} // end namespace mlir
+} // namespace tblgen
+} // namespace mlir
 
 /// The OR of two method properties should return method properties. Ensure that
 /// this function is visible to `Class`.
@@ -532,22 +532,32 @@ private:
   Visibility visibility;
 };
 
-/// Unstructured extra class declarations, from TableGen definitions. The
-/// default visibility of extra class declarations is up to the owning class.
+/// Unstructured extra class declarations and definitions, from TableGen
+/// definitions. The default visibility of extra class declarations is up to the
+/// owning class.
 class ExtraClassDeclaration
     : public ClassDeclarationBase<ClassDeclaration::ExtraClassDeclaration> {
 public:
   /// Create an extra class declaration.
-  ExtraClassDeclaration(StringRef extraClassDeclaration)
-      : extraClassDeclaration(extraClassDeclaration) {}
+  ExtraClassDeclaration(StringRef extraClassDeclaration,
+                        StringRef extraClassDefinition = "")
+      : extraClassDeclaration(extraClassDeclaration),
+        extraClassDefinition(extraClassDefinition) {}
 
   /// Write the extra class declarations.
   void writeDeclTo(raw_indented_ostream &os) const override;
+
+  /// Write the extra class definitions.
+  void writeDefTo(raw_indented_ostream &os,
+                  StringRef namePrefix) const override;
 
 private:
   /// The string of the extra class declarations. It is re-indented before
   /// printed.
   StringRef extraClassDeclaration;
+  /// The string of the extra class definitions. It is re-indented before
+  /// printed.
+  StringRef extraClassDefinition;
 };
 
 /// A class used to emit C++ classes from Tablegen.  Contains a list of public

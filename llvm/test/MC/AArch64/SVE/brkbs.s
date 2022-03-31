@@ -12,5 +12,5 @@
 brkbs  p0.b, p15/z, p15.b
 // CHECK-INST: brkbs	p0.b, p15/z, p15.b
 // CHECK-ENCODING: [0xe0,0x7d,0xd0,0x25]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: e0 7d d0 25 <unknown>

@@ -164,7 +164,7 @@ TEST(OperandStorageTest, RangeErase) {
   // Create an operation with operands to erase.
   Operation *user =
       createOp(&context, {operand2, operand1, operand2, operand1});
-  llvm::BitVector eraseIndices(user->getNumOperands());
+  BitVector eraseIndices(user->getNumOperands());
 
   // Check erasing no operands.
   user->eraseOperands(eraseIndices);
@@ -232,11 +232,11 @@ TEST(NamedAttrListTest, TestAppendAssign) {
   NamedAttrList attrs;
   Builder b(&ctx);
 
-  attrs.append("foo", b.getStringAttr("bar"));
+  attrs.append(b.getStringAttr("foo"), b.getStringAttr("bar"));
   attrs.append("baz", b.getStringAttr("boo"));
 
   {
-    auto it = attrs.begin();
+    auto *it = attrs.begin();
     EXPECT_EQ(it->getName(), b.getStringAttr("foo"));
     EXPECT_EQ(it->getValue(), b.getStringAttr("bar"));
     ++it;
@@ -260,7 +260,7 @@ TEST(NamedAttrListTest, TestAppendAssign) {
   ASSERT_FALSE(dup.hasValue());
 
   {
-    auto it = attrs.begin();
+    auto *it = attrs.begin();
     EXPECT_EQ(it->getName(), b.getStringAttr("foo"));
     EXPECT_EQ(it->getValue(), b.getStringAttr("f"));
     ++it;
@@ -271,4 +271,4 @@ TEST(NamedAttrListTest, TestAppendAssign) {
   attrs.assign({});
   ASSERT_TRUE(attrs.empty());
 }
-} // end namespace
+} // namespace

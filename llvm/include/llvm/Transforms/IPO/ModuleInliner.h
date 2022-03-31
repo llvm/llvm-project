@@ -11,15 +11,9 @@
 
 #include "llvm/Analysis/InlineAdvisor.h"
 #include "llvm/Analysis/InlineCost.h"
-#include "llvm/Analysis/ReplayInlineAdvisor.h"
-#include "llvm/Analysis/Utils/ImportedFunctionsInliningStatistics.h"
 #include "llvm/IR/PassManager.h"
-#include <utility>
 
 namespace llvm {
-
-class AssumptionCacheTracker;
-class ProfileSummaryInfo;
 
 /// The module inliner pass for the new pass manager.
 ///

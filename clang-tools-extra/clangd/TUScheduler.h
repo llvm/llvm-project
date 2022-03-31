@@ -19,7 +19,6 @@
 #include "support/Path.h"
 #include "support/Threading.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include <chrono>
@@ -134,8 +133,7 @@ public:
   /// contains only AST nodes from the #include directives at the start of the
   /// file. AST node in the current file should be observed on onMainAST call.
   virtual void onPreambleAST(PathRef Path, llvm::StringRef Version,
-                             ASTContext &Ctx,
-                             std::shared_ptr<clang::Preprocessor> PP,
+                             ASTContext &Ctx, Preprocessor &PP,
                              const CanonicalIncludes &) {}
 
   /// The argument function is run under the critical section guarding against

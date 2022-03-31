@@ -9,7 +9,7 @@
 
 // PGOALL-LABEL: define{{.*}} void @debug_captured()
 // PGOGEN: store {{.*}} @[[DCC]], i32 0, i32 0
-void debug_captured() {
+void debug_captured(void) {
   int x = 10;
 
 // Check both debug_captured counters, so we can do this all in one pass

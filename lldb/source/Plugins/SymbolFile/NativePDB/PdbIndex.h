@@ -25,7 +25,6 @@ namespace llvm {
 namespace pdb {
 class DbiStream;
 class TpiStream;
-class TpiStream;
 class InfoStream;
 class PublicsStream;
 class GlobalsStream;

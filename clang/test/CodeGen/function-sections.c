@@ -12,7 +12,7 @@
 // RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -O2 -x ir %t.o -fthinlto-index=%t.thinlto.bc -S -fdata-sections -o - | FileCheck %s --check-prefix=DATA_SECT
 
 const int hello = 123;
-void world() {}
+void world(void) {}
 
 // PLAIN-NOT: section
 // PLAIN: world:

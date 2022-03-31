@@ -17,6 +17,8 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
+#include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/SMLoc.h"
 #include <cassert>
@@ -34,6 +36,10 @@ struct X86Operand final : public MCParsedAsmOperand {
   StringRef SymName;
   void *OpDecl;
   bool AddressOf;
+
+  /// This used for inline asm which may specify base reg and index reg for
+  /// MemOp. e.g. ARR[eax + ecx*4], so no extra reg can be used for MemOp.
+  bool UseUpRegs = false;
 
   struct TokOp {
     const char *Data;
@@ -378,6 +384,8 @@ struct X86Operand final : public MCParsedAsmOperand {
     return isAbsMem() && Mem.ModeSize == 16;
   }
 
+  bool isMemUseUpRegs() const override { return UseUpRegs; }
+
   bool isSrcIdx() const {
     return !getMemIndexReg() && getMemScale() == 1 &&
       (getMemBaseReg() == X86::RSI || getMemBaseReg() == X86::ESI ||
@@ -663,7 +671,8 @@ struct X86Operand final : public MCParsedAsmOperand {
   static std::unique_ptr<X86Operand>
   CreateMem(unsigned ModeSize, const MCExpr *Disp, SMLoc StartLoc, SMLoc EndLoc,
             unsigned Size = 0, StringRef SymName = StringRef(),
-            void *OpDecl = nullptr, unsigned FrontendSize = 0) {
+            void *OpDecl = nullptr, unsigned FrontendSize = 0,
+            bool UseUpRegs = false) {
     auto Res = std::make_unique<X86Operand>(Memory, StartLoc, EndLoc);
     Res->Mem.SegReg   = 0;
     Res->Mem.Disp     = Disp;
@@ -674,6 +683,7 @@ struct X86Operand final : public MCParsedAsmOperand {
     Res->Mem.Size     = Size;
     Res->Mem.ModeSize = ModeSize;
     Res->Mem.FrontendSize = FrontendSize;
+    Res->UseUpRegs = UseUpRegs;
     Res->SymName      = SymName;
     Res->OpDecl       = OpDecl;
     Res->AddressOf    = false;
@@ -687,7 +697,7 @@ struct X86Operand final : public MCParsedAsmOperand {
             SMLoc EndLoc, unsigned Size = 0,
             unsigned DefaultBaseReg = X86::NoRegister,
             StringRef SymName = StringRef(), void *OpDecl = nullptr,
-            unsigned FrontendSize = 0) {
+            unsigned FrontendSize = 0, bool UseUpRegs = false) {
     // We should never just have a displacement, that should be parsed as an
     // absolute memory operand.
     assert((SegReg || BaseReg || IndexReg || DefaultBaseReg) &&
@@ -706,6 +716,7 @@ struct X86Operand final : public MCParsedAsmOperand {
     Res->Mem.Size     = Size;
     Res->Mem.ModeSize = ModeSize;
     Res->Mem.FrontendSize = FrontendSize;
+    Res->UseUpRegs = UseUpRegs;
     Res->SymName      = SymName;
     Res->OpDecl       = OpDecl;
     Res->AddressOf    = false;

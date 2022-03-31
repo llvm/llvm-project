@@ -16,6 +16,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SpecialCaseList.h"
+#include "llvm/Support/AArch64TargetParser.h"
 #include "llvm/Support/TargetParser.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
@@ -641,10 +642,14 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         Args.hasFlag(options::OPT_fsanitize_memory_use_after_dtor,
                      options::OPT_fno_sanitize_memory_use_after_dtor,
                      MsanUseAfterDtor);
+    MsanParamRetval = Args.hasFlag(
+        options::OPT_fsanitize_memory_param_retval,
+        options::OPT_fno_sanitize_memory_param_retval, MsanParamRetval);
     NeedPIE |= !(TC.getTriple().isOSLinux() &&
                  TC.getTriple().getArch() == llvm::Triple::x86_64);
   } else {
     MsanUseAfterDtor = false;
+    MsanParamRetval = false;
   }
 
   if (AllAddedKinds & SanitizerKind::Thread) {
@@ -843,10 +848,11 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     // As a workaround for a bug in gold 2.26 and earlier, dead stripping of
     // globals in ASan is disabled by default on ELF targets.
     // See https://sourceware.org/bugzilla/show_bug.cgi?id=19002
-    AsanGlobalsDeadStripping =
+    AsanGlobalsDeadStripping = Args.hasFlag(
+        options::OPT_fsanitize_address_globals_dead_stripping,
+        options::OPT_fno_sanitize_address_globals_dead_stripping,
         !TC.getTriple().isOSBinFormatELF() || TC.getTriple().isOSFuchsia() ||
-        TC.getTriple().isPS4() ||
-        Args.hasArg(options::OPT_fsanitize_address_globals_dead_stripping);
+            TC.getTriple().isPS4());
 
     AsanUseOdrIndicator =
         Args.hasFlag(options::OPT_fsanitize_address_use_odr_indicator,
@@ -1010,8 +1016,8 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
   // AMDGPU sanitizer support is experimental and controlled by -fgpu-sanitize.
   if (TC.getTriple().isNVPTX() ||
       (TC.getTriple().isAMDGPU() &&
-       !Args.hasFlag(options::OPT_fgpu_sanitize,
-                     options::OPT_fno_gpu_sanitize)))
+       !Args.hasFlag(options::OPT_fgpu_sanitize, options::OPT_fno_gpu_sanitize,
+                     true)))
     return;
 
   // Translate available CoverageFeatures to corresponding clang-cc1 flags.
@@ -1095,6 +1101,9 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
 
   if (MsanUseAfterDtor)
     CmdArgs.push_back("-fsanitize-memory-use-after-dtor");
+
+  if (MsanParamRetval)
+    CmdArgs.push_back("-fsanitize-memory-param-retval");
 
   // FIXME: Pass these parameters as function attributes, not as -llvm flags.
   if (!TsanMemoryAccess) {

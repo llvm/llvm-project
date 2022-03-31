@@ -139,6 +139,21 @@ public:
   std::string getFormattedText(const SourceManager &SourceMgr,
                                DiagnosticsEngine &Diags) const;
 
+  struct CommentLine {
+    std::string Text;
+    PresumedLoc Begin;
+    PresumedLoc End;
+
+    CommentLine(StringRef Text, PresumedLoc Begin, PresumedLoc End)
+        : Text(Text), Begin(Begin), End(End) {}
+  };
+
+  /// Returns sanitized comment text as separated lines with locations in
+  /// source, suitable for further processing and rendering requiring source
+  /// locations.
+  std::vector<CommentLine> getFormattedLines(const SourceManager &SourceMgr,
+                                             DiagnosticsEngine &Diags) const;
+
   /// Parse the comment, assuming it is attached to decl \c D.
   comments::FullComment *parse(const ASTContext &Context,
                                const Preprocessor *PP, const Decl *D) const;

@@ -40,7 +40,7 @@ CHECK:         0x[[BAOFF]], addr_size = 0x08 (next unit at [[XOFF:.*]])
 CHECK:   DW_AT_GNU_dwo_id {{.*}} ([[DWOB:.*]])
 
 CHECK-LABEL: .debug_cu_index
-CHECK:    Index  Signature INFO                      ABBREV                             LINE                     STR_OFFSETS
-CHECK-DAG:       [[DWOC]]  {{\[}}[[COFF]], [[AOFF]]) [0x0000[[CAOFF]], 0x0000[[AAOFF]]) [0x00000000, 0x00000011) [0x00000000, 0x00000018)
-CHECK-DAG:       [[DWOA]]  {{\[}}[[AOFF]], [[BOFF]]) [0x0000[[AAOFF]], 0x0000[[BAOFF]]) [0x00000011, 0x00000022) [0x00000018, 0x00000028)
-CHECK-DAG:       [[DWOB]]  {{\[}}[[BOFF]], [[XOFF]]) [0x0000[[BAOFF]], 0x000000c3)      [0x00000022, 0x00000033) [0x00000028, 0x0000003c)
+CHECK:    Index  Signature INFO                 ABBREV                             LINE                     STR_OFFSETS
+CHECK-DAG:       [[DWOC]]  [[[COFF]], [[AOFF]]) [0x0000[[CAOFF]], 0x0000[[AAOFF]]) [0x00000000, 0x00000011) [0x00000000, 0x00000018)
+CHECK-DAG:       [[DWOA]]  [[[AOFF]], [[BOFF]]) [0x0000[[AAOFF]], 0x0000[[BAOFF]]) [0x00000011, 0x00000022) [0x00000018, 0x00000028)
+CHECK-DAG:       [[DWOB]]  [[[BOFF]], [[XOFF]]) [0x0000[[BAOFF]], 0x000000c3)      [0x00000022, 0x00000033) [0x00000028, 0x0000003c)

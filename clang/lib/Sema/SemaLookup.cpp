@@ -620,7 +620,7 @@ void LookupResult::resolveKind() {
     getSema().diagnoseEquivalentInternalLinkageDeclarations(
         getNameLoc(), HasNonFunction, EquivalentNonFunctions);
 
-  Decls.set_size(N);
+  Decls.truncate(N);
 
   if (HasNonFunction && (HasFunction || HasUnresolved))
     Ambiguous = true;
@@ -1561,8 +1561,12 @@ llvm::DenseSet<Module*> &Sema::getLookupModules() {
 static bool isInCurrentModule(const Module *M, const LangOptions &LangOpts) {
   // If M is the global module fragment of a module that we've not yet finished
   // parsing, then it must be part of the current module.
+  // If it's a partition, then it must be visible to an importer (since only
+  // another partition or the named module can import it).
   return M->getTopLevelModuleName() == LangOpts.CurrentModule ||
-         (M->Kind == Module::GlobalModuleFragment && !M->Parent);
+         (M->Kind == Module::GlobalModuleFragment && !M->Parent) ||
+         M->Kind == Module::ModulePartitionInterface ||
+         M->Kind == Module::ModulePartitionImplementation;
 }
 
 bool Sema::hasVisibleMergedDefinition(NamedDecl *Def) {
@@ -1683,8 +1687,8 @@ bool LookupResult::isVisibleSlow(Sema &SemaRef, NamedDecl *D) {
   Module *DeclModule = SemaRef.getOwningModule(D);
   assert(DeclModule && "hidden decl has no owning module");
 
-  // If the owning module is visible, the decl is visible.
   if (SemaRef.isModuleVisible(DeclModule, D->isModulePrivate()))
+    // If the owning module is visible, the decl is visible.
     return true;
 
   // Determine whether a decl context is a file context for the purpose of
@@ -1757,6 +1761,22 @@ bool Sema::isModuleVisible(const Module *M, bool ModulePrivate) {
   // is in our visible module set.
   if (ModulePrivate) {
     if (isInCurrentModule(M, getLangOpts()))
+      return true;
+    else if (M->Kind == Module::ModuleKind::ModulePartitionImplementation &&
+             isModuleDirectlyImported(M))
+      // Unless a partition implementation is directly imported it is not
+      // counted as visible for lookup, although the contained decls might
+      // still be reachable.  It's a partition, so it must be part of the
+      // current module to be a valid import.
+      return true;
+    else if (getLangOpts().CPlusPlusModules && !ModuleScopes.empty() &&
+             ModuleScopes[0].Module->Kind ==
+                 Module::ModuleKind::ModulePartitionImplementation &&
+             ModuleScopes[0].Module->getPrimaryModuleInterfaceName() ==
+                 M->Name &&
+             isModuleDirectlyImported(M))
+      // We are building a module implementation partition and the TU imports
+      // the primary module interface unit.
       return true;
   } else {
     if (VisibleModules.isVisible(M))
@@ -4307,18 +4327,35 @@ void TypoCorrectionConsumer::addCorrection(TypoCorrection Correction) {
   if (!CList.empty() && !CList.back().isResolved())
     CList.pop_back();
   if (NamedDecl *NewND = Correction.getCorrectionDecl()) {
-    std::string CorrectionStr = Correction.getAsString(SemaRef.getLangOpts());
-    for (TypoResultList::iterator RI = CList.begin(), RIEnd = CList.end();
-         RI != RIEnd; ++RI) {
-      // If the Correction refers to a decl already in the result list,
-      // replace the existing result if the string representation of Correction
-      // comes before the current result alphabetically, then stop as there is
-      // nothing more to be done to add Correction to the candidate set.
-      if (RI->getCorrectionDecl() == NewND) {
-        if (CorrectionStr < RI->getAsString(SemaRef.getLangOpts()))
-          *RI = Correction;
-        return;
-      }
+    auto RI = llvm::find_if(CList, [NewND](const TypoCorrection &TypoCorr) {
+      return TypoCorr.getCorrectionDecl() == NewND;
+    });
+    if (RI != CList.end()) {
+      // The Correction refers to a decl already in the list. No insertion is
+      // necessary and all further cases will return.
+
+      auto IsDeprecated = [](Decl *D) {
+        while (D) {
+          if (D->isDeprecated())
+            return true;
+          D = llvm::dyn_cast_or_null<NamespaceDecl>(D->getDeclContext());
+        }
+        return false;
+      };
+
+      // Prefer non deprecated Corrections over deprecated and only then
+      // sort using an alphabetical order.
+      std::pair<bool, std::string> NewKey = {
+          IsDeprecated(Correction.getFoundDecl()),
+          Correction.getAsString(SemaRef.getLangOpts())};
+
+      std::pair<bool, std::string> PrevKey = {
+          IsDeprecated(RI->getFoundDecl()),
+          RI->getAsString(SemaRef.getLangOpts())};
+
+      if (NewKey < PrevKey)
+        *RI = Correction;
+      return;
     }
   }
   if (CList.empty() || Correction.isResolved())

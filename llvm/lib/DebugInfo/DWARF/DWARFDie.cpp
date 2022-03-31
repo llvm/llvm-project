@@ -14,19 +14,20 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
-#include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
+#include "llvm/DebugInfo/DWARF/DWARFTypeUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <cinttypes>
 #include <cstdint>
@@ -89,7 +90,6 @@ static void dumpLocationList(raw_ostream &OS, const DWARFFormValue &FormValue,
   U->getLocationTable().dumpLocationList(&Offset, OS, U->getBaseAddress(), MRI,
                                          Ctx.getDWARFObj(), U, DumpOpts,
                                          Indent);
-  return;
 }
 
 static void dumpLocationExpr(raw_ostream &OS, const DWARFFormValue &FormValue,
@@ -105,7 +105,6 @@ static void dumpLocationExpr(raw_ostream &OS, const DWARFFormValue &FormValue,
                      Ctx.isLittleEndian(), 0);
   DWARFExpression(Data, U->getAddressByteSize(), U->getFormParams().Format)
       .print(OS, DumpOpts, MRI, U);
-  return;
 }
 
 static DWARFDie resolveReferencedType(DWARFDie D,
@@ -217,15 +216,16 @@ struct DWARFTypePrinter {
       OS << "void";
       return DWARFDie();
     }
-    DWARFDie Inner = resolveReferencedType(D);
+    DWARFDie InnerDIE;
+    auto Inner = [&] { return InnerDIE = resolveReferencedType(D); };
     const dwarf::Tag T = D.getTag();
     switch (T) {
     case DW_TAG_pointer_type: {
-      appendPointerLikeTypeBefore(D, Inner, "*");
+      appendPointerLikeTypeBefore(D, Inner(), "*");
       break;
     }
     case DW_TAG_subroutine_type: {
-      appendQualifiedNameBefore(Inner);
+      appendQualifiedNameBefore(Inner());
       if (Word) {
         OS << ' ';
       }
@@ -233,23 +233,24 @@ struct DWARFTypePrinter {
       break;
     }
     case DW_TAG_array_type: {
-      appendQualifiedNameBefore(Inner);
+      appendQualifiedNameBefore(Inner());
       break;
     }
     case DW_TAG_reference_type:
-      appendPointerLikeTypeBefore(D, Inner, "&");
+      appendPointerLikeTypeBefore(D, Inner(), "&");
       break;
     case DW_TAG_rvalue_reference_type:
-      appendPointerLikeTypeBefore(D, Inner, "&&");
+      appendPointerLikeTypeBefore(D, Inner(), "&&");
       break;
     case DW_TAG_ptr_to_member_type: {
-      appendQualifiedNameBefore(Inner);
-      if (needsParens(Inner))
+      appendQualifiedNameBefore(Inner());
+      if (needsParens(InnerDIE))
         OS << '(';
       else if (Word)
         OS << ' ';
       if (DWARFDie Cont = resolveReferencedType(D, DW_AT_containing_type)) {
         appendQualifiedName(Cont);
+        EndedWithTemplate = false;
         OS << "::";
       }
       OS << "*";
@@ -286,7 +287,7 @@ struct DWARFTypePrinter {
       const char *NamePtr = dwarf::toString(D.find(DW_AT_name), nullptr);
       if (!NamePtr) {
         appendTypeTagName(D.getTag());
-        return Inner;
+        return DWARFDie();
       }
       Word = true;
       StringRef Name = NamePtr;
@@ -319,7 +320,7 @@ struct DWARFTypePrinter {
       break;
     }
     }
-    return Inner;
+    return InnerDIE;
   }
 
   void appendUnqualifiedNameAfter(DWARFDie D, DWARFDie Inner,
@@ -532,8 +533,10 @@ struct DWARFTypePrinter {
       appendQualifiedName(TypeAttr ? resolveReferencedType(C, *TypeAttr)
                                    : DWARFDie());
     }
-    if (IsTemplate && *FirstParameter && FirstParameter == &FirstParameterValue)
+    if (IsTemplate && *FirstParameter && FirstParameter == &FirstParameterValue) {
       OS << '<';
+      EndedWithTemplate = false;
+    }
     return IsTemplate;
   }
   void decomposeConstVolatile(DWARFDie &N, DWARFDie &T, DWARFDie &C,
@@ -612,7 +615,8 @@ struct DWARFTypePrinter {
     bool First = true;
     bool RealFirst = true;
     for (DWARFDie P : D) {
-      if (P.getTag() != DW_TAG_formal_parameter)
+      if (P.getTag() != DW_TAG_formal_parameter &&
+          P.getTag() != DW_TAG_unspecified_parameters)
         return;
       DWARFDie T = resolveReferencedType(P);
       if (SkipFirstParamIfArtificial && RealFirst && P.find(DW_AT_artificial)) {
@@ -624,43 +628,97 @@ struct DWARFTypePrinter {
         OS << ", ";
       }
       First = false;
-      appendQualifiedName(T);
+      if (P.getTag() == DW_TAG_unspecified_parameters)
+        OS << "...";
+      else
+        appendQualifiedName(T);
     }
     EndedWithTemplate = false;
     OS << ')';
     if (FirstParamIfArtificial) {
       if (DWARFDie P = FirstParamIfArtificial) {
         if (P.getTag() == DW_TAG_pointer_type) {
-          DWARFDie C;
-          DWARFDie V;
           auto CVStep = [&](DWARFDie CV) {
             if (DWARFDie U = resolveReferencedType(CV)) {
-              if (U.getTag() == DW_TAG_const_type)
-                return C = U;
-              if (U.getTag() == DW_TAG_volatile_type)
-                return V = U;
+              Const |= U.getTag() == DW_TAG_const_type;
+              Volatile |= U.getTag() == DW_TAG_volatile_type;
+              return U;
             }
             return DWARFDie();
           };
           if (DWARFDie CV = CVStep(P)) {
             CVStep(CV);
           }
-          if (C)
-            OS << " const";
-          if (V)
-            OS << " volatile";
         }
       }
-    } else {
-      if (Const)
-        OS << " const";
-      if (Volatile)
-        OS << " volatile";
     }
+
+    if (auto CC = D.find(DW_AT_calling_convention)) {
+      switch (*CC->getAsUnsignedConstant()) {
+      case CallingConvention::DW_CC_BORLAND_stdcall:
+        OS << " __attribute__((stdcall))";
+        break;
+      case CallingConvention::DW_CC_BORLAND_msfastcall:
+        OS << " __attribute__((fastcall))";
+        break;
+      case CallingConvention::DW_CC_BORLAND_thiscall:
+        OS << " __attribute__((thiscall))";
+        break;
+      case CallingConvention::DW_CC_LLVM_vectorcall:
+        OS << " __attribute__((vectorcall))";
+        break;
+      case CallingConvention::DW_CC_BORLAND_pascal:
+        OS << " __attribute__((pascal))";
+        break;
+      case CallingConvention::DW_CC_LLVM_Win64:
+        OS << " __attribute__((ms_abi))";
+        break;
+      case CallingConvention::DW_CC_LLVM_X86_64SysV:
+        OS << " __attribute__((sysv_abi))";
+        break;
+      case CallingConvention::DW_CC_LLVM_AAPCS:
+        // AArch64VectorCall missing?
+        OS << " __attribute__((pcs(\"aapcs\")))";
+        break;
+      case CallingConvention::DW_CC_LLVM_AAPCS_VFP:
+        OS << " __attribute__((pcs(\"aapcs-vfp\")))";
+        break;
+      case CallingConvention::DW_CC_LLVM_IntelOclBicc:
+        OS << " __attribute__((intel_ocl_bicc))";
+        break;
+      case CallingConvention::DW_CC_LLVM_SpirFunction:
+      case CallingConvention::DW_CC_LLVM_OpenCLKernel:
+        // These aren't available as attributes, but maybe we should still
+        // render them somehow? (Clang doesn't render them, but that's an issue
+        // for template names too - since then the DWARF names of templates
+        // instantiated with function types with these calling conventions won't
+        // have distinct names - so we'd need to fix that too)
+        break;
+      case CallingConvention::DW_CC_LLVM_Swift:
+        // SwiftAsync missing
+        OS << " __attribute__((swiftcall))";
+        break;
+      case CallingConvention::DW_CC_LLVM_PreserveMost:
+        OS << " __attribute__((preserve_most))";
+        break;
+      case CallingConvention::DW_CC_LLVM_PreserveAll:
+        OS << " __attribute__((preserve_all))";
+        break;
+      case CallingConvention::DW_CC_LLVM_X86RegCall:
+        OS << " __attribute__((regcall))";
+        break;
+      }
+    }
+
+    if (Const)
+      OS << " const";
+    if (Volatile)
+      OS << " volatile";
     if (D.find(DW_AT_reference))
       OS << " &";
     if (D.find(DW_AT_rvalue_reference))
       OS << " &&";
+
     appendUnqualifiedNameAfter(Inner, resolveReferencedType(Inner));
   }
   void appendScopes(DWARFDie D) {
@@ -769,7 +827,7 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
     DWARFDie D = resolveReferencedType(Die, FormValue);
     if (D && !D.isNULL()) {
       OS << Space << "\"";
-      DWARFTypePrinter(OS).appendQualifiedName(D);
+      dumpTypeQualifiedName(D, OS);
       OS << '"';
     }
   } else if (Attr == DW_AT_APPLE_property_attribute) {
@@ -803,7 +861,9 @@ void DWARFDie::getFullName(raw_string_ostream &OS,
   const char *NamePtr = getShortName();
   if (!NamePtr)
     return;
-  DWARFTypePrinter(OS).appendUnqualifiedName(*this, OriginalFullName);
+  if (getTag() == DW_TAG_GNU_template_parameter_pack)
+    return;
+  dumpTypeUnqualifiedName(*this, OS, OriginalFullName);
 }
 
 bool DWARFDie::isSubprogramDIE() const { return getTag() == DW_TAG_subprogram; }
@@ -1265,3 +1325,16 @@ bool DWARFAttribute::mayHaveLocationExpr(dwarf::Attribute Attr) {
     return false;
   }
 }
+
+namespace llvm {
+
+void dumpTypeQualifiedName(const DWARFDie &DIE, raw_ostream &OS) {
+  DWARFTypePrinter(OS).appendQualifiedName(DIE);
+}
+
+void dumpTypeUnqualifiedName(const DWARFDie &DIE, raw_ostream &OS,
+                             std::string *OriginalFullName) {
+  DWARFTypePrinter(OS).appendUnqualifiedName(DIE, OriginalFullName);
+}
+
+} // namespace llvm

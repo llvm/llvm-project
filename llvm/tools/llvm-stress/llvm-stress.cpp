@@ -34,12 +34,14 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -67,41 +69,10 @@ static cl::opt<std::string> OutputFilename("o",
                                            cl::value_desc("filename"),
                                            cl::cat(StressCategory));
 
-static LLVMContext Context;
-
-namespace cl {
-
-template <> class parser<Type*> final : public basic_parser<Type*> {
-public:
-  parser(Option &O) : basic_parser(O) {}
-
-  // Parse options as IR types. Return true on error.
-  bool parse(Option &O, StringRef, StringRef Arg, Type *&Value) {
-    if      (Arg == "half")      Value = Type::getHalfTy(Context);
-    else if (Arg == "fp128")     Value = Type::getFP128Ty(Context);
-    else if (Arg == "x86_fp80")  Value = Type::getX86_FP80Ty(Context);
-    else if (Arg == "ppc_fp128") Value = Type::getPPC_FP128Ty(Context);
-    else if (Arg == "x86_mmx")   Value = Type::getX86_MMXTy(Context);
-    else if (Arg.startswith("i")) {
-      unsigned N = 0;
-      Arg.drop_front().getAsInteger(10, N);
-      if (N > 0)
-        Value = Type::getIntNTy(Context, N);
-    }
-
-    if (!Value)
-      return O.error("Invalid IR scalar type: '" + Arg + "'!");
-    return false;
-  }
-
-  StringRef getValueName() const override { return "IR scalar type"; }
-};
-
-} // end namespace cl
-
-static cl::list<Type*> AdditionalScalarTypes("types", cl::CommaSeparated,
-  cl::desc("Additional IR scalar types "
-           "(always includes i1, i8, i16, i32, i64, float and double)"));
+static cl::list<StringRef> AdditionalScalarTypes(
+    "types", cl::CommaSeparated,
+    cl::desc("Additional IR scalar types "
+             "(always includes i1, i8, i16, i32, i64, float and double)"));
 
 namespace {
 
@@ -183,7 +154,38 @@ struct Modifier {
 public:
   /// C'tor
   Modifier(BasicBlock *Block, PieceTable *PT, Random *R)
-      : BB(Block), PT(PT), Ran(R), Context(BB->getContext()) {}
+      : BB(Block), PT(PT), Ran(R), Context(BB->getContext()) {
+    ScalarTypes.assign({Type::getInt1Ty(Context), Type::getInt8Ty(Context),
+                        Type::getInt16Ty(Context), Type::getInt32Ty(Context),
+                        Type::getInt64Ty(Context), Type::getFloatTy(Context),
+                        Type::getDoubleTy(Context)});
+
+    for (auto &Arg : AdditionalScalarTypes) {
+      Type *Ty = nullptr;
+      if (Arg == "half")
+        Ty = Type::getHalfTy(Context);
+      else if (Arg == "fp128")
+        Ty = Type::getFP128Ty(Context);
+      else if (Arg == "x86_fp80")
+        Ty = Type::getX86_FP80Ty(Context);
+      else if (Arg == "ppc_fp128")
+        Ty = Type::getPPC_FP128Ty(Context);
+      else if (Arg == "x86_mmx")
+        Ty = Type::getX86_MMXTy(Context);
+      else if (Arg.startswith("i")) {
+        unsigned N = 0;
+        Arg.drop_front().getAsInteger(10, N);
+        if (N > 0)
+          Ty = Type::getIntNTy(Context, N);
+      }
+      if (!Ty) {
+        errs() << "Invalid IR scalar type: '" << Arg << "'!\n";
+        exit(1);
+      }
+
+      ScalarTypes.push_back(Ty);
+    }
+  }
 
   /// virtual D'tor to silence warnings.
   virtual ~Modifier() = default;
@@ -308,20 +310,6 @@ protected:
 
   /// Pick a random scalar type.
   Type *pickScalarType() {
-    static std::vector<Type*> ScalarTypes;
-    if (ScalarTypes.empty()) {
-      ScalarTypes.assign({
-        Type::getInt1Ty(Context),
-        Type::getInt8Ty(Context),
-        Type::getInt16Ty(Context),
-        Type::getInt32Ty(Context),
-        Type::getInt64Ty(Context),
-        Type::getFloatTy(Context),
-        Type::getDoubleTy(Context)
-      });
-      llvm::append_range(ScalarTypes, AdditionalScalarTypes);
-    }
-
     return ScalarTypes[getRandom() % ScalarTypes.size()];
   }
 
@@ -336,6 +324,8 @@ protected:
 
   /// Context
   LLVMContext &Context;
+
+  std::vector<Type *> ScalarTypes;
 };
 
 struct LoadModifier: public Modifier {
@@ -345,9 +335,10 @@ struct LoadModifier: public Modifier {
   void Act() override {
     // Try to use predefined pointers. If non-exist, use undef pointer value;
     Value *Ptr = getRandomPointerValue();
-    PointerType *Tp = cast<PointerType>(Ptr->getType());
-    Value *V = new LoadInst(Tp->getElementType(), Ptr, "L",
-                            BB->getTerminator());
+    Type *Ty = Ptr->getType()->isOpaquePointerTy()
+                   ? pickType()
+                   : Ptr->getType()->getNonOpaquePointerElementType();
+    Value *V = new LoadInst(Ty, Ptr, "L", BB->getTerminator());
     PT->push_back(V);
   }
 };
@@ -359,15 +350,16 @@ struct StoreModifier: public Modifier {
   void Act() override {
     // Try to use predefined pointers. If non-exist, use undef pointer value;
     Value *Ptr = getRandomPointerValue();
-    PointerType *Tp = cast<PointerType>(Ptr->getType());
-    Value *Val = getRandomValue(Tp->getElementType());
-    Type  *ValTy = Val->getType();
+    Type *ValTy = Ptr->getType()->isOpaquePointerTy()
+                      ? pickType()
+                      : Ptr->getType()->getNonOpaquePointerElementType();
 
     // Do not store vectors of i1s because they are unsupported
     // by the codegen.
     if (ValTy->isVectorTy() && ValTy->getScalarSizeInBits() == 1)
       return;
 
+    Value *Val = getRandomValue(ValTy);
     new StoreInst(Val, Ptr, BB->getTerminator());
   }
 };
@@ -745,6 +737,7 @@ int main(int argc, char **argv) {
   cl::HideUnrelatedOptions({&StressCategory, &getColorCategory()});
   cl::ParseCommandLineOptions(argc, argv, "llvm codegen stress-tester\n");
 
+  LLVMContext Context;
   auto M = std::make_unique<Module>("/tmp/autogen.bc", Context);
   Function *F = GenEmptyFunction(M.get());
 

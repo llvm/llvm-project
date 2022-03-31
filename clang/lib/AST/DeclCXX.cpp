@@ -79,10 +79,9 @@ CXXRecordDecl::DefinitionData::DefinitionData(CXXRecordDecl *D)
       HasBasesWithFields(false), HasBasesWithNonStaticDataMembers(false),
       HasPrivateFields(false), HasProtectedFields(false),
       HasPublicFields(false), HasMutableFields(false), HasVariantMembers(false),
-      HasOnlyCMembers(true), HasInClassInitializer(false),
+      HasOnlyCMembers(true), HasInitMethod(false), HasInClassInitializer(false),
       HasUninitializedReferenceMember(false), HasUninitializedFields(false),
-      HasInheritedConstructor(false),
-      HasInheritedDefaultConstructor(false),
+      HasInheritedConstructor(false), HasInheritedDefaultConstructor(false),
       HasInheritedAssignment(false),
       NeedOverloadResolutionForCopyConstructor(false),
       NeedOverloadResolutionForMoveConstructor(false),
@@ -147,16 +146,16 @@ CXXRecordDecl *CXXRecordDecl::Create(const ASTContext &C, TagKind TK,
 CXXRecordDecl *
 CXXRecordDecl::CreateLambda(const ASTContext &C, DeclContext *DC,
                             TypeSourceInfo *Info, SourceLocation Loc,
-                            bool Dependent, bool IsGeneric,
+                            unsigned DependencyKind, bool IsGeneric,
                             LambdaCaptureDefault CaptureDefault) {
   auto *R = new (C, DC) CXXRecordDecl(CXXRecord, TTK_Class, C, DC, Loc, Loc,
                                       nullptr, nullptr);
   R->setBeingDefined(true);
-  R->DefinitionData =
-      new (C) struct LambdaDefinitionData(R, Info, Dependent, IsGeneric,
-                                          CaptureDefault);
+  R->DefinitionData = new (C) struct LambdaDefinitionData(
+      R, Info, DependencyKind, IsGeneric, CaptureDefault);
   R->setMayHaveOutOfDateDef(false);
   R->setImplicit(true);
+
   C.getTypeDeclType(R, /*PrevDecl=*/nullptr);
   return R;
 }
@@ -3272,7 +3271,7 @@ void MSGuidDecl::anchor() {}
 
 MSGuidDecl::MSGuidDecl(DeclContext *DC, QualType T, Parts P)
     : ValueDecl(Decl::MSGuid, DC, SourceLocation(), DeclarationName(), T),
-      PartVal(P), APVal() {}
+      PartVal(P) {}
 
 MSGuidDecl *MSGuidDecl::Create(const ASTContext &C, QualType T, Parts P) {
   DeclContext *DC = C.getTranslationUnitDecl();
@@ -3362,6 +3361,38 @@ APValue &MSGuidDecl::getAsAPValue() const {
   }
 
   return APVal;
+}
+
+void UnnamedGlobalConstantDecl::anchor() {}
+
+UnnamedGlobalConstantDecl::UnnamedGlobalConstantDecl(const ASTContext &C,
+                                                     DeclContext *DC,
+                                                     QualType Ty,
+                                                     const APValue &Val)
+    : ValueDecl(Decl::UnnamedGlobalConstant, DC, SourceLocation(),
+                DeclarationName(), Ty),
+      Value(Val) {
+  // Cleanup the embedded APValue if required (note that our destructor is never
+  // run)
+  if (Value.needsCleanup())
+    C.addDestruction(&Value);
+}
+
+UnnamedGlobalConstantDecl *
+UnnamedGlobalConstantDecl::Create(const ASTContext &C, QualType T,
+                                  const APValue &Value) {
+  DeclContext *DC = C.getTranslationUnitDecl();
+  return new (C, DC) UnnamedGlobalConstantDecl(C, DC, T, Value);
+}
+
+UnnamedGlobalConstantDecl *
+UnnamedGlobalConstantDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
+  return new (C, ID)
+      UnnamedGlobalConstantDecl(C, nullptr, QualType(), APValue());
+}
+
+void UnnamedGlobalConstantDecl::printName(llvm::raw_ostream &OS) const {
+  OS << "unnamed-global-constant";
 }
 
 static const char *getAccessName(AccessSpecifier AS) {

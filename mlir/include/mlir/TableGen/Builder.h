@@ -23,7 +23,7 @@ namespace llvm {
 class Init;
 class Record;
 class SMLoc;
-} // end namespace llvm
+} // namespace llvm
 
 namespace mlir {
 namespace tblgen {
@@ -62,7 +62,7 @@ public:
   };
 
   /// Construct a builder from the given Record instance.
-  Builder(const llvm::Record *record, ArrayRef<llvm::SMLoc> loc);
+  Builder(const llvm::Record *record, ArrayRef<SMLoc> loc);
 
   /// Return a list of parameters used in this build method.
   ArrayRef<Parameter> getParameters() const { return parameters; }
@@ -79,7 +79,7 @@ private:
   SmallVector<Parameter> parameters;
 };
 
-} // end namespace tblgen
-} // end namespace mlir
+} // namespace tblgen
+} // namespace mlir
 
 #endif // MLIR_TABLEGEN_BUILDER_H_

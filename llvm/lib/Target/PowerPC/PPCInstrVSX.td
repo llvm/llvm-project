@@ -158,6 +158,11 @@ def HasP9Vector : Predicate<"Subtarget->hasP9Vector()">;
 def NoP9Altivec : Predicate<"!Subtarget->hasP9Altivec()">;
 def NoP10Vector: Predicate<"!Subtarget->hasP10Vector()">;
 
+def PPCldsplatAlign16 : PatFrag<(ops node:$ptr), (PPCldsplat node:$ptr), [{
+  return cast<MemIntrinsicSDNode>(N)->getAlign() >= Align(16) &&
+         isOffsetMultipleOf(N, 16);
+}]>;
+
 //--------------------- VSX-specific instruction formats ---------------------//
 // By default, all VSX instructions are to be selected over their Altivec
 // counter parts and they do not have unmodeled sideeffects.
@@ -2892,10 +2897,30 @@ def : Pat<(v2i64 (PPCvcmp_rec v2i64:$vA, v2i64:$vB, 199)),
 
 // XL Compat builtins.
 def : Pat<(int_ppc_fmsub f64:$A, f64:$B, f64:$C), (XSMSUBMDP $A, $B, $C)>;
-def : Pat<(int_ppc_fnmsub f64:$A, f64:$B, f64:$C), (XSNMSUBMDP $A, $B, $C)>;
 def : Pat<(int_ppc_fnmadd f64:$A, f64:$B, f64:$C), (XSNMADDMDP $A, $B, $C)>;
 def : Pat<(int_ppc_fre f64:$A), (XSREDP $A)>;
 def : Pat<(int_ppc_frsqrte vsfrc:$XB), (XSRSQRTEDP $XB)>;
+
+// XXMRG[LH]W is a direct replacement for VMRG[LH]W respectively.
+// Prefer the VSX form for greater register range.
+def:Pat<(vmrglw_unary_shuffle v16i8:$vA, undef),
+        (COPY_TO_REGCLASS (XXMRGLW (COPY_TO_REGCLASS $vA, VSRC),
+                                   (COPY_TO_REGCLASS $vA, VSRC)), VRRC)>;
+def:Pat<(vmrghw_unary_shuffle v16i8:$vA, undef),
+        (COPY_TO_REGCLASS (XXMRGHW (COPY_TO_REGCLASS $vA, VSRC),
+                                   (COPY_TO_REGCLASS $vA, VSRC)), VRRC)>;
+def:Pat<(vmrglw_shuffle v16i8:$vA, v16i8:$vB),
+        (COPY_TO_REGCLASS (XXMRGLW (COPY_TO_REGCLASS $vA, VSRC),
+                                   (COPY_TO_REGCLASS $vB, VSRC)), VRRC)>;
+def:Pat<(vmrghw_shuffle v16i8:$vA, v16i8:$vB),
+        (COPY_TO_REGCLASS (XXMRGHW (COPY_TO_REGCLASS $vA, VSRC),
+                                   (COPY_TO_REGCLASS $vB, VSRC)), VRRC)>;
+def:Pat<(vmrglw_swapped_shuffle v16i8:$vA, v16i8:$vB),
+        (COPY_TO_REGCLASS (XXMRGLW (COPY_TO_REGCLASS $vB, VSRC),
+                                   (COPY_TO_REGCLASS $vA, VSRC)), VRRC)>;
+def:Pat<(vmrghw_swapped_shuffle v16i8:$vA, v16i8:$vB),
+        (COPY_TO_REGCLASS (XXMRGHW (COPY_TO_REGCLASS $vB, VSRC),
+                                   (COPY_TO_REGCLASS $vA, VSRC)), VRRC)>;
 } // HasVSX
 
 // Any big endian VSX subtarget.
@@ -3180,6 +3205,12 @@ defm : ScalToVecWPermute<
   v2f64, (f64 (load ForceXForm:$src)),
   (XXPERMDIs (XFLOADf64 ForceXForm:$src), 2),
   (SUBREG_TO_REG (i64 1), (XFLOADf64 ForceXForm:$src), sub_64)>;
+
+// Splat loads.
+def : Pat<(v8i16 (PPCldsplatAlign16 ForceXForm:$A)),
+          (v8i16 (VSPLTH 7, (LVX ForceXForm:$A)))>;
+def : Pat<(v16i8 (PPCldsplatAlign16 ForceXForm:$A)),
+          (v16i8 (VSPLTB 15, (LVX ForceXForm:$A)))>;
 } // HasVSX, NoP9Vector, IsLittleEndian
 
 let Predicates = [HasVSX, NoP9Vector, IsBigEndian] in {
@@ -3187,6 +3218,12 @@ let Predicates = [HasVSX, NoP9Vector, IsBigEndian] in {
             (LXVD2X ForceXForm:$src)>;
   def : Pat<(int_ppc_vsx_stxvd2x v2f64:$rS, ForceXForm:$dst),
             (STXVD2X $rS, ForceXForm:$dst)>;
+
+  // Splat loads.
+  def : Pat<(v8i16 (PPCldsplatAlign16 ForceXForm:$A)),
+            (v8i16 (VSPLTH 0, (LVX ForceXForm:$A)))>;
+  def : Pat<(v16i8 (PPCldsplatAlign16 ForceXForm:$A)),
+            (v16i8 (VSPLTB 0, (LVX ForceXForm:$A)))>;
 } // HasVSX, NoP9Vector, IsBigEndian
 
 // Any VSX subtarget that only has loads and stores that load in big endian
@@ -3294,7 +3331,6 @@ def : Pat<(v16i8 (bitconvert (v16i8 immAllOnesV))),
 
 // XL Compat builtins.
 def : Pat<(int_ppc_fmsubs f32:$A, f32:$B, f32:$C), (XSMSUBMSP $A, $B, $C)>;
-def : Pat<(int_ppc_fnmsubs f32:$A, f32:$B, f32:$C), (XSNMSUBMSP $A, $B, $C)>;
 def : Pat<(int_ppc_fnmadds f32:$A, f32:$B, f32:$C), (XSNMADDMSP $A, $B, $C)>;
 def : Pat<(int_ppc_fres f32:$A), (XSRESP $A)>;
 def : Pat<(i32 (int_ppc_extract_exp f64:$A)),

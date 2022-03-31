@@ -15,6 +15,7 @@
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-private.h"
+#include "llvm/DebugInfo/DWARF/DWARFLocationExpression.h"
 #include <functional>
 
 class DWARFUnit;
@@ -55,18 +56,10 @@ public:
   /// \param[in] level
   ///     The level of verbosity to use.
   ///
-  /// \param[in] location_list_base_addr
-  ///     If this is a location list based expression, this is the
-  ///     address of the object that owns it. NOTE: this value is
-  ///     different from the DWARF version of the location list base
-  ///     address which is compile unit relative. This base address
-  ///     is the address of the object that owns the location list.
-  ///
   /// \param[in] abi
   ///     An optional ABI plug-in that can be used to resolve register
   ///     names.
-  void GetDescription(Stream *s, lldb::DescriptionLevel level,
-                      lldb::addr_t location_list_base_addr, ABI *abi) const;
+  void GetDescription(Stream *s, lldb::DescriptionLevel level, ABI *abi) const;
 
   /// Return true if the location expression contains data
   bool IsValid() const;
@@ -216,6 +209,13 @@ public:
   bool DumpLocationForAddress(Stream *s, lldb::DescriptionLevel level,
                               lldb::addr_t func_load_addr, lldb::addr_t address,
                               ABI *abi);
+
+  bool DumpLocations(Stream *s, lldb::DescriptionLevel level,
+                     lldb::addr_t func_load_addr, lldb::addr_t addr, ABI *abi);
+
+  bool GetLocationExpressions(
+      lldb::addr_t load_function_start,
+      llvm::function_ref<bool(llvm::DWARFLocationExpression)> callback) const;
 
   bool MatchesOperand(StackFrame &frame, const Instruction::Operand &op);
 

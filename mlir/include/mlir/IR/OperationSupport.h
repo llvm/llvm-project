@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_IR_OPERATION_SUPPORT_H
-#define MLIR_IR_OPERATION_SUPPORT_H
+#ifndef MLIR_IR_OPERATIONSUPPORT_H
+#define MLIR_IR_OPERATIONSUPPORT_H
 
 #include "mlir/IR/BlockSupport.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -29,7 +29,7 @@
 
 namespace llvm {
 class BitVector;
-} // end namespace llvm
+} // namespace llvm
 
 namespace mlir {
 class Dialect;
@@ -49,14 +49,12 @@ class Pattern;
 class Region;
 class ResultRange;
 class RewritePattern;
+class RewritePatternSet;
 class Type;
 class Value;
 class ValueRange;
 template <typename ValueRangeT>
 class ValueTypeRange;
-
-class RewritePatternSet;
-using OwningRewritePatternList = RewritePatternSet;
 
 //===----------------------------------------------------------------------===//
 // OperationName
@@ -74,6 +72,8 @@ public:
   using PrintAssemblyFn =
       llvm::unique_function<void(Operation *, OpAsmPrinter &, StringRef) const>;
   using VerifyInvariantsFn =
+      llvm::unique_function<LogicalResult(Operation *) const>;
+  using VerifyRegionInvariantsFn =
       llvm::unique_function<LogicalResult(Operation *) const>;
 
 protected:
@@ -114,6 +114,7 @@ protected:
     ParseAssemblyFn parseAssemblyFn;
     PrintAssemblyFn printAssemblyFn;
     VerifyInvariantsFn verifyInvariantsFn;
+    VerifyRegionInvariantsFn verifyRegionInvariantsFn;
 
     /// A list of attribute names registered to this operation in StringAttr
     /// form. This allows for operation classes to use StringAttr for attribute
@@ -231,9 +232,7 @@ public:
   /// Lookup the registered operation information for the given operation.
   /// Returns None if the operation isn't registered.
   static Optional<RegisteredOperationName> lookup(StringRef name,
-                                                  MLIRContext *ctx) {
-    return OperationName(name, ctx).getRegisteredInfo();
-  }
+                                                  MLIRContext *ctx);
 
   /// Register a new operation in a Dialect object.
   /// This constructor is used by Dialect objects when they register the list of
@@ -242,16 +241,18 @@ public:
   static void insert(Dialect &dialect) {
     insert(T::getOperationName(), dialect, TypeID::get<T>(),
            T::getParseAssemblyFn(), T::getPrintAssemblyFn(),
-           T::getVerifyInvariantsFn(), T::getFoldHookFn(),
-           T::getGetCanonicalizationPatternsFn(), T::getInterfaceMap(),
-           T::getHasTraitFn(), T::getAttributeNames());
+           T::getVerifyInvariantsFn(), T::getVerifyRegionInvariantsFn(),
+           T::getFoldHookFn(), T::getGetCanonicalizationPatternsFn(),
+           T::getInterfaceMap(), T::getHasTraitFn(), T::getAttributeNames());
   }
   /// The use of this method is in general discouraged in favor of
   /// 'insert<CustomOp>(dialect)'.
   static void
   insert(StringRef name, Dialect &dialect, TypeID typeID,
          ParseAssemblyFn &&parseAssembly, PrintAssemblyFn &&printAssembly,
-         VerifyInvariantsFn &&verifyInvariants, FoldHookFn &&foldHook,
+         VerifyInvariantsFn &&verifyInvariants,
+         VerifyRegionInvariantsFn &&verifyRegionInvariants,
+         FoldHookFn &&foldHook,
          GetCanonicalizationPatternsFn &&getCanonicalizationPatterns,
          detail::InterfaceMap &&interfaceMap, HasTraitFn &&hasTrait,
          ArrayRef<StringRef> attrNames);
@@ -276,11 +277,14 @@ public:
     return impl->printAssemblyFn(op, p, defaultDialect);
   }
 
-  /// This hook implements the verifier for this operation.  It should emits an
-  /// error message and returns failure if a problem is detected, or returns
+  /// These hooks implement the verifiers for this operation.  It should emits
+  /// an error message and returns failure if a problem is detected, or returns
   /// success if everything is ok.
   LogicalResult verifyInvariants(Operation *op) const {
     return impl->verifyInvariantsFn(op);
+  }
+  LogicalResult verifyRegionInvariants(Operation *op) const {
+    return impl->verifyRegionInvariantsFn(op);
   }
 
   /// This hook implements a generalized folder for this operation.  Operations
@@ -424,7 +428,7 @@ std::pair<IteratorT, bool> findAttrSorted(IteratorT first, IteratorT last,
   return findAttrUnsorted(first, last, name);
 }
 
-} // end namespace impl
+} // namespace impl
 
 //===----------------------------------------------------------------------===//
 // NamedAttrList
@@ -470,7 +474,10 @@ public:
   }
 
   /// Add a range of named attributes.
-  template <typename IteratorT>
+  template <typename IteratorT,
+            typename = std::enable_if_t<std::is_convertible<
+                typename std::iterator_traits<IteratorT>::iterator_category,
+                std::input_iterator_tag>::value>>
   void append(IteratorT in_start, IteratorT in_end) {
     // TODO: expand to handle case where values appended are in order & after
     // end of current list.
@@ -582,9 +589,12 @@ struct OperationState {
 
 public:
   OperationState(Location location, StringRef name);
-
   OperationState(Location location, OperationName name);
 
+  OperationState(Location location, OperationName name, ValueRange operands,
+                 TypeRange types, ArrayRef<NamedAttribute> attributes,
+                 BlockRange successors = {},
+                 MutableArrayRef<std::unique_ptr<Region>> regions = {});
   OperationState(Location location, StringRef name, ValueRange operands,
                  TypeRange types, ArrayRef<NamedAttribute> attributes,
                  BlockRange successors = {},
@@ -665,7 +675,7 @@ public:
 
   /// Erase the operands held by the storage that have their corresponding bit
   /// set in `eraseIndices`.
-  void eraseOperands(const llvm::BitVector &eraseIndices);
+  void eraseOperands(const BitVector &eraseIndices);
 
   /// Get the operation operands held by the storage.
   MutableArrayRef<OpOperand> getOperands() { return {operandStorage, size()}; }
@@ -688,7 +698,7 @@ private:
   /// A pointer to the operand storage.
   OpOperand *operandStorage;
 };
-} // end namespace detail
+} // namespace detail
 
 //===----------------------------------------------------------------------===//
 // OpPrintingFlags
@@ -716,6 +726,9 @@ public:
   /// Always print operations in the generic form.
   OpPrintingFlags &printGenericOpForm();
 
+  /// Do not verify the operation when using custom operation printers.
+  OpPrintingFlags &assumeVerified();
+
   /// Use local scope when printing the operation. This allows for using the
   /// printer in a more localized and thread-safe setting, but may not
   /// necessarily be identical to what the IR will look like when dumping
@@ -737,6 +750,9 @@ public:
   /// Return if operations should be printed in the generic form.
   bool shouldPrintGenericOpForm() const;
 
+  /// Return if operation verification should be skipped.
+  bool shouldAssumeVerified() const;
+
   /// Return if the printer should use local scope when dumping the IR.
   bool shouldUseLocalScope() const;
 
@@ -751,6 +767,9 @@ private:
 
   /// Print operations in the generic form.
   bool printGenericOpFormFlag : 1;
+
+  /// Skip operation verification.
+  bool assumeVerifiedFlag : 1;
 
   /// Print operations with numberings local to the current operation.
   bool printLocalScope : 1;
@@ -1171,7 +1190,7 @@ struct OperationEquivalence {
 /// Enable Bitmask enums for OperationEquivalence::Flags.
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
-} // end namespace mlir
+} // namespace mlir
 
 namespace llvm {
 template <>
@@ -1223,6 +1242,6 @@ struct PointerLikeTypeTraits<mlir::RegisteredOperationName>
   }
 };
 
-} // end namespace llvm
+} // namespace llvm
 
 #endif

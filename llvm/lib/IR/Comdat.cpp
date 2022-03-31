@@ -11,11 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm-c/Comdat.h"
-#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/StringMapEntry.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Comdat.h"
 #include "llvm/IR/GlobalObject.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Value.h"
 
 using namespace llvm;
 
@@ -24,6 +26,10 @@ Comdat::Comdat(Comdat &&C) : Name(C.Name), SK(C.SK) {}
 Comdat::Comdat() = default;
 
 StringRef Comdat::getName() const { return Name->first(); }
+
+void Comdat::addUser(GlobalObject *GO) { Users.insert(GO); }
+
+void Comdat::removeUser(GlobalObject *GO) { Users.erase(GO); }
 
 LLVMComdatRef LLVMGetOrInsertComdat(LLVMModuleRef M, const char *Name) {
   return wrap(unwrap(M)->getOrInsertComdat(Name));

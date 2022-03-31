@@ -15,8 +15,9 @@
 #ifndef LLVM_ANALYSIS_LOOPUNROLLANALYZER_H
 #define LLVM_ANALYSIS_LOOPUNROLLANALYZER_H
 
-#include "llvm/Analysis/InstructionSimplify.h"
-#include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/InstVisitor.h"
 
 // This class is used to get an estimate of the optimization effects that we
@@ -36,6 +37,8 @@
 // And finally:
 //   v = b[1]
 namespace llvm {
+class Instruction;
+
 class UnrolledInstAnalyzer : private InstVisitor<UnrolledInstAnalyzer, bool> {
   typedef InstVisitor<UnrolledInstAnalyzer, bool> Base;
   friend class InstVisitor<UnrolledInstAnalyzer, bool>;

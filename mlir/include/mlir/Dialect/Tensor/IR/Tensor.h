@@ -10,6 +10,8 @@
 #define MLIR_DIALECT_TENSOR_IR_TENSOR_H_
 
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Complex/IR/Complex.h"
+#include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
@@ -18,6 +20,7 @@
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Interfaces/TilingInterface.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 
 //===----------------------------------------------------------------------===//
@@ -82,6 +85,28 @@ bool preservesStaticInformation(Type source, Type target);
 /// ```
 bool canFoldIntoConsumerOp(CastOp castOp);
 
+/// Determines whether the tensor::CastOp casts to a more static version of the
+/// source tensor. This is useful to fold into a producing op and implement
+/// canonicaliation patterns with the `tensor.cast` op as the root, but producer
+/// being from different dialects. Returns true when all conditions are met:
+/// 1. source and result and ranked tensors with same element type and rank.
+/// 2. the result type has more static information than the source.
+///
+/// Example:
+/// ```mlir
+///   %1 = producer ... : tensor<?x?xf32>
+///   %2 = tensor.cast %1 : tensor<?x?xf32> to tensor<8x16xf32>
+/// ```
+///
+/// can be canonicalized to :
+///
+/// ```mlir
+///   %2 = producer ... : tensor<8x16xf32>
+/// ```
+/// Not all ops might be canonicalizable this way, but for those that can be,
+/// this method provides a check that it is worth doing the canonicalization.
+bool canFoldIntoProducerOp(CastOp castOp);
+
 /// Performs folding of any operand of `op` if it comes from a tensor::CastOp
 /// that can be folded.
 LogicalResult foldTensorCast(Operation *op);
@@ -99,6 +124,19 @@ Value createCanonicalRankReducingExtractSliceOp(OpBuilder &b, Location loc,
 /// at the canonical [0 .. 0] position.
 Value createCanonicalRankReducingInsertSliceOp(OpBuilder &b, Location loc,
                                                Value tensor, Value dest);
+
+/// Function to control the folding of constant and extract slice
+using ControlConstantExtractSliceFusionFn = std::function<bool(ExtractSliceOp)>;
+
+/// Patterns to fold the extract slice op with its constant operand
+void populateFoldConstantExtractSlicePatterns(
+    RewritePatternSet &patterns,
+    const ControlConstantExtractSliceFusionFn &controlFn =
+        [](ExtractSliceOp op) {
+          // Disable by default because the folding can generate a large
+          // constant tensor, which would affect the compile time and storage.
+          return false;
+        });
 
 } // namespace tensor
 } // namespace mlir

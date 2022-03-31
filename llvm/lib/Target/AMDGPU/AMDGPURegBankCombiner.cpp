@@ -36,6 +36,7 @@ protected:
   MachineIRBuilder &B;
   MachineFunction &MF;
   MachineRegisterInfo &MRI;
+  const GCNSubtarget &Subtarget;
   const RegisterBankInfo &RBI;
   const TargetRegisterInfo &TRI;
   const SIInstrInfo &TII;
@@ -44,9 +45,9 @@ protected:
 public:
   AMDGPURegBankCombinerHelper(MachineIRBuilder &B, CombinerHelper &Helper)
       : B(B), MF(B.getMF()), MRI(*B.getMRI()),
-        RBI(*MF.getSubtarget().getRegBankInfo()),
-        TRI(*MF.getSubtarget().getRegisterInfo()),
-        TII(*MF.getSubtarget<GCNSubtarget>().getInstrInfo()), Helper(Helper){};
+        Subtarget(MF.getSubtarget<GCNSubtarget>()),
+        RBI(*Subtarget.getRegBankInfo()), TRI(*Subtarget.getRegisterInfo()),
+        TII(*Subtarget.getInstrInfo()), Helper(Helper){};
 
   bool isVgprRegBank(Register Reg);
   Register getAsVgpr(Register Reg);
@@ -193,7 +194,10 @@ bool AMDGPURegBankCombinerHelper::matchFPMinMaxToMed3(
     MachineInstr &MI, Med3MatchInfo &MatchInfo) {
   Register Dst = MI.getOperand(0).getReg();
   LLT Ty = MRI.getType(Dst);
-  if (Ty != LLT::scalar(16) && Ty != LLT::scalar(32))
+
+  // med3 for f16 is only available on gfx9+, and not available for v2f16.
+  if ((Ty != LLT::scalar(16) || !Subtarget.hasMed3_16()) &&
+      Ty != LLT::scalar(32))
     return false;
 
   auto OpcodeTriple = getMinMaxPair(MI.getOpcode());

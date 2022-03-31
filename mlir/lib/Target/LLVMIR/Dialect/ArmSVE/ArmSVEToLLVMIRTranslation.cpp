@@ -40,12 +40,13 @@ public:
     return failure();
   }
 };
-} // end namespace
+} // namespace
 
 void mlir::registerArmSVEDialectTranslation(DialectRegistry &registry) {
   registry.insert<arm_sve::ArmSVEDialect>();
-  registry.addDialectInterface<arm_sve::ArmSVEDialect,
-                               ArmSVEDialectLLVMIRTranslationInterface>();
+  registry.addExtension(+[](MLIRContext *ctx, arm_sve::ArmSVEDialect *dialect) {
+    dialect->addInterfaces<ArmSVEDialectLLVMIRTranslationInterface>();
+  });
 }
 
 void mlir::registerArmSVEDialectTranslation(MLIRContext &context) {

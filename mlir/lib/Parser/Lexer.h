@@ -14,7 +14,7 @@
 #define MLIR_LIB_PARSER_LEXER_H
 
 #include "Token.h"
-#include "mlir/Parser.h"
+#include "mlir/Parser/Parser.h"
 
 namespace mlir {
 class Location;
@@ -30,7 +30,7 @@ public:
 
   /// Encode the specified source location information into a Location object
   /// for attachment to the IR or error reporting.
-  Location getEncodedSourceLocation(llvm::SMLoc loc);
+  Location getEncodedSourceLocation(SMLoc loc);
 
   /// Change the position of the lexer cursor.  The next token we lex will start
   /// at the designated point in the input.
@@ -68,6 +68,6 @@ private:
   void operator=(const Lexer &) = delete;
 };
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_LIB_PARSER_LEXER_H

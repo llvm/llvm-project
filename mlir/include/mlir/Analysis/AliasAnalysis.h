@@ -180,7 +180,7 @@ struct AliasAnalysisTraits {
   /// querying into derived analysis implementations.
   class Concept {
   public:
-    virtual ~Concept() {}
+    virtual ~Concept() = default;
 
     /// Given two values, return their aliasing behavior.
     virtual AliasResult alias(Value lhs, Value rhs) = 0;
@@ -212,7 +212,7 @@ struct AliasAnalysisTraits {
     ImplT impl;
   };
 };
-} // end namespace detail
+} // namespace detail
 
 //===----------------------------------------------------------------------===//
 // AliasAnalysis
@@ -278,6 +278,6 @@ private:
   SmallVector<std::unique_ptr<Concept>, 4> aliasImpls;
 };
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_ANALYSIS_ALIASANALYSIS_H_

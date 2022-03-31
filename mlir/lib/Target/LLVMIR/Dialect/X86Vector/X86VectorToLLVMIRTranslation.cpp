@@ -41,12 +41,14 @@ public:
     return failure();
   }
 };
-} // end namespace
+} // namespace
 
 void mlir::registerX86VectorDialectTranslation(DialectRegistry &registry) {
   registry.insert<x86vector::X86VectorDialect>();
-  registry.addDialectInterface<x86vector::X86VectorDialect,
-                               X86VectorDialectLLVMIRTranslationInterface>();
+  registry.addExtension(
+      +[](MLIRContext *ctx, x86vector::X86VectorDialect *dialect) {
+        dialect->addInterfaces<X86VectorDialectLLVMIRTranslationInterface>();
+      });
 }
 
 void mlir::registerX86VectorDialectTranslation(MLIRContext &context) {

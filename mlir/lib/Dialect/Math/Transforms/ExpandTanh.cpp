@@ -13,7 +13,6 @@
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Math/Transforms/Passes.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Transforms/DialectConversion.h"
 
@@ -49,7 +48,8 @@ static LogicalResult convertTanhOp(math::TanhOp op, PatternRewriter &rewriter) {
   Value zero = rewriter.create<arith::ConstantOp>(loc, floatZero);
   Value cmpRes = rewriter.create<arith::CmpFOp>(loc, arith::CmpFPredicate::OGE,
                                                 op.getOperand(), zero);
-  rewriter.replaceOpWithNewOp<SelectOp>(op, cmpRes, positiveRes, negativeRes);
+  rewriter.replaceOpWithNewOp<arith::SelectOp>(op, cmpRes, positiveRes,
+                                               negativeRes);
   return success();
 }
 

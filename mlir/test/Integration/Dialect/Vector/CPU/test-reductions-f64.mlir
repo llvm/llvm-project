@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-scf-to-std -convert-vector-to-llvm -convert-std-to-llvm -reconcile-unrealized-casts | \
+// RUN: mlir-opt %s -convert-scf-to-cf -convert-vector-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-cpu-runner -e entry -entry-point-result=void  \
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
@@ -33,16 +33,16 @@ func @entry() {
 
   // Various vector reductions. Not full functional unit tests, but
   // a simple integration test to see if the code runs end-to-end.
-  %0 = vector.reduction "add", %v9 : vector<10xf64> into f64
+  %0 = vector.reduction <add>, %v9 : vector<10xf64> into f64
   vector.print %0 : f64
   // CHECK: -7.75
-  %1 = vector.reduction "mul", %v9 : vector<10xf64> into f64
+  %1 = vector.reduction <mul>, %v9 : vector<10xf64> into f64
   vector.print %1 : f64
   // CHECK: -5760
-  %2 = vector.reduction "minf", %v9 : vector<10xf64> into f64
+  %2 = vector.reduction <minf>, %v9 : vector<10xf64> into f64
   vector.print %2 : f64
   // CHECK: -16
-  %3 = vector.reduction "maxf", %v9 : vector<10xf64> into f64
+  %3 = vector.reduction <maxf>, %v9 : vector<10xf64> into f64
   vector.print %3 : f64
   // CHECK: 5
 

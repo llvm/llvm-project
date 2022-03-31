@@ -18,10 +18,10 @@ body: |
     %a:_(s32) = COPY $vgpr0
     %amt:_(s32) = COPY $vgpr1
     %bw:_(s32) = G_CONSTANT i32 32
-    %shl:_(s32) = G_SHL %a:_, %amt:_(s32)
-    %sub:_(s32) = G_SUB %bw:_, %amt:_
-    %lshr:_(s32) = G_LSHR %a:_, %sub:_(s32)
-    %or:_(s32) = G_OR %shl:_, %lshr:_
+    %shl:_(s32) = G_SHL %a, %amt
+    %sub:_(s32) = G_SUB %bw, %amt
+    %lshr:_(s32) = G_LSHR %a, %sub
+    %or:_(s32) = G_OR %shl, %lshr
     $vgpr2 = COPY %or
 ...
 
@@ -42,11 +42,11 @@ body: |
     %a:_(<2 x s32>) = COPY $vgpr0_vgpr1
     %amt:_(<2 x s32>) = COPY $vgpr2_vgpr3
     %scalar_bw:_(s32) = G_CONSTANT i32 32
-    %bw:_(<2 x s32>) = G_BUILD_VECTOR %scalar_bw(s32), %scalar_bw(s32)
-    %shl:_(<2 x s32>) = G_SHL %a:_, %amt:_(<2 x s32>)
-    %sub:_(<2 x s32>) = G_SUB %bw:_, %amt:_
-    %lshr:_(<2 x s32>) = G_LSHR %a:_, %sub:_(<2 x s32>)
-    %or:_(<2 x s32>) = G_OR %shl:_, %lshr:_
+    %bw:_(<2 x s32>) = G_BUILD_VECTOR %scalar_bw, %scalar_bw
+    %shl:_(<2 x s32>) = G_SHL %a, %amt
+    %sub:_(<2 x s32>) = G_SUB %bw, %amt
+    %lshr:_(<2 x s32>) = G_LSHR %a, %sub
+    %or:_(<2 x s32>) = G_OR %shl, %lshr
     $vgpr4_vgpr5 = COPY %or
 ...
 
@@ -67,10 +67,10 @@ body: |
     %a:_(s32) = COPY $vgpr0
     %amt:_(s32) = COPY $vgpr1
     %bw:_(s32) = G_CONSTANT i32 32
-    %shl:_(s32) = G_SHL %a:_, %amt:_(s32)
-    %sub:_(s32) = G_SUB %bw:_, %amt:_
-    %lshr:_(s32) = G_LSHR %a:_, %sub:_(s32)
-    %or:_(s32) = G_OR %lshr:_, %shl:_
+    %shl:_(s32) = G_SHL %a, %amt
+    %sub:_(s32) = G_SUB %bw, %amt
+    %lshr:_(s32) = G_LSHR %a, %sub
+    %or:_(s32) = G_OR %lshr, %shl
     $vgpr2 = COPY %or
 ...
 
@@ -91,21 +91,71 @@ body: |
     %a:_(s32) = COPY $vgpr0
     %amt:_(s32) = COPY $vgpr1
     %bw:_(s32) = G_CONSTANT i32 32
-    %lshr:_(s32) = G_LSHR %a:_, %amt:_(s32)
-    %sub:_(s32) = G_SUB %bw:_, %amt:_
-    %shl:_(s32) = G_SHL %a:_, %sub:_(s32)
-    %or:_(s32) = G_OR %shl:_, %lshr:_
+    %lshr:_(s32) = G_LSHR %a, %amt
+    %sub:_(s32) = G_SUB %bw, %amt
+    %shl:_(s32) = G_SHL %a, %sub
+    %or:_(s32) = G_OR %shl, %lshr
     $vgpr2 = COPY %or
 ...
 
 ---
-name: rotl_i32_bad_const
+name: rot_i32_const
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    ; CHECK-LABEL: name: rot_i32_const
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %a:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: %amt1:_(s32) = G_CONSTANT i32 12
+    ; CHECK-NEXT: %or:_(s32) = G_ROTR %a, %amt1(s32)
+    ; CHECK-NEXT: $vgpr1 = COPY %or(s32)
+    %a:_(s32) = COPY $vgpr0
+    %amt0:_(s32) = G_CONSTANT i32 20
+    %amt1:_(s32) = G_CONSTANT i32 12
+    %shl:_(s32) = G_SHL %a, %amt0
+    %lshr:_(s32) = G_LSHR %a, %amt1
+    %or:_(s32) = G_OR %shl, %lshr
+    $vgpr1 = COPY %or
+...
+
+---
+name: rot_i32_bad_const
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    ; CHECK-LABEL: name: rot_i32_bad_const
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %a:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: %amt0:_(s32) = G_CONSTANT i32 20
+    ; CHECK-NEXT: %amt1:_(s32) = G_CONSTANT i32 11
+    ; CHECK-NEXT: %shl:_(s32) = G_SHL %a, %amt0(s32)
+    ; CHECK-NEXT: %lshr:_(s32) = G_LSHR %a, %amt1(s32)
+    ; CHECK-NEXT: %or:_(s32) = G_OR %shl, %lshr
+    ; CHECK-NEXT: $vgpr1 = COPY %or(s32)
+    %a:_(s32) = COPY $vgpr0
+    %amt0:_(s32) = G_CONSTANT i32 20
+    %amt1:_(s32) = G_CONSTANT i32 11
+    %shl:_(s32) = G_SHL %a, %amt0
+    %lshr:_(s32) = G_LSHR %a, %amt1
+    %or:_(s32) = G_OR %shl, %lshr
+    $vgpr1 = COPY %or
+...
+
+
+---
+name: rotl_i32_bad_bw
 tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
 
-    ; CHECK-LABEL: name: rotl_i32_bad_const
+    ; CHECK-LABEL: name: rotl_i32_bad_bw
     ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %a:_(s32) = COPY $vgpr0
@@ -119,10 +169,10 @@ body: |
     %a:_(s32) = COPY $vgpr0
     %amt:_(s32) = COPY $vgpr1
     %bw:_(s32) = G_CONSTANT i32 31
-    %shl:_(s32) = G_SHL %a:_, %amt:_(s32)
-    %sub:_(s32) = G_SUB %bw:_, %amt:_
-    %lshr:_(s32) = G_LSHR %a:_, %sub:_(s32)
-    %or:_(s32) = G_OR %shl:_, %lshr:_
+    %shl:_(s32) = G_SHL %a, %amt
+    %sub:_(s32) = G_SUB %bw, %amt
+    %lshr:_(s32) = G_LSHR %a, %sub
+    %or:_(s32) = G_OR %shl, %lshr
     $vgpr2 = COPY %or
 ...
 
@@ -149,9 +199,9 @@ body: |
     %amt:_(s32) = COPY $vgpr1
     %amt1:_(s32) = COPY $vgpr2
     %bw:_(s32) = G_CONSTANT i32 32
-    %shl:_(s32) = G_SHL %a:_, %amt:_(s32)
-    %sub:_(s32) = G_SUB %bw:_, %amt1:_
-    %lshr:_(s32) = G_LSHR %a:_, %sub:_(s32)
-    %or:_(s32) = G_OR %shl:_, %lshr:_
+    %shl:_(s32) = G_SHL %a, %amt
+    %sub:_(s32) = G_SUB %bw, %amt1
+    %lshr:_(s32) = G_LSHR %a, %sub
+    %or:_(s32) = G_OR %shl, %lshr
     $vgpr3 = COPY %or
 ...

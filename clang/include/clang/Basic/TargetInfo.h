@@ -47,9 +47,6 @@ class DiagnosticsEngine;
 class LangOptions;
 class CodeGenOptions;
 class MacroBuilder;
-class QualType;
-class SourceLocation;
-class SourceManager;
 
 namespace Builtin { struct Info; }
 
@@ -104,10 +101,10 @@ struct TransferrableTargetInfo {
   unsigned char AccumScale;
   unsigned char LongAccumScale;
 
-  unsigned char SuitableAlign;
   unsigned char DefaultAlignForAttributeAligned;
   unsigned char MinGlobalAlign;
 
+  unsigned short SuitableAlign;
   unsigned short NewAlign;
   unsigned MaxVectorAlign;
   unsigned MaxTLSAlign;
@@ -215,6 +212,7 @@ protected:
   unsigned char RegParmMax, SSERegParmMax;
   TargetCXXABI TheCXXABI;
   const LangASMap *AddrSpaceMap;
+  unsigned ProgramAddrSpace;
 
   mutable StringRef PlatformName;
   mutable VersionTuple PlatformMinVersion;
@@ -236,6 +234,8 @@ protected:
   unsigned ARMCDECoprocMask : 8;
 
   unsigned MaxOpenCLWorkGroupSize;
+
+  Optional<llvm::Triple> DarwinTargetVariantTriple;
 
   // TargetInfo Constructor.  Default initializes all fields.
   TargetInfo(const llvm::Triple &T);
@@ -592,6 +592,17 @@ public:
     return false;
   }
 
+  // Different targets may support a different maximum width for the _BitInt
+  // type, depending on what operations are supported.
+  virtual size_t getMaxBitIntWidth() const {
+    // FIXME: this value should be llvm::IntegerType::MAX_INT_BITS, which is
+    // maximum bit width that LLVM claims its IR can support. However, most
+    // backends currently have a bug where they only support division
+    // operations on types that are <= 128 bits and crash otherwise. We're
+    // setting the max supported value to 128 to be conservative.
+    return 128;
+  }
+
   /// Determine whether _Float16 is supported on this target.
   virtual bool hasLegalHalfType() const { return HasLegalHalfType; }
 
@@ -635,8 +646,8 @@ public:
   }
 
   /// Return the largest alignment for which a suitably-sized allocation with
-  /// '::operator new(size_t)' or 'malloc' is guaranteed to produce a
-  /// correctly-aligned pointer.
+  /// '::operator new(size_t)' is guaranteed to produce a correctly-aligned
+  /// pointer.
   unsigned getNewAlign() const {
     return NewAlign ? NewAlign : std::max(LongDoubleAlign, LongLongAlign);
   }
@@ -715,7 +726,11 @@ public:
   }
 
   /// Return the value for the C99 FLT_EVAL_METHOD macro.
-  virtual unsigned getFloatEvalMethod() const { return 0; }
+  virtual LangOptions::FPEvalMethodKind getFPEvalMethod() const {
+    return LangOptions::FPEvalMethodKind::FEM_Source;
+  }
+
+  virtual bool supportSourceEvalMethod() const { return true; }
 
   // getLargeArrayMinWidth/Align - Return the minimum array size that is
   // 'large' and its alignment.
@@ -769,6 +784,9 @@ public:
   unsigned getIntMaxTWidth() const {
     return getTypeWidth(IntMaxType);
   }
+
+  /// Return the address space for functions for the given target.
+  unsigned getProgramAddressSpace() const { return ProgramAddrSpace; }
 
   // Return the size of unwind_word for this target.
   virtual unsigned getUnwindWordWidth() const { return getPointerWidth(0); }
@@ -1177,12 +1195,12 @@ public:
   /// Microsoft C++ code using dllimport/export attributes?
   virtual bool shouldDLLImportComdatSymbols() const {
     return getTriple().isWindowsMSVCEnvironment() ||
-           getTriple().isWindowsItaniumEnvironment() || getTriple().isPS4CPU();
+           getTriple().isWindowsItaniumEnvironment() || getTriple().isPS4();
   }
 
   // Does this target have PS4 specific dllimport/export handling?
   virtual bool hasPS4DLLImportExport() const {
-    return getTriple().isPS4CPU() ||
+    return getTriple().isPS4() ||
            // Windows Itanium support allows for testing the SCEI flavour of
            // dllimport/export handling on a Windows system.
            (getTriple().isWindowsItaniumEnvironment() &&
@@ -1288,9 +1306,15 @@ public:
     bool BranchTargetEnforcement = false;
   };
 
+  /// Determine if the Architecture in this TargetInfo supports branch
+  /// protection
+  virtual bool isBranchProtectionSupportedArch(StringRef Arch) const {
+    return false;
+  }
+
   /// Determine if this TargetInfo supports the given branch protection
   /// specification
-  virtual bool validateBranchProtection(StringRef Spec,
+  virtual bool validateBranchProtection(StringRef Spec, StringRef Arch,
                                         BranchProtectionInfo &BPI,
                                         StringRef &Err) const {
     Err = "";
@@ -1347,6 +1371,13 @@ public:
 
   // Get the character to be added for mangling purposes for cpu_specific.
   virtual char CPUSpecificManglingCharacter(StringRef Name) const {
+    llvm_unreachable(
+        "cpu_specific Multiversioning not implemented on this target");
+  }
+
+  // Get the value for the 'tune-cpu' flag for a cpu_specific variant with the
+  // programmer-specified 'Name'.
+  virtual StringRef getCPUSpecificTuneName(StringRef Name) const {
     llvm_unreachable(
         "cpu_specific Multiversioning not implemented on this target");
   }
@@ -1589,6 +1620,21 @@ public:
 
   /// Whether target allows debuginfo types for decl only variables/functions.
   virtual bool allowDebugInfoForExternalRef() const { return false; }
+
+  /// Returns the darwin target variant triple, the variant of the deployment
+  /// target for which the code is being compiled.
+  const llvm::Triple *getDarwinTargetVariantTriple() const {
+    return DarwinTargetVariantTriple ? DarwinTargetVariantTriple.getPointer()
+                                     : nullptr;
+  }
+
+  /// Returns the version of the darwin target variant SDK which was used during
+  /// the compilation if one was specified, or an empty version otherwise.
+  const Optional<VersionTuple> getDarwinTargetVariantSDKVersion() const {
+    return !getTargetOpts().DarwinTargetVariantSDKVersion.empty()
+               ? getTargetOpts().DarwinTargetVariantSDKVersion
+               : Optional<VersionTuple>();
+  }
 
 protected:
   /// Copy type and layout related info.

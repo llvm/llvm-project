@@ -11,6 +11,7 @@
 #include "flang/Frontend/FrontendOptions.h"
 #include "flang/FrontendTool/Utils.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include "gtest/gtest.h"
@@ -160,5 +161,63 @@ TEST_F(FrontendActionTest, ParseSyntaxOnly) {
       llvm::StringRef(outputDiagBuffer.data())
           .contains(
               ":1:14: error: IF statement is not allowed in IF statement\n"));
+}
+
+TEST_F(FrontendActionTest, EmitLLVM) {
+  // Populate the input file with the pre-defined input and flush it.
+  *(inputFileOs_) << "end program";
+  inputFileOs_.reset();
+
+  // Set-up the action kind.
+  compInst_.invocation().frontendOpts().programAction = EmitLLVM;
+  compInst_.invocation().preprocessorOpts().noReformat = true;
+
+  // Set-up the output stream. We are using output buffer wrapped as an output
+  // stream, as opposed to an actual file (or a file descriptor).
+  llvm::SmallVector<char> outputFileBuffer;
+  std::unique_ptr<llvm::raw_pwrite_stream> outputFileStream(
+      new llvm::raw_svector_ostream(outputFileBuffer));
+  compInst_.set_outputStream(std::move(outputFileStream));
+
+  // Execute the action.
+  bool success = ExecuteCompilerInvocation(&compInst_);
+
+  // Validate the expected output.
+  EXPECT_TRUE(success);
+  EXPECT_TRUE(!outputFileBuffer.empty());
+
+  EXPECT_TRUE(llvm::StringRef(outputFileBuffer.data())
+                  .contains("define void @_QQmain()"));
+}
+
+TEST_F(FrontendActionTest, EmitAsm) {
+  // Populate the input file with the pre-defined input and flush it.
+  *(inputFileOs_) << "end program";
+  inputFileOs_.reset();
+
+  // Set-up the action kind.
+  compInst_.invocation().frontendOpts().programAction = EmitAssembly;
+  compInst_.invocation().preprocessorOpts().noReformat = true;
+
+  // Initialise LLVM backend
+  llvm::InitializeAllTargets();
+  llvm::InitializeAllTargetMCs();
+  llvm::InitializeAllAsmPrinters();
+
+  // Set-up the output stream. We are using output buffer wrapped as an output
+  // stream, as opposed to an actual file (or a file descriptor).
+  llvm::SmallVector<char, 256> outputFileBuffer;
+  std::unique_ptr<llvm::raw_pwrite_stream> outputFileStream(
+      new llvm::raw_svector_ostream(outputFileBuffer));
+  compInst_.set_outputStream(std::move(outputFileStream));
+
+  // Execute the action.
+  bool success = ExecuteCompilerInvocation(&compInst_);
+
+  // Validate the expected output.
+  EXPECT_TRUE(success);
+  EXPECT_TRUE(!outputFileBuffer.empty());
+
+  EXPECT_TRUE(llvm::StringRef(outputFileBuffer.data()).contains("_QQmain"));
 }
 } // namespace

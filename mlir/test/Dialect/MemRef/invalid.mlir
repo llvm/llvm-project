@@ -149,7 +149,7 @@ func @transpose_wrong_type(%v : memref<?x?xf32, affine_map<(i, j)[off, M]->(off 
 // -----
 
 func @memref_reinterpret_cast_too_many_offsets(%in: memref<?xf32>) {
-  // expected-error @+1 {{expected <= 1 offset values}}
+  // expected-error @+1 {{expected 1 offset values}}
   %out = memref.reinterpret_cast %in to
            offset: [0, 0], sizes: [10, 10], strides: [10, 1]
            : memref<?xf32> to memref<10x10xf32, offset: 0, strides: [10, 1]>
@@ -208,13 +208,39 @@ func @memref_reinterpret_cast_offset_mismatch(%in: memref<?xf32>) {
 
 // -----
 
-func @memref_reinterpret_cast_offset_mismatch(%in: memref<?xf32>) {
-  %c0 = arith.constant 0 : index
-  %c10 = arith.constant 10 : index
-  // expected-error @+1 {{expected result type with size = 10 instead of -1 in dim = 0}}
+func @memref_reinterpret_cast_no_map_but_offset(%in: memref<?xf32>) {
+  // expected-error @+1 {{expected result type with offset = 0 instead of 2}}
+  %out = memref.reinterpret_cast %in to offset: [2], sizes: [10], strides: [1]
+         : memref<?xf32> to memref<10xf32>
+  return
+}
+
+// -----
+
+func @memref_reinterpret_cast_no_map_but_stride(%in: memref<?xf32>) {
+  // expected-error @+1 {{expected result type with stride = 10 instead of 1 in dim = 0}}
+  %out = memref.reinterpret_cast %in to offset: [0], sizes: [10], strides: [10]
+         : memref<?xf32> to memref<10xf32>
+  return
+}
+
+// -----
+
+func @memref_reinterpret_cast_no_map_but_strides(%in: memref<?x?xf32>) {
+  // expected-error @+1 {{expected result type with stride = 42 instead of 10 in dim = 0}}
   %out = memref.reinterpret_cast %in to
-           offset: [%c0], sizes: [10, %c10], strides: [%c10, 1]
-           : memref<?xf32> to memref<?x?xf32, offset: ?, strides: [?, 1]>
+           offset: [0], sizes: [9, 10], strides: [42, 1]
+         : memref<?x?xf32> to memref<9x10xf32>
+  return
+}
+
+// -----
+
+func @memref_reinterpret_cast_non_strided_layout(%in: memref<?x?xf32>) {
+  // expected-error @+1 {{expected result type to have strided layout but found 'memref<9x10xf32, affine_map<(d0, d1) -> (d0)>>}}
+  %out = memref.reinterpret_cast %in to
+           offset: [0], sizes: [9, 10], strides: [42, 1]
+         : memref<?x?xf32> to memref<9x10xf32, affine_map<(d0, d1) -> (d0)>>
   return
 }
 
@@ -490,7 +516,7 @@ func @collapse_shape_illegal_mixed_memref_2(%arg0 : memref<?x4x5xf32>)
 
 func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = memref.alloc() : memref<2048xi8>
-  // expected-error@+1 {{expects 1 offset operand}}
+  // expected-error@+1 {{expected SSA operand}}
   %1 = memref.view %0[][%arg0, %arg1]
     : memref<2048xi8> to memref<?x?xf32>
   return
@@ -592,7 +618,7 @@ func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = memref.alloc() : memref<8x16x4xf32>
-  // expected-error@+1 {{expected <= 3 offset values}}
+  // expected-error@+1 {{expected 3 offset values}}
   %1 = memref.subview %0[%arg0, %arg1, 0, 0][%arg2, 0, 0, 0][1, 1, 1, 1]
     : memref<8x16x4xf32> to
       memref<8x?x4xf32, offset: 0, strides:[?, ?, 4]>
@@ -651,11 +677,38 @@ func @invalid_rank_reducing_subview(%arg0 : memref<?x?xf32>, %arg1 : index, %arg
 
 // -----
 
-func @static_stride_to_dynamic_stride(%arg0 : memref<?x?x?xf32>, %arg1 : index,
-    %arg2 : index) -> memref<?x?xf32, offset:?, strides: [?, ?]> {
-  // expected-error @+1 {{expected result type to be 'memref<1x?x?xf32, affine_map<(d0, d1, d2)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2 + d2)>>' or a rank-reduced version. (mismatch of result layout)}}
-  %0 = memref.subview %arg0[0, 0, 0] [1, %arg1, %arg2] [1, 1, 1] : memref<?x?x?xf32> to memref<?x?xf32, offset: ?, strides: [?, ?]>
-  return %0 : memref<?x?xf32, offset: ?, strides: [?, ?]>
+#map0 = affine_map<(d0, d1)[s0] -> (d0 * 16 + d1)>
+
+func @subview_bad_offset_1(%arg0: memref<16x16xf32>) {
+  %c0 = arith.constant 0 : index
+  %c8 = arith.constant 8 : index
+  // expected-error @+1 {{expected result type to be 'memref<8x8xf32, affine_map<(d0, d1)[s0] -> (d0 * 16 + s0 + d1)>>' or a rank-reduced version}}
+  %s2 = memref.subview %arg0[%c8, %c8][8, 8][1, 1]  : memref<16x16xf32> to memref<8x8xf32, #map0>
+  return
+}
+
+// -----
+
+#map0 = affine_map<(d0, d1)[s0] -> (d0 * 16 + d1 + 136)>
+
+func @subview_bad_offset_2(%arg0: memref<16x16xf32>) {
+  %c0 = arith.constant 0 : index
+  %c8 = arith.constant 8 : index
+  // expected-error @+1 {{expected result type to be 'memref<8x8xf32, affine_map<(d0, d1)[s0] -> (d0 * 16 + s0 + d1)>>' or a rank-reduced version}}
+  %s2 = memref.subview %arg0[%c8, 8][8, 8][1, 1]  : memref<16x16xf32> to memref<8x8xf32, #map0>
+  return
+}
+
+// -----
+
+#map0 = affine_map<(d0, d1)[s0] -> (d0 * 16 + d1 + s0 * 437)>
+
+func @subview_bad_offset_3(%arg0: memref<16x16xf32>) {
+  %c0 = arith.constant 0 : index
+  %c8 = arith.constant 8 : index
+  // expected-error @+1 {{expected result type to be 'memref<8x8xf32, affine_map<(d0, d1)[s0] -> (d0 * 16 + s0 + d1)>>' or a rank-reduced version}}
+  %s2 = memref.subview %arg0[%c8, 8][8, 8][1, 1]  : memref<16x16xf32> to memref<8x8xf32, #map0>
+  return
 }
 
 // -----
@@ -752,7 +805,7 @@ func @assume_alignment(%0: memref<4x4xf16>) {
 
 // -----
 
-"alloca_without_scoped_alloc_parent"() ( {
+"alloca_without_scoped_alloc_parent"() ({
   memref.alloca() : memref<1xf32>
   // expected-error@-1 {{requires an ancestor op with AutomaticAllocationScope trait}}
   return
@@ -806,5 +859,105 @@ func @test_alloc_memref_map_rank_mismatch() {
 ^bb0:
   // expected-error@+1 {{memref layout mismatch between rank and affine map: 2 != 1}}
   %0 = memref.alloc() : memref<1024x64xf32, affine_map<(d0) -> (d0)>, 1>
+  return
+}
+
+// -----
+
+func @rank(%0: f32) {
+  // expected-error@+1 {{'memref.rank' op operand #0 must be unranked.memref of any type values or memref of any type values}}
+  "memref.rank"(%0): (f32)->index
+  return
+}
+
+// -----
+
+#map = affine_map<(d0, d1, d2)[s0, s1, s2, s3] -> (s0 + d0 * s1 + d1 * s2 + d2 * s3)>
+func @illegal_num_offsets(%arg0 : memref<?x?x?xf32>, %arg1 : index, %arg2 : index) {
+  // expected-error@+1 {{expected 3 offset values}}
+  %0 = memref.subview %arg0[0, 0] [%arg1, %arg2] [1, 1] : memref<?x?x?xf32> to memref<?x?x?xf32, #map>
+}
+
+// -----
+
+func @atomic_rmw_idxs_rank_mismatch(%I: memref<16x10xf32>, %i : index, %val : f32) {
+  // expected-error@+1 {{expects the number of subscripts to be equal to memref rank}}
+  %x = memref.atomic_rmw addf %val, %I[%i] : (f32, memref<16x10xf32>) -> f32
+  return
+}
+
+// -----
+
+func @atomic_rmw_expects_float(%I: memref<16x10xi32>, %i : index, %val : i32) {
+  // expected-error@+1 {{expects a floating-point type}}
+  %x = memref.atomic_rmw addf %val, %I[%i, %i] : (i32, memref<16x10xi32>) -> i32
+  return
+}
+
+// -----
+
+func @atomic_rmw_expects_int(%I: memref<16x10xf32>, %i : index, %val : f32) {
+  // expected-error@+1 {{expects an integer type}}
+  %x = memref.atomic_rmw addi %val, %I[%i, %i] : (f32, memref<16x10xf32>) -> f32
+  return
+}
+
+// -----
+
+func @generic_atomic_rmw_wrong_arg_num(%I: memref<10xf32>, %i : index) {
+  // expected-error@+1 {{expected single number of entry block arguments}}
+  %x = memref.generic_atomic_rmw %I[%i] : memref<10xf32> {
+    ^bb0(%arg0 : f32, %arg1 : f32):
+      %c1 = arith.constant 1.0 : f32
+      memref.atomic_yield %c1 : f32
+  }
+  return
+}
+
+// -----
+
+func @generic_atomic_rmw_wrong_arg_type(%I: memref<10xf32>, %i : index) {
+  // expected-error@+1 {{expected block argument of the same type result type}}
+  %x = memref.generic_atomic_rmw %I[%i] : memref<10xf32> {
+    ^bb0(%old_value : i32):
+      %c1 = arith.constant 1.0 : f32
+      memref.atomic_yield %c1 : f32
+  }
+  return
+}
+
+// -----
+
+func @generic_atomic_rmw_result_type_mismatch(%I: memref<10xf32>, %i : index) {
+ // expected-error@+1 {{failed to verify that result type matches element type of memref}}
+ %0 = "memref.generic_atomic_rmw"(%I, %i) ({
+    ^bb0(%old_value: f32):
+      %c1 = arith.constant 1.0 : f32
+      memref.atomic_yield %c1 : f32
+    }) : (memref<10xf32>, index) -> i32
+  return
+}
+
+// -----
+
+func @generic_atomic_rmw_has_side_effects(%I: memref<10xf32>, %i : index) {
+  // expected-error@+4 {{should contain only operations with no side effects}}
+  %x = memref.generic_atomic_rmw %I[%i] : memref<10xf32> {
+    ^bb0(%old_value : f32):
+      %c1 = arith.constant 1.0 : f32
+      %buf = memref.alloc() : memref<2048xf32>
+      memref.atomic_yield %c1 : f32
+  }
+}
+
+// -----
+
+func @atomic_yield_type_mismatch(%I: memref<10xf32>, %i : index) {
+  // expected-error@+4 {{op types mismatch between yield op: 'i32' and its parent: 'f32'}}
+  %x = memref.generic_atomic_rmw %I[%i] : memref<10xf32> {
+    ^bb0(%old_value : f32):
+      %c1 = arith.constant 1 : i32
+      memref.atomic_yield %c1 : i32
+  }
   return
 }

@@ -40,10 +40,6 @@ using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "aarch64-sve-intrinsic-opts"
 
-namespace llvm {
-void initializeSVEIntrinsicOptsPass(PassRegistry &);
-}
-
 namespace {
 struct SVEIntrinsicOpts : public ModulePass {
   static char ID; // Pass identification, replacement for typeid
@@ -152,7 +148,7 @@ bool SVEIntrinsicOpts::coalescePTrueIntrinsicCalls(
   // Remove the most encompassing ptrue, as well as any promoted ptrues, leaving
   // behind only the ptrues to be coalesced.
   PTrues.remove(MostEncompassingPTrue);
-  PTrues.remove_if([](auto *PTrue) { return isPTruePromoted(PTrue); });
+  PTrues.remove_if(isPTruePromoted);
 
   // Hoist MostEncompassingPTrue to the start of the basic block. It is always
   // safe to do this, since ptrue intrinsic calls are guaranteed to have no
@@ -287,10 +283,10 @@ bool SVEIntrinsicOpts::optimizePredicateStore(Instruction *I) {
   if (!Attr.isValid())
     return false;
 
-  unsigned MinVScale, MaxVScale;
-  std::tie(MinVScale, MaxVScale) = Attr.getVScaleRangeArgs();
+  unsigned MinVScale = Attr.getVScaleRangeMin();
+  Optional<unsigned> MaxVScale = Attr.getVScaleRangeMax();
   // The transform needs to know the exact runtime length of scalable vectors
-  if (MinVScale != MaxVScale || MinVScale == 0)
+  if (!MaxVScale || MinVScale != MaxVScale)
     return false;
 
   auto *PredType =
@@ -351,10 +347,10 @@ bool SVEIntrinsicOpts::optimizePredicateLoad(Instruction *I) {
   if (!Attr.isValid())
     return false;
 
-  unsigned MinVScale, MaxVScale;
-  std::tie(MinVScale, MaxVScale) = Attr.getVScaleRangeArgs();
+  unsigned MinVScale = Attr.getVScaleRangeMin();
+  Optional<unsigned> MaxVScale = Attr.getVScaleRangeMax();
   // The transform needs to know the exact runtime length of scalable vectors
-  if (MinVScale != MaxVScale || MinVScale == 0)
+  if (!MaxVScale || MinVScale != MaxVScale)
     return false;
 
   auto *PredType =

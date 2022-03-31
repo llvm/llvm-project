@@ -111,7 +111,7 @@ template <typename... NodeType> std::string dumpASTString(NodeType &&... N) {
 
   Dumper.Visit(std::forward<NodeType &&>(N)...);
 
-  return OS.str();
+  return Buffer;
 }
 
 template <typename... NodeType>
@@ -126,7 +126,7 @@ std::string dumpASTString(TraversalKind TK, NodeType &&... N) {
 
   Dumper.Visit(std::forward<NodeType &&>(N)...);
 
-  return OS.str();
+  return Buffer;
 }
 
 const FunctionDecl *getFunctionNode(clang::ASTUnit *AST,

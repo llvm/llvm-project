@@ -65,8 +65,7 @@ private:
 PPCInstructionSelector::PPCInstructionSelector(const PPCTargetMachine &TM,
                                                const PPCSubtarget &STI,
                                                const PPCRegisterBankInfo &RBI)
-    : InstructionSelector(), TII(*STI.getInstrInfo()),
-      TRI(*STI.getRegisterInfo()), RBI(RBI),
+    : TII(*STI.getInstrInfo()), TRI(*STI.getRegisterInfo()), RBI(RBI),
 #define GET_GLOBALISEL_PREDICATES_INIT
 #include "PPCGenGlobalISel.inc"
 #undef GET_GLOBALISEL_PREDICATES_INIT

@@ -1,11 +1,8 @@
 # Exclude tests from libMLIR.so
 add_mlir_library(MLIRTestTransforms
   TestConstantFold.cpp
+  TestControlFlowSink.cpp
   TestInlining.cpp
-  TestLoopFusion.cpp
-  TestLoopMapping.cpp
-  TestLoopParametricTiling.cpp
-  TestLoopUnrolling.cpp
 
   EXCLUDE_FROM_LIBMLIR
 

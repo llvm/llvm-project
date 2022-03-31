@@ -17,17 +17,16 @@
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Analysis/SyncDependenceAnalysis.h"
-#include "llvm/IR/Function.h"
-#include "llvm/Pass.h"
+#include "llvm/IR/PassManager.h"
 #include <vector>
 
 namespace llvm {
-class Module;
-class Value;
+class Function;
 class Instruction;
 class Loop;
 class raw_ostream;
 class TargetTransformInfo;
+class Value;
 
 /// \brief Generic divergence analysis for reducible CFGs.
 ///
@@ -147,7 +146,7 @@ class DivergenceInfo {
   // analysis can run indefinitely. We set ContainsIrreducible and no
   // analysis is actually performed on the function. All values in
   // this function are conservatively reported as divergent instead.
-  bool ContainsIrreducible;
+  bool ContainsIrreducible = false;
   std::unique_ptr<SyncDependenceAnalysis> SDA;
   std::unique_ptr<DivergenceAnalysisImpl> DA;
 

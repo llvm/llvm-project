@@ -80,9 +80,13 @@ namespace std {
 
 */
 
+#include <__assert> // all public C++ headers provide the assertion handler
 #include <__availability>
 #include <__config>
 #include <__utility/forward.h>
+#include <__utility/in_place.h>
+#include <__utility/move.h>
+#include <__utility/unreachable.h>
 #include <cstdlib>
 #include <memory>
 #include <type_traits>
@@ -90,7 +94,7 @@ namespace std {
 #include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 namespace std {
@@ -364,6 +368,7 @@ namespace __any_imp
         case _Action::_TypeInfo:
           return __type_info();
         }
+        __libcpp_unreachable();
     }
 
     template <class ..._Args>
@@ -447,6 +452,7 @@ namespace __any_imp
         case _Action::_TypeInfo:
           return __type_info();
         }
+        __libcpp_unreachable();
     }
 
     template <class ..._Args>

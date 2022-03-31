@@ -6,11 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CheckerRegistration.h"
 #include "Reusables.h"
 
 #include "clang/AST/ExprCXX.h"
+#include "clang/Analysis/PathDiagnostic.h"
+#include "clang/StaticAnalyzer/Core/BugReporter/CommonBugCategories.h"
+#include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "clang/StaticAnalyzer/Frontend/AnalysisConsumer.h"
+#include "clang/StaticAnalyzer/Frontend/CheckerRegistry.h"
 #include "clang/Tooling/Tooling.h"
 #include "gtest/gtest.h"
 #include <type_traits>
@@ -487,6 +494,131 @@ TEST(CallDescription, MatchBuiltins) {
       "  __builtin___memset_chk(&x, 0, sizeof(x),"
       "                         __builtin_object_size(&x, 0));"
       "}"));
+
+  {
+    SCOPED_TRACE("multiple similar builtins");
+    EXPECT_TRUE(tooling::runToolOnCode(
+        std::unique_ptr<FrontendAction>(new CallDescriptionAction<>(
+            {{{CDF_MaybeBuiltin, "memcpy", 3}, false},
+             {{CDF_MaybeBuiltin, "wmemcpy", 3}, true}})),
+        R"(void foo(wchar_t *x, wchar_t *y) {
+            __builtin_wmemcpy(x, y, sizeof(wchar_t));
+          })"));
+  }
+  {
+    SCOPED_TRACE("multiple similar builtins reversed order");
+    EXPECT_TRUE(tooling::runToolOnCode(
+        std::unique_ptr<FrontendAction>(new CallDescriptionAction<>(
+            {{{CDF_MaybeBuiltin, "wmemcpy", 3}, true},
+             {{CDF_MaybeBuiltin, "memcpy", 3}, false}})),
+        R"(void foo(wchar_t *x, wchar_t *y) {
+            __builtin_wmemcpy(x, y, sizeof(wchar_t));
+          })"));
+  }
+  {
+    SCOPED_TRACE("lookbehind and lookahead mismatches");
+    EXPECT_TRUE(tooling::runToolOnCode(
+        std::unique_ptr<FrontendAction>(
+            new CallDescriptionAction<>({{{CDF_MaybeBuiltin, "func"}, false}})),
+        R"(
+          void funcXXX();
+          void XXXfunc();
+          void XXXfuncXXX();
+          void test() {
+            funcXXX();
+            XXXfunc();
+            XXXfuncXXX();
+          })"));
+  }
+  {
+    SCOPED_TRACE("lookbehind and lookahead matches");
+    EXPECT_TRUE(tooling::runToolOnCode(
+        std::unique_ptr<FrontendAction>(
+            new CallDescriptionAction<>({{{CDF_MaybeBuiltin, "func"}, true}})),
+        R"(
+          void func();
+          void func_XXX();
+          void XXX_func();
+          void XXX_func_XXX();
+
+          void test() {
+            func(); // exact match
+            func_XXX();
+            XXX_func();
+            XXX_func_XXX();
+          })"));
+  }
+}
+
+//===----------------------------------------------------------------------===//
+// Testing through a checker interface.
+//
+// Above, the static analyzer isn't run properly, only the bare minimum to
+// create CallEvents. This causes CallEvents through function pointers to not
+// refer to the pointee function, but this works fine if we run
+// AnalysisASTConsumer.
+//===----------------------------------------------------------------------===//
+
+class CallDescChecker
+    : public Checker<check::PreCall, check::PreStmt<CallExpr>> {
+  CallDescriptionSet Set = {{"bar", 0}};
+
+public:
+  void checkPreCall(const CallEvent &Call, CheckerContext &C) const {
+    if (Set.contains(Call)) {
+      C.getBugReporter().EmitBasicReport(
+          Call.getDecl(), this, "CallEvent match", categories::LogicError,
+          "CallEvent match",
+          PathDiagnosticLocation{Call.getDecl(), C.getSourceManager()});
+    }
+  }
+
+  void checkPreStmt(const CallExpr *CE, CheckerContext &C) const {
+    if (Set.containsAsWritten(*CE)) {
+      C.getBugReporter().EmitBasicReport(
+          CE->getCalleeDecl(), this, "CallExpr match", categories::LogicError,
+          "CallExpr match",
+          PathDiagnosticLocation{CE->getCalleeDecl(), C.getSourceManager()});
+    }
+  }
+};
+
+void addCallDescChecker(AnalysisASTConsumer &AnalysisConsumer,
+                        AnalyzerOptions &AnOpts) {
+  AnOpts.CheckersAndPackages = {{"test.CallDescChecker", true}};
+  AnalysisConsumer.AddCheckerRegistrationFn([](CheckerRegistry &Registry) {
+    Registry.addChecker<CallDescChecker>("test.CallDescChecker", "Description",
+                                         "");
+  });
+}
+
+TEST(CallDescription, CheckCallExprMatching) {
+  // Imprecise matching shouldn't catch the call to bar, because its obscured
+  // by a function pointer.
+  constexpr StringRef FnPtrCode = R"code(
+    void bar();
+    void foo() {
+      void (*fnptr)() = bar;
+      fnptr();
+    })code";
+  std::string Diags;
+  EXPECT_TRUE(runCheckerOnCode<addCallDescChecker>(FnPtrCode.str(), Diags,
+                                                   /*OnlyEmitWarnings*/ true));
+  EXPECT_EQ("test.CallDescChecker: CallEvent match\n", Diags);
+
+  // This should be caught properly by imprecise matching, as the call is done
+  // purely through syntactic means.
+  constexpr StringRef Code = R"code(
+    void bar();
+    void foo() {
+      bar();
+    })code";
+  Diags.clear();
+  EXPECT_TRUE(runCheckerOnCode<addCallDescChecker>(Code.str(), Diags,
+                                                   /*OnlyEmitWarnings*/ true));
+  EXPECT_EQ("test.CallDescChecker: CallEvent match\n"
+            "test.CallDescChecker: CallExpr match\n",
+            Diags);
 }
 
 } // namespace

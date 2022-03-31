@@ -95,7 +95,8 @@ Features not supported or with limited support for Cuda devices
 
 - Nested parallelism: inner parallel regions are executed sequentially.
 
-- Static linking of libraries containing device code is not supported yet.
+- Static linking of libraries containing device code is not supported without
+  explicitly using ``-fopenmp-new-driver``.
 
 - Automatic translation of math functions in target regions to device-specific
   math functions is not implemented yet.
@@ -266,7 +267,7 @@ want to help with the implementation.
 +==============================+==============================================================+==========================+=======================================================================+
 | atomic extension             | 'compare' clause on atomic construct                         | :good:`worked on`        |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| atomic extension             | 'fail' clause on atomic construct                            | :none:`unclaimed`        |                                                                       |
+| atomic extension             | 'fail' clause on atomic construct                            | :part:`worked on`        |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
 | base language                | C++ attribute specifier syntax                               | :good:`done`             | D105648                                                               |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
@@ -338,7 +339,7 @@ want to help with the implementation.
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
 | misc extension               | assume and assumes directives                                | :part:`worked on`        |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| misc extension               | nothing directive                                            | :none:`unclaimed`        |                                                                       |
+| misc extension               | nothing directive                                            | :part:`worked on`        |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
 | misc extension               | masked construct and related combined constructs             | :part:`worked on`        | D99995, D100514                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+

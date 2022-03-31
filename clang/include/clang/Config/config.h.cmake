@@ -8,6 +8,9 @@
 /* Bug report URL. */
 #define BUG_REPORT_URL "${BUG_REPORT_URL}"
 
+/* Default to -fPIE and -pie on Linux. */
+#cmakedefine01 CLANG_DEFAULT_PIE_ON_LINUX
+
 /* Default linker to use. */
 #define CLANG_DEFAULT_LINKER "${CLANG_DEFAULT_LINKER}"
 
@@ -74,6 +77,9 @@
 
 /* enable x86 relax relocations by default */
 #cmakedefine01 ENABLE_X86_RELAX_RELOCATIONS
+
+/* Enable IEEE binary128 as default long double format on PowerPC Linux. */
+#cmakedefine01 PPC_LINUX_DEFAULT_IEEELONGDOUBLE
 
 /* Enable each functionality of modules */
 #cmakedefine01 CLANG_ENABLE_ARCMT

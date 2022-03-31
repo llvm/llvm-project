@@ -5,10 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file defines the PointerUnion class, which is a discriminated union of
-// pointer types.
-//
+///
+/// \file
+/// This file defines the PointerUnion class, which is a discriminated union of
+/// pointer types.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_POINTERUNION_H
@@ -16,6 +17,7 @@
 
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 #include <algorithm>
 #include <cassert>
@@ -34,21 +36,6 @@ namespace pointer_union_detail {
   template <typename... Ts> constexpr int lowBitsAvailable() {
     return std::min<int>({PointerLikeTypeTraits<Ts>::NumLowBitsAvailable...});
   }
-
-  /// Find the index of a type in a list of types. TypeIndex<T, Us...>::Index
-  /// is the index of T in Us, or sizeof...(Us) if T does not appear in the
-  /// list.
-  template <typename T, typename ...Us> struct TypeIndex;
-  template <typename T, typename ...Us> struct TypeIndex<T, T, Us...> {
-    static constexpr int Index = 0;
-  };
-  template <typename T, typename U, typename... Us>
-  struct TypeIndex<T, U, Us...> {
-    static constexpr int Index = 1 + TypeIndex<T, Us...>::Index;
-  };
-  template <typename T> struct TypeIndex<T> {
-    static constexpr int Index = 0;
-  };
 
   /// Find the first type in a list of types.
   template <typename T, typename...> struct GetFirstType {
@@ -116,6 +103,7 @@ namespace pointer_union_detail {
 ///    P = (float*)0;
 ///    Y = P.get<float*>();   // ok.
 ///    X = P.get<int*>();     // runtime assertion failure.
+///    PointerUnion<int*, int*> Q; // compile time failure.
 template <typename... PTs>
 class PointerUnion
     : public pointer_union_detail::PointerUnionMembers<
@@ -124,12 +112,14 @@ class PointerUnion
               void *, pointer_union_detail::bitsRequired(sizeof...(PTs)), int,
               pointer_union_detail::PointerUnionUIntTraits<PTs...>>,
           0, PTs...> {
+  static_assert(TypesAreDistinct<PTs...>::value,
+                "PointerUnion alternative types cannot be repeated");
   // The first type is special because we want to directly cast a pointer to a
   // default-initialized union to a pointer to the first type. But we don't
   // want PointerUnion to be a 'template <typename First, typename ...Rest>'
   // because it's much more convenient to have a name for the whole pack. So
   // split off the first type here.
-  using First = typename pointer_union_detail::GetFirstType<PTs...>::type;
+  using First = TypeAtIndex<0, PTs...>;
   using Base = typename PointerUnion::PointerUnionMembers;
 
 public:
@@ -146,10 +136,7 @@ public:
 
   /// Test if the Union currently holds the type matching T.
   template <typename T> bool is() const {
-    constexpr int Index = pointer_union_detail::TypeIndex<T, PTs...>::Index;
-    static_assert(Index < sizeof...(PTs),
-                  "PointerUnion::is<T> given type not in the union");
-    return this->Val.getInt() == Index;
+    return this->Val.getInt() == FirstIndexOfType<T, PTs...>::value;
   }
 
   /// Returns the value of the specified pointer type.

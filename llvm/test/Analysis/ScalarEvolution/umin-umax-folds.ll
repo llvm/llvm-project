@@ -13,7 +13,7 @@ define void @umin_sext_x_zext_x(i32 %len) {
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 1
 ; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,4294967297) S: [1,4294967297) Exits: (1 + (zext i32 %len to i64))<nuw><nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %and = and i1 %cmp1, %cmp2
-; CHECK-NEXT:    --> %and U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> (%cmp1 umin %cmp2) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @umin_sext_x_zext_x
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (zext i32 %len to i64)
 ; CHECK-NEXT:  Loop %loop: max backedge-taken count is 4294967295

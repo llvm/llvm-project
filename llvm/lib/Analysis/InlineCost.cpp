@@ -18,11 +18,11 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
-#include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -53,6 +53,16 @@ static cl::opt<int>
     DefaultThreshold("inlinedefault-threshold", cl::Hidden, cl::init(225),
                      cl::ZeroOrMore,
                      cl::desc("Default amount of inlining to perform"));
+
+// We introduce this option since there is a minor compile-time win by avoiding
+// addition of TTI attributes (target-features in particular) to inline
+// candidates when they are guaranteed to be the same as top level methods in
+// some use cases. If we avoid adding the attribute, we need an option to avoid
+// checking these attributes.
+static cl::opt<bool> IgnoreTTIInlineCompatible(
+    "ignore-tti-inline-compatible", cl::Hidden, cl::init(false),
+    cl::desc("Ignore TTI attributes compatibility check between callee/caller "
+             "during inline cost calculation"));
 
 static cl::opt<bool> PrintInstructionComments(
     "print-instruction-comments", cl::Hidden, cl::init(false),
@@ -133,8 +143,6 @@ static cl::opt<bool> DisableGEPConstOperand(
     cl::desc("Disables evaluation of GetElementPtr with constant operands"));
 
 namespace {
-class InlineCostCallAnalyzer;
-
 /// This function behaves more like CallBase::hasFnAttr: when it looks for the
 /// requested attribute, it check both the call instruction and the called
 /// function (if it's available and operand bundles don't prohibit that).
@@ -151,7 +159,9 @@ Attribute getFnAttr(CallBase &CB, StringRef AttrKind) {
 
   return {};
 }
+} // namespace
 
+namespace llvm {
 Optional<int> getStringFnAttrAsInt(CallBase &CB, StringRef AttrKind) {
   Attribute Attr = getFnAttr(CB, AttrKind);
   int AttrValue;
@@ -159,6 +169,10 @@ Optional<int> getStringFnAttrAsInt(CallBase &CB, StringRef AttrKind) {
     return None;
   return AttrValue;
 }
+} // namespace llvm
+
+namespace {
+class InlineCostCallAnalyzer;
 
 // This struct is used to store information about inline cost of a
 // particular instruction
@@ -198,7 +212,7 @@ class CallAnalyzer : public InstVisitor<CallAnalyzer, bool> {
   friend class InstVisitor<CallAnalyzer, bool>;
 
 protected:
-  virtual ~CallAnalyzer() {}
+  virtual ~CallAnalyzer() = default;
   /// The TargetTransformInfo available for this compilation.
   const TargetTransformInfo &TTI;
 
@@ -352,7 +366,7 @@ protected:
   DenseMap<Value *, std::pair<Value *, APInt>> ConstantOffsetPtrs;
 
   /// Keep track of dead blocks due to the constant arguments.
-  SetVector<BasicBlock *> DeadBlocks;
+  SmallPtrSet<BasicBlock *, 16> DeadBlocks;
 
   /// The mapping of the blocks to their known unique successors due to the
   /// constant arguments.
@@ -361,10 +375,10 @@ protected:
   /// Model the elimination of repeated loads that is expected to happen
   /// whenever we simplify away the stores that would otherwise cause them to be
   /// loads.
-  bool EnableLoadElimination;
+  bool EnableLoadElimination = true;
 
   /// Whether we allow inlining for recursive call.
-  bool AllowRecursiveCall;
+  bool AllowRecursiveCall = false;
 
   SmallPtrSet<Value *, 16> LoadAddrSet;
 
@@ -455,8 +469,7 @@ public:
                OptimizationRemarkEmitter *ORE = nullptr)
       : TTI(TTI), GetAssumptionCache(GetAssumptionCache), GetBFI(GetBFI),
         PSI(PSI), F(Callee), DL(F.getParent()->getDataLayout()), ORE(ORE),
-        CandidateCall(Call), EnableLoadElimination(true),
-        AllowRecursiveCall(false) {}
+        CandidateCall(Call) {}
 
   InlineResult analyze();
 
@@ -905,6 +918,11 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
             getStringFnAttrAsInt(CandidateCall, "function-inline-cost"))
       Cost = *AttrCost;
 
+    if (Optional<int> AttrCostMult = getStringFnAttrAsInt(
+            CandidateCall,
+            InlineConstants::FunctionInlineCostMultiplierAttributeName))
+      Cost *= *AttrCostMult;
+
     if (Optional<int> AttrThreshold =
             getStringFnAttrAsInt(CandidateCall, "function-inline-threshold"))
       Threshold = *AttrThreshold;
@@ -1021,7 +1039,7 @@ public:
     return None;
   }
 
-  virtual ~InlineCostCallAnalyzer() {}
+  virtual ~InlineCostCallAnalyzer() = default;
   int getThreshold() const { return Threshold; }
   int getCost() const { return Cost; }
   Optional<CostBenefitPair> getCostBenefitPair() { return CostBenefit; }
@@ -2553,7 +2571,7 @@ void CallAnalyzer::findDeadBlocks(BasicBlock *CurrBB, BasicBlock *NextBB) {
     NewDead.push_back(Succ);
     while (!NewDead.empty()) {
       BasicBlock *Dead = NewDead.pop_back_val();
-      if (DeadBlocks.insert(Dead))
+      if (DeadBlocks.insert(Dead).second)
         // Continue growing the dead block lists.
         for (BasicBlock *S : successors(Dead))
           if (IsNewlyDead(S))
@@ -2746,7 +2764,8 @@ static bool functionsHaveCompatibleAttributes(
   // object, and always returns the same object (which is overwritten on each
   // GetTLI call). Therefore we copy the first result.
   auto CalleeTLI = GetTLI(*Callee);
-  return TTI.areInlineCompatible(Caller, Callee) &&
+  return (IgnoreTTIInlineCompatible ||
+          TTI.areInlineCompatible(Caller, Callee)) &&
          GetTLI(*Caller).areInlineCompatible(CalleeTLI,
                                              InlineCallerSupersetNoBuiltin) &&
          AttributeFuncs::areInlineCompatible(*Caller, *Callee);
@@ -2865,6 +2884,9 @@ Optional<InlineResult> llvm::getAttributeBasedInliningDecision(
   // Calls to functions with always-inline attributes should be inlined
   // whenever possible.
   if (Call.hasFnAttr(Attribute::AlwaysInline)) {
+    if (Call.getAttributes().hasFnAttr(Attribute::NoInline))
+      return InlineResult::failure("noinline call site attribute");
+
     auto IsViable = isInlineViable(*Callee);
     if (IsViable.isSuccess())
       return InlineResult::success();
@@ -2897,15 +2919,6 @@ Optional<InlineResult> llvm::getAttributeBasedInliningDecision(
   // Don't inline call sites marked noinline.
   if (Call.isNoInline())
     return InlineResult::failure("noinline call site attribute");
-
-  // Don't inline functions if one does not have any stack protector attribute
-  // but the other does.
-  if (Caller->hasStackProtectorFnAttr() && !Callee->hasStackProtectorFnAttr())
-    return InlineResult::failure(
-        "stack protected caller but callee requested no stack protector");
-  if (Callee->hasStackProtectorFnAttr() && !Caller->hasStackProtectorFnAttr())
-    return InlineResult::failure(
-        "stack protected callee but caller requested no stack protector");
 
   return None;
 }

@@ -167,7 +167,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
   DebugLoc dl;
 
   Register FramePtr = RegInfo->getFrameRegister(MF);
-  unsigned BasePtr = RegInfo->getBaseRegister();
+  Register BasePtr = RegInfo->getBaseRegister();
   int CFAOffset = 0;
 
   // Thumb add/sub sp, imm8 instructions implicitly multiply the offset by 4.
@@ -206,7 +206,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
   }
 
   for (const CalleeSavedInfo &I : CSI) {
-    unsigned Reg = I.getReg();
+    Register Reg = I.getReg();
     int FI = I.getFrameIdx();
     switch (Reg) {
     case ARM::R8:
@@ -267,7 +267,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
         .setMIFlags(MachineInstr::FrameSetup);
   }
   for (const CalleeSavedInfo &I : CSI) {
-    unsigned Reg = I.getReg();
+    Register Reg = I.getReg();
     int FI = I.getFrameIdx();
     switch (Reg) {
     case ARM::R8:
@@ -348,7 +348,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
 
   // Emit call frame information for the callee-saved high registers.
   for (auto &I : CSI) {
-    unsigned Reg = I.getReg();
+    Register Reg = I.getReg();
     int FI = I.getFrameIdx();
     switch (Reg) {
     case ARM::R8:
@@ -376,7 +376,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
     // at this point in the prologue, so pick one.
     unsigned ScratchRegister = ARM::NoRegister;
     for (auto &I : CSI) {
-      unsigned Reg = I.getReg();
+      Register Reg = I.getReg();
       if (isARMLowRegister(Reg) && !(HasFP && Reg == FramePtr)) {
         ScratchRegister = Reg;
         break;
@@ -531,7 +531,7 @@ void Thumb1FrameLowering::emitEpilogue(MachineFunction &MF,
       unsigned ScratchRegister = ARM::NoRegister;
       bool HasFP = hasFP(MF);
       for (auto &I : MFI.getCalleeSavedInfo()) {
-        unsigned Reg = I.getReg();
+        Register Reg = I.getReg();
         if (isARMLowRegister(Reg) && !(HasFP && Reg == FramePtr)) {
           ScratchRegister = Reg;
           break;
@@ -824,8 +824,8 @@ bool Thumb1FrameLowering::spillCalleeSavedRegisters(
   ARMRegSet CopyRegs;     // Registers which can be used after pushing
                           // LoRegs for saving HiRegs.
 
-  for (unsigned i = CSI.size(); i != 0; --i) {
-    unsigned Reg = CSI[i-1].getReg();
+  for (const CalleeSavedInfo &I : llvm::reverse(CSI)) {
+    Register Reg = I.getReg();
 
     if (ARM::tGPRRegClass.contains(Reg) || Reg == ARM::LR) {
       LoRegsToSave[Reg] = true;
@@ -949,7 +949,7 @@ bool Thumb1FrameLowering::restoreCalleeSavedRegisters(
   ARMRegSet CopyRegs;
 
   for (CalleeSavedInfo I : CSI) {
-    unsigned Reg = I.getReg();
+    Register Reg = I.getReg();
 
     if (ARM::tGPRRegClass.contains(Reg) || Reg == ARM::LR) {
       LoRegsToRestore[Reg] = true;
@@ -1021,9 +1021,8 @@ bool Thumb1FrameLowering::restoreCalleeSavedRegisters(
       BuildMI(MF, DL, TII.get(ARM::tPOP)).add(predOps(ARMCC::AL));
 
   bool NeedsPop = false;
-  for (unsigned i = CSI.size(); i != 0; --i) {
-    CalleeSavedInfo &Info = CSI[i-1];
-    unsigned Reg = Info.getReg();
+  for (CalleeSavedInfo &Info : llvm::reverse(CSI)) {
+    Register Reg = Info.getReg();
 
     // High registers (excluding lr) have already been dealt with
     if (!(ARM::tGPRRegClass.contains(Reg) || Reg == ARM::LR))
@@ -1067,7 +1066,7 @@ bool Thumb1FrameLowering::restoreCalleeSavedRegisters(
   if (NeedsPop)
     MBB.insert(MI, &*MIB);
   else
-    MF.DeleteMachineInstr(MIB);
+    MF.deleteMachineInstr(MIB);
 
   return true;
 }

@@ -435,16 +435,16 @@ define i1 @scalar_i64_bitsinmiddle_eq(i64 %x, i64 %y) nounwind {
 ; X64-BMI1-NEXT:    movq %rsi, %rcx
 ; X64-BMI1-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; X64-BMI1-NEXT:    shrq %cl, %rdi
-; X64-BMI1-NEXT:    movabsq $281474976645120, %rax # imm = 0xFFFFFFFF0000
-; X64-BMI1-NEXT:    testq %rax, %rdi
+; X64-BMI1-NEXT:    shrq $16, %rdi
+; X64-BMI1-NEXT:    testl %edi, %edi
 ; X64-BMI1-NEXT:    sete %al
 ; X64-BMI1-NEXT:    retq
 ;
 ; X64-BMI2-LABEL: scalar_i64_bitsinmiddle_eq:
 ; X64-BMI2:       # %bb.0:
 ; X64-BMI2-NEXT:    shrxq %rsi, %rdi, %rax
-; X64-BMI2-NEXT:    movabsq $281474976645120, %rcx # imm = 0xFFFFFFFF0000
-; X64-BMI2-NEXT:    testq %rcx, %rax
+; X64-BMI2-NEXT:    shrq $16, %rax
+; X64-BMI2-NEXT:    testl %eax, %eax
 ; X64-BMI2-NEXT:    sete %al
 ; X64-BMI2-NEXT:    retq
   %t0 = shl i64 281474976645120, %y
@@ -465,9 +465,9 @@ define <4 x i1> @vec_4xi32_splat_eq(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X86-SSE2-NEXT:    cvttps2dq %xmm1, %xmm1
 ; X86-SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [1,1,1,1]
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[1,1,3,3]
+; X86-SSE2-NEXT:    pmuludq %xmm2, %xmm1
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
 ; X86-SSE2-NEXT:    pmuludq %xmm2, %xmm3
-; X86-SSE2-NEXT:    pmuludq %xmm1, %xmm2
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[0,2,2,3]
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm3[0,2,2,3]
 ; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
 ; X86-SSE2-NEXT:    pand %xmm1, %xmm0
@@ -491,9 +491,9 @@ define <4 x i1> @vec_4xi32_splat_eq(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-SSE2-NEXT:    cvttps2dq %xmm1, %xmm1
 ; X64-SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [1,1,1,1]
 ; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[1,1,3,3]
+; X64-SSE2-NEXT:    pmuludq %xmm2, %xmm1
+; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
 ; X64-SSE2-NEXT:    pmuludq %xmm2, %xmm3
-; X64-SSE2-NEXT:    pmuludq %xmm1, %xmm2
-; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[0,2,2,3]
 ; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm3[0,2,2,3]
 ; X64-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
 ; X64-SSE2-NEXT:    pand %xmm1, %xmm0
@@ -611,9 +611,9 @@ define <4 x i1> @vec_4xi32_nonsplat_undef1_eq(<4 x i32> %x, <4 x i32> %y) nounwi
 ; X86-SSE2-NEXT:    cvttps2dq %xmm1, %xmm1
 ; X86-SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [1,1,1,1]
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[1,1,3,3]
+; X86-SSE2-NEXT:    pmuludq %xmm2, %xmm1
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
 ; X86-SSE2-NEXT:    pmuludq %xmm2, %xmm3
-; X86-SSE2-NEXT:    pmuludq %xmm1, %xmm2
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[0,2,2,3]
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm3[0,2,2,3]
 ; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
 ; X86-SSE2-NEXT:    pand %xmm1, %xmm0
@@ -637,9 +637,9 @@ define <4 x i1> @vec_4xi32_nonsplat_undef1_eq(<4 x i32> %x, <4 x i32> %y) nounwi
 ; X64-SSE2-NEXT:    cvttps2dq %xmm1, %xmm1
 ; X64-SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [1,1,1,1]
 ; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[1,1,3,3]
+; X64-SSE2-NEXT:    pmuludq %xmm2, %xmm1
+; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
 ; X64-SSE2-NEXT:    pmuludq %xmm2, %xmm3
-; X64-SSE2-NEXT:    pmuludq %xmm1, %xmm2
-; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[0,2,2,3]
 ; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm3[0,2,2,3]
 ; X64-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
 ; X64-SSE2-NEXT:    pand %xmm1, %xmm0

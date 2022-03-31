@@ -19,6 +19,8 @@
 #include "WebAssemblySubtarget.h"
 #include "WebAssemblyTargetMachine.h"
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -159,22 +161,19 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     setTargetDAGCombine(ISD::VECTOR_SHUFFLE);
 
     // Combine extends of extract_subvectors into widening ops
-    setTargetDAGCombine(ISD::SIGN_EXTEND);
-    setTargetDAGCombine(ISD::ZERO_EXTEND);
+    setTargetDAGCombine({ISD::SIGN_EXTEND, ISD::ZERO_EXTEND});
 
     // Combine int_to_fp or fp_extend of extract_vectors and vice versa into
     // conversions ops
-    setTargetDAGCombine(ISD::SINT_TO_FP);
-    setTargetDAGCombine(ISD::UINT_TO_FP);
-    setTargetDAGCombine(ISD::FP_EXTEND);
-    setTargetDAGCombine(ISD::EXTRACT_SUBVECTOR);
+    setTargetDAGCombine({ISD::SINT_TO_FP, ISD::UINT_TO_FP, ISD::FP_EXTEND,
+                         ISD::EXTRACT_SUBVECTOR});
 
     // Combine fp_to_{s,u}int_sat or fp_round of concat_vectors or vice versa
     // into conversion ops
-    setTargetDAGCombine(ISD::FP_TO_SINT_SAT);
-    setTargetDAGCombine(ISD::FP_TO_UINT_SAT);
-    setTargetDAGCombine(ISD::FP_ROUND);
-    setTargetDAGCombine(ISD::CONCAT_VECTORS);
+    setTargetDAGCombine({ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT,
+                         ISD::FP_ROUND, ISD::CONCAT_VECTORS});
+
+    setTargetDAGCombine(ISD::TRUNCATE);
 
     // Support saturating add for i8x16 and i16x8
     for (auto Op : {ISD::SADDSAT, ISD::UADDSAT})
@@ -575,7 +574,7 @@ LowerCallResults(MachineInstr &CallResults, DebugLoc DL, MachineBasicBlock *BB,
   // Move the function pointer to the end of the arguments for indirect calls
   if (IsIndirect) {
     auto FnPtr = CallParams.getOperand(0);
-    CallParams.RemoveOperand(0);
+    CallParams.removeOperand(0);
 
     // For funcrefs, call_indirect is done through __funcref_call_table and the
     // funcref is always installed in slot 0 of the table, therefore instead of having
@@ -905,6 +904,30 @@ WebAssemblyTargetLowering::getPreferredVectorAction(MVT VT) const {
   }
 
   return TargetLoweringBase::getPreferredVectorAction(VT);
+}
+
+bool WebAssemblyTargetLowering::shouldSimplifyDemandedVectorElts(
+    SDValue Op, const TargetLoweringOpt &TLO) const {
+  // ISel process runs DAGCombiner after legalization; this step is called
+  // SelectionDAG optimization phase. This post-legalization combining process
+  // runs DAGCombiner on each node, and if there was a change to be made,
+  // re-runs legalization again on it and its user nodes to make sure
+  // everythiing is in a legalized state.
+  //
+  // The legalization calls lowering routines, and we do our custom lowering for
+  // build_vectors (LowerBUILD_VECTOR), which converts undef vector elements
+  // into zeros. But there is a set of routines in DAGCombiner that turns unused
+  // (= not demanded) nodes into undef, among which SimplifyDemandedVectorElts
+  // turns unused vector elements into undefs. But this routine does not work
+  // with our custom LowerBUILD_VECTOR, which turns undefs into zeros. This
+  // combination can result in a infinite loop, in which undefs are converted to
+  // zeros in legalization and back to undefs in combining.
+  //
+  // So after DAG is legalized, we prevent SimplifyDemandedVectorElts from
+  // running for build_vectors.
+  if (Op.getOpcode() == ISD::BUILD_VECTOR && TLO.LegalOps && TLO.LegalTys)
+    return false;
+  return true;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1489,8 +1512,7 @@ bool WebAssemblyTargetLowering::MatchTableForLowering(SelectionDAG &DAG,
     if (GA) {
       // We are in Case 2 above.
       Idx = Base->getOperand(1);
-      if (!Idx || GA->getNumValues() != 1 || Idx->getNumValues() != 1)
-        return false;
+      assert(GA->getNumValues() == 1);
     } else {
       // This might be Case 1 above (or an error)
       SDValue V = Base->getOperand(0);
@@ -1627,7 +1649,7 @@ SDValue WebAssemblyTargetLowering::LowerCopyToReg(SDValue Op,
     // local.copy between Op and its FI operand.
     SDValue Chain = Op.getOperand(0);
     SDLoc DL(Op);
-    unsigned Reg = cast<RegisterSDNode>(Op.getOperand(1))->getReg();
+    Register Reg = cast<RegisterSDNode>(Op.getOperand(1))->getReg();
     EVT VT = Src.getValueType();
     SDValue Copy(DAG.getMachineNode(VT == MVT::i32 ? WebAssembly::COPY_I32
                                                    : WebAssembly::COPY_I64,
@@ -2609,6 +2631,114 @@ performVectorTruncZeroCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   return DAG.getNode(Op, SDLoc(N), ResVT, Source);
 }
 
+// Helper to extract VectorWidth bits from Vec, starting from IdxVal.
+static SDValue extractSubVector(SDValue Vec, unsigned IdxVal, SelectionDAG &DAG,
+                                const SDLoc &DL, unsigned VectorWidth) {
+  EVT VT = Vec.getValueType();
+  EVT ElVT = VT.getVectorElementType();
+  unsigned Factor = VT.getSizeInBits() / VectorWidth;
+  EVT ResultVT = EVT::getVectorVT(*DAG.getContext(), ElVT,
+                                  VT.getVectorNumElements() / Factor);
+
+  // Extract the relevant VectorWidth bits.  Generate an EXTRACT_SUBVECTOR
+  unsigned ElemsPerChunk = VectorWidth / ElVT.getSizeInBits();
+  assert(isPowerOf2_32(ElemsPerChunk) && "Elements per chunk not power of 2");
+
+  // This is the index of the first element of the VectorWidth-bit chunk
+  // we want. Since ElemsPerChunk is a power of 2 just need to clear bits.
+  IdxVal &= ~(ElemsPerChunk - 1);
+
+  // If the input is a buildvector just emit a smaller one.
+  if (Vec.getOpcode() == ISD::BUILD_VECTOR)
+    return DAG.getBuildVector(ResultVT, DL,
+                              Vec->ops().slice(IdxVal, ElemsPerChunk));
+
+  SDValue VecIdx = DAG.getIntPtrConstant(IdxVal, DL);
+  return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ResultVT, Vec, VecIdx);
+}
+
+// Helper to recursively truncate vector elements in half with NARROW_U. DstVT
+// is the expected destination value type after recursion. In is the initial
+// input. Note that the input should have enough leading zero bits to prevent
+// NARROW_U from saturating results.
+static SDValue truncateVectorWithNARROW(EVT DstVT, SDValue In, const SDLoc &DL,
+                                        SelectionDAG &DAG) {
+  EVT SrcVT = In.getValueType();
+
+  // No truncation required, we might get here due to recursive calls.
+  if (SrcVT == DstVT)
+    return In;
+
+  unsigned SrcSizeInBits = SrcVT.getSizeInBits();
+  unsigned NumElems = SrcVT.getVectorNumElements();
+  if (!isPowerOf2_32(NumElems))
+    return SDValue();
+  assert(DstVT.getVectorNumElements() == NumElems && "Illegal truncation");
+  assert(SrcSizeInBits > DstVT.getSizeInBits() && "Illegal truncation");
+
+  LLVMContext &Ctx = *DAG.getContext();
+  EVT PackedSVT = EVT::getIntegerVT(Ctx, SrcVT.getScalarSizeInBits() / 2);
+
+  // Narrow to the largest type possible:
+  // vXi64/vXi32 -> i16x8.narrow_i32x4_u and vXi16 -> i8x16.narrow_i16x8_u.
+  EVT InVT = MVT::i16, OutVT = MVT::i8;
+  if (SrcVT.getScalarSizeInBits() > 16) {
+    InVT = MVT::i32;
+    OutVT = MVT::i16;
+  }
+  unsigned SubSizeInBits = SrcSizeInBits / 2;
+  InVT = EVT::getVectorVT(Ctx, InVT, SubSizeInBits / InVT.getSizeInBits());
+  OutVT = EVT::getVectorVT(Ctx, OutVT, SubSizeInBits / OutVT.getSizeInBits());
+
+  // Split lower/upper subvectors.
+  SDValue Lo = extractSubVector(In, 0, DAG, DL, SubSizeInBits);
+  SDValue Hi = extractSubVector(In, NumElems / 2, DAG, DL, SubSizeInBits);
+
+  // 256bit -> 128bit truncate - Narrow lower/upper 128-bit subvectors.
+  if (SrcVT.is256BitVector() && DstVT.is128BitVector()) {
+    Lo = DAG.getBitcast(InVT, Lo);
+    Hi = DAG.getBitcast(InVT, Hi);
+    SDValue Res = DAG.getNode(WebAssemblyISD::NARROW_U, DL, OutVT, Lo, Hi);
+    return DAG.getBitcast(DstVT, Res);
+  }
+
+  // Recursively narrow lower/upper subvectors, concat result and narrow again.
+  EVT PackedVT = EVT::getVectorVT(Ctx, PackedSVT, NumElems / 2);
+  Lo = truncateVectorWithNARROW(PackedVT, Lo, DL, DAG);
+  Hi = truncateVectorWithNARROW(PackedVT, Hi, DL, DAG);
+
+  PackedVT = EVT::getVectorVT(Ctx, PackedSVT, NumElems);
+  SDValue Res = DAG.getNode(ISD::CONCAT_VECTORS, DL, PackedVT, Lo, Hi);
+  return truncateVectorWithNARROW(DstVT, Res, DL, DAG);
+}
+
+static SDValue performTruncateCombine(SDNode *N,
+                                      TargetLowering::DAGCombinerInfo &DCI) {
+  auto &DAG = DCI.DAG;
+
+  SDValue In = N->getOperand(0);
+  EVT InVT = In.getValueType();
+  if (!InVT.isSimple())
+    return SDValue();
+
+  EVT OutVT = N->getValueType(0);
+  if (!OutVT.isVector())
+    return SDValue();
+
+  EVT OutSVT = OutVT.getVectorElementType();
+  EVT InSVT = InVT.getVectorElementType();
+  // Currently only cover truncate to v16i8 or v8i16.
+  if (!((InSVT == MVT::i16 || InSVT == MVT::i32 || InSVT == MVT::i64) &&
+        (OutSVT == MVT::i8 || OutSVT == MVT::i16) && OutVT.is128BitVector()))
+    return SDValue();
+
+  SDLoc DL(N);
+  APInt Mask = APInt::getLowBitsSet(InVT.getScalarSizeInBits(),
+                                    OutVT.getScalarSizeInBits());
+  In = DAG.getNode(ISD::AND, DL, InVT, In, DAG.getConstant(Mask, DL, InVT));
+  return truncateVectorWithNARROW(OutVT, In, DL, DAG);
+}
+
 SDValue
 WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
@@ -2625,5 +2755,7 @@ WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::FP_ROUND:
   case ISD::CONCAT_VECTORS:
     return performVectorTruncZeroCombine(N, DCI);
+  case ISD::TRUNCATE:
+    return performTruncateCombine(N, DCI);
   }
 }

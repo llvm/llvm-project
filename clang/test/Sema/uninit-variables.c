@@ -4,35 +4,35 @@
 typedef __typeof(sizeof(int)) size_t;
 void *malloc(size_t);
 
-int test1() {
+int test1(void) {
   int x; // expected-note{{initialize the variable 'x' to silence this warning}}
   return x; // expected-warning{{variable 'x' is uninitialized when used here}}
 }
 
-int test2() {
+int test2(void) {
   int x = 0;
   return x; // no-warning
 }
 
-int test3() {
+int test3(void) {
   int x;
   x = 0;
   return x; // no-warning
 }
 
-int test4() {
+int test4(void) {
   int x; // expected-note{{initialize the variable 'x' to silence this warning}}
   ++x; // expected-warning{{variable 'x' is uninitialized when used here}}
   return x; 
 }
 
-int test5() {
+int test5(void) {
   int x, y; // expected-note{{initialize the variable 'y' to silence this warning}}
   x = y; // expected-warning{{variable 'y' is uninitialized when used here}}
   return x;
 }
 
-int test6() {
+int test6(void) {
   int x; // expected-note{{initialize the variable 'x' to silence this warning}}
   x += 2; // expected-warning{{variable 'x' is uninitialized when used here}}
   return x;
@@ -95,22 +95,22 @@ void test12(unsigned n) {
   for (unsigned i ; n ; ++i) ; // expected-warning{{variable 'i' is uninitialized when used here}} expected-note{{initialize the variable 'i' to silence this warning}}
 }
 
-int test13() {
+int test13(void) {
   static int i;
   return i; // no-warning
 }
 
 // Simply don't crash on this test case.
-void test14() {
+void test14(void) {
   const char *p = 0;
   for (;;) {}
 }
 
-void test15() {
+void test15(void) {
   int x = x; // no-warning: signals intended lack of initialization.
 }
 
-int test15b() {
+int test15b(void) {
   // Warn here with the self-init, since it does result in a use of
   // an uninitialized variable and this is the root cause.
   int x = x; // expected-warning {{variable 'x' is uninitialized when used within its own initialization}}
@@ -118,14 +118,14 @@ int test15b() {
 }
 
 // Don't warn in the following example; shows dataflow confluence.
-char *test16_aux();
-void test16() {
+char *test16_aux(void);
+void test16(void) {
   char *p = test16_aux();
   for (unsigned i = 0 ; i < 100 ; i++)
     p[i] = 'a'; // no-warning
 }
 
-void test17() {
+void test17(void) {
   // Don't warn multiple times about the same uninitialized variable
   // along the same path.
   int *x; // expected-note{{initialize the variable 'x' to silence this warning}}
@@ -141,17 +141,17 @@ int test18(int x, int y) {
   return 0;
 }
 
-int test19_aux1();
-int test19_aux2();
+int test19_aux1(void);
+int test19_aux2(void);
 int test19_aux3(int *x);
-int test19() {
+int test19(void) {
   int z;
   if (test19_aux1() + test19_aux2() && test19_aux1() && test19_aux3(&z))
     return z; // no-warning
   return 0;
 }
 
-int test20() {
+int test20(void) {
   int z; // expected-note{{initialize the variable 'z' to silence this warning}}
   if ((test19_aux1() + test19_aux2() && test19_aux1()) || test19_aux3(&z)) // expected-warning {{variable 'z' is used uninitialized whenever '||' condition is true}} expected-note {{remove the '||' if its condition is always false}}
     return z; // expected-note {{uninitialized use occurs here}}
@@ -165,14 +165,14 @@ int test21(int x, int y) {
   return 0;
 }
 
-int test22() {
+int test22(void) {
   int z;
   while (test19_aux1() + test19_aux2() && test19_aux1() && test19_aux3(&z))
     return z; // no-warning
   return 0;
 }
 
-int test23() {
+int test23(void) {
   int z;
   for ( ; test19_aux1() + test19_aux2() && test19_aux1() && test19_aux3(&z) ; )
     return z; // no-warning
@@ -192,54 +192,54 @@ int test24(int flag) {
   return val; // expected-warning{{variable 'val' may be uninitialized when used here}}
 }
 
-float test25() {
+float test25(void) {
   float x; // expected-note{{initialize the variable 'x' to silence this warning}}
   return x; // expected-warning{{variable 'x' is uninitialized when used here}}
 }
 
 typedef int MyInt;
-MyInt test26() {
+MyInt test26(void) {
   MyInt x; // expected-note{{initialize the variable 'x' to silence this warning}}
   return x; // expected-warning{{variable 'x' is uninitialized when used here}}
 }
 
 // Test handling of sizeof().
-int test27() {
+int test27(void) {
   struct test_27 { int x; } *y;
   return sizeof(y->x); // no-warning
 }
 
-int test28() {
+int test28(void) {
   int len; // expected-note{{initialize the variable 'len' to silence this warning}}
   return sizeof(int[len]); // expected-warning{{variable 'len' is uninitialized when used here}}
 }
 
-void test29() {
+void test29(void) {
   int x; // expected-note{{initialize the variable 'x' to silence this warning}}
   (void) ^{ (void) x; }; // expected-warning{{variable 'x' is uninitialized when captured by block}}
 }
 
-void test30() {
+void test30(void) {
   static int x; // no-warning
   (void) ^{ (void) x; };
 }
 
-void test31() {
+void test31(void) {
   __block int x; // no-warning
   (void) ^{ (void) x; };
 }
 
 int test32_x;
-void test32() {
+void test32(void) {
   (void) ^{ (void) test32_x; }; // no-warning
 }
 
-void test_33() {
+void test_33(void) {
   int x; // no-warning
   (void) x;
 }
 
-int test_34() {
+int test_34(void) {
   int x; // expected-note{{initialize the variable 'x' to silence this warning}}
   (void) x;
   return x; // expected-warning{{variable 'x' is uninitialized when used here}}
@@ -252,7 +252,7 @@ void test35(int x) {
 }
 
 // Test handling of indirect goto.
-void test36()
+void test36(void)
 {
   void **pc; // expected-note{{initialize the variable 'pc' to silence this warning}}
   void *dummy[] = { &&L1, &&L2 };
@@ -263,9 +263,9 @@ void test36()
 }
 
 // Test && nested in ||.
-int test37_a();
-int test37_b();
-int test37()
+int test37_a(void);
+int test37_b(void);
+int test37(void)
 {
     int identifier;
     if ((test37_a() && (identifier = 1)) ||
@@ -301,7 +301,7 @@ int test41(int x) {
   return y; // expected-note{{uninitialized use occurs here}}
 }
 
-void test42() {
+void test42(void) {
   int a;
   a = 30; // no-warning
 }
@@ -329,7 +329,7 @@ int test45(int j) {
   return y;
 }
 
-void test46()
+void test46(void)
 {
   int i; // expected-note{{initialize the variable 'i' to silence this warning}}
   int j = i ? : 1; // expected-warning {{variable 'i' is uninitialized when used here}}
@@ -346,7 +346,7 @@ void *test49(int *i)
   return &a ? : i; // no-warning
 }
 
-void test50()
+void test50(void)
 {
   char c[1 ? : 2]; // no-warning
 }
@@ -374,13 +374,13 @@ int test52(int a, int b) {
   return x; // expected-warning {{variable 'x' may be uninitialized when used here}}
 }
 
-void test53() {
+void test53(void) {
   int x; // expected-note {{initialize the variable 'x' to silence this warning}}
   int y = (x);  // expected-warning {{variable 'x' is uninitialized when used here}}
 }
 
 // This CFG caused the uninitialized values warning to inf-loop.
-extern int PR10379_g();
+extern int PR10379_g(void);
 void PR10379_f(int *len) {
   int new_len; // expected-note{{initialize the variable 'new_len' to silence this warning}}
   for (int i = 0; i < 42 && PR10379_g() == 0; i++) {
@@ -401,7 +401,7 @@ void test_vla_sizeof(int x) {
 
 // Test absurd case of deadcode + use of blocks.  This previously was a false positive
 // due to an analysis bug.
-int test_block_and_dead_code() {
+int test_block_and_dead_code(void) {
   __block int x;
   ^{ x = 1; }();
   if (0)
@@ -432,7 +432,7 @@ void rdar9432305(float *P) {
 // Test that fixits are not emitted inside macros.
 #define UNINIT(T, x, y) T x; T y = x;
 #define ASSIGN(T, x, y) T y = x;
-void test54() {
+void test54(void) {
   UNINIT(int, a, b);  // expected-warning {{variable 'a' is uninitialized when used here}} \
                       // expected-note {{variable 'a' is declared here}}
   int c;  // expected-note {{initialize the variable 'c' to silence this warning}}
@@ -443,7 +443,7 @@ void test54() {
 struct { struct { void *p; } a; } test55 = { { &test55.a }}; // no-warning
 struct { struct { void *p; } a; } test56 = { { &(test56.a) }}; // no-warning
 
-void uninit_in_loop() {
+void uninit_in_loop(void) {
   int produce(void);
   void consume(int);
   for (int n = 0; n < 100; ++n) {
@@ -453,7 +453,7 @@ void uninit_in_loop() {
   }
 }
 
-void uninit_in_loop_goto() {
+void uninit_in_loop_goto(void) {
   int produce(void);
   void consume(int);
   for (int n = 0; n < 100; ++n) {
@@ -473,7 +473,7 @@ extern int setjmp(jmp_buf env); // implicitly returns_twice
 
 void do_stuff_and_longjmp(jmp_buf env, int *result) __attribute__((noreturn));
 
-int returns_twice() {
+int returns_twice(void) {
   int a; // expected-note {{initialize}}
   if (!a) { // expected-warning {{variable 'a' is uninitialized}}
     jmp_buf env;
@@ -494,12 +494,12 @@ int compound_assign(int *arr, int n) {
   return sum / n;
 }
 
-int compound_assign_2() {
+int compound_assign_2(void) {
   int x; // expected-note {{initialize}}
   return x += 1; // expected-warning {{variable 'x' is uninitialized}}
 }
 
-int compound_assign_3() {
+int compound_assign_3(void) {
   int x; // expected-note {{initialize}}
   x *= 0; // expected-warning {{variable 'x' is uninitialized}}
   return x;
@@ -510,7 +510,7 @@ int self_init_in_cond(int *p) {
   return n;
 }
 
-void test_analyzer_noreturn_aux() __attribute__((analyzer_noreturn));
+void test_analyzer_noreturn_aux(void) __attribute__((analyzer_noreturn));
 
 void test_analyzer_noreturn(int y) {
   int x; // expected-note {{initialize the variable 'x' to silence this warning}}

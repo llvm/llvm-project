@@ -35,6 +35,7 @@ MyObject *objects;
 
 // CHECK-DAG: [[SIZES0:@.+]] = private unnamed_addr constant [1 x i64] [i64 {{8|4}}]
 // CHECK-DAG: [[MAPS0:@.+]] = private unnamed_addr constant [1 x i64] [i64 17]
+// CHECK-DAG: [[SIZES1:@.+]] = private unnamed_addr constant [2 x i64] [i64 0, i64 4]
 // CHECK-DAG: [[MAPS1:@.+]] = private unnamed_addr constant [2 x i64] [i64 0, i64 281474976710673]
 // CHECK: @main
 int main(void) {

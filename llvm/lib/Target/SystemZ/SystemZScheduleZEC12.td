@@ -152,12 +152,12 @@ def : InstRW<[WLat1, FXU, LSU, NormalGr], (instregex "CL(G)?T(Asm.*)?$")>;
 // Call
 def : InstRW<[WLat1, FXU2, VBU, GroupAlone], (instregex "(Call)?BRAS$")>;
 def : InstRW<[WLat1, FXU2, LSU, GroupAlone], (instregex "(Call)?BRASL(_XPLINK64)?$")>;
-def : InstRW<[WLat1, FXU2, LSU, GroupAlone], (instregex "(Call)?BAS(R)?(_XPLINK64)?$")>;
+def : InstRW<[WLat1, FXU2, LSU, GroupAlone], (instregex "(Call)?BAS(R)?(_XPLINK64|_STACKEXT)?$")>;
 def : InstRW<[WLat1, FXU2, LSU, GroupAlone], (instregex "TLS_(G|L)DCALL$")>;
 
 // Return
-def : InstRW<[WLat1, LSU, EndGroup], (instregex "Return$")>;
-def : InstRW<[WLat1, LSU, NormalGr], (instregex "CondReturn$")>;
+def : InstRW<[WLat1, LSU, EndGroup], (instregex "Return(_XPLINK)?$")>;
+def : InstRW<[WLat1, LSU, NormalGr], (instregex "CondReturn(_XPLINK)?$")>;
 
 //===----------------------------------------------------------------------===//
 // Move instructions

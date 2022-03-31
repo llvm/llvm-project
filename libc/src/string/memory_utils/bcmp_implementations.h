@@ -18,13 +18,13 @@
 namespace __llvm_libc {
 
 // Fixed-size difference between 'lhs' and 'rhs'.
-template <typename Element> bool Differs(const char *lhs, const char *rhs) {
-  return !Element::Equals(lhs, rhs);
+template <typename Element> bool differs(const char *lhs, const char *rhs) {
+  return !Element::equals(lhs, rhs);
 }
 // Runtime-size difference between 'lhs' and 'rhs'.
 template <typename Element>
-bool Differs(const char *lhs, const char *rhs, size_t size) {
-  return !Element::Equals(lhs, rhs, size);
+bool differs(const char *lhs, const char *rhs, size_t size) {
+  return !Element::equals(lhs, rhs, size);
 }
 
 static inline int inline_bcmp(const char *lhs, const char *rhs, size_t count) {
@@ -38,22 +38,22 @@ static inline int inline_bcmp(const char *lhs, const char *rhs, size_t count) {
   if (count == 0)
     return 0;
   if (count == 1)
-    return Differs<_1>(lhs, rhs);
+    return differs<_1>(lhs, rhs);
   if (count == 2)
-    return Differs<_2>(lhs, rhs);
+    return differs<_2>(lhs, rhs);
   if (count == 3)
-    return Differs<_3>(lhs, rhs);
+    return differs<_3>(lhs, rhs);
   if (count <= 8)
-    return Differs<HeadTail<_4>>(lhs, rhs, count);
+    return differs<HeadTail<_4>>(lhs, rhs, count);
   if (count <= 16)
-    return Differs<HeadTail<_8>>(lhs, rhs, count);
+    return differs<HeadTail<_8>>(lhs, rhs, count);
   if (count <= 32)
-    return Differs<HeadTail<_16>>(lhs, rhs, count);
+    return differs<HeadTail<_16>>(lhs, rhs, count);
   if (count <= 64)
-    return Differs<HeadTail<_32>>(lhs, rhs, count);
+    return differs<HeadTail<_32>>(lhs, rhs, count);
   if (count <= 128)
-    return Differs<HeadTail<_64>>(lhs, rhs, count);
-  return Differs<Align<_32>::Then<Loop<_32>>>(lhs, rhs, count);
+    return differs<HeadTail<_64>>(lhs, rhs, count);
+  return differs<Align<_32>::Then<Loop<_32>>>(lhs, rhs, count);
 }
 
 } // namespace __llvm_libc

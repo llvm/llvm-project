@@ -9,11 +9,9 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_COLLECTMACROS_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_COLLECTMACROS_H
 
-#include "AST.h"
 #include "Protocol.h"
 #include "SourceCode.h"
 #include "index/SymbolID.h"
-#include "clang/Basic/IdentifierTable.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "llvm/ADT/DenseMap.h"
 #include <string>

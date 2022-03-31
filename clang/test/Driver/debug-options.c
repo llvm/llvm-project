@@ -132,6 +132,13 @@
 // RUN: %clang -### -c -g %s -target powerpc64-ibm-aix-xcoff -gcolumn-info \
 // RUN:             2>&1 | FileCheck -check-prefix=CI %s
 
+// WebAssembly.
+// WebAssembly should default to DWARF4.
+// RUN: %clang -### -c -g %s -target wasm32 2>&1 \
+// RUN:             | FileCheck -check-prefix=G_DWARF4 %s
+// RUN: %clang -### -c -g %s -target wasm64 2>&1 \
+// RUN:             | FileCheck -check-prefix=G_DWARF4 %s
+
 // RUN: %clang -### -c -gdwarf-2 %s 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_ONLY_DWARF2 %s
 //
@@ -279,7 +286,8 @@
 // NOG_PS4-NOT: "-dwarf-version=
 //
 // G_PS4: "-cc1"
-// G_PS4: "-dwarf-version=
+/// PS4 will stay on v4 even if the generic default version changes.
+// G_PS4: "-dwarf-version=4"
 // G_PS4: "-generate-arange-section"
 //
 // G_ERR: error: unknown argument:

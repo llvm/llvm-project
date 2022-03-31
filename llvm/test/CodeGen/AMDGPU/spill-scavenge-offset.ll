@@ -1,7 +1,7 @@
 ; RUN: llc -march=amdgcn -mcpu=verde -enable-misched=0 -post-RA-scheduler=0 -amdgpu-spill-sgpr-to-vgpr=0 < %s | FileCheck -check-prefixes=CHECK,GFX6 %s
 ; RUN: llc -sgpr-regalloc=basic -vgpr-regalloc=basic -march=amdgcn -mcpu=tonga -enable-misched=0 -post-RA-scheduler=0 -amdgpu-spill-sgpr-to-vgpr=0 < %s | FileCheck --check-prefix=CHECK %s
-; RUN: llc -march=amdgcn -mattr=-xnack -mcpu=gfx900 -enable-misched=0 -post-RA-scheduler=0 -amdgpu-spill-sgpr-to-vgpr=0 -amdgpu-enable-flat-scratch < %s | FileCheck -check-prefixes=CHECK,GFX9-FLATSCR,FLATSCR %s
-; RUN: llc -march=amdgcn -mcpu=gfx1030 -enable-misched=0 -post-RA-scheduler=0 -amdgpu-spill-sgpr-to-vgpr=0 -amdgpu-enable-flat-scratch < %s | FileCheck -check-prefixes=CHECK,GFX10-FLATSCR,FLATSCR %s
+; RUN: llc -march=amdgcn -mattr=-xnack,+enable-flat-scratch -mcpu=gfx900 -enable-misched=0 -post-RA-scheduler=0 -amdgpu-spill-sgpr-to-vgpr=0 < %s | FileCheck -check-prefixes=CHECK,GFX9-FLATSCR,FLATSCR %s
+; RUN: llc -march=amdgcn -mcpu=gfx1030 -enable-misched=0 -post-RA-scheduler=0 -amdgpu-spill-sgpr-to-vgpr=0 -mattr=+enable-flat-scratch < %s | FileCheck -check-prefixes=CHECK,GFX10-FLATSCR,FLATSCR %s
 ;
 ; There is something about Tonga that causes this test to spend a lot of time
 ; in the default register allocator.
@@ -46,12 +46,69 @@ entry:
 }
 
 ; CHECK-LABEL: test_limited_sgpr
-; GFX6: s_add_i32 s32, s32, 0x[[OFFSET:[0-9a-f]+]]
-; GFX6: s_add_i32 s32, s32, 0x[[OFFSET:[0-9a-f]+]]
-; GFX6: s_add_i32 s32, s32, 0x[[OFFSET:[0-9a-f]+]]
-; GFX6: s_waitcnt expcnt(0)
-; GFX6-NEXT: buffer_load_dword v{{[0-9]+}}, off, s[{{[0-9:]+}}], s32
-; GFX6-NEXT: s_add_i32 s32, s32, 0x[[OFFSET:[0-9a-f]+]]
+; GFX6: %bb.1:
+; GFX6: s_mov_b64 exec, 0xff
+; GFX6: buffer_store_dword [[SPILL_REG_0:v[0-9]+]]
+; GFX6-COUNT-8: v_writelane_b32 [[SPILL_REG_0]]
+; GFX6: v_mov_b32_e32 [[OFFSET_REG0:v[0-9]+]], 0x[[OFFSET0:[0-9a-f]+]]
+; GFX6: buffer_store_dword [[SPILL_REG_0]], [[OFFSET_REG0]], s{{\[[0-9]+:[0-9]+\]}}, 0 offen
+; GFX6: buffer_load_dword [[SPILL_REG_0]], off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
+; GFX6: s_mov_b64 exec, s
+
+
+; GFX6: s_mov_b64 exec, 0xff
+; GFX6: v_mov_b32_e32 [[RELOAD_OFFSET_REG0:v[0-9]+]], 0x[[RELOAD_OFFSET0:[0-9a-f]+]]
+; GFX6: buffer_store_dword [[RELOAD_REG_0:v[0-9]+]], off,
+; GFX6: buffer_load_dword [[RELOAD_REG_0]], [[RELOAD_OFFSET_REG0]], s{{\[[0-9]+:[0-9]+\]}}, 0 offen
+; GFX6-COUNT-8: v_readlane_b32 s{{[0-9]+}}, [[RELOAD_REG_0]]
+; GFX6: buffer_load_dword [[RELOAD_REG_0]], off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
+; GFX6: s_mov_b64 exec,
+
+
+; GFX6: s_mov_b64 exec, 0xff
+; GFX6: buffer_store_dword [[SPILL_REG_1:v[0-9]+]]
+; GFX6-COUNT-8: v_writelane_b32 [[SPILL_REG_1]]
+; GFX6: v_mov_b32_e32 [[OFFSET_REG1:v[0-9]+]], 0x[[OFFSET1:[0-9a-f]+]]
+; GFX6: buffer_store_dword [[SPILL_REG_1]], [[OFFSET_REG1]], s{{\[[0-9]+:[0-9]+\]}}, 0 offen
+; GFX6: buffer_load_dword [[SPILL_REG_1]], off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
+; GFX6: s_mov_b64 exec, s
+
+
+; GFX6: s_mov_b64 exec, 0xff
+; GFX6: v_mov_b32_e32 [[RELOAD_OFFSET_REG1:v[0-9]+]], 0x[[RELOAD_OFFSET1:[0-9a-f]+]]
+; GFX6: buffer_store_dword [[RELOAD_REG_1:v[0-9]+]], off,
+; GFX6: buffer_load_dword [[RELOAD_REG_1]], [[RELOAD_OFFSET_REG1]], s{{\[[0-9]+:[0-9]+\]}}, 0 offen
+; GFX6-COUNT-8: v_readlane_b32 s{{[0-9]+}}, [[RELOAD_REG_1]]
+; GFX6: buffer_load_dword [[RELOAD_REG_1]], off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
+; GFX6: s_mov_b64 exec,
+
+
+; GFX6: s_mov_b64 exec, 0xff
+; GFX6: buffer_store_dword [[SPILL_REG_2:v[0-9]+]]
+; GFX6-COUNT-8: v_writelane_b32 [[SPILL_REG_2]]
+; GFX6: v_mov_b32_e32 [[OFFSET_REG2:v[0-9]+]], 0x[[OFFSET2:[0-9a-f]+]]
+; GFX6: buffer_store_dword [[SPILL_REG_2]], [[OFFSET_REG2]], s{{\[[0-9]+:[0-9]+\]}}, 0 offen
+; GFX6: buffer_load_dword [[SPILL_REG_2]], off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
+; GFX6: s_mov_b64 exec, s
+
+
+; GFX6: s_mov_b64 exec, 0xff
+; GFX6: buffer_store_dword [[SPILL_REG_3:v[0-9]+]]
+; GFX6-COUNT-8: v_writelane_b32 [[SPILL_REG_3]]
+; GFX6: v_mov_b32_e32 [[OFFSET_REG3:v[0-9]+]], 0x[[OFFSET3:[0-9a-f]+]]
+; GFX6: buffer_store_dword [[SPILL_REG_3]], [[OFFSET_REG3]], s{{\[[0-9]+:[0-9]+\]}}, 0 offen
+; GFX6: buffer_load_dword [[SPILL_REG_3]], off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
+; GFX6: s_mov_b64 exec, s
+
+
+; GFX6: s_mov_b64 exec, 0xff
+; GFX6: buffer_store_dword [[SPILL_REG_4:v[0-9]+]]
+; GFX6-COUNT-4: v_writelane_b32 [[SPILL_REG_4]]
+; GFX6: v_mov_b32_e32 [[OFFSET_REG4:v[0-9]+]], 0x[[OFFSET4:[0-9a-f]+]]
+; GFX6: buffer_store_dword [[SPILL_REG_4]], [[OFFSET_REG4]], s{{\[[0-9]+:[0-9]+\]}}, 0 offen
+; GFX6: buffer_load_dword [[SPILL_REG_4]], off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
+; GFX6: s_mov_b64 exec, s
+
 ; GFX6: NumSgprs: 48
 ; GFX6: ScratchSize: 8608
 

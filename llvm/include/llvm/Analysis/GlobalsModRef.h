@@ -14,15 +14,14 @@
 #define LLVM_ANALYSIS_GLOBALSMODREF_H
 
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
 #include <list>
 
 namespace llvm {
 class CallGraph;
+class Function;
 
 /// An alias analysis result set for globals.
 ///
@@ -78,6 +77,8 @@ class GlobalsAAResult : public AAResultBase<GlobalsAAResult> {
   explicit GlobalsAAResult(
       const DataLayout &DL,
       std::function<const TargetLibraryInfo &(Function &F)> GetTLI);
+
+  friend struct RecomputeGlobalsAAPass;
 
 public:
   GlobalsAAResult(GlobalsAAResult &&Arg);
@@ -137,6 +138,10 @@ public:
   typedef GlobalsAAResult Result;
 
   GlobalsAAResult run(Module &M, ModuleAnalysisManager &AM);
+};
+
+struct RecomputeGlobalsAAPass : PassInfoMixin<RecomputeGlobalsAAPass> {
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 /// Legacy wrapper pass to provide the GlobalsAAResult object.

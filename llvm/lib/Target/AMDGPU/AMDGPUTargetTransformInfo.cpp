@@ -691,40 +691,6 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     return BaseT::getIntrinsicInstrCost(ICA, CostKind);
 
   Type *RetTy = ICA.getReturnType();
-  EVT OrigTy = TLI->getValueType(DL, RetTy);
-  if (!OrigTy.isSimple()) {
-    if (CostKind != TTI::TCK_CodeSize)
-      return BaseT::getIntrinsicInstrCost(ICA, CostKind);
-
-    // TODO: Combine these two logic paths.
-    if (ICA.isTypeBasedOnly())
-      return getTypeBasedIntrinsicInstrCost(ICA, CostKind);
-
-    unsigned RetVF =
-        (RetTy->isVectorTy() ? cast<FixedVectorType>(RetTy)->getNumElements()
-                             : 1);
-    const IntrinsicInst *I = ICA.getInst();
-    const SmallVectorImpl<const Value *> &Args = ICA.getArgs();
-    FastMathFlags FMF = ICA.getFlags();
-    // Assume that we need to scalarize this intrinsic.
-
-    // Compute the scalarization overhead based on Args for a vector
-    // intrinsic. A vectorizer will pass a scalar RetTy and VF > 1, while
-    // CostModel will pass a vector RetTy and VF is 1.
-    InstructionCost ScalarizationCost = InstructionCost::getInvalid();
-    if (RetVF > 1) {
-      ScalarizationCost = 0;
-      if (!RetTy->isVoidTy())
-        ScalarizationCost +=
-            getScalarizationOverhead(cast<VectorType>(RetTy), true, false);
-      ScalarizationCost +=
-          getOperandsScalarizationOverhead(Args, ICA.getArgTypes());
-    }
-
-    IntrinsicCostAttributes Attrs(ICA.getID(), RetTy, ICA.getArgTypes(), FMF, I,
-                                  ScalarizationCost);
-    return getIntrinsicInstrCost(Attrs, CostKind);
-  }
 
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, RetTy);
@@ -878,15 +844,8 @@ bool GCNTTIImpl::isInlineAsmSourceOfDivergence(
 
     TLI->ComputeConstraintToUse(TC, SDValue());
 
-    Register AssignedReg;
-    const TargetRegisterClass *RC;
-    std::tie(AssignedReg, RC) = TLI->getRegForInlineAsmConstraint(
-      TRI, TC.ConstraintCode, TC.ConstraintVT);
-    if (AssignedReg) {
-      // FIXME: This is a workaround for getRegForInlineAsmConstraint
-      // returning VS_32
-      RC = TRI->getPhysRegClass(AssignedReg);
-    }
+    const TargetRegisterClass *RC = TLI->getRegForInlineAsmConstraint(
+        TRI, TC.ConstraintCode, TC.ConstraintVT).second;
 
     // For AGPR constraints null is returned on subtargets without AGPRs, so
     // assume divergent for null.
@@ -1083,7 +1042,8 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
 
 InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                            VectorType *VT, ArrayRef<int> Mask,
-                                           int Index, VectorType *SubTp) {
+                                           int Index, VectorType *SubTp,
+                                           ArrayRef<Value *> Args) {
   Kind = improveShuffleKindFromMask(Kind, Mask);
   if (ST->hasVOP3PInsts()) {
     if (cast<FixedVectorType>(VT)->getNumElements() == 2 &&

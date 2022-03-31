@@ -169,3 +169,90 @@ namespace PR50561 {
   template<C T, typename U> void f(T, U) = delete;
   void g() { f(0, 0); }
 }
+
+namespace PR49188 {
+  template<class T> concept C = false;     // expected-note 7 {{because 'false' evaluated to false}}
+
+  C auto f1() { // expected-error {{deduced type 'void' does not satisfy 'C'}}
+    return void();
+  }
+  C auto f2() { // expected-error {{deduced type 'void' does not satisfy 'C'}}
+    return;
+  }
+  C auto f3() { // expected-error {{deduced type 'void' does not satisfy 'C'}}
+  }
+  C decltype(auto) f4() { // expected-error {{deduced type 'void' does not satisfy 'C'}}
+    return void();
+  }
+  C decltype(auto) f5() { // expected-error {{deduced type 'void' does not satisfy 'C'}}
+    return;
+  }
+  C decltype(auto) f6() { // expected-error {{deduced type 'void' does not satisfy 'C'}}
+  }
+  C auto& f7() { // expected-error {{deduced type 'void' does not satisfy 'C'}}
+    return void();
+  }
+  C auto& f8() {
+    return; // expected-error {{cannot deduce return type 'C auto &' from omitted return expression}}
+  }
+  C auto& f9() { // expected-error {{cannot deduce return type 'C auto &' for function with no return statements}}
+  }
+}
+namespace PR53911 {
+  template<class T> concept C = false; // expected-note 3 {{because 'false' evaluated to false}}
+
+  C auto *f1() { // expected-error {{deduced type 'void' does not satisfy 'C'}}
+    return (void*)nullptr;
+  }
+  C auto *f2() { // expected-error {{deduced type 'int' does not satisfy 'C'}}
+    return (int*)nullptr;
+  }
+  C auto *****f3() { // expected-error {{deduced type 'int' does not satisfy 'C'}}
+    return (int*****)nullptr;
+  }
+}
+
+namespace PR54379 {
+template <int N>
+struct A {
+  static void f() requires (N == 0) { return; } // expected-note {{candidate template ignored: constraints not satisfied}} expected-note {{evaluated to false}}
+  static void f() requires (N == 1) { return; } // expected-note {{candidate template ignored: constraints not satisfied}} expected-note {{evaluated to false}}
+};
+void (*f1)() = A<2>::f; // expected-error {{address of overloaded function 'f' does not match required type}}
+
+struct B {
+  template <int N2 = 1> static void f() requires (N2 == 0) { return; }  // expected-note {{candidate template ignored: constraints not satisfied [with N2 = 1]}} expected-note {{evaluated to false}}
+};
+void (*f2)() = B::f; // expected-error {{address of overloaded function 'f' does not match required type}}
+}
+
+namespace PR54443 {
+
+template <class T, class U>
+struct is_same { static constexpr bool value = false; };
+
+template <class T>
+struct is_same<T, T> { static constexpr bool value = true; };
+
+template <class T, class U>
+concept same_as = is_same<T, U>::value; // expected-note-re 4 {{because {{.*}} evaluated to false}}
+
+int const &f();
+
+same_as<int const> auto i1 = f(); // expected-error {{deduced type 'int' does not satisfy 'same_as<const int>'}}
+same_as<int const> auto &i2 = f();
+same_as<int const> auto &&i3 = f(); // expected-error {{deduced type 'const int &' does not satisfy 'same_as<const int>'}}
+
+same_as<int const &> auto i4 = f(); // expected-error {{deduced type 'int' does not satisfy 'same_as<const int &>'}}
+same_as<int const &> auto &i5 = f(); // expected-error {{deduced type 'const int' does not satisfy 'same_as<const int &>'}}
+same_as<int const &> auto &&i6 = f();
+
+template <class T>
+concept C = false; // expected-note 3 {{because 'false' evaluated to false}}
+
+int **const &g();
+
+C auto **j1 = g();   // expected-error {{deduced type 'int' does not satisfy 'C'}}
+C auto **&j2 = g();  // expected-error {{deduced type 'int' does not satisfy 'C'}}
+C auto **&&j3 = g(); // expected-error {{deduced type 'int' does not satisfy 'C'}}
+}

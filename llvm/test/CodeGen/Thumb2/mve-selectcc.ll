@@ -208,24 +208,22 @@ define i32 @e() {
 ; CHECK-LABEL: e:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    adr r0, .LCPI14_0
-; CHECK-NEXT:    vmov.i32 q1, #0x4
+; CHECK-NEXT:    movs r1, #0
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    movs r0, #0
-; CHECK-NEXT:    vmov q2, q0
+; CHECK-NEXT:    movs r0, #4
+; CHECK-NEXT:    vmov q1, q0
 ; CHECK-NEXT:  .LBB14_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    adds r0, #4
-; CHECK-NEXT:    vadd.i32 q2, q2, q1
-; CHECK-NEXT:    cmp r0, #8
-; CHECK-NEXT:    cset r1, eq
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, ne
-; CHECK-NEXT:    subs.w r2, r0, #8
-; CHECK-NEXT:    vdup.32 q3, r1
-; CHECK-NEXT:    csel r0, r0, r2, ne
-; CHECK-NEXT:    vbic q2, q2, q3
-; CHECK-NEXT:    vand q3, q3, q0
-; CHECK-NEXT:    vorr q2, q3, q2
+; CHECK-NEXT:    adds r1, #4
+; CHECK-NEXT:    vadd.i32 q1, q1, r0
+; CHECK-NEXT:    cmp r1, #8
+; CHECK-NEXT:    csetm r2, eq
+; CHECK-NEXT:    subs.w r3, r1, #8
+; CHECK-NEXT:    vdup.32 q2, r2
+; CHECK-NEXT:    csel r1, r1, r3, ne
+; CHECK-NEXT:    vbic q1, q1, q2
+; CHECK-NEXT:    vand q2, q2, q0
+; CHECK-NEXT:    vorr q1, q2, q1
 ; CHECK-NEXT:    b .LBB14_1
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.2:

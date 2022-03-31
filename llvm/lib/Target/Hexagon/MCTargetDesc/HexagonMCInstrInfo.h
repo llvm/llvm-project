@@ -41,7 +41,8 @@ public:
 
 namespace Hexagon {
 
-class PacketIterator {
+class PacketIterator : public std::iterator<std::forward_iterator_tag,
+    PacketIterator> {
   MCInstrInfo const &MCII;
   MCInst::const_iterator BundleCurrent;
   MCInst::const_iterator BundleEnd;
@@ -64,18 +65,24 @@ public:
 
 namespace HexagonMCInstrInfo {
 
-size_t const innerLoopOffset = 0;
-int64_t const innerLoopMask = 1 << innerLoopOffset;
+constexpr size_t innerLoopOffset = 0;
+constexpr int64_t innerLoopMask = 1 << innerLoopOffset;
 
-size_t const outerLoopOffset = 1;
-int64_t const outerLoopMask = 1 << outerLoopOffset;
+constexpr size_t outerLoopOffset = 1;
+constexpr int64_t outerLoopMask = 1 << outerLoopOffset;
 
 // do not reorder memory load/stores by default load/stores are re-ordered
 // and by default loads can be re-ordered
-size_t const memReorderDisabledOffset = 2;
-int64_t const memReorderDisabledMask = 1 << memReorderDisabledOffset;
+constexpr size_t memReorderDisabledOffset = 2;
+constexpr int64_t memReorderDisabledMask = 1 << memReorderDisabledOffset;
 
-size_t const bundleInstructionsOffset = 1;
+constexpr size_t splitNoMemOrderOffset = 3;
+constexpr int64_t splitNoMemorderMask = 1 << splitNoMemOrderOffset;
+
+constexpr size_t noShuffleOffset = 4;
+constexpr int64_t noShuffleMask = 1 << noShuffleOffset;
+
+constexpr size_t bundleInstructionsOffset = 1;
 
 void addConstant(MCInst &MI, uint64_t Value, MCContext &Context);
 void addConstExtender(MCContext &Context, MCInstrInfo const &MCII, MCInst &MCB,
@@ -94,6 +101,8 @@ bool canonicalizePacket(MCInstrInfo const &MCII, MCSubtargetInfo const &STI,
                         MCContext &Context, MCInst &MCB,
                         HexagonMCChecker *Checker,
                         bool AttemptCompatibility = false);
+bool IsABranchingInst(MCInstrInfo const &MCII, MCSubtargetInfo const &STI,
+                      MCInst const &I);
 
 // Create a duplex instruction given the two subinsts
 MCInst *deriveDuplex(MCContext &Context, unsigned iClass, MCInst const &inst0,
@@ -188,6 +197,7 @@ bool hasImmExt(MCInst const &MCI);
 bool hasNewValue(MCInstrInfo const &MCII, MCInst const &MCI);
 bool hasNewValue2(MCInstrInfo const &MCII, MCInst const &MCI);
 bool hasTmpDst(MCInstrInfo const &MCII, MCInst const &MCI);
+bool hasHvxTmp(MCInstrInfo const &MCII, MCInst const &MCI);
 unsigned iClassOfDuplexPair(unsigned Ga, unsigned Gb);
 
 int64_t minConstant(MCInst const &MCI, size_t Index);
@@ -305,6 +315,10 @@ bool mustNotExtend(MCExpr const &Expr);
 // Returns true if this instruction requires a slot to execute.
 bool requiresSlot(MCSubtargetInfo const &STI, MCInst const &MCI);
 
+
+// Returns true if \a MCB would require endloop padding.
+bool LoopNeedsPadding(MCInst const &MCB);
+
 unsigned packetSize(StringRef CPU);
 
 // Returns the maximum number of slots available in the given
@@ -316,8 +330,7 @@ unsigned packetSizeSlots(MCSubtargetInfo const &STI);
 unsigned slotsConsumed(MCInstrInfo const &MCII, MCSubtargetInfo const &STI,
                        MCInst const &MCI);
 
-
-// Pad the bundle with nops to satisfy endloop requirements
+// Pad the bundle with nops to satisfy endloop requirements.
 void padEndloop(MCInst &MCI, MCContext &Context);
 class PredicateInfo {
 public:

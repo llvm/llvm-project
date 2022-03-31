@@ -9,30 +9,16 @@ define fastcc void @_ZN12_GLOBAL__N_127PolynomialMultiplyRecognize9recognizeEv()
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 undef, label [[IF_END50_I:%.*]], label [[IF_THEN22_I:%.*]]
 ; CHECK:       if.then22.i:
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* undef, i64 0, i32 0, i64 0
 ; CHECK-NEXT:    [[SUB_I:%.*]] = add nsw i32 undef, -1
 ; CHECK-NEXT:    [[CONV31_I:%.*]] = and i32 undef, [[SUB_I]]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* undef, i64 0, i32 0, i64 0
-; CHECK-NEXT:    [[ARRAYIDX_I_I7_1_I_I:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* undef, i64 0, i32 0, i64 1
-; CHECK-NEXT:    [[ARRAYIDX_I_I7_2_I_I:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* undef, i64 0, i32 0, i64 2
-; CHECK-NEXT:    [[ARRAYIDX_I_I7_3_I_I:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* undef, i64 0, i32 0, i64 3
-; CHECK-NEXT:    [[ARRAYIDX_I_I7_4_I_I:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* undef, i64 0, i32 0, i64 4
-; CHECK-NEXT:    [[ARRAYIDX_I_I7_5_I_I:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* undef, i64 0, i32 0, i64 5
-; CHECK-NEXT:    [[ARRAYIDX_I_I7_6_I_I:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* undef, i64 0, i32 0, i64 6
-; CHECK-NEXT:    [[ARRAYIDX_I_I7_7_I_I:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* undef, i64 0, i32 0, i64 7
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> poison, i32 [[CONV31_I]], i32 0
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr <8 x i32> [[SHUFFLE]], <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
-; CHECK-NEXT:    [[ARRAYIDX_I_I7_8_I_I:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* undef, i64 0, i32 0, i64 8
-; CHECK-NEXT:    [[ARRAYIDX_I_I7_9_I_I:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* undef, i64 0, i32 0, i64 9
-; CHECK-NEXT:    [[ARRAYIDX_I_I7_10_I_I:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* undef, i64 0, i32 0, i64 10
-; CHECK-NEXT:    [[ARRAYIDX_I_I7_11_I_I:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* undef, i64 0, i32 0, i64 11
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> poison, i32 [[CONV31_I]], i32 0
 ; CHECK-NEXT:    [[SHUFFLE1:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = lshr <4 x i32> [[SHUFFLE1]], <i32 9, i32 10, i32 11, i32 12>
-; CHECK-NEXT:    [[ARRAYIDX_I_I7_12_I_I:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* undef, i64 0, i32 0, i64 12
 ; CHECK-NEXT:    [[SHR_12_I_I:%.*]] = lshr i32 [[CONV31_I]], 13
-; CHECK-NEXT:    [[ARRAYIDX_I_I7_13_I_I:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* undef, i64 0, i32 0, i64 13
-; CHECK-NEXT:    [[ARRAYIDX_I_I7_14_I_I:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* undef, i64 0, i32 0, i64 14
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> poison, i32 [[CONV31_I]], i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> [[TMP5]], i32 [[CONV31_I]], i32 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = lshr <2 x i32> [[TMP6]], <i32 14, i32 15>
@@ -46,7 +32,6 @@ define fastcc void @_ZN12_GLOBAL__N_127PolynomialMultiplyRecognize9recognizeEv()
 ; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <16 x i32> [[TMP13]], <16 x i32> [[TMP14]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 16, i32 17>
 ; CHECK-NEXT:    [[TMP16:%.*]] = trunc <16 x i32> [[TMP15]] to <16 x i8>
 ; CHECK-NEXT:    [[TMP17:%.*]] = and <16 x i8> [[TMP16]], <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
-; CHECK-NEXT:    [[ARRAYIDX_I_I7_15_I_I:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* undef, i64 0, i32 0, i64 15
 ; CHECK-NEXT:    [[TMP18:%.*]] = bitcast i8* [[TMP0]] to <16 x i8>*
 ; CHECK-NEXT:    store <16 x i8> [[TMP17]], <16 x i8>* [[TMP18]], align 1
 ; CHECK-NEXT:    unreachable

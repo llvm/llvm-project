@@ -95,7 +95,9 @@ public:
   static lldb::PlatformSP GetHostPlatform();
 
   static lldb::PlatformSP
-  GetPlatformForArchitecture(const ArchSpec &arch, ArchSpec *platform_arch_ptr);
+  GetPlatformForArchitecture(const ArchSpec &arch,
+                             const ArchSpec &process_host_arch = {},
+                             ArchSpec *platform_arch_ptr = nullptr);
 
   static const char *GetHostPlatformName();
 
@@ -107,6 +109,7 @@ public:
   static lldb::PlatformSP Create(ConstString name, Status &error);
 
   static lldb::PlatformSP Create(const ArchSpec &arch,
+                                 const ArchSpec &process_host_arch,
                                  ArchSpec *platform_arch_ptr, Status &error);
 
   /// Augments the triple either with information from platform or the host
@@ -217,7 +220,7 @@ public:
   llvm::Optional<std::string> GetOSKernelDescription();
 
   // Returns the name of the platform
-  ConstString GetName();
+  llvm::StringRef GetName() { return GetPluginName(); }
 
   virtual const char *GetHostname();
 
@@ -310,7 +313,8 @@ public:
 
   /// Get the platform's supported architectures in the order in which they
   /// should be searched.
-  virtual std::vector<ArchSpec> GetSupportedArchitectures() = 0;
+  virtual std::vector<ArchSpec>
+  GetSupportedArchitectures(const ArchSpec &process_host_arch) = 0;
 
   virtual size_t GetSoftwareBreakpointTrapOpcode(Target &target,
                                                  BreakpointSite *bp_site);
@@ -332,6 +336,7 @@ public:
   /// Lets a platform answer if it is compatible with a given architecture and
   /// the target triple contained within.
   virtual bool IsCompatibleArchitecture(const ArchSpec &arch,
+                                        const ArchSpec &process_host_arch,
                                         bool exact_arch_match,
                                         ArchSpec *compatible_arch_ptr);
 
@@ -508,17 +513,17 @@ public:
 
   virtual uint64_t ReadFile(lldb::user_id_t fd, uint64_t offset, void *dst,
                             uint64_t dst_len, Status &error) {
-    error.SetErrorStringWithFormat(
-        "Platform::ReadFile() is not supported in the %s platform",
-        GetName().GetCString());
+    error.SetErrorStringWithFormatv(
+        "Platform::ReadFile() is not supported in the {0} platform",
+        GetPluginName());
     return -1;
   }
 
   virtual uint64_t WriteFile(lldb::user_id_t fd, uint64_t offset,
                              const void *src, uint64_t src_len, Status &error) {
-    error.SetErrorStringWithFormat(
-        "Platform::WriteFile() is not supported in the %s platform",
-        GetName().GetCString());
+    error.SetErrorStringWithFormatv(
+        "Platform::WriteFile() is not supported in the {0} platform",
+        GetPluginName());
     return -1;
   }
 
@@ -863,6 +868,8 @@ public:
     return nullptr;
   }
 
+  virtual CompilerType GetSiginfoType(const llvm::Triple &triple);
+
 protected:
   /// Create a list of ArchSpecs with the given OS and a architectures. The
   /// vendor field is left as an "unspecified unknown".
@@ -890,7 +897,7 @@ protected:
   FileSpec m_working_dir; // The working directory which is used when installing
                           // modules that have no install path set
   std::string m_remote_url;
-  std::string m_name;
+  std::string m_hostname;
   llvm::VersionTuple m_os_version;
   ArchSpec
       m_system_arch; // The architecture of the kernel or the remote platform
@@ -958,7 +965,7 @@ private:
 
 class PlatformList {
 public:
-  PlatformList() : m_mutex(), m_platforms(), m_selected_platform_sp() {}
+  PlatformList() {}
 
   ~PlatformList() = default;
 

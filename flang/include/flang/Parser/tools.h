@@ -29,7 +29,7 @@ const Name &GetLastName(const Variable &);
 const Name &GetLastName(const AllocateObject &);
 
 // GetFirstName() isolates and returns a reference to the leftmost Name
-// in a variable.
+// in a variable or entity declaration.
 const Name &GetFirstName(const Name &);
 const Name &GetFirstName(const StructureComponent &);
 const Name &GetFirstName(const DataRef &);

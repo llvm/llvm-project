@@ -88,7 +88,7 @@ define <8 x i32> @concat8(<4 x i32>* %A, <4 x i32>* %B) {
 define <4 x half> @concat9(<2 x half> %A, <2 x half> %B) {
 ; CHECK-LABEL: concat9:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip1    v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    zip1 v0.2s, v0.2s, v1.2s
 ; CHECK-NEXT:    ret
    %v4half= shufflevector <2 x half> %A, <2 x half> %B, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
    ret <4 x half> %v4half

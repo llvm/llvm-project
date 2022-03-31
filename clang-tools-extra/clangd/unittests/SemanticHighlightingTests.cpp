@@ -7,11 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "Annotations.h"
-#include "ClangdServer.h"
 #include "Protocol.h"
 #include "SemanticHighlighting.h"
 #include "SourceCode.h"
-#include "TestFS.h"
 #include "TestTU.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -617,7 +615,14 @@ sizeof...($TemplateParameter[[Elements]]);
         void $Method_decl[[bar1]]() {
           $Class[[Foo]]<$TemplateParameter[[U]]>().$Field_dependentName[[Waldo]];
         }
+
+        void $Method_decl[[Overload]]();
+        void $Method_decl_readonly[[Overload]]() const;
       };
+      template <typename $TemplateParameter_decl[[T]]>
+      void $Function_decl[[baz]]($Class[[Foo]]<$TemplateParameter[[T]]> $Parameter_decl[[o]]) {
+        $Parameter[[o]].$Method_readonly_dependentName[[Overload]]();
+      }
     )cpp",
       // Concepts
       R"cpp(

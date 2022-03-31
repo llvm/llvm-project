@@ -40,6 +40,17 @@ static const size_t TabStop = 8;
 unsigned SourceMgr::AddIncludeFile(const std::string &Filename,
                                    SMLoc IncludeLoc,
                                    std::string &IncludedFile) {
+  ErrorOr<std::unique_ptr<MemoryBuffer>> NewBufOrErr =
+      OpenIncludeFile(Filename, IncludedFile);
+  if (!NewBufOrErr)
+    return 0;
+
+  return AddNewSourceBuffer(std::move(*NewBufOrErr), IncludeLoc);
+}
+
+ErrorOr<std::unique_ptr<MemoryBuffer>>
+SourceMgr::OpenIncludeFile(const std::string &Filename,
+                           std::string &IncludedFile) {
   IncludedFile = Filename;
   ErrorOr<std::unique_ptr<MemoryBuffer>> NewBufOrErr =
       MemoryBuffer::getFile(IncludedFile);
@@ -52,10 +63,7 @@ unsigned SourceMgr::AddIncludeFile(const std::string &Filename,
     NewBufOrErr = MemoryBuffer::getFile(IncludedFile);
   }
 
-  if (!NewBufOrErr)
-    return 0;
-
-  return AddNewSourceBuffer(std::move(*NewBufOrErr), IncludeLoc);
+  return NewBufOrErr;
 }
 
 unsigned SourceMgr::FindBufferContainingLoc(SMLoc Loc) const {
@@ -292,8 +300,7 @@ SMDiagnostic SourceMgr::GetMessage(SMLoc Loc, SourceMgr::DiagKind Kind,
 
     // Convert any ranges to column ranges that only intersect the line of the
     // location.
-    for (unsigned i = 0, e = Ranges.size(); i != e; ++i) {
-      SMRange R = Ranges[i];
+    for (SMRange R : Ranges) {
       if (!R.isValid())
         continue;
 

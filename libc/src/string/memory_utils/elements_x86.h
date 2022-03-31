@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_ELEMENTS_X86_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_ELEMENTS_X86_H
 
+#include "src/__support/CPP/Bit.h"
 #include "src/__support/architectures.h"
 
 #if defined(LLVM_LIBC_ARCH_X86)
@@ -30,30 +31,30 @@ namespace x86 {
 
 #ifdef __SSE2__
 template <typename Base> struct Vector : public Base {
-  static void Copy(char *__restrict dst, const char *__restrict src) {
-    Base::Store(dst, Base::Load(src));
+  static void copy(char *__restrict dst, const char *__restrict src) {
+    Base::store(dst, Base::load(src));
   }
 
-  static void Move(char *dst, const char *src) {
-    Base::Store(dst, Base::Load(src));
+  static void move(char *dst, const char *src) {
+    Base::store(dst, Base::load(src));
   }
 
-  static bool Equals(const char *a, const char *b) {
-    return Base::NotEqualMask(Base::Load(a), Base::Load(b)) == 0;
+  static bool equals(const char *a, const char *b) {
+    return Base::not_equal_mask(Base::load(a), Base::load(b)) == 0;
   }
 
-  static int ThreeWayCompare(const char *a, const char *b) {
-    const auto mask = Base::NotEqualMask(Base::Load(a), Base::Load(b));
+  static int three_way_compare(const char *a, const char *b) {
+    const auto mask = Base::not_equal_mask(Base::load(a), Base::load(b));
     if (!mask)
       return 0;
-    return CharDiff(a, b, mask);
+    return char_diff(a, b, mask);
   }
 
-  static void SplatSet(char *dst, const unsigned char value) {
-    Base::Store(dst, Base::GetSplattedValue(value));
+  static void splat_set(char *dst, const unsigned char value) {
+    Base::store(dst, Base::get_splatted_value(value));
   }
 
-  static int CharDiff(const char *a, const char *b, uint64_t mask) {
+  static int char_diff(const char *a, const char *b, uint64_t mask) {
     const size_t diff_index = __builtin_ctzll(mask);
     const int ca = (unsigned char)a[diff_index];
     const int cb = (unsigned char)b[diff_index];
@@ -62,22 +63,24 @@ template <typename Base> struct Vector : public Base {
 };
 
 struct M128 {
-  static constexpr size_t kSize = 16;
-  using T = char __attribute__((__vector_size__(kSize)));
+  static constexpr size_t SIZE = 16;
+  using T = char __attribute__((__vector_size__(SIZE)));
   static uint16_t mask(T value) {
     // NOLINTNEXTLINE(llvmlibc-callee-namespace)
-    return _mm_movemask_epi8(value);
+    return _mm_movemask_epi8(__llvm_libc::bit_cast<__m128i>(value));
   }
-  static uint16_t NotEqualMask(T a, T b) { return mask(a != b); }
-  static T Load(const char *ptr) {
+  static uint16_t not_equal_mask(T a, T b) { return mask(a != b); }
+  static T load(const char *ptr) {
     // NOLINTNEXTLINE(llvmlibc-callee-namespace)
-    return _mm_loadu_si128(reinterpret_cast<__m128i_u const *>(ptr));
+    return __llvm_libc::bit_cast<T>(
+        _mm_loadu_si128(reinterpret_cast<__m128i_u const *>(ptr)));
   }
-  static void Store(char *ptr, T value) {
+  static void store(char *ptr, T value) {
     // NOLINTNEXTLINE(llvmlibc-callee-namespace)
-    return _mm_storeu_si128(reinterpret_cast<__m128i_u *>(ptr), value);
+    return _mm_storeu_si128(reinterpret_cast<__m128i_u *>(ptr),
+                            __llvm_libc::bit_cast<__m128i>(value));
   }
-  static T GetSplattedValue(const char v) {
+  static T get_splatted_value(const char v) {
     const T splatted = {v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v};
     return splatted;
   }
@@ -87,22 +90,24 @@ using Vector128 = Vector<M128>; // 16 Bytes
 
 #ifdef __AVX2__
 struct M256 {
-  static constexpr size_t kSize = 32;
-  using T = char __attribute__((__vector_size__(kSize)));
+  static constexpr size_t SIZE = 32;
+  using T = char __attribute__((__vector_size__(SIZE)));
   static uint32_t mask(T value) {
     // NOLINTNEXTLINE(llvmlibc-callee-namespace)
-    return _mm256_movemask_epi8(value);
+    return _mm256_movemask_epi8(__llvm_libc::bit_cast<__m256i>(value));
   }
-  static uint32_t NotEqualMask(T a, T b) { return mask(a != b); }
-  static T Load(const char *ptr) {
+  static uint32_t not_equal_mask(T a, T b) { return mask(a != b); }
+  static T load(const char *ptr) {
     // NOLINTNEXTLINE(llvmlibc-callee-namespace)
-    return _mm256_loadu_si256(reinterpret_cast<__m256i const *>(ptr));
+    return __llvm_libc::bit_cast<T>(
+        _mm256_loadu_si256(reinterpret_cast<__m256i const *>(ptr)));
   }
-  static void Store(char *ptr, T value) {
+  static void store(char *ptr, T value) {
     // NOLINTNEXTLINE(llvmlibc-callee-namespace)
-    return _mm256_storeu_si256(reinterpret_cast<__m256i *>(ptr), value);
+    return _mm256_storeu_si256(reinterpret_cast<__m256i *>(ptr),
+                               __llvm_libc::bit_cast<__m256i>(value));
   }
-  static T GetSplattedValue(const char v) {
+  static T get_splatted_value(const char v) {
     const T splatted = {v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v,
                         v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v};
     return splatted;
@@ -113,21 +118,22 @@ using Vector256 = Vector<M256>; // 32 Bytes
 
 #if defined(__AVX512F__) and defined(__AVX512BW__)
 struct M512 {
-  static constexpr size_t kSize = 64;
-  using T = char __attribute__((__vector_size__(kSize)));
-  static uint64_t NotEqualMask(T a, T b) {
+  static constexpr size_t SIZE = 64;
+  using T = char __attribute__((__vector_size__(SIZE)));
+  static uint64_t not_equal_mask(T a, T b) {
     // NOLINTNEXTLINE(llvmlibc-callee-namespace)
-    return _mm512_cmpneq_epi8_mask(a, b);
+    return _mm512_cmpneq_epi8_mask(__llvm_libc::bit_cast<__m512i>(a),
+                                   __llvm_libc::bit_cast<__m512i>(b));
   }
-  static T Load(const char *ptr) {
+  static T load(const char *ptr) {
     // NOLINTNEXTLINE(llvmlibc-callee-namespace)
-    return _mm512_loadu_epi8(ptr);
+    return __llvm_libc::bit_cast<T>(_mm512_loadu_epi8(ptr));
   }
-  static void Store(char *ptr, T value) {
+  static void store(char *ptr, T value) {
     // NOLINTNEXTLINE(llvmlibc-callee-namespace)
-    return _mm512_storeu_epi8(ptr, value);
+    return _mm512_storeu_epi8(ptr, __llvm_libc::bit_cast<__m512i>(value));
   }
-  static T GetSplattedValue(const char v) {
+  static T get_splatted_value(const char v) {
     const T splatted = {v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v,
                         v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v,
                         v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v,
@@ -169,7 +175,7 @@ using _128 = __llvm_libc::Repeated<_8, 16>;
 #endif
 
 struct Accelerator {
-  static void Copy(char *dst, const char *src, size_t count) {
+  static void copy(char *dst, const char *src, size_t count) {
     asm volatile("rep movsb" : "+D"(dst), "+S"(src), "+c"(count) : : "memory");
   }
 };

@@ -135,7 +135,7 @@ private:
     if (bytes > size_) {
       char *old{buffer_};
       auto oldSize{size_};
-      size_ = std::max<std::int64_t>(bytes, minBuffer);
+      size_ = std::max<std::int64_t>(bytes, size_ + minBuffer);
       buffer_ =
           reinterpret_cast<char *>(AllocateMemoryOrCrash(terminator, size_));
       auto chunk{std::min<std::int64_t>(length_, oldSize - start_)};

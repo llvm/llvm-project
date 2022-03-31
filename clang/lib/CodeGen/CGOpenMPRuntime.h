@@ -35,7 +35,6 @@ class ArrayType;
 class Constant;
 class FunctionType;
 class GlobalVariable;
-class StructType;
 class Type;
 class Value;
 class OpenMPIRBuilder;
@@ -48,7 +47,6 @@ class OMPExecutableDirective;
 class OMPLoopDirective;
 class VarDecl;
 class OMPDeclareReductionDecl;
-class IdentifierInfo;
 
 namespace CodeGen {
 class Address;
@@ -162,10 +160,10 @@ private:
   /// Performs aggregate initialization.
   /// \param N Number of reduction item in the common list.
   /// \param PrivateAddr Address of the corresponding private item.
-  /// \param SharedLVal Address of the original shared variable.
+  /// \param SharedAddr Address of the original shared variable.
   /// \param DRD Declare reduction construct used for reduction item.
   void emitAggregateInitialization(CodeGenFunction &CGF, unsigned N,
-                                   Address PrivateAddr, LValue SharedLVal,
+                                   Address PrivateAddr, Address SharedAddr,
                                    const OMPDeclareReductionDecl *DRD);
 
 public:
@@ -187,10 +185,10 @@ public:
   /// \param PrivateAddr Address of the corresponding private item.
   /// \param DefaultInit Default initialization sequence that should be
   /// performed if no reduction specific initialization is found.
-  /// \param SharedLVal Address of the original shared variable.
+  /// \param SharedAddr Address of the original shared variable.
   void
   emitInitialization(CodeGenFunction &CGF, unsigned N, Address PrivateAddr,
-                     LValue SharedLVal,
+                     Address SharedAddr,
                      llvm::function_ref<bool(CodeGenFunction &)> DefaultInit);
   /// Returns true if the private copy requires cleanups.
   bool needCleanups(unsigned N);
@@ -220,6 +218,11 @@ public:
   /// Returns true if the initialization of the reduction item uses initializer
   /// from declare reduction construct.
   bool usesReductionInitializer(unsigned N) const;
+  /// Return the type of the private item.
+  QualType getPrivateType(unsigned N) const {
+    return cast<VarDecl>(cast<DeclRefExpr>(ClausesData[N].Private)->getDecl())
+        ->getType();
+  }
 };
 
 class CGOpenMPRuntime {
@@ -471,8 +474,8 @@ private:
   /// <critical_section_name> + ".var" for "omp critical" directives; 2)
   /// <mangled_name_for_global_var> + ".cache." for cache for threadprivate
   /// variables.
-  llvm::StringMap<llvm::AssertingVH<llvm::Constant>, llvm::BumpPtrAllocator>
-      InternalVars;
+  llvm::StringMap<llvm::AssertingVH<llvm::GlobalVariable>,
+                  llvm::BumpPtrAllocator> InternalVars;
   /// Type typedef kmp_int32 (* kmp_routine_entry_t)(kmp_int32, void *);
   llvm::Type *KmpRoutineEntryPtrTy = nullptr;
   QualType KmpRoutineEntryPtrQTy;
@@ -829,9 +832,9 @@ private:
   /// \param Ty Type of the global variable. If it is exist already the type
   /// must be the same.
   /// \param Name Name of the variable.
-  llvm::Constant *getOrCreateInternalVariable(llvm::Type *Ty,
-                                              const llvm::Twine &Name,
-                                              unsigned AddressSpace = 0);
+  llvm::GlobalVariable *getOrCreateInternalVariable(llvm::Type *Ty,
+                                                    const llvm::Twine &Name,
+                                                    unsigned AddressSpace = 0);
 
   /// Set of threadprivate variables with the generated initializer.
   llvm::StringSet<> ThreadPrivateWithDefinition;
@@ -916,6 +919,14 @@ private:
   std::pair<llvm::Value *, LValue> getDepobjElements(CodeGenFunction &CGF,
                                                      LValue DepobjLVal,
                                                      SourceLocation Loc);
+
+  SmallVector<llvm::Value *, 4>
+  emitDepobjElementsSizes(CodeGenFunction &CGF, QualType &KmpDependInfoTy,
+                          const OMPTaskDataTy::DependData &Data);
+
+  void emitDepobjElements(CodeGenFunction &CGF, QualType &KmpDependInfoTy,
+                          LValue PosLVal, const OMPTaskDataTy::DependData &Data,
+                          Address DependenciesArray);
 
 public:
   explicit CGOpenMPRuntime(CodeGenModule &CGM)
@@ -1015,11 +1026,13 @@ public:
   /// variables used in \a OutlinedFn function.
   /// \param IfCond Condition in the associated 'if' clause, if it was
   /// specified, nullptr otherwise.
+  /// \param NumThreads The value corresponding to the num_threads clause, if
+  /// any, or nullptr.
   ///
   virtual void emitParallelCall(CodeGenFunction &CGF, SourceLocation Loc,
                                 llvm::Function *OutlinedFn,
                                 ArrayRef<llvm::Value *> CapturedVars,
-                                const Expr *IfCond);
+                                const Expr *IfCond, llvm::Value *NumThreads);
 
   /// Emits a critical region.
   /// \param CriticalName Name of the critical region.
@@ -1406,14 +1419,14 @@ public:
                                     bool HasCancel = false);
 
   /// Emits reduction function.
-  /// \param ArgsType Array type containing pointers to reduction variables.
+  /// \param ArgsElemType Array type containing pointers to reduction variables.
   /// \param Privates List of private copies for original reduction arguments.
   /// \param LHSExprs List of LHS in \a ReductionOps reduction operations.
   /// \param RHSExprs List of RHS in \a ReductionOps reduction operations.
   /// \param ReductionOps List of reduction operations in form 'LHS binop RHS'
   /// or 'operator binop(LHS, RHS)'.
   llvm::Function *emitReductionFunction(SourceLocation Loc,
-                                        llvm::Type *ArgsType,
+                                        llvm::Type *ArgsElemType,
                                         ArrayRef<const Expr *> Privates,
                                         ArrayRef<const Expr *> LHSExprs,
                                         ArrayRef<const Expr *> RHSExprs,
@@ -1991,11 +2004,13 @@ public:
   /// variables used in \a OutlinedFn function.
   /// \param IfCond Condition in the associated 'if' clause, if it was
   /// specified, nullptr otherwise.
+  /// \param NumThreads The value corresponding to the num_threads clause, if
+  /// any, or nullptr.
   ///
   void emitParallelCall(CodeGenFunction &CGF, SourceLocation Loc,
                         llvm::Function *OutlinedFn,
                         ArrayRef<llvm::Value *> CapturedVars,
-                        const Expr *IfCond) override;
+                        const Expr *IfCond, llvm::Value *NumThreads) override;
 
   /// Emits a critical region.
   /// \param CriticalName Name of the critical region.

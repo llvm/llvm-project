@@ -332,12 +332,12 @@ func @failedSingleBlockImplicitTerminator_missing_terminator() {
 
 // Test the invariants of operations with the Symbol Trait.
 
-// expected-error@+1 {{requires string attribute 'sym_name'}}
+// expected-error@+1 {{op requires attribute 'sym_name'}}
 "test.symbol"() {} : () -> ()
 
 // -----
 
-// expected-error@+1 {{requires visibility attribute 'sym_visibility' to be a string attribute}}
+// expected-error@+1 {{op attribute 'sym_visibility' failed to satisfy constraint: string attribute}}
 "test.symbol"() {sym_name = "foo_2", sym_visibility} : () -> ()
 
 // -----
@@ -364,7 +364,7 @@ func private @foo()
 // -----
 
 // Test that operation with the SymbolTable Trait fails with  too many blocks.
-// expected-error@+1 {{Operations with a 'SymbolTable' must have exactly one block}}
+// expected-error@+1 {{op expects region #0 to have 0 or 1 blocks}}
 "test.symbol_scope"() ({
   ^entry:
     "test.finish" () : () -> ()
@@ -488,6 +488,79 @@ func @succeededResultSizeAttr() {
 
 // -----
 
+// CHECK-LABEL: @succeededOilistTrivial
+func @succeededOilistTrivial() {
+  // CHECK: test.oilist_with_keywords_only keyword
+  test.oilist_with_keywords_only keyword
+  // CHECK: test.oilist_with_keywords_only otherKeyword
+  test.oilist_with_keywords_only otherKeyword
+  // CHECK: test.oilist_with_keywords_only keyword otherKeyword
+  test.oilist_with_keywords_only keyword otherKeyword
+  // CHECK: test.oilist_with_keywords_only keyword otherKeyword
+  test.oilist_with_keywords_only otherKeyword keyword
+  // CHECK: test.oilist_with_keywords_only thirdKeyword
+  test.oilist_with_keywords_only thirdKeyword
+  // CHECK: test.oilist_with_keywords_only keyword thirdKeyword
+  test.oilist_with_keywords_only keyword thirdKeyword
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @succeededOilistSimple
+func @succeededOilistSimple(%arg0 : i32, %arg1 : i32, %arg2 : i32) {
+  // CHECK: test.oilist_with_simple_args keyword %{{.*}} : i32
+  test.oilist_with_simple_args keyword %arg0 : i32
+  // CHECK: test.oilist_with_simple_args otherKeyword %{{.*}} : i32
+  test.oilist_with_simple_args otherKeyword %arg0 : i32
+  // CHECK: test.oilist_with_simple_args thirdKeyword %{{.*}} : i32
+  test.oilist_with_simple_args thirdKeyword %arg0 : i32
+
+  // CHECK: test.oilist_with_simple_args keyword %{{.*}} : i32 otherKeyword %{{.*}} : i32
+  test.oilist_with_simple_args keyword %arg0 : i32 otherKeyword %arg1 : i32
+  // CHECK: test.oilist_with_simple_args keyword %{{.*}} : i32 thirdKeyword %{{.*}} : i32
+  test.oilist_with_simple_args keyword %arg0 : i32 thirdKeyword %arg1 : i32
+  // CHECK: test.oilist_with_simple_args otherKeyword %{{.*}} : i32 thirdKeyword %{{.*}} : i32
+  test.oilist_with_simple_args thirdKeyword %arg0 : i32 otherKeyword %arg1 : i32
+
+  // CHECK: test.oilist_with_simple_args keyword %{{.*}} : i32 otherKeyword %{{.*}} : i32 thirdKeyword %{{.*}} : i32
+  test.oilist_with_simple_args keyword %arg0 : i32 otherKeyword %arg1 : i32 thirdKeyword %arg2 : i32
+  // CHECK: test.oilist_with_simple_args keyword %{{.*}} : i32 otherKeyword %{{.*}} : i32 thirdKeyword %{{.*}} : i32
+  test.oilist_with_simple_args otherKeyword %arg0 : i32 keyword %arg1 : i32 thirdKeyword %arg2 : i32
+  // CHECK: test.oilist_with_simple_args keyword %{{.*}} : i32 otherKeyword %{{.*}} : i32 thirdKeyword %{{.*}} : i32
+  test.oilist_with_simple_args otherKeyword %arg0 : i32 thirdKeyword %arg1 : i32 keyword %arg2 : i32
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @succeededOilistVariadic
+// CHECK-SAME: (%[[ARG0:.*]]: i32, %[[ARG1:.*]]: i32, %[[ARG2:.*]]: i32)
+func @succeededOilistVariadic(%arg0: i32, %arg1: i32, %arg2: i32) {
+  // CHECK: test.oilist_variadic_with_parens keyword(%[[ARG0]], %[[ARG1]] : i32, i32)
+  test.oilist_variadic_with_parens keyword (%arg0, %arg1 : i32, i32)
+  // CHECK: test.oilist_variadic_with_parens keyword(%[[ARG0]], %[[ARG1]] : i32, i32) otherKeyword(%[[ARG2]], %[[ARG1]] : i32, i32)
+  test.oilist_variadic_with_parens otherKeyword (%arg2, %arg1 : i32, i32) keyword (%arg0, %arg1 : i32, i32)
+  // CHECK: test.oilist_variadic_with_parens keyword(%[[ARG0]], %[[ARG1]] : i32, i32) otherKeyword(%[[ARG0]], %[[ARG1]] : i32, i32) thirdKeyword(%[[ARG2]], %[[ARG0]], %[[ARG1]] : i32, i32, i32)
+  test.oilist_variadic_with_parens thirdKeyword (%arg2, %arg0, %arg1 : i32, i32, i32) keyword (%arg0, %arg1 : i32, i32) otherKeyword (%arg0, %arg1 : i32, i32)
+  return
+}
+
+// -----
+// CHECK-LABEL: succeededOilistCustom
+// CHECK-SAME: (%[[ARG0:.*]]: i32, %[[ARG1:.*]]: i32, %[[ARG2:.*]]: i32)
+func @succeededOilistCustom(%arg0: i32, %arg1: i32, %arg2: i32) {
+  // CHECK: test.oilist_custom private(%[[ARG0]], %[[ARG1]] : i32, i32)
+  test.oilist_custom private (%arg0, %arg1 : i32, i32)
+  // CHECK: test.oilist_custom private(%[[ARG0]], %[[ARG1]] : i32, i32) nowait
+  test.oilist_custom private (%arg0, %arg1 : i32, i32) nowait
+  // CHECK: test.oilist_custom private(%arg0, %arg1 : i32, i32) reduction (%arg1) nowait
+  test.oilist_custom nowait reduction (%arg1) private (%arg0, %arg1 : i32, i32)
+  return
+}
+
+// -----
+
 func @failedHasDominanceScopeOutsideDominanceFreeScope() -> () {
   "test.ssacfg_region"() ({
     test.graph_region {
@@ -506,7 +579,7 @@ func @failedHasDominanceScopeOutsideDominanceFreeScope() -> () {
 // checked for dominance
 func @illegalInsideDominanceFreeScope() -> () {
   test.graph_region {
-    builtin.func @test() -> i1 {
+    func.func @test() -> i1 {
     ^bb1:
       // expected-error @+1 {{operand #0 does not dominate this use}}
       %2:3 = "bar"(%1) : (i64) -> (i1,i1,i1)
@@ -525,13 +598,13 @@ func @illegalInsideDominanceFreeScope() -> () {
 // checked for dominance
 func @illegalCDFGInsideDominanceFreeScope() -> () {
   test.graph_region {
-    builtin.func @test() -> i1 {
+    func.func @test() -> i1 {
     ^bb1:
       // expected-error @+1 {{operand #0 does not dominate this use}}
       %2:3 = "bar"(%1) : (i64) -> (i1,i1,i1)
-      br ^bb4
+      cf.br ^bb4
     ^bb2:
-      br ^bb2
+      cf.br ^bb2
     ^bb4:
       %1 = "foo"() : ()->i64   // expected-note {{operand defined here}}
 		return %2#1 : i1
@@ -559,7 +632,7 @@ func @graph_region_cant_have_blocks() {
   test.graph_region {
     // expected-error@-1 {{'test.graph_region' op expects graph region #0 to have 0 or 1 blocks}}
   ^bb42:
-    br ^bb43
+    cf.br ^bb43
   ^bb43:
     "terminator"() : () -> ()
   }

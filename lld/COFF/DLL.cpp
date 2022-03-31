@@ -659,14 +659,14 @@ void DelayLoadContents::create(COFFLinkerContext &ctx, Defined *h) {
         // Add a syntentic symbol for this load thunk, using the "__imp_load"
         // prefix, in case this thunk needs to be added to the list of valid
         // call targets for Control Flow Guard.
-        StringRef symName = saver.save("__imp_load_" + extName);
+        StringRef symName = saver().save("__imp_load_" + extName);
         s->loadThunkSym =
             cast<DefinedSynthetic>(ctx.symtab.addSynthetic(symName, t));
       }
     }
     thunks.push_back(tm);
     StringRef tmName =
-        saver.save("__tailMerge_" + syms[0]->getDLLName().lower());
+        saver().save("__tailMerge_" + syms[0]->getDLLName().lower());
     ctx.symtab.addSynthetic(tmName, tm);
     // Terminate with null values.
     addresses.push_back(make<NullChunk>(8));

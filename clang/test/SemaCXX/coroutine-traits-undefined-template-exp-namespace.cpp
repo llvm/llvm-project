@@ -6,7 +6,7 @@
 namespace std {
 namespace experimental {
 template <typename... T>
-struct coroutine_traits {
+struct coroutine_traits { // expected-note{{declared here}}
   struct promise_type {};
 };
 
@@ -16,5 +16,5 @@ template <> struct coroutine_traits<void>; // expected-note {{forward declaratio
 
 void uses_forward_declaration() {
   co_return; // expected-error {{this function cannot be a coroutine: missing definition of specialization 'coroutine_traits<void>'}}
-             // expected-warning@-1 {{Please move from std::experimental::coroutine_traits to std::coroutine_traits}}
+             // expected-warning@-1 {{support for std::experimental::coroutine_traits will be removed}}
 }

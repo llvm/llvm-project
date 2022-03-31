@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_REFACTOR_REFACTORING_ACTION_H
-#define LLVM_CLANG_TOOLING_REFACTOR_REFACTORING_ACTION_H
+#ifndef LLVM_CLANG_TOOLING_REFACTORING_REFACTORINGACTION_H
+#define LLVM_CLANG_TOOLING_REFACTORING_REFACTORINGACTION_H
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Tooling/Refactoring/RefactoringActionRules.h"
@@ -60,4 +60,4 @@ std::vector<std::unique_ptr<RefactoringAction>> createRefactoringActions();
 } // end namespace tooling
 } // end namespace clang
 
-#endif // LLVM_CLANG_TOOLING_REFACTOR_REFACTORING_ACTION_H
+#endif // LLVM_CLANG_TOOLING_REFACTORING_REFACTORINGACTION_H

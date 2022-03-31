@@ -7,13 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "StreamUtil.h"
-#include "FormatUtil.h"
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptor.h"
 #include "llvm/DebugInfo/PDB/Native/DbiModuleList.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
+#include "llvm/DebugInfo/PDB/Native/FormatUtil.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
@@ -95,7 +95,7 @@ void llvm::pdb::discoverStreamPurposes(PDBFile &File,
   }
 
   Streams.resize(StreamCount);
-  for (uint16_t StreamIdx = 0; StreamIdx < StreamCount; ++StreamIdx) {
+  for (uint32_t StreamIdx = 0; StreamIdx < StreamCount; ++StreamIdx) {
     if (StreamIdx == OldMSFDirectory)
       Streams[StreamIdx] =
           stream(StreamPurpose::Other, "Old MSF Directory", StreamIdx);

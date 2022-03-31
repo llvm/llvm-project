@@ -207,8 +207,8 @@ raw_ostream &operator<<(raw_ostream &os, Visibility visibility) {
   }
   return os;
 }
-} // end namespace tblgen
-} // end namespace mlir
+} // namespace tblgen
+} // namespace mlir
 
 //===----------------------------------------------------------------------===//
 // ParentClass definitions
@@ -258,6 +258,11 @@ void VisibilityDeclaration::writeDeclTo(raw_indented_ostream &os) const {
 
 void ExtraClassDeclaration::writeDeclTo(raw_indented_ostream &os) const {
   os.printReindented(extraClassDeclaration);
+}
+
+void ExtraClassDeclaration::writeDefTo(raw_indented_ostream &os,
+                                       StringRef namePrefix) const {
+  os.printReindented(extraClassDefinition);
 }
 
 //===----------------------------------------------------------------------===//

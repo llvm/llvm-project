@@ -20,7 +20,6 @@ _warningFlags = [
   '-Wno-attributes',
   '-Wno-pessimizing-move',
   '-Wno-c++11-extensions',
-  '-Wno-user-defined-literals',
   '-Wno-noexcept-type',
   '-Wno-aligned-allocation-unavailable',
   '-Wno-atomic-alignment',
@@ -28,6 +27,11 @@ _warningFlags = [
   # GCC warns about places where we might want to add sized allocation/deallocation
   # functions, but we know better what we're doing/testing in the test suite.
   '-Wno-sized-deallocation',
+
+  # Turn off warnings about user-defined literals with reserved suffixes. Those are
+  # just noise since we are testing the Standard Library itself.
+  '-Wno-literal-suffix', # GCC
+  '-Wno-user-defined-literals', # Clang
 
   # These warnings should be enabled in order to support the MSVC
   # team using the test suite; They enable the warnings below and
@@ -76,7 +80,7 @@ DEFAULT_PARAMETERS = [
             actions=lambda modules: [
               AddFeature('modules-build'),
               AddCompileFlag('-fmodules'),
-              AddCompileFlag('-Xclang -fmodules-local-submodule-visibility'),
+              AddCompileFlag('-fcxx-modules'), # AppleClang disregards -fmodules entirely when compiling C++. This enables modules for C++.
             ] if modules else []),
 
   Parameter(name='enable_exceptions', choices=[True, False], type=bool, default=True,
@@ -117,14 +121,16 @@ DEFAULT_PARAMETERS = [
 
   Parameter(name='enable_warnings', choices=[True, False], type=bool, default=True,
             help="Whether to enable warnings when compiling the test suite.",
-            actions=lambda warnings: [] if not warnings else [
-              AddOptionalWarningFlag(w) for w in _warningFlags
-            ]),
+            actions=lambda warnings: [] if not warnings else
+              [AddOptionalWarningFlag(w) for w in _warningFlags] +
+              [AddCompileFlag('-D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER')]
+            ),
 
   Parameter(name='debug_level', choices=['', '0', '1'], type=str, default='',
             help="The debugging level to enable in the test suite.",
             actions=lambda debugLevel: [] if debugLevel == '' else filter(None, [
               AddFeature('debug_level={}'.format(debugLevel)),
+              AddCompileFlag('-Wno-macro-redefined'),
               AddCompileFlag('-D_LIBCPP_DEBUG={}'.format(debugLevel)),
               AddFeature('LIBCXX-DEBUG-FIXME') if debugLevel == '1' else None
             ])),
@@ -176,6 +182,14 @@ DEFAULT_PARAMETERS = [
             actions=lambda enabled: [] if enabled else [
               AddFeature('libcxx-no-debug-mode')
             ]),
+
+  Parameter(name='enable_assertions', choices=[True, False], type=bool, default=False,
+            help="Whether to enable assertions when compiling the test suite. This is only meaningful when "
+                 "running the tests against libc++.",
+            actions=lambda assertions: [
+              AddCompileFlag('-D_LIBCPP_ENABLE_ASSERTIONS=1'),
+              AddFeature('libcpp-has-assertions')
+            ] if assertions else []),
 
   Parameter(name='additional_features', type=list, default=[],
             help="A comma-delimited list of additional features that will be enabled when running the tests. "

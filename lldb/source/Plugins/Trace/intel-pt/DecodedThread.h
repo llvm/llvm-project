@@ -9,6 +9,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_DECODEDTHREAD_H
 #define LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_DECODEDTHREAD_H
 
+#include <utility>
 #include <vector>
 
 #include "llvm/Support/Errc.h"
@@ -62,14 +63,13 @@ private:
 class IntelPTInstruction {
 public:
   IntelPTInstruction(const pt_insn &pt_insn, uint64_t timestamp)
-      : m_pt_insn(pt_insn), m_timestamp(timestamp) {}
+      : m_pt_insn(pt_insn), m_timestamp(timestamp), m_is_error(false) {}
 
-  IntelPTInstruction(const pt_insn &pt_insn) : m_pt_insn(pt_insn) {}
+  IntelPTInstruction(const pt_insn &pt_insn)
+      : m_pt_insn(pt_insn), m_is_error(false) {}
 
   /// Error constructor
-  ///
-  /// libipt errors should use the underlying \a IntelPTError class.
-  IntelPTInstruction(llvm::Error err);
+  IntelPTInstruction();
 
   /// Check if this object represents an error (i.e. a gap).
   ///
@@ -82,10 +82,8 @@ public:
   ///     an error.
   lldb::addr_t GetLoadAddress() const;
 
-  /// \return
-  ///     An \a llvm::Error object if this class corresponds to an Error, or an
-  ///     \a llvm::Error::success otherwise.
-  llvm::Error ToError() const;
+  /// Get the size in bytes of an instance of this class
+  static size_t GetMemoryUsage();
 
   /// Get the timestamp associated with the current instruction. The timestamp
   /// is similar to what a rdtsc instruction would return.
@@ -112,9 +110,11 @@ private:
   IntelPTInstruction(const IntelPTInstruction &other) = delete;
   const IntelPTInstruction &operator=(const IntelPTInstruction &other) = delete;
 
+  // When adding new members to this class, make sure to update
+  // IntelPTInstruction::GetNonErrorMemoryUsage() if needed.
   pt_insn m_pt_insn;
   llvm::Optional<uint64_t> m_timestamp;
-  std::unique_ptr<llvm::ErrorInfoBase> m_error;
+  bool m_is_error;
 };
 
 /// \class DecodedThread
@@ -126,34 +126,60 @@ private:
 /// stopped at. See \a Trace::GetCursorPosition for more information.
 class DecodedThread : public std::enable_shared_from_this<DecodedThread> {
 public:
-  DecodedThread(lldb::ThreadSP thread_sp,
-                std::vector<IntelPTInstruction> &&instructions,
-                size_t raw_trace_size);
+  DecodedThread(lldb::ThreadSP thread_sp);
 
-  /// Constructor with a single error signaling a complete failure of the
-  /// decoding process.
-  DecodedThread(lldb::ThreadSP thread_sp, llvm::Error error);
+  /// Utility constructor that initializes the trace with a provided error.
+  DecodedThread(lldb::ThreadSP thread_sp, llvm::Error &&err);
 
   /// Get the instructions from the decoded trace. Some of them might indicate
-  /// errors (i.e. gaps) in the trace.
+  /// errors (i.e. gaps) in the trace. For an instruction error, you can access
+  /// its underlying error message with the \a GetErrorByInstructionIndex()
+  /// method.
   ///
   /// \return
   ///   The instructions of the trace.
   llvm::ArrayRef<IntelPTInstruction> GetInstructions() const;
 
+  /// Get the error associated with a given instruction index.
+  ///
+  /// \return
+  ///   The error message of \b nullptr if the given index
+  ///   points to a valid instruction.
+  const char *GetErrorByInstructionIndex(uint64_t ins_idx);
+
+  /// Append a successfully decoded instruction.
+  template <typename... Ts> void AppendInstruction(Ts... instruction_args) {
+    m_instructions.emplace_back(instruction_args...);
+  }
+
+  /// Append a decoding error (i.e. an instruction that failed to be decoded).
+  void AppendError(llvm::Error &&error);
+
   /// Get a new cursor for the decoded thread.
   lldb::TraceCursorUP GetCursor();
 
-  /// Get the size in bytes of the corresponding Intel PT raw trace
+  /// Set the size in bytes of the corresponding Intel PT raw trace.
+  void SetRawTraceSize(size_t size);
+
+  /// Get the size in bytes of the corresponding Intel PT raw trace.
   ///
   /// \return
-  ///   The size of the trace.
-  size_t GetRawTraceSize() const;
+  ///   The size of the trace, or \b llvm::None if not available.
+  llvm::Optional<size_t> GetRawTraceSize() const;
+
+  /// The approximate size in bytes used by this instance,
+  /// including all the already decoded instructions.
+  size_t CalculateApproximateMemoryUsage() const;
+
+  lldb::ThreadSP GetThread();
 
 private:
+  /// When adding new members to this class, make sure
+  /// to update \a CalculateApproximateMemoryUsage() accordingly.
   lldb::ThreadSP m_thread_sp;
   std::vector<IntelPTInstruction> m_instructions;
-  size_t m_raw_trace_size;
+  llvm::DenseMap<uint64_t, std::string> m_errors;
+  llvm::Optional<size_t> m_raw_trace_size;
 };
 
 using DecodedThreadSP = std::shared_ptr<DecodedThread>;

@@ -43,51 +43,51 @@ int main(int, char**)
         year_month_weekday_last{year{1234}, January, weekday_last{Tuesday}},
         true), "");
 
-//  different day
+    // different day
     static_assert( testComparisons2(
         year_month_weekday_last{year{1234}, January, weekday_last{Tuesday}},
         year_month_weekday_last{year{1234}, January, weekday_last{Wednesday}},
         false), "");
 
-//  different month
+    // different month
     static_assert( testComparisons2(
         year_month_weekday_last{year{1234}, January,  weekday_last{Tuesday}},
         year_month_weekday_last{year{1234}, February, weekday_last{Tuesday}},
         false), "");
 
-//  different year
+    // different year
     static_assert( testComparisons2(
         year_month_weekday_last{year{1234}, January, weekday_last{Tuesday}},
         year_month_weekday_last{year{1235}, January, weekday_last{Tuesday}},
         false), "");
 
 
-//  different month and day
+    // different month and day
     static_assert( testComparisons2(
         year_month_weekday_last{year{1234}, January,  weekday_last{Tuesday}},
         year_month_weekday_last{year{1234}, February, weekday_last{Wednesday}},
         false), "");
 
-//  different year and month
+    // different year and month
     static_assert( testComparisons2(
         year_month_weekday_last{year{1234}, February, weekday_last{Tuesday}},
         year_month_weekday_last{year{1235}, January,  weekday_last{Tuesday}},
         false), "");
 
-//  different year and day
+    // different year and day
     static_assert( testComparisons2(
         year_month_weekday_last{year{1234}, January, weekday_last{Wednesday}},
         year_month_weekday_last{year{1235}, January, weekday_last{Tuesday}},
         false), "");
 
-//  different year, month and day
+    // different year, month and day
     static_assert( testComparisons2(
         year_month_weekday_last{year{1234}, February, weekday_last{Wednesday}},
         year_month_weekday_last{year{1235}, January,  weekday_last{Tuesday}},
         false), "");
 
 
-//  same year, different days
+    // same year, different days
     for (unsigned i = 1; i < 28; ++i)
         for (unsigned j = 1; j < 28; ++j)
             assert((testComparisons2(
@@ -95,7 +95,7 @@ int main(int, char**)
                 year_month_weekday_last{year{1234}, January, weekday_last{weekday{j}}},
                 i == j)));
 
-//  same year, different months
+    // same year, different months
     for (unsigned i = 1; i < 12; ++i)
         for (unsigned j = 1; j < 12; ++j)
             assert((testComparisons2(
@@ -103,13 +103,13 @@ int main(int, char**)
                 year_month_weekday_last{year{1234}, month{j}, weekday_last{Tuesday}},
                 i == j)));
 
-//  same month, different years
-    for (int i = 1000; i < 20; ++i)
-        for (int j = 1000; j < 20; ++j)
+    // same month, different years
+    for (int i = 1000; i < 2000; ++i)
+        for (int j = 1000; j < 2000; ++j)
         assert((testComparisons2(
             year_month_weekday_last{year{i}, January, weekday_last{Tuesday}},
             year_month_weekday_last{year{j}, January, weekday_last{Tuesday}},
             i == j)));
 
-  return 0;
+    return 0;
 }

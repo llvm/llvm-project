@@ -11,12 +11,14 @@ define void @test_bigframe() {
   %var2 = alloca i8, i32 16
   %var3 = alloca i8, i32 20000000
 
-; CHECK: sub sp, sp, #4095, lsl #12
-; CHECK: sub sp, sp, #4095, lsl #12
-; CHECK: sub sp, sp, #1575, lsl #12
-; CHECK: sub sp, sp, #2576
-; CHECK: .cfi_def_cfa_offset 40000032
-
+; CHECK:      sub sp, sp, #4095, lsl #12          // =16773120
+; CHECK-NEXT: .cfi_def_cfa_offset 16773136
+; CHECK-NEXT: sub sp, sp, #4095, lsl #12          // =16773120
+; CHECK-NEXT: .cfi_def_cfa_offset 33546256
+; CHECK-NEXT: sub sp, sp, #1575, lsl #12          // =6451200
+; CHECK-NEXT: .cfi_def_cfa_offset 39997456
+; CHECK-NEXT: sub sp, sp, #2576
+; CHECK-NEXT: .cfi_def_cfa_offset 40000032
 
 ; CHECK: add [[TMP:x[0-9]+]], sp, #4095, lsl #12
 ; CHECK: add [[TMP1:x[0-9]+]], [[TMP]], #787, lsl #12
@@ -52,8 +54,11 @@ define void @test_mediumframe() {
   %var1 = alloca i8, i32 1000000
   %var2 = alloca i8, i32 16
   %var3 = alloca i8, i32 1000000
-; CHECK: sub sp, sp, #488, lsl #12
+
+; CHECK:      sub sp, sp, #488, lsl #12           // =1998848
+; CHECK-NEXT: .cfi_def_cfa_offset 1998864
 ; CHECK-NEXT: sub sp, sp, #1168
+; CHECK-NEXT: .cfi_def_cfa_offset 2000032
 
   store volatile i8* %var1, i8** @addr
 ; CHECK: add     [[VAR1ADDR:x[0-9]+]], sp, #244, lsl #12

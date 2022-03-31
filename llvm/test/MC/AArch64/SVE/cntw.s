@@ -12,35 +12,35 @@
 cntw  x0
 // CHECK-INST: cntw	x0
 // CHECK-ENCODING: [0xe0,0xe3,0xa0,0x04]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: e0 e3 a0 04 <unknown>
 
 cntw  x0, all
 // CHECK-INST: cntw	x0
 // CHECK-ENCODING: [0xe0,0xe3,0xa0,0x04]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: e0 e3 a0 04 <unknown>
 
 cntw  x0, all, mul #1
 // CHECK-INST: cntw	x0
 // CHECK-ENCODING: [0xe0,0xe3,0xa0,0x04]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: e0 e3 a0 04 <unknown>
 
 cntw  x0, all, mul #16
 // CHECK-INST: cntw	x0, all, mul #16
 // CHECK-ENCODING: [0xe0,0xe3,0xaf,0x04]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: e0 e3 af 04 <unknown>
 
 cntw  x0, pow2
 // CHECK-INST: cntw	x0, pow2
 // CHECK-ENCODING: [0x00,0xe0,0xa0,0x04]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: 00 e0 a0 04 <unknown>
 
 cntw  x0, #28
 // CHECK-INST: cntw	x0, #28
 // CHECK-ENCODING: [0x80,0xe3,0xa0,0x04]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: 80 e3 a0 04 <unknown>

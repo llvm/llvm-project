@@ -428,7 +428,7 @@ bool XCoreFrameLowering::spillCalleeSavedRegisters(
     DL = MI->getDebugLoc();
 
   for (const CalleeSavedInfo &I : CSI) {
-    unsigned Reg = I.getReg();
+    Register Reg = I.getReg();
     assert(Reg != XCore::LR && !(Reg == XCore::R10 && hasFP(*MF)) &&
            "LR & FP are always handled in emitPrologue");
 
@@ -455,7 +455,7 @@ bool XCoreFrameLowering::restoreCalleeSavedRegisters(
   if (!AtStart)
     --BeforeI;
   for (const CalleeSavedInfo &CSR : CSI) {
-    unsigned Reg = CSR.getReg();
+    Register Reg = CSR.getReg();
     assert(Reg != XCore::LR && !(Reg == XCore::R10 && hasFP(*MF)) &&
            "LR & FP are always handled in emitEpilogue");
 

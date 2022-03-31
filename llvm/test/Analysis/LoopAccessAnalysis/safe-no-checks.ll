@@ -1,4 +1,4 @@
-; RUN: opt -passes='require<aa>,require<scalar-evolution>,require<aa>,loop(print-access-info)' -aa-pipeline='basic-aa' -disable-output < %s  2>&1 | FileCheck %s
+; RUN: opt -passes='print-access-info' -aa-pipeline='basic-aa' -disable-output < %s  2>&1 | FileCheck %s
 
 ; If the arrays don't alias this loop is safe with no memchecks:
 ;   for (i = 0; i < n; i++)

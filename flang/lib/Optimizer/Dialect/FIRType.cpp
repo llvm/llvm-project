@@ -61,11 +61,11 @@ static bool isaIntegerType(mlir::Type ty) {
 }
 
 bool verifyRecordMemberType(mlir::Type ty) {
-  return !(ty.isa<BoxType>() || ty.isa<BoxCharType>() ||
-           ty.isa<BoxProcType>() || ty.isa<ShapeType>() ||
-           ty.isa<ShapeShiftType>() || ty.isa<ShiftType>() ||
-           ty.isa<SliceType>() || ty.isa<FieldType>() || ty.isa<LenType>() ||
-           ty.isa<ReferenceType>() || ty.isa<TypeDescType>());
+  return !(ty.isa<BoxCharType>() || ty.isa<BoxProcType>() ||
+           ty.isa<ShapeType>() || ty.isa<ShapeShiftType>() ||
+           ty.isa<ShiftType>() || ty.isa<SliceType>() || ty.isa<FieldType>() ||
+           ty.isa<LenType>() || ty.isa<ReferenceType>() ||
+           ty.isa<TypeDescType>());
 }
 
 bool verifySameLists(llvm::ArrayRef<RecordType::TypePair> a1,
@@ -243,6 +243,35 @@ bool hasDynamicSize(mlir::Type t) {
     return true;
   if (auto rec = t.dyn_cast<fir::RecordType>())
     return hasDynamicSize(rec);
+  return false;
+}
+
+bool isPointerType(mlir::Type ty) {
+  if (auto refTy = fir::dyn_cast_ptrEleTy(ty))
+    ty = refTy;
+  if (auto boxTy = ty.dyn_cast<fir::BoxType>())
+    return boxTy.getEleTy().isa<fir::PointerType>();
+  return false;
+}
+
+bool isAllocatableType(mlir::Type ty) {
+  if (auto refTy = fir::dyn_cast_ptrEleTy(ty))
+    ty = refTy;
+  if (auto boxTy = ty.dyn_cast<fir::BoxType>())
+    return boxTy.getEleTy().isa<fir::HeapType>();
+  return false;
+}
+
+bool isRecordWithAllocatableMember(mlir::Type ty) {
+  if (auto recTy = ty.dyn_cast<fir::RecordType>())
+    for (auto [field, memTy] : recTy.getTypeList()) {
+      if (fir::isAllocatableType(memTy))
+        return true;
+      // A record type cannot recursively include itself as a direct member.
+      // There must be an intervening `ptr` type, so recursion is safe here.
+      if (memTy.isa<fir::RecordType>() && isRecordWithAllocatableMember(memTy))
+        return true;
+    }
   return false;
 }
 
@@ -642,12 +671,6 @@ unsigned fir::RecordType::getFieldIndex(llvm::StringRef ident) {
   return std::numeric_limits<unsigned>::max();
 }
 
-std::string fir::RecordType::getLoweredName() const {
-  auto split = getName().split('T');
-  std::string name = (split.first + "E.dt." + split.second).str();
-  return name;
-}
-
 //===----------------------------------------------------------------------===//
 // ReferenceType
 //===----------------------------------------------------------------------===//
@@ -861,6 +884,14 @@ mlir::LogicalResult fir::VectorType::verify(
 
 bool fir::VectorType::isValidElementType(mlir::Type t) {
   return isa_real(t) || isa_integer(t);
+}
+
+bool fir::isCharacterProcedureTuple(mlir::Type ty, bool acceptRawFunc) {
+  mlir::TupleType tuple = ty.dyn_cast<mlir::TupleType>();
+  return tuple && tuple.size() == 2 &&
+         (tuple.getType(0).isa<fir::BoxProcType>() ||
+          (acceptRawFunc && tuple.getType(0).isa<mlir::FunctionType>())) &&
+         fir::isa_integer(tuple.getType(1));
 }
 
 //===----------------------------------------------------------------------===//

@@ -104,8 +104,14 @@ if (NOT LIBCXX_ENABLE_DEBUG_MODE_SUPPORT)
   serialize_lit_param(enable_debug_tests False)
 endif()
 
-if (LIBCXX_TARGET_TRIPLE)
-  serialize_lit_param(target_triple "\"${LIBCXX_TARGET_TRIPLE}\"")
+if (LIBCXX_ENABLE_ASSERTIONS)
+  serialize_lit_param(enable_assertions True)
+endif()
+
+if (CMAKE_CXX_COMPILER_TARGET)
+  serialize_lit_param(target_triple "\"${CMAKE_CXX_COMPILER_TARGET}\"")
+else()
+  serialize_lit_param(target_triple "\"${LLVM_DEFAULT_TARGET_TRIPLE}\"")
 endif()
 
 if (LLVM_USE_SANITIZER)

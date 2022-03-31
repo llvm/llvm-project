@@ -33,7 +33,7 @@ struct TestRegistration {
     test_detail::tests().push_back(func);
   }
 };
-} // end namespace test_detail
+} // namespace test_detail
 
 /// Declares a test function with the given name and adds it to the list of
 /// known tests.  The body of the function must follow immediately.  Example:

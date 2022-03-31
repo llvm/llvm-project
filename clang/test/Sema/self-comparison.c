@@ -36,7 +36,7 @@ int bar2(float x) {
 
 #define IS_THE_ANSWER(x) (x == 42)
 
-int macro_comparison() {
+int macro_comparison(void) {
   return IS_THE_ANSWER(42);
 }
 
@@ -45,7 +45,7 @@ int compare_sizeof(int x) {
   return sizeof(x == x); // no-warning
 }
 
-int array_comparisons() {
+int array_comparisons(void) {
   int array1[2];
   int array2[2];
 
@@ -88,6 +88,6 @@ int R8435950(int i) {
 
 __attribute__((weak)) int weak_1[3];
 __attribute__((weak)) int weak_2[3];
-_Bool compare_weak() {
+_Bool compare_weak(void) {
   return weak_1 == weak_2;
 }

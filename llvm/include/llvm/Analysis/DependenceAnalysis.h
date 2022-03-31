@@ -74,13 +74,9 @@ namespace llvm {
     Dependence &operator=(Dependence &&) = default;
 
   public:
-    Dependence(Instruction *Source,
-               Instruction *Destination) :
-      Src(Source),
-      Dst(Destination),
-      NextPredecessor(nullptr),
-      NextSuccessor(nullptr) {}
-    virtual ~Dependence() {}
+    Dependence(Instruction *Source, Instruction *Destination)
+        : Src(Source), Dst(Destination) {}
+    virtual ~Dependence() = default;
 
     /// Dependence::DVEntry - Each level in the distance/direction vector
     /// has a direction (or perhaps a union of several directions), and
@@ -99,9 +95,10 @@ namespace llvm {
       bool PeelFirst : 1; // Peeling the first iteration will break dependence.
       bool PeelLast  : 1; // Peeling the last iteration will break the dependence.
       bool Splitable : 1; // Splitting the loop will break dependence.
-      const SCEV *Distance; // NULL implies no distance available.
-      DVEntry() : Direction(ALL), Scalar(true), PeelFirst(false),
-                  PeelLast(false), Splitable(false), Distance(nullptr) { }
+      const SCEV *Distance = nullptr; // NULL implies no distance available.
+      DVEntry()
+          : Direction(ALL), Scalar(true), PeelFirst(false), PeelLast(false),
+            Splitable(false) {}
     };
 
     /// getSrc - Returns the source instruction for this dependence.
@@ -200,7 +197,7 @@ namespace llvm {
 
   private:
     Instruction *Src, *Dst;
-    const Dependence *NextPredecessor, *NextSuccessor;
+    const Dependence *NextPredecessor = nullptr, *NextSuccessor = nullptr;
     friend class DependenceInfo;
   };
 

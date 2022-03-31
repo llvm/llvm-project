@@ -98,49 +98,104 @@ entry:
 
 declare float @llvm.ppc.fnmadds(float, float, float)
 
-define dso_local double @fnmsub_t0(double %d, double %d2, double %d3) {
-; CHECK-PWR8-LABEL: fnmsub_t0:
+define dso_local float @fnmsub_f32(float %f, float %f2, float %f3) {
+; CHECK-PWR8-LABEL: fnmsub_f32:
 ; CHECK-PWR8:       # %bb.0: # %entry
-; CHECK-PWR8-NEXT:    xsnmsubmdp 1, 2, 3
+; CHECK-PWR8-NEXT:    xsnmsubasp 3, 1, 2
+; CHECK-PWR8-NEXT:    fmr 1, 3
 ; CHECK-PWR8-NEXT:    blr
 ;
-; CHECK-NOVSX-LABEL: fnmsub_t0:
-; CHECK-NOVSX:       # %bb.0: # %entry
-; CHECK-NOVSX-NEXT:    fnmsub 1, 1, 2, 3
-; CHECK-NOVSX-NEXT:    blr
-;
-; CHECK-PWR7-LABEL: fnmsub_t0:
-; CHECK-PWR7:       # %bb.0: # %entry
-; CHECK-PWR7-NEXT:    xsnmsubmdp 1, 2, 3
-; CHECK-PWR7-NEXT:    blr
-entry:
-  %0 = tail call double @llvm.ppc.fnmsub(double %d, double %d2, double %d3)
-  ret double %0
-}
-
-declare double @llvm.ppc.fnmsub(double, double, double)
-
-define dso_local float @fnmsubs_t0(float %f, float %f2, float %f3) {
-; CHECK-PWR8-LABEL: fnmsubs_t0:
-; CHECK-PWR8:       # %bb.0: # %entry
-; CHECK-PWR8-NEXT:    xsnmsubmsp 1, 2, 3
-; CHECK-PWR8-NEXT:    blr
-;
-; CHECK-NOVSX-LABEL: fnmsubs_t0:
+; CHECK-NOVSX-LABEL: fnmsub_f32:
 ; CHECK-NOVSX:       # %bb.0: # %entry
 ; CHECK-NOVSX-NEXT:    fnmsubs 1, 1, 2, 3
 ; CHECK-NOVSX-NEXT:    blr
 ;
-; CHECK-PWR7-LABEL: fnmsubs_t0:
+; CHECK-PWR7-LABEL: fnmsub_f32:
 ; CHECK-PWR7:       # %bb.0: # %entry
 ; CHECK-PWR7-NEXT:    fnmsubs 1, 1, 2, 3
 ; CHECK-PWR7-NEXT:    blr
 entry:
-  %0 = tail call float @llvm.ppc.fnmsubs(float %f, float %f2, float %f3)
+  %0 = tail call float @llvm.ppc.fnmsub.f32(float %f, float %f2, float %f3)
   ret float %0
 }
 
-declare float @llvm.ppc.fnmsubs(float, float, float)
+declare float @llvm.ppc.fnmsub.f32(float, float, float)
+
+define dso_local double @fnmsub_f64(double %f, double %f2, double %f3) {
+; CHECK-PWR8-LABEL: fnmsub_f64:
+; CHECK-PWR8:       # %bb.0: # %entry
+; CHECK-PWR8-NEXT:    xsnmsubadp 3, 1, 2
+; CHECK-PWR8-NEXT:    fmr 1, 3
+; CHECK-PWR8-NEXT:    blr
+;
+; CHECK-NOVSX-LABEL: fnmsub_f64:
+; CHECK-NOVSX:       # %bb.0: # %entry
+; CHECK-NOVSX-NEXT:    fnmsub 1, 1, 2, 3
+; CHECK-NOVSX-NEXT:    blr
+;
+; CHECK-PWR7-LABEL: fnmsub_f64:
+; CHECK-PWR7:       # %bb.0: # %entry
+; CHECK-PWR7-NEXT:    xsnmsubadp 3, 1, 2
+; CHECK-PWR7-NEXT:    fmr 1, 3
+; CHECK-PWR7-NEXT:    blr
+entry:
+  %0 = tail call double @llvm.ppc.fnmsub.f64(double %f, double %f2, double %f3)
+  ret double %0
+}
+
+declare double @llvm.ppc.fnmsub.f64(double, double, double)
+
+define dso_local <4 x float> @fnmsub_v4f32(<4 x float> %f, <4 x float> %f2, <4 x float> %f3) {
+; CHECK-PWR8-LABEL: fnmsub_v4f32:
+; CHECK-PWR8:       # %bb.0: # %entry
+; CHECK-PWR8-NEXT:    xvnmsubasp 36, 34, 35
+; CHECK-PWR8-NEXT:    vmr 2, 4
+; CHECK-PWR8-NEXT:    blr
+;
+; CHECK-NOVSX-LABEL: fnmsub_v4f32:
+; CHECK-NOVSX:       # %bb.0: # %entry
+; CHECK-NOVSX-NEXT:    fnmsubs 1, 1, 5, 9
+; CHECK-NOVSX-NEXT:    fnmsubs 2, 2, 6, 10
+; CHECK-NOVSX-NEXT:    fnmsubs 3, 3, 7, 11
+; CHECK-NOVSX-NEXT:    fnmsubs 4, 4, 8, 12
+; CHECK-NOVSX-NEXT:    blr
+;
+; CHECK-PWR7-LABEL: fnmsub_v4f32:
+; CHECK-PWR7:       # %bb.0: # %entry
+; CHECK-PWR7-NEXT:    xvnmsubasp 36, 34, 35
+; CHECK-PWR7-NEXT:    vmr 2, 4
+; CHECK-PWR7-NEXT:    blr
+entry:
+  %0 = tail call <4 x float> @llvm.ppc.fnmsub.v4f32(<4 x float> %f, <4 x float> %f2, <4 x float> %f3)
+  ret <4 x float> %0
+}
+
+declare <4 x float> @llvm.ppc.fnmsub.v4f32(<4 x float>, <4 x float>, <4 x float>)
+
+define dso_local <2 x double> @fnmsub_v2f64(<2 x double> %f, <2 x double> %f2, <2 x double> %f3) {
+; CHECK-PWR8-LABEL: fnmsub_v2f64:
+; CHECK-PWR8:       # %bb.0: # %entry
+; CHECK-PWR8-NEXT:    xvnmsubadp 36, 34, 35
+; CHECK-PWR8-NEXT:    vmr 2, 4
+; CHECK-PWR8-NEXT:    blr
+;
+; CHECK-NOVSX-LABEL: fnmsub_v2f64:
+; CHECK-NOVSX:       # %bb.0: # %entry
+; CHECK-NOVSX-NEXT:    fnmsub 1, 1, 3, 5
+; CHECK-NOVSX-NEXT:    fnmsub 2, 2, 4, 6
+; CHECK-NOVSX-NEXT:    blr
+;
+; CHECK-PWR7-LABEL: fnmsub_v2f64:
+; CHECK-PWR7:       # %bb.0: # %entry
+; CHECK-PWR7-NEXT:    xvnmsubadp 36, 34, 35
+; CHECK-PWR7-NEXT:    vmr 2, 4
+; CHECK-PWR7-NEXT:    blr
+entry:
+  %0 = tail call <2 x double> @llvm.ppc.fnmsub.v2f64(<2 x double> %f, <2 x double> %f2, <2 x double> %f3)
+  ret <2 x double> %0
+}
+
+declare <2 x double> @llvm.ppc.fnmsub.v2f64(<2 x double>, <2 x double>, <2 x double>)
 
 define dso_local double @fre(double %d) {
 ; CHECK-PWR8-LABEL: fre:

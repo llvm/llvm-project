@@ -50,13 +50,14 @@ void test1(void) {
 // CHECK-NEXT: [[T0:%.*]] = load [[MYOBJECT:%.*]]*, [[MYOBJECT:%.*]]** @x
 // CHECK-NEXT: [[ARG:%.*]] = load i8*, i8** [[OBJ]]
 // CHECK-NEXT: [[ARG_RETAINED:%.*]] = call i8* @llvm.objc.retain(i8* [[ARG]])
-// CHECK-NEXT: load i8*, i8** @
 // CHECK-NEXT: [[SELF:%.*]] = bitcast [[MYOBJECT]]* [[T0]] to i8*
 //   Null check.
 // CHECK-NEXT: [[T0:%.*]] = icmp eq i8* [[SELF]], null
-// CHECK-NEXT: br i1 [[T0]], label [[FORNULL:%.*]], label [[FORCALL:%.*]]
+// CHECK-NEXT: br i1 [[T0]], label [[FORNULL:%.*]], label %[[FORCALL:.*]]
 //   Invoke and produce the return values.
-// CHECK:      [[CALL:%.*]] = invoke <2 x float> bitcast
+// CHECK:     [[FORCALL]]:
+// CHECK-NEXT: load i8*, i8** @OBJC_SELECTOR_REFERENCES_
+// CHECK-NEXT: [[CALL:%.*]] = invoke <2 x float> bitcast
 // CHECK-NEXT:   to label [[INVOKE_CONT:%.*]] unwind label {{%.*}}
 // CHECK:      [[T0:%.*]] = bitcast { float, float }* [[COERCE:%.*]] to <2 x float>*
 // CHECK-NEXT: store <2 x float> [[CALL]], <2 x float>* [[T0]],

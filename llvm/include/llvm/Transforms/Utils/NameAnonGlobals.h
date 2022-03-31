@@ -14,7 +14,6 @@
 #ifndef LLVM_TRANSFORMS_UTILS_NAMEANONGLOBALS_H
 #define LLVM_TRANSFORMS_UTILS_NAMEANONGLOBALS_H
 
-#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {

@@ -5,15 +5,20 @@
 # CHECK-NEXT: Verifying .debug_info Unit Header Chain...
 # CHECK-NEXT: Verifying .debug_types Unit Header Chain...
 # CHECK-NEXT: Verifying non-dwo Units...
+# CHECK-NEXT: Verifying unit: 1 / 2, "test.cpp"
+# CHECK-NEXT: Verifying unit: 2 / 2{{$}}
 # CHECK-NEXT: warning: DW_TAG_skeleton_unit has DW_CHILDREN_yes but DIE has no children
 # CHECK-NEXT: DW_TAG_skeleton_unit
 # CHECK-NEXT: error: Skeleton compilation unit has children.
+# CHECK-NEXT: Verifying dwo Units...
 # CHECK-NEXT: Errors detected.
 
         .section .debug_abbrev,"",@progbits
         .byte   1                       # Abbreviation Code
         .byte   74                      # DW_TAG_skeleton_unit
         .byte   0                       # DW_CHILDREN_no
+        .byte   3                       # DW_AT_name
+        .byte   8                       # DW_FORM_string
         .byte   0                       # EOM(1)
         .byte   0                       # EOM(2)
         .byte   2                       # Abbreviation Code
@@ -33,6 +38,7 @@
         .long   .debug_abbrev           # Offset Into Abbrev. Section
         .quad   -6573227469967412476
         .byte   1                       # Abbrev [1]
+        .asciz  "test.cpp"
         .byte   0
 .Lcu_end0:
         .long   .Lcu_end1-.Lcu_start1 # Length of Unit

@@ -20,7 +20,6 @@ class GISelChangeObserver;
 class LegalizerInfo;
 class MachineInstr;
 class MachineIRBuilder;
-class MachineRegisterInfo;
 
 // Contains information relevant to enabling/disabling various combines for a
 // pass.

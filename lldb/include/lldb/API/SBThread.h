@@ -208,6 +208,8 @@ public:
 
   bool SafeToCallFunctions();
 
+  SBValue GetSiginfo();
+
 private:
   friend class SBBreakpoint;
   friend class SBBreakpointLocation;

@@ -15,7 +15,7 @@
 
 namespace clang {
 
-static const llvm::SmallVector<llvm::StringRef, 4>
+static llvm::SmallVector<llvm::StringRef, 4>
 getAllPossibleAMDGPUTargetIDFeatures(const llvm::Triple &T,
                                      llvm::StringRef Proc) {
   // Entries in returned vector should be in alphabetical order.
@@ -33,7 +33,7 @@ getAllPossibleAMDGPUTargetIDFeatures(const llvm::Triple &T,
   return Ret;
 }
 
-const llvm::SmallVector<llvm::StringRef, 4>
+llvm::SmallVector<llvm::StringRef, 4>
 getAllPossibleTargetIDFeatures(const llvm::Triple &T,
                                llvm::StringRef Processor) {
   llvm::SmallVector<llvm::StringRef, 4> Ret;

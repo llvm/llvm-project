@@ -106,6 +106,12 @@ public:
   Optional<Instruction *> instCombineIntrinsic(InstCombiner &IC,
                                                IntrinsicInst &II) const;
 
+  Optional<Value *> simplifyDemandedVectorEltsIntrinsic(
+      InstCombiner &IC, IntrinsicInst &II, APInt DemandedElts, APInt &UndefElts,
+      APInt &UndefElts2, APInt &UndefElts3,
+      std::function<void(Instruction *, unsigned, APInt, APInt &)>
+          SimplifyAndSetOp) const;
+
   TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
     switch (K) {
     case TargetTransformInfo::RGK_Scalar:
@@ -307,7 +313,13 @@ public:
     return 2;
   }
 
+  bool emitGetActiveLaneMask() const {
+    return ST->hasSVE();
+  }
+
   bool supportsScalableVectors() const { return ST->hasSVE(); }
+
+  bool enableScalableVectorization() const { return ST->hasSVE(); }
 
   bool isLegalToVectorizeReduction(const RecurrenceDescriptor &RdxDesc,
                                    ElementCount VF) const;
@@ -318,7 +330,8 @@ public:
 
   InstructionCost getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
                                  ArrayRef<int> Mask, int Index,
-                                 VectorType *SubTp);
+                                 VectorType *SubTp,
+                                 ArrayRef<Value *> Args = None);
   /// @}
 };
 

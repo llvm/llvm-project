@@ -90,6 +90,7 @@ OPTIONS:
   --rsp-quoting         - quoting style for response files
     =posix              -   posix
     =windows            -   windows
+  --thin                - create a thin archive
   --version             - print the version and exit
   @<file>               - read options from <file>
 
@@ -118,7 +119,7 @@ MODIFIERS:
   [P] - use full names when matching (implied for thin archives)
   [s] - create an archive index (cf. ranlib)
   [S] - do not build a symbol table
-  [T] - create a thin archive
+  [T] - deprecated, use --thin instead
   [u] - update only [files] newer than archive contents
   [U] - use actual timestamps and uids/gids
   [v] - be verbose about actions taken
@@ -390,8 +391,6 @@ static ArchiveOperation parseCommandLine() {
       break;
     case 'T':
       Thin = true;
-      // Thin archives store path names, so P should be forced.
-      CompareFullPath = true;
       break;
     case 'L':
       AddLibrary = true;
@@ -406,6 +405,10 @@ static ArchiveOperation parseCommandLine() {
       badUsage(std::string("unknown option ") + Options[i]);
     }
   }
+
+  // Thin archives store path names, so P should be forced.
+  if (Thin)
+    CompareFullPath = true;
 
   // At this point, the next thing on the command line must be
   // the archive name.
@@ -651,6 +654,11 @@ static void addChildMember(std::vector<NewArchiveMember> &Members,
                            bool FlattenArchive = false) {
   if (Thin && !M.getParent()->isThin())
     fail("cannot convert a regular archive to a thin one");
+
+  // Avoid converting an existing thin archive to a regular one.
+  if (!AddLibrary && M.getParent()->isThin())
+    Thin = true;
+
   Expected<NewArchiveMember> NMOrErr =
       NewArchiveMember::getOldMember(M, Deterministic);
   failIfError(NMOrErr.takeError());
@@ -965,6 +973,8 @@ static void createSymbolTable(object::Archive *OldArchive) {
   if (OldArchive->hasSymbolTable())
     return;
 
+  if (OldArchive->isThin())
+    Thin = true;
   performWriteOperation(CreateSymTab, OldArchive, nullptr, nullptr);
 }
 
@@ -1003,12 +1013,17 @@ static int performOperation(ArchiveOperation Operation,
     fail("unable to open '" + ArchiveName + "': " + EC.message());
 
   if (!EC) {
-    Error Err = Error::success();
-    object::Archive Archive(Buf.get()->getMemBufferRef(), Err);
-    failIfError(std::move(Err), "unable to load '" + ArchiveName + "'");
-    if (Archive.isThin())
+    Expected<std::unique_ptr<object::Archive>> ArchiveOrError =
+        object::Archive::create(Buf.get()->getMemBufferRef());
+    if (!ArchiveOrError)
+      failIfError(ArchiveOrError.takeError(),
+                  "unable to load '" + ArchiveName + "'");
+
+    std::unique_ptr<object::Archive> Archive = std::move(ArchiveOrError.get());
+    if (Archive->isThin())
       CompareFullPath = true;
-    performOperation(Operation, &Archive, std::move(Buf.get()), NewMembers);
+    performOperation(Operation, Archive.get(), std::move(Buf.get()),
+                     NewMembers);
     return 0;
   }
 
@@ -1111,11 +1126,11 @@ static void runMRIScript() {
 }
 
 static bool handleGenericOption(StringRef arg) {
-  if (arg == "-help" || arg == "--help" || arg == "-h") {
+  if (arg == "--help" || arg == "-h") {
     printHelpMessage();
     return true;
   }
-  if (arg == "-version" || arg == "--version") {
+  if (arg == "--version") {
     cl::PrintVersionMessage();
     return true;
   }
@@ -1129,8 +1144,6 @@ static const char *matchFlagWithArg(StringRef Expected,
 
   if (Arg.startswith("--"))
     Arg = Arg.substr(2);
-  else if (Arg.startswith("-"))
-    Arg = Arg.substr(1);
 
   size_t len = Expected.size();
   if (Arg == Expected) {
@@ -1196,6 +1209,11 @@ static int ar_main(int argc, char **argv) {
 
     if (strcmp(*ArgIt, "-M") == 0) {
       MRI = true;
+      continue;
+    }
+
+    if (strcmp(*ArgIt, "--thin") == 0) {
+      Thin = true;
       continue;
     }
 

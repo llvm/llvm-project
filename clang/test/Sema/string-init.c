@@ -5,7 +5,7 @@ typedef int wchar_t;
 typedef unsigned short char16_t;
 typedef unsigned int char32_t;
 
-void f() {
+void f(void) {
   char a1[] = "a"; // No error.
   char a2[] = u8"a"; // No error.
   char a3[] = u"a"; // expected-error{{initializing char array with wide string literal}}
@@ -43,7 +43,7 @@ void f() {
   long f5[] = L"a"; // expected-error{{array initializer must be an initializer list}}
 }
 
-void g() {
+void g(void) {
   char a[] = 1; // expected-error{{array initializer must be an initializer list or string literal}}
   wchar_t b[] = 1; // expected-error{{array initializer must be an initializer list or wide string literal}}
   char16_t c[] = 1; // expected-error{{array initializer must be an initializer list or wide string literal}}

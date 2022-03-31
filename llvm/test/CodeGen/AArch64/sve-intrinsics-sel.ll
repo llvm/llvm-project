@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+streaming-sve < %s | FileCheck %s
 
 ;
 ; SEL (Vectors)
@@ -105,4 +106,4 @@ declare <vscale x 4 x float> @llvm.aarch64.sve.sel.nxv4f32(<vscale x 4 x i1>, <v
 declare <vscale x 2 x double> @llvm.aarch64.sve.sel.nxv2f64(<vscale x 2 x i1>, <vscale x 2 x double>, <vscale x 2 x double>)
 
 ; +bf16 is required for the bfloat version.
-attributes #0 = { "target-features"="+sve,+bf16" }
+attributes #0 = { "target-features"="+bf16" }

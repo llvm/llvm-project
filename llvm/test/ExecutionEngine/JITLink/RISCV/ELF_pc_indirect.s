@@ -4,12 +4,12 @@
 # RUN: llvm-mc -triple=riscv32 -position-independent -filetype=obj \
 # RUN:     -o %t/elf_riscv32_sm_pic_reloc.o %s
 # RUN: llvm-jitlink -noexec \
-# RUN:     -slab-allocate 100Kb -slab-address 0xfff00000 -slab-page-size 4096 \
-# RUN:     -define-abs external_func=0x1 -define-abs external_data=0x2 \
+# RUN:     -slab-allocate 100Kb -slab-address 0x1ff00000 -slab-page-size 4096 \
+# RUN:     -abs external_func=0x1 -abs external_data=0x2 \
 # RUN:     -check %s %t/elf_riscv64_sm_pic_reloc.o
 # RUN: llvm-jitlink -noexec \
-# RUN:     -slab-allocate 100Kb -slab-address 0xfff00000 -slab-page-size 4096 \
-# RUN:     -define-abs external_func=0x1 -define-abs external_data=0x2 \
+# RUN:     -slab-allocate 100Kb -slab-address 0x1ff00000 -slab-page-size 4096 \
+# RUN:     -abs external_func=0x1 -abs external_data=0x2 \
 # RUN:     -check %s %t/elf_riscv32_sm_pic_reloc.o
 #
 # Test ELF small/PIC relocations

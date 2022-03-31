@@ -50,6 +50,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeIndirectBrExpandPassPass(Registry);
   initializeInterleavedLoadCombinePass(Registry);
   initializeInterleavedAccessPass(Registry);
+  initializeJMCInstrumenterPass(Registry);
   initializeLiveDebugValuesPass(Registry);
   initializeLiveDebugVariablesPass(Registry);
   initializeLiveIntervalsPass(Registry);
@@ -57,6 +58,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeLiveStacksPass(Registry);
   initializeLiveVariablesPass(Registry);
   initializeLocalStackSlotPassPass(Registry);
+  initializeLowerGlobalDtorsLegacyPassPass(Registry);
   initializeLowerIntrinsicsPass(Registry);
   initializeMIRAddFSDiscriminatorsPass(Registry);
   initializeMIRCanonicalizerPass(Registry);
@@ -68,6 +70,8 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeMachineCSEPass(Registry);
   initializeMachineCombinerPass(Registry);
   initializeMachineCopyPropagationPass(Registry);
+  initializeMachineCycleInfoPrinterPassPass(Registry);
+  initializeMachineCycleInfoWrapperPassPass(Registry);
   initializeMachineDominatorTreePass(Registry);
   initializeMachineFunctionPrinterPassPass(Registry);
   initializeMachineLICMPass(Registry);

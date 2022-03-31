@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: LIBCXX-AIX-FIXME
-
 // <system_error>
 
 // class error_category
@@ -29,7 +27,11 @@ void test_message_for_bad_value() {
     const std::error_category& e_cat1 = std::system_category();
     const std::string msg = e_cat1.message(-1);
     // Exact message format varies by platform.
+    #if defined(_AIX)
+    LIBCPP_ASSERT(msg.rfind("Error -1 occurred", 0) == 0);
+    #else
     LIBCPP_ASSERT(msg.rfind("Unknown error", 0) == 0);
+    #endif
     assert(errno == E2BIG);
 }
 

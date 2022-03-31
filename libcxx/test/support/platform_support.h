@@ -15,30 +15,21 @@
 #define PLATFORM_SUPPORT_H
 
 // locale names
-#ifdef _WIN32
-    // WARNING: Windows does not support UTF-8 codepages.
-    // Locales are "converted" using https://docs.moodle.org/dev/Table_of_locales
-#   define LOCALE_en_US           "en-US"
-#   define LOCALE_en_US_UTF_8     "en-US"
-#   define LOCALE_cs_CZ_ISO8859_2 "cs-CZ"
-#   define LOCALE_fr_FR_UTF_8     "fr-FR"
-#   define LOCALE_fr_CA_ISO8859_1 "fr-CA"
-#   define LOCALE_ru_RU_UTF_8     "ru-RU"
-#   define LOCALE_zh_CN_UTF_8     "zh-CN"
+#define LOCALE_en_US           "en_US"
+#define LOCALE_en_US_UTF_8     "en_US.UTF-8"
+#define LOCALE_fr_FR_UTF_8     "fr_FR.UTF-8"
+#ifdef __linux__
+#    define LOCALE_fr_CA_ISO8859_1 "fr_CA.ISO-8859-1"
+#    define LOCALE_cs_CZ_ISO8859_2 "cs_CZ.ISO-8859-2"
+#elif defined(_WIN32)
+#    define LOCALE_fr_CA_ISO8859_1 "fr-CA"
+#    define LOCALE_cs_CZ_ISO8859_2 "cs-CZ"
 #else
-#   define LOCALE_en_US           "en_US"
-#   define LOCALE_en_US_UTF_8     "en_US.UTF-8"
-#   define LOCALE_fr_FR_UTF_8     "fr_FR.UTF-8"
-#   ifdef __linux__
-#       define LOCALE_fr_CA_ISO8859_1 "fr_CA.ISO-8859-1"
-#       define LOCALE_cs_CZ_ISO8859_2 "cs_CZ.ISO-8859-2"
-#   else
-#       define LOCALE_fr_CA_ISO8859_1 "fr_CA.ISO8859-1"
-#       define LOCALE_cs_CZ_ISO8859_2 "cs_CZ.ISO8859-2"
-#   endif
-#   define LOCALE_ru_RU_UTF_8     "ru_RU.UTF-8"
-#   define LOCALE_zh_CN_UTF_8     "zh_CN.UTF-8"
+#    define LOCALE_fr_CA_ISO8859_1 "fr_CA.ISO8859-1"
+#    define LOCALE_cs_CZ_ISO8859_2 "cs_CZ.ISO8859-2"
 #endif
+#define LOCALE_ru_RU_UTF_8     "ru_RU.UTF-8"
+#define LOCALE_zh_CN_UTF_8     "zh_CN.UTF-8"
 
 #include <stdio.h>
 #include <stdlib.h>

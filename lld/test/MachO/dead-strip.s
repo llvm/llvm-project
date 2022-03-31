@@ -7,7 +7,6 @@
 
 ## Check that .private_extern symbols are marked as local in the symbol table
 ## and aren't in the export trie.
-## Dead-stripped symbols should also not be in a map file output.
 # RUN: %lld -lSystem -dead_strip -map %t/map -u _ref_private_extern_u \
 # RUN:     %t/basics.o -o %t/basics
 # RUN: llvm-objdump --syms --section-headers %t/basics | \
@@ -16,7 +15,6 @@
 # RUN:     --exports-trie --indirect-symbols %t/basics | \
 # RUN:     FileCheck --check-prefix=EXECDATA --implicit-check-not _unref %s
 # RUN: llvm-otool -l %t/basics | grep -q 'segname __PAGEZERO'
-# RUN: FileCheck --check-prefix=MAP --implicit-check-not _unref %s < %t/map
 # EXEC-LABEL: Sections:
 # EXEC-LABEL: Name
 # EXEC-NEXT:  __text
@@ -24,27 +22,53 @@
 # EXEC-NEXT:  __ref_section
 # EXEC-NEXT:  __common
 # EXEC-LABEL: SYMBOL TABLE:
-# EXEC-NEXT:   l {{.*}} _ref_data
-# EXEC-NEXT:   l {{.*}} _ref_local
-# EXEC-NEXT:   l {{.*}} _ref_from_no_dead_strip_globl
-# EXEC-NEXT:   l {{.*}} _no_dead_strip_local
-# EXEC-NEXT:   l {{.*}} _ref_from_no_dead_strip_local
-# EXEC-NEXT:   l {{.*}} _ref_private_extern_u
-# EXEC-NEXT:   l {{.*}} _main
-# EXEC-NEXT:   l {{.*}} _ref_private_extern
-# EXEC-NEXT:   g {{.*}} _ref_com
-# EXEC-NEXT:   g {{.*}} _no_dead_strip_globl
-# EXEC-NEXT:   g {{.*}} __mh_execute_header
+# EXEC-DAG:   l {{.*}} _ref_data
+# EXEC-DAG:   l {{.*}} _ref_local
+# EXEC-DAG:   l {{.*}} _ref_from_no_dead_strip_globl
+# EXEC-DAG:   l {{.*}} _no_dead_strip_local
+# EXEC-DAG:   l {{.*}} _ref_from_no_dead_strip_local
+# EXEC-DAG:   l {{.*}} _ref_private_extern_u
+# EXEC-DAG:   l {{.*}} _main
+# EXEC-DAG:   l {{.*}} _ref_private_extern
+# EXEC-DAG:   g {{.*}} _no_dead_strip_globl
+# EXEC-DAG:   g {{.*}} _ref_com
+# EXEC-DAG:   g {{.*}} __mh_execute_header
 # EXECDATA-LABEL: Indirect symbols
 # EXECDATA-NEXT:  name
 # EXECDATA-NEXT:  _ref_com
 # EXECDATA-LABEL: Contents of (__DATA,__ref_section) section
 # EXECDATA-NEXT:   04 00 00 00 00 00 00 00 05 00 00 00 00 00 00 00
 # EXECDATA-LABEL: Exports trie:
-# EXECDATA-NEXT:   __mh_execute_header
-# EXECDATA-NEXT:   _ref_com
-# EXECDATA-NEXT:   _no_dead_strip_globl
+# EXECDATA-DAG:   _ref_com
+# EXECDATA-DAG:   _no_dead_strip_globl
+# EXECDATA-DAG:   __mh_execute_header
+
+## Check that dead stripped symbols get listed properly.
+# RUN: FileCheck --check-prefix=MAP %s < %t/map
+
 # MAP: _main
+# MAP-LABEL: Dead Stripped Symbols
+# MAP: <<dead>> [ 1] _unref_com
+# MAP: <<dead>> [ 1] _unref_data
+# MAP: <<dead>> [ 1] _unref_extern
+# MAP: <<dead>> [ 1] _unref_local
+# MAP: <<dead>> [ 1] _unref_private_extern
+# MAP: <<dead>> [ 1] l_unref_data
+
+## Run dead stripping on code without any dead symbols.
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos \
+# RUN:     %t/no-dead-symbols.s -o %t/no-dead-symbols.o
+# RUN: %lld -lSystem -dead_strip -map %t/no-dead-symbols-map \
+# RUN:     %t/no-dead-symbols.o -o %t/no-dead-symbols
+## Mark the end of the file with a string.
+# RUN: FileCheck --check-prefix=NODEADSYMBOLS %s < %t/no-dead-symbols-map
+
+# NODEADSYMBOLS-LABEL: # Symbols:
+# NODEADSYMBOLS-NEXT: # Address File Name
+# NODEADSYMBOLS-NEXT: _main
+# NODEADSYMBOLS-LABEL: # Dead Stripped Symbols:
+# NODEADSYMBOLS-NEXT: # Address File Name
+# NODEADSYMBOLS-EMPTY:
 
 # RUN: %lld -dylib -dead_strip -u _ref_private_extern_u %t/basics.o -o %t/basics.dylib
 # RUN: llvm-objdump --syms %t/basics.dylib | \
@@ -53,17 +77,17 @@
 # RUN: llvm-objdump --syms %t/basics.dylib | \
 # RUN:     FileCheck --check-prefix=DYLIB --implicit-check-not _unref %s
 # DYLIB-LABEL: SYMBOL TABLE:
-# DYLIB-NEXT:   l {{.*}} _ref_data
-# DYLIB-NEXT:   l {{.*}} _ref_local
-# DYLIB-NEXT:   l {{.*}} _ref_from_no_dead_strip_globl
-# DYLIB-NEXT:   l {{.*}} _no_dead_strip_local
-# DYLIB-NEXT:   l {{.*}} _ref_from_no_dead_strip_local
-# DYLIB-NEXT:   l {{.*}} _ref_private_extern_u
-# DYLIB-NEXT:   l {{.*}} _ref_private_extern
-# DYLIB-NEXT:   g {{.*}} _ref_com
-# DYLIB-NEXT:   g {{.*}} _unref_com
-# DYLIB-NEXT:   g {{.*}} _unref_extern
-# DYLIB-NEXT:   g {{.*}} _no_dead_strip_globl
+# DYLIB-DAG:   l {{.*}} _ref_data
+# DYLIB-DAG:   l {{.*}} _ref_local
+# DYLIB-DAG:   l {{.*}} _ref_from_no_dead_strip_globl
+# DYLIB-DAG:   l {{.*}} _no_dead_strip_local
+# DYLIB-DAG:   l {{.*}} _ref_from_no_dead_strip_local
+# DYLIB-DAG:   l {{.*}} _ref_private_extern_u
+# DYLIB-DAG:   l {{.*}} _ref_private_extern
+# DYLIB-DAG:   g {{.*}} _ref_com
+# DYLIB-DAG:   g {{.*}} _unref_com
+# DYLIB-DAG:   g {{.*}} _unref_extern
+# DYLIB-DAG:   g {{.*}} _no_dead_strip_globl
 
 ## Extern symbols aren't stripped from executables with -export_dynamic
 # RUN: %lld -lSystem -dead_strip -export_dynamic -u _ref_private_extern_u \
@@ -77,19 +101,19 @@
 # EXECDYN-NEXT:  __ref_section
 # EXECDYN-NEXT:  __common
 # EXECDYN-LABEL: SYMBOL TABLE:
-# EXECDYN-NEXT:   l {{.*}} _ref_data
-# EXECDYN-NEXT:   l {{.*}} _ref_local
-# EXECDYN-NEXT:   l {{.*}} _ref_from_no_dead_strip_globl
-# EXECDYN-NEXT:   l {{.*}} _no_dead_strip_local
-# EXECDYN-NEXT:   l {{.*}} _ref_from_no_dead_strip_local
-# EXECDYN-NEXT:   l {{.*}} _ref_private_extern_u
-# EXECDYN-NEXT:   l {{.*}} _main
-# EXECDYN-NEXT:   l {{.*}} _ref_private_extern
-# EXECDYN-NEXT:   g {{.*}} _ref_com
-# EXECDYN-NEXT:   g {{.*}} _unref_com
-# EXECDYN-NEXT:   g {{.*}} _unref_extern
-# EXECDYN-NEXT:   g {{.*}} _no_dead_strip_globl
-# EXECDYN-NEXT:   g {{.*}} __mh_execute_header
+# EXECDYN-DAG:   l {{.*}} _ref_data
+# EXECDYN-DAG:   l {{.*}} _ref_local
+# EXECDYN-DAG:   l {{.*}} _ref_from_no_dead_strip_globl
+# EXECDYN-DAG:   l {{.*}} _no_dead_strip_local
+# EXECDYN-DAG:   l {{.*}} _ref_from_no_dead_strip_local
+# EXECDYN-DAG:   l {{.*}} _ref_private_extern_u
+# EXECDYN-DAG:   l {{.*}} _main
+# EXECDYN-DAG:   l {{.*}} _ref_private_extern
+# EXECDYN-DAG:   g {{.*}} _ref_com
+# EXECDYN-DAG:   g {{.*}} _unref_com
+# EXECDYN-DAG:   g {{.*}} _unref_extern
+# EXECDYN-DAG:   g {{.*}} _no_dead_strip_globl
+# EXECDYN-DAG:   g {{.*}} __mh_execute_header
 
 ## Absolute symbol handling.
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos \
@@ -878,6 +902,12 @@ _main:
   retq
 
 .subsections_via_symbols
+
+#--- no-dead-symbols.s
+.text
+.globl _main
+_main:
+  retq
 
 #--- literals.s
 .cstring

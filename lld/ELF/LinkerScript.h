@@ -15,15 +15,12 @@
 #include "lld/Common/Strings.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <memory>
-#include <vector>
 
 namespace lld {
 namespace elf {
@@ -34,8 +31,8 @@ class InputSection;
 class InputSectionBase;
 class OutputSection;
 class SectionBase;
-class Symbol;
 class ThunkSection;
+struct OutputDesc;
 
 // This represents an r-value in the linker script.
 struct ExprValue {
@@ -203,20 +200,20 @@ public:
 
   // Input sections that matches at least one of SectionPatterns
   // will be associated with this InputSectionDescription.
-  std::vector<SectionPattern> sectionPatterns;
+  SmallVector<SectionPattern, 0> sectionPatterns;
 
   // Includes InputSections and MergeInputSections. Used temporarily during
   // assignment of input sections to output sections.
-  std::vector<InputSectionBase *> sectionBases;
+  SmallVector<InputSectionBase *, 0> sectionBases;
 
   // Used after the finalizeInputSections() pass. MergeInputSections have been
   // merged into MergeSyntheticSections.
-  std::vector<InputSection *> sections;
+  SmallVector<InputSection *, 0> sections;
 
   // Temporary record of synthetic ThunkSection instances and the pass that
   // they were created in. This is used to insert newly created ThunkSections
   // into Sections at the end of a createThunks() pass.
-  std::vector<std::pair<ThunkSection *, uint32_t>> thunkSections;
+  SmallVector<std::pair<ThunkSection *, uint32_t>, 0> thunkSections;
 
   // SectionPatterns can be filtered with the INPUT_SECTION_FLAGS command.
   uint64_t withFlags;
@@ -244,7 +241,7 @@ struct ByteCommand : SectionCommand {
 };
 
 struct InsertCommand {
-  std::vector<StringRef> names;
+  SmallVector<StringRef, 0> names;
   bool isAfter;
   StringRef where;
 };
@@ -271,7 +268,7 @@ class LinkerScript final {
     uint64_t tbssAddr = 0;
   };
 
-  llvm::DenseMap<StringRef, OutputSection *> nameToOutputSection;
+  llvm::DenseMap<llvm::CachedHashStringRef, OutputDesc *> nameToOutputSection;
 
   void addSymbol(SymbolAssignment *cmd);
   void assignSymbol(SymbolAssignment *cmd, bool inSec);
@@ -279,15 +276,15 @@ class LinkerScript final {
   void expandOutputSection(uint64_t size);
   void expandMemoryRegions(uint64_t size);
 
-  std::vector<InputSectionBase *>
+  SmallVector<InputSectionBase *, 0>
   computeInputSections(const InputSectionDescription *,
                        ArrayRef<InputSectionBase *>);
 
-  std::vector<InputSectionBase *> createInputSectionList(OutputSection &cmd);
+  SmallVector<InputSectionBase *, 0> createInputSectionList(OutputSection &cmd);
 
   void discardSynthetic(OutputSection &);
 
-  std::vector<size_t> getPhdrIndices(OutputSection *sec);
+  SmallVector<size_t, 0> getPhdrIndices(OutputSection *sec);
 
   std::pair<MemoryRegion *, MemoryRegion *>
   findMemoryRegion(OutputSection *sec, MemoryRegion *hint);
@@ -307,26 +304,26 @@ class LinkerScript final {
   uint64_t dot;
 
 public:
-  OutputSection *createOutputSection(StringRef name, StringRef location);
-  OutputSection *getOrCreateOutputSection(StringRef name);
+  OutputDesc *createOutputSection(StringRef name, StringRef location);
+  OutputDesc *getOrCreateOutputSection(StringRef name);
 
   bool hasPhdrsCommands() { return !phdrsCommands.empty(); }
   uint64_t getDot() { return dot; }
-  void discard(InputSectionBase *s);
+  void discard(InputSectionBase &s);
 
   ExprValue getSymbolValue(StringRef name, const Twine &loc);
 
   void addOrphanSections();
   void diagnoseOrphanHandling() const;
-  void adjustSectionsBeforeSorting();
+  void adjustOutputSections();
   void adjustSectionsAfterSorting();
 
-  std::vector<PhdrEntry *> createPhdrs();
+  SmallVector<PhdrEntry *, 0> createPhdrs();
   bool needsInterpSection();
 
   bool shouldKeep(InputSectionBase *s);
   const Defined *assignAddresses();
-  void allocateHeaders(std::vector<PhdrEntry *> &phdrs);
+  void allocateHeaders(SmallVector<PhdrEntry *, 0> &phdrs);
   void processSectionCommands();
   void processSymbolAssignments();
   void declareSymbols();
@@ -337,36 +334,36 @@ public:
   void processInsertCommands();
 
   // SECTIONS command list.
-  std::vector<SectionCommand *> sectionCommands;
+  SmallVector<SectionCommand *, 0> sectionCommands;
 
   // PHDRS command list.
-  std::vector<PhdrsCommand> phdrsCommands;
+  SmallVector<PhdrsCommand, 0> phdrsCommands;
 
   bool hasSectionsCommand = false;
   bool errorOnMissingSection = false;
 
   // List of section patterns specified with KEEP commands. They will
   // be kept even if they are unused and --gc-sections is specified.
-  std::vector<InputSectionDescription *> keptSections;
+  SmallVector<InputSectionDescription *, 0> keptSections;
 
   // A map from memory region name to a memory region descriptor.
   llvm::MapVector<llvm::StringRef, MemoryRegion *> memoryRegions;
 
   // A list of symbols referenced by the script.
-  std::vector<llvm::StringRef> referencedSymbols;
+  SmallVector<llvm::StringRef, 0> referencedSymbols;
 
   // Used to implement INSERT [AFTER|BEFORE]. Contains output sections that need
   // to be reordered.
-  std::vector<InsertCommand> insertCommands;
+  SmallVector<InsertCommand, 0> insertCommands;
 
   // OutputSections specified by OVERWRITE_SECTIONS.
-  std::vector<OutputSection *> overwriteSections;
+  SmallVector<OutputDesc *, 0> overwriteSections;
 
   // Sections that will be warned/errored by --orphan-handling.
-  std::vector<const InputSectionBase *> orphanSections;
+  SmallVector<const InputSectionBase *, 0> orphanSections;
 };
 
-extern LinkerScript *script;
+extern std::unique_ptr<LinkerScript> script;
 
 } // end namespace elf
 } // end namespace lld

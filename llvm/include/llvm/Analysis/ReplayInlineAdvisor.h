@@ -11,14 +11,12 @@
 
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/InlineAdvisor.h"
-#include "llvm/IR/LLVMContext.h"
 
 namespace llvm {
-class BasicBlock;
 class CallBase;
 class Function;
+class LLVMContext;
 class Module;
-class OptimizationRemarkEmitter;
 
 struct CallSiteFormat {
   enum class Format : int {

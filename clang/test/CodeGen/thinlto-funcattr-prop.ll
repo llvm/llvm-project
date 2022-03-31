@@ -17,7 +17,7 @@
 ;; Summary for call_extern. Note that llvm-lto2 writes out the index before propagation occurs so call_extern doesn't have its flags updated.
 ; CHECK-INDEX: ^2 = gv: (guid: 13959900437860518209, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 1, dsoLocal: 1, canAutoHide: 0), insts: 2, calls: ((callee: ^3)))))
 ;; Summary for extern
-; CHECK-INDEX: ^3 = gv: (guid: 14959766916849974397, summaries: (function: (module: ^1, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 1, dsoLocal: 0, canAutoHide: 0), insts: 1, funcFlags: (readNone: 0, readOnly: 0, noRecurse: 1, returnDoesNotAlias: 0, noInline: 0, alwaysInline: 0, noUnwind: 1, mayThrow: 0, hasUnknownCall: 0))))
+; CHECK-INDEX: ^3 = gv: (guid: 14959766916849974397, summaries: (function: (module: ^1, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 1, dsoLocal: 0, canAutoHide: 0), insts: 1, funcFlags: (readNone: 0, readOnly: 0, noRecurse: 1, returnDoesNotAlias: 0, noInline: 0, alwaysInline: 0, noUnwind: 1, mayThrow: 0, hasUnknownCall: 0, mustBeUnreachable: 0))))
 
 ;--- a.ll
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"

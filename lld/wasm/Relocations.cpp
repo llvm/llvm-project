@@ -20,7 +20,8 @@ namespace lld {
 namespace wasm {
 
 static bool requiresGOTAccess(const Symbol *sym) {
-  if (!config->isPic)
+  if (!config->isPic &&
+      config->unresolvedSymbols != UnresolvedPolicy::ImportDynamic)
     return false;
   if (sym->isHidden() || sym->isLocal())
     return false;
@@ -65,6 +66,8 @@ static void reportUndefined(Symbol *sym) {
           }
         }
       }
+      break;
+    case UnresolvedPolicy::ImportDynamic:
       break;
     }
   }
@@ -112,6 +115,11 @@ void scanRelocations(InputChunk *chunk) {
       break;
     case R_WASM_MEMORY_ADDR_TLS_SLEB:
     case R_WASM_MEMORY_ADDR_TLS_SLEB64:
+      if (!sym->isDefined()) {
+        error(toString(file) + ": relocation " + relocTypeToString(reloc.Type) +
+              " cannot be used against an undefined symbol `" + toString(*sym) +
+              "`");
+      }
       // In single-threaded builds TLS is lowered away and TLS data can be
       // merged with normal data and allowing TLS relocation in non-TLS
       // segments.
@@ -134,7 +142,9 @@ void scanRelocations(InputChunk *chunk) {
       break;
     }
 
-    if (config->isPic) {
+    if (config->isPic ||
+        (sym->isUndefined() &&
+         config->unresolvedSymbols == UnresolvedPolicy::ImportDynamic)) {
       switch (reloc.Type) {
       case R_WASM_TABLE_INDEX_SLEB:
       case R_WASM_TABLE_INDEX_SLEB64:
@@ -145,8 +155,8 @@ void scanRelocations(InputChunk *chunk) {
         // Certain relocation types can't be used when building PIC output,
         // since they would require absolute symbol addresses at link time.
         error(toString(file) + ": relocation " + relocTypeToString(reloc.Type) +
-              " cannot be used against symbol " + toString(*sym) +
-              "; recompile with -fPIC");
+              " cannot be used against symbol `" + toString(*sym) +
+              "`; recompile with -fPIC");
         break;
       case R_WASM_TABLE_INDEX_I32:
       case R_WASM_TABLE_INDEX_I64:

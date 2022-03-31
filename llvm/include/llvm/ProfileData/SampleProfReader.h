@@ -227,10 +227,8 @@
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/DiagnosticInfo.h"
-#include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/ProfileData/GCOV.h"
@@ -240,7 +238,6 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SymbolRemappingReader.h"
-#include <algorithm>
 #include <cstdint>
 #include <list>
 #include <memory>
@@ -473,8 +470,11 @@ public:
   /// Whether input profile is based on pseudo probes.
   bool profileIsProbeBased() const { return ProfileIsProbeBased; }
 
-  /// Whether input profile is fully context-sensitive
-  bool profileIsCS() const { return ProfileIsCS; }
+  /// Whether input profile is fully context-sensitive and flat.
+  bool profileIsCSFlat() const { return ProfileIsCSFlat; }
+
+  /// Whether input profile is fully context-sensitive and nested.
+  bool profileIsCSNested() const { return ProfileIsCSNested; }
 
   virtual std::unique_ptr<ProfileSymbolList> getProfileSymbolList() {
     return nullptr;
@@ -533,8 +533,11 @@ protected:
   /// \brief Whether samples are collected based on pseudo probes.
   bool ProfileIsProbeBased = false;
 
-  /// Whether function profiles are context-sensitive.
-  bool ProfileIsCS = false;
+  /// Whether function profiles are context-sensitive flat profiles.
+  bool ProfileIsCSFlat = false;
+
+  /// Whether function profiles are context-sensitive nested profiles.
+  bool ProfileIsCSNested = false;
 
   /// Number of context-sensitive profiles.
   uint32_t CSProfileCount = 0;
@@ -698,6 +701,8 @@ protected:
   std::error_code readSecHdrTable();
 
   std::error_code readFuncMetadata(bool ProfileHasAttribute);
+  std::error_code readFuncMetadata(bool ProfileHasAttribute,
+                                   FunctionSamples *FProfile);
   std::error_code readFuncOffsetTable();
   std::error_code readFuncProfiles();
   std::error_code readMD5NameTable();

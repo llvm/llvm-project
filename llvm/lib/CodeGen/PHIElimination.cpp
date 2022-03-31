@@ -31,9 +31,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
-#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
-#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Pass.h"
@@ -213,7 +211,7 @@ bool PHIElimination::runOnMachineFunction(MachineFunction &MF) {
   for (auto &I : LoweredPHIs) {
     if (LIS)
       LIS->RemoveMachineInstrFromMaps(*I.first);
-    MF.DeleteMachineInstr(I.first);
+    MF.deleteMachineInstr(I.first);
   }
 
   // TODO: we should use the incremental DomTree updater here.
@@ -626,7 +624,7 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
   if (reusedIncoming || !IncomingReg) {
     if (LIS)
       LIS->RemoveMachineInstrFromMaps(*MPhi);
-    MF.DeleteMachineInstr(MPhi);
+    MF.deleteMachineInstr(MPhi);
   }
 }
 

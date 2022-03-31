@@ -37,6 +37,7 @@ function(add_flang_nongtest_unittest test_name)
 endfunction()
 
 add_subdirectory(Optimizer)
+add_subdirectory(Common)
 add_subdirectory(Decimal)
 add_subdirectory(Evaluate)
 add_subdirectory(Runtime)

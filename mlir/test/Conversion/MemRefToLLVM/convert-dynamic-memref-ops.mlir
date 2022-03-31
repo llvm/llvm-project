@@ -1,5 +1,6 @@
 // RUN: mlir-opt -split-input-file -convert-memref-to-llvm %s | FileCheck %s
 // RUN: mlir-opt -split-input-file -convert-memref-to-llvm='use-aligned-alloc=1' %s | FileCheck %s --check-prefix=ALIGNED-ALLOC
+// RUN: mlir-opt -split-input-file -convert-memref-to-llvm='index-bitwidth=32' %s | FileCheck --check-prefix=CHECK32 %s
 
 // CHECK-LABEL: func @mixed_alloc(
 //       CHECK:   %[[Marg:.*]]: index, %[[Narg:.*]]: index)
@@ -326,15 +327,24 @@ func @memref_cast_mixed_to_mixed(%mixed : memref<42x?xf32>) {
 // -----
 
 // CHECK-LABEL: func @memref_cast_ranked_to_unranked
+// CHECK32-LABEL: func @memref_cast_ranked_to_unranked
 func @memref_cast_ranked_to_unranked(%arg : memref<42x2x?xf32>) {
 // CHECK-DAG:  %[[c:.*]] = llvm.mlir.constant(1 : index) : i64
 // CHECK-DAG:  %[[p:.*]] = llvm.alloca %[[c]] x !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<3 x i64>, array<3 x i64>)> : (i64) -> !llvm.ptr<struct<(ptr<f32>, ptr<f32>, i64, array<3 x i64>, array<3 x i64>)>>
 // CHECK-DAG:  llvm.store %{{.*}}, %[[p]] : !llvm.ptr<struct<(ptr<f32>, ptr<f32>, i64, array<3 x i64>, array<3 x i64>)>>
 // CHECK-DAG:  %[[p2:.*]] = llvm.bitcast %[[p]] : !llvm.ptr<struct<(ptr<f32>, ptr<f32>, i64, array<3 x i64>, array<3 x i64>)>> to !llvm.ptr<i8>
-// CHECK-DAG:  %[[r:.*]] = llvm.mlir.constant(3 : i64) : i64
+// CHECK-DAG:  %[[r:.*]] = llvm.mlir.constant(3 : index) : i64
 // CHECK    :  llvm.mlir.undef : !llvm.struct<(i64, ptr<i8>)>
 // CHECK-DAG:  llvm.insertvalue %[[r]], %{{.*}}[0] : !llvm.struct<(i64, ptr<i8>)>
 // CHECK-DAG:  llvm.insertvalue %[[p2]], %{{.*}}[1] : !llvm.struct<(i64, ptr<i8>)>
+// CHECK32-DAG:  %[[c:.*]] = llvm.mlir.constant(1 : index) : i64
+// CHECK32-DAG:  %[[p:.*]] = llvm.alloca %[[c]] x !llvm.struct<(ptr<f32>, ptr<f32>, i32, array<3 x i32>, array<3 x i32>)> : (i64) -> !llvm.ptr<struct<(ptr<f32>, ptr<f32>, i32, array<3 x i32>, array<3 x i32>)>>
+// CHECK32-DAG:  llvm.store %{{.*}}, %[[p]] : !llvm.ptr<struct<(ptr<f32>, ptr<f32>, i32, array<3 x i32>, array<3 x i32>)>>
+// CHECK32-DAG:  %[[p2:.*]] = llvm.bitcast %[[p]] : !llvm.ptr<struct<(ptr<f32>, ptr<f32>, i32, array<3 x i32>, array<3 x i32>)>> to !llvm.ptr<i8>
+// CHECK32-DAG:  %[[r:.*]] = llvm.mlir.constant(3 : index) : i32
+// CHECK32    :  llvm.mlir.undef : !llvm.struct<(i32, ptr<i8>)>
+// CHECK32-DAG:  llvm.insertvalue %[[r]], %{{.*}}[0] : !llvm.struct<(i32, ptr<i8>)>
+// CHECK32-DAG:  llvm.insertvalue %[[p2]], %{{.*}}[1] : !llvm.struct<(i32, ptr<i8>)>
   %0 = memref.cast %arg : memref<42x2x?xf32> to memref<*xf32>
   return
 }
@@ -501,8 +511,7 @@ func @memref_reshape(%input : memref<2x3xf32>, %shape : memref<?xindex>) {
 // CHECK: [[STRUCT_PTR:%.*]] = llvm.bitcast [[UNDERLYING_DESC]]
 // CHECK-SAME: !llvm.ptr<i8> to !llvm.ptr<struct<(ptr<f32>, ptr<f32>, i64, i64)>>
 // CHECK: [[C0:%.*]] = llvm.mlir.constant(0 : index) : i64
-// CHECK: [[C3_I32:%.*]] = llvm.mlir.constant(3 : i32) : i32
-// CHECK: [[SIZES_PTR:%.*]] = llvm.getelementptr [[STRUCT_PTR]]{{\[}}[[C0]], [[C3_I32]]]
+// CHECK: [[SIZES_PTR:%.*]] = llvm.getelementptr [[STRUCT_PTR]]{{\[}}[[C0]], 3]
 // CHECK: [[STRIDES_PTR:%.*]] = llvm.getelementptr [[SIZES_PTR]]{{\[}}[[RANK]]]
 // CHECK: [[SHAPE_IN_PTR:%.*]] = llvm.extractvalue [[SHAPE]][1] : [[SHAPE_TY]]
 // CHECK: [[C1_:%.*]] = llvm.mlir.constant(1 : index) : i64

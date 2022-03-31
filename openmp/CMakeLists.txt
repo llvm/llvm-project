@@ -7,7 +7,12 @@ set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 if (OPENMP_STANDALONE_BUILD OR "${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
   set(OPENMP_STANDALONE_BUILD TRUE)
   project(openmp C CXX)
+endif()
 
+# Must go below project(..)
+include(GNUInstallDirs)
+
+if (OPENMP_STANDALONE_BUILD)
   # CMAKE_BUILD_TYPE was not set, default to Release.
   if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
@@ -61,10 +66,15 @@ if (APPLE OR WIN32 OR NOT OPENMP_HAVE_STD_CPP14_FLAG)
   set(ENABLE_LIBOMPTARGET OFF)
 endif()
 
+set(ENABLE_LIBOMPTARGET_PROFILING OFF)
+if (ENABLE_LIBOMPTARGET AND NOT LLVM_RUNTIMES_BUILD)
+  set(ENABLE_LIBOMPTARGET_PROFILING ON)
+endif()
+
 option(OPENMP_ENABLE_LIBOMPTARGET "Enable building libomptarget for offloading."
        ${ENABLE_LIBOMPTARGET})
 option(OPENMP_ENABLE_LIBOMPTARGET_PROFILING "Enable time profiling for libomptarget."
-       ${ENABLE_LIBOMPTARGET})
+       ${ENABLE_LIBOMPTARGET_PROFILING})
 option(OPENMP_ENABLE_LIBOMP_PROFILING "Enable time profiling for libomp." OFF)
 
 # Build host runtime library, after LIBOMPTARGET variables are set since they are needed

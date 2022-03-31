@@ -64,7 +64,7 @@ public:
   std::string SplitDwarfFile;
 
   const char *Argv0 = nullptr;
-  ArrayRef<const char *> CommandLineArgs;
+  ArrayRef<std::string> CommandLineArgs;
 
   /// Additional paths to search for `.include` directives when using the
   /// integrated assembler.

@@ -19,6 +19,7 @@
 #include "llvm/Object/COFF.h"
 #include "llvm/ObjectYAML/ObjectYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
+#include "llvm/Support/BinaryStreamWriter.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
@@ -64,11 +65,7 @@ struct COFFParser {
   }
 
   bool parseSections() {
-    for (std::vector<COFFYAML::Section>::iterator i = Obj.Sections.begin(),
-                                                  e = Obj.Sections.end();
-         i != e; ++i) {
-      COFFYAML::Section &Sec = *i;
-
+    for (COFFYAML::Section &Sec : Obj.Sections) {
       // If the name is less than 8 bytes, store it in place, otherwise
       // store it in the string table.
       StringRef Name = Sec.Name;
@@ -103,11 +100,7 @@ struct COFFParser {
   }
 
   bool parseSymbols() {
-    for (std::vector<COFFYAML::Symbol>::iterator i = Obj.Symbols.begin(),
-                                                 e = Obj.Symbols.end();
-         i != e; ++i) {
-      COFFYAML::Symbol &Sym = *i;
-
+    for (COFFYAML::Symbol &Sym : Obj.Symbols) {
       // If the name is less than 8 bytes, store it in place, otherwise
       // store it in the string table.
       StringRef Name = Sym.Name;

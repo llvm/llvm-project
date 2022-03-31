@@ -13,6 +13,7 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_MIPATTERNMATCH_H
 #define LLVM_CODEGEN_GLOBALISEL_MIPATTERNMATCH_H
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/InstrTypes.h"
@@ -59,11 +60,26 @@ inline OneNonDBGUse_match<SubPat> m_OneNonDBGUse(const SubPat &SP) {
   return SP;
 }
 
-struct ConstantMatch {
-  int64_t &CR;
-  ConstantMatch(int64_t &C) : CR(C) {}
+template <typename ConstT>
+inline Optional<ConstT> matchConstant(Register, const MachineRegisterInfo &);
+
+template <>
+inline Optional<APInt> matchConstant(Register Reg,
+                                     const MachineRegisterInfo &MRI) {
+  return getIConstantVRegVal(Reg, MRI);
+}
+
+template <>
+inline Optional<int64_t> matchConstant(Register Reg,
+                                       const MachineRegisterInfo &MRI) {
+  return getIConstantVRegSExtVal(Reg, MRI);
+}
+
+template <typename ConstT> struct ConstantMatch {
+  ConstT &CR;
+  ConstantMatch(ConstT &C) : CR(C) {}
   bool match(const MachineRegisterInfo &MRI, Register Reg) {
-    if (auto MaybeCst = getIConstantVRegSExtVal(Reg, MRI)) {
+    if (auto MaybeCst = matchConstant<ConstT>(Reg, MRI)) {
       CR = *MaybeCst;
       return true;
     }
@@ -71,7 +87,12 @@ struct ConstantMatch {
   }
 };
 
-inline ConstantMatch m_ICst(int64_t &Cst) { return ConstantMatch(Cst); }
+inline ConstantMatch<APInt> m_ICst(APInt &Cst) {
+  return ConstantMatch<APInt>(Cst);
+}
+inline ConstantMatch<int64_t> m_ICst(int64_t &Cst) {
+  return ConstantMatch<int64_t>(Cst);
+}
 
 struct GCstAndRegMatch {
   Optional<ValueAndVReg> &ValReg;
@@ -361,9 +382,9 @@ m_GAdd(const LHS &L, const RHS &R) {
 }
 
 template <typename LHS, typename RHS>
-inline BinaryOp_match<LHS, RHS, TargetOpcode::G_PTR_ADD, true>
+inline BinaryOp_match<LHS, RHS, TargetOpcode::G_PTR_ADD, false>
 m_GPtrAdd(const LHS &L, const RHS &R) {
-  return BinaryOp_match<LHS, RHS, TargetOpcode::G_PTR_ADD, true>(L, R);
+  return BinaryOp_match<LHS, RHS, TargetOpcode::G_PTR_ADD, false>(L, R);
 }
 
 template <typename LHS, typename RHS>

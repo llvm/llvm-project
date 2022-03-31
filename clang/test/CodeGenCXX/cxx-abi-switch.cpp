@@ -22,7 +22,7 @@ public:
 B::B(int *i) : i_(i) {}
 B::~B() {}
 
-// CHECK: define{{.*}} void @_ZN1BC2EPi(%class.B* {{[^,]*}} %this, i32* %i)
-// CHECK: define{{.*}} void @_ZN1BC1EPi(%class.B* {{[^,]*}} %this, i32* %i)
+// CHECK: define{{.*}} void @_ZN1BC2EPi(%class.B* {{[^,]*}} %this, i32* noundef %i)
+// CHECK: define{{.*}} void @_ZN1BC1EPi(%class.B* {{[^,]*}} %this, i32* noundef %i)
 // CHECK: define{{.*}} void @_ZN1BD2Ev(%class.B* {{[^,]*}} %this)
 // CHECK: define{{.*}} void @_ZN1BD1Ev(%class.B* {{[^,]*}} %this)

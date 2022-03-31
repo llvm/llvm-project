@@ -19,7 +19,7 @@ body:             |
 ...
 ---
 # GFX10-LABEL: name: image_load_merged_v1v3_reversed
-# GFX10: %{{[0-9]+}}:vreg_128 = IMAGE_LOAD_V4_V2_gfx10 %5, %3, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
+# GFX10: %{{[0-9]+}}:vreg_128 = IMAGE_LOAD_V4_V2_gfx10 %5, %3, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), addrspace 4)
 # GFX10: %{{[0-9]+}}:vgpr_32 = COPY %8.sub3
 # GFX10: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub0_sub1_sub2
 
@@ -95,7 +95,7 @@ body:             |
 ---
 
 # GFX10-LABEL: name: image_load_merged_v3v1_reversed
-# GFX10: %{{[0-9]+}}:vreg_128 = IMAGE_LOAD_V4_V2_gfx10 %5, %3, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), addrspace 4)
+# GFX10: %{{[0-9]+}}:vreg_128 = IMAGE_LOAD_V4_V2_gfx10 %5, %3, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
 # GFX10: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 # GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %8.sub0
 
@@ -114,7 +114,7 @@ body:             |
 ---
 
 # GFX10-LABEL: name: image_load_divided_merged
-# GFX10: %{{[0-9]+}}:vreg_128 = IMAGE_LOAD_V4_V2_gfx10 %5, %3, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
+# GFX10: %{{[0-9]+}}:vreg_128 = IMAGE_LOAD_V4_V2_gfx10 %5, %3, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), addrspace 4)
 
 name: image_load_divided_merged
 body:             |

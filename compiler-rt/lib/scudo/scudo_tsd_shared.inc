@@ -42,7 +42,7 @@ ALWAYS_INLINE void initThreadMaybe(bool MinimalInit = false) {
 ScudoTSD *getTSDAndLockSlow(ScudoTSD *TSD);
 
 ALWAYS_INLINE ScudoTSD *
-getTSDAndLock(bool *UnlockRequired) NO_THREAD_SAFETY_ANALYSIS {
+getTSDAndLock(bool *UnlockRequired) SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
   ScudoTSD *TSD = getCurrentTSD();
   DCHECK(TSD && "No TSD associated with the current thread!");
   *UnlockRequired = true;

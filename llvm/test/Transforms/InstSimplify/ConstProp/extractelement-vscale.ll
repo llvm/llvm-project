@@ -1,4 +1,4 @@
-; RUN: opt -S -instsimplify < %s | FileCheck %s
+; RUN: opt -S -passes=instsimplify < %s | FileCheck %s
 
 ; CHECK-LABEL: definitely_in_bounds
 ; CHECK: ret i8 0

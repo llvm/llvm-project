@@ -1,6 +1,5 @@
 ; Make sure we don't end up in an infinite recursion in singleReachablePHIPath().
-; REQUIRES: asserts
-; RUN: opt -newgvn -S %s | FileCheck %s
+; RUN: opt < %s -passes=newgvn -S | FileCheck %s
 
 @c = external global i64, align 8
 
@@ -20,7 +19,7 @@
 ; CHECK-NEXT:   %dipsy = load i64, i64* @c
 ; CHECK-NEXT:   br label %ph
 ; CHECK: back:                                             ; preds = %l2
-; CHECK-NEXT:   store i8 undef, i8* null
+; CHECK-NEXT:   store i8 poison, i8* null
 ; CHECK-NEXT:   br label %ph
 ; CHECK: end:                                              ; preds = %l2
 ; CHECK-NEXT:   ret void

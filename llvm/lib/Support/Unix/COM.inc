@@ -21,6 +21,6 @@ namespace sys {
 InitializeCOMRAII::InitializeCOMRAII(COMThreadingMode Threading,
                                      bool SpeedOverMemory) {}
 
-InitializeCOMRAII::~InitializeCOMRAII() {}
+InitializeCOMRAII::~InitializeCOMRAII() = default;
 }
 }

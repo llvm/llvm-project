@@ -112,7 +112,7 @@ define void @test3(i8* %src, i8* %dest, i64 %size) noinline {
 ; CHECK-NOT: read
 ; CHECK-SAME: noinline
 ; BEFORE-LABEL: define void @test3(i8* %src, i8* %dest, i64 %size)
-; AFTER-LABEL: define void @test3(i8* nocapture readonly %src, i8* nocapture %dest, i64 %size)
+; AFTER-LABEL: define void @test3(i8* nocapture readonly %src, i8* nocapture writeonly %dest, i64 %size)
   %fptr = alloca i8* (i8*, i8*, i64)*
   store i8* (i8*, i8*, i64)* @memcpy, i8* (i8*, i8*, i64)** %fptr
   %f = load i8* (i8*, i8*, i64)*, i8* (i8*, i8*, i64)** %fptr

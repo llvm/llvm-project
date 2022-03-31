@@ -49,7 +49,7 @@ void t_vxv(int *v1, int *v2, int *v3, int n) {
 
 
 // CK1-LABEL: define {{[^@]+}}@test
-int test() {
+int test(void) {
   int v1[N], v2[N], v3[N];
 
   // init
@@ -222,7 +222,7 @@ int t_simd(int *v1, int *v2, int *v3, int idx) {
 }
 
 // CK3-LABEL: define {{[^@]+}}@test
-void test() {
+void test(void) {
   int v1[N], v2[N], v3[N];
 
   // init
@@ -296,7 +296,7 @@ void all_vxv(int *v1, int *v2, int *v3, int n) {
 #pragma omp end declare target
 
 // CK4-LABEL: define {{[^@]+}}@test
-void test() {
+void test(void) {
     int v1[N], v2[N], v3[N];
 
     //init

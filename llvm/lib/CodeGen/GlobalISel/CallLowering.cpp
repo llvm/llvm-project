@@ -11,16 +11,16 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/CallingConvLower.h"
-#include "llvm/CodeGen/GlobalISel/CallLowering.h"
-#include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Target/TargetMachine.h"
@@ -86,6 +86,7 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   CallLoweringInfo Info;
   const DataLayout &DL = MIRBuilder.getDataLayout();
   MachineFunction &MF = MIRBuilder.getMF();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
   bool CanBeTailCalled = CB.isTailCall() &&
                          isInTailCallPosition(CB, MF.getTarget()) &&
                          (MF.getFunction()
@@ -108,6 +109,7 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
     // argument points into the caller's stack frame.
     CanBeTailCalled = false;
   }
+
 
   // First step is to marshall all the function's parameters into the correct
   // physregs and memory locations. Gather the sequence of argument types that
@@ -136,9 +138,22 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   else
     Info.Callee = MachineOperand::CreateReg(GetCalleeReg(), false);
 
+  Register ReturnHintAlignReg;
+  Align ReturnHintAlign;
+
   Info.OrigRet = ArgInfo{ResRegs, RetTy, 0, ISD::ArgFlagsTy{}};
-  if (!Info.OrigRet.Ty->isVoidTy())
+
+  if (!Info.OrigRet.Ty->isVoidTy()) {
     setArgFlags(Info.OrigRet, AttributeList::ReturnIndex, DL, CB);
+
+    if (MaybeAlign Alignment = CB.getRetAlign()) {
+      if (*Alignment > Align(1)) {
+        ReturnHintAlignReg = MRI.cloneVirtualRegister(ResRegs[0]);
+        Info.OrigRet.Regs[0] = ReturnHintAlignReg;
+        ReturnHintAlign = *Alignment;
+      }
+    }
+  }
 
   Info.CB = &CB;
   Info.KnownCallees = CB.getMetadata(LLVMContext::MD_callees);
@@ -147,7 +162,15 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   Info.IsMustTailCall = CB.isMustTailCall();
   Info.IsTailCall = CanBeTailCalled;
   Info.IsVarArg = IsVarArg;
-  return lowerCall(MIRBuilder, Info);
+  if (!lowerCall(MIRBuilder, Info))
+    return false;
+
+  if (ReturnHintAlignReg && !Info.IsTailCall) {
+    MIRBuilder.buildAssertAlign(ResRegs[0], ReturnHintAlignReg,
+                                ReturnHintAlign);
+  }
+
+  return true;
 }
 
 template <typename FuncInfoTy>
@@ -256,7 +279,7 @@ mergeVectorRegsToResultRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
   LLT PartLLT = MRI.getType(SrcRegs[0]);
 
   // Deal with v3s16 split into v2s16
-  LLT LCMTy = getLCMType(LLTy, PartLLT);
+  LLT LCMTy = getCoverTy(LLTy, PartLLT);
   if (LCMTy == LLTy) {
     // Common case where no padding is needed.
     assert(DstRegs.size() == 1);
@@ -267,21 +290,9 @@ mergeVectorRegsToResultRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
   // widening the original value.
   Register UnmergeSrcReg;
   if (LCMTy != PartLLT) {
-    // e.g. A <3 x s16> value was split to <2 x s16>
-    // %register_value0:_(<2 x s16>)
-    // %register_value1:_(<2 x s16>)
-    // %undef:_(<2 x s16>) = G_IMPLICIT_DEF
-    // %concat:_<6 x s16>) = G_CONCAT_VECTORS %reg_value0, %reg_value1, %undef
-    // %dst_reg:_(<3 x s16>), %dead:_(<3 x s16>) = G_UNMERGE_VALUES %concat
-    const int NumWide = LCMTy.getSizeInBits() / PartLLT.getSizeInBits();
-    Register Undef = B.buildUndef(PartLLT).getReg(0);
-
-    // Build vector of undefs.
-    SmallVector<Register, 8> WidenedSrcs(NumWide, Undef);
-
-    // Replace the first sources with the real registers.
-    std::copy(SrcRegs.begin(), SrcRegs.end(), WidenedSrcs.begin());
-    UnmergeSrcReg = B.buildConcatVectors(LCMTy, WidenedSrcs).getReg(0);
+    assert(DstRegs.size() == 1);
+    return B.buildDeleteTrailingVectorElements(DstRegs[0],
+                                               B.buildMerge(LCMTy, SrcRegs));
   } else {
     // We don't need to widen anything if we're extracting a scalar which was
     // promoted to a vector e.g. s8 -> v4s8 -> s8
@@ -298,6 +309,8 @@ mergeVectorRegsToResultRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
   for (int I = DstRegs.size(); I != NumDst; ++I)
     PadDstRegs[I] = MRI.createGenericVirtualRegister(LLTy);
 
+  if (PadDstRegs.size() == 1)
+    return B.buildDeleteTrailingVectorElements(DstRegs[0], UnmergeSrcReg);
   return B.buildUnmerge(PadDstRegs, UnmergeSrcReg);
 }
 
@@ -485,7 +498,7 @@ static void buildCopyToRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
 
   MachineRegisterInfo &MRI = *B.getMRI();
   LLT DstTy = MRI.getType(DstRegs[0]);
-  LLT LCMTy = getLCMType(SrcTy, PartTy);
+  LLT LCMTy = getCoverTy(SrcTy, PartTy);
 
   const unsigned DstSize = DstTy.getSizeInBits();
   const unsigned SrcSize = SrcTy.getSizeInBits();
@@ -493,7 +506,7 @@ static void buildCopyToRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
 
   Register UnmergeSrc = SrcReg;
 
-  if (CoveringSize != SrcSize) {
+  if (!LCMTy.isVector() && CoveringSize != SrcSize) {
     // For scalars, it's common to be able to use a simple extension.
     if (SrcTy.isScalar() && DstTy.isScalar()) {
       CoveringSize = alignTo(SrcSize, DstSize);
@@ -510,20 +523,17 @@ static void buildCopyToRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
     }
   }
 
-  // Unmerge to the original registers and pad with dead defs.
-  SmallVector<Register, 8> UnmergeResults(DstRegs.begin(), DstRegs.end());
-  for (unsigned Size = DstSize * DstRegs.size(); Size != CoveringSize;
-       Size += DstSize) {
-    UnmergeResults.push_back(MRI.createGenericVirtualRegister(DstTy));
-  }
+  if (LCMTy.isVector() && CoveringSize != SrcSize)
+    UnmergeSrc = B.buildPadVectorWithUndefElements(LCMTy, SrcReg).getReg(0);
 
-  B.buildUnmerge(UnmergeResults, UnmergeSrc);
+  B.buildUnmerge(DstRegs, UnmergeSrc);
 }
 
 bool CallLowering::determineAndHandleAssignments(
     ValueHandler &Handler, ValueAssigner &Assigner,
     SmallVectorImpl<ArgInfo> &Args, MachineIRBuilder &MIRBuilder,
-    CallingConv::ID CallConv, bool IsVarArg, Register ThisReturnReg) const {
+    CallingConv::ID CallConv, bool IsVarArg,
+    ArrayRef<Register> ThisReturnRegs) const {
   MachineFunction &MF = MIRBuilder.getMF();
   const Function &F = MF.getFunction();
   SmallVector<CCValAssign, 16> ArgLocs;
@@ -533,7 +543,7 @@ bool CallLowering::determineAndHandleAssignments(
     return false;
 
   return handleAssignments(Handler, Args, CCInfo, ArgLocs, MIRBuilder,
-                           ThisReturnReg);
+                           ThisReturnRegs);
 }
 
 static unsigned extendOpFromFlags(llvm::ISD::ArgFlagsTy Flags) {
@@ -610,7 +620,7 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
                                      CCState &CCInfo,
                                      SmallVectorImpl<CCValAssign> &ArgLocs,
                                      MachineIRBuilder &MIRBuilder,
-                                     Register ThisReturnReg) const {
+                                     ArrayRef<Register> ThisReturnRegs) const {
   MachineFunction &MF = MIRBuilder.getMF();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const Function &F = MF.getFunction();
@@ -688,10 +698,12 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
                       ValTy, extendOpFromFlags(Args[i].Flags[0]));
     }
 
+    bool BigEndianPartOrdering = TLI->hasBigEndianPartOrdering(OrigVT, DL);
     for (unsigned Part = 0; Part < NumParts; ++Part) {
       Register ArgReg = Args[i].Regs[Part];
       // There should be Regs.size() ArgLocs per argument.
-      VA = ArgLocs[j + Part];
+      unsigned Idx = BigEndianPartOrdering ? NumParts - 1 - Part : Part;
+      CCValAssign &VA = ArgLocs[j + Idx];
       const ISD::ArgFlagsTy Flags = Args[i].Flags[Part];
 
       if (VA.isMemLoc() && !Flags.isByVal()) {
@@ -754,10 +766,10 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
 
       assert(!VA.needsCustom() && "custom loc should have been handled already");
 
-      if (i == 0 && ThisReturnReg.isValid() &&
+      if (i == 0 && !ThisReturnRegs.empty() &&
           Handler.isIncomingArgumentHandler() &&
           isTypeIsValidForThisReturn(ValVT)) {
-        Handler.assignValueToReg(Args[i].Regs[i], ThisReturnReg, VA);
+        Handler.assignValueToReg(ArgReg, ThisReturnRegs[Part], VA);
         continue;
       }
 

@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
-// RUN: not %clang_cc1 -fsyntax-only %s -fdiagnostics-parseable-fixits 2>&1 | \
+// RUN: %clang_cc1 -fsyntax-only -verify -Wno-strict-prototypes %s
+// RUN: not %clang_cc1 -fsyntax-only -Wno-strict-prototypes %s -fdiagnostics-parseable-fixits 2>&1 | \
 // RUN:         FileCheck %s --check-prefix=C
-// RUN: not %clang_cc1 -fsyntax-only %s -fdiagnostics-parseable-fixits -x c++ -std=c++11 2>&1 | \
+// RUN: not %clang_cc1 -fsyntax-only -Wno-strict-prototypes %s -fdiagnostics-parseable-fixits -x c++ -std=c++11 2>&1 | \
 // RUN:         FileCheck %s --check-prefix=CXX11
 int x __attribute__((sentinel)); //expected-warning{{'sentinel' attribute only applies to functions, methods and blocks}}
 
@@ -18,7 +18,7 @@ void f5(int a) __attribute__ ((sentinel)); //expected-warning{{'sentinel' attrib
 
 void f6() __attribute__((__sentinel__));  // expected-warning {{'sentinel' attribute requires named arguments}}
 
-void g() {
+void g(void) {
   // The integer literal zero is not a sentinel.
   f1(1, 0); // expected-warning {{missing sentinel in function call}}
 // C: fix-it:{{.*}}:{23:10-23:10}:", (void*) 0"

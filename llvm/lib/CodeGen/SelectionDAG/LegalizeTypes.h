@@ -19,7 +19,6 @@
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/Debug.h"
 
 namespace llvm {
 
@@ -334,18 +333,17 @@ private:
   SDValue PromoteIntRes_MGATHER(MaskedGatherSDNode *N);
   SDValue PromoteIntRes_Overflow(SDNode *N);
   SDValue PromoteIntRes_SADDSUBO(SDNode *N, unsigned ResNo);
-  SDValue PromoteIntRes_SELECT(SDNode *N);
-  SDValue PromoteIntRes_VSELECT(SDNode *N);
+  SDValue PromoteIntRes_Select(SDNode *N);
   SDValue PromoteIntRes_SELECT_CC(SDNode *N);
   SDValue PromoteIntRes_SETCC(SDNode *N);
-  SDValue PromoteIntRes_SHL(SDNode *N, bool IsVP);
-  SDValue PromoteIntRes_SimpleIntBinOp(SDNode *N, bool IsVP);
-  SDValue PromoteIntRes_ZExtIntBinOp(SDNode *N, bool IsVP);
-  SDValue PromoteIntRes_SExtIntBinOp(SDNode *N, bool IsVP);
+  SDValue PromoteIntRes_SHL(SDNode *N);
+  SDValue PromoteIntRes_SimpleIntBinOp(SDNode *N);
+  SDValue PromoteIntRes_ZExtIntBinOp(SDNode *N);
+  SDValue PromoteIntRes_SExtIntBinOp(SDNode *N);
   SDValue PromoteIntRes_UMINUMAX(SDNode *N);
   SDValue PromoteIntRes_SIGN_EXTEND_INREG(SDNode *N);
-  SDValue PromoteIntRes_SRA(SDNode *N, bool IsVP);
-  SDValue PromoteIntRes_SRL(SDNode *N, bool IsVP);
+  SDValue PromoteIntRes_SRA(SDNode *N);
+  SDValue PromoteIntRes_SRL(SDNode *N);
   SDValue PromoteIntRes_TRUNCATE(SDNode *N);
   SDValue PromoteIntRes_UADDSUBO(SDNode *N, unsigned ResNo);
   SDValue PromoteIntRes_ADDSUBCARRY(SDNode *N, unsigned ResNo);
@@ -819,6 +817,12 @@ private:
   void GetSplitVector(SDValue Op, SDValue &Lo, SDValue &Hi);
   void SetSplitVector(SDValue Op, SDValue Lo, SDValue Hi);
 
+  /// Split mask operator of a VP intrinsic.
+  std::pair<SDValue, SDValue> SplitMask(SDValue Mask);
+
+  /// Split mask operator of a VP intrinsic in a given location.
+  std::pair<SDValue, SDValue> SplitMask(SDValue Mask, const SDLoc &DL);
+
   // Helper function for incrementing the pointer when splitting
   // memory operations
   void IncrementPointer(MemSDNode *N, EVT MemVT, MachinePointerInfo &MPI,
@@ -826,7 +830,7 @@ private:
 
   // Vector Result Splitting: <128 x ty> -> 2 x <64 x ty>.
   void SplitVectorResult(SDNode *N, unsigned ResNo);
-  void SplitVecRes_BinOp(SDNode *N, SDValue &Lo, SDValue &Hi, bool IsVP);
+  void SplitVecRes_BinOp(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_TernaryOp(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_UnaryOp(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_ExtendOp(SDNode *N, SDValue &Lo, SDValue &Hi);
@@ -847,8 +851,10 @@ private:
   void SplitVecRes_FCOPYSIGN(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_INSERT_VECTOR_ELT(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_LOAD(LoadSDNode *LD, SDValue &Lo, SDValue &Hi);
+  void SplitVecRes_VP_LOAD(VPLoadSDNode *LD, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_MLOAD(MaskedLoadSDNode *MLD, SDValue &Lo, SDValue &Hi);
-  void SplitVecRes_MGATHER(MaskedGatherSDNode *MGT, SDValue &Lo, SDValue &Hi);
+  void SplitVecRes_Gather(MemSDNode *VPGT, SDValue &Lo, SDValue &Hi,
+                          bool SplitSETCC = false);
   void SplitVecRes_ScalarOp(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_STEP_VECTOR(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_SETCC(SDNode *N, SDValue &Lo, SDValue &Hi);
@@ -864,6 +870,7 @@ private:
   SDValue SplitVecOp_VSELECT(SDNode *N, unsigned OpNo);
   SDValue SplitVecOp_VECREDUCE(SDNode *N, unsigned OpNo);
   SDValue SplitVecOp_VECREDUCE_SEQ(SDNode *N);
+  SDValue SplitVecOp_VP_REDUCE(SDNode *N, unsigned OpNo);
   SDValue SplitVecOp_UnaryOp(SDNode *N);
   SDValue SplitVecOp_TruncateHelper(SDNode *N);
 
@@ -873,9 +880,10 @@ private:
   SDValue SplitVecOp_EXTRACT_VECTOR_ELT(SDNode *N);
   SDValue SplitVecOp_ExtVecInRegOp(SDNode *N);
   SDValue SplitVecOp_STORE(StoreSDNode *N, unsigned OpNo);
+  SDValue SplitVecOp_VP_STORE(VPStoreSDNode *N, unsigned OpNo);
   SDValue SplitVecOp_MSTORE(MaskedStoreSDNode *N, unsigned OpNo);
-  SDValue SplitVecOp_MSCATTER(MaskedScatterSDNode *N, unsigned OpNo);
-  SDValue SplitVecOp_MGATHER(MaskedGatherSDNode *MGT, unsigned OpNo);
+  SDValue SplitVecOp_Scatter(MemSDNode *N, unsigned OpNo);
+  SDValue SplitVecOp_Gather(MemSDNode *MGT, unsigned OpNo);
   SDValue SplitVecOp_CONCAT_VECTORS(SDNode *N);
   SDValue SplitVecOp_VSETCC(SDNode *N);
   SDValue SplitVecOp_FP_ROUND(SDNode *N);
@@ -900,6 +908,23 @@ private:
   }
   void SetWidenedVector(SDValue Op, SDValue Result);
 
+  /// Given a mask Mask, returns the larger vector into which Mask was widened.
+  SDValue GetWidenedMask(SDValue Mask, ElementCount EC) {
+    // For VP operations, we must also widen the mask. Note that the mask type
+    // may not actually need widening, leading it be split along with the VP
+    // operation.
+    // FIXME: This could lead to an infinite split/widen loop. We only handle
+    // the case where the mask needs widening to an identically-sized type as
+    // the vector inputs.
+    assert(getTypeAction(Mask.getValueType()) ==
+               TargetLowering::TypeWidenVector &&
+           "Unable to widen binary VP op");
+    Mask = GetWidenedVector(Mask);
+    assert(Mask.getValueType().getVectorElementCount() == EC &&
+           "Unable to widen binary VP op");
+    return Mask;
+  }
+
   // Widen Vector Result Promotion.
   void WidenVectorResult(SDNode *N, unsigned ResNo);
   SDValue WidenVecRes_MERGE_VALUES(SDNode* N, unsigned ResNo);
@@ -911,10 +936,12 @@ private:
   SDValue WidenVecRes_INSERT_SUBVECTOR(SDNode *N);
   SDValue WidenVecRes_INSERT_VECTOR_ELT(SDNode* N);
   SDValue WidenVecRes_LOAD(SDNode* N);
+  SDValue WidenVecRes_VP_LOAD(VPLoadSDNode *N);
   SDValue WidenVecRes_MLOAD(MaskedLoadSDNode* N);
   SDValue WidenVecRes_MGATHER(MaskedGatherSDNode* N);
+  SDValue WidenVecRes_VP_GATHER(VPGatherSDNode* N);
   SDValue WidenVecRes_ScalarOp(SDNode* N);
-  SDValue WidenVecRes_SELECT(SDNode* N);
+  SDValue WidenVecRes_Select(SDNode *N);
   SDValue WidenVSELECTMask(SDNode *N);
   SDValue WidenVecRes_SELECT_CC(SDNode* N);
   SDValue WidenVecRes_SETCC(SDNode* N);
@@ -923,7 +950,7 @@ private:
   SDValue WidenVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N);
 
   SDValue WidenVecRes_Ternary(SDNode *N);
-  SDValue WidenVecRes_Binary(SDNode *N, bool IsVP);
+  SDValue WidenVecRes_Binary(SDNode *N);
   SDValue WidenVecRes_BinaryCanTrap(SDNode *N);
   SDValue WidenVecRes_BinaryWithExtraScalarOp(SDNode *N);
   SDValue WidenVecRes_StrictFP(SDNode *N);
@@ -945,9 +972,11 @@ private:
   SDValue WidenVecOp_INSERT_SUBVECTOR(SDNode *N);
   SDValue WidenVecOp_EXTRACT_SUBVECTOR(SDNode *N);
   SDValue WidenVecOp_STORE(SDNode* N);
+  SDValue WidenVecOp_VP_STORE(SDNode *N, unsigned OpNo);
   SDValue WidenVecOp_MSTORE(SDNode* N, unsigned OpNo);
   SDValue WidenVecOp_MGATHER(SDNode* N, unsigned OpNo);
   SDValue WidenVecOp_MSCATTER(SDNode* N, unsigned OpNo);
+  SDValue WidenVecOp_VP_SCATTER(SDNode* N, unsigned OpNo);
   SDValue WidenVecOp_SETCC(SDNode* N);
   SDValue WidenVecOp_STRICT_FSETCC(SDNode* N);
   SDValue WidenVecOp_VSELECT(SDNode *N);
@@ -957,6 +986,7 @@ private:
   SDValue WidenVecOp_FCOPYSIGN(SDNode *N);
   SDValue WidenVecOp_VECREDUCE(SDNode *N);
   SDValue WidenVecOp_VECREDUCE_SEQ(SDNode *N);
+  SDValue WidenVecOp_VP_REDUCE(SDNode *N);
 
   /// Helper function to generate a set of operations to perform
   /// a vector operation for a wider type.
@@ -1023,7 +1053,7 @@ private:
   void SplitRes_MERGE_VALUES(SDNode *N, unsigned ResNo,
                              SDValue &Lo, SDValue &Hi);
   void SplitRes_ARITH_FENCE (SDNode *N, SDValue &Lo, SDValue &Hi);
-  void SplitRes_SELECT      (SDNode *N, SDValue &Lo, SDValue &Hi);
+  void SplitRes_Select      (SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitRes_SELECT_CC   (SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitRes_UNDEF       (SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitRes_FREEZE      (SDNode *N, SDValue &Lo, SDValue &Hi);

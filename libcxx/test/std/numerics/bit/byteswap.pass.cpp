@@ -41,8 +41,10 @@ constexpr std::pair<T, T> get_test_data() {
     return {static_cast<T>(0x60AF8503), static_cast<T>(0x0385AF60)};
   case 8:
     return {static_cast<T>(0xABCDFE9477936406), static_cast<T>(0x0664937794FECDAB)};
+  default:
+    assert(false);
+    return {}; // for MSVC, whose `assert` is tragically not [[noreturn]]
   }
-  assert(false);
 }
 
 template <class T>
@@ -57,12 +59,12 @@ constexpr bool test() {
   test_num<uint32_t>(0x01234567, 0x67452301);
   test_num<uint64_t>(0x0123456789ABCDEF, 0xEFCDAB8967452301);
 
-  test_num<int8_t>(0xAB, 0xAB);
-  test_num<int16_t>(0xCDEF, 0xEFCD);
+  test_num<int8_t>(static_cast<int8_t>(0xAB), static_cast<int8_t>(0xAB));
+  test_num<int16_t>(static_cast<int16_t>(0xCDEF), static_cast<int16_t>(0xEFCD));
   test_num<int32_t>(0x01234567, 0x67452301);
   test_num<int64_t>(0x0123456789ABCDEF, 0xEFCDAB8967452301);
 
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
   const auto in = static_cast<__uint128_t>(0x0123456789ABCDEF) << 64 | 0x13579BDF02468ACE;
   const auto expected = static_cast<__uint128_t>(0xCE8A4602DF9B5713) << 64 | 0xEFCDAB8967452301;
   test_num<__uint128_t>(in, expected);
@@ -71,7 +73,7 @@ constexpr bool test() {
 
   test_num<bool>(true, true);
   test_num<bool>(false, false);
-  test_num<char>(0xCD, 0xCD);
+  test_num<char>(static_cast<char>(0xCD), static_cast<char>(0xCD));
   test_num<unsigned char>(0xEF, 0xEF);
   test_num<signed char>(0x45, 0x45);
   test_num<char8_t>(0xAB, 0xAB);

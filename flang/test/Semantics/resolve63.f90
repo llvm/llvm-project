@@ -265,9 +265,9 @@ contains
     i = x + y
     i = x + i
     i = y + i
-    !ERROR: No intrinsic or user-defined OPERATOR(+) matches operand types TYPE(t2) and TYPE(t1)
+    !ERROR: No intrinsic or user-defined OPERATOR(+) matches operand types CLASS(t2) and CLASS(t1)
     i = y + x
-    !ERROR: No intrinsic or user-defined OPERATOR(+) matches operand types INTEGER(4) and TYPE(t1)
+    !ERROR: No intrinsic or user-defined OPERATOR(+) matches operand types INTEGER(4) and CLASS(t1)
     i = i + x
   end
 end
@@ -344,3 +344,18 @@ module m8
     call generic(null(), null())
   end subroutine
 end
+
+! Ensure no bogus errors for assignments to CLASS(*) allocatable
+module m10
+  type :: t1
+    integer :: n
+  end type
+ contains
+  subroutine test
+    class(*), allocatable :: poly
+    poly = 1
+    poly = 3.14159
+    poly = 'Il faut imaginer Sisyphe heureux'
+    poly = t1(1)
+  end subroutine
+end module

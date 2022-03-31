@@ -29,38 +29,51 @@ class OutputSection;
 
 class InputSection {
 public:
-  enum Kind {
+  enum Kind : uint8_t {
     ConcatKind,
     CStringLiteralKind,
     WordLiteralKind,
   };
 
-  Kind kind() const { return shared->sectionKind; }
+  Kind kind() const { return sectionKind; }
   virtual ~InputSection() = default;
   virtual uint64_t getSize() const { return data.size(); }
   virtual bool empty() const { return data.empty(); }
-  InputFile *getFile() const { return shared->file; }
-  StringRef getName() const { return shared->name; }
-  StringRef getSegName() const { return shared->segname; }
-  uint32_t getFlags() const { return shared->flags; }
+  InputFile *getFile() const { return section.file; }
+  StringRef getName() const { return section.name; }
+  StringRef getSegName() const { return section.segname; }
+  uint32_t getFlags() const { return section.flags; }
   uint64_t getFileSize() const;
   // Translates \p off -- an offset relative to this InputSection -- into an
   // offset from the beginning of its parent OutputSection.
   virtual uint64_t getOffset(uint64_t off) const = 0;
   // The offset from the beginning of the file.
   uint64_t getVA(uint64_t off) const;
+  // Return a user-friendly string for use in diagnostics.
+  std::string getLocation(uint64_t off) const;
   // Whether the data at \p off in this InputSection is live.
   virtual bool isLive(uint64_t off) const = 0;
   virtual void markLive(uint64_t off) = 0;
   virtual InputSection *canonical() { return this; }
+  virtual const InputSection *canonical() const { return this; }
+
+protected:
+  InputSection(Kind kind, const Section &section, ArrayRef<uint8_t> data,
+               uint32_t align)
+      : sectionKind(kind), align(align), data(data), section(section) {}
+
+  InputSection(const InputSection &rhs)
+      : sectionKind(rhs.sectionKind), align(rhs.align), data(rhs.data),
+        section(rhs.section) {}
+
+  Kind sectionKind;
+
+public:
+  // is address assigned?
+  bool isFinal = false;
+  uint32_t align = 1;
 
   OutputSection *parent = nullptr;
-
-  uint32_t align = 1;
-  uint32_t callSiteCount : 31;
-  // is address assigned?
-  uint32_t isFinal : 1;
-
   ArrayRef<uint8_t> data;
   std::vector<Reloc> relocs;
   // The symbols that belong to this InputSection, sorted by value. With
@@ -68,32 +81,7 @@ public:
   llvm::TinyPtrVector<Defined *> symbols;
 
 protected:
-  // The fields in this struct are immutable. Since we create a lot of
-  // InputSections with identical values for them (due to
-  // .subsections_via_symbols), factoring them out into a shared struct reduces
-  // memory consumption and makes copying cheaper.
-  struct Shared {
-    InputFile *file;
-    StringRef name;
-    StringRef segname;
-    uint32_t flags;
-    Kind sectionKind;
-    Shared(InputFile *file, StringRef name, StringRef segname, uint32_t flags,
-           Kind kind)
-        : file(file), name(name), segname(segname), flags(flags),
-          sectionKind(kind) {}
-  };
-
-  InputSection(Kind kind, StringRef segname, StringRef name, InputFile *file,
-               ArrayRef<uint8_t> data, uint32_t align, uint32_t flags)
-      : align(align), callSiteCount(0), isFinal(false), data(data),
-        shared(make<Shared>(file, name, segname, flags, kind)) {}
-
-  InputSection(const InputSection &rhs)
-      : align(rhs.align), callSiteCount(0), isFinal(false), data(rhs.data),
-        shared(rhs.shared) {}
-
-  const Shared *const shared;
+  const Section &section;
 };
 
 // ConcatInputSections are combined into (Concat)OutputSections through simple
@@ -101,15 +89,9 @@ protected:
 // contents merged before output.
 class ConcatInputSection final : public InputSection {
 public:
-  ConcatInputSection(StringRef segname, StringRef name, InputFile *file,
-                     ArrayRef<uint8_t> data, uint32_t align = 1,
-                     uint32_t flags = 0)
-      : InputSection(ConcatKind, segname, name, file, data, align, flags) {}
-
-  ConcatInputSection(StringRef segname, StringRef name)
-      : ConcatInputSection(segname, name, /*file=*/nullptr,
-                           /*data=*/{},
-                           /*align=*/1, /*flags=*/0) {}
+  ConcatInputSection(const Section &section, ArrayRef<uint8_t> data,
+                     uint32_t align = 1)
+      : InputSection(ConcatKind, section, data, align) {}
 
   uint64_t getOffset(uint64_t off) const override { return outSecOff + off; }
   uint64_t getVA() const { return InputSection::getVA(0); }
@@ -118,12 +100,13 @@ public:
   void markLive(uint64_t off) override { live = true; }
   bool isCoalescedWeak() const { return wasCoalesced && symbols.empty(); }
   bool shouldOmitFromOutput() const { return !live || isCoalescedWeak(); }
-  bool isHashableForICF() const;
-  void hashForICF();
   void writeTo(uint8_t *buf);
 
   void foldIdentical(ConcatInputSection *redundant);
   ConcatInputSection *canonical() override {
+    return replacement ? replacement : this;
+  }
+  const InputSection *canonical() const override {
     return replacement ? replacement : this;
   }
 
@@ -134,7 +117,7 @@ public:
   // Points to the surviving section after this one is folded by ICF
   ConcatInputSection *replacement = nullptr;
   // Equivalence-class ID for ICF
-  uint64_t icfEqClass[2] = {0, 0};
+  uint32_t icfEqClass[2] = {0, 0};
 
   // With subsections_via_symbols, most symbols have their own InputSection,
   // and for weak symbols (e.g. from inline functions), only the
@@ -143,11 +126,19 @@ public:
   // first and not copied to the output.
   bool wasCoalesced = false;
   bool live = !config->deadStrip;
+  bool hasCallSites = false;
   // This variable has two usages. Initially, it represents the input order.
   // After assignAddresses is called, it represents the offset from the
   // beginning of the output section this section was assigned to.
   uint64_t outSecOff = 0;
 };
+
+// Initialize a fake InputSection that does not belong to any InputFile.
+ConcatInputSection *makeSyntheticInputSection(StringRef segName,
+                                              StringRef sectName,
+                                              uint32_t flags = 0,
+                                              ArrayRef<uint8_t> data = {},
+                                              uint32_t align = 1);
 
 // Helper functions to make it easy to sprinkle asserts.
 
@@ -190,10 +181,9 @@ static_assert(sizeof(StringPiece) == 16, "StringPiece is too big!");
 // conservative behavior we can certainly implement that.
 class CStringInputSection final : public InputSection {
 public:
-  CStringInputSection(StringRef segname, StringRef name, InputFile *file,
-                      ArrayRef<uint8_t> data, uint32_t align, uint32_t flags)
-      : InputSection(CStringLiteralKind, segname, name, file, data, align,
-                     flags) {}
+  CStringInputSection(const Section &section, ArrayRef<uint8_t> data,
+                      uint32_t align)
+      : InputSection(CStringLiteralKind, section, data, align) {}
   uint64_t getOffset(uint64_t off) const override;
   bool isLive(uint64_t off) const override { return getStringPiece(off).live; }
   void markLive(uint64_t off) override { getStringPiece(off).live = true; }
@@ -228,14 +218,15 @@ public:
 
 class WordLiteralInputSection final : public InputSection {
 public:
-  WordLiteralInputSection(StringRef segname, StringRef name, InputFile *file,
-                          ArrayRef<uint8_t> data, uint32_t align,
-                          uint32_t flags);
+  WordLiteralInputSection(const Section &section, ArrayRef<uint8_t> data,
+                          uint32_t align);
   uint64_t getOffset(uint64_t off) const override;
   bool isLive(uint64_t off) const override {
     return live[off >> power2LiteralSize];
   }
-  void markLive(uint64_t off) override { live[off >> power2LiteralSize] = 1; }
+  void markLive(uint64_t off) override {
+    live[off >> power2LiteralSize] = true;
+  }
 
   static bool classof(const InputSection *isec) {
     return isec->kind() == WordLiteralKind;
@@ -277,8 +268,8 @@ inline bool isWordLiteralSection(uint32_t flags) {
 }
 
 bool isCodeSection(const InputSection *);
-
 bool isCfStringSection(const InputSection *);
+bool isClassRefsSection(const InputSection *);
 
 extern std::vector<ConcatInputSection *> inputSections;
 
@@ -290,6 +281,7 @@ constexpr const char binding[] = "__binding";
 constexpr const char bitcodeBundle[] = "__bundle";
 constexpr const char cString[] = "__cstring";
 constexpr const char cfString[] = "__cfstring";
+constexpr const char cgProfile[] = "__cg_profile";
 constexpr const char codeSignature[] = "__code_signature";
 constexpr const char common[] = "__common";
 constexpr const char compactUnwind[] = "__compact_unwind";
@@ -314,6 +306,7 @@ constexpr const char moduleTermFunc[] = "__mod_term_func";
 constexpr const char nonLazySymbolPtr[] = "__nl_symbol_ptr";
 constexpr const char objcCatList[] = "__objc_catlist";
 constexpr const char objcClassList[] = "__objc_classlist";
+constexpr const char objcClassRefs[] = "__objc_classrefs";
 constexpr const char objcConst[] = "__objc_const";
 constexpr const char objcImageInfo[] = "__objc_imageinfo";
 constexpr const char objcNonLazyCatList[] = "__objc_nlcatlist";

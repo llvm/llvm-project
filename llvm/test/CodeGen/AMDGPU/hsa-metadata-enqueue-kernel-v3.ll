@@ -50,7 +50,7 @@ define amdgpu_kernel void @test_non_enqueue_kernel_caller(i8 %a) #0
 ; CHECK-NEXT:       - .address_space:  global
 ; CHECK-NEXT:         .offset:         32
 ; CHECK-NEXT:         .size:           8
-; CHECK-NEXT:         .value_kind:     hidden_none
+; CHECK-NEXT:         .value_kind:     hidden_hostcall_buffer
 ; CHECK-NEXT:       - .address_space:  global
 ; CHECK-NEXT:         .offset:         40
 ; CHECK-NEXT:         .size:           8

@@ -1,4 +1,4 @@
-//===-- M68kCallingConv.h - M68k Custom CC Routines ---------*- C++ -*-===//
+//===-- M68kCallingConv.h - M68k Custom CC Routines -------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -74,4 +74,4 @@ inline bool CC_M68k_Any_AssignToReg(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
 
 } // namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_M68K_M68KCALLINGCONV_H

@@ -17,8 +17,9 @@
 //   future_status
 //   wait_for(const chrono::duration<Rep, Period>& rel_time) const;
 
-#include <future>
 #include <cassert>
+#include <chrono>
+#include <future>
 
 #include "make_test_thread.h"
 #include "test_macros.h"

@@ -14,7 +14,6 @@
 
 #include "Plugins/Process/Utility/GDBRemoteSignals.h"
 #include "Plugins/Process/gdb-remote/GDBRemoteCommunicationClient.h"
-#include "Plugins/Process/gdb-remote/GDBRemoteCommunicationReplayServer.h"
 #include "lldb/Target/Platform.h"
 
 namespace lldb_private {
@@ -66,7 +65,8 @@ public:
                                          // target, else use existing one
                          Status &error) override;
 
-  std::vector<ArchSpec> GetSupportedArchitectures() override {
+  std::vector<ArchSpec>
+  GetSupportedArchitectures(const ArchSpec &process_host_arch) override {
     return m_supported_architectures;
   }
 
@@ -154,8 +154,8 @@ public:
   GetPendingGdbServerList(std::vector<std::string> &connection_urls);
 
 protected:
-  process_gdb_remote::GDBRemoteCommunicationClient m_gdb_client;
-  process_gdb_remote::GDBRemoteCommunicationReplayServer m_gdb_replay_server;
+  std::unique_ptr<process_gdb_remote::GDBRemoteCommunicationClient>
+      m_gdb_client_up;
   std::string m_platform_description; // After we connect we can get a more
                                       // complete description of what we are
                                       // connected to

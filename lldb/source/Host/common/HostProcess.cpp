@@ -22,20 +22,15 @@ HostProcess::~HostProcess() = default;
 
 Status HostProcess::Terminate() { return m_native_process->Terminate(); }
 
-Status HostProcess::GetMainModule(FileSpec &file_spec) const {
-  return m_native_process->GetMainModule(file_spec);
-}
-
 lldb::pid_t HostProcess::GetProcessId() const {
   return m_native_process->GetProcessId();
 }
 
 bool HostProcess::IsRunning() const { return m_native_process->IsRunning(); }
 
-llvm::Expected<HostThread>
-HostProcess::StartMonitoring(const Host::MonitorChildProcessCallback &callback,
-                             bool monitor_signals) {
-  return m_native_process->StartMonitoring(callback, monitor_signals);
+llvm::Expected<HostThread> HostProcess::StartMonitoring(
+    const Host::MonitorChildProcessCallback &callback) {
+  return m_native_process->StartMonitoring(callback);
 }
 
 HostNativeProcessBase &HostProcess::GetNativeProcess() {

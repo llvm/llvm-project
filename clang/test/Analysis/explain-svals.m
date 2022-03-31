@@ -21,7 +21,7 @@ void test_1(Object *p) {
   clang_analyzer_explain(q->x); // expected-warning-re{{{{^initial value of instance variable 'x' of object at symbol of type 'Object \*' conjured at statement '\[\[Object alloc\] init\]'$}}}}
 }
 
-void test_2() {
+void test_2(void) {
   __block int x;
   ^{
     clang_analyzer_explain(&x); // expected-warning-re{{{{^pointer to block variable 'x'$}}}}

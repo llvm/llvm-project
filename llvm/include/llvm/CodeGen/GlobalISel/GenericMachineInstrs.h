@@ -14,6 +14,7 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_GENERICMACHINEINSTRS_H
 #define LLVM_CODEGEN_GLOBALISEL_GENERICMACHINEINSTRS_H
 
+#include "llvm/IR/Instructions.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
@@ -223,6 +224,37 @@ public:
 
   static bool classof(const MachineInstr *MI) {
     return MI->getOpcode() == TargetOpcode::G_SELECT;
+  }
+};
+
+/// Represent a G_ICMP or G_FCMP.
+class GAnyCmp : public GenericMachineInstr {
+public:
+  CmpInst::Predicate getCond() const {
+    return static_cast<CmpInst::Predicate>(getOperand(1).getPredicate());
+  }
+  Register getLHSReg() const { return getReg(2); }
+  Register getRHSReg() const { return getReg(3); }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_ICMP ||
+           MI->getOpcode() == TargetOpcode::G_FCMP;
+  }
+};
+
+/// Represent a G_ICMP.
+class GICmp : public GAnyCmp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_ICMP;
+  }
+};
+
+/// Represent a G_FCMP.
+class GFCmp : public GAnyCmp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_FCMP;
   }
 };
 

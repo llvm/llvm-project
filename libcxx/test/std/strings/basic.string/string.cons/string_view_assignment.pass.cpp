@@ -17,7 +17,7 @@
 #include "min_allocator.h"
 
 template <class S, class SV>
-void
+TEST_CONSTEXPR_CXX20 void
 test(S s1, SV sv)
 {
     typedef typename S::traits_type T;
@@ -28,9 +28,8 @@ test(S s1, SV sv)
     assert(s1.capacity() >= s1.size());
 }
 
-int main(int, char**)
-{
-    {
+bool test() {
+  {
     typedef std::string S;
     typedef std::string_view SV;
     test(S(), SV(""));
@@ -48,9 +47,9 @@ int main(int, char**)
     test(S("1234567890123456789012345678901234567890123456789012345678901234567890"
            "1234567890123456789012345678901234567890123456789012345678901234567890"),
          SV("abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz"));
-    }
+  }
 #if TEST_STD_VER >= 11
-    {
+  {
     typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
     typedef std::string_view SV;
     test(S(), SV(""));
@@ -68,7 +67,17 @@ int main(int, char**)
     test(S("1234567890123456789012345678901234567890123456789012345678901234567890"
            "1234567890123456789012345678901234567890123456789012345678901234567890"),
          SV("abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz"));
-    }
+  }
+#endif
+
+  return true;
+}
+
+int main(int, char**)
+{
+  test();
+#if TEST_STD_VER > 17
+  // static_assert(test());
 #endif
 
   return 0;

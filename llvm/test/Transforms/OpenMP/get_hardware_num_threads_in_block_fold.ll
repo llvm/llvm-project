@@ -13,7 +13,7 @@ target triple = "nvptx64"
 ; CHECK: @[[KERNEL1_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 3
 ; CHECK: @[[KERNEL2_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 3
 ; CHECK: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
-; CHECK: @[[GLOB1:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* @[[GLOB0]], i32 0, i32 0) }, align 8
+; CHECK: @[[GLOB1:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 22, i8* getelementptr inbounds ([23 x i8], [23 x i8]* @[[GLOB0]], i32 0, i32 0) }, align 8
 ;.
 define weak void @kernel0() #0 {
 ; CHECK-LABEL: define {{[^@]+}}@kernel0
@@ -178,7 +178,16 @@ entry:
   ret void
 }
 
-declare i32 @__kmpc_get_hardware_num_threads_in_block()
+define internal i32 @__kmpc_get_hardware_num_threads_in_block() {
+; CHECK-LABEL: define {{[^@]+}}@__kmpc_get_hardware_num_threads_in_block
+; CHECK-SAME: () #[[ATTR1]] {
+; CHECK-NEXT:    [[RET:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block_dummy()
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+  %ret = call i32 @__kmpc_get_hardware_num_threads_in_block_dummy()
+  ret i32 %ret
+}
+declare i32 @__kmpc_get_hardware_num_threads_in_block_dummy()
 declare i32 @__kmpc_target_init(%struct.ident_t*, i8, i1 zeroext, i1 zeroext) #1
 declare void @__kmpc_target_deinit(%struct.ident_t* nocapture readnone, i8, i1 zeroext) #1
 declare void @__kmpc_parallel_51(%struct.ident_t*, i32, i32, i32, i32, i8*, i8*, i8**, i64)

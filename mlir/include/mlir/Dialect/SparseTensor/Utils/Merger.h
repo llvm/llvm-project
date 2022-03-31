@@ -13,7 +13,7 @@
 #ifndef MLIR_DIALECT_SPARSETENSOR_UTILS_MERGER_H_
 #define MLIR_DIALECT_SPARSETENSOR_UTILS_MERGER_H_
 
-#include "mlir/Dialect/Linalg/IR/LinalgOps.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/BitVector.h"
 
@@ -28,6 +28,7 @@ enum Kind {
   // Leaf.
   kTensor = 0,
   kInvariant,
+  kIndex,
   // Unary operations.
   kAbsF,
   kCeilF,
@@ -42,6 +43,7 @@ enum Kind {
   kCastUF, // unsigned
   kCastS,  // signed
   kCastU,  // unsigned
+  kCastIdx,
   kTruncI,
   kBitCast,
   // Binary operations.
@@ -79,6 +81,9 @@ struct TensorExp {
     /// Expressions representing tensors simply have a tensor number.
     unsigned tensor;
 
+    /// Indices hold the index number.
+    unsigned index;
+
     /// Tensor operations hold the indices of their children.
     Children children;
   };
@@ -94,16 +99,16 @@ struct TensorExp {
 /// tensor expression.
 struct LatPoint {
   LatPoint(unsigned n, unsigned e, unsigned b);
-  LatPoint(const llvm::BitVector &b, unsigned e);
+  LatPoint(const BitVector &b, unsigned e);
 
   /// Conjunction of tensor loop indices as bitvector. This represents
   /// all indices involved in the tensor expression
-  llvm::BitVector bits;
+  BitVector bits;
 
   /// Simplified conjunction of tensor loop indices as bitvector. This
   /// represents a simplified condition under which this tensor expression
   /// must execute. Pre-computed during codegen to avoid repeated eval.
-  llvm::BitVector simple;
+  BitVector simple;
 
   /// Index of the tensor expresssion.
   unsigned exp;
@@ -163,7 +168,7 @@ public:
   /// within the given set using just two basic rules:
   /// (1) multiple dense conditions are reduced to single dense, and
   /// (2) a *singleton* sparse/dense is reduced to sparse/random access.
-  llvm::BitVector simplifyCond(unsigned s0, unsigned p0);
+  BitVector simplifyCond(unsigned s0, unsigned p0);
 
   /// Returns true if Li > Lj.
   bool latGT(unsigned i, unsigned j) const;
@@ -190,7 +195,7 @@ public:
   }
 
   /// Returns true if any set bit corresponds to queried dim.
-  bool hasAnyDimOf(const llvm::BitVector &bits, Dim d) const;
+  bool hasAnyDimOf(const BitVector &bits, Dim d) const;
 
   /// Returns true if given tensor iterates *only* in the given tensor
   /// expression. For the output tensor, this defines a "simply dynamic"
@@ -217,7 +222,7 @@ public:
   void dumpExp(unsigned e) const;
   void dumpLat(unsigned p) const;
   void dumpSet(unsigned s) const;
-  void dumpBits(const llvm::BitVector &bits) const;
+  void dumpBits(const BitVector &bits) const;
 #endif
 
   /// Builds the iteration lattices in a bottom-up traversal given the remaining

@@ -219,6 +219,11 @@ static cl::opt<bool> ShowEncoding(
     cl::desc("Print encoding information in the instruction info view"),
     cl::cat(ViewOptions), cl::init(false));
 
+static cl::opt<bool> ShowBarriers(
+    "show-barriers",
+    cl::desc("Print memory barrier information in the instruction info view"),
+    cl::cat(ViewOptions), cl::init(false));
+
 static cl::opt<bool> DisableCustomBehaviour(
     "disable-cb",
     cl::desc(
@@ -347,12 +352,6 @@ int main(int argc, char **argv) {
   if (!STI->isCPUStringValid(MCPU))
     return 1;
 
-  bool IsOutOfOrder = STI->getSchedModel().isOutOfOrder();
-  if (!PrintInstructionTables && !IsOutOfOrder) {
-    WithColor::warning() << "support for in-order CPU '" << MCPU
-                         << "' is experimental.\n";
-  }
-
   if (!STI->getSchedModel().hasInstrSchedModel()) {
     WithColor::error()
         << "unable to find instruction-level scheduling information for"
@@ -367,6 +366,7 @@ int main(int argc, char **argv) {
   }
 
   // Apply overrides to llvm-mca specific options.
+  bool IsOutOfOrder = STI->getSchedModel().isOutOfOrder();
   processViewOptions(IsOutOfOrder);
 
   std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TripleName));
@@ -465,6 +465,21 @@ int main(int argc, char **argv) {
 
   const MCSchedModel &SM = STI->getSchedModel();
 
+  std::unique_ptr<mca::InstrPostProcess> IPP;
+  if (!DisableCustomBehaviour) {
+    // TODO: It may be a good idea to separate CB and IPP so that they can
+    // be used independently of each other. What I mean by this is to add
+    // an extra command-line arg --disable-ipp so that CB and IPP can be
+    // toggled without needing to toggle both of them together.
+    IPP = std::unique_ptr<mca::InstrPostProcess>(
+        TheTarget->createInstrPostProcess(*STI, *MCII));
+  }
+  if (!IPP) {
+    // If the target doesn't have its own IPP implemented (or the -disable-cb
+    // flag is set) then we use the base class (which does nothing).
+    IPP = std::make_unique<mca::InstrPostProcess>(*STI, *MCII);
+  }
+
   // Create an instruction builder.
   mca::InstrBuilder IB(*STI, *MCII, *MRI, MCIA.get());
 
@@ -479,7 +494,7 @@ int main(int argc, char **argv) {
   unsigned RegionIdx = 0;
 
   std::unique_ptr<MCCodeEmitter> MCE(
-      TheTarget->createMCCodeEmitter(*MCII, *MRI, Ctx));
+      TheTarget->createMCCodeEmitter(*MCII, Ctx));
   assert(MCE && "Unable to create code emitter!");
 
   std::unique_ptr<MCAsmBackend> MAB(TheTarget->createMCAsmBackend(
@@ -498,18 +513,9 @@ int main(int argc, char **argv) {
     ArrayRef<MCInst> Insts = Region->getInstructions();
     mca::CodeEmitter CE(*STI, *MAB, *MCE, Insts);
 
-    std::unique_ptr<mca::InstrPostProcess> IPP;
-    if (!DisableCustomBehaviour) {
-      IPP = std::unique_ptr<mca::InstrPostProcess>(
-          TheTarget->createInstrPostProcess(*STI, *MCII));
-    }
-    if (!IPP)
-      // If the target doesn't have its own IPP implemented (or the
-      // -disable-cb flag is set) then we use the base class
-      // (which does nothing).
-      IPP = std::make_unique<mca::InstrPostProcess>(*STI, *MCII);
+    IPP->resetState();
 
-    std::vector<std::unique_ptr<mca::Instruction>> LoweredSequence;
+    SmallVector<std::unique_ptr<mca::Instruction>> LoweredSequence;
     for (const MCInst &MCI : Insts) {
       Expected<std::unique_ptr<mca::Instruction>> Inst =
           IB.createInstruction(MCI);
@@ -553,7 +559,8 @@ int main(int argc, char **argv) {
       // Create the views for this pipeline, execute, and emit a report.
       if (PrintInstructionInfoView) {
         Printer.addView(std::make_unique<mca::InstructionInfoView>(
-            *STI, *MCII, CE, ShowEncoding, Insts, *IP));
+            *STI, *MCII, CE, ShowEncoding, Insts, *IP, LoweredSequence,
+            ShowBarriers));
       }
       Printer.addView(
           std::make_unique<mca::ResourcePressureView>(*STI, *IP, Insts));
@@ -629,7 +636,8 @@ int main(int argc, char **argv) {
 
     if (PrintInstructionInfoView)
       Printer.addView(std::make_unique<mca::InstructionInfoView>(
-          *STI, *MCII, CE, ShowEncoding, Insts, *IP));
+          *STI, *MCII, CE, ShowEncoding, Insts, *IP, LoweredSequence,
+          ShowBarriers));
 
     // Fetch custom Views that are to be placed after the InstructionInfoView.
     // Refer to the comment paired with the CB->getStartViews(*IP, Insts); line

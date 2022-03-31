@@ -152,12 +152,7 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   Value *SrcPtr = Load->getPointerOperand()->stripPointerCasts();
   assert(isa<PointerType>(SrcPtr->getType()) && "Expected a pointer type");
 
-  // If original AS != Load's AS, we can't bitcast the original pointer and have
-  // to use Load's operand instead. Ideally we would want to strip pointer casts
-  // without changing AS, but there's no API to do that ATM.
   unsigned AS = Load->getPointerAddressSpace();
-  if (AS != SrcPtr->getType()->getPointerAddressSpace())
-    SrcPtr = Load->getPointerOperand();
 
   // We are potentially transforming byte-sized (8-bit) memory accesses, so make
   // sure we have all of our type-based constraints in place for this target.
@@ -245,7 +240,8 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   // It is safe and potentially profitable to load a vector directly:
   // inselt undef, load Scalar, 0 --> load VecPtr
   IRBuilder<> Builder(Load);
-  Value *CastedPtr = Builder.CreateBitCast(SrcPtr, MinVecTy->getPointerTo(AS));
+  Value *CastedPtr = Builder.CreatePointerBitCastOrAddrSpaceCast(
+      SrcPtr, MinVecTy->getPointerTo(AS));
   Value *VecLd = Builder.CreateAlignedLoad(MinVecTy, CastedPtr, Alignment);
   VecLd = Builder.CreateShuffleVector(VecLd, Mask);
 
@@ -881,7 +877,8 @@ static ScalarizationResult canScalarizeAccess(FixedVectorType *VecTy,
   ConstantRange IdxRange(IntWidth, true);
 
   if (isGuaranteedNotToBePoison(Idx, &AC)) {
-    if (ValidIndices.contains(computeConstantRange(Idx, true, &AC, CtxI, &DT)))
+    if (ValidIndices.contains(computeConstantRange(Idx, /* ForSigned */ false,
+                                                   true, &AC, CtxI, &DT)))
       return ScalarizationResult::safe();
     return ScalarizationResult::unsafe();
   }
@@ -989,9 +986,9 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
   if (!FixedVT)
     return false;
 
-  InstructionCost OriginalCost = TTI.getMemoryOpCost(
-      Instruction::Load, LI->getType(), Align(LI->getAlignment()),
-      LI->getPointerAddressSpace());
+  InstructionCost OriginalCost =
+      TTI.getMemoryOpCost(Instruction::Load, LI->getType(), LI->getAlign(),
+                          LI->getPointerAddressSpace());
   InstructionCost ScalarizedCost = 0;
 
   Instruction *LastCheckedInst = LI;
@@ -1018,12 +1015,8 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
           return false;
         NumInstChecked++;
       }
+      LastCheckedInst = UI;
     }
-
-    if (!LastCheckedInst)
-      LastCheckedInst = UI;
-    else if (LastCheckedInst->comesBefore(UI))
-      LastCheckedInst = UI;
 
     auto ScalarIdx = canScalarizeAccess(FixedVT, UI->getOperand(1), &I, AC, DT);
     if (!ScalarIdx.isSafe()) {

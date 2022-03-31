@@ -9,13 +9,11 @@
 #ifndef _LIBCPP___ALGORITHM_ROTATE_COPY_H
 #define _LIBCPP___ALGORITHM_ROTATE_COPY_H
 
-#include <__config>
 #include <__algorithm/copy.h>
-#include <iterator>
-#include <type_traits>
+#include <__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD

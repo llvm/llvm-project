@@ -11,21 +11,21 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "CodeGenTarget.h"
+#include "GlobalISel/CodeExpander.h"
+#include "GlobalISel/CodeExpansions.h"
+#include "GlobalISel/GIMatchDag.h"
+#include "GlobalISel/GIMatchDagPredicate.h"
+#include "GlobalISel/GIMatchTree.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ScopedPrinter.h"
-#include "llvm/Support/Timer.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/StringMatcher.h"
 #include "llvm/TableGen/TableGenBackend.h"
-#include "CodeGenTarget.h"
-#include "GlobalISel/CodeExpander.h"
-#include "GlobalISel/CodeExpansions.h"
-#include "GlobalISel/GIMatchDag.h"
-#include "GlobalISel/GIMatchTree.h"
 #include <cstdint>
 
 using namespace llvm;
@@ -633,7 +633,7 @@ void GICombinerEmitter::emitNameMatcher(raw_ostream &OS) const {
     raw_string_ostream SS(Code);
     SS << "return " << EnumeratedRule.getID() << ";\n";
     Cases.push_back(
-        std::make_pair(std::string(EnumeratedRule.getName()), SS.str()));
+        std::make_pair(std::string(EnumeratedRule.getName()), Code));
   }
 
   OS << "static Optional<uint64_t> getRuleIdxForIdentifier(StringRef "
@@ -939,15 +939,14 @@ void GICombinerEmitter::run(raw_ostream &OS) {
      << "      report_fatal_error(\"Beginning of range should be before "
         "end of range\");\n"
      << "    return {{*First, *Last + 1}};\n"
-     << "  } else if (RangePair.first == \"*\") {\n"
-     << "    return {{0, " << Rules.size() << "}};\n"
-     << "  } else {\n"
-     << "    const auto I = getRuleIdxForIdentifier(RangePair.first);\n"
-     << "    if (!I.hasValue())\n"
-     << "      return None;\n"
-     << "    return {{*I, *I + 1}};\n"
      << "  }\n"
-     << "  return None;\n"
+     << "  if (RangePair.first == \"*\") {\n"
+     << "    return {{0, " << Rules.size() << "}};\n"
+     << "  }\n"
+     << "  const auto I = getRuleIdxForIdentifier(RangePair.first);\n"
+     << "  if (!I.hasValue())\n"
+     << "    return None;\n"
+     << "  return {{*I, *I + 1}};\n"
      << "}\n\n";
 
   for (bool Enabled : {true, false}) {

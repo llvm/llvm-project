@@ -122,6 +122,12 @@ ARM_ARCH("armv8.7-a", ARMV8_7A, "8.7-A", "v8.7a",
          (ARM::AEK_SEC        | ARM::AEK_MP   | ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
           ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP  | ARM::AEK_CRC  | ARM::AEK_RAS |
           ARM::AEK_DOTPROD    | ARM::AEK_BF16 | ARM::AEK_I8MM))
+ARM_ARCH("armv8.8-a", ARMV8_8A, "8.8-A", "v8.8a",
+         ARMBuildAttrs::CPUArch::v8_A, FK_CRYPTO_NEON_FP_ARMV8,
+         (ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
+          ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP | ARM::AEK_CRC | ARM::AEK_RAS |
+          ARM::AEK_DOTPROD | ARM::AEK_BF16 | ARM::AEK_SHA2 | ARM::AEK_AES |
+          ARM::AEK_I8MM))
 ARM_ARCH("armv9-a", ARMV9A, "9-A", "v9a",
          ARMBuildAttrs::CPUArch::v8_A, FK_NEON_FP_ARMV8,
          (ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
@@ -134,6 +140,11 @@ ARM_ARCH("armv9.1-a", ARMV9_1A, "9.1-A", "v9.1a",
           ARM::AEK_DOTPROD | ARM::AEK_BF16 | ARM::AEK_I8MM))
 ARM_ARCH("armv9.2-a", ARMV9_2A, "9.2-A", "v9.2a",
          ARMBuildAttrs::CPUArch::v8_A, FK_NEON_FP_ARMV8,
+         (ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
+          ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP | ARM::AEK_CRC | ARM::AEK_RAS |
+          ARM::AEK_DOTPROD | ARM::AEK_BF16 | ARM::AEK_I8MM))
+ARM_ARCH("armv9.3-a", ARMV9_3A, "9.3-A", "v9.3a",
+         ARMBuildAttrs::CPUArch::v8_A, FK_CRYPTO_NEON_FP_ARMV8,
          (ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
           ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP | ARM::AEK_CRC | ARM::AEK_RAS |
           ARM::AEK_DOTPROD | ARM::AEK_BF16 | ARM::AEK_I8MM))
@@ -316,6 +327,8 @@ ARM_CPU_NAME("cortex-a710", ARMV9A, FK_NEON_FP_ARMV8, false,
              (ARM::AEK_DOTPROD | ARM::AEK_FP16FML | ARM::AEK_BF16 | ARM::AEK_SB |
               ARM::AEK_I8MM))
 ARM_CPU_NAME("cortex-x1", ARMV8_2A, FK_CRYPTO_NEON_FP_ARMV8, false,
+             (ARM::AEK_FP16 | ARM::AEK_DOTPROD))
+ARM_CPU_NAME("cortex-x1c", ARMV8_2A, FK_CRYPTO_NEON_FP_ARMV8, false,
              (ARM::AEK_FP16 | ARM::AEK_DOTPROD))
 ARM_CPU_NAME("neoverse-n1", ARMV8_2A, FK_CRYPTO_NEON_FP_ARMV8, false,
              (ARM::AEK_FP16 | ARM::AEK_DOTPROD))

@@ -75,47 +75,69 @@ TEST_F(AttributorTestBase, TestCast) {
 
 TEST_F(AttributorTestBase, AAReachabilityTest) {
   const char *ModuleString = R"(
-    @x = global i32 0
-    define void @func4() {
+    @x = external global i32
+    define internal void @func4() {
       store i32 0, i32* @x
       ret void
     }
 
-    define void @func3() {
+    define internal void @func3() {
       store i32 0, i32* @x
       ret void
     }
 
-    define void @func2() {
+    define internal void @func8() {
+      store i32 0, i32* @x
+      ret void
+    }
+
+    define internal void @func2() {
     entry:
       call void @func3()
       ret void
     }
 
-    define void @func1() {
+    define internal void @func1() {
     entry:
       call void @func2()
       ret void
     }
 
-    define void @func5(void ()* %unknown) {
+    declare void @unknown()
+    define internal void @func5(void ()* %ptr) {
     entry:
-      call void %unknown()
+      call void %ptr()
+      call void @unknown()
       ret void
     }
 
-    define void @func6() {
+    define internal void @func6() {
     entry:
       call void @func5(void ()* @func3)
       ret void
     }
 
-    define void @func7() {
+    define internal void @func7() {
     entry:
       call void @func2()
       call void @func4()
       ret void
     }
+
+    define internal void @func9() {
+    entry:
+      call void @func2()
+      call void @func8()
+      ret void
+    }
+
+    define void @func10() {
+    entry:
+      call void @func9()
+      call void @func4()
+      ret void
+    }
+
   )";
 
   Module &M = parseModule(ModuleString);
@@ -128,32 +150,43 @@ TEST_F(AttributorTestBase, AAReachabilityTest) {
   CallGraphUpdater CGUpdater;
   BumpPtrAllocator Allocator;
   InformationCache InfoCache(M, AG, Allocator, nullptr);
-  Attributor A(Functions, InfoCache, CGUpdater);
+  Attributor A(Functions, InfoCache, CGUpdater, /* Allowed */ nullptr,
+               /*DeleteFns*/ false);
 
-  Function *F1 = M.getFunction("func1");
-  Function *F3 = M.getFunction("func3");
-  Function *F4 = M.getFunction("func4");
-  Function *F6 = M.getFunction("func6");
-  Function *F7 = M.getFunction("func7");
+  Function &F1 = *M.getFunction("func1");
+  Function &F3 = *M.getFunction("func3");
+  Function &F4 = *M.getFunction("func4");
+  Function &F6 = *M.getFunction("func6");
+  Function &F7 = *M.getFunction("func7");
+  Function &F9 = *M.getFunction("func9");
 
   // call void @func2()
-  CallBase &F7FirstCB =
-      *static_cast<CallBase *>(F7->getEntryBlock().getFirstNonPHI());
+  CallBase &F7FirstCB = static_cast<CallBase &>(*F7.getEntryBlock().begin());
+  // call void @func2()
+  Instruction &F9FirstInst = *F9.getEntryBlock().begin();
+  // call void @func8
+  Instruction &F9SecondInst = *++(F9.getEntryBlock().begin());
 
   const AAFunctionReachability &F1AA =
-      A.getOrCreateAAFor<AAFunctionReachability>(IRPosition::function(*F1));
+      A.getOrCreateAAFor<AAFunctionReachability>(IRPosition::function(F1));
 
   const AAFunctionReachability &F6AA =
-      A.getOrCreateAAFor<AAFunctionReachability>(IRPosition::function(*F6));
+      A.getOrCreateAAFor<AAFunctionReachability>(IRPosition::function(F6));
 
   const AAFunctionReachability &F7AA =
-      A.getOrCreateAAFor<AAFunctionReachability>(IRPosition::function(*F7));
+      A.getOrCreateAAFor<AAFunctionReachability>(IRPosition::function(F7));
+
+  const AAFunctionReachability &F9AA =
+      A.getOrCreateAAFor<AAFunctionReachability>(IRPosition::function(F9));
 
   F1AA.canReach(A, F3);
   F1AA.canReach(A, F4);
   F6AA.canReach(A, F4);
   F7AA.canReach(A, F7FirstCB, F3);
   F7AA.canReach(A, F7FirstCB, F4);
+  F9AA.instructionCanReach(A, F9FirstInst, F3);
+  F9AA.instructionCanReach(A, F9SecondInst, F3, false);
+  F9AA.instructionCanReach(A, F9FirstInst, F4);
 
   A.run();
 
@@ -166,6 +199,17 @@ TEST_F(AttributorTestBase, AAReachabilityTest) {
   // Assumed to be reacahable, since F6 can reach a function with
   // a unknown callee.
   ASSERT_TRUE(F6AA.canReach(A, F4));
+
+  // The second instruction of F9 can't reach the first call.
+  ASSERT_FALSE(F9AA.instructionCanReach(A, F9SecondInst, F3, false));
+  // TODO: Without lifetime limiting callback this query does actually not make
+  //       much sense. "Anything" is reachable from the caller of func10.
+  ASSERT_TRUE(F9AA.instructionCanReach(A, F9SecondInst, F3, true));
+
+  // The first instruction of F9 can reach the first call.
+  ASSERT_TRUE(F9AA.instructionCanReach(A, F9FirstInst, F3));
+  // Because func10 calls the func4 after the call to func9 it is reachable.
+  ASSERT_TRUE(F9AA.instructionCanReach(A, F9FirstInst, F4));
 }
 
 } // namespace llvm

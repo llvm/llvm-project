@@ -39,170 +39,175 @@ def write_file(file_name, text):
     f.truncate()
 
 
-def run_test_once(args, extra_args):
-  resource_dir = args.resource_dir
-  assume_file_name = args.assume_filename
-  input_file_name = args.input_file_name
-  check_name = args.check_name
-  temp_file_name = args.temp_file_name
-  expect_clang_tidy_error = args.expect_clang_tidy_error
-  std = args.std
-
-  file_name_with_extension = assume_file_name or input_file_name
-  _, extension = os.path.splitext(file_name_with_extension)
-  if extension not in ['.c', '.hpp', '.m', '.mm']:
-    extension = '.cpp'
-  temp_file_name = temp_file_name + extension
-
-  clang_tidy_extra_args = extra_args
-  clang_extra_args = []
-  if '--' in extra_args:
-    i = clang_tidy_extra_args.index('--')
-    clang_extra_args = clang_tidy_extra_args[i + 1:]
-    clang_tidy_extra_args = clang_tidy_extra_args[:i]
-
-  # If the test does not specify a config style, force an empty one; otherwise
-  # autodetection logic can discover a ".clang-tidy" file that is not related to
-  # the test.
-  if not any(
-      [arg.startswith('-config=') for arg in clang_tidy_extra_args]):
-    clang_tidy_extra_args.append('-config={}')
-
-  if extension in ['.m', '.mm']:
-    clang_extra_args = ['-fobjc-abi-version=2', '-fobjc-arc', '-fblocks'] + \
-        clang_extra_args
-
-  if extension in ['.cpp', '.hpp', '.mm']:
-    clang_extra_args.append('-std=' + std)
-
-  # Tests should not rely on STL being available, and instead provide mock
-  # implementations of relevant APIs.
-  clang_extra_args.append('-nostdinc++')
-
-  if resource_dir is not None:
-    clang_extra_args.append('-resource-dir=%s' % resource_dir)
-
-  with open(input_file_name, 'r', encoding='utf-8') as input_file:
-    input_text = input_file.read()
-
-  check_fixes_prefixes = []
-  check_messages_prefixes = []
-  check_notes_prefixes = []
-
-  has_check_fixes = False
-  has_check_messages = False
-  has_check_notes = False
-
-  for check in args.check_suffix:
-    if check and not re.match('^[A-Z0-9\-]+$', check):
-      sys.exit('Only A..Z, 0..9 and "-" are ' +
-        'allowed in check suffixes list, but "%s" was given' % (check))
-
-    file_check_suffix = ('-' + check) if check else ''
-    check_fixes_prefix = 'CHECK-FIXES' + file_check_suffix
-    check_messages_prefix = 'CHECK-MESSAGES' + file_check_suffix
-    check_notes_prefix = 'CHECK-NOTES' + file_check_suffix
-
-    has_check_fix = check_fixes_prefix in input_text
-    has_check_message = check_messages_prefix in input_text
-    has_check_note = check_notes_prefix in input_text
-
-    if has_check_note and has_check_message:
-      sys.exit('Please use either %s or %s but not both' %
-        (check_notes_prefix, check_messages_prefix))
-
-    if not has_check_fix and not has_check_message and not has_check_note:
-      sys.exit('%s, %s or %s not found in the input' %
-        (check_fixes_prefix, check_messages_prefix, check_notes_prefix))
-
-    has_check_fixes = has_check_fixes or has_check_fix
-    has_check_messages = has_check_messages or has_check_message
-    has_check_notes = has_check_notes or has_check_note
-
-    if has_check_fix:
-      check_fixes_prefixes.append(check_fixes_prefix)
-    if has_check_message:
-      check_messages_prefixes.append(check_messages_prefix)
-    if has_check_note:
-      check_notes_prefixes.append(check_notes_prefix)
-
-  assert has_check_fixes or has_check_messages or has_check_notes
-  # Remove the contents of the CHECK lines to avoid CHECKs matching on
-  # themselves.  We need to keep the comments to preserve line numbers while
-  # avoiding empty lines which could potentially trigger formatting-related
-  # checks.
-  cleaned_test = re.sub('// *CHECK-[A-Z0-9\-]*:[^\r\n]*', '//', input_text)
-
-  write_file(temp_file_name, cleaned_test)
-
-  original_file_name = temp_file_name + ".orig"
-  write_file(original_file_name, cleaned_test)
-
-  args = ['clang-tidy', temp_file_name, '-fix', '--checks=-*,' + check_name] + \
-      clang_tidy_extra_args + ['--'] + clang_extra_args
-  if expect_clang_tidy_error:
-    args.insert(0, 'not')
-  print('Running ' + repr(args) + '...')
+def try_run(args, raise_error=True):
   try:
-    clang_tidy_output = \
-        subprocess.check_output(args, stderr=subprocess.STDOUT).decode()
+    process_output = \
+      subprocess.check_output(args, stderr=subprocess.STDOUT).decode(errors='ignore')
   except subprocess.CalledProcessError as e:
-    print('clang-tidy failed:\n' + e.output.decode())
-    raise
-
-  print('------------------------ clang-tidy output -----------------------')
-  print(clang_tidy_output.encode())
-  print('\n------------------------------------------------------------------')
-
-  try:
-    diff_output = subprocess.check_output(
-        ['diff', '-u', original_file_name, temp_file_name],
-        stderr=subprocess.STDOUT)
-  except subprocess.CalledProcessError as e:
-    diff_output = e.output
-
-  print('------------------------------ Fixes -----------------------------\n' +
-        diff_output.decode(errors='ignore') +
-        '\n------------------------------------------------------------------')
-
-  if has_check_fixes:
-    try:
-      subprocess.check_output(
-          ['FileCheck', '-input-file=' + temp_file_name, input_file_name,
-           '-check-prefixes=' + ','.join(check_fixes_prefixes),
-           '-strict-whitespace'],
-          stderr=subprocess.STDOUT)
-    except subprocess.CalledProcessError as e:
-      print('FileCheck failed:\n' + e.output.decode())
+    process_output = e.output.decode(errors='ignore')
+    print('%s failed:\n%s' % (' '.join(args), process_output))
+    if raise_error:
       raise
+  return process_output
 
-  if has_check_messages:
-    messages_file = temp_file_name + '.msg'
-    write_file(messages_file, clang_tidy_output)
-    try:
-      subprocess.check_output(
-          ['FileCheck', '-input-file=' + messages_file, input_file_name,
-           '-check-prefixes=' + ','.join(check_messages_prefixes),
-           '-implicit-check-not={{warning|error}}:'],
-          stderr=subprocess.STDOUT)
-    except subprocess.CalledProcessError as e:
-      print('FileCheck failed:\n' + e.output.decode())
-      raise
 
-  if has_check_notes:
-    notes_file = temp_file_name + '.notes'
-    filtered_output = [line for line in clang_tidy_output.splitlines()
-                       if not "note: FIX-IT applied" in line]
-    write_file(notes_file, '\n'.join(filtered_output))
-    try:
-      subprocess.check_output(
-          ['FileCheck', '-input-file=' + notes_file, input_file_name,
-           '-check-prefixes=' + ','.join(check_notes_prefixes),
-           '-implicit-check-not={{note|warning|error}}:'],
-          stderr=subprocess.STDOUT)
-    except subprocess.CalledProcessError as e:
-      print('FileCheck failed:\n' + e.output.decode())
-      raise
+# This class represents the appearance of a message prefix in a file.
+class MessagePrefix:
+  def __init__(self, label):
+    self.has_message = False
+    self.prefixes = []
+    self.label = label
+
+  def check(self, file_check_suffix, input_text):
+    self.prefix = self.label + file_check_suffix
+    self.has_message = self.prefix in input_text
+    if self.has_message:
+      self.prefixes.append(self.prefix)
+    return self.has_message
+
+
+class CheckRunner:
+  def __init__(self, args, extra_args):
+    self.resource_dir = args.resource_dir
+    self.assume_file_name = args.assume_filename
+    self.input_file_name = args.input_file_name
+    self.check_name = args.check_name
+    self.temp_file_name = args.temp_file_name
+    self.original_file_name = self.temp_file_name + ".orig"
+    self.expect_clang_tidy_error = args.expect_clang_tidy_error
+    self.std = args.std
+    self.check_suffix = args.check_suffix
+    self.input_text = ''
+    self.has_check_fixes = False
+    self.has_check_messages = False
+    self.has_check_notes = False
+    self.fixes = MessagePrefix('CHECK-FIXES')
+    self.messages = MessagePrefix('CHECK-MESSAGES')
+    self.notes = MessagePrefix('CHECK-NOTES')
+
+    file_name_with_extension = self.assume_file_name or self.input_file_name
+    _, extension = os.path.splitext(file_name_with_extension)
+    if extension not in ['.c', '.hpp', '.m', '.mm']:
+      extension = '.cpp'
+    self.temp_file_name = self.temp_file_name + extension
+
+    self.clang_extra_args = []
+    self.clang_tidy_extra_args = extra_args
+    if '--' in extra_args:
+      i = self.clang_tidy_extra_args.index('--')
+      self.clang_extra_args = self.clang_tidy_extra_args[i + 1:]
+      self.clang_tidy_extra_args = self.clang_tidy_extra_args[:i]
+
+    # If the test does not specify a config style, force an empty one; otherwise
+    # auto-detection logic can discover a ".clang-tidy" file that is not related to
+    # the test.
+    if not any(
+        [arg.startswith('-config=') for arg in self.clang_tidy_extra_args]):
+      self.clang_tidy_extra_args.append('-config={}')
+
+    if extension in ['.m', '.mm']:
+      self.clang_extra_args = ['-fobjc-abi-version=2', '-fobjc-arc', '-fblocks'] + \
+          self.clang_extra_args
+
+    if extension in ['.cpp', '.hpp', '.mm']:
+      self.clang_extra_args.append('-std=' + self.std)
+
+    # Tests should not rely on STL being available, and instead provide mock
+    # implementations of relevant APIs.
+    self.clang_extra_args.append('-nostdinc++')
+
+    if self.resource_dir is not None:
+      self.clang_extra_args.append('-resource-dir=%s' % self.resource_dir)
+
+  def read_input(self):
+    with open(self.input_file_name, 'r', encoding='utf-8') as input_file:
+      self.input_text = input_file.read()
+
+  def get_prefixes(self):
+    for suffix in self.check_suffix:
+      if suffix and not re.match('^[A-Z0-9\\-]+$', suffix):
+        sys.exit('Only A..Z, 0..9 and "-" are allowed in check suffixes list,'
+                 + ' but "%s" was given' % suffix)
+
+      file_check_suffix = ('-' + suffix) if suffix else ''
+
+      has_check_fix = self.fixes.check(file_check_suffix, self.input_text)
+      self.has_check_fixes = self.has_check_fixes or has_check_fix
+
+      has_check_message = self.messages.check(file_check_suffix, self.input_text)
+      self.has_check_messages = self.has_check_messages or has_check_message
+
+      has_check_note = self.notes.check(file_check_suffix, self.input_text)
+      self.has_check_notes = self.has_check_notes or has_check_note
+
+      if has_check_note and has_check_message:
+        sys.exit('Please use either %s or %s but not both' %
+          (self.notes.prefix, self.messages.prefix))
+
+      if not has_check_fix and not has_check_message and not has_check_note:
+        sys.exit('%s, %s or %s not found in the input' %
+          (self.fixes.prefix, self.messages.prefix, self.notes.prefix))
+
+    assert self.has_check_fixes or self.has_check_messages or self.has_check_notes
+
+  def prepare_test_inputs(self):
+    # Remove the contents of the CHECK lines to avoid CHECKs matching on
+    # themselves.  We need to keep the comments to preserve line numbers while
+    # avoiding empty lines which could potentially trigger formatting-related
+    # checks.
+    cleaned_test = re.sub('// *CHECK-[A-Z0-9\\-]*:[^\r\n]*', '//', self.input_text)
+    write_file(self.temp_file_name, cleaned_test)
+    write_file(self.original_file_name, cleaned_test)
+
+  def run_clang_tidy(self):
+    args = ['clang-tidy', self.temp_file_name, '-fix', '--checks=-*,' + self.check_name] + \
+        self.clang_tidy_extra_args + ['--'] + self.clang_extra_args
+    if self.expect_clang_tidy_error:
+      args.insert(0, 'not')
+    print('Running ' + repr(args) + '...')
+    clang_tidy_output = try_run(args)
+    print('------------------------ clang-tidy output -----------------------')
+    print(clang_tidy_output.encode())
+    print('\n------------------------------------------------------------------')
+
+    diff_output = try_run(['diff', '-u', self.original_file_name, self.temp_file_name], False)
+    print('------------------------------ Fixes -----------------------------\n' +
+          diff_output +
+          '\n------------------------------------------------------------------')
+    return clang_tidy_output
+
+  def check_fixes(self):
+    if self.has_check_fixes:
+      try_run(['FileCheck', '-input-file=' + self.temp_file_name, self.input_file_name,
+              '-check-prefixes=' + ','.join(self.fixes.prefixes),
+              '-strict-whitespace'])
+
+  def check_messages(self, clang_tidy_output):
+    if self.has_check_messages:
+      messages_file = self.temp_file_name + '.msg'
+      write_file(messages_file, clang_tidy_output)
+      try_run(['FileCheck', '-input-file=' + messages_file, self.input_file_name,
+             '-check-prefixes=' + ','.join(self.messages.prefixes),
+             '-implicit-check-not={{warning|error}}:'])
+
+  def check_notes(self, clang_tidy_output):
+    if self.has_check_notes:
+      notes_file = self.temp_file_name + '.notes'
+      filtered_output = [line for line in clang_tidy_output.splitlines()
+                         if not ("note: FIX-IT applied" in line)]
+      write_file(notes_file, '\n'.join(filtered_output))
+      try_run(['FileCheck', '-input-file=' + notes_file, self.input_file_name,
+             '-check-prefixes=' + ','.join(self.notes.prefixes),
+             '-implicit-check-not={{note|warning|error}}:'])
+
+  def run(self):
+    self.read_input()
+    self.get_prefixes()
+    self.prepare_test_inputs()
+    clang_tidy_output = self.run_clang_tidy()
+    self.check_fixes()
+    self.check_messages(clang_tidy_output)
+    self.check_notes(clang_tidy_output)
 
 
 def expand_std(std):
@@ -223,7 +228,7 @@ def csv(string):
   return string.split(',')
 
 
-def main():
+def parse_arguments():
   parser = argparse.ArgumentParser()
   parser.add_argument('-expect-clang-tidy-error', action='store_true')
   parser.add_argument('-resource-dir')
@@ -232,20 +237,23 @@ def main():
   parser.add_argument('check_name')
   parser.add_argument('temp_file_name')
   parser.add_argument(
-      '-check-suffix',
-      '-check-suffixes',
-      default=[''],
-      type=csv,
-      help='comma-separated list of FileCheck suffixes')
+    '-check-suffix',
+    '-check-suffixes',
+    default=[''],
+    type=csv,
+    help='comma-separated list of FileCheck suffixes')
   parser.add_argument('-std', type=csv, default=['c++11-or-later'])
+  return parser.parse_known_args()
 
-  args, extra_args = parser.parse_known_args()
+
+def main():
+  args, extra_args = parse_arguments()
 
   abbreviated_stds = args.std
   for abbreviated_std in abbreviated_stds:
     for std in expand_std(abbreviated_std):
       args.std = std
-      run_test_once(args, extra_args)
+      CheckRunner(args, extra_args).run()
 
 
 if __name__ == '__main__':

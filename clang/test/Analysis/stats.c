@@ -1,7 +1,7 @@
 // REQUIRES: asserts
 // RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-stats %s 2>&1 | FileCheck %s
 
-void foo() {
+void foo(void) {
   int x;
 }
 // CHECK: ... Statistics Collected ...

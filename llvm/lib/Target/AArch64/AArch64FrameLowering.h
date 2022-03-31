@@ -26,9 +26,8 @@ public:
       : TargetFrameLowering(StackGrowsDown, Align(16), 0, Align(16),
                             true /*StackRealignable*/) {}
 
-  void
-  emitCalleeSavedFrameMoves(MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator MBBI) const override;
+  void emitCalleeSavedFrameMoves(MachineBasicBlock &MBB,
+                                 MachineBasicBlock::iterator MBBI) const;
 
   MachineBasicBlock::iterator
   eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
@@ -142,13 +141,12 @@ private:
   int64_t assignSVEStackObjectOffsets(MachineFrameInfo &MF,
                                       int &MinCSFrameIndex,
                                       int &MaxCSFrameIndex) const;
-  MCCFIInstruction
-  createDefCFAExpressionFromSP(const TargetRegisterInfo &TRI,
-                               const StackOffset &OffsetFromSP) const;
-  MCCFIInstruction createCfaOffset(const TargetRegisterInfo &MRI, unsigned DwarfReg,
-                                   const StackOffset &OffsetFromDefCFA) const;
   bool shouldCombineCSRLocalStackBumpInEpilogue(MachineBasicBlock &MBB,
                                                 unsigned StackBumpBytes) const;
+  void emitCalleeSavedGPRLocations(MachineBasicBlock &MBB,
+                                   MachineBasicBlock::iterator MBBI) const;
+  void emitCalleeSavedSVELocations(MachineBasicBlock &MBB,
+                                   MachineBasicBlock::iterator MBBI) const;
 };
 
 } // End llvm namespace

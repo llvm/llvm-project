@@ -72,7 +72,7 @@ usmmla z0.s, z1.b, z2.b
 usdot z0.s, z1.b, z2.b
 // CHECK-INST: usdot z0.s, z1.b, z2.b
 // CHECK-ENCODING: [0x20,0x78,0x82,0x44]
-// CHECK-ERROR: instruction requires: i8mm streaming-sve
+// CHECK-ERROR: instruction requires: i8mm sve or sme
 // CHECK-UNKNOWN: 20 78 82 44 <unknown>
 
 // Test compatibility with MOVPRFX instruction.
@@ -85,7 +85,7 @@ movprfx z0, z7
 usdot z0.s, z1.b, z2.b
 // CHECK-INST: usdot z0.s, z1.b, z2.b
 // CHECK-ENCODING: [0x20,0x78,0x82,0x44]
-// CHECK-ERROR: instruction requires: i8mm streaming-sve
+// CHECK-ERROR: instruction requires: i8mm sve or sme
 // CHECK-UNKNOWN: 20 78 82 44 <unknown>
 
 
@@ -95,13 +95,13 @@ usdot z0.s, z1.b, z2.b
 usdot z0.s, z1.b, z2.b[0]
 // CHECK-INST: usdot z0.s, z1.b, z2.b[0]
 // CHECK-ENCODING: [0x20,0x18,0xa2,0x44]
-// CHECK-ERROR: instruction requires: i8mm streaming-sve
+// CHECK-ERROR: instruction requires: i8mm sve or sme
 // CHECK-UNKNOWN: 20 18 a2 44 <unknown>
 
 sudot z0.s, z1.b, z2.b[3]
 // CHECK-INST: sudot z0.s, z1.b, z2.b[3]
 // CHECK-ENCODING: [0x20,0x1c,0xba,0x44]
-// CHECK-ERROR: instruction requires: i8mm streaming-sve
+// CHECK-ERROR: instruction requires: i8mm sve or sme
 // CHECK-UNKNOWN: 20 1c ba 44 <unknown>
 
 // Test compatibility with MOVPRFX instruction.
@@ -114,7 +114,7 @@ movprfx z0, z7
 usdot z0.s, z1.b, z2.b[0]
 // CHECK-INST: usdot z0.s, z1.b, z2.b[0]
 // CHECK-ENCODING: [0x20,0x18,0xa2,0x44]
-// CHECK-ERROR: instruction requires: i8mm streaming-sve
+// CHECK-ERROR: instruction requires: i8mm sve or sme
 // CHECK-UNKNOWN: 20 18 a2 44 <unknown>
 
 movprfx z0, z7
@@ -125,5 +125,5 @@ movprfx z0, z7
 sudot z0.s, z1.b, z2.b[0]
 // CHECK-INST: sudot z0.s, z1.b, z2.b[0]
 // CHECK-ENCODING: [0x20,0x1c,0xa2,0x44]
-// CHECK-ERROR: instruction requires: i8mm streaming-sve
+// CHECK-ERROR: instruction requires: i8mm sve or sme
 // CHECK-UNKNOWN: 20 1c a2 44 <unknown>

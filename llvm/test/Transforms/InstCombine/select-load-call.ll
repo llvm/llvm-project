@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | grep "ret i32 1"
+; RUN: opt < %s -passes=instcombine -S | grep "ret i32 1"
 
 declare void @test2()
 

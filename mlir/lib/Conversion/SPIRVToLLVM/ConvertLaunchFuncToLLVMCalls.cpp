@@ -13,17 +13,16 @@
 
 #include "../PassDetail.h"
 #include "mlir/Conversion/ArithmeticToLLVM/ArithmeticToLLVM.h"
+#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/SPIRVToLLVM/SPIRVToLLVM.h"
 #include "mlir/Conversion/SPIRVToLLVM/SPIRVToLLVMPass.h"
-#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -208,7 +207,7 @@ class GPULaunchLowering : public ConvertOpToLLVMPattern<gpu::LaunchFuncOp> {
     SmallVector<CopyInfo, 4> copyInfo;
     auto numKernelOperands = launchOp.getNumKernelOperands();
     auto kernelOperands = adaptor.getOperands().take_back(numKernelOperands);
-    for (auto operand : llvm::enumerate(kernelOperands)) {
+    for (const auto &operand : llvm::enumerate(kernelOperands)) {
       // Check if the kernel's operand is a ranked memref.
       auto memRefType = launchOp.getKernelOperand(operand.index())
                             .getType()
@@ -281,8 +280,7 @@ public:
          llvm::make_early_inc_range(module.getOps<gpu::GPUModuleOp>()))
       gpuModule.erase();
 
-    // Specify options to lower Standard to LLVM and pull in the conversion
-    // patterns.
+    // Specify options to lower to LLVM and pull in the conversion patterns.
     LowerToLLVMOptions options(module.getContext());
     options.emitCWrappers = true;
     auto *context = module.getContext();
@@ -291,7 +289,7 @@ public:
     mlir::arith::populateArithmeticToLLVMConversionPatterns(typeConverter,
                                                             patterns);
     populateMemRefToLLVMConversionPatterns(typeConverter, patterns);
-    populateStdToLLVMConversionPatterns(typeConverter, patterns);
+    populateFuncToLLVMConversionPatterns(typeConverter, patterns);
     patterns.add<GPULaunchLowering>(typeConverter);
 
     // Pull in SPIR-V type conversion patterns to convert SPIR-V global

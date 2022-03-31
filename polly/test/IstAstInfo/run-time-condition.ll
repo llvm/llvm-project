@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basic-aa -polly-ast -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -basic-aa -polly-print-ast -disable-output < %s | FileCheck %s
 
 ; for (i = 0; i < 1024; i++)
 ;   A[i] = B[i];

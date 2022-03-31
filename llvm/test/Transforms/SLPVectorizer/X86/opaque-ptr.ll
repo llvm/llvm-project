@@ -4,13 +4,7 @@
 define void @test(ptr %r, ptr %p, ptr %q) #0 {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:    [[P0:%.*]] = getelementptr inbounds i64, ptr [[P:%.*]], i64 0
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i64, ptr [[P]], i64 1
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i64, ptr [[P]], i64 2
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i64, ptr [[P]], i64 3
 ; CHECK-NEXT:    [[Q0:%.*]] = getelementptr inbounds i64, ptr [[Q:%.*]], i64 0
-; CHECK-NEXT:    [[Q1:%.*]] = getelementptr inbounds i64, ptr [[Q]], i64 1
-; CHECK-NEXT:    [[Q2:%.*]] = getelementptr inbounds i64, ptr [[Q]], i64 2
-; CHECK-NEXT:    [[Q3:%.*]] = getelementptr inbounds i64, ptr [[Q]], i64 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr [[P0]], align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i64>, ptr [[Q0]], align 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub nsw <4 x i64> [[TMP1]], [[TMP2]]
@@ -53,5 +47,31 @@ define void @test(ptr %r, ptr %p, ptr %q) #0 {
   %g1 = getelementptr inbounds i32, ptr %r, i64 %sub1
   %g2 = getelementptr inbounds i32, ptr %r, i64 %sub2
   %g3 = getelementptr inbounds i32, ptr %r, i64 %sub3
+  ret void
+}
+
+define void @test2(i64* %a, i64* %b) {
+; CHECK-LABEL: @test2(
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> poison, ptr [[A:%.*]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x ptr> [[TMP1]], ptr [[B:%.*]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i64, <2 x ptr> [[TMP2]], <2 x i64> <i64 1, i64 3>
+; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint <2 x ptr> [[TMP3]] to <2 x i64>
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x ptr> [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = load <2 x i64>, ptr [[TMP5]], align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = add <2 x i64> [[TMP4]], [[TMP6]]
+; CHECK-NEXT:    store <2 x i64> [[TMP7]], ptr [[TMP5]], align 8
+; CHECK-NEXT:    ret void
+;
+  %a1 = getelementptr inbounds i64, i64* %a, i64 1
+  %a2 = getelementptr inbounds i64, i64* %a, i64 2
+  %i1 = ptrtoint i64* %a1 to i64
+  %b3 = getelementptr inbounds i64, i64* %b, i64 3
+  %i2 = ptrtoint i64* %b3 to i64
+  %v1 = load i64, i64* %a1, align 8
+  %v2 = load i64, i64* %a2, align 8
+  %add1 = add i64 %i1, %v1
+  %add2 = add i64 %i2, %v2
+  store i64 %add1, i64* %a1, align 8
+  store i64 %add2, i64* %a2, align 8
   ret void
 }

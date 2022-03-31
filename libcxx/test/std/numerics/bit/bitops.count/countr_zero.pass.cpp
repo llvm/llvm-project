@@ -50,7 +50,7 @@ constexpr bool test()
     assert(std::countr_zero(T(130)) == 1);
     assert(std::countr_zero(max) == 0);
 
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
     if constexpr (std::is_same_v<T, __uint128_t>) {
         T val = T(128) << 32;
         assert(std::countr_zero(val-1) ==  0);
@@ -77,7 +77,7 @@ int main(int, char**)
     static_assert(!std::is_invocable_v<L, int>);
     static_assert(!std::is_invocable_v<L, long>);
     static_assert(!std::is_invocable_v<L, long long>);
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
     static_assert(!std::is_invocable_v<L, __int128_t>);
 #endif
 
@@ -92,7 +92,7 @@ int main(int, char**)
     static_assert(!std::is_invocable_v<L, bool>);
     static_assert(!std::is_invocable_v<L, char>);
     static_assert(!std::is_invocable_v<L, wchar_t>);
-#ifndef _LIBCPP_HAS_NO_CHAR8_T
+#ifndef TEST_HAS_NO_CHAR8_T
     static_assert(!std::is_invocable_v<L, char8_t>);
 #endif
     static_assert(!std::is_invocable_v<L, char16_t>);
@@ -109,7 +109,7 @@ int main(int, char**)
     static_assert(test<unsigned int>());
     static_assert(test<unsigned long>());
     static_assert(test<unsigned long long>());
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
     static_assert(test<__uint128_t>());
 #endif
     static_assert(test<uint8_t>());
@@ -125,7 +125,7 @@ int main(int, char**)
     test<unsigned int>();
     test<unsigned long>();
     test<unsigned long long>();
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
     test<__uint128_t>();
 #endif
     test<uint8_t>();

@@ -93,7 +93,7 @@ void coverage9(int *x) {
   y = (*x);  // no warning
 }
 
-static void empty_function(){
+static void empty_function(void){
 }
 int use_empty_function(int x) {
     x = 0;

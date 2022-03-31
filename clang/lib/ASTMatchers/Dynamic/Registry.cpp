@@ -228,6 +228,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(eachOf);
   REGISTER_MATCHER(elaboratedType);
   REGISTER_MATCHER(elaboratedTypeLoc);
+  REGISTER_MATCHER(usingType);
   REGISTER_MATCHER(enumConstantDecl);
   REGISTER_MATCHER(enumDecl);
   REGISTER_MATCHER(enumType);
@@ -403,7 +404,9 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(isComparisonOperator);
   REGISTER_MATCHER(isConst);
   REGISTER_MATCHER(isConstQualified);
+  REGISTER_MATCHER(isConsteval);
   REGISTER_MATCHER(isConstexpr);
+  REGISTER_MATCHER(isConstinit);
   REGISTER_MATCHER(isCopyAssignmentOperator);
   REGISTER_MATCHER(isCopyConstructor);
   REGISTER_MATCHER(isDefaultConstructor);

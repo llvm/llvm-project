@@ -55,14 +55,14 @@ define weak void @__omp_offloading_2b_10393b5_spmd_l12() #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca i8*, align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i8 1, i1 false, i1 true)
+; CHECK-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
+; CHECK-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[IS_WORKER_CHECK:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
+; CHECK:       is_worker_check:
 ; CHECK-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 ; CHECK-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
 ; CHECK-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
 ; CHECK-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
-; CHECK-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[IS_WORKER_CHECK:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
-; CHECK:       is_worker_check:
-; CHECK-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
-; CHECK-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
+; CHECK-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
 ; CHECK:       worker_state_machine.begin:
 ; CHECK-NEXT:    call void @__kmpc_barrier_simple_generic(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]])
 ; CHECK-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(i8** [[WORKER_WORK_FN_ADDR]])
@@ -150,10 +150,10 @@ define internal void @spmd_helper() #1 {
 ; CHECK-SAME: () #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x i8*], align 8
-; CHECK-NEXT:    call void @leaf() #[[ATTR7:[0-9]+]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* noundef @[[GLOB2]]) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    call void @leaf() #[[ATTR6]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB2]]) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-; CHECK-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* noundef @[[GLOB2]], i32 [[TMP0]], i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__ to i8*), i8* noundef @__omp_outlined___wrapper.ID, i8** noundef [[TMP1]], i64 noundef 0)
+; CHECK-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB2]], i32 [[TMP0]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__ to i8*), i8* @__omp_outlined___wrapper.ID, i8** [[TMP1]], i64 0)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -168,11 +168,11 @@ entry:
 ; Function Attrs: convergent noinline norecurse nounwind
 define internal void @__omp_outlined__(i32* noalias %.global_tid., i32* noalias %.bound_tid.) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@__omp_outlined__
-; CHECK-SAME: (i32* noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-NEXT:    call void @unknown() #[[ATTR8:[0-9]+]]
+; CHECK-NEXT:    call void @unknown() #[[ATTR7:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -193,9 +193,6 @@ define internal void @__omp_outlined___wrapper(i16 zeroext %0, i32 %1) #2 {
 ; CHECK-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; CHECK-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; CHECK-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
-; CHECK-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 ; CHECK-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; CHECK-NEXT:    call void @__omp_outlined__(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret void
@@ -239,7 +236,7 @@ define internal void @generic_helper() #1 {
 ; CHECK-LABEL: define {{[^@]+}}@generic_helper
 ; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @leaf() #[[ATTR7]]
+; CHECK-NEXT:    call void @leaf() #[[ATTR6]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -276,11 +273,10 @@ attributes #5 = { convergent }
 ; CHECK: attributes #[[ATTR1]] = { convergent noinline nounwind "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="sm_53" "target-features"="+ptx32,+sm_53" }
 ; CHECK: attributes #[[ATTR2]] = { nounwind }
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { alwaysinline }
-; CHECK: attributes #[[ATTR4]] = { convergent nofree noinline nosync nounwind willreturn writeonly "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="sm_53" "target-features"="+ptx32,+sm_53" }
+; CHECK: attributes #[[ATTR4]] = { convergent noinline nounwind writeonly "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="sm_53" "target-features"="+ptx32,+sm_53" }
 ; CHECK: attributes #[[ATTR5]] = { convergent nounwind }
 ; CHECK: attributes #[[ATTR6]] = { convergent nounwind writeonly }
-; CHECK: attributes #[[ATTR7]] = { convergent nofree nosync nounwind willreturn writeonly }
-; CHECK: attributes #[[ATTR8]] = { convergent }
+; CHECK: attributes #[[ATTR7]] = { convergent }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{i32 0, i32 43, i32 17011637, !"spmd", i32 12, i32 0}
 ; CHECK: [[META1:![0-9]+]] = !{i32 0, i32 43, i32 17011637, !"generic", i32 20, i32 1}

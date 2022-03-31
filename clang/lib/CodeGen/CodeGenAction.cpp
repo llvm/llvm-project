@@ -571,7 +571,6 @@ void BackendConsumer::SrcMgrDiagHandler(const llvm::DiagnosticInfoSrcMgr &DI) {
   // If Loc is invalid, we still need to report the issue, it just gets no
   // location info.
   Diags.Report(Loc, DiagID).AddString(Message);
-  return;
 }
 
 bool
@@ -1114,7 +1113,7 @@ void CodeGenAction::ExecuteAction() {
   auto &CodeGenOpts = CI.getCodeGenOpts();
   auto &Diagnostics = CI.getDiagnostics();
   std::unique_ptr<raw_pwrite_stream> OS =
-      GetOutputStream(CI, getCurrentFile(), BA);
+      GetOutputStream(CI, getCurrentFileOrBufferName(), BA);
   if (BA != Backend_EmitNothing && !OS)
     return;
 
@@ -1135,6 +1134,7 @@ void CodeGenAction::ExecuteAction() {
     TheModule->setTargetTriple(TargetOpts.Triple);
   }
 
+  EmbedObject(TheModule.get(), CodeGenOpts, Diagnostics);
   EmbedBitcode(TheModule.get(), CodeGenOpts, *MainFile);
 
   LLVMContext &Ctx = TheModule->getContext();

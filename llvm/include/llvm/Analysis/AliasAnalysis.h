@@ -38,7 +38,6 @@
 #define LLVM_ANALYSIS_ALIASANALYSIS_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/MemoryLocation.h"
@@ -60,7 +59,6 @@ class CatchReturnInst;
 class DominatorTree;
 class FenceInst;
 class Function;
-class InvokeInst;
 class LoopInfo;
 class PreservedAnalyses;
 class TargetLibraryInfo;
@@ -679,7 +677,7 @@ public:
 
   /// Checks if functions with the specified behavior are known to only write
   /// memory (or not access memory at all).
-  static bool doesNotReadMemory(FunctionModRefBehavior MRB) {
+  static bool onlyWritesMemory(FunctionModRefBehavior MRB) {
     return !isRefSet(createModRefInfo(MRB));
   }
 
@@ -1267,6 +1265,14 @@ bool isIdentifiedObject(const Value *V);
 /// arguments other than itself, which is not necessarily true for
 /// IdentifiedObjects.
 bool isIdentifiedFunctionLocal(const Value *V);
+
+/// Return true if Object memory is not visible after an unwind, in the sense
+/// that program semantics cannot depend on Object containing any particular
+/// value on unwind. If the RequiresNoCaptureBeforeUnwind out parameter is set
+/// to true, then the memory is only not visible if the object has not been
+/// captured prior to the unwind. Otherwise it is not visible even if captured.
+bool isNotVisibleOnUnwind(const Value *Object,
+                          bool &RequiresNoCaptureBeforeUnwind);
 
 /// A manager for alias analyses.
 ///

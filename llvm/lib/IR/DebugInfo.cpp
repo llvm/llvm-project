@@ -14,17 +14,16 @@
 #include "llvm-c/DebugInfo.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DIBuilder.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
-#include "llvm/IR/DebugInfo.h"
-#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GVMaterializer.h"
 #include "llvm/IR/Instruction.h"
@@ -1436,14 +1435,14 @@ LLVMDIBuilderCreateSubroutineType(LLVMDIBuilderRef Builder,
 }
 
 LLVMMetadataRef LLVMDIBuilderCreateExpression(LLVMDIBuilderRef Builder,
-                                              int64_t *Addr, size_t Length) {
-  return wrap(unwrap(Builder)->createExpression(ArrayRef<int64_t>(Addr,
-                                                                  Length)));
+                                              uint64_t *Addr, size_t Length) {
+  return wrap(
+      unwrap(Builder)->createExpression(ArrayRef<uint64_t>(Addr, Length)));
 }
 
 LLVMMetadataRef
 LLVMDIBuilderCreateConstantValueExpression(LLVMDIBuilderRef Builder,
-                                           int64_t Value) {
+                                           uint64_t Value) {
   return wrap(unwrap(Builder)->createConstantValueExpression(Value));
 }
 

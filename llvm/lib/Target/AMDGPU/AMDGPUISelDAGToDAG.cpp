@@ -679,9 +679,6 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
   case ISD::FMA:
     SelectFMAD_FMA(N);
     return;
-  case AMDGPUISD::ATOMIC_CMP_SWAP:
-    SelectATOMIC_CMP_SWAP(N);
-    return;
   case AMDGPUISD::CVT_PKRTZ_F16_F32:
   case AMDGPUISD::CVT_PKNORM_I16_F32:
   case AMDGPUISD::CVT_PKNORM_U16_F32:
@@ -1798,6 +1795,60 @@ bool AMDGPUDAGToDAGISel::SelectScratchSAddr(SDNode *Parent, SDValue Addr,
   return true;
 }
 
+bool AMDGPUDAGToDAGISel::SelectScratchSVAddr(SDNode *N, SDValue Addr,
+                                             SDValue &VAddr, SDValue &SAddr,
+                                             SDValue &Offset) const  {
+  int64_t ImmOffset = 0;
+
+  SDValue LHS, RHS;
+  if (isBaseWithConstantOffset64(Addr, LHS, RHS)) {
+    int64_t COffsetVal = cast<ConstantSDNode>(RHS)->getSExtValue();
+    const SIInstrInfo *TII = Subtarget->getInstrInfo();
+
+    if (TII->isLegalFLATOffset(COffsetVal, AMDGPUAS::PRIVATE_ADDRESS, true)) {
+      Addr = LHS;
+      ImmOffset = COffsetVal;
+    } else if (!LHS->isDivergent() && COffsetVal > 0) {
+      SDLoc SL(N);
+      // saddr + large_offset -> saddr + (vaddr = large_offset & ~MaxOffset) +
+      //                         (large_offset & MaxOffset);
+      int64_t SplitImmOffset, RemainderOffset;
+      std::tie(SplitImmOffset, RemainderOffset)
+        = TII->splitFlatOffset(COffsetVal, AMDGPUAS::PRIVATE_ADDRESS, true);
+
+      if (isUInt<32>(RemainderOffset)) {
+        SDNode *VMov = CurDAG->getMachineNode(
+          AMDGPU::V_MOV_B32_e32, SL, MVT::i32,
+          CurDAG->getTargetConstant(RemainderOffset, SDLoc(), MVT::i32));
+        VAddr = SDValue(VMov, 0);
+        SAddr = LHS;
+        Offset = CurDAG->getTargetConstant(SplitImmOffset, SDLoc(), MVT::i16);
+        return true;
+      }
+    }
+  }
+
+  if (Addr.getOpcode() != ISD::ADD)
+    return false;
+
+  LHS = Addr.getOperand(0);
+  RHS = Addr.getOperand(1);
+
+  if (!LHS->isDivergent() && RHS->isDivergent()) {
+    SAddr = LHS;
+    VAddr = RHS;
+  } else if (!RHS->isDivergent() && LHS->isDivergent()) {
+    SAddr = RHS;
+    VAddr = LHS;
+  } else {
+    return false;
+  }
+
+  SAddr = SelectSAddrFI(CurDAG, SAddr);
+  Offset = CurDAG->getTargetConstant(ImmOffset, SDLoc(), MVT::i16);
+  return true;
+}
+
 bool AMDGPUDAGToDAGISel::SelectSMRDOffset(SDValue ByteOffsetNode,
                                           SDValue &Offset, bool &Imm) const {
   ConstantSDNode *C = dyn_cast<ConstantSDNode>(ByteOffsetNode);
@@ -2224,70 +2275,6 @@ void AMDGPUDAGToDAGISel::SelectFMAD_FMA(SDNode *N) {
   }
 }
 
-// This is here because there isn't a way to use the generated sub0_sub1 as the
-// subreg index to EXTRACT_SUBREG in tablegen.
-void AMDGPUDAGToDAGISel::SelectATOMIC_CMP_SWAP(SDNode *N) {
-  MemSDNode *Mem = cast<MemSDNode>(N);
-  unsigned AS = Mem->getAddressSpace();
-  if (AS == AMDGPUAS::FLAT_ADDRESS) {
-    SelectCode(N);
-    return;
-  }
-
-  MVT VT = N->getSimpleValueType(0);
-  bool Is32 = (VT == MVT::i32);
-  SDLoc SL(N);
-
-  MachineSDNode *CmpSwap = nullptr;
-  if (Subtarget->hasAddr64()) {
-    SDValue SRsrc, VAddr, SOffset, Offset;
-
-    if (SelectMUBUFAddr64(Mem->getBasePtr(), SRsrc, VAddr, SOffset, Offset)) {
-      unsigned Opcode = Is32 ? AMDGPU::BUFFER_ATOMIC_CMPSWAP_ADDR64_RTN :
-        AMDGPU::BUFFER_ATOMIC_CMPSWAP_X2_ADDR64_RTN;
-      SDValue CmpVal = Mem->getOperand(2);
-      SDValue CPol = CurDAG->getTargetConstant(AMDGPU::CPol::GLC, SL, MVT::i32);
-
-      // XXX - Do we care about glue operands?
-
-      SDValue Ops[] = {CmpVal, VAddr, SRsrc, SOffset, Offset, CPol,
-                       Mem->getChain()};
-
-      CmpSwap = CurDAG->getMachineNode(Opcode, SL, Mem->getVTList(), Ops);
-    }
-  }
-
-  if (!CmpSwap) {
-    SDValue SRsrc, SOffset, Offset;
-    if (SelectMUBUFOffset(Mem->getBasePtr(), SRsrc, SOffset, Offset)) {
-      unsigned Opcode = Is32 ? AMDGPU::BUFFER_ATOMIC_CMPSWAP_OFFSET_RTN :
-        AMDGPU::BUFFER_ATOMIC_CMPSWAP_X2_OFFSET_RTN;
-
-      SDValue CmpVal = Mem->getOperand(2);
-      SDValue CPol = CurDAG->getTargetConstant(AMDGPU::CPol::GLC, SL, MVT::i32);
-      SDValue Ops[] = {CmpVal, SRsrc, SOffset, Offset, CPol, Mem->getChain()};
-
-      CmpSwap = CurDAG->getMachineNode(Opcode, SL, Mem->getVTList(), Ops);
-    }
-  }
-
-  if (!CmpSwap) {
-    SelectCode(N);
-    return;
-  }
-
-  MachineMemOperand *MMO = Mem->getMemOperand();
-  CurDAG->setNodeMemRefs(CmpSwap, {MMO});
-
-  unsigned SubReg = Is32 ? AMDGPU::sub0 : AMDGPU::sub0_sub1;
-  SDValue Extract
-    = CurDAG->getTargetExtractSubreg(SubReg, SL, VT, SDValue(CmpSwap, 0));
-
-  ReplaceUses(SDValue(N, 0), Extract);
-  ReplaceUses(SDValue(N, 1), SDValue(CmpSwap, 1));
-  CurDAG->RemoveDeadNode(N);
-}
-
 void AMDGPUDAGToDAGISel::SelectDSAppendConsume(SDNode *N, unsigned IntrID) {
   // The address is assumed to be uniform, so if it ends up in a VGPR, it will
   // be copied to an SGPR with readfirstlane.
@@ -2619,7 +2606,7 @@ bool AMDGPUDAGToDAGISel::SelectVOP3OMods(SDValue In, SDValue &Src,
 }
 
 bool AMDGPUDAGToDAGISel::SelectVOP3PMods(SDValue In, SDValue &Src,
-                                         SDValue &SrcMods) const {
+                                         SDValue &SrcMods, bool IsDOT) const {
   unsigned Mods = 0;
   Src = In;
 
@@ -2628,7 +2615,8 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMods(SDValue In, SDValue &Src,
     Src = Src.getOperand(0);
   }
 
-  if (Src.getOpcode() == ISD::BUILD_VECTOR) {
+  if (Src.getOpcode() == ISD::BUILD_VECTOR &&
+      (!IsDOT || !Subtarget->hasDOTOpSelHazard())) {
     unsigned VecMods = Mods;
 
     SDValue Lo = stripBitcast(Src.getOperand(0));
@@ -2714,6 +2702,11 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMods(SDValue In, SDValue &Src,
 
   SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
   return true;
+}
+
+bool AMDGPUDAGToDAGISel::SelectVOP3PModsDOT(SDValue In, SDValue &Src,
+                                            SDValue &SrcMods) const {
+  return SelectVOP3PMods(In, Src, SrcMods, true);
 }
 
 bool AMDGPUDAGToDAGISel::SelectVOP3OpSel(SDValue In, SDValue &Src,
@@ -2840,7 +2833,7 @@ bool AMDGPUDAGToDAGISel::isVGPRImm(const SDNode * N) const {
           }
         }
       }
-      // If "AllUsesAcceptSReg == false" so far we haven't suceeded
+      // If "AllUsesAcceptSReg == false" so far we haven't succeeded
       // commuting current user. This means have at least one use
       // that strictly require VGPR. Thus, we will not attempt to commute
       // other user instructions.

@@ -17,12 +17,12 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/CFG.h"
-#include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/Dominators.h"
 
 #include "llvm/IR/PatternMatch.h"
@@ -407,25 +407,19 @@ breakBackedgeIfNotTaken(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
   if (!L->getLoopLatch())
     return LoopDeletionResult::Unmodified;
 
-  auto *BTC = SE.getSymbolicMaxBackedgeTakenCount(L);
-  if (BTC->isZero()) {
-    // SCEV knows this backedge isn't taken!
-    breakLoopBackedge(L, DT, SE, LI, MSSA);
-    ++NumBackedgesBroken;
-    return LoopDeletionResult::Deleted;
-  }
-
-  // If SCEV leaves open the possibility of a zero trip count, see if
-  // symbolically evaluating the first iteration lets us prove the backedge
-  // unreachable.
-  if (isa<SCEVCouldNotCompute>(BTC) || !SE.isKnownNonZero(BTC))
-    if (canProveExitOnFirstIteration(L, DT, LI)) {
-      breakLoopBackedge(L, DT, SE, LI, MSSA);
-      ++NumBackedgesBroken;
-      return LoopDeletionResult::Deleted;
+  auto *BTCMax = SE.getConstantMaxBackedgeTakenCount(L);
+  if (!BTCMax->isZero()) {
+    auto *BTC = SE.getBackedgeTakenCount(L);
+    if (!BTC->isZero()) {
+      if (!isa<SCEVCouldNotCompute>(BTC) && SE.isKnownNonZero(BTC))
+        return LoopDeletionResult::Unmodified;
+      if (!canProveExitOnFirstIteration(L, DT, LI))
+        return LoopDeletionResult::Unmodified;
     }
-
-  return LoopDeletionResult::Unmodified;
+  }
+  ++NumBackedgesBroken;
+  breakLoopBackedge(L, DT, SE, LI, MSSA);
+  return LoopDeletionResult::Deleted;
 }
 
 /// Remove a loop if it is dead.

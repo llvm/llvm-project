@@ -21,22 +21,16 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/CallingConv.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/OperandTraits.h"
-#include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
-#include "llvm/IR/Value.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -46,6 +40,10 @@
 #include <vector>
 
 namespace llvm {
+
+class StringRef;
+class Type;
+class Value;
 
 namespace Intrinsic {
 typedef unsigned ID;
@@ -1393,10 +1391,13 @@ public:
   const Use &getCalledOperandUse() const { return Op<CalledOperandOpEndIdx>(); }
   Use &getCalledOperandUse() { return Op<CalledOperandOpEndIdx>(); }
 
-  /// Returns the function called, or null if this is an
-  /// indirect function invocation.
+  /// Returns the function called, or null if this is an indirect function
+  /// invocation or the function signature does not match the call signature.
   Function *getCalledFunction() const {
-    return dyn_cast_or_null<Function>(getCalledOperand());
+    if (auto *F = dyn_cast_or_null<Function>(getCalledOperand()))
+      if (F->getValueType() == getFunctionType())
+        return F;
+    return nullptr;
   }
 
   /// Return true if the callsite is an indirect call.
@@ -1544,7 +1545,7 @@ public:
   }
 
   /// Removes the attributes from the function
-  void removeFnAttrs(const AttrBuilder &AttrsToRemove) {
+  void removeFnAttrs(const AttributeMask &AttrsToRemove) {
     Attrs = Attrs.removeFnAttributes(getContext(), AttrsToRemove);
   }
 
@@ -1559,7 +1560,7 @@ public:
   }
 
   /// Removes the attributes from the return value
-  void removeRetAttrs(const AttrBuilder &AttrsToRemove) {
+  void removeRetAttrs(const AttributeMask &AttrsToRemove) {
     Attrs = Attrs.removeRetAttributes(getContext(), AttrsToRemove);
   }
 
@@ -1576,7 +1577,7 @@ public:
   }
 
   /// Removes the attributes from the given argument
-  void removeParamAttrs(unsigned ArgNo, const AttrBuilder &AttrsToRemove) {
+  void removeParamAttrs(unsigned ArgNo, const AttributeMask &AttrsToRemove) {
     Attrs = Attrs.removeParamAttributes(getContext(), ArgNo, AttrsToRemove);
   }
 
@@ -1717,13 +1718,19 @@ public:
 
   // FIXME: Once this API is no longer duplicated in `CallSite`, rename this to
   // better indicate that this may return a conservative answer.
-  bool doesNotReadMemory(unsigned OpNo) const {
+  bool onlyWritesMemory(unsigned OpNo) const {
     return dataOperandHasImpliedAttr(OpNo, Attribute::WriteOnly) ||
            dataOperandHasImpliedAttr(OpNo, Attribute::ReadNone);
   }
 
   /// Extract the alignment of the return value.
-  MaybeAlign getRetAlign() const { return Attrs.getRetAlignment(); }
+  MaybeAlign getRetAlign() const {
+    if (auto Align = Attrs.getRetAlignment())
+      return Align;
+    if (const Function *F = getCalledFunction())
+      return F->getAttributes().getRetAlignment();
+    return None;
+  }
 
   /// Extract the alignment for a call or parameter (0=unknown).
   MaybeAlign getParamAlign(unsigned ArgNo) const {
@@ -1752,13 +1759,29 @@ public:
     return nullptr;
   }
 
-  /// Extract the preallocated type for a call or parameter.
+  /// Extract the inalloca type for a call or parameter.
   Type *getParamInAllocaType(unsigned ArgNo) const {
     if (auto *Ty = Attrs.getParamInAllocaType(ArgNo))
       return Ty;
     if (const Function *F = getCalledFunction())
       return F->getAttributes().getParamInAllocaType(ArgNo);
     return nullptr;
+  }
+
+  /// Extract the sret type for a call or parameter.
+  Type *getParamStructRetType(unsigned ArgNo) const {
+    if (auto *Ty = Attrs.getParamStructRetType(ArgNo))
+      return Ty;
+    if (const Function *F = getCalledFunction())
+      return F->getAttributes().getParamStructRetType(ArgNo);
+    return nullptr;
+  }
+
+  /// Extract the elementtype type for a parameter.
+  /// Note that elementtype() can only be applied to call arguments, not
+  /// function declaration parameters.
+  Type *getParamElementType(unsigned ArgNo) const {
+    return Attrs.getParamElementType(ArgNo);
   }
 
   /// Extract the number of dereferenceable bytes for a call or
@@ -1818,16 +1841,16 @@ public:
 
   /// Determine if the call does not access or only reads memory.
   bool onlyReadsMemory() const {
-    return doesNotAccessMemory() || hasFnAttr(Attribute::ReadOnly);
+    return hasImpliedFnAttr(Attribute::ReadOnly);
   }
 
   void setOnlyReadsMemory() { addFnAttr(Attribute::ReadOnly); }
 
   /// Determine if the call does not access or only writes memory.
-  bool doesNotReadMemory() const {
-    return doesNotAccessMemory() || hasFnAttr(Attribute::WriteOnly);
+  bool onlyWritesMemory() const {
+    return hasImpliedFnAttr(Attribute::WriteOnly);
   }
-  void setDoesNotReadMemory() { addFnAttr(Attribute::WriteOnly); }
+  void setOnlyWritesMemory() { addFnAttr(Attribute::WriteOnly); }
 
   /// Determine if the call can access memmory only using pointers based
   /// on its arguments.
@@ -2043,7 +2066,8 @@ public:
   bool hasClobberingOperandBundles() const {
     for (auto &BOI : bundle_op_infos()) {
       if (BOI.Tag->second == LLVMContext::OB_deopt ||
-          BOI.Tag->second == LLVMContext::OB_funclet)
+          BOI.Tag->second == LLVMContext::OB_funclet ||
+          BOI.Tag->second == LLVMContext::OB_ptrauth)
         continue;
 
       // This instruction has an operand bundle that is not known to us.
@@ -2087,8 +2111,8 @@ public:
   /// Is the function attribute S disallowed by some operand bundle on
   /// this operand bundle user?
   bool isFnAttrDisallowedByOpBundle(StringRef S) const {
-    // Operand bundles only possibly disallow readnone, readonly and argmemonly
-    // attributes.  All String attributes are fine.
+    // Operand bundles only possibly disallow memory access attributes.  All
+    // String attributes are fine.
     return false;
   }
 
@@ -2113,6 +2137,9 @@ public:
 
     case Attribute::ReadOnly:
       return hasClobberingOperandBundles();
+
+    case Attribute::WriteOnly:
+      return hasReadingOperandBundles();
     }
 
     llvm_unreachable("switch has a default case!");
@@ -2283,6 +2310,26 @@ private:
       return false;
 
     return hasFnAttrOnCalledFunction(Kind);
+  }
+
+  /// A specialized version of hasFnAttrImpl for when the caller wants to
+  /// know if an attribute's semantics are implied, not whether the attribute
+  /// is actually present.  This distinction only exists when checking whether
+  /// something is readonly or writeonly since readnone implies both.  The case
+  /// which motivates the specialized code is a callee with readnone, and an
+  /// operand bundle on the call which disallows readnone but not either
+  /// readonly or writeonly.
+  bool hasImpliedFnAttr(Attribute::AttrKind Kind) const {
+    assert((Kind == Attribute::ReadOnly || Kind == Attribute::WriteOnly) &&
+           "use hasFnAttrImpl instead");
+    if (Attrs.hasFnAttr(Kind) || Attrs.hasFnAttr(Attribute::ReadNone))
+      return true;
+
+    if (isFnAttrDisallowedByOpBundle(Kind))
+      return false;
+
+    return hasFnAttrOnCalledFunction(Kind) ||
+      hasFnAttrOnCalledFunction(Attribute::ReadNone);
   }
 
   /// Determine whether the return value has the given attribute. Supports

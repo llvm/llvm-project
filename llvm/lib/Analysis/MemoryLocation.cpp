@@ -8,12 +8,10 @@
 
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsARM.h"
-#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 using namespace llvm;
@@ -120,34 +118,41 @@ MemoryLocation MemoryLocation::getForDest(const AnyMemIntrinsic *MI) {
 
 Optional<MemoryLocation>
 MemoryLocation::getForDest(const CallBase *CB, const TargetLibraryInfo &TLI) {
-  if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(CB)) {
-    if (auto *MemInst = dyn_cast<AnyMemIntrinsic>(CB))
-      return getForDest(MemInst);
+  if (!CB->onlyAccessesArgMemory())
+    return None;
 
-    switch (II->getIntrinsicID()) {
-    default:
+  if (CB->hasOperandBundles())
+    // TODO: remove implementation restriction
+    return None;
+
+  Value *UsedV = nullptr;
+  Optional<unsigned> UsedIdx;
+  for (unsigned i = 0; i < CB->arg_size(); i++) {
+    if (!CB->getArgOperand(i)->getType()->isPointerTy())
+      continue;
+     if (CB->onlyReadsMemory(i))
+       continue;
+    if (!UsedV) {
+      // First potentially writing parameter
+      UsedV = CB->getArgOperand(i);
+      UsedIdx = i;
+      continue;
+    }
+    UsedIdx = None;
+    if (UsedV != CB->getArgOperand(i))
+      // Can't describe writing to two distinct locations.
+      // TODO: This results in an inprecision when two values derived from the
+      // same object are passed as arguments to the same function.
       return None;
-    case Intrinsic::init_trampoline:
-      return MemoryLocation::getForArgument(CB, 0, TLI);
-    case Intrinsic::masked_store:
-      return MemoryLocation::getForArgument(CB, 1, TLI);
-    }
   }
+  if (!UsedV)
+    // We don't currently have a way to represent a "does not write" result
+    // and thus have to be conservative and return unknown.
+    return None;
 
-  LibFunc LF;
-  if (TLI.getLibFunc(*CB, LF) && TLI.has(LF)) {
-    switch (LF) {
-    case LibFunc_strncpy:
-    case LibFunc_strcpy:
-    case LibFunc_strcat:
-    case LibFunc_strncat:
-      return getForArgument(CB, 0, &TLI);
-    default:
-      break;
-    }
-  }
-
-  return None;
+  if (UsedIdx)
+    return getForArgument(CB, *UsedIdx, &TLI);
+  return MemoryLocation::getBeforeOrAfter(UsedV, CB->getAAMetadata());
 }
 
 MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
@@ -271,10 +276,18 @@ MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
       return MemoryLocation(Arg, Size, AATags);
     }
     case LibFunc_memset_pattern16:
+    case LibFunc_memset_pattern4:
+    case LibFunc_memset_pattern8:
       assert((ArgIdx == 0 || ArgIdx == 1) &&
              "Invalid argument index for memset_pattern16");
-      if (ArgIdx == 1)
-        return MemoryLocation(Arg, LocationSize::precise(16), AATags);
+      if (ArgIdx == 1) {
+        unsigned Size = 16;
+        if (F == LibFunc_memset_pattern4)
+          Size = 4;
+        else if (F == LibFunc_memset_pattern8)
+          Size = 8;
+        return MemoryLocation(Arg, LocationSize::precise(Size), AATags);
+      }
       if (const ConstantInt *LenCI =
               dyn_cast<ConstantInt>(Call->getArgOperand(2)))
         return MemoryLocation(Arg, LocationSize::precise(LenCI->getZExtValue()),
@@ -309,7 +322,6 @@ MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
       break;
     };
   }
-  // FIXME: Handle memset_pattern4 and memset_pattern8 also.
 
   return MemoryLocation::getBeforeOrAfter(Call->getArgOperand(ArgIdx), AATags);
 }

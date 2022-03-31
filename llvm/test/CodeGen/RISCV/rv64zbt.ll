@@ -24,6 +24,24 @@ define signext i32 @cmix_i32(i32 signext %a, i32 signext %b, i32 signext %c) nou
   ret i32 %or
 }
 
+define signext i32 @cmix_i32_2(i32 signext %a, i32 signext %b, i32 signext %c) nounwind {
+; RV64I-LABEL: cmix_i32_2:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    xor a0, a0, a2
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    xor a0, a0, a2
+; RV64I-NEXT:    ret
+;
+; RV64ZBT-LABEL: cmix_i32_2:
+; RV64ZBT:       # %bb.0:
+; RV64ZBT-NEXT:    cmix a0, a1, a0, a2
+; RV64ZBT-NEXT:    ret
+  %xor = xor i32 %a, %c
+  %and = and i32 %xor, %b
+  %xor1 = xor i32 %and, %c
+  ret i32 %xor1
+}
+
 define i64 @cmix_i64(i64 %a, i64 %b, i64 %c) nounwind {
 ; RV64I-LABEL: cmix_i64:
 ; RV64I:       # %bb.0:
@@ -44,13 +62,31 @@ define i64 @cmix_i64(i64 %a, i64 %b, i64 %c) nounwind {
   ret i64 %or
 }
 
+define i64 @cmix_i64_2(i64 %a, i64 %b, i64 %c) nounwind {
+; RV64I-LABEL: cmix_i64_2:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    xor a0, a1, a2
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    xor a0, a0, a2
+; RV64I-NEXT:    ret
+;
+; RV64ZBT-LABEL: cmix_i64_2:
+; RV64ZBT:       # %bb.0:
+; RV64ZBT-NEXT:    cmix a0, a1, a1, a2
+; RV64ZBT-NEXT:    ret
+  %xor = xor i64 %b, %c
+  %and = and i64 %xor, %b
+  %xor1 = xor i64 %and, %c
+  ret i64 %xor1
+}
+
 define signext i32 @cmov_i32(i32 signext %a, i32 signext %b, i32 signext %c) nounwind {
 ; RV64I-LABEL: cmov_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    beqz a1, .LBB2_2
+; RV64I-NEXT:    beqz a1, .LBB4_2
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    mv a2, a0
-; RV64I-NEXT:  .LBB2_2:
+; RV64I-NEXT:  .LBB4_2:
 ; RV64I-NEXT:    mv a0, a2
 ; RV64I-NEXT:    ret
 ;
@@ -66,10 +102,10 @@ define signext i32 @cmov_i32(i32 signext %a, i32 signext %b, i32 signext %c) nou
 define signext i32 @cmov_sle_i32(i32 signext %a, i32 signext %b, i32 signext %c, i32 signext %d) nounwind {
 ; RV64I-LABEL: cmov_sle_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    bge a2, a1, .LBB3_2
+; RV64I-NEXT:    bge a2, a1, .LBB5_2
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:  .LBB3_2:
+; RV64I-NEXT:  .LBB5_2:
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBT-LABEL: cmov_sle_i32:
@@ -85,10 +121,10 @@ define signext i32 @cmov_sle_i32(i32 signext %a, i32 signext %b, i32 signext %c,
 define signext i32 @cmov_sge_i32(i32 signext %a, i32 signext %b, i32 signext %c, i32 signext %d) nounwind {
 ; RV64I-LABEL: cmov_sge_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    bge a1, a2, .LBB4_2
+; RV64I-NEXT:    bge a1, a2, .LBB6_2
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:  .LBB4_2:
+; RV64I-NEXT:  .LBB6_2:
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBT-LABEL: cmov_sge_i32:
@@ -104,10 +140,10 @@ define signext i32 @cmov_sge_i32(i32 signext %a, i32 signext %b, i32 signext %c,
 define signext i32 @cmov_ule_i32(i32 signext %a, i32 signext %b, i32 signext %c, i32 signext %d) nounwind {
 ; RV64I-LABEL: cmov_ule_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    bgeu a2, a1, .LBB5_2
+; RV64I-NEXT:    bgeu a2, a1, .LBB7_2
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:  .LBB5_2:
+; RV64I-NEXT:  .LBB7_2:
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBT-LABEL: cmov_ule_i32:
@@ -123,10 +159,10 @@ define signext i32 @cmov_ule_i32(i32 signext %a, i32 signext %b, i32 signext %c,
 define signext i32 @cmov_uge_i32(i32 signext %a, i32 signext %b, i32 signext %c, i32 signext %d) nounwind {
 ; RV64I-LABEL: cmov_uge_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    bgeu a1, a2, .LBB6_2
+; RV64I-NEXT:    bgeu a1, a2, .LBB8_2
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:  .LBB6_2:
+; RV64I-NEXT:  .LBB8_2:
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBT-LABEL: cmov_uge_i32:
@@ -142,10 +178,10 @@ define signext i32 @cmov_uge_i32(i32 signext %a, i32 signext %b, i32 signext %c,
 define i64 @cmov_i64(i64 %a, i64 %b, i64 %c) nounwind {
 ; RV64I-LABEL: cmov_i64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    beqz a1, .LBB7_2
+; RV64I-NEXT:    beqz a1, .LBB9_2
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    mv a2, a0
-; RV64I-NEXT:  .LBB7_2:
+; RV64I-NEXT:  .LBB9_2:
 ; RV64I-NEXT:    mv a0, a2
 ; RV64I-NEXT:    ret
 ;
@@ -161,10 +197,10 @@ define i64 @cmov_i64(i64 %a, i64 %b, i64 %c) nounwind {
 define i64 @cmov_sle_i64(i64 %a, i64 %b, i64 %c, i64 %d) nounwind {
 ; RV64I-LABEL: cmov_sle_i64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    bge a2, a1, .LBB8_2
+; RV64I-NEXT:    bge a2, a1, .LBB10_2
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:  .LBB8_2:
+; RV64I-NEXT:  .LBB10_2:
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBT-LABEL: cmov_sle_i64:
@@ -180,10 +216,10 @@ define i64 @cmov_sle_i64(i64 %a, i64 %b, i64 %c, i64 %d) nounwind {
 define i64 @cmov_sge_i64(i64 %a, i64 %b, i64 %c, i64 %d) nounwind {
 ; RV64I-LABEL: cmov_sge_i64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    bge a1, a2, .LBB9_2
+; RV64I-NEXT:    bge a1, a2, .LBB11_2
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:  .LBB9_2:
+; RV64I-NEXT:  .LBB11_2:
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBT-LABEL: cmov_sge_i64:
@@ -199,10 +235,10 @@ define i64 @cmov_sge_i64(i64 %a, i64 %b, i64 %c, i64 %d) nounwind {
 define i64 @cmov_ule_i64(i64 %a, i64 %b, i64 %c, i64 %d) nounwind {
 ; RV64I-LABEL: cmov_ule_i64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    bgeu a2, a1, .LBB10_2
+; RV64I-NEXT:    bgeu a2, a1, .LBB12_2
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:  .LBB10_2:
+; RV64I-NEXT:  .LBB12_2:
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBT-LABEL: cmov_ule_i64:
@@ -218,10 +254,10 @@ define i64 @cmov_ule_i64(i64 %a, i64 %b, i64 %c, i64 %d) nounwind {
 define i64 @cmov_uge_i64(i64 %a, i64 %b, i64 %c, i64 %d) nounwind {
 ; RV64I-LABEL: cmov_uge_i64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    bgeu a1, a2, .LBB11_2
+; RV64I-NEXT:    bgeu a1, a2, .LBB13_2
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:  .LBB11_2:
+; RV64I-NEXT:  .LBB13_2:
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBT-LABEL: cmov_uge_i64:

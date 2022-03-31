@@ -33,21 +33,21 @@
 // Exclude leak-detection on arm32 for Android because `__aeabi_read_tp`
 // is missing. This caused a link error.
 #if SANITIZER_ANDROID && (__ANDROID_API__ < 28 || defined(__arm__))
-#define CAN_SANITIZE_LEAKS 0
+#  define CAN_SANITIZE_LEAKS 0
 #elif (SANITIZER_LINUX || SANITIZER_MAC) && (SANITIZER_WORDSIZE == 64) && \
     (defined(__x86_64__) || defined(__mips64) || defined(__aarch64__) ||  \
      defined(__powerpc64__) || defined(__s390x__))
-#define CAN_SANITIZE_LEAKS 1
+#  define CAN_SANITIZE_LEAKS 1
 #elif defined(__i386__) && (SANITIZER_LINUX || SANITIZER_MAC)
-#define CAN_SANITIZE_LEAKS 1
+#  define CAN_SANITIZE_LEAKS 1
 #elif defined(__arm__) && SANITIZER_LINUX
-#define CAN_SANITIZE_LEAKS 1
+#  define CAN_SANITIZE_LEAKS 1
 #elif SANITIZER_RISCV64 && SANITIZER_LINUX
-#define CAN_SANITIZE_LEAKS 1
+#  define CAN_SANITIZE_LEAKS 1
 #elif SANITIZER_NETBSD || SANITIZER_FUCHSIA
-#define CAN_SANITIZE_LEAKS 1
+#  define CAN_SANITIZE_LEAKS 1
 #else
-#define CAN_SANITIZE_LEAKS 0
+#  define CAN_SANITIZE_LEAKS 0
 #endif
 
 namespace __sanitizer {
@@ -82,6 +82,15 @@ extern Flags lsan_flags;
 inline Flags *flags() { return &lsan_flags; }
 void RegisterLsanFlags(FlagParser *parser, Flags *f);
 
+struct LeakedChunk {
+  uptr chunk;
+  u32 stack_trace_id;
+  uptr leaked_size;
+  ChunkTag tag;
+};
+
+using LeakedChunks = InternalMmapVector<LeakedChunk>;
+
 struct Leak {
   u32 id;
   uptr hit_count;
@@ -101,8 +110,7 @@ struct LeakedObject {
 class LeakReport {
  public:
   LeakReport() {}
-  void AddLeakedChunk(uptr chunk, u32 stack_trace_id, uptr leaked_size,
-                      ChunkTag tag);
+  void AddLeakedChunks(const LeakedChunks &chunks);
   void ReportTopLeaks(uptr max_leaks);
   void PrintSummary();
   uptr ApplySuppressions();
@@ -136,7 +144,7 @@ struct RootRegion {
 // threads and enumerating roots.
 struct CheckForLeaksParam {
   Frontier frontier;
-  LeakReport leak_report;
+  LeakedChunks leaks;
   bool success = false;
 };
 
@@ -222,8 +230,24 @@ void UnlockAllocator();
 // Returns true if [addr, addr + sizeof(void *)) is poisoned.
 bool WordIsPoisoned(uptr addr);
 // Wrappers for ThreadRegistry access.
-void LockThreadRegistry() NO_THREAD_SAFETY_ANALYSIS;
-void UnlockThreadRegistry() NO_THREAD_SAFETY_ANALYSIS;
+void LockThreadRegistry() SANITIZER_NO_THREAD_SAFETY_ANALYSIS;
+void UnlockThreadRegistry() SANITIZER_NO_THREAD_SAFETY_ANALYSIS;
+
+struct ScopedStopTheWorldLock {
+  ScopedStopTheWorldLock() {
+    LockThreadRegistry();
+    LockAllocator();
+  }
+
+  ~ScopedStopTheWorldLock() {
+    UnlockAllocator();
+    UnlockThreadRegistry();
+  }
+
+  ScopedStopTheWorldLock &operator=(const ScopedStopTheWorldLock &) = delete;
+  ScopedStopTheWorldLock(const ScopedStopTheWorldLock &) = delete;
+};
+
 ThreadRegistry *GetThreadRegistryLocked();
 bool GetThreadRangesLocked(tid_t os_id, uptr *stack_begin, uptr *stack_end,
                            uptr *tls_begin, uptr *tls_end, uptr *cache_begin,

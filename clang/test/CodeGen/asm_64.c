@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm %s -o - | FileCheck %s
 
 // CHECK-LABEL: @t1
-void t1() {
+void t1(void) {
   __asm__ ("mov r8w, 100;");
   // CHECK: call void asm sideeffect "mov r8w, 100;"
   __asm__ ("mov r8d, 100;");

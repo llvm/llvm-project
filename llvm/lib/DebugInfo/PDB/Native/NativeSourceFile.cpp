@@ -8,6 +8,8 @@
 
 #include "llvm/DebugInfo/PDB/Native/NativeSourceFile.h"
 #include "llvm/DebugInfo/PDB/Native/NativeSession.h"
+#include "llvm/DebugInfo/PDB/Native/PDBFile.h"
+#include "llvm/DebugInfo/PDB/Native/PDBStringTable.h"
 
 using namespace llvm;
 using namespace llvm::pdb;

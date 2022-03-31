@@ -52,53 +52,55 @@ static LogicalResult verifyMultShape(Operation *op, VectorType atp,
   return success();
 }
 
-static LogicalResult verify(amx::TileZeroOp op) {
-  return verifyTileSize(op, op.getVectorType());
+LogicalResult amx::TileZeroOp::verify() {
+  return verifyTileSize(*this, getVectorType());
 }
 
-static LogicalResult verify(amx::TileLoadOp op) {
-  unsigned rank = op.getMemRefType().getRank();
-  if (llvm::size(op.indices()) != rank)
-    return op.emitOpError("requires ") << rank << " indices";
-  return verifyTileSize(op, op.getVectorType());
+LogicalResult amx::TileLoadOp::verify() {
+  unsigned rank = getMemRefType().getRank();
+  if (indices().size() != rank)
+    return emitOpError("requires ") << rank << " indices";
+  return verifyTileSize(*this, getVectorType());
 }
 
-static LogicalResult verify(amx::TileStoreOp op) {
-  unsigned rank = op.getMemRefType().getRank();
-  if (llvm::size(op.indices()) != rank)
-    return op.emitOpError("requires ") << rank << " indices";
-  return verifyTileSize(op, op.getVectorType());
+LogicalResult amx::TileStoreOp::verify() {
+  unsigned rank = getMemRefType().getRank();
+  if (indices().size() != rank)
+    return emitOpError("requires ") << rank << " indices";
+  return verifyTileSize(*this, getVectorType());
 }
 
-static LogicalResult verify(amx::TileMulFOp op) {
-  VectorType aType = op.getLhsVectorType();
-  VectorType bType = op.getRhsVectorType();
-  VectorType cType = op.getVectorType();
-  if (failed(verifyTileSize(op, aType)) || failed(verifyTileSize(op, bType)) ||
-      failed(verifyTileSize(op, cType)) ||
-      failed(verifyMultShape(op, aType, bType, cType, 1)))
+LogicalResult amx::TileMulFOp::verify() {
+  VectorType aType = getLhsVectorType();
+  VectorType bType = getRhsVectorType();
+  VectorType cType = getVectorType();
+  if (failed(verifyTileSize(*this, aType)) ||
+      failed(verifyTileSize(*this, bType)) ||
+      failed(verifyTileSize(*this, cType)) ||
+      failed(verifyMultShape(*this, aType, bType, cType, 1)))
     return failure();
   Type ta = aType.getElementType();
   Type tb = bType.getElementType();
   Type tc = cType.getElementType();
   if (!ta.isBF16() || !tb.isBF16() || !tc.isF32())
-    return op.emitOpError("unsupported type combination");
+    return emitOpError("unsupported type combination");
   return success();
 }
 
-static LogicalResult verify(amx::TileMulIOp op) {
-  VectorType aType = op.getLhsVectorType();
-  VectorType bType = op.getRhsVectorType();
-  VectorType cType = op.getVectorType();
-  if (failed(verifyTileSize(op, aType)) || failed(verifyTileSize(op, bType)) ||
-      failed(verifyTileSize(op, cType)) ||
-      failed(verifyMultShape(op, aType, bType, cType, 2)))
+LogicalResult amx::TileMulIOp::verify() {
+  VectorType aType = getLhsVectorType();
+  VectorType bType = getRhsVectorType();
+  VectorType cType = getVectorType();
+  if (failed(verifyTileSize(*this, aType)) ||
+      failed(verifyTileSize(*this, bType)) ||
+      failed(verifyTileSize(*this, cType)) ||
+      failed(verifyMultShape(*this, aType, bType, cType, 2)))
     return failure();
   Type ta = aType.getElementType();
   Type tb = bType.getElementType();
   Type tc = cType.getElementType();
   if (!ta.isInteger(8) || !tb.isInteger(8) || !tc.isInteger(32))
-    return op.emitOpError("unsupported type combination");
+    return emitOpError("unsupported type combination");
   return success();
 }
 

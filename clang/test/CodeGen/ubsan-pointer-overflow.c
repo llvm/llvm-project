@@ -10,6 +10,7 @@ void fixed_len_array(int k) {
   // CHECK: getelementptr inbounds [10 x [10 x i32]], [10 x [10 x i32]]* [[ARR:%.*]], i64 0, i64 [[IDXPROM:%.*]]
   // CHECK-NEXT: [[SMUL:%.*]] = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 40, i64 [[IDXPROM]]), !nosanitize
   // CHECK-NEXT: [[SMULOFLOW:%.*]] = extractvalue { i64, i1 } [[SMUL]], 1, !nosanitize
+  // CHECK-NEXT: [[OR:%.+]] = or i1 [[SMULOFLOW]], false, !nosanitize
   // CHECK-NEXT: [[SMULVAL:%.*]] = extractvalue { i64, i1 } [[SMUL]], 0, !nosanitize
   // CHECK-NEXT: [[BASE:%.*]] = ptrtoint [10 x [10 x i32]]* [[ARR]] to i64, !nosanitize
   // CHECK-NEXT: [[COMPGEP:%.*]] = add i64 [[BASE]], [[SMULVAL]], !nosanitize

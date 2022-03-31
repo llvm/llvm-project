@@ -42,6 +42,10 @@ let Defs = [R1D, R15D, CC], Uses = [R15D], hasNoSchedulingInfo = 1,
     hasSideEffects = 1 in
   def PROBED_STACKALLOC : Pseudo<(outs), (ins i64imm:$stacksize), []>;
 
+let Defs = [R3D, CC], Uses = [R3D, R4D], hasNoSchedulingInfo = 1,
+    hasSideEffects = 1 in
+  def XPLINK_STACKALLOC : Pseudo<(outs), (ins), []>;
+
 //===----------------------------------------------------------------------===//
 // Branch instructions
 //===----------------------------------------------------------------------===//
@@ -285,6 +289,10 @@ let Predicates = [IsTargetXPLINK64] in {
     def CallBASR_XPLINK64  : Alias<4, (outs), (ins ADDR64:$R2, variable_ops),
                           [(z_call ADDR64:$R2)]>;
   }
+
+  let isCall = 1, Defs = [R3D, CC], Uses = [FPC] in {
+    def CallBASR_STACKEXT  : Alias<4, (outs), (ins ADDR64:$R2), []>;
+  }
 }
 
 // Regular calls.
@@ -336,13 +344,25 @@ let isCall = 1, isTerminator = 1, isReturn = 1 in {
   def CLGIBCall : Alias<6, (outs), (ins GR64:$R1, imm64zx8:$I2, cond4:$M3, ADDR64:$R4), []>;
 }
 
-// A return instruction (br %r14) for ELF and (b 2 %r7) for XPLink.
-let isReturn = 1, isTerminator = 1, isBarrier = 1, hasCtrlDep = 1 in
-  def Return : Alias<2, (outs), (ins), [(z_retflag)]>;
+let Predicates = [IsTargetXPLINK64] in {
+  // A return instruction (b 2(%r7)).
+  let isReturn = 1, isTerminator = 1, isBarrier = 1, hasCtrlDep = 1 in
+    def Return_XPLINK : Alias<4, (outs), (ins), [(z_retflag)]>;
 
-// A conditional return instruction (bcr <cond>, %r14).
-let isReturn = 1, isTerminator = 1, hasCtrlDep = 1, CCMaskFirst = 1, Uses = [CC] in
-  def CondReturn : Alias<2, (outs), (ins cond4:$valid, cond4:$R1), []>;
+  // A conditional return instruction (bc <cond>, 2(%r7)).
+  let isReturn = 1, isTerminator = 1, hasCtrlDep = 1, CCMaskFirst = 1, Uses = [CC] in
+    def CondReturn_XPLINK : Alias<4, (outs), (ins cond4:$valid, cond4:$R1), []>;
+}
+
+let Predicates = [IsTargetELF] in {
+  // A return instruction (br %r14).
+  let isReturn = 1, isTerminator = 1, isBarrier = 1, hasCtrlDep = 1 in
+    def Return : Alias<2, (outs), (ins), [(z_retflag)]>;
+
+  // A conditional return instruction (bcr <cond>, %r14).
+  let isReturn = 1, isTerminator = 1, hasCtrlDep = 1, CCMaskFirst = 1, Uses = [CC] in
+    def CondReturn : Alias<2, (outs), (ins cond4:$valid, cond4:$R1), []>;
+}
 
 // Fused compare and conditional returns.
 let isReturn = 1, isTerminator = 1, hasCtrlDep = 1 in {

@@ -6,7 +6,7 @@ int testx[(sizeof(x) == sizeof(int) * 10) ? 1 : -1];
 
 int (*a)(int (*x)[10], int (*y)[]);
 int (*a)(int (*x)[], int (*y)[5]);
-void b() {
+void b(void) {
   int x[10], y[5];
   a(&x, &y);
   a(&y, &y); // expected-warning {{incompatible pointer}}

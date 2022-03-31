@@ -1,0 +1,199 @@
+# RUN: llc %s -march=x86-64 -run-pass=livedebugvalues -o - \
+# RUN:       -experimental-debug-variable-locations=true \
+# RUN:     | FileCheck %s -implicit-check-not=DBG_VALUE \
+# RUN:        --check-prefixes=CHECK,COMMON
+# RUN: llc %s -march=x86-64 -run-pass=livedebugvalues -o - \
+# RUN:       -experimental-debug-variable-locations=false \
+# RUN:     | FileCheck %s -implicit-check-not=DBG_VALUE \
+# RUN:        --check-prefixes=VARLOC,COMMON
+#
+# This test is designed to stimulate a simplification of variable-value
+# propagation in InstrRefBasedLDV. When we only have a single assignment of
+# a variable, we don't have to completely enumerate all the PHIs the variable
+# has and then value propagate through them: the variable value is available
+# only in those blocks dominated by the assignment. Example in this test:
+#
+#             entry
+#            /  |  \
+#           /   v   \
+#          /   bb1   \    <--- Single variable assignment happens here
+#         /   /   \   \
+#        /   v     v   \
+#        | bb2     bb3 |
+#        |   \    /    |
+#        |    v  v     |
+#        |     bb4     |
+#         \   /   \    /
+#          v v     v  v
+#           bb5    bb6    <---  Dominance frontier is here
+#
+# The general InstrRefBasedLDV algorithm takes this CFG, places PHIs at bb5 and
+# bb6, then value-propagates until it's determined that they can't be
+# eliminated. Then, we determine that there's no machine location for such PHIs,
+# and no variable location is emitted.
+#
+# The fast way of doing this: observe that the variable value can never extend
+# past the dominance frontier of the block where the assignment happens. So
+# just propagate the variable value into the dominated blocks, and avoid the
+# general algorithm.
+#
+# Doing so introduces a functional change: VarLocBasedLDV won't propagate
+# variable locations through out-of-scope blocks, and InstrRefBasedLDV tries to
+# replicate VarLocBasedLDV most of the time. In the MIR below, bb2 is out of
+# scope. This effectively becomes another variable assignment (of undef), which
+# requires full SSA and value propagation to emulate what VarLocBasedLDV did.
+# Applying this speed optimisation makes us diverge from what VarLocBasedLDV
+# does by not treating the out-of-scope block as an effective undef assignment,
+# hence this test.
+#
+# CHECK-LABEL: bb.1:
+# CHECK:       DBG_VALUE
+# CHECK-LABEL: bb.2:
+## No location here because it's out-of-scope.
+# CHECK-LABEL: bb.3:
+# CHECK:       DBG_VALUE
+# CHECK-LABEL: bb.4:
+# CHECK:       DBG_VALUE
+#
+## VarLocBasedLDV will take the DBG_VALUE in the assignment block, propagate
+## to bb.3, but not into bb.4 because of the intervening out-of-scope block.
+#
+# VARLOC-LABEL: bb.1:
+# VARLOC:       DBG_VALUE
+# VARLOC-LABEL: bb.2:
+## No location here because it's out-of-scope.
+# VARLOC-LABEL: bb.3:
+# VARLOC:       DBG_VALUE
+#
+## Common tail for 'test2' -- this is checking that the assignment of undef or
+## $noreg in single-assignment mode doesn't lead to trouble further down the
+## line, specifically assertion failures.
+#
+# COMMON-LABEL: name: test2
+# COMMON: DBG_VALUE $noreg
+--- |
+  define i32 @_Z8bb_to_bb() local_unnamed_addr !dbg !12 {
+  entry:
+    ret i32 0, !dbg !17
+  }
+
+  define i32 @test2() local_unnamed_addr !dbg !112 {
+  entry:
+    ret i32 0, !dbg !117
+  }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!7, !8, !9, !10}
+  !llvm.ident = !{!11}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, globals: !3, debugInfoForProfiling: true, nameTableKind: None)
+  !1 = !DIFile(filename: "main.cpp", directory: "F:\")
+  !2 = !{}
+  !3 = !{!4}
+  !4 = !DIGlobalVariableExpression(var: !5, expr: !DIExpression())
+  !5 = distinct !DIGlobalVariable(name: "start", scope: !0, file: !1, line: 4, type: !6, isLocal: false, isDefinition: true)
+  !6 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !7 = !{i32 2, !"Dwarf Version", i32 4}
+  !8 = !{i32 2, !"Debug Info Version", i32 3}
+  !9 = !{i32 1, !"wchar_size", i32 2}
+  !10 = !{i32 7, !"PIC Level", i32 2}
+  !11 = !{!"clang"}
+  !12 = distinct !DISubprogram(name: "bb_to_bb", linkageName: "bb_to_bb", scope: !1, file: !1, line: 6, type: !13, scopeLine: 6, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !15)
+  !13 = !DISubroutineType(types: !14)
+  !14 = !{!6, !6}
+  !15 = !{!16}
+  !16 = !DILocalVariable(name: "myVar", scope: !18, file: !1, line: 7, type: !6)
+  !17 = !DILocation(line: 10, scope: !18)
+  !18 = distinct !DILexicalBlock(scope: !12, file: !1, line: 1, column: 1)
+  !19 = distinct !DILexicalBlock(scope: !12, file: !1, line: 1, column: 1)
+  !20 = !DILocation(line: 10, scope: !19)
+  !112 = distinct !DISubprogram(name: "test2", linkageName: "102", scope: !1, file: !1, line: 6, type: !13, scopeLine: 6, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !115)
+  !115 = !{!116}
+  !116 = !DILocalVariable(name: "myVar", scope: !118, file: !1, line: 7, type: !6)
+  !117 = !DILocation(line: 10, scope: !118)
+  !118 = distinct !DILexicalBlock(scope: !112, file: !1, line: 1, column: 1)
+  !119 = distinct !DILexicalBlock(scope: !112, file: !1, line: 1, column: 1)
+  !120 = !DILocation(line: 10, scope: !119)
+
+...
+---
+name: _Z8bb_to_bb
+debugValueSubstitutions:
+  - { srcinst: 4, srcop: 0, dstinst: 3, dstop: 0, subreg: 0 }
+body:  |
+  bb.0.entry:
+    successors: %bb.1, %bb.5, %bb.6
+
+    $rax = MOV64ri 1, debug-instr-number 1, debug-location !17
+    JCC_1 %bb.5, 1, implicit $eflags
+    JCC_1 %bb.6, 2, implicit $eflags
+    JMP_1 %bb.1
+
+  bb.1:
+    successors: %bb.2, %bb.3
+
+    DBG_VALUE $rax, $noreg, !16, !DIExpression(), debug-location !17
+    JCC_1 %bb.3, 1, implicit $eflags, debug-location !17
+
+  bb.2:
+    successors: %bb.4
+
+    JMP_1 %bb.4, debug-location !20
+
+  bb.3:
+    successors: %bb.4
+
+    JMP_1 %bb.4, debug-location !17
+
+  bb.4:
+    successors: %bb.5, %bb.6
+
+    JCC_1 %bb.5, 1, implicit $eflags, debug-location !17
+    JMP_1 %bb.6, debug-location !17
+
+  bb.5:
+    RET 0, debug-location !17
+
+  bb.6:
+    RET 0, debug-location !17
+...
+---
+name: test2
+debugValueSubstitutions:
+  - { srcinst: 4, srcop: 0, dstinst: 3, dstop: 0, subreg: 0 }
+body:  |
+  bb.0.entry:
+    successors: %bb.1, %bb.5, %bb.6
+
+    $rax = MOV64ri 1, debug-instr-number 1, debug-location !117
+    JCC_1 %bb.5, 1, implicit $eflags
+    JCC_1 %bb.6, 2, implicit $eflags
+    JMP_1 %bb.1
+
+  bb.1:
+    successors: %bb.2, %bb.3
+
+    DBG_VALUE $noreg, $noreg, !116, !DIExpression(), debug-location !117
+    JCC_1 %bb.3, 1, implicit $eflags, debug-location !117
+
+  bb.2:
+    successors: %bb.4
+
+    JMP_1 %bb.4, debug-location !120
+
+  bb.3:
+    successors: %bb.4
+
+    JMP_1 %bb.4, debug-location !117
+
+  bb.4:
+    successors: %bb.5, %bb.6
+
+    JCC_1 %bb.5, 1, implicit $eflags, debug-location !117
+    JMP_1 %bb.6, debug-location !117
+
+  bb.5:
+    RET 0, debug-location !117
+
+  bb.6:
+    RET 0, debug-location !117

@@ -14,7 +14,6 @@
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/Support/Compiler.h"
-#include <cstdint>
 #include <vector>
 
 namespace llvm {
@@ -23,7 +22,6 @@ class BasicBlock;
 class MachineBranchProbabilityInfo;
 class MachineFunction;
 class MachineLoopInfo;
-class MachineModuleInfo;
 class MachineRegisterInfo;
 class MBFIWrapper;
 class ProfileSummaryInfo;

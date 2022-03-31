@@ -4,7 +4,7 @@
 
 #define NULL 0
 
-void clang_analyzer_printState();
+void clang_analyzer_printState(void);
 
 void test(pthread_mutex_t *mtx) {
   int ret = pthread_mutex_destroy(mtx);

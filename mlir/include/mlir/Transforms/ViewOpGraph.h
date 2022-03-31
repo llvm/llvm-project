@@ -23,6 +23,6 @@ class Pass;
 std::unique_ptr<Pass>
 createPrintOpGraphPass(raw_ostream &os = llvm::errs());
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_TRANSFORMS_VIEWOPGRAPH_H_

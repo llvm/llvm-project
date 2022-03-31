@@ -64,9 +64,9 @@ __parallel_merge_body(std::size_t __size_x, std::size_t __size_y, _RandomAccessI
 template <class _ExecutionPolicy, typename _RandomAccessIterator1, typename _RandomAccessIterator2,
           typename _RandomAccessIterator3, typename _Compare, typename _LeafMerge>
 void
-__parallel_merge(_ExecutionPolicy&& /*__exec*/, _RandomAccessIterator1 __xs, _RandomAccessIterator1 __xe,
-                 _RandomAccessIterator2 __ys, _RandomAccessIterator2 __ye, _RandomAccessIterator3 __zs, _Compare __comp,
-                 _LeafMerge __leaf_merge)
+__parallel_merge(__pstl::__internal::__openmp_backend_tag, _ExecutionPolicy&& /*__exec*/, _RandomAccessIterator1 __xs,
+                 _RandomAccessIterator1 __xe, _RandomAccessIterator2 __ys, _RandomAccessIterator2 __ye,
+                 _RandomAccessIterator3 __zs, _Compare __comp, _LeafMerge __leaf_merge)
 
 {
     std::size_t __size_x = __xe - __xs;

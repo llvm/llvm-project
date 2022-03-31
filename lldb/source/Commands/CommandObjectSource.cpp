@@ -36,7 +36,7 @@ using namespace lldb_private;
 class CommandObjectSourceInfo : public CommandObjectParsed {
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options() {}
+    CommandOptions() {}
 
     ~CommandOptions() override = default;
 
@@ -118,8 +118,7 @@ public:
             "Display source line information for the current target "
             "process.  Defaults to instruction pointer in current stack "
             "frame.",
-            nullptr, eCommandRequiresTarget),
-        m_options() {}
+            nullptr, eCommandRequiresTarget) {}
 
   ~CommandObjectSourceInfo() override = default;
 
@@ -624,7 +623,7 @@ protected:
 class CommandObjectSourceList : public CommandObjectParsed {
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options() {}
+    CommandOptions() {}
 
     ~CommandOptions() override = default;
 
@@ -723,15 +722,14 @@ public:
       : CommandObjectParsed(interpreter, "source list",
                             "Display source code for the current target "
                             "process as specified by options.",
-                            nullptr, eCommandRequiresTarget),
-        m_options() {}
+                            nullptr, eCommandRequiresTarget) {}
 
   ~CommandObjectSourceList() override = default;
 
   Options *GetOptions() override { return &m_options; }
 
-  const char *GetRepeatCommand(Args &current_command_args,
-                               uint32_t index) override {
+  llvm::Optional<std::string> GetRepeatCommand(Args &current_command_args,
+                                               uint32_t index) override {
     // This is kind of gross, but the command hasn't been parsed yet so we
     // can't look at the option values for this invocation...  I have to scan
     // the arguments directly.
@@ -740,13 +738,13 @@ public:
           return e.ref() == "-r" || e.ref() == "--reverse";
         });
     if (iter == current_command_args.end())
-      return m_cmd_name.c_str();
+      return m_cmd_name;
 
     if (m_reverse_name.empty()) {
       m_reverse_name = m_cmd_name;
       m_reverse_name.append(" -r");
     }
-    return m_reverse_name.c_str();
+    return m_reverse_name;
   }
 
 protected:
@@ -757,7 +755,7 @@ protected:
     SourceInfo(ConstString name, const LineEntry &line_entry)
         : function(name), line_entry(line_entry) {}
 
-    SourceInfo() : function(), line_entry() {}
+    SourceInfo() {}
 
     bool IsValid() const { return (bool)function && line_entry.IsValid(); }
 

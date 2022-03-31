@@ -20,7 +20,7 @@ namespace llvm {
 class MemoryBuffer;
 class SMLoc;
 class SourceMgr;
-} // end namespace llvm
+} // namespace llvm
 
 namespace mlir {
 class DiagnosticEngine;
@@ -34,7 +34,7 @@ class Value;
 
 namespace detail {
 struct DiagnosticEngineImpl;
-} // end namespace detail
+} // namespace detail
 
 /// Defines the different supported severity of a diagnostic.
 enum class DiagnosticSeverity {
@@ -62,16 +62,18 @@ public:
   // Construct from a signed integer.
   template <typename T>
   explicit DiagnosticArgument(
-      T val, typename std::enable_if<std::is_signed<T>::value &&
-                                     std::numeric_limits<T>::is_integer &&
-                                     sizeof(T) <= sizeof(int64_t)>::type * = 0)
+      T val,
+      typename std::enable_if<std::is_signed<T>::value &&
+                              std::numeric_limits<T>::is_integer &&
+                              sizeof(T) <= sizeof(int64_t)>::type * = nullptr)
       : kind(DiagnosticArgumentKind::Integer), opaqueVal(int64_t(val)) {}
   // Construct from an unsigned integer.
   template <typename T>
   explicit DiagnosticArgument(
-      T val, typename std::enable_if<std::is_unsigned<T>::value &&
-                                     std::numeric_limits<T>::is_integer &&
-                                     sizeof(T) <= sizeof(uint64_t)>::type * = 0)
+      T val,
+      typename std::enable_if<std::is_unsigned<T>::value &&
+                              std::numeric_limits<T>::is_integer &&
+                              sizeof(T) <= sizeof(uint64_t)>::type * = nullptr)
       : kind(DiagnosticArgumentKind::Unsigned), opaqueVal(uint64_t(val)) {}
   // Construct from a string reference.
   explicit DiagnosticArgument(StringRef val)
@@ -263,6 +265,13 @@ public:
   /// Allow a diagnostic to be converted to 'failure'.
   operator LogicalResult() const;
 
+  /// Allow a diagnostic to be converted to FailureOr<T>. Always results in
+  /// 'failure' because this cast cannot possibly return an object of 'T'.
+  template <typename T>
+  operator FailureOr<T>() const {
+    return failure();
+  }
+
 private:
   Diagnostic(const Diagnostic &rhs) = delete;
   Diagnostic &operator=(const Diagnostic &rhs) = delete;
@@ -344,6 +353,14 @@ public:
   /// Allow an inflight diagnostic to be converted to 'failure', otherwise
   /// 'success' if this is an empty diagnostic.
   operator LogicalResult() const;
+
+  /// Allow an inflight diagnostic to be converted to FailureOr<T>. Always
+  /// results in 'failure' because this cast cannot possibly return an object of
+  /// 'T'.
+  template <typename T>
+  operator FailureOr<T>() const {
+    return failure();
+  }
 
 private:
   InFlightDiagnostic &operator=(const InFlightDiagnostic &) = delete;
@@ -429,8 +446,9 @@ public:
   }
 
   /// Emit a diagnostic using the registered issue handler if present, or with
-  /// the default behavior if not.
-  void emit(Diagnostic diag);
+  /// the default behavior if not. The diagnostic instance is consumed in the
+  /// process.
+  void emit(Diagnostic &&diag);
 
 private:
   friend class MLIRContextImpl;
@@ -516,7 +534,7 @@ private:
 
 namespace detail {
 struct SourceMgrDiagnosticHandlerImpl;
-} // end namespace detail
+} // namespace detail
 
 /// This class is a utility diagnostic handler for use with llvm::SourceMgr.
 class SourceMgrDiagnosticHandler : public ScopedDiagnosticHandler {
@@ -561,7 +579,7 @@ protected:
 
 private:
   /// Convert a location into the given memory buffer into an SMLoc.
-  llvm::SMLoc convertLocToSMLoc(FileLineColLoc loc);
+  SMLoc convertLocToSMLoc(FileLineColLoc loc);
 
   /// Given a location, returns the first nested location (including 'loc') that
   /// can be shown to the user.
@@ -580,7 +598,7 @@ private:
 
 namespace detail {
 struct SourceMgrDiagnosticVerifierHandlerImpl;
-} // end namespace detail
+} // namespace detail
 
 /// This class is a utility diagnostic handler for use with llvm::SourceMgr that
 /// verifies that emitted diagnostics match 'expected-*' lines on the
@@ -613,7 +631,7 @@ private:
 
 namespace detail {
 struct ParallelDiagnosticHandlerImpl;
-} // end namespace detail
+} // namespace detail
 
 /// This class is a utility diagnostic handler for use when multi-threading some
 /// part of the compiler where diagnostics may be emitted. This handler ensures

@@ -100,14 +100,15 @@ private:
       return;
     }
 
-    JITTargetAddress InitAddr = B.getAddress() & ~(LineWidth - 1);
-    JITTargetAddress StartAddr = B.getAddress();
-    JITTargetAddress EndAddr = B.getAddress() + B.getSize();
+    ExecutorAddr InitAddr(B.getAddress().getValue() & ~(LineWidth - 1));
+    ExecutorAddr StartAddr = B.getAddress();
+    ExecutorAddr EndAddr = B.getAddress() + B.getSize();
     auto *Data = reinterpret_cast<const uint8_t *>(B.getContent().data());
 
-    for (JITTargetAddress CurAddr = InitAddr; CurAddr != EndAddr; ++CurAddr) {
+    for (ExecutorAddr CurAddr = InitAddr; CurAddr != EndAddr; ++CurAddr) {
       if (CurAddr % LineWidth == 0)
-        outs() << "          " << formatv("{0:x16}", CurAddr) << ": ";
+        outs() << "          " << formatv("{0:x16}", CurAddr.getValue())
+               << ": ";
       if (CurAddr < StartAddr)
         outs() << "   ";
       else

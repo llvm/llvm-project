@@ -27,7 +27,7 @@ int main(int, char**)
     typedef C::value_type V;
     C m = {1, 2, 3, 4, 5, 6};
     assert(m.size() == 6);
-    assert(distance(m.begin(), m.end()) == 6);
+    assert(std::distance(m.begin(), m.end()) == 6);
     C::const_iterator i = m.cbegin();
     assert(*i == V(1));
     assert(*++i == V(2));
@@ -41,7 +41,7 @@ int main(int, char**)
     typedef C::value_type V;
     C m = {1, 2, 3, 4, 5, 6};
     assert(m.size() == 6);
-    assert(distance(m.begin(), m.end()) == 6);
+    assert(std::distance(m.begin(), m.end()) == 6);
     C::const_iterator i = m.cbegin();
     assert(*i == V(1));
     assert(*++i == V(2));

@@ -9,7 +9,7 @@
 #ifndef MLIR_CONVERSION_LINALGTOSTANDARD_LINALGTOSTANDARD_H_
 #define MLIR_CONVERSION_LINALGTOSTANDARD_LINALGTOSTANDARD_H_
 
-#include "mlir/Dialect/Linalg/IR/LinalgOps.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 namespace mlir {
@@ -20,7 +20,7 @@ class OperationPass;
 namespace linalg {
 
 //===----------------------------------------------------------------------===//
-// Patterns to convert a LinalgOp to std.call @external library implementation.
+// Patterns to convert a LinalgOp to func.call @external library implementation.
 //===----------------------------------------------------------------------===//
 // These patterns are exposed individually because they are expected to be
 // typically used individually.
@@ -36,25 +36,6 @@ public:
   using OpInterfaceRewritePattern<LinalgOp>::OpInterfaceRewritePattern;
 
   LogicalResult matchAndRewrite(LinalgOp op,
-                                PatternRewriter &rewriter) const override;
-};
-
-/// Rewrite pattern specialization for CopyOp, kicks in when both input and
-/// output permutations are left unspecified or are the identity.
-class CopyOpToLibraryCallRewrite : public OpRewritePattern<CopyOp> {
-public:
-  using OpRewritePattern<CopyOp>::OpRewritePattern;
-  LogicalResult matchAndRewrite(CopyOp op,
-                                PatternRewriter &rewriter) const override;
-};
-
-/// Rewrite CopyOp with permutations into a sequence of TransposeOp and
-/// permutation-free CopyOp. This interplays with TransposeOpConversion and
-/// LinalgConversion<CopyOp> to create a path to the LLVM dialect.
-class CopyTransposeRewrite : public OpRewritePattern<CopyOp> {
-public:
-  using OpRewritePattern<CopyOp>::OpRewritePattern;
-  LogicalResult matchAndRewrite(CopyOp op,
                                 PatternRewriter &rewriter) const override;
 };
 

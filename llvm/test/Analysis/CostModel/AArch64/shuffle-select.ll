@@ -1,4 +1,4 @@
-; RUN: opt < %s -mtriple=aarch64--linux-gnu -cost-model -analyze | FileCheck %s --check-prefix=COST
+; RUN: opt < %s -mtriple=aarch64--linux-gnu -passes='print<cost-model>' 2>&1 -disable-output | FileCheck %s --check-prefix=COST
 ; RUN: llc < %s -mtriple=aarch64--linux-gnu | FileCheck %s --check-prefix=CODE
 
 ; COST-LABEL: sel.v8i8

@@ -71,7 +71,7 @@ define i32 @test_atomic_load_add_i32(i32 %offset) nounwind {
 
 define void @test_atomic_load_add_i64(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i64:
-; CHECK: bl __sync_fetch_and_add_8
+; CHECK: bl __atomic_fetch_add_8
    %old = atomicrmw add i64* @var64, i64 %offset monotonic
   store i64 %old, i64* @var64
   ret void

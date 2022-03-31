@@ -17,7 +17,6 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Scalar/DCE.h"
 
 using namespace llvm;
@@ -33,14 +32,15 @@ static void createEmptyFunction(Module &M) {
 }
 
 void IRMutationStrategy::mutate(Module &M, RandomIRBuilder &IB) {
-  if (M.empty())
-    createEmptyFunction(M);
-
   auto RS = makeSampler<Function *>(IB.Rand);
   for (Function &F : M)
     if (!F.isDeclaration())
       RS.sample(&F, /*Weight=*/1);
-  mutate(*RS.getSelection(), IB);
+
+  if (RS.isEmpty())
+    createEmptyFunction(M);
+  else
+    mutate(*RS.getSelection(), IB);
 }
 
 void IRMutationStrategy::mutate(Function &F, RandomIRBuilder &IB) {

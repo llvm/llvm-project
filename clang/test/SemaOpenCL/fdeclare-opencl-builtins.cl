@@ -1,12 +1,15 @@
 // RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL -fdeclare-opencl-builtins -DNO_HEADER
 // RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL -fdeclare-opencl-builtins -finclude-default-header
-// RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL1.2 -fdeclare-opencl-builtins -DNO_HEADER
-// RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL1.2 -fdeclare-opencl-builtins -finclude-default-header
+// RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL1.2 -fdeclare-opencl-builtins -DNO_HEADER -cl-ext=-cl_intel_subgroups
+// RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL1.2 -fdeclare-opencl-builtins -finclude-default-header -cl-ext=-cl_intel_subgroups
 // RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL2.0 -fdeclare-opencl-builtins -DNO_HEADER
 // RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL2.0 -fdeclare-opencl-builtins -finclude-default-header
+// RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL3.0 -fdeclare-opencl-builtins -finclude-default-header
 // RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CLC++ -fdeclare-opencl-builtins -DNO_HEADER
 // RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CLC++ -fdeclare-opencl-builtins -finclude-default-header
+// RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CLC++2021 -fdeclare-opencl-builtins -finclude-default-header
 // RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL2.0 -fdeclare-opencl-builtins -finclude-default-header -cl-ext=-cl_khr_fp64 -DNO_FP64
+// RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL3.0 -fdeclare-opencl-builtins -finclude-default-header -DNO_ATOMSCOPE
 
 // Test the -fdeclare-opencl-builtins option.  This is not a completeness
 // test, so it should not test for all builtins defined by OpenCL.  Instead
@@ -46,12 +49,19 @@ typedef __UINTPTR_TYPE__ uintptr_t;
 typedef char char2 __attribute__((ext_vector_type(2)));
 typedef char char4 __attribute__((ext_vector_type(4)));
 typedef uchar uchar4 __attribute__((ext_vector_type(4)));
+typedef uchar uchar16 __attribute__((ext_vector_type(16)));
 typedef float float4 __attribute__((ext_vector_type(4)));
+typedef float float16 __attribute__((ext_vector_type(16)));
 typedef half half4 __attribute__((ext_vector_type(4)));
 typedef int int2 __attribute__((ext_vector_type(2)));
 typedef int int4 __attribute__((ext_vector_type(4)));
+typedef uint uint2 __attribute__((ext_vector_type(2)));
 typedef uint uint4 __attribute__((ext_vector_type(4)));
 typedef long long2 __attribute__((ext_vector_type(2)));
+typedef long long8 __attribute__((ext_vector_type(8)));
+typedef ulong ulong4 __attribute__((ext_vector_type(4)));
+typedef short short16 __attribute__((ext_vector_type(16)));
+typedef ushort ushort3 __attribute__((ext_vector_type(3)));
 
 typedef int clk_profiling_info;
 #define CLK_PROFILING_COMMAND_EXEC_TIME 0x1
@@ -63,11 +73,21 @@ typedef struct {int a;} ndrange_t;
 
 // Enable extensions that are enabled in opencl-c-base.h.
 #if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
+#define __opencl_c_generic_address_space 1
 #define cl_khr_subgroup_extended_types 1
 #define cl_khr_subgroup_ballot 1
 #define cl_khr_subgroup_non_uniform_arithmetic 1
 #define cl_khr_subgroup_clustered_reduce 1
+#define __opencl_c_read_write_images 1
+#define __opencl_subgroup_builtins 1
 #endif
+
+#if (__OPENCL_CPP_VERSION__ == 100 || __OPENCL_C_VERSION__ == 200)
+#define __opencl_c_atomic_order_seq_cst 1
+#define __opencl_c_atomic_scope_device 1
+#endif
+
+#define __opencl_c_named_address_space_builtins 1
 #endif
 
 kernel void test_pointers(volatile global void *global_p, global const int4 *a) {
@@ -85,6 +105,7 @@ kernel void test_pointers(volatile global void *global_p, global const int4 *a) 
 #if !defined(NO_HEADER) && (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
 kernel void test_enum_args(volatile global atomic_int *global_p, global int *expected) {
   int desired;
+  atomic_work_item_fence(CLK_GLOBAL_MEM_FENCE, memory_order_acq_rel, memory_scope_device);
   atomic_compare_exchange_strong_explicit(global_p, expected, desired,
                                           memory_order_acq_rel,
                                           memory_order_relaxed,
@@ -142,6 +163,46 @@ void test_atomic_fetch_with_address_space(volatile __generic atomic_float *a_flo
   resd1 = atomic_fetch_add_explicit(a_double_global, d1, memory_order_seq_cst, memory_scope_work_group);
 }
 #endif // !defined(NO_HEADER) && __OPENCL_C_VERSION__ >= 200
+
+#if !defined(NO_HEADER) && __OPENCL_C_VERSION__ == 200 && defined(__opencl_c_generic_address_space)
+
+// Test that overloads that use atomic_double are not available when the fp64
+// extension is disabled.  Test this by counting the number of notes about
+// candidate functions.
+void test_atomic_double_reporting(volatile __generic atomic_int *a) {
+  atomic_init(a);
+  // expected-error@-1{{no matching function for call to 'atomic_init'}}
+#if defined(NO_FP64)
+  // Expecting 5 candidates: int, uint, long, ulong, float
+  // expected-note@-4 5 {{candidate function not viable: requires 2 arguments, but 1 was provided}}
+#else
+  // Expecting 6 candidates: int, uint, long, ulong, float, double
+  // expected-note@-7 6 {{candidate function not viable: requires 2 arguments, but 1 was provided}}
+#endif
+}
+
+#endif
+
+#if defined(NO_ATOMSCOPE) && __OPENCL_C_VERSION__ >= 300
+// Disable the feature by undefining the feature macro.
+#undef __opencl_c_atomic_scope_device
+
+// Test that only the overload with explicit order and scope arguments is
+// available when the __opencl_c_atomic_scope_device feature is disabled.
+void test_atomics_without_scope_device(volatile __generic atomic_int *a_int) {
+  int d;
+
+  atomic_exchange(a_int, d);
+  // expected-error@-1{{implicit declaration of function 'atomic_exchange' is invalid in OpenCL}}
+
+  atomic_exchange_explicit(a_int, d, memory_order_seq_cst);
+  // expected-error@-1{{no matching function for call to 'atomic_exchange_explicit'}}
+  // expected-note@-2 + {{candidate function not viable}}
+
+  atomic_exchange_explicit(a_int, d, memory_order_seq_cst, memory_scope_work_group);
+}
+
+#endif
 
 // Test old atomic overloaded with generic address space in C++ for OpenCL.
 #if __OPENCL_C_VERSION__ >= 200
@@ -284,18 +345,27 @@ kernel void basic_vector_data() {
   global void *global_p;
   private void *private_p;
   size_t s;
+  ulong4 ul4;
+  short16 s16;
+#if __OPENCL_C_VERSION__ >= CL_VERSION_2_0
+  ushort3 us3;
+  uchar16 uc16;
+#endif
+  long8 l8;
+  uint2 ui2;
+  float16 f16;
 
-  vload4(s, (const __constant ulong *) constant_p);
-  vload16(s, (const __constant short *) constant_p);
+  ul4 = vload4(s, (const __constant ulong *) constant_p);
+  s16 = vload16(s, (const __constant short *) constant_p);
 
 #if __OPENCL_C_VERSION__ >= CL_VERSION_2_0
-  vload3(s, (const __generic ushort *) generic_p);
-  vload16(s, (const __generic uchar *) generic_p);
+  us3 = vload3(s, (const __generic ushort *) generic_p);
+  uc16 = vload16(s, (const __generic uchar *) generic_p);
 #endif
 
-  vload8(s, (const __global long *) global_p);
-  vload2(s, (const __local uint *) local_p);
-  vload16(s, (const __private float *) private_p);
+  l8 = vload8(s, (const __global long *) global_p);
+  ui2 = vload2(s, (const __local uint *) local_p);
+  f16 = vload16(s, (const __private float *) private_p);
 }
 
 kernel void basic_work_item() {

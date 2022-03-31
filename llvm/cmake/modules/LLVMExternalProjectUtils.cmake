@@ -11,8 +11,14 @@ function(llvm_ExternalProject_BuildCmd out_var target bin_dir)
     # Use special command for Makefiles to support parallelism.
     set(${out_var} "$(MAKE)" "-C" "${bin_dir}" "${target}" PARENT_SCOPE)
   else()
+    set(tool_args "${LLVM_EXTERNAL_PROJECT_BUILD_TOOL_ARGS}")
+    if(NOT tool_args STREQUAL "")
+      string(CONFIGURE "${tool_args}" tool_args @ONLY)
+      string(PREPEND tool_args "-- ")
+      separate_arguments(tool_args UNIX_COMMAND "${tool_args}")
+    endif()
     set(${out_var} ${CMAKE_COMMAND} --build ${bin_dir} --target ${target}
-                                    --config ${ARG_CONFIGURATION} PARENT_SCOPE)
+                                    --config ${ARG_CONFIGURATION} ${tool_args} PARENT_SCOPE)
   endif()
 endfunction()
 
@@ -50,12 +56,14 @@ endfunction()
 #     Use provided strip tool instead of the default one.
 #   TARGET_TRIPLE triple
 #     Optional target triple to pass to the compiler
+#   BYPRODUCTS files...
+#     Files generated as a byproduct of this build.
 #   )
 function(llvm_ExternalProject_Add name source_dir)
   cmake_parse_arguments(ARG
     "USE_TOOLCHAIN;EXCLUDE_FROM_ALL;NO_INSTALL;ALWAYS_CLEAN"
     "SOURCE_DIR"
-    "CMAKE_ARGS;TOOLCHAIN_TOOLS;RUNTIME_LIBRARIES;DEPENDS;EXTRA_TARGETS;PASSTHROUGH_PREFIXES;STRIP_TOOL;TARGET_TRIPLE"
+    "CMAKE_ARGS;TOOLCHAIN_TOOLS;RUNTIME_LIBRARIES;DEPENDS;EXTRA_TARGETS;PASSTHROUGH_PREFIXES;STRIP_TOOL;TARGET_TRIPLE;BYPRODUCTS"
     ${ARGN})
   canonicalize_tool_name(${name} nameCanon)
 
@@ -308,12 +316,15 @@ function(llvm_ExternalProject_Add name source_dir)
                -DPACKAGE_VERSION=${PACKAGE_VERSION}
                -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
                -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
+               -DCMAKE_C_COMPILER_LAUNCHER=${CMAKE_C_COMPILER_LAUNCHER}
+               -DCMAKE_CXX_COMPILER_LAUNCHER=${CMAKE_CXX_COMPILER_LAUNCHER}
                -DCMAKE_EXPORT_COMPILE_COMMANDS=1
                ${cmake_args}
                ${PASSTHROUGH_VARIABLES}
     INSTALL_COMMAND ""
     STEP_TARGETS configure build
     BUILD_ALWAYS 1
+    BUILD_BYPRODUCTS ${ARG_BYPRODUCTS}
     USES_TERMINAL_CONFIGURE 1
     USES_TERMINAL_BUILD 1
     USES_TERMINAL_INSTALL 1

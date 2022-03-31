@@ -1,4 +1,4 @@
-; RUN: opt  -instsimplify -S < %s | FileCheck %s
+; RUN: opt  -passes=instsimplify -S < %s | FileCheck %s
 
 ; Test back to back reverse shuffles are eliminated.
 define <vscale x 4 x i32> @shuffle_b2b_reverse(<vscale x 4 x i32> %a) {

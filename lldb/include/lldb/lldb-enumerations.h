@@ -749,6 +749,7 @@ enum BasicType {
   eBasicTypeUnsignedWChar,
   eBasicTypeChar16,
   eBasicTypeChar32,
+  eBasicTypeChar8,
   eBasicTypeShort,
   eBasicTypeUnsignedShort,
   eBasicTypeInt,
@@ -1138,6 +1139,12 @@ enum SaveCoreStyle {
   eSaveCoreFull = 1,
   eSaveCoreDirtyOnly = 2,
   eSaveCoreStackOnly = 3,
+};
+
+// Type of counter values associated with instructions in a trace.
+enum TraceCounter {
+  // Timestamp counter, like the one offered by Intel CPUs (TSC).
+  eTraceCounterTSC,
 };
 
 } // namespace lldb

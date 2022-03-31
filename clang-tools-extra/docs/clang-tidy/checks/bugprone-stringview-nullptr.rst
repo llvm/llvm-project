@@ -43,9 +43,9 @@ is translated into...
   bool is_empty = sv.empty();
   bool isnt_empty = !sv.empty();
 
-  accepts_sv({});
+  accepts_sv("");
 
-  accepts_sv({});  // A
+  accepts_sv("");  // A
 
   accepts_sv({nullptr, 0});  // B
 

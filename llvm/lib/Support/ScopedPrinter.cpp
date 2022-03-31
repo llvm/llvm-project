@@ -1,7 +1,6 @@
 #include "llvm/Support/ScopedPrinter.h"
 
 #include "llvm/Support/Format.h"
-#include <cctype>
 
 using namespace llvm::support;
 
@@ -41,6 +40,16 @@ void ScopedPrinter::printBinaryImpl(StringRef Label, StringRef Str,
       OS << " " << Str;
     OS << " (" << format_bytes(Data, None, Data.size(), 1, 0, true) << ")\n";
   }
+}
+
+JSONScopedPrinter::JSONScopedPrinter(
+    raw_ostream &OS, bool PrettyPrint,
+    std::unique_ptr<DelimitedScope> &&OuterScope)
+    : ScopedPrinter(OS, ScopedPrinter::ScopedPrinterKind::JSON),
+      JOS(OS, /*Indent=*/PrettyPrint ? 2 : 0),
+      OuterScope(std::move(OuterScope)) {
+  if (this->OuterScope)
+    this->OuterScope->setPrinter(*this);
 }
 
 } // namespace llvm

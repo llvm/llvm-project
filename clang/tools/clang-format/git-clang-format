@@ -79,6 +79,7 @@ def main():
       'm',  # ObjC
       'mm',  # ObjC++
       'cc', 'cp', 'cpp', 'c++', 'cxx', 'hh', 'hpp', 'hxx',  # C++
+      'ccm', 'cppm', 'cxxm', 'c++m',  # C++ Modules
       'cu', 'cuh',  # CUDA
       # Other languages that clang-format supports
       'proto', 'protodevel',  # Protocol Buffers
@@ -160,10 +161,12 @@ def main():
       print('Running clang-format on the following files:')
       for filename in changed_lines:
         print('    %s' % filename)
+
   if not changed_lines:
     if opts.verbose >= 0:
       print('no modified files to format')
-    return
+    return 0
+
   if len(commits) > 1:
     old_tree = commits[1]
     new_tree = run_clang_format_and_save_to_tree(changed_lines,
@@ -178,10 +181,13 @@ def main():
   if opts.verbose >= 1:
     print('old tree: %s' % old_tree)
     print('new tree: %s' % new_tree)
+
   if old_tree == new_tree:
     if opts.verbose >= 0:
       print('clang-format did not modify any files')
-  elif opts.diff:
+    return 0
+
+  if opts.diff:
     print_diff(old_tree, new_tree)
   elif opts.diffstat:
     print_diffstat(old_tree, new_tree)
@@ -192,6 +198,8 @@ def main():
       print('changed files:')
       for filename in changed_files:
         print('    %s' % filename)
+
+  return 1
 
 
 def load_git_config(non_string_options=None):

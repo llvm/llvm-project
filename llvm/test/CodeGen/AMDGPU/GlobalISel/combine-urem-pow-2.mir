@@ -176,15 +176,15 @@ body:             |
     ; GCN: liveins: $vgpr0, $vgpr1
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: %var:_(<2 x s16>) = COPY $vgpr0
-    ; GCN-NEXT: %shift_amt:_(<2 x s16>) = COPY $vgpr1
+    ; GCN-NEXT: %shift_amt:_(s32) = COPY $vgpr1
     ; GCN-NEXT: %two:_(s32) = G_CONSTANT i32 2
     ; GCN-NEXT: %four:_(s32) = G_CONSTANT i32 4
-    ; GCN-NEXT: %shift:_(s32) = G_SHL %two, %shift_amt(<2 x s16>)
+    ; GCN-NEXT: %shift:_(s32) = G_SHL %two, %shift_amt(s32)
     ; GCN-NEXT: %four_vec:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC %four(s32), %shift(s32)
     ; GCN-NEXT: %rem:_(<2 x s16>) = G_UREM %var, %four_vec
     ; GCN-NEXT: $vgpr0 = COPY %rem(<2 x s16>)
     %var:_(<2 x s16>) = COPY $vgpr0
-    %shift_amt:_(<2 x s16>) = COPY $vgpr1
+    %shift_amt:_(s32) = COPY $vgpr1
     %two:_(s32) = G_CONSTANT i32 2
     %four:_(s32) = G_CONSTANT i32 4
     %shift:_(s32) = G_SHL %two, %shift_amt

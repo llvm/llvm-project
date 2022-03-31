@@ -137,6 +137,9 @@ test0:
     .int32      2000000000
     .size       .L.str, 28
 
+    .data
+    .int8       73
+
     .section    .init_array.42,"",@
     .p2align    2
     .int32      test0
@@ -271,6 +274,10 @@ empty_fref_table:
 # CHECK-NEXT:      .int64      5000000000
 # CHECK-NEXT:      .int32      2000000000
 # CHECK-NEXT:      .size       .L.str, 28
+
+# CHECK:           .data
+# CHECK-EMPTY:
+# CHECK-NEXT:      .int8       73
 
 # CHECK:           .section    .init_array.42,"",@
 # CHECK-NEXT:      .p2align    2

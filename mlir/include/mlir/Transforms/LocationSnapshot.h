@@ -61,6 +61,6 @@ std::unique_ptr<Pass> createLocationSnapshotPass(OpPrintingFlags flags,
 /// Overload utilizing pass options for initialization.
 std::unique_ptr<Pass> createLocationSnapshotPass();
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_TRANSFORMS_LOCATIONSNAPSHOT_H

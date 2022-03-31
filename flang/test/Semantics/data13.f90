@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -fsyntax-only -fdebug-dump-symbols %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -fdebug-dump-symbols %s 2>&1 | FileCheck %s
 ! Verify that the closure of EQUIVALENCE'd symbols with any DATA
 ! initialization produces a combined initializer, with explicit
 ! initialization overriding any default component initialization.

@@ -83,7 +83,7 @@ int hoo(void) {
 
 //CHECK: define{{.*}} i32 @foo() #5 {
 //CHECK: define{{.*}} i32 @goo() #6 {
-//CHECK: declare i32 @zoo(i32*, i32*) #7
+//CHECK: declare i32 @zoo(i32* noundef, i32* noundef) #7
 //CHECK: define{{.*}} i32 @hoo() #8 {
 
 //ELF: attributes #0 = { "bss-section"="my_bss.1" "data-section"="my_data.1" "rodata-section"="my_rodata.1" }

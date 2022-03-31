@@ -23,7 +23,7 @@
 @dynamic c;
 @end
 
-int test() {
+int test(void) {
   A *a = [[A alloc] init];
   return a.x;
 }

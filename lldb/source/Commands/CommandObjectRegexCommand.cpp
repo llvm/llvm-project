@@ -10,6 +10,9 @@
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 
+#include "llvm/Support/Errc.h"
+#include "llvm/Support/Error.h"
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -20,10 +23,37 @@ CommandObjectRegexCommand::CommandObjectRegexCommand(
     bool is_removable)
     : CommandObjectRaw(interpreter, name, help, syntax),
       m_max_matches(max_matches), m_completion_type_mask(completion_type_mask),
-      m_entries(), m_is_removable(is_removable) {}
+      m_is_removable(is_removable) {}
 
 // Destructor
 CommandObjectRegexCommand::~CommandObjectRegexCommand() = default;
+
+llvm::Expected<std::string> CommandObjectRegexCommand::SubstituteVariables(
+    llvm::StringRef input,
+    const llvm::SmallVectorImpl<llvm::StringRef> &replacements) {
+  std::string buffer;
+  llvm::raw_string_ostream output(buffer);
+
+  llvm::SmallVector<llvm::StringRef, 4> parts;
+  input.split(parts, '%');
+
+  output << parts[0];
+  for (llvm::StringRef part : drop_begin(parts)) {
+    size_t idx = 0;
+    if (part.consumeInteger(10, idx))
+      output << '%';
+    else if (idx < replacements.size())
+      output << replacements[idx];
+    else
+      return llvm::make_error<llvm::StringError>(
+          llvm::formatv("%{0} is out of range: not enough arguments specified",
+                        idx),
+          llvm::errc::invalid_argument);
+    output << part;
+  }
+
+  return output.str();
+}
 
 bool CommandObjectRegexCommand::DoExecute(llvm::StringRef command,
                                           CommandReturnObject &result) {
@@ -31,29 +61,20 @@ bool CommandObjectRegexCommand::DoExecute(llvm::StringRef command,
   for (pos = m_entries.begin(); pos != end; ++pos) {
     llvm::SmallVector<llvm::StringRef, 4> matches;
     if (pos->regex.Execute(command, &matches)) {
-      std::string new_command(pos->command);
-      char percent_var[8];
-      size_t idx, percent_var_idx;
-      for (uint32_t match_idx = 1; match_idx <= m_max_matches; ++match_idx) {
-        if (match_idx < matches.size()) {
-          const std::string match_str = matches[match_idx].str();
-          const int percent_var_len =
-              ::snprintf(percent_var, sizeof(percent_var), "%%%u", match_idx);
-          for (idx = 0; (percent_var_idx = new_command.find(
-                             percent_var, idx)) != std::string::npos;) {
-            new_command.erase(percent_var_idx, percent_var_len);
-            new_command.insert(percent_var_idx, match_str);
-            idx = percent_var_idx + match_str.size();
-          }
-        }
+      llvm::Expected<std::string> new_command =
+          SubstituteVariables(pos->command, matches);
+      if (!new_command) {
+        result.SetError(new_command.takeError());
+        return false;
       }
+
       // Interpret the new command and return this as the result!
       if (m_interpreter.GetExpandRegexAliases())
-        result.GetOutputStream().Printf("%s\n", new_command.c_str());
+        result.GetOutputStream().Printf("%s\n", new_command->c_str());
       // Pass in true for "no context switching".  The command that called us
       // should have set up the context appropriately, we shouldn't have to
       // redo that.
-      return m_interpreter.HandleCommand(new_command.c_str(),
+      return m_interpreter.HandleCommand(new_command->c_str(),
                                          eLazyBoolCalculate, result);
     }
   }
@@ -61,10 +82,10 @@ bool CommandObjectRegexCommand::DoExecute(llvm::StringRef command,
   if (!GetSyntax().empty())
     result.AppendError(GetSyntax());
   else
-    result.GetOutputStream() << "Command contents '" << command
-                             << "' failed to match any "
-                                "regular expression in the '"
-                             << m_cmd_name << "' regex ";
+    result.GetErrorStream() << "Command contents '" << command
+                            << "' failed to match any "
+                               "regular expression in the '"
+                            << m_cmd_name << "' regex ";
   return false;
 }
 

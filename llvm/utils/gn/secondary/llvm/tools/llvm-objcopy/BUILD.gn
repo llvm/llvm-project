@@ -1,4 +1,5 @@
 import("//llvm/tools/binutils_symlinks.gni")
+import("//llvm/tools/cctools_symlinks.gni")
 import("//llvm/utils/TableGen/tablegen.gni")
 import("//llvm/utils/gn/build/symlink_or_copy.gni")
 
@@ -33,6 +34,12 @@ if (llvm_install_binutils_symlinks) {
     "strip",
   ]
 }
+if (llvm_install_cctools_symlinks) {
+  symlinks += [
+    "bitcode_strip",
+    "install_name_tool",
+  ]
+}
 foreach(target, symlinks) {
   symlink_or_copy(target) {
     deps = [ ":llvm-objcopy" ]
@@ -56,28 +63,13 @@ executable("llvm-objcopy") {
     ":ObjcopyOpts",
     ":StripOpts",
     "//llvm/lib/MC",
+    "//llvm/lib/ObjCopy",
     "//llvm/lib/Object",
     "//llvm/lib/Option",
     "//llvm/lib/Support",
   ]
-  include_dirs = [ "." ]
   sources = [
-    "COFF/COFFObjcopy.cpp",
-    "COFF/Object.cpp",
-    "COFF/Reader.cpp",
-    "COFF/Writer.cpp",
-    "ConfigManager.cpp",
-    "ELF/ELFObjcopy.cpp",
-    "ELF/Object.cpp",
-    "MachO/MachOLayoutBuilder.cpp",
-    "MachO/MachOObjcopy.cpp",
-    "MachO/MachOReader.cpp",
-    "MachO/MachOWriter.cpp",
-    "MachO/Object.cpp",
+    "ObjcopyOptions.cpp",
     "llvm-objcopy.cpp",
-    "wasm/Object.cpp",
-    "wasm/Reader.cpp",
-    "wasm/WasmObjcopy.cpp",
-    "wasm/Writer.cpp",
   ]
 }

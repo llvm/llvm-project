@@ -42,8 +42,8 @@
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Flags.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/Logging.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
@@ -200,7 +200,7 @@ bool ValueObject::UpdateValueIfNeeded(bool update_format) {
 }
 
 bool ValueObject::UpdateFormatsIfNeeded() {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS));
+  Log *log = GetLog(LLDBLog::DataFormatters);
   LLDB_LOGF(log,
             "[%s %p] checking for FormatManager revisions. ValueObject "
             "rev: %d - Global rev: %d",
@@ -850,7 +850,7 @@ bool ValueObject::SetData(DataExtractor &data, Status &error) {
 static bool CopyStringDataToBufferSP(const StreamString &source,
                                      lldb::DataBufferSP &destination) {
   llvm::StringRef src = source.GetString();
-  src.consume_back(llvm::StringRef("\0", 1));
+  src = src.rtrim('\0');
   destination = std::make_shared<DataBufferHeap>(src.size(), 0);
   memcpy(destination->GetBytes(), src.data(), src.size());
   return true;
@@ -2803,7 +2803,7 @@ ValueObject::EvaluationPoint::EvaluationPoint() : m_mod_id(), m_exe_ctx_ref() {}
 
 ValueObject::EvaluationPoint::EvaluationPoint(ExecutionContextScope *exe_scope,
                                               bool use_selected)
-    : m_mod_id(), m_exe_ctx_ref(), m_needs_update(true) {
+    : m_mod_id(), m_exe_ctx_ref() {
   ExecutionContext exe_ctx(exe_scope);
   TargetSP target_sp(exe_ctx.GetTargetSP());
   if (target_sp) {
@@ -2840,7 +2840,7 @@ ValueObject::EvaluationPoint::EvaluationPoint(ExecutionContextScope *exe_scope,
 
 ValueObject::EvaluationPoint::EvaluationPoint(
     const ValueObject::EvaluationPoint &rhs)
-    : m_mod_id(), m_exe_ctx_ref(rhs.m_exe_ctx_ref), m_needs_update(true) {}
+    : m_mod_id(), m_exe_ctx_ref(rhs.m_exe_ctx_ref) {}
 
 ValueObject::EvaluationPoint::~EvaluationPoint() = default;
 

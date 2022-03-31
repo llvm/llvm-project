@@ -56,12 +56,12 @@ namespace pdl_to_pdl_interp {
 /// op4 and op5 in the cost graph, because the subtrees rooted at these two
 /// roots do not intersect. It is easy to see that the optimal root for this
 /// pattern is op3, resulting in the spanning arborescence op3 -> {op4, op5}.
-struct RootOrderingCost {
+struct RootOrderingEntry {
   /// The depth of the connector `Value` w.r.t. the target root.
   ///
-  /// This is a pair where the first entry is the actual cost, and the second
-  /// entry is a priority for breaking ties (with 0 being the highest).
-  /// Typically, the priority is a unique edge ID.
+  /// This is a pair where the first value is the additive cost (the depth of
+  /// the connector), and the second value is a priority for breaking ties
+  /// (with 0 being the highest). Typically, the priority is a unique edge ID.
   std::pair<unsigned, unsigned> cost;
 
   /// The connector value in the intersection of the two subtrees rooted at
@@ -75,7 +75,7 @@ struct RootOrderingCost {
 /// is indexed by the target node, and the inner map is indexed by the source
 /// node. Each edge is associated with a cost and the underlying connector
 /// value.
-using RootOrderingGraph = DenseMap<Value, DenseMap<Value, RootOrderingCost>>;
+using RootOrderingGraph = DenseMap<Value, DenseMap<Value, RootOrderingEntry>>;
 
 /// The optimal branching algorithm solver. This solver accepts a graph and the
 /// root in its constructor, and is invoked via the solve() member function.
@@ -131,7 +131,7 @@ private:
   DenseMap<Value, Value> parents;
 };
 
-} // end namespace pdl_to_pdl_interp
-} // end namespace mlir
+} // namespace pdl_to_pdl_interp
+} // namespace mlir
 
 #endif // MLIR_CONVERSION_PDLTOPDLINTERP_ROOTORDERING_H_

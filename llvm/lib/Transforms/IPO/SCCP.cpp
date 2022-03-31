@@ -18,6 +18,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Scalar/SCCP.h"
+#include "llvm/Transforms/Utils/SCCPSolver.h"
 
 using namespace llvm;
 

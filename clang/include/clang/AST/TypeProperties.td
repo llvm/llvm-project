@@ -358,7 +358,20 @@ let Class = UnresolvedUsingType in {
   }
 
   def : Creator<[{
-    return ctx.getTypeDeclType(cast<UnresolvedUsingTypenameDecl>(declaration));
+    return ctx.getUnresolvedUsingType(cast<UnresolvedUsingTypenameDecl>(declaration));
+  }]>;
+}
+
+let Class = UsingType in {
+  def : Property<"foundDeclaration", UsingShadowDeclRef> {
+    let Read = [{ node->getFoundDecl() }];
+  }
+  def : Property<"underlyingType", QualType> {
+    let Read = [{ node->getUnderlyingType() }];
+  }
+
+  def : Creator<[{
+    return ctx.getUsingType(foundDeclaration, underlyingType);
   }]>;
 }
 
@@ -603,6 +616,19 @@ let Class = AttributedType in {
 
   def : Creator<[{
     return ctx.getAttributedType(attribute, modifiedType, equivalentType);
+  }]>;
+}
+
+let Class = BTFTagAttributedType in {
+  def : Property<"attr", BTFTypeTagAttr> {
+    let Read = [{ node->getAttr() }];
+  }
+  def : Property<"wrappedType", QualType> {
+    let Read = [{ node->getWrappedType() }];
+  }
+
+  def : Creator<[{
+    return ctx.getBTFTagAttributedType(attr, wrappedType);
   }]>;
 }
 

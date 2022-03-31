@@ -391,11 +391,18 @@ void LinkageComputer::mergeTemplateLV(
   bool considerVisibility =
     shouldConsiderTemplateVisibility(fn, specInfo);
 
-  // Merge information from the template parameters.
   FunctionTemplateDecl *temp = specInfo->getTemplate();
-  LinkageInfo tempLV =
-    getLVForTemplateParameterList(temp->getTemplateParameters(), computation);
-  LV.mergeMaybeWithVisibility(tempLV, considerVisibility);
+
+  // Merge information from the template declaration.
+  LinkageInfo tempLV = getLVForDecl(temp, computation);
+  // The linkage of the specialization should be consistent with the
+  // template declaration.
+  LV.setLinkage(tempLV.getLinkage());
+
+  // Merge information from the template parameters.
+  LinkageInfo paramsLV =
+      getLVForTemplateParameterList(temp->getTemplateParameters(), computation);
+  LV.mergeMaybeWithVisibility(paramsLV, considerVisibility);
 
   // Merge information from the template arguments.
   const TemplateArgumentList &templateArgs = *specInfo->TemplateArguments;
@@ -604,8 +611,14 @@ static LinkageInfo getExternalLinkageFor(const NamedDecl *D) {
   //   - A name declared at namespace scope that does not have internal linkage
   //     by the previous rules and that is introduced by a non-exported
   //     declaration has module linkage.
-  if (isInModulePurview(D) && !isExportedFromModuleInterfaceUnit(
-                                  cast<NamedDecl>(D->getCanonicalDecl())))
+  //
+  // [basic.namespace.general]/p2
+  //   A namespace is never attached to a named module and never has a name with
+  //   module linkage.
+  if (isInModulePurview(D) &&
+      !isExportedFromModuleInterfaceUnit(
+          cast<NamedDecl>(D->getCanonicalDecl())) &&
+      !isa<NamespaceDecl>(D))
     return LinkageInfo(ModuleLinkage, DefaultVisibility, false);
 
   return LinkageInfo::external();
@@ -780,6 +793,7 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
     //
     // Note that we don't want to make the variable non-external
     // because of this, but unique-external linkage suits us.
+
     if (Context.getLangOpts().CPlusPlus && !isFirstInExternCContext(Var) &&
         !IgnoreVarTypeLinkage) {
       LinkageInfo TypeLV = getLVForType(*Var->getType(), computation);
@@ -905,10 +919,6 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
   // always be default.
   if (!isExternallyVisible(LV.getLinkage()))
     return LinkageInfo(LV.getLinkage(), DefaultVisibility, false);
-
-  // Mark the symbols as hidden when compiling for the device.
-  if (Context.getLangOpts().OpenMP && Context.getLangOpts().OpenMPIsDevice)
-    LV.mergeVisibility(HiddenVisibility, /*newExplicit=*/false);
 
   return LV;
 }
@@ -1063,6 +1073,7 @@ LinkageComputer::getLVForClassMember(const NamedDecl *D,
 
   // Finally, merge in information from the class.
   LV.mergeMaybeWithVisibility(classLV, considerClassVisibility);
+
   return LV;
 }
 
@@ -1536,6 +1547,11 @@ LinkageInfo LinkageComputer::getDeclLinkageAndVisibility(const NamedDecl *D) {
 }
 
 Module *Decl::getOwningModuleForLinkage(bool IgnoreLinkage) const {
+  if (isa<NamespaceDecl>(this))
+    // Namespaces never have module linkage.  It is the entities within them
+    // that [may] do.
+    return nullptr;
+
   Module *M = getOwningModule();
   if (!M)
     return nullptr;
@@ -1546,24 +1562,28 @@ Module *Decl::getOwningModuleForLinkage(bool IgnoreLinkage) const {
     return nullptr;
 
   case Module::ModuleInterfaceUnit:
+  case Module::ModulePartitionInterface:
+  case Module::ModulePartitionImplementation:
     return M;
 
+  case Module::ModuleHeaderUnit:
   case Module::GlobalModuleFragment: {
     // External linkage declarations in the global module have no owning module
     // for linkage purposes. But internal linkage declarations in the global
     // module fragment of a particular module are owned by that module for
     // linkage purposes.
+    // FIXME: p1815 removes the need for this distinction -- there are no
+    // internal linkage declarations that need to be referred to from outside
+    // this TU.
     if (IgnoreLinkage)
       return nullptr;
     bool InternalLinkage;
     if (auto *ND = dyn_cast<NamedDecl>(this))
       InternalLinkage = !ND->hasExternalFormalLinkage();
-    else {
-      auto *NSD = dyn_cast<NamespaceDecl>(this);
-      InternalLinkage = (NSD && NSD->isAnonymousNamespace()) ||
-                        isInAnonymousNamespace();
-    }
-    return InternalLinkage ? M->Parent : nullptr;
+    else
+      InternalLinkage = isInAnonymousNamespace();
+    return InternalLinkage ? M->Kind == Module::ModuleHeaderUnit ? M : M->Parent
+                           : nullptr;
   }
 
   case Module::PrivateModuleFragment:
@@ -1583,7 +1603,7 @@ std::string NamedDecl::getQualifiedNameAsString() const {
   std::string QualName;
   llvm::raw_string_ostream OS(QualName);
   printQualifiedName(OS, getASTContext().getPrintingPolicy());
-  return OS.str();
+  return QualName;
 }
 
 void NamedDecl::printQualifiedName(raw_ostream &OS) const {
@@ -2014,7 +2034,7 @@ const char *VarDecl::getStorageClassSpecifierString(StorageClass SC) {
 
 VarDecl::VarDecl(Kind DK, ASTContext &C, DeclContext *DC,
                  SourceLocation StartLoc, SourceLocation IdLoc,
-                 IdentifierInfo *Id, QualType T, TypeSourceInfo *TInfo,
+                 const IdentifierInfo *Id, QualType T, TypeSourceInfo *TInfo,
                  StorageClass SC)
     : DeclaratorDecl(DK, DC, IdLoc, Id, T, TInfo, StartLoc),
       redeclarable_base(C) {
@@ -2029,10 +2049,9 @@ VarDecl::VarDecl(Kind DK, ASTContext &C, DeclContext *DC,
   // Everything else is implicitly initialized to false.
 }
 
-VarDecl *VarDecl::Create(ASTContext &C, DeclContext *DC,
-                         SourceLocation StartL, SourceLocation IdL,
-                         IdentifierInfo *Id, QualType T, TypeSourceInfo *TInfo,
-                         StorageClass S) {
+VarDecl *VarDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation StartL,
+                         SourceLocation IdL, const IdentifierInfo *Id,
+                         QualType T, TypeSourceInfo *TInfo, StorageClass S) {
   return new (C, DC) VarDecl(Var, C, DC, StartL, IdL, Id, T, TInfo, S);
 }
 
@@ -3245,7 +3264,6 @@ bool FunctionDecl::isGlobal() const {
     if (const auto *Namespace = cast<NamespaceDecl>(DC)) {
       if (!Namespace->getDeclName())
         return false;
-      break;
     }
   }
 
@@ -4298,6 +4316,7 @@ TagDecl::TagDecl(Kind DK, TagKind TK, const ASTContext &C, DeclContext *DC,
   setEmbeddedInDeclarator(false);
   setFreeStanding(false);
   setCompleteDefinitionRequired(false);
+  TagDeclBits.IsThisDeclarationADemotedDefinition = false;
 }
 
 SourceLocation TagDecl::getOuterLocStart() const {

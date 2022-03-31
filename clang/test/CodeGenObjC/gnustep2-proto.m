@@ -33,7 +33,7 @@
 // CHECK: define{{.*}} i8* @x()
 // CHECK:   = load 
 // CHECK-SAME: @._OBJC_REF_PROTOCOL_X, align 8
-void *x()
+void *x(void)
 {
 	return @protocol(X);
 }

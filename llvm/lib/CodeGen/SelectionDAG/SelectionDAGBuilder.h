@@ -190,7 +190,6 @@ public:
   static const unsigned LowestSDNodeOrder = 1;
 
   SelectionDAG &DAG;
-  const DataLayout *DL = nullptr;
   AAResults *AA = nullptr;
   const TargetLibraryInfo *LibInfo;
 
@@ -285,7 +284,8 @@ public:
     return CurInst ? CurInst->getDebugLoc() : DebugLoc();
   }
 
-  void CopyValueToVirtualRegister(const Value *V, unsigned Reg);
+  void CopyValueToVirtualRegister(const Value *V, unsigned Reg,
+                                  ISD::NodeType ExtendType = ISD::ANY_EXTEND);
 
   void visit(const Instruction &I);
 
@@ -568,9 +568,13 @@ private:
   void visitTargetIntrinsic(const CallInst &I, unsigned Intrinsic);
   void visitConstrainedFPIntrinsic(const ConstrainedFPIntrinsic &FPI);
   void visitVPLoadGather(const VPIntrinsic &VPIntrin, EVT VT,
-                         SmallVector<SDValue, 7> &OpValues, bool isGather);
+                         SmallVector<SDValue, 7> &OpValues, bool IsGather);
   void visitVPStoreScatter(const VPIntrinsic &VPIntrin,
-                           SmallVector<SDValue, 7> &OpValues, bool isScatter);
+                           SmallVector<SDValue, 7> &OpValues, bool IsScatter);
+  void visitVPStridedLoad(const VPIntrinsic &VPIntrin, EVT VT,
+                          SmallVectorImpl<SDValue> &OpValues);
+  void visitVPStridedStore(const VPIntrinsic &VPIntrin,
+                           SmallVectorImpl<SDValue> &OpValues);
   void visitVectorPredicationIntrinsic(const VPIntrinsic &VPIntrin);
 
   void visitVAStart(const CallInst &I);

@@ -21,7 +21,7 @@ int OK_3(void) {
 
 int OK_3(void);
 
-int test() {
+int test(void) {
   // Should cause an error due to not_OK()
   return OK_1() + not_OK() + OK_3();
 }
@@ -66,7 +66,7 @@ int test() {
 // CHECK-NEXT: | `-OMPDeclareVariantAttr [[ADDR_29:0x[a-z0-9]*]] <<invalid sloc>> Inherited Implicit implementation={vendor(intel)}
 // CHECK-NEXT: |   `-DeclRefExpr [[ADDR_23]] <line:17:1> 'int ({{.*}})' Function [[ADDR_24]] 'OK_3[implementation={vendor(intel)}]' 'int ({{.*}})'
 // CHECK-NEXT: `-FunctionDecl [[ADDR_30:0x[a-z0-9]*]] <line:24:1, line:27:1> line:24:5 test 'int ({{.*}})'
-// CHECK-NEXT:   `-CompoundStmt [[ADDR_31:0x[a-z0-9]*]] <col:12, line:27:1>
+// CHECK-NEXT:   `-CompoundStmt [[ADDR_31:0x[a-z0-9]*]] <col:16, line:27:1>
 // CHECK-NEXT:     `-ReturnStmt [[ADDR_32:0x[a-z0-9]*]] <line:26:3, col:35>
 // CHECK-NEXT:       `-BinaryOperator [[ADDR_33:0x[a-z0-9]*]] <col:10, col:35> 'int' '+'
 // CHECK-NEXT:         |-BinaryOperator [[ADDR_34:0x[a-z0-9]*]] <col:10, col:26> 'int' '+'

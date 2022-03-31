@@ -18,8 +18,22 @@
 
 extern "C" {
 
-/// Encoding of the elemental type, for "overloading" @newSparseTensor.
-enum class OverheadType : uint32_t { kU64 = 1, kU32 = 2, kU16 = 3, kU8 = 4 };
+/// This type is used in the public API at all places where MLIR expects
+/// values with the built-in type "index". For now, we simply assume that
+/// type is 64-bit, but targets with different "index" bit widths should link
+/// with an alternatively built runtime support library.
+// TODO: support such targets?
+using index_type = uint64_t;
+
+/// Encoding of overhead types (both pointer overhead and indices
+/// overhead), for "overloading" @newSparseTensor.
+enum class OverheadType : uint32_t {
+  kIndex = 0,
+  kU64 = 1,
+  kU32 = 2,
+  kU16 = 3,
+  kU8 = 4
+};
 
 /// Encoding of the elemental type, for "overloading" @newSparseTensor.
 enum class PrimaryType : uint32_t {
@@ -36,9 +50,10 @@ enum class Action : uint32_t {
   kEmpty = 0,
   kFromFile = 1,
   kFromCOO = 2,
-  kEmptyCOO = 3,
-  kToCOO = 4,
-  kToIterator = 5
+  kSparseToSparse = 3,
+  kEmptyCOO = 4,
+  kToCOO = 5,
+  kToIterator = 6
 };
 
 /// This enum mimics `SparseTensorEncodingAttr::DimLevelType` for

@@ -145,6 +145,9 @@ set(files
   xsaveoptintrin.h
   xsavesintrin.h
   xtestintrin.h
+  velintrin.h
+  velintrin_gen.h
+  velintrin_approx.h
   )
 
 set(cuda_wrapper_files
@@ -161,6 +164,12 @@ set(ppc_wrapper_files
   ppc_wrappers/pmmintrin.h
   ppc_wrappers/tmmintrin.h
   ppc_wrappers/smmintrin.h
+  ppc_wrappers/bmiintrin.h
+  ppc_wrappers/bmi2intrin.h
+  ppc_wrappers/immintrin.h
+  ppc_wrappers/tmmintrin.h
+  ppc_wrappers/x86intrin.h
+  ppc_wrappers/x86gprintrin.h
 )
 
 set(openmp_wrapper_files
@@ -219,6 +228,10 @@ if(ARM IN_LIST LLVM_TARGETS_TO_BUILD OR AArch64 IN_LIST LLVM_TARGETS_TO_BUILD)
   clang_generate_header(-gen-arm-mve-header arm_mve.td arm_mve.h)
   # Generate arm_cde.h
   clang_generate_header(-gen-arm-cde-header arm_cde.td arm_cde.h)
+  # Copy arm_neon_sve_bridge.h
+  copy_header_to_output_dir(${CMAKE_CURRENT_SOURCE_DIR}
+    arm_neon_sve_bridge.h
+  )
 endif()
 if(RISCV IN_LIST LLVM_TARGETS_TO_BUILD)
   # Generate riscv_vector.h

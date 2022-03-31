@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
 
 // template<class T, class Cat = partial_ordering>
 // concept three_way_comparable = // see below
@@ -15,6 +14,7 @@
 #include <compare>
 
 #include "compare_types.h"
+#include "test_macros.h"
 
 namespace fundamentals {
 // with default ordering
@@ -26,14 +26,14 @@ static_assert(std::three_way_comparable<char const*>);
 static_assert(std::three_way_comparable<char volatile*>);
 static_assert(std::three_way_comparable<char const volatile*>);
 static_assert(std::three_way_comparable<wchar_t&>);
-#ifndef _LIBCPP_HAS_NO_CHAR8_T
+#ifndef TEST_HAS_NO_CHAR8_T
 static_assert(std::three_way_comparable<char8_t const&>);
 #endif
-#ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
+#ifndef TEST_HAS_NO_UNICODE_CHARS
 static_assert(std::three_way_comparable<char16_t volatile&>);
 static_assert(std::three_way_comparable<char32_t const volatile&>);
 #endif
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
 static_assert(std::three_way_comparable<__int128_t const&>);
 static_assert(std::three_way_comparable<__uint128_t const&>);
 #endif

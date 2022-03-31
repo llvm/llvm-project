@@ -349,28 +349,28 @@ void Operation::updateOrderIfNecessary() {
 
 auto llvm::ilist_detail::SpecificNodeAccess<
     typename llvm::ilist_detail::compute_node_options<
-        ::mlir::Operation>::type>::getNodePtr(pointer N) -> node_type * {
-  return NodeAccess::getNodePtr<OptionsT>(N);
+        ::mlir::Operation>::type>::getNodePtr(pointer n) -> node_type * {
+  return NodeAccess::getNodePtr<OptionsT>(n);
 }
 
 auto llvm::ilist_detail::SpecificNodeAccess<
     typename llvm::ilist_detail::compute_node_options<
-        ::mlir::Operation>::type>::getNodePtr(const_pointer N)
+        ::mlir::Operation>::type>::getNodePtr(const_pointer n)
     -> const node_type * {
-  return NodeAccess::getNodePtr<OptionsT>(N);
+  return NodeAccess::getNodePtr<OptionsT>(n);
 }
 
 auto llvm::ilist_detail::SpecificNodeAccess<
     typename llvm::ilist_detail::compute_node_options<
-        ::mlir::Operation>::type>::getValuePtr(node_type *N) -> pointer {
-  return NodeAccess::getValuePtr<OptionsT>(N);
+        ::mlir::Operation>::type>::getValuePtr(node_type *n) -> pointer {
+  return NodeAccess::getValuePtr<OptionsT>(n);
 }
 
 auto llvm::ilist_detail::SpecificNodeAccess<
     typename llvm::ilist_detail::compute_node_options<
-        ::mlir::Operation>::type>::getValuePtr(const node_type *N)
+        ::mlir::Operation>::type>::getValuePtr(const node_type *n)
     -> const_pointer {
-  return NodeAccess::getValuePtr<OptionsT>(N);
+  return NodeAccess::getValuePtr<OptionsT>(n);
 }
 
 void llvm::ilist_traits<::mlir::Operation>::deleteNode(Operation *op) {
@@ -378,9 +378,9 @@ void llvm::ilist_traits<::mlir::Operation>::deleteNode(Operation *op) {
 }
 
 Block *llvm::ilist_traits<::mlir::Operation>::getContainingBlock() {
-  size_t Offset(size_t(&((Block *)nullptr->*Block::getSublistAccess(nullptr))));
-  iplist<Operation> *Anchor(static_cast<iplist<Operation> *>(this));
-  return reinterpret_cast<Block *>(reinterpret_cast<char *>(Anchor) - Offset);
+  size_t offset(size_t(&((Block *)nullptr->*Block::getSublistAccess(nullptr))));
+  iplist<Operation> *anchor(static_cast<iplist<Operation> *>(this));
+  return reinterpret_cast<Block *>(reinterpret_cast<char *>(anchor) - offset);
 }
 
 /// This is a trait method invoked when an operation is added to a block.  We
@@ -506,7 +506,7 @@ LogicalResult Operation::fold(ArrayRef<Attribute> operands,
   if (!dialect)
     return failure();
 
-  auto *interface = dialect->getRegisteredInterface<DialectFoldInterface>();
+  auto *interface = dyn_cast<DialectFoldInterface>(dialect);
   if (!interface)
     return failure();
 
@@ -580,14 +580,27 @@ Operation *Operation::clone() {
 // OpState trait class.
 //===----------------------------------------------------------------------===//
 
-// The fallback for the parser is to reject the custom assembly form.
+// The fallback for the parser is to try for a dialect operation parser.
+// Otherwise, reject the custom assembly form.
 ParseResult OpState::parse(OpAsmParser &parser, OperationState &result) {
+  if (auto parseFn = result.name.getDialect()->getParseOperationHook(
+          result.name.getStringRef()))
+    return (*parseFn)(parser, result);
   return parser.emitError(parser.getNameLoc(), "has no custom assembly form");
 }
 
-// The fallback for the printer is to print in the generic assembly form.
-void OpState::print(Operation *op, OpAsmPrinter &p) { p.printGenericOp(op); }
-// The fallback for the printer is to print in the generic assembly form.
+// The fallback for the printer is to try for a dialect operation printer.
+// Otherwise, it prints the generic form.
+void OpState::print(Operation *op, OpAsmPrinter &p, StringRef defaultDialect) {
+  if (auto printFn = op->getDialect()->getOperationPrinter(op)) {
+    printOpName(op, p, defaultDialect);
+    printFn(op, p);
+  } else {
+    p.printGenericOp(op);
+  }
+}
+
+/// Print an operation name, eliding the dialect prefix if necessary.
 void OpState::printOpName(Operation *op, OpAsmPrinter &p,
                           StringRef defaultDialect) {
   StringRef name = op->getName().getStringRef();
@@ -595,8 +608,8 @@ void OpState::printOpName(Operation *op, OpAsmPrinter &p,
     name = name.drop_front(defaultDialect.size() + 1);
   // TODO: remove this special case (and update test/IR/parser.mlir)
   else if ((defaultDialect.empty() || defaultDialect == "builtin") &&
-           name.startswith("std."))
-    name = name.drop_front(4);
+           name.startswith("func."))
+    name = name.drop_front(5);
   p.getStream() << name;
 }
 
@@ -982,7 +995,7 @@ LogicalResult OpTrait::impl::verifyValueSizeAttr(Operation *op,
 
   size_t totalCount = std::accumulate(
       sizeAttr.begin(), sizeAttr.end(), 0,
-      [](unsigned all, APInt one) { return all + one.getZExtValue(); });
+      [](unsigned all, const APInt &one) { return all + one.getZExtValue(); });
 
   if (totalCount != expectedCount)
     return op->emitOpError()
@@ -1011,8 +1024,7 @@ LogicalResult OpTrait::impl::verifyNoRegionArguments(Operation *op) {
       if (op->getNumRegions() > 1)
         return op->emitOpError("region #")
                << region.getRegionNumber() << " should have no arguments";
-      else
-        return op->emitOpError("region should have no arguments");
+      return op->emitOpError("region should have no arguments");
     }
   }
   return success();
@@ -1076,15 +1088,11 @@ LogicalResult OpTrait::impl::verifyIsIsolatedFromAbove(Operation *isolatedOp) {
     while (!pendingRegions.empty()) {
       for (Operation &op : pendingRegions.pop_back_val()->getOps()) {
         for (Value operand : op.getOperands()) {
-          // operand should be non-null here if the IR is well-formed. But
-          // we don't assert here as this function is called from the verifier
-          // and so could be called on invalid IR.
-          if (!operand)
-            return op.emitOpError("operation's operand is null");
-
           // Check that any value that is used by an operation is defined in the
           // same region as either an operation result.
           auto *operandRegion = operand.getParentRegion();
+          if (!operandRegion)
+            return op.emitError("operation's operand is unlinked");
           if (!region.isAncestor(operandRegion)) {
             return op.emitOpError("using value defined outside the region")
                        .attachNote(isolatedOp->getLoc())
@@ -1113,69 +1121,7 @@ bool OpTrait::hasElementwiseMappableTraits(Operation *op) {
 }
 
 //===----------------------------------------------------------------------===//
-// BinaryOp implementation
-//===----------------------------------------------------------------------===//
-
-// These functions are out-of-line implementations of the methods in BinaryOp,
-// which avoids them being template instantiated/duplicated.
-
-void impl::buildBinaryOp(OpBuilder &builder, OperationState &result, Value lhs,
-                         Value rhs) {
-  assert(lhs.getType() == rhs.getType());
-  result.addOperands({lhs, rhs});
-  result.types.push_back(lhs.getType());
-}
-
-ParseResult impl::parseOneResultSameOperandTypeOp(OpAsmParser &parser,
-                                                  OperationState &result) {
-  SmallVector<OpAsmParser::OperandType, 2> ops;
-  Type type;
-  // If the operand list is in-between parentheses, then we have a generic form.
-  // (see the fallback in `printOneResultOp`).
-  llvm::SMLoc loc = parser.getCurrentLocation();
-  if (!parser.parseOptionalLParen()) {
-    if (parser.parseOperandList(ops) || parser.parseRParen() ||
-        parser.parseOptionalAttrDict(result.attributes) ||
-        parser.parseColon() || parser.parseType(type))
-      return failure();
-    auto fnType = type.dyn_cast<FunctionType>();
-    if (!fnType) {
-      parser.emitError(loc, "expected function type");
-      return failure();
-    }
-    if (parser.resolveOperands(ops, fnType.getInputs(), loc, result.operands))
-      return failure();
-    result.addTypes(fnType.getResults());
-    return success();
-  }
-  return failure(parser.parseOperandList(ops) ||
-                 parser.parseOptionalAttrDict(result.attributes) ||
-                 parser.parseColonType(type) ||
-                 parser.resolveOperands(ops, type, result.operands) ||
-                 parser.addTypeToList(type, result.types));
-}
-
-void impl::printOneResultOp(Operation *op, OpAsmPrinter &p) {
-  assert(op->getNumResults() == 1 && "op should have one result");
-
-  // If not all the operand and result types are the same, just use the
-  // generic assembly form to avoid omitting information in printing.
-  auto resultType = op->getResult(0).getType();
-  if (llvm::any_of(op->getOperandTypes(),
-                   [&](Type type) { return type != resultType; })) {
-    p.printGenericOp(op, /*printOpName=*/false);
-    return;
-  }
-
-  p << ' ';
-  p.printOperands(op->getOperands());
-  p.printOptionalAttrDict(op->getAttrs());
-  // Now we can output only one type for all operands and the result.
-  p << " : " << resultType;
-}
-
-//===----------------------------------------------------------------------===//
-// CastOp implementation
+// CastOpInterface
 //===----------------------------------------------------------------------===//
 
 /// Attempt to fold the given cast operation.
@@ -1216,50 +1162,6 @@ LogicalResult impl::verifyCastInterfaceOp(
     return diag << " and result type" << (resultTypes.size() == 1 ? " " : "s ")
                 << resultTypes << " are cast incompatible";
   }
-
-  return success();
-}
-
-void impl::buildCastOp(OpBuilder &builder, OperationState &result, Value source,
-                       Type destType) {
-  result.addOperands(source);
-  result.addTypes(destType);
-}
-
-ParseResult impl::parseCastOp(OpAsmParser &parser, OperationState &result) {
-  OpAsmParser::OperandType srcInfo;
-  Type srcType, dstType;
-  return failure(parser.parseOperand(srcInfo) ||
-                 parser.parseOptionalAttrDict(result.attributes) ||
-                 parser.parseColonType(srcType) ||
-                 parser.resolveOperand(srcInfo, srcType, result.operands) ||
-                 parser.parseKeywordType("to", dstType) ||
-                 parser.addTypeToList(dstType, result.types));
-}
-
-void impl::printCastOp(Operation *op, OpAsmPrinter &p) {
-  p << ' ' << op->getOperand(0);
-  p.printOptionalAttrDict(op->getAttrs());
-  p << " : " << op->getOperand(0).getType() << " to "
-    << op->getResult(0).getType();
-}
-
-Value impl::foldCastOp(Operation *op) {
-  // Identity cast
-  if (op->getOperand(0).getType() == op->getResult(0).getType())
-    return op->getOperand(0);
-  return nullptr;
-}
-
-LogicalResult
-impl::verifyCastOp(Operation *op,
-                   function_ref<bool(Type, Type)> areCastCompatible) {
-  auto opType = op->getOperand(0).getType();
-  auto resType = op->getResult(0).getType();
-  if (!areCastCompatible(opType, resType))
-    return op->emitError("operand type ")
-           << opType << " and result type " << resType
-           << " are cast incompatible";
 
   return success();
 }

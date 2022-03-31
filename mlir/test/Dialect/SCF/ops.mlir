@@ -8,9 +8,9 @@ func @std_for(%arg0 : index, %arg1 : index, %arg2 : index) {
   scf.for %i0 = %arg0 to %arg1 step %arg2 {
     scf.for %i1 = %arg0 to %arg1 step %arg2 {
       %min_cmp = arith.cmpi slt, %i0, %i1 : index
-      %min = select %min_cmp, %i0, %i1 : index
+      %min = arith.select %min_cmp, %i0, %i1 : index
       %max_cmp = arith.cmpi sge, %i0, %i1 : index
-      %max = select %max_cmp, %i0, %i1 : index
+      %max = arith.select %max_cmp, %i0, %i1 : index
       scf.for %i2 = %min to %max step %i1 {
       }
     }
@@ -21,9 +21,9 @@ func @std_for(%arg0 : index, %arg1 : index, %arg2 : index) {
 //  CHECK-NEXT:   scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
 //  CHECK-NEXT:     scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
 //  CHECK-NEXT:       %{{.*}} = arith.cmpi slt, %{{.*}}, %{{.*}} : index
-//  CHECK-NEXT:       %{{.*}} = select %{{.*}}, %{{.*}}, %{{.*}} : index
+//  CHECK-NEXT:       %{{.*}} = arith.select %{{.*}}, %{{.*}}, %{{.*}} : index
 //  CHECK-NEXT:       %{{.*}} = arith.cmpi sge, %{{.*}}, %{{.*}} : index
-//  CHECK-NEXT:       %{{.*}} = select %{{.*}}, %{{.*}}, %{{.*}} : index
+//  CHECK-NEXT:       %{{.*}} = arith.select %{{.*}}, %{{.*}}, %{{.*}} : index
 //  CHECK-NEXT:       scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
 
 func @std_if(%arg0: i1, %arg1: f32) {
@@ -56,9 +56,9 @@ func @std_parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
   scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
                                           step (%arg4, %step) {
     %min_cmp = arith.cmpi slt, %i0, %i1 : index
-    %min = select %min_cmp, %i0, %i1 : index
+    %min = arith.select %min_cmp, %i0, %i1 : index
     %max_cmp = arith.cmpi sge, %i0, %i1 : index
-    %max = select %max_cmp, %i0, %i1 : index
+    %max = arith.select %max_cmp, %i0, %i1 : index
     %zero = arith.constant 0.0 : f32
     %int_zero = arith.constant 0 : i32
     %red:2 = scf.parallel (%i2) = (%min) to (%max) step (%i1)
@@ -89,9 +89,9 @@ func @std_parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
 //  CHECK-NEXT:   scf.parallel (%[[I0:.*]], %[[I1:.*]]) = (%[[ARG0]], %[[ARG1]]) to
 //       CHECK:   (%[[ARG2]], %[[ARG3]]) step (%[[ARG4]], %[[STEP]]) {
 //  CHECK-NEXT:     %[[MIN_CMP:.*]] = arith.cmpi slt, %[[I0]], %[[I1]] : index
-//  CHECK-NEXT:     %[[MIN:.*]] = select %[[MIN_CMP]], %[[I0]], %[[I1]] : index
+//  CHECK-NEXT:     %[[MIN:.*]] = arith.select %[[MIN_CMP]], %[[I0]], %[[I1]] : index
 //  CHECK-NEXT:     %[[MAX_CMP:.*]] = arith.cmpi sge, %[[I0]], %[[I1]] : index
-//  CHECK-NEXT:     %[[MAX:.*]] = select %[[MAX_CMP]], %[[I0]], %[[I1]] : index
+//  CHECK-NEXT:     %[[MAX:.*]] = arith.select %[[MAX_CMP]], %[[I0]], %[[I1]] : index
 //  CHECK-NEXT:     %[[ZERO:.*]] = arith.constant 0.000000e+00 : f32
 //  CHECK-NEXT:     %[[INT_ZERO:.*]] = arith.constant 0 : i32
 //  CHECK-NEXT:     scf.parallel (%{{.*}}) = (%[[MIN]]) to (%[[MAX]])
@@ -298,13 +298,13 @@ func @execute_region() -> i64 {
   }
 
   // CHECK:       scf.execute_region {
-  // CHECK-NEXT:    br ^bb1
+  // CHECK-NEXT:    cf.br ^bb1
   // CHECK-NEXT:  ^bb1:
   // CHECK-NEXT:    scf.yield
   // CHECK-NEXT:  }
   "scf.execute_region"() ({
   ^bb0:
-    br ^bb1
+    cf.br ^bb1
   ^bb1:
     scf.yield
   }) : () -> ()

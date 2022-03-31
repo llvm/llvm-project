@@ -27,7 +27,7 @@
 // These 3 result (after optimizations) in simple 'icmp sge i32 %src, 0'.
 
 // CHECK-LABEL: @unsigned_int_to_signed_int
-// CHECK-SAME: (i32 %[[SRC:.*]])
+// CHECK-SAME: i32 noundef %[[SRC:.*]])
 signed int unsigned_int_to_signed_int(unsigned int src) {
   // CHECK: %[[SRC_ADDR:.*]] = alloca i32
   // CHECK-NEXT: store i32 %[[SRC]], i32* %[[SRC_ADDR]]
@@ -50,7 +50,7 @@ signed int unsigned_int_to_signed_int(unsigned int src) {
 }
 
 // CHECK-LABEL: @signed_int_to_unsigned_int
-// CHECK-SAME: (i32 %[[SRC:.*]])
+// CHECK-SAME: i32 noundef %[[SRC:.*]])
 unsigned int signed_int_to_unsigned_int(signed int src) {
   // CHECK: %[[SRC_ADDR:.*]] = alloca i32
   // CHECK-NEXT: store i32 %[[SRC]], i32* %[[SRC_ADDR]]
@@ -73,7 +73,7 @@ unsigned int signed_int_to_unsigned_int(signed int src) {
 }
 
 // CHECK-LABEL: @signed_int_to_unsigned_char
-// CHECK-SAME: (i32 %[[SRC:.*]])
+// CHECK-SAME: i32 noundef %[[SRC:.*]])
 unsigned char signed_int_to_unsigned_char(signed int src) {
   // CHECK: %[[SRC_ADDR:.*]] = alloca i32
   // CHECK-NEXT: store i32 %[[SRC]], i32* %[[SRC_ADDR]]
@@ -99,7 +99,7 @@ unsigned char signed_int_to_unsigned_char(signed int src) {
 // These 3 result (after optimizations) in simple 'icmp sge i8 %src, 0'
 
 // CHECK-LABEL: @signed_char_to_unsigned_char
-// CHECK-SAME: (i8 signext %[[SRC:.*]])
+// CHECK-SAME: (i8 noundef signext %[[SRC:.*]])
 unsigned char signed_char_to_unsigned_char(signed char src) {
   // CHECK: %[[SRC_ADDR:.*]] = alloca i8
   // CHECK-NEXT: store i8 %[[SRC]], i8* %[[SRC_ADDR]]
@@ -122,7 +122,7 @@ unsigned char signed_char_to_unsigned_char(signed char src) {
 }
 
 // CHECK-LABEL: @unsigned_char_to_signed_char
-// CHECK-SAME: (i8 zeroext %[[SRC:.*]])
+// CHECK-SAME: (i8 noundef zeroext %[[SRC:.*]])
 signed char unsigned_char_to_signed_char(unsigned char src) {
   // CHECK: %[[SRC_ADDR:.*]] = alloca i8
   // CHECK-NEXT: store i8 %[[SRC]], i8* %[[SRC_ADDR]]
@@ -145,7 +145,7 @@ signed char unsigned_char_to_signed_char(unsigned char src) {
 }
 
 // CHECK-LABEL: @signed_char_to_unsigned_int
-// CHECK-SAME: (i8 signext %[[SRC:.*]])
+// CHECK-SAME: (i8 noundef signext %[[SRC:.*]])
 unsigned int signed_char_to_unsigned_int(signed char src) {
   // CHECK: %[[SRC_ADDR:.*]] = alloca i8
   // CHECK-NEXT: store i8 %[[SRC]], i8* %[[SRC_ADDR]]
@@ -171,7 +171,7 @@ unsigned int signed_char_to_unsigned_int(signed char src) {
 // This one result (after optimizations) in 'icmp sge i8 (trunc i32 %src), 0'
 
 // CHECK-LABEL: @unsigned_int_to_signed_char
-// CHECK-SAME: (i32 %[[SRC:.*]])
+// CHECK-SAME: i32 noundef %[[SRC:.*]])
 signed char unsigned_int_to_signed_char(unsigned int src) {
   // CHECK: %[[SRC_ADDR:.*]] = alloca i32
   // CHECK-NEXT: store i32 %[[SRC]], i32* %[[SRC_ADDR]]
@@ -197,7 +197,7 @@ signed char unsigned_int_to_signed_char(unsigned int src) {
 // The worst one: 'xor i1 (icmp sge i8 (trunc i32 %x), 0), (icmp sge i32 %x, 0)'
 
 // CHECK-LABEL: @signed_int_to_signed_char
-// CHECK-SAME: (i32 %[[SRC:.*]])
+// CHECK-SAME: i32 noundef %[[SRC:.*]])
 signed char signed_int_to_signed_char(signed int x) {
   // CHECK: %[[SRC_ADDR:.*]] = alloca i32
   // CHECK-NEXT: store i32 %[[SRC]], i32* %[[SRC_ADDR]]
@@ -229,7 +229,7 @@ typedef unsigned int uint32_t;
 typedef signed int int32_t;
 
 // CHECK-LABEL: @uint32_t_to_int32_t
-// CHECK-SAME: (i32 %[[SRC:.*]])
+// CHECK-SAME: i32 noundef %[[SRC:.*]])
 int32_t uint32_t_to_int32_t(uint32_t src) {
   // CHECK: %[[SRC_ADDR:.*]] = alloca i32
   // CHECK-NEXT: store i32 %[[SRC]], i32* %[[SRC_ADDR]]

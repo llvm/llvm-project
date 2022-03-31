@@ -11,11 +11,11 @@
 
 #include <__config>
 #include <__random/gamma_distribution.h>
-#include <limits>
 #include <iosfwd>
+#include <limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS

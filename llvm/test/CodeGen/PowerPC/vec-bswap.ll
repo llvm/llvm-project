@@ -10,12 +10,12 @@
 
 define dso_local void @test(i32* %Arr, i32 signext %Len) {
 ; CHECK-LABEL: test:
-; CHECK:         lxvx [[REG:vs[0-9]+]], r{{[0-9]+}}, r{{[0-9]+}}
+; CHECK:         lxv [[REG:vs[0-9]+]], 0(r{{[0-9]+}})
 ; CHECK-NOT:     [[REG]]
 ; CHECK:         xxbrw vs{{[0-9]+}}, [[REG]]
 
 ; AIX-LABEL:     test:
-; AIX64:         lxvx [[REG64:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
+; AIX64:         lxv [[REG64:[0-9]+]], {{[0-9]+}}({{[0-9]+}})
 ; AIX32:         lxv [[REG32:[0-9]+]], {{[0-9]+}}({{[0-9]+}})
 ; AIX64-NOT:     [[REG64]]
 ; AIX64:         xxbrw {{[0-9]+}}, [[REG64]]

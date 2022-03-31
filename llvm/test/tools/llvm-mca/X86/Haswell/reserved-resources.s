@@ -5,11 +5,11 @@ fxrstor (%rsp)
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      100
-# CHECK-NEXT: Total Cycles:      6403
+# CHECK-NEXT: Total Cycles:      4720
 # CHECK-NEXT: Total uOps:        9000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    1.41
+# CHECK-NEXT: uOps Per Cycle:    1.91
 # CHECK-NEXT: IPC:               0.02
 # CHECK-NEXT: Block RThroughput: 22.5
 

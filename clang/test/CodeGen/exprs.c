@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown %s -Wno-strict-prototypes -emit-llvm -o - | FileCheck %s
 
 // PR1895
 // sizeof function
@@ -15,10 +15,10 @@ void *test(int *i) {
 }
 
 _Bool test2b; 
-int test2() { if (test2b); return 0; }
+int test2(void) { if (test2b); return 0; }
 
 // PR1921
-int test3() {
+int test3(void) {
   const unsigned char *bp;
   bp -= (short)1;
 }
@@ -26,7 +26,7 @@ int test3() {
 // PR2080 - sizeof void
 int t1 = sizeof(void);
 int t2 = __alignof__(void);
-void test4() {
+void test4(void) {
   t1 = sizeof(void);
   t2 = __alignof__(void);
   
@@ -40,14 +40,14 @@ int test5(const float x, float float_number) {
 }
 
 // this one shouldn't fold
-int ola() {
+int ola(void) {
   int a=2;
   if ((0, (int)a) & 2) { return 1; }
   return 2;
 }
 
 // this one shouldn't fold as well
-void eMaisUma() {
+void eMaisUma(void) {
   double t[1];
   if (*t)
     return;
@@ -63,7 +63,7 @@ struct X {
   int Y;
 };
 struct X foo();
-int bar() {
+int bar(void) {
   return ((struct X)foo()).Y + 1;
 }
 
@@ -80,14 +80,14 @@ unsigned f1(void) {
 }  
 
 union f3_x {int x; float y;};
-int f3() {return ((union f3_x)2).x;}
+int f3(void) {return ((union f3_x)2).x;}
 
 union f4_y {int x; _Complex float y;};
-_Complex float f4() {return ((union f4_y)(_Complex float)2.0).y;}
+_Complex float f4(void) {return ((union f4_y)(_Complex float)2.0).y;}
 
 struct f5_a { int a; } f5_a;
 union f5_z {int x; struct f5_a y;};
-struct f5_a f5() {return ((union f5_z)f5_a).y;}
+struct f5_a f5(void) {return ((union f5_z)f5_a).y;}
 
 // ?: in "lvalue"
 struct s6 { int f0; };
@@ -96,12 +96,12 @@ int f6(int a0, struct s6 a1, struct s6 a2) {
 }
 
 // PR4026
-void f7() {
+void f7(void) {
   __func__;
 }
 
 // PR4067
-int f8() {
+int f8(void) {
   return ({ foo(); }).Y;
 }
 
@@ -116,7 +116,7 @@ void f9(struct S *x) {
   foo(((void)1, x->c).tab[0]);
 }
 
-void f10() {
+void f10(void) {
   __builtin_sin(0);
 }
 
@@ -133,7 +133,7 @@ int f11(long X) {
 // CHECK-NEXT: load i32, i32* [[T0]], align 4
 }
 
-int f12() {
+int f12(void) {
   // PR3150
   // CHECK-LABEL: define{{.*}} i32 @f12
   // CHECK: ret i32 1
@@ -153,7 +153,7 @@ void f14(struct s14 *a) {
 }
 
 // CHECK-LABEL: define{{.*}} void @f15
-void f15() {
+void f15(void) {
   extern void f15_start(void);
   f15_start();
   // CHECK: call void @f15_start()
@@ -170,7 +170,7 @@ void f15() {
 
 // PR8967: this was crashing
 // CHECK-LABEL: define{{.*}} void @f16()
-void f16() {
+void f16(void) {
   __extension__({ goto lbl; });
  lbl:
   ;
@@ -178,7 +178,7 @@ void f16() {
 
 // PR13704: negative increment in i128 is not preserved.
 // CHECK-LABEL: define{{.*}} void @f17()
-void f17() {
+void f17(void) {
   extern void extfunc(__int128);
   __int128 x = 2;
   x--;
@@ -191,14 +191,14 @@ typedef union u {
     int i;
 } strct;
 int returns_int(void);
-void f18() {
+void f18(void) {
   (strct)returns_int();
 }
 // CHECK-LABEL: define{{.*}} void @f18()
 // CHECK: call i32 @returns_int()
 
 // Ensure the right stmt is returned
-int f19() {
+int f19(void) {
   return ({ 3;;4;; });
 }
 // CHECK-LABEL: define{{.*}} i32 @f19()

@@ -151,15 +151,7 @@ define signext i16 @func16(i16 signext %x, i16 signext %y, i16 signext %z) nounw
 ; CHECK-T2NODSP-NEXT:    muls r1, r2, r1
 ; CHECK-T2NODSP-NEXT:    sxth r1, r1
 ; CHECK-T2NODSP-NEXT:    add r0, r1
-; CHECK-T2NODSP-NEXT:    movw r1, #32767
-; CHECK-T2NODSP-NEXT:    cmp r0, r1
-; CHECK-T2NODSP-NEXT:    it lt
-; CHECK-T2NODSP-NEXT:    movlt r1, r0
-; CHECK-T2NODSP-NEXT:    movw r0, #32768
-; CHECK-T2NODSP-NEXT:    movt r0, #65535
-; CHECK-T2NODSP-NEXT:    cmn.w r1, #32768
-; CHECK-T2NODSP-NEXT:    it gt
-; CHECK-T2NODSP-NEXT:    movgt r0, r1
+; CHECK-T2NODSP-NEXT:    ssat r0, #16, r0
 ; CHECK-T2NODSP-NEXT:    bx lr
 ;
 ; CHECK-T2DSP-LABEL: func16:
@@ -205,12 +197,7 @@ define signext i8 @func8(i8 signext %x, i8 signext %y, i8 signext %z) nounwind {
 ; CHECK-T2NODSP-NEXT:    muls r1, r2, r1
 ; CHECK-T2NODSP-NEXT:    sxtb r1, r1
 ; CHECK-T2NODSP-NEXT:    add r0, r1
-; CHECK-T2NODSP-NEXT:    cmp r0, #127
-; CHECK-T2NODSP-NEXT:    it ge
-; CHECK-T2NODSP-NEXT:    movge r0, #127
-; CHECK-T2NODSP-NEXT:    cmn.w r0, #128
-; CHECK-T2NODSP-NEXT:    it le
-; CHECK-T2NODSP-NEXT:    mvnle r0, #127
+; CHECK-T2NODSP-NEXT:    ssat r0, #8, r0
 ; CHECK-T2NODSP-NEXT:    bx lr
 ;
 ; CHECK-T2DSP-LABEL: func8:
@@ -257,12 +244,7 @@ define signext i4 @func4(i4 signext %x, i4 signext %y, i4 signext %z) nounwind {
 ; CHECK-T2NODSP-NEXT:    muls r1, r2, r1
 ; CHECK-T2NODSP-NEXT:    lsls r1, r1, #28
 ; CHECK-T2NODSP-NEXT:    add.w r0, r0, r1, asr #28
-; CHECK-T2NODSP-NEXT:    cmp r0, #7
-; CHECK-T2NODSP-NEXT:    it ge
-; CHECK-T2NODSP-NEXT:    movge r0, #7
-; CHECK-T2NODSP-NEXT:    cmn.w r0, #8
-; CHECK-T2NODSP-NEXT:    it le
-; CHECK-T2NODSP-NEXT:    mvnle r0, #7
+; CHECK-T2NODSP-NEXT:    ssat r0, #4, r0
 ; CHECK-T2NODSP-NEXT:    bx lr
 ;
 ; CHECK-T2DSP-LABEL: func4:

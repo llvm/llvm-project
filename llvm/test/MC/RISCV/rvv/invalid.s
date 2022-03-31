@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -triple=riscv64 --mattr=+experimental-v --mattr=+f %s 2>&1 \
+# RUN: not llvm-mc -triple=riscv64 --mattr=+v --mattr=+f %s 2>&1 \
 # RUN:        | FileCheck %s --check-prefix=CHECK-ERROR
 
 vsetivli a2, 32, e8,m1
@@ -7,8 +7,21 @@ vsetivli a2, 32, e8,m1
 vsetivli a2, zero, e8,m1
 # CHECK-ERROR: immediate must be an integer in the range [0, 31]
 
+vsetivli a2, 5, (1 << 10)
+# CHECK-ERROR: operand must be e[8|16|32|64|128|256|512|1024],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+
+vsetivli a2, 5, 0x400
+# CHECK-ERROR: operand must be e[8|16|32|64|128|256|512|1024],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+
 vsetivli a2, 5, e31
 # CHECK-ERROR: operand must be e[8|16|32|64|128|256|512|1024],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+
+vsetvli a2, a0, (1 << 11)
+# CHECK-ERROR: operand must be e[8|16|32|64|128|256|512|1024],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+
+vsetvli a2, a0, 0x800
+# CHECK-ERROR: operand must be e[8|16|32|64|128|256|512|1024],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+
 
 vsetvli a2, a0, e31
 # CHECK-ERROR: operand must be e[8|16|32|64|128|256|512|1024],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
@@ -659,6 +672,72 @@ vs8r.v v6, (a0)
 # CHECK-ERROR: invalid operand for instruction
 
 vs8r.v v7, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vmv2r.v v1, v0
+# CHECK-ERROR: invalid operand for instruction
+
+vmv2r.v v0, v1
+# CHECK-ERROR: invalid operand for instruction
+
+vmv4r.v v1, v0
+# CHECK-ERROR: invalid operand for instruction
+
+vmv4r.v v2, v0
+# CHECK-ERROR: invalid operand for instruction
+
+vmv4r.v v3, v0
+# CHECK-ERROR: invalid operand for instruction
+
+vmv4r.v v0, v1
+# CHECK-ERROR: invalid operand for instruction
+
+vmv4r.v v0, v2
+# CHECK-ERROR: invalid operand for instruction
+
+vmv4r.v v0, v3
+# CHECK-ERROR: invalid operand for instruction
+
+vmv8r.v v1, v0
+# CHECK-ERROR: invalid operand for instruction
+
+vmv8r.v v2, v0
+# CHECK-ERROR: invalid operand for instruction
+
+vmv8r.v v3, v0
+# CHECK-ERROR: invalid operand for instruction
+
+vmv8r.v v4, v0
+# CHECK-ERROR: invalid operand for instruction
+
+vmv8r.v v5, v0
+# CHECK-ERROR: invalid operand for instruction
+
+vmv8r.v v6, v0
+# CHECK-ERROR: invalid operand for instruction
+
+vmv8r.v v7, v0
+# CHECK-ERROR: invalid operand for instruction
+
+vmv8r.v v0, v1
+# CHECK-ERROR: invalid operand for instruction
+
+vmv8r.v v0, v2
+# CHECK-ERROR: invalid operand for instruction
+
+vmv8r.v v0, v3
+# CHECK-ERROR: invalid operand for instruction
+
+vmv8r.v v0, v4
+# CHECK-ERROR: invalid operand for instruction
+
+vmv8r.v v0, v5
+# CHECK-ERROR: invalid operand for instruction
+
+vmv8r.v v0, v6
+# CHECK-ERROR: invalid operand for instruction
+
+vmv8r.v v0, v7
 # CHECK-ERROR: invalid operand for instruction
 
 vmsge.vx v2, v4, a0, v0.t, v0

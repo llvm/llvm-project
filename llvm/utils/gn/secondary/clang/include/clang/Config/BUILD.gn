@@ -8,7 +8,8 @@ write_cmake_config("Config") {
   input = "config.h.cmake"
   output = "$target_gen_dir/config.h"
   values = [
-    "BUG_REPORT_URL=https://bugs.llvm.org/",
+    "BUG_REPORT_URL=https://github.com/llvm/llvm-project/issues/",
+    "CLANG_DEFAULT_PIE_ON_LINUX=",
     "CLANG_DEFAULT_LINKER=",
     "CLANG_DEFAULT_STD_C=",
     "CLANG_DEFAULT_STD_CXX=",
@@ -31,6 +32,7 @@ write_cmake_config("Config") {
     "ENABLE_X86_RELAX_RELOCATIONS=1",
     "CLANG_ENABLE_OBJC_REWRITER=1",  # FIXME: flag?
     "CLANG_SYSTEMZ_DEFAULT_ARCH=z10",
+    "PPC_LINUX_DEFAULT_IEEELONGDOUBLE=",
   ]
 
   if (clang_enable_arcmt) {

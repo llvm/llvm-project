@@ -38,7 +38,7 @@
 # RUN: FileCheck %s --check-prefix=VERSION < repro1/version.txt
 # VERSION: LLD
 
-# RUN: cd repro1; ld64.lld @response.txt
+# RUN: cd repro1; %no-arg-lld @response.txt
 
 # RUN: mkdir -p %t.dir/build2/a/b/c
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos %s -o %t.dir/build2/foo.o
@@ -51,7 +51,7 @@
 # RSP2-NOT:  {{^}}repro2{{[/\\]}}
 # RSP2:      {{[/\\]}}foo.o
 
-# RUN: cd repro2; ld64.lld @response.txt
+# RUN: cd repro2; %no-arg-lld @response.txt
 
 .globl _main
 _main:

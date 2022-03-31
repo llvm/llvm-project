@@ -20,10 +20,12 @@ class PlatformCommandTestCase(TestBase):
         self.runCmd("help platform")
 
     @no_debug_info_test
-    def test_help_platform(self):
+    def test_help_shell_alias(self):
         self.expect("help shell", substrs=["Run a shell command on the host.",
-                                           "shell <shell-command>"])
-
+                                           "shell <shell-command>",
+                                           "'shell' is an abbreviation"])
+        # "platform shell" has options. The "shell" alias for it does not.
+        self.expect("help shell", substrs=["Command Options:"], matching=False)
 
     @no_debug_info_test
     def test_list(self):

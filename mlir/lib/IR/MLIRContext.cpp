@@ -43,9 +43,6 @@
 using namespace mlir;
 using namespace mlir::detail;
 
-using llvm::hash_combine;
-using llvm::hash_combine_range;
-
 //===----------------------------------------------------------------------===//
 // MLIRContext CommandLine Options
 //===----------------------------------------------------------------------===//
@@ -71,7 +68,7 @@ struct MLIRContextOptions {
       llvm::cl::desc("When a diagnostic is emitted, also print the stack trace "
                      "as an attached note")};
 };
-} // end anonymous namespace
+} // namespace
 
 static llvm::ManagedStatic<MLIRContextOptions> clOptions;
 
@@ -110,7 +107,7 @@ struct ScopedWriterLock {
   }
   llvm::sys::SmartRWMutex<true> *mutex;
 };
-} // end anonymous namespace.
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // MLIRContextImpl
@@ -185,7 +182,11 @@ public:
   llvm::StringMap<OperationName::Impl> operations;
 
   /// A vector of operation info specifically for registered operations.
-  SmallVector<RegisteredOperationName> registeredOperations;
+  llvm::StringMap<RegisteredOperationName> registeredOperations;
+
+  /// This is a sorted container of registered operations for a deterministic
+  /// and efficient `getRegisteredOperations` implementation.
+  SmallVector<RegisteredOperationName, 0> sortedRegisteredOperations;
 
   /// A mutex used when accessing operation information.
   llvm::sys::SmartRWMutex<true> operationInfoMutex;
@@ -250,7 +251,7 @@ public:
       attrMapping.second->~AbstractAttribute();
   }
 };
-} // end namespace mlir
+} // namespace mlir
 
 MLIRContext::MLIRContext(Threading setting)
     : MLIRContext(DialectRegistry(), setting) {}
@@ -322,7 +323,7 @@ MLIRContext::MLIRContext(const DialectRegistry &registry, Threading setting)
   impl->affineUniquer.registerParametricStorageType<IntegerSetStorage>();
 }
 
-MLIRContext::~MLIRContext() {}
+MLIRContext::~MLIRContext() = default;
 
 /// Copy the specified array of elements into memory managed by the provided
 /// bump pointer allocator.  This assumes the elements are all PODs.
@@ -356,9 +357,8 @@ DiagnosticEngine &MLIRContext::getDiagEngine() { return getImpl().diagEngine; }
 void MLIRContext::appendDialectRegistry(const DialectRegistry &registry) {
   registry.appendTo(impl->dialectsRegistry);
 
-  // For the already loaded dialects, register the interfaces immediately.
-  for (const auto &kvp : impl->loadedDialects)
-    registry.registerDelayedInterfaces(kvp.second.get());
+  // For the already loaded dialects, apply any possible extensions immediately.
+  registry.applyExtensions(this);
 }
 
 const DialectRegistry &MLIRContext::getDialectRegistry() {
@@ -409,9 +409,9 @@ MLIRContext::getOrLoadDialect(StringRef dialectNamespace, TypeID dialectID,
                               function_ref<std::unique_ptr<Dialect>()> ctor) {
   auto &impl = getImpl();
   // Get the correct insertion position sorted by namespace.
-  std::unique_ptr<Dialect> &dialect = impl.loadedDialects[dialectNamespace];
+  auto dialectIt = impl.loadedDialects.find(dialectNamespace);
 
-  if (!dialect) {
+  if (dialectIt == impl.loadedDialects.end()) {
     LLVM_DEBUG(llvm::dbgs()
                << "Load new dialect in Context " << dialectNamespace << "\n");
 #ifndef NDEBUG
@@ -422,7 +422,8 @@ MLIRContext::getOrLoadDialect(StringRef dialectNamespace, TypeID dialectID,
           "the PassManager): this can indicate a "
           "missing `dependentDialects` in a pass for example.");
 #endif
-    dialect = ctor();
+    std::unique_ptr<Dialect> &dialect =
+        impl.loadedDialects.insert({dialectNamespace, ctor()}).first->second;
     assert(dialect && "dialect ctor failed");
 
     // Refresh all the identifiers dialect field, this catches cases where a
@@ -435,12 +436,13 @@ MLIRContext::getOrLoadDialect(StringRef dialectNamespace, TypeID dialectID,
       impl.dialectReferencingStrAttrs.erase(stringAttrsIt);
     }
 
-    // Actually register the interfaces with delayed registration.
-    impl.dialectsRegistry.registerDelayedInterfaces(dialect.get());
+    // Apply any extensions to this newly loaded dialect.
+    impl.dialectsRegistry.applyExtensions(dialect.get());
     return dialect.get();
   }
 
   // Abort if dialect with namespace has already been registered.
+  std::unique_ptr<Dialect> &dialect = dialectIt->second;
   if (dialect->getTypeID() != dialectID)
     llvm::report_fatal_error("a dialect with namespace '" + dialectNamespace +
                              "' has already been registered");
@@ -517,6 +519,16 @@ void MLIRContext::setThreadPool(llvm::ThreadPool &pool) {
   enableMultithreading();
 }
 
+unsigned MLIRContext::getNumThreads() {
+  if (isMultithreadingEnabled()) {
+    assert(impl->threadPool &&
+           "multi-threading is enabled but threadpool not set");
+    return impl->threadPool->getThreadCount();
+  }
+  // No multithreading or active thread pool. Return 1 thread.
+  return 1;
+}
+
 llvm::ThreadPool &MLIRContext::getThreadPool() {
   assert(isMultithreadingEnabled() &&
          "expected multi-threading to be enabled within the context");
@@ -560,27 +572,13 @@ void MLIRContext::printStackTraceOnDiagnostic(bool enable) {
   impl->printStackTraceOnDiagnostic = enable;
 }
 
-/// Return information about all registered operations.  This isn't very
-/// efficient, typically you should ask the operations about their properties
-/// directly.
-std::vector<RegisteredOperationName> MLIRContext::getRegisteredOperations() {
-  // We just have the operations in a non-deterministic hash table order. Dump
-  // into a temporary array, then sort it by operation name to get a stable
-  // ordering.
-  std::vector<RegisteredOperationName> result(
-      impl->registeredOperations.begin(), impl->registeredOperations.end());
-  llvm::array_pod_sort(result.begin(), result.end(),
-                       [](const RegisteredOperationName *lhs,
-                          const RegisteredOperationName *rhs) {
-                         return lhs->getIdentifier().compare(
-                             rhs->getIdentifier());
-                       });
-
-  return result;
+/// Return information about all registered operations.
+ArrayRef<RegisteredOperationName> MLIRContext::getRegisteredOperations() {
+  return impl->sortedRegisteredOperations;
 }
 
 bool MLIRContext::isOperationRegistered(StringRef name) {
-  return OperationName(name, this).isRegistered();
+  return RegisteredOperationName::lookup(name, this).hasValue();
 }
 
 void Dialect::addType(TypeID typeID, AbstractType &&typeInfo) {
@@ -640,6 +638,15 @@ OperationName::OperationName(StringRef name, MLIRContext *context) {
   // Check for an existing name in read-only mode.
   bool isMultithreadingEnabled = context->isMultithreadingEnabled();
   if (isMultithreadingEnabled) {
+    // Check the registered info map first. In the overwhelmingly common case,
+    // the entry will be in here and it also removes the need to acquire any
+    // locks.
+    auto registeredIt = ctxImpl.registeredOperations.find(name);
+    if (LLVM_LIKELY(registeredIt != ctxImpl.registeredOperations.end())) {
+      impl = registeredIt->second.impl;
+      return;
+    }
+
     llvm::sys::SmartScopedReader<true> contextLock(ctxImpl.operationInfoMutex);
     auto it = ctxImpl.operations.find(name);
     if (it != ctxImpl.operations.end()) {
@@ -667,6 +674,15 @@ StringRef OperationName::getDialectNamespace() const {
 // RegisteredOperationName
 //===----------------------------------------------------------------------===//
 
+Optional<RegisteredOperationName>
+RegisteredOperationName::lookup(StringRef name, MLIRContext *ctx) {
+  auto &impl = ctx->getImpl();
+  auto it = impl.registeredOperations.find(name);
+  if (it != impl.registeredOperations.end())
+    return it->getValue();
+  return llvm::None;
+}
+
 ParseResult
 RegisteredOperationName::parseAssembly(OpAsmParser &parser,
                                        OperationState &result) const {
@@ -676,7 +692,8 @@ RegisteredOperationName::parseAssembly(OpAsmParser &parser,
 void RegisteredOperationName::insert(
     StringRef name, Dialect &dialect, TypeID typeID,
     ParseAssemblyFn &&parseAssembly, PrintAssemblyFn &&printAssembly,
-    VerifyInvariantsFn &&verifyInvariants, FoldHookFn &&foldHook,
+    VerifyInvariantsFn &&verifyInvariants,
+    VerifyRegionInvariantsFn &&verifyRegionInvariants, FoldHookFn &&foldHook,
     GetCanonicalizationPatternsFn &&getCanonicalizationPatterns,
     detail::InterfaceMap &&interfaceMap, HasTraitFn &&hasTrait,
     ArrayRef<StringRef> attrNames) {
@@ -708,7 +725,19 @@ void RegisteredOperationName::insert(
                  << "' is already registered.\n";
     abort();
   }
-  ctxImpl.registeredOperations.push_back(RegisteredOperationName(&impl));
+  auto emplaced = ctxImpl.registeredOperations.try_emplace(
+      name, RegisteredOperationName(&impl));
+  assert(emplaced.second && "operation name registration must be successful");
+
+  // Add emplaced operation name to the sorted operations container.
+  RegisteredOperationName &value = emplaced.first->getValue();
+  ctxImpl.sortedRegisteredOperations.insert(
+      llvm::upper_bound(ctxImpl.sortedRegisteredOperations, value,
+                        [](auto &lhs, auto &rhs) {
+                          return lhs.getIdentifier().compare(
+                              rhs.getIdentifier());
+                        }),
+      value);
 
   // Update the registered info for this operation.
   impl.dialect = &dialect;
@@ -720,6 +749,7 @@ void RegisteredOperationName::insert(
   impl.parseAssemblyFn = std::move(parseAssembly);
   impl.printAssemblyFn = std::move(printAssembly);
   impl.verifyInvariantsFn = std::move(verifyInvariants);
+  impl.verifyRegionInvariantsFn = std::move(verifyRegionInvariants);
   impl.attributeNames = cachedAttrNames;
 }
 

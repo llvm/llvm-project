@@ -6,14 +6,9 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: libcpp-has-no-incomplete-format
 // TODO FMT Evaluate gcc-11 status
 // UNSUPPORTED: gcc-11
-
-// The tests write fixed size buffer, make sure it remains in bounds.
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
-// UNSUPPORTED: libcxx-no-debug-mode
 
 // <format>
 
@@ -31,59 +26,50 @@
 #include "test_macros.h"
 #include "format_tests.h"
 
-auto test = []<class CharT, class... Args>(std::basic_string<CharT> expected,
-                                           std::basic_string<CharT> fmt,
+auto test = []<class CharT, class... Args>(std::basic_string_view<CharT> expected, std::basic_string_view<CharT> fmt,
                                            const Args&... args) {
   {
     std::basic_string<CharT> out(expected.size(), CharT(' '));
-    auto it = std::vformat_to(out.begin(), fmt,
-                              std::make_format_args<context_t<CharT>>(args...));
+    auto it = std::vformat_to(out.begin(), fmt, std::make_format_args<context_t<CharT>>(args...));
     assert(it == out.end());
     assert(out == expected);
   }
   {
     std::list<CharT> out;
-    std::vformat_to(std::back_inserter(out), fmt,
-                    std::make_format_args<context_t<CharT>>(args...));
-    assert(
-        std::equal(out.begin(), out.end(), expected.begin(), expected.end()));
+    std::vformat_to(std::back_inserter(out), fmt, std::make_format_args<context_t<CharT>>(args...));
+    assert(std::equal(out.begin(), out.end(), expected.begin(), expected.end()));
   }
   {
     std::vector<CharT> out;
-    std::vformat_to(std::back_inserter(out), fmt,
-                    std::make_format_args<context_t<CharT>>(args...));
-    assert(
-        std::equal(out.begin(), out.end(), expected.begin(), expected.end()));
+    std::vformat_to(std::back_inserter(out), fmt, std::make_format_args<context_t<CharT>>(args...));
+    assert(std::equal(out.begin(), out.end(), expected.begin(), expected.end()));
   }
   {
     assert(expected.size() < 4096 && "Update the size of the buffer.");
     CharT out[4096];
-    CharT* it = std::vformat_to(
-        out, fmt, std::make_format_args<context_t<CharT>>(args...));
+    CharT* it = std::vformat_to(out, fmt, std::make_format_args<context_t<CharT>>(args...));
     assert(std::distance(out, it) == int(expected.size()));
     // Convert to std::string since output contains '\0' for boolean tests.
     assert(std::basic_string<CharT>(out, it) == expected);
   }
 };
 
-auto test_exception = []<class CharT, class... Args>(
-    std::string_view what, std::basic_string<CharT> fmt, const Args&... args) {
+auto test_exception = []<class CharT, class... Args>(std::string_view what, std::basic_string_view<CharT> fmt,
+                                                     const Args&... args) {
 #ifndef TEST_HAS_NO_EXCEPTIONS
   try {
     std::basic_string<CharT> out;
-    std::vformat_to(std::back_inserter(out), fmt,
-                    std::make_format_args<context_t<CharT>>(args...));
+    std::vformat_to(std::back_inserter(out), fmt, std::make_format_args<context_t<CharT>>(args...));
     assert(false);
-  } catch (std::format_error& e) {
+  } catch ([[maybe_unused]] const std::format_error& e) {
     LIBCPP_ASSERT(e.what() == what);
     return;
   }
   assert(false);
-#else
+#endif
   (void)what;
   (void)fmt;
   (void)sizeof...(args);
-#endif
 };
 
 int main(int, char**) {

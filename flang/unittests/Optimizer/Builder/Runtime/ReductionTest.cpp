@@ -210,8 +210,8 @@ TEST_F(RuntimeCallTest, genDotProduct) {
 }
 
 void checkGenMxxloc(fir::FirOpBuilder &builder,
-    void (*genFct)(fir::FirOpBuilder &, Location, mlir::Value, mlir::Value,
-        mlir::Value, mlir::Value, mlir::Value),
+    void (*genFct)(fir::FirOpBuilder &, mlir::Location, mlir::Value,
+        mlir::Value, mlir::Value, mlir::Value, mlir::Value),
     llvm::StringRef fctName, unsigned nbArgs) {
   mlir::Location loc = builder.getUnknownLoc();
   mlir::Type i32Ty = builder.getI32Type();
@@ -236,8 +236,8 @@ TEST_F(RuntimeCallTest, genMinlocTest) {
 }
 
 void checkGenMxxlocDim(fir::FirOpBuilder &builder,
-    void (*genFct)(fir::FirOpBuilder &, Location, mlir::Value, mlir::Value,
-        mlir::Value, mlir::Value, mlir::Value, mlir::Value),
+    void (*genFct)(fir::FirOpBuilder &, mlir::Location, mlir::Value,
+        mlir::Value, mlir::Value, mlir::Value, mlir::Value, mlir::Value),
     llvm::StringRef fctName, unsigned nbArgs) {
   mlir::Location loc = builder.getUnknownLoc();
   auto i32Ty = builder.getI32Type();
@@ -265,8 +265,8 @@ TEST_F(RuntimeCallTest, genMinlocDimTest) {
 }
 
 void checkGenMxxvalChar(fir::FirOpBuilder &builder,
-    void (*genFct)(
-        fir::FirOpBuilder &, Location, mlir::Value, mlir::Value, mlir::Value),
+    void (*genFct)(fir::FirOpBuilder &, mlir::Location, mlir::Value,
+        mlir::Value, mlir::Value),
     llvm::StringRef fctName, unsigned nbArgs) {
   mlir::Location loc = builder.getUnknownLoc();
   auto i32Ty = builder.getI32Type();
@@ -291,8 +291,8 @@ TEST_F(RuntimeCallTest, genMinvalCharTest) {
 }
 
 void checkGen4argsDim(fir::FirOpBuilder &builder,
-    void (*genFct)(fir::FirOpBuilder &, Location, mlir::Value, mlir::Value,
-        mlir::Value, mlir::Value),
+    void (*genFct)(fir::FirOpBuilder &, mlir::Location, mlir::Value,
+        mlir::Value, mlir::Value, mlir::Value),
     llvm::StringRef fctName, unsigned nbArgs) {
   mlir::Location loc = builder.getUnknownLoc();
   auto i32Ty = builder.getI32Type();

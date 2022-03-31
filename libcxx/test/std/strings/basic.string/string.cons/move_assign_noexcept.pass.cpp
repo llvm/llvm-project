@@ -62,36 +62,45 @@ struct some_alloc3
     typedef std::false_type is_always_equal;
 };
 
+bool test() {
+  {
+    typedef std::string C;
+    static_assert(std::is_nothrow_move_assignable<C>::value, "");
+  }
+  {
+    typedef std::basic_string<char, std::char_traits<char>, test_allocator<char>> C;
+    static_assert(!std::is_nothrow_move_assignable<C>::value, "");
+  }
+  {
+    typedef std::basic_string<char, std::char_traits<char>, some_alloc<char>> C;
+#if TEST_STD_VER > 14
+    // if the allocators are always equal, then the move assignment can be noexcept
+    static_assert( std::is_nothrow_move_assignable<C>::value, "");
+#else
+      static_assert(!std::is_nothrow_move_assignable<C>::value, "");
+#endif
+  }
+#if TEST_STD_VER > 14
+  {
+    //  POCMA is false, always equal
+    typedef std::basic_string<char, std::char_traits<char>, some_alloc2<char>> C;
+    static_assert( std::is_nothrow_move_assignable<C>::value, "");
+  }
+  {
+    //  POCMA is false, not always equal
+    typedef std::basic_string<char, std::char_traits<char>, some_alloc3<char>> C;
+    static_assert(!std::is_nothrow_move_assignable<C>::value, "");
+  }
+#endif
+
+  return true;
+}
+
 int main(int, char**)
 {
-    {
-        typedef std::string C;
-        static_assert(std::is_nothrow_move_assignable<C>::value, "");
-    }
-    {
-        typedef std::basic_string<char, std::char_traits<char>, test_allocator<char>> C;
-        static_assert(!std::is_nothrow_move_assignable<C>::value, "");
-    }
-    {
-        typedef std::basic_string<char, std::char_traits<char>, some_alloc<char>> C;
-#if TEST_STD_VER > 14
-    //  if the allocators are always equal, then the move assignment can be noexcept
-        static_assert( std::is_nothrow_move_assignable<C>::value, "");
-#else
-        static_assert(!std::is_nothrow_move_assignable<C>::value, "");
-#endif
-    }
-#if TEST_STD_VER > 14
-    {
-    //  POCMA is false, always equal
-        typedef std::basic_string<char, std::char_traits<char>, some_alloc2<char>> C;
-        static_assert( std::is_nothrow_move_assignable<C>::value, "");
-    }
-    {
-    //  POCMA is false, not always equal
-        typedef std::basic_string<char, std::char_traits<char>, some_alloc3<char>> C;
-        static_assert(!std::is_nothrow_move_assignable<C>::value, "");
-    }
+  test();
+#if TEST_STD_VER > 17
+  // static_assert(test());
 #endif
 
   return 0;

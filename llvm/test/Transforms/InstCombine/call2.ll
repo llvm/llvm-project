@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine | llvm-dis
+; RUN: opt < %s -passes=instcombine | llvm-dis
 
 ; This used to crash trying to do a double-to-pointer conversion
 define i32 @bar() {

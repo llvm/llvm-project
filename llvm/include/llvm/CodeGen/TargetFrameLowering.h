@@ -213,11 +213,15 @@ public:
   virtual void emitEpilogue(MachineFunction &MF,
                             MachineBasicBlock &MBB) const = 0;
 
+  /// emitZeroCallUsedRegs - Zeros out call used registers.
+  virtual void emitZeroCallUsedRegs(BitVector RegsToZero,
+                                    MachineBasicBlock &MBB) const {}
+
   /// With basic block sections, emit callee saved frame moves for basic blocks
   /// that are in a different section.
   virtual void
-  emitCalleeSavedFrameMoves(MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator MBBI) const {}
+  emitCalleeSavedFrameMovesFullCFA(MachineBasicBlock &MBB,
+                                   MachineBasicBlock::iterator MBBI) const {}
 
   /// Replace a StackProbe stub (if any) with the actual probe code inline
   virtual void inlineStackProbe(MachineFunction &MF,

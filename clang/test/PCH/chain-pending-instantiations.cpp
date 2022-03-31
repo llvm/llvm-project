@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 %s -emit-llvm -triple i686-pc-linux -o - -chain-include %s -chain-include %s | FileCheck %s
-// CHECK: define linkonce_odr %{{[^ ]+}} @_ZN1AI1BE3getEv
+// CHECK: define linkonce_odr noundef %{{[^ ]+}} @_ZN1AI1BE3getEv
 #if !defined(PASS1)
 #define PASS1
 

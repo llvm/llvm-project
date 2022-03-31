@@ -13,7 +13,7 @@ typedef struct NSSize {
 @property NSSize size;
 @end
 
-void foo() { 
+void foo(void) { 
         Foo *f;
         f.size.width = 2.2; // expected-error {{expression is not assignable}}
 	f.size.inner.dim = 200; // expected-error {{expression is not assignable}}

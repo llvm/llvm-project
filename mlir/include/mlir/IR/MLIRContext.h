@@ -17,7 +17,7 @@
 
 namespace llvm {
 class ThreadPool;
-} // end namespace llvm
+} // namespace llvm
 
 namespace mlir {
 class DebugActionManager;
@@ -147,6 +147,13 @@ public:
   /// this call in this case.
   void setThreadPool(llvm::ThreadPool &pool);
 
+  /// Return the number of threads used by the thread pool in this context. The
+  /// number of computed hardware threads can change over the lifetime of a
+  /// process based on affinity changes, so users should use the number of
+  /// threads actually in the thread pool for dispatching work. Returns 1 if
+  /// multithreading is disabled.
+  unsigned getNumThreads();
+
   /// Return the thread pool used by this context. This method requires that
   /// multithreading be enabled within the context, and should generally not be
   /// used directly. Users should instead prefer the threading utilities within
@@ -169,10 +176,9 @@ public:
   /// emitting diagnostics.
   void printStackTraceOnDiagnostic(bool enable);
 
-  /// Return information about all registered operations.  This isn't very
-  /// efficient: typically you should ask the operations about their properties
-  /// directly.
-  std::vector<RegisteredOperationName> getRegisteredOperations();
+  /// Return a sorted array containing the information about all registered
+  /// operations.
+  ArrayRef<RegisteredOperationName> getRegisteredOperations();
 
   /// Return true if this operation name is registered in this context.
   bool isOperationRegistered(StringRef name);
@@ -236,6 +242,6 @@ private:
 /// an MLIR context for initialization.
 void registerMLIRContextCLOptions();
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_IR_MLIRCONTEXT_H

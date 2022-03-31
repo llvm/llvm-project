@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_MATCHERS_H
-#define MLIR_MATCHERS_H
+#ifndef MLIR_IR_MATCHERS_H
+#define MLIR_IR_MATCHERS_H
 
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
@@ -92,6 +92,43 @@ struct constant_op_binder {
 };
 
 /// The matcher that matches a constant scalar / vector splat / tensor splat
+/// float operation and binds the constant float value.
+struct constant_float_op_binder {
+  FloatAttr::ValueType *bind_value;
+
+  /// Creates a matcher instance that binds the value to bv if match succeeds.
+  constant_float_op_binder(FloatAttr::ValueType *bv) : bind_value(bv) {}
+
+  bool match(Operation *op) {
+    Attribute attr;
+    if (!constant_op_binder<Attribute>(&attr).match(op))
+      return false;
+    auto type = op->getResult(0).getType();
+
+    if (type.isa<FloatType>())
+      return attr_value_binder<FloatAttr>(bind_value).match(attr);
+    if (type.isa<VectorType, RankedTensorType>()) {
+      if (auto splatAttr = attr.dyn_cast<SplatElementsAttr>()) {
+        return attr_value_binder<FloatAttr>(bind_value)
+            .match(splatAttr.getSplatValue<Attribute>());
+      }
+    }
+    return false;
+  }
+};
+
+/// The matcher that matches a given target constant scalar / vector splat /
+/// tensor splat float value that fulfills a predicate.
+struct constant_float_predicate_matcher {
+  bool (*predicate)(const APFloat &);
+
+  bool match(Operation *op) {
+    APFloat value(APFloat::Bogus());
+    return constant_float_op_binder(&value).match(op) && predicate(value);
+  }
+};
+
+/// The matcher that matches a constant scalar / vector splat / tensor splat
 /// integer operation and binds the constant integer value.
 struct constant_int_op_binder {
   IntegerAttr::ValueType *bind_value;
@@ -118,22 +155,13 @@ struct constant_int_op_binder {
 };
 
 /// The matcher that matches a given target constant scalar / vector splat /
-/// tensor splat integer value.
-template <int64_t TargetValue>
-struct constant_int_value_matcher {
-  bool match(Operation *op) {
-    APInt value;
-    return constant_int_op_binder(&value).match(op) && TargetValue == value;
-  }
-};
+/// tensor splat integer value that fulfills a predicate.
+struct constant_int_predicate_matcher {
+  bool (*predicate)(const APInt &);
 
-/// The matcher that matches anything except the given target constant scalar /
-/// vector splat / tensor splat integer value.
-template <int64_t TargetNotValue>
-struct constant_int_not_value_matcher {
   bool match(Operation *op) {
     APInt value;
-    return constant_int_op_binder(&value).match(op) && TargetNotValue != value;
+    return constant_int_op_binder(&value).match(op) && predicate(value);
   }
 };
 
@@ -166,7 +194,7 @@ typename std::enable_if_t<
                       Operation *>::value,
     bool>
 matchOperandOrValueAtIndex(Operation *op, unsigned idx, MatcherClass &matcher) {
-  if (auto defOp = op->getOperand(idx).getDefiningOp())
+  if (auto *defOp = op->getOperand(idx).getDefiningOp())
     return matcher.match(defOp);
   return false;
 }
@@ -225,7 +253,7 @@ struct RecursivePatternMatcher {
   std::tuple<OperandMatchers...> operandMatchers;
 };
 
-} // end namespace detail
+} // namespace detail
 
 /// Matches a constant foldable operation.
 inline detail::constant_op_matcher m_Constant() {
@@ -239,26 +267,65 @@ inline detail::constant_op_binder<AttrT> m_Constant(AttrT *bind_value) {
   return detail::constant_op_binder<AttrT>(bind_value);
 }
 
+/// Matches a constant scalar / vector splat / tensor splat float (both positive
+/// and negative) zero.
+inline detail::constant_float_predicate_matcher m_AnyZeroFloat() {
+  return {[](const APFloat &value) { return value.isZero(); }};
+}
+
+/// Matches a constant scalar / vector splat / tensor splat float positive zero.
+inline detail::constant_float_predicate_matcher m_PosZeroFloat() {
+  return {[](const APFloat &value) { return value.isPosZero(); }};
+}
+
+/// Matches a constant scalar / vector splat / tensor splat float negative zero.
+inline detail::constant_float_predicate_matcher m_NegZeroFloat() {
+  return {[](const APFloat &value) { return value.isNegZero(); }};
+}
+
+/// Matches a constant scalar / vector splat / tensor splat float ones.
+inline detail::constant_float_predicate_matcher m_OneFloat() {
+  return {[](const APFloat &value) {
+    return APFloat(value.getSemantics(), 1) == value;
+  }};
+}
+
+/// Matches a constant scalar / vector splat / tensor splat float positive
+/// infinity.
+inline detail::constant_float_predicate_matcher m_PosInfFloat() {
+  return {[](const APFloat &value) {
+    return !value.isNegative() && value.isInfinity();
+  }};
+}
+
+/// Matches a constant scalar / vector splat / tensor splat float negative
+/// infinity.
+inline detail::constant_float_predicate_matcher m_NegInfFloat() {
+  return {[](const APFloat &value) {
+    return value.isNegative() && value.isInfinity();
+  }};
+}
+
+/// Matches a constant scalar / vector splat / tensor splat integer zero.
+inline detail::constant_int_predicate_matcher m_Zero() {
+  return {[](const APInt &value) { return 0 == value; }};
+}
+
+/// Matches a constant scalar / vector splat / tensor splat integer that is any
+/// non-zero value.
+inline detail::constant_int_predicate_matcher m_NonZero() {
+  return {[](const APInt &value) { return 0 != value; }};
+}
+
 /// Matches a constant scalar / vector splat / tensor splat integer one.
-inline detail::constant_int_value_matcher<1> m_One() {
-  return detail::constant_int_value_matcher<1>();
+inline detail::constant_int_predicate_matcher m_One() {
+  return {[](const APInt &value) { return 1 == value; }};
 }
 
 /// Matches the given OpClass.
 template <typename OpClass>
 inline detail::op_matcher<OpClass> m_Op() {
   return detail::op_matcher<OpClass>();
-}
-
-/// Matches a constant scalar / vector splat / tensor splat integer zero.
-inline detail::constant_int_value_matcher<0> m_Zero() {
-  return detail::constant_int_value_matcher<0>();
-}
-
-/// Matches a constant scalar / vector splat / tensor splat integer that is any
-/// non-zero value.
-inline detail::constant_int_not_value_matcher<0> m_NonZero() {
-  return detail::constant_int_not_value_matcher<0>();
 }
 
 /// Entry point for matching a pattern over a Value.
@@ -274,6 +341,13 @@ inline bool matchPattern(Value value, const Pattern &pattern) {
 template <typename Pattern>
 inline bool matchPattern(Operation *op, const Pattern &pattern) {
   return const_cast<Pattern &>(pattern).match(op);
+}
+
+/// Matches a constant holding a scalar/vector/tensor float (splat) and
+/// writes the float value to bind_value.
+inline detail::constant_float_op_binder
+m_ConstantFloat(FloatAttr::ValueType *bind_value) {
+  return detail::constant_float_op_binder(bind_value);
 }
 
 /// Matches a constant holding a scalar/vector/tensor integer (splat) and
@@ -294,6 +368,6 @@ inline auto m_Any(Value *val) { return detail::AnyCapturedValueMatcher(val); }
 inline auto m_Val(Value v) { return detail::PatternMatcherValue(v); }
 } // namespace matchers
 
-} // end namespace mlir
+} // namespace mlir
 
-#endif // MLIR_MATCHERS_H
+#endif // MLIR_IR_MATCHERS_H

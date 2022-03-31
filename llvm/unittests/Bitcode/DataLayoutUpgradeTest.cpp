@@ -24,7 +24,7 @@ TEST(DataLayoutUpgradeTest, ValidDataLayoutUpgrade) {
   EXPECT_EQ(DL1, "e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:64"
                  "-f80:128-n8:16:32:64-S128");
   EXPECT_EQ(DL2, "e-m:w-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:64"
-                 "-f80:32-n8:16:32-S32");
+                 "-f80:128-n8:16:32-S32");
   EXPECT_EQ(DL3, "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128"
                  "-n32:64-S128");
 

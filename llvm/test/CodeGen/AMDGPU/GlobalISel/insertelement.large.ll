@@ -14,9 +14,9 @@ define amdgpu_kernel void @v_insert_v64i32_37(<64 x i32> addrspace(1)* %ptr.in, 
 ; GCN-NEXT:    global_load_dwordx4 v[44:47], v64, s[0:1] offset:48
 ; GCN-NEXT:    global_load_dwordx4 v[48:51], v64, s[0:1] offset:64
 ; GCN-NEXT:    global_load_dwordx4 v[52:55], v64, s[0:1] offset:80
+; GCN-NEXT:    global_load_dwordx4 v[0:3], v64, s[0:1] offset:128
 ; GCN-NEXT:    global_load_dwordx4 v[56:59], v64, s[0:1] offset:96
 ; GCN-NEXT:    global_load_dwordx4 v[60:63], v64, s[0:1] offset:112
-; GCN-NEXT:    global_load_dwordx4 v[0:3], v64, s[0:1] offset:128
 ; GCN-NEXT:    global_load_dwordx4 v[4:7], v64, s[0:1] offset:144
 ; GCN-NEXT:    global_load_dwordx4 v[8:11], v64, s[0:1] offset:160
 ; GCN-NEXT:    global_load_dwordx4 v[12:15], v64, s[0:1] offset:176
@@ -38,8 +38,6 @@ define amdgpu_kernel void @v_insert_v64i32_37(<64 x i32> addrspace(1)* %ptr.in, 
 ; GCN-NEXT:    global_store_dwordx4 v64, v[20:23], s[2:3] offset:208
 ; GCN-NEXT:    s_waitcnt vmcnt(7)
 ; GCN-NEXT:    global_store_dwordx4 v64, v[24:27], s[2:3] offset:224
-; GCN-NEXT:    s_waitcnt vmcnt(7)
-; GCN-NEXT:    global_store_dwordx4 v64, v[28:31], s[2:3] offset:240
 ; GCN-NEXT:    global_store_dwordx4 v64, v[32:35], s[2:3]
 ; GCN-NEXT:    global_store_dwordx4 v64, v[36:39], s[2:3] offset:16
 ; GCN-NEXT:    global_store_dwordx4 v64, v[40:43], s[2:3] offset:32
@@ -48,6 +46,8 @@ define amdgpu_kernel void @v_insert_v64i32_37(<64 x i32> addrspace(1)* %ptr.in, 
 ; GCN-NEXT:    global_store_dwordx4 v64, v[52:55], s[2:3] offset:80
 ; GCN-NEXT:    global_store_dwordx4 v64, v[56:59], s[2:3] offset:96
 ; GCN-NEXT:    global_store_dwordx4 v64, v[60:63], s[2:3] offset:112
+; GCN-NEXT:    s_waitcnt vmcnt(15)
+; GCN-NEXT:    global_store_dwordx4 v64, v[28:31], s[2:3] offset:240
 ; GCN-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: v_insert_v64i32_37:
@@ -58,13 +58,13 @@ define amdgpu_kernel void @v_insert_v64i32_37(<64 x i32> addrspace(1)* %ptr.in, 
 ; GFX10-NEXT:    s_clause 0xf
 ; GFX10-NEXT:    global_load_dwordx4 v[32:35], v64, s[0:1]
 ; GFX10-NEXT:    global_load_dwordx4 v[36:39], v64, s[0:1] offset:16
+; GFX10-NEXT:    global_load_dwordx4 v[0:3], v64, s[0:1] offset:128
 ; GFX10-NEXT:    global_load_dwordx4 v[40:43], v64, s[0:1] offset:32
 ; GFX10-NEXT:    global_load_dwordx4 v[44:47], v64, s[0:1] offset:48
 ; GFX10-NEXT:    global_load_dwordx4 v[48:51], v64, s[0:1] offset:64
 ; GFX10-NEXT:    global_load_dwordx4 v[52:55], v64, s[0:1] offset:80
 ; GFX10-NEXT:    global_load_dwordx4 v[56:59], v64, s[0:1] offset:96
 ; GFX10-NEXT:    global_load_dwordx4 v[60:63], v64, s[0:1] offset:112
-; GFX10-NEXT:    global_load_dwordx4 v[0:3], v64, s[0:1] offset:128
 ; GFX10-NEXT:    global_load_dwordx4 v[4:7], v64, s[0:1] offset:144
 ; GFX10-NEXT:    global_load_dwordx4 v[8:11], v64, s[0:1] offset:160
 ; GFX10-NEXT:    global_load_dwordx4 v[12:15], v64, s[0:1] offset:176
@@ -84,8 +84,6 @@ define amdgpu_kernel void @v_insert_v64i32_37(<64 x i32> addrspace(1)* %ptr.in, 
 ; GFX10-NEXT:    global_store_dwordx4 v64, v[16:19], s[2:3] offset:192
 ; GFX10-NEXT:    s_waitcnt vmcnt(2)
 ; GFX10-NEXT:    global_store_dwordx4 v64, v[20:23], s[2:3] offset:208
-; GFX10-NEXT:    s_waitcnt vmcnt(1)
-; GFX10-NEXT:    global_store_dwordx4 v64, v[24:27], s[2:3] offset:224
 ; GFX10-NEXT:    global_store_dwordx4 v64, v[32:35], s[2:3]
 ; GFX10-NEXT:    global_store_dwordx4 v64, v[36:39], s[2:3] offset:16
 ; GFX10-NEXT:    global_store_dwordx4 v64, v[40:43], s[2:3] offset:32
@@ -94,6 +92,8 @@ define amdgpu_kernel void @v_insert_v64i32_37(<64 x i32> addrspace(1)* %ptr.in, 
 ; GFX10-NEXT:    global_store_dwordx4 v64, v[52:55], s[2:3] offset:80
 ; GFX10-NEXT:    global_store_dwordx4 v64, v[56:59], s[2:3] offset:96
 ; GFX10-NEXT:    global_store_dwordx4 v64, v[60:63], s[2:3] offset:112
+; GFX10-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-NEXT:    global_store_dwordx4 v64, v[24:27], s[2:3] offset:224
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    global_store_dwordx4 v64, v[28:31], s[2:3] offset:240
 ; GFX10-NEXT:    s_endpgm

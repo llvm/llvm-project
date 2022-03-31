@@ -468,3 +468,11 @@ class targetCommandTestCase(TestBase):
         # Invalid arguments.
         self.expect("target modules search-paths query faz baz", error=True,
                     substrs=["query requires one argument"])
+
+    @no_debug_info_test
+    def test_target_modules_type(self):
+        self.buildB()
+        self.runCmd("file " + self.getBuildArtifact("b.out"),
+                    CURRENT_EXECUTABLE_SET)
+        self.expect("target modules lookup --type int",
+                    substrs=["1 match found", 'name = "int"'])

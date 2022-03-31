@@ -18,21 +18,21 @@
 using RunContext = __llvm_libc::testing::RunContext;
 
 TEST_F(LlvmLibcILogbTest, SpecialNumbers_ilogbl) {
-  testSpecialNumbers<long double>(&__llvm_libc::ilogbl);
+  test_special_numbers<long double>(&__llvm_libc::ilogbl);
 }
 
 TEST_F(LlvmLibcILogbTest, PowersOfTwo_ilogbl) {
-  testPowersOfTwo<long double>(&__llvm_libc::ilogbl);
+  test_powers_of_two<long double>(&__llvm_libc::ilogbl);
 }
 
 TEST_F(LlvmLibcILogbTest, SomeIntegers_ilogbl) {
-  testSomeIntegers<long double>(&__llvm_libc::ilogbl);
+  test_some_integers<long double>(&__llvm_libc::ilogbl);
 }
 
 TEST_F(LlvmLibcILogbTest, SubnormalRange_ilogbl) {
-  testSubnormalRange<long double>(&__llvm_libc::ilogbl);
+  test_subnormal_range<long double>(&__llvm_libc::ilogbl);
 }
 
 TEST_F(LlvmLibcILogbTest, NormalRange_ilogbl) {
-  testNormalRange<long double>(&__llvm_libc::ilogbl);
+  test_normal_range<long double>(&__llvm_libc::ilogbl);
 }

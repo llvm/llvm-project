@@ -7,13 +7,13 @@ struct foo {
 };
 
 foo::foo() {
-  // CHECK-LABEL: define{{.*}} void @_ZN3fooC2Ev(%struct.foo* inreg %this)
-  // CHECK-LABEL: define{{.*}} void @_ZN3fooC1Ev(%struct.foo* inreg %this)
+  // CHECK-LABEL: define{{.*}} void @_ZN3fooC2Ev(%struct.foo* inreg noundef nonnull align 1 dereferenceable(1) %this)
+  // CHECK-LABEL: define{{.*}} void @_ZN3fooC1Ev(%struct.foo* inreg noundef nonnull align 1 dereferenceable(1) %this)
 }
 
 foo::~foo() {
-  // CHECK-LABEL: define{{.*}} void @_ZN3fooD2Ev(%struct.foo* inreg %this)
-  // CHECK-LABEL: define{{.*}} void @_ZN3fooD1Ev(%struct.foo* inreg %this)
+  // CHECK-LABEL: define{{.*}} void @_ZN3fooD2Ev(%struct.foo* inreg noundef nonnull align 1 dereferenceable(1) %this)
+  // CHECK-LABEL: define{{.*}} void @_ZN3fooD1Ev(%struct.foo* inreg noundef nonnull align 1 dereferenceable(1) %this)
 }
 
 void dummy() {
@@ -21,6 +21,6 @@ void dummy() {
   // older clangs accept:
   // template foo::foo(int x);
   foo x(10);
-  // CHECK-LABEL: define linkonce_odr void @_ZN3fooC1IiEET_(%struct.foo* inreg %this, i32 inreg %x)
-  // CHECK-LABEL: define linkonce_odr void @_ZN3fooC2IiEET_(%struct.foo* inreg %this, i32 inreg %x)
+  // CHECK-LABEL: define linkonce_odr void @_ZN3fooC1IiEET_(%struct.foo* inreg noundef nonnull align 1 dereferenceable(1) %this, i32 inreg noundef %x)
+  // CHECK-LABEL: define linkonce_odr void @_ZN3fooC2IiEET_(%struct.foo* inreg noundef nonnull align 1 dereferenceable(1) %this, i32 inreg noundef %x)
 }

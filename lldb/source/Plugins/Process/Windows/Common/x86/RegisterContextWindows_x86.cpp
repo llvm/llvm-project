@@ -192,7 +192,7 @@ bool RegisterContextWindows_x86::ReadRegister(const RegisterInfo *reg_info,
     return ReadRegisterHelper(CONTEXT_CONTROL, "EFLAGS", m_context.EFlags,
                               reg_value);
   default:
-    Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_REGISTERS);
+    Log *log = GetLog(WindowsLog::Registers);
     LLDB_LOG(log, "Requested unknown register {0}", reg);
     break;
   }
@@ -208,7 +208,7 @@ bool RegisterContextWindows_x86::WriteRegister(const RegisterInfo *reg_info,
   if (!CacheAllRegisterValues())
     return false;
 
-  Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_REGISTERS);
+  Log *log = GetLog(WindowsLog::Registers);
   uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
   switch (reg) {
   case lldb_eax_i386:
@@ -263,7 +263,7 @@ bool RegisterContextWindows_x86::WriteRegister(const RegisterInfo *reg_info,
 bool RegisterContextWindows_x86::ReadRegisterHelper(
     DWORD flags_required, const char *reg_name, DWORD value,
     RegisterValue &reg_value) const {
-  Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_REGISTERS);
+  Log *log = GetLog(WindowsLog::Registers);
   if ((m_context.ContextFlags & flags_required) != flags_required) {
     LLDB_LOG(log, "Thread context doesn't have {0}", reg_name);
     return false;

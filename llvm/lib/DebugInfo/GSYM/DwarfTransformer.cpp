@@ -10,6 +10,7 @@
 #include <unordered_set>
 
 #include "llvm/DebugInfo/DIContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ThreadPool.h"
@@ -427,11 +428,28 @@ void DwarfTransformer::handleDie(raw_ostream &OS, CUInfo &CUI, DWARFDie Die) {
 
 Error DwarfTransformer::convert(uint32_t NumThreads) {
   size_t NumBefore = Gsym.getNumFunctionInfos();
+  auto getDie = [&](DWARFUnit &DwarfUnit) -> DWARFDie {
+    DWARFDie ReturnDie = DwarfUnit.getUnitDIE(false);
+    if (llvm::Optional<uint64_t> DWOId = DwarfUnit.getDWOId()) {
+      DWARFUnit *DWOCU = DwarfUnit.getNonSkeletonUnitDIE(false).getDwarfUnit();
+      if (!DWOCU->isDWOUnit()) {
+        std::string DWOName = dwarf::toString(
+            DwarfUnit.getUnitDIE().find(
+                {dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name}),
+            "");
+        Log << "warning: Unable to retrieve DWO .debug_info section for "
+            << DWOName << "\n";
+      } else {
+        ReturnDie = DWOCU->getUnitDIE(false);
+      }
+    }
+    return ReturnDie;
+  };
   if (NumThreads == 1) {
     // Parse all DWARF data from this thread, use the same string/file table
     // for everything
     for (const auto &CU : DICtx.compile_units()) {
-      DWARFDie Die = CU->getUnitDIE(false);
+      DWARFDie Die = getDie(*CU);
       CUInfo CUI(DICtx, dyn_cast<DWARFCompileUnit>(CU.get()));
       handleDie(Log, CUI, Die);
     }
@@ -456,7 +474,7 @@ Error DwarfTransformer::convert(uint32_t NumThreads) {
     // Now convert all DWARF to GSYM in a thread pool.
     std::mutex LogMutex;
     for (const auto &CU : DICtx.compile_units()) {
-      DWARFDie Die = CU->getUnitDIE(false /*CUDieOnly*/);
+      DWARFDie Die = getDie(*CU);
       if (Die) {
         CUInfo CUI(DICtx, dyn_cast<DWARFCompileUnit>(CU.get()));
         pool.async([this, CUI, &LogMutex, Die]() mutable {
@@ -531,7 +549,7 @@ llvm::Error DwarfTransformer::verify(StringRef GsymPath) {
             << LR->Locations.size() << "\n";
         Log << "    " << NumDwarfInlineInfos << " DWARF frames:\n";
         for (size_t Idx = 0; Idx < NumDwarfInlineInfos; ++Idx) {
-          const auto dii = DwarfInlineInfos.getFrame(Idx);
+          const auto &dii = DwarfInlineInfos.getFrame(Idx);
           Log << "    [" << Idx << "]: " << dii.FunctionName << " @ "
               << dii.FileName << ':' << dii.Line << '\n';
         }
@@ -551,7 +569,7 @@ llvm::Error DwarfTransformer::verify(StringRef GsymPath) {
             ++Idx) {
         const auto &gii = LR->Locations[Idx];
         if (Idx < NumDwarfInlineInfos) {
-          const auto dii = DwarfInlineInfos.getFrame(Idx);
+          const auto &dii = DwarfInlineInfos.getFrame(Idx);
           gsymFilename = LR->getSourceFile(Idx);
           // Verify function name
           if (dii.FunctionName.find(gii.Name.str()) != 0)

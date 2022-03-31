@@ -19,7 +19,7 @@
 #include "min_allocator.h"
 
 template <class S>
-void
+TEST_CONSTEXPR_CXX20 void
 test(S s, typename S::size_type pos1, typename S::size_type n1, const typename S::value_type* str,
      typename S::size_type n2, S expected)
 {
@@ -35,7 +35,7 @@ test(S s, typename S::size_type pos1, typename S::size_type n1, const typename S
 }
 
 template <class S>
-void test0()
+TEST_CONSTEXPR_CXX20 bool test0()
 {
     test(S(""), 0, 0, "", 0, S(""));
     test(S(""), 0, 0, "12345", 0, S(""));
@@ -137,10 +137,12 @@ void test0()
     test(S("abcde"), 1, 0, "12345", 0, S("abcde"));
     test(S("abcde"), 1, 0, "12345", 1, S("a1bcde"));
     test(S("abcde"), 1, 0, "12345", 2, S("a12bcde"));
+
+    return true;
 }
 
 template <class S>
-void test1()
+TEST_CONSTEXPR_CXX20 bool test1()
 {
     test(S("abcde"), 1, 0, "12345", 4, S("a1234bcde"));
     test(S("abcde"), 1, 0, "12345", 5, S("a12345bcde"));
@@ -242,10 +244,12 @@ void test1()
     test(S("abcde"), 2, 1, "12345", 5, S("ab12345de"));
     test(S("abcde"), 2, 1, "1234567890", 0, S("abde"));
     test(S("abcde"), 2, 1, "1234567890", 1, S("ab1de"));
+
+    return true;
 }
 
 template <class S>
-void test2()
+TEST_CONSTEXPR_CXX20 bool test2()
 {
     test(S("abcde"), 2, 1, "1234567890", 5, S("ab12345de"));
     test(S("abcde"), 2, 1, "1234567890", 9, S("ab123456789de"));
@@ -347,10 +351,12 @@ void test2()
     test(S("abcdefghij"), 0, 0, "1234567890", 9, S("123456789abcdefghij"));
     test(S("abcdefghij"), 0, 0, "1234567890", 10, S("1234567890abcdefghij"));
     test(S("abcdefghij"), 0, 0, "12345678901234567890", 0, S("abcdefghij"));
+
+    return true;
 }
 
 template <class S>
-void test3()
+TEST_CONSTEXPR_CXX20 bool test3()
 {
     test(S("abcdefghij"), 0, 0, "12345678901234567890", 1, S("1abcdefghij"));
     test(S("abcdefghij"), 0, 0, "12345678901234567890", 10, S("1234567890abcdefghij"));
@@ -452,10 +458,12 @@ void test3()
     test(S("abcdefghij"), 1, 1, "12345678901234567890", 10, S("a1234567890cdefghij"));
     test(S("abcdefghij"), 1, 1, "12345678901234567890", 19, S("a1234567890123456789cdefghij"));
     test(S("abcdefghij"), 1, 1, "12345678901234567890", 20, S("a12345678901234567890cdefghij"));
+
+    return true;
 }
 
 template <class S>
-void test4()
+TEST_CONSTEXPR_CXX20 bool test4()
 {
     test(S("abcdefghij"), 1, 4, "", 0, S("afghij"));
     test(S("abcdefghij"), 1, 4, "12345", 0, S("afghij"));
@@ -557,10 +565,12 @@ void test4()
     test(S("abcdefghij"), 5, 4, "12345", 0, S("abcdej"));
     test(S("abcdefghij"), 5, 4, "12345", 1, S("abcde1j"));
     test(S("abcdefghij"), 5, 4, "12345", 2, S("abcde12j"));
+
+    return true;
 }
 
 template <class S>
-void test5()
+TEST_CONSTEXPR_CXX20 bool test5()
 {
     test(S("abcdefghij"), 5, 4, "12345", 4, S("abcde1234j"));
     test(S("abcdefghij"), 5, 4, "12345", 5, S("abcde12345j"));
@@ -662,10 +672,12 @@ void test5()
     test(S("abcdefghijklmnopqrst"), 0, 1, "12345", 5, S("12345bcdefghijklmnopqrst"));
     test(S("abcdefghijklmnopqrst"), 0, 1, "1234567890", 0, S("bcdefghijklmnopqrst"));
     test(S("abcdefghijklmnopqrst"), 0, 1, "1234567890", 1, S("1bcdefghijklmnopqrst"));
+
+    return true;
 }
 
 template <class S>
-void test6()
+TEST_CONSTEXPR_CXX20 bool test6()
 {
     test(S("abcdefghijklmnopqrst"), 0, 1, "1234567890", 5, S("12345bcdefghijklmnopqrst"));
     test(S("abcdefghijklmnopqrst"), 0, 1, "1234567890", 9, S("123456789bcdefghijklmnopqrst"));
@@ -767,10 +779,12 @@ void test6()
     test(S("abcdefghijklmnopqrst"), 1, 9, "1234567890", 9, S("a123456789klmnopqrst"));
     test(S("abcdefghijklmnopqrst"), 1, 9, "1234567890", 10, S("a1234567890klmnopqrst"));
     test(S("abcdefghijklmnopqrst"), 1, 9, "12345678901234567890", 0, S("aklmnopqrst"));
+
+    return true;
 }
 
 template <class S>
-void test7()
+TEST_CONSTEXPR_CXX20 bool test7()
 {
     test(S("abcdefghijklmnopqrst"), 1, 9, "12345678901234567890", 1, S("a1klmnopqrst"));
     test(S("abcdefghijklmnopqrst"), 1, 9, "12345678901234567890", 10, S("a1234567890klmnopqrst"));
@@ -872,10 +886,12 @@ void test7()
     test(S("abcdefghijklmnopqrst"), 10, 9, "12345678901234567890", 10, S("abcdefghij1234567890t"));
     test(S("abcdefghijklmnopqrst"), 10, 9, "12345678901234567890", 19, S("abcdefghij1234567890123456789t"));
     test(S("abcdefghijklmnopqrst"), 10, 9, "12345678901234567890", 20, S("abcdefghij12345678901234567890t"));
+
+    return true;
 }
 
 template <class S>
-void test8()
+TEST_CONSTEXPR_CXX20 bool test8()
 {
     test(S("abcdefghijklmnopqrst"), 10, 10, "", 0, S("abcdefghij"));
     test(S("abcdefghijklmnopqrst"), 10, 10, "12345", 0, S("abcdefghij"));
@@ -941,52 +957,61 @@ void test8()
     test(S("abcdefghijklmnopqrst"), 20, 0, "12345678901234567890", 10, S("abcdefghijklmnopqrst1234567890"));
     test(S("abcdefghijklmnopqrst"), 20, 0, "12345678901234567890", 19, S("abcdefghijklmnopqrst1234567890123456789"));
     test(S("abcdefghijklmnopqrst"), 20, 0, "12345678901234567890", 20, S("abcdefghijklmnopqrst12345678901234567890"));
+
+    return true;
+}
+
+template <class S>
+bool test9() {
+  S s_short = "123/";
+  S s_long  = "Lorem ipsum dolor sit amet, consectetur/";
+
+  s_short.replace(s_short.begin(), s_short.begin(), s_short.data(), s_short.size());
+  assert(s_short == "123/123/");
+  s_short.replace(s_short.begin(), s_short.begin(), s_short.data(), s_short.size());
+  assert(s_short == "123/123/123/123/");
+  s_short.replace(s_short.begin(), s_short.begin(), s_short.data(), s_short.size());
+  assert(s_short == "123/123/123/123/123/123/123/123/");
+
+  s_long.replace(s_long.begin(), s_long.begin(), s_long.data(), s_long.size());
+  assert(s_long == "Lorem ipsum dolor sit amet, consectetur/Lorem ipsum dolor sit amet, consectetur/");
+
+  return true;
+}
+
+template <class S>
+void test() {
+  test0<S>();
+  test1<S>();
+  test2<S>();
+  test3<S>();
+  test4<S>();
+  test5<S>();
+  test6<S>();
+  test7<S>();
+  test8<S>();
+  test9<S>();
+
+#if TEST_STD_VER > 17
+  // static_assert(test0<S>());
+  // static_assert(test1<S>());
+  // static_assert(test2<S>());
+  // static_assert(test3<S>());
+  // static_assert(test4<S>());
+  // static_assert(test5<S>());
+  // static_assert(test6<S>());
+  // static_assert(test7<S>());
+  // static_assert(test8<S>());
+  // static_assert(test9<S>());
+#endif
 }
 
 int main(int, char**)
 {
-    {
-    typedef std::string S;
-    test0<S>();
-    test1<S>();
-    test2<S>();
-    test3<S>();
-    test4<S>();
-    test5<S>();
-    test6<S>();
-    test7<S>();
-    test8<S>();
-    }
+  test<std::string>();
 #if TEST_STD_VER >= 11
-    {
-    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
-    test0<S>();
-    test1<S>();
-    test2<S>();
-    test3<S>();
-    test4<S>();
-    test5<S>();
-    test6<S>();
-    test7<S>();
-    test8<S>();
-    }
+  test<std::basic_string<char, std::char_traits<char>, min_allocator<char>>>();
 #endif
-
-    { // test replacing into self
-    typedef std::string S;
-    S s_short = "123/";
-    S s_long  = "Lorem ipsum dolor sit amet, consectetur/";
-
-    s_short.replace(s_short.begin(), s_short.begin(), s_short.data(), s_short.size());
-    assert(s_short == "123/123/");
-    s_short.replace(s_short.begin(), s_short.begin(), s_short.data(), s_short.size());
-    assert(s_short == "123/123/123/123/");
-    s_short.replace(s_short.begin(), s_short.begin(), s_short.data(), s_short.size());
-    assert(s_short == "123/123/123/123/123/123/123/123/");
-
-    s_long.replace(s_long.begin(), s_long.begin(), s_long.data(), s_long.size());
-    assert(s_long == "Lorem ipsum dolor sit amet, consectetur/Lorem ipsum dolor sit amet, consectetur/");
-    }
 
   return 0;
 }

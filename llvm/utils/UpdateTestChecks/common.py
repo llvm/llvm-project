@@ -1,11 +1,13 @@
 from __future__ import print_function
 
+import argparse
 import copy
 import glob
 import os
 import re
 import subprocess
 import sys
+import shlex
 
 ##### Common utilities for update_*test_checks.py
 
@@ -13,7 +15,99 @@ import sys
 _verbose = False
 _prefix_filecheck_ir_name = ''
 
+class Regex(object):
+  """Wrap a compiled regular expression object to allow deep copy of a regexp.
+  This is required for the deep copy done in do_scrub.
+
+  """
+  def __init__(self, regex):
+    self.regex = regex
+
+  def __deepcopy__(self, memo):
+    result = copy.copy(self)
+    result.regex = self.regex
+    return result
+
+  def search(self, line):
+    return self.regex.search(line)
+
+  def sub(self, repl, line):
+    return self.regex.sub(repl, line)
+
+  def pattern(self):
+    return self.regex.pattern
+
+  def flags(self):
+    return self.regex.flags
+
+class Filter(Regex):
+  """Augment a Regex object with a flag indicating whether a match should be
+    added (!is_filter_out) or removed (is_filter_out) from the generated checks.
+
+  """
+  def __init__(self, regex, is_filter_out):
+    super(Filter, self).__init__(regex)
+    self.is_filter_out = is_filter_out
+
+  def __deepcopy__(self, memo):
+    result = copy.deepcopy(super(Filter, self), memo)
+    result.is_filter_out = copy.deepcopy(self.is_filter_out, memo)
+    return result
+
 def parse_commandline_args(parser):
+  class RegexAction(argparse.Action):
+    """Add a regular expression option value to a list of regular expressions.
+    This compiles the expression, wraps it in a Regex and adds it to the option
+    value list."""
+    def __init__(self, option_strings, dest, nargs=None, **kwargs):
+      if nargs is not None:
+        raise ValueError('nargs not allowed')
+      super(RegexAction, self).__init__(option_strings, dest, **kwargs)
+
+    def do_call(self, namespace, values, flags):
+      value_list = getattr(namespace, self.dest)
+      if value_list is None:
+        value_list = []
+
+      try:
+        value_list.append(Regex(re.compile(values, flags)))
+      except re.error as error:
+        raise ValueError('{}: Invalid regular expression \'{}\' ({})'.format(
+          option_string, error.pattern, error.msg))
+
+      setattr(namespace, self.dest, value_list)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+      self.do_call(namespace, values, 0)
+
+  class FilterAction(RegexAction):
+    """Add a filter to a list of filter option values."""
+    def __init__(self, option_strings, dest, nargs=None, **kwargs):
+      super(FilterAction, self).__init__(option_strings, dest, nargs, **kwargs)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+      super(FilterAction, self).__call__(parser, namespace, values, option_string)
+
+      value_list = getattr(namespace, self.dest)
+
+      is_filter_out = ( option_string == '--filter-out' )
+
+      value_list[-1] = Filter(value_list[-1].regex, is_filter_out)
+
+      setattr(namespace, self.dest, value_list)
+
+  filter_group = parser.add_argument_group(
+    'filtering',
+    """Filters are applied to each output line according to the order given. The
+    first matching filter terminates filter processing for that current line.""")
+
+  filter_group.add_argument('--filter', action=FilterAction, dest='filters',
+                            metavar='REGEX',
+                            help='Only include lines matching REGEX (may be specified multiple times)')
+  filter_group.add_argument('--filter-out', action=FilterAction, dest='filters',
+                            metavar='REGEX',
+                            help='Exclude lines matching REGEX')
+
   parser.add_argument('--include-generated-funcs', action='store_true',
                       help='Output checks for functions not in source')
   parser.add_argument('-v', '--verbose', action='store_true',
@@ -213,6 +307,7 @@ IR_FUNCTION_RE = re.compile(r'^\s*define\s+(?:internal\s+)?[^@]*@"?([\w.$-]+)"?\
 TRIPLE_IR_RE = re.compile(r'^\s*target\s+triple\s*=\s*"([^"]+)"$')
 TRIPLE_ARG_RE = re.compile(r'-mtriple[= ]([^ ]+)')
 MARCH_ARG_RE = re.compile(r'-march[= ]([^ ]+)')
+DEBUG_ONLY_ARG_RE = re.compile(r'-debug-only[= ]([^ ]+)')
 
 SCRUB_LEADING_WHITESPACE_RE = re.compile(r'^(\s+)')
 SCRUB_WHITESPACE_RE = re.compile(r'(?!^(|  \w))[ \t]+', flags=re.M)
@@ -258,6 +353,36 @@ def find_run_lines(test, lines):
     debug('  RUN: {}'.format(l))
   return run_lines
 
+def get_triple_from_march(march):
+  triples = {
+      'amdgcn': 'amdgcn',
+      'r600': 'r600',
+      'mips': 'mips',
+      'sparc': 'sparc',
+      'hexagon': 'hexagon',
+      've': 've',
+  }
+  for prefix, triple in triples.items():
+    if march.startswith(prefix):
+      return triple
+  print("Cannot find a triple. Assume 'x86'", file=sys.stderr)
+  return 'x86'
+
+def apply_filters(line, filters):
+  has_filter = False
+  for f in filters:
+    if not f.is_filter_out:
+      has_filter = True
+    if f.search(line):
+      return False if f.is_filter_out else True
+  # If we only used filter-out, keep the line, otherwise discard it since no
+  # filter matched.
+  return False if has_filter else True
+
+def do_filter(body, filters):
+  return body if not filters else '\n'.join(filter(
+    lambda line: apply_filters(line, filters), body.splitlines()))
+
 def scrub_body(body):
   # Scrub runs of whitespace out of the assembly, but leave the leading
   # whitespace in place.
@@ -282,7 +407,7 @@ class function_body(object):
     self.extrascrub = extra
     self.args_and_sig = args_and_sig
     self.attrs = attrs
-  def is_same_except_arg_names(self, extrascrub, args_and_sig, attrs, is_asm):
+  def is_same_except_arg_names(self, extrascrub, args_and_sig, attrs, is_backend):
     arg_names = set()
     def drop_arg_names(match):
         arg_names.add(match.group(variable_group_in_ir_value_match))
@@ -301,9 +426,9 @@ class function_body(object):
     ans1 = IR_VALUE_RE.sub(drop_arg_names, args_and_sig)
     if ans0 != ans1:
         return False
-    if is_asm:
+    if is_backend:
         # Check without replacements, the replacements are not applied to the
-        # body for asm checks.
+        # body for backend checks.
         return self.extrascrub == extrascrub
 
     es0 = IR_VALUE_RE.sub(repl_arg_names, self.extrascrub)
@@ -320,6 +445,11 @@ class FunctionTestBuilder:
     self._verbose = flags.verbose
     self._record_args = flags.function_signature
     self._check_attributes = flags.check_attributes
+    # Strip double-quotes if input was read by UTC_ARGS
+    self._filters = list(map(lambda f: Filter(re.compile(f.pattern().strip('"'),
+                                                         f.flags()),
+                                              f.is_filter_out),
+                             flags.filters)) if flags.filters else []
     self._scrubber_args = scrubber_args
     self._path = path
     # Strip double-quotes if input was read by UTC_ARGS
@@ -344,7 +474,10 @@ class FunctionTestBuilder:
   def global_var_dict(self):
     return self._global_var_dict
 
-  def process_run_line(self, function_re, scrubber, raw_tool_output, prefixes, is_asm):
+  def is_filtered(self):
+    return bool(self._filters)
+
+  def process_run_line(self, function_re, scrubber, raw_tool_output, prefixes, is_backend):
     build_global_values_dictionary(self._global_var_dict, raw_tool_output, prefixes)
     for m in function_re.finditer(raw_tool_output):
       if not m:
@@ -360,9 +493,10 @@ class FunctionTestBuilder:
           args_and_sig = '('
       else:
           args_and_sig = ''
-      scrubbed_body = do_scrub(body, scrubber, self._scrubber_args,
+      filtered_body = do_filter(body, self._filters)
+      scrubbed_body = do_scrub(filtered_body, scrubber, self._scrubber_args,
                                extra=False)
-      scrubbed_extra = do_scrub(body, scrubber, self._scrubber_args,
+      scrubbed_extra = do_scrub(filtered_body, scrubber, self._scrubber_args,
                                 extra=True)
       if 'analysis' in m.groupdict():
         analysis = m.group('analysis')
@@ -411,7 +545,7 @@ class FunctionTestBuilder:
                 scrubbed_extra,
                 args_and_sig,
                 attrs,
-                is_asm)):
+                is_backend)):
               self._func_dict[prefix][func].scrub = scrubbed_extra
               self._func_dict[prefix][func].args_and_sig = args_and_sig
               continue
@@ -605,7 +739,7 @@ def generalize_check_lines(lines, is_analyze, vars_seen, global_vars_seen):
     var = get_name_from_ir_value_match(match)
     for nameless_value in nameless_values:
         if may_clash_with_default_check_prefix_name(nameless_value.check_prefix, var):
-          warn("Change IR value name '%s' or use -prefix-ir-filecheck-name to prevent possible conflict"
+          warn("Change IR value name '%s' or use --prefix-filecheck-ir-name to prevent possible conflict"
             " with scripted FileCheck name." % (var,))
     key = (var, get_check_key_from_ir_value_match(match))
     is_local_def = is_local_def_ir_value_match(match)
@@ -649,7 +783,7 @@ def generalize_check_lines(lines, is_analyze, vars_seen, global_vars_seen):
   return lines
 
 
-def add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, check_label_format, is_asm, is_analyze, global_vars_seen_dict):
+def add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, check_label_format, is_backend, is_analyze, global_vars_seen_dict, is_filtered):
   # prefix_exclusions are prefixes we cannot use to print the function because it doesn't exist in run lines that use these prefixes as well.
   prefix_exclusions = set()
   printed_prefixes = []
@@ -684,7 +818,7 @@ def add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, 
 
       # Add some space between different check prefixes, but not after the last
       # check line (before the test code).
-      if is_asm:
+      if is_backend:
         if len(printed_prefixes) != 0:
           output_lines.append(comment_marker)
 
@@ -707,15 +841,26 @@ def add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, 
       else:
         output_lines.append(check_label_format % (checkprefix, func_name, args_and_sig))
       func_body = str(func_dict[checkprefix][func_name]).splitlines()
+      if not func_body:
+        # We have filtered everything.
+        continue
 
       # For ASM output, just emit the check lines.
-      if is_asm:
-        output_lines.append('%s %s:       %s' % (comment_marker, checkprefix, func_body[0]))
-        for func_line in func_body[1:]:
+      if is_backend:
+        body_start = 1
+        if is_filtered:
+          # For filtered output we don't add "-NEXT" so don't add extra spaces
+          # before the first line.
+          body_start = 0
+        else:
+          output_lines.append('%s %s:       %s' % (comment_marker, checkprefix, func_body[0]))
+        for func_line in func_body[body_start:]:
           if func_line.strip() == '':
             output_lines.append('%s %s-EMPTY:' % (comment_marker, checkprefix))
           else:
-            output_lines.append('%s %s-NEXT:  %s' % (comment_marker, checkprefix, func_line))
+            check_suffix = '-NEXT' if not is_filtered else ''
+            output_lines.append('%s %s%s:  %s' % (comment_marker, checkprefix,
+                                                  check_suffix, func_line))
         break
 
       # For IR output, change all defs to FileCheck variables, so we're immune
@@ -747,8 +892,9 @@ def add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, 
           output_lines.append('{} {}:       {}'.format(
               comment_marker, checkprefix, func_line))
         else:
-          output_lines.append('{} {}-NEXT:  {}'.format(
-              comment_marker, checkprefix, func_line))
+          check_suffix = '-NEXT' if not is_filtered else ''
+          output_lines.append('{} {}{}:  {}'.format(
+              comment_marker, checkprefix, check_suffix, func_line))
         is_blank_line = False
 
       # Add space between different check prefixes and also before the first
@@ -762,18 +908,21 @@ def add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, 
       break
 
 def add_ir_checks(output_lines, comment_marker, prefix_list, func_dict,
-                  func_name, preserve_names, function_sig, global_vars_seen_dict):
+                  func_name, preserve_names, function_sig,
+                  global_vars_seen_dict, is_filtered):
   # Label format is based on IR string.
   function_def_regex = 'define {{[^@]+}}' if function_sig else ''
   check_label_format = '{} %s-LABEL: {}@%s%s'.format(comment_marker, function_def_regex)
   add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name,
-             check_label_format, False, preserve_names, global_vars_seen_dict)
+             check_label_format, False, preserve_names, global_vars_seen_dict,
+             is_filtered)
 
-def add_analyze_checks(output_lines, comment_marker, prefix_list, func_dict, func_name):
+def add_analyze_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, is_filtered):
   check_label_format = '{} %s-LABEL: \'%s%s\''.format(comment_marker)
   global_vars_seen_dict = {}
   add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name,
-             check_label_format, False, True, global_vars_seen_dict)
+             check_label_format, False, True, global_vars_seen_dict,
+             is_filtered)
 
 def build_global_values_dictionary(glob_val_dict, raw_tool_output, prefixes):
   for nameless_value in nameless_values:
@@ -901,11 +1050,21 @@ def get_autogennote_suffix(parser, args):
         continue
     if parser.get_default(action.dest) == value:
       continue  # Don't add default values
-    autogenerated_note_args += action.option_strings[0] + ' '
-    if action.const is None:  # action takes a parameter
-      if action.nargs == '+':
-        value = ' '.join(map(lambda v: '"' + v.strip('"') + '"', value))
-      autogenerated_note_args += '%s ' % value
+    if action.dest == 'filters':
+      # Create a separate option for each filter element.  The value is a list
+      # of Filter objects.
+      for elem in value:
+        opt_name = 'filter-out' if elem.is_filter_out else 'filter'
+        opt_value = elem.pattern()
+        new_arg = '--%s "%s" ' % (opt_name, opt_value.strip('"'))
+        if new_arg not in autogenerated_note_args:
+          autogenerated_note_args += new_arg
+    else:
+      autogenerated_note_args += action.option_strings[0] + ' '
+      if action.const is None:  # action takes a parameter
+        if action.nargs == '+':
+          value = ' '.join(map(lambda v: '"' + v.strip('"') + '"', value))
+        autogenerated_note_args += '%s ' % value
   if autogenerated_note_args:
     autogenerated_note_args = ' %s %s' % (UTC_ARGS_KEY, autogenerated_note_args[:-1])
   return autogenerated_note_args
@@ -914,7 +1073,7 @@ def get_autogennote_suffix(parser, args):
 def check_for_command(line, parser, args, argv, argparse_callback):
     cmd_m = UTC_ARGS_CMD.match(line)
     if cmd_m:
-        for option in cmd_m.group('cmd').strip().split(' '):
+        for option in shlex.split(cmd_m.group('cmd').strip()):
             if option:
                 argv.append(option)
         args = parser.parse_args(filter(lambda arg: arg not in args.tests, argv))

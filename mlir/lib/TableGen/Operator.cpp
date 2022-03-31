@@ -128,17 +128,28 @@ StringRef Operator::getExtraClassDeclaration() const {
   return def.getValueAsString(attr);
 }
 
+StringRef Operator::getExtraClassDefinition() const {
+  constexpr auto attr = "extraClassDefinition";
+  if (def.isValueUnset(attr))
+    return {};
+  return def.getValueAsString(attr);
+}
+
 const llvm::Record &Operator::getDef() const { return def; }
 
 bool Operator::skipDefaultBuilders() const {
   return def.getValueAsBit("skipDefaultBuilders");
 }
 
-auto Operator::result_begin() -> value_iterator { return results.begin(); }
+auto Operator::result_begin() const -> const_value_iterator {
+  return results.begin();
+}
 
-auto Operator::result_end() -> value_iterator { return results.end(); }
+auto Operator::result_end() const -> const_value_iterator {
+  return results.end();
+}
 
-auto Operator::getResults() -> value_range {
+auto Operator::getResults() const -> const_value_range {
   return {result_begin(), result_end()};
 }
 
@@ -279,9 +290,13 @@ auto Operator::getAttributes() const
   return {attribute_begin(), attribute_end()};
 }
 
-auto Operator::operand_begin() -> value_iterator { return operands.begin(); }
-auto Operator::operand_end() -> value_iterator { return operands.end(); }
-auto Operator::getOperands() -> value_range {
+auto Operator::operand_begin() const -> const_value_iterator {
+  return operands.begin();
+}
+auto Operator::operand_end() const -> const_value_iterator {
+  return operands.end();
+}
+auto Operator::getOperands() const -> const_value_range {
   return {operand_begin(), operand_end()};
 }
 
@@ -312,9 +327,8 @@ void Operator::populateTypeInferenceInfo(
   if (getNumResults() == 0)
     return;
 
-  // Skip for ops with variadic operands/results.
-  // TODO: This can be relaxed.
-  if (isVariadic())
+  // Skip ops with variadic or optional results.
+  if (getNumVariableLengthResults() > 0)
     return;
 
   // Skip cases currently being custom generated.
@@ -346,10 +360,9 @@ void Operator::populateTypeInferenceInfo(
       if (getArg(*mi).is<NamedAttribute *>()) {
         // TODO: Handle attributes.
         continue;
-      } else {
-        resultTypeMapping[i].emplace_back(*mi);
-        found = true;
       }
+      resultTypeMapping[i].emplace_back(*mi);
+      found = true;
     }
     return found;
   };
@@ -534,14 +547,36 @@ void Operator::populateOpStructure() {
     SmallPtrSet<const llvm::Init *, 32> traitSet;
     traits.reserve(traitSet.size());
 
+    // The declaration order of traits imply the verification order of traits.
+    // Some traits may require other traits to be verified first then they can
+    // do further verification based on those verified facts. If you see this
+    // error, fix the traits declaration order by checking the `dependentTraits`
+    // field.
+    auto verifyTraitValidity = [&](Record *trait) {
+      auto *dependentTraits = trait->getValueAsListInit("dependentTraits");
+      for (auto *traitInit : *dependentTraits)
+        if (traitSet.find(traitInit) == traitSet.end())
+          PrintFatalError(
+              def.getLoc(),
+              trait->getValueAsString("trait") + " requires " +
+                  cast<DefInit>(traitInit)->getDef()->getValueAsString(
+                      "trait") +
+                  " to precede it in traits list");
+    };
+
     std::function<void(llvm::ListInit *)> insert;
     insert = [&](llvm::ListInit *traitList) {
       for (auto *traitInit : *traitList) {
         auto *def = cast<DefInit>(traitInit)->getDef();
-        if (def->isSubClassOf("OpTraitList")) {
+        if (def->isSubClassOf("TraitList")) {
           insert(def->getValueAsListInit("traits"));
           continue;
         }
+
+        // Verify if the trait has all the dependent traits declared before
+        // itself.
+        verifyTraitValidity(def);
+
         // Keep traits in the same order while skipping over duplicates.
         if (traitSet.insert(traitInit).second)
           traits.push_back(Trait::create(traitInit));
@@ -598,7 +633,7 @@ auto Operator::getSameTypeAsResult(int index) const -> ArrayRef<ArgOrType> {
   return resultTypeMapping[index];
 }
 
-ArrayRef<llvm::SMLoc> Operator::getLoc() const { return def.getLoc(); }
+ArrayRef<SMLoc> Operator::getLoc() const { return def.getLoc(); }
 
 bool Operator::hasDescription() const {
   return def.getValue("description") != nullptr;
@@ -665,8 +700,7 @@ getGetterOrSetterNames(bool isGetter, const Operator &op, StringRef name) {
   // is safer).
   auto skip = [&](StringRef newName) {
     bool shouldSkip = newName == "getAttributeNames" ||
-                      newName == "getAttributes" || newName == "getOperation" ||
-                      newName == "getType";
+                      newName == "getAttributes" || newName == "getOperation";
     if (newName == "getOperands") {
       // To reduce noise, skip generating the prefixed form and the warning if
       // $operands correspond to single variadic argument.
@@ -677,6 +711,11 @@ getGetterOrSetterNames(bool isGetter, const Operator &op, StringRef name) {
     if (newName == "getRegions") {
       if (op.getNumRegions() == 1 && op.getNumVariadicRegions() == 1)
         return true;
+      shouldSkip = true;
+    }
+    if (newName == "getType") {
+      if (op.getNumResults() == 0)
+        return false;
       shouldSkip = true;
     }
     if (!shouldSkip)

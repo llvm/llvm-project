@@ -25,6 +25,7 @@ function(get_errc_messages outvar)
         int main() {
             std::cout << getMessageFor(ENOENT) << ';' << getMessageFor(EISDIR);
             std::cout << ';' << getMessageFor(EINVAL) << ';' << getMessageFor(EACCES);
+            return 0;
         }
     ")
 
@@ -38,6 +39,7 @@ function(get_errc_messages outvar)
         set(${outvar} ${errc_result} PARENT_SCOPE)
     else()
         set(${outvar} "" PARENT_SCOPE)
+        message(NOTICE "${errc_compile_errors}")
         message(STATUS "Failed to get errc messages")
     endif ()
 endfunction()

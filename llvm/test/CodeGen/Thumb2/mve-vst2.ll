@@ -327,14 +327,11 @@ define void @vst2_v2i64(<2 x i64> *%src, <4 x i64> *%dst) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q0, [r0, #16]
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
-; CHECK-NEXT:    vmov.f32 s10, s0
-; CHECK-NEXT:    vmov.f32 s11, s1
-; CHECK-NEXT:    vmov.f32 s8, s4
-; CHECK-NEXT:    vmov.f32 s9, s5
-; CHECK-NEXT:    vmov.f32 s0, s6
-; CHECK-NEXT:    vstrb.8 q2, [r1], #16
-; CHECK-NEXT:    vmov.f32 s1, s7
-; CHECK-NEXT:    vstrw.32 q0, [r1]
+; CHECK-NEXT:    vmov.f64 d4, d3
+; CHECK-NEXT:    vmov.f64 d5, d1
+; CHECK-NEXT:    vmov.f64 d3, d0
+; CHECK-NEXT:    vstrw.32 q2, [r1, #16]
+; CHECK-NEXT:    vstrw.32 q1, [r1]
 ; CHECK-NEXT:    bx lr
 entry:
   %s1 = getelementptr <2 x i64>, <2 x i64>* %src, i32 0
@@ -349,29 +346,23 @@ entry:
 define void @vst2_v4i64(<4 x i64> *%src, <8 x i64> *%dst) {
 ; CHECK-LABEL: vst2_v4i64:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
-; CHECK-NEXT:    vpush {d8, d9, d10, d11}
-; CHECK-NEXT:    vldrw.u32 q4, [r0, #48]
-; CHECK-NEXT:    vldrw.u32 q0, [r0, #16]
-; CHECK-NEXT:    vldrw.u32 q2, [r0, #32]
-; CHECK-NEXT:    vldrw.u32 q1, [r0]
-; CHECK-NEXT:    vmov.f32 s12, s2
-; CHECK-NEXT:    vmov.f32 s13, s3
-; CHECK-NEXT:    vmov.f32 s20, s6
-; CHECK-NEXT:    vmov.f32 s21, s7
-; CHECK-NEXT:    vmov.f32 s2, s16
-; CHECK-NEXT:    vmov.f32 s3, s17
-; CHECK-NEXT:    vmov.f32 s6, s8
-; CHECK-NEXT:    vstrw.32 q0, [r1, #32]
-; CHECK-NEXT:    vmov.f32 s7, s9
-; CHECK-NEXT:    vmov.f32 s14, s18
-; CHECK-NEXT:    vstrb.8 q1, [r1], #48
-; CHECK-NEXT:    vmov.f32 s15, s19
-; CHECK-NEXT:    vmov.f32 s22, s10
-; CHECK-NEXT:    vstrw.32 q3, [r1]
-; CHECK-NEXT:    vmov.f32 s23, s11
-; CHECK-NEXT:    vstrw.32 q5, [r1, #-32]
-; CHECK-NEXT:    vpop {d8, d9, d10, d11}
+; CHECK-NEXT:    .vsave {d8, d9}
+; CHECK-NEXT:    vpush {d8, d9}
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #32]
+; CHECK-NEXT:    vldrw.u32 q2, [r0]
+; CHECK-NEXT:    vldrw.u32 q1, [r0, #48]
+; CHECK-NEXT:    vldrw.u32 q3, [r0, #16]
+; CHECK-NEXT:    vmov.f64 d8, d4
+; CHECK-NEXT:    vmov.f64 d9, d0
+; CHECK-NEXT:    vmov.f64 d0, d5
+; CHECK-NEXT:    vstrw.32 q4, [r1]
+; CHECK-NEXT:    vmov.f64 d5, d2
+; CHECK-NEXT:    vstrw.32 q0, [r1, #16]
+; CHECK-NEXT:    vmov.f64 d4, d6
+; CHECK-NEXT:    vmov.f64 d2, d7
+; CHECK-NEXT:    vstrw.32 q2, [r1, #32]
+; CHECK-NEXT:    vstrw.32 q1, [r1, #48]
+; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    bx lr
 entry:
   %s1 = getelementptr <4 x i64>, <4 x i64>* %src, i32 0

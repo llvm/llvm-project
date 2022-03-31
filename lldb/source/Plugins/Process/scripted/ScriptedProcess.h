@@ -84,13 +84,13 @@ public:
 
   ArchSpec GetArchitecture();
 
-  Status GetMemoryRegionInfo(lldb::addr_t load_addr,
-                             MemoryRegionInfo &range_info) override;
-
   Status
   GetMemoryRegions(lldb_private::MemoryRegionInfos &region_list) override;
 
   bool GetProcessInfo(ProcessInstanceInfo &info) override;
+
+  lldb_private::StructuredData::ObjectSP
+  GetLoadedDynamicLibrariesInfos() override;
 
 protected:
   Status DoStop();
@@ -99,6 +99,9 @@ protected:
 
   bool DoUpdateThreadList(ThreadList &old_thread_list,
                           ThreadList &new_thread_list) override;
+
+  Status DoGetMemoryRegionInfo(lldb::addr_t load_addr,
+                               MemoryRegionInfo &range_info) override;
 
 private:
   friend class ScriptedThread;

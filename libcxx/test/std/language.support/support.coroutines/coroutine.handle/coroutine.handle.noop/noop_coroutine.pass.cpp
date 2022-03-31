@@ -21,8 +21,6 @@
 
 #include "test_macros.h"
 
-#if __has_builtin(__builtin_coro_noop)
-
 static_assert(std::is_same<std::coroutine_handle<std::noop_coroutine_promise>, std::noop_coroutine_handle>::value, "");
 static_assert(std::is_same<decltype(std::noop_coroutine()), std::noop_coroutine_handle>::value, "");
 
@@ -57,20 +55,25 @@ int main(int, char**)
   h.resume();
   h.destroy();
   h();
-  static_assert(h.done() == false, "");
   static_assert(h, "");
+  static_assert(h.done() == false, "");
 
-  h.promise();
+  // [coroutine.handle.noop.resumption]p2
+  // Remarks: If noop_coroutine_handle is converted to
+  // coroutine_handle<>, calls to operator(), resume and
+  // destroy on that handle will also have no observable
+  // effects.
+  base.resume();
+  base.destroy();
+  base();
+  assert(base);
+  assert(base.done() == false);
+
+  TEST_IGNORE_NODISCARD h.promise();
   assert(h.address() == base.address());
-  assert(h==base);
+  assert(h == base);
   assert(h.address() != nullptr);
   assert(std::coroutine_handle<>::from_address(h.address()) == base);
 
   return 0;
 }
-
-#else
-
-int main(int, char**) { return 0; }
-
-#endif //  __has_builtin(__builtin_coro_noop)

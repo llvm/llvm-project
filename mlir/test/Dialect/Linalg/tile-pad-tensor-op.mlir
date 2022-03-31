@@ -2,6 +2,8 @@
 // RUN: FileCheck %s -check-prefix=TILE2
 // RUN: mlir-opt %s -linalg-tile="tile-sizes=0,3" -resolve-shaped-type-result-dims -cse -split-input-file | \
 // RUN: FileCheck %s -check-prefix=TILE1
+// This test only checks that tiling does not crash.
+// RUN: mlir-opt %s -linalg-tile="tile-sizes=2" -resolve-shaped-type-result-dims -cse -split-input-file
 
 //  TILE2-DAG:  #[[MAP0:.*]] = affine_map<()[s0] -> (s0 + 8)>
 //  TILE2-DAG:  #[[MAP1:.*]] = affine_map<()[s0] -> (s0 + 7)>
@@ -21,7 +23,7 @@
 //       TILE2:         tensor.generate
 //       TILE2:       else
 //       TILE2:         %[[SLICE:.*]] = tensor.extract_slice %[[IN]][{{.*}}, {{.*}}] [{{.*}}, {{.*}}] [1, 1]
-//       TILE2:         %[[PAD:.*]] = linalg.pad_tensor %[[SLICE]]
+//       TILE2:         %[[PAD:.*]] = tensor.pad %[[SLICE]]
 //       TILE2:       tensor.insert_slice %[[SWAP_RESULT]] into %[[INNER_OUT]][{{.*}}, {{.*}}] [{{.*}}, {{.*}}] [1, 1]
 //       TILE2:   return %[[RESULT]]
 
@@ -41,15 +43,15 @@
 //       TILE1:       tensor.generate
 //       TILE1:     else
 //       TILE1:       %[[SLICE:.*]] = tensor.extract_slice %[[IN]][{{.*}}, {{.*}}] [{{.*}}, {{.*}}] [1, 1]
-//       TILE1:       %[[PAD:.*]] = linalg.pad_tensor %[[SLICE]] low[3, %{{.*}}] high[{{.*}}, {{.*}}]
+//       TILE1:       %[[PAD:.*]] = tensor.pad %[[SLICE]] low[3, %{{.*}}] high[{{.*}}, {{.*}}]
 //       TILE1:     tensor.insert_slice %[[SWAP_RESULT]] into %[[INNER_OUT]][0, {{.*}}] [%[[DIM0]], {{.*}}] [1, 1]
 //       TILE1:   return %[[RESULT]]
 
 func @dynamic_pad_tensor(%input_tensor: tensor<?x?xf32>,
                          %pad_value: f32) -> tensor<?x?xf32> {
-  %0 = linalg.pad_tensor %input_tensor low[3, 4] high[5, 3] {
+  %0 = tensor.pad %input_tensor low[3, 4] high[5, 3] {
     ^bb0(%arg1: index, %arg2: index):
-      linalg.yield %pad_value : f32
+      tensor.yield %pad_value : f32
     } : tensor<?x?xf32> to tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
 }
@@ -69,7 +71,7 @@ func @dynamic_pad_tensor(%input_tensor: tensor<?x?xf32>,
 //       TILE2:         tensor.generate
 //       TILE2:       else
 //       TILE2:         %[[SLICE:.*]] = tensor.extract_slice %[[IN]][{{.*}}, {{.*}}] [{{.*}}, {{.*}}] [1, 1]
-//       TILE2:         %[[PAD:.*]] = linalg.pad_tensor %[[SLICE]]
+//       TILE2:         %[[PAD:.*]] = tensor.pad %[[SLICE]]
 //       TILE2:       tensor.insert_slice %[[SWAP_RESULT]] into %[[INNER_OUT]][{{.*}}, {{.*}}] [{{.*}}, {{.*}}] [1, 1]
 //       TILE2:   return %[[RESULT]]
 
@@ -84,15 +86,15 @@ func @dynamic_pad_tensor(%input_tensor: tensor<?x?xf32>,
 //       TILE1:       tensor.generate
 //       TILE1:     else
 //       TILE1:       %[[SLICE:.*]] = tensor.extract_slice %[[IN]][0, {{.*}}] [7, {{.*}}] [1, 1]
-//       TILE1:       %[[PAD:.*]] = linalg.pad_tensor %[[SLICE]] low[3, %{{.*}}] high[5, {{.*}}]
+//       TILE1:       %[[PAD:.*]] = tensor.pad %[[SLICE]] low[3, %{{.*}}] high[5, {{.*}}]
 //       TILE1:     tensor.insert_slice %[[SWAP_RESULT]] into %[[INNER_OUT]][0, {{.*}}] [15, {{.*}}] [1, 1]
 //       TILE1:   return %[[RESULT]]
 
 func @static_pad_tensor(%input_tensor: tensor<7x9xf32>,
                         %pad_value: f32) -> tensor<15x16xf32> {
-  %0 = linalg.pad_tensor %input_tensor low[3, 4] high[5, 3] {
+  %0 = tensor.pad %input_tensor low[3, 4] high[5, 3] {
     ^bb0(%arg1: index, %arg2: index):
-      linalg.yield %pad_value : f32
+      tensor.yield %pad_value : f32
     } : tensor<7x9xf32> to tensor<15x16xf32>
   return %0 : tensor<15x16xf32>
 }
@@ -110,7 +112,7 @@ func @static_pad_tensor(%input_tensor: tensor<7x9xf32>,
 //       TILE1:       scf.yield %[[GEN]] : tensor<14x3xf32>
 //       TILE1:     else
 //       TILE1:       %[[SLICE:.*]] = tensor.extract_slice %arg0[0, %{{.*}}] [7, %{{.*}}] [1, 1] : tensor<7x9xf32> to tensor<7x?xf32>
-//       TILE1:       %[[PAD:.*]] = linalg.pad_tensor %[[SLICE]] low[0, 0] high[7, %{{.*}}]
+//       TILE1:       %[[PAD:.*]] = tensor.pad %[[SLICE]] low[0, 0] high[7, %{{.*}}]
 //       TILE1:       scf.yield %[[PAD]] : tensor<14x3xf32>
 //       TILE1:     %[[R3:.*]] = tensor.insert_slice %[[R2]] into %[[INNER_OUT]][0, %[[IV]]] [14, 3] [1, 1] : tensor<14x3xf32> into tensor<14x15xf32>
 //       TILE1:     scf.yield %[[R3]] : tensor<14x15xf32>
@@ -118,9 +120,9 @@ func @static_pad_tensor(%input_tensor: tensor<7x9xf32>,
 func @static_pad_tile_evenly(%input_tensor: tensor<7x9xf32>,
                              %output_tensor: tensor<14x15xf32>,
                              %pad_value: f32) -> tensor<14x15xf32> {
-  %0 = linalg.pad_tensor %input_tensor low[0, 0] high[7, 6] {
+  %0 = tensor.pad %input_tensor low[0, 0] high[7, 6] {
     ^bb0(%arg1: index, %arg2: index):
-      linalg.yield %pad_value : f32
+      tensor.yield %pad_value : f32
     } : tensor<7x9xf32> to tensor<14x15xf32>
   return %0 : tensor<14x15xf32>
 }

@@ -116,7 +116,10 @@ void InputChunk::relocate(uint8_t *buf) const {
       LLVM_DEBUG(dbgs() << " sym=" << file->getSymbols()[rel.Index]->getName());
     LLVM_DEBUG(dbgs() << " addend=" << rel.Addend << " index=" << rel.Index
                       << " offset=" << rel.Offset << "\n");
-    auto value = file->calcNewValue(rel, tombstone, this);
+    // TODO(sbc): Check that the value is within the range of the
+    // relocation type below.  Most likely we must error out here
+    // if its not with range.
+    uint64_t value = file->calcNewValue(rel, tombstone, this);
 
     switch (rel.Type) {
     case R_WASM_TYPE_INDEX_LEB:
@@ -125,7 +128,7 @@ void InputChunk::relocate(uint8_t *buf) const {
     case R_WASM_TAG_INDEX_LEB:
     case R_WASM_MEMORY_ADDR_LEB:
     case R_WASM_TABLE_NUMBER_LEB:
-      encodeULEB128(value, loc, 5);
+      encodeULEB128(static_cast<uint32_t>(value), loc, 5);
       break;
     case R_WASM_MEMORY_ADDR_LEB64:
       encodeULEB128(value, loc, 10);
@@ -373,19 +376,26 @@ void InputChunk::generateRelocationCode(raw_ostream &os) const {
   for (const WasmRelocation &rel : relocations) {
     uint64_t offset = getVA(rel.Offset) - getInputSectionOffset();
 
+    Symbol *sym = file->getSymbol(rel);
+    if (!config->isPic && sym->isDefined())
+      continue;
+
     LLVM_DEBUG(dbgs() << "gen reloc: type=" << relocTypeToString(rel.Type)
                       << " addend=" << rel.Addend << " index=" << rel.Index
                       << " output offset=" << offset << "\n");
 
-    // Get __memory_base
-    writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
-    writeUleb128(os, WasmSym::memoryBase->getGlobalIndex(), "memory_base");
-
-    // Add the offset of the relocation
+    // Calculate the address at which to apply the relocations
     writeU8(os, opcode_ptr_const, "CONST");
     writeSleb128(os, offset, "offset");
-    writeU8(os, opcode_ptr_add, "ADD");
 
+    // In PIC mode we need to add the __memory_base
+    if (config->isPic) {
+      writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
+      writeUleb128(os, WasmSym::memoryBase->getGlobalIndex(), "memory_base");
+      writeU8(os, opcode_ptr_add, "ADD");
+    }
+
+    // Now figure out what we want to store at this location
     bool is64 = relocIs64(rel.Type);
     unsigned opcode_reloc_const =
         is64 ? WASM_OPCODE_I64_CONST : WASM_OPCODE_I32_CONST;
@@ -394,8 +404,6 @@ void InputChunk::generateRelocationCode(raw_ostream &os) const {
     unsigned opcode_reloc_store =
         is64 ? WASM_OPCODE_I64_STORE : WASM_OPCODE_I32_STORE;
 
-    Symbol *sym = file->getSymbol(rel);
-    // Now figure out what we want to store
     if (sym->hasGOTIndex()) {
       writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
       writeUleb128(os, sym->getGOTIndex(), "global index");
@@ -405,6 +413,7 @@ void InputChunk::generateRelocationCode(raw_ostream &os) const {
         writeU8(os, opcode_reloc_add, "ADD");
       }
     } else {
+      assert(config->isPic);
       const GlobalSymbol* baseSymbol = WasmSym::memoryBase;
       if (rel.Type == R_WASM_TABLE_INDEX_I32 ||
           rel.Type == R_WASM_TABLE_INDEX_I64)

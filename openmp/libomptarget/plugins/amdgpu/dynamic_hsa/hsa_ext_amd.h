@@ -76,6 +76,12 @@ hsa_status_t hsa_amd_agents_allow_access(uint32_t num_agents,
                                          const uint32_t *flags,
                                          const void *ptr);
 
+hsa_status_t hsa_amd_memory_lock(void* host_ptr, size_t size,
+                                hsa_agent_t* agents, int num_agent,
+                                void** agent_ptr);
+
+hsa_status_t hsa_amd_memory_unlock(void* host_ptr);
+
 hsa_status_t hsa_amd_memory_fill(void *ptr, uint32_t value, size_t count);
 
 typedef enum hsa_amd_event_type_s {

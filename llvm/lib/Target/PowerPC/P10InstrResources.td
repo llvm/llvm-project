@@ -409,8 +409,8 @@ def : InstRW<[P10W_DF_13C, P10W_DISP_ANY, P10DF_Read, P10DF_Read, P10DF_Read],
 // 13 Cycles Decimal Floating Point operations, and 3 Cycles Store operations, 2 input operands
 def : InstRW<[P10W_DF_13C, P10W_DISP_EVEN, P10W_ST_3C, P10W_DISP_ANY],
       (instrs
-    HASHST,
-    HASHSTP
+    HASHST, HASHST8,
+    HASHSTP, HASHSTP8
 )>;
 
 // 24 Cycles Decimal Floating Point operations, 1 input operands
@@ -619,6 +619,8 @@ def : InstRW<[P10W_DX_5C, P10W_DISP_ANY, P10DX_Read, P10DX_Read],
     XSCMPEXPQP,
     XSCMPOQP,
     XSCMPUQP,
+    XSMAXCQP,
+    XSMINCQP,
     XSTSTDCQP,
     XXGENPCVBM
 )>;
@@ -1336,8 +1338,8 @@ def : InstRW<[P10W_LD_6C, P10W_DISP_ANY, P10LD_Read, P10LD_Read],
 // 6 Cycles Load operations, and 13 Cycles Decimal Floating Point operations, 2 input operands
 def : InstRW<[P10W_LD_6C, P10W_DISP_EVEN, P10W_DF_13C, P10W_DISP_ANY],
       (instrs
-    HASHCHK,
-    HASHCHKP
+    HASHCHK, HASHCHK8,
+    HASHCHKP, HASHCHKP8
 )>;
 
 // Single crack instructions
@@ -1623,6 +1625,7 @@ def : InstRW<[P10W_PM_4C, P10W_DISP_ANY, P10PM_Read],
       (instrs
     LVSL,
     LVSR,
+    LXVKQ,
     MFVSRLD,
     MTVSRWS,
     VCLZLSBB,
@@ -1977,7 +1980,6 @@ def : InstRW<[P10W_SX, P10W_DISP_ANY],
     ICBTLS,
     ICCCI,
     LA, LA8,
-    LDMX,
     MFDCR,
     MFPMR,
     MFSRIN,

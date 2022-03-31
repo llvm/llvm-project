@@ -31,15 +31,18 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileUtilities.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
@@ -49,8 +52,6 @@
 #include "llvm/Target/TargetOptions.h"
 
 #include "llvm/Transforms/IPO/Internalize.h"
-
-#include "lld/Common/Driver.h"
 
 #include <mutex>
 
@@ -104,7 +105,7 @@ private:
 
   std::string getRocmPath();
 };
-} // end namespace
+} // namespace
 
 SerializeToHsacoPass::SerializeToHsacoPass(const SerializeToHsacoPass &other)
     : PassWrapper<SerializeToHsacoPass, gpu::SerializeToBlobPass>(other) {}
@@ -160,7 +161,7 @@ SerializeToHsacoPass::loadLibraries(SmallVectorImpl<char> &path,
     llvm::StringRef pathRef(path.data(), path.size());
     std::unique_ptr<llvm::Module> library =
         llvm::getLazyIRFileModule(pathRef, error, context);
-    path.set_size(dirLength);
+    path.truncate(dirLength);
     if (!library) {
       getOperation().emitError() << "Failed to load library " << file
                                  << " from " << path << error.getMessage();
@@ -238,6 +239,7 @@ SerializeToHsacoPass::translateToLLVMIR(llvm::LLVMContext &llvmContext) {
     constant->setAlignment(llvm::MaybeAlign(bitwidth / 8));
   };
 
+  // Set up control variables in the module instead of linking in tiny bitcode
   if (needOcml) {
     // TODO(kdrewnia): Enable math optimizations once we have support for
     // `-ffast-math`-like options
@@ -276,7 +278,7 @@ SerializeToHsacoPass::translateToLLVMIR(llvm::LLVMContext &llvmContext) {
 
   if (!mbModules) {
     getOperation()
-            .emitWarning("Could not load required device labraries")
+            .emitWarning("Could not load required device libraries")
             .attachNote()
         << "This will probably cause link-time or run-time failures";
     return ret; // We can still abort here
@@ -306,6 +308,7 @@ SerializeToHsacoPass::translateToLLVMIR(llvm::LLVMContext &llvmContext) {
       return nullptr;
     }
   }
+
   return ret;
 }
 
@@ -351,7 +354,7 @@ SerializeToHsacoPass::assembleIsa(const std::string &isa) {
 
   llvm::SourceMgr srcMgr;
   srcMgr.AddNewSourceBuffer(llvm::MemoryBuffer::getMemBuffer(isa),
-                            llvm::SMLoc());
+                            SMLoc());
 
   const llvm::MCTargetOptions mcOptions;
   std::unique_ptr<llvm::MCRegisterInfo> mri(
@@ -375,7 +378,7 @@ SerializeToHsacoPass::assembleIsa(const std::string &isa) {
   std::unique_ptr<llvm::MCStreamer> mcStreamer;
   std::unique_ptr<llvm::MCInstrInfo> mcii(target->createMCInstrInfo());
 
-  llvm::MCCodeEmitter *ce = target->createMCCodeEmitter(*mcii, *mri, ctx);
+  llvm::MCCodeEmitter *ce = target->createMCCodeEmitter(*mcii, ctx);
   llvm::MCAsmBackend *mab = target->createMCAsmBackend(*sti, *mri, mcOptions);
   mcStreamer.reset(target->createMCObjectStreamer(
       triple, ctx, std::unique_ptr<llvm::MCAsmBackend>(mab),
@@ -427,16 +430,15 @@ SerializeToHsacoPass::createHsaco(const SmallVectorImpl<char> &isaBinary) {
   }
   llvm::FileRemover cleanupHsaco(tempHsacoFilename);
 
-  {
-    static std::mutex mutex;
-    const std::lock_guard<std::mutex> lock(mutex);
-    // Invoke lld. Expect a true return value from lld.
-    if (!lld::elf::link({"ld.lld", "-shared", tempIsaBinaryFilename.c_str(),
-                         "-o", tempHsacoFilename.c_str()},
-                        /*canEarlyExit=*/false, llvm::outs(), llvm::errs())) {
-      emitError(loc, "lld invocation error");
-      return {};
-    }
+  std::string theRocmPath = getRocmPath();
+  llvm::SmallString<32> lldPath(std::move(theRocmPath));
+  llvm::sys::path::append(lldPath, "llvm", "bin", "ld.lld");
+  int lldResult = llvm::sys::ExecuteAndWait(
+      lldPath,
+      {"ld.lld", "-shared", tempIsaBinaryFilename, "-o", tempHsacoFilename});
+  if (lldResult != 0) {
+    emitError(loc, "lld invocation error");
+    return {};
   }
 
   // Load the HSA code object.
@@ -473,6 +475,17 @@ void mlir::registerGpuSerializeToHsacoPass() {
                                                       "", 2);
       });
 }
+
+/// Create an instance of the GPU kernel function to HSAco binary serialization
+/// pass.
+std::unique_ptr<Pass> mlir::createGpuSerializeToHsacoPass(StringRef triple,
+                                                          StringRef arch,
+                                                          StringRef features,
+                                                          int optLevel) {
+  return std::make_unique<SerializeToHsacoPass>(triple, arch, features,
+                                                optLevel);
+}
+
 #else  // MLIR_GPU_TO_HSACO_PASS_ENABLE
 void mlir::registerGpuSerializeToHsacoPass() {}
 #endif // MLIR_GPU_TO_HSACO_PASS_ENABLE

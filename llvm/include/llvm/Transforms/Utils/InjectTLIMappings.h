@@ -15,8 +15,10 @@
 
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Pass.h"
 
 namespace llvm {
+class Function;
 class InjectTLIMappings : public PassInfoMixin<InjectTLIMappings> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);

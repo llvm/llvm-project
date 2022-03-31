@@ -10,8 +10,7 @@ declare void @llvm.va_end(i8*) nounwind
 ; CHECK-LABEL: test_byval_8_bytes_alignment:
 define void @test_byval_8_bytes_alignment(i32 %i, ...) {
 entry:
-; CHECK: sub       sp, sp, #12
-; CHECK: sub       sp, sp, #4
+; CHECK: sub       sp, sp, #16
 ; CHECK: add       r0, sp, #4
 ; CHECK: stmib     sp, {r1, r2, r3}
   %g = alloca i8*
@@ -30,7 +29,7 @@ entry:
 ; CHECK: movw [[BASE:r[0-9]+]], :lower16:static_val
 ; CHECK: movt [[BASE]], :upper16:static_val
 ; ldm is not formed when the coalescer failed to coalesce everything.
-; CHECK: ldrd    r2, [[TMP:r[0-9]+]], {{\[}}[[BASE]]{{\]}}
+; CHECK: ldrd    r2, [[TMP:r[0-9]+]], [[[BASE]]]
 ; CHECK: movw r0, #555
 define i32 @main() {
 entry:
@@ -57,7 +56,7 @@ entry:
 ; CHECK: movw [[BASE:r[0-9]+]], :lower16:static_val
 ; CHECK: movt [[BASE]], :upper16:static_val
 ; ldm is not formed when the coalescer failed to coalesce everything.
-; CHECK: ldrd     r2, [[TMP:r[0-9]+]], {{\[}}[[BASE]]{{\]}}
+; CHECK: ldrd     r2, [[TMP:r[0-9]+]], [[[BASE]]]
 ; CHECK: movw r0, #555
 define i32 @main_fixed_arg() {
 entry:

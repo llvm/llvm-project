@@ -2,7 +2,7 @@
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK
 
 ; Check that the head sample count for ticker is 0.
-; CHECK: _Z6tickeri:67:0
+; CHECK: _Z6tickeri:1566:0
 ; CHECK-NOT: _Z6tickeri.resume
 
 

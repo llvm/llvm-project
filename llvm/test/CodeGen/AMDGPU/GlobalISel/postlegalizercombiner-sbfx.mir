@@ -13,11 +13,12 @@ body: |
 
     ; GCN-LABEL: name: bfe_sext_inreg_ashr_s32
     ; GCN: liveins: $vgpr0
-    ; GCN: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; GCN: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-    ; GCN: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; GCN: [[SBFX:%[0-9]+]]:_(s32) = G_SBFX [[COPY]], [[C]](s32), [[C1]]
-    ; GCN: $vgpr0 = COPY [[SBFX]](s32)
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+    ; GCN-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; GCN-NEXT: [[SBFX:%[0-9]+]]:_(s32) = G_SBFX [[COPY]], [[C]](s32), [[C1]]
+    ; GCN-NEXT: $vgpr0 = COPY [[SBFX]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = G_CONSTANT i32 4
     %2:_(s32) = G_ASHR %0, %1(s32)
@@ -37,11 +38,12 @@ body: |
 
     ; GCN-LABEL: name: bfe_sext_inreg_lshr_s32
     ; GCN: liveins: $vgpr0
-    ; GCN: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; GCN: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-    ; GCN: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; GCN: [[SBFX:%[0-9]+]]:_(s32) = G_SBFX [[COPY]], [[C]](s32), [[C1]]
-    ; GCN: $vgpr0 = COPY [[SBFX]](s32)
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+    ; GCN-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; GCN-NEXT: [[SBFX:%[0-9]+]]:_(s32) = G_SBFX [[COPY]], [[C]](s32), [[C1]]
+    ; GCN-NEXT: $vgpr0 = COPY [[SBFX]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = G_CONSTANT i32 4
     %2:_(s32) = G_LSHR %0, %1(s32)
@@ -61,11 +63,12 @@ body: |
 
     ; GCN-LABEL: name: bfe_sext_inreg_ashr_s64
     ; GCN: liveins: $vgpr0_vgpr1
-    ; GCN: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; GCN: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-    ; GCN: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; GCN: [[SBFX:%[0-9]+]]:_(s64) = G_SBFX [[COPY]], [[C]](s32), [[C1]]
-    ; GCN: $vgpr0_vgpr1 = COPY [[SBFX]](s64)
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+    ; GCN-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; GCN-NEXT: [[SBFX:%[0-9]+]]:_(s64) = G_SBFX [[COPY]], [[C]](s32), [[C1]]
+    ; GCN-NEXT: $vgpr0_vgpr1 = COPY [[SBFX]](s64)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_CONSTANT i32 4
     %2:_(s64) = G_ASHR %0, %1(s32)
@@ -85,11 +88,12 @@ body: |
 
     ; GCN-LABEL: name: toobig_sext_inreg_ashr_s32
     ; GCN: liveins: $vgpr0
-    ; GCN: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; GCN: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; GCN: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[COPY]], [[C]](s32)
-    ; GCN: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[ASHR]], 20
-    ; GCN: $vgpr0 = COPY [[SEXT_INREG]](s32)
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; GCN-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[COPY]], [[C]](s32)
+    ; GCN-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[ASHR]], 20
+    ; GCN-NEXT: $vgpr0 = COPY [[SEXT_INREG]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = G_CONSTANT i32 16
     %2:_(s32) = G_ASHR %0, %1(s32)
@@ -109,15 +113,16 @@ body: |
 
     ; GCN-LABEL: name: toobig_sext_inreg_ashr_s64
     ; GCN: liveins: $vgpr0_vgpr1
-    ; GCN: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; GCN: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
-    ; GCN: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
-    ; GCN: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[UV1]], [[C]](s32)
-    ; GCN: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; GCN: [[ASHR1:%[0-9]+]]:_(s32) = G_ASHR [[UV1]], [[C1]](s32)
-    ; GCN: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[ASHR1]](s32), [[ASHR]](s32)
-    ; GCN: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[MV]], 32
-    ; GCN: $vgpr0_vgpr1 = COPY [[SEXT_INREG]](s64)
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; GCN-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
+    ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
+    ; GCN-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[UV1]], [[C]](s32)
+    ; GCN-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+    ; GCN-NEXT: [[ASHR1:%[0-9]+]]:_(s32) = G_ASHR [[UV1]], [[C1]](s32)
+    ; GCN-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[ASHR1]](s32), [[ASHR]](s32)
+    ; GCN-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[MV]], 32
+    ; GCN-NEXT: $vgpr0_vgpr1 = COPY [[SEXT_INREG]](s64)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_CONSTANT i32 40
     %2:_(s64) = G_ASHR %0, %1(s32)
@@ -137,11 +142,12 @@ body: |
 
     ; GCN-LABEL: name: var_sext_inreg_ashr_s32
     ; GCN: liveins: $vgpr0, $vgpr1
-    ; GCN: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; GCN: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-    ; GCN: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[COPY]], [[COPY1]](s32)
-    ; GCN: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[ASHR]], 10
-    ; GCN: $vgpr0 = COPY [[SEXT_INREG]](s32)
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+    ; GCN-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[COPY]], [[COPY1]](s32)
+    ; GCN-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[ASHR]], 10
+    ; GCN-NEXT: $vgpr0 = COPY [[SEXT_INREG]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(s32) = G_ASHR %0, %1(s32)

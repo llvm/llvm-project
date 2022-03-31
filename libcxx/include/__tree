@@ -10,16 +10,17 @@
 #ifndef _LIBCPP___TREE
 #define _LIBCPP___TREE
 
+#include <__algorithm/min.h>
 #include <__config>
 #include <__utility/forward.h>
-#include <algorithm>
+#include <__utility/swap.h>
 #include <iterator>
 #include <limits>
 #include <memory>
 #include <stdexcept>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
@@ -545,7 +546,7 @@ template <class ..._Args>
 struct __is_tree_value_type : false_type {};
 
 template <class _One>
-struct __is_tree_value_type<_One> : __is_tree_value_type_imp<typename __uncvref<_One>::type> {};
+struct __is_tree_value_type<_One> : __is_tree_value_type_imp<__uncvref_t<_One> > {};
 
 template <class _Tp>
 struct __tree_key_value_types {

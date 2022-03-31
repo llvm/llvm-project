@@ -9,8 +9,6 @@
 #include "support/ThreadsafeFS.h"
 #include "Logger.h"
 #include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Path.h"

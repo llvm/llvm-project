@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // template<class T>
@@ -46,3 +45,8 @@ struct int_begin_iterator_end {
   int* end();
 };
 static_assert(!std::ranges::range<int_begin_iterator_end>);
+
+// Test ADL-proofing.
+struct Incomplete;
+template<class T> struct Holder { T t; };
+static_assert(!std::ranges::range<Holder<Incomplete>*>);

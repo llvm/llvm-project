@@ -90,9 +90,10 @@ VETargetMachine::VETargetMachine(const Target &T, const Triple &TT,
   initAsmInfo();
 }
 
-VETargetMachine::~VETargetMachine() {}
+VETargetMachine::~VETargetMachine() = default;
 
-TargetTransformInfo VETargetMachine::getTargetTransformInfo(const Function &F) {
+TargetTransformInfo
+VETargetMachine::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(VETTIImpl(this, F));
 }
 

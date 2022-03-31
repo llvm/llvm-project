@@ -57,4 +57,4 @@ llvm::Optional<T> getConfiguration(CheckerManager &Mgr, Checker *Chk,
 } // namespace ento
 } // namespace clang
 
-#endif // LLVM_CLANG_LIB_STATICANALYZER_CHECKERS_MOVE_H
+#endif // LLVM_CLANG_LIB_STATICANALYZER_CHECKER_YAML_H

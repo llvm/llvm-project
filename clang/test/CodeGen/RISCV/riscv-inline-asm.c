@@ -5,7 +5,7 @@
 
 // Test RISC-V specific inline assembly constraints.
 
-void test_I() {
+void test_I(void) {
 // CHECK-LABEL: define{{.*}} void @test_I()
 // CHECK: call void asm sideeffect "", "I"(i32 2047)
   asm volatile ("" :: "I"(2047));
@@ -13,13 +13,13 @@ void test_I() {
   asm volatile ("" :: "I"(-2048));
 }
 
-void test_J() {
+void test_J(void) {
 // CHECK-LABEL: define{{.*}} void @test_J()
 // CHECK: call void asm sideeffect "", "J"(i32 0)
   asm volatile ("" :: "J"(0));
 }
 
-void test_K() {
+void test_K(void) {
 // CHECK-LABEL: define{{.*}} void @test_K()
 // CHECK: call void asm sideeffect "", "K"(i32 31)
   asm volatile ("" :: "K"(31));
@@ -29,7 +29,7 @@ void test_K() {
 
 float f;
 double d;
-void test_f() {
+void test_f(void) {
 // CHECK-LABEL: define{{.*}} void @test_f()
 // CHECK: [[FLT_ARG:%[a-zA-Z_0-9]+]] = load float, float* @f
 // CHECK: call void asm sideeffect "", "f"(float [[FLT_ARG]])
@@ -40,12 +40,12 @@ void test_f() {
 }
 
 void test_A(int *p) {
-// CHECK-LABEL: define{{.*}} void @test_A(i32* %p)
-// CHECK: call void asm sideeffect "", "*A"(i32* %p)
+// CHECK-LABEL: define{{.*}} void @test_A(i32* noundef %p)
+// CHECK: call void asm sideeffect "", "*A"(i32* elementtype(i32) %p)
   asm volatile("" :: "A"(*p));
 }
 
-void test_S() {
+void test_S(void) {
 // CHECK-LABEL: define{{.*}} void @test_S()
 // CHECK: call void asm sideeffect "", "S"(float* nonnull @f)
   asm volatile("" :: "S"(&f));

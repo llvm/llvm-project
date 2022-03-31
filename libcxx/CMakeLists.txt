@@ -10,13 +10,14 @@ endif()
 #===============================================================================
 cmake_minimum_required(VERSION 3.13.4)
 
+set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
+
 # Add path for custom modules
-set(CMAKE_MODULE_PATH
+list(INSERT CMAKE_MODULE_PATH 0
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules"
-  "${CMAKE_CURRENT_SOURCE_DIR}/../cmake"
-  "${CMAKE_CURRENT_SOURCE_DIR}/../cmake/Modules"
-  ${CMAKE_MODULE_PATH}
+  "${LLVM_COMMON_CMAKE_UTILS}"
+  "${LLVM_COMMON_CMAKE_UTILS}/Modules"
   )
 
 set(CMAKE_FOLDER "libc++")
@@ -26,24 +27,30 @@ set(LIBCXX_BINARY_DIR  ${CMAKE_CURRENT_BINARY_DIR})
 set(LIBCXX_BINARY_INCLUDE_DIR "${LIBCXX_BINARY_DIR}/include/c++build")
 
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR LIBCXX_STANDALONE_BUILD)
+  message(FATAL_ERROR "The Standalone build has been deprecated since LLVM 14, and it is not supported anymore. "
+                      "Please use one of the ways described at https://libcxx.llvm.org/BuildingLibcxx.html for "
+                      "building libc++.")
   project(libcxx CXX C)
 
   set(PACKAGE_NAME libcxx)
-  set(PACKAGE_VERSION 14.0.0git)
+  set(PACKAGE_VERSION 15.0.0git)
   set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
   set(PACKAGE_BUGREPORT "llvm-bugs@lists.llvm.org")
 
   # In a standalone build, we don't have llvm to automatically generate the
   # llvm-lit script for us.  So we need to provide an explicit directory that
   # the configurator should write the script into.
-  set(LIBCXX_STANDALONE_BUILD 1)
+  set(LIBCXX_STANDALONE_BUILD TRUE)
   set(LLVM_LIT_OUTPUT_DIR "${LIBCXX_BINARY_DIR}/bin")
-
-  # Find the LLVM sources and simulate LLVM CMake options.
-  include(HandleOutOfTreeLLVM)
 endif()
 
+# Must go below project(..)
+include(GNUInstallDirs)
+
 if (LIBCXX_STANDALONE_BUILD)
+  # Find the LLVM sources and simulate LLVM CMake options.
+  include(HandleOutOfTreeLLVM)
+
   find_package(Python3 COMPONENTS Interpreter)
   if(NOT Python3_Interpreter_FOUND)
     message(SEND_ERROR "Python3 not found. Python3 is required")
@@ -75,7 +82,10 @@ include(CMakeDependentOption)
 include(HandleCompilerRT)
 
 # Basic options ---------------------------------------------------------------
-option(LIBCXX_ENABLE_ASSERTIONS "Enable assertions independent of build mode." OFF)
+option(LIBCXX_ENABLE_ASSERTIONS
+  "Enable assertions inside the compiled library, and at the same time make it the
+   default when compiling user code. Note that assertions can be enabled or disabled
+   by users in their own code regardless of this option." OFF)
 option(LIBCXX_ENABLE_SHARED "Build libc++ as a shared library." ON)
 option(LIBCXX_ENABLE_STATIC "Build libc++ as a static library." ON)
 option(LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY "Build libc++experimental.a" ON)
@@ -130,12 +140,31 @@ option(LIBCXX_ENABLE_INCOMPLETE_FEATURES
     are new library features under development. These features don't guarantee
     ABI stability nor the quality of completed library features. Vendors
     shipping the library may want to disable this option." ON)
-set(LIBCXX_TEST_CONFIG "legacy.cfg.in" CACHE STRING
+
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  set(LIBCXX_DEFAULT_TEST_CONFIG "llvm-libc++-shared-gcc.cfg.in")
+elseif(MINGW)
+  set(LIBCXX_DEFAULT_TEST_CONFIG "llvm-libc++-mingw.cfg.in")
+elseif(WIN32) # clang-cl
+  if (LIBCXX_ENABLE_SHARED)
+    set(LIBCXX_DEFAULT_TEST_CONFIG "llvm-libc++-shared-clangcl.cfg.in")
+  else()
+    set(LIBCXX_DEFAULT_TEST_CONFIG "llvm-libc++-static-clangcl.cfg.in")
+  endif()
+else()
+  if (LIBCXX_ENABLE_SHARED)
+    set(LIBCXX_DEFAULT_TEST_CONFIG "llvm-libc++-shared.cfg.in")
+  else()
+    set(LIBCXX_DEFAULT_TEST_CONFIG "llvm-libc++-static.cfg.in")
+  endif()
+endif()
+set(LIBCXX_TEST_CONFIG "${LIBCXX_DEFAULT_TEST_CONFIG}" CACHE STRING
     "The path to the Lit testing configuration to use when running the tests.
      If a relative path is provided, it is assumed to be relative to '<monorepo>/libcxx/test/configs'.")
 if (NOT IS_ABSOLUTE "${LIBCXX_TEST_CONFIG}")
   set(LIBCXX_TEST_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/test/configs/${LIBCXX_TEST_CONFIG}")
 endif()
+message(STATUS "Using libc++ testing configuration: ${LIBCXX_TEST_CONFIG}")
 set(LIBCXX_TEST_PARAMS "" CACHE STRING
     "A list of parameters to run the Lit test suite with.")
 
@@ -175,9 +204,17 @@ cmake_dependent_option(LIBCXX_INSTALL_EXPERIMENTAL_LIBRARY
         "Install libc++experimental.a" ON
         "LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY;LIBCXX_INSTALL_LIBRARY" OFF)
 
-set(LIBCXX_ABI_VERSION "1" CACHE STRING "ABI version of libc++. Can be either 1 or 2, where 2 is currently not stable. Defaults to 1.")
-set(LIBCXX_ABI_NAMESPACE "" CACHE STRING "The inline ABI namespace used by libc++. It defaults to __n where `n` is the current ABI version.")
-option(LIBCXX_ABI_UNSTABLE "Unstable ABI of libc++." OFF)
+option(LIBCXX_ABI_UNSTABLE "Use the unstable ABI of libc++. This is equivalent to specifying LIBCXX_ABI_VERSION=n, where n is the not-yet-stable version." OFF)
+if (LIBCXX_ABI_UNSTABLE)
+  set(abi_version "2")
+else()
+  set(abi_version "1")
+endif()
+set(LIBCXX_ABI_VERSION "${abi_version}" CACHE STRING "ABI version of libc++. Can be either 1 or 2, where 2 is currently the unstable ABI. Defaults to 1 unless LIBCXX_ABI_UNSTABLE is specified, in which case this is 2.")
+set(LIBCXX_ABI_NAMESPACE "__${LIBCXX_ABI_VERSION}" CACHE STRING "The inline ABI namespace used by libc++. It defaults to __n where `n` is the current ABI version.")
+if (NOT LIBCXX_ABI_NAMESPACE MATCHES "__.*")
+  message(FATAL_ERROR "LIBCXX_ABI_NAMESPACE must be a reserved identifier.")
+endif()
 option(LIBCXX_ABI_FORCE_ITANIUM "Ignore auto-detection and force use of the Itanium ABI.")
 option(LIBCXX_ABI_FORCE_MICROSOFT "Ignore auto-detection and force use of the Microsoft ABI.")
 
@@ -196,6 +233,7 @@ endif()
 
 option(LIBCXX_HIDE_FROM_ABI_PER_TU_BY_DEFAULT "Enable per TU ABI insulation by default. To be used by vendors." OFF)
 set(LIBCXX_ABI_DEFINES "" CACHE STRING "A semicolon separated list of ABI macros to define in the site config header.")
+option(LIBCXX_EXTRA_SITE_DEFINES "Extra defines to add into __config_site")
 option(LIBCXX_USE_COMPILER_RT "Use compiler-rt instead of libgcc" OFF)
 set(LIBCXX_LIBCPPABI_VERSION "2" CACHE STRING "Version of libc++abi's ABI to re-export from libc++ when re-exporting is enabled.
                                                Note that this is not related to the version of libc++'s ABI itself!")
@@ -266,14 +304,10 @@ if (LIBCXX_BUILD_32_BITS)
   message(FATAL_ERROR "LIBCXX_BUILD_32_BITS is not supported anymore when building the runtimes, please specify a full triple instead.")
 endif()
 
-if(CMAKE_CXX_COMPILER_TARGET)
-  set(LIBCXX_DEFAULT_TARGET_TRIPLE "${CMAKE_CXX_COMPILER_TARGET}")
-else()
-  set(LIBCXX_DEFAULT_TARGET_TRIPLE "${LLVM_DEFAULT_TARGET_TRIPLE}")
+# TODO: Remove this after branching for LLVM 15
+if(LIBCXX_SYSROOT OR LIBCXX_TARGET_TRIPLE OR LIBCXX_GCC_TOOLCHAIN)
+  message(WARNING "LIBCXX_SYSROOT, LIBCXX_TARGET_TRIPLE and LIBCXX_GCC_TOOLCHAIN are not supported anymore, please use the native CMake equivalents instead")
 endif()
-set(LIBCXX_TARGET_TRIPLE "${LIBCXX_DEFAULT_TARGET_TRIPLE}" CACHE STRING "Use alternate target triple.")
-set(LIBCXX_SYSROOT "${CMAKE_SYSROOT}" CACHE STRING "Use alternate sysroot.")
-set(LIBCXX_GCC_TOOLCHAIN "${CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN}" CACHE STRING "Use alternate GCC toolchain.")
 
 # Feature options -------------------------------------------------------------
 option(LIBCXX_ENABLE_EXCEPTIONS "Use exceptions." ON)
@@ -409,44 +443,35 @@ endif ()
 
 # TODO: Projects that depend on libc++ should use LIBCXX_GENERATED_INCLUDE_DIR
 # instead of hard-coding include/c++/v1.
+
+set(LIBCXX_INSTALL_INCLUDE_DIR "${CMAKE_INSTALL_INCLUDEDIR}/c++/v1" CACHE PATH
+    "Path where target-agnostic libc++ headers should be installed.")
+set(LIBCXX_INSTALL_RUNTIME_DIR "${CMAKE_INSTALL_BINDIR}" CACHE PATH
+    "Path where built libc++ runtime libraries should be installed.")
+
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   set(LIBCXX_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
   set(LIBCXX_GENERATED_INCLUDE_DIR "${LLVM_BINARY_DIR}/include/c++/v1")
   set(LIBCXX_GENERATED_INCLUDE_TARGET_DIR "${LLVM_BINARY_DIR}/include/${LLVM_DEFAULT_TARGET_TRIPLE}/c++/v1")
   set(LIBCXX_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE} CACHE PATH
       "Path where built libc++ libraries should be installed.")
-  set(LIBCXX_INSTALL_RUNTIME_DIR bin CACHE PATH
-      "Path where built libc++ runtime libraries should be installed.")
-  set(LIBCXX_INSTALL_INCLUDE_DIR "include/c++/v1" CACHE PATH
-      "Path where target-agnostic libc++ headers should be installed.")
-  set(LIBCXX_INSTALL_INCLUDE_TARGET_DIR "include/${LLVM_DEFAULT_TARGET_TRIPLE}/c++/v1" CACHE PATH
+  set(LIBCXX_INSTALL_INCLUDE_TARGET_DIR "${CMAKE_INSTALL_INCLUDEDIR}/${LLVM_DEFAULT_TARGET_TRIPLE}/c++/v1" CACHE PATH
       "Path where target-specific libc++ headers should be installed.")
   if(LIBCXX_LIBDIR_SUBDIR)
     string(APPEND LIBCXX_LIBRARY_DIR /${LIBCXX_LIBDIR_SUBDIR})
     string(APPEND LIBCXX_INSTALL_LIBRARY_DIR /${LIBCXX_LIBDIR_SUBDIR})
   endif()
-elseif(LLVM_LIBRARY_OUTPUT_INTDIR)
-  set(LIBCXX_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
-  set(LIBCXX_GENERATED_INCLUDE_DIR "${LLVM_BINARY_DIR}/include/c++/v1")
-  set(LIBCXX_GENERATED_INCLUDE_TARGET_DIR "${LIBCXX_GENERATED_INCLUDE_DIR}")
-  set(LIBCXX_INSTALL_LIBRARY_DIR lib${LIBCXX_LIBDIR_SUFFIX} CACHE PATH
-      "Path where built libc++ libraries should be installed.")
-  set(LIBCXX_INSTALL_RUNTIME_DIR bin CACHE PATH
-      "Path where built libc++ runtime libraries should be installed.")
-  set(LIBCXX_INSTALL_INCLUDE_DIR "include/c++/v1" CACHE PATH
-      "Path where target-agnostic libc++ headers should be installed.")
-  set(LIBCXX_INSTALL_INCLUDE_TARGET_DIR "${LIBCXX_INSTALL_INCLUDE_DIR}" CACHE PATH
-      "Path where target-specific libc++ headers should be installed.")
 else()
-  set(LIBCXX_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LIBCXX_LIBDIR_SUFFIX})
-  set(LIBCXX_GENERATED_INCLUDE_DIR "${CMAKE_BINARY_DIR}/include/c++/v1")
+  if(LLVM_LIBRARY_OUTPUT_INTDIR)
+    set(LIBCXX_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
+    set(LIBCXX_GENERATED_INCLUDE_DIR "${LLVM_BINARY_DIR}/include/c++/v1")
+  else()
+    set(LIBCXX_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LIBCXX_LIBDIR_SUFFIX})
+    set(LIBCXX_GENERATED_INCLUDE_DIR "${CMAKE_BINARY_DIR}/include/c++/v1")
+  endif()
   set(LIBCXX_GENERATED_INCLUDE_TARGET_DIR "${LIBCXX_GENERATED_INCLUDE_DIR}")
   set(LIBCXX_INSTALL_LIBRARY_DIR lib${LIBCXX_LIBDIR_SUFFIX} CACHE PATH
       "Path where built libc++ libraries should be installed.")
-  set(LIBCXX_INSTALL_RUNTIME_DIR bin CACHE PATH
-      "Path where built libc++ runtime libraries should be installed.")
-  set(LIBCXX_INSTALL_INCLUDE_DIR "include/c++/v1" CACHE PATH
-      "Path where target-agnostic libc++ headers should be installed.")
   set(LIBCXX_INSTALL_INCLUDE_TARGET_DIR "${LIBCXX_INSTALL_INCLUDE_DIR}" CACHE PATH
       "Path where target-specific libc++ headers should be installed.")
 endif()
@@ -474,14 +499,8 @@ include(HandleLibcxxFlags)
 # These flags get added to CMAKE_CXX_FLAGS and CMAKE_C_FLAGS so that
 # 'config-ix' use them during feature checks. It also adds them to both
 # 'LIBCXX_COMPILE_FLAGS' and 'LIBCXX_LINK_FLAGS'
-if(LIBCXX_TARGET_TRIPLE)
-  add_target_flags_if_supported("--target=${LIBCXX_TARGET_TRIPLE}")
-endif()
-if(LIBCXX_SYSROOT)
-  add_target_flags_if_supported("--sysroot=${LIBCXX_SYSROOT}")
-endif()
-if(LIBCXX_GCC_TOOLCHAIN)
-  add_target_flags_if_supported("--gcc-toolchain=${LIBCXX_GCC_TOOLCHAIN}")
+if(ZOS)
+  add_target_flags_if_supported("-fzos-le-char-mode=ebcdic")
 endif()
 
 # Configure compiler.
@@ -624,6 +643,7 @@ function(cxx_add_warning_flags target)
     endif()
   elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
     target_add_compile_flags_if_supported(${target} PRIVATE
+      -Wno-attributes
       -Wno-literal-suffix
       -Wno-c++14-compat
       -Wno-noexcept-type
@@ -677,9 +697,6 @@ if (LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY AND LIBCXX_ENABLE_SHARED)
 endif()
 
 # Assertion flags =============================================================
-define_if(LIBCXX_ENABLE_ASSERTIONS -UNDEBUG)
-define_if_not(LIBCXX_ENABLE_ASSERTIONS -DNDEBUG)
-define_if(LIBCXX_ENABLE_ASSERTIONS -D_LIBCPP_DEBUG=0)
 define_if(LIBCXX_DEBUG_BUILD -D_DEBUG)
 if (LIBCXX_ENABLE_ASSERTIONS AND NOT LIBCXX_DEBUG_BUILD)
   # MSVC doesn't like _DEBUG on release builds. See PR 4379.
@@ -763,6 +780,13 @@ function(cxx_link_system_libraries target)
     target_add_link_flags_if_supported(${target} PRIVATE "-nodefaultlibs")
     target_add_compile_flags_if_supported(${target} PRIVATE "/Zl")
     target_add_link_flags_if_supported(${target} PRIVATE "/nodefaultlib")
+  endif()
+
+  if (LIBCXX_SUPPORTS_UNWINDLIB_NONE_FLAG AND LIBCXXABI_USE_LLVM_UNWINDER)
+    # If we're linking directly against the libunwind that we're building
+    # in the same invocation, don't try to link in the toolchain's
+    # default libunwind (which may be missing still).
+    target_add_link_flags_if_supported(${target} PRIVATE "--unwindlib=none")
   endif()
 
   if (LIBCXX_HAS_SYSTEM_LIB)
@@ -851,19 +875,8 @@ function(cxx_add_windows_flags target)
 endfunction()
 
 # Configuration file flags =====================================================
-if (NOT LIBCXX_ABI_VERSION EQUAL 1)
-  config_define(${LIBCXX_ABI_VERSION} _LIBCPP_ABI_VERSION)
-endif()
-if (NOT LIBCXX_ABI_NAMESPACE STREQUAL "")
-  if (NOT LIBCXX_ABI_NAMESPACE MATCHES "__.*")
-    message(FATAL_ERROR "LIBCXX_ABI_NAMESPACE must be a reserved identifier.")
-  endif()
-  if (LIBCXX_ABI_NAMESPACE MATCHES "__[0-9]+$")
-    message(FATAL_ERROR "LIBCXX_ABI_NAMESPACE '${LIBCXX_ABI_NAMESPACE}' is reserved for use by libc++.")
-  endif()
-  config_define(${LIBCXX_ABI_NAMESPACE} _LIBCPP_ABI_NAMESPACE)
-endif()
-config_define_if(LIBCXX_ABI_UNSTABLE _LIBCPP_ABI_UNSTABLE)
+config_define(${LIBCXX_ABI_VERSION} _LIBCPP_ABI_VERSION)
+config_define(${LIBCXX_ABI_NAMESPACE} _LIBCPP_ABI_NAMESPACE)
 config_define_if(LIBCXX_ABI_FORCE_ITANIUM _LIBCPP_ABI_FORCE_ITANIUM)
 config_define_if(LIBCXX_ABI_FORCE_MICROSOFT _LIBCPP_ABI_FORCE_MICROSOFT)
 config_define_if(LIBCXX_HIDE_FROM_ABI_PER_TU_BY_DEFAULT _LIBCPP_HIDE_FROM_ABI_PER_TU_BY_DEFAULT)
@@ -885,6 +898,11 @@ config_define_if_not(LIBCXX_ENABLE_LOCALIZATION _LIBCPP_HAS_NO_LOCALIZATION)
 config_define_if_not(LIBCXX_ENABLE_UNICODE _LIBCPP_HAS_NO_UNICODE)
 config_define_if_not(LIBCXX_ENABLE_WIDE_CHARACTERS _LIBCPP_HAS_NO_WIDE_CHARACTERS)
 config_define_if_not(LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS _LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS)
+if (LIBCXX_ENABLE_ASSERTIONS)
+  config_define(1 _LIBCPP_ENABLE_ASSERTIONS_DEFAULT)
+else()
+  config_define(0 _LIBCPP_ENABLE_ASSERTIONS_DEFAULT)
+endif()
 # Incomplete features get their own specific disabling flags. This makes it
 # easier to grep for target specific flags once the feature is complete.
 config_define_if_not(LIBCXX_ENABLE_INCOMPLETE_FEATURES _LIBCPP_HAS_NO_INCOMPLETE_FORMAT)
@@ -900,6 +918,17 @@ if (LIBCXX_ABI_DEFINES)
   endforeach()
   string(REPLACE ";" "\n" abi_defines "${abi_defines}")
   config_define(${abi_defines} _LIBCPP_ABI_DEFINES)
+endif()
+
+if (LIBCXX_EXTRA_SITE_DEFINES)
+  set(extra_site_defines)
+  foreach (extra_site_define ${LIBCXX_EXTRA_SITE_DEFINES})
+    # Allow defines such as DEFINE=VAL, transformed into "#define DEFINE VAL".
+    string(REPLACE "=" " " extra_site_define "${extra_site_define}")
+    list(APPEND extra_site_defines "#define ${extra_site_define}")
+  endforeach()
+  string(REPLACE ";" "\n" extra_site_defines "${extra_site_defines}")
+  config_define(${extra_site_defines} _LIBCPP_EXTRA_SITE_DEFINES)
 endif()
 
 # By default libc++ on Windows expects to use a shared library, which requires

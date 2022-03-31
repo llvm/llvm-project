@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file defines the operation set for the TOSA dialect as defined in
-// the TOSA specfication (https://developer.mlplatform.org/w/tosa/). 
+// the TOSA specfication (https://developer.mlplatform.org/w/tosa/).
 //
 //===----------------------------------------------------------------------===//
 
@@ -58,7 +58,7 @@ def Tosa_ArgMaxOp : Tosa_Op<"argmax", [
 //===----------------------------------------------------------------------===//
 def Tosa_AvgPool2dOp : Tosa_Op<"avg_pool2d", [
     DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
-                              ["inferReturnTypeComponents"]>, 
+                              ["inferReturnTypeComponents"]>,
     NoSideEffect]> {
   let summary = "Performs max pooling on the input.";
 
@@ -82,8 +82,7 @@ def Tosa_AvgPool2dOp : Tosa_Op<"avg_pool2d", [
   );
 
   let builders = [Tosa_AvgPool2dOpQuantInfoBuilder];
-
-  let verifier = [{ return verifyAveragePoolOp(*this); }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -116,8 +115,7 @@ def Tosa_Conv2DOp : Tosa_Op<"conv2d", [
   );
 
   let builders = [Tosa_ConvOpQuantInfoBuilder];
-
-  let verifier = [{ return verifyConvOp(*this); }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -149,8 +147,7 @@ def Tosa_Conv3DOp : Tosa_Op<"conv3d", [
   );
 
   let builders = [Tosa_ConvOpQuantInfoBuilder];
-
-  let verifier = [{ return verifyConvOp(*this); }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -183,8 +180,7 @@ def Tosa_DepthwiseConv2DOp : Tosa_Op<"depthwise_conv2d", [
   );
 
   let builders = [Tosa_ConvOpQuantInfoBuilder];
-
-  let verifier = [{ return verifyConvOp(*this); }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -212,8 +208,7 @@ def Tosa_FullyConnectedOp : Tosa_Op<"fully_connected", [
   );
 
   let builders = [Tosa_FCOpQuantInfoBuilder];
-
-  let verifier = [{ return verifyConvOp(*this); }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -271,6 +266,8 @@ def Tosa_MaxPool2dOp : Tosa_Op<"max_pool2d", [
   let results = (outs
     Tosa_Tensor4D:$output
   );
+
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -322,9 +319,9 @@ def Tosa_ClampOp : Tosa_Op<"clamp", [
 
   let description = [{
     Clamp to an arbitrary minimum and maximum value.
-    Maximum and minimum values are specified as values in the range of the 
+    Maximum and minimum values are specified as values in the range of the
     input type.
-    No zero point subtraction is done to the values, thus to clamp to the zero 
+    No zero point subtraction is done to the values, thus to clamp to the zero
     point value, the zero point itself should be supplied as the minimum value.
   }];
 
@@ -339,6 +336,8 @@ def Tosa_ClampOp : Tosa_Op<"clamp", [
   let results = (outs
     Tosa_Tensor:$output
   );
+
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -484,7 +483,7 @@ def Tosa_BitwiseAndOp : Tosa_Op<"bitwise_and", [
 
   let description = [{
     Elementwise bitwise AND of input1 and input2. Axis of size 1
-    will be broadcast as necessary. 
+    will be broadcast as necessary.
   }];
 
   let arguments = (ins
@@ -1121,14 +1120,16 @@ def Tosa_SelectOp : Tosa_Op<"select", [
   }];
 
   let arguments = (ins
-    I1Tensor:$input1,
-    Tosa_Tensor:$input2,
-    Tosa_Tensor:$input3
+    I1Tensor:$pred,
+    Tosa_Tensor:$on_true,
+    Tosa_Tensor:$on_false
   );
 
   let results = (outs
     Tosa_Tensor:$output
   );
+  let hasCanonicalizeMethod = 1;
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1375,7 +1376,7 @@ def Tosa_ConcatOp : Tosa_Op<"concat", [
   let summary = "Concatenates tensors along one dimension.";
 
   let description = [{
-    Concatenate a variadic amount of tensors along a given axis. No data 
+    Concatenate a variadic amount of tensors along a given axis. No data
     conversion happens during a concat operation.
   }];
 
@@ -1401,7 +1402,7 @@ def Tosa_PadOp : Tosa_Op<"pad", [
   let summary = "Pads a tensor with value specified.";
 
   let description = [{
-    Pads a tensor along borders of each dimension with pad_value. 
+    Pads a tensor along borders of each dimension with pad_value.
   }];
 
   let arguments = (ins
@@ -1506,7 +1507,7 @@ def Tosa_SliceOp: Tosa_Op<"slice", [
 //===----------------------------------------------------------------------===//
 def Tosa_TileOp: Tosa_Op<"tile", [
       DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
-                              ["inferReturnTypeComponents"]>, 
+                              ["inferReturnTypeComponents"]>,
       NoSideEffect]> {
   let summary = "Tile operator";
 
@@ -1530,7 +1531,7 @@ def Tosa_TileOp: Tosa_Op<"tile", [
 //===----------------------------------------------------------------------===//
 def Tosa_TransposeOp : Tosa_Op<"transpose", [
       DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
-                              ["inferReturnTypeComponents"]>, 
+                              ["inferReturnTypeComponents"]>,
       NoSideEffect]> {
   let summary = "Transpose operator";
 
@@ -1561,7 +1562,7 @@ def Tosa_TransposeOp : Tosa_Op<"transpose", [
 //===----------------------------------------------------------------------===//
 def Tosa_GatherOp : Tosa_Op<"gather", [
       DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
-                              ["inferReturnTypeComponents"]>, 
+                              ["inferReturnTypeComponents"]>,
       NoSideEffect]> {
   let summary = "Gather operation,";
 
@@ -1693,7 +1694,7 @@ def Tosa_CastOp: Tosa_Op<"cast", [NoSideEffect,
 //===----------------------------------------------------------------------===//
 // Operator: rescale
 //===----------------------------------------------------------------------===//
-def Tosa_RescaleOp: Tosa_Op<"rescale", [NoSideEffect, 
+def Tosa_RescaleOp: Tosa_Op<"rescale", [NoSideEffect,
       DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
                               ["inferReturnTypeComponents"]>]> {
   let summary = "Tosa rescale operator";

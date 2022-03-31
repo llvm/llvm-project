@@ -45,6 +45,42 @@ struct PositiveInt {
   // CHECK-FIXES: int j{1};
 };
 
+struct PositiveNotDefaultInt {
+  PositiveNotDefaultInt(int) : i(7) {}
+  // CHECK-FIXES: PositiveNotDefaultInt(int)  {}
+  int i;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use default member initializer for 'i'
+  // CHECK-FIXES: int i{7};
+};
+
+// We cannot reconcile these initializers.
+struct TwoConstructors {
+    TwoConstructors(int) : i(7) {}
+    TwoConstructors(int, int) : i(8) {}
+    int i;
+};
+
+struct PositiveNotDefaultOOLInt {
+  PositiveNotDefaultOOLInt(int);
+  int i;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use default member initializer for 'i'
+  // CHECK-FIXES: int i{7};
+};
+
+PositiveNotDefaultOOLInt::PositiveNotDefaultOOLInt(int) : i(7) {}
+// CHECK-FIXES: PositiveNotDefaultOOLInt::PositiveNotDefaultOOLInt(int)  {}
+
+struct PositiveNotDefaultOOLInt2 {
+  PositiveNotDefaultOOLInt2(int, int);
+  int i;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use default member initializer for 'i'
+  // CHECK-FIXES: int i{7};
+  int j;
+};
+
+PositiveNotDefaultOOLInt2::PositiveNotDefaultOOLInt2(int, int arg) : i(7), j(arg) {}
+// CHECK-FIXES: PositiveNotDefaultOOLInt2::PositiveNotDefaultOOLInt2(int, int arg) :  j(arg) {}
+
 struct PositiveUnaryMinusInt {
   PositiveUnaryMinusInt() : j(-1) {}
   // CHECK-FIXES: PositiveUnaryMinusInt()  {}
@@ -232,12 +268,6 @@ struct NegativeBitField
 {
   NegativeBitField() : i(6) {}
   int i : 5;
-};
-
-struct NegativeNotDefaultInt
-{
-  NegativeNotDefaultInt(int) : i(7) {}
-  int i;
 };
 
 struct NegativeDefaultArg

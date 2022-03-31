@@ -8,8 +8,6 @@
 
 // UNSUPPORTED: c++03
 
-// XFAIL: LIBCXX-AIX-FIXME
-
 // <filesystem>
 
 // void rename(const path& old_p, const path& new_p);

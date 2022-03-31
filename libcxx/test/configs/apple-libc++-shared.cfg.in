@@ -7,21 +7,19 @@
 # We also don't use a per-target include directory layout, so we have only one
 # include directory for the libc++ headers.
 
-import sys
-
 lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
 
 config.substitutions.append(('%{flags}',
     '-isysroot {}'.format('@CMAKE_OSX_SYSROOT@') if '@CMAKE_OSX_SYSROOT@' else ''
 ))
 config.substitutions.append(('%{compile_flags}',
-    '-nostdinc++ -isystem %{install}/include/c++/v1 -I %{libcxx}/test/support -include %{libcxx}/test/support/nasty_macros.h'
+    '-nostdinc++ -I %{include} -I %{libcxx}/test/support'
 ))
 config.substitutions.append(('%{link_flags}',
-    '-nostdlib++ -L %{install}/lib -lc++'
+    '-nostdlib++ -L %{lib} -lc++'
 ))
 config.substitutions.append(('%{exec}',
-    '{} %{{libcxx}}/utils/run.py --execdir %T --env DYLD_LIBRARY_PATH=%{{install}}/lib -- '.format(sys.executable)
+    '%{executor} --execdir %T --env DYLD_LIBRARY_PATH=%{lib} -- '
 ))
 
 import os, site

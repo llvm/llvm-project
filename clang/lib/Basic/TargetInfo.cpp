@@ -25,7 +25,7 @@ using namespace clang;
 static const LangASMap DefaultAddrSpaceMap = {0};
 
 // TargetInfo Constructor.
-TargetInfo::TargetInfo(const llvm::Triple &T) : TargetOpts(), Triple(T) {
+TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   // Set defaults.  Defaults are set for a 32-bit RISC platform, like PPC or
   // SPARC.  These should be overridden by concrete targets as needed.
   BigEndian = !T.isLittleEndian();
@@ -150,6 +150,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : TargetOpts(), Triple(T) {
   PlatformMinVersion = VersionTuple();
 
   MaxOpenCLWorkGroupSize = 1024;
+  ProgramAddrSpace = 0;
 }
 
 // Out of line virtual dtor for TargetInfo.
@@ -421,6 +422,8 @@ void TargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
           OpenCLFeaturesMap, "__opencl_c_generic_address_space");
       Opts.OpenCLPipes =
           hasFeatureEnabled(OpenCLFeaturesMap, "__opencl_c_pipes");
+      Opts.Blocks =
+          hasFeatureEnabled(OpenCLFeaturesMap, "__opencl_c_device_enqueue");
     }
   }
 
@@ -446,6 +449,20 @@ void TargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
     } else if (Opts.LongDoubleSize == 128) {
       LongDoubleWidth = LongDoubleAlign = 128;
       LongDoubleFormat = &llvm::APFloat::IEEEquad();
+    } else if (Opts.LongDoubleSize == 80) {
+      LongDoubleFormat = &llvm::APFloat::x87DoubleExtended();
+      if (getTriple().isWindowsMSVCEnvironment()) {
+        LongDoubleWidth = 128;
+        LongDoubleAlign = 128;
+      } else { // Linux
+        if (getTriple().getArch() == llvm::Triple::x86) {
+          LongDoubleWidth = 96;
+          LongDoubleAlign = 32;
+        } else {
+          LongDoubleWidth = 128;
+          LongDoubleAlign = 128;
+        }
+      }
     }
   }
 

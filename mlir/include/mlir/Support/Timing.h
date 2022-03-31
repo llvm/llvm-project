@@ -184,8 +184,8 @@ private:
 /// manager implementations.
 class Timer {
 public:
-  Timer() {}
-  Timer(const Timer &other) : tm(other.tm), handle(other.handle) {}
+  Timer() = default;
+  Timer(const Timer &other) = default;
   Timer(Timer &&other) : Timer(other) {
     other.tm = nullptr;
     other.handle = nullptr;
@@ -228,8 +228,7 @@ public:
   ///
   /// The `nameBuilder` function is not guaranteed to be called.
   Timer nest(const void *id, function_ref<std::string()> nameBuilder) {
-    return tm ? Timer(*tm, tm->nestTimer(handle, id, std::move(nameBuilder)))
-              : Timer();
+    return tm ? Timer(*tm, tm->nestTimer(handle, id, nameBuilder)) : Timer();
   }
 
   /// See above.
@@ -353,7 +352,7 @@ public:
 
   DefaultTimingManager();
   DefaultTimingManager(DefaultTimingManager &&rhs);
-  virtual ~DefaultTimingManager();
+  ~DefaultTimingManager() override;
 
   // Disable copying of the `DefaultTimingManager`.
   DefaultTimingManager(const DefaultTimingManager &rhs) = delete;

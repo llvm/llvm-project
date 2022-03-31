@@ -23,11 +23,11 @@ using namespace llvm;
 
 static sys::SmartMutex<true> OutputMutex;
 
-CodeGenCoverage::CodeGenCoverage() {}
+CodeGenCoverage::CodeGenCoverage() = default;
 
 void CodeGenCoverage::setCovered(uint64_t RuleID) {
   if (RuleCoverage.size() <= RuleID)
-    RuleCoverage.resize(RuleID + 1, 0);
+    RuleCoverage.resize(RuleID + 1, false);
   RuleCoverage[RuleID] = true;
 }
 

@@ -52,13 +52,13 @@ define i128 @foo(i128 %t, i128 %u) {
 ; X86-NEXT:    imull %esi, %ecx
 ; X86-NEXT:    addl %edx, %ecx
 ; X86-NEXT:    addl %ebx, %eax
-; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl %eax, (%esp) # 4-byte Spill
 ; X86-NEXT:    adcl %edi, %ecx
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    mull %esi
 ; X86-NEXT:    movl %edx, %edi
-; X86-NEXT:    movl %eax, (%esp) # 4-byte Spill
+; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    movl %ebp, %eax
 ; X86-NEXT:    mull %esi
 ; X86-NEXT:    movl %edx, %ebx
@@ -77,12 +77,12 @@ define i128 @foo(i128 %t, i128 %u) {
 ; X86-NEXT:    addl %edi, %eax
 ; X86-NEXT:    movzbl %bl, %esi
 ; X86-NEXT:    adcl %esi, %edx
-; X86-NEXT:    addl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Folded Reload
+; X86-NEXT:    addl (%esp), %eax # 4-byte Folded Reload
 ; X86-NEXT:    adcl %ecx, %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl (%esp), %esi # 4-byte Reload
-; X86-NEXT:    movl %esi, (%ecx)
 ; X86-NEXT:    movl %ebp, 4(%ecx)
+; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
+; X86-NEXT:    movl %esi, (%ecx)
 ; X86-NEXT:    movl %eax, 8(%ecx)
 ; X86-NEXT:    movl %edx, 12(%ecx)
 ; X86-NEXT:    movl %ecx, %eax
@@ -107,15 +107,12 @@ define i128 @foo(i128 %t, i128 %u) {
 define void @PR13897() nounwind {
 ; X64-LABEL: PR13897:
 ; X64:       # %bb.0: # %"0x0"
-; X64-NEXT:    movl bbb(%rip), %ecx
-; X64-NEXT:    movabsq $4294967297, %rdx # imm = 0x100000001
-; X64-NEXT:    movq %rcx, %rax
-; X64-NEXT:    mulq %rdx
-; X64-NEXT:    addq %rcx, %rdx
+; X64-NEXT:    movl bbb(%rip), %eax
+; X64-NEXT:    movq %rax, %rcx
 ; X64-NEXT:    shlq $32, %rcx
-; X64-NEXT:    addq %rcx, %rdx
-; X64-NEXT:    movq %rax, aaa(%rip)
-; X64-NEXT:    movq %rdx, aaa+8(%rip)
+; X64-NEXT:    orq %rax, %rcx
+; X64-NEXT:    movq %rcx, aaa+8(%rip)
+; X64-NEXT:    movq %rcx, aaa(%rip)
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: PR13897:

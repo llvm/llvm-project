@@ -5,7 +5,7 @@ entry:
   br label %for.cond
 
 for.cond:                                         ; preds = %cond.true.i, %entry
-  callbr void asm sideeffect "", "X,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@j, %for.end))
+  callbr void asm sideeffect "", "i,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@j, %for.end))
           to label %cond.true.i [label %for.end]
 
 cond.true.i:                                      ; preds = %for.cond

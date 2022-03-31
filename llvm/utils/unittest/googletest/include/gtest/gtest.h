@@ -27,7 +27,6 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-//
 // The Google C++ Testing and Mocking Framework (Google Test)
 //
 // This header file defines the public API for Google Test.  It should be
@@ -59,16 +58,16 @@
 #include <type_traits>
 #include <vector>
 
-#include "gtest/internal/gtest-internal.h"
-#include "gtest/internal/gtest-string.h"
 #include "gtest/gtest-death-test.h"
 #include "gtest/gtest-matchers.h"
 #include "gtest/gtest-message.h"
 #include "gtest/gtest-param-test.h"
 #include "gtest/gtest-printers.h"
-#include "gtest/gtest_prod.h"
 #include "gtest/gtest-test-part.h"
 #include "gtest/gtest-typed-test.h"
+#include "gtest/gtest_prod.h"
+#include "gtest/internal/gtest-internal.h"
+#include "gtest/internal/gtest-string.h"
 
 GTEST_DISABLE_MSC_WARNINGS_PUSH_(4251 \
 /* class A needs to have dll-interface to be used by clients of class B */)

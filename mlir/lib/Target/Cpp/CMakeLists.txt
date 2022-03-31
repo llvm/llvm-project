@@ -7,11 +7,12 @@ add_mlir_translation_library(MLIRTargetCpp
 
   LINK_LIBS PUBLIC
   MLIRArithmetic
+  MLIRControlFlow
   MLIREmitC
+  MLIRFunc
   MLIRIR
   MLIRMath
   MLIRSCF
-  MLIRStandard
   MLIRSupport
-  MLIRTranslation
+  MLIRTranslateLib
   )

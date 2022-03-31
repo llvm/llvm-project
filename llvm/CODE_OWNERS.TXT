@@ -19,17 +19,13 @@ E: arsenm2@gmail.com
 I: arsenm
 D: InferAddressSpaces
 
-N: Simon Atanasyan
-E: simon@atanasyan.com
-D: MIPS Backend (lib/Target/Mips/*)
-
 N: Justin Bogner
 E: mail@justinbogner.com
 D: InstrProfiling and related parts of ProfileData
 D: SelectionDAG (lib/CodeGen/SelectionDAG/*)
 
 N: Alex Bradbury
-E: asb@lowrisc.org
+E: asb@igalia.com
 D: RISC-V backend (lib/Target/RISCV/*)
 
 N: Matthias Braun
@@ -153,6 +149,10 @@ E: sabre@nondot.org
 W: http://nondot.org/~sabre/
 D: Everything not covered by someone else
 
+N: Weining Lu
+E: luweining@loongson.cn
+D: LoongArch backend (lib/Target/LoongArch/*)
+
 N: David Majnemer
 E: david.majnemer@gmail.com
 D: IR Constant Folder, InstCombine
@@ -161,8 +161,8 @@ N: Dylan McKay
 E: me@dylanmckay.io
 D: AVR Backend
 
-N: Simon Moll
-E: simon.moll@emea.nec.com
+N: Kazushi Marukawa
+E: marukawa@nec.com
 D: VE Backend
 
 N: Tim Northover
@@ -190,7 +190,7 @@ E: listmail@philipreames.com
 D: IndVar Simplify, Scalar Evolution
 
 N: Paul Robinson
-E: paul_robinson@playstation.sony.com
+E: paul.robinson@sony.com
 D: Sony PlayStation®4 support
 
 N: Chad Rosier

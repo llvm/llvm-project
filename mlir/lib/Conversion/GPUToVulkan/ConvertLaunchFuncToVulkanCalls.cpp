@@ -166,7 +166,7 @@ private:
   static constexpr unsigned kVulkanLaunchNumConfigOperands = 3;
 };
 
-} // anonymous namespace
+} // namespace
 
 void VulkanLaunchFuncToVulkanCallsPass::runOnOperation() {
   initializeCachedTypes();
@@ -222,7 +222,7 @@ void VulkanLaunchFuncToVulkanCallsPass::createBindMemRefCalls(
   Value descriptorSet = builder.create<LLVM::ConstantOp>(
       loc, getInt32Type(), builder.getI32IntegerAttr(0));
 
-  for (auto en :
+  for (const auto &en :
        llvm::enumerate(cInterfaceVulkanLaunchCallOp.getOperands().drop_front(
            kVulkanLaunchNumConfigOperands))) {
     // Create LLVM constant for the descriptor binding index.

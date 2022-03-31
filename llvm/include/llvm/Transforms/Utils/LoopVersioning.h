@@ -15,7 +15,6 @@
 #ifndef LLVM_TRANSFORMS_UTILS_LOOPVERSIONING_H
 #define LLVM_TRANSFORMS_UTILS_LOOPVERSIONING_H
 
-#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
@@ -23,6 +22,8 @@
 namespace llvm {
 
 class Loop;
+class SCEVPredicate;
+class ScalarEvolution;
 class LoopAccessInfo;
 class LoopInfo;
 struct RuntimeCheckingPtrGroup;
@@ -113,7 +114,7 @@ private:
   Loop *VersionedLoop;
   /// The fall-back loop.  I.e. control flows here if pointers in the
   /// loop may alias (memchecks failed).
-  Loop *NonVersionedLoop;
+  Loop *NonVersionedLoop = nullptr;
 
   /// This maps the instructions from VersionedLoop to their counterpart
   /// in NonVersionedLoop.
@@ -123,7 +124,7 @@ private:
   SmallVector<RuntimePointerCheck, 4> AliasChecks;
 
   /// The set of SCEV checks that we are versioning for.
-  const SCEVUnionPredicate &Preds;
+  const SCEVPredicate &Preds;
 
   /// Maps a pointer to the pointer checking group that the pointer
   /// belongs to.

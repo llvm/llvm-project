@@ -76,29 +76,50 @@ Grade::GradeEnum Grade::judge(double Score) {
   return BAD;
 }
 
-std::vector<FunctionData> getThroughputs(ArrayRef<Sample> Samples) {
-  std::unordered_map<SampleId, std::vector<double>, SampleId::Hasher>
-      BucketedSamples;
-  for (const auto &S : Samples)
-    BucketedSamples[S.Id].push_back(S.BytesPerSecond);
-  std::unordered_map<FunctionId, StringMap<double>, FunctionId::Hasher>
-      Throughputs;
-  for (auto &Pair : BucketedSamples) {
-    const auto &Id = Pair.first;
-    auto &Values = Pair.second;
-    const size_t HalfSize = Values.size() / 2;
-    std::nth_element(Values.begin(), Values.begin() + HalfSize, Values.end());
-    const double MedianValue = Values[HalfSize];
-    Throughputs[Id.Function][Id.Distribution.Name] = MedianValue;
+static double computeUnbiasedSampleVariance(const std::vector<double> &Samples,
+                                            const double SampleMean) {
+  assert(!Samples.empty());
+  if (Samples.size() == 1)
+    return 0;
+  double DiffSquaresSum = 0;
+  for (const double S : Samples) {
+    const double Diff = S - SampleMean;
+    DiffSquaresSum += Diff * Diff;
   }
+  return DiffSquaresSum / (Samples.size() - 1);
+}
+
+static void processPerDistributionData(PerDistributionData &Data) {
+  auto &Samples = Data.BytesPerSecondSamples;
+  assert(!Samples.empty());
+  // Sample Mean
+  const double Sum = std::accumulate(Samples.begin(), Samples.end(), 0.0);
+  Data.BytesPerSecondMean = Sum / Samples.size();
+  // Unbiased Sample Variance
+  Data.BytesPerSecondVariance =
+      computeUnbiasedSampleVariance(Samples, Data.BytesPerSecondMean);
+  // Median
+  const size_t HalfSize = Samples.size() / 2;
+  std::nth_element(Samples.begin(), Samples.begin() + HalfSize, Samples.end());
+  Data.BytesPerSecondMedian = Samples[HalfSize];
+}
+
+std::vector<FunctionData> getThroughputs(ArrayRef<Sample> Samples) {
+  std::unordered_map<FunctionId, FunctionData, FunctionId::Hasher> Functions;
+  for (const auto &S : Samples) {
+    if (S.Type != SampleType::ITERATION)
+      break;
+    auto &Function = Functions[S.Id.Function];
+    auto &Data = Function.PerDistributionData[S.Id.Distribution.Name];
+    Data.BytesPerSecondSamples.push_back(S.BytesPerSecond);
+  }
+
   std::vector<FunctionData> Output;
-  for (auto &Pair : Throughputs) {
-    FunctionData Data;
-    Data.Id = Pair.first;
-    for (const auto &Pair : Pair.second)
-      Data.PerDistributionData[Pair.getKey()].MedianBytesPerSecond =
-          Pair.getValue();
-    Output.push_back(std::move(Data));
+  for (auto &[FunctionId, Function] : Functions) {
+    Function.Id = FunctionId;
+    for (auto &Pair : Function.PerDistributionData)
+      processPerDistributionData(Pair.second);
+    Output.push_back(std::move(Function));
   }
   return Output;
 }
@@ -130,7 +151,7 @@ void fillScores(MutableArrayRef<FunctionData> Functions) {
     const FunctionType Type = Function.Id.Type;
     for (const auto &Pair : Function.PerDistributionData) {
       const auto &Distribution = Pair.getKey();
-      const double Throughput = Pair.getValue().MedianBytesPerSecond;
+      const double Throughput = Pair.getValue().BytesPerSecondMedian;
       const Key K{Type, Distribution};
       ThroughputMinMax[K].update(Throughput);
     }
@@ -140,7 +161,7 @@ void fillScores(MutableArrayRef<FunctionData> Functions) {
     const FunctionType Type = Function.Id.Type;
     for (const auto &Pair : Function.PerDistributionData) {
       const auto &Distribution = Pair.getKey();
-      const double Throughput = Pair.getValue().MedianBytesPerSecond;
+      const double Throughput = Pair.getValue().BytesPerSecondMedian;
       const Key K{Type, Distribution};
       Function.PerDistributionData[Distribution].Score =
           ThroughputMinMax[K].normalize(Throughput);
@@ -149,14 +170,17 @@ void fillScores(MutableArrayRef<FunctionData> Functions) {
 }
 
 void castVotes(MutableArrayRef<FunctionData> Functions) {
-  for (FunctionData &Function : Functions)
+  for (FunctionData &Function : Functions) {
+    Function.ScoresGeoMean = 1.0;
     for (const auto &Pair : Function.PerDistributionData) {
       const StringRef Distribution = Pair.getKey();
       const double Score = Pair.getValue().Score;
+      Function.ScoresGeoMean *= Score;
       const auto G = Grade::judge(Score);
       ++(Function.GradeHisto[G]);
       Function.PerDistributionData[Distribution].Grade = G;
     }
+  }
 
   for (FunctionData &Function : Functions) {
     const auto &GradeHisto = Function.GradeHisto;

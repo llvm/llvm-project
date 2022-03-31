@@ -45,7 +45,7 @@ int main(int, char**)
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get_date(I(in), I(in+sizeof(in)/sizeof(in[0])-1), ios, err, &t);
-        assert(i.base() == in+sizeof(in)/sizeof(in[0])-1);
+        assert(base(i) == in+sizeof(in)/sizeof(in[0])-1);
         assert(t.tm_mon == 4);
         assert(t.tm_mday == 5);
         assert(t.tm_year == 105);

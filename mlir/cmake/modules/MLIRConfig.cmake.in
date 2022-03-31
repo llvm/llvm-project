@@ -8,7 +8,7 @@ find_package(LLVM REQUIRED CONFIG
 set(MLIR_EXPORTED_TARGETS "@MLIR_EXPORTS@")
 set(MLIR_CMAKE_DIR "@MLIR_CONFIG_CMAKE_DIR@")
 set(MLIR_INCLUDE_DIRS "@MLIR_CONFIG_INCLUDE_DIRS@")
-set(MLIR_TABLEGEN_EXE "@MLIR_TABLEGEN_EXE@")
+set(MLIR_TABLEGEN_EXE "@MLIR_CONFIG_TABLEGEN_EXE@")
 set(MLIR_INSTALL_AGGREGATE_OBJECTS "@MLIR_INSTALL_AGGREGATE_OBJECTS@")
 set(MLIR_ENABLE_BINDINGS_PYTHON "@MLIR_ENABLE_BINDINGS_PYTHON@")
 
@@ -22,7 +22,12 @@ set_property(GLOBAL PROPERTY MLIR_CONVERSION_LIBS "@MLIR_CONVERSION_LIBS@")
 set_property(GLOBAL PROPERTY MLIR_TRANSLATION_LIBS "@MLIR_TRANSLATION_LIBS@")
 
 # Provide all our library targets to users.
-@MLIR_CONFIG_INCLUDE_EXPORTS@
+# More specifically, configure MLIR so that it can be directly included in a top
+# level CMakeLists.txt, but also so that it can be imported via `find_package`.
+# This is based on how LLVM handles exports.
+if(NOT TARGET MLIRSupport)
+  @MLIR_CONFIG_INCLUDE_EXPORTS@
+endif()
 
 # By creating these targets here, subprojects that depend on MLIR's
 # tablegen-generated headers can always depend on these targets whether building

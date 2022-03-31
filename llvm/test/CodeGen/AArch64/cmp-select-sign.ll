@@ -115,7 +115,7 @@ define <7 x i8> @sign_7xi8(<7 x i8> %a) {
 ; CHECK-LABEL: sign_7xi8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v1.8b, #1
-; CHECK-NEXT:    sshr v0.8b, v0.8b, #7
+; CHECK-NEXT:    cmlt v0.8b, v0.8b, #0
 ; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
   %c = icmp sgt <7 x i8> %a, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
@@ -127,7 +127,7 @@ define <8 x i8> @sign_8xi8(<8 x i8> %a) {
 ; CHECK-LABEL: sign_8xi8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v1.8b, #1
-; CHECK-NEXT:    sshr v0.8b, v0.8b, #7
+; CHECK-NEXT:    cmlt v0.8b, v0.8b, #0
 ; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
   %c = icmp sgt <8 x i8> %a, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
@@ -139,7 +139,7 @@ define <16 x i8> @sign_16xi8(<16 x i8> %a) {
 ; CHECK-LABEL: sign_16xi8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v1.16b, #1
-; CHECK-NEXT:    sshr v0.16b, v0.16b, #7
+; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
 ; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %c = icmp sgt <16 x i8> %a, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
@@ -150,7 +150,7 @@ define <16 x i8> @sign_16xi8(<16 x i8> %a) {
 define <3 x i32> @sign_3xi32(<3 x i32> %a) {
 ; CHECK-LABEL: sign_3xi32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sshr v0.4s, v0.4s, #31
+; CHECK-NEXT:    cmlt v0.4s, v0.4s, #0
 ; CHECK-NEXT:    orr v0.4s, #1
 ; CHECK-NEXT:    ret
   %c = icmp sgt <3 x i32> %a, <i32 -1, i32 -1, i32 -1>
@@ -161,7 +161,7 @@ define <3 x i32> @sign_3xi32(<3 x i32> %a) {
 define <4 x i32> @sign_4xi32(<4 x i32> %a) {
 ; CHECK-LABEL: sign_4xi32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sshr v0.4s, v0.4s, #31
+; CHECK-NEXT:    cmlt v0.4s, v0.4s, #0
 ; CHECK-NEXT:    orr v0.4s, #1
 ; CHECK-NEXT:    ret
   %c = icmp sgt <4 x i32> %a, <i32 -1, i32 -1, i32 -1, i32 -1>
@@ -173,15 +173,15 @@ define <4 x i32> @sign_4xi32_multi_use(<4 x i32> %a) {
 ; CHECK-LABEL: sign_4xi32_multi_use:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    movi v1.2d, #0xffffffffffffffff
-; CHECK-NEXT:    sshr v2.4s, v0.4s, #31
-; CHECK-NEXT:    cmgt v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    cmlt v2.4s, v0.4s, #0
 ; CHECK-NEXT:    orr v2.4s, #1
-; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    cmgt v1.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    str q2, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    xtn v0.4h, v1.4s
 ; CHECK-NEXT:    bl use_4xi1
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
@@ -198,10 +198,10 @@ define <4 x i32> @not_sign_4xi32(<4 x i32> %a) {
 ; CHECK-LABEL: not_sign_4xi32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI16_0
-; CHECK-NEXT:    movi v1.4s, #1
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI16_0]
-; CHECK-NEXT:    cmgt v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    and v1.16b, v0.16b, v1.16b
+; CHECK-NEXT:    movi v2.4s, #1
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI16_0]
+; CHECK-NEXT:    cmgt v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    and v1.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    orn v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    ret
   %c = icmp sgt <4 x i32> %a, <i32 1, i32 -1, i32 -1, i32 -1>
@@ -214,7 +214,7 @@ define <4 x i32> @not_sign_4xi32_2(<4 x i32> %a) {
 ; CHECK-LABEL: not_sign_4xi32_2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI17_0
-; CHECK-NEXT:    sshr v0.4s, v0.4s, #31
+; CHECK-NEXT:    cmlt v0.4s, v0.4s, #0
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI17_0]
 ; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
@@ -229,10 +229,10 @@ define <4 x i32> @not_sign_4xi32_3(<4 x i32> %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v1.2d, #0xffffffffffffffff
 ; CHECK-NEXT:    adrp x8, .LCPI18_0
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI18_0]
+; CHECK-NEXT:    movi v2.4s, #1
+; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI18_0]
 ; CHECK-NEXT:    cmgt v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    movi v1.4s, #1
-; CHECK-NEXT:    bsl v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    bsl v0.16b, v2.16b, v3.16b
 ; CHECK-NEXT:    ret
   %c = icmp sgt <4 x i32> %a, <i32 -1, i32 -1, i32 -1, i32 -1>
   %res = select <4 x i1> %c, <4 x i32> <i32 1, i32 1, i32 1, i32 1>, <4 x i32> <i32 -1, i32 -1, i32 -1, i32 1>

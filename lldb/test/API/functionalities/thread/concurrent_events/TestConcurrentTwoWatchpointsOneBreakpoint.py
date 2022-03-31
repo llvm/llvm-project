@@ -20,7 +20,7 @@ class ConcurrentTwoWatchpointsOneBreakpoint(ConcurrentEventsBase):
     @add_test_categories(["watchpoint"])
     def test(self):
         """Test two threads that trigger a watchpoint and one breakpoint thread. """
-        self.build(dictionary=self.getBuildFlags())
+        self.build()
         self.do_thread_actions(
             num_watchpoint_threads=2,
             num_breakpoint_threads=1)

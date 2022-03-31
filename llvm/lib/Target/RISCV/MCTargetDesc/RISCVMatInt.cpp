@@ -31,7 +31,7 @@ static int getInstSeqCost(RISCVMatInt::InstSeq &Res, bool HasRVC) {
     case RISCV::LUI:
       Compressed = isInt<6>(Instr.Imm);
       break;
-    case RISCV::ADDUW:
+    case RISCV::ADD_UW:
       Compressed = false;
       break;
     }
@@ -123,10 +123,11 @@ static void generateInstSeqImpl(int64_t Val,
     }
   }
 
-  // Try to use SLLIUW for Hi52 when it is uint32 but not int32.
+  // Try to use SLLI_UW for Hi52 when it is uint32 but not int32.
   if (isUInt<32>((uint64_t)Hi52) && !isInt<32>((uint64_t)Hi52) &&
       ActiveFeatures[RISCV::FeatureStdExtZba]) {
-    // Use LUI+ADDI or LUI to compose, then clear the upper 32 bits with SLLIUW.
+    // Use LUI+ADDI or LUI to compose, then clear the upper 32 bits with
+    // SLLI_UW.
     Hi52 = ((uint64_t)Hi52) | (0xffffffffull << 32);
     Unsigned = true;
   }
@@ -134,11 +135,29 @@ static void generateInstSeqImpl(int64_t Val,
   generateInstSeqImpl(Hi52, ActiveFeatures, Res);
 
   if (Unsigned)
-    Res.push_back(RISCVMatInt::Inst(RISCV::SLLIUW, ShiftAmount));
+    Res.push_back(RISCVMatInt::Inst(RISCV::SLLI_UW, ShiftAmount));
   else
     Res.push_back(RISCVMatInt::Inst(RISCV::SLLI, ShiftAmount));
   if (Lo12)
     Res.push_back(RISCVMatInt::Inst(RISCV::ADDI, Lo12));
+}
+
+static unsigned extractRotateInfo(int64_t Val) {
+  // for case: 0b111..1..xxxxxx1..1..
+  unsigned LeadingOnes = countLeadingOnes((uint64_t)Val);
+  unsigned TrailingOnes = countTrailingOnes((uint64_t)Val);
+  if (TrailingOnes > 0 && TrailingOnes < 64 &&
+      (LeadingOnes + TrailingOnes) > (64 - 12))
+    return 64 - TrailingOnes;
+
+  // for case: 0bxxx1..1..1...xxx
+  unsigned UpperTrailingOnes = countTrailingOnes(Hi_32(Val));
+  unsigned LowerLeadingOnes = countLeadingOnes(Lo_32(Val));
+  if (UpperTrailingOnes < 32 &&
+      (UpperTrailingOnes + LowerLeadingOnes) > (64 - 12))
+    return 32 - UpperTrailingOnes;
+
+  return 0;
 }
 
 namespace llvm {
@@ -192,7 +211,7 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
       uint64_t LeadingOnesVal = Val | maskLeadingOnes<uint64_t>(LeadingZeros);
       TmpSeq.clear();
       generateInstSeqImpl(LeadingOnesVal, ActiveFeatures, TmpSeq);
-      TmpSeq.push_back(RISCVMatInt::Inst(RISCV::ADDUW, 0));
+      TmpSeq.push_back(RISCVMatInt::Inst(RISCV::ADD_UW, 0));
 
       // Keep the new sequence if it is an improvement.
       if (TmpSeq.size() < Res.size()) {
@@ -312,6 +331,18 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
     }
   }
 
+  // Perform optimization with rori in the Zbb extension.
+  if (Res.size() > 2 && ActiveFeatures[RISCV::FeatureStdExtZbb]) {
+    if (unsigned Rotate = extractRotateInfo(Val)) {
+      RISCVMatInt::InstSeq TmpSeq;
+      uint64_t NegImm12 =
+          ((uint64_t)Val >> (64 - Rotate)) | ((uint64_t)Val << Rotate);
+      assert(isInt<12>(NegImm12));
+      TmpSeq.push_back(RISCVMatInt::Inst(RISCV::ADDI, NegImm12));
+      TmpSeq.push_back(RISCVMatInt::Inst(RISCV::RORI, Rotate));
+      Res = TmpSeq;
+    }
+  }
   return Res;
 }
 

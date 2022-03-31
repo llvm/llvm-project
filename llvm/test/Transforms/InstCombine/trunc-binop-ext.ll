@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 define i16 @narrow_sext_and(i16 %x16, i32 %y32) {
 ; CHECK-LABEL: @narrow_sext_and(

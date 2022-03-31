@@ -530,6 +530,21 @@ TEST_P(ImportExpr, ImportInitListExpr) {
                            has(floatLiteral(equals(1.0)))))))));
 }
 
+const internal::VariadicDynCastAllOfMatcher<Expr, CXXDefaultInitExpr>
+    cxxDefaultInitExpr;
+
+TEST_P(ImportExpr, ImportCXXDefaultInitExpr) {
+  MatchVerifier<Decl> Verifier;
+  testImport("class declToImport { int DefInit = 5; }; declToImport X;",
+             Lang_CXX11, "", Lang_CXX11, Verifier,
+             cxxRecordDecl(hasDescendant(cxxConstructorDecl(
+                 hasAnyConstructorInitializer(cxxCtorInitializer(
+                     withInitializer(cxxDefaultInitExpr())))))));
+  testImport(
+      "struct X { int A = 5; }; X declToImport{};", Lang_CXX17, "", Lang_CXX17,
+      Verifier,
+      varDecl(hasInitializer(initListExpr(hasInit(0, cxxDefaultInitExpr())))));
+}
 
 const internal::VariadicDynCastAllOfMatcher<Expr, VAArgExpr> vaArgExpr;
 
@@ -560,6 +575,15 @@ TEST_P(ImportType, ImportAtomicType) {
       "void declToImport() { typedef _Atomic(int) a_int; }",
       Lang_CXX11, "", Lang_CXX11, Verifier,
       functionDecl(hasDescendant(typedefDecl(has(atomicType())))));
+}
+
+TEST_P(ImportType, ImportUsingType) {
+  MatchVerifier<Decl> Verifier;
+  testImport("struct C {};"
+             "void declToImport() { using ::C; new C{}; }",
+             Lang_CXX11, "", Lang_CXX11, Verifier,
+             functionDecl(hasDescendant(
+                 cxxNewExpr(hasType(pointerType(pointee(usingType())))))));
 }
 
 TEST_P(ImportDecl, ImportFunctionTemplateDecl) {
@@ -5815,6 +5839,7 @@ TEST_P(ASTImporterOptionSpecificTestBase, LambdaInFunctionBody) {
       std::distance(FromL->decls().begin(), FromL->decls().end());
   EXPECT_NE(ToLSize, 0u);
   EXPECT_EQ(ToLSize, FromLSize);
+  EXPECT_FALSE(FromL->isDependentLambda());
 }
 
 TEST_P(ASTImporterOptionSpecificTestBase, LambdaInFunctionParam) {
@@ -5834,6 +5859,7 @@ TEST_P(ASTImporterOptionSpecificTestBase, LambdaInFunctionParam) {
       std::distance(FromL->decls().begin(), FromL->decls().end());
   EXPECT_NE(ToLSize, 0u);
   EXPECT_EQ(ToLSize, FromLSize);
+  EXPECT_TRUE(FromL->isDependentLambda());
 }
 
 TEST_P(ASTImporterOptionSpecificTestBase, LambdaInGlobalScope) {
@@ -6452,8 +6478,8 @@ TEST_P(ImportSourceLocations, OverwrittenFileBuffer) {
 
     llvm::SmallVector<char, 64> Buffer;
     Buffer.append(Contents.begin(), Contents.end());
-    auto FileContents =
-        std::make_unique<llvm::SmallVectorMemoryBuffer>(std::move(Buffer), Path);
+    auto FileContents = std::make_unique<llvm::SmallVectorMemoryBuffer>(
+        std::move(Buffer), Path, /*RequiresNullTerminator=*/false);
     FromSM.overrideFileContents(&FE, std::move(FileContents));
 
     // Import the VarDecl to trigger the importing of the FileID.
@@ -6800,7 +6826,8 @@ struct ImportWithExternalSource : ASTImporterOptionSpecificTestBase {
                  bool MinimalImport,
                  const std::shared_ptr<ASTImporterSharedState> &SharedState) {
       return new ASTImporter(ToContext, ToFileManager, FromContext,
-                             FromFileManager, MinimalImport,
+                             // Use minimal import for these tests.
+                             FromFileManager, /*MinimalImport=*/true,
                              // We use the regular lookup.
                              /*SharedState=*/nullptr);
     };
@@ -7464,6 +7491,143 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportDeductionGuideDifferentOrder) {
                 ->getParam(0)
                 ->getDeclContext(),
             ToDGOther);
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase,
+       ImportRecordWithLayoutRequestingExpr) {
+  TranslationUnitDecl *FromTU = getTuDecl(
+      R"(
+      struct A {
+        int idx;
+        static void foo(A x) {
+          (void)&"text"[x.idx];
+        }
+      };
+      )",
+      Lang_CXX11);
+
+  auto *FromA = FirstDeclMatcher<CXXRecordDecl>().match(
+      FromTU, cxxRecordDecl(hasName("A")));
+
+  // Test that during import of 'foo' the record layout can be obtained without
+  // crash.
+  auto *ToA = Import(FromA, Lang_CXX11);
+  EXPECT_TRUE(ToA);
+  EXPECT_TRUE(ToA->isCompleteDefinition());
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase,
+       ImportRecordWithLayoutRequestingExprDifferentRecord) {
+  TranslationUnitDecl *FromTU = getTuDecl(
+      R"(
+      struct B;
+      struct A {
+        int idx;
+        B *b;
+      };
+      struct B {
+        static void foo(A x) {
+          (void)&"text"[x.idx];
+        }
+      };
+      )",
+      Lang_CXX11);
+
+  auto *FromA = FirstDeclMatcher<CXXRecordDecl>().match(
+      FromTU, cxxRecordDecl(hasName("A")));
+
+  // Test that during import of 'foo' the record layout (of 'A') can be obtained
+  // without crash. It is not possible to have all of the fields of 'A' imported
+  // at that time (without big code changes).
+  auto *ToA = Import(FromA, Lang_CXX11);
+  EXPECT_TRUE(ToA);
+  EXPECT_TRUE(ToA->isCompleteDefinition());
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, ImportInClassInitializerFromField) {
+  // Encounter import of a field when the field already exists but has the
+  // in-class initializer expression not yet set. Such case can occur in the AST
+  // of generated template specializations.
+  // The first code forces to create a template specialization of
+  // `A<int>` but without implicit constructors.
+  // The second ("From") code contains a variable of type `A<int>`, this
+  // results in a template specialization that has constructors and
+  // CXXDefaultInitExpr nodes.
+  Decl *ToTU = getToTuDecl(
+      R"(
+      void f();
+      template<typename> struct A { int X = 1; };
+      struct B { A<int> Y; };
+      )",
+      Lang_CXX11);
+  auto *ToX = FirstDeclMatcher<FieldDecl>().match(
+      ToTU,
+      fieldDecl(hasName("X"), hasParent(classTemplateSpecializationDecl())));
+  ASSERT_TRUE(ToX->hasInClassInitializer());
+  ASSERT_FALSE(ToX->getInClassInitializer());
+
+  Decl *FromTU = getTuDecl(
+      R"(
+      void f();
+      template<typename> struct A { int X = 1; };
+      struct B { A<int> Y; };
+      //
+      A<int> Z;
+      )",
+      Lang_CXX11, "input1.cc");
+  auto *FromX = FirstDeclMatcher<FieldDecl>().match(
+      FromTU,
+      fieldDecl(hasName("X"), hasParent(classTemplateSpecializationDecl())));
+
+  auto *ToXImported = Import(FromX, Lang_CXX11);
+  EXPECT_EQ(ToXImported, ToX);
+  EXPECT_TRUE(ToX->getInClassInitializer());
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase,
+       ImportInClassInitializerFromCXXDefaultInitExpr) {
+  // Encounter AST import of a CXXDefaultInitExpr where the "to-field"
+  // of it exists but has the in-class initializer not set yet.
+  Decl *ToTU = getToTuDecl(
+      R"(
+      namespace N {
+        template<typename> int b;
+        struct X;
+      }
+      template<typename> struct A { N::X *X = nullptr; };
+      struct B { A<int> Y; };
+      )",
+      Lang_CXX14);
+  auto *ToX = FirstDeclMatcher<FieldDecl>().match(
+      ToTU,
+      fieldDecl(hasName("X"), hasParent(classTemplateSpecializationDecl())));
+  ASSERT_TRUE(ToX->hasInClassInitializer());
+  ASSERT_FALSE(ToX->getInClassInitializer());
+
+  Decl *FromTU = getTuDecl(
+      R"(
+      namespace N {
+        template<typename> int b;
+        struct X;
+      }
+      template<typename> struct A { N::X *X = nullptr; };
+      struct B { A<int> Y; };
+      //
+      void f() {
+        (void)A<int>{};
+      }
+      struct C {
+        C(): attr(new A<int>{}){}
+        A<int> *attr;
+        const int value = N::b<C>;
+      };
+      )",
+      Lang_CXX14, "input1.cc");
+  auto *FromF = FirstDeclMatcher<FunctionDecl>().match(
+      FromTU, functionDecl(hasName("f"), isDefinition()));
+  auto *ToF = Import(FromF, Lang_CXX11);
+  EXPECT_TRUE(ToF);
+  EXPECT_TRUE(ToX->getInClassInitializer());
 }
 
 INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ASTImporterLookupTableTest,

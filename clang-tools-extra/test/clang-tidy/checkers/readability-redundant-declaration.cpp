@@ -70,6 +70,32 @@ struct Friendly {
 
 void enemy();
 
+template <typename>
+struct TemplateFriendly {
+  template <typename T>
+  friend void generic_friend();
+};
+
+template <typename T>
+void generic_friend() {}
+
+TemplateFriendly<int> template_friendly;
+
+template <typename>
+struct TemplateFriendly2 {
+  template <typename T>
+  friend void generic_friend2() {}
+};
+
+template <typename T>
+void generic_friend2();
+
+void generic_friend_caller() {
+  TemplateFriendly2<int> f;
+  generic_friend2<int>();
+}
+
+
 namespace macros {
 #define DECLARE(x) extern int x
 #define DEFINE(x) extern int x; int x = 42

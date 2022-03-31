@@ -14,12 +14,18 @@ for e in [
   "ASAN_OPTIONS",
   "TSAN_OPTIONS",
   "UBSAN_OPTIONS",
+  "LSAN_OPTIONS",
   "APPLE_ASAN_INIT_FOR_DLOPEN",
   "ASAN_ACTIVATION_OPTIONS",
   "MallocNanoZone",
 ]:
   if e in os.environ:
     os.environ["SIMCTL_CHILD_" + e] = os.environ[e]
+
+find_atos_cmd = 'xcrun -sdk iphonesimulator -f atos'
+atos_path = subprocess.run(find_atos_cmd.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True).stdout.decode().strip()
+for san in ['ASAN', 'TSAN', 'UBSAN', 'LSAN']:
+  os.environ[f'SIMCTL_CHILD_{san}_SYMBOLIZER_PATH'] = atos_path
 
 prog = sys.argv[1]
 exit_code = None
@@ -39,7 +45,7 @@ if prog == 'rm':
   # We use `shell=True` so that any wildcard globs get expanded by the shell.
 
   if iossim_run_verbose:
-    print("RUNNING: \t{}".format(rm_cmd_line_str))
+    print("RUNNING: \t{}".format(rm_cmd_line_str), flush=True)
 
   exitcode = subprocess.call(rm_cmd_line_str, shell=True)
 
@@ -53,7 +59,7 @@ else:
   cmd += sys.argv[1:]
 
   if iossim_run_verbose:
-    print("RUNNING: \t{}".format(" ".join(cmd)))
+    print("RUNNING: \t{}".format(" ".join(cmd)), flush=True)
 
   exitcode = subprocess.call(cmd)
 if exitcode > 125:

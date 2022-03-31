@@ -11,9 +11,8 @@
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/FunctionSupport.h"
+#include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/Rewrite/PatternApplicator.h"
-#include "mlir/Transforms/Utils.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -147,7 +146,7 @@ private:
   /// Current value mappings.
   BlockAndValueMapping mapping;
 };
-} // end anonymous namespace
+} // namespace
 
 Value ConversionValueMapping::lookupOrDefault(Value from,
                                               Type desiredType) const {
@@ -252,7 +251,7 @@ public:
     op->setLoc(loc);
     op->setAttrs(attrs);
     op->setOperands(operands);
-    for (auto it : llvm::enumerate(successors))
+    for (const auto &it : llvm::enumerate(successors))
       op->setSuccessor(it.value(), it.index());
   }
 
@@ -408,7 +407,7 @@ private:
   /// The original output type. This is only used for argument conversions.
   Type origOutputType;
 };
-} // end anonymous namespace
+} // namespace
 
 /// Build an unresolved materialization operation given an output type and set
 /// of input operands.
@@ -593,7 +592,7 @@ struct ArgConverter {
   /// An ordered set of unresolved materializations during conversion.
   SmallVectorImpl<UnresolvedMaterialization> &unresolvedMaterializations;
 };
-} // end anonymous namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // Rewrite Application
@@ -763,7 +762,11 @@ Block *ArgConverter::applySignatureConversion(
   Block *newBlock = block->splitBlock(block->begin());
   block->replaceAllUsesWith(newBlock);
 
-  SmallVector<Value, 4> newArgRange(newBlock->addArguments(convertedTypes));
+  // FIXME: We should map the new arguments to proper locations.
+  SmallVector<Location> newLocs(convertedTypes.size(),
+                                rewriter.getUnknownLoc());
+  SmallVector<Value, 4> newArgRange(
+      newBlock->addArguments(convertedTypes, newLocs));
   ArrayRef<Value> newArgs(newArgRange);
 
   // Remap each of the original arguments as determined by the signature
@@ -1018,8 +1021,8 @@ struct ConversionPatternRewriterImpl {
   llvm::ScopedPrinter logger{llvm::dbgs()};
 #endif
 };
-} // end namespace detail
-} // end namespace mlir
+} // namespace detail
+} // namespace mlir
 
 /// Detach any operations nested in the given operation from their parent
 /// blocks, and erase the given operation. This can be used when the nested
@@ -1256,7 +1259,7 @@ LogicalResult ConversionPatternRewriterImpl::remapValues(
   remapped.reserve(llvm::size(values));
 
   SmallVector<Type, 1> legalTypes;
-  for (auto it : llvm::enumerate(values)) {
+  for (const auto &it : llvm::enumerate(values)) {
     Value operand = it.value();
     Type origType = operand.getType();
 
@@ -1492,7 +1495,7 @@ LogicalResult ConversionPatternRewriterImpl::notifyMatchFailure(
 ConversionPatternRewriter::ConversionPatternRewriter(MLIRContext *ctx)
     : PatternRewriter(ctx),
       impl(new detail::ConversionPatternRewriterImpl(*this)) {}
-ConversionPatternRewriter::~ConversionPatternRewriter() {}
+ConversionPatternRewriter::~ConversionPatternRewriter() = default;
 
 void ConversionPatternRewriter::replaceOpWithIf(
     Operation *op, ValueRange newValues, bool *allUsesReplaced,
@@ -1931,7 +1934,7 @@ OperationLegalizer::legalizeWithFold(Operation *op,
     Operation *cstOp = rewriterImpl.createdOps[i];
     if (failed(legalize(cstOp, rewriter))) {
       LLVM_DEBUG(logFailure(rewriterImpl.logger,
-                            "generated constant '{0}' was illegal",
+                            "failed to legalize generated constant '{0}'",
                             cstOp->getName()));
       rewriterImpl.resetState(curState);
       return failure();
@@ -2106,7 +2109,7 @@ LogicalResult OperationLegalizer::legalizePatternCreatedOperations(
     Operation *op = impl.createdOps[i];
     if (failed(legalize(op, rewriter))) {
       LLVM_DEBUG(logFailure(impl.logger,
-                            "generated operation '{0}'({1}) was illegal",
+                            "failed to legalize generated operation '{0}'({1})",
                             op->getName(), op));
       return failure();
     }
@@ -2120,9 +2123,9 @@ LogicalResult OperationLegalizer::legalizePatternRootUpdates(
   for (int i = state.numRootUpdates, e = newState.numRootUpdates; i != e; ++i) {
     Operation *op = impl.rootUpdates[i].getOperation();
     if (failed(legalize(op, rewriter))) {
-      LLVM_DEBUG(logFailure(impl.logger,
-                            "operation updated in-place '{0}' was illegal",
-                            op->getName()));
+      LLVM_DEBUG(logFailure(
+          impl.logger, "failed to legalize operation updated in-place '{0}'",
+          op->getName()));
       return failure();
     }
   }
@@ -2396,7 +2399,7 @@ private:
   /// *not* to be legalizable to the target.
   DenseSet<Operation *> *trackedOps;
 };
-} // end anonymous namespace
+} // namespace
 
 LogicalResult OperationConverter::convert(ConversionPatternRewriter &rewriter,
                                           Operation *op) {
@@ -2585,6 +2588,11 @@ static void computeNecessaryMaterializations(
         return !necessaryMaterializations.count(matIt->second);
       return rewriterImpl.isOpIgnored(user);
     };
+    // This value may be replacing another value that has a live user.
+    for (Value inv : inverseMapping.lookup(value))
+      if (llvm::find_if_not(inv.getUsers(), findFn) != inv.user_end())
+        return true;
+    // Or have live users itself.
     return llvm::find_if_not(value.getUsers(), findFn) != value.user_end();
   };
 
@@ -3049,55 +3057,50 @@ auto TypeConverter::convertBlockSignature(Block *block)
 }
 
 //===----------------------------------------------------------------------===//
-// FunctionLikeSignatureConversion
+// FunctionOpInterfaceSignatureConversion
 //===----------------------------------------------------------------------===//
 
 /// Create a default conversion pattern that rewrites the type signature of a
-/// FunctionLike op. This only supports FunctionLike ops which use FunctionType
-/// to represent their type.
+/// FunctionOpInterface op. This only supports ops which use FunctionType to
+/// represent their type.
 namespace {
-struct FunctionLikeSignatureConversion : public ConversionPattern {
-  FunctionLikeSignatureConversion(StringRef functionLikeOpName,
-                                  MLIRContext *ctx, TypeConverter &converter)
+struct FunctionOpInterfaceSignatureConversion : public ConversionPattern {
+  FunctionOpInterfaceSignatureConversion(StringRef functionLikeOpName,
+                                         MLIRContext *ctx,
+                                         TypeConverter &converter)
       : ConversionPattern(converter, functionLikeOpName, /*benefit=*/1, ctx) {}
 
-  /// Hook to implement combined matching and rewriting for FunctionLike ops.
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    FunctionType type = function_like_impl::getFunctionType(op);
+    FunctionOpInterface funcOp = cast<FunctionOpInterface>(op);
+    FunctionType type = funcOp.getFunctionType().cast<FunctionType>();
 
     // Convert the original function types.
     TypeConverter::SignatureConversion result(type.getNumInputs());
     SmallVector<Type, 1> newResults;
     if (failed(typeConverter->convertSignatureArgs(type.getInputs(), result)) ||
         failed(typeConverter->convertTypes(type.getResults(), newResults)) ||
-        failed(rewriter.convertRegionTypes(
-            &function_like_impl::getFunctionBody(op), *typeConverter, &result)))
+        failed(rewriter.convertRegionTypes(&funcOp.getBody(), *typeConverter,
+                                           &result)))
       return failure();
 
     // Update the function signature in-place.
     auto newType = FunctionType::get(rewriter.getContext(),
                                      result.getConvertedTypes(), newResults);
 
-    rewriter.updateRootInPlace(
-        op, [&] { function_like_impl::setFunctionType(op, newType); });
+    rewriter.updateRootInPlace(op, [&] { funcOp.setType(newType); });
 
     return success();
   }
 };
-} // end anonymous namespace
+} // namespace
 
-void mlir::populateFunctionLikeTypeConversionPattern(
+void mlir::populateFunctionOpInterfaceTypeConversionPattern(
     StringRef functionLikeOpName, RewritePatternSet &patterns,
     TypeConverter &converter) {
-  patterns.add<FunctionLikeSignatureConversion>(
+  patterns.add<FunctionOpInterfaceSignatureConversion>(
       functionLikeOpName, patterns.getContext(), converter);
-}
-
-void mlir::populateFuncOpTypeConversionPattern(RewritePatternSet &patterns,
-                                               TypeConverter &converter) {
-  populateFunctionLikeTypeConversionPattern<FuncOp>(patterns, converter);
 }
 
 //===----------------------------------------------------------------------===//

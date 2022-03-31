@@ -14,7 +14,6 @@
 
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -23,7 +22,6 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
@@ -694,38 +692,39 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
       VMap[OrigV] = I;
   }
 
+  // Simplify conditional branches and switches with a constant operand. We try
+  // to prune these out when cloning, but if the simplification required
+  // looking through PHI nodes, those are only available after forming the full
+  // basic block. That may leave some here, and we still want to prune the dead
+  // code as early as possible.
+  Function::iterator Begin = cast<BasicBlock>(VMap[StartingBB])->getIterator();
+  for (BasicBlock &BB : make_range(Begin, NewFunc->end()))
+    ConstantFoldTerminator(&BB);
+
+  // Some blocks may have become unreachable as a result. Find and delete them.
+  {
+    SmallPtrSet<BasicBlock *, 16> ReachableBlocks;
+    SmallVector<BasicBlock *, 16> Worklist;
+    Worklist.push_back(&*Begin);
+    while (!Worklist.empty()) {
+      BasicBlock *BB = Worklist.pop_back_val();
+      if (ReachableBlocks.insert(BB).second)
+        append_range(Worklist, successors(BB));
+    }
+
+    SmallVector<BasicBlock *, 16> UnreachableBlocks;
+    for (BasicBlock &BB : make_range(Begin, NewFunc->end()))
+      if (!ReachableBlocks.contains(&BB))
+        UnreachableBlocks.push_back(&BB);
+    DeleteDeadBlocks(UnreachableBlocks);
+  }
+
   // Now that the inlined function body has been fully constructed, go through
   // and zap unconditional fall-through branches. This happens all the time when
   // specializing code: code specialization turns conditional branches into
   // uncond branches, and this code folds them.
-  Function::iterator Begin = cast<BasicBlock>(VMap[StartingBB])->getIterator();
   Function::iterator I = Begin;
   while (I != NewFunc->end()) {
-    // We need to simplify conditional branches and switches with a constant
-    // operand. We try to prune these out when cloning, but if the
-    // simplification required looking through PHI nodes, those are only
-    // available after forming the full basic block. That may leave some here,
-    // and we still want to prune the dead code as early as possible.
-    //
-    // Do the folding before we check if the block is dead since we want code
-    // like
-    //  bb:
-    //    br i1 undef, label %bb, label %bb
-    // to be simplified to
-    //  bb:
-    //    br label %bb
-    // before we call I->getSinglePredecessor().
-    ConstantFoldTerminator(&*I);
-
-    // Check if this block has become dead during inlining or other
-    // simplifications. Note that the first block will appear dead, as it has
-    // not yet been wired up properly.
-    if (I != Begin && (pred_empty(&*I) || I->getSinglePredecessor() == &*I)) {
-      BasicBlock *DeadBB = &*I++;
-      DeleteDeadBlock(DeadBB);
-      continue;
-    }
-
     BranchInst *BI = dyn_cast<BranchInst>(I->getTerminator());
     if (!BI || BI->isConditional()) {
       ++I;

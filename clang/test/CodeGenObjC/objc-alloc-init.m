@@ -8,7 +8,7 @@
 -(X *)init;
 @end
 
-void f() {
+void f(void) {
   [[X alloc] init];
   // OPTIMIZED: call i8* @objc_alloc_init(
   // NOT_OPTIMIZED: call i8* @objc_alloc(

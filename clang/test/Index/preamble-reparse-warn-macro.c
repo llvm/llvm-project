@@ -8,5 +8,5 @@
 #define MAC 1
 #include "header.h"
 
-void test();
+void test(void);
 #define MAC 2

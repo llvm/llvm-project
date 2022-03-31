@@ -1,0 +1,11 @@
+thread list
+register read --all
+bt
+thread select 2
+register read --all
+bt
+thread select 3
+register read --all
+bt
+p *(int*)&hz
+memory read &hz

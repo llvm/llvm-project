@@ -1,13 +1,13 @@
-; RUN: llvm-profgen --format=text --unsymbolized-profile=%S/Inputs/profile-density.raw.prof --binary=%S/Inputs/inline-noprobe2.perfbin --output=%t1 --use-offset=0 --show-density -hot-function-density-threshold=1 &> %t2
+; RUN: llvm-profgen --format=text --unsymbolized-profile=%S/Inputs/profile-density.raw.prof --binary=%S/Inputs/inline-noprobe2.perfbin --output=%t1 --use-offset=0 --show-density -hot-function-density-threshold=10  --trim-cold-profile=0 &> %t2
 ; RUN: FileCheck %s --input-file %t2 --check-prefix=CHECK-DENSITY
 
 ; RUN: llvm-profgen --format=text --unsymbolized-profile=%S/Inputs/profile-density-cs.raw.prof --binary=%S/Inputs/inline-noprobe2.perfbin --output=%t3 --show-density -hot-function-density-threshold=1 &> %t4
 ; RUN: FileCheck %s --input-file %t4 --check-prefix=CHECK-DENSITY-CS
 
-;CHECK-DENSITY: AutoFDO is estimated to optimize better with 4.9x more samples. Please consider increasing sampling rate or profiling for longer duration to get more samples.
-;CHECK-DENSITY: Minimum profile density for hot functions with top 99.00% total samples: 0.2
+;CHECK-DENSITY: AutoFDO is estimated to optimize better with 3.1x more samples. Please consider increasing sampling rate or profiling for longer duration to get more samples.
+;CHECK-DENSITY: Minimum profile density for hot functions with top 99.00% total samples: 3.2
 
-;CHECK-DENSITY-CS: Minimum profile density for hot functions with top 99.00% total samples: 31.4
+;CHECK-DENSITY-CS: Minimum profile density for hot functions with top 99.00% total samples: 128.3
 
 ; original code:
 ; clang -O3 -g -fno-optimize-sibling-calls -fdebug-info-for-profiling qsort.c -o a.out

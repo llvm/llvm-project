@@ -1,4 +1,4 @@
-; RUN: opt < %s -deadargelim -S | not grep DEADARG
+; RUN: opt < %s -passes=deadargelim -S | not grep DEADARG
 
 ; test - an obviously dead argument
 define internal i32 @test(i32 %v, i32 %DEADARG1, i32* %p) {

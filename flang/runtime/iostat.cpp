@@ -30,11 +30,11 @@ const char *IostatErrorString(int iostat) {
   case IostatInternalWriteOverrun:
     return "Internal write overran available records";
   case IostatErrorInFormat:
-    return "Invalid FORMAT";
+    return "Bad FORMAT";
   case IostatErrorInKeyword:
     return "Bad keyword argument value";
-  case IostatEndfileNonSequential:
-    return "ENDFILE on non-sequential file";
+  case IostatEndfileDirect:
+    return "ENDFILE on direct-access file";
   case IostatEndfileUnwritable:
     return "ENDFILE on read-only file";
   case IostatOpenBadRecl:
@@ -53,6 +53,30 @@ const char *IostatErrorString(int iostat) {
     return "BACKSPACE at first record";
   case IostatRewindNonSequential:
     return "REWIND on non-sequential file";
+  case IostatWriteAfterEndfile:
+    return "WRITE after ENDFILE";
+  case IostatFormattedIoOnUnformattedUnit:
+    return "Formatted I/O on unformatted file";
+  case IostatUnformattedIoOnFormattedUnit:
+    return "Unformatted I/O on formatted file";
+  case IostatListIoOnDirectAccessUnit:
+    return "List-directed or NAMELIST I/O on direct-access file";
+  case IostatUnformattedChildOnFormattedParent:
+    return "Unformatted child I/O on formatted parent unit";
+  case IostatFormattedChildOnUnformattedParent:
+    return "Formatted child I/O on unformatted parent unit";
+  case IostatChildInputFromOutputParent:
+    return "Child input from output parent unit";
+  case IostatChildOutputToInputParent:
+    return "Child output to input parent unit";
+  case IostatShortRead:
+    return "Read from external unit returned insufficient data";
+  case IostatMissingTerminator:
+    return "Sequential record missing its terminator";
+  case IostatBadUnformattedRecord:
+    return "Erroneous unformatted sequential file record structure";
+  case IostatUTF8Decoding:
+    return "UTF-8 decoding error";
   default:
     return nullptr;
   }

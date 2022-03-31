@@ -1,4 +1,4 @@
-; RUN: opt -passes='require<scalar-evolution>,require<aa>,loop(print-access-info)' -disable-output  < %s 2>&1 | FileCheck %s
+; RUN: opt -passes='print-access-info' -disable-output  < %s 2>&1 | FileCheck %s
 
 ; The runtime memory check code and the access grouping
 ; algorithm both assume that the start and end values

@@ -6,9 +6,10 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: libcpp-has-no-localization
 // UNSUPPORTED: libcpp-has-no-incomplete-format
+// TODO FMT Evaluate gcc-11 status
+// UNSUPPORTED: gcc-11
 
 // REQUIRES: locale.en_US.UTF-8
 // REQUIRES: locale.fr_FR.UTF-8
@@ -83,10 +84,10 @@ void test() {
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
   test<std::back_insert_iterator<std::basic_string<wchar_t>>, wchar_t>();
 #endif
-#ifndef _LIBCPP_HAS_NO_CHAR8_T
+#ifndef TEST_HAS_NO_CHAR8_T
   test<std::back_insert_iterator<std::basic_string<char8_t>>, char8_t>();
 #endif
-#ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
+#ifndef TEST_HAS_NO_UNICODE_CHARS
   test<std::back_insert_iterator<std::basic_string<char16_t>>, char16_t>();
   test<std::back_insert_iterator<std::basic_string<char32_t>>, char32_t>();
 #endif

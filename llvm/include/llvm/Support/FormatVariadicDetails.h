@@ -10,6 +10,7 @@
 #define LLVM_SUPPORT_FORMATVARIADICDETAILS_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <type_traits>
@@ -23,7 +24,7 @@ class format_adapter {
   virtual void anchor();
 
 protected:
-  virtual ~format_adapter() {}
+  virtual ~format_adapter() = default;
 
 public:
   virtual void format(raw_ostream &S, StringRef Options) = 0;

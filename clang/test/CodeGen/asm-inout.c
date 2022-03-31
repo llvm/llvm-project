@@ -3,14 +3,14 @@
 int *foo(void);
 
 // CHECK: @test1
-void test1() {
+void test1(void) {
   // CHECK: [[REGCALLRESULT:%[a-zA-Z0-9\.]+]] = call i32* @foo()
-  // CHECK: call void asm "foobar", "=*m,*m,~{dirflag},~{fpsr},~{flags}"(i32* [[REGCALLRESULT]], i32* [[REGCALLRESULT]])
+  // CHECK: call void asm "foobar", "=*m,*m,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) [[REGCALLRESULT]], i32* elementtype(i32) [[REGCALLRESULT]])
   asm ("foobar" : "+m"(*foo()));
 }
 
 // CHECK: @test2
-void test2() {
+void test2(void) {
   // CHECK: [[REGCALLRESULT:%[a-zA-Z0-9\.]+]] = call i32* @foo()
   // CHECK: load i32, i32* [[REGCALLRESULT]]
   // CHECK: call i32 asm

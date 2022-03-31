@@ -131,6 +131,7 @@ bitmask which can be decomposed as follows:
     WideCharacter = 0x0071,     // wide char
     Character16 = 0x007a,       // char16_t
     Character32 = 0x007b,       // char32_t
+    Character8 = 0x007c,        // char8_t
 
     SByte = 0x0068,       // 8 bit signed int
     Byte = 0x0069,        // 8 bit unsigned int

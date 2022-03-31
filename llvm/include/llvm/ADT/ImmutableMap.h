@@ -5,9 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file defines the ImmutableMap class.
-//
+///
+/// \file
+/// This file defines the ImmutableMap class.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_IMMUTABLEMAP_H
@@ -140,44 +141,7 @@ public:
 
   bool isEmpty() const { return !Root; }
 
-  //===--------------------------------------------------===//
-  // Foreach - A limited form of map iteration.
-  //===--------------------------------------------------===//
-
-private:
-  template <typename Callback>
-  struct CBWrapper {
-    Callback C;
-
-    void operator()(value_type_ref V) { C(V.first,V.second); }
-  };
-
-  template <typename Callback>
-  struct CBWrapperRef {
-    Callback &C;
-
-    CBWrapperRef(Callback& c) : C(c) {}
-
-    void operator()(value_type_ref V) { C(V.first,V.second); }
-  };
-
 public:
-  template <typename Callback>
-  void foreach(Callback& C) {
-    if (Root) {
-      CBWrapperRef<Callback> CB(C);
-      Root->foreach(CB);
-    }
-  }
-
-  template <typename Callback>
-  void foreach() {
-    if (Root) {
-      CBWrapper<Callback> CB;
-      Root->foreach(CB);
-    }
-  }
-
   //===--------------------------------------------------===//
   // For testing.
   //===--------------------------------------------------===//
@@ -264,7 +228,7 @@ public:
       : Root(X.getRootWithoutRetain()), Factory(F.getTreeFactory()) {}
 
   static inline ImmutableMapRef getEmptyMap(FactoryTy *F) {
-    return ImmutableMapRef(0, F);
+    return ImmutableMapRef(nullptr, F);
   }
 
   void manualRetain() {
@@ -345,7 +309,7 @@ public:
   ///  which key is the highest in the ordering of keys in the map.  This
   ///  method returns NULL if the map is empty.
   value_type* getMaxElement() const {
-    return Root ? &(Root->getMaxElement()->getValue()) : 0;
+    return Root ? &(Root->getMaxElement()->getValue()) : nullptr;
   }
 
   //===--------------------------------------------------===//

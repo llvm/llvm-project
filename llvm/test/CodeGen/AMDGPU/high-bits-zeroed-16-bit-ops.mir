@@ -12,32 +12,35 @@ body:             |
     liveins: $vgpr0
     ; GFX8-LABEL: name: v_cvt_f16_f32_altmask
     ; GFX8: liveins: $vgpr0
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: %op:vgpr_32 = nofpexcept V_CVT_F16_F32_e64 0, killed [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX8: %smask:sreg_32 = S_MOV_B32 65535
-    ; GFX8: %vmask:vgpr_32 = V_MOV_B32_e32 65535, implicit $exec
-    ; GFX8: $vgpr0 = COPY %op
-    ; GFX8: $vgpr1 = COPY %op
-    ; GFX8: $vgpr2 = COPY %op
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: %op:vgpr_32 = nofpexcept V_CVT_F16_F32_e64 0, killed [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX8-NEXT: %smask:sreg_32 = S_MOV_B32 65535
+    ; GFX8-NEXT: %vmask:vgpr_32 = V_MOV_B32_e32 65535, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %op
+    ; GFX8-NEXT: $vgpr1 = COPY %op
+    ; GFX8-NEXT: $vgpr2 = COPY %op
     ; GFX9-LABEL: name: v_cvt_f16_f32_altmask
     ; GFX9: liveins: $vgpr0
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: %op:vgpr_32 = nofpexcept V_CVT_F16_F32_e64 0, killed [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX9: %smask:sreg_32 = S_MOV_B32 65535
-    ; GFX9: %vmask:vgpr_32 = V_MOV_B32_e32 65535, implicit $exec
-    ; GFX9: $vgpr0 = COPY %op
-    ; GFX9: $vgpr1 = COPY %op
-    ; GFX9: $vgpr2 = COPY %op
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: %op:vgpr_32 = nofpexcept V_CVT_F16_F32_e64 0, killed [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX9-NEXT: %smask:sreg_32 = S_MOV_B32 65535
+    ; GFX9-NEXT: %vmask:vgpr_32 = V_MOV_B32_e32 65535, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %op
+    ; GFX9-NEXT: $vgpr1 = COPY %op
+    ; GFX9-NEXT: $vgpr2 = COPY %op
     ; GFX10-LABEL: name: v_cvt_f16_f32_altmask
     ; GFX10: liveins: $vgpr0
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: %op:vgpr_32 = nofpexcept V_CVT_F16_F32_e64 0, killed [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX10: %and0:vgpr_32 = V_AND_B32_e32 65535, %op, implicit $exec
-    ; GFX10: %and1:vgpr_32 = V_AND_B32_e64 65535, %op, implicit $exec
-    ; GFX10: %and2:vgpr_32 = V_AND_B32_e64 65535, %op, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and0
-    ; GFX10: $vgpr1 = COPY %and1
-    ; GFX10: $vgpr2 = COPY %and2
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: %op:vgpr_32 = nofpexcept V_CVT_F16_F32_e64 0, killed [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and0:vgpr_32 = V_AND_B32_e32 65535, %op, implicit $exec
+    ; GFX10-NEXT: %and1:vgpr_32 = V_AND_B32_e64 65535, %op, implicit $exec
+    ; GFX10-NEXT: %and2:vgpr_32 = V_AND_B32_e64 65535, %op, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and0
+    ; GFX10-NEXT: $vgpr1 = COPY %and1
+    ; GFX10-NEXT: $vgpr2 = COPY %and2
     %0:vgpr_32 = COPY $vgpr0
     %op:vgpr_32 = nofpexcept V_CVT_F16_F32_e64 0, killed %0, 0, 0, implicit $mode, implicit $exec
     %and0:vgpr_32 = V_AND_B32_e32 65535, %op, implicit $exec
@@ -60,24 +63,27 @@ body:             |
     liveins: $vgpr0
     ; GFX8-LABEL: name: wrong_mask_value
     ; GFX8: liveins: $vgpr0
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: %op:vgpr_32 = nofpexcept V_CVT_F16_F32_e64 0, killed [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX8: %mask:sreg_32 = S_MOV_B32 65534
-    ; GFX8: %and:vgpr_32 = V_AND_B32_e64 %mask, %op, implicit $exec
-    ; GFX8: $vgpr0 = COPY %and
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: %op:vgpr_32 = nofpexcept V_CVT_F16_F32_e64 0, killed [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX8-NEXT: %mask:sreg_32 = S_MOV_B32 65534
+    ; GFX8-NEXT: %and:vgpr_32 = V_AND_B32_e64 %mask, %op, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %and
     ; GFX9-LABEL: name: wrong_mask_value
     ; GFX9: liveins: $vgpr0
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: %op:vgpr_32 = nofpexcept V_CVT_F16_F32_e64 0, killed [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX9: %mask:sreg_32 = S_MOV_B32 65534
-    ; GFX9: %and:vgpr_32 = V_AND_B32_e64 %mask, %op, implicit $exec
-    ; GFX9: $vgpr0 = COPY %and
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: %op:vgpr_32 = nofpexcept V_CVT_F16_F32_e64 0, killed [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX9-NEXT: %mask:sreg_32 = S_MOV_B32 65534
+    ; GFX9-NEXT: %and:vgpr_32 = V_AND_B32_e64 %mask, %op, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %and
     ; GFX10-LABEL: name: wrong_mask_value
     ; GFX10: liveins: $vgpr0
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: %op:vgpr_32 = nofpexcept V_CVT_F16_F32_e64 0, killed [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX10: %and:vgpr_32 = V_AND_B32_e64 65534, %op, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: %op:vgpr_32 = nofpexcept V_CVT_F16_F32_e64 0, killed [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and:vgpr_32 = V_AND_B32_e64 65534, %op, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and
     %0:vgpr_32 = COPY $vgpr0
     %op:vgpr_32 = nofpexcept V_CVT_F16_F32_e64 0, killed %0, 0, 0, implicit $mode, implicit $exec
     %mask:sreg_32 = S_MOV_B32 65534
@@ -94,27 +100,30 @@ body:             |
     liveins: $vgpr0
     ; GFX8-LABEL: name: v_cvt_f16_f32
     ; GFX8: liveins: $vgpr0
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: %op_vop3:vgpr_32 = nofpexcept V_CVT_F16_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX8: %op_vop1:vgpr_32 = nofpexcept V_CVT_F16_F32_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX8: $vgpr0 = COPY %op_vop3
-    ; GFX8: $vgpr1 = COPY %op_vop1
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: %op_vop3:vgpr_32 = nofpexcept V_CVT_F16_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX8-NEXT: %op_vop1:vgpr_32 = nofpexcept V_CVT_F16_F32_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX8-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX9-LABEL: name: v_cvt_f16_f32
     ; GFX9: liveins: $vgpr0
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: %op_vop3:vgpr_32 = nofpexcept V_CVT_F16_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX9: %op_vop1:vgpr_32 = nofpexcept V_CVT_F16_F32_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX9: $vgpr0 = COPY %op_vop3
-    ; GFX9: $vgpr1 = COPY %op_vop1
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: %op_vop3:vgpr_32 = nofpexcept V_CVT_F16_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX9-NEXT: %op_vop1:vgpr_32 = nofpexcept V_CVT_F16_F32_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX9-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX10-LABEL: name: v_cvt_f16_f32
     ; GFX10: liveins: $vgpr0
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: %op_vop3:vgpr_32 = nofpexcept V_CVT_F16_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX10: %op_vop1:vgpr_32 = nofpexcept V_CVT_F16_F32_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX10: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
-    ; GFX10: %and_vop1:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and_vop3
-    ; GFX10: $vgpr1 = COPY %and_vop1
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: %op_vop3:vgpr_32 = nofpexcept V_CVT_F16_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX10-NEXT: %op_vop1:vgpr_32 = nofpexcept V_CVT_F16_F32_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
+    ; GFX10-NEXT: %and_vop1:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and_vop3
+    ; GFX10-NEXT: $vgpr1 = COPY %and_vop1
     %0:vgpr_32 = COPY $vgpr0
     %op_vop3:vgpr_32 = nofpexcept V_CVT_F16_F32_e64 0, %0, 0, 0, implicit $mode, implicit $exec
     %op_vop1:vgpr_32 = nofpexcept V_CVT_F16_F32_e32 %0, implicit $mode, implicit $exec
@@ -133,27 +142,30 @@ body:             |
     liveins: $vgpr0
     ; GFX8-LABEL: name: v_cvt_f16_u16
     ; GFX8: liveins: $vgpr0
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: %op_vop3:vgpr_32 = nofpexcept V_CVT_F16_U16_e64 [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX8: %op_vop1:vgpr_32 = nofpexcept V_CVT_F16_U16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX8: $vgpr0 = COPY %op_vop3
-    ; GFX8: $vgpr1 = COPY %op_vop1
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: %op_vop3:vgpr_32 = nofpexcept V_CVT_F16_U16_e64 [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX8-NEXT: %op_vop1:vgpr_32 = nofpexcept V_CVT_F16_U16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX8-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX9-LABEL: name: v_cvt_f16_u16
     ; GFX9: liveins: $vgpr0
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: %op_vop3:vgpr_32 = nofpexcept V_CVT_F16_U16_e64 [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX9: %op_vop1:vgpr_32 = nofpexcept V_CVT_F16_U16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX9: $vgpr0 = COPY %op_vop3
-    ; GFX9: $vgpr1 = COPY %op_vop1
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: %op_vop3:vgpr_32 = nofpexcept V_CVT_F16_U16_e64 [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX9-NEXT: %op_vop1:vgpr_32 = nofpexcept V_CVT_F16_U16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX9-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX10-LABEL: name: v_cvt_f16_u16
     ; GFX10: liveins: $vgpr0
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: %op_vop3:vgpr_32 = nofpexcept V_CVT_F16_U16_e64 [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX10: %op_vop1:vgpr_32 = nofpexcept V_CVT_F16_U16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX10: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
-    ; GFX10: %and_vop1:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and_vop3
-    ; GFX10: $vgpr1 = COPY %and_vop1
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: %op_vop3:vgpr_32 = nofpexcept V_CVT_F16_U16_e64 [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX10-NEXT: %op_vop1:vgpr_32 = nofpexcept V_CVT_F16_U16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
+    ; GFX10-NEXT: %and_vop1:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and_vop3
+    ; GFX10-NEXT: $vgpr1 = COPY %and_vop1
     %0:vgpr_32 = COPY $vgpr0
     %op_vop3:vgpr_32 = nofpexcept V_CVT_F16_U16_e64 %0, 0, 0, implicit $mode, implicit $exec
     %op_vop1:vgpr_32 = nofpexcept V_CVT_F16_U16_e32 %0, implicit $mode, implicit $exec
@@ -172,27 +184,30 @@ body:             |
     liveins: $vgpr0
     ; GFX8-LABEL: name: v_cvt_f16_i16
     ; GFX8: liveins: $vgpr0
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: %op_vop3:vgpr_32 = nofpexcept V_CVT_F16_I16_e64 [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX8: %op_vop1:vgpr_32 = nofpexcept V_CVT_F16_I16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX8: $vgpr0 = COPY %op_vop3
-    ; GFX8: $vgpr1 = COPY %op_vop1
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: %op_vop3:vgpr_32 = nofpexcept V_CVT_F16_I16_e64 [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX8-NEXT: %op_vop1:vgpr_32 = nofpexcept V_CVT_F16_I16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX8-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX9-LABEL: name: v_cvt_f16_i16
     ; GFX9: liveins: $vgpr0
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: %op_vop3:vgpr_32 = nofpexcept V_CVT_F16_I16_e64 [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX9: %op_vop1:vgpr_32 = nofpexcept V_CVT_F16_I16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX9: $vgpr0 = COPY %op_vop3
-    ; GFX9: $vgpr1 = COPY %op_vop1
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: %op_vop3:vgpr_32 = nofpexcept V_CVT_F16_I16_e64 [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX9-NEXT: %op_vop1:vgpr_32 = nofpexcept V_CVT_F16_I16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX9-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX10-LABEL: name: v_cvt_f16_i16
     ; GFX10: liveins: $vgpr0
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: %op_vop3:vgpr_32 = nofpexcept V_CVT_F16_I16_e64 [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX10: %op_vop1:vgpr_32 = nofpexcept V_CVT_F16_I16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX10: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
-    ; GFX10: %and_vop1:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and_vop3
-    ; GFX10: $vgpr1 = COPY %and_vop1
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: %op_vop3:vgpr_32 = nofpexcept V_CVT_F16_I16_e64 [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX10-NEXT: %op_vop1:vgpr_32 = nofpexcept V_CVT_F16_I16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
+    ; GFX10-NEXT: %and_vop1:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and_vop3
+    ; GFX10-NEXT: $vgpr1 = COPY %and_vop1
     %0:vgpr_32 = COPY $vgpr0
     %op_vop3:vgpr_32 = nofpexcept V_CVT_F16_I16_e64 %0, 0, 0, implicit $mode, implicit $exec
     %op_vop1:vgpr_32 = nofpexcept V_CVT_F16_I16_e32 %0, implicit $mode, implicit $exec
@@ -211,27 +226,30 @@ body:             |
     liveins: $vgpr0
     ; GFX8-LABEL: name: v_rcp_f16
     ; GFX8: liveins: $vgpr0
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: %op_vop3:vgpr_32 = nofpexcept V_RCP_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX8: %op_vop1:vgpr_32 = nofpexcept V_RCP_F16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX8: $vgpr0 = COPY %op_vop3
-    ; GFX8: $vgpr1 = COPY %op_vop1
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: %op_vop3:vgpr_32 = nofpexcept V_RCP_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX8-NEXT: %op_vop1:vgpr_32 = nofpexcept V_RCP_F16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX8-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX9-LABEL: name: v_rcp_f16
     ; GFX9: liveins: $vgpr0
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: %op_vop3:vgpr_32 = nofpexcept V_RCP_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX9: %op_vop1:vgpr_32 = nofpexcept V_RCP_F16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX9: $vgpr0 = COPY %op_vop3
-    ; GFX9: $vgpr1 = COPY %op_vop1
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: %op_vop3:vgpr_32 = nofpexcept V_RCP_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX9-NEXT: %op_vop1:vgpr_32 = nofpexcept V_RCP_F16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX9-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX10-LABEL: name: v_rcp_f16
     ; GFX10: liveins: $vgpr0
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: %op_vop3:vgpr_32 = nofpexcept V_RCP_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX10: %op_vop1:vgpr_32 = nofpexcept V_RCP_F16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX10: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
-    ; GFX10: %and_vop1:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and_vop3
-    ; GFX10: $vgpr1 = COPY %and_vop1
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: %op_vop3:vgpr_32 = nofpexcept V_RCP_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX10-NEXT: %op_vop1:vgpr_32 = nofpexcept V_RCP_F16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
+    ; GFX10-NEXT: %and_vop1:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and_vop3
+    ; GFX10-NEXT: $vgpr1 = COPY %and_vop1
     %0:vgpr_32 = COPY $vgpr0
     %op_vop3:vgpr_32 = nofpexcept V_RCP_F16_e64 0, %0, 0, 0, implicit $mode, implicit $exec
     %op_vop1:vgpr_32 = nofpexcept V_RCP_F16_e32 %0, implicit $mode, implicit $exec
@@ -249,27 +267,30 @@ body:             |
     liveins: $vgpr0
     ; GFX8-LABEL: name: v_rsq_f16
     ; GFX8: liveins: $vgpr0
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: %op_vop3:vgpr_32 = nofpexcept V_RSQ_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX8: %op_vop1:vgpr_32 = nofpexcept V_RSQ_F16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX8: $vgpr0 = COPY %op_vop3
-    ; GFX8: $vgpr1 = COPY %op_vop1
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: %op_vop3:vgpr_32 = nofpexcept V_RSQ_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX8-NEXT: %op_vop1:vgpr_32 = nofpexcept V_RSQ_F16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX8-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX9-LABEL: name: v_rsq_f16
     ; GFX9: liveins: $vgpr0
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: %op_vop3:vgpr_32 = nofpexcept V_RSQ_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX9: %op_vop1:vgpr_32 = nofpexcept V_RSQ_F16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX9: $vgpr0 = COPY %op_vop3
-    ; GFX9: $vgpr1 = COPY %op_vop1
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: %op_vop3:vgpr_32 = nofpexcept V_RSQ_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX9-NEXT: %op_vop1:vgpr_32 = nofpexcept V_RSQ_F16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX9-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX10-LABEL: name: v_rsq_f16
     ; GFX10: liveins: $vgpr0
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: %op_vop3:vgpr_32 = nofpexcept V_RSQ_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX10: %op_vop1:vgpr_32 = nofpexcept V_RSQ_F16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX10: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
-    ; GFX10: %and_vop1:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and_vop3
-    ; GFX10: $vgpr1 = COPY %and_vop1
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: %op_vop3:vgpr_32 = nofpexcept V_RSQ_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX10-NEXT: %op_vop1:vgpr_32 = nofpexcept V_RSQ_F16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
+    ; GFX10-NEXT: %and_vop1:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and_vop3
+    ; GFX10-NEXT: $vgpr1 = COPY %and_vop1
     %0:vgpr_32 = COPY $vgpr0
     %op_vop3:vgpr_32 = nofpexcept V_RSQ_F16_e64 0, %0, 0, 0, implicit $mode, implicit $exec
     %op_vop1:vgpr_32 = nofpexcept V_RSQ_F16_e32 %0, implicit $mode, implicit $exec
@@ -287,27 +308,30 @@ body:             |
     liveins: $vgpr0
     ; GFX8-LABEL: name: v_sqrt_f16
     ; GFX8: liveins: $vgpr0
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: %op_vop3:vgpr_32 = nofpexcept V_SQRT_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX8: %op_vop1:vgpr_32 = nofpexcept V_SQRT_F16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX8: $vgpr0 = COPY %op_vop3
-    ; GFX8: $vgpr1 = COPY %op_vop1
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: %op_vop3:vgpr_32 = nofpexcept V_SQRT_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX8-NEXT: %op_vop1:vgpr_32 = nofpexcept V_SQRT_F16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX8-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX9-LABEL: name: v_sqrt_f16
     ; GFX9: liveins: $vgpr0
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: %op_vop3:vgpr_32 = nofpexcept V_SQRT_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX9: %op_vop1:vgpr_32 = nofpexcept V_SQRT_F16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX9: $vgpr0 = COPY %op_vop3
-    ; GFX9: $vgpr1 = COPY %op_vop1
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: %op_vop3:vgpr_32 = nofpexcept V_SQRT_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX9-NEXT: %op_vop1:vgpr_32 = nofpexcept V_SQRT_F16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX9-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX10-LABEL: name: v_sqrt_f16
     ; GFX10: liveins: $vgpr0
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: %op_vop3:vgpr_32 = nofpexcept V_SQRT_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX10: %op_vop1:vgpr_32 = nofpexcept V_SQRT_F16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX10: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
-    ; GFX10: %and_vop1:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and_vop3
-    ; GFX10: $vgpr1 = COPY %and_vop1
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: %op_vop3:vgpr_32 = nofpexcept V_SQRT_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX10-NEXT: %op_vop1:vgpr_32 = nofpexcept V_SQRT_F16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
+    ; GFX10-NEXT: %and_vop1:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and_vop3
+    ; GFX10-NEXT: $vgpr1 = COPY %and_vop1
     %0:vgpr_32 = COPY $vgpr0
     %op_vop3:vgpr_32 = nofpexcept V_SQRT_F16_e64 0, %0, 0, 0, implicit $mode, implicit $exec
     %op_vop1:vgpr_32 = nofpexcept V_SQRT_F16_e32 %0, implicit $mode, implicit $exec
@@ -326,27 +350,30 @@ body:             |
     liveins: $vgpr0
     ; GFX8-LABEL: name: v_log_f16
     ; GFX8: liveins: $vgpr0
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: %op_vop3:vgpr_32 = nofpexcept V_LOG_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX8: %op_vop1:vgpr_32 = nofpexcept V_LOG_F16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX8: $vgpr0 = COPY %op_vop3
-    ; GFX8: $vgpr1 = COPY %op_vop1
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: %op_vop3:vgpr_32 = nofpexcept V_LOG_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX8-NEXT: %op_vop1:vgpr_32 = nofpexcept V_LOG_F16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX8-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX9-LABEL: name: v_log_f16
     ; GFX9: liveins: $vgpr0
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: %op_vop3:vgpr_32 = nofpexcept V_LOG_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX9: %op_vop1:vgpr_32 = nofpexcept V_LOG_F16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX9: $vgpr0 = COPY %op_vop3
-    ; GFX9: $vgpr1 = COPY %op_vop1
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: %op_vop3:vgpr_32 = nofpexcept V_LOG_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX9-NEXT: %op_vop1:vgpr_32 = nofpexcept V_LOG_F16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX9-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX10-LABEL: name: v_log_f16
     ; GFX10: liveins: $vgpr0
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: %op_vop3:vgpr_32 = nofpexcept V_LOG_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX10: %op_vop1:vgpr_32 = nofpexcept V_LOG_F16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX10: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
-    ; GFX10: %and_vop1:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and_vop3
-    ; GFX10: $vgpr1 = COPY %and_vop1
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: %op_vop3:vgpr_32 = nofpexcept V_LOG_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX10-NEXT: %op_vop1:vgpr_32 = nofpexcept V_LOG_F16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
+    ; GFX10-NEXT: %and_vop1:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and_vop3
+    ; GFX10-NEXT: $vgpr1 = COPY %and_vop1
     %0:vgpr_32 = COPY $vgpr0
     %op_vop3:vgpr_32 = nofpexcept V_LOG_F16_e64 0, %0, 0, 0, implicit $mode, implicit $exec
     %op_vop1:vgpr_32 = nofpexcept V_LOG_F16_e32 %0, implicit $mode, implicit $exec
@@ -365,27 +392,30 @@ body:             |
     liveins: $vgpr0
     ; GFX8-LABEL: name: v_exp_f16
     ; GFX8: liveins: $vgpr0
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: %op_vop3:vgpr_32 = nofpexcept V_EXP_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX8: %op_vop1:vgpr_32 = nofpexcept V_EXP_F16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX8: $vgpr0 = COPY %op_vop3
-    ; GFX8: $vgpr1 = COPY %op_vop1
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: %op_vop3:vgpr_32 = nofpexcept V_EXP_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX8-NEXT: %op_vop1:vgpr_32 = nofpexcept V_EXP_F16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX8-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX9-LABEL: name: v_exp_f16
     ; GFX9: liveins: $vgpr0
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: %op_vop3:vgpr_32 = nofpexcept V_EXP_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX9: %op_vop1:vgpr_32 = nofpexcept V_EXP_F16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX9: $vgpr0 = COPY %op_vop3
-    ; GFX9: $vgpr1 = COPY %op_vop1
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: %op_vop3:vgpr_32 = nofpexcept V_EXP_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX9-NEXT: %op_vop1:vgpr_32 = nofpexcept V_EXP_F16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX9-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX10-LABEL: name: v_exp_f16
     ; GFX10: liveins: $vgpr0
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: %op_vop3:vgpr_32 = nofpexcept V_EXP_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX10: %op_vop1:vgpr_32 = nofpexcept V_EXP_F16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX10: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
-    ; GFX10: %and_vop1:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and_vop3
-    ; GFX10: $vgpr1 = COPY %and_vop1
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: %op_vop3:vgpr_32 = nofpexcept V_EXP_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX10-NEXT: %op_vop1:vgpr_32 = nofpexcept V_EXP_F16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
+    ; GFX10-NEXT: %and_vop1:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and_vop3
+    ; GFX10-NEXT: $vgpr1 = COPY %and_vop1
     %0:vgpr_32 = COPY $vgpr0
     %op_vop3:vgpr_32 = nofpexcept V_EXP_F16_e64 0, %0, 0, 0, implicit $mode, implicit $exec
     %op_vop1:vgpr_32 = nofpexcept V_EXP_F16_e32 %0, implicit $mode, implicit $exec
@@ -404,27 +434,30 @@ body:             |
     liveins: $vgpr0
     ; GFX8-LABEL: name: v_sin_f16
     ; GFX8: liveins: $vgpr0
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: %op_vop3:vgpr_32 = nofpexcept V_SIN_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX8: %op_vop1:vgpr_32 = nofpexcept V_SIN_F16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX8: $vgpr0 = COPY %op_vop3
-    ; GFX8: $vgpr1 = COPY %op_vop1
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: %op_vop3:vgpr_32 = nofpexcept V_SIN_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX8-NEXT: %op_vop1:vgpr_32 = nofpexcept V_SIN_F16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX8-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX9-LABEL: name: v_sin_f16
     ; GFX9: liveins: $vgpr0
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: %op_vop3:vgpr_32 = nofpexcept V_SIN_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX9: %op_vop1:vgpr_32 = nofpexcept V_SIN_F16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX9: $vgpr0 = COPY %op_vop3
-    ; GFX9: $vgpr1 = COPY %op_vop1
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: %op_vop3:vgpr_32 = nofpexcept V_SIN_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX9-NEXT: %op_vop1:vgpr_32 = nofpexcept V_SIN_F16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX9-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX10-LABEL: name: v_sin_f16
     ; GFX10: liveins: $vgpr0
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: %op_vop3:vgpr_32 = nofpexcept V_SIN_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX10: %op_vop1:vgpr_32 = nofpexcept V_SIN_F16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX10: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
-    ; GFX10: %and_vop1:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and_vop3
-    ; GFX10: $vgpr1 = COPY %and_vop1
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: %op_vop3:vgpr_32 = nofpexcept V_SIN_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX10-NEXT: %op_vop1:vgpr_32 = nofpexcept V_SIN_F16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
+    ; GFX10-NEXT: %and_vop1:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and_vop3
+    ; GFX10-NEXT: $vgpr1 = COPY %and_vop1
     %0:vgpr_32 = COPY $vgpr0
     %op_vop3:vgpr_32 = nofpexcept V_SIN_F16_e64 0, %0, 0, 0, implicit $mode, implicit $exec
     %op_vop1:vgpr_32 = nofpexcept V_SIN_F16_e32 %0, implicit $mode, implicit $exec
@@ -443,27 +476,30 @@ body:             |
     liveins: $vgpr0
     ; GFX8-LABEL: name: v_cos_f16
     ; GFX8: liveins: $vgpr0
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: %op_vop3:vgpr_32 = nofpexcept V_COS_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX8: %op_vop1:vgpr_32 = nofpexcept V_COS_F16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX8: $vgpr0 = COPY %op_vop3
-    ; GFX8: $vgpr1 = COPY %op_vop1
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: %op_vop3:vgpr_32 = nofpexcept V_COS_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX8-NEXT: %op_vop1:vgpr_32 = nofpexcept V_COS_F16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX8-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX9-LABEL: name: v_cos_f16
     ; GFX9: liveins: $vgpr0
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: %op_vop3:vgpr_32 = nofpexcept V_COS_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX9: %op_vop1:vgpr_32 = nofpexcept V_COS_F16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX9: $vgpr0 = COPY %op_vop3
-    ; GFX9: $vgpr1 = COPY %op_vop1
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: %op_vop3:vgpr_32 = nofpexcept V_COS_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX9-NEXT: %op_vop1:vgpr_32 = nofpexcept V_COS_F16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX9-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX10-LABEL: name: v_cos_f16
     ; GFX10: liveins: $vgpr0
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: %op_vop3:vgpr_32 = nofpexcept V_COS_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX10: %op_vop1:vgpr_32 = nofpexcept V_COS_F16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX10: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
-    ; GFX10: %and_vop1:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and_vop3
-    ; GFX10: $vgpr1 = COPY %and_vop1
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: %op_vop3:vgpr_32 = nofpexcept V_COS_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX10-NEXT: %op_vop1:vgpr_32 = nofpexcept V_COS_F16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
+    ; GFX10-NEXT: %and_vop1:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and_vop3
+    ; GFX10-NEXT: $vgpr1 = COPY %and_vop1
     %0:vgpr_32 = COPY $vgpr0
     %op_vop3:vgpr_32 = nofpexcept V_COS_F16_e64 0, %0, 0, 0, implicit $mode, implicit $exec
     %op_vop1:vgpr_32 = nofpexcept V_COS_F16_e32 %0, implicit $mode, implicit $exec
@@ -482,27 +518,30 @@ body:             |
     liveins: $vgpr0
     ; GFX8-LABEL: name: v_floor_f16
     ; GFX8: liveins: $vgpr0
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: %op_vop3:vgpr_32 = nofpexcept V_FLOOR_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX8: %op_vop1:vgpr_32 = nofpexcept V_FLOOR_F16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX8: $vgpr0 = COPY %op_vop3
-    ; GFX8: $vgpr1 = COPY %op_vop1
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: %op_vop3:vgpr_32 = nofpexcept V_FLOOR_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX8-NEXT: %op_vop1:vgpr_32 = nofpexcept V_FLOOR_F16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX8-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX9-LABEL: name: v_floor_f16
     ; GFX9: liveins: $vgpr0
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: %op_vop3:vgpr_32 = nofpexcept V_FLOOR_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX9: %op_vop1:vgpr_32 = nofpexcept V_FLOOR_F16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX9: $vgpr0 = COPY %op_vop3
-    ; GFX9: $vgpr1 = COPY %op_vop1
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: %op_vop3:vgpr_32 = nofpexcept V_FLOOR_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX9-NEXT: %op_vop1:vgpr_32 = nofpexcept V_FLOOR_F16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX9-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX10-LABEL: name: v_floor_f16
     ; GFX10: liveins: $vgpr0
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: %op_vop3:vgpr_32 = nofpexcept V_FLOOR_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX10: %op_vop1:vgpr_32 = nofpexcept V_FLOOR_F16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX10: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
-    ; GFX10: %and_vop1:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and_vop3
-    ; GFX10: $vgpr1 = COPY %and_vop1
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: %op_vop3:vgpr_32 = nofpexcept V_FLOOR_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX10-NEXT: %op_vop1:vgpr_32 = nofpexcept V_FLOOR_F16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
+    ; GFX10-NEXT: %and_vop1:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and_vop3
+    ; GFX10-NEXT: $vgpr1 = COPY %and_vop1
     %0:vgpr_32 = COPY $vgpr0
     %op_vop3:vgpr_32 = nofpexcept V_FLOOR_F16_e64 0, %0, 0, 0, implicit $mode, implicit $exec
     %op_vop1:vgpr_32 = nofpexcept V_FLOOR_F16_e32 %0, implicit $mode, implicit $exec
@@ -521,27 +560,30 @@ body:             |
     liveins: $vgpr0
     ; GFX8-LABEL: name: v_ceil_f16
     ; GFX8: liveins: $vgpr0
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: %op_vop3:vgpr_32 = nofpexcept V_CEIL_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX8: %op_vop1:vgpr_32 = nofpexcept V_CEIL_F16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX8: $vgpr0 = COPY %op_vop3
-    ; GFX8: $vgpr1 = COPY %op_vop1
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: %op_vop3:vgpr_32 = nofpexcept V_CEIL_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX8-NEXT: %op_vop1:vgpr_32 = nofpexcept V_CEIL_F16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX8-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX9-LABEL: name: v_ceil_f16
     ; GFX9: liveins: $vgpr0
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: %op_vop3:vgpr_32 = nofpexcept V_CEIL_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX9: %op_vop1:vgpr_32 = nofpexcept V_CEIL_F16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX9: $vgpr0 = COPY %op_vop3
-    ; GFX9: $vgpr1 = COPY %op_vop1
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: %op_vop3:vgpr_32 = nofpexcept V_CEIL_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX9-NEXT: %op_vop1:vgpr_32 = nofpexcept V_CEIL_F16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX9-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX10-LABEL: name: v_ceil_f16
     ; GFX10: liveins: $vgpr0
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: %op_vop3:vgpr_32 = nofpexcept V_CEIL_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX10: %op_vop1:vgpr_32 = nofpexcept V_CEIL_F16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX10: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
-    ; GFX10: %and_vop1:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and_vop3
-    ; GFX10: $vgpr1 = COPY %and_vop1
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: %op_vop3:vgpr_32 = nofpexcept V_CEIL_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX10-NEXT: %op_vop1:vgpr_32 = nofpexcept V_CEIL_F16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
+    ; GFX10-NEXT: %and_vop1:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and_vop3
+    ; GFX10-NEXT: $vgpr1 = COPY %and_vop1
     %0:vgpr_32 = COPY $vgpr0
     %op_vop3:vgpr_32 = nofpexcept V_CEIL_F16_e64 0, %0, 0, 0, implicit $mode, implicit $exec
     %op_vop1:vgpr_32 = nofpexcept V_CEIL_F16_e32 %0, implicit $mode, implicit $exec
@@ -560,27 +602,30 @@ body:             |
     liveins: $vgpr0
     ; GFX8-LABEL: name: v_trunc_f16
     ; GFX8: liveins: $vgpr0
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: %op_vop3:vgpr_32 = nofpexcept V_TRUNC_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX8: %op_vop1:vgpr_32 = nofpexcept V_TRUNC_F16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX8: $vgpr0 = COPY %op_vop3
-    ; GFX8: $vgpr1 = COPY %op_vop1
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: %op_vop3:vgpr_32 = nofpexcept V_TRUNC_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX8-NEXT: %op_vop1:vgpr_32 = nofpexcept V_TRUNC_F16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX8-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX9-LABEL: name: v_trunc_f16
     ; GFX9: liveins: $vgpr0
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: %op_vop3:vgpr_32 = nofpexcept V_TRUNC_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX9: %op_vop1:vgpr_32 = nofpexcept V_TRUNC_F16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX9: $vgpr0 = COPY %op_vop3
-    ; GFX9: $vgpr1 = COPY %op_vop1
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: %op_vop3:vgpr_32 = nofpexcept V_TRUNC_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX9-NEXT: %op_vop1:vgpr_32 = nofpexcept V_TRUNC_F16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX9-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX10-LABEL: name: v_trunc_f16
     ; GFX10: liveins: $vgpr0
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: %op_vop3:vgpr_32 = nofpexcept V_TRUNC_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX10: %op_vop1:vgpr_32 = nofpexcept V_TRUNC_F16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX10: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
-    ; GFX10: %and_vop1:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and_vop3
-    ; GFX10: $vgpr1 = COPY %and_vop1
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: %op_vop3:vgpr_32 = nofpexcept V_TRUNC_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX10-NEXT: %op_vop1:vgpr_32 = nofpexcept V_TRUNC_F16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
+    ; GFX10-NEXT: %and_vop1:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and_vop3
+    ; GFX10-NEXT: $vgpr1 = COPY %and_vop1
     %0:vgpr_32 = COPY $vgpr0
     %op_vop3:vgpr_32 = nofpexcept V_TRUNC_F16_e64 0, %0, 0, 0, implicit $mode, implicit $exec
     %op_vop1:vgpr_32 = nofpexcept V_TRUNC_F16_e32 %0, implicit $mode, implicit $exec
@@ -599,27 +644,30 @@ body:             |
     liveins: $vgpr0
     ; GFX8-LABEL: name: v_rndne_f16
     ; GFX8: liveins: $vgpr0
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: %op_vop3:vgpr_32 = nofpexcept V_RNDNE_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX8: %op_vop1:vgpr_32 = nofpexcept V_RNDNE_F16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX8: $vgpr0 = COPY %op_vop3
-    ; GFX8: $vgpr1 = COPY %op_vop1
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: %op_vop3:vgpr_32 = nofpexcept V_RNDNE_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX8-NEXT: %op_vop1:vgpr_32 = nofpexcept V_RNDNE_F16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX8-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX9-LABEL: name: v_rndne_f16
     ; GFX9: liveins: $vgpr0
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: %op_vop3:vgpr_32 = nofpexcept V_RNDNE_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX9: %op_vop1:vgpr_32 = nofpexcept V_RNDNE_F16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX9: $vgpr0 = COPY %op_vop3
-    ; GFX9: $vgpr1 = COPY %op_vop1
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: %op_vop3:vgpr_32 = nofpexcept V_RNDNE_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX9-NEXT: %op_vop1:vgpr_32 = nofpexcept V_RNDNE_F16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX9-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX10-LABEL: name: v_rndne_f16
     ; GFX10: liveins: $vgpr0
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: %op_vop3:vgpr_32 = nofpexcept V_RNDNE_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX10: %op_vop1:vgpr_32 = nofpexcept V_RNDNE_F16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX10: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
-    ; GFX10: %and_vop1:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and_vop3
-    ; GFX10: $vgpr1 = COPY %and_vop1
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: %op_vop3:vgpr_32 = nofpexcept V_RNDNE_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX10-NEXT: %op_vop1:vgpr_32 = nofpexcept V_RNDNE_F16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
+    ; GFX10-NEXT: %and_vop1:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and_vop3
+    ; GFX10-NEXT: $vgpr1 = COPY %and_vop1
     %0:vgpr_32 = COPY $vgpr0
     %op_vop3:vgpr_32 = nofpexcept V_RNDNE_F16_e64 0, %0, 0, 0, implicit $mode, implicit $exec
     %op_vop1:vgpr_32 = nofpexcept V_RNDNE_F16_e32 %0, implicit $mode, implicit $exec
@@ -638,27 +686,30 @@ body:             |
     liveins: $vgpr0
     ; GFX8-LABEL: name: v_fract_f16
     ; GFX8: liveins: $vgpr0
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: %op_vop3:vgpr_32 = nofpexcept V_FRACT_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX8: %op_vop1:vgpr_32 = nofpexcept V_FRACT_F16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX8: $vgpr0 = COPY %op_vop3
-    ; GFX8: $vgpr1 = COPY %op_vop1
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: %op_vop3:vgpr_32 = nofpexcept V_FRACT_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX8-NEXT: %op_vop1:vgpr_32 = nofpexcept V_FRACT_F16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX8-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX9-LABEL: name: v_fract_f16
     ; GFX9: liveins: $vgpr0
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: %op_vop3:vgpr_32 = nofpexcept V_FRACT_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX9: %op_vop1:vgpr_32 = nofpexcept V_FRACT_F16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX9: $vgpr0 = COPY %op_vop3
-    ; GFX9: $vgpr1 = COPY %op_vop1
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: %op_vop3:vgpr_32 = nofpexcept V_FRACT_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX9-NEXT: %op_vop1:vgpr_32 = nofpexcept V_FRACT_F16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX9-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX10-LABEL: name: v_fract_f16
     ; GFX10: liveins: $vgpr0
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: %op_vop3:vgpr_32 = nofpexcept V_FRACT_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX10: %op_vop1:vgpr_32 = nofpexcept V_FRACT_F16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX10: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
-    ; GFX10: %and_vop1:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and_vop3
-    ; GFX10: $vgpr1 = COPY %and_vop1
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: %op_vop3:vgpr_32 = nofpexcept V_FRACT_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX10-NEXT: %op_vop1:vgpr_32 = nofpexcept V_FRACT_F16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
+    ; GFX10-NEXT: %and_vop1:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and_vop3
+    ; GFX10-NEXT: $vgpr1 = COPY %and_vop1
     %0:vgpr_32 = COPY $vgpr0
     %op_vop3:vgpr_32 = nofpexcept V_FRACT_F16_e64 0, %0, 0, 0, implicit $mode, implicit $exec
     %op_vop1:vgpr_32 = nofpexcept V_FRACT_F16_e32 %0, implicit $mode, implicit $exec
@@ -677,27 +728,30 @@ body:             |
     liveins: $vgpr0
     ; GFX8-LABEL: name: v_frexp_mant_f16
     ; GFX8: liveins: $vgpr0
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: %op_vop3:vgpr_32 = nofpexcept V_FREXP_MANT_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX8: %op_vop1:vgpr_32 = nofpexcept V_FREXP_MANT_F16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX8: $vgpr0 = COPY %op_vop3
-    ; GFX8: $vgpr1 = COPY %op_vop1
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: %op_vop3:vgpr_32 = nofpexcept V_FREXP_MANT_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX8-NEXT: %op_vop1:vgpr_32 = nofpexcept V_FREXP_MANT_F16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX8-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX9-LABEL: name: v_frexp_mant_f16
     ; GFX9: liveins: $vgpr0
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: %op_vop3:vgpr_32 = nofpexcept V_FREXP_MANT_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX9: %op_vop1:vgpr_32 = nofpexcept V_FREXP_MANT_F16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX9: $vgpr0 = COPY %op_vop3
-    ; GFX9: $vgpr1 = COPY %op_vop1
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: %op_vop3:vgpr_32 = nofpexcept V_FREXP_MANT_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX9-NEXT: %op_vop1:vgpr_32 = nofpexcept V_FREXP_MANT_F16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX9-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX10-LABEL: name: v_frexp_mant_f16
     ; GFX10: liveins: $vgpr0
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: %op_vop3:vgpr_32 = nofpexcept V_FREXP_MANT_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX10: %op_vop1:vgpr_32 = nofpexcept V_FREXP_MANT_F16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX10: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
-    ; GFX10: %and_vop1:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and_vop3
-    ; GFX10: $vgpr1 = COPY %and_vop1
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: %op_vop3:vgpr_32 = nofpexcept V_FREXP_MANT_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX10-NEXT: %op_vop1:vgpr_32 = nofpexcept V_FREXP_MANT_F16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
+    ; GFX10-NEXT: %and_vop1:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and_vop3
+    ; GFX10-NEXT: $vgpr1 = COPY %and_vop1
     %0:vgpr_32 = COPY $vgpr0
     %op_vop3:vgpr_32 = nofpexcept V_FREXP_MANT_F16_e64 0, %0, 0, 0, implicit $mode, implicit $exec
     %op_vop1:vgpr_32 = nofpexcept V_FREXP_MANT_F16_e32 %0, implicit $mode, implicit $exec
@@ -716,27 +770,30 @@ body:             |
     liveins: $vgpr0
     ; GFX8-LABEL: name: v_frexp_exp_f16
     ; GFX8: liveins: $vgpr0
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: %op_vop3:vgpr_32 = nofpexcept V_FREXP_EXP_I16_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX8: %op_vop1:vgpr_32 = nofpexcept V_FREXP_EXP_I16_F16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX8: $vgpr0 = COPY %op_vop3
-    ; GFX8: $vgpr1 = COPY %op_vop1
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: %op_vop3:vgpr_32 = nofpexcept V_FREXP_EXP_I16_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX8-NEXT: %op_vop1:vgpr_32 = nofpexcept V_FREXP_EXP_I16_F16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX8-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX9-LABEL: name: v_frexp_exp_f16
     ; GFX9: liveins: $vgpr0
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: %op_vop3:vgpr_32 = nofpexcept V_FREXP_EXP_I16_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX9: %op_vop1:vgpr_32 = nofpexcept V_FREXP_EXP_I16_F16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX9: $vgpr0 = COPY %op_vop3
-    ; GFX9: $vgpr1 = COPY %op_vop1
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: %op_vop3:vgpr_32 = nofpexcept V_FREXP_EXP_I16_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX9-NEXT: %op_vop1:vgpr_32 = nofpexcept V_FREXP_EXP_I16_F16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX9-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX10-LABEL: name: v_frexp_exp_f16
     ; GFX10: liveins: $vgpr0
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: %op_vop3:vgpr_32 = nofpexcept V_FREXP_EXP_I16_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX10: %op_vop1:vgpr_32 = nofpexcept V_FREXP_EXP_I16_F16_e32 [[COPY]], implicit $mode, implicit $exec
-    ; GFX10: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
-    ; GFX10: %and_vop1:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and_vop3
-    ; GFX10: $vgpr1 = COPY %and_vop1
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: %op_vop3:vgpr_32 = nofpexcept V_FREXP_EXP_I16_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX10-NEXT: %op_vop1:vgpr_32 = nofpexcept V_FREXP_EXP_I16_F16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
+    ; GFX10-NEXT: %and_vop1:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and_vop3
+    ; GFX10-NEXT: $vgpr1 = COPY %and_vop1
     %0:vgpr_32 = COPY $vgpr0
     %op_vop3:vgpr_32 = nofpexcept V_FREXP_EXP_I16_F16_e64 0, %0, 0, 0, implicit $mode, implicit $exec
     %op_vop1:vgpr_32 = nofpexcept V_FREXP_EXP_I16_F16_e32 %0, implicit $mode, implicit $exec
@@ -755,30 +812,33 @@ body:             |
     liveins: $vgpr0, $vgpr1
     ; GFX8-LABEL: name: v_ldexp_f16
     ; GFX8: liveins: $vgpr0, $vgpr1
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX8: %op_vop3:vgpr_32 = nofpexcept V_LDEXP_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; GFX8: %op_vop1:vgpr_32 = nofpexcept V_LDEXP_F16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX8: $vgpr0 = COPY %op_vop3
-    ; GFX8: $vgpr1 = COPY %op_vop1
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX8-NEXT: %op_vop3:vgpr_32 = nofpexcept V_LDEXP_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; GFX8-NEXT: %op_vop1:vgpr_32 = nofpexcept V_LDEXP_F16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX8-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX9-LABEL: name: v_ldexp_f16
     ; GFX9: liveins: $vgpr0, $vgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX9: %op_vop3:vgpr_32 = nofpexcept V_LDEXP_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; GFX9: %op_vop1:vgpr_32 = nofpexcept V_LDEXP_F16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX9: $vgpr0 = COPY %op_vop3
-    ; GFX9: $vgpr1 = COPY %op_vop1
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX9-NEXT: %op_vop3:vgpr_32 = nofpexcept V_LDEXP_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; GFX9-NEXT: %op_vop1:vgpr_32 = nofpexcept V_LDEXP_F16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX9-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX10-LABEL: name: v_ldexp_f16
     ; GFX10: liveins: $vgpr0, $vgpr1
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX10: %op_vop3:vgpr_32 = nofpexcept V_LDEXP_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; GFX10: %op_vop1:vgpr_32 = nofpexcept V_LDEXP_F16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX10: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
-    ; GFX10: %and_vop2:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and_vop3
-    ; GFX10: $vgpr1 = COPY %and_vop2
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX10-NEXT: %op_vop3:vgpr_32 = nofpexcept V_LDEXP_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; GFX10-NEXT: %op_vop1:vgpr_32 = nofpexcept V_LDEXP_F16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
+    ; GFX10-NEXT: %and_vop2:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and_vop3
+    ; GFX10-NEXT: $vgpr1 = COPY %and_vop2
     %0:vgpr_32 = COPY $vgpr0
     %1:vgpr_32 = COPY $vgpr1
     %op_vop3:vgpr_32 = nofpexcept V_LDEXP_F16_e64 0, %0, 0, %1, 0, 0, implicit $mode, implicit $exec
@@ -798,30 +858,33 @@ body:             |
     liveins: $vgpr0, $vgpr1
     ; GFX8-LABEL: name: v_lshlrev_b16
     ; GFX8: liveins: $vgpr0, $vgpr1
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX8: %op_vop3:vgpr_32 = nofpexcept V_LSHLREV_B16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX8: %op_vop2:vgpr_32 = nofpexcept V_LSHLREV_B16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX8: $vgpr0 = COPY %op_vop3
-    ; GFX8: $vgpr1 = COPY %op_vop2
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX8-NEXT: %op_vop3:vgpr_32 = nofpexcept V_LSHLREV_B16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: %op_vop2:vgpr_32 = nofpexcept V_LSHLREV_B16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX8-NEXT: $vgpr1 = COPY %op_vop2
     ; GFX9-LABEL: name: v_lshlrev_b16
     ; GFX9: liveins: $vgpr0, $vgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX9: %op_vop3:vgpr_32 = nofpexcept V_LSHLREV_B16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX9: %op_vop2:vgpr_32 = nofpexcept V_LSHLREV_B16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX9: $vgpr0 = COPY %op_vop3
-    ; GFX9: $vgpr1 = COPY %op_vop2
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX9-NEXT: %op_vop3:vgpr_32 = nofpexcept V_LSHLREV_B16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: %op_vop2:vgpr_32 = nofpexcept V_LSHLREV_B16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX9-NEXT: $vgpr1 = COPY %op_vop2
     ; GFX10-LABEL: name: v_lshlrev_b16
     ; GFX10: liveins: $vgpr0, $vgpr1
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX10: %op_vop3:vgpr_32 = nofpexcept V_LSHLREV_B16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX10: %op_vop2:vgpr_32 = nofpexcept V_LSHLREV_B16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX10: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
-    ; GFX10: %and_vop2:vgpr_32 = V_AND_B32_e32 65535, %op_vop2, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and_vop3
-    ; GFX10: $vgpr1 = COPY %and_vop2
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX10-NEXT: %op_vop3:vgpr_32 = nofpexcept V_LSHLREV_B16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %op_vop2:vgpr_32 = nofpexcept V_LSHLREV_B16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
+    ; GFX10-NEXT: %and_vop2:vgpr_32 = V_AND_B32_e32 65535, %op_vop2, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and_vop3
+    ; GFX10-NEXT: $vgpr1 = COPY %and_vop2
     %0:vgpr_32 = COPY $vgpr0
     %1:vgpr_32 = COPY $vgpr1
     %op_vop3:vgpr_32 = nofpexcept V_LSHLREV_B16_e64 %0, %1, implicit $mode, implicit $exec
@@ -841,30 +904,33 @@ body:             |
     liveins: $vgpr0, $vgpr1
     ; GFX8-LABEL: name: v_lshrrev_b16
     ; GFX8: liveins: $vgpr0, $vgpr1
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX8: %op_vop3:vgpr_32 = nofpexcept V_LSHRREV_B16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX8: %op_vop2:vgpr_32 = nofpexcept V_LSHRREV_B16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX8: $vgpr0 = COPY %op_vop3
-    ; GFX8: $vgpr1 = COPY %op_vop2
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX8-NEXT: %op_vop3:vgpr_32 = nofpexcept V_LSHRREV_B16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: %op_vop2:vgpr_32 = nofpexcept V_LSHRREV_B16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX8-NEXT: $vgpr1 = COPY %op_vop2
     ; GFX9-LABEL: name: v_lshrrev_b16
     ; GFX9: liveins: $vgpr0, $vgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX9: %op_vop3:vgpr_32 = nofpexcept V_LSHRREV_B16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX9: %op_vop2:vgpr_32 = nofpexcept V_LSHRREV_B16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX9: $vgpr0 = COPY %op_vop3
-    ; GFX9: $vgpr1 = COPY %op_vop2
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX9-NEXT: %op_vop3:vgpr_32 = nofpexcept V_LSHRREV_B16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: %op_vop2:vgpr_32 = nofpexcept V_LSHRREV_B16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX9-NEXT: $vgpr1 = COPY %op_vop2
     ; GFX10-LABEL: name: v_lshrrev_b16
     ; GFX10: liveins: $vgpr0, $vgpr1
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX10: %op_vop3:vgpr_32 = nofpexcept V_LSHRREV_B16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX10: %op_vop2:vgpr_32 = nofpexcept V_LSHRREV_B16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX10: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
-    ; GFX10: %and_vop2:vgpr_32 = V_AND_B32_e32 65535, %op_vop2, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and_vop3
-    ; GFX10: $vgpr1 = COPY %and_vop2
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX10-NEXT: %op_vop3:vgpr_32 = nofpexcept V_LSHRREV_B16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %op_vop2:vgpr_32 = nofpexcept V_LSHRREV_B16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
+    ; GFX10-NEXT: %and_vop2:vgpr_32 = V_AND_B32_e32 65535, %op_vop2, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and_vop3
+    ; GFX10-NEXT: $vgpr1 = COPY %and_vop2
     %0:vgpr_32 = COPY $vgpr0
     %1:vgpr_32 = COPY $vgpr1
     %op_vop3:vgpr_32 = nofpexcept V_LSHRREV_B16_e64 %0, %1, implicit $mode, implicit $exec
@@ -884,30 +950,33 @@ body:             |
     liveins: $vgpr0, $vgpr1
     ; GFX8-LABEL: name: v_ashrrev_i16
     ; GFX8: liveins: $vgpr0, $vgpr1
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX8: %op_vop3:vgpr_32 = nofpexcept V_ASHRREV_I16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX8: %op_vop2:vgpr_32 = nofpexcept V_ASHRREV_I16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX8: $vgpr0 = COPY %op_vop3
-    ; GFX8: $vgpr1 = COPY %op_vop2
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX8-NEXT: %op_vop3:vgpr_32 = nofpexcept V_ASHRREV_I16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: %op_vop2:vgpr_32 = nofpexcept V_ASHRREV_I16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX8-NEXT: $vgpr1 = COPY %op_vop2
     ; GFX9-LABEL: name: v_ashrrev_i16
     ; GFX9: liveins: $vgpr0, $vgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX9: %op_vop3:vgpr_32 = nofpexcept V_ASHRREV_I16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX9: %op_vop2:vgpr_32 = nofpexcept V_ASHRREV_I16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX9: $vgpr0 = COPY %op_vop3
-    ; GFX9: $vgpr1 = COPY %op_vop2
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX9-NEXT: %op_vop3:vgpr_32 = nofpexcept V_ASHRREV_I16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: %op_vop2:vgpr_32 = nofpexcept V_ASHRREV_I16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX9-NEXT: $vgpr1 = COPY %op_vop2
     ; GFX10-LABEL: name: v_ashrrev_i16
     ; GFX10: liveins: $vgpr0, $vgpr1
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX10: %op_vop3:vgpr_32 = nofpexcept V_ASHRREV_I16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX10: %op_vop2:vgpr_32 = nofpexcept V_ASHRREV_I16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX10: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
-    ; GFX10: %and_vop2:vgpr_32 = V_AND_B32_e32 65535, %op_vop2, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and_vop3
-    ; GFX10: $vgpr1 = COPY %and_vop2
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX10-NEXT: %op_vop3:vgpr_32 = nofpexcept V_ASHRREV_I16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %op_vop2:vgpr_32 = nofpexcept V_ASHRREV_I16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
+    ; GFX10-NEXT: %and_vop2:vgpr_32 = V_AND_B32_e32 65535, %op_vop2, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and_vop3
+    ; GFX10-NEXT: $vgpr1 = COPY %and_vop2
     %0:vgpr_32 = COPY $vgpr0
     %1:vgpr_32 = COPY $vgpr1
     %op_vop3:vgpr_32 = nofpexcept V_ASHRREV_I16_e64 %0, %1, implicit $mode, implicit $exec
@@ -927,30 +996,33 @@ body:             |
     liveins: $vgpr0, $vgpr1
     ; GFX8-LABEL: name: v_add_u16
     ; GFX8: liveins: $vgpr0, $vgpr1
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX8: %op_vop3:vgpr_32 = nofpexcept V_ADD_U16_e64 [[COPY]], [[COPY1]], 0, implicit $mode, implicit $exec
-    ; GFX8: %op_vop2:vgpr_32 = nofpexcept V_ADD_U16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX8: $vgpr0 = COPY %op_vop3
-    ; GFX8: $vgpr1 = COPY %op_vop2
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX8-NEXT: %op_vop3:vgpr_32 = nofpexcept V_ADD_U16_e64 [[COPY]], [[COPY1]], 0, implicit $mode, implicit $exec
+    ; GFX8-NEXT: %op_vop2:vgpr_32 = nofpexcept V_ADD_U16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX8-NEXT: $vgpr1 = COPY %op_vop2
     ; GFX9-LABEL: name: v_add_u16
     ; GFX9: liveins: $vgpr0, $vgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX9: %op_vop3:vgpr_32 = nofpexcept V_ADD_U16_e64 [[COPY]], [[COPY1]], 0, implicit $mode, implicit $exec
-    ; GFX9: %op_vop2:vgpr_32 = nofpexcept V_ADD_U16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX9: $vgpr0 = COPY %op_vop3
-    ; GFX9: $vgpr1 = COPY %op_vop2
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX9-NEXT: %op_vop3:vgpr_32 = nofpexcept V_ADD_U16_e64 [[COPY]], [[COPY1]], 0, implicit $mode, implicit $exec
+    ; GFX9-NEXT: %op_vop2:vgpr_32 = nofpexcept V_ADD_U16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX9-NEXT: $vgpr1 = COPY %op_vop2
     ; GFX10-LABEL: name: v_add_u16
     ; GFX10: liveins: $vgpr0, $vgpr1
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX10: %op_vop3:vgpr_32 = nofpexcept V_ADD_U16_e64 [[COPY]], [[COPY1]], 0, implicit $mode, implicit $exec
-    ; GFX10: %op_vop2:vgpr_32 = nofpexcept V_ADD_U16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX10: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
-    ; GFX10: %and_vop2:vgpr_32 = V_AND_B32_e32 65535, %op_vop2, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and_vop3
-    ; GFX10: $vgpr1 = COPY %and_vop2
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX10-NEXT: %op_vop3:vgpr_32 = nofpexcept V_ADD_U16_e64 [[COPY]], [[COPY1]], 0, implicit $mode, implicit $exec
+    ; GFX10-NEXT: %op_vop2:vgpr_32 = nofpexcept V_ADD_U16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
+    ; GFX10-NEXT: %and_vop2:vgpr_32 = V_AND_B32_e32 65535, %op_vop2, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and_vop3
+    ; GFX10-NEXT: $vgpr1 = COPY %and_vop2
     %0:vgpr_32 = COPY $vgpr0
     %1:vgpr_32 = COPY $vgpr1
     %op_vop3:vgpr_32 = nofpexcept V_ADD_U16_e64 %0, %1, 0, implicit $mode, implicit $exec
@@ -970,30 +1042,33 @@ body:             |
     liveins: $vgpr0, $vgpr1
     ; GFX8-LABEL: name: v_sub_u16
     ; GFX8: liveins: $vgpr0, $vgpr1
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX8: %op_vop3:vgpr_32 = nofpexcept V_SUB_U16_e64 [[COPY]], [[COPY1]], 0, implicit $mode, implicit $exec
-    ; GFX8: %op_vop2:vgpr_32 = nofpexcept V_SUB_U16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX8: $vgpr0 = COPY %op_vop3
-    ; GFX8: $vgpr1 = COPY %op_vop2
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX8-NEXT: %op_vop3:vgpr_32 = nofpexcept V_SUB_U16_e64 [[COPY]], [[COPY1]], 0, implicit $mode, implicit $exec
+    ; GFX8-NEXT: %op_vop2:vgpr_32 = nofpexcept V_SUB_U16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX8-NEXT: $vgpr1 = COPY %op_vop2
     ; GFX9-LABEL: name: v_sub_u16
     ; GFX9: liveins: $vgpr0, $vgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX9: %op_vop3:vgpr_32 = nofpexcept V_SUB_U16_e64 [[COPY]], [[COPY1]], 0, implicit $mode, implicit $exec
-    ; GFX9: %op_vop2:vgpr_32 = nofpexcept V_SUB_U16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX9: $vgpr0 = COPY %op_vop3
-    ; GFX9: $vgpr1 = COPY %op_vop2
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX9-NEXT: %op_vop3:vgpr_32 = nofpexcept V_SUB_U16_e64 [[COPY]], [[COPY1]], 0, implicit $mode, implicit $exec
+    ; GFX9-NEXT: %op_vop2:vgpr_32 = nofpexcept V_SUB_U16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX9-NEXT: $vgpr1 = COPY %op_vop2
     ; GFX10-LABEL: name: v_sub_u16
     ; GFX10: liveins: $vgpr0, $vgpr1
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX10: %op_vop3:vgpr_32 = nofpexcept V_SUB_U16_e64 [[COPY]], [[COPY1]], 0, implicit $mode, implicit $exec
-    ; GFX10: %op_vop2:vgpr_32 = nofpexcept V_SUB_U16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX10: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
-    ; GFX10: %and_vop2:vgpr_32 = V_AND_B32_e32 65535, %op_vop2, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and_vop3
-    ; GFX10: $vgpr1 = COPY %and_vop2
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX10-NEXT: %op_vop3:vgpr_32 = nofpexcept V_SUB_U16_e64 [[COPY]], [[COPY1]], 0, implicit $mode, implicit $exec
+    ; GFX10-NEXT: %op_vop2:vgpr_32 = nofpexcept V_SUB_U16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
+    ; GFX10-NEXT: %and_vop2:vgpr_32 = V_AND_B32_e32 65535, %op_vop2, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and_vop3
+    ; GFX10-NEXT: $vgpr1 = COPY %and_vop2
     %0:vgpr_32 = COPY $vgpr0
     %1:vgpr_32 = COPY $vgpr1
     %op_vop3:vgpr_32 = nofpexcept V_SUB_U16_e64 %0, %1, 0, implicit $mode, implicit $exec
@@ -1013,30 +1088,33 @@ body:             |
     liveins: $vgpr0, $vgpr1
     ; GFX8-LABEL: name: v_subrev_u16
     ; GFX8: liveins: $vgpr0, $vgpr1
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX8: %op_vop3:vgpr_32 = nofpexcept V_SUBREV_U16_e64 [[COPY]], [[COPY1]], 0, implicit $mode, implicit $exec
-    ; GFX8: %op_vop2:vgpr_32 = nofpexcept V_SUBREV_U16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX8: $vgpr0 = COPY %op_vop3
-    ; GFX8: $vgpr1 = COPY %op_vop2
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX8-NEXT: %op_vop3:vgpr_32 = nofpexcept V_SUBREV_U16_e64 [[COPY]], [[COPY1]], 0, implicit $mode, implicit $exec
+    ; GFX8-NEXT: %op_vop2:vgpr_32 = nofpexcept V_SUBREV_U16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX8-NEXT: $vgpr1 = COPY %op_vop2
     ; GFX9-LABEL: name: v_subrev_u16
     ; GFX9: liveins: $vgpr0, $vgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX9: %op_vop3:vgpr_32 = nofpexcept V_SUBREV_U16_e64 [[COPY]], [[COPY1]], 0, implicit $mode, implicit $exec
-    ; GFX9: %op_vop2:vgpr_32 = nofpexcept V_SUBREV_U16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX9: $vgpr0 = COPY %op_vop3
-    ; GFX9: $vgpr1 = COPY %op_vop2
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX9-NEXT: %op_vop3:vgpr_32 = nofpexcept V_SUBREV_U16_e64 [[COPY]], [[COPY1]], 0, implicit $mode, implicit $exec
+    ; GFX9-NEXT: %op_vop2:vgpr_32 = nofpexcept V_SUBREV_U16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX9-NEXT: $vgpr1 = COPY %op_vop2
     ; GFX10-LABEL: name: v_subrev_u16
     ; GFX10: liveins: $vgpr0, $vgpr1
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX10: %op_vop3:vgpr_32 = nofpexcept V_SUBREV_U16_e64 [[COPY]], [[COPY1]], 0, implicit $mode, implicit $exec
-    ; GFX10: %op_vop2:vgpr_32 = nofpexcept V_SUBREV_U16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX10: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
-    ; GFX10: %and_vop2:vgpr_32 = V_AND_B32_e32 65535, %op_vop2, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and_vop3
-    ; GFX10: $vgpr1 = COPY %and_vop2
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX10-NEXT: %op_vop3:vgpr_32 = nofpexcept V_SUBREV_U16_e64 [[COPY]], [[COPY1]], 0, implicit $mode, implicit $exec
+    ; GFX10-NEXT: %op_vop2:vgpr_32 = nofpexcept V_SUBREV_U16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
+    ; GFX10-NEXT: %and_vop2:vgpr_32 = V_AND_B32_e32 65535, %op_vop2, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and_vop3
+    ; GFX10-NEXT: $vgpr1 = COPY %and_vop2
     %0:vgpr_32 = COPY $vgpr0
     %1:vgpr_32 = COPY $vgpr1
     %op_vop3:vgpr_32 = nofpexcept V_SUBREV_U16_e64 %0, %1, 0, implicit $mode, implicit $exec
@@ -1056,30 +1134,33 @@ body:             |
     liveins: $vgpr0, $vgpr1
     ; GFX8-LABEL: name: v_mul_lo_u16
     ; GFX8: liveins: $vgpr0, $vgpr1
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX8: %op_vop3:vgpr_32 = nofpexcept V_MUL_LO_U16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX8: %op_vop2:vgpr_32 = nofpexcept V_MUL_LO_U16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX8: $vgpr0 = COPY %op_vop3
-    ; GFX8: $vgpr1 = COPY %op_vop2
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX8-NEXT: %op_vop3:vgpr_32 = nofpexcept V_MUL_LO_U16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: %op_vop2:vgpr_32 = nofpexcept V_MUL_LO_U16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX8-NEXT: $vgpr1 = COPY %op_vop2
     ; GFX9-LABEL: name: v_mul_lo_u16
     ; GFX9: liveins: $vgpr0, $vgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX9: %op_vop3:vgpr_32 = nofpexcept V_MUL_LO_U16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX9: %op_vop2:vgpr_32 = nofpexcept V_MUL_LO_U16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX9: $vgpr0 = COPY %op_vop3
-    ; GFX9: $vgpr1 = COPY %op_vop2
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX9-NEXT: %op_vop3:vgpr_32 = nofpexcept V_MUL_LO_U16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: %op_vop2:vgpr_32 = nofpexcept V_MUL_LO_U16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX9-NEXT: $vgpr1 = COPY %op_vop2
     ; GFX10-LABEL: name: v_mul_lo_u16
     ; GFX10: liveins: $vgpr0, $vgpr1
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX10: %op_vop3:vgpr_32 = nofpexcept V_MUL_LO_U16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX10: %op_vop2:vgpr_32 = nofpexcept V_MUL_LO_U16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX10: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
-    ; GFX10: %and_vop2:vgpr_32 = V_AND_B32_e32 65535, %op_vop2, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and_vop3
-    ; GFX10: $vgpr1 = COPY %and_vop2
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX10-NEXT: %op_vop3:vgpr_32 = nofpexcept V_MUL_LO_U16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %op_vop2:vgpr_32 = nofpexcept V_MUL_LO_U16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
+    ; GFX10-NEXT: %and_vop2:vgpr_32 = V_AND_B32_e32 65535, %op_vop2, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and_vop3
+    ; GFX10-NEXT: $vgpr1 = COPY %and_vop2
     %0:vgpr_32 = COPY $vgpr0
     %1:vgpr_32 = COPY $vgpr1
     %op_vop3:vgpr_32 = nofpexcept V_MUL_LO_U16_e64 %0, %1, implicit $mode, implicit $exec
@@ -1099,30 +1180,33 @@ body:             |
     liveins: $vgpr0, $vgpr1
     ; GFX8-LABEL: name: v_add_f16
     ; GFX8: liveins: $vgpr0, $vgpr1
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX8: %op_vop3:vgpr_32 = nofpexcept V_ADD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; GFX8: %op_vop1:vgpr_32 = nofpexcept V_ADD_F16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX8: $vgpr0 = COPY %op_vop3
-    ; GFX8: $vgpr1 = COPY %op_vop1
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX8-NEXT: %op_vop3:vgpr_32 = nofpexcept V_ADD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; GFX8-NEXT: %op_vop1:vgpr_32 = nofpexcept V_ADD_F16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX8-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX9-LABEL: name: v_add_f16
     ; GFX9: liveins: $vgpr0, $vgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX9: %op_vop3:vgpr_32 = nofpexcept V_ADD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; GFX9: %op_vop1:vgpr_32 = nofpexcept V_ADD_F16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX9: $vgpr0 = COPY %op_vop3
-    ; GFX9: $vgpr1 = COPY %op_vop1
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX9-NEXT: %op_vop3:vgpr_32 = nofpexcept V_ADD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; GFX9-NEXT: %op_vop1:vgpr_32 = nofpexcept V_ADD_F16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX9-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX10-LABEL: name: v_add_f16
     ; GFX10: liveins: $vgpr0, $vgpr1
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX10: %op_vop3:vgpr_32 = nofpexcept V_ADD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; GFX10: %op_vop1:vgpr_32 = nofpexcept V_ADD_F16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX10: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
-    ; GFX10: %and_vop2:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and_vop3
-    ; GFX10: $vgpr1 = COPY %and_vop2
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX10-NEXT: %op_vop3:vgpr_32 = nofpexcept V_ADD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; GFX10-NEXT: %op_vop1:vgpr_32 = nofpexcept V_ADD_F16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
+    ; GFX10-NEXT: %and_vop2:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and_vop3
+    ; GFX10-NEXT: $vgpr1 = COPY %and_vop2
     %0:vgpr_32 = COPY $vgpr0
     %1:vgpr_32 = COPY $vgpr1
     %op_vop3:vgpr_32 = nofpexcept V_ADD_F16_e64 0, %0, 0, %1, 0, 0, implicit $mode, implicit $exec
@@ -1142,30 +1226,33 @@ body:             |
     liveins: $vgpr0, $vgpr1
     ; GFX8-LABEL: name: v_sub_f16
     ; GFX8: liveins: $vgpr0, $vgpr1
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX8: %op_vop3:vgpr_32 = nofpexcept V_ADD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; GFX8: %op_vop1:vgpr_32 = nofpexcept V_ADD_F16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX8: $vgpr0 = COPY %op_vop3
-    ; GFX8: $vgpr1 = COPY %op_vop1
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX8-NEXT: %op_vop3:vgpr_32 = nofpexcept V_ADD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; GFX8-NEXT: %op_vop1:vgpr_32 = nofpexcept V_ADD_F16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX8-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX9-LABEL: name: v_sub_f16
     ; GFX9: liveins: $vgpr0, $vgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX9: %op_vop3:vgpr_32 = nofpexcept V_ADD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; GFX9: %op_vop1:vgpr_32 = nofpexcept V_ADD_F16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX9: $vgpr0 = COPY %op_vop3
-    ; GFX9: $vgpr1 = COPY %op_vop1
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX9-NEXT: %op_vop3:vgpr_32 = nofpexcept V_ADD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; GFX9-NEXT: %op_vop1:vgpr_32 = nofpexcept V_ADD_F16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX9-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX10-LABEL: name: v_sub_f16
     ; GFX10: liveins: $vgpr0, $vgpr1
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX10: %op_vop3:vgpr_32 = nofpexcept V_ADD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; GFX10: %op_vop1:vgpr_32 = nofpexcept V_ADD_F16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX10: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
-    ; GFX10: %and_vop2:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and_vop3
-    ; GFX10: $vgpr1 = COPY %and_vop2
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX10-NEXT: %op_vop3:vgpr_32 = nofpexcept V_ADD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; GFX10-NEXT: %op_vop1:vgpr_32 = nofpexcept V_ADD_F16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
+    ; GFX10-NEXT: %and_vop2:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and_vop3
+    ; GFX10-NEXT: $vgpr1 = COPY %and_vop2
     %0:vgpr_32 = COPY $vgpr0
     %1:vgpr_32 = COPY $vgpr1
     %op_vop3:vgpr_32 = nofpexcept V_ADD_F16_e64 0, %0, 0, %1, 0, 0, implicit $mode, implicit $exec
@@ -1185,30 +1272,33 @@ body:             |
     liveins: $vgpr0, $vgpr1
     ; GFX8-LABEL: name: v_subrev_f16
     ; GFX8: liveins: $vgpr0, $vgpr1
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX8: %op_vop3:vgpr_32 = nofpexcept V_ADD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; GFX8: %op_vop1:vgpr_32 = nofpexcept V_ADD_F16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX8: $vgpr0 = COPY %op_vop3
-    ; GFX8: $vgpr1 = COPY %op_vop1
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX8-NEXT: %op_vop3:vgpr_32 = nofpexcept V_ADD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; GFX8-NEXT: %op_vop1:vgpr_32 = nofpexcept V_ADD_F16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX8-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX9-LABEL: name: v_subrev_f16
     ; GFX9: liveins: $vgpr0, $vgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX9: %op_vop3:vgpr_32 = nofpexcept V_ADD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; GFX9: %op_vop1:vgpr_32 = nofpexcept V_ADD_F16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX9: $vgpr0 = COPY %op_vop3
-    ; GFX9: $vgpr1 = COPY %op_vop1
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX9-NEXT: %op_vop3:vgpr_32 = nofpexcept V_ADD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; GFX9-NEXT: %op_vop1:vgpr_32 = nofpexcept V_ADD_F16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX9-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX10-LABEL: name: v_subrev_f16
     ; GFX10: liveins: $vgpr0, $vgpr1
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX10: %op_vop3:vgpr_32 = nofpexcept V_ADD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; GFX10: %op_vop1:vgpr_32 = nofpexcept V_ADD_F16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX10: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
-    ; GFX10: %and_vop2:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and_vop3
-    ; GFX10: $vgpr1 = COPY %and_vop2
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX10-NEXT: %op_vop3:vgpr_32 = nofpexcept V_ADD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; GFX10-NEXT: %op_vop1:vgpr_32 = nofpexcept V_ADD_F16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
+    ; GFX10-NEXT: %and_vop2:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and_vop3
+    ; GFX10-NEXT: $vgpr1 = COPY %and_vop2
     %0:vgpr_32 = COPY $vgpr0
     %1:vgpr_32 = COPY $vgpr1
     %op_vop3:vgpr_32 = nofpexcept V_ADD_F16_e64 0, %0, 0, %1, 0, 0, implicit $mode, implicit $exec
@@ -1228,30 +1318,33 @@ body:             |
     liveins: $vgpr0, $vgpr1
     ; GFX8-LABEL: name: v_mul_f16
     ; GFX8: liveins: $vgpr0, $vgpr1
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX8: %op_vop3:vgpr_32 = nofpexcept V_ADD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; GFX8: %op_vop1:vgpr_32 = nofpexcept V_ADD_F16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX8: $vgpr0 = COPY %op_vop3
-    ; GFX8: $vgpr1 = COPY %op_vop1
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX8-NEXT: %op_vop3:vgpr_32 = nofpexcept V_ADD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; GFX8-NEXT: %op_vop1:vgpr_32 = nofpexcept V_ADD_F16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX8-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX9-LABEL: name: v_mul_f16
     ; GFX9: liveins: $vgpr0, $vgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX9: %op_vop3:vgpr_32 = nofpexcept V_ADD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; GFX9: %op_vop1:vgpr_32 = nofpexcept V_ADD_F16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX9: $vgpr0 = COPY %op_vop3
-    ; GFX9: $vgpr1 = COPY %op_vop1
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX9-NEXT: %op_vop3:vgpr_32 = nofpexcept V_ADD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; GFX9-NEXT: %op_vop1:vgpr_32 = nofpexcept V_ADD_F16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX9-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX10-LABEL: name: v_mul_f16
     ; GFX10: liveins: $vgpr0, $vgpr1
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX10: %op_vop3:vgpr_32 = nofpexcept V_ADD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; GFX10: %op_vop1:vgpr_32 = nofpexcept V_ADD_F16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX10: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
-    ; GFX10: %and_vop2:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and_vop3
-    ; GFX10: $vgpr1 = COPY %and_vop2
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX10-NEXT: %op_vop3:vgpr_32 = nofpexcept V_ADD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; GFX10-NEXT: %op_vop1:vgpr_32 = nofpexcept V_ADD_F16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
+    ; GFX10-NEXT: %and_vop2:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and_vop3
+    ; GFX10-NEXT: $vgpr1 = COPY %and_vop2
     %0:vgpr_32 = COPY $vgpr0
     %1:vgpr_32 = COPY $vgpr1
     %op_vop3:vgpr_32 = nofpexcept V_ADD_F16_e64 0, %0, 0, %1, 0, 0, implicit $mode, implicit $exec
@@ -1271,30 +1364,33 @@ body:             |
     liveins: $vgpr0, $vgpr1
     ; GFX8-LABEL: name: v_max_f16
     ; GFX8: liveins: $vgpr0, $vgpr1
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX8: %op_vop3:vgpr_32 = nofpexcept V_ADD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; GFX8: %op_vop1:vgpr_32 = nofpexcept V_ADD_F16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX8: $vgpr0 = COPY %op_vop3
-    ; GFX8: $vgpr1 = COPY %op_vop1
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX8-NEXT: %op_vop3:vgpr_32 = nofpexcept V_ADD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; GFX8-NEXT: %op_vop1:vgpr_32 = nofpexcept V_ADD_F16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX8-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX9-LABEL: name: v_max_f16
     ; GFX9: liveins: $vgpr0, $vgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX9: %op_vop3:vgpr_32 = nofpexcept V_ADD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; GFX9: %op_vop1:vgpr_32 = nofpexcept V_ADD_F16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX9: $vgpr0 = COPY %op_vop3
-    ; GFX9: $vgpr1 = COPY %op_vop1
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX9-NEXT: %op_vop3:vgpr_32 = nofpexcept V_ADD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; GFX9-NEXT: %op_vop1:vgpr_32 = nofpexcept V_ADD_F16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX9-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX10-LABEL: name: v_max_f16
     ; GFX10: liveins: $vgpr0, $vgpr1
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX10: %op_vop3:vgpr_32 = nofpexcept V_ADD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; GFX10: %op_vop1:vgpr_32 = nofpexcept V_ADD_F16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX10: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
-    ; GFX10: %and_vop2:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and_vop3
-    ; GFX10: $vgpr1 = COPY %and_vop2
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX10-NEXT: %op_vop3:vgpr_32 = nofpexcept V_ADD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; GFX10-NEXT: %op_vop1:vgpr_32 = nofpexcept V_ADD_F16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
+    ; GFX10-NEXT: %and_vop2:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and_vop3
+    ; GFX10-NEXT: $vgpr1 = COPY %and_vop2
     %0:vgpr_32 = COPY $vgpr0
     %1:vgpr_32 = COPY $vgpr1
     %op_vop3:vgpr_32 = nofpexcept V_ADD_F16_e64 0, %0, 0, %1, 0, 0, implicit $mode, implicit $exec
@@ -1314,30 +1410,33 @@ body:             |
     liveins: $vgpr0, $vgpr1
     ; GFX8-LABEL: name: v_min_f16
     ; GFX8: liveins: $vgpr0, $vgpr1
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX8: %op_vop3:vgpr_32 = nofpexcept V_ADD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; GFX8: %op_vop1:vgpr_32 = nofpexcept V_ADD_F16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX8: $vgpr0 = COPY %op_vop3
-    ; GFX8: $vgpr1 = COPY %op_vop1
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX8-NEXT: %op_vop3:vgpr_32 = nofpexcept V_ADD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; GFX8-NEXT: %op_vop1:vgpr_32 = nofpexcept V_ADD_F16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX8-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX9-LABEL: name: v_min_f16
     ; GFX9: liveins: $vgpr0, $vgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX9: %op_vop3:vgpr_32 = nofpexcept V_ADD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; GFX9: %op_vop1:vgpr_32 = nofpexcept V_ADD_F16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX9: $vgpr0 = COPY %op_vop3
-    ; GFX9: $vgpr1 = COPY %op_vop1
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX9-NEXT: %op_vop3:vgpr_32 = nofpexcept V_ADD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; GFX9-NEXT: %op_vop1:vgpr_32 = nofpexcept V_ADD_F16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX9-NEXT: $vgpr1 = COPY %op_vop1
     ; GFX10-LABEL: name: v_min_f16
     ; GFX10: liveins: $vgpr0, $vgpr1
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX10: %op_vop3:vgpr_32 = nofpexcept V_ADD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; GFX10: %op_vop1:vgpr_32 = nofpexcept V_ADD_F16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX10: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
-    ; GFX10: %and_vop2:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and_vop3
-    ; GFX10: $vgpr1 = COPY %and_vop2
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX10-NEXT: %op_vop3:vgpr_32 = nofpexcept V_ADD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; GFX10-NEXT: %op_vop1:vgpr_32 = nofpexcept V_ADD_F16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
+    ; GFX10-NEXT: %and_vop2:vgpr_32 = V_AND_B32_e32 65535, %op_vop1, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and_vop3
+    ; GFX10-NEXT: $vgpr1 = COPY %and_vop2
     %0:vgpr_32 = COPY $vgpr0
     %1:vgpr_32 = COPY $vgpr1
     %op_vop3:vgpr_32 = nofpexcept V_ADD_F16_e64 0, %0, 0, %1, 0, 0, implicit $mode, implicit $exec
@@ -1357,30 +1456,33 @@ body:             |
     liveins: $vgpr0, $vgpr1
     ; GFX8-LABEL: name: v_max_u16
     ; GFX8: liveins: $vgpr0, $vgpr1
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX8: %op_vop3:vgpr_32 = nofpexcept V_MAX_U16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX8: %op_vop2:vgpr_32 = nofpexcept V_MAX_U16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX8: $vgpr0 = COPY %op_vop3
-    ; GFX8: $vgpr1 = COPY %op_vop2
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX8-NEXT: %op_vop3:vgpr_32 = nofpexcept V_MAX_U16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: %op_vop2:vgpr_32 = nofpexcept V_MAX_U16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX8-NEXT: $vgpr1 = COPY %op_vop2
     ; GFX9-LABEL: name: v_max_u16
     ; GFX9: liveins: $vgpr0, $vgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX9: %op_vop3:vgpr_32 = nofpexcept V_MAX_U16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX9: %op_vop2:vgpr_32 = nofpexcept V_MAX_U16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX9: $vgpr0 = COPY %op_vop3
-    ; GFX9: $vgpr1 = COPY %op_vop2
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX9-NEXT: %op_vop3:vgpr_32 = nofpexcept V_MAX_U16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: %op_vop2:vgpr_32 = nofpexcept V_MAX_U16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX9-NEXT: $vgpr1 = COPY %op_vop2
     ; GFX10-LABEL: name: v_max_u16
     ; GFX10: liveins: $vgpr0, $vgpr1
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX10: %op_vop3:vgpr_32 = nofpexcept V_MAX_U16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX10: %op_vop2:vgpr_32 = nofpexcept V_MAX_U16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX10: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
-    ; GFX10: %and_vop2:vgpr_32 = V_AND_B32_e32 65535, %op_vop2, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and_vop3
-    ; GFX10: $vgpr1 = COPY %and_vop2
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX10-NEXT: %op_vop3:vgpr_32 = nofpexcept V_MAX_U16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %op_vop2:vgpr_32 = nofpexcept V_MAX_U16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
+    ; GFX10-NEXT: %and_vop2:vgpr_32 = V_AND_B32_e32 65535, %op_vop2, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and_vop3
+    ; GFX10-NEXT: $vgpr1 = COPY %and_vop2
     %0:vgpr_32 = COPY $vgpr0
     %1:vgpr_32 = COPY $vgpr1
     %op_vop3:vgpr_32 = nofpexcept V_MAX_U16_e64 %0, %1, implicit $mode, implicit $exec
@@ -1399,30 +1501,33 @@ body:             |
     liveins: $vgpr0, $vgpr1
     ; GFX8-LABEL: name: v_min_u16
     ; GFX8: liveins: $vgpr0, $vgpr1
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX8: %op_vop3:vgpr_32 = nofpexcept V_MIN_U16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX8: %op_vop2:vgpr_32 = nofpexcept V_MIN_U16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX8: $vgpr0 = COPY %op_vop3
-    ; GFX8: $vgpr1 = COPY %op_vop2
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX8-NEXT: %op_vop3:vgpr_32 = nofpexcept V_MIN_U16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: %op_vop2:vgpr_32 = nofpexcept V_MIN_U16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX8-NEXT: $vgpr1 = COPY %op_vop2
     ; GFX9-LABEL: name: v_min_u16
     ; GFX9: liveins: $vgpr0, $vgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX9: %op_vop3:vgpr_32 = nofpexcept V_MIN_U16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX9: %op_vop2:vgpr_32 = nofpexcept V_MIN_U16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX9: $vgpr0 = COPY %op_vop3
-    ; GFX9: $vgpr1 = COPY %op_vop2
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX9-NEXT: %op_vop3:vgpr_32 = nofpexcept V_MIN_U16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: %op_vop2:vgpr_32 = nofpexcept V_MIN_U16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX9-NEXT: $vgpr1 = COPY %op_vop2
     ; GFX10-LABEL: name: v_min_u16
     ; GFX10: liveins: $vgpr0, $vgpr1
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX10: %op_vop3:vgpr_32 = nofpexcept V_MIN_U16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX10: %op_vop2:vgpr_32 = nofpexcept V_MIN_U16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX10: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
-    ; GFX10: %and_vop2:vgpr_32 = V_AND_B32_e32 65535, %op_vop2, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and_vop3
-    ; GFX10: $vgpr1 = COPY %and_vop2
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX10-NEXT: %op_vop3:vgpr_32 = nofpexcept V_MIN_U16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %op_vop2:vgpr_32 = nofpexcept V_MIN_U16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
+    ; GFX10-NEXT: %and_vop2:vgpr_32 = V_AND_B32_e32 65535, %op_vop2, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and_vop3
+    ; GFX10-NEXT: $vgpr1 = COPY %and_vop2
     %0:vgpr_32 = COPY $vgpr0
     %1:vgpr_32 = COPY $vgpr1
     %op_vop3:vgpr_32 = nofpexcept V_MIN_U16_e64 %0, %1, implicit $mode, implicit $exec
@@ -1442,30 +1547,33 @@ body:             |
     liveins: $vgpr0, $vgpr1
     ; GFX8-LABEL: name: v_max_i16
     ; GFX8: liveins: $vgpr0, $vgpr1
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX8: %op_vop3:vgpr_32 = nofpexcept V_MAX_I16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX8: %op_vop2:vgpr_32 = nofpexcept V_MAX_I16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX8: $vgpr0 = COPY %op_vop3
-    ; GFX8: $vgpr1 = COPY %op_vop2
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX8-NEXT: %op_vop3:vgpr_32 = nofpexcept V_MAX_I16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: %op_vop2:vgpr_32 = nofpexcept V_MAX_I16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX8-NEXT: $vgpr1 = COPY %op_vop2
     ; GFX9-LABEL: name: v_max_i16
     ; GFX9: liveins: $vgpr0, $vgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX9: %op_vop3:vgpr_32 = nofpexcept V_MAX_I16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX9: %op_vop2:vgpr_32 = nofpexcept V_MAX_I16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX9: $vgpr0 = COPY %op_vop3
-    ; GFX9: $vgpr1 = COPY %op_vop2
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX9-NEXT: %op_vop3:vgpr_32 = nofpexcept V_MAX_I16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: %op_vop2:vgpr_32 = nofpexcept V_MAX_I16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX9-NEXT: $vgpr1 = COPY %op_vop2
     ; GFX10-LABEL: name: v_max_i16
     ; GFX10: liveins: $vgpr0, $vgpr1
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX10: %op_vop3:vgpr_32 = nofpexcept V_MAX_I16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX10: %op_vop2:vgpr_32 = nofpexcept V_MAX_I16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX10: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
-    ; GFX10: %and_vop2:vgpr_32 = V_AND_B32_e32 65535, %op_vop2, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and_vop3
-    ; GFX10: $vgpr1 = COPY %and_vop2
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX10-NEXT: %op_vop3:vgpr_32 = nofpexcept V_MAX_I16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %op_vop2:vgpr_32 = nofpexcept V_MAX_I16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
+    ; GFX10-NEXT: %and_vop2:vgpr_32 = V_AND_B32_e32 65535, %op_vop2, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and_vop3
+    ; GFX10-NEXT: $vgpr1 = COPY %and_vop2
     %0:vgpr_32 = COPY $vgpr0
     %1:vgpr_32 = COPY $vgpr1
     %op_vop3:vgpr_32 = nofpexcept V_MAX_I16_e64 %0, %1, implicit $mode, implicit $exec
@@ -1484,30 +1592,33 @@ body:             |
     liveins: $vgpr0, $vgpr1
     ; GFX8-LABEL: name: v_min_i16
     ; GFX8: liveins: $vgpr0, $vgpr1
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX8: %op_vop3:vgpr_32 = nofpexcept V_MIN_I16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX8: %op_vop2:vgpr_32 = nofpexcept V_MIN_I16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX8: $vgpr0 = COPY %op_vop3
-    ; GFX8: $vgpr1 = COPY %op_vop2
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX8-NEXT: %op_vop3:vgpr_32 = nofpexcept V_MIN_I16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: %op_vop2:vgpr_32 = nofpexcept V_MIN_I16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX8-NEXT: $vgpr1 = COPY %op_vop2
     ; GFX9-LABEL: name: v_min_i16
     ; GFX9: liveins: $vgpr0, $vgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX9: %op_vop3:vgpr_32 = nofpexcept V_MIN_I16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX9: %op_vop2:vgpr_32 = nofpexcept V_MIN_I16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX9: $vgpr0 = COPY %op_vop3
-    ; GFX9: $vgpr1 = COPY %op_vop2
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX9-NEXT: %op_vop3:vgpr_32 = nofpexcept V_MIN_I16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: %op_vop2:vgpr_32 = nofpexcept V_MIN_I16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %op_vop3
+    ; GFX9-NEXT: $vgpr1 = COPY %op_vop2
     ; GFX10-LABEL: name: v_min_i16
     ; GFX10: liveins: $vgpr0, $vgpr1
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX10: %op_vop3:vgpr_32 = nofpexcept V_MIN_I16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX10: %op_vop2:vgpr_32 = nofpexcept V_MIN_I16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; GFX10: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
-    ; GFX10: %and_vop2:vgpr_32 = V_AND_B32_e32 65535, %op_vop2, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and_vop3
-    ; GFX10: $vgpr1 = COPY %and_vop2
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX10-NEXT: %op_vop3:vgpr_32 = nofpexcept V_MIN_I16_e64 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %op_vop2:vgpr_32 = nofpexcept V_MIN_I16_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
+    ; GFX10-NEXT: %and_vop2:vgpr_32 = V_AND_B32_e32 65535, %op_vop2, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and_vop3
+    ; GFX10-NEXT: $vgpr1 = COPY %and_vop2
     %0:vgpr_32 = COPY $vgpr0
     %1:vgpr_32 = COPY $vgpr1
     %op_vop3:vgpr_32 = nofpexcept V_MIN_I16_e64 %0, %1, implicit $mode, implicit $exec
@@ -1527,27 +1638,29 @@ body:             |
     liveins: $vgpr0, $vgpr1, $vgpr2
     ; GFX8-LABEL: name: v_mad_f16
     ; GFX8: liveins: $vgpr0, $vgpr1, $vgpr2
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX8: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; GFX8: %op:vgpr_32 = nofpexcept V_MAD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
-    ; GFX8: $vgpr0 = COPY %op
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX8-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+    ; GFX8-NEXT: %op:vgpr_32 = nofpexcept V_MAD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %op
     ; GFX9-LABEL: name: v_mad_f16
     ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX9: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; GFX9: %op:vgpr_32 = nofpexcept V_MAD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
-    ; GFX9: %and:vgpr_32 = V_AND_B32_e32 65535, %op, implicit $exec
-    ; GFX9: $vgpr0 = COPY %and
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX9-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+    ; GFX9-NEXT: %op:vgpr_32 = nofpexcept V_MAD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %op
     ; GFX10-LABEL: name: v_mad_f16
     ; GFX10: liveins: $vgpr0, $vgpr1, $vgpr2
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX10: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; GFX10: %op:vgpr_32 = nofpexcept V_MAD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
-    ; GFX10: %and:vgpr_32 = V_AND_B32_e32 65535, %op, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX10-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+    ; GFX10-NEXT: %op:vgpr_32 = nofpexcept V_MAD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and:vgpr_32 = V_AND_B32_e32 65535, %op, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and
     %0:vgpr_32 = COPY $vgpr0
     %1:vgpr_32 = COPY $vgpr1
     %2:vgpr_32 = COPY $vgpr2
@@ -1565,27 +1678,29 @@ body:             |
     liveins: $vgpr0, $vgpr1, $vgpr2
     ; GFX8-LABEL: name: v_fma_f16
     ; GFX8: liveins: $vgpr0, $vgpr1, $vgpr2
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX8: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; GFX8: %op:vgpr_32 = nofpexcept V_FMA_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
-    ; GFX8: $vgpr0 = COPY %op
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX8-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+    ; GFX8-NEXT: %op:vgpr_32 = nofpexcept V_FMA_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %op
     ; GFX9-LABEL: name: v_fma_f16
     ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX9: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; GFX9: %op:vgpr_32 = nofpexcept V_FMA_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
-    ; GFX9: %and:vgpr_32 = V_AND_B32_e32 65535, %op, implicit $exec
-    ; GFX9: $vgpr0 = COPY %and
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX9-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+    ; GFX9-NEXT: %op:vgpr_32 = nofpexcept V_FMA_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %op
     ; GFX10-LABEL: name: v_fma_f16
     ; GFX10: liveins: $vgpr0, $vgpr1, $vgpr2
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX10: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; GFX10: %op:vgpr_32 = nofpexcept V_FMA_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
-    ; GFX10: %and:vgpr_32 = V_AND_B32_e32 65535, %op, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX10-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+    ; GFX10-NEXT: %op:vgpr_32 = nofpexcept V_FMA_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and:vgpr_32 = V_AND_B32_e32 65535, %op, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and
     %0:vgpr_32 = COPY $vgpr0
     %1:vgpr_32 = COPY $vgpr1
     %2:vgpr_32 = COPY $vgpr2
@@ -1603,27 +1718,29 @@ body:             |
     liveins: $vgpr0, $vgpr1, $vgpr2
     ; GFX8-LABEL: name: v_div_fixup_f16
     ; GFX8: liveins: $vgpr0, $vgpr1, $vgpr2
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX8: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; GFX8: %op:vgpr_32 = nofpexcept V_DIV_FIXUP_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
-    ; GFX8: $vgpr0 = COPY %op
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX8-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+    ; GFX8-NEXT: %op:vgpr_32 = nofpexcept V_DIV_FIXUP_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %op
     ; GFX9-LABEL: name: v_div_fixup_f16
     ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX9: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; GFX9: %op:vgpr_32 = nofpexcept V_DIV_FIXUP_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
-    ; GFX9: %and:vgpr_32 = V_AND_B32_e32 65535, %op, implicit $exec
-    ; GFX9: $vgpr0 = COPY %and
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX9-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+    ; GFX9-NEXT: %op:vgpr_32 = nofpexcept V_DIV_FIXUP_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %op
     ; GFX10-LABEL: name: v_div_fixup_f16
     ; GFX10: liveins: $vgpr0, $vgpr1, $vgpr2
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX10: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; GFX10: %op:vgpr_32 = nofpexcept V_DIV_FIXUP_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
-    ; GFX10: %and:vgpr_32 = V_AND_B32_e32 65535, %op, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX10-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+    ; GFX10-NEXT: %op:vgpr_32 = nofpexcept V_DIV_FIXUP_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and:vgpr_32 = V_AND_B32_e32 65535, %op, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and
     %0:vgpr_32 = COPY $vgpr0
     %1:vgpr_32 = COPY $vgpr1
     %2:vgpr_32 = COPY $vgpr2
@@ -1641,24 +1758,27 @@ body:             |
     liveins: $vgpr0, $vgpr1
     ; GFX8-LABEL: name: v_madak_f16
     ; GFX8: liveins: $vgpr0, $vgpr1
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX8: %op:vgpr_32 = nofpexcept V_MADAK_F16 [[COPY]], [[COPY1]], 1234, implicit $mode, implicit $exec
-    ; GFX8: $vgpr0 = COPY %op
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX8-NEXT: %op:vgpr_32 = nofpexcept V_MADAK_F16 [[COPY]], [[COPY1]], 1234, implicit $mode, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %op
     ; GFX9-LABEL: name: v_madak_f16
     ; GFX9: liveins: $vgpr0, $vgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX9: %op:vgpr_32 = nofpexcept V_MADAK_F16 [[COPY]], [[COPY1]], 1234, implicit $mode, implicit $exec
-    ; GFX9: %and:vgpr_32 = V_AND_B32_e32 65535, %op, implicit $exec
-    ; GFX9: $vgpr0 = COPY %and
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX9-NEXT: %op:vgpr_32 = nofpexcept V_MADAK_F16 [[COPY]], [[COPY1]], 1234, implicit $mode, implicit $exec
+    ; GFX9-NEXT: %and:vgpr_32 = V_AND_B32_e32 65535, %op, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %and
     ; GFX10-LABEL: name: v_madak_f16
     ; GFX10: liveins: $vgpr0, $vgpr1
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX10: %op:vgpr_32 = nofpexcept V_MADAK_F16 [[COPY]], [[COPY1]], 1234, implicit $mode, implicit $exec
-    ; GFX10: %and:vgpr_32 = V_AND_B32_e32 65535, %op, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX10-NEXT: %op:vgpr_32 = nofpexcept V_MADAK_F16 [[COPY]], [[COPY1]], 1234, implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and:vgpr_32 = V_AND_B32_e32 65535, %op, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and
     %0:vgpr_32 = COPY $vgpr0
     %1:vgpr_32 = COPY $vgpr1
     %op:vgpr_32 = nofpexcept V_MADAK_F16 %0, %1, 1234, implicit $mode, implicit $exec
@@ -1675,24 +1795,27 @@ body:             |
     liveins: $vgpr0, $vgpr1
     ; GFX8-LABEL: name: v_madmk_f16
     ; GFX8: liveins: $vgpr0, $vgpr1
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX8: %op:vgpr_32 = nofpexcept V_MADMK_F16 [[COPY]], 1234, [[COPY1]], implicit $mode, implicit $exec
-    ; GFX8: $vgpr0 = COPY %op
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX8-NEXT: %op:vgpr_32 = nofpexcept V_MADMK_F16 [[COPY]], 1234, [[COPY1]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %op
     ; GFX9-LABEL: name: v_madmk_f16
     ; GFX9: liveins: $vgpr0, $vgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX9: %op:vgpr_32 = nofpexcept V_MADMK_F16 [[COPY]], 1234, [[COPY1]], implicit $mode, implicit $exec
-    ; GFX9: %and:vgpr_32 = V_AND_B32_e32 65535, %op, implicit $exec
-    ; GFX9: $vgpr0 = COPY %and
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX9-NEXT: %op:vgpr_32 = nofpexcept V_MADMK_F16 [[COPY]], 1234, [[COPY1]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: %and:vgpr_32 = V_AND_B32_e32 65535, %op, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %and
     ; GFX10-LABEL: name: v_madmk_f16
     ; GFX10: liveins: $vgpr0, $vgpr1
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX10: %op:vgpr_32 = nofpexcept V_MADMK_F16 [[COPY]], 1234, [[COPY1]], implicit $mode, implicit $exec
-    ; GFX10: %and:vgpr_32 = V_AND_B32_e32 65535, %op, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX10-NEXT: %op:vgpr_32 = nofpexcept V_MADMK_F16 [[COPY]], 1234, [[COPY1]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and:vgpr_32 = V_AND_B32_e32 65535, %op, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and
     %0:vgpr_32 = COPY $vgpr0
     %1:vgpr_32 = COPY $vgpr1
     %op:vgpr_32 = nofpexcept V_MADMK_F16 %0, 1234, %1, implicit $mode, implicit $exec
@@ -1709,24 +1832,27 @@ body:             |
     liveins: $vgpr0, $vgpr1
     ; GFX8-LABEL: name: v_fmaak_f16
     ; GFX8: liveins: $vgpr0, $vgpr1
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX8: %op:vgpr_32 = nofpexcept V_FMAAK_F16 [[COPY]], [[COPY1]], 1234, implicit $mode, implicit $exec
-    ; GFX8: $vgpr0 = COPY %op
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX8-NEXT: %op:vgpr_32 = nofpexcept V_FMAAK_F16 [[COPY]], [[COPY1]], 1234, implicit $mode, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %op
     ; GFX9-LABEL: name: v_fmaak_f16
     ; GFX9: liveins: $vgpr0, $vgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX9: %op:vgpr_32 = nofpexcept V_FMAAK_F16 [[COPY]], [[COPY1]], 1234, implicit $mode, implicit $exec
-    ; GFX9: %and:vgpr_32 = V_AND_B32_e32 65535, %op, implicit $exec
-    ; GFX9: $vgpr0 = COPY %and
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX9-NEXT: %op:vgpr_32 = nofpexcept V_FMAAK_F16 [[COPY]], [[COPY1]], 1234, implicit $mode, implicit $exec
+    ; GFX9-NEXT: %and:vgpr_32 = V_AND_B32_e32 65535, %op, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %and
     ; GFX10-LABEL: name: v_fmaak_f16
     ; GFX10: liveins: $vgpr0, $vgpr1
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX10: %op:vgpr_32 = nofpexcept V_FMAAK_F16 [[COPY]], [[COPY1]], 1234, implicit $mode, implicit $exec
-    ; GFX10: %and:vgpr_32 = V_AND_B32_e32 65535, %op, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX10-NEXT: %op:vgpr_32 = nofpexcept V_FMAAK_F16 [[COPY]], [[COPY1]], 1234, implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and:vgpr_32 = V_AND_B32_e32 65535, %op, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and
     %0:vgpr_32 = COPY $vgpr0
     %1:vgpr_32 = COPY $vgpr1
     %op:vgpr_32 = nofpexcept V_FMAAK_F16 %0, %1, 1234, implicit $mode, implicit $exec
@@ -1743,24 +1869,27 @@ body:             |
     liveins: $vgpr0, $vgpr1
     ; GFX8-LABEL: name: v_fmamk_f16
     ; GFX8: liveins: $vgpr0, $vgpr1
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX8: %op:vgpr_32 = nofpexcept V_FMAMK_F16 [[COPY]], 1234, [[COPY1]], implicit $mode, implicit $exec
-    ; GFX8: $vgpr0 = COPY %op
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX8-NEXT: %op:vgpr_32 = nofpexcept V_FMAMK_F16 [[COPY]], 1234, [[COPY1]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %op
     ; GFX9-LABEL: name: v_fmamk_f16
     ; GFX9: liveins: $vgpr0, $vgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX9: %op:vgpr_32 = nofpexcept V_FMAMK_F16 [[COPY]], 1234, [[COPY1]], implicit $mode, implicit $exec
-    ; GFX9: %and:vgpr_32 = V_AND_B32_e32 65535, %op, implicit $exec
-    ; GFX9: $vgpr0 = COPY %and
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX9-NEXT: %op:vgpr_32 = nofpexcept V_FMAMK_F16 [[COPY]], 1234, [[COPY1]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: %and:vgpr_32 = V_AND_B32_e32 65535, %op, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %and
     ; GFX10-LABEL: name: v_fmamk_f16
     ; GFX10: liveins: $vgpr0, $vgpr1
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX10: %op:vgpr_32 = nofpexcept V_FMAMK_F16 [[COPY]], 1234, [[COPY1]], implicit $mode, implicit $exec
-    ; GFX10: %and:vgpr_32 = V_AND_B32_e32 65535, %op, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX10-NEXT: %op:vgpr_32 = nofpexcept V_FMAMK_F16 [[COPY]], 1234, [[COPY1]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and:vgpr_32 = V_AND_B32_e32 65535, %op, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and
     %0:vgpr_32 = COPY $vgpr0
     %1:vgpr_32 = COPY $vgpr1
     %op:vgpr_32 = nofpexcept V_FMAMK_F16 %0, 1234, %1, implicit $mode, implicit $exec
@@ -1777,35 +1906,38 @@ body:             |
     liveins: $vgpr0, $vgpr1, $vgpr2
     ; GFX8-LABEL: name: v_mac_f16
     ; GFX8: liveins: $vgpr0, $vgpr1, $vgpr2
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX8: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; GFX8: %op_vop2:vgpr_32 = nofpexcept V_MAC_F16_e32 [[COPY]], [[COPY1]], [[COPY2]], implicit $mode, implicit $exec
-    ; GFX8: %op_vop3:vgpr_32 = nofpexcept V_MAC_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
-    ; GFX8: $vgpr0 = COPY %op_vop2
-    ; GFX8: $vgpr0 = COPY %op_vop3
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX8-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+    ; GFX8-NEXT: %op_vop2:vgpr_32 = nofpexcept V_MAC_F16_e32 [[COPY]], [[COPY1]], [[COPY2]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: %op_vop3:vgpr_32 = nofpexcept V_MAC_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %op_vop2
+    ; GFX8-NEXT: $vgpr0 = COPY %op_vop3
     ; GFX9-LABEL: name: v_mac_f16
     ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX9: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; GFX9: %op_vop2:vgpr_32 = nofpexcept V_MAC_F16_e32 [[COPY]], [[COPY1]], [[COPY2]], implicit $mode, implicit $exec
-    ; GFX9: %op_vop3:vgpr_32 = nofpexcept V_MAC_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
-    ; GFX9: %and_vop2:vgpr_32 = V_AND_B32_e32 65535, %op_vop2, implicit $exec
-    ; GFX9: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
-    ; GFX9: $vgpr0 = COPY %and_vop2
-    ; GFX9: $vgpr0 = COPY %and_vop3
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX9-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+    ; GFX9-NEXT: %op_vop2:vgpr_32 = nofpexcept V_MAC_F16_e32 [[COPY]], [[COPY1]], [[COPY2]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: %op_vop3:vgpr_32 = nofpexcept V_MAC_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
+    ; GFX9-NEXT: %and_vop2:vgpr_32 = V_AND_B32_e32 65535, %op_vop2, implicit $exec
+    ; GFX9-NEXT: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %and_vop2
+    ; GFX9-NEXT: $vgpr0 = COPY %and_vop3
     ; GFX10-LABEL: name: v_mac_f16
     ; GFX10: liveins: $vgpr0, $vgpr1, $vgpr2
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX10: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; GFX10: %op_vop2:vgpr_32 = nofpexcept V_MAC_F16_e32 [[COPY]], [[COPY1]], [[COPY2]], implicit $mode, implicit $exec
-    ; GFX10: %op_vop3:vgpr_32 = nofpexcept V_MAC_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
-    ; GFX10: %and_vop2:vgpr_32 = V_AND_B32_e32 65535, %op_vop2, implicit $exec
-    ; GFX10: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and_vop2
-    ; GFX10: $vgpr0 = COPY %and_vop3
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX10-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+    ; GFX10-NEXT: %op_vop2:vgpr_32 = nofpexcept V_MAC_F16_e32 [[COPY]], [[COPY1]], [[COPY2]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %op_vop3:vgpr_32 = nofpexcept V_MAC_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and_vop2:vgpr_32 = V_AND_B32_e32 65535, %op_vop2, implicit $exec
+    ; GFX10-NEXT: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and_vop2
+    ; GFX10-NEXT: $vgpr0 = COPY %and_vop3
     %0:vgpr_32 = COPY $vgpr0
     %1:vgpr_32 = COPY $vgpr1
     %2:vgpr_32 = COPY $vgpr2
@@ -1826,35 +1958,38 @@ body:             |
     liveins: $vgpr0, $vgpr1, $vgpr2
     ; GFX8-LABEL: name: v_fmac_f16
     ; GFX8: liveins: $vgpr0, $vgpr1, $vgpr2
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX8: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; GFX8: %op_vop2:vgpr_32 = nofpexcept V_FMAC_F16_e32 [[COPY]], [[COPY1]], [[COPY2]], implicit $mode, implicit $exec
-    ; GFX8: %op_vop3:vgpr_32 = nofpexcept V_FMAC_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
-    ; GFX8: $vgpr0 = COPY %op_vop2
-    ; GFX8: $vgpr0 = COPY %op_vop3
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX8-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+    ; GFX8-NEXT: %op_vop2:vgpr_32 = nofpexcept V_FMAC_F16_e32 [[COPY]], [[COPY1]], [[COPY2]], implicit $mode, implicit $exec
+    ; GFX8-NEXT: %op_vop3:vgpr_32 = nofpexcept V_FMAC_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %op_vop2
+    ; GFX8-NEXT: $vgpr0 = COPY %op_vop3
     ; GFX9-LABEL: name: v_fmac_f16
     ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX9: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; GFX9: %op_vop2:vgpr_32 = nofpexcept V_FMAC_F16_e32 [[COPY]], [[COPY1]], [[COPY2]], implicit $mode, implicit $exec
-    ; GFX9: %op_vop3:vgpr_32 = nofpexcept V_FMAC_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
-    ; GFX9: %and_vop2:vgpr_32 = V_AND_B32_e32 65535, %op_vop2, implicit $exec
-    ; GFX9: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
-    ; GFX9: $vgpr0 = COPY %and_vop2
-    ; GFX9: $vgpr0 = COPY %and_vop3
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX9-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+    ; GFX9-NEXT: %op_vop2:vgpr_32 = nofpexcept V_FMAC_F16_e32 [[COPY]], [[COPY1]], [[COPY2]], implicit $mode, implicit $exec
+    ; GFX9-NEXT: %op_vop3:vgpr_32 = nofpexcept V_FMAC_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
+    ; GFX9-NEXT: %and_vop2:vgpr_32 = V_AND_B32_e32 65535, %op_vop2, implicit $exec
+    ; GFX9-NEXT: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %and_vop2
+    ; GFX9-NEXT: $vgpr0 = COPY %and_vop3
     ; GFX10-LABEL: name: v_fmac_f16
     ; GFX10: liveins: $vgpr0, $vgpr1, $vgpr2
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX10: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; GFX10: %op_vop2:vgpr_32 = nofpexcept V_FMAC_F16_e32 [[COPY]], [[COPY1]], [[COPY2]], implicit $mode, implicit $exec
-    ; GFX10: %op_vop3:vgpr_32 = nofpexcept V_FMAC_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
-    ; GFX10: %and_vop2:vgpr_32 = V_AND_B32_e32 65535, %op_vop2, implicit $exec
-    ; GFX10: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and_vop2
-    ; GFX10: $vgpr0 = COPY %and_vop3
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX10-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+    ; GFX10-NEXT: %op_vop2:vgpr_32 = nofpexcept V_FMAC_F16_e32 [[COPY]], [[COPY1]], [[COPY2]], implicit $mode, implicit $exec
+    ; GFX10-NEXT: %op_vop3:vgpr_32 = nofpexcept V_FMAC_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and_vop2:vgpr_32 = V_AND_B32_e32 65535, %op_vop2, implicit $exec
+    ; GFX10-NEXT: %and_vop3:vgpr_32 = V_AND_B32_e32 65535, %op_vop3, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and_vop2
+    ; GFX10-NEXT: $vgpr0 = COPY %and_vop3
     %0:vgpr_32 = COPY $vgpr0
     %1:vgpr_32 = COPY $vgpr1
     %2:vgpr_32 = COPY $vgpr2
@@ -1875,31 +2010,34 @@ body:             |
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
     ; GFX8-LABEL: name: no_fold_v_mad_mixlo_f16
     ; GFX8: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX8: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; GFX8: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr3
-    ; GFX8: %op:vgpr_32 = nofpexcept V_MAD_MIXLO_F16 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, [[COPY3]], 0, 0, implicit $mode, implicit $exec
-    ; GFX8: %and:vgpr_32 = V_AND_B32_e32 65535, %op, implicit $exec
-    ; GFX8: $vgpr0 = COPY %and
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX8-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+    ; GFX8-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+    ; GFX8-NEXT: %op:vgpr_32 = nofpexcept V_MAD_MIXLO_F16 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, [[COPY3]], 0, 0, implicit $mode, implicit $exec
+    ; GFX8-NEXT: %and:vgpr_32 = V_AND_B32_e32 65535, %op, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %and
     ; GFX9-LABEL: name: no_fold_v_mad_mixlo_f16
     ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX9: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; GFX9: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr3
-    ; GFX9: %op:vgpr_32 = nofpexcept V_MAD_MIXLO_F16 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, [[COPY3]], 0, 0, implicit $mode, implicit $exec
-    ; GFX9: %and:vgpr_32 = V_AND_B32_e32 65535, %op, implicit $exec
-    ; GFX9: $vgpr0 = COPY %and
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX9-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+    ; GFX9-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+    ; GFX9-NEXT: %op:vgpr_32 = nofpexcept V_MAD_MIXLO_F16 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, [[COPY3]], 0, 0, implicit $mode, implicit $exec
+    ; GFX9-NEXT: %and:vgpr_32 = V_AND_B32_e32 65535, %op, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %and
     ; GFX10-LABEL: name: no_fold_v_mad_mixlo_f16
     ; GFX10: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX10: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; GFX10: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr3
-    ; GFX10: %op:vgpr_32 = nofpexcept V_MAD_MIXLO_F16 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, [[COPY3]], 0, 0, implicit $mode, implicit $exec
-    ; GFX10: %and:vgpr_32 = V_AND_B32_e32 65535, %op, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX10-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+    ; GFX10-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+    ; GFX10-NEXT: %op:vgpr_32 = nofpexcept V_MAD_MIXLO_F16 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, [[COPY3]], 0, 0, implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and:vgpr_32 = V_AND_B32_e32 65535, %op, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and
     %0:vgpr_32 = COPY $vgpr0
     %1:vgpr_32 = COPY $vgpr1
     %2:vgpr_32 = COPY $vgpr2
@@ -1918,31 +2056,34 @@ body:             |
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
     ; GFX8-LABEL: name: no_fold_v_mad_mixhi_f16
     ; GFX8: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX8: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; GFX8: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr3
-    ; GFX8: %op:vgpr_32 = nofpexcept V_MAD_MIXHI_F16 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, [[COPY3]], 0, 0, implicit $mode, implicit $exec
-    ; GFX8: %and:vgpr_32 = V_AND_B32_e32 65535, %op, implicit $exec
-    ; GFX8: $vgpr0 = COPY %and
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX8-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+    ; GFX8-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+    ; GFX8-NEXT: %op:vgpr_32 = nofpexcept V_MAD_MIXHI_F16 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, [[COPY3]], 0, 0, implicit $mode, implicit $exec
+    ; GFX8-NEXT: %and:vgpr_32 = V_AND_B32_e32 65535, %op, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = COPY %and
     ; GFX9-LABEL: name: no_fold_v_mad_mixhi_f16
     ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX9: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; GFX9: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr3
-    ; GFX9: %op:vgpr_32 = nofpexcept V_MAD_MIXHI_F16 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, [[COPY3]], 0, 0, implicit $mode, implicit $exec
-    ; GFX9: %and:vgpr_32 = V_AND_B32_e32 65535, %op, implicit $exec
-    ; GFX9: $vgpr0 = COPY %and
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX9-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+    ; GFX9-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+    ; GFX9-NEXT: %op:vgpr_32 = nofpexcept V_MAD_MIXHI_F16 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, [[COPY3]], 0, 0, implicit $mode, implicit $exec
+    ; GFX9-NEXT: %and:vgpr_32 = V_AND_B32_e32 65535, %op, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY %and
     ; GFX10-LABEL: name: no_fold_v_mad_mixhi_f16
     ; GFX10: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
-    ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX10: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; GFX10: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr3
-    ; GFX10: %op:vgpr_32 = nofpexcept V_MAD_MIXHI_F16 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, [[COPY3]], 0, 0, implicit $mode, implicit $exec
-    ; GFX10: %and:vgpr_32 = V_AND_B32_e32 65535, %op, implicit $exec
-    ; GFX10: $vgpr0 = COPY %and
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX10-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+    ; GFX10-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+    ; GFX10-NEXT: %op:vgpr_32 = nofpexcept V_MAD_MIXHI_F16 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, [[COPY3]], 0, 0, implicit $mode, implicit $exec
+    ; GFX10-NEXT: %and:vgpr_32 = V_AND_B32_e32 65535, %op, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = COPY %and
     %0:vgpr_32 = COPY $vgpr0
     %1:vgpr_32 = COPY $vgpr1
     %2:vgpr_32 = COPY $vgpr2

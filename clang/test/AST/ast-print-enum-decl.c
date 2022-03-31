@@ -8,13 +8,13 @@
 // RUN: echo "// expected""-warning@* 6 {{'T' is deprecated}}" >> %t.c
 // RUN: echo "// expected""-note@* 6 {{'T' has been explicitly marked deprecated here}}" >> %t.c
 //
-// RUN: %clang_cc1 -verify -ast-print %t.c \
+// RUN: %clang_cc1 -verify -ast-print -Wno-strict-prototypes %t.c \
 // RUN: | FileCheck --check-prefixes=CHECK,PRINT %s
 
 // END.
 
 // CHECK-LABEL: defFirst
-void defFirst() {
+void defFirst(void) {
   // PRINT-NEXT: enum
   // PRINT-DAG:  __attribute__((aligned(16)))
   // PRINT-DAG:  __attribute__((deprecated("")))
@@ -33,7 +33,7 @@ void defFirst() {
 }
 
 // CHECK-LABEL: defLast
-void defLast() {
+void defLast(void) {
   // PRINT-NEXT: enum __attribute__((aligned(16))) T *p0;
   enum __attribute__((aligned(16))) T *p0;
 
@@ -47,7 +47,7 @@ void defLast() {
 }
 
 // CHECK-LABEL: defMiddle
-void defMiddle() {
+void defMiddle(void) {
   // PRINT-NEXT: enum __attribute__((deprecated(""))) T *p0;
   // expected-warning@+2 {{'T' is deprecated}}
   // expected-note@+1 3 {{'T' has been explicitly marked deprecated here}}
@@ -64,7 +64,7 @@ void defMiddle() {
 }
 
 // CHECK-LABEL: declsOnly
-void declsOnly() {
+void declsOnly(void) {
   // FIXME: For some reason, attributes are ignored if they're not on the first
   // declaration and not on the definition.
 

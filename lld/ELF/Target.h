@@ -9,6 +9,7 @@
 #ifndef LLD_ELF_TARGET_H
 #define LLD_ELF_TARGET_H
 
+#include "Config.h"
 #include "InputSection.h"
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/Object/ELF.h"
@@ -221,6 +222,18 @@ void addPPC64SaveRestore();
 uint64_t getPPC64TocBase();
 uint64_t getAArch64Page(uint64_t expr);
 
+class AArch64Relaxer {
+  bool safeToRelaxAdrpLdr = true;
+
+public:
+  explicit AArch64Relaxer(ArrayRef<Relocation> relocs);
+
+  bool tryRelaxAdrpAdd(const Relocation &adrpRel, const Relocation &addRel,
+                       uint64_t secAddr, uint8_t *buf) const;
+  bool tryRelaxAdrpLdr(const Relocation &adrpRel, const Relocation &ldrRel,
+                       uint64_t secAddr, uint8_t *buf) const;
+};
+
 extern const TargetInfo *target;
 TargetInfo *getTarget();
 
@@ -287,5 +300,26 @@ inline void write64(void *p, uint64_t v) {
 }
 } // namespace elf
 } // namespace lld
+
+#ifdef __clang__
+#pragma clang diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
+#endif
+#define invokeELFT(f, ...)                                                     \
+  switch (config->ekind) {                                                     \
+  case ELF32LEKind:                                                            \
+    f<ELF32LE>(__VA_ARGS__);                                                   \
+    break;                                                                     \
+  case ELF32BEKind:                                                            \
+    f<ELF32BE>(__VA_ARGS__);                                                   \
+    break;                                                                     \
+  case ELF64LEKind:                                                            \
+    f<ELF64LE>(__VA_ARGS__);                                                   \
+    break;                                                                     \
+  case ELF64BEKind:                                                            \
+    f<ELF64BE>(__VA_ARGS__);                                                   \
+    break;                                                                     \
+  default:                                                                     \
+    llvm_unreachable("unknown config->ekind");                                 \
+  }
 
 #endif

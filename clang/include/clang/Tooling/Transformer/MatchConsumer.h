@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_TRANSFORMER_MATCH_CONSUMER_H_
-#define LLVM_CLANG_TOOLING_TRANSFORMER_MATCH_CONSUMER_H_
+#ifndef LLVM_CLANG_TOOLING_TRANSFORMER_MATCHCONSUMER_H
+#define LLVM_CLANG_TOOLING_TRANSFORMER_MATCHCONSUMER_H
 
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -100,4 +100,4 @@ llvm::Expected<T> MatchComputation<T>::eval(
 }
 } // namespace transformer
 } // namespace clang
-#endif // LLVM_CLANG_TOOLING_TRANSFORMER_MATCH_CONSUMER_H_
+#endif // LLVM_CLANG_TOOLING_TRANSFORMER_MATCHCONSUMER_H

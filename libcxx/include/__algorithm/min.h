@@ -9,14 +9,14 @@
 #ifndef _LIBCPP___ALGORITHM_MIN_H
 #define _LIBCPP___ALGORITHM_MIN_H
 
-#include <__config>
 #include <__algorithm/comp.h>
 #include <__algorithm/comp_ref_type.h>
 #include <__algorithm/min_element.h>
+#include <__config>
 #include <initializer_list>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS

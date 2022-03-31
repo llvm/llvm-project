@@ -24,4 +24,3 @@ muls	#0, %d0
 ; CHECK:      mulu  #-1, %d0
 ; CHECK-SAME: encoding: [0xc0,0xfc,0xff,0xff]
 mulu	#-1, %d0
-

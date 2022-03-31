@@ -10,14 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/IR/Attributes.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Metadata.h"
-#include "llvm/IR/Type.h"
+#include "llvm/IR/ProfileSummary.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/ProfileData/SampleProf.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
@@ -59,12 +55,12 @@ cl::opt<unsigned> ProfileSummaryLargeWorkingSetSizeThreshold(
 
 // The next two options override the counts derived from summary computation and
 // are useful for debugging purposes.
-cl::opt<int> ProfileSummaryHotCount(
+cl::opt<uint64_t> ProfileSummaryHotCount(
     "profile-summary-hot-count", cl::ReallyHidden, cl::ZeroOrMore,
     cl::desc("A fixed hot count that overrides the count derived from"
              " profile-summary-cutoff-hot"));
 
-cl::opt<int> ProfileSummaryColdCount(
+cl::opt<uint64_t> ProfileSummaryColdCount(
     "profile-summary-cold-count", cl::ReallyHidden, cl::ZeroOrMore,
     cl::desc("A fixed cold count that overrides the count derived from"
              " profile-summary-cutoff-cold"));
@@ -110,7 +106,13 @@ void SampleProfileSummaryBuilder::addRecord(
     NumFunctions++;
     if (FS.getHeadSamples() > MaxFunctionCount)
       MaxFunctionCount = FS.getHeadSamples();
+  } else if (FS.getContext().hasAttribute(
+                 sampleprof::ContextDuplicatedIntoBase)) {
+    // Do not recount callee samples if they are already merged into their base
+    // profiles. This can happen to CS nested profile.
+    return;
   }
+
   for (const auto &I : FS.getBodySamples()) {
     uint64_t Count = I.second.getSamples();
       addCount(Count);
@@ -194,7 +196,7 @@ SampleProfileSummaryBuilder::computeSummaryForProfiles(
   // more function profiles each with lower counts, which in turn leads to lower
   // hot thresholds. To compensate for that, by default we merge context
   // profiles before computing profile summary.
-  if (UseContextLessSummary || (sampleprof::FunctionSamples::ProfileIsCS &&
+  if (UseContextLessSummary || (sampleprof::FunctionSamples::ProfileIsCSFlat &&
                                 !UseContextLessSummary.getNumOccurrences())) {
     for (const auto &I : Profiles) {
       ContextLessProfiles[I.second.getName()].merge(I.second);

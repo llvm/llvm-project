@@ -1,5 +1,5 @@
-; RUN: opt < %s -cost-model -analyze -mtriple=systemz-unknown -mcpu=z13 | FileCheck %s
-; RUN: opt < %s -cost-model -analyze -mtriple=systemz-unknown -mcpu=zEC12 \
+; RUN: opt < %s -passes='print<cost-model>' 2>&1 -disable-output -mtriple=systemz-unknown -mcpu=z13 | FileCheck %s
+; RUN: opt < %s -passes='print<cost-model>' 2>&1 -disable-output -mtriple=systemz-unknown -mcpu=zEC12 \
 ; RUN:  | FileCheck %s --check-prefix=IPMSQ
 ;
 ; TODO: add more tests for differing operand types of the two compares.

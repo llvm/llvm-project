@@ -14,7 +14,6 @@
 #include "index/Index.h"
 #include "index/Relation.h"
 #include "index/Serialization.h"
-#include "index/dex/Dex.h"
 #include "index/remote/Client.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
@@ -334,7 +333,8 @@ public:
     }
 
     // Auto-detects input format when parsing
-    auto IndexIn = clang::clangd::readIndexFile(Buffer->get()->getBuffer());
+    auto IndexIn = clang::clangd::readIndexFile(Buffer->get()->getBuffer(),
+                                                SymbolOrigin::Static);
     if (!IndexIn) {
       llvm::errs() << llvm::toString(IndexIn.takeError()) << "\n";
       return;
@@ -374,7 +374,7 @@ std::unique_ptr<SymbolIndex> openIndex(llvm::StringRef Index) {
   return Index.startswith("remote:")
              ? remote::getClient(Index.drop_front(strlen("remote:")),
                                  ProjectRoot)
-             : loadIndex(Index, /*UseDex=*/true);
+             : loadIndex(Index, SymbolOrigin::Static, /*UseDex=*/true);
 }
 
 bool runCommand(std::string Request, const SymbolIndex &Index) {
@@ -413,6 +413,13 @@ int main(int argc, const char *argv[]) {
   using namespace clang::clangd;
 
   llvm::cl::ParseCommandLineOptions(argc, argv, Overview);
+
+  // Preserve global options when flag parser is reset, so commands can use
+  // them.
+  IndexLocation.setValue(IndexLocation, /*initial=*/true);
+  ExecCommand.setValue(ExecCommand, /*initial=*/true);
+  ProjectRoot.setValue(ProjectRoot, /*initial=*/true);
+
   llvm::cl::ResetCommandLineParser(); // We reuse it for REPL commands.
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
 

@@ -10,7 +10,7 @@
 #include "Symbols.h"
 #include "Target.h"
 #include "lld/Common/ErrorHandler.h"
-#include "llvm/Object/ELF.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/Endian.h"
 
 using namespace llvm;
@@ -114,6 +114,7 @@ uint32_t AMDGPU::calcEFlags() const {
   case ELFABIVERSION_AMDGPU_HSA_V3:
     return calcEFlagsV3();
   case ELFABIVERSION_AMDGPU_HSA_V4:
+  case ELFABIVERSION_AMDGPU_HSA_V5:
     return calcEFlagsV4();
   default:
     error("unknown abi version: " + Twine(abiVersion));

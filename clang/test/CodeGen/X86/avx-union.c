@@ -27,11 +27,11 @@ union M256 m1;
 union M512 m2;
 // CHECK-LABEL:   define{{.*}} void @test()
 // CHECK:         call void @foo1(<4 x double>
-// CHECK-LEGACY:  call void @foo1(%union.M256* byval(%union.M256) align 32
-// AVX:           call void @foo2(%union.M512* byval(%union.M512) align 64
+// CHECK-LEGACY:  call void @foo1(%union.M256* noundef byval(%union.M256) align 32
+// AVX:           call void @foo2(%union.M512* noundef byval(%union.M512) align 64
 // AVX512:        call void @foo2(<8 x double>
-// AVX512-LEGACY: call void @foo2(%union.M512* byval(%union.M512) align 64
-void test() {
+// AVX512-LEGACY: call void @foo2(%union.M512* noundef byval(%union.M512) align 64
+void test(void) {
   foo1(m1);
   foo2(m2);
 }

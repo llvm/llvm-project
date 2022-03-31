@@ -18,9 +18,11 @@
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/DependenceGraphBuilder.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
-#include "llvm/IR/Instructions.h"
 
 namespace llvm {
+class Function;
+class Loop;
+class LoopInfo;
 class DDGNode;
 class DDGEdge;
 using DDGNodeBase = DGNode<DDGNode, DDGEdge>;
@@ -52,8 +54,8 @@ public:
   };
 
   DDGNode() = delete;
-  DDGNode(const NodeKind K) : DDGNodeBase(), Kind(K) {}
-  DDGNode(const DDGNode &N) : DDGNodeBase(N), Kind(N.Kind) {}
+  DDGNode(const NodeKind K) : Kind(K) {}
+  DDGNode(const DDGNode &N) = default;
   DDGNode(DDGNode &&N) : DDGNodeBase(std::move(N)), Kind(N.Kind) {}
   virtual ~DDGNode() = 0;
 
@@ -93,7 +95,7 @@ public:
   RootDDGNode() : DDGNode(NodeKind::Root) {}
   RootDDGNode(const RootDDGNode &N) = delete;
   RootDDGNode(RootDDGNode &&N) : DDGNode(std::move(N)) {}
-  ~RootDDGNode() {}
+  ~RootDDGNode() = default;
 
   /// Define classof to be able to use isa<>, cast<>, dyn_cast<>, etc.
   static bool classof(const DDGNode *N) {
@@ -113,11 +115,7 @@ public:
   SimpleDDGNode(SimpleDDGNode &&N);
   ~SimpleDDGNode();
 
-  SimpleDDGNode &operator=(const SimpleDDGNode &N) {
-    DDGNode::operator=(N);
-    InstList = N.InstList;
-    return *this;
-  }
+  SimpleDDGNode &operator=(const SimpleDDGNode &N) = default;
 
   SimpleDDGNode &operator=(SimpleDDGNode &&N) {
     DDGNode::operator=(std::move(N));
@@ -179,11 +177,7 @@ public:
   PiBlockDDGNode(PiBlockDDGNode &&N);
   ~PiBlockDDGNode();
 
-  PiBlockDDGNode &operator=(const PiBlockDDGNode &N) {
-    DDGNode::operator=(N);
-    NodeList = N.NodeList;
-    return *this;
-  }
+  PiBlockDDGNode &operator=(const PiBlockDDGNode &N) = default;
 
   PiBlockDDGNode &operator=(PiBlockDDGNode &&N) {
     DDGNode::operator=(std::move(N));
@@ -231,11 +225,7 @@ public:
   DDGEdge(DDGNode &N, EdgeKind K) : DDGEdgeBase(N), Kind(K) {}
   DDGEdge(const DDGEdge &E) : DDGEdgeBase(E), Kind(E.getKind()) {}
   DDGEdge(DDGEdge &&E) : DDGEdgeBase(std::move(E)), Kind(E.Kind) {}
-  DDGEdge &operator=(const DDGEdge &E) {
-    DDGEdgeBase::operator=(E);
-    Kind = E.Kind;
-    return *this;
-  }
+  DDGEdge &operator=(const DDGEdge &E) = default;
 
   DDGEdge &operator=(DDGEdge &&E) {
     DDGEdgeBase::operator=(std::move(E));
@@ -272,7 +262,7 @@ public:
       : Name(N), DI(DepInfo), Root(nullptr) {}
   DependenceGraphInfo(DependenceGraphInfo &&G)
       : Name(std::move(G.Name)), DI(std::move(G.DI)), Root(G.Root) {}
-  virtual ~DependenceGraphInfo() {}
+  virtual ~DependenceGraphInfo() = default;
 
   /// Return the label that is used to name this graph.
   StringRef getName() const { return Name; }

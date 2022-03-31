@@ -1,4 +1,4 @@
-# RUN: llvm-ifs --input-format=ELF --output-format=IFS --output=- %p/Inputs/gnu_hash.so | FileCheck %s
+# RUN: llvm-ifs --input-format=ELF --output-ifs=- %p/Inputs/gnu_hash.so | FileCheck %s
 
 # CHECK:      --- !ifs-v1
 # CHECK-NEXT: IfsVersion:      3.0

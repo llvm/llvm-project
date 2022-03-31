@@ -8,6 +8,7 @@
 // RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck -check-prefix=NOSICIVI --implicit-check-not=error: %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=fiji %s 2>&1 | FileCheck -check-prefix=NOSICIVI --implicit-check-not=error: %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 %s 2>&1 | FileCheck --check-prefix=NOGFX9 --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 %s 2>&1 | FileCheck --check-prefix=NOGFX10 --implicit-check-not=error: %s
 
 //===----------------------------------------------------------------------===//
 // Instructions
@@ -109,6 +110,7 @@ s_mulk_i32 s2, 0xFFFF
 s_cbranch_i_fork s[2:3], 0x6
 // SICI: s_cbranch_i_fork s[2:3], 6 ; encoding: [0x06,0x00,0x82,0xb8]
 // VI9:  s_cbranch_i_fork s[2:3], 6 ; encoding: [0x06,0x00,0x02,0xb8]
+// NOGFX10: error: instruction not supported on this GPU
 
 //===----------------------------------------------------------------------===//
 // getreg/setreg and hwreg macro
@@ -151,27 +153,31 @@ s_getreg_b32 s2, hwreg(15)
 // GFX9:  s_getreg_b32 s2, hwreg(HW_REG_SH_MEM_BASES) ; encoding: [0x0f,0xf8,0x82,0xb8]
 // GFX10: s_getreg_b32 s2, hwreg(HW_REG_SH_MEM_BASES) ; encoding: [0x0f,0xf8,0x02,0xb9]
 
-// GFX10+ registers
 s_getreg_b32 s2, hwreg(16)
 // SICI:  s_getreg_b32 s2, hwreg(16) ; encoding: [0x10,0xf8,0x02,0xb9]
-// VI9:   s_getreg_b32 s2, hwreg(16) ; encoding: [0x10,0xf8,0x82,0xb8]
+// VI:    s_getreg_b32 s2, hwreg(16) ; encoding: [0x10,0xf8,0x82,0xb8]
+// GFX9:  s_getreg_b32 s2, hwreg(HW_REG_TBA_LO) ; encoding: [0x10,0xf8,0x82,0xb8]
 // GFX10: s_getreg_b32 s2, hwreg(HW_REG_TBA_LO) ; encoding: [0x10,0xf8,0x02,0xb9]
 
 s_getreg_b32 s2, hwreg(17)
 // SICI:  s_getreg_b32 s2, hwreg(17) ; encoding: [0x11,0xf8,0x02,0xb9]
-// VI9:   s_getreg_b32 s2, hwreg(17) ; encoding: [0x11,0xf8,0x82,0xb8]
+// VI:    s_getreg_b32 s2, hwreg(17) ; encoding: [0x11,0xf8,0x82,0xb8]
+// GFX9:  s_getreg_b32 s2, hwreg(HW_REG_TBA_HI) ; encoding: [0x11,0xf8,0x82,0xb8]
 // GFX10: s_getreg_b32 s2, hwreg(HW_REG_TBA_HI) ; encoding: [0x11,0xf8,0x02,0xb9]
 
 s_getreg_b32 s2, hwreg(18)
 // SICI:  s_getreg_b32 s2, hwreg(18) ; encoding: [0x12,0xf8,0x02,0xb9]
-// VI9:   s_getreg_b32 s2, hwreg(18) ; encoding: [0x12,0xf8,0x82,0xb8]
+// VI:    s_getreg_b32 s2, hwreg(18) ; encoding: [0x12,0xf8,0x82,0xb8]
+// GFX9:  s_getreg_b32 s2, hwreg(HW_REG_TMA_LO) ; encoding: [0x12,0xf8,0x82,0xb8]
 // GFX10: s_getreg_b32 s2, hwreg(HW_REG_TMA_LO) ; encoding: [0x12,0xf8,0x02,0xb9]
 
 s_getreg_b32 s2, hwreg(19)
 // SICI:  s_getreg_b32 s2, hwreg(19) ; encoding: [0x13,0xf8,0x02,0xb9]
-// VI9:   s_getreg_b32 s2, hwreg(19) ; encoding: [0x13,0xf8,0x82,0xb8]
+// VI:    s_getreg_b32 s2, hwreg(19) ; encoding: [0x13,0xf8,0x82,0xb8]
+// GFX9:  s_getreg_b32 s2, hwreg(HW_REG_TMA_HI) ; encoding: [0x13,0xf8,0x82,0xb8]
 // GFX10: s_getreg_b32 s2, hwreg(HW_REG_TMA_HI) ; encoding: [0x13,0xf8,0x02,0xb9]
 
+// GFX10+ registers
 s_getreg_b32 s2, hwreg(20)
 // SICI:  s_getreg_b32 s2, hwreg(20) ; encoding: [0x14,0xf8,0x02,0xb9]
 // VI9:   s_getreg_b32 s2, hwreg(20) ; encoding: [0x14,0xf8,0x82,0xb8]
@@ -190,12 +196,12 @@ s_getreg_b32 s2, hwreg(22)
 s_getreg_b32 s2, hwreg(23)
 // SICI:  s_getreg_b32 s2, hwreg(23) ; encoding: [0x17,0xf8,0x02,0xb9]
 // VI9:   s_getreg_b32 s2, hwreg(23) ; encoding: [0x17,0xf8,0x82,0xb8]
-// GFX10: s_getreg_b32 s2, hwreg(23) ; encoding: [0x17,0xf8,0x02,0xb9]
+// GFX10: s_getreg_b32 s2, hwreg(HW_REG_HW_ID1) ; encoding: [0x17,0xf8,0x02,0xb9]
 
 s_getreg_b32 s2, hwreg(24)
 // SICI:  s_getreg_b32 s2, hwreg(24) ; encoding: [0x18,0xf8,0x02,0xb9]
 // VI9:   s_getreg_b32 s2, hwreg(24) ; encoding: [0x18,0xf8,0x82,0xb8]
-// GFX10: s_getreg_b32 s2, hwreg(24) ; encoding: [0x18,0xf8,0x02,0xb9]
+// GFX10: s_getreg_b32 s2, hwreg(HW_REG_HW_ID2) ; encoding: [0x18,0xf8,0x02,0xb9]
 
 s_getreg_b32 s2, hwreg(25)
 // SICI:  s_getreg_b32 s2, hwreg(25) ; encoding: [0x19,0xf8,0x02,0xb9]
@@ -224,7 +230,17 @@ s_setreg_b32 0xf803, s2
 s_setreg_b32 hwreg(HW_REG_HW_ID), s2
 // SICI: s_setreg_b32 hwreg(HW_REG_HW_ID), s2       ; encoding: [0x04,0xf8,0x82,0xb9]
 // VI9:  s_setreg_b32 hwreg(HW_REG_HW_ID), s2       ; encoding: [0x04,0xf8,0x02,0xb9]
-// GFX10: s_setreg_b32 hwreg(HW_REG_HW_ID), s2 ; encoding: [0x04,0xf8,0x82,0xb9]
+// GFX10: s_setreg_b32 hwreg(HW_REG_HW_ID1), s2   ; encoding: [0x17,0xf8,0x82,0xb9]
+
+s_setreg_b32 hwreg(HW_REG_HW_ID1), s2
+// NOSICIVI: error: specified hardware register is not supported on this GPU
+// NOGFX9: error: specified hardware register is not supported on this GPU
+// GFX10: s_setreg_b32 hwreg(HW_REG_HW_ID1), s2      ; encoding: [0x17,0xf8,0x82,0xb9]
+
+s_setreg_b32 hwreg(HW_REG_HW_ID2), s2
+// NOSICIVI: error: specified hardware register is not supported on this GPU
+// NOGFX9: error: specified hardware register is not supported on this GPU
+// GFX10: s_setreg_b32 hwreg(HW_REG_HW_ID2), s2      ; encoding: [0x18,0xf8,0x82,0xb9]
 
 // HW register identifier, non-default offset/width
 s_setreg_b32 hwreg(HW_REG_GPR_ALLOC, 1, 31), s2
@@ -245,27 +261,31 @@ s_setreg_b32 hwreg(15), s2
 // GFX9:  s_setreg_b32 hwreg(HW_REG_SH_MEM_BASES), s2 ; encoding: [0x0f,0xf8,0x02,0xb9]
 // GFX10: s_setreg_b32 hwreg(HW_REG_SH_MEM_BASES), s2 ; encoding: [0x0f,0xf8,0x82,0xb9]
 
-// GFX10+ registers
 s_setreg_b32 hwreg(16), s2
 // SICI:  s_setreg_b32 hwreg(16), s2      ; encoding: [0x10,0xf8,0x82,0xb9]
-// VI9:   s_setreg_b32 hwreg(16), s2      ; encoding: [0x10,0xf8,0x02,0xb9]
+// VI:    s_setreg_b32 hwreg(16), s2      ; encoding: [0x10,0xf8,0x02,0xb9]
+// GFX9:  s_setreg_b32 hwreg(HW_REG_TBA_LO), s2 ; encoding: [0x10,0xf8,0x02,0xb9]
 // GFX10: s_setreg_b32 hwreg(HW_REG_TBA_LO), s2 ; encoding: [0x10,0xf8,0x82,0xb9]
 
 s_setreg_b32 hwreg(17), s2
 // SICI:  s_setreg_b32 hwreg(17), s2      ; encoding: [0x11,0xf8,0x82,0xb9]
-// VI9:   s_setreg_b32 hwreg(17), s2      ; encoding: [0x11,0xf8,0x02,0xb9]
+// VI:    s_setreg_b32 hwreg(17), s2      ; encoding: [0x11,0xf8,0x02,0xb9]
+// GFX9:  s_setreg_b32 hwreg(HW_REG_TBA_HI), s2 ; encoding: [0x11,0xf8,0x02,0xb9]
 // GFX10: s_setreg_b32 hwreg(HW_REG_TBA_HI), s2 ; encoding: [0x11,0xf8,0x82,0xb9]
 
 s_setreg_b32 hwreg(18), s2
 // SICI:  s_setreg_b32 hwreg(18), s2      ; encoding: [0x12,0xf8,0x82,0xb9]
-// VI9:   s_setreg_b32 hwreg(18), s2      ; encoding: [0x12,0xf8,0x02,0xb9]
+// VI:    s_setreg_b32 hwreg(18), s2      ; encoding: [0x12,0xf8,0x02,0xb9]
+// GFX9:  s_setreg_b32 hwreg(HW_REG_TMA_LO), s2 ; encoding: [0x12,0xf8,0x02,0xb9]
 // GFX10: s_setreg_b32 hwreg(HW_REG_TMA_LO), s2 ; encoding: [0x12,0xf8,0x82,0xb9]
 
 s_setreg_b32 hwreg(19), s2
 // SICI:  s_setreg_b32 hwreg(19), s2      ; encoding: [0x13,0xf8,0x82,0xb9]
-// VI9:   s_setreg_b32 hwreg(19), s2      ; encoding: [0x13,0xf8,0x02,0xb9]
+// VI:    s_setreg_b32 hwreg(19), s2      ; encoding: [0x13,0xf8,0x02,0xb9]
+// GFX9:  s_setreg_b32 hwreg(HW_REG_TMA_HI), s2 ; encoding: [0x13,0xf8,0x02,0xb9]
 // GFX10: s_setreg_b32 hwreg(HW_REG_TMA_HI), s2 ; encoding: [0x13,0xf8,0x82,0xb9]
 
+// GFX10+ registers
 s_setreg_b32 hwreg(20), s2
 // SICI:  s_setreg_b32 hwreg(20), s2      ; encoding: [0x14,0xf8,0x82,0xb9]
 // VI9:   s_setreg_b32 hwreg(20), s2      ; encoding: [0x14,0xf8,0x02,0xb9]
@@ -284,12 +304,12 @@ s_setreg_b32 hwreg(22), s2
 s_setreg_b32 hwreg(23), s2
 // SICI:  s_setreg_b32 hwreg(23), s2      ; encoding: [0x17,0xf8,0x82,0xb9]
 // VI9:   s_setreg_b32 hwreg(23), s2      ; encoding: [0x17,0xf8,0x02,0xb9]
-// GFX10: s_setreg_b32 hwreg(23), s2      ; encoding: [0x17,0xf8,0x82,0xb9]
+// GFX10: s_setreg_b32 hwreg(HW_REG_HW_ID1), s2      ; encoding: [0x17,0xf8,0x82,0xb9]
 
 s_setreg_b32 hwreg(24), s2
 // SICI:  s_setreg_b32 hwreg(24), s2      ; encoding: [0x18,0xf8,0x82,0xb9]
 // VI9:   s_setreg_b32 hwreg(24), s2      ; encoding: [0x18,0xf8,0x02,0xb9]
-// GFX10: s_setreg_b32 hwreg(24), s2      ; encoding: [0x18,0xf8,0x82,0xb9]
+// GFX10: s_setreg_b32 hwreg(HW_REG_HW_ID2), s2      ; encoding: [0x18,0xf8,0x82,0xb9]
 
 s_setreg_b32 hwreg(25), s2
 // SICI:  s_setreg_b32 hwreg(25), s2      ; encoding: [0x19,0xf8,0x82,0xb9]

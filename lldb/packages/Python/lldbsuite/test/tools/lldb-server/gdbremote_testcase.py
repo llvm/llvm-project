@@ -772,29 +772,20 @@ class GdbRemoteTestCaseBase(Base):
             thread_ids.extend(new_thread_infos)
         return thread_ids
 
-    def wait_for_thread_count(self, thread_count):
-        start_time = time.time()
-        timeout_time = start_time + self.DEFAULT_TIMEOUT
+    def launch_with_threads(self, thread_count):
+        procs = self.prep_debug_monitor_and_inferior(
+                inferior_args=["thread:new"]*(thread_count-1) + ["trap"])
 
-        actual_thread_count = 0
-        while actual_thread_count < thread_count:
-            self.reset_test_sequence()
-            self.add_threadinfo_collection_packets()
-
-            context = self.expect_gdbremote_sequence()
-            self.assertIsNotNone(context)
-
-            threads = self.parse_threadinfo_packets(context)
-            self.assertIsNotNone(threads)
-
-            actual_thread_count = len(threads)
-
-            if time.time() > timeout_time:
-                raise Exception(
-                    'timed out after {} seconds while waiting for threads: waiting for at least {} threads, found {}'.format(
-                        self.DEFAULT_TIMEOUT, thread_count, actual_thread_count))
-
-        return threads
+        self.test_sequence.add_log_lines([
+                "read packet: $c#00",
+                {"direction": "send",
+                    "regex": r"^\$T([0-9a-fA-F]{2})([^#]*)#..$",
+                    "capture": {1: "stop_signo", 2: "stop_reply_kv"}}], True)
+        self.add_threadinfo_collection_packets()
+        context = self.expect_gdbremote_sequence()
+        threads = self.parse_threadinfo_packets(context)
+        self.assertGreaterEqual(len(threads), thread_count)
+        return context, threads
 
     def add_set_breakpoint_packets(
             self,
@@ -851,6 +842,7 @@ class GdbRemoteTestCaseBase(Base):
         "qXfer:libraries:read",
         "qXfer:libraries-svr4:read",
         "qXfer:features:read",
+        "qXfer:siginfo:read",
         "qEcho",
         "QPassSignals",
         "multiprocess",
@@ -894,28 +886,6 @@ class GdbRemoteTestCaseBase(Base):
                     key)
 
         return supported_dict
-
-    def run_process_then_stop(self, run_seconds=1):
-        # Tell the stub to continue.
-        self.test_sequence.add_log_lines(
-            ["read packet: $vCont;c#a8"],
-            True)
-        context = self.expect_gdbremote_sequence()
-
-        # Wait for run_seconds.
-        time.sleep(run_seconds)
-
-        # Send an interrupt, capture a T response.
-        self.reset_test_sequence()
-        self.test_sequence.add_log_lines(
-            ["read packet: {}".format(chr(3)),
-             {"direction": "send", "regex": r"^\$T([0-9a-fA-F]+)([^#]+)#[0-9a-fA-F]{2}$", "capture": {1: "stop_result"}}],
-            True)
-        context = self.expect_gdbremote_sequence()
-        self.assertIsNotNone(context)
-        self.assertIsNotNone(context.get("stop_result"))
-
-        return context
 
     def continue_process_and_wait_for_stop(self):
         self.test_sequence.add_log_lines(
@@ -1536,17 +1506,18 @@ class GdbRemoteTestCaseBase(Base):
         # variable value
         if re.match("s390x", arch):
             expected_step_count = 2
-        # ARM64 requires "4" instructions: 2 to compute the address (adrp, add),
-        # one to materialize the constant (mov) and the store
+        # ARM64 requires "4" instructions: 2 to compute the address (adrp,
+        # add), one to materialize the constant (mov) and the store. Once
+        # addresses and constants are materialized, only one instruction is
+        # needed.
         if re.match("arm64", arch):
-            expected_step_count = 4
-
-        self.assertEqual(step_count, expected_step_count)
-
-        # ARM64: Once addresses and constants are materialized, only one
-        # instruction is needed.
-        if re.match("arm64", arch):
-            expected_step_count = 1
+            before_materialization_step_count = 4
+            after_matrialization_step_count = 1
+            self.assertIn(step_count, [before_materialization_step_count,
+                                       after_matrialization_step_count])
+            expected_step_count = after_matrialization_step_count
+        else:
+            self.assertEqual(step_count, expected_step_count)
 
         # Verify we hit the next state.
         args["expected_g_c1"] = "0"

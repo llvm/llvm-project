@@ -16,15 +16,15 @@ void wsr64_1(unsigned long v) {
   __builtin_arm_wsr64("sysreg", v);
 }
 
-unsigned rsr_1() {
+unsigned rsr_1(void) {
   return __builtin_arm_rsr("sysreg");
 }
 
-void *rsrp_1() {
+void *rsrp_1(void) {
   return __builtin_arm_rsrp("sysreg");
 }
 
-unsigned long rsr64_1() {
+unsigned long rsr64_1(void) {
   return __builtin_arm_rsr64("sysreg");
 }
 
@@ -40,15 +40,15 @@ void wsr64_2(unsigned long v) {
   __builtin_arm_wsr64("0:1:2:3:4", v);
 }
 
-unsigned rsr_2() {
+unsigned rsr_2(void) {
   return __builtin_arm_rsr("0:1:15:15:4");
 }
 
-void *rsrp_2() {
+void *rsrp_2(void) {
   return __builtin_arm_rsrp("0:1:2:3:4");
 }
 
-unsigned long rsr64_2() {
+unsigned long rsr64_2(void) {
   return __builtin_arm_rsr64("0:1:15:15:4");
 }
 
@@ -64,38 +64,38 @@ void wsr64_3(unsigned long v) {
   __builtin_arm_wsr64("0:1:2", v); //expected-error {{invalid special register for builtin}}
 }
 
-unsigned rsr_3() {
+unsigned rsr_3(void) {
   return __builtin_arm_rsr("0:1:2"); //expected-error {{invalid special register for builtin}}
 }
 
-unsigned rsr_4() {
+unsigned rsr_4(void) {
   return __builtin_arm_rsr("0:1:2:3:8"); //expected-error {{invalid special register for builtin}}
 }
 
-unsigned rsr_5() {
+unsigned rsr_5(void) {
   return __builtin_arm_rsr("0:8:1:2:3"); //expected-error {{invalid special register for builtin}}
 }
 
-unsigned rsr_6() {
+unsigned rsr_6(void) {
   return __builtin_arm_rsr("0:1:16:16:2"); //expected-error {{invalid special register for builtin}}
 }
 
-void *rsrp_3() {
+void *rsrp_3(void) {
   return __builtin_arm_rsrp("0:1:2"); //expected-error {{invalid special register for builtin}}
 }
 
-unsigned long rsr64_3() {
+unsigned long rsr64_3(void) {
   return __builtin_arm_rsr64("0:1:2"); //expected-error {{invalid special register for builtin}}
 }
 
-unsigned long rsr64_4() {
+unsigned long rsr64_4(void) {
   return __builtin_arm_rsr64("0:1:2:3:8"); //expected-error {{invalid special register for builtin}}
 }
 
-unsigned long rsr64_5() {
+unsigned long rsr64_5(void) {
   return __builtin_arm_rsr64("0:8:2:3:4"); //expected-error {{invalid special register for builtin}}
 }
 
-unsigned long rsr64_6() {
+unsigned long rsr64_6(void) {
   return __builtin_arm_rsr64("0:1:16:16:2"); //expected-error {{invalid special register for builtin}}
 }

@@ -90,7 +90,7 @@ SourceLocation::printToString(const SourceManager &SM) const {
   std::string S;
   llvm::raw_string_ostream OS(S);
   print(OS, SM);
-  return OS.str();
+  return S;
 }
 
 LLVM_DUMP_METHOD void SourceLocation::dump(const SourceManager &SM) const {
@@ -149,7 +149,7 @@ SourceRange::printToString(const SourceManager &SM) const {
   std::string S;
   llvm::raw_string_ostream OS(S);
   print(OS, SM);
-  return OS.str();
+  return S;
 }
 
 //===----------------------------------------------------------------------===//

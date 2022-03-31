@@ -584,26 +584,33 @@ the form:
 where debugger and internal_dict are as above, that function will get run when
 the module is loaded allowing you to add whatever commands you want into the
 current debugger. Note that this function will only be run when using the LLDB
-command command script import, it will not get run if anyone imports your
-module from another module. If you want to always run code when your module is
-loaded from LLDB or when loaded via an import statement in python code you can
-test the lldb.debugger object, since you imported the module at the top of the
-python ls.py module. This test must be in code that isn't contained inside of
-any function or class, just like the standard test for __main__ like all python
-modules usually do. Sample code would look like:
+command ``command script import``, it will not get run if anyone imports your
+module from another module.
+
+The standard test for ``__main__``, like many python modules do, is useful for
+creating scripts that can be run from the command line. However, for command
+line scripts, the debugger instance must be created manually. Sample code would
+look like:
 
 ::
 
   if __name__ == '__main__':
+      # Initialize the debugger before making any API calls.
+      lldb.SBDebugger.Initialize()
       # Create a new debugger instance in your module if your module
       # can be run from the command line. When we run a script from
       # the command line, we won't have any debugger object in
       # lldb.debugger, so we can just create it if it will be needed
-      lldb.debugger = lldb.SBDebugger.Create()
-  elif lldb.debugger:
-      # Module is being run inside the LLDB interpreter
-      lldb.debugger.HandleCommand('command script add -f ls.ls ls')
-      print 'The "ls" python command has been installed and is ready for use.'
+      debugger = lldb.SBDebugger.Create()
+
+      # Next, do whatever work this module should do when run as a command.
+      # ...
+
+      # Finally, dispose of the debugger you just made.
+      lldb.SBDebugger.Destroy(debugger)
+      # Terminate the debug sesssion
+      lldb.SBDebugger.Terminate()
+
 
 Now we can create a module called ls.py in the file ~/ls.py that will implement
 a function that can be used by LLDB's python command code:
@@ -673,7 +680,7 @@ that goal:
   Python Interactive Interpreter. To exit, type 'quit()', 'exit()' or Ctrl-D.
   >>> def pofoo_funct(debugger, command, result, internal_dict):
   ...	cmd = "po [ModifyString(" + command + ") capitalizedString]"
-  ...	lldb.debugger.HandleCommand(cmd)
+  ...	debugger.HandleCommand(cmd)
   ...
   >>> ^D
   (lldb) command script add pofoo -f pofoo_funct

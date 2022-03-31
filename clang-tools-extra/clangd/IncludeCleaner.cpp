@@ -14,6 +14,7 @@
 #include "SourceCode.h"
 #include "support/Logger.h"
 #include "support/Trace.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/SourceLocation.h"
@@ -21,11 +22,16 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/Syntax/Tokens.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 
 namespace clang {
 namespace clangd {
+
+static bool AnalyzeStdlib = false;
+void setIncludeCleanerAnalyzesStdlib(bool B) { AnalyzeStdlib = B; }
+
 namespace {
 
 /// Crawler traverses the AST and feeds in the locations of (sometimes
@@ -67,10 +73,13 @@ public:
   }
 
   bool VisitTemplateSpecializationType(TemplateSpecializationType *TST) {
-    if (isNew(TST)) {
-      add(TST->getTemplateName().getAsTemplateDecl()); // Primary template.
-      add(TST->getAsCXXRecordDecl());                  // Specialization
-    }
+    add(TST->getTemplateName().getAsTemplateDecl()); // Primary template.
+    add(TST->getAsCXXRecordDecl());                  // Specialization
+    return true;
+  }
+
+  bool VisitUsingType(UsingType *UT) {
+    add(UT->getFoundDecl());
     return true;
   }
 
@@ -122,6 +131,10 @@ private:
   void add(const Decl *D) {
     if (!D || !isNew(D->getCanonicalDecl()))
       return;
+    if (auto SS = StdRecognizer(D)) {
+      Result.Stdlib.insert(*SS);
+      return;
+    }
     // Special case RecordDecls, as it is common for them to be forward
     // declared multiple times. The most common cases are:
     // - Definition available in TU, only mark that one as usage. The rest is
@@ -131,14 +144,14 @@ private:
     //   redecls.
     if (const auto *RD = llvm::dyn_cast<RecordDecl>(D)) {
       if (const auto *Definition = RD->getDefinition()) {
-        Result.insert(Definition->getLocation());
+        Result.User.insert(Definition->getLocation());
         return;
       }
       if (SM.isInMainFile(RD->getMostRecentDecl()->getLocation()))
         return;
     }
     for (const Decl *Redecl : D->redecls())
-      Result.insert(Redecl->getLocation());
+      Result.User.insert(Redecl->getLocation());
   }
 
   bool isNew(const void *P) { return P && Visited.insert(P).second; }
@@ -146,13 +159,14 @@ private:
   ReferencedLocations &Result;
   llvm::DenseSet<const void *> Visited;
   const SourceManager &SM;
+  tooling::stdlib::Recognizer StdRecognizer;
 };
 
 // Given a set of referenced FileIDs, determines all the potentially-referenced
 // files and macros by traversing expansion/spelling locations of macro IDs.
 // This is used to map the referenced SourceLocations onto real files.
-struct ReferencedFiles {
-  ReferencedFiles(const SourceManager &SM) : SM(SM) {}
+struct ReferencedFilesBuilder {
+  ReferencedFilesBuilder(const SourceManager &SM) : SM(SM) {}
   llvm::DenseSet<FileID> Files;
   llvm::DenseSet<FileID> Macros;
   const SourceManager &SM;
@@ -193,10 +207,10 @@ clangd::Range getDiagnosticRange(llvm::StringRef Code, unsigned HashOffset) {
 
 // Finds locations of macros referenced from within the main file. That includes
 // references that were not yet expanded, e.g `BAR` in `#define FOO BAR`.
-void findReferencedMacros(ParsedAST &AST, ReferencedLocations &Result) {
+void findReferencedMacros(const SourceManager &SM, Preprocessor &PP,
+                          const syntax::TokenBuffer *Tokens,
+                          ReferencedLocations &Result) {
   trace::Span Tracer("IncludeCleaner::findReferencedMacros");
-  auto &SM = AST.getSourceManager();
-  auto &PP = AST.getPreprocessor();
   // FIXME(kirillbobyrev): The macros from the main file are collected in
   // ParsedAST's MainFileMacros. However, we can't use it here because it
   // doesn't handle macro references that were not expanded, e.g. in macro
@@ -206,25 +220,29 @@ void findReferencedMacros(ParsedAST &AST, ReferencedLocations &Result) {
   // this mechanism (as opposed to iterating through all tokens) will improve
   // the performance of findReferencedMacros and also improve other features
   // relying on MainFileMacros.
-  for (const syntax::Token &Tok :
-       AST.getTokens().spelledTokens(SM.getMainFileID())) {
+  for (const syntax::Token &Tok : Tokens->spelledTokens(SM.getMainFileID())) {
     auto Macro = locateMacroAt(Tok, PP);
     if (!Macro)
       continue;
     auto Loc = Macro->Info->getDefinitionLoc();
     if (Loc.isValid())
-      Result.insert(Loc);
+      Result.User.insert(Loc);
+    // FIXME: support stdlib macros
   }
 }
 
-bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST) {
-  // FIXME(kirillbobyrev): We currently do not support the umbrella headers.
-  // Standard Library headers are typically umbrella headers, and system
-  // headers are likely to be the Standard Library headers. Until we have a
-  // good support for umbrella headers and Standard Library headers, don't warn
-  // about them.
-  if (Inc.Written.front() == '<')
+static bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST) {
+  if (Inc.BehindPragmaKeep)
     return false;
+
+  // FIXME(kirillbobyrev): We currently do not support the umbrella headers.
+  // System headers are likely to be standard library headers.
+  // Until we have good support for umbrella headers, don't warn about them.
+  if (Inc.Written.front() == '<') {
+    if (AnalyzeStdlib && tooling::stdlib::Header::named(Inc.Written))
+      return true;
+    return false;
+  }
   // Headers without include guards have side effects and are not
   // self-contained, skip them.
   assert(Inc.HeaderID);
@@ -268,38 +286,61 @@ FileID headerResponsible(FileID ID, const SourceManager &SM,
 
 } // namespace
 
-ReferencedLocations findReferencedLocations(ParsedAST &AST) {
+ReferencedLocations findReferencedLocations(ASTContext &Ctx, Preprocessor &PP,
+                                            const syntax::TokenBuffer *Tokens) {
   trace::Span Tracer("IncludeCleaner::findReferencedLocations");
   ReferencedLocations Result;
-  ReferencedLocationCrawler Crawler(Result, AST.getSourceManager());
-  Crawler.TraverseAST(AST.getASTContext());
-  findReferencedMacros(AST, Result);
+  const auto &SM = Ctx.getSourceManager();
+  ReferencedLocationCrawler Crawler(Result, SM);
+  Crawler.TraverseAST(Ctx);
+  if (Tokens)
+    findReferencedMacros(SM, PP, Tokens, Result);
   return Result;
 }
 
-llvm::DenseSet<FileID>
-findReferencedFiles(const llvm::DenseSet<SourceLocation> &Locs,
-                    const IncludeStructure &Includes, const SourceManager &SM) {
-  std::vector<SourceLocation> Sorted{Locs.begin(), Locs.end()};
+ReferencedLocations findReferencedLocations(ParsedAST &AST) {
+  return findReferencedLocations(AST.getASTContext(), AST.getPreprocessor(),
+                                 &AST.getTokens());
+}
+
+ReferencedFiles
+findReferencedFiles(const ReferencedLocations &Locs, const SourceManager &SM,
+                    llvm::function_ref<FileID(FileID)> HeaderResponsible) {
+  std::vector<SourceLocation> Sorted{Locs.User.begin(), Locs.User.end()};
   llvm::sort(Sorted); // Group by FileID.
-  ReferencedFiles Files(SM);
+  ReferencedFilesBuilder Builder(SM);
   for (auto It = Sorted.begin(); It < Sorted.end();) {
     FileID FID = SM.getFileID(*It);
-    Files.add(FID, *It);
+    Builder.add(FID, *It);
     // Cheaply skip over all the other locations from the same FileID.
     // This avoids lots of redundant Loc->File lookups for the same file.
     do
       ++It;
     while (It != Sorted.end() && SM.isInFileID(*It, FID));
   }
+
   // If a header is not self-contained, we consider its symbols a logical part
   // of the including file. Therefore, mark the parents of all used
   // non-self-contained FileIDs as used. Perform this on FileIDs rather than
   // HeaderIDs, as each inclusion of a non-self-contained file is distinct.
-  llvm::DenseSet<FileID> Result;
-  for (FileID ID : Files.Files)
-    Result.insert(headerResponsible(ID, SM, Includes));
-  return Result;
+  llvm::DenseSet<FileID> UserFiles;
+  for (FileID ID : Builder.Files)
+    UserFiles.insert(HeaderResponsible(ID));
+
+  llvm::DenseSet<tooling::stdlib::Header> StdlibFiles;
+  for (const auto &Symbol : Locs.Stdlib)
+    for (const auto &Header : Symbol.headers())
+      StdlibFiles.insert(Header);
+
+  return {std::move(UserFiles), std::move(StdlibFiles)};
+}
+
+ReferencedFiles findReferencedFiles(const ReferencedLocations &Locs,
+                                    const IncludeStructure &Includes,
+                                    const SourceManager &SM) {
+  return findReferencedFiles(Locs, SM, [&SM, &Includes](FileID ID) {
+    return headerResponsible(ID, SM, Includes);
+  });
 }
 
 std::vector<const Inclusion *>
@@ -333,13 +374,13 @@ static bool isSpecialBuffer(FileID FID, const SourceManager &SM) {
 #endif
 
 llvm::DenseSet<IncludeStructure::HeaderID>
-translateToHeaderIDs(const llvm::DenseSet<FileID> &Files,
+translateToHeaderIDs(const ReferencedFiles &Files,
                      const IncludeStructure &Includes,
                      const SourceManager &SM) {
   trace::Span Tracer("IncludeCleaner::translateToHeaderIDs");
   llvm::DenseSet<IncludeStructure::HeaderID> TranslatedHeaderIDs;
-  TranslatedHeaderIDs.reserve(Files.size());
-  for (FileID FID : Files) {
+  TranslatedHeaderIDs.reserve(Files.User.size());
+  for (FileID FID : Files.User) {
     const FileEntry *FE = SM.getFileEntryForID(FID);
     if (!FE) {
       assert(isSpecialBuffer(FID, SM));
@@ -349,6 +390,9 @@ translateToHeaderIDs(const llvm::DenseSet<FileID> &Files,
     assert(File);
     TranslatedHeaderIDs.insert(*File);
   }
+  for (tooling::stdlib::Header StdlibUsed : Files.Stdlib)
+    for (auto HID : Includes.StdlibHeaders.lookup(StdlibUsed))
+      TranslatedHeaderIDs.insert(HID);
   return TranslatedHeaderIDs;
 }
 

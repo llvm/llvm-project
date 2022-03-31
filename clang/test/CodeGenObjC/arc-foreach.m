@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -fblocks -fobjc-arc -fobjc-runtime-has-weak -emit-llvm %s -o - | FileCheck -check-prefix CHECK-LP64 %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -O1 -fblocks -fobjc-arc -fobjc-runtime-has-weak -emit-llvm %s -o - | FileCheck -check-prefix CHECK-LP64-OPT %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple x86_64-apple-darwin -fblocks -fobjc-arc -fobjc-runtime-has-weak -emit-llvm %s -o - | FileCheck -check-prefix CHECK-LP64 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple x86_64-apple-darwin -O1 -fblocks -fobjc-arc -fobjc-runtime-has-weak -emit-llvm %s -o - | FileCheck -check-prefix CHECK-LP64-OPT %s
 // rdar://9503326
 // rdar://9606600
 
@@ -51,9 +51,9 @@ void test0(NSArray *array) {
 // CHECK-LP64-NEXT: [[SAVED_ARRAY:%.*]] = bitcast i8* [[T2]] to [[ARRAY_T]]*
 
 // Call the enumeration method.
-// CHECK-LP64-NEXT: [[T0:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES_
-// CHECK-LP64-NEXT: [[T1:%.*]] = bitcast [[ARRAY_T]]* [[SAVED_ARRAY]] to i8*
-// CHECK-LP64-NEXT: [[SIZE:%.*]] = call i64 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i64 (i8*, i8*, [[STATE_T]]*, [16 x i8*]*, i64)*)(i8* [[T1]], i8* [[T0]], [[STATE_T]]* [[STATE]], [16 x i8*]* [[BUFFER]], i64 16)
+// CHECK-LP64-NEXT: [[T0:%.*]] = bitcast [[ARRAY_T]]* [[SAVED_ARRAY]] to i8*
+// CHECK-LP64-NEXT: [[T1:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES_
+// CHECK-LP64-NEXT: [[SIZE:%.*]] = call i64 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i64 (i8*, i8*, [[STATE_T]]*, [16 x i8*]*, i64)*)(i8* [[T0]], i8* [[T1]], [[STATE_T]]* [[STATE]], [16 x i8*]* [[BUFFER]], i64 16)
 
 // Check for a nonzero result.
 // CHECK-LP64-NEXT: [[T0:%.*]] = icmp eq i64 [[SIZE]], 0
@@ -78,9 +78,9 @@ void test0(NSArray *array) {
 // CHECK-LP64-OPT: [[CAPTURE:%.*]] = load i8*, i8** [[D0]]
 // CHECK-LP64-OPT: call void (...) @llvm.objc.clang.arc.use(i8* [[CAPTURE]])
 
-// CHECK-LP64:      [[T0:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES_
-// CHECK-LP64-NEXT: [[T1:%.*]] = bitcast [[ARRAY_T]]* [[SAVED_ARRAY]] to i8*
-// CHECK-LP64-NEXT: [[SIZE:%.*]] = call i64 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i64 (i8*, i8*, [[STATE_T]]*, [16 x i8*]*, i64)*)(i8* [[T1]], i8* [[T0]], [[STATE_T]]* [[STATE]], [16 x i8*]* [[BUFFER]], i64 16)
+// CHECK-LP64:      [[T0:%.*]] = bitcast [[ARRAY_T]]* [[SAVED_ARRAY]] to i8*
+// CHECK-LP64-NEXT: [[T1:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES_
+// CHECK-LP64-NEXT: [[SIZE:%.*]] = call i64 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i64 (i8*, i8*, [[STATE_T]]*, [16 x i8*]*, i64)*)(i8* [[T0]], i8* [[T1]], [[STATE_T]]* [[STATE]], [16 x i8*]* [[BUFFER]], i64 16)
 
 // Release the array.
 // CHECK-LP64:      [[T0:%.*]] = bitcast [[ARRAY_T]]* [[SAVED_ARRAY]] to i8*
@@ -141,8 +141,8 @@ void test2(Test2 *a) {
 // CHECK-LP64-NEXT: [[COLL:%.*]] = bitcast i8* [[T2]] to [[ARRAY_T]]*
 
 // Make sure it's not immediately released before starting the iteration.
-// CHECK-LP64-NEXT: load i8*, i8** @OBJC_SELECTOR_REFERENCES_
 // CHECK-LP64-NEXT: [[T0:%.*]] = bitcast [[ARRAY_T]]* [[COLL]] to i8*
+// CHECK-LP64-NEXT: load i8*, i8** @OBJC_SELECTOR_REFERENCES_
 // CHECK-LP64-NEXT: @objc_msgSend
 
 // This bitcast is for the mutation check.
@@ -151,6 +151,7 @@ void test2(Test2 *a) {
 
 // This bitcast is for the 'next' message send.
 // CHECK-LP64:      [[T0:%.*]] = bitcast [[ARRAY_T]]* [[COLL]] to i8*
+// CHECK-LP64-NEXT: load i8*, i8** @OBJC_SELECTOR_REFERENCES_
 // CHECK-LP64-NEXT: @objc_msgSend
 
 // This bitcast is for the final release.

@@ -160,10 +160,17 @@ public:
       std::optional<Expr<SubscriptInteger>> &&);
 
   std::optional<Expr<SubscriptInteger>> lower() const;
+  const Expr<SubscriptInteger> *GetLower() const {
+    return lower_.has_value() ? &lower_->value() : nullptr;
+  }
   Triplet &set_lower(Expr<SubscriptInteger> &&);
   std::optional<Expr<SubscriptInteger>> upper() const;
+  const Expr<SubscriptInteger> *GetUpper() const {
+    return upper_.has_value() ? &upper_->value() : nullptr;
+  }
   Triplet &set_upper(Expr<SubscriptInteger> &&);
   Expr<SubscriptInteger> stride() const; // N.B. result is not optional<>
+  const Expr<SubscriptInteger> &GetStride() const { return stride_.value(); }
   Triplet &set_stride(Expr<SubscriptInteger> &&);
 
   bool operator==(const Triplet &) const;

@@ -27,7 +27,7 @@ func @reduce_window_max() {
                   %2 = affine.load %0[%arg0, %arg1, %arg2, %arg3] : memref<1x8x8x64xf32>
                   %3 = affine.load %1[%arg0 + %arg4, %arg1 * 2 + %arg5, %arg2 * 2 + %arg6, %arg3 + %arg7] : memref<1x18x18x64xf32>
                   %4 = arith.cmpf ogt, %2, %3 : f32
-                  %5 = select %4, %2, %3 : f32
+                  %5 = arith.select %4, %2, %3 : f32
                   affine.store %5, %0[%arg0, %arg1, %arg2, %arg3] : memref<1x8x8x64xf32>
                 }
               }
@@ -63,7 +63,7 @@ func @reduce_window_max() {
 // CHECK:                        %[[lhs:.*]] = affine.load %[[v0]][%[[a0]], %[[a1]], %[[a2]], %[[a3]]] : memref<1x8x8x64xf32>
 // CHECK:                        %[[rhs:.*]] = affine.load %[[v1]][%[[a0]] + %[[a4]], %[[a1]] * 2 + %[[a5]], %[[a2]] * 2 + %[[a6]], %[[a3]] + %[[a7]]] : memref<1x18x18x64xf32>
 // CHECK:                        %[[res:.*]] = arith.cmpf ogt, %[[lhs]], %[[rhs]] : f32
-// CHECK:                        %[[sel:.*]] = select %[[res]], %[[lhs]], %[[rhs]] : f32
+// CHECK:                        %[[sel:.*]] = arith.select %[[res]], %[[lhs]], %[[rhs]] : f32
 // CHECK:                        affine.store %[[sel]], %[[v0]][%[[a0]], %[[a1]], %[[a2]], %[[a3]]] : memref<1x8x8x64xf32>
 // CHECK:                      }
 // CHECK:                    }
@@ -266,6 +266,60 @@ func @nested_min_max(%m: memref<?xf32>, %lb0: index,
             to min affine_map<(d0, d1) -> (d0, d1)>(%ub0, %ub1) {
       affine.load %m[%i] : memref<?xf32>
     }
+  }
+  return
+}
+
+// Test in the presence of locally allocated memrefs.
+
+// CHECK: func @local_alloc
+func @local_alloc() {
+  %cst = arith.constant 0.0 : f32
+  affine.for %i = 0 to 100 {
+    %m = memref.alloc() : memref<1xf32>
+    %ma = memref.alloca() : memref<1xf32>
+    affine.store %cst, %m[0] : memref<1xf32>
+  }
+  // CHECK: affine.parallel
+  return
+}
+
+// CHECK: func @local_alloc_cast
+func @local_alloc_cast() {
+  %cst = arith.constant 0.0 : f32
+  affine.for %i = 0 to 100 {
+    %m = memref.alloc() : memref<128xf32>
+    affine.for %j = 0 to 128 {
+      affine.store %cst, %m[%j] : memref<128xf32>
+    }
+    affine.for %j = 0 to 128 {
+      affine.store %cst, %m[0] : memref<128xf32>
+    }
+    %r = memref.reinterpret_cast %m to offset: [0], sizes: [8, 16],
+           strides: [16, 1] : memref<128xf32> to memref<8x16xf32>
+    affine.for %j = 0 to 8 {
+      affine.store %cst, %r[%j, %j] : memref<8x16xf32>
+    }
+  }
+  // CHECK: affine.parallel
+  // CHECK:   affine.parallel
+  // CHECK:   }
+  // CHECK:   affine.for
+  // CHECK:   }
+  // CHECK:   affine.parallel
+  // CHECK:   }
+  // CHECK: }
+
+  return
+}
+
+// CHECK-LABEL: @iter_arg_memrefs
+func @iter_arg_memrefs(%in: memref<10xf32>) {
+  %mi = memref.alloc() : memref<f32>
+  // Loop-carried memrefs are treated as serializing the loop.
+  // CHECK: affine.for
+  %mo = affine.for %i = 0 to 10 iter_args(%m_arg = %mi) -> (memref<f32>) {
+    affine.yield %m_arg : memref<f32>
   }
   return
 }

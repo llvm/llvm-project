@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_AST_COMPUTE_DEPENDENCE_H
-#define LLVM_CLANG_AST_COMPUTE_DEPENDENCE_H
+#ifndef LLVM_CLANG_AST_COMPUTEDEPENDENCE_H
+#define LLVM_CLANG_AST_COMPUTEDEPENDENCE_H
 
 #include "clang/AST/DependenceFlags.h"
 #include "clang/Basic/ExceptionSpecificationType.h"

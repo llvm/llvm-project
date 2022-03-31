@@ -9,7 +9,7 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_NATIVEENUMGLOBALS_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_NATIVEENUMGLOBALS_H
 
-#include "llvm/DebugInfo/CodeView/SymbolRecord.h"
+#include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/PDBSymbol.h"
 

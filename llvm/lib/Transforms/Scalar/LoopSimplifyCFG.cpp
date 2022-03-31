@@ -16,28 +16,21 @@
 #include "llvm/Transforms/Scalar/LoopSimplifyCFG.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/AssumptionCache.h"
-#include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
-#include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/ScalarEvolution.h"
-#include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
-#include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 using namespace llvm;
 
@@ -261,13 +254,17 @@ private:
     assert(L.getNumBlocks() == LiveLoopBlocks.size() + DeadLoopBlocks.size() &&
            "Malformed block sets?");
 
-    // Now, all exit blocks that are not marked as live are dead.
+    // Now, all exit blocks that are not marked as live are dead, if all their
+    // predecessors are in the loop. This may not be the case, as the input loop
+    // may not by in loop-simplify/canonical form.
     SmallVector<BasicBlock *, 8> ExitBlocks;
     L.getExitBlocks(ExitBlocks);
     SmallPtrSet<BasicBlock *, 8> UniqueDeadExits;
     for (auto *ExitBlock : ExitBlocks)
       if (!LiveExitBlocks.count(ExitBlock) &&
-          UniqueDeadExits.insert(ExitBlock).second)
+          UniqueDeadExits.insert(ExitBlock).second &&
+          all_of(predecessors(ExitBlock),
+                 [this](BasicBlock *Pred) { return L.contains(Pred); }))
         DeadExitBlocks.push_back(ExitBlock);
 
     // Whether or not the edge From->To will still be present in graph after the
@@ -468,7 +465,7 @@ private:
       LI.removeBlock(BB);
     }
 
-    DetatchDeadBlocks(DeadLoopBlocks, &DTUpdates, /*KeepOneInputPHIs*/true);
+    detachDeadBlocks(DeadLoopBlocks, &DTUpdates, /*KeepOneInputPHIs*/true);
     DTU.applyUpdates(DTUpdates);
     DTUpdates.clear();
     for (auto *BB : DeadLoopBlocks)

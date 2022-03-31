@@ -69,6 +69,40 @@ namespace llvm {
   // Specify what functions should keep the frame pointer.
   enum class FramePointerKind { None, NonLeaf, All };
 
-}  // end llvm namespace
+  // Specify what type of zeroing callee-used registers.
+  namespace ZeroCallUsedRegs {
+  const unsigned ONLY_USED = 1U << 1;
+  const unsigned ONLY_GPR = 1U << 2;
+  const unsigned ONLY_ARG = 1U << 3;
+
+  enum class ZeroCallUsedRegsKind : unsigned int {
+    // Don't zero any call-used regs.
+    Skip = 1U << 0,
+    // Only zeros call-used GPRs used in the fn and pass args.
+    UsedGPRArg = ONLY_USED | ONLY_GPR | ONLY_ARG,
+    // Only zeros call-used GPRs used in the fn.
+    UsedGPR = ONLY_USED | ONLY_GPR,
+    // Only zeros call-used regs used in the fn and pass args.
+    UsedArg = ONLY_USED | ONLY_ARG,
+    // Only zeros call-used regs used in the fn.
+    Used = ONLY_USED,
+    // Zeros all call-used GPRs that pass args.
+    AllGPRArg = ONLY_GPR | ONLY_ARG,
+    // Zeros all call-used GPRs.
+    AllGPR = ONLY_GPR,
+    // Zeros all call-used regs that pass args.
+    AllArg = ONLY_ARG,
+    // Zeros all call-used regs.
+    All = 0,
+  };
+  } // namespace ZeroCallUsedRegs
+
+  enum class UWTableKind {
+    None = 0,  ///< No unwind table requested
+    Sync = 1,  ///< "Synchronous" unwind tables
+    Async = 2, ///< "Asynchronous" unwind tables (instr precise)
+    Default = 2,
+  };
+  } // namespace llvm
 
 #endif

@@ -16,10 +16,11 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
-#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/Analysis.h"
+#include "llvm/CodeGen/GlobalISel/CSEInfo.h"
+#include "llvm/CodeGen/GlobalISel/CSEMIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/InlineAsmLowering.h"
@@ -47,7 +48,6 @@
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
@@ -78,7 +78,6 @@
 #include "llvm/Transforms/Utils/MemoryOpRemark.h"
 #include <algorithm>
 #include <cassert>
-#include <cstddef>
 #include <cstdint>
 #include <iterator>
 #include <string>
@@ -338,9 +337,10 @@ bool IRTranslator::translateCompare(const User &U,
     MIRBuilder.buildCopy(
         Res, getOrCreateVReg(*Constant::getAllOnesValue(U.getType())));
   else {
-    assert(CI && "Instruction should be CmpInst");
-    MIRBuilder.buildFCmp(Pred, Res, Op0, Op1,
-                         MachineInstr::copyFlagsFromInstruction(*CI));
+    uint16_t Flags = 0;
+    if (CI)
+      Flags = MachineInstr::copyFlagsFromInstruction(*CI);
+    MIRBuilder.buildFCmp(Pred, Res, Op0, Op1, Flags);
   }
 
   return true;
@@ -2251,6 +2251,23 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     Info.OrigRet = {Register(), Type::getVoidTy(CI.getContext()), 0};
     return CLI->lowerCall(MIRBuilder, Info);
   }
+  case Intrinsic::fptrunc_round: {
+    unsigned Flags = MachineInstr::copyFlagsFromInstruction(CI);
+
+    // Convert the metadata argument to a constant integer
+    Metadata *MD = cast<MetadataAsValue>(CI.getArgOperand(1))->getMetadata();
+    Optional<RoundingMode> RoundMode =
+        convertStrToRoundingMode(cast<MDString>(MD)->getString());
+
+    // Add the Rounding mode as an integer
+    MIRBuilder
+        .buildInstr(TargetOpcode::G_INTRINSIC_FPTRUNC_ROUND,
+                    {getOrCreateVReg(CI)},
+                    {getOrCreateVReg(*CI.getArgOperand(0))}, Flags)
+        .addImm((int)RoundMode.getValue());
+
+    return true;
+  }
 #define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)  \
   case Intrinsic::INTRINSIC:
 #include "llvm/IR/ConstrainedOps.def"
@@ -2983,7 +3000,7 @@ bool IRTranslator::translate(const Constant &C, Register Reg) {
     // Return the scalar if it is a <1 x Ty> vector.
     unsigned NumElts = CAZ->getElementCount().getFixedValue();
     if (NumElts == 1)
-      return translateCopy(C, *CAZ->getElementValue(0u), *EntryBuilder.get());
+      return translateCopy(C, *CAZ->getElementValue(0u), *EntryBuilder);
     SmallVector<Register, 4> Ops;
     for (unsigned I = 0; I < NumElts; ++I) {
       Constant &Elt = *CAZ->getElementValue(I);
@@ -2993,8 +3010,7 @@ bool IRTranslator::translate(const Constant &C, Register Reg) {
   } else if (auto CV = dyn_cast<ConstantDataVector>(&C)) {
     // Return the scalar if it is a <1 x Ty> vector.
     if (CV->getNumElements() == 1)
-      return translateCopy(C, *CV->getElementAsConstant(0),
-                           *EntryBuilder.get());
+      return translateCopy(C, *CV->getElementAsConstant(0), *EntryBuilder);
     SmallVector<Register, 4> Ops;
     for (unsigned i = 0; i < CV->getNumElements(); ++i) {
       Constant &Elt = *CV->getElementAsConstant(i);
@@ -3012,7 +3028,7 @@ bool IRTranslator::translate(const Constant &C, Register Reg) {
     }
   } else if (auto CV = dyn_cast<ConstantVector>(&C)) {
     if (CV->getNumOperands() == 1)
-      return translateCopy(C, *CV->getOperand(0), *EntryBuilder.get());
+      return translateCopy(C, *CV->getOperand(0), *EntryBuilder);
     SmallVector<Register, 4> Ops;
     for (unsigned i = 0; i < CV->getNumOperands(); ++i) {
       Ops.push_back(getOrCreateVReg(*CV->getOperand(i)));
@@ -3261,7 +3277,7 @@ bool IRTranslator::emitSPDescriptorFailure(StackProtectorDescriptor &SPD,
   // because the function return type can be different from __stack_chk_fail's
   // return type (void).
   const TargetMachine &TM = MF->getTarget();
-  if (TM.getTargetTriple().isPS4CPU() || TM.getTargetTriple().isWasm()) {
+  if (TM.getTargetTriple().isPS4() || TM.getTargetTriple().isWasm()) {
     LLVM_DEBUG(dbgs() << "Unhandled trap emission for stack protector fail\n");
     return false;
   }
@@ -3412,7 +3428,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
     }
   }
 
-  if (!CLI->lowerFormalArguments(*EntryBuilder.get(), F, VRegArgs, FuncInfo)) {
+  if (!CLI->lowerFormalArguments(*EntryBuilder, F, VRegArgs, FuncInfo)) {
     OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
                                F.getSubprogram(), &F.getEntryBlock());
     R << "unable to lower arguments: " << ore::NV("Prototype", F.getType());
@@ -3502,7 +3518,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   // Get rid of the now empty basic block.
   EntryBB->removeSuccessor(&NewEntryBB);
   MF->remove(EntryBB);
-  MF->DeleteMachineBasicBlock(EntryBB);
+  MF->deleteMachineBasicBlock(EntryBB);
 
   assert(&MF->front() == &NewEntryBB &&
          "New entry wasn't next in the list of basic block!");

@@ -51,9 +51,9 @@ namespace llvm {
     ///
     FSEL,
 
-    /// XSMAXCDP, XSMINCDP - C-type min/max instructions.
-    XSMAXCDP,
-    XSMINCDP,
+    /// XSMAXC[DQ]P, XSMINC[DQ]P - C-type min/max instructions.
+    XSMAXC,
+    XSMINC,
 
     /// FCFID - The FCFID instruction, taking an f64 operand and producing
     /// and f64 value containing the FP representation of the integer that
@@ -77,7 +77,7 @@ namespace llvm {
     FCTIDUZ,
     FCTIWUZ,
 
-    /// Floating-point-to-interger conversion instructions
+    /// Floating-point-to-integer conversion instructions
     FP_TO_UINT_IN_VSR,
     FP_TO_SINT_IN_VSR,
 
@@ -765,8 +765,19 @@ namespace llvm {
     /// then the VPERM for the shuffle. All in all a very slow sequence.
     TargetLoweringBase::LegalizeTypeAction getPreferredVectorAction(MVT VT)
       const override {
-      if (!VT.isScalableVector() && VT.getVectorNumElements() != 1 &&
-          VT.getScalarSizeInBits() % 8 == 0)
+      // Default handling for scalable and single-element vectors.
+      if (VT.isScalableVector() || VT.getVectorNumElements() == 1)
+        return TargetLoweringBase::getPreferredVectorAction(VT);
+
+      // Split and promote vNi1 vectors so we don't produce v256i1/v512i1
+      // types as those are only for MMA instructions.
+      if (VT.getScalarSizeInBits() == 1 && VT.getSizeInBits() > 16)
+        return TypeSplitVector;
+      if (VT.getScalarSizeInBits() == 1)
+        return TypePromoteInteger;
+
+      // Widen vectors that have reasonably sized elements.
+      if (VT.getScalarSizeInBits() % 8 == 0)
         return TypeWidenVector;
       return TargetLoweringBase::getPreferredVectorAction(VT);
     }
@@ -1273,6 +1284,24 @@ namespace llvm {
     SDValue LowerINTRINSIC_VOID(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBSWAP(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerATOMIC_CMP_SWAP(SDValue Op, SelectionDAG &DAG) const;
+    SDValue lowerToLibCall(const char *LibCallName, SDValue Op,
+                           SelectionDAG &DAG) const;
+    SDValue lowerLibCallBasedOnType(const char *LibCallFloatName,
+                                    const char *LibCallDoubleName, SDValue Op,
+                                    SelectionDAG &DAG) const;
+    bool isLowringToMASSFiniteSafe(SDValue Op) const;
+    bool isLowringToMASSSafe(SDValue Op) const;
+    SDValue lowerLibCallBase(const char *LibCallDoubleName,
+                             const char *LibCallFloatName,
+                             const char *LibCallDoubleNameFinite,
+                             const char *LibCallFloatNameFinite, SDValue Op,
+                             SelectionDAG &DAG) const;
+    SDValue lowerPow(SDValue Op, SelectionDAG &DAG) const;
+    SDValue lowerSin(SDValue Op, SelectionDAG &DAG) const;
+    SDValue lowerCos(SDValue Op, SelectionDAG &DAG) const;
+    SDValue lowerLog(SDValue Op, SelectionDAG &DAG) const;
+    SDValue lowerLog10(SDValue Op, SelectionDAG &DAG) const;
+    SDValue lowerExp(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerATOMIC_LOAD_STORE(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSCALAR_TO_VECTOR(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerMUL(SDValue Op, SelectionDAG &DAG) const;
@@ -1456,4 +1485,4 @@ namespace llvm {
 
 } // end namespace llvm
 
-#endif // LLVM_TARGET_POWERPC_PPC32ISELLOWERING_H
+#endif // LLVM_LIB_TARGET_POWERPC_PPCISELLOWERING_H

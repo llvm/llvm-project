@@ -15,16 +15,11 @@
 #include "index/Index.h"
 #include "support/Logger.h"
 #include "clang/AST/DeclTemplate.h"
-#include "clang/Index/IndexDataConsumer.h"
 #include "clang/Index/IndexSymbol.h"
-#include "clang/Index/IndexingAction.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/Path.h"
-#include "llvm/Support/ScopedPrinter.h"
 #include <limits>
 #include <tuple>
 
@@ -483,7 +478,7 @@ private:
     if (!llvm::isa<NamedDecl>(D))
       return VisitKind::No;
 
-    if (auto Func = llvm::dyn_cast<FunctionDecl>(D)) {
+    if (auto *Func = llvm::dyn_cast<FunctionDecl>(D)) {
       // Some functions are implicit template instantiations, those should be
       // ignored.
       if (auto *Info = Func->getTemplateSpecializationInfo()) {

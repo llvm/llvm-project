@@ -1,5 +1,4 @@
-; RUN: opt %loadPolly -polly-scops \
-; RUN:                -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ;    void pos(float *A, long n) {
 ;      for (long i = 0; i < 100; i++)
@@ -31,7 +30,7 @@
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             [n] -> { Stmt_bb2[i0] -> [i0] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:             [n] -> { Stmt_bb2[i0] -> MemRef_A[o0] : (-n + o0) mod 42 = 0 and -41 <= o0 <= 41 and ((n > 0 and o0 >= 0) or (n <= 0 and o0 <= 0)) }; 
+; CHECK-NEXT:             [n] -> { Stmt_bb2[i0] -> MemRef_A[o0] : (-n + o0) mod 42 = 0 and -41 <= o0 <= 41 and ((n > 0 and o0 >= 0) or (n <= 0 and o0 <= 0)) };
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:             [n] -> { Stmt_bb2[i0] -> MemRef_A[o0] : (-n + o0) mod 42 = 0 and -41 <= o0 <= 41 and ((n > 0 and o0 >= 0) or (n <= 0 and o0 <= 0)) };
 ; CHECK-NEXT: }

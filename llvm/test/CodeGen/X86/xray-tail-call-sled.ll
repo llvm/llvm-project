@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs -filetype=asm -o - -mtriple=x86_64-unknown-linux-gnu < %s | FileCheck %s
-; RUN: llc -verify-machineinstrs -filetype=asm -o - -mtriple=x86_64-darwin-unknown    < %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu < %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-darwin-unknown    < %s | FileCheck %s
 
 define dso_local i32 @callee() nounwind noinline uwtable "function-instrument"="xray-always" {
 ; CHECK:       .p2align 1, 0x90

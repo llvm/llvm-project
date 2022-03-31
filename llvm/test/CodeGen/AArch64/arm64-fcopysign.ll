@@ -6,10 +6,10 @@
 define float @test1(float %x, float %y) nounwind {
 ; CHECK-LABEL: test1:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    movi.4s v2, #128, lsl #24
 ; CHECK-NEXT:    ; kill: def $s0 killed $s0 def $q0
+; CHECK-NEXT:    mvni.4s v2, #128, lsl #24
 ; CHECK-NEXT:    ; kill: def $s1 killed $s1 def $q1
-; CHECK-NEXT:    bit.16b v0, v1, v2
+; CHECK-NEXT:    bif.16b v0, v1, v2
 ; CHECK-NEXT:    ; kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
@@ -20,11 +20,11 @@ entry:
 define double @test2(double %x, double %y) nounwind {
 ; CHECK-LABEL: test2:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    movi.2d v2, #0000000000000000
+; CHECK-NEXT:    movi.2d v2, #0xffffffffffffffff
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    ; kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    fneg.2d v2, v2
-; CHECK-NEXT:    bit.16b v0, v1, v2
+; CHECK-NEXT:    bif.16b v0, v1, v2
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
@@ -36,12 +36,12 @@ entry:
 define double @test3(double %a, float %b, float %c) nounwind {
 ; CHECK-LABEL: test3:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    movi.2d v3, #0000000000000000
+; CHECK-NEXT:    movi.2d v3, #0xffffffffffffffff
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fadd s1, s1, s2
 ; CHECK-NEXT:    fneg.2d v2, v3
 ; CHECK-NEXT:    fcvt d1, s1
-; CHECK-NEXT:    bit.16b v0, v1, v2
+; CHECK-NEXT:    bif.16b v0, v1, v2
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %tmp1 = fadd float %b, %c
@@ -55,11 +55,11 @@ define float @test4() nounwind {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
 ; CHECK-NEXT:    bl _bar
-; CHECK-NEXT:    movi.4s v1, #128, lsl #24
 ; CHECK-NEXT:    fcvt s0, d0
-; CHECK-NEXT:    fmov s2, #0.50000000
-; CHECK-NEXT:    bit.16b v2, v0, v1
-; CHECK-NEXT:    fadd s0, s0, s2
+; CHECK-NEXT:    fmov s1, #0.50000000
+; CHECK-NEXT:    mvni.4s v2, #128, lsl #24
+; CHECK-NEXT:    bif.16b v1, v0, v2
+; CHECK-NEXT:    fadd s0, s0, s1
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:

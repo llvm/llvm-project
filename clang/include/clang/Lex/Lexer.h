@@ -13,7 +13,6 @@
 #ifndef LLVM_CLANG_LEX_LEXER_H
 #define LLVM_CLANG_LEX_LEXER_H
 
-#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/PreprocessorLexer.h"
@@ -36,6 +35,7 @@ namespace clang {
 class DiagnosticBuilder;
 class Preprocessor;
 class SourceManager;
+class LangOptions;
 
 /// ConflictMarkerKind - Kinds of conflict marker which the lexer might be
 /// recovering from.
@@ -90,8 +90,18 @@ class Lexer : public PreprocessorLexer {
   // Location for start of file.
   SourceLocation FileLoc;
 
-  // LangOpts enabled by this language (cache).
-  LangOptions LangOpts;
+  // LangOpts enabled by this language.
+  // Storing LangOptions as reference here is important from performance point
+  // of view. Lack of reference means that LangOptions copy constructor would be
+  // called by Lexer(..., const LangOptions &LangOpts,...). Given that local
+  // Lexer objects are created thousands times (in Lexer::getRawToken,
+  // Preprocessor::EnterSourceFile and other places) during single module
+  // processing in frontend it would make std::vector<std::string> copy
+  // constructors surprisingly hot.
+  const LangOptions &LangOpts;
+
+  // True if '//' line comments are enabled.
+  bool LineComment;
 
   // True if lexer for _Pragma handling.
   bool Is_PragmaLexer;
@@ -172,10 +182,6 @@ public:
                                    SourceLocation ExpansionLocStart,
                                    SourceLocation ExpansionLocEnd,
                                    unsigned TokLen, Preprocessor &PP);
-
-  /// getLangOpts - Return the language features currently enabled.
-  /// NOTE: this lexer modifies features as a file is parsed!
-  const LangOptions &getLangOpts() const { return LangOpts; }
 
   /// getFileLoc - Return the File Location for the file we are lexing out of.
   /// The physical location encodes the location where the characters come from,

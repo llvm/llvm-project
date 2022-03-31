@@ -14,8 +14,6 @@
 
 #include "VPlanPredicator.h"
 #include "VPlan.h"
-#include "llvm/ADT/DepthFirstIterator.h"
-#include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -50,14 +48,14 @@ VPValue *VPlanPredicator::getOrCreateNotPredicate(VPBasicBlock *PredBB,
 
   case EdgeType::FALSE_EDGE:
     // CurrBB is the False successor of PredBB - compute not of CBV.
-    IntermediateVal = Builder.createNot(CBV);
+    IntermediateVal = Builder.createNot(CBV, {});
     break;
   }
 
   // Now AND intermediate value with PredBB's block predicate if it has one.
   VPValue *BP = PredBB->getPredicate();
   if (BP)
-    return Builder.createAnd(BP, IntermediateVal);
+    return Builder.createAnd(BP, IntermediateVal, {});
   else
     return IntermediateVal;
 }
@@ -96,7 +94,7 @@ VPValue *VPlanPredicator::genPredicateTree(std::list<VPValue *> &Worklist) {
     Worklist.pop_front();
 
     // Create an OR of these values.
-    VPValue *Or = Builder.createOr(LHS, RHS);
+    VPValue *Or = Builder.createOr(LHS, RHS, {});
 
     // Push OR to the back of the worklist.
     Worklist.push_back(Or);
@@ -231,7 +229,7 @@ void VPlanPredicator::linearizeRegionRec(VPRegionBlock *Region) {
 }
 
 // Entry point. The driver function for the predicator.
-void VPlanPredicator::predicate(void) {
+void VPlanPredicator::predicate() {
   // Predicate the blocks within Region.
   predicateRegionRec(cast<VPRegionBlock>(Plan.getEntry()));
 

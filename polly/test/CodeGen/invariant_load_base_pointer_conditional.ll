@@ -3,10 +3,11 @@
 ; CHECK-LABEL: polly.preload.begin:
 ; CHECK-NEXT:    %0 = sext i32 %N to i64
 ; CHECK-NEXT:    %1 = icmp sge i64 %0, 514
+; CHECK-NEXT:    %polly.preload.cond.result = and i1 %1, true
 ; CHECK-NEXT:    br label %polly.preload.cond
 ;
 ; CHECK-LABEL: polly.preload.cond:
-; CHECK-NEXT:    br i1 %1, label %polly.preload.exec, label %polly.preload.merge
+; CHECK-NEXT:    br i1 %polly.preload.cond.result, label %polly.preload.exec, label %polly.preload.merge
 ;
 ; CHECK-LABEL: polly.preload.merge:
 ; CHECK-NEXT:    %polly.preload.tmp6.merge = phi i32* [ %polly.access.BPLoc.load, %polly.preload.exec ], [ null, %polly.preload.cond ]

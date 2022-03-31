@@ -15,6 +15,10 @@
 
 #include "mlir/IR/Dialect.h"
 
+namespace mlir {
+class BlockAndValueMapping;
+} // namespace mlir
+
 namespace fir {
 
 /// FIR dialect
@@ -49,6 +53,11 @@ public:
 
   static llvm::StringRef getDialectNamespace() { return "fircg"; }
 };
+
+/// Support for inlining on FIR.
+bool canLegallyInline(mlir::Operation *op, mlir::Region *reg, bool,
+                      mlir::BlockAndValueMapping &map);
+bool canLegallyInline(mlir::Operation *, mlir::Operation *, bool);
 
 } // namespace fir
 

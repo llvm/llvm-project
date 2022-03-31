@@ -19,6 +19,7 @@ unittest("CodeGenTests") {
   ]
   sources = [
     "AArch64SelectionDAGTest.cpp",
+    "AMDGPUMetadataTest.cpp",
     "AllocationOrderTest.cpp",
     "AsmPrinterDwarfTest.cpp",
     "DIEHashTest.cpp",
@@ -30,6 +31,7 @@ unittest("CodeGenTests") {
     "MachineInstrTest.cpp",
     "MachineOperandTest.cpp",
     "PassManagerTest.cpp",
+    "RegAllocScoreTest.cpp",
     "ScalableVectorMVTsTest.cpp",
     "SelectionDAGAddressAnalysisTest.cpp",
     "TargetOptionsTest.cpp",

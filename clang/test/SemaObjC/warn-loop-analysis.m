@@ -7,7 +7,7 @@
 
 // Do not warn on objc classes has objectAtIndexedSubscript method.
 MyArray *test;
-void foo()
+void foo(void)
 {
   unsigned int i;
   for (i = 42; i > 0;) // No warnings here

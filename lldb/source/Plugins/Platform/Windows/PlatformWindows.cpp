@@ -394,7 +394,7 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
       return LLDB_INVALID_IMAGE_TOKEN;
     }
 
-    error.SetErrorStringWithFormat("LoadLibrary Error: %lu", error_code);
+    error.SetErrorStringWithFormat("LoadLibrary Error: %" PRIu64, error_code);
     return LLDB_INVALID_IMAGE_TOKEN;
   }
 
@@ -488,18 +488,20 @@ ProcessSP PlatformWindows::DebugProcess(ProcessLaunchInfo &launch_info,
     // This is a process attach.  Don't need to launch anything.
     ProcessAttachInfo attach_info(launch_info);
     return Attach(attach_info, debugger, &target, error);
-  } else {
-    ProcessSP process_sp = target.CreateProcess(
-        launch_info.GetListener(), launch_info.GetProcessPluginName(), nullptr,
-        false);
-
-    // We need to launch and attach to the process.
-    launch_info.GetFlags().Set(eLaunchFlagDebug);
-    if (process_sp)
-      error = process_sp->Launch(launch_info);
-
-    return process_sp;
   }
+
+  ProcessSP process_sp =
+      target.CreateProcess(launch_info.GetListener(),
+                           launch_info.GetProcessPluginName(), nullptr, false);
+
+  process_sp->HijackProcessEvents(launch_info.GetHijackListener());
+
+  // We need to launch and attach to the process.
+  launch_info.GetFlags().Set(eLaunchFlagDebug);
+  if (process_sp)
+    error = process_sp->Launch(launch_info);
+
+  return process_sp;
 }
 
 lldb::ProcessSP PlatformWindows::Attach(ProcessAttachInfo &attach_info,

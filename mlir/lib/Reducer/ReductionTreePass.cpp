@@ -41,7 +41,7 @@ static void applyPatterns(Region &region,
   std::vector<Operation *> opsNotInRange;
   std::vector<Operation *> opsInRange;
   size_t keepIndex = 0;
-  for (auto op : enumerate(region.getOps())) {
+  for (const auto &op : enumerate(region.getOps())) {
     int index = op.index();
     if (keepIndex < rangeToKeep.size() &&
         index == rangeToKeep[keepIndex].second)
@@ -92,7 +92,7 @@ static LogicalResult findOptimal(ModuleOp module, Region &region,
       {0, std::distance(region.op_begin(), region.op_end())}};
 
   ReductionNode *root = allocator.Allocate();
-  new (root) ReductionNode(nullptr, std::move(ranges), allocator);
+  new (root) ReductionNode(nullptr, ranges, allocator);
   // Duplicate the module for root node and locate the region in the copy.
   if (failed(root->initialize(module, region)))
     llvm_unreachable("unexpected initialization failure");
@@ -199,7 +199,7 @@ private:
   FrozenRewritePatternSet reducerPatterns;
 };
 
-} // end anonymous namespace
+} // namespace
 
 LogicalResult ReductionTreePass::initialize(MLIRContext *context) {
   RewritePatternSet patterns(context);

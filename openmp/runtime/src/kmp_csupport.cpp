@@ -531,7 +531,8 @@ void __kmpc_end_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
 
   kmp_task_team_t *task_team = this_thr->th.th_task_team;
   // we need to wait for the proxy tasks before finishing the thread
-  if (task_team != NULL && task_team->tt.tt_found_proxy_tasks)
+  if (task_team != NULL && (task_team->tt.tt_found_proxy_tasks ||
+                            task_team->tt.tt_hidden_helper_task_encountered))
     __kmp_task_team_wait(this_thr, serial_team USE_ITT_BUILD_ARG(NULL));
 
   KMP_MB();
@@ -684,13 +685,13 @@ void __kmpc_flush(ident_t *loc) {
   if (!__kmp_cpuinfo.flags.sse2) {
     // CPU cannot execute SSE2 instructions.
   } else {
-#if KMP_COMPILER_ICC
+#if KMP_COMPILER_ICC || KMP_COMPILER_ICX
     _mm_mfence();
 #elif KMP_COMPILER_MSVC
     MemoryBarrier();
 #else
     __sync_synchronize();
-#endif // KMP_COMPILER_ICC
+#endif // KMP_COMPILER_ICC || KMP_COMPILER_ICX
   }
 #endif // KMP_MIC
 #elif (KMP_ARCH_ARM || KMP_ARCH_AARCH64 || KMP_ARCH_MIPS || KMP_ARCH_MIPS64 || \

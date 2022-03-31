@@ -21,6 +21,7 @@
 ! CHECK-NEXT: -cpp      Enable predefined and command line preprocessor macros
 ! CHECK-NEXT: -c        Only run preprocess, compile, and assemble steps
 ! CHECK-NEXT: -D <macro>=<value>     Define <macro> to <value> (or 1 if <value> omitted)
+! CHECK-NEXT: -emit-llvm             Use the LLVM representation for assembler and object files
 ! CHECK-NEXT: -E        Only run the preprocessor
 ! CHECK-NEXT: -falternative-parameter-statement
 ! CHECK-NEXT: Enable the old style PARAMETER statement
@@ -46,12 +47,17 @@
 ! CHECK-NEXT: -fxor-operator         Enable .XOR. as a synonym of .NEQV.
 ! CHECK-NEXT: -help     Display available options
 ! CHECK-NEXT: -I <dir>               Add directory to the end of the list of include search paths
+! CHECK-NEXT: -mllvm <value>         Additional arguments to forward to LLVM's option processing
 ! CHECK-NEXT: -module-dir <dir>      Put MODULE files in <dir>
 ! CHECK-NEXT: -nocpp                 Disable predefined and command line preprocessor macros
 ! CHECK-NEXT: -o <file> Write output to <file>
 ! CHECK-NEXT: -pedantic              Warn on language extensions
+! CHECK-NEXT: -print-effective-triple Print the effective target triple
+! CHECK-NEXT: -print-target-triple    Print the normalized target triple
 ! CHECK-NEXT: -P                     Disable linemarker output in -E mode
 ! CHECK-NEXT: -std=<value>           Language standard to compile for
+! CHECK-NEXT: -S                     Only run preprocess and compilation steps
+! CHECK-NEXT: --target=<value>        Generate code for the given target
 ! CHECK-NEXT: -U <macro>             Undefine macro <macro>
 ! CHECK-NEXT: --version Print version information
 ! CHECK-NEXT: -W<warning>            Enable the specified warning

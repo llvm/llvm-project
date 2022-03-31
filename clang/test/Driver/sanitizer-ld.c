@@ -22,7 +22,25 @@
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-ASAN-NO-LINK-RUNTIME-LINUX %s
 //
-// CHECK-ASAN-NO-LINK-RUNTIME-LINUX-NOT: libclang_rt.asan
+// CHECK-ASAN-NO-LINK-RUNTIME-LINUX-NOT: libclang_rt.asan-x86_64
+
+// RUN: %clang -fsanitize=address %s -### -o %t.o 2>&1 \
+// RUN:     -target x86_64-unknown-linux -fuse-ld=ld \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-ASAN-EXECUTABLE-LINUX %s
+//
+// CHECK-ASAN-EXECUTABLE-LINUX: libclang_rt.asan_static-x86_64
+// CHECK-ASAN-EXECUTABLE-LINUX: libclang_rt.asan-x86_64
+
+// RUN: %clang -fsanitize=address -shared %s -### -o %t.o 2>&1  \
+// RUN:     -target x86_64-unknown-linux -fuse-ld=ld \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-ASAN-SHARED-LINUX %s
+//
+// CHECK-ASAN-SHARED-LINUX: libclang_rt.asan_static-x86_64
+// CHECK-ASAN-SHARED-LINUX-NOT: libclang_rt.asan-x86_64
 
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -target i386-unknown-linux -fuse-ld=ld -fsanitize=address -shared-libsan \

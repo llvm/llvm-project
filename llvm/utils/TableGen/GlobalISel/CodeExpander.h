@@ -15,10 +15,10 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/SMLoc.h"
 
 namespace llvm {
 class CodeExpansions;
+class SMLoc;
 class raw_ostream;
 
 /// Emit the given code with all '${foo}' placeholders expanded to their

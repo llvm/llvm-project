@@ -31,7 +31,7 @@ class DisassembleRawDataTestCase(TestBase):
         elif re.match("powerpc64le", arch):
             target = self.dbg.CreateTargetWithFileAndTargetTriple("", "powerpc64le")
             raw_bytes = bytearray([0x00, 0x00, 0x80, 0x38])
-        elif arch == "aarch64":
+        elif arch in ("aarch64", "arm64"):
             target = self.dbg.CreateTargetWithFileAndTargetTriple("", "aarch64")
             raw_bytes = bytearray([0x60, 0x0c, 0x80, 0x52])
         elif arch == "arm":
@@ -57,7 +57,7 @@ class DisassembleRawDataTestCase(TestBase):
         elif re.match("powerpc64le", arch):
             self.assertEqual(inst.GetMnemonic(target), "li")
             self.assertEqual(inst.GetOperands(target), "4, 0")
-        elif arch == "aarch64":
+        elif arch in ("aarch64", "arm64"):
             self.assertEqual(inst.GetMnemonic(target), "mov")
             self.assertEqual(inst.GetOperands(target), "w0, #0x63")
         elif arch == "arm":

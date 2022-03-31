@@ -198,7 +198,7 @@ public:
   DescriptorType &operator*() { return descriptor; }
   DescriptorType *operator->() { return &descriptor; }
   T &operator[](std::initializer_list<int64_t> indices) {
-    return descriptor[std::move(indices)];
+    return descriptor[indices];
   }
 
 private:

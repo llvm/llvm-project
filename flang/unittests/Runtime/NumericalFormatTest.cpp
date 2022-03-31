@@ -1,4 +1,4 @@
-//===-- flang/unittests/RuntimeGTest/NumericalFormatTest.cpp ----*- C++ -*-===//
+//===-- flang/unittests/Runtime/NumericalFormatTest.cpp ---------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -118,6 +118,9 @@ TEST(IOApiTests, MultilineOutputTest) {
   auto cookie{IONAME(BeginInternalArrayFormattedOutput)(
       section, format, std::strlen(format))};
 
+  // Fill last line with periods
+  std::memset(buffer[numLines - 1], '.', lineLength);
+
   // Write data to buffer
   IONAME(OutputAscii)(cookie, "WORLD", 5);
   IONAME(OutputAscii)(cookie, "HELLO", 5);
@@ -135,7 +138,7 @@ TEST(IOApiTests, MultilineOutputTest) {
                                   "                                "
                                   "789                 abcd 666 777"
                                   " 888 999                        "
-                                  "                                "};
+                                  "................................"};
   // Ensure formatted string matches expected output
   EXPECT_TRUE(
       CompareFormattedStrings(expect, std::string{buffer[0], sizeof buffer}))

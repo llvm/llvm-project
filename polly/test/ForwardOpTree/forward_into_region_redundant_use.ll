@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-invariant-load-hoisting=true -polly-optree -analyze < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadPolly -polly-invariant-load-hoisting=true -polly-print-optree -disable-output < %s | FileCheck %s -match-full-lines
 ;
 
 define void @foo(float* %A, i32 %p, float* %B) {

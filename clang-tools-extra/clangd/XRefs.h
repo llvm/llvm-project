@@ -17,12 +17,8 @@
 #include "SourceCode.h"
 #include "index/Index.h"
 #include "index/SymbolID.h"
-#include "index/SymbolLocation.h"
 #include "support/Path.h"
 #include "clang/AST/ASTTypeTraits.h"
-#include "clang/AST/Type.h"
-#include "clang/Format/Format.h"
-#include "clang/Index/IndexSymbol.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/raw_ostream.h"
 #include <vector>
@@ -104,6 +100,12 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &,
 ///   - subclasses for a base class;
 std::vector<LocatedSymbol> findImplementations(ParsedAST &AST, Position Pos,
                                                const SymbolIndex *Index);
+
+/// Returns symbols for types referenced at \p Pos.
+///
+/// For example, given `b^ar()` wher bar return Foo, this function returns the
+/// definition of class Foo.
+std::vector<LocatedSymbol> findType(ParsedAST &AST, Position Pos);
 
 /// Returns references of the symbol at a specified \p Pos.
 /// \p Limit limits the number of results returned (0 means no limit).

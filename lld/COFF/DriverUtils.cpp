@@ -48,17 +48,17 @@ const uint16_t RT_MANIFEST = 24;
 
 class Executor {
 public:
-  explicit Executor(StringRef s) : prog(saver.save(s)) {}
-  void add(StringRef s) { args.push_back(saver.save(s)); }
-  void add(std::string &s) { args.push_back(saver.save(s)); }
-  void add(Twine s) { args.push_back(saver.save(s)); }
-  void add(const char *s) { args.push_back(saver.save(s)); }
+  explicit Executor(StringRef s) : prog(saver().save(s)) {}
+  void add(StringRef s) { args.push_back(saver().save(s)); }
+  void add(std::string &s) { args.push_back(saver().save(s)); }
+  void add(Twine s) { args.push_back(saver().save(s)); }
+  void add(const char *s) { args.push_back(saver().save(s)); }
 
   void run() {
     ErrorOr<std::string> exeOrErr = sys::findProgramByName(prog);
     if (auto ec = exeOrErr.getError())
       fatal("unable to find " + prog + " in PATH: " + ec.message());
-    StringRef exe = saver.save(*exeOrErr);
+    StringRef exe = saver().save(*exeOrErr);
     args.insert(args.begin(), exe);
 
     if (sys::ExecuteAndWait(args[0], args) != 0)
@@ -184,12 +184,6 @@ void parsePDBPageSize(StringRef s) {
   if (v != 4096 && v != 8192 && v != 16384 && v != 32768) {
     error("/pdbpagesize: invalid argument: " + s);
     return;
-  }
-
-  // FIXME: Remove this once other page sizes work.
-  if (v != 4096) {
-    warn("/pdbpagesize: page sizes != 4096 not yet implemented, ignoring flag");
-    v = 4096;
   }
 
   config->pdbPageSize = v;
@@ -642,14 +636,14 @@ static StringRef killAt(StringRef sym, bool prefix) {
   sym = sym.substr(0, sym.find('@', 1));
   if (!sym.startswith("@")) {
     if (prefix && !sym.startswith("_"))
-      return saver.save("_" + sym);
+      return saver().save("_" + sym);
     return sym;
   }
   // For fastcall, remove the leading @ and replace it with an
   // underscore, if prefixes are used.
   sym = sym.substr(1);
   if (prefix)
-    sym = saver.save("_" + sym);
+    sym = saver().save("_" + sym);
   return sym;
 }
 
@@ -860,7 +854,7 @@ opt::InputArgList ArgParser::parse(ArrayRef<const char *> argv) {
                                               argv.data() + argv.size());
   if (!args.hasArg(OPT_lldignoreenv))
     addLINK(expandedArgv);
-  cl::ExpandResponseFiles(saver, getQuotingStyle(args), expandedArgv);
+  cl::ExpandResponseFiles(saver(), getQuotingStyle(args), expandedArgv);
   args = optTable.ParseArgs(makeArrayRef(expandedArgv).drop_front(),
                             missingIndex, missingCount);
 
@@ -907,7 +901,7 @@ ParsedDirectives ArgParser::parseDirectives(StringRef s) {
   // Handle /EXPORT and /INCLUDE in a fast path. These directives can appear for
   // potentially every symbol in the object, so they must be handled quickly.
   SmallVector<StringRef, 16> tokens;
-  cl::TokenizeWindowsCommandLineNoCopy(s, saver, tokens);
+  cl::TokenizeWindowsCommandLineNoCopy(s, saver(), tokens);
   for (StringRef tok : tokens) {
     if (tok.startswith_insensitive("/export:") ||
         tok.startswith_insensitive("-export:"))
@@ -920,7 +914,7 @@ ParsedDirectives ArgParser::parseDirectives(StringRef s) {
       // already copied quoted arguments for us, so those do not need to be
       // copied again.
       bool HasNul = tok.end() != s.end() && tok.data()[tok.size()] == '\0';
-      rest.push_back(HasNul ? tok.data() : saver.save(tok).data());
+      rest.push_back(HasNul ? tok.data() : saver().save(tok).data());
     }
   }
 
@@ -954,7 +948,7 @@ void ArgParser::addLINK(SmallVector<const char *, 256> &argv) {
 
 std::vector<const char *> ArgParser::tokenize(StringRef s) {
   SmallVector<const char *, 16> tokens;
-  cl::TokenizeWindowsCommandLine(s, saver, tokens);
+  cl::TokenizeWindowsCommandLine(s, saver(), tokens);
   return std::vector<const char *>(tokens.begin(), tokens.end());
 }
 

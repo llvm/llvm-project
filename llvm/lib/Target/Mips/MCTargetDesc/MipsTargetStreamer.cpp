@@ -11,17 +11,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "MipsTargetStreamer.h"
-#include "MipsInstPrinter.h"
 #include "MCTargetDesc/MipsABIInfo.h"
 #include "MipsELFStreamer.h"
+#include "MipsInstPrinter.h"
 #include "MipsMCExpr.h"
 #include "MipsMCTargetDesc.h"
 #include "MipsTargetObjectFile.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbolELF.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
@@ -901,7 +903,7 @@ void MipsTargetELFStreamer::finish() {
       unsigned Alignment = Section.getAlignment();
       if (Alignment) {
         OS.SwitchSection(&Section);
-        if (Section.UseCodeAlign())
+        if (Section.useCodeAlign())
           OS.emitCodeAlignment(Alignment, &STI, Alignment);
         else
           OS.emitValueToAlignment(Alignment, 0, 1, Alignment);

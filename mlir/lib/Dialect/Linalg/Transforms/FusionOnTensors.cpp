@@ -13,12 +13,12 @@
 #include "PassDetail.h"
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Linalg/IR/LinalgOps.h"
-#include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/Support/LLVM.h"
@@ -43,7 +43,7 @@ static SmallVector<int64_t> getTiledSliceDims(OpOperand *consumerOperand,
 
   // Search the slice dimensions tiled by a tile loop dimension.
   DenseSet<int64_t> tiledSliceDimIndices;
-  for (auto en : enumerate(indexingMap.getResults())) {
+  for (const auto &en : enumerate(indexingMap.getResults())) {
     for (auto tiledLoopDim : tiledLoopDims) {
       if (en.value().isFunctionOfDim(tiledLoopDim))
         tiledSliceDimIndices.insert(en.index());
@@ -270,9 +270,10 @@ bool TileLoopNest::hasOtherUses(BlockArgument bbArg,
   });
 }
 
-LogicalResult TileLoopNest::tileRootOp(OpBuilder &b,
-                                       ArrayRef<int64_t> tileSizes,
-                                       ArrayRef<int64_t> tileInterchange) {
+LogicalResult TileLoopNest::tileRootOp(
+    OpBuilder &b, ArrayRef<int64_t> tileSizes,
+    ArrayRef<int64_t> tileInterchange,
+    Optional<LinalgLoopDistributionOptions> tileDistribution) {
   // Exit if all tile sizes are zero.
   if (tileSizes.size() == static_cast<size_t>(count(tileSizes, 0)))
     return success();
@@ -284,10 +285,17 @@ LogicalResult TileLoopNest::tileRootOp(OpBuilder &b,
                           tileInterchange.begin(), tileInterchange.end()))
                       .setTileSizes(tileSizes)
                       .setLoopType(LinalgTilingLoopType::Loops);
-  Optional<TiledLinalgOp> tiledRootOp = tileLinalgOp(b, rootOp, tilingOptions);
+  if (tileDistribution)
+    tilingOptions =
+        tilingOptions.setDistributionOptions(tileDistribution.getValue());
+
+  // TODO: Propagate RewriterBase everywhere.
+  IRRewriter rewriter(b);
+  FailureOr<TiledLinalgOp> tiledRootOp =
+      tileLinalgOp(rewriter, rootOp, tilingOptions);
 
   // Exit if tiling the root operation fails.
-  if (!tiledRootOp.hasValue())
+  if (failed(tiledRootOp))
     return failure();
 
   // Replace all uses of the root operation if it has been tiled before. All
@@ -305,7 +313,7 @@ LogicalResult TileLoopNest::tileRootOp(OpBuilder &b,
   // Update the root operation and append the loops and tile loop dimensions.
   rootOp = tiledRootOp->op;
   tileLoopOps.append(tiledRootOp->loops.begin(), tiledRootOp->loops.end());
-  for (auto en : enumerate(tileSizes)) {
+  for (const auto &en : enumerate(tileSizes)) {
     // Copy only the tiled loop dimensions with non-zero tile size.
     if (en.value() == 0)
       continue;
@@ -339,6 +347,12 @@ FailureOr<LinalgOp> TileLoopNest::fuseProducer(OpBuilder &b,
   LinalgOp consumerOp = consumerOpOperand->getOwner();
   if (sliceOp->getBlock() != rootOp->getBlock() ||
       consumerOp->getBlock() != rootOp->getBlock())
+    return failure();
+
+  // Check `consumerOpOperand` is not shape-only to avoid fusion if the data is
+  // not used by the `consumerOp` computation.
+  BlockArgument bbArg = consumerOp.getTiedBlockArgument(consumerOpOperand);
+  if (bbArg.getUses().empty())
     return failure();
 
   // Check if the producer is a LinalgOp possibly passed by iteration argument.
@@ -405,10 +419,10 @@ SmallVector<LinalgOp> TileLoopNest::getAllTiledAndFusedOps() {
 // Tile and fuse entry-points.
 //===----------------------------------------------------------------------===//
 
-FailureOr<TileLoopNest>
-mlir::linalg::tileConsumerAndFuseProducers(OpBuilder &b, LinalgOp consumerOp,
-                                           ArrayRef<int64_t> tileSizes,
-                                           ArrayRef<int64_t> tileInterchange) {
+FailureOr<TileLoopNest> mlir::linalg::tileConsumerAndFuseProducers(
+    OpBuilder &b, LinalgOp consumerOp, ArrayRef<int64_t> tileSizes,
+    ArrayRef<int64_t> tileInterchange,
+    const Optional<LinalgLoopDistributionOptions> &tileDistribution) {
   assert(tileSizes.size() == tileInterchange.size() &&
          "expect the number of tile sizes and interchange dims to match");
   assert(isPermutation(tileInterchange) &&
@@ -443,7 +457,8 @@ mlir::linalg::tileConsumerAndFuseProducers(OpBuilder &b, LinalgOp consumerOp,
   SmallVector<int64_t> outerTileSizes;
   outerTileSizes.append(tileSizes.begin(), tileSizes.begin() + split);
   outerTileSizes.append(tileSizes.size() - split, 0);
-  if (failed(tileLoopNest.tileRootOp(b, outerTileSizes, tileInterchange)))
+  if (failed(tileLoopNest.tileRootOp(b, outerTileSizes, tileInterchange,
+                                     tileDistribution)))
     return failure();
   fuseProducersGreedily(tileLoopNest.getRootOp().getOutputOperands());
 
@@ -451,9 +466,14 @@ mlir::linalg::tileConsumerAndFuseProducers(OpBuilder &b, LinalgOp consumerOp,
   SmallVector<int64_t> innerTileSizes;
   innerTileSizes.append(split, 0);
   innerTileSizes.append(tileSizes.begin() + split, tileSizes.end());
-  if (failed(tileLoopNest.tileRootOp(b, innerTileSizes, tileInterchange)))
+  if (failed(tileLoopNest.tileRootOp(b, innerTileSizes, tileInterchange,
+                                     tileDistribution)))
     return failure();
   fuseProducersGreedily(tileLoopNest.getRootOp().getInputOperands());
+
+  // Exit if the tile loop nest is empty since all tile sizes are zero.
+  if (tileLoopNest.isEmpty())
+    return failure();
 
   return tileLoopNest;
 }

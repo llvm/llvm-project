@@ -9,6 +9,7 @@
 #include "mlir/Conversion/ArithmeticToSPIRV/ArithmeticToSPIRV.h"
 #include "../PassDetail.h"
 #include "../SPIRVCommon/Pattern.h"
+#include "mlir/Conversion/FuncToSPIRV/FuncToSPIRV.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
@@ -190,7 +191,16 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-} // end anonymous namespace
+/// Converts arith.select to spv.Select.
+class SelectOpPattern final : public OpConversionPattern<arith::SelectOp> {
+public:
+  using OpConversionPattern<arith::SelectOp>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(arith::SelectOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // Conversion Helpers
@@ -273,7 +283,7 @@ LogicalResult ConstantCompositeOpPattern::matchAndRewrite(
     arith::ConstantOp constOp, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
   auto srcType = constOp.getType().dyn_cast<ShapedType>();
-  if (!srcType)
+  if (!srcType || srcType.getNumElements() == 1)
     return failure();
 
   // arith.constant should only have vector or tenor types.
@@ -358,8 +368,17 @@ LogicalResult ConstantScalarOpPattern::matchAndRewrite(
     arith::ConstantOp constOp, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
   Type srcType = constOp.getType();
+  if (auto shapedType = srcType.dyn_cast<ShapedType>()) {
+    if (shapedType.getNumElements() != 1)
+      return failure();
+    srcType = shapedType.getElementType();
+  }
   if (!srcType.isIntOrIndexOrFloat())
     return failure();
+
+  Attribute cstAttr = constOp.getValue();
+  if (cstAttr.getType().isa<ShapedType>())
+    cstAttr = cstAttr.cast<DenseElementsAttr>().getSplatValue<Attribute>();
 
   Type dstType = getTypeConverter()->convertType(srcType);
   if (!dstType)
@@ -367,7 +386,7 @@ LogicalResult ConstantScalarOpPattern::matchAndRewrite(
 
   // Floating-point types.
   if (srcType.isa<FloatType>()) {
-    auto srcAttr = constOp.getValue().cast<FloatAttr>();
+    auto srcAttr = cstAttr.cast<FloatAttr>();
     auto dstAttr = srcAttr;
 
     // Floating-point types not supported in the target environment are all
@@ -386,7 +405,7 @@ LogicalResult ConstantScalarOpPattern::matchAndRewrite(
   if (srcType.isInteger(1)) {
     // arith.constant can use 0/1 instead of true/false for i1 values. We need
     // to handle that here.
-    auto dstAttr = convertBoolAttr(constOp.getValue(), rewriter);
+    auto dstAttr = convertBoolAttr(cstAttr, rewriter);
     if (!dstAttr)
       return failure();
     rewriter.replaceOpWithNewOp<spirv::ConstantOp>(constOp, dstType, dstAttr);
@@ -395,7 +414,7 @@ LogicalResult ConstantScalarOpPattern::matchAndRewrite(
 
   // IndexType or IntegerType. Index values are converted to 32-bit integer
   // values when converting to SPIR-V.
-  auto srcAttr = constOp.getValue().cast<IntegerAttr>();
+  auto srcAttr = cstAttr.cast<IntegerAttr>();
   auto dstAttr =
       convertIntegerAttr(srcAttr, dstType.cast<IntegerType>(), rewriter);
   if (!dstAttr)
@@ -772,6 +791,19 @@ LogicalResult CmpFOpNanNonePattern::matchAndRewrite(
 }
 
 //===----------------------------------------------------------------------===//
+// SelectOpPattern
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+SelectOpPattern::matchAndRewrite(arith::SelectOp op, OpAdaptor adaptor,
+                                 ConversionPatternRewriter &rewriter) const {
+  rewriter.replaceOpWithNewOp<spirv::SelectOp>(op, adaptor.getCondition(),
+                                               adaptor.getTrueValue(),
+                                               adaptor.getFalseValue());
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // Pattern Population
 //===----------------------------------------------------------------------===//
 
@@ -781,25 +813,25 @@ void mlir::arith::populateArithmeticToSPIRVPatterns(
   patterns.add<
     ConstantCompositeOpPattern,
     ConstantScalarOpPattern,
-    spirv::UnaryAndBinaryOpPattern<arith::AddIOp, spirv::IAddOp>,
-    spirv::UnaryAndBinaryOpPattern<arith::SubIOp, spirv::ISubOp>,
-    spirv::UnaryAndBinaryOpPattern<arith::MulIOp, spirv::IMulOp>,
-    spirv::UnaryAndBinaryOpPattern<arith::DivUIOp, spirv::UDivOp>,
-    spirv::UnaryAndBinaryOpPattern<arith::DivSIOp, spirv::SDivOp>,
-    spirv::UnaryAndBinaryOpPattern<arith::RemUIOp, spirv::UModOp>,
+    spirv::ElementwiseOpPattern<arith::AddIOp, spirv::IAddOp>,
+    spirv::ElementwiseOpPattern<arith::SubIOp, spirv::ISubOp>,
+    spirv::ElementwiseOpPattern<arith::MulIOp, spirv::IMulOp>,
+    spirv::ElementwiseOpPattern<arith::DivUIOp, spirv::UDivOp>,
+    spirv::ElementwiseOpPattern<arith::DivSIOp, spirv::SDivOp>,
+    spirv::ElementwiseOpPattern<arith::RemUIOp, spirv::UModOp>,
     RemSIOpGLSLPattern, RemSIOpOCLPattern,
     BitwiseOpPattern<arith::AndIOp, spirv::LogicalAndOp, spirv::BitwiseAndOp>,
     BitwiseOpPattern<arith::OrIOp, spirv::LogicalOrOp, spirv::BitwiseOrOp>,
     XOrIOpLogicalPattern, XOrIOpBooleanPattern,
-    spirv::UnaryAndBinaryOpPattern<arith::ShLIOp, spirv::ShiftLeftLogicalOp>,
-    spirv::UnaryAndBinaryOpPattern<arith::ShRUIOp, spirv::ShiftRightLogicalOp>,
-    spirv::UnaryAndBinaryOpPattern<arith::ShRSIOp, spirv::ShiftRightArithmeticOp>,
-    spirv::UnaryAndBinaryOpPattern<arith::NegFOp, spirv::FNegateOp>,
-    spirv::UnaryAndBinaryOpPattern<arith::AddFOp, spirv::FAddOp>,
-    spirv::UnaryAndBinaryOpPattern<arith::SubFOp, spirv::FSubOp>,
-    spirv::UnaryAndBinaryOpPattern<arith::MulFOp, spirv::FMulOp>,
-    spirv::UnaryAndBinaryOpPattern<arith::DivFOp, spirv::FDivOp>,
-    spirv::UnaryAndBinaryOpPattern<arith::RemFOp, spirv::FRemOp>,
+    spirv::ElementwiseOpPattern<arith::ShLIOp, spirv::ShiftLeftLogicalOp>,
+    spirv::ElementwiseOpPattern<arith::ShRUIOp, spirv::ShiftRightLogicalOp>,
+    spirv::ElementwiseOpPattern<arith::ShRSIOp, spirv::ShiftRightArithmeticOp>,
+    spirv::ElementwiseOpPattern<arith::NegFOp, spirv::FNegateOp>,
+    spirv::ElementwiseOpPattern<arith::AddFOp, spirv::FAddOp>,
+    spirv::ElementwiseOpPattern<arith::SubFOp, spirv::FSubOp>,
+    spirv::ElementwiseOpPattern<arith::MulFOp, spirv::FMulOp>,
+    spirv::ElementwiseOpPattern<arith::DivFOp, spirv::FDivOp>,
+    spirv::ElementwiseOpPattern<arith::RemFOp, spirv::FRemOp>,
     TypeCastingOpPattern<arith::ExtUIOp, spirv::UConvertOp>, ExtUII1Pattern,
     TypeCastingOpPattern<arith::ExtSIOp, spirv::SConvertOp>,
     TypeCastingOpPattern<arith::ExtFOp, spirv::FConvertOp>,
@@ -811,7 +843,15 @@ void mlir::arith::populateArithmeticToSPIRVPatterns(
     TypeCastingOpPattern<arith::IndexCastOp, spirv::SConvertOp>,
     TypeCastingOpPattern<arith::BitcastOp, spirv::BitcastOp>,
     CmpIOpBooleanPattern, CmpIOpPattern,
-    CmpFOpNanNonePattern, CmpFOpPattern
+    CmpFOpNanNonePattern, CmpFOpPattern,
+    SelectOpPattern,
+
+    spirv::ElementwiseOpPattern<arith::MaxFOp, spirv::GLSLFMaxOp>,
+    spirv::ElementwiseOpPattern<arith::MaxSIOp, spirv::GLSLSMaxOp>,
+    spirv::ElementwiseOpPattern<arith::MaxUIOp, spirv::GLSLUMaxOp>,
+    spirv::ElementwiseOpPattern<arith::MinFOp, spirv::GLSLFMinOp>,
+    spirv::ElementwiseOpPattern<arith::MinSIOp, spirv::GLSLSMinOp>,
+    spirv::ElementwiseOpPattern<arith::MinUIOp, spirv::GLSLUMinOp>
   >(typeConverter, patterns.getContext());
   // clang-format on
 
@@ -828,8 +868,8 @@ void mlir::arith::populateArithmeticToSPIRVPatterns(
 namespace {
 struct ConvertArithmeticToSPIRVPass
     : public ConvertArithmeticToSPIRVBase<ConvertArithmeticToSPIRVPass> {
-  void runOnFunction() override {
-    auto module = getOperation()->getParentOfType<ModuleOp>();
+  void runOnOperation() override {
+    auto module = getOperation();
     auto targetAttr = spirv::lookupTargetEnvOrDefault(module);
     auto target = SPIRVConversionTarget::get(targetAttr);
 
@@ -838,14 +878,15 @@ struct ConvertArithmeticToSPIRVPass
     SPIRVTypeConverter typeConverter(targetAttr, options);
 
     RewritePatternSet patterns(&getContext());
-    mlir::arith::populateArithmeticToSPIRVPatterns(typeConverter, patterns);
+    arith::populateArithmeticToSPIRVPatterns(typeConverter, patterns);
+    populateFuncToSPIRVPatterns(typeConverter, patterns);
+    populateBuiltinFuncToSPIRVPatterns(typeConverter, patterns);
 
-    if (failed(applyPartialConversion(getOperation(), *target,
-                                      std::move(patterns))))
+    if (failed(applyPartialConversion(module, *target, std::move(patterns))))
       signalPassFailure();
   }
 };
-} // end anonymous namespace
+} // namespace
 
 std::unique_ptr<Pass> mlir::arith::createConvertArithmeticToSPIRVPass() {
   return std::make_unique<ConvertArithmeticToSPIRVPass>();

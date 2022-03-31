@@ -6,9 +6,15 @@
 @b = internal unnamed_addr addrspace(3) global [64 x i32] undef, align 4
 @c = internal unnamed_addr addrspace(3) global [64 x i32] undef, align 4
 
+; FIXME: Should combine the DS instructions into ds_write2 and ds_read2. This
+; does not happen because when SILoadStoreOptimizer is run, the reads and writes
+; are not adjacent. They are only moved later by MachineScheduler.
+
 ; GCN-LABEL: {{^}}no_clobber_ds_load_stores_x2:
-; GCN: ds_write2st64_b32
-; GCN: ds_read2st64_b32
+; GCN: ds_write_b32
+; GCN: ds_write_b32
+; GCN: ds_read_b32
+; GCN: ds_read_b32
 
 ; CHECK-LABEL: @no_clobber_ds_load_stores_x2
 ; CHECK: store i32 1, i32 addrspace(3)* %0, align 16, !alias.scope !0, !noalias !3
@@ -30,9 +36,11 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}no_clobber_ds_load_stores_x3:
-; GCN-DAG: ds_write2st64_b32
 ; GCN-DAG: ds_write_b32
-; GCN-DAG: ds_read2st64_b32
+; GCN-DAG: ds_write_b32
+; GCN-DAG: ds_write_b32
+; GCN-DAG: ds_read_b32
+; GCN-DAG: ds_read_b32
 ; GCN-DAG: ds_read_b32
 
 ; CHECK-LABEL: @no_clobber_ds_load_stores_x3

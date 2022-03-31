@@ -4,7 +4,7 @@ int printf(const char *restrict,...);
 
 // Testing core functionality of the region store.
 // radar://10127782
-int compoundLiteralTest() {
+int compoundLiteralTest(void) {
     int index = 0;
     for (index = 0; index < 2; index++) {
         int thing = (int []){0, 1}[index];
@@ -13,7 +13,7 @@ int compoundLiteralTest() {
     return 0;
 }
 
-int compoundLiteralTest2() {
+int compoundLiteralTest2(void) {
     int index = 0;
     for (index = 0; index < 3; index++) {
         int thing = (int [][3]){{0,0,0}, {1,1,1}, {2,2,2}}[index][index];

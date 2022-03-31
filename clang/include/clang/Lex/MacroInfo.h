@@ -54,11 +54,14 @@ class MacroInfo {
   /// macro, this includes the \c __VA_ARGS__ identifier on the list.
   IdentifierInfo **ParameterList = nullptr;
 
+  /// This is the list of tokens that the macro is defined to.
+  const Token *ReplacementTokens = nullptr;
+
   /// \see ParameterList
   unsigned NumParameters = 0;
 
-  /// This is the list of tokens that the macro is defined to.
-  SmallVector<Token, 8> ReplacementTokens;
+  /// \see ReplacementTokens
+  unsigned NumReplacementTokens = 0;
 
   /// Length in characters of the macro definition.
   mutable unsigned DefinitionLength;
@@ -230,26 +233,47 @@ public:
   bool isWarnIfUnused() const { return IsWarnIfUnused; }
 
   /// Return the number of tokens that this macro expands to.
-  unsigned getNumTokens() const { return ReplacementTokens.size(); }
+  unsigned getNumTokens() const { return NumReplacementTokens; }
 
   const Token &getReplacementToken(unsigned Tok) const {
-    assert(Tok < ReplacementTokens.size() && "Invalid token #");
+    assert(Tok < NumReplacementTokens && "Invalid token #");
     return ReplacementTokens[Tok];
   }
 
-  using tokens_iterator = SmallVectorImpl<Token>::const_iterator;
+  using const_tokens_iterator = const Token *;
 
-  tokens_iterator tokens_begin() const { return ReplacementTokens.begin(); }
-  tokens_iterator tokens_end() const { return ReplacementTokens.end(); }
-  bool tokens_empty() const { return ReplacementTokens.empty(); }
-  ArrayRef<Token> tokens() const { return ReplacementTokens; }
+  const_tokens_iterator tokens_begin() const { return ReplacementTokens; }
+  const_tokens_iterator tokens_end() const {
+    return ReplacementTokens + NumReplacementTokens;
+  }
+  bool tokens_empty() const { return NumReplacementTokens == 0; }
+  ArrayRef<Token> tokens() const {
+    return llvm::makeArrayRef(ReplacementTokens, NumReplacementTokens);
+  }
 
-  /// Add the specified token to the replacement text for the macro.
-  void AddTokenToBody(const Token &Tok) {
+  llvm::MutableArrayRef<Token>
+  allocateTokens(unsigned NumTokens, llvm::BumpPtrAllocator &PPAllocator) {
+    assert(ReplacementTokens == nullptr && NumReplacementTokens == 0 &&
+           "Token list already allocated!");
+    NumReplacementTokens = NumTokens;
+    Token *NewReplacementTokens = PPAllocator.Allocate<Token>(NumTokens);
+    ReplacementTokens = NewReplacementTokens;
+    return llvm::makeMutableArrayRef(NewReplacementTokens, NumTokens);
+  }
+
+  void setTokens(ArrayRef<Token> Tokens, llvm::BumpPtrAllocator &PPAllocator) {
     assert(
         !IsDefinitionLengthCached &&
         "Changing replacement tokens after definition length got calculated");
-    ReplacementTokens.push_back(Tok);
+    assert(ReplacementTokens == nullptr && NumReplacementTokens == 0 &&
+           "Token list already set!");
+    if (Tokens.empty())
+      return;
+
+    NumReplacementTokens = Tokens.size();
+    Token *NewReplacementTokens = PPAllocator.Allocate<Token>(Tokens.size());
+    std::copy(Tokens.begin(), Tokens.end(), NewReplacementTokens);
+    ReplacementTokens = NewReplacementTokens;
   }
 
   /// Return true if this macro is enabled.

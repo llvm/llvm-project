@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | not grep div
+; RUN: opt < %s -passes=instcombine -S | not grep div
 
 define <2 x i8> @f(<2 x i8> %x) {
   %A = udiv <2 x i8> %x, <i8 1, i8 1>

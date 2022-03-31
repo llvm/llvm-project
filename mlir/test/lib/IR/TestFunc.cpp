@@ -1,4 +1,4 @@
-//===- TestFunctionLike.cpp - Pass to test helpers on FunctionLike --------===//
+//===- TestFunc.cpp - Pass to test helpers on function utilities ----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,12 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/Pass/Pass.h"
 
 using namespace mlir;
 
 namespace {
-/// This is a test pass for verifying FuncOp's insertArgument method.
+/// This is a test pass for verifying FunctionOpInterface's insertArgument
+/// method.
 struct TestFuncInsertArg
     : public PassWrapper<TestFuncInsertArg, OperationPass<ModuleOp>> {
   StringRef getArgument() const final { return "test-func-insert-arg"; }
@@ -20,14 +22,15 @@ struct TestFuncInsertArg
   void runOnOperation() override {
     auto module = getOperation();
 
-    for (FuncOp func : module.getOps<FuncOp>()) {
+    UnknownLoc unknownLoc = UnknownLoc::get(module.getContext());
+    for (auto func : module.getOps<FunctionOpInterface>()) {
       auto inserts = func->getAttrOfType<ArrayAttr>("test.insert_args");
       if (!inserts || inserts.empty())
         continue;
       SmallVector<unsigned, 4> indicesToInsert;
       SmallVector<Type, 4> typesToInsert;
       SmallVector<DictionaryAttr, 4> attrsToInsert;
-      SmallVector<Optional<Location>, 4> locsToInsert;
+      SmallVector<Location, 4> locsToInsert;
       for (auto insert : inserts.getAsRange<ArrayAttr>()) {
         indicesToInsert.push_back(
             insert[0].cast<IntegerAttr>().getValue().getZExtValue());
@@ -35,10 +38,9 @@ struct TestFuncInsertArg
         attrsToInsert.push_back(insert.size() > 2
                                     ? insert[2].cast<DictionaryAttr>()
                                     : DictionaryAttr::get(&getContext()));
-        locsToInsert.push_back(
-            insert.size() > 3
-                ? Optional<Location>(insert[3].cast<LocationAttr>())
-                : Optional<Location>{});
+        locsToInsert.push_back(insert.size() > 3
+                                   ? Location(insert[3].cast<LocationAttr>())
+                                   : unknownLoc);
       }
       func->removeAttr("test.insert_args");
       func.insertArguments(indicesToInsert, typesToInsert, attrsToInsert,
@@ -47,7 +49,7 @@ struct TestFuncInsertArg
   }
 };
 
-/// This is a test pass for verifying FuncOp's insertResult method.
+/// This is a test pass for verifying FunctionOpInterface's insertResult method.
 struct TestFuncInsertResult
     : public PassWrapper<TestFuncInsertResult, OperationPass<ModuleOp>> {
   StringRef getArgument() const final { return "test-func-insert-result"; }
@@ -57,7 +59,7 @@ struct TestFuncInsertResult
   void runOnOperation() override {
     auto module = getOperation();
 
-    for (FuncOp func : module.getOps<FuncOp>()) {
+    for (auto func : module.getOps<FunctionOpInterface>()) {
       auto inserts = func->getAttrOfType<ArrayAttr>("test.insert_results");
       if (!inserts || inserts.empty())
         continue;
@@ -78,7 +80,8 @@ struct TestFuncInsertResult
   }
 };
 
-/// This is a test pass for verifying FuncOp's eraseArgument method.
+/// This is a test pass for verifying FunctionOpInterface's eraseArgument
+/// method.
 struct TestFuncEraseArg
     : public PassWrapper<TestFuncEraseArg, OperationPass<ModuleOp>> {
   StringRef getArgument() const final { return "test-func-erase-arg"; }
@@ -86,25 +89,17 @@ struct TestFuncEraseArg
   void runOnOperation() override {
     auto module = getOperation();
 
-    for (FuncOp func : module.getOps<FuncOp>()) {
-      SmallVector<unsigned, 4> indicesToErase;
-      for (auto argIndex : llvm::seq<int>(0, func.getNumArguments())) {
-        if (func.getArgAttr(argIndex, "test.erase_this_arg")) {
-          // Push back twice to test that duplicate arg indices are handled
-          // correctly.
-          indicesToErase.push_back(argIndex);
-          indicesToErase.push_back(argIndex);
-        }
-      }
-      // Reverse the order to test that unsorted index lists are handled
-      // correctly.
-      std::reverse(indicesToErase.begin(), indicesToErase.end());
+    for (auto func : module.getOps<FunctionOpInterface>()) {
+      BitVector indicesToErase(func.getNumArguments());
+      for (auto argIndex : llvm::seq<int>(0, func.getNumArguments()))
+        if (func.getArgAttr(argIndex, "test.erase_this_arg"))
+          indicesToErase.set(argIndex);
       func.eraseArguments(indicesToErase);
     }
   }
 };
 
-/// This is a test pass for verifying FuncOp's eraseResult method.
+/// This is a test pass for verifying FunctionOpInterface's eraseResult method.
 struct TestFuncEraseResult
     : public PassWrapper<TestFuncEraseResult, OperationPass<ModuleOp>> {
   StringRef getArgument() const final { return "test-func-erase-result"; }
@@ -114,42 +109,37 @@ struct TestFuncEraseResult
   void runOnOperation() override {
     auto module = getOperation();
 
-    for (FuncOp func : module.getOps<FuncOp>()) {
-      SmallVector<unsigned, 4> indicesToErase;
-      for (auto resultIndex : llvm::seq<int>(0, func.getNumResults())) {
-        if (func.getResultAttr(resultIndex, "test.erase_this_result")) {
-          // Push back twice to test that duplicate indices are handled
-          // correctly.
-          indicesToErase.push_back(resultIndex);
-          indicesToErase.push_back(resultIndex);
-        }
-      }
-      // Reverse the order to test that unsorted index lists are handled
-      // correctly.
-      std::reverse(indicesToErase.begin(), indicesToErase.end());
+    for (auto func : module.getOps<FunctionOpInterface>()) {
+      BitVector indicesToErase(func.getNumResults());
+      for (auto resultIndex : llvm::seq<int>(0, func.getNumResults()))
+        if (func.getResultAttr(resultIndex, "test.erase_this_result"))
+          indicesToErase.set(resultIndex);
       func.eraseResults(indicesToErase);
     }
   }
 };
 
-/// This is a test pass for verifying FuncOp's setType method.
+/// This is a test pass for verifying FunctionOpInterface's setType method.
 struct TestFuncSetType
     : public PassWrapper<TestFuncSetType, OperationPass<ModuleOp>> {
   StringRef getArgument() const final { return "test-func-set-type"; }
-  StringRef getDescription() const final { return "Test FuncOp::setType."; }
+  StringRef getDescription() const final {
+    return "Test FunctionOpInterface::setType.";
+  }
   void runOnOperation() override {
     auto module = getOperation();
     SymbolTable symbolTable(module);
 
-    for (FuncOp func : module.getOps<FuncOp>()) {
+    for (auto func : module.getOps<FunctionOpInterface>()) {
       auto sym = func->getAttrOfType<FlatSymbolRefAttr>("test.set_type_from");
       if (!sym)
         continue;
-      func.setType(symbolTable.lookup<FuncOp>(sym.getValue()).getType());
+      func.setType(symbolTable.lookup<FunctionOpInterface>(sym.getValue())
+                       .getFunctionType());
     }
   }
 };
-} // end anonymous namespace
+} // namespace
 
 namespace mlir {
 void registerTestFunc() {

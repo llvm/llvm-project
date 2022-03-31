@@ -29,6 +29,9 @@ executable("lldb-vscode") {
     ldflags = [ "-Wl,-sectcreate,__TEXT,__info_plist," +
                 rebase_path(plist[0], root_out_dir) ]
   }
+  if (current_os == "win") {
+    libs = [ "ws2_32.lib" ]
+  }
 
   # FIXME: link in //lldb/source/Host on Win (and netbsd)
   # FIXME: link in pthread

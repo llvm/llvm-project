@@ -14,7 +14,7 @@ template("write_lit_config") {
           rebase_path(get_label_info("//clang-tools-extra", "target_out_dir")),
       "CLANG_TOOLS_SOURCE_DIR=" + rebase_path("//clang-tools-extra"),
       "LLVM_LIBS_DIR=",  # needed only for shared builds
-      "TARGET_TRIPLE=$llvm_target_triple",
+      "LLVM_TARGET_TRIPLE=$llvm_target_triple",
     ]
     if (host_os == "win") {
       # See comment for Windows solink in llvm/utils/gn/build/toolchain/BUILD.gn
@@ -32,7 +32,10 @@ write_lit_config("lit_site_cfg") {
   output = clang_tools_extra_lit_site_cfg_file
 
   extra_values = [
-    "CLANG_TOOLS_DIR=" + rebase_path("$root_out_dir/bin"),
+    "CURRENT_TOOLS_DIR=" + rebase_path("$root_out_dir/bin"),
+    "CLANG_PLUGIN_SUPPORT=0",
+    "LLVM_HOST_TRIPLE=$llvm_current_triple",
+    "LLVM_INSTALL_TOOLCHAIN_ONLY=0",
     "LLVM_LIT_TOOLS_DIR=",  # Intentionally empty, matches cmake build.
     "LLVM_TOOLS_DIR=" + rebase_path("$root_out_dir/bin"),
     "Python3_EXECUTABLE=$python_path",
@@ -42,6 +45,14 @@ write_lit_config("lit_site_cfg") {
     extra_values += [ "CLANG_TIDY_ENABLE_STATIC_ANALYZER=1" ]
   } else {
     extra_values += [ "CLANG_TIDY_ENABLE_STATIC_ANALYZER=0" ]
+  }
+
+  if (host_os == "mac") {
+    extra_values += [ "LLVM_PLUGIN_EXT=.dylib" ]
+  } else if (host_os == "win") {
+    extra_values += [ "LLVM_PLUGIN_EXT=.dll" ]
+  } else {
+    extra_values += [ "LLVM_PLUGIN_EXT=.so" ]
   }
 }
 

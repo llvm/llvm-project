@@ -20,7 +20,7 @@
 namespace llvm {
 class Init;
 class Record;
-} // end namespace llvm
+} // namespace llvm
 
 namespace mlir {
 namespace tblgen {
@@ -64,6 +64,9 @@ class NativeTrait : public Trait {
 public:
   // Returns the trait corresponding to a C++ trait class.
   std::string getFullyQualifiedTraitName() const;
+
+  // Returns if this is a structural op trait.
+  bool isStructuralOpTrait() const;
 
   static bool classof(const Trait *t) { return t->getKind() == Kind::Native; }
 };
@@ -110,7 +113,7 @@ public:
   std::vector<StringRef> getAlwaysDeclaredMethods() const;
 };
 
-} // end namespace tblgen
-} // end namespace mlir
+} // namespace tblgen
+} // namespace mlir
 
 #endif // MLIR_TABLEGEN_TRAIT_H_

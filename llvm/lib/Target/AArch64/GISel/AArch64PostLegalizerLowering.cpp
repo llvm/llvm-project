@@ -58,7 +58,7 @@ struct ShuffleVectorPseudo {
   ShuffleVectorPseudo(unsigned Opc, Register Dst,
                       std::initializer_list<SrcOp> SrcOps)
       : Opc(Opc), Dst(Dst), SrcOps(SrcOps){};
-  ShuffleVectorPseudo() {}
+  ShuffleVectorPseudo() = default;
 };
 
 /// Check if a vector shuffle corresponds to a REV instruction with the

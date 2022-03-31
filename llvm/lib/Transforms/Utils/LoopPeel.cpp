@@ -28,7 +28,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
-#include "llvm/IR/Metadata.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -38,12 +37,10 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
-#include "llvm/Transforms/Utils/UnrollLoop.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
-#include <limits>
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
@@ -104,9 +101,7 @@ bool llvm::canPeel(Loop *L) {
   // note that LoopPeeling currently can only update the branch weights of latch
   // blocks and branch weights to blocks with deopt or unreachable do not need
   // updating.
-  return all_of(Exits, [](const BasicBlock *BB) {
-    return IsBlockFollowedByDeoptOrUnreachable(BB);
-  });
+  return llvm::all_of(Exits, IsBlockFollowedByDeoptOrUnreachable);
 }
 
 // This function calculates the number of iterations after which the given Phi
@@ -333,10 +328,35 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
   return DesiredPeelCount;
 }
 
+/// This "heuristic" exactly matches implicit behavior which used to exist
+/// inside getLoopEstimatedTripCount.  It was added here to keep an
+/// improvement inside that API from causing peeling to become more agressive.
+/// This should probably be removed.
+static bool violatesLegacyMultiExitLoopCheck(Loop *L) {
+  BasicBlock *Latch = L->getLoopLatch();
+  if (!Latch)
+    return true;
+
+  BranchInst *LatchBR = dyn_cast<BranchInst>(Latch->getTerminator());
+  if (!LatchBR || LatchBR->getNumSuccessors() != 2 || !L->isLoopExiting(Latch))
+    return true;
+
+  assert((LatchBR->getSuccessor(0) == L->getHeader() ||
+          LatchBR->getSuccessor(1) == L->getHeader()) &&
+         "At least one edge out of the latch must go to the header");
+
+  SmallVector<BasicBlock *, 4> ExitBlocks;
+  L->getUniqueNonLatchExitBlocks(ExitBlocks);
+  return any_of(ExitBlocks, [](const BasicBlock *EB) {
+      return !EB->getTerminatingDeoptimizeCall();
+    });
+}
+
+
 // Return the number of iterations we want to peel off.
 void llvm::computePeelCount(Loop *L, unsigned LoopSize,
                             TargetTransformInfo::PeelingPreferences &PP,
-                            unsigned &TripCount, DominatorTree &DT,
+                            unsigned TripCount, DominatorTree &DT,
                             ScalarEvolution &SE, unsigned Threshold) {
   assert(LoopSize > 0 && "Zero loop size is not allowed!");
   // Save the PP.PeelCount value set by the target in
@@ -347,7 +367,7 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
     return;
 
   // Only try to peel innermost loops by default.
-  // The constraint can be relaxed by the target in TTI.getUnrollingPreferences
+  // The constraint can be relaxed by the target in TTI.getPeelingPreferences
   // or by the flag -unroll-allow-loop-nests-peeling.
   if (!PP.AllowLoopNestsPeeling && !L->isInnermost())
     return;
@@ -384,8 +404,8 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
     SmallDenseMap<PHINode *, Optional<unsigned> > IterationsToInvariance;
     // Now go through all Phis to calculate their the number of iterations they
     // need to become invariants.
-    // Start the max computation with the UP.PeelCount value set by the target
-    // in TTI.getUnrollingPreferences or by the flag -unroll-peel-count.
+    // Start the max computation with the PP.PeelCount value set by the target
+    // in TTI.getPeelingPreferences or by the flag -unroll-peel-count.
     unsigned DesiredPeelCount = TargetPeelCount;
     BasicBlock *BackEdge = L->getLoopLatch();
     assert(BackEdge && "Loop is not in simplified form?");
@@ -436,6 +456,8 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
   // We only do this in the presence of profile information, since otherwise
   // our estimates of the trip count are not reliable enough.
   if (L->getHeader()->getParent()->hasProfileData()) {
+    if (violatesLegacyMultiExitLoopCheck(L))
+      return;
     Optional<unsigned> PeelCount = getLoopEstimatedTripCount(L);
     if (!PeelCount)
       return;
@@ -712,7 +734,7 @@ TargetTransformInfo::PeelingPreferences llvm::gatherPeelingPreferences(
 /// for the bulk of dynamic execution, can be further simplified by scalar
 /// optimizations.
 bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
-                    ScalarEvolution *SE, DominatorTree *DT, AssumptionCache *AC,
+                    ScalarEvolution *SE, DominatorTree &DT, AssumptionCache *AC,
                     bool PreserveLCSSA) {
   assert(PeelCount > 0 && "Attempt to peel out zero iterations?");
   assert(canPeel(L) && "Attempt to peel a loop which is not peelable?");
@@ -731,23 +753,21 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
   // routes which can lead to the exit: we can reach it from the peeled
   // iterations too.
   DenseMap<BasicBlock *, BasicBlock *> NonLoopBlocksIDom;
-  if (DT) {
-    for (auto *BB : L->blocks()) {
-      auto *BBDomNode = DT->getNode(BB);
-      SmallVector<BasicBlock *, 16> ChildrenToUpdate;
-      for (auto *ChildDomNode : BBDomNode->children()) {
-        auto *ChildBB = ChildDomNode->getBlock();
-        if (!L->contains(ChildBB))
-          ChildrenToUpdate.push_back(ChildBB);
-      }
-      // The new idom of the block will be the nearest common dominator
-      // of all copies of the previous idom. This is equivalent to the
-      // nearest common dominator of the previous idom and the first latch,
-      // which dominates all copies of the previous idom.
-      BasicBlock *NewIDom = DT->findNearestCommonDominator(BB, Latch);
-      for (auto *ChildBB : ChildrenToUpdate)
-        NonLoopBlocksIDom[ChildBB] = NewIDom;
+  for (auto *BB : L->blocks()) {
+    auto *BBDomNode = DT.getNode(BB);
+    SmallVector<BasicBlock *, 16> ChildrenToUpdate;
+    for (auto *ChildDomNode : BBDomNode->children()) {
+      auto *ChildBB = ChildDomNode->getBlock();
+      if (!L->contains(ChildBB))
+        ChildrenToUpdate.push_back(ChildBB);
     }
+    // The new idom of the block will be the nearest common dominator
+    // of all copies of the previous idom. This is equivalent to the
+    // nearest common dominator of the previous idom and the first latch,
+    // which dominates all copies of the previous idom.
+    BasicBlock *NewIDom = DT.findNearestCommonDominator(BB, Latch);
+    for (auto *ChildBB : ChildrenToUpdate)
+      NonLoopBlocksIDom[ChildBB] = NewIDom;
   }
 
   Function *F = Header->getParent();
@@ -797,11 +817,11 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
   //  If (cond) goto Header
   // Exit:
 
-  BasicBlock *InsertTop = SplitEdge(PreHeader, Header, DT, LI);
+  BasicBlock *InsertTop = SplitEdge(PreHeader, Header, &DT, LI);
   BasicBlock *InsertBot =
-      SplitBlock(InsertTop, InsertTop->getTerminator(), DT, LI);
+      SplitBlock(InsertTop, InsertTop->getTerminator(), &DT, LI);
   BasicBlock *NewPreHeader =
-      SplitBlock(InsertBot, InsertBot->getTerminator(), DT, LI);
+      SplitBlock(InsertBot, InsertBot->getTerminator(), &DT, LI);
 
   InsertTop->setName(Header->getName() + ".peel.begin");
   InsertBot->setName(Header->getName() + ".peel.next");
@@ -827,23 +847,21 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
     ValueToValueMapTy VMap;
 
     cloneLoopBlocks(L, Iter, InsertTop, InsertBot, ExitEdges, NewBlocks,
-                    LoopBlocks, VMap, LVMap, DT, LI,
+                    LoopBlocks, VMap, LVMap, &DT, LI,
                     LoopLocalNoAliasDeclScopes);
 
     // Remap to use values from the current iteration instead of the
     // previous one.
     remapInstructionsInBlocks(NewBlocks, VMap);
 
-    if (DT) {
-      // Update IDoms of the blocks reachable through exits.
-      if (Iter == 0)
-        for (auto BBIDom : NonLoopBlocksIDom)
-          DT->changeImmediateDominator(BBIDom.first,
-                                       cast<BasicBlock>(LVMap[BBIDom.second]));
+    // Update IDoms of the blocks reachable through exits.
+    if (Iter == 0)
+      for (auto BBIDom : NonLoopBlocksIDom)
+        DT.changeImmediateDominator(BBIDom.first,
+                                     cast<BasicBlock>(LVMap[BBIDom.second]));
 #ifdef EXPENSIVE_CHECKS
-      assert(DT->verify(DominatorTree::VerificationLevel::Fast));
+    assert(DT.verify(DominatorTree::VerificationLevel::Fast));
 #endif
-    }
 
     auto *LatchBRCopy = cast<BranchInst>(VMap[LatchBR]);
     updateBranchWeights(InsertBot, LatchBRCopy, ExitWeight, FallThroughWeight);
@@ -852,7 +870,7 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
     LatchBRCopy->setMetadata(LLVMContext::MD_loop, nullptr);
 
     InsertTop = InsertBot;
-    InsertBot = SplitBlock(InsertBot, InsertBot->getTerminator(), DT, LI);
+    InsertBot = SplitBlock(InsertBot, InsertBot->getTerminator(), &DT, LI);
     InsertBot->setName(Header->getName() + ".peel.next");
 
     F->getBasicBlockList().splice(InsertTop->getIterator(),
@@ -886,11 +904,13 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
   // We modified the loop, update SE.
   SE->forgetTopmostLoop(L);
 
+#ifdef EXPENSIVE_CHECKS
   // Finally DomtTree must be correct.
-  assert(DT->verify(DominatorTree::VerificationLevel::Fast));
+  assert(DT.verify(DominatorTree::VerificationLevel::Fast));
+#endif
 
   // FIXME: Incrementally update loop-simplify
-  simplifyLoop(L, DT, LI, SE, AC, nullptr, PreserveLCSSA);
+  simplifyLoop(L, &DT, LI, SE, AC, nullptr, PreserveLCSSA);
 
   NumPeeled++;
 

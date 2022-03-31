@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // class std::ranges::subrange;
@@ -31,22 +30,22 @@ constexpr bool test() {
   assert(a4.begin() == globalBuff + 4);
   assert(a4.size() == 4);
 
-  std::ranges::subrange<InputIter> b(InputIter(globalBuff), InputIter(globalBuff + 8));
+  std::ranges::subrange<InputIter, sentinel_wrapper<InputIter>> b(InputIter(globalBuff), sentinel_wrapper(InputIter(globalBuff + 8)));
   auto b1 = std::move(b).next();
-  assert(b1.begin().base() == globalBuff + 1);
+  assert(base(b1.begin()) == globalBuff + 1);
 
   std::ranges::subrange<BidirIter> c(BidirIter(globalBuff + 4), BidirIter(globalBuff + 8));
   auto c1 = c.prev();
-  assert(c1.begin().base() == globalBuff + 3);
+  assert(base(c1.begin()) == globalBuff + 3);
   auto c2 = c.prev(4);
-  assert(c2.begin().base() == globalBuff);
+  assert(base(c2.begin()) == globalBuff);
 
   std::ranges::subrange<BidirIter> d(BidirIter(globalBuff + 4), BidirIter(globalBuff + 8));
   auto d1 = d.advance(4);
-  assert(d1.begin().base() == globalBuff + 8);
+  assert(base(d1.begin()) == globalBuff + 8);
   assert(d1.empty());
   auto d2 = d1.advance(-4);
-  assert(d2.begin().base() == globalBuff + 4);
+  assert(base(d2.begin()) == globalBuff + 4);
 
   return true;
 }

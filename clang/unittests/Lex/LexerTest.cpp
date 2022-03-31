@@ -23,6 +23,8 @@
 #include "clang/Lex/ModuleLoader.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringRef.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <memory>
@@ -631,5 +633,30 @@ TEST_F(LexerTest, CreatedFIDCountForPredefinedBuffer) {
   }
   EXPECT_EQ(SourceMgr.getNumCreatedFIDsForFileID(PP->getPredefinesFileID()),
             1U);
+}
+
+TEST_F(LexerTest, RawAndNormalLexSameForLineComments) {
+  const llvm::StringLiteral Source = R"cpp(
+  // First line comment.
+  //* Second line comment which is ambigious.
+  ; // Have a non-comment token to make sure something is lexed.
+  )cpp";
+  LangOpts.LineComment = false;
+  auto Toks = Lex(Source);
+  auto &SM = PP->getSourceManager();
+  auto SrcBuffer = SM.getBufferData(SM.getMainFileID());
+  Lexer L(SM.getLocForStartOfFile(SM.getMainFileID()), PP->getLangOpts(),
+          SrcBuffer.data(), SrcBuffer.data(),
+          SrcBuffer.data() + SrcBuffer.size());
+
+  auto ToksView = llvm::makeArrayRef(Toks);
+  clang::Token T;
+  EXPECT_FALSE(ToksView.empty());
+  while (!L.LexFromRawLexer(T)) {
+    ASSERT_TRUE(!ToksView.empty());
+    EXPECT_EQ(T.getKind(), ToksView.front().getKind());
+    ToksView = ToksView.drop_front();
+  }
+  EXPECT_TRUE(ToksView.empty());
 }
 } // anonymous namespace

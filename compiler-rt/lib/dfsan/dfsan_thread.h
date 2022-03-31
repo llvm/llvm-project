@@ -24,8 +24,7 @@ class DFsanThread {
   // NOTE: There is no DFsanThread constructor. It is allocated
   // via mmap() and *must* be valid in zero-initialized state.
 
-  static DFsanThread *Create(void *start_routine_trampoline,
-                             thread_callback_t start_routine, void *arg,
+  static DFsanThread *Create(thread_callback_t start_routine, void *arg,
                              bool track_origins = false);
   static void TSDDtor(void *tsd);
   void Destroy();
@@ -59,7 +58,6 @@ class DFsanThread {
 
   bool AddrIsInStack(uptr addr);
 
-  void *start_routine_trampoline_;
   thread_callback_t start_routine_;
   void *arg_;
   bool track_origins_;

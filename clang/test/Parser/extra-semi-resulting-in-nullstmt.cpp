@@ -17,13 +17,13 @@ void test() {
   ;
 
   // This removal of extra semi also consumes all the comments.
-  // clang-format: off
+  // clang-format off
   ;;;
-  // clang-format: on
+  // clang-format on
 
-  // clang-format: off
+  // clang-format off
   ;NULLMACRO(ZZ);
-  // clang-format: on
+  // clang-format on
 
   {}; // expected-warning {{empty expression statement has no effect; remove unnecessary ';' to silence this warning}}
 

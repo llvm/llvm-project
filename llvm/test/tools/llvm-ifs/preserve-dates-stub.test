@@ -1,8 +1,8 @@
 ## Test writing unchanged content to ELF Stub file with --write-if-changed flag.
 
-# RUN: llvm-ifs --output-format=ELF --output=%t %s
+# RUN: llvm-ifs --output-elf=%t %s
 # RUN: env TZ=GMT touch -m -t 197001010000 %t
-# RUN: llvm-ifs --output-format=ELF --output=%t --write-if-changed %s
+# RUN: llvm-ifs --output-elf=%t --write-if-changed %s
 # RUN: env TZ=GMT ls -l %t | FileCheck %s
 
 --- !ifs-v1

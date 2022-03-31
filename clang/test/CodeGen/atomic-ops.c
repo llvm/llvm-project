@@ -202,7 +202,7 @@ struct S fd1(struct S *a) {
   // CHECK: [[CAST:%.*]]  = bitcast %struct.S* [[RETVAL]] to i64*
   // CHECK: [[SRC:%.*]]  = bitcast i64* [[A]] to i8*
   // CHECK: [[DEST:%.*]]  = bitcast i64* [[CAST]] to i8*
-  // CHECK: call void @__atomic_load(i32 8, i8* [[SRC]], i8* [[DEST]], i32 5)
+  // CHECK: call void @__atomic_load(i32 noundef 8, i8* noundef [[SRC]], i8* noundef [[DEST]], i32 noundef 5)
   // CHECK: ret
   struct S ret;
   __atomic_load(a, &ret, memory_order_seq_cst);
@@ -221,7 +221,7 @@ void fd2(struct S *a, struct S *b) {
   // CHECK-NEXT: [[COERCED_B:%.*]] = bitcast %struct.S* [[LOAD_B_PTR]] to i64*
   // CHECK-NEXT: [[COERCED_A:%.*]] = bitcast i64* [[COERCED_A_TMP]] to i8*
   // CHECK-NEXT: [[CAST_B:%.*]] = bitcast i64* [[COERCED_B]] to i8*
-  // CHECK-NEXT: call void @__atomic_store(i32 8, i8* [[COERCED_A]], i8* [[CAST_B]],
+  // CHECK-NEXT: call void @__atomic_store(i32 noundef 8, i8* noundef [[COERCED_A]], i8* noundef [[CAST_B]],
   // CHECK-NEXT: ret void
   __atomic_store(a, b, memory_order_seq_cst);
 }
@@ -243,7 +243,7 @@ void fd3(struct S *a, struct S *b, struct S *c) {
   // CHECK-NEXT: [[COERCED_A:%.*]] = bitcast i64* [[COERCED_A_TMP]] to i8*
   // CHECK-NEXT: [[CAST_B:%.*]] = bitcast i64* [[COERCED_B]] to i8*
   // CHECK-NEXT: [[CAST_C:%.*]] = bitcast i64* [[COERCED_C]] to i8*
-  // CHECK-NEXT: call void @__atomic_exchange(i32 8, i8* [[COERCED_A]], i8* [[CAST_B]], i8* [[CAST_C]],
+  // CHECK-NEXT: call void @__atomic_exchange(i32 noundef 8, i8* noundef [[COERCED_A]], i8* noundef [[CAST_B]], i8* noundef [[CAST_C]],
 
   __atomic_exchange(a, b, c, memory_order_seq_cst);
 }
@@ -265,7 +265,7 @@ _Bool fd4(struct S *a, struct S *b, struct S *c) {
   // CHECK-NEXT: [[COERCED_A:%.*]] = bitcast i64* [[COERCED_A_TMP]] to i8*
   // CHECK-NEXT: [[COERCED_B:%.*]] = bitcast i64* [[COERCED_B_TMP]] to i8*
   // CHECK-NEXT: [[CAST_C:%.*]] = bitcast i64* [[COERCED_C]] to i8*
-  // CHECK-NEXT: [[CALL:%.*]] = call zeroext i1 @__atomic_compare_exchange(i32 8, i8* [[COERCED_A]], i8* [[COERCED_B]], i8* [[CAST_C]],
+  // CHECK-NEXT: [[CALL:%.*]] = call zeroext i1 @__atomic_compare_exchange(i32 noundef 8, i8* noundef [[COERCED_A]], i8* noundef [[COERCED_B]], i8* noundef [[CAST_C]],
   // CHECK-NEXT: ret i1 [[CALL]]
   return __atomic_compare_exchange(a, b, c, 1, 5, 5);
 }
@@ -320,7 +320,7 @@ _Bool fsb(_Bool *c) {
 
 char flag1;
 volatile char flag2;
-void test_and_set() {
+void test_and_set(void) {
   // CHECK: atomicrmw xchg i8* @flag1, i8 1 seq_cst, align 1
   __atomic_test_and_set(&flag1, memory_order_seq_cst);
   // CHECK: atomicrmw volatile xchg i8* @flag2, i8 1 acquire, align 1
@@ -343,20 +343,20 @@ struct Incomplete;
 int lock_free(struct Incomplete *incomplete) {
   // CHECK-LABEL: @lock_free
 
-  // CHECK: call zeroext i1 @__atomic_is_lock_free(i32 3, i8* null)
+  // CHECK: call zeroext i1 @__atomic_is_lock_free(i32 noundef 3, i8* noundef null)
   __c11_atomic_is_lock_free(3);
 
-  // CHECK: call zeroext i1 @__atomic_is_lock_free(i32 16, i8* {{.*}}@sixteen{{.*}})
+  // CHECK: call zeroext i1 @__atomic_is_lock_free(i32 noundef 16, i8* noundef {{.*}}@sixteen{{.*}})
   __atomic_is_lock_free(16, &sixteen);
 
-  // CHECK: call zeroext i1 @__atomic_is_lock_free(i32 17, i8* {{.*}}@seventeen{{.*}})
+  // CHECK: call zeroext i1 @__atomic_is_lock_free(i32 noundef 17, i8* noundef {{.*}}@seventeen{{.*}})
   __atomic_is_lock_free(17, &seventeen);
 
-  // CHECK: call zeroext i1 @__atomic_is_lock_free(i32 4, {{.*}})
+  // CHECK: call zeroext i1 @__atomic_is_lock_free(i32 noundef 4, {{.*}})
   __atomic_is_lock_free(4, incomplete);
 
   char cs[20];
-  // CHECK: call zeroext i1 @__atomic_is_lock_free(i32 4, {{.*}})
+  // CHECK: call zeroext i1 @__atomic_is_lock_free(i32 noundef 4, {{.*}})
   __atomic_is_lock_free(4, cs+1);
 
   // CHECK-NOT: call
@@ -388,41 +388,41 @@ struct bar smallThing, thing1, thing2;
 struct foo bigThing;
 _Atomic(struct foo) bigAtomic;
 
-void structAtomicStore() {
+void structAtomicStore(void) {
   // CHECK-LABEL: @structAtomicStore
   struct foo f = {0};
   struct bar b = {0};
   __atomic_store(&smallThing, &b, 5);
-  // CHECK: call void @__atomic_store(i32 3, i8* {{.*}} @smallThing
+  // CHECK: call void @__atomic_store(i32 noundef 3, i8* noundef {{.*}} @smallThing
 
   __atomic_store(&bigThing, &f, 5);
-  // CHECK: call void @__atomic_store(i32 512, i8* {{.*}} @bigThing
+  // CHECK: call void @__atomic_store(i32 noundef 512, i8* noundef {{.*}} @bigThing
 }
-void structAtomicLoad() {
+void structAtomicLoad(void) {
   // CHECK-LABEL: @structAtomicLoad
   struct bar b;
   __atomic_load(&smallThing, &b, 5);
-  // CHECK: call void @__atomic_load(i32 3, i8* {{.*}} @smallThing
+  // CHECK: call void @__atomic_load(i32 noundef 3, i8* noundef {{.*}} @smallThing
 
   struct foo f = {0};
   __atomic_load(&bigThing, &f, 5);
-  // CHECK: call void @__atomic_load(i32 512, i8* {{.*}} @bigThing
+  // CHECK: call void @__atomic_load(i32 noundef 512, i8* noundef {{.*}} @bigThing
 }
-struct foo structAtomicExchange() {
+struct foo structAtomicExchange(void) {
   // CHECK-LABEL: @structAtomicExchange
   struct foo f = {0};
   struct foo old;
   __atomic_exchange(&f, &bigThing, &old, 5);
-  // CHECK: call void @__atomic_exchange(i32 512, {{.*}}, i8* bitcast ({{.*}} @bigThing to i8*),
+  // CHECK: call void @__atomic_exchange(i32 noundef 512, {{.*}}, i8* noundef bitcast ({{.*}} @bigThing to i8*),
 
   return __c11_atomic_exchange(&bigAtomic, f, 5);
-  // CHECK: call void @__atomic_exchange(i32 512, i8* bitcast ({{.*}} @bigAtomic to i8*),
+  // CHECK: call void @__atomic_exchange(i32 noundef 512, i8* noundef bitcast ({{.*}} @bigAtomic to i8*),
 }
-int structAtomicCmpExchange() {
+int structAtomicCmpExchange(void) {
   // CHECK-LABEL: @structAtomicCmpExchange
   // CHECK: %[[x_mem:.*]] = alloca i8
   _Bool x = __atomic_compare_exchange(&smallThing, &thing1, &thing2, 1, 5, 5);
-  // CHECK: %[[call1:.*]] = call zeroext i1 @__atomic_compare_exchange(i32 3, {{.*}} @smallThing{{.*}} @thing1{{.*}} @thing2
+  // CHECK: %[[call1:.*]] = call zeroext i1 @__atomic_compare_exchange(i32 noundef 3, {{.*}} @smallThing{{.*}} @thing1{{.*}} @thing2
   // CHECK: %[[zext1:.*]] = zext i1 %[[call1]] to i8
   // CHECK: store i8 %[[zext1]], i8* %[[x_mem]], align 1
   // CHECK: %[[x:.*]] = load i8, i8* %[[x_mem]]
@@ -433,7 +433,7 @@ int structAtomicCmpExchange() {
   struct foo g = {0};
   g.big[12] = 12;
   return x & __c11_atomic_compare_exchange_strong(&bigAtomic, &f, g, 5, 5);
-  // CHECK: %[[call2:.*]] = call zeroext i1 @__atomic_compare_exchange(i32 512, i8* bitcast ({{.*}} @bigAtomic to i8*),
+  // CHECK: %[[call2:.*]] = call zeroext i1 @__atomic_compare_exchange(i32 noundef 512, i8* noundef bitcast ({{.*}} @bigAtomic to i8*),
   // CHECK: %[[conv2:.*]] = zext i1 %[[call2]] to i32
   // CHECK: %[[and:.*]] = and i32 %[[conv1]], %[[conv2]]
   // CHECK: ret i32 %[[and]]
@@ -444,7 +444,7 @@ int structAtomicCmpExchange() {
 _Atomic(int) atomic_init_i = 42;
 
 // CHECK-LABEL: @atomic_init_foo
-void atomic_init_foo()
+void atomic_init_foo(void)
 {
   // CHECK-NOT: }
   // CHECK-NOT: atomic
@@ -651,7 +651,7 @@ void EMIT_ALL_THE_THINGS(int *ptr, int *ptr2, int new, _Bool weak, int success, 
   // CHECK: = cmpxchg weak {{.*}} seq_cst seq_cst, align
 }
 
-int PR21643() {
+int PR21643(void) {
   return __atomic_or_fetch((int __attribute__((address_space(257))) *)0x308, 1,
                            __ATOMIC_RELAXED);
   // CHECK: %[[atomictmp:.*]] = alloca i32, align 4
@@ -698,17 +698,17 @@ int PR17306_2(volatile int *i, int value) {
   return __atomic_add_fetch(i, value, memory_order_seq_cst);
 }
 
-void test_underaligned() {
+void test_underaligned(void) {
   // CHECK-LABEL: @test_underaligned
   struct Underaligned { char c[8]; } underaligned_a, underaligned_b, underaligned_c;
 
-  // CHECK: call void @__atomic_load(i32 8,
+  // CHECK: call void @__atomic_load(i32 noundef 8,
   __atomic_load(&underaligned_a, &underaligned_b, memory_order_seq_cst);
-  // CHECK: call void @__atomic_store(i32 8,
+  // CHECK: call void @__atomic_store(i32 noundef 8,
   __atomic_store(&underaligned_a, &underaligned_b, memory_order_seq_cst);
-  // CHECK: call void @__atomic_exchange(i32 8,
+  // CHECK: call void @__atomic_exchange(i32 noundef 8,
   __atomic_exchange(&underaligned_a, &underaligned_b, &underaligned_c, memory_order_seq_cst);
-  // CHECK: call {{.*}} @__atomic_compare_exchange(i32 8,
+  // CHECK: call {{.*}} @__atomic_compare_exchange(i32 noundef 8,
   __atomic_compare_exchange(&underaligned_a, &underaligned_b, &underaligned_c, 1, memory_order_seq_cst, memory_order_seq_cst);
 
   __attribute__((aligned)) struct Underaligned aligned_a, aligned_b, aligned_c;
@@ -792,7 +792,7 @@ void test_minmax_postop(int *si, unsigned *ui, unsigned short *us, signed char *
   // CHECK: store i8 [[NEW]], i8*
   *sc = __atomic_min_fetch(sc, 42, memory_order_release);
 
-  // CHECK: [[OLD:%.*]] = call i64 @__atomic_fetch_umin_8(i8* {{%.*}}, i64 [[RHS:%.*]],
+  // CHECK: [[OLD:%.*]] = call i64 @__atomic_fetch_umin_8(i8* noundef {{%.*}}, i64 noundef [[RHS:%.*]],
   // CHECK: [[TST:%.*]] = icmp ult i64 [[OLD]], [[RHS]]
   // CHECK: [[NEW:%.*]] = select i1 [[TST]], i64 [[OLD]], i64 [[RHS]]
   // CHECK: store i64 [[NEW]], i64*

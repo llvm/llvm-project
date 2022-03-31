@@ -232,7 +232,7 @@ Value *IslExprBuilder::createOpNAry(__isl_take isl_ast_expr *Expr) {
 }
 
 std::pair<Value *, Type *>
-IslExprBuilder::createAccessAddress(isl_ast_expr *Expr) {
+IslExprBuilder::createAccessAddress(__isl_take isl_ast_expr *Expr) {
   assert(isl_ast_expr_get_type(Expr) == isl_ast_expr_op &&
          "isl ast expression not of type isl_ast_op");
   assert(isl_ast_expr_get_op_type(Expr) == isl_ast_op_access &&
@@ -343,7 +343,7 @@ IslExprBuilder::createAccessAddress(isl_ast_expr *Expr) {
   return {Access, SAI->getElementType()};
 }
 
-Value *IslExprBuilder::createOpAccess(isl_ast_expr *Expr) {
+Value *IslExprBuilder::createOpAccess(__isl_take isl_ast_expr *Expr) {
   auto Info = createAccessAddress(Expr);
   assert(Info.first && "Could not create op access address");
   return Builder.CreateLoad(Info.second, Info.first,
@@ -526,8 +526,8 @@ Value *IslExprBuilder::createOpICmp(__isl_take isl_ast_expr *Expr) {
   isl_ast_op_type OpType = isl_ast_expr_get_op_type(Expr);
   assert(OpType >= isl_ast_op_eq && OpType <= isl_ast_op_gt &&
          "Unsupported ICmp isl ast expression");
-  assert(isl_ast_op_eq + 4 == isl_ast_op_gt &&
-         "Isl ast op type interface changed");
+  static_assert(isl_ast_op_eq + 4 == isl_ast_op_gt,
+                "Isl ast op type interface changed");
 
   CmpInst::Predicate Predicates[5][2] = {
       {CmpInst::ICMP_EQ, CmpInst::ICMP_EQ},

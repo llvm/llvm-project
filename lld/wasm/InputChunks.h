@@ -108,15 +108,11 @@ public:
   // Signals the chunk was discarded by COMDAT handling.
   unsigned discarded : 1;
 
-  // Signals that the chuck was implicitly marked as TLS based on its name
-  // alone. This is a compatibility mechanism to support older object files.
-  unsigned implicitTLS : 1;
-
 protected:
   InputChunk(ObjFile *f, Kind k, StringRef name, uint32_t alignment = 0,
              uint32_t flags = 0)
       : name(name), file(f), alignment(alignment), flags(flags), sectionKind(k),
-        live(!config->gcSections), discarded(false), implicitTLS(false) {}
+        live(!config->gcSections), discarded(false) {}
   ArrayRef<uint8_t> data() const { return rawData; }
   uint64_t getTombstone() const;
 

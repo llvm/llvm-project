@@ -16,23 +16,14 @@
 namespace mlir {
 
 // Rewriting that replaces Op with XOp, YOp, or ZOp depending on the dimension
-// that Op operates on.  Op is assumed to return an `std.index` value and
+// that Op operates on.  Op is assumed to return an `index` value and
 // XOp, YOp and ZOp are assumed to return an `llvm.i32` value.  Depending on
 // `indexBitwidth`, sign-extend or truncate the resulting value to match the
 // bitwidth expected by the consumers of the value.
 template <typename Op, typename XOp, typename YOp, typename ZOp>
 struct GPUIndexIntrinsicOpLowering : public ConvertOpToLLVMPattern<Op> {
 private:
-  enum dimension { X = 0, Y = 1, Z = 2, invalid };
   unsigned indexBitwidth;
-
-  static dimension dimensionToIndex(Op op) {
-    return StringSwitch<dimension>(op.dimension())
-        .Case("x", X)
-        .Case("y", Y)
-        .Case("z", Z)
-        .Default(invalid);
-  }
 
 public:
   explicit GPUIndexIntrinsicOpLowering(LLVMTypeConverter &typeConverter)
@@ -46,18 +37,16 @@ public:
     auto loc = op->getLoc();
     MLIRContext *context = rewriter.getContext();
     Value newOp;
-    switch (dimensionToIndex(op)) {
-    case X:
+    switch (op.dimension()) {
+    case gpu::Dimension::x:
       newOp = rewriter.create<XOp>(loc, IntegerType::get(context, 32));
       break;
-    case Y:
+    case gpu::Dimension::y:
       newOp = rewriter.create<YOp>(loc, IntegerType::get(context, 32));
       break;
-    case Z:
+    case gpu::Dimension::z:
       newOp = rewriter.create<ZOp>(loc, IntegerType::get(context, 32));
       break;
-    default:
-      return failure();
     }
 
     if (indexBitwidth > 32) {

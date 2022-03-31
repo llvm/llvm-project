@@ -6,9 +6,9 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; PR15882
 
 ; CHECK: %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; CHECK: %offset.idx = sub i64 %startval, %index
-; CHECK: %[[a0:.+]] = add i64 %offset.idx, 0
-; CHECK: %[[a4:.+]] = add i64 %offset.idx, -4
+; CHECK: [[OFFSET_IDX:%.+]] = sub i64 %startval, %index
+; CHECK: %[[a0:.+]] = add i64 [[OFFSET_IDX]], 0
+; CHECK: %[[a4:.+]] = add i64 [[OFFSET_IDX]], -4
 
 define i32 @reverse_induction_i64(i64 %startval, i32 * %ptr) {
 entry:
@@ -32,9 +32,9 @@ loopend:
 
 ; CHECK-LABEL: @reverse_induction_i128(
 ; CHECK: %index = phi i128 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; CHECK: %offset.idx = sub i128 %startval, %index
-; CHECK: %[[a0:.+]] = add i128 %offset.idx, 0
-; CHECK: %[[a4:.+]] = add i128 %offset.idx, -4
+; CHECK: [[OFFSET_IDX:%.+]] = sub i128 %startval, %index
+; CHECK: %[[a0:.+]] = add i128 [[OFFSET_IDX]], 0
+; CHECK: %[[a4:.+]] = add i128 [[OFFSET_IDX]], -4
 
 define i32 @reverse_induction_i128(i128 %startval, i32 * %ptr) {
 entry:
@@ -58,9 +58,9 @@ loopend:
 
 ; CHECK-LABEL: @reverse_induction_i16(
 ; CHECK: %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; CHECK: %offset.idx = sub i16 %startval, {{.*}}
-; CHECK: %[[a0:.+]] = add i16 %offset.idx, 0
-; CHECK: %[[a4:.+]] = add i16 %offset.idx, -4
+; CHECK: [[OFFSET_IDX:%.+]] = sub i16 %startval, {{.*}}
+; CHECK: %[[a0:.+]] = add i16 [[OFFSET_IDX]], 0
+; CHECK: %[[a4:.+]] = add i16 [[OFFSET_IDX]], -4
 
 define i32 @reverse_induction_i16(i16 %startval, i32 * %ptr) {
 entry:
@@ -101,9 +101,9 @@ loopend:
 
 ; CHECK-LABEL: @reverse_forward_induction_i64_i8(
 ; CHECK: %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; CHECK: %offset.idx = sub i64 1023, %index
-; CHECK: %[[a0:.+]] = add i64 %offset.idx, 0
-; CHECK: %[[a4:.+]] = add i64 %offset.idx, -4
+; CHECK: [[OFFSET_IDX:%.+]] = sub i64 1023, %index
+; CHECK: %[[a0:.+]] = add i64 [[OFFSET_IDX]], 0
+; CHECK: %[[a4:.+]] = add i64 [[OFFSET_IDX]], -4
 
 define void @reverse_forward_induction_i64_i8() {
 entry:
@@ -127,9 +127,9 @@ while.end:
 
 ; CHECK-LABEL: @reverse_forward_induction_i64_i8_signed(
 ; CHECK: %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; CHECK: %offset.idx = sub i64 1023, %index
-; CHECK: %[[a0:.+]] = add i64 %offset.idx, 0
-; CHECK: %[[a4:.+]] = add i64 %offset.idx, -4
+; CHECK: [[OFFSET_IDX:%.+]] = sub i64 1023, %index
+; CHECK: %[[a0:.+]] = add i64 [[OFFSET_IDX]], 0
+; CHECK: %[[a4:.+]] = add i64 [[OFFSET_IDX]], -4
 
 define void @reverse_forward_induction_i64_i8_signed() {
 entry:

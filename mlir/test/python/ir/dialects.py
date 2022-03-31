@@ -16,10 +16,10 @@ def run(f):
 @run
 def testDialectDescriptor():
   ctx = Context()
-  d = ctx.get_dialect_descriptor("std")
-  # CHECK: <DialectDescriptor std>
+  d = ctx.get_dialect_descriptor("func")
+  # CHECK: <DialectDescriptor func>
   print(d)
-  # CHECK: std
+  # CHECK: func
   print(d.namespace)
   try:
     _ = ctx.get_dialect_descriptor("not_existing")
@@ -34,8 +34,8 @@ def testDialectDescriptor():
 def testUserDialectClass():
   ctx = Context()
   # Access using attribute.
-  d = ctx.dialects.std
-  # CHECK: <Dialect std (class mlir.dialects._std_ops_gen._Dialect)>
+  d = ctx.dialects.func
+  # CHECK: <Dialect func (class mlir.dialects._func_ops_gen._Dialect)>
   print(d)
   try:
     _ = ctx.dialects.not_existing
@@ -45,8 +45,8 @@ def testUserDialectClass():
     assert False, "Expected exception"
 
   # Access using index.
-  d = ctx.dialects["std"]
-  # CHECK: <Dialect std (class mlir.dialects._std_ops_gen._Dialect)>
+  d = ctx.dialects["func"]
+  # CHECK: <Dialect func (class mlir.dialects._func_ops_gen._Dialect)>
   print(d)
   try:
     _ = ctx.dialects["not_existing"]
@@ -56,8 +56,8 @@ def testUserDialectClass():
     assert False, "Expected exception"
 
   # Using the 'd' alias.
-  d = ctx.d["std"]
-  # CHECK: <Dialect std (class mlir.dialects._std_ops_gen._Dialect)>
+  d = ctx.d["func"]
+  # CHECK: <Dialect func (class mlir.dialects._func_ops_gen._Dialect)>
   print(d)
 
 
@@ -100,7 +100,7 @@ def testCustomOpView():
 def testIsRegisteredOperation():
   ctx = Context()
 
-  # CHECK: std.cond_br: True
-  print(f"std.cond_br: {ctx.is_registered_operation('std.cond_br')}")
-  # CHECK: std.not_existing: False
-  print(f"std.not_existing: {ctx.is_registered_operation('std.not_existing')}")
+  # CHECK: cf.cond_br: True
+  print(f"cf.cond_br: {ctx.is_registered_operation('cf.cond_br')}")
+  # CHECK: func.not_existing: False
+  print(f"func.not_existing: {ctx.is_registered_operation('func.not_existing')}")

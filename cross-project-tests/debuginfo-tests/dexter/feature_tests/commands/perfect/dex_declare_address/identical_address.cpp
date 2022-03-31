@@ -2,8 +2,6 @@
 //      Test that a \DexDeclareAddress value can be used to compare two equal
 //      pointer variables.
 //
-// REQUIRES: system-linux
-//
 // RUN: %dexter_regression_test -- %s | FileCheck %s
 // CHECK: identical_address.cpp
 

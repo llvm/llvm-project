@@ -13,6 +13,7 @@
 #include "ErrorHandling.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -68,6 +69,16 @@ struct InstructionPointer {
   bool advance();
   bool backward();
   void update(uint64_t Addr);
+};
+
+// The special frame addresses.
+enum SpecialFrameAddr {
+  // Dummy root of frame trie.
+  DummyRoot = 0,
+  // Represent all the addresses outside of current binary.
+  // This's also used to indicate the call stack should be truncated since this
+  // isn't a real call context the compiler will see.
+  ExternalAddr = 1,
 };
 
 using RangesTy = std::vector<std::pair<uint64_t, uint64_t>>;
@@ -156,14 +167,14 @@ public:
   // their remaining probes.
   void trackInlineesOptimizedAway(MCPseudoProbeDecoder &ProbeDecoder);
 
-  void dump() { RootContext.dumpTree(); }
-
-private:
   using ProbeFrameStack = SmallVector<std::pair<StringRef, uint32_t>>;
   void trackInlineesOptimizedAway(MCPseudoProbeDecoder &ProbeDecoder,
                               MCDecodedPseudoProbeInlineTree &ProbeNode,
                               ProbeFrameStack &Context);
 
+  void dump() { RootContext.dumpTree(); }
+
+private:
   // Root node for context trie tree, node that this is a reverse context trie
   // with callee as parent and caller as child. This way we can traverse from
   // root to find the best/longest matching context if an exact match does not
@@ -175,8 +186,12 @@ private:
 using OffsetRange = std::pair<uint64_t, uint64_t>;
 
 class ProfiledBinary {
-  // Absolute path of the binary.
+  // Absolute path of the executable binary.
   std::string Path;
+  // Path of the debug info binary.
+  std::string DebugBinaryPath;
+  // Path of symbolizer path which should be pointed to binary with debug info.
+  StringRef SymbolizerPath;
   // The target triple.
   Triple TheTriple;
   // The runtime base address that the first executable segment is loaded at.
@@ -202,6 +217,9 @@ class ProfiledBinary {
 
   // A map of mapping function name to BinaryFunction info.
   std::unordered_map<std::string, BinaryFunction> BinaryFunctions;
+
+  // A list of binary functions that have samples.
+  std::unordered_set<const BinaryFunction *> ProfiledFunctions;
 
   // An ordered map of mapping function's start offset to function range
   // relevant info. Currently to determine if the offset of ELF is the start of
@@ -242,6 +260,9 @@ class ProfiledBinary {
   // Pseudo probe decoder
   MCPseudoProbeDecoder ProbeDecoder;
 
+  // Function name to probe frame map for top-level outlined functions.
+  StringMap<MCDecodedPseudoProbeInlineTree *> TopLevelProbeFrameMap;
+
   bool UsePseudoProbes = false;
 
   bool UseFSDiscriminator = false;
@@ -260,6 +281,8 @@ class ProfiledBinary {
   template <class ELFT>
   void setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj, StringRef FileName);
 
+  void checkPseudoProbe(const ELFObjectFileBase *Obj);
+
   void decodePseudoProbe(const ELFObjectFileBase *Obj);
 
   void
@@ -272,6 +295,9 @@ class ProfiledBinary {
 
   // Load debug info of subprograms from DWARF section.
   void loadSymbolsFromDWARF(ObjectFile &Obj);
+
+  // Load debug info from DWARF unit.
+  void loadSymbolsFromDWARFUnit(DWARFUnit &CompilationUnit);
 
   // A function may be spilt into multiple non-continuous address ranges. We use
   // this to set whether start offset of a function is the real entry of the
@@ -301,13 +327,18 @@ class ProfiledBinary {
   void load();
 
 public:
-  ProfiledBinary(const StringRef Path)
-      : Path(Path), ProEpilogTracker(this),
+  ProfiledBinary(const StringRef ExeBinPath, const StringRef DebugBinPath)
+      : Path(ExeBinPath), DebugBinaryPath(DebugBinPath), ProEpilogTracker(this),
         TrackFuncContextSize(EnableCSPreInliner &&
                              UseContextCostForPreInliner) {
+    // Point to executable binary if debug info binary is not specified.
+    SymbolizerPath = DebugBinPath.empty() ? ExeBinPath : DebugBinPath;
     setupSymbolizer();
     load();
   }
+
+  void decodePseudoProbe();
+
   uint64_t virtualAddrToOffset(uint64_t VirtualAddress) const {
     return VirtualAddress - BaseAddress;
   }
@@ -330,6 +361,13 @@ public:
   }
   const std::vector<uint64_t> &getTextSegmentOffsets() const {
     return TextSegmentOffsets;
+  }
+
+  uint64_t getInstSize(uint64_t Offset) const {
+    auto I = Offset2InstSizeMap.find(Offset);
+    if (I == Offset2InstSizeMap.end())
+      return 0;
+    return I->second;
   }
 
   bool offsetIsCode(uint64_t Offset) const {
@@ -379,6 +417,8 @@ public:
   }
 
   uint64_t getCallAddrFromFrameAddr(uint64_t FrameAddr) const {
+    if (FrameAddr == ExternalAddr)
+      return ExternalAddr;
     auto I = getIndexForAddr(FrameAddr);
     FrameAddr = I ? getAddressforIndex(I - 1) : 0;
     if (FrameAddr && addressIsCall(FrameAddr))
@@ -421,6 +461,14 @@ public:
     return BinaryFunctions;
   }
 
+  std::unordered_set<const BinaryFunction *> &getProfiledFunctions() {
+    return ProfiledFunctions;
+  }
+
+  void setProfiledFunctions(std::unordered_set<const BinaryFunction *> &Funcs) {
+    ProfiledFunctions = Funcs;
+  }
+
   BinaryFunction *getBinaryFunction(StringRef FName) {
     auto I = BinaryFunctions.find(FName.str());
     if (I == BinaryFunctions.end())
@@ -452,6 +500,8 @@ public:
     return Stack.back();
   }
 
+  void flushSymbolizer() { Symbolizer.reset(); }
+
   // Compare two addresses' inline context
   bool inlineContextEqual(uint64_t Add1, uint64_t Add2);
 
@@ -465,6 +515,8 @@ public:
   // inline context.
   void computeInlinedContextSizeForRange(uint64_t StartOffset,
                                          uint64_t EndOffset);
+
+  void computeInlinedContextSizeForFunc(const BinaryFunction *Func);
 
   const MCDecodedPseudoProbe *getCallProbeForAddr(uint64_t Address) const {
     return ProbeDecoder.getCallProbeForAddr(Address);

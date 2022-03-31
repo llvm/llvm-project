@@ -279,7 +279,8 @@ public:
             " CONCURRENT"_err_en_US,
             doConcurrentSourcePosition_);
       }
-      if (name->symbol && fromScope(*name->symbol, "ieee_exceptions"s)) {
+      if (name->symbol &&
+          fromScope(*name->symbol, "__fortran_ieee_exceptions"s)) {
         if (name->source == "ieee_set_halting_mode") {
           SayWithDo(context_, currentStatementSourcePosition_,
               "IEEE_SET_HALTING_MODE is not allowed in DO "
@@ -472,7 +473,7 @@ private:
     if (isReal && !warn) {
       // No messages for the default case
     } else if (isReal && warn) {
-      context_.Say(sourceLocation, "DO controls should be INTEGER"_en_US);
+      context_.Say(sourceLocation, "DO controls should be INTEGER"_port_en_US);
     } else {
       SayBadDoControl(sourceLocation);
     }
@@ -520,7 +521,7 @@ private:
       CheckDoExpression(*bounds.step);
       if (IsZero(*bounds.step)) {
         context_.Say(bounds.step->thing.value().source,
-            "DO step expression should not be zero"_en_US);
+            "DO step expression should not be zero"_warn_en_US);
       }
     }
   }
@@ -645,7 +646,7 @@ private:
         if (hasDefaultNone) {
           // C1127, you can only have one DEFAULT(NONE)
           context_.Say(currentStatementSourcePosition_,
-              "Only one DEFAULT(NONE) may appear"_en_US);
+              "Only one DEFAULT(NONE) may appear"_port_en_US);
           break;
         }
         hasDefaultNone = true;
@@ -768,9 +769,8 @@ private:
           assignment.u);
       for (const Symbol &index : indexVars) {
         if (symbols.count(index) == 0) {
-          context_.Say(
-              "Warning: FORALL index variable '%s' not used on left-hand side"
-              " of assignment"_en_US,
+          context_.Say("FORALL index variable '%s' not used on left-hand side"
+                       " of assignment"_warn_en_US,
               index.name());
         }
       }

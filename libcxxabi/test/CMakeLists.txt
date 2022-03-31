@@ -63,7 +63,7 @@ endif()
 
 if (NOT LIBCXXABI_STANDALONE_BUILD)
   list(APPEND LIBCXXABI_TEST_DEPS cxx)
-  if (LIBCXXABI_USE_LLVM_UNWINDER)
+  if (LIBCXXABI_USE_LLVM_UNWINDER AND TARGET unwind)
     list(APPEND LIBCXXABI_TEST_DEPS unwind)
   endif()
 endif()
@@ -79,14 +79,20 @@ if (NOT LIBCXXABI_ENABLE_EXCEPTIONS)
   serialize_lit_param(enable_exceptions False)
 endif()
 
+if (LIBCXXABI_ENABLE_ASSERTIONS)
+  serialize_lit_param(enable_assertions True)
+endif()
+
 serialize_lit_param(enable_experimental False)
 
 if (LLVM_USE_SANITIZER)
   serialize_lit_param(use_sanitizer "\"${LLVM_USE_SANITIZER}\"")
 endif()
 
-if (LIBCXXABI_TARGET_TRIPLE)
-  serialize_lit_param(target_triple "\"${LIBCXXABI_TARGET_TRIPLE}\"")
+if (CMAKE_CXX_COMPILER_TARGET)
+  serialize_lit_param(target_triple "\"${CMAKE_CXX_COMPILER_TARGET}\"")
+else()
+  serialize_lit_param(target_triple "\"${LLVM_DEFAULT_TARGET_TRIPLE}\"")
 endif()
 
 foreach(param IN LISTS LIBCXXABI_TEST_PARAMS)

@@ -149,3 +149,138 @@ func @sparse_insert(%arg0: tensor<128xf64, #SparseVector>, %arg1: memref<?xindex
   sparse_tensor.lex_insert %arg0, %arg1, %arg2 : tensor<128xf64, #SparseVector>, memref<?xindex>, f64
   return
 }
+
+// -----
+
+#SparseMatrix = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed"]}>
+
+// CHECK-LABEL: func @sparse_expansion(
+//  CHECK-SAME: %[[A:.*]]: tensor<8x8xf64, #sparse_tensor.encoding<{{.*}}>>)
+//       CHECK: sparse_tensor.expand %[[A]]
+//       CHECK: return
+func @sparse_expansion(%arg0: tensor<8x8xf64, #SparseMatrix>) {
+  %values, %filled, %added, %count = sparse_tensor.expand %arg0
+    : tensor<8x8xf64, #SparseMatrix> to memref<?xf64>, memref<?xi1>, memref<?xindex>, index
+  return
+}
+
+// -----
+
+#SparseMatrix = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed"]}>
+
+// CHECK-LABEL: func @sparse_compression(
+//  CHECK-SAME: %[[A:.*]]: tensor<8x8xf64, #sparse_tensor.encoding<{{.*}}>>,
+//       CHECK: sparse_tensor.compress %[[A]]
+//       CHECK: return
+func @sparse_compression(%arg0: tensor<8x8xf64, #SparseMatrix>,
+                         %arg1: memref<?xindex>, %arg2: memref<?xf64>, %arg3: memref<?xi1>,
+                         %arg4: memref<?xindex>, %arg5: index) {
+  sparse_tensor.compress %arg0, %arg1, %arg2, %arg3, %arg4, %arg5
+    : tensor<8x8xf64, #SparseMatrix>, memref<?xindex>, memref<?xf64>, memref<?xi1>, memref<?xindex>, index
+  return
+}
+
+// -----
+
+#SparseMatrix = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed"]}>
+
+// CHECK-LABEL: func @sparse_out(
+//  CHECK-SAME: %[[A:.*]]: tensor<?x?xf64, #sparse_tensor.encoding<{{.*}}>>,
+//  CHECK-SAME: %[[B:.*]]: !llvm.ptr<i8>)
+//       CHECK: sparse_tensor.out %[[A]], %[[B]] : tensor<?x?xf64, #sparse_tensor.encoding<{{.*}}>>, !llvm.ptr<i8>
+//       CHECK: return
+func @sparse_out(%arg0: tensor<?x?xf64, #SparseMatrix>, %arg1: !llvm.ptr<i8>) {
+  sparse_tensor.out %arg0, %arg1 : tensor<?x?xf64, #SparseMatrix>, !llvm.ptr<i8>
+  return
+}
+
+// -----
+
+#SparseMatrix = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed"]}>
+
+// CHECK-LABEL: func @sparse_binary(
+//  CHECK-SAME:   %[[A:.*]]: f64, %[[B:.*]]: i64) -> f64 {
+//       CHECK:   %[[Z:.*]] = arith.constant 0.000000e+00 : f64
+//       CHECK:   %[[C1:.*]] = sparse_tensor.binary %[[A]], %[[B]] : f64, i64 to f64
+//       CHECK:     overlap = {
+//       CHECK:       ^bb0(%[[A1:.*]]: f64, %[[B1:.*]]: i64):
+//       CHECK:         sparse_tensor.yield %[[A1]] : f64
+//       CHECK:     }
+//       CHECK:     left = identity
+//       CHECK:     right = {
+//       CHECK:       ^bb0(%[[A2:.*]]: i64):
+//       CHECK:         sparse_tensor.yield %[[Z]] : f64
+//       CHECK:     }
+//       CHECK:   return %[[C1]] : f64
+//       CHECK: }
+func @sparse_binary(%arg0: f64, %arg1: i64) -> f64 {
+  %cf0 = arith.constant 0.0 : f64
+  %r = sparse_tensor.binary %arg0, %arg1 : f64, i64 to f64
+    overlap={
+      ^bb0(%x: f64, %y: i64):
+        sparse_tensor.yield %x : f64
+    }
+    left=identity
+    right={
+      ^bb0(%y: i64):
+        sparse_tensor.yield %cf0 : f64
+    }
+  return %r : f64
+}
+
+// -----
+
+#SparseMatrix = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed"]}>
+
+// CHECK-LABEL: func @sparse_unary(
+//  CHECK-SAME:   %[[A:.*]]: f64) -> f64 {
+//       CHECK:   %[[C1:.*]] = sparse_tensor.unary %[[A]] : f64 to f64
+//       CHECK:     present = {
+//       CHECK:       ^bb0(%[[A1:.*]]: f64):
+//       CHECK:         sparse_tensor.yield %[[A1]] : f64
+//       CHECK:     }
+//       CHECK:     absent = {
+//       CHECK:       %[[R:.*]] = arith.constant -1.000000e+00 : f64
+//       CHECK:       sparse_tensor.yield %[[R]] : f64
+//       CHECK:     }
+//       CHECK:   return %[[C1]] : f64
+//       CHECK: }
+func @sparse_unary(%arg0: f64) -> f64 {
+  %r = sparse_tensor.unary %arg0 : f64 to f64
+    present={
+      ^bb0(%x: f64):
+        sparse_tensor.yield %x : f64
+    } absent={
+      ^bb0:
+        %cf1 = arith.constant -1.0 : f64
+        sparse_tensor.yield %cf1 : f64
+    }
+  return %r : f64
+}
+
+// -----
+
+#SparseMatrix = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed"]}>
+
+// CHECK-LABEL: func @sparse_unary(
+//  CHECK-SAME:   %[[A:.*]]: f64) -> i64 {
+//       CHECK:   %[[C1:.*]] = sparse_tensor.unary %[[A]] : f64 to i64
+//       CHECK:     present = {
+//       CHECK:       ^bb0(%[[A1:.*]]: f64):
+//       CHECK:         %[[R:.*]] = arith.fptosi %[[A1]] : f64 to i64
+//       CHECK:         sparse_tensor.yield %[[R]] : i64
+//       CHECK:     }
+//       CHECK:     absent = {
+//       CHECK:     }
+//       CHECK:   return %[[C1]] : i64
+//       CHECK: }
+func @sparse_unary(%arg0: f64) -> i64 {
+  %r = sparse_tensor.unary %arg0 : f64 to i64
+    present={
+      ^bb0(%x: f64):
+        %ret = arith.fptosi %x : f64 to i64
+        sparse_tensor.yield %ret : i64
+    }
+    absent={}
+  return %r : i64
+}

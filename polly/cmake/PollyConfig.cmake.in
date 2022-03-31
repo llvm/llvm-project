@@ -1,5 +1,7 @@
 # This file allows users to call find_package(Polly) and pick up our targets.
 
+@POLLY_CONFIG_CODE@
+
 find_package(LLVM REQUIRED CONFIG
              HINTS "@POLLY_CONFIG_LLVM_CMAKE_DIR@")
 

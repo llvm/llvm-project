@@ -44,6 +44,18 @@ add_dependencies(mlir-headers LinalgOdsGen)
 
 add_mlir_dialect(LinalgOps linalg)
 
+set(LLVM_TARGET_DEFINITIONS LinalgOps.td)
+mlir_tablegen(LinalgOpsEnums.h.inc -gen-enum-decls)
+mlir_tablegen(LinalgOpsEnums.cpp.inc -gen-enum-defs)
+add_public_tablegen_target(MLIRLinalgOpsEnumsIncGen)
+add_dependencies(mlir-headers MLIRLinalgOpsEnumsIncGen)
+
+set(LLVM_TARGET_DEFINITIONS LinalgOps.td)
+mlir_tablegen(LinalgOpsAttrDefs.h.inc -gen-attrdef-decls)
+mlir_tablegen(LinalgOpsAttrDefs.cpp.inc -gen-attrdef-defs)
+add_public_tablegen_target(MLIRLinalgOpsAttributesIncGen)
+add_dependencies(mlir-headers MLIRLinalgOpsAttributesIncGen)
+
 add_mlir_doc(LinalgDoc LinalgOps Dialects/ -gen-op-doc)
 add_dependencies(LinalgOpsDocGen LinalgOdsGen)
 

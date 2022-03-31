@@ -10,42 +10,39 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "sanitizer_common/sanitizer_platform.h"
-#if SANITIZER_LINUX && defined(__x86_64__)
-
 #include "sanitizer_common/sanitizer_stoptheworld.h"
-#include "gtest/gtest.h"
 
-#include "sanitizer_common/sanitizer_libc.h"
-#include "sanitizer_common/sanitizer_common.h"
+#include "sanitizer_common/sanitizer_platform.h"
+#if (SANITIZER_LINUX || SANITIZER_WINDOWS) && defined(__x86_64__)
 
-#include <pthread.h>
-#include <sched.h>
+#  include <atomic>
+#  include <mutex>
+#  include <thread>
+
+#  include "gtest/gtest.h"
+#  include "sanitizer_common/sanitizer_common.h"
+#  include "sanitizer_common/sanitizer_libc.h"
 
 namespace __sanitizer {
 
-static pthread_mutex_t incrementer_thread_exit_mutex;
+static std::mutex mutex;
 
 struct CallbackArgument {
-  volatile int counter;
-  volatile bool threads_stopped;
-  volatile bool callback_executed;
-  CallbackArgument()
-    : counter(0),
-      threads_stopped(false),
-      callback_executed(false) {}
+  std::atomic_int counter = {};
+  std::atomic_bool threads_stopped = {};
+  std::atomic_bool callback_executed = {};
 };
 
-void *IncrementerThread(void *argument) {
-  CallbackArgument *callback_argument = (CallbackArgument *)argument;
+void IncrementerThread(CallbackArgument &callback_argument) {
   while (true) {
-    __sync_fetch_and_add(&callback_argument->counter, 1);
-    if (pthread_mutex_trylock(&incrementer_thread_exit_mutex) == 0) {
-      pthread_mutex_unlock(&incrementer_thread_exit_mutex);
-      return NULL;
-    } else {
-      sched_yield();
+    callback_argument.counter++;
+
+    if (mutex.try_lock()) {
+      mutex.unlock();
+      return;
     }
+
+    std::this_thread::yield();
   }
 }
 
@@ -55,11 +52,10 @@ void Callback(const SuspendedThreadsList &suspended_threads_list,
               void *argument) {
   CallbackArgument *callback_argument = (CallbackArgument *)argument;
   callback_argument->callback_executed = true;
-  int counter_at_init = __sync_fetch_and_add(&callback_argument->counter, 0);
+  int counter_at_init = callback_argument->counter;
   for (uptr i = 0; i < 1000; i++) {
-    sched_yield();
-    if (__sync_fetch_and_add(&callback_argument->counter, 0) !=
-          counter_at_init) {
+    std::this_thread::yield();
+    if (callback_argument->counter != counter_at_init) {
       callback_argument->threads_stopped = false;
       return;
     }
@@ -68,91 +64,65 @@ void Callback(const SuspendedThreadsList &suspended_threads_list,
 }
 
 TEST(StopTheWorld, SuspendThreadsSimple) {
-  pthread_mutex_init(&incrementer_thread_exit_mutex, NULL);
   CallbackArgument argument;
-  pthread_t thread_id;
-  int pthread_create_result;
-  pthread_mutex_lock(&incrementer_thread_exit_mutex);
-  pthread_create_result = pthread_create(&thread_id, NULL, IncrementerThread,
-                                         &argument);
-  ASSERT_EQ(0, pthread_create_result);
-  StopTheWorld(&Callback, &argument);
-  pthread_mutex_unlock(&incrementer_thread_exit_mutex);
+  std::thread thread;
+  {
+    std::lock_guard<std::mutex> lock(mutex);
+    thread = std::thread(IncrementerThread, std::ref(argument));
+    StopTheWorld(&Callback, &argument);
+  }
   EXPECT_TRUE(argument.callback_executed);
   EXPECT_TRUE(argument.threads_stopped);
   // argument is on stack, so we have to wait for the incrementer thread to
   // terminate before we can return from this function.
-  ASSERT_EQ(0, pthread_join(thread_id, NULL));
-  pthread_mutex_destroy(&incrementer_thread_exit_mutex);
+  ASSERT_NO_THROW(thread.join());
 }
 
 // A more comprehensive test where we spawn a bunch of threads while executing
 // StopTheWorld in parallel.
 static const uptr kThreadCount = 50;
-static const uptr kStopWorldAfter = 10; // let this many threads spawn first
-
-static pthread_mutex_t advanced_incrementer_thread_exit_mutex;
+static const uptr kStopWorldAfter = 10;  // let this many threads spawn first
 
 struct AdvancedCallbackArgument {
-  volatile uptr thread_index;
-  volatile int counters[kThreadCount];
-  pthread_t thread_ids[kThreadCount];
-  volatile bool threads_stopped;
-  volatile bool callback_executed;
-  volatile bool fatal_error;
-  AdvancedCallbackArgument()
-    : thread_index(0),
-      threads_stopped(false),
-      callback_executed(false),
-      fatal_error(false) {}
+  std::atomic_uintptr_t thread_index = {};
+  std::atomic_int counters[kThreadCount] = {};
+  std::thread threads[kThreadCount];
+  std::atomic_bool threads_stopped = {};
+  std::atomic_bool callback_executed = {};
 };
 
-void *AdvancedIncrementerThread(void *argument) {
-  AdvancedCallbackArgument *callback_argument =
-      (AdvancedCallbackArgument *)argument;
-  uptr this_thread_index = __sync_fetch_and_add(
-      &callback_argument->thread_index, 1);
+void AdvancedIncrementerThread(AdvancedCallbackArgument &callback_argument) {
+  uptr this_thread_index = callback_argument.thread_index++;
   // Spawn the next thread.
-  int pthread_create_result;
   if (this_thread_index + 1 < kThreadCount) {
-    pthread_create_result =
-        pthread_create(&callback_argument->thread_ids[this_thread_index + 1],
-                       NULL, AdvancedIncrementerThread, argument);
-    // Cannot use ASSERT_EQ in non-void-returning functions. If there's a
-    // problem, defer failing to the main thread.
-    if (pthread_create_result != 0) {
-      callback_argument->fatal_error = true;
-      __sync_fetch_and_add(&callback_argument->thread_index,
-                           kThreadCount - callback_argument->thread_index);
-    }
+    callback_argument.threads[this_thread_index + 1] =
+        std::thread(AdvancedIncrementerThread, std::ref(callback_argument));
   }
   // Do the actual work.
   while (true) {
-    __sync_fetch_and_add(&callback_argument->counters[this_thread_index], 1);
-    if (pthread_mutex_trylock(&advanced_incrementer_thread_exit_mutex) == 0) {
-      pthread_mutex_unlock(&advanced_incrementer_thread_exit_mutex);
-      return NULL;
-    } else {
-      sched_yield();
+    callback_argument.counters[this_thread_index]++;
+    if (mutex.try_lock()) {
+      mutex.unlock();
+      return;
     }
+
+    std::this_thread::yield();
   }
 }
 
 void AdvancedCallback(const SuspendedThreadsList &suspended_threads_list,
-                             void *argument) {
+                      void *argument) {
   AdvancedCallbackArgument *callback_argument =
       (AdvancedCallbackArgument *)argument;
   callback_argument->callback_executed = true;
 
   int counters_at_init[kThreadCount];
   for (uptr j = 0; j < kThreadCount; j++)
-    counters_at_init[j] = __sync_fetch_and_add(&callback_argument->counters[j],
-                                               0);
+    counters_at_init[j] = callback_argument->counters[j];
   for (uptr i = 0; i < 10; i++) {
-    sched_yield();
+    std::this_thread::yield();
     for (uptr j = 0; j < kThreadCount; j++)
-      if (__sync_fetch_and_add(&callback_argument->counters[j], 0) !=
-            counters_at_init[j]) {
+      if (callback_argument->counters[j] != counters_at_init[j]) {
         callback_argument->threads_stopped = false;
         return;
       }
@@ -161,39 +131,37 @@ void AdvancedCallback(const SuspendedThreadsList &suspended_threads_list,
 }
 
 TEST(StopTheWorld, SuspendThreadsAdvanced) {
-  pthread_mutex_init(&advanced_incrementer_thread_exit_mutex, NULL);
   AdvancedCallbackArgument argument;
 
-  pthread_mutex_lock(&advanced_incrementer_thread_exit_mutex);
-  int pthread_create_result;
-  pthread_create_result = pthread_create(&argument.thread_ids[0], NULL,
-                                         AdvancedIncrementerThread,
-                                         &argument);
-  ASSERT_EQ(0, pthread_create_result);
-  // Wait for several threads to spawn before proceeding.
-  while (__sync_fetch_and_add(&argument.thread_index, 0) < kStopWorldAfter)
-    sched_yield();
-  StopTheWorld(&AdvancedCallback, &argument);
-  EXPECT_TRUE(argument.callback_executed);
-  EXPECT_TRUE(argument.threads_stopped);
+  {
+    std::lock_guard<std::mutex> lock(mutex);
+    argument.threads[0] =
+        std::thread(AdvancedIncrementerThread, std::ref(argument));
+    // Wait for several threads to spawn before proceeding.
+    while (argument.thread_index < kStopWorldAfter) std::this_thread::yield();
+    StopTheWorld(&AdvancedCallback, &argument);
+    EXPECT_TRUE(argument.callback_executed);
+    EXPECT_TRUE(argument.threads_stopped);
 
-  // Wait for all threads to spawn before we start terminating them.
-  while (__sync_fetch_and_add(&argument.thread_index, 0) < kThreadCount)
-    sched_yield();
-  ASSERT_FALSE(argument.fatal_error); // a pthread_create has failed
+    // Wait for all threads to spawn before we start terminating them.
+    while (argument.thread_index < kThreadCount) std::this_thread::yield();
+  }
   // Signal the threads to terminate.
-  pthread_mutex_unlock(&advanced_incrementer_thread_exit_mutex);
-  for (uptr i = 0; i < kThreadCount; i++)
-    ASSERT_EQ(0, pthread_join(argument.thread_ids[i], NULL));
-  pthread_mutex_destroy(&advanced_incrementer_thread_exit_mutex);
+  for (auto &t : argument.threads) t.join();
 }
 
 static void SegvCallback(const SuspendedThreadsList &suspended_threads_list,
                          void *argument) {
-  *(volatile int*)0x1234 = 0;
+  *(volatile int *)0x1234 = 0;
 }
 
-TEST(StopTheWorld, SegvInCallback) {
+#  if SANITIZER_WINDOWS
+#    define MAYBE_SegvInCallback DISABLED_SegvInCallback
+#  else
+#    define MAYBE_SegvInCallback SegvInCallback
+#  endif
+
+TEST(StopTheWorld, MAYBE_SegvInCallback) {
   // Test that tracer thread catches SIGSEGV.
   StopTheWorld(&SegvCallback, NULL);
 }

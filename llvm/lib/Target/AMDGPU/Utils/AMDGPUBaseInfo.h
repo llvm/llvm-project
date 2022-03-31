@@ -47,9 +47,18 @@ bool isHsaAbiVersion3(const MCSubtargetInfo *STI);
 /// \returns True if HSA OS ABI Version identification is 4,
 /// false otherwise.
 bool isHsaAbiVersion4(const MCSubtargetInfo *STI);
-/// \returns True if HSA OS ABI Version identification is 3 or 4,
+/// \returns True if HSA OS ABI Version identification is 5,
 /// false otherwise.
-bool isHsaAbiVersion3Or4(const MCSubtargetInfo *STI);
+bool isHsaAbiVersion5(const MCSubtargetInfo *STI);
+/// \returns True if HSA OS ABI Version identification is 3 and above,
+/// false otherwise.
+bool isHsaAbiVersion3AndAbove(const MCSubtargetInfo *STI);
+
+/// \returns The offset of the hostcall pointer argument from implicitarg_ptr
+unsigned getHostcallImplicitArgPosition();
+
+/// \returns Code object version.
+unsigned getAmdhsaCodeObjectVersion();
 
 struct GcnBufferFormatInfo {
   unsigned Format;
@@ -59,11 +68,19 @@ struct GcnBufferFormatInfo {
   unsigned DataFormat;
 };
 
+struct MAIInstInfo {
+  uint16_t Opcode;
+  bool is_dgemm;
+  bool is_gfx940_xdl;
+};
+
 #define GET_MIMGBaseOpcode_DECL
 #define GET_MIMGDim_DECL
 #define GET_MIMGEncoding_DECL
 #define GET_MIMGLZMapping_DECL
 #define GET_MIMGMIPMapping_DECL
+#define GET_MIMGBiASMapping_DECL
+#define GET_MAIInstInfoTable_DECL
 #include "AMDGPUGenSearchableTables.inc"
 
 namespace IsaInfo {
@@ -330,6 +347,16 @@ struct MIMGMIPMappingInfo {
   MIMGBaseOpcode NONMIP;
 };
 
+struct MIMGBiasMappingInfo {
+  MIMGBaseOpcode Bias;
+  MIMGBaseOpcode NoBias;
+};
+
+struct MIMGOffsetMappingInfo {
+  MIMGBaseOpcode Offset;
+  MIMGBaseOpcode NoOffset;
+};
+
 struct MIMGG16MappingInfo {
   MIMGBaseOpcode G;
   MIMGBaseOpcode G16;
@@ -340,6 +367,12 @@ const MIMGLZMappingInfo *getMIMGLZMappingInfo(unsigned L);
 
 LLVM_READONLY
 const MIMGMIPMappingInfo *getMIMGMIPMappingInfo(unsigned MIP);
+
+LLVM_READONLY
+const MIMGBiasMappingInfo *getMIMGBiasMappingInfo(unsigned Bias);
+
+LLVM_READONLY
+const MIMGOffsetMappingInfo *getMIMGOffsetMappingInfo(unsigned Offset);
 
 LLVM_READONLY
 const MIMGG16MappingInfo *getMIMGG16MappingInfo(unsigned G);
@@ -418,6 +451,13 @@ bool getVOP2IsSingle(unsigned Opc);
 LLVM_READONLY
 bool getVOP3IsSingle(unsigned Opc);
 
+/// Returns true if MAI operation is a double precision GEMM.
+LLVM_READONLY
+bool getMAIIsDGEMM(unsigned Opc);
+
+LLVM_READONLY
+bool getMAIIsGFX940XDL(unsigned Opc);
+
 LLVM_READONLY
 const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,
                                                   uint8_t NumComponents,
@@ -476,7 +516,7 @@ struct Waitcnt {
   unsigned LgkmCnt = ~0u;
   unsigned VsCnt = ~0u;
 
-  Waitcnt() {}
+  Waitcnt() = default;
   Waitcnt(unsigned VmCnt, unsigned ExpCnt, unsigned LgkmCnt, unsigned VsCnt)
       : VmCnt(VmCnt), ExpCnt(ExpCnt), LgkmCnt(LgkmCnt), VsCnt(VsCnt) {}
 
@@ -578,10 +618,7 @@ unsigned encodeWaitcnt(const IsaVersion &Version, const Waitcnt &Decoded);
 namespace Hwreg {
 
 LLVM_READONLY
-int64_t getHwregId(const StringRef Name);
-
-LLVM_READNONE
-bool isValidHwreg(int64_t Id, const MCSubtargetInfo &STI);
+int64_t getHwregId(const StringRef Name, const MCSubtargetInfo &STI);
 
 LLVM_READNONE
 bool isValidHwreg(int64_t Id);
@@ -650,19 +687,19 @@ unsigned getDefaultFormatEncoding(const MCSubtargetInfo &STI);
 namespace SendMsg {
 
 LLVM_READONLY
-int64_t getMsgId(const StringRef Name);
+int64_t getMsgId(const StringRef Name, const MCSubtargetInfo &STI);
 
 LLVM_READONLY
 int64_t getMsgOpId(int64_t MsgId, const StringRef Name);
 
 LLVM_READNONE
-StringRef getMsgName(int64_t MsgId);
+StringRef getMsgName(int64_t MsgId, const MCSubtargetInfo &STI);
 
 LLVM_READNONE
 StringRef getMsgOpName(int64_t MsgId, int64_t OpId);
 
 LLVM_READNONE
-bool isValidMsgId(int64_t MsgId, const MCSubtargetInfo &STI, bool Strict = true);
+bool isValidMsgId(int64_t MsgId);
 
 LLVM_READNONE
 bool isValidMsgOp(int64_t MsgId, int64_t OpId, const MCSubtargetInfo &STI,
@@ -718,6 +755,8 @@ bool isEntryFunctionCC(CallingConv::ID CC);
 LLVM_READNONE
 bool isModuleEntryFunctionCC(CallingConv::ID CC);
 
+bool isKernelCC(const Function *Func);
+
 // FIXME: Remove this when calling conventions cleaned up
 LLVM_READNONE
 inline bool isKernel(CallingConv::ID CC) {
@@ -741,21 +780,25 @@ bool isSI(const MCSubtargetInfo &STI);
 bool isCI(const MCSubtargetInfo &STI);
 bool isVI(const MCSubtargetInfo &STI);
 bool isGFX9(const MCSubtargetInfo &STI);
+bool isGFX9_GFX10(const MCSubtargetInfo &STI);
+bool isGFX8Plus(const MCSubtargetInfo &STI);
 bool isGFX9Plus(const MCSubtargetInfo &STI);
 bool isGFX10(const MCSubtargetInfo &STI);
 bool isGFX10Plus(const MCSubtargetInfo &STI);
+bool isNotGFX10Plus(const MCSubtargetInfo &STI);
+bool isGFX10Before1030(const MCSubtargetInfo &STI);
 bool isGCN3Encoding(const MCSubtargetInfo &STI);
 bool isGFX10_AEncoding(const MCSubtargetInfo &STI);
 bool isGFX10_BEncoding(const MCSubtargetInfo &STI);
 bool hasGFX10_3Insts(const MCSubtargetInfo &STI);
 bool isGFX90A(const MCSubtargetInfo &STI);
+bool isGFX940(const MCSubtargetInfo &STI);
 bool hasArchitectedFlatScratch(const MCSubtargetInfo &STI);
+bool hasMAIInsts(const MCSubtargetInfo &STI);
+int getTotalNumVGPRs(bool has90AInsts, int32_t ArgNumAGPR, int32_t ArgNumVGPR);
 
 /// Is Reg - scalar register
 bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI);
-
-/// Is there any intersection between registers
-bool isRegIntersect(unsigned Reg0, unsigned Reg1, const MCRegisterInfo* TRI);
 
 /// If \p Reg is a pseudo reg, return the correct hardware register given
 /// \p STI otherwise return \p Reg.
@@ -911,7 +954,7 @@ inline bool isLegal64BitDPPControl(unsigned DC) {
 /// \returns true if the intrinsic is divergent
 bool isIntrinsicSourceOfDivergence(unsigned IntrID);
 
-// Track defaults for fields in the MODE registser.
+// Track defaults for fields in the MODE register.
 struct SIModeRegisterDefaults {
   /// Floating point opcodes that support exception flag gathering quiet and
   /// propagate signaling NaN inputs per IEEE 754-2008. Min_dx10 and max_dx10

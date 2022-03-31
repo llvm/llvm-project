@@ -14,6 +14,12 @@
 #ifndef COMPILERRT_ASSEMBLY_H
 #define COMPILERRT_ASSEMBLY_H
 
+#if defined(__linux__) && defined(__CET__)
+#if __has_include(<cet.h>)
+#include <cet.h>
+#endif
+#endif
+
 #if defined(__APPLE__) && defined(__aarch64__)
 #define SEPARATOR %%
 #else
@@ -181,6 +187,14 @@
 #define POP_PC()                                                               \
   pop {ip};                                                                    \
   JMP(ip)
+#endif
+
+#if __ARM_ARCH >= 7
+#define DMB dmb
+#elif __ARM_ARCH >= 6
+#define DMB mcr p15, #0, r0, c7, c10, #5
+#else
+#error only supported on ARMv6+
 #endif
 
 #if defined(USE_THUMB_2)

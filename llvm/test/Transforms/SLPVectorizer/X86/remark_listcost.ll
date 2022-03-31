@@ -5,21 +5,23 @@
 define void @vsub2_test(i32* %pin1, i32* %pin2, i32* %pout) #0 {
 ; CHECK-LABEL: @vsub2_test(
 ; CHECK-NEXT:    br label [[TMP1:%.*]]
-; CHECK:         [[IDX_04:%.*]] = phi i32 [ 0, [[TMP0:%.*]] ], [ [[TMP8:%.*]], [[TMP1]] ]
+; CHECK:       1:
+; CHECK-NEXT:    [[IDX_04:%.*]] = phi i32 [ 0, [[TMP0:%.*]] ], [ [[TMP8:%.*]], [[TMP1]] ]
 ; CHECK-NEXT:    [[PO_03:%.*]] = phi i32* [ [[POUT:%.*]], [[TMP0]] ], [ [[TMP7:%.*]], [[TMP1]] ]
 ; CHECK-NEXT:    [[PTMPI2_02:%.*]] = phi i32* [ [[PIN2:%.*]], [[TMP0]] ], [ [[TMP4:%.*]], [[TMP1]] ]
 ; CHECK-NEXT:    [[PTMPI1_01:%.*]] = phi i32* [ [[PIN1:%.*]], [[TMP0]] ], [ [[TMP2:%.*]], [[TMP1]] ]
 ; CHECK-NEXT:    [[TMP2]] = getelementptr inbounds i32, i32* [[PTMPI1_01]], i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* [[PTMPI1_01]], align 4, !tbaa !1
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* [[PTMPI1_01]], align 4, !tbaa [[TBAA1:![0-9]+]]
 ; CHECK-NEXT:    [[TMP4]] = getelementptr inbounds i32, i32* [[PTMPI2_02]], i64 1
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, i32* [[PTMPI2_02]], align 4, !tbaa !1
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, i32* [[PTMPI2_02]], align 4, !tbaa [[TBAA1]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub nsw i32 [[TMP3]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7]] = getelementptr inbounds i32, i32* [[PO_03]], i64 1
-; CHECK-NEXT:    store i32 [[TMP6]], i32* [[PO_03]], align 4, !tbaa !1
+; CHECK-NEXT:    store i32 [[TMP6]], i32* [[PO_03]], align 4, !tbaa [[TBAA1]]
 ; CHECK-NEXT:    [[TMP8]] = add nuw nsw i32 [[IDX_04]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[TMP8]], 64
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[TMP9:%.*]], label [[TMP1]], !llvm.loop !5
-; CHECK:         ret void
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[TMP9:%.*]], label [[TMP1]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK:       9:
+; CHECK-NEXT:    ret void
 ;
   br label %1
 

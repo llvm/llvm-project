@@ -20,20 +20,21 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 #include <bitset>
 #include <cassert>
 #include <cstdint>
-#include <map>
+#include <set>
 #include <string>
 #include <utility>
 
 namespace llvm {
 
 class AttrBuilder;
+class AttributeMask;
 class AttributeImpl;
 class AttributeListImpl;
 class AttributeSetNode;
@@ -130,6 +131,7 @@ public:
   static Attribute getWithByRefType(LLVMContext &Context, Type *Ty);
   static Attribute getWithPreallocatedType(LLVMContext &Context, Type *Ty);
   static Attribute getWithInAllocaType(LLVMContext &Context, Type *Ty);
+  static Attribute getWithUWTableKind(LLVMContext &Context, UWTableKind Kind);
 
   /// For a typed attribute, return the equivalent attribute with the type
   /// changed to \p ReplacementTy.
@@ -216,9 +218,15 @@ public:
   /// if not known).
   std::pair<unsigned, Optional<unsigned>> getAllocSizeArgs() const;
 
-  /// Returns the argument numbers for the vscale_range attribute (or pair(0, 0)
-  /// if not known).
-  std::pair<unsigned, unsigned> getVScaleRangeArgs() const;
+  /// Returns the minimum value for the vscale_range attribute.
+  unsigned getVScaleRangeMin() const;
+
+  /// Returns the maximum value for the vscale_range attribute or None when
+  /// unknown.
+  Optional<unsigned> getVScaleRangeMax() const;
+
+  // Returns the unwind table kind.
+  UWTableKind getUWTableKind() const;
 
   /// The Attribute is converted to a string of equivalent mnemonic. This
   /// is, presumably, for writing out the mnemonics for the assembly writer.
@@ -317,7 +325,7 @@ public:
   /// Remove the specified attributes from this set. Returns a new set because
   /// attribute sets are immutable.
   LLVM_NODISCARD AttributeSet
-  removeAttributes(LLVMContext &C, const AttrBuilder &AttrsToRemove) const;
+  removeAttributes(LLVMContext &C, const AttributeMask &AttrsToRemove) const;
 
   /// Return the number of attributes in this set.
   unsigned getNumAttributes() const;
@@ -348,7 +356,9 @@ public:
   Type *getInAllocaType() const;
   Type *getElementType() const;
   std::pair<unsigned, Optional<unsigned>> getAllocSizeArgs() const;
-  std::pair<unsigned, unsigned> getVScaleRangeArgs() const;
+  unsigned getVScaleRangeMin() const;
+  Optional<unsigned> getVScaleRangeMax() const;
+  UWTableKind getUWTableKind() const;
   std::string getAsString(bool InAttrGrp = false) const;
 
   /// Return true if this attribute set belongs to the LLVMContext.
@@ -451,6 +461,8 @@ public:
                            ArrayRef<uint64_t> Values);
   static AttributeList get(LLVMContext &C, unsigned Index,
                            ArrayRef<StringRef> Kind);
+  static AttributeList get(LLVMContext &C, unsigned Index,
+                           AttributeSet Attrs);
   static AttributeList get(LLVMContext &C, unsigned Index,
                            const AttrBuilder &B);
 
@@ -574,7 +586,7 @@ public:
   /// Remove the specified attributes at the specified index from this
   /// attribute list. Returns a new list because attribute lists are immutable.
   LLVM_NODISCARD AttributeList removeAttributesAtIndex(
-      LLVMContext &C, unsigned Index, const AttrBuilder &AttrsToRemove) const;
+      LLVMContext &C, unsigned Index, const AttributeMask &AttrsToRemove) const;
 
   /// Remove all attributes at the specified index from this
   /// attribute list. Returns a new list because attribute lists are immutable.
@@ -598,7 +610,7 @@ public:
   /// Remove the specified attribute at the function index from this
   /// attribute list. Returns a new list because attribute lists are immutable.
   LLVM_NODISCARD AttributeList
-  removeFnAttributes(LLVMContext &C, const AttrBuilder &AttrsToRemove) const {
+  removeFnAttributes(LLVMContext &C, const AttributeMask &AttrsToRemove) const {
     return removeAttributesAtIndex(C, FunctionIndex, AttrsToRemove);
   }
 
@@ -624,8 +636,8 @@ public:
 
   /// Remove the specified attribute at the return value index from this
   /// attribute list. Returns a new list because attribute lists are immutable.
-  LLVM_NODISCARD AttributeList
-  removeRetAttributes(LLVMContext &C, const AttrBuilder &AttrsToRemove) const {
+  LLVM_NODISCARD AttributeList removeRetAttributes(
+      LLVMContext &C, const AttributeMask &AttrsToRemove) const {
     return removeAttributesAtIndex(C, ReturnIndex, AttrsToRemove);
   }
 
@@ -646,8 +658,9 @@ public:
 
   /// Remove the specified attribute at the specified arg index from this
   /// attribute list. Returns a new list because attribute lists are immutable.
-  LLVM_NODISCARD AttributeList removeParamAttributes(
-      LLVMContext &C, unsigned ArgNo, const AttrBuilder &AttrsToRemove) const {
+  LLVM_NODISCARD AttributeList
+  removeParamAttributes(LLVMContext &C, unsigned ArgNo,
+                        const AttributeMask &AttrsToRemove) const {
     return removeAttributesAtIndex(C, ArgNo + FirstArgIndex, AttrsToRemove);
   }
 
@@ -834,6 +847,9 @@ public:
   /// arg.
   uint64_t getParamDereferenceableOrNullBytes(unsigned ArgNo) const;
 
+  /// Get the unwind table kind requested for the function.
+  UWTableKind getUWTableKind() const;
+
   /// Return the attributes at the index as a string.
   std::string getAsString(unsigned Index, bool InAttrGrp = false) const;
 
@@ -923,40 +939,88 @@ template <> struct DenseMapInfo<AttributeList, void> {
 
 //===----------------------------------------------------------------------===//
 /// \class
+/// This class stores enough information to efficiently remove some attributes
+/// from an existing AttrBuilder, AttributeSet or AttributeList.
+class AttributeMask {
+  std::bitset<Attribute::EndAttrKinds> Attrs;
+  std::set<SmallString<32>, std::less<>> TargetDepAttrs;
+
+public:
+  AttributeMask() = default;
+  AttributeMask(const AttributeMask &) = delete;
+  AttributeMask(AttributeMask &&) = default;
+
+  AttributeMask(AttributeSet AS) {
+    for (Attribute A : AS)
+      addAttribute(A);
+  }
+
+  /// Add an attribute to the mask.
+  AttributeMask &addAttribute(Attribute::AttrKind Val) {
+    assert((unsigned)Val < Attribute::EndAttrKinds &&
+           "Attribute out of range!");
+    Attrs[Val] = true;
+    return *this;
+  }
+
+  /// Add the Attribute object to the builder.
+  AttributeMask &addAttribute(Attribute A) {
+    if (A.isStringAttribute())
+      addAttribute(A.getKindAsString());
+    else
+      addAttribute(A.getKindAsEnum());
+    return *this;
+  }
+
+  /// Add the target-dependent attribute to the builder.
+  AttributeMask &addAttribute(StringRef A) {
+    TargetDepAttrs.insert(A);
+    return *this;
+  }
+
+  /// Return true if the builder has the specified attribute.
+  bool contains(Attribute::AttrKind A) const {
+    assert((unsigned)A < Attribute::EndAttrKinds && "Attribute out of range!");
+    return Attrs[A];
+  }
+
+  /// Return true if the builder has the specified target-dependent
+  /// attribute.
+  bool contains(StringRef A) const { return TargetDepAttrs.count(A); }
+
+  /// Return true if the mask contains the specified attribute.
+  bool contains(Attribute A) const {
+    if (A.isStringAttribute())
+      return contains(A.getKindAsString());
+    return contains(A.getKindAsEnum());
+  }
+};
+
+//===----------------------------------------------------------------------===//
+/// \class
 /// This class is used in conjunction with the Attribute::get method to
 /// create an Attribute object. The object itself is uniquified. The Builder's
 /// value, however, is not. So this can be used as a quick way to test for
 /// equality, presence of attributes, etc.
 class AttrBuilder {
-  std::bitset<Attribute::EndAttrKinds> Attrs;
-  std::map<SmallString<32>, SmallString<32>, std::less<>> TargetDepAttrs;
-  std::array<uint64_t, Attribute::NumIntAttrKinds> IntAttrs = {};
-  std::array<Type *, Attribute::NumTypeAttrKinds> TypeAttrs = {};
-
-  Optional<unsigned> kindToIntIndex(Attribute::AttrKind Kind) const;
-  Optional<unsigned> kindToTypeIndex(Attribute::AttrKind Kind) const;
+  LLVMContext &Ctx;
+  SmallVector<Attribute, 8> Attrs;
 
 public:
-  AttrBuilder() = default;
+  AttrBuilder(LLVMContext &Ctx) : Ctx(Ctx) {}
+  AttrBuilder(const AttrBuilder &) = delete;
+  AttrBuilder(AttrBuilder &&) = default;
 
-  AttrBuilder(const Attribute &A) {
+  AttrBuilder(LLVMContext &Ctx, const Attribute &A) : Ctx(Ctx) {
     addAttribute(A);
   }
 
-  AttrBuilder(AttributeList AS, unsigned Idx);
-  AttrBuilder(AttributeSet AS);
+  AttrBuilder(LLVMContext &Ctx, AttributeSet AS);
 
   void clear();
 
   /// Add an attribute to the builder.
-  AttrBuilder &addAttribute(Attribute::AttrKind Val) {
-    assert((unsigned)Val < Attribute::EndAttrKinds &&
-           "Attribute out of range!");
-    assert(Attribute::isEnumAttrKind(Val) &&
-           "Adding integer/type attribute without an argument!");
-    Attrs[Val] = true;
-    return *this;
-  }
+  AttrBuilder &addAttribute(Attribute::AttrKind Val);
 
   /// Add the Attribute object to the builder.
   AttrBuilder &addAttribute(Attribute A);
@@ -967,41 +1031,48 @@ public:
   /// Remove an attribute from the builder.
   AttrBuilder &removeAttribute(Attribute::AttrKind Val);
 
-  /// Remove the attributes from the builder.
-  AttrBuilder &removeAttributes(AttributeList A, uint64_t WithoutIndex);
-
-  /// Remove the target-dependent attribute to the builder.
+  /// Remove the target-dependent attribute from the builder.
   AttrBuilder &removeAttribute(StringRef A);
 
-  /// Add the attributes from the builder.
+  /// Remove the target-dependent attribute from the builder.
+  AttrBuilder &removeAttribute(Attribute A) {
+    if (A.isStringAttribute())
+      return removeAttribute(A.getKindAsString());
+    else
+      return removeAttribute(A.getKindAsEnum());
+  }
+
+  /// Add the attributes from the builder. Attributes in the passed builder
+  /// overwrite attributes in this builder if they have the same key.
   AttrBuilder &merge(const AttrBuilder &B);
 
   /// Remove the attributes from the builder.
-  AttrBuilder &remove(const AttrBuilder &B);
+  AttrBuilder &remove(const AttributeMask &AM);
 
   /// Return true if the builder has any attribute that's in the
   /// specified builder.
-  bool overlaps(const AttrBuilder &B) const;
+  bool overlaps(const AttributeMask &AM) const;
 
   /// Return true if the builder has the specified attribute.
-  bool contains(Attribute::AttrKind A) const {
-    assert((unsigned)A < Attribute::EndAttrKinds && "Attribute out of range!");
-    return Attrs[A];
-  }
+  bool contains(Attribute::AttrKind A) const;
 
   /// Return true if the builder has the specified target-dependent
   /// attribute.
   bool contains(StringRef A) const;
 
   /// Return true if the builder has IR-level attributes.
-  bool hasAttributes() const;
-
-  /// Return true if the builder has any attribute that's in the
-  /// specified attribute.
-  bool hasAttributes(AttributeList A, uint64_t Index) const;
+  bool hasAttributes() const { return !Attrs.empty(); }
 
   /// Return true if the builder has an alignment attribute.
   bool hasAlignmentAttr() const;
+
+  /// Return Attribute with the given Kind. The returned attribute will be
+  /// invalid if the Kind is not present in the builder.
+  Attribute getAttribute(Attribute::AttrKind Kind) const;
+
+  /// Return Attribute with the given Kind. The returned attribute will be
+  /// invalid if the Kind is not present in the builder.
+  Attribute getAttribute(StringRef Kind) const;
 
   /// Return raw (possibly packed/encoded) value of integer attribute or 0 if
   /// not set.
@@ -1053,9 +1124,11 @@ public:
   /// doesn't exist, pair(0, 0) is returned.
   std::pair<unsigned, Optional<unsigned>> getAllocSizeArgs() const;
 
-  /// Retrieve the vscale_range args, if the vscale_range attribute exists.  If
-  /// it doesn't exist, pair(0, 0) is returned.
-  std::pair<unsigned, unsigned> getVScaleRangeArgs() const;
+  /// Retrieve the minimum value of 'vscale_range'.
+  unsigned getVScaleRangeMin() const;
+
+  /// Retrieve the maximum value of 'vscale_range' or None when unknown.
+  Optional<unsigned> getVScaleRangeMax() const;
 
   /// Add integer attribute with raw value (packed/encoded if necessary).
   AttrBuilder &addRawIntAttr(Attribute::AttrKind Kind, uint64_t Value);
@@ -1097,7 +1170,8 @@ public:
                                 const Optional<unsigned> &NumElemsArg);
 
   /// This turns two ints into the form used internally in Attribute.
-  AttrBuilder &addVScaleRangeAttr(unsigned MinValue, unsigned MaxValue);
+  AttrBuilder &addVScaleRangeAttr(unsigned MinValue,
+                                  Optional<unsigned> MaxValue);
 
   /// Add a type attribute with the given type.
   AttrBuilder &addTypeAttr(Attribute::AttrKind Kind, Type *Ty);
@@ -1125,30 +1199,11 @@ public:
   /// Attribute.getIntValue().
   AttrBuilder &addVScaleRangeAttrFromRawRepr(uint64_t RawVScaleRangeRepr);
 
-  /// Return true if the builder contains no target-independent
-  /// attributes.
-  bool empty() const { return Attrs.none(); }
+  /// This turns the unwind table kind into the form used internally in
+  /// Attribute.
+  AttrBuilder &addUWTableAttr(UWTableKind Kind);
 
-  // Iterators for target-dependent attributes.
-  using td_type = decltype(TargetDepAttrs)::value_type;
-  using td_iterator = decltype(TargetDepAttrs)::iterator;
-  using td_const_iterator = decltype(TargetDepAttrs)::const_iterator;
-  using td_range = iterator_range<td_iterator>;
-  using td_const_range = iterator_range<td_const_iterator>;
-
-  td_iterator td_begin() { return TargetDepAttrs.begin(); }
-  td_iterator td_end() { return TargetDepAttrs.end(); }
-
-  td_const_iterator td_begin() const { return TargetDepAttrs.begin(); }
-  td_const_iterator td_end() const { return TargetDepAttrs.end(); }
-
-  td_range td_attrs() { return td_range(td_begin(), td_end()); }
-
-  td_const_range td_attrs() const {
-    return td_const_range(td_begin(), td_end());
-  }
-
-  bool td_empty() const { return TargetDepAttrs.empty(); }
+  ArrayRef<Attribute> attrs() const { return Attrs; }
 
   bool operator==(const AttrBuilder &B) const;
   bool operator!=(const AttrBuilder &B) const { return !(*this == B); }
@@ -1156,15 +1211,24 @@ public:
 
 namespace AttributeFuncs {
 
-/// Which attributes cannot be applied to a type.
-AttrBuilder typeIncompatible(Type *Ty);
+enum AttributeSafetyKind : uint8_t {
+  ASK_SAFE_TO_DROP = 1,
+  ASK_UNSAFE_TO_DROP = 2,
+  ASK_ALL = ASK_SAFE_TO_DROP | ASK_UNSAFE_TO_DROP,
+};
+
+/// Which attributes cannot be applied to a type. The argument \p ASK indicates,
+/// if only attributes that are known to be safely droppable are contained in
+/// the mask; only attributes that might be unsafe to drop (e.g., ABI-related
+/// attributes) are in the mask; or both.
+AttributeMask typeIncompatible(Type *Ty, AttributeSafetyKind ASK = ASK_ALL);
 
 /// Get param/return attributes which imply immediate undefined behavior if an
 /// invalid value is passed. For example, this includes noundef (where undef
 /// implies UB), but not nonnull (where null implies poison). It also does not
 /// include attributes like nocapture, which constrain the function
 /// implementation rather than the passed value.
-AttrBuilder getUBImplyingAttributes();
+AttributeMask getUBImplyingAttributes();
 
 /// \returns Return true if the two functions have compatible target-independent
 /// attributes for inlining purposes.

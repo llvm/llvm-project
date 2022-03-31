@@ -14,7 +14,7 @@
 
 // CHECK: no analyzer checkers or packages are associated with 'non.existant.Checker'
 // CHECK: use -analyzer-disable-all-checks to disable all static analyzer checkers
-int buggy() {
+int buggy(void) {
   int x = 0;
   return 5/x; // no warning
 }

@@ -13,17 +13,14 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
-#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCSectionMachO.h"
-#include "llvm/MC/MCTargetOptions.h"
-#include "llvm/MC/SectionKind.h"
+#include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 using namespace llvm;
 
@@ -63,6 +60,7 @@ void TargetMachine::resetTargetOptions(const Function &F) const {
   RESET_OPTION(NoInfsFPMath, "no-infs-fp-math");
   RESET_OPTION(NoNaNsFPMath, "no-nans-fp-math");
   RESET_OPTION(NoSignedZerosFPMath, "no-signed-zeros-fp-math");
+  RESET_OPTION(ApproxFuncFPMath, "approx-func-fp-math");
 }
 
 /// Returns the code generation relocation model. The choices are static, PIC,
@@ -189,7 +187,8 @@ CodeGenOpt::Level TargetMachine::getOptLevel() const { return OptLevel; }
 
 void TargetMachine::setOptLevel(CodeGenOpt::Level Level) { OptLevel = Level; }
 
-TargetTransformInfo TargetMachine::getTargetTransformInfo(const Function &F) {
+TargetTransformInfo
+TargetMachine::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(F.getParent()->getDataLayout());
 }
 
@@ -217,7 +216,7 @@ MCSymbol *TargetMachine::getSymbol(const GlobalValue *GV) const {
   return TLOF->getContext().getOrCreateSymbol(NameStr);
 }
 
-TargetIRAnalysis TargetMachine::getTargetIRAnalysis() {
+TargetIRAnalysis TargetMachine::getTargetIRAnalysis() const {
   // Since Analysis can't depend on Target, use a std::function to invert the
   // dependency.
   return TargetIRAnalysis(

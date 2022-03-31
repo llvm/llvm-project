@@ -110,7 +110,17 @@ void TraceIntelPT::DumpTraceInfo(Thread &thread, Stream &s, bool verbose) {
     s.Printf(", not traced\n");
     return;
   }
-  s.Printf("\n  Raw trace size: %zu bytes\n", *raw_size);
+  s.Printf("\n");
+
+  size_t insn_len = Decode(thread)->GetInstructions().size();
+  size_t mem_used = Decode(thread)->CalculateApproximateMemoryUsage();
+
+  s.Printf("  Raw trace size: %zu KiB\n", *raw_size / 1024);
+  s.Printf("  Total number of instructions: %zu\n", insn_len);
+  s.Printf("  Total approximate memory usage: %0.2lf KiB\n",
+           (double)mem_used / 1024);
+  s.Printf("  Average memory usage per instruction: %zu bytes\n",
+           mem_used / insn_len);
   return;
 }
 

@@ -13,27 +13,8 @@
 #include "mlir/Transforms/Passes.h"
 
 namespace mlir {
-class AffineDialect;
-
-// Forward declaration from Dialect.h
-template <typename ConcreteDialect>
-void registerDialect(DialectRegistry &registry);
-
-namespace arith {
-class ArithmeticDialect;
-} // end namespace arith
-
-namespace memref {
-class MemRefDialect;
-} // end namespace memref
-
-namespace bufferization {
-class BufferizationDialect;
-} // namespace bufferization
-
 #define GEN_PASS_CLASSES
 #include "mlir/Transforms/Passes.h.inc"
-
-} // end namespace mlir
+} // namespace mlir
 
 #endif // TRANSFORMS_PASSDETAIL_H_

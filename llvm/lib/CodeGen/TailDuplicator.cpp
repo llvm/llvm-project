@@ -19,17 +19,15 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
-#include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/MachineSizeOpts.h"
 #include "llvm/CodeGen/MachineSSAUpdater.h"
+#include "llvm/CodeGen/MachineSizeOpts.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -207,19 +205,17 @@ bool TailDuplicator::tailDuplicateAndUpdate(
       // Add the new vregs as available values.
       DenseMap<Register, AvailableValsTy>::iterator LI =
           SSAUpdateVals.find(VReg);
-      for (unsigned j = 0, ee = LI->second.size(); j != ee; ++j) {
-        MachineBasicBlock *SrcBB = LI->second[j].first;
-        Register SrcReg = LI->second[j].second;
+      for (std::pair<MachineBasicBlock *, Register> &J : LI->second) {
+        MachineBasicBlock *SrcBB = J.first;
+        Register SrcReg = J.second;
         SSAUpdate.AddAvailableValue(SrcBB, SrcReg);
       }
 
       SmallVector<MachineOperand *> DebugUses;
       // Rewrite uses that are outside of the original def's block.
-      MachineRegisterInfo::use_iterator UI = MRI->use_begin(VReg);
-      while (UI != MRI->use_end()) {
-        MachineOperand &UseMO = *UI;
+      for (MachineOperand &UseMO :
+           llvm::make_early_inc_range(MRI->use_operands(VReg))) {
         MachineInstr *UseMI = UseMO.getParent();
-        ++UI;
         // Rewrite debug uses last so that they can take advantage of any
         // register mappings introduced by other users in its BB, since we
         // cannot create new register definitions specifically for the debug
@@ -372,8 +368,8 @@ void TailDuplicator::processPHI(
     return;
 
   // Remove PredBB from the PHI node.
-  MI->RemoveOperand(SrcOpIdx + 1);
-  MI->RemoveOperand(SrcOpIdx);
+  MI->removeOperand(SrcOpIdx + 1);
+  MI->removeOperand(SrcOpIdx);
   if (MI->getNumOperands() == 1)
     MI->eraseFromParent();
 }
@@ -498,22 +494,22 @@ void TailDuplicator::updateSuccessorsPHIs(
         for (unsigned i = MI.getNumOperands() - 2; i != Idx; i -= 2) {
           MachineOperand &MO = MI.getOperand(i + 1);
           if (MO.getMBB() == FromBB) {
-            MI.RemoveOperand(i + 1);
-            MI.RemoveOperand(i);
+            MI.removeOperand(i + 1);
+            MI.removeOperand(i);
           }
         }
       } else
         Idx = 0;
 
       // If Idx is set, the operands at Idx and Idx+1 must be removed.
-      // We reuse the location to avoid expensive RemoveOperand calls.
+      // We reuse the location to avoid expensive removeOperand calls.
 
       DenseMap<Register, AvailableValsTy>::iterator LI =
           SSAUpdateVals.find(Reg);
       if (LI != SSAUpdateVals.end()) {
         // This register is defined in the tail block.
-        for (unsigned j = 0, ee = LI->second.size(); j != ee; ++j) {
-          MachineBasicBlock *SrcBB = LI->second[j].first;
+        for (const std::pair<MachineBasicBlock *, Register> &J : LI->second) {
+          MachineBasicBlock *SrcBB = J.first;
           // If we didn't duplicate a bb into a particular predecessor, we
           // might still have added an entry to SSAUpdateVals to correcly
           // recompute SSA. If that case, avoid adding a dummy extra argument
@@ -521,7 +517,7 @@ void TailDuplicator::updateSuccessorsPHIs(
           if (!SrcBB->isSuccessor(SuccBB))
             continue;
 
-          Register SrcReg = LI->second[j].second;
+          Register SrcReg = J.second;
           if (Idx != 0) {
             MI.getOperand(Idx).setReg(SrcReg);
             MI.getOperand(Idx + 1).setMBB(SrcBB);
@@ -532,8 +528,7 @@ void TailDuplicator::updateSuccessorsPHIs(
         }
       } else {
         // Live in tail block, must also be live in predecessors.
-        for (unsigned j = 0, ee = TDBBs.size(); j != ee; ++j) {
-          MachineBasicBlock *SrcBB = TDBBs[j];
+        for (MachineBasicBlock *SrcBB : TDBBs) {
           if (Idx != 0) {
             MI.getOperand(Idx).setReg(Reg);
             MI.getOperand(Idx + 1).setMBB(SrcBB);
@@ -544,8 +539,8 @@ void TailDuplicator::updateSuccessorsPHIs(
         }
       }
       if (Idx != 0) {
-        MI.RemoveOperand(Idx + 1);
-        MI.RemoveOperand(Idx);
+        MI.removeOperand(Idx + 1);
+        MI.removeOperand(Idx);
       }
     }
   }

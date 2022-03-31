@@ -28,8 +28,6 @@
 #include "llvm/Support/DOTGraphTraits.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
-#include <cstddef>
 #include <iterator>
 #include <string>
 #include <type_traits>
@@ -265,10 +263,9 @@ public:
           << DOT::EscapeString(DTraits.getEdgeDestLabel(Node, i));
       }
 
-      if (RenderUsingHTML)
-        O << "<td colspan=\"1\">... truncated</td>";
-      else if (i != e)
-        O << "|<d64>truncated...}";
+      if (i != e)
+        O << "|<d64>truncated...";
+      O << "}";
     }
 
     if (RenderUsingHTML)

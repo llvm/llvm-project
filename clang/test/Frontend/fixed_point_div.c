@@ -36,7 +36,7 @@ _Bool b;
 // CHECK-NEXT:    store i16 [[TMP2]], i16* @sa, align 2
 // CHECK-NEXT:    ret void
 //
-void sdiv_sasasa() {
+void sdiv_sasasa(void) {
   sa = sa / sa;
 }
 
@@ -50,7 +50,7 @@ void sdiv_sasasa() {
 // CHECK-NEXT:    store i32 [[TMP2]], i32* @a, align 4
 // CHECK-NEXT:    ret void
 //
-void sdiv_asaa() {
+void sdiv_asaa(void) {
   a = sa / a;
 }
 
@@ -63,7 +63,7 @@ void sdiv_asaa() {
 // CHECK-NEXT:    store i16 [[TMP2]], i16* @sa, align 2
 // CHECK-NEXT:    ret void
 //
-void sdiv_sasasf() {
+void sdiv_sasasf(void) {
   sa = sa / sf;
 }
 
@@ -80,7 +80,7 @@ void sdiv_sasasf() {
 // CHECK-NEXT:    store i16 [[RESIZE2]], i16* @sa, align 2
 // CHECK-NEXT:    ret void
 //
-void sdiv_sasaf() {
+void sdiv_sasaf(void) {
   sa = sa / f;
 }
 
@@ -94,7 +94,7 @@ void sdiv_sasaf() {
 // CHECK-NEXT:    store i32 [[TMP2]], i32* @a, align 4
 // CHECK-NEXT:    ret void
 //
-void sdiv_aasf() {
+void sdiv_aasf(void) {
   a = a / sf;
 }
 
@@ -111,7 +111,7 @@ void sdiv_aasf() {
 // CHECK-NEXT:    store i32 [[RESIZE2]], i32* @a, align 4
 // CHECK-NEXT:    ret void
 //
-void sdiv_aalf() {
+void sdiv_aalf(void) {
   a = a / lf;
 }
 
@@ -136,7 +136,7 @@ void sdiv_aalf() {
 // UNSIGNED-NEXT:    store i16 [[TMP2]], i16* @sa, align 2
 // UNSIGNED-NEXT:    ret void
 //
-void sdiv_sasausa() {
+void sdiv_sasausa(void) {
   sa = sa / usa;
 }
 
@@ -163,7 +163,7 @@ void sdiv_sasausa() {
 // UNSIGNED-NEXT:    store i32 [[TMP2]], i32* @a, align 4
 // UNSIGNED-NEXT:    ret void
 //
-void sdiv_asaua() {
+void sdiv_asaua(void) {
   a = sa / ua;
 }
 
@@ -189,7 +189,7 @@ void sdiv_asaua() {
 // UNSIGNED-NEXT:    store i16 [[TMP2]], i16* @sa, align 2
 // UNSIGNED-NEXT:    ret void
 //
-void sdiv_sasausf() {
+void sdiv_sasausf(void) {
   sa = sa / usf;
 }
 
@@ -219,7 +219,7 @@ void sdiv_sasausf() {
 // UNSIGNED-NEXT:    store i16 [[RESIZE2]], i16* @sa, align 2
 // UNSIGNED-NEXT:    ret void
 //
-void sdiv_sasaulf() {
+void sdiv_sasaulf(void) {
   sa = sa / ulf;
 }
 
@@ -235,7 +235,7 @@ void sdiv_sasaulf() {
 // CHECK-NEXT:    store i32 [[TMP6]], i32* @a, align 4
 // CHECK-NEXT:    ret void
 //
-void sdiv_aaaaa() {
+void sdiv_aaaaa(void) {
   a = a / a2 / a3 / a4;
 }
 
@@ -256,7 +256,7 @@ void sdiv_aaaaa() {
 // UNSIGNED-NEXT:    store i16 [[TMP2]], i16* @usa, align 2
 // UNSIGNED-NEXT:    ret void
 //
-void udiv_usausausa() {
+void udiv_usausausa(void) {
   usa = usa / usa;
 }
 
@@ -280,7 +280,7 @@ void udiv_usausausa() {
 // UNSIGNED-NEXT:    store i32 [[TMP2]], i32* @ua, align 4
 // UNSIGNED-NEXT:    ret void
 //
-void udiv_uausaua() {
+void udiv_uausaua(void) {
   ua = usa / ua;
 }
 
@@ -302,7 +302,7 @@ void udiv_uausaua() {
 // UNSIGNED-NEXT:    store i16 [[TMP2]], i16* @usa, align 2
 // UNSIGNED-NEXT:    ret void
 //
-void udiv_usausausf() {
+void udiv_usausausf(void) {
   usa = usa / usf;
 }
 
@@ -332,7 +332,7 @@ void udiv_usausausf() {
 // UNSIGNED-NEXT:    store i16 [[RESIZE2]], i16* @usa, align 2
 // UNSIGNED-NEXT:    ret void
 //
-void udiv_usausauf() {
+void udiv_usausauf(void) {
   usa = usa / uf;
 }
 
@@ -349,7 +349,7 @@ void udiv_usausauf() {
 // CHECK-NEXT:    store i16 [[RESIZE2]], i16* @sa, align 2
 // CHECK-NEXT:    ret void
 //
-void int_sasai() {
+void int_sasai(void) {
   sa = sa / i;
 }
 
@@ -365,7 +365,7 @@ void int_sasai() {
 // CHECK-NEXT:    store i16 [[RESIZE2]], i16* @sa, align 2
 // CHECK-NEXT:    ret void
 //
-void int_sasaui() {
+void int_sasaui(void) {
   sa = sa / ui;
 }
 
@@ -393,7 +393,7 @@ void int_sasaui() {
 // UNSIGNED-NEXT:    store i16 [[RESIZE2]], i16* @usa, align 2
 // UNSIGNED-NEXT:    ret void
 //
-void int_usausai() {
+void int_usausai(void) {
   usa = usa / i;
 }
 
@@ -421,7 +421,7 @@ void int_usausai() {
 // UNSIGNED-NEXT:    store i16 [[RESIZE2]], i16* @usa, align 2
 // UNSIGNED-NEXT:    ret void
 //
-void int_usausaui() {
+void int_usausaui(void) {
   usa = usa / ui;
 }
 
@@ -437,7 +437,7 @@ void int_usausaui() {
 // CHECK-NEXT:    store i32 [[RESIZE2]], i32* @lf, align 4
 // CHECK-NEXT:    ret void
 //
-void int_lflfui() {
+void int_lflfui(void) {
   lf = lf / ui;
 }
 
@@ -455,7 +455,7 @@ void int_lflfui() {
 // CHECK-NEXT:    store i32 [[RESIZE2]], i32* @a, align 4
 // CHECK-NEXT:    ret void
 //
-void int_aab() {
+void int_aab(void) {
   a = a / b;
 }
 
@@ -471,7 +471,7 @@ void int_aab() {
 // CHECK-NEXT:    store i32 [[RESIZE2]], i32* @a, align 4
 // CHECK-NEXT:    ret void
 //
-void int_aia() {
+void int_aia(void) {
   a = i / a;
 }
 
@@ -499,7 +499,7 @@ void int_aia() {
 // UNSIGNED-NEXT:    store i16 [[RESIZE2]], i16* @usa, align 2
 // UNSIGNED-NEXT:    ret void
 //
-void int_usauiusa() {
+void int_usauiusa(void) {
   usa = ui / usa;
 }
 
@@ -515,7 +515,7 @@ void int_usauiusa() {
 // CHECK-NEXT:    store i16 [[RESIZE2]], i16* @sa, align 2
 // CHECK-NEXT:    ret void
 //
-void int_sauisa() {
+void int_sauisa(void) {
   sa = ui / sa;
 }
 
@@ -528,7 +528,7 @@ void int_sauisa() {
 // CHECK-NEXT:    store i16 [[TMP2]], i16* @sa_sat, align 2
 // CHECK-NEXT:    ret void
 //
-void sat_sassasas() {
+void sat_sassasas(void) {
   sa_sat = sa / sa_sat;
 }
 
@@ -550,7 +550,7 @@ void sat_sassasas() {
 // UNSIGNED-NEXT:    store i16 [[RESIZE1]], i16* @usa_sat, align 2
 // UNSIGNED-NEXT:    ret void
 //
-void sat_usasusausas() {
+void sat_usasusausas(void) {
   usa_sat = usa / usa_sat;
 }
 
@@ -576,7 +576,7 @@ void sat_usasusausas() {
 // UNSIGNED-NEXT:    store i32 [[RESIZE2]], i32* @ua_sat, align 4
 // UNSIGNED-NEXT:    ret void
 //
-void sat_uasuausas() {
+void sat_uasuausas(void) {
   ua_sat = ua / usa_sat;
 }
 
@@ -596,7 +596,7 @@ void sat_uasuausas() {
 // CHECK-NEXT:    store i16 [[RESIZE2]], i16* @sa_sat, align 2
 // CHECK-NEXT:    ret void
 //
-void sat_sassasi() {
+void sat_sassasi(void) {
   sa_sat = sa_sat / i;
 }
 
@@ -616,7 +616,7 @@ void sat_sassasi() {
 // CHECK-NEXT:    store i16 [[RESIZE2]], i16* @sa_sat, align 2
 // CHECK-NEXT:    ret void
 //
-void sat_sassasui() {
+void sat_sassasui(void) {
   sa_sat = sa_sat / ui;
 }
 
@@ -638,7 +638,7 @@ void sat_sassasui() {
 // UNSIGNED-NEXT:    store i16 [[RESIZE1]], i16* @uf_sat, align 2
 // UNSIGNED-NEXT:    ret void
 //
-void sat_ufsufsufs() {
+void sat_ufsufsufs(void) {
   uf_sat = uf_sat / uf_sat;
 }
 
@@ -674,6 +674,6 @@ void sat_ufsufsufs() {
 // UNSIGNED-NEXT:    store i16 [[RESIZE2]], i16* @usa_sat, align 2
 // UNSIGNED-NEXT:    ret void
 //
-void sat_usasusasi() {
+void sat_usasusasi(void) {
   usa_sat = usa_sat / i;
 }

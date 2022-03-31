@@ -31,7 +31,7 @@ define i32 @test1() nounwind {
 ; CHECK:       bb7:
 ; CHECK-NEXT:    br label [[BB8]]
 ; CHECK:       bb8:
-; CHECK-NEXT:    [[DOT0:%.*]] = phi i32 [ [[TMP0]], [[BB7]] ], [ undef, [[BB6]] ], [ undef, [[BB4]] ], [ 4, [[BB2]] ], [ 5, [[BB]] ]
+; CHECK-NEXT:    [[DOT0:%.*]] = phi i32 [ [[TMP0]], [[BB7]] ], [ poison, [[BB6]] ], [ poison, [[BB4]] ], [ 4, [[BB2]] ], [ 5, [[BB]] ]
 ; CHECK-NEXT:    ret i32 [[DOT0]]
 ;
 entry:

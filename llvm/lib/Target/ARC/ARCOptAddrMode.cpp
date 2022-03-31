@@ -459,12 +459,12 @@ void ARCOptAddrMode::changeToAddrMode(MachineInstr &Ldst, unsigned NewOpcode,
 
   Register BaseReg = Ldst.getOperand(BasePos).getReg();
 
-  Ldst.RemoveOperand(OffPos);
-  Ldst.RemoveOperand(BasePos);
+  Ldst.removeOperand(OffPos);
+  Ldst.removeOperand(BasePos);
 
   if (IsStore) {
     Src = Ldst.getOperand(BasePos - 1);
-    Ldst.RemoveOperand(BasePos - 1);
+    Ldst.removeOperand(BasePos - 1);
   }
 
   Ldst.setDesc(AST->getInstrInfo()->get(NewOpcode));

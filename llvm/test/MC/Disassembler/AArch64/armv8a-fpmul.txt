@@ -1,6 +1,5 @@
 # RUN:     llvm-mc -triple aarch64-none-linux-gnu -mattr=+fp16fml           --disassemble < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,FP16
 # RUN:     llvm-mc -triple aarch64-none-linux-gnu -mattr=-fullfp16,+fp16fml --disassemble < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,FP16
-# RUN:     llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8r --disassemble < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,FP16
 
 #A fullfp16 instruction, for testing the interaction of the features
 [0x41,0x08,0xe3,0x1e]

@@ -13,8 +13,12 @@
 #ifndef NVVMIR_OPS
 #define NVVMIR_OPS
 
+include "mlir/IR/EnumAttr.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+
+def LLVM_i8Ptr_global : LLVM_IntPtrBase<8, 1>;
+def LLVM_i8Ptr_shared : LLVM_IntPtrBase<8, 3>;
 
 //===----------------------------------------------------------------------===//
 // NVVM dialect definitions
@@ -31,13 +35,15 @@ def NVVM_Dialect : Dialect {
     /// functions.
     static StringRef getKernelFuncAttrName() { return "nvvm.kernel"; }
   }];
+
+  let useDefaultAttributePrinterParser = 1;
 }
 
 //===----------------------------------------------------------------------===//
 // NVVM op definitions
 //===----------------------------------------------------------------------===//
 
-class NVVM_Op<string mnemonic, list<OpTrait> traits = []> :
+class NVVM_Op<string mnemonic, list<Trait> traits = []> :
   LLVM_OpBase<NVVM_Dialect, mnemonic, traits> {
 }
 
@@ -46,7 +52,7 @@ class NVVM_Op<string mnemonic, list<OpTrait> traits = []> :
 //===----------------------------------------------------------------------===//
 
 class NVVM_IntrOp<string mnem, list<int> overloadedResults,
-                  list<int> overloadedOperands, list<OpTrait> traits,
+                  list<int> overloadedOperands, list<Trait> traits,
                   int numResults>
   : LLVM_IntrOpBase<NVVM_Dialect, mnem, "nvvm_" # !subst(".", "_", mnem),
                     overloadedResults, overloadedOperands, traits, numResults>;
@@ -57,7 +63,7 @@ class NVVM_IntrOp<string mnem, list<int> overloadedResults,
 //===----------------------------------------------------------------------===//
 
 class NVVM_SpecialRegisterOp<string mnemonic,
-    list<OpTrait> traits = []> :
+    list<Trait> traits = []> :
   NVVM_IntrOp<mnemonic, [], [], !listconcat(traits, [NoSideEffect]), 1>,
   Arguments<(ins)> {
   let assemblyFormat = "attr-dict `:` type($res)";
@@ -97,20 +103,18 @@ def NVVM_Barrier0Op : NVVM_Op<"barrier0"> {
   let assemblyFormat = "attr-dict";
 }
 
-def ShflKindBfly : StrEnumAttrCase<"bfly">;
-def ShflKindUp : StrEnumAttrCase<"up">;
-def ShflKindDown : StrEnumAttrCase<"down">;
-def ShflKindIdx : StrEnumAttrCase<"idx">;
+def ShflKindBfly : I32EnumAttrCase<"bfly", 0>;
+def ShflKindUp   : I32EnumAttrCase<"up", 1>;
+def ShflKindDown : I32EnumAttrCase<"down", 2>;
+def ShflKindIdx  : I32EnumAttrCase<"idx", 3>;
 
 /// Enum attribute of the different shuffle kinds.
-def ShflKind : StrEnumAttr<"ShflKind", "NVVM shuffle kind",
+def ShflKind : I32EnumAttr<"ShflKind", "NVVM shuffle kind",
   [ShflKindBfly, ShflKindUp, ShflKindDown, ShflKindIdx]> {
+  let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::NVVM";
-  let storageType = "mlir::StringAttr";
-  let returnType = "NVVM::ShflKind";
-  let convertFromStorage = "*symbolizeEnum<NVVM::ShflKind>($_self.getValue())";
-  let constBuilderCall = "$_builder.getStringAttr(stringifyEnum($0))";
 }
+def ShflKindAttr : EnumAttr<NVVM_Dialect, ShflKind, "shfl_kind">;
 
 def NVVM_ShflOp :
   NVVM_Op<"shfl.sync">,
@@ -119,7 +123,7 @@ def NVVM_ShflOp :
                  LLVM_Type:$val,
                  I32:$offset,
                  I32:$mask_and_clamp,
-                 ShflKind:$kind,
+                 ShflKindAttr:$kind,
                  OptionalAttr<UnitAttr>:$return_value_and_is_valid)> {
   string llvmBuilder = [{
       auto intId = getShflIntrinsicId(
@@ -127,22 +131,11 @@ def NVVM_ShflOp :
       $res = createIntrinsicCall(builder,
           intId, {$dst, $val, $offset, $mask_and_clamp});
   }];
-  let verifier = [{
-    if (!(*this)->getAttrOfType<UnitAttr>("return_value_and_is_valid"))
-      return success();
-    auto type = getType().dyn_cast<LLVM::LLVMStructType>();
-    auto elementType = (type && type.getBody().size() == 2)
-                     ? type.getBody()[1].dyn_cast<IntegerType>()
-                     : nullptr;
-    if (!elementType || elementType.getWidth() != 1)
-      return emitError("expected return type to be a two-element struct with "
-                       "i1 as the second element");
-    return success();
-  }];
   let assemblyFormat = [{
     $kind $dst `,` $val `,` $offset `,` $mask_and_clamp  attr-dict
      `:` type($val) `->` type($res)
    }];
+   let hasVerifier = 1;
 }
 
 def NVVM_VoteBallotOp :
@@ -153,20 +146,53 @@ def NVVM_VoteBallotOp :
       $res = createIntrinsicCall(builder,
             llvm::Intrinsic::nvvm_vote_ballot_sync, {$mask, $pred});
   }];
-  let parser = [{ return parseNVVMVoteBallotOp(parser, result); }];
-  let printer = [{ printNVVMIntrinsicOp(p, this->getOperation()); }];
+  let hasCustomAssemblyFormat = 1;
 }
 
-def NVVM_MmaOp :
-  NVVM_Op<"mma.sync">,
-  Results<(outs LLVM_Type:$res)>,
-  Arguments<(ins Variadic<LLVM_Type>:$args)> {
+
+def NVVM_CpAsyncOp : NVVM_Op<"cp.async.shared.global">,
+  Arguments<(ins LLVM_i8Ptr_shared:$dst,
+                 LLVM_i8Ptr_global:$src,
+                 I32Attr:$size)> {
   string llvmBuilder = [{
-    $res = createIntrinsicCall(
-        builder, llvm::Intrinsic::nvvm_mma_m8n8k4_row_col_f32_f32, $args);
+      llvm::Intrinsic::ID id;
+      switch ($size) {
+        case 4:
+          id = llvm::Intrinsic::nvvm_cp_async_ca_shared_global_4;
+          break;
+        case 8:
+          id = llvm::Intrinsic::nvvm_cp_async_ca_shared_global_8;
+          break;
+        case 16:
+          id = llvm::Intrinsic::nvvm_cp_async_ca_shared_global_16;
+          break;
+        default:
+          llvm_unreachable("unsupported async copy size");
+      }
+      createIntrinsicCall(builder, id, {$dst, $src});
   }];
-  let assemblyFormat = "$args attr-dict `:` functional-type($args, $res)";
-  let verifier = [{ return ::verify(*this); }];
+  let assemblyFormat = "$dst `,` $src `,` $size attr-dict";
+  let hasVerifier = 1;
+}
+
+def NVVM_CpAsyncCommitGroupOp : NVVM_Op<"cp.async.commit.group"> {
+  string llvmBuilder = [{
+      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_cp_async_commit_group);
+  }];
+  let assemblyFormat = "attr-dict";
+}
+
+def NVVM_CpAsyncWaitGroupOp : NVVM_Op<"cp.async.wait.group">,
+  Arguments<(ins I32Attr:$n)> {
+  string llvmBuilder = [{
+      createIntrinsicCall(
+        builder,
+        llvm::Intrinsic::nvvm_cp_async_wait_group,
+        llvm::ConstantInt::get(
+          llvm::Type::getInt32Ty(moduleTranslation.getLLVMContext()),
+          $n));
+  }];
+  let assemblyFormat = "$n attr-dict";
 }
 
 /// Helpers to instantiate different version of wmma intrinsics.
@@ -258,6 +284,7 @@ class MMA_LDST_OPS<list<GEOM> Geom, list<string> Frags, list<string> Types> {
 // Creates list of valid combinations of fragments. This is a subset of what
 // llvm supports and can be extended as needed.
 class NVVM_MMA_OPS {
+  // "wmma" operations
   list<list<WMMA_REGS>> tf32_wmma_ops = MMA_OPS<
             [GEOM<16, 16, 8>],
             ["tf32"], [], ["f32"], []>.ret;
@@ -286,6 +313,32 @@ class NVVM_MMA_OPS {
   // Separate A/B/C fragments (loads) from D (stores).
   list<WMMA_REGS> all_ld_ops = !filter(op, all_ldst_ops, !ne(op.frag, "d"));
   list<WMMA_REGS> all_st_ops = !filter(op, all_ldst_ops, !eq(op.frag, "d"));
+
+  // "mma_sync" operations
+  list<list<WMMA_REGS>> tf32_mma_ops = MMA_OPS<
+            [GEOM<16,8,4>, GEOM<16,8,8>],
+            ["tf32"], [], ["f32"], []>.ret;
+  list<list<WMMA_REGS>> bf16_mma_ops = MMA_OPS<
+            [GEOM<16,8,16>, GEOM<16,8,8>],
+            ["bf16"], [], ["f32"], []>.ret;
+  list<list<WMMA_REGS>> f64_mma_ops = MMA_OPS<
+            [GEOM<8,8,4>],
+            ["f64"], [], ["f64"], []>.ret;
+  list<list<WMMA_REGS>> fp_mma_ops = MMA_OPS<
+            [GEOM<8,8,4>, GEOM<16,8,8>, GEOM<16,8,16>],
+            ["f16"], [], ["f16", "f32"], ["f16", "f32"]>.ret;
+  list<list<WMMA_REGS>> int_mma_ops = MMA_OPS<
+            [GEOM<8,8,16>, GEOM<16,8,16>, GEOM<16,8,32>],
+            ["s8", "u8"], ["s8", "u8"], ["s32"], []>.ret;
+  list<list<WMMA_REGS>> subint_mma_ops = MMA_OPS<
+            [GEOM<8,8,32>, GEOM<16,8,32>, GEOM<16,8,64>],
+            ["s4", "u4"], ["s4", "u4"], ["s32"], []>.ret;
+  list<list<WMMA_REGS>> bit_mma_ops = MMA_OPS<
+            [GEOM<8,8,128>, GEOM<16,8,128>, GEOM<16,8,256>],
+            ["b1"], [], ["s32"], []>.ret;
+  list<list<WMMA_REGS>> all_mma_sync_ops = !listconcat(
+            tf32_mma_ops, bf16_mma_ops, f64_mma_ops,
+            fp_mma_ops, int_mma_ops, subint_mma_ops, bit_mma_ops);
 }
 
 def NVVM_MMA_OPS : NVVM_MMA_OPS;
@@ -367,52 +420,207 @@ class MMA_MMA_INTR<string opName> {
   string id = !foldl("", f, acc, el, acc # "\n" # el);
 }
 
-def MMALayoutRow : StrEnumAttrCase<"row">;
-def MMALayoutCol : StrEnumAttrCase<"col">;
+/// Enum attribute for binary (b1) MMA operation type
+def MMAB1OpNone : I32EnumAttrCase<"none", 0>;
+def MMAB1OpXorPopc : I32EnumAttrCase<"xor_popc", 1>;
+def MMAB1OpAndPopc : I32EnumAttrCase<"and_popc", 2>;
+def MMAB1Op : I32EnumAttr<"MMAB1Op", "MMA binary operations",
+  [MMAB1OpNone, MMAB1OpXorPopc, MMAB1OpAndPopc]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::NVVM";
+}
+def MMAB1OpAttr : EnumAttr<NVVM_Dialect, MMAB1Op, "mma_b1op"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+/// Enum attribute type for the overflow behavior of MMA integer operations
+def MMAIntOverflowWrap : I32EnumAttrCase<"wrapped", 0>;
+def MMAIntOverflowSat : I32EnumAttrCase<"satfinite", 1>;
+def MMAIntOverflow : I32EnumAttr<"MMAIntOverflow", "MMA overflow options",
+  [MMAIntOverflowSat, MMAIntOverflowWrap]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::NVVM";
+}
+def MMAIntOverflowAttr : EnumAttr<NVVM_Dialect, MMAIntOverflow, "mma_int_overflow"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+/// Attribute to hold the MMA shape
+def NVVM_MMAShapeAttr : StructAttr<"MMAShapeAttr", NVVM_Dialect, [
+    StructFieldAttr<"m", I32Attr>,
+    StructFieldAttr<"n", I32Attr>,
+    StructFieldAttr<"k", I32Attr>
+  ]> {
+  let summary = "Attribute for MMA operation shape.";
+}
+
+// Returns true if this combination of layout/satf for MMA ops is supported;
+// false otherwise.
+// E.g.
+// if NVVM_MMA_SUPPORTED<...>.ret then
+//   def : FOO<>; // The record will only be defined for supported ops.
+//
+class NVVM_MMA_SUPPORTED<list<WMMA_REGS> frags, string layout_a, string layout_b, int satf> {
+  // MMA ops check both layouts.
+  string layout = layout_a # ":" # layout_b;
+  string a_type = frags[0].ptx_elt_type;
+  string b_type = frags[1].ptx_elt_type;
+  string c_type = frags[2].ptx_elt_type;
+  string d_type = frags[3].ptx_elt_type;
+  string geom = frags[0].geom;
+
+  // gcd is a shortcut used to identify instructions that depend on
+  // geom+frag_c+frag_d.
+  string gcd = geom # ":" # c_type # d_type;
+  bit ret = !cond(
+
+    // Limit satf to valid types
+    !and(!eq(satf, 1),
+         !ne(a_type, "s8"),
+         !ne(a_type, "u8"),
+         !ne(a_type, "s4"),
+         !ne(a_type, "u4")): false,
+
+    // m8n8k4 has no C=f32 D=f16 variant.
+    !eq(gcd, "m8n8k4:f32f16"): false,
+
+    // only m8n8k4 for f16 does not require row:col layout
+    !and(!ne(layout, "row:col"),
+         !or(!ne(geom, "m8n8k4"),
+             !ne(a_type, "f16"))) : false,
+
+    // m16n8k8 requires A and B to be the same type and C and D to be the same
+    // type.
+    !and(!eq(geom, "m16n8k8"),
+         !or(!ne(a_type, b_type),
+             !ne(c_type, d_type))): false,
+
+    // m16n8k8 requires C and D to be the same type.
+    !and(!eq(geom, "m16n8k8"),
+         !ne(c_type, d_type)): false,
+
+    // All other are OK.
+    true: true
+  );
+}
+
+// Returns a list of operation suffixes corresponding to possible b1 
+// multiply-and-accumulate operations for all fragments which have a 
+// b1 type. For all other fragments, the list returned holds a list 
+// containing the empty string.
+class NVVM_MMA_B1OPS<list<WMMA_REGS> frags> {
+  list<string> ret = !cond(
+    !eq(frags[0].ptx_elt_type, "b1") : ["xor_popc", "and_popc"],
+    true: [""]
+  );
+}
+
+/// Generate enum value of the mma.sync intrinsic.
+class MMA_SYNC_NAME<string ALayout, string BLayout, string b1op, int Satfinite,
+               WMMA_REGS A, WMMA_REGS B, WMMA_REGS C, WMMA_REGS D> {
+  string signature = MMA_SIGNATURE<A, B, C, D>.ret;
+  string id = "llvm::Intrinsic::nvvm_mma"
+                # !if(!ne(b1op, ""), "_" # b1op, "")
+                # "_" # A.geom
+                # "_" # ALayout
+                # "_" # BLayout
+                # !if(Satfinite, "_satfinite", "")
+                # signature;  
+}
+
+/// Helper to create the mapping between the configuration and the mma.sync
+/// intrinsic enum value.
+class MMA_SYNC_INTR {
+  list<list<list<list<list<string>>>>> cond0 =
+    !foreach(op, NVVM_MMA_OPS.all_mma_sync_ops,
+      !foreach(layoutA, ["row", "col"],
+        !foreach(layoutB, ["row", "col"],
+          !foreach (sat, [0, 1],
+            !foreach (b1op, NVVM_MMA_B1OPS<op>.ret,
+              !if(NVVM_MMA_SUPPORTED<[op[0], op[1], op[2], op[3]],
+                                     layoutA, layoutB, sat>.ret,
+      "if (layoutA == \"" # layoutA #  "\" && layoutB == \"" # layoutB #  "\" && "
+      "    m == " # op[0].m # " && n == " # op[0].n # " && k == " # op[0].k #
+      "    && \"" # op[0].ptx_elt_type # "\" == eltypeA && \""
+       # op[1].ptx_elt_type # "\" == eltypeB && " 
+       # " \"" # op[2].ptx_elt_type # "\" == eltypeC && "
+       # " \"" # op[3].ptx_elt_type # "\" == eltypeD "
+       # " && (sat.hasValue()  ? " # sat # " == static_cast<int>(*sat) : true)"
+       # !if(!ne(b1op, ""), " && (b1Op.hasValue() ? MMAB1Op::" # b1op # " == b1Op.getValue() : true)", "") # ")\n"
+       # "  return " #
+       MMA_SYNC_NAME<layoutA, layoutB, b1op, sat, op[0], op[1], op[2], op[3]>.id # ";", 
+          "") // if supported
+          ) // b1op
+        ) // sat
+      ) // layoutB
+    ) // layoutA
+  ); // all_mma_sync_ops
+  list<list<list<string>>> f1 = !foldl([[[""]]],
+                                  !foldl([[[[""]]]], cond0, acc, el, 
+                                      !listconcat(acc, el)),
+                                    acc1, el1, !listconcat(acc1, el1));
+  list<list<string>> f2 = !foldl([[""]], f1, acc1, el1, !listconcat(acc1, el1));
+  list<string> f3 = !foldl([""], f2, acc, el, !listconcat(acc, el));
+  string id = !foldl("", f3, acc, el, acc # "\n" # el);
+}
+
+def MMALayoutRow : I32EnumAttrCase<"row", 0>;
+def MMALayoutCol : I32EnumAttrCase<"col", 1>;
 
 /// Enum attribute of the different matrix layout.
-def MMALayout : StrEnumAttr<"MMALayout", "NVVM MMA layout",
+def MMALayout : I32EnumAttr<"MMALayout", "NVVM MMA layout",
   [MMALayoutRow, MMALayoutCol]> {
+  let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::NVVM";
-  let storageType = "mlir::StringAttr";
-  let returnType = "NVVM::MMALayout";
-  let convertFromStorage = "*symbolizeEnum<NVVM::MMALayout>($_self.getValue())";
-  let constBuilderCall = "$_builder.getStringAttr(stringifyEnum($0))";
+}
+def MMALayoutAttr : EnumAttr<NVVM_Dialect, MMALayout, "mma_layout"> {
+  let assemblyFormat = "`<` $value `>`";
 }
 
-def MMATypeF16 : StrEnumAttrCase<"f16">;
-def MMATypeF32 : StrEnumAttrCase<"f32">;
-def MMATypeTF32 : StrEnumAttrCase<"tf32">;
+/// Enum attribute of the different PTX element types used for MMA operands.
+def MMATypeF16  : I32EnumAttrCase<"f16", 0>;
+def MMATypeF32  : I32EnumAttrCase<"f32", 1>;
+def MMATypeTF32 : I32EnumAttrCase<"tf32", 2>;
+def MMATypeU8 : I32EnumAttrCase<"u8", 3>;
+def MMATypeS8 : I32EnumAttrCase<"s8", 4>;
+def MMATypeS32 : I32EnumAttrCase<"s32", 5>;
+def MMATypeB1 : I32EnumAttrCase<"b1", 6>;
+def MMATypeU4 : I32EnumAttrCase<"u4", 7>;
+def MMATypeS4 : I32EnumAttrCase<"s4", 8>;
+def MMATypeBF16 : I32EnumAttrCase<"bf16", 9>;
+def MMATypeF64 : I32EnumAttrCase<"f64", 10>;
 
-/// Enum attribute of the different matrix types.
-def MMATypes : StrEnumAttr<"MMATypes", "NVVM MMA types",
-  [MMATypeF16, MMATypeF32, MMATypeTF32]> {
+def MMATypes : I32EnumAttr<"MMATypes", "NVVM MMA types",
+  [MMATypeF16, MMATypeF32, MMATypeTF32,
+  MMATypeBF16, MMATypeS8, MMATypeU8,
+  MMATypeS32, MMATypeS4, MMATypeU4,
+  MMATypeB1, MMATypeF64]> {
+  let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::NVVM";
-  let storageType = "mlir::StringAttr";
-  let returnType = "NVVM::MMATypes";
-  let convertFromStorage = "*symbolizeEnum<NVVM::MMATypes>($_self.getValue())";
-  let constBuilderCall = "$_builder.getStringAttr(stringifyEnum($0))";
+}
+def MMATypesAttr : EnumAttr<NVVM_Dialect, MMATypes, "mma_type"> {
+  let assemblyFormat = "`<` $value `>`";
 }
 
-def MMAFragA : StrEnumAttrCase<"a">;
-def MMAFragB : StrEnumAttrCase<"b">;
-def MMAFragC : StrEnumAttrCase<"c">;
+def MMAFragA : I32EnumAttrCase<"a", 0>;
+def MMAFragB : I32EnumAttrCase<"b", 1>;
+def MMAFragC : I32EnumAttrCase<"c", 2>;
 
 /// Enum attribute of the different frag types.
-def MMAFragAttr : StrEnumAttr<"MMAFrag", "NVVM MMA frag type",
+def MMAFrag: I32EnumAttr<"MMAFrag", "NVVM MMA frag type",
   [MMAFragA, MMAFragB, MMAFragC]> {
+  let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::NVVM";
-  let storageType = "mlir::StringAttr";
-  let returnType = "NVVM::MMAFrag";
-  let convertFromStorage = "*symbolizeEnum<NVVM::MMAFrag>($_self.getValue())";
-  let constBuilderCall = "$_builder.getStringAttr(stringifyEnum($0))";
+}
+def MMAFragAttr : EnumAttr<NVVM_Dialect, MMAFrag, "mma_frag"> {
+  let assemblyFormat = "`<` $value `>`";
 }
 
 def NVVM_WMMALoadOp: NVVM_Op<"wmma.load">,
   Results<(outs LLVM_AnyStruct:$res)>,
   Arguments<(ins LLVM_AnyPointer: $ptr, I32: $stride, I32Attr:$m,
-             I32Attr:$n, I32Attr:$k, MMALayout:$layout, MMATypes:$eltype,
-             MMAFragAttr:$frag)> {
+             I32Attr:$n, I32Attr:$k, MMALayoutAttr:$layout,
+             MMATypesAttr:$eltype, MMAFragAttr:$frag)> {
 
   let summary = "Warp synchronous matrix load";
 
@@ -484,13 +692,13 @@ def NVVM_WMMALoadOp: NVVM_Op<"wmma.load">,
     }];
 
   let assemblyFormat = "$ptr `,` $stride attr-dict `:` functional-type($ptr, $res)";
-  let verifier = [{ return ::verify(*this); }];
+  let hasVerifier = 1;
 }
 
 def NVVM_WMMAStoreOp : NVVM_Op<"wmma.store">,
   Arguments<(ins LLVM_AnyPointer: $ptr,
-             I32Attr:$m, I32Attr:$n, I32Attr:$k, MMALayout:$layout,
-             MMATypes:$eltype, Variadic<LLVM_Type>:$args, I32: $stride)>{
+             I32Attr:$m, I32Attr:$n, I32Attr:$k, MMALayoutAttr:$layout,
+             MMATypesAttr:$eltype, Variadic<LLVM_Type>:$args, I32: $stride)>{
   let summary = "Warp synchronous matrix store";
 
   let extraClassDeclaration =
@@ -539,15 +747,15 @@ def NVVM_WMMAStoreOp : NVVM_Op<"wmma.store">,
   }];
 
   let assemblyFormat = "$ptr `,` $stride `,` $args attr-dict `:` type($ptr) `,` type($args)";
-  let verifier = [{ return ::verify(*this); }];
+  let hasVerifier = 1;
 }
 
 // Base class for all the variants of WMMA mmaOps that may be defined.
 def NVVM_WMMAMmaOp : NVVM_Op<"wmma.mma">,
   Results<(outs LLVM_AnyStruct:$res)>,
-  Arguments<(ins I32Attr:$m, I32Attr:$n, I32Attr:$k, MMALayout:$layoutA,
-            MMALayout:$layoutB, MMATypes:$eltypeA, MMATypes:$eltypeB,
-            Variadic<LLVM_Type>:$args)>{
+  Arguments<(ins I32Attr:$m, I32Attr:$n, I32Attr:$k, MMALayoutAttr:$layoutA,
+             MMALayoutAttr:$layoutB, MMATypesAttr:$eltypeA,
+             MMATypesAttr:$eltypeB, Variadic<LLVM_Type>:$args)>{
   let summary = "Warp synchronous matrix-multiply accumulate using tensor cores.";
 
   let extraClassDeclaration =
@@ -593,7 +801,188 @@ def NVVM_WMMAMmaOp : NVVM_Op<"wmma.mma">,
   }];
 
   let assemblyFormat = "$args attr-dict `:` functional-type($args, $res)";
-  let verifier = [{ return ::verify(*this); }];
+  let hasVerifier = 1;
+}
+
+def NVVM_LdMatrixOp: NVVM_Op<"ldmatrix">,
+  Results<(outs AnyType:$res)>,
+  Arguments<(ins LLVM_AnyPointer: $ptr, I32Attr:$num, MMALayoutAttr:$layout)> {
+
+  let summary = "cooperative matrix load";
+
+  string llvmBuilder = [{
+      auto operands = moduleTranslation.lookupValues(opInst.getOperands());
+      auto intId = getLdMatrixIntrinsicId($layout, $num);
+      $res = createIntrinsicCall(builder, intId, operands, {operands[0]->getType()});
+  }];
+
+  string baseDescription = [{
+    The `nvvm.ldmatrix` operation collectively loads one or more matrices across
+    all threads in a warp from the location indicated by the address operand
+    `ptr` from shared memory.
+
+    The attribute `num` indicates how many 8x8 16-bit matrices are to be loaded.
+
+    All the threads in the warp must execute the same ldmatrix operations.
+
+    Each row of 8 elements needs to be consecutive in memory. Each lane of the
+    warp contains the start address of a row of 8 elements laid out as below:
+
+    ```
+    num | lane 0--7    | Threads 8--15  | Threads 16--31
+    1   | addr0--addr7 |                |
+    2   | addr0--addr7 | addr8--addr15  |
+    4   | addr0--addr7 | addr8--addr15  | addr16--addr31
+    ```
+
+    Example:
+    ```mlir
+    %l1 = nvvm.ldmatrix %ptr {num = 1 : i32, layout = #nvvm.mma_layout<row>} :
+      (!llvm.ptr<i32, 3>) -> i32
+    %l2 = nvvm.ldmatrix %ptr {num = 4 : i32, layout = #nvvm.mma_layout<row>} :
+      (!llvm.ptr<i32, 3>) -> !llvm.struct<(i32, i32, i32, i32)>
+    ```
+  }];
+
+  let assemblyFormat = "$ptr attr-dict `:` functional-type($ptr, $res)";
+  let hasVerifier = 1;
+}
+
+def NVVM_MmaOp : NVVM_Op<"mma.sync", [AttrSizedOperandSegments]> {
+
+  let summary = "cooperative matrix-multiply and accumulate";
+
+  let description = [{
+    The `nvvm.mma.sync` operation collectively performs the operation
+    `D = matmul(A, B) + C` using all threads in a warp.    
+
+    All the threads in the warp must execute the same `mma.sync` operation.
+
+    For each possible multiplicand PTX data type, there are one or more possible
+    instruction shapes given as "mMnNkK". The below table describes the posssibilities
+    as well as the types required for the operands. Note that the data type for 
+    C (the accumulator) and D (the result) can vary independently when there are 
+    multiple possibilities in the "C/D Type" column.
+
+    When an optional attribute cannot be immediately inferred from the types of
+    the operands and the result during parsing or validation, an error will be
+    raised.
+
+    `b1Op` is only relevant when the binary (b1) type is given to 
+    `multiplicandDataType`. It specifies how the multiply-and-acumulate is
+    performed and is either `xor_popc` or `and_poc`. The default is `xor_popc`.
+
+    `intOverflowBehavior` is only relevant when the `multiplicandType` attribute 
+    is one of `u8, s8, u4, s4`, this attribute describes how overflow is handled
+    in the accumulator. When the attribute is `satfinite`, the accumulator values
+    are clamped in the int32 range on overflow. This is the default behavior.
+    Alternatively, accumulator behavior `wrapped` can also be specified, in 
+    which case overflow wraps from one end of the range to the other.
+
+    `layoutA` and `layoutB` are required and should generally be set to 
+    `#nvvm.mma_layout<row>` and `#nvvm.mma_layout<col>` respectively, but other
+    combinations are possible for certain layouts according to the table below.
+
+    ```
+    | A/B Type | Shape     | ALayout | BLayout | A Type   | B Type   | C/D Type          |
+    |----------|-----------|---------|---------|----------|----------|-------------------|
+    | f64      | .m8n8k4   | row     | col     | 1x f64   | 1x f64   | 2x f64            |
+    | f16      | .m8n8k4   | row/col | row/col | 2x f16x2 | 2x f16x2 | 4x f16x2 or 8xf32 |
+    |          | .m16n8k8  | row     | col     | 2x f16x2 | 1x f16x2 | 2x f16x2 or 4 f32 |
+    |          | .m16n8k16 | row     | col     | 4x f16x2 | 2x f16x2 | 2x f16x2 or 4 f32 |
+    | bf16     | .m16n8k8  | row     | col     | 2x f16x2 | 1x f16x2 | 2x f16x2 or 4 f32 |
+    |          | .m16n8k16 | row     | col     | 4x f16x2 | 2x f16x2 | 2x f16x2 or 4 f32 |
+    | tf32     | .m16n8k4  | row     | col     | 2x i32   | 1x i32   | 4x f32            |
+    |          | .m16n8k8  | row     | col     | 4x i32   | 2x i32   | 2x f16x2 or 4 f32 |
+    | u8/s8    | .m8n8k16  | row     | col     | 1x i32   | 1x i32   | 2x i32            |
+    |          | .m16n8k16 | row     | col     | 2x i32   | 1x i32   | 4x i32            |
+    |          | .m16n8k32 | row     | col     | 4x i32   | 2x i32   | 4x i32            |
+    | u4/s4    | .m8n8k32  | row     | col     | 1x i32   | 1x i32   | 2x i32            |
+    |          | m16n8k32  | row     | col     | 2x i32   | 1x i32   | 4x i32            |
+    |          | m16n8k64  | row     | col     | 4x i32   | 2x i32   | 4x i32            |
+    | b1       | m8n8k128  | row     | col     | 1x i32   | 1x i32   | 2x i32            |
+    |          | m16n8k128 | row     | col     | 2x i32   | 1x i32   | 4x i32            |
+    ```
+
+
+    Example:
+    ```mlir
+
+    %128 = nvvm.mma.sync A[%120, %121, %122, %123]  
+                         B[%124, %125]  
+                         C[%126, %127]  
+                         {layoutA = #nvvm.mma_layout<row>, 
+                          layoutB = #nvvm.mma_layout<col>, 
+                          shape = {k = 16 : i32, m = 16 : i32, n = 8 : i32}} 
+        : (vector<2xf16>, vector<2xf16>, vector<2xf16>)
+           -> !llvm.struct<(vector<2xf16>, vector<2xf16>)>
+    ```
+  }];
+
+  let results = (outs LLVM_AnyStruct:$res);
+  let arguments = (ins NVVM_MMAShapeAttr:$shape,
+             OptionalAttr<MMAB1OpAttr>:$b1Op, 
+             OptionalAttr<MMAIntOverflowAttr>:$intOverflowBehavior,
+             MMALayoutAttr:$layoutA,
+             MMALayoutAttr:$layoutB,
+             OptionalAttr<MMATypesAttr>:$multiplicandAPtxType,
+             OptionalAttr<MMATypesAttr>:$multiplicandBPtxType,
+             Variadic<LLVM_Type>:$operandA,
+             Variadic<LLVM_Type>:$operandB,
+             Variadic<LLVM_Type>:$operandC); 
+
+  let extraClassDeclaration = !strconcat([{
+      static llvm::Intrinsic::ID getIntrinsicID(
+            int64_t m, int64_t n, uint64_t k,
+            llvm::Optional<MMAB1Op> b1Op, 
+            llvm::Optional<MMAIntOverflow> sat,
+            mlir::NVVM::MMALayout layoutAEnum, mlir::NVVM::MMALayout layoutBEnum,
+            mlir::NVVM::MMATypes eltypeAEnum, mlir::NVVM::MMATypes eltypeBEnum,
+            mlir::NVVM::MMATypes eltypeCEnum, mlir::NVVM::MMATypes eltypeDEnum) {
+        llvm::StringRef layoutA = stringifyEnum(layoutAEnum);
+        llvm::StringRef layoutB = stringifyEnum(layoutBEnum);
+        llvm::StringRef eltypeA = stringifyEnum(eltypeAEnum);
+        llvm::StringRef eltypeB = stringifyEnum(eltypeBEnum);
+        llvm::StringRef eltypeC = stringifyEnum(eltypeCEnum);
+        llvm::StringRef eltypeD = stringifyEnum(eltypeDEnum);
+        }],
+        MMA_SYNC_INTR<>.id, [{
+        return 0;
+      }
+
+      static Optional<mlir::NVVM::MMATypes> inferOperandMMAType(Type operandElType,
+        bool isAccumulator);
+
+      MMATypes accumPtxType();
+      MMATypes resultPtxType();
+    }]);
+
+  let builders = [
+      OpBuilder<(ins  "Type":$resultType, "ValueRange":$operandA, 
+        "ValueRange":$operandB, "ValueRange":$operandC,
+        "ArrayRef<int64_t>":$shape, "Optional<MMAB1Op>":$b1Op,
+        "Optional<MMAIntOverflow>":$intOverflow,
+        "Optional<std::array<MMATypes, 2>>":$multiplicandPtxTypes,
+        "Optional<std::array<MMALayout, 2>>":$multiplicandLayouts)>
+    ];
+
+  string llvmBuilder = [{
+    auto operands = moduleTranslation.lookupValues(opInst.getOperands());
+    auto intId = mlir::NVVM::MmaOp::getIntrinsicID(
+        $shape.m().getInt(), $shape.n().getInt(), $shape.k().getInt(), 
+        $b1Op, $intOverflowBehavior,
+        $layoutA, $layoutB,
+        $multiplicandAPtxType.getValue(), 
+        $multiplicandBPtxType.getValue(),
+        op.accumPtxType(), 
+        op.resultPtxType());
+
+    $res = createIntrinsicCall(
+      builder, intId, operands);
+  }];
+
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
 }
 
 #endif // NVVMIR_OPS

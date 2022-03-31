@@ -9,7 +9,7 @@ module attributes {
   gpu.module @kernels {
     gpu.func @kernel_add(%arg0 : memref<8xf32>, %arg1 : memref<8xf32>, %arg2 : memref<8xf32>)
       kernel attributes { spv.entry_point_abi = {local_size = dense<[1, 1, 1]>: vector<3xi32> }} {
-      %0 = "gpu.block_id"() {dimension = "x"} : () -> index
+      %0 = gpu.block_id x
       %1 = memref.load %arg0[%0] : memref<8xf32>
       %2 = memref.load %arg1[%0] : memref<8xf32>
       %3 = arith.addf %1, %2 : f32

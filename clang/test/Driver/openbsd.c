@@ -1,14 +1,10 @@
-// RUN: %clang -no-canonical-prefixes -target i686-pc-openbsd %s -### 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-LD %s
-// CHECK-LD: clang{{.*}}" "-cc1" "-triple" "i686-pc-openbsd"
-// CHECK-LD: ld{{.*}}" "-e" "__start" "--eh-frame-hdr" "-Bdynamic" "-dynamic-linker" "{{.*}}ld.so" "-o" "a.out" "{{.*}}crt0.o" "{{.*}}crtbegin.o" "{{.*}}.o" "-lcompiler_rt" "-lc" "-lcompiler_rt" "{{.*}}crtend.o"
-
 // Check for --eh-frame-hdr being passed with static linking
 // RUN: %clang -no-canonical-prefixes -target i686-pc-openbsd -static %s -### 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-STATIC-EH %s
 // CHECK-LD-STATIC-EH: clang{{.*}}" "-cc1" "-triple" "i686-pc-openbsd"
 // CHECK-LD-STATIC-EH: ld{{.*}}" "-e" "__start" "--eh-frame-hdr" "-Bstatic" "-o" "a.out" "{{.*}}rcrt0.o" "{{.*}}crtbegin.o" "{{.*}}.o" "-lcompiler_rt" "-lc" "-lcompiler_rt" "{{.*}}crtend.o"
 
+// Check for profiling variants of libraries when linking and -nopie
 // RUN: %clang -no-canonical-prefixes -target i686-pc-openbsd -pg -pthread %s -### 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PG %s
 // CHECK-PG: clang{{.*}}" "-cc1" "-triple" "i686-pc-openbsd"
@@ -40,8 +36,9 @@
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS64-LD %s
 // RUN: %clang -no-canonical-prefixes -target mips64el-unknown-openbsd %s -### 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS64EL-LD %s
-// CHECK-LD-R: clang{{.*}}" "-cc1" "-triple" "i686-pc-openbsd"
-// CHECK-LD-R: ld{{.*}}" "-e" "__start" "--eh-frame-hdr" "-Bdynamic" "-dynamic-linker" "{{.*}}ld.so" "-o" "a.out" "{{.*}}crt0.o" "{{.*}}crtbegin.o" "-L{{.*}}" "-r" "{{.*}}.o" "-lcompiler_rt" "-lc" "-lcompiler_rt" "{{.*}}crtend.o"
+// CHECK-LD-R:     "-r"
+// CHECK-LD-R-NOT: "-l
+// CHECK-LD-R-NOT: crt{{[^./]+}}.o
 // CHECK-LD-S: clang{{.*}}" "-cc1" "-triple" "i686-pc-openbsd"
 // CHECK-LD-S: ld{{.*}}" "-e" "__start" "--eh-frame-hdr" "-Bdynamic" "-dynamic-linker" "{{.*}}ld.so" "-o" "a.out" "{{.*}}crt0.o" "{{.*}}crtbegin.o" "-L{{.*}}" "-s" "{{.*}}.o" "-lcompiler_rt" "-lc" "-lcompiler_rt" "{{.*}}crtend.o"
 // CHECK-LD-T: clang{{.*}}" "-cc1" "-triple" "i686-pc-openbsd"
@@ -52,6 +49,12 @@
 // CHECK-MIPS64-LD: ld{{.*}}" "-EB" "-e" "__start" "--eh-frame-hdr" "-Bdynamic" "-dynamic-linker" "{{.*}}ld.so" "-o" "a.out" "{{.*}}crt0.o" "{{.*}}crtbegin.o" "-L{{.*}}" "{{.*}}.o" "-lcompiler_rt" "-lc" "-lcompiler_rt" "{{.*}}crtend.o"
 // CHECK-MIPS64EL-LD: clang{{.*}}" "-cc1" "-triple" "mips64el-unknown-openbsd"
 // CHECK-MIPS64EL-LD: ld{{.*}}" "-EL" "-e" "__start" "--eh-frame-hdr" "-Bdynamic" "-dynamic-linker" "{{.*}}ld.so" "-o" "a.out" "{{.*}}crt0.o" "{{.*}}crtbegin.o" "-L{{.*}}" "{{.*}}.o" "-lcompiler_rt" "-lc" "-lcompiler_rt" "{{.*}}crtend.o"
+
+// Check that --sysroot is passed to the linker
+// RUN: %clang -no-canonical-prefixes -target i686-pc-openbsd %s -### 2>&1 \
+// RUN:   --sysroot=%S/Inputs/basic_openbsd_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-LD-SYSROOT %s
+// CHECK-LD-SYSROOT: ld{{.*}}" "--sysroot=[[SYSROOT:[^"]+]]"
 
 // Check passing options to the assembler for various OpenBSD targets
 // RUN: %clang -target amd64-pc-openbsd -m32 -### -no-integrated-as -c %s 2>&1 \
@@ -78,11 +81,6 @@
 // CHECK-MIPS64-PIC: as{{.*}}" "-march" "mips3" "-mabi" "64" "-EB" "-KPIC"
 // CHECK-MIPS64EL: as{{.*}}" "-mabi" "64" "-EL"
 // CHECK-MIPS64EL-PIC: as{{.*}}" "-mabi" "64" "-EL" "-KPIC"
-
-// Check that the integrated assembler is enabled for SPARC
-// RUN: %clang -target sparc64-unknown-openbsd -### -c %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=CHECK-IAS %s
-// CHECK-IAS-NOT: "-no-integrated-as"
 
 // Check linking against correct startup code when (not) using PIE
 // RUN: %clang -no-canonical-prefixes -target i686-pc-openbsd %s -### 2>&1 \
@@ -120,3 +118,11 @@
 // RUN: %clang -target powerpc-unknown-openbsd -### -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-POWERPC-SECUREPLT %s
 // CHECK-POWERPC-SECUREPLT: "-target-feature" "+secure-plt"
+
+// Check that unwind tables are enabled
+// RUN: %clang -target arm-unknown-openbsd -### -S %s 2>&1 | \
+// RUN: FileCheck -check-prefix=NO-UNWIND-TABLES %s
+// RUN: %clang -target mips64-unknown-openbsd -### -S %s 2>&1 | \
+// RUN: FileCheck -check-prefix=UNWIND-TABLES %s
+// UNWIND-TABLES: "-funwind-tables=2"
+// NO-UNWIND-TABLES-NOT: "-funwind-tables=2"

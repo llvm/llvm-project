@@ -85,6 +85,47 @@ define amdgpu_kernel void @sext_i16_to_i64_divergent(i64 addrspace(1)* %out, i16
   ret void
 }
 
+define amdgpu_kernel void @sext_i32_to_i64_uniform(i64 addrspace(1)* %out, i32 %a, i64 %b) {
+; GCN-LABEL: sext_i32_to_i64_uniform:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_load_dword s6, s[0:1], 0xb
+; GCN-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xd
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; GCN-NEXT:    s_mov_b32 s3, 0xf000
+; GCN-NEXT:    s_mov_b32 s2, -1
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_ashr_i32 s7, s6, 31
+; GCN-NEXT:    s_add_u32 s4, s4, s6
+; GCN-NEXT:    s_addc_u32 s5, s5, s7
+; GCN-NEXT:    v_mov_b32_e32 v0, s4
+; GCN-NEXT:    v_mov_b32_e32 v1, s5
+; GCN-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
+; GCN-NEXT:    s_endpgm
+  %sext = sext i32 %a to i64
+  %res = add i64 %b, %sext
+  store i64 %res, i64 addrspace(1)* %out
+  ret void
+}
+
+define amdgpu_kernel void @sext_i32_to_i64_divergent(i64 addrspace(1)* %out, i32 %a, i64 %b) {
+; GCN-LABEL: sext_i32_to_i64_divergent:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_load_dword s4, s[0:1], 0xb
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; GCN-NEXT:    s_mov_b32 s3, 0xf000
+; GCN-NEXT:    s_mov_b32 s2, -1
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    v_add_i32_e32 v0, vcc, s4, v0
+; GCN-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; GCN-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
+; GCN-NEXT:    s_endpgm
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %divergent.a = add i32 %a, %tid
+  %sext = sext i32 %divergent.a to i64
+  store i64 %sext, i64 addrspace(1)* %out
+  ret void
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 
 attributes #0 = { nounwind }

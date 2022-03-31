@@ -5,7 +5,7 @@
 
 ;CHECK-SECTION: ProfileSummarySection - Offset: [[#]], Size: [[#]], Flags: {fs-discriminator}
 
-;CHECK: partition_pivot_last:88:1
+;CHECK: partition_pivot_last:507:1
 ;CHECK:  1: 4
 ;CHECK:  2: 4
 ;CHECK:  3: 4
@@ -22,7 +22,7 @@
 ;CHECK:  5.5120: 2
 ;CHECK:  6: 3
 ;CHECK:  7: 3
-;CHECK:  5: swap:18
+;CHECK:  5: swap:80
 ;CHECK:   1: 2
 ;CHECK:   1.1024: 2
 ;CHECK:   1.4096: 2
@@ -32,34 +32,13 @@
 ;CHECK:   3: 2
 ;CHECK:   3.512: 2
 ;CHECK:   3.3584: 2
-;CHECK:  6: swap:12
+;CHECK:   65532: 2
+;CHECK:  6: swap:51
 ;CHECK:   1.14336: 3
 ;CHECK:   2.7168: 3
 ;CHECK:   2.11776: 3
 ;CHECK:   3.13824: 3
-;CHECK: partition_pivot_first:41:1
-;CHECK:  0: 1
-;CHECK:  1: 1
-;CHECK:  2: 1
-;CHECK:  3: 1
-;CHECK:  3.1: 1
-;CHECK:  3.11265: 7
-;CHECK:  4: 7
-;CHECK:  4.1: 4
-;CHECK:  4.2: 2
-;CHECK:  4.3: 4
-;CHECK:  5: 1
-;CHECK:  6: 1
-;CHECK:  4.2: swap:6
-;CHECK:   1.7168: 2
-;CHECK:   2: 2
-;CHECK:   3.4608: 2
-;CHECK:  5: swap:4
-;CHECK:   1: 1
-;CHECK:   2.229376: 1
-;CHECK:   2.589824: 1
-;CHECK:   3: 1
-;CHECK: main:24:0
+;CHECK: main:369:0
 ;CHECK:  0: 0
 ;CHECK:  3: 0
 ;CHECK:  4.1: 1
@@ -74,7 +53,31 @@
 ;CHECK:  9: 1
 ;CHECK:  11: 0
 ;CHECK:  14: 0
-;CHECK: quick_sort:13:2
+;CHECK:  65499: 2
+;CHECK: partition_pivot_first:298:1
+;CHECK:  0: 1
+;CHECK:  1: 1
+;CHECK:  2: 1
+;CHECK:  3: 1
+;CHECK:  3.1: 1
+;CHECK:  3.11265: 7
+;CHECK:  4: 7
+;CHECK:  4.1: 4
+;CHECK:  4.2: 2
+;CHECK:  4.3: 4
+;CHECK:  5: 1
+;CHECK:  6: 1
+;CHECK:  65516: 1
+;CHECK:  4.2: swap:24
+;CHECK:   1.7168: 2
+;CHECK:   2: 2
+;CHECK:   3.4608: 2
+;CHECK:  5: swap:17
+;CHECK:   1: 1
+;CHECK:   2.229376: 1
+;CHECK:   2.589824: 1
+;CHECK:   3: 1
+;CHECK: quick_sort:122:2
 ;CHECK:  0: 2
 ;CHECK:  1: 2
 ;CHECK:  1.15360: 2
@@ -82,6 +85,7 @@
 ;CHECK:  3: 1 quick_sort:1
 ;CHECK:  4: 2
 ;CHECK:  6: 2
+;CHECK:  65507: 2
 
 
 ; original code:

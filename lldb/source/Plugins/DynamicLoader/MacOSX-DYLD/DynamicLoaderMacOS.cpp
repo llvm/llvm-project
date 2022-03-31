@@ -17,6 +17,7 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
 
@@ -155,7 +156,7 @@ void DynamicLoaderMacOS::ClearNotificationBreakpoint() {
 // (available on SnowLeopard only). If that fails, then check in the default
 // addresses.
 void DynamicLoaderMacOS::DoInitialImageFetch() {
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
+  Log *log = GetLog(LLDBLog::DynamicLoader);
 
   // Remove any binaries we pre-loaded in the Target before
   // launching/attaching. If the same binaries are present in the process,
@@ -298,10 +299,12 @@ bool DynamicLoaderMacOS::NotifyBreakpointHit(void *baton,
       }
     }
   } else {
-    process->GetTarget().GetDebugger().GetAsyncErrorStream()->Printf(
-        "No ABI plugin located for triple %s -- shared libraries will not be "
-        "registered!\n",
-        process->GetTarget().GetArchitecture().GetTriple().getTriple().c_str());
+    Target &target = process->GetTarget();
+    Debugger::ReportWarning(
+        "no ABI plugin located for triple " +
+            target.GetArchitecture().GetTriple().getTriple() +
+            ": shared libraries will not be registered",
+        target.GetDebugger().GetID());
   }
 
   // Return true to stop the target, false to just let the target run
@@ -310,7 +313,7 @@ bool DynamicLoaderMacOS::NotifyBreakpointHit(void *baton,
 
 void DynamicLoaderMacOS::AddBinaries(
     const std::vector<lldb::addr_t> &load_addresses) {
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
+  Log *log = GetLog(LLDBLog::DynamicLoader);
   ImageInfo::collection image_infos;
 
   LLDB_LOGF(log, "Adding %" PRId64 " modules.",

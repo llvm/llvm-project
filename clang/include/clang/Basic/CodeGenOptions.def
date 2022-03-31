@@ -107,6 +107,8 @@ CODEGENOPT(CFProtectionReturn , 1, 0) ///< if -fcf-protection is
                                       ///< set to full or return.
 CODEGENOPT(CFProtectionBranch , 1, 0) ///< if -fcf-protection is
                                       ///< set to full or branch.
+CODEGENOPT(IBTSeal, 1, 0)             ///< set to optimize CFProtectionBranch.
+
 CODEGENOPT(XRayInstrumentFunctions , 1, 0) ///< Set when -fxray-instrument is
                                            ///< enabled.
 CODEGENOPT(StackSizeSection  , 1, 0) ///< Set when -fstack-size-section is enabled.
@@ -139,6 +141,10 @@ VALUE_CODEGENOPT(XRaySelectedFunctionGroup, 32, 0)
 VALUE_CODEGENOPT(PatchableFunctionEntryCount , 32, 0) ///< Number of NOPs at function entry
 VALUE_CODEGENOPT(PatchableFunctionEntryOffset , 32, 0)
 
+CODEGENOPT(HotPatch, 1, 0) ///< Supports the Microsoft /HOTPATCH flag and
+                           ///< generates a 'patchable-function' attribute.
+
+CODEGENOPT(JMCInstrument, 1, 0) ///< Set when -fjmc is enabled.
 CODEGENOPT(InstrumentForProfiling , 1, 0) ///< Set when -pg is enabled.
 CODEGENOPT(CallFEntry , 1, 0) ///< Set when -mfentry is enabled.
 CODEGENOPT(MNopMCount , 1, 0) ///< Set when -mnop-mcount is enabled.
@@ -231,6 +237,9 @@ CODEGENOPT(SanitizeMemoryTrackOrigins, 2, 0) ///< Enable tracking origins in
 ENUM_CODEGENOPT(SanitizeAddressDtor, llvm::AsanDtorKind, 2,
                 llvm::AsanDtorKind::Global)  ///< Set how ASan global
                                              ///< destructors are emitted.
+CODEGENOPT(SanitizeMemoryParamRetval, 1, 0) ///< Enable detection of uninitialized
+                                            ///< parameters and return values
+                                            ///< in MemorySanitizer
 CODEGENOPT(SanitizeMemoryUseAfterDtor, 1, 0) ///< Enable use-after-delete detection
                                              ///< in MemorySanitizer
 CODEGENOPT(SanitizeCfiCrossDso, 1, 0) ///< Enable cross-dso support in CFI.
@@ -368,9 +377,6 @@ ENUM_CODEGENOPT(DebuggerTuning, llvm::DebuggerKind, 3,
 /// emitted.
 VALUE_CODEGENOPT(DwarfVersion, 3, 0)
 
-/// Whether to use experimental new variable location tracking.
-CODEGENOPT(ValueTrackingVariableLocations, 1, 0)
-
 /// Whether we should emit CodeView debug information. It's possible to emit
 /// CodeView and DWARF into the same object.
 CODEGENOPT(EmitCodeView, 1, 0)
@@ -458,6 +464,10 @@ ENUM_CODEGENOPT(SwiftAsyncFramePointer, SwiftAsyncFramePointerKind, 2,
 
 /// Whether to skip RAX setup when passing variable arguments (x86 only).
 CODEGENOPT(SkipRaxSetup, 1, 0)
+
+/// Whether to zero out caller-used registers before returning.
+ENUM_CODEGENOPT(ZeroCallUsedRegs, llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind,
+                5, llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::Skip)
 
 #undef CODEGENOPT
 #undef ENUM_CODEGENOPT

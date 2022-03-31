@@ -38,15 +38,16 @@ struct suspend_always;
 
  */
 
+#include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <__coroutine/coroutine_handle.h>
-#include <__coroutine/noop_coroutine_handle.h>
 #include <__coroutine/coroutine_traits.h>
+#include <__coroutine/noop_coroutine_handle.h>
 #include <__coroutine/trivial_awaitables.h>
 #include <version>
 
 #ifndef _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 #endif // _LIBCPP_COROUTINE

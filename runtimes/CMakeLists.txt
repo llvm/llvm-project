@@ -28,13 +28,19 @@ endfunction()
 find_package(LLVM PATHS "${LLVM_BINARY_DIR}" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
 find_package(Clang PATHS "${LLVM_BINARY_DIR}" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
 
+set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
+
 # Add path for custom and the LLVM build's modules to the CMake module path.
 list(INSERT CMAKE_MODULE_PATH 0
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
+  "${LLVM_COMMON_CMAKE_UTILS}"
+  "${LLVM_COMMON_CMAKE_UTILS}/Modules"
   "${CMAKE_CURRENT_SOURCE_DIR}/../llvm/cmake"
   "${CMAKE_CURRENT_SOURCE_DIR}/../llvm/cmake/modules"
 )
+
+set(LLVM_THIRD_PARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../third-party")
 
 function(get_compiler_rt_path path)
   foreach(entry ${runtimes})
@@ -82,14 +88,29 @@ set(LLVM_CMAKE_DIR ${LLVM_MAIN_SRC_DIR}/cmake/modules)
 set(LLVM_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../llvm)
 
 include(CheckLibraryExists)
+include(LLVMCheckCompilerLinkerFlag)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
+
+
+check_c_compiler_flag("" LLVM_RUNTIMES_LINKING_WORKS)
+if (NOT LLVM_RUNTIMES_LINKING_WORKS)
+  # The compiler driver may be implicitly trying to link against libunwind,
+  # which might not work if libunwind doesn't exist yet. Try to check if
+  # --unwindlib=none is supported, and use that if possible.
+  # Don't add this if not necessary to fix linking, as it can break using
+  # e.g. ASAN/TSAN.
+  llvm_check_compiler_linker_flag(C "--unwindlib=none" LLVM_RUNTIMES_SUPPORT_UNWINDLIB_NONE_FLAG)
+  if (LLVM_RUNTIMES_SUPPORT_UNWINDLIB_NONE_FLAG)
+    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} --unwindlib=none")
+  endif()
+endif()
 
 # Disable use of the installed C++ standard library when building runtimes.
 # Check for -nostdlib++ first; if there's no C++ standard library yet,
 # all check_cxx_compiler_flag commands will fail until we add -nostdlib++
 # (or -nodefaultlibs).
-check_c_compiler_flag(-nostdlib++ LLVM_RUNTIMES_SUPPORT_NOSTDLIBXX_FLAG)
+llvm_check_compiler_linker_flag(C "-nostdlib++" LLVM_RUNTIMES_SUPPORT_NOSTDLIBXX_FLAG)
 if (LLVM_RUNTIMES_SUPPORT_NOSTDLIBXX_FLAG)
   set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdlib++")
 endif()
@@ -157,6 +178,23 @@ if(LLVM_INCLUDE_TESTS)
   set(LLVM_LIT_ARGS "${LIT_ARGS_DEFAULT}" CACHE STRING "Default options for lit")
 endif()
 
+# llvm-libgcc incorporates both compiler-rt and libunwind as subprojects with very
+# specific flags, which causes clashes when they're independently built too.
+if("llvm-libgcc" IN_LIST runtimes)
+  if("compiler-rt" IN_LIST runtimes OR "compiler-rt" IN_LIST LLVM_ENABLE_PROJECTS)
+    message(FATAL_ERROR
+      "Attempting to build both compiler-rt and llvm-libgcc will cause irreconcilable "
+      "target clashes. Please choose one or the other, but not both.")
+  endif()
+
+  if("libunwind" IN_LIST runtimes)
+    message(
+      FATAL_ERROR
+      "Attempting to build both libunwind and llvm-libgcc will cause irreconcilable "
+      "target clashes. Please choose one or the other, but not both.")
+  endif()
+endif()
+
 # We do this in two loops so that HAVE_* is set for each runtime before the
 # other runtimes are added.
 foreach(entry ${runtimes})
@@ -199,6 +237,16 @@ if(LLVM_INCLUDE_TESTS)
     # invocation already generated the llvm-lit script.
     add_subdirectory(${LLVM_MAIN_SRC_DIR}/utils/llvm-lit
                      ${CMAKE_CURRENT_BINARY_DIR}/llvm-lit)
+  endif()
+
+  if(LLVM_RUNTIMES_TARGET)
+    configure_file(
+      ${CMAKE_CURRENT_SOURCE_DIR}/Tests.cmake.in
+      ${LLVM_BINARY_DIR}/runtimes/${LLVM_RUNTIMES_TARGET}/Tests.cmake)
+  else()
+    configure_file(
+      ${CMAKE_CURRENT_SOURCE_DIR}/Tests.cmake.in
+      ${LLVM_BINARY_DIR}/runtimes/Tests.cmake)
   endif()
 endif()
 

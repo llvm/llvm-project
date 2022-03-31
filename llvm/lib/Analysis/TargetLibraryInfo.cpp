@@ -238,9 +238,8 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     // e.g., x86_64-pc-windows-msvc18.
     bool hasPartialC99 = true;
     if (T.isKnownWindowsMSVCEnvironment()) {
-      unsigned Major, Minor, Micro;
-      T.getEnvironmentVersion(Major, Minor, Micro);
-      hasPartialC99 = (Major == 0 || Major >= 19);
+      VersionTuple Version = T.getEnvironmentVersion();
+      hasPartialC99 = (Version.getMajor() == 0 || Version.getMajor() >= 19);
     }
 
     // Latest targets support C89 math functions, in part.
@@ -1111,9 +1110,11 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
   case LibFunc_system:
     return (NumParams == 1 && FTy.getParamType(0)->isPointerTy());
   case LibFunc___kmpc_alloc_shared:
+    return NumParams == 1 && FTy.getReturnType()->isPointerTy();
   case LibFunc_malloc:
   case LibFunc_vec_malloc:
-    return (NumParams == 1 && FTy.getReturnType()->isPointerTy());
+    return NumParams == 1 && FTy.getParamType(0)->isIntegerTy(SizeTBits) &&
+           FTy.getReturnType()->isPointerTy();
   case LibFunc_memcmp:
     return NumParams == 3 && FTy.getReturnType()->isIntegerTy(32) &&
            FTy.getParamType(0)->isPointerTy() &&

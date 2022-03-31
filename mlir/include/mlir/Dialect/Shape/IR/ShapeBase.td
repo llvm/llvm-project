@@ -39,7 +39,7 @@ def ShapeDialect : Dialect {
 
   let hasConstantMaterializer = 1;
   let hasOperationAttrVerify = 1;
-  let emitAccessorPrefix = kEmitAccessorPrefix_Both;
+  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 
 def Shape_ShapeType : DialectType<ShapeDialect,

@@ -14,9 +14,9 @@
 #define LLVM_CODEGEN_MACHINEBASICBLOCK_H
 
 #include "llvm/ADT/GraphTraits.h"
+#include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/ADT/SparseBitVector.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBundleIterator.h"
 #include "llvm/IR/DebugLoc.h"
@@ -24,7 +24,6 @@
 #include "llvm/Support/BranchProbability.h"
 #include <cassert>
 #include <cstdint>
-#include <functional>
 #include <iterator>
 #include <string>
 #include <vector>
@@ -110,10 +109,10 @@ public:
 private:
   using Instructions = ilist<MachineInstr, ilist_sentinel_tracking<true>>;
 
-  Instructions Insts;
   const BasicBlock *BB;
   int Number;
   MachineFunction *xParent;
+  Instructions Insts;
 
   /// Keep track of the predecessor / successor basic blocks.
   std::vector<MachineBasicBlock *> Predecessors;
@@ -136,6 +135,10 @@ private:
   /// Alignment of the basic block. One if the basic block does not need to be
   /// aligned.
   Align Alignment;
+  /// Maximum amount of bytes that can be added to align the basic block. If the
+  /// alignment cannot be reached in this many bytes, no bytes are emitted.
+  /// Zero to represent no maximum.
+  unsigned MaxBytesForAlignment = 0;
 
   /// Indicate that this basic block is entered via an exception handler.
   bool IsEHPad = false;
@@ -520,6 +523,19 @@ public:
 
   /// Set alignment of the basic block.
   void setAlignment(Align A) { Alignment = A; }
+
+  void setAlignment(Align A, unsigned MaxBytes) {
+    setAlignment(A);
+    setMaxBytesForAlignment(MaxBytes);
+  }
+
+  /// Return the maximum amount of padding allowed for aligning the basic block.
+  unsigned getMaxBytesForAlignment() const { return MaxBytesForAlignment; }
+
+  /// Set the maximum amount of padding allowed for aligning the basic block
+  void setMaxBytesForAlignment(unsigned MaxBytes) {
+    MaxBytesForAlignment = MaxBytes;
+  }
 
   /// Returns true if the block is a landing pad. That is this basic block is
   /// entered via an exception handler.

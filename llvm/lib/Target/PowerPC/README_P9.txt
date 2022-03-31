@@ -579,11 +579,6 @@ Atomic operations (l[dw]at, st[dw]at):
 - Provide builtins since not all FC's necessarily have an existing LLVM
   atomic operation
 
-Load Doubleword Monitored (ldmx):
-- Investigate whether there are any uses for this. It seems to be related to
-  Garbage Collection so it isn't likely to be all that useful for most
-  languages we deal with.
-
 Move to CR from XER Extended (mcrxrx):
 - Is there a use for this in LLVM?
 

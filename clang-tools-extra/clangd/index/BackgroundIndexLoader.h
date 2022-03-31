@@ -12,11 +12,6 @@
 #include "index/Background.h"
 #include "support/Path.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
-#include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/VirtualFileSystem.h"
 #include <memory>
 #include <vector>
 

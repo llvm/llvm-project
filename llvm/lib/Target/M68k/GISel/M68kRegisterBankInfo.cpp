@@ -1,4 +1,4 @@
-//===-- M68kRegisterBankInfo.cpp -------------------------------*- C++ -*-===//
+//===-- M68kRegisterBankInfo.cpp --------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,9 +13,9 @@
 #include "M68kRegisterBankInfo.h"
 #include "M68kInstrInfo.h" // For the register classes
 #include "M68kSubtarget.h"
-#include "llvm/CodeGen/GlobalISel/RegisterBank.h"
-#include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterBank.h"
+#include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 
 #define GET_TARGET_REGBANK_IMPL

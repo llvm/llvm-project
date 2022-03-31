@@ -21,7 +21,7 @@
 namespace llvm {
 class DefInit;
 class Record;
-} // end namespace llvm
+} // namespace llvm
 
 namespace mlir {
 namespace tblgen {
@@ -241,7 +241,7 @@ public:
 // Name of infer type op interface.
 extern const char *inferTypeOpInterface;
 
-} // end namespace tblgen
-} // end namespace mlir
+} // namespace tblgen
+} // namespace mlir
 
 #endif // MLIR_TABLEGEN_ATTRIBUTE_H_

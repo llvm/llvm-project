@@ -1494,30 +1494,29 @@ int nc = (int)objc_getClassList(baton.classes, sizeof(baton.classes)/sizeof(Clas
 if __name__ == '__main__':
     lldb.debugger = lldb.SBDebugger.Create()
 
-# Make the options so we can generate the help text for the new LLDB
-# command line command prior to registering it with LLDB below. This way
-# if clients in LLDB type "help malloc_info", they will see the exact same
-# output as typing "malloc_info --help".
-ptr_refs.__doc__ = get_ptr_refs_options().format_help()
-cstr_refs.__doc__ = get_cstr_refs_options().format_help()
-malloc_info.__doc__ = get_malloc_info_options().format_help()
-objc_refs.__doc__ = get_objc_refs_options().format_help()
-lldb.debugger.HandleCommand(
-    'command script add -f %s.ptr_refs ptr_refs' %
-    __name__)
-lldb.debugger.HandleCommand(
-    'command script add -f %s.cstr_refs cstr_refs' %
-    __name__)
-lldb.debugger.HandleCommand(
-    'command script add -f %s.malloc_info malloc_info' %
-    __name__)
-lldb.debugger.HandleCommand(
-    'command script add -f %s.find_variable find_variable' %
-    __name__)
-# lldb.debugger.HandleCommand('command script add -f %s.heap heap' % package_name)
-# lldb.debugger.HandleCommand('command script add -f %s.section_ptr_refs section_ptr_refs' % package_name)
-# lldb.debugger.HandleCommand('command script add -f %s.stack_ptr_refs stack_ptr_refs' % package_name)
-lldb.debugger.HandleCommand(
-    'command script add -f %s.objc_refs objc_refs' %
-    __name__)
-print('"malloc_info", "ptr_refs", "cstr_refs", "find_variable", and "objc_refs" commands have been installed, use the "--help" options on these commands for detailed help.')
+def __lldb_init_module(debugger, internal_dict):
+    # Make the options so we can generate the help text for the new LLDB
+    # command line command prior to registering it with LLDB below. This way
+    # if clients in LLDB type "help malloc_info", they will see the exact same
+    # output as typing "malloc_info --help".
+    ptr_refs.__doc__ = get_ptr_refs_options().format_help()
+    cstr_refs.__doc__ = get_cstr_refs_options().format_help()
+    malloc_info.__doc__ = get_malloc_info_options().format_help()
+    objc_refs.__doc__ = get_objc_refs_options().format_help()
+    debugger.HandleCommand(
+        'command script add -f %s.ptr_refs ptr_refs' %
+        __name__)
+    debugger.HandleCommand(
+        'command script add -f %s.cstr_refs cstr_refs' %
+        __name__)
+    debugger.HandleCommand(
+        'command script add -f %s.malloc_info malloc_info' %
+        __name__)
+    debugger.HandleCommand(
+        'command script add -f %s.find_variable find_variable' %
+        __name__)
+    # debugger.HandleCommand('command script add -f %s.section_ptr_refs section_ptr_refs' % package_name)
+    debugger.HandleCommand(
+        'command script add -f %s.objc_refs objc_refs' %
+        __name__)
+    print('"malloc_info", "ptr_refs", "cstr_refs", "find_variable", and "objc_refs" commands have been installed, use the "--help" options on these commands for detailed help.')

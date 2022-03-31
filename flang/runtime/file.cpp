@@ -45,8 +45,8 @@ static int openfile_mkstemp(IoErrorHandler &handler) {
   if (::GetTempFileNameA(tempDirName, "Fortran", uUnique, tempFileName) == 0) {
     return -1;
   }
-  int fd{::_open(
-      tempFileName, _O_CREAT | _O_TEMPORARY | _O_RDWR, _S_IREAD | _S_IWRITE)};
+  int fd{::_open(tempFileName, _O_CREAT | _O_BINARY | _O_TEMPORARY | _O_RDWR,
+      _S_IREAD | _S_IWRITE)};
 #else
   char path[]{"/tmp/Fortran-Scratch-XXXXXX"};
   int fd{::mkstemp(path)};
@@ -82,6 +82,12 @@ void OpenFile::Open(OpenStatus status, std::optional<Action> action,
       return;
     }
     int flags{0};
+#ifdef _WIN32
+    // We emit explicit CR+LF line endings and cope with them on input
+    // for formatted files, since we can't yet always know now at OPEN
+    // time whether the file is formatted or not.
+    flags |= O_BINARY;
+#endif
     if (status != OpenStatus::Old) {
       flags |= O_CREAT;
     }
@@ -154,10 +160,12 @@ void OpenFile::Predefine(int fd) {
   mayRead_ = fd == 0;
   mayWrite_ = fd != 0;
   mayPosition_ = false;
+#ifdef _WIN32
+  isWindowsTextFile_ = true;
+#endif
 }
 
 void OpenFile::Close(CloseStatus status, IoErrorHandler &handler) {
-  CheckOpen(handler);
   pending_.reset();
   knownSize_.reset();
   switch (status) {

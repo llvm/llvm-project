@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeViewDebug.h"
-#include "DwarfExpression.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
@@ -29,7 +28,6 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
-#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -41,7 +39,6 @@
 #include "llvm/DebugInfo/CodeView/EnumTables.h"
 #include "llvm/DebugInfo/CodeView/Line.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
-#include "llvm/DebugInfo/CodeView/TypeDumpVisitor.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeTableCollection.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbackPipeline.h"
@@ -58,16 +55,14 @@
 #include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/Support/BinaryByteStream.h"
-#include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/BinaryStreamWriter.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Program.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
@@ -514,7 +509,7 @@ void CodeViewDebug::maybeRecordLocation(const DebugLoc &DL,
   if (!DL || DL == PrevInstLoc)
     return;
 
-  const DIScope *Scope = DL.get()->getScope();
+  const DIScope *Scope = DL->getScope();
   if (!Scope)
     return;
 
@@ -600,6 +595,8 @@ static SourceLanguage MapDWLangToCVLang(unsigned DWLang) {
     return SourceLanguage::D;
   case dwarf::DW_LANG_Swift:
     return SourceLanguage::Swift;
+  case dwarf::DW_LANG_Rust:
+    return SourceLanguage::Rust;
   default:
     // There's no CodeView representation for this language, and CV doesn't
     // have an "unknown" option for the language field, so we'll use MASM,
@@ -611,8 +608,8 @@ static SourceLanguage MapDWLangToCVLang(unsigned DWLang) {
 void CodeViewDebug::beginModule(Module *M) {
   // If module doesn't have named metadata anchors or COFF debug section
   // is not available, skip any debug info related stuff.
-  if (!M->getNamedMetadata("llvm.dbg.cu") ||
-      !Asm->getObjFileLowering().getCOFFDebugSymbolsSection()) {
+  NamedMDNode *CUs = M->getNamedMetadata("llvm.dbg.cu");
+  if (!CUs || !Asm->getObjFileLowering().getCOFFDebugSymbolsSection()) {
     Asm = nullptr;
     return;
   }
@@ -622,7 +619,6 @@ void CodeViewDebug::beginModule(Module *M) {
   TheCPU = mapArchToCVCPUType(Triple(M->getTargetTriple()).getArch());
 
   // Get the current source language.
-  NamedMDNode *CUs = MMI->getModule()->getNamedMetadata("llvm.dbg.cu");
   const MDNode *Node = *CUs->operands().begin();
   const auto *CU = cast<DICompileUnit>(Node);
 
@@ -650,6 +646,7 @@ void CodeViewDebug::endModule() {
   switchToDebugSectionForSymbol(nullptr);
 
   MCSymbol *CompilerInfo = beginCVSubsection(DebugSubsectionKind::Symbols);
+  emitObjName();
   emitCompilerInformation();
   endCVSubsection(CompilerInfo);
 
@@ -785,6 +782,29 @@ void CodeViewDebug::emitTypeGlobalHashes() {
   }
 }
 
+void CodeViewDebug::emitObjName() {
+  MCSymbol *CompilerEnd = beginSymbolRecord(SymbolKind::S_OBJNAME);
+
+  StringRef PathRef(Asm->TM.Options.ObjectFilenameForDebug);
+  llvm::SmallString<256> PathStore(PathRef);
+
+  if (PathRef.empty() || PathRef == "-") {
+    // Don't emit the filename if we're writing to stdout or to /dev/null.
+    PathRef = {};
+  } else {
+    llvm::sys::path::remove_dots(PathStore, /*remove_dot_dot=*/true);
+    PathRef = PathStore;
+  }
+
+  OS.AddComment("Signature");
+  OS.emitIntValue(0, 4);
+
+  OS.AddComment("Object name");
+  emitNullTerminatedSymbolName(OS, PathRef);
+
+  endSymbolRecord(CompilerEnd);
+}
+
 namespace {
 struct Version {
   int Part[4];
@@ -800,6 +820,8 @@ static Version parseVersion(StringRef Name) {
     if (isdigit(C)) {
       V.Part[N] *= 10;
       V.Part[N] += C - '0';
+      V.Part[N] =
+          std::min<int>(V.Part[N], std::numeric_limits<uint16_t>::max());
     } else if (C == '.') {
       ++N;
       if (N >= 4)
@@ -820,6 +842,12 @@ void CodeViewDebug::emitCompilerInformation() {
   if (MMI->getModule()->getProfileSummary(/*IsCS*/ false) != nullptr) {
     Flags |= static_cast<uint32_t>(CompileSym3Flags::PGO);
   }
+  using ArchType = llvm::Triple::ArchType;
+  ArchType Arch = Triple(MMI->getModule()->getTargetTriple()).getArch();
+  if (Asm->TM.Options.Hotpatch || Arch == ArchType::thumb ||
+      Arch == ArchType::aarch64) {
+    Flags |= static_cast<uint32_t>(CompileSym3Flags::HotPatch);
+  }
 
   OS.AddComment("Flags and language");
   OS.emitInt32(Flags);
@@ -834,8 +862,9 @@ void CodeViewDebug::emitCompilerInformation() {
   StringRef CompilerVersion = CU->getProducer();
   Version FrontVer = parseVersion(CompilerVersion);
   OS.AddComment("Frontend version");
-  for (int N : FrontVer.Part)
+  for (int N : FrontVer.Part) {
     OS.emitInt16(N);
+  }
 
   // Some Microsoft tools, like Binscope, expect a backend version number of at
   // least 8.something, so we'll coerce the LLVM version into a form that
@@ -862,6 +891,34 @@ static TypeIndex getStringIdTypeIdx(GlobalTypeTableBuilder &TypeTable,
   return TypeTable.writeLeafType(SIR);
 }
 
+static std::string flattenCommandLine(ArrayRef<std::string> Args,
+                                      StringRef MainFilename) {
+  std::string FlatCmdLine;
+  raw_string_ostream OS(FlatCmdLine);
+  bool PrintedOneArg = false;
+  if (!StringRef(Args[0]).contains("-cc1")) {
+    llvm::sys::printArg(OS, "-cc1", /*Quote=*/true);
+    PrintedOneArg = true;
+  }
+  for (unsigned i = 0; i < Args.size(); i++) {
+    StringRef Arg = Args[i];
+    if (Arg.empty())
+      continue;
+    if (Arg == "-main-file-name" || Arg == "-o") {
+      i++; // Skip this argument and next one.
+      continue;
+    }
+    if (Arg.startswith("-object-file-name") || Arg == MainFilename)
+      continue;
+    if (PrintedOneArg)
+      OS << " ";
+    llvm::sys::printArg(OS, Arg, /*Quote=*/true);
+    PrintedOneArg = true;
+  }
+  OS.flush();
+  return FlatCmdLine;
+}
+
 void CodeViewDebug::emitBuildInfo() {
   // First, make LF_BUILDINFO. It's a sequence of strings with various bits of
   // build info. The known prefix is:
@@ -882,8 +939,16 @@ void CodeViewDebug::emitBuildInfo() {
       getStringIdTypeIdx(TypeTable, MainSourceFile->getDirectory());
   BuildInfoArgs[BuildInfoRecord::SourceFile] =
       getStringIdTypeIdx(TypeTable, MainSourceFile->getFilename());
-  // FIXME: Path to compiler and command line. PDB is intentionally blank unless
-  // we implement /Zi type servers.
+  // FIXME: PDB is intentionally blank unless we implement /Zi type servers.
+  BuildInfoArgs[BuildInfoRecord::TypeServerPDB] =
+      getStringIdTypeIdx(TypeTable, "");
+  if (Asm->TM.Options.MCOptions.Argv0 != nullptr) {
+    BuildInfoArgs[BuildInfoRecord::BuildTool] =
+        getStringIdTypeIdx(TypeTable, Asm->TM.Options.MCOptions.Argv0);
+    BuildInfoArgs[BuildInfoRecord::CommandLine] = getStringIdTypeIdx(
+        TypeTable, flattenCommandLine(Asm->TM.Options.MCOptions.CommandLineArgs,
+                                      MainSourceFile->getFilename()));
+  }
   BuildInfoRecord BIR(BuildInfoArgs);
   TypeIndex BuildInfoIndex = TypeTable.writeLeafType(BIR);
 
@@ -1755,6 +1820,7 @@ TypeIndex CodeViewDebug::lowerTypeBasic(const DIBasicType *Ty) {
     break;
   case dwarf::DW_ATE_UTF:
     switch (ByteSize) {
+    case 1: STK = SimpleTypeKind::Character8; break;
     case 2: STK = SimpleTypeKind::Character16; break;
     case 4: STK = SimpleTypeKind::Character32; break;
     }

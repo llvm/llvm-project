@@ -15,7 +15,7 @@ contains
  end function
 end module
 
-! RUN: %flang_fc1 -fsyntax-only -fget-symbols-sources %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -fget-symbols-sources %s 2>&1 | FileCheck %s
 ! CHECK-COUNT-1:f:{{.*}}getsymbols01.f90, 12, 26-27
 ! CHECK-COUNT-1:mm1:{{.*}}getsymbols01.f90, 2, 8-11
 ! CHECK-COUNT-1:s:{{.*}}getsymbols01.f90, 5, 18-19

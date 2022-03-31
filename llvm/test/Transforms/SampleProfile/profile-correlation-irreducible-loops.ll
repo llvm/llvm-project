@@ -1,5 +1,5 @@
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profile-correlation-irreducible-loops.prof | opt -passes='print<block-freq>' -disable-output  -use-iterative-bfi-inference 2>&1 | FileCheck %s
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profile-correlation-irreducible-loops.prof -S | FileCheck %s --check-prefix=CHECK2
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profile-correlation-irreducible-loops.prof -sample-profile-use-profi=0 | opt -passes='print<block-freq>' -disable-output  -use-iterative-bfi-inference 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profile-correlation-irreducible-loops.prof -sample-profile-use-profi=0 -S | FileCheck %s --check-prefix=CHECK2
 ; RUN: opt < %s -passes='print<block-freq>' -use-iterative-bfi-inference -disable-output 2>&1 | FileCheck %s --check-prefix=CHECK3
 
 ; The C++ code for this test case is from c-parse.c in 403.gcc (SPEC2006)

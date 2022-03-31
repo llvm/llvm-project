@@ -265,7 +265,7 @@ public:
 
   bool MightBeParameterized() const;
   bool IsForwardReferenced() const;
-  bool HasDefaultInitialization() const;
+  bool HasDefaultInitialization(bool ignoreAllocatable = false) const;
   bool HasDestruction() const;
   bool HasFinalization() const;
 
@@ -293,7 +293,6 @@ public:
       return nullptr;
     }
   }
-  bool MightBeAssignmentCompatibleWith(const DerivedTypeSpec &) const;
   bool operator==(const DerivedTypeSpec &that) const {
     return RawEquals(that) && parameters_ == that.parameters_;
   }

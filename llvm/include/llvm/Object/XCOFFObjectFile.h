@@ -60,10 +60,13 @@ public:
     return static_cast<const T *>(this)->FlagAndTDataAlignment &
            AuxiHeaderFlagMask;
   }
+
   uint8_t getTDataAlignment() const {
     return static_cast<const T *>(this)->FlagAndTDataAlignment &
            AuxiHeaderTDataAlignmentMask;
   }
+
+  uint16_t getVersion() const { return static_cast<const T *>(this)->Version; }
 };
 
 struct XCOFFAuxiliaryHeader32 : XCOFFAuxiliaryHeader<XCOFFAuxiliaryHeader32> {
@@ -113,7 +116,7 @@ struct XCOFFAuxiliaryHeader32 : XCOFFAuxiliaryHeader<XCOFFAuxiliaryHeader32> {
   support::ubig16_t SecNumOfTBSS;
 };
 
-struct XCOFFAuxiliaryHeader64 : XCOFFAuxiliaryHeader<XCOFFAuxiliaryHeader32> {
+struct XCOFFAuxiliaryHeader64 : XCOFFAuxiliaryHeader<XCOFFAuxiliaryHeader64> {
   support::ubig16_t AuxMagic;
   support::ubig16_t Version;
   support::ubig32_t ReservedForDebugger;
@@ -348,6 +351,57 @@ struct XCOFFSectAuxEntForStat {
   uint8_t Pad[10];
 }; // 32-bit XCOFF file only.
 
+struct XCOFFFunctionAuxEnt32 {
+  support::ubig32_t OffsetToExceptionTbl;
+  support::ubig32_t SizeOfFunction;
+  support::ubig32_t PtrToLineNum;
+  support::big32_t SymIdxOfNextBeyond;
+  uint8_t Pad[2];
+};
+
+struct XCOFFFunctionAuxEnt64 {
+  support::ubig64_t PtrToLineNum;
+  support::ubig32_t SizeOfFunction;
+  support::big32_t SymIdxOfNextBeyond;
+  uint8_t Pad;
+  XCOFF::SymbolAuxType AuxType; // Contains _AUX_FCN; Type of auxiliary entry
+};
+
+struct XCOFFExceptionAuxEnt {
+  support::ubig64_t OffsetToExceptionTbl;
+  support::ubig32_t SizeOfFunction;
+  support::big32_t SymIdxOfNextBeyond;
+  uint8_t Pad;
+  XCOFF::SymbolAuxType AuxType; // Contains _AUX_EXCEPT; Type of auxiliary entry
+};
+
+struct XCOFFBlockAuxEnt32 {
+  uint8_t ReservedZeros1[2];
+  support::ubig16_t LineNumHi;
+  support::ubig16_t LineNumLo;
+  uint8_t ReservedZeros2[12];
+};
+
+struct XCOFFBlockAuxEnt64 {
+  support::ubig32_t LineNum;
+  uint8_t Pad[13];
+  XCOFF::SymbolAuxType AuxType; // Contains _AUX_SYM; Type of auxiliary entry
+};
+
+struct XCOFFSectAuxEntForDWARF32 {
+  support::ubig32_t LengthOfSectionPortion;
+  uint8_t Pad1[4];
+  support::ubig32_t NumberOfRelocEnt;
+  uint8_t Pad2[6];
+};
+
+struct XCOFFSectAuxEntForDWARF64 {
+  support::ubig64_t LengthOfSectionPortion;
+  support::ubig64_t NumberOfRelocEnt;
+  uint8_t Pad;
+  XCOFF::SymbolAuxType AuxType; // Contains _AUX_SECT; Type of Auxillary entry
+};
+
 template <typename AddressType> struct XCOFFRelocation {
   // Masks for packing/unpacking the r_rsize field of relocations.
 
@@ -396,9 +450,6 @@ private:
 
   const void *SymbolTblPtr = nullptr;
   XCOFFStringTable StringTable = {0, nullptr};
-
-  const XCOFFFileHeader32 *fileHeader32() const;
-  const XCOFFFileHeader64 *fileHeader64() const;
 
   const XCOFFSectionHeader32 *sectionHeaderTable32() const;
   const XCOFFSectionHeader64 *sectionHeaderTable64() const;
@@ -497,6 +548,8 @@ public:
 
   // Below here is the non-inherited interface.
   bool is64Bit() const;
+  Expected<StringRef> getRawData(const char *Start, uint64_t Size,
+                                 StringRef Name) const;
 
   const XCOFFAuxiliaryHeader32 *auxiliaryHeader32() const;
   const XCOFFAuxiliaryHeader64 *auxiliaryHeader64() const;
@@ -508,6 +561,8 @@ public:
   XCOFFSymbolRef toSymbolRef(DataRefImpl Ref) const;
 
   // File header related interfaces.
+  const XCOFFFileHeader32 *fileHeader32() const;
+  const XCOFFFileHeader64 *fileHeader64() const;
   uint16_t getMagic() const;
   uint16_t getNumberOfSections() const;
   int32_t getTimeStamp() const;
@@ -635,6 +690,9 @@ public:
     else
       Entry32 = reinterpret_cast<const XCOFFSymbolEntry32 *>(SymEntDataRef.p);
   }
+
+  const XCOFFSymbolEntry32 *getSymbol32() { return Entry32; }
+  const XCOFFSymbolEntry64 *getSymbol64() { return Entry64; }
 
   uint64_t getValue() const { return Entry32 ? getValue32() : getValue64(); }
 

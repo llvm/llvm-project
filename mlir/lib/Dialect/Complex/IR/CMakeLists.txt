@@ -11,6 +11,6 @@ add_mlir_dialect_library(MLIRComplex
   LINK_LIBS PUBLIC
   MLIRArithmetic
   MLIRDialect
+  MLIRInferTypeOpInterface
   MLIRIR
-  MLIRStandard
   )

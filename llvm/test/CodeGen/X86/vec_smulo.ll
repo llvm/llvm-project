@@ -3282,9 +3282,9 @@ define <4 x i32> @smulo_v4i1(<4 x i1> %a0, <4 x i1> %a1, <4 x i1>* %p2) nounwind
 ; AVX-LABEL: smulo_v4i1:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpslld $31, %xmm0, %xmm0
-; AVX-NEXT:    vmovmskps %xmm0, %eax
-; AVX-NEXT:    vpsrad $31, %xmm0, %xmm0
+; AVX-NEXT:    vpslld $31, %xmm0, %xmm1
+; AVX-NEXT:    vpsrad $31, %xmm1, %xmm0
+; AVX-NEXT:    vmovmskps %xmm1, %eax
 ; AVX-NEXT:    movb %al, (%rdi)
 ; AVX-NEXT:    retq
 ;

@@ -9,13 +9,13 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
-#include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/DebugInfo/DIContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
-#include "llvm/DebugInfo/DWARF/DWARFRelocMap.h"
+#include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
+#include "llvm/DebugInfo/DWARF/DWARFLocationExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cinttypes>
@@ -23,6 +23,10 @@
 
 using namespace llvm;
 using object::SectionedAddress;
+
+namespace llvm {
+class DWARFObject;
+}
 
 namespace {
 class DWARFLocationInterpreter {
@@ -41,9 +45,7 @@ public:
 } // namespace
 
 static Error createResolverError(uint32_t Index, unsigned Kind) {
-  return createStringError(errc::invalid_argument,
-                           "Unable to resolve indirect address %u for: %s",
-                           Index, dwarf::LocListEncodingString(Kind).data());
+  return make_error<ResolverError>(Index, (dwarf::LoclistEntries)Kind);
 }
 
 Expected<Optional<DWARFLocationExpression>>
@@ -404,3 +406,10 @@ void DWARFDebugLoclists::dumpRange(uint64_t StartOffset, uint64_t Size,
     OS << '\n';
   }
 }
+
+void llvm::ResolverError::log(raw_ostream &OS) const {
+  OS << format("unable to resolve indirect address %u for: %s", Index,
+               dwarf::LocListEncodingString(Kind).data());
+}
+
+char llvm::ResolverError::ID;

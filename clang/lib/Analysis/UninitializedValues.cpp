@@ -591,8 +591,8 @@ public:
 
         if (AtPredExit == MayUninitialized) {
           // If the predecessor's terminator is an "asm goto" that initializes
-          // the variable, then it won't be counted as "initialized" on the
-          // non-fallthrough paths.
+          // the variable, then don't count it as "initialized" on the indirect
+          // paths.
           CFGTerminator term = Pred->getTerminator();
           if (const auto *as = dyn_cast_or_null<GCCAsmStmt>(term.getStmt())) {
             const CFGBlock *fallthrough = *Pred->succ_begin();
@@ -810,13 +810,21 @@ void TransferFunctions::VisitGCCAsmStmt(GCCAsmStmt *as) {
   if (!as->isAsmGoto())
     return;
 
-  for (const Expr *o : as->outputs())
-    if (const VarDecl *VD = findVar(o).getDecl())
-      if (vals[VD] != Initialized)
-        // If the variable isn't initialized by the time we get here, then we
-        // mark it as potentially uninitialized for those cases where it's used
-        // on an indirect path, where it's not guaranteed to be defined.
-        vals[VD] = MayUninitialized;
+  ASTContext &C = ac.getASTContext();
+  for (const Expr *O : as->outputs()) {
+    const Expr *Ex = stripCasts(C, O);
+
+    // Strip away any unary operators. Invalid l-values are reported by other
+    // semantic analysis passes.
+    while (const auto *UO = dyn_cast<UnaryOperator>(Ex))
+      Ex = stripCasts(C, UO->getSubExpr());
+
+    // Mark the variable as potentially uninitialized for those cases where
+    // it's used on an indirect path, where it's not guaranteed to be
+    // defined.
+    if (const VarDecl *VD = findVar(Ex).getDecl())
+      vals[VD] = MayUninitialized;
+  }
 }
 
 void TransferFunctions::VisitObjCMessageExpr(ObjCMessageExpr *ME) {

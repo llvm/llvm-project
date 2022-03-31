@@ -354,4 +354,4 @@ inline std::ostream& operator<<(std::ostream& ss, const StringRef str) {
 } // namespace threadSafety
 } // namespace clang
 
-#endif // LLVM_CLANG_THREAD_SAFETY_UTIL_H
+#endif // LLVM_CLANG_ANALYSIS_ANALYSES_THREADSAFETYUTIL_H

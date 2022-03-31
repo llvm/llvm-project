@@ -43,6 +43,13 @@ static void computeMultiplierAndShiftTosaScale16(double scale,
          "Shifted mantissa exceeds 32-bit signed output type");
 
   multiplier = static_cast<int32_t>(shiftedM);
+
+  // Shifting tops out at 63 bits. Right shift to make 63 bits the max.
+  if (shift > 63) {
+    // Shifting the multiplier by more than 31-bits is unnecessary.
+    multiplier = multiplier >> std::min<int32_t>(31, shift - 63);
+    shift = 63;
+  }
 }
 
 /// From a scale value, generates multiplier and shift values where
@@ -71,6 +78,13 @@ static void computeMultiplierAndShiftTosaScale32(double scale,
          "Shifted mantissa exceeds 32-bit signed output type");
 
   multiplier = static_cast<int32_t>(shiftedM);
+
+  // Shifting tops out at 63 bits. Right shift to make 63 bits the max.
+  if (shift > 63) {
+    // Shifting the multiplier by more than 32-bits is unnecessary.
+    multiplier = multiplier >> std::min<int32_t>(31, shift - 63);
+    shift = 63;
+  }
 }
 
 /// Generates a quantized multiplier/shift from double.

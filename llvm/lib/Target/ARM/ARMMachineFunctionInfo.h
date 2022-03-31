@@ -289,7 +289,7 @@ public:
       return false;
     if (SignReturnAddressAll)
       return true;
-    return LRSpilled;
+    return SpillsLR;
   }
 
   bool branchTargetEnforcement() const { return BranchTargetEnforcement; }

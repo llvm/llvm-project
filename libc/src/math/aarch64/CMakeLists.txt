@@ -77,23 +77,3 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O2
 )
-
-add_entrypoint_object(
-  sqrt
-  SRCS
-    sqrt.cpp
-  HDRS
-    ../sqrt.h
-  COMPILE_OPTIONS
-    -O2
-)
-
-add_entrypoint_object(
-  sqrtf
-  SRCS
-    sqrtf.cpp
-  HDRS
-    ../sqrtf.h
-  COMPILE_OPTIONS
-    -O2
-)

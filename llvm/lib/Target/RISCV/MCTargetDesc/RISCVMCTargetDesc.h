@@ -29,7 +29,6 @@ class MCSubtargetInfo;
 class Target;
 
 MCCodeEmitter *createRISCVMCCodeEmitter(const MCInstrInfo &MCII,
-                                        const MCRegisterInfo &MRI,
                                         MCContext &Ctx);
 
 MCAsmBackend *createRISCVAsmBackend(const Target &T, const MCSubtargetInfo &STI,

@@ -14,6 +14,7 @@
 #ifndef BUILTIN_ATTRIBUTES
 #define BUILTIN_ATTRIBUTES
 
+include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinDialect.td"
 include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/IR/SubElementInterfaces.td"
@@ -152,7 +153,8 @@ def Builtin_DenseIntOrFPElementsAttr : Builtin_Attr<
     Syntax:
 
     ```
-    dense-intorfloat-elements-attribute ::= `dense` `<` attribute-value `>` `:`
+    tensor-literal ::= integer-literal | float-literal | [] | [tensor-literal (, tensor-literal)* ]
+    dense-intorfloat-elements-attribute ::= `dense` `<` tensor-literal `>` `:`
                                             ( tensor-type | vector-type )
     ```
 
@@ -175,6 +177,7 @@ def Builtin_DenseIntOrFPElementsAttr : Builtin_Attr<
   let extraClassDeclaration = [{
     using DenseElementsAttr::empty;
     using DenseElementsAttr::getNumElements;
+    using DenseElementsAttr::getElementType;
     using DenseElementsAttr::getValues;
     using DenseElementsAttr::isSplat;
     using DenseElementsAttr::size;
@@ -312,6 +315,7 @@ def Builtin_DenseStringElementsAttr : Builtin_Attr<
   let extraClassDeclaration = [{
     using DenseElementsAttr::empty;
     using DenseElementsAttr::getNumElements;
+    using DenseElementsAttr::getElementType;
     using DenseElementsAttr::getValues;
     using DenseElementsAttr::isSplat;
     using DenseElementsAttr::size;
@@ -945,12 +949,6 @@ def Builtin_StringAttr : Builtin_Attr<"String"> {
       if (*this == rhs)
         return 0;
       return getValue().compare(rhs.getValue());
-    }
-
-    /// FIXME: Defined as part of transition of Identifier->StringAttr. Prefer
-    /// using the other `get` methods instead.
-    static StringAttr get(const Twine &str, MLIRContext *context) {
-      return get(context, str);
     }
 
   private:

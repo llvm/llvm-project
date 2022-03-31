@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s -Wno-unreachable-code
 
-void test1() {
+void test1(void) {
   { ; {  ;;}} ;;
 }
 
-void test2() {
+void test2(void) {
   if (0) { if (1) {} } else { }
 
   do { } while (0); 
@@ -18,7 +18,7 @@ void test2() {
   for (int X = 0; 0; (void)0);
 }
 
-void test3() {
+void test3(void) {
     switch (0) {
     
     case 4:
@@ -30,7 +30,7 @@ void test3() {
   }
 }
 
-void test4() {
+void test4(void) {
   if (0);  // expected-warning {{if statement has empty body}} expected-note {{put the semicolon on a separate line to silence this warning}}
   
   int X;  // declaration in a block.
@@ -39,7 +39,7 @@ foo:  if (0); // expected-warning {{if statement has empty body}} expected-note 
 }
 
 typedef int t;
-void test5() {
+void test5(void) {
   if (0);   // expected-warning {{if statement has empty body}} expected-note {{put the semicolon on a separate line to silence this warning}}
 
   t x = 0;
@@ -54,16 +54,16 @@ void test6(void) {
    while (0);
 }
 
-int test7() {
+int test7(void) {
   return 4     // expected-error {{expected ';' after return statement}}
 }
 
-void test8() {
+void test8(void) {
   // Should not skip '}' and produce a "expected '}'" error.
   undecl // expected-error {{use of undeclared identifier 'undecl'}}
 }
 
-int test9() {
+int test9(void) {
   int T[] = {1, 2, };
 
   int X;

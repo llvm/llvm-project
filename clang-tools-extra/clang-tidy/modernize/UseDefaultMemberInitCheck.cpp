@@ -212,17 +212,14 @@ void UseDefaultMemberInitCheck::registerMatchers(MatchFinder *Finder) {
             InitBase);
 
   Finder->addMatcher(
-      cxxConstructorDecl(
-          isDefaultConstructor(),
-          forEachConstructorInitializer(
-              cxxCtorInitializer(
-                  forField(unless(anyOf(getLangOpts().CPlusPlus20
-                                            ? unless(anything())
-                                            : isBitField(),
-                                        hasInClassInitializer(anything()),
-                                        hasParent(recordDecl(isUnion()))))),
-                  withInitializer(Init))
-                  .bind("default"))),
+      cxxConstructorDecl(forEachConstructorInitializer(
+          cxxCtorInitializer(
+              forField(unless(anyOf(
+                  getLangOpts().CPlusPlus20 ? unless(anything()) : isBitField(),
+                  hasInClassInitializer(anything()),
+                  hasParent(recordDecl(isUnion()))))),
+              withInitializer(Init))
+              .bind("default"))),
       this);
 
   Finder->addMatcher(
@@ -247,6 +244,14 @@ void UseDefaultMemberInitCheck::check(const MatchFinder::MatchResult &Result) {
 void UseDefaultMemberInitCheck::checkDefaultInit(
     const MatchFinder::MatchResult &Result, const CXXCtorInitializer *Init) {
   const FieldDecl *Field = Init->getAnyMember();
+
+  // Check whether we have multiple hand-written constructors and bomb out, as
+  // it is hard to reconcile their sets of member initializers.
+  const auto *ClassDecl = cast<CXXRecordDecl>(Field->getParent());
+  if (llvm::count_if(ClassDecl->ctors(), [](const CXXConstructorDecl *Ctor) {
+        return !Ctor->isCopyOrMoveConstructor();
+      }) > 1)
+    return;
 
   SourceLocation StartLoc = Field->getBeginLoc();
   if (StartLoc.isMacroID() && IgnoreMacros)

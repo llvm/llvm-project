@@ -6,8 +6,8 @@
 // CHECK-NOT: msgSend_fixup_alloc
 // CHECK: OBJC_SELECTOR_REFERENCES
 
-int f0() {
-  return ^(){ return 0; }();
+int f0(void) {
+  return ^(void){ return 0; }();
 }
 
 @interface I0
@@ -22,7 +22,7 @@ int f0() {
 +(id) alloc;
 @end
 
-void f1() {
+void f1(void) {
   [I1 alloc];
 }
 

@@ -73,27 +73,27 @@ struct MemoryAccessObserver {
 MemoryAccessObserver Observer;
 
 template <size_t Size> struct TestingElement {
-  static constexpr size_t kSize = Size;
+  static constexpr size_t SIZE = Size;
 
-  static void Copy(char *__restrict dst, const char *__restrict src) {
-    Observer.ObserveRead(src, kSize);
-    Observer.ObserveWrite(dst, kSize);
+  static void copy(char *__restrict dst, const char *__restrict src) {
+    Observer.ObserveRead(src, SIZE);
+    Observer.ObserveWrite(dst, SIZE);
   }
 
-  static bool Equals(const char *lhs, const char *rhs) {
-    Observer.ObserveRead(lhs, kSize);
-    Observer.ObserveRead(rhs, kSize);
+  static bool equals(const char *lhs, const char *rhs) {
+    Observer.ObserveRead(lhs, SIZE);
+    Observer.ObserveRead(rhs, SIZE);
     return true;
   }
 
-  static int ThreeWayCompare(const char *lhs, const char *rhs) {
-    Observer.ObserveRead(lhs, kSize);
-    Observer.ObserveRead(rhs, kSize);
+  static int three_way_compare(const char *lhs, const char *rhs) {
+    Observer.ObserveRead(lhs, SIZE);
+    Observer.ObserveRead(rhs, SIZE);
     return 0;
   }
 
-  static void SplatSet(char *dst, const unsigned char value) {
-    Observer.ObserveWrite(dst, kSize);
+  static void splat_set(char *dst, const unsigned char value) {
+    Observer.ObserveWrite(dst, SIZE);
   }
 };
 
@@ -112,25 +112,26 @@ struct LlvmLibcTestAccessBase : public testing::Test {
     static const BufferAccess untouched;
 
     Observer.Reset();
-    HigherOrder::Copy(dst_ptr() + Offset, src_ptr() + Offset, Size);
+    HigherOrder::copy(dst_ptr() + Offset, src_ptr() + Offset, Size);
     ASSERT_STREQ(src().writes, untouched);
     ASSERT_STREQ(dst().reads, untouched);
     ASSERT_STREQ(src().reads, expected);
     ASSERT_STREQ(dst().writes, expected);
     Observer.Reset();
-    HigherOrder::Equals(lhs_ptr() + Offset, rhs_ptr() + Offset, Size);
+    HigherOrder::equals(lhs_ptr() + Offset, rhs_ptr() + Offset, Size);
     ASSERT_STREQ(lhs().writes, untouched);
     ASSERT_STREQ(rhs().writes, untouched);
     ASSERT_STREQ(lhs().reads, expected);
     ASSERT_STREQ(rhs().reads, expected);
     Observer.Reset();
-    HigherOrder::ThreeWayCompare(lhs_ptr() + Offset, rhs_ptr() + Offset, Size);
+    HigherOrder::three_way_compare(lhs_ptr() + Offset, rhs_ptr() + Offset,
+                                   Size);
     ASSERT_STREQ(lhs().writes, untouched);
     ASSERT_STREQ(rhs().writes, untouched);
     ASSERT_STREQ(lhs().reads, expected);
     ASSERT_STREQ(rhs().reads, expected);
     Observer.Reset();
-    HigherOrder::SplatSet(dst_ptr() + Offset, 5, Size);
+    HigherOrder::splat_set(dst_ptr() + Offset, 5, Size);
     ASSERT_STREQ(src().reads, untouched);
     ASSERT_STREQ(src().writes, untouched);
     ASSERT_STREQ(dst().reads, untouched);
@@ -165,7 +166,7 @@ struct LlvmLibcTestAccessTail : public LlvmLibcTestAccessBase {
     static constexpr size_t Size = 10;
 
     BufferAccess expected;
-    expected.Touch(Size - ParamType::kSize, ParamType::kSize);
+    expected.Touch(Size - ParamType::SIZE, ParamType::SIZE);
 
     checkMaxAccess(expected, 1);
     checkOperations<Tail<ParamType>, Size>(expected);
@@ -179,8 +180,8 @@ struct LlvmLibcTestAccessHeadTail : public LlvmLibcTestAccessBase {
     static constexpr size_t Size = 10;
 
     BufferAccess expected;
-    expected.Touch(0, ParamType::kSize);
-    expected.Touch(Size - ParamType::kSize, ParamType::kSize);
+    expected.Touch(0, ParamType::SIZE);
+    expected.Touch(Size - ParamType::SIZE, ParamType::SIZE);
 
     checkMaxAccess(expected, 2);
     checkOperations<HeadTail<ParamType>, Size>(expected);
@@ -194,9 +195,9 @@ struct LlvmLibcTestAccessLoop : public LlvmLibcTestAccessBase {
     static constexpr size_t Size = 20;
 
     BufferAccess expected;
-    for (size_t i = 0; i < Size - ParamType::kSize; i += ParamType::kSize)
-      expected.Touch(i, ParamType::kSize);
-    expected.Touch(Size - ParamType::kSize, ParamType::kSize);
+    for (size_t i = 0; i < Size - ParamType::SIZE; i += ParamType::SIZE)
+      expected.Touch(i, ParamType::SIZE);
+    expected.Touch(Size - ParamType::SIZE, ParamType::SIZE);
 
     checkMaxAccess(expected, 2);
     checkOperations<Loop<ParamType>, Size>(expected);
@@ -212,9 +213,9 @@ struct LlvmLibcTestAccessAlignedAccess : public LlvmLibcTestAccessBase {
     using AlignmentT = TestingElement<4>;
 
     BufferAccess expected;
-    expected.Touch(Offset, AlignmentT::kSize);
-    expected.Touch(AlignmentT::kSize, ParamType::kSize);
-    expected.Touch(Offset + Size - ParamType::kSize, ParamType::kSize);
+    expected.Touch(Offset, AlignmentT::SIZE);
+    expected.Touch(AlignmentT::SIZE, ParamType::SIZE);
+    expected.Touch(Offset + Size - ParamType::SIZE, ParamType::SIZE);
 
     checkMaxAccess(expected, 3);
     checkOperations<Align<AlignmentT, Arg::_1>::Then<HeadTail<ParamType>>, Size,

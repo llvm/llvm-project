@@ -38,22 +38,26 @@ static AtomicOrdering strongerOrdering(AtomicOrdering X, AtomicOrdering Y) {
 }
 
 /// It is safe to destroy a constant iff it is only used by constants itself.
-/// Note that constants cannot be cyclic, so this test is pretty easy to
-/// implement recursively.
-///
+/// Note that while constants cannot be cyclic, they can be tree-like, so we
+/// should keep a visited set to avoid exponential runtime.
 bool llvm::isSafeToDestroyConstant(const Constant *C) {
-  if (isa<GlobalValue>(C))
-    return false;
-
-  if (isa<ConstantData>(C))
-    return false;
-
-  for (const User *U : C->users())
-    if (const Constant *CU = dyn_cast<Constant>(U)) {
-      if (!isSafeToDestroyConstant(CU))
-        return false;
-    } else
+  SmallVector<const Constant *, 8> Worklist;
+  SmallPtrSet<const Constant *, 8> Visited;
+  Worklist.push_back(C);
+  while (!Worklist.empty()) {
+    const Constant *C = Worklist.pop_back_val();
+    if (!Visited.insert(C).second)
+      continue;
+    if (isa<GlobalValue>(C) || isa<ConstantData>(C))
       return false;
+
+    for (const User *U : C->users()) {
+      if (const Constant *CU = dyn_cast<Constant>(U))
+        Worklist.push_back(CU);
+      else
+        return false;
+    }
+  }
   return true;
 }
 
@@ -65,17 +69,18 @@ static bool analyzeGlobalAux(const Value *V, GlobalStatus &GS,
 
   for (const Use &U : V->uses()) {
     const User *UR = U.getUser();
-    if (const ConstantExpr *CE = dyn_cast<ConstantExpr>(UR)) {
-      GS.HasNonInstructionUser = true;
-
-      // If the result of the constantexpr isn't pointer type, then we won't
-      // know to expect it in various places.  Just reject early.
-      if (!isa<PointerType>(CE->getType()))
-        return true;
-
-      // FIXME: Do we need to add constexpr selects to VisitedUsers?
-      if (analyzeGlobalAux(CE, GS, VisitedUsers))
-        return true;
+    if (const Constant *C = dyn_cast<Constant>(UR)) {
+      const ConstantExpr *CE = dyn_cast<ConstantExpr>(C);
+      if (CE && isa<PointerType>(CE->getType())) {
+        // Recursively analyze pointer-typed constant expressions.
+        // FIXME: Do we need to add constexpr selects to VisitedUsers?
+        if (analyzeGlobalAux(CE, GS, VisitedUsers))
+          return true;
+      } else {
+        // Ignore dead constant users.
+        if (!isSafeToDestroyConstant(C))
+          return true;
+      }
     } else if (const Instruction *I = dyn_cast<Instruction>(UR)) {
       if (!GS.HasMultipleAccessingFunctions) {
         const Function *F = I->getParent()->getParent();
@@ -105,9 +110,7 @@ static bool analyzeGlobalAux(const Value *V, GlobalStatus &GS,
         // value, not an aggregate), keep more specific information about
         // stores.
         if (GS.StoredType != GlobalStatus::Stored) {
-          const Value *Ptr = SI->getPointerOperand();
-          if (isa<ConstantExpr>(Ptr))
-            Ptr = Ptr->stripPointerCasts();
+          const Value *Ptr = SI->getPointerOperand()->stripPointerCasts();
           if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(Ptr)) {
             Value *StoredVal = SI->getOperand(0);
 
@@ -173,13 +176,7 @@ static bool analyzeGlobalAux(const Value *V, GlobalStatus &GS,
       } else {
         return true; // Any other non-load instruction might take address!
       }
-    } else if (const Constant *C = dyn_cast<Constant>(UR)) {
-      GS.HasNonInstructionUser = true;
-      // We might have a dead and dangling constant hanging off of here.
-      if (!isSafeToDestroyConstant(C))
-        return true;
     } else {
-      GS.HasNonInstructionUser = true;
       // Otherwise must be some other user.
       return true;
     }

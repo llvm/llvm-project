@@ -6,7 +6,7 @@ void q(void (^p)(void)) {
     p();
 }
 
-void f() {
+void f(void) {
     __block char BYREF_VAR_CHECK = 'a';
     __block char d = 'd';
     q(^{
@@ -25,7 +25,7 @@ void f() {
     });
 }
 
-int main() {
+int main(void) {
     f();
     return 0;
 }

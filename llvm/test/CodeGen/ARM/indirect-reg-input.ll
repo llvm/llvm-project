@@ -9,6 +9,6 @@
 define void @switch_to_stack(%struct.my_stack* %stack) nounwind {
 entry:
   %regs = getelementptr inbounds %struct.my_stack, %struct.my_stack* %stack, i32 0, i32 0
-  tail call void asm "\0A", "=*r,*0"(%struct.myjmp_buf* %regs, %struct.myjmp_buf* %regs)
+  tail call void asm "\0A", "=*r,*0"(%struct.myjmp_buf* elementtype(%struct.myjmp_buf) %regs, %struct.myjmp_buf* elementtype(%struct.myjmp_buf) %regs)
   ret void
 }

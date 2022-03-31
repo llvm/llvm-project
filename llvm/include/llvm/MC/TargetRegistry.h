@@ -27,7 +27,6 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <iterator>
@@ -56,7 +55,6 @@ class MCTargetAsmParser;
 class MCTargetOptions;
 class MCTargetStreamer;
 class raw_ostream;
-class raw_pwrite_stream;
 class TargetMachine;
 class TargetOptions;
 namespace mca {
@@ -177,7 +175,6 @@ public:
                                                  const MCInstrInfo &MII,
                                                  const MCRegisterInfo &MRI);
   using MCCodeEmitterCtorTy = MCCodeEmitter *(*)(const MCInstrInfo &II,
-                                                 const MCRegisterInfo &MRI,
                                                  MCContext &Ctx);
   using ELFStreamerCtorTy =
       MCStreamer *(*)(const Triple &T, MCContext &Ctx,
@@ -508,11 +505,10 @@ public:
 
   /// createMCCodeEmitter - Create a target specific code emitter.
   MCCodeEmitter *createMCCodeEmitter(const MCInstrInfo &II,
-                                     const MCRegisterInfo &MRI,
                                      MCContext &Ctx) const {
     if (!MCCodeEmitterCtorFn)
       return nullptr;
-    return MCCodeEmitterCtorFn(II, MRI, Ctx);
+    return MCCodeEmitterCtorFn(II, Ctx);
   }
 
   /// Create a target specific MCStreamer.
@@ -534,6 +530,8 @@ public:
     switch (T.getObjectFormat()) {
     case Triple::UnknownObjectFormat:
       llvm_unreachable("Unknown object format");
+    case Triple::DXContainer:
+      llvm_unreachable("DXContainer is unsupported through MC");
     case Triple::COFF:
       assert(T.isOSWindows() && "only Windows COFF is supported");
       S = COFFStreamerCtorFn(Ctx, std::move(TAB), std::move(OW),
@@ -1362,7 +1360,6 @@ template <class MCCodeEmitterImpl> struct RegisterMCCodeEmitter {
 
 private:
   static MCCodeEmitter *Allocator(const MCInstrInfo & /*II*/,
-                                  const MCRegisterInfo & /*MRI*/,
                                   MCContext & /*Ctx*/) {
     return new MCCodeEmitterImpl();
   }

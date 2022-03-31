@@ -48,6 +48,10 @@ int64_t __tgt_rtl_init_requires(int64_t RequiresFlags);
 // return an error code.
 int32_t __tgt_rtl_init_device(int32_t ID);
 
+// Deinitialize the specified device. In case of success return 0; otherwise
+// return an error code.
+int32_t __tgt_rtl_deinit_device(int32_t ID);
+
 // Pass an executable image section described by image to the specified
 // device and prepare an address table of target entities. In case of error,
 // return NULL. Otherwise, return a pointer to the built address table.
@@ -170,6 +174,10 @@ int32_t __tgt_rtl_sync_event(int32_t ID, void *Event);
 
 int32_t __tgt_rtl_destroy_event(int32_t ID, void *Event);
 // }
+
+int32_t __tgt_rtl_init_async_info(int32_t ID, __tgt_async_info **AsyncInfoPtr);
+int32_t __tgt_rtl_init_device_info(int32_t ID, __tgt_device_info *DeviceInfoPtr,
+                                   const char **ErrStr);
 
 #ifdef __cplusplus
 }

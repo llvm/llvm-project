@@ -14,7 +14,6 @@
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
@@ -447,11 +446,17 @@ static std::string linkageToString(GlobalValue::LinkageTypes LT) {
 
 static std::string fflagsToString(FunctionSummary::FFlags F) {
   auto FlagValue = [](unsigned V) { return V ? '1' : '0'; };
-  char FlagRep[] = {FlagValue(F.ReadNone),  FlagValue(F.ReadOnly),
-                    FlagValue(F.NoRecurse), FlagValue(F.ReturnDoesNotAlias),
-                    FlagValue(F.NoInline),  FlagValue(F.AlwaysInline),
-                    FlagValue(F.NoUnwind),  FlagValue(F.MayThrow), 
-                    FlagValue(F.HasUnknownCall), 0};
+  char FlagRep[] = {FlagValue(F.ReadNone),
+                    FlagValue(F.ReadOnly),
+                    FlagValue(F.NoRecurse),
+                    FlagValue(F.ReturnDoesNotAlias),
+                    FlagValue(F.NoInline),
+                    FlagValue(F.AlwaysInline),
+                    FlagValue(F.NoUnwind),
+                    FlagValue(F.MayThrow),
+                    FlagValue(F.HasUnknownCall),
+                    FlagValue(F.MustBeUnreachable),
+                    0};
 
   return FlagRep;
 }

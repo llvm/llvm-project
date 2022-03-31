@@ -82,7 +82,7 @@ float2 float2x;
 // register int rix __asm__("0");
 register int rix __asm__("esp");
 
-int main() {
+int main(void) {
 // CHECK: store atomic i32 1, i32* getelementptr inbounds ({ i32, i32 }, { i32, i32 }* @civ, i32 0, i32 1) monotonic, align 4
 #pragma omp atomic write
  __imag(civ) = 1;
@@ -156,7 +156,7 @@ int main() {
 // CHECK: store i32 [[REAL_VAL]], i32* [[TEMP_REAL_REF]]
 // CHECK: store i32 [[IMG_VAL]], i32* [[TEMP_IMG_REF]]
 // CHECK: [[BITCAST:%.+]] = bitcast { i32, i32 }* [[TEMP]] to i8*
-// CHECK: call void @__atomic_store(i64 8, i8* bitcast ({ i32, i32 }* @{{.*}} to i8*), i8* [[BITCAST]], i32 0)
+// CHECK: call void @__atomic_store(i64 noundef 8, i8* noundef bitcast ({ i32, i32 }* @{{.*}} to i8*), i8* noundef [[BITCAST]], i32 noundef 0)
 #pragma omp atomic write
   cix = civ;
 // CHECK: [[REAL_VAL:%.+]] = load float, float* getelementptr inbounds ({ float, float }, { float, float }* @{{.*}}, i32 0, i32 0)
@@ -166,7 +166,7 @@ int main() {
 // CHECK: store float [[REAL_VAL]], float* [[TEMP_REAL_REF]]
 // CHECK: store float [[IMG_VAL]], float* [[TEMP_IMG_REF]]
 // CHECK: [[BITCAST:%.+]] = bitcast { float, float }* [[TEMP]] to i8*
-// CHECK: call void @__atomic_store(i64 8, i8* bitcast ({ float, float }* @{{.*}} to i8*), i8* [[BITCAST]], i32 0)
+// CHECK: call void @__atomic_store(i64 noundef 8, i8* noundef bitcast ({ float, float }* @{{.*}} to i8*), i8* noundef [[BITCAST]], i32 noundef 0)
 #pragma omp atomic write
   cfx = cfv;
 // CHECK: [[REAL_VAL:%.+]] = load double, double* getelementptr inbounds ({ double, double }, { double, double }* @{{.*}}, i32 0, i32 0)
@@ -176,7 +176,7 @@ int main() {
 // CHECK: store double [[REAL_VAL]], double* [[TEMP_REAL_REF]]
 // CHECK: store double [[IMG_VAL]], double* [[TEMP_IMG_REF]]
 // CHECK: [[BITCAST:%.+]] = bitcast { double, double }* [[TEMP]] to i8*
-// CHECK: call void @__atomic_store(i64 16, i8* bitcast ({ double, double }* @{{.*}} to i8*), i8* [[BITCAST]], i32 5)
+// CHECK: call void @__atomic_store(i64 noundef 16, i8* noundef bitcast ({ double, double }* @{{.*}} to i8*), i8* noundef [[BITCAST]], i32 noundef 5)
 // CHECK: call{{.*}} @__kmpc_flush(
 #pragma omp atomic seq_cst write
   cdx = cdv;
@@ -217,7 +217,7 @@ int main() {
 // CHECK: store i32 [[VAL]], i32* [[TEMP_REAL_REF]]
 // CHECK: store i32 0, i32* [[TEMP_IMG_REF]]
 // CHECK: [[BITCAST:%.+]] = bitcast { i32, i32 }* [[TEMP]] to i8*
-// CHECK: call void @__atomic_store(i64 8, i8* bitcast ({ i32, i32 }* @{{.+}} to i8*), i8* [[BITCAST]], i32 0)
+// CHECK: call void @__atomic_store(i64 noundef 8, i8* noundef bitcast ({ i32, i32 }* @{{.+}} to i8*), i8* noundef [[BITCAST]], i32 noundef 0)
 #pragma omp atomic write
   cix = lv;
 // CHECK: load i64, i64*
@@ -245,7 +245,7 @@ int main() {
 // CHECK: store i32 [[VAL]], i32* [[TEMP_REAL_REF]]
 // CHECK: store i32 0, i32* [[TEMP_IMG_REF]]
 // CHECK: [[BITCAST:%.+]] = bitcast { i32, i32 }* [[TEMP]] to i8*
-// CHECK: call void @__atomic_store(i64 8, i8* bitcast ({ i32, i32 }* @{{.+}} to i8*), i8* [[BITCAST]], i32 0)
+// CHECK: call void @__atomic_store(i64 noundef 8, i8* noundef bitcast ({ i32, i32 }* @{{.+}} to i8*), i8* noundef [[BITCAST]], i32 noundef 0)
 #pragma omp atomic write
   cix = fv;
 // CHECK: load double, double*
@@ -313,7 +313,7 @@ int main() {
 // CHECK: load x86_fp80, x86_fp80* @{{.+}}
 // CHECK: [[NEW_VAL:%.+]] = fptosi x86_fp80 %{{.+}} to i32
 // CHECK: [[BITCAST:%.+]] = bitcast i32* [[LDTEMP:%.+]] to i8*
-// CHECK: call void @__atomic_load(i64 4, i8* getelementptr (i8, i8* bitcast (%struct.BitFields_packed* @{{.+}} to i8*), i64 4), i8* [[BITCAST]], i32 0)
+// CHECK: call void @__atomic_load(i64 noundef 4, i8* noundef getelementptr (i8, i8* bitcast (%struct.BitFields_packed* @{{.+}} to i8*), i64 4), i8* noundef [[BITCAST]], i32 noundef 0)
 // CHECK: br label %[[CONT:.+]]
 // CHECK: [[CONT]]
 // CHECK: [[OLD_BF_VALUE:%.+]] = load i32, i32* [[LDTEMP]],
@@ -325,7 +325,7 @@ int main() {
 // CHECK: store i32 %{{.+}}, i32* [[LDTEMP1]]
 // CHECK: [[BITCAST_TEMP_OLD_BF_ADDR:%.+]] = bitcast i32* [[LDTEMP]] to i8*
 // CHECK: [[BITCAST_TEMP_NEW_BF_ADDR:%.+]] = bitcast i32* [[LDTEMP1]] to i8*
-// CHECK: [[FAIL_SUCCESS:%.+]] = call zeroext i1 @__atomic_compare_exchange(i64 4, i8* getelementptr (i8, i8* bitcast (%struct.BitFields_packed* @{{.+}} to i8*), i64 4), i8* [[BITCAST_TEMP_OLD_BF_ADDR]], i8* [[BITCAST_TEMP_NEW_BF_ADDR]], i32 0, i32 0)
+// CHECK: [[FAIL_SUCCESS:%.+]] = call zeroext i1 @__atomic_compare_exchange(i64 noundef 4, i8* noundef getelementptr (i8, i8* bitcast (%struct.BitFields_packed* @{{.+}} to i8*), i64 4), i8* noundef [[BITCAST_TEMP_OLD_BF_ADDR]], i8* noundef [[BITCAST_TEMP_NEW_BF_ADDR]], i32 noundef 0, i32 noundef 0)
 // CHECK: br i1 [[FAIL_SUCCESS]], label %[[EXIT:.+]], label %[[CONT]]
 // CHECK: [[EXIT]]
 #pragma omp atomic write
@@ -392,7 +392,7 @@ int main() {
 // CHECK: [[NEW_VAL:%.+]] = fptosi x86_fp80 %{{.+}} to i32
 // CHECK: [[LDTEMP:%.+]] = bitcast i32* %{{.+}} to i24*
 // CHECK: [[BITCAST:%.+]] = bitcast i24* %{{.+}} to i8*
-// CHECK: call void @__atomic_load(i64 3, i8* getelementptr (i8, i8* bitcast (%struct.BitFields3_packed* @{{.+}} to i8*), i64 1), i8* [[BITCAST]], i32 0)
+// CHECK: call void @__atomic_load(i64 noundef 3, i8* noundef getelementptr (i8, i8* bitcast (%struct.BitFields3_packed* @{{.+}} to i8*), i64 1), i8* noundef [[BITCAST]], i32 noundef 0)
 // CHECK: br label %[[CONT:.+]]
 // CHECK: [[CONT]]
 // CHECK: [[OLD_VAL:%.+]] = load i24, i24* %{{.+}},
@@ -405,7 +405,7 @@ int main() {
 // CHECK: store i24 %{{.+}}, i24* [[TEMP]]
 // CHECK: [[BITCAST_TEMP_OLD_BF_ADDR:%.+]] = bitcast i24* [[LDTEMP]] to i8*
 // CHECK: [[BITCAST_TEMP_NEW_BF_ADDR:%.+]] = bitcast i24* [[TEMP]] to i8*
-// CHECK: [[FAIL_SUCCESS:%.+]] = call zeroext i1 @__atomic_compare_exchange(i64 3, i8* getelementptr (i8, i8* bitcast (%struct.BitFields3_packed* @{{.+}} to i8*), i64 1), i8* [[BITCAST_TEMP_OLD_BF_ADDR]], i8* [[BITCAST_TEMP_NEW_BF_ADDR]], i32 0, i32 0)
+// CHECK: [[FAIL_SUCCESS:%.+]] = call zeroext i1 @__atomic_compare_exchange(i64 noundef 3, i8* noundef getelementptr (i8, i8* bitcast (%struct.BitFields3_packed* @{{.+}} to i8*), i64 1), i8* noundef [[BITCAST_TEMP_OLD_BF_ADDR]], i8* noundef [[BITCAST_TEMP_NEW_BF_ADDR]], i32 noundef 0, i32 noundef 0)
 // CHECK: br i1 [[FAIL_SUCCESS]], label %[[EXIT:.+]], label %[[CONT]]
 // CHECK: [[EXIT]]
 #pragma omp atomic write

@@ -46,20 +46,19 @@ define amdgpu_kernel void @ashr_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> ad
 ;
 ; EG-LABEL: ashr_v2i32:
 ; EG:       ; %bb.0:
-; EG-NEXT:    ALU 0, @10, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    TEX 1 @6
-; EG-NEXT:    ALU 3, @11, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 0, @8, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    TEX 0 @6
+; EG-NEXT:    ALU 3, @9, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XY, T1.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
 ; EG-NEXT:    Fetch clause starting at 6:
-; EG-NEXT:     VTX_READ_64 T1.XY, T0.X, 8, #1
-; EG-NEXT:     VTX_READ_64 T0.XY, T0.X, 0, #1
-; EG-NEXT:    ALU clause starting at 10:
+; EG-NEXT:     VTX_READ_128 T0.XYZW, T0.X, 0, #1
+; EG-NEXT:    ALU clause starting at 8:
 ; EG-NEXT:     MOV * T0.X, KC0[2].Z,
-; EG-NEXT:    ALU clause starting at 11:
-; EG-NEXT:     ASHR * T0.Y, T0.Y, T1.Y,
-; EG-NEXT:     ASHR T0.X, T0.X, T1.X,
+; EG-NEXT:    ALU clause starting at 9:
+; EG-NEXT:     ASHR * T0.Y, T0.Y, T0.W,
+; EG-NEXT:     ASHR T0.X, T0.X, T0.Z,
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
   %b_ptr = getelementptr <2 x i32>, <2 x i32> addrspace(1)* %in, i32 1
@@ -193,25 +192,23 @@ define amdgpu_kernel void @ashr_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> ad
 ;
 ; EG-LABEL: ashr_v2i16:
 ; EG:       ; %bb.0:
-; EG-NEXT:    ALU 1, @10, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    TEX 1 @6
-; EG-NEXT:    ALU 14, @12, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 0, @8, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    TEX 0 @6
+; EG-NEXT:    ALU 14, @9, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T6.X, T7.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
 ; EG-NEXT:    Fetch clause starting at 6:
-; EG-NEXT:     VTX_READ_32 T7.X, T7.X, 0, #1
-; EG-NEXT:     VTX_READ_32 T6.X, T6.X, 4, #1
-; EG-NEXT:    ALU clause starting at 10:
+; EG-NEXT:     VTX_READ_64 T6.XY, T6.X, 0, #1
+; EG-NEXT:    ALU clause starting at 8:
 ; EG-NEXT:     MOV * T6.X, KC0[2].Z,
-; EG-NEXT:     MOV * T7.X, PV.X,
-; EG-NEXT:    ALU clause starting at 12:
-; EG-NEXT:     LSHR * T0.W, T7.X, literal.x,
+; EG-NEXT:    ALU clause starting at 9:
+; EG-NEXT:     LSHR * T0.W, T6.X, literal.x,
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
 ; EG-NEXT:     BFE_INT T0.Y, PV.W, 0.0, literal.x,
-; EG-NEXT:     LSHR T0.Z, T6.X, literal.x,
-; EG-NEXT:     BFE_INT T0.W, T7.X, 0.0, literal.x, BS:VEC_120/SCL_212
-; EG-NEXT:     AND_INT * T1.W, T6.X, literal.y,
+; EG-NEXT:     LSHR T0.Z, T6.Y, literal.x,
+; EG-NEXT:     BFE_INT T0.W, T6.X, 0.0, literal.x,
+; EG-NEXT:     AND_INT * T1.W, T6.Y, literal.y,
 ; EG-NEXT:    16(2.242078e-44), 65535(9.183409e-41)
 ; EG-NEXT:     ASHR T0.W, PV.W, PS,
 ; EG-NEXT:     ASHR * T1.W, PV.Y, PV.Z,
@@ -253,10 +250,10 @@ define amdgpu_kernel void @ashr_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> ad
 ; SI-NEXT:    v_ashrrev_i32_e32 v1, 16, v1
 ; SI-NEXT:    v_lshrrev_b32_e32 v6, 16, v2
 ; SI-NEXT:    v_lshrrev_b32_e32 v7, 16, v3
-; SI-NEXT:    v_ashrrev_i32_e32 v1, v7, v1
-; SI-NEXT:    v_ashrrev_i32_e32 v3, v3, v5
-; SI-NEXT:    v_ashrrev_i32_e32 v0, v6, v0
-; SI-NEXT:    v_ashrrev_i32_e32 v2, v2, v4
+; SI-NEXT:    v_ashr_i32_e32 v1, v1, v7
+; SI-NEXT:    v_ashr_i32_e32 v3, v5, v3
+; SI-NEXT:    v_ashr_i32_e32 v0, v0, v6
+; SI-NEXT:    v_ashr_i32_e32 v2, v4, v2
 ; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; SI-NEXT:    v_and_b32_e32 v3, s2, v3
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
@@ -291,28 +288,23 @@ define amdgpu_kernel void @ashr_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> ad
 ;
 ; EG-LABEL: ashr_v4i16:
 ; EG:       ; %bb.0:
-; EG-NEXT:    ALU 0, @12, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    TEX 0 @8
-; EG-NEXT:    ALU 3, @13, KC0[], KC1[]
-; EG-NEXT:    TEX 0 @10
-; EG-NEXT:    ALU 54, @17, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 0, @8, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    TEX 0 @6
+; EG-NEXT:    ALU 58, @9, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T10.XY, T9.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
-; EG-NEXT:    Fetch clause starting at 8:
-; EG-NEXT:     VTX_READ_64 T10.XY, T9.X, 0, #1
-; EG-NEXT:    Fetch clause starting at 10:
-; EG-NEXT:     VTX_READ_64 T9.XY, T9.X, 8, #1
-; EG-NEXT:    ALU clause starting at 12:
+; EG-NEXT:    Fetch clause starting at 6:
+; EG-NEXT:     VTX_READ_128 T9.XYZW, T9.X, 0, #1
+; EG-NEXT:    ALU clause starting at 8:
 ; EG-NEXT:     MOV * T9.X, KC0[2].Z,
-; EG-NEXT:    ALU clause starting at 13:
-; EG-NEXT:     MOV T4.X, T10.X,
-; EG-NEXT:     MOV * T5.X, T10.Y,
+; EG-NEXT:    ALU clause starting at 9:
+; EG-NEXT:     MOV T4.X, T9.X,
+; EG-NEXT:     MOV * T5.X, T9.Y,
 ; EG-NEXT:     MOV T0.Y, PV.X,
 ; EG-NEXT:     MOV * T0.Z, PS,
-; EG-NEXT:    ALU clause starting at 17:
-; EG-NEXT:     MOV T2.X, T9.X,
-; EG-NEXT:     MOV * T3.X, T9.Y,
+; EG-NEXT:     MOV T2.X, T9.Z,
+; EG-NEXT:     MOV * T3.X, T9.W,
 ; EG-NEXT:     MOV * T0.W, T6.X,
 ; EG-NEXT:     MOV T1.Y, T2.X,
 ; EG-NEXT:     BFE_INT * T1.W, T0.Y, 0.0, literal.x,

@@ -815,7 +815,120 @@ TEST_F(QualifierFixerTest, NoOpQualifierReplacements) {
   ReplacementCount = 0;
   EXPECT_EQ(ReplacementCount, 0);
   verifyFormat("static const uint32 foo[] = {0, 31};", Style);
+  verifyFormat("#define MACRO static const", Style);
   EXPECT_EQ(ReplacementCount, 0);
+}
+
+TEST_F(QualifierFixerTest, QualifierTemplates) {
+  FormatStyle Style = getLLVMStyle();
+  Style.QualifierAlignment = FormatStyle::QAS_Custom;
+  Style.QualifierOrder = {"static", "const", "type"};
+
+  ReplacementCount = 0;
+  EXPECT_EQ(ReplacementCount, 0);
+  verifyFormat("using A = B<>;", Style);
+  verifyFormat("using A = B /**/<>;", Style);
+  verifyFormat("template <class C> using A = B<Foo<C>, 1>;", Style);
+  verifyFormat("template <class C> using A = B /**/<Foo<C>, 1>;", Style);
+  verifyFormat("template <class C> using A = B /* */<Foo<C>, 1>;", Style);
+  verifyFormat("template <class C> using A = B /*foo*/<Foo<C>, 1>;", Style);
+  verifyFormat("template <class C> using A = B /**/ /**/<Foo<C>, 1>;", Style);
+  verifyFormat("template <class C> using A = B<Foo</**/ C>, 1>;", Style);
+  verifyFormat("template <class C> using A = /**/ B<Foo<C>, 1>;", Style);
+  EXPECT_EQ(ReplacementCount, 0);
+  verifyFormat("template <class C>\n"
+               "using A = B // foo\n"
+               "    <Foo<C>, 1>;",
+               Style);
+
+  ReplacementCount = 0;
+  Style.QualifierOrder = {"type", "static", "const"};
+  verifyFormat("using A = B<>;", Style);
+  verifyFormat("using A = B /**/<>;", Style);
+  verifyFormat("template <class C> using A = B<Foo<C>, 1>;", Style);
+  verifyFormat("template <class C> using A = B /**/<Foo<C>, 1>;", Style);
+  verifyFormat("template <class C> using A = B /* */<Foo<C>, 1>;", Style);
+  verifyFormat("template <class C> using A = B /*foo*/<Foo<C>, 1>;", Style);
+  verifyFormat("template <class C> using A = B /**/ /**/<Foo<C>, 1>;", Style);
+  verifyFormat("template <class C> using A = B<Foo</**/ C>, 1>;", Style);
+  verifyFormat("template <class C> using A = /**/ B<Foo<C>, 1>;", Style);
+  EXPECT_EQ(ReplacementCount, 0);
+  verifyFormat("template <class C>\n"
+               "using A = B // foo\n"
+               "    <Foo<C>, 1>;",
+               Style);
+}
+
+TEST_F(QualifierFixerTest, WithConstraints) {
+  FormatStyle Style = getLLVMStyle();
+  Style.QualifierAlignment = FormatStyle::QAS_Custom;
+  Style.QualifierOrder = {"constexpr", "type"};
+
+  verifyFormat("template <typename T>\n"
+               "  requires Concept<F>\n"
+               "constexpr constructor();",
+               Style);
+  verifyFormat("template <typename T>\n"
+               "  requires Concept1<F> && Concept2<F>\n"
+               "constexpr constructor();",
+               Style);
+}
+
+TEST_F(QualifierFixerTest, DisableRegions) {
+  FormatStyle Style = getLLVMStyle();
+  Style.QualifierAlignment = FormatStyle::QAS_Custom;
+  Style.QualifierOrder = {"inline", "static", "const", "type"};
+
+  ReplacementCount = 0;
+  verifyFormat("// clang-format off\n"
+               "int const inline static a = 0;\n"
+               "// clang-format on\n",
+               Style);
+  EXPECT_EQ(ReplacementCount, 0);
+  verifyFormat("// clang-format off\n"
+               "int const inline static a = 0;\n"
+               "// clang-format on\n"
+               "inline static const int a = 0;\n",
+               "// clang-format off\n"
+               "int const inline static a = 0;\n"
+               "// clang-format on\n"
+               "int const inline static a = 0;\n",
+               Style);
+}
+
+TEST_F(QualifierFixerTest, TemplatesRight) {
+  FormatStyle Style = getLLVMStyle();
+  Style.QualifierAlignment = FormatStyle::QAS_Custom;
+  Style.QualifierOrder = {"type", "const"};
+
+  verifyFormat("template <typename T>\n"
+               "  requires Concept<T const>\n"
+               "void f();",
+               "template <typename T>\n"
+               "  requires Concept<const T>\n"
+               "void f();",
+               Style);
+  verifyFormat("TemplateType<T const> t;", "TemplateType<const T> t;", Style);
+  verifyFormat("TemplateType<Container const> t;",
+               "TemplateType<const Container> t;", Style);
+}
+
+TEST_F(QualifierFixerTest, TemplatesLeft) {
+  FormatStyle Style = getLLVMStyle();
+  Style.QualifierAlignment = FormatStyle::QAS_Custom;
+  Style.QualifierOrder = {"const", "type"};
+
+  verifyFormat("template <const T> t;", "template <T const> t;", Style);
+  verifyFormat("template <typename T>\n"
+               "  requires Concept<const T>\n"
+               "void f();",
+               "template <typename T>\n"
+               "  requires Concept<T const>\n"
+               "void f();",
+               Style);
+  verifyFormat("TemplateType<const T> t;", "TemplateType<T const> t;", Style);
+  verifyFormat("TemplateType<const Container> t;",
+               "TemplateType<Container const> t;", Style);
 }
 
 } // namespace format

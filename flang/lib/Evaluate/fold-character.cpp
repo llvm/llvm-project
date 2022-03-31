@@ -140,6 +140,9 @@ Expr<Type<TypeCategory::Character, KIND>> FoldOperation(
   return Expr<Result>{std::move(x)};
 }
 
+#ifdef _MSC_VER // disable bogus warning about missing definitions
+#pragma warning(disable : 4661)
+#endif
 FOR_EACH_CHARACTER_KIND(template class ExpressionBase, )
 template class ExpressionBase<SomeCharacter>;
 } // namespace Fortran::evaluate

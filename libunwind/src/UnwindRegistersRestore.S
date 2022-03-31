@@ -394,7 +394,7 @@ Lnovec:
   PPC64_LR(3)
   bctr
 
-#elif defined(__ppc__)
+#elif defined(__powerpc__)
 
 DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind13Registers_ppc6jumptoEv)
 //
@@ -660,7 +660,13 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind13Registers_arm20restoreCoreAndJumpToEv)
   ldr sp, [lr, #52]
   ldr lr, [lr, #60]  @ restore pc into lr
 #endif
+#if defined(__ARM_FEATURE_BTI_DEFAULT) && !defined(__ARM_ARCH_ISA_ARM)
+  // 'bx' is not BTI setting when used with lr, therefore r12 is used instead
+  mov r12, lr
+  JMP(r12)
+#else
   JMP(lr)
+#endif
 
 @
 @ static void libunwind::Registers_arm::restoreVFPWithFLDMD(unw_fpreg_t* values)
@@ -1055,6 +1061,53 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind21Registers_mips_newabi6jumptoEv)
   jr    $31
   ld    $4, (8 * 4)($4)
   .set pop
+
+#elif defined(__sparc__) && defined(__arch64__)
+
+DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind17Registers_sparc646jumptoEv)
+//
+// void libunwind::Registers_sparc64::jumpto()
+//
+// On entry:
+//  thread_state pointer is in %o0
+//
+  .register %g2, #scratch
+  .register %g3, #scratch
+  .register %g6, #scratch
+  .register %g7, #scratch
+  flushw
+  ldx  [%o0 + 0x08], %g1
+  ldx  [%o0 + 0x10], %g2
+  ldx  [%o0 + 0x18], %g3
+  ldx  [%o0 + 0x20], %g4
+  ldx  [%o0 + 0x28], %g5
+  ldx  [%o0 + 0x30], %g6
+  ldx  [%o0 + 0x38], %g7
+  ldx  [%o0 + 0x48], %o1
+  ldx  [%o0 + 0x50], %o2
+  ldx  [%o0 + 0x58], %o3
+  ldx  [%o0 + 0x60], %o4
+  ldx  [%o0 + 0x68], %o5
+  ldx  [%o0 + 0x70], %o6
+  ldx  [%o0 + 0x78], %o7
+  ldx  [%o0 + 0x80], %l0
+  ldx  [%o0 + 0x88], %l1
+  ldx  [%o0 + 0x90], %l2
+  ldx  [%o0 + 0x98], %l3
+  ldx  [%o0 + 0xa0], %l4
+  ldx  [%o0 + 0xa8], %l5
+  ldx  [%o0 + 0xb0], %l6
+  ldx  [%o0 + 0xb8], %l7
+  ldx  [%o0 + 0xc0], %i0
+  ldx  [%o0 + 0xc8], %i1
+  ldx  [%o0 + 0xd0], %i2
+  ldx  [%o0 + 0xd8], %i3
+  ldx  [%o0 + 0xe0], %i4
+  ldx  [%o0 + 0xe8], %i5
+  ldx  [%o0 + 0xf0], %i6
+  ldx  [%o0 + 0xf8], %i7
+  jmp  %o7
+   ldx [%o0 + 0x40], %o0
 
 #elif defined(__sparc__)
 

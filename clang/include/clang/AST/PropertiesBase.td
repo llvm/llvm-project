@@ -79,6 +79,7 @@ def AttrKind : EnumPropertyType<"attr::Kind">;
 def AutoTypeKeyword : EnumPropertyType;
 def Bool : PropertyType<"bool">;
 def BuiltinTypeKind : EnumPropertyType<"BuiltinType::Kind">;
+def BTFTypeTagAttr : PropertyType<"const BTFTypeTagAttr *">;
 def CallingConv : EnumPropertyType;
 def DeclarationName : PropertyType;
 def DeclarationNameKind : EnumPropertyType<"DeclarationName::NameKind">;
@@ -107,6 +108,8 @@ def DeclRef : RefPropertyType<"Decl"> { let ConstWhenWriting = 1; }
     SubclassPropertyType<"TemplateTypeParmDecl", DeclRef>;
   def TemplateTemplateParmDeclRef :
     SubclassPropertyType<"TemplateTemplateParmDecl", DeclRef>;
+  def UsingShadowDeclRef :
+    SubclassPropertyType<"UsingShadowDecl", DeclRef>;
   def ValueDeclRef :
     SubclassPropertyType<"ValueDecl", DeclRef>;
 def ElaboratedTypeKeyword : EnumPropertyType;

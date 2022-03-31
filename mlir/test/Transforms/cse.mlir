@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.func(cse)' | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='func.func(cse)' | FileCheck %s
 
 // CHECK-DAG: #[[$MAP:.*]] = affine_map<(d0) -> (d0 mod 2)>
 #map0 = affine_map<(d0) -> (d0 mod 2)>
@@ -130,13 +130,13 @@ func @down_propagate() -> i32 {
   // CHECK-NEXT: %true = arith.constant true
   %cond = arith.constant true
 
-  // CHECK-NEXT: cond_br %true, ^bb1, ^bb2(%c1_i32 : i32)
-  cond_br %cond, ^bb1, ^bb2(%0 : i32)
+  // CHECK-NEXT: cf.cond_br %true, ^bb1, ^bb2(%c1_i32 : i32)
+  cf.cond_br %cond, ^bb1, ^bb2(%0 : i32)
 
 ^bb1: // CHECK: ^bb1:
-  // CHECK-NEXT: br ^bb2(%c1_i32 : i32)
+  // CHECK-NEXT: cf.br ^bb2(%c1_i32 : i32)
   %1 = arith.constant 1 : i32
-  br ^bb2(%1 : i32)
+  cf.br ^bb2(%1 : i32)
 
 ^bb2(%arg : i32):
   return %arg : i32
@@ -167,15 +167,15 @@ func @up_propagate() -> i32 {
   // CHECK-NEXT: %true = arith.constant true
   %cond = arith.constant true
 
-  // CHECK-NEXT: cond_br %true, ^bb1, ^bb2(%c0_i32 : i32)
-  cond_br %cond, ^bb1, ^bb2(%0 : i32)
+  // CHECK-NEXT: cf.cond_br %true, ^bb1, ^bb2(%c0_i32 : i32)
+  cf.cond_br %cond, ^bb1, ^bb2(%0 : i32)
 
 ^bb1: // CHECK: ^bb1:
   // CHECK-NEXT: %c1_i32 = arith.constant 1 : i32
   %1 = arith.constant 1 : i32
 
-  // CHECK-NEXT: br ^bb2(%c1_i32 : i32)
-  br ^bb2(%1 : i32)
+  // CHECK-NEXT: cf.br ^bb2(%c1_i32 : i32)
+  cf.br ^bb2(%1 : i32)
 
 ^bb2(%arg : i32): // CHECK: ^bb2
   // CHECK-NEXT: %c1_i32_0 = arith.constant 1 : i32
@@ -196,18 +196,18 @@ func @up_propagate_region() -> i32 {
   %0 = "foo.region"() ({
     // CHECK-NEXT:  %c0_i32 = arith.constant 0 : i32
     // CHECK-NEXT: %true = arith.constant true
-    // CHECK-NEXT: cond_br
+    // CHECK-NEXT: cf.cond_br
 
     %1 = arith.constant 0 : i32
     %true = arith.constant true
-    cond_br %true, ^bb1, ^bb2(%1 : i32)
+    cf.cond_br %true, ^bb1, ^bb2(%1 : i32)
 
   ^bb1: // CHECK: ^bb1:
     // CHECK-NEXT: %c1_i32 = arith.constant 1 : i32
-    // CHECK-NEXT: br
+    // CHECK-NEXT: cf.br
 
     %c1_i32 = arith.constant 1 : i32
-    br ^bb2(%c1_i32 : i32)
+    cf.br ^bb2(%c1_i32 : i32)
 
   ^bb2(%arg : i32): // CHECK: ^bb2(%1: i32):
     // CHECK-NEXT: %c1_i32_0 = arith.constant 1 : i32
@@ -229,7 +229,7 @@ func @nested_isolated() -> i32 {
   %0 = arith.constant 1 : i32
 
   // CHECK-NEXT: @nested_func
-  builtin.func @nested_func() {
+  func.func @nested_func() {
     // CHECK-NEXT: arith.constant 1
     %foo = arith.constant 1 : i32
     "foo.yield"(%foo) : (i32) -> ()

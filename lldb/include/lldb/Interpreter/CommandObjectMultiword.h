@@ -51,17 +51,12 @@ public:
   CommandObject *GetSubcommandObject(llvm::StringRef sub_cmd,
                                      StringList *matches = nullptr) override;
 
-  void AproposAllSubCommands(llvm::StringRef prefix,
-                             llvm::StringRef search_word,
-                             StringList &commands_found,
-                             StringList &commands_help) override;
-
   bool WantsRawCommandString() override { return false; }
 
   void HandleCompletion(CompletionRequest &request) override;
 
-  const char *GetRepeatCommand(Args &current_command_args,
-                               uint32_t index) override;
+  llvm::Optional<std::string> GetRepeatCommand(Args &current_command_args,
+                                               uint32_t index) override;
 
   bool Execute(const char *args_string, CommandReturnObject &result) override;
 
@@ -110,11 +105,6 @@ public:
   CommandObject *GetSubcommandObject(llvm::StringRef sub_cmd,
                                      StringList *matches = nullptr) override;
 
-  void AproposAllSubCommands(llvm::StringRef prefix,
-                             llvm::StringRef search_word,
-                             StringList &commands_found,
-                             StringList &commands_help) override;
-
   bool LoadSubCommand(llvm::StringRef cmd_name,
                       const lldb::CommandObjectSP &command_obj) override;
 
@@ -130,8 +120,8 @@ public:
   HandleArgumentCompletion(CompletionRequest &request,
                            OptionElementVector &opt_element_vector) override;
 
-  const char *GetRepeatCommand(Args &current_command_args,
-                               uint32_t index) override;
+  llvm::Optional<std::string> GetRepeatCommand(Args &current_command_args,
+                                               uint32_t index) override;
 
   /// \return
   ///     An error message to be displayed when the command is executed (i.e.

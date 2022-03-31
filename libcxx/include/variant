@@ -199,11 +199,17 @@ namespace std {
 
 */
 
+#include <__assert> // all public C++ headers provide the assertion handler
 #include <__availability>
 #include <__config>
 #include <__functional/hash.h>
+#include <__functional/operations.h>
+#include <__functional/unary_function.h>
 #include <__tuple>
 #include <__utility/forward.h>
+#include <__utility/in_place.h>
+#include <__utility/move.h>
+#include <__utility/swap.h>
 #include <__variant/monostate.h>
 #include <compare>
 #include <exception>
@@ -212,11 +218,19 @@ namespace std {
 #include <new>
 #include <tuple>
 #include <type_traits>
-#include <utility>
 #include <version>
 
+// TODO: remove these headers
+#include <__functional/binary_function.h>
+#include <__functional/invoke.h>
+#include <__functional/reference_wrapper.h>
+#include <__functional/weak_result_type.h>
+#include <__memory/allocator_arg_t.h>
+#include <__memory/uses_allocator.h>
+#include <typeinfo>
+
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
@@ -549,7 +563,7 @@ private:
   inline _LIBCPP_INLINE_VISIBILITY
   static constexpr auto __make_fdiagonal_impl() {
     return __make_dispatch<_Fp, _Vs...>(
-        index_sequence<((void)__identity<_Vs>{}, _Ip)...>{});
+        index_sequence<((void)__type_identity<_Vs>{}, _Ip)...>{});
   }
 
   template <class _Fp, class... _Vs, size_t... _Is>
@@ -1121,8 +1135,11 @@ class _LIBCPP_TEMPLATE_VIS __impl
   using __base_type = __copy_assignment<__traits<_Types...>>;
 
 public:
-  using __base_type::__base_type;
-  using __base_type::operator=;
+  using __base_type::__base_type; // get in_place_index_t constructor & friends
+  __impl(__impl const&) = default;
+  __impl(__impl&&) = default;
+  __impl& operator=(__impl const&) = default;
+  __impl& operator=(__impl&&) = default;
 
   template <size_t _Ip, class _Arg>
   inline _LIBCPP_INLINE_VISIBILITY
@@ -1186,12 +1203,12 @@ private:
 
 struct __no_narrowing_check {
   template <class _Dest, class _Source>
-  using _Apply = __identity<_Dest>;
+  using _Apply = __type_identity<_Dest>;
 };
 
 struct __narrowing_check {
   template <class _Dest>
-  static auto __test_impl(_Dest (&&)[1]) -> __identity<_Dest>;
+  static auto __test_impl(_Dest (&&)[1]) -> __type_identity<_Dest>;
   template <class _Dest, class _Source>
   using _Apply _LIBCPP_NODEBUG = decltype(__test_impl<_Dest>({declval<_Source>()}));
 };
@@ -1217,7 +1234,7 @@ template <class _Tp, size_t>
 struct __overload_bool  {
   template <class _Up, class _Ap = __uncvref_t<_Up>>
   auto operator()(bool, _Up&&) const
-      -> enable_if_t<is_same_v<_Ap, bool>, __identity<_Tp>>;
+      -> enable_if_t<is_same_v<_Ap, bool>, __type_identity<_Tp>>;
 };
 
 template <size_t _Idx>
@@ -1252,7 +1269,7 @@ template <class _Tp, class... _Types>
 using __best_match_t =
     typename invoke_result_t<_MakeOverloads<_Types...>, _Tp, _Tp>::type;
 
-} // __variant_detail
+} // namespace __variant_detail
 
 template <class... _Types>
 class _LIBCPP_TEMPLATE_VIS variant

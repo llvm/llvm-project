@@ -14,6 +14,9 @@
 // XFAIL: ubsan
 // UNSUPPORTED: freebsd, solaris, darwin
 
+// THUMB starts background thead only for Asan.
+// XFAIL: thumb && !asan
+
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>

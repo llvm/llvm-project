@@ -8,7 +8,7 @@ __attribute__((objc_arc_weak_reference_unavailable))
 
 @interface sub : NSOptOut1072 @end // expected-note 2 {{class is declared here}}
 
-int main() {
+int main(void) {
   __weak sub *w2; // expected-error {{class is incompatible with __weak references}}
 
   __weak NSOptOut1072 *ns1; // expected-error {{class is incompatible with __weak references}}
@@ -26,7 +26,7 @@ __attribute__((objc_arc_weak_reference_unavailable))
 + (id) new;
 @end
 
-NOWEAK * Test1() {
+NOWEAK * Test1(void) {
   NOWEAK * strong1 = [NOWEAK new];
   __weak id weak1;
   weak1 = strong1; // expected-error {{assignment of a weak-unavailable object to a __weak object}}
@@ -39,7 +39,7 @@ NOWEAK * Test1() {
 @protocol P @end
 @protocol P1 @end
 
-NOWEAK<P, P1> * Test2() {
+NOWEAK<P, P1> * Test2(void) {
   NOWEAK<P, P1> * strong1 = 0;
   __weak id<P> weak1;
   weak1 = strong1; // expected-error {{assignment of a weak-unavailable object to a __weak object}}

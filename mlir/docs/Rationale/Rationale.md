@@ -560,24 +560,24 @@ func @search(%A: memref<?x?xi32>, %S: <?xi32>, %key : i32) {
 
 func @search_body(%A: memref<?x?xi32>, %S: memref<?xi32>, %key: i32, %i : i32) {
   %nj = memref.dim %A, 1 : memref<?x?xi32>
-  br ^bb1(0)
+  cf.br ^bb1(0)
 
 ^bb1(%j: i32)
   %p1 = arith.cmpi "lt", %j, %nj : i32
-  cond_br %p1, ^bb2, ^bb5
+  cf.cond_br %p1, ^bb2, ^bb5
 
 ^bb2:
   %v = affine.load %A[%i, %j] : memref<?x?xi32>
   %p2 = arith.cmpi "eq", %v, %key : i32
-  cond_br %p2, ^bb3(%j), ^bb4
+  cf.cond_br %p2, ^bb3(%j), ^bb4
 
 ^bb3(%j: i32)
   affine.store %j, %S[%i] : memref<?xi32>
-  br ^bb5
+  cf.br ^bb5
 
 ^bb4:
   %jinc = arith.addi %j, 1 : i32
-  br ^bb1(%jinc)
+  cf.br ^bb1(%jinc)
 
 ^bb5:
   return
@@ -1054,12 +1054,12 @@ design choices:
 
 1.  MLIR makes use of extensive uniqued immutable data structures (affine
     expressions, types, etc are all immutable, uniqued, and immortal).
-2.  Constants are defined in per-function pools, instead of being globally
+2.  Constants are defined in per-operation pools, instead of being globally
     uniqued.
-3.  Functions themselves are not SSA values either, so they don't have the same
-    problem as constants.
-4.  FunctionPasses are copied (through their copy ctor) into one instance per
+3.  Functions, and other global-like operations, themselves are not SSA values
+    either, so they don't have the same problem as constants.
+4.  Passes are copied (through their copy ctor) into one instance per
     thread, avoiding sharing of local state across threads.
 
-This allows MLIR function passes to support efficient multithreaded compilation
+This allows MLIR passes to support efficient multithreaded compilation
 and code generation.

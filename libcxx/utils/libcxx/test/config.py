@@ -159,15 +159,6 @@ class Configuration(object):
         self.lit_config.note("Running against the C++ Library at {}".format(self.cxx_runtime_root))
         self.lit_config.note("Linking against the ABI Library at {}".format(self.abi_library_root))
         self.lit_config.note("Running against the ABI Library at {}".format(self.abi_runtime_root))
-        sys.stderr.flush()  # Force flushing to avoid broken output on Windows
-
-    def get_test_format(self):
-        from libcxx.test.format import LibcxxTestFormat
-        return LibcxxTestFormat(
-            self.cxx,
-            self.use_clang_verify,
-            self.executor,
-            exec_env=self.exec_env)
 
     def configure_cxx(self):
         # Gather various compiler parameters.
@@ -297,11 +288,6 @@ class Configuration(object):
 
     def configure_compile_flags_header_includes(self):
         support_path = os.path.join(self.libcxx_src_root, 'test', 'support')
-        if self.cxx_stdlib_under_test != 'libstdc++' and \
-           not self.target_info.is_windows() and \
-           not self.target_info.is_zos():
-            self.cxx.compile_flags += [
-                '-include', os.path.join(support_path, 'nasty_macros.h')]
         if self.cxx_stdlib_under_test == 'msvc':
             self.cxx.compile_flags += [
                 '-include', os.path.join(support_path,
@@ -326,8 +312,8 @@ class Configuration(object):
         if triple is not None:
             cxx_target_headers = os.path.join(path, triple, cxx, version)
             if os.path.isdir(cxx_target_headers):
-                self.cxx.compile_flags += ['-I' + cxx_target_headers]
-        self.cxx.compile_flags += ['-I' + cxx_headers]
+                self.cxx.compile_flags += ['-I', cxx_target_headers]
+        self.cxx.compile_flags += ['-I', cxx_headers]
         if self.libcxx_obj_root is not None:
             cxxabi_headers = os.path.join(self.libcxx_obj_root, 'include',
                                           'c++build')
@@ -424,6 +410,8 @@ class Configuration(object):
                         self.cxx.link_flags += [abs_path]
                     else:
                         self.cxx.link_flags += ['-lc++abi']
+        elif cxx_abi == 'system-libcxxabi':
+            self.cxx.link_flags += ['-lc++abi']
         elif cxx_abi == 'libcxxrt':
             self.cxx.link_flags += ['-lcxxrt']
         elif cxx_abi == 'vcruntime':
@@ -467,7 +455,6 @@ class Configuration(object):
         sub.append(('%{flags}',         ' '.join(map(self.quote, flags))))
         sub.append(('%{compile_flags}', ' '.join(map(self.quote, compile_flags))))
         sub.append(('%{link_flags}',    ' '.join(map(self.quote, self.cxx.link_flags))))
-        sub.append(('%{install}',       self.quote(self.config.install_root)))
 
         codesign_ident = self.get_lit_conf('llvm_codesign_identity', '')
         env_vars = ' '.join('%s=%s' % (k, self.quote(v)) for (k, v) in self.exec_env.items())

@@ -72,17 +72,19 @@ public:
 
   static tok::TokenKind getTokenFromQualifier(const std::string &Qualifier);
 
-  FormatToken *analyzeRight(const SourceManager &SourceMgr,
-                            const AdditionalKeywords &Keywords,
-                            tooling::Replacements &Fixes, FormatToken *Tok,
-                            const std::string &Qualifier,
-                            tok::TokenKind QualifierType);
+  const FormatToken *analyzeRight(const SourceManager &SourceMgr,
+                                  const AdditionalKeywords &Keywords,
+                                  tooling::Replacements &Fixes,
+                                  const FormatToken *Tok,
+                                  const std::string &Qualifier,
+                                  tok::TokenKind QualifierType);
 
-  FormatToken *analyzeLeft(const SourceManager &SourceMgr,
-                           const AdditionalKeywords &Keywords,
-                           tooling::Replacements &Fixes, FormatToken *Tok,
-                           const std::string &Qualifier,
-                           tok::TokenKind QualifierType);
+  const FormatToken *analyzeLeft(const SourceManager &SourceMgr,
+                                 const AdditionalKeywords &Keywords,
+                                 tooling::Replacements &Fixes,
+                                 const FormatToken *Tok,
+                                 const std::string &Qualifier,
+                                 tok::TokenKind QualifierType);
 
   // is the Token a simple or qualifier type
   static bool isQualifierOrType(const FormatToken *Tok,

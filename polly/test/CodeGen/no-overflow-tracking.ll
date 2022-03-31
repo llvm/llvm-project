@@ -1,7 +1,5 @@
-; RUN: opt %loadPolly -analyze -polly-scops \
-; RUN: -polly-invariant-load-hoisting=true < %s | FileCheck %s
-; RUN: opt %loadPolly -S -polly-codegen -polly-overflow-tracking=never \
-; RUN: -polly-invariant-load-hoisting=true < %s | FileCheck %s --check-prefix=IR
+; RUN: opt %loadPolly -polly-invariant-load-hoisting=true -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-invariant-load-hoisting=true -polly-overflow-tracking=never -polly-codegen -S < %s | FileCheck %s --check-prefix=IR
 ;
 ; As (p + q) can overflow we have to check that we load from
 ; I[p + q] only if it does not.
@@ -30,12 +28,13 @@
 ; IR-NEXT:   %21 = add nsw i64 %20, %19
 ; IR-NEXT:   %22 = icmp sge i64 %21, -2147483648
 ; IR-NEXT:   %23 = and i1 %18, %22
-; IR-NEXT:   br label %polly.preload.cond1
+; IR-NEXT:   %polly.preload.cond.result1 = and i1 %23, true
+; IR-NEXT:   br label %polly.preload.cond2
 ;
-; IR:      polly.preload.cond1:
-; IR-NEXT:   br i1 %23
+; IR:      polly.preload.cond2:
+; IR-NEXT:   br i1 %polly.preload.cond.result1
 ;
-; IR:      polly.preload.exec3:
+; IR:      polly.preload.exec4:
 ; IR-NEXT:   %polly.access.polly.preload.tmp1.merge = getelementptr i32, i32* %polly.preload.tmp1.merge, i64 0
 ; IR-NEXT:   %polly.access.polly.preload.tmp1.merge.load = load i32, i32* %polly.access.polly.preload.tmp1.merge, align 4
 ;

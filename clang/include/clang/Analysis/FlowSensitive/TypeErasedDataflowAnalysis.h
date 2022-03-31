@@ -14,15 +14,18 @@
 #ifndef LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_TYPEERASEDDATAFLOWANALYSIS_H
 #define LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_TYPEERASEDDATAFLOWANALYSIS_H
 
+#include <utility>
 #include <vector>
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Stmt.h"
 #include "clang/Analysis/CFG.h"
+#include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
 #include "llvm/ADT/Any.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/Support/Error.h"
 
 namespace clang {
 namespace dataflow {
@@ -38,8 +41,18 @@ struct TypeErasedLattice {
 };
 
 /// Type-erased base class for dataflow analyses built on a single lattice type.
-class TypeErasedDataflowAnalysis {
+class TypeErasedDataflowAnalysis : public Environment::ValueModel {
+  /// Determines whether to apply the built-in transfer functions.
+  // FIXME: Remove this option once the framework supports composing analyses
+  // (at which point the built-in transfer functions can be simply a standalone
+  // analysis).
+  bool ApplyBuiltinTransfer;
+
 public:
+  TypeErasedDataflowAnalysis() : ApplyBuiltinTransfer(true) {}
+  TypeErasedDataflowAnalysis(bool ApplyBuiltinTransfer)
+      : ApplyBuiltinTransfer(ApplyBuiltinTransfer) {}
+
   virtual ~TypeErasedDataflowAnalysis() {}
 
   /// Returns the `ASTContext` that is used by the analysis.
@@ -62,9 +75,12 @@ public:
 
   /// Applies the analysis transfer function for a given statement and
   /// type-erased lattice element.
-  virtual TypeErasedLattice transferTypeErased(const Stmt *,
-                                               const TypeErasedLattice &,
-                                               Environment &) = 0;
+  virtual void transferTypeErased(const Stmt *, TypeErasedLattice &,
+                                  Environment &) = 0;
+
+  /// Determines whether to apply the built-in transfer functions, which model
+  /// the heap and stack in the `Environment`.
+  bool applyBuiltinTransfer() const { return ApplyBuiltinTransfer; }
 };
 
 /// Type-erased model of the program at a given program point.
@@ -74,18 +90,36 @@ struct TypeErasedDataflowAnalysisState {
 
   /// Model of the state of the program (store and heap).
   Environment Env;
+
+  TypeErasedDataflowAnalysisState(TypeErasedLattice Lattice, Environment Env)
+      : Lattice(std::move(Lattice)), Env(std::move(Env)) {}
 };
 
-/// Performs dataflow analysis and returns a mapping from basic block IDs to
-/// dataflow analysis states that model the respective basic blocks. Indices
-/// of the returned vector correspond to basic block IDs.
+/// Transfers the state of a basic block by evaluating each of its statements in
+/// the context of `Analysis` and the states of its predecessors that are
+/// available in `BlockStates`. `HandleTransferredStmt` (if provided) will be
+/// applied to each statement in the block, after it is evaluated.
 ///
 /// Requirements:
 ///
-///  `Cfg` must have been built with `CFG::BuildOptions::setAllAlwaysAdd()` to
-///  ensure that all sub-expressions in a basic block are evaluated.
-std::vector<llvm::Optional<TypeErasedDataflowAnalysisState>>
-runTypeErasedDataflowAnalysis(const CFG &Cfg,
+///   All predecessors of `Block` except those with loop back edges must have
+///   already been transferred. States in `BlockStates` that are set to
+///   `llvm::None` represent basic blocks that are not evaluated yet.
+TypeErasedDataflowAnalysisState transferBlock(
+    const ControlFlowContext &CFCtx,
+    std::vector<llvm::Optional<TypeErasedDataflowAnalysisState>> &BlockStates,
+    const CFGBlock &Block, const Environment &InitEnv,
+    TypeErasedDataflowAnalysis &Analysis,
+    std::function<void(const CFGStmt &,
+                       const TypeErasedDataflowAnalysisState &)>
+        HandleTransferredStmt = nullptr);
+
+/// Performs dataflow analysis and returns a mapping from basic block IDs to
+/// dataflow analysis states that model the respective basic blocks. Indices
+/// of the returned vector correspond to basic block IDs. Returns an error if
+/// the dataflow analysis cannot be performed successfully.
+llvm::Expected<std::vector<llvm::Optional<TypeErasedDataflowAnalysisState>>>
+runTypeErasedDataflowAnalysis(const ControlFlowContext &CFCtx,
                               TypeErasedDataflowAnalysis &Analysis,
                               const Environment &InitEnv);
 

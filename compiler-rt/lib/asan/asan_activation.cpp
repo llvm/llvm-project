@@ -112,7 +112,7 @@ void AsanDeactivate() {
   disabled.quarantine_size_mb = 0;
   disabled.thread_local_quarantine_size_kb = 0;
   // Redzone must be at least Max(16, granularity) bytes long.
-  disabled.min_redzone = Max(16, (int)SHADOW_GRANULARITY);
+  disabled.min_redzone = Max(16, (int)ASAN_SHADOW_GRANULARITY);
   disabled.max_redzone = disabled.min_redzone;
   disabled.alloc_dealloc_mismatch = false;
   disabled.may_return_null = true;

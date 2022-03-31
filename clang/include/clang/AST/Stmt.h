@@ -595,7 +595,7 @@ protected:
 
     /// The kind of source location builtin represented by the SourceLocExpr.
     /// Ex. __builtin_LINE, __builtin_FUNCTION, ect.
-    unsigned Kind : 2;
+    unsigned Kind : 3;
   };
 
   class StmtExprBitfields {

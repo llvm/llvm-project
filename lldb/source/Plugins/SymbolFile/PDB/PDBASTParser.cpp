@@ -22,13 +22,15 @@
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/TypeMap.h"
 #include "lldb/Symbol/TypeSystem.h"
-
+#include "lldb/Utility/LLDBLog.h"
+#include "llvm/DebugInfo/PDB/ConcreteSymbolEnumerator.h"
 #include "llvm/DebugInfo/PDB/IPDBLineNumber.h"
 #include "llvm/DebugInfo/PDB/IPDBSourceFile.h"
 #include "llvm/DebugInfo/PDB/PDBSymbol.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolData.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolFunc.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeArray.h"
+#include "llvm/DebugInfo/PDB/PDBSymbolTypeBaseClass.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeBuiltin.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeEnum.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeFunctionArg.h"
@@ -1298,7 +1300,7 @@ void PDBASTParser::AddRecordMembers(
             TypeSystemClang::SetIntegerInitializerForVariable(
                 decl, value.toAPSInt().extOrTrunc(type_width));
           } else {
-            LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_AST),
+            LLDB_LOG(GetLog(LLDBLog::AST),
                      "Class '{0}' has a member '{1}' of type '{2}' ({3} bits) "
                      "which resolves to a wider constant value ({4} bits). "
                      "Ignoring constant.",
@@ -1316,7 +1318,7 @@ void PDBASTParser::AddRecordMembers(
                   decl, value.toAPFloat());
               decl->setConstexpr(true);
             } else {
-              LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_AST),
+              LLDB_LOG(GetLog(LLDBLog::AST),
                        "Class '{0}' has a member '{1}' of type '{2}' ({3} "
                        "bits) which resolves to a constant value of mismatched "
                        "width ({4} bits). Ignoring constant.",

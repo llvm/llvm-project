@@ -302,9 +302,7 @@ define arm_aapcscc i32 @test_lshr_load64_4_unaligned(i64* %a) {
 ;
 ; CHECK-BE-LABEL: test_lshr_load64_4_unaligned:
 ; CHECK-BE:       @ %bb.0: @ %entry
-; CHECK-BE-NEXT:    ldr r1, [r0]
-; CHECK-BE-NEXT:    ldrh r0, [r0, #4]
-; CHECK-BE-NEXT:    orr r0, r0, r1, lsl #16
+; CHECK-BE-NEXT:    ldr r0, [r0, #2]
 ; CHECK-BE-NEXT:    bx lr
 ;
 ; CHECK-THUMB-LABEL: test_lshr_load64_4_unaligned:
@@ -341,9 +339,7 @@ define arm_aapcscc i32 @test_lshr_load64_1_lsb(i64* %a) {
 ;
 ; CHECK-BE-LABEL: test_lshr_load64_1_lsb:
 ; CHECK-BE:       @ %bb.0: @ %entry
-; CHECK-BE-NEXT:    ldr r1, [r0]
-; CHECK-BE-NEXT:    ldrb r0, [r0, #4]
-; CHECK-BE-NEXT:    orr r0, r0, r1, lsl #8
+; CHECK-BE-NEXT:    ldr r0, [r0, #1]
 ; CHECK-BE-NEXT:    bx lr
 ;
 ; CHECK-THUMB-LABEL: test_lshr_load64_1_lsb:
@@ -441,23 +437,17 @@ entry:
 define arm_aapcscc i32 @test_lshr_load4_fail(i64* %a) {
 ; CHECK-ARM-LABEL: test_lshr_load4_fail:
 ; CHECK-ARM:       @ %bb.0: @ %entry
-; CHECK-ARM-NEXT:    ldrd r0, r1, [r0]
-; CHECK-ARM-NEXT:    lsr r0, r0, #8
-; CHECK-ARM-NEXT:    orr r0, r0, r1, lsl #24
+; CHECK-ARM-NEXT:    ldr r0, [r0, #1]
 ; CHECK-ARM-NEXT:    bx lr
 ;
 ; CHECK-BE-LABEL: test_lshr_load4_fail:
 ; CHECK-BE:       @ %bb.0: @ %entry
-; CHECK-BE-NEXT:    ldrd r0, r1, [r0]
-; CHECK-BE-NEXT:    lsr r1, r1, #8
-; CHECK-BE-NEXT:    orr r0, r1, r0, lsl #24
+; CHECK-BE-NEXT:    ldr r0, [r0, #3]
 ; CHECK-BE-NEXT:    bx lr
 ;
 ; CHECK-THUMB-LABEL: test_lshr_load4_fail:
 ; CHECK-THUMB:       @ %bb.0: @ %entry
-; CHECK-THUMB-NEXT:    ldrd r0, r1, [r0]
-; CHECK-THUMB-NEXT:    lsrs r0, r0, #8
-; CHECK-THUMB-NEXT:    orr.w r0, r0, r1, lsl #24
+; CHECK-THUMB-NEXT:    ldr.w r0, [r0, #1]
 ; CHECK-THUMB-NEXT:    bx lr
 ;
 ; CHECK-ALIGN-LABEL: test_lshr_load4_fail:

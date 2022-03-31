@@ -25,14 +25,10 @@ define i8 @widget(i8* %arr, i8 %t9) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], [[ARR2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP4]] to i8
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i8 1, [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = sub i8 1, [[TMP5]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt i8 [[TMP7]], 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp slt i8 [[TMP6]], 1
-; CHECK-NEXT:    [[TMP10:%.*]] = select i1 false, i1 [[TMP8]], i1 [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp ugt i64 [[TMP4]], 255
-; CHECK-NEXT:    [[TMP12:%.*]] = or i1 [[TMP10]], [[TMP11]]
-; CHECK-NEXT:    [[TMP13:%.*]] = or i1 false, [[TMP12]]
-; CHECK-NEXT:    br i1 [[TMP13]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    [[TMP12:%.*]] = or i1 [[TMP9]], [[TMP11]]
+; CHECK-NEXT:    br i1 [[TMP12]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP2]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP2]], [[N_MOD_VF]]

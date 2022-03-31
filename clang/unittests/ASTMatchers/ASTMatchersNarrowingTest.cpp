@@ -1790,6 +1790,35 @@ TEST_P(ASTMatchersTest, IsNoThrow_CXX11) {
   EXPECT_TRUE(matches("void f() noexcept;", functionProtoType(isNoThrow())));
 }
 
+TEST_P(ASTMatchersTest, IsConsteval) {
+  if (!GetParam().isCXX20OrLater())
+    return;
+
+  EXPECT_TRUE(matches("consteval int bar();",
+                      functionDecl(hasName("bar"), isConsteval())));
+  EXPECT_TRUE(notMatches("constexpr int bar();",
+                         functionDecl(hasName("bar"), isConsteval())));
+  EXPECT_TRUE(
+      notMatches("int bar();", functionDecl(hasName("bar"), isConsteval())));
+}
+
+TEST_P(ASTMatchersTest, IsConsteval_MatchesIfConsteval) {
+  if (!GetParam().isCXX20OrLater())
+    return;
+
+  EXPECT_TRUE(matches("void baz() { if consteval {} }", ifStmt(isConsteval())));
+  EXPECT_TRUE(
+      matches("void baz() { if ! consteval {} }", ifStmt(isConsteval())));
+  EXPECT_TRUE(matches("void baz() { if ! consteval {} else {} }",
+                      ifStmt(isConsteval())));
+  EXPECT_TRUE(
+      matches("void baz() { if not consteval {} }", ifStmt(isConsteval())));
+  EXPECT_TRUE(notMatches("void baz() { if constexpr(1 > 0) {} }",
+                         ifStmt(isConsteval())));
+  EXPECT_TRUE(
+      notMatches("void baz() { if (1 > 0) {} }", ifStmt(isConsteval())));
+}
+
 TEST_P(ASTMatchersTest, IsConstexpr) {
   if (!GetParam().isCXX11OrLater()) {
     return;
@@ -1810,6 +1839,25 @@ TEST_P(ASTMatchersTest, IsConstexpr_MatchesIfConstexpr) {
       matches("void baz() { if constexpr(1 > 0) {} }", ifStmt(isConstexpr())));
   EXPECT_TRUE(
       notMatches("void baz() { if (1 > 0) {} }", ifStmt(isConstexpr())));
+}
+
+TEST_P(ASTMatchersTest, IsConstinit) {
+  if (!GetParam().isCXX20OrLater())
+    return;
+
+  EXPECT_TRUE(matches("constinit int foo = 1;",
+                      varDecl(hasName("foo"), isConstinit())));
+  EXPECT_TRUE(matches("extern constinit int foo;",
+                      varDecl(hasName("foo"), isConstinit())));
+  EXPECT_TRUE(matches("constinit const char* foo = \"bar\";",
+                      varDecl(hasName("foo"), isConstinit())));
+  EXPECT_TRUE(
+      notMatches("[[clang::require_constant_initialization]] int foo = 1;",
+                 varDecl(hasName("foo"), isConstinit())));
+  EXPECT_TRUE(notMatches("constexpr int foo = 1;",
+                         varDecl(hasName("foo"), isConstinit())));
+  EXPECT_TRUE(notMatches("static inline int foo = 1;",
+                         varDecl(hasName("foo"), isConstinit())));
 }
 
 TEST_P(ASTMatchersTest, HasInitStatement_MatchesSelectionInitializers) {

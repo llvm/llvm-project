@@ -41,7 +41,8 @@ module __Fortran_builtins
 
   procedure(type(__builtin_c_ptr)) :: __builtin_c_loc
 
-  intrinsic :: __builtin_ieee_is_nan
+  intrinsic :: __builtin_ieee_is_nan, __builtin_ieee_is_normal, &
+    __builtin_ieee_is_negative
   intrinsic :: __builtin_ieee_next_after, __builtin_ieee_next_down, &
     __builtin_ieee_next_up
   intrinsic :: scale ! for ieee_scalb

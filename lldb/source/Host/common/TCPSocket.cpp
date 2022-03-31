@@ -14,6 +14,7 @@
 
 #include "lldb/Host/Config.h"
 #include "lldb/Host/MainLoop.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 
 #include "llvm/Config/llvm-config.h"
@@ -148,7 +149,7 @@ Status TCPSocket::CreateSocket(int domain) {
 
 Status TCPSocket::Connect(llvm::StringRef name) {
 
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_COMMUNICATION));
+  Log *log = GetLog(LLDBLog::Communication);
   LLDB_LOGF(log, "TCPSocket::%s (host/port = %s)", __FUNCTION__, name.data());
 
   Status error;
@@ -184,7 +185,7 @@ Status TCPSocket::Connect(llvm::StringRef name) {
 }
 
 Status TCPSocket::Listen(llvm::StringRef name, int backlog) {
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION));
+  Log *log = GetLog(LLDBLog::Connection);
   LLDB_LOGF(log, "TCPSocket::%s (%s)", __FUNCTION__, name.data());
 
   Status error;

@@ -70,6 +70,21 @@ TEST_F(SortIncludesTest, BasicSorting) {
                  {tooling::Range(25, 1)}));
 }
 
+TEST_F(SortIncludesTest, TrailingComments) {
+  EXPECT_EQ("#include \"a.h\"\n"
+            "#include \"b.h\" /* long\n"
+            "                  * long\n"
+            "                  * comment*/\n"
+            "#include \"c.h\"\n"
+            "#include \"d.h\"\n",
+            sort("#include \"a.h\"\n"
+                 "#include \"c.h\"\n"
+                 "#include \"b.h\" /* long\n"
+                 "                  * long\n"
+                 "                  * comment*/\n"
+                 "#include \"d.h\"\n"));
+}
+
 TEST_F(SortIncludesTest, SortedIncludesUsingSortPriorityAttribute) {
   FmtStyle.IncludeStyle.IncludeBlocks = tooling::IncludeStyle::IBS_Regroup;
   FmtStyle.IncludeStyle.IncludeCategories = {
@@ -1043,6 +1058,153 @@ TEST_F(SortIncludesTest, DisableFormatDisablesIncludeSorting) {
   EXPECT_EQ(Sorted, sort(Unsorted));
   FmtStyle.DisableFormat = true;
   EXPECT_EQ(Unsorted, sort(Unsorted, "input.cpp", 0));
+}
+
+TEST_F(SortIncludesTest, DisableRawStringLiteralSorting) {
+
+  EXPECT_EQ("const char *t = R\"(\n"
+            "#include <b.h>\n"
+            "#include <a.h>\n"
+            ")\";",
+            sort("const char *t = R\"(\n"
+                 "#include <b.h>\n"
+                 "#include <a.h>\n"
+                 ")\";",
+                 "test.cxx", 0));
+  EXPECT_EQ("const char *t = R\"x(\n"
+            "#include <b.h>\n"
+            "#include <a.h>\n"
+            ")x\";",
+            sort("const char *t = R\"x(\n"
+                 "#include <b.h>\n"
+                 "#include <a.h>\n"
+                 ")x\";",
+                 "test.cxx", 0));
+  EXPECT_EQ("const char *t = R\"xyz(\n"
+            "#include <b.h>\n"
+            "#include <a.h>\n"
+            ")xyz\";",
+            sort("const char *t = R\"xyz(\n"
+                 "#include <b.h>\n"
+                 "#include <a.h>\n"
+                 ")xyz\";",
+                 "test.cxx", 0));
+
+  EXPECT_EQ("#include <a.h>\n"
+            "#include <b.h>\n"
+            "const char *t = R\"(\n"
+            "#include <b.h>\n"
+            "#include <a.h>\n"
+            ")\";\n"
+            "#include <c.h>\n"
+            "#include <d.h>\n"
+            "const char *t = R\"x(\n"
+            "#include <f.h>\n"
+            "#include <e.h>\n"
+            ")x\";\n"
+            "#include <g.h>\n"
+            "#include <h.h>\n"
+            "const char *t = R\"xyz(\n"
+            "#include <j.h>\n"
+            "#include <i.h>\n"
+            ")xyz\";\n"
+            "#include <k.h>\n"
+            "#include <l.h>",
+            sort("#include <b.h>\n"
+                 "#include <a.h>\n"
+                 "const char *t = R\"(\n"
+                 "#include <b.h>\n"
+                 "#include <a.h>\n"
+                 ")\";\n"
+                 "#include <d.h>\n"
+                 "#include <c.h>\n"
+                 "const char *t = R\"x(\n"
+                 "#include <f.h>\n"
+                 "#include <e.h>\n"
+                 ")x\";\n"
+                 "#include <h.h>\n"
+                 "#include <g.h>\n"
+                 "const char *t = R\"xyz(\n"
+                 "#include <j.h>\n"
+                 "#include <i.h>\n"
+                 ")xyz\";\n"
+                 "#include <l.h>\n"
+                 "#include <k.h>",
+                 "test.cc", 4));
+
+  EXPECT_EQ("const char *t = R\"AMZ029amz(\n"
+            "#include <b.h>\n"
+            "#include <a.h>\n"
+            ")AMZ029amz\";",
+            sort("const char *t = R\"AMZ029amz(\n"
+                 "#include <b.h>\n"
+                 "#include <a.h>\n"
+                 ")AMZ029amz\";",
+                 "test.cxx", 0));
+
+  EXPECT_EQ("const char *t = R\"-AMZ029amz(\n"
+            "#include <b.h>\n"
+            "#include <a.h>\n"
+            ")-AMZ029amz\";",
+            sort("const char *t = R\"-AMZ029amz(\n"
+                 "#include <b.h>\n"
+                 "#include <a.h>\n"
+                 ")-AMZ029amz\";",
+                 "test.cxx", 0));
+
+  EXPECT_EQ("const char *t = R\"AMZ029amz-(\n"
+            "#include <b.h>\n"
+            "#include <a.h>\n"
+            ")AMZ029amz-\";",
+            sort("const char *t = R\"AMZ029amz-(\n"
+                 "#include <b.h>\n"
+                 "#include <a.h>\n"
+                 ")AMZ029amz-\";",
+                 "test.cxx", 0));
+
+  EXPECT_EQ("const char *t = R\"AM|029amz-(\n"
+            "#include <b.h>\n"
+            "#include <a.h>\n"
+            ")AM|029amz-\";",
+            sort("const char *t = R\"AM|029amz-(\n"
+                 "#include <b.h>\n"
+                 "#include <a.h>\n"
+                 ")AM|029amz-\";",
+                 "test.cxx", 0));
+
+  EXPECT_EQ("const char *t = R\"AM[029amz-(\n"
+            "#include <b.h>\n"
+            "#include <a.h>\n"
+            ")AM[029amz-\";",
+            sort("const char *t = R\"AM[029amz-(\n"
+                 "#include <b.h>\n"
+                 "#include <a.h>\n"
+                 ")AM[029amz-\";",
+                 "test.cxx", 0));
+
+  EXPECT_EQ("const char *t = R\"AM]029amz-(\n"
+            "#include <b.h>\n"
+            "#include <a.h>\n"
+            ")AM]029amz-\";",
+            sort("const char *t = R\"AM]029amz-(\n"
+                 "#include <b.h>\n"
+                 "#include <a.h>\n"
+                 ")AM]029amz-\";",
+                 "test.cxx", 0));
+
+#define X "AMZ029amz{}+!%*=_:;',.<>|/?#~-$"
+
+  EXPECT_EQ("const char *t = R\"" X "(\n"
+            "#include <b.h>\n"
+            "#include <a.h>\n"
+            ")" X "\";",
+            sort("const char *t = R\"" X "(\n"
+                 "#include <b.h>\n"
+                 "#include <a.h>\n"
+                 ")" X "\";",
+                 "test.cxx", 0));
+
+#undef X
 }
 
 } // end namespace

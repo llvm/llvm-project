@@ -159,19 +159,13 @@ llvm::DenseSet<const NamedDecl *> locateDeclAt(ParsedAST &AST,
   return Result;
 }
 
-// By default, we exclude C++ standard symbols and protobuf symbols as rename
-// these symbols would change system/generated files which are unlikely to be
-// modified.
+// By default, we exclude symbols from system headers and protobuf symbols as
+// renaming these symbols would change system/generated files which are unlikely
+// to be good candidates for modification.
 bool isExcluded(const NamedDecl &RenameDecl) {
-  if (isProtoFile(RenameDecl.getLocation(),
-                  RenameDecl.getASTContext().getSourceManager()))
-    return true;
-  static const auto *StdSymbols = new llvm::DenseSet<llvm::StringRef>({
-#define SYMBOL(Name, NameSpace, Header) {#NameSpace #Name},
-#include "StdSymbolMap.inc"
-#undef SYMBOL
-  });
-  return StdSymbols->count(printQualifiedName(RenameDecl));
+  const auto &SM = RenameDecl.getASTContext().getSourceManager();
+  return SM.isInSystemHeader(RenameDecl.getLocation()) ||
+         isProtoFile(RenameDecl.getLocation(), SM);
 }
 
 enum class ReasonToReject {
@@ -395,7 +389,7 @@ const NamedDecl *lookupSiblingsWithinContext(ASTContext &Ctx,
   DeclarationName LookupName(&II);
   DeclContextLookupResult LookupResult;
   const auto *DC = RenamedDecl.getDeclContext();
-  while (DC && DC->isTransparentContext())
+  while (DC->isTransparentContext())
     DC = DC->getParent();
   switch (DC->getDeclKind()) {
   // The enclosing DeclContext may not be the enclosing scope, it might have
@@ -455,7 +449,7 @@ std::string toString(InvalidName::Kind K) {
 }
 
 llvm::Error makeError(InvalidName Reason) {
-  auto Message = [](InvalidName Reason) {
+  auto Message = [](const InvalidName &Reason) {
     switch (Reason.K) {
     case InvalidName::Keywords:
       return llvm::formatv("the chosen name \"{0}\" is a keyword",
@@ -733,7 +727,7 @@ llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
     return makeError(ReasonToReject::SameName);
   auto Invalid = checkName(RenameDecl, RInputs.NewName);
   if (Invalid)
-    return makeError(*Invalid);
+    return makeError(std::move(*Invalid));
 
   auto Reject = renameable(RenameDecl, RInputs.MainFilePath, RInputs.Index);
   if (Reject)
@@ -906,7 +900,7 @@ llvm::Optional<std::vector<Range>> getMappedRanges(ArrayRef<Range> Indexed,
 
   std::vector<size_t> Best;
   size_t BestCost = std::numeric_limits<size_t>::max();
-  bool HasMultiple = 0;
+  bool HasMultiple = false;
   std::vector<size_t> ResultStorage;
   int Fuel = 10000;
   findNearMiss(ResultStorage, Indexed, Lexed, 0, Fuel,

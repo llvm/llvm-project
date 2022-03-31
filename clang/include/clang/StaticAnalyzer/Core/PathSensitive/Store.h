@@ -172,9 +172,9 @@ public:
   ///    dynamic_cast.
   ///  - We don't know (base is a symbolic region and we don't have
   ///    enough info to determine if the cast will succeed at run time).
-  /// The function returns an SVal representing the derived class; it's
-  /// valid only if Failed flag is set to false.
-  SVal attemptDownCast(SVal Base, QualType DerivedPtrType, bool &Failed);
+  /// The function returns an optional with SVal representing the derived class
+  /// in case of a successful cast and `None` otherwise.
+  Optional<SVal> evalBaseToDerived(SVal Base, QualType DerivedPtrType);
 
   const ElementRegion *GetElementZeroRegion(const SubRegion *R, QualType T);
 

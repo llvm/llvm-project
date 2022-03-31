@@ -3,11 +3,11 @@
 // RUN:               -async-runtime-ref-counting                              \
 // RUN:               -async-runtime-ref-counting-opt                          \
 // RUN:               -convert-async-to-llvm                                   \
-// RUN:               -convert-scf-to-std                                      \
+// RUN:               -convert-scf-to-cf                                      \
 // RUN:               -convert-memref-to-llvm                                  \
 // RUN:               -arith-expand                                            \
-// RUN:               -std-expand                                              \
-// RUN:               -convert-std-to-llvm                                     \
+// RUN:               -memref-expand                                              \
+// RUN:               -convert-func-to-llvm                                     \
 // RUN:               -reconcile-unrealized-casts                              \
 // RUN: | mlir-cpu-runner                                                      \
 // RUN:  -e entry -entry-point-result=void -O0                                 \
@@ -19,11 +19,11 @@
 // RUN:               -async-to-async-runtime                                  \
 // RUN:               -async-runtime-policy-based-ref-counting                 \
 // RUN:               -convert-async-to-llvm                                   \
-// RUN:               -convert-scf-to-std                                      \
+// RUN:               -convert-scf-to-cf                                      \
 // RUN:               -convert-memref-to-llvm                                  \
 // RUN:               -arith-expand                                            \
-// RUN:               -std-expand                                              \
-// RUN:               -convert-std-to-llvm                                     \
+// RUN:               -memref-expand                                              \
+// RUN:               -convert-func-to-llvm                                     \
 // RUN:               -reconcile-unrealized-casts                              \
 // RUN: | mlir-cpu-runner                                                      \
 // RUN:  -e entry -entry-point-result=void -O0                                 \
@@ -38,11 +38,11 @@
 // RUN:               -async-runtime-ref-counting                              \
 // RUN:               -async-runtime-ref-counting-opt                          \
 // RUN:               -convert-async-to-llvm                                   \
-// RUN:               -convert-scf-to-std                                      \
+// RUN:               -convert-scf-to-cf                                      \
 // RUN:               -convert-memref-to-llvm                                  \
 // RUN:               -arith-expand                                            \
-// RUN:               -std-expand                                              \
-// RUN:               -convert-std-to-llvm                                     \
+// RUN:               -memref-expand                                              \
+// RUN:               -convert-func-to-llvm                                     \
 // RUN:               -reconcile-unrealized-casts                              \
 // RUN: | mlir-cpu-runner                                                      \
 // RUN:  -e entry -entry-point-result=void -O0                                 \
@@ -68,11 +68,19 @@ func @entry() {
   %A = memref.alloc() : memref<9xf32>
   %U = memref.cast %A :  memref<9xf32> to memref<*xf32>
 
+  // Initialize memref with zeros because we do load and store to in every test
+  // to verify that we process each element of the iteration space once.
+  scf.parallel (%i) = (%lb) to (%ub) step (%c1) {
+    memref.store %c0, %A[%i] : memref<9xf32>
+  }
+
   // 1. %i = (0) to (9) step (1)
   scf.parallel (%i) = (%lb) to (%ub) step (%c1) {
     %0 = arith.index_cast %i : index to i32
     %1 = arith.sitofp %0 : i32 to f32
-    memref.store %1, %A[%i] : memref<9xf32>
+    %2 = memref.load %A[%i] : memref<9xf32>
+    %3 = arith.addf %1, %2 : f32
+    memref.store %3, %A[%i] : memref<9xf32>
   }
   // CHECK: [0, 1, 2, 3, 4, 5, 6, 7, 8]
   call @print_memref_f32(%U): (memref<*xf32>) -> ()
@@ -85,7 +93,9 @@ func @entry() {
   scf.parallel (%i) = (%lb) to (%ub) step (%c2) {
     %0 = arith.index_cast %i : index to i32
     %1 = arith.sitofp %0 : i32 to f32
-    memref.store %1, %A[%i] : memref<9xf32>
+    %2 = memref.load %A[%i] : memref<9xf32>
+    %3 = arith.addf %1, %2 : f32
+    memref.store %3, %A[%i] : memref<9xf32>
   }
   // CHECK:  [0, 0, 2, 0, 4, 0, 6, 0, 8]
   call @print_memref_f32(%U): (memref<*xf32>) -> ()
@@ -102,7 +112,9 @@ func @entry() {
     %1 = arith.sitofp %0 : i32 to f32
     %2 = arith.constant 20 : index
     %3 = arith.addi %i, %2 : index
-    memref.store %1, %A[%3] : memref<9xf32>
+    %4 = memref.load %A[%3] : memref<9xf32>
+    %5 = arith.addf %1, %4 : f32
+    memref.store %5, %A[%3] : memref<9xf32>
   }
   // CHECK: [-20, 0, 0, -17, 0, 0, -14, 0, 0]
   call @print_memref_f32(%U): (memref<*xf32>) -> ()
@@ -113,7 +125,7 @@ func @entry() {
 
   scf.parallel (%i) = (%lb1) to (%ub1) step (%c1) {
     %false = arith.constant 0 : i1
-    assert %false, "should never be executed"
+    cf.assert %false, "should never be executed"
   }
 
   memref.dealloc %A : memref<9xf32>

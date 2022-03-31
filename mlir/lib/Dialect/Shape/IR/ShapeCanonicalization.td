@@ -1,5 +1,5 @@
+include "mlir/IR/PatternBase.td"
 include "mlir/Dialect/Shape/IR/ShapeOps.td"
-include "mlir/Dialect/StandardOps/IR/Ops.td"
 include "mlir/Dialect/Tensor/IR/TensorOps.td"
 
 def AllInputShapesEq : Constraint<CPred< [{

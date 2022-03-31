@@ -13,7 +13,9 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 
 using namespace lldb;
@@ -406,7 +408,7 @@ const UnwindPlan::RowSP UnwindPlan::GetRowAtIndex(uint32_t idx) const {
   if (idx < m_row_list.size())
     return m_row_list[idx];
   else {
-    Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
+    Log *log = GetLog(LLDBLog::Unwind);
     LLDB_LOGF(log,
               "error: UnwindPlan::GetRowAtIndex(idx = %u) invalid index "
               "(number rows is %u)",
@@ -417,7 +419,7 @@ const UnwindPlan::RowSP UnwindPlan::GetRowAtIndex(uint32_t idx) const {
 
 const UnwindPlan::RowSP UnwindPlan::GetLastRow() const {
   if (m_row_list.empty()) {
-    Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
+    Log *log = GetLog(LLDBLog::Unwind);
     LLDB_LOGF(log, "UnwindPlan::GetLastRow() when rows are empty");
     return UnwindPlan::RowSP();
   }
@@ -434,7 +436,7 @@ void UnwindPlan::SetPlanValidAddressRange(const AddressRange &range) {
 bool UnwindPlan::PlanValidAtAddress(Address addr) {
   // If this UnwindPlan has no rows, it is an invalid UnwindPlan.
   if (GetRowCount() == 0) {
-    Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
+    Log *log = GetLog(LLDBLog::Unwind);
     if (log) {
       StreamString s;
       if (addr.Dump(&s, nullptr, Address::DumpStyleSectionNameOffset)) {
@@ -457,7 +459,7 @@ bool UnwindPlan::PlanValidAtAddress(Address addr) {
   if (GetRowAtIndex(0).get() == nullptr ||
       GetRowAtIndex(0)->GetCFAValue().GetValueType() ==
           Row::FAValue::unspecified) {
-    Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
+    Log *log = GetLog(LLDBLog::Unwind);
     if (log) {
       StreamString s;
       if (addr.Dump(&s, nullptr, Address::DumpStyleSectionNameOffset)) {

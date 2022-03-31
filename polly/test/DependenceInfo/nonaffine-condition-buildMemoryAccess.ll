@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -polly-allow-nonaffine-loops -polly-allow-nonaffine -debug-only=polly-dependence < %s 2>&1 | FileCheck %s 
+; RUN: opt %loadPolly -polly-codegen -polly-allow-nonaffine-loops -polly-allow-nonaffine -debug-only=polly-dependence < %s 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 ; CHECK:        MayWriteAccess :=   [Reduction Type: NONE] [Scalar: 0]

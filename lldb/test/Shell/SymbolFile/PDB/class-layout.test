@@ -85,7 +85,7 @@ CLASS:    int m_protected;
 CLASS:    Class();
 CLASS:    Class(int);
 CLASS:    ~Class();
-CLASS:    static int {{.*}}StaticMemberFunc(int, ...);
+CLASS:    {{(static )?}}int {{.*}}StaticMemberFunc(int, ...);
 CLASS:    int Get();
 CLASS:    int f(MemberTest::Friend);
 CLASS:    bool operator==(const MemberTest::Class &)

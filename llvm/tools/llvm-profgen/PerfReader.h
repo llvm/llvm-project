@@ -213,6 +213,7 @@ using AggregatedCounter =
                        Hashable<PerfSample>::Hash, Hashable<PerfSample>::Equal>;
 
 using SampleVector = SmallVector<std::tuple<uint64_t, uint64_t, uint64_t>, 16>;
+
 // The state for the unwinder, it doesn't hold the data but only keep the
 // pointer/index of the data, While unwinding, the CallStack is changed
 // dynamicially and will be recorded as the context of the sample
@@ -221,7 +222,7 @@ struct UnwindState {
   const ProfiledBinary *Binary;
   // Call stack trie node
   struct ProfiledFrame {
-    const uint64_t Address = 0;
+    const uint64_t Address = DummyRoot;
     ProfiledFrame *Parent;
     SampleVector RangeSamples;
     SampleVector BranchSamples;
@@ -241,7 +242,8 @@ struct UnwindState {
     void recordBranchCount(uint64_t Source, uint64_t Target, uint64_t Count) {
       BranchSamples.emplace_back(std::make_tuple(Source, Target, Count));
     }
-    bool isDummyRoot() { return Address == 0; }
+    bool isDummyRoot() { return Address == DummyRoot; }
+    bool isExternalFrame() { return Address == ExternalAddr; }
     bool isLeafFrame() { return Children.empty(); }
   };
 
@@ -262,6 +264,9 @@ struct UnwindState {
   bool validateInitialState() {
     uint64_t LBRLeaf = LBRStack[LBRIndex].Target;
     uint64_t LeafAddr = CurrentLeafFrame->Address;
+    assert((LBRLeaf != ExternalAddr || LBRLeaf == LeafAddr) &&
+           "External leading LBR should match the leaf frame.");
+
     // When we take a stack sample, ideally the sampling distance between the
     // leaf IP of stack and the last LBR target shouldn't be very large.
     // Use a heuristic size (0x100) to filter out broken records.
@@ -283,8 +288,9 @@ struct UnwindState {
   uint64_t getCurrentLBRSource() const { return LBRStack[LBRIndex].Source; }
   uint64_t getCurrentLBRTarget() const { return LBRStack[LBRIndex].Target; }
   const LBREntry &getCurrentLBR() const { return LBRStack[LBRIndex]; }
+  bool IsLastLBR() const { return LBRIndex == 0; }
+  bool getLBRStackSize() const { return LBRStack.size(); }
   void advanceLBR() { LBRIndex++; }
-
   ProfiledFrame *getParentFrame() { return CurrentLeafFrame->Parent; }
 
   void pushFrame(uint64_t Address) {
@@ -298,6 +304,8 @@ struct UnwindState {
   }
 
   void popFrame() { CurrentLeafFrame = CurrentLeafFrame->Parent; }
+
+  void clearCallStack() { CurrentLeafFrame = &DummyTrieRoot; }
 
   void initFrameTrie(const SmallVectorImpl<uint64_t> &CallStack) {
     ProfiledFrame *Cur = &DummyTrieRoot;
@@ -325,7 +333,7 @@ struct ContextKey {
   };
 
   // Utilities for LLVM-style RTTI
-  enum ContextKind { CK_StringBased, CK_ProbeBased };
+  enum ContextKind { CK_StringBased, CK_AddrBased };
   const ContextKind Kind;
   ContextKind getKind() const { return Kind; }
   ContextKey(ContextKind K) : Kind(K){};
@@ -351,34 +359,23 @@ struct StringBasedCtxKey : public ContextKey {
   }
 };
 
-// Probe based context key as the intermediate key of context
-// String based context key will introduce redundant string handling
-// since the callee context is inferred from the context string which
-// need to be splitted by '@' to get the last location frame, so we
-// can just use probe instead and generate the string in the end.
-struct ProbeBasedCtxKey : public ContextKey {
-  SmallVector<const MCDecodedPseudoProbe *, 16> Probes;
+// Address-based context id
+struct AddrBasedCtxKey : public ContextKey {
+  SmallVector<uint64_t, 16> Context;
 
-  ProbeBasedCtxKey() : ContextKey(CK_ProbeBased) {}
+  bool WasLeafInlined;
+  AddrBasedCtxKey() : ContextKey(CK_AddrBased), WasLeafInlined(false){};
   static bool classof(const ContextKey *K) {
-    return K->getKind() == CK_ProbeBased;
+    return K->getKind() == CK_AddrBased;
   }
 
   bool isEqual(const ContextKey *K) const override {
-    const ProbeBasedCtxKey *O = dyn_cast<ProbeBasedCtxKey>(K);
-    assert(O != nullptr && "Probe based key shouldn't be null in isEqual");
-    return std::equal(Probes.begin(), Probes.end(), O->Probes.begin(),
-                      O->Probes.end());
+    const AddrBasedCtxKey *Other = dyn_cast<AddrBasedCtxKey>(K);
+    return Context == Other->Context;
   }
 
   void genHashCode() override {
-    for (const auto *P : Probes) {
-      HashCode = hash_combine(HashCode, P);
-    }
-    if (HashCode == 0) {
-      // Avoid zero value of HashCode when it's an empty list
-      HashCode = 1;
-    }
+    HashCode = hash_combine_range(Context.begin(), Context.end());
   }
 };
 
@@ -412,6 +409,8 @@ struct FrameStack {
   ProfiledBinary *Binary;
   FrameStack(ProfiledBinary *B) : Binary(B) {}
   bool pushFrame(UnwindState::ProfiledFrame *Cur) {
+    assert(!Cur->isExternalFrame() &&
+           "External frame's not expected for context stack.");
     Stack.push_back(Cur->Address);
     return true;
   }
@@ -423,20 +422,14 @@ struct FrameStack {
   std::shared_ptr<StringBasedCtxKey> getContextKey();
 };
 
-struct ProbeStack {
-  SmallVector<const MCDecodedPseudoProbe *, 16> Stack;
+struct AddressStack {
+  SmallVector<uint64_t, 16> Stack;
   ProfiledBinary *Binary;
-  ProbeStack(ProfiledBinary *B) : Binary(B) {}
+  AddressStack(ProfiledBinary *B) : Binary(B) {}
   bool pushFrame(UnwindState::ProfiledFrame *Cur) {
-    const MCDecodedPseudoProbe *CallProbe =
-        Binary->getCallProbeForAddr(Cur->Address);
-    // We may not find a probe for a merged or external callsite.
-    // Callsite merging may cause the loss of original probe IDs.
-    // Cutting off the context from here since the inliner will
-    // not know how to consume a context with unknown callsites.
-    if (!CallProbe)
-      return false;
-    Stack.push_back(CallProbe);
+    assert(!Cur->isExternalFrame() &&
+           "External frame's not expected for context stack.");
+    Stack.push_back(Cur->Address);
     return true;
   }
 
@@ -444,18 +437,7 @@ struct ProbeStack {
     if (!Stack.empty())
       Stack.pop_back();
   }
-  // Use pseudo probe based context key to get the sample counter
-  // A context stands for a call path from 'main' to an uninlined
-  // callee with all inline frames recovered on that path. The probes
-  // belonging to that call path is the probes either originated from
-  // the callee or from any functions inlined into the callee. Since
-  // pseudo probes are organized in a tri-tree style after decoded,
-  // the tree path from the tri-tree root (which is the uninlined
-  // callee) to the probe node forms an inline context.
-  // Here we use a list of probe(pointer) as the context key to speed up
-  // aggregation and the final context string will be generate in
-  // ProfileGenerator
-  std::shared_ptr<ProbeBasedCtxKey> getContextKey();
+  std::shared_ptr<AddrBasedCtxKey> getContextKey();
 };
 
 /*
@@ -484,6 +466,12 @@ public:
   bool unwind(const PerfSample *Sample, uint64_t Repeat);
   std::set<uint64_t> &getUntrackedCallsites() { return UntrackedCallsites; }
 
+  uint64_t NumTotalBranches = 0;
+  uint64_t NumExtCallBranch = 0;
+  uint64_t NumMissingExternalFrame = 0;
+  uint64_t NumMismatchedProEpiBranch = 0;
+  uint64_t NumMismatchedExtCallBranch = 0;
+
 private:
   bool isCallState(UnwindState &State) const {
     // The tail call frame is always missing here in stack sample, we will
@@ -494,13 +482,25 @@ private:
   bool isReturnState(UnwindState &State) const {
     // Simply check addressIsReturn, as ret is always reliable, both for
     // regular call and tail call.
-    return Binary->addressIsReturn(State.getCurrentLBRSource());
+    if (!Binary->addressIsReturn(State.getCurrentLBRSource()))
+      return false;
+
+    // In a callback case, a return from internal code, say A, to external
+    // runtime can happen. The external runtime can then call back to
+    // another internal routine, say B. Making an artificial branch that
+    // looks like a return from A to B can confuse the unwinder to treat
+    // the instruction before B as the call instruction. Here we detect this
+    // case if the return target is not the next inst of call inst, then we just
+    // do not treat it as a return.
+    uint64_t CallAddr =
+        Binary->getCallAddrFromFrameAddr(State.getCurrentLBRTarget());
+    return (CallAddr != 0);
   }
 
   void unwindCall(UnwindState &State);
   void unwindLinear(UnwindState &State, uint64_t Repeat);
   void unwindReturn(UnwindState &State);
-  void unwindBranchWithinFrame(UnwindState &State);
+  void unwindBranch(UnwindState &State);
 
   template <typename T>
   void collectSamplesFromFrame(UnwindState::ProfiledFrame *Cur, T &Stack);
@@ -538,14 +538,18 @@ public:
   const ContextSampleCounterMap &getSampleCounters() const {
     return SampleCounters;
   }
-  bool profileIsCS() { return ProfileIsCS; }
+  bool profileIsCSFlat() { return ProfileIsCSFlat; }
 
 protected:
   ProfiledBinary *Binary = nullptr;
   StringRef PerfTraceFile;
 
   ContextSampleCounterMap SampleCounters;
-  bool ProfileIsCS = false;
+  bool ProfileIsCSFlat = false;
+
+  uint64_t NumTotalSample = 0;
+  uint64_t NumLeafExternalFrame = 0;
+  uint64_t NumLeadingOutgoingLBR = 0;
 };
 
 // Read perf script to parse the events and samples.

@@ -1,10 +1,10 @@
-; RUN: opt < %s -cost-model -analyze -mtriple=systemz-unknown -mcpu=z13 \
+; RUN: opt < %s -passes='print<cost-model>' 2>&1 -disable-output -mtriple=systemz-unknown -mcpu=z13 \
 ; RUN:  | FileCheck %s -check-prefixes=CHECK,Z13
-; RUN: opt < %s -cost-model -analyze -mtriple=systemz-unknown -mcpu=z15 \
+; RUN: opt < %s -passes='print<cost-model>' 2>&1 -disable-output -mtriple=systemz-unknown -mcpu=z15 \
 ; RUN:  | FileCheck %s -check-prefixes=CHECK,Z15
 
 define void @fun0(i32 %a)  {
-; CHECK-LABEL: Printing analysis 'Cost Model Analysis' for function 'fun0':
+; CHECK-LABEL: function 'fun0'
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %c0 = xor i32 %l0, -1
 ; Z13:   Cost Model: Found an estimated cost of 1 for instruction:   %res0 = or i32 %a, %c0
 ; Z15:   Cost Model: Found an estimated cost of 0 for instruction:   %res0 = or i32 %a, %c0
@@ -51,7 +51,7 @@ entry:
 }
 
 define void @fun1(i64 %a)  {
-; CHECK-LABEL: Printing analysis 'Cost Model Analysis' for function 'fun1':
+; CHECK-LABEL: function 'fun1'
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %c0 = xor i64 %l0, -1
 ; Z13:   Cost Model: Found an estimated cost of 1 for instruction:   %res0 = or i64 %a, %c0
 ; Z15:   Cost Model: Found an estimated cost of 0 for instruction:   %res0 = or i64 %a, %c0

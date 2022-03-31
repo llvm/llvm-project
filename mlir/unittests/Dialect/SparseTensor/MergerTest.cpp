@@ -3,6 +3,7 @@
 #include "gtest/gtest.h"
 #include <memory>
 
+using namespace mlir;
 using namespace mlir::sparse_tensor;
 
 namespace {
@@ -22,7 +23,8 @@ struct Pattern {
   /// Rather than using these, please use the readable helper constructor
   /// functions below to make tests more readable.
   Pattern(unsigned tensorNum) : kind(Kind::kTensor), tensorNum(tensorNum) {}
-  Pattern(Kind kind, std::shared_ptr<Pattern> e0, std::shared_ptr<Pattern> e1)
+  Pattern(Kind kind, const std::shared_ptr<Pattern> &e0,
+          const std::shared_ptr<Pattern> &e1)
       : kind(kind), e0(e0), e1(e1) {
     assert(kind >= Kind::kMulF);
     assert(e0 && e1);
@@ -38,13 +40,15 @@ static std::shared_ptr<Pattern> tensorPattern(unsigned tensorNum) {
   return std::make_shared<Pattern>(tensorNum);
 }
 
-static std::shared_ptr<Pattern> addfPattern(std::shared_ptr<Pattern> e0,
-                                            std::shared_ptr<Pattern> e1) {
+static std::shared_ptr<Pattern>
+addfPattern(const std::shared_ptr<Pattern> &e0,
+            const std::shared_ptr<Pattern> &e1) {
   return std::make_shared<Pattern>(Kind::kAddF, e0, e1);
 }
 
-static std::shared_ptr<Pattern> mulfPattern(std::shared_ptr<Pattern> e0,
-                                            std::shared_ptr<Pattern> e1) {
+static std::shared_ptr<Pattern>
+mulfPattern(const std::shared_ptr<Pattern> &e0,
+            const std::shared_ptr<Pattern> &e1) {
   return std::make_shared<Pattern>(Kind::kMulF, e0, e1);
 }
 
@@ -84,8 +88,8 @@ protected:
   /// groups of lattice points should be ordered with respect to other groups,
   /// but there is no required ordering within groups.
   bool latPointWithinRange(unsigned s, unsigned p, unsigned n,
-                           std::shared_ptr<Pattern> pattern,
-                           llvm::BitVector bits) {
+                           const std::shared_ptr<Pattern> &pattern,
+                           const BitVector &bits) {
     for (unsigned i = p; i < p + n; ++i) {
       if (compareExpression(merger.lat(merger.set(s)[i]).exp, pattern) &&
           compareBits(s, i, bits))
@@ -96,22 +100,23 @@ protected:
 
   /// Wrapper over latPointWithinRange for readability of tests.
   void expectLatPointWithinRange(unsigned s, unsigned p, unsigned n,
-                                 std::shared_ptr<Pattern> pattern,
-                                 llvm::BitVector bits) {
+                                 const std::shared_ptr<Pattern> &pattern,
+                                 const BitVector &bits) {
     EXPECT_TRUE(latPointWithinRange(s, p, n, pattern, bits));
   }
 
   /// Wrapper over expectLatPointWithinRange for a single lat point.
-  void expectLatPoint(unsigned s, unsigned p, std::shared_ptr<Pattern> pattern,
-                      llvm::BitVector bits) {
+  void expectLatPoint(unsigned s, unsigned p,
+                      const std::shared_ptr<Pattern> &pattern,
+                      const BitVector &bits) {
     EXPECT_TRUE(latPointWithinRange(s, p, 1, pattern, bits));
   }
 
   /// Converts a vector of (loop, tensor) pairs to a bitvector with the
   /// corresponding bits set.
-  llvm::BitVector
-  loopsToBits(std::vector<std::pair<unsigned, unsigned>> loops) {
-    llvm::BitVector testBits = llvm::BitVector(numTensors + 1, false);
+  BitVector
+  loopsToBits(const std::vector<std::pair<unsigned, unsigned>> &loops) {
+    BitVector testBits = BitVector(numTensors + 1, false);
     for (auto l : loops) {
       auto loop = std::get<0>(l);
       auto tensor = std::get<1>(l);
@@ -121,7 +126,7 @@ protected:
   }
 
   /// Returns true if the bits of lattice point p in set s match the given bits.
-  bool compareBits(unsigned s, unsigned p, llvm::BitVector bits) {
+  bool compareBits(unsigned s, unsigned p, const BitVector &bits) {
     return merger.lat(merger.set(s)[p]).bits == bits;
   }
 
@@ -136,7 +141,7 @@ protected:
   ///     children are equal.
   /// - Expressions with Kind invariant or tensor are equal if they have the
   ///     same expression id.
-  bool compareExpression(unsigned e, std::shared_ptr<Pattern> pattern) {
+  bool compareExpression(unsigned e, const std::shared_ptr<Pattern> &pattern) {
     auto tensorExp = merger.exp(e);
     if (tensorExp.kind != pattern->kind)
       return false;
@@ -198,7 +203,7 @@ protected:
   }
 };
 
-} // anonymous namespace
+} // namespace
 
 /// Vector addition of 2 vectors, i.e.:
 ///   a(i) = b(i) + c(i)

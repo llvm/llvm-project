@@ -45,7 +45,7 @@ TEST(Timer, Additivity) {
   T1.stopTimer();
   auto TR2 = T1.getTotalTime();
 
-  EXPECT_TRUE(TR1 < TR2);
+  EXPECT_LT(TR1, TR2);
 }
 
 TEST(Timer, CheckIfTriggered) {

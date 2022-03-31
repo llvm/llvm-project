@@ -2,11 +2,14 @@
 
 // Currently hangs on amdgpu
 // UNSUPPORTED: amdgcn-amd-amdhsa
-// UNSUPPORTED: amdgcn-amd-amdhsa-newRTL
+// UNSUPPORTED: amdgcn-amd-amdhsa-newDriver
 // UNSUPPORTED: x86_64-pc-linux-gnu
+// UNSUPPORTED: x86_64-pc-linux-gnu-newDriver
 
 #include <cassert>
+#include <cmath>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <vector>
 
@@ -47,8 +50,7 @@ public:
       }
   }
 
-  long Compare(const std::vector<float> &matrix) const {
-    long fail = 0;
+  void Compare(const std::vector<float> &matrix) const {
     for (int i = 0; i < nBlocksPerCol; i++)
       for (int j = 0; j < nBlocksPerRow; j++) {
         float *CurrBlock = GetBlock(i, j);
@@ -58,12 +60,10 @@ public:
             int currj = j * rowsPerBlock + jj;
             float m_value = matrix[curri + currj * nCols];
             float bm_value = CurrBlock[ii + jj * colsPerBlock];
-            if (bm_value != m_value) {
-              fail++;
-            }
+            assert(std::fabs(bm_value - m_value) <
+                   std::numeric_limits<float>::epsilon());
           }
       }
-    return fail;
   }
 
   float *GetBlock(int i, int j) const {
@@ -126,20 +126,19 @@ int main(int argc, char *argv[]) {
   }
 
   auto BlockedA = BlockMatrix(BS, BS, N, N);
-  BlockedA.Initialize(a);
-  BlockedA.Compare(a);
   auto BlockedB = BlockMatrix(BS, BS, N, N);
+  auto BlockedC = BlockMatrix(BS, BS, N, N);
+  BlockedA.Initialize(a);
   BlockedB.Initialize(b);
+  BlockedC.Initialize(c);
+  BlockedA.Compare(a);
   BlockedB.Compare(b);
+  BlockedC.Compare(c);
 
   Matmul(a, b, c);
-
-  auto BlockedC = BlockMatrix(BS, BS, N, N);
   BlockMatMul_TargetNowait(BlockedA, BlockedB, BlockedC);
 
-  if (BlockedC.Compare(c) > 0) {
-    return 1;
-  }
+  BlockedC.Compare(c);
 
   std::cout << "PASS\n";
 

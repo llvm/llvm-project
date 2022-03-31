@@ -416,8 +416,8 @@ void HexagonFrameLowering::findShrunkPrologEpilog(MachineFunction &MF,
   UnsignedMap RPO;
   RPOTType RPOT(&MF);
   unsigned RPON = 0;
-  for (RPOTType::rpo_iterator I = RPOT.begin(), E = RPOT.end(); I != E; ++I)
-    RPO[(*I)->getNumber()] = RPON++;
+  for (auto &I : RPOT)
+    RPO[I->getNumber()] = RPON++;
 
   // Don't process functions that have loops, at least for now. Placement
   // of prolog and epilog must take loop structure into account. For simpli-
@@ -1410,7 +1410,7 @@ bool HexagonFrameLowering::insertCSRSpillsInBlock(MachineBasicBlock &MBB,
   }
 
   for (const CalleeSavedInfo &I : CSI) {
-    unsigned Reg = I.getReg();
+    Register Reg = I.getReg();
     // Add live in registers. We treat eh_return callee saved register r0 - r3
     // specially. They are not really callee saved registers as they are not
     // supposed to be killed.
@@ -1479,7 +1479,7 @@ bool HexagonFrameLowering::insertCSRRestoresInBlock(MachineBasicBlock &MBB,
   }
 
   for (const CalleeSavedInfo &I : CSI) {
-    unsigned Reg = I.getReg();
+    Register Reg = I.getReg();
     const TargetRegisterClass *RC = HRI.getMinimalPhysRegClass(Reg);
     int FI = I.getFrameIdx();
     HII.loadRegFromStackSlot(MBB, MI, Reg, FI, RC, &HRI);
@@ -1620,7 +1620,7 @@ bool HexagonFrameLowering::assignCalleeSavedSpillSlots(MachineFunction &MF,
   // sub-registers to SRegs.
   LLVM_DEBUG(dbgs() << "Initial CS registers: {");
   for (const CalleeSavedInfo &I : CSI) {
-    unsigned R = I.getReg();
+    Register R = I.getReg();
     LLVM_DEBUG(dbgs() << ' ' << printReg(R, TRI));
     for (MCSubRegIterator SR(R, TRI, true); SR.isValid(); ++SR)
       SRegs[*SR] = true;
@@ -2635,7 +2635,7 @@ bool HexagonFrameLowering::shouldInlineCSR(const MachineFunction &MF,
   // a contiguous block starting from D8.
   BitVector Regs(Hexagon::NUM_TARGET_REGS);
   for (const CalleeSavedInfo &I : CSI) {
-    unsigned R = I.getReg();
+    Register R = I.getReg();
     if (!Hexagon::DoubleRegsRegClass.contains(R))
       return true;
     Regs[R] = true;

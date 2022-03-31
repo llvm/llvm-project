@@ -10,7 +10,7 @@
 // No warning because this is the default expansion anyway.
 
 // Check that this still expands to the right text.
-void test() {
+void test(void) {
   goto label; // expected-error {{cannot jump from this goto statement to its label}}
   __weak id x; // expected-note {{jump bypasses initialization of __weak variable}}
 label:

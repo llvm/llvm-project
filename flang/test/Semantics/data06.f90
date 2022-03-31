@@ -7,6 +7,12 @@ subroutine s1
   type(t1) :: t1x
   !ERROR: Default-initialized 't1x' must not be initialized in a DATA statement
   data t1x%j / 777 /
+  type :: t2
+    integer, allocatable :: j
+    integer :: k
+  end type t2
+  type(t2) :: t2x
+  data t2x%k / 777 / ! allocatable component is ok
   integer :: ja = 888
   !ERROR: Default-initialized 'ja' must not be initialized in a DATA statement
   data ja / 999 /
@@ -43,8 +49,6 @@ subroutine s1
   data jx/'abc'/
   !ERROR: DATA statement value could not be converted to the type 'INTEGER(4)' of the object 'jx'
   data jx/t1()/
-  !ERROR: DATA statement value could not be converted to the type 'INTEGER(4)' of the object 'jx'
-  data jx/.false./
   !ERROR: DATA statement value 'jy' for 'jx' is not a constant
   data jx/jy/
 end subroutine

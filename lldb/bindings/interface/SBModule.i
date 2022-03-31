@@ -137,6 +137,13 @@ public:
     void
     Clear();
 
+    %feature("docstring", "Check if the module is file backed.
+    @return
+        True, if the module is backed by an object file on disk.
+        False, if the module is backed by an object file in memory.") IsFileBacked;
+    bool
+    IsFileBacked() const;
+
     %feature("docstring", "
     Get const accessor for the module file specification.
 

@@ -2,12 +2,12 @@ Category,Algorithm,Assignee,CL,Complete
 Search,any_of,Christopher Di Bella,`D105793 <https://llvm.org/D105793>`_
 Search,all_of,Christopher Di Bella,`D105793 <https://llvm.org/D105793>`_
 Search,none_of,Christopher Di Bella,`D105793 <https://llvm.org/D105793>`_
-Search,find,Christopher Di Bella,`D105456 <https://llvm.org/D105456>`_
-Search,find_if,Christopher Di Bella,`D105792 <https://llvm.org/D105792>`_
-Search,find_if_not,Christopher Di Bella,`D105792 <https://llvm.org/D105792>`_
+Search,find,Nikolas Klauser,`D121248 <https://reviews.llvm.org/D121248>`_,✅
+Search,find_if,Nikolas Klauser,`D121248 <https://reviews.llvm.org/D121248>`_,✅
+Search,find_if_not,Nikolas Klauser,`D121248 <https://reviews.llvm.org/D121248>`_,✅
 Search,find_first_of,Not assigned,n/a,Not started
 Search,adjacent_find,Not assigned,n/a,Not started
-Search,mismatch,Not assigned,n/a,Not started
+Search,mismatch,Nikolas Klauser,`D117817 <https://llvm.org/D117817>`,Complete
 Search,equal,Not assigned,n/a,Not started
 Search,lexicographical_compare,Not assigned,n/a,Not started
 Search,partition_point,Christopher Di Bella,`D105794 <https://llvm.org/D105794>`_,Under review
@@ -15,11 +15,11 @@ Search,lower_bound,Christopher Di Bella,`D105795 <https://llvm.org/D105795>`_,Un
 Search,upper_bound,Christopher Di Bella,`D105795 <https://llvm.org/D105795>`_,Under review
 Search,equal_range,Christopher Di Bella,n/a,Not started
 Search,binary_search,Christopher Di Bella,n/a,Not started
-Search,min,Not assigned,n/a,Not started
+Search,min,Nikolas Klauser,`D119589 <https://llvm.org/D119589>`_,✅
 Search,max,Not assigned,n/a,Not started
 Search,minmax,Not assigned,n/a,Not started
-Search,min_element,Not assigned,n/a,Not started
-Search,max_element,Not assigned,n/a,Not started
+Search,min_element,Nikolas Klauser,`D117025 <https://llvm.org/D117025>`_,✅
+Search,max_element,Nikolas Klauser,`D117523 <https://llvm.org/D117523>`_,✅
 Search,minmax_element,Not assigned,n/a,Not started
 Search,count,Not assigned,n/a,Not started
 Search,count_if,Not assigned,n/a,Not started
@@ -46,14 +46,14 @@ Write,fill,Not assigned,n/a,Not started
 Write,fill_n,Not assigned,n/a,Not started
 Write,transform,Not assigned,n/a,Not started
 Write,generate,Not assigned,n/a,Not started
-Write,generate_nNot assigned,n/a,Not started
+Write,generate_n,Not assigned,n/a,Not started
 Write,remove_copy,Not assigned,n/a,Not started
 Write,remove_copy_if,Not assigned,n/a,Not started
 Write,replace,Not assigned,n/a,Not started
 Write,replace_if,Not assigned,n/a,Not started
 Write,replace_copy,Not assigned,n/a,Not started
 Write,replace_copy_if,Not assigned,n/a,Not started
-Write,swap_ranges,Not assigned,n/a,Not started
+Write,swap_ranges,Nikolas Klauser,`D116303 <https://llvm.org/D116303>`_,✅
 Write,reverse_copy,Not assigned,n/a,Not started
 Write,rotate_copy,Not assigned,n/a,Not started
 Write,sample,Not assigned,n/a,Not started
@@ -84,17 +84,17 @@ Permutation,pop_heap,Not assigned,n/a,Not started
 Permutation,sort_heap,Not assigned,n/a,Not started
 Permutation,prev_permutation,Not assigned,n/a,Not started
 Permutation,next_permutation,Not assigned,n/a,Not started
-Uninitialised memory,uninitialized_copy,var-const,n/a,Not started
-Uninitialised memory,uninitialized_copy_n,var-const,n/a,Not started
-Uninitialised memory,uninitialized_fill,var-const,n/a,Not started
-Uninitialised memory,uninitialized_fill_n,var-const,n/a,Not started
-Uninitialised memory,uninitialized_move,var-const,n/a,Not started
-Uninitialised memory,uninitialized_move_n,var-const,n/a,Not started
-Uninitialised memory,uninitialized_default_construct,var-const,n/a,Not started
-Uninitialised memory,uninitialized_default_construct_n,var-const,n/a,Not started
-Uninitialised memory,uninitialized_value_construct,var-const,n/a,Not started
-Uninitialised memory,uninitialized_value_construct_n,var-const,n/a,Not started
-Uninitialised memory,destroy,var-const,n/a,Not started
-Uninitialised memory,destroy_n,var-const,n/a,Not started
-Uninitialised memory,destroy_at,var-const,n/a,Not started
-Uninitialised memory,construct_at,var-const,n/a,Not started
+Uninitialised memory,uninitialized_copy,Konstantin Varlamov,`D116023 <https://llvm.org/D116023>`_,✅
+Uninitialised memory,uninitialized_copy_n,Konstantin Varlamov,`D116023 <https://llvm.org/D116023>`_,✅
+Uninitialised memory,uninitialized_fill,Konstantin Varlamov,`D115626 <https://llvm.org/D115626>`_,✅
+Uninitialised memory,uninitialized_fill_n,Konstantin Varlamov,`D115626 <https://llvm.org/D115626>`_,✅
+Uninitialised memory,uninitialized_move,Konstantin Varlamov,`D116023 <https://llvm.org/D116023>`_,✅
+Uninitialised memory,uninitialized_move_n,Konstantin Varlamov,`D116023 <https://llvm.org/D116023>`_,✅
+Uninitialised memory,uninitialized_default_construct,Konstantin Varlamov,`D115315 <https://llvm.org/D115315>`_,✅
+Uninitialised memory,uninitialized_default_construct_n,Konstantin Varlamov,`D115315 <https://llvm.org/D115315>`_,✅
+Uninitialised memory,uninitialized_value_construct,Konstantin Varlamov,`D115626 <https://llvm.org/D115626>`_,✅
+Uninitialised memory,uninitialized_value_construct_n,Konstantin Varlamov,`D115626 <https://llvm.org/D115626>`_,✅
+Uninitialised memory,destroy,Konstantin Varlamov,`D116078 <https://llvm.org/D116078>`_,✅
+Uninitialised memory,destroy_n,Konstantin Varlamov,`D116078 <https://llvm.org/D116078>`_,✅
+Uninitialised memory,destroy_at,Konstantin Varlamov,`D116078 <https://llvm.org/D116078>`_,✅
+Uninitialised memory,construct_at,Konstantin Varlamov,`D116078 <https://llvm.org/D116078>`_,✅

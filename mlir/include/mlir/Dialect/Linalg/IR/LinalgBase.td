@@ -13,6 +13,7 @@
 #ifndef LINALG_BASE
 #define LINALG_BASE
 
+include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
 
 def Linalg_Dialect : Dialect {
@@ -37,7 +38,6 @@ def Linalg_Dialect : Dialect {
     "AffineDialect",
     "math::MathDialect",
     "memref::MemRefDialect",
-    "StandardOpsDialect",
     "tensor::TensorDialect",
   ];
   let hasCanonicalizer = 1;
@@ -48,8 +48,8 @@ def Linalg_Dialect : Dialect {
     constexpr const static ::llvm::StringLiteral
         kMemoizedIndexingMapsAttrName = "linalg.memoized_indexing_maps";
 
-    using RegionBuilderFunType =
-      llvm::function_ref<void(ImplicitLocOpBuilder &b, Block &)>;
+    using RegionBuilderFunType = llvm::function_ref<
+      void(ImplicitLocOpBuilder &b, Block &, ArrayRef<NamedAttribute>)>;
     RegionBuilderFunType getRegionBuilder(StringRef name) {
       return namedStructuredOpRegionBuilders.lookup(name);
     }
@@ -58,8 +58,46 @@ def Linalg_Dialect : Dialect {
   }];
 }
 
-// Whether a type is a RangeType.
-def LinalgIsRangeTypePred : CPred<"$_self.isa<RangeType>()">;
-def Range : DialectType<Linalg_Dialect, LinalgIsRangeTypePred, "range">;
+// Define the function attribute enums matching the OpDSL functions.
+def UnaryFn : I32EnumAttr<"UnaryFn", "", [
+  I32EnumAttrCase<"exp", 0>,
+  I32EnumAttrCase<"log", 1>,
+  I32EnumAttrCase<"abs", 2>,
+  I32EnumAttrCase<"ceil", 3>,
+  I32EnumAttrCase<"floor", 4>,
+  I32EnumAttrCase<"negf", 5>
+]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::linalg";
+}
+def BinaryFn : I32EnumAttr<"BinaryFn", "", [
+  I32EnumAttrCase<"add", 0>,
+  I32EnumAttrCase<"sub", 1>,
+  I32EnumAttrCase<"mul", 2>,
+  I32EnumAttrCase<"max_signed", 3>,
+  I32EnumAttrCase<"min_signed", 4>,
+  I32EnumAttrCase<"max_unsigned", 5>,
+  I32EnumAttrCase<"min_unsigned", 6>
+]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::linalg";
+}
+def TypeFn : I32EnumAttr<"TypeFn", "", [
+  I32EnumAttrCase<"cast_signed", 0>,
+  I32EnumAttrCase<"cast_unsigned", 1>
+]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::linalg";
+}
+
+def UnaryFnAttr : EnumAttr<Linalg_Dialect, UnaryFn, "unary_fn"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+def BinaryFnAttr : EnumAttr<Linalg_Dialect, BinaryFn, "binary_fn"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+def TypeFnAttr : EnumAttr<Linalg_Dialect, TypeFn, "type_fn"> {
+  let assemblyFormat = "`<` $value `>`";
+}
 
 #endif // LINALG_BASE

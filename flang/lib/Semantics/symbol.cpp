@@ -13,6 +13,7 @@
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/tools.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cstring>
 #include <string>
 #include <type_traits>
 
@@ -69,6 +70,11 @@ static void DumpList(llvm::raw_ostream &os, const char *label, const T &list) {
   }
 }
 
+void SubprogramDetails::set_moduleInterface(Symbol &symbol) {
+  CHECK(!moduleInterface_);
+  moduleInterface_ = &symbol;
+}
+
 const Scope *ModuleDetails::parent() const {
   return isSubmodule_ && scope_ ? &scope_->parent() : nullptr;
 }
@@ -115,6 +121,9 @@ llvm::raw_ostream &operator<<(
   os << (sep == '(' ? "()" : ")");
   if (x.stmtFunction_) {
     os << " -> " << x.stmtFunction_->AsFortran();
+  }
+  if (x.moduleInterface_) {
+    os << " moduleInterface: " << *x.moduleInterface_;
   }
   return os;
 }
@@ -348,7 +357,7 @@ bool Symbol::IsSubprogram() const {
 
 bool Symbol::IsFromModFile() const {
   return test(Flag::ModFile) ||
-      (!owner_->IsGlobal() && owner_->symbol()->IsFromModFile());
+      (!owner_->IsTopLevel() && owner_->symbol()->IsFromModFile());
 }
 
 ObjectEntityDetails::ObjectEntityDetails(EntityDetails &&d)
@@ -543,7 +552,7 @@ void Symbol::dump() const { llvm::errs() << *this << '\n'; }
 // parent scopes. For scopes without corresponding symbols, use the kind
 // with an index (e.g. Block1, Block2, etc.).
 static void DumpUniqueName(llvm::raw_ostream &os, const Scope &scope) {
-  if (!scope.IsGlobal()) {
+  if (!scope.IsTopLevel()) {
     DumpUniqueName(os, scope.parent());
     os << '/';
     if (auto *scopeSymbol{scope.symbol()};
@@ -657,7 +666,7 @@ std::string GenericKind::ToString() const {
   return std::visit(
       common::visitors {
         [](const OtherKind &x) { return EnumToString(x); },
-            [](const DefinedIo &x) { return EnumToString(x); },
+            [](const DefinedIo &x) { return AsFortran(x).ToString(); },
 #if !__clang__ && __GNUC__ == 7 && __GNUC_MINOR__ == 2
             [](const common::NumericOperator &x) {
               return common::EnumToString(x);
@@ -675,13 +684,32 @@ std::string GenericKind::ToString() const {
       u);
 }
 
+SourceName GenericKind::AsFortran(DefinedIo x) {
+  const char *name{nullptr};
+  switch (x) {
+    SWITCH_COVERS_ALL_CASES
+  case DefinedIo::ReadFormatted:
+    name = "read(formatted)";
+    break;
+  case DefinedIo::ReadUnformatted:
+    name = "read(unformatted)";
+    break;
+  case DefinedIo::WriteFormatted:
+    name = "write(formatted)";
+    break;
+  case DefinedIo::WriteUnformatted:
+    name = "write(unformatted)";
+    break;
+  }
+  return {name, std::strlen(name)};
+}
+
 bool GenericKind::Is(GenericKind::OtherKind x) const {
   const OtherKind *y{std::get_if<OtherKind>(&u)};
   return y && *y == x;
 }
 
-bool SymbolOffsetCompare::operator()(
-    const SymbolRef &x, const SymbolRef &y) const {
+bool SymbolOffsetCompare::operator()(const SymbolRef &x, const SymbolRef &y) const {
   const Symbol *xCommon{FindCommonBlockContaining(*x)};
   const Symbol *yCommon{FindCommonBlockContaining(*y)};
   if (xCommon) {
@@ -709,6 +737,7 @@ bool SymbolOffsetCompare::operator()(
   return x->GetSemanticsContext().allCookedSources().Precedes(
       x->name(), y->name());
 }
+
 bool SymbolOffsetCompare::operator()(
     const MutableSymbolRef &x, const MutableSymbolRef &y) const {
   return (*this)(SymbolRef{*x}, SymbolRef{*y});

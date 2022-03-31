@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | grep "align 32" | count 2
+; RUN: opt < %s -passes=instcombine -S | grep "align 32" | count 2
 
 ; It's tempting to have an instcombine in which the src pointer of a
 ; memcpy is aligned up to the alignment of the destination, however

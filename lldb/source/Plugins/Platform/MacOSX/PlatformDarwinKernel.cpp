@@ -27,6 +27,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
@@ -69,7 +70,7 @@ void PlatformDarwinKernel::Terminate() {
 
 PlatformSP PlatformDarwinKernel::CreateInstance(bool force,
                                                 const ArchSpec *arch) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
+  Log *log = GetLog(LLDBLog::Platform);
   if (log) {
     const char *arch_name;
     if (arch && arch->GetArchitectureName())
@@ -279,7 +280,7 @@ void PlatformDarwinKernel::GetStatus(Stream &strm) {
   strm.Printf(" Number of Kernel dSYM.yaa's indexed: %d\n",
               (int)m_kernel_dsyms_yaas.size());
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
+  Log *log = GetLog(LLDBLog::Platform);
   if (log) {
     LLDB_LOGF(log, "\nkexts with dSYMs");
     for (auto pos : m_name_to_kext_path_map_with_dsyms) {
@@ -483,11 +484,9 @@ PlatformDarwinKernel::GetKernelsAndKextsInDirectoryHelper(
   FileSpec file_spec(path);
   ConstString file_spec_extension = file_spec.GetFileNameExtension();
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
-  Log *log_verbose(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM | LLDB_LOG_OPTION_VERBOSE));
+  Log *log = GetLog(LLDBLog::Platform);
 
-  LLDB_LOGF(log_verbose, "PlatformDarwinKernel examining '%s'",
-            file_spec.GetPath().c_str());
+  LLDB_LOGV(log, "PlatformDarwinKernel examining '{0}'", file_spec);
 
   PlatformDarwinKernel *thisp = (PlatformDarwinKernel *)baton;
 
@@ -567,9 +566,8 @@ PlatformDarwinKernel::GetKernelsAndKextsInDirectoryHelper(
   if (recurse && file_spec_extension != g_dsym_suffix &&
       file_spec_extension != g_kext_suffix &&
       file_spec_extension != g_bundle_suffix) {
-    LLDB_LOGF(log_verbose,
-              "PlatformDarwinKernel descending into directory '%s'",
-              file_spec.GetPath().c_str());
+    LLDB_LOGV(log, "PlatformDarwinKernel descending into directory '{0}'",
+              file_spec);
     return FileSystem::eEnumerateDirectoryResultEnter;
   } else {
     return FileSystem::eEnumerateDirectoryResultNext;
@@ -578,7 +576,7 @@ PlatformDarwinKernel::GetKernelsAndKextsInDirectoryHelper(
 
 void PlatformDarwinKernel::AddKextToMap(PlatformDarwinKernel *thisp,
                                         const FileSpec &file_spec) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
+  Log *log = GetLog(LLDBLog::Platform);
   CFCBundle bundle(file_spec.GetPath().c_str());
   CFStringRef bundle_id(bundle.GetIdentifier());
   if (bundle_id && CFGetTypeID(bundle_id) == CFStringGetTypeID()) {
@@ -911,13 +909,15 @@ Status PlatformDarwinKernel::ExamineKextForMatchingUUID(
   return {};
 }
 
-bool PlatformDarwinKernel::GetSupportedArchitectureAtIndex(uint32_t idx,
-                                                           ArchSpec &arch) {
+std::vector<ArchSpec> PlatformDarwinKernel::GetSupportedArchitectures(
+    const ArchSpec &process_host_arch) {
+  std::vector<ArchSpec> result;
 #if defined(__arm__) || defined(__arm64__) || defined(__aarch64__)
-  return ARMGetSupportedArchitectureAtIndex(idx, arch);
+  ARMGetSupportedArchitectures(result);
 #else
-  return x86GetSupportedArchitectureAtIndex(idx, arch);
+  x86GetSupportedArchitectures(result);
 #endif
+  return result;
 }
 
 void PlatformDarwinKernel::CalculateTrapHandlerSymbolNames() {

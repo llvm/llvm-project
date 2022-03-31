@@ -15,12 +15,8 @@
 #include "support/Logger.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Index/IndexSymbol.h"
-#include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
@@ -382,6 +378,13 @@ bool fromJSON(const llvm::json::Value &Params, ClientCapabilities &R,
         if (auto *Parameter = Info->getObject("parameterInformation")) {
           if (auto OffsetSupport = Parameter->getBoolean("labelOffsetSupport"))
             R.OffsetsInSignatureHelp = *OffsetSupport;
+        }
+        if (const auto *DocumentationFormat =
+                Info->getArray("documentationFormat")) {
+          for (const auto &Format : *DocumentationFormat) {
+            if (fromJSON(Format, R.SignatureHelpDocumentationFormat, P))
+              break;
+          }
         }
       }
     }
@@ -1031,7 +1034,7 @@ llvm::json::Value toJSON(const SignatureInformation &SI) {
       {"label", SI.label},
       {"parameters", llvm::json::Array(SI.parameters)},
   };
-  if (!SI.documentation.empty())
+  if (!SI.documentation.value.empty())
     Result["documentation"] = SI.documentation;
   return std::move(Result);
 }
@@ -1310,7 +1313,7 @@ llvm::json::Value toJSON(const CallHierarchyOutgoingCall &C) {
 bool fromJSON(const llvm::json::Value &Params, InlayHintsParams &R,
               llvm::json::Path P) {
   llvm::json::ObjectMapper O(Params, P);
-  return O && O.map("textDocument", R.textDocument);
+  return O && O.map("textDocument", R.textDocument) && O.map("range", R.range);
 }
 
 llvm::json::Value toJSON(InlayHintKind K) {
@@ -1319,21 +1322,25 @@ llvm::json::Value toJSON(InlayHintKind K) {
     return "parameter";
   case InlayHintKind::TypeHint:
     return "type";
+  case InlayHintKind::DesignatorHint:
+    return "designator";
   }
   llvm_unreachable("Unknown clang.clangd.InlayHintKind");
 }
 
 llvm::json::Value toJSON(const InlayHint &H) {
-  return llvm::json::Object{
-      {"range", H.range}, {"kind", H.kind}, {"label", H.label}};
+  return llvm::json::Object{{"position", H.position},
+                            {"range", H.range},
+                            {"kind", H.kind},
+                            {"label", H.label}};
 }
 bool operator==(const InlayHint &A, const InlayHint &B) {
-  return std::tie(A.kind, A.range, A.label) ==
-         std::tie(B.kind, B.range, B.label);
+  return std::tie(A.position, A.range, A.kind, A.label) ==
+         std::tie(B.position, B.range, B.kind, B.label);
 }
 bool operator<(const InlayHint &A, const InlayHint &B) {
-  return std::tie(A.kind, A.range, A.label) <
-         std::tie(B.kind, B.range, B.label);
+  return std::tie(A.position, A.range, A.kind, A.label) <
+         std::tie(B.position, B.range, B.kind, B.label);
 }
 
 static const char *toString(OffsetEncoding OE) {

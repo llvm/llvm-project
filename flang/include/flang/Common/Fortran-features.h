@@ -27,11 +27,12 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     OmitFunctionDummies, CrayPointer, Hollerith, ArithmeticIF, Assign,
     AssignedGOTO, Pause, OpenACC, OpenMP, CruftAfterAmpersand, ClassicCComments,
     AdditionalFormats, BigIntLiterals, RealDoControls,
-    EquivalenceNumericWithCharacter, AdditionalIntrinsics, AnonymousParents,
+    EquivalenceNumericWithCharacter, EquivalenceNonDefaultNumeric,
+    EquivalenceSameNonSequence, AdditionalIntrinsics, AnonymousParents,
     OldLabelDoEndStatements, LogicalIntegerAssignment, EmptySourceFile,
     ProgramReturn, ImplicitNoneTypeNever, ImplicitNoneTypeAlways,
     ForwardRefDummyImplicitNone, OpenAccessAppend, BOZAsDefaultInteger,
-    DistinguishableSpecifics, DefaultSave)
+    DistinguishableSpecifics, DefaultSave, PointerInSeqType, NonCharacterFormat)
 
 using LanguageFeatures = EnumSet<LanguageFeature, LanguageFeature_enumSize>;
 

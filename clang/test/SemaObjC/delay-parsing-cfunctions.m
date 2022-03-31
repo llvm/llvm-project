@@ -1,4 +1,4 @@
-// RUN: %clang_cc1  -fsyntax-only -Werror -verify -Wno-objc-root-class %s
+// RUN: %clang_cc1  -fsyntax-only -Werror -verify -Wno-objc-root-class -Wno-strict-prototypes %s
 // expected-no-diagnostics
 // rdar://10387088
 
@@ -37,7 +37,7 @@ MyClass * myObject;
 
 static int getMe;
 
-static int test() {
+static int test(void) {
   return 0;
 }
 

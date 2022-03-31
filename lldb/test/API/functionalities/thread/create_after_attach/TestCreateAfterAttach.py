@@ -28,7 +28,7 @@ class CreateAfterAttachTestCase(TestBase):
     @expectedFailureNetBSD
     def test_create_after_attach(self):
         """Test thread creation after process attach."""
-        self.build(dictionary=self.getBuildFlags(use_cpp11=False))
+        self.build()
         exe = self.getBuildArtifact("a.out")
 
         # Spawn a new process

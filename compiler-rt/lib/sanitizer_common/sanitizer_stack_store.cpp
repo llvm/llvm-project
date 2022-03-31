@@ -56,7 +56,7 @@ StackTrace StackStore::Load(Id id) {
   uptr idx = IdToOffset(id);
   uptr block_idx = GetBlockIdx(idx);
   CHECK_LT(block_idx, ARRAY_SIZE(blocks_));
-  const uptr *stack_trace = blocks_[block_idx].GetOrUnpack();
+  const uptr *stack_trace = blocks_[block_idx].GetOrUnpack(this);
   if (!stack_trace)
     return {};
   stack_trace += GetInBlockIdx(idx);
@@ -65,11 +65,7 @@ StackTrace StackStore::Load(Id id) {
 }
 
 uptr StackStore::Allocated() const {
-  uptr next_block = GetBlockIdx(
-      RoundUpTo(atomic_load_relaxed(&total_frames_), kBlockSizeFrames));
-  uptr res = 0;
-  for (uptr i = 0; i < next_block; ++i) res += blocks_[i].Allocated();
-  return res + sizeof(*this);
+  return atomic_load_relaxed(&allocated_) + sizeof(*this);
 }
 
 uptr *StackStore::Alloc(uptr count, uptr *idx, uptr *pack) {
@@ -83,7 +79,7 @@ uptr *StackStore::Alloc(uptr count, uptr *idx, uptr *pack) {
       // Fits into the a single block.
       CHECK_LT(block_idx, ARRAY_SIZE(blocks_));
       *idx = start;
-      return blocks_[block_idx].GetOrCreate() + GetInBlockIdx(start);
+      return blocks_[block_idx].GetOrCreate(this) + GetInBlockIdx(start);
     }
 
     // Retry. We can't use range allocated in two different blocks.
@@ -96,40 +92,57 @@ uptr *StackStore::Alloc(uptr count, uptr *idx, uptr *pack) {
   }
 }
 
+void *StackStore::Map(uptr size, const char *mem_type) {
+  atomic_fetch_add(&allocated_, size, memory_order_relaxed);
+  return MmapNoReserveOrDie(size, mem_type);
+}
+
+void StackStore::Unmap(void *addr, uptr size) {
+  atomic_fetch_sub(&allocated_, size, memory_order_relaxed);
+  UnmapOrDie(addr, size);
+}
+
 uptr StackStore::Pack(Compression type) {
   uptr res = 0;
-  for (BlockInfo &b : blocks_) res += b.Pack(type);
+  for (BlockInfo &b : blocks_) res += b.Pack(type, this);
   return res;
 }
 
+void StackStore::LockAll() {
+  for (BlockInfo &b : blocks_) b.Lock();
+}
+
+void StackStore::UnlockAll() {
+  for (BlockInfo &b : blocks_) b.Unlock();
+}
+
 void StackStore::TestOnlyUnmap() {
-  for (BlockInfo &b : blocks_) b.TestOnlyUnmap();
+  for (BlockInfo &b : blocks_) b.TestOnlyUnmap(this);
   internal_memset(this, 0, sizeof(*this));
 }
 
 uptr *StackStore::BlockInfo::Get() const {
   // Idiomatic double-checked locking uses memory_order_acquire here. But
-  // relaxed is find for us, justification is similar to
+  // relaxed is fine for us, justification is similar to
   // TwoLevelMap::GetOrCreate.
   return reinterpret_cast<uptr *>(atomic_load_relaxed(&data_));
 }
 
-uptr *StackStore::BlockInfo::Create() {
+uptr *StackStore::BlockInfo::Create(StackStore *store) {
   SpinMutexLock l(&mtx_);
   uptr *ptr = Get();
   if (!ptr) {
-    ptr = reinterpret_cast<uptr *>(
-        MmapNoReserveOrDie(kBlockSizeBytes, "StackStore"));
+    ptr = reinterpret_cast<uptr *>(store->Map(kBlockSizeBytes, "StackStore"));
     atomic_store(&data_, reinterpret_cast<uptr>(ptr), memory_order_release);
   }
   return ptr;
 }
 
-uptr *StackStore::BlockInfo::GetOrCreate() {
+uptr *StackStore::BlockInfo::GetOrCreate(StackStore *store) {
   uptr *ptr = Get();
   if (LIKELY(ptr))
     return ptr;
-  return Create();
+  return Create(store);
 }
 
 class SLeb128Encoder {
@@ -221,6 +234,11 @@ static uptr *UncompressLzw(const u8 *from, const u8 *from_end, uptr *to,
   return to;
 }
 
+#if defined(_MSC_VER) && !defined(__clang__)
+#  pragma warning(push)
+// Disable 'nonstandard extension used: zero-sized array in struct/union'.
+#  pragma warning(disable : 4200)
+#endif
 namespace {
 struct PackedHeader {
   uptr size;
@@ -228,8 +246,11 @@ struct PackedHeader {
   u8 data[];
 };
 }  // namespace
+#if defined(_MSC_VER) && !defined(__clang__)
+#  pragma warning(pop)
+#endif
 
-uptr *StackStore::BlockInfo::GetOrUnpack() {
+uptr *StackStore::BlockInfo::GetOrUnpack(StackStore *store) {
   SpinMutexLock l(&mtx_);
   switch (state) {
     case State::Storing:
@@ -249,8 +270,8 @@ uptr *StackStore::BlockInfo::GetOrUnpack() {
 
   uptr packed_size_aligned = RoundUpTo(header->size, GetPageSizeCached());
 
-  uptr *unpacked = reinterpret_cast<uptr *>(
-      MmapNoReserveOrDie(kBlockSizeBytes, "StackStoreUnpack"));
+  uptr *unpacked =
+      reinterpret_cast<uptr *>(store->Map(kBlockSizeBytes, "StackStoreUnpack"));
 
   uptr *unpacked_end;
   switch (header->type) {
@@ -271,13 +292,13 @@ uptr *StackStore::BlockInfo::GetOrUnpack() {
 
   MprotectReadOnly(reinterpret_cast<uptr>(unpacked), kBlockSizeBytes);
   atomic_store(&data_, reinterpret_cast<uptr>(unpacked), memory_order_release);
-  UnmapOrDie(ptr, packed_size_aligned);
+  store->Unmap(ptr, packed_size_aligned);
 
   state = State::Unpacked;
   return Get();
 }
 
-uptr StackStore::BlockInfo::Pack(Compression type) {
+uptr StackStore::BlockInfo::Pack(Compression type, StackStore *store) {
   if (type == Compression::None)
     return 0;
 
@@ -294,8 +315,8 @@ uptr StackStore::BlockInfo::Pack(Compression type) {
   if (!ptr || !Stored(0))
     return 0;
 
-  u8 *packed = reinterpret_cast<u8 *>(
-      MmapNoReserveOrDie(kBlockSizeBytes, "StackStorePack"));
+  u8 *packed =
+      reinterpret_cast<u8 *>(store->Map(kBlockSizeBytes, "StackStorePack"));
   PackedHeader *header = reinterpret_cast<PackedHeader *>(packed);
   u8 *alloc_end = packed + kBlockSizeBytes;
 
@@ -323,40 +344,26 @@ uptr StackStore::BlockInfo::Pack(Compression type) {
   if (kBlockSizeBytes - header->size < kBlockSizeBytes / 8) {
     VPrintf(1, "Undo and keep block unpacked\n");
     MprotectReadOnly(reinterpret_cast<uptr>(ptr), kBlockSizeBytes);
-    UnmapOrDie(packed, kBlockSizeBytes);
+    store->Unmap(packed, kBlockSizeBytes);
     state = State::Unpacked;
     return 0;
   }
 
   uptr packed_size_aligned = RoundUpTo(header->size, GetPageSizeCached());
-  UnmapOrDie(packed + packed_size_aligned,
-             kBlockSizeBytes - packed_size_aligned);
+  store->Unmap(packed + packed_size_aligned,
+               kBlockSizeBytes - packed_size_aligned);
   MprotectReadOnly(reinterpret_cast<uptr>(packed), packed_size_aligned);
 
   atomic_store(&data_, reinterpret_cast<uptr>(packed), memory_order_release);
-  UnmapOrDie(ptr, kBlockSizeBytes);
+  store->Unmap(ptr, kBlockSizeBytes);
 
   state = State::Packed;
   return kBlockSizeBytes - packed_size_aligned;
 }
 
-uptr StackStore::BlockInfo::Allocated() const {
-  SpinMutexLock l(&mtx_);
-  switch (state) {
-    case State::Packed: {
-      const PackedHeader *ptr = reinterpret_cast<const PackedHeader *>(Get());
-      CHECK_NE(nullptr, ptr);
-      return RoundUpTo(ptr->size, GetPageSizeCached());
-    }
-    case State::Unpacked:
-    case State::Storing:
-      return kBlockSizeBytes;
-  }
-}
-
-void StackStore::BlockInfo::TestOnlyUnmap() {
+void StackStore::BlockInfo::TestOnlyUnmap(StackStore *store) {
   if (uptr *ptr = Get())
-    UnmapOrDie(ptr, kBlockSizeBytes);
+    store->Unmap(ptr, kBlockSizeBytes);
 }
 
 bool StackStore::BlockInfo::Stored(uptr n) {

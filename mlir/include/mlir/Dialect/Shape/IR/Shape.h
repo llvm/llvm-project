@@ -11,10 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_SHAPE_IR_SHAPE_H
-#define MLIR_SHAPE_IR_SHAPE_H
+#ifndef MLIR_DIALECT_SHAPE_IR_SHAPE_H
+#define MLIR_DIALECT_SHAPE_IR_SHAPE_H
 
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dialect.h"
@@ -74,4 +75,4 @@ public:
 
 #include "mlir/Dialect/Shape/IR/ShapeOpsDialect.h.inc"
 
-#endif // MLIR_SHAPE_IR_SHAPE_H
+#endif // MLIR_DIALECT_SHAPE_IR_SHAPE_H

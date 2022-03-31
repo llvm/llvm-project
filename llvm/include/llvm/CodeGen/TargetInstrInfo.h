@@ -130,7 +130,7 @@ public:
   }
 
   /// Given \p MO is a PhysReg use return if it can be ignored for the purpose
-  /// of instruction rematerialization.
+  /// of instruction rematerialization or sinking.
   virtual bool isIgnorableUse(const MachineOperand &MO) const {
     return false;
   }
@@ -381,6 +381,17 @@ public:
   /// this gives the target a hook to override the default behavior with regards
   /// to which instructions should be sunk.
   virtual bool shouldSink(const MachineInstr &MI) const { return true; }
+
+  /// Return false if the instruction should not be hoisted by MachineLICM.
+  ///
+  /// MachineLICM determines on its own whether the instruction is safe to
+  /// hoist; this gives the target a hook to extend this assessment and prevent
+  /// an instruction being hoisted from a given loop for target specific
+  /// reasons.
+  virtual bool shouldHoist(const MachineInstr &MI,
+                           const MachineLoop *FromLoop) const {
+    return true;
+  }
 
   /// Re-issue the specified 'original' instruction at the
   /// specific location targeting a new destination register.
@@ -723,12 +734,16 @@ public:
     virtual bool shouldIgnoreForPipelining(const MachineInstr *MI) const = 0;
 
     /// Create a condition to determine if the trip count of the loop is greater
-    /// than TC.
+    /// than TC, where TC is always one more than for the previous prologue or
+    /// 0 if this is being called for the outermost prologue.
     ///
     /// If the trip count is statically known to be greater than TC, return
     /// true. If the trip count is statically known to be not greater than TC,
     /// return false. Otherwise return nullopt and fill out Cond with the test
     /// condition.
+    ///
+    /// Note: This hook is guaranteed to be called from the innermost to the
+    /// outermost prologue of the loop being software pipelined.
     virtual Optional<bool>
     createTripCountGreaterCondition(int TC, MachineBasicBlock &MBB,
                                     SmallVectorImpl<MachineOperand> &Cond) = 0;
@@ -1189,8 +1204,6 @@ public:
   virtual void setSpecialOperandAttr(MachineInstr &OldMI1, MachineInstr &OldMI2,
                                      MachineInstr &NewMI1,
                                      MachineInstr &NewMI2) const {}
-
-  virtual void setSpecialOperandAttr(MachineInstr &MI, uint16_t Flags) const {}
 
   /// Return true when a target supports MachineCombiner.
   virtual bool useMachineCombiner() const { return false; }
@@ -1929,9 +1942,7 @@ public:
   /// Optional target hook that returns true if \p MBB is safe to outline from,
   /// and returns any target-specific information in \p Flags.
   virtual bool isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
-                                      unsigned &Flags) const {
-    return true;
-  }
+                                      unsigned &Flags) const;
 
   /// Insert a custom frame for outlined functions.
   virtual void buildOutlinedFrame(MachineBasicBlock &MBB, MachineFunction &MF,
@@ -1946,7 +1957,7 @@ public:
   virtual MachineBasicBlock::iterator
   insertOutlinedCall(Module &M, MachineBasicBlock &MBB,
                      MachineBasicBlock::iterator &It, MachineFunction &MF,
-                     const outliner::Candidate &C) const {
+                     outliner::Candidate &C) const {
     llvm_unreachable(
         "Target didn't implement TargetInstrInfo::insertOutlinedCall!");
   }

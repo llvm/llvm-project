@@ -8,9 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-// Investigation needed
-// XFAIL: gcc
-
 // <memory>
 
 // template <class T, class ...Args>
@@ -18,18 +15,22 @@
 
 #include <memory>
 #include <cassert>
+#include <utility>
 
+#include "test_iterators.h"
 
 struct Foo {
-    int a;
-    char b;
-    double c;
     constexpr Foo() { }
-    constexpr Foo(int a, char b, double c) : a(a), b(b), c(c) { }
+    constexpr Foo(int a, char b, double c) : a_(a), b_(b), c_(c) { }
     constexpr Foo(int a, char b, double c, int* count) : Foo(a, b, c) { *count += 1; }
     constexpr bool operator==(Foo const& other) const {
-        return a == other.a && b == other.b && c == other.c;
+        return a_ == other.a_ && b_ == other.b_ && c_ == other.c_;
     }
+
+private:
+    int a_;
+    char b_;
+    double c_;
 };
 
 struct Counted {
@@ -97,15 +98,23 @@ constexpr bool test()
     return true;
 }
 
-// Make sure std::construct_at SFINAEs out based on the validity of calling
-// the constructor, instead of hard-erroring.
-template <typename T, typename = decltype(
-    std::construct_at((T*)nullptr, 1, 2) // missing arguments for Foo(...)
-)>
-constexpr bool test_sfinae(int) { return false; }
-template <typename T>
-constexpr bool test_sfinae(...) { return true; }
-static_assert(test_sfinae<Foo>(int()));
+template <class ...Args, class = decltype(std::construct_at(std::declval<Args>()...))>
+constexpr bool can_construct_at(Args&&...) { return true; }
+
+template <class ...Args>
+constexpr bool can_construct_at(...) { return false; }
+
+// Check that SFINAE works.
+static_assert( can_construct_at((int*)nullptr, 42));
+static_assert( can_construct_at((Foo*)nullptr, 1, '2', 3.0));
+static_assert(!can_construct_at((Foo*)nullptr, 1, '2'));
+static_assert(!can_construct_at((Foo*)nullptr, 1, '2', 3.0, 4));
+static_assert(!can_construct_at(nullptr, 1, '2', 3.0));
+static_assert(!can_construct_at((int*)nullptr, 1, '2', 3.0));
+static_assert(!can_construct_at(contiguous_iterator<Foo*>(), 1, '2', 3.0));
+// Can't construct function pointers.
+static_assert(!can_construct_at((int(*)())nullptr));
+static_assert(!can_construct_at((int(*)())nullptr, nullptr));
 
 int main(int, char**)
 {

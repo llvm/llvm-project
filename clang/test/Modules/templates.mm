@@ -83,9 +83,9 @@ unsigned testMixedStruct() {
   // CHECK: call {{.*}}memcpy{{.*}}(i8* align {{[0-9]+}} %{{.*}}, i8* align {{[0-9]+}} bitcast ({{.*}}* @__const._Z15testMixedStructv.r to i8*), i64 16,
   ListInt_right r{0, 2};
 
-  // CHECK: call void @_Z10useListIntR4ListIiE(%[[ListInt]]* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %[[l]])
+  // CHECK: call void @_Z10useListIntR4ListIiE(%[[ListInt]]* noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %[[l]])
   useListInt(l);
-  // CHECK: call void @_Z10useListIntR4ListIiE(%[[ListInt]]* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %[[r]])
+  // CHECK: call void @_Z10useListIntR4ListIiE(%[[ListInt]]* noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %[[r]])
   useListInt(r);
 
   // CHECK: load i32, i32* bitcast (i8* getelementptr inbounds (i8, i8* bitcast ({{.*}}* @list_left to i8*), i64 8) to i32*)
@@ -107,11 +107,11 @@ void testDelayUpdatesImpl() { testDelayUpdates<int>(); }
 void testStaticDataMember() {
   WithUndefinedStaticDataMember<int[]> load_it;
 
-  // CHECK-LABEL: define linkonce_odr i32* @_Z23getStaticDataMemberLeftv(
+  // CHECK-LABEL: define linkonce_odr noundef i32* @_Z23getStaticDataMemberLeftv(
   // CHECK: ret i32* getelementptr inbounds ([0 x i32], [0 x i32]* @_ZN29WithUndefinedStaticDataMemberIA_iE9undefinedE, i64 0, i64 0)
   (void) getStaticDataMemberLeft();
 
-  // CHECK-LABEL: define linkonce_odr i32* @_Z24getStaticDataMemberRightv(
+  // CHECK-LABEL: define linkonce_odr noundef i32* @_Z24getStaticDataMemberRightv(
   // CHECK: ret i32* getelementptr inbounds ([0 x i32], [0 x i32]* @_ZN29WithUndefinedStaticDataMemberIA_iE9undefinedE, i64 0, i64 0)
   (void) getStaticDataMemberRight();
 }

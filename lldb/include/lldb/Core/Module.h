@@ -21,8 +21,8 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
-#include "lldb/Utility/XcodeSDK.h"
 #include "lldb/Utility/UUID.h"
+#include "lldb/Utility/XcodeSDK.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
@@ -128,7 +128,7 @@ public:
   Module(const ModuleSpec &module_spec);
 
   template <typename ObjFilePlugin, typename... Args>
-  static lldb::ModuleSP CreateModuleFromObjectFile(Args &&... args) {
+  static lldb::ModuleSP CreateModuleFromObjectFile(Args &&...args) {
     // Must create a module and place it into a shared pointer before we can
     // create an object file since it has a std::weak_ptr back to the module,
     // so we need to control the creation carefully in this static function
@@ -255,8 +255,7 @@ public:
   ///     Returns a valid symbol pointer if a symbol was found,
   ///     nullptr otherwise.
   const Symbol *FindFirstSymbolWithNameAndType(
-      ConstString name,
-      lldb::SymbolType symbol_type = lldb::eSymbolTypeAny);
+      ConstString name, lldb::SymbolType symbol_type = lldb::eSymbolTypeAny);
 
   void FindSymbolsWithNameAndType(ConstString name,
                                   lldb::SymbolType symbol_type,
@@ -439,12 +438,13 @@ public:
   ///
   /// \param searched_symbol_files
   ///     Prevents one file from being visited multiple times.
-  void FindTypes(llvm::ArrayRef<CompilerContext> pattern, LanguageSet languages,
-                 llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
-                 TypeMap &types);
+  void
+  FindTypes(llvm::ArrayRef<CompilerContext> pattern, LanguageSet languages,
+            llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
+            TypeMap &types);
 
-  lldb::TypeSP FindFirstType(const SymbolContext &sc,
-                             ConstString type_name, bool exact_match);
+  lldb::TypeSP FindFirstType(const SymbolContext &sc, ConstString type_name,
+                             bool exact_match);
 
   /// Find types by name that are in a namespace. This function is used by the
   /// expression parser when searches need to happen in an exact namespace
@@ -788,8 +788,7 @@ public:
       const FileSpec &file_spec, uint32_t line, bool check_inlines,
       lldb::SymbolContextItem resolve_scope, SymbolContextList &sc_list);
 
-  void SetFileSpecAndObjectName(const FileSpec &file,
-                                ConstString object_name);
+  void SetFileSpecAndObjectName(const FileSpec &file, ConstString object_name);
 
   bool GetIsDynamicLinkEditor();
 
@@ -876,7 +875,7 @@ public:
   /// The value is returned as a reference to allow it to be updated by the
   /// ElapsedTime RAII object.
   StatsDuration &GetSymtabParseTime() { return m_symtab_parse_time; }
-  
+
   /// Accessor for the symbol table index time metric.
   ///
   /// The value is returned as a reference to allow it to be updated by the
@@ -906,7 +905,7 @@ public:
   /// correctly.
   class LookupInfo {
   public:
-    LookupInfo() : m_name(), m_lookup_name() {}
+    LookupInfo() {}
 
     LookupInfo(ConstString name, lldb::FunctionNameType name_type_mask,
                lldb::LanguageType language);
@@ -946,30 +945,67 @@ public:
     bool m_match_name_after_lookup = false;
   };
 
+  /// Get a unique hash for this module.
+  ///
+  /// The hash should be enough to identify the file on disk and the
+  /// architecture of the file. If the module represents an object inside of a
+  /// file, then the hash should include the object name and object offset to
+  /// ensure a unique hash. Some examples:
+  /// - just a regular object file (mach-o, elf, coff, etc) should create a hash
+  /// - a universal mach-o file that contains to multiple architectures,
+  ///   each architecture slice should have a unique hash even though they come
+  ///   from the same file
+  /// - a .o file inside of a BSD archive. Each .o file will have an object name
+  ///   and object offset that should produce a unique hash. The object offset
+  ///   is needed as BSD archive files can contain multiple .o files that have
+  ///   the same name.
+  uint32_t Hash();
+
+  /// Get a unique cache key for the current module.
+  ///
+  /// The cache key must be unique for a file on disk and not change if the file
+  /// is updated. This allows cache data to use this key as a prefix and as
+  /// files are modified in disk, we will overwrite the cache files. If one file
+  /// can contain multiple files, like a universal mach-o file or like a BSD
+  /// archive, the cache key must contain enough information to differentiate
+  /// these different files.
+  std::string GetCacheKey();
+
+  /// Get the global index file cache.
+  ///
+  /// LLDB can cache data for a module between runs. This cache directory can be
+  /// used to stored data that previously was manually created each time you debug.
+  /// Examples include debug information indexes, symbol tables, symbol table
+  /// indexes, and more.
+  ///
+  /// \returns
+  ///   If caching is enabled in the lldb settings, return a pointer to the data
+  ///   file cache. If caching is not enabled, return NULL.
+  static DataFileCache *GetIndexCache();
 protected:
   // Member Variables
   mutable std::recursive_mutex m_mutex; ///< A mutex to keep this object happy
-                                        ///in multi-threaded environments.
+                                        /// in multi-threaded environments.
 
   /// The modification time for this module when it was created.
   llvm::sys::TimePoint<> m_mod_time;
 
-  ArchSpec m_arch;      ///< The architecture for this module.
+  ArchSpec m_arch; ///< The architecture for this module.
   UUID m_uuid; ///< Each module is assumed to have a unique identifier to help
-               ///match it up to debug symbols.
+               /// match it up to debug symbols.
   FileSpec m_file; ///< The file representation on disk for this module (if
-                   ///there is one).
+                   /// there is one).
   FileSpec m_platform_file; ///< The path to the module on the platform on which
-                            ///it is being debugged
+                            /// it is being debugged
   FileSpec m_remote_install_file; ///< If set when debugging on remote
-                                  ///platforms, this module will be installed at
-                                  ///this location
+                                  /// platforms, this module will be installed
+                                  /// at this location
   FileSpec m_symfile_spec;   ///< If this path is valid, then this is the file
-                             ///that _will_ be used as the symbol file for this
-                             ///module
+                             /// that _will_ be used as the symbol file for this
+                             /// module
   ConstString m_object_name; ///< The name an object within this module that is
-                             ///selected, or empty of the module is represented
-                             ///by \a m_file.
+                             /// selected, or empty of the module is represented
+                             /// by \a m_file.
   uint64_t m_object_offset = 0;
   llvm::sys::TimePoint<> m_object_mod_time;
 
@@ -979,8 +1015,8 @@ protected:
   lldb::DataBufferSP m_data_sp;
 
   lldb::ObjectFileSP m_objfile_sp; ///< A shared pointer to the object file
-                                   ///parser for this module as it may or may
-                                   ///not be shared with the SymbolFile
+                                   /// parser for this module as it may or may
+                                   /// not be shared with the SymbolFile
   llvm::Optional<UnwindTable> m_unwind_table; ///< Table of FuncUnwinders
                                               /// objects created for this
                                               /// Module's functions
@@ -988,11 +1024,11 @@ protected:
       m_symfile_up; ///< A pointer to the symbol vendor for this module.
   std::vector<lldb::SymbolVendorUP>
       m_old_symfiles; ///< If anyone calls Module::SetSymbolFileFileSpec() and
-                      ///changes the symbol file,
+                      /// changes the symbol file,
   ///< we need to keep all old symbol files around in case anyone has type
-  ///references to them
-  TypeSystemMap m_type_system_map;   ///< A map of any type systems associated
-                                     ///with this module
+  /// references to them
+  TypeSystemMap m_type_system_map; ///< A map of any type systems associated
+                                   /// with this module
   /// Module specific source remappings for when you have debug info for a
   /// module that doesn't match where the sources currently are.
   PathMappingList m_source_mappings =
@@ -1011,11 +1047,11 @@ protected:
   /// We store a symbol table parse time duration here because we might have
   /// an object file and a symbol file which both have symbol tables. The parse
   /// time for the symbol tables can be aggregated here.
-  StatsDuration m_symtab_parse_time{0.0};
+  StatsDuration m_symtab_parse_time;
   /// We store a symbol named index time duration here because we might have
   /// an object file and a symbol file which both have symbol tables. The parse
   /// time for the symbol tables can be aggregated here.
-  StatsDuration m_symtab_index_time{0.0};
+  StatsDuration m_symtab_index_time;
 
   /// Resolve a file or load virtual address.
   ///

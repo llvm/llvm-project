@@ -13,4 +13,6 @@ add_mlir_conversion_library(MLIRVectorToGPU
   MLIRLLVMIR
   MLIRMemRef
   MLIRTransforms
+  MLIRVector
+  MLIRVectorUtils
   )

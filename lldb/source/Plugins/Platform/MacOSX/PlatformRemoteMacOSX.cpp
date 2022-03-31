@@ -23,6 +23,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
@@ -58,7 +59,7 @@ void PlatformRemoteMacOSX::Terminate() {
 
 PlatformSP PlatformRemoteMacOSX::CreateInstance(bool force,
                                                 const ArchSpec *arch) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
+  Log *log = GetLog(LLDBLog::Platform);
   if (log) {
     const char *arch_name;
     if (arch && arch->GetArchitectureName())
@@ -124,35 +125,20 @@ PlatformSP PlatformRemoteMacOSX::CreateInstance(bool force,
   return PlatformSP();
 }
 
-bool PlatformRemoteMacOSX::GetSupportedArchitectureAtIndex(uint32_t idx,
-                                                           ArchSpec &arch) {
+std::vector<ArchSpec>
+PlatformRemoteMacOSX::GetSupportedArchitectures(const ArchSpec &host_info) {
   // macOS for ARM64 support both native and translated x86_64 processes
-  if (!m_num_arm_arches || idx < m_num_arm_arches) {
-    bool res = ARMGetSupportedArchitectureAtIndex(idx, arch);
-    if (res)
-      return true;
-    if (!m_num_arm_arches)
-      m_num_arm_arches = idx;
-  }
+  std::vector<ArchSpec> result;
+  ARMGetSupportedArchitectures(result, llvm::Triple::MacOSX);
 
-  // We can't use x86GetSupportedArchitectureAtIndex() because it uses
+  // We can't use x86GetSupportedArchitectures() because it uses
   // the system architecture for some of its return values and also
   // has a 32bits variant.
-  if (idx == m_num_arm_arches) {
-    arch.SetTriple("x86_64-apple-macosx");
-    return true;
-  } else if (idx == m_num_arm_arches + 1) {
-    arch.SetTriple("x86_64-apple-ios-macabi");
-    return true;
-  } else if (idx == m_num_arm_arches + 2) {
-    arch.SetTriple("arm64-apple-ios");
-    return true;
-  } else if (idx == m_num_arm_arches + 3) {
-    arch.SetTriple("arm64e-apple-ios");
-    return true;
-  }
-
-  return false;
+  result.push_back(ArchSpec("x86_64-apple-macosx"));
+  result.push_back(ArchSpec("x86_64-apple-ios-macabi"));
+  result.push_back(ArchSpec("arm64-apple-ios"));
+  result.push_back(ArchSpec("arm64e-apple-ios"));
+  return result;
 }
 
 lldb_private::Status PlatformRemoteMacOSX::GetFileWithUUID(

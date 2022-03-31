@@ -86,7 +86,7 @@ void test_tag_mismatch(int *ptr)
   C_func(ptr, 20); // should warn, but may cause false positives
 }
 
-void test_null_pointer()
+void test_null_pointer(void)
 {
   C_func(0, C_tag); // no-warning
   C_func((void *) 0, C_tag); // no-warning

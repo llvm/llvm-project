@@ -21,17 +21,18 @@
 using namespace lldb;
 using namespace lldb_private;
 
-llvm::Expected<HostThread> ThreadLauncher::LaunchThread(
-    llvm::StringRef name, lldb::thread_func_t thread_function,
-    lldb::thread_arg_t thread_arg, size_t min_stack_byte_size) {
-  // Host::ThreadCreateTrampoline will delete this pointer for us.
-  HostThreadCreateInfo *info_ptr =
-      new HostThreadCreateInfo(name.data(), thread_function, thread_arg);
+llvm::Expected<HostThread>
+ThreadLauncher::LaunchThread(llvm::StringRef name,
+                             std::function<thread_result_t()> impl,
+                             size_t min_stack_byte_size) {
+  // Host::ThreadCreateTrampoline will take ownership if thread creation is
+  // successful.
+  auto info_up = std::make_unique<HostThreadCreateInfo>(name.str(), impl);
   lldb::thread_t thread;
 #ifdef _WIN32
   thread = (lldb::thread_t)::_beginthreadex(
       0, (unsigned)min_stack_byte_size,
-      HostNativeThread::ThreadCreateTrampoline, info_ptr, 0, NULL);
+      HostNativeThread::ThreadCreateTrampoline, info_up.get(), 0, NULL);
   if (thread == LLDB_INVALID_HOST_THREAD)
     return llvm::errorCodeToError(llvm::mapWindowsError(GetLastError()));
 #else
@@ -63,7 +64,7 @@ llvm::Expected<HostThread> ThreadLauncher::LaunchThread(
   }
   int err =
       ::pthread_create(&thread, thread_attr_ptr,
-                       HostNativeThread::ThreadCreateTrampoline, info_ptr);
+                       HostNativeThread::ThreadCreateTrampoline, info_up.get());
 
   if (destroy_attr)
     ::pthread_attr_destroy(&thread_attr);
@@ -73,5 +74,6 @@ llvm::Expected<HostThread> ThreadLauncher::LaunchThread(
         std::error_code(err, std::generic_category()));
 #endif
 
+  info_up.release();
   return HostThread(thread);
 }

@@ -58,7 +58,6 @@ class Scope;
 class Stmt;
 class SwitchStmt;
 class TemplateParameterList;
-class TemplateTypeParmDecl;
 class VarDecl;
 
 namespace sema {

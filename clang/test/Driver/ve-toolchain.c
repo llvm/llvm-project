@@ -6,7 +6,7 @@
 /// Checking dwarf-version
 
 // RUN: %clang -### -g -target ve %s 2>&1 | FileCheck -check-prefix=DWARF_VER %s
-// DWARF_VER: "-dwarf-version=4"
+// DWARF_VER: "-dwarf-version=5"
 
 ///-----------------------------------------------------------------------------
 /// Checking include-path
@@ -83,6 +83,7 @@
 // RUN: %clang -### -target ve-unknown-linux-gnu \
 // RUN:     --sysroot %S/Inputs/basic_ve_tree \
 // RUN:     -resource-dir=%S/Inputs/basic_ve_tree/resource_dir \
+// RUN:     --unwindlib=none \
 // RUN:     -fuse-ld=ld \
 // RUN:     %s 2>&1 | FileCheck -check-prefix=DEF %s
 

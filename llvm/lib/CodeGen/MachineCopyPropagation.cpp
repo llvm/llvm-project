@@ -61,7 +61,6 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/InitializePasses.h"
@@ -414,31 +413,6 @@ bool MachineCopyPropagation::isForwardableRegClassCopy(const MachineInstr &Copy,
   if (!UseI.isCopy())
     return false;
 
-  const TargetRegisterClass *CopySrcRC =
-      TRI->getMinimalPhysRegClass(CopySrcReg);
-  const TargetRegisterClass *UseDstRC =
-      TRI->getMinimalPhysRegClass(UseI.getOperand(0).getReg());
-  const TargetRegisterClass *CrossCopyRC = TRI->getCrossCopyRegClass(CopySrcRC);
-
-  // If cross copy register class is not the same as copy source register class
-  // then it is not possible to copy the register directly and requires a cross
-  // register class copy. Fowarding this copy without checking register class of
-  // UseDst may create additional cross register copies when expanding the copy
-  // instruction in later passes.
-  if (CopySrcRC != CrossCopyRC) {
-    const TargetRegisterClass *CopyDstRC =
-        TRI->getMinimalPhysRegClass(Copy.getOperand(0).getReg());
-
-    // Check if UseDstRC matches the necessary register class to copy from
-    // CopySrc's register class. If so then forwarding the copy will not
-    // introduce any cross-class copys. Else if CopyDstRC matches then keep the
-    // copy and do not forward. If neither UseDstRC or CopyDstRC matches then
-    // we may need a cross register copy later but we do not worry about it
-    // here.
-    if (UseDstRC != CrossCopyRC && CopyDstRC == CrossCopyRC)
-      return false;
-  }
-
   /// COPYs don't have register class constraints, so if the user instruction
   /// is a COPY, we just try to avoid introducing additional cross-class
   /// COPYs.  For example:
@@ -455,12 +429,34 @@ bool MachineCopyPropagation::isForwardableRegClassCopy(const MachineInstr &Copy,
   ///
   /// so we have reduced the number of cross-class COPYs and potentially
   /// introduced a nop COPY that can be removed.
-  const TargetRegisterClass *SuperRC = UseDstRC;
-  for (TargetRegisterClass::sc_iterator SuperRCI = UseDstRC->getSuperClasses();
-       SuperRC; SuperRC = *SuperRCI++)
-    if (SuperRC->contains(CopySrcReg))
-      return true;
 
+  // Allow forwarding if src and dst belong to any common class, so long as they
+  // don't belong to any (possibly smaller) common class that requires copies to
+  // go via a different class.
+  Register UseDstReg = UseI.getOperand(0).getReg();
+  bool Found = false;
+  bool IsCrossClass = false;
+  for (const TargetRegisterClass *RC : TRI->regclasses()) {
+    if (RC->contains(CopySrcReg) && RC->contains(UseDstReg)) {
+      Found = true;
+      if (TRI->getCrossCopyRegClass(RC) != RC) {
+        IsCrossClass = true;
+        break;
+      }
+    }
+  }
+  if (!Found)
+    return false;
+  if (!IsCrossClass)
+    return true;
+  // The forwarded copy would be cross-class. Only do this if the original copy
+  // was also cross-class.
+  Register CopyDstReg = Copy.getOperand(0).getReg();
+  for (const TargetRegisterClass *RC : TRI->regclasses()) {
+    if (RC->contains(CopySrcReg) && RC->contains(CopyDstReg) &&
+        TRI->getCrossCopyRegClass(RC) != RC)
+      return true;
+  }
   return false;
 }
 

@@ -9,22 +9,18 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_INFOSTREAM_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_INFOSTREAM_H
 
-#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/DebugInfo/CodeView/GUID.h"
-#include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Native/NamedStreamMap.h"
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
-#include "llvm/DebugInfo/PDB/PDBTypes.h"
+#include "llvm/Support/BinaryStream.h"
+#include "llvm/Support/BinaryStreamRef.h"
 
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
 namespace pdb {
-class InfoStreamBuilder;
-class PDBFile;
-
+struct InfoStreamHeader;
 class InfoStream {
   friend class InfoStreamBuilder;
 

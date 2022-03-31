@@ -20,9 +20,7 @@
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/PointerUnion.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/iterator_range.h"
@@ -46,6 +44,8 @@ namespace llvm {
 class Module;
 class ModuleSlotTracker;
 class raw_ostream;
+template <typename T> class StringMapEntry;
+template <typename ValueTy> class StringMapEntryStorage;
 class Type;
 
 enum LLVMConstants : uint32_t {
@@ -682,6 +682,10 @@ struct AAMDNodes {
   // Shift tbaa.struct Metadata node to start off bytes later
   static MDNode *shiftTBAAStruct(MDNode *M, size_t off);
 
+  // Extend tbaa Metadata node to apply to a series of bytes of length len.
+  // A size of -1 denotes an unknown size.
+  static MDNode *extendToTBAA(MDNode *TBAA, ssize_t len);
+
   /// Given two sets of AAMDNodes that apply to the same pointer,
   /// give the best AAMDNodes that are compatible with both (i.e. a set of
   /// nodes whose allowable aliasing conclusions are a subset of those
@@ -703,6 +707,21 @@ struct AAMDNodes {
     Result.TBAA = TBAA ? shiftTBAA(TBAA, Offset) : nullptr;
     Result.TBAAStruct =
         TBAAStruct ? shiftTBAAStruct(TBAAStruct, Offset) : nullptr;
+    Result.Scope = Scope;
+    Result.NoAlias = NoAlias;
+    return Result;
+  }
+
+  /// Create a new AAMDNode that describes this AAMDNode after extending it to
+  /// apply to a series of bytes of length Len. A size of -1 denotes an unknown
+  /// size.
+  AAMDNodes extendTo(ssize_t Len) const {
+    AAMDNodes Result;
+    Result.TBAA = TBAA ? extendToTBAA(TBAA, Len) : nullptr;
+    // tbaa.struct contains (offset, size, type) triples. Extending the length
+    // of the tbaa.struct doesn't require changing this (though more information
+    // could be provided by adding more triples at subsequent lengths).
+    Result.TBAAStruct = TBAAStruct;
     Result.Scope = Scope;
     Result.NoAlias = NoAlias;
     return Result;

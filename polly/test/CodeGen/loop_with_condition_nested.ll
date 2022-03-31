@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -basic-aa -polly-ast -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -basic-aa -polly-codegen -loops -analyze < %s | FileCheck %s -check-prefix=LOOPS
+; RUN: opt %loadPolly -basic-aa -polly-print-ast -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -basic-aa -polly-codegen < %s | opt -passes='print<loops>' -disable-output 2>&1 | FileCheck %s -check-prefix=LOOPS
 
 
 ;#include <string.h>
@@ -212,4 +212,4 @@ declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) nounwind
 ; CHECK: }
 
 ; LOOPS-DAG: Loop at depth 1 containing: %bb1<header><exiting>,%bb2,%bb4,%bb7,%bb6,%bb8,%bb9,%bb10<latch>
-; LOOPS-DAG: Loop at depth 1 containing: %polly.loop_header<header>,%polly.cond,%polly.merge,%polly.then,%polly.else,%polly.stmt.bb7,%polly.cond3,%polly.merge4,%polly.then5,%polly.else6,%polly.stmt.bb6,%polly.stmt.bb9<latch><exiting>
+; LOOPS-DAG: Loop at depth 1 containing: %polly.loop_header<header>,%polly.cond,%polly.else,%polly.cond3,%polly.else6,%polly.then5,%polly.stmt.bb6,%polly.merge4,%polly.then,%polly.stmt.bb7,%polly.merge,%polly.stmt.bb9<latch><exiting>

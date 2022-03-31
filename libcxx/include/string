@@ -158,6 +158,9 @@ public:
     void resize(size_type n, value_type c);
     void resize(size_type n);
 
+    template<class Operation>
+    constexpr void resize_and_overwrite(size_type n, Operation op); // since C++23
+
     void reserve(size_type res_arg);
     void reserve(); // deprecated in C++20
     void shrink_to_fit();
@@ -515,11 +518,18 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len ); // C++1
 
 */
 
+#include <__algorithm/max.h>
+#include <__algorithm/min.h>
+#include <__algorithm/remove.h>
+#include <__algorithm/remove_if.h>
+#include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <__debug>
-#include <__functional_base>
+#include <__ios/fpos.h>
 #include <__iterator/wrap_iter.h>
-#include <algorithm>
+#include <__utility/auto_cast.h>
+#include <__utility/move.h>
+#include <__utility/swap.h>
 #include <compare>
 #include <cstdio>  // EOF
 #include <cstdlib>
@@ -531,19 +541,28 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len ); // C++1
 #include <stdexcept>
 #include <string_view>
 #include <type_traits>
-#include <utility>
 #include <version>
 
+// TODO: remove these headers
+#include <__functional/binary_function.h>
+#include <__functional/invoke.h>
+#include <__functional/operations.h>
+#include <__functional/reference_wrapper.h>
+#include <__functional/unary_function.h>
+#include <__functional/weak_result_type.h>
+#include <new>
+#include <typeinfo>
+
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-#   include <cwchar>
+#  include <cwchar>
 #endif
 
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
-# include <cstdint>
+#  include <cstdint>
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
@@ -551,43 +570,6 @@ _LIBCPP_PUSH_MACROS
 
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-
-// fpos
-
-template <class _StateT>
-class _LIBCPP_TEMPLATE_VIS fpos
-{
-private:
-    _StateT __st_;
-    streamoff __off_;
-public:
-    _LIBCPP_INLINE_VISIBILITY fpos(streamoff __off = streamoff()) : __st_(), __off_(__off) {}
-
-    _LIBCPP_INLINE_VISIBILITY operator streamoff() const {return __off_;}
-
-    _LIBCPP_INLINE_VISIBILITY _StateT state() const {return __st_;}
-    _LIBCPP_INLINE_VISIBILITY void state(_StateT __st) {__st_ = __st;}
-
-    _LIBCPP_INLINE_VISIBILITY fpos& operator+=(streamoff __off) {__off_ += __off; return *this;}
-    _LIBCPP_INLINE_VISIBILITY fpos  operator+ (streamoff __off) const {fpos __t(*this); __t += __off; return __t;}
-    _LIBCPP_INLINE_VISIBILITY fpos& operator-=(streamoff __off) {__off_ -= __off; return *this;}
-    _LIBCPP_INLINE_VISIBILITY fpos  operator- (streamoff __off) const {fpos __t(*this); __t -= __off; return __t;}
-};
-
-template <class _StateT>
-inline _LIBCPP_INLINE_VISIBILITY
-streamoff operator-(const fpos<_StateT>& __x, const fpos<_StateT>& __y)
-    {return streamoff(__x) - streamoff(__y);}
-
-template <class _StateT>
-inline _LIBCPP_INLINE_VISIBILITY
-bool operator==(const fpos<_StateT>& __x, const fpos<_StateT>& __y)
-    {return streamoff(__x) == streamoff(__y);}
-
-template <class _StateT>
-inline _LIBCPP_INLINE_VISIBILITY
-bool operator!=(const fpos<_StateT>& __x, const fpos<_StateT>& __y)
-    {return streamoff(__x) != streamoff(__y);}
 
 // basic_string
 
@@ -614,16 +596,6 @@ basic_string<_CharT, _Traits, _Allocator>
 operator+(const basic_string<_CharT, _Traits, _Allocator>& __x, _CharT __y);
 
 _LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS string operator+<char, char_traits<char>, allocator<char> >(char const*, string const&))
-
-template <bool>
-struct __basic_string_common;
-
-template <>
-struct __basic_string_common<true> {
-    // Both are defined in string.cpp
-    _LIBCPP_NORETURN _LIBCPP_EXPORTED_FROM_ABI void __throw_length_error() const;
-    _LIBCPP_NORETURN _LIBCPP_EXPORTED_FROM_ABI void __throw_out_of_range() const;
-};
 
 template <class _Iter>
 struct __string_is_trivial_iterator : public false_type {};
@@ -677,7 +649,6 @@ class
     _LIBCPP_PREFERRED_NAME(u32string)
 #endif
     basic_string
-    : private __basic_string_common<true> // This base class is historical, but it needs to remain for ABI compatibility
 {
 public:
     typedef basic_string                                 __self;
@@ -826,9 +797,7 @@ public:
     basic_string(const _CharT* __s) : __r_(__default_init_tag(), __default_init_tag()) {
       _LIBCPP_ASSERT(__s != nullptr, "basic_string(const char*) detected nullptr");
       __init(__s, traits_type::length(__s));
-#   if _LIBCPP_DEBUG_LEVEL == 2
-      __get_db()->__insert_c(this);
-#   endif
+      _VSTD::__debug_db_insert_c(this);
     }
 
     template <class = __enable_if_t<__is_allocator<_Allocator>::value, nullptr_t> >
@@ -972,6 +941,16 @@ public:
     _LIBCPP_INLINE_VISIBILITY void resize(size_type __n) {resize(__n, value_type());}
 
     void reserve(size_type __requested_capacity);
+
+#if _LIBCPP_STD_VER > 20
+    template <class _Op>
+    _LIBCPP_HIDE_FROM_ABI constexpr
+    void resize_and_overwrite(size_type __n, _Op __op) {
+      __resize_default_init(__n);
+      __erase_to_end(_VSTD::move(__op)(data(), _LIBCPP_AUTO_CAST(__n)));
+    }
+#endif
+
     _LIBCPP_INLINE_VISIBILITY void __resize_default_init(size_type __n);
 
     _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_INLINE_VISIBILITY
@@ -1454,12 +1433,40 @@ public:
 #endif // _LIBCPP_DEBUG_LEVEL == 2
 
 private:
-    _LIBCPP_INLINE_VISIBILITY
-    allocator_type& __alloc() _NOEXCEPT
-        {return __r_.second();}
-    _LIBCPP_INLINE_VISIBILITY
-    const allocator_type& __alloc() const _NOEXCEPT
-        {return __r_.second();}
+    _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI static bool __fits_in_sso(size_type __sz) {
+        // SSO is disabled during constant evaluation because `__is_long` isn't constexpr friendly
+        return !__libcpp_is_constant_evaluated() && (__sz < __min_cap);
+    }
+
+    template <class _ForwardIterator>
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
+    iterator __insert_from_safe_copy(size_type __n, size_type __ip, _ForwardIterator __first, _ForwardIterator __last) {
+        size_type __sz = size();
+        size_type __cap = capacity();
+        value_type* __p;
+        if (__cap - __sz >= __n)
+        {
+            __p = std::__to_address(__get_pointer());
+            size_type __n_move = __sz - __ip;
+            if (__n_move != 0)
+                traits_type::move(__p + __ip + __n, __p + __ip, __n_move);
+        }
+        else
+        {
+            __grow_by(__cap, __sz + __n - __cap, __sz, __ip, 0, __n);
+            __p = std::__to_address(__get_long_pointer());
+        }
+        __sz += __n;
+        __set_size(__sz);
+        traits_type::assign(__p[__sz], value_type());
+        for (__p += __ip; __first != __last; ++__p, ++__first)
+            traits_type::assign(*__p, *__first);
+
+        return begin() + __ip;
+    }
+
+    _LIBCPP_HIDE_FROM_ABI allocator_type& __alloc() _NOEXCEPT { return __r_.second(); }
+    _LIBCPP_HIDE_FROM_ABI const allocator_type& __alloc() const _NOEXCEPT { return __r_.second(); }
 
 #ifdef _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
 
@@ -1694,6 +1701,13 @@ private:
       return *this;
     }
 
+    _LIBCPP_HIDE_FROM_ABI basic_string& __null_terminate_at(value_type* __p, size_type __newsz) {
+      __set_size(__newsz);
+      __invalidate_iterators_past(__newsz);
+      traits_type::assign(__p[__newsz], value_type());
+      return *this;
+    }
+
     _LIBCPP_INLINE_VISIBILITY void __invalidate_all_iterators();
     _LIBCPP_INLINE_VISIBILITY void __invalidate_iterators_past(size_type);
 
@@ -1706,20 +1720,12 @@ private:
 
     _LIBCPP_NORETURN _LIBCPP_HIDE_FROM_ABI
     void __throw_length_error() const {
-#ifndef _LIBCPP_NO_EXCEPTIONS
-        __basic_string_common<true>::__throw_length_error();
-#else
-        _VSTD::abort();
-#endif
+        _VSTD::__throw_length_error("basic_string");
     }
 
     _LIBCPP_NORETURN _LIBCPP_HIDE_FROM_ABI
     void __throw_out_of_range() const {
-#ifndef _LIBCPP_NO_EXCEPTIONS
-        __basic_string_common<true>::__throw_out_of_range();
-#else
-        _VSTD::abort();
-#endif
+        _VSTD::__throw_out_of_range("basic_string");
     }
 
     friend basic_string operator+<>(const basic_string&, const basic_string&);
@@ -1778,7 +1784,8 @@ void
 basic_string<_CharT, _Traits, _Allocator>::__invalidate_all_iterators()
 {
 #if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->__invalidate_all(this);
+    if (!__libcpp_is_constant_evaluated())
+        __get_db()->__invalidate_all(this);
 #endif
 }
 
@@ -1788,22 +1795,24 @@ void
 basic_string<_CharT, _Traits, _Allocator>::__invalidate_iterators_past(size_type __pos)
 {
 #if _LIBCPP_DEBUG_LEVEL == 2
-    __c_node* __c = __get_db()->__find_c_and_lock(this);
-    if (__c)
-    {
-        const_pointer __new_last = __get_pointer() + __pos;
-        for (__i_node** __p = __c->end_; __p != __c->beg_; )
+    if (!__libcpp_is_constant_evaluated()) {
+        __c_node* __c = __get_db()->__find_c_and_lock(this);
+        if (__c)
         {
-            --__p;
-            const_iterator* __i = static_cast<const_iterator*>((*__p)->__i_);
-            if (__i->base() > __new_last)
+            const_pointer __new_last = __get_pointer() + __pos;
+            for (__i_node** __p = __c->end_; __p != __c->beg_; )
             {
-                (*__p)->__c_ = nullptr;
-                if (--__c->end_ != __p)
-                    _VSTD::memmove(__p, __p+1, (__c->end_ - __p)*sizeof(__i_node*));
+                --__p;
+                const_iterator* __i = static_cast<const_iterator*>((*__p)->__i_);
+                if (__i->base() > __new_last)
+                {
+                    (*__p)->__c_ = nullptr;
+                    if (--__c->end_ != __p)
+                        _VSTD::memmove(__p, __p+1, (__c->end_ - __p)*sizeof(__i_node*));
+                }
             }
+            __get_db()->unlock();
         }
-        __get_db()->unlock();
     }
 #else
     (void)__pos;
@@ -1816,9 +1825,7 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string()
     _NOEXCEPT_(is_nothrow_default_constructible<allocator_type>::value)
      : __r_(__default_init_tag(), __default_init_tag())
 {
-#if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->__insert_c(this);
-#endif
+    _VSTD::__debug_db_insert_c(this);
     __zero();
 }
 
@@ -1832,9 +1839,7 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(const allocator_type& __
 #endif
 : __r_(__default_init_tag(), __a)
 {
-#if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->__insert_c(this);
-#endif
+    _VSTD::__debug_db_insert_c(this);
     __zero();
 }
 
@@ -1844,9 +1849,9 @@ void basic_string<_CharT, _Traits, _Allocator>::__init(const value_type* __s,
                                                        size_type __reserve)
 {
     if (__reserve > max_size())
-        this->__throw_length_error();
+        __throw_length_error();
     pointer __p;
-    if (__reserve < __min_cap)
+    if (__fits_in_sso(__reserve))
     {
         __set_short_size(__sz);
         __p = __get_short_pointer();
@@ -1868,9 +1873,9 @@ void
 basic_string<_CharT, _Traits, _Allocator>::__init(const value_type* __s, size_type __sz)
 {
     if (__sz > max_size())
-        this->__throw_length_error();
+        __throw_length_error();
     pointer __p;
-    if (__sz < __min_cap)
+    if (__fits_in_sso(__sz))
     {
         __set_short_size(__sz);
         __p = __get_short_pointer();
@@ -1894,9 +1899,7 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(const _CharT* __s, const
 {
     _LIBCPP_ASSERT(__s != nullptr, "basic_string(const char*, allocator) detected nullptr");
     __init(__s, traits_type::length(__s));
-#if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->__insert_c(this);
-#endif
+    _VSTD::__debug_db_insert_c(this);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -1906,9 +1909,7 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(const _CharT* __s, size_
 {
     _LIBCPP_ASSERT(__n == 0 || __s != nullptr, "basic_string(const char*, n) detected nullptr");
     __init(__s, __n);
-#if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->__insert_c(this);
-#endif
+    _VSTD::__debug_db_insert_c(this);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -1918,9 +1919,7 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(const _CharT* __s, size_
 {
     _LIBCPP_ASSERT(__n == 0 || __s != nullptr, "basic_string(const char*, n, allocator) detected nullptr");
     __init(__s, __n);
-#if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->__insert_c(this);
-#endif
+    _VSTD::__debug_db_insert_c(this);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -1932,10 +1931,7 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(const basic_string& __st
     else
         __init_copy_ctor_external(_VSTD::__to_address(__str.__get_long_pointer()),
                                   __str.__get_long_size());
-
-#if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->__insert_c(this);
-#endif
+    _VSTD::__debug_db_insert_c(this);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -1948,21 +1944,19 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(
     else
         __init_copy_ctor_external(_VSTD::__to_address(__str.__get_long_pointer()),
                                   __str.__get_long_size());
-#if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->__insert_c(this);
-#endif
+    _VSTD::__debug_db_insert_c(this);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
 void basic_string<_CharT, _Traits, _Allocator>::__init_copy_ctor_external(
     const value_type* __s, size_type __sz) {
   pointer __p;
-  if (__sz < __min_cap) {
+  if (__fits_in_sso(__sz)) {
     __p = __get_short_pointer();
     __set_short_size(__sz);
   } else {
     if (__sz > max_size())
-      this->__throw_length_error();
+      __throw_length_error();
     size_t __cap = __recommend(__sz);
     __p = __alloc_traits::allocate(__alloc(), __cap + 1);
     __set_long_pointer(__p);
@@ -1985,9 +1979,9 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(basic_string&& __str)
     : __r_(_VSTD::move(__str.__r_))
 {
     __str.__zero();
+    _VSTD::__debug_db_insert_c(this);
 #if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->__insert_c(this);
-    if (__is_long())
+    if (!__libcpp_is_constant_evaluated() && __is_long())
         __get_db()->swap(this, &__str);
 #endif
 }
@@ -2004,9 +1998,9 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(basic_string&& __str, co
         __r_.first().__r = __str.__r_.first().__r;
         __str.__zero();
     }
+    _VSTD::__debug_db_insert_c(this);
 #if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->__insert_c(this);
-    if (__is_long())
+    if (!__libcpp_is_constant_evaluated() && __is_long())
         __get_db()->swap(this, &__str);
 #endif
 }
@@ -2018,9 +2012,9 @@ void
 basic_string<_CharT, _Traits, _Allocator>::__init(size_type __n, value_type __c)
 {
     if (__n > max_size())
-        this->__throw_length_error();
+        __throw_length_error();
     pointer __p;
-    if (__n < __min_cap)
+    if (__fits_in_sso(__n))
     {
         __set_short_size(__n);
         __p = __get_short_pointer();
@@ -2043,9 +2037,7 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(size_type __n, _CharT __
      : __r_(__default_init_tag(), __default_init_tag())
 {
     __init(__n, __c);
-#if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->__insert_c(this);
-#endif
+    _VSTD::__debug_db_insert_c(this);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -2054,9 +2046,7 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(size_type __n, _CharT __
     : __r_(__default_init_tag(), __a)
 {
     __init(__n, __c);
-#if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->__insert_c(this);
-#endif
+    _VSTD::__debug_db_insert_c(this);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -2067,11 +2057,9 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(const basic_string& __st
 {
     size_type __str_sz = __str.size();
     if (__pos > __str_sz)
-        this->__throw_out_of_range();
+        __throw_out_of_range();
     __init(__str.data() + __pos, _VSTD::min(__n, __str_sz - __pos));
-#if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->__insert_c(this);
-#endif
+    _VSTD::__debug_db_insert_c(this);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -2082,11 +2070,9 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(const basic_string& __st
 {
     size_type __str_sz = __str.size();
     if (__pos > __str_sz)
-        this->__throw_out_of_range();
+        __throw_out_of_range();
     __init(__str.data() + __pos, __str_sz - __pos);
-#if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->__insert_c(this);
-#endif
+    _VSTD::__debug_db_insert_c(this);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -2098,9 +2084,7 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(
     __self_view __sv0 = __t;
     __self_view __sv = __sv0.substr(__pos, __n);
     __init(__sv.data(), __sv.size());
-#if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->__insert_c(this);
-#endif
+    _VSTD::__debug_db_insert_c(this);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -2110,9 +2094,7 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(const _Tp & __t)
 {
     __self_view __sv = __t;
     __init(__sv.data(), __sv.size());
-#if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->__insert_c(this);
-#endif
+    _VSTD::__debug_db_insert_c(this);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -2122,9 +2104,7 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(const _Tp & __t, const _
 {
     __self_view __sv = __t;
     __init(__sv.data(), __sv.size());
-#if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->__insert_c(this);
-#endif
+    _VSTD::__debug_db_insert_c(this);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -2163,9 +2143,9 @@ basic_string<_CharT, _Traits, _Allocator>::__init(_ForwardIterator __first, _For
 {
     size_type __sz = static_cast<size_type>(_VSTD::distance(__first, __last));
     if (__sz > max_size())
-        this->__throw_length_error();
+        __throw_length_error();
     pointer __p;
-    if (__sz < __min_cap)
+    if (__fits_in_sso(__sz))
     {
         __set_short_size(__sz);
         __p = __get_short_pointer();
@@ -2204,9 +2184,7 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(_InputIterator __first, 
      : __r_(__default_init_tag(), __default_init_tag())
 {
     __init(__first, __last);
-#if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->__insert_c(this);
-#endif
+    _VSTD::__debug_db_insert_c(this);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -2217,9 +2195,7 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(_InputIterator __first, 
     : __r_(__default_init_tag(), __a)
 {
     __init(__first, __last);
-#if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->__insert_c(this);
-#endif
+    _VSTD::__debug_db_insert_c(this);
 }
 
 #ifndef _LIBCPP_CXX03_LANG
@@ -2231,9 +2207,7 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(
      : __r_(__default_init_tag(), __default_init_tag())
 {
     __init(__il.begin(), __il.end());
-#if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->__insert_c(this);
-#endif
+    _VSTD::__debug_db_insert_c(this);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -2244,9 +2218,7 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(
     : __r_(__default_init_tag(), __a)
 {
     __init(__il.begin(), __il.end());
-#if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->__insert_c(this);
-#endif
+    _VSTD::__debug_db_insert_c(this);
 }
 
 #endif // _LIBCPP_CXX03_LANG
@@ -2255,7 +2227,8 @@ template <class _CharT, class _Traits, class _Allocator>
 basic_string<_CharT, _Traits, _Allocator>::~basic_string()
 {
 #if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->__erase_c(this);
+    if (!__libcpp_is_constant_evaluated())
+        __get_db()->__erase_c(this);
 #endif
     if (__is_long())
         __alloc_traits::deallocate(__alloc(), __get_long_pointer(), __get_long_cap());
@@ -2269,7 +2242,7 @@ basic_string<_CharT, _Traits, _Allocator>::__grow_by_and_replace
 {
     size_type __ms = max_size();
     if (__delta_cap > __ms - __old_cap - 1)
-        this->__throw_length_error();
+        __throw_length_error();
     pointer __old_p = __get_pointer();
     size_type __cap = __old_cap < __ms / 2 - __alignment ?
                           __recommend(_VSTD::max(__old_cap + __delta_cap, 2 * __old_cap)) :
@@ -2301,7 +2274,7 @@ basic_string<_CharT, _Traits, _Allocator>::__grow_by(size_type __old_cap, size_t
 {
     size_type __ms = max_size();
     if (__delta_cap > __ms - __old_cap)
-        this->__throw_length_error();
+        __throw_length_error();
     pointer __old_p = __get_pointer();
     size_type __cap = __old_cap < __ms / 2 - __alignment ?
                           __recommend(_VSTD::max(__old_cap + __delta_cap, 2 * __old_cap)) :
@@ -2329,7 +2302,7 @@ template <bool __is_short>
 basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::__assign_no_alias(
     const value_type* __s, size_type __n) {
-  size_type __cap = __is_short ? __min_cap : __get_long_cap();
+  size_type __cap = __is_short ? static_cast<size_type>(__min_cap) : __get_long_cap();
   if (__n < __cap) {
     pointer __p = __is_short ? __get_short_pointer() : __get_long_pointer();
     __is_short ? __set_short_size(__n) : __set_long_size(__n);
@@ -2351,14 +2324,12 @@ basic_string<_CharT, _Traits, _Allocator>::__assign_external(
   if (__cap >= __n) {
     value_type* __p = _VSTD::__to_address(__get_pointer());
     traits_type::move(__p, __s, __n);
-    traits_type::assign(__p[__n], value_type());
-    __set_size(__n);
-    __invalidate_iterators_past(__n);
+    return __null_terminate_at(__p, __n);
   } else {
     size_type __sz = size();
     __grow_by_and_replace(__cap, __n - __cap, __sz, 0, __sz, __n, __s);
+    return *this;
   }
-  return *this;
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -2366,7 +2337,7 @@ basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::assign(const value_type* __s, size_type __n)
 {
     _LIBCPP_ASSERT(__n == 0 || __s != nullptr, "string::assign received nullptr");
-    return (__builtin_constant_p(__n) && __n < __min_cap)
+    return (__builtin_constant_p(__n) && __fits_in_sso(__n))
                ? __assign_short(__s, __n)
                : __assign_external(__s, __n);
 }
@@ -2383,10 +2354,7 @@ basic_string<_CharT, _Traits, _Allocator>::assign(size_type __n, value_type __c)
     }
     value_type* __p = _VSTD::__to_address(__get_pointer());
     traits_type::assign(__p, __n, __c);
-    traits_type::assign(__p[__n], value_type());
-    __set_size(__n);
-    __invalidate_iterators_past(__n);
-    return *this;
+    return __null_terminate_at(__p, __n);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -2538,7 +2506,7 @@ basic_string<_CharT, _Traits, _Allocator>::assign(const basic_string& __str, siz
 {
     size_type __sz = __str.size();
     if (__pos > __sz)
-        this->__throw_out_of_range();
+        __throw_out_of_range();
     return assign(__str.data() + __pos, _VSTD::min(__n, __sz - __pos));
 }
 
@@ -2555,7 +2523,7 @@ basic_string<_CharT, _Traits, _Allocator>::assign(const _Tp & __t, size_type __p
     __self_view __sv = __t;
     size_type __sz = __sv.size();
     if (__pos > __sz)
-        this->__throw_out_of_range();
+        __throw_out_of_range();
     return assign(__sv.data() + __pos, _VSTD::min(__n, __sz - __pos));
 }
 
@@ -2572,7 +2540,7 @@ basic_string<_CharT, _Traits, _Allocator>::assign(const value_type* __s)
 {
     _LIBCPP_ASSERT(__s != nullptr, "string::assign received nullptr");
     return __builtin_constant_p(*__s)
-               ? (traits_type::length(__s) < __min_cap
+               ? (__fits_in_sso(traits_type::length(__s))
                       ? __assign_short(__s, traits_type::length(__s))
                       : __assign_external(__s, traits_type::length(__s)))
                : __assign_external(__s);
@@ -2724,7 +2692,7 @@ basic_string<_CharT, _Traits, _Allocator>::append(const basic_string& __str, siz
 {
     size_type __sz = __str.size();
     if (__pos > __sz)
-        this->__throw_out_of_range();
+        __throw_out_of_range();
     return append(__str.data() + __pos, _VSTD::min(__n, __sz - __pos));
 }
 
@@ -2740,7 +2708,7 @@ basic_string<_CharT, _Traits, _Allocator>::append(const _Tp & __t, size_type __p
     __self_view __sv = __t;
     size_type __sz = __sv.size();
     if (__pos > __sz)
-        this->__throw_out_of_range();
+        __throw_out_of_range();
     return append(__sv.data() + __pos, _VSTD::min(__n, __sz - __pos));
 }
 
@@ -2761,7 +2729,7 @@ basic_string<_CharT, _Traits, _Allocator>::insert(size_type __pos, const value_t
     _LIBCPP_ASSERT(__n == 0 || __s != nullptr, "string::insert received nullptr");
     size_type __sz = size();
     if (__pos > __sz)
-        this->__throw_out_of_range();
+        __throw_out_of_range();
     size_type __cap = capacity();
     if (__cap - __sz >= __n)
     {
@@ -2792,7 +2760,7 @@ basic_string<_CharT, _Traits, _Allocator>::insert(size_type __pos, size_type __n
 {
     size_type __sz = size();
     if (__pos > __sz)
-        this->__throw_out_of_range();
+        __throw_out_of_range();
     if (__n)
     {
         size_type __cap = capacity();
@@ -2826,13 +2794,11 @@ __enable_if_t
 >
 basic_string<_CharT, _Traits, _Allocator>::insert(const_iterator __pos, _InputIterator __first, _InputIterator __last)
 {
-#if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__pos) == this,
-        "string::insert(iterator, range) called with an iterator not"
-        " referring to this string");
-#endif
-    const basic_string __temp(__first, __last, __alloc());
-    return insert(__pos, __temp.data(), __temp.data() + __temp.size());
+  _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(&__pos) == this,
+                       "string::insert(iterator, range) called with an iterator not"
+                       " referring to this string");
+  const basic_string __temp(__first, __last, __alloc());
+  return insert(__pos, __temp.data(), __temp.data() + __temp.size());
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -2844,46 +2810,23 @@ __enable_if_t
 >
 basic_string<_CharT, _Traits, _Allocator>::insert(const_iterator __pos, _ForwardIterator __first, _ForwardIterator __last)
 {
-#if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__pos) == this,
-        "string::insert(iterator, range) called with an iterator not"
-        " referring to this string");
-#endif
+    _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(&__pos) == this,
+                         "string::insert(iterator, range) called with an iterator not referring to this string");
+
     size_type __ip = static_cast<size_type>(__pos - begin());
-    size_type __n = static_cast<size_type>(_VSTD::distance(__first, __last));
-    if (__n)
+    size_type __n = static_cast<size_type>(std::distance(__first, __last));
+    if (__n == 0)
+        return begin() + __ip;
+
+    if (__string_is_trivial_iterator<_ForwardIterator>::value && !__addr_in_range(*__first))
     {
-        if (__string_is_trivial_iterator<_ForwardIterator>::value &&
-            !__addr_in_range(*__first))
-        {
-            size_type __sz = size();
-            size_type __cap = capacity();
-            value_type* __p;
-            if (__cap - __sz >= __n)
-            {
-                __p = _VSTD::__to_address(__get_pointer());
-                size_type __n_move = __sz - __ip;
-                if (__n_move != 0)
-                    traits_type::move(__p + __ip + __n, __p + __ip, __n_move);
-            }
-            else
-            {
-                __grow_by(__cap, __sz + __n - __cap, __sz, __ip, 0, __n);
-                __p = _VSTD::__to_address(__get_long_pointer());
-            }
-            __sz += __n;
-            __set_size(__sz);
-            traits_type::assign(__p[__sz], value_type());
-            for (__p += __ip; __first != __last; ++__p, (void) ++__first)
-                traits_type::assign(*__p, *__first);
-        }
-        else
-        {
-            const basic_string __temp(__first, __last, __alloc());
-            return insert(__pos, __temp.data(), __temp.data() + __temp.size());
-        }
+        return __insert_from_safe_copy(__n, __ip, __first, __last);
     }
-    return begin() + __ip;
+    else
+    {
+        const basic_string __temp(__first, __last, __alloc());
+        return __insert_from_safe_copy(__n, __ip, __temp.begin(), __temp.end());
+    }
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -2901,7 +2844,7 @@ basic_string<_CharT, _Traits, _Allocator>::insert(size_type __pos1, const basic_
 {
     size_type __str_sz = __str.size();
     if (__pos2 > __str_sz)
-        this->__throw_out_of_range();
+        __throw_out_of_range();
     return insert(__pos1, __str.data() + __pos2, _VSTD::min(__n, __str_sz - __pos2));
 }
 
@@ -2918,7 +2861,7 @@ basic_string<_CharT, _Traits, _Allocator>::insert(size_type __pos1, const _Tp& _
     __self_view __sv = __t;
     size_type __str_sz = __sv.size();
     if (__pos2 > __str_sz)
-        this->__throw_out_of_range();
+        __throw_out_of_range();
     return insert(__pos1, __sv.data() + __pos2, _VSTD::min(__n, __str_sz - __pos2));
 }
 
@@ -2934,6 +2877,10 @@ template <class _CharT, class _Traits, class _Allocator>
 typename basic_string<_CharT, _Traits, _Allocator>::iterator
 basic_string<_CharT, _Traits, _Allocator>::insert(const_iterator __pos, value_type __c)
 {
+    _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(&__pos) == this,
+                         "string::insert(iterator, character) called with an iterator not"
+                         " referring to this string");
+
     size_type __ip = static_cast<size_type>(__pos - begin());
     size_type __sz = size();
     size_type __cap = capacity();
@@ -2961,14 +2908,12 @@ inline
 typename basic_string<_CharT, _Traits, _Allocator>::iterator
 basic_string<_CharT, _Traits, _Allocator>::insert(const_iterator __pos, size_type __n, value_type __c)
 {
-#if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__pos) == this,
-        "string::insert(iterator, n, value) called with an iterator not"
-        " referring to this string");
-#endif
-    difference_type __p = __pos - begin();
-    insert(static_cast<size_type>(__p), __n, __c);
-    return begin() + __p;
+  _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(&__pos) == this,
+                       "string::insert(iterator, n, value) called with an iterator not"
+                       " referring to this string");
+  difference_type __p = __pos - begin();
+  insert(static_cast<size_type>(__p), __n, __c);
+  return begin() + __p;
 }
 
 // replace
@@ -2981,7 +2926,7 @@ basic_string<_CharT, _Traits, _Allocator>::replace(size_type __pos, size_type __
     _LIBCPP_ASSERT(__n2 == 0 || __s != nullptr, "string::replace received nullptr");
     size_type __sz = size();
     if (__pos > __sz)
-        this->__throw_out_of_range();
+        __throw_out_of_range();
     __n1 = _VSTD::min(__n1, __sz - __pos);
     size_type __cap = capacity();
     if (__cap - __sz + __n1 >= __n2)
@@ -2996,7 +2941,7 @@ basic_string<_CharT, _Traits, _Allocator>::replace(size_type __pos, size_type __
                 {
                     traits_type::move(__p + __pos, __s, __n2);
                     traits_type::move(__p + __pos + __n2, __p + __pos + __n1, __n_move);
-                    goto __finish;
+                    return __null_terminate_at(__p, __sz + (__n2 - __n1));
                 }
                 if (__p + __pos < __s && __s < __p + __sz)
                 {
@@ -3015,13 +2960,7 @@ basic_string<_CharT, _Traits, _Allocator>::replace(size_type __pos, size_type __
             }
         }
         traits_type::move(__p + __pos, __s, __n2);
-__finish:
-// __sz += __n2 - __n1; in this and the below function below can cause unsigned
-// integer overflow, but this is a safe operation, so we disable the check.
-        __sz += __n2 - __n1;
-        __set_size(__sz);
-        __invalidate_iterators_past(__sz);
-        traits_type::assign(__p[__sz], value_type());
+        return __null_terminate_at(__p, __sz + (__n2 - __n1));
     }
     else
         __grow_by_and_replace(__cap, __sz - __n1 + __n2 - __cap, __sz, __pos, __n1, __n2, __s);
@@ -3031,11 +2970,10 @@ __finish:
 template <class _CharT, class _Traits, class _Allocator>
 basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::replace(size_type __pos, size_type __n1, size_type __n2, value_type __c)
-    _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
 {
     size_type __sz = size();
     if (__pos > __sz)
-        this->__throw_out_of_range();
+        __throw_out_of_range();
     __n1 = _VSTD::min(__n1, __sz - __pos);
     size_type __cap = capacity();
     value_type* __p;
@@ -3055,11 +2993,7 @@ basic_string<_CharT, _Traits, _Allocator>::replace(size_type __pos, size_type __
         __p = _VSTD::__to_address(__get_long_pointer());
     }
     traits_type::assign(__p + __pos, __n2, __c);
-    __sz += __n2 - __n1;
-    __set_size(__sz);
-    __invalidate_iterators_past(__sz);
-    traits_type::assign(__p[__sz], value_type());
-    return *this;
+    return __null_terminate_at(__p, __sz - (__n1 - __n2));
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -3073,7 +3007,7 @@ basic_string<_CharT, _Traits, _Allocator>::replace(const_iterator __i1, const_it
                                                    _InputIterator __j1, _InputIterator __j2)
 {
     const basic_string __temp(__j1, __j2, __alloc());
-    return this->replace(__i1, __i2, __temp);
+    return replace(__i1, __i2, __temp);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -3091,7 +3025,7 @@ basic_string<_CharT, _Traits, _Allocator>::replace(size_type __pos1, size_type _
 {
     size_type __str_sz = __str.size();
     if (__pos2 > __str_sz)
-        this->__throw_out_of_range();
+        __throw_out_of_range();
     return replace(__pos1, __n1, __str.data() + __pos2, _VSTD::min(__n2, __str_sz - __pos2));
 }
 
@@ -3108,7 +3042,7 @@ basic_string<_CharT, _Traits, _Allocator>::replace(size_type __pos1, size_type _
     __self_view __sv = __t;
     size_type __str_sz = __sv.size();
     if (__pos2 > __str_sz)
-        this->__throw_out_of_range();
+        __throw_out_of_range();
     return replace(__pos1, __n1, __sv.data() + __pos2, _VSTD::min(__n2, __str_sz - __pos2));
 }
 
@@ -3170,10 +3104,7 @@ basic_string<_CharT, _Traits, _Allocator>::__erase_external_with_move(
         size_type __n_move = __sz - __pos - __n;
         if (__n_move != 0)
             traits_type::move(__p + __pos, __p + __pos + __n, __n_move);
-        __sz -= __n;
-        __set_size(__sz);
-        __invalidate_iterators_past(__sz);
-        traits_type::assign(__p[__sz], value_type());
+        __null_terminate_at(__p, __sz - __n);
     }
 }
 
@@ -3181,7 +3112,8 @@ template <class _CharT, class _Traits, class _Allocator>
 basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::erase(size_type __pos,
                                                  size_type __n) {
-  if (__pos > size()) this->__throw_out_of_range();
+  if (__pos > size())
+    __throw_out_of_range();
   if (__n == npos) {
     __erase_to_end(__pos);
   } else {
@@ -3195,17 +3127,15 @@ inline
 typename basic_string<_CharT, _Traits, _Allocator>::iterator
 basic_string<_CharT, _Traits, _Allocator>::erase(const_iterator __pos)
 {
-#if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__pos) == this,
-        "string::erase(iterator) called with an iterator not"
-        " referring to this string");
-#endif
-    _LIBCPP_ASSERT(__pos != end(),
-        "string::erase(iterator) called with a non-dereferenceable iterator");
-    iterator __b = begin();
-    size_type __r = static_cast<size_type>(__pos - __b);
-    erase(__r, 1);
-    return __b + static_cast<difference_type>(__r);
+  _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(&__pos) == this,
+                       "string::erase(iterator) called with an iterator not"
+                       " referring to this string");
+
+  _LIBCPP_ASSERT(__pos != end(), "string::erase(iterator) called with a non-dereferenceable iterator");
+  iterator __b = begin();
+  size_type __r = static_cast<size_type>(__pos - __b);
+  erase(__r, 1);
+  return __b + static_cast<difference_type>(__r);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -3213,16 +3143,15 @@ inline
 typename basic_string<_CharT, _Traits, _Allocator>::iterator
 basic_string<_CharT, _Traits, _Allocator>::erase(const_iterator __first, const_iterator __last)
 {
-#if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__first) == this,
-        "string::erase(iterator,  iterator) called with an iterator not"
-        " referring to this string");
-#endif
-    _LIBCPP_ASSERT(__first <= __last, "string::erase(first, last) called with invalid range");
-    iterator __b = begin();
-    size_type __r = static_cast<size_type>(__first - __b);
-    erase(__r, static_cast<size_type>(__last - __first));
-    return __b + static_cast<difference_type>(__r);
+  _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(&__first) == this,
+                       "string::erase(iterator,  iterator) called with an iterator not"
+                       " referring to this string");
+
+  _LIBCPP_ASSERT(__first <= __last, "string::erase(first, last) called with invalid range");
+  iterator __b = begin();
+  size_type __r = static_cast<size_type>(__first - __b);
+  erase(__r, static_cast<size_type>(__last - __first));
+  return __b + static_cast<difference_type>(__r);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -3231,20 +3160,7 @@ void
 basic_string<_CharT, _Traits, _Allocator>::pop_back()
 {
     _LIBCPP_ASSERT(!empty(), "string::pop_back(): string is already empty");
-    size_type __sz;
-    if (__is_long())
-    {
-        __sz = __get_long_size() - 1;
-        __set_long_size(__sz);
-        traits_type::assign(*(__get_long_pointer() + __sz), value_type());
-    }
-    else
-    {
-        __sz = __get_short_size() - 1;
-        __set_short_size(__sz);
-        traits_type::assign(*(__get_short_pointer() + __sz), value_type());
-    }
-    __invalidate_iterators_past(__sz);
+    __erase_to_end(size() - 1);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -3270,17 +3186,7 @@ inline
 void
 basic_string<_CharT, _Traits, _Allocator>::__erase_to_end(size_type __pos)
 {
-    if (__is_long())
-    {
-        traits_type::assign(*(__get_long_pointer() + __pos), value_type());
-        __set_long_size(__pos);
-    }
-    else
-    {
-        traits_type::assign(*(__get_short_pointer() + __pos), value_type());
-        __set_short_size(__pos);
-    }
-    __invalidate_iterators_past(__pos);
+  __null_terminate_at(_VSTD::__to_address(__get_pointer()), __pos);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -3323,12 +3229,13 @@ void
 basic_string<_CharT, _Traits, _Allocator>::reserve(size_type __requested_capacity)
 {
     if (__requested_capacity > max_size())
-        this->__throw_length_error();
+        __throw_length_error();
 
-#if _LIBCPP_STD_VER > 17
-    // Reserve never shrinks as of C++20.
-    if (__requested_capacity <= capacity()) return;
-#endif
+    // Make sure reserve(n) never shrinks. This is technically only required in C++20
+    // and later (since P0966R1), however we provide consistent behavior in all Standard
+    // modes because this function is instantiated in the shared library.
+    if (__requested_capacity <= capacity())
+        return;
 
     size_type __target_capacity = _VSTD::max(__requested_capacity, size());
     __target_capacity = __recommend(__target_capacity);
@@ -3338,6 +3245,7 @@ basic_string<_CharT, _Traits, _Allocator>::reserve(size_type __requested_capacit
 }
 
 template <class _CharT, class _Traits, class _Allocator>
+inline
 void
 basic_string<_CharT, _Traits, _Allocator>::shrink_to_fit() _NOEXCEPT
 {
@@ -3348,6 +3256,7 @@ basic_string<_CharT, _Traits, _Allocator>::shrink_to_fit() _NOEXCEPT
 }
 
 template <class _CharT, class _Traits, class _Allocator>
+inline
 void
 basic_string<_CharT, _Traits, _Allocator>::__shrink_or_extend(size_type __target_capacity)
 {
@@ -3427,7 +3336,7 @@ typename basic_string<_CharT, _Traits, _Allocator>::const_reference
 basic_string<_CharT, _Traits, _Allocator>::at(size_type __n) const
 {
     if (__n >= size())
-        this->__throw_out_of_range();
+        __throw_out_of_range();
     return (*this)[__n];
 }
 
@@ -3436,7 +3345,7 @@ typename basic_string<_CharT, _Traits, _Allocator>::reference
 basic_string<_CharT, _Traits, _Allocator>::at(size_type __n)
 {
     if (__n >= size())
-        this->__throw_out_of_range();
+        __throw_out_of_range();
     return (*this)[__n];
 }
 
@@ -3482,7 +3391,7 @@ basic_string<_CharT, _Traits, _Allocator>::copy(value_type* __s, size_type __n, 
 {
     size_type __sz = size();
     if (__pos > __sz)
-        this->__throw_out_of_range();
+        __throw_out_of_range();
     size_type __rlen = _VSTD::min(__n, __sz - __pos);
     traits_type::copy(__s, data() + __pos, __rlen);
     return __rlen;
@@ -3508,11 +3417,13 @@ basic_string<_CharT, _Traits, _Allocator>::swap(basic_string& __str)
 #endif
 {
 #if _LIBCPP_DEBUG_LEVEL == 2
-    if (!__is_long())
-        __get_db()->__invalidate_all(this);
-    if (!__str.__is_long())
-        __get_db()->__invalidate_all(&__str);
-    __get_db()->swap(this, &__str);
+    if (!__libcpp_is_constant_evaluated()) {
+        if (!__is_long())
+            __get_db()->__invalidate_all(this);
+        if (!__str.__is_long())
+            __get_db()->__invalidate_all(&__str);
+        __get_db()->swap(this, &__str);
+    }
 #endif
     _LIBCPP_ASSERT(
         __alloc_traits::propagate_on_container_swap::value ||
@@ -3924,7 +3835,7 @@ basic_string<_CharT, _Traits, _Allocator>::compare(size_type __pos1,
     _LIBCPP_ASSERT(__n2 == 0 || __s != nullptr, "string::compare(): received nullptr");
     size_type __sz = size();
     if (__pos1 > __sz || __n2 == npos)
-        this->__throw_out_of_range();
+        __throw_out_of_range();
     size_type __rlen = _VSTD::min(__n1, __sz - __pos1);
     int __r = traits_type::compare(data() + __pos1, __s, _VSTD::min(__rlen, __n2));
     if (__r == 0)
@@ -3988,7 +3899,7 @@ basic_string<_CharT, _Traits, _Allocator>::compare(size_type __pos1,
                                                    size_type __pos2,
                                                    size_type __n2) const
 {
-        return compare(__pos1, __n1, __self_view(__str), __pos2, __n2);
+    return compare(__pos1, __n1, __self_view(__str), __pos2, __n2);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -4253,9 +4164,10 @@ basic_string<_CharT, _Traits, _Allocator>
 operator+(const basic_string<_CharT, _Traits, _Allocator>& __lhs,
           const basic_string<_CharT, _Traits, _Allocator>& __rhs)
 {
-    basic_string<_CharT, _Traits, _Allocator> __r(__lhs.get_allocator());
-    typename basic_string<_CharT, _Traits, _Allocator>::size_type __lhs_sz = __lhs.size();
-    typename basic_string<_CharT, _Traits, _Allocator>::size_type __rhs_sz = __rhs.size();
+    using _String = basic_string<_CharT, _Traits, _Allocator>;
+    _String __r(_String::__alloc_traits::select_on_container_copy_construction(__lhs.get_allocator()));
+    typename _String::size_type __lhs_sz = __lhs.size();
+    typename _String::size_type __rhs_sz = __rhs.size();
     __r.__init(__lhs.data(), __lhs_sz, __lhs_sz + __rhs_sz);
     __r.append(__rhs.data(), __rhs_sz);
     return __r;
@@ -4265,9 +4177,10 @@ template<class _CharT, class _Traits, class _Allocator>
 basic_string<_CharT, _Traits, _Allocator>
 operator+(const _CharT* __lhs , const basic_string<_CharT,_Traits,_Allocator>& __rhs)
 {
-    basic_string<_CharT, _Traits, _Allocator> __r(__rhs.get_allocator());
-    typename basic_string<_CharT, _Traits, _Allocator>::size_type __lhs_sz = _Traits::length(__lhs);
-    typename basic_string<_CharT, _Traits, _Allocator>::size_type __rhs_sz = __rhs.size();
+    using _String = basic_string<_CharT, _Traits, _Allocator>;
+    _String __r(_String::__alloc_traits::select_on_container_copy_construction(__rhs.get_allocator()));
+    typename _String::size_type __lhs_sz = _Traits::length(__lhs);
+    typename _String::size_type __rhs_sz = __rhs.size();
     __r.__init(__lhs, __lhs_sz, __lhs_sz + __rhs_sz);
     __r.append(__rhs.data(), __rhs_sz);
     return __r;
@@ -4277,8 +4190,9 @@ template<class _CharT, class _Traits, class _Allocator>
 basic_string<_CharT, _Traits, _Allocator>
 operator+(_CharT __lhs, const basic_string<_CharT,_Traits,_Allocator>& __rhs)
 {
-    basic_string<_CharT, _Traits, _Allocator> __r(__rhs.get_allocator());
-    typename basic_string<_CharT, _Traits, _Allocator>::size_type __rhs_sz = __rhs.size();
+    using _String = basic_string<_CharT, _Traits, _Allocator>;
+    _String __r(_String::__alloc_traits::select_on_container_copy_construction(__rhs.get_allocator()));
+    typename _String::size_type __rhs_sz = __rhs.size();
     __r.__init(&__lhs, 1, 1 + __rhs_sz);
     __r.append(__rhs.data(), __rhs_sz);
     return __r;
@@ -4289,9 +4203,10 @@ inline
 basic_string<_CharT, _Traits, _Allocator>
 operator+(const basic_string<_CharT, _Traits, _Allocator>& __lhs, const _CharT* __rhs)
 {
-    basic_string<_CharT, _Traits, _Allocator> __r(__lhs.get_allocator());
-    typename basic_string<_CharT, _Traits, _Allocator>::size_type __lhs_sz = __lhs.size();
-    typename basic_string<_CharT, _Traits, _Allocator>::size_type __rhs_sz = _Traits::length(__rhs);
+    using _String = basic_string<_CharT, _Traits, _Allocator>;
+    _String __r(_String::__alloc_traits::select_on_container_copy_construction(__lhs.get_allocator()));
+    typename _String::size_type __lhs_sz = __lhs.size();
+    typename _String::size_type __rhs_sz = _Traits::length(__rhs);
     __r.__init(__lhs.data(), __lhs_sz, __lhs_sz + __rhs_sz);
     __r.append(__rhs, __rhs_sz);
     return __r;
@@ -4301,8 +4216,9 @@ template<class _CharT, class _Traits, class _Allocator>
 basic_string<_CharT, _Traits, _Allocator>
 operator+(const basic_string<_CharT, _Traits, _Allocator>& __lhs, _CharT __rhs)
 {
-    basic_string<_CharT, _Traits, _Allocator> __r(__lhs.get_allocator());
-    typename basic_string<_CharT, _Traits, _Allocator>::size_type __lhs_sz = __lhs.size();
+    using _String = basic_string<_CharT, _Traits, _Allocator>;
+    _String __r(_String::__alloc_traits::select_on_container_copy_construction(__lhs.get_allocator()));
+    typename _String::size_type __lhs_sz = __lhs.size();
     __r.__init(__lhs.data(), __lhs_sz, __lhs_sz + 1);
     __r.push_back(__rhs);
     return __r;
@@ -4502,16 +4418,16 @@ template<class _CharT, class _Traits, class _Allocator>
 bool
 basic_string<_CharT, _Traits, _Allocator>::__dereferenceable(const const_iterator* __i) const
 {
-    return this->data() <= _VSTD::__to_address(__i->base()) &&
-           _VSTD::__to_address(__i->base()) < this->data() + this->size();
+    return data() <= _VSTD::__to_address(__i->base()) &&
+           _VSTD::__to_address(__i->base()) < data() + size();
 }
 
 template<class _CharT, class _Traits, class _Allocator>
 bool
 basic_string<_CharT, _Traits, _Allocator>::__decrementable(const const_iterator* __i) const
 {
-    return this->data() < _VSTD::__to_address(__i->base()) &&
-           _VSTD::__to_address(__i->base()) <= this->data() + this->size();
+    return data() < _VSTD::__to_address(__i->base()) &&
+           _VSTD::__to_address(__i->base()) <= data() + size();
 }
 
 template<class _CharT, class _Traits, class _Allocator>
@@ -4519,7 +4435,7 @@ bool
 basic_string<_CharT, _Traits, _Allocator>::__addable(const const_iterator* __i, ptrdiff_t __n) const
 {
     const value_type* __p = _VSTD::__to_address(__i->base()) + __n;
-    return this->data() <= __p && __p <= this->data() + this->size();
+    return data() <= __p && __p <= data() + size();
 }
 
 template<class _CharT, class _Traits, class _Allocator>
@@ -4527,7 +4443,7 @@ bool
 basic_string<_CharT, _Traits, _Allocator>::__subscriptable(const const_iterator* __i, ptrdiff_t __n) const
 {
     const value_type* __p = _VSTD::__to_address(__i->base()) + __n;
-    return this->data() <= __p && __p < this->data() + this->size();
+    return data() <= __p && __p < data() + size();
 }
 
 #endif // _LIBCPP_DEBUG_LEVEL == 2

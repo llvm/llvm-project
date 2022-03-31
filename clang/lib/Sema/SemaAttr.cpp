@@ -470,6 +470,27 @@ void Sema::ActOnPragmaDetectMismatch(SourceLocation Loc, StringRef Name,
   Consumer.HandleTopLevelDecl(DeclGroupRef(PDMD));
 }
 
+void Sema::ActOnPragmaFPEvalMethod(SourceLocation Loc,
+                                   LangOptions::FPEvalMethodKind Value) {
+  FPOptionsOverride NewFPFeatures = CurFPFeatureOverrides();
+  switch (Value) {
+  default:
+    llvm_unreachable("invalid pragma eval_method kind");
+  case LangOptions::FEM_Source:
+    NewFPFeatures.setFPEvalMethodOverride(LangOptions::FEM_Source);
+    break;
+  case LangOptions::FEM_Double:
+    NewFPFeatures.setFPEvalMethodOverride(LangOptions::FEM_Double);
+    break;
+  case LangOptions::FEM_Extended:
+    NewFPFeatures.setFPEvalMethodOverride(LangOptions::FEM_Extended);
+    break;
+  }
+  FpPragmaStack.Act(Loc, PSK_Set, StringRef(), NewFPFeatures);
+  CurFPFeatures = NewFPFeatures.applyOverrides(getLangOpts());
+  PP.setCurrentFPEvalMethod(Loc, Value);
+}
+
 void Sema::ActOnPragmaFloatControl(SourceLocation Loc,
                                    PragmaMsStackAction Action,
                                    PragmaFloatControlKind Value) {
@@ -487,6 +508,13 @@ void Sema::ActOnPragmaFloatControl(SourceLocation Loc,
   case PFC_Precise:
     NewFPFeatures.setFPPreciseEnabled(true);
     FpPragmaStack.Act(Loc, Action, StringRef(), NewFPFeatures);
+    if (PP.getCurrentFPEvalMethod() ==
+            LangOptions::FPEvalMethodKind::FEM_Indeterminable &&
+        PP.getLastFPEvalPragmaLocation().isValid())
+      // A preceding `pragma float_control(precise,off)` has changed
+      // the value of the evaluation method.
+      // Set it back to its old value.
+      PP.setCurrentFPEvalMethod(SourceLocation(), PP.getLastFPEvalMethod());
     break;
   case PFC_NoPrecise:
     if (CurFPFeatures.getFPExceptionMode() == LangOptions::FPE_Strict)
@@ -496,6 +524,10 @@ void Sema::ActOnPragmaFloatControl(SourceLocation Loc,
     else
       NewFPFeatures.setFPPreciseEnabled(false);
     FpPragmaStack.Act(Loc, Action, StringRef(), NewFPFeatures);
+    PP.setLastFPEvalMethod(PP.getCurrentFPEvalMethod());
+    // `AllowFPReassoc` or `AllowReciprocal` option is enabled.
+    PP.setCurrentFPEvalMethod(
+        Loc, LangOptions::FPEvalMethodKind::FEM_Indeterminable);
     break;
   case PFC_Except:
     if (!isPreciseFPEnabled())
@@ -519,6 +551,12 @@ void Sema::ActOnPragmaFloatControl(SourceLocation Loc,
     }
     FpPragmaStack.Act(Loc, Action, StringRef(), NewFPFeatures);
     NewFPFeatures = FpPragmaStack.CurrentValue;
+    if (CurFPFeatures.getAllowFPReassociate() ||
+        CurFPFeatures.getAllowReciprocal())
+      // Since we are popping the pragma, we don't want to be passing
+      // a location here.
+      PP.setCurrentFPEvalMethod(SourceLocation(),
+                                CurFPFeatures.getFPEvalMethod());
     break;
   }
   CurFPFeatures = NewFPFeatures.applyOverrides(getLangOpts());
@@ -792,7 +830,7 @@ attrMatcherRuleListToString(ArrayRef<attr::SubjectMatchRule> Rules) {
       OS << (I.index() == Rules.size() - 1 ? ", and " : ", ");
     OS << "'" << attr::getSubjectMatchRuleSpelling(I.value()) << "'";
   }
-  return OS.str();
+  return Result;
 }
 
 } // end anonymous namespace
@@ -1213,8 +1251,9 @@ void Sema::PopPragmaVisibility(bool IsNamespaceEnd, SourceLocation EndLoc) {
 }
 
 template <typename Ty>
-static bool checkCommonAttributeFeatures(Sema& S, const Ty *Node,
-                                         const ParsedAttr& A) {
+static bool checkCommonAttributeFeatures(Sema &S, const Ty *Node,
+                                         const ParsedAttr &A,
+                                         bool SkipArgCountCheck) {
   // Several attributes carry different semantics than the parsing requires, so
   // those are opted out of the common argument checks.
   //
@@ -1240,26 +1279,30 @@ static bool checkCommonAttributeFeatures(Sema& S, const Ty *Node,
   if (A.hasCustomParsing())
     return false;
 
-  if (A.getMinArgs() == A.getMaxArgs()) {
-    // If there are no optional arguments, then checking for the argument count
-    // is trivial.
-    if (!A.checkExactlyNumArgs(S, A.getMinArgs()))
-      return true;
-  } else {
-    // There are optional arguments, so checking is slightly more involved.
-    if (A.getMinArgs() && !A.checkAtLeastNumArgs(S, A.getMinArgs()))
-      return true;
-    else if (!A.hasVariadicArg() && A.getMaxArgs() &&
-             !A.checkAtMostNumArgs(S, A.getMaxArgs()))
-      return true;
+  if (!SkipArgCountCheck) {
+    if (A.getMinArgs() == A.getMaxArgs()) {
+      // If there are no optional arguments, then checking for the argument
+      // count is trivial.
+      if (!A.checkExactlyNumArgs(S, A.getMinArgs()))
+        return true;
+    } else {
+      // There are optional arguments, so checking is slightly more involved.
+      if (A.getMinArgs() && !A.checkAtLeastNumArgs(S, A.getMinArgs()))
+        return true;
+      else if (!A.hasVariadicArg() && A.getMaxArgs() &&
+               !A.checkAtMostNumArgs(S, A.getMaxArgs()))
+        return true;
+    }
   }
 
   return false;
 }
 
-bool Sema::checkCommonAttributeFeatures(const Decl *D, const ParsedAttr &A) {
-  return ::checkCommonAttributeFeatures(*this, D, A);
+bool Sema::checkCommonAttributeFeatures(const Decl *D, const ParsedAttr &A,
+                                        bool SkipArgCountCheck) {
+  return ::checkCommonAttributeFeatures(*this, D, A, SkipArgCountCheck);
 }
-bool Sema::checkCommonAttributeFeatures(const Stmt *S, const ParsedAttr &A) {
-  return ::checkCommonAttributeFeatures(*this, S, A);
+bool Sema::checkCommonAttributeFeatures(const Stmt *S, const ParsedAttr &A,
+                                        bool SkipArgCountCheck) {
+  return ::checkCommonAttributeFeatures(*this, S, A, SkipArgCountCheck);
 }

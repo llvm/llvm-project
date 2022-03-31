@@ -50,6 +50,7 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.fputil
   COMPILE_OPTIONS
     -O2
+    -mfma
 )
 
 add_entrypoint_object(
@@ -62,6 +63,7 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.fputil
   COMPILE_OPTIONS
     -O2
+    -mfma
 )
 
 add_math_entrypoint_object(ceil)
@@ -115,6 +117,14 @@ add_math_entrypoint_object(ilogbl)
 add_math_entrypoint_object(ldexp)
 add_math_entrypoint_object(ldexpf)
 add_math_entrypoint_object(ldexpl)
+
+add_math_entrypoint_object(log10f)
+
+add_math_entrypoint_object(log1pf)
+
+add_math_entrypoint_object(log2f)
+
+add_math_entrypoint_object(logf)
 
 add_math_entrypoint_object(logb)
 add_math_entrypoint_object(logbf)

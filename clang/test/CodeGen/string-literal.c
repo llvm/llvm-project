@@ -11,7 +11,7 @@ typedef __CHAR16_TYPE__ char16_t;
 typedef __CHAR32_TYPE__ char32_t;
 #endif
 
-int main() {
+int main(void) {
   // CHECK-C: private unnamed_addr constant [10 x i8] c"abc\00\00\00\00\00\00\00", align 1
   // CHECK-C11: private unnamed_addr constant [10 x i8] c"abc\00\00\00\00\00\00\00", align 1
   // CHECK-CXX11: private unnamed_addr constant [10 x i8] c"abc\00\00\00\00\00\00\00", align 1

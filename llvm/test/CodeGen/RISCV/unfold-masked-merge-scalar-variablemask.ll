@@ -3,9 +3,9 @@
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,RV32,RV32I
 ; RUN: llc -mtriple=riscv64 < %s \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,RV64,RV64I
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-zbb < %s \
+; RUN: llc -mtriple=riscv32 -mattr=+zbb < %s \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,RV32,RV32ZBB
-; RUN: llc -mtriple=riscv64 -mattr=+experimental-zbb < %s \
+; RUN: llc -mtriple=riscv64 -mattr=+zbb < %s \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,RV64,RV64ZBB
 
 ; TODO: Should we convert these to X ^ ((X ^ Y) & M) form when Zbb isn't

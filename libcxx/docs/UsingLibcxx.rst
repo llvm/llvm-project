@@ -121,6 +121,92 @@ provide pretty-printers itself. Those can be used as:
         <args>
 
 
+.. _assertions-mode:
+
+Enabling the "safe libc++" mode
+===============================
+
+Libc++ contains a number of assertions whose goal is to catch undefined behavior in the
+library, usually caused by precondition violations. Those assertions do not aim to be
+exhaustive -- instead they aim to provide a good balance between safety and performance.
+In particular, these assertions do not change the complexity of algorithms. However, they
+might, in some cases, interfere with compiler optimizations.
+
+By default, these assertions are turned off. Vendors can decide to turn them on while building
+the compiled library by defining ``LIBCXX_ENABLE_ASSERTIONS=ON`` at CMake configuration time.
+When ``LIBCXX_ENABLE_ASSERTIONS`` is used, the compiled library will be built with assertions
+enabled, **and** user code will be built with assertions enabled by default. If
+``LIBCXX_ENABLE_ASSERTIONS=OFF`` at CMake configure time, the compiled library will not contain
+assertions and the default when building user code will be to have assertions disabled.
+As a user, you can consult your vendor to know whether assertions are enabled by default.
+
+Furthermore, independently of any vendor-selected default, users can always control whether
+assertions are enabled in their code by defining ``_LIBCPP_ENABLE_ASSERTIONS=0|1`` before
+including any libc++ header (we recommend passing ``-D_LIBCPP_ENABLE_ASSERTIONS=X`` to the
+compiler). Note that if the compiled library was built by the vendor without assertions,
+functions compiled inside the static or shared library won't have assertions enabled even
+if the user defines ``_LIBCPP_ENABLE_ASSERTIONS=1`` (the same is true for the inverse case
+where the static or shared library was compiled **with** assertions but the user tries to
+disable them). However, most of the code in libc++ is in the headers, so the user-selected
+value for ``_LIBCPP_ENABLE_ASSERTIONS`` (if any) will usually be respected.
+
+When an assertion fails, an assertion handler function is called. The library provides a default
+assertion handler that prints an error message and calls ``std::abort()``. Note that this assertion
+handler is provided by the static or shared library, so it is only available when deploying to a
+platform where the compiled library is sufficiently recent. However, users can also override that
+assertion handler with their own, which can be useful to provide custom behavior, or when deploying
+to older platforms where the default assertion handler isn't available.
+
+Replacing the default assertion handler is done by defining the following function:
+
+.. code-block:: cpp
+
+  void __libcpp_assertion_handler(char const* file, int line, char const* expression, char const* message)
+
+This mechanism is similar to how one can replace the default definition of ``operator new``
+and ``operator delete``. For example:
+
+.. code-block:: cpp
+
+  // In HelloWorldHandler.cpp
+  #include <version> // must include any libc++ header before defining the handler (C compatibility headers excluded)
+
+  void std::__libcpp_assertion_handler(char const* file, int line, char const* expression, char const* message) {
+    std::printf("Assertion %s failed at %s:%d, more info: %s", expression, file, line, message);
+    std::abort();
+  }
+
+  // In HelloWorld.cpp
+  #include <vector>
+
+  int main() {
+    std::vector<int> v;
+    int& x = v[0]; // Your assertion handler will be called here if _LIBCPP_ENABLE_ASSERTIONS=1
+  }
+
+Also note that the assertion handler should usually not return. Since the assertions in libc++
+catch undefined behavior, your code will proceed with undefined behavior if your assertion
+handler is called and does return.
+
+Furthermore, throwing an exception from the assertion handler is not recommended. Indeed, many
+functions in the library are ``noexcept``, and any exception thrown from the assertion handler
+will result in ``std::terminate`` being called.
+
+Back-deploying with a custom assertion handler
+----------------------------------------------
+When deploying to an older platform that does not provide a default assertion handler, the
+compiler will diagnose the usage of ``std::__libcpp_assertion_handler`` with an error. This
+is done to avoid the load-time error that would otherwise happen if the code was being deployed
+on the older system.
+
+If you are providing a custom assertion handler, this error is effectively a false positive.
+To let the library know that you are providing a custom assertion handler in back-deployment
+scenarios, you must define the ``_LIBCPP_AVAILABILITY_CUSTOM_ASSERTION_HANDLER_PROVIDED`` macro,
+and the library will assume that you are providing your own definition. If no definition is
+provided and the code is back-deployed to the older platform, it will fail to load when the
+dynamic linker fails to find a definition for ``std::__libcpp_assertion_handler``, so you
+should only remove the guard rails if you really mean it!
+
 Libc++ Configuration Macros
 ===========================
 

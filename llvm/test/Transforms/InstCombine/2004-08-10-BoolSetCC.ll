@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | \
+; RUN: opt < %s -passes=instcombine -S | \
 ; RUN:    grep "ret i1 false"
 
 define i1 @test(i1 %V) {

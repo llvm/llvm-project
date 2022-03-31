@@ -29,50 +29,51 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Target/TargetMachine.h"
 #include <system_error>
 #include <vector>
 
 using namespace llvm;
 
-static cl::OptionCategory Options("llvm-reduce options");
+cl::OptionCategory LLVMReduceOptions("llvm-reduce options");
 
 static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden,
-                          cl::cat(Options));
+                          cl::cat(LLVMReduceOptions));
 static cl::opt<bool> Version("v", cl::desc("Alias for -version"), cl::Hidden,
-                             cl::cat(Options));
+                             cl::cat(LLVMReduceOptions));
 
 static cl::opt<bool>
     PrintDeltaPasses("print-delta-passes",
                      cl::desc("Print list of delta passes, passable to "
                               "--delta-passes as a comma separated list"),
-                     cl::cat(Options));
+                     cl::cat(LLVMReduceOptions));
 
 static cl::opt<std::string> InputFilename(cl::Positional, cl::Required,
                                           cl::desc("<input llvm ll/bc file>"),
-                                          cl::cat(Options));
+                                          cl::cat(LLVMReduceOptions));
 
 static cl::opt<std::string>
     TestFilename("test", cl::Required,
                  cl::desc("Name of the interesting-ness test to be run"),
-                 cl::cat(Options));
+                 cl::cat(LLVMReduceOptions));
 
 static cl::list<std::string>
     TestArguments("test-arg", cl::ZeroOrMore,
                   cl::desc("Arguments passed onto the interesting-ness test"),
-                  cl::cat(Options));
+                  cl::cat(LLVMReduceOptions));
 
 static cl::opt<std::string> OutputFilename(
     "output", cl::desc("Specify the output file. default: reduced.ll|mir"));
 static cl::alias OutputFileAlias("o", cl::desc("Alias for -output"),
                                  cl::aliasopt(OutputFilename),
-                                 cl::cat(Options));
+                                 cl::cat(LLVMReduceOptions));
 
 static cl::opt<bool>
     ReplaceInput("in-place",
                  cl::desc("WARNING: This option will replace your input file "
                           "with the reduced version!"),
-                 cl::cat(Options));
+                 cl::cat(LLVMReduceOptions));
 
 enum class InputLanguages { None, IR, MIR };
 
@@ -82,11 +83,17 @@ static cl::opt<InputLanguages>
                   cl::init(InputLanguages::None),
                   cl::values(clEnumValN(InputLanguages::IR, "ir", ""),
                              clEnumValN(InputLanguages::MIR, "mir", "")),
-                  cl::cat(Options));
+                  cl::cat(LLVMReduceOptions));
 
 static cl::opt<std::string> TargetTriple("mtriple",
                                          cl::desc("Set the target triple"),
-                                         cl::cat(Options));
+                                         cl::cat(LLVMReduceOptions));
+
+static cl::opt<int>
+    MaxPassIterations("max-pass-iterations",
+                      cl::desc("Maximum number of times to run the full set "
+                               "of delta passes (default=1)"),
+                      cl::init(1), cl::cat(LLVMReduceOptions));
 
 static codegen::RegisterCodeGenFlags CGF;
 
@@ -128,7 +135,7 @@ static std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
 int main(int Argc, char **Argv) {
   InitLLVM X(Argc, Argv);
 
-  cl::HideUnrelatedOptions({&Options, &getColorCategory()});
+  cl::HideUnrelatedOptions({&LLVMReduceOptions, &getColorCategory()});
   cl::ParseCommandLineOptions(Argc, Argv, "LLVM automatic testcase reducer.\n");
 
   bool ReduceModeMIR = false;
@@ -161,7 +168,7 @@ int main(int Argc, char **Argv) {
   TestRunner Tester(TestFilename, TestArguments, std::move(OriginalProgram));
 
   // Try to reduce code
-  runDeltaPasses(Tester);
+  runDeltaPasses(Tester, MaxPassIterations);
 
   // Print reduced file to STDOUT
   if (OutputFilename == "-")

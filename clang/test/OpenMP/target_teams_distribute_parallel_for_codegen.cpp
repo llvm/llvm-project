@@ -72,7 +72,7 @@ int target_teams_fun(int *g){
 #endif // CK1
 #endif // HEADER
 // CHECK1-LABEL: define {{[^@]+}}@_Z16target_teams_funPi
-// CHECK1-SAME: (i32* [[G:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK1-SAME: (i32* noundef [[G:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[G_ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[N:%.*]] = alloca i32, align 4
@@ -120,7 +120,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z16target_teams_funPi_l51
-// CHECK1-SAME: (i64 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]], i64 [[DOTCAPTURE_EXPR_:%.*]], i64 [[DOTCAPTURE_EXPR_1:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK1-SAME: (i64 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]], i64 noundef [[DOTCAPTURE_EXPR_1:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[N_ADDR:%.*]] = alloca i64, align 8
 // CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca [1000 x i32]*, align 8
@@ -136,10 +136,10 @@ int target_teams_fun(int *g){
 // CHECK1-NEXT:    [[TMP1:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
 // CHECK1-NEXT:    [[CONV3:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
 // CHECK1-NEXT:    [[CONV4:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR2]] to i32*
-// CHECK1-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV3]], align 8
-// CHECK1-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV4]], align 8
+// CHECK1-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV3]], align 4
+// CHECK1-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV4]], align 4
 // CHECK1-NEXT:    call void @__kmpc_push_num_teams(%struct.ident_t* @[[GLOB3]], i32 [[TMP0]], i32 [[TMP2]], i32 [[TMP3]])
-// CHECK1-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK1-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK1-NEXT:    [[CONV5:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK1-NEXT:    store i32 [[TMP4]], i32* [[CONV5]], align 4
 // CHECK1-NEXT:    [[TMP5:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -148,7 +148,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -171,7 +171,7 @@ int target_teams_fun(int *g){
 // CHECK1-NEXT:    store [1000 x i32]* [[A]], [1000 x i32]** [[A_ADDR]], align 8
 // CHECK1-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK1-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
-// CHECK1-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK1-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK1-NEXT:    store i32 [[TMP1]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK1-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK1-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP2]], 0
@@ -217,7 +217,7 @@ int target_teams_fun(int *g){
 // CHECK1-NEXT:    [[TMP15:%.*]] = zext i32 [[TMP14]] to i64
 // CHECK1-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK1-NEXT:    [[TMP17:%.*]] = zext i32 [[TMP16]] to i64
-// CHECK1-NEXT:    [[TMP18:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK1-NEXT:    [[TMP18:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK1-NEXT:    [[CONV6:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK1-NEXT:    store i32 [[TMP18]], i32* [[CONV6]], align 4
 // CHECK1-NEXT:    [[TMP19:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -241,7 +241,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[DOTPREVIOUS_LB_:%.*]], i64 [[DOTPREVIOUS_UB_:%.*]], i64 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -267,7 +267,7 @@ int target_teams_fun(int *g){
 // CHECK1-NEXT:    store [1000 x i32]* [[A]], [1000 x i32]** [[A_ADDR]], align 8
 // CHECK1-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK1-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
-// CHECK1-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK1-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK1-NEXT:    store i32 [[TMP1]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK1-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK1-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP2]], 0
@@ -358,7 +358,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z16target_teams_funPi_l58
-// CHECK1-SAME: (i64 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* [[G:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (i64 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* noundef [[G:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[N_ADDR:%.*]] = alloca i64, align 8
 // CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca [1000 x i32]*, align 8
@@ -369,7 +369,7 @@ int target_teams_fun(int *g){
 // CHECK1-NEXT:    store i32* [[G]], i32** [[G_ADDR]], align 8
 // CHECK1-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK1-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
-// CHECK1-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK1-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK1-NEXT:    [[CONV1:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK1-NEXT:    store i32 [[TMP1]], i32* [[CONV1]], align 4
 // CHECK1-NEXT:    [[TMP2:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -379,7 +379,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_outlined..2
-// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* [[G:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* noundef [[G:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -404,7 +404,7 @@ int target_teams_fun(int *g){
 // CHECK1-NEXT:    store i32* [[G]], i32** [[G_ADDR]], align 8
 // CHECK1-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK1-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
-// CHECK1-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK1-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK1-NEXT:    store i32 [[TMP1]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK1-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK1-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP2]], 0
@@ -450,7 +450,7 @@ int target_teams_fun(int *g){
 // CHECK1-NEXT:    [[TMP15:%.*]] = zext i32 [[TMP14]] to i64
 // CHECK1-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK1-NEXT:    [[TMP17:%.*]] = zext i32 [[TMP16]] to i64
-// CHECK1-NEXT:    [[TMP18:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK1-NEXT:    [[TMP18:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK1-NEXT:    [[CONV6:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK1-NEXT:    store i32 [[TMP18]], i32* [[CONV6]], align 4
 // CHECK1-NEXT:    [[TMP19:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -475,7 +475,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_outlined..3
-// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[DOTPREVIOUS_LB_:%.*]], i64 [[DOTPREVIOUS_UB_:%.*]], i64 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* [[G:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* noundef [[G:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -503,7 +503,7 @@ int target_teams_fun(int *g){
 // CHECK1-NEXT:    store i32* [[G]], i32** [[G_ADDR]], align 8
 // CHECK1-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK1-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
-// CHECK1-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK1-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK1-NEXT:    store i32 [[TMP1]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK1-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK1-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP2]], 0
@@ -582,7 +582,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_Z16target_teams_funPi
-// CHECK2-SAME: (i32* [[G:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK2-SAME: (i32* noundef [[G:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[G_ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    [[N:%.*]] = alloca i32, align 4
@@ -738,7 +738,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z16target_teams_funPi_l51
-// CHECK2-SAME: (i64 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]], i64 [[DOTCAPTURE_EXPR_:%.*]], i64 [[DOTCAPTURE_EXPR_1:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK2-SAME: (i64 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]], i64 noundef [[DOTCAPTURE_EXPR_1:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[N_ADDR:%.*]] = alloca i64, align 8
 // CHECK2-NEXT:    [[A_ADDR:%.*]] = alloca [1000 x i32]*, align 8
@@ -754,10 +754,10 @@ int target_teams_fun(int *g){
 // CHECK2-NEXT:    [[TMP1:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
 // CHECK2-NEXT:    [[CONV3:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
 // CHECK2-NEXT:    [[CONV4:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR2]] to i32*
-// CHECK2-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV3]], align 8
-// CHECK2-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV4]], align 8
+// CHECK2-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV3]], align 4
+// CHECK2-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV4]], align 4
 // CHECK2-NEXT:    call void @__kmpc_push_num_teams(%struct.ident_t* @[[GLOB3]], i32 [[TMP0]], i32 [[TMP2]], i32 [[TMP3]])
-// CHECK2-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK2-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK2-NEXT:    [[CONV5:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK2-NEXT:    store i32 [[TMP4]], i32* [[CONV5]], align 4
 // CHECK2-NEXT:    [[TMP5:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -766,7 +766,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK2-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]]) #[[ATTR1]] {
+// CHECK2-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]]) #[[ATTR1]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -789,7 +789,7 @@ int target_teams_fun(int *g){
 // CHECK2-NEXT:    store [1000 x i32]* [[A]], [1000 x i32]** [[A_ADDR]], align 8
 // CHECK2-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK2-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
-// CHECK2-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK2-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK2-NEXT:    store i32 [[TMP1]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK2-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK2-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP2]], 0
@@ -835,7 +835,7 @@ int target_teams_fun(int *g){
 // CHECK2-NEXT:    [[TMP15:%.*]] = zext i32 [[TMP14]] to i64
 // CHECK2-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK2-NEXT:    [[TMP17:%.*]] = zext i32 [[TMP16]] to i64
-// CHECK2-NEXT:    [[TMP18:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK2-NEXT:    [[TMP18:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK2-NEXT:    [[CONV6:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK2-NEXT:    store i32 [[TMP18]], i32* [[CONV6]], align 4
 // CHECK2-NEXT:    [[TMP19:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -859,7 +859,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK2-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[DOTPREVIOUS_LB_:%.*]], i64 [[DOTPREVIOUS_UB_:%.*]], i64 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]]) #[[ATTR1]] {
+// CHECK2-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]]) #[[ATTR1]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -885,7 +885,7 @@ int target_teams_fun(int *g){
 // CHECK2-NEXT:    store [1000 x i32]* [[A]], [1000 x i32]** [[A_ADDR]], align 8
 // CHECK2-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK2-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
-// CHECK2-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK2-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK2-NEXT:    store i32 [[TMP1]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK2-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK2-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP2]], 0
@@ -976,7 +976,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z16target_teams_funPi_l58
-// CHECK2-SAME: (i64 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* [[G:%.*]]) #[[ATTR1]] {
+// CHECK2-SAME: (i64 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* noundef [[G:%.*]]) #[[ATTR1]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[N_ADDR:%.*]] = alloca i64, align 8
 // CHECK2-NEXT:    [[A_ADDR:%.*]] = alloca [1000 x i32]*, align 8
@@ -987,7 +987,7 @@ int target_teams_fun(int *g){
 // CHECK2-NEXT:    store i32* [[G]], i32** [[G_ADDR]], align 8
 // CHECK2-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK2-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
-// CHECK2-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK2-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK2-NEXT:    [[CONV1:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK2-NEXT:    store i32 [[TMP1]], i32* [[CONV1]], align 4
 // CHECK2-NEXT:    [[TMP2:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -997,7 +997,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..2
-// CHECK2-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* [[G:%.*]]) #[[ATTR1]] {
+// CHECK2-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* noundef [[G:%.*]]) #[[ATTR1]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1022,7 +1022,7 @@ int target_teams_fun(int *g){
 // CHECK2-NEXT:    store i32* [[G]], i32** [[G_ADDR]], align 8
 // CHECK2-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK2-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
-// CHECK2-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK2-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK2-NEXT:    store i32 [[TMP1]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK2-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK2-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP2]], 0
@@ -1068,7 +1068,7 @@ int target_teams_fun(int *g){
 // CHECK2-NEXT:    [[TMP15:%.*]] = zext i32 [[TMP14]] to i64
 // CHECK2-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK2-NEXT:    [[TMP17:%.*]] = zext i32 [[TMP16]] to i64
-// CHECK2-NEXT:    [[TMP18:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK2-NEXT:    [[TMP18:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK2-NEXT:    [[CONV6:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK2-NEXT:    store i32 [[TMP18]], i32* [[CONV6]], align 4
 // CHECK2-NEXT:    [[TMP19:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -1093,7 +1093,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..3
-// CHECK2-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[DOTPREVIOUS_LB_:%.*]], i64 [[DOTPREVIOUS_UB_:%.*]], i64 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* [[G:%.*]]) #[[ATTR1]] {
+// CHECK2-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* noundef [[G:%.*]]) #[[ATTR1]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1121,7 +1121,7 @@ int target_teams_fun(int *g){
 // CHECK2-NEXT:    store i32* [[G]], i32** [[G_ADDR]], align 8
 // CHECK2-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK2-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
-// CHECK2-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK2-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK2-NEXT:    store i32 [[TMP1]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK2-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK2-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP2]], 0
@@ -1207,7 +1207,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_Z16target_teams_funPi
-// CHECK3-SAME: (i32* [[G:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK3-SAME: (i32* noundef [[G:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[G_ADDR:%.*]] = alloca i32*, align 8
 // CHECK3-NEXT:    [[N:%.*]] = alloca i32, align 4
@@ -1363,7 +1363,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z16target_teams_funPi_l51
-// CHECK3-SAME: (i64 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]], i64 [[DOTCAPTURE_EXPR_:%.*]], i64 [[DOTCAPTURE_EXPR_1:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK3-SAME: (i64 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]], i64 noundef [[DOTCAPTURE_EXPR_1:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[N_ADDR:%.*]] = alloca i64, align 8
 // CHECK3-NEXT:    [[A_ADDR:%.*]] = alloca [1000 x i32]*, align 8
@@ -1379,10 +1379,10 @@ int target_teams_fun(int *g){
 // CHECK3-NEXT:    [[TMP1:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
 // CHECK3-NEXT:    [[CONV3:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
 // CHECK3-NEXT:    [[CONV4:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR2]] to i32*
-// CHECK3-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV3]], align 8
-// CHECK3-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV4]], align 8
+// CHECK3-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV3]], align 4
+// CHECK3-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV4]], align 4
 // CHECK3-NEXT:    call void @__kmpc_push_num_teams(%struct.ident_t* @[[GLOB3]], i32 [[TMP0]], i32 [[TMP2]], i32 [[TMP3]])
-// CHECK3-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK3-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK3-NEXT:    [[CONV5:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK3-NEXT:    store i32 [[TMP4]], i32* [[CONV5]], align 4
 // CHECK3-NEXT:    [[TMP5:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -1391,7 +1391,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK3-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]]) #[[ATTR1]] {
+// CHECK3-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1414,7 +1414,7 @@ int target_teams_fun(int *g){
 // CHECK3-NEXT:    store [1000 x i32]* [[A]], [1000 x i32]** [[A_ADDR]], align 8
 // CHECK3-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK3-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
-// CHECK3-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK3-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK3-NEXT:    store i32 [[TMP1]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK3-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK3-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP2]], 0
@@ -1460,7 +1460,7 @@ int target_teams_fun(int *g){
 // CHECK3-NEXT:    [[TMP15:%.*]] = zext i32 [[TMP14]] to i64
 // CHECK3-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK3-NEXT:    [[TMP17:%.*]] = zext i32 [[TMP16]] to i64
-// CHECK3-NEXT:    [[TMP18:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK3-NEXT:    [[TMP18:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK3-NEXT:    [[CONV6:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK3-NEXT:    store i32 [[TMP18]], i32* [[CONV6]], align 4
 // CHECK3-NEXT:    [[TMP19:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -1484,7 +1484,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK3-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[DOTPREVIOUS_LB_:%.*]], i64 [[DOTPREVIOUS_UB_:%.*]], i64 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]]) #[[ATTR1]] {
+// CHECK3-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1510,7 +1510,7 @@ int target_teams_fun(int *g){
 // CHECK3-NEXT:    store [1000 x i32]* [[A]], [1000 x i32]** [[A_ADDR]], align 8
 // CHECK3-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK3-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
-// CHECK3-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK3-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK3-NEXT:    store i32 [[TMP1]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK3-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK3-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP2]], 0
@@ -1601,7 +1601,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z16target_teams_funPi_l58
-// CHECK3-SAME: (i64 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* [[G:%.*]]) #[[ATTR1]] {
+// CHECK3-SAME: (i64 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* noundef [[G:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[N_ADDR:%.*]] = alloca i64, align 8
 // CHECK3-NEXT:    [[A_ADDR:%.*]] = alloca [1000 x i32]*, align 8
@@ -1612,7 +1612,7 @@ int target_teams_fun(int *g){
 // CHECK3-NEXT:    store i32* [[G]], i32** [[G_ADDR]], align 8
 // CHECK3-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK3-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
-// CHECK3-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK3-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK3-NEXT:    [[CONV1:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK3-NEXT:    store i32 [[TMP1]], i32* [[CONV1]], align 4
 // CHECK3-NEXT:    [[TMP2:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -1622,7 +1622,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@.omp_outlined..2
-// CHECK3-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* [[G:%.*]]) #[[ATTR1]] {
+// CHECK3-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* noundef [[G:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1647,7 +1647,7 @@ int target_teams_fun(int *g){
 // CHECK3-NEXT:    store i32* [[G]], i32** [[G_ADDR]], align 8
 // CHECK3-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK3-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
-// CHECK3-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK3-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK3-NEXT:    store i32 [[TMP1]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK3-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK3-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP2]], 0
@@ -1693,7 +1693,7 @@ int target_teams_fun(int *g){
 // CHECK3-NEXT:    [[TMP15:%.*]] = zext i32 [[TMP14]] to i64
 // CHECK3-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK3-NEXT:    [[TMP17:%.*]] = zext i32 [[TMP16]] to i64
-// CHECK3-NEXT:    [[TMP18:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK3-NEXT:    [[TMP18:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK3-NEXT:    [[CONV6:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK3-NEXT:    store i32 [[TMP18]], i32* [[CONV6]], align 4
 // CHECK3-NEXT:    [[TMP19:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -1718,7 +1718,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@.omp_outlined..3
-// CHECK3-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[DOTPREVIOUS_LB_:%.*]], i64 [[DOTPREVIOUS_UB_:%.*]], i64 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* [[G:%.*]]) #[[ATTR1]] {
+// CHECK3-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* noundef [[G:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1746,7 +1746,7 @@ int target_teams_fun(int *g){
 // CHECK3-NEXT:    store i32* [[G]], i32** [[G_ADDR]], align 8
 // CHECK3-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK3-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
-// CHECK3-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK3-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK3-NEXT:    store i32 [[TMP1]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK3-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK3-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP2]], 0
@@ -1832,7 +1832,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@_Z16target_teams_funPi
-// CHECK4-SAME: (i32* [[G:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK4-SAME: (i32* noundef [[G:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[G_ADDR:%.*]] = alloca i32*, align 4
 // CHECK4-NEXT:    [[N:%.*]] = alloca i32, align 4
@@ -1984,7 +1984,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z16target_teams_funPi_l51
-// CHECK4-SAME: (i32 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]], i32 [[DOTCAPTURE_EXPR_:%.*]], i32 [[DOTCAPTURE_EXPR_1:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK4-SAME: (i32 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]], i32 noundef [[DOTCAPTURE_EXPR_1:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
 // CHECK4-NEXT:    [[A_ADDR:%.*]] = alloca [1000 x i32]*, align 4
@@ -2008,7 +2008,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK4-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]]) #[[ATTR1]] {
+// CHECK4-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]]) #[[ATTR1]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK4-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -2097,7 +2097,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK4-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32 [[DOTPREVIOUS_LB_:%.*]], i32 [[DOTPREVIOUS_UB_:%.*]], i32 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]]) #[[ATTR1]] {
+// CHECK4-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], i32 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]]) #[[ATTR1]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK4-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -2210,7 +2210,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z16target_teams_funPi_l58
-// CHECK4-SAME: (i32 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* [[G:%.*]]) #[[ATTR1]] {
+// CHECK4-SAME: (i32 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* noundef [[G:%.*]]) #[[ATTR1]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
 // CHECK4-NEXT:    [[A_ADDR:%.*]] = alloca [1000 x i32]*, align 4
@@ -2229,7 +2229,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@.omp_outlined..2
-// CHECK4-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* [[G:%.*]]) #[[ATTR1]] {
+// CHECK4-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* noundef [[G:%.*]]) #[[ATTR1]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK4-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -2321,7 +2321,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@.omp_outlined..3
-// CHECK4-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32 [[DOTPREVIOUS_LB_:%.*]], i32 [[DOTPREVIOUS_UB_:%.*]], i32 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* [[G:%.*]]) #[[ATTR1]] {
+// CHECK4-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], i32 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* noundef [[G:%.*]]) #[[ATTR1]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK4-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -2431,7 +2431,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@_Z16target_teams_funPi
-// CHECK5-SAME: (i32* [[G:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK5-SAME: (i32* noundef [[G:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[G_ADDR:%.*]] = alloca i32*, align 4
 // CHECK5-NEXT:    [[N:%.*]] = alloca i32, align 4
@@ -2583,7 +2583,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z16target_teams_funPi_l51
-// CHECK5-SAME: (i32 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]], i32 [[DOTCAPTURE_EXPR_:%.*]], i32 [[DOTCAPTURE_EXPR_1:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK5-SAME: (i32 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]], i32 noundef [[DOTCAPTURE_EXPR_1:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
 // CHECK5-NEXT:    [[A_ADDR:%.*]] = alloca [1000 x i32]*, align 4
@@ -2607,7 +2607,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK5-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]]) #[[ATTR1]] {
+// CHECK5-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]]) #[[ATTR1]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -2696,7 +2696,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK5-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32 [[DOTPREVIOUS_LB_:%.*]], i32 [[DOTPREVIOUS_UB_:%.*]], i32 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]]) #[[ATTR1]] {
+// CHECK5-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], i32 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]]) #[[ATTR1]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -2809,7 +2809,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z16target_teams_funPi_l58
-// CHECK5-SAME: (i32 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* [[G:%.*]]) #[[ATTR1]] {
+// CHECK5-SAME: (i32 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* noundef [[G:%.*]]) #[[ATTR1]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
 // CHECK5-NEXT:    [[A_ADDR:%.*]] = alloca [1000 x i32]*, align 4
@@ -2828,7 +2828,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@.omp_outlined..2
-// CHECK5-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* [[G:%.*]]) #[[ATTR1]] {
+// CHECK5-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* noundef [[G:%.*]]) #[[ATTR1]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -2920,7 +2920,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@.omp_outlined..3
-// CHECK5-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32 [[DOTPREVIOUS_LB_:%.*]], i32 [[DOTPREVIOUS_UB_:%.*]], i32 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* [[G:%.*]]) #[[ATTR1]] {
+// CHECK5-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], i32 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* noundef [[G:%.*]]) #[[ATTR1]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -3030,7 +3030,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK10-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z16target_teams_funPi_l51
-// CHECK10-SAME: (i64 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]], i64 [[DOTCAPTURE_EXPR_:%.*]], i64 [[DOTCAPTURE_EXPR_1:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK10-SAME: (i64 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]], i64 noundef [[DOTCAPTURE_EXPR_1:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK10-NEXT:  entry:
 // CHECK10-NEXT:    [[N_ADDR:%.*]] = alloca i64, align 8
 // CHECK10-NEXT:    [[A_ADDR:%.*]] = alloca [1000 x i32]*, align 8
@@ -3046,10 +3046,10 @@ int target_teams_fun(int *g){
 // CHECK10-NEXT:    [[TMP1:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
 // CHECK10-NEXT:    [[CONV3:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
 // CHECK10-NEXT:    [[CONV4:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR2]] to i32*
-// CHECK10-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV3]], align 8
-// CHECK10-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV4]], align 8
+// CHECK10-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV3]], align 4
+// CHECK10-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV4]], align 4
 // CHECK10-NEXT:    call void @__kmpc_push_num_teams(%struct.ident_t* @[[GLOB3]], i32 [[TMP0]], i32 [[TMP2]], i32 [[TMP3]])
-// CHECK10-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK10-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK10-NEXT:    [[CONV5:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK10-NEXT:    store i32 [[TMP4]], i32* [[CONV5]], align 4
 // CHECK10-NEXT:    [[TMP5:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -3058,7 +3058,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK10-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK10-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]]) #[[ATTR0]] {
+// CHECK10-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]]) #[[ATTR0]] {
 // CHECK10-NEXT:  entry:
 // CHECK10-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK10-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -3081,7 +3081,7 @@ int target_teams_fun(int *g){
 // CHECK10-NEXT:    store [1000 x i32]* [[A]], [1000 x i32]** [[A_ADDR]], align 8
 // CHECK10-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK10-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
-// CHECK10-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK10-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK10-NEXT:    store i32 [[TMP1]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK10-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK10-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP2]], 0
@@ -3127,7 +3127,7 @@ int target_teams_fun(int *g){
 // CHECK10-NEXT:    [[TMP15:%.*]] = zext i32 [[TMP14]] to i64
 // CHECK10-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK10-NEXT:    [[TMP17:%.*]] = zext i32 [[TMP16]] to i64
-// CHECK10-NEXT:    [[TMP18:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK10-NEXT:    [[TMP18:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK10-NEXT:    [[CONV6:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK10-NEXT:    store i32 [[TMP18]], i32* [[CONV6]], align 4
 // CHECK10-NEXT:    [[TMP19:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -3151,7 +3151,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK10-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK10-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[DOTPREVIOUS_LB_:%.*]], i64 [[DOTPREVIOUS_UB_:%.*]], i64 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]]) #[[ATTR0]] {
+// CHECK10-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]]) #[[ATTR0]] {
 // CHECK10-NEXT:  entry:
 // CHECK10-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK10-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -3177,7 +3177,7 @@ int target_teams_fun(int *g){
 // CHECK10-NEXT:    store [1000 x i32]* [[A]], [1000 x i32]** [[A_ADDR]], align 8
 // CHECK10-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK10-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
-// CHECK10-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK10-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK10-NEXT:    store i32 [[TMP1]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK10-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK10-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP2]], 0
@@ -3268,7 +3268,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK10-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z16target_teams_funPi_l58
-// CHECK10-SAME: (i64 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* [[G:%.*]]) #[[ATTR0]] {
+// CHECK10-SAME: (i64 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* noundef [[G:%.*]]) #[[ATTR0]] {
 // CHECK10-NEXT:  entry:
 // CHECK10-NEXT:    [[N_ADDR:%.*]] = alloca i64, align 8
 // CHECK10-NEXT:    [[A_ADDR:%.*]] = alloca [1000 x i32]*, align 8
@@ -3279,7 +3279,7 @@ int target_teams_fun(int *g){
 // CHECK10-NEXT:    store i32* [[G]], i32** [[G_ADDR]], align 8
 // CHECK10-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK10-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
-// CHECK10-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK10-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK10-NEXT:    [[CONV1:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK10-NEXT:    store i32 [[TMP1]], i32* [[CONV1]], align 4
 // CHECK10-NEXT:    [[TMP2:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -3289,7 +3289,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK10-LABEL: define {{[^@]+}}@.omp_outlined..2
-// CHECK10-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* [[G:%.*]]) #[[ATTR0]] {
+// CHECK10-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* noundef [[G:%.*]]) #[[ATTR0]] {
 // CHECK10-NEXT:  entry:
 // CHECK10-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK10-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -3314,7 +3314,7 @@ int target_teams_fun(int *g){
 // CHECK10-NEXT:    store i32* [[G]], i32** [[G_ADDR]], align 8
 // CHECK10-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK10-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
-// CHECK10-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK10-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK10-NEXT:    store i32 [[TMP1]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK10-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK10-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP2]], 0
@@ -3360,7 +3360,7 @@ int target_teams_fun(int *g){
 // CHECK10-NEXT:    [[TMP15:%.*]] = zext i32 [[TMP14]] to i64
 // CHECK10-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK10-NEXT:    [[TMP17:%.*]] = zext i32 [[TMP16]] to i64
-// CHECK10-NEXT:    [[TMP18:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK10-NEXT:    [[TMP18:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK10-NEXT:    [[CONV6:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK10-NEXT:    store i32 [[TMP18]], i32* [[CONV6]], align 4
 // CHECK10-NEXT:    [[TMP19:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -3385,7 +3385,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK10-LABEL: define {{[^@]+}}@.omp_outlined..3
-// CHECK10-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[DOTPREVIOUS_LB_:%.*]], i64 [[DOTPREVIOUS_UB_:%.*]], i64 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* [[G:%.*]]) #[[ATTR0]] {
+// CHECK10-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* noundef [[G:%.*]]) #[[ATTR0]] {
 // CHECK10-NEXT:  entry:
 // CHECK10-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK10-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -3413,7 +3413,7 @@ int target_teams_fun(int *g){
 // CHECK10-NEXT:    store i32* [[G]], i32** [[G_ADDR]], align 8
 // CHECK10-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK10-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
-// CHECK10-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK10-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK10-NEXT:    store i32 [[TMP1]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK10-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK10-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP2]], 0
@@ -3492,7 +3492,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK11-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z16target_teams_funPi_l51
-// CHECK11-SAME: (i64 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]], i64 [[DOTCAPTURE_EXPR_:%.*]], i64 [[DOTCAPTURE_EXPR_1:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK11-SAME: (i64 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]], i64 noundef [[DOTCAPTURE_EXPR_1:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK11-NEXT:  entry:
 // CHECK11-NEXT:    [[N_ADDR:%.*]] = alloca i64, align 8
 // CHECK11-NEXT:    [[A_ADDR:%.*]] = alloca [1000 x i32]*, align 8
@@ -3508,10 +3508,10 @@ int target_teams_fun(int *g){
 // CHECK11-NEXT:    [[TMP1:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
 // CHECK11-NEXT:    [[CONV3:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
 // CHECK11-NEXT:    [[CONV4:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR2]] to i32*
-// CHECK11-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV3]], align 8
-// CHECK11-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV4]], align 8
+// CHECK11-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV3]], align 4
+// CHECK11-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV4]], align 4
 // CHECK11-NEXT:    call void @__kmpc_push_num_teams(%struct.ident_t* @[[GLOB3]], i32 [[TMP0]], i32 [[TMP2]], i32 [[TMP3]])
-// CHECK11-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK11-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK11-NEXT:    [[CONV5:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK11-NEXT:    store i32 [[TMP4]], i32* [[CONV5]], align 4
 // CHECK11-NEXT:    [[TMP5:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -3520,7 +3520,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK11-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK11-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]]) #[[ATTR0]] {
+// CHECK11-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]]) #[[ATTR0]] {
 // CHECK11-NEXT:  entry:
 // CHECK11-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK11-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -3543,7 +3543,7 @@ int target_teams_fun(int *g){
 // CHECK11-NEXT:    store [1000 x i32]* [[A]], [1000 x i32]** [[A_ADDR]], align 8
 // CHECK11-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK11-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
-// CHECK11-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK11-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK11-NEXT:    store i32 [[TMP1]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK11-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK11-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP2]], 0
@@ -3589,7 +3589,7 @@ int target_teams_fun(int *g){
 // CHECK11-NEXT:    [[TMP15:%.*]] = zext i32 [[TMP14]] to i64
 // CHECK11-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK11-NEXT:    [[TMP17:%.*]] = zext i32 [[TMP16]] to i64
-// CHECK11-NEXT:    [[TMP18:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK11-NEXT:    [[TMP18:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK11-NEXT:    [[CONV6:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK11-NEXT:    store i32 [[TMP18]], i32* [[CONV6]], align 4
 // CHECK11-NEXT:    [[TMP19:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -3613,7 +3613,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK11-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK11-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[DOTPREVIOUS_LB_:%.*]], i64 [[DOTPREVIOUS_UB_:%.*]], i64 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]]) #[[ATTR0]] {
+// CHECK11-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]]) #[[ATTR0]] {
 // CHECK11-NEXT:  entry:
 // CHECK11-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK11-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -3639,7 +3639,7 @@ int target_teams_fun(int *g){
 // CHECK11-NEXT:    store [1000 x i32]* [[A]], [1000 x i32]** [[A_ADDR]], align 8
 // CHECK11-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK11-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
-// CHECK11-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK11-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK11-NEXT:    store i32 [[TMP1]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK11-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK11-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP2]], 0
@@ -3730,7 +3730,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK11-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z16target_teams_funPi_l58
-// CHECK11-SAME: (i64 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* [[G:%.*]]) #[[ATTR0]] {
+// CHECK11-SAME: (i64 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* noundef [[G:%.*]]) #[[ATTR0]] {
 // CHECK11-NEXT:  entry:
 // CHECK11-NEXT:    [[N_ADDR:%.*]] = alloca i64, align 8
 // CHECK11-NEXT:    [[A_ADDR:%.*]] = alloca [1000 x i32]*, align 8
@@ -3741,7 +3741,7 @@ int target_teams_fun(int *g){
 // CHECK11-NEXT:    store i32* [[G]], i32** [[G_ADDR]], align 8
 // CHECK11-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK11-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
-// CHECK11-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK11-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK11-NEXT:    [[CONV1:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK11-NEXT:    store i32 [[TMP1]], i32* [[CONV1]], align 4
 // CHECK11-NEXT:    [[TMP2:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -3751,7 +3751,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK11-LABEL: define {{[^@]+}}@.omp_outlined..2
-// CHECK11-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* [[G:%.*]]) #[[ATTR0]] {
+// CHECK11-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* noundef [[G:%.*]]) #[[ATTR0]] {
 // CHECK11-NEXT:  entry:
 // CHECK11-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK11-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -3776,7 +3776,7 @@ int target_teams_fun(int *g){
 // CHECK11-NEXT:    store i32* [[G]], i32** [[G_ADDR]], align 8
 // CHECK11-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK11-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
-// CHECK11-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK11-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK11-NEXT:    store i32 [[TMP1]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK11-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK11-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP2]], 0
@@ -3822,7 +3822,7 @@ int target_teams_fun(int *g){
 // CHECK11-NEXT:    [[TMP15:%.*]] = zext i32 [[TMP14]] to i64
 // CHECK11-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK11-NEXT:    [[TMP17:%.*]] = zext i32 [[TMP16]] to i64
-// CHECK11-NEXT:    [[TMP18:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK11-NEXT:    [[TMP18:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK11-NEXT:    [[CONV6:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK11-NEXT:    store i32 [[TMP18]], i32* [[CONV6]], align 4
 // CHECK11-NEXT:    [[TMP19:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -3847,7 +3847,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK11-LABEL: define {{[^@]+}}@.omp_outlined..3
-// CHECK11-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[DOTPREVIOUS_LB_:%.*]], i64 [[DOTPREVIOUS_UB_:%.*]], i64 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* [[G:%.*]]) #[[ATTR0]] {
+// CHECK11-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* noundef [[G:%.*]]) #[[ATTR0]] {
 // CHECK11-NEXT:  entry:
 // CHECK11-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK11-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -3875,7 +3875,7 @@ int target_teams_fun(int *g){
 // CHECK11-NEXT:    store i32* [[G]], i32** [[G_ADDR]], align 8
 // CHECK11-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK11-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
-// CHECK11-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK11-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK11-NEXT:    store i32 [[TMP1]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK11-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK11-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP2]], 0
@@ -3954,7 +3954,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK12-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z16target_teams_funPi_l51
-// CHECK12-SAME: (i32 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]], i32 [[DOTCAPTURE_EXPR_:%.*]], i32 [[DOTCAPTURE_EXPR_1:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK12-SAME: (i32 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]], i32 noundef [[DOTCAPTURE_EXPR_1:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK12-NEXT:  entry:
 // CHECK12-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
 // CHECK12-NEXT:    [[A_ADDR:%.*]] = alloca [1000 x i32]*, align 4
@@ -3978,7 +3978,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK12-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK12-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]]) #[[ATTR0]] {
+// CHECK12-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]]) #[[ATTR0]] {
 // CHECK12-NEXT:  entry:
 // CHECK12-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK12-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -4067,7 +4067,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK12-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK12-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32 [[DOTPREVIOUS_LB_:%.*]], i32 [[DOTPREVIOUS_UB_:%.*]], i32 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]]) #[[ATTR0]] {
+// CHECK12-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], i32 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]]) #[[ATTR0]] {
 // CHECK12-NEXT:  entry:
 // CHECK12-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK12-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -4180,7 +4180,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK12-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z16target_teams_funPi_l58
-// CHECK12-SAME: (i32 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* [[G:%.*]]) #[[ATTR0]] {
+// CHECK12-SAME: (i32 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* noundef [[G:%.*]]) #[[ATTR0]] {
 // CHECK12-NEXT:  entry:
 // CHECK12-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
 // CHECK12-NEXT:    [[A_ADDR:%.*]] = alloca [1000 x i32]*, align 4
@@ -4199,7 +4199,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK12-LABEL: define {{[^@]+}}@.omp_outlined..2
-// CHECK12-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* [[G:%.*]]) #[[ATTR0]] {
+// CHECK12-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* noundef [[G:%.*]]) #[[ATTR0]] {
 // CHECK12-NEXT:  entry:
 // CHECK12-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK12-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -4291,7 +4291,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK12-LABEL: define {{[^@]+}}@.omp_outlined..3
-// CHECK12-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32 [[DOTPREVIOUS_LB_:%.*]], i32 [[DOTPREVIOUS_UB_:%.*]], i32 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* [[G:%.*]]) #[[ATTR0]] {
+// CHECK12-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], i32 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* noundef [[G:%.*]]) #[[ATTR0]] {
 // CHECK12-NEXT:  entry:
 // CHECK12-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK12-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -4394,7 +4394,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z16target_teams_funPi_l51
-// CHECK13-SAME: (i32 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]], i32 [[DOTCAPTURE_EXPR_:%.*]], i32 [[DOTCAPTURE_EXPR_1:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK13-SAME: (i32 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]], i32 noundef [[DOTCAPTURE_EXPR_1:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
 // CHECK13-NEXT:    [[A_ADDR:%.*]] = alloca [1000 x i32]*, align 4
@@ -4418,7 +4418,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK13-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]]) #[[ATTR0]] {
+// CHECK13-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]]) #[[ATTR0]] {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK13-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -4507,7 +4507,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK13-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32 [[DOTPREVIOUS_LB_:%.*]], i32 [[DOTPREVIOUS_UB_:%.*]], i32 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]]) #[[ATTR0]] {
+// CHECK13-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], i32 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]]) #[[ATTR0]] {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK13-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -4620,7 +4620,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z16target_teams_funPi_l58
-// CHECK13-SAME: (i32 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* [[G:%.*]]) #[[ATTR0]] {
+// CHECK13-SAME: (i32 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* noundef [[G:%.*]]) #[[ATTR0]] {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
 // CHECK13-NEXT:    [[A_ADDR:%.*]] = alloca [1000 x i32]*, align 4
@@ -4639,7 +4639,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@.omp_outlined..2
-// CHECK13-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* [[G:%.*]]) #[[ATTR0]] {
+// CHECK13-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* noundef [[G:%.*]]) #[[ATTR0]] {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK13-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -4731,7 +4731,7 @@ int target_teams_fun(int *g){
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@.omp_outlined..3
-// CHECK13-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32 [[DOTPREVIOUS_LB_:%.*]], i32 [[DOTPREVIOUS_UB_:%.*]], i32 [[N:%.*]], [1000 x i32]* nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* [[G:%.*]]) #[[ATTR0]] {
+// CHECK13-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], i32 noundef [[N:%.*]], [1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[A:%.*]], i32* noundef [[G:%.*]]) #[[ATTR0]] {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK13-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4

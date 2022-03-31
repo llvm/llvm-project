@@ -10,9 +10,8 @@
 
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
+#include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/Object/MachO.h"
-#include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "orc"
@@ -20,7 +19,7 @@
 namespace llvm {
 namespace orc {
 
-IRLayer::~IRLayer() {}
+IRLayer::~IRLayer() = default;
 
 Error IRLayer::add(ResourceTrackerSP RT, ThreadSafeModule TSM) {
   assert(RT && "RT can not be null");
@@ -33,7 +32,7 @@ Error IRLayer::add(ResourceTrackerSP RT, ThreadSafeModule TSM) {
 IRMaterializationUnit::IRMaterializationUnit(
     ExecutionSession &ES, const IRSymbolMapper::ManglingOptions &MO,
     ThreadSafeModule TSM)
-    : MaterializationUnit(SymbolFlagsMap(), nullptr), TSM(std::move(TSM)) {
+    : MaterializationUnit(Interface()), TSM(std::move(TSM)) {
 
   assert(this->TSM && "Module must not be null");
 
@@ -98,10 +97,10 @@ IRMaterializationUnit::IRMaterializationUnit(
 }
 
 IRMaterializationUnit::IRMaterializationUnit(
-    ThreadSafeModule TSM, SymbolFlagsMap SymbolFlags,
-    SymbolStringPtr InitSymbol, SymbolNameToDefinitionMap SymbolToDefinition)
-    : MaterializationUnit(std::move(SymbolFlags), std::move(InitSymbol)),
-      TSM(std::move(TSM)), SymbolToDefinition(std::move(SymbolToDefinition)) {}
+    ThreadSafeModule TSM, Interface I,
+    SymbolNameToDefinitionMap SymbolToDefinition)
+    : MaterializationUnit(std::move(I)), TSM(std::move(TSM)),
+      SymbolToDefinition(std::move(SymbolToDefinition)) {}
 
 StringRef IRMaterializationUnit::getName() const {
   if (TSM)
@@ -159,39 +158,49 @@ char ObjectLayer::ID;
 
 ObjectLayer::ObjectLayer(ExecutionSession &ES) : ES(ES) {}
 
-ObjectLayer::~ObjectLayer() {}
+ObjectLayer::~ObjectLayer() = default;
+
+Error ObjectLayer::add(ResourceTrackerSP RT, std::unique_ptr<MemoryBuffer> O,
+                       MaterializationUnit::Interface I) {
+  assert(RT && "RT can not be null");
+  auto &JD = RT->getJITDylib();
+  return JD.define(std::make_unique<BasicObjectLayerMaterializationUnit>(
+                       *this, std::move(O), std::move(I)),
+                   std::move(RT));
+}
 
 Error ObjectLayer::add(ResourceTrackerSP RT, std::unique_ptr<MemoryBuffer> O) {
-  assert(RT && "RT can not be null");
-  auto ObjMU = BasicObjectLayerMaterializationUnit::Create(*this, std::move(O));
-  if (!ObjMU)
-    return ObjMU.takeError();
-  auto &JD = RT->getJITDylib();
-  return JD.define(std::move(*ObjMU), std::move(RT));
+  auto I = getObjectFileInterface(getExecutionSession(), O->getMemBufferRef());
+  if (!I)
+    return I.takeError();
+  return add(std::move(RT), std::move(O), std::move(*I));
+}
+
+Error ObjectLayer::add(JITDylib &JD, std::unique_ptr<MemoryBuffer> O) {
+  auto I = getObjectFileInterface(getExecutionSession(), O->getMemBufferRef());
+  if (!I)
+    return I.takeError();
+  return add(JD, std::move(O), std::move(*I));
 }
 
 Expected<std::unique_ptr<BasicObjectLayerMaterializationUnit>>
 BasicObjectLayerMaterializationUnit::Create(ObjectLayer &L,
                                             std::unique_ptr<MemoryBuffer> O) {
-  auto ObjSymInfo =
-      getObjectSymbolInfo(L.getExecutionSession(), O->getMemBufferRef());
 
-  if (!ObjSymInfo)
-    return ObjSymInfo.takeError();
+  auto ObjInterface =
+      getObjectFileInterface(L.getExecutionSession(), O->getMemBufferRef());
 
-  auto &SymbolFlags = ObjSymInfo->first;
-  auto &InitSymbol = ObjSymInfo->second;
+  if (!ObjInterface)
+    return ObjInterface.takeError();
 
   return std::unique_ptr<BasicObjectLayerMaterializationUnit>(
-      new BasicObjectLayerMaterializationUnit(
-          L, std::move(O), std::move(SymbolFlags), std::move(InitSymbol)));
+      new BasicObjectLayerMaterializationUnit(L, std::move(O),
+                                              std::move(*ObjInterface)));
 }
 
 BasicObjectLayerMaterializationUnit::BasicObjectLayerMaterializationUnit(
-    ObjectLayer &L, std::unique_ptr<MemoryBuffer> O, SymbolFlagsMap SymbolFlags,
-    SymbolStringPtr InitSymbol)
-    : MaterializationUnit(std::move(SymbolFlags), std::move(InitSymbol)), L(L),
-      O(std::move(O)) {}
+    ObjectLayer &L, std::unique_ptr<MemoryBuffer> O, Interface I)
+    : MaterializationUnit(std::move(I)), L(L), O(std::move(O)) {}
 
 StringRef BasicObjectLayerMaterializationUnit::getName() const {
   if (O)

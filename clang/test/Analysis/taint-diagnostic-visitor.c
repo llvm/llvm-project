@@ -5,14 +5,14 @@
 int scanf(const char *restrict format, ...);
 int system(const char *command);
 
-void taintDiagnostic()
+void taintDiagnostic(void)
 {
   char buf[128];
   scanf("%s", buf); // expected-note {{Taint originated here}}
   system(buf); // expected-warning {{Untrusted data is passed to a system call}} // expected-note {{Untrusted data is passed to a system call (CERT/STR02-C. Sanitize data passed to complex subsystems)}}
 }
 
-int taintDiagnosticOutOfBound() {
+int taintDiagnosticOutOfBound(void) {
   int index;
   int Array[] = {1, 2, 3, 4, 5};
   scanf("%d", &index); // expected-note {{Taint originated here}}
@@ -27,7 +27,7 @@ int taintDiagnosticDivZero(int operand) {
                        // expected-note@-1 {{Division by a tainted value, possibly zero}}
 }
 
-void taintDiagnosticVLA() {
+void taintDiagnosticVLA(void) {
   int x;
   scanf("%d", &x); // expected-note {{Value assigned to 'x'}}
                    // expected-note@-1 {{Taint originated here}}

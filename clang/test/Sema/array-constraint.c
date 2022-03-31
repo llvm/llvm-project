@@ -5,7 +5,7 @@ struct s* t (struct s z[]) {   // expected-error {{array has incomplete element 
   return z;
 }
 
-void ff() { 
+void ff(void) { 
   struct s v, *p; // expected-error {{variable has incomplete type 'struct s'}}
 
   p = &v;
@@ -33,7 +33,7 @@ pfunc xx(int f[](void)) { // expected-error {{'f' declared as array of functions
   return f;
 }
 
-void check_size() {
+void check_size(void) {
   float f;
   int size_not_int[f]; // expected-error {{size of array has non-integer type 'float'}}
   int negative_size[1-2]; // expected-error{{array with a negative size}}
@@ -45,7 +45,7 @@ typedef int TA[I]; // expected-error {{variable length array declaration not all
 
 void strFunc(char *); // expected-note{{passing argument to parameter here}}
 const char staticAry[] = "test";
-void checkStaticAry() { 
+void checkStaticAry(void) { 
   strFunc(staticAry); // expected-warning{{passing 'const char[5]' to parameter of type 'char *' discards qualifiers}}
 }
 

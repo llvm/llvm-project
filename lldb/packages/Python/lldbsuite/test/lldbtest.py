@@ -231,6 +231,11 @@ def pointer_size():
 
 def is_exe(fpath):
     """Returns true if fpath is an executable."""
+    if fpath == None:
+        return False
+    if sys.platform == 'win32':
+        if not fpath.endswith(".exe"):
+            fpath += ".exe"
     return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
 
 
@@ -1570,7 +1575,7 @@ class Base(unittest2.TestCase):
         return os.environ["CC"]
 
 
-    def yaml2obj(self, yaml_path, obj_path):
+    def yaml2obj(self, yaml_path, obj_path, max_size=None):
         """
         Create an object file at the given path from a yaml file.
 
@@ -1580,52 +1585,9 @@ class Base(unittest2.TestCase):
         if not yaml2obj_bin:
             self.assertTrue(False, "No valid yaml2obj executable specified")
         command = [yaml2obj_bin, "-o=%s" % obj_path, yaml_path]
+        if max_size is not None:
+            command += ["--max-size=%d" % max_size]
         self.runBuildCommand(command)
-
-    def getBuildFlags(
-            self,
-            use_cpp11=True,
-            use_libcxx=False,
-            use_libstdcxx=False):
-        """ Returns a dictionary (which can be provided to build* functions above) which
-            contains OS-specific build flags.
-        """
-        cflags = ""
-        ldflags = ""
-
-        # On Mac OS X, unless specifically requested to use libstdc++, use
-        # libc++
-        if not use_libstdcxx and self.platformIsDarwin():
-            use_libcxx = True
-
-        if use_libcxx and self.libcxxPath:
-            cflags += "-stdlib=libc++ "
-            if self.libcxxPath:
-                libcxxInclude = os.path.join(self.libcxxPath, "include")
-                libcxxLib = os.path.join(self.libcxxPath, "lib")
-                if os.path.isdir(libcxxInclude) and os.path.isdir(libcxxLib):
-                    cflags += "-nostdinc++ -I%s -L%s -Wl,-rpath,%s " % (
-                        libcxxInclude, libcxxLib, libcxxLib)
-
-        if use_cpp11:
-            cflags += "-std="
-            if "gcc" in self.getCompiler() and "4.6" in self.getCompilerVersion():
-                cflags += "c++0x"
-            else:
-                cflags += "c++11"
-        if self.platformIsDarwin() or self.getPlatform() == "freebsd":
-            cflags += " -stdlib=libc++"
-        elif self.getPlatform() == "openbsd":
-            cflags += " -stdlib=libc++"
-        elif self.getPlatform() == "netbsd":
-            # NetBSD defaults to libc++
-            pass
-        elif "clang" in self.getCompiler():
-            cflags += " -stdlib=libstdc++"
-
-        return {'CFLAGS_EXTRAS': cflags,
-                'LD_EXTRAS': ldflags,
-                }
 
     def cleanup(self, dictionary=None):
         """Platform specific way to do cleanup after build."""
@@ -2513,7 +2475,8 @@ FileCheck output:
             self.fail(self._formatMessage(msg,
                 "'{}' is not success".format(error)))
 
-    def createTestTarget(self, file_path=None, msg=None):
+    def createTestTarget(self, file_path=None, msg=None,
+                         load_dependent_modules=True):
         """
         Creates a target from the file found at the given file path.
         Asserts that the resulting target is valid.
@@ -2527,7 +2490,6 @@ FileCheck output:
         error = lldb.SBError()
         triple = ""
         platform = ""
-        load_dependent_modules = True
         target = self.dbg.CreateTarget(file_path, triple, platform,
                                        load_dependent_modules, error)
         if error.Fail():
@@ -2579,6 +2541,8 @@ FileCheck output:
         err.write(type.GetName() + ":\n")
         err.write('\t' + "ByteSize        -> " +
                   str(type.GetByteSize()) + '\n')
+        err.write('\t' + "IsAggregateType   -> " +
+                  str(type.IsAggregateType()) + '\n')
         err.write('\t' + "IsPointerType   -> " +
                   str(type.IsPointerType()) + '\n')
         err.write('\t' + "IsReferenceType -> " +

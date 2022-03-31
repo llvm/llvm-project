@@ -705,7 +705,7 @@ SDValue MSP430TargetLowering::LowerCCCArguments(
 
   for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
     if (Ins[i].Flags.isSRet()) {
-      unsigned Reg = FuncInfo->getSRetReturnReg();
+      Register Reg = FuncInfo->getSRetReturnReg();
       if (!Reg) {
         Reg = MF.getRegInfo().createVirtualRegister(
             getRegClassFor(MVT::i16));
@@ -772,7 +772,7 @@ MSP430TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 
   if (MF.getFunction().hasStructRetAttr()) {
     MSP430MachineFunctionInfo *FuncInfo = MF.getInfo<MSP430MachineFunctionInfo>();
-    unsigned Reg = FuncInfo->getSRetReturnReg();
+    Register Reg = FuncInfo->getSRetReturnReg();
 
     if (!Reg)
       llvm_unreachable("sret virtual register not created in entry block");
@@ -1402,12 +1402,12 @@ bool MSP430TargetLowering::isTruncateFree(EVT VT1, EVT VT2) const {
 
 bool MSP430TargetLowering::isZExtFree(Type *Ty1, Type *Ty2) const {
   // MSP430 implicitly zero-extends 8-bit results in 16-bit registers.
-  return 0 && Ty1->isIntegerTy(8) && Ty2->isIntegerTy(16);
+  return false && Ty1->isIntegerTy(8) && Ty2->isIntegerTy(16);
 }
 
 bool MSP430TargetLowering::isZExtFree(EVT VT1, EVT VT2) const {
   // MSP430 implicitly zero-extends 8-bit results in 16-bit registers.
-  return 0 && VT1 == MVT::i8 && VT2 == MVT::i16;
+  return false && VT1 == MVT::i8 && VT2 == MVT::i16;
 }
 
 bool MSP430TargetLowering::isZExtFree(SDValue Val, EVT VT2) const {

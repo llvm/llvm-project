@@ -96,10 +96,15 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
     // of a name conflict, we fall through to the replaceSymbol() call below.
   }
 
+  // With -flat_namespace, all extern symbols in dylibs are interposable.
+  // FIXME: Add support for `-interposable` (PR53680).
+  bool interposable = config->namespaceKind == NamespaceKind::flat &&
+                      config->outputType != MachO::MH_EXECUTE &&
+                      !isPrivateExtern;
   Defined *defined = replaceSymbol<Defined>(
       s, name, file, isec, value, size, isWeakDef, /*isExternal=*/true,
       isPrivateExtern, isThumb, isReferencedDynamically, noDeadStrip,
-      overridesWeakDef, isWeakDefCanBeHidden);
+      overridesWeakDef, isWeakDefCanBeHidden, interposable);
   return defined;
 }
 
@@ -113,8 +118,10 @@ Symbol *SymbolTable::addUndefined(StringRef name, InputFile *file,
 
   if (wasInserted)
     replaceSymbol<Undefined>(s, name, file, refState);
-  else if (auto *lazy = dyn_cast<LazySymbol>(s))
+  else if (auto *lazy = dyn_cast<LazyArchive>(s))
     lazy->fetchArchiveMember();
+  else if (isa<LazyObject>(s))
+    extract(*s->getFile(), s->getName());
   else if (auto *dynsym = dyn_cast<DylibSymbol>(s))
     dynsym->reference(refState);
   else if (auto *undefined = dyn_cast<Undefined>(s))
@@ -178,14 +185,14 @@ Symbol *SymbolTable::addDynamicLookup(StringRef name) {
   return addDylib(name, /*file=*/nullptr, /*isWeakDef=*/false, /*isTlv=*/false);
 }
 
-Symbol *SymbolTable::addLazy(StringRef name, ArchiveFile *file,
-                             const object::Archive::Symbol &sym) {
+Symbol *SymbolTable::addLazyArchive(StringRef name, ArchiveFile *file,
+                                    const object::Archive::Symbol &sym) {
   Symbol *s;
   bool wasInserted;
   std::tie(s, wasInserted) = insert(name, file);
 
   if (wasInserted) {
-    replaceSymbol<LazySymbol>(s, file, sym);
+    replaceSymbol<LazyArchive>(s, file, sym);
   } else if (isa<Undefined>(s)) {
     file->fetch(sym);
   } else if (auto *dysym = dyn_cast<DylibSymbol>(s)) {
@@ -193,7 +200,27 @@ Symbol *SymbolTable::addLazy(StringRef name, ArchiveFile *file,
       if (dysym->getRefState() != RefState::Unreferenced)
         file->fetch(sym);
       else
-        replaceSymbol<LazySymbol>(s, file, sym);
+        replaceSymbol<LazyArchive>(s, file, sym);
+    }
+  }
+  return s;
+}
+
+Symbol *SymbolTable::addLazyObject(StringRef name, InputFile &file) {
+  Symbol *s;
+  bool wasInserted;
+  std::tie(s, wasInserted) = insert(name, &file);
+
+  if (wasInserted) {
+    replaceSymbol<LazyObject>(s, file, name);
+  } else if (isa<Undefined>(s)) {
+    extract(file, name);
+  } else if (auto *dysym = dyn_cast<DylibSymbol>(s)) {
+    if (dysym->isWeakDef()) {
+      if (dysym->getRefState() != RefState::Unreferenced)
+        extract(file, name);
+      else
+        replaceSymbol<LazyObject>(s, file, name);
     }
   }
   return s;
@@ -244,7 +271,7 @@ static void handleSectionBoundarySymbol(const Undefined &sym, StringRef segSect,
     }
 
   if (!osec) {
-    ConcatInputSection *isec = make<ConcatInputSection>(segName, sectName);
+    ConcatInputSection *isec = makeSyntheticInputSection(segName, sectName);
 
     // This runs after markLive() and is only called for Undefineds that are
     // live. Marking the isec live ensures an OutputSection is created that the
@@ -319,4 +346,4 @@ void lld::macho::treatUndefinedSymbol(const Undefined &sym, StringRef source) {
   }
 }
 
-SymbolTable *macho::symtab;
+std::unique_ptr<SymbolTable> macho::symtab;

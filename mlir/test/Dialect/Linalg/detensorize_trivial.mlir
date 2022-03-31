@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -linalg-detensorize=aggressive-mode | FileCheck %s -check-prefix=DET-ALL
-// RUN: mlir-opt %s -linalg-detensorize | FileCheck %s -check-prefix=DET-CF
+// RUN: mlir-opt %s -pass-pipeline="func.func(linalg-detensorize{aggressive-mode})" | FileCheck %s -check-prefix=DET-ALL
+// RUN: mlir-opt %s -pass-pipeline="func.func(linalg-detensorize)" | FileCheck %s -check-prefix=DET-CF
 
 
 #map0 = affine_map<() -> ()>
@@ -11,11 +11,10 @@
 
 func @main(%farg0 : tensor<i32>) -> (tensor<i1>) attributes {} {
   %c10 = arith.constant 10 : i32
-  %1 = tensor.from_elements %c10 : tensor<1xi32>
-  %reshaped1 = linalg.tensor_collapse_shape %1 [] : tensor<1xi32> into tensor<i32>
+  %1 = tensor.from_elements %c10 : tensor<i32>
   %3 = linalg.init_tensor [] : tensor<i1>
   %4 = linalg.generic #attrs
-    ins(%farg0, %reshaped1 : tensor<i32>, tensor<i32>)
+    ins(%farg0, %1 : tensor<i32>, tensor<i32>)
     outs(%3 : tensor<i1>) {
     ^bb0(%arg0: i32, %arg1: i32, %arg2: i1):
       %8 = arith.cmpi slt, %arg0, %arg1 : i32
@@ -30,7 +29,6 @@ func @main(%farg0 : tensor<i32>) -> (tensor<i1>) attributes {} {
 // DET-ALL-NEXT:    tensor.extract %{{.*}}[]
 // DET-ALL-NEXT:    arith.cmpi slt, %{{.*}}, %{{.*}}
 // DET-ALL-NEXT:    tensor.from_elements %{{.*}}
-// DET-ALL-NEXT:    linalg.tensor_collapse_shape %{{.*}}
 // DET-ALL-NEXT:    return %{{.*}} : tensor<i1>
 // DET-ALL-NEXT:  }
 

@@ -52,6 +52,6 @@ struct IntegerSetStorage : public StorageUniquer::BaseStorage {
   }
 };
 
-} // end namespace detail
-} // end namespace mlir
+} // namespace detail
+} // namespace mlir
 #endif // INTEGERSETDETAIL_H_

@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple aarch64 -mattr=+sve -asm-verbose=0 < %s | FileCheck %s
+; RUN: llc -mtriple aarch64 -mattr=+streaming-sve -asm-verbose=0 < %s | FileCheck %s
 
 ; All these tests create a vector tuple, insert z5 into one of the elements,
 ; and finally extracts that element from the wide vector to return it.  These
@@ -228,7 +229,7 @@ define <vscale x 4 x i32> @get_tuple4_nxv16i32_elt3(<vscale x 16 x i32> %tuple) 
   ret <vscale x 4 x i32> %ext
 }
 
-attributes #0 = { nounwind "target-features"="+sve" }
+attributes #0 = { nounwind }
 
 declare <vscale x 8 x i32>  @llvm.aarch64.sve.tuple.create2.nxv8i32.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i32>)
 declare <vscale x 8 x i32> @llvm.aarch64.sve.tuple.set.nxv8i32.nxv4i32(<vscale x 8 x i32>, i32, <vscale x 4 x i32>)

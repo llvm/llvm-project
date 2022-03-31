@@ -5,7 +5,7 @@
 ; CHECK: .L_ZTId.DW.stub:
 
 ; CHECK:  .data
-; CHECK-NEXT: .Lsec_end1:
+; CHECK-NEXT: .Lsec_end0:
 
 source_filename = "test/DebugInfo/X86/arange-and-stub.ll"
 target triple = "x86_64-linux-gnu"

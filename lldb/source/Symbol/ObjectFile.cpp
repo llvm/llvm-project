@@ -19,9 +19,12 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Timer.h"
 #include "lldb/lldb-private.h"
+
+#include "llvm/Support/DJB.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -249,7 +252,7 @@ ObjectFile::ObjectFile(const lldb::ModuleSP &module_sp,
     m_file = *file_spec_ptr;
   if (data_sp)
     m_data.SetData(data_sp, data_offset, length);
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
+  Log *log = GetLog(LLDBLog::Object);
   LLDB_LOGF(log,
             "%p ObjectFile::ObjectFile() module = %p (%s), file = %s, "
             "file_offset = 0x%8.8" PRIx64 ", size = %" PRIu64,
@@ -268,7 +271,7 @@ ObjectFile::ObjectFile(const lldb::ModuleSP &module_sp,
       m_symtab_up(), m_symtab_once_up(new llvm::once_flag()) {
   if (header_data_sp)
     m_data.SetData(header_data_sp, 0, header_data_sp->GetByteSize());
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
+  Log *log = GetLog(LLDBLog::Object);
   LLDB_LOGF(log,
             "%p ObjectFile::ObjectFile() module = %p (%s), process = %p, "
             "header_addr = 0x%" PRIx64,
@@ -278,7 +281,7 @@ ObjectFile::ObjectFile(const lldb::ModuleSP &module_sp,
 }
 
 ObjectFile::~ObjectFile() {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
+  Log *log = GetLog(LLDBLog::Object);
   LLDB_LOGF(log, "%p ObjectFile::~ObjectFile ()\n", static_cast<void *>(this));
 }
 
@@ -571,7 +574,7 @@ bool ObjectFile::SplitArchivePathWithObject(llvm::StringRef path_with_object,
 void ObjectFile::ClearSymtab() {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
-    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
+    Log *log = GetLog(LLDBLog::Object);
     LLDB_LOGF(log, "%p ObjectFile::ClearSymtab () symtab = %p",
               static_cast<void *>(this),
               static_cast<void *>(m_symtab_up.get()));
@@ -737,13 +740,24 @@ Symtab *ObjectFile::GetSymtab() {
     // not be able to access the symbol table contents since all APIs in Symtab
     // are protected by a mutex in the Symtab object itself.
     llvm::call_once(*m_symtab_once_up, [&]() {
-       ElapsedTime elapsed(module_sp->GetSymtabParseTime());
-       Symtab *symtab = new Symtab(this);
-       std::lock_guard<std::recursive_mutex> symtab_guard(symtab->GetMutex());
-       m_symtab_up.reset(symtab);
-       ParseSymtab(*m_symtab_up);
-       m_symtab_up->Finalize();
+      Symtab *symtab = new Symtab(this);
+      std::lock_guard<std::recursive_mutex> symtab_guard(symtab->GetMutex());
+      m_symtab_up.reset(symtab);
+      if (!m_symtab_up->LoadFromCache()) {
+        ElapsedTime elapsed(module_sp->GetSymtabParseTime());
+        ParseSymtab(*m_symtab_up);
+        m_symtab_up->Finalize();
+      }
     });
   }
   return m_symtab_up.get();
+}
+
+uint32_t ObjectFile::GetCacheHash() {
+  if (m_cache_hash)
+    return *m_cache_hash;
+  StreamString strm;
+  strm.Format("{0}-{1}-{2}", m_file, GetType(), GetStrata());
+  m_cache_hash = llvm::djbHash(strm.GetString());
+  return *m_cache_hash;
 }

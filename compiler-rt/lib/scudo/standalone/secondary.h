@@ -113,6 +113,19 @@ void mapSecondary(Options Options, uptr CommitBase, uptr CommitSize,
   }
 }
 
+// Template specialization to avoid producing zero-length array
+template <typename T, size_t Size> class NonZeroLengthArray {
+public:
+  T &operator[](uptr Idx) { return values[Idx]; }
+
+private:
+  T values[Size];
+};
+template <typename T> class NonZeroLengthArray<T, 0> {
+public:
+  T &operator[](uptr UNUSED Idx) { UNREACHABLE("Unsupported!"); }
+};
+
 template <typename Config> class MapAllocatorCache {
 public:
   // Ensure the default maximum specified fits the array.
@@ -219,7 +232,7 @@ public:
     const u32 MaxCount = atomic_load_relaxed(&MaxEntriesCount);
     bool Found = false;
     CachedBlock Entry;
-    uptr HeaderPos;
+    uptr HeaderPos = 0;
     {
       ScopedLock L(Mutex);
       if (EntriesCount == 0)
@@ -395,7 +408,8 @@ private:
   atomic_s32 ReleaseToOsIntervalMs = {};
 
   CachedBlock Entries[Config::SecondaryCacheEntriesArraySize] = {};
-  CachedBlock Quarantine[Config::SecondaryCacheQuarantineSize] = {};
+  NonZeroLengthArray<CachedBlock, Config::SecondaryCacheQuarantineSize>
+      Quarantine = {};
 };
 
 template <typename Config> class MapAllocator {
@@ -445,7 +459,7 @@ public:
     }
   }
 
-  uptr canCache(uptr Size) { return Cache.canCache(Size); }
+  bool canCache(uptr Size) { return Cache.canCache(Size); }
 
   bool setOption(Option O, sptr Value) { return Cache.setOption(O, Value); }
 

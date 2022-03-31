@@ -42,7 +42,7 @@ class DebugObjectSection {
 public:
   virtual void setTargetMemoryRange(SectionRange Range) = 0;
   virtual void dump(raw_ostream &OS, StringRef Name) {}
-  virtual ~DebugObjectSection() {}
+  virtual ~DebugObjectSection() = default;
 };
 
 template <typename ELFT>
@@ -67,9 +67,9 @@ private:
 template <typename ELFT>
 void ELFDebugObjectSection<ELFT>::setTargetMemoryRange(SectionRange Range) {
   // Only patch load-addresses for executable and data sections.
-  if (isTextOrDataSection()) {
-    Header->sh_addr = static_cast<typename ELFT::uint>(Range.getStart());
-  }
+  if (isTextOrDataSection())
+    Header->sh_addr =
+        static_cast<typename ELFT::uint>(Range.getStart().getValue());
 }
 
 template <typename ELFT>

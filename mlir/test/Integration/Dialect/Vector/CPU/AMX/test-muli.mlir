@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-vector-to-scf -lower-affine -convert-scf-to-std -convert-vector-to-llvm="enable-amx" -convert-memref-to-llvm -convert-std-to-llvm -reconcile-unrealized-casts | \
+// RUN: mlir-opt %s -convert-vector-to-scf -lower-affine -convert-scf-to-cf -convert-vector-to-llvm="enable-amx" -convert-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-translate -mlir-to-llvmir | \
 // RUN: %lli --entry-function=entry --mattr="+amx-tile,+amx-int8,+amx-bf16" --dlopen=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
@@ -8,7 +8,7 @@
 // Multiply into zeroed destination.
 func @kernel1(%arg0: memref<2x8xi8>,
               %arg1: memref<2x8xi8>,
-	      %arg2: memref<2x2xi32>) {
+              %arg2: memref<2x2xi32>) {
   %0 = arith.constant 0 : index
   %1 = amx.tile_load %arg0[%0, %0] : memref<2x8xi8>  into vector<2x8xi8>
   %2 = amx.tile_load %arg1[%0, %0] : memref<2x8xi8>  into vector<2x8xi8>
@@ -21,7 +21,7 @@ func @kernel1(%arg0: memref<2x8xi8>,
 // Multiply and update into destination.
 func @kernel2(%arg0: memref<2x8xi8>,
               %arg1: memref<2x8xi8>,
-	      %arg2: memref<2x2xi32>) {
+              %arg2: memref<2x2xi32>) {
   %0 = arith.constant 0 : index
   %1 = amx.tile_load %arg0[%0, %0] : memref<2x8xi8>  into vector<2x8xi8>
   %2 = amx.tile_load %arg1[%0, %0] : memref<2x8xi8>  into vector<2x8xi8>

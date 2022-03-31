@@ -19,6 +19,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
@@ -54,8 +55,19 @@ class Status {
   llvm::sys::fs::perms Perms;
 
 public:
-  // FIXME: remove when files support multiple names
-  bool IsVFSMapped = false;
+  /// Whether this entity has an external path different from the virtual path,
+  /// and the external path is exposed by leaking it through the abstraction.
+  /// For example, a RedirectingFileSystem will set this for paths where
+  /// UseExternalName is true.
+  ///
+  /// FIXME: Currently the external path is exposed by replacing the virtual
+  /// path in this Status object. Instead, we should leave the path in the
+  /// Status intact (matching the requested virtual path), and just use this
+  /// flag as hint that a new API, FileSystem::getExternalVFSPath(), will not
+  /// return `None`. Clients can then request the external path only where
+  /// needed (e.g. for diagnostics, or to report discovered dependencies to
+  /// external tools).
+  bool ExposesExternalVFSPath = false;
 
   Status() = default;
   Status(const llvm::sys::fs::file_status &Status);
@@ -64,6 +76,8 @@ public:
          uint64_t Size, llvm::sys::fs::file_type Type,
          llvm::sys::fs::perms Perms);
 
+  /// Get a copy of a Status with a different size.
+  static Status copyWithNewSize(const Status &In, uint64_t NewSize);
   /// Get a copy of a Status with a different name.
   static Status copyWithNewName(const Status &In, const Twine &NewName);
   static Status copyWithNewName(const llvm::sys::fs::file_status &In,
@@ -303,6 +317,28 @@ public:
   /// \returns success if \a path has been made absolute, otherwise a
   ///          platform-specific error_code.
   virtual std::error_code makeAbsolute(SmallVectorImpl<char> &Path) const;
+
+  enum class PrintType { Summary, Contents, RecursiveContents };
+  void print(raw_ostream &OS, PrintType Type = PrintType::Contents,
+             unsigned IndentLevel = 0) const {
+    printImpl(OS, Type, IndentLevel);
+  }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump() const;
+#endif
+
+protected:
+  virtual void printImpl(raw_ostream &OS, PrintType Type,
+                         unsigned IndentLevel) const {
+    printIndent(OS, IndentLevel);
+    OS << "FileSystem\n";
+  }
+
+  void printIndent(raw_ostream &OS, unsigned IndentLevel) const {
+    for (unsigned i = 0; i < IndentLevel; ++i)
+      OS << "  ";
+  }
 };
 
 /// Gets an \p vfs::FileSystem for the 'real' file system, as seen by
@@ -354,6 +390,8 @@ public:
   using const_iterator = FileSystemList::const_reverse_iterator;
   using reverse_iterator = FileSystemList::iterator;
   using const_reverse_iterator = FileSystemList::const_iterator;
+  using range = iterator_range<iterator>;
+  using const_range = iterator_range<const_iterator>;
 
   /// Get an iterator pointing to the most recently added file system.
   iterator overlays_begin() { return FSList.rbegin(); }
@@ -370,6 +408,13 @@ public:
   /// Get an iterator pointing one-past the most recently added file system.
   reverse_iterator overlays_rend() { return FSList.end(); }
   const_reverse_iterator overlays_rend() const { return FSList.end(); }
+
+  range overlays_range() { return llvm::reverse(FSList); }
+  const_range overlays_range() const { return llvm::reverse(FSList); }
+
+protected:
+  void printImpl(raw_ostream &OS, PrintType Type,
+                 unsigned IndentLevel) const override;
 };
 
 /// By default, this delegates all calls to the underlying file system. This
@@ -417,6 +462,21 @@ namespace detail {
 
 class InMemoryDirectory;
 class InMemoryFile;
+class InMemoryNode;
+
+struct NewInMemoryNodeInfo {
+  llvm::sys::fs::UniqueID DirUID;
+  StringRef Path;
+  StringRef Name;
+  time_t ModificationTime;
+  std::unique_ptr<llvm::MemoryBuffer> Buffer;
+  uint32_t User;
+  uint32_t Group;
+  llvm::sys::fs::file_type Type;
+  llvm::sys::fs::perms Perms;
+
+  Status makeStatus() const;
+};
 
 } // namespace detail
 
@@ -426,14 +486,15 @@ class InMemoryFileSystem : public FileSystem {
   std::string WorkingDirectory;
   bool UseNormalizedPaths = true;
 
-  /// If HardLinkTarget is non-null, a hardlink is created to the To path which
-  /// must be a file. If it is null then it adds the file as the public addFile.
+  using MakeNodeFn = llvm::function_ref<std::unique_ptr<detail::InMemoryNode>(
+      detail::NewInMemoryNodeInfo)>;
+
+  /// Create node with \p MakeNode and add it into this filesystem at \p Path.
   bool addFile(const Twine &Path, time_t ModificationTime,
                std::unique_ptr<llvm::MemoryBuffer> Buffer,
                Optional<uint32_t> User, Optional<uint32_t> Group,
                Optional<llvm::sys::fs::file_type> Type,
-               Optional<llvm::sys::fs::perms> Perms,
-               const detail::InMemoryFile *HardLinkTarget);
+               Optional<llvm::sys::fs::perms> Perms, MakeNodeFn MakeNode);
 
 public:
   explicit InMemoryFileSystem(bool UseNormalizedPaths = true);
@@ -501,6 +562,10 @@ public:
                               SmallVectorImpl<char> &Output) const override;
   std::error_code isLocal(const Twine &Path, bool &Result) override;
   std::error_code setCurrentWorkingDirectory(const Twine &Path) override;
+
+protected:
+  void printImpl(raw_ostream &OS, PrintType Type,
+                 unsigned IndentLevel) const override;
 };
 
 /// Get a globally unique ID for a virtual file or directory.
@@ -545,11 +610,17 @@ class RedirectingFileSystemParser;
 /// }
 /// \endverbatim
 ///
+/// The roots may be absolute or relative. If relative they will be made
+/// absolute against the current working directory.
+///
 /// All configuration options are optional.
 ///   'case-sensitive': <boolean, default=(true for Posix, false for Windows)>
 ///   'use-external-names': <boolean, default=true>
 ///   'overlay-relative': <boolean, default=false>
-///   'fallthrough': <boolean, default=true>
+///   'fallthrough': <boolean, default=true, deprecated - use 'redirecting-with'
+///                   instead>
+///   'redirecting-with': <string, one of 'fallthrough', 'fallback', or
+///                        'redirect-only', default='fallthrough'>
 ///
 /// Virtual directories that list their contents are represented as
 /// \verbatim
@@ -619,6 +690,20 @@ class RedirectingFileSystem : public vfs::FileSystem {
 public:
   enum EntryKind { EK_Directory, EK_DirectoryRemap, EK_File };
   enum NameKind { NK_NotSet, NK_External, NK_Virtual };
+
+  /// The type of redirection to perform.
+  enum class RedirectKind {
+    /// Lookup the redirected path first (ie. the one specified in
+    /// 'external-contents') and if that fails "fallthrough" to a lookup of the
+    /// originally provided path.
+    Fallthrough,
+    /// Lookup the provided path first and if that fails, "fallback" to a
+    /// lookup of the redirected path.
+    Fallback,
+    /// Only lookup the redirected path, do not lookup the originally provided
+    /// path.
+    RedirectOnly
+  };
 
   /// A single file or directory in the VFS.
   class Entry {
@@ -754,16 +839,10 @@ private:
   friend class RedirectingFSDirIterImpl;
   friend class RedirectingFileSystemParser;
 
-  bool shouldUseExternalFS() const { return IsFallthrough; }
-
   /// Canonicalize path by removing ".", "..", "./", components. This is
   /// a VFS request, do not bother about symlinks in the path components
   /// but canonicalize in order to perform the correct entry search.
   std::error_code makeCanonical(SmallVectorImpl<char> &Path) const;
-
-  /// Whether to fall back to the external file system when an operation fails
-  /// with the given error code on a path associated with the provided Entry.
-  bool shouldFallBackToExternalFS(std::error_code EC, Entry *E = nullptr) const;
 
   /// Get the File status, or error, from the underlying external file system.
   /// This returns the status with the originally requested name, while looking
@@ -812,9 +891,9 @@ private:
   /// names of files.  This global value is overridable on a per-file basis.
   bool UseExternalNames = true;
 
-  /// Whether to attempt a file lookup in external file system after it wasn't
-  /// found in VFS.
-  bool IsFallthrough = true;
+  /// Determines the lookups to perform, as well as their order. See
+  /// \c RedirectKind for details.
+  RedirectKind Redirection = RedirectKind::Fallthrough;
   /// @}
 
   RedirectingFileSystem(IntrusiveRefCntPtr<FileSystem> ExternalFS);
@@ -869,15 +948,19 @@ public:
 
   StringRef getExternalContentsPrefixDir() const;
 
+  /// Sets the redirection kind to \c Fallthrough if true or \c RedirectOnly
+  /// otherwise. Will removed in the future, use \c setRedirection instead.
   void setFallthrough(bool Fallthrough);
+
+  void setRedirection(RedirectingFileSystem::RedirectKind Kind);
 
   std::vector<llvm::StringRef> getRoots() const;
 
-  void dump(raw_ostream &OS) const;
-  void dumpEntry(raw_ostream &OS, Entry *E, int NumSpaces = 0) const;
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  LLVM_DUMP_METHOD void dump() const;
-#endif
+  void printEntry(raw_ostream &OS, Entry *E, unsigned IndentLevel = 0) const;
+
+protected:
+  void printImpl(raw_ostream &OS, PrintType Type,
+                 unsigned IndentLevel) const override;
 };
 
 /// Collect all pairs of <virtual path, real path> entries from the

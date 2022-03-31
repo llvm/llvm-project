@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 "-triple" "arm64-apple-watchos3.0" -fsyntax-only -verify %s
+// RUN: %clang_cc1 "-triple" "arm64-apple-watchos4.0" -fsyntax-only -verify %s
+// RUN: %clang_cc1 "-triple" "arm64-apple-watchos4.0" -DUSE_VERSION_MAP -isysroot %S/Inputs/WatchOS7.0.sdk -fsyntax-only -verify %s
 
 void f0(int) __attribute__((availability(ios,introduced=2.0,deprecated=2.1))); // expected-note {{'f0' has been explicitly marked deprecated here}}
 void f1(int) __attribute__((availability(ios,introduced=2.1)));
@@ -10,7 +11,7 @@ void f6(int) __attribute__((availability(ios,deprecated=12.1))); // OK - not dep
 void f7(int) __attribute__((availability(ios,deprecated=8.3))); // expected-note {{'f7' has been explicitly marked deprecated here}}
 void f8(int) __attribute__((availability(ios,introduced=2.0,obsoleted=10.0))); // expected-note {{explicitly marked unavailable}}
 
-void test() {
+void test(void) {
   f0(0); // expected-warning{{'f0' is deprecated: first deprecated in watchOS 2.0}}
   f1(0);
   f2(0); // expected-warning{{'f2' is deprecated: first deprecated in watchOS 2.0}}
@@ -35,7 +36,7 @@ void f5c_watchos(int) __attribute__((availability(ios,introduced=2.0))) __attrib
 void f6_watchos(int) __attribute__((availability(watchos,deprecated=3.0))); // expected-note {{'f6_watchos' has been explicitly marked deprecated here}}
 void f6_watchos(int) __attribute__((availability(watchOS,introduced=2.0)));
 
-void test_watchos() {
+void test_watchos(void) {
   f0_watchos(0); // expected-warning{{'f0_watchos' is deprecated: first deprecated in watchOS 2.1}}
   f1_watchos(0);
   f2_watchos(0); // expected-warning{{'f2_watchos' is deprecated: first deprecated in watchOS 3.0}}
@@ -53,8 +54,24 @@ void test_watchos() {
   f6_watchos(0); // expected-warning {{'f6_watchos' is deprecated: first deprecated in watchOS 3.0}}
 }
 
-void deprecatedAfterIntroduced() __attribute__((availability(ios,introduced=9.3,deprecated=10))); // expected-note {{here}}
+void deprecatedAfterIntroduced(void) __attribute__((availability(ios,introduced=9.3,deprecated=10))); // expected-note {{here}}
 
-void test_ios_correctly_map_to_watchos() {
+void test_ios_correctly_map_to_watchos(void) {
   deprecatedAfterIntroduced(); // expected-warning {{'deprecatedAfterIntroduced' is deprecated: first deprecated in watchOS 3}}
 }
+
+#ifdef USE_VERSION_MAP
+// iOS 10.3.1 corresponds to watchOS 3.2, as indicated in 'SDKSettings.json'.
+void f9(int) __attribute__((availability(ios,deprecated=10.3.1))); // expected-note {{'f9' has been explicitly marked deprecated here}}
+
+void testWithVersionMap(void) {
+  f9(0); // expected-warning {{'f9' is deprecated: first deprecated in watchOS 3.2}}
+}
+#else
+// Without VersionMap, watchOS version is inferred incorrectly as 3.3.1.
+void f9(int) __attribute__((availability(ios,deprecated=10.3.1))); // expected-note {{'f9' has been explicitly marked deprecated here}}
+
+void testWithoutVersionMap(void) {
+  f9(0); // expected-warning {{'f9' is deprecated: first deprecated in watchOS 3.3.1}}
+}
+#endif

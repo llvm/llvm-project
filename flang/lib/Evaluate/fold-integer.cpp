@@ -76,10 +76,11 @@ Expr<Type<TypeCategory::Integer, KIND>> LBOUND(FoldingContext &context,
         if (symbol.Rank() == rank) {
           lowerBoundsAreOne = false;
           if (dim) {
-            return Fold(context,
-                ConvertToType<T>(GetLowerBound(context, *named, *dim)));
+            if (auto lb{GetLBOUND(context, *named, *dim)}) {
+              return Fold(context, ConvertToType<T>(std::move(*lb)));
+            }
           } else if (auto extents{
-                         AsExtentArrayExpr(GetLowerBounds(context, *named))}) {
+                         AsExtentArrayExpr(GetLBOUNDs(context, *named))}) {
             return Fold(context,
                 ConvertToType<T>(Expr<ExtentType>{std::move(*extents)}));
           }
@@ -139,11 +140,11 @@ Expr<Type<TypeCategory::Integer, KIND>> UBOUND(FoldingContext &context,
                                      "rank-%d assumed-size array"_err_en_US,
                   rank, rank);
               return MakeInvalidIntrinsic<T>(std::move(funcRef));
-            } else if (auto ub{GetUpperBound(context, *named, *dim)}) {
+            } else if (auto ub{GetUBOUND(context, *named, *dim)}) {
               return Fold(context, ConvertToType<T>(std::move(*ub)));
             }
           } else {
-            Shape ubounds{GetUpperBounds(context, *named)};
+            Shape ubounds{GetUBOUNDs(context, *named)};
             if (semantics::IsAssumedSizeArray(symbol)) {
               CHECK(!ubounds.back());
               ubounds.back() = ExtentExpr{-1};
@@ -158,7 +159,7 @@ Expr<Type<TypeCategory::Integer, KIND>> UBOUND(FoldingContext &context,
         }
       }
       if (takeBoundsFromShape) {
-        if (auto shape{GetShape(context, *array)}) {
+        if (auto shape{GetContextFreeShape(context, *array)}) {
           if (dim) {
             if (auto &dimSize{shape->at(*dim)}) {
               return Fold(context,
@@ -284,11 +285,12 @@ public:
           }
         }
         resultIndices.emplace_back(hit);
-        at[zbDim] = dimLength;
+        at[zbDim] = std::max<ConstantSubscript>(dimLength, 1);
         array->IncrementSubscripts(at);
         at[zbDim] = 1;
         if (mask) {
-          maskAt[zbDim] = mask->lbounds()[zbDim] + dimLength - 1;
+          maskAt[zbDim] = mask->lbounds()[zbDim] +
+              std::max<ConstantSubscript>(dimLength, 1) - 1;
           mask->IncrementSubscripts(maskAt);
           maskAt[zbDim] = mask->lbounds()[zbDim];
         }
@@ -329,14 +331,12 @@ private:
       if constexpr (T::category == TypeCategory::Logical) {
         // array(at) .EQV. value?
         static_assert(WHICH == WhichLocation::Findloc);
-        cmp.emplace(
-            ConvertToType<LogicalResult>(Expr<T>{LogicalOperation<T::kind>{
-                LogicalOperator::Eqv, Expr<T>{Constant<T>{std::move(element)}},
-                Expr<T>{Constant<T>{*value}}}}));
+        cmp.emplace(ConvertToType<LogicalResult>(
+            Expr<T>{LogicalOperation<T::kind>{LogicalOperator::Eqv,
+                Expr<T>{Constant<T>{element}}, Expr<T>{Constant<T>{*value}}}}));
       } else { // compare array(at) to value
-        cmp.emplace(
-            PackageRelation(relation, Expr<T>{Constant<T>{std::move(element)}},
-                Expr<T>{Constant<T>{*value}}));
+        cmp.emplace(PackageRelation(relation, Expr<T>{Constant<T>{element}},
+            Expr<T>{Constant<T>{*value}}));
       }
       Expr<LogicalResult> folded{Fold(context_, std::move(*cmp))};
       result = GetScalarConstantValue<LogicalResult>(folded).value().IsTrue();
@@ -413,13 +413,13 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
   auto *intrinsic{std::get_if<SpecificIntrinsic>(&funcRef.proc().u)};
   CHECK(intrinsic);
   std::string name{intrinsic->name};
-  if (name == "abs") {
+  if (name == "abs") { // incl. babs, iiabs, jiaabs, & kiabs
     return FoldElementalIntrinsic<T, T>(context, std::move(funcRef),
         ScalarFunc<T, T>([&context](const Scalar<T> &i) -> Scalar<T> {
           typename Scalar<T>::ValueWithOverflow j{i.ABS()};
           if (j.overflow) {
             context.messages().Say(
-                "abs(integer(kind=%d)) folding overflowed"_en_US, KIND);
+                "abs(integer(kind=%d)) folding overflowed"_warn_en_US, KIND);
           }
           return j.value;
         }));
@@ -439,7 +439,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
                   auto y{x.template ToInteger<Scalar<T>>(mode)};
                   if (y.flags.test(RealFlag::Overflow)) {
                     context.messages().Say(
-                        "%s intrinsic folding overflow"_en_US, name);
+                        "%s intrinsic folding overflow"_warn_en_US, name);
                   }
                   return y.value;
                 }));
@@ -505,7 +505,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
       if (len.value() != 1) {
         // Do not die, this was not checked before
         context.messages().Say(
-            "Character in intrinsic function %s must have length one"_en_US,
+            "Character in intrinsic function %s must have length one"_warn_en_US,
             name);
       } else {
         return std::visit(
@@ -677,7 +677,11 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
       return std::visit(
           [&](auto &kx) {
             if (auto len{kx.LEN()}) {
-              return Fold(context, ConvertToType<T>(*std::move(len)));
+              if (IsScopeInvariantExpr(*len)) {
+                return Fold(context, ConvertToType<T>(*std::move(len)));
+              } else {
+                return Expr<T>{std::move(funcRef)};
+              }
             } else {
               return Expr<T>{std::move(funcRef)};
             }
@@ -756,9 +760,9 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
                 const Scalar<T> &y) -> Scalar<T> {
               auto quotRem{x.DivideSigned(y)};
               if (quotRem.divisionByZero) {
-                context.messages().Say("mod() by zero"_en_US);
+                context.messages().Say("mod() by zero"_warn_en_US);
               } else if (quotRem.overflow) {
-                context.messages().Say("mod() folding overflowed"_en_US);
+                context.messages().Say("mod() folding overflowed"_warn_en_US);
               }
               return quotRem.remainder;
             }));
@@ -769,7 +773,8 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
                 const Scalar<T> &y) -> Scalar<T> {
               auto result{x.MODULO(y)};
               if (result.overflow) {
-                context.messages().Say("modulo() folding overflowed"_en_US);
+                context.messages().Say(
+                    "modulo() folding overflowed"_warn_en_US);
               }
               return result.value;
             }));
@@ -851,7 +856,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
       }
     }
   } else if (name == "shape") {
-    if (auto shape{GetShape(context, args[0])}) {
+    if (auto shape{GetContextFreeShape(context, args[0])}) {
       if (auto shapeExpr{AsExtentArrayExpr(*shape)}) {
         return Fold(context, ConvertToType<T>(std::move(*shapeExpr)));
       }
@@ -889,12 +894,13 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
               typename Scalar<T>::ValueWithOverflow result{j.SIGN(k)};
               if (result.overflow) {
                 context.messages().Say(
-                    "sign(integer(kind=%d)) folding overflowed"_en_US, KIND);
+                    "sign(integer(kind=%d)) folding overflowed"_warn_en_US,
+                    KIND);
               }
               return result.value;
             }));
   } else if (name == "size") {
-    if (auto shape{GetShape(context, args[0])}) {
+    if (auto shape{GetContextFreeShape(context, args[0])}) {
       if (auto &dimArg{args[1]}) { // DIM= is present, get one extent
         if (auto dim{GetInt64Arg(args[1])}) {
           int rank{GetRank(*shape)};
@@ -910,7 +916,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
             }
           } else {
             context.messages().Say(
-                "size(array,dim=%jd) dimension is out of range for rank-%d array"_en_US,
+                "size(array,dim=%jd) dimension is out of range for rank-%d array"_warn_en_US,
                 *dim, rank);
           }
         }
@@ -1020,6 +1026,9 @@ std::optional<std::int64_t> ToInt64(const Expr<SomeType> &expr) {
   }
 }
 
+#ifdef _MSC_VER // disable bogus warning about missing definitions
+#pragma warning(disable : 4661)
+#endif
 FOR_EACH_INTEGER_KIND(template class ExpressionBase, )
 template class ExpressionBase<SomeInteger>;
 } // namespace Fortran::evaluate

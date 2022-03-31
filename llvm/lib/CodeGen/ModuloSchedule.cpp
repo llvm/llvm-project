@@ -11,6 +11,7 @@
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/MCContext.h"
@@ -813,8 +814,8 @@ static void removePhis(MachineBasicBlock *BB, MachineBasicBlock *Incoming) {
       break;
     for (unsigned i = 1, e = MI.getNumOperands(); i != e; i += 2)
       if (MI.getOperand(i + 1).getMBB() == Incoming) {
-        MI.RemoveOperand(i + 1);
-        MI.RemoveOperand(i);
+        MI.removeOperand(i + 1);
+        MI.removeOperand(i);
         break;
       }
   }
@@ -1704,7 +1705,7 @@ void PeelingModuloScheduleExpander::peelPrologAndEpilogs() {
   // Peel out the prologs.
   LS.reset();
   for (int I = 0; I < Schedule.getNumStages() - 1; ++I) {
-    LS[I] = 1;
+    LS[I] = true;
     Prologs.push_back(peelKernel(LPD_Front));
     LiveStages[Prologs.back()] = LS;
     AvailableStages[Prologs.back()] = LS;
@@ -1752,7 +1753,7 @@ void PeelingModuloScheduleExpander::peelPrologAndEpilogs() {
       // Move stage one block at a time so that Phi nodes are updated correctly.
       for (size_t K = Iteration; K > I; K--)
         moveStageBetweenBlocks(Epilogs[K - 1], Epilogs[K], Stage);
-      LS[Stage] = 1;
+      LS[Stage] = true;
     }
     LiveStages[Epilogs[I]] = LS;
     AvailableStages[Epilogs[I]] = AS;
@@ -1929,8 +1930,8 @@ void PeelingModuloScheduleExpander::fixupBranches() {
       // blocks. Leave it to unreachable-block-elim to clean up.
       Prolog->removeSuccessor(Fallthrough);
       for (MachineInstr &P : Fallthrough->phis()) {
-        P.RemoveOperand(2);
-        P.RemoveOperand(1);
+        P.removeOperand(2);
+        P.removeOperand(1);
       }
       TII->insertUnconditionalBranch(*Prolog, Epilog, DebugLoc());
       KernelDisposed = true;
@@ -1939,8 +1940,8 @@ void PeelingModuloScheduleExpander::fixupBranches() {
       // Prolog always falls through; remove incoming values in epilog.
       Prolog->removeSuccessor(Epilog);
       for (MachineInstr &P : Epilog->phis()) {
-        P.RemoveOperand(4);
-        P.RemoveOperand(3);
+        P.removeOperand(4);
+        P.removeOperand(3);
       }
     }
   }

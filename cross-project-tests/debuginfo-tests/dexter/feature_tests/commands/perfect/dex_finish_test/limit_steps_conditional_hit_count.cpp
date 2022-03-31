@@ -5,7 +5,8 @@
 //      given number of times.
 //      Test using the conditional controller (using \DexLimitSteps).
 //
-// REQUIRES: system-linux
+// The dbgeng driver doesn't support \DexLimitSteps yet.
+// UNSUPPORTED: system-windows
 //
 // RUN: %dexter_regression_test -- %s | FileCheck %s
 // CHECK: limit_steps_conditional_hit_count.cpp

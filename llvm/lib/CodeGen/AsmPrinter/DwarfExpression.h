@@ -340,16 +340,17 @@ public:
   /// create one if necessary.
   unsigned getOrCreateBaseType(unsigned BitSize, dwarf::TypeKind Encoding);
 
+  /// Emit all remaining operations in the DIExpressionCursor. The
+  /// cursor must not contain any DW_OP_LLVM_arg operations.
+  void addExpression(DIExpressionCursor &&Expr);
+
   /// Emit all remaining operations in the DIExpressionCursor.
-  ///
-  /// \param FragmentOffsetInBits     If this is one fragment out of multiple
-  ///                                 locations, this is the offset of the
-  ///                                 fragment inside the entire variable.
-  void addExpression(DIExpressionCursor &&Expr,
-                     unsigned FragmentOffsetInBits = 0);
-  void
-  addExpression(DIExpressionCursor &&Expr,
-                llvm::function_ref<bool(unsigned, DIExpressionCursor &)> InsertArg);
+  /// DW_OP_LLVM_arg operations are resolved by calling (\p InsertArg).
+  //
+  /// \return false if any call to (\p InsertArg) returns false.
+  bool addExpression(
+      DIExpressionCursor &&Expr,
+      llvm::function_ref<bool(unsigned, DIExpressionCursor &)> InsertArg);
 
   /// If applicable, emit an empty DW_OP_piece / DW_OP_bit_piece to advance to
   /// the fragment described by \c Expr.

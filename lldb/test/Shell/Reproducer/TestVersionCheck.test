@@ -6,24 +6,12 @@
 # RUN: %clang_host %S/Inputs/simple.c -g -o %t.out
 # RUN: %lldb -x -b -s %S/Inputs/FileCapture.in --capture --capture-path %t.repro %t.out | FileCheck %s --check-prefix CHECK --check-prefix CAPTURE
 
-# Make sure that replay works.
-# RUN: %lldb --replay %t.repro | FileCheck %s --check-prefix CHECK --check-prefix REPLAY
-
 # Change the reproducer version.
 # RUN: echo "bogus" >> %t.repro/version.txt
 
-# Make sure that replay works.
-# RUN: not %lldb --replay %t.repro 2>&1 | FileCheck %s --check-prefix ERROR
-
-# Make sure that we can circumvent the version check with -reproducer-no-version-check.
-# RUN: %lldb --replay %t.repro -reproducer-no-version-check | FileCheck %s --check-prefix CHECK --check-prefix REPLAY
-
 # CAPTURE: testing
-# REPLAY-NOT: testing
 
 # CHECK: Process {{.*}} exited
 
 # CAPTURE: Reproducer is in capture mode.
 # CAPTURE: Reproducer written
-
-# ERROR: error: reproducer replay failed: reproducer capture and replay version don't match

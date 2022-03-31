@@ -10,54 +10,48 @@
 #ifndef _LIBCPP___FORMAT_FORMAT_ARG_H
 #define _LIBCPP___FORMAT_FORMAT_ARG_H
 
+#include <__assert>
 #include <__concepts/arithmetic.h>
 #include <__config>
 #include <__format/format_error.h>
 #include <__format/format_fwd.h>
-#include <__functional_base>
+#include <__format/format_parse_context.h>
+#include <__memory/addressof.h>
+#include <__utility/unreachable.h>
 #include <__variant/monostate.h>
 #include <string>
 #include <string_view>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
-
-_LIBCPP_PUSH_MACROS
-#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER > 17
 
-// TODO FMT Remove this once we require compilers with proper C++20 support.
-// If the compiler has no concepts support, the format header will be disabled.
-// Without concepts support enable_if needs to be used and that too much effort
-// to support compilers with partial C++20 support.
-#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
-
 namespace __format {
-/** The type stored in @ref basic_format_arg. */
+/// The type stored in @ref basic_format_arg.
+///
+/// @note The 128-bit types are unconditionally in the list to avoid the values
+/// of the enums to depend on the availability of 128-bit integers.
 enum class _LIBCPP_ENUM_VIS __arg_t : uint8_t {
   __none,
   __boolean,
   __char_type,
   __int,
   __long_long,
-#ifndef _LIBCPP_HAS_NO_INT128
   __i128,
-#endif
   __unsigned,
   __unsigned_long_long,
-#ifndef _LIBCPP_HAS_NO_INT128
   __u128,
-#endif
   __float,
   __double,
   __long_double,
   __const_char_type_ptr,
   __string_view,
-  __ptr
+  __ptr,
+  __handle
 };
 } // namespace __format
 
@@ -75,18 +69,22 @@ visit_format_arg(_Visitor&& __vis, basic_format_arg<_Context> __arg) {
     return _VSTD::invoke(_VSTD::forward<_Visitor>(__vis), __arg.__int);
   case __format::__arg_t::__long_long:
     return _VSTD::invoke(_VSTD::forward<_Visitor>(__vis), __arg.__long_long);
-#ifndef _LIBCPP_HAS_NO_INT128
   case __format::__arg_t::__i128:
+#ifndef _LIBCPP_HAS_NO_INT128
     return _VSTD::invoke(_VSTD::forward<_Visitor>(__vis), __arg.__i128);
+#else
+    __libcpp_unreachable();
 #endif
   case __format::__arg_t::__unsigned:
     return _VSTD::invoke(_VSTD::forward<_Visitor>(__vis), __arg.__unsigned);
   case __format::__arg_t::__unsigned_long_long:
     return _VSTD::invoke(_VSTD::forward<_Visitor>(__vis),
                          __arg.__unsigned_long_long);
-#ifndef _LIBCPP_HAS_NO_INT128
   case __format::__arg_t::__u128:
+#ifndef _LIBCPP_HAS_NO_INT128
     return _VSTD::invoke(_VSTD::forward<_Visitor>(__vis), __arg.__u128);
+#else
+   __libcpp_unreachable();
 #endif
   case __format::__arg_t::__float:
     return _VSTD::invoke(_VSTD::forward<_Visitor>(__vis), __arg.__float);
@@ -101,15 +99,16 @@ visit_format_arg(_Visitor&& __vis, basic_format_arg<_Context> __arg) {
     return _VSTD::invoke(_VSTD::forward<_Visitor>(__vis), __arg.__string_view);
   case __format::__arg_t::__ptr:
     return _VSTD::invoke(_VSTD::forward<_Visitor>(__vis), __arg.__ptr);
+  case __format::__arg_t::__handle:
+    return _VSTD::invoke(_VSTD::forward<_Visitor>(__vis), __arg.__handle);
   }
-  _LIBCPP_UNREACHABLE();
+  __libcpp_unreachable();
 }
 
 template <class _Context>
 class _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT basic_format_arg {
 public:
-  // TODO FMT Define the handle class.
-  class handle;
+  class _LIBCPP_TEMPLATE_VIS handle;
 
   _LIBCPP_HIDE_FROM_ABI basic_format_arg() noexcept
       : __type_{__format::__arg_t::__none} {}
@@ -133,13 +132,12 @@ private:
   // shall be well-formed when treated as an unevaluated operand.
 
   template <class _Ctx, class... _Args>
-  _LIBCPP_HIDE_FROM_ABI
-      _LIBCPP_AVAILABILITY_FORMAT friend __format_arg_store<_Ctx, _Args...>
-      _VSTD::make_format_args(const _Args&...);
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_FORMAT friend __format_arg_store<_Ctx, _Args...>
+  make_format_args(const _Args&...);
 
   template <class _Visitor, class _Ctx>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_FORMAT friend decltype(auto)
-  _VSTD::visit_format_arg(_Visitor&& __vis, basic_format_arg<_Ctx> __arg);
+  visit_format_arg(_Visitor&& __vis, basic_format_arg<_Ctx> __arg);
 
   union {
     bool __boolean;
@@ -158,7 +156,7 @@ private:
     const char_type* __const_char_type_ptr;
     basic_string_view<char_type> __string_view;
     const void* __ptr;
-    // TODO FMT Add the handle.
+    handle __handle;
   };
   __format::__arg_t __type_;
 
@@ -242,15 +240,41 @@ private:
   explicit basic_format_arg(nullptr_t) noexcept
       : __ptr(nullptr), __type_(__format::__arg_t::__ptr) {}
 
-  // TODO FMT Implement the _Tp* constructor.
+  template <class _Tp>
+  requires is_void_v<_Tp> _LIBCPP_HIDE_FROM_ABI explicit basic_format_arg(_Tp* __p) noexcept
+      : __ptr(__p), __type_(__format::__arg_t::__ptr) {}
+
+  template <class _Tp>
+  _LIBCPP_HIDE_FROM_ABI explicit basic_format_arg(const _Tp& __v) noexcept
+      : __handle(__v), __type_(__format::__arg_t::__handle) {}
 };
 
-#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
+template <class _Context>
+class _LIBCPP_TEMPLATE_VIS basic_format_arg<_Context>::handle {
+  friend class basic_format_arg<_Context>;
+
+public:
+  _LIBCPP_HIDE_FROM_ABI
+  void format(basic_format_parse_context<char_type>& __parse_ctx, _Context& __ctx) const {
+    __format_(__parse_ctx, __ctx, __ptr_);
+  }
+
+private:
+  const void* __ptr_;
+  void (*__format_)(basic_format_parse_context<char_type>&, _Context&, const void*);
+
+  template <class _Tp>
+  _LIBCPP_HIDE_FROM_ABI explicit handle(const _Tp& __v) noexcept
+      : __ptr_(_VSTD::addressof(__v)),
+        __format_([](basic_format_parse_context<char_type>& __parse_ctx, _Context& __ctx, const void* __ptr) {
+          typename _Context::template formatter_type<_Tp> __f;
+          __parse_ctx.advance_to(__f.parse(__parse_ctx));
+          __ctx.advance_to(__f.format(*static_cast<const _Tp*>(__ptr), __ctx));
+        }) {}
+};
 
 #endif //_LIBCPP_STD_VER > 17
 
 _LIBCPP_END_NAMESPACE_STD
-
-_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___FORMAT_FORMAT_ARG_H

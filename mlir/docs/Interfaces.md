@@ -77,8 +77,7 @@ or transformation without the need to determine the specific dialect subclass:
 
 ```c++
 Dialect *dialect = ...;
-if (DialectInlinerInterface *interface
-      = dialect->getRegisteredInterface<DialectInlinerInterface>()) {
+if (DialectInlinerInterface *interface = dyn_cast<DialectInlinerInterface>(dialect)) {
   // The dialect has provided an implementation of this interface.
   ...
 }
@@ -393,6 +392,18 @@ comprised of the following components:
         These declarations are _not_ implicitly visible in default
         implementations of interface methods, but static declarations may be
         accessed with full name qualification.
+*   Extra Shared Class Declarations (Optional: `extraSharedClassDeclaration`)
+    -   Additional C++ code that is injected into the declarations of both the
+        interface and trait class. This allows for defining methods and more
+        that are exposed on both the interface and trait class, e.g. to inject
+        utilties on both the interface and the derived entity implementing the
+        interface (e.g. attribute, operation, etc.).
+    -   In non-static methods, `$_attr`/`$_op`/`$_type`
+        (depending on the type of interface) may be used to refer to an
+        instance of the IR entity. In the interface declaration, the type of
+        the instance is the interface class. In the trait declaration, the
+        type of the instance is the concrete entity class
+        (e.g. `IntegerAttr`, `FuncOp`, etc.).
 
 `OpInterface` classes may additionally contain the following:
 

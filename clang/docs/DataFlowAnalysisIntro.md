@@ -287,7 +287,7 @@ out = transfer(basic_block, join(in_1, in_2, ..., in_n))
 
 (Note that there are other ways to write this equation that produce higher
 precision analysis results. The trick is to keep exploring the execution paths
-separately and delay joining until later. Hoowever, we won't discuss those
+separately and delay joining until later. However, we won't discuss those
 variations here.)
 
 To make a conclusion about all paths through the program, we repeat this

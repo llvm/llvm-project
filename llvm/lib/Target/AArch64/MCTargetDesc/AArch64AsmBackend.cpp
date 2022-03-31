@@ -22,6 +22,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSectionMachO.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -620,7 +621,8 @@ public:
         break;
       }
       case MCCFIInstruction::OpDefCfaOffset: {
-        assert(StackSize == 0 && "We already have the CFA offset!");
+        if (StackSize != 0)
+          return CU::UNWIND_ARM64_MODE_DWARF;
         StackSize = std::abs(Inst.getOffset());
         break;
       }

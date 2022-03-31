@@ -25,6 +25,7 @@ add_lld_library(lldMachO
   OutputSection.cpp
   OutputSegment.cpp
   Relocations.cpp
+  SectionPriorities.cpp
   SymbolTable.cpp
   Symbols.cpp
   SyntheticSections.cpp
@@ -38,6 +39,7 @@ add_lld_library(lldMachO
   BitReader
   Core
   DebugInfoDWARF
+  Demangle
   LTO
   MC
   ObjCARCOpts

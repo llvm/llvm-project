@@ -41,7 +41,7 @@ namespace {
 using DialectFilterIterator =
     llvm::filter_iterator<ArrayRef<llvm::Record *>::iterator,
                           std::function<bool(const llvm::Record *)>>;
-} // end anonymous namespace
+} // namespace
 
 /// Given a set of records for a T, filter the ones that correspond to
 /// the given dialect.
@@ -68,9 +68,10 @@ findSelectedDialect(ArrayRef<const llvm::Record *> dialectDefs) {
     return llvm::None;
   }
 
-  auto dialectIt = llvm::find_if(dialectDefs, [](const llvm::Record *def) {
-    return Dialect(def).getName() == selectedDialect;
-  });
+  const auto *dialectIt =
+      llvm::find_if(dialectDefs, [](const llvm::Record *def) {
+        return Dialect(def).getName() == selectedDialect;
+      });
   if (dialectIt == dialectDefs.end()) {
     llvm::errs() << "selected dialect with '-dialect' does not exist\n";
     return llvm::None;
@@ -184,10 +185,11 @@ static const char *const operationInterfaceFallbackDecl = R"(
 )";
 
 /// Generate the declaration for the given dialect class.
-static void emitDialectDecl(Dialect &dialect,
-                            iterator_range<DialectFilterIterator> dialectAttrs,
-                            iterator_range<DialectFilterIterator> dialectTypes,
-                            raw_ostream &os) {
+static void
+emitDialectDecl(Dialect &dialect,
+                const iterator_range<DialectFilterIterator> &dialectAttrs,
+                const iterator_range<DialectFilterIterator> &dialectTypes,
+                raw_ostream &os) {
   /// Build the list of dependent dialects
   std::string dependentDialectRegistrations;
   {
@@ -208,9 +210,9 @@ static void emitDialectDecl(Dialect &dialect,
 
     // Check for any attributes/types registered to this dialect.  If there are,
     // add the hooks for parsing/printing.
-    if (!dialectAttrs.empty() || dialect.useDefaultAttributePrinterParser())
+    if (!dialectAttrs.empty() && dialect.useDefaultAttributePrinterParser())
       os << attrParserDecl;
-    if (!dialectTypes.empty() || dialect.useDefaultTypePrinterParser())
+    if (!dialectTypes.empty() && dialect.useDefaultTypePrinterParser())
       os << typeParserDecl;
 
     // Add the decls for the various features of the dialect.

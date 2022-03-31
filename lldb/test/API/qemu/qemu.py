@@ -1,6 +1,7 @@
 import argparse
 import socket
 import json
+import os
 import sys
 
 import use_lldb_suite
@@ -35,8 +36,10 @@ class MyResponder(MockGDBServerResponder):
                     json.dump(self._state, f)
             elif action == "stdout":
                 sys.stdout.write(data)
+                sys.stdout.flush()
             elif action == "stderr":
                 sys.stderr.write(data)
+                sys.stderr.flush()
             elif action == "stdin":
                 self._state[data] = sys.stdin.readline()
             else:
@@ -53,11 +56,15 @@ def main():
     parser = argparse.ArgumentParser(description=_description,
             formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('-g', metavar="unix-socket", required=True)
+    parser.add_argument('-0', metavar="arg0")
+    parser.add_argument('-fake-arg', dest="fake-arg")
     parser.add_argument('program', help="The program to 'emulate'.")
     parser.add_argument("args", nargs=argparse.REMAINDER)
     args = parser.parse_args()
 
-    emulator = FakeEmulator(args.g, vars(args))
+    state = vars(args)
+    state["environ"] = dict(os.environ)
+    emulator = FakeEmulator(args.g, state)
     emulator.run()
 
 if __name__ == "__main__":

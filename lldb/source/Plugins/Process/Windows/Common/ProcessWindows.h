@@ -71,6 +71,8 @@ public:
                           ThreadList &new_thread_list) override;
   bool IsAlive() override;
 
+  ArchSpec GetSystemArchitecture() override;
+
   size_t DoReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
                       Status &error) override;
   size_t DoWriteMemory(lldb::addr_t vm_addr, const void *buf, size_t size,
@@ -78,8 +80,6 @@ public:
   lldb::addr_t DoAllocateMemory(size_t size, uint32_t permissions,
                                 Status &error) override;
   Status DoDeallocateMemory(lldb::addr_t ptr) override;
-  Status GetMemoryRegionInfo(lldb::addr_t vm_addr,
-                             MemoryRegionInfo &info) override;
 
   lldb::addr_t GetImageInfoAddress() override;
 
@@ -102,6 +102,10 @@ public:
   Status GetWatchpointSupportInfo(uint32_t &num, bool &after) override;
   Status EnableWatchpoint(Watchpoint *wp, bool notify = true) override;
   Status DisableWatchpoint(Watchpoint *wp, bool notify = true) override;
+
+protected:
+  Status DoGetMemoryRegionInfo(lldb::addr_t vm_addr,
+                               MemoryRegionInfo &info) override;
 
 private:
   struct WatchpointInfo {

@@ -10,7 +10,7 @@
 /// This file defines the GCNRegPressure class, which tracks registry pressure
 /// by bookkeeping number of SGPR/VGPRs used, weights for large SGPR/VGPRs. It
 /// also implements a compare function, which compares different register
-/// pressures, and declares one with max occupance as winner.
+/// pressures, and declares one with max occupancy as winner.
 ///
 //===----------------------------------------------------------------------===//
 

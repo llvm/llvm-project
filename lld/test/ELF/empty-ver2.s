@@ -12,7 +12,7 @@
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Version: 1
-# CHECK-NEXT:     Name: bar@
+# CHECK-NEXT:     Name: bar{{$}}
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 

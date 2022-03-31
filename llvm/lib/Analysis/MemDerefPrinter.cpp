@@ -9,14 +9,11 @@
 #include "llvm/Analysis/MemDerefPrinter.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/Passes.h"
-#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -59,8 +56,8 @@ bool MemDerefPrinter::runOnFunction(Function &F) {
       Value *PO = LI->getPointerOperand();
       if (isDereferenceablePointer(PO, LI->getType(), DL))
         Deref.push_back(PO);
-      if (isDereferenceableAndAlignedPointer(
-              PO, LI->getType(), MaybeAlign(LI->getAlignment()), DL))
+      if (isDereferenceableAndAlignedPointer(PO, LI->getType(), LI->getAlign(),
+                                             DL))
         DerefAndAligned.insert(PO);
     }
   }
@@ -94,8 +91,8 @@ PreservedAnalyses MemDerefPrinterPass::run(Function &F,
       Value *PO = LI->getPointerOperand();
       if (isDereferenceablePointer(PO, LI->getType(), DL))
         Deref.push_back(PO);
-      if (isDereferenceableAndAlignedPointer(
-              PO, LI->getType(), MaybeAlign(LI->getAlignment()), DL))
+      if (isDereferenceableAndAlignedPointer(PO, LI->getType(), LI->getAlign(),
+                                             DL))
         DerefAndAligned.insert(PO);
     }
   }

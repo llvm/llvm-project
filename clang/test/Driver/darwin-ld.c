@@ -236,6 +236,9 @@
 // RUN: %clang -target x86_64-apple-darwin12 -rdynamic -### %t.o \
 // RUN:   -fuse-ld= -mlinker-version=137 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_EXPORT_DYNAMIC %s < %t.log
+// RUN: %clang -target x86_64-apple-darwin12 -rdynamic -### %t.o \
+// RUN:   -fuse-ld=lld -B%S/Inputs/lld -mlinker-version=100 2> %t.log
+// RUN: FileCheck -check-prefix=LINK_EXPORT_DYNAMIC %s < %t.log
 // LINK_EXPORT_DYNAMIC: {{ld(.exe)?"}}
 // LINK_EXPORT_DYNAMIC: "-export_dynamic"
 
@@ -311,7 +314,7 @@
 // LINK_VERSION_DIGITS-NOT: invalid version number in '-mlinker-version=133.3'
 // LINK_VERSION_DIGITS-NOT: invalid version number in '-mlinker-version=133.3.0'
 // LINK_VERSION_DIGITS-NOT: invalid version number in '-mlinker-version=133.3.0.1'
-// LINK_VERSION_DIGITS-NOT: invalid version number in '-mlinker-version=133.3.0.1.2'
+// LINK_VERSION_DIGITS: invalid version number in '-mlinker-version=133.3.0.1.2'
 // LINK_VERSION_DIGITS: invalid version number in '-mlinker-version=133.3.0.1.2.6'
 // LINK_VERSION_DIGITS: invalid version number in '-mlinker-version=133.3.0.1.a'
 // LINK_VERSION_DIGITS: invalid version number in '-mlinker-version=133.3.0.1a'

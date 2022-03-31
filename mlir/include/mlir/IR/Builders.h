@@ -53,8 +53,6 @@ public:
 
   MLIRContext *getContext() const { return context; }
 
-  StringAttr getIdentifier(const Twine &str);
-
   // Locations.
   Location getUnknownLoc();
   Location getFusedLoc(ArrayRef<Location> locs,
@@ -386,15 +384,18 @@ public:
 
   /// Add new block with 'argTypes' arguments and set the insertion point to the
   /// end of it. The block is inserted at the provided insertion point of
-  /// 'parent'.
+  /// 'parent'. `locs` contains the locations of the inserted arguments, and
+  /// should match the size of `argTypes`.
   Block *createBlock(Region *parent, Region::iterator insertPt = {},
                      TypeRange argTypes = llvm::None,
-                     ArrayRef<Location> locs = {});
+                     ArrayRef<Location> locs = llvm::None);
 
   /// Add new block with 'argTypes' arguments and set the insertion point to the
-  /// end of it. The block is placed before 'insertBefore'.
+  /// end of it. The block is placed before 'insertBefore'. `locs` contains the
+  /// locations of the inserted arguments, and should match the size of
+  /// `argTypes`.
   Block *createBlock(Block *insertBefore, TypeRange argTypes = llvm::None,
-                     ArrayRef<Location> locs = {});
+                     ArrayRef<Location> locs = llvm::None);
 
   //===--------------------------------------------------------------------===//
   // Operation Creation
@@ -404,28 +405,39 @@ public:
   Operation *insert(Operation *op);
 
   /// Creates an operation given the fields represented as an OperationState.
-  Operation *createOperation(const OperationState &state);
+  Operation *create(const OperationState &state);
+
+  /// Creates an operation with the given fields.
+  Operation *create(Location loc, StringAttr opName, ValueRange operands,
+                    TypeRange types, ArrayRef<NamedAttribute> attributes = {},
+                    BlockRange successors = {},
+                    MutableArrayRef<std::unique_ptr<Region>> regions = {});
 
 private:
   /// Helper for sanity checking preconditions for create* methods below.
-  void checkHasRegisteredInfo(const OperationName &name) {
-    if (LLVM_UNLIKELY(!name.isRegistered()))
+  template <typename OpT>
+  RegisteredOperationName getCheckRegisteredInfo(MLIRContext *ctx) {
+    Optional<RegisteredOperationName> opName =
+        RegisteredOperationName::lookup(OpT::getOperationName(), ctx);
+    if (LLVM_UNLIKELY(!opName)) {
       llvm::report_fatal_error(
-          "Building op `" + name.getStringRef() +
+          "Building op `" + OpT::getOperationName() +
           "` but it isn't registered in this MLIRContext: the dialect may not "
           "be loaded or this operation isn't registered by the dialect. See "
           "also https://mlir.llvm.org/getting_started/Faq/"
           "#registered-loaded-dependent-whats-up-with-dialects-management");
+    }
+    return *opName;
   }
 
 public:
   /// Create an operation of specific op type at the current insertion point.
   template <typename OpTy, typename... Args>
   OpTy create(Location location, Args &&...args) {
-    OperationState state(location, OpTy::getOperationName());
-    checkHasRegisteredInfo(state.name);
+    OperationState state(location,
+                         getCheckRegisteredInfo<OpTy>(location.getContext()));
     OpTy::build(*this, state, std::forward<Args>(args)...);
-    auto *op = createOperation(state);
+    auto *op = create(state);
     auto result = dyn_cast<OpTy>(op);
     assert(result && "builder didn't return the right type");
     return result;
@@ -437,10 +449,10 @@ public:
   template <typename OpTy, typename... Args>
   void createOrFold(SmallVectorImpl<Value> &results, Location location,
                     Args &&...args) {
-    // Create the operation without using 'createOperation' as we don't want to
+    // Create the operation without using 'create' as we don't want to
     // insert it yet.
-    OperationState state(location, OpTy::getOperationName());
-    checkHasRegisteredInfo(state.name);
+    OperationState state(location,
+                         getCheckRegisteredInfo<OpTy>(location.getContext()));
     OpTy::build(*this, state, std::forward<Args>(args)...);
     Operation *op = Operation::create(state);
 

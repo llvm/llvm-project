@@ -23,11 +23,6 @@
 #include <ciso646>
 #endif
 
-#if defined(__GNUC__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wvariadic-macros"
-#endif
-
 #define TEST_STRINGIZE_IMPL(x) #x
 #define TEST_STRINGIZE(x) TEST_STRINGIZE_IMPL(x)
 
@@ -77,7 +72,7 @@
 #  define TEST_COMPILER_APPLE_CLANG
 # endif
 #elif defined(_MSC_VER)
-# define TEST_COMPILER_C1XX
+# define TEST_COMPILER_MSVC
 #elif defined(__GNUC__)
 # define TEST_COMPILER_GCC
 #endif
@@ -147,7 +142,7 @@
 
 #if defined(__cpp_lib_is_constant_evaluated) && __cpp_lib_is_constant_evaluated >= 201811L
 # define TEST_IS_CONSTANT_EVALUATED std::is_constant_evaluated()
-#elif __has_builtin(__builtin_is_constant_evaluated)
+#elif TEST_HAS_BUILTIN(__builtin_is_constant_evaluated)
 # define TEST_IS_CONSTANT_EVALUATED __builtin_is_constant_evaluated()
 #else
 # define TEST_IS_CONSTANT_EVALUATED false
@@ -206,10 +201,12 @@
 #define TEST_HAS_NO_ALIGNED_ALLOCATION
 #endif
 
-#if defined(_LIBCPP_SAFE_STATIC)
-#define TEST_SAFE_STATIC _LIBCPP_SAFE_STATIC
+#if TEST_STD_VER > 17
+#define TEST_CONSTINIT constinit
+#elif defined(_LIBCPP_CONSTINIT)
+#define TEST_CONSTINIT _LIBCPP_CONSTINIT
 #else
-#define TEST_SAFE_STATIC
+#define TEST_CONSTINIT
 #endif
 
 #if !defined(__cpp_impl_three_way_comparison) \
@@ -236,15 +233,11 @@
 #define LIBCPP_ASSERT_NOT_NOEXCEPT(...) ASSERT_NOT_NOEXCEPT(__VA_ARGS__)
 #define LIBCPP_ONLY(...) __VA_ARGS__
 #else
-#define LIBCPP_ASSERT(...) ((void)0)
-#define LIBCPP_STATIC_ASSERT(...) ((void)0)
-#define LIBCPP_ASSERT_NOEXCEPT(...) ((void)0)
-#define LIBCPP_ASSERT_NOT_NOEXCEPT(...) ((void)0)
-#define LIBCPP_ONLY(...) ((void)0)
-#endif
-
-#if !defined(_LIBCPP_HAS_NO_RANGES)
-#define TEST_SUPPORTS_RANGES
+#define LIBCPP_ASSERT(...) static_assert(true, "")
+#define LIBCPP_STATIC_ASSERT(...) static_assert(true, "")
+#define LIBCPP_ASSERT_NOEXCEPT(...) static_assert(true, "")
+#define LIBCPP_ASSERT_NOT_NOEXCEPT(...) static_assert(true, "")
+#define LIBCPP_ONLY(...) static_assert(true, "")
 #endif
 
 #define TEST_IGNORE_NODISCARD (void)
@@ -314,7 +307,7 @@ inline void DoNotOptimize(Tp const& value) {
 #endif
 
 #if (defined(_WIN32) && !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)) ||   \
-    defined(__MVS__)
+    defined(__MVS__) || defined(_AIX)
 // Macros for waiving cases when we can't count allocations done within
 // the library implementation.
 //
@@ -324,6 +317,7 @@ inline void DoNotOptimize(Tp const& value) {
 // calls within the library.
 //
 // The same goes on IBM zOS.
+// The same goes on AIX.
 #define ASSERT_WITH_LIBRARY_INTERNAL_ALLOCATIONS(...) ((void)(__VA_ARGS__))
 #define TEST_SUPPORTS_LIBRARY_INTERNAL_ALLOCATIONS 0
 #else
@@ -361,8 +355,64 @@ inline void DoNotOptimize(Tp const& value) {
 #   define TEST_HAS_NO_WIDE_CHARACTERS
 #endif
 
-#if defined(__GNUC__)
-#pragma GCC diagnostic pop
+#if defined(_LIBCPP_HAS_NO_UNICODE)
+#   define TEST_HAS_NO_UNICODE
+#elif defined(_MSVC_EXECUTION_CHARACTER_SET) && _MSVC_EXECUTION_CHARACTER_SET != 65001
+#   define TEST_HAS_NO_UNICODE
+#endif
+
+#if defined(_LIBCPP_HAS_NO_INT128) || defined(_MSVC_STL_VERSION)
+#   define TEST_HAS_NO_INT128
+#endif
+
+#if defined(_LIBCPP_HAS_NO_UNICODE_CHARS)
+#   define TEST_HAS_NO_UNICODE_CHARS
+#endif
+
+#if defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#  define TEST_HAS_NO_LOCALIZATION
+#endif
+
+#if TEST_STD_VER <= 17 || !defined(__cpp_char8_t)
+#  define TEST_HAS_NO_CHAR8_T
+#endif
+
+#if defined(_LIBCPP_HAS_NO_THREADS)
+#  define TEST_HAS_NO_THREADS
+#endif
+
+#if defined(_LIBCPP_HAS_NO_FILESYSTEM_LIBRARY)
+#  define TEST_HAS_NO_FILESYSTEM_LIBRARY
+#endif
+
+#if defined(_LIBCPP_HAS_NO_FGETPOS_FSETPOS)
+#  define TEST_HAS_NO_FGETPOS_FSETPOS
+#endif
+
+#if defined(TEST_COMPILER_CLANG)
+#  define TEST_DIAGNOSTIC_PUSH _Pragma("clang diagnostic push")
+#  define TEST_DIAGNOSTIC_POP _Pragma("clang diagnostic pop")
+#  define TEST_CLANG_DIAGNOSTIC_IGNORED(str) _Pragma(TEST_STRINGIZE(clang diagnostic ignored str))
+#  define TEST_GCC_DIAGNOSTIC_IGNORED(str)
+#  define TEST_MSVC_DIAGNOSTIC_IGNORED(num)
+#elif defined(TEST_COMPILER_GCC)
+#  define TEST_DIAGNOSTIC_PUSH _Pragma("GCC diagnostic push")
+#  define TEST_DIAGNOSTIC_POP _Pragma("GCC diagnostic pop")
+#  define TEST_CLANG_DIAGNOSTIC_IGNORED(str)
+#  define TEST_GCC_DIAGNOSTIC_IGNORED(str) _Pragma(TEST_STRINGIZE(GCC diagnostic ignored str))
+#  define TEST_MSVC_DIAGNOSTIC_IGNORED(num)
+#elif defined(TEST_COMPILER_MSVC)
+#  define TEST_DIAGNOSTIC_PUSH _Pragma("warning(push)")
+#  define TEST_DIAGNOSTIC_POP _Pragma("warning(pop)")
+#  define TEST_CLANG_DIAGNOSTIC_IGNORED(str)
+#  define TEST_GCC_DIAGNOSTIC_IGNORED(str)
+#  define TEST_MSVC_DIAGNOSTIC_IGNORED(num) _Pragma(TEST_STRINGIZE(warning(disable: num)))
+#else
+#  define TEST_DIAGNOSTIC_PUSH
+#  define TEST_DIAGNOSTIC_POP
+#  define TEST_CLANG_DIAGNOSTIC_IGNORED(str)
+#  define TEST_GCC_DIAGNOSTIC_IGNORED(str)
+#  define TEST_MSVC_DIAGNOSTIC_IGNORED(num)
 #endif
 
 #endif // SUPPORT_TEST_MACROS_HPP

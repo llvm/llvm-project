@@ -18,6 +18,7 @@ if (MLIR_ENABLE_SPIRV_CPU_RUNNER)
     MLIRAnalysis
     MLIRArithmetic
     MLIRExecutionEngine
+    MLIRFunc
     MLIRGPUOps
     MLIRIR
     MLIRJitRunner
@@ -26,10 +27,9 @@ if (MLIR_ENABLE_SPIRV_CPU_RUNNER)
     MLIRMemRef
     MLIRParser
     MLIRSPIRV
-    MLIRStandard
     MLIRTargetLLVMIRExport
     MLIRTransforms
-    MLIRTranslation
+    MLIRTranslateLib
     MLIRSupport
   )
 endif()

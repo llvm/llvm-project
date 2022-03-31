@@ -9,9 +9,6 @@
 // NetBSD does not support LC_TIME at the moment
 // XFAIL: netbsd
 
-// XFAIL: LIBCXX-WINDOWS-FIXME
-// XFAIL: LIBCXX-AIX-FIXME
-
 // REQUIRES: locale.en_US.UTF-8
 // REQUIRES: locale.fr_FR.UTF-8
 
@@ -29,9 +26,6 @@
 //     ~time_put_byname();
 // };
 
-// TODO: investigation needed
-// XFAIL: target={{.*}}-linux-gnu{{.*}}
-
 #include <locale>
 #include <cassert>
 #include "test_macros.h"
@@ -39,7 +33,7 @@
 
 #include "platform_support.h" // locale name macros
 
-typedef std::time_put_byname<char, output_iterator<char*> > F;
+typedef std::time_put_byname<char, cpp17_output_iterator<char*> > F;
 
 class my_facet
     : public F
@@ -52,7 +46,6 @@ public:
 int main(int, char**)
 {
     char str[200];
-    output_iterator<char*> iter;
     tm t;
     t.tm_sec = 6;
     t.tm_min = 3;
@@ -67,19 +60,20 @@ int main(int, char**)
     {
         const my_facet f(LOCALE_en_US_UTF_8, 1);
         std::string pat("Today is %A which is abbreviated %a.");
-        iter = f.put(output_iterator<char*>(str), ios, '*', &t,
-                     pat.data(), pat.data() + pat.size());
-        std::string ex(str, iter.base());
+        cpp17_output_iterator<char*> iter =
+            f.put(cpp17_output_iterator<char*>(str), ios, '*', &t, pat.data(), pat.data() + pat.size());
+        std::string ex(str, base(iter));
         assert(ex == "Today is Saturday which is abbreviated Sat.");
     }
     {
         const my_facet f(LOCALE_fr_FR_UTF_8, 1);
-        std::string pat("Today is %A which is abbreviated %a.");
-        iter = f.put(output_iterator<char*>(str), ios, '*', &t,
-                     pat.data(), pat.data() + pat.size());
-        std::string ex(str, iter.base());
-        assert((ex == "Today is Samedi which is abbreviated Sam.")||
-               (ex == "Today is samedi which is abbreviated sam." ));
+        std::string pat("Today is %A which is abbreviated '%a'.");
+        cpp17_output_iterator<char*> iter =
+            f.put(cpp17_output_iterator<char*>(str), ios, '*', &t, pat.data(), pat.data() + pat.size());
+        std::string ex(str, base(iter));
+        assert((ex == "Today is Samedi which is abbreviated 'Sam'.")||
+               (ex == "Today is samedi which is abbreviated 'sam'." )||
+               (ex == "Today is samedi which is abbreviated 'sam.'."));
     }
 
   return 0;

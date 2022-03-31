@@ -97,7 +97,7 @@ class RegSeqNames<int last_reg, int stride, int size, string prefix,
                     []);
 }
 
-// Generates list of dags for register tupless.
+// Generates list of dags for register tuples.
 class RegSeqDags<RegisterClass RC, int last_reg, int stride, int size,
                 int start = 0> {
   dag trunc_rc = (trunc RC,
@@ -189,7 +189,7 @@ def PC_REG : SIReg<"pc", 0>, DwarfRegNum<[16, 16]> {
 def VCC : RegisterWithSubRegs<"vcc", [VCC_LO, VCC_HI]> {
   let Namespace = "AMDGPU";
   let SubRegIndices = [sub0, sub1];
-  let HWEncoding = 106;
+  let HWEncoding = VCC_LO.HWEncoding;
 }
 
 defm EXEC_LO : SIRegLoHi16<"exec_lo", 126>, DwarfRegNum<[1, 1]>;
@@ -198,7 +198,7 @@ defm EXEC_HI : SIRegLoHi16<"exec_hi", 127>;
 def EXEC : RegisterWithSubRegs<"exec", [EXEC_LO, EXEC_HI]>, DwarfRegNum<[17, 1]> {
   let Namespace = "AMDGPU";
   let SubRegIndices = [sub0, sub1];
-  let HWEncoding = 126;
+  let HWEncoding = EXEC_LO.HWEncoding;
 }
 
 // 32-bit real registers, for MC only.
@@ -237,7 +237,7 @@ def XNACK_MASK :
     RegisterWithSubRegs<"xnack_mask", [XNACK_MASK_LO, XNACK_MASK_HI]> {
   let Namespace = "AMDGPU";
   let SubRegIndices = [sub0, sub1];
-  let HWEncoding = 104;
+  let HWEncoding = XNACK_MASK_LO.HWEncoding;
 }
 
 // Trap handler registers
@@ -247,7 +247,7 @@ defm TBA_HI : SIRegLoHi16<"tba_hi", 109>;
 def TBA : RegisterWithSubRegs<"tba", [TBA_LO, TBA_HI]> {
   let Namespace = "AMDGPU";
   let SubRegIndices = [sub0, sub1];
-  let HWEncoding = 108;
+  let HWEncoding = TBA_LO.HWEncoding;
 }
 
 defm TMA_LO : SIRegLoHi16<"tma_lo", 110>;
@@ -256,7 +256,7 @@ defm TMA_HI : SIRegLoHi16<"tma_hi", 111>;
 def TMA : RegisterWithSubRegs<"tma", [TMA_LO, TMA_HI]> {
   let Namespace = "AMDGPU";
   let SubRegIndices = [sub0, sub1];
-  let HWEncoding = 110;
+  let HWEncoding = TMA_LO.HWEncoding;
 }
 
 foreach Index = 0...15 in {
@@ -617,7 +617,7 @@ def Pseudo_SReg_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16
   let HasSGPR = 1;
 }
 
-def Pseudo_SReg_128 : SIRegisterClass<"AMDGPU", [v4i32, v2i64, v2f64], 32,
+def Pseudo_SReg_128 : SIRegisterClass<"AMDGPU", [v4i32, v2i64, v2f64, v8i16, v8f16], 32,
   (add PRIVATE_RSRC_REG)> {
   let isAllocatable = 0;
   let CopyCost = -1;
@@ -701,23 +701,6 @@ def SGPR_64 : SIRegisterClass<"AMDGPU", [v2i32, i64, v2f32, f64, v4i16, v4f16], 
   let HasSGPR = 1;
 }
 
-// CCR (call clobbered registers) SGPR 64-bit registers
-def CCR_SGPR_64 : SIRegisterClass<"AMDGPU", SGPR_64.RegTypes, 32,
-                                (add (trunc SGPR_64, 16))> {
-  let CopyCost = SGPR_64.CopyCost;
-  let AllocationPriority = SGPR_64.AllocationPriority;
-  let HasSGPR = 1;
-}
-
-// Call clobbered 64-bit SGPRs for AMDGPU_Gfx CC
-def Gfx_CCR_SGPR_64 : SIRegisterClass<"AMDGPU", SGPR_64.RegTypes, 32,
-                                (add (trunc (shl SGPR_64, 15), 1), // s[30:31]
-                                     (trunc (shl SGPR_64, 18), 14))> { // s[36:37]-s[s62:63]
-  let CopyCost = SGPR_64.CopyCost;
-  let AllocationPriority = SGPR_64.AllocationPriority;
-  let HasSGPR = 1;
-}
-
 def TTMP_64 : SIRegisterClass<"AMDGPU", [v2i32, i64, f64, v4i16, v4f16], 32,
                             (add TTMP_64Regs)> {
   let isAllocatable = 0;
@@ -784,7 +767,7 @@ multiclass SRegClass<int numRegs, int priority,
 }
 
 defm "" : SRegClass<3, 14, [v3i32, v3f32], SGPR_96Regs, TTMP_96Regs>;
-defm "" : SRegClass<4, 15, [v4i32, v4f32, v2i64], SGPR_128Regs, TTMP_128Regs>;
+defm "" : SRegClass<4, 15, [v4i32, v4f32, v2i64, v2f64, v8i16, v8f16], SGPR_128Regs, TTMP_128Regs>;
 defm "" : SRegClass<5, 16, [v5i32, v5f32], SGPR_160Regs, TTMP_160Regs>;
 defm "" : SRegClass<6, 17, [v6i32, v6f32, v3i64, v3f64], SGPR_192Regs, TTMP_192Regs>;
 defm "" : SRegClass<7, 18, [v7i32, v7f32], SGPR_224Regs, TTMP_224Regs>;
@@ -824,7 +807,7 @@ multiclass VRegClass<int numRegs, list<ValueType> regTypes, dag regList> {
 defm VReg_64 : VRegClass<2, [i64, f64, v2i32, v2f32, v4f16, v4i16, p0, p1, p4],
                                 (add VGPR_64)>;
 defm VReg_96 : VRegClass<3, [v3i32, v3f32], (add VGPR_96)>;
-defm VReg_128 : VRegClass<4, [v4i32, v4f32, v2i64, v2f64], (add VGPR_128)>;
+defm VReg_128 : VRegClass<4, [v4i32, v4f32, v2i64, v2f64, v8i16, v8f16], (add VGPR_128)>;
 defm VReg_160 : VRegClass<5, [v5i32, v5f32], (add VGPR_160)>;
 
 defm VReg_192 : VRegClass<6, [v6i32, v6f32, v3i64, v3f64], (add VGPR_192)>;
@@ -846,7 +829,7 @@ multiclass ARegClass<int numRegs, list<ValueType> regTypes, dag regList> {
 defm AReg_64 : ARegClass<2, [i64, f64, v2i32, v2f32, v4f16, v4i16],
                         (add AGPR_64)>;
 defm AReg_96 : ARegClass<3, [v3i32, v3f32], (add AGPR_96)>;
-defm AReg_128 : ARegClass<4, [v4i32, v4f32, v2i64, v2f64], (add AGPR_128)>;
+defm AReg_128 : ARegClass<4, [v4i32, v4f32, v2i64, v2f64, v8i16, v8f16], (add AGPR_128)>;
 defm AReg_160 : ARegClass<5, [v5i32, v5f32], (add AGPR_160)>;
 defm AReg_192 : ARegClass<6, [v6i32, v6f32, v3i64, v3f64], (add AGPR_192)>;
 defm AReg_224 : ARegClass<7, [v7i32, v7f32], (add AGPR_224)>;
@@ -856,21 +839,12 @@ defm AReg_1024 : ARegClass<32, [v32i32, v32f32, v16i64, v16f64], (add AGPR_1024)
 
 } // End GeneratePressureSet = 0
 
-// This is not a real register. This is just to have a register to add
-// to VReg_1 that does not alias any real register that would
-// introduce inferred register classes.
-def ARTIFICIAL_VGPR : SIReg <"invalid vgpr", 0> {
-  let isArtificial = 1;
-}
-
 let GeneratePressureSet = 0 in {
-// FIXME: Should specify an empty set for this. No register should
-// ever be allocated using VReg_1. This is a hack for SelectionDAG
-// that should always be lowered by SILowerI1Copies. TableGen crashes
-// on an empty register set, but also sorts register classes based on
-// the number of registerss in them. Add only one register so this is
+// No register should ever be allocated using VReg_1. This is a hack for
+// SelectionDAG that should always be lowered by SILowerI1Copies.  TableGen
+// sorts register classes based on the number of registers in them so this is
 // sorted to the end and not preferred over VGPR_32.
-def VReg_1 : SIRegisterClass<"AMDGPU", [i1], 32, (add ARTIFICIAL_VGPR)> {
+def VReg_1 : SIRegisterClass<"AMDGPU", [i1], 32, (add)> {
   let Size = 1;
   let HasVGPR = 1;
 }
@@ -913,11 +887,11 @@ defm AV_64 : AVRegClass<2, VReg_64.RegTypes, (add VGPR_64), (add AGPR_64)>;
 defm AV_96 : AVRegClass<3, VReg_96.RegTypes, (add VGPR_96), (add AGPR_96)>;
 defm AV_128 : AVRegClass<4, VReg_128.RegTypes, (add VGPR_128), (add AGPR_128)>;
 defm AV_160 : AVRegClass<5, VReg_160.RegTypes, (add VGPR_160), (add AGPR_160)>;
-defm AV_192 : AVRegClass<6, VReg_160.RegTypes, (add VGPR_192), (add AGPR_192)>;
-defm AV_224 : AVRegClass<7, VReg_160.RegTypes, (add VGPR_224), (add AGPR_224)>;
-defm AV_256 : AVRegClass<8, VReg_160.RegTypes, (add VGPR_256), (add AGPR_256)>;
-defm AV_512 : AVRegClass<16, VReg_160.RegTypes, (add VGPR_512), (add AGPR_512)>;
-defm AV_1024 : AVRegClass<32, VReg_160.RegTypes, (add VGPR_1024), (add AGPR_1024)>;
+defm AV_192 : AVRegClass<6, VReg_192.RegTypes, (add VGPR_192), (add AGPR_192)>;
+defm AV_224 : AVRegClass<7, VReg_224.RegTypes, (add VGPR_224), (add AGPR_224)>;
+defm AV_256 : AVRegClass<8, VReg_256.RegTypes, (add VGPR_256), (add AGPR_256)>;
+defm AV_512 : AVRegClass<16, VReg_512.RegTypes, (add VGPR_512), (add AGPR_512)>;
+defm AV_1024 : AVRegClass<32, VReg_1024.RegTypes, (add VGPR_1024), (add AGPR_1024)>;
 
 //===----------------------------------------------------------------------===//
 //  Register operands
@@ -1126,6 +1100,16 @@ def AVSrc_32 : RegisterOperand<AV_32> {
 
 def AVSrc_64 : RegisterOperand<AV_64> {
   let DecoderMethod = "DecodeAV_64RegisterClass";
+  let EncoderMethod = "getAVOperandEncoding";
+}
+
+def AVSrc_128 : RegisterOperand<AV_128> {
+  let DecoderMethod = "DecodeAV_128RegisterClass";
+  let EncoderMethod = "getAVOperandEncoding";
+}
+
+def AVSrc_512 : RegisterOperand<AV_512> {
+  let DecoderMethod = "DecodeAV_512RegisterClass";
   let EncoderMethod = "getAVOperandEncoding";
 }
 

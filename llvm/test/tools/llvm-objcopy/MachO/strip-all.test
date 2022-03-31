@@ -24,23 +24,23 @@
 ## "llvm-strip --strip-all" and "llvm-objcopy --strip-all".
 # RUN: llvm-strip %t.exec -o %t2
 # RUN: llvm-strip --strip-all %t.exec -o %t3
-# cmp %t2 %t.exec.stripped
-# cmp %t3 %t.exec.stripped
+# RUN: cmp %t2 %t.exec.stripped
+# RUN: cmp %t3 %t.exec.stripped
 
 # RUN: llvm-strip %t.dwarf -o %t4
 # RUN: llvm-strip --strip-all %t.dwarf -o %t5
-# cmp %t4 %t.dwarf.stripped
-# cmp %t5 %t.dwarf.stripped
+# RUN: cmp %t4 %t.dwarf.stripped
+# RUN: cmp %t5 %t.dwarf.stripped
 
 # RUN: llvm-lipo %t.dwarf -create -output %t.dwarf.universal
 # RUN: llvm-strip %t.dwarf.universal -o %t.dwarf.universal.stripped
 # RUN: llvm-lipo %t.dwarf.universal.stripped -thin x86_64 -output %t6
 # RUN: cmp %t6 %t.dwarf.stripped
 
-# RUN: llvm-strip %t.exec -o %t7
-# RUN: llvm-strip --strip-all %t.exec -o %t8
-# cmp %t7 %t.fixups.stripped
-# cmp %t8 %t.fixups.stripped
+# RUN: llvm-strip %t.fixups -o %t7
+# RUN: llvm-strip --strip-all %t.fixups -o %t8
+# RUN: cmp %t7 %t.fixups.stripped
+# RUN: cmp %t8 %t.fixups.stripped
 
 ## Make sure that debug sections are removed.
 # DWARF:       Sections [

@@ -2,7 +2,7 @@
 # RUN: llvm-mc -triple=x86_64-apple-macosx10.9 -filetype=obj -o %t/macho_reloc.o %s
 # RUN: llvm-jitlink -noexec \
 # RUN:    -slab-allocate 100Kb -slab-address 0xfff00000 -slab-page-size 4096 \
-# RUN:    -define-abs external_data=0x1 -define-abs external_func=0x2 \
+# RUN:    -abs external_data=0x1 -abs external_func=0x2 \
 # RUN:    -check=%s %t/macho_reloc.o
 #
 # Test standard MachO relocations. Simulates slab allocation in the top 1Mb of

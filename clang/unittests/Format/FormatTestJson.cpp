@@ -27,17 +27,15 @@ protected:
 
     // Mock up what ClangFormat.cpp will do for JSON by adding a variable
     // to trick JSON into being JavaScript
-    if (Style.isJson()) {
+    if (Style.isJson() && !Style.DisableFormat) {
       auto Err = Replaces.add(
           tooling::Replacement(tooling::Replacement("", 0, 0, "x = ")));
-      if (Err) {
+      if (Err)
         llvm::errs() << "Bad Json variable insertion\n";
-      }
     }
     auto ChangedCode = applyAllReplacements(Code, Replaces);
-    if (!ChangedCode) {
+    if (!ChangedCode)
       llvm::errs() << "Bad Json varibale replacement\n";
-    }
     StringRef NewCode = *ChangedCode;
 
     std::vector<tooling::Range> Ranges(1, tooling::Range(0, NewCode.size()));
@@ -60,10 +58,15 @@ protected:
     return Style;
   }
 
+  static void verifyFormatStable(llvm::StringRef Code,
+                                 const FormatStyle &Style) {
+    EXPECT_EQ(Code.str(), format(Code, Style)) << "Expected code is not stable";
+  }
+
   static void
   verifyFormat(llvm::StringRef Code,
                const FormatStyle &Style = getLLVMStyle(FormatStyle::LK_Json)) {
-    EXPECT_EQ(Code.str(), format(Code, Style)) << "Expected code is not stable";
+    verifyFormatStable(Code, Style);
     EXPECT_EQ(Code.str(), format(test::messUp(Code), Style));
   }
 };
@@ -191,6 +194,25 @@ TEST_F(FormatTestJson, JsonNoStringSplit) {
                "    {}\n"
                "]",
                Style);
+}
+
+TEST_F(FormatTestJson, DisableJsonFormat) {
+  FormatStyle Style = getLLVMStyle(FormatStyle::LK_Json);
+  verifyFormatStable("{}", Style);
+  verifyFormatStable("{\n"
+                     "  \"name\": 1\n"
+                     "}",
+                     Style);
+
+  // Since we have to disable formatting to run this test, we shall refrain from
+  // calling test::messUp lest we change the unformatted code and cannot format
+  // it back to how it started.
+  Style.DisableFormat = true;
+  verifyFormatStable("{}", Style);
+  verifyFormatStable("{\n"
+                     "  \"name\": 1\n"
+                     "}",
+                     Style);
 }
 
 } // namespace format

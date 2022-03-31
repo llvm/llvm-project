@@ -25,12 +25,12 @@ namespace {
 struct AffineLoopNormalizePass
     : public AffineLoopNormalizeBase<AffineLoopNormalizePass> {
 
-  void runOnFunction() override {
-    getFunction().walk([](Operation *op) {
+  void runOnOperation() override {
+    getOperation().walk([](Operation *op) {
       if (auto affineParallel = dyn_cast<AffineParallelOp>(op))
         normalizeAffineParallel(affineParallel);
       else if (auto affineFor = dyn_cast<AffineForOp>(op))
-        normalizeAffineFor(affineFor);
+        (void)normalizeAffineFor(affineFor);
     });
   }
 };

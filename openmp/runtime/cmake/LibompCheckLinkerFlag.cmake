@@ -8,6 +8,8 @@
 #//===----------------------------------------------------------------------===//
 #
 
+include(GNUInstallDirs)
+
 # Checking a linker flag to build a shared library
 # There is no real trivial way to do this in CMake, so we implement it here
 # this will have ${boolean} = TRUE if the flag succeeds, otherwise FALSE.
@@ -23,7 +25,7 @@ function(libomp_check_linker_flag flag boolean)
      add_library(foo SHARED src_to_link.c)")
   # Compiling as a part of runtimes introduces ARCH-unknown-linux-gnu as a part
   # of a working directory.  So adding a guard for unknown.
-  set(failed_regexes "[Ee]rror;[Uu]nknown[^-];[Ss]kipping;LINK : warning")
+  set(failed_regexes "[Ee]rror;[Uu]nknown[^-];[Ss]kipping;LINK : warning;Unsupported command line")
   set(base_dir ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/link_flag_check_${boolean})
   file(MAKE_DIRECTORY ${base_dir})
   file(MAKE_DIRECTORY ${base_dir}/build)

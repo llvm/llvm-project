@@ -28,8 +28,8 @@
 // HOST:  call void @_Z16__device_stub__gIZ12test_resolvevEUlvE_EvT_
 // HOST:  call void @_ZZ12test_resolvevENKUlvE_clEv
 // HOST-LABEL: define internal void @_ZZ12test_resolvevENKUlvE_clEv
-// HOST:  call i32 @_Z10overloadedIiET_v
-// HOST-LABEL: define linkonce_odr i32 @_Z10overloadedIiET_v
+// HOST:  call noundef i32 @_Z10overloadedIiET_v
+// HOST-LABEL: define linkonce_odr noundef i32 @_Z10overloadedIiET_v
 // HOST:  ret i32 2
 
 // Check kernel is registered with correct device side kernel name.
@@ -51,8 +51,8 @@
 // DEV-LABEL: define{{.*}} amdgpu_kernel void @_Z1gIZ12test_resolvevEUlvE_EvT_
 // DEV:  call void @_ZZ12test_resolvevENKUlvE_clEv
 // DEV-LABEL: define internal void @_ZZ12test_resolvevENKUlvE_clEv
-// DEV:  call i32 @_Z10overloadedIiET_v
-// DEV-LABEL: define linkonce_odr i32 @_Z10overloadedIiET_v
+// DEV:  call noundef i32 @_Z10overloadedIiET_v
+// DEV-LABEL: define linkonce_odr noundef i32 @_Z10overloadedIiET_v
 // DEV:  ret i32 1
 
 __device__ int a;

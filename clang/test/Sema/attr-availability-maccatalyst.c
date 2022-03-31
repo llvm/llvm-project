@@ -32,7 +32,7 @@ void f9(void) // expected-note {{'f9' has been explicitly marked unavailable her
 __attribute__((availability(maccatalyst,unavailable)))
 __attribute__((availability(ios,introduced=2.0)));
 
-void test() {
+void test(void) {
   f0(0);
 #ifndef APPEXT
   // expected-warning@-2 {{'f0' is deprecated: first deprecated in macCatalyst 9.1}}
@@ -96,7 +96,7 @@ __attribute__((availability(ios,unavailable)));
 void f103(void)
 __attribute__((availability(maccatalyst,introduced=3.0)));
 
-void dontInheritObsoletedDeprecated() {
+void dontInheritObsoletedDeprecated(void) {
   f100();
   f101();
   f102();
@@ -109,7 +109,7 @@ void f202(void) __attribute__((availability(ios,introduced=2.0, deprecated=5.0))
 void f203(void) __attribute__((availability(ios,introduced=2.0, obsoleted=5.0))); // expected-note {{here}}
 void f204(void) __attribute__((availability(ios,unavailable))); // expected-note {{here}}
 
-void inheritIosAvailability() {
+void inheritIosAvailability(void) {
   f202();
 #ifndef APPEXT
 // expected-warning@-2 {{'f202' is deprecated: first deprecated in macCatalyst 13.1}}

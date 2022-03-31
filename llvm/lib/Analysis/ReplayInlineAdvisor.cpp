@@ -14,9 +14,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/ReplayInlineAdvisor.h"
-#include "llvm/IR/DebugInfoMetadata.h"
-#include "llvm/IR/Instructions.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Support/LineIterator.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include <memory>
 
 using namespace llvm;
@@ -28,8 +28,7 @@ ReplayInlineAdvisor::ReplayInlineAdvisor(
     std::unique_ptr<InlineAdvisor> OriginalAdvisor,
     const ReplayInlinerSettings &ReplaySettings, bool EmitRemarks)
     : InlineAdvisor(M, FAM), OriginalAdvisor(std::move(OriginalAdvisor)),
-      HasReplayRemarks(false), ReplaySettings(ReplaySettings),
-      EmitRemarks(EmitRemarks) {
+      ReplaySettings(ReplaySettings), EmitRemarks(EmitRemarks) {
 
   auto BufferOrErr = MemoryBuffer::getFileOrSTDIN(ReplaySettings.ReplayFile);
   std::error_code EC = BufferOrErr.getError();

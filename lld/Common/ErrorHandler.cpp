@@ -10,6 +10,7 @@
 
 #include "llvm/Support/Parallel.h"
 
+#include "lld/Common/CommonLinkerContext.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
@@ -18,20 +19,10 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
-#include <mutex>
 #include <regex>
 
 using namespace llvm;
 using namespace lld;
-
-// The functions defined in this file can be called from multiple threads,
-// but lld::outs() or lld::errs() are not thread-safe. We protect them using a
-// mutex.
-static std::mutex mu;
-
-// We want to separate multi-line messages with a newline. `sep` is "\n"
-// if the last messages was multi-line. Otherwise "".
-static StringRef sep;
 
 static StringRef getSeparator(const Twine &msg) {
   if (StringRef(msg.str()).contains('\n'))
@@ -39,30 +30,70 @@ static StringRef getSeparator(const Twine &msg) {
   return "";
 }
 
-raw_ostream *lld::stdoutOS;
-raw_ostream *lld::stderrOS;
-
-ErrorHandler &lld::errorHandler() {
-  static ErrorHandler handler;
-  return handler;
+ErrorHandler::~ErrorHandler() {
+  if (cleanupCallback)
+    cleanupCallback();
 }
 
+void ErrorHandler::initialize(llvm::raw_ostream &stdoutOS,
+                              llvm::raw_ostream &stderrOS, bool exitEarly,
+                              bool disableOutput) {
+  this->stdoutOS = &stdoutOS;
+  this->stderrOS = &stderrOS;
+  stderrOS.enable_colors(stderrOS.has_colors());
+  this->exitEarly = exitEarly;
+  this->disableOutput = disableOutput;
+}
+
+void ErrorHandler::flushStreams() {
+  std::lock_guard<std::mutex> lock(mu);
+  outs().flush();
+  errs().flush();
+}
+
+ErrorHandler &lld::errorHandler() { return context().e; }
+
+void lld::error(const Twine &msg) { errorHandler().error(msg); }
+void lld::error(const Twine &msg, ErrorTag tag, ArrayRef<StringRef> args) {
+  errorHandler().error(msg, tag, args);
+}
+void lld::fatal(const Twine &msg) { errorHandler().fatal(msg); }
+void lld::log(const Twine &msg) { errorHandler().log(msg); }
+void lld::message(const Twine &msg, llvm::raw_ostream &s) {
+  errorHandler().message(msg, s);
+}
+void lld::warn(const Twine &msg) { errorHandler().warn(msg); }
+uint64_t lld::errorCount() { return errorHandler().errorCount; }
+
 raw_ostream &lld::outs() {
-  if (errorHandler().disableOutput)
+  ErrorHandler &e = errorHandler();
+  return e.outs();
+}
+
+raw_ostream &lld::errs() {
+  ErrorHandler &e = errorHandler();
+  return e.errs();
+}
+
+raw_ostream &ErrorHandler::outs() {
+  if (disableOutput)
     return llvm::nulls();
   return stdoutOS ? *stdoutOS : llvm::outs();
 }
 
-raw_ostream &lld::errs() {
-  if (errorHandler().disableOutput)
+raw_ostream &ErrorHandler::errs() {
+  if (disableOutput)
     return llvm::nulls();
   return stderrOS ? *stderrOS : llvm::errs();
 }
 
 void lld::exitLld(int val) {
-  // Delete any temporary file, while keeping the memory mapping open.
-  if (errorHandler().outputBuffer)
-    errorHandler().outputBuffer->discard();
+  if (hasContext()) {
+    ErrorHandler &e = errorHandler();
+    // Delete any temporary file, while keeping the memory mapping open.
+    if (e.outputBuffer)
+      e.outputBuffer->discard();
+  }
 
   // Re-throw a possible signal or exception once/if it was catched by
   // safeLldMain().
@@ -75,11 +106,9 @@ void lld::exitLld(int val) {
   if (!CrashRecoveryContext::GetCurrent())
     llvm_shutdown();
 
-  {
-    std::lock_guard<std::mutex> lock(mu);
-    lld::outs().flush();
-    lld::errs().flush();
-  }
+  if (hasContext())
+    lld::errorHandler().flushStreams();
+
   // When running inside safeLldMain(), restore the control flow back to the
   // CrashRecoveryContext. Otherwise simply use _exit(), meanning no cleanup,
   // since we want to avoid further crashes on shutdown.
@@ -90,6 +119,13 @@ void lld::diagnosticHandler(const DiagnosticInfo &di) {
   SmallString<128> s;
   raw_svector_ostream os(s);
   DiagnosticPrinterRawOStream dp(os);
+
+  // For an inline asm diagnostic, prepend the module name to get something like
+  // "$module <inline asm>:1:5: ".
+  if (auto *dism = dyn_cast<DiagnosticInfoSrcMgr>(&di))
+    if (dism->isInlineAsmDiag())
+      os << dism->getModuleName() << ' ';
+
   di.print(dp);
   switch (di.getSeverity()) {
   case DS_Error:

@@ -133,6 +133,15 @@ struct NameUniquer {
   /// Check whether the name should be re-mangle with external ABI convention.
   static bool needExternalNameMangling(llvm::StringRef uniquedName);
 
+  /// Does \p uniquedName belong to module \p moduleName?
+  static bool belongsToModule(llvm::StringRef uniquedName,
+                              llvm::StringRef moduleName);
+
+  /// Given a mangled derived type name, get the name of the related derived
+  /// type descriptor object. Returns an empty string if \p mangledTypeName is
+  /// not a valid mangled derived type name.
+  static std::string getTypeDescriptorName(llvm::StringRef mangledTypeName);
+
 private:
   static std::string intAsString(std::int64_t i);
   static std::string doKind(std::int64_t kind);

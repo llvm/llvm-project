@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=aarch64-linux-gnu -mattr=+sve -cost-model -analyze < %s | FileCheck %s
+; RUN: opt -mtriple=aarch64-linux-gnu -mattr=+sve -passes='print<cost-model>' 2>&1 -disable-output < %s | FileCheck %s
 
 define void @sve_truncs() {
   ;CHECK-LABEL: 'sve_truncs'

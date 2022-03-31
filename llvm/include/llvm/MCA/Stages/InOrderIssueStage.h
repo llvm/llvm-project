@@ -38,7 +38,7 @@ struct StallInfo {
   unsigned CyclesLeft;
   StallKind Kind;
 
-  StallInfo() : IR(), CyclesLeft(), Kind(StallKind::DEFAULT) {}
+  StallInfo() : CyclesLeft(), Kind(StallKind::DEFAULT) {}
 
   StallKind getStallKind() const { return Kind; }
   unsigned getCyclesLeft() const { return CyclesLeft; }

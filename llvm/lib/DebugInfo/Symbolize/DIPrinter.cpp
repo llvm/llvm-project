@@ -16,9 +16,7 @@
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cmath>
@@ -33,8 +31,8 @@ namespace symbolize {
 class SourceCode {
   std::unique_ptr<MemoryBuffer> MemBuf;
 
-  const Optional<StringRef> load(StringRef FileName,
-                                 const Optional<StringRef> &EmbeddedSource) {
+  Optional<StringRef> load(StringRef FileName,
+                           const Optional<StringRef> &EmbeddedSource) {
     if (Lines <= 0)
       return None;
 
@@ -50,7 +48,7 @@ class SourceCode {
     }
   }
 
-  const Optional<StringRef> pruneSource(const Optional<StringRef> &Source) {
+  Optional<StringRef> pruneSource(const Optional<StringRef> &Source) {
     if (!Source)
       return None;
     size_t FirstLinePos = StringRef::npos, Pos = 0;

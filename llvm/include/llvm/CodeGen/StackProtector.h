@@ -20,7 +20,6 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/ValueMap.h"
 #include "llvm/Pass.h"
 
 namespace llvm {
@@ -95,7 +94,7 @@ private:
                                 bool InStruct = false) const;
 
   /// Check whether a stack allocation has its address taken.
-  bool HasAddressTaken(const Instruction *AI, uint64_t AllocSize);
+  bool HasAddressTaken(const Instruction *AI, TypeSize AllocSize);
 
   /// RequiresStackProtector - Check whether or not this function needs a
   /// stack protector based upon the stack protector level.

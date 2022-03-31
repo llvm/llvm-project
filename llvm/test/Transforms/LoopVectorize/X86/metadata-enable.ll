@@ -19,7 +19,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define i32 @enabled(i32* noalias nocapture %a, i32* noalias nocapture readonly %b, i32 %N) {
 ; O1-LABEL: @enabled(
 ; O1-NEXT:  entry:
-; O1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[N:%.*]], i32 0
+; O1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[N:%.*]], i64 0
 ; O1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; O1-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B:%.*]] to <4 x i32>*
 ; O1-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
@@ -136,7 +136,7 @@ define i32 @enabled(i32* noalias nocapture %a, i32* noalias nocapture readonly %
 ;
 ; O2-LABEL: @enabled(
 ; O2-NEXT:  entry:
-; O2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[N:%.*]], i32 0
+; O2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[N:%.*]], i64 0
 ; O2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; O2-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B:%.*]] to <4 x i32>*
 ; O2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
@@ -253,7 +253,7 @@ define i32 @enabled(i32* noalias nocapture %a, i32* noalias nocapture readonly %
 ;
 ; O3-LABEL: @enabled(
 ; O3-NEXT:  entry:
-; O3-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[N:%.*]], i32 0
+; O3-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[N:%.*]], i64 0
 ; O3-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; O3-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B:%.*]] to <4 x i32>*
 ; O3-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
@@ -370,7 +370,7 @@ define i32 @enabled(i32* noalias nocapture %a, i32* noalias nocapture readonly %
 ;
 ; O3DEFAULT-LABEL: @enabled(
 ; O3DEFAULT-NEXT:  entry:
-; O3DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[N:%.*]], i32 0
+; O3DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[N:%.*]], i64 0
 ; O3DEFAULT-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; O3DEFAULT-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B:%.*]] to <4 x i32>*
 ; O3DEFAULT-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
@@ -487,7 +487,7 @@ define i32 @enabled(i32* noalias nocapture %a, i32* noalias nocapture readonly %
 ;
 ; Os-LABEL: @enabled(
 ; Os-NEXT:  entry:
-; Os-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[N:%.*]], i32 0
+; Os-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[N:%.*]], i64 0
 ; Os-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; Os-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B:%.*]] to <4 x i32>*
 ; Os-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
@@ -604,7 +604,7 @@ define i32 @enabled(i32* noalias nocapture %a, i32* noalias nocapture readonly %
 ;
 ; Oz-LABEL: @enabled(
 ; Oz-NEXT:  entry:
-; Oz-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[N:%.*]], i32 0
+; Oz-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[N:%.*]], i64 0
 ; Oz-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; Oz-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B:%.*]] to <4 x i32>*
 ; Oz-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
@@ -721,7 +721,7 @@ define i32 @enabled(i32* noalias nocapture %a, i32* noalias nocapture readonly %
 ;
 ; O1VEC2-LABEL: @enabled(
 ; O1VEC2-NEXT:  entry:
-; O1VEC2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[N:%.*]], i32 0
+; O1VEC2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[N:%.*]], i64 0
 ; O1VEC2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; O1VEC2-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B:%.*]] to <4 x i32>*
 ; O1VEC2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
@@ -838,7 +838,7 @@ define i32 @enabled(i32* noalias nocapture %a, i32* noalias nocapture readonly %
 ;
 ; OzVEC2-LABEL: @enabled(
 ; OzVEC2-NEXT:  entry:
-; OzVEC2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[N:%.*]], i32 0
+; OzVEC2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[N:%.*]], i64 0
 ; OzVEC2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; OzVEC2-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B:%.*]] to <4 x i32>*
 ; OzVEC2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
@@ -955,7 +955,7 @@ define i32 @enabled(i32* noalias nocapture %a, i32* noalias nocapture readonly %
 ;
 ; O3DIS-LABEL: @enabled(
 ; O3DIS-NEXT:  entry:
-; O3DIS-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[N:%.*]], i32 0
+; O3DIS-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[N:%.*]], i64 0
 ; O3DIS-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; O3DIS-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B:%.*]] to <4 x i32>*
 ; O3DIS-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
@@ -1109,7 +1109,7 @@ define i32 @nopragma(i32* noalias nocapture %a, i32* noalias nocapture readonly 
 ;
 ; O2-LABEL: @nopragma(
 ; O2-NEXT:  entry:
-; O2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[N:%.*]], i32 0
+; O2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[N:%.*]], i64 0
 ; O2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; O2-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B:%.*]] to <4 x i32>*
 ; O2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
@@ -1226,7 +1226,7 @@ define i32 @nopragma(i32* noalias nocapture %a, i32* noalias nocapture readonly 
 ;
 ; O3-LABEL: @nopragma(
 ; O3-NEXT:  entry:
-; O3-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[N:%.*]], i32 0
+; O3-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[N:%.*]], i64 0
 ; O3-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; O3-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B:%.*]] to <4 x i32>*
 ; O3-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
@@ -1343,7 +1343,7 @@ define i32 @nopragma(i32* noalias nocapture %a, i32* noalias nocapture readonly 
 ;
 ; O3DEFAULT-LABEL: @nopragma(
 ; O3DEFAULT-NEXT:  entry:
-; O3DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[N:%.*]], i32 0
+; O3DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[N:%.*]], i64 0
 ; O3DEFAULT-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; O3DEFAULT-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B:%.*]] to <4 x i32>*
 ; O3DEFAULT-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
@@ -1460,7 +1460,7 @@ define i32 @nopragma(i32* noalias nocapture %a, i32* noalias nocapture readonly 
 ;
 ; Os-LABEL: @nopragma(
 ; Os-NEXT:  entry:
-; Os-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[N:%.*]], i32 0
+; Os-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[N:%.*]], i64 0
 ; Os-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; Os-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B:%.*]] to <4 x i32>*
 ; Os-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
@@ -1768,90 +1768,90 @@ define i32 @disabled(i32* noalias nocapture %a, i32* noalias nocapture readonly 
 ; O3DEFAULT-NEXT:  entry:
 ; O3DEFAULT-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B:%.*]] to <4 x i32>*
 ; O3DEFAULT-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
-; O3DEFAULT-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[N:%.*]], i32 0
-; O3DEFAULT-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> zeroinitializer
-; O3DEFAULT-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[TMP1]], [[TMP3]]
-; O3DEFAULT-NEXT:    [[TMP5:%.*]] = bitcast i32* [[A:%.*]] to <4 x i32>*
-; O3DEFAULT-NEXT:    store <4 x i32> [[TMP4]], <4 x i32>* [[TMP5]], align 4
+; O3DEFAULT-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[N:%.*]], i64 0
+; O3DEFAULT-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> zeroinitializer
+; O3DEFAULT-NEXT:    [[TMP3:%.*]] = add nsw <4 x i32> [[TMP1]], [[SHUFFLE]]
+; O3DEFAULT-NEXT:    [[TMP4:%.*]] = bitcast i32* [[A:%.*]] to <4 x i32>*
+; O3DEFAULT-NEXT:    store <4 x i32> [[TMP3]], <4 x i32>* [[TMP4]], align 4
 ; O3DEFAULT-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 4
 ; O3DEFAULT-NEXT:    [[ARRAYIDX2_4:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 4
-; O3DEFAULT-NEXT:    [[TMP6:%.*]] = bitcast i32* [[ARRAYIDX_4]] to <4 x i32>*
-; O3DEFAULT-NEXT:    [[TMP7:%.*]] = load <4 x i32>, <4 x i32>* [[TMP6]], align 4
-; O3DEFAULT-NEXT:    [[TMP8:%.*]] = add nsw <4 x i32> [[TMP7]], [[TMP3]]
-; O3DEFAULT-NEXT:    [[TMP9:%.*]] = bitcast i32* [[ARRAYIDX2_4]] to <4 x i32>*
-; O3DEFAULT-NEXT:    store <4 x i32> [[TMP8]], <4 x i32>* [[TMP9]], align 4
+; O3DEFAULT-NEXT:    [[TMP5:%.*]] = bitcast i32* [[ARRAYIDX_4]] to <4 x i32>*
+; O3DEFAULT-NEXT:    [[TMP6:%.*]] = load <4 x i32>, <4 x i32>* [[TMP5]], align 4
+; O3DEFAULT-NEXT:    [[TMP7:%.*]] = add nsw <4 x i32> [[TMP6]], [[SHUFFLE]]
+; O3DEFAULT-NEXT:    [[TMP8:%.*]] = bitcast i32* [[ARRAYIDX2_4]] to <4 x i32>*
+; O3DEFAULT-NEXT:    store <4 x i32> [[TMP7]], <4 x i32>* [[TMP8]], align 4
 ; O3DEFAULT-NEXT:    [[ARRAYIDX_8:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 8
 ; O3DEFAULT-NEXT:    [[ARRAYIDX2_8:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 8
-; O3DEFAULT-NEXT:    [[TMP10:%.*]] = bitcast i32* [[ARRAYIDX_8]] to <4 x i32>*
-; O3DEFAULT-NEXT:    [[TMP11:%.*]] = load <4 x i32>, <4 x i32>* [[TMP10]], align 4
-; O3DEFAULT-NEXT:    [[TMP12:%.*]] = add nsw <4 x i32> [[TMP11]], [[TMP3]]
-; O3DEFAULT-NEXT:    [[TMP13:%.*]] = bitcast i32* [[ARRAYIDX2_8]] to <4 x i32>*
-; O3DEFAULT-NEXT:    store <4 x i32> [[TMP12]], <4 x i32>* [[TMP13]], align 4
+; O3DEFAULT-NEXT:    [[TMP9:%.*]] = bitcast i32* [[ARRAYIDX_8]] to <4 x i32>*
+; O3DEFAULT-NEXT:    [[TMP10:%.*]] = load <4 x i32>, <4 x i32>* [[TMP9]], align 4
+; O3DEFAULT-NEXT:    [[TMP11:%.*]] = add nsw <4 x i32> [[TMP10]], [[SHUFFLE]]
+; O3DEFAULT-NEXT:    [[TMP12:%.*]] = bitcast i32* [[ARRAYIDX2_8]] to <4 x i32>*
+; O3DEFAULT-NEXT:    store <4 x i32> [[TMP11]], <4 x i32>* [[TMP12]], align 4
 ; O3DEFAULT-NEXT:    [[ARRAYIDX_12:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 12
 ; O3DEFAULT-NEXT:    [[ARRAYIDX2_12:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 12
-; O3DEFAULT-NEXT:    [[TMP14:%.*]] = bitcast i32* [[ARRAYIDX_12]] to <4 x i32>*
-; O3DEFAULT-NEXT:    [[TMP15:%.*]] = load <4 x i32>, <4 x i32>* [[TMP14]], align 4
-; O3DEFAULT-NEXT:    [[TMP16:%.*]] = add nsw <4 x i32> [[TMP15]], [[TMP3]]
-; O3DEFAULT-NEXT:    [[TMP17:%.*]] = bitcast i32* [[ARRAYIDX2_12]] to <4 x i32>*
-; O3DEFAULT-NEXT:    store <4 x i32> [[TMP16]], <4 x i32>* [[TMP17]], align 4
+; O3DEFAULT-NEXT:    [[TMP13:%.*]] = bitcast i32* [[ARRAYIDX_12]] to <4 x i32>*
+; O3DEFAULT-NEXT:    [[TMP14:%.*]] = load <4 x i32>, <4 x i32>* [[TMP13]], align 4
+; O3DEFAULT-NEXT:    [[TMP15:%.*]] = add nsw <4 x i32> [[TMP14]], [[SHUFFLE]]
+; O3DEFAULT-NEXT:    [[TMP16:%.*]] = bitcast i32* [[ARRAYIDX2_12]] to <4 x i32>*
+; O3DEFAULT-NEXT:    store <4 x i32> [[TMP15]], <4 x i32>* [[TMP16]], align 4
 ; O3DEFAULT-NEXT:    [[ARRAYIDX_16:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 16
 ; O3DEFAULT-NEXT:    [[ARRAYIDX2_16:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 16
-; O3DEFAULT-NEXT:    [[TMP18:%.*]] = bitcast i32* [[ARRAYIDX_16]] to <4 x i32>*
-; O3DEFAULT-NEXT:    [[TMP19:%.*]] = load <4 x i32>, <4 x i32>* [[TMP18]], align 4
-; O3DEFAULT-NEXT:    [[TMP20:%.*]] = add nsw <4 x i32> [[TMP19]], [[TMP3]]
-; O3DEFAULT-NEXT:    [[TMP21:%.*]] = bitcast i32* [[ARRAYIDX2_16]] to <4 x i32>*
-; O3DEFAULT-NEXT:    store <4 x i32> [[TMP20]], <4 x i32>* [[TMP21]], align 4
+; O3DEFAULT-NEXT:    [[TMP17:%.*]] = bitcast i32* [[ARRAYIDX_16]] to <4 x i32>*
+; O3DEFAULT-NEXT:    [[TMP18:%.*]] = load <4 x i32>, <4 x i32>* [[TMP17]], align 4
+; O3DEFAULT-NEXT:    [[TMP19:%.*]] = add nsw <4 x i32> [[TMP18]], [[SHUFFLE]]
+; O3DEFAULT-NEXT:    [[TMP20:%.*]] = bitcast i32* [[ARRAYIDX2_16]] to <4 x i32>*
+; O3DEFAULT-NEXT:    store <4 x i32> [[TMP19]], <4 x i32>* [[TMP20]], align 4
 ; O3DEFAULT-NEXT:    [[ARRAYIDX_20:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 20
 ; O3DEFAULT-NEXT:    [[ARRAYIDX2_20:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 20
-; O3DEFAULT-NEXT:    [[TMP22:%.*]] = bitcast i32* [[ARRAYIDX_20]] to <4 x i32>*
-; O3DEFAULT-NEXT:    [[TMP23:%.*]] = load <4 x i32>, <4 x i32>* [[TMP22]], align 4
-; O3DEFAULT-NEXT:    [[TMP24:%.*]] = add nsw <4 x i32> [[TMP23]], [[TMP3]]
-; O3DEFAULT-NEXT:    [[TMP25:%.*]] = bitcast i32* [[ARRAYIDX2_20]] to <4 x i32>*
-; O3DEFAULT-NEXT:    store <4 x i32> [[TMP24]], <4 x i32>* [[TMP25]], align 4
+; O3DEFAULT-NEXT:    [[TMP21:%.*]] = bitcast i32* [[ARRAYIDX_20]] to <4 x i32>*
+; O3DEFAULT-NEXT:    [[TMP22:%.*]] = load <4 x i32>, <4 x i32>* [[TMP21]], align 4
+; O3DEFAULT-NEXT:    [[TMP23:%.*]] = add nsw <4 x i32> [[TMP22]], [[SHUFFLE]]
+; O3DEFAULT-NEXT:    [[TMP24:%.*]] = bitcast i32* [[ARRAYIDX2_20]] to <4 x i32>*
+; O3DEFAULT-NEXT:    store <4 x i32> [[TMP23]], <4 x i32>* [[TMP24]], align 4
 ; O3DEFAULT-NEXT:    [[ARRAYIDX_24:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 24
 ; O3DEFAULT-NEXT:    [[ARRAYIDX2_24:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 24
-; O3DEFAULT-NEXT:    [[TMP26:%.*]] = bitcast i32* [[ARRAYIDX_24]] to <4 x i32>*
-; O3DEFAULT-NEXT:    [[TMP27:%.*]] = load <4 x i32>, <4 x i32>* [[TMP26]], align 4
-; O3DEFAULT-NEXT:    [[TMP28:%.*]] = add nsw <4 x i32> [[TMP27]], [[TMP3]]
-; O3DEFAULT-NEXT:    [[TMP29:%.*]] = bitcast i32* [[ARRAYIDX2_24]] to <4 x i32>*
-; O3DEFAULT-NEXT:    store <4 x i32> [[TMP28]], <4 x i32>* [[TMP29]], align 4
+; O3DEFAULT-NEXT:    [[TMP25:%.*]] = bitcast i32* [[ARRAYIDX_24]] to <4 x i32>*
+; O3DEFAULT-NEXT:    [[TMP26:%.*]] = load <4 x i32>, <4 x i32>* [[TMP25]], align 4
+; O3DEFAULT-NEXT:    [[TMP27:%.*]] = add nsw <4 x i32> [[TMP26]], [[SHUFFLE]]
+; O3DEFAULT-NEXT:    [[TMP28:%.*]] = bitcast i32* [[ARRAYIDX2_24]] to <4 x i32>*
+; O3DEFAULT-NEXT:    store <4 x i32> [[TMP27]], <4 x i32>* [[TMP28]], align 4
 ; O3DEFAULT-NEXT:    [[ARRAYIDX_28:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 28
 ; O3DEFAULT-NEXT:    [[ARRAYIDX2_28:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 28
-; O3DEFAULT-NEXT:    [[TMP30:%.*]] = bitcast i32* [[ARRAYIDX_28]] to <4 x i32>*
-; O3DEFAULT-NEXT:    [[TMP31:%.*]] = load <4 x i32>, <4 x i32>* [[TMP30]], align 4
-; O3DEFAULT-NEXT:    [[TMP32:%.*]] = add nsw <4 x i32> [[TMP31]], [[TMP3]]
-; O3DEFAULT-NEXT:    [[TMP33:%.*]] = bitcast i32* [[ARRAYIDX2_28]] to <4 x i32>*
-; O3DEFAULT-NEXT:    store <4 x i32> [[TMP32]], <4 x i32>* [[TMP33]], align 4
+; O3DEFAULT-NEXT:    [[TMP29:%.*]] = bitcast i32* [[ARRAYIDX_28]] to <4 x i32>*
+; O3DEFAULT-NEXT:    [[TMP30:%.*]] = load <4 x i32>, <4 x i32>* [[TMP29]], align 4
+; O3DEFAULT-NEXT:    [[TMP31:%.*]] = add nsw <4 x i32> [[TMP30]], [[SHUFFLE]]
+; O3DEFAULT-NEXT:    [[TMP32:%.*]] = bitcast i32* [[ARRAYIDX2_28]] to <4 x i32>*
+; O3DEFAULT-NEXT:    store <4 x i32> [[TMP31]], <4 x i32>* [[TMP32]], align 4
 ; O3DEFAULT-NEXT:    [[ARRAYIDX_32:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 32
 ; O3DEFAULT-NEXT:    [[ARRAYIDX2_32:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 32
-; O3DEFAULT-NEXT:    [[TMP34:%.*]] = bitcast i32* [[ARRAYIDX_32]] to <4 x i32>*
-; O3DEFAULT-NEXT:    [[TMP35:%.*]] = load <4 x i32>, <4 x i32>* [[TMP34]], align 4
-; O3DEFAULT-NEXT:    [[TMP36:%.*]] = add nsw <4 x i32> [[TMP35]], [[TMP3]]
-; O3DEFAULT-NEXT:    [[TMP37:%.*]] = bitcast i32* [[ARRAYIDX2_32]] to <4 x i32>*
-; O3DEFAULT-NEXT:    store <4 x i32> [[TMP36]], <4 x i32>* [[TMP37]], align 4
+; O3DEFAULT-NEXT:    [[TMP33:%.*]] = bitcast i32* [[ARRAYIDX_32]] to <4 x i32>*
+; O3DEFAULT-NEXT:    [[TMP34:%.*]] = load <4 x i32>, <4 x i32>* [[TMP33]], align 4
+; O3DEFAULT-NEXT:    [[TMP35:%.*]] = add nsw <4 x i32> [[TMP34]], [[SHUFFLE]]
+; O3DEFAULT-NEXT:    [[TMP36:%.*]] = bitcast i32* [[ARRAYIDX2_32]] to <4 x i32>*
+; O3DEFAULT-NEXT:    store <4 x i32> [[TMP35]], <4 x i32>* [[TMP36]], align 4
 ; O3DEFAULT-NEXT:    [[ARRAYIDX_36:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 36
 ; O3DEFAULT-NEXT:    [[ARRAYIDX2_36:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 36
-; O3DEFAULT-NEXT:    [[TMP38:%.*]] = bitcast i32* [[ARRAYIDX_36]] to <4 x i32>*
-; O3DEFAULT-NEXT:    [[TMP39:%.*]] = load <4 x i32>, <4 x i32>* [[TMP38]], align 4
-; O3DEFAULT-NEXT:    [[TMP40:%.*]] = add nsw <4 x i32> [[TMP39]], [[TMP3]]
-; O3DEFAULT-NEXT:    [[TMP41:%.*]] = bitcast i32* [[ARRAYIDX2_36]] to <4 x i32>*
-; O3DEFAULT-NEXT:    store <4 x i32> [[TMP40]], <4 x i32>* [[TMP41]], align 4
+; O3DEFAULT-NEXT:    [[TMP37:%.*]] = bitcast i32* [[ARRAYIDX_36]] to <4 x i32>*
+; O3DEFAULT-NEXT:    [[TMP38:%.*]] = load <4 x i32>, <4 x i32>* [[TMP37]], align 4
+; O3DEFAULT-NEXT:    [[TMP39:%.*]] = add nsw <4 x i32> [[TMP38]], [[SHUFFLE]]
+; O3DEFAULT-NEXT:    [[TMP40:%.*]] = bitcast i32* [[ARRAYIDX2_36]] to <4 x i32>*
+; O3DEFAULT-NEXT:    store <4 x i32> [[TMP39]], <4 x i32>* [[TMP40]], align 4
 ; O3DEFAULT-NEXT:    [[ARRAYIDX_40:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 40
 ; O3DEFAULT-NEXT:    [[ARRAYIDX2_40:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 40
-; O3DEFAULT-NEXT:    [[TMP42:%.*]] = bitcast i32* [[ARRAYIDX_40]] to <4 x i32>*
-; O3DEFAULT-NEXT:    [[TMP43:%.*]] = load <4 x i32>, <4 x i32>* [[TMP42]], align 4
-; O3DEFAULT-NEXT:    [[TMP44:%.*]] = add nsw <4 x i32> [[TMP43]], [[TMP3]]
-; O3DEFAULT-NEXT:    [[TMP45:%.*]] = bitcast i32* [[ARRAYIDX2_40]] to <4 x i32>*
-; O3DEFAULT-NEXT:    store <4 x i32> [[TMP44]], <4 x i32>* [[TMP45]], align 4
+; O3DEFAULT-NEXT:    [[TMP41:%.*]] = bitcast i32* [[ARRAYIDX_40]] to <4 x i32>*
+; O3DEFAULT-NEXT:    [[TMP42:%.*]] = load <4 x i32>, <4 x i32>* [[TMP41]], align 4
+; O3DEFAULT-NEXT:    [[TMP43:%.*]] = add nsw <4 x i32> [[TMP42]], [[SHUFFLE]]
+; O3DEFAULT-NEXT:    [[TMP44:%.*]] = bitcast i32* [[ARRAYIDX2_40]] to <4 x i32>*
+; O3DEFAULT-NEXT:    store <4 x i32> [[TMP43]], <4 x i32>* [[TMP44]], align 4
 ; O3DEFAULT-NEXT:    [[ARRAYIDX_44:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 44
 ; O3DEFAULT-NEXT:    [[ARRAYIDX2_44:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 44
-; O3DEFAULT-NEXT:    [[TMP46:%.*]] = bitcast i32* [[ARRAYIDX_44]] to <4 x i32>*
-; O3DEFAULT-NEXT:    [[TMP47:%.*]] = load <4 x i32>, <4 x i32>* [[TMP46]], align 4
-; O3DEFAULT-NEXT:    [[TMP48:%.*]] = add nsw <4 x i32> [[TMP47]], [[TMP3]]
-; O3DEFAULT-NEXT:    [[TMP49:%.*]] = bitcast i32* [[ARRAYIDX2_44]] to <4 x i32>*
-; O3DEFAULT-NEXT:    store <4 x i32> [[TMP48]], <4 x i32>* [[TMP49]], align 4
-; O3DEFAULT-NEXT:    [[TMP50:%.*]] = load i32, i32* [[A]], align 4
-; O3DEFAULT-NEXT:    ret i32 [[TMP50]]
+; O3DEFAULT-NEXT:    [[TMP45:%.*]] = bitcast i32* [[ARRAYIDX_44]] to <4 x i32>*
+; O3DEFAULT-NEXT:    [[TMP46:%.*]] = load <4 x i32>, <4 x i32>* [[TMP45]], align 4
+; O3DEFAULT-NEXT:    [[TMP47:%.*]] = add nsw <4 x i32> [[TMP46]], [[SHUFFLE]]
+; O3DEFAULT-NEXT:    [[TMP48:%.*]] = bitcast i32* [[ARRAYIDX2_44]] to <4 x i32>*
+; O3DEFAULT-NEXT:    store <4 x i32> [[TMP47]], <4 x i32>* [[TMP48]], align 4
+; O3DEFAULT-NEXT:    [[TMP49:%.*]] = load i32, i32* [[A]], align 4
+; O3DEFAULT-NEXT:    ret i32 [[TMP49]]
 ;
 ; Os-LABEL: @disabled(
 ; Os-NEXT:  entry:

@@ -31,15 +31,11 @@
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -84,8 +80,7 @@ public:
   void AfterExecute(CompilerInstance &CI) override {
     if (ParsedCallback) {
       trace::Span Tracer("Running PreambleCallback");
-      ParsedCallback(CI.getASTContext(), CI.getPreprocessorPtr(),
-                     CanonIncludes);
+      ParsedCallback(CI.getASTContext(), CI.getPreprocessor(), CanonIncludes);
     }
 
     const SourceManager &SM = CI.getSourceManager();
@@ -99,7 +94,7 @@ public:
     CanonIncludes.addSystemHeadersMapping(CI.getLangOpts());
     LangOpts = &CI.getLangOpts();
     SourceMgr = &CI.getSourceManager();
-    Compiler = &CI;
+    Includes.collect(CI);
   }
 
   std::unique_ptr<PPCallbacks> createPPCallbacks() override {
@@ -107,10 +102,8 @@ public:
            "SourceMgr and LangOpts must be set at this point");
 
     return std::make_unique<PPChainedCallbacks>(
-        Includes.collect(*Compiler),
-        std::make_unique<PPChainedCallbacks>(
-            std::make_unique<CollectMainFileMacros>(*SourceMgr, Macros),
-            collectPragmaMarksCallback(*SourceMgr, Marks)));
+        std::make_unique<CollectMainFileMacros>(*SourceMgr, Macros),
+        collectPragmaMarksCallback(*SourceMgr, Marks));
   }
 
   CommentHandler *getCommentHandler() override {
@@ -142,7 +135,6 @@ private:
   std::unique_ptr<CommentHandler> IWYUHandler = nullptr;
   const clang::LangOptions *LangOpts = nullptr;
   const SourceManager *SourceMgr = nullptr;
-  const CompilerInstance *Compiler = nullptr;
 };
 
 // Represents directives other than includes, where basic textual information is
@@ -288,7 +280,7 @@ scanPreamble(llvm::StringRef Contents, const tooling::CompileCommand &Cmd) {
     return error("failed BeginSourceFile");
   Preprocessor &PP = Clang->getPreprocessor();
   IncludeStructure Includes;
-  PP.addPPCallbacks(Includes.collect(*Clang));
+  Includes.collect(*Clang);
   ScannedPreamble SP;
   SP.Bounds = Bounds;
   PP.addPPCallbacks(
@@ -320,12 +312,98 @@ bool isMainFile(llvm::StringRef FileName, const SourceManager &SM) {
   return FE && *FE == SM.getFileEntryForID(SM.getMainFileID());
 }
 
+// Accumulating wall time timer. Similar to llvm::Timer, but much cheaper,
+// it only tracks wall time.
+// Since this is a generic timer, We may want to move this to support/ if we
+// find a use case outside of FS time tracking.
+class WallTimer {
+public:
+  WallTimer() : TotalTime(std::chrono::steady_clock::duration::zero()) {}
+  // [Re-]Start the timer.
+  void startTimer() { StartTime = std::chrono::steady_clock::now(); }
+  // Stop the timer and update total time.
+  void stopTimer() {
+    TotalTime += std::chrono::steady_clock::now() - StartTime;
+  }
+  // Return total time, in seconds.
+  double getTime() { return std::chrono::duration<double>(TotalTime).count(); }
+
+private:
+  std::chrono::steady_clock::duration TotalTime;
+  std::chrono::steady_clock::time_point StartTime;
+};
+
+class WallTimerRegion {
+public:
+  WallTimerRegion(WallTimer &T) : T(T) { T.startTimer(); }
+  ~WallTimerRegion() { T.stopTimer(); }
+
+private:
+  WallTimer &T;
+};
+
+// Used by TimerFS, tracks time spent in status() and getBuffer() calls while
+// proxying to underlying File implementation.
+class TimerFile : public llvm::vfs::File {
+public:
+  TimerFile(WallTimer &Timer, std::unique_ptr<File> InnerFile)
+      : Timer(Timer), InnerFile(std::move(InnerFile)) {}
+
+  llvm::ErrorOr<llvm::vfs::Status> status() override {
+    WallTimerRegion T(Timer);
+    return InnerFile->status();
+  }
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
+  getBuffer(const Twine &Name, int64_t FileSize, bool RequiresNullTerminator,
+            bool IsVolatile) override {
+    WallTimerRegion T(Timer);
+    return InnerFile->getBuffer(Name, FileSize, RequiresNullTerminator,
+                                IsVolatile);
+  }
+  std::error_code close() override {
+    WallTimerRegion T(Timer);
+    return InnerFile->close();
+  }
+
+private:
+  WallTimer &Timer;
+  std::unique_ptr<llvm::vfs::File> InnerFile;
+};
+
+// A wrapper for FileSystems that tracks the amount of time spent in status()
+// and openFileForRead() calls.
+class TimerFS : public llvm::vfs::ProxyFileSystem {
+public:
+  TimerFS(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
+      : ProxyFileSystem(std::move(FS)) {}
+
+  llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
+  openFileForRead(const llvm::Twine &Path) override {
+    WallTimerRegion T(Timer);
+    auto FileOr = getUnderlyingFS().openFileForRead(Path);
+    if (!FileOr)
+      return FileOr;
+    return std::make_unique<TimerFile>(Timer, std::move(FileOr.get()));
+  }
+
+  llvm::ErrorOr<llvm::vfs::Status> status(const llvm::Twine &Path) override {
+    WallTimerRegion T(Timer);
+    return getUnderlyingFS().status(Path);
+  }
+
+  double getTime() { return Timer.getTime(); }
+
+private:
+  WallTimer Timer;
+};
+
 } // namespace
 
 std::shared_ptr<const PreambleData>
 buildPreamble(PathRef FileName, CompilerInvocation CI,
               const ParseInputs &Inputs, bool StoreInMemory,
-              PreambleParsedCallback PreambleCallback) {
+              PreambleParsedCallback PreambleCallback,
+              PreambleBuildStats *Stats) {
   // Note that we don't need to copy the input contents, preamble can live
   // without those.
   auto ContentsBuffer =
@@ -354,7 +432,8 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
   PreambleDiagnostics.setLevelAdjuster([&](DiagnosticsEngine::Level DiagLevel,
                                            const clang::Diagnostic &Info) {
     if (Cfg.Diagnostics.SuppressAll ||
-        isBuiltinDiagnosticSuppressed(Info.getID(), Cfg.Diagnostics.Suppress))
+        isBuiltinDiagnosticSuppressed(Info.getID(), Cfg.Diagnostics.Suppress,
+                                      *CI.getLangOpts()))
       return DiagnosticsEngine::Ignored;
     switch (Info.getID()) {
     case diag::warn_no_newline_eof:
@@ -382,18 +461,25 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
   llvm::SmallString<32> AbsFileName(FileName);
   VFS->makeAbsolute(AbsFileName);
   auto StatCache = std::make_unique<PreambleFileStatusCache>(AbsFileName);
+  auto StatCacheFS = StatCache->getProducingFS(VFS);
+  llvm::IntrusiveRefCntPtr<TimerFS> TimedFS(new TimerFS(StatCacheFS));
+
+  WallTimer PreambleTimer;
+  PreambleTimer.startTimer();
   auto BuiltPreamble = PrecompiledPreamble::Build(
       CI, ContentsBuffer.get(), Bounds, *PreambleDiagsEngine,
-      StatCache->getProducingFS(VFS),
-      std::make_shared<PCHContainerOperations>(), StoreInMemory, CapturedInfo);
+      Stats ? TimedFS : StatCacheFS, std::make_shared<PCHContainerOperations>(),
+      StoreInMemory, CapturedInfo);
+  PreambleTimer.stopTimer();
 
   // When building the AST for the main file, we do want the function
   // bodies.
   CI.getFrontendOpts().SkipFunctionBodies = false;
 
   if (BuiltPreamble) {
-    vlog("Built preamble of size {0} for file {1} version {2}",
-         BuiltPreamble->getSize(), FileName, Inputs.Version);
+    vlog("Built preamble of size {0} for file {1} version {2} in {3} seconds",
+         BuiltPreamble->getSize(), FileName, Inputs.Version,
+         PreambleTimer.getTime());
     std::vector<Diag> Diags = PreambleDiagnostics.take();
     auto Result = std::make_shared<PreambleData>(std::move(*BuiltPreamble));
     Result->Version = Inputs.Version;
@@ -405,6 +491,10 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
     Result->CanonIncludes = CapturedInfo.takeCanonicalIncludes();
     Result->StatCache = std::move(StatCache);
     Result->MainIsIncludeGuarded = CapturedInfo.isMainFileIncludeGuarded();
+    if (Stats != nullptr) {
+      Stats->TotalBuildTime = PreambleTimer.getTime();
+      Stats->FileSystemTime = TimedFS->getTime();
+    }
     return Result;
   }
 

@@ -1,10 +1,10 @@
 // RUN: %check_clang_tidy %s objc-assert-equals %t -- -- -I %S/Inputs/objc-assert
 #include "XCTestAssertions.h"
 // Can't reference NSString directly so we use this getStr() instead.
-__typeof(@"abc") getStr() {
+__typeof(@"abc") getStr(void) {
   return @"abc";
 }
-void foo() {
+void foo(void) {
   XCTAssertEqual(getStr(), @"abc");
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use XCTAssertEqualObjects for comparing objects
   // CHECK-FIXES: XCTAssertEqualObjects(getStr(), @"abc");

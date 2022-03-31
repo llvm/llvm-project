@@ -10,13 +10,13 @@
 #ifndef _LIBCPP___ALGORITHM_MISMATCH_H
 #define _LIBCPP___ALGORITHM_MISMATCH_H
 
-#include <__config>
 #include <__algorithm/comp.h>
+#include <__config>
 #include <__iterator/iterator_traits.h>
-#include <utility>
+#include <__utility/pair.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD

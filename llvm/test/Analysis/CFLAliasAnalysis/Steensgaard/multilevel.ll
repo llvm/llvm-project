@@ -6,7 +6,7 @@
 ; *m;
 ; *n;
 
-; RUN: opt < %s -cfl-steens-aa -aa-eval -print-may-aliases -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -aa-pipeline=cfl-steens-aa -passes=aa-eval -print-may-aliases -disable-output 2>&1 | FileCheck %s
 
 %T = type { i32, [10 x i8] }
 
@@ -25,6 +25,10 @@ define void @test() {
 
   %AP = load %T*, %T** %M ; PartialAlias with %A
   %BP = load %T*, %T** %N ; PartialAlias with %B
+  load %T, %T* %A
+  load %T, %T* %B
+  load %T, %T* %AP
+  load %T, %T* %BP
 
   ret void
 }

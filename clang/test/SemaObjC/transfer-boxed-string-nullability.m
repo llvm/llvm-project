@@ -15,7 +15,7 @@
 
 void takesNonNull(NSString * _Nonnull ptr);
 
-void testBoxedString() {
+void testBoxedString(void) {
   // No diagnostic emitted as this doesn't need a stringWithUTF8String message
   // send.
   takesNonNull(@("hey"));

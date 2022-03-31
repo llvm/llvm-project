@@ -8,7 +8,7 @@
 // knows how to make the metadata comdat associative, so the string literal
 // global is only registered if the instrumented global prevails during linking.
 
-const char *foo() { return "asdf"; }
+const char *foo(void) { return "asdf"; }
 
 // LINUX: @.str = private unnamed_addr constant [5 x i8] c"asdf\00", align 1
 

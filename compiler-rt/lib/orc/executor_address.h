@@ -212,4 +212,15 @@ using SPSExecutorAddrRangeSequence = SPSSequence<SPSExecutorAddrRange>;
 
 } // End namespace __orc_rt
 
+namespace std {
+
+// Make ExecutorAddr hashable.
+template <> struct hash<__orc_rt::ExecutorAddr> {
+  size_t operator()(const __orc_rt::ExecutorAddr &A) const {
+    return hash<uint64_t>()(A.getValue());
+  }
+};
+
+} // namespace std
+
 #endif // ORC_RT_EXECUTOR_ADDRESS_H

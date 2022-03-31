@@ -10,6 +10,7 @@
 #include "ProfiledBinary.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include <cstdint>
 #include <queue>
 
@@ -41,7 +42,7 @@ extern cl::opt<int> ProfileInlineLimitMax;
 extern cl::opt<bool> SortProfiledSCC;
 
 cl::opt<bool> EnableCSPreInliner(
-    "csspgo-preinliner", cl::Hidden, cl::init(false),
+    "csspgo-preinliner", cl::Hidden, cl::init(true),
     cl::desc("Run a global pre-inliner to merge context profile based on "
              "estimated global top-down inline decisions"));
 
@@ -61,7 +62,14 @@ CSPreInliner::CSPreInliner(SampleProfileMap &Profiles, ProfiledBinary &Binary,
       // ContextTracker.getFuncNameFor to work, if `Profiles` can have md5 codes
       // as their profile context.
       ContextTracker(Profiles, nullptr), ProfileMap(Profiles), Binary(Binary),
-      HotCountThreshold(HotThreshold), ColdCountThreshold(ColdThreshold) {}
+      HotCountThreshold(HotThreshold), ColdCountThreshold(ColdThreshold) {
+  // Set default preinliner hot/cold call site threshold tuned with CSSPGO.
+  // for good performance with reasonable profile size.
+  if (!SampleHotCallSiteThreshold.getNumOccurrences())
+    SampleHotCallSiteThreshold = 1500;
+  if (!SampleColdCallSiteThreshold.getNumOccurrences())
+    SampleColdCallSiteThreshold = 0;
+}
 
 std::vector<StringRef> CSPreInliner::buildTopDownOrder() {
   std::vector<StringRef> Order;

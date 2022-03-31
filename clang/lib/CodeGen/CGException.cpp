@@ -400,8 +400,8 @@ void CodeGenFunction::EmitAnyExprToExn(const Expr *e, Address addr) {
 
   // __cxa_allocate_exception returns a void*;  we need to cast this
   // to the appropriate type for the object.
-  llvm::Type *ty = ConvertTypeForMem(e->getType())->getPointerTo();
-  Address typedAddr = Builder.CreateBitCast(addr, ty);
+  llvm::Type *ty = ConvertTypeForMem(e->getType());
+  Address typedAddr = Builder.CreateElementBitCast(addr, ty);
 
   // FIXME: this isn't quite right!  If there's a final unelided call
   // to a copy constructor, then according to [except.terminate]p1 we
@@ -421,13 +421,13 @@ void CodeGenFunction::EmitAnyExprToExn(const Expr *e, Address addr) {
 Address CodeGenFunction::getExceptionSlot() {
   if (!ExceptionSlot)
     ExceptionSlot = CreateTempAlloca(Int8PtrTy, "exn.slot");
-  return Address(ExceptionSlot, getPointerAlign());
+  return Address(ExceptionSlot, Int8PtrTy, getPointerAlign());
 }
 
 Address CodeGenFunction::getEHSelectorSlot() {
   if (!EHSelectorSlot)
     EHSelectorSlot = CreateTempAlloca(Int32Ty, "ehselector.slot");
-  return Address(EHSelectorSlot, CharUnits::fromQuantity(4));
+  return Address(EHSelectorSlot, Int32Ty, CharUnits::fromQuantity(4));
 }
 
 llvm::Value *CodeGenFunction::getExceptionFromSlot() {
@@ -1845,7 +1845,7 @@ Address CodeGenFunction::recoverAddrOfEscapedLocal(CodeGenFunction &ParentCGF,
   llvm::Value *ChildVar =
       Builder.CreateBitCast(RecoverCall, ParentVar.getType());
   ChildVar->setName(ParentVar.getName());
-  return Address(ChildVar, ParentVar.getAlignment());
+  return ParentVar.withPointer(ChildVar);
 }
 
 void CodeGenFunction::EmitCapturedLocals(CodeGenFunction &ParentCGF,
@@ -1931,7 +1931,8 @@ void CodeGenFunction::EmitCapturedLocals(CodeGenFunction &ParentCGF,
           FrameRecoverFn, {ParentI8Fn, ParentFP,
                            llvm::ConstantInt::get(Int32Ty, FrameEscapeIdx)});
       ParentFP = Builder.CreateBitCast(ParentFP, CGM.VoidPtrPtrTy);
-      ParentFP = Builder.CreateLoad(Address(ParentFP, getPointerAlign()));
+      ParentFP = Builder.CreateLoad(
+          Address(ParentFP, CGM.VoidPtrTy, getPointerAlign()));
     }
   }
 

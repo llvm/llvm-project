@@ -1295,7 +1295,7 @@ static void fixRegionTerminator(RegionMRT *Region) {
   }
 }
 
-// If a region region is just a sequence of regions (and the exit
+// If a region is just a sequence of regions (and the exit
 // block in the case of the top level region), we can simply skip
 // linearizing it, because it is already linear
 bool regionIsSequence(RegionMRT *Region) {
@@ -2786,12 +2786,8 @@ AMDGPUMachineCFGStructurizer::initializeSelectRegisters(MRT *MRT, unsigned Selec
     // Fixme: Move linearization creation to the original spot
     createLinearizedRegion(Region, SelectOut);
 
-    for (auto CI = Region->getChildren()->begin(),
-              CE = Region->getChildren()->end();
-         CI != CE; ++CI) {
-      InnerSelectOut =
-          initializeSelectRegisters((*CI), InnerSelectOut, MRI, TII);
-    }
+    for (auto *CI : *Region->getChildren())
+      InnerSelectOut = initializeSelectRegisters(CI, InnerSelectOut, MRI, TII);
     MRT->setBBSelectRegIn(InnerSelectOut);
     return InnerSelectOut;
   } else {

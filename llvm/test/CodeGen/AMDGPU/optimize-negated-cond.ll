@@ -36,19 +36,17 @@ bb4:
 
 ; GCN-LABEL: {{^}}negated_cond_dominated_blocks:
 ; GCN:   s_cmp_lg_u32
-; GCN: s_cselect_b64  [[CC1:[^,]+]], -1, 0
+; GCN:   s_cselect_b64  [[CC1:[^,]+]], -1, 0
 ; GCN:   s_branch [[BB1:.LBB[0-9]+_[0-9]+]]
 ; GCN: [[BB0:.LBB[0-9]+_[0-9]+]]
 ; GCN-NOT: v_cndmask_b32
 ; GCN-NOT: v_cmp
 ; GCN: [[BB1]]:
-; GCN:   s_mov_b64 [[CC2:[^,]+]], -1
 ; GCN:   s_mov_b64 vcc, [[CC1]]
 ; GCN:   s_cbranch_vccz [[BB2:.LBB[0-9]+_[0-9]+]]
-; GCN:   s_mov_b64 [[CC2]], 0
+; GCN:   s_mov_b64 vcc, exec
+; GCN:   s_cbranch_execnz [[BB0]]
 ; GCN: [[BB2]]:
-; GCN:   s_andn2_b64 vcc, exec, [[CC2]]
-; GCN:   s_cbranch_vccnz [[BB0]]
 define amdgpu_kernel void @negated_cond_dominated_blocks(i32 addrspace(1)* %arg1) {
 bb:
   br label %bb2

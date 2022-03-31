@@ -36,9 +36,9 @@ static std::string maybeDemangleSymbol(StringRef symName) {
     StringRef demangleInput = prefixless;
     if (config->machine == I386)
       demangleInput.consume_front("_");
-    std::string demangled = demangle(std::string(demangleInput));
+    std::string demangled = demangle(demangleInput, true);
     if (demangled != demangleInput)
-      return prefix + demangle(std::string(demangleInput));
+      return prefix + demangle(demangleInput, true);
     return (prefix + prefixless).str();
   }
   return std::string(symName);

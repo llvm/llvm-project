@@ -25,10 +25,7 @@
 
 #include "llvm/Transforms/Scalar/IndVarSimplify.h"
 #include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -74,11 +71,9 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
@@ -137,8 +132,6 @@ AllowIVWidening("indvars-widen-indvars", cl::Hidden, cl::init(true),
                 cl::desc("Allow widening of indvars to eliminate s/zext"));
 
 namespace {
-
-struct RewritePhi;
 
 class IndVarSimplify {
   LoopInfo *LI;
@@ -607,10 +600,10 @@ bool IndVarSimplify::simplifyAndExtend(Loop *L,
           Intrinsic::getName(Intrinsic::experimental_guard));
   bool HasGuards = GuardDecl && !GuardDecl->use_empty();
 
-  SmallVector<PHINode*, 8> LoopPhis;
-  for (BasicBlock::iterator I = L->getHeader()->begin(); isa<PHINode>(I); ++I) {
-    LoopPhis.push_back(cast<PHINode>(I));
-  }
+  SmallVector<PHINode *, 8> LoopPhis;
+  for (PHINode &PN : L->getHeader()->phis())
+    LoopPhis.push_back(&PN);
+
   // Each round of simplification iterates through the SimplifyIVUsers worklist
   // for all current phis, then determines whether any IVs can be
   // widened. Widening adds new phis to LoopPhis, inducing another round of
@@ -982,6 +975,7 @@ static Value *genLoopLimit(PHINode *IndVar, BasicBlock *ExitingBB,
   assert(isLoopCounter(IndVar, L, SE));
   const SCEVAddRecExpr *AR = cast<SCEVAddRecExpr>(SE->getSCEV(IndVar));
   const SCEV *IVInit = AR->getStart();
+  assert(AR->getStepRecurrence(*SE)->isOne() && "only handles unit stride");
 
   // IVInit may be a pointer while ExitCount is an integer when FindLoopCounter
   // finds a valid pointer IV. Sign extend ExitCount in order to materialize a
@@ -1004,13 +998,6 @@ static Value *genLoopLimit(PHINode *IndVar, BasicBlock *ExitingBB,
     assert(SE->isLoopInvariant(IVOffset, L) &&
            "Computed iteration count is not loop invariant!");
 
-    // We could handle pointer IVs other than i8*, but we need to compensate for
-    // gep index scaling.
-    assert(SE->getSizeOfExpr(IntegerType::getInt64Ty(IndVar->getContext()),
-                             cast<PointerType>(IndVar->getType())
-                                 ->getElementType())->isOne() &&
-           "unit stride pointer IV must be i8*");
-
     const SCEV *IVLimit = SE->getAddExpr(IVInit, IVOffset);
     BranchInst *BI = cast<BranchInst>(ExitingBB->getTerminator());
     return Rewriter.expandCodeFor(IVLimit, IndVar->getType(), BI);
@@ -1026,7 +1013,6 @@ static Value *genLoopLimit(PHINode *IndVar, BasicBlock *ExitingBB,
     // IVInit integer and ExitCount pointer would only occur if a canonical IV
     // were generated on top of case #2, which is not expected.
 
-    assert(AR->getStepRecurrence(*SE)->isOne() && "only handles unit stride");
     // For unit stride, IVCount = Start + ExitCount with 2's complement
     // overflow.
 

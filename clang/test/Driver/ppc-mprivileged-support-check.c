@@ -17,7 +17,7 @@
 // RUN:   -mcpu=power7 -mprivileged %s 2>&1 | FileCheck %s --check-prefix=NOPRIV
 
 // __SP__ TODO: Fix this test case to check for the attribute.
-int test() {
+int test(void) {
   return 0;
 }
 

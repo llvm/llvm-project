@@ -220,12 +220,7 @@ public:
   /// Create an InterfaceMap given with the implementation of the interfaces.
   /// The use of this constructor is in general discouraged in favor of
   /// 'InterfaceMap::get<InterfaceA, ...>()'.
-  InterfaceMap(MutableArrayRef<std::pair<TypeID, void *>> elements)
-      : interfaces(elements.begin(), elements.end()) {
-    llvm::sort(interfaces, [](const auto &lhs, const auto &rhs) {
-      return compare(lhs.first, rhs.first);
-    });
-  }
+  InterfaceMap(MutableArrayRef<std::pair<TypeID, void *>> elements);
 
   /// Insert the given models as implementations of the corresponding interfaces
   /// for the concrete attribute class.
@@ -260,9 +255,10 @@ private:
   /// Returns an instance of the concept object for the given interface id if it
   /// was registered to this map, null otherwise.
   void *lookup(TypeID id) const {
-    auto it = llvm::lower_bound(interfaces, id, [](const auto &it, TypeID id) {
-      return compare(it.first, id);
-    });
+    const auto *it =
+        llvm::lower_bound(interfaces, id, [](const auto &it, TypeID id) {
+          return compare(it.first, id);
+        });
     return (it != interfaces.end() && it->first == id) ? it->second : nullptr;
   }
 
@@ -270,7 +266,7 @@ private:
   SmallVector<std::pair<TypeID, void *>> interfaces;
 };
 
-} // end namespace detail
-} // end namespace mlir
+} // namespace detail
+} // namespace mlir
 
 #endif

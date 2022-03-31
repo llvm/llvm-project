@@ -41,7 +41,7 @@ private:
   Block CurrentBlock{0, 0, nullptr, {}};
 
 public:
-  explicit BlockIndexer(Index &I) : RecordVisitor(), Indices(I) {}
+  explicit BlockIndexer(Index &I) : Indices(I) {}
 
   Error visit(BufferExtents &) override;
   Error visit(WallclockRecord &) override;

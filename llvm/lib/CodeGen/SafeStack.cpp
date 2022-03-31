@@ -17,7 +17,6 @@
 #include "SafeStackLayout.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -52,7 +51,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
-#include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -97,10 +95,9 @@ static cl::opt<bool>
     SafeStackUsePointerAddress("safestack-use-pointer-address",
                                   cl::init(false), cl::Hidden);
 
-// Disabled by default due to PR32143.
 static cl::opt<bool> ClColoring("safe-stack-coloring",
                                 cl::desc("enable safe stack coloring"),
-                                cl::Hidden, cl::init(false));
+                                cl::Hidden, cl::init(true));
 
 namespace {
 
@@ -521,8 +518,7 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
   StackLayout SSL(StackAlignment);
   if (StackGuardSlot) {
     Type *Ty = StackGuardSlot->getAllocatedType();
-    uint64_t Align =
-        std::max(DL.getPrefTypeAlignment(Ty), StackGuardSlot->getAlignment());
+    Align Align = std::max(DL.getPrefTypeAlign(Ty), StackGuardSlot->getAlign());
     SSL.addObject(StackGuardSlot, getStaticAllocaAllocationSize(StackGuardSlot),
                   Align, SSC.getFullLiveRange());
   }
@@ -534,8 +530,9 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
       Size = 1; // Don't create zero-sized stack objects.
 
     // Ensure the object is properly aligned.
-    uint64_t Align =
-        std::max(DL.getPrefTypeAlignment(Ty), Arg->getParamAlignment());
+    Align Align = DL.getPrefTypeAlign(Ty);
+    if (auto A = Arg->getParamAlign())
+      Align = std::max(Align, *A);
     SSL.addObject(Arg, Size, Align, SSC.getFullLiveRange());
   }
 
@@ -546,24 +543,24 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
       Size = 1; // Don't create zero-sized stack objects.
 
     // Ensure the object is properly aligned.
-    uint64_t Align = std::max(DL.getPrefTypeAlignment(Ty), AI->getAlignment());
+    Align Align = std::max(DL.getPrefTypeAlign(Ty), AI->getAlign());
 
     SSL.addObject(AI, Size, Align,
                   ClColoring ? SSC.getLiveRange(AI) : NoColoringRange);
   }
 
   SSL.computeLayout();
-  uint64_t FrameAlignment = SSL.getFrameAlignment();
+  Align FrameAlignment = SSL.getFrameAlignment();
 
   // FIXME: tell SSL that we start at a less-then-MaxAlignment aligned location
   // (AlignmentSkew).
   if (FrameAlignment > StackAlignment) {
     // Re-align the base pointer according to the max requested alignment.
-    assert(isPowerOf2_64(FrameAlignment));
     IRB.SetInsertPoint(BasePointer->getNextNode());
     BasePointer = cast<Instruction>(IRB.CreateIntToPtr(
-        IRB.CreateAnd(IRB.CreatePtrToInt(BasePointer, IntPtrTy),
-                      ConstantInt::get(IntPtrTy, ~uint64_t(FrameAlignment - 1))),
+        IRB.CreateAnd(
+            IRB.CreatePtrToInt(BasePointer, IntPtrTy),
+            ConstantInt::get(IntPtrTy, ~(FrameAlignment.value() - 1))),
         StackPtrTy));
   }
 

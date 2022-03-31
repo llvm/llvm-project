@@ -4,6 +4,7 @@ set(LLVM_LINK_COMPONENTS
   Option
   ProfileData
   Support
+  WindowsDriver
   )
 
 if(WIN32)
@@ -53,7 +54,9 @@ add_clang_library(clangDriver
   ToolChains/Fuchsia.cpp
   ToolChains/Gnu.cpp
   ToolChains/Haiku.cpp
-  ToolChains/HIP.cpp
+  ToolChains/HIPUtility.cpp
+  ToolChains/HIPAMD.cpp
+  ToolChains/HIPSPV.cpp
   ToolChains/Hexagon.cpp
   ToolChains/Hurd.cpp
   ToolChains/Linux.cpp

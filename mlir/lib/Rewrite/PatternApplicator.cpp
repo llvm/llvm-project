@@ -28,7 +28,7 @@ PatternApplicator::PatternApplicator(
     bytecode->initializeMutableState(*mutableByteCodeState);
   }
 }
-PatternApplicator::~PatternApplicator() {}
+PatternApplicator::~PatternApplicator() = default;
 
 #ifndef NDEBUG
 /// Log a message for a pattern that is impossible to match.
@@ -53,7 +53,7 @@ void PatternApplicator::applyCostModel(CostModel model) {
   // Apply the cost model to the bytecode patterns first, and then the native
   // patterns.
   if (const PDLByteCode *bytecode = frozenPatternList.getPDLByteCode()) {
-    for (auto it : llvm::enumerate(bytecode->getPatterns()))
+    for (const auto &it : llvm::enumerate(bytecode->getPatterns()))
       mutableByteCodeState->updatePatternBenefit(it.index(), model(it.value()));
   }
 

@@ -37,7 +37,7 @@ func @recursively_legal_invalid_op() {
   }
   /// Operation that is dynamically legal, i.e. the function has a pattern
   /// applied to legalize the argument type before it becomes recursively legal.
-  builtin.func @dynamic_func(%arg: i64) attributes {test.recursively_legal} {
+  func.func @dynamic_func(%arg: i64) attributes {test.recursively_legal} {
     %ignored = "test.illegal_op_f"() : () -> (i32)
     "test.return"() : () -> ()
   }
@@ -89,8 +89,8 @@ builtin.module {
   func @test_undo_region_inline() {
     "test.region"() ({
       ^bb1(%i0: i64):
-        // expected-error@+1 {{failed to legalize operation 'std.br'}}
-        br ^bb2(%i0 : i64)
+        // expected-error@+1 {{failed to legalize operation 'cf.br'}}
+        cf.br ^bb2(%i0 : i64)
       ^bb2(%i1: i64):
         "test.invalid"(%i1) : (i64) -> ()
     }) {} : () -> ()
@@ -110,7 +110,7 @@ builtin.module {
     // expected-error@+1 {{failed to legalize operation 'test.region'}}
     "test.region"() ({
       ^bb1(%i0: i64):
-        br ^bb2(%i0 : i64)
+        cf.br ^bb2(%i0 : i64)
       ^bb2(%i1: i64):
         "test.invalid"(%i1) : (i64) -> ()
     }) {legalizer.should_clone, legalizer.erase_old_blocks} : () -> ()

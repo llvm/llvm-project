@@ -12,9 +12,9 @@
 
 #include "X86RegisterBankInfo.h"
 #include "X86InstrInfo.h"
-#include "llvm/CodeGen/GlobalISel/RegisterBank.h"
-#include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterBank.h"
+#include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 
 #define GET_TARGET_REGBANK_IMPL
@@ -25,8 +25,7 @@ using namespace llvm;
 #define GET_TARGET_REGBANK_INFO_IMPL
 #include "X86GenRegisterBankInfo.def"
 
-X86RegisterBankInfo::X86RegisterBankInfo(const TargetRegisterInfo &TRI)
-    : X86GenRegisterBankInfo() {
+X86RegisterBankInfo::X86RegisterBankInfo(const TargetRegisterInfo &TRI) {
 
   // validate RegBank initialization.
   const RegisterBank &RBGPR = getRegBank(X86::GPRRegBankID);

@@ -1,6 +1,7 @@
 # REQUIRES: x86
 # RUN: split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %t/asm -o %t.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %t/mismatch.s -o %t/mismatch.o
 # RUN: ld.lld --script %t/lds %t.o -o %t/out
 # RUN: llvm-readelf -S -l %t/out | FileCheck %s
 
@@ -16,15 +17,28 @@
 # CHECK:      00 .data_noload_a .data_noload_b .no_input_sec_noload {{$}}
 # CHECK:      01 .text {{$}}
 
+## The output SHT_PROBITS is contrary to the user expectation of SHT_NOBITS.
+## Issue a warning. See https://github.com/ClangBuiltLinux/linux/issues/1597
+# RUN: ld.lld --script %t/lds %t.o %t/mismatch.o -o %t/out 2>&1 | FileCheck %s --check-prefix=WARN
+# RUN: llvm-readelf -S -l %t/out | FileCheck %s --check-prefix=CHECK2
+
+# WARN:   warning: section type mismatch for .data_noload_a
+# CHECK2:      Name                 Type     Address          Off               Size
+# CHECK2:      .data_noload_a       PROGBITS 0000000000000000 [[OFF:[0-9a-f]+]] 001001
+
 #--- asm
 .section .text,"ax",@progbits
   nop
 
-.section .data_noload_a,"aw",@progbits
+.section .data_noload_a,"aw",@nobits
 .zero 4096
 
-.section .data_noload_b,"aw",@progbits
+.section .data_noload_b,"aw",@nobits
 .zero 4096
+
+#--- mismatch.s
+.section .data_noload_a,"aw",@progbits
+.byte 1
 
 #--- lds
 SECTIONS {

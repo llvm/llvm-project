@@ -15,9 +15,10 @@
 #include "MetadataImpl.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/IR/DIBuilder.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/Instructions.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Value.h"
 
 #include <numeric>
 
@@ -26,7 +27,7 @@ using namespace llvm;
 namespace llvm {
 // Use FS-AFDO discriminator.
 cl::opt<bool> EnableFSDiscriminator(
-    "enable-fs-discriminator", cl::Hidden, cl::init(false),
+    "enable-fs-discriminator", cl::Hidden, cl::init(false), cl::ZeroOrMore,
     cl::desc("Enable adding flow sensitive discriminators"));
 } // namespace llvm
 
@@ -180,6 +181,7 @@ void DILocation::decodeDiscriminator(unsigned D, unsigned &BD, unsigned &DF,
   CI = getUnsignedFromPrefixEncoding(
       getNextComponentInDiscriminator(getNextComponentInDiscriminator(D)));
 }
+dwarf::Tag DINode::getTag() const { return (dwarf::Tag)SubclassData16; }
 
 DINode::DIFlags DINode::getFlag(StringRef Flag) {
   return StringSwitch<DIFlags>(Flag)
@@ -282,6 +284,7 @@ static bool isCanonical(const MDString *S) {
 }
 #endif
 
+dwarf::Tag GenericDINode::getTag() const { return (dwarf::Tag)SubclassData16; }
 GenericDINode *GenericDINode::getImpl(LLVMContext &Context, unsigned Tag,
                                       MDString *Header,
                                       ArrayRef<Metadata *> DwarfOps,
@@ -340,6 +343,9 @@ void GenericDINode::recalculateHash() {
                        CLASS(Context, Storage, UNWRAP_ARGS(ARGS), OPS),        \
                    Storage, Context.pImpl->CLASS##s)
 
+DISubrange::DISubrange(LLVMContext &C, StorageType Storage,
+                       ArrayRef<Metadata *> Ops)
+    : DINode(C, DISubrangeKind, Storage, dwarf::DW_TAG_subrange_type, Ops) {}
 DISubrange *DISubrange::getImpl(LLVMContext &Context, int64_t Count, int64_t Lo,
                                 StorageType Storage, bool ShouldCreate) {
   auto *CountNode = ConstantAsMetadata::get(
@@ -450,6 +456,10 @@ DISubrange::BoundType DISubrange::getStride() const {
 
   return BoundType();
 }
+DIGenericSubrange::DIGenericSubrange(LLVMContext &C, StorageType Storage,
+                                     ArrayRef<Metadata *> Ops)
+    : DINode(C, DIGenericSubrangeKind, Storage, dwarf::DW_TAG_generic_subrange,
+             Ops) {}
 
 DIGenericSubrange *DIGenericSubrange::getImpl(LLVMContext &Context,
                                               Metadata *CountNode, Metadata *LB,
@@ -529,6 +539,13 @@ DIGenericSubrange::BoundType DIGenericSubrange::getStride() const {
   return BoundType();
 }
 
+DIEnumerator::DIEnumerator(LLVMContext &C, StorageType Storage,
+                           const APInt &Value, bool IsUnsigned,
+                           ArrayRef<Metadata *> Ops)
+    : DINode(C, DIEnumeratorKind, Storage, dwarf::DW_TAG_enumerator, Ops),
+      Value(Value) {
+  SubclassData32 = IsUnsigned;
+}
 DIEnumerator *DIEnumerator::getImpl(LLVMContext &Context, const APInt &Value,
                                     bool IsUnsigned, MDString *Name,
                                     StorageType Storage, bool ShouldCreate) {
@@ -567,15 +584,48 @@ Optional<DIBasicType::Signedness> DIBasicType::getSignedness() const {
 DIStringType *DIStringType::getImpl(LLVMContext &Context, unsigned Tag,
                                     MDString *Name, Metadata *StringLength,
                                     Metadata *StringLengthExp,
+                                    Metadata *StringLocationExp,
                                     uint64_t SizeInBits, uint32_t AlignInBits,
                                     unsigned Encoding, StorageType Storage,
                                     bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
-  DEFINE_GETIMPL_LOOKUP(DIStringType, (Tag, Name, StringLength, StringLengthExp,
-                                       SizeInBits, AlignInBits, Encoding));
-  Metadata *Ops[] = {nullptr, nullptr, Name, StringLength, StringLengthExp};
+  DEFINE_GETIMPL_LOOKUP(DIStringType,
+                        (Tag, Name, StringLength, StringLengthExp,
+                         StringLocationExp, SizeInBits, AlignInBits, Encoding));
+  Metadata *Ops[] = {nullptr,      nullptr,         Name,
+                     StringLength, StringLengthExp, StringLocationExp};
   DEFINE_GETIMPL_STORE(DIStringType, (Tag, SizeInBits, AlignInBits, Encoding),
                        Ops);
+}
+DIType *DIDerivedType::getClassType() const {
+  assert(getTag() == dwarf::DW_TAG_ptr_to_member_type);
+  return cast_or_null<DIType>(getExtraData());
+}
+uint32_t DIDerivedType::getVBPtrOffset() const {
+  assert(getTag() == dwarf::DW_TAG_inheritance);
+  if (auto *CM = cast_or_null<ConstantAsMetadata>(getExtraData()))
+    if (auto *CI = dyn_cast_or_null<ConstantInt>(CM->getValue()))
+      return static_cast<uint32_t>(CI->getZExtValue());
+  return 0;
+}
+Constant *DIDerivedType::getStorageOffsetInBits() const {
+  assert(getTag() == dwarf::DW_TAG_member && isBitField());
+  if (auto *C = cast_or_null<ConstantAsMetadata>(getExtraData()))
+    return C->getValue();
+  return nullptr;
+}
+
+Constant *DIDerivedType::getConstant() const {
+  assert(getTag() == dwarf::DW_TAG_member && isStaticMember());
+  if (auto *C = cast_or_null<ConstantAsMetadata>(getExtraData()))
+    return C->getValue();
+  return nullptr;
+}
+Constant *DIDerivedType::getDiscriminantValue() const {
+  assert(getTag() == dwarf::DW_TAG_member && !isStaticMember());
+  if (auto *C = cast_or_null<ConstantAsMetadata>(getExtraData()))
+    return C->getValue();
+  return nullptr;
 }
 
 DIDerivedType *DIDerivedType::getImpl(
@@ -698,6 +748,12 @@ DICompositeType *DICompositeType::getODRTypeIfExists(LLVMContext &Context,
     return nullptr;
   return Context.pImpl->DITypeMap->lookup(&Identifier);
 }
+DISubroutineType::DISubroutineType(LLVMContext &C, StorageType Storage,
+                                   DIFlags Flags, uint8_t CC,
+                                   ArrayRef<Metadata *> Ops)
+    : DIType(C, DISubroutineTypeKind, Storage, dwarf::DW_TAG_subroutine_type, 0,
+             0, 0, 0, Flags, Ops),
+      CC(CC) {}
 
 DISubroutineType *DISubroutineType::getImpl(LLVMContext &Context, DIFlags Flags,
                                             uint8_t CC, Metadata *TypeArray,
@@ -707,6 +763,12 @@ DISubroutineType *DISubroutineType::getImpl(LLVMContext &Context, DIFlags Flags,
   Metadata *Ops[] = {nullptr, nullptr, nullptr, TypeArray};
   DEFINE_GETIMPL_STORE(DISubroutineType, (Flags, CC), Ops);
 }
+
+DIFile::DIFile(LLVMContext &C, StorageType Storage,
+               Optional<ChecksumInfo<MDString *>> CS, Optional<MDString *> Src,
+               ArrayRef<Metadata *> Ops)
+    : DIScope(C, DIFileKind, Storage, dwarf::DW_TAG_file_type, Ops),
+      Checksum(CS), Source(Src) {}
 
 // FIXME: Implement this string-enum correspondence with a .def file and macros,
 // so that the association is explicit rather than implied.
@@ -745,6 +807,20 @@ DIFile *DIFile::getImpl(LLVMContext &Context, MDString *Filename,
   Metadata *Ops[] = {Filename, Directory, CS ? CS->Value : nullptr,
                      Source.getValueOr(nullptr)};
   DEFINE_GETIMPL_STORE(DIFile, (CS, Source), Ops);
+}
+DICompileUnit::DICompileUnit(LLVMContext &C, StorageType Storage,
+                             unsigned SourceLanguage, bool IsOptimized,
+                             unsigned RuntimeVersion, unsigned EmissionKind,
+                             uint64_t DWOId, bool SplitDebugInlining,
+                             bool DebugInfoForProfiling, unsigned NameTableKind,
+                             bool RangesBaseAddress, ArrayRef<Metadata *> Ops)
+    : DIScope(C, DICompileUnitKind, Storage, dwarf::DW_TAG_compile_unit, Ops),
+      SourceLanguage(SourceLanguage), IsOptimized(IsOptimized),
+      RuntimeVersion(RuntimeVersion), EmissionKind(EmissionKind), DWOId(DWOId),
+      SplitDebugInlining(SplitDebugInlining),
+      DebugInfoForProfiling(DebugInfoForProfiling),
+      NameTableKind(NameTableKind), RangesBaseAddress(RangesBaseAddress) {
+  assert(Storage != Uniqued);
 }
 
 DICompileUnit *DICompileUnit::getImpl(
@@ -823,6 +899,30 @@ const char *DICompileUnit::nameTableKindString(DebugNameTableKind NTK) {
     return "None";
   }
   return nullptr;
+}
+DISubprogram::DISubprogram(LLVMContext &C, StorageType Storage, unsigned Line,
+                           unsigned ScopeLine, unsigned VirtualIndex,
+                           int ThisAdjustment, DIFlags Flags, DISPFlags SPFlags,
+                           ArrayRef<Metadata *> Ops)
+    : DILocalScope(C, DISubprogramKind, Storage, dwarf::DW_TAG_subprogram, Ops),
+      Line(Line), ScopeLine(ScopeLine), VirtualIndex(VirtualIndex),
+      ThisAdjustment(ThisAdjustment), Flags(Flags), SPFlags(SPFlags) {
+  static_assert(dwarf::DW_VIRTUALITY_max < 4, "Virtuality out of range");
+}
+DISubprogram::DISPFlags
+DISubprogram::toSPFlags(bool IsLocalToUnit, bool IsDefinition, bool IsOptimized,
+                        unsigned Virtuality, bool IsMainSubprogram) {
+  // We're assuming virtuality is the low-order field.
+  static_assert(int(SPFlagVirtual) == int(dwarf::DW_VIRTUALITY_virtual) &&
+                    int(SPFlagPureVirtual) ==
+                        int(dwarf::DW_VIRTUALITY_pure_virtual),
+                "Virtuality constant mismatch");
+  return static_cast<DISPFlags>(
+      (Virtuality & SPFlagVirtuality) |
+      (IsLocalToUnit ? SPFlagLocalToUnit : SPFlagZero) |
+      (IsDefinition ? SPFlagDefinition : SPFlagZero) |
+      (IsOptimized ? SPFlagOptimized : SPFlagZero) |
+      (IsMainSubprogram ? SPFlagMainSubprogram : SPFlagZero));
 }
 
 DISubprogram *DILocalScope::getSubprogram() const {
@@ -912,6 +1012,10 @@ bool DISubprogram::describes(const Function *F) const {
   assert(F && "Invalid function");
   return F->getSubprogram() == this;
 }
+DILexicalBlockBase::DILexicalBlockBase(LLVMContext &C, unsigned ID,
+                                       StorageType Storage,
+                                       ArrayRef<Metadata *> Ops)
+    : DILocalScope(C, ID, Storage, dwarf::DW_TAG_lexical_block, Ops) {}
 
 DILexicalBlock *DILexicalBlock::getImpl(LLVMContext &Context, Metadata *Scope,
                                         Metadata *File, unsigned Line,
@@ -937,6 +1041,10 @@ DILexicalBlockFile *DILexicalBlockFile::getImpl(LLVMContext &Context,
   DEFINE_GETIMPL_STORE(DILexicalBlockFile, (Discriminator), Ops);
 }
 
+DINamespace::DINamespace(LLVMContext &Context, StorageType Storage,
+                         bool ExportSymbols, ArrayRef<Metadata *> Ops)
+    : DIScope(Context, DINamespaceKind, Storage, dwarf::DW_TAG_namespace, Ops),
+      ExportSymbols(ExportSymbols) {}
 DINamespace *DINamespace::getImpl(LLVMContext &Context, Metadata *Scope,
                                   MDString *Name, bool ExportSymbols,
                                   StorageType Storage, bool ShouldCreate) {
@@ -947,6 +1055,11 @@ DINamespace *DINamespace::getImpl(LLVMContext &Context, Metadata *Scope,
   DEFINE_GETIMPL_STORE(DINamespace, (ExportSymbols), Ops);
 }
 
+DICommonBlock::DICommonBlock(LLVMContext &Context, StorageType Storage,
+                             unsigned LineNo, ArrayRef<Metadata *> Ops)
+    : DIScope(Context, DICommonBlockKind, Storage, dwarf::DW_TAG_common_block,
+              Ops),
+      LineNo(LineNo) {}
 DICommonBlock *DICommonBlock::getImpl(LLVMContext &Context, Metadata *Scope,
                                       Metadata *Decl, MDString *Name,
                                       Metadata *File, unsigned LineNo,
@@ -958,6 +1071,10 @@ DICommonBlock *DICommonBlock::getImpl(LLVMContext &Context, Metadata *Scope,
   DEFINE_GETIMPL_STORE(DICommonBlock, (LineNo), Ops);
 }
 
+DIModule::DIModule(LLVMContext &Context, StorageType Storage, unsigned LineNo,
+                   bool IsDecl, ArrayRef<Metadata *> Ops)
+    : DIScope(Context, DIModuleKind, Storage, dwarf::DW_TAG_module, Ops),
+      LineNo(LineNo), IsDecl(IsDecl) {}
 DIModule *DIModule::getImpl(LLVMContext &Context, Metadata *File,
                             Metadata *Scope, MDString *Name,
                             MDString *ConfigurationMacros,
@@ -971,6 +1088,13 @@ DIModule *DIModule::getImpl(LLVMContext &Context, Metadata *File,
                      IncludePath, APINotesFile};
   DEFINE_GETIMPL_STORE(DIModule, (LineNo, IsDecl), Ops);
 }
+DITemplateTypeParameter::DITemplateTypeParameter(LLVMContext &Context,
+                                                 StorageType Storage,
+                                                 bool IsDefault,
+                                                 ArrayRef<Metadata *> Ops)
+    : DITemplateParameter(Context, DITemplateTypeParameterKind, Storage,
+                          dwarf::DW_TAG_template_type_parameter, IsDefault,
+                          Ops) {}
 
 DITemplateTypeParameter *
 DITemplateTypeParameter::getImpl(LLVMContext &Context, MDString *Name,
@@ -1036,6 +1160,11 @@ DILocalVariable::getImpl(LLVMContext &Context, Metadata *Scope, MDString *Name,
   DEFINE_GETIMPL_STORE(DILocalVariable, (Line, Arg, Flags, AlignInBits), Ops);
 }
 
+DIVariable::DIVariable(LLVMContext &C, unsigned ID, StorageType Storage,
+                       signed Line, ArrayRef<Metadata *> Ops,
+                       uint32_t AlignInBits)
+    : DINode(C, ID, Storage, dwarf::DW_TAG_variable, Ops), Line(Line),
+      AlignInBits(AlignInBits) {}
 Optional<uint64_t> DIVariable::getSizeInBits() const {
   // This is used by the Verifier so be mindful of broken types.
   const Metadata *RawType = getRawType();
@@ -1059,6 +1188,9 @@ Optional<uint64_t> DIVariable::getSizeInBits() const {
   return None;
 }
 
+DILabel::DILabel(LLVMContext &C, StorageType Storage, unsigned Line,
+                 ArrayRef<Metadata *> Ops)
+    : DINode(C, DILabelKind, Storage, dwarf::DW_TAG_label, Ops), Line(Line) {}
 DILabel *DILabel::getImpl(LLVMContext &Context, Metadata *Scope, MDString *Name,
                           Metadata *File, unsigned Line, StorageType Storage,
                           bool ShouldCreate) {
@@ -1074,6 +1206,12 @@ DIExpression *DIExpression::getImpl(LLVMContext &Context,
                                     StorageType Storage, bool ShouldCreate) {
   DEFINE_GETIMPL_LOOKUP(DIExpression, (Elements));
   DEFINE_GETIMPL_STORE_NO_OPS(DIExpression, (Elements));
+}
+bool DIExpression::isEntryValue() const {
+  return getNumElements() > 0 && getElement(0) == dwarf::DW_OP_LLVM_entry_value;
+}
+bool DIExpression::startsWithDeref() const {
+  return getNumElements() > 0 && getElement(0) == dwarf::DW_OP_deref;
 }
 
 unsigned DIExpression::ExprOperand::getSize() const {
@@ -1594,6 +1732,11 @@ DIGlobalVariableExpression::getImpl(LLVMContext &Context, Metadata *Variable,
   Metadata *Ops[] = {Variable, Expression};
   DEFINE_GETIMPL_STORE_NO_CONSTRUCTOR_ARGS(DIGlobalVariableExpression, Ops);
 }
+DIObjCProperty::DIObjCProperty(LLVMContext &C, StorageType Storage,
+                               unsigned Line, unsigned Attributes,
+                               ArrayRef<Metadata *> Ops)
+    : DINode(C, DIObjCPropertyKind, Storage, dwarf::DW_TAG_APPLE_property, Ops),
+      Line(Line), Attributes(Attributes) {}
 
 DIObjCProperty *DIObjCProperty::getImpl(
     LLVMContext &Context, MDString *Name, Metadata *File, unsigned Line,

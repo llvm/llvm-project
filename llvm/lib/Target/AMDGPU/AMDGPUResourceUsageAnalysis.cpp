@@ -28,6 +28,7 @@
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/Analysis/CallGraph.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
@@ -87,9 +88,7 @@ int32_t AMDGPUResourceUsageAnalysis::SIFunctionResourceInfo::getTotalNumSGPRs(
 
 int32_t AMDGPUResourceUsageAnalysis::SIFunctionResourceInfo::getTotalNumVGPRs(
     const GCNSubtarget &ST, int32_t ArgNumAGPR, int32_t ArgNumVGPR) const {
-  if (ST.hasGFX90AInsts() && ArgNumAGPR)
-    return alignTo(ArgNumVGPR, 4) + ArgNumAGPR;
-  return std::max(ArgNumVGPR, ArgNumAGPR);
+  return AMDGPU::getTotalNumVGPRs(ST.hasGFX90AInsts(), ArgNumAGPR, ArgNumVGPR);
 }
 
 int32_t AMDGPUResourceUsageAnalysis::SIFunctionResourceInfo::getTotalNumVGPRs(
@@ -97,28 +96,27 @@ int32_t AMDGPUResourceUsageAnalysis::SIFunctionResourceInfo::getTotalNumVGPRs(
   return getTotalNumVGPRs(ST, NumAGPR, NumVGPR);
 }
 
-bool AMDGPUResourceUsageAnalysis::runOnSCC(CallGraphSCC &SCC) {
+bool AMDGPUResourceUsageAnalysis::runOnModule(Module &M) {
   auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
   if (!TPC)
     return false;
 
+  MachineModuleInfo &MMI = getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
   const TargetMachine &TM = TPC->getTM<TargetMachine>();
   bool HasIndirectCall = false;
 
-  for (CallGraphNode *I : SCC) {
-    Function *F = I->getFunction();
-    if (!F || F->isDeclaration())
+  for (Function &F : M) {
+    if (F.isDeclaration())
       continue;
 
-    MachineModuleInfo &MMI =
-        getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
-    MachineFunction &MF = MMI.getOrCreateMachineFunction(*F);
+    MachineFunction *MF = MMI.getMachineFunction(F);
+    assert(MF && "function must have been generated already");
 
     auto CI = CallGraphResourceInfo.insert(
-        std::make_pair(&MF.getFunction(), SIFunctionResourceInfo()));
+        std::make_pair(&F, SIFunctionResourceInfo()));
     SIFunctionResourceInfo &Info = CI.first->second;
     assert(CI.second && "should only be called once per function");
-    Info = analyzeResourceUsage(MF, TM);
+    Info = analyzeResourceUsage(*MF, TM);
     HasIndirectCall |= Info.HasIndirectCall;
   }
 

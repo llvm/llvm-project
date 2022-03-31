@@ -557,9 +557,10 @@ MODULE_BLOCK Contents
 ---------------------
 
 The ``MODULE_BLOCK`` block (id 8) is the top-level block for LLVM bitcode files,
-and each bitcode file must contain exactly one. In addition to records
-(described below) containing information about the module, a ``MODULE_BLOCK``
-block may contain the following sub-blocks:
+and each module in a bitcode file must contain exactly one. A bitcode file with
+multi-module bitcode is valid. In addition to records (described below)
+containing information about the module, a ``MODULE_BLOCK`` block may contain
+the following sub-blocks:
 
 * `BLOCKINFO`_
 * `PARAMATTR_BLOCK`_
@@ -1077,6 +1078,7 @@ The integer codes are mapped to well-known attributes as follows.
 * code 76: ``nosanitize_coverage``
 * code 77: ``elementtype``
 * code 78: ``disable_sanitizer_instrumentation``
+* code 79: ``nosanitize_bounds``
 
 .. note::
   The ``allocsize`` attribute has a special encoding for its arguments. Its two

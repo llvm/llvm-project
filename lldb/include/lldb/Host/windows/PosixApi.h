@@ -84,35 +84,10 @@ typedef uint32_t pid_t;
 #define STDOUT_FILENO 1
 #define STDERR_FILENO 2
 
-#define S_IFDIR _S_IFDIR
-
-#ifndef S_ISDIR
-#define S_ISDIR(mode) (((mode)&S_IFMT) == S_IFDIR)
-#endif
-
-#endif // _MSC_VER
-
-// Various useful posix functions that are not present in Windows.  We provide
-// custom implementations.
-int vasprintf(char **ret, const char *fmt, va_list ap);
-char *strcasestr(const char *s, const char *find);
-
-#ifdef _MSC_VER
-
-char *basename(char *path);
-char *dirname(char *path);
-
-int strcasecmp(const char *s1, const char *s2);
-int strncasecmp(const char *s1, const char *s2, size_t n);
-
 #endif // _MSC_VER
 
 // empty functions
 inline int posix_openpt(int flag) { LLVM_BUILTIN_UNREACHABLE; }
-
-inline int strerror_r(int errnum, char *buf, size_t buflen) {
-  LLVM_BUILTIN_UNREACHABLE;
-}
 
 inline int unlockpt(int fd) { LLVM_BUILTIN_UNREACHABLE; }
 inline int grantpt(int fd) { LLVM_BUILTIN_UNREACHABLE; }

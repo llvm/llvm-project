@@ -11,7 +11,10 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
-void alloc_free_blocks() {
+// disable_sanitizer_instrumentation on __tsan_test_only_on_fork is not
+// transitive, so we must apply it here as well.
+// Instrumenting alloc_free_blocks() will result in deadlocks in TSan.
+__attribute__((disable_sanitizer_instrumentation)) void alloc_free_blocks() {
   // Allocate a bunch of blocks to drain local allocator cache
   // and provoke it to lock allocator global mutexes.
   const int kBlocks = 1000;

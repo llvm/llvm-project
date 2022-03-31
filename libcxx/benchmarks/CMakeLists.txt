@@ -41,7 +41,7 @@ ExternalProject_Add(google-benchmark-libcxx
         EXCLUDE_FROM_ALL ON
         DEPENDS cxx cxx-headers
         PREFIX benchmark-libcxx
-        SOURCE_DIR ${LIBCXX_SOURCE_DIR}/utils/google-benchmark
+        SOURCE_DIR ${LLVM_THIRD_PARTY_DIR}/benchmark
         INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/benchmark-libcxx
         CMAKE_CACHE_ARGS
           -DCMAKE_C_COMPILER:STRING=${CMAKE_C_COMPILER}
@@ -66,7 +66,7 @@ if (LIBCXX_BENCHMARK_NATIVE_STDLIB)
   ExternalProject_Add(google-benchmark-native
         EXCLUDE_FROM_ALL ON
         PREFIX benchmark-native
-        SOURCE_DIR ${LIBCXX_SOURCE_DIR}/utils/google-benchmark
+        SOURCE_DIR ${LLVM_THIRD_PARTY_DIR}/benchmark
         INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/benchmark-native
         CMAKE_CACHE_ARGS
           -DCMAKE_C_COMPILER:STRING=${CMAKE_C_COMPILER}
@@ -166,6 +166,11 @@ endfunction()
 # Register Benchmark tests
 #==============================================================================
 file(GLOB BENCHMARK_TESTS "*.bench.cpp")
+
+if (NOT LIBCXX_ENABLE_INCOMPLETE_FEATURES)
+  list(FILTER BENCHMARK_TESTS EXCLUDE REGEX "(format_to_n|format_to|format|formatted_size|formatter_float|std_format_spec_string_unicode).bench.cpp")
+endif()
+
 foreach(test_path ${BENCHMARK_TESTS})
   get_filename_component(test_file "${test_path}" NAME)
   string(REPLACE ".bench.cpp" "" test_name "${test_file}")

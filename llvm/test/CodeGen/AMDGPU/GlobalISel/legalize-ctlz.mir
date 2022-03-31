@@ -9,10 +9,10 @@ body: |
     liveins: $vgpr0
     ; CHECK-LABEL: name: ctlz_s32_s32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[AMDGPU_FFBH_U32_:%[0-9]+]]:_(s32) = G_AMDGPU_FFBH_U32 [[COPY]](s32)
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
-    ; CHECK: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBH_U32_]], [[C]]
-    ; CHECK: $vgpr0 = COPY [[UMIN]](s32)
+    ; CHECK-NEXT: [[AMDGPU_FFBH_U32_:%[0-9]+]]:_(s32) = G_AMDGPU_FFBH_U32 [[COPY]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
+    ; CHECK-NEXT: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBH_U32_]], [[C]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[UMIN]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = G_CTLZ %0
     $vgpr0 = COPY %1
@@ -26,10 +26,10 @@ body: |
     liveins: $vgpr0_vgpr1
     ; CHECK-LABEL: name: ctlz_s32_s64
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; CHECK: [[AMDGPU_FFBH_U32_:%[0-9]+]]:_(s32) = G_AMDGPU_FFBH_U32 [[COPY]](s64)
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 64
-    ; CHECK: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBH_U32_]], [[C]]
-    ; CHECK: $vgpr0 = COPY [[UMIN]](s32)
+    ; CHECK-NEXT: [[AMDGPU_FFBH_U32_:%[0-9]+]]:_(s32) = G_AMDGPU_FFBH_U32 [[COPY]](s64)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 64
+    ; CHECK-NEXT: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBH_U32_]], [[C]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[UMIN]](s32)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_CTLZ %0
     $vgpr0 = COPY %1
@@ -43,11 +43,11 @@ body: |
     liveins: $vgpr0_vgpr1
     ; CHECK-LABEL: name: ctlz_s64_s64
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; CHECK: [[AMDGPU_FFBH_U32_:%[0-9]+]]:_(s32) = G_AMDGPU_FFBH_U32 [[COPY]](s64)
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 64
-    ; CHECK: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBH_U32_]], [[C]]
-    ; CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[UMIN]](s32)
-    ; CHECK: $vgpr0_vgpr1 = COPY [[ZEXT]](s64)
+    ; CHECK-NEXT: [[AMDGPU_FFBH_U32_:%[0-9]+]]:_(s32) = G_AMDGPU_FFBH_U32 [[COPY]](s64)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 64
+    ; CHECK-NEXT: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBH_U32_]], [[C]]
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[UMIN]](s32)
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[ZEXT]](s64)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s64) = G_CTLZ %0
     $vgpr0_vgpr1 = COPY %1
@@ -61,12 +61,12 @@ body: |
     liveins: $vgpr0
     ; CHECK-LABEL: name: ctlz_s16_s32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[AMDGPU_FFBH_U32_:%[0-9]+]]:_(s32) = G_AMDGPU_FFBH_U32 [[COPY]](s32)
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
-    ; CHECK: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBH_U32_]], [[C]]
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[UMIN]], [[C1]]
-    ; CHECK: $vgpr0 = COPY [[AND]](s32)
+    ; CHECK-NEXT: [[AMDGPU_FFBH_U32_:%[0-9]+]]:_(s32) = G_AMDGPU_FFBH_U32 [[COPY]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
+    ; CHECK-NEXT: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBH_U32_]], [[C]]
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[UMIN]], [[C1]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[AND]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s16) = G_CTLZ %0
     %2:_(s32) = G_ZEXT %1
@@ -81,16 +81,16 @@ body: |
     liveins: $vgpr0
     ; CHECK-LABEL: name: ctlz_s16_s16
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
-    ; CHECK: [[AMDGPU_FFBH_U32_:%[0-9]+]]:_(s32) = G_AMDGPU_FFBH_U32 [[AND]](s32)
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
-    ; CHECK: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBH_U32_]], [[C1]]
-    ; CHECK: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CHECK: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[UMIN]], [[C2]]
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[SUB]](s32)
-    ; CHECK: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
-    ; CHECK: $vgpr0 = COPY [[AND1]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: [[AMDGPU_FFBH_U32_:%[0-9]+]]:_(s32) = G_AMDGPU_FFBH_U32 [[AND]](s32)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
+    ; CHECK-NEXT: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBH_U32_]], [[C1]]
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[UMIN]], [[C2]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[SUB]](s32)
+    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[AND1]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s16) = G_TRUNC %0
     %2:_(s16) = G_CTLZ %1
@@ -106,14 +106,14 @@ body: |
     liveins: $vgpr0_vgpr1
     ; CHECK-LABEL: name: ctlz_v2s32_v2s32
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
-    ; CHECK: [[AMDGPU_FFBH_U32_:%[0-9]+]]:_(s32) = G_AMDGPU_FFBH_U32 [[UV]](s32)
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
-    ; CHECK: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBH_U32_]], [[C]]
-    ; CHECK: [[AMDGPU_FFBH_U32_1:%[0-9]+]]:_(s32) = G_AMDGPU_FFBH_U32 [[UV1]](s32)
-    ; CHECK: [[UMIN1:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBH_U32_1]], [[C]]
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[UMIN]](s32), [[UMIN1]](s32)
-    ; CHECK: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
+    ; CHECK-NEXT: [[AMDGPU_FFBH_U32_:%[0-9]+]]:_(s32) = G_AMDGPU_FFBH_U32 [[UV]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
+    ; CHECK-NEXT: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBH_U32_]], [[C]]
+    ; CHECK-NEXT: [[AMDGPU_FFBH_U32_1:%[0-9]+]]:_(s32) = G_AMDGPU_FFBH_U32 [[UV1]](s32)
+    ; CHECK-NEXT: [[UMIN1:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBH_U32_1]], [[C]]
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[UMIN]](s32), [[UMIN1]](s32)
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
     %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
     %1:_(<2 x s32>) = G_CTLZ %0
     $vgpr0_vgpr1 = COPY %1
@@ -127,14 +127,14 @@ body: |
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3
     ; CHECK-LABEL: name: ctlz_v2s32_v2s64
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    ; CHECK: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](<2 x s64>)
-    ; CHECK: [[AMDGPU_FFBH_U32_:%[0-9]+]]:_(s32) = G_AMDGPU_FFBH_U32 [[UV]](s64)
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 64
-    ; CHECK: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBH_U32_]], [[C]]
-    ; CHECK: [[AMDGPU_FFBH_U32_1:%[0-9]+]]:_(s32) = G_AMDGPU_FFBH_U32 [[UV1]](s64)
-    ; CHECK: [[UMIN1:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBH_U32_1]], [[C]]
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[UMIN]](s32), [[UMIN1]](s32)
-    ; CHECK: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](<2 x s64>)
+    ; CHECK-NEXT: [[AMDGPU_FFBH_U32_:%[0-9]+]]:_(s32) = G_AMDGPU_FFBH_U32 [[UV]](s64)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 64
+    ; CHECK-NEXT: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBH_U32_]], [[C]]
+    ; CHECK-NEXT: [[AMDGPU_FFBH_U32_1:%[0-9]+]]:_(s32) = G_AMDGPU_FFBH_U32 [[UV1]](s64)
+    ; CHECK-NEXT: [[UMIN1:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBH_U32_1]], [[C]]
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[UMIN]](s32), [[UMIN1]](s32)
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
     %0:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %1:_(<2 x s32>) = G_CTLZ %0
     $vgpr0_vgpr1 = COPY %1
@@ -148,27 +148,27 @@ body: |
     liveins: $vgpr0
     ; CHECK-LABEL: name: ctlz_v2s16_v2s16
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
-    ; CHECK: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[BITCAST]], [[C1]]
-    ; CHECK: [[AMDGPU_FFBH_U32_:%[0-9]+]]:_(s32) = G_AMDGPU_FFBH_U32 [[AND]](s32)
-    ; CHECK: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
-    ; CHECK: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBH_U32_]], [[C2]]
-    ; CHECK: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[UMIN]], [[C]]
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[SUB]](s32)
-    ; CHECK: [[AND1:%[0-9]+]]:_(s32) = G_AND [[LSHR]], [[C1]]
-    ; CHECK: [[AMDGPU_FFBH_U32_1:%[0-9]+]]:_(s32) = G_AMDGPU_FFBH_U32 [[AND1]](s32)
-    ; CHECK: [[UMIN1:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBH_U32_1]], [[C2]]
-    ; CHECK: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[UMIN1]], [[C]]
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[SUB1]](s32)
-    ; CHECK: [[AND2:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C1]]
-    ; CHECK: [[AND3:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C1]]
-    ; CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND3]], [[C]](s32)
-    ; CHECK: [[OR:%[0-9]+]]:_(s32) = G_OR [[AND2]], [[SHL]]
-    ; CHECK: [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
-    ; CHECK: $vgpr0 = COPY [[BITCAST1]](<2 x s16>)
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[BITCAST]], [[C1]]
+    ; CHECK-NEXT: [[AMDGPU_FFBH_U32_:%[0-9]+]]:_(s32) = G_AMDGPU_FFBH_U32 [[AND]](s32)
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
+    ; CHECK-NEXT: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBH_U32_]], [[C2]]
+    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[UMIN]], [[C]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[SUB]](s32)
+    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[LSHR]], [[C1]]
+    ; CHECK-NEXT: [[AMDGPU_FFBH_U32_1:%[0-9]+]]:_(s32) = G_AMDGPU_FFBH_U32 [[AND1]](s32)
+    ; CHECK-NEXT: [[UMIN1:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBH_U32_1]], [[C2]]
+    ; CHECK-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[UMIN1]], [[C]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY [[SUB1]](s32)
+    ; CHECK-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C1]]
+    ; CHECK-NEXT: [[AND3:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C1]]
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND3]], [[C]](s32)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[AND2]], [[SHL]]
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
+    ; CHECK-NEXT: $vgpr0 = COPY [[BITCAST1]](<2 x s16>)
     %0:_(<2 x s16>) = COPY $vgpr0
     %1:_(<2 x s16>) = G_CTLZ %0
     $vgpr0 = COPY %1
@@ -183,16 +183,16 @@ body: |
 
     ; CHECK-LABEL: name: ctlz_s7_s7
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 127
-    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
-    ; CHECK: [[AMDGPU_FFBH_U32_:%[0-9]+]]:_(s32) = G_AMDGPU_FFBH_U32 [[AND]](s32)
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
-    ; CHECK: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBH_U32_]], [[C1]]
-    ; CHECK: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 25
-    ; CHECK: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[UMIN]], [[C2]]
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[SUB]](s32)
-    ; CHECK: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
-    ; CHECK: $vgpr0 = COPY [[AND1]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 127
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: [[AMDGPU_FFBH_U32_:%[0-9]+]]:_(s32) = G_AMDGPU_FFBH_U32 [[AND]](s32)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
+    ; CHECK-NEXT: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBH_U32_]], [[C1]]
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 25
+    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[UMIN]], [[C2]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[SUB]](s32)
+    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[AND1]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s7) = G_TRUNC %0
     %2:_(s7) = G_CTLZ %1
@@ -209,18 +209,18 @@ body: |
 
     ; CHECK-LABEL: name: ctlz_s33_s33
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8589934591
-    ; CHECK: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-    ; CHECK: [[AMDGPU_FFBH_U32_:%[0-9]+]]:_(s32) = G_AMDGPU_FFBH_U32 [[AND]](s64)
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 64
-    ; CHECK: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBH_U32_]], [[C1]]
-    ; CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[UMIN]](s32)
-    ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 31
-    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[ZEXT]](s64)
-    ; CHECK: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[C2]](s64)
-    ; CHECK: [[USUBO:%[0-9]+]]:_(s32), [[USUBO1:%[0-9]+]]:_(s1) = G_USUBO [[UV]], [[UV2]]
-    ; CHECK: [[ZEXT1:%[0-9]+]]:_(s64) = G_ZEXT [[USUBO]](s32)
-    ; CHECK: $vgpr0_vgpr1 = COPY [[ZEXT1]](s64)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8589934591
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: [[AMDGPU_FFBH_U32_:%[0-9]+]]:_(s32) = G_AMDGPU_FFBH_U32 [[AND]](s64)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 64
+    ; CHECK-NEXT: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBH_U32_]], [[C1]]
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[UMIN]](s32)
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 31
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[ZEXT]](s64)
+    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[C2]](s64)
+    ; CHECK-NEXT: [[USUBO:%[0-9]+]]:_(s32), [[USUBO1:%[0-9]+]]:_(s1) = G_USUBO [[UV]], [[UV2]]
+    ; CHECK-NEXT: [[ZEXT1:%[0-9]+]]:_(s64) = G_ZEXT [[USUBO]](s32)
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[ZEXT1]](s64)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s33) = G_TRUNC %0
     %2:_(s33) = G_CTLZ %1

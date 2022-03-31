@@ -12,6 +12,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/TargetSelect.h"
@@ -51,7 +52,7 @@ void DWARFExpressionCompactPrinterTest::TestExprPrinter(
     ArrayRef<uint8_t> ExprData, StringRef Expected) {
   // If we didn't build ARM, do not run the test.
   if (!MRI)
-    return;
+    GTEST_SKIP();
 
   // Print the expression, passing in the subprogram DIE, and check that the
   // result is as expected.

@@ -34,7 +34,7 @@ public:
   const char *id() const override final;
 
   bool prepare(const Selection &Inputs) override {
-    for (auto N = Inputs.ASTSelection.commonAncestor(); N && !Node;
+    for (auto *N = Inputs.ASTSelection.commonAncestor(); N && !Node;
          N = N->Parent)
       if (dumpable(N->ASTNode))
         Node = N->ASTNode;

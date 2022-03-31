@@ -19,7 +19,7 @@ long     nrand48(unsigned short[3]);
 long     random(void);
 int      rand_r(unsigned *);
 
-void test_rand()
+void test_rand(void)
 {
   unsigned short a[7];
   unsigned b;

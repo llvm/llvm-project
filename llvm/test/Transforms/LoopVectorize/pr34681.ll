@@ -80,7 +80,9 @@ for.end:
 
 
 ; CHECK-LABEL: @foo2
-; CHECK: for.body.lr.ph
+; CHECK: vector.scevcheck:
+; CHECK-NEXT:  add nsw i32 %conv, -1
+; CHECK-NEXT:  [[NEG:%.+]] = sub i32 0, %conv
 ; CHECK-NOT: %ident.check = icmp ne i16 %N, 1
 ; CHECK-NOT: %{{[0-9]+}} = or i1 false, %ident.check
 ; CHECK-NOT: br i1 %{{[0-9]+}}, label %scalar.ph, label %vector.ph

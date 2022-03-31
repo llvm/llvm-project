@@ -129,7 +129,7 @@ public:
 
     Rewriter Rewrite(SM, LO);
     if (!applyAllReplacements(Repls, Rewrite)) {
-      llvm::errs() << "An error occured during applying fix-it.\n";
+      llvm::errs() << "An error occurred during applying fix-it.\n";
     }
 
     Rewrite.overwriteChangedFiles();

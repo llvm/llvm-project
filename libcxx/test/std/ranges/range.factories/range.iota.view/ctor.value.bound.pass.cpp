@@ -7,17 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
-// ADDITIONAL_COMPILE_FLAGS: -Wno-sign-compare
+#include "test_macros.h"
+
+TEST_CLANG_DIAGNOSTIC_IGNORED("-Wsign-compare")
+TEST_GCC_DIAGNOSTIC_IGNORED("-Wsign-compare")
+TEST_MSVC_DIAGNOSTIC_IGNORED(4018 4389) // various "signed/unsigned mismatch"
 
 // constexpr iota_view(type_identity_t<W> value, type_identity_t<Bound> bound);
 
 #include <ranges>
 #include <cassert>
 
-#include "test_macros.h"
 #include "types.h"
 
 constexpr bool test() {
@@ -57,4 +59,3 @@ int main(int, char**) {
 
   return 0;
 }
-

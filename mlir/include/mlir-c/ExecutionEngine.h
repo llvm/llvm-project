@@ -87,4 +87,4 @@ mlirExecutionEngineDumpToObjectFile(MlirExecutionEngine jit,
 }
 #endif
 
-#endif // EXECUTIONENGINE_H
+#endif // MLIR_C_EXECUTIONENGINE_H

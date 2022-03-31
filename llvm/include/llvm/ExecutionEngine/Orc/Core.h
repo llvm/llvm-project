@@ -670,15 +670,23 @@ class MaterializationUnit {
 public:
   static char ID;
 
-  MaterializationUnit(SymbolFlagsMap InitalSymbolFlags,
-                      SymbolStringPtr InitSymbol)
-      : SymbolFlags(std::move(InitalSymbolFlags)),
-        InitSymbol(std::move(InitSymbol)) {
-    assert((!this->InitSymbol || this->SymbolFlags.count(this->InitSymbol)) &&
-           "If set, InitSymbol should appear in InitialSymbolFlags map");
-  }
+  struct Interface {
+    Interface() = default;
+    Interface(SymbolFlagsMap InitalSymbolFlags, SymbolStringPtr InitSymbol)
+        : SymbolFlags(std::move(InitalSymbolFlags)),
+          InitSymbol(std::move(InitSymbol)) {
+      assert((!this->InitSymbol || this->SymbolFlags.count(this->InitSymbol)) &&
+             "If set, InitSymbol should appear in InitialSymbolFlags map");
+    }
 
-  virtual ~MaterializationUnit() {}
+    SymbolFlagsMap SymbolFlags;
+    SymbolStringPtr InitSymbol;
+  };
+
+  MaterializationUnit(Interface I)
+      : SymbolFlags(std::move(I.SymbolFlags)),
+        InitSymbol(std::move(I.InitSymbol)) {}
+  virtual ~MaterializationUnit() = default;
 
   /// Return the name of this materialization unit. Useful for debugging
   /// output.
@@ -730,7 +738,7 @@ public:
 private:
   void materialize(std::unique_ptr<MaterializationResponsibility> R) override;
   void discard(const JITDylib &JD, const SymbolStringPtr &Name) override;
-  static SymbolFlagsMap extractFlags(const SymbolMap &Symbols);
+  static MaterializationUnit::Interface extractFlags(const SymbolMap &Symbols);
 
   SymbolMap Symbols;
 };
@@ -772,7 +780,8 @@ public:
 private:
   void materialize(std::unique_ptr<MaterializationResponsibility> R) override;
   void discard(const JITDylib &JD, const SymbolStringPtr &Name) override;
-  static SymbolFlagsMap extractFlags(const SymbolAliasMap &Aliases);
+  static MaterializationUnit::Interface
+  extractFlags(const SymbolAliasMap &Aliases);
 
   JITDylib *SourceJD = nullptr;
   JITDylibLookupFlags SourceJDLookupFlags;
@@ -1111,32 +1120,33 @@ public:
   /// DFS order (based on linkage relationships). Each JITDylib will appear
   /// only once.
   ///
-  /// It is illegal to call this method on a defunct JITDylib and the client
-  /// is responsible for ensuring that they do not do so.
-  static std::vector<JITDylibSP> getDFSLinkOrder(ArrayRef<JITDylibSP> JDs);
+  /// If any JITDylib in the order is defunct then this method will return an
+  /// error, otherwise returns the order.
+  static Expected<std::vector<JITDylibSP>>
+  getDFSLinkOrder(ArrayRef<JITDylibSP> JDs);
 
-  /// Returns the given JITDylibs and all of their transitive dependensies in
+  /// Returns the given JITDylibs and all of their transitive dependencies in
   /// reverse DFS order (based on linkage relationships). Each JITDylib will
   /// appear only once.
   ///
-  /// It is illegal to call this method on a defunct JITDylib and the client
-  /// is responsible for ensuring that they do not do so.
-  static std::vector<JITDylibSP>
+  /// If any JITDylib in the order is defunct then this method will return an
+  /// error, otherwise returns the order.
+  static Expected<std::vector<JITDylibSP>>
   getReverseDFSLinkOrder(ArrayRef<JITDylibSP> JDs);
 
   /// Return this JITDylib and its transitive dependencies in DFS order
   /// based on linkage relationships.
   ///
-  /// It is illegal to call this method on a defunct JITDylib and the client
-  /// is responsible for ensuring that they do not do so.
-  std::vector<JITDylibSP> getDFSLinkOrder();
+  /// If any JITDylib in the order is defunct then this method will return an
+  /// error, otherwise returns the order.
+  Expected<std::vector<JITDylibSP>> getDFSLinkOrder();
 
   /// Rteurn this JITDylib and its transitive dependencies in reverse DFS order
   /// based on linkage relationships.
   ///
-  /// It is illegal to call this method on a defunct JITDylib and the client
-  /// is responsible for ensuring that they do not do so.
-  std::vector<JITDylibSP> getReverseDFSLinkOrder();
+  /// If any JITDylib in the order is defunct then this method will return an
+  /// error, otherwise returns the order.
+  Expected<std::vector<JITDylibSP>> getReverseDFSLinkOrder();
 
 private:
   using AsynchronousSymbolQuerySet =
@@ -1300,6 +1310,10 @@ public:
   /// __dso_handle).
   virtual Error setupJITDylib(JITDylib &JD) = 0;
 
+  /// This method will be called outside the session lock each time a JITDylib
+  /// is removed to allow the Platform to remove any JITDylib-specific data.
+  virtual Error teardownJITDylib(JITDylib &JD) = 0;
+
   /// This method will be called under the ExecutionSession lock each time a
   /// MaterializationUnit is added to a JITDylib.
   virtual Error notifyAdding(ResourceTracker &RT,
@@ -1318,8 +1332,7 @@ public:
                     const DenseMap<JITDylib *, SymbolLookupSet> &InitSyms);
 
   /// Performs an async lookup for the the given symbols in each of the given
-  /// JITDylibs, calling the given handler with the compound result map once
-  /// all lookups have completed.
+  /// JITDylibs, calling the given handler once all lookups have completed.
   static void
   lookupInitSymbolsAsync(unique_function<void(Error)> OnComplete,
                          ExecutionSession &ES,

@@ -13,7 +13,7 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
@@ -35,21 +35,19 @@
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCParser/AsmCond.h"
 #include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCAsmParserExtension.h"
-#include "llvm/MC/MCParser/MCAsmParserUtils.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCTargetOptions.h"
-#include "llvm/MC/MCValue.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -63,7 +61,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
-#include <cctype>
 #include <climits>
 #include <cstddef>
 #include <cstdint>
@@ -379,7 +376,7 @@ private:
   /// time of assembly
   struct tm TM;
 
-  std::vector<bool> EndStatementAtEOFStack;
+  BitVector EndStatementAtEOFStack;
 
   AsmCond TheCondState;
   std::vector<AsmCond> TheCondStack;
@@ -424,7 +421,7 @@ private:
     int64_t LineNumber;
     SMLoc Loc;
     unsigned Buf;
-    CppHashInfoTy() : Filename(), LineNumber(0), Loc(), Buf(0) {}
+    CppHashInfoTy() : LineNumber(0), Buf(0) {}
   };
   CppHashInfoTy CppHashInfo;
 
@@ -1516,11 +1513,8 @@ StringRef MasmParser::parseStringToEndOfStatement() {
 bool MasmParser::parseParenExpr(const MCExpr *&Res, SMLoc &EndLoc) {
   if (parseExpression(Res))
     return true;
-  if (Lexer.isNot(AsmToken::RParen))
-    return TokError("expected ')' in parentheses expression");
   EndLoc = Lexer.getTok().getEndLoc();
-  Lex();
-  return false;
+  return parseRParen();
 }
 
 /// Parse a bracket expression and return it.
@@ -1838,9 +1832,8 @@ bool MasmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
     Lex(); // Eat the operator.
     if (parseExpression(Res, EndLoc))
       return true;
-    if (Lexer.isNot(AsmToken::RParen))
-      return TokError("expected ')'");
-    Lex(); // Eat the operator.
+    if (parseRParen())
+      return true;
     Res = getTargetParser().createTargetUnaryExpr(Res, FirstTokenKind, Ctx);
     return !Res;
   }
@@ -1929,8 +1922,7 @@ bool MasmParser::parseParenExprOfDepth(unsigned ParenDepth, const MCExpr *&Res,
     // This is the same behavior as parseParenExpression().
     if (ParenDepth - 1 > 0) {
       EndLoc = getTok().getEndLoc();
-      if (parseToken(AsmToken::RParen,
-                     "expected ')' in parentheses expression"))
+      if (parseRParen())
         return true;
     }
   }
@@ -3358,8 +3350,7 @@ bool MasmParser::handleMacroInvocation(const MCAsmMacro *M, SMLoc NameLoc) {
   }
 
   // Consume the right-parenthesis on the other side of the arguments.
-  if (parseToken(AsmToken::RParen, "invoking macro function '" + M->Name +
-                                       "' requires arguments in parentheses"))
+  if (parseRParen())
     return true;
 
   // Exit values may require lexing, unfortunately. We construct a new buffer to
@@ -3743,8 +3734,7 @@ bool MasmParser::parseScalarInitializer(unsigned Size,
       SmallVector<const MCExpr *, 1> DuplicatedValues;
       if (parseToken(AsmToken::LParen,
                      "parentheses required for 'dup' contents") ||
-          parseScalarInstList(Size, DuplicatedValues) ||
-          parseToken(AsmToken::RParen, "unmatched parentheses"))
+          parseScalarInstList(Size, DuplicatedValues) || parseRParen())
         return true;
 
       for (int i = 0; i < Repetitions; ++i)
@@ -3950,8 +3940,7 @@ bool MasmParser::parseRealInstList(const fltSemantics &Semantics,
       SmallVector<APInt, 1> DuplicatedValues;
       if (parseToken(AsmToken::LParen,
                      "parentheses required for 'dup' contents") ||
-          parseRealInstList(Semantics, DuplicatedValues) ||
-          parseToken(AsmToken::RParen, "unmatched parentheses"))
+          parseRealInstList(Semantics, DuplicatedValues) || parseRParen())
         return true;
 
       for (int i = 0; i < Repetitions; ++i)
@@ -4316,8 +4305,7 @@ bool MasmParser::parseStructInstList(
       std::vector<StructInitializer> DuplicatedValues;
       if (parseToken(AsmToken::LParen,
                      "parentheses required for 'dup' contents") ||
-          parseStructInstList(Structure, DuplicatedValues) ||
-          parseToken(AsmToken::RParen, "unmatched parentheses"))
+          parseStructInstList(Structure, DuplicatedValues) || parseRParen())
         return true;
 
       for (int i = 0; i < Repetitions; ++i)
@@ -4771,7 +4759,7 @@ bool MasmParser::emitAlignTo(int64_t Alignment) {
     // directive.
     const MCSection *Section = getStreamer().getCurrentSectionOnly();
     assert(Section && "must have section to emit alignment");
-    if (Section->UseCodeAlign()) {
+    if (Section->useCodeAlign()) {
       getStreamer().emitCodeAlignment(Alignment, &getTargetParser().getSTI(),
                                       /*MaxBytesToEmit=*/0);
     } else {

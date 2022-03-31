@@ -29,6 +29,8 @@ namespace llvm {
 ELFYAML::Chunk::~Chunk() = default;
 
 namespace ELFYAML {
+ELF_ELFOSABI Object::getOSAbi() const { return Header.OSABI; }
+
 unsigned Object::getMachine() const {
   if (Header.Machine)
     return *Header.Machine;
@@ -175,6 +177,10 @@ void ScalarEnumerationTraits<ELFYAML::ELF_NT>::enumeration(
   ECase(NT_AMD_PAL_METADATA);
   // AMDGPU specific notes. (Code Object V3)
   ECase(NT_AMDGPU_METADATA);
+  // Android specific notes.
+  ECase(NT_ANDROID_TYPE_IDENT);
+  ECase(NT_ANDROID_TYPE_KUSER);
+  ECase(NT_ANDROID_TYPE_MEMTAG);
 #undef ECase
   IO.enumFallback<Hex32>(Value);
 }
@@ -344,6 +350,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_EM>::enumeration(
   ECase(EM_BPF);
   ECase(EM_VE);
   ECase(EM_CSKY);
+  ECase(EM_LOONGARCH);
 #undef ECase
   IO.enumFallback<Hex16>(Value);
 }
@@ -464,29 +471,31 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCaseMask(EF_MIPS_ARCH_64R6, EF_MIPS_ARCH);
     break;
   case ELF::EM_HEXAGON:
-    BCase(EF_HEXAGON_MACH_V2);
-    BCase(EF_HEXAGON_MACH_V3);
-    BCase(EF_HEXAGON_MACH_V4);
-    BCase(EF_HEXAGON_MACH_V5);
-    BCase(EF_HEXAGON_MACH_V55);
-    BCase(EF_HEXAGON_MACH_V60);
-    BCase(EF_HEXAGON_MACH_V62);
-    BCase(EF_HEXAGON_MACH_V65);
-    BCase(EF_HEXAGON_MACH_V66);
-    BCase(EF_HEXAGON_MACH_V67);
-    BCase(EF_HEXAGON_MACH_V67T);
-    BCase(EF_HEXAGON_MACH_V68);
-    BCase(EF_HEXAGON_ISA_V2);
-    BCase(EF_HEXAGON_ISA_V3);
-    BCase(EF_HEXAGON_ISA_V4);
-    BCase(EF_HEXAGON_ISA_V5);
-    BCase(EF_HEXAGON_ISA_V55);
-    BCase(EF_HEXAGON_ISA_V60);
-    BCase(EF_HEXAGON_ISA_V62);
-    BCase(EF_HEXAGON_ISA_V65);
-    BCase(EF_HEXAGON_ISA_V66);
-    BCase(EF_HEXAGON_ISA_V67);
-    BCase(EF_HEXAGON_ISA_V68);
+    BCaseMask(EF_HEXAGON_MACH_V2, EF_HEXAGON_MACH);
+    BCaseMask(EF_HEXAGON_MACH_V3, EF_HEXAGON_MACH);
+    BCaseMask(EF_HEXAGON_MACH_V4, EF_HEXAGON_MACH);
+    BCaseMask(EF_HEXAGON_MACH_V5, EF_HEXAGON_MACH);
+    BCaseMask(EF_HEXAGON_MACH_V55, EF_HEXAGON_MACH);
+    BCaseMask(EF_HEXAGON_MACH_V60, EF_HEXAGON_MACH);
+    BCaseMask(EF_HEXAGON_MACH_V62, EF_HEXAGON_MACH);
+    BCaseMask(EF_HEXAGON_MACH_V65, EF_HEXAGON_MACH);
+    BCaseMask(EF_HEXAGON_MACH_V66, EF_HEXAGON_MACH);
+    BCaseMask(EF_HEXAGON_MACH_V67, EF_HEXAGON_MACH);
+    BCaseMask(EF_HEXAGON_MACH_V67T, EF_HEXAGON_MACH);
+    BCaseMask(EF_HEXAGON_MACH_V68, EF_HEXAGON_MACH);
+    BCaseMask(EF_HEXAGON_MACH_V69, EF_HEXAGON_MACH);
+    BCaseMask(EF_HEXAGON_ISA_V2, EF_HEXAGON_ISA);
+    BCaseMask(EF_HEXAGON_ISA_V3, EF_HEXAGON_ISA);
+    BCaseMask(EF_HEXAGON_ISA_V4, EF_HEXAGON_ISA);
+    BCaseMask(EF_HEXAGON_ISA_V5, EF_HEXAGON_ISA);
+    BCaseMask(EF_HEXAGON_ISA_V55, EF_HEXAGON_ISA);
+    BCaseMask(EF_HEXAGON_ISA_V60, EF_HEXAGON_ISA);
+    BCaseMask(EF_HEXAGON_ISA_V62, EF_HEXAGON_ISA);
+    BCaseMask(EF_HEXAGON_ISA_V65, EF_HEXAGON_ISA);
+    BCaseMask(EF_HEXAGON_ISA_V66, EF_HEXAGON_ISA);
+    BCaseMask(EF_HEXAGON_ISA_V67, EF_HEXAGON_ISA);
+    BCaseMask(EF_HEXAGON_ISA_V68, EF_HEXAGON_ISA);
+    BCaseMask(EF_HEXAGON_ISA_V69, EF_HEXAGON_ISA);
     break;
   case ELF::EM_AVR:
     BCaseMask(EF_AVR_ARCH_AVR1, EF_AVR_ARCH_MASK);
@@ -516,6 +525,7 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCaseMask(EF_RISCV_FLOAT_ABI_DOUBLE, EF_RISCV_FLOAT_ABI);
     BCaseMask(EF_RISCV_FLOAT_ABI_QUAD, EF_RISCV_FLOAT_ABI);
     BCase(EF_RISCV_RVE);
+    BCase(EF_RISCV_TSO);
     break;
   case ELF::EM_AMDGPU:
     BCaseMask(EF_AMDGPU_MACH_NONE, EF_AMDGPU_MACH);
@@ -557,6 +567,7 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX909, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX90A, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX90C, EF_AMDGPU_MACH);
+    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX940, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1010, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1011, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1012, EF_AMDGPU_MACH);
@@ -567,6 +578,7 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1033, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1034, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1035, EF_AMDGPU_MACH);
+    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1036, EF_AMDGPU_MACH);
     switch (Object->Header.ABIVersion) {
     default:
       // ELFOSABI_AMDGPU_PAL, ELFOSABI_AMDGPU_MESA3D support *_V3 flags.
@@ -576,6 +588,7 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
       BCase(EF_AMDGPU_FEATURE_SRAMECC_V3);
       break;
     case ELF::ELFABIVERSION_AMDGPU_HSA_V4:
+    case ELF::ELFABIVERSION_AMDGPU_HSA_V5:
       BCaseMask(EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4,
                 EF_AMDGPU_FEATURE_XNACK_V4);
       BCaseMask(EF_AMDGPU_FEATURE_XNACK_ANY_V4,
@@ -701,7 +714,14 @@ void ScalarBitSetTraits<ELFYAML::ELF_SHF>::bitset(IO &IO,
   BCase(SHF_GROUP);
   BCase(SHF_TLS);
   BCase(SHF_COMPRESSED);
-  BCase(SHF_GNU_RETAIN);
+  switch (Object->getOSAbi()) {
+  case ELF::ELFOSABI_SOLARIS:
+    BCase(SHF_SUNW_NODISCARD);
+    break;
+  default:
+    BCase(SHF_GNU_RETAIN);
+    break;
+  }
   switch (Object->getMachine()) {
   case ELF::EM_ARM:
     BCase(SHF_ARM_PURECODE);
@@ -835,11 +855,17 @@ void ScalarEnumerationTraits<ELFYAML::ELF_REL>::enumeration(
   case ELF::EM_CSKY:
 #include "llvm/BinaryFormat/ELFRelocs/CSKY.def"
     break;
+  case ELF::EM_PPC:
+#include "llvm/BinaryFormat/ELFRelocs/PowerPC.def"
+    break;
   case ELF::EM_PPC64:
 #include "llvm/BinaryFormat/ELFRelocs/PowerPC64.def"
     break;
   case ELF::EM_68K:
 #include "llvm/BinaryFormat/ELFRelocs/M68k.def"
+    break;
+  case ELF::EM_LOONGARCH:
+#include "llvm/BinaryFormat/ELFRelocs/LoongArch.def"
     break;
   default:
     // Nothing to do.

@@ -9,7 +9,6 @@
 // <ranges>
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 #include <ranges>
@@ -39,7 +38,14 @@ struct DifferentSentinel : std::ranges::view_base {
   sentinel_wrapper<int*> end() const;
 };
 
+struct WrongConstSentinel : std::ranges::view_base {
+  int *begin() const;
+  sentinel_wrapper<int*> end();
+  sentinel_wrapper<const int*> end() const;
+};
+
 static_assert( std::ranges::__simple_view<SimpleView>);
 static_assert(!std::ranges::__simple_view<WrongConstView>);
 static_assert(!std::ranges::__simple_view<NoConstView>);
-static_assert(!std::ranges::__simple_view<DifferentSentinel>);
+static_assert( std::ranges::__simple_view<DifferentSentinel>);
+static_assert(!std::ranges::__simple_view<WrongConstSentinel>);

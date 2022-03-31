@@ -62,6 +62,8 @@ public:
     align = target->wordSize;
   }
 
+  // Implementations of this method can assume that the regular (non-__LINKEDIT)
+  // sections already have their addresses assigned.
   virtual void finalizeContents() {}
 
   // Sections in __LINKEDIT are special: their offsets are recorded in the
@@ -103,6 +105,7 @@ class PageZeroSection final : public SyntheticSection {
 public:
   PageZeroSection();
   bool isHidden() const override { return true; }
+  bool isNeeded() const override { return target->pageZeroSize != 0; }
   uint64_t getSize() const override { return target->pageZeroSize; }
   uint64_t getFileSize() const override { return 0; }
   void writeTo(uint8_t *buf) const override {}
@@ -189,13 +192,13 @@ public:
   bool isNeeded() const override { return !bindingsMap.empty(); }
   void writeTo(uint8_t *buf) const override;
 
-  void addEntry(const DylibSymbol *dysym, const InputSection *isec,
-                uint64_t offset, int64_t addend = 0) {
+  void addEntry(const Symbol *dysym, const InputSection *isec, uint64_t offset,
+                int64_t addend = 0) {
     bindingsMap[dysym].emplace_back(addend, Location(isec, offset));
   }
 
 private:
-  BindingsMap<const DylibSymbol *> bindingsMap;
+  BindingsMap<const Symbol *> bindingsMap;
   SmallVector<char, 128> contents;
 };
 
@@ -328,13 +331,13 @@ public:
   void writeTo(uint8_t *buf) const override;
   // Note that every entry here will by referenced by a corresponding entry in
   // the StubHelperSection.
-  void addEntry(DylibSymbol *dysym);
-  const llvm::SetVector<DylibSymbol *> &getEntries() const { return entries; }
+  void addEntry(Symbol *dysym);
+  const llvm::SetVector<Symbol *> &getEntries() const { return entries; }
 
 private:
-  uint32_t encode(const DylibSymbol &);
+  uint32_t encode(const Symbol &);
 
-  llvm::SetVector<DylibSymbol *> entries;
+  llvm::SetVector<Symbol *> entries;
   SmallVector<char, 128> contents;
   llvm::raw_svector_ostream os{contents};
 };
@@ -528,13 +531,19 @@ private:
 
 class DeduplicatedCStringSection final : public CStringSection {
 public:
-  DeduplicatedCStringSection();
-  uint64_t getSize() const override { return builder.getSize(); }
+  uint64_t getSize() const override { return size; }
   void finalizeContents() override;
-  void writeTo(uint8_t *buf) const override { builder.write(buf); }
+  void writeTo(uint8_t *buf) const override;
 
 private:
-  llvm::StringTableBuilder builder;
+  struct StringOffset {
+    uint8_t trailingZeros;
+    uint64_t outSecOff = UINT64_MAX;
+
+    explicit StringOffset(uint8_t zeros) : trailingZeros(zeros) {}
+  };
+  llvm::DenseMap<llvm::CachedHashStringRef, StringOffset> stringOffsetMap;
+  size_t size = 0;
 };
 
 /*
@@ -592,6 +601,7 @@ private:
 };
 
 struct InStruct {
+  const uint8_t *bufferStart = nullptr;
   MachHeaderSection *header = nullptr;
   CStringSection *cStringSection = nullptr;
   WordLiteralSection *wordLiteralSection = nullptr;

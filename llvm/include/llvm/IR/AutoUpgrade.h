@@ -17,13 +17,14 @@
 
 namespace llvm {
   class AttrBuilder;
-  class CallInst;
+  class CallBase;
   class Constant;
   class Function;
   class Instruction;
+  class GlobalVariable;
   class MDNode;
   class Module;
-  class GlobalVariable;
+  class StringRef;
   class Type;
   class Value;
 
@@ -35,7 +36,7 @@ namespace llvm {
 
   /// This is the complement to the above, replacing a specific call to an
   /// intrinsic function with a call to the specified new function.
-  void UpgradeIntrinsicCall(CallInst *CI, Function *NewFn);
+  void UpgradeIntrinsicCall(CallBase *CB, Function *NewFn);
 
   // This upgrades the comment for objc retain release markers in inline asm
   // calls

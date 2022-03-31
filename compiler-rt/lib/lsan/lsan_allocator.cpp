@@ -27,11 +27,11 @@ extern "C" void *memset(void *ptr, int value, uptr num);
 
 namespace __lsan {
 #if defined(__i386__) || defined(__arm__)
-static const uptr kMaxAllowedMallocSize = 1UL << 30;
+static const uptr kMaxAllowedMallocSize = 1ULL << 30;
 #elif defined(__mips64) || defined(__aarch64__)
-static const uptr kMaxAllowedMallocSize = 4UL << 30;
+static const uptr kMaxAllowedMallocSize = 4ULL << 30;
 #else
-static const uptr kMaxAllowedMallocSize = 8UL << 30;
+static const uptr kMaxAllowedMallocSize = 8ULL << 30;
 #endif
 
 static Allocator allocator;

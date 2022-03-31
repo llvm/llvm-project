@@ -36,3 +36,14 @@ void test_memcpy_inline_template(void *dst, const void *src) {
   // we do not try to evaluate size in non intantiated templates.
   __builtin_memcpy_inline(dst, src, size);
 }
+
+void test_memcpy_inline_implicit_conversion(void *ptr) {
+  char a[5];
+  __builtin_memcpy_inline(ptr, a, 5);
+  __builtin_memcpy_inline(a, ptr, 5);
+}
+
+void test_memcpy_inline_num_args(void *dst, void *src) {
+ __builtin_memcpy_inline(); // expected-error {{too few arguments to function call}}
+ __builtin_memcpy_inline(dst, src, 4, NULL); // expected-error {{too many arguments to function call}}
+}

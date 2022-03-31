@@ -18,7 +18,6 @@
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -27,7 +26,8 @@
 
 namespace llvm {
 
-bool DwarfStreamer::init(Triple TheTriple) {
+bool DwarfStreamer::init(Triple TheTriple,
+                         StringRef Swift5ReflectionSegmentName) {
   std::string ErrorStr;
   std::string TripleName;
   StringRef Context = "dwarf streamer init";
@@ -54,8 +54,9 @@ bool DwarfStreamer::init(Triple TheTriple) {
   if (!MSTI)
     return error("no subtarget info for target " + TripleName, Context), false;
 
-  MC.reset(new MCContext(TheTriple, MAI.get(), MRI.get(), MSTI.get()));
-  MOFI.reset(TheTarget->createMCObjectFileInfo(*MC, /*PIC=*/false));
+  MC.reset(new MCContext(TheTriple, MAI.get(), MRI.get(), MSTI.get(), nullptr,
+                         nullptr, true, Swift5ReflectionSegmentName));
+  MOFI.reset(TheTarget->createMCObjectFileInfo(*MC, /*PIC=*/false, false));
   MC->setObjectFileInfo(MOFI.get());
 
   MAB = TheTarget->createMCAsmBackend(*MSTI, *MRI, MCOptions);
@@ -66,7 +67,7 @@ bool DwarfStreamer::init(Triple TheTriple) {
   if (!MII)
     return error("no instr info info for target " + TripleName, Context), false;
 
-  MCE = TheTarget->createMCCodeEmitter(*MII, *MRI, *MC);
+  MCE = TheTarget->createMCCodeEmitter(*MII, *MC);
   if (!MCE)
     return error("no code emitter for target " + TripleName, Context), false;
 
@@ -302,6 +303,18 @@ void DwarfStreamer::emitSwiftAST(StringRef Buffer) {
   MS->emitBytes(Buffer);
 }
 
+void DwarfStreamer::emitSwiftReflectionSection(
+    llvm::binaryformat::Swift5ReflectionSectionKind ReflSectionKind,
+    StringRef Buffer, uint32_t Alignment, uint32_t Size) {
+  MCSection *ReflectionSection =
+      MOFI->getSwift5ReflectionSection(ReflSectionKind);
+  if (ReflectionSection == nullptr)
+    return;
+  ReflectionSection->setAlignment(Align(Alignment));
+  MS->SwitchSection(ReflectionSection);
+  MS->emitBytes(Buffer);
+}
+
 /// Emit the debug_range section contents for \p FuncRange by
 /// translating the original \p Entries. The debug_range section
 /// format is totally trivial, consisting just of pairs of address
@@ -531,9 +544,7 @@ void DwarfStreamer::emitLineTableForUnit(MCDwarfLineTableParams Params,
 
   unsigned RowsSinceLastSequence = 0;
 
-  for (unsigned Idx = 0; Idx < Rows.size(); ++Idx) {
-    auto &Row = Rows[Idx];
-
+  for (DWARFDebugLine::Row &Row : Rows) {
     int64_t AddressDelta;
     if (Address == -1ULL) {
       MS->emitIntValue(dwarf::DW_LNS_extended_op, 1);

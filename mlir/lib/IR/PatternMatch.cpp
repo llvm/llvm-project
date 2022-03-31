@@ -157,22 +157,21 @@ void PDLPatternModule::mergeIn(PDLPatternModule &&other) {
   // Ignore the other module if it has no patterns.
   if (!other.pdlModule)
     return;
+
+  // Steal the functions of the other module.
+  for (auto &it : other.constraintFunctions)
+    registerConstraintFunction(it.first(), std::move(it.second));
+  for (auto &it : other.rewriteFunctions)
+    registerRewriteFunction(it.first(), std::move(it.second));
+
   // Steal the other state if we have no patterns.
   if (!pdlModule) {
-    constraintFunctions = std::move(other.constraintFunctions);
-    rewriteFunctions = std::move(other.rewriteFunctions);
     pdlModule = std::move(other.pdlModule);
     return;
   }
-  // Steal the functions of the other module.
-  for (auto &it : constraintFunctions)
-    registerConstraintFunction(it.first(), std::move(it.second));
-  for (auto &it : rewriteFunctions)
-    registerRewriteFunction(it.first(), std::move(it.second));
 
   // Merge the pattern operations from the other module into this one.
   Block *block = pdlModule->getBody();
-  block->getTerminator()->erase();
   block->getOperations().splice(block->end(),
                                 other.pdlModule->getBody()->getOperations());
 }
@@ -182,18 +181,20 @@ void PDLPatternModule::mergeIn(PDLPatternModule &&other) {
 
 void PDLPatternModule::registerConstraintFunction(
     StringRef name, PDLConstraintFunction constraintFn) {
-  auto it = constraintFunctions.try_emplace(name, std::move(constraintFn));
-  (void)it;
-  assert(it.second &&
-         "constraint with the given name has already been registered");
+  // TODO: Is it possible to diagnose when `name` is already registered to
+  // a function that is not equivalent to `constraintFn`?
+  // Allow existing mappings in the case multiple patterns depend on the same
+  // constraint.
+  constraintFunctions.try_emplace(name, std::move(constraintFn));
 }
 
 void PDLPatternModule::registerRewriteFunction(StringRef name,
                                                PDLRewriteFunction rewriteFn) {
-  auto it = rewriteFunctions.try_emplace(name, std::move(rewriteFn));
-  (void)it;
-  assert(it.second && "native rewrite function with the given name has "
-                      "already been registered");
+  // TODO: Is it possible to diagnose when `name` is already registered to
+  // a function that is not equivalent to `rewriteFn`?
+  // Allow existing mappings in the case multiple patterns depend on the same
+  // rewrite.
+  rewriteFunctions.try_emplace(name, std::move(rewriteFn));
 }
 
 //===----------------------------------------------------------------------===//

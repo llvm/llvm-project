@@ -3,6 +3,13 @@
 # Check if MLIR is built as a standalone project.
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   project(mlir)
+  set(MLIR_STANDALONE_BUILD TRUE)
+endif()
+
+# Must go below project(..)
+include(GNUInstallDirs)
+
+if(MLIR_STANDALONE_BUILD)
   cmake_minimum_required(VERSION 3.13.4)
 
   find_package(LLVM CONFIG REQUIRED)
@@ -33,7 +40,16 @@ set(MLIR_BINARY_DIR  ${CMAKE_CURRENT_BINARY_DIR})
 set(MLIR_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
 set(MLIR_TOOLS_DIR   ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
+if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
+  set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
+endif()
+
+# Make sure that our source directory is on the current cmake module path so
+# that we can include cmake files from this directory.
+list(INSERT CMAKE_MODULE_PATH 0
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
+  "${LLVM_COMMON_CMAKE_UTILS}/Modules"
+  )
 
 include(AddMLIR)
 
@@ -47,6 +63,13 @@ endif()
 # don't have a reason to support this.
 check_c_compiler_flag("-Werror=implicit-function-declaration" C_SUPPORTS_WERROR_IMPLICIT_FUNCTION_DECLARATION)
 append_if(C_SUPPORTS_WERROR_IMPLICIT_FUNCTION_DECLARATION "-Werror=implicit-function-declaration" CMAKE_C_FLAGS)
+
+# Forbid mismatch between declaration and definition for class vs struct. This is
+# harmless on Unix systems, but it'll be a ticking bomb for MSVC/Windows systems
+# where it creeps into the ABI.
+check_c_compiler_flag("-Werror=mismatched-tags" C_SUPPORTS_WERROR_MISMATCHED_TAGS)
+append_if(C_SUPPORTS_WERROR_MISMATCHED_TAGS "-Werror=mismatched-tags" CMAKE_C_FLAGS)
+append_if(C_SUPPORTS_WERROR_MISMATCHED_TAGS "-Werror=mismatched-tags" CMAKE_CXX_FLAGS)
 
 # Installing the headers and docs needs to depend on generating any public
 # tablegen'd targets.
@@ -107,10 +130,16 @@ set(MLIR_BUILD_MLIR_C_DYLIB 0 CACHE BOOL "Builds libMLIR-C shared library.")
 
 set(MLIR_ENABLE_BINDINGS_PYTHON 0 CACHE BOOL
        "Enables building of Python bindings.")
+set(MLIR_DETECT_PYTHON_ENV_PRIME_SEARCH 1 CACHE BOOL
+       "Prime the python detection by searching for a full 'Development' \
+       component first (temporary while diagnosing environment specific Python \
+       detection issues)")
 if(MLIR_ENABLE_BINDINGS_PYTHON)
   include(MLIRDetectPythonEnv)
   mlir_configure_python_dev_packages()
 endif()
+
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 include_directories( "include")
 include_directories( ${MLIR_INCLUDE_DIR})
@@ -157,7 +186,7 @@ endif()
 
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   install(DIRECTORY include/mlir include/mlir-c
-    DESTINATION include
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
     COMPONENT mlir-headers
     FILES_MATCHING
     PATTERN "*.def"
@@ -168,7 +197,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     )
 
   install(DIRECTORY ${MLIR_INCLUDE_DIR}/mlir ${MLIR_INCLUDE_DIR}/mlir-c
-    DESTINATION include
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
     COMPONENT mlir-headers
     FILES_MATCHING
     PATTERN "*.def"
@@ -188,3 +217,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
 endif()
 
 add_subdirectory(cmake/modules)
+
+if (MLIR_ENABLE_PYTHON_BENCHMARKS)
+  add_subdirectory(utils/mbr)
+endif()

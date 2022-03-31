@@ -6,14 +6,10 @@ define <2 x i64> @shuffle1_v2i64(<2 x i64> %src, <2 x i64> %a, <2 x i64> %b) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    orrs r2, r3
 ; CHECK-NEXT:    mov.w r3, #0
-; CHECK-NEXT:    cset r2, eq
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, ne
+; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    orrs r0, r1
-; CHECK-NEXT:    cset r0, eq
 ; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csetm r0, ne
+; CHECK-NEXT:    csetm r0, eq
 ; CHECK-NEXT:    bfi r3, r0, #8, #8
 ; CHECK-NEXT:    add r0, sp, #16
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
@@ -111,14 +107,10 @@ define <2 x i64> @shuffle2_v2i64(<2 x i64> %src, <2 x i64> %a, <2 x i64> %b) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    mov.w r1, #0
-; CHECK-NEXT:    cset r0, eq
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csetm r0, ne
+; CHECK-NEXT:    csetm r0, eq
 ; CHECK-NEXT:    bfi r1, r0, #0, #8
 ; CHECK-NEXT:    orrs.w r0, r2, r3
-; CHECK-NEXT:    cset r0, eq
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csetm r0, ne
+; CHECK-NEXT:    csetm r0, eq
 ; CHECK-NEXT:    bfi r1, r0, #8, #8
 ; CHECK-NEXT:    add r0, sp, #16
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
@@ -203,9 +195,7 @@ define <2 x i64> @shuffle3_v2i64(<2 x i64> %src, <2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: shuffle3_v2i64:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    orrs r0, r1
-; CHECK-NEXT:    cset r0, eq
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csetm r0, ne
+; CHECK-NEXT:    csetm r0, eq
 ; CHECK-NEXT:    vmsr p0, r0
 ; CHECK-NEXT:    add r0, sp, #16
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
@@ -307,9 +297,7 @@ define <2 x i64> @shuffle4_v2i64(<2 x i64> %src, <2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: shuffle4_v2i64:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    orrs.w r0, r2, r3
-; CHECK-NEXT:    cset r0, eq
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csetm r0, ne
+; CHECK-NEXT:    csetm r0, eq
 ; CHECK-NEXT:    vmsr p0, r0
 ; CHECK-NEXT:    add r0, sp, #16
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
@@ -617,28 +605,20 @@ define <4 x i32> @shuffle6_v2i64(<2 x i64> %src1, <2 x i64> %src2, <4 x i32> %a,
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    mov.w r1, #0
-; CHECK-NEXT:    cset r0, eq
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csetm r0, ne
+; CHECK-NEXT:    csetm r0, eq
 ; CHECK-NEXT:    bfi r1, r0, #0, #4
 ; CHECK-NEXT:    orrs.w r0, r2, r3
-; CHECK-NEXT:    cset r0, eq
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csetm r0, ne
+; CHECK-NEXT:    csetm r0, eq
 ; CHECK-NEXT:    bfi r1, r0, #4, #4
 ; CHECK-NEXT:    mov r0, sp
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
 ; CHECK-NEXT:    vmov r0, r2, d0
 ; CHECK-NEXT:    orrs r0, r2
-; CHECK-NEXT:    cset r0, eq
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csetm r0, ne
+; CHECK-NEXT:    csetm r0, eq
 ; CHECK-NEXT:    bfi r1, r0, #8, #4
 ; CHECK-NEXT:    vmov r0, r2, d1
 ; CHECK-NEXT:    orrs r0, r2
-; CHECK-NEXT:    cset r0, eq
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csetm r0, ne
+; CHECK-NEXT:    csetm r0, eq
 ; CHECK-NEXT:    bfi r1, r0, #12, #4
 ; CHECK-NEXT:    add r0, sp, #32
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]

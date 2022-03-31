@@ -1,10 +1,10 @@
+include(GNUInstallDirs)
 include(LLVMDistributionSupport)
 
 function(mlir_tablegen ofn)
   tablegen(MLIR ${ARGV})
   set(TABLEGEN_OUTPUT ${TABLEGEN_OUTPUT} ${CMAKE_CURRENT_BINARY_DIR}/${ofn}
       PARENT_SCOPE)
-  include_directories(${CMAKE_CURRENT_BINARY_DIR})
 endfunction()
 
 # Declare a dialect in the include directory
@@ -320,18 +320,11 @@ function(add_mlir_aggregate name)
       "    DEPS = ${_local_deps}\n\n")
   endforeach()
 
-  # Unfortunately need to compile at least one source file, which is hard
-  # to guarantee, so just always generate one. We generate one vs using the
-  # LLVM common dummy.cpp because it works better out of tree.
-  set(_empty_src "${CMAKE_CURRENT_BINARY_DIR}/${name}__empty.cpp")
-  file(WRITE "${_empty_src}" "typedef int dummy;")
-
   add_mlir_library(${name}
     ${_libtype}
     ${ARG_UNPARSED_ARGUMENTS}
     PARTIAL_SOURCES_INTENDED
     EXCLUDE_FROM_LIBMLIR
-    "${_empty_src}"
     LINK_LIBS PRIVATE
     ${_deps}
     ${ARG_PUBLIC_LIBS}
@@ -371,7 +364,7 @@ function(add_mlir_library_install name)
     ${export_to_mlirtargets}
     LIBRARY DESTINATION lib${LLVM_LIBDIR_SUFFIX}
     ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX}
-    RUNTIME DESTINATION bin
+    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
     # Note that CMake will create a directory like:
     #   objects-${CMAKE_BUILD_TYPE}/obj.LibName
     # and put object files there.

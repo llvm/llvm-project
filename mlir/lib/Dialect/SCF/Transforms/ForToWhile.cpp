@@ -15,7 +15,6 @@
 #include "mlir/Dialect/SCF/Passes.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/SCF/Transforms.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -33,26 +32,30 @@ struct ForLoopLoweringPattern : public OpRewritePattern<ForOp> {
                                 PatternRewriter &rewriter) const override {
     // Generate type signature for the loop-carried values. The induction
     // variable is placed first, followed by the forOp.iterArgs.
-    SmallVector<Type, 8> lcvTypes;
+    SmallVector<Type> lcvTypes;
+    SmallVector<Location> lcvLocs;
     lcvTypes.push_back(forOp.getInductionVar().getType());
-    llvm::transform(forOp.initArgs(), std::back_inserter(lcvTypes),
-                    [&](auto v) { return v.getType(); });
+    lcvLocs.push_back(forOp.getInductionVar().getLoc());
+    for (Value value : forOp.getInitArgs()) {
+      lcvTypes.push_back(value.getType());
+      lcvLocs.push_back(value.getLoc());
+    }
 
     // Build scf.WhileOp
     SmallVector<Value> initArgs;
-    initArgs.push_back(forOp.lowerBound());
-    llvm::append_range(initArgs, forOp.initArgs());
+    initArgs.push_back(forOp.getLowerBound());
+    llvm::append_range(initArgs, forOp.getInitArgs());
     auto whileOp = rewriter.create<WhileOp>(forOp.getLoc(), lcvTypes, initArgs,
                                             forOp->getAttrs());
 
     // 'before' region contains the loop condition and forwarding of iteration
     // arguments to the 'after' region.
     auto *beforeBlock = rewriter.createBlock(
-        &whileOp.before(), whileOp.before().begin(), lcvTypes, {});
-    rewriter.setInsertionPointToStart(&whileOp.before().front());
+        &whileOp.getBefore(), whileOp.getBefore().begin(), lcvTypes, lcvLocs);
+    rewriter.setInsertionPointToStart(&whileOp.getBefore().front());
     auto cmpOp = rewriter.create<arith::CmpIOp>(
         whileOp.getLoc(), arith::CmpIPredicate::slt,
-        beforeBlock->getArgument(0), forOp.upperBound());
+        beforeBlock->getArgument(0), forOp.getUpperBound());
     rewriter.create<scf::ConditionOp>(whileOp.getLoc(), cmpOp.getResult(),
                                       beforeBlock->getArguments());
 
@@ -60,16 +63,16 @@ struct ForLoopLoweringPattern : public OpRewritePattern<ForOp> {
     // region. The return type of the execRegionOp does not contain the
     // iv - yields in the source for-loop contain only iterArgs.
     auto *afterBlock = rewriter.createBlock(
-        &whileOp.after(), whileOp.after().begin(), lcvTypes, {});
+        &whileOp.getAfter(), whileOp.getAfter().begin(), lcvTypes, lcvLocs);
 
     // Add induction variable incrementation
     rewriter.setInsertionPointToEnd(afterBlock);
     auto ivIncOp = rewriter.create<arith::AddIOp>(
-        whileOp.getLoc(), afterBlock->getArgument(0), forOp.step());
+        whileOp.getLoc(), afterBlock->getArgument(0), forOp.getStep());
 
     // Rewrite uses of the for-loop block arguments to the new while-loop
     // "after" arguments
-    for (auto barg : enumerate(forOp.getBody(0)->getArguments()))
+    for (const auto &barg : enumerate(forOp.getBody(0)->getArguments()))
       barg.value().replaceAllUsesWith(afterBlock->getArgument(barg.index()));
 
     // Inline for-loop body operations into 'after' region.
@@ -87,7 +90,7 @@ struct ForLoopLoweringPattern : public OpRewritePattern<ForOp> {
     // an extra value (the induction variable escapes the loop through being
     // carried in the set of iterargs). Instead, rewrite uses of the forOp
     // results.
-    for (auto arg : llvm::enumerate(forOp.getResults()))
+    for (const auto &arg : llvm::enumerate(forOp.getResults()))
       arg.value().replaceAllUsesWith(whileOp.getResult(arg.index() + 1));
 
     rewriter.eraseOp(forOp);
@@ -96,8 +99,8 @@ struct ForLoopLoweringPattern : public OpRewritePattern<ForOp> {
 };
 
 struct ForToWhileLoop : public SCFForToWhileLoopBase<ForToWhileLoop> {
-  void runOnFunction() override {
-    FuncOp funcOp = getFunction();
+  void runOnOperation() override {
+    FuncOp funcOp = getOperation();
     MLIRContext *ctx = funcOp.getContext();
     RewritePatternSet patterns(ctx);
     patterns.add<ForLoopLoweringPattern>(ctx);

@@ -18,7 +18,7 @@
 #include "min_allocator.h"
 
 template <class S>
-void
+TEST_CONSTEXPR_CXX20 void
 test(S s)
 {
     const S& cs = s;
@@ -32,20 +32,29 @@ test(S s)
     assert(s.front() == typename S::value_type('z'));
 }
 
-int main(int, char**)
-{
-    {
+bool test() {
+  {
     typedef std::string S;
     test(S("1"));
     test(S("1234567890123456789012345678901234567890"));
-    }
+  }
 #if TEST_STD_VER >= 11
-    {
+  {
     typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
     test(S("1"));
     test(S("1234567890123456789012345678901234567890"));
-    }
+  }
 #endif
 
-    return 0;
+  return true;
+}
+
+int main(int, char**)
+{
+  test();
+#if TEST_STD_VER > 17
+  // static_assert(test());
+#endif
+
+  return 0;
 }

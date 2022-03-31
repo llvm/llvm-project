@@ -1,3 +1,4 @@
+include(GNUInstallDirs)
 include(LLVMDistributionSupport)
 
 macro(add_lld_library name)
@@ -19,7 +20,7 @@ macro(add_lld_library name)
       ${export_to_lldtargets}
       LIBRARY DESTINATION lib${LLVM_LIBDIR_SUFFIX}
       ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX}
-      RUNTIME DESTINATION bin)
+      RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
 
     if (${ARG_SHARED} AND NOT CMAKE_CONFIGURATION_TYPES)
       add_llvm_install_targets(install-${name}
@@ -46,7 +47,7 @@ macro(add_lld_tool name)
     get_target_export_arg(${name} LLD export_to_lldtargets)
     install(TARGETS ${name}
       ${export_to_lldtargets}
-      RUNTIME DESTINATION bin
+      RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
       COMPONENT ${name})
 
     if(NOT CMAKE_CONFIGURATION_TYPES)

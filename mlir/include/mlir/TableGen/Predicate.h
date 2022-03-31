@@ -24,7 +24,7 @@ class Init;
 class ListInit;
 class Record;
 class SMLoc;
-} // end namespace llvm
+} // namespace llvm
 
 namespace mlir {
 namespace tblgen {
@@ -34,7 +34,7 @@ namespace tblgen {
 class Pred {
 public:
   // Constructs the null Predicate (e.g., always true).
-  explicit Pred() : def(nullptr) {}
+  explicit Pred() {}
   // Construct a Predicate from a record.
   explicit Pred(const llvm::Record *record);
   // Construct a Predicate from an initializer.
@@ -54,7 +54,7 @@ public:
   bool isCombined() const;
 
   // Get the location of the predicate.
-  ArrayRef<llvm::SMLoc> getLoc() const;
+  ArrayRef<SMLoc> getLoc() const;
 
   // Records are pointer-comparable.
   bool operator==(const Pred &other) const { return def == other.def; }
@@ -69,7 +69,7 @@ public:
 
 protected:
   // The TableGen definition of this predicate.
-  const llvm::Record *def;
+  const llvm::Record *def{nullptr};
 };
 
 // A logical predicate wrapping a C expression.  This class must closely follow
@@ -101,7 +101,7 @@ public:
   const llvm::Record *getCombinerDef() const;
 
   // Get the predicates that are combined by this predicate.
-  const std::vector<llvm::Record *> getChildren() const;
+  std::vector<llvm::Record *> getChildren() const;
 };
 
 // A combined predicate that requires all child predicates of 'CPred' type to
@@ -122,7 +122,7 @@ public:
   StringRef getSuffix() const;
 };
 
-} // end namespace tblgen
-} // end namespace mlir
+} // namespace tblgen
+} // namespace mlir
 
 #endif // MLIR_TABLEGEN_PREDICATE_H_

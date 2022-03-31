@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -triple spir-unknown-unknown -emit-llvm -O0 -cl-std=clc++ -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple spir-unknown-unknown -emit-llvm -O0 -cl-std=cl2.0 -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple spir-unknown-unknown -emit-llvm -O0 -cl-std=cl3.0 -o - %s | FileCheck %s
 
 // CHECK: %[[A:.*]] = type { float, float, float }
 typedef struct {

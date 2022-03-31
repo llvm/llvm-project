@@ -6,17 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 #include "Annotations.h"
-#include "Compiler.h"
-#include "Matchers.h"
 #include "ParsedAST.h"
-#include "SyncAPI.h"
-#include "TestFS.h"
 #include "TestTU.h"
 #include "XRefs.h"
-#include "index/FileIndex.h"
-#include "index/SymbolCollector.h"
-#include "clang/Index/IndexingAction.h"
-#include "llvm/Support/Path.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -26,10 +18,10 @@ namespace {
 
 using ::testing::UnorderedElementsAreArray;
 
-auto CreateExpectedSymbolDetails = [](const std::string &name,
-                                      const std::string &container,
+auto CreateExpectedSymbolDetails = [](const std::string &Name,
+                                      const std::string &Container,
                                       const std::string &USR) {
-  return SymbolDetails{name, container, USR, SymbolID(USR)};
+  return SymbolDetails{Name, Container, USR, SymbolID(USR)};
 };
 
 TEST(SymbolInfoTests, All) {

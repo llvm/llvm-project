@@ -15,11 +15,11 @@
 
 #include "memprof_allocator.h"
 #include "memprof_mapping.h"
-#include "memprof_meminfoblock.h"
 #include "memprof_mibmap.h"
 #include "memprof_rawprofile.h"
 #include "memprof_stack.h"
 #include "memprof_thread.h"
+#include "profile/MemProfData.inc"
 #include "sanitizer_common/sanitizer_allocator_checks.h"
 #include "sanitizer_common/sanitizer_allocator_interface.h"
 #include "sanitizer_common/sanitizer_allocator_report.h"
@@ -36,6 +36,42 @@
 #include <time.h>
 
 namespace __memprof {
+namespace {
+using ::llvm::memprof::MemInfoBlock;
+
+void Print(const MemInfoBlock &M, const u64 id, bool print_terse) {
+  u64 p;
+
+  if (print_terse) {
+    p = M.TotalSize * 100 / M.AllocCount;
+    Printf("MIB:%llu/%u/%llu.%02llu/%u/%u/", id, M.AllocCount, p / 100, p % 100,
+           M.MinSize, M.MaxSize);
+    p = M.TotalAccessCount * 100 / M.AllocCount;
+    Printf("%llu.%02llu/%llu/%llu/", p / 100, p % 100, M.MinAccessCount,
+           M.MaxAccessCount);
+    p = M.TotalLifetime * 100 / M.AllocCount;
+    Printf("%llu.%02llu/%u/%u/", p / 100, p % 100, M.MinLifetime,
+           M.MaxLifetime);
+    Printf("%u/%u/%u/%u\n", M.NumMigratedCpu, M.NumLifetimeOverlaps,
+           M.NumSameAllocCpu, M.NumSameDeallocCpu);
+  } else {
+    p = M.TotalSize * 100 / M.AllocCount;
+    Printf("Memory allocation stack id = %llu\n", id);
+    Printf("\talloc_count %u, size (ave/min/max) %llu.%02llu / %u / %u\n",
+           M.AllocCount, p / 100, p % 100, M.MinSize, M.MaxSize);
+    p = M.TotalAccessCount * 100 / M.AllocCount;
+    Printf("\taccess_count (ave/min/max): %llu.%02llu / %llu / %llu\n", p / 100,
+           p % 100, M.MinAccessCount, M.MaxAccessCount);
+    p = M.TotalLifetime * 100 / M.AllocCount;
+    Printf("\tlifetime (ave/min/max): %llu.%02llu / %u / %u\n", p / 100,
+           p % 100, M.MinLifetime, M.MaxLifetime);
+    Printf("\tnum migrated: %u, num lifetime overlaps: %u, num same alloc "
+           "cpu: %u, num same dealloc_cpu: %u\n",
+           M.NumMigratedCpu, M.NumLifetimeOverlaps, M.NumSameAllocCpu,
+           M.NumSameDeallocCpu);
+  }
+}
+} // namespace
 
 static int GetCpuId(void) {
   // _memprof_preinit is called via the preinit_array, which subsequently calls
@@ -240,7 +276,7 @@ struct Allocator {
   static void PrintCallback(const uptr Key, LockedMemInfoBlock *const &Value,
                             void *Arg) {
     SpinMutexLock(&Value->mutex);
-    Value->mib.Print(Key, bool(Arg));
+    Print(Value->mib, Key, bool(Arg));
   }
 
   void FinishAndWrite() {
@@ -524,12 +560,12 @@ struct Allocator {
 
   void PrintStats() { allocator.PrintStats(); }
 
-  void ForceLock() NO_THREAD_SAFETY_ANALYSIS {
+  void ForceLock() SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
     allocator.ForceLock();
     fallback_mutex.Lock();
   }
 
-  void ForceUnlock() NO_THREAD_SAFETY_ANALYSIS {
+  void ForceUnlock() SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
     fallback_mutex.Unlock();
     allocator.ForceUnlock();
   }

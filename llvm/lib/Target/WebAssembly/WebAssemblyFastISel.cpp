@@ -16,6 +16,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "Utils/WebAssemblyTypeUtilities.h"
 #include "Utils/WebAssemblyUtilities.h"
 #include "WebAssembly.h"
 #include "WebAssemblyMachineFunctionInfo.h"
@@ -286,7 +287,7 @@ bool WebAssemblyFastISel::computeAddress(const Value *Obj, Address &Addr) {
           }
           if (S == 1 && Addr.isRegBase() && Addr.getReg() == 0) {
             // An unscaled add of a register. Set it as the new base.
-            unsigned Reg = getRegForValue(Op);
+            Register Reg = getRegForValue(Op);
             if (Reg == 0)
               return false;
             Addr.setReg(Reg);
@@ -372,7 +373,7 @@ bool WebAssemblyFastISel::computeAddress(const Value *Obj, Address &Addr) {
   if (Addr.isSet()) {
     return false;
   }
-  unsigned Reg = getRegForValue(Obj);
+  Register Reg = getRegForValue(Obj);
   if (Reg == 0)
     return false;
   Addr.setReg(Reg);
@@ -430,7 +431,7 @@ unsigned WebAssemblyFastISel::getRegForI1Value(const Value *V,
       }
 
   Not = false;
-  unsigned Reg = getRegForValue(V);
+  Register Reg = getRegForValue(V);
   if (Reg == 0)
     return 0;
   return maskI1Value(Reg, V);
@@ -458,12 +459,12 @@ unsigned WebAssemblyFastISel::zeroExtendToI32(unsigned Reg, const Value *V,
     return 0;
   }
 
-  unsigned Imm = createResultReg(&WebAssembly::I32RegClass);
+  Register Imm = createResultReg(&WebAssembly::I32RegClass);
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
           TII.get(WebAssembly::CONST_I32), Imm)
       .addImm(~(~uint64_t(0) << MVT(From).getSizeInBits()));
 
-  unsigned Result = createResultReg(&WebAssembly::I32RegClass);
+  Register Result = createResultReg(&WebAssembly::I32RegClass);
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
           TII.get(WebAssembly::AND_I32), Result)
       .addReg(Reg)
@@ -488,18 +489,18 @@ unsigned WebAssemblyFastISel::signExtendToI32(unsigned Reg, const Value *V,
     return 0;
   }
 
-  unsigned Imm = createResultReg(&WebAssembly::I32RegClass);
+  Register Imm = createResultReg(&WebAssembly::I32RegClass);
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
           TII.get(WebAssembly::CONST_I32), Imm)
       .addImm(32 - MVT(From).getSizeInBits());
 
-  unsigned Left = createResultReg(&WebAssembly::I32RegClass);
+  Register Left = createResultReg(&WebAssembly::I32RegClass);
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
           TII.get(WebAssembly::SHL_I32), Left)
       .addReg(Reg)
       .addReg(Imm);
 
-  unsigned Right = createResultReg(&WebAssembly::I32RegClass);
+  Register Right = createResultReg(&WebAssembly::I32RegClass);
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
           TII.get(WebAssembly::SHR_S_I32), Right)
       .addReg(Left)
@@ -517,7 +518,7 @@ unsigned WebAssemblyFastISel::zeroExtend(unsigned Reg, const Value *V,
 
     Reg = zeroExtendToI32(Reg, V, From);
 
-    unsigned Result = createResultReg(&WebAssembly::I64RegClass);
+    Register Result = createResultReg(&WebAssembly::I64RegClass);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
             TII.get(WebAssembly::I64_EXTEND_U_I32), Result)
         .addReg(Reg);
@@ -539,7 +540,7 @@ unsigned WebAssemblyFastISel::signExtend(unsigned Reg, const Value *V,
 
     Reg = signExtendToI32(Reg, V, From);
 
-    unsigned Result = createResultReg(&WebAssembly::I64RegClass);
+    Register Result = createResultReg(&WebAssembly::I64RegClass);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
             TII.get(WebAssembly::I64_EXTEND_S_I32), Result)
         .addReg(Reg);
@@ -555,7 +556,7 @@ unsigned WebAssemblyFastISel::signExtend(unsigned Reg, const Value *V,
 unsigned WebAssemblyFastISel::getRegForUnsignedValue(const Value *V) {
   MVT::SimpleValueType From = getSimpleType(V->getType());
   MVT::SimpleValueType To = getLegalType(From);
-  unsigned VReg = getRegForValue(V);
+  Register VReg = getRegForValue(V);
   if (VReg == 0)
     return 0;
   return zeroExtend(VReg, V, From, To);
@@ -564,7 +565,7 @@ unsigned WebAssemblyFastISel::getRegForUnsignedValue(const Value *V) {
 unsigned WebAssemblyFastISel::getRegForSignedValue(const Value *V) {
   MVT::SimpleValueType From = getSimpleType(V->getType());
   MVT::SimpleValueType To = getLegalType(From);
-  unsigned VReg = getRegForValue(V);
+  Register VReg = getRegForValue(V);
   if (VReg == 0)
     return 0;
   return signExtend(VReg, V, From, To);
@@ -578,7 +579,7 @@ unsigned WebAssemblyFastISel::getRegForPromotedValue(const Value *V,
 unsigned WebAssemblyFastISel::notValue(unsigned Reg) {
   assert(MRI.getRegClass(Reg) == &WebAssembly::I32RegClass);
 
-  unsigned NotReg = createResultReg(&WebAssembly::I32RegClass);
+  Register NotReg = createResultReg(&WebAssembly::I32RegClass);
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
           TII.get(WebAssembly::EQZ_I32), NotReg)
       .addReg(Reg);
@@ -586,7 +587,7 @@ unsigned WebAssemblyFastISel::notValue(unsigned Reg) {
 }
 
 unsigned WebAssemblyFastISel::copyValue(unsigned Reg) {
-  unsigned ResultReg = createResultReg(MRI.getRegClass(Reg));
+  Register ResultReg = createResultReg(MRI.getRegClass(Reg));
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(WebAssembly::COPY),
           ResultReg)
       .addReg(Reg);
@@ -598,7 +599,7 @@ unsigned WebAssemblyFastISel::fastMaterializeAlloca(const AllocaInst *AI) {
       FuncInfo.StaticAllocaMap.find(AI);
 
   if (SI != FuncInfo.StaticAllocaMap.end()) {
-    unsigned ResultReg =
+    Register ResultReg =
         createResultReg(Subtarget->hasAddr64() ? &WebAssembly::I64RegClass
                                                : &WebAssembly::I32RegClass);
     unsigned Opc =
@@ -617,7 +618,7 @@ unsigned WebAssemblyFastISel::fastMaterializeConstant(const Constant *C) {
       return 0;
     if (GV->isThreadLocal())
       return 0;
-    unsigned ResultReg =
+    Register ResultReg =
         createResultReg(Subtarget->hasAddr64() ? &WebAssembly::I64RegClass
                                                : &WebAssembly::I32RegClass);
     unsigned Opc = Subtarget->hasAddr64() ? WebAssembly::CONST_I64
@@ -715,7 +716,7 @@ bool WebAssemblyFastISel::fastLowerArguments() {
     default:
       return false;
     }
-    unsigned ResultReg = createResultReg(RC);
+    Register ResultReg = createResultReg(RC);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(Opc), ResultReg)
         .addImm(I);
     updateValueMap(&Arg, ResultReg);
@@ -887,7 +888,7 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
     if (Subtarget->hasAddr64()) {
       auto Wrap = BuildMI(*FuncInfo.MBB, std::prev(FuncInfo.InsertPt), DbgLoc,
                           TII.get(WebAssembly::I32_WRAP_I64));
-      unsigned Reg32 = createResultReg(&WebAssembly::I32RegClass);
+      Register Reg32 = createResultReg(&WebAssembly::I32RegClass);
       Wrap.addReg(Reg32, RegState::Define);
       Wrap.addReg(CalleeReg);
       CalleeReg = Reg32;
@@ -914,11 +915,11 @@ bool WebAssemblyFastISel::selectSelect(const Instruction *I) {
   if (CondReg == 0)
     return false;
 
-  unsigned TrueReg = getRegForValue(Select->getTrueValue());
+  Register TrueReg = getRegForValue(Select->getTrueValue());
   if (TrueReg == 0)
     return false;
 
-  unsigned FalseReg = getRegForValue(Select->getFalseValue());
+  Register FalseReg = getRegForValue(Select->getFalseValue());
   if (FalseReg == 0)
     return false;
 
@@ -959,7 +960,7 @@ bool WebAssemblyFastISel::selectSelect(const Instruction *I) {
     return false;
   }
 
-  unsigned ResultReg = createResultReg(RC);
+  Register ResultReg = createResultReg(RC);
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(Opc), ResultReg)
       .addReg(TrueReg)
       .addReg(FalseReg)
@@ -972,12 +973,12 @@ bool WebAssemblyFastISel::selectSelect(const Instruction *I) {
 bool WebAssemblyFastISel::selectTrunc(const Instruction *I) {
   const auto *Trunc = cast<TruncInst>(I);
 
-  unsigned Reg = getRegForValue(Trunc->getOperand(0));
+  Register Reg = getRegForValue(Trunc->getOperand(0));
   if (Reg == 0)
     return false;
 
   if (Trunc->getOperand(0)->getType()->isIntegerTy(64)) {
-    unsigned Result = createResultReg(&WebAssembly::I32RegClass);
+    Register Result = createResultReg(&WebAssembly::I32RegClass);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
             TII.get(WebAssembly::I32_WRAP_I64), Result)
         .addReg(Reg);
@@ -994,7 +995,7 @@ bool WebAssemblyFastISel::selectZExt(const Instruction *I) {
   const Value *Op = ZExt->getOperand(0);
   MVT::SimpleValueType From = getSimpleType(Op->getType());
   MVT::SimpleValueType To = getLegalType(getSimpleType(ZExt->getType()));
-  unsigned In = getRegForValue(Op);
+  Register In = getRegForValue(Op);
   if (In == 0)
     return false;
   unsigned Reg = zeroExtend(In, Op, From, To);
@@ -1011,7 +1012,7 @@ bool WebAssemblyFastISel::selectSExt(const Instruction *I) {
   const Value *Op = SExt->getOperand(0);
   MVT::SimpleValueType From = getSimpleType(Op->getType());
   MVT::SimpleValueType To = getLegalType(getSimpleType(SExt->getType()));
-  unsigned In = getRegForValue(Op);
+  Register In = getRegForValue(Op);
   if (In == 0)
     return false;
   unsigned Reg = signExtend(In, Op, From, To);
@@ -1075,7 +1076,7 @@ bool WebAssemblyFastISel::selectICmp(const Instruction *I) {
   if (RHS == 0)
     return false;
 
-  unsigned ResultReg = createResultReg(&WebAssembly::I32RegClass);
+  Register ResultReg = createResultReg(&WebAssembly::I32RegClass);
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(Opc), ResultReg)
       .addReg(LHS)
       .addReg(RHS);
@@ -1086,11 +1087,11 @@ bool WebAssemblyFastISel::selectICmp(const Instruction *I) {
 bool WebAssemblyFastISel::selectFCmp(const Instruction *I) {
   const auto *FCmp = cast<FCmpInst>(I);
 
-  unsigned LHS = getRegForValue(FCmp->getOperand(0));
+  Register LHS = getRegForValue(FCmp->getOperand(0));
   if (LHS == 0)
     return false;
 
-  unsigned RHS = getRegForValue(FCmp->getOperand(1));
+  Register RHS = getRegForValue(FCmp->getOperand(1));
   if (RHS == 0)
     return false;
 
@@ -1136,7 +1137,7 @@ bool WebAssemblyFastISel::selectFCmp(const Instruction *I) {
     return false;
   }
 
-  unsigned ResultReg = createResultReg(&WebAssembly::I32RegClass);
+  Register ResultReg = createResultReg(&WebAssembly::I32RegClass);
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(Opc), ResultReg)
       .addReg(LHS)
       .addReg(RHS);
@@ -1157,7 +1158,7 @@ bool WebAssemblyFastISel::selectBitCast(const Instruction *I) {
   if (!VT.isSimple() || !RetVT.isSimple())
     return false;
 
-  unsigned In = getRegForValue(I->getOperand(0));
+  Register In = getRegForValue(I->getOperand(0));
   if (In == 0)
     return false;
 
@@ -1229,7 +1230,7 @@ bool WebAssemblyFastISel::selectLoad(const Instruction *I) {
 
   materializeLoadStoreOperands(Addr);
 
-  unsigned ResultReg = createResultReg(RC);
+  Register ResultReg = createResultReg(RC);
   auto MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(Opc),
                      ResultReg);
 
@@ -1284,7 +1285,7 @@ bool WebAssemblyFastISel::selectStore(const Instruction *I) {
 
   materializeLoadStoreOperands(Addr);
 
-  unsigned ValueReg = getRegForValue(Store->getValueOperand());
+  Register ValueReg = getRegForValue(Store->getValueOperand());
   if (ValueReg == 0)
     return false;
   if (VTIsi1)

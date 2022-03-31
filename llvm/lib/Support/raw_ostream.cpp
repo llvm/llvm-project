@@ -11,10 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLArrayExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Config/config.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/Duration.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
@@ -24,10 +25,8 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include <algorithm>
-#include <cctype>
 #include <cerrno>
 #include <cstdio>
-#include <iterator>
 #include <sys/stat.h>
 
 // <fcntl.h> may provide O_BINARY.
@@ -643,13 +642,14 @@ raw_fd_ostream::raw_fd_ostream(int fd, bool shouldClose, bool unbuffered,
 
   // Get the starting position.
   off_t loc = ::lseek(FD, 0, SEEK_CUR);
-#ifdef _WIN32
-  // MSVCRT's _lseek(SEEK_CUR) doesn't return -1 for pipes.
   sys::fs::file_status Status;
   std::error_code EC = status(FD, Status);
-  SupportsSeeking = !EC && Status.type() == sys::fs::file_type::regular_file;
+  IsRegularFile = Status.type() == sys::fs::file_type::regular_file;
+#ifdef _WIN32
+  // MSVCRT's _lseek(SEEK_CUR) doesn't return -1 for pipes.
+  SupportsSeeking = !EC && IsRegularFile;
 #else
-  SupportsSeeking = loc != (off_t)-1;
+  SupportsSeeking = !EC && loc != (off_t)-1;
 #endif
   if (!SupportsSeeking)
     pos = 0;
@@ -869,8 +869,8 @@ Expected<sys::fs::FileLocker> raw_fd_ostream::lock() {
 }
 
 Expected<sys::fs::FileLocker>
-raw_fd_ostream::tryLockFor(std::chrono::milliseconds Timeout) {
-  std::error_code EC = sys::fs::tryLockFile(FD, Timeout);
+raw_fd_ostream::tryLockFor(Duration const& Timeout) {
+  std::error_code EC = sys::fs::tryLockFile(FD, Timeout.getDuration());
   if (!EC)
     return sys::fs::FileLocker(FD);
   return errorCodeToError(EC);
@@ -914,8 +914,7 @@ raw_fd_stream::raw_fd_stream(StringRef Filename, std::error_code &EC)
   if (EC)
     return;
 
-  // Do not support non-seekable files.
-  if (!supportsSeeking())
+  if (!isRegularFile())
     EC = std::make_error_code(std::errc::invalid_argument);
 }
 
@@ -936,10 +935,6 @@ bool raw_fd_stream::classof(const raw_ostream *OS) {
 //===----------------------------------------------------------------------===//
 //  raw_string_ostream
 //===----------------------------------------------------------------------===//
-
-raw_string_ostream::~raw_string_ostream() {
-  flush();
-}
 
 void raw_string_ostream::write_impl(const char *Ptr, size_t Size) {
   OS.append(Ptr, Size);

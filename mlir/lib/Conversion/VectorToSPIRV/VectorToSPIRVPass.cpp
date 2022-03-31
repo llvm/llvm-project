@@ -22,13 +22,13 @@
 using namespace mlir;
 
 namespace {
-struct LowerVectorToSPIRVPass
-    : public ConvertVectorToSPIRVBase<LowerVectorToSPIRVPass> {
+struct ConvertVectorToSPIRVPass
+    : public ConvertVectorToSPIRVBase<ConvertVectorToSPIRVPass> {
   void runOnOperation() override;
 };
 } // namespace
 
-void LowerVectorToSPIRVPass::runOnOperation() {
+void ConvertVectorToSPIRVPass::runOnOperation() {
   MLIRContext *context = &getContext();
   ModuleOp module = getOperation();
 
@@ -37,17 +37,26 @@ void LowerVectorToSPIRVPass::runOnOperation() {
       SPIRVConversionTarget::get(targetAttr);
 
   SPIRVTypeConverter typeConverter(targetAttr);
+
+  // Use UnrealizedConversionCast as the bridge so that we don't need to pull in
+  // patterns for other dialects.
+  auto addUnrealizedCast = [](OpBuilder &builder, Type type, ValueRange inputs,
+                              Location loc) {
+    auto cast = builder.create<UnrealizedConversionCastOp>(loc, type, inputs);
+    return Optional<Value>(cast.getResult(0));
+  };
+  typeConverter.addSourceMaterialization(addUnrealizedCast);
+  typeConverter.addTargetMaterialization(addUnrealizedCast);
+  target->addLegalOp<UnrealizedConversionCastOp>();
+
   RewritePatternSet patterns(context);
   populateVectorToSPIRVPatterns(typeConverter, patterns);
 
-  target->addLegalOp<ModuleOp>();
-  target->addLegalOp<FuncOp>();
-
-  if (failed(applyFullConversion(module, *target, std::move(patterns))))
+  if (failed(applyPartialConversion(module, *target, std::move(patterns))))
     return signalPassFailure();
 }
 
 std::unique_ptr<OperationPass<ModuleOp>>
 mlir::createConvertVectorToSPIRVPass() {
-  return std::make_unique<LowerVectorToSPIRVPass>();
+  return std::make_unique<ConvertVectorToSPIRVPass>();
 }

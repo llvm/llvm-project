@@ -8,7 +8,7 @@ struct p {
 struct p t = { 1, 10 };
 struct p u;
 
-int main () {
+int main (void) {
   // CHECK: align 1
   // CHECK: align 1
   int tmp = t.b;

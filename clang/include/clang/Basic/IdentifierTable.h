@@ -458,6 +458,10 @@ public:
   /// 7.1.3, C++ [lib.global.names]).
   ReservedIdentifierStatus isReserved(const LangOptions &LangOpts) const;
 
+  /// If the identifier is an "uglified" reserved name, return a cleaned form.
+  /// e.g. _Foo => Foo. Otherwise, just returns the name.
+  StringRef deuglifiedName() const;
+
   /// Provide less than operator for lexicographical sorting.
   bool operator<(const IdentifierInfo &RHS) const {
     return getName() < RHS.getName();

@@ -237,7 +237,7 @@ void NVPTXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 }
 
 TargetTransformInfo
-NVPTXTargetMachine::getTargetTransformInfo(const Function &F) {
+NVPTXTargetMachine::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(NVPTXTTIImpl(this, F));
 }
 

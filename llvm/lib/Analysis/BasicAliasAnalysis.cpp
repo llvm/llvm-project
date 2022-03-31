@@ -22,7 +22,6 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/CaptureTracking.h"
-#include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/PhiValues.h"
@@ -45,7 +44,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
@@ -779,7 +777,7 @@ FunctionModRefBehavior BasicAAResult::getModRefBehavior(const CallBase *Call) {
   // than that.
   if (Call->onlyReadsMemory())
     Min = FMRB_OnlyReadsMemory;
-  else if (Call->doesNotReadMemory())
+  else if (Call->onlyWritesMemory())
     Min = FMRB_OnlyWritesMemory;
 
   if (Call->onlyAccessesArgMemory())
@@ -812,7 +810,7 @@ FunctionModRefBehavior BasicAAResult::getModRefBehavior(const Function *F) {
   // If the function declares it only reads memory, go with that.
   if (F->onlyReadsMemory())
     Min = FMRB_OnlyReadsMemory;
-  else if (F->doesNotReadMemory())
+  else if (F->onlyWritesMemory())
     Min = FMRB_OnlyWritesMemory;
 
   if (F->onlyAccessesArgMemory())
@@ -972,7 +970,7 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
         continue;
       }
       // Operand aliases 'Object' but call only writes into it.
-      if (Call->doesNotReadMemory(OperandNo)) {
+      if (Call->onlyWritesMemory(OperandNo)) {
         Result = setMod(Result);
         continue;
       }
@@ -1010,19 +1008,22 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
       return ModRefInfo::NoModRef;
   }
 
-  // The semantics of memcpy intrinsics either exactly overlap or do not
-  // overlap, i.e., source and destination of any given memcpy are either
-  // no-alias or must-alias.
-  if (auto *Inst = dyn_cast<AnyMemCpyInst>(Call)) {
+  // Ideally, there should be no need to special case for memcpy/memove
+  // intrinsics here since general machinery (based on memory attributes) should
+  // already handle it just fine. Unfortunately, it doesn't due to deficiency in
+  // operand bundles support. At the moment it's not clear if complexity behind
+  // enhancing general mechanism worths it.
+  // TODO: Consider improving operand bundles support in general mechanism.
+  if (auto *Inst = dyn_cast<AnyMemTransferInst>(Call)) {
     AliasResult SrcAA =
         getBestAAResults().alias(MemoryLocation::getForSource(Inst), Loc, AAQI);
     AliasResult DestAA =
         getBestAAResults().alias(MemoryLocation::getForDest(Inst), Loc, AAQI);
     // It's also possible for Loc to alias both src and dest, or neither.
     ModRefInfo rv = ModRefInfo::NoModRef;
-    if (SrcAA != AliasResult::NoAlias)
+    if (SrcAA != AliasResult::NoAlias || Call->hasReadingOperandBundles())
       rv = setRef(rv);
-    if (DestAA != AliasResult::NoAlias)
+    if (DestAA != AliasResult::NoAlias || Call->hasClobberingOperandBundles())
       rv = setMod(rv);
     return rv;
   }
@@ -1248,8 +1249,8 @@ AliasResult BasicAAResult::aliasGEP(
     else
       GCD = APIntOps::GreatestCommonDivisor(GCD, ScaleForGCD.abs());
 
-    ConstantRange CR =
-        computeConstantRange(Index.Val.V, true, &AC, Index.CxtI);
+    ConstantRange CR = computeConstantRange(Index.Val.V, /* ForSigned */ false,
+                                            true, &AC, Index.CxtI);
     KnownBits Known =
         computeKnownBits(Index.Val.V, DL, 0, &AC, Index.CxtI, DT);
     CR = CR.intersectWith(
@@ -1296,8 +1297,31 @@ AliasResult BasicAAResult::aliasGEP(
     const VariableGEPIndex &Var = DecompGEP1.VarIndices[0];
     if (Var.Val.TruncBits == 0 &&
         isKnownNonZero(Var.Val.V, DL, 0, &AC, Var.CxtI, DT)) {
-      // If V != 0 then abs(VarIndex) >= abs(Scale).
-      MinAbsVarIndex = Var.Scale.abs();
+      // If V != 0, then abs(VarIndex) > 0.
+      MinAbsVarIndex = APInt(Var.Scale.getBitWidth(), 1);
+
+      // Check if abs(V*Scale) >= abs(Scale) holds in the presence of
+      // potentially wrapping math.
+      auto MultiplyByScaleNoWrap = [](const VariableGEPIndex &Var) {
+        if (Var.IsNSW)
+          return true;
+
+        int ValOrigBW = Var.Val.V->getType()->getPrimitiveSizeInBits();
+        // If Scale is small enough so that abs(V*Scale) >= abs(Scale) holds.
+        // The max value of abs(V) is 2^ValOrigBW - 1. Multiplying with a
+        // constant smaller than 2^(bitwidth(Val) - ValOrigBW) won't wrap.
+        int MaxScaleValueBW = Var.Val.getBitWidth() - ValOrigBW;
+        if (MaxScaleValueBW <= 0)
+          return false;
+        return Var.Scale.ule(
+            APInt::getMaxValue(MaxScaleValueBW).zext(Var.Scale.getBitWidth()));
+      };
+      // Refine MinAbsVarIndex, if abs(Scale*V) >= abs(Scale) holds in the
+      // presence of potentially wrapping math.
+      if (MultiplyByScaleNoWrap(Var)) {
+        // If V != 0 then abs(VarIndex) >= abs(Scale).
+        MinAbsVarIndex = Var.Scale.abs();
+      }
     }
   } else if (DecompGEP1.VarIndices.size() == 2) {
     // VarIndex = Scale*V0 + (-Scale)*V1.
@@ -1699,6 +1723,7 @@ AliasResult BasicAAResult::aliasCheckRecursive(
       return Result;
   } else if (const GEPOperator *GV2 = dyn_cast<GEPOperator>(V2)) {
     AliasResult Result = aliasGEP(GV2, V2Size, V1, V1Size, O2, O1, AAQI);
+    Result.swap();
     if (Result != AliasResult::MayAlias)
       return Result;
   }
@@ -1709,6 +1734,7 @@ AliasResult BasicAAResult::aliasCheckRecursive(
       return Result;
   } else if (const PHINode *PN = dyn_cast<PHINode>(V2)) {
     AliasResult Result = aliasPHI(PN, V2Size, V1, V1Size, AAQI);
+    Result.swap();
     if (Result != AliasResult::MayAlias)
       return Result;
   }
@@ -1719,6 +1745,7 @@ AliasResult BasicAAResult::aliasCheckRecursive(
       return Result;
   } else if (const SelectInst *S2 = dyn_cast<SelectInst>(V2)) {
     AliasResult Result = aliasSelect(S2, V2Size, V1, V1Size, AAQI);
+    Result.swap();
     if (Result != AliasResult::MayAlias)
       return Result;
   }

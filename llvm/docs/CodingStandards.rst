@@ -844,7 +844,7 @@ function declared in the header:
   namespace llvm {
   int foo(char *s) { // Mismatch between "const char *" and "char *"
   }
-  } // end namespace llvm
+  } // namespace llvm
 
 This error will not be caught until the build is nearly complete, when the
 linker fails to find a definition for any uses of the original function.  If the
@@ -1508,8 +1508,8 @@ being closed by a ``}``.  For example:
 
   };
 
-  } // end namespace knowledge
-  } // end namespace llvm
+  } // namespace knowledge
+  } // namespace llvm
 
 
 Feel free to skip the closing comment when the namespace being closed is
@@ -1550,7 +1550,7 @@ as possible, and only use them for class declarations.  For example:
     StringSort(...)
     bool operator<(const char *RHS) const;
   };
-  } // end anonymous namespace
+  } // namespace
 
   static void runHelper() {
     ...
@@ -1574,7 +1574,7 @@ Avoid putting declarations other than classes into anonymous namespaces:
 
   // ... many declarations ...
 
-  } // end anonymous namespace
+  } // namespace
 
 When you are looking at "``runHelper``" in the middle of a large C++ file,
 you have no immediate way to tell if this function is local to the file.  In

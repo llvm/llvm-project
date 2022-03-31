@@ -14,11 +14,13 @@
 #ifndef LLVM_ANALYSIS_BLOCKFREQUENCYINFOIMPL_H
 #define LLVM_ANALYSIS_BLOCKFREQUENCYINFOIMPL_H
 
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/Twine.h"
@@ -30,7 +32,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DOTGraphTraits.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/ScaledNumber.h"
 #include "llvm/Support/raw_ostream.h"
@@ -44,7 +45,6 @@
 #include <list>
 #include <queue>
 #include <string>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -1451,7 +1451,7 @@ void BlockFrequencyInfoImpl<BT>::iterativeInference(
   // frequencies need to be updated based on the incoming edges.
   // The set is dynamic and changes after every update. Initially all blocks
   // with a positive frequency are active
-  auto IsActive = std::vector<bool>(Freq.size(), false);
+  auto IsActive = BitVector(Freq.size(), false);
   std::queue<size_t> ActiveSet;
   for (size_t I = 0; I < Freq.size(); I++) {
     if (Freq[I] > 0) {
@@ -1515,7 +1515,7 @@ void BlockFrequencyInfoImpl<BT>::findReachableBlocks(
   // Find all blocks to apply inference on, that is, reachable from the entry
   // along edges with non-zero probablities
   std::queue<const BlockT *> Queue;
-  std::unordered_set<const BlockT *> Reachable;
+  SmallPtrSet<const BlockT *, 8> Reachable;
   const BlockT *Entry = &F->front();
   Queue.push(Entry);
   Reachable.insert(Entry);
@@ -1526,16 +1526,14 @@ void BlockFrequencyInfoImpl<BT>::findReachableBlocks(
       auto EP = BPI->getEdgeProbability(SrcBB, DstBB);
       if (EP.isZero())
         continue;
-      if (Reachable.find(DstBB) == Reachable.end()) {
+      if (Reachable.insert(DstBB).second)
         Queue.push(DstBB);
-        Reachable.insert(DstBB);
-      }
     }
   }
 
   // Find all blocks to apply inference on, that is, backward reachable from
   // the entry along (backward) edges with non-zero probablities
-  std::unordered_set<const BlockT *> InverseReachable;
+  SmallPtrSet<const BlockT *, 8> InverseReachable;
   for (const BlockT &BB : *F) {
     // An exit block is a block without any successors
     bool HasSucc = GraphTraits<const BlockT *>::child_begin(&BB) !=
@@ -1552,10 +1550,8 @@ void BlockFrequencyInfoImpl<BT>::findReachableBlocks(
       auto EP = BPI->getEdgeProbability(DstBB, SrcBB);
       if (EP.isZero())
         continue;
-      if (InverseReachable.find(DstBB) == InverseReachable.end()) {
+      if (InverseReachable.insert(DstBB).second)
         Queue.push(DstBB);
-        InverseReachable.insert(DstBB);
-      }
     }
   }
 
@@ -1580,15 +1576,14 @@ void BlockFrequencyInfoImpl<BT>::initTransitionProbabilities(
   // Find unique successors and corresponding probabilities for every block
   for (size_t Src = 0; Src < NumBlocks; Src++) {
     const BlockT *BB = Blocks[Src];
-    std::unordered_set<const BlockT *> UniqueSuccs;
+    SmallPtrSet<const BlockT *, 2> UniqueSuccs;
     for (const auto SI : children<const BlockT *>(BB)) {
       // Ignore cold blocks
       if (BlockIndex.find(SI) == BlockIndex.end())
         continue;
       // Ignore parallel edges between BB and SI blocks
-      if (UniqueSuccs.find(SI) != UniqueSuccs.end())
+      if (!UniqueSuccs.insert(SI).second)
         continue;
-      UniqueSuccs.insert(SI);
       // Ignore jumps with zero probability
       auto EP = BPI->getEdgeProbability(BB, SI);
       if (EP.isZero())

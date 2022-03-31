@@ -1,14 +1,14 @@
-// RUN: %clang_cc1 -triple x86_64-gnu-linux -O3 -disable-llvm-passes -I%S -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,LIN,LIN64,NoNewStructPathTBAA
-// RUN: %clang_cc1 -triple x86_64-gnu-linux -O3 -disable-llvm-passes -I%S -new-struct-path-tbaa -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,LIN,LIN64,NewStructPathTBAA
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple x86_64-gnu-linux -O3 -disable-llvm-passes -I%S -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,LIN,LIN64,NoNewStructPathTBAA
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple x86_64-gnu-linux -O3 -disable-llvm-passes -I%S -new-struct-path-tbaa -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,LIN,LIN64,NewStructPathTBAA
 
-// RUN: %clang_cc1 -triple x86_64-windows-pc -O3 -disable-llvm-passes -I%S -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,WIN,WIN64,NoNewStructPathTBAA
-// RUN: %clang_cc1 -triple x86_64-windows-pc -O3 -disable-llvm-passes -I%S -new-struct-path-tbaa -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,WIN,WIN64,NewStructPathTBAA
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple x86_64-windows-pc -O3 -disable-llvm-passes -I%S -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,WIN,WIN64,NoNewStructPathTBAA
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple x86_64-windows-pc -O3 -disable-llvm-passes -I%S -new-struct-path-tbaa -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,WIN,WIN64,NewStructPathTBAA
 
-// RUN: %clang_cc1 -triple i386-gnu-linux -O3 -disable-llvm-passes -I%S -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,LIN,LIN32,NoNewStructPathTBAA
-// RUN: %clang_cc1 -triple i386-gnu-linux -O3 -disable-llvm-passes -I%S -new-struct-path-tbaa -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,LIN,LIN32,NewStructPathTBAA
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple i386-gnu-linux -O3 -disable-llvm-passes -I%S -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,LIN,LIN32,NoNewStructPathTBAA
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple i386-gnu-linux -O3 -disable-llvm-passes -I%S -new-struct-path-tbaa -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,LIN,LIN32,NewStructPathTBAA
 
-// RUN: %clang_cc1 -triple i386-windows-pc -O3 -disable-llvm-passes -I%S -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,WIN,WIN32,NoNewStructPathTBAA
-// RUN: %clang_cc1 -triple i386-windows-pc -O3 -disable-llvm-passes -I%S -new-struct-path-tbaa -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,WIN,WIN32,NewStructPathTBAA
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple i386-windows-pc -O3 -disable-llvm-passes -I%S -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,WIN,WIN32,NoNewStructPathTBAA
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple i386-windows-pc -O3 -disable-llvm-passes -I%S -new-struct-path-tbaa -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,WIN,WIN32,NewStructPathTBAA
 
 namespace std {
   class type_info { public: virtual ~type_info(); private: const char * name; };
@@ -272,71 +272,6 @@ void TakesVarargs(int i, ...) {
   // WIN32: %[[LOADV3:.+]] = load i16, i16* %[[BC3]]
   // WIN32: store i16 %[[LOADV3]], i16*
 
-
-  _BitInt(129) D = __builtin_va_arg(args, _BitInt(129));
-  // LIN64: %[[AD4:.+]] = getelementptr inbounds [1 x %struct.__va_list_tag], [1 x %struct.__va_list_tag]* %[[ARGS]]
-  // LIN64: %[[OFA_P4:.+]] = getelementptr inbounds %struct.__va_list_tag, %struct.__va_list_tag* %[[AD4]], i32 0, i32 2
-  // LIN64: %[[OFA4:.+]] = load i8*, i8** %[[OFA_P4]]
-  // LIN64: %[[BC4:.+]] = bitcast i8* %[[OFA4]] to i129*
-  // LIN64: %[[OFANEXT4:.+]] = getelementptr i8, i8* %[[OFA4]], i32 24
-  // LIN64: store i8* %[[OFANEXT4]], i8** %[[OFA_P4]]
-  // LIN64: %[[LOAD4:.+]] = load i129, i129* %[[BC4]]
-  // LIN64: store i129 %[[LOAD4]], i129*
-
-  // LIN32: %[[CUR4:.+]] = load i8*, i8** %[[ARGS]]
-  // LIN32: %[[NEXT4:.+]] = getelementptr inbounds i8, i8* %[[CUR4]], i32 20
-  // LIN32: store i8* %[[NEXT4]], i8** %[[ARGS]]
-  // LIN32: %[[BC4:.+]] = bitcast i8* %[[CUR4]] to i129*
-  // LIN32: %[[LOADV4:.+]] = load i129, i129* %[[BC4]]
-  // LIN32: store i129 %[[LOADV4]], i129*
-
-  // WIN64: %[[CUR4:.+]] = load i8*, i8** %[[ARGS]]
-  // WIN64: %[[NEXT4:.+]] = getelementptr inbounds i8, i8* %[[CUR4]], i64 8
-  // WIN64: store i8* %[[NEXT4]], i8** %[[ARGS]]
-  // WIN64: %[[BC4:.+]] = bitcast i8* %[[CUR4]] to i129**
-  // WIN64: %[[LOADP4:.+]] = load i129*, i129** %[[BC4]]
-  // WIN64: %[[LOADV4:.+]] = load i129, i129* %[[LOADP4]]
-  // WIN64: store i129 %[[LOADV4]], i129*
-
-  // WIN32: %[[CUR4:.+]] = load i8*, i8** %[[ARGS]]
-  // WIN32: %[[NEXT4:.+]] = getelementptr inbounds i8, i8* %[[CUR4]], i32 24
-  // WIN32: store i8* %[[NEXT4]], i8** %[[ARGS]]
-  // WIN32: %[[BC4:.+]] = bitcast i8* %[[CUR4]] to i129*
-  // WIN32: %[[LOADV4:.+]] = load i129, i129* %[[BC4]]
-  // WIN32: store i129 %[[LOADV4]], i129*
-
-  _BitInt(8388600) E = __builtin_va_arg(args, _BitInt(8388600));
-  // LIN64: %[[AD5:.+]] = getelementptr inbounds [1 x %struct.__va_list_tag], [1 x %struct.__va_list_tag]* %[[ARGS]]
-  // LIN64: %[[OFA_P5:.+]] = getelementptr inbounds %struct.__va_list_tag, %struct.__va_list_tag* %[[AD5]], i32 0, i32 2
-  // LIN64: %[[OFA5:.+]] = load i8*, i8** %[[OFA_P5]]
-  // LIN64: %[[BC5:.+]] = bitcast i8* %[[OFA5]] to i8388600*
-  // LIN64: %[[OFANEXT5:.+]] = getelementptr i8, i8* %[[OFA5]], i32 1048576
-  // LIN64: store i8* %[[OFANEXT5]], i8** %[[OFA_P5]]
-  // LIN64: %[[LOAD5:.+]] = load i8388600, i8388600* %[[BC5]]
-  // LIN64: store i8388600 %[[LOAD5]], i8388600*
-
-  // LIN32: %[[CUR5:.+]] = load i8*, i8** %[[ARGS]]
-  // LIN32: %[[NEXT5:.+]] = getelementptr inbounds i8, i8* %[[CUR5]], i32 1048576
-  // LIN32: store i8* %[[NEXT5]], i8** %[[ARGS]]
-  // LIN32: %[[BC5:.+]] = bitcast i8* %[[CUR5]] to i8388600*
-  // LIN32: %[[LOADV5:.+]] = load i8388600, i8388600* %[[BC5]]
-  // LIN32: store i8388600 %[[LOADV5]], i8388600*
-
-  // WIN64: %[[CUR5:.+]] = load i8*, i8** %[[ARGS]]
-  // WIN64: %[[NEXT5:.+]] = getelementptr inbounds i8, i8* %[[CUR5]], i64 8
-  // WIN64: store i8* %[[NEXT5]], i8** %[[ARGS]]
-  // WIN64: %[[BC5:.+]] = bitcast i8* %[[CUR5]] to i8388600**
-  // WIN64: %[[LOADP5:.+]] = load i8388600*, i8388600** %[[BC5]]
-  // WIN64: %[[LOADV5:.+]] = load i8388600, i8388600* %[[LOADP5]]
-  // WIN64: store i8388600 %[[LOADV5]], i8388600*
-
-  // WIN32: %[[CUR5:.+]] = load i8*, i8** %[[ARGS]]
-  // WIN32: %[[NEXT5:.+]] = getelementptr inbounds i8, i8* %[[CUR5]], i32 1048576
-  // WIN32: store i8* %[[NEXT5]], i8** %[[ARGS]]
-  // WIN32: %[[BC5:.+]] = bitcast i8* %[[CUR5]] to i8388600*
-  // WIN32: %[[LOADV5:.+]] = load i8388600, i8388600* %[[BC5]]
-  // WIN32: store i8388600 %[[LOADV5]], i8388600*
-
   __builtin_va_end(args);
   // LIN64: %[[ENDAD:.+]] = getelementptr inbounds [1 x %struct.__va_list_tag], [1 x %struct.__va_list_tag]* %[[ARGS]]
   // LIN64: %[[ENDAD1:.+]] = bitcast %struct.__va_list_tag* %[[ENDAD]] to i8*
@@ -405,7 +340,7 @@ void ExplicitCasts() {
 
 struct S {
   _BitInt(17) A;
-  _BitInt(8388600) B;
+  _BitInt(128) B;
   _BitInt(17) C;
 };
 
@@ -420,9 +355,9 @@ void OffsetOfTest() {
   // LIN32: store i{{.+}} 4, i{{.+}}* %{{.+}}
   // WIN: store i{{.+}} 8, i{{.+}}* %{{.+}}
   auto C = __builtin_offsetof(S,C);
-  // LIN64: store i{{.+}} 1048584, i{{.+}}* %{{.+}}
-  // LIN32: store i{{.+}} 1048580, i{{.+}}* %{{.+}}
-  // WIN: store i{{.+}} 1048584, i{{.+}}* %{{.+}}
+  // LIN64: store i{{.+}} 24, i{{.+}}* %{{.+}}
+  // LIN32: store i{{.+}} 20, i{{.+}}* %{{.+}}
+  // WIN: store i{{.+}} 24, i{{.+}}* %{{.+}}
 }
 
 

@@ -404,7 +404,6 @@ let SchedModel = P9Model in {
   def P9_LoadAndALU2Op_7C : WriteSequence<[P9_LS_4C, P9_ALU_3C]>;
   def P9_LoadAndALU2Op_8C : WriteSequence<[P9_LS_5C, P9_ALU_3C]>;
   def P9_LoadAndPMOp_8C : WriteSequence<[P9_LS_5C, P9_PM_3C]>;
-  def P9_LoadAndLoadOp_8C : WriteSequence<[P9_LS_4C, P9_LS_4C]>;
   def P9_IntDivAndALUOp_18C_8 : WriteSequence<[P9_DIV_16C_8, P9_ALU_2C]>;
   def P9_IntDivAndALUOp_26C_8 : WriteSequence<[P9_DIV_24C_8, P9_ALU_2C]>;
   def P9_IntDivAndALUOp_42C_8 : WriteSequence<[P9_DIV_40C_8, P9_ALU_2C]>;

@@ -10,8 +10,7 @@
 
 // istream cout;
 
-// XFAIL: LIBCXX-WINDOWS-FIXME
-
+// UNSUPPORTED: executor-has-no-bash
 // FILE_DEPENDENCIES: ../check-stdout.sh
 // RUN: %{build}
 // RUN: %{exec} bash check-stdout.sh "%t.exe" "1234"

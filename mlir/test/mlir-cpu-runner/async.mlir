@@ -1,14 +1,4 @@
-// RUN:   mlir-opt %s -async-to-async-runtime                                  \
-// RUN:               -async-runtime-ref-counting                              \
-// RUN:               -async-runtime-ref-counting-opt                          \
-// RUN:               -convert-async-to-llvm                                   \
-// RUN:               -convert-linalg-to-loops                                 \
-// RUN:               -convert-scf-to-std                                      \
-// RUN:               -convert-linalg-to-llvm                                  \
-// RUN:               -convert-memref-to-llvm                                  \
-// RUN:               -convert-arith-to-llvm                                   \
-// RUN:               -convert-std-to-llvm                                     \
-// RUN:               -reconcile-unrealized-casts                              \
+// RUN:   mlir-opt %s -pass-pipeline="async-to-async-runtime,func.func(async-runtime-ref-counting,async-runtime-ref-counting-opt),convert-async-to-llvm,func.func(convert-linalg-to-loops,convert-scf-to-cf),convert-linalg-to-llvm,convert-memref-to-llvm,func.func(convert-arith-to-llvm),convert-func-to-llvm,reconcile-unrealized-casts" \
 // RUN: | mlir-cpu-runner                                                      \
 // RUN:     -e main -entry-point-result=void -O0                               \
 // RUN:     -shared-libs=%linalg_test_lib_dir/libmlir_c_runner_utils%shlibext  \
@@ -29,7 +19,7 @@ func @main() {
   %c4 = arith.constant 4.0 : f32
 
   %A = memref.alloc() : memref<4xf32>
-  linalg.fill(%c0, %A) : f32, memref<4xf32>
+  linalg.fill ins(%c0 : f32) outs(%A : memref<4xf32>)
 
   // CHECK: [0, 0, 0, 0]
   %U = memref.cast %A :  memref<4xf32> to memref<*xf32>

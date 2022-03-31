@@ -35,8 +35,6 @@ static_library("GlobalISel") {
     "LostDebugLocObserver.cpp",
     "MachineIRBuilder.cpp",
     "RegBankSelect.cpp",
-    "RegisterBank.cpp",
-    "RegisterBankInfo.cpp",
     "Utils.cpp",
   ]
 }

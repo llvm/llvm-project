@@ -22,31 +22,26 @@
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/GlobalsModRef.h"
-#include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
-#include "llvm/Analysis/MustExecute.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
@@ -773,8 +768,8 @@ void llvm::breakLoopBackedge(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
 }
 
 
-/// Checks if \p L has single exit through latch block except possibly
-/// "deoptimizing" exits. Returns branch instruction terminating the loop
+/// Checks if \p L has an exiting latch branch.  There may also be other
+/// exiting blocks.  Returns branch instruction terminating the loop
 /// latch if above check is successful, nullptr otherwise.
 static BranchInst *getExpectedExitLoopLatchBranch(Loop *L) {
   BasicBlock *Latch = L->getLoopLatch();
@@ -789,53 +784,61 @@ static BranchInst *getExpectedExitLoopLatchBranch(Loop *L) {
           LatchBR->getSuccessor(1) == L->getHeader()) &&
          "At least one edge out of the latch must go to the header");
 
-  SmallVector<BasicBlock *, 4> ExitBlocks;
-  L->getUniqueNonLatchExitBlocks(ExitBlocks);
-  if (any_of(ExitBlocks, [](const BasicBlock *EB) {
-        return !EB->getTerminatingDeoptimizeCall();
-      }))
-    return nullptr;
-
   return LatchBR;
+}
+
+/// Return the estimated trip count for any exiting branch which dominates
+/// the loop latch.
+static Optional<uint64_t>
+getEstimatedTripCount(BranchInst *ExitingBranch, Loop *L,
+                      uint64_t &OrigExitWeight) {
+  // To estimate the number of times the loop body was executed, we want to
+  // know the number of times the backedge was taken, vs. the number of times
+  // we exited the loop.
+  uint64_t LoopWeight, ExitWeight;
+  if (!ExitingBranch->extractProfMetadata(LoopWeight, ExitWeight))
+    return None;
+
+  if (L->contains(ExitingBranch->getSuccessor(1)))
+    std::swap(LoopWeight, ExitWeight);
+
+  if (!ExitWeight)
+    // Don't have a way to return predicated infinite
+    return None;
+
+  OrigExitWeight = ExitWeight;
+
+  // Estimated exit count is a ratio of the loop weight by the weight of the
+  // edge exiting the loop, rounded to nearest.
+  uint64_t ExitCount = llvm::divideNearest(LoopWeight, ExitWeight);
+  // Estimated trip count is one plus estimated exit count.
+  return ExitCount + 1;
 }
 
 Optional<unsigned>
 llvm::getLoopEstimatedTripCount(Loop *L,
                                 unsigned *EstimatedLoopInvocationWeight) {
-  // Support loops with an exiting latch and other existing exists only
-  // deoptimize.
-  BranchInst *LatchBranch = getExpectedExitLoopLatchBranch(L);
-  if (!LatchBranch)
-    return None;
-
-  // To estimate the number of times the loop body was executed, we want to
-  // know the number of times the backedge was taken, vs. the number of times
-  // we exited the loop.
-  uint64_t BackedgeTakenWeight, LatchExitWeight;
-  if (!LatchBranch->extractProfMetadata(BackedgeTakenWeight, LatchExitWeight))
-    return None;
-
-  if (LatchBranch->getSuccessor(0) != L->getHeader())
-    std::swap(BackedgeTakenWeight, LatchExitWeight);
-
-  if (!LatchExitWeight)
-    return None;
-
-  if (EstimatedLoopInvocationWeight)
-    *EstimatedLoopInvocationWeight = LatchExitWeight;
-
-  // Estimated backedge taken count is a ratio of the backedge taken weight by
-  // the weight of the edge exiting the loop, rounded to nearest.
-  uint64_t BackedgeTakenCount =
-      llvm::divideNearest(BackedgeTakenWeight, LatchExitWeight);
-  // Estimated trip count is one plus estimated backedge taken count.
-  return BackedgeTakenCount + 1;
+  // Currently we take the estimate exit count only from the loop latch,
+  // ignoring other exiting blocks.  This can overestimate the trip count
+  // if we exit through another exit, but can never underestimate it.
+  // TODO: incorporate information from other exits
+  if (BranchInst *LatchBranch = getExpectedExitLoopLatchBranch(L)) {
+    uint64_t ExitWeight;
+    if (Optional<uint64_t> EstTripCount =
+        getEstimatedTripCount(LatchBranch, L, ExitWeight)) {
+      if (EstimatedLoopInvocationWeight)
+        *EstimatedLoopInvocationWeight = ExitWeight;
+      return *EstTripCount;
+    }
+  }
+  return None;
 }
 
 bool llvm::setLoopEstimatedTripCount(Loop *L, unsigned EstimatedTripCount,
                                      unsigned EstimatedloopInvocationWeight) {
-  // Support loops with an exiting latch and other existing exists only
-  // deoptimize.
+  // At the moment, we currently support changing the estimate trip count of
+  // the latch branch only.  We could extend this API to manipulate estimated
+  // trip counts for any exit.
   BranchInst *LatchBranch = getExpectedExitLoopLatchBranch(L);
   if (!LatchBranch)
     return false;
@@ -923,8 +926,7 @@ Value *llvm::createMinMaxOp(IRBuilderBase &Builder, RecurKind RK, Value *Left,
 
 // Helper to generate an ordered reduction.
 Value *llvm::getOrderedReduction(IRBuilderBase &Builder, Value *Acc, Value *Src,
-                                 unsigned Op, RecurKind RdxKind,
-                                 ArrayRef<Value *> RedOps) {
+                                 unsigned Op, RecurKind RdxKind) {
   unsigned VF = cast<FixedVectorType>(Src->getType())->getNumElements();
 
   // Extract and apply reduction ops in ascending order:
@@ -942,9 +944,6 @@ Value *llvm::getOrderedReduction(IRBuilderBase &Builder, Value *Acc, Value *Src,
              "Invalid min/max");
       Result = createMinMaxOp(Builder, RdxKind, Result, Ext);
     }
-
-    if (!RedOps.empty())
-      propagateIRFlags(Result, RedOps);
   }
 
   return Result;
@@ -952,14 +951,20 @@ Value *llvm::getOrderedReduction(IRBuilderBase &Builder, Value *Acc, Value *Src,
 
 // Helper to generate a log2 shuffle reduction.
 Value *llvm::getShuffleReduction(IRBuilderBase &Builder, Value *Src,
-                                 unsigned Op, RecurKind RdxKind,
-                                 ArrayRef<Value *> RedOps) {
+                                 unsigned Op, RecurKind RdxKind) {
   unsigned VF = cast<FixedVectorType>(Src->getType())->getNumElements();
   // VF is a power of 2 so we can emit the reduction using log2(VF) shuffles
   // and vector ops, reducing the set of values being computed by half each
   // round.
   assert(isPowerOf2_32(VF) &&
          "Reduction emission only supported for pow2 vectors!");
+  // Note: fast-math-flags flags are controlled by the builder configuration
+  // and are assumed to apply to all generated arithmetic instructions.  Other
+  // poison generating flags (nsw/nuw/inbounds/inrange/exact) are not part
+  // of the builder configuration, and since they're not passed explicitly,
+  // will never be relevant here.  Note that it would be generally unsound to
+  // propagate these from an intrinsic call to the expansion anyways as we/
+  // change the order of operations.
   Value *TmpVec = Src;
   SmallVector<int, 32> ShuffleMask(VF);
   for (unsigned i = VF; i != 1; i >>= 1) {
@@ -973,7 +978,6 @@ Value *llvm::getShuffleReduction(IRBuilderBase &Builder, Value *Src,
     Value *Shuf = Builder.CreateShuffleVector(TmpVec, ShuffleMask, "rdx.shuf");
 
     if (Op != Instruction::ICmp && Op != Instruction::FCmp) {
-      // The builder propagates its fast-math-flags setting.
       TmpVec = Builder.CreateBinOp((Instruction::BinaryOps)Op, TmpVec, Shuf,
                                    "bin.rdx");
     } else {
@@ -981,13 +985,6 @@ Value *llvm::getShuffleReduction(IRBuilderBase &Builder, Value *Src,
              "Invalid min/max");
       TmpVec = createMinMaxOp(Builder, RdxKind, TmpVec, Shuf);
     }
-    if (!RedOps.empty())
-      propagateIRFlags(TmpVec, RedOps);
-
-    // We may compute the reassociated scalar ops in a way that does not
-    // preserve nsw/nuw etc. Conservatively, drop those flags.
-    if (auto *ReductionInst = dyn_cast<Instruction>(TmpVec))
-      ReductionInst->dropPoisonGeneratingFlags();
   }
   // The result is in the first element of the vector.
   return Builder.CreateExtractElement(TmpVec, Builder.getInt32(0));
@@ -1035,8 +1032,7 @@ Value *llvm::createSelectCmpTargetReduction(IRBuilderBase &Builder,
 
 Value *llvm::createSimpleTargetReduction(IRBuilderBase &Builder,
                                          const TargetTransformInfo *TTI,
-                                         Value *Src, RecurKind RdxKind,
-                                         ArrayRef<Value *> RedOps) {
+                                         Value *Src, RecurKind RdxKind) {
   auto *SrcVecEltTy = cast<VectorType>(Src->getType())->getElementType();
   switch (RdxKind) {
   case RecurKind::Add:
@@ -1566,7 +1562,9 @@ Value *llvm::addRuntimeChecks(
   auto ExpandedChecks = expandBounds(PointerChecks, TheLoop, Loc, Exp);
 
   LLVMContext &Ctx = Loc->getContext();
-  IRBuilder<> ChkBuilder(Loc);
+  IRBuilder<InstSimplifyFolder> ChkBuilder(Ctx,
+                                           Loc->getModule()->getDataLayout());
+  ChkBuilder.SetInsertPoint(Loc);
   // Our instructions might fold to a constant.
   Value *MemoryRuntimeCheck = nullptr;
 

@@ -48,7 +48,7 @@ public:
   /// This class represents the base class of a debug action handler.
   class HandlerBase {
   public:
-    virtual ~HandlerBase() {}
+    virtual ~HandlerBase() = default;
 
     /// Return the unique handler id of this handler, use for casting
     /// functionality.
@@ -193,7 +193,9 @@ template <typename... ParameterTs> class DebugAction {
 public:
   class Handler : public DebugActionManager::HandlerBase {
   public:
-    Handler() : HandlerBase(TypeID::get<Handler>()) {}
+    Handler()
+        : HandlerBase(
+              TypeID::get<typename DebugAction<ParameterTs...>::Handler>()) {}
 
     /// This hook allows for controlling whether an action should execute or
     /// not. `parameters` correspond to the set of values provided by the
@@ -206,7 +208,7 @@ public:
     /// Provide classof to allow casting between handler types.
     static bool classof(const DebugActionManager::HandlerBase *handler) {
       return handler->getHandlerID() ==
-             TypeID::get<DebugAction<ParameterTs...>::Handler>();
+             TypeID::get<typename DebugAction<ParameterTs...>::Handler>();
     }
   };
 
@@ -223,6 +225,6 @@ private:
   friend class DebugActionManager;
 };
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_SUPPORT_DEBUGACTION_H

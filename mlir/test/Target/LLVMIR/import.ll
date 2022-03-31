@@ -331,6 +331,12 @@ define i32 @invokeLandingpad() personality i8* bitcast (i32 (...)* @__gxx_person
   ret i32 0
 }
 
+; CHECK-LABEL: @hasGCFunction
+; CHECK-SAME: garbageCollector = "statepoint-example"
+define void @hasGCFunction() gc "statepoint-example" {
+    ret void
+}
+
 ;CHECK-LABEL: @useFreezeOp
 define i32 @useFreezeOp(i32 %x) {
   ;CHECK: %{{[0-9]+}} = llvm.freeze %{{[0-9a-z]+}} : i32

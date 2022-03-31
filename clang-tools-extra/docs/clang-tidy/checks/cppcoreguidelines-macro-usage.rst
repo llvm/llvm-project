@@ -7,10 +7,38 @@ Finds macro usage that is considered problematic because better language
 constructs exist for the task.
 
 The relevant sections in the C++ Core Guidelines are
-`Enum.1 <https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#enum1-prefer-enumerations-over-macros>`_,
-`ES.30 <https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#es30-dont-use-macros-for-program-text-manipulation>`_,
-`ES.31 <https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#es31-dont-use-macros-for-constants-or-functions>`_ and
-`ES.33 <https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#es33-if-you-must-use-macros-give-them-unique-names>`_.
+`ES.31 <https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#es31-dont-use-macros-for-constants-or-functions>`_, and
+`ES.32 <https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#es32-use-all_caps-for-all-macro-names>`_.
+
+Examples:
+
+.. code-block:: c++
+
+  #define C 0
+  #define F1(x, y) ((a) > (b) ? (a) : (b))
+  #define F2(...) (__VA_ARGS__)
+  #define COMMA ,
+  #define NORETURN [[noreturn]]
+  #define DEPRECATED attribute((deprecated))
+  #if LIB_EXPORTS
+  #define DLLEXPORTS __declspec(dllexport)
+  #else
+  #define DLLEXPORTS __declspec(dllimport)
+  #endif
+
+results in the following warnings::
+
+  4 warnings generated.
+  test.cpp:1:9: warning: macro 'C' used to declare a constant; consider using a 'constexpr' constant [cppcoreguidelines-macro-usage]
+  #define C 0
+          ^
+  test.cpp:2:9: warning: function-like macro 'F1' used; consider a 'constexpr' template function [cppcoreguidelines-macro-usage]
+  #define F1(x, y) ((a) > (b) ? (a) : (b))
+          ^
+  test.cpp:3:9: warning: variadic macro 'F2' used; consider using a 'constexpr' variadic template function [cppcoreguidelines-macro-usage]
+  #define F2(...) (__VA_ARGS__)
+          ^
+
 
 Options
 -------

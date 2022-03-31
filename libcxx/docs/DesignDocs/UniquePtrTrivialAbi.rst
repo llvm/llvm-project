@@ -36,7 +36,7 @@ Design
 ======
 
 * Annotate the two definitions of ``std::unique_ptr``  with ``clang::trivial_abi`` attribute.
-* Put the attribuate behind a flag because this change has potential compilation and runtime breakages.
+* Put the attribute behind a flag because this change has potential compilation and runtime breakages.
 
 
 This comes with some side effects:

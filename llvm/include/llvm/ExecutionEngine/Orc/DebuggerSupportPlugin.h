@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_EXECUTIONENGINE_ORC_DEBUGGERSUPPORT_H
-#define LLVM_EXECUTIONENGINE_ORC_DEBUGGERSUPPORT_H
+#ifndef LLVM_EXECUTIONENGINE_ORC_DEBUGGERSUPPORTPLUGIN_H
+#define LLVM_EXECUTIONENGINE_ORC_DEBUGGERSUPPORTPLUGIN_H
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/EPCDebugObjectRegistrar.h"
@@ -29,7 +29,7 @@ class GDBJITDebugInfoRegistrationPlugin : public ObjectLinkingLayer::Plugin {
 public:
   class DebugSectionSynthesizer {
   public:
-    virtual ~DebugSectionSynthesizer() {}
+    virtual ~DebugSectionSynthesizer() = default;
     virtual Error startSynthesis() = 0;
     virtual Error completeSynthesisAndRegister() = 0;
   };
@@ -61,4 +61,4 @@ private:
 } // namespace orc
 } // namespace llvm
 
-#endif // LLVM_EXECUTIONENGINE_ORC_DEBUGGERSUPPORT_H
+#endif // LLVM_EXECUTIONENGINE_ORC_DEBUGGERSUPPORTPLUGIN_H

@@ -31,7 +31,7 @@
 // CHECK-ARMV7: call double bitcast {{.*}} @objc_msgSend to
 // CHECK-ARMV7: call double bitcast {{.*}} @objc_msgSend to
 // CHECK-ARMV7: }
-void t0() {
+void t0(void) {
   [(A*)0 floatValue];
   [(A*)0 doubleValue];
   [(A*)0 longDoubleValue];

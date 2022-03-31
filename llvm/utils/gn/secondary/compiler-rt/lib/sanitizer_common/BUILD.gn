@@ -132,6 +132,7 @@ source_set("sources") {
     "sanitizer_stoptheworld_linux_libcdep.cpp",
     "sanitizer_stoptheworld_mac.cpp",
     "sanitizer_stoptheworld_netbsd_libcdep.cpp",
+    "sanitizer_stoptheworld_win.cpp",
     "sanitizer_suppressions.cpp",
     "sanitizer_suppressions.h",
     "sanitizer_symbolizer.cpp",
@@ -163,6 +164,42 @@ source_set("sources") {
     "sanitizer_win_dll_thunk.h",
     "sanitizer_win_weak_interception.h",
   ]
+}
+
+source_set("weak_interception") {
+  configs -= [ "//llvm/utils/gn/build:llvm_code" ]
+  configs += [ "//llvm/utils/gn/build:crt_code" ]
+  sources = [
+    "sanitizer_coverage_win_weak_interception.cpp",
+    "sanitizer_win_weak_interception.cpp",
+  ]
+  defines = [ "SANITIZER_DYNAMIC" ]
+}
+
+source_set("dll_thunk") {
+  configs -= [ "//llvm/utils/gn/build:llvm_code" ]
+  configs += [ "//llvm/utils/gn/build:crt_code" ]
+  sources = [
+    "sanitizer_coverage_win_dll_thunk.cpp",
+    "sanitizer_coverage_win_sections.cpp",
+    "sanitizer_win_dll_thunk.cpp",
+  ]
+  defines = [ "SANITIZER_DLL_THUNK" ]
+}
+
+source_set("dynamic_runtime_thunk") {
+  configs -= [ "//llvm/utils/gn/build:llvm_code" ]
+  configs += [ "//llvm/utils/gn/build:crt_code" ]
+  sources = [
+    "sanitizer_coverage_win_dynamic_runtime_thunk.cpp",
+    "sanitizer_coverage_win_sections.cpp",
+    "sanitizer_win_dynamic_runtime_thunk.cpp",
+  ]
+  defines = [ "SANITIZER_DYNAMIC_RUNTIME_THUNK" ]
+  cflags = []
+  if (current_os == "win") {
+    cflags += [ "-Zl" ]
+  }
 }
 
 # Libc functions stubs. These sources should be linked instead of

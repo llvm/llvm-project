@@ -607,35 +607,35 @@ end:
 define arm_aapcs_vfpcc void @three_pointer_iv_v4i32(i32* nocapture readonly %x, i32* nocapture %z, i32 %n) {
 ; CHECK-LABEL: three_pointer_iv_v4i32:
 ; CHECK:       @ %bb.0: @ %vector.ph
-; CHECK-NEXT:    .save {r7, lr}
-; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13}
-; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13}
+; CHECK-NEXT:    .save {r4, lr}
+; CHECK-NEXT:    push {r4, lr}
+; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
+; CHECK-NEXT:    vpush {d8, d9, d10, d11}
 ; CHECK-NEXT:    adr.w r12, .LCPI10_0
 ; CHECK-NEXT:    adr.w lr, .LCPI10_1
-; CHECK-NEXT:    adr r3, .LCPI10_2
-; CHECK-NEXT:    vldrw.u32 q2, [lr]
-; CHECK-NEXT:    vldrw.u32 q1, [r3]
-; CHECK-NEXT:    vldrw.u32 q3, [r12]
-; CHECK-NEXT:    vmov.i32 q0, #0xa
+; CHECK-NEXT:    adr r4, .LCPI10_2
+; CHECK-NEXT:    vldrw.u32 q1, [lr]
+; CHECK-NEXT:    vldrw.u32 q0, [r4]
+; CHECK-NEXT:    vldrw.u32 q2, [r12]
+; CHECK-NEXT:    movs r3, #10
 ; CHECK-NEXT:  .LBB10_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vldrw.u32 q3, [r0, q0, uxtw #2]
 ; CHECK-NEXT:    vldrw.u32 q4, [r0, q1, uxtw #2]
 ; CHECK-NEXT:    vldrw.u32 q5, [r0, q2, uxtw #2]
-; CHECK-NEXT:    vldrw.u32 q6, [r0, q3, uxtw #2]
 ; CHECK-NEXT:    subs r2, #4
-; CHECK-NEXT:    vmul.i32 q4, q5, q4
+; CHECK-NEXT:    vmul.i32 q3, q4, q3
 ; CHECK-NEXT:    add.w r0, r0, #48
-; CHECK-NEXT:    vmul.i32 q6, q5, q6
-; CHECK-NEXT:    vmul.i32 q5, q5, q0
-; CHECK-NEXT:    vstrw.32 q5, [r1, q2, uxtw #2]
-; CHECK-NEXT:    vstrw.32 q6, [r1, q3, uxtw #2]
+; CHECK-NEXT:    vmul.i32 q5, q4, q5
+; CHECK-NEXT:    vmul.i32 q4, q4, r3
 ; CHECK-NEXT:    vstrw.32 q4, [r1, q1, uxtw #2]
+; CHECK-NEXT:    vstrw.32 q5, [r1, q2, uxtw #2]
+; CHECK-NEXT:    vstrw.32 q3, [r1, q0, uxtw #2]
 ; CHECK-NEXT:    add.w r1, r1, #48
 ; CHECK-NEXT:    bne .LBB10_1
 ; CHECK-NEXT:  @ %bb.2: @ %end
-; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13}
-; CHECK-NEXT:    pop {r7, pc}
+; CHECK-NEXT:    vpop {d8, d9, d10, d11}
+; CHECK-NEXT:    pop {r4, pc}
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.3:
 ; CHECK-NEXT:  .LCPI10_0:
@@ -689,35 +689,35 @@ end:
 define arm_aapcs_vfpcc void @three_pointer_iv_v4i8(i8* nocapture readonly %x, i8* nocapture %z, i32 %n) {
 ; CHECK-LABEL: three_pointer_iv_v4i8:
 ; CHECK:       @ %bb.0: @ %vector.ph
-; CHECK-NEXT:    .save {r7, lr}
-; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13}
-; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13}
+; CHECK-NEXT:    .save {r4, lr}
+; CHECK-NEXT:    push {r4, lr}
+; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
+; CHECK-NEXT:    vpush {d8, d9, d10, d11}
 ; CHECK-NEXT:    adr.w r12, .LCPI11_0
 ; CHECK-NEXT:    adr.w lr, .LCPI11_1
-; CHECK-NEXT:    adr r3, .LCPI11_2
-; CHECK-NEXT:    vldrw.u32 q2, [lr]
-; CHECK-NEXT:    vldrw.u32 q1, [r3]
-; CHECK-NEXT:    vldrw.u32 q3, [r12]
-; CHECK-NEXT:    vmov.i32 q0, #0xa
+; CHECK-NEXT:    adr r4, .LCPI11_2
+; CHECK-NEXT:    vldrw.u32 q1, [lr]
+; CHECK-NEXT:    vldrw.u32 q0, [r4]
+; CHECK-NEXT:    vldrw.u32 q2, [r12]
+; CHECK-NEXT:    movs r3, #10
 ; CHECK-NEXT:  .LBB11_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vldrb.u32 q3, [r0, q0]
 ; CHECK-NEXT:    vldrb.u32 q4, [r0, q1]
 ; CHECK-NEXT:    vldrb.u32 q5, [r0, q2]
-; CHECK-NEXT:    vldrb.u32 q6, [r0, q3]
 ; CHECK-NEXT:    subs r2, #4
-; CHECK-NEXT:    vmul.i32 q4, q5, q4
+; CHECK-NEXT:    vmul.i32 q3, q4, q3
 ; CHECK-NEXT:    add.w r0, r0, #12
-; CHECK-NEXT:    vmul.i32 q6, q5, q6
-; CHECK-NEXT:    vmul.i32 q5, q5, q0
-; CHECK-NEXT:    vstrb.32 q5, [r1, q2]
-; CHECK-NEXT:    vstrb.32 q6, [r1, q3]
+; CHECK-NEXT:    vmul.i32 q5, q4, q5
+; CHECK-NEXT:    vmul.i32 q4, q4, r3
 ; CHECK-NEXT:    vstrb.32 q4, [r1, q1]
+; CHECK-NEXT:    vstrb.32 q5, [r1, q2]
+; CHECK-NEXT:    vstrb.32 q3, [r1, q0]
 ; CHECK-NEXT:    add.w r1, r1, #12
 ; CHECK-NEXT:    bne .LBB11_1
 ; CHECK-NEXT:  @ %bb.2: @ %end
-; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13}
-; CHECK-NEXT:    pop {r7, pc}
+; CHECK-NEXT:    vpop {d8, d9, d10, d11}
+; CHECK-NEXT:    pop {r4, pc}
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.3:
 ; CHECK-NEXT:  .LCPI11_0:
@@ -777,35 +777,35 @@ end:
 define arm_aapcs_vfpcc void @three_pointer_iv_v8i16(i16* nocapture readonly %x, i16* nocapture %z, i32 %n) {
 ; CHECK-LABEL: three_pointer_iv_v8i16:
 ; CHECK:       @ %bb.0: @ %vector.ph
-; CHECK-NEXT:    .save {r7, lr}
-; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13}
-; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13}
+; CHECK-NEXT:    .save {r4, lr}
+; CHECK-NEXT:    push {r4, lr}
+; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
+; CHECK-NEXT:    vpush {d8, d9, d10, d11}
 ; CHECK-NEXT:    adr.w r12, .LCPI12_0
 ; CHECK-NEXT:    adr.w lr, .LCPI12_1
-; CHECK-NEXT:    adr r3, .LCPI12_2
-; CHECK-NEXT:    vldrw.u32 q2, [lr]
-; CHECK-NEXT:    vldrw.u32 q1, [r3]
-; CHECK-NEXT:    vldrw.u32 q3, [r12]
-; CHECK-NEXT:    vmov.i16 q0, #0xa
+; CHECK-NEXT:    adr r4, .LCPI12_2
+; CHECK-NEXT:    vldrw.u32 q1, [lr]
+; CHECK-NEXT:    vldrw.u32 q0, [r4]
+; CHECK-NEXT:    vldrw.u32 q2, [r12]
+; CHECK-NEXT:    movs r3, #10
 ; CHECK-NEXT:  .LBB12_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vldrh.u16 q3, [r0, q0, uxtw #1]
 ; CHECK-NEXT:    vldrh.u16 q4, [r0, q1, uxtw #1]
 ; CHECK-NEXT:    vldrh.u16 q5, [r0, q2, uxtw #1]
-; CHECK-NEXT:    vldrh.u16 q6, [r0, q3, uxtw #1]
 ; CHECK-NEXT:    subs r2, #4
-; CHECK-NEXT:    vmul.i16 q4, q5, q4
+; CHECK-NEXT:    vmul.i16 q3, q4, q3
 ; CHECK-NEXT:    add.w r0, r0, #48
-; CHECK-NEXT:    vmul.i16 q6, q5, q6
-; CHECK-NEXT:    vmul.i16 q5, q5, q0
-; CHECK-NEXT:    vstrh.16 q5, [r1, q2, uxtw #1]
-; CHECK-NEXT:    vstrh.16 q6, [r1, q3, uxtw #1]
+; CHECK-NEXT:    vmul.i16 q5, q4, q5
+; CHECK-NEXT:    vmul.i16 q4, q4, r3
 ; CHECK-NEXT:    vstrh.16 q4, [r1, q1, uxtw #1]
+; CHECK-NEXT:    vstrh.16 q5, [r1, q2, uxtw #1]
+; CHECK-NEXT:    vstrh.16 q3, [r1, q0, uxtw #1]
 ; CHECK-NEXT:    add.w r1, r1, #48
 ; CHECK-NEXT:    bne .LBB12_1
 ; CHECK-NEXT:  @ %bb.2: @ %end
-; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13}
-; CHECK-NEXT:    pop {r7, pc}
+; CHECK-NEXT:    vpop {d8, d9, d10, d11}
+; CHECK-NEXT:    pop {r4, pc}
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.3:
 ; CHECK-NEXT:  .LCPI12_0:
@@ -871,35 +871,35 @@ end:
 define arm_aapcs_vfpcc void @three_pointer_iv_v16i8(i8* nocapture readonly %x, i8* nocapture %z, i32 %n) {
 ; CHECK-LABEL: three_pointer_iv_v16i8:
 ; CHECK:       @ %bb.0: @ %vector.ph
-; CHECK-NEXT:    .save {r7, lr}
-; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13}
-; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13}
+; CHECK-NEXT:    .save {r4, lr}
+; CHECK-NEXT:    push {r4, lr}
+; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
+; CHECK-NEXT:    vpush {d8, d9, d10, d11}
 ; CHECK-NEXT:    adr.w r12, .LCPI13_0
 ; CHECK-NEXT:    adr.w lr, .LCPI13_1
-; CHECK-NEXT:    adr r3, .LCPI13_2
-; CHECK-NEXT:    vldrw.u32 q2, [lr]
-; CHECK-NEXT:    vldrw.u32 q1, [r3]
-; CHECK-NEXT:    vldrw.u32 q3, [r12]
-; CHECK-NEXT:    vmov.i8 q0, #0xa
+; CHECK-NEXT:    adr r4, .LCPI13_2
+; CHECK-NEXT:    vldrw.u32 q1, [lr]
+; CHECK-NEXT:    vldrw.u32 q0, [r4]
+; CHECK-NEXT:    vldrw.u32 q2, [r12]
+; CHECK-NEXT:    movs r3, #10
 ; CHECK-NEXT:  .LBB13_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vldrb.u8 q3, [r0, q0]
 ; CHECK-NEXT:    vldrb.u8 q4, [r0, q1]
 ; CHECK-NEXT:    vldrb.u8 q5, [r0, q2]
-; CHECK-NEXT:    vldrb.u8 q6, [r0, q3]
 ; CHECK-NEXT:    subs r2, #4
-; CHECK-NEXT:    vmul.i8 q4, q5, q4
+; CHECK-NEXT:    vmul.i8 q3, q4, q3
 ; CHECK-NEXT:    add.w r0, r0, #48
-; CHECK-NEXT:    vmul.i8 q6, q5, q6
-; CHECK-NEXT:    vmul.i8 q5, q5, q0
-; CHECK-NEXT:    vstrb.8 q5, [r1, q2]
-; CHECK-NEXT:    vstrb.8 q6, [r1, q3]
+; CHECK-NEXT:    vmul.i8 q5, q4, q5
+; CHECK-NEXT:    vmul.i8 q4, q4, r3
 ; CHECK-NEXT:    vstrb.8 q4, [r1, q1]
+; CHECK-NEXT:    vstrb.8 q5, [r1, q2]
+; CHECK-NEXT:    vstrb.8 q3, [r1, q0]
 ; CHECK-NEXT:    add.w r1, r1, #48
 ; CHECK-NEXT:    bne .LBB13_1
 ; CHECK-NEXT:  @ %bb.2: @ %end
-; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13}
-; CHECK-NEXT:    pop {r7, pc}
+; CHECK-NEXT:    vpop {d8, d9, d10, d11}
+; CHECK-NEXT:    pop {r4, pc}
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.3:
 ; CHECK-NEXT:  .LCPI13_0:

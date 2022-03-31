@@ -16,7 +16,7 @@ using __llvm_libc::time_utils::TimeConstants;
 
 LLVM_LIBC_FUNCTION(char *, asctime_r,
                    (const struct tm *timeptr, char *buffer)) {
-  return time_utils::asctime(timeptr, buffer, TimeConstants::AsctimeMaxBytes);
+  return time_utils::asctime(timeptr, buffer, TimeConstants::ASCTIME_MAX_BYTES);
 }
 
 } // namespace __llvm_libc

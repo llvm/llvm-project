@@ -120,7 +120,7 @@ public:
 
   lldb::addr_t GetAddressMask() override;
 
-  bool GetCorefileMainBinaryInfo(lldb::addr_t &address,
+  bool GetCorefileMainBinaryInfo(lldb::addr_t &value, bool &value_is_offset,
                                  lldb_private::UUID &uuid,
                                  ObjectFile::BinaryType &type) override;
 
@@ -225,7 +225,8 @@ protected:
     std::string filename;
     lldb_private::UUID uuid;
     lldb::addr_t load_address = LLDB_INVALID_ADDRESS;
-    bool currently_executing;
+    lldb::addr_t slide = 0;
+    bool currently_executing = false;
     std::vector<std::tuple<lldb_private::ConstString, lldb::addr_t>>
         segment_load_addresses;
   };

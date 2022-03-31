@@ -11,7 +11,7 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Transforms/Passes.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -95,19 +95,19 @@ public:
       return mlir::failure();
     }
     auto argType = getResultArgumentType(result.getType(), options);
-    auto buffer = saveResult.memref();
+    auto buffer = saveResult.getMemref();
     mlir::Value arg = buffer;
     if (mustEmboxResult(result.getType(), options))
       arg = rewriter.create<fir::EmboxOp>(
-          loc, argType, buffer, saveResult.shape(), /*slice*/ mlir::Value{},
-          saveResult.typeparams());
+          loc, argType, buffer, saveResult.getShape(), /*slice*/ mlir::Value{},
+          saveResult.getTypeparams());
 
     llvm::SmallVector<mlir::Type> newResultTypes;
-    if (callOp.callee()) {
+    if (callOp.getCallee()) {
       llvm::SmallVector<mlir::Value> newOperands = {arg};
       newOperands.append(callOp.getOperands().begin(),
                          callOp.getOperands().end());
-      rewriter.create<fir::CallOp>(loc, callOp.callee().getValue(),
+      rewriter.create<fir::CallOp>(loc, callOp.getCallee().getValue(),
                                    newResultTypes, newOperands);
     } else {
       // Indirect calls.
@@ -149,22 +149,22 @@ public:
   }
 };
 
-class ReturnOpConversion : public mlir::OpRewritePattern<mlir::ReturnOp> {
+class ReturnOpConversion : public mlir::OpRewritePattern<mlir::func::ReturnOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
   ReturnOpConversion(mlir::MLIRContext *context,
                      const AbstractResultOptions &opt)
       : OpRewritePattern(context), options{opt} {}
   mlir::LogicalResult
-  matchAndRewrite(mlir::ReturnOp ret,
+  matchAndRewrite(mlir::func::ReturnOp ret,
                   mlir::PatternRewriter &rewriter) const override {
     rewriter.setInsertionPoint(ret);
     auto returnedValue = ret.getOperand(0);
     bool replacedStorage = false;
     if (auto *op = returnedValue.getDefiningOp())
       if (auto load = mlir::dyn_cast<fir::LoadOp>(op)) {
-        auto resultStorage = load.memref();
-        load.memref().replaceAllUsesWith(options.newArg);
+        auto resultStorage = load.getMemref();
+        load.getMemref().replaceAllUsesWith(options.newArg);
         replacedStorage = true;
         if (auto *alloc = resultStorage.getDefiningOp())
           if (alloc->use_empty())
@@ -177,7 +177,7 @@ public:
     if (!replacedStorage)
       rewriter.create<fir::StoreOp>(ret.getLoc(), returnedValue,
                                     options.newArg);
-    rewriter.replaceOpWithNewOp<mlir::ReturnOp>(ret);
+    rewriter.replaceOpWithNewOp<mlir::func::ReturnOp>(ret);
     return mlir::success();
   }
 
@@ -197,7 +197,7 @@ public:
     auto oldFuncTy = addrOf.getType().cast<mlir::FunctionType>();
     auto newFuncTy = getNewFunctionType(oldFuncTy, options);
     auto newAddrOf = rewriter.create<fir::AddrOfOp>(addrOf.getLoc(), newFuncTy,
-                                                    addrOf.symbol());
+                                                    addrOf.getSymbol());
     // Rather than converting all op a function pointer might transit through
     // (e.g calls, stores, loads, converts...), cast new type to the abstract
     // type. A conversion will be added when calling indirect calls of abstract
@@ -216,13 +216,13 @@ public:
     auto *context = &getContext();
     auto func = getOperation();
     auto loc = func.getLoc();
-    mlir::OwningRewritePatternList patterns(context);
+    mlir::RewritePatternSet patterns(context);
     mlir::ConversionTarget target = *context;
     AbstractResultOptions options{passResultAsBox.getValue(),
                                   /*newArg=*/{}};
 
     // Convert function type itself if it has an abstract result
-    auto funcTy = func.getType().cast<mlir::FunctionType>();
+    auto funcTy = func.getFunctionType().cast<mlir::FunctionType>();
     if (mustConvertCallOrFunc(funcTy)) {
       func.setType(getNewFunctionType(funcTy, options));
       unsigned zero = 0;
@@ -231,7 +231,7 @@ public:
         mlir::OpBuilder rewriter(context);
         auto resultType = funcTy.getResult(0);
         auto argTy = getResultArgumentType(resultType, options);
-        options.newArg = func.front().insertArgument(zero, argTy);
+        options.newArg = func.front().insertArgument(zero, argTy, loc);
         if (mustEmboxResult(resultType, options)) {
           auto bufferType = fir::ReferenceType::get(resultType);
           rewriter.setInsertionPointToStart(&func.front());
@@ -239,8 +239,8 @@ public:
               rewriter.create<fir::BoxAddrOp>(loc, bufferType, options.newArg);
         }
         patterns.insert<ReturnOpConversion>(context, options);
-        target.addDynamicallyLegalOp<mlir::ReturnOp>(
-            [](mlir::ReturnOp ret) { return ret.operands().empty(); });
+        target.addDynamicallyLegalOp<mlir::func::ReturnOp>(
+            [](mlir::func::ReturnOp ret) { return ret.operands().empty(); });
       }
     }
 
@@ -249,7 +249,7 @@ public:
 
     // Convert the calls and, if needed,  the ReturnOp in the function body.
     target.addLegalDialect<fir::FIROpsDialect, mlir::arith::ArithmeticDialect,
-                           mlir::StandardOpsDialect>();
+                           mlir::func::FuncDialect>();
     target.addIllegalOp<fir::SaveResultOp>();
     target.addDynamicallyLegalOp<fir::CallOp>([](fir::CallOp call) {
       return !mustConvertCallOrFunc(call.getFunctionType());

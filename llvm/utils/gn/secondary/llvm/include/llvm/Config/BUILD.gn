@@ -5,6 +5,7 @@ import("//llvm/lib/Target/targets_with_disassemblers.gni")
 import("//llvm/lib/Target/targets_with_mcas.gni")
 import("//llvm/triples.gni")
 import("//llvm/utils/gn/build/buildflags.gni")
+import("//llvm/utils/gn/build/libs/curl/enable.gni")
 import("//llvm/utils/gn/build/libs/edit/enable.gni")
 import("//llvm/utils/gn/build/libs/pthread/enable.gni")
 import("//llvm/utils/gn/build/libs/terminfo/enable.gni")
@@ -46,6 +47,10 @@ declare_args() {
 
   # Iterate unordered llvm containers in reverse.
   llvm_enable_reverse_iteration = false
+
+  # glibc is at least 2.33 which has mallinfo2.
+  # TODO: remove this once nobody using the gn build is building against an old glibc.
+  llvm_have_mallinfo2 = false
 }
 
 write_cmake_config("abi-breaking") {
@@ -72,7 +77,7 @@ write_cmake_config("config") {
   input = "config.h.cmake"
   output = "$target_gen_dir/config.h"
   values = [
-    "BUG_REPORT_URL=https://bugs.llvm.org/",
+    "BUG_REPORT_URL=https://github.com/llvm/llvm-project/issues/",
     "ENABLE_BACKTRACES=1",
     "ENABLE_CRASH_OVERRIDES=1",
     "BACKTRACE_HEADER=execinfo.h",
@@ -89,7 +94,6 @@ write_cmake_config("config") {
     "HAVE_LIBPFM=",
     "HAVE_LIBPSAPI=",
     "HAVE_MALLCTL=",
-    "HAVE_MALLINFO2=",
     "HAVE_SIGNAL_H=1",
     "HAVE_STD_IS_TRIVIALLY_COPYABLE=1",
     "HAVE_STRERROR=1",
@@ -120,7 +124,7 @@ write_cmake_config("config") {
     "LLVM_VERSION_INFO=",
     "LLVM_VERSION_PRINTER_SHOW_HOST_TARGET_INFO=1",
     "LLVM_WINDOWS_PREFER_FORWARD_SLASH=",
-    "PACKAGE_BUGREPORT=https://bugs.llvm.org/",
+    "PACKAGE_BUGREPORT=https://github.com/llvm/llvm-project/issues/",
     "PACKAGE_NAME=LLVM",
     "PACKAGE_STRING=LLVM ${llvm_version}git",
     "PACKAGE_VERSION=${llvm_version}git",
@@ -143,7 +147,6 @@ write_cmake_config("config") {
       "HAVE_LINK_H=1",
       "HAVE_LSEEK64=1",
       "HAVE_MALLINFO=1",
-      "HAVE_POSIX_FALLOCATE=1",
       "HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC=1",
     ]
   } else {
@@ -152,7 +155,6 @@ write_cmake_config("config") {
       "HAVE_LINK_H=",
       "HAVE_LSEEK64=",
       "HAVE_MALLINFO=",
-      "HAVE_POSIX_FALLOCATE=",
       "HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC=",
     ]
   }
@@ -312,16 +314,16 @@ write_cmake_config("config") {
     values += [ "LLVM_ENABLE_DIA_SDK=" ]
   }
 
-  if (llvm_enable_zlib) {
-    values += [ "LLVM_ENABLE_ZLIB=1" ]
-  } else {
-    values += [ "LLVM_ENABLE_ZLIB=" ]
-  }
-
   if (llvm_enable_libxml2) {
     values += [ "LLVM_ENABLE_LIBXML2=1" ]
   } else {
     values += [ "LLVM_ENABLE_LIBXML2=" ]
+  }
+
+  if (llvm_have_mallinfo2) {
+    values += [ "HAVE_MALLINFO2=1" ]
+  } else {
+    values += [ "HAVE_MALLINFO2=" ]
   }
 }
 
@@ -329,13 +331,14 @@ write_cmake_config("llvm-config") {
   input = "llvm-config.h.cmake"
   output = "$target_gen_dir/llvm-config.h"
   values = [
+    "LLVM_BUILD_LLVM_DYLIB=",
+    "LLVM_BUILD_SHARED_LIBS=",
     "LLVM_DEFAULT_TARGET_TRIPLE=$llvm_target_triple",
-    "LLVM_ENABLE_CURL=",
     "LLVM_ENABLE_DUMP=",
     "LLVM_ENABLE_NEW_PASS_MANAGER=1",
     "LLVM_FORCE_ENABLE_STATS=",
+    "LLVM_FORCE_USE_OLD_TOOLCHAIN=",
     "LLVM_HAS_ATOMICS=1",
-    "LLVM_HAVE_TF_AOT=",
     "LLVM_HAVE_TF_API=",
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
     "LLVM_NATIVE_ARCH=$native_target",
@@ -346,6 +349,7 @@ write_cmake_config("llvm-config") {
     "LLVM_NATIVE_TARGETINFO=1",
     "LLVM_NATIVE_TARGETMC=1",
     "LLVM_NATIVE_TARGETMCA=1",
+    "LLVM_UNREACHABLE_OPTIMIZE=1",
     "LLVM_USE_INTEL_JITEVENTS=",
     "LLVM_USE_OPROFILE=",
     "LLVM_USE_PERF=",
@@ -378,6 +382,18 @@ write_cmake_config("llvm-config") {
     values += [ "LLVM_ENABLE_THREADS=1" ]
   } else {
     values += [ "LLVM_ENABLE_THREADS=" ]
+  }
+
+  if (llvm_enable_zlib) {
+    values += [ "LLVM_ENABLE_ZLIB=1" ]
+  } else {
+    values += [ "LLVM_ENABLE_ZLIB=" ]
+  }
+
+  if (llvm_enable_libcurl) {
+    values += [ "LLVM_ENABLE_CURL=1" ]
+  } else {
+    values += [ "LLVM_ENABLE_CURL=" ]
   }
 }
 

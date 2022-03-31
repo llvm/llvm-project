@@ -156,5 +156,51 @@ bool VPlanVerifier::verifyPlanIsValid(const VPlan &Plan) {
       RecipeI++;
     }
   }
+
+  const VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
+  const VPBasicBlock *Entry = dyn_cast<VPBasicBlock>(TopRegion->getEntry());
+  if (!Entry) {
+    errs() << "VPlan entry block is not a VPBasicBlock\n";
+    return false;
+  }
+
+  if (!isa<VPCanonicalIVPHIRecipe>(&*Entry->begin())) {
+    errs() << "VPlan vector loop header does not start with a "
+              "VPCanonicalIVPHIRecipe\n";
+    return false;
+  }
+
+  const VPBasicBlock *Exit = dyn_cast<VPBasicBlock>(TopRegion->getExit());
+  if (!Exit) {
+    errs() << "VPlan exit block is not a VPBasicBlock\n";
+    return false;
+  }
+
+  if (Exit->empty()) {
+    errs() << "VPlan vector loop exit must end with BranchOnCount "
+              "VPInstruction but is empty\n";
+    return false;
+  }
+
+  auto *LastInst = dyn_cast<VPInstruction>(std::prev(Exit->end()));
+  if (!LastInst || LastInst->getOpcode() != VPInstruction::BranchOnCount) {
+    errs() << "VPlan vector loop exit must end with BranchOnCount "
+              "VPInstruction\n";
+    return false;
+  }
+
+  for (const VPRegionBlock *Region :
+       VPBlockUtils::blocksOnly<const VPRegionBlock>(
+           depth_first(VPBlockRecursiveTraversalWrapper<const VPBlockBase *>(
+               Plan.getEntry())))) {
+    if (Region->getEntry()->getNumPredecessors() != 0) {
+      errs() << "region entry block has predecessors\n";
+      return false;
+    }
+    if (Region->getExit()->getNumSuccessors() != 0) {
+      errs() << "region exit block has successors\n";
+      return false;
+    }
+  }
   return true;
 }

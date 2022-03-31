@@ -28,7 +28,6 @@
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/InstructionPrecedenceTracking.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 
@@ -42,6 +41,7 @@ class Instruction;
 class Loop;
 class LoopInfo;
 class PostDominatorTree;
+class raw_ostream;
 
 /// Captures loop safety information.
 /// It keep information for loop blocks may throw exception or otherwise
@@ -281,9 +281,7 @@ struct MustBeExecutedIterator {
 
   using ExplorerTy = MustBeExecutedContextExplorer;
 
-  MustBeExecutedIterator(const MustBeExecutedIterator &Other)
-      : Visited(Other.Visited), Explorer(Other.Explorer),
-        CurInst(Other.CurInst), Head(Other.Head), Tail(Other.Tail) {}
+  MustBeExecutedIterator(const MustBeExecutedIterator &Other) = default;
 
   MustBeExecutedIterator(MustBeExecutedIterator &&Other)
       : Visited(std::move(Other.Visited)), Explorer(Other.Explorer),
@@ -299,7 +297,7 @@ struct MustBeExecutedIterator {
     return *this;
   }
 
-  ~MustBeExecutedIterator() {}
+  ~MustBeExecutedIterator() = default;
 
   /// Pre- and post-increment operators.
   ///{

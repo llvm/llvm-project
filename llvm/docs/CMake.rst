@@ -221,6 +221,10 @@ description is in `LLVM-related variables`_ below.
   Control which projects are enabled. For example you may want to work on clang
   or lldb by specifying ``-DLLVM_ENABLE_PROJECTS="clang;lldb"``.
 
+**LLVM_ENABLE_RUNTIMES**:STRING
+  Control which runtimes are enabled. For example you may want to work on
+  libc++ or libc++abi by specifying ``-DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi"``.
+
 **LLVM_LIBDIR_SUFFIX**:STRING
   Extra suffix to append to the directory where libraries are to be
   installed. On a 64-bit architecture, one could use ``-DLLVM_LIBDIR_SUFFIX=64``
@@ -252,6 +256,22 @@ manual, or execute ``cmake --help-variable VARIABLE_NAME``.
   Sets the C++ standard to conform to when building LLVM.  Possible values are
   14, 17, 20.  LLVM Requires C++ 14 or higher.  This defaults to 14.
 
+**CMAKE_INSTALL_BINDIR**:PATH
+  The path to install executables, relative to the *CMAKE_INSTALL_PREFIX*.
+  Defaults to "bin".
+
+**CMAKE_INSTALL_INCLUDEDIR**:PATH
+  The path to install header files, relative to the *CMAKE_INSTALL_PREFIX*.
+  Defaults to "include".
+
+**CMAKE_INSTALL_DOCDIR**:PATH
+  The path to install documentation, relative to the *CMAKE_INSTALL_PREFIX*.
+  Defaults to "share/doc".
+
+**CMAKE_INSTALL_MANDIR**:PATH
+  The path to install manpage files, relative to the *CMAKE_INSTALL_PREFIX*.
+  Defaults to "share/man".
+
 .. _LLVM-related variables:
 
 LLVM-related variables
@@ -279,6 +299,12 @@ enabled sub-projects. Nearly all of these variable names begin with
   (off) irrespective of whether normal (`NDEBUG`-based) assertions are
   enabled or not.  A version of LLVM built with ABI breaking checks
   is not ABI compatible with a version built without it.
+
+**LLVM_UNREACHABLE_OPTIMIZE**:BOOL
+  This flag controls the behavior of `llvm_unreachable()` in release build
+  (when assertions are disabled in general). When ON (default) then
+  `llvm_unreachable()` is considered "undefined behavior" and optimized as
+  such. When OFF it is instead replaced with a guaranteed "trap".
 
 **LLVM_APPEND_VC_REV**:BOOL
   Embed version control revision info (Git revision id).
@@ -453,9 +479,7 @@ enabled sub-projects. Nearly all of these variable names begin with
   creation of certain convenience build system targets, such as the various
   ``install-*`` and ``check-*`` targets, since IDEs don't always deal well with
   a large number of targets. This is usually autodetected, but it can be
-  configured manually to explicitly control the generation of those targets. One
-  scenario where a manual override may be desirable is when using Visual Studio
-  2017's CMake integration, which would not be detected as an IDE otherwise.
+  configured manually to explicitly control the generation of those targets.
 
 **LLVM_ENABLE_LIBCXX**:BOOL
   If the host compiler and linker supports the stdlib flag, -stdlib=libc++ is
@@ -491,17 +515,17 @@ enabled sub-projects. Nearly all of these variable names begin with
 
 **LLVM_ENABLE_PROJECTS**:STRING
   Semicolon-separated list of projects to build, or *all* for building all
-  (clang, lldb, compiler-rt, lld, polly, etc) projects. This flag assumes
-  that projects are checked out side-by-side and not nested, i.e. clang
-  needs to be in parallel of llvm instead of nested in `llvm/tools`.
-  This feature allows to have one build for only LLVM and another for clang+llvm
-  using the same source checkout.
+  (clang, lldb, lld, polly, etc) projects. This flag assumes that projects
+  are checked out side-by-side and not nested, i.e. clang needs to be in
+  parallel of llvm instead of nested in `llvm/tools`. This feature allows
+  to have one build for only LLVM and another for clang+llvm using the same
+  source checkout.
   The full list is:
-  ``clang;clang-tools-extra;compiler-rt;cross-project-tests;libc;libclc;lld;lldb;openmp;polly;pstl``
+  ``clang;clang-tools-extra;cross-project-tests;libc;libclc;lld;lldb;openmp;polly;pstl``
 
 **LLVM_ENABLE_RUNTIMES**:STRING
-  Build libc++, libc++abi or other projects using that a just-built compiler.
-  This is the correct way to build libc++ when putting together a toolchain.
+  Build libc++, libc++abi, libunwind or compiler-rt using the just-built compiler.
+  This is the correct way to build runtimes when putting together a toolchain.
   It will build the builtins separately from the other runtimes to preserve
   correct dependency ordering. If you want to build the runtimes using a system
   compiler, see the `libc++ documentation <https://libcxx.llvm.org/BuildingLibcxx.html>`_.
@@ -598,12 +622,12 @@ enabled sub-projects. Nearly all of these variable names begin with
 **LLVM_INSTALL_OCAMLDOC_HTML_DIR**:STRING
   The path to install OCamldoc-generated HTML documentation to. This path can
   either be absolute or relative to the CMAKE_INSTALL_PREFIX. Defaults to
-  `share/doc/llvm/ocaml-html`.
+  ``${CMAKE_INSTALL_DOCDIR}/llvm/ocaml-html``.
 
 **LLVM_INSTALL_SPHINX_HTML_DIR**:STRING
   The path to install Sphinx-generated HTML documentation to. This path can
   either be absolute or relative to the CMAKE_INSTALL_PREFIX. Defaults to
-  `share/doc/llvm/html`.
+  ``${CMAKE_INSTALL_DOCDIR}/llvm/html``.
 
 **LLVM_INSTALL_UTILS**:BOOL
   If enabled, utility binaries like ``FileCheck`` and ``not`` will be installed
@@ -627,8 +651,8 @@ enabled sub-projects. Nearly all of these variable names begin with
 
 **LLVM_INSTALL_DOXYGEN_HTML_DIR**:STRING
   The path to install Doxygen-generated HTML documentation to. This path can
-  either be absolute or relative to the CMAKE_INSTALL_PREFIX. Defaults to
-  `share/doc/llvm/doxygen-html`.
+  either be absolute or relative to the *CMAKE_INSTALL_PREFIX*. Defaults to
+  ``${CMAKE_INSTALL_DOCDIR}/llvm/doxygen-html``.
 
 **LLVM_LINK_LLVM_DYLIB**:BOOL
   If enabled, tools will be linked with the libLLVM shared library. Defaults
@@ -763,6 +787,26 @@ enabled sub-projects. Nearly all of these variable names begin with
 **SPHINX_WARNINGS_AS_ERRORS**:BOOL
   If enabled then sphinx documentation warnings will be treated as
   errors. Defaults to ON.
+
+Advanced variables
+~~~~~~~~~~~~~~~~~~
+
+These are niche, and changing them from their defaults is more likely to cause
+things to go wrong.  They are also unstable across LLVM versions.
+
+**LLVM_TOOLS_INSTALL_DIR**:STRING
+  The path to install the main LLVM tools, relative to the *CMAKE_INSTALL_PREFIX*.
+  Defaults to *CMAKE_INSTALL_BINDIR*.
+
+**LLVM_UTILS_INSTALL_DIR**:STRING
+  The path to install auxiliary LLVM utilities, relative to the *CMAKE_INSTALL_PREFIX*.
+  Only matters if *LLVM_INSTALL_UTILS* is enabled.
+  Defaults to *LLVM_TOOLS_INSTALL_DIR*.
+
+**LLVM_EXAMPLES_INSTALL_DIR**:STRING
+  The path for examples of using LLVM, relative to the *CMAKE_INSTALL_PREFIX*.
+  Only matters if *LLVM_BUILD_EXAMPLES* is enabled.
+  Defaults to "examples".
 
 CMake Caches
 ============

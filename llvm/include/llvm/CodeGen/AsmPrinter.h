@@ -17,13 +17,12 @@
 
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/AsmPrinterHandler.h"
 #include "llvm/CodeGen/DwarfStringPoolEntry.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/IR/InlineAsm.h"
-#include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/SourceMgr.h"
 #include <cstdint>
 #include <memory>
 #include <utility>
@@ -231,6 +230,9 @@ public:
   /// Returns 4 for DWARF32 and 12 for DWARF64.
   unsigned int getUnitLengthFieldByteSize() const;
 
+  /// Returns information about the byte size of DW_FORM values.
+  dwarf::FormParams getDwarfFormParams() const;
+
   bool isPositionIndependent() const;
 
   /// Return true if assembly output should contain comments.
@@ -431,7 +433,8 @@ public:
   /// global value is specified, and if that global has an explicit alignment
   /// requested, it will override the alignment request if required for
   /// correctness.
-  void emitAlignment(Align Alignment, const GlobalObject *GV = nullptr) const;
+  void emitAlignment(Align Alignment, const GlobalObject *GV = nullptr,
+                     unsigned MaxBytesToEmit = 0) const;
 
   /// Lower the specified LLVM Constant to an MCExpr.
   virtual const MCExpr *lowerConstant(const Constant *CV);
@@ -799,6 +802,11 @@ private:
 
   /// This method decides whether the specified basic block requires a label.
   bool shouldEmitLabelForBasicBlock(const MachineBasicBlock &MBB) const;
+
+protected:
+  virtual bool shouldEmitWeakSwiftAsyncExtendedFramePointerFlags() const {
+    return false;
+  }
 };
 
 } // end namespace llvm

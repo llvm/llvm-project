@@ -26,7 +26,7 @@ id CFBridgingRelease(CFTypeRef __attribute__((cf_consumed)) X);
 
 @interface NSMutableString @end
 
-NSMutableString *test() {
+NSMutableString *test(void) {
   NSDictionary *infoDictionary;
   infoDictionary[kCFBundleNameKey] = 0; // expected-error {{indexing expression is invalid because subscript type 'CFStringRef' (aka 'const struct __CFString *') is not an integral or Objective-C pointer type}}
   return infoDictionary[CFStringCreateMutable(((void*)0), 100)]; // expected-error {{indexing expression is invalid because subscript type 'CFMutableStringRef' (aka 'struct __CFString *') is not an integral or Objective-C pointer type}} \

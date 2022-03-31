@@ -2745,6 +2745,18 @@ unaryTransformType()
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Type.html">Type</a>&gt;</td><td class="name" onclick="toggle('usingType0')"><a name="usingType0Anchor">usingType</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1UsingType.html">UsingType</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="usingType0"><pre>Matches types specified through a using declaration.
+
+Given
+  namespace a { struct S {}; }
+  using a::S;
+  S s;
+
+usingType() matches the type of the variable declaration of s.
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Type.html">Type</a>&gt;</td><td class="name" onclick="toggle('variableArrayType0')"><a name="variableArrayType0Anchor">variableArrayType</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1VariableArrayType.html">VariableArrayType</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="variableArrayType0"><pre>Matches C arrays with a specified size that is not an
 integer-constant-expression.
@@ -4201,6 +4213,22 @@ auto Y() -&gt; int {}
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('isConsteval0')"><a name="isConsteval0Anchor">isConsteval</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isConsteval0"><pre>Matches consteval function declarations and if consteval/if ! consteval
+statements.
+
+Given:
+  consteval int a();
+  void b() { if consteval {} }
+  void c() { if ! consteval {} }
+  void d() { if ! consteval {} else {} }
+functionDecl(isConsteval())
+  matches the declaration of "int a()".
+ifStmt(isConsteval())
+  matches the if statement in "void b()", "void c()", "void d()".
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('isConstexpr1')"><a name="isConstexpr1Anchor">isConstexpr</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isConstexpr1"><pre>Matches constexpr variable and function declarations,
        and if constexpr.
@@ -4294,7 +4322,7 @@ varDecl(isExternC())
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('isInline1')"><a name="isInline1Anchor">isInline</a></td><td></td></tr>
-<tr><td colspan="4" class="doc" id="isInline1"><pre>Matches function and namespace declarations that are marked with
+<tr><td colspan="4" class="doc" id="isInline1"><pre>Matches functions, variables and namespace declarations that are marked with
 the inline keyword.
 
 Given
@@ -4303,8 +4331,10 @@ Given
   namespace n {
   inline namespace m {}
   }
+  inline int Foo = 5;
 functionDecl(isInline()) will match ::f().
 namespaceDecl(isInline()) will match n::m.
+varDecl(isInline()) will match Foo;
 </pre></td></tr>
 
 
@@ -4470,6 +4500,22 @@ functionProtoType(parameterCountIs(2))
   matches g and h
 functionProtoType(parameterCountIs(3))
   matches k
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1IfStmt.html">IfStmt</a>&gt;</td><td class="name" onclick="toggle('isConsteval1')"><a name="isConsteval1Anchor">isConsteval</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isConsteval1"><pre>Matches consteval function declarations and if consteval/if ! consteval
+statements.
+
+Given:
+  consteval int a();
+  void b() { if consteval {} }
+  void c() { if ! consteval {} }
+  void d() { if ! consteval {} else {} }
+functionDecl(isConsteval())
+  matches the declaration of "int a()".
+ifStmt(isConsteval())
+  matches the if statement in "void b()", "void c()", "void d()".
 </pre></td></tr>
 
 
@@ -4653,7 +4699,7 @@ namespaceDecl(isAnonymous()) will match #1 but not ::n.
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1NamespaceDecl.html">NamespaceDecl</a>&gt;</td><td class="name" onclick="toggle('isInline0')"><a name="isInline0Anchor">isInline</a></td><td></td></tr>
-<tr><td colspan="4" class="doc" id="isInline0"><pre>Matches function and namespace declarations that are marked with
+<tr><td colspan="4" class="doc" id="isInline0"><pre>Matches functions, variables and namespace declarations that are marked with
 the inline keyword.
 
 Given
@@ -4662,8 +4708,10 @@ Given
   namespace n {
   inline namespace m {}
   }
+  inline int Foo = 5;
 functionDecl(isInline()) will match ::f().
 namespaceDecl(isInline()) will match n::m.
+varDecl(isInline()) will match Foo;
 </pre></td></tr>
 
 
@@ -5596,6 +5644,19 @@ ifStmt(isConstexpr())
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1VarDecl.html">VarDecl</a>&gt;</td><td class="name" onclick="toggle('isConstinit0')"><a name="isConstinit0Anchor">isConstinit</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isConstinit0"><pre>Matches constinit variable declarations.
+
+Given:
+  constinit int foo = 42;
+  constinit const char* bar = "bar";
+  int baz = 42;
+  [[clang::require_constant_initialization]] int xyz = 42;
+varDecl(isConstinit())
+  matches the declaration of `foo` and `bar`, but not `baz` and `xyz`.
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1VarDecl.html">VarDecl</a>&gt;</td><td class="name" onclick="toggle('isDefinition1')"><a name="isDefinition1Anchor">isDefinition</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isDefinition1"><pre>Matches if a declaration has a body attached.
 
@@ -5668,6 +5729,23 @@ capture.
 
 Example matches x (matcher = varDecl(isInitCapture()))
 auto f = [x=3]() { return x; };
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1VarDecl.html">VarDecl</a>&gt;</td><td class="name" onclick="toggle('isInline2')"><a name="isInline2Anchor">isInline</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isInline2"><pre>Matches functions, variables and namespace declarations that are marked with
+the inline keyword.
+
+Given
+  inline void f();
+  void g();
+  namespace n {
+  inline namespace m {}
+  }
+  inline int Foo = 5;
+functionDecl(isInline()) will match ::f().
+namespaceDecl(isInline()) will match n::m.
+varDecl(isInline()) will match Foo;
 </pre></td></tr>
 
 
@@ -7504,19 +7582,24 @@ varDecl(hasTypeLoc(templateSpecializationTypeLoc(hasTemplateArgumentLoc(0,
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DeclRefExpr.html">DeclRefExpr</a>&gt;</td><td class="name" onclick="toggle('throughUsingDecl0')"><a name="throughUsingDecl0Anchor">throughUsingDecl</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1UsingShadowDecl.html">UsingShadowDecl</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="throughUsingDecl0"><pre>Matches a DeclRefExpr that refers to a declaration through a
-specific using shadow declaration.
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DeclRefExpr.html">DeclRefExpr</a>&gt;</td><td class="name" onclick="toggle('throughUsingDecl0')"><a name="throughUsingDecl0Anchor">throughUsingDecl</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1UsingShadowDecl.html">UsingShadowDecl</a>&gt; Inner</td></tr>
+<tr><td colspan="4" class="doc" id="throughUsingDecl0"><pre>Matches if a node refers to a declaration through a specific
+using shadow declaration.
 
-Given
-  namespace a { void f() {} }
+Examples:
+  namespace a { int f(); }
   using a::f;
-  void g() {
-    f();     // Matches this ..
-    a::f();  // .. but not this.
-  }
+  int x = f();
 declRefExpr(throughUsingDecl(anything()))
-  matches f()
+  matches f
+
+  namespace a { class X{}; }
+  using a::X;
+  X x;
+typeLoc(loc(usingType(throughUsingDecl(anything()))))
+  matches X
+
+Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DeclRefExpr.html">DeclRefExpr</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1UsingType.html">UsingType</a>&gt;
 </pre></td></tr>
 
 
@@ -7606,7 +7689,7 @@ declaration of class D.
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DecltypeType.html">DecltypeType</a>&gt;</td><td class="name" onclick="toggle('hasUnderlyingType0')"><a name="hasUnderlyingType0Anchor">hasUnderlyingType</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Type.html">Type</a>&gt;</td></tr>
-<tr><td colspan="4" class="doc" id="hasUnderlyingType0"><pre>Matches DecltypeType nodes to find out the underlying type.
+<tr><td colspan="4" class="doc" id="hasUnderlyingType0"><pre>Matches DecltypeType or UsingType nodes to find the underlying type.
 
 Given
   decltype(1) a = 1;
@@ -7614,7 +7697,7 @@ Given
 decltypeType(hasUnderlyingType(isInteger()))
   matches the type of "a"
 
-Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DecltypeType.html">DecltypeType</a>&gt;
+Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DecltypeType.html">DecltypeType</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1UsingType.html">UsingType</a>&gt;
 </pre></td></tr>
 
 
@@ -9611,6 +9694,40 @@ Given
   using X::b;
 usingDecl(hasAnyUsingShadowDecl(hasTargetDecl(functionDecl())))
   matches using X::b but not using X::a </pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1UsingType.html">UsingType</a>&gt;</td><td class="name" onclick="toggle('hasUnderlyingType1')"><a name="hasUnderlyingType1Anchor">hasUnderlyingType</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Type.html">Type</a>&gt;</td></tr>
+<tr><td colspan="4" class="doc" id="hasUnderlyingType1"><pre>Matches DecltypeType or UsingType nodes to find the underlying type.
+
+Given
+  decltype(1) a = 1;
+  decltype(2.0) b = 2.0;
+decltypeType(hasUnderlyingType(isInteger()))
+  matches the type of "a"
+
+Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DecltypeType.html">DecltypeType</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1UsingType.html">UsingType</a>&gt;
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1UsingType.html">UsingType</a>&gt;</td><td class="name" onclick="toggle('throughUsingDecl1')"><a name="throughUsingDecl1Anchor">throughUsingDecl</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1UsingShadowDecl.html">UsingShadowDecl</a>&gt; Inner</td></tr>
+<tr><td colspan="4" class="doc" id="throughUsingDecl1"><pre>Matches if a node refers to a declaration through a specific
+using shadow declaration.
+
+Examples:
+  namespace a { int f(); }
+  using a::f;
+  int x = f();
+declRefExpr(throughUsingDecl(anything()))
+  matches f
+
+  namespace a { class X{}; }
+  using a::X;
+  X x;
+typeLoc(loc(usingType(throughUsingDecl(anything()))))
+  matches X
+
+Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DeclRefExpr.html">DeclRefExpr</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1UsingType.html">UsingType</a>&gt;
+</pre></td></tr>
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ValueDecl.html">ValueDecl</a>&gt;</td><td class="name" onclick="toggle('hasType7')"><a name="hasType7Anchor">hasType</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt; InnerMatcher</td></tr>

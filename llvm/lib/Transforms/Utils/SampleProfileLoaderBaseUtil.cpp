@@ -11,6 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/SampleProfileLoaderBaseUtil.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Module.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 
 namespace llvm {
 
@@ -37,6 +41,10 @@ cl::opt<bool> NoWarnSampleUnused(
 cl::opt<bool> SampleProfileUseProfi(
     "sample-profile-use-profi", cl::init(false), cl::Hidden, cl::ZeroOrMore,
     cl::desc("Use profi to infer block and edge counts."));
+
+cl::opt<bool> SampleProfileInferEntryCount(
+    "sample-profile-infer-entry-count", cl::init(true), cl::Hidden,
+    cl::ZeroOrMore, cl::desc("Use profi to infer function entry count."));
 
 namespace sampleprofutil {
 

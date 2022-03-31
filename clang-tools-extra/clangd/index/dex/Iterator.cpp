@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Iterator.h"
-#include "llvm/Support/Casting.h"
+#include "llvm/ADT/STLExtras.h"
 #include <algorithm>
 #include <cassert>
 #include <numeric>
@@ -77,7 +77,7 @@ public:
 private:
   llvm::raw_ostream &dump(llvm::raw_ostream &OS) const override {
     OS << "(& ";
-    auto Separator = "";
+    auto *Separator = "";
     for (const auto &Child : Children) {
       OS << Separator << *Child;
       Separator = " ";
@@ -206,7 +206,7 @@ public:
 private:
   llvm::raw_ostream &dump(llvm::raw_ostream &OS) const override {
     OS << "(| ";
-    auto Separator = "";
+    auto *Separator = "";
     for (const auto &Child : Children) {
       OS << Separator << *Child;
       Separator = " ";

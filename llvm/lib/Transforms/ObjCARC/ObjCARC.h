@@ -22,7 +22,6 @@
 #ifndef LLVM_LIB_TRANSFORMS_OBJCARC_OBJCARC_H
 #define LLVM_LIB_TRANSFORMS_OBJCARC_OBJCARC_H
 
-#include "ARCRuntimeEntryPoints.h"
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/ObjCARCAnalysisUtils.h"
 #include "llvm/Analysis/ObjCARCUtil.h"
@@ -105,8 +104,7 @@ CallInst *createCallInstWithColors(
 
 class BundledRetainClaimRVs {
 public:
-  BundledRetainClaimRVs(bool ContractPass, bool UseMarker)
-      : ContractPass(ContractPass), UseMarker(UseMarker) {}
+  BundledRetainClaimRVs(bool ContractPass) : ContractPass(ContractPass) {}
   ~BundledRetainClaimRVs();
 
   /// Insert a retainRV/claimRV call to the normal destination blocks of invokes
@@ -156,9 +154,6 @@ private:
   DenseMap<CallInst *, CallBase *> RVCalls;
 
   bool ContractPass;
-
-  /// Indicates whether the target uses a special inline-asm marker.
-  bool UseMarker;
 };
 
 } // end namespace objcarc

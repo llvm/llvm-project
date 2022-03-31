@@ -76,9 +76,9 @@ as they become available.</p>
 Specifications</a> that will help drive the future of the C++ programming
 language.</p>
 
-<p>The <a href="https://bugs.llvm.org/">LLVM bug tracker</a> contains Clang
-C++ components that track known bugs with Clang's language conformance in
-each language mode.</p>
+<p>The <a href="https://github.com/llvm/llvm-project/issues/">LLVM bug tracker</a> uses
+the "c++" label, as well as mode-specific labels such as "c++11", "c++14",
+and so on, to track known bugs with Clang's language conformance.</p>
 
 <h2 id="cxx98">C++98 implementation status</h2>
 
@@ -906,7 +906,7 @@ code. This issue is expected to be rectified soon.
       <td class="full" align="center">Clang 9</td>
     </tr>
     <tr id="p0734">
-      <td rowspan="12">Concepts</td>
+      <td rowspan="13">Concepts</td>
       <td><a href="https://wg21.link/p0734r0">P0734R0</a></td>
       <td class="full" align="center">Clang 10</td>
     </tr>
@@ -938,13 +938,16 @@ code. This issue is expected to be rectified soon.
       </tr>
       <tr> <!-- from Belfast -->
         <td><a href="https://wg21.link/p1972r0">P1972R0</a></td>
-        <td rowspan="3" class="none" align="center">No</td>
+        <td rowspan="4" class="full" align="center">Clang 10</td>
       </tr>
       <tr>
         <td><a href="https://wg21.link/p1980r0">P1980R0</a></td>
       </tr>
       <tr> <!-- from Prague -->
         <td><a href="https://wg21.link/p2103r0">P2103R0</a></td>
+      </tr>
+      <tr> <!-- from February 2022 -->
+        <td><a href="https://wg21.link/p2493r0">P2493R0</a></td>
       </tr>
       <tr>
         <td><a href="https://wg21.link/p2092r0">P2092R0</a></td>
@@ -1006,12 +1009,12 @@ code. This issue is expected to be rectified soon.
       </tr>
       <tr>
         <td><a href="https://wg21.link/p2085r0">P2085R0</a></td>
-        <td class="none" align="center">No</td>
+        <td class="full" align="center">Clang 14</td>
       </tr>
     <tr>
       <td>Access checking on specializations</td>
       <td><a href="https://wg21.link/p0692r1">P0692R1</a></td>
-      <td class="unreleased" align="center">Clang 14</td>
+      <td class="full" align="center">Clang 14</td>
     </tr>
     <tr>
       <td>Default constructible and assignable stateless lambdas</td>
@@ -1021,7 +1024,11 @@ code. This issue is expected to be rectified soon.
     <tr>
       <td>Lambdas in unevaluated contexts</td>
       <td><a href="https://wg21.link/p0315r4">P0315R4</a></td>
-      <td class="partial" align="center">Partial</td>
+      <td class="partial" align="center">
+        <details><summary>Partial</summary>
+          temp.deduct/9 is not implemented yet.
+        </details>
+      </td>
     </tr>
     <!-- Jacksonville papers -->
     <tr>
@@ -1121,7 +1128,7 @@ code. This issue is expected to be rectified soon.
     </tr>
       <tr> <!-- from Prague -->
         <td><a href="https://wg21.link/p1937r2">P1937R2</a></td>
-        <td class="unreleased" align="center">Clang 14</td>
+        <td class="full" align="center">Clang 14</td>
       </tr>
     <tr>
       <td><tt>std::is_constant_evaluated</tt></td>
@@ -1199,7 +1206,13 @@ code. This issue is expected to be rectified soon.
     <tr>
       <td>Coroutines</td>
       <td><a href="https://wg21.link/p0912r5">P0912R5</a></td>
-      <td class="partial" align="center">Partial</td>
+      <td class="partial" align="center">
+        <details><summary>Partial</summary>
+          The optimizer does not yet handle TLS with
+  <tt>__attribute__((const))</tt> attribute correctly. There can be issues where the
+  coroutine may resume on a different thread. <br \>This feature requires further
+  analysis of the C++ Standard to determine what work is necessary for conformance.
+        </details></td>
     </tr>
     <!-- Cologne 2019 papers -->
     <tr>
@@ -1238,7 +1251,7 @@ code. This issue is expected to be rectified soon.
     <tr>
       <td>Permit conversions to arrays of unknown bound</td>
       <td><a href="https://wg21.link/p0388r4">P0388R4</a></td>
-      <td class="unreleased" align="center">Clang 14</td>
+      <td class="full" align="center">Clang 14</td>
     </tr>
     <tr>
       <td><tt>constinit</tt></td>
@@ -1301,7 +1314,7 @@ C++20, informally referred to as C++2b.</p>
     <tr>
       <td><tt>if consteval</tt></td>
       <td><a href="https://wg21.link/P1938R3">P1938R3</a></td>
-      <td class="unreleased" align="center">Clang 14</td>
+      <td class="full" align="center">Clang 14</td>
     </tr>
     <tr>
       <td>Allow duplicate attributes</td>
@@ -1311,7 +1324,7 @@ C++20, informally referred to as C++2b.</p>
     <tr>
       <td>Narrowing contextual conversions to bool</td>
       <td><a href="https://wg21.link/P1401R5">P1401R5</a></td>
-      <td class="unreleased" align="center">Clang 14</td>
+      <td class="full" align="center">Clang 14</td>
     </tr>
     <tr>
       <td>Trimming whitespaces before line splicing</td>
@@ -1326,7 +1339,7 @@ C++20, informally referred to as C++2b.</p>
     <tr>
       <td>C++ identifier syntax using UAX 31</td>
       <td><a href="https://wg21.link/P1949R7">P1949R7</a></td>
-      <td class="unreleased" align="center">Clang 14</td>
+      <td class="full" align="center">Clang 14</td>
     </tr>
     <tr>
       <td>Mixed string literal concatenation</td>
@@ -1347,12 +1360,12 @@ C++20, informally referred to as C++2b.</p>
     <tr>
       <td>Multidimensional subscript operator</td>
       <td><a href="https://wg21.link/P2128R6">P2128R6</a></td>
-      <td class="none" align="center">No</td>
+      <td class="unreleased" align="center">Clang 15</td>
     </tr>
     <tr>
       <td>Non-literal variables (and labels and gotos) in constexpr functions</td>
       <td><a href="https://wg21.link/P2242R3">P2242R3</a></td>
-      <td class="none" align="center">No</td>
+      <td class="unreleased" align="center">Clang 15</td>
     </tr>
     <tr>
       <td>Character encoding of diagnostic text</td>
@@ -1377,7 +1390,37 @@ C++20, informally referred to as C++2b.</p>
     <tr>
       <td>Extend init-statement to allow alias-declaration</td>
       <td><a href="https://wg21.link/P2360R0">P2360R0</a></td>
-      <td class="unreleased" align="center">Clang 14</td>
+      <td class="full" align="center">Clang 14</td>
+    </tr>
+    <tr>
+      <td>auto(x): decay-copy in the language</td>
+      <td><a href="https://wg21.link/P0849R8">P0849R8</a></td>
+      <td class="unreleased" align="center">Clang 15</td>
+    </tr>
+    <!-- February 2022 papers -->
+    <tr>
+      <td>Attributes on Lambda-Expressions</td>
+      <td><a href="https://wg21.link/P2173R1">P2173R1</a></td>
+      <td class="full" align="center">Clang 13</td>
+    </tr>
+    <tr>
+      <td><tt>constexpr</tt> for <tt><cmath</tt> and <tt>cstdlib</tt></td>
+      <td><a href="https://wg21.link/P0533R9">P0533R9</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Type trait to determine if a reference binds to a temporary</td>
+      <td><a href="https://wg21.link/P2255R2">P2255R2</a></td>
+      <td class="partial" align="center">
+        <details><summary>Partial</summary>
+          Clang provides a <tt>__reference_binds_to_temporary</tt> type trait
+          builtin, with which the library facility can be partially implemented.
+          Both <tt>__reference_constructs_from_temporary</tt> and
+          <tt>__reference_converts_from_temporary</tt> builtins should be
+          provided, following the normal cross-vendor convention to implement
+          traits requiring compiler support directly.
+        </details></td>
+      </td>
     </tr>
 
 </table>

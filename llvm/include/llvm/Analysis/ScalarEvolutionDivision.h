@@ -42,6 +42,7 @@ public:
   void visitUMaxExpr(const SCEVUMaxExpr *Numerator) {}
   void visitSMinExpr(const SCEVSMinExpr *Numerator) {}
   void visitUMinExpr(const SCEVUMinExpr *Numerator) {}
+  void visitSequentialUMinExpr(const SCEVSequentialUMinExpr *Numerator) {}
   void visitUnknown(const SCEVUnknown *Numerator) {}
   void visitCouldNotCompute(const SCEVCouldNotCompute *Numerator) {}
 

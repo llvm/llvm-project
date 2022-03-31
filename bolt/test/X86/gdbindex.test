@@ -1,0 +1,32 @@
+RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %p/Inputs/dwarfdump-gdbindex.s -o %t.o
+RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %p/Inputs/dwarfdump-gdbindex2.s -o %t2.o
+RUN: ld.lld --gdb-index %t.o %t2.o -o %tfile.exe
+RUN: llvm-bolt %tfile.exe -o %tfile.exe.bolt -update-debug-sections
+RUN: llvm-dwarfdump -gdb-index %tfile.exe.bolt | FileCheck %s
+
+; test.cpp:
+; int main() { return 0; }
+; test2.cpp:
+; int main2() { return 0; }
+; Compiled with:
+; gcc -gsplit-dwarf -c test.cpp test2.cpp
+; gold --gdb-index test.o test2.o -o dwarfdump-gdbindex-v7.elf-x86-64
+; gcc version 5.3.1 20160413, GNU gold (GNU Binutils for Ubuntu 2.26) 1.11
+; Info about gdb-index: https://sourceware.org/gdb/onlinedocs/gdb/Index-Section-Format.html
+
+; CHECK-LABEL: .gdb_index contents:
+; CHECK: Version = 7
+
+; CHECK:      CU list offset = 0x18, has 2 entries:
+; CHECK-NEXT:   0: Offset = 0x0, Length = 0x4b
+; CHECK-NEXT:   1: Offset = 0x4b, Length = 0x4f
+
+; CHECK:      Types CU list offset = 0x38, has 0 entries:
+
+; CHECK:      Address area offset = 0x38, has 2 entries:
+; CHECK-NEXT:   Low/High address = [0x20117c, 0x201187) (Size: 0xb), CU id = 0
+; CHECK-NEXT:   Low/High address = [0x201188, 0x201193) (Size: 0xb), CU id = 1
+
+; CHECK:      Symbol table offset = 0x60, size = 1024, filled slots:
+
+; CHECK:      Constant pool offset = 0x2060, has 0 CU vectors:

@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 %s -emit-llvm -triple i386-apple-darwin -o - | FileCheck %s
-extern void abort();
+extern void abort(void);
 extern void exit(int);
 struct T
 {
@@ -12,7 +12,7 @@ struct T s[1];
 s[0]=t;
 return(char)s->c;
 }
-main()
+main(void)
 {
 // CHECK:  getelementptr inbounds [1 x %struct.T], [1 x %struct.T]* %s, i32 0, i32 0
 // CHECK:  getelementptr inbounds [1 x %struct.T], [1 x %struct.T]* %s, i32 0, i32 0

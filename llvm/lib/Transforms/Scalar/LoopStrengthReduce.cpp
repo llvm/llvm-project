@@ -78,6 +78,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
@@ -91,9 +92,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/OperandTraits.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
@@ -119,7 +118,6 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
-#include <cstdlib>
 #include <iterator>
 #include <limits>
 #include <map>
@@ -481,6 +479,12 @@ void Formula::initialMatch(const SCEV *S, Loop *L, ScalarEvolution &SE) {
   canonicalize(*L);
 }
 
+static bool containsAddRecDependentOnLoop(const SCEV *S, const Loop &L) {
+  return SCEVExprContains(S, [&L](const SCEV *S) {
+    return isa<SCEVAddRecExpr>(S) && (cast<SCEVAddRecExpr>(S)->getLoop() == &L);
+  });
+}
+
 /// Check whether or not this formula satisfies the canonical
 /// representation.
 /// \see Formula::BaseRegs.
@@ -494,18 +498,15 @@ bool Formula::isCanonical(const Loop &L) const {
   if (Scale == 1 && BaseRegs.empty())
     return false;
 
-  const SCEVAddRecExpr *SAR = dyn_cast<const SCEVAddRecExpr>(ScaledReg);
-  if (SAR && SAR->getLoop() == &L)
+  if (containsAddRecDependentOnLoop(ScaledReg, L))
     return true;
 
   // If ScaledReg is not a recurrent expr, or it is but its loop is not current
   // loop, meanwhile BaseRegs contains a recurrent expr reg related with current
   // loop, we want to swap the reg in BaseRegs with ScaledReg.
-  auto I = find_if(BaseRegs, [&](const SCEV *S) {
-    return isa<const SCEVAddRecExpr>(S) &&
-           (cast<SCEVAddRecExpr>(S)->getLoop() == &L);
+  return none_of(BaseRegs, [&L](const SCEV *S) {
+    return containsAddRecDependentOnLoop(S, L);
   });
-  return I == BaseRegs.end();
 }
 
 /// Helper method to morph a formula into its canonical representation.
@@ -537,11 +538,9 @@ void Formula::canonicalize(const Loop &L) {
   // If ScaledReg is an invariant with respect to L, find the reg from
   // BaseRegs containing the recurrent expr related with Loop L. Swap the
   // reg with ScaledReg.
-  const SCEVAddRecExpr *SAR = dyn_cast<const SCEVAddRecExpr>(ScaledReg);
-  if (!SAR || SAR->getLoop() != &L) {
-    auto I = find_if(BaseRegs, [&](const SCEV *S) {
-      return isa<const SCEVAddRecExpr>(S) &&
-             (cast<SCEVAddRecExpr>(S)->getLoop() == &L);
+  if (!containsAddRecDependentOnLoop(ScaledReg, L)) {
+    auto I = find_if(BaseRegs, [&L](const SCEV *S) {
+      return containsAddRecDependentOnLoop(S, L);
     });
     if (I != BaseRegs.end())
       std::swap(ScaledReg, *I);
@@ -3486,6 +3485,31 @@ LSRInstance::CollectLoopInvariantFixupsAndFormulae() {
         // Don't bother if the instruction is in a BB which ends in an EHPad.
         if (UseBB->getTerminator()->isEHPad())
           continue;
+
+        // Ignore cases in which the currently-examined value could come from
+        // a basic block terminated with an EHPad. This checks all incoming
+        // blocks of the phi node since it is possible that the same incoming
+        // value comes from multiple basic blocks, only some of which may end
+        // in an EHPad. If any of them do, a subsequent rewrite attempt by this
+        // pass would try to insert instructions into an EHPad, hitting an
+        // assertion.
+        if (isa<PHINode>(UserInst)) {
+          const auto *PhiNode = cast<PHINode>(UserInst);
+          bool HasIncompatibleEHPTerminatedBlock = false;
+          llvm::Value *ExpectedValue = U;
+          for (unsigned int I = 0; I < PhiNode->getNumIncomingValues(); I++) {
+            if (PhiNode->getIncomingValue(I) == ExpectedValue) {
+              if (PhiNode->getIncomingBlock(I)->getTerminator()->isEHPad()) {
+                HasIncompatibleEHPTerminatedBlock = true;
+                break;
+              }
+            }
+          }
+          if (HasIncompatibleEHPTerminatedBlock) {
+            continue;
+          }
+        }
+
         // Don't bother rewriting PHIs in catchswitch blocks.
         if (isa<CatchSwitchInst>(UserInst->getParent()->getTerminator()))
           continue;
@@ -6011,7 +6035,7 @@ struct SCEVDbgValueBuilder {
     // See setFinalExpression: prepend our opcodes on the start of any old
     // expression opcodes.
     assert(!DI.hasArgList());
-    llvm::SmallVector<uint64_t, 6> FinalExpr(Expr.begin() + 2, Expr.end());
+    llvm::SmallVector<uint64_t, 6> FinalExpr(llvm::drop_begin(Expr, 2));
     auto *NewExpr =
         DIExpression::prependOpcodes(OldExpr, FinalExpr, /*StackValue*/ true);
     DI.setExpression(NewExpr);

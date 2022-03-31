@@ -9,6 +9,7 @@ from lldb.plugins.scripted_process import ScriptedThread
 class DummyScriptedProcess(ScriptedProcess):
     def __init__(self, target: lldb.SBTarget, args : lldb.SBStructuredData):
         super().__init__(target, args)
+        self.threads[0] = DummyScriptedThread(self, None)
 
     def get_memory_region_containing_address(self, addr: int) -> lldb.SBMemoryRegionInfo:
         return None
@@ -45,6 +46,7 @@ class DummyScriptedProcess(ScriptedProcess):
 class DummyScriptedThread(ScriptedThread):
     def __init__(self, process, args):
         super().__init__(process, args)
+        self.frames.append({"pc": 0x0100001b00 })
 
     def get_thread_id(self) -> int:
         return 0x19
@@ -59,21 +61,6 @@ class DummyScriptedThread(ScriptedThread):
         return { "type": lldb.eStopReasonSignal, "data": {
             "signal": signal.SIGINT
         } }
-
-    def get_stackframes(self):
-        class ScriptedStackFrame:
-            def __init__(idx, cfa, pc, symbol_ctx):
-                self.idx = idx
-                self.cfa = cfa
-                self.pc = pc
-                self.symbol_ctx = symbol_ctx
-
-
-        symbol_ctx = lldb.SBSymbolContext()
-        frame_zero = ScriptedStackFrame(0, 0x42424242, 0x5000000, symbol_ctx)
-        self.frames.append(frame_zero)
-
-        return self.frame_zero[0:0]
 
     def get_register_context(self) -> str:
         return struct.pack(

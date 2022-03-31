@@ -189,6 +189,8 @@ function(darwin_filter_host_archs input output)
 
   if(ARM_HOST)
     list(REMOVE_ITEM tmp_var i386)
+    list(REMOVE_ITEM tmp_var x86_64)
+    list(REMOVE_ITEM tmp_var x86_64h)
   else()
     list(REMOVE_ITEM tmp_var arm64)
     list(REMOVE_ITEM tmp_var arm64e)
@@ -296,6 +298,14 @@ macro(darwin_add_builtin_library name suffix)
     string(REGEX REPLACE "sim" "" base_os "${LIB_OS}")
     list(APPEND builtin_cflags
          -target "${LIB_ARCH}-apple-${base_os}${DARWIN_${LIBOS}_BUILTIN_MIN_VER}-simulator")
+  endif()
+
+  if ("${COMPILER_RT_ENABLE_MACCATALYST}" AND
+      "${LIB_OS}" MATCHES "^osx$")
+    # Build the macOS builtins with Mac Catalyst support.
+    list(APPEND builtin_cflags
+      -target ${LIB_ARCH}-apple-macos${DARWIN_osx_BUILTIN_MIN_VER}
+      -darwin-target-variant ${LIB_ARCH}-apple-ios13.1-macabi)
   endif()
 
   set_target_compile_flags(${libname}

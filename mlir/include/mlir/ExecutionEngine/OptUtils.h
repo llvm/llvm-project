@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_EXECUTIONENGINE_OPTUTILS_H_
-#define MLIR_EXECUTIONENGINE_OPTUTILS_H_
+#ifndef MLIR_EXECUTIONENGINE_OPTUTILS_H
+#define MLIR_EXECUTIONENGINE_OPTUTILS_H
 
 #include "llvm/Pass.h"
 
@@ -52,6 +52,6 @@ makeLLVMPassesTransformer(llvm::ArrayRef<const llvm::PassInfo *> llvmPasses,
                           llvm::TargetMachine *targetMachine,
                           unsigned optPassesInsertPos = 0);
 
-} // end namespace mlir
+} // namespace mlir
 
-#endif // LIR_EXECUTIONENGINE_OPTUTILS_H_
+#endif // MLIR_EXECUTIONENGINE_OPTUTILS_H

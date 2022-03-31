@@ -13,7 +13,7 @@
 // SYMTAB: D------X foo
 // SYMTAB: D------X bar
 
-void foo() {}
+void foo(void) {}
 
 asm(".globl bar      \n"
     "bar:            \n"

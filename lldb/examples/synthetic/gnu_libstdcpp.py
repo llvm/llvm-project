@@ -2,7 +2,7 @@ from __future__ import division
 import lldb.formatters.Logger
 
 # C++ STL formatters for LLDB
-# As there are many versions of the libcstd++, you are encouraged to look at the STL
+# As there are many versions of the libstdc++, you are encouraged to look at the STL
 # implementation for your platform before relying on these formatters to do the right
 # thing for your setup
 
@@ -684,3 +684,135 @@ class StdMapLikeSynthProvider:
         return True
 
 _list_uses_loop_detector = True
+
+class StdDequeSynthProvider:
+    def __init__(self, valobj, d):
+        self.valobj = valobj
+        self.pointer_size = self.valobj.GetProcess().GetAddressByteSize()
+        self.count = None
+        self.block_size = -1
+        self.element_size = -1
+        self.find_block_size()
+
+
+    def find_block_size(self):
+        # in order to use the deque we must have the block size, or else
+        # it's impossible to know what memory addresses are valid
+        self.element_type = self.valobj.GetType().GetTemplateArgumentType(0)
+        if not self.element_type.IsValid():
+            return
+        self.element_size = self.element_type.GetByteSize()
+        # The block size (i.e. number of elements per subarray) is defined in
+        # this piece of code, so we need to replicate it.
+        #
+        # #define _GLIBCXX_DEQUE_BUF_SIZE 512
+        #
+        # return (__size < _GLIBCXX_DEQUE_BUF_SIZE
+	    #   ? size_t(_GLIBCXX_DEQUE_BUF_SIZE / __size) : size_t(1));
+        if self.element_size < 512:
+            self.block_size = 512 // self.element_size
+        else:
+            self.block_size = 1
+
+    def num_children(self):
+        if self.count is None:
+            return 0
+        return self.count
+
+    def has_children(self):
+        return True
+
+    def get_child_index(self, name):
+        try:
+            return int(name.lstrip('[').rstrip(']'))
+        except:
+            return -1
+
+    def get_child_at_index(self, index):
+        if index < 0 or self.count is None:
+            return None
+        if index >= self.num_children():
+            return None
+        try:
+            name = '[' + str(index) + ']'
+            # We first look for the element in the first subarray,
+            # which might be incomplete.
+            if index < self.first_node_size:
+                # The following statement is valid because self.first_elem is the pointer
+                # to the first element
+                return self.first_elem.CreateChildAtOffset(name, index * self.element_size, self.element_type)
+
+            # Now the rest of the subarrays except for maybe the last one
+            # are going to be complete, so the final expression is simpler
+            i, j = divmod(index - self.first_node_size, self.block_size)
+
+            # We first move to the beginning of the node/subarray were our element is
+            node = self.start_node.CreateChildAtOffset(
+                '',
+                (1 + i) * self.valobj.GetProcess().GetAddressByteSize(),
+                self.element_type.GetPointerType())
+            return node.CreateChildAtOffset(name, j * self.element_size, self.element_type)
+
+        except:
+            return None
+
+    def update(self):
+        logger = lldb.formatters.Logger.Logger()
+        self.count = 0
+        try:
+            # A deque is effectively a two-dim array, with fixed width.
+            # However, only a subset of this memory contains valid data
+            # since a deque may have some slack at the front and back in
+            # order to have O(1) insertion at both ends.
+            # The rows in active use are delimited by '_M_start' and
+            # '_M_finish'.
+            #
+            # To find the elements that are actually constructed, the 'start'
+            # variable tells which element in this NxM array is the 0th
+            # one.
+            if self.block_size < 0 or self.element_size < 0:
+                return False
+
+            count = 0
+
+            impl = self.valobj.GetChildMemberWithName('_M_impl')
+
+            # we calculate the size of the first node (i.e. first internal array)
+            self.start = impl.GetChildMemberWithName('_M_start')
+            self.start_node = self.start.GetChildMemberWithName('_M_node')
+            first_node_address = self.start_node.GetValueAsUnsigned(0)
+            first_node_last_elem = self.start.GetChildMemberWithName('_M_last').GetValueAsUnsigned(0)
+            self.first_elem = self.start.GetChildMemberWithName('_M_cur')
+            first_node_first_elem = self.first_elem.GetValueAsUnsigned(0)
+
+
+            finish = impl.GetChildMemberWithName('_M_finish')
+            last_node_address = finish.GetChildMemberWithName('_M_node').GetValueAsUnsigned(0)
+            last_node_first_elem = finish.GetChildMemberWithName('_M_first').GetValueAsUnsigned(0)
+            last_node_last_elem = finish.GetChildMemberWithName('_M_cur').GetValueAsUnsigned(0)
+
+            if first_node_first_elem == 0 or first_node_last_elem == 0 or first_node_first_elem > first_node_last_elem:
+                return False
+            if last_node_first_elem == 0 or last_node_last_elem == 0 or last_node_first_elem > last_node_last_elem:
+                return False
+
+
+            if last_node_address == first_node_address:
+                self.first_node_size = (last_node_last_elem - first_node_first_elem) // self.element_size
+                count += self.first_node_size
+            else:
+                self.first_node_size = (first_node_last_elem - first_node_first_elem) // self.element_size
+                count += self.first_node_size
+
+                # we calculate the size of the last node
+                finish = impl.GetChildMemberWithName('_M_finish')
+                last_node_address = finish.GetChildMemberWithName('_M_node').GetValueAsUnsigned(0)
+                count += (last_node_last_elem - last_node_first_elem) // self.element_size
+
+                # we calculate the size of the intermediate nodes
+                num_intermediate_nodes = (last_node_address - first_node_address - 1) // self.valobj.GetProcess().GetAddressByteSize()
+                count += self.block_size * num_intermediate_nodes
+            self.count = count
+        except:
+            pass
+        return False

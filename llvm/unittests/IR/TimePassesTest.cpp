@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/IR/LegacyPassManager.h"
+#include "llvm/Pass.h"
+#include "llvm/PassRegistry.h"
 #include <gtest/gtest.h>
 #include <llvm/ADT/SmallString.h>
-#include "llvm/IR/LegacyPassManager.h"
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/PassInstrumentation.h>

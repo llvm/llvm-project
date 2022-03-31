@@ -194,31 +194,31 @@ void test_core(void) {
   // CHECK-ASM: vlvgg
 
   vsc = vec_insert_and_zero(cptrsc);
-  // CHECK: insertelement <16 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 poison, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, i8 %{{.*}}, i32 7
+  // CHECK: insertelement <16 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 poison, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, i8 %{{.*}}, i64 7
   // CHECK-ASM: vllezb
   vuc = vec_insert_and_zero(cptruc);
-  // CHECK: insertelement <16 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 poison, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, i8 %{{.*}}, i32 7
+  // CHECK: insertelement <16 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 poison, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, i8 %{{.*}}, i64 7
   // CHECK-ASM: vllezb
   vss = vec_insert_and_zero(cptrss);
-  // CHECK: insertelement <8 x i16> <i16 0, i16 0, i16 0, i16 poison, i16 0, i16 0, i16 0, i16 0>, i16 %{{.*}}, i32 3
+  // CHECK: insertelement <8 x i16> <i16 0, i16 0, i16 0, i16 poison, i16 0, i16 0, i16 0, i16 0>, i16 %{{.*}}, i64 3
   // CHECK-ASM: vllezh
   vus = vec_insert_and_zero(cptrus);
-  // CHECK: insertelement <8 x i16> <i16 0, i16 0, i16 0, i16 poison, i16 0, i16 0, i16 0, i16 0>, i16 %{{.*}}, i32 3
+  // CHECK: insertelement <8 x i16> <i16 0, i16 0, i16 0, i16 poison, i16 0, i16 0, i16 0, i16 0>, i16 %{{.*}}, i64 3
   // CHECK-ASM: vllezh
   vsi = vec_insert_and_zero(cptrsi);
-  // CHECK: insertelement <4 x i32> <i32 0, i32 poison, i32 0, i32 0>, i32 %{{.*}}, i32 1
+  // CHECK: insertelement <4 x i32> <i32 0, i32 poison, i32 0, i32 0>, i32 %{{.*}}, i64 1
   // CHECK-ASM: vllezf
   vui = vec_insert_and_zero(cptrui);
-  // CHECK: insertelement <4 x i32> <i32 0, i32 poison, i32 0, i32 0>, i32 %{{.*}}, i32 1
+  // CHECK: insertelement <4 x i32> <i32 0, i32 poison, i32 0, i32 0>, i32 %{{.*}}, i64 1
   // CHECK-ASM: vllezf
   vsl = vec_insert_and_zero(cptrsl);
-  // CHECK: insertelement <2 x i64> <i64 poison, i64 0>, i64 %{{.*}}, i32 0
+  // CHECK: insertelement <2 x i64> <i64 poison, i64 0>, i64 %{{.*}}, i64 0
   // CHECK-ASM: vllezg
   vul = vec_insert_and_zero(cptrul);
-  // CHECK: insertelement <2 x i64> <i64 poison, i64 0>, i64 %{{.*}}, i32 0
+  // CHECK: insertelement <2 x i64> <i64 poison, i64 0>, i64 %{{.*}}, i64 0
   // CHECK-ASM: vllezg
   vd = vec_insert_and_zero(cptrd);
-  // CHECK: insertelement <2 x double> <double poison, double 0.000000e+00>, double %{{.*}}, i32 0
+  // CHECK: insertelement <2 x double> <double poison, double 0.000000e+00>, double %{{.*}}, i64 0
   // CHECK-ASM: vllezg
 
   vsc = vec_perm(vsc, vsc, vuc);
@@ -3289,13 +3289,13 @@ void test_integer(void) {
   // CHECK-ASM: vsrlb
 
   vsc = vec_abs(vsc);
-  // CHECK-ASM: vlpb
+  // CHECK-ASM: vlcb
   vss = vec_abs(vss);
-  // CHECK-ASM: vlph
+  // CHECK-ASM: vlch
   vsi = vec_abs(vsi);
-  // CHECK-ASM: vlpf
+  // CHECK-ASM: vlcf
   vsl = vec_abs(vsl);
-  // CHECK-ASM: vlpg
+  // CHECK-ASM: vlcg
 
   vsc = vec_max(vsc, vsc);
   // CHECK-ASM: vmxb

@@ -4,12 +4,6 @@
 // RUN: mlir-opt %s -test-linalg-transform-patterns="test-tile-pattern tile-sizes=256,128,512 peeled-loops=1,2" -canonicalize | \
 // RUN:     FileCheck %s -check-prefix=CHECK-PEEL-12
 
-// RUN: mlir-opt %s -test-linalg-transform-patterns="test-tile-pattern tile-sizes=256,128,512 loop-type=tiled_loop peeled-loops=0" -canonicalize | \
-// RUN:     FileCheck %s -check-prefix=CHECK-TILED-LOOP-PEEL-0
-
-// RUN: mlir-opt %s -test-linalg-transform-patterns="test-tile-pattern tile-sizes=256,128,512 loop-type=tiled_loop peeled-loops=0,1" -canonicalize | \
-// RUN:     FileCheck %s -check-prefix=CHECK-TILED-LOOP-PEEL-01
-
 //     CHECK-PEEL-0: func @matmul_static_tensor
 // CHECK-PEEL-0-DAG:   %[[c0:.*]] = arith.constant 0 : index
 // CHECK-PEEL-0-DAG:   %[[c128:.*]] = arith.constant 128 : index
@@ -51,42 +45,6 @@
 //     CHECK-PEEL-12:       linalg.matmul ins({{.*}} : tensor<?x?xf32>, tensor<?x36xf32>) outs({{.*}} : tensor<?x36xf32>)
 //     CHECK-PEEL-12:     }
 //     CHECK-PEEL-12:   }
-
-//     CHECK-TILED-LOOP-PEEL-0: func @matmul_static_tensor
-// CHECK-TILED-LOOP-PEEL-0-DAG:   %[[c0:.*]] = arith.constant 0 : index
-// CHECK-TILED-LOOP-PEEL-0-DAG:   %[[c128:.*]] = arith.constant 128 : index
-// CHECK-TILED-LOOP-PEEL-0-DAG:   %[[c256:.*]] = arith.constant 256 : index
-// CHECK-TILED-LOOP-PEEL-0-DAG:   %[[c512:.*]] = arith.constant 512 : index
-// CHECK-TILED-LOOP-PEEL-0-DAG:   %[[c1280:.*]] = arith.constant 1280 : index
-// CHECK-TILED-LOOP-PEEL-0-DAG:   %[[c1500:.*]] = arith.constant 1500 : index
-// CHECK-TILED-LOOP-PEEL-0-DAG:   %[[c1600:.*]] = arith.constant 1600 : index
-// CHECK-TILED-LOOP-PEEL-0-DAG:   %[[c1700:.*]] = arith.constant 1700 : index
-//     CHECK-TILED-LOOP-PEEL-0:   linalg.tiled_loop (%{{.*}}, %{{.*}}, %{{.*}}) = (%[[c0]], %[[c0]], %[[c0]]) to (%[[c1280]], %[[c1700]], %[[c1600]]) step (%[[c256]], %[[c128]], %[[c512]])
-//     CHECK-TILED-LOOP-PEEL-0:     linalg.matmul ins({{.*}} : tensor<256x?xf32>, tensor<?x?xf32>) outs({{.*}} : tensor<256x?xf32>)
-//     CHECK-TILED-LOOP-PEEL-0:   }
-//     CHECK-TILED-LOOP-PEEL-0:   linalg.tiled_loop (%{{.*}}, %{{.*}}, %{{.*}}) = (%[[c1280]], %[[c0]], %[[c0]]) to (%[[c1500]], %[[c1700]], %[[c1600]]) step (%[[c256]], %[[c128]], %[[c512]])
-//     CHECK-TILED-LOOP-PEEL-0:     linalg.matmul ins({{.*}} : tensor<?x?xf32>, tensor<?x?xf32>) outs({{.*}} : tensor<?x?xf32>)
-//     CHECK-TILED-LOOP-PEEL-0:   }
-
-//     CHECK-TILED-LOOP-PEEL-01: func @matmul_static_tensor
-// CHECK-TILED-LOOP-PEEL-01-DAG:   %[[c0:.*]] = arith.constant 0 : index
-// CHECK-TILED-LOOP-PEEL-01-DAG:   %[[c128:.*]] = arith.constant 128 : index
-// CHECK-TILED-LOOP-PEEL-01-DAG:   %[[c256:.*]] = arith.constant 256 : index
-// CHECK-TILED-LOOP-PEEL-01-DAG:   %[[c512:.*]] = arith.constant 512 : index
-// CHECK-TILED-LOOP-PEEL-01-DAG:   %[[c1280:.*]] = arith.constant 1280 : index
-// CHECK-TILED-LOOP-PEEL-01-DAG:   %[[c1500:.*]] = arith.constant 1500 : index
-// CHECK-TILED-LOOP-PEEL-01-DAG:   %[[c1600:.*]] = arith.constant 1600 : index
-// CHECK-TILED-LOOP-PEEL-01-DAG:   %[[c1664:.*]] = arith.constant 1664 : index
-// CHECK-TILED-LOOP-PEEL-01-DAG:   %[[c1700:.*]] = arith.constant 1700 : index
-//     CHECK-TILED-LOOP-PEEL-01:   linalg.tiled_loop (%{{.*}}, %{{.*}}, %{{.*}}) = (%[[c0]], %[[c0]], %[[c0]]) to (%[[c1280]], %[[c1664]], %[[c1600]]) step (%[[c256]], %[[c128]], %[[c512]])
-//     CHECK-TILED-LOOP-PEEL-01:     linalg.matmul ins({{.*}} : tensor<256x?xf32>, tensor<?x128xf32>) outs({{.*}} : tensor<256x128xf32>)
-//     CHECK-TILED-LOOP-PEEL-01:   }
-//     CHECK-TILED-LOOP-PEEL-01:   linalg.tiled_loop (%{{.*}}, %{{.*}}, %{{.*}}) = (%[[c0]], %[[c1664]], %[[c0]]) to (%[[c1280]], %[[c1700]], %[[c1600]]) step (%[[c256]], %[[c128]], %[[c512]])
-//     CHECK-TILED-LOOP-PEEL-01:     linalg.matmul ins({{.*}} : tensor<256x?xf32>, tensor<?x?xf32>) outs({{.*}} : tensor<256x?xf32>)
-//     CHECK-TILED-LOOP-PEEL-01:   }
-//     CHECK-TILED-LOOP-PEEL-01:   linalg.tiled_loop (%{{.*}}, %{{.*}}, %{{.*}}) = (%[[c1280]], %[[c0]], %[[c0]]) to (%[[c1500]], %[[c1700]], %[[c1600]]) step (%[[c256]], %[[c128]], %[[c512]])
-//     CHECK-TILED-LOOP-PEEL-01:     linalg.matmul ins({{.*}} : tensor<?x?xf32>, tensor<?x?xf32>) outs({{.*}} : tensor<?x?xf32>)
-//     CHECK-TILED-LOOP-PEEL-01:   }
 func @matmul_static_tensor(%arg0: tensor<1500x1600xf32>, %arg1: tensor<1600x1700xf32>)
     -> tensor<1500x1700xf32> {
   %out = linalg.init_tensor [1500, 1700] : tensor<1500x1700xf32>
@@ -138,33 +96,6 @@ func @matmul_static_tensor(%arg0: tensor<1500x1600xf32>, %arg1: tensor<1600x1700
 //     CHECK-PEEL-12:       }
 //     CHECK-PEEL-12:     }
 //     CHECK-PEEL-12:   }
-
-//     CHECK-TILED-LOOP-PEEL-0: func @matmul_dynamic_tensor
-// CHECK-TILED-LOOP-PEEL-0-DAG:   %[[c0:.*]] = arith.constant 0 : index
-// CHECK-TILED-LOOP-PEEL-0-DAG:   %[[c128:.*]] = arith.constant 128 : index
-// CHECK-TILED-LOOP-PEEL-0-DAG:   %[[c256:.*]] = arith.constant 256 : index
-// CHECK-TILED-LOOP-PEEL-0-DAG:   %[[c512:.*]] = arith.constant 512 : index
-//     CHECK-TILED-LOOP-PEEL-0:   linalg.tiled_loop (%{{.*}}, %{{.*}}, %{{.*}}) = (%[[c0]], %[[c0]], %[[c0]]) to (%{{.*}}, %{{.*}}, %{{.*}}) step (%[[c256]], %[[c128]], %[[c512]])
-//     CHECK-TILED-LOOP-PEEL-0:     linalg.matmul ins({{.*}} : tensor<256x?xf32>, tensor<?x?xf32>) outs({{.*}} : tensor<256x?xf32>)
-//     CHECK-TILED-LOOP-PEEL-0:   }
-//     CHECK-TILED-LOOP-PEEL-0:   linalg.tiled_loop (%{{.*}}, %{{.*}}, %{{.*}}) = (%{{.*}}, %[[c0]], %[[c0]]) to (%{{.*}}, %{{.*}}, %{{.*}}) step (%[[c256]], %[[c128]], %[[c512]])
-//     CHECK-TILED-LOOP-PEEL-0:     linalg.matmul ins({{.*}} : tensor<?x?xf32>, tensor<?x?xf32>) outs({{.*}} : tensor<?x?xf32>)
-//     CHECK-TILED-LOOP-PEEL-0:   }
-
-//     CHECK-TILED-LOOP-PEEL-01: func @matmul_dynamic_tensor
-// CHECK-TILED-LOOP-PEEL-01-DAG:   %[[c0:.*]] = arith.constant 0 : index
-// CHECK-TILED-LOOP-PEEL-01-DAG:   %[[c128:.*]] = arith.constant 128 : index
-// CHECK-TILED-LOOP-PEEL-01-DAG:   %[[c256:.*]] = arith.constant 256 : index
-// CHECK-TILED-LOOP-PEEL-01-DAG:   %[[c512:.*]] = arith.constant 512 : index
-//     CHECK-TILED-LOOP-PEEL-01:   linalg.tiled_loop (%{{.*}}, %{{.*}}, %{{.*}}) = (%[[c0]], %[[c0]], %[[c0]]) to (%{{.*}}, %{{.*}}, %{{.*}}) step (%[[c256]], %[[c128]], %[[c512]])
-//     CHECK-TILED-LOOP-PEEL-01:     linalg.matmul ins({{.*}} : tensor<256x?xf32>, tensor<?x128xf32>) outs({{.*}} : tensor<256x128xf32>)
-//     CHECK-TILED-LOOP-PEEL-01:   }
-//     CHECK-TILED-LOOP-PEEL-01:   linalg.tiled_loop (%{{.*}}, %{{.*}}, %{{.*}}) = (%[[c0]], %{{.*}}, %[[c0]]) to (%{{.*}}, %{{.*}}, %{{.*}}) step (%[[c256]], %[[c128]], %[[c512]])
-//     CHECK-TILED-LOOP-PEEL-01:     linalg.matmul ins({{.*}} : tensor<256x?xf32>, tensor<?x?xf32>) outs({{.*}} : tensor<256x?xf32>)
-//     CHECK-TILED-LOOP-PEEL-01:   }
-//     CHECK-TILED-LOOP-PEEL-01:   linalg.tiled_loop (%{{.*}}, %{{.*}}, %{{.*}}) = (%{{.*}}, %[[c0]], %[[c0]]) to (%{{.*}}, %{{.*}}, %{{.*}}) step (%[[c256]], %[[c128]], %[[c512]])
-//     CHECK-TILED-LOOP-PEEL-01:     linalg.matmul ins({{.*}} : tensor<?x?xf32>, tensor<?x?xf32>) outs({{.*}} : tensor<?x?xf32>)
-//     CHECK-TILED-LOOP-PEEL-01:   }
 func @matmul_dynamic_tensor(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>)
     -> tensor<?x?xf32> {
   %c0 = arith.constant 0 : index

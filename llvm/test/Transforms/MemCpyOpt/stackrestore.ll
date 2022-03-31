@@ -15,33 +15,19 @@ target triple = "i686-unknown-windows-msvc19.14.26433"
 ; a call to @external.
 
 define i32 @test_norestore(i32 %n) {
-; NO_MSSA-LABEL: @test_norestore(
-; NO_MSSA-NEXT:    [[TMPMEM:%.*]] = alloca [10 x i8], align 4
-; NO_MSSA-NEXT:    [[TMP:%.*]] = getelementptr inbounds [10 x i8], [10 x i8]* [[TMPMEM]], i32 0, i32 0
-; NO_MSSA-NEXT:    [[P:%.*]] = alloca i8, i32 [[N:%.*]], align 4
-; NO_MSSA-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* [[P]], i8* align 1 getelementptr inbounds ([9 x i8], [9 x i8]* @str, i32 0, i32 0), i32 9, i1 false)
-; NO_MSSA-NEXT:    [[P10:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 9
-; NO_MSSA-NEXT:    store i8 0, i8* [[P10]], align 1
-; NO_MSSA-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* [[TMP]], i8* [[P]], i32 10, i1 false)
-; NO_MSSA-NEXT:    call void @external()
-; NO_MSSA-NEXT:    [[HEAP:%.*]] = call i8* @malloc(i32 9)
-; NO_MSSA-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* [[HEAP]], i8* [[P]], i32 9, i1 false)
-; NO_MSSA-NEXT:    call void @useit(i8* [[HEAP]])
-; NO_MSSA-NEXT:    ret i32 0
-;
-; MSSA-LABEL: @test_norestore(
-; MSSA-NEXT:    [[TMPMEM:%.*]] = alloca [10 x i8], align 4
-; MSSA-NEXT:    [[TMP:%.*]] = getelementptr inbounds [10 x i8], [10 x i8]* [[TMPMEM]], i32 0, i32 0
-; MSSA-NEXT:    [[P:%.*]] = alloca i8, i32 [[N:%.*]], align 4
-; MSSA-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* [[P]], i8* align 1 getelementptr inbounds ([9 x i8], [9 x i8]* @str, i32 0, i32 0), i32 9, i1 false)
-; MSSA-NEXT:    [[P10:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 9
-; MSSA-NEXT:    store i8 0, i8* [[P10]], align 1
-; MSSA-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* [[TMP]], i8* [[P]], i32 10, i1 false)
-; MSSA-NEXT:    call void @external()
-; MSSA-NEXT:    [[HEAP:%.*]] = call i8* @malloc(i32 9)
-; MSSA-NEXT:    call void @llvm.memmove.p0i8.p0i8.i32(i8* [[HEAP]], i8* align 1 getelementptr inbounds ([9 x i8], [9 x i8]* @str, i32 0, i32 0), i32 9, i1 false)
-; MSSA-NEXT:    call void @useit(i8* [[HEAP]])
-; MSSA-NEXT:    ret i32 0
+; CHECK-LABEL: @test_norestore(
+; CHECK-NEXT:    [[TMPMEM:%.*]] = alloca [10 x i8], align 4
+; CHECK-NEXT:    [[TMP:%.*]] = getelementptr inbounds [10 x i8], [10 x i8]* [[TMPMEM]], i32 0, i32 0
+; CHECK-NEXT:    [[P:%.*]] = alloca i8, i32 [[N:%.*]], align 4
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* [[P]], i8* align 1 getelementptr inbounds ([9 x i8], [9 x i8]* @str, i32 0, i32 0), i32 9, i1 false)
+; CHECK-NEXT:    [[P10:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 9
+; CHECK-NEXT:    store i8 0, i8* [[P10]], align 1
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* [[TMP]], i8* [[P]], i32 10, i1 false)
+; CHECK-NEXT:    call void @external()
+; CHECK-NEXT:    [[HEAP:%.*]] = call i8* @malloc(i32 9)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* [[HEAP]], i8* align 1 getelementptr inbounds ([9 x i8], [9 x i8]* @str, i32 0, i32 0), i32 9, i1 false)
+; CHECK-NEXT:    call void @useit(i8* [[HEAP]])
+; CHECK-NEXT:    ret i32 0
 ;
   %tmpmem = alloca [10 x i8], align 4
   %tmp = getelementptr inbounds [10 x i8], [10 x i8]* %tmpmem, i32 0, i32 0

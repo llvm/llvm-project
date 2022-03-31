@@ -50,6 +50,7 @@ extern "C" {
 
 DEFINE_C_API_STRUCT(MlirContext, void);
 DEFINE_C_API_STRUCT(MlirDialect, void);
+DEFINE_C_API_STRUCT(MlirDialectRegistry, void);
 DEFINE_C_API_STRUCT(MlirOperation, void);
 DEFINE_C_API_STRUCT(MlirOpPrintingFlags, void);
 DEFINE_C_API_STRUCT(MlirBlock, void);
@@ -108,6 +109,11 @@ mlirContextGetAllowUnregisteredDialects(MlirContext context);
 MLIR_CAPI_EXPORTED intptr_t
 mlirContextGetNumRegisteredDialects(MlirContext context);
 
+/// Append the contents of the given dialect registry to the registry associated
+/// with the context.
+MLIR_CAPI_EXPORTED void
+mlirContextAppendDialectRegistry(MlirContext ctx, MlirDialectRegistry registry);
+
 /// Returns the number of dialects loaded by the context.
 
 MLIR_CAPI_EXPORTED intptr_t
@@ -151,6 +157,22 @@ MLIR_CAPI_EXPORTED bool mlirDialectEqual(MlirDialect dialect1,
 
 /// Returns the namespace of the given dialect.
 MLIR_CAPI_EXPORTED MlirStringRef mlirDialectGetNamespace(MlirDialect dialect);
+
+//===----------------------------------------------------------------------===//
+// DialectRegistry API.
+//===----------------------------------------------------------------------===//
+
+/// Creates a dialect registry and transfers its ownership to the caller.
+MLIR_CAPI_EXPORTED MlirDialectRegistry mlirDialectRegistryCreate();
+
+/// Checks if the dialect registry is null.
+static inline bool mlirDialectRegistryIsNull(MlirDialectRegistry registry) {
+  return !registry.ptr;
+}
+
+/// Takes a dialect registry owned by the caller and destroys it.
+MLIR_CAPI_EXPORTED void
+mlirDialectRegistryDestroy(MlirDialectRegistry registry);
 
 //===----------------------------------------------------------------------===//
 // Location API.
@@ -531,7 +553,8 @@ MLIR_CAPI_EXPORTED MlirRegion mlirRegionGetNextInOperation(MlirRegion region);
 /// Creates a new empty block with the given argument types and transfers
 /// ownership to the caller.
 MLIR_CAPI_EXPORTED MlirBlock mlirBlockCreate(intptr_t nArgs,
-                                             MlirType const *args);
+                                             MlirType const *args,
+                                             MlirLocation const *locs);
 
 /// Takes a block owned by the caller and destroys it.
 MLIR_CAPI_EXPORTED void mlirBlockDestroy(MlirBlock block);
@@ -590,7 +613,8 @@ MLIR_CAPI_EXPORTED intptr_t mlirBlockGetNumArguments(MlirBlock block);
 /// Appends an argument of the specified type to the block. Returns the newly
 /// added argument.
 MLIR_CAPI_EXPORTED MlirValue mlirBlockAddArgument(MlirBlock block,
-                                                  MlirType type);
+                                                  MlirType type,
+                                                  MlirLocation loc);
 
 /// Returns `pos`-th argument of the block.
 MLIR_CAPI_EXPORTED MlirValue mlirBlockGetArgument(MlirBlock block,

@@ -1,10 +1,10 @@
+#TODO(michaelrj): separate the fputil library into individual targets.
 add_header_library(
   fputil
   HDRS
     FEnvImpl.h
     BasicOperations.h
     DivisionAndRemainderOperations.h
-    FEnvUtils.h
     FloatProperties.h
     FPBits.h
     BasicOperations.h
@@ -20,5 +20,18 @@ add_header_library(
     libc.include.errno
     libc.include.fenv
     libc.src.__support.common
-    libc.src.__support.CPP.standalone_cpp
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.CPP.bit
+    libc.src.errno.errno
 )
+
+add_header_library(
+  sqrt
+  HDRS
+    sqrt.h
+  DEPENDS
+    .fputil
+    libc.src.__support.FPUtil.generic.sqrt
+)
+
+add_subdirectory(generic)

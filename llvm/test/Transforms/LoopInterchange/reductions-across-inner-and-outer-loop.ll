@@ -151,6 +151,44 @@ for1.loopexit:                                 ; preds = %for1.inc
   ret i64 %sum.inc.lcssa2
 }
 
+; Check that we do not interchange if reduction is stored in an invariant address inside inner loop
+; REMARKS: --- !Missed
+; REMARKS-NEXT: Pass:            loop-interchange
+; REMARKS-NEXT: Name:            UnsupportedPHIOuter
+; REMARKS-NEXT: Function:        test4
+
+define i64 @test4([100 x [100 x i64]]* %Arr, i64* %dst) {
+entry:
+  %gep.dst = getelementptr inbounds i64, i64* %dst, i64 42
+  br label %for1.header
+
+for1.header:                                         ; preds = %for1.inc, %entry
+  %indvars.iv23 = phi i64 [ 0, %entry ], [ %indvars.iv.next24, %for1.inc ]
+  %sum.outer = phi i64 [ 0, %entry ], [ %sum.inc.lcssa, %for1.inc ]
+  br label %for2
+
+for2:                                        ; preds = %for2, %for1.header
+  %indvars.iv = phi i64 [ 0, %for1.header ], [ %indvars.iv.next.3, %for2 ]
+  %sum.inner = phi i64 [ %sum.outer, %for1.header ], [ %sum.inc, %for2 ]
+  %arrayidx = getelementptr inbounds [100 x [100 x i64]], [100 x [100 x i64]]* %Arr, i64 0, i64 %indvars.iv, i64 %indvars.iv23
+  %lv = load i64, i64* %arrayidx, align 4
+  %sum.inc = add i64 %sum.inner, %lv
+  store i64 %sum.inc, i64* %gep.dst, align 4
+  %indvars.iv.next.3 = add nuw nsw i64 %indvars.iv, 1
+  %exit1 = icmp eq i64 %indvars.iv.next.3, 100
+  br i1 %exit1, label %for1.inc, label %for2
+
+for1.inc:                                ; preds = %for2
+  %sum.inc.lcssa = phi i64 [ %sum.inc, %for2 ]
+  %indvars.iv.next24 = add nuw nsw i64 %indvars.iv23, 1
+  %exit2 = icmp eq i64 %indvars.iv.next24, 100
+  br i1 %exit2, label %for1.loopexit, label %for1.header
+
+for1.loopexit:                                 ; preds = %for1.inc
+  %sum.inc.lcssa2 = phi i64 [ %sum.inc.lcssa, %for1.inc ]
+  ret i64 %sum.inc.lcssa2
+}
+
 ; Check that we do not interchange or crash if the PHI in the outer loop gets a
 ; constant from the inner loop.
 ; REMARKS: --- !Missed
@@ -188,4 +226,84 @@ for1.inc:                                ; preds = %for2
 for1.loopexit:                                 ; preds = %for1.inc
   %il.res.lcssa2 = phi i64 [ %sum.inc.amend, %for1.inc ]
   ret i64 %il.res.lcssa2
+}
+
+; Floating point reductions are interchanged if all the fp instructions
+; involved allow reassociation.
+; REMARKS: --- !Passed
+; REMARKS-NEXT: Pass:            loop-interchange
+; REMARKS-NEXT: Name:            Interchanged
+; REMARKS-NEXT: Function:        test5
+
+define float @test5([100 x [100 x float]]* %Arr, [100 x [100 x float]]* %Arr2) {
+entry:
+  br label %outer.header
+
+outer.header:                                     ; preds = %outer.inc, %entry
+  %iv.outer = phi i64 [ 1, %entry ], [ %iv.outer.next, %outer.inc ]
+  %float.outer = phi float [ 1.000000e+00, %entry ], [ %float.inner.lcssa, %outer.inc ]
+  br label %for.body3
+
+for.body3:                                        ; preds = %for.body3, %outer.header
+  %float.inner = phi float [ %float.outer , %outer.header ], [ %float.inner.inc.inc, %for.body3 ]
+  %iv.inner = phi i64 [ %iv.inner.next, %for.body3 ], [ 1, %outer.header ]
+  %arrayidx5 = getelementptr inbounds [100 x [100 x float]], [100 x [100 x float]]* %Arr, i64 0, i64 %iv.inner, i64 %iv.outer
+  %vA = load float, float* %arrayidx5
+  %float.inner.inc = fadd fast float %float.inner, %vA
+  %arrayidx6 = getelementptr inbounds [100 x [100 x float]], [100 x [100 x float]]* %Arr2, i64 0, i64 %iv.inner, i64 %iv.outer
+  %vB = load float, float* %arrayidx6
+  %float.inner.inc.inc = fadd fast float %float.inner.inc, %vB
+  %iv.inner.next = add nuw nsw i64 %iv.inner, 1
+  %exitcond = icmp eq i64 %iv.inner.next, 100
+  br i1 %exitcond, label %outer.inc, label %for.body3
+
+outer.inc:                                        ; preds = %for.body3
+  %float.inner.lcssa = phi float [ %float.inner.inc.inc, %for.body3 ]
+  %iv.outer.next = add nsw i64 %iv.outer, 1
+  %cmp = icmp eq i64 %iv.outer.next, 100
+  br i1 %cmp, label %outer.header, label %for.exit
+
+for.exit:                                         ; preds = %outer.inc
+  %float.outer.lcssa = phi float [ %float.inner.lcssa, %outer.inc ]
+  ret float %float.outer.lcssa
+}
+
+; Floating point reductions are not interchanged if not all the fp instructions
+; involved allow reassociation.
+; REMARKS: --- !Missed
+; REMARKS-NEXT: Pass:            loop-interchange
+; REMARKS-NEXT: Name:            UnsupportedPHIOuter
+; REMARKS-NEXT: Function:        test6
+
+define float @test6([100 x [100 x float]]* %Arr, [100 x [100 x float]]* %Arr2) {
+entry:
+  br label %outer.header
+
+outer.header:                                     ; preds = %outer.inc, %entry
+  %iv.outer = phi i64 [ 1, %entry ], [ %iv.outer.next, %outer.inc ]
+  %float.outer = phi float [ 1.000000e+00, %entry ], [ %float.inner.lcssa, %outer.inc ]
+  br label %for.body3
+
+for.body3:                                        ; preds = %for.body3, %outer.header
+  %float.inner = phi float [ %float.outer , %outer.header ], [ %float.inner.inc.inc, %for.body3 ]
+  %iv.inner = phi i64 [ %iv.inner.next, %for.body3 ], [ 1, %outer.header ]
+  %arrayidx5 = getelementptr inbounds [100 x [100 x float]], [100 x [100 x float]]* %Arr, i64 0, i64 %iv.inner, i64 %iv.outer
+  %vA = load float, float* %arrayidx5
+  %float.inner.inc = fadd float %float.inner, %vA ; do not allow reassociation
+  %arrayidx6 = getelementptr inbounds [100 x [100 x float]], [100 x [100 x float]]* %Arr2, i64 0, i64 %iv.inner, i64 %iv.outer
+  %vB = load float, float* %arrayidx6
+  %float.inner.inc.inc = fadd fast float %float.inner.inc, %vB
+  %iv.inner.next = add nuw nsw i64 %iv.inner, 1
+  %exitcond = icmp eq i64 %iv.inner.next, 100
+  br i1 %exitcond, label %outer.inc, label %for.body3
+
+outer.inc:                                        ; preds = %for.body3
+  %float.inner.lcssa = phi float [ %float.inner.inc.inc, %for.body3 ]
+  %iv.outer.next = add nsw i64 %iv.outer, 1
+  %cmp = icmp eq i64 %iv.outer.next, 100
+  br i1 %cmp, label %outer.header, label %for.exit
+
+for.exit:                                         ; preds = %outer.inc
+  %float.outer.lcssa = phi float [ %float.inner.lcssa, %outer.inc ]
+  ret float %float.outer.lcssa
 }

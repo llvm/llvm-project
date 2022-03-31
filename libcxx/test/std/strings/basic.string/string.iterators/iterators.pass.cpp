@@ -23,12 +23,13 @@
 #include "test_macros.h"
 
 template<class C>
-void test()
+TEST_CONSTEXPR_CXX20 void test()
 {
     { // N3644 testing
         typename C::iterator ii1{}, ii2{};
         typename C::iterator ii4 = ii1;
         typename C::const_iterator cii{};
+
         assert ( ii1 == ii2 );
         assert ( ii1 == ii4 );
 
@@ -49,10 +50,16 @@ void test()
         assert (cii - ii1 == 0);
         assert (ii1 - cii == 0);
     }
+    {
+        C a;
+        typename C::iterator i1 = a.begin();
+        typename C::iterator i2;
+        i2 = i1;
+        assert ( i1 == i2 );
+    }
 }
 
-int main(int, char**)
-{
+TEST_CONSTEXPR_CXX20 bool test() {
     test<std::string>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test<std::wstring>();
@@ -65,5 +72,14 @@ int main(int, char**)
     test<std::u16string>();
     test<std::u32string>();
 
+    return true;
+}
+
+int main(int, char**)
+{
+    test();
+#if defined(__cpp_lib_constexpr_string) && __cpp_lib_constexpr_string >= 201907L
+    static_assert(test());
+#endif
     return 0;
 }

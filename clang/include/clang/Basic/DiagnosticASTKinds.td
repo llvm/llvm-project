@@ -65,6 +65,8 @@ def note_consteval_address_accessible : Note<
   "is not a constant expression">;
 def note_constexpr_uninitialized : Note<
   "%select{|sub}0object of type %1 is not initialized">;
+def note_constexpr_static_local : Note<
+  "control flows through the definition of a %select{static|thread_local}0 variable">;
 def note_constexpr_subobject_declared_here : Note<
   "subobject declared here">;
 def note_constexpr_array_index : Note<"cannot refer to element %0 of "
@@ -439,8 +441,6 @@ def note_odr_tag_kind_here: Note<
 def note_odr_field : Note<"field %0 has type %1 here">;
 def note_odr_field_name : Note<"field has name %0 here">;
 def note_odr_missing_field : Note<"no corresponding field here">;
-def note_odr_bit_field : Note<"bit-field %0 with type %1 and length %2 here">;
-def note_odr_not_bit_field : Note<"field %0 is not a bit-field">;
 def note_odr_base : Note<"class has base type %0">;
 def note_odr_virtual_base : Note<
   "%select{non-virtual|virtual}0 derivation here">;
@@ -590,4 +590,9 @@ def warn_padded_struct_size : Warning<
   InGroup<Padded>, DefaultIgnore;
 def warn_unnecessary_packed : Warning<
   "packed attribute is unnecessary for %0">, InGroup<Packed>, DefaultIgnore;
+
+// -Wunaligned-access
+def warn_unaligned_access : Warning<
+  "field %1 within %0 is less aligned than %2 and is usually due to %0 being "
+  "packed, which can lead to unaligned accesses">, InGroup<UnalignedAccess>, DefaultIgnore;
 }

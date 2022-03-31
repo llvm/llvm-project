@@ -55,6 +55,9 @@ struct ScopedBlockSignals {
   explicit ScopedBlockSignals(__sanitizer_sigset_t *copy);
   ~ScopedBlockSignals();
 
+  ScopedBlockSignals &operator=(const ScopedBlockSignals &) = delete;
+  ScopedBlockSignals(const ScopedBlockSignals &) = delete;
+
  private:
   __sanitizer_sigset_t saved_;
 };

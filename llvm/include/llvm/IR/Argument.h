@@ -14,7 +14,6 @@
 #define LLVM_IR_ARGUMENT_H
 
 #include "llvm/ADT/Twine.h"
-#include "llvm/ADT/ilist_node.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Value.h"
 
@@ -162,7 +161,7 @@ public:
   /// Remove attributes from an argument.
   void removeAttr(Attribute::AttrKind Kind);
 
-  void removeAttrs(const AttrBuilder &B);
+  void removeAttrs(const AttributeMask &AM);
 
   /// Check if an argument has a given attribute.
   bool hasAttribute(Attribute::AttrKind Kind) const;

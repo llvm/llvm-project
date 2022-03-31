@@ -17,8 +17,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.ctype.tolower
     libc.src.ctype.toupper
 
-    # errno.h entrypoints
-    libc.src.errno.__errno_location
+    # fcntl.h entrypoints
+    libc.src.fcntl.creat
+    libc.src.fcntl.open
+    libc.src.fcntl.openat
 
     # string.h entrypoints
     libc.src.string.bcmp
@@ -50,6 +52,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strtok
     libc.src.string.strtok_r
 
+    # string.h entrypoints that depend on malloc
+    libc.src.string.strdup
+    libc.src.string.strndup
+
     # inttypes.h entrypoints
     libc.src.inttypes.imaxdiv
     libc.src.inttypes.strtoimax
@@ -71,9 +77,35 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.strtod
     libc.src.stdlib.strtof
     libc.src.stdlib.strtol
+    libc.src.stdlib.strtold
     libc.src.stdlib.strtoll
     libc.src.stdlib.strtoul
     libc.src.stdlib.strtoull
+
+    # stdlib.h external entrypoints
+    libc.src.stdlib.malloc
+    libc.src.stdlib.calloc
+    libc.src.stdlib.realloc
+    libc.src.stdlib.aligned_alloc
+    libc.src.stdlib.free
+
+    # sys/mman.h entrypoints
+    libc.src.sys.mman.mmap
+    libc.src.sys.mman.munmap
+
+    # sys/stat.h entrypoints
+    libc.src.sys.stat.mkdir
+    libc.src.sys.stat.mkdirat
+
+    # unistd.h entrypoints
+    libc.src.unistd.close
+    libc.src.unistd.fsync
+    libc.src.unistd.lseek
+    libc.src.unistd.read
+    libc.src.unistd.rmdir
+    libc.src.unistd.unlink
+    libc.src.unistd.unlinkat
+    libc.src.unistd.write
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
@@ -139,6 +171,10 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.llround
     libc.src.math.llroundf
     libc.src.math.llroundl
+    libc.src.math.log10f
+    libc.src.math.log1pf
+    libc.src.math.log2f
+    libc.src.math.logf
     libc.src.math.logb
     libc.src.math.logbf
     libc.src.math.logbl
@@ -184,25 +220,32 @@ set(TARGET_LIBM_ENTRYPOINTS
 if(LLVM_LIBC_FULL_BUILD)
   list(APPEND TARGET_LIBC_ENTRYPOINTS
     # assert.h entrypoints
-    libc.src.assert.__assert_fail
+    # libc.src.assert.__assert_fail
 
     # stdlib.h entrypoints
     libc.src.stdlib._Exit
-    libc.src.stdlib.abort
+    # libc.src.stdlib.abort
+    libc.src.stdlib.atexit
+    libc.src.stdlib.exit
+    libc.src.stdlib.getenv
+
+    # stdio.h entrypoints
+    libc.src.stdio.fclose
+    libc.src.stdio.fopen
+    libc.src.stdio.fread
+    libc.src.stdio.fseek
+    libc.src.stdio.fwrite
 
     # signal.h entrypoints
-    libc.src.signal.raise
-    libc.src.signal.sigaction
-    libc.src.signal.sigdelset
-    libc.src.signal.sigaddset
-    libc.src.signal.sigemptyset
-    libc.src.signal.sigprocmask
-    libc.src.signal.sigfillset
-    libc.src.signal.signal
-
-    # sys/mman.h entrypoints
-    libc.src.sys.mman.mmap
-    libc.src.sys.mman.munmap
+    # TODO: Enable signal.h entrypoints after fixing signal.h
+    # libc.src.signal.raise
+    # libc.src.signal.sigaction
+    # libc.src.signal.sigdelset
+    # libc.src.signal.sigaddset
+    # libc.src.signal.sigemptyset
+    # libc.src.signal.sigprocmask
+    # libc.src.signal.sigfillset
+    # libc.src.signal.signal
 
     # threads.h entrypoints
     libc.src.threads.call_once
@@ -224,24 +267,6 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.gmtime
     libc.src.time.gmtime_r
     libc.src.time.mktime
-
-    # unistd.h entrypoints
-    libc.src.unistd.write
-  )
-endif()
-
-if(LLVM_LIBC_INCLUDE_SCUDO)
-  list(APPEND TARGET_LIBC_ENTRYPOINTS
-
-    # stdlib.h external entrypoints
-    libc.src.stdlib.malloc
-    libc.src.stdlib.calloc
-    libc.src.stdlib.realloc
-    libc.src.stdlib.free
-
-    # string.h entrypoints that depend on malloc
-    libc.src.string.strdup
-    libc.src.string.strndup
   )
 endif()
 

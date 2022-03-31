@@ -39,7 +39,7 @@
 #pragma clang attribute pop
 
 #pragma clang attribute push (__attribute__((abi_tag("a"))))
-// CHECK: fix-it:{{.*}}:{[[@LINE-1]]:60-[[@LINE-1]]:60}:", apply_to = any(record(unless(is_union)), variable, function, namespace)"
+// CHECK: fix-it:{{.*}}:{[[@LINE-1]]:60-[[@LINE-1]]:60}:", apply_to = any(function, namespace, record(unless(is_union)), variable)"
 #pragma clang attribute push (__attribute__((abi_tag("a"))) apply_to=function)
 // CHECK: fix-it:{{.*}}:{[[@LINE-1]]:60-[[@LINE-1]]:60}:", "
 #pragma clang attribute push (__attribute__((abi_tag("a"))) = function)
@@ -48,36 +48,39 @@
 // CHECK: fix-it:{{.*}}:{[[@LINE-1]]:60-[[@LINE-1]]:60}:", apply_to = "
 
 #pragma clang attribute push (__attribute__((abi_tag("a"))) 22)
-// CHECK: fix-it:{{.*}}:{[[@LINE-1]]:60-[[@LINE-1]]:63}:", apply_to = any(record(unless(is_union)), variable, function, namespace)"
+// CHECK: fix-it:{{.*}}:{[[@LINE-1]]:60-[[@LINE-1]]:63}:", apply_to = any(function, namespace, record(unless(is_union)), variable)"
 #pragma clang attribute push (__attribute__((abi_tag("a"))) function)
-// CHECK: fix-it:{{.*}}:{[[@LINE-1]]:60-[[@LINE-1]]:69}:", apply_to = any(record(unless(is_union)), variable, function, namespace)"
+// CHECK: fix-it:{{.*}}:{[[@LINE-1]]:60-[[@LINE-1]]:69}:", apply_to = any(function, namespace, record(unless(is_union)), variable)"
 #pragma clang attribute push (__attribute__((abi_tag("a"))) (function))
-// CHECK: fix-it:{{.*}}:{[[@LINE-1]]:60-[[@LINE-1]]:71}:", apply_to = any(record(unless(is_union)), variable, function, namespace)"
+// CHECK: fix-it:{{.*}}:{[[@LINE-1]]:60-[[@LINE-1]]:71}:", apply_to = any(function, namespace, record(unless(is_union)), variable)"
 
 #pragma clang attribute push (__attribute__((abi_tag("a"))), )
-// CHECK: fix-it:{{.*}}:{[[@LINE-1]]:61-[[@LINE-1]]:62}:"apply_to = any(record(unless(is_union)), variable, function, namespace)"
+// CHECK: fix-it:{{.*}}:{[[@LINE-1]]:61-[[@LINE-1]]:62}:"apply_to = any(function, namespace, record(unless(is_union)), variable)"
 #pragma clang attribute push (__attribute__((abi_tag("a"))), = function)
 // CHECK: fix-it:{{.*}}:{[[@LINE-1]]:61-[[@LINE-1]]:61}:"apply_to"
 #pragma clang attribute push (__attribute__((abi_tag("a"))), any(function))
 // CHECK: fix-it:{{.*}}:{[[@LINE-1]]:61-[[@LINE-1]]:61}:"apply_to = "
 
 #pragma clang attribute push (__attribute__((abi_tag("a"))), 22)
-// CHECK: fix-it:{{.*}}:{[[@LINE-1]]:61-[[@LINE-1]]:64}:"apply_to = any(record(unless(is_union)), variable, function, namespace)"
+// CHECK: fix-it:{{.*}}:{[[@LINE-1]]:61-[[@LINE-1]]:64}:"apply_to = any(function, namespace, record(unless(is_union)), variable)"
 #pragma clang attribute push (__attribute__((abi_tag("a"))), 1, 2)
-// CHECK: fix-it:{{.*}}:{[[@LINE-1]]:61-[[@LINE-1]]:66}:"apply_to = any(record(unless(is_union)), variable, function, namespace)"
+// CHECK: fix-it:{{.*}}:{[[@LINE-1]]:61-[[@LINE-1]]:66}:"apply_to = any(function, namespace, record(unless(is_union)), variable)"
 #pragma clang attribute push (__attribute__((abi_tag("a"))), function)
-// CHECK: fix-it:{{.*}}:{[[@LINE-1]]:61-[[@LINE-1]]:70}:"apply_to = any(record(unless(is_union)), variable, function, namespace)"
+// CHECK: fix-it:{{.*}}:{[[@LINE-1]]:61-[[@LINE-1]]:70}:"apply_to = any(function, namespace, record(unless(is_union)), variable)"
 #pragma clang attribute push (__attribute__((abi_tag("a"))), (function))
-// CHECK: fix-it:{{.*}}:{[[@LINE-1]]:61-[[@LINE-1]]:72}:"apply_to = any(record(unless(is_union)), variable, function, namespace)"
+// CHECK: fix-it:{{.*}}:{[[@LINE-1]]:61-[[@LINE-1]]:72}:"apply_to = any(function, namespace, record(unless(is_union)), variable)"
 
 #pragma clang attribute push (__attribute__((abi_tag("a"))), apply_to)
-// CHECK: fix-it:{{.*}}:{[[@LINE-1]]:70-[[@LINE-1]]:70}:" = any(record(unless(is_union)), variable, function, namespace)"
+// CHECK: fix-it:{{.*}}:{[[@LINE-1]]:70-[[@LINE-1]]:70}:" = any(function, namespace, record(unless(is_union)), variable)"
 #pragma clang attribute push (__attribute__((abi_tag("a"))), apply_to any(function))
 // CHECK: fix-it:{{.*}}:{[[@LINE-1]]:70-[[@LINE-1]]:70}:" = "
 
 #pragma clang attribute push (__attribute__((abi_tag("a"))), apply_to 41 (22))
-// CHECK: fix-it:{{.*}}:{[[@LINE-1]]:70-[[@LINE-1]]:78}:" = any(record(unless(is_union)), variable, function, namespace)"
+// CHECK: fix-it:{{.*}}:{[[@LINE-1]]:70-[[@LINE-1]]:78}:" = any(function, namespace, record(unless(is_union)), variable)"
 
 // Don't give fix-it to attributes without a strict subject set
 #pragma clang attribute push (__attribute__((annotate("a"))))
 // CHECK-NO: [[@LINE-1]]:61
+
+#pragma clang attribute push (__attribute__((objc_externally_retained)), apply_to)
+// CHECK: fix-it:{{.*}}:{[[@LINE-1]]:82-[[@LINE-1]]:82}:" = any(function, variable(unless(is_parameter)))"

@@ -1,5 +1,9 @@
 // RUN: %libomptarget-compilexx-generic -O3 && %libomptarget-run-generic
 
+// Hangs
+// UNSUPPORTED: amdgcn-amd-amdhsa
+// UNSUPPORTED: amdgcn-amd-amdhsa-newDriver
+
 #include <iostream>
 
 template <typename T> int test_map() {

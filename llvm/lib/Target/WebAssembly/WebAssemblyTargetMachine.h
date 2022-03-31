@@ -46,7 +46,7 @@ public:
     return TLOF.get();
   }
 
-  TargetTransformInfo getTargetTransformInfo(const Function &F) override;
+  TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
 
   bool usesPhysRegsForValues() const override { return false; }
 

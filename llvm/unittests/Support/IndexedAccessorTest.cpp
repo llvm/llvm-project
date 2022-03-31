@@ -32,7 +32,7 @@ struct ArrayIndexedAccessorRange
 template <typename T>
 static void compareData(ArrayIndexedAccessorRange<T> range,
                         ArrayRef<T> referenceData) {
-  ASSERT_TRUE(referenceData.size() == range.size());
+  ASSERT_EQ(referenceData.size(), range.size());
   ASSERT_TRUE(std::equal(range.begin(), range.end(), referenceData.begin()));
 }
 

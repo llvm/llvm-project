@@ -34,39 +34,44 @@ llvm::Type *CGOpenCLRuntime::convertOpenCLSpecificType(const Type *T) {
   assert(T->isOpenCLSpecificType() &&
          "Not an OpenCL specific type!");
 
-  llvm::LLVMContext& Ctx = CGM.getLLVMContext();
-  uint32_t AddrSpc = CGM.getContext().getTargetAddressSpace(
-      CGM.getContext().getOpenCLTypeAddrSpace(T));
   switch (cast<BuiltinType>(T)->getKind()) {
   default:
     llvm_unreachable("Unexpected opencl builtin type!");
     return nullptr;
-#define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
-  case BuiltinType::Id: \
-    return llvm::PointerType::get( \
-        llvm::StructType::create(Ctx, "opencl." #ImgType "_" #Suffix "_t"), \
-        AddrSpc);
+#define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix)                   \
+  case BuiltinType::Id:                                                        \
+    return getPointerType(T, "opencl." #ImgType "_" #Suffix "_t");
 #include "clang/Basic/OpenCLImageTypes.def"
   case BuiltinType::OCLSampler:
     return getSamplerType(T);
   case BuiltinType::OCLEvent:
-    return llvm::PointerType::get(
-        llvm::StructType::create(Ctx, "opencl.event_t"), AddrSpc);
+    return getPointerType(T, "opencl.event_t");
   case BuiltinType::OCLClkEvent:
-    return llvm::PointerType::get(
-        llvm::StructType::create(Ctx, "opencl.clk_event_t"), AddrSpc);
+    return getPointerType(T, "opencl.clk_event_t");
   case BuiltinType::OCLQueue:
-    return llvm::PointerType::get(
-        llvm::StructType::create(Ctx, "opencl.queue_t"), AddrSpc);
+    return getPointerType(T, "opencl.queue_t");
   case BuiltinType::OCLReserveID:
-    return llvm::PointerType::get(
-        llvm::StructType::create(Ctx, "opencl.reserve_id_t"), AddrSpc);
-#define EXT_OPAQUE_TYPE(ExtType, Id, Ext) \
-  case BuiltinType::Id: \
-    return llvm::PointerType::get( \
-        llvm::StructType::create(Ctx, "opencl." #ExtType), AddrSpc);
+    return getPointerType(T, "opencl.reserve_id_t");
+#define EXT_OPAQUE_TYPE(ExtType, Id, Ext)                                      \
+  case BuiltinType::Id:                                                        \
+    return getPointerType(T, "opencl." #ExtType);
 #include "clang/Basic/OpenCLExtensionTypes.def"
   }
+}
+
+llvm::PointerType *CGOpenCLRuntime::getPointerType(const Type *T,
+                                                   StringRef Name) {
+  auto I = CachedTys.find(Name);
+  if (I != CachedTys.end())
+    return I->second;
+
+  llvm::LLVMContext &Ctx = CGM.getLLVMContext();
+  uint32_t AddrSpc = CGM.getContext().getTargetAddressSpace(
+      CGM.getContext().getOpenCLTypeAddrSpace(T));
+  auto *PTy =
+      llvm::PointerType::get(llvm::StructType::create(Ctx, Name), AddrSpc);
+  CachedTys[Name] = PTy;
+  return PTy;
 }
 
 llvm::Type *CGOpenCLRuntime::getPipeType(const PipeType *T) {
@@ -143,13 +148,14 @@ static const BlockExpr *getBlockExpr(const Expr *E) {
 /// corresponding block expression.
 void CGOpenCLRuntime::recordBlockInfo(const BlockExpr *E,
                                       llvm::Function *InvokeF,
-                                      llvm::Value *Block) {
+                                      llvm::Value *Block, llvm::Type *BlockTy) {
   assert(EnqueuedBlockMap.find(E) == EnqueuedBlockMap.end() &&
          "Block expression emitted twice");
   assert(isa<llvm::Function>(InvokeF) && "Invalid invoke function");
   assert(Block->getType()->isPointerTy() && "Invalid block literal type");
   EnqueuedBlockMap[E].InvokeFunc = InvokeF;
   EnqueuedBlockMap[E].BlockArg = Block;
+  EnqueuedBlockMap[E].BlockTy = BlockTy;
   EnqueuedBlockMap[E].Kernel = nullptr;
 }
 
@@ -174,8 +180,7 @@ CGOpenCLRuntime::emitOpenCLEnqueuedBlock(CodeGenFunction &CGF, const Expr *E) {
   }
 
   auto *F = CGF.getTargetHooks().createEnqueuedBlockKernel(
-      CGF, EnqueuedBlockMap[Block].InvokeFunc,
-      EnqueuedBlockMap[Block].BlockArg->stripPointerCasts());
+      CGF, EnqueuedBlockMap[Block].InvokeFunc, EnqueuedBlockMap[Block].BlockTy);
 
   // The common part of the post-processing of the kernel goes here.
   F->addFnAttr(llvm::Attribute::NoUnwind);

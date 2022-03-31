@@ -32,46 +32,70 @@
 #ifndef LLVM_TRANSFORMS_SCALAR_LICM_H
 #define LLVM_TRANSFORMS_SCALAR_LICM_H
 
-#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Transforms/Scalar/LoopPassManager.h"
 
 namespace llvm {
+
+class LPMUpdater;
+class Loop;
+class LoopNest;
 
 extern cl::opt<unsigned> SetLicmMssaOptCap;
 extern cl::opt<unsigned> SetLicmMssaNoAccForPromotionCap;
 
+struct LICMOptions {
+  unsigned MssaOptCap;
+  unsigned MssaNoAccForPromotionCap;
+  bool AllowSpeculation;
+
+  LICMOptions()
+      : MssaOptCap(SetLicmMssaOptCap),
+        MssaNoAccForPromotionCap(SetLicmMssaNoAccForPromotionCap),
+        AllowSpeculation(true) {}
+
+  LICMOptions(unsigned MssaOptCap, unsigned MssaNoAccForPromotionCap,
+              bool AllowSpeculation)
+      : MssaOptCap(MssaOptCap),
+        MssaNoAccForPromotionCap(MssaNoAccForPromotionCap),
+        AllowSpeculation(AllowSpeculation) {}
+};
+
 /// Performs Loop Invariant Code Motion Pass.
 class LICMPass : public PassInfoMixin<LICMPass> {
-  unsigned LicmMssaOptCap;
-  unsigned LicmMssaNoAccForPromotionCap;
+  LICMOptions Opts;
 
 public:
-  LICMPass()
-      : LicmMssaOptCap(SetLicmMssaOptCap),
-        LicmMssaNoAccForPromotionCap(SetLicmMssaNoAccForPromotionCap) {}
-  LICMPass(unsigned LicmMssaOptCap, unsigned LicmMssaNoAccForPromotionCap)
-      : LicmMssaOptCap(LicmMssaOptCap),
-        LicmMssaNoAccForPromotionCap(LicmMssaNoAccForPromotionCap) {}
+  LICMPass(unsigned MssaOptCap, unsigned MssaNoAccForPromotionCap,
+           bool AllowSpeculation)
+      : LICMPass(LICMOptions(MssaOptCap, MssaNoAccForPromotionCap,
+                             AllowSpeculation)) {}
+  LICMPass(LICMOptions Opts) : Opts(Opts) {}
+
   PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
                         LoopStandardAnalysisResults &AR, LPMUpdater &U);
+
+  void printPipeline(raw_ostream &OS,
+                     function_ref<StringRef(StringRef)> MapClassName2PassName);
 };
 
 /// Performs LoopNest Invariant Code Motion Pass.
 class LNICMPass : public PassInfoMixin<LNICMPass> {
-  unsigned LicmMssaOptCap;
-  unsigned LicmMssaNoAccForPromotionCap;
+  LICMOptions Opts;
 
 public:
-  LNICMPass()
-      : LicmMssaOptCap(SetLicmMssaOptCap),
-        LicmMssaNoAccForPromotionCap(SetLicmMssaNoAccForPromotionCap) {}
-  LNICMPass(unsigned LicmMssaOptCap, unsigned LicmMssaNoAccForPromotionCap)
-      : LicmMssaOptCap(LicmMssaOptCap),
-        LicmMssaNoAccForPromotionCap(LicmMssaNoAccForPromotionCap) {}
+  LNICMPass(unsigned MssaOptCap, unsigned MssaNoAccForPromotionCap,
+            bool AllowSpeculation)
+      : LNICMPass(LICMOptions(MssaOptCap, MssaNoAccForPromotionCap,
+                              AllowSpeculation)) {}
+  LNICMPass(LICMOptions Opts) : Opts(Opts) {}
+
   PreservedAnalyses run(LoopNest &L, LoopAnalysisManager &AM,
                         LoopStandardAnalysisResults &AR, LPMUpdater &U);
+
+  void printPipeline(raw_ostream &OS,
+                     function_ref<StringRef(StringRef)> MapClassName2PassName);
 };
 } // end namespace llvm
 

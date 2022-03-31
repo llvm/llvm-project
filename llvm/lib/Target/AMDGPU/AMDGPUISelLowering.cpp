@@ -19,6 +19,7 @@
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/Analysis.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Support/CommandLine.h"
@@ -51,7 +52,7 @@ unsigned AMDGPUTargetLowering::numBitsUnsigned(SDValue Op, SelectionDAG &DAG) {
 unsigned AMDGPUTargetLowering::numBitsSigned(SDValue Op, SelectionDAG &DAG) {
   // In order for this to be a signed 24-bit value, bit 23, must
   // be a sign bit.
-  return DAG.ComputeMinSignedBits(Op);
+  return DAG.ComputeMaxSignificantBits(Op);
 }
 
 AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
@@ -360,6 +361,8 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::CONCAT_VECTORS, MVT::v8f32, Custom);
   setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v2f16, Custom);
   setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v2i16, Custom);
+  setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v4f16, Custom);
+  setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v4i16, Custom);
   setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v2f32, Custom);
   setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v2i32, Custom);
   setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v3f32, Custom);
@@ -588,26 +591,16 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   if (AMDGPUBypassSlowDiv)
     addBypassSlowDiv(64, 32);
 
-  setTargetDAGCombine(ISD::BITCAST);
-  setTargetDAGCombine(ISD::SHL);
-  setTargetDAGCombine(ISD::SRA);
-  setTargetDAGCombine(ISD::SRL);
-  setTargetDAGCombine(ISD::TRUNCATE);
-  setTargetDAGCombine(ISD::MUL);
-  setTargetDAGCombine(ISD::SMUL_LOHI);
-  setTargetDAGCombine(ISD::UMUL_LOHI);
-  setTargetDAGCombine(ISD::MULHU);
-  setTargetDAGCombine(ISD::MULHS);
-  setTargetDAGCombine(ISD::SELECT);
-  setTargetDAGCombine(ISD::SELECT_CC);
-  setTargetDAGCombine(ISD::STORE);
-  setTargetDAGCombine(ISD::FADD);
-  setTargetDAGCombine(ISD::FSUB);
-  setTargetDAGCombine(ISD::FNEG);
-  setTargetDAGCombine(ISD::FABS);
-  setTargetDAGCombine(ISD::AssertZext);
-  setTargetDAGCombine(ISD::AssertSext);
-  setTargetDAGCombine(ISD::INTRINSIC_WO_CHAIN);
+  setTargetDAGCombine({ISD::BITCAST,    ISD::SHL,
+                       ISD::SRA,        ISD::SRL,
+                       ISD::TRUNCATE,   ISD::MUL,
+                       ISD::SMUL_LOHI,  ISD::UMUL_LOHI,
+                       ISD::MULHU,      ISD::MULHS,
+                       ISD::SELECT,     ISD::SELECT_CC,
+                       ISD::STORE,      ISD::FADD,
+                       ISD::FSUB,       ISD::FNEG,
+                       ISD::FABS,       ISD::AssertZext,
+                       ISD::AssertSext, ISD::INTRINSIC_WO_CHAIN});
 }
 
 bool AMDGPUTargetLowering::mayIgnoreSignedZero(SDValue Op) const {
@@ -1406,6 +1399,11 @@ SDValue AMDGPUTargetLowering::LowerEXTRACT_SUBVECTOR(SDValue Op,
   if (((SrcVT == MVT::v4f16 && VT == MVT::v2f16) ||
        (SrcVT == MVT::v4i16 && VT == MVT::v2i16)) &&
       Start != 1)
+    return Op;
+
+  if (((SrcVT == MVT::v8f16 && VT == MVT::v4f16) ||
+       (SrcVT == MVT::v8i16 && VT == MVT::v4i16)) &&
+      (Start == 0 || Start == 4))
     return Op;
 
   DAG.ExtractVectorElements(Op.getOperand(0), Args, Start,
@@ -3274,8 +3272,9 @@ SDValue AMDGPUTargetLowering::performSrlCombine(SDNode *N,
   // this improves the ability to match BFE patterns in isel.
   if (LHS.getOpcode() == ISD::AND) {
     if (auto *Mask = dyn_cast<ConstantSDNode>(LHS.getOperand(1))) {
-      if (Mask->getAPIntValue().isShiftedMask() &&
-          Mask->getAPIntValue().countTrailingZeros() == ShiftAmt) {
+      unsigned MaskIdx, MaskLen;
+      if (Mask->getAPIntValue().isShiftedMask(MaskIdx, MaskLen) &&
+          MaskIdx == ShiftAmt) {
         return DAG.getNode(
             ISD::AND, SL, VT,
             DAG.getNode(ISD::SRL, SL, VT, LHS.getOperand(0), N->getOperand(1)),
@@ -4373,10 +4372,14 @@ uint32_t AMDGPUTargetLowering::getImplicitParameterOffset(
   uint64_t ArgOffset = alignTo(MFI->getExplicitKernArgSize(), Alignment) +
                        ExplicitArgOffset;
   switch (Param) {
-  case GRID_DIM:
+  case FIRST_IMPLICIT:
     return ArgOffset;
-  case GRID_OFFSET:
-    return ArgOffset + 4;
+  case PRIVATE_BASE:
+    return ArgOffset + AMDGPU::ImplicitArg::PRIVATE_BASE_OFFSET;
+  case SHARED_BASE:
+    return ArgOffset + AMDGPU::ImplicitArg::SHARED_BASE_OFFSET;
+  case QUEUE_PTR:
+    return ArgOffset + AMDGPU::ImplicitArg::QUEUE_PTR_OFFSET;
   }
   llvm_unreachable("unexpected implicit parameter type");
 }
@@ -4398,7 +4401,6 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(TC_RETURN)
   NODE_NAME_CASE(TRAP)
   NODE_NAME_CASE(RET_FLAG)
-  NODE_NAME_CASE(RET_GFX_FLAG)
   NODE_NAME_CASE(RETURN_TO_EPILOG)
   NODE_NAME_CASE(ENDPGM)
   NODE_NAME_CASE(DWORDADDR)
@@ -4478,6 +4480,8 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(CONST_DATA_PTR)
   NODE_NAME_CASE(PC_ADD_REL_OFFSET)
   NODE_NAME_CASE(LDS)
+  NODE_NAME_CASE(FPTRUNC_ROUND_UPWARD)
+  NODE_NAME_CASE(FPTRUNC_ROUND_DOWNWARD)
   NODE_NAME_CASE(DUMMY_CHAIN)
   case AMDGPUISD::FIRST_MEM_OPCODE_NUMBER: break;
   NODE_NAME_CASE(LOAD_D16_HI)
@@ -4626,11 +4630,12 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
     RHSKnown = RHSKnown.trunc(24);
 
     if (Opc == AMDGPUISD::MUL_I24) {
-      unsigned LHSValBits = 24 - LHSKnown.countMinSignBits();
-      unsigned RHSValBits = 24 - RHSKnown.countMinSignBits();
-      unsigned MaxValBits = std::min(LHSValBits + RHSValBits, 32u);
-      if (MaxValBits >= 32)
+      unsigned LHSValBits = LHSKnown.countMaxSignificantBits();
+      unsigned RHSValBits = RHSKnown.countMaxSignificantBits();
+      unsigned MaxValBits = LHSValBits + RHSValBits;
+      if (MaxValBits > 32)
         break;
+      unsigned SignBits = 32 - MaxValBits + 1;
       bool LHSNegative = LHSKnown.isNegative();
       bool LHSNonNegative = LHSKnown.isNonNegative();
       bool LHSPositive = LHSKnown.isStrictlyPositive();
@@ -4639,16 +4644,16 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
       bool RHSPositive = RHSKnown.isStrictlyPositive();
 
       if ((LHSNonNegative && RHSNonNegative) || (LHSNegative && RHSNegative))
-        Known.Zero.setHighBits(32 - MaxValBits);
+        Known.Zero.setHighBits(SignBits);
       else if ((LHSNegative && RHSPositive) || (LHSPositive && RHSNegative))
-        Known.One.setHighBits(32 - MaxValBits);
+        Known.One.setHighBits(SignBits);
     } else {
-      unsigned LHSValBits = 24 - LHSKnown.countMinLeadingZeros();
-      unsigned RHSValBits = 24 - RHSKnown.countMinLeadingZeros();
-      unsigned MaxValBits = std::min(LHSValBits + RHSValBits, 32u);
+      unsigned LHSValBits = LHSKnown.countMaxActiveBits();
+      unsigned RHSValBits = RHSKnown.countMaxActiveBits();
+      unsigned MaxValBits = LHSValBits + RHSValBits;
       if (MaxValBits >= 32)
         break;
-      Known.Zero.setHighBits(32 - MaxValBits);
+      Known.Zero.setBitsFrom(MaxValBits);
     }
     break;
   }
@@ -4904,7 +4909,8 @@ AMDGPUTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   }
 }
 
-bool AMDGPUTargetLowering::isConstantUnsignedBitfieldExtactLegal(
+bool AMDGPUTargetLowering::isConstantUnsignedBitfieldExtractLegal(
     unsigned Opc, LLT Ty1, LLT Ty2) const {
-  return Ty1 == Ty2 && (Ty1 == LLT::scalar(32) || Ty1 == LLT::scalar(64));
+  return (Ty1 == LLT::scalar(32) || Ty1 == LLT::scalar(64)) &&
+         Ty2 == LLT::scalar(32);
 }

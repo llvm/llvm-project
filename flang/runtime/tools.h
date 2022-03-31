@@ -56,6 +56,15 @@ void CheckConformability(const Descriptor &to, const Descriptor &x,
     Terminator &, const char *funcName, const char *toName,
     const char *fromName);
 
+// Helper to store integer value in result[at].
+template <int KIND> struct StoreIntegerAt {
+  void operator()(const Fortran::runtime::Descriptor &result, std::size_t at,
+      std::int64_t value) const {
+    *result.ZeroBasedIndexedElement<Fortran::runtime::CppTypeFor<
+        Fortran::common::TypeCategory::Integer, KIND>>(at) = value;
+  }
+};
+
 // Validate a KIND= argument
 void CheckIntegerKind(Terminator &, int kind, const char *intrinsic);
 
@@ -87,16 +96,16 @@ inline bool SetInteger(INT &x, int kind, std::int64_t value) {
   switch (kind) {
   case 1:
     reinterpret_cast<CppTypeFor<TypeCategory::Integer, 1> &>(x) = value;
-    return true;
+    return value == reinterpret_cast<CppTypeFor<TypeCategory::Integer, 1> &>(x);
   case 2:
     reinterpret_cast<CppTypeFor<TypeCategory::Integer, 2> &>(x) = value;
-    return true;
+    return value == reinterpret_cast<CppTypeFor<TypeCategory::Integer, 2> &>(x);
   case 4:
     reinterpret_cast<CppTypeFor<TypeCategory::Integer, 4> &>(x) = value;
-    return true;
+    return value == reinterpret_cast<CppTypeFor<TypeCategory::Integer, 4> &>(x);
   case 8:
     reinterpret_cast<CppTypeFor<TypeCategory::Integer, 8> &>(x) = value;
-    return true;
+    return value == reinterpret_cast<CppTypeFor<TypeCategory::Integer, 8> &>(x);
   default:
     return false;
   }

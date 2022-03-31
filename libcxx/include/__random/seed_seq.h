@@ -17,7 +17,7 @@
 #include <vector>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
@@ -31,25 +31,24 @@ public:
     // types
     typedef uint32_t result_type;
 
-private:
-    vector<result_type> __v_;
-
-    template<class _InputIterator>
-        void init(_InputIterator __first, _InputIterator __last);
-public:
     // constructors
     _LIBCPP_INLINE_VISIBILITY
     seed_seq() _NOEXCEPT {}
 #ifndef _LIBCPP_CXX03_LANG
-    template<class _Tp>
-        _LIBCPP_INLINE_VISIBILITY
-        seed_seq(initializer_list<_Tp> __il) {init(__il.begin(), __il.end());}
+    template<class _Tp, __enable_if_t<is_integral<_Tp>::value>* = nullptr>
+    _LIBCPP_INLINE_VISIBILITY
+    seed_seq(initializer_list<_Tp> __il) {
+        __init(__il.begin(), __il.end());
+    }
 #endif // _LIBCPP_CXX03_LANG
 
     template<class _InputIterator>
-        _LIBCPP_INLINE_VISIBILITY
-        seed_seq(_InputIterator __first, _InputIterator __last)
-             {init(__first, __last);}
+    _LIBCPP_INLINE_VISIBILITY
+    seed_seq(_InputIterator __first, _InputIterator __last) {
+        static_assert(is_integral<typename iterator_traits<_InputIterator>::value_type>::value,
+            "Mandates: iterator_traits<InputIterator>::value_type is an integer type");
+        __init(__first, __last);
+    }
 
     // generating functions
     template<class _RandomAccessIterator>
@@ -63,18 +62,22 @@ public:
         void param(_OutputIterator __dest) const
             {_VSTD::copy(__v_.begin(), __v_.end(), __dest);}
 
-private:
-    // no copy functions
-    seed_seq(const seed_seq&); // = delete;
-    void operator=(const seed_seq&); // = delete;
+    seed_seq(const seed_seq&) = delete;
+    void operator=(const seed_seq&) = delete;
 
     _LIBCPP_INLINE_VISIBILITY
     static result_type _Tp(result_type __x) {return __x ^ (__x >> 27);}
+
+private:
+    template<class _InputIterator>
+    void __init(_InputIterator __first, _InputIterator __last);
+
+    vector<result_type> __v_;
 };
 
 template<class _InputIterator>
 void
-seed_seq::init(_InputIterator __first, _InputIterator __last)
+seed_seq::__init(_InputIterator __first, _InputIterator __last)
 {
     for (_InputIterator __s = __first; __s != __last; ++__s)
         __v_.push_back(*__s & 0xFFFFFFFF);

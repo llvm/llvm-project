@@ -298,11 +298,11 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @scaled_i32_i32_2gep(i32* %base, <4 x i32>* %offptr) {
 ; CHECK-LABEL: scaled_i32_i32_2gep:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrw.u32 q1, [r1]
-; CHECK-NEXT:    vmov.i32 q0, #0x14
-; CHECK-NEXT:    vshl.i32 q1, q1, #2
-; CHECK-NEXT:    vadd.i32 q1, q1, r0
-; CHECK-NEXT:    vadd.i32 q1, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r1]
+; CHECK-NEXT:    movs r2, #20
+; CHECK-NEXT:    vshl.i32 q0, q0, #2
+; CHECK-NEXT:    vadd.i32 q0, q0, r0
+; CHECK-NEXT:    vadd.i32 q1, q0, r2
 ; CHECK-NEXT:    vldrw.u32 q0, [q1]
 ; CHECK-NEXT:    bx lr
 entry:

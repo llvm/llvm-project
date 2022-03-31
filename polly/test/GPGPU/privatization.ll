@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -analyze -polly-scops < %s | FileCheck %s -check-prefix=SCOP
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s -check-prefix=SCOP
 ; RUN: opt %loadPolly -S -polly-codegen-ppcg < %s | FileCheck %s -check-prefix=HOST-IR
 
 ; REQUIRES: pollyacc
@@ -12,7 +12,7 @@
 ; the declare would not be generated unless a call to a kernel exists.
 ; HOST-IR: declare void @polly_launchKernel(i8*, i32, i32, i32, i32, i32, i8*)
 
-; 
+;
 ;
 ;    void checkPrivatization(int A[], int B[], int C[], int control) {
 ;      int x;

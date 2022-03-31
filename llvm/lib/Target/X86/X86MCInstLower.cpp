@@ -48,6 +48,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizer.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerCommon.h"
+#include <string>
 
 using namespace llvm;
 
@@ -1336,235 +1337,30 @@ void X86AsmPrinter::LowerASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
     return;
   }
 
-  unsigned Reg = MI.getOperand(0).getReg().id();
+  const auto &Reg = MI.getOperand(0).getReg();
   ASanAccessInfo AccessInfo(MI.getOperand(1).getImm());
 
-  MCSymbol *&Sym =
-      AsanMemaccessSymbols[AsanMemaccessTuple(Reg, AccessInfo.Packed)];
-  if (!Sym) {
-    std::string Name = AccessInfo.IsWrite ? "store" : "load";
-    std::string SymName = "__asan_check_" + Name +
-                          utostr(1ULL << AccessInfo.AccessSizeIndex) + "_rn" +
-                          utostr(Reg);
-    Sym = OutContext.getOrCreateSymbol(SymName);
-  }
+  uint64_t ShadowBase;
+  int MappingScale;
+  bool OrShadowOffset;
+  getAddressSanitizerParams(Triple(TM.getTargetTriple()), 64,
+                            AccessInfo.CompileKernel, &ShadowBase,
+                            &MappingScale, &OrShadowOffset);
+
+  StringRef Name = AccessInfo.IsWrite ? "store" : "load";
+  StringRef Op = OrShadowOffset ? "or" : "add";
+  std::string SymName = ("__asan_check_" + Name + "_" + Op + "_" +
+                         Twine(1ULL << AccessInfo.AccessSizeIndex) + "_" +
+                         TM.getMCRegisterInfo()->getName(Reg.asMCReg()))
+                            .str();
+  if (OrShadowOffset)
+    report_fatal_error(
+        "OrShadowOffset is not supported with optimized callbacks");
 
   EmitAndCountInstruction(
       MCInstBuilder(X86::CALL64pcrel32)
-          .addExpr(MCSymbolRefExpr::create(Sym, OutContext)));
-}
-
-void X86AsmPrinter::emitAsanMemaccessPartial(Module &M, unsigned Reg,
-                                             const ASanAccessInfo &AccessInfo,
-                                             MCSubtargetInfo &STI) {
-  assert(AccessInfo.AccessSizeIndex == 0 || AccessInfo.AccessSizeIndex == 1 ||
-         AccessInfo.AccessSizeIndex == 2);
-  assert(Reg != X86::R10);
-  assert(Reg != X86::R11);
-
-  uint64_t ShadowBase;
-  int MappingScale;
-  bool OrShadowOffset;
-  getAddressSanitizerParams(
-      Triple(M.getTargetTriple()), M.getDataLayout().getPointerSizeInBits(),
-      AccessInfo.CompileKernel, &ShadowBase, &MappingScale, &OrShadowOffset);
-
-  OutStreamer->emitInstruction(MCInstBuilder(X86::MOV64rr)
-                                   .addReg(X86::R10)
-                                   .addReg(X86::NoRegister + Reg),
-                               STI);
-  OutStreamer->emitInstruction(MCInstBuilder(X86::SHR64ri)
-                                   .addReg(X86::R10)
-                                   .addReg(X86::R10)
-                                   .addImm(MappingScale),
-                               STI);
-  if (OrShadowOffset) {
-    OutStreamer->emitInstruction(MCInstBuilder(X86::OR64ri32)
-                                     .addReg(X86::R10)
-                                     .addReg(X86::R10)
-                                     .addImm(ShadowBase),
-                                 STI);
-    OutStreamer->emitInstruction(MCInstBuilder(X86::MOV8rm)
-                                     .addReg(X86::R10B)
-                                     .addReg(X86::R10)
-                                     .addImm(1)
-                                     .addReg(X86::NoRegister)
-                                     .addImm(0)
-                                     .addReg(X86::NoRegister),
-                                 STI);
-    OutStreamer->emitInstruction(
-        MCInstBuilder(X86::TEST8rr).addReg(X86::R10B).addReg(X86::R10B), STI);
-  } else {
-    OutStreamer->emitInstruction(MCInstBuilder(X86::MOVSX32rm8)
-                                     .addReg(X86::R10D)
-                                     .addReg(X86::R10)
-                                     .addImm(1)
-                                     .addReg(X86::NoRegister)
-                                     .addImm(ShadowBase)
-                                     .addReg(X86::NoRegister),
-                                 STI);
-    OutStreamer->emitInstruction(
-        MCInstBuilder(X86::TEST32rr).addReg(X86::R10D).addReg(X86::R10D), STI);
-  }
-  MCSymbol *AdditionalCheck = OutContext.createTempSymbol();
-  OutStreamer->emitInstruction(
-      MCInstBuilder(X86::JCC_1)
-          .addExpr(MCSymbolRefExpr::create(AdditionalCheck, OutContext))
-          .addImm(X86::COND_NE),
-      STI);
-  MCSymbol *ReturnSym = OutContext.createTempSymbol();
-  OutStreamer->emitLabel(ReturnSym);
-  OutStreamer->emitInstruction(MCInstBuilder(getRetOpcode(*Subtarget)), STI);
-
-  // Shadow byte is non-zero so we need to perform additional checks.
-  OutStreamer->emitLabel(AdditionalCheck);
-  OutStreamer->emitInstruction(MCInstBuilder(X86::MOV64rr)
-                                   .addReg(X86::R11)
-                                   .addReg(X86::NoRegister + Reg),
-                               STI);
-  const size_t Granularity = 1ULL << MappingScale;
-  OutStreamer->emitInstruction(MCInstBuilder(X86::AND32ri8)
-                                   .addReg(X86::NoRegister)
-                                   .addReg(X86::R11D)
-                                   .addImm(Granularity - 1),
-                               STI);
-  if (AccessInfo.AccessSizeIndex == 1) {
-    OutStreamer->emitInstruction(MCInstBuilder(X86::ADD32ri8)
-                                     .addReg(X86::NoRegister)
-                                     .addReg(X86::R11D)
-                                     .addImm(1),
-                                 STI);
-  } else if (AccessInfo.AccessSizeIndex == 2) {
-    OutStreamer->emitInstruction(MCInstBuilder(X86::ADD32ri8)
-                                     .addReg(X86::NoRegister)
-                                     .addReg(X86::R11D)
-                                     .addImm(3),
-                                 STI);
-  }
-
-  OutStreamer->emitInstruction(
-      MCInstBuilder(X86::CMP32rr).addReg(X86::R11D).addReg(X86::R10D).addImm(1),
-      STI);
-  OutStreamer->emitInstruction(
-      MCInstBuilder(X86::JCC_1)
-          .addExpr(MCSymbolRefExpr::create(ReturnSym, OutContext))
-          .addImm(X86::COND_L),
-      STI);
-
-  emitAsanReportError(M, Reg, AccessInfo, STI);
-}
-
-void X86AsmPrinter::emitAsanMemaccessFull(Module &M, unsigned Reg,
-                                          const ASanAccessInfo &AccessInfo,
-                                          MCSubtargetInfo &STI) {
-  assert(AccessInfo.AccessSizeIndex == 3 || AccessInfo.AccessSizeIndex == 4);
-  assert(Reg != X86::R10);
-  assert(Reg != X86::R11);
-
-  uint64_t ShadowBase;
-  int MappingScale;
-  bool OrShadowOffset;
-  getAddressSanitizerParams(
-      Triple(M.getTargetTriple()), M.getDataLayout().getPointerSizeInBits(),
-      AccessInfo.CompileKernel, &ShadowBase, &MappingScale, &OrShadowOffset);
-
-  OutStreamer->emitInstruction(MCInstBuilder(X86::MOV64rr)
-                                   .addReg(X86::R10)
-                                   .addReg(X86::NoRegister + Reg),
-                               STI);
-  OutStreamer->emitInstruction(MCInstBuilder(X86::SHR64ri)
-                                   .addReg(X86::R10)
-                                   .addReg(X86::R10)
-                                   .addImm(MappingScale),
-                               STI);
-  if (OrShadowOffset) {
-    OutStreamer->emitInstruction(MCInstBuilder(X86::OR64ri32)
-                                     .addReg(X86::R10)
-                                     .addReg(X86::R10)
-                                     .addImm(ShadowBase),
-                                 STI);
-    auto OpCode = AccessInfo.AccessSizeIndex == 3 ? X86::CMP8mi : X86::CMP16mi8;
-    OutStreamer->emitInstruction(MCInstBuilder(OpCode)
-                                     .addReg(X86::R10)
-                                     .addImm(1)
-                                     .addReg(X86::NoRegister)
-                                     .addImm(0)
-                                     .addReg(X86::NoRegister)
-                                     .addImm(0),
-                                 STI);
-  } else {
-    auto OpCode = AccessInfo.AccessSizeIndex == 3 ? X86::CMP8mi : X86::CMP16mi8;
-    OutStreamer->emitInstruction(MCInstBuilder(OpCode)
-                                     .addReg(X86::R10)
-                                     .addImm(1)
-                                     .addReg(X86::NoRegister)
-                                     .addImm(ShadowBase)
-                                     .addReg(X86::NoRegister)
-                                     .addImm(0),
-                                 STI);
-  }
-  MCSymbol *ReportCode = OutContext.createTempSymbol();
-  OutStreamer->emitInstruction(
-      MCInstBuilder(X86::JCC_1)
-          .addExpr(MCSymbolRefExpr::create(ReportCode, OutContext))
-          .addImm(X86::COND_NE),
-      STI);
-  MCSymbol *ReturnSym = OutContext.createTempSymbol();
-  OutStreamer->emitLabel(ReturnSym);
-  OutStreamer->emitInstruction(MCInstBuilder(getRetOpcode(*Subtarget)), STI);
-
-  OutStreamer->emitLabel(ReportCode);
-  emitAsanReportError(M, Reg, AccessInfo, STI);
-}
-
-void X86AsmPrinter::emitAsanReportError(Module &M, unsigned Reg,
-                                        const ASanAccessInfo &AccessInfo,
-                                        MCSubtargetInfo &STI) {
-  std::string Name = AccessInfo.IsWrite ? "store" : "load";
-  MCSymbol *ReportError = OutContext.getOrCreateSymbol(
-      "__asan_report_" + Name + utostr(1ULL << AccessInfo.AccessSizeIndex));
-  OutStreamer->emitInstruction(MCInstBuilder(X86::MOV64rr)
-                                   .addReg(X86::RDI)
-                                   .addReg(X86::NoRegister + Reg),
-                               STI);
-  OutStreamer->emitInstruction(
-      MCInstBuilder(X86::JMP_4)
-          .addExpr(MCSymbolRefExpr::create(ReportError, MCSymbolRefExpr::VK_PLT,
-                                           OutContext)),
-      STI);
-}
-
-void X86AsmPrinter::emitAsanMemaccessSymbols(Module &M) {
-  if (AsanMemaccessSymbols.empty())
-    return;
-
-  const Triple &TT = TM.getTargetTriple();
-  assert(TT.isOSBinFormatELF());
-  std::unique_ptr<MCSubtargetInfo> STI(
-      TM.getTarget().createMCSubtargetInfo(TT.str(), "", ""));
-  assert(STI && "Unable to create subtarget info");
-
-  for (auto &P : AsanMemaccessSymbols) {
-    MCSymbol *Sym = P.second;
-    OutStreamer->SwitchSection(OutContext.getELFSection(
-        ".text.hot", ELF::SHT_PROGBITS,
-        ELF::SHF_EXECINSTR | ELF::SHF_ALLOC | ELF::SHF_GROUP, 0, Sym->getName(),
-        /*IsComdat=*/true));
-
-    OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeFunction);
-    OutStreamer->emitSymbolAttribute(Sym, MCSA_Weak);
-    OutStreamer->emitSymbolAttribute(Sym, MCSA_Hidden);
-    OutStreamer->emitLabel(Sym);
-
-    unsigned Reg = std::get<0>(P.first);
-    ASanAccessInfo AccessInfo(std::get<1>(P.first));
-
-    if (AccessInfo.AccessSizeIndex < 3) {
-      emitAsanMemaccessPartial(M, Reg, AccessInfo, *STI);
-    } else {
-      emitAsanMemaccessFull(M, Reg, AccessInfo, *STI);
-    }
-  }
+          .addExpr(MCSymbolRefExpr::create(
+              OutContext.getOrCreateSymbol(SymName), OutContext)));
 }
 
 void X86AsmPrinter::LowerPATCHABLE_OP(const MachineInstr &MI,
@@ -2614,6 +2410,15 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
   X86MCInstLower MCInstLowering(*MF, *this);
   const X86RegisterInfo *RI =
       MF->getSubtarget<X86Subtarget>().getRegisterInfo();
+
+  if (MI->getOpcode() == X86::OR64rm) {
+    for (auto &Opd : MI->operands()) {
+      if (Opd.isSymbol() && StringRef(Opd.getSymbolName()) ==
+                                "swift_async_extendedFramePointerFlags") {
+        ShouldEmitWeakSwiftAsyncExtendedFramePointerFlags = true;
+      }
+    }
+  }
 
   // Add a comment about EVEX-2-VEX compression for AVX-512 instrs that
   // are compressed from EVEX encoding to VEX encoding.

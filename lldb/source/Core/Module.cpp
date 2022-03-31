@@ -10,6 +10,7 @@
 
 #include "lldb/Core/AddressRange.h"
 #include "lldb/Core/AddressResolverFileLine.h"
+#include "lldb/Core/DataFileCache.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/FileSpecList.h"
 #include "lldb/Core/Mangled.h"
@@ -38,8 +39,8 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/Logging.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
@@ -55,7 +56,10 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/DJB.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -125,8 +129,7 @@ Module *Module::GetAllocatedModuleAtIndex(size_t idx) {
 }
 
 Module::Module(const ModuleSpec &module_spec)
-    : m_object_offset(0), m_file_has_changed(false),
-      m_first_file_changed_log(false) {
+    : m_file_has_changed(false), m_first_file_changed_log(false) {
   // Scope for locker below...
   {
     std::lock_guard<std::recursive_mutex> guard(
@@ -134,8 +137,7 @@ Module::Module(const ModuleSpec &module_spec)
     GetModuleCollection().push_back(this);
   }
 
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_OBJECT |
-                                                  LIBLLDB_LOG_MODULES));
+  Log *log(GetLog(LLDBLog::Object | LLDBLog::Modules));
   if (log != nullptr)
     LLDB_LOGF(log, "%p Module::Module((%s) '%s%s%s%s')",
               static_cast<void *>(this),
@@ -233,8 +235,8 @@ Module::Module(const ModuleSpec &module_spec)
 Module::Module(const FileSpec &file_spec, const ArchSpec &arch,
                const ConstString *object_name, lldb::offset_t object_offset,
                const llvm::sys::TimePoint<> &object_mod_time)
-    : m_mod_time(FileSystem::Instance().GetModificationTime(file_spec)), m_arch(arch),
-      m_file(file_spec), m_object_offset(object_offset),
+    : m_mod_time(FileSystem::Instance().GetModificationTime(file_spec)),
+      m_arch(arch), m_file(file_spec), m_object_offset(object_offset),
       m_object_mod_time(object_mod_time), m_file_has_changed(false),
       m_first_file_changed_log(false) {
   // Scope for locker below...
@@ -247,8 +249,7 @@ Module::Module(const FileSpec &file_spec, const ArchSpec &arch,
   if (object_name)
     m_object_name = *object_name;
 
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_OBJECT |
-                                                  LIBLLDB_LOG_MODULES));
+  Log *log(GetLog(LLDBLog::Object | LLDBLog::Modules));
   if (log != nullptr)
     LLDB_LOGF(log, "%p Module::Module((%s) '%s%s%s%s')",
               static_cast<void *>(this), m_arch.GetArchitectureName(),
@@ -277,8 +278,7 @@ Module::~Module() {
     assert(pos != end);
     modules.erase(pos);
   }
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_OBJECT |
-                                                  LIBLLDB_LOG_MODULES));
+  Log *log(GetLog(LLDBLog::Object | LLDBLog::Modules));
   if (log != nullptr)
     LLDB_LOGF(log, "%p Module::~Module((%s) '%s%s%s%s')",
               static_cast<void *>(this), m_arch.GetArchitectureName(),
@@ -559,9 +559,8 @@ uint32_t Module::ResolveSymbolContextForAddress(
             // that the symbol has been resolved.
             if (so_addr.GetOffset() ==
                     addr_range.GetBaseAddress().GetOffset() ||
-                so_addr.GetOffset() ==
-                    addr_range.GetBaseAddress().GetOffset() +
-                        addr_range.GetByteSize()) {
+                so_addr.GetOffset() == addr_range.GetBaseAddress().GetOffset() +
+                                           addr_range.GetByteSize()) {
               resolved_flags |= flags;
             }
           } else {
@@ -636,9 +635,7 @@ void Module::FindCompileUnits(const FileSpec &path,
 Module::LookupInfo::LookupInfo(ConstString name,
                                FunctionNameType name_type_mask,
                                LanguageType language)
-    : m_name(name), m_lookup_name(), m_language(language),
-      m_name_type_mask(eFunctionNameTypeNone),
-      m_match_name_after_lookup(false) {
+    : m_name(name), m_lookup_name(), m_language(language) {
   const char *name_cstr = name.GetCString();
   llvm::StringRef basename;
   llvm::StringRef context;
@@ -765,8 +762,7 @@ void Module::LookupInfo::Prune(SymbolContextList &sc_list,
       // pull anything out
       ConstString mangled_name(sc.GetFunctionName(Mangled::ePreferMangled));
       ConstString full_name(sc.GetFunctionName());
-      if (mangled_name != m_name && full_name != m_name)
-      {
+      if (mangled_name != m_name && full_name != m_name) {
         CPlusPlusLanguage::MethodName cpp_method(full_name);
         if (cpp_method.IsValid()) {
           if (cpp_method.GetContext().empty()) {
@@ -940,7 +936,6 @@ void Module::FindTypes_Impl(
     size_t max_matches,
     llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
     TypeMap &types) {
-  LLDB_SCOPED_TIMER();
   if (SymbolFile *symbols = GetSymbolFile())
     symbols->FindTypes(name, parent_decl_ctx, max_matches,
                        searched_symbol_files, types);
@@ -960,8 +955,8 @@ void Module::FindTypesInNamespace(ConstString type_name,
   }
 }
 
-lldb::TypeSP Module::FindFirstType(const SymbolContext &sc,
-                                   ConstString name, bool exact_match) {
+lldb::TypeSP Module::FindFirstType(const SymbolContext &sc, ConstString name,
+                                   bool exact_match) {
   TypeList type_list;
   llvm::DenseSet<lldb_private::SymbolFile *> searched_symbol_files;
   FindTypes(name, exact_match, 1, searched_symbol_files, type_list);
@@ -1027,7 +1022,9 @@ void Module::FindTypes(
     llvm::ArrayRef<CompilerContext> pattern, LanguageSet languages,
     llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
     TypeMap &types) {
-  LLDB_SCOPED_TIMER();
+  // If a scoped timer is needed, place it in a SymbolFile::FindTypes override.
+  // A timer here is too high volume for some cases, for example when calling
+  // FindTypes on each object file.
   if (SymbolFile *symbols = GetSymbolFile())
     symbols->FindTypes(pattern, languages, searched_symbol_files, types);
 }
@@ -1332,9 +1329,8 @@ void Module::SymbolIndicesToSymbolContextList(
   }
 }
 
-void Module::FindFunctionSymbols(ConstString name,
-                                   uint32_t name_type_mask,
-                                   SymbolContextList &sc_list) {
+void Module::FindFunctionSymbols(ConstString name, uint32_t name_type_mask,
+                                 SymbolContextList &sc_list) {
   LLDB_SCOPED_TIMERF("Module::FindSymbolsFunctions (name = %s, mask = 0x%8.8x)",
                      name.AsCString(), name_type_mask);
   if (Symtab *symtab = GetSymtab())
@@ -1342,13 +1338,10 @@ void Module::FindFunctionSymbols(ConstString name,
 }
 
 void Module::FindSymbolsWithNameAndType(ConstString name,
-                                          SymbolType symbol_type,
-                                          SymbolContextList &sc_list) {
+                                        SymbolType symbol_type,
+                                        SymbolContextList &sc_list) {
   // No need to protect this call using m_mutex all other method calls are
   // already thread safe.
-  LLDB_SCOPED_TIMERF(
-      "Module::FindSymbolsWithNameAndType (name = %s, type = %i)",
-      name.AsCString(), symbol_type);
   if (Symtab *symtab = GetSymtab()) {
     std::vector<uint32_t> symbol_indexes;
     symtab->FindAllSymbolsWithNameAndType(name, symbol_type, symbol_indexes);
@@ -1608,14 +1601,16 @@ bool Module::FindSourceFile(const FileSpec &orig_spec,
   return false;
 }
 
-llvm::Optional<std::string> Module::RemapSourceFile(llvm::StringRef path) const {
+llvm::Optional<std::string>
+Module::RemapSourceFile(llvm::StringRef path) const {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (auto remapped = m_source_mappings.RemapPath(path))
     return remapped->GetPath();
   return {};
 }
 
-void Module::RegisterXcodeSDK(llvm::StringRef sdk_name, llvm::StringRef sysroot) {
+void Module::RegisterXcodeSDK(llvm::StringRef sdk_name,
+                              llvm::StringRef sysroot) {
   XcodeSDK sdk(sdk_name.str());
   llvm::StringRef sdk_path(HostInfo::GetXcodeSDKPath(sdk));
   if (sdk_path.empty())
@@ -1630,7 +1625,7 @@ void Module::RegisterXcodeSDK(llvm::StringRef sdk_name, llvm::StringRef sysroot)
 bool Module::MergeArchitecture(const ArchSpec &arch_spec) {
   if (!arch_spec.IsValid())
     return false;
-  LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT | LIBLLDB_LOG_MODULES),
+  LLDB_LOGF(GetLog(LLDBLog::Object | LLDBLog::Modules),
             "module has arch %s, merging/replacing with arch %s",
             m_arch.GetTriple().getTriple().c_str(),
             arch_spec.GetTriple().getTriple().c_str());
@@ -1660,4 +1655,37 @@ bool Module::GetIsDynamicLinkEditor() {
     return obj_file->GetIsDynamicLinkEditor();
 
   return false;
+}
+
+uint32_t Module::Hash() {
+  std::string identifier;
+  llvm::raw_string_ostream id_strm(identifier);
+  id_strm << m_arch.GetTriple().str() << '-' << m_file.GetPath();
+  if (m_object_name)
+    id_strm << '(' << m_object_name.GetStringRef() << ')';
+  if (m_object_offset > 0)
+    id_strm << m_object_offset;
+  const auto mtime = llvm::sys::toTimeT(m_object_mod_time);
+  if (mtime > 0)
+    id_strm << mtime;
+  return llvm::djbHash(id_strm.str());
+}
+
+std::string Module::GetCacheKey() {
+  std::string key;
+  llvm::raw_string_ostream strm(key);
+  strm << m_arch.GetTriple().str() << '-' << m_file.GetFilename();
+  if (m_object_name)
+    strm << '(' << m_object_name.GetStringRef() << ')';
+  strm << '-' << llvm::format_hex(Hash(), 10);
+  return strm.str();
+}
+
+DataFileCache *Module::GetIndexCache() {
+  if (!ModuleList::GetGlobalModuleListProperties().GetEnableLLDBIndexCache())
+    return nullptr;
+  // NOTE: intentional leak so we don't crash if global destructor chain gets
+  // called as other threads still use the result of this function
+  static DataFileCache *g_data_file_cache = new DataFileCache(ModuleList::GetGlobalModuleListProperties().GetLLDBIndexCachePath().GetPath());
+  return g_data_file_cache;
 }

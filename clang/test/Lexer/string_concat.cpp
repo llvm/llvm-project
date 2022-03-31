@@ -7,7 +7,7 @@ typedef __CHAR16_TYPE__ char16_t;
 typedef __CHAR32_TYPE__ char32_t;
 #endif
 
-void f() {
+void f(void) {
 
   const char* a = u8"abc" u"abc"; // expected-error {{unsupported non-standard concatenation of string literals}}
   const char* b = u8"abc" U"abc"; // expected-error {{unsupported non-standard concatenation of string literals}}

@@ -96,12 +96,19 @@ __kmp_acquire_tas_lock_timed_template(kmp_tas_lock_t *lck, kmp_int32 gtid) {
   }
 
   kmp_uint32 spins;
+  kmp_uint64 time;
   KMP_FSYNC_PREPARE(lck);
   KMP_INIT_YIELD(spins);
+  KMP_INIT_BACKOFF(time);
   kmp_backoff_t backoff = __kmp_spin_backoff_params;
   do {
+#if !KMP_HAVE_UMWAIT
     __kmp_spin_backoff(&backoff);
-    KMP_YIELD_OVERSUB_ELSE_SPIN(spins);
+#else
+    if (!__kmp_tpause_enabled)
+      __kmp_spin_backoff(&backoff);
+#endif
+    KMP_YIELD_OVERSUB_ELSE_SPIN(spins, time);
   } while (KMP_ATOMIC_LD_RLX(&lck->lk.poll) != tas_free ||
            !__kmp_atomic_compare_store_acq(&lck->lk.poll, tas_free, tas_busy));
   KMP_FSYNC_ACQUIRED(lck);
@@ -1947,7 +1954,7 @@ static inline bool __kmp_is_unlocked_queuing_lock(kmp_queuing_lock_t *lck) {
 
 // We need a fence here, since we must ensure that no memory operations
 // from later in this thread float above that read.
-#if KMP_COMPILER_ICC
+#if KMP_COMPILER_ICC || KMP_COMPILER_ICX
   _mm_mfence();
 #else
   __sync_synchronize();
@@ -2227,10 +2234,12 @@ __kmp_acquire_drdpa_lock_timed_template(kmp_drdpa_lock_t *lck, kmp_int32 gtid) {
   // The current implementation of KMP_WAIT doesn't allow for mask
   // and poll to be re-read every spin iteration.
   kmp_uint32 spins;
+  kmp_uint64 time;
   KMP_FSYNC_PREPARE(lck);
   KMP_INIT_YIELD(spins);
+  KMP_INIT_BACKOFF(time);
   while (polls[ticket & mask] < ticket) { // atomic load
-    KMP_YIELD_OVERSUB_ELSE_SPIN(spins);
+    KMP_YIELD_OVERSUB_ELSE_SPIN(spins, time);
     // Re-read the mask and the poll pointer from the lock structure.
     //
     // Make certain that "mask" is read before "polls" !!!
@@ -2659,9 +2668,17 @@ void __kmp_spin_backoff(kmp_backoff_t *boff) {
   kmp_uint32 i;
   for (i = boff->step; i > 0; i--) {
     kmp_uint64 goal = __kmp_tsc() + boff->min_tick;
-    do {
-      KMP_CPU_PAUSE();
-    } while (before(__kmp_tsc(), goal));
+#if KMP_HAVE_UMWAIT
+    if (__kmp_umwait_enabled) {
+      __kmp_tpause(0, boff->min_tick);
+    } else {
+#endif
+      do {
+        KMP_CPU_PAUSE();
+      } while (before(__kmp_tsc(), goal));
+#if KMP_HAVE_UMWAIT
+    }
+#endif
   }
   boff->step = (boff->step << 1 | 1) & (boff->max_backoff - 1);
 }

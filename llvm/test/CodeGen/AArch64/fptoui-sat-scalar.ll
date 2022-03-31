@@ -22,8 +22,7 @@ define i1 @test_unsigned_i1_f32(float %f) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fcvtzu w8, s0
 ; CHECK-NEXT:    cmp w8, #1
-; CHECK-NEXT:    csinc w8, w8, wzr, lo
-; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    csinc w0, w8, wzr, lo
 ; CHECK-NEXT:    ret
     %x = call i1 @llvm.fptoui.sat.i1.f32(float %f)
     ret i1 %x
@@ -172,8 +171,7 @@ define i1 @test_unsigned_i1_f64(double %f) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fcvtzu w8, d0
 ; CHECK-NEXT:    cmp w8, #1
-; CHECK-NEXT:    csinc w8, w8, wzr, lo
-; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    csinc w0, w8, wzr, lo
 ; CHECK-NEXT:    ret
     %x = call i1 @llvm.fptoui.sat.i1.f64(double %f)
     ret i1 %x
@@ -323,16 +321,14 @@ define i1 @test_unsigned_i1_f16(half %f) nounwind {
 ; CHECK-CVT-NEXT:    fcvt s0, h0
 ; CHECK-CVT-NEXT:    fcvtzu w8, s0
 ; CHECK-CVT-NEXT:    cmp w8, #1
-; CHECK-CVT-NEXT:    csinc w8, w8, wzr, lo
-; CHECK-CVT-NEXT:    and w0, w8, #0x1
+; CHECK-CVT-NEXT:    csinc w0, w8, wzr, lo
 ; CHECK-CVT-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: test_unsigned_i1_f16:
 ; CHECK-FP16:       // %bb.0:
 ; CHECK-FP16-NEXT:    fcvtzu w8, h0
 ; CHECK-FP16-NEXT:    cmp w8, #1
-; CHECK-FP16-NEXT:    csinc w8, w8, wzr, lo
-; CHECK-FP16-NEXT:    and w0, w8, #0x1
+; CHECK-FP16-NEXT:    csinc w0, w8, wzr, lo
 ; CHECK-FP16-NEXT:    ret
     %x = call i1 @llvm.fptoui.sat.i1.f16(half %f)
     ret i1 %x

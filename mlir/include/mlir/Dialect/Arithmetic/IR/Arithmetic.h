@@ -12,6 +12,7 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Interfaces/CastInterfaces.h"
+#include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/VectorInterfaces.h"
 
@@ -89,8 +90,8 @@ public:
   static bool classof(Operation *op);
 };
 
-} // end namespace arith
-} // end namespace mlir
+} // namespace arith
+} // namespace mlir
 
 //===----------------------------------------------------------------------===//
 // Utility Functions
@@ -109,7 +110,21 @@ bool applyCmpPredicate(arith::CmpIPredicate predicate, const APInt &lhs,
 bool applyCmpPredicate(arith::CmpFPredicate predicate, const APFloat &lhs,
                        const APFloat &rhs);
 
-} // end namespace arith
-} // end namespace mlir
+/// Returns the identity value attribute associated with an AtomicRMWKind op.
+Attribute getIdentityValueAttr(AtomicRMWKind kind, Type resultType,
+                               OpBuilder &builder, Location loc);
+
+/// Returns the identity value associated with an AtomicRMWKind op.
+Value getIdentityValue(AtomicRMWKind op, Type resultType, OpBuilder &builder,
+                       Location loc);
+
+/// Returns the value obtained by applying the reduction operation kind
+/// associated with a binary AtomicRMWKind op to `lhs` and `rhs`.
+Value getReductionOp(AtomicRMWKind op, OpBuilder &builder, Location loc,
+                     Value lhs, Value rhs);
+
+arith::CmpIPredicate invertPredicate(arith::CmpIPredicate pred);
+} // namespace arith
+} // namespace mlir
 
 #endif // MLIR_DIALECT_ARITHMETIC_IR_ARITHMETIC_H_

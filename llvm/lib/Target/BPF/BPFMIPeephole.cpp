@@ -24,6 +24,7 @@
 #include "BPFInstrInfo.h"
 #include "BPFTargetMachine.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/Support/Debug.h"
@@ -56,8 +57,8 @@ private:
   bool isInsnFrom32Def(MachineInstr *DefInsn);
   bool isPhiFrom32Def(MachineInstr *MovMI);
   bool isMovFrom32Def(MachineInstr *MovMI);
-  bool eliminateZExtSeq(void);
-  bool eliminateZExt(void);
+  bool eliminateZExtSeq();
+  bool eliminateZExt();
 
   std::set<MachineInstr *> PhiInsns;
 
@@ -172,7 +173,7 @@ bool BPFMIPeephole::isMovFrom32Def(MachineInstr *MovMI)
   return true;
 }
 
-bool BPFMIPeephole::eliminateZExtSeq(void) {
+bool BPFMIPeephole::eliminateZExtSeq() {
   MachineInstr* ToErase = nullptr;
   bool Eliminated = false;
 
@@ -240,7 +241,7 @@ bool BPFMIPeephole::eliminateZExtSeq(void) {
   return Eliminated;
 }
 
-bool BPFMIPeephole::eliminateZExt(void) {
+bool BPFMIPeephole::eliminateZExt() {
   MachineInstr* ToErase = nullptr;
   bool Eliminated = false;
 
@@ -312,7 +313,7 @@ private:
   // Initialize class variables.
   void initialize(MachineFunction &MFParm);
 
-  bool eliminateRedundantMov(void);
+  bool eliminateRedundantMov();
 
 public:
 
@@ -334,7 +335,7 @@ void BPFMIPreEmitPeephole::initialize(MachineFunction &MFParm) {
   LLVM_DEBUG(dbgs() << "*** BPF PreEmit peephole pass ***\n\n");
 }
 
-bool BPFMIPreEmitPeephole::eliminateRedundantMov(void) {
+bool BPFMIPreEmitPeephole::eliminateRedundantMov() {
   MachineInstr* ToErase = nullptr;
   bool Eliminated = false;
 
@@ -405,7 +406,7 @@ private:
   // Initialize class variables.
   void initialize(MachineFunction &MFParm);
 
-  bool eliminateTruncSeq(void);
+  bool eliminateTruncSeq();
 
 public:
 
@@ -452,7 +453,7 @@ void BPFMIPeepholeTruncElim::initialize(MachineFunction &MFParm) {
 // are 32-bit registers, but later on, kernel verifier will rewrite
 // it with 64-bit value. Therefore, truncating the value after the
 // load will result in incorrect code.
-bool BPFMIPeepholeTruncElim::eliminateTruncSeq(void) {
+bool BPFMIPeepholeTruncElim::eliminateTruncSeq() {
   MachineInstr* ToErase = nullptr;
   bool Eliminated = false;
 

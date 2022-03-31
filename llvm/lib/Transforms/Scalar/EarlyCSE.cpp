@@ -16,7 +16,6 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopedHashTable.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -30,19 +29,16 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
-#include "llvm/IR/Use.h"
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -55,7 +51,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
-#include "llvm/Transforms/Utils/GuardUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 #include <deque>
@@ -603,7 +598,10 @@ public:
            const TargetTransformInfo &TTI, DominatorTree &DT,
            AssumptionCache &AC, MemorySSA *MSSA)
       : TLI(TLI), TTI(TTI), DT(DT), AC(AC), SQ(DL, &TLI, &DT, &AC), MSSA(MSSA),
-        MSSAUpdater(std::make_unique<MemorySSAUpdater>(MSSA)) {}
+        MSSAUpdater(std::make_unique<MemorySSAUpdater>(MSSA)) {
+    if (MSSA)
+      MSSA->ensureOptimizedUses();
+  }
 
   bool run();
 
@@ -781,6 +779,21 @@ private:
       return getLoadStorePointerOperand(Inst);
     }
 
+    Type *getValueType() const {
+      // TODO: handle target-specific intrinsics.
+      if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(Inst)) {
+        switch (II->getIntrinsicID()) {
+        case Intrinsic::masked_load:
+          return II->getType();
+        case Intrinsic::masked_store:
+          return II->getArgOperand(0)->getType();
+        default:
+          return nullptr;
+        }
+      }
+      return getLoadStoreType(Inst);
+    }
+
     bool mayReadFromMemory() const {
       if (IntrID != 0)
         return Info.ReadMem;
@@ -827,10 +840,13 @@ private:
                         const ParseMemoryInst &Later);
 
   Value *getOrCreateResult(Value *Inst, Type *ExpectedType) const {
+    // TODO: We could insert relevant casts on type mismatch here.
     if (auto *LI = dyn_cast<LoadInst>(Inst))
-      return LI;
-    if (auto *SI = dyn_cast<StoreInst>(Inst))
-      return SI->getValueOperand();
+      return LI->getType() == ExpectedType ? LI : nullptr;
+    else if (auto *SI = dyn_cast<StoreInst>(Inst)) {
+      Value *V = SI->getValueOperand();
+      return V->getType() == ExpectedType ? V : nullptr;
+    }
     assert(isa<IntrinsicInst>(Inst) && "Instruction not supported");
     auto *II = cast<IntrinsicInst>(Inst);
     if (isHandledNonTargetIntrinsic(II->getIntrinsicID()))
@@ -1159,6 +1175,9 @@ bool EarlyCSE::overridingStores(const ParseMemoryInst &Earlier,
          "Violated invariant");
   if (Earlier.getPointerOperand() != Later.getPointerOperand())
     return false;
+  if (!Earlier.getValueType() || !Later.getValueType() ||
+      Earlier.getValueType() != Later.getValueType())
+    return false;
   if (Earlier.getMatchingId() != Later.getMatchingId())
     return false;
   // At the moment, we don't remove ordered stores, but do remove
@@ -1366,8 +1385,16 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
           LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");
           continue;
         }
-        if (auto *I = dyn_cast<Instruction>(V))
-          I->andIRFlags(&Inst);
+        if (auto *I = dyn_cast<Instruction>(V)) {
+          // If I being poison triggers UB, there is no need to drop those
+          // flags. Otherwise, only retain flags present on both I and Inst.
+          // TODO: Currently some fast-math flags are not treated as
+          // poison-generating even though they should. Until this is fixed,
+          // always retain flags present on both I and Inst for floating point
+          // instructions.
+          if (isa<FPMathOperator>(I) || (I->hasPoisonGeneratingFlags() && !programUndefinedIfPoison(I)))
+            I->andIRFlags(&Inst);
+        }
         Inst.replaceAllUsesWith(V);
         salvageKnowledge(&Inst, &AC);
         removeMSSA(Inst);

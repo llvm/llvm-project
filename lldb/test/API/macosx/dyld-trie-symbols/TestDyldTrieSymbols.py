@@ -37,14 +37,12 @@ class DyldTrieSymbolsTestCase(TestBase):
         unstripped_foo_symbols = unstripped_target.FindSymbols("foo")
         self.assertEqual(unstripped_foo_symbols.GetSize(), 1)
 
-        # make sure we can look up the mangled name, demangled base name,
-        # demangled name with argument.
+        # Make sure we can look up the mangled name and the demangled base
+        # name.
         unstripped_Z3pat_symbols = unstripped_target.FindSymbols("_Z3pati")
         self.assertEqual(unstripped_Z3pat_symbols.GetSize(), 1)
         unstripped_pat_symbols = unstripped_target.FindSymbols("pat")
         self.assertEqual(unstripped_pat_symbols.GetSize(), 1)
-        unstripped_patint_symbols = unstripped_target.FindSymbols("pat(int)")
-        self.assertEqual(unstripped_patint_symbols.GetSize(), 1)
 
         unstripped_bar_symbols = unstripped_target.FindSymbols("bar")
         self.assertEqual(unstripped_bar_symbols.GetSize(), 1)
@@ -77,8 +75,6 @@ class DyldTrieSymbolsTestCase(TestBase):
         self.assertEqual(stripped_Z3pat_symbols.GetSize(), 1)
         stripped_pat_symbols = stripped_target.FindSymbols("pat")
         self.assertEqual(stripped_pat_symbols.GetSize(), 1)
-        stripped_patint_symbols = stripped_target.FindSymbols("pat(int)")
-        self.assertEqual(stripped_patint_symbols.GetSize(), 1)
 
         # bar should have been strippped.  We should not find it, or the
         # stripping went wrong.

@@ -1,5 +1,5 @@
 # RUN: %clang -c -o %t %s
-# RUN: %llvm_jitlink -dlopen /usr/lib/swift/libswiftCore.dylib %t
+# RUN: %llvm_jitlink -preload /usr/lib/swift/libswiftCore.dylib %t
 
 # REQUIRES: osx-swift-runtime
 

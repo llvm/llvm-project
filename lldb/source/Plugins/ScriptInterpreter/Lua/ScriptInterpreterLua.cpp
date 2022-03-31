@@ -217,7 +217,6 @@ bool ScriptInterpreterLua::LoadScriptingModule(
     lldb_private::Status &error, StructuredData::ObjectSP *module_sp,
     FileSpec extra_search_dir) {
 
-  FileSystem::Instance().Collect(filename);
   if (llvm::Error e = m_lua->LoadModule(filename)) {
     error.SetErrorStringWithFormatv("lua failed to import '{0}': {1}\n",
                                     filename, llvm::toString(std::move(e)));

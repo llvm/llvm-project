@@ -60,17 +60,18 @@ define <vscale x 14 x i1> @extract_nxv14i1_nxv28i1_14(<vscale x 28 x i1> %in) {
 ; CHECK-LABEL: extract_nxv14i1_nxv28i1_14:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-NEXT:    punpkhi p2.h, p1.b
 ; CHECK-NEXT:    punpklo p1.h, p1.b
 ; CHECK-NEXT:    punpklo p2.h, p2.b
+; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    punpkhi p3.h, p1.b
 ; CHECK-NEXT:    punpkhi p4.h, p2.b
+; CHECK-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    punpklo p1.h, p1.b
 ; CHECK-NEXT:    punpklo p2.h, p2.b
 ; CHECK-NEXT:    punpkhi p5.h, p3.b
@@ -1014,3 +1015,63 @@ define <vscale x 4 x bfloat> @extract_nxv4bf16_nxv16bf16_12(<vscale x 16 x bfloa
 
 declare <vscale x 4 x bfloat> @llvm.experimental.vector.extract.nxv4bf16.nxv16bf16(<vscale x 16 x bfloat>, i64)
 
+
+;
+; Extract from a splat
+;
+define <vscale x 2 x float> @extract_nxv2f32_nxv4f32_splat(float %f) {
+; CHECK-LABEL: extract_nxv2f32_nxv4f32_splat:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
+; CHECK-NEXT:    mov z0.s, s0
+; CHECK-NEXT:    ret
+  %ins = insertelement <vscale x 4 x float> poison, float %f, i32 0
+  %splat = shufflevector <vscale x 4 x float> %ins, <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
+  %ext = call <vscale x 2 x float> @llvm.experimental.vector.extract.nxv2f32.nxv4f32(<vscale x 4 x float> %splat, i64 0)
+  ret <vscale x 2 x float> %ext
+}
+
+define <vscale x 2 x float> @extract_nxv2f32_nxv4f32_splat_const() {
+; CHECK-LABEL: extract_nxv2f32_nxv4f32_splat_const:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov z0.s, #1.00000000
+; CHECK-NEXT:    ret
+  %ins = insertelement <vscale x 4 x float> poison, float 1.0, i32 0
+  %splat = shufflevector <vscale x 4 x float> %ins, <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
+  %ext = call <vscale x 2 x float> @llvm.experimental.vector.extract.nxv2f32.nxv4f32(<vscale x 4 x float> %splat, i64 0)
+  ret <vscale x 2 x float> %ext
+}
+
+define <vscale x 4 x i32> @extract_nxv4i32_nxv8i32_splat_const() {
+; CHECK-LABEL: extract_nxv4i32_nxv8i32_splat_const:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.s, #1 // =0x1
+; CHECK-NEXT:    ret
+  %ins = insertelement <vscale x 8 x i32> poison, i32 1, i32 0
+  %splat = shufflevector <vscale x 8 x i32> %ins, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
+  %ext = call <vscale x 4 x i32> @llvm.experimental.vector.extract.nxv4i32.nxv8i32(<vscale x 8 x i32> %splat, i64 0)
+  ret <vscale x 4 x i32> %ext
+}
+
+define <vscale x 2 x i1> @extract_nxv2i1_nxv16i1_all_ones() {
+; CHECK-LABEL: extract_nxv2i1_nxv16i1_all_ones:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ret
+  %ins = insertelement <vscale x 16 x i1> poison, i1 1, i32 0
+  %splat = shufflevector <vscale x 16 x i1> %ins, <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
+  %ext = call <vscale x 2 x i1> @llvm.experimental.vector.extract.nxv2i1.nxv16i1(<vscale x 16 x i1> %splat, i64 0)
+  ret <vscale x 2 x i1> %ext
+}
+
+define <vscale x 2 x i1> @extract_nxv2i1_nxv16i1_all_zero() {
+; CHECK-LABEL: extract_nxv2i1_nxv16i1_all_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    pfalse p0.b
+; CHECK-NEXT:    ret
+  %ext = call <vscale x 2 x i1> @llvm.experimental.vector.extract.nxv2i1.nxv16i1(<vscale x 16 x i1> zeroinitializer, i64 0)
+  ret <vscale x 2 x i1> %ext
+}
+
+declare <vscale x 2 x float> @llvm.experimental.vector.extract.nxv2f32.nxv4f32(<vscale x 4 x float>, i64)
+declare <vscale x 4 x i32> @llvm.experimental.vector.extract.nxv4i32.nxv8i32(<vscale x 8 x i32>, i64)

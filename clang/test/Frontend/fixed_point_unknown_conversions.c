@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -verify -ffixed-point %s
 
-void func() {
+void func(void) {
   _Bool b;
   char c;
   int i;

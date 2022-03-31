@@ -875,22 +875,19 @@ define i32 @zext_load_i32_by_i8_bswap(i32* %arg) {
 ; CHECK-ARMv6-LABEL: zext_load_i32_by_i8_bswap:
 ; CHECK-ARMv6:       @ %bb.0:
 ; CHECK-ARMv6-NEXT:    ldrh r0, [r0]
-; CHECK-ARMv6-NEXT:    lsl r0, r0, #16
-; CHECK-ARMv6-NEXT:    rev r0, r0
+; CHECK-ARMv6-NEXT:    rev16 r0, r0
 ; CHECK-ARMv6-NEXT:    bx lr
 ;
 ; CHECK-THUMBv6-LABEL: zext_load_i32_by_i8_bswap:
 ; CHECK-THUMBv6:       @ %bb.0:
 ; CHECK-THUMBv6-NEXT:    ldrh r0, [r0]
-; CHECK-THUMBv6-NEXT:    lsls r0, r0, #16
-; CHECK-THUMBv6-NEXT:    rev r0, r0
+; CHECK-THUMBv6-NEXT:    rev16 r0, r0
 ; CHECK-THUMBv6-NEXT:    bx lr
 ;
 ; CHECK-THUMBv7-LABEL: zext_load_i32_by_i8_bswap:
 ; CHECK-THUMBv7:       @ %bb.0:
 ; CHECK-THUMBv7-NEXT:    ldrh r0, [r0]
-; CHECK-THUMBv7-NEXT:    lsls r0, r0, #16
-; CHECK-THUMBv7-NEXT:    rev r0, r0
+; CHECK-THUMBv7-NEXT:    rev16 r0, r0
 ; CHECK-THUMBv7-NEXT:    bx lr
 
   %tmp = bitcast i32* %arg to i8*

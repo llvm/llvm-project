@@ -205,7 +205,7 @@ public:
     std::vector<LLVMEnumAttrCase> cases;
 
     for (auto &c : tblgen::EnumAttr::getAllCases())
-      cases.push_back(LLVMEnumAttrCase(c));
+      cases.emplace_back(c);
 
     return cases;
   }

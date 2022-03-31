@@ -13,11 +13,21 @@
 ; often - add another IR file with a different DW_OP_convert that's otherwise
 ; identical and demonstrate that they have different DWO IDs.
 
-; SPLIT: 0x00000000: Compile Unit: {{.*}} DWO_id = 0xecf2563326b0bdd3
+; SPLIT: 0x00000000: Compile Unit: {{.*}} DWO_id = 0xa6edbf487b0a7acf
 
 ; Regression testing a fairly quirky bug where instead of hashing (see above),
 ; extra bytes would be emitted into the output assembly in no
 ; particular/intentional section - so let's check they don't show up at all:
+; ASM-NOT: .asciz  "\200\200\200"
+; ASM:      .byte   10                              # Loc expr size
+; ASM-NEXT: .byte   17                              # DW_OP_consts
+; ASM-NEXT: .byte   7                               # 7
+; ASM-NEXT: .byte   48                              # DW_OP_lit0
+; ASM-NEXT: .byte   34                              # DW_OP_plus
+; ASM-NEXT: .byte   168                             # DW_OP_convert
+; ASM-NEXT: .asciz  "\232\200\200"                  #
+; ASM-NEXT: .byte   159                             # DW_OP_stack_value
+; ASM-NEXT: .byte   0                               # DW_LLE_end_of_list
 ; ASM-NOT: .asciz  "\200\200\200"
 
 ; CHECK: 0x{{0*}}[[TYPE:.*]]: DW_TAG_base_type

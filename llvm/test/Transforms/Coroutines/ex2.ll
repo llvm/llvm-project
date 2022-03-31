@@ -1,7 +1,7 @@
 ; Second example from Doc/Coroutines.rst (custom alloc and free functions)
 ; RUN: opt < %s -passes='default<O2>' -enable-coroutines -S | FileCheck %s
 
-define i8* @f(i32 %n) {
+define i8* @f(i32 %n) "coroutine.presplit"="0" {
 entry:
   %id = call token @llvm.coro.id(i32 0, i8* null, i8* null, i8* null)
   %need.dyn.alloc = call i1 @llvm.coro.alloc(token %id)

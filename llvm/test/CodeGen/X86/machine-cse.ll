@@ -112,6 +112,8 @@ define i32 @cross_mbb_phys_cse(i32 %a, i32 %b) nounwind ssp {
 ; CHECK-NEXT:    cmpl %esi, %edi
 ; CHECK-NEXT:    ja .LBB2_2
 ; CHECK-NEXT:  # %bb.1: # %if.end
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpl %esi, %edi
 ; CHECK-NEXT:    sbbl %eax, %eax
 ; CHECK-NEXT:  .LBB2_2: # %return
 ; CHECK-NEXT:    retq

@@ -32,10 +32,11 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
+#include "lldb/Utility/VASPrintf.h"
 #include "lldb/lldb-private.h"
-
 #include <memory>
 
 using namespace lldb;
@@ -112,7 +113,7 @@ bool RegisterContextUnwind::IsUnwindPlanValidForCurrentPC(
 // zeroth frame or currently executing frame.
 
 void RegisterContextUnwind::InitializeZerothFrame() {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
+  Log *log = GetLog(LLDBLog::Unwind);
   ExecutionContext exe_ctx(m_thread.shared_from_this());
   RegisterContextSP reg_ctx_sp = m_thread.GetRegisterContext();
 
@@ -303,7 +304,7 @@ void RegisterContextUnwind::InitializeZerothFrame() {
 // RegisterContextUnwind "below" it to provide things like its current pc value.
 
 void RegisterContextUnwind::InitializeNonZerothFrame() {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
+  Log *log = GetLog(LLDBLog::Unwind);
   if (IsFrameZero()) {
     m_frame_type = eNotAValidFrame;
     UnwindLogMsg("non-zeroth frame tests positive for IsFrameZero -- that "
@@ -1247,7 +1248,7 @@ enum UnwindLLDB::RegisterSearchResult
 RegisterContextUnwind::SavedLocationForRegister(
     uint32_t lldb_regnum, lldb_private::UnwindLLDB::RegisterLocation &regloc) {
   RegisterNumber regnum(m_thread, eRegisterKindLLDB, lldb_regnum);
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
+  Log *log = GetLog(LLDBLog::Unwind);
 
   // Have we already found this register location?
   if (!m_registers.empty()) {
@@ -1509,7 +1510,7 @@ RegisterContextUnwind::SavedLocationForRegister(
                    regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB));
       return UnwindLLDB::RegisterSearchResult::eRegisterFound;
     } else {
-      std::string unwindplan_name("");
+      std::string unwindplan_name;
       if (m_full_unwind_plan_sp) {
         unwindplan_name += "via '";
         unwindplan_name += m_full_unwind_plan_sp->GetSourceName().AsCString();
@@ -2324,45 +2325,35 @@ bool RegisterContextUnwind::ReadPC(addr_t &pc) {
 }
 
 void RegisterContextUnwind::UnwindLogMsg(const char *fmt, ...) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
-  if (log) {
-    va_list args;
-    va_start(args, fmt);
+  Log *log = GetLog(LLDBLog::Unwind);
+  if (!log)
+    return;
 
-    char *logmsg;
-    if (vasprintf(&logmsg, fmt, args) == -1 || logmsg == nullptr) {
-      if (logmsg)
-        free(logmsg);
-      va_end(args);
-      return;
-    }
-    va_end(args);
+  va_list args;
+  va_start(args, fmt);
 
+  llvm::SmallString<0> logmsg;
+  if (VASprintf(logmsg, fmt, args)) {
     LLDB_LOGF(log, "%*sth%d/fr%u %s",
               m_frame_number < 100 ? m_frame_number : 100, "",
-              m_thread.GetIndexID(), m_frame_number, logmsg);
-    free(logmsg);
+              m_thread.GetIndexID(), m_frame_number, logmsg.c_str());
   }
+  va_end(args);
 }
 
 void RegisterContextUnwind::UnwindLogMsgVerbose(const char *fmt, ...) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
-  if (log && log->GetVerbose()) {
-    va_list args;
-    va_start(args, fmt);
+  Log *log = GetLog(LLDBLog::Unwind);
+  if (!log || !log->GetVerbose())
+    return;
 
-    char *logmsg;
-    if (vasprintf(&logmsg, fmt, args) == -1 || logmsg == nullptr) {
-      if (logmsg)
-        free(logmsg);
-      va_end(args);
-      return;
-    }
-    va_end(args);
+  va_list args;
+  va_start(args, fmt);
 
+  llvm::SmallString<0> logmsg;
+  if (VASprintf(logmsg, fmt, args)) {
     LLDB_LOGF(log, "%*sth%d/fr%u %s",
               m_frame_number < 100 ? m_frame_number : 100, "",
-              m_thread.GetIndexID(), m_frame_number, logmsg);
-    free(logmsg);
+              m_thread.GetIndexID(), m_frame_number, logmsg.c_str());
   }
+  va_end(args);
 }

@@ -41,8 +41,6 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
@@ -215,6 +213,53 @@ static bool simplifyCommonValuePhi(PHINode *P, LazyValueInfo *LVI,
   return true;
 }
 
+static Value *getValueOnEdge(LazyValueInfo *LVI, Value *Incoming,
+                             BasicBlock *From, BasicBlock *To,
+                             Instruction *CxtI) {
+  if (Constant *C = LVI->getConstantOnEdge(Incoming, From, To, CxtI))
+    return C;
+
+  // Look if the incoming value is a select with a scalar condition for which
+  // LVI can tells us the value. In that case replace the incoming value with
+  // the appropriate value of the select. This often allows us to remove the
+  // select later.
+  auto *SI = dyn_cast<SelectInst>(Incoming);
+  if (!SI)
+    return nullptr;
+
+  // Once LVI learns to handle vector types, we could also add support
+  // for vector type constants that are not all zeroes or all ones.
+  Value *Condition = SI->getCondition();
+  if (!Condition->getType()->isVectorTy()) {
+    if (Constant *C = LVI->getConstantOnEdge(Condition, From, To, CxtI)) {
+      if (C->isOneValue())
+        return SI->getTrueValue();
+      if (C->isZeroValue())
+        return SI->getFalseValue();
+    }
+  }
+
+  // Look if the select has a constant but LVI tells us that the incoming
+  // value can never be that constant. In that case replace the incoming
+  // value with the other value of the select. This often allows us to
+  // remove the select later.
+
+  // The "false" case
+  if (auto *C = dyn_cast<Constant>(SI->getFalseValue()))
+    if (LVI->getPredicateOnEdge(ICmpInst::ICMP_EQ, SI, C, From, To, CxtI) ==
+        LazyValueInfo::False)
+      return SI->getTrueValue();
+
+  // The "true" case,
+  // similar to the select "false" case, but try the select "true" value
+  if (auto *C = dyn_cast<Constant>(SI->getTrueValue()))
+    if (LVI->getPredicateOnEdge(ICmpInst::ICMP_EQ, SI, C, From, To, CxtI) ==
+        LazyValueInfo::False)
+      return SI->getFalseValue();
+
+  return nullptr;
+}
+
 static bool processPHI(PHINode *P, LazyValueInfo *LVI, DominatorTree *DT,
                        const SimplifyQuery &SQ) {
   bool Changed = false;
@@ -224,50 +269,11 @@ static bool processPHI(PHINode *P, LazyValueInfo *LVI, DominatorTree *DT,
     Value *Incoming = P->getIncomingValue(i);
     if (isa<Constant>(Incoming)) continue;
 
-    Value *V = LVI->getConstantOnEdge(Incoming, P->getIncomingBlock(i), BB, P);
-
-    // Look if the incoming value is a select with a scalar condition for which
-    // LVI can tells us the value. In that case replace the incoming value with
-    // the appropriate value of the select. This often allows us to remove the
-    // select later.
-    if (!V) {
-      SelectInst *SI = dyn_cast<SelectInst>(Incoming);
-      if (!SI) continue;
-
-      Value *Condition = SI->getCondition();
-      if (!Condition->getType()->isVectorTy()) {
-        if (Constant *C = LVI->getConstantOnEdge(
-                Condition, P->getIncomingBlock(i), BB, P)) {
-          if (C->isOneValue()) {
-            V = SI->getTrueValue();
-          } else if (C->isZeroValue()) {
-            V = SI->getFalseValue();
-          }
-          // Once LVI learns to handle vector types, we could also add support
-          // for vector type constants that are not all zeroes or all ones.
-        }
-      }
-
-      // Look if the select has a constant but LVI tells us that the incoming
-      // value can never be that constant. In that case replace the incoming
-      // value with the other value of the select. This often allows us to
-      // remove the select later.
-      if (!V) {
-        Constant *C = dyn_cast<Constant>(SI->getFalseValue());
-        if (!C) continue;
-
-        if (LVI->getPredicateOnEdge(ICmpInst::ICMP_EQ, SI, C,
-              P->getIncomingBlock(i), BB, P) !=
-            LazyValueInfo::False)
-          continue;
-        V = SI->getTrueValue();
-      }
-
-      LLVM_DEBUG(dbgs() << "CVP: Threading PHI over " << *SI << '\n');
+    Value *V = getValueOnEdge(LVI, Incoming, P->getIncomingBlock(i), BB, P);
+    if (V) {
+      P->setIncomingValue(i, V);
+      Changed = true;
     }
-
-    P->setIncomingValue(i, V);
-    Changed = true;
   }
 
   if (Value *V = SimplifyInstruction(P, SQ)) {

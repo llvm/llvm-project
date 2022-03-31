@@ -7,11 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TextAPI/Target.h"
-#include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Support/Format.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
@@ -22,26 +19,26 @@ Expected<Target> Target::create(StringRef TargetValue) {
   auto ArchitectureStr = Result.first;
   auto Architecture = getArchitectureFromName(ArchitectureStr);
   auto PlatformStr = Result.second;
-  PlatformKind Platform;
-  Platform = StringSwitch<PlatformKind>(PlatformStr)
-                 .Case("macos", PlatformKind::macOS)
-                 .Case("ios", PlatformKind::iOS)
-                 .Case("tvos", PlatformKind::tvOS)
-                 .Case("watchos", PlatformKind::watchOS)
-                 .Case("bridgeos", PlatformKind::bridgeOS)
-                 .Case("maccatalyst", PlatformKind::macCatalyst)
-                 .Case("ios-simulator", PlatformKind::iOSSimulator)
-                 .Case("tvos-simulator", PlatformKind::tvOSSimulator)
-                 .Case("watchos-simulator", PlatformKind::watchOSSimulator)
-                 .Case("driverkit", PlatformKind::driverKit)
-                 .Default(PlatformKind::unknown);
+  PlatformType Platform;
+  Platform = StringSwitch<PlatformType>(PlatformStr)
+                 .Case("macos", PLATFORM_MACOS)
+                 .Case("ios", PLATFORM_IOS)
+                 .Case("tvos", PLATFORM_TVOS)
+                 .Case("watchos", PLATFORM_WATCHOS)
+                 .Case("bridgeos", PLATFORM_BRIDGEOS)
+                 .Case("maccatalyst", PLATFORM_MACCATALYST)
+                 .Case("ios-simulator", PLATFORM_IOSSIMULATOR)
+                 .Case("tvos-simulator", PLATFORM_TVOSSIMULATOR)
+                 .Case("watchos-simulator", PLATFORM_WATCHOSSIMULATOR)
+                 .Case("driverkit", PLATFORM_DRIVERKIT)
+                 .Default(PLATFORM_UNKNOWN);
 
-  if (Platform == PlatformKind::unknown) {
+  if (Platform == PLATFORM_UNKNOWN) {
     if (PlatformStr.startswith("<") && PlatformStr.endswith(">")) {
       PlatformStr = PlatformStr.drop_front().drop_back();
       unsigned long long RawValue;
       if (!PlatformStr.getAsInteger(10, RawValue))
-        Platform = (PlatformKind)RawValue;
+        Platform = (PlatformType)RawValue;
     }
   }
 

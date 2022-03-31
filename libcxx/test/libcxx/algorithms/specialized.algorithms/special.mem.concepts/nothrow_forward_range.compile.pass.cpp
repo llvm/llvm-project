@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
+// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // template<class R>
 // concept __nothrow_forward_range;
@@ -33,3 +33,10 @@ static_assert(std::ranges::__nothrow_forward_range<test_range<forward_iterator>>
 static_assert(!std::ranges::__nothrow_forward_range<test_range<cpp20_input_iterator>>);
 static_assert(std::ranges::forward_range<test_range<ForwardProxyIterator>>);
 static_assert(!std::ranges::__nothrow_forward_range<test_range<ForwardProxyIterator>>);
+
+constexpr bool forward_subsumes_input(std::ranges::__nothrow_forward_range auto&&) {
+  return true;
+}
+constexpr bool forward_subsumes_input(std::ranges::__nothrow_input_range auto&&);
+
+static_assert(forward_subsumes_input("foo"));

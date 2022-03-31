@@ -25,15 +25,24 @@ class ScriptedProcess;
 namespace lldb_private {
 
 class ScriptedThread : public lldb_private::Thread {
+
 public:
-  ScriptedThread(ScriptedProcess &process, Status &error);
+  ScriptedThread(ScriptedProcess &process,
+                 lldb::ScriptedThreadInterfaceSP interface_sp, lldb::tid_t tid,
+                 StructuredData::GenericSP script_object_sp = nullptr);
 
   ~ScriptedThread() override;
+
+  static llvm::Expected<std::shared_ptr<ScriptedThread>>
+  Create(ScriptedProcess &process,
+         StructuredData::Generic *script_object = nullptr);
 
   lldb::RegisterContextSP GetRegisterContext() override;
 
   lldb::RegisterContextSP
   CreateRegisterContextForFrame(lldb_private::StackFrame *frame) override;
+
+  bool LoadArtificialStackFrames();
 
   bool CalculateStopInfo() override;
 
@@ -59,8 +68,9 @@ private:
   std::shared_ptr<DynamicRegisterInfo> GetDynamicRegisterInfo();
 
   const ScriptedProcess &m_scripted_process;
+  lldb::ScriptedThreadInterfaceSP m_scripted_thread_interface_sp = nullptr;
+  lldb_private::StructuredData::GenericSP m_script_object_sp = nullptr;
   std::shared_ptr<DynamicRegisterInfo> m_register_info_sp = nullptr;
-  lldb_private::StructuredData::ObjectSP m_script_object_sp = nullptr;
 };
 
 } // namespace lldb_private

@@ -72,8 +72,8 @@ int main(int, char**)
     static_assert( year_month_day{sd} == ymd, ""); // and back
     }
 
-//  There's one more leap day between 1/1/40 and 1/1/70
-//  when compared to 1/1/70 -> 1/1/2000
+    // There's one more leap day between 1/1/40 and 1/1/70
+    // when compared to 1/1/70 -> 1/1/2000
     {
     constexpr year_month_day ymd{year{1940}, month{1}, day{2}};
     constexpr sys_days sd{ymd};
@@ -90,7 +90,7 @@ int main(int, char**)
     assert( year_month_day{sd} == ymd); // and back
     }
 
-//  These two tests check the wording for LWG 3206
+    // These two tests check the wording for LWG 3206
     {
     constexpr year_month_day ymd{year{1971}, month{1}, day{0}}; // bad day
     static_assert(!ymd.ok(),         "");

@@ -8,10 +8,13 @@
 
 #include "llvm/DebugInfo/PDB/PDB.h"
 
+#include "llvm/DebugInfo/PDB/ConcreteSymbolEnumerator.h"
+#include "llvm/DebugInfo/PDB/IPDBLineNumber.h"
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
 #include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolCompiland.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolExe.h"
+#include "llvm/DebugInfo/PDB/PDBSymbolTypeFunctionSig.h"
 #include "llvm/Support/Path.h"
 
 #include "llvm/Testing/Support/Error.h"

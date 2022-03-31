@@ -26,7 +26,6 @@ class raw_ostream;
 namespace DWARFYAML {
 
 struct Data;
-struct PubSection;
 
 Error emitDebugAbbrev(raw_ostream &OS, const Data &DI);
 Error emitDebugStr(raw_ostream &OS, const Data &DI);

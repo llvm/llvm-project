@@ -294,10 +294,10 @@ which first check the ``NOTE:`` line exists and matches the script name.
 These are the most common scripts and their purposes/applications in generating
 assertions:
 
-.. code-block::
+.. code-block:: none
 
   update_analyze_test_checks.py
-  opt --analyze --costmodel
+  opt -passes='print<cost-model>'
 
   update_cc_test_checks.py
   C/C++, or clang/clang++ (IR checks)
@@ -568,6 +568,18 @@ RUN lines:
 ``%{pathsep}``
 
    Expands to the path separator, i.e. ``:`` (or ``;`` on Windows).
+
+``${fs-src-root}``
+   Expands to the root component of file system paths for the source directory,
+   i.e. ``/`` on Unix systems or ``C:\`` (or another drive) on Windows.
+
+``${fs-tmp-root}``
+   Expands to the root component of file system paths for the test's temporary
+   directory, i.e. ``/`` on Unix systems or ``C:\`` (or another drive) on
+   Windows.
+
+``${fs-sep}``
+   Expands to the file system separator, i.e. ``/`` or ``\`` on Windows.
 
 ``%/s, %/S, %/t, %/T:``
 

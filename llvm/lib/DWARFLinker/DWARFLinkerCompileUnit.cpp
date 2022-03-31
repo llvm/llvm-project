@@ -40,8 +40,6 @@ StringRef CompileUnit::getSysRoot() {
 void CompileUnit::markEverythingAsKept() {
   unsigned Idx = 0;
 
-  setHasInterestingContent();
-
   for (auto &I : Info) {
     // Mark everything that wasn't explicit marked for pruning.
     I.Keep = !I.Prune;

@@ -17,6 +17,7 @@
 #include "StackMapPrinter.h"
 #include "llvm-readobj.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
@@ -30,7 +31,9 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/AMDGPUMetadataVerifier.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/BinaryFormat/MsgPackDocument.h"
 #include "llvm/Demangle/Demangle.h"
+#include "llvm/Object/Archive.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ELFTypes.h"
@@ -548,6 +551,9 @@ public:
     assert(&this->W.getOStream() == &llvm::fouts());
   }
 
+  void printFileSummary(StringRef FileStr, ObjectFile &Obj,
+                        ArrayRef<std::string> InputFilenames,
+                        const Archive *A) override;
   void printFileHeaders() override;
   void printGroupSections() override;
   void printRelocations() override;
@@ -697,7 +703,25 @@ private:
   void printMipsPLT(const MipsGOTParser<ELFT> &Parser) override;
   void printMipsABIFlags() override;
 
+protected:
   ScopedPrinter &W;
+};
+
+// JSONELFDumper shares most of the same implementation as LLVMELFDumper except
+// it uses a JSONScopedPrinter.
+template <typename ELFT> class JSONELFDumper : public LLVMELFDumper<ELFT> {
+public:
+  LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
+
+  JSONELFDumper(const object::ELFObjectFile<ELFT> &ObjF, ScopedPrinter &Writer)
+      : LLVMELFDumper<ELFT>(ObjF, Writer) {}
+
+  void printFileSummary(StringRef FileStr, ObjectFile &Obj,
+                        ArrayRef<std::string> InputFilenames,
+                        const Archive *A) override;
+
+private:
+  std::unique_ptr<DictScope> FileScope;
 };
 
 } // end anonymous namespace
@@ -709,6 +733,8 @@ static std::unique_ptr<ObjDumper>
 createELFDumper(const ELFObjectFile<ELFT> &Obj, ScopedPrinter &Writer) {
   if (opts::Output == opts::GNU)
     return std::make_unique<GNUELFDumper<ELFT>>(Obj, Writer);
+  else if (opts::Output == opts::JSON)
+    return std::make_unique<JSONELFDumper<ELFT>>(Obj, Writer);
   return std::make_unique<LLVMELFDumper<ELFT>>(Obj, Writer);
 }
 
@@ -1178,6 +1204,7 @@ const EnumEntry<unsigned> ElfMachineType[] = {
   ENUM_ENT(EM_LANAI,         "EM_LANAI"),
   ENUM_ENT(EM_BPF,           "EM_BPF"),
   ENUM_ENT(EM_VE,            "NEC SX-Aurora Vector Engine"),
+  ENUM_ENT(EM_LOONGARCH,     "LoongArch"),
 };
 
 const EnumEntry<unsigned> ElfSymbolBindings[] = {
@@ -1215,8 +1242,15 @@ const EnumEntry<unsigned> ElfSectionFlags[] = {
   ENUM_ENT(SHF_GROUP,            "G"),
   ENUM_ENT(SHF_TLS,              "T"),
   ENUM_ENT(SHF_COMPRESSED,       "C"),
-  ENUM_ENT(SHF_GNU_RETAIN,       "R"),
   ENUM_ENT(SHF_EXCLUDE,          "E"),
+};
+
+const EnumEntry<unsigned> ElfGNUSectionFlags[] = {
+  ENUM_ENT(SHF_GNU_RETAIN, "R")
+};
+
+const EnumEntry<unsigned> ElfSolarisSectionFlags[] = {
+  ENUM_ENT(SHF_SUNW_NODISCARD, "R")
 };
 
 const EnumEntry<unsigned> ElfXCoreSectionFlags[] = {
@@ -1248,9 +1282,19 @@ const EnumEntry<unsigned> ElfX86_64SectionFlags[] = {
 };
 
 static std::vector<EnumEntry<unsigned>>
-getSectionFlagsForTarget(unsigned EMachine) {
+getSectionFlagsForTarget(unsigned EOSAbi, unsigned EMachine) {
   std::vector<EnumEntry<unsigned>> Ret(std::begin(ElfSectionFlags),
                                        std::end(ElfSectionFlags));
+  switch (EOSAbi) {
+  case ELFOSABI_SOLARIS:
+    Ret.insert(Ret.end(), std::begin(ElfSolarisSectionFlags),
+               std::end(ElfSolarisSectionFlags));
+    break;
+  default:
+    Ret.insert(Ret.end(), std::begin(ElfGNUSectionFlags),
+               std::end(ElfGNUSectionFlags));
+    break;
+  }
   switch (EMachine) {
   case EM_ARM:
     Ret.insert(Ret.end(), std::begin(ElfARMSectionFlags),
@@ -1278,7 +1322,8 @@ getSectionFlagsForTarget(unsigned EMachine) {
   return Ret;
 }
 
-static std::string getGNUFlags(unsigned EMachine, uint64_t Flags) {
+static std::string getGNUFlags(unsigned EOSAbi, unsigned EMachine,
+                               uint64_t Flags) {
   // Here we are trying to build the flags string in the same way as GNU does.
   // It is not that straightforward. Imagine we have sh_flags == 0x90000000.
   // SHF_EXCLUDE ("E") has a value of 0x80000000 and SHF_MASKPROC is 0xf0000000.
@@ -1289,7 +1334,7 @@ static std::string getGNUFlags(unsigned EMachine, uint64_t Flags) {
   bool HasOSFlag = false;
   bool HasProcFlag = false;
   std::vector<EnumEntry<unsigned>> FlagsList =
-      getSectionFlagsForTarget(EMachine);
+      getSectionFlagsForTarget(EOSAbi, EMachine);
   while (Flags) {
     // Take the least significant bit as a flag.
     uint64_t Flag = Flags & -Flags;
@@ -1482,6 +1527,7 @@ const EnumEntry<unsigned> ElfHeaderAMDGPUFlagsABIVersion3[] = {
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX909),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX90A),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX90C),
+  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX940),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1010),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1011),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1012),
@@ -1492,6 +1538,7 @@ const EnumEntry<unsigned> ElfHeaderAMDGPUFlagsABIVersion3[] = {
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1033),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1034),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1035),
+  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1036),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_FEATURE_XNACK_V3),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_FEATURE_SRAMECC_V3)
 };
@@ -1536,6 +1583,7 @@ const EnumEntry<unsigned> ElfHeaderAMDGPUFlagsABIVersion4[] = {
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX909),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX90A),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX90C),
+  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX940),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1010),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1011),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1012),
@@ -1546,6 +1594,7 @@ const EnumEntry<unsigned> ElfHeaderAMDGPUFlagsABIVersion4[] = {
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1033),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1034),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1035),
+  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1036),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_FEATURE_XNACK_ANY_V4),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_FEATURE_XNACK_OFF_V4),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_FEATURE_XNACK_ON_V4),
@@ -1559,7 +1608,8 @@ const EnumEntry<unsigned> ElfHeaderRISCVFlags[] = {
   ENUM_ENT(EF_RISCV_FLOAT_ABI_SINGLE, "single-float ABI"),
   ENUM_ENT(EF_RISCV_FLOAT_ABI_DOUBLE, "double-float ABI"),
   ENUM_ENT(EF_RISCV_FLOAT_ABI_QUAD, "quad-float ABI"),
-  ENUM_ENT(EF_RISCV_RVE, "RVE")
+  ENUM_ENT(EF_RISCV_RVE, "RVE"),
+  ENUM_ENT(EF_RISCV_TSO, "TSO"),
 };
 
 const EnumEntry<unsigned> ElfHeaderAVRFlags[] = {
@@ -2238,6 +2288,7 @@ std::string ELFDumper<ELFT>::getDynamicEntry(uint64_t Type,
     case DT_MIPS_PLTGOT:
     case DT_MIPS_RWPLT:
     case DT_MIPS_RLD_MAP_REL:
+    case DT_MIPS_XHASH:
       return FormatHexValue(Value);
     case DT_MIPS_FLAGS:
       return FormatFlags(Value, makeArrayRef(ElfDynamicDTMipsFlags));
@@ -3225,6 +3276,16 @@ static const EnumEntry<unsigned> *getObjectFileEnumEntry(unsigned Type) {
   return nullptr;
 }
 
+template <class ELFT>
+void GNUELFDumper<ELFT>::printFileSummary(StringRef FileStr, ObjectFile &Obj,
+                                          ArrayRef<std::string> InputFilenames,
+                                          const Archive *A) {
+  if (InputFilenames.size() > 1 || A) {
+    this->W.startLine() << "\n";
+    this->W.printString("File", FileStr);
+  }
+}
+
 template <class ELFT> void GNUELFDumper<ELFT>::printFileHeaders() {
   const Elf_Ehdr &e = this->Obj.getHeader();
   OS << "ELF Header:\n";
@@ -3643,7 +3704,8 @@ template <class ELFT> void GNUELFDumper<ELFT>::printSectionHeaders() {
     Fields[4].Str = to_string(format_hex_no_prefix(Sec.sh_offset, 6));
     Fields[5].Str = to_string(format_hex_no_prefix(Sec.sh_size, 6));
     Fields[6].Str = to_string(format_hex_no_prefix(Sec.sh_entsize, 2));
-    Fields[7].Str = getGNUFlags(this->Obj.getHeader().e_machine, Sec.sh_flags);
+    Fields[7].Str = getGNUFlags(this->Obj.getHeader().e_ident[ELF::EI_OSABI],
+                                this->Obj.getHeader().e_machine, Sec.sh_flags);
     Fields[8].Str = to_string(Sec.sh_link);
     Fields[9].Str = to_string(Sec.sh_info);
     Fields[10].Str = to_string(Sec.sh_addralign);
@@ -3870,7 +3932,7 @@ void GNUELFDumper<ELFT>::printHashTableSymbols(const Elf_Hash &SysVHash) {
   for (uint32_t Buc = 0; Buc < SysVHash.nbucket; Buc++) {
     if (Buckets[Buc] == ELF::STN_UNDEF)
       continue;
-    std::vector<bool> Visited(SysVHash.nchain);
+    BitVector Visited(SysVHash.nchain);
     for (uint32_t Ch = Buckets[Buc]; Ch < SysVHash.nchain; Ch = Chains[Ch]) {
       if (Ch == ELF::STN_UNDEF)
         break;
@@ -4618,7 +4680,7 @@ void GNUELFDumper<ELFT>::printHashHistogram(const Elf_Hash &HashTable) {
   // Go over all buckets and and note chain lengths of each bucket (total
   // unique chain lengths).
   for (size_t B = 0; B < NBucket; B++) {
-    std::vector<bool> Visited(NChain);
+    BitVector Visited(NChain);
     for (size_t C = Buckets[B]; C < NChain; C = Chains[C]) {
       if (C == ELF::STN_UNDEF)
         break;
@@ -5004,6 +5066,57 @@ static bool printGNUNote(raw_ostream &OS, uint32_t NoteType,
   return true;
 }
 
+using AndroidNoteProperties = std::vector<std::pair<StringRef, std::string>>;
+static AndroidNoteProperties getAndroidNoteProperties(uint32_t NoteType,
+                                                      ArrayRef<uint8_t> Desc) {
+  AndroidNoteProperties Props;
+  switch (NoteType) {
+  case ELF::NT_ANDROID_TYPE_MEMTAG:
+    if (Desc.empty()) {
+      Props.emplace_back("Invalid .note.android.memtag", "");
+      return Props;
+    }
+
+    switch (Desc[0] & NT_MEMTAG_LEVEL_MASK) {
+    case NT_MEMTAG_LEVEL_NONE:
+      Props.emplace_back("Tagging Mode", "NONE");
+      break;
+    case NT_MEMTAG_LEVEL_ASYNC:
+      Props.emplace_back("Tagging Mode", "ASYNC");
+      break;
+    case NT_MEMTAG_LEVEL_SYNC:
+      Props.emplace_back("Tagging Mode", "SYNC");
+      break;
+    default:
+      Props.emplace_back(
+          "Tagging Mode",
+          ("Unknown (" + Twine::utohexstr(Desc[0] & NT_MEMTAG_LEVEL_MASK) + ")")
+              .str());
+      break;
+    }
+    Props.emplace_back("Heap",
+                       (Desc[0] & NT_MEMTAG_HEAP) ? "Enabled" : "Disabled");
+    Props.emplace_back("Stack",
+                       (Desc[0] & NT_MEMTAG_STACK) ? "Enabled" : "Disabled");
+    break;
+  default:
+    return Props;
+  }
+  return Props;
+}
+
+static bool printAndroidNote(raw_ostream &OS, uint32_t NoteType,
+                             ArrayRef<uint8_t> Desc) {
+  // Return true if we were able to pretty-print the note, false otherwise.
+  AndroidNoteProperties Props = getAndroidNoteProperties(NoteType, Desc);
+  if (Props.empty())
+    return false;
+  for (const auto &KV : Props)
+    OS << "    " << KV.first << ": " << KV.second << '\n';
+  OS << '\n';
+  return true;
+}
+
 template <typename ELFT>
 static bool printLLVMOMPOFFLOADNote(raw_ostream &OS, uint32_t NoteType,
                                     ArrayRef<uint8_t> Desc) {
@@ -5363,6 +5476,13 @@ const NoteType LLVMOMPOFFLOADNoteTypes[] = {
      "NT_LLVM_OPENMP_OFFLOAD_PRODUCER_VERSION (producing toolchain version)"},
 };
 
+const NoteType AndroidNoteTypes[] = {
+    {ELF::NT_ANDROID_TYPE_IDENT, "NT_ANDROID_TYPE_IDENT"},
+    {ELF::NT_ANDROID_TYPE_KUSER, "NT_ANDROID_TYPE_KUSER"},
+    {ELF::NT_ANDROID_TYPE_MEMTAG,
+     "NT_ANDROID_TYPE_MEMTAG (Android memory tagging information)"},
+};
+
 const NoteType CoreNoteTypes[] = {
     {ELF::NT_PRSTATUS, "NT_PRSTATUS (prstatus structure)"},
     {ELF::NT_FPREGSET, "NT_FPREGSET (floating point registers)"},
@@ -5458,7 +5578,7 @@ StringRef getNoteTypeName(const typename ELFT::Note &Note, unsigned ELFType) {
       return Result;
     return FindNote(CoreNoteTypes);
   }
-  if (Name.startswith("OpenBSD") && ELFType == ELF::ET_CORE) {
+  if (ELFType == ELF::ET_CORE && Name.startswith("OpenBSD")) {
     // OpenBSD also places the generic core notes in the OpenBSD namespace.
     StringRef Result = FindNote(OpenBSDCoreNoteTypes);
     if (!Result.empty())
@@ -5471,6 +5591,8 @@ StringRef getNoteTypeName(const typename ELFT::Note &Note, unsigned ELFType) {
     return FindNote(AMDGPUNoteTypes);
   if (Name == "LLVMOMPOFFLOAD")
     return FindNote(LLVMOMPOFFLOADNoteTypes);
+  if (Name == "Android")
+    return FindNote(AndroidNoteTypes);
 
   if (ELFType == ELF::ET_CORE)
     return FindNote(CoreNoteTypes);
@@ -5621,6 +5743,9 @@ template <class ELFT> void GNUELFDumper<ELFT>::printNotes() {
           return NoteOrErr.takeError();
         }
       }
+    } else if (Name == "Android") {
+      if (printAndroidNote(OS, Type, Descriptor))
+        return Error::success();
     }
     if (!Descriptor.empty()) {
       OS << "   description data:";
@@ -6356,6 +6481,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printFileHeaders() {
                      unsigned(ELF::EF_AMDGPU_MACH));
         break;
       case ELF::ELFABIVERSION_AMDGPU_HSA_V4:
+      case ELF::ELFABIVERSION_AMDGPU_HSA_V5:
         W.printFlags("Flags", E.e_flags,
                      makeArrayRef(ElfHeaderAMDGPUFlagsABIVersion4),
                      unsigned(ELF::EF_AMDGPU_MACH),
@@ -6463,7 +6589,8 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printSectionHeaders() {
 
   int SectionIndex = -1;
   std::vector<EnumEntry<unsigned>> FlagsList =
-      getSectionFlagsForTarget(this->Obj.getHeader().e_machine);
+      getSectionFlagsForTarget(this->Obj.getHeader().e_ident[ELF::EI_OSABI],
+                               this->Obj.getHeader().e_machine);
   for (const Elf_Shdr &Sec : cantFail(this->Obj.sections())) {
     DictScope SectionD(W, "Section");
     W.printNumber("Index", ++SectionIndex);
@@ -6986,6 +7113,17 @@ static bool printGNUNoteLLVMStyle(uint32_t NoteType, ArrayRef<uint8_t> Desc,
   return true;
 }
 
+static bool printAndroidNoteLLVMStyle(uint32_t NoteType, ArrayRef<uint8_t> Desc,
+                                      ScopedPrinter &W) {
+  // Return true if we were able to pretty-print the note, false otherwise.
+  AndroidNoteProperties Props = getAndroidNoteProperties(NoteType, Desc);
+  if (Props.empty())
+    return false;
+  for (const auto &KV : Props)
+    W.printString(KV.first, KV.second);
+  return true;
+}
+
 template <typename ELFT>
 static bool printLLVMOMPOFFLOADNoteLLVMStyle(uint32_t NoteType,
                                              ArrayRef<uint8_t> Desc,
@@ -7088,6 +7226,9 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printNotes() {
           return N.takeError();
         }
       }
+    } else if (Name == "Android") {
+      if (printAndroidNoteLLVMStyle(Type, Descriptor, W))
+        return Error::success();
     }
     if (!Descriptor.empty()) {
       W.printBinaryBlock("Description data", Descriptor);
@@ -7305,4 +7446,19 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printMipsABIFlags() {
   W.printNumber("CPR2 size", getMipsRegisterSize(Flags->cpr2_size));
   W.printFlags("Flags 1", Flags->flags1, makeArrayRef(ElfMipsFlags1));
   W.printHex("Flags 2", Flags->flags2);
+}
+
+template <class ELFT>
+void JSONELFDumper<ELFT>::printFileSummary(StringRef FileStr, ObjectFile &Obj,
+                                           ArrayRef<std::string> InputFilenames,
+                                           const Archive *A) {
+  FileScope = std::make_unique<DictScope>(this->W, FileStr);
+  DictScope D(this->W, "FileSummary");
+  this->W.printString("File", FileStr);
+  this->W.printString("Format", Obj.getFileFormatName());
+  this->W.printString("Arch", Triple::getArchTypeName(Obj.getArch()));
+  this->W.printString(
+      "AddressSize",
+      std::string(formatv("{0}bit", 8 * Obj.getBytesInAddress())));
+  this->printLoadName();
 }

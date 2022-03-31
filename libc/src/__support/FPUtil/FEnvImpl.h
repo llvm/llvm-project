@@ -6,42 +6,45 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_DUMMY_FENVIMPL_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_DUMMY_FENVIMPL_H
+#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_FENVIMPL_H
+#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_FENVIMPL_H
 
 #include "src/__support/architectures.h"
 
 #if defined(LLVM_LIBC_ARCH_AARCH64)
+#if defined(__APPLE__)
+#include "aarch64/fenv_darwin_impl.h"
+#else
 #include "aarch64/FEnvImpl.h"
+#endif
 #elif defined(LLVM_LIBC_ARCH_X86)
 #include "x86_64/FEnvImpl.h"
 #else
 #include <fenv.h>
-#include <math.h>
 
 namespace __llvm_libc {
 namespace fputil {
 
 // All dummy functions silently succeed.
 
-static inline int clearExcept(int) { return 0; }
+static inline int clear_except(int) { return 0; }
 
-static inline int testExcept(int) { return 0; }
+static inline int test_except(int) { return 0; }
 
-static inline int setExcept(int) { return 0; }
+static inline int set_except(int) { return 0; }
 
-static inline int raiseExcept(int) { return 0; }
+static inline int raise_except(int) { return 0; }
 
-static inline int getRound() { return FE_TONEAREST; }
+static inline int get_round() { return FE_TONEAREST; }
 
-static inline int setRound(int) { return 0; }
+static inline int set_round(int) { return 0; }
 
-static inline int getEnv(fenv_t *) { return 0; }
+static inline int get_env(fenv_t *) { return 0; }
 
-static inline int setEnv(const fenv_t *) { return 0; }
+static inline int set_env(const fenv_t *) { return 0; }
 
 } // namespace fputil
 } // namespace __llvm_libc
 #endif
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_DUMMY_FENVIMPL_H
+#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_FENVIMPL_H

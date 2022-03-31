@@ -1,9 +1,9 @@
-// RUN: mlir-opt -test-linalg-control-fusion-by-expansion %s -split-input-file | FileCheck %s
+// RUN: mlir-opt -test-linalg-elementwise-fusion-patterns=control-fusion-by-expansion %s -split-input-file | FileCheck %s
 
 func @control_producer_reshape_fusion(%arg0 : tensor<?x?x?xf32>, %arg1 : tensor<?xf32>) -> tensor<?x?xf32> {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
-  %0 = linalg.tensor_collapse_shape %arg0 [[0, 1], [2]] : tensor<?x?x?xf32> into tensor<?x?xf32>
+  %0 = tensor.collapse_shape %arg0 [[0, 1], [2]] : tensor<?x?x?xf32> into tensor<?x?xf32>
   %d0 = tensor.dim %0, %c0 : tensor<?x?xf32>
   %d1 = tensor.dim %0, %c1 : tensor<?x?xf32>
   %init = linalg.init_tensor [%d0, %d1] : tensor<?x?xf32>
@@ -25,7 +25,7 @@ func @control_producer_reshape_fusion(%arg0 : tensor<?x?x?xf32>, %arg1 : tensor<
 // CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: tensor<?xf32>
 //  CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
 //  CHECK-DAG:   %[[C1:.+]] = arith.constant 1 : index
-//      CHECK:   %[[RESHAPE:.+]] = linalg.tensor_collapse_shape %[[ARG0]]
+//      CHECK:   %[[RESHAPE:.+]] = tensor.collapse_shape %[[ARG0]]
 // CHECK-SAME:       {{\[}}[0, 1], [2]{{\]}} : tensor<?x?x?xf32> into tensor<?x?xf32>
 //      CHECK:   %[[RESULT:.+]] = linalg.generic
 // CHECK-SAME:       indexing_maps = [#[[MAP0]], #[[MAP1]], #[[MAP0]]]
@@ -48,7 +48,7 @@ func @control_consumer_reshape_fusion(%arg0 : tensor<1x?x?xf32>, %arg1 : tensor<
       ^bb0(%arg2: f32):
         linalg.yield %cst : f32
       } -> tensor<?x?xf32>
-  %0 = linalg.tensor_expand_shape %fill [[0, 1], [2]] : tensor<?x?xf32> into tensor<1x?x?xf32>
+  %0 = tensor.expand_shape %fill [[0, 1], [2]] : tensor<?x?xf32> into tensor<1x?x?xf32>
   %1 = linalg.batch_matmul ins(%arg0, %arg1 : tensor<1x?x?xf32>, tensor<1x?x?xf32>)
       outs(%0 : tensor<1x?x?xf32>) -> tensor<1x?x?xf32>
   return %1 : tensor<1x?x?xf32>

@@ -21,7 +21,6 @@
 #include "X86TargetMachine.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelectorImpl.h"
-#include "llvm/CodeGen/GlobalISel/RegisterBank.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
@@ -31,6 +30,7 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterBank.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DataLayout.h"
@@ -153,8 +153,8 @@ private:
 X86InstructionSelector::X86InstructionSelector(const X86TargetMachine &TM,
                                                const X86Subtarget &STI,
                                                const X86RegisterBankInfo &RBI)
-    : InstructionSelector(), TM(TM), STI(STI), TII(*STI.getInstrInfo()),
-      TRI(*STI.getRegisterInfo()), RBI(RBI),
+    : TM(TM), STI(STI), TII(*STI.getInstrInfo()), TRI(*STI.getRegisterInfo()),
+      RBI(RBI),
 #define GET_GLOBALISEL_PREDICATES_INIT
 #include "X86GenGlobalISel.inc"
 #undef GET_GLOBALISEL_PREDICATES_INIT
@@ -537,12 +537,12 @@ bool X86InstructionSelector::selectLoadStoreOp(MachineInstr &I,
   I.setDesc(TII.get(NewOpc));
   MachineInstrBuilder MIB(MF, I);
   if (Opc == TargetOpcode::G_LOAD) {
-    I.RemoveOperand(1);
+    I.removeOperand(1);
     addFullAddress(MIB, AM);
   } else {
     // G_STORE (VAL, Addr), X86Store instruction (Addr, VAL)
-    I.RemoveOperand(1);
-    I.RemoveOperand(0);
+    I.removeOperand(1);
+    I.removeOperand(0);
     addFullAddress(MIB, AM).addUse(DefReg);
   }
   return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
@@ -625,7 +625,7 @@ bool X86InstructionSelector::selectGlobalValue(MachineInstr &I,
   I.setDesc(TII.get(NewOpc));
   MachineInstrBuilder MIB(MF, I);
 
-  I.RemoveOperand(1);
+  I.removeOperand(1);
   addFullAddress(MIB, AM);
 
   return constrainSelectedInstRegOperands(I, TII, TRI, RBI);

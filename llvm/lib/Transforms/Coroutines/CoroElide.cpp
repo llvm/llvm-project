@@ -103,21 +103,12 @@ static void removeTailCallAttribute(AllocaInst *Frame, AAResults &AA) {
 
 // Given a resume function @f.resume(%f.frame* %frame), returns the size
 // and expected alignment of %f.frame type.
-static std::pair<uint64_t, Align> getFrameLayout(Function *Resume) {
-  // Prefer to pull information from the function attributes.
+static Optional<std::pair<uint64_t, Align>> getFrameLayout(Function *Resume) {
+  // Pull information from the function attributes.
   auto Size = Resume->getParamDereferenceableBytes(0);
-  auto Align = Resume->getParamAlign(0);
-
-  // If those aren't given, extract them from the type.
-  if (Size == 0 || !Align) {
-    auto *FrameTy = Resume->arg_begin()->getType()->getPointerElementType();
-
-    const DataLayout &DL = Resume->getParent()->getDataLayout();
-    if (!Size) Size = DL.getTypeAllocSize(FrameTy);
-    if (!Align) Align = DL.getABITypeAlign(FrameTy);
-  }
-
-  return std::make_pair(Size, *Align);
+  if (!Size)
+    return None;
+  return std::make_pair(Size, Resume->getParamAlign(0).valueOrOne());
 }
 
 // Finds first non alloca instruction in the entry block of a function.
@@ -361,17 +352,19 @@ bool Lowerer::processCoroId(CoroIdInst *CoroId, AAResults &AA,
     replaceWithConstant(DestroyAddrConstant, It.second);
 
   if (ShouldElide) {
-    auto FrameSizeAndAlign = getFrameLayout(cast<Function>(ResumeAddrConstant));
-    elideHeapAllocations(CoroId->getFunction(), FrameSizeAndAlign.first,
-                         FrameSizeAndAlign.second, AA);
-    coro::replaceCoroFree(CoroId, /*Elide=*/true);
-    NumOfCoroElided++;
+    if (auto FrameSizeAndAlign =
+            getFrameLayout(cast<Function>(ResumeAddrConstant))) {
+      elideHeapAllocations(CoroId->getFunction(), FrameSizeAndAlign->first,
+                           FrameSizeAndAlign->second, AA);
+      coro::replaceCoroFree(CoroId, /*Elide=*/true);
+      NumOfCoroElided++;
 #ifndef NDEBUG
-    if (!CoroElideInfoOutputFilename.empty())
-      *getOrCreateLogFile()
-          << "Elide " << CoroId->getCoroutine()->getName() << " in "
-          << CoroId->getFunction()->getName() << "\n";
+      if (!CoroElideInfoOutputFilename.empty())
+        *getOrCreateLogFile()
+            << "Elide " << CoroId->getCoroutine()->getName() << " in "
+            << CoroId->getFunction()->getName() << "\n";
 #endif
+    }
   }
 
   return true;

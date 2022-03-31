@@ -1,0 +1,204 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+// UNSUPPORTED: c++03, c++11, c++14, c++17
+// UNSUPPORTED: libcpp-has-no-incomplete-ranges
+
+// <memory>
+//
+// template<input_iterator I, nothrow-forward-iterator O, nothrow-sentinel-for<O> S>
+//   requires constructible_from<iter_value_t<O>, iter_reference_t<I>>
+// uninitialized_copy_n_result<I, O> uninitialized_copy_n(I ifirst, iter_difference_t<I> n, O ofirst, S olast); // since C++20
+
+#include <algorithm>
+#include <cassert>
+#include <iterator>
+#include <memory>
+#include <ranges>
+#include <type_traits>
+
+#include "../buffer.h"
+#include "../counted.h"
+#include "test_macros.h"
+#include "test_iterators.h"
+
+// TODO(varconst): consolidate the ADL checks into a single file.
+// Because this is a variable and not a function, it's guaranteed that ADL won't be used. However,
+// implementations are allowed to use a different mechanism to achieve this effect, so this check is
+// libc++-specific.
+LIBCPP_STATIC_ASSERT(std::is_class_v<decltype(std::ranges::uninitialized_move_n)>);
+
+static_assert(std::is_invocable_v<decltype(std::ranges::uninitialized_move_n), int*, size_t, long*, long*>);
+struct NotConvertibleFromInt {};
+static_assert(!std::is_invocable_v<decltype(std::ranges::uninitialized_move_n), int*, size_t, NotConvertibleFromInt*,
+                                   NotConvertibleFromInt*>);
+
+namespace adl {
+
+static int iter_move_invocations = 0;
+
+template <class T>
+struct Iterator {
+  using value_type = T;
+  using difference_type = int;
+  using iterator_concept = std::input_iterator_tag;
+
+  T* ptr = nullptr;
+
+  Iterator() = default;
+  explicit Iterator(int* p) : ptr(p) {}
+
+  T& operator*() const { return *ptr; }
+
+  Iterator& operator++() { ++ptr; return *this; }
+  Iterator operator++(int) {
+    Iterator prev = *this;
+    ++ptr;
+    return prev;
+  }
+
+  friend T&& iter_move(Iterator iter) {
+    ++iter_move_invocations;
+    return std::move(*iter);
+  }
+
+  friend bool operator==(const Iterator& lhs, const Iterator& rhs) { return lhs.ptr == rhs.ptr; }
+};
+
+} // namespace adl
+
+int main(int, char**) {
+  // An empty range -- no default constructors should be invoked.
+  {
+    Counted in[] = {Counted()};
+    Buffer<Counted, 1> out;
+    Counted::reset();
+
+    auto result = std::ranges::uninitialized_move_n(in, 0, out.begin(), out.end());
+    assert(Counted::current_objects == 0);
+    assert(Counted::total_objects == 0);
+    assert(Counted::total_copies == 0);
+    assert(result.in == in);
+    assert(result.out == out.begin());
+  }
+  Counted::reset();
+
+  // A range containing several objects.
+  {
+    constexpr int N = 5;
+    Counted in[N] = {Counted(1), Counted(2), Counted(3), Counted(4), Counted(5)};
+    Buffer<Counted, N> out;
+    Counted::reset();
+
+    auto result = std::ranges::uninitialized_move_n(in, N, out.begin(), out.end());
+    ASSERT_SAME_TYPE(decltype(result), std::ranges::uninitialized_move_n_result<Counted*, Counted*>);
+
+    assert(Counted::current_objects == N);
+    assert(Counted::total_objects == N);
+    assert(Counted::total_moves == N);
+    assert(Counted::total_copies == 0);
+
+    assert(std::equal(in, in + N, out.begin(), out.end()));
+    assert(result.in == in + N);
+    assert(result.out == out.end());
+
+    std::destroy(out.begin(), out.end());
+  }
+  Counted::reset();
+
+  // An exception is thrown while objects are being created -- the existing objects should stay
+  // valid. (iterator, sentinel) overload.
+#ifndef TEST_HAS_NO_EXCEPTIONS
+  {
+    constexpr int N = 3;
+    Counted in[] = {Counted(1), Counted(2), Counted(3), Counted(4), Counted(5)};
+    Buffer<Counted, 5> out;
+    Counted::reset();
+
+    Counted::throw_on = N; // When constructing out[3].
+    try {
+      std::ranges::uninitialized_move_n(in, 5, out.begin(), out.end());
+      assert(false);
+    } catch (...) {
+    }
+    assert(Counted::current_objects == 0);
+    assert(Counted::total_objects == N);
+    assert(Counted::total_moves == N);
+    assert(Counted::total_copies == 0);
+
+    std::destroy(out.begin(), out.begin() + N);
+  }
+  Counted::reset();
+
+#endif // TEST_HAS_NO_EXCEPTIONS
+
+  // Works with const iterators.
+  {
+    constexpr int N = 5;
+    Counted in[N] = {Counted(1), Counted(2), Counted(3), Counted(4), Counted(5)};
+    Buffer<Counted, N> out;
+    Counted::reset();
+
+    std::ranges::uninitialized_move_n(in, N, out.cbegin(), out.cend());
+    assert(Counted::current_objects == N);
+    assert(Counted::total_objects == N);
+    assert(std::equal(in, in + N, out.begin(), out.end()));
+
+    std::destroy(out.begin(), out.end());
+  }
+  Counted::reset();
+
+  // Conversions.
+  {
+    constexpr int N = 3;
+    int in[N] = {1, 2, 3};
+    Buffer<double, N> out;
+
+    std::ranges::uninitialized_move_n(in, N, out.begin(), out.end());
+    assert(std::equal(in, in + N, out.begin(), out.end()));
+  }
+
+  // Destination range is shorter than the source range.
+  {
+    constexpr int M = 3;
+    constexpr int N = 5;
+    Counted in[N] = {Counted(1), Counted(2), Counted(3), Counted(4), Counted(5)};
+    Buffer<Counted, M> out;
+    Counted::reset();
+
+    auto result = std::ranges::uninitialized_move_n(in, N, out.begin(), out.end());
+    assert(Counted::current_objects == M);
+    assert(Counted::total_objects == M);
+    assert(Counted::total_moves == M);
+    assert(Counted::total_copies == 0);
+
+    assert(std::equal(in, in + M, out.begin(), out.end()));
+    assert(result.in == in + M);
+    assert(result.out == out.end());
+  }
+
+  // Ensure the `iter_move` customization point is being used.
+  {
+    constexpr int N = 3;
+    int in[N] = {1, 2, 3};
+    Buffer<int, N> out;
+    adl::Iterator<int> begin(in);
+    adl::Iterator<int> end(in + N);
+
+    std::ranges::uninitialized_move(begin, end, out.begin(), out.end());
+    assert(adl::iter_move_invocations == 3);
+    adl::iter_move_invocations = 0;
+
+    std::ranges::subrange range(begin, end);
+    std::ranges::uninitialized_move(range, out);
+    assert(adl::iter_move_invocations == 3);
+    adl::iter_move_invocations = 0;
+  }
+
+  return 0;
+}

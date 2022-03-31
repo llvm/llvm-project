@@ -29,7 +29,8 @@ public:
     return HostInfo::GetUserIDResolver();
   }
 
-  std::vector<ArchSpec> GetSupportedArchitectures() override;
+  std::vector<ArchSpec>
+  GetSupportedArchitectures(const ArchSpec &process_host_arch) override;
 
   lldb::ProcessSP DebugProcess(ProcessLaunchInfo &launch_info,
                                Debugger &debugger, Target &target,
@@ -45,7 +46,15 @@ public:
 
   void CalculateTrapHandlerSymbolNames() override {}
 
-  Environment GetEnvironment() override { return Host::GetEnvironment(); }
+  Environment GetEnvironment() override;
+
+  MmapArgList GetMmapArgumentList(const ArchSpec &arch, lldb::addr_t addr,
+                                  lldb::addr_t length, unsigned prot,
+                                  unsigned flags, lldb::addr_t fd,
+                                  lldb::addr_t offset) override {
+    return Platform::GetHostPlatform()->GetMmapArgumentList(
+        arch, addr, length, prot, flags, fd, offset);
+  }
 
 private:
   static lldb::PlatformSP CreateInstance(bool force, const ArchSpec *arch);

@@ -15,6 +15,8 @@ int main() {
   A my_a;
   my_a.m_a = 1;
 
+  int arr[2]{0};
+
   my_a.access(); // stop in main
   return 0;
 }

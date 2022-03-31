@@ -35,7 +35,7 @@ class MSP430AsmBackend : public MCAsmBackend {
 public:
   MSP430AsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI)
       : MCAsmBackend(support::little), OSABI(OSABI) {}
-  ~MSP430AsmBackend() override {}
+  ~MSP430AsmBackend() override = default;
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,

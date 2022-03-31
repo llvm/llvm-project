@@ -72,6 +72,7 @@ ConstString GenericBitsetFrontEnd::GetDataContainerMemberName() {
   case StdLib::LibStdcpp:
     return ConstString("_M_w");
   }
+  llvm_unreachable("Unknown StdLib enum");
 }
 
 bool GenericBitsetFrontEnd::Update() {

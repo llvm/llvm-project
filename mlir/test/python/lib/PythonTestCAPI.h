@@ -17,6 +17,16 @@ extern "C" {
 
 MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(PythonTest, python_test);
 
+MLIR_CAPI_EXPORTED bool
+mlirAttributeIsAPythonTestTestAttribute(MlirAttribute attr);
+
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirPythonTestTestAttributeGet(MlirContext context);
+
+MLIR_CAPI_EXPORTED bool mlirTypeIsAPythonTestTestType(MlirType type);
+
+MLIR_CAPI_EXPORTED MlirType mlirPythonTestTestTypeGet(MlirContext context);
+
 #ifdef __cplusplus
 }
 #endif

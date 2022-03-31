@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Demangle/MicrosoftDemangleNodes.h"
-#include "llvm/Demangle/DemangleConfig.h"
 #include "llvm/Demangle/Utility.h"
 #include <cctype>
 #include <string>
@@ -122,8 +121,8 @@ std::string Node::toString(OutputFlags Flags) const {
   OutputBuffer OB;
   initializeOutputBuffer(nullptr, nullptr, OB, 1024);
   this->output(OB, Flags);
-  OB << '\0';
-  std::string Owned(OB.getBuffer());
+  StringView SV = OB;
+  std::string Owned(SV.begin(), SV.end());
   std::free(OB.getBuffer());
   return Owned;
 }

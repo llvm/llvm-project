@@ -290,41 +290,17 @@ void CommandObjectMultiword::HandleCompletion(CompletionRequest &request) {
   sub_command_object->HandleCompletion(request);
 }
 
-const char *CommandObjectMultiword::GetRepeatCommand(Args &current_command_args,
-                                                     uint32_t index) {
+llvm::Optional<std::string>
+CommandObjectMultiword::GetRepeatCommand(Args &current_command_args,
+                                         uint32_t index) {
   index++;
   if (current_command_args.GetArgumentCount() <= index)
-    return nullptr;
+    return llvm::None;
   CommandObject *sub_command_object =
       GetSubcommandObject(current_command_args[index].ref());
   if (sub_command_object == nullptr)
-    return nullptr;
+    return llvm::None;
   return sub_command_object->GetRepeatCommand(current_command_args, index);
-}
-
-void CommandObjectMultiword::AproposAllSubCommands(llvm::StringRef prefix,
-                                                   llvm::StringRef search_word,
-                                                   StringList &commands_found,
-                                                   StringList &commands_help) {
-  CommandObject::CommandMap::const_iterator pos;
-
-  for (pos = m_subcommand_dict.begin(); pos != m_subcommand_dict.end(); ++pos) {
-    const char *command_name = pos->first.c_str();
-    CommandObject *sub_cmd_obj = pos->second.get();
-    StreamString complete_command_name;
-
-    complete_command_name << prefix << " " << command_name;
-
-    if (sub_cmd_obj->HelpTextContainsWord(search_word)) {
-      commands_found.AppendString(complete_command_name.GetString());
-      commands_help.AppendString(sub_cmd_obj->GetHelp());
-    }
-
-    if (sub_cmd_obj->IsMultiwordObject())
-      sub_cmd_obj->AproposAllSubCommands(complete_command_name.GetString(),
-                                         search_word, commands_found,
-                                         commands_help);
-  }
 }
 
 CommandObjectProxy::CommandObjectProxy(CommandInterpreter &interpreter,
@@ -409,16 +385,6 @@ CommandObject *CommandObjectProxy::GetSubcommandObject(llvm::StringRef sub_cmd,
   return nullptr;
 }
 
-void CommandObjectProxy::AproposAllSubCommands(llvm::StringRef prefix,
-                                               llvm::StringRef search_word,
-                                               StringList &commands_found,
-                                               StringList &commands_help) {
-  CommandObject *proxy_command = GetProxyCommandObject();
-  if (proxy_command)
-    return proxy_command->AproposAllSubCommands(prefix, search_word,
-                                                commands_found, commands_help);
-}
-
 bool CommandObjectProxy::LoadSubCommand(
     llvm::StringRef cmd_name, const lldb::CommandObjectSP &command_sp) {
   CommandObject *proxy_command = GetProxyCommandObject();
@@ -454,12 +420,13 @@ void CommandObjectProxy::HandleArgumentCompletion(
     proxy_command->HandleArgumentCompletion(request, opt_element_vector);
 }
 
-const char *CommandObjectProxy::GetRepeatCommand(Args &current_command_args,
-                                                 uint32_t index) {
+llvm::Optional<std::string>
+CommandObjectProxy::GetRepeatCommand(Args &current_command_args,
+                                     uint32_t index) {
   CommandObject *proxy_command = GetProxyCommandObject();
   if (proxy_command)
     return proxy_command->GetRepeatCommand(current_command_args, index);
-  return nullptr;
+  return llvm::None;
 }
 
 llvm::StringRef CommandObjectProxy::GetUnsupportedError() {

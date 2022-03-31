@@ -1,7 +1,7 @@
 # RUN: llvm-mc -filetype=obj -triple=riscv32 %s \
-# RUN:     | llvm-objdump -d --mattr=+experimental-v - | FileCheck %s
+# RUN:     | llvm-objdump -d --mattr=+v - | FileCheck %s
 # RUN: llvm-mc -filetype=obj -triple=riscv64 %s \
-# RUN:     | llvm-objdump -d --mattr=+experimental-v - | FileCheck %s
+# RUN:     | llvm-objdump -d --mattr=+v - | FileCheck %s
 
 # CHECK: vsetvli a1, a0, e64, m1, tu, mu
 .word 0x018575d7

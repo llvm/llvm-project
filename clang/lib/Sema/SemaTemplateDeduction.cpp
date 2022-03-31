@@ -533,9 +533,9 @@ DeduceTemplateArguments(Sema &S,
 ///
 /// \param TemplateParams the template parameters that we are deducing
 ///
-/// \param Param the parameter type
+/// \param P the parameter type
 ///
-/// \param Arg the argument type
+/// \param A the argument type
 ///
 /// \param Info information about the template argument deduction itself
 ///
@@ -1199,11 +1199,11 @@ static CXXRecordDecl *getCanonicalRD(QualType T) {
 ///
 /// \param S the semantic analysis object within which we are deducing.
 ///
-/// \param RecordT the top level record object we are deducing against.
+/// \param RD the top level record object we are deducing against.
 ///
 /// \param TemplateParams the template parameters that we are deducing.
 ///
-/// \param SpecParam the template specialization parameter type.
+/// \param P the template specialization parameter type.
 ///
 /// \param Info information about the template argument deduction itself.
 ///
@@ -1315,9 +1315,9 @@ DeduceTemplateBases(Sema &S, const CXXRecordDecl *RD,
 ///
 /// \param TemplateParams the template parameters that we are deducing
 ///
-/// \param ParamIn the parameter type
+/// \param P the parameter type
 ///
-/// \param ArgIn the argument type
+/// \param A the argument type
 ///
 /// \param Info information about the template argument deduction itself
 ///
@@ -4452,7 +4452,7 @@ namespace {
 
   public:
     SubstituteDeducedTypeTransform(Sema &SemaRef, DependentAuto DA)
-        : TreeTransform<SubstituteDeducedTypeTransform>(SemaRef), Replacement(),
+        : TreeTransform<SubstituteDeducedTypeTransform>(SemaRef),
           ReplacementIsPack(DA.IsPack), UseTypeSugar(true) {}
 
     SubstituteDeducedTypeTransform(Sema &SemaRef, QualType Replacement,
@@ -4769,12 +4769,13 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *&Init, QualType &Result,
       return DAR_FailedAlreadyDiagnosed;
   }
 
-  if (const auto *AT = Type.getType()->getAs<AutoType>()) {
+  QualType MaybeAuto = Type.getType().getNonReferenceType();
+  while (MaybeAuto->isPointerType())
+    MaybeAuto = MaybeAuto->getPointeeType();
+  if (const auto *AT = MaybeAuto->getAs<AutoType>()) {
     if (AT->isConstrained() && !IgnoreConstraints) {
-      auto ConstraintsResult =
-          CheckDeducedPlaceholderConstraints(*this, *AT,
-                                             Type.getContainedAutoTypeLoc(),
-                                             DeducedType);
+      auto ConstraintsResult = CheckDeducedPlaceholderConstraints(
+          *this, *AT, Type.getContainedAutoTypeLoc(), DeducedType);
       if (ConstraintsResult != DAR_Succeeded)
         return ConstraintsResult;
     }

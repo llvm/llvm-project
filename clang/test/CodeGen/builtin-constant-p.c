@@ -19,7 +19,7 @@ struct foo test0(int expr) {
 
 /* --- Pointer types */
 
-int test1() {
+int test1(void) {
   // CHECK-LABEL: test1
   // CHECK: ret i32 0
   return __builtin_constant_p(&a - 13);
@@ -29,7 +29,7 @@ int test1() {
 
 int b[] = {1, 2, 3};
 
-int test2() {
+int test2(void) {
   // CHECK-LABEL: test2
   // CHECK: ret i32 0
   return __builtin_constant_p(b);
@@ -37,7 +37,7 @@ int test2() {
 
 const char test3_c[] = {1, 2, 3, 0};
 
-int test3() {
+int test3(void) {
   // CHECK-LABEL: test3
   // CHECK: ret i32 0
   return __builtin_constant_p(test3_c);
@@ -47,7 +47,7 @@ inline char test4_i(const char *x) {
   return x[1];
 }
 
-int test4() {
+int test4(void) {
   // CHECK: define{{.*}} i32 @test4
   // CHECK: ret i32 0
   return __builtin_constant_p(test4_i(test3_c));
@@ -57,7 +57,7 @@ int test4() {
 
 const int c = 42;
 
-int test5() {
+int test5(void) {
   // CHECK-LABEL: test5
   // CHECK: ret i32 1
   return __builtin_constant_p(c);
@@ -68,19 +68,19 @@ int test5() {
 int arr[] = { 1, 2, 3 };
 const int c_arr[] = { 1, 2, 3 };
 
-int test6() {
+int test6(void) {
   // CHECK-LABEL: test6
   // CHECK: call i1 @llvm.is.constant.i32
   return __builtin_constant_p(arr[2]);
 }
 
-int test7() {
+int test7(void) {
   // CHECK-LABEL: test7
   // CHECK: call i1 @llvm.is.constant.i32
   return __builtin_constant_p(c_arr[2]);
 }
 
-int test8() {
+int test8(void) {
   // CHECK-LABEL: test8
   // CHECK: ret i32 0
   return __builtin_constant_p(c_arr);
@@ -88,13 +88,13 @@ int test8() {
 
 /* --- Function pointers */
 
-int test9() {
+int test9(void) {
   // CHECK-LABEL: test9
   // CHECK: ret i32 0
   return __builtin_constant_p(&test9);
 }
 
-int test10() {
+int test10(void) {
   // CHECK-LABEL: test10
   // CHECK: ret i32 1
   return __builtin_constant_p(&test10 != 0);
@@ -122,7 +122,7 @@ extern fn_p *dest_p;
 static void src_fn(void) {
 }
 
-void test11() {
+void test11(void) {
   assign(dest_p, src_fn);
 }
 
@@ -137,16 +137,16 @@ struct { int a; } test13 = { __builtin_constant_p(test13_v) };
 
 extern unsigned long long test14_v;
 
-void test14() {
+void test14(void) {
   // CHECK-LABEL: test14
   // CHECK: call void asm sideeffect "", {{.*}}(i32 -1) 
   __asm__ __volatile__("" :: "n"( (__builtin_constant_p(test14_v) || 0) ? 1 : -1));
 }
 
-int test15_f();
+int test15_f(void);
 // CHECK-LABEL: define{{.*}} void @test15
 // CHECK-NOT: call {{.*}}test15_f
-void test15() {
+void test15(void) {
   int a, b;
   (void)__builtin_constant_p((a = b, test15_f()));
 }

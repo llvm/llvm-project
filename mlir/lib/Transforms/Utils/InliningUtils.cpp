@@ -14,8 +14,8 @@
 
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/Interfaces/CallInterfaces.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -67,10 +67,6 @@ bool InlinerInterface::isLegalToInline(Operation *call, Operation *callable,
 bool InlinerInterface::isLegalToInline(
     Region *dest, Region *src, bool wouldBeCloned,
     BlockAndValueMapping &valueMapping) const {
-  // Regions can always be inlined into functions.
-  if (isa<FuncOp>(dest->getParentOp()))
-    return true;
-
   if (auto *handler = getInterfaceFor(dest->getParentOp()))
     return handler->isLegalToInline(dest, src, wouldBeCloned, valueMapping);
   return false;
@@ -215,9 +211,10 @@ inlineRegionImpl(InlinerInterface &interface, Region *src, Block *inlineBlock,
   } else {
     // Otherwise, there were multiple blocks inlined. Add arguments to the post
     // insertion block to represent the results to replace.
-    for (auto resultToRepl : llvm::enumerate(resultsToReplace)) {
-      resultToRepl.value().replaceAllUsesWith(postInsertBlock->addArgument(
-          regionResultTypes[resultToRepl.index()]));
+    for (const auto &resultToRepl : llvm::enumerate(resultsToReplace)) {
+      resultToRepl.value().replaceAllUsesWith(
+          postInsertBlock->addArgument(regionResultTypes[resultToRepl.index()],
+                                       resultToRepl.value().getLoc()));
     }
 
     /// Handle the terminators for each of the new blocks.

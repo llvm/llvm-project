@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TestTU.h"
 #include "TweakTesting.h"
-#include "gmock/gmock-matchers.h"
+#include "TestFS.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -192,7 +191,7 @@ TEST_F(DefineInlineTest, UsingShadowDecls) {
 }
 
 TEST_F(DefineInlineTest, TransformNestedNamespaces) {
-  auto Test = R"cpp(
+  auto *Test = R"cpp(
     namespace a {
       void bar();
       namespace b {
@@ -220,7 +219,7 @@ TEST_F(DefineInlineTest, TransformNestedNamespaces) {
       b::c::aux();
       a::b::c::aux();
     })cpp";
-  auto Expected = R"cpp(
+  auto *Expected = R"cpp(
     namespace a {
       void bar();
       namespace b {
@@ -252,7 +251,7 @@ TEST_F(DefineInlineTest, TransformNestedNamespaces) {
 }
 
 TEST_F(DefineInlineTest, TransformUsings) {
-  auto Test = R"cpp(
+  auto *Test = R"cpp(
     namespace a { namespace b { namespace c { void aux(); } } }
 
     void foo();
@@ -263,7 +262,7 @@ TEST_F(DefineInlineTest, TransformUsings) {
       using c::aux;
       namespace d = c;
     })cpp";
-  auto Expected = R"cpp(
+  auto *Expected = R"cpp(
     namespace a { namespace b { namespace c { void aux(); } } }
 
     void foo(){
@@ -278,7 +277,7 @@ TEST_F(DefineInlineTest, TransformUsings) {
 }
 
 TEST_F(DefineInlineTest, TransformDecls) {
-  auto Test = R"cpp(
+  auto *Test = R"cpp(
     void foo();
     void f^oo() {
       class Foo {
@@ -293,7 +292,7 @@ TEST_F(DefineInlineTest, TransformDecls) {
       enum class EnClass { Zero, One };
       EnClass y = EnClass::Zero;
     })cpp";
-  auto Expected = R"cpp(
+  auto *Expected = R"cpp(
     void foo(){
       class Foo {
       public:
@@ -312,7 +311,7 @@ TEST_F(DefineInlineTest, TransformDecls) {
 }
 
 TEST_F(DefineInlineTest, TransformTemplDecls) {
-  auto Test = R"cpp(
+  auto *Test = R"cpp(
     namespace a {
       template <typename T> class Bar {
       public:
@@ -329,7 +328,7 @@ TEST_F(DefineInlineTest, TransformTemplDecls) {
       bar<Bar<int>>.bar();
       aux<Bar<int>>();
     })cpp";
-  auto Expected = R"cpp(
+  auto *Expected = R"cpp(
     namespace a {
       template <typename T> class Bar {
       public:
@@ -350,7 +349,7 @@ TEST_F(DefineInlineTest, TransformTemplDecls) {
 }
 
 TEST_F(DefineInlineTest, TransformMembers) {
-  auto Test = R"cpp(
+  auto *Test = R"cpp(
     class Foo {
       void foo();
     };
@@ -358,7 +357,7 @@ TEST_F(DefineInlineTest, TransformMembers) {
     void Foo::f^oo() {
       return;
     })cpp";
-  auto Expected = R"cpp(
+  auto *Expected = R"cpp(
     class Foo {
       void foo(){
       return;
@@ -395,7 +394,7 @@ TEST_F(DefineInlineTest, TransformMembers) {
 }
 
 TEST_F(DefineInlineTest, TransformDependentTypes) {
-  auto Test = R"cpp(
+  auto *Test = R"cpp(
     namespace a {
       template <typename T> class Bar {};
     }
@@ -409,7 +408,7 @@ TEST_F(DefineInlineTest, TransformDependentTypes) {
       Bar<T> B;
       Bar<Bar<T>> q;
     })cpp";
-  auto Expected = R"cpp(
+  auto *Expected = R"cpp(
     namespace a {
       template <typename T> class Bar {};
     }
@@ -511,7 +510,7 @@ TEST_F(DefineInlineTest, TransformFunctionTempls) {
 }
 
 TEST_F(DefineInlineTest, TransformTypeLocs) {
-  auto Test = R"cpp(
+  auto *Test = R"cpp(
     namespace a {
       template <typename T> class Bar {
       public:
@@ -528,7 +527,7 @@ TEST_F(DefineInlineTest, TransformTypeLocs) {
       Foo foo;
       a::Bar<Bar<int>>::Baz<Bar<int>> q;
     })cpp";
-  auto Expected = R"cpp(
+  auto *Expected = R"cpp(
     namespace a {
       template <typename T> class Bar {
       public:
@@ -549,7 +548,7 @@ TEST_F(DefineInlineTest, TransformTypeLocs) {
 }
 
 TEST_F(DefineInlineTest, TransformDeclRefs) {
-  auto Test = R"cpp(
+  auto *Test = R"cpp(
     namespace a {
       template <typename T> class Bar {
       public:
@@ -575,7 +574,7 @@ TEST_F(DefineInlineTest, TransformDeclRefs) {
       bar();
       a::test();
     })cpp";
-  auto Expected = R"cpp(
+  auto *Expected = R"cpp(
     namespace a {
       template <typename T> class Bar {
       public:
@@ -605,12 +604,12 @@ TEST_F(DefineInlineTest, TransformDeclRefs) {
 }
 
 TEST_F(DefineInlineTest, StaticMembers) {
-  auto Test = R"cpp(
+  auto *Test = R"cpp(
     namespace ns { class X { static void foo(); void bar(); }; }
     void ns::X::b^ar() {
       foo();
     })cpp";
-  auto Expected = R"cpp(
+  auto *Expected = R"cpp(
     namespace ns { class X { static void foo(); void bar(){
       foo();
     } }; }
@@ -654,7 +653,7 @@ est);
 }
 
 TEST_F(DefineInlineTest, TransformTemplParamNames) {
-  auto Test = R"cpp(
+  auto *Test = R"cpp(
     struct Foo {
       struct Bar {
         template <class, class X,
@@ -668,7 +667,7 @@ TEST_F(DefineInlineTest, TransformTemplParamNames) {
               template<typename> class V, template<typename> class W,
               int X, int Y>
     void Foo::Bar::f^oo(U, W<U>, int Q) {})cpp";
-  auto Expected = R"cpp(
+  auto *Expected = R"cpp(
     struct Foo {
       struct Bar {
         template <class T, class U,
@@ -683,13 +682,13 @@ TEST_F(DefineInlineTest, TransformTemplParamNames) {
 }
 
 TEST_F(DefineInlineTest, TransformInlineNamespaces) {
-  auto Test = R"cpp(
+  auto *Test = R"cpp(
     namespace a { inline namespace b { namespace { struct Foo{}; } } }
     void foo();
 
     using namespace a;
     void ^foo() {Foo foo;})cpp";
-  auto Expected = R"cpp(
+  auto *Expected = R"cpp(
     namespace a { inline namespace b { namespace { struct Foo{}; } } }
     void foo(){a::Foo foo;}
 

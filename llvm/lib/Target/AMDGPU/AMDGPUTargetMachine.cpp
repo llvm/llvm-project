@@ -27,6 +27,7 @@
 #include "SIMachineScheduler.h"
 #include "TargetInfo/AMDGPUTargetInfo.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
+#include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
@@ -56,6 +57,7 @@
 #include "llvm/Transforms/Vectorize.h"
 
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 namespace {
 class SGPRRegisterRegAlloc : public RegisterRegAllocBase<SGPRRegisterRegAlloc> {
@@ -229,13 +231,6 @@ static cl::opt<bool, true> LateCFGStructurize(
   "amdgpu-late-structurize",
   cl::desc("Enable late CFG structurization"),
   cl::location(AMDGPUTargetMachine::EnableLateStructurizeCFG),
-  cl::Hidden);
-
-static cl::opt<bool, true> EnableAMDGPUFixedFunctionABIOpt(
-  "amdgpu-fixed-function-abi",
-  cl::desc("Enable all implicit function arguments"),
-  cl::location(AMDGPUTargetMachine::EnableFixedFunctionABI),
-  cl::init(true),
   cl::Hidden);
 
 // Enable lib calls simplifications
@@ -505,7 +500,6 @@ AMDGPUTargetMachine::AMDGPUTargetMachine(const Target &T, const Triple &TT,
 
 bool AMDGPUTargetMachine::EnableLateStructurizeCFG = false;
 bool AMDGPUTargetMachine::EnableFunctionCalls = false;
-bool AMDGPUTargetMachine::EnableFixedFunctionABI = false;
 bool AMDGPUTargetMachine::EnableLowerModuleLDS = true;
 
 AMDGPUTargetMachine::~AMDGPUTargetMachine() = default;
@@ -844,7 +838,7 @@ GCNTargetMachine::getSubtargetImpl(const Function &F) const {
 }
 
 TargetTransformInfo
-GCNTargetMachine::getTargetTransformInfo(const Function &F) {
+GCNTargetMachine::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(GCNTTIImpl(this, F));
 }
 

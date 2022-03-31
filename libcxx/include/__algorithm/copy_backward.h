@@ -9,14 +9,14 @@
 #ifndef _LIBCPP___ALGORITHM_COPY_BACKWARD_H
 #define _LIBCPP___ALGORITHM_COPY_BACKWARD_H
 
-#include <__config>
 #include <__algorithm/unwrap_iter.h>
+#include <__config>
 #include <__iterator/iterator_traits.h>
 #include <cstring>
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD

@@ -57,12 +57,12 @@ extern unsigned struct_regmatch_sz;
 extern unsigned struct_fstab_sz;
 extern unsigned struct_statfs_sz;
 extern unsigned struct_sockaddr_sz;
-extern unsigned ucontext_t_sz;
-#endif // !SANITIZER_ANDROID
+unsigned ucontext_t_sz(void *uctx);
+#  endif  // !SANITIZER_ANDROID
 
-#if SANITIZER_LINUX
+#  if SANITIZER_LINUX
 
-#if defined(__x86_64__)
+#    if defined(__x86_64__)
 const unsigned struct_kernel_stat_sz = 144;
 const unsigned struct_kernel_stat64_sz = 0;
 #elif defined(__i386__)
@@ -370,7 +370,8 @@ struct __sanitizer_group {
   char **gr_mem;
 };
 
-#  if (defined(__x86_64__) && !defined(_LP64)) || defined(__hexagon__)
+#  if (SANITIZER_LINUX && !SANITIZER_GLIBC && !SANITIZER_ANDROID) || \
+      (defined(__x86_64__) && !defined(_LP64)) || defined(__hexagon__)
 typedef long long __sanitizer_time_t;
 #else
 typedef long __sanitizer_time_t;
@@ -478,7 +479,8 @@ struct __sanitizer_dirent {
   unsigned short d_reclen;
   // more fields that we don't care about
 };
-#  elif SANITIZER_ANDROID || defined(__x86_64__) || defined(__hexagon__)
+#  elif (SANITIZER_LINUX && !SANITIZER_GLIBC) || defined(__x86_64__) || \
+      defined(__hexagon__)
 struct __sanitizer_dirent {
   unsigned long long d_ino;
   unsigned long long d_off;
@@ -1108,6 +1110,14 @@ extern unsigned IOCTL_BLKRASET;
 extern unsigned IOCTL_BLKROGET;
 extern unsigned IOCTL_BLKROSET;
 extern unsigned IOCTL_BLKRRPART;
+extern unsigned IOCTL_BLKFRASET;
+extern unsigned IOCTL_BLKFRAGET;
+extern unsigned IOCTL_BLKSECTSET;
+extern unsigned IOCTL_BLKSECTGET;
+extern unsigned IOCTL_BLKSSZGET;
+extern unsigned IOCTL_BLKBSZGET;
+extern unsigned IOCTL_BLKBSZSET;
+extern unsigned IOCTL_BLKGETSIZE64;
 extern unsigned IOCTL_CDROMAUDIOBUFSIZ;
 extern unsigned IOCTL_CDROMEJECT;
 extern unsigned IOCTL_CDROMEJECT_SW;

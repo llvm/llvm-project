@@ -207,6 +207,7 @@ __OMP_RTL(__kmpc_omp_reg_task_with_affinity, false, Int32, IdentPtr, Int32,
 
 __OMP_RTL(__kmpc_get_hardware_num_blocks, false, Int32, )
 __OMP_RTL(__kmpc_get_hardware_num_threads_in_block, false, Int32, )
+__OMP_RTL(__kmpc_get_warp_size, false, Int32, )
 
 __OMP_RTL(omp_get_thread_num, false, Int32, )
 __OMP_RTL(omp_get_num_threads, false, Int32, )
@@ -381,7 +382,16 @@ __OMP_RTL(__kmpc_doacross_wait, false, Void, IdentPtr, Int32, Int64Ptr)
 __OMP_RTL(__kmpc_doacross_fini, false, Void, IdentPtr, Int32)
 
 __OMP_RTL(__kmpc_alloc, false, VoidPtr, /* Int */ Int32, SizeTy, VoidPtr)
+__OMP_RTL(__kmpc_aligned_alloc, false, VoidPtr, /* Int */ Int32, SizeTy, SizeTy,
+          VoidPtr)
 __OMP_RTL(__kmpc_free, false, Void, /* Int */ Int32, VoidPtr, VoidPtr)
+
+__OMP_RTL(__tgt_interop_init, false, Void, IdentPtr, Int32, VoidPtrPtr, Int64,
+          Int32, Int32, VoidPtr, Int32)
+__OMP_RTL(__tgt_interop_destroy, false, Void, IdentPtr, Int32, VoidPtrPtr,
+          Int32, Int32, VoidPtr, Int32)
+__OMP_RTL(__tgt_interop_use, false, Void, IdentPtr, Int32, VoidPtrPtr, Int32,
+          Int32, VoidPtr, Int32)
 
 __OMP_RTL(__kmpc_init_allocator, false, /* omp_allocator_handle_t */ VoidPtr,
           /* Int */ Int32, /* omp_memespace_handle_t */ VoidPtr,
@@ -455,8 +465,6 @@ __OMP_RTL(__kmpc_barrier_simple_generic, false, Void, IdentPtr, Int32)
 __OMP_RTL(__kmpc_warp_active_thread_mask, false, Int64,)
 __OMP_RTL(__kmpc_syncwarp, false, Void, Int64)
 
-__OMP_RTL(__kmpc_get_warp_size, false, Int32, )
-
 __OMP_RTL(__kmpc_is_generic_main_thread_id, false, Int8, Int32)
 
 __OMP_RTL(__last, false, Void, )
@@ -467,6 +475,7 @@ __OMP_RTL(__last, false, Void, )
 #define ParamAttrs(...) ArrayRef<AttributeSet>({__VA_ARGS__})
 #define EnumAttr(Kind) Attribute::get(Ctx, Attribute::AttrKind::Kind)
 #define EnumAttrInt(Kind, N) Attribute::get(Ctx, Attribute::AttrKind::Kind, N)
+#define AllocSizeAttr(N, M) Attribute::getWithAllocSizeArgs(Ctx, N, M)
 #define AttributeSet(...)                                                      \
   AttributeSet::get(Ctx, ArrayRef<Attribute>({__VA_ARGS__}))
 
@@ -629,6 +638,7 @@ __OMP_RTL_ATTRS(__kmpc_omp_reg_task_with_affinity, DefaultAttrs, AttributeSet(),
 
 __OMP_RTL_ATTRS(__kmpc_get_hardware_num_blocks, GetterAttrs, AttributeSet(), ParamAttrs())
 __OMP_RTL_ATTRS(__kmpc_get_hardware_num_threads_in_block, GetterAttrs, AttributeSet(), ParamAttrs())
+__OMP_RTL_ATTRS(__kmpc_get_warp_size, GetterAttrs, AttributeSet(), ParamAttrs())
 
 __OMP_RTL_ATTRS(omp_get_thread_num, GetterAttrs, AttributeSet(), ParamAttrs())
 __OMP_RTL_ATTRS(omp_get_num_threads, GetterAttrs, AttributeSet(), ParamAttrs())
@@ -899,12 +909,16 @@ __OMP_RTL_ATTRS(__kmpc_doacross_wait, BarrierAttrs, AttributeSet(),
 __OMP_RTL_ATTRS(__kmpc_doacross_fini, BarrierAttrs, AttributeSet(),
                 ParamAttrs(ReadOnlyPtrAttrs))
 
-__OMP_RTL_ATTRS(__kmpc_alloc_shared, DeviceAllocAttrs, ReturnPtrAttrs,
-                ParamAttrs())
+__OMP_RTL_ATTRS(__kmpc_alloc_shared, AttributeSet(
+  EnumAttr(NoUnwind),
+  EnumAttr(NoSync), 
+  AllocSizeAttr(0, None)), ReturnPtrAttrs, ParamAttrs())
 __OMP_RTL_ATTRS(__kmpc_free_shared, DeviceAllocAttrs, AttributeSet(),
                 ParamAttrs(NoCaptureAttrs))
 
 __OMP_RTL_ATTRS(__kmpc_alloc, DefaultAttrs, ReturnPtrAttrs, ParamAttrs())
+__OMP_RTL_ATTRS(__kmpc_aligned_alloc, DefaultAttrs, ReturnPtrAttrs,
+                ParamAttrs())
 __OMP_RTL_ATTRS(__kmpc_free, AllocAttrs, AttributeSet(), ParamAttrs())
 
 __OMP_RTL_ATTRS(__kmpc_init_allocator, DefaultAttrs, ReturnPtrAttrs,
@@ -951,6 +965,7 @@ __OMP_RTL_ATTRS(__kmpc_parallel_51, AlwaysInlineAttrs, AttributeSet(),
 #undef EnumAttr
 #undef EnumAttrInt
 #undef ParamAttrs
+#undef AllocSizeAttr
 
 ///}
 
@@ -1130,6 +1145,8 @@ __OMP_TRAIT_PROPERTY(implementation, vendor, gnu)
 __OMP_TRAIT_PROPERTY(implementation, vendor, ibm)
 __OMP_TRAIT_PROPERTY(implementation, vendor, intel)
 __OMP_TRAIT_PROPERTY(implementation, vendor, llvm)
+__OMP_TRAIT_PROPERTY(implementation, vendor, nec)
+__OMP_TRAIT_PROPERTY(implementation, vendor, nvidia)
 __OMP_TRAIT_PROPERTY(implementation, vendor, pgi)
 __OMP_TRAIT_PROPERTY(implementation, vendor, ti)
 __OMP_TRAIT_PROPERTY(implementation, vendor, unknown)

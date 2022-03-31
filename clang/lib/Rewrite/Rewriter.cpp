@@ -223,6 +223,7 @@ std::string Rewriter::getRewrittenText(CharSourceRange Range) const {
   RewriteBuffer::iterator Start = RB.begin();
   std::advance(Start, StartOff);
   RewriteBuffer::iterator End = Start;
+  assert(EndOff >= StartOff && "Invalid iteration distance");
   std::advance(End, EndOff-StartOff);
 
   return std::string(Start, End);

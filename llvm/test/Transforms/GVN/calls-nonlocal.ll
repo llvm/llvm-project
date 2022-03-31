@@ -68,7 +68,7 @@ return:		; preds = %bb27
 ; CHECK: bb26:
 ; CHECK:   br label %bb27
 ; CHECK: bb27:
-; CHECK:   %tmp.0 = phi i32 [ 11, %bb26 ], [ undef, %bb24 ], [ undef, %bb14 ], [ %g, %bb ]
+; CHECK:   %tmp.0 = phi i32 [ 11, %bb26 ], [ poison, %bb24 ], [ poison, %bb14 ], [ %g, %bb ]
 ; CHECK:   ret i32 %tmp.0
 ; CHECK: }
 

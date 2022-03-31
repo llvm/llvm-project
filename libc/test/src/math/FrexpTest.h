@@ -19,8 +19,8 @@ template <typename T> class FrexpTest : public __llvm_libc::testing::Test {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 
-  static constexpr UIntType HiddenBit =
-      UIntType(1) << __llvm_libc::fputil::MantissaWidth<T>::value;
+  static constexpr UIntType HIDDEN_BIT =
+      UIntType(1) << __llvm_libc::fputil::MantissaWidth<T>::VALUE;
 
 public:
   typedef T (*FrexpFunc)(T, int *);
@@ -29,7 +29,7 @@ public:
     int exponent;
     ASSERT_FP_EQ(aNaN, func(aNaN, &exponent));
     ASSERT_FP_EQ(inf, func(inf, &exponent));
-    ASSERT_FP_EQ(negInf, func(negInf, &exponent));
+    ASSERT_FP_EQ(neg_inf, func(neg_inf, &exponent));
 
     ASSERT_FP_EQ(0.0, func(0.0, &exponent));
     ASSERT_EQ(exponent, 0);
@@ -93,9 +93,9 @@ public:
 
   void testRange(FrexpFunc func) {
     using UIntType = typename FPBits::UIntType;
-    constexpr UIntType count = 10000000;
-    constexpr UIntType step = UIntType(-1) / count;
-    for (UIntType i = 0, v = 0; i <= count; ++i, v += step) {
+    constexpr UIntType COUNT = 10000000;
+    constexpr UIntType STEP = UIntType(-1) / COUNT;
+    for (UIntType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
       T x = static_cast<T>(FPBits(v));
       if (isnan(x) || isinf(x) || x == 0.0l)
         continue;

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 // Asan interface list.
 //===----------------------------------------------------------------------===//
+
 INTERFACE_FUNCTION(__asan_addr_is_in_fake_stack)
 INTERFACE_FUNCTION(__asan_address_is_poisoned)
 INTERFACE_FUNCTION(__asan_after_dynamic_init)

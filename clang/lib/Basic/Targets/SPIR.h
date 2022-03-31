@@ -144,16 +144,16 @@ public:
     // FIXME: SYCL specification considers unannotated pointers and references
     // to be pointing to the generic address space. See section 5.9.3 of
     // SYCL 2020 specification.
-    // Currently, there is no way of representing SYCL's and HIP's default
+    // Currently, there is no way of representing SYCL's and HIP/CUDA's default
     // address space language semantic along with the semantics of embedded C's
     // default address space in the same address space map. Hence the map needs
     // to be reset to allow mapping to the desired value of 'Default' entry for
-    // SYCL and HIP.
+    // SYCL and HIP/CUDA.
     setAddressSpaceMap(
         /*DefaultIsGeneric=*/Opts.SYCLIsDevice ||
-        // The address mapping from HIP language for device code is only defined
-        // for SPIR-V.
-        (getTriple().isSPIRV() && Opts.HIP && Opts.CUDAIsDevice));
+        // The address mapping from HIP/CUDA language for device code is only
+        // defined for SPIR-V.
+        (getTriple().isSPIRV() && Opts.CUDAIsDevice));
   }
 
   void setSupportedOpenCLOpts() override {

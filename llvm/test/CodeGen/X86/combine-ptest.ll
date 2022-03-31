@@ -392,6 +392,78 @@ define i32 @ptestz_v32i8_signbits(<32 x i8> %c, i32 %a, i32 %b) {
   ret i32 %t5
 }
 
+;
+; testz(or(extract_lo(X),extract_hi(X),or(extract_lo(Y),extract_hi(Y)) -> testz(X,Y)
+;
+
+define i32 @ptestz_v2i64_concat(<4 x i64> %c, <4 x i64> %d, i32 %a, i32 %b) {
+; CHECK-LABEL: ptestz_v2i64_concat:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    vptest %ymm1, %ymm0
+; CHECK-NEXT:    cmovnel %esi, %eax
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %t1 = shufflevector <4 x i64> %c, <4 x i64> undef, <2 x i32> <i32 0, i32 1>
+  %t2 = shufflevector <4 x i64> %c, <4 x i64> undef, <2 x i32> <i32 2, i32 3>
+  %t3 = shufflevector <4 x i64> %d, <4 x i64> undef, <2 x i32> <i32 0, i32 1>
+  %t4 = shufflevector <4 x i64> %d, <4 x i64> undef, <2 x i32> <i32 2, i32 3>
+  %t5 = or <2 x i64> %t1, %t2
+  %t6 = or <2 x i64> %t4, %t3
+  %t7 = call i32 @llvm.x86.sse41.ptestz(<2 x i64> %t5, <2 x i64> %t6)
+  %t8 = icmp ne i32 %t7, 0
+  %t9 = select i1 %t8, i32 %a, i32 %b
+  ret i32 %t9
+}
+
+; FIXME: Foldable to ptest(xor(%0,%1),xor(%0,%1))
+define i1 @PR38788_0(<4 x i32> %0, <4 x i32> %1) {
+; CHECK-LABEL: PR38788_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vptest %xmm1, %xmm0
+; CHECK-NEXT:    setb %al
+; CHECK-NEXT:    retq
+  %3 = icmp eq <4 x i32> %0, %1
+  %4 = sext <4 x i1> %3 to <4 x i32>
+  %5 = bitcast <4 x i32> %4 to <2 x i64>
+  %6 = tail call i32 @llvm.x86.sse41.ptestc(<2 x i64> %5, <2 x i64> <i64 -1, i64 -1>)
+  %7 = icmp eq i32 %6, 1
+  ret i1 %7
+}
+
+define i1 @PR38788_1(<16 x i16> %0, <16 x i16> %1) {
+; AVX1-LABEL: PR38788_1:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; AVX1-NEXT:    vpcmpeqw %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vcmptrueps %ymm1, %ymm1, %ymm1
+; AVX1-NEXT:    vptest %ymm1, %ymm0
+; AVX1-NEXT:    setae %al
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: PR38788_1:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX2-NEXT:    vptest %ymm1, %ymm0
+; AVX2-NEXT:    setae %al
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+  %3 = icmp eq <16 x i16> %0, %1
+  %4 = sext <16 x i1> %3 to <16 x i16>
+  %5 = bitcast <16 x i16> %4 to <4 x i64>
+  %6 = tail call i32 @llvm.x86.avx.ptestc.256(<4 x i64> %5, <4 x i64> <i64 -1, i64 -1, i64 -1, i64 -1>)
+  %7 = icmp eq i32 %6, 0
+  ret i1 %7
+}
+
 declare i32 @llvm.x86.sse41.ptestz(<2 x i64>, <2 x i64>) nounwind readnone
 declare i32 @llvm.x86.sse41.ptestc(<2 x i64>, <2 x i64>) nounwind readnone
 declare i32 @llvm.x86.sse41.ptestnzc(<2 x i64>, <2 x i64>) nounwind readnone

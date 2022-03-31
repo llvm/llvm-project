@@ -14,6 +14,7 @@
 #include "PerfReader.h"
 #include "ProfileGenerator.h"
 #include "ProfiledBinary.h"
+#include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
@@ -48,9 +49,15 @@ static cl::opt<std::string> UnsymbolizedProfFilename(
 static cl::alias UPA("up", cl::desc("Alias for --unsymbolized-profile"),
                      cl::aliasopt(UnsymbolizedProfFilename));
 
-static cl::opt<std::string> BinaryPath(
-    "binary", cl::value_desc("binary"), cl::Required,
-    cl::desc("Path of profiled binary, only one binary is supported."),
+static cl::opt<std::string>
+    BinaryPath("binary", cl::value_desc("binary"), cl::Required,
+               cl::desc("Path of profiled executable binary."),
+               cl::cat(ProfGenCategory));
+
+static cl::opt<std::string> DebugBinPath(
+    "debug-binary", cl::value_desc("debug-binary"), cl::ZeroOrMore,
+    cl::desc("Path of debug info binary, llvm-profgen will load the DWARF info "
+             "from it instead of the executable binary."),
     cl::cat(ProfGenCategory));
 
 extern cl::opt<bool> ShowDisassemblyOnly;
@@ -135,7 +142,7 @@ int main(int argc, const char *argv[]) {
 
   // Load symbols and disassemble the code of a given binary.
   std::unique_ptr<ProfiledBinary> Binary =
-      std::make_unique<ProfiledBinary>(BinaryPath);
+      std::make_unique<ProfiledBinary>(BinaryPath, DebugBinPath);
   if (ShowDisassemblyOnly)
     return EXIT_SUCCESS;
 
@@ -150,7 +157,7 @@ int main(int argc, const char *argv[]) {
 
   std::unique_ptr<ProfileGeneratorBase> Generator =
       ProfileGeneratorBase::create(Binary.get(), Reader->getSampleCounters(),
-                                   Reader->profileIsCS());
+                                   Reader->profileIsCSFlat());
   Generator->generateProfile();
   Generator->write();
 

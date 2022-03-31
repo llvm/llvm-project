@@ -8,7 +8,7 @@ void __stdcall foo_std(const char *lpString1, const char *lpString2);
 void __fastcall foo_fast(const char *lpString1, const char *lpString2);
 void __vectorcall foo_vector(const char *lpString1, const char *lpString2);
 
-void __cdecl bar() {
+void __cdecl bar(void) {
   foo_default(0, 0);
   foo_std(0, 0);
   foo_fast(0, 0);
@@ -16,30 +16,30 @@ void __cdecl bar() {
 }
 
 // X86-LABEL: define dso_local void @bar()
-// X86:   call void @foo_default(i8* null, i8* null)
-// X86:   call x86_stdcallcc void @"\01_foo_std@8"(i8* null, i8* null)
-// X86:   call x86_fastcallcc void @"\01@foo_fast@8"(i8* inreg null, i8* inreg null)
-// X86:   call x86_vectorcallcc void @"\01foo_vector@@8"(i8* inreg null, i8* inreg null)
+// X86:   call void @foo_default(i8* noundef null, i8* noundef null)
+// X86:   call x86_stdcallcc void @"\01_foo_std@8"(i8* noundef null, i8* noundef null)
+// X86:   call x86_fastcallcc void @"\01@foo_fast@8"(i8* inreg noundef null, i8* inreg noundef null)
+// X86:   call x86_vectorcallcc void @"\01foo_vector@@8"(i8* inreg noundef null, i8* inreg noundef null)
 // X86:   ret void
 
 // X64-LABEL: define dso_local void @bar()
-// X64:   call void @foo_default(i8* null, i8* null)
-// X64:   call void @foo_std(i8* null, i8* null)
-// X64:   call void @foo_fast(i8* null, i8* null)
-// X64:   call x86_vectorcallcc void @"\01foo_vector@@16"(i8* null, i8* null)
+// X64:   call void @foo_default(i8* noundef null, i8* noundef null)
+// X64:   call void @foo_std(i8* noundef null, i8* noundef null)
+// X64:   call void @foo_fast(i8* noundef null, i8* noundef null)
+// X64:   call x86_vectorcallcc void @"\01foo_vector@@16"(i8* noundef null, i8* noundef null)
 // X64:   ret void
 
 // X86-VEC-LABEL: define dso_local void @bar()
-// X86-VEC:   call x86_vectorcallcc void @"\01foo_default@@8"(i8* inreg null, i8* inreg null)
-// X86-VEC:   call x86_stdcallcc void @"\01_foo_std@8"(i8* null, i8* null)
-// X86-VEC:   call x86_fastcallcc void @"\01@foo_fast@8"(i8* inreg null, i8* inreg null)
-// X86-VEC:   call x86_vectorcallcc void @"\01foo_vector@@8"(i8* inreg null, i8* inreg null)
+// X86-VEC:   call x86_vectorcallcc void @"\01foo_default@@8"(i8* inreg noundef null, i8* inreg noundef null)
+// X86-VEC:   call x86_stdcallcc void @"\01_foo_std@8"(i8* noundef null, i8* noundef null)
+// X86-VEC:   call x86_fastcallcc void @"\01@foo_fast@8"(i8* inreg noundef null, i8* inreg noundef null)
+// X86-VEC:   call x86_vectorcallcc void @"\01foo_vector@@8"(i8* inreg noundef null, i8* inreg noundef null)
 // X86-VEC:   ret void
 
 // X64-VEC-LABEL: define dso_local void @bar()
-// X64-VEC:   call x86_vectorcallcc void @"\01foo_default@@16"(i8* null, i8* null)
-// X64-VEC:   call void @foo_std(i8* null, i8* null)
-// X64-VEC:   call void @foo_fast(i8* null, i8* null)
-// X64-VEC:   call x86_vectorcallcc void @"\01foo_vector@@16"(i8* null, i8* null)
+// X64-VEC:   call x86_vectorcallcc void @"\01foo_default@@16"(i8* noundef null, i8* noundef null)
+// X64-VEC:   call void @foo_std(i8* noundef null, i8* noundef null)
+// X64-VEC:   call void @foo_fast(i8* noundef null, i8* noundef null)
+// X64-VEC:   call x86_vectorcallcc void @"\01foo_vector@@16"(i8* noundef null, i8* noundef null)
 // X64-VEC:   ret void
 

@@ -18,6 +18,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Host/FileSystem.h"
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Host/HostNativeProcessBase.h"
 #include "lldb/Host/HostProcess.h"
 #include "lldb/Host/windows/HostThreadWindows.h"
@@ -141,7 +142,7 @@ Status ProcessWindows::EnableBreakpointSite(BreakpointSite *bp_site) {
   if (bp_site->HardwareRequired())
     return Status("Hardware breakpoints are not supported.");
 
-  Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_BREAKPOINTS);
+  Log *log = GetLog(WindowsLog::Breakpoints);
   LLDB_LOG(log, "bp_site = {0:x}, id={1}, addr={2:x}", bp_site,
            bp_site->GetID(), bp_site->GetLoadAddress());
 
@@ -152,7 +153,7 @@ Status ProcessWindows::EnableBreakpointSite(BreakpointSite *bp_site) {
 }
 
 Status ProcessWindows::DisableBreakpointSite(BreakpointSite *bp_site) {
-  Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_BREAKPOINTS);
+  Log *log = GetLog(WindowsLog::Breakpoints);
   LLDB_LOG(log, "bp_site = {0:x}, id={1}, addr={2:x}", bp_site,
            bp_site->GetID(), bp_site->GetLoadAddress());
 
@@ -165,7 +166,7 @@ Status ProcessWindows::DisableBreakpointSite(BreakpointSite *bp_site) {
 
 Status ProcessWindows::DoDetach(bool keep_stopped) {
   Status error;
-  Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_PROCESS);
+  Log *log = GetLog(WindowsLog::Process);
   StateType private_state = GetPrivateState();
   if (private_state != eStateExited && private_state != eStateDetached) {
     error = DetachProcess();
@@ -203,7 +204,7 @@ ProcessWindows::DoAttachToProcessWithID(lldb::pid_t pid,
 }
 
 Status ProcessWindows::DoResume() {
-  Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_PROCESS);
+  Log *log = GetLog(WindowsLog::Process);
   llvm::sys::ScopedLock lock(m_mutex);
   Status error;
 
@@ -349,7 +350,7 @@ DumpAdditionalExceptionInformation(llvm::raw_ostream &stream,
 }
 
 void ProcessWindows::RefreshStateAfterStop() {
-  Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_EXCEPTION);
+  Log *log = GetLog(WindowsLog::Exception);
   llvm::sys::ScopedLock lock(m_mutex);
 
   if (!m_session_data) {
@@ -520,7 +521,7 @@ bool ProcessWindows::CanDebug(lldb::TargetSP target_sp,
 
 bool ProcessWindows::DoUpdateThreadList(ThreadList &old_thread_list,
                                         ThreadList &new_thread_list) {
-  Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_THREAD);
+  Log *log = GetLog(WindowsLog::Thread);
   // Add all the threads that were previously running and for which we did not
   // detect a thread exited event.
   int new_size = 0;
@@ -576,6 +577,10 @@ bool ProcessWindows::IsAlive() {
   }
 }
 
+ArchSpec ProcessWindows::GetSystemArchitecture() {
+  return HostInfo::GetArchitecture();
+}
+
 size_t ProcessWindows::DoReadMemory(lldb::addr_t vm_addr, void *buf,
                                     size_t size, Status &error) {
   size_t bytes_read = 0;
@@ -601,8 +606,8 @@ Status ProcessWindows::DoDeallocateMemory(lldb::addr_t ptr) {
   return ProcessDebugger::DeallocateMemory(ptr);
 }
 
-Status ProcessWindows::GetMemoryRegionInfo(lldb::addr_t vm_addr,
-                                           MemoryRegionInfo &info) {
+Status ProcessWindows::DoGetMemoryRegionInfo(lldb::addr_t vm_addr,
+                                             MemoryRegionInfo &info) {
   return ProcessDebugger::GetMemoryRegionInfo(vm_addr, info);
 }
 
@@ -625,7 +630,7 @@ DynamicLoaderWindowsDYLD *ProcessWindows::GetDynamicLoader() {
 
 void ProcessWindows::OnExitProcess(uint32_t exit_code) {
   // No need to acquire the lock since m_session_data isn't accessed.
-  Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_PROCESS);
+  Log *log = GetLog(WindowsLog::Process);
   LLDB_LOG(log, "Process {0} exited with code {1}", GetID(), exit_code);
 
   TargetSP target = CalculateTarget();
@@ -644,7 +649,7 @@ void ProcessWindows::OnExitProcess(uint32_t exit_code) {
 
 void ProcessWindows::OnDebuggerConnected(lldb::addr_t image_base) {
   DebuggerThreadSP debugger = m_session_data->m_debugger;
-  Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_PROCESS);
+  Log *log = GetLog(WindowsLog::Process);
   LLDB_LOG(log, "Debugger connected to process {0}.  Image base = {1:x}",
            debugger->GetProcess().GetProcessId(), image_base);
 
@@ -692,7 +697,7 @@ void ProcessWindows::OnDebuggerConnected(lldb::addr_t image_base) {
 ExceptionResult
 ProcessWindows::OnDebugException(bool first_chance,
                                  const ExceptionRecord &record) {
-  Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_EXCEPTION);
+  Log *log = GetLog(WindowsLog::Exception);
   llvm::sys::ScopedLock lock(m_mutex);
 
   // FIXME: Without this check, occasionally when running the test suite there
@@ -809,7 +814,7 @@ void ProcessWindows::OnDebugString(const std::string &string) {}
 
 void ProcessWindows::OnDebuggerError(const Status &error, uint32_t type) {
   llvm::sys::ScopedLock lock(m_mutex);
-  Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_PROCESS);
+  Log *log = GetLog(WindowsLog::Process);
 
   if (m_session_data->m_initial_stop_received) {
     // This happened while debugging.  Do we shutdown the debugging session,

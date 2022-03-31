@@ -19,9 +19,9 @@
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck --check-prefix=IE %s
 
 # GD-RELA:      .rela.dyn {
-# GD-RELA-NEXT:   0x23C0 R_X86_64_TLSDESC - 0xB
+# GD-RELA-NEXT:   0x23D0 R_X86_64_TLSDESC - 0xB
 # GD-RELA-NEXT:   0x23B0 R_X86_64_TLSDESC a 0x0
-# GD-RELA-NEXT:   0x23D0 R_X86_64_TLSDESC c 0x0
+# GD-RELA-NEXT:   0x23C0 R_X86_64_TLSDESC c 0x0
 # GD-RELA-NEXT: }
 # GD-RELA:      Hex dump of section '.got':
 # GD-RELA-NEXT: 0x000023b0 00000000 00000000 00000000 00000000
@@ -29,28 +29,28 @@
 # GD-RELA-NEXT: 0x000023d0 00000000 00000000 00000000 00000000
 
 # GD-REL:       .rel.dyn {
-# GD-REL-NEXT:    0x23A8 R_X86_64_TLSDESC -
+# GD-REL-NEXT:    0x23B8 R_X86_64_TLSDESC -
 # GD-REL-NEXT:    0x2398 R_X86_64_TLSDESC a
-# GD-REL-NEXT:    0x23B8 R_X86_64_TLSDESC c
+# GD-REL-NEXT:    0x23A8 R_X86_64_TLSDESC c
 # GD-REL-NEXT:  }
 # GD-REL:       Hex dump of section '.got':
 # GD-REL-NEXT:  0x00002398 00000000 00000000 00000000 00000000
-# GD-REL-NEXT:  0x000023a8 00000000 00000000 0b000000 00000000
-# GD-REL-NEXT:  0x000023b8 00000000 00000000 00000000 00000000
+# GD-REL-NEXT:  0x000023a8 00000000 00000000 00000000 00000000
+# GD-REL-NEXT:  0x000023b8 00000000 00000000 0b000000 00000000
 
 ## &.rela.dyn[a]-pc = 0x23B0-0x12e7 = 4297
 # GD:            leaq 4297(%rip), %rax
 # GD-NEXT: 12e7: callq *(%rax)
 # GD-NEXT:       movl %fs:(%rax), %eax
 
-## &.rela.dyn[b]-pc = 0x23C0-0x12f3 = 4301
-# GD-NEXT:       leaq 4301(%rip), %rcx
+## &.rela.dyn[b]-pc = 0x23D0-0x12f3 = 4317
+# GD-NEXT:       leaq 4317(%rip), %rcx
 # GD-NEXT: 12f3: movq %rcx, %rax
 # GD-NEXT:       callq *(%rax)
 # GD-NEXT:       movl %fs:(%rax), %eax
 
-## &.rela.dyn[c]-pc = 0x23D0-0x1302 = 4302
-# GD-NEXT:       leaq 4302(%rip), %r15
+## &.rela.dyn[c]-pc = 0x23C0-0x1302 = 4286
+# GD-NEXT:       leaq 4286(%rip), %r15
 # GD-NEXT: 1302: movq %r15, %rax
 # GD-NEXT:       callq *(%rax)
 # GD-NEXT:       movl %fs:(%rax), %eax

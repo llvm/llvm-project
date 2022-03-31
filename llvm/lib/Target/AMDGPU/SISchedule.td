@@ -59,6 +59,7 @@ def WriteIntMul : SchedWrite;
 
 // mAI multipass instructions.
 def Write2PassMAI  : SchedWrite;
+def Write4PassMAI  : SchedWrite;
 def Write8PassMAI  : SchedWrite;
 def Write16PassMAI : SchedWrite;
 def Write4PassDGEMM : SchedWrite;
@@ -86,6 +87,7 @@ class SISchedMachineModel : SchedMachineModel {
 def SIFullSpeedModel : SISchedMachineModel;
 def SIQuarterSpeedModel : SISchedMachineModel;
 def SIDPFullSpeedModel : SISchedMachineModel;
+def SIDPGFX940FullSpeedModel : SISchedMachineModel;
 def GFX10SpeedModel : SISchedMachineModel;
 
 // XXX: Are the resource counts correct?
@@ -156,6 +158,8 @@ multiclass SICommonWriteRes {
 
   let ResourceCycles = [2] in
   def : HWWriteRes<Write2PassMAI,  [HWXDL], 2>;
+  let ResourceCycles = [4] in
+  def : HWWriteRes<Write4PassMAI,  [HWXDL], 4>;
   let ResourceCycles = [8] in
   def : HWWriteRes<Write8PassMAI,  [HWXDL], 8>;
   let ResourceCycles = [16] in
@@ -243,6 +247,40 @@ def : InstRW<[Write4PassDGEMM, MIMFMARead], (instregex "^V_MFMA_.64_4X4X")>;
 def : InstRW<[Write8PassDGEMM, MIMFMARead], (instregex "^V_MFMA_.64_16X16X")>;
 
 } // End SchedModel = SIDPFullSpeedModel
+
+let SchedModel = SIDPGFX940FullSpeedModel in {
+
+defm : SICommonWriteRes;
+
+def : HWVALUWriteRes<WriteFloatFMA,    1>;
+def : HWVALUWriteRes<WriteDouble,      1>;
+def : HWVALUWriteRes<WriteDoubleAdd,   1>;
+def : HWVALUWriteRes<WriteDoubleCvt,   1>;
+def : HWVALUWriteRes<WriteTrans64,     4>;
+def : HWVALUWriteRes<WriteIntMul,      1>;
+def : HWVALUWriteRes<Write64Bit,       1>;
+
+def : InstRW<[WriteCopy], (instrs COPY)>;
+def : InstRW<[Write64Bit], (instregex "^V_ACCVGPR_WRITE_B32_e64$")>;
+def : InstRW<[Write2PassMAI,   MIMFMARead], (instregex "^V_MFMA_.32_4X4X")>;
+
+def : InstRW<[Write4PassMAI,   MIMFMARead], (instregex "^V_MFMA_.32_16X16X8X")>;
+def : InstRW<[Write4PassMAI,   MIMFMARead], (instregex "^V_MFMA_.32_16X16X16")>;
+def : InstRW<[Write4PassMAI,   MIMFMARead], (instregex "^V_MFMA_.32_16X16X32")>;
+def : InstRW<[Write8PassMAI,   MIMFMARead], (instregex "^V_MFMA_.32_16X16X[14][FBI]")>;
+
+def : InstRW<[Write8PassMAI,   MIMFMARead], (instregex "^V_MFMA_.32_32X32X4XF")>;
+def : InstRW<[Write8PassMAI,   MIMFMARead], (instregex "^V_MFMA_.32_32X32X8")>;
+def : InstRW<[Write8PassMAI,   MIMFMARead], (instregex "^V_MFMA_.32_32X32X16")>;
+def : InstRW<[Write16PassMAI,  MIMFMARead], (instregex "^V_MFMA_.32_32X32X[124][FBI]")>;
+
+def : InstRW<[Write4PassDGEMM, MIMFMARead], (instregex "^V_MFMA_.64_4X4X")>;
+def : InstRW<[Write8PassDGEMM, MIMFMARead], (instregex "^V_MFMA_.64_16X16X")>;
+
+def : InstRW<[Write4PassMAI,   MIMFMARead], (instregex "^V_SMFMAC_.32_16X16X")>;
+def : InstRW<[Write8PassMAI,   MIMFMARead], (instregex "^V_SMFMAC_.32_32X32X")>;
+
+} // End SchedModel = SIDPGFX940FullSpeedModel
 
 let SchedModel = GFX10SpeedModel in {
 

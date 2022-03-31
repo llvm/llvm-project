@@ -275,9 +275,9 @@ void DependencyGraph::getCriticalSequence(
       [](const DGNode &Lhs, const DGNode &Rhs) { return Lhs.Cost < Rhs.Cost; });
   unsigned IID = std::distance(Nodes.begin(), It);
   Seq.resize(Nodes[IID].Depth);
-  for (unsigned I = Seq.size(), E = 0; I > E; --I) {
+  for (const DependencyEdge *&DE : llvm::reverse(Seq)) {
     const DGNode &N = Nodes[IID];
-    Seq[I - 1] = &N.CriticalPredecessor;
+    DE = &N.CriticalPredecessor;
     IID = N.CriticalPredecessor.FromIID;
   }
 }

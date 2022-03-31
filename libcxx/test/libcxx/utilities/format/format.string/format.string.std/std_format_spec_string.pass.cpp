@@ -6,9 +6,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: libcpp-has-no-incomplete-format
-// XFAIL: LIBCXX-AIX-FIXME
 
 // <format>
 
@@ -164,19 +162,14 @@ constexpr void test() {
 
   test_exception<Parser<CharT>>("End of input while parsing format-spec arg-id",
                                 CSTR("{"));
-  test_exception<Parser<CharT>>(
-      "A format-spec arg-id should terminate at a '}'", CSTR("{0"));
+  test_exception<Parser<CharT>>("Invalid arg-id", CSTR("{0"));
   test_exception<Parser<CharT>>(
       "The arg-id of the format-spec starts with an invalid character",
       CSTR("{a"));
-  test_exception<Parser<CharT>>(
-      "A format-spec arg-id should terminate at a '}'", CSTR("{1"));
-  test_exception<Parser<CharT>>(
-      "A format-spec arg-id should terminate at a '}'", CSTR("{9"));
-  test_exception<Parser<CharT>>(
-      "A format-spec arg-id should terminate at a '}'", CSTR("{9:"));
-  test_exception<Parser<CharT>>(
-      "A format-spec arg-id should terminate at a '}'", CSTR("{9a"));
+  test_exception<Parser<CharT>>("Invalid arg-id", CSTR("{1"));
+  test_exception<Parser<CharT>>("Invalid arg-id", CSTR("{9"));
+  test_exception<Parser<CharT>>("Invalid arg-id", CSTR("{9:"));
+  test_exception<Parser<CharT>>("Invalid arg-id", CSTR("{9a"));
 
   static_assert(std::__format::__number_max == 2'147'483'647,
                 "Update the assert and the test.");
@@ -206,12 +199,6 @@ constexpr void test() {
   test({.precision = 1, .precision_as_arg = true}, 4, CSTR(".{1}}"));
 
   test_exception<Parser<CharT>>(
-      "A format-spec precision field shouldn't have a leading zero",
-      CSTR(".00"));
-  test_exception<Parser<CharT>>(
-      "A format-spec precision field shouldn't have a leading zero",
-      CSTR(".01"));
-  test_exception<Parser<CharT>>(
       "The format-spec precision field doesn't contain a value or arg-id",
       CSTR(".a"));
   test_exception<Parser<CharT>>(
@@ -232,19 +219,14 @@ constexpr void test() {
 
   test_exception<Parser<CharT>>("End of input while parsing format-spec arg-id",
                                 CSTR(".{"));
-  test_exception<Parser<CharT>>(
-      "A format-spec arg-id should terminate at a '}'", CSTR(".{0"));
+  test_exception<Parser<CharT>>("Invalid arg-id", CSTR(".{0"));
   test_exception<Parser<CharT>>(
       "The arg-id of the format-spec starts with an invalid character",
       CSTR(".{a"));
-  test_exception<Parser<CharT>>(
-      "A format-spec arg-id should terminate at a '}'", CSTR(".{1"));
-  test_exception<Parser<CharT>>(
-      "A format-spec arg-id should terminate at a '}'", CSTR(".{9"));
-  test_exception<Parser<CharT>>(
-      "A format-spec arg-id should terminate at a '}'", CSTR(".{9:"));
-  test_exception<Parser<CharT>>(
-      "A format-spec arg-id should terminate at a '}'", CSTR(".{9a"));
+  test_exception<Parser<CharT>>("Invalid arg-id", CSTR(".{1"));
+  test_exception<Parser<CharT>>("Invalid arg-id", CSTR(".{9"));
+  test_exception<Parser<CharT>>("Invalid arg-id", CSTR(".{9:"));
+  test_exception<Parser<CharT>>("Invalid arg-id", CSTR(".{9a"));
 
   static_assert(std::__format::__number_max == 2'147'483'647,
                 "Update the assert and the test.");
@@ -358,7 +340,7 @@ constexpr bool test() {
 #ifndef _LIBCPP_HAS_NO_CHAR8_T
   test<char8_t>();
 #endif
-#ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
+#ifndef TEST_HAS_NO_UNICODE_CHARS
   test<char16_t>();
   test<char32_t>();
 #endif

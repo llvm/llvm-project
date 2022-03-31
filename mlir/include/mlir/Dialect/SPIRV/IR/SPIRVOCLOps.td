@@ -20,7 +20,7 @@ include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
 //===----------------------------------------------------------------------===//
 
 // Base class for all OpenCL ops.
-class SPV_OCLOp<string mnemonic, int opcode, list<OpTrait> traits = []> :
+class SPV_OCLOp<string mnemonic, int opcode, list<Trait> traits = []> :
   SPV_ExtInstOp<mnemonic, "OCL", "OpenCL.std", opcode, traits> {
 
   let availability = [
@@ -33,7 +33,7 @@ class SPV_OCLOp<string mnemonic, int opcode, list<OpTrait> traits = []> :
 
 // Base class for OpenCL unary ops.
 class SPV_OCLUnaryOp<string mnemonic, int opcode, Type resultType,
-                     Type operandType, list<OpTrait> traits = []> :
+                     Type operandType, list<Trait> traits = []> :
   SPV_OCLOp<mnemonic, opcode, !listconcat([NoSideEffect], traits)> {
 
   let arguments = (ins
@@ -44,22 +44,21 @@ class SPV_OCLUnaryOp<string mnemonic, int opcode, Type resultType,
     SPV_ScalarOrVectorOf<resultType>:$result
   );
 
-  let parser = [{ return parseUnaryOp(parser, result); }];
+  let assemblyFormat = "$operand `:` type($operand) attr-dict";
 
-  let printer = [{ return printUnaryOp(getOperation(), p); }];
-
-  let verifier = [{ return success(); }];
+  let hasVerifier = 0;
 }
 
 // Base class for OpenCL Unary arithmetic ops where return type matches
 // the operand type.
 class SPV_OCLUnaryArithmeticOp<string mnemonic, int opcode, Type type,
-                               list<OpTrait> traits = []> :
-  SPV_OCLUnaryOp<mnemonic, opcode, type, type, traits>;
+                               list<Trait> traits = []> :
+  SPV_OCLUnaryOp<mnemonic, opcode, type, type,
+                 traits # [SameOperandsAndResultType]>;
 
 // Base class for OpenCL binary ops.
 class SPV_OCLBinaryOp<string mnemonic, int opcode, Type resultType,
-                      Type operandType, list<OpTrait> traits = []> :
+                      Type operandType, list<Trait> traits = []> :
   SPV_OCLOp<mnemonic, opcode, !listconcat([NoSideEffect], traits)> {
 
   let arguments = (ins
@@ -71,26 +70,58 @@ class SPV_OCLBinaryOp<string mnemonic, int opcode, Type resultType,
     SPV_ScalarOrVectorOf<resultType>:$result
   );
 
-  let parser = [{ return impl::parseOneResultSameOperandTypeOp(parser, result); }];
-
-  let printer = [{ return impl::printOneResultOp(getOperation(), p); }];
-
-  let verifier = [{ return success(); }];
+  let hasVerifier = 0;
 }
 
 // Base class for OpenCL Binary arithmetic ops where operand types and
 // return type matches.
 class SPV_OCLBinaryArithmeticOp<string mnemonic, int opcode, Type type,
-                                list<OpTrait> traits = []> :
-  SPV_OCLBinaryOp<mnemonic, opcode, type, type, traits>;
+                                list<Trait> traits = []> :
+  SPV_OCLBinaryOp<mnemonic, opcode, type, type,
+                  traits # [SameOperandsAndResultType]> {                    
+  let assemblyFormat = "operands attr-dict `:` type($result)";
+}
+
+// Base class for OpenCL binary ops.
+class SPV_OCLTernaryOp<string mnemonic, int opcode, Type resultType,
+                      Type operandType, list<Trait> traits = []> :
+  SPV_OCLOp<mnemonic, opcode, !listconcat([NoSideEffect], traits)> {
+
+  let arguments = (ins
+    SPV_ScalarOrVectorOf<operandType>:$x,
+    SPV_ScalarOrVectorOf<operandType>:$y,
+    SPV_ScalarOrVectorOf<operandType>:$z
+  );
+
+  let results = (outs
+    SPV_ScalarOrVectorOf<resultType>:$result
+  );
+
+  let hasVerifier = 0;
+}
+
+// Base class for OpenCL Ternary arithmetic ops where operand types and
+// return type matches.
+class SPV_OCLTernaryArithmeticOp<string mnemonic, int opcode, Type type,
+                                list<Trait> traits = []> :
+  SPV_OCLTernaryOp<mnemonic, opcode, type, type,
+                  traits # [SameOperandsAndResultType]> {
+  let assemblyFormat = "operands attr-dict `:` type($result)";
+}
+
 
 // -----
 
-def SPV_OCLTanhOp : SPV_OCLUnaryArithmeticOp<"tanh", 63, SPV_Float> {
-  let summary = "Compute hyperbolic tangent of x radians.";
+def SPV_OCLFmaOp : SPV_OCLTernaryArithmeticOp<"fma", 26, SPV_Float> {
+  let summary = [{
+    Compute the correctly rounded floating-point representation of the sum
+    of c with the infinitely precise product of a and b. Rounding of
+    intermediate products shall not occur. Edge case results are per the
+    IEEE 754-2008 standard.
+  }];
 
   let description = [{
-    Result Type and x must be floating-point or vector(2,3,4,8,16) of
+    Result Type, a, b and c must be floating-point or vector(2,3,4,8,16) of
     floating-point values.
 
     All of the operands, including the Result Type operand, must be of the
@@ -99,17 +130,13 @@ def SPV_OCLTanhOp : SPV_OCLUnaryArithmeticOp<"tanh", 63, SPV_Float> {
     <!-- End of AutoGen section -->
 
     ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    tanh-op ::= ssa-id `=` `spv.OCL.tanh` ssa-use `:`
+    fma-op ::= ssa-id `=` `spv.OCL.fma` ssa-use, ssa-use, ssa-use `:`
                float-scalar-vector-type
     ```mlir
 
-    #### Example:
-
     ```
-    %2 = spv.OCL.tanh %0 : f32
-    %3 = spv.OCL.tanh %1 : vector<3xf16>
+    %0 = spv.OCL.fma %a, %b, %c : f32
+    %1 = spv.OCL.fma %a, %b, %c : vector<3xf16>
     ```
   }];
 }
@@ -173,6 +200,38 @@ def SPV_OCLCosOp : SPV_OCLUnaryArithmeticOp<"cos", 14, SPV_Float> {
     ```
     %2 = spv.OCL.cos %0 : f32
     %3 = spv.OCL.cos %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPV_OCLErfOp : SPV_OCLUnaryArithmeticOp<"erf", 18, SPV_Float> {
+  let summary = [{
+    Error function of x encountered in integrating the normal distribution.
+  }];
+
+  let description = [{
+    Result Type and x must be floating-point or vector(2,3,4,8,16) of
+    floating-point values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    float-scalar-vector-type ::= float-type |
+                                 `vector<` integer-literal `x` float-type `>`
+    erf-op ::= ssa-id `=` `spv.OCL.erf` ssa-use `:`
+               float-scalar-vector-type
+    ```mlir
+
+    #### Example:
+
+    ```
+    %2 = spv.OCL.erf %0 : f32
+    %3 = spv.OCL.erf %1 : vector<3xf16>
     ```
   }];
 }
@@ -417,6 +476,36 @@ def SPV_OCLSqrtOp : SPV_OCLUnaryArithmeticOp<"sqrt", 61, SPV_Float> {
     ```
     %2 = spv.OCL.sqrt %0 : f32
     %3 = spv.OCL.sqrt %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPV_OCLTanhOp : SPV_OCLUnaryArithmeticOp<"tanh", 63, SPV_Float> {
+  let summary = "Compute hyperbolic tangent of x radians.";
+
+  let description = [{
+    Result Type and x must be floating-point or vector(2,3,4,8,16) of
+    floating-point values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    float-scalar-vector-type ::= float-type |
+                                 `vector<` integer-literal `x` float-type `>`
+    tanh-op ::= ssa-id `=` `spv.OCL.tanh` ssa-use `:`
+               float-scalar-vector-type
+    ```mlir
+
+    #### Example:
+
+    ```
+    %2 = spv.OCL.tanh %0 : f32
+    %3 = spv.OCL.tanh %1 : vector<3xf16>
     ```
   }];
 }

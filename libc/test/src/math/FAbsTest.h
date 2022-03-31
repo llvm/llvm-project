@@ -25,16 +25,16 @@ public:
     EXPECT_FP_EQ(aNaN, func(aNaN));
 
     EXPECT_FP_EQ(inf, func(inf));
-    EXPECT_FP_EQ(inf, func(negInf));
+    EXPECT_FP_EQ(inf, func(neg_inf));
 
     EXPECT_FP_EQ(zero, func(zero));
-    EXPECT_FP_EQ(zero, func(negZero));
+    EXPECT_FP_EQ(zero, func(neg_zero));
   }
 
   void testRange(FabsFunc func) {
-    constexpr UIntType count = 10000000;
-    constexpr UIntType step = UIntType(-1) / count;
-    for (UIntType i = 0, v = 0; i <= count; ++i, v += step) {
+    constexpr UIntType COUNT = 10000000;
+    constexpr UIntType STEP = UIntType(-1) / COUNT;
+    for (UIntType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
       T x = T(FPBits(v));
       if (isnan(x) || isinf(x))
         continue;

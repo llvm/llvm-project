@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: modules-build
+
 // NOTE: Undefined __DEPRECATED to prevent this test from failing with -Werror
 #undef __DEPRECATED
 #include <assert.h>

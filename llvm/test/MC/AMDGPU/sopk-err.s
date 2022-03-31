@@ -60,22 +60,22 @@ s_getreg_b32 s2, hwreg(HW_REG_SH_MEM_BASES)
 s_getreg_b32 s2, hwreg(HW_REG_TBA_LO)
 // GFX10:    s_getreg_b32 s2, hwreg(HW_REG_TBA_LO) ; encoding: [0x10,0xf8,0x02,0xb9]
 // SICIVI-ERR: error: specified hardware register is not supported on this GPU
-// GFX9-ERR: error: specified hardware register is not supported on this GPU
+// GFX9:     s_getreg_b32 s2, hwreg(HW_REG_TBA_LO)   ; encoding: [0x10,0xf8,0x82,0xb8]
 
 s_getreg_b32 s2, hwreg(HW_REG_TBA_HI)
 // GFX10:    s_getreg_b32 s2, hwreg(HW_REG_TBA_HI) ; encoding: [0x11,0xf8,0x02,0xb9]
 // SICIVI-ERR: error: specified hardware register is not supported on this GPU
-// GFX9-ERR: error: specified hardware register is not supported on this GPU
+// GFX9:     s_getreg_b32 s2, hwreg(HW_REG_TBA_HI)   ; encoding: [0x11,0xf8,0x82,0xb8]
 
 s_getreg_b32 s2, hwreg(HW_REG_TMA_LO)
 // GFX10:    s_getreg_b32 s2, hwreg(HW_REG_TMA_LO) ; encoding: [0x12,0xf8,0x02,0xb9]
 // SICIVI-ERR: error: specified hardware register is not supported on this GPU
-// GFX9-ERR: error: specified hardware register is not supported on this GPU
+// GFX9:     s_getreg_b32 s2, hwreg(HW_REG_TMA_LO)   ; encoding: [0x12,0xf8,0x82,0xb8]
 
 s_getreg_b32 s2, hwreg(HW_REG_TMA_HI)
 // GFX10:    s_getreg_b32 s2, hwreg(HW_REG_TMA_HI) ; encoding: [0x13,0xf8,0x02,0xb9]
 // SICIVI-ERR: error: specified hardware register is not supported on this GPU
-// GFX9-ERR: error: specified hardware register is not supported on this GPU
+// GFX9:     s_getreg_b32 s2, hwreg(HW_REG_TMA_HI)   ; encoding: [0x13,0xf8,0x82,0xb8]
 
 s_getreg_b32 s2, hwreg(HW_REG_FLAT_SCR_LO)
 // GFX10:    s_getreg_b32 s2, hwreg(HW_REG_FLAT_SCR_LO) ; encoding: [0x14,0xf8,0x02,0xb9]

@@ -44,8 +44,8 @@
 # RUN: tar xOf repro3.tar repro3/response.txt | FileCheck %s --check-prefix=RSP3
 # RSP3:      --chroot .
 # RSP3:      "{{.*}}foo bar"
-# RSP3-NEXT: --library-path "[[BASEDIR:.+]]/foo bar"
-# RSP3-NEXT: --library-path [[BASEDIR]]/file
+# RSP3-NEXT: -L "[[BASEDIR:.+]]/foo bar"
+# RSP3-NEXT: -L [[BASEDIR]]/file
 # RSP3-NEXT: --script [[BASEDIR]]/file2
 # RSP3-NEXT: --dynamic-list [[BASEDIR]]/dyn
 # RSP3-NEXT: -rpath [[BASEDIR]]/file

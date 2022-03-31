@@ -762,9 +762,9 @@ void CXXInstanceCall::getInitialStackFrameContents(
       QualType Ty = Ctx.getPointerType(Ctx.getRecordType(Class));
 
       // FIXME: CallEvent maybe shouldn't be directly accessing StoreManager.
-      bool Failed;
-      ThisVal = StateMgr.getStoreManager().attemptDownCast(ThisVal, Ty, Failed);
-      if (Failed) {
+      Optional<SVal> V =
+          StateMgr.getStoreManager().evalBaseToDerived(ThisVal, Ty);
+      if (!V.hasValue()) {
         // We might have suffered some sort of placement new earlier, so
         // we're constructing in a completely unexpected storage.
         // Fall back to a generic pointer cast for this-value.
@@ -772,7 +772,8 @@ void CXXInstanceCall::getInitialStackFrameContents(
         const CXXRecordDecl *StaticClass = StaticMD->getParent();
         QualType StaticTy = Ctx.getPointerType(Ctx.getRecordType(StaticClass));
         ThisVal = SVB.evalCast(ThisVal, Ty, StaticTy);
-      }
+      } else
+        ThisVal = *V;
     }
 
     if (!ThisVal.isUnknown())

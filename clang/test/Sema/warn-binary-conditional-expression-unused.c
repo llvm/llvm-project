@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -Wunused-value -verify %s
-int main() {
+int main(void) {
     int a;
     int b;
     a ? : b; //expected-warning{{expression result unused}}

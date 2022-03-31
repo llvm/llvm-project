@@ -20,12 +20,17 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_LEGALIZER_H
 #define LLVM_CODEGEN_GLOBALISEL_LEGALIZER_H
 
-#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 
 namespace llvm {
 
-class MachineRegisterInfo;
+class LegalizerInfo;
+class MachineIRBuilder;
+class MachineInstr;
+class GISelChangeObserver;
 class LostDebugLocObserver;
 
 class Legalizer : public MachineFunctionPass {

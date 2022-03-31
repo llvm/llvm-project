@@ -13,7 +13,7 @@ kernel void f(__attribute__((nosvm)) global int* a);
 // expected-error@-6 {{attribute 'nosvm' is supported in the OpenCL version 2.0 onwards}}
 #endif
 
-__attribute__((nosvm)) void g(); // expected-warning {{'nosvm' attribute only applies to variables}}
+__attribute__((nosvm)) void g(void); // expected-warning {{'nosvm' attribute only applies to variables}}
 
 #else
 void f(__attribute__((nosvm)) int* a); // expected-warning {{'nosvm' attribute ignored}}

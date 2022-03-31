@@ -51,6 +51,7 @@ private:
   bool hasBlocksRuntime() const override;
   bool SupportsProfiling() const override;
   bool HasNativeLLVMSupport() const override;
+  unsigned GetDefaultDwarfVersion() const override { return 4; }
   void
   addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                         llvm::opt::ArgStringList &CC1Args,
@@ -69,11 +70,20 @@ private:
 
   const char *getDefaultLinker() const override { return "wasm-ld"; }
 
+  CXXStdlibType GetDefaultCXXStdlibType() const override {
+    return ToolChain::CST_Libcxx;
+  }
+
   Tool *buildLinker() const override;
 
   std::string getMultiarchTriple(const Driver &D,
                                  const llvm::Triple &TargetTriple,
                                  StringRef SysRoot) const override;
+
+  void addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
+                             llvm::opt::ArgStringList &CC1Args) const;
+  void addLibStdCXXIncludePaths(const llvm::opt::ArgList &DriverArgs,
+                                llvm::opt::ArgStringList &CC1Args) const;
 };
 
 } // end namespace toolchains

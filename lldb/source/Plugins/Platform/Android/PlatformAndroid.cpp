@@ -11,6 +11,7 @@
 #include "lldb/Core/Section.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/UriParser.h"
@@ -58,7 +59,7 @@ void PlatformAndroid::Terminate() {
 }
 
 PlatformSP PlatformAndroid::CreateInstance(bool force, const ArchSpec *arch) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
+  Log *log = GetLog(LLDBLog::Platform);
   if (log) {
     const char *arch_name;
     if (arch && arch->GetArchitectureName())
@@ -190,7 +191,7 @@ Status PlatformAndroid::GetFile(const FileSpec &source,
 
   auto source_file = source_spec.GetCString(false);
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
+  Log *log = GetLog(LLDBLog::Platform);
   LLDB_LOGF(log, "Got mode == 0 on '%s': try to get file via 'shell cat'",
             source_file);
 
@@ -265,7 +266,7 @@ uint32_t PlatformAndroid::GetSdkVersion() {
   version_string = llvm::StringRef(version_string).trim().str();
 
   if (error.Fail() || version_string.empty()) {
-    Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM);
+    Log *log = GetLog(LLDBLog::Platform);
     LLDB_LOGF(log, "Get SDK version failed. (error: %s, output: %s)",
               error.AsCString(), version_string.c_str());
     return 0;
@@ -313,7 +314,7 @@ Status PlatformAndroid::DownloadSymbolFile(const lldb::ModuleSP &module_sp,
     command.Printf("rm -rf %s", s->c_str());
     Status error = adb.Shell(command.GetData(), seconds(5), nullptr);
 
-    Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
+    Log *log = GetLog(LLDBLog::Platform);
     if (log && error.Fail())
       LLDB_LOGF(log, "Failed to remove temp directory: %s", error.AsCString());
   });

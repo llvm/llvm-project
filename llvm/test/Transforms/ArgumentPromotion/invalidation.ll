@@ -13,9 +13,9 @@
 
 define internal i32 @a(i32* %x) {
 ; CHECK-LABEL: define {{[^@]+}}@a
-; CHECK-SAME: (i32 [[X_VAL:%.*]])
+; CHECK-SAME: (i32 [[X_0_VAL:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i32 [[X_VAL]]
+; CHECK-NEXT:    ret i32 [[X_0_VAL]]
 ;
 entry:
   %v = load i32, i32* %x
@@ -23,9 +23,9 @@ entry:
 }
 
 define i32 @b() {
-; CHECK-LABEL: define {{[^@]+}}@b()
+; CHECK-LABEL: define {{[^@]+}}@b() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[G_VAL:%.*]] = load i32, i32* @G
+; CHECK-NEXT:    [[G_VAL:%.*]] = load i32, i32* @G, align 4
 ; CHECK-NEXT:    [[V:%.*]] = call i32 @a(i32 [[G_VAL]])
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
@@ -35,9 +35,9 @@ entry:
 }
 
 define i32 @c() {
-; CHECK-LABEL: define {{[^@]+}}@c()
+; CHECK-LABEL: define {{[^@]+}}@c() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[G_VAL:%.*]] = load i32, i32* @G
+; CHECK-NEXT:    [[G_VAL:%.*]] = load i32, i32* @G, align 4
 ; CHECK-NEXT:    [[V1:%.*]] = call i32 @a(i32 [[G_VAL]])
 ; CHECK-NEXT:    [[V2:%.*]] = call i32 @b()
 ; CHECK-NEXT:    [[RESULT:%.*]] = add i32 [[V1]], [[V2]]

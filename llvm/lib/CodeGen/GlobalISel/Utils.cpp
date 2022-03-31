@@ -16,14 +16,15 @@
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
+#include "llvm/CodeGen/GlobalISel/LostDebugLocObserver.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
-#include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
-#include "llvm/CodeGen/MachineSizeOpts.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineSizeOpts.h"
+#include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -31,6 +32,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Transforms/Utils/SizeOpts.h"
 
 #define DEBUG_TYPE "globalisel-utils"
 
@@ -500,6 +502,7 @@ Optional<APInt> llvm::ConstantFoldBinOp(unsigned Opcode, const Register Op1,
   default:
     break;
   case TargetOpcode::G_ADD:
+  case TargetOpcode::G_PTR_ADD:
     return C1 + C2;
   case TargetOpcode::G_AND:
     return C1 & C2;
@@ -533,6 +536,14 @@ Optional<APInt> llvm::ConstantFoldBinOp(unsigned Opcode, const Register Op1,
     if (!C2.getBoolValue())
       break;
     return C1.srem(C2);
+  case TargetOpcode::G_SMIN:
+    return APIntOps::smin(C1, C2);
+  case TargetOpcode::G_SMAX:
+    return APIntOps::smax(C1, C2);
+  case TargetOpcode::G_UMIN:
+    return APIntOps::umin(C1, C2);
+  case TargetOpcode::G_UMAX:
+    return APIntOps::umax(C1, C2);
   }
 
   return None;
@@ -592,17 +603,17 @@ Optional<APFloat> llvm::ConstantFoldFPBinOp(unsigned Opcode, const Register Op1,
   return None;
 }
 
-Optional<MachineInstr *>
-llvm::ConstantFoldVectorBinop(unsigned Opcode, const Register Op1,
-                              const Register Op2,
-                              const MachineRegisterInfo &MRI,
-                              MachineIRBuilder &MIB) {
-  auto *SrcVec1 = getOpcodeDef<GBuildVector>(Op1, MRI);
-  if (!SrcVec1)
-    return None;
+Register llvm::ConstantFoldVectorBinop(unsigned Opcode, const Register Op1,
+                                       const Register Op2,
+                                       const MachineRegisterInfo &MRI,
+                                       MachineIRBuilder &MIB) {
   auto *SrcVec2 = getOpcodeDef<GBuildVector>(Op2, MRI);
   if (!SrcVec2)
-    return None;
+    return Register();
+
+  auto *SrcVec1 = getOpcodeDef<GBuildVector>(Op1, MRI);
+  if (!SrcVec1)
+    return Register();
 
   const LLT EltTy = MRI.getType(SrcVec1->getSourceReg(0));
 
@@ -611,14 +622,14 @@ llvm::ConstantFoldVectorBinop(unsigned Opcode, const Register Op1,
     auto MaybeCst = ConstantFoldBinOp(Opcode, SrcVec1->getSourceReg(Idx),
                                       SrcVec2->getSourceReg(Idx), MRI);
     if (!MaybeCst)
-      return None;
+      return Register();
     auto FoldedCstReg = MIB.buildConstant(EltTy, *MaybeCst).getReg(0);
     FoldedElements.emplace_back(FoldedCstReg);
   }
   // Create the new vector constant.
   auto CstVec =
       MIB.buildBuildVector(MRI.getType(SrcVec1->getReg(0)), FoldedElements);
-  return &*CstVec;
+  return CstVec.getReg(0);
 }
 
 bool llvm::isKnownNeverNaN(Register Val, const MachineRegisterInfo &MRI,
@@ -704,8 +715,7 @@ Register llvm::getFunctionLiveInPhysReg(MachineFunction &MF,
                                         const TargetInstrInfo &TII,
                                         MCRegister PhysReg,
                                         const TargetRegisterClass &RC,
-                                        LLT RegTy) {
-  DebugLoc DL; // FIXME: Is no location the right choice?
+                                        const DebugLoc &DL, LLT RegTy) {
   MachineBasicBlock &EntryMBB = MF.front();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   Register LiveIn = MRI.getLiveInVirtReg(PhysReg);
@@ -923,6 +933,21 @@ LLT llvm::getLCMType(LLT OrigTy, LLT TargetTy) {
   return LLT::scalar(LCMSize);
 }
 
+LLT llvm::getCoverTy(LLT OrigTy, LLT TargetTy) {
+  if (!OrigTy.isVector() || !TargetTy.isVector() || OrigTy == TargetTy ||
+      (OrigTy.getScalarSizeInBits() != TargetTy.getScalarSizeInBits()))
+    return getLCMType(OrigTy, TargetTy);
+
+  unsigned OrigTyNumElts = OrigTy.getNumElements();
+  unsigned TargetTyNumElts = TargetTy.getNumElements();
+  if (OrigTyNumElts % TargetTyNumElts == 0)
+    return OrigTy;
+
+  unsigned NumElts = alignTo(OrigTyNumElts, TargetTyNumElts);
+  return LLT::scalarOrVector(ElementCount::getFixed(NumElts),
+                             OrigTy.getElementType());
+}
+
 LLT llvm::getGCDType(LLT OrigTy, LLT TargetTy) {
   const unsigned OrigSize = OrigTy.getSizeInBits();
   const unsigned TargetSize = TargetTy.getSizeInBits();
@@ -1090,6 +1115,26 @@ Optional<RegOrConstant> llvm::getVectorSplat(const MachineInstr &MI,
   return RegOrConstant(Reg);
 }
 
+static bool isConstantScalar(const MachineInstr &MI,
+                             const MachineRegisterInfo &MRI,
+                             bool AllowFP = true,
+                             bool AllowOpaqueConstants = true) {
+  switch (MI.getOpcode()) {
+  case TargetOpcode::G_CONSTANT:
+  case TargetOpcode::G_IMPLICIT_DEF:
+    return true;
+  case TargetOpcode::G_FCONSTANT:
+    return AllowFP;
+  case TargetOpcode::G_GLOBAL_VALUE:
+  case TargetOpcode::G_FRAME_INDEX:
+  case TargetOpcode::G_BLOCK_ADDR:
+  case TargetOpcode::G_JUMP_TABLE:
+    return AllowOpaqueConstants;
+  default:
+    return false;
+  }
+}
+
 bool llvm::isConstantOrConstantVector(MachineInstr &MI,
                                       const MachineRegisterInfo &MRI) {
   Register Def = MI.getOperand(0).getReg();
@@ -1107,6 +1152,25 @@ bool llvm::isConstantOrConstantVector(MachineInstr &MI,
   return true;
 }
 
+bool llvm::isConstantOrConstantVector(const MachineInstr &MI,
+                                      const MachineRegisterInfo &MRI,
+                                      bool AllowFP, bool AllowOpaqueConstants) {
+  if (isConstantScalar(MI, MRI, AllowFP, AllowOpaqueConstants))
+    return true;
+
+  if (!isBuildVectorOp(MI.getOpcode()))
+    return false;
+
+  const unsigned NumOps = MI.getNumOperands();
+  for (unsigned I = 1; I != NumOps; ++I) {
+    const MachineInstr *ElementDef = MRI.getVRegDef(MI.getOperand(I).getReg());
+    if (!isConstantScalar(*ElementDef, MRI, AllowFP, AllowOpaqueConstants))
+      return false;
+  }
+
+  return true;
+}
+
 Optional<APInt>
 llvm::isConstantOrConstantSplatVector(MachineInstr &MI,
                                       const MachineRegisterInfo &MRI) {
@@ -1118,6 +1182,39 @@ llvm::isConstantOrConstantSplatVector(MachineInstr &MI,
     return None;
   const unsigned ScalarSize = MRI.getType(Def).getScalarSizeInBits();
   return APInt(ScalarSize, *MaybeCst, true);
+}
+
+bool llvm::isNullOrNullSplat(const MachineInstr &MI,
+                             const MachineRegisterInfo &MRI, bool AllowUndefs) {
+  switch (MI.getOpcode()) {
+  case TargetOpcode::G_IMPLICIT_DEF:
+    return AllowUndefs;
+  case TargetOpcode::G_CONSTANT:
+    return MI.getOperand(1).getCImm()->isNullValue();
+  case TargetOpcode::G_FCONSTANT: {
+    const ConstantFP *FPImm = MI.getOperand(1).getFPImm();
+    return FPImm->isZero() && !FPImm->isNegative();
+  }
+  default:
+    if (!AllowUndefs) // TODO: isBuildVectorAllZeros assumes undef is OK already
+      return false;
+    return isBuildVectorAllZeros(MI, MRI);
+  }
+}
+
+bool llvm::isAllOnesOrAllOnesSplat(const MachineInstr &MI,
+                                   const MachineRegisterInfo &MRI,
+                                   bool AllowUndefs) {
+  switch (MI.getOpcode()) {
+  case TargetOpcode::G_IMPLICIT_DEF:
+    return AllowUndefs;
+  case TargetOpcode::G_CONSTANT:
+    return MI.getOperand(1).getCImm()->isAllOnesValue();
+  default:
+    if (!AllowUndefs) // TODO: isBuildVectorAllOnes assumes undef is OK already
+      return false;
+    return isBuildVectorAllOnes(MI, MRI);
+  }
 }
 
 bool llvm::matchUnaryPredicate(

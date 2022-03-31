@@ -82,28 +82,26 @@ public:
 
 class DummyStopInfo : public StopInfo {
 public:
-  DummyStopInfo(Thread &thread, uint64_t value)
-      : StopInfo(thread, value), m_should_stop(true),
-        m_stop_reason(eStopReasonBreakpoint) {}
+  DummyStopInfo(Thread &thread, uint64_t value) : StopInfo(thread, value) {}
 
   bool ShouldStop(Event *event_ptr) override { return m_should_stop; }
 
   StopReason GetStopReason() const override { return m_stop_reason; }
 
-  bool m_should_stop;
-  StopReason m_stop_reason;
+  bool m_should_stop = true;
+  StopReason m_stop_reason = eStopReasonBreakpoint;
 };
 
 class DummyProcessEventData : public Process::ProcessEventData {
 public:
   DummyProcessEventData(ProcessSP &process_sp, StateType state)
-      : ProcessEventData(process_sp, state), m_should_stop_hit_count(0) {}
+      : ProcessEventData(process_sp, state) {}
   bool ShouldStop(Event *event_ptr, bool &found_valid_stopinfo) override {
     m_should_stop_hit_count++;
     return false;
   }
 
-  int m_should_stop_hit_count;
+  int m_should_stop_hit_count = 0;
 };
 } // namespace
 

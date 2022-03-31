@@ -18,11 +18,12 @@
 #include "../PassDetail.h"
 #include "mlir/Conversion/ArithmeticToLLVM/ArithmeticToLLVM.h"
 #include "mlir/Conversion/AsyncToLLVM/AsyncToLLVM.h"
+#include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
+#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
+#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
-#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
-#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 #include "mlir/Dialect/Async/IR/Async.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
@@ -184,6 +185,10 @@ protected:
       {llvmPointerType /* void *dst */, llvmInt32Type /* unsigned int value */,
        llvmIntPtrType /* intptr_t sizeBytes */,
        llvmPointerType /* void *stream */}};
+  FunctionCallBuilder setDefaultDeviceCallBuilder = {
+      "mgpuSetDefaultDevice",
+      llvmVoidType,
+      {llvmInt32Type /* uint32_t devIndex */}};
 };
 
 /// A rewrite pattern to convert gpu.host_register operations into a GPU runtime
@@ -341,6 +346,21 @@ private:
   matchAndRewrite(gpu::MemsetOp memsetOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override;
 };
+
+/// A rewrite pattern to convert gpu.set_default_device to a GPU runtime call.
+/// Currently supports CUDA and ROCm (HIP)
+class ConvertSetDefaultDeviceOpToGpuRuntimeCallPattern
+    : public ConvertOpToGpuRuntimeCallPattern<gpu::SetDefaultDeviceOp> {
+public:
+  ConvertSetDefaultDeviceOpToGpuRuntimeCallPattern(
+      LLVMTypeConverter &typeConverter)
+      : ConvertOpToGpuRuntimeCallPattern<gpu::SetDefaultDeviceOp>(
+            typeConverter) {}
+
+  LogicalResult
+  matchAndRewrite(gpu::SetDefaultDeviceOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
 } // namespace
 
 void GpuToLLVMConversionPass::runOnOperation() {
@@ -351,9 +371,10 @@ void GpuToLLVMConversionPass::runOnOperation() {
   target.addIllegalDialect<gpu::GPUDialect>();
 
   mlir::arith::populateArithmeticToLLVMConversionPatterns(converter, patterns);
+  mlir::cf::populateControlFlowToLLVMConversionPatterns(converter, patterns);
   populateVectorToLLVMConversionPatterns(converter, patterns);
   populateMemRefToLLVMConversionPatterns(converter, patterns);
-  populateStdToLLVMConversionPatterns(converter, patterns);
+  populateFuncToLLVMConversionPatterns(converter, patterns);
   populateAsyncStructuralTypeConversionsAndLegality(converter, patterns,
                                                     target);
   populateGpuToLLVMConversionPatterns(converter, patterns, gpuBinaryAnnotation);
@@ -634,7 +655,7 @@ Value ConvertLaunchFuncOpToGpuRuntimeCallPattern::generateParamsArray(
                                                  arraySize, /*alignment=*/0);
   auto zero = builder.create<LLVM::ConstantOp>(loc, llvmInt32Type,
                                                builder.getI32IntegerAttr(0));
-  for (auto en : llvm::enumerate(arguments)) {
+  for (const auto &en : llvm::enumerate(arguments)) {
     auto index = builder.create<LLVM::ConstantOp>(
         loc, llvmInt32Type, builder.getI32IntegerAttr(en.index()));
     auto fieldPtr = builder.create<LLVM::GEPOp>(
@@ -790,8 +811,8 @@ LogicalResult ConvertMemcpyOpToGpuRuntimeCallPattern::matchAndRewrite(
 
   Type elementPtrType = getElementPtrType(memRefType);
   Value nullPtr = rewriter.create<LLVM::NullOp>(loc, elementPtrType);
-  Value gepPtr = rewriter.create<LLVM::GEPOp>(
-      loc, elementPtrType, ArrayRef<Value>{nullPtr, numElements});
+  Value gepPtr = rewriter.create<LLVM::GEPOp>(loc, elementPtrType, nullPtr,
+                                              ArrayRef<Value>{numElements});
   auto sizeBytes =
       rewriter.create<LLVM::PtrToIntOp>(loc, getIndexType(), gepPtr);
 
@@ -842,13 +863,22 @@ LogicalResult ConvertMemsetOpToGpuRuntimeCallPattern::matchAndRewrite(
   return success();
 }
 
+LogicalResult ConvertSetDefaultDeviceOpToGpuRuntimeCallPattern::matchAndRewrite(
+    gpu::SetDefaultDeviceOp op, OpAdaptor adaptor,
+    ConversionPatternRewriter &rewriter) const {
+  Location loc = op.getLoc();
+  setDefaultDeviceCallBuilder.create(loc, rewriter, {adaptor.devIndex()});
+  rewriter.replaceOp(op, {});
+  return success();
+}
+
 std::unique_ptr<mlir::OperationPass<mlir::ModuleOp>>
 mlir::createGpuToLLVMConversionPass() {
   return std::make_unique<GpuToLLVMConversionPass>();
 }
 
 void mlir::populateGpuToLLVMConversionPatterns(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns,
+    LLVMTypeConverter &converter, RewritePatternSet &patterns,
     StringRef gpuBinaryAnnotation) {
   converter.addConversion(
       [context = &converter.getContext()](gpu::AsyncTokenType type) -> Type {
@@ -859,6 +889,7 @@ void mlir::populateGpuToLLVMConversionPatterns(
                ConvertHostRegisterOpToGpuRuntimeCallPattern,
                ConvertMemcpyOpToGpuRuntimeCallPattern,
                ConvertMemsetOpToGpuRuntimeCallPattern,
+               ConvertSetDefaultDeviceOpToGpuRuntimeCallPattern,
                ConvertWaitAsyncOpToGpuRuntimeCallPattern,
                ConvertWaitOpToGpuRuntimeCallPattern,
                ConvertAsyncYieldToGpuRuntimeCallPattern>(converter);

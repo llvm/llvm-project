@@ -16,8 +16,7 @@
 #include "SymbolTable.h"
 #include "Symbols.h"
 
-#include "lld/Common/ErrorHandler.h"
-#include "lld/Common/Memory.h"
+#include "lld/Common/CommonLinkerContext.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/EndianStream.h"
@@ -50,7 +49,7 @@ std::vector<SyntheticSection *> macho::syntheticSections;
 SyntheticSection::SyntheticSection(const char *segname, const char *name)
     : OutputSection(SyntheticKind, name) {
   std::tie(this->segname, this->name) = maybeRenameSection({segname, name});
-  isec = make<ConcatInputSection>(segname, name);
+  isec = makeSyntheticInputSection(segname, name);
   isec->parent = this;
   syntheticSections.push_back(this);
 }
@@ -85,7 +84,7 @@ static uint32_t cpuSubtype() {
 
   if (config->outputType == MH_EXECUTE && !config->staticLink &&
       target->cpuSubtype == CPU_SUBTYPE_X86_64_ALL &&
-      config->platform() == PlatformKind::macOS &&
+      config->platform() == PLATFORM_MACOS &&
       config->platformInfo.minimum >= VersionTuple(10, 5))
     subtype |= CPU_SUBTYPE_LIB64;
 
@@ -236,6 +235,8 @@ void macho::addNonLazyBindingEntries(const Symbol *sym,
     in.rebase->addEntry(isec, offset);
     if (defined->isExternalWeakDef())
       in.weakBinding->addEntry(sym, isec, offset, addend);
+    else if (defined->interposable)
+      in.binding->addEntry(sym, isec, offset, addend);
   } else {
     // Undefined symbols are filtered out in scanRelocations(); we should never
     // get here
@@ -418,6 +419,13 @@ static int16_t ordinalForDylibSymbol(const DylibSymbol &dysym) {
   return dysym.getFile()->ordinal;
 }
 
+static int16_t ordinalForSymbol(const Symbol &sym) {
+  if (const auto *dysym = dyn_cast<DylibSymbol>(&sym))
+    return ordinalForDylibSymbol(*dysym);
+  assert(cast<Defined>(&sym)->interposable);
+  return BIND_SPECIAL_DYLIB_FLAT_LOOKUP;
+}
+
 static void encodeDylibOrdinal(int16_t ordinal, raw_svector_ostream &os) {
   if (ordinal <= 0) {
     os << static_cast<uint8_t>(BIND_OPCODE_SET_DYLIB_SPECIAL_IMM |
@@ -487,14 +495,14 @@ void BindingSection::finalizeContents() {
   int16_t lastOrdinal = 0;
 
   for (auto &p : sortBindings(bindingsMap)) {
-    const DylibSymbol *sym = p.first;
+    const Symbol *sym = p.first;
     std::vector<BindingEntry> &bindings = p.second;
     uint8_t flags = BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM;
     if (sym->isWeakRef())
       flags |= BIND_SYMBOL_FLAGS_WEAK_IMPORT;
     os << flags << sym->getName() << '\0'
        << static_cast<uint8_t>(BIND_OPCODE_SET_TYPE_IMM | BIND_TYPE_POINTER);
-    int16_t ordinal = ordinalForDylibSymbol(*sym);
+    int16_t ordinal = ordinalForSymbol(*sym);
     if (ordinal != lastOrdinal) {
       encodeDylibOrdinal(ordinal, os);
       lastOrdinal = ordinal;
@@ -597,7 +605,7 @@ bool StubHelperSection::isNeeded() const { return in.lazyBinding->isNeeded(); }
 void StubHelperSection::writeTo(uint8_t *buf) const {
   target->writeStubHelperHeader(buf);
   size_t off = target->stubHelperHeaderSize;
-  for (const DylibSymbol *sym : in.lazyBinding->getEntries()) {
+  for (const Symbol *sym : in.lazyBinding->getEntries()) {
     target->writeStubHelperEntry(buf + off, *sym, addr + off);
     off += target->stubHelperEntrySize;
   }
@@ -668,7 +676,7 @@ LazyBindingSection::LazyBindingSection()
 void LazyBindingSection::finalizeContents() {
   // TODO: Just precompute output size here instead of writing to a temporary
   // buffer
-  for (DylibSymbol *sym : entries)
+  for (Symbol *sym : entries)
     sym->lazyBindOffset = encode(*sym);
 }
 
@@ -676,11 +684,11 @@ void LazyBindingSection::writeTo(uint8_t *buf) const {
   memcpy(buf, contents.data(), contents.size());
 }
 
-void LazyBindingSection::addEntry(DylibSymbol *dysym) {
-  if (entries.insert(dysym)) {
-    dysym->stubsHelperIndex = entries.size() - 1;
+void LazyBindingSection::addEntry(Symbol *sym) {
+  if (entries.insert(sym)) {
+    sym->stubsHelperIndex = entries.size() - 1;
     in.rebase->addEntry(in.lazyPointers->isec,
-                        dysym->stubsIndex * target->wordSize);
+                        sym->stubsIndex * target->wordSize);
   }
 }
 
@@ -690,7 +698,7 @@ void LazyBindingSection::addEntry(DylibSymbol *dysym) {
 // BIND_OPCODE_DONE terminator. As such, unlike in the non-lazy-binding case,
 // we cannot encode just the differences between symbols; we have to emit the
 // complete bind information for each symbol.
-uint32_t LazyBindingSection::encode(const DylibSymbol &sym) {
+uint32_t LazyBindingSection::encode(const Symbol &sym) {
   uint32_t opstreamOffset = contents.size();
   OutputSegment *dataSeg = in.lazyPointers->parent;
   os << static_cast<uint8_t>(BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB |
@@ -698,7 +706,7 @@ uint32_t LazyBindingSection::encode(const DylibSymbol &sym) {
   uint64_t offset = in.lazyPointers->addr - dataSeg->addr +
                     sym.stubsIndex * target->wordSize;
   encodeULEB128(offset, os);
-  encodeDylibOrdinal(ordinalForDylibSymbol(sym), os);
+  encodeDylibOrdinal(ordinalForSymbol(sym), os);
 
   uint8_t flags = BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM;
   if (sym.isWeakRef())
@@ -733,41 +741,36 @@ DataInCodeSection::DataInCodeSection()
 
 template <class LP>
 static std::vector<MachO::data_in_code_entry> collectDataInCodeEntries() {
-  using SegmentCommand = typename LP::segment_command;
-  using SectionHeader = typename LP::section;
-
   std::vector<MachO::data_in_code_entry> dataInCodeEntries;
   for (const InputFile *inputFile : inputFiles) {
     if (!isa<ObjFile>(inputFile))
       continue;
     const ObjFile *objFile = cast<ObjFile>(inputFile);
-    const auto *c = reinterpret_cast<const SegmentCommand *>(
-        findCommand(objFile->mb.getBufferStart(), LP::segmentLCType));
-    if (!c)
-      continue;
-    ArrayRef<SectionHeader> sectionHeaders{
-        reinterpret_cast<const SectionHeader *>(c + 1), c->nsects};
-
-    ArrayRef<MachO::data_in_code_entry> entries = objFile->dataInCodeEntries;
+    ArrayRef<MachO::data_in_code_entry> entries = objFile->getDataInCode();
     if (entries.empty())
       continue;
+
+    assert(is_sorted(dataInCodeEntries, [](const data_in_code_entry &lhs,
+                                           const data_in_code_entry &rhs) {
+      return lhs.offset < rhs.offset;
+    }));
     // For each code subsection find 'data in code' entries residing in it.
     // Compute the new offset values as
     // <offset within subsection> + <subsection address> - <__TEXT address>.
-    for (size_t i = 0, n = sectionHeaders.size(); i < n; ++i) {
-      for (const Subsection &subsec : objFile->sections[i].subsections) {
+    for (const Section *section : objFile->sections) {
+      for (const Subsection &subsec : section->subsections) {
         const InputSection *isec = subsec.isec;
         if (!isCodeSection(isec))
           continue;
         if (cast<ConcatInputSection>(isec)->shouldOmitFromOutput())
           continue;
-        const uint64_t beginAddr = sectionHeaders[i].addr + subsec.offset;
+        const uint64_t beginAddr = section->addr + subsec.offset;
         auto it = llvm::lower_bound(
             entries, beginAddr,
             [](const MachO::data_in_code_entry &entry, uint64_t addr) {
               return entry.offset < addr;
             });
-        const uint64_t endAddr = beginAddr + isec->getFileSize();
+        const uint64_t endAddr = beginAddr + isec->getSize();
         for (const auto end = entries.end();
              it != end && it->offset + it->length <= endAddr; ++it)
           dataInCodeEntries.push_back(
@@ -839,7 +842,7 @@ void SymtabSection::emitBeginSourceStab(DWARFUnit *compileUnit) {
   if (!dir.endswith(sep))
     dir += sep;
   stab.strx = stringTableSection.addString(
-      saver.save(dir + compileUnit->getUnitDIE().getShortName()));
+      saver().save(dir + compileUnit->getUnitDIE().getShortName()));
   stabs.emplace_back(std::move(stab));
 }
 
@@ -861,7 +864,7 @@ void SymtabSection::emitObjectFileStab(ObjFile *file) {
   if (!file->archiveName.empty())
     path.append({"(", file->getName(), ")"});
 
-  StringRef adjustedPath = saver.save(path.str());
+  StringRef adjustedPath = saver().save(path.str());
   adjustedPath.consume_front(config->osoPrefix);
 
   stab.strx = stringTableSection.addString(adjustedPath);
@@ -1288,7 +1291,10 @@ void BitcodeBundleSection::finalize() {
   using namespace llvm::sys::fs;
   CHECK_EC(createTemporaryFile("bitcode-bundle", "xar", xarPath));
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
   xar_t xar(xar_open(xarPath.data(), O_RDWR));
+#pragma clang diagnostic pop
   if (!xar)
     fatal("failed to open XAR temporary file at " + xarPath);
   CHECK_EC(xar_opt_set(xar, XAR_OPT_COMPRESSION, XAR_OPT_VAL_NONE));
@@ -1344,7 +1350,10 @@ void CStringSection::finalizeContents() {
     for (size_t i = 0, e = isec->pieces.size(); i != e; ++i) {
       if (!isec->pieces[i].live)
         continue;
-      uint32_t pieceAlign = MinAlign(isec->pieces[i].inSecOff, align);
+      // See comment above DeduplicatedCStringSection for how alignment is
+      // handled.
+      uint32_t pieceAlign =
+          1 << countTrailingZeros(isec->align | isec->pieces[i].inSecOff);
       offset = alignTo(offset, pieceAlign);
       isec->pieces[i].outSecOff = offset;
       isec->isFinal = true;
@@ -1354,55 +1363,88 @@ void CStringSection::finalizeContents() {
   }
   size = offset;
 }
+
 // Mergeable cstring literals are found under the __TEXT,__cstring section. In
 // contrast to ELF, which puts strings that need different alignments into
 // different sections, clang's Mach-O backend puts them all in one section.
 // Strings that need to be aligned have the .p2align directive emitted before
-// them, which simply translates into zero padding in the object file.
+// them, which simply translates into zero padding in the object file. In other
+// words, we have to infer the desired alignment of these cstrings from their
+// addresses.
 //
-// I *think* ld64 extracts the desired per-string alignment from this data by
-// preserving each string's offset from the last section-aligned address. I'm
-// not entirely certain since it doesn't seem consistent about doing this, and
-// in fact doesn't seem to be correct in general: we can in fact can induce ld64
-// to produce a crashing binary just by linking in an additional object file
-// that only contains a duplicate cstring at a different alignment. See PR50563
-// for details.
+// We differ slightly from ld64 in how we've chosen to align these cstrings.
+// Both LLD and ld64 preserve the number of trailing zeros in each cstring's
+// address in the input object files. When deduplicating identical cstrings,
+// both linkers pick the cstring whose address has more trailing zeros, and
+// preserve the alignment of that address in the final binary. However, ld64
+// goes a step further and also preserves the offset of the cstring from the
+// last section-aligned address.  I.e. if a cstring is at offset 18 in the
+// input, with a section alignment of 16, then both LLD and ld64 will ensure the
+// final address is 2-byte aligned (since 18 == 16 + 2). But ld64 will also
+// ensure that the final address is of the form 16 * k + 2 for some k.
 //
-// On x86_64, the cstrings we've seen so far that require special alignment are
-// all accessed by SIMD operations -- x86_64 requires SIMD accesses to be
-// 16-byte-aligned. arm64 also seems to require 16-byte-alignment in some cases
-// (PR50791), but I haven't tracked down the root cause. So for now, I'm just
-// aligning all strings to 16 bytes.  This is indeed wasteful, but
-// implementation-wise it's simpler than preserving per-string
-// alignment+offsets. It also avoids the aforementioned crash after
-// deduplication of differently-aligned strings.  Finally, the overhead is not
-// huge: using 16-byte alignment (vs no alignment) is only a 0.5% size overhead
-// when linking chromium_framework on x86_64.
-DeduplicatedCStringSection::DeduplicatedCStringSection()
-    : builder(StringTableBuilder::RAW, /*Alignment=*/16) {}
-
+// Note that ld64's heuristic means that a dedup'ed cstring's final address is
+// dependent on the order of the input object files. E.g. if in addition to the
+// cstring at offset 18 above, we have a duplicate one in another file with a
+// `.cstring` section alignment of 2 and an offset of zero, then ld64 will pick
+// the cstring from the object file earlier on the command line (since both have
+// the same number of trailing zeros in their address). So the final cstring may
+// either be at some address `16 * k + 2` or at some address `2 * k`.
+//
+// I've opted not to follow this behavior primarily for implementation
+// simplicity, and secondarily to save a few more bytes. It's not clear to me
+// that preserving the section alignment + offset is ever necessary, and there
+// are many cases that are clearly redundant. In particular, if an x86_64 object
+// file contains some strings that are accessed via SIMD instructions, then the
+// .cstring section in the object file will be 16-byte-aligned (since SIMD
+// requires its operand addresses to be 16-byte aligned). However, there will
+// typically also be other cstrings in the same file that aren't used via SIMD
+// and don't need this alignment. They will be emitted at some arbitrary address
+// `A`, but ld64 will treat them as being 16-byte aligned with an offset of `16
+// % A`.
 void DeduplicatedCStringSection::finalizeContents() {
-  // Add all string pieces to the string table builder to create section
-  // contents.
-  for (const CStringInputSection *isec : inputs)
-    for (size_t i = 0, e = isec->pieces.size(); i != e; ++i)
-      if (isec->pieces[i].live)
-        builder.add(isec->getCachedHashStringRef(i));
+  // Find the largest alignment required for each string.
+  for (const CStringInputSection *isec : inputs) {
+    for (size_t i = 0, e = isec->pieces.size(); i != e; ++i) {
+      const StringPiece &piece = isec->pieces[i];
+      if (!piece.live)
+        continue;
+      auto s = isec->getCachedHashStringRef(i);
+      assert(isec->align != 0);
+      uint8_t trailingZeros = countTrailingZeros(isec->align | piece.inSecOff);
+      auto it = stringOffsetMap.insert(
+          std::make_pair(s, StringOffset(trailingZeros)));
+      if (!it.second && it.first->second.trailingZeros < trailingZeros)
+        it.first->second.trailingZeros = trailingZeros;
+    }
+  }
 
-  // Fix the string table content. After this, the contents will never change.
-  builder.finalizeInOrder();
-
-  // finalize() fixed tail-optimized strings, so we can now get
-  // offsets of strings. Get an offset for each string and save it
-  // to a corresponding SectionPiece for easy access.
+  // Assign an offset for each string and save it to the corresponding
+  // StringPieces for easy access.
   for (CStringInputSection *isec : inputs) {
     for (size_t i = 0, e = isec->pieces.size(); i != e; ++i) {
       if (!isec->pieces[i].live)
         continue;
-      isec->pieces[i].outSecOff =
-          builder.getOffset(isec->getCachedHashStringRef(i));
-      isec->isFinal = true;
+      auto s = isec->getCachedHashStringRef(i);
+      auto it = stringOffsetMap.find(s);
+      assert(it != stringOffsetMap.end());
+      StringOffset &offsetInfo = it->second;
+      if (offsetInfo.outSecOff == UINT64_MAX) {
+        offsetInfo.outSecOff = alignTo(size, 1 << offsetInfo.trailingZeros);
+        size = offsetInfo.outSecOff + s.size();
+      }
+      isec->pieces[i].outSecOff = offsetInfo.outSecOff;
     }
+    isec->isFinal = true;
+  }
+}
+
+void DeduplicatedCStringSection::writeTo(uint8_t *buf) const {
+  for (const auto &p : stringOffsetMap) {
+    StringRef data = p.first.val();
+    uint64_t off = p.second.outSecOff;
+    if (!data.empty())
+      memcpy(buf + off, data.data(), data.size());
   }
 }
 
@@ -1479,7 +1521,7 @@ void WordLiteralSection::writeTo(uint8_t *buf) const {
 void macho::createSyntheticSymbols() {
   auto addHeaderSymbol = [](const char *name) {
     symtab->addSynthetic(name, in.header->isec, /*value=*/0,
-                         /*privateExtern=*/true, /*includeInSymtab=*/false,
+                         /*isPrivateExtern=*/true, /*includeInSymtab=*/false,
                          /*referencedDynamically=*/false);
   };
 
@@ -1492,11 +1534,11 @@ void macho::createSyntheticSymbols() {
     // Otherwise, it's an absolute symbol.
     if (config->isPic)
       symtab->addSynthetic("__mh_execute_header", in.header->isec, /*value=*/0,
-                           /*privateExtern=*/false, /*includeInSymtab=*/true,
+                           /*isPrivateExtern=*/false, /*includeInSymtab=*/true,
                            /*referencedDynamically=*/true);
     else
       symtab->addSynthetic("__mh_execute_header", /*isec=*/nullptr, /*value=*/0,
-                           /*privateExtern=*/false, /*includeInSymtab=*/true,
+                           /*isPrivateExtern=*/false, /*includeInSymtab=*/true,
                            /*referencedDynamically=*/true);
     break;
 

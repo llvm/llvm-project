@@ -1,7 +1,6 @@
 ; This testcase ensures that CFL AA answers queries soundly when callee tries 
 ; to mutate the memory pointed to by its parameters
 
-; RUN: opt < %s -disable-basic-aa -cfl-steens-aa -aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s
 ; RUN: opt < %s -aa-pipeline=cfl-steens-aa -passes=aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s
 
 @g = external global i32
@@ -11,7 +10,7 @@ define void @store_arg_unknown_callee(i32** %arg1) {
 	ret void
 }
 ; CHECK-LABEL: Function: test_store_arg_unknown
-; CHECK: NoAlias: i32* %x, i32** %p
+; CHECK: NoAlias: i32** %p, i32* %x
 ; CHECK: NoAlias: i32* %a, i32** %p
 ; CHECK: NoAlias: i32* %b, i32** %p
 ; CHECK: MayAlias: i32* %lp, i32* %x
@@ -23,10 +22,14 @@ define void @test_store_arg_unknown(i32* %x) {
   %b = alloca i32, align 4
   %p = alloca i32*, align 8
 
+  load i32, i32* %x
+  load i32, i32* %a
+  load i32, i32* %b
   store i32* %a, i32** %p
   call void @store_arg_unknown_callee(i32** %p)
 
   %lp = load i32*, i32** %p
+  load i32, i32* %lp
 
   ret void
 }

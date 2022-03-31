@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-position=before-vectorizer -polly-scops -analyze < %s | FileCheck %s --check-prefix=SCOP
+; RUN: opt %loadPolly -polly-position=before-vectorizer -polly-print-scops -disable-output < %s | FileCheck %s --check-prefix=SCOP
 ; RUN: opt %loadPolly -polly-position=before-vectorizer -polly-codegen -S < %s | FileCheck %s --check-prefix=IR
 
 ; The IR has two ScopArrayInfo for the value %next.0. This used to produce two

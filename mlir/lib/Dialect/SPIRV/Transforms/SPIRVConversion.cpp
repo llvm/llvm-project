@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -235,7 +236,7 @@ getTypeNumBytes(const SPIRVTypeConverter::Options &options, Type type) {
       return llvm::None;
 
     int64_t memrefSize = -1;
-    for (auto shape : enumerate(dims))
+    for (const auto &shape : enumerate(dims))
       memrefSize = std::max(memrefSize, shape.value() * strides[shape.index()]);
 
     return (offset + memrefSize) * elementSize.getValue();
@@ -552,12 +553,12 @@ public:
 LogicalResult
 FuncOpConversion::matchAndRewrite(FuncOp funcOp, OpAdaptor adaptor,
                                   ConversionPatternRewriter &rewriter) const {
-  auto fnType = funcOp.getType();
+  auto fnType = funcOp.getFunctionType();
   if (fnType.getNumResults() > 1)
     return failure();
 
   TypeConverter::SignatureConversion signatureConverter(fnType.getNumInputs());
-  for (auto argType : enumerate(fnType.getInputs())) {
+  for (const auto &argType : enumerate(fnType.getInputs())) {
     auto convertedType = getTypeConverter()->convertType(argType.value());
     if (!convertedType)
       return failure();
@@ -580,7 +581,7 @@ FuncOpConversion::matchAndRewrite(FuncOp funcOp, OpAdaptor adaptor,
 
   // Copy over all attributes other than the function name and type.
   for (const auto &namedAttr : funcOp->getAttrs()) {
-    if (namedAttr.getName() != function_like_impl::getTypeAttrName() &&
+    if (namedAttr.getName() != FunctionOpInterface::getTypeAttrName() &&
         namedAttr.getName() != SymbolTable::getSymbolAttrName())
       newFuncOp->setAttr(namedAttr.getName(), namedAttr.getValue());
   }
@@ -778,7 +779,7 @@ Value mlir::spirv::linearizeIndex(ValueRange indices, ArrayRef<int64_t> strides,
 
   Value linearizedIndex = builder.create<spirv::ConstantOp>(
       loc, integerType, IntegerAttr::get(integerType, offset));
-  for (auto index : llvm::enumerate(indices)) {
+  for (const auto &index : llvm::enumerate(indices)) {
     Value strideVal = builder.create<spirv::ConstantOp>(
         loc, integerType,
         IntegerAttr::get(integerType, strides[index.index()]));

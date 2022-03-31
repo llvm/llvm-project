@@ -32,25 +32,25 @@ class TestReadMemCString(TestBase):
         err = lldb.SBError()
 
         empty_str_addr = frame.FindVariable("empty_string").GetValueAsUnsigned(err)
-        self.assertTrue(err.Success())
+        self.assertSuccess(err)
         self.assertTrue(empty_str_addr != lldb.LLDB_INVALID_ADDRESS)
 
         one_letter_str_addr = frame.FindVariable("one_letter_string").GetValueAsUnsigned(err)
-        self.assertTrue(err.Success())
+        self.assertSuccess(err)
         self.assertTrue(one_letter_str_addr != lldb.LLDB_INVALID_ADDRESS)
 
         invalid_memory_str_addr = frame.FindVariable("invalid_memory_string").GetValueAsUnsigned(err)
-        self.assertTrue(err.Success())
+        self.assertSuccess(err)
         self.assertTrue(invalid_memory_str_addr != lldb.LLDB_INVALID_ADDRESS)
 
         # Important:  An empty (0-length) c-string must come back as a Python string, not a
         # None object.
         empty_str = process.ReadCStringFromMemory(empty_str_addr, 2048, err)
-        self.assertTrue(err.Success())
+        self.assertSuccess(err)
         self.assertEqual(empty_str, "")
 
         one_letter_string = process.ReadCStringFromMemory(one_letter_str_addr, 2048, err)
-        self.assertTrue(err.Success())
+        self.assertSuccess(err)
         self.assertEqual(one_letter_string, "1")
 
         invalid_memory_string = process.ReadCStringFromMemory(invalid_memory_str_addr, 2048, err)

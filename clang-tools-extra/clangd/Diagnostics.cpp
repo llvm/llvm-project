@@ -12,10 +12,9 @@
 #include "Protocol.h"
 #include "SourceCode.h"
 #include "support/Logger.h"
-#include "clang/Basic/AllDiagnostics.h"
+#include "clang/Basic/AllDiagnostics.h" // IWYU pragma: keep
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticIDs.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
@@ -29,12 +28,10 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/Support/Capacity.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/ScopedPrinter.h"
-#include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <cassert>
 #include <cstddef>
 #include <vector>
 
@@ -45,7 +42,7 @@ namespace {
 const char *getDiagnosticCode(unsigned ID) {
   switch (ID) {
 #define DIAG(ENUM, CLASS, DEFAULT_MAPPING, DESC, GROPU, SFINAE, NOWERROR,      \
-             SHOWINSYSHEADER, DEFERRABLE, CATEGORY)                            \
+             SHOWINSYSHEADER, SHOWINSYSMACRO, DEFERRABLE, CATEGORY)            \
   case clang::diag::ENUM:                                                      \
     return #ENUM;
 #include "clang/Basic/DiagnosticASTKinds.inc"
@@ -419,6 +416,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Diag &D) {
       OS << Sep << Fix;
       Sep = ", ";
     }
+    OS << "}";
   }
   return OS;
 }
@@ -466,7 +464,8 @@ void toLSPDiags(
 
   // Main diagnostic should always refer to a range inside main file. If a
   // diagnostic made it so for, it means either itself or one of its notes is
-  // inside main file.
+  // inside main file. It's also possible that there's a fix in the main file,
+  // but we preserve fixes iff primary diagnostic is in the main file.
   if (D.InsideMainFile) {
     Main.range = D.Range;
   } else {
@@ -630,7 +629,10 @@ void StoreDiags::EndSourceFile() {
 /// the result is not too large and does not contain newlines.
 static void writeCodeToFixMessage(llvm::raw_ostream &OS, llvm::StringRef Code) {
   constexpr unsigned MaxLen = 50;
-
+  if (Code == "\n") {
+    OS << "\\n";
+    return;
+  }
   // Only show the first line if there are many.
   llvm::StringRef R = Code.split('\n').first;
   // Shorten the message if it's too long.
@@ -701,13 +703,12 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
     return;
   }
 
-  bool InsideMainFile = isInsideMainFile(Info);
   SourceManager &SM = Info.getSourceManager();
 
   auto FillDiagBase = [&](DiagBase &D) {
     fillNonLocationData(DiagLevel, Info, D);
 
-    D.InsideMainFile = InsideMainFile;
+    D.InsideMainFile = isInsideMainFile(Info);
     D.Range = diagnosticRange(Info, *LangOpts);
     D.File = std::string(SM.getFilename(Info.getLocation()));
     D.AbsFile = getCanonicalPath(
@@ -719,9 +720,9 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
   auto AddFix = [&](bool SyntheticMessage) -> bool {
     assert(!Info.getFixItHints().empty() &&
            "diagnostic does not have attached fix-its");
-    if (!InsideMainFile)
+    // No point in generating fixes, if the diagnostic is for a different file.
+    if (!LastDiag->InsideMainFile)
       return false;
-
     // Copy as we may modify the ranges.
     auto FixIts = Info.getFixItHints().vec();
     llvm::SmallVector<TextEdit, 1> Edits;
@@ -823,6 +824,18 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
     if (LastDiag->Severity == DiagnosticsEngine::Ignored)
       return;
 
+    // Give include-fixer a chance to replace a note with a fix.
+    if (Fixer) {
+      auto ReplacementFixes = Fixer(LastDiag->Severity, Info);
+      if (!ReplacementFixes.empty()) {
+        assert(Info.getNumFixItHints() == 0 &&
+               "Include-fixer replaced a note with clang fix-its attached!");
+        LastDiag->Fixes.insert(LastDiag->Fixes.end(), ReplacementFixes.begin(),
+                               ReplacementFixes.end());
+        return;
+      }
+    }
+
     if (!Info.getFixItHints().empty()) {
       // A clang note with fix-it is not a separate diagnostic in clangd. We
       // attach it as a Fix to the main diagnostic instead.
@@ -866,7 +879,14 @@ void StoreDiags::flushLastDiag() {
 }
 
 bool isBuiltinDiagnosticSuppressed(unsigned ID,
-                                   const llvm::StringSet<> &Suppress) {
+                                   const llvm::StringSet<> &Suppress,
+                                   const LangOptions &LangOpts) {
+  // Don't complain about header-only stuff in mainfiles if it's a header.
+  // FIXME: would be cleaner to suppress in clang, once we decide whether the
+  //        behavior should be to silently-ignore or respect the pragma.
+  if (ID == diag::pp_pragma_sysheader_in_main_file && LangOpts.IsHeaderFile)
+    return true;
+
   if (const char *CodePtr = getDiagnosticCode(ID)) {
     if (Suppress.contains(normalizeSuppressedCode(CodePtr)))
       return true;

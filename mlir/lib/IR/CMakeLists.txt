@@ -9,11 +9,12 @@ add_mlir_library(MLIRIR
   BuiltinAttributes.cpp
   BuiltinDialect.cpp
   BuiltinTypes.cpp
+  BuiltinTypeInterfaces.cpp
   Diagnostics.cpp
   Dialect.cpp
   Dominance.cpp
   FunctionImplementation.cpp
-  FunctionSupport.cpp
+  FunctionInterfaces.cpp
   IntegerSet.cpp
   Location.cpp
   MLIRContext.cpp

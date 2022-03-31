@@ -96,6 +96,7 @@ namespace clang {
     void VisitFieldDecl(FieldDecl *D);
     void VisitMSPropertyDecl(MSPropertyDecl *D);
     void VisitMSGuidDecl(MSGuidDecl *D);
+    void VisitUnnamedGlobalConstantDecl(UnnamedGlobalConstantDecl *D);
     void VisitTemplateParamObjectDecl(TemplateParamObjectDecl *D);
     void VisitIndirectFieldDecl(IndirectFieldDecl *D);
     void VisitVarDecl(VarDecl *D);
@@ -962,9 +963,15 @@ void ASTDeclWriter::VisitMSGuidDecl(MSGuidDecl *D) {
   Record.push_back(Parts.Part1);
   Record.push_back(Parts.Part2);
   Record.push_back(Parts.Part3);
-  for (auto C : Parts.Part4And5)
-    Record.push_back(C);
+  Record.append(std::begin(Parts.Part4And5), std::end(Parts.Part4And5));
   Code = serialization::DECL_MS_GUID;
+}
+
+void ASTDeclWriter::VisitUnnamedGlobalConstantDecl(
+    UnnamedGlobalConstantDecl *D) {
+  VisitValueDecl(D);
+  Record.AddAPValue(D->getValue());
+  Code = serialization::DECL_UNNAMED_GLOBAL_CONSTANT;
 }
 
 void ASTDeclWriter::VisitTemplateParamObjectDecl(TemplateParamObjectDecl *D) {

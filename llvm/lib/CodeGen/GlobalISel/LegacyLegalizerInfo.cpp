@@ -64,7 +64,7 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, LegacyLegalizeAction Action) {
   return OS;
 }
 
-LegacyLegalizerInfo::LegacyLegalizerInfo() : TablesInitialized(false) {
+LegacyLegalizerInfo::LegacyLegalizerInfo() {
   // Set defaults.
   // FIXME: these two (G_ANYEXT and G_TRUNC?) can be legalized to the
   // fundamental load/store Jakob proposed. Once loads & stores are supported.

@@ -863,13 +863,13 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
 
   OS << "#ifdef GET_INSTRINFO_HELPER_DECLS\n";
   OS << "#undef GET_INSTRINFO_HELPER_DECLS\n\n";
-  emitTIIHelperMethods(OS, TargetName, /* ExpandDefintion = */false);
+  emitTIIHelperMethods(OS, TargetName, /* ExpandDefinition = */ false);
   OS << "\n";
   OS << "#endif // GET_INSTRINFO_HELPER_DECLS\n\n";
 
   OS << "#ifdef GET_INSTRINFO_HELPERS\n";
   OS << "#undef GET_INSTRINFO_HELPERS\n\n";
-  emitTIIHelperMethods(OS, TargetName, /* ExpandDefintion = */true);
+  emitTIIHelperMethods(OS, TargetName, /* ExpandDefinition = */ true);
   OS << "#endif // GET_INSTRINFO_HELPERS\n\n";
 
   OS << "#ifdef GET_INSTRINFO_CTOR_DTOR\n";
@@ -943,6 +943,7 @@ void InstrInfoEmitter::emitRecord(const CodeGenInstruction &Inst, unsigned Num,
   // Emit all of the target independent flags...
   if (Inst.isPreISelOpcode)    OS << "|(1ULL<<MCID::PreISelOpcode)";
   if (Inst.isPseudo)           OS << "|(1ULL<<MCID::Pseudo)";
+  if (Inst.isMeta)             OS << "|(1ULL<<MCID::Meta)";
   if (Inst.isReturn)           OS << "|(1ULL<<MCID::Return)";
   if (Inst.isEHScopeReturn)    OS << "|(1ULL<<MCID::EHScopeReturn)";
   if (Inst.isBranch)           OS << "|(1ULL<<MCID::Branch)";

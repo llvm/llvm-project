@@ -10,9 +10,14 @@
 #define LLVM_DEBUGINFO_DWARF_DWARFCOMPILEUNIT_H
 
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
-#include "llvm/DebugInfo/DWARF/DWARFUnitIndex.h"
 
 namespace llvm {
+
+class DWARFContext;
+class DWARFDebugAbbrev;
+class raw_ostream;
+struct DIDumpOptions;
+struct DWARFSection;
 
 class DWARFCompileUnit : public DWARFUnit {
 public:

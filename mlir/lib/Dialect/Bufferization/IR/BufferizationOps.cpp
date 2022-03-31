@@ -1,4 +1,3 @@
-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -12,6 +11,73 @@
 
 using namespace mlir;
 using namespace mlir::bufferization;
+
+//===----------------------------------------------------------------------===//
+// Helper functions
+//===----------------------------------------------------------------------===//
+
+FailureOr<Value>
+mlir::bufferization::castOrReallocMemRefValue(OpBuilder &b, Value value,
+                                              MemRefType destType) {
+  auto srcType = value.getType().cast<MemRefType>();
+
+  // Casting to the same type, nothing to do.
+  if (srcType == destType)
+    return value;
+
+  // Element type, rank and memory space must match.
+  if (srcType.getElementType() != destType.getElementType())
+    return failure();
+  if (srcType.getMemorySpaceAsInt() != destType.getMemorySpaceAsInt())
+    return failure();
+  if (srcType.getRank() != destType.getRank())
+    return failure();
+
+  // In case the affine maps are different, we may need to use a copy if we go
+  // from dynamic to static offset or stride (the canonicalization cannot know
+  // at this point that it is really cast compatible).
+  auto isGuaranteedCastCompatible = [](MemRefType source, MemRefType target) {
+    int64_t sourceOffset, targetOffset;
+    SmallVector<int64_t, 4> sourceStrides, targetStrides;
+    if (failed(getStridesAndOffset(source, sourceStrides, sourceOffset)) ||
+        failed(getStridesAndOffset(target, targetStrides, targetOffset)))
+      return false;
+    auto dynamicToStatic = [](int64_t a, int64_t b) {
+      return a == MemRefType::getDynamicStrideOrOffset() &&
+             b != MemRefType::getDynamicStrideOrOffset();
+    };
+    if (dynamicToStatic(sourceOffset, targetOffset))
+      return false;
+    for (auto it : zip(sourceStrides, targetStrides))
+      if (dynamicToStatic(std::get<0>(it), std::get<1>(it)))
+        return false;
+    return true;
+  };
+
+  // Note: If `areCastCompatible`, a cast is valid, but may fail at runtime. To
+  // ensure that we only generate casts that always succeed at runtime, we check
+  // a fix extra conditions in `isGuaranteedCastCompatible`.
+  if (memref::CastOp::areCastCompatible(srcType, destType) &&
+      isGuaranteedCastCompatible(srcType, destType)) {
+    Value casted = b.create<memref::CastOp>(value.getLoc(), destType, value);
+    return casted;
+  }
+
+  auto loc = value.getLoc();
+  SmallVector<Value, 4> dynamicOperands;
+  for (int i = 0; i < destType.getRank(); ++i) {
+    if (destType.getShape()[i] != ShapedType::kDynamicSize)
+      continue;
+    auto index = b.createOrFold<arith::ConstantIndexOp>(loc, i);
+    Value size = b.create<memref::DimOp>(loc, value, index);
+    dynamicOperands.push_back(size);
+  }
+  // TODO: Use alloc/memcpy callback from BufferizationOptions if called via
+  // BufferizableOpInterface impl of ToMemrefOp.
+  Value copy = b.create<memref::AllocOp>(loc, destType, dynamicOperands);
+  b.create<memref::CopyOp>(loc, value, copy);
+  return copy;
+}
 
 //===----------------------------------------------------------------------===//
 // CloneOp
@@ -52,11 +118,12 @@ struct SimplifyClones : public OpRewritePattern<CloneOp> {
     // also consider aliases. That would also make the safety check below
     // redundant.
     llvm::Optional<Operation *> maybeCloneDeallocOp =
-        findDealloc(cloneOp.output());
+        memref::findDealloc(cloneOp.output());
     // Skip if either of them has > 1 deallocate operations.
     if (!maybeCloneDeallocOp.hasValue())
       return failure();
-    llvm::Optional<Operation *> maybeSourceDeallocOp = findDealloc(source);
+    llvm::Optional<Operation *> maybeSourceDeallocOp =
+        memref::findDealloc(source);
     if (!maybeSourceDeallocOp.hasValue())
       return failure();
     Operation *cloneDeallocOp = *maybeCloneDeallocOp;
@@ -100,11 +167,11 @@ struct SimplifyClones : public OpRewritePattern<CloneOp> {
   }
 };
 
-} // namespace.
+} // namespace
 
-void CloneOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void CloneOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                           MLIRContext *context) {
-  results.insert<SimplifyClones>(context);
+  results.add<SimplifyClones>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -182,6 +249,51 @@ struct ToMemrefOfCast : public OpRewritePattern<ToMemrefOp> {
   }
 };
 
+/// Try to fold to_memref(to_tensor(x)). If x's type and the result type of the
+/// to_memref op are different, a memref.cast is needed.
+static LogicalResult foldToMemrefToTensorPair(RewriterBase &rewriter,
+                                              ToMemrefOp toMemref,
+                                              bool allowSameType = true) {
+  auto memrefToTensor = toMemref.tensor().getDefiningOp<ToTensorOp>();
+  if (!memrefToTensor)
+    return failure();
+
+  Type srcType = memrefToTensor.memref().getType();
+  Type destType = toMemref.getType();
+
+  // Function can be configured to only handle cases where a cast is needed.
+  if (!allowSameType && srcType == destType)
+    return failure();
+
+  auto rankedSrcType = srcType.dyn_cast<MemRefType>();
+  auto rankedDestType = destType.dyn_cast<MemRefType>();
+  auto unrankedSrcType = srcType.dyn_cast<UnrankedMemRefType>();
+
+  // Ranked memref -> Ranked memref cast.
+  if (rankedSrcType && rankedDestType) {
+    FailureOr<Value> replacement = castOrReallocMemRefValue(
+        rewriter, memrefToTensor.memref(), rankedDestType);
+    if (failed(replacement))
+      return failure();
+
+    rewriter.replaceOp(toMemref, *replacement);
+    return success();
+  }
+
+  // Unranked memref -> Ranked memref cast: May require a copy.
+  // TODO: Not implemented at the moment.
+  if (unrankedSrcType && rankedDestType)
+    return failure();
+
+  // Unranked memref -> unranked memref cast
+  // Ranked memref -> unranked memref cast: No copy needed.
+  assert(memref::CastOp::areCastCompatible(srcType, destType) &&
+         "expected that types are cast compatible");
+  rewriter.replaceOpWithNewOp<memref::CastOp>(toMemref, destType,
+                                              memrefToTensor.memref());
+  return success();
+}
+
 /// Canonicalize bufferization.to_tensor + bufferization.to_memref to
 /// memref.cast when type mismatches prevent `ToMemrefOp::fold` to kick in.
 struct TensorLoadToMemref : public OpRewritePattern<ToMemrefOp> {
@@ -189,62 +301,10 @@ struct TensorLoadToMemref : public OpRewritePattern<ToMemrefOp> {
 
   LogicalResult matchAndRewrite(ToMemrefOp toMemref,
                                 PatternRewriter &rewriter) const final {
-    auto memrefToTensor = toMemref.tensor().getDefiningOp<ToTensorOp>();
-    // Bail unless we have a memref_to_tensor + tensor_to_memref with different
-    // types. `ToMemrefOp::fold` handles the same type case.
-    if (!memrefToTensor ||
-        memrefToTensor.memref().getType() == toMemref.getType())
-      return failure();
-    // If types are definitely not cast-compatible, bail.
-    if (!memref::CastOp::areCastCompatible(memrefToTensor.memref().getType(),
-                                           toMemref.getType()))
-      return failure();
-
-    // We already know that the types are potentially cast-compatible. However
-    // in case the affine maps are different, we may need to use a copy if we go
-    // from dynamic to static offset or stride (the canonicalization cannot know
-    // at this point that it is really cast compatible).
-    auto isGuaranteedCastCompatible = [](MemRefType source, MemRefType target) {
-      int64_t sourceOffset, targetOffset;
-      SmallVector<int64_t, 4> sourceStrides, targetStrides;
-      if (failed(getStridesAndOffset(source, sourceStrides, sourceOffset)) ||
-          failed(getStridesAndOffset(target, targetStrides, targetOffset)))
-        return false;
-      auto dynamicToStatic = [](int64_t a, int64_t b) {
-        return a == MemRefType::getDynamicStrideOrOffset() &&
-               b != MemRefType::getDynamicStrideOrOffset();
-      };
-      if (dynamicToStatic(sourceOffset, targetOffset))
-        return false;
-      for (auto it : zip(sourceStrides, targetStrides))
-        if (dynamicToStatic(std::get<0>(it), std::get<1>(it)))
-          return false;
-      return true;
-    };
-
-    auto memrefToTensorType =
-        memrefToTensor.memref().getType().dyn_cast<MemRefType>();
-    auto toMemrefType = toMemref.getType().dyn_cast<MemRefType>();
-    if (memrefToTensorType && toMemrefType &&
-        !isGuaranteedCastCompatible(memrefToTensorType, toMemrefType)) {
-      MemRefType resultType = toMemrefType;
-      auto loc = toMemref.getLoc();
-      SmallVector<Value, 4> dynamicOperands;
-      for (int i = 0; i < resultType.getRank(); ++i) {
-        if (resultType.getShape()[i] != ShapedType::kDynamicSize)
-          continue;
-        auto index = rewriter.createOrFold<arith::ConstantIndexOp>(loc, i);
-        Value size = rewriter.create<tensor::DimOp>(loc, memrefToTensor, index);
-        dynamicOperands.push_back(size);
-      }
-      auto copy =
-          rewriter.create<memref::AllocOp>(loc, resultType, dynamicOperands);
-      rewriter.create<memref::CopyOp>(loc, memrefToTensor.memref(), copy);
-      rewriter.replaceOp(toMemref, {copy});
-    } else
-      rewriter.replaceOpWithNewOp<memref::CastOp>(toMemref, toMemref.getType(),
-                                                  memrefToTensor.memref());
-    return success();
+    // Only handle cases where a cast is needed. The other case is handled by
+    // the folder.
+    return foldToMemrefToTensorPair(rewriter, toMemref,
+                                    /*allowSameType=*/false);
   }
 };
 
@@ -286,6 +346,12 @@ void ToMemrefOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                              MLIRContext *context) {
   results.add<DimOfCastOp, LoadOfToMemref, ToMemrefOfCast, TensorLoadToMemref>(
       context);
+}
+
+LogicalResult ToMemrefOp::bufferize(RewriterBase &rewriter,
+                                    BufferizationState &state) {
+  // Fold to_memref(to_tensor(x)) to x. Insert a cast if necessary.
+  return foldToMemrefToTensorPair(rewriter, *this);
 }
 
 Optional<Operation *> CloneOp::buildDealloc(OpBuilder &builder, Value alloc) {

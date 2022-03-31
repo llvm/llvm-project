@@ -5,13 +5,13 @@ entry:
 ; CHECK-LABEL: _Z1fz:
 ; CHECK: extsp 3
 ; CHECK: stw r[[REG:[0-3]{1,1}]]
-; CHECK: , sp{{\[}}[[REG]]{{\]}}
+; CHECK: , sp[[[REG]]]
 ; CHECK: stw r[[REG:[0-3]{1,1}]]
-; CHECK: , sp{{\[}}[[REG]]{{\]}}
+; CHECK: , sp[[[REG]]]
 ; CHECK: stw r[[REG:[0-3]{1,1}]]
-; CHECK: , sp{{\[}}[[REG]]{{\]}}
+; CHECK: , sp[[[REG]]]
 ; CHECK: stw r[[REG:[0-3]{1,1}]]
-; CHECK: , sp{{\[}}[[REG]]{{\]}}
+; CHECK: , sp[[[REG]]]
 ; CHECK: ldaw sp, sp[3]
 ; CHECK: retsp 0
   ret void

@@ -10,7 +10,6 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCCodeEmitter.h"
@@ -19,23 +18,29 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCFragment.h"
-#include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCLinkerOptimizationHint.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSectionMachO.h"
-#include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolMachO.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/MC/SectionKind.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <vector>
+
+namespace llvm {
+class MCInst;
+class MCStreamer;
+class MCSubtargetInfo;
+class Triple;
+} // namespace llvm
 
 using namespace llvm;
 
@@ -92,6 +97,9 @@ public:
                       unsigned Update, VersionTuple SDKVersion) override;
   void emitBuildVersion(unsigned Platform, unsigned Major, unsigned Minor,
                         unsigned Update, VersionTuple SDKVersion) override;
+  void emitDarwinTargetVariantBuildVersion(unsigned Platform, unsigned Major,
+                                           unsigned Minor, unsigned Update,
+                                           VersionTuple SDKVersion) override;
   void emitThumbFunc(MCSymbol *Func) override;
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
   void emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) override;
@@ -113,8 +121,16 @@ public:
   void emitLOHDirective(MCLOHType Kind, const MCLOHArgs &Args) override {
     getAssembler().getLOHContainer().addDirective(Kind, Args);
   }
+  void emitCGProfileEntry(const MCSymbolRefExpr *From,
+                          const MCSymbolRefExpr *To, uint64_t Count) override {
+    if (!From->getSymbol().isTemporary() && !To->getSymbol().isTemporary())
+      getAssembler().CGProfile.push_back({From, To, Count});
+  }
 
   void finishImpl() override;
+
+  void finalizeCGProfileEntry(const MCSymbolRefExpr *&SRE);
+  void finalizeCGProfile();
 };
 
 } // end anonymous namespace.
@@ -142,7 +158,8 @@ static bool canGoAfterDWARF(const MCSectionMachO &MSec) {
   if (SegName == "__DATA" && (SecName == "__nl_symbol_ptr" ||
                               SecName == "__thread_ptr"))
     return true;
-
+  if (SegName == "__LLVM" && SecName == "__cg_profile")
+    return true;
   return false;
 }
 
@@ -281,6 +298,13 @@ void MCMachOStreamer::emitBuildVersion(unsigned Platform, unsigned Major,
                                        VersionTuple SDKVersion) {
   getAssembler().setBuildVersion((MachO::PlatformType)Platform, Major, Minor,
                                  Update, SDKVersion);
+}
+
+void MCMachOStreamer::emitDarwinTargetVariantBuildVersion(
+    unsigned Platform, unsigned Major, unsigned Minor, unsigned Update,
+    VersionTuple SDKVersion) {
+  getAssembler().setDarwinTargetVariantBuildVersion(
+      (MachO::PlatformType)Platform, Major, Minor, Update, SDKVersion);
 }
 
 void MCMachOStreamer::emitThumbFunc(MCSymbol *Symbol) {
@@ -503,7 +527,38 @@ void MCMachOStreamer::finishImpl() {
     }
   }
 
+  finalizeCGProfile();
+
   this->MCObjectStreamer::finishImpl();
+}
+
+void MCMachOStreamer::finalizeCGProfileEntry(const MCSymbolRefExpr *&SRE) {
+  const MCSymbol *S = &SRE->getSymbol();
+  bool Created;
+  getAssembler().registerSymbol(*S, &Created);
+  if (Created)
+    S->setExternal(true);
+}
+
+void MCMachOStreamer::finalizeCGProfile() {
+  MCAssembler &Asm = getAssembler();
+  if (Asm.CGProfile.empty())
+    return;
+  for (MCAssembler::CGProfileEntry &E : Asm.CGProfile) {
+    finalizeCGProfileEntry(E.From);
+    finalizeCGProfileEntry(E.To);
+  }
+  // We can't write the section out until symbol indices are finalized which
+  // doesn't happen until after section layout. We need to create the section
+  // and set its size now so that it's accounted for in layout.
+  MCSection *CGProfileSection = Asm.getContext().getMachOSection(
+      "__LLVM", "__cg_profile", 0, SectionKind::getMetadata());
+  Asm.registerSection(*CGProfileSection);
+  auto *Frag = new MCDataFragment(CGProfileSection);
+  // For each entry, reserve space for 2 32-bit indices and a 64-bit count.
+  size_t SectionBytes =
+      Asm.CGProfile.size() * (2 * sizeof(uint32_t) + sizeof(uint64_t));
+  Frag->getContents().resize(SectionBytes);
 }
 
 MCStreamer *llvm::createMachOStreamer(MCContext &Context,
@@ -516,7 +571,10 @@ MCStreamer *llvm::createMachOStreamer(MCContext &Context,
       new MCMachOStreamer(Context, std::move(MAB), std::move(OW), std::move(CE),
                           DWARFMustBeAtTheEnd, LabelSections);
   const Triple &Target = Context.getTargetTriple();
-  S->emitVersionForTarget(Target, Context.getObjectFileInfo()->getSDKVersion());
+  S->emitVersionForTarget(
+      Target, Context.getObjectFileInfo()->getSDKVersion(),
+      Context.getObjectFileInfo()->getDarwinTargetVariantTriple(),
+      Context.getObjectFileInfo()->getDarwinTargetVariantSDKVersion());
   if (RelaxAll)
     S->getAssembler().setRelaxAll(true);
   return S;

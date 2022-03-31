@@ -21,20 +21,14 @@ namespace __tsan {
 
 // ThreadContext implementation.
 
-ThreadContext::ThreadContext(Tid tid)
-    : ThreadContextBase(tid), thr(), sync(), epoch0(), epoch1() {}
+ThreadContext::ThreadContext(Tid tid) : ThreadContextBase(tid), thr(), sync() {}
 
 #if !SANITIZER_GO
 ThreadContext::~ThreadContext() {
 }
 #endif
 
-void ThreadContext::OnReset() {
-  CHECK_EQ(sync.size(), 0);
-  uptr trace_p = GetThreadTrace(tid);
-  ReleaseMemoryPagesToOS(trace_p, trace_p + TraceSize() * sizeof(Event));
-  //!!! ReleaseMemoryToOS(GetThreadTraceHeader(tid), sizeof(Trace));
-}
+void ThreadContext::OnReset() { CHECK(!sync); }
 
 #if !SANITIZER_GO
 struct ThreadLeak {
@@ -57,7 +51,9 @@ static void CollectThreadLeaks(ThreadContextBase *tctx_base, void *arg) {
 }
 #endif
 
-#if !SANITIZER_GO
+// Disabled on Mac because lldb test TestTsanBasic fails:
+// https://reviews.llvm.org/D112603#3163158
+#if !SANITIZER_GO && !SANITIZER_MAC
 static void ReportIgnoresEnabled(ThreadContext *tctx, IgnoreSet *set) {
   if (tctx->tid == kMainTid) {
     Printf("ThreadSanitizer: main thread finished with ignores enabled\n");
@@ -112,30 +108,35 @@ int ThreadCount(ThreadState *thr) {
 }
 
 struct OnCreatedArgs {
-  ThreadState *thr;
-  uptr pc;
+  VectorClock *sync;
+  uptr sync_epoch;
+  StackID stack;
 };
 
 Tid ThreadCreate(ThreadState *thr, uptr pc, uptr uid, bool detached) {
-  OnCreatedArgs args = { thr, pc };
-  u32 parent_tid = thr ? thr->tid : kInvalidTid;  // No parent for GCD workers.
-  Tid tid = ctx->thread_registry.CreateThread(uid, detached, parent_tid, &args);
-  DPrintf("#%d: ThreadCreate tid=%d uid=%zu\n", parent_tid, tid, uid);
+  // The main thread and GCD workers don't have a parent thread.
+  Tid parent = kInvalidTid;
+  OnCreatedArgs arg = {nullptr, 0, kInvalidStackID};
+  if (thr) {
+    parent = thr->tid;
+    arg.stack = CurrentStackId(thr, pc);
+    if (!thr->ignore_sync) {
+      SlotLocker locker(thr);
+      thr->clock.ReleaseStore(&arg.sync);
+      arg.sync_epoch = ctx->global_epoch;
+      IncrementEpoch(thr);
+    }
+  }
+  Tid tid = ctx->thread_registry.CreateThread(uid, detached, parent, &arg);
+  DPrintf("#%d: ThreadCreate tid=%d uid=%zu\n", parent, tid, uid);
   return tid;
 }
 
 void ThreadContext::OnCreated(void *arg) {
-  thr = 0;
-  if (tid == kMainTid)
-    return;
   OnCreatedArgs *args = static_cast<OnCreatedArgs *>(arg);
-  if (!args->thr)  // GCD workers don't have a parent thread.
-    return;
-  args->thr->fast_state.IncrementEpoch();
-  // Can't increment epoch w/o writing to the trace as well.
-  TraceAddEvent(args->thr, args->thr->fast_state, EventTypeMop, 0);
-  ReleaseImpl(args->thr, 0, &sync);
-  creation_stack_id = CurrentStackId(args->thr, args->pc);
+  sync = args->sync;
+  sync_epoch = args->sync_epoch;
+  creation_stack_id = args->stack;
 }
 
 extern "C" void __tsan_stack_initialization() {}
@@ -150,6 +151,15 @@ struct OnStartedArgs {
 
 void ThreadStart(ThreadState *thr, Tid tid, tid_t os_id,
                  ThreadType thread_type) {
+  ctx->thread_registry.StartThread(tid, os_id, thread_type, thr);
+  if (!thr->ignore_sync) {
+    SlotAttachAndLock(thr);
+    if (thr->tctx->sync_epoch == ctx->global_epoch)
+      thr->clock.Acquire(thr->tctx->sync);
+    SlotUnlock(thr);
+  }
+  Free(thr->tctx->sync);
+
   uptr stk_addr = 0;
   uptr stk_size = 0;
   uptr tls_addr = 0;
@@ -159,12 +169,10 @@ void ThreadStart(ThreadState *thr, Tid tid, tid_t os_id,
     GetThreadStackAndTls(tid == kMainTid, &stk_addr, &stk_size, &tls_addr,
                          &tls_size);
 #endif
-
-  ThreadRegistry *tr = &ctx->thread_registry;
-  OnStartedArgs args = { thr, stk_addr, stk_size, tls_addr, tls_size };
-  tr->StartThread(tid, os_id, thread_type, &args);
-
-  while (!thr->tctx->trace.parts.Empty()) thr->tctx->trace.parts.PopBack();
+  thr->stk_addr = stk_addr;
+  thr->stk_size = stk_size;
+  thr->tls_addr = tls_addr;
+  thr->tls_size = tls_size;
 
 #if !SANITIZER_GO
   if (ctx->after_multithreaded_fork) {
@@ -192,57 +200,41 @@ void ThreadStart(ThreadState *thr, Tid tid, tid_t os_id,
 }
 
 void ThreadContext::OnStarted(void *arg) {
-  OnStartedArgs *args = static_cast<OnStartedArgs *>(arg);
-  thr = args->thr;
-  // RoundUp so that one trace part does not contain events
-  // from different threads.
-  epoch0 = RoundUp(epoch1 + 1, kTracePartSize);
-  epoch1 = (u64)-1;
-  new (thr)
-      ThreadState(ctx, tid, unique_id, epoch0, reuse_count, args->stk_addr,
-                  args->stk_size, args->tls_addr, args->tls_size);
+  thr = static_cast<ThreadState *>(arg);
+  DPrintf("#%d: ThreadStart\n", tid);
+  new (thr) ThreadState(tid);
   if (common_flags()->detect_deadlocks)
-    thr->dd_lt = ctx->dd->CreateLogicalThread(unique_id);
-  thr->fast_state.SetHistorySize(flags()->history_size);
-  // Commit switch to the new part of the trace.
-  // TraceAddEvent will reset stack0/mset0 in the new part for us.
-  TraceAddEvent(thr, thr->fast_state, EventTypeMop, 0);
-
-  thr->fast_synch_epoch = epoch0;
-  AcquireImpl(thr, 0, &sync);
-  sync.Reset(&thr->proc()->clock_cache);
+    thr->dd_lt = ctx->dd->CreateLogicalThread(tid);
   thr->tctx = this;
+#if !SANITIZER_GO
   thr->is_inited = true;
-  DPrintf(
-      "#%d: ThreadStart epoch=%zu stk_addr=%zx stk_size=%zx "
-      "tls_addr=%zx tls_size=%zx\n",
-      tid, (uptr)epoch0, args->stk_addr, args->stk_size, args->tls_addr,
-      args->tls_size);
+#endif
 }
 
 void ThreadFinish(ThreadState *thr) {
+  DPrintf("#%d: ThreadFinish\n", thr->tid);
   ThreadCheckIgnore(thr);
   if (thr->stk_addr && thr->stk_size)
     DontNeedShadowFor(thr->stk_addr, thr->stk_size);
   if (thr->tls_addr && thr->tls_size)
     DontNeedShadowFor(thr->tls_addr, thr->tls_size);
   thr->is_dead = true;
-  thr->is_inited = false;
 #if !SANITIZER_GO
+  thr->is_inited = false;
   thr->ignore_interceptors++;
+  PlatformCleanUpThreadState(thr);
 #endif
-  ctx->thread_registry.FinishThread(thr->tid);
-}
-
-void ThreadContext::OnFinished() {
-  if (!detached) {
-    thr->fast_state.IncrementEpoch();
-    // Can't increment epoch w/o writing to the trace as well.
-    TraceAddEvent(thr, thr->fast_state, EventTypeMop, 0);
-    ReleaseImpl(thr, 0, &sync);
+  if (!thr->ignore_sync) {
+    SlotLocker locker(thr);
+    ThreadRegistryLock lock(&ctx->thread_registry);
+    // Note: detached is protected by the thread registry mutex,
+    // the thread may be detaching concurrently in another thread.
+    if (!thr->tctx->detached) {
+      thr->clock.ReleaseStore(&thr->tctx->sync);
+      thr->tctx->sync_epoch = ctx->global_epoch;
+      IncrementEpoch(thr);
+    }
   }
-  epoch1 = thr->fast_state.epoch();
-
 #if !SANITIZER_GO
   UnmapOrDie(thr->shadow_stack, kShadowStackSize * sizeof(uptr));
 #else
@@ -251,18 +243,37 @@ void ThreadContext::OnFinished() {
   thr->shadow_stack = nullptr;
   thr->shadow_stack_pos = nullptr;
   thr->shadow_stack_end = nullptr;
-
   if (common_flags()->detect_deadlocks)
     ctx->dd->DestroyLogicalThread(thr->dd_lt);
-  thr->clock.ResetCached(&thr->proc()->clock_cache);
-#if !SANITIZER_GO
-  thr->last_sleep_clock.ResetCached(&thr->proc()->clock_cache);
-#endif
-#if !SANITIZER_GO
-  PlatformCleanUpThreadState(thr);
-#endif
+  SlotDetach(thr);
+  ctx->thread_registry.FinishThread(thr->tid);
   thr->~ThreadState();
-  thr = 0;
+}
+
+void ThreadContext::OnFinished() {
+  Lock lock(&ctx->slot_mtx);
+  Lock lock1(&trace.mtx);
+  // Queue all trace parts into the global recycle queue.
+  auto parts = &trace.parts;
+  while (trace.local_head) {
+    CHECK(parts->Queued(trace.local_head));
+    ctx->trace_part_recycle.PushBack(trace.local_head);
+    trace.local_head = parts->Next(trace.local_head);
+  }
+  ctx->trace_part_recycle_finished += parts->Size();
+  if (ctx->trace_part_recycle_finished > Trace::kFinishedThreadHi) {
+    ctx->trace_part_finished_excess += parts->Size();
+    trace.parts_allocated = 0;
+  } else if (ctx->trace_part_recycle_finished > Trace::kFinishedThreadLo &&
+             parts->Size() > 1) {
+    ctx->trace_part_finished_excess += parts->Size() - 1;
+    trace.parts_allocated = 1;
+  }
+  // From now on replay will use trace->final_pos.
+  trace.final_pos = (Event *)atomic_load_relaxed(&thr->trace_pos);
+  atomic_store_relaxed(&thr->trace_pos, 0);
+  thr->tctx = nullptr;
+  thr = nullptr;
 }
 
 struct ConsumeThreadContext {
@@ -274,35 +285,43 @@ Tid ThreadConsumeTid(ThreadState *thr, uptr pc, uptr uid) {
   return ctx->thread_registry.ConsumeThreadUserId(uid);
 }
 
+struct JoinArg {
+  VectorClock *sync;
+  uptr sync_epoch;
+};
+
 void ThreadJoin(ThreadState *thr, uptr pc, Tid tid) {
   CHECK_GT(tid, 0);
-  CHECK_LT(tid, kMaxTid);
   DPrintf("#%d: ThreadJoin tid=%d\n", thr->tid, tid);
-  ctx->thread_registry.JoinThread(tid, thr);
+  JoinArg arg = {};
+  ctx->thread_registry.JoinThread(tid, &arg);
+  if (!thr->ignore_sync) {
+    SlotLocker locker(thr);
+    if (arg.sync_epoch == ctx->global_epoch)
+      thr->clock.Acquire(arg.sync);
+  }
+  Free(arg.sync);
 }
 
-void ThreadContext::OnJoined(void *arg) {
-  ThreadState *caller_thr = static_cast<ThreadState *>(arg);
-  AcquireImpl(caller_thr, 0, &sync);
-  sync.Reset(&caller_thr->proc()->clock_cache);
+void ThreadContext::OnJoined(void *ptr) {
+  auto arg = static_cast<JoinArg *>(ptr);
+  arg->sync = sync;
+  arg->sync_epoch = sync_epoch;
+  sync = nullptr;
+  sync_epoch = 0;
 }
 
-void ThreadContext::OnDead() { CHECK_EQ(sync.size(), 0); }
+void ThreadContext::OnDead() { CHECK_EQ(sync, nullptr); }
 
 void ThreadDetach(ThreadState *thr, uptr pc, Tid tid) {
   CHECK_GT(tid, 0);
-  CHECK_LT(tid, kMaxTid);
   ctx->thread_registry.DetachThread(tid, thr);
 }
 
-void ThreadContext::OnDetached(void *arg) {
-  ThreadState *thr1 = static_cast<ThreadState *>(arg);
-  sync.Reset(&thr1->proc()->clock_cache);
-}
+void ThreadContext::OnDetached(void *arg) { Free(sync); }
 
 void ThreadNotJoined(ThreadState *thr, uptr pc, Tid tid, uptr uid) {
   CHECK_GT(tid, 0);
-  CHECK_LT(tid, kMaxTid);
   ctx->thread_registry.SetThreadUserId(tid, uid);
 }
 

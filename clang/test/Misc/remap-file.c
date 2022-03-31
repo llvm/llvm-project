@@ -4,5 +4,5 @@
 
 // CHECK-EXIST: remap-file.c:1:28: warning: incompatible pointer types
 // CHECK-NONEXIST: nonexistent.c:1:28: warning: incompatible pointer types
-// CHECK-HEADER: nonexistent.c:3:19: warning: incompatible pointer types
+// CHECK-HEADER: nonexistent.c:3:23: warning: incompatible pointer types
 int

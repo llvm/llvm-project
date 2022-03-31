@@ -30,6 +30,7 @@ namespace clangd {
 namespace {
 using testing::Contains;
 using testing::Each;
+using testing::IsEmpty;
 
 TEST(GetDeducedType, KwAutoKwDecltypeExpansion) {
   struct Test {
@@ -179,21 +180,188 @@ TEST(GetDeducedType, KwAutoKwDecltypeExpansion) {
           )cpp",
           "Bar",
       },
+      {
+          R"cpp(
+            // Generic lambda param.
+            struct Foo{};
+            auto Generic = [](^auto x) { return 0; };
+            int m = Generic(Foo{});
+          )cpp",
+          "struct Foo",
+      },
+      {
+          R"cpp(
+            // Generic lambda instantiated twice, matching deduction.
+            struct Foo{};
+            auto Generic = [](^auto x, auto y) { return 0; };
+            int m = Generic(Foo{}, "one");
+            int n = Generic(Foo{}, 2);
+          )cpp",
+          // No deduction although both instantiations yield the same result :-(
+          nullptr,
+      },
+      {
+          R"cpp(
+            // Generic lambda instantiated twice, conflicting deduction.
+            struct Foo{};
+            auto Generic = [](^auto y) { return 0; };
+            int m = Generic("one");
+            int n = Generic(2);
+          )cpp",
+          nullptr,
+      },
+      {
+          R"cpp(
+            // Generic function param.
+            struct Foo{};
+            int generic(^auto x) { return 0; }
+            int m = generic(Foo{});
+          )cpp",
+          "struct Foo",
+      },
+      {
+          R"cpp(
+            // More complicated param type involving auto.
+            template <class> concept C = true;
+            struct Foo{};
+            int generic(C ^auto *x) { return 0; }
+            const Foo *Ptr = nullptr;
+            int m = generic(Ptr);
+          )cpp",
+          "const struct Foo",
+      },
   };
   for (Test T : Tests) {
     Annotations File(T.AnnotatedCode);
-    auto AST = TestTU::withCode(File.code()).build();
+    auto TU = TestTU::withCode(File.code());
+    TU.ExtraArgs.push_back("-std=c++20");
+    auto AST = TU.build();
     SourceManagerForFile SM("foo.cpp", File.code());
 
-    SCOPED_TRACE(File.code());
+    SCOPED_TRACE(T.AnnotatedCode);
     EXPECT_FALSE(File.points().empty());
     for (Position Pos : File.points()) {
       auto Location = sourceLocationInMainFile(SM.get(), Pos);
       ASSERT_TRUE(!!Location) << llvm::toString(Location.takeError());
       auto DeducedType = getDeducedType(AST.getASTContext(), *Location);
-      ASSERT_TRUE(DeducedType);
-      EXPECT_EQ(DeducedType->getAsString(), T.DeducedType);
+      if (T.DeducedType == nullptr) {
+        EXPECT_FALSE(DeducedType);
+      } else {
+        ASSERT_TRUE(DeducedType);
+        EXPECT_EQ(DeducedType->getAsString(), T.DeducedType);
+      }
     }
+  }
+}
+
+TEST(ClangdAST, GetOnlyInstantiation) {
+  struct {
+    const char *Code;
+    llvm::StringLiteral NodeType;
+    const char *Name;
+  } Cases[] = {
+      {
+          R"cpp(
+            template <typename> class X {};
+            X<int> x;
+          )cpp",
+          "CXXRecord",
+          "template<> class X<int> {}",
+      },
+      {
+          R"cpp(
+            template <typename T> T X = T{};
+            int y = X<char>;
+          )cpp",
+          "Var",
+          // VarTemplateSpecializationDecl doesn't print as template<>...
+          "char X = char{}",
+      },
+      {
+          R"cpp(
+            template <typename T> int X(T) { return 42; }
+            int y = X("text");
+          )cpp",
+          "Function",
+          "template<> int X<const char *>(const char *)",
+      },
+      {
+          R"cpp(
+            int X(auto *x) { return 42; }
+            int y = X("text");
+          )cpp",
+          "Function",
+          "template<> int X<const char>(const char *x)",
+      },
+  };
+
+  for (const auto &Case : Cases) {
+    SCOPED_TRACE(Case.Code);
+    auto TU = TestTU::withCode(Case.Code);
+    TU.ExtraArgs.push_back("-std=c++20");
+    auto AST = TU.build();
+    PrintingPolicy PP = AST.getASTContext().getPrintingPolicy();
+    PP.TerseOutput = true;
+    std::string Name;
+    if (auto *Result = getOnlyInstantiation(
+            const_cast<NamedDecl *>(&findDecl(AST, [&](const NamedDecl &D) {
+              return D.getDescribedTemplate() != nullptr &&
+                     D.getDeclKindName() == Case.NodeType;
+            })))) {
+      llvm::raw_string_ostream OS(Name);
+      Result->print(OS, PP);
+    }
+
+    if (Case.Name)
+      EXPECT_EQ(Case.Name, Name);
+    else
+      EXPECT_THAT(Name, IsEmpty());
+  }
+}
+
+TEST(ClangdAST, GetContainedAutoParamType) {
+  auto TU = TestTU::withCode(R"cpp(
+    int withAuto(
+       auto a,
+       auto *b,
+       const auto *c,
+       auto &&d,
+       auto *&e,
+       auto (*f)(int)
+    ){};
+
+    int withoutAuto(
+      int a,
+      int *b,
+      const int *c,
+      int &&d,
+      int *&e,
+      int (*f)(int)
+    ){};
+  )cpp");
+  TU.ExtraArgs.push_back("-std=c++20");
+  auto AST = TU.build();
+
+  const auto &WithAuto =
+      llvm::cast<FunctionTemplateDecl>(findDecl(AST, "withAuto"));
+  auto ParamsWithAuto = WithAuto.getTemplatedDecl()->parameters();
+  auto *TemplateParamsWithAuto = WithAuto.getTemplateParameters();
+  ASSERT_EQ(ParamsWithAuto.size(), TemplateParamsWithAuto->size());
+
+  for (unsigned I = 0; I < ParamsWithAuto.size(); ++I) {
+    SCOPED_TRACE(ParamsWithAuto[I]->getNameAsString());
+    auto Loc = getContainedAutoParamType(
+        ParamsWithAuto[I]->getTypeSourceInfo()->getTypeLoc());
+    ASSERT_FALSE(Loc.isNull());
+    EXPECT_EQ(Loc.getTypePtr()->getDecl(), TemplateParamsWithAuto->getParam(I));
+  }
+
+  const auto &WithoutAuto =
+      llvm::cast<FunctionDecl>(findDecl(AST, "withoutAuto"));
+  for (auto *ParamWithoutAuto : WithoutAuto.parameters()) {
+    ASSERT_TRUE(getContainedAutoParamType(
+                    ParamWithoutAuto->getTypeSourceInfo()->getTypeLoc())
+                    .isNull());
   }
 }
 
@@ -425,6 +593,29 @@ TEST(ClangdAST, GetAttributes) {
               Each(implicitAttr()));
   ASSERT_THAT(getAttributes(DynTypedNode::create(*FooIf->getThen())),
               Contains(attrKind(attr::Unlikely)));
+}
+
+TEST(ClangdAST, HasReservedName) {
+  ParsedAST AST = TestTU::withCode(R"cpp(
+    void __foo();
+    namespace std {
+      inline namespace __1 { class error_code; }
+      namespace __detail { int secret; }
+    }
+  )cpp")
+                      .build();
+
+  EXPECT_TRUE(hasReservedName(findUnqualifiedDecl(AST, "__foo")));
+  EXPECT_FALSE(
+      hasReservedScope(*findUnqualifiedDecl(AST, "__foo").getDeclContext()));
+
+  EXPECT_FALSE(hasReservedName(findUnqualifiedDecl(AST, "error_code")));
+  EXPECT_FALSE(hasReservedScope(
+      *findUnqualifiedDecl(AST, "error_code").getDeclContext()));
+
+  EXPECT_FALSE(hasReservedName(findUnqualifiedDecl(AST, "secret")));
+  EXPECT_TRUE(
+      hasReservedScope(*findUnqualifiedDecl(AST, "secret").getDeclContext()));
 }
 
 } // namespace

@@ -13,10 +13,12 @@
 #ifndef LLVM_DEBUGINFO_SYMBOLIZE_SYMBOLIZE_H
 #define LLVM_DEBUGINFO_SYMBOLIZE_SYMBOLIZE_H
 
-#include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/ilist_node.h"
+#include "llvm/ADT/simple_ilist.h"
+#include "llvm/DebugInfo/DIContext.h"
+#include "llvm/DebugInfo/Symbolize/DIFetcher.h"
 #include "llvm/Object/Binary.h"
-#include "llvm/Object/ELFObjectFile.h"
-#include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Error.h"
 #include <algorithm>
 #include <cstdint>
@@ -27,12 +29,23 @@
 #include <vector>
 
 namespace llvm {
+namespace object {
+class ELFObjectFileBase;
+class MachOObjectFile;
+class ObjectFile;
+struct SectionedAddress;
+} // namespace object
+
 namespace symbolize {
+
+class SymbolizableModule;
 
 using namespace object;
 
 using FunctionNameKind = DILineInfoSpecifier::FunctionNameKind;
 using FileLineInfoKind = DILineInfoSpecifier::FileLineInfoKind;
+
+class CachedBinary;
 
 class LLVMSymbolizer {
 public:
@@ -49,17 +62,23 @@ public:
     std::string FallbackDebugPath;
     std::string DWPName;
     std::vector<std::string> DebugFileDirectory;
+    size_t MaxCacheSize =
+        sizeof(size_t) == 4
+            ? 512 * 1024 * 1024 /* 512 MiB */
+            : static_cast<size_t>(4ULL * 1024 * 1024 * 1024) /* 4 GiB */;
   };
 
-  LLVMSymbolizer() = default;
-  LLVMSymbolizer(const Options &Opts) : Opts(Opts) {}
+  LLVMSymbolizer();
+  LLVMSymbolizer(const Options &Opts);
 
-  ~LLVMSymbolizer() { flush(); }
+  ~LLVMSymbolizer();
 
   // Overloads accepting ObjectFile does not support COFF currently
   Expected<DILineInfo> symbolizeCode(const ObjectFile &Obj,
                                      object::SectionedAddress ModuleOffset);
   Expected<DILineInfo> symbolizeCode(const std::string &ModuleName,
+                                     object::SectionedAddress ModuleOffset);
+  Expected<DILineInfo> symbolizeCode(ArrayRef<uint8_t> BuildID,
                                      object::SectionedAddress ModuleOffset);
   Expected<DIInliningInfo>
   symbolizeInlinedCode(const ObjectFile &Obj,
@@ -67,21 +86,38 @@ public:
   Expected<DIInliningInfo>
   symbolizeInlinedCode(const std::string &ModuleName,
                        object::SectionedAddress ModuleOffset);
+  Expected<DIInliningInfo>
+  symbolizeInlinedCode(ArrayRef<uint8_t> BuildID,
+                       object::SectionedAddress ModuleOffset);
 
   Expected<DIGlobal> symbolizeData(const ObjectFile &Obj,
                                    object::SectionedAddress ModuleOffset);
   Expected<DIGlobal> symbolizeData(const std::string &ModuleName,
+                                   object::SectionedAddress ModuleOffset);
+  Expected<DIGlobal> symbolizeData(ArrayRef<uint8_t> BuildID,
                                    object::SectionedAddress ModuleOffset);
   Expected<std::vector<DILocal>>
   symbolizeFrame(const ObjectFile &Obj, object::SectionedAddress ModuleOffset);
   Expected<std::vector<DILocal>>
   symbolizeFrame(const std::string &ModuleName,
                  object::SectionedAddress ModuleOffset);
+  Expected<std::vector<DILocal>>
+  symbolizeFrame(ArrayRef<uint8_t> BuildID,
+                 object::SectionedAddress ModuleOffset);
   void flush();
+
+  // Evict entries from the binary cache until it is under the maximum size
+  // given in the options. Calling this invalidates references in the DI...
+  // objects returned by the methods above.
+  void pruneCache();
 
   static std::string
   DemangleName(const std::string &Name,
                const SymbolizableModule *DbiModuleDescriptor);
+
+  void addDIFetcher(std::unique_ptr<DIFetcher> Fetcher) {
+    DIFetchers.push_back(std::move(Fetcher));
+  }
 
 private:
   // Bundles together object file with code/data and object file with
@@ -112,6 +148,12 @@ private:
   getOrCreateModuleInfo(const std::string &ModuleName);
   Expected<SymbolizableModule *> getOrCreateModuleInfo(const ObjectFile &Obj);
 
+  /// Returns a SymbolizableModule or an error if loading debug info failed.
+  /// Unlike the above, errors are reported each time, since they are more
+  /// likely to be transient.
+  Expected<SymbolizableModule *>
+  getOrCreateModuleInfo(ArrayRef<uint8_t> BuildID);
+
   Expected<SymbolizableModule *>
   createModuleInfo(const ObjectFile *Obj, std::unique_ptr<DIContext> Context,
                    StringRef ModuleName);
@@ -126,6 +168,13 @@ private:
                                   const ELFObjectFileBase *Obj,
                                   const std::string &ArchName);
 
+  bool findDebugBinary(const std::string &OrigPath,
+                       const std::string &DebuglinkName, uint32_t CRCHash,
+                       std::string &Result);
+
+  bool getOrFindDebugBinary(const ArrayRef<uint8_t> BuildID,
+                            std::string &Result);
+
   /// Returns pair of pointers to object and debug object.
   Expected<ObjectPair> getOrCreateObjectPair(const std::string &Path,
                                              const std::string &ArchName);
@@ -136,15 +185,24 @@ private:
   Expected<ObjectFile *> getOrCreateObject(const std::string &Path,
                                            const std::string &ArchName);
 
+  /// Update the LRU cache order when a binary is accessed.
+  void recordAccess(CachedBinary &Bin);
+
   std::map<std::string, std::unique_ptr<SymbolizableModule>, std::less<>>
       Modules;
+  StringMap<std::string> BuildIDPaths;
 
   /// Contains cached results of getOrCreateObjectPair().
   std::map<std::pair<std::string, std::string>, ObjectPair>
       ObjectPairForPathArch;
 
   /// Contains parsed binary for each path, or parsing error.
-  std::map<std::string, OwningBinary<Binary>> BinaryForPath;
+  std::map<std::string, CachedBinary> BinaryForPath;
+
+  /// A list of cached binaries in LRU order.
+  simple_ilist<CachedBinary> LRUBinaries;
+  /// Sum of the sizes of the cached binaries.
+  size_t CacheSize = 0;
 
   /// Parsed object file for path/architecture pair, where "path" refers
   /// to Mach-O universal binary.
@@ -152,6 +210,37 @@ private:
       ObjectForUBPathAndArch;
 
   Options Opts;
+
+  SmallVector<std::unique_ptr<DIFetcher>> DIFetchers;
+};
+
+// A binary intrusively linked into a LRU cache list. If the binary is empty,
+// then the entry marks that an error occurred, and it is not part of the LRU
+// list.
+class CachedBinary : public ilist_node<CachedBinary> {
+public:
+  CachedBinary() = default;
+  CachedBinary(OwningBinary<Binary> Bin) : Bin(std::move(Bin)) {}
+
+  OwningBinary<Binary> &operator*() { return Bin; }
+  OwningBinary<Binary> *operator->() { return &Bin; }
+
+  // Add an action to be performed when the binary is evicted, before all
+  // previously registered evictors.
+  void pushEvictor(std::function<void()> Evictor);
+
+  // Run all registered evictors in the reverse of the order in which they were
+  // added.
+  void evict() {
+    if (Evictor)
+      Evictor();
+  }
+
+  size_t size() { return Bin.getBinary()->getData().size(); }
+
+private:
+  OwningBinary<Binary> Bin;
+  std::function<void()> Evictor;
 };
 
 } // end namespace symbolize

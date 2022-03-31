@@ -79,8 +79,8 @@ bool FrontendAction::BeginSourceFile(
   if ((invoc.preprocessorOpts().macrosFlag == PPMacrosFlag::Include) ||
       (invoc.preprocessorOpts().macrosFlag == PPMacrosFlag::Unknown &&
           currentInput().MustBePreprocessed())) {
-    invoc.setDefaultPredefinitions();
-    invoc.collectMacroDefinitions();
+    invoc.SetDefaultPredefinitions();
+    invoc.CollectMacroDefinitions();
   }
 
   // Decide between fixed and free form (if the user didn't express any
@@ -162,7 +162,7 @@ bool FrontendAction::RunSemanticChecks() {
   assert(parseTree && "Cannot run semantic checks without a parse tree!");
 
   // Prepare semantics
-  ci.setSemantics(std::make_unique<Fortran::semantics::Semantics>(
+  ci.SetSemantics(std::make_unique<Fortran::semantics::Semantics>(
       ci.invocation().semanticsContext(), *parseTree,
       ci.invocation().debugModuleDir()));
   auto &semantics = ci.semantics();
@@ -176,6 +176,21 @@ bool FrontendAction::RunSemanticChecks() {
 
   // Report the diagnostics from the semantic checks
   semantics.EmitMessages(ci.semaOutputStream());
+
+  return true;
+}
+
+bool FrontendAction::GenerateRtTypeTables() {
+  instance().setRtTyTables(
+      std::make_unique<Fortran::semantics::RuntimeDerivedTypeTables>(
+          BuildRuntimeDerivedTypeTables(
+              instance().invocation().semanticsContext())));
+
+  // The runtime derived type information table builder may find additional
+  // semantic errors. Report them.
+  if (reportFatalSemanticErrors()) {
+    return false;
+  }
 
   return true;
 }

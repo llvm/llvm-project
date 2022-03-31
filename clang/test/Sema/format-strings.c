@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wformat-nonliteral -isystem %S/Inputs %s
 // RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wformat-nonliteral -isystem %S/Inputs -fno-signed-char %s
+// RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wformat-nonliteral -isystem %S/Inputs -triple=x86_64-unknown-fuchsia %s
+// RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wformat-nonliteral -isystem %S/Inputs -triple=x86_64-linux-android %s
 
 #include <stdarg.h>
 #include <stddef.h>
@@ -118,7 +120,9 @@ void check_conditional_literal(const char* s, int i) {
   printf(i ? "%i\n" : "%i %s %s\n", i, s); // expected-warning{{more '%' conversions than data arguments}}
 }
 
-void check_writeback_specifier()
+#if !defined(__ANDROID__) && !defined(__Fuchsia__)
+
+void check_writeback_specifier(void)
 {
   int x;
   char *b;
@@ -153,6 +157,45 @@ void check_writeback_specifier()
   printf("%Ln", 0); // expected-warning{{length modifier 'L' results in undefined behavior or no effect with 'n' conversion specifier}}
   // expected-note@-1{{did you mean to use 'll'?}}
 }
+
+#else
+
+void check_writeback_specifier(void)
+{
+  int x;
+  printf("%n", &x); // expected-warning{{'%n' specifier not supported on this platform}}
+
+  printf("%hhn", (signed char*)0); // expected-warning{{'%n' specifier not supported on this platform}}
+  printf("%hhn", (char*)0); // expected-warning{{'%n' specifier not supported on this platform}}
+  printf("%hhn", (unsigned char*)0); // expected-warning{{'%n' specifier not supported on this platform}}
+  printf("%hhn", (int*)0); // expected-warning{{format specifies type 'signed char *' but the argument has type 'int *'}}
+  // expected-warning@-1 {{'%n' specifier not supported on this platform}}
+
+  printf("%hn", (short*)0); // expected-warning{{'%n' specifier not supported on this platform}}
+  printf("%hn", (unsigned short*)0); // expected-warning{{'%n' specifier not supported on this platform}}
+  printf("%hn", (int*)0); // expected-warning{{format specifies type 'short *' but the argument has type 'int *'}}
+  // expected-warning@-1 {{'%n' specifier not supported on this platform}}
+
+  printf("%n", (int*)0); // expected-warning{{'%n' specifier not supported on this platform}}
+  printf("%n", (unsigned int*)0); // expected-warning{{'%n' specifier not supported on this platform}}
+  printf("%n", (char*)0); // expected-warning{{format specifies type 'int *' but the argument has type 'char *'}}
+  // expected-warning@-1 {{'%n' specifier not supported on this platform}}
+
+  printf("%ln", (long*)0); // expected-warning{{'%n' specifier not supported on this platform}}
+  printf("%ln", (unsigned long*)0); // expected-warning{{'%n' specifier not supported on this platform}}
+  printf("%ln", (int*)0); // expected-warning{{format specifies type 'long *' but the argument has type 'int *'}}
+  // expected-warning@-1 {{'%n' specifier not supported on this platform}}
+
+  printf("%lln", (long long*)0); // expected-warning{{'%n' specifier not supported on this platform}}
+  printf("%lln", (unsigned long long*)0); // expected-warning{{'%n' specifier not supported on this platform}}
+  printf("%lln", (int*)0); // expected-warning{{format specifies type 'long long *' but the argument has type 'int *'}}
+  // expected-warning@-1 {{'%n' specifier not supported on this platform}}
+
+  printf("%qn", (long long*)0); // expected-warning{{'%n' specifier not supported on this platform}}
+  printf("%qn", (unsigned long long*)0); // expected-warning{{'%n' specifier not supported on this platform}}
+}
+
+#endif // !defined(__ANDROID__) && !defined(__Fuchsia__)
 
 void check_invalid_specifier(FILE* fp, char *buf)
 {
@@ -201,7 +244,7 @@ void check_asterisk_precision_width(int x) {
 
 void __attribute__((format(printf,1,3))) myprintf(const char*, int blah, ...);
 
-void test_myprintf() {
+void test_myprintf(void) {
   myprintf("%d", 17, 18); // okay
 }
 
@@ -275,7 +318,7 @@ void test10(int x, float f, int i, long long lli) {
 
 typedef unsigned char uint8_t;
 
-void should_understand_small_integers() {
+void should_understand_small_integers(void) {
   printf("%hhu", (short) 10); // expected-warning{{format specifies type 'unsigned char' but the argument has type 'short'}}
   printf("%hu\n", (unsigned char)1); // warning with -Wformat-pedantic only
   printf("%hu\n", (uint8_t)1);       // warning with -Wformat-pedantic only
@@ -346,7 +389,7 @@ void test_unicode_conversions(wchar_t *s) {
 // Mac OS X supports positional arguments in format strings.
 // This is an IEEE extension (IEEE Std 1003.1).
 // FIXME: This is probably not portable everywhere.
-void test_positional_arguments() {
+void test_positional_arguments(void) {
   printf("%0$", (int)2); // expected-warning{{position arguments in format strings start counting at 1 (not 0)}}
   printf("%1$*0$d", (int) 2); // expected-warning{{position arguments in format strings start counting at 1 (not 0)}}
   printf("%1$d", (int) 2); // no-warning
@@ -361,7 +404,7 @@ void test_positional_arguments() {
 
 // PR 6697 - Handle format strings where the data argument is not adjacent to the format string
 void myprintf_PR_6697(const char *format, int x, ...) __attribute__((__format__(printf,1, 3)));
-void test_pr_6697() {
+void test_pr_6697(void) {
   myprintf_PR_6697("%s\n", 1, "foo"); // no-warning
   myprintf_PR_6697("%s\n", 1, (int)0); // expected-warning{{format specifies type 'char *' but the argument has type 'int'}}
   // FIXME: Not everything should clearly support positional arguments,
@@ -376,7 +419,7 @@ void rdar8026030(FILE *fp) {
   fprintf(fp, "\%"); // expected-warning{{incomplete format specifier}}
 }
 
-void bug7377_bad_length_mod_usage() {
+void bug7377_bad_length_mod_usage(void) {
   // Bad length modifiers
   printf("%hhs", "foo"); // expected-warning{{length modifier 'hh' results in undefined behavior or no effect with 's' conversion specifier}}
   printf("%1$zp", (void *)0); // expected-warning{{length modifier 'z' results in undefined behavior or no effect with 'p' conversion specifier}}
@@ -386,14 +429,28 @@ void bug7377_bad_length_mod_usage() {
   // Bad flag usage
   printf("%#p", (void *) 0); // expected-warning{{flag '#' results in undefined behavior with 'p' conversion specifier}}
   printf("%0d", -1); // no-warning
+  printf("%-p", (void *) 0); // no-warning
+#if !defined(__ANDROID__) && !defined(__Fuchsia__)
   printf("%#n", (int *) 0); // expected-warning{{flag '#' results in undefined behavior with 'n' conversion specifier}}
   printf("%-n", (int *) 0); // expected-warning{{flag '-' results in undefined behavior with 'n' conversion specifier}}
-  printf("%-p", (void *) 0); // no-warning
+#else
+  printf("%#n", (int *) 0); // expected-warning{{flag '#' results in undefined behavior with 'n' conversion specifier}}
+  // expected-warning@-1 {{'%n' specifier not supported on this platform}}
+  printf("%-n", (int *) 0); // expected-warning{{flag '-' results in undefined behavior with 'n' conversion specifier}}
+  // expected-warning@-1 {{'%n' specifier not supported on this platform}}
+#endif // !defined(__ANDROID__) && !defined(__Fuchsia__)
 
   // Bad optional amount use
   printf("%.2c", 'a'); // expected-warning{{precision used with 'c' conversion specifier, resulting in undefined behavior}}
+#if !defined(__ANDROID__) && !defined(__Fuchsia__)
   printf("%1n", (int *) 0); // expected-warning{{field width used with 'n' conversion specifier, resulting in undefined behavior}}
   printf("%.9n", (int *) 0); // expected-warning{{precision used with 'n' conversion specifier, resulting in undefined behavior}}
+#else
+  printf("%1n", (int *) 0); // expected-warning{{field width used with 'n' conversion specifier, resulting in undefined behavior}}
+  // expected-warning@-1 {{'%n' specifier not supported on this platform}}
+  printf("%.9n", (int *) 0); // expected-warning{{precision used with 'n' conversion specifier, resulting in undefined behavior}}
+  // expected-warning@-1 {{'%n' specifier not supported on this platform}}
+#endif // #if !defined(__ANDROID__) && !defined(__Fuchsia__)
 
   // Ignored flags
   printf("% +f", 1.23); // expected-warning{{flag ' ' is ignored when flag '+' is present}}
@@ -423,7 +480,7 @@ void pr7981(wint_t c, wchar_t c2) {
 }
 
 // <rdar://problem/8269537> -Wformat-security says NULL is not a string literal
-void rdar8269537() {
+void rdar8269537(void) {
   // This is likely to crash in most cases, but -Wformat-nonliteral technically
   // doesn't warn in this case.
   printf(0); // no-warning
@@ -439,12 +496,12 @@ void rdar8332221(va_list ap, int *x, long *y) {
 }
 
 // PR8641
-void pr8641() {
+void pr8641(void) {
   printf("%#x\n", 10);
   printf("%#X\n", 10);
 }
 
-void posix_extensions() {
+void posix_extensions(void) {
   // Test %'d, "thousands grouping".
   // <rdar://problem/8816343>
   printf("%'d\n", 123456789); // no-warning
@@ -459,13 +516,13 @@ void posix_extensions() {
 #pragma GCC diagnostic warning "-Wformat"
 #pragma GCC diagnostic ignored "-Wformat-security"
 
-void pr8486() {
+void pr8486(void) {
   printf("%s", 1); // expected-warning{{format specifies type 'char *' but the argument has type 'int'}}
 }
 
 // PR9314
 // Don't warn about string literals that are PreDefinedExprs, e.g. __func__.
-void pr9314() {
+void pr9314(void) {
   printf(__PRETTY_FUNCTION__); // no-warning
   printf(__func__); // no-warning
 }
@@ -487,7 +544,7 @@ void check_char(unsigned char x, signed char y) {
 
 // Test suppression of individual warnings.
 
-void test_suppress_invalid_specifier() {
+void test_suppress_invalid_specifier(void) {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wformat-invalid-specifier"
   printf("%@", 12); // no-warning
@@ -500,7 +557,7 @@ void test_suppress_invalid_specifier() {
 
 // Test that the printf call site is where the warning is attached.  If the
 // format string is somewhere else, point to it in a note.
-void pr9751() {
+void pr9751(void) {
   const char kFormat1[] = "%d %d \n"; // expected-note{{format string is defined here}}}
   printf(kFormat1, 0); // expected-warning{{more '%' conversions than data arguments}}
   printf("%d %s\n", 0); // expected-warning{{more '%' conversions than data arguments}}
@@ -581,7 +638,7 @@ void pr9751() {
          0.0); // expected-warning{{format specifies}}
 }
 
-void pr18905() {
+void pr18905(void) {
   const char s1[] = "s\0%s"; // expected-note{{format string is defined here}}
   const char s2[1] = "s"; // expected-note{{format string is defined here}}
   const char s3[2] = "s\0%s"; // expected-warning{{initializer-string for char array is too long}}
@@ -600,7 +657,7 @@ void __attribute__((format(strfmon,1,2))) monformat(const char *fmt, ...);
 void __attribute__((format(strftime,1,0))) dateformat(const char *fmt);
 
 // Other formats
-void test_other_formats() {
+void test_other_formats(void) {
   char *str = "";
   monformat("", 1); // expected-warning{{format string is empty}}
   monformat(str); // expected-warning{{format string is not a string literal (potentially insecure)}}
@@ -644,6 +701,8 @@ void test14_zed(int *p) {
   test14_bar("%", "%d", p); // expected-warning{{incomplete format specifier}}
 }
 
+#if !defined(__ANDROID__) && !defined(__Fuchsia__)
+
 void test_qualifiers(volatile int *vip, const int *cip,
                      const volatile int *cvip) {
   printf("%n", cip); // expected-warning{{format specifies type 'int *' but the argument has type 'const int *'}}
@@ -659,6 +718,29 @@ void test_qualifiers(volatile int *vip, const int *cip,
   printf("%n", (ip_t)0); // No warning.
   printf("%n", (cip_t)0); // expected-warning{{format specifies type 'int *' but the argument has type 'cip_t' (aka 'const int *')}}
 }
+
+#else
+
+void test_qualifiers(volatile int *vip, const int *cip,
+                     const volatile int *cvip) {
+  printf("%n", cip); // expected-warning{{format specifies type 'int *' but the argument has type 'const int *'}}
+  // expected-warning@-1 {{'%n' specifier not supported on this platform}}
+  printf("%n", cvip); // expected-warning{{format specifies type 'int *' but the argument has type 'const volatile int *'}}
+  // expected-warning@-1 {{'%n' specifier not supported on this platform}}
+
+  printf("%n", vip); // expected-warning{{'%n' specifier not supported on this platform}}
+  printf("%p", cip); // No warning.
+  printf("%p", cvip); // No warning.
+
+
+  typedef int* ip_t;
+  typedef const int* cip_t;
+  printf("%n", (ip_t)0); // expected-warning{{'%n' specifier not supported on this platform}}
+  printf("%n", (cip_t)0); // expected-warning{{format specifies type 'int *' but the argument has type 'cip_t' (aka 'const int *')}}
+  // expected-warning@-1 {{'%n' specifier not supported on this platform}}
+}
+
+#endif // #if !defined(__ANDROID__) && !defined(__Fuchsia__)
 
 #pragma GCC diagnostic ignored "-Wformat-nonliteral"
 #pragma GCC diagnostic warning "-Wformat-security"
@@ -706,7 +788,7 @@ void test_char_pointer_arithmetic(int b) {
   // expected-note@-2{{format string is defined here}}
 }
 
-void PR30481() {
+void PR30481(void) {
   // This caused crashes due to invalid casts.
   printf(1 > 0); // expected-warning{{format string is not a string literal}} expected-warning{{incompatible integer to pointer conversion}} expected-note@format-strings.c:*{{passing argument to parameter here}} expected-note{{to avoid this}}
 }
@@ -715,7 +797,7 @@ void test_printf_opaque_ptr(void *op) {
   printf("%s", op); // expected-warning{{format specifies type 'char *' but the argument has type 'void *'}}
 }
 
-void test_block() {
+void test_block(void) {
   void __attribute__((__format__(__printf__, 1, 2))) (^printf_arg1)(
       const char *, ...) =
       ^(const char *fmt, ...) __attribute__((__format__(__printf__, 1, 2))) {

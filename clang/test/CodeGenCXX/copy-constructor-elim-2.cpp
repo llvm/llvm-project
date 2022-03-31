@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple armv7-none-eabi -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple armv7-none-eabi -emit-llvm -o - %s | FileCheck %s
 
 struct A { int x; A(int); ~A(); };
 A f() { return A(0); }

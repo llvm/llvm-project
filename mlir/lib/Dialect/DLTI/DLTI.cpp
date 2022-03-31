@@ -71,7 +71,7 @@ DataLayoutEntryAttr DataLayoutEntryAttr::parse(AsmParser &parser) {
 
   Type type = nullptr;
   std::string identifier;
-  llvm::SMLoc idLoc = parser.getCurrentLocation();
+  SMLoc idLoc = parser.getCurrentLocation();
   OptionalParseResult parsedType = parser.parseOptionalType(type);
   if (parsedType.hasValue() && failed(parsedType.getValue()))
     return {};
@@ -201,7 +201,7 @@ combineOneSpec(DataLayoutSpecInterface spec,
   spec.bucketEntriesByType(newEntriesForType, newEntriesForID);
 
   // Try overwriting the old entries with the new ones.
-  for (const auto &kvp : newEntriesForType) {
+  for (auto &kvp : newEntriesForType) {
     if (!entriesForType.count(kvp.first)) {
       entriesForType[kvp.first] = std::move(kvp.second);
       continue;
@@ -231,8 +231,8 @@ combineOneSpec(DataLayoutSpecInterface spec,
     // dialect is not loaded for some reason, use the default combinator
     // that conservatively accepts identical entries only.
     entriesForID[id] =
-        dialect ? dialect->getRegisteredInterface<DataLayoutDialectInterface>()
-                      ->combine(entriesForID[id], kvp.second)
+        dialect ? cast<DataLayoutDialectInterface>(dialect)->combine(
+                      entriesForID[id], kvp.second)
                 : DataLayoutDialectInterface::defaultCombine(entriesForID[id],
                                                              kvp.second);
     if (!entriesForID[id])

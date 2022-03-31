@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: LIBCXX-WINDOWS-FIXME
-
 // type_traits
 
 // aligned_storage
@@ -314,6 +312,16 @@ int main(int, char**)
     static_assert(sizeof(T1) == 16, "");
     }
   {
+    const int Align = 8192;
+    typedef typename std::aligned_storage<1, Align>::type T1;
+    static_assert(std::is_trivial<T1>::value, "");
+    static_assert(std::is_standard_layout<T1>::value, "");
+    static_assert(std::alignment_of<T1>::value == Align, "");
+    static_assert(sizeof(T1) == Align, "");
+  }
+#ifndef _WIN32
+  // Windows only supports alignment up to 8192 bytes.
+  {
     const int Align = 65536;
     typedef typename std::aligned_storage<1, Align>::type T1;
     static_assert(std::is_trivial<T1>::value, "");
@@ -321,6 +329,7 @@ int main(int, char**)
     static_assert(std::alignment_of<T1>::value == Align, "");
     static_assert(sizeof(T1) == Align, "");
   }
+#endif
 
   return 0;
 }

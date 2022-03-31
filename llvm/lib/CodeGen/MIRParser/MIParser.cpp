@@ -26,8 +26,6 @@
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/AsmParser/SlotMapping.h"
-#include "llvm/CodeGen/GlobalISel/RegisterBank.h"
-#include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
 #include "llvm/CodeGen/MIRFormatter.h"
 #include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -38,6 +36,8 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterBank.h"
+#include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -60,7 +60,6 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCInstrDesc.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/Casting.h"
@@ -69,10 +68,8 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetIntrinsicInfo.h"
 #include "llvm/Target/TargetMachine.h"
-#include <algorithm>
 #include <cassert>
 #include <cctype>
 #include <cstddef>
@@ -875,11 +872,11 @@ bool MIParser::parseBasicBlock(MachineBasicBlock &MBB,
   // N.B: Multiple lists of successors and liveins are allowed and they're
   // merged into one.
   // Example:
-  //   liveins: %edi
-  //   liveins: %esi
+  //   liveins: $edi
+  //   liveins: $esi
   //
   // is equivalent to
-  //   liveins: %edi, %esi
+  //   liveins: $edi, $esi
   bool ExplicitSuccessors = false;
   while (true) {
     if (Token.is(MIToken::kw_successors)) {
@@ -1094,11 +1091,23 @@ bool MIParser::parse(MachineInstr *&MI) {
       return true;
   }
 
-  // TODO: Check for extraneous machine operands.
   MI = MF.CreateMachineInstr(MCID, DebugLocation, /*NoImplicit=*/true);
   MI->setFlags(Flags);
-  for (const auto &Operand : Operands)
+
+  unsigned NumExplicitOps = 0;
+  for (const auto &Operand : Operands) {
+    bool IsImplicitOp = Operand.Operand.isReg() && Operand.Operand.isImplicit();
+    if (!IsImplicitOp) {
+      if (!MCID.isVariadic() && NumExplicitOps >= MCID.getNumOperands() &&
+          !Operand.Operand.isValidExcessOperand())
+        return error("too many operands for instruction");
+
+      ++NumExplicitOps;
+    }
+
     MI->addOperand(MF, Operand.Operand);
+  }
+
   if (assignRegisterTies(*MI, Operands))
     return true;
   if (PreInstrSymbol)
@@ -3269,11 +3278,21 @@ bool MIParser::parseMachineMemoryOperand(MachineMemOperand *&Dest) {
   MDNode *Range = nullptr;
   while (consumeIfPresent(MIToken::comma)) {
     switch (Token.kind()) {
-    case MIToken::kw_align:
+    case MIToken::kw_align: {
       // align is printed if it is different than size.
-      if (parseAlignment(BaseAlignment))
+      uint64_t Alignment;
+      if (parseAlignment(Alignment))
         return true;
+      if (Ptr.Offset & (Alignment - 1)) {
+        // MachineMemOperand::getAlign never returns a value greater than the
+        // alignment of offset, so this just guards against hand-written MIR
+        // that specifies a large "align" value when it should probably use
+        // "basealign" instead.
+        return error("specified alignment is more aligned than offset");
+      }
+      BaseAlignment = Alignment;
       break;
+    }
     case MIToken::kw_basealign:
       // basealign is printed if it is different than align.
       if (parseAlignment(BaseAlignment))

@@ -31,6 +31,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
@@ -76,8 +77,7 @@ TypeAndOrName ItaniumABILanguageRuntime::GetTypeInfoFromVTableAddress(
           const char *name =
               symbol->GetMangled().GetDemangledName().AsCString();
           if (name && strstr(name, vtable_demangled_prefix) == name) {
-            Log *log(
-                lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
+            Log *log = GetLog(LLDBLog::Object);
             LLDB_LOGF(log,
                       "0x%16.16" PRIx64
                       ": static-type = '%s' has vtable symbol '%s'\n",

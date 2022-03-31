@@ -4106,7 +4106,8 @@ void __kmp_unregister_root_current_thread(int gtid) {
   kmp_task_team_t *task_team = thread->th.th_task_team;
 
   // we need to wait for the proxy tasks before finishing the thread
-  if (task_team != NULL && task_team->tt.tt_found_proxy_tasks) {
+  if (task_team != NULL && (task_team->tt.tt_found_proxy_tasks ||
+                            task_team->tt.tt_hidden_helper_task_encountered)) {
 #if OMPT_SUPPORT
     // the runtime is shutting down so we won't report any events
     thread->th.ompt_thread_info.state = ompt_state_undefined;
@@ -6894,7 +6895,9 @@ static void __kmp_check_mic_type() {
 static void __kmp_user_level_mwait_init() {
   struct kmp_cpuid buf;
   __kmp_x86_cpuid(7, 0, &buf);
-  __kmp_umwait_enabled = ((buf.ecx >> 5) & 1) && __kmp_user_level_mwait;
+  __kmp_waitpkg_enabled = ((buf.ecx >> 5) & 1);
+  __kmp_umwait_enabled = __kmp_waitpkg_enabled && __kmp_user_level_mwait;
+  __kmp_tpause_enabled = __kmp_waitpkg_enabled && (__kmp_tpause_state > 0);
   KF_TRACE(30, ("__kmp_user_level_mwait_init: __kmp_umwait_enabled = %d\n",
                 __kmp_umwait_enabled));
 }
@@ -7710,6 +7713,11 @@ static void __kmp_push_thread_limit(kmp_info_t *thr, int num_teams,
       num_threads = 1;
     }
   } else {
+    if (num_threads < 0) {
+      __kmp_msg(kmp_ms_warning, KMP_MSG(CantFormThrTeam, num_threads, 1),
+                __kmp_msg_null);
+      num_threads = 1;
+    }
     // This thread will be the primary thread of the league primary threads
     // Store new thread limit; old limit is saved in th_cg_roots list
     thr->th.th_current_task->td_icvs.thread_limit = num_threads;
@@ -7741,9 +7749,13 @@ static void __kmp_push_thread_limit(kmp_info_t *thr, int num_teams,
 void __kmp_push_num_teams(ident_t *id, int gtid, int num_teams,
                           int num_threads) {
   kmp_info_t *thr = __kmp_threads[gtid];
-  KMP_DEBUG_ASSERT(num_teams >= 0);
-  KMP_DEBUG_ASSERT(num_threads >= 0);
-
+  if (num_teams < 0) {
+    // OpenMP specification requires requested values to be positive,
+    // but people can send us any value, so we'd better check
+    __kmp_msg(kmp_ms_warning, KMP_MSG(NumTeamsNotPositive, num_teams, 1),
+              __kmp_msg_null);
+    num_teams = 1;
+  }
   if (num_teams == 0) {
     if (__kmp_nteams > 0) {
       num_teams = __kmp_nteams;
@@ -7800,7 +7812,7 @@ void __kmp_push_num_teams_51(ident_t *id, int gtid, int num_teams_lb,
   } else if (num_teams_lb == num_teams_ub) { // requires exact number of teams
     num_teams = num_teams_ub;
   } else { // num_teams_lb <= num_teams <= num_teams_ub
-    if (num_threads == 0) {
+    if (num_threads <= 0) {
       if (num_teams_ub > __kmp_teams_max_nth) {
         num_teams = num_teams_lb;
       } else {
@@ -8941,19 +8953,16 @@ void __kmp_resize_dist_barrier(kmp_team_t *team, int old_nthreads,
     KMP_DEBUG_ASSERT(team->t.t_threads[f]->th.th_used_in_team.load() == 2);
   }
   // Release all the workers
-  kmp_uint64 new_value; // new value for go
-  new_value = team->t.b->go_release();
+  team->t.b->go_release();
 
   KMP_MFENCE();
 
   // Workers should see transition status 2 and move to 0; but may need to be
   // woken up first
-  size_t my_go_index;
   int count = old_nthreads - 1;
   while (count > 0) {
     count = old_nthreads - 1;
     for (int f = 1; f < old_nthreads; ++f) {
-      my_go_index = f / team->t.b->threads_per_go;
       if (other_threads[f]->th.th_used_in_team.load() != 0) {
         if (__kmp_dflt_blocktime != KMP_MAX_BLOCKTIME) { // Wake up the workers
           kmp_atomic_flag_64<> *flag = (kmp_atomic_flag_64<> *)CCAST(

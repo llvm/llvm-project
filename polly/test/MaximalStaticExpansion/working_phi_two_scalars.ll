@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-mse -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-mse -pass-remarks-analysis="polly-mse" -analyze < %s 2>&1 | FileCheck %s --check-prefix=MSE
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-mse -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-mse -polly-print-scops -pass-remarks-analysis="polly-mse" -disable-output < %s 2>&1 | FileCheck %s --check-prefix=MSE
 ;
 ; Verify that the accesses are correctly expanded for MemoryKind::PHI
 ; tmp_05 and tmp2_06 are not expanded because they need copy-in.
@@ -51,7 +51,7 @@
 ; CHECK-NOT: new: { Stmt_for_inc4[i0] -> MemRef_tmp_05__phi_Stmt_for_body_expanded[1 + i0] : i0 <= 9998 };
 ; CHECK: new: { Stmt_for_inc4[i0] -> MemRef_conv_lcssa__phi_Stmt_for_inc4_expanded[i0] };
 ; CHECK: new: { Stmt_for_inc4[i0] -> MemRef_add_lcssa__phi_Stmt_for_inc4_expanded[i0] };
-; 
+;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 

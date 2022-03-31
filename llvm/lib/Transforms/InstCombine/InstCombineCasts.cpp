@@ -13,13 +13,10 @@
 #include "InstCombineInternal.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/ConstantFolding.h"
-#include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
-#include <numeric>
 using namespace llvm;
 using namespace PatternMatch;
 
@@ -85,13 +82,16 @@ static Value *decomposeSimpleLinearExpr(Value *Val, unsigned &Scale,
 Instruction *InstCombinerImpl::PromoteCastOfAllocation(BitCastInst &CI,
                                                        AllocaInst &AI) {
   PointerType *PTy = cast<PointerType>(CI.getType());
+  // Opaque pointers don't have an element type we could replace with.
+  if (PTy->isOpaque())
+    return nullptr;
 
   IRBuilderBase::InsertPointGuard Guard(Builder);
   Builder.SetInsertPoint(&AI);
 
   // Get the type really allocated and the type casted to.
   Type *AllocElTy = AI.getAllocatedType();
-  Type *CastElTy = PTy->getElementType();
+  Type *CastElTy = PTy->getNonOpaquePointerElementType();
   if (!AllocElTy->isSized() || !CastElTy->isSized()) return nullptr;
 
   // This optimisation does not work for cases where the cast type
@@ -157,7 +157,7 @@ Instruction *InstCombinerImpl::PromoteCastOfAllocation(BitCastInst &CI,
     Amt = Builder.CreateAdd(Amt, Off);
   }
 
-  AllocaInst *New = Builder.CreateAlloca(CastElTy, Amt);
+  AllocaInst *New = Builder.CreateAlloca(CastElTy, AI.getAddressSpace(), Amt);
   New->setAlignment(AI.getAlign());
   New->takeName(&AI);
   New->setUsedWithInAlloca(AI.isUsedWithInAlloca());
@@ -965,13 +965,13 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
   if (match(Src, m_VScale(DL))) {
     if (Trunc.getFunction() &&
         Trunc.getFunction()->hasFnAttribute(Attribute::VScaleRange)) {
-      unsigned MaxVScale = Trunc.getFunction()
-                               ->getFnAttribute(Attribute::VScaleRange)
-                               .getVScaleRangeArgs()
-                               .second;
-      if (MaxVScale > 0 && Log2_32(MaxVScale) < DestWidth) {
-        Value *VScale = Builder.CreateVScale(ConstantInt::get(DestTy, 1));
-        return replaceInstUsesWith(Trunc, VScale);
+      Attribute Attr =
+          Trunc.getFunction()->getFnAttribute(Attribute::VScaleRange);
+      if (Optional<unsigned> MaxVScale = Attr.getVScaleRangeMax()) {
+        if (Log2_32(MaxVScale.getValue()) < DestWidth) {
+          Value *VScale = Builder.CreateVScale(ConstantInt::get(DestTy, 1));
+          return replaceInstUsesWith(Trunc, VScale);
+        }
       }
     }
   }
@@ -1337,14 +1337,13 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &CI) {
   if (match(Src, m_VScale(DL))) {
     if (CI.getFunction() &&
         CI.getFunction()->hasFnAttribute(Attribute::VScaleRange)) {
-      unsigned MaxVScale = CI.getFunction()
-                               ->getFnAttribute(Attribute::VScaleRange)
-                               .getVScaleRangeArgs()
-                               .second;
-      unsigned TypeWidth = Src->getType()->getScalarSizeInBits();
-      if (MaxVScale > 0 && Log2_32(MaxVScale) < TypeWidth) {
-        Value *VScale = Builder.CreateVScale(ConstantInt::get(DestTy, 1));
-        return replaceInstUsesWith(CI, VScale);
+      Attribute Attr = CI.getFunction()->getFnAttribute(Attribute::VScaleRange);
+      if (Optional<unsigned> MaxVScale = Attr.getVScaleRangeMax()) {
+        unsigned TypeWidth = Src->getType()->getScalarSizeInBits();
+        if (Log2_32(MaxVScale.getValue()) < TypeWidth) {
+          Value *VScale = Builder.CreateVScale(ConstantInt::get(DestTy, 1));
+          return replaceInstUsesWith(CI, VScale);
+        }
       }
     }
   }
@@ -1608,13 +1607,12 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &CI) {
   if (match(Src, m_VScale(DL))) {
     if (CI.getFunction() &&
         CI.getFunction()->hasFnAttribute(Attribute::VScaleRange)) {
-      unsigned MaxVScale = CI.getFunction()
-                               ->getFnAttribute(Attribute::VScaleRange)
-                               .getVScaleRangeArgs()
-                               .second;
-      if (MaxVScale > 0 && Log2_32(MaxVScale) < (SrcBitSize - 1)) {
-        Value *VScale = Builder.CreateVScale(ConstantInt::get(DestTy, 1));
-        return replaceInstUsesWith(CI, VScale);
+      Attribute Attr = CI.getFunction()->getFnAttribute(Attribute::VScaleRange);
+      if (Optional<unsigned> MaxVScale = Attr.getVScaleRangeMax()) {
+        if (Log2_32(MaxVScale.getValue()) < (SrcBitSize - 1)) {
+          Value *VScale = Builder.CreateVScale(ConstantInt::get(DestTy, 1));
+          return replaceInstUsesWith(CI, VScale);
+        }
       }
     }
   }
@@ -2149,13 +2147,9 @@ optimizeVectorResizeWithIntegerBitCasts(Value *InVal, VectorType *DestTy,
   // Now that the element types match, get the shuffle mask and RHS of the
   // shuffle to use, which depends on whether we're increasing or decreasing the
   // size of the input.
-  SmallVector<int, 16> ShuffleMaskStorage;
+  auto ShuffleMaskStorage = llvm::to_vector<16>(llvm::seq<int>(0, SrcElts));
   ArrayRef<int> ShuffleMask;
   Value *V2;
-
-  // Produce an identify shuffle mask for the src vector.
-  ShuffleMaskStorage.resize(SrcElts);
-  std::iota(ShuffleMaskStorage.begin(), ShuffleMaskStorage.end(), 0);
 
   if (SrcElts > DestElts) {
     // If we're shrinking the number of elements (rewriting an integer
@@ -2651,8 +2645,8 @@ static Instruction *convertBitCastToGEP(BitCastInst &CI, IRBuilderBase &Builder,
   if (SrcPTy->isOpaque() || DstPTy->isOpaque())
     return nullptr;
 
-  Type *DstElTy = DstPTy->getElementType();
-  Type *SrcElTy = SrcPTy->getElementType();
+  Type *DstElTy = DstPTy->getNonOpaquePointerElementType();
+  Type *SrcElTy = SrcPTy->getNonOpaquePointerElementType();
 
   // When the type pointed to is not sized the cast cannot be
   // turned into a gep.
@@ -2671,8 +2665,8 @@ static Instruction *convertBitCastToGEP(BitCastInst &CI, IRBuilderBase &Builder,
   // If we found a path from the src to dest, create the getelementptr now.
   if (SrcElTy == DstElTy) {
     SmallVector<Value *, 8> Idxs(NumZeros + 1, Builder.getInt32(0));
-    GetElementPtrInst *GEP =
-        GetElementPtrInst::Create(SrcPTy->getElementType(), Src, Idxs);
+    GetElementPtrInst *GEP = GetElementPtrInst::Create(
+        SrcPTy->getNonOpaquePointerElementType(), Src, Idxs);
 
     // If the source pointer is dereferenceable, then assume it points to an
     // allocated object and apply "inbounds" to the GEP.

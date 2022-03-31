@@ -1092,10 +1092,14 @@ TEST(StringRefTest, DropWhileUntil) {
 TEST(StringRefTest, StringLiteral) {
   constexpr StringRef StringRefs[] = {"Foo", "Bar"};
   EXPECT_EQ(StringRef("Foo"), StringRefs[0]);
+  EXPECT_EQ(3u, (std::integral_constant<size_t, StringRefs[0].size()>::value));
+  EXPECT_EQ(false, (std::integral_constant<bool, StringRefs[0].empty()>::value));
   EXPECT_EQ(StringRef("Bar"), StringRefs[1]);
 
   constexpr StringLiteral Strings[] = {"Foo", "Bar"};
   EXPECT_EQ(StringRef("Foo"), Strings[0]);
+  EXPECT_EQ(3u, (std::integral_constant<size_t, Strings[0].size()>::value));
+  EXPECT_EQ(false, (std::integral_constant<bool, Strings[0].empty()>::value));
   EXPECT_EQ(StringRef("Bar"), Strings[1]);
 }
 
@@ -1103,6 +1107,36 @@ TEST(StringRefTest, StringLiteral) {
 // The code is in utils/unittest/googletest/internal/custom/gtest-printers.h
 TEST(StringRefTest, GTestPrinter) {
   EXPECT_EQ(R"("foo")", ::testing::PrintToString(StringRef("foo")));
+}
+
+TEST(StringRefTest, LFLineEnding) {
+  constexpr StringRef Cases[] = {"\nDoggo\nPupper", "Floofer\n", "Woofer"};
+  EXPECT_EQ(StringRef("\n"), Cases[0].detectEOL());
+  EXPECT_EQ(StringRef("\n"), Cases[1].detectEOL());
+  EXPECT_EQ(StringRef("\n"), Cases[2].detectEOL());
+}
+
+TEST(StringRefTest, CRLineEnding) {
+  constexpr StringRef Cases[] = {"\rDoggo\rPupper", "Floofer\r", "Woo\rfer\n"};
+  EXPECT_EQ(StringRef("\r"), Cases[0].detectEOL());
+  EXPECT_EQ(StringRef("\r"), Cases[1].detectEOL());
+  EXPECT_EQ(StringRef("\r"), Cases[2].detectEOL());
+}
+
+TEST(StringRefTest, CRLFLineEnding) {
+  constexpr StringRef Cases[] = {"\r\nDoggo\r\nPupper", "Floofer\r\n",
+                                 "Woofer\r\nSubWoofer\n"};
+  EXPECT_EQ(StringRef("\r\n"), Cases[0].detectEOL());
+  EXPECT_EQ(StringRef("\r\n"), Cases[1].detectEOL());
+  EXPECT_EQ(StringRef("\r\n"), Cases[2].detectEOL());
+}
+
+TEST(StringRefTest, LFCRLineEnding) {
+  constexpr StringRef Cases[] = {"\n\rDoggo\n\rPupper", "Floofer\n\r",
+                                 "Woofer\n\rSubWoofer\n"};
+  EXPECT_EQ(StringRef("\n\r"), Cases[0].detectEOL());
+  EXPECT_EQ(StringRef("\n\r"), Cases[1].detectEOL());
+  EXPECT_EQ(StringRef("\n\r"), Cases[2].detectEOL());
 }
 
 static_assert(std::is_trivially_copyable<StringRef>::value,

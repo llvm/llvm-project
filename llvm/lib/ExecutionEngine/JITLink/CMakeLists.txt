@@ -1,4 +1,5 @@
 add_llvm_component_library(LLVMJITLink
+  DWARFRecordSectionSplitter.cpp
   EHFrameSupport.cpp
   JITLink.cpp
   JITLinkGeneric.cpp
@@ -41,6 +42,7 @@ add_llvm_component_library(LLVMJITLink
 target_link_libraries(LLVMJITLink
   PRIVATE
   LLVMObject
+  LLVMOrcShared
   LLVMOrcTargetProcess
   LLVMSupport
 )

@@ -80,10 +80,8 @@ def OP_QDMULH_N : Op<(call "vqdmulh", $p0, (dup $p1))>;
 def OP_QDMULH_LN : Op<(call "vqdmulh", $p0, (call_mangled "splat_lane", $p1, $p2))>;
 def OP_QRDMULH_LN : Op<(call "vqrdmulh", $p0, (call_mangled "splat_lane", $p1, $p2))>;
 def OP_QRDMULH_N : Op<(call "vqrdmulh", $p0, (dup $p1))>;
-def OP_QRDMLAH : Op<(call "vqadd", $p0, (call "vqrdmulh", $p1, $p2))>;
-def OP_QRDMLSH : Op<(call "vqsub", $p0, (call "vqrdmulh", $p1, $p2))>;
-def OP_QRDMLAH_LN : Op<(call "vqadd", $p0, (call "vqrdmulh", $p1, (call_mangled "splat_lane", $p2, $p3)))>;
-def OP_QRDMLSH_LN : Op<(call "vqsub", $p0, (call "vqrdmulh", $p1, (call_mangled "splat_lane", $p2, $p3)))>;
+def OP_QRDMLAH_LN : Op<(call "vqrdmlah", $p0, $p1, (call_mangled "splat_lane", $p2, $p3))>;
+def OP_QRDMLSH_LN : Op<(call "vqrdmlsh", $p0, $p1, (call_mangled "splat_lane", $p2, $p3))>;
 def OP_FMS_LN   : Op<(call "vfma_lane", $p0, (op "-", $p1), $p2, $p3)>;
 def OP_FMS_LNQ  : Op<(call "vfma_laneq", $p0, (op "-", $p1), $p2, $p3)>;
 def OP_TRN1     : Op<(shuffle $p0, $p1, (interleave (decimate mask0, 2),
@@ -185,10 +183,10 @@ def OP_SCALAR_QDMULL_LN : ScalarMulOp<"vqdmull">;
 def OP_SCALAR_QDMULH_LN : ScalarMulOp<"vqdmulh">;
 def OP_SCALAR_QRDMULH_LN : ScalarMulOp<"vqrdmulh">;
 
-def OP_SCALAR_QRDMLAH_LN : Op<(call "vqadd", $p0, (call "vqrdmulh", $p1,
-                              (call "vget_lane", $p2, $p3)))>;
-def OP_SCALAR_QRDMLSH_LN : Op<(call "vqsub", $p0, (call "vqrdmulh", $p1,
-                              (call "vget_lane", $p2, $p3)))>;
+def OP_SCALAR_QRDMLAH_LN : Op<(call "vqrdmlah", $p0, $p1,
+                                (call "vget_lane", $p2, $p3))>;
+def OP_SCALAR_QRDMLSH_LN : Op<(call "vqrdmlsh", $p0, $p1,
+                                (call "vget_lane", $p2, $p3))>;
 
 def OP_SCALAR_HALF_GET_LN : Op<(bitcast "float16_t",
                                    (call "vget_lane",
@@ -326,8 +324,8 @@ def VQDMULH  : SInst<"vqdmulh", "...", "siQsQi">;
 def VQRDMULH : SInst<"vqrdmulh", "...", "siQsQi">;
 
 let ArchGuard = "defined(__ARM_FEATURE_QRDMX)" in {
-def VQRDMLAH : SOpInst<"vqrdmlah", "....", "siQsQi", OP_QRDMLAH>;
-def VQRDMLSH : SOpInst<"vqrdmlsh", "....", "siQsQi", OP_QRDMLSH>;
+def VQRDMLAH : SInst<"vqrdmlah", "....", "siQsQi">;
+def VQRDMLSH : SInst<"vqrdmlsh", "....", "siQsQi">;
 }
 
 def VQDMLAL  : SInst<"vqdmlal", "(>Q)(>Q)..", "si">;
@@ -1400,11 +1398,11 @@ def SCALAR_SQRDMULH : SInst<"vqrdmulh", "111", "SsSi">;
 let ArchGuard = "defined(__ARM_FEATURE_QRDMX) && defined(__aarch64__)" in {
 ////////////////////////////////////////////////////////////////////////////////
 // Signed Saturating Rounding Doubling Multiply Accumulate Returning High Half
-def SCALAR_SQRDMLAH : SOpInst<"vqrdmlah", "1111", "SsSi", OP_QRDMLAH>;
+def SCALAR_SQRDMLAH : SInst<"vqrdmlah", "1111", "SsSi">;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Signed Saturating Rounding Doubling Multiply Subtract Returning High Half
-def SCALAR_SQRDMLSH : SOpInst<"vqrdmlsh", "1111", "SsSi", OP_QRDMLSH>;
+def SCALAR_SQRDMLSH : SInst<"vqrdmlsh", "1111", "SsSi">;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

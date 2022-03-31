@@ -9,6 +9,7 @@
 #ifndef LLDB_SYMBOL_SYMBOLFILE_H
 #define LLDB_SYMBOL_SYMBOLFILE_H
 
+#include "lldb/Core/ModuleList.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/SourceLocationSpec.h"
 #include "lldb/Symbol/CompilerDecl.h"
@@ -67,8 +68,7 @@ public:
 
   // Constructors and Destructors
   SymbolFile(lldb::ObjectFileSP objfile_sp)
-      : m_objfile_sp(std::move(objfile_sp)), m_abilities(0),
-        m_calculated_abilities(false) {}
+      : m_objfile_sp(std::move(objfile_sp)) {}
 
   ~SymbolFile() override = default;
 
@@ -180,7 +180,6 @@ public:
   virtual size_t ParseBlocksRecursive(Function &func) = 0;
   virtual size_t ParseVariablesForContext(const SymbolContext &sc) = 0;
   virtual Type *ResolveTypeUID(lldb::user_id_t type_uid) = 0;
-
 
   /// The characteristics of an array type.
   struct ArrayInfo {
@@ -318,19 +317,46 @@ public:
   ///
   /// \returns 0.0 if no information has been parsed or if there is
   /// no computational cost to parsing the debug information.
-  virtual StatsDuration GetDebugInfoParseTime() {
-    return StatsDuration(0.0);
-  }
+  virtual StatsDuration::Duration GetDebugInfoParseTime() { return {}; }
 
   /// Return the time it took to index the debug information in the object
   /// file.
   ///
   /// \returns 0.0 if the file doesn't need to be indexed or if it
   /// hasn't been indexed yet, or a valid duration if it has.
-  virtual StatsDuration GetDebugInfoIndexTime() {
-    return StatsDuration(0.0);
-  }
+  virtual StatsDuration::Duration GetDebugInfoIndexTime() { return {}; }
 
+  /// Get the additional modules that this symbol file uses to parse debug info.
+  ///
+  /// Some debug info is stored in stand alone object files that are represented
+  /// by unique modules that will show up in the statistics module list. Return
+  /// a list of modules that are not in the target module list that this symbol
+  /// file is currently using so that they can be tracked and assoicated with
+  /// the module in the statistics.
+  virtual ModuleList GetDebugInfoModules() { return ModuleList(); }
+
+  /// Accessors for the bool that indicates if the debug info index was loaded
+  /// from, or saved to the module index cache.
+  ///
+  /// In statistics it is handy to know if a module's debug info was loaded from
+  /// or saved to the cache. When the debug info index is loaded from the cache
+  /// startup times can be faster. When the cache is enabled and the debug info
+  /// index is saved to the cache, debug sessions can be slower. These accessors
+  /// can be accessed by the statistics and emitted to help track these costs.
+  /// \{
+  bool GetDebugInfoIndexWasLoadedFromCache() const {
+    return m_index_was_loaded_from_cache;
+  }
+  void SetDebugInfoIndexWasLoadedFromCache() {
+    m_index_was_loaded_from_cache = true;
+  }
+  bool GetDebugInfoIndexWasSavedToCache() const {
+    return m_index_was_saved_to_cache;
+  }
+  void SetDebugInfoIndexWasSavedToCache() {
+    m_index_was_saved_to_cache = true;
+  }
+  /// \}
 
 protected:
   void AssertModuleLock();
@@ -347,8 +373,10 @@ protected:
   llvm::Optional<std::vector<lldb::CompUnitSP>> m_compile_units;
   TypeList m_type_list;
   Symtab *m_symtab = nullptr;
-  uint32_t m_abilities;
-  bool m_calculated_abilities;
+  uint32_t m_abilities = 0;
+  bool m_calculated_abilities = false;
+  bool m_index_was_loaded_from_cache = false;
+  bool m_index_was_saved_to_cache = false;
 
 private:
   SymbolFile(const SymbolFile &) = delete;

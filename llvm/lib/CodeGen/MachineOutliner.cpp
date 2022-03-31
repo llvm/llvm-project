@@ -59,6 +59,8 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/Passes.h"
@@ -82,8 +84,16 @@ using namespace llvm;
 using namespace ore;
 using namespace outliner;
 
+// Statistics for outlined functions.
 STATISTIC(NumOutlined, "Number of candidates outlined");
 STATISTIC(FunctionsCreated, "Number of functions created");
+
+// Statistics for instruction mapping.
+STATISTIC(NumLegalInUnsignedVec, "Number of legal instrs in unsigned vector");
+STATISTIC(NumIllegalInUnsignedVec,
+          "Number of illegal instrs in unsigned vector");
+STATISTIC(NumInvisible, "Number of invisible instrs in unsigned vector");
+STATISTIC(UnsignedVecSize, "Size of unsigned vector");
 
 // Set to true if the user wants the outliner to run on linkonceodr linkage
 // functions. This is false by default because the linker can dedupe linkonceodr
@@ -188,6 +198,8 @@ struct InstructionMapper {
     assert(LegalInstrNumber != DenseMapInfo<unsigned>::getTombstoneKey() &&
            "Tried to assign DenseMap tombstone or empty key to instruction.");
 
+    // Statistics.
+    ++NumLegalInUnsignedVec;
     return MINumber;
   }
 
@@ -215,6 +227,8 @@ struct InstructionMapper {
     InstrListForMBB.push_back(It);
     UnsignedVecForMBB.push_back(IllegalInstrNumber);
     IllegalInstrNumber--;
+    // Statistics.
+    ++NumIllegalInUnsignedVec;
 
     assert(LegalInstrNumber < IllegalInstrNumber &&
            "Instruction mapping overflow!");
@@ -293,6 +307,7 @@ struct InstructionMapper {
       case InstrType::Invisible:
         // Normally this is set by mapTo(Blah)Unsigned, but we just want to
         // skip this instruction. So, unset the flag here.
+        ++NumInvisible;
         AddedIllegalLastTime = false;
         break;
       }
@@ -623,6 +638,15 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
 
   TII.mergeOutliningCandidateAttributes(*F, OF.Candidates);
 
+  // Set uwtable, so we generate eh_frame.
+  UWTableKind UW = std::accumulate(
+      OF.Candidates.cbegin(), OF.Candidates.cend(), UWTableKind::None,
+      [](UWTableKind K, const outliner::Candidate &C) {
+        return std::max(K, C.getMF()->getFunction().getUWTableKind());
+      });
+  if (UW != UWTableKind::None)
+    F->setUWTableKind(UW);
+
   BasicBlock *EntryBB = BasicBlock::Create(C, "entry", F);
   IRBuilder<> Builder(EntryBB);
   Builder.CreateRetVoid();
@@ -896,6 +920,9 @@ void MachineOutliner::populateMapper(InstructionMapper &Mapper, Module &M,
       // MBB is suitable for outlining. Map it to a list of unsigneds.
       Mapper.convertToUnsignedVec(MBB, *TII);
     }
+
+    // Statistics.
+    UnsignedVecSize = Mapper.UnsignedVec.size();
   }
 }
 

@@ -4,4 +4,4 @@
 // Expect *not* to see a diagnostic for "implicit declaration of function"
 // expected-no-diagnostics
 
-void f0() { f1(); }
+void f0(void) { f1(); }

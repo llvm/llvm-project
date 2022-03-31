@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/SubtargetFeature.h"
+#include "llvm/Support/RISCVISAInfo.h"
 
 namespace llvm {
 
@@ -87,6 +88,13 @@ enum {
   // Pseudos.
   IsRVVWideningReductionShift = HasVecPolicyOpShift + 1,
   IsRVVWideningReductionMask = 1 << IsRVVWideningReductionShift,
+
+  // Does this instruction care about mask policy. If it is not, the mask policy
+  // could be either agnostic or undisturbed. For example, unmasked, store, and
+  // reduction operations result would not be affected by mask policy, so
+  // compiler has free to select either one.
+  UsesMaskPolicyShift = IsRVVWideningReductionShift + 1,
+  UsesMaskPolicyMask = 1 << UsesMaskPolicyShift,
 };
 
 // Match with the definitions in RISCVInstrFormatsV.td
@@ -109,8 +117,8 @@ enum VLMUL : uint8_t {
 };
 
 enum {
-  TAIL_UNDISTURBED = 0,
   TAIL_AGNOSTIC = 1,
+  MASK_AGNOSTIC = 2,
 };
 
 // Helper functions to read TSFlags.
@@ -155,6 +163,10 @@ static inline bool hasVecPolicyOp(uint64_t TSFlags) {
 static inline bool isRVVWideningReduction(uint64_t TSFlags) {
   return TSFlags & IsRVVWideningReductionMask;
 }
+/// \returns true if mask policy is valid for the instruction.
+static inline bool UsesMaskPolicy(uint64_t TSFlags) {
+  return TSFlags & UsesMaskPolicyMask;
+}
 
 // RISC-V Specific Machine Operand Flags
 enum {
@@ -191,7 +203,8 @@ enum OperandType : unsigned {
   OPERAND_SIMM12,
   OPERAND_UIMM20,
   OPERAND_UIMMLOG2XLEN,
-  OPERAND_LAST_RISCV_IMM = OPERAND_UIMMLOG2XLEN,
+  OPERAND_RVKRNUM,
+  OPERAND_LAST_RISCV_IMM = OPERAND_RVKRNUM,
   // Operand is either a register or uimm5, this is used by V extension pseudo
   // instructions to represent a value that be passed as AVL to either vsetvli
   // or vsetivli.
@@ -299,6 +312,16 @@ struct SysReg {
 #include "RISCVGenSearchableTables.inc"
 } // end namespace RISCVSysReg
 
+namespace RISCVInsnOpcode {
+struct RISCVOpcode {
+  const char *Name;
+  unsigned Value;
+};
+
+#define GET_RISCVOpcodesList_DECL
+#include "RISCVGenSearchableTables.inc"
+} // end namespace RISCVInsnOpcode
+
 namespace RISCVABI {
 
 enum ABI {
@@ -333,9 +356,8 @@ namespace RISCVFeatures {
 // triple. Exits with report_fatal_error if not.
 void validate(const Triple &TT, const FeatureBitset &FeatureBits);
 
-// Convert FeatureBitset to FeatureVector.
-void toFeatureVector(std::vector<std::string> &FeatureVector,
-                     const FeatureBitset &FeatureBits);
+llvm::Expected<std::unique_ptr<RISCVISAInfo>>
+parseFeatureBits(bool IsRV64, const FeatureBitset &FeatureBits);
 
 } // namespace RISCVFeatures
 
@@ -364,6 +386,11 @@ std::pair<unsigned, bool> decodeVLMUL(RISCVII::VLMUL VLMUL);
 inline static unsigned decodeVSEW(unsigned VSEW) {
   assert(VSEW < 8 && "Unexpected VSEW value");
   return 1 << (VSEW + 3);
+}
+
+inline static unsigned encodeSEW(unsigned SEW) {
+  assert(isValidSEW(SEW) && "Unexpected SEW value");
+  return Log2_32(SEW) - 3;
 }
 
 inline static unsigned getSEW(unsigned VType) {

@@ -40,8 +40,8 @@ define amdgpu_kernel void @divergent_or3_b64(<3 x i64> addrspace(1)* %arg) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_or3_b32 v1, v3, v1, v5
 ; GCN-NEXT:    v_or3_b32 v0, v2, v0, v4
-; GCN-NEXT:    v_not_b32_e32 v0, v0
 ; GCN-NEXT:    v_not_b32_e32 v1, v1
+; GCN-NEXT:    v_not_b32_e32 v0, v0
 ; GCN-NEXT:    global_store_dwordx2 v6, v[0:1], s[0:1]
 ; GCN-NEXT:    s_endpgm
 bb:
@@ -103,8 +103,8 @@ define amdgpu_kernel void @divergent_and3_b64(<3 x i64> addrspace(1)* %arg) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_and_b32_e32 v1, v1, v5
 ; GCN-NEXT:    v_and_b32_e32 v0, v0, v4
-; GCN-NEXT:    v_not_b32_e32 v0, v0
 ; GCN-NEXT:    v_not_b32_e32 v1, v1
+; GCN-NEXT:    v_not_b32_e32 v0, v0
 ; GCN-NEXT:    global_store_dwordx2 v6, v[0:1], s[0:1]
 ; GCN-NEXT:    s_endpgm
 bb:
@@ -163,8 +163,8 @@ define amdgpu_kernel void @divergent_xor3_b64(<3 x i64> addrspace(1)* %arg) {
 ; GCN-NEXT:    v_xor_b32_e32 v1, v3, v1
 ; GCN-NEXT:    v_xor_b32_e32 v0, v2, v0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_xnor_b32_e32 v0, v0, v4
 ; GCN-NEXT:    v_xnor_b32_e32 v1, v1, v5
+; GCN-NEXT:    v_xnor_b32_e32 v0, v0, v4
 ; GCN-NEXT:    global_store_dwordx2 v6, v[0:1], s[0:1]
 ; GCN-NEXT:    s_endpgm
 bb:

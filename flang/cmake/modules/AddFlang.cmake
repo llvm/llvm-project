@@ -1,3 +1,4 @@
+include(GNUInstallDirs)
 include(LLVMDistributionSupport)
 
 macro(set_flang_windows_version_resource_properties name)
@@ -71,7 +72,7 @@ macro(add_flang_library name)
         ${export_to_flangtargets}
         LIBRARY DESTINATION lib${LLVM_LIBDIR_SUFFIX}
         ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX}
-        RUNTIME DESTINATION bin)
+        RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
 
       if (NOT LLVM_ENABLE_IDE)
         add_llvm_install_targets(install-${name}
@@ -108,7 +109,7 @@ macro(add_flang_tool name)
     get_target_export_arg(${name} Flang export_to_flangtargets)
     install(TARGETS ${name}
       ${export_to_flangtargets}
-      RUNTIME DESTINATION bin
+      RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
       COMPONENT ${name})
 
     if(NOT LLVM_ENABLE_IDE)

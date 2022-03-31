@@ -98,10 +98,10 @@ entry:
 define <2 x i16> @dupsext_v2i8_v2i16(i8 %src, <2 x i8> %b) {
 ; CHECK-LABEL: dupsext_v2i8_v2i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    shl v0.2s, v0.2s, #24
 ; CHECK-NEXT:    sxtb w8, w0
-; CHECK-NEXT:    dup v1.2s, w8
+; CHECK-NEXT:    shl v0.2s, v0.2s, #24
 ; CHECK-NEXT:    sshr v0.2s, v0.2s, #24
+; CHECK-NEXT:    dup v1.2s, w8
 ; CHECK-NEXT:    mul v0.2s, v1.2s, v0.2s
 ; CHECK-NEXT:    ret
 entry:
@@ -156,16 +156,88 @@ entry:
 define <8 x i16> @nonsplat_shuffleinsert(i8 %src, <8 x i8> %b) {
 ; CHECK-LABEL: nonsplat_shuffleinsert:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sxtb w8, w0
-; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-NEXT:    dup v1.8h, w8
-; CHECK-NEXT:    mul v0.8h, v1.8h, v0.8h
+; CHECK-NEXT:    dup v1.8b, w0
+; CHECK-NEXT:    smull v0.8h, v1.8b, v0.8b
 ; CHECK-NEXT:    ret
 entry:
     %in = sext i8 %src to i16
     %ext.b = sext <8 x i8> %b to <8 x i16>
     %broadcast.splatinsert = insertelement <8 x i16> undef, i16 %in, i16 1
     %broadcast.splat = shufflevector <8 x i16> %broadcast.splatinsert, <8 x i16> undef, <8 x i32> <i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1>
+    %out = mul nsw <8 x i16> %broadcast.splat, %ext.b
+    ret <8 x i16> %out
+}
+
+define <4 x i32> @nonsplat_shuffleinsert2(<4 x i16> %b, i16 %b0, i16 %b1, i16 %b2, i16 %b3) {
+; CHECK-LABEL: nonsplat_shuffleinsert2:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    mov v1.h[1], w1
+; CHECK-NEXT:    mov v1.h[2], w2
+; CHECK-NEXT:    mov v1.h[3], w3
+; CHECK-NEXT:    smull v0.4s, v1.4h, v0.4h
+; CHECK-NEXT:    ret
+entry:
+    %s0 = sext i16 %b0 to i32
+    %s1 = sext i16 %b1 to i32
+    %s2 = sext i16 %b2 to i32
+    %s3 = sext i16 %b3 to i32
+    %ext.b = sext <4 x i16> %b to <4 x i32>
+    %v0 = insertelement <4 x i32> undef, i32 %s0, i32 0
+    %v1 = insertelement <4 x i32> %v0, i32 %s1, i32 1
+    %v2 = insertelement <4 x i32> %v1, i32 %s2, i32 2
+    %v3 = insertelement <4 x i32> %v2, i32 %s3, i32 3
+    %out = mul nsw <4 x i32> %v3, %ext.b
+    ret <4 x i32> %out
+}
+
+define void @typei1_orig(i64 %a, i8* %p, <8 x i16>* %q) {
+; CHECK-LABEL: typei1_orig:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmp x0, #0
+; CHECK-NEXT:    ldr q0, [x2]
+; CHECK-NEXT:    cset w8, gt
+; CHECK-NEXT:    neg v0.8h, v0.8h
+; CHECK-NEXT:    dup v1.8h, w8
+; CHECK-NEXT:    mul v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    cmtst v0.8h, v0.8h, v0.8h
+; CHECK-NEXT:    xtn v0.8b, v0.8h
+; CHECK-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NEXT:    str q0, [x1]
+; CHECK-NEXT:    ret
+    %tmp = xor <16 x i1> zeroinitializer, <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+    %tmp6 = load <8 x i16>, <8 x i16>* %q, align 2
+    %tmp7 = sub <8 x i16> zeroinitializer, %tmp6
+    %tmp8 = shufflevector <8 x i16> %tmp7, <8 x i16> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+    %tmp9 = icmp slt i64 0, %a
+    %tmp10 = zext i1 %tmp9 to i16
+    %tmp11 = insertelement <16 x i16> undef, i16 %tmp10, i64 0
+    %tmp12 = shufflevector <16 x i16> %tmp11, <16 x i16> undef, <16 x i32> zeroinitializer
+    %tmp13 = mul nuw <16 x i16> %tmp8, %tmp12
+    %tmp14 = icmp ne <16 x i16> %tmp13, zeroinitializer
+    %tmp15 = and <16 x i1> %tmp14, %tmp
+    %tmp16 = sext <16 x i1> %tmp15 to <16 x i8>
+    %tmp17 = bitcast i8* %p to <16 x i8>*
+    store <16 x i8> %tmp16, <16 x i8>* %tmp17, align 1
+    ret void
+}
+
+define <8 x i16> @typei1_v8i1_v8i16(i1 %src, <8 x i1> %b) {
+; CHECK-LABEL: typei1_v8i1_v8i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v1.8b, #1
+; CHECK-NEXT:    and w8, w0, #0x1
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    dup v1.8h, w8
+; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEXT:    mul v0.8h, v1.8h, v0.8h
+; CHECK-NEXT:    ret
+entry:
+    %in = zext i1 %src to i16
+    %ext.b = zext <8 x i1> %b to <8 x i16>
+    %broadcast.splatinsert = insertelement <8 x i16> undef, i16 %in, i16 0
+    %broadcast.splat = shufflevector <8 x i16> %broadcast.splatinsert, <8 x i16> undef, <8 x i32> zeroinitializer
     %out = mul nsw <8 x i16> %broadcast.splat, %ext.b
     ret <8 x i16> %out
 }

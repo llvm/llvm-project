@@ -79,7 +79,7 @@ int main(int argc, char **argv) {
   }
 }
 
-// CHECK: define internal i32 [[TASK1]](
+// CHECK: define internal noundef i32 [[TASK1]](
 // CHECK: [[DOWN:%.+]] = getelementptr inbounds [[TD_TY:%.+]], [[TD_TY]]* %{{.+}}, i32 0, i32 5
 // CHECK: [[DOWN_VAL:%.+]] = load i64, i64* [[DOWN]],
 // CHECK: [[UP:%.+]] = getelementptr inbounds [[TD_TY]], [[TD_TY]]* %{{.+}}, i32 0, i32 6
@@ -109,7 +109,7 @@ int main(int argc, char **argv) {
 // CHECK: br label %
 // CHECK: ret i32 0
 
-// CHECK: define internal i32 [[TASK2]](
+// CHECK: define internal noundef i32 [[TASK2]](
 // CHECK: [[DOWN:%.+]] = getelementptr inbounds [[TD_TY:%.+]], [[TD_TY]]* %{{.+}}, i32 0, i32 5
 // CHECK: [[DOWN_VAL:%.+]] = load i64, i64* [[DOWN]],
 // CHECK: [[UP:%.+]] = getelementptr inbounds [[TD_TY]], [[TD_TY]]* %{{.+}}, i32 0, i32 6
@@ -139,7 +139,7 @@ int main(int argc, char **argv) {
 // CHECK: br label %
 // CHECK: ret i32 0
 
-// CHECK: define internal i32 [[TASK3]](
+// CHECK: define internal noundef i32 [[TASK3]](
 // CHECK: [[DOWN:%.+]] = getelementptr inbounds [[TD_TY:%.+]], [[TD_TY]]* %{{.+}}, i32 0, i32 5
 // CHECK: [[DOWN_VAL:%.+]] = load i64, i64* [[DOWN]],
 // CHECK: [[UP:%.+]] = getelementptr inbounds [[TD_TY]], [[TD_TY]]* %{{.+}}, i32 0, i32 6
@@ -157,7 +157,7 @@ int main(int argc, char **argv) {
 // CHECK: br label
 // CHECK: ret i32 0
 
-// CHECK: define internal i32 [[TASK_CANCEL]](
+// CHECK: define internal noundef i32 [[TASK_CANCEL]](
 // CHECK: [[RES:%.+]] = call i32 @__kmpc_cancel(%struct.ident_t* @{{.+}}, i32 %{{.+}}, i32 4)
 // CHECK: [[IS_CANCEL:%.+]] = icmp ne i32 [[RES]], 0
 // CHECK: br i1 [[IS_CANCEL]], label %[[EXIT:.+]], label %[[CONTINUE:[^,]+]]
@@ -199,7 +199,7 @@ struct S {
   }
 } s(1);
 
-// CHECK: define internal i32 [[TASK4]](
+// CHECK: define internal noundef i32 [[TASK4]](
 // CHECK: [[DOWN:%.+]] = getelementptr inbounds [[TD_TY:%.+]], [[TD_TY]]* %{{.+}}, i32 0, i32 5
 // CHECK: [[DOWN_VAL:%.+]] = load i64, i64* [[DOWN]],
 // CHECK: [[UP:%.+]] = getelementptr inbounds [[TD_TY]], [[TD_TY]]* %{{.+}}, i32 0, i32 6
@@ -238,8 +238,8 @@ public:
 // CHECK-LABEL: taskloop_with_class
 void taskloop_with_class() {
   St s1;
-  // CHECK: [[TD:%.+]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* @{{.+}}, i32 [[GTID:%.+]], i32 1, i64 80, i64 8, i32 (i32, i8*)* bitcast (i32 (i32, [[TD_TYPE:%.+]]*)* @{{.+}} to i32 (i32, i8*)*))
-  // CHECK: call void @__kmpc_taskloop(%struct.ident_t* @{{.+}}, i32 [[GTID]], i8* [[TD]], i32 1, i64* %{{.+}}, i64* %{{.+}}, i64 %{{.+}}, i32 1, i32 0, i64 0, i8* null)
+  // CHECK: [[TD:%.+]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* @{{.+}}, i32 [[GTID:%.+]], i32 1, i64 88, i64 8, i32 (i32, i8*)* bitcast (i32 (i32, [[TD_TYPE:%.+]]*)* @{{.+}} to i32 (i32, i8*)*))
+  // CHECK: call void @__kmpc_taskloop(%struct.ident_t* @{{.+}}, i32 [[GTID]], i8* [[TD]], i32 1, i64* %{{.+}}, i64* %{{.+}}, i64 %{{.+}}, i32 1, i32 0, i64 0, i8* bitcast (void ([[TD_TYPE]]*, [[TD_TYPE]]*, i32)* @{{.+}} to i8*))
 #pragma omp taskloop
   for (St s = St(); s < s1; s += 1) {
   }

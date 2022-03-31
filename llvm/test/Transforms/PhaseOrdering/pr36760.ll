@@ -5,9 +5,8 @@
 define i64 @PR36760(i64 %a) {
 ; CHECK-LABEL: @PR36760(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i64 [[A:%.*]], 0
-; CHECK-NEXT:    [[DOTA:%.*]] = select i1 [[TMP0]], i64 [[A]], i64 0
-; CHECK-NEXT:    ret i64 [[DOTA]]
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.smax.i64(i64 [[A:%.*]], i64 0)
+; CHECK-NEXT:    ret i64 [[TMP0]]
 ;
 entry:
   %retval = alloca i64, align 8
@@ -37,10 +36,9 @@ return:
 define i64 @PR36760_2(i64 %a) #0 {
 ; CHECK-LABEL: @PR36760_2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp slt i64 [[A:%.*]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[TMP0]], i64 [[A]], i64 -1
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = xor i64 [[TMP1]], -1
-; CHECK-NEXT:    ret i64 [[RETVAL_0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.smin.i64(i64 [[A:%.*]], i64 -1)
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i64 [[TMP0]], -1
+; CHECK-NEXT:    ret i64 [[TMP1]]
 ;
 entry:
   %retval = alloca i64, align 8

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-ast -analyze < %s | FileCheck %s --check-prefix=AST
+; RUN: opt %loadPolly -polly-print-ast -disable-output < %s | FileCheck %s --check-prefix=AST
 ; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s
 
 ; TODO: FIXME: Simplify the context.
@@ -15,7 +15,8 @@
 ; CHECK-NEXT:  %5 = sext i1 %4 to i64
 ; CHECK-NEXT:  %6 = icmp eq i64 0, %5
 ; CHECK-NEXT:  %7 = and i1 %2, %6
-; CHECK-NEXT:  br i1 %7, label %polly.start, label %for.body4
+; CHECK-NEXT:  %polly.rtc.result = and i1 %7, true
+; CHECK-NEXT:  br i1 %polly.rtc.result, label %polly.start, label %for.body4
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

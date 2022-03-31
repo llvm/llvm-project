@@ -169,8 +169,7 @@ if(LLVM_ENABLE_CURL)
     # Check if curl we found is usable; for example, we may have found a 32-bit
     # library on a 64-bit system which would result in a link-time failure.
     cmake_push_check_state()
-    list(APPEND CMAKE_REQUIRED_INCLUDES ${CURL_INCLUDE_DIRS})
-    list(APPEND CMAKE_REQUIRED_LIBRARIES ${CURL_LIBRARY})
+    list(APPEND CMAKE_REQUIRED_LIBRARIES CURL::libcurl)
     check_symbol_exists(curl_easy_init curl/curl.h HAVE_CURL)
     cmake_pop_check_state()
     if(LLVM_ENABLE_CURL STREQUAL FORCE_ON AND NOT HAVE_CURL)
@@ -243,7 +242,6 @@ check_symbol_exists(setrlimit sys/resource.h HAVE_SETRLIMIT)
 check_symbol_exists(isatty unistd.h HAVE_ISATTY)
 check_symbol_exists(futimens sys/stat.h HAVE_FUTIMENS)
 check_symbol_exists(futimes sys/time.h HAVE_FUTIMES)
-check_symbol_exists(posix_fallocate fcntl.h HAVE_POSIX_FALLOCATE)
 # AddressSanitizer conflicts with lib/Support/Unix/Signals.inc
 # Avoid sigaltstack on Apple platforms, where backtrace() cannot handle it
 # (rdar://7089625) and _Unwind_Backtrace is unusable because it cannot unwind
@@ -603,7 +601,7 @@ find_program(GOLD_EXECUTABLE NAMES ${LLVM_DEFAULT_TARGET_TRIPLE}-ld.gold ld.gold
 set(LLVM_BINUTILS_INCDIR "" CACHE PATH
     "PATH to binutils/include containing plugin-api.h for gold plugin.")
 
-if(CMAKE_GENERATOR STREQUAL "Ninja")
+if(CMAKE_GENERATOR MATCHES "Ninja")
   execute_process(COMMAND ${CMAKE_MAKE_PROGRAM} --version
     OUTPUT_VARIABLE NINJA_VERSION
     OUTPUT_STRIP_TRAILING_WHITESPACE)
@@ -611,7 +609,7 @@ if(CMAKE_GENERATOR STREQUAL "Ninja")
   message(STATUS "Ninja version: ${NINJA_VERSION}")
 endif()
 
-if(CMAKE_GENERATOR STREQUAL "Ninja" AND
+if(CMAKE_GENERATOR MATCHES "Ninja" AND
     NOT "${NINJA_VERSION}" VERSION_LESS "1.9.0" AND
     CMAKE_HOST_APPLE AND CMAKE_HOST_SYSTEM_VERSION VERSION_GREATER "15.6.0")
   set(LLVM_TOUCH_STATIC_LIBRARIES ON)
@@ -651,7 +649,6 @@ else()
       find_ocamlfind_package(ctypes VERSION 0.4 OPTIONAL)
       if( HAVE_OCAML_CTYPES )
         message(STATUS "OCaml bindings enabled.")
-        find_ocamlfind_package(oUnit VERSION 2 OPTIONAL)
         set(LLVM_BINDINGS "${LLVM_BINDINGS} ocaml")
 
         set(LLVM_OCAML_INSTALL_PATH "${OCAML_STDLIB_PATH}" CACHE STRING

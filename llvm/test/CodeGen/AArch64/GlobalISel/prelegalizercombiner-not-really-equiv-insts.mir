@@ -5,7 +5,10 @@
   @g = external hidden unnamed_addr global i32, align 4
   define void @not_necessarily_equiv_loads() { ret void }
   define void @invariant_loads() { ret void }
-  define void @both_have_to_be_invariant() { ret void }
+  define void @both_have_to_be_invariant_1() { ret void }
+  define void @both_have_to_be_invariant_2() { ret void }
+  define void @both_have_to_have_same_size() { ret void }
+
 ...
 ---
 name:            not_necessarily_equiv_loads
@@ -22,11 +25,11 @@ body:             |
 
     ; CHECK-LABEL: name: not_necessarily_equiv_loads
     ; CHECK: %ptr:_(p0) = G_GLOBAL_VALUE @g
-    ; CHECK: %load1:_(s32) = G_LOAD %ptr(p0) :: (load (s32) from @g)
-    ; CHECK: %load2:_(s32) = G_LOAD %ptr(p0) :: (load (s32) from @g)
-    ; CHECK: %or:_(s32) = G_OR %load2, %load1
-    ; CHECK: G_STORE %or(s32), %ptr(p0) :: (store (s32) into @g)
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: %load1:_(s32) = G_LOAD %ptr(p0) :: (load (s32) from @g)
+    ; CHECK-NEXT: %load2:_(s32) = G_LOAD %ptr(p0) :: (load (s32) from @g)
+    ; CHECK-NEXT: %or:_(s32) = G_OR %load2, %load1
+    ; CHECK-NEXT: G_STORE %or(s32), %ptr(p0) :: (store (s32) into @g)
+    ; CHECK-NEXT: RET_ReallyLR
     %ptr:_(p0) = G_GLOBAL_VALUE @g
     %load1:_(s32) = G_LOAD %ptr(p0) :: (load (s32) from @g)
     %load2:_(s32) = G_LOAD %ptr(p0) :: (load (s32) from @g)
@@ -46,9 +49,9 @@ body:             |
 
     ; CHECK-LABEL: name: invariant_loads
     ; CHECK: %ptr:_(p0) = G_GLOBAL_VALUE @g
-    ; CHECK: %load2:_(s32) = G_LOAD %ptr(p0) :: (dereferenceable invariant load (s32) from @g)
-    ; CHECK: G_STORE %load2(s32), %ptr(p0) :: (store (s32) into @g)
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: %load2:_(s32) = G_LOAD %ptr(p0) :: (dereferenceable invariant load (s32) from @g)
+    ; CHECK-NEXT: G_STORE %load2(s32), %ptr(p0) :: (store (s32) into @g)
+    ; CHECK-NEXT: RET_ReallyLR
     %ptr:_(p0) = G_GLOBAL_VALUE @g
     %load1:_(s32) = G_LOAD %ptr(p0) :: (dereferenceable invariant load (s32) from @g)
     %load2:_(s32) = G_LOAD %ptr(p0) :: (dereferenceable invariant load (s32) from @g)
@@ -58,7 +61,7 @@ body:             |
 
 ...
 ---
-name:            both_have_to_be_invariant
+name:            both_have_to_be_invariant_1
 tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
@@ -66,16 +69,62 @@ body:             |
 
     ; We shouldn't combine here, because the loads both have to be invariant.
 
-    ; CHECK-LABEL: name: both_have_to_be_invariant
+    ; CHECK-LABEL: name: both_have_to_be_invariant_1
     ; CHECK: %ptr:_(p0) = G_GLOBAL_VALUE @g
-    ; CHECK: %load1:_(s32) = G_LOAD %ptr(p0) :: (dereferenceable invariant load (s32) from @g)
-    ; CHECK: %load2:_(s32) = G_LOAD %ptr(p0) :: (dereferenceable load (s32) from @g)
-    ; CHECK: %or:_(s32) = G_OR %load2, %load1
-    ; CHECK: G_STORE %or(s32), %ptr(p0) :: (store (s32) into @g)
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: %load1:_(s32) = G_LOAD %ptr(p0) :: (dereferenceable invariant load (s32) from @g)
+    ; CHECK-NEXT: %load2:_(s32) = G_LOAD %ptr(p0) :: (dereferenceable load (s32) from @g)
+    ; CHECK-NEXT: %or:_(s32) = G_OR %load2, %load1
+    ; CHECK-NEXT: G_STORE %or(s32), %ptr(p0) :: (store (s32) into @g)
+    ; CHECK-NEXT: RET_ReallyLR
     %ptr:_(p0) = G_GLOBAL_VALUE @g
     %load1:_(s32) = G_LOAD %ptr(p0) :: (dereferenceable invariant load (s32) from @g)
     %load2:_(s32) = G_LOAD %ptr(p0) :: (dereferenceable load (s32) from @g)
+    %or:_(s32) = G_OR %load2, %load1
+    G_STORE %or(s32), %ptr(p0) :: (store (s32) into @g)
+    RET_ReallyLR
+...
+---
+name:            both_have_to_be_invariant_2
+tracksRegLiveness: true
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+
+    ; We shouldn't combine here, because the loads both have to be invariant.
+
+    ; CHECK-LABEL: name: both_have_to_be_invariant_2
+    ; CHECK: %ptr:_(p0) = G_GLOBAL_VALUE @g
+    ; CHECK-NEXT: %load1:_(s32) = G_LOAD %ptr(p0) :: (dereferenceable load (s32) from @g)
+    ; CHECK-NEXT: %load2:_(s32) = G_LOAD %ptr(p0) :: (dereferenceable invariant load (s32) from @g)
+    ; CHECK-NEXT: %or:_(s32) = G_OR %load2, %load1
+    ; CHECK-NEXT: G_STORE %or(s32), %ptr(p0) :: (store (s32) into @g)
+    ; CHECK-NEXT: RET_ReallyLR
+    %ptr:_(p0) = G_GLOBAL_VALUE @g
+    %load1:_(s32) = G_LOAD %ptr(p0) :: (dereferenceable load (s32) from @g)
+    %load2:_(s32) = G_LOAD %ptr(p0) :: (dereferenceable invariant load (s32) from @g)
+    %or:_(s32) = G_OR %load2, %load1
+    G_STORE %or(s32), %ptr(p0) :: (store (s32) into @g)
+    RET_ReallyLR
+...
+---
+name:            both_have_to_have_same_size
+tracksRegLiveness: true
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+
+    ; We shouldn't combine here, because the loads both have to have the same size.
+
+    ; CHECK-LABEL: name: both_have_to_have_same_size
+    ; CHECK: %ptr:_(p0) = G_GLOBAL_VALUE @g
+    ; CHECK-NEXT: %load1:_(s32) = G_ZEXTLOAD %ptr(p0) :: (dereferenceable invariant load (s8) from @g)
+    ; CHECK-NEXT: %load2:_(s32) = G_ZEXTLOAD %ptr(p0) :: (dereferenceable invariant load (s16) from @g)
+    ; CHECK-NEXT: %or:_(s32) = G_OR %load2, %load1
+    ; CHECK-NEXT: G_STORE %or(s32), %ptr(p0) :: (store (s32) into @g)
+    ; CHECK-NEXT: RET_ReallyLR
+    %ptr:_(p0) = G_GLOBAL_VALUE @g
+    %load1:_(s32) = G_ZEXTLOAD %ptr(p0) :: (dereferenceable invariant load (s8) from @g)
+    %load2:_(s32) = G_ZEXTLOAD %ptr(p0) :: (dereferenceable invariant load (s16) from @g)
     %or:_(s32) = G_OR %load2, %load1
     G_STORE %or(s32), %ptr(p0) :: (store (s32) into @g)
     RET_ReallyLR

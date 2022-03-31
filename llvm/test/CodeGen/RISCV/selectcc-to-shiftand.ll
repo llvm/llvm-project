@@ -3,9 +3,9 @@
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,RV32,RV32I
 ; RUN: llc < %s -mtriple=riscv64 \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,RV64,RV64I
-; RUN: llc < %s -mtriple=riscv32 -mattr=+experimental-zbb \
+; RUN: llc < %s -mtriple=riscv32 -mattr=+zbb \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,RV32,RV32ZBB
-; RUN: llc < %s -mtriple=riscv64 -mattr=+experimental-zbb \
+; RUN: llc < %s -mtriple=riscv64 -mattr=+zbb \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,RV64,RV64ZBB
 
 ; Compare if negative and select of constants where one constant is zero.
@@ -31,8 +31,8 @@ define i32 @neg_sel_constants(i32 signext %a) {
 define i32 @neg_sel_special_constant(i32 signext %a) {
 ; RV32-LABEL: neg_sel_special_constant:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    srli a0, a0, 22
-; RV32-NEXT:    andi a0, a0, 512
+; RV32-NEXT:    srli a0, a0, 31
+; RV32-NEXT:    slli a0, a0, 9
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: neg_sel_special_constant:
@@ -100,14 +100,14 @@ define i32 @pos_sel_special_constant(i32 signext %a) {
 ; RV32-LABEL: pos_sel_special_constant:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    not a0, a0
-; RV32-NEXT:    srli a0, a0, 22
-; RV32-NEXT:    andi a0, a0, 512
+; RV32-NEXT:    srli a0, a0, 31
+; RV32-NEXT:    slli a0, a0, 9
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: pos_sel_special_constant:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    li a1, -1
-; RV64-NEXT:    slt a0, a1, a0
+; RV64-NEXT:    slti a0, a0, 0
+; RV64-NEXT:    xori a0, a0, 1
 ; RV64-NEXT:    slli a0, a0, 9
 ; RV64-NEXT:    ret
   %tmp.1 = icmp sgt i32 %a, -1

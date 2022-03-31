@@ -10,7 +10,7 @@
 //===----------------------------------------------------------------------===//
 
 module @patterns {
-  func @matcher(%root : !pdl.operation) {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
     pdl_interp.apply_constraint "multi_entity_constraint"(%root, %root : !pdl.operation, !pdl.operation) -> ^pat, ^end
 
   ^pat:
@@ -24,7 +24,7 @@ module @patterns {
   }
 
   module @rewriters {
-    func @success(%root : !pdl.operation) {
+    pdl_interp.func @success(%root : !pdl.operation) {
       %op = pdl_interp.create_operation "test.replaced_by_pattern"
       pdl_interp.erase %root
       pdl_interp.finalize
@@ -41,7 +41,7 @@ module @ir attributes { test.apply_constraint_1 } {
 // -----
 
 module @patterns {
-  func @matcher(%root : !pdl.operation) {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
     %results = pdl_interp.get_results of %root : !pdl.range<value>
     %types = pdl_interp.get_value_type of %results : !pdl.range<type>
     pdl_interp.apply_constraint "multi_entity_var_constraint"(%results, %types : !pdl.range<value>, !pdl.range<type>) -> ^pat, ^end
@@ -54,7 +54,7 @@ module @patterns {
   }
 
   module @rewriters {
-    func @success(%root : !pdl.operation) {
+    pdl_interp.func @success(%root : !pdl.operation) {
       %op = pdl_interp.create_operation "test.replaced_by_pattern"
       pdl_interp.erase %root
       pdl_interp.finalize
@@ -77,7 +77,7 @@ module @ir attributes { test.apply_constraint_2 } {
 //===----------------------------------------------------------------------===//
 
 module @patterns {
-  func @matcher(%root : !pdl.operation) {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
     pdl_interp.check_operation_name of %root is "test.op" -> ^pat, ^end
 
   ^pat:
@@ -88,9 +88,9 @@ module @patterns {
   }
 
   module @rewriters {
-    func @success(%root : !pdl.operation) {
+    pdl_interp.func @success(%root : !pdl.operation) {
       %operand = pdl_interp.get_operand 0 of %root
-      pdl_interp.apply_rewrite "rewriter"[42](%root, %operand : !pdl.operation, !pdl.value)
+      pdl_interp.apply_rewrite "rewriter"(%root, %operand : !pdl.operation, !pdl.value)
       pdl_interp.finalize
     }
   }
@@ -99,7 +99,7 @@ module @patterns {
 // CHECK-LABEL: test.apply_rewrite_1
 // CHECK: %[[INPUT:.*]] = "test.op_input"
 // CHECK-NOT: "test.op"
-// CHECK: "test.success"(%[[INPUT]]) {constantParams = [42]}
+// CHECK: "test.success"(%[[INPUT]])
 module @ir attributes { test.apply_rewrite_1 } {
   %input = "test.op_input"() : () -> i32
   "test.op"(%input) : (i32) -> ()
@@ -108,7 +108,7 @@ module @ir attributes { test.apply_rewrite_1 } {
 // -----
 
 module @patterns {
-  func @matcher(%root : !pdl.operation) {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
     pdl_interp.check_operation_name of %root is "test.op" -> ^pat, ^end
 
   ^pat:
@@ -119,7 +119,7 @@ module @patterns {
   }
 
   module @rewriters {
-    func @success(%root : !pdl.operation) {
+    pdl_interp.func @success(%root : !pdl.operation) {
       %op = pdl_interp.apply_rewrite "creator"(%root : !pdl.operation) : !pdl.operation
       pdl_interp.erase %root
       pdl_interp.finalize
@@ -136,7 +136,7 @@ module @ir attributes { test.apply_rewrite_2 } {
 // -----
 
 module @patterns {
-  func @matcher(%root : !pdl.operation) {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
     pdl_interp.check_operation_name of %root is "test.op" -> ^pat, ^end
 
   ^pat:
@@ -147,7 +147,7 @@ module @patterns {
   }
 
   module @rewriters {
-    func @success(%root : !pdl.operation) {
+    pdl_interp.func @success(%root : !pdl.operation) {
       %operands, %types = pdl_interp.apply_rewrite "var_creator"(%root : !pdl.operation) : !pdl.range<value>, !pdl.range<type>
       %op = pdl_interp.create_operation "test.success"(%operands : !pdl.range<value>) -> (%types : !pdl.range<type>)
       pdl_interp.replace %root with (%operands : !pdl.range<value>)
@@ -169,7 +169,7 @@ module @ir attributes { test.apply_rewrite_3 } {
 // -----
 
 module @patterns {
-  func @matcher(%root : !pdl.operation) {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
     pdl_interp.check_operation_name of %root is "test.op" -> ^pat, ^end
 
   ^pat:
@@ -180,7 +180,7 @@ module @patterns {
   }
 
   module @rewriters {
-    func @success(%root : !pdl.operation) {
+    pdl_interp.func @success(%root : !pdl.operation) {
       %type = pdl_interp.apply_rewrite "type_creator" : !pdl.type
       %newOp = pdl_interp.create_operation "test.success" -> (%type : !pdl.type)
       pdl_interp.erase %root
@@ -202,7 +202,7 @@ module @ir attributes { test.apply_rewrite_4 } {
 //===----------------------------------------------------------------------===//
 
 module @patterns {
-  func @matcher(%root : !pdl.operation) {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
     %test_attr = pdl_interp.create_attribute unit
     %attr = pdl_interp.get_attribute "test_attr" of %root
     pdl_interp.are_equal %test_attr, %attr : !pdl.attribute -> ^pat, ^end
@@ -215,7 +215,7 @@ module @patterns {
   }
 
   module @rewriters {
-    func @success(%root : !pdl.operation) {
+    pdl_interp.func @success(%root : !pdl.operation) {
       %op = pdl_interp.create_operation "test.success"
       pdl_interp.erase %root
       pdl_interp.finalize
@@ -232,7 +232,7 @@ module @ir attributes { test.are_equal_1 } {
 // -----
 
 module @patterns {
-  func @matcher(%root : !pdl.operation) {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
     %const_types = pdl_interp.create_types [i32, i64]
     %results = pdl_interp.get_results of %root : !pdl.range<value>
     %result_types = pdl_interp.get_value_type of %results : !pdl.range<type>
@@ -246,7 +246,7 @@ module @patterns {
   }
 
   module @rewriters {
-    func @success(%root : !pdl.operation) {
+    pdl_interp.func @success(%root : !pdl.operation) {
       %op = pdl_interp.create_operation "test.success"
       pdl_interp.erase %root
       pdl_interp.finalize
@@ -270,7 +270,7 @@ module @ir attributes { test.are_equal_2 } {
 //===----------------------------------------------------------------------===//
 
 module @patterns {
-  func @matcher(%root : !pdl.operation) {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
     pdl_interp.check_operation_name of %root is "test.op" -> ^pat1, ^end
 
   ^pat1:
@@ -284,7 +284,7 @@ module @patterns {
   }
 
   module @rewriters {
-    func @success(%root : !pdl.operation) {
+    pdl_interp.func @success(%root : !pdl.operation) {
       %op = pdl_interp.create_operation "test.success"
       pdl_interp.erase %root
       pdl_interp.finalize
@@ -305,7 +305,7 @@ module @ir attributes { test.branch_1 } {
 //===----------------------------------------------------------------------===//
 
 module @patterns {
-  func @matcher(%root : !pdl.operation) {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
     %attr = pdl_interp.get_attribute "test_attr" of %root
     pdl_interp.check_attribute %attr is unit -> ^pat, ^end
 
@@ -317,7 +317,7 @@ module @patterns {
   }
 
   module @rewriters {
-    func @success(%root : !pdl.operation) {
+    pdl_interp.func @success(%root : !pdl.operation) {
       %op = pdl_interp.create_operation "test.success"
       pdl_interp.erase %root
       pdl_interp.finalize
@@ -338,7 +338,7 @@ module @ir attributes { test.check_attribute_1 } {
 //===----------------------------------------------------------------------===//
 
 module @patterns {
-  func @matcher(%root : !pdl.operation) {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
     pdl_interp.check_operand_count of %root is at_least 1 -> ^exact_check, ^end
 
   ^exact_check:
@@ -352,7 +352,7 @@ module @patterns {
   }
 
   module @rewriters {
-    func @success(%root : !pdl.operation) {
+    pdl_interp.func @success(%root : !pdl.operation) {
       %op = pdl_interp.create_operation "test.success"
       pdl_interp.erase %root
       pdl_interp.finalize
@@ -375,7 +375,7 @@ module @ir attributes { test.check_operand_count_1 } {
 //===----------------------------------------------------------------------===//
 
 module @patterns {
-  func @matcher(%root : !pdl.operation) {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
     pdl_interp.check_operation_name of %root is "test.op" -> ^pat, ^end
 
   ^pat:
@@ -386,7 +386,7 @@ module @patterns {
   }
 
   module @rewriters {
-    func @success(%root : !pdl.operation) {
+    pdl_interp.func @success(%root : !pdl.operation) {
       %op = pdl_interp.create_operation "test.success"
       pdl_interp.erase %root
       pdl_interp.finalize
@@ -407,7 +407,7 @@ module @ir attributes { test.check_operation_name_1 } {
 //===----------------------------------------------------------------------===//
 
 module @patterns {
-  func @matcher(%root : !pdl.operation) {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
     pdl_interp.check_result_count of %root is at_least 1 -> ^exact_check, ^end
 
   ^exact_check:
@@ -421,7 +421,7 @@ module @patterns {
   }
 
   module @rewriters {
-    func @success(%root : !pdl.operation) {
+    pdl_interp.func @success(%root : !pdl.operation) {
       %op = pdl_interp.create_operation "test.success"
       pdl_interp.erase %root
       pdl_interp.finalize
@@ -445,7 +445,7 @@ module @ir attributes { test.check_result_count_1 } {
 //===----------------------------------------------------------------------===//
 
 module @patterns {
-  func @matcher(%root : !pdl.operation) {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
     %attr = pdl_interp.get_attribute "test_attr" of %root
     pdl_interp.is_not_null %attr : !pdl.attribute -> ^pat1, ^end
 
@@ -461,7 +461,7 @@ module @patterns {
   }
 
   module @rewriters {
-    func @success(%root : !pdl.operation) {
+    pdl_interp.func @success(%root : !pdl.operation) {
       %op = pdl_interp.create_operation "test.success"
       pdl_interp.erase %root
       pdl_interp.finalize
@@ -482,7 +482,7 @@ module @ir attributes { test.check_type_1 } {
 //===----------------------------------------------------------------------===//
 
 module @patterns {
-  func @matcher(%root : !pdl.operation) {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
     %results = pdl_interp.get_results of %root : !pdl.range<value>
     %result_types = pdl_interp.get_value_type of %results : !pdl.range<type>
     pdl_interp.check_types %result_types are [i32] -> ^pat2, ^end
@@ -495,7 +495,7 @@ module @patterns {
   }
 
   module @rewriters {
-    func @success(%root : !pdl.operation) {
+    pdl_interp.func @success(%root : !pdl.operation) {
       %op = pdl_interp.create_operation "test.success"
       pdl_interp.erase %root
       pdl_interp.finalize
@@ -537,7 +537,7 @@ module @ir attributes { test.check_types_1 } {
 //===----------------------------------------------------------------------===//
 
 module @patterns {
-  func @matcher(%root : !pdl.operation) {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
     %attr = pdl_interp.get_attribute "test_attr" of %root
     pdl_interp.is_not_null %attr : !pdl.attribute -> ^pat1, ^end
 
@@ -554,7 +554,7 @@ module @patterns {
   }
 
   module @rewriters {
-    func @success(%root : !pdl.operation) {
+    pdl_interp.func @success(%root : !pdl.operation) {
       %op = pdl_interp.create_operation "test.success"
       pdl_interp.erase %root
       pdl_interp.finalize
@@ -587,7 +587,7 @@ module @ir attributes { test.create_type_1 } {
 //===----------------------------------------------------------------------===//
 
 module @patterns {
-  func @matcher(%root : !pdl.operation) {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
     %val = pdl_interp.get_result 0 of %root
     %ops = pdl_interp.get_users of %val : !pdl.value
     %op1 = pdl_interp.extract 1 of %ops : !pdl.operation
@@ -599,7 +599,7 @@ module @patterns {
   }
 
   module @rewriters {
-    func @success(%matched : !pdl.operation) {
+    pdl_interp.func @success(%matched : !pdl.operation) {
       %op = pdl_interp.create_operation "test.success"
       pdl_interp.erase %matched
       pdl_interp.finalize
@@ -620,7 +620,7 @@ module @ir attributes { test.extract_op } {
 // -----
 
 module @patterns {
-  func @matcher(%root : !pdl.operation) {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
     %vals = pdl_interp.get_results of %root : !pdl.range<value>
     %types = pdl_interp.get_value_type of %vals : !pdl.range<type>
     %type1 = pdl_interp.extract 1 of %types : !pdl.type
@@ -632,7 +632,7 @@ module @patterns {
   }
 
   module @rewriters {
-    func @success(%matched : !pdl.operation) {
+    pdl_interp.func @success(%matched : !pdl.operation) {
       %op = pdl_interp.create_operation "test.success"
       pdl_interp.erase %matched
       pdl_interp.finalize
@@ -653,7 +653,7 @@ module @ir attributes { test.extract_type } {
 // -----
 
 module @patterns {
-  func @matcher(%root : !pdl.operation) {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
     %vals = pdl_interp.get_results of %root : !pdl.range<value>
     %val1 = pdl_interp.extract 1 of %vals : !pdl.value
     pdl_interp.is_not_null %val1 : !pdl.value -> ^success, ^end
@@ -664,7 +664,7 @@ module @patterns {
   }
 
   module @rewriters {
-    func @success(%matched : !pdl.operation) {
+    pdl_interp.func @success(%matched : !pdl.operation) {
       %op = pdl_interp.create_operation "test.success"
       pdl_interp.erase %matched
       pdl_interp.finalize
@@ -695,7 +695,7 @@ module @ir attributes { test.extract_value } {
 //===----------------------------------------------------------------------===//
 
 module @patterns {
-  func @matcher(%root : !pdl.operation) {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
     %val1 = pdl_interp.get_result 0 of %root
     %ops1 = pdl_interp.get_users of %val1 : !pdl.value
     pdl_interp.foreach %op1 : !pdl.operation in %ops1 {
@@ -714,7 +714,7 @@ module @patterns {
   }
 
   module @rewriters {
-    func @success(%matched : !pdl.operation) {
+    pdl_interp.func @success(%matched : !pdl.operation) {
       %op = pdl_interp.create_operation "test.success"
       pdl_interp.erase %matched
       pdl_interp.finalize
@@ -747,7 +747,7 @@ module @ir attributes { test.foreach } {
 //===----------------------------------------------------------------------===//
 
 module @patterns {
-  func @matcher(%root : !pdl.operation) {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
     %val = pdl_interp.get_result 0 of %root
     %ops = pdl_interp.get_users of %val : !pdl.value
     pdl_interp.foreach %op : !pdl.operation in %ops {
@@ -760,7 +760,7 @@ module @patterns {
   }
 
   module @rewriters {
-    func @success(%matched : !pdl.operation) {
+    pdl_interp.func @success(%matched : !pdl.operation) {
       %op = pdl_interp.create_operation "test.success"
       pdl_interp.erase %matched
       pdl_interp.finalize
@@ -781,7 +781,7 @@ module @ir attributes { test.get_users_of_value } {
 // -----
 
 module @patterns {
-  func @matcher(%root : !pdl.operation) {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
     pdl_interp.check_result_count of %root is at_least 2 -> ^next, ^end
   ^next:
     %vals = pdl_interp.get_results of %root : !pdl.range<value>
@@ -796,7 +796,7 @@ module @patterns {
   }
 
   module @rewriters {
-    func @success(%matched : !pdl.operation) {
+    pdl_interp.func @success(%matched : !pdl.operation) {
       %op = pdl_interp.create_operation "test.success"
       pdl_interp.erase %matched
       pdl_interp.finalize
@@ -817,7 +817,7 @@ module @ir attributes { test.get_all_users_of_range } {
 // -----
 
 module @patterns {
-  func @matcher(%root : !pdl.operation) {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
     pdl_interp.check_result_count of %root is at_least 2 -> ^next, ^end
   ^next:
     %vals = pdl_interp.get_results of %root : !pdl.range<value>
@@ -833,7 +833,7 @@ module @patterns {
   }
 
   module @rewriters {
-    func @success(%matched : !pdl.operation) {
+    pdl_interp.func @success(%matched : !pdl.operation) {
       %op = pdl_interp.create_operation "test.success"
       pdl_interp.erase %matched
       pdl_interp.finalize
@@ -870,7 +870,7 @@ module @ir attributes { test.get_first_users_of_range } {
 //===----------------------------------------------------------------------===//
 
 module @patterns {
-  func @matcher(%root : !pdl.operation) {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
     pdl_interp.check_operand_count of %root is 5 -> ^pat1, ^end
 
   ^pat1:
@@ -888,7 +888,7 @@ module @patterns {
   }
 
   module @rewriters {
-    func @success(%root : !pdl.operation) {
+    pdl_interp.func @success(%root : !pdl.operation) {
       %op = pdl_interp.create_operation "test.success"
       pdl_interp.erase %root
       pdl_interp.finalize
@@ -921,7 +921,7 @@ module @ir attributes { test.get_defining_op_1 } {
 //===----------------------------------------------------------------------===//
 
 module @patterns {
-  func @matcher(%root : !pdl.operation) {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
     pdl_interp.check_operand_count of %root is 2 -> ^pat1, ^end
 
   ^pat1:
@@ -937,7 +937,7 @@ module @patterns {
   }
 
   module @rewriters {
-    func @success(%root : !pdl.operation) {
+    pdl_interp.func @success(%root : !pdl.operation) {
       %op = pdl_interp.create_operation "test.success"
       pdl_interp.erase %root
       pdl_interp.finalize
@@ -956,7 +956,7 @@ module @ir attributes { test.get_operands_1 } {
 
 // Test all of the various combinations related to `AttrSizedOperandSegments`.
 module @patterns {
-  func @matcher(%root : !pdl.operation) {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
     pdl_interp.check_operation_name of %root is "test.attr_sized_operands" -> ^pat1, ^end
 
   ^pat1:
@@ -996,7 +996,7 @@ module @patterns {
   }
 
   module @rewriters {
-    func @success(%root: !pdl.operation, %operands_0: !pdl.range<value>, %operands_1: !pdl.range<value>, %operands_2: !pdl.range<value>, %operands_2_single: !pdl.value) {
+    pdl_interp.func @success(%root: !pdl.operation, %operands_0: !pdl.range<value>, %operands_1: !pdl.range<value>, %operands_2: !pdl.range<value>, %operands_2_single: !pdl.value) {
       %op0 = pdl_interp.create_operation "test.success"(%operands_0 : !pdl.range<value>)
       %op1 = pdl_interp.create_operation "test.success"(%operands_1 : !pdl.range<value>)
       %op2 = pdl_interp.create_operation "test.success"(%operands_2 : !pdl.range<value>)
@@ -1025,7 +1025,7 @@ module @ir attributes { test.get_operands_2 } {
 //===----------------------------------------------------------------------===//
 
 module @patterns {
-  func @matcher(%root : !pdl.operation) {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
     pdl_interp.check_result_count of %root is 5 -> ^pat1, ^end
 
   ^pat1:
@@ -1043,7 +1043,7 @@ module @patterns {
   }
 
   module @rewriters {
-    func @success(%root : !pdl.operation) {
+    pdl_interp.func @success(%root : !pdl.operation) {
       %op = pdl_interp.create_operation "test.success"
       pdl_interp.erase %root
       pdl_interp.finalize
@@ -1066,7 +1066,7 @@ module @ir attributes { test.get_result_1 } {
 //===----------------------------------------------------------------------===//
 
 module @patterns {
-  func @matcher(%root : !pdl.operation) {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
     pdl_interp.check_result_count of %root is 5 -> ^pat1, ^end
 
   ^pat1:
@@ -1082,7 +1082,7 @@ module @patterns {
   }
 
   module @rewriters {
-    func @success(%root : !pdl.operation) {
+    pdl_interp.func @success(%root : !pdl.operation) {
       %op = pdl_interp.create_operation "test.success"
       pdl_interp.erase %root
       pdl_interp.finalize
@@ -1100,7 +1100,7 @@ module @ir attributes { test.get_results_1 } {
 
 // Test all of the various combinations related to `AttrSizedResultSegments`.
 module @patterns {
-  func @matcher(%root : !pdl.operation) {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
     pdl_interp.check_operation_name of %root is "test.attr_sized_results" -> ^pat1, ^end
 
   ^pat1:
@@ -1140,7 +1140,7 @@ module @patterns {
   }
 
   module @rewriters {
-    func @success(%root: !pdl.operation, %results_0: !pdl.range<value>, %results_1: !pdl.range<value>, %results_2: !pdl.range<value>, %results_2_single: !pdl.value) {
+    pdl_interp.func @success(%root: !pdl.operation, %results_0: !pdl.range<value>, %results_1: !pdl.range<value>, %results_2: !pdl.range<value>, %results_2_single: !pdl.value) {
       %results_0_types = pdl_interp.get_value_type of %results_0 : !pdl.range<type>
       %results_1_types = pdl_interp.get_value_type of %results_1 : !pdl.range<type>
       %results_2_types = pdl_interp.get_value_type of %results_2 : !pdl.range<type>
@@ -1198,7 +1198,7 @@ module @ir attributes { test.get_results_2 } {
 
 // Check that the highest benefit pattern is selected.
 module @patterns {
-  func @matcher(%root : !pdl.operation) {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
     pdl_interp.check_operation_name of %root is "test.op" -> ^pat1, ^end
 
   ^pat1:
@@ -1212,11 +1212,11 @@ module @patterns {
   }
 
   module @rewriters {
-    func @failure(%root : !pdl.operation) {
+    pdl_interp.func @failure(%root : !pdl.operation) {
       pdl_interp.erase %root
       pdl_interp.finalize
     }
-    func @success(%root : !pdl.operation) {
+    pdl_interp.func @success(%root : !pdl.operation) {
       %op = pdl_interp.create_operation "test.success"
       pdl_interp.erase %root
       pdl_interp.finalize
@@ -1234,7 +1234,7 @@ module @ir attributes { test.record_match_1 } {
 
 // Check that ranges are properly forwarded to the result.
 module @patterns {
-  func @matcher(%root : !pdl.operation) {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
     pdl_interp.check_operation_name of %root is "test.op" -> ^pat1, ^end
 
   ^pat1:
@@ -1248,7 +1248,7 @@ module @patterns {
   }
 
   module @rewriters {
-    func @success(%operands: !pdl.range<value>, %types: !pdl.range<type>, %root: !pdl.operation) {
+    pdl_interp.func @success(%operands: !pdl.range<value>, %types: !pdl.range<type>, %root: !pdl.operation) {
       %op = pdl_interp.create_operation "test.success"(%operands : !pdl.range<value>) -> (%types : !pdl.range<type>)
       %results = pdl_interp.get_results of %op : !pdl.range<value>
       pdl_interp.replace %root with (%results : !pdl.range<value>)
@@ -1274,7 +1274,7 @@ module @ir attributes { test.record_match_2 } {
 //===----------------------------------------------------------------------===//
 
 module @patterns {
-  func @matcher(%root : !pdl.operation) {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
     pdl_interp.check_operation_name of %root is "test.op" -> ^pat, ^end
 
   ^pat:
@@ -1285,7 +1285,7 @@ module @patterns {
   }
 
   module @rewriters {
-    func @success(%root : !pdl.operation) {
+    pdl_interp.func @success(%root : !pdl.operation) {
       %operand = pdl_interp.get_operand 0 of %root
       pdl_interp.replace %root with (%operand : !pdl.value)
       pdl_interp.finalize
@@ -1310,7 +1310,7 @@ module @ir attributes { test.replace_op_1 } {
 //===----------------------------------------------------------------------===//
 
 module @patterns {
-  func @matcher(%root : !pdl.operation) {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
     %attr = pdl_interp.get_attribute "test_attr" of %root
     pdl_interp.switch_attribute %attr to [0, unit](^end, ^pat) -> ^end
 
@@ -1326,7 +1326,7 @@ module @patterns {
   }
 
   module @rewriters {
-    func @success(%root : !pdl.operation) {
+    pdl_interp.func @success(%root : !pdl.operation) {
       %op = pdl_interp.create_operation "test.success"
       pdl_interp.erase %root
       pdl_interp.finalize
@@ -1347,7 +1347,7 @@ module @ir attributes { test.switch_attribute_1 } {
 //===----------------------------------------------------------------------===//
 
 module @patterns {
-  func @matcher(%root : !pdl.operation) {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
     pdl_interp.switch_operand_count of %root to dense<[0, 1]> : vector<2xi32>(^end, ^pat) -> ^end
 
   ^pat:
@@ -1361,7 +1361,7 @@ module @patterns {
   }
 
   module @rewriters {
-    func @success(%root : !pdl.operation) {
+    pdl_interp.func @success(%root : !pdl.operation) {
       %op = pdl_interp.create_operation "test.success"
       pdl_interp.erase %root
       pdl_interp.finalize
@@ -1383,7 +1383,7 @@ module @ir attributes { test.switch_operand_1 } {
 //===----------------------------------------------------------------------===//
 
 module @patterns {
-  func @matcher(%root : !pdl.operation) {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
     pdl_interp.switch_operation_name of %root to ["foo.op", "test.op"](^end, ^pat1) -> ^end
 
   ^pat1:
@@ -1397,7 +1397,7 @@ module @patterns {
   }
 
   module @rewriters {
-    func @success(%root : !pdl.operation) {
+    pdl_interp.func @success(%root : !pdl.operation) {
       %op = pdl_interp.create_operation "test.success"
       pdl_interp.erase %root
       pdl_interp.finalize
@@ -1418,7 +1418,7 @@ module @ir attributes { test.switch_operation_name_1 } {
 //===----------------------------------------------------------------------===//
 
 module @patterns {
-  func @matcher(%root : !pdl.operation) {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
     pdl_interp.switch_result_count of %root to dense<[0, 1]> : vector<2xi32>(^end, ^pat) -> ^end
 
   ^pat:
@@ -1432,7 +1432,7 @@ module @patterns {
   }
 
   module @rewriters {
-    func @success(%root : !pdl.operation) {
+    pdl_interp.func @success(%root : !pdl.operation) {
       %op = pdl_interp.create_operation "test.success"
       pdl_interp.erase %root
       pdl_interp.finalize
@@ -1453,7 +1453,7 @@ module @ir attributes { test.switch_result_1 } {
 //===----------------------------------------------------------------------===//
 
 module @patterns {
-  func @matcher(%root : !pdl.operation) {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
     %attr = pdl_interp.get_attribute "test_attr" of %root
     pdl_interp.is_not_null %attr : !pdl.attribute -> ^pat1, ^end
 
@@ -1472,7 +1472,7 @@ module @patterns {
   }
 
   module @rewriters {
-    func @success(%root : !pdl.operation) {
+    pdl_interp.func @success(%root : !pdl.operation) {
       %op = pdl_interp.create_operation "test.success"
       pdl_interp.erase %root
       pdl_interp.finalize
@@ -1493,7 +1493,7 @@ module @ir attributes { test.switch_type_1 } {
 //===----------------------------------------------------------------------===//
 
 module @patterns {
-  func @matcher(%root : !pdl.operation) {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
     %results = pdl_interp.get_results of %root : !pdl.range<value>
     %types = pdl_interp.get_value_type of %results : !pdl.range<type>
     pdl_interp.switch_types %types to [[i64, i64], [i32]](^pat2, ^end) -> ^end
@@ -1509,7 +1509,7 @@ module @patterns {
   }
 
   module @rewriters {
-    func @success(%root : !pdl.operation) {
+    pdl_interp.func @success(%root : !pdl.operation) {
       %op = pdl_interp.create_operation "test.success"
       pdl_interp.erase %root
       pdl_interp.finalize

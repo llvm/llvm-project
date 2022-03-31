@@ -130,64 +130,6 @@ void parallel_sort(RandomAccessIterator Start, RandomAccessIterator End,
 // improving to take the number of available cores into account.)
 enum { MaxTasksPerGroup = 1024 };
 
-template <class IterTy, class FuncTy>
-void parallel_for_each(IterTy Begin, IterTy End, FuncTy Fn) {
-  // If we have zero or one items, then do not incur the overhead of spinning up
-  // a task group.  They are surprisingly expensive, and because they do not
-  // support nested parallelism, a single entry task group can block parallel
-  // execution underneath them.
-  auto NumItems = std::distance(Begin, End);
-  if (NumItems <= 1) {
-    if (NumItems)
-      Fn(*Begin);
-    return;
-  }
-
-  // Limit the number of tasks to MaxTasksPerGroup to limit job scheduling
-  // overhead on large inputs.
-  ptrdiff_t TaskSize = NumItems / MaxTasksPerGroup;
-  if (TaskSize == 0)
-    TaskSize = 1;
-
-  TaskGroup TG;
-  while (TaskSize < std::distance(Begin, End)) {
-    TG.spawn([=, &Fn] { std::for_each(Begin, Begin + TaskSize, Fn); });
-    Begin += TaskSize;
-  }
-  std::for_each(Begin, End, Fn);
-}
-
-template <class IndexTy, class FuncTy>
-void parallel_for_each_n(IndexTy Begin, IndexTy End, FuncTy Fn) {
-  // If we have zero or one items, then do not incur the overhead of spinning up
-  // a task group.  They are surprisingly expensive, and because they do not
-  // support nested parallelism, a single entry task group can block parallel
-  // execution underneath them.
-  auto NumItems = End - Begin;
-  if (NumItems <= 1) {
-    if (NumItems)
-      Fn(Begin);
-    return;
-  }
-
-  // Limit the number of tasks to MaxTasksPerGroup to limit job scheduling
-  // overhead on large inputs.
-  ptrdiff_t TaskSize = NumItems / MaxTasksPerGroup;
-  if (TaskSize == 0)
-    TaskSize = 1;
-
-  TaskGroup TG;
-  IndexTy I = Begin;
-  for (; I + TaskSize < End; I += TaskSize) {
-    TG.spawn([=, &Fn] {
-      for (IndexTy J = I, E = I + TaskSize; J != E; ++J)
-        Fn(J);
-    });
-  }
-  for (IndexTy J = I; J < End; ++J)
-    Fn(J);
-}
-
 template <class IterTy, class ResultTy, class ReduceFuncTy,
           class TransformFuncTy>
 ResultTy parallel_transform_reduce(IterTy Begin, IterTy End, ResultTy Init,
@@ -251,27 +193,11 @@ void parallelSort(RandomAccessIterator Start, RandomAccessIterator End,
   llvm::sort(Start, End, Comp);
 }
 
+void parallelForEachN(size_t Begin, size_t End, function_ref<void(size_t)> Fn);
+
 template <class IterTy, class FuncTy>
 void parallelForEach(IterTy Begin, IterTy End, FuncTy Fn) {
-#if LLVM_ENABLE_THREADS
-  if (parallel::strategy.ThreadsRequested != 1) {
-    parallel::detail::parallel_for_each(Begin, End, Fn);
-    return;
-  }
-#endif
-  std::for_each(Begin, End, Fn);
-}
-
-template <class FuncTy>
-void parallelForEachN(size_t Begin, size_t End, FuncTy Fn) {
-#if LLVM_ENABLE_THREADS
-  if (parallel::strategy.ThreadsRequested != 1) {
-    parallel::detail::parallel_for_each_n(Begin, End, Fn);
-    return;
-  }
-#endif
-  for (size_t I = Begin; I != End; ++I)
-    Fn(I);
+  parallelForEachN(0, End - Begin, [&](size_t I) { Fn(Begin[I]); });
 }
 
 template <class IterTy, class ResultTy, class ReduceFuncTy,

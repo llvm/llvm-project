@@ -11,7 +11,8 @@
 #define _LIBCPP_STRING_VIEW
 
 /*
-string_view synopsis
+
+    string_view synopsis
 
 namespace std {
 
@@ -195,15 +196,15 @@ namespace std {
 
 */
 
+#include <__algorithm/min.h>
+#include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
-#include <__debug>
 #include <__ranges/concepts.h>
 #include <__ranges/data.h>
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/enable_view.h>
 #include <__ranges/size.h>
 #include <__string>
-#include <algorithm>
 #include <compare>
 #include <iosfwd>
 #include <iterator>
@@ -213,7 +214,7 @@ namespace std {
 #include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
@@ -234,6 +235,15 @@ typedef basic_string_view<char32_t> u32string_view;
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 typedef basic_string_view<wchar_t>  wstring_view;
 #endif
+
+// TODO: This is a workaround for some vendors to carry a downstream diff to accept `nullptr` in
+//       string_view constructors. This can be refactored when this exact form isn't needed anymore.
+template <class _Traits>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR
+inline size_t __char_traits_length_checked(const typename _Traits::char_type* __s) _NOEXCEPT {
+  // This needs to be a single statement for C++11 constexpr
+  return _LIBCPP_ASSERT(__s != nullptr, "null pointer passed to non-null argument of char_traits<...>::length"), _Traits::length(__s);
+}
 
 template<class _CharT, class _Traits>
 class
@@ -286,7 +296,7 @@ public:
 #endif
     }
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_RANGES)
+#if _LIBCPP_STD_VER > 17
     template <contiguous_iterator _It, sized_sentinel_for<_It> _End>
       requires (is_same_v<iter_value_t<_It>, _CharT> && !is_convertible_v<_End, size_type>)
     constexpr _LIBCPP_HIDE_FROM_ABI basic_string_view(_It __begin, _End __end)
@@ -294,9 +304,9 @@ public:
     {
       _LIBCPP_ASSERT((__end - __begin) >= 0, "std::string_view::string_view(iterator, sentinel) received invalid range");
     }
-#endif
+#endif // _LIBCPP_STD_VER > 17
 
-#if _LIBCPP_STD_VER > 20 && !defined(_LIBCPP_HAS_NO_RANGES)
+#if _LIBCPP_STD_VER > 20 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
     template <class _Range>
       requires (
         !is_same_v<remove_cvref_t<_Range>, basic_string_view> &&
@@ -313,7 +323,7 @@ public:
       )
     constexpr _LIBCPP_HIDE_FROM_ABI
     basic_string_view(_Range&& __r) : __data(ranges::data(__r)), __size(ranges::size(__r)) {}
-#endif
+#endif // _LIBCPP_STD_VER > 20 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 
     _LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
     basic_string_view(const _CharT* __s)
@@ -707,26 +717,26 @@ private:
     size_type           __size;
 };
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_RANGES)
+#if _LIBCPP_STD_VER > 17
 template <class _CharT, class _Traits>
 inline constexpr bool ranges::enable_view<basic_string_view<_CharT, _Traits>> = true;
 
 template <class _CharT, class _Traits>
 inline constexpr bool ranges::enable_borrowed_range<basic_string_view<_CharT, _Traits> > = true;
-#endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_RANGES)
+#endif // _LIBCPP_STD_VER > 17
 
 // [string.view.deduct]
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_RANGES)
+#if _LIBCPP_STD_VER > 17
 template <contiguous_iterator _It, sized_sentinel_for<_It> _End>
   basic_string_view(_It, _End) -> basic_string_view<iter_value_t<_It>>;
-#endif
+#endif // _LIBCPP_STD_VER > 17
 
 
-#if _LIBCPP_STD_VER > 20 && !defined(_LIBCPP_HAS_NO_RANGES)
+#if _LIBCPP_STD_VER > 20 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 template <ranges::contiguous_range _Range>
   basic_string_view(_Range) -> basic_string_view<ranges::range_value_t<_Range>>;
-#endif
+#endif // _LIBCPP_STD_VER > 20 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 
 // [string.view.comparison]
 // operator ==

@@ -86,7 +86,9 @@ void tools::MinGW::Linker::AddLibGCC(const ArgList &Args,
   CmdArgs.push_back("-lmoldname");
   CmdArgs.push_back("-lmingwex");
   for (auto Lib : Args.getAllArgValues(options::OPT_l))
-    if (StringRef(Lib).startswith("msvcr") || StringRef(Lib).startswith("ucrt"))
+    if (StringRef(Lib).startswith("msvcr") ||
+        StringRef(Lib).startswith("ucrt") ||
+        StringRef(Lib).startswith("crtdll"))
       return;
   CmdArgs.push_back("-lmsvcrt");
 }
@@ -163,6 +165,9 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("DllMainCRTStartup");
     CmdArgs.push_back("--enable-auto-image-base");
   }
+
+  if (Args.hasArg(options::OPT_Z_Xlinker__no_demangle))
+    CmdArgs.push_back("--no-demangle");
 
   CmdArgs.push_back("-o");
   const char *OutputFile = Output.getFilename();
@@ -486,10 +491,7 @@ bool toolchains::MinGW::isPIEDefault(const llvm::opt::ArgList &Args) const {
   return false;
 }
 
-bool toolchains::MinGW::isPICDefaultForced() const {
-  return getArch() == llvm::Triple::x86_64 ||
-         getArch() == llvm::Triple::aarch64;
-}
+bool toolchains::MinGW::isPICDefaultForced() const { return true; }
 
 llvm::ExceptionHandling
 toolchains::MinGW::GetExceptionModel(const ArgList &Args) const {

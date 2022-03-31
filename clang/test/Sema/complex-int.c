@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 %s -verify -fsyntax-only
 
-void a() {
+void a(void) {
 __complex__ int arr;
 __complex__ short brr;
 __complex__ unsigned xx;
@@ -18,8 +18,8 @@ result = arr*brr;
 result = xx*yy;
 
 switch (arr) { // expected-error{{statement requires expression of integer type ('_Complex int' invalid)}}
-  case brr: ;
-  case xx: ;
+  case brr: ; // expected-error{{integer constant expression must have integer type}}
+  case xx: ; // expected-error{{integer constant expression must have integer type}}
 }
 switch (ii) {
   case brr: ; // expected-error{{integer constant expression must have integer type}}
@@ -27,7 +27,7 @@ switch (ii) {
 }
 }
 
-void Tester() {
+void Tester(void) {
 __complex short a1;
 __complex int a2;
 __complex float a3;

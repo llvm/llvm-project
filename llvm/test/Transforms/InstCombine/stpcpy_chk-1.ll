@@ -2,7 +2,7 @@
 ; Test lib call simplification of __stpcpy_chk calls with various values
 ; for src, dst, and slen.
 ;
-; RUN: opt < %s -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:128:128"
 
@@ -48,6 +48,18 @@ define i8* @test_simplify3() {
   ret i8* %ret
 }
 
+define i8* @test_simplify1_tail() {
+; CHECK-LABEL: @test_simplify1_tail(
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noundef nonnull align 1 dereferenceable(12) getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i8* noundef nonnull align 1 dereferenceable(12) getelementptr inbounds ([12 x i8], [12 x i8]* @.str, i32 0, i32 0), i32 12, i1 false)
+; CHECK-NEXT:    ret i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 11)
+;
+  %dst = getelementptr inbounds [60 x i8], [60 x i8]* @a, i32 0, i32 0
+  %src = getelementptr inbounds [12 x i8], [12 x i8]* @.str, i32 0, i32 0
+
+  %ret = tail call i8* @__stpcpy_chk(i8* %dst, i8* %src, i32 60)
+  ret i8* %ret
+}
+
 ; Check cases where there are no string constants.
 
 define i8* @test_simplify4() {
@@ -59,6 +71,18 @@ define i8* @test_simplify4() {
   %src = getelementptr inbounds [60 x i8], [60 x i8]* @b, i32 0, i32 0
 
   %ret = call i8* @__stpcpy_chk(i8* %dst, i8* %src, i32 -1)
+  ret i8* %ret
+}
+
+define i8* @test_simplify4_tail() {
+; CHECK-LABEL: @test_simplify4_tail(
+; CHECK-NEXT:    [[STPCPY:%.*]] = tail call i8* @stpcpy(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i8* getelementptr inbounds ([60 x i8], [60 x i8]* @b, i32 0, i32 0))
+; CHECK-NEXT:    ret i8* [[STPCPY]]
+;
+  %dst = getelementptr inbounds [60 x i8], [60 x i8]* @a, i32 0, i32 0
+  %src = getelementptr inbounds [60 x i8], [60 x i8]* @b, i32 0, i32 0
+
+  %ret = tail call i8* @__stpcpy_chk(i8* %dst, i8* %src, i32 -1)
   ret i8* %ret
 }
 
@@ -90,6 +114,20 @@ define i8* @test_simplify6() {
 
   %len = call i32 @llvm.objectsize.i32.p0i8(i8* %dst, i1 false, i1 false, i1 false)
   %ret = call i8* @__stpcpy_chk(i8* %dst, i8* %dst, i32 %len)
+  ret i8* %ret
+}
+
+; Check cases where there are no string constants, and is a tail call.
+
+define i8* @test_simplify7() {
+; CHECK-LABEL: @test_simplify7(
+; CHECK-NEXT:    [[STPCPY:%.*]] = tail call i8* @stpcpy(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i8* getelementptr inbounds ([60 x i8], [60 x i8]* @b, i32 0, i32 0))
+; CHECK-NEXT:    ret i8* [[STPCPY]]
+;
+  %dst = getelementptr inbounds [60 x i8], [60 x i8]* @a, i32 0, i32 0
+  %src = getelementptr inbounds [60 x i8], [60 x i8]* @b, i32 0, i32 0
+
+  %ret = tail call i8* @__stpcpy_chk(i8* %dst, i8* %src, i32 -1)
   ret i8* %ret
 }
 

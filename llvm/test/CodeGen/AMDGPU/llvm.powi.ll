@@ -57,9 +57,9 @@ define float @v_powi_neg1_f32(float %l) {
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    v_div_scale_f32 v1, s[4:5], v0, v0, 1.0
 ; GFX7-NEXT:    v_rcp_f32_e32 v2, v1
-; GFX7-NEXT:    v_fma_f32 v3, -v1, v2, 1.0
-; GFX7-NEXT:    v_fma_f32 v2, v3, v2, v2
 ; GFX7-NEXT:    v_div_scale_f32 v3, vcc, 1.0, v0, 1.0
+; GFX7-NEXT:    v_fma_f32 v4, -v1, v2, 1.0
+; GFX7-NEXT:    v_fma_f32 v2, v4, v2, v2
 ; GFX7-NEXT:    v_mul_f32_e32 v4, v3, v2
 ; GFX7-NEXT:    v_fma_f32 v5, -v1, v4, v3
 ; GFX7-NEXT:    v_fma_f32 v4, v5, v2, v4
@@ -104,9 +104,9 @@ define float @v_powi_neg2_f32(float %l) {
 ; GFX7-NEXT:    v_mul_f32_e32 v0, v0, v0
 ; GFX7-NEXT:    v_div_scale_f32 v1, s[4:5], v0, v0, 1.0
 ; GFX7-NEXT:    v_rcp_f32_e32 v2, v1
-; GFX7-NEXT:    v_fma_f32 v3, -v1, v2, 1.0
-; GFX7-NEXT:    v_fma_f32 v2, v3, v2, v2
 ; GFX7-NEXT:    v_div_scale_f32 v3, vcc, 1.0, v0, 1.0
+; GFX7-NEXT:    v_fma_f32 v4, -v1, v2, 1.0
+; GFX7-NEXT:    v_fma_f32 v2, v4, v2, v2
 ; GFX7-NEXT:    v_mul_f32_e32 v4, v3, v2
 ; GFX7-NEXT:    v_fma_f32 v5, -v1, v4, v3
 ; GFX7-NEXT:    v_fma_f32 v4, v5, v2, v4
@@ -200,9 +200,9 @@ define float @v_powi_neg128_f32(float %l) {
 ; GFX7-NEXT:    v_mul_f32_e32 v0, v0, v0
 ; GFX7-NEXT:    v_div_scale_f32 v1, s[4:5], v0, v0, 1.0
 ; GFX7-NEXT:    v_rcp_f32_e32 v2, v1
-; GFX7-NEXT:    v_fma_f32 v3, -v1, v2, 1.0
-; GFX7-NEXT:    v_fma_f32 v2, v3, v2, v2
 ; GFX7-NEXT:    v_div_scale_f32 v3, vcc, 1.0, v0, 1.0
+; GFX7-NEXT:    v_fma_f32 v4, -v1, v2, 1.0
+; GFX7-NEXT:    v_fma_f32 v2, v4, v2, v2
 ; GFX7-NEXT:    v_mul_f32_e32 v4, v3, v2
 ; GFX7-NEXT:    v_fma_f32 v5, -v1, v4, v3
 ; GFX7-NEXT:    v_fma_f32 v4, v5, v2, v4

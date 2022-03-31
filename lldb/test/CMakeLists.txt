@@ -69,10 +69,6 @@ if(TARGET lldb-vscode)
   add_lldb_test_dependency(lldb-vscode)
 endif()
 
-if(TARGET lldb-instr)
-  add_lldb_test_dependency(lldb-instr)
-endif()
-
 if(TARGET liblldb)
   add_lldb_test_dependency(liblldb)
 endif()
@@ -137,7 +133,7 @@ if(TARGET clang)
 endif()
 
 if (LLDB_BUILT_STANDALONE)
-  set(LLVM_HOST_TRIPLE ${TARGET_TRIPLE})
+  set(LLVM_HOST_TRIPLE ${LLVM_TARGET_TRIPLE})
 endif()
 
 add_lldb_test_dependency(

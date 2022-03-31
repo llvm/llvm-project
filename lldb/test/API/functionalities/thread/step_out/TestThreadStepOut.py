@@ -14,11 +14,6 @@ class ThreadStepOutTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    # Test occasionally times out on the Linux build bot
-    @skipIfLinux
-    @expectedFailureAll(
-        oslist=["linux"],
-        bugnumber="llvm.org/pr23477 Test occasionally times out on the Linux build bot")
     @expectedFailureAll(
         oslist=["freebsd"],
         bugnumber="llvm.org/pr18066 inferior does not exit")
@@ -27,14 +22,9 @@ class ThreadStepOutTestCase(TestBase):
     @expectedFailureNetBSD
     def test_step_single_thread(self):
         """Test thread step out on one thread via command interpreter. """
-        self.build(dictionary=self.getBuildFlags())
+        self.build()
         self.step_out_test(self.step_out_single_thread_with_cmd)
 
-    # Test occasionally times out on the Linux build bot
-    @skipIfLinux
-    @expectedFailureAll(
-        oslist=["linux"],
-        bugnumber="llvm.org/pr23477 Test occasionally times out on the Linux build bot")
     @expectedFailureAll(
         oslist=["freebsd"],
         bugnumber="llvm.org/pr19347 2nd thread stops at breakpoint")
@@ -44,14 +34,9 @@ class ThreadStepOutTestCase(TestBase):
     @expectedFailureNetBSD
     def test_step_all_threads(self):
         """Test thread step out on all threads via command interpreter. """
-        self.build(dictionary=self.getBuildFlags())
+        self.build()
         self.step_out_test(self.step_out_all_threads_with_cmd)
 
-    # Test occasionally times out on the Linux build bot
-    @skipIfLinux
-    @expectedFailureAll(
-        oslist=["linux"],
-        bugnumber="llvm.org/pr23477 Test occasionally times out on the Linux build bot")
     @expectedFailureAll(
         oslist=["freebsd"],
         bugnumber="llvm.org/pr19347 2nd thread stops at breakpoint")
@@ -60,7 +45,7 @@ class ThreadStepOutTestCase(TestBase):
     @expectedFailureNetBSD
     def test_python(self):
         """Test thread step out on one thread via Python API (dwarf)."""
-        self.build(dictionary=self.getBuildFlags())
+        self.build()
         self.step_out_test(self.step_out_with_python)
         
     def setUp(self):
@@ -143,9 +128,9 @@ class ThreadStepOutTestCase(TestBase):
         if len(breakpoint_threads) == 1:
             success = thread.Suspend()
             self.assertTrue(success, "Couldn't suspend a thread")
-            bkpt_threads = lldbutil.continue_to_breakpoint(self.process,
+            breakpoint_threads = lldbutil.continue_to_breakpoint(self.process,
                                                            bkpt)
-            self.assertEqual(len(bkpt_threads), 1, "Second thread stopped")
+            self.assertEqual(len(breakpoint_threads), 2, "Second thread stopped")
             success = thread.Resume()
             self.assertTrue(success, "Couldn't resume a thread")
 

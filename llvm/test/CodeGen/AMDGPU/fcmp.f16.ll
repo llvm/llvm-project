@@ -614,7 +614,7 @@ entry:
 
 ; VI:  v_cmp_nlt_f16_e32 vcc, v[[B_F16_1]], v[[A_F16_1]]
 ; GCN: v_cndmask_b32_e64 v[[R_I32_1:[0-9]+]]
-; GCN: buffer_store_dwordx2 v{{\[}}[[R_I32_0]]:[[R_I32_1]]{{\]}}
+; GCN: buffer_store_dwordx2 v[[[R_I32_0]]:[[R_I32_1]]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @fcmp_v2f16_nlt(
     <2 x i32> addrspace(1)* %r,

@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <utility>
+
 #include "IRModule.h"
 
 #include "PybindUtils.h"
@@ -30,7 +32,8 @@ static const char kDumpDocstring[] =
 /// Throws errors in case of failure, using "action" to describe what the caller
 /// was attempting to do.
 template <typename PyType, typename CType>
-static void pyListToVector(py::list list, llvm::SmallVectorImpl<CType> &result,
+static void pyListToVector(const py::list &list,
+                           llvm::SmallVectorImpl<CType> &result,
                            StringRef action) {
   result.reserve(py::len(list));
   for (py::handle item : list) {
@@ -203,7 +206,7 @@ public:
   static constexpr const char *pyClassName = "AffineAddExpr";
   using PyConcreteAffineExpr::PyConcreteAffineExpr;
 
-  static PyAffineAddExpr get(PyAffineExpr lhs, PyAffineExpr rhs) {
+  static PyAffineAddExpr get(PyAffineExpr lhs, const PyAffineExpr &rhs) {
     MlirAffineExpr expr = mlirAffineAddExprGet(lhs, rhs);
     return PyAffineAddExpr(lhs.getContext(), expr);
   }
@@ -232,7 +235,7 @@ public:
   static constexpr const char *pyClassName = "AffineMulExpr";
   using PyConcreteAffineExpr::PyConcreteAffineExpr;
 
-  static PyAffineMulExpr get(PyAffineExpr lhs, PyAffineExpr rhs) {
+  static PyAffineMulExpr get(PyAffineExpr lhs, const PyAffineExpr &rhs) {
     MlirAffineExpr expr = mlirAffineMulExprGet(lhs, rhs);
     return PyAffineMulExpr(lhs.getContext(), expr);
   }
@@ -261,7 +264,7 @@ public:
   static constexpr const char *pyClassName = "AffineModExpr";
   using PyConcreteAffineExpr::PyConcreteAffineExpr;
 
-  static PyAffineModExpr get(PyAffineExpr lhs, PyAffineExpr rhs) {
+  static PyAffineModExpr get(PyAffineExpr lhs, const PyAffineExpr &rhs) {
     MlirAffineExpr expr = mlirAffineModExprGet(lhs, rhs);
     return PyAffineModExpr(lhs.getContext(), expr);
   }
@@ -290,7 +293,7 @@ public:
   static constexpr const char *pyClassName = "AffineFloorDivExpr";
   using PyConcreteAffineExpr::PyConcreteAffineExpr;
 
-  static PyAffineFloorDivExpr get(PyAffineExpr lhs, PyAffineExpr rhs) {
+  static PyAffineFloorDivExpr get(PyAffineExpr lhs, const PyAffineExpr &rhs) {
     MlirAffineExpr expr = mlirAffineFloorDivExprGet(lhs, rhs);
     return PyAffineFloorDivExpr(lhs.getContext(), expr);
   }
@@ -319,7 +322,7 @@ public:
   static constexpr const char *pyClassName = "AffineCeilDivExpr";
   using PyConcreteAffineExpr::PyConcreteAffineExpr;
 
-  static PyAffineCeilDivExpr get(PyAffineExpr lhs, PyAffineExpr rhs) {
+  static PyAffineCeilDivExpr get(PyAffineExpr lhs, const PyAffineExpr &rhs) {
     MlirAffineExpr expr = mlirAffineCeilDivExprGet(lhs, rhs);
     return PyAffineCeilDivExpr(lhs.getContext(), expr);
   }
@@ -375,7 +378,7 @@ class PyAffineMapExprList
 public:
   static constexpr const char *pyClassName = "AffineExprList";
 
-  PyAffineMapExprList(PyAffineMap map, intptr_t startIndex = 0,
+  PyAffineMapExprList(const PyAffineMap &map, intptr_t startIndex = 0,
                       intptr_t length = -1, intptr_t step = 1)
       : Sliceable(startIndex,
                   length == -1 ? mlirAffineMapGetNumResults(map) : length,
@@ -397,7 +400,7 @@ public:
 private:
   PyAffineMap affineMap;
 };
-} // end namespace
+} // namespace
 
 bool PyAffineMap::operator==(const PyAffineMap &other) {
   return mlirAffineMapEqual(affineMap, other.affineMap);
@@ -423,7 +426,8 @@ namespace {
 
 class PyIntegerSetConstraint {
 public:
-  PyIntegerSetConstraint(PyIntegerSet set, intptr_t pos) : set(set), pos(pos) {}
+  PyIntegerSetConstraint(PyIntegerSet set, intptr_t pos)
+      : set(std::move(set)), pos(pos) {}
 
   PyAffineExpr getExpr() {
     return PyAffineExpr(set.getContext(),
@@ -449,7 +453,7 @@ class PyIntegerSetConstraintList
 public:
   static constexpr const char *pyClassName = "IntegerSetConstraintList";
 
-  PyIntegerSetConstraintList(PyIntegerSet set, intptr_t startIndex = 0,
+  PyIntegerSetConstraintList(const PyIntegerSet &set, intptr_t startIndex = 0,
                              intptr_t length = -1, intptr_t step = 1)
       : Sliceable(startIndex,
                   length == -1 ? mlirIntegerSetGetNumConstraints(set) : length,
@@ -676,7 +680,7 @@ void mlir::python::populateIRAffine(py::module &m) {
                     std::vector<PyAffineMap> res;
                     res.reserve(compressed.size());
                     for (auto m : compressed)
-                      res.push_back(PyAffineMap(context->getRef(), m));
+                      res.emplace_back(context->getRef(), m);
                     return res;
                   })
       .def_property_readonly(

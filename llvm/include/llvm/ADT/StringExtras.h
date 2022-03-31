@@ -5,9 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file contains some functions that are useful when dealing with strings.
-//
+///
+/// \file
+/// This file contains some functions that are useful when dealing with strings.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_STRINGEXTRAS_H
@@ -29,14 +30,15 @@
 
 namespace llvm {
 
-template<typename T> class SmallVectorImpl;
 class raw_ostream;
 
 /// hexdigit - Return the hexadecimal character for the
 /// given number \p X (which should be less than 16).
 inline char hexdigit(unsigned X, bool LowerCase = false) {
-  const char HexChar = LowerCase ? 'a' : 'A';
-  return X < 10 ? '0' + X : HexChar + X - 10;
+  assert(X < 16);
+  static const char LUT[] = "0123456789ABCDEF";
+  const uint8_t Offset = LowerCase ? 32 : 0;
+  return LUT[X] | Offset;
 }
 
 /// Given an array of c-style strings terminated by a null pointer, construct
@@ -147,13 +149,14 @@ inline char toUpper(char x) {
   return x;
 }
 
-inline std::string utohexstr(uint64_t X, bool LowerCase = false) {
+inline std::string utohexstr(uint64_t X, bool LowerCase = false,
+                             unsigned Width = 0) {
   char Buffer[17];
   char *BufPtr = std::end(Buffer);
 
   if (X == 0) *--BufPtr = '0';
 
-  while (X) {
+  for (unsigned i = 0; Width ? (i < Width) : X; ++i) {
     unsigned char Mod = static_cast<unsigned char>(X) & 15;
     *--BufPtr = hexdigit(Mod, LowerCase);
     X >>= 4;
@@ -164,23 +167,26 @@ inline std::string utohexstr(uint64_t X, bool LowerCase = false) {
 
 /// Convert buffer \p Input to its hexadecimal representation.
 /// The returned string is double the size of \p Input.
-inline std::string toHex(StringRef Input, bool LowerCase = false) {
-  static const char *const LUT = "0123456789ABCDEF";
-  const uint8_t Offset = LowerCase ? 32 : 0;
-  size_t Length = Input.size();
+inline void toHex(ArrayRef<uint8_t> Input, bool LowerCase,
+                  SmallVectorImpl<char> &Output) {
+  const size_t Length = Input.size();
+  Output.resize_for_overwrite(Length * 2);
 
-  std::string Output;
-  Output.reserve(2 * Length);
-  for (size_t i = 0; i < Length; ++i) {
-    const unsigned char c = Input[i];
-    Output.push_back(LUT[c >> 4] | Offset);
-    Output.push_back(LUT[c & 15] | Offset);
+  for (size_t i = 0; i < Length; i++) {
+    const uint8_t c = Input[i];
+    Output[i * 2    ] = hexdigit(c >> 4, LowerCase);
+    Output[i * 2 + 1] = hexdigit(c & 15, LowerCase);
   }
-  return Output;
 }
 
 inline std::string toHex(ArrayRef<uint8_t> Input, bool LowerCase = false) {
-  return toHex(toStringRef(Input), LowerCase);
+  SmallString<16> Output;
+  toHex(Input, LowerCase, Output);
+  return std::string(Output);
+}
+
+inline std::string toHex(StringRef Input, bool LowerCase = false) {
+  return toHex(arrayRefFromStringRef(Input), LowerCase);
 }
 
 /// Store the binary representation of the two provided values, \p MSB and

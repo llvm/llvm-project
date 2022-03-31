@@ -17,25 +17,26 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/CallingConvLower.h"
-#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
-#include "llvm/IR/Attributes.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/LowLevelTypeImpl.h"
 #include "llvm/Support/MachineValueType.h"
 #include <cstdint>
 #include <functional>
 
 namespace llvm {
 
+class AttributeList;
 class CallBase;
 class DataLayout;
 class Function;
 class FunctionLoweringInfo;
 class MachineIRBuilder;
+class MachineFunction;
 struct MachinePointerInfo;
 class MachineRegisterInfo;
 class TargetLowering;
@@ -95,7 +96,7 @@ public:
             bool IsFixed = true)
       : ArgInfo(Regs, OrigValue.getType(), OrigIndex, Flags, IsFixed, &OrigValue) {}
 
-    ArgInfo() : BaseArgInfo() {}
+    ArgInfo() = default;
   };
 
   struct CallLoweringInfo {
@@ -388,12 +389,12 @@ protected:
   /// \p Handler to move them to the assigned locations.
   ///
   /// \return True if everything has succeeded, false otherwise.
-  bool determineAndHandleAssignments(ValueHandler &Handler,
-                                     ValueAssigner &Assigner,
-                                     SmallVectorImpl<ArgInfo> &Args,
-                                     MachineIRBuilder &MIRBuilder,
-                                     CallingConv::ID CallConv, bool IsVarArg,
-                                     Register ThisReturnReg = Register()) const;
+  bool
+  determineAndHandleAssignments(ValueHandler &Handler, ValueAssigner &Assigner,
+                                SmallVectorImpl<ArgInfo> &Args,
+                                MachineIRBuilder &MIRBuilder,
+                                CallingConv::ID CallConv, bool IsVarArg,
+                                ArrayRef<Register> ThisReturnRegs = None) const;
 
   /// Use \p Handler to insert code to handle the argument/return values
   /// represented by \p Args. It's expected determineAssignments previously
@@ -402,7 +403,7 @@ protected:
                          CCState &CCState,
                          SmallVectorImpl<CCValAssign> &ArgLocs,
                          MachineIRBuilder &MIRBuilder,
-                         Register ThisReturnReg = Register()) const;
+                         ArrayRef<Register> ThisReturnRegs = None) const;
 
   /// Check whether parameters to a call that are passed in callee saved
   /// registers are the same as from the calling function.  This needs to be

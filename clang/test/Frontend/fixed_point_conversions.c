@@ -41,7 +41,7 @@ double d;
 // CHECK-NEXT:    store i32 [[TMP0]], i32* @a2, align 4
 // CHECK-NEXT:    ret void
 //
-void fix_same1() {
+void fix_same1(void) {
   a2 = a;
 }
 
@@ -51,7 +51,7 @@ void fix_same1() {
 // CHECK-NEXT:    store i32 [[TMP0]], i32* @a2, align 4
 // CHECK-NEXT:    ret void
 //
-void fix_same2() {
+void fix_same2(void) {
   a2 = (_Accum)a;
 }
 
@@ -64,7 +64,7 @@ void fix_same2() {
 // CHECK-NEXT:    store i32 [[RESIZE]], i32* @a, align 4
 // CHECK-NEXT:    ret void
 //
-void fix_castdown1() {
+void fix_castdown1(void) {
   a = la;
 }
 
@@ -76,7 +76,7 @@ void fix_castdown1() {
 // CHECK-NEXT:    store i32 [[RESIZE]], i32* @a, align 4
 // CHECK-NEXT:    ret void
 //
-void fix_castdown2() {
+void fix_castdown2(void) {
   a = (_Accum)la;
 }
 
@@ -88,7 +88,7 @@ void fix_castdown2() {
 // CHECK-NEXT:    store i16 [[RESIZE]], i16* @sa, align 2
 // CHECK-NEXT:    ret void
 //
-void fix_castdown3() {
+void fix_castdown3(void) {
   sa = a;
 }
 
@@ -100,7 +100,7 @@ void fix_castdown3() {
 // CHECK-NEXT:    store i16 [[RESIZE]], i16* @sa, align 2
 // CHECK-NEXT:    ret void
 //
-void fix_castdown4() {
+void fix_castdown4(void) {
   sa = a;
 }
 
@@ -113,7 +113,7 @@ void fix_castdown4() {
 // CHECK-NEXT:    store i32 [[UPSCALE]], i32* @a, align 4
 // CHECK-NEXT:    ret void
 //
-void fix_castup1() {
+void fix_castup1(void) {
   a = sa;
 }
 
@@ -125,7 +125,7 @@ void fix_castup1() {
 // CHECK-NEXT:    store i32 [[UPSCALE]], i32* @a, align 4
 // CHECK-NEXT:    ret void
 //
-void fix_castup2() {
+void fix_castup2(void) {
   a = (_Accum)sa;
 }
 
@@ -137,7 +137,7 @@ void fix_castup2() {
 // CHECK-NEXT:    store i32 [[RESIZE]], i32* @a, align 4
 // CHECK-NEXT:    ret void
 //
-void fix_castup3() {
+void fix_castup3(void) {
   a = la;
 }
 
@@ -149,7 +149,7 @@ void fix_castup3() {
 // CHECK-NEXT:    store i32 [[RESIZE]], i32* @a, align 4
 // CHECK-NEXT:    ret void
 //
-void fix_castup4() {
+void fix_castup4(void) {
   a = (long _Accum)la;
 }
 
@@ -167,7 +167,7 @@ void fix_castup4() {
 // UNSIGNED-NEXT:    store i32 [[TMP0]], i32* @ua, align 4
 // UNSIGNED-NEXT:    ret void
 //
-void fix_sign1() {
+void fix_sign1(void) {
   ua = a;
 }
 
@@ -184,7 +184,7 @@ void fix_sign1() {
 // UNSIGNED-NEXT:    store i32 [[TMP0]], i32* @a, align 4
 // UNSIGNED-NEXT:    ret void
 //
-void fix_sign2() {
+void fix_sign2(void) {
   a = ua;
 }
 
@@ -201,7 +201,7 @@ void fix_sign2() {
 // UNSIGNED-NEXT:    store i32 [[TMP0]], i32* @ua, align 4
 // UNSIGNED-NEXT:    ret void
 //
-void fix_sign3() {
+void fix_sign3(void) {
   ua = (unsigned _Accum)a;
 }
 
@@ -218,7 +218,7 @@ void fix_sign3() {
 // UNSIGNED-NEXT:    store i32 [[TMP0]], i32* @a, align 4
 // UNSIGNED-NEXT:    ret void
 //
-void fix_sign4() {
+void fix_sign4(void) {
   a = (_Accum)ua;
 }
 
@@ -238,7 +238,7 @@ void fix_sign4() {
 // UNSIGNED-NEXT:    store i64 [[UPSCALE]], i64* @ula, align 8
 // UNSIGNED-NEXT:    ret void
 //
-void fix_sign5() {
+void fix_sign5(void) {
   ula = a;
 }
 
@@ -255,7 +255,7 @@ void fix_sign5() {
 // CHECK-NEXT:    store i16 [[RESIZE]], i16* @sat_sa, align 2
 // CHECK-NEXT:    ret void
 //
-void fix_sat1() {
+void fix_sat1(void) {
   // Casting down between types
   sat_sa = sat_a;
 }
@@ -272,7 +272,7 @@ void fix_sat1() {
 // CHECK-NEXT:    store i8 [[RESIZE]], i8* @sat_sf, align 1
 // CHECK-NEXT:    ret void
 //
-void fix_sat2() {
+void fix_sat2(void) {
   // Accum to Fract, decreasing scale
   sat_sf = sat_a;
 }
@@ -288,7 +288,7 @@ void fix_sat2() {
 // CHECK-NEXT:    store i16 [[RESIZE]], i16* @sat_f, align 2
 // CHECK-NEXT:    ret void
 //
-void fix_sat3() {
+void fix_sat3(void) {
   // Accum to Fract, same scale
   sat_f = a;
 }
@@ -306,7 +306,7 @@ void fix_sat3() {
 // CHECK-NEXT:    store i32 [[RESIZE1]], i32* @sat_lf, align 4
 // CHECK-NEXT:    ret void
 //
-void fix_sat4() {
+void fix_sat4(void) {
   // Accum to Fract, increasing scale
   sat_lf = sat_a;
 }
@@ -335,7 +335,7 @@ void fix_sat4() {
 // UNSIGNED-NEXT:    store i16 [[RESIZE]], i16* @sat_usa, align 2
 // UNSIGNED-NEXT:    ret void
 //
-void fix_sat5() {
+void fix_sat5(void) {
   // Signed to unsigned, decreasing scale
   sat_usa = sat_a;
 }
@@ -359,7 +359,7 @@ void fix_sat5() {
 // UNSIGNED-NEXT:    store i32 [[SATMIN]], i32* @sat_ua, align 4
 // UNSIGNED-NEXT:    ret void
 //
-void fix_sat6() {
+void fix_sat6(void) {
   // Signed to unsigned, increasing scale
   sat_ua = sat_a;
 }
@@ -370,7 +370,7 @@ void fix_sat6() {
 // CHECK-NEXT:    store i32 [[TMP0]], i32* @sat_a, align 4
 // CHECK-NEXT:    ret void
 //
-void fix_sat7() {
+void fix_sat7(void) {
   // Nothing when saturating to the same type and size
   sat_a = a;
 }
@@ -381,7 +381,7 @@ void fix_sat7() {
 // CHECK-NEXT:    store i32 [[TMP0]], i32* @a, align 4
 // CHECK-NEXT:    ret void
 //
-void fix_sat8() {
+void fix_sat8(void) {
   // Nothing when assigning back
   a = sat_a;
 }
@@ -393,7 +393,7 @@ void fix_sat8() {
 // CHECK-NEXT:    store i32 [[RESIZE]], i32* @sat_a, align 4
 // CHECK-NEXT:    ret void
 //
-void fix_sat9() {
+void fix_sat9(void) {
   // No overflow when casting from fract to signed accum
   sat_a = sat_f;
 }
@@ -418,7 +418,7 @@ void fix_sat9() {
 // UNSIGNED-NEXT:    store i32 [[SATMIN]], i32* @sat_ua, align 4
 // UNSIGNED-NEXT:    ret void
 //
-void fix_sat10() {
+void fix_sat10(void) {
   // Only get overflow checking if signed fract to unsigned accum
   sat_ua = sat_sf;
 }
@@ -432,7 +432,7 @@ void fix_sat10() {
 // CHECK-NEXT:    store i8 [[RESIZE]], i8* @sf, align 1
 // CHECK-NEXT:    ret void
 //
-void fix_fract1() {
+void fix_fract1(void) {
   // To lower scale
   sf = a;
 }
@@ -445,7 +445,7 @@ void fix_fract1() {
 // CHECK-NEXT:    store i32 [[UPSCALE]], i32* @a, align 4
 // CHECK-NEXT:    ret void
 //
-void fix_fract2() {
+void fix_fract2(void) {
   // To higher scale
   a = sf;
 }
@@ -457,7 +457,7 @@ void fix_fract2() {
 // CHECK-NEXT:    store i16 [[RESIZE]], i16* @f, align 2
 // CHECK-NEXT:    ret void
 //
-void fix_fract3() {
+void fix_fract3(void) {
   // To same scale
   f = a;
 }
@@ -469,7 +469,7 @@ void fix_fract3() {
 // CHECK-NEXT:    store i32 [[RESIZE]], i32* @a, align 4
 // CHECK-NEXT:    ret void
 //
-void fix_fract4() {
+void fix_fract4(void) {
   a = f;
 }
 
@@ -480,7 +480,7 @@ void fix_fract4() {
 // CHECK-NEXT:    store i32 [[RESIZE]], i32* @ua, align 4
 // CHECK-NEXT:    ret void
 //
-void fix_fract5() {
+void fix_fract5(void) {
   // To unsigned
   ua = uf;
 }
@@ -492,7 +492,7 @@ void fix_fract5() {
 // CHECK-NEXT:    store i16 [[RESIZE]], i16* @uf, align 2
 // CHECK-NEXT:    ret void
 //
-void fix_fract6() {
+void fix_fract6(void) {
   uf = ua;
 }
 
@@ -508,7 +508,7 @@ void fix_fract6() {
 // CHECK-NEXT:    store i32 [[RESIZE]], i32* @i, align 4
 // CHECK-NEXT:    ret void
 //
-void fix_int1() {
+void fix_int1(void) {
   // Will need to check for negative values
   i = sa;
 }
@@ -529,7 +529,7 @@ void fix_int1() {
 // UNSIGNED-NEXT:    store i32 [[RESIZE]], i32* @i, align 4
 // UNSIGNED-NEXT:    ret void
 //
-void fix_int2() {
+void fix_int2(void) {
   // No check needed for unsigned fixed points. Can just right shift.
   i = usa;
 }
@@ -543,7 +543,7 @@ void fix_int2() {
 // CHECK-NEXT:    store i16 [[UPSCALE]], i16* @sa, align 2
 // CHECK-NEXT:    ret void
 //
-void int_fix1() {
+void int_fix1(void) {
   sa = i;
 }
 
@@ -555,7 +555,7 @@ void int_fix1() {
 // CHECK-NEXT:    store i16 [[UPSCALE]], i16* @sa, align 2
 // CHECK-NEXT:    ret void
 //
-void int_fix2() {
+void int_fix2(void) {
   sa = ui;
 }
 
@@ -575,7 +575,7 @@ void int_fix2() {
 // UNSIGNED-NEXT:    store i16 [[UPSCALE]], i16* @usa, align 2
 // UNSIGNED-NEXT:    ret void
 //
-void int_fix3() {
+void int_fix3(void) {
   usa = i;
 }
 
@@ -595,7 +595,7 @@ void int_fix3() {
 // UNSIGNED-NEXT:    store i16 [[UPSCALE]], i16* @usa, align 2
 // UNSIGNED-NEXT:    ret void
 //
-void int_fix4() {
+void int_fix4(void) {
   usa = ui;
 }
 
@@ -607,7 +607,7 @@ void int_fix4() {
 // CHECK-NEXT:    store i64 [[UPSCALE]], i64* @la, align 8
 // CHECK-NEXT:    ret void
 //
-void int_fix5() {
+void int_fix5(void) {
   la = s;
 }
 
@@ -625,7 +625,7 @@ void int_fix5() {
 // CHECK-NEXT:    store i16 [[RESIZE1]], i16* @sat_sa, align 2
 // CHECK-NEXT:    ret void
 //
-void int_sat1() {
+void int_sat1(void) {
   sat_sa = i;
 }
 
@@ -640,7 +640,7 @@ void int_sat1() {
 // CHECK-NEXT:    store i16 [[RESIZE1]], i16* @sat_sa, align 2
 // CHECK-NEXT:    ret void
 //
-void int_sat2() {
+void int_sat2(void) {
   sat_sa = ui;
 }
 
@@ -670,7 +670,7 @@ void int_sat2() {
 // UNSIGNED-NEXT:    store i16 [[RESIZE1]], i16* @sat_usa, align 2
 // UNSIGNED-NEXT:    ret void
 //
-void int_sat3() {
+void int_sat3(void) {
   sat_usa = i;
 }
 
@@ -696,7 +696,7 @@ void int_sat3() {
 // UNSIGNED-NEXT:    store i16 [[RESIZE1]], i16* @sat_usa, align 2
 // UNSIGNED-NEXT:    ret void
 //
-void int_sat4() {
+void int_sat4(void) {
   sat_usa = ui;
 }
 
@@ -709,7 +709,7 @@ void int_sat4() {
 // CHECK-NEXT:    store i16 [[TMP2]], i16* @sa, align 2
 // CHECK-NEXT:    ret void
 //
-void float_fix1() {
+void float_fix1(void) {
   sa = fl;
 }
 
@@ -721,7 +721,7 @@ void float_fix1() {
 // CHECK-NEXT:    store i32 [[TMP2]], i32* @a, align 4
 // CHECK-NEXT:    ret void
 //
-void float_fix2() {
+void float_fix2(void) {
   a = fl;
 }
 
@@ -733,7 +733,7 @@ void float_fix2() {
 // CHECK-NEXT:    store i64 [[TMP2]], i64* @la, align 8
 // CHECK-NEXT:    ret void
 //
-void float_fix3() {
+void float_fix3(void) {
   la = fl;
 }
 
@@ -745,7 +745,7 @@ void float_fix3() {
 // CHECK-NEXT:    store i8 [[TMP2]], i8* @sf, align 1
 // CHECK-NEXT:    ret void
 //
-void float_fix4() {
+void float_fix4(void) {
   sf = fl;
 }
 
@@ -757,7 +757,7 @@ void float_fix4() {
 // CHECK-NEXT:    store i32 [[TMP2]], i32* @lf, align 4
 // CHECK-NEXT:    ret void
 //
-void float_fix5() {
+void float_fix5(void) {
   lf = fl;
 }
 
@@ -777,7 +777,7 @@ void float_fix5() {
 // UNSIGNED-NEXT:    store i32 [[TMP2]], i32* @ua, align 4
 // UNSIGNED-NEXT:    ret void
 //
-void float_fix6() {
+void float_fix6(void) {
   ua = fl;
 }
 
@@ -797,7 +797,7 @@ void float_fix6() {
 // UNSIGNED-NEXT:    store i16 [[TMP2]], i16* @uf, align 2
 // UNSIGNED-NEXT:    ret void
 //
-void float_fix7() {
+void float_fix7(void) {
   uf = fl;
 }
 
@@ -810,7 +810,7 @@ void float_fix7() {
 // CHECK-NEXT:    store float [[TMP2]], float* @fl, align 4
 // CHECK-NEXT:    ret void
 //
-void fix_float1() {
+void fix_float1(void) {
   fl = sa;
 }
 
@@ -822,7 +822,7 @@ void fix_float1() {
 // CHECK-NEXT:    store float [[TMP2]], float* @fl, align 4
 // CHECK-NEXT:    ret void
 //
-void fix_float2() {
+void fix_float2(void) {
   fl = a;
 }
 
@@ -834,7 +834,7 @@ void fix_float2() {
 // CHECK-NEXT:    store float [[TMP2]], float* @fl, align 4
 // CHECK-NEXT:    ret void
 //
-void fix_float3() {
+void fix_float3(void) {
   fl = la;
 }
 
@@ -846,7 +846,7 @@ void fix_float3() {
 // CHECK-NEXT:    store float [[TMP2]], float* @fl, align 4
 // CHECK-NEXT:    ret void
 //
-void fix_float4() {
+void fix_float4(void) {
   fl = sf;
 }
 
@@ -858,7 +858,7 @@ void fix_float4() {
 // CHECK-NEXT:    store float [[TMP2]], float* @fl, align 4
 // CHECK-NEXT:    ret void
 //
-void fix_float5() {
+void fix_float5(void) {
   fl = lf;
 }
 
@@ -878,7 +878,7 @@ void fix_float5() {
 // UNSIGNED-NEXT:    store float [[TMP2]], float* @fl, align 4
 // UNSIGNED-NEXT:    ret void
 //
-void fix_float6() {
+void fix_float6(void) {
   fl = ua;
 }
 
@@ -898,7 +898,7 @@ void fix_float6() {
 // UNSIGNED-NEXT:    store float [[TMP2]], float* @fl, align 4
 // UNSIGNED-NEXT:    ret void
 //
-void fix_float7() {
+void fix_float7(void) {
   fl = uf;
 }
 
@@ -911,7 +911,7 @@ void fix_float7() {
 // CHECK-NEXT:    store i16 [[TMP2]], i16* @sat_sa, align 2
 // CHECK-NEXT:    ret void
 //
-void float_sat1() {
+void float_sat1(void) {
   sat_sa = fl;
 }
 
@@ -923,7 +923,7 @@ void float_sat1() {
 // CHECK-NEXT:    store i32 [[TMP2]], i32* @sat_a, align 4
 // CHECK-NEXT:    ret void
 //
-void float_sat2() {
+void float_sat2(void) {
   sat_a = fl;
 }
 
@@ -935,7 +935,7 @@ void float_sat2() {
 // CHECK-NEXT:    store i64 [[TMP2]], i64* @sat_la, align 8
 // CHECK-NEXT:    ret void
 //
-void float_sat3() {
+void float_sat3(void) {
   sat_la = fl;
 }
 
@@ -947,7 +947,7 @@ void float_sat3() {
 // CHECK-NEXT:    store i8 [[TMP2]], i8* @sat_sf, align 1
 // CHECK-NEXT:    ret void
 //
-void float_sat4() {
+void float_sat4(void) {
   sat_sf = fl;
 }
 
@@ -969,7 +969,7 @@ void float_sat4() {
 // UNSIGNED-NEXT:    store i32 [[SATMIN]], i32* @sat_ua, align 4
 // UNSIGNED-NEXT:    ret void
 //
-void float_sat5() {
+void float_sat5(void) {
   sat_ua = fl;
 }
 
@@ -991,6 +991,6 @@ void float_sat5() {
 // UNSIGNED-NEXT:    store i16 [[SATMIN]], i16* @sat_uf, align 2
 // UNSIGNED-NEXT:    ret void
 //
-void float_sat6() {
+void float_sat6(void) {
   sat_uf = fl;
 }

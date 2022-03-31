@@ -12,22 +12,22 @@
     PythonList list(PyRefType::Borrowed, $input);
     int size = list.GetSize();
     int i = 0;
-    $1 = (char**)malloc((size+1)*sizeof(char*));
+    $1 = (char **)malloc((size + 1) * sizeof(char *));
     for (i = 0; i < size; i++) {
       PythonString py_str = list.GetItemAtIndex(i).AsType<PythonString>();
       if (!py_str.IsAllocated()) {
-        PyErr_SetString(PyExc_TypeError,"list must contain strings");
+        PyErr_SetString(PyExc_TypeError, "list must contain strings");
         free($1);
         return nullptr;
       }
 
-      $1[i] = const_cast<char*>(py_str.GetString().data());
+      $1[i] = const_cast<char *>(py_str.GetString().data());
     }
     $1[i] = 0;
   } else if ($input == Py_None) {
-    $1 =  NULL;
+    $1 = NULL;
   } else {
-    PyErr_SetString(PyExc_TypeError,"not a list");
+    PyErr_SetString(PyExc_TypeError, "not a list");
     return NULL;
   }
 }
@@ -41,12 +41,12 @@
     int i = 0;
     for (i = 0; i < size; i++) {
       PythonString s = list.GetItemAtIndex(i).AsType<PythonString>();
-      if (!s.IsAllocated()) { $1 = 0; }
+      if (!s.IsAllocated()) {
+        $1 = 0;
+      }
     }
-  }
-  else
-  {
-    $1 = ( ($input == Py_None) ? 1 : 0);
+  } else {
+    $1 = (($input == Py_None) ? 1 : 0);
   }
 }
 
@@ -58,7 +58,8 @@
   int len;
   int i;
   len = 0;
-  while ($1[len]) len++;
+  while ($1[len])
+    len++;
   PythonList list(len);
   for (i = 0; i < len; i++)
     list.SetItemAtIndex(i, PythonString($1[i]));
@@ -76,7 +77,7 @@
 %typemap(in) lldb::StateType {
   PythonObject obj = Retain<PythonObject>($input);
   unsigned long long state_type_value =
-    unwrapOrSetPythonException(As<unsigned long long>(obj));
+      unwrapOrSetPythonException(As<unsigned long long>(obj));
   if (PyErr_Occurred())
     return nullptr;
   if (state_type_value > lldb::StateType::kLastStateType) {
@@ -90,16 +91,16 @@
 
 // typemap for a char buffer
 %typemap(in) (char *dst, size_t dst_len) {
-   if (!PyInt_Check($input)) {
-       PyErr_SetString(PyExc_ValueError, "Expecting an integer");
-       return NULL;
-   }
-   $2 = PyInt_AsLong($input);
-   if ($2 <= 0) {
-       PyErr_SetString(PyExc_ValueError, "Positive integer expected");
-       return NULL;
-   }
-   $1 = (char *) malloc($2);
+  if (!PyInt_Check($input)) {
+    PyErr_SetString(PyExc_ValueError, "Expecting an integer");
+    return NULL;
+  }
+  $2 = PyInt_AsLong($input);
+  if ($2 <= 0) {
+    PyErr_SetString(PyExc_ValueError, "Positive integer expected");
+    return NULL;
+  }
+  $1 = (char *)malloc($2);
 }
 // SBProcess::ReadCStringFromMemory() uses a void*, but needs to be treated
 // as char data instead of byte data.
@@ -107,17 +108,17 @@
 
 // Return the char buffer.  Discarding any previous return result
 %typemap(argout) (char *dst, size_t dst_len) {
-   Py_XDECREF($result);   /* Blow away any previous result */
-   if (result == 0) {
-      PythonString string("");
-      $result = string.release();
-      Py_INCREF($result);
-   } else {
-      llvm::StringRef ref(static_cast<const char*>($1), result);
-      PythonString string(ref);
-      $result = string.release();
-   }
-   free($1);
+  Py_XDECREF($result); /* Blow away any previous result */
+  if (result == 0) {
+    PythonString string("");
+    $result = string.release();
+    Py_INCREF($result);
+  } else {
+    llvm::StringRef ref(static_cast<const char *>($1), result);
+    PythonString string(ref);
+    $result = string.release();
+  }
+  free($1);
 }
 // SBProcess::ReadCStringFromMemory() uses a void*, but needs to be treated
 // as char data instead of byte data.
@@ -126,23 +127,23 @@
 
 // typemap for handling an snprintf-like API like SBThread::GetStopDescription.
 %typemap(in) (char *dst_or_null, size_t dst_len) {
-   if (!PyInt_Check($input)) {
-       PyErr_SetString(PyExc_ValueError, "Expecting an integer");
-       return NULL;
-   }
-   $2 = PyInt_AsLong($input);
-   if ($2 <= 0) {
-       PyErr_SetString(PyExc_ValueError, "Positive integer expected");
-       return NULL;
-   }
-   $1 = (char *) malloc($2);
+  if (!PyInt_Check($input)) {
+    PyErr_SetString(PyExc_ValueError, "Expecting an integer");
+    return NULL;
+  }
+  $2 = PyInt_AsLong($input);
+  if ($2 <= 0) {
+    PyErr_SetString(PyExc_ValueError, "Positive integer expected");
+    return NULL;
+  }
+  $1 = (char *)malloc($2);
 }
 %typemap(argout) (char *dst_or_null, size_t dst_len) {
-   Py_XDECREF($result);   /* Blow away any previous result */
-   llvm::StringRef ref($1);
-   PythonString string(ref);
-   $result = string.release();
-   free($1);
+  Py_XDECREF($result); /* Blow away any previous result */
+  llvm::StringRef ref($1);
+  PythonString string(ref);
+  $result = string.release();
+  free($1);
 }
 
 
@@ -151,80 +152,74 @@
 // Ditto for SBProcess::PutSTDIN(const char *src, size_t src_len).
 %typemap(in) (const char *cstr, uint32_t cstr_len),
              (const char *src, size_t src_len) {
-   if (PythonString::Check($input)) {
-      PythonString str(PyRefType::Borrowed, $input);
-      $1 = (char*)str.GetString().data();
-      $2 = str.GetSize();
-   }
-   else if(PythonByteArray::Check($input)) {
-      PythonByteArray bytearray(PyRefType::Borrowed, $input);
-      $1 = (char*)bytearray.GetBytes().data();
-      $2 = bytearray.GetSize();
-   }
-   else if (PythonBytes::Check($input)) {
-      PythonBytes bytes(PyRefType::Borrowed, $input);
-      $1 = (char*)bytes.GetBytes().data();
-      $2 = bytes.GetSize();
-   }
-   else {
-      PyErr_SetString(PyExc_ValueError, "Expecting a string");
-      return NULL;
-   }
+  if (PythonString::Check($input)) {
+    PythonString str(PyRefType::Borrowed, $input);
+    $1 = (char *)str.GetString().data();
+    $2 = str.GetSize();
+  } else if (PythonByteArray::Check($input)) {
+    PythonByteArray bytearray(PyRefType::Borrowed, $input);
+    $1 = (char *)bytearray.GetBytes().data();
+    $2 = bytearray.GetSize();
+  } else if (PythonBytes::Check($input)) {
+    PythonBytes bytes(PyRefType::Borrowed, $input);
+    $1 = (char *)bytes.GetBytes().data();
+    $2 = bytes.GetSize();
+  } else {
+    PyErr_SetString(PyExc_ValueError, "Expecting a string");
+    return NULL;
+  }
 }
 // For SBProcess::WriteMemory, SBTarget::GetInstructions and SBDebugger::DispatchInput.
 %typemap(in) (const void *buf, size_t size),
              (const void *data, size_t data_len) {
-   if (PythonString::Check($input)) {
-      PythonString str(PyRefType::Borrowed, $input);
-      $1 = (void*)str.GetString().data();
-      $2 = str.GetSize();
-   }
-   else if(PythonByteArray::Check($input)) {
-      PythonByteArray bytearray(PyRefType::Borrowed, $input);
-      $1 = (void*)bytearray.GetBytes().data();
-      $2 = bytearray.GetSize();
-   }
-   else if (PythonBytes::Check($input)) {
-      PythonBytes bytes(PyRefType::Borrowed, $input);
-      $1 = (void*)bytes.GetBytes().data();
-      $2 = bytes.GetSize();
-   }
-   else {
-      PyErr_SetString(PyExc_ValueError, "Expecting a buffer");
-      return NULL;
-   }
+  if (PythonString::Check($input)) {
+    PythonString str(PyRefType::Borrowed, $input);
+    $1 = (void *)str.GetString().data();
+    $2 = str.GetSize();
+  } else if (PythonByteArray::Check($input)) {
+    PythonByteArray bytearray(PyRefType::Borrowed, $input);
+    $1 = (void *)bytearray.GetBytes().data();
+    $2 = bytearray.GetSize();
+  } else if (PythonBytes::Check($input)) {
+    PythonBytes bytes(PyRefType::Borrowed, $input);
+    $1 = (void *)bytes.GetBytes().data();
+    $2 = bytes.GetSize();
+  } else {
+    PyErr_SetString(PyExc_ValueError, "Expecting a buffer");
+    return NULL;
+  }
 }
 
 // typemap for an incoming buffer
 // See also SBProcess::ReadMemory.
 %typemap(in) (void *buf, size_t size) {
-   if (PyInt_Check($input)) {
-      $2 = PyInt_AsLong($input);
-   } else if (PyLong_Check($input)) {
-      $2 = PyLong_AsLong($input);
-   } else {
-      PyErr_SetString(PyExc_ValueError, "Expecting an integer or long object");
-      return NULL;
-   }
-   if ($2 <= 0) {
-       PyErr_SetString(PyExc_ValueError, "Positive integer expected");
-       return NULL;
-   }
-   $1 = (void *) malloc($2);
+  if (PyInt_Check($input)) {
+    $2 = PyInt_AsLong($input);
+  } else if (PyLong_Check($input)) {
+    $2 = PyLong_AsLong($input);
+  } else {
+    PyErr_SetString(PyExc_ValueError, "Expecting an integer or long object");
+    return NULL;
+  }
+  if ($2 <= 0) {
+    PyErr_SetString(PyExc_ValueError, "Positive integer expected");
+    return NULL;
+  }
+  $1 = (void *)malloc($2);
 }
 
 // Return the buffer.  Discarding any previous return result
 // See also SBProcess::ReadMemory.
 %typemap(argout) (void *buf, size_t size) {
-   Py_XDECREF($result);   /* Blow away any previous result */
-   if (result == 0) {
-      $result = Py_None;
-      Py_INCREF($result);
-   } else {
-      PythonBytes bytes(static_cast<const uint8_t*>($1), result);
-      $result = bytes.release();
-   }
-   free($1);
+  Py_XDECREF($result); /* Blow away any previous result */
+  if (result == 0) {
+    $result = Py_None;
+    Py_INCREF($result);
+  } else {
+    PythonBytes bytes(static_cast<const uint8_t *>($1), result);
+    $result = bytes.release();
+  }
+  free($1);
 }
 
 %{
@@ -250,19 +245,18 @@ template <> int32_t PyLongAsT<int32_t>(PyObject *obj) {
   return static_cast<int32_t>(PyLong_AsLong(obj));
 }
 
-template <class T>
-bool SetNumberFromPyObject(T &number, PyObject *obj) {
+template <class T> bool SetNumberFromPyObject(T &number, PyObject *obj) {
   if (PyInt_Check(obj))
     number = static_cast<T>(PyInt_AsLong(obj));
   else if (PyLong_Check(obj))
     number = PyLongAsT<T>(obj);
-  else return false;
+  else
+    return false;
 
   return true;
 }
 
-template <>
-bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
+template <> bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
   if (PyFloat_Check(obj)) {
     number = PyFloat_AsDouble(obj);
     return true;
@@ -287,11 +281,11 @@ bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
     int size = PyList_Size($input);
     int i = 0;
     $2 = size;
-    $1 = ($1_type) malloc(size * sizeof($*1_type));
+    $1 = ($1_type)malloc(size * sizeof($*1_type));
     for (i = 0; i < size; i++) {
-      PyObject *o = PyList_GetItem($input,i);
+      PyObject *o = PyList_GetItem($input, i);
       if (!SetNumberFromPyObject($1[i], o)) {
-        PyErr_SetString(PyExc_TypeError,"list must contain numbers");
+        PyErr_SetString(PyExc_TypeError, "list must contain numbers");
         free($1);
         return NULL;
       }
@@ -302,10 +296,10 @@ bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
       }
     }
   } else if ($input == Py_None) {
-    $1 =  NULL;
+    $1 = NULL;
     $2 = 0;
   } else {
-    PyErr_SetString(PyExc_TypeError,"not a list");
+    PyErr_SetString(PyExc_TypeError, "not a list");
     return NULL;
   }
 }
@@ -322,43 +316,42 @@ bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
 // to the more Pythonic style where a list is returned and no previous allocation
 // is necessary - this will break if more than 50 versions are ever returned
 %typemap(typecheck) (uint32_t *versions, uint32_t num_versions) {
-    $1 = ($input == Py_None ? 1 : 0);
+  $1 = ($input == Py_None ? 1 : 0);
 }
 
 %typemap(in, numinputs=0) (uint32_t *versions) {
-    $1 = (uint32_t*)malloc(sizeof(uint32_t) * 50);
+  $1 = (uint32_t *)malloc(sizeof(uint32_t) * 50);
 }
 
 %typemap(in, numinputs=0) (uint32_t num_versions) {
-    $1 = 50;
+  $1 = 50;
 }
 
 %typemap(argout) (uint32_t *versions, uint32_t num_versions) {
-    uint32_t count = result;
-    if (count >= $2)
-        count = $2;
-    PyObject* list = PyList_New(count);
-    for (uint32_t j = 0; j < count; j++)
-    {
-        PyObject* item = PyInt_FromLong($1[j]);
-        int ok = PyList_SetItem(list,j,item);
-        if (ok != 0)
-        {
-            $result = Py_None;
-            break;
-        }
+  uint32_t count = result;
+  if (count >= $2)
+    count = $2;
+  PyObject *list = PyList_New(count);
+  for (uint32_t j = 0; j < count; j++) {
+    PyObject *item = PyInt_FromLong($1[j]);
+    int ok = PyList_SetItem(list, j, item);
+    if (ok != 0) {
+      $result = Py_None;
+      break;
     }
-    $result = list;
+  }
+  $result = list;
 }
 
 %typemap(freearg) (uint32_t *versions) {
-    free($1);
+  free($1);
 }
 
 
 // For Log::LogOutputCallback
 %typemap(in) (lldb::LogOutputCallback log_callback, void *baton) {
-  if (!($input == Py_None || PyCallable_Check(reinterpret_cast<PyObject*>($input)))) {
+  if (!($input == Py_None ||
+        PyCallable_Check(reinterpret_cast<PyObject *>($input)))) {
     PyErr_SetString(PyExc_TypeError, "Need a callable object or None!");
     return NULL;
   }
@@ -376,7 +369,7 @@ bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
 
 %typemap(typecheck) (lldb::LogOutputCallback log_callback, void *baton) {
   $1 = $input == Py_None;
-  $1 = $1 || PyCallable_Check(reinterpret_cast<PyObject*>($input));
+  $1 = $1 || PyCallable_Check(reinterpret_cast<PyObject *>($input));
 }
 
 
@@ -398,7 +391,8 @@ bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
     PyErr_SetString(PyExc_TypeError, "not a file");
     return nullptr;
   }
-  auto sp = unwrapOrSetPythonException(py_file.ConvertToFileForcingUseOfScriptingIOMethods());
+  auto sp = unwrapOrSetPythonException(
+      py_file.ConvertToFileForcingUseOfScriptingIOMethods());
   if (!sp)
     return nullptr;
   $1 = sp;
@@ -410,7 +404,8 @@ bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
     PyErr_SetString(PyExc_TypeError, "not a file");
     return nullptr;
   }
-  auto sp = unwrapOrSetPythonException(py_file.ConvertToFile(/*borrowed=*/true));
+  auto sp =
+      unwrapOrSetPythonException(py_file.ConvertToFile(/*borrowed=*/true));
   if (!sp)
     return nullptr;
   $1 = sp;
@@ -422,7 +417,8 @@ bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
     PyErr_SetString(PyExc_TypeError, "not a file");
     return nullptr;
   }
-  auto sp = unwrapOrSetPythonException(py_file.ConvertToFileForcingUseOfScriptingIOMethods(/*borrowed=*/true));
+  auto sp = unwrapOrSetPythonException(
+      py_file.ConvertToFileForcingUseOfScriptingIOMethods(/*borrowed=*/true));
   if (!sp)
     return nullptr;
   $1 = sp;
@@ -446,40 +442,34 @@ bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
       return nullptr;
     $result = pyfile.release();
   }
-  if (!$result)
-  {
-      $result = Py_None;
-      Py_INCREF(Py_None);
+  if (!$result) {
+    $result = Py_None;
+    Py_INCREF(Py_None);
   }
 }
 
 %typemap(in) (const char* string, int len) {
-    if ($input == Py_None)
-    {
-        $1 = NULL;
-        $2 = 0;
-    }
-    else if (PythonString::Check($input))
-    {
-        PythonString py_str(PyRefType::Borrowed, $input);
-        llvm::StringRef str = py_str.GetString();
-        $1 = const_cast<char*>(str.data());
-        $2 = str.size();
-        // In Python 2, if $input is a PyUnicode object then this
-        // will trigger a Unicode -> String conversion, in which
-        // case the `PythonString` will now own the PyString.  Thus
-        // if it goes out of scope, the data will be deleted.  The
-        // only way to avoid this is to leak the Python object in
-        // that case.  Note that if there was no conversion, then
-        // releasing the string will not leak anything, since we
-        // created this as a borrowed reference.
-        py_str.release();
-    }
-    else
-    {
-        PyErr_SetString(PyExc_TypeError,"not a string-like object");
-        return NULL;
-    }
+  if ($input == Py_None) {
+    $1 = NULL;
+    $2 = 0;
+  } else if (PythonString::Check($input)) {
+    PythonString py_str(PyRefType::Borrowed, $input);
+    llvm::StringRef str = py_str.GetString();
+    $1 = const_cast<char *>(str.data());
+    $2 = str.size();
+    // In Python 2, if $input is a PyUnicode object then this
+    // will trigger a Unicode -> String conversion, in which
+    // case the `PythonString` will now own the PyString.  Thus
+    // if it goes out of scope, the data will be deleted.  The
+    // only way to avoid this is to leak the Python object in
+    // that case.  Note that if there was no conversion, then
+    // releasing the string will not leak anything, since we
+    // created this as a borrowed reference.
+    py_str.release();
+  } else {
+    PyErr_SetString(PyExc_TypeError, "not a string-like object");
+    return NULL;
+  }
 }
 
 // These two pybuffer macros are copied out of swig/Lib/python/pybuffer.i,
@@ -491,7 +481,9 @@ bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
 
 %define %pybuffer_mutable_binary(TYPEMAP, SIZE)
 %typemap(in) (TYPEMAP, SIZE) (Py_buffer_RAII view) {
-  int res; Py_ssize_t size = 0; void *buf = 0;
+  int res;
+  Py_ssize_t size = 0;
+  void *buf = 0;
   res = PyObject_GetBuffer($input, &view.buffer, PyBUF_WRITABLE);
   if (res < 0) {
     PyErr_Clear();
@@ -499,14 +491,16 @@ bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
   }
   size = view.buffer.len;
   buf = view.buffer.buf;
-  $1 = ($1_ltype) buf;
-  $2 = ($2_ltype) (size/sizeof($*1_type));
+  $1 = ($1_ltype)buf;
+  $2 = ($2_ltype)(size / sizeof($*1_type));
 }
 %enddef
 
 %define %pybuffer_binary(TYPEMAP, SIZE)
 %typemap(in) (TYPEMAP, SIZE) (Py_buffer_RAII view) {
-  int res; Py_ssize_t size = 0; const void *buf = 0;
+  int res;
+  Py_ssize_t size = 0;
+  const void *buf = 0;
   res = PyObject_GetBuffer($input, &view.buffer, PyBUF_CONTIG_RO);
   if (res < 0) {
     PyErr_Clear();
@@ -514,8 +508,8 @@ bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
   }
   size = view.buffer.len;
   buf = view.buffer.buf;
-  $1 = ($1_ltype) buf;
-  $2 = ($2_ltype) (size / sizeof($*1_type));
+  $1 = ($1_ltype)buf;
+  $2 = ($2_ltype)(size / sizeof($*1_type));
 }
 %enddef
 

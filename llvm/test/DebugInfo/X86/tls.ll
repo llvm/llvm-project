@@ -30,44 +30,32 @@
 ; that here instead of raw assembly printing
 
 ; FISSION: .section    .debug_info.dwo,
+; 3 bytes of data in this DW_FORM_exprloc representation of the location of 'tls'
+; FISSION: .byte 3{{ *}}# DW_AT_location
+; DW_OP_GNU_const_index (0xfx == 252) to refer to the debug_addr table
+; FISSION-NEXT: .byte 252
+; an index of zero into the debug_addr table
+; FISSION-NEXT: .byte 0
+
 ; SINGLE: .section     .debug_info,
 ; DARWIN: .section     {{.*}}debug_info,
 
-; SINGLE-64: DW_TAG_variable
 ; 10 bytes of data in this DW_FORM_exprloc representation of the location of 'tls'
 ; SINGLE-64: .byte     10 # DW_AT_location
 ; DW_OP_const8u (0x0e == 14) of address
 ; SINGLE-64-NEXT: .byte        14
 ; SINGLE-64-NEXT: .quad tls@DTPOFF
 
-; DARWIN: DW_TAG_variable
 ; DARWIN: .byte     10 ## DW_AT_location
 ; DW_OP_const8u (0x0e == 14) of address
 ; DARWIN-NEXT: .byte        14
 ; DARWIN-NEXT: .quad _tls
 
-; SINGLE-32: DW_TAG_variable
 ; 6 bytes of data in 32-bit mode
 ; SINGLE-32: .byte     6 # DW_AT_location
 ; DW_OP_const4u (0x0e == 12) of address
 ; SINGLE-32-NEXT: .byte        12
 ; SINGLE-32-NEXT: .long tls@DTPOFF
-
-; FISSION: DW_TAG_template_value_parameter
-; FISSION: .byte 3 # DW_AT_location
-; DW_OP_GNU_addr_index
-; FISSION-NEXT: .byte 251
-; FISSION-NEXT: .byte 2
-; DW_OP_stack_value
-; FISSION-NEXT: .byte 159
-
-; FISSION: DW_TAG_variable
-; 3 bytes of data in this DW_FORM_exprloc representation of the location of 'tls'
-; FISSION: .byte 3{{ *}}# DW_AT_location
-; DW_OP_GNU_const_index (0xfx == 252) to refer to the debug_addr table
-; FISSION-NEXT: .byte 252
-; an index of 1 into the debug_addr table
-; FISSION-NEXT: .byte 1
 
 ; DW_OP_GNU_push_tls_address
 ; GNUOP-NEXT: .byte 224
@@ -78,12 +66,19 @@
 ; FISSION: .byte 2 # DW_AT_location
 ; DW_OP_GNU_addr_index
 ; FISSION-NEXT: .byte 251
-; FISSION-NEXT: .byte 2
+; FISSION-NEXT: .byte 1
+
+; FISSION: DW_TAG_template_value_parameter
+; FISSION: .byte 3 # DW_AT_location
+; DW_OP_GNU_addr_index
+; FISSION-NEXT: .byte 251
+; FISSION-NEXT: .byte 1
+; DW_OP_stack_value
+; FISSION-NEXT: .byte 159
 
 ; check that the expected TLS address description is the first thing in the debug_addr section
 ; FISSION: .section    .debug_addr
 ; FISSION-NEXT: .Laddr_table_base0:
-; FISSION-NEXT: .quad .Lfunc_begin0
 ; FISSION-NEXT: .quad  tls@DTPOFF
 ; FISSION-NEXT: .quad  glbl
 ; FISSION-NOT: .quad  glbl

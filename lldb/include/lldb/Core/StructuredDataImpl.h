@@ -25,9 +25,12 @@ namespace lldb_private {
 
 class StructuredDataImpl {
 public:
-  StructuredDataImpl() : m_plugin_wp(), m_data_sp() {}
+  StructuredDataImpl() {}
 
   StructuredDataImpl(const StructuredDataImpl &rhs) = default;
+
+  StructuredDataImpl(StructuredData::ObjectSP obj)
+      : m_data_sp(std::move(obj)) {}
 
   StructuredDataImpl(const lldb::EventSP &event_sp)
       : m_plugin_wp(

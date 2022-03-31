@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
 
 // constexpr counted_iterator() requires default_initializable<I> = default;
 
@@ -17,11 +16,11 @@
 #include "test_iterators.h"
 
 constexpr bool test() {
-  static_assert( std::default_initializable<std::counted_iterator<cpp17_input_iterator<int*>>>);
-  static_assert(!std::default_initializable<std::counted_iterator<cpp20_input_iterator<int*>>>);
+  static_assert(!std::default_initializable<std::counted_iterator<cpp17_input_iterator<int*>>>);
+  static_assert( std::default_initializable<std::counted_iterator<forward_iterator<int*>>>);
 
-  std::counted_iterator<cpp17_input_iterator<int*>> iter;
-  assert(iter.base() == cpp17_input_iterator<int*>());
+  std::counted_iterator<forward_iterator<int*>> iter;
+  assert(iter.base() == forward_iterator<int*>());
   assert(iter.count() == 0);
 
   return true;

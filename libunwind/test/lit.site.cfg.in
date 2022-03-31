@@ -25,8 +25,8 @@ config.libunwind_shared         = @LIBUNWIND_ENABLE_SHARED@
 config.enable_shared            = @LIBCXX_ENABLE_SHARED@
 config.arm_ehabi                = @LIBUNWIND_USES_ARM_EHABI@
 config.host_triple              = "@LLVM_HOST_TRIPLE@"
-config.sysroot                  = "@LIBUNWIND_SYSROOT@"
-config.gcc_toolchain            = "@LIBUNWIND_GCC_TOOLCHAIN@"
+config.sysroot                  = "@CMAKE_SYSROOT@"
+config.gcc_toolchain            = "@CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN@"
 config.cxx_ext_threads          = @LIBUNWIND_BUILD_EXTERNAL_THREAD_LIBRARY@
 config.x86_cet                  = @LIBUNWIND_ENABLE_CET@
 

@@ -10,7 +10,7 @@ __attribute__((objc_root_class))
 -(instancetype)init __attribute__((unavailable)); // expected-note{{'init' has been explicitly marked unavailable here}}
 @end
 
-void usemyobject() {
+void usemyobject(void) {
   [MyObject new]; // expected-error{{'new' is unavailable}}
 }
 
@@ -19,7 +19,7 @@ void usemyobject() {
 +(instancetype)new;
 @end
 
-void usemyotherobject() {
+void usemyotherobject(void) {
   [MyOtherObject new]; // no error; new is overrideen.
 }
 
@@ -29,7 +29,7 @@ void usemyotherobject() {
 +(instancetype)new: (int)x;
 @end
 
-void usenotgoodoverride() {
+void usenotgoodoverride(void) {
   [NotGoodOverride new]; // no error
 }
 
@@ -42,7 +42,7 @@ void usenotgoodoverride() {
 -(instancetype)init __attribute__((unavailable));
 @end
 
-void usenotmyobject() {
+void usenotmyobject(void) {
   [NotMyObject new]; // no error; this isn't NSObject
 }
 

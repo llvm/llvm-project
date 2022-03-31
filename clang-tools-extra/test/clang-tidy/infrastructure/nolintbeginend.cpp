@@ -59,29 +59,23 @@ class C6 { C6(int i); };
 // NOLINTEND(google-explicit-constructor)
 
 // NOLINTBEGIN(google-explicit-constructor)
-// NOLINTBEGIN(some-other-check)
-class C7 { C7(int i); };
-// NOLINTEND(google-explicit-constructor)
-// NOLINTEND(some-other-check)
-
-// NOLINTBEGIN(google-explicit-constructor)
 // NOLINTBEGIN
-class C8 { C8(int i); };
+class C7 { C7(int i); };
 // NOLINTEND
 // NOLINTEND(google-explicit-constructor)
 
 // NOLINTBEGIN
 // NOLINTBEGIN(google-explicit-constructor)
-class C9 { C9(int i); };
+class C8 { C8(int i); };
 // NOLINTEND(google-explicit-constructor)
 // NOLINTEND
 
 // NOLINTBEGIN(not-closed-bracket-is-treated-as-skip-all
-class C10 { C10(int i); };
+class C9 { C9(int i); };
 // NOLINTEND(not-closed-bracket-is-treated-as-skip-all
 
 // NOLINTBEGIN without-brackets-skip-all, another-check
-class C11 { C11(int i); };
+class C10 { C10(int i); };
 // NOLINTEND without-brackets-skip-all, another-check
 
 #define MACRO(X) class X { X(int i); };
@@ -114,28 +108,28 @@ MACRO_WRAPPED_WITH_NO_LINT
 MACRO_NO_LINT_INSIDE_MACRO
 
 // NOLINTBEGIN(google*)
-class C12 { C12(int i); };
+class C11 { C11(int i); };
 // NOLINTEND(google*)
 
 // NOLINTBEGIN(*explicit-constructor)
-class C15 { C15(int i); };
+class C12 { C12(int i); };
 // NOLINTEND(*explicit-constructor)
 
 // NOLINTBEGIN(*explicit*)
-class C16 { C16(int i); };
+class C13 { C13(int i); };
 // NOLINTEND(*explicit*)
 
 // NOLINTBEGIN(-explicit-constructor)
-class C17 { C17(int x); };
+class C14 { C14(int x); };
 // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: single-argument constructors must be marked explicit
 // NOLINTEND(-explicit-constructor)
 
 // NOLINTBEGIN(google*,-google*)
-class C18 { C18(int x); };
+class C15 { C15(int x); };
 // NOLINTEND(google*,-google*)
 
 // NOLINTBEGIN(*,-google*)
-class C19 { C19(int x); };
+class C16 { C16(int x); };
 // NOLINTEND(*,-google*)
 
 int array1[10];
@@ -154,4 +148,4 @@ int array3[10];
 int array4[10];
 // NOLINTEND(*-avoid-c-arrays)
 
-// CHECK-MESSAGES: Suppressed 27 warnings (27 NOLINT).
+// CHECK-MESSAGES: Suppressed 26 warnings (26 NOLINT).

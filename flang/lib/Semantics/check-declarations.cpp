@@ -34,7 +34,6 @@ using characteristics::Procedure;
 class CheckHelper {
 public:
   explicit CheckHelper(SemanticsContext &c) : context_{c} {}
-  CheckHelper(SemanticsContext &c, const Scope &s) : context_{c}, scope_{&s} {}
 
   SemanticsContext &context() { return context_; }
   void Check() { Check(context_.globalScope()); }
@@ -237,8 +236,13 @@ void CheckHelper::Check(const Symbol &symbol) {
   }
   if (InPure()) {
     if (IsSaved(symbol)) {
-      messages_.Say(
-          "A pure subprogram may not have a variable with the SAVE attribute"_err_en_US);
+      if (IsInitialized(symbol)) {
+        messages_.Say(
+            "A pure subprogram may not initialize a variable"_err_en_US);
+      } else {
+        messages_.Say(
+            "A pure subprogram may not have a variable with the SAVE attribute"_err_en_US);
+      }
     }
     if (symbol.attrs().test(Attr::VOLATILE)) {
       messages_.Say(
@@ -584,7 +588,7 @@ void CheckHelper::CheckObjectEntity(
       messages_.Say("A function result must not be initialized"_err_en_US);
     } else if (IsInBlankCommon(symbol)) {
       messages_.Say(
-          "A variable in blank COMMON should not be initialized"_en_US);
+          "A variable in blank COMMON should not be initialized"_port_en_US);
     }
   }
   if (symbol.owner().kind() == Scope::Kind::BlockData) {
@@ -1413,10 +1417,10 @@ void CheckHelper::WarnMissingFinal(const Symbol &symbol) {
         !derivedDetails->GetFinalForRank(rank)) {
       if (auto *msg{derivedSym == initialDerivedSym
                   ? messages_.Say(symbol.name(),
-                        "'%s' of derived type '%s' does not have a FINAL subroutine for its rank (%d)"_en_US,
+                        "'%s' of derived type '%s' does not have a FINAL subroutine for its rank (%d)"_warn_en_US,
                         symbol.name(), derivedSym->name(), rank)
                   : messages_.Say(symbol.name(),
-                        "'%s' of derived type '%s' extended from '%s' does not have a FINAL subroutine for its rank (%d)"_en_US,
+                        "'%s' of derived type '%s' extended from '%s' does not have a FINAL subroutine for its rank (%d)"_warn_en_US,
                         symbol.name(), initialDerivedSym->name(),
                         derivedSym->name(), rank)}) {
         msg->Attach(derivedSym->name(),
@@ -2131,6 +2135,21 @@ void SubprogramMatchHelper::Check(
   const Procedure *proc2{checkHelper.Characterize(symbol2)};
   if (!proc1 || !proc2) {
     return;
+  }
+  if (proc1->attrs.test(Procedure::Attr::Pure) !=
+      proc2->attrs.test(Procedure::Attr::Pure)) {
+    Say(symbol1, symbol2,
+        "Module subprogram '%s' and its corresponding interface body are not both PURE"_err_en_US);
+  }
+  if (proc1->attrs.test(Procedure::Attr::Elemental) !=
+      proc2->attrs.test(Procedure::Attr::Elemental)) {
+    Say(symbol1, symbol2,
+        "Module subprogram '%s' and its corresponding interface body are not both ELEMENTAL"_err_en_US);
+  }
+  if (proc1->attrs.test(Procedure::Attr::BindC) !=
+      proc2->attrs.test(Procedure::Attr::BindC)) {
+    Say(symbol1, symbol2,
+        "Module subprogram '%s' and its corresponding interface body are not both BIND(C)"_err_en_US);
   }
   if (proc1->functionResult && proc2->functionResult &&
       *proc1->functionResult != *proc2->functionResult) {

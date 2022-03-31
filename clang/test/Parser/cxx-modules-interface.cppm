@@ -16,13 +16,14 @@ export {
 export int c;
 
 namespace N {
-  export void f() {}
-}
+export void f() {}
+} // namespace N
 
-export struct T {} t;
+export struct T {
+} t;
 
 struct S {
-  export int n; // expected-error {{expected member name or ';'}}
+  export int n;        // expected-error {{expected member name or ';'}}
   export static int n; // expected-error {{expected member name or ';'}}
 };
 void f() {

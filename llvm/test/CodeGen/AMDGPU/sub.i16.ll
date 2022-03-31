@@ -89,7 +89,7 @@ define amdgpu_kernel void @v_test_sub_i16_zext_to_i32(i32 addrspace(1)* %out, i1
 ; VI: flat_load_ushort [[B:v[0-9]+]]
 ; VI: v_mov_b32_e32 v[[VZERO:[0-9]+]], 0
 ; VI-DAG: v_sub_u16_e32 v[[ADD:[0-9]+]], [[A]], [[B]]
-; VI: buffer_store_dwordx2 v{{\[}}[[ADD]]:[[VZERO]]{{\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0{{$}}
+; VI: buffer_store_dwordx2 v[[[ADD]]:[[VZERO]]], off, {{s\[[0-9]+:[0-9]+\]}}, 0{{$}}
 define amdgpu_kernel void @v_test_sub_i16_zext_to_i64(i64 addrspace(1)* %out, i16 addrspace(1)* %in0, i16 addrspace(1)* %in1) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.out = getelementptr inbounds i64, i64 addrspace(1)* %out, i32 %tid
@@ -130,7 +130,7 @@ define amdgpu_kernel void @v_test_sub_i16_sext_to_i32(i32 addrspace(1)* %out, i1
 ; VI: v_sub_u16_e32 [[ADD:v[0-9]+]], [[A]], [[B]]
 ; VI-NEXT: v_bfe_i32 v[[LO:[0-9]+]], [[ADD]], 0, 16
 ; VI:      v_ashrrev_i32_e32 v[[HI:[0-9]+]], 31, v[[LO]]
-; VI-NEXT: buffer_store_dwordx2 v{{\[}}[[LO]]:[[HI]]{{\]}}
+; VI-NEXT: buffer_store_dwordx2 v[[[LO]]:[[HI]]]
 define amdgpu_kernel void @v_test_sub_i16_sext_to_i64(i64 addrspace(1)* %out, i16 addrspace(1)* %in0, i16 addrspace(1)* %in1) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.out = getelementptr inbounds i64, i64 addrspace(1)* %out, i32 %tid

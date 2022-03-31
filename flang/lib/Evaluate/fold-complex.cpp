@@ -30,7 +30,8 @@ Expr<Type<TypeCategory::Complex, KIND>> FoldIntrinsicFunction(
           context, std::move(funcRef), *callable);
     } else {
       context.messages().Say(
-          "%s(complex(kind=%d)) cannot be folded on host"_en_US, name, KIND);
+          "%s(complex(kind=%d)) cannot be folded on host"_warn_en_US, name,
+          KIND);
     }
   } else if (name == "conjg") {
     return FoldElementalIntrinsic<T, T>(
@@ -41,6 +42,15 @@ Expr<Type<TypeCategory::Complex, KIND>> FoldIntrinsicFunction(
         // CMPLX(X [, KIND]) with complex X
         return Fold(context, ConvertToType<T>(std::move(*x)));
       } else {
+        if (args.size() >= 2 && args[1].has_value()) {
+          // Do not fold CMPLX with an Y argument that may be absent at runtime
+          // into a complex constructor so that lowering can deal with the
+          // optional aspect (there is no optional aspect with the complex
+          // constructor).
+          if (MayBePassedAsAbsentOptional(*args[1]->UnwrapExpr(), context)) {
+            return Expr<T>{std::move(funcRef)};
+          }
+        }
         // CMPLX(X [, Y [, KIND]]) with non-complex X
         Expr<SomeType> re{std::move(*args[0].value().UnwrapExpr())};
         Expr<SomeType> im{args.size() >= 2 && args[1].has_value()
@@ -78,6 +88,9 @@ Expr<Type<TypeCategory::Complex, KIND>> FoldOperation(
   return Expr<Result>{std::move(x)};
 }
 
+#ifdef _MSC_VER // disable bogus warning about missing definitions
+#pragma warning(disable : 4661)
+#endif
 FOR_EACH_COMPLEX_KIND(template class ExpressionBase, )
 template class ExpressionBase<SomeComplex>;
 } // namespace Fortran::evaluate

@@ -62,7 +62,7 @@ class FunctionStartsTestCase(TestBase):
         attach_info.SetProcessID(popen.pid)
         attach_info.SetIgnoreExisting(False)
         process = target.Attach(attach_info, error)
-        self.assertTrue(error.Success(), "Didn't attach successfully to %d: %s"%(popen.pid, error.GetCString()))
+        self.assertSuccess(error, "Didn't attach successfully to %d"%(popen.pid))
 
         bkpt = target.BreakpointCreateByName("dont_strip_me", exe)
         self.assertTrue(bkpt.GetNumLocations() > 0, "Didn't set the dont_strip_me bkpt.")

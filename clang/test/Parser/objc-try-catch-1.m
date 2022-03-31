@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.10 -fsyntax-only -verify -fobjc-exceptions %s
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.10 -fsyntax-only -verify -fobjc-exceptions -x objective-c++ %s
-void * proc();
+void * proc(void);
 
 @interface NSConstantString
 @end
@@ -11,7 +11,7 @@ void * proc();
 @interface Frob1
 @end
 
-void * foo()
+void * foo(void)
 {
   @try {
     return proc();
@@ -44,20 +44,20 @@ void * foo()
 }
 
 
-void bar()
+void bar(void)
 {
   @try {}// expected-error {{@try statement without a @catch and @finally clause}}
   @"s"; //  expected-warning {{result unused}}
 }
 
-void baz()
+void baz(void)
 {
   @try {}// expected-error {{@try statement without a @catch and @finally clause}}
   @try {}
   @finally {}
 }
 
-void noTwoTokenLookAheadRequiresABitOfFancyFootworkInTheParser() {
+void noTwoTokenLookAheadRequiresABitOfFancyFootworkInTheParser(void) {
     @try {
         // Do something
     } @catch (...) {}

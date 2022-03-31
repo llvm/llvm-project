@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 %s -verify -fheinous-gnu-extensions
 
-void foo() {
+void foo(void) {
   int a;
   // PR3788
   asm("nop" : : "m"((int)(a))); // expected-warning {{cast in an inline asm context requiring an lvalue}}

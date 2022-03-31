@@ -15,21 +15,18 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Attributes.h"
@@ -74,7 +71,6 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
-#include <cstring>
 #include <utility>
 #include <vector>
 
@@ -108,6 +104,19 @@ static Type *getPromotedType(Type *Ty) {
   return Ty;
 }
 
+/// Recognize a memcpy/memmove from a trivially otherwise unused alloca.
+/// TODO: This should probably be integrated with visitAllocSites, but that
+/// requires a deeper change to allow either unread or unwritten objects.
+static bool hasUndefSource(AnyMemTransferInst *MI) {
+  auto *Src = MI->getRawSource();
+  while (isa<GetElementPtrInst>(Src) || isa<BitCastInst>(Src)) {
+    if (!Src->hasOneUse())
+      return false;
+    Src = cast<Instruction>(Src)->getOperand(0);
+  }
+  return isa<AllocaInst>(Src) && Src->hasOneUse();
+}
+
 Instruction *InstCombinerImpl::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
   Align DstAlign = getKnownAlignment(MI->getRawDest(), DL, MI, &AC, &DT);
   MaybeAlign CopyDstAlign = MI->getDestAlign();
@@ -127,6 +136,14 @@ Instruction *InstCombinerImpl::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
   // that the store must be storing the constant value (else the memory
   // wouldn't be constant), and this must be a noop.
   if (AA->pointsToConstantMemory(MI->getDest())) {
+    // Set the size of the copy to 0, it will be deleted on the next iteration.
+    MI->setLength(Constant::getNullValue(MI->getLength()->getType()));
+    return MI;
+  }
+
+  // If the source is provably undef, the memcpy/memmove doesn't do anything
+  // (unless the transfer is volatile).
+  if (hasUndefSource(MI) && !MI->isVolatile()) {
     // Set the size of the copy to 0, it will be deleted on the next iteration.
     MI->setLength(Constant::getNullValue(MI->getLength()->getType()));
     return MI;
@@ -352,9 +369,27 @@ Instruction *InstCombinerImpl::simplifyMaskedStore(IntrinsicInst &II) {
 // * Dereferenceable address & few lanes -> scalarize speculative load/selects
 // * Adjacent vector addresses -> masked.load
 // * Narrow width by halfs excluding zero/undef lanes
-// * Vector splat address w/known mask -> scalar load
 // * Vector incrementing address -> vector masked load
 Instruction *InstCombinerImpl::simplifyMaskedGather(IntrinsicInst &II) {
+  auto *ConstMask = dyn_cast<Constant>(II.getArgOperand(2));
+  if (!ConstMask)
+    return nullptr;
+
+  // Vector splat address w/known mask -> scalar load
+  // Fold the gather to load the source vector first lane
+  // because it is reloading the same value each time
+  if (ConstMask->isAllOnesValue())
+    if (auto *SplatPtr = getSplatValue(II.getArgOperand(0))) {
+      auto *VecTy = cast<VectorType>(II.getType());
+      const Align Alignment =
+          cast<ConstantInt>(II.getArgOperand(1))->getAlignValue();
+      LoadInst *L = Builder.CreateAlignedLoad(VecTy->getElementType(), SplatPtr,
+                                              Alignment, "load.scalar");
+      Value *Shuf =
+          Builder.CreateVectorSplat(VecTy->getElementCount(), L, "broadcast");
+      return replaceInstUsesWith(II, cast<Instruction>(Shuf));
+    }
+
   return nullptr;
 }
 
@@ -362,7 +397,6 @@ Instruction *InstCombinerImpl::simplifyMaskedGather(IntrinsicInst &II) {
 // * Single constant active lane -> store
 // * Adjacent vector addresses -> masked.store
 // * Narrow store width by halfs excluding zero/undef lanes
-// * Vector splat address w/known mask -> scalar store
 // * Vector incrementing address -> vector masked store
 Instruction *InstCombinerImpl::simplifyMaskedScatter(IntrinsicInst &II) {
   auto *ConstMask = dyn_cast<Constant>(II.getArgOperand(3));
@@ -373,6 +407,34 @@ Instruction *InstCombinerImpl::simplifyMaskedScatter(IntrinsicInst &II) {
   if (ConstMask->isNullValue())
     return eraseInstFromFunction(II);
 
+  // Vector splat address -> scalar store
+  if (auto *SplatPtr = getSplatValue(II.getArgOperand(1))) {
+    // scatter(splat(value), splat(ptr), non-zero-mask) -> store value, ptr
+    if (auto *SplatValue = getSplatValue(II.getArgOperand(0))) {
+      Align Alignment = cast<ConstantInt>(II.getArgOperand(2))->getAlignValue();
+      StoreInst *S =
+          new StoreInst(SplatValue, SplatPtr, /*IsVolatile=*/false, Alignment);
+      S->copyMetadata(II);
+      return S;
+    }
+    // scatter(vector, splat(ptr), splat(true)) -> store extract(vector,
+    // lastlane), ptr
+    if (ConstMask->isAllOnesValue()) {
+      Align Alignment = cast<ConstantInt>(II.getArgOperand(2))->getAlignValue();
+      VectorType *WideLoadTy = cast<VectorType>(II.getArgOperand(1)->getType());
+      ElementCount VF = WideLoadTy->getElementCount();
+      Constant *EC =
+          ConstantInt::get(Builder.getInt32Ty(), VF.getKnownMinValue());
+      Value *RunTimeVF = VF.isScalable() ? Builder.CreateVScale(EC) : EC;
+      Value *LastLane = Builder.CreateSub(RunTimeVF, Builder.getInt32(1));
+      Value *Extract =
+          Builder.CreateExtractElement(II.getArgOperand(0), LastLane);
+      StoreInst *S =
+          new StoreInst(Extract, SplatPtr, /*IsVolatile=*/false, Alignment);
+      S->copyMetadata(II);
+      return S;
+    }
+  }
   if (isa<ScalableVectorType>(ConstMask->getType()))
     return nullptr;
 
@@ -449,7 +511,7 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
     // ctlz/cttz i1 Op0 --> not Op0
     if (match(Op1, m_Zero()))
       return BinaryOperator::CreateNot(Op0);
-    // If zero is undef, then the input can be assumed to be "true", so the
+    // If zero is poison, then the input can be assumed to be "true", so the
     // instruction simplifies to "false".
     assert(match(Op1, m_One()) && "Expected ctlz/cttz operand to be 0 or 1");
     return IC.replaceInstUsesWith(II, ConstantInt::getNullValue(II.getType()));
@@ -474,7 +536,7 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
     }
 
     // Zext doesn't change the number of trailing zeros, so narrow:
-    // cttz(zext(x)) -> zext(cttz(x)) if the 'ZeroIsUndef' parameter is 'true'.
+    // cttz(zext(x)) -> zext(cttz(x)) if the 'ZeroIsPoison' parameter is 'true'.
     if (match(Op0, m_OneUse(m_ZExt(m_Value(X)))) && match(Op1, m_One())) {
       auto *Cttz = IC.Builder.CreateBinaryIntrinsic(Intrinsic::cttz, X,
                                                     IC.Builder.getTrue());
@@ -511,7 +573,7 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
   }
 
   // If the input to cttz/ctlz is known to be non-zero,
-  // then change the 'ZeroIsUndef' parameter to 'true'
+  // then change the 'ZeroIsPoison' parameter to 'true'
   // because we know the zero behavior can't affect the result.
   if (!Known.One.isZero() ||
       isKnownNonZero(Op0, IC.getDataLayout(), 0, &IC.getAssumptionCache(), &II,
@@ -750,6 +812,10 @@ static Optional<bool> getKnownSign(Value *Op, Instruction *CxtI,
   if (Known.isNegative())
     return true;
 
+  Value *X, *Y;
+  if (match(Op, m_NSWSub(m_Value(X), m_Value(Y))))
+    return isImpliedByDomCondition(ICmpInst::ICMP_SLT, X, Y, CxtI, DL);
+
   return isImpliedByDomCondition(
       ICmpInst::ICMP_SLT, Op, Constant::getNullValue(Op->getType()), CxtI, DL);
 }
@@ -792,6 +858,67 @@ static Instruction *moveAddAfterMinMax(IntrinsicInst *II,
   return IsSigned ? BinaryOperator::CreateNSWAdd(NewMinMax, Add->getOperand(1))
                   : BinaryOperator::CreateNUWAdd(NewMinMax, Add->getOperand(1));
 }
+/// Match a sadd_sat or ssub_sat which is using min/max to clamp the value.
+Instruction *InstCombinerImpl::matchSAddSubSat(IntrinsicInst &MinMax1) {
+  Type *Ty = MinMax1.getType();
+
+  // We are looking for a tree of:
+  // max(INT_MIN, min(INT_MAX, add(sext(A), sext(B))))
+  // Where the min and max could be reversed
+  Instruction *MinMax2;
+  BinaryOperator *AddSub;
+  const APInt *MinValue, *MaxValue;
+  if (match(&MinMax1, m_SMin(m_Instruction(MinMax2), m_APInt(MaxValue)))) {
+    if (!match(MinMax2, m_SMax(m_BinOp(AddSub), m_APInt(MinValue))))
+      return nullptr;
+  } else if (match(&MinMax1,
+                   m_SMax(m_Instruction(MinMax2), m_APInt(MinValue)))) {
+    if (!match(MinMax2, m_SMin(m_BinOp(AddSub), m_APInt(MaxValue))))
+      return nullptr;
+  } else
+    return nullptr;
+
+  // Check that the constants clamp a saturate, and that the new type would be
+  // sensible to convert to.
+  if (!(*MaxValue + 1).isPowerOf2() || -*MinValue != *MaxValue + 1)
+    return nullptr;
+  // In what bitwidth can this be treated as saturating arithmetics?
+  unsigned NewBitWidth = (*MaxValue + 1).logBase2() + 1;
+  // FIXME: This isn't quite right for vectors, but using the scalar type is a
+  // good first approximation for what should be done there.
+  if (!shouldChangeType(Ty->getScalarType()->getIntegerBitWidth(), NewBitWidth))
+    return nullptr;
+
+  // Also make sure that the inner min/max and the add/sub have one use.
+  if (!MinMax2->hasOneUse() || !AddSub->hasOneUse())
+    return nullptr;
+
+  // Create the new type (which can be a vector type)
+  Type *NewTy = Ty->getWithNewBitWidth(NewBitWidth);
+
+  Intrinsic::ID IntrinsicID;
+  if (AddSub->getOpcode() == Instruction::Add)
+    IntrinsicID = Intrinsic::sadd_sat;
+  else if (AddSub->getOpcode() == Instruction::Sub)
+    IntrinsicID = Intrinsic::ssub_sat;
+  else
+    return nullptr;
+
+  // The two operands of the add/sub must be nsw-truncatable to the NewTy. This
+  // is usually achieved via a sext from a smaller type.
+  if (ComputeMaxSignificantBits(AddSub->getOperand(0), 0, AddSub) >
+          NewBitWidth ||
+      ComputeMaxSignificantBits(AddSub->getOperand(1), 0, AddSub) > NewBitWidth)
+    return nullptr;
+
+  // Finally create and return the sat intrinsic, truncated to the new type
+  Function *F = Intrinsic::getDeclaration(MinMax1.getModule(), IntrinsicID, NewTy);
+  Value *AT = Builder.CreateTrunc(AddSub->getOperand(0), NewTy);
+  Value *BT = Builder.CreateTrunc(AddSub->getOperand(1), NewTy);
+  Value *Sat = Builder.CreateCall(F, {AT, BT});
+  return CastInst::Create(Instruction::SExt, Sat, Ty);
+}
+
 
 /// If we have a clamp pattern like max (min X, 42), 41 -- where the output
 /// can only be one of two possible constant values -- turn that into a select
@@ -832,6 +959,59 @@ static Instruction *foldClampRangeOfTwo(IntrinsicInst *II,
   // min (max X, 42), 43 --> X < 43 ? 42 : 43
   Value *Cmp = Builder.CreateICmp(Pred, X, I1);
   return SelectInst::Create(Cmp, ConstantInt::get(II->getType(), *C0), I1);
+}
+
+/// If this min/max has a constant operand and an operand that is a matching
+/// min/max with a constant operand, constant-fold the 2 constant operands.
+static Instruction *reassociateMinMaxWithConstants(IntrinsicInst *II) {
+  Intrinsic::ID MinMaxID = II->getIntrinsicID();
+  auto *LHS = dyn_cast<IntrinsicInst>(II->getArgOperand(0));
+  if (!LHS || LHS->getIntrinsicID() != MinMaxID)
+    return nullptr;
+
+  Constant *C0, *C1;
+  if (!match(LHS->getArgOperand(1), m_ImmConstant(C0)) ||
+      !match(II->getArgOperand(1), m_ImmConstant(C1)))
+    return nullptr;
+
+  // max (max X, C0), C1 --> max X, (max C0, C1) --> max X, NewC
+  ICmpInst::Predicate Pred = MinMaxIntrinsic::getPredicate(MinMaxID);
+  Constant *CondC = ConstantExpr::getICmp(Pred, C0, C1);
+  Constant *NewC = ConstantExpr::getSelect(CondC, C0, C1);
+
+  Module *Mod = II->getModule();
+  Function *MinMax = Intrinsic::getDeclaration(Mod, MinMaxID, II->getType());
+  return CallInst::Create(MinMax, {LHS->getArgOperand(0), NewC});
+}
+
+/// If this min/max has a matching min/max operand with a constant, try to push
+/// the constant operand into this instruction. This can enable more folds.
+static Instruction *
+reassociateMinMaxWithConstantInOperand(IntrinsicInst *II,
+                                       InstCombiner::BuilderTy &Builder) {
+  // Match and capture a min/max operand candidate.
+  Value *X, *Y;
+  Constant *C;
+  Instruction *Inner;
+  if (!match(II, m_c_MaxOrMin(m_OneUse(m_CombineAnd(
+                                  m_Instruction(Inner),
+                                  m_MaxOrMin(m_Value(X), m_ImmConstant(C)))),
+                              m_Value(Y))))
+    return nullptr;
+
+  // The inner op must match. Check for constants to avoid infinite loops.
+  Intrinsic::ID MinMaxID = II->getIntrinsicID();
+  auto *InnerMM = dyn_cast<IntrinsicInst>(Inner);
+  if (!InnerMM || InnerMM->getIntrinsicID() != MinMaxID ||
+      match(X, m_ImmConstant()) || match(Y, m_ImmConstant()))
+    return nullptr;
+
+  // max (max X, C), Y --> max (max X, Y), C
+  Function *MinMax =
+      Intrinsic::getDeclaration(II->getModule(), MinMaxID, II->getType());
+  Value *NewInner = Builder.CreateBinaryIntrinsic(MinMaxID, X, Y);
+  NewInner->takeName(Inner);
+  return CallInst::Create(MinMax, {NewInner, C});
 }
 
 /// Reduce a sequence of min/max intrinsics with a common operand.
@@ -904,8 +1084,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   if (isFreeCall(&CI, &TLI))
     return visitFree(CI);
 
-  // If the caller function is nounwind, mark the call as nounwind, even if the
-  // callee isn't.
+  // If the caller function (i.e. us, the function that contains this CallInst)
+  // is nounwind, mark the call as nounwind, even if the callee isn't.
   if (CI.getFunction()->doesNotThrow() && !CI.doesNotThrow()) {
     CI.setDoesNotThrow();
     return &CI;
@@ -1179,6 +1359,12 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         if (Instruction *R = FoldOpIntoSelect(*II, Sel))
           return R;
 
+    if (Instruction *NewMinMax = reassociateMinMaxWithConstants(II))
+      return NewMinMax;
+
+    if (Instruction *R = reassociateMinMaxWithConstantInOperand(II, Builder))
+      return R;
+
     if (Instruction *NewMinMax = factorizeMinMaxTree(II))
        return NewMinMax;
 
@@ -1188,10 +1374,43 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Value *IIOperand = II->getArgOperand(0);
     Value *X = nullptr;
 
+    // Try to canonicalize bswap-of-logical-shift-by-8-bit-multiple as
+    // inverse-shift-of-bswap:
+    // bswap (shl X, C) --> lshr (bswap X), C
+    // bswap (lshr X, C) --> shl (bswap X), C
+    // TODO: Use knownbits to allow variable shift and non-splat vector match.
+    BinaryOperator *BO;
+    if (match(IIOperand, m_OneUse(m_BinOp(BO)))) {
+      const APInt *C;
+      if (match(BO, m_LogicalShift(m_Value(X), m_APIntAllowUndef(C))) &&
+          (*C & 7) == 0) {
+        Value *NewSwap = Builder.CreateUnaryIntrinsic(Intrinsic::bswap, X);
+        BinaryOperator::BinaryOps InverseShift =
+            BO->getOpcode() == Instruction::Shl ? Instruction::LShr
+                                                : Instruction::Shl;
+        return BinaryOperator::Create(InverseShift, NewSwap, BO->getOperand(1));
+      }
+    }
+
+    KnownBits Known = computeKnownBits(IIOperand, 0, II);
+    uint64_t LZ = alignDown(Known.countMinLeadingZeros(), 8);
+    uint64_t TZ = alignDown(Known.countMinTrailingZeros(), 8);
+    unsigned BW = Known.getBitWidth();
+
+    // bswap(x) -> shift(x) if x has exactly one "active byte"
+    if (BW - LZ - TZ == 8) {
+      assert(LZ != TZ && "active byte cannot be in the middle");
+      if (LZ > TZ)  // -> shl(x) if the "active byte" is in the low part of x
+        return BinaryOperator::CreateNUWShl(
+            IIOperand, ConstantInt::get(IIOperand->getType(), LZ - TZ));
+      // -> lshr(x) if the "active byte" is in the high part of x
+      return BinaryOperator::CreateExactLShr(
+            IIOperand, ConstantInt::get(IIOperand->getType(), TZ - LZ));
+    }
+
     // bswap(trunc(bswap(x))) -> trunc(lshr(x, c))
     if (match(IIOperand, m_Trunc(m_BSwap(m_Value(X))))) {
-      unsigned C = X->getType()->getScalarSizeInBits() -
-                   IIOperand->getType()->getScalarSizeInBits();
+      unsigned C = X->getType()->getScalarSizeInBits() - BW;
       Value *CV = ConstantInt::get(X->getType(), C);
       Value *V = Builder.CreateLShr(X, CV);
       return new TruncInst(V, IIOperand->getType());
@@ -2408,10 +2627,28 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
 // Fence instruction simplification
 Instruction *InstCombinerImpl::visitFenceInst(FenceInst &FI) {
-  // Remove identical consecutive fences.
-  Instruction *Next = FI.getNextNonDebugInstruction();
-  if (auto *NFI = dyn_cast<FenceInst>(Next))
-    if (FI.isIdenticalTo(NFI))
+  auto *NFI = dyn_cast<FenceInst>(FI.getNextNonDebugInstruction());
+  // This check is solely here to handle arbitrary target-dependent syncscopes.
+  // TODO: Can remove if does not matter in practice.
+  if (NFI && FI.isIdenticalTo(NFI))
+    return eraseInstFromFunction(FI);
+
+  // Returns true if FI1 is identical or stronger fence than FI2.
+  auto isIdenticalOrStrongerFence = [](FenceInst *FI1, FenceInst *FI2) {
+    auto FI1SyncScope = FI1->getSyncScopeID();
+    // Consider same scope, where scope is global or single-thread.
+    if (FI1SyncScope != FI2->getSyncScopeID() ||
+        (FI1SyncScope != SyncScope::System &&
+         FI1SyncScope != SyncScope::SingleThread))
+      return false;
+
+    return isAtLeastOrStrongerThan(FI1->getOrdering(), FI2->getOrdering());
+  };
+  if (NFI && isIdenticalOrStrongerFence(NFI, &FI))
+    return eraseInstFromFunction(FI);
+
+  if (auto *PFI = dyn_cast_or_null<FenceInst>(FI.getPrevNonDebugInstruction()))
+    if (isIdenticalOrStrongerFence(PFI, &FI))
       return eraseInstFromFunction(FI);
   return nullptr;
 }
@@ -2460,7 +2697,7 @@ static bool isSafeToEliminateVarargsCast(const CallBase &Call,
   if (!Call.isByValArgument(ix))
     return false;
 
-  Type *SrcElemTy = SrcTy->getElementType();
+  Type *SrcElemTy = SrcTy->getNonOpaquePointerElementType();
   Type *DstElemTy = Call.getParamByValType(ix);
   if (!SrcElemTy->isSized() || !DstElemTy->isSized())
     return false;
@@ -2471,6 +2708,12 @@ static bool isSafeToEliminateVarargsCast(const CallBase &Call,
 
 Instruction *InstCombinerImpl::tryOptimizeCall(CallInst *CI) {
   if (!CI->getCalledFunction()) return nullptr;
+
+  // Skip optimizing notail and musttail calls so
+  // LibCallSimplifier::optimizeCall doesn't have to preserve those invariants.
+  // LibCallSimplifier::optimizeCall should try to preseve tail calls though.
+  if (CI->isMustTailCall() || CI->isNoTailCall())
+    return nullptr;
 
   auto InstCombineRAUW = [this](Instruction *From, Value *With) {
     replaceInstUsesWith(*From, With);
@@ -2565,57 +2808,36 @@ static IntrinsicInst *findInitTrampoline(Value *Callee) {
 }
 
 void InstCombinerImpl::annotateAnyAllocSite(CallBase &Call, const TargetLibraryInfo *TLI) {
-  unsigned NumArgs = Call.arg_size();
-  ConstantInt *Op0C = dyn_cast<ConstantInt>(Call.getOperand(0));
-  ConstantInt *Op1C =
-      (NumArgs == 1) ? nullptr : dyn_cast<ConstantInt>(Call.getOperand(1));
-  // Bail out if the allocation size is zero (or an invalid alignment of zero
-  // with aligned_alloc).
-  if ((Op0C && Op0C->isNullValue()) || (Op1C && Op1C->isNullValue()))
-    return;
+  // Note: We only handle cases which can't be driven from generic attributes
+  // here.  So, for example, nonnull and noalias (which are common properties
+  // of some allocation functions) are expected to be handled via annotation
+  // of the respective allocator declaration with generic attributes.
 
-  if (isMallocLikeFn(&Call, TLI) && Op0C) {
-    if (isOpNewLikeFn(&Call, TLI))
+  uint64_t Size;
+  ObjectSizeOpts Opts;
+  if (getObjectSize(&Call, Size, DL, TLI, Opts) && Size > 0) {
+    // TODO: We really should just emit deref_or_null here and then
+    // let the generic inference code combine that with nonnull.
+    if (Call.hasRetAttr(Attribute::NonNull))
       Call.addRetAttr(Attribute::getWithDereferenceableBytes(
-          Call.getContext(), Op0C->getZExtValue()));
+          Call.getContext(), Size));
     else
       Call.addRetAttr(Attribute::getWithDereferenceableOrNullBytes(
-          Call.getContext(), Op0C->getZExtValue()));
-  } else if (isAlignedAllocLikeFn(&Call, TLI)) {
-    if (Op1C)
-      Call.addRetAttr(Attribute::getWithDereferenceableOrNullBytes(
-          Call.getContext(), Op1C->getZExtValue()));
-    // Add alignment attribute if alignment is a power of two constant.
-    if (Op0C && Op0C->getValue().ult(llvm::Value::MaximumAlignment) &&
-        isKnownNonZero(Call.getOperand(1), DL, 0, &AC, &Call, &DT)) {
-      uint64_t AlignmentVal = Op0C->getZExtValue();
-      if (llvm::isPowerOf2_64(AlignmentVal)) {
-        Call.removeRetAttr(Attribute::Alignment);
-        Call.addRetAttr(Attribute::getWithAlignment(Call.getContext(),
-                                                    Align(AlignmentVal)));
-      }
-    }
-  } else if (isReallocLikeFn(&Call, TLI) && Op1C) {
-    Call.addRetAttr(Attribute::getWithDereferenceableOrNullBytes(
-        Call.getContext(), Op1C->getZExtValue()));
-  } else if (isCallocLikeFn(&Call, TLI) && Op0C && Op1C) {
-    bool Overflow;
-    const APInt &N = Op0C->getValue();
-    APInt Size = N.umul_ov(Op1C->getValue(), Overflow);
-    if (!Overflow)
-      Call.addRetAttr(Attribute::getWithDereferenceableOrNullBytes(
-          Call.getContext(), Size.getZExtValue()));
-  } else if (isStrdupLikeFn(&Call, TLI)) {
-    uint64_t Len = GetStringLength(Call.getOperand(0));
-    if (Len) {
-      // strdup
-      if (NumArgs == 1)
-        Call.addRetAttr(Attribute::getWithDereferenceableOrNullBytes(
-            Call.getContext(), Len));
-      // strndup
-      else if (NumArgs == 2 && Op1C)
-        Call.addRetAttr(Attribute::getWithDereferenceableOrNullBytes(
-            Call.getContext(), std::min(Len, Op1C->getZExtValue() + 1)));
+          Call.getContext(), Size));
+  }
+
+  // Add alignment attribute if alignment is a power of two constant.
+  Value *Alignment = getAllocAlignment(&Call, TLI);
+  if (!Alignment)
+    return;
+
+  ConstantInt *AlignOpC = dyn_cast<ConstantInt>(Alignment);
+  if (AlignOpC && AlignOpC->getValue().ult(llvm::Value::MaximumAlignment)) {
+    uint64_t AlignmentVal = AlignOpC->getZExtValue();
+    if (llvm::isPowerOf2_64(AlignmentVal)) {
+      Call.removeRetAttr(Attribute::Alignment);
+      Call.addRetAttr(Attribute::getWithAlignment(Call.getContext(),
+                                                  Align(AlignmentVal)));
     }
   }
 }
@@ -2655,10 +2877,12 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
   // If the callee is a pointer to a function, attempt to move any casts to the
   // arguments of the call/callbr/invoke.
   Value *Callee = Call.getCalledOperand();
-  if (!isa<Function>(Callee) && transformConstExprCastCall(Call))
+  Function *CalleeF = dyn_cast<Function>(Callee);
+  if ((!CalleeF || CalleeF->getFunctionType() != Call.getFunctionType()) &&
+      transformConstExprCastCall(Call))
     return nullptr;
 
-  if (Function *CalleeF = dyn_cast<Function>(Callee)) {
+  if (CalleeF) {
     // Remove the convergent attr on calls when the callee is not convergent.
     if (Call.isConvergent() && !CalleeF->isConvergent() &&
         !CalleeF->isIntrinsic()) {
@@ -2738,9 +2962,9 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
         PointerType *NewTy = cast<PointerType>(CI->getOperand(0)->getType());
         if (!NewTy->isOpaque() && Call.isByValArgument(ix)) {
           Call.removeParamAttr(ix, Attribute::ByVal);
-          Call.addParamAttr(
-              ix, Attribute::getWithByValType(
-                      Call.getContext(), NewTy->getElementType()));
+          Call.addParamAttr(ix, Attribute::getWithByValType(
+                                    Call.getContext(),
+                                    NewTy->getNonOpaquePointerElementType()));
         }
         Changed = true;
       }
@@ -2776,7 +3000,8 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
             Call, Builder.CreateBitOrPointerCast(ReturnedArg, CallTy));
     }
 
-  if (isAllocLikeFn(&Call, &TLI))
+  if (isAllocationFn(&Call, &TLI) &&
+      isAllocRemovable(&cast<CallBase>(Call), &TLI))
     return visitAllocSite(Call);
 
   // Handle intrinsics which can be used in both call and invoke context.
@@ -2928,7 +3153,7 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
     }
 
     if (!CallerPAL.isEmpty() && !Caller->use_empty()) {
-      AttrBuilder RAttrs(CallerPAL, AttributeList::ReturnIndex);
+      AttrBuilder RAttrs(FT->getContext(), CallerPAL.getRetAttrs());
       if (RAttrs.overlaps(AttributeFuncs::typeIncompatible(NewRetTy)))
         return false;   // Attribute not compatible with transformed value.
     }
@@ -2962,8 +3187,7 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
   //
   //  Similarly, avoid folding away bitcasts of byval calls.
   if (Callee->getAttributes().hasAttrSomewhere(Attribute::InAlloca) ||
-      Callee->getAttributes().hasAttrSomewhere(Attribute::Preallocated) ||
-      Callee->getAttributes().hasAttrSomewhere(Attribute::ByVal))
+      Callee->getAttributes().hasAttrSomewhere(Attribute::Preallocated))
     return false;
 
   auto AI = Call.arg_begin();
@@ -2974,12 +3198,15 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
     if (!CastInst::isBitOrNoopPointerCastable(ActTy, ParamTy, DL))
       return false;   // Cannot transform this parameter value.
 
-    if (AttrBuilder(CallerPAL.getParamAttrs(i))
-            .overlaps(AttributeFuncs::typeIncompatible(ParamTy)))
+    // Check if there are any incompatible attributes we cannot drop safely.
+    if (AttrBuilder(FT->getContext(), CallerPAL.getParamAttrs(i))
+            .overlaps(AttributeFuncs::typeIncompatible(
+                ParamTy, AttributeFuncs::ASK_UNSAFE_TO_DROP)))
       return false;   // Attribute not compatible with transformed value.
 
-    if (Call.isInAllocaArgument(i))
-      return false;   // Cannot transform to and from inalloca.
+    if (Call.isInAllocaArgument(i) ||
+        CallerPAL.hasParamAttr(i, Attribute::Preallocated))
+      return false; // Cannot transform to and from inalloca/preallocated.
 
     if (CallerPAL.hasParamAttr(i, Attribute::SwiftError))
       return false;
@@ -2988,13 +3215,18 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
     // sized type and the sized type has to have the same size as the old type.
     if (ParamTy != ActTy && CallerPAL.hasParamAttr(i, Attribute::ByVal)) {
       PointerType *ParamPTy = dyn_cast<PointerType>(ParamTy);
-      if (!ParamPTy || !ParamPTy->getElementType()->isSized())
+      if (!ParamPTy)
         return false;
 
-      Type *CurElTy = Call.getParamByValType(i);
-      if (DL.getTypeAllocSize(CurElTy) !=
-          DL.getTypeAllocSize(ParamPTy->getElementType()))
-        return false;
+      if (!ParamPTy->isOpaque()) {
+        Type *ParamElTy = ParamPTy->getNonOpaquePointerElementType();
+        if (!ParamElTy->isSized())
+          return false;
+
+        Type *CurElTy = Call.getParamByValType(i);
+        if (DL.getTypeAllocSize(CurElTy) != DL.getTypeAllocSize(ParamElTy))
+          return false;
+      }
     }
   }
 
@@ -3006,17 +3238,14 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
     // If the callee is just a declaration, don't change the varargsness of the
     // call.  We don't want to introduce a varargs call where one doesn't
     // already exist.
-    PointerType *APTy = cast<PointerType>(Call.getCalledOperand()->getType());
-    if (FT->isVarArg()!=cast<FunctionType>(APTy->getElementType())->isVarArg())
+    if (FT->isVarArg() != Call.getFunctionType()->isVarArg())
       return false;
 
     // If both the callee and the cast type are varargs, we still have to make
     // sure the number of fixed parameters are the same or we have the same
     // ABI issues as if we introduce a varargs call.
-    if (FT->isVarArg() &&
-        cast<FunctionType>(APTy->getElementType())->isVarArg() &&
-        FT->getNumParams() !=
-        cast<FunctionType>(APTy->getElementType())->getNumParams())
+    if (FT->isVarArg() && Call.getFunctionType()->isVarArg() &&
+        FT->getNumParams() != Call.getFunctionType()->getNumParams())
       return false;
   }
 
@@ -3039,7 +3268,7 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
   ArgAttrs.reserve(NumActualArgs);
 
   // Get any return attributes.
-  AttrBuilder RAttrs(CallerPAL, AttributeList::ReturnIndex);
+  AttrBuilder RAttrs(FT->getContext(), CallerPAL.getRetAttrs());
 
   // If the return value is not being used, the type may not be compatible
   // with the existing attributes.  Wipe out any problematic attributes.
@@ -3055,13 +3284,20 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
       NewArg = Builder.CreateBitOrPointerCast(*AI, ParamTy);
     Args.push_back(NewArg);
 
-    // Add any parameter attributes.
-    if (CallerPAL.hasParamAttr(i, Attribute::ByVal)) {
-      AttrBuilder AB(CallerPAL.getParamAttrs(i));
-      AB.addByValAttr(NewArg->getType()->getPointerElementType());
+    // Add any parameter attributes except the ones incompatible with the new
+    // type. Note that we made sure all incompatible ones are safe to drop.
+    AttributeMask IncompatibleAttrs = AttributeFuncs::typeIncompatible(
+        ParamTy, AttributeFuncs::ASK_SAFE_TO_DROP);
+    if (CallerPAL.hasParamAttr(i, Attribute::ByVal) &&
+        !ParamTy->isOpaquePointerTy()) {
+      AttrBuilder AB(Ctx, CallerPAL.getParamAttrs(i).removeAttributes(
+                              Ctx, IncompatibleAttrs));
+      AB.addByValAttr(ParamTy->getNonOpaquePointerElementType());
       ArgAttrs.push_back(AttributeSet::get(Ctx, AB));
-    } else
-      ArgAttrs.push_back(CallerPAL.getParamAttrs(i));
+    } else {
+      ArgAttrs.push_back(
+          CallerPAL.getParamAttrs(i).removeAttributes(Ctx, IncompatibleAttrs));
+    }
   }
 
   // If the function takes more arguments than the call was taking, add them

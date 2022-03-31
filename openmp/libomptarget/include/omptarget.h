@@ -192,6 +192,11 @@ struct __tgt_target_non_contig {
   uint64_t Stride;
 };
 
+struct __tgt_device_info {
+  void *Context = nullptr;
+  void *Device = nullptr;
+};
+
 #ifdef __cplusplus
 extern "C" {
 #endif

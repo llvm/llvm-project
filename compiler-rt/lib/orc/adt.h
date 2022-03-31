@@ -15,6 +15,7 @@
 
 #include <cstring>
 #include <limits>
+#include <ostream>
 #include <string>
 
 namespace __orc_rt {
@@ -76,6 +77,7 @@ public:
   constexpr string_view(const char *S, size_type Count)
       : Data(S), Size(Count) {}
   string_view(const char *S) : Data(S), Size(strlen(S)) {}
+  string_view(const std::string &S) : Data(S.data()), Size(S.size()) {}
 
   constexpr const_iterator begin() const noexcept { return Data; }
   constexpr const_iterator end() const noexcept { return Data + Size; }
@@ -104,10 +106,23 @@ private:
   size_type Size = 0;
 };
 
-inline std::string to_string(string_view SV) {
-  return std::string(SV.data(), SV.size());
+inline std::ostream &operator<<(std::ostream &OS, string_view S) {
+  return OS.write(S.data(), S.size());
 }
 
 } // end namespace __orc_rt
 
-#endif // ORC_RT_COMMON_H
+namespace std {
+// Make string_view hashable.
+// FIXME: This can be removed (along with the string_view class) when we move
+// to C++17.
+template <> struct hash<__orc_rt::string_view> {
+  size_t operator()(const __orc_rt::string_view &S) const {
+    std::string Tmp(S.data(), S.size());
+    return hash<std::string>()(Tmp);
+  }
+};
+
+} // namespace std
+
+#endif // ORC_RT_ADT_H

@@ -21,21 +21,6 @@
 namespace llvm {
 namespace jitlink {
 
-/// A LinkGraph pass that splits blocks in an eh-frame section into sub-blocks
-/// representing individual eh-frames.
-/// EHFrameSplitter should not be run without EHFrameEdgeFixer, which is
-/// responsible for adding FDE-to-CIE edges.
-class EHFrameSplitter {
-public:
-  EHFrameSplitter(StringRef EHFrameSectionName);
-  Error operator()(LinkGraph &G);
-
-private:
-  Error processBlock(LinkGraph &G, Block &B, LinkGraph::SplitBlockCache &Cache);
-
-  StringRef EHFrameSectionName;
-};
-
 /// A LinkGraph pass that adds missing FDE-to-CIE, FDE-to-PC and FDE-to-LSDA
 /// edges.
 class EHFrameEdgeFixer {
@@ -71,12 +56,12 @@ private:
   };
 
   using BlockEdgeMap = DenseMap<Edge::OffsetT, EdgeTarget>;
-  using CIEInfosMap = DenseMap<JITTargetAddress, CIEInformation>;
+  using CIEInfosMap = DenseMap<orc::ExecutorAddr, CIEInformation>;
 
   struct ParseContext {
     ParseContext(LinkGraph &G) : G(G) {}
 
-    Expected<CIEInformation *> findCIEInfo(JITTargetAddress Address) {
+    Expected<CIEInformation *> findCIEInfo(orc::ExecutorAddr Address) {
       auto I = CIEInfos.find(Address);
       if (I == CIEInfos.end())
         return make_error<JITLinkError>("No CIE found at address " +
@@ -102,12 +87,13 @@ private:
 
   static bool isSupportedPointerEncoding(uint8_t PointerEncoding);
   unsigned getPointerEncodingDataSize(uint8_t PointerEncoding);
-  Expected<std::pair<JITTargetAddress, Edge::Kind>>
+  Expected<std::pair<orc::ExecutorAddr, Edge::Kind>>
   readEncodedPointer(uint8_t PointerEncoding,
-                     JITTargetAddress PointerFieldAddress,
+                     orc::ExecutorAddr PointerFieldAddress,
                      BinaryStreamReader &RecordReader);
 
-  Expected<Symbol &> getOrCreateSymbol(ParseContext &PC, JITTargetAddress Addr);
+  Expected<Symbol &> getOrCreateSymbol(ParseContext &PC,
+                                       orc::ExecutorAddr Addr);
 
   StringRef EHFrameSectionName;
   unsigned PointerSize;

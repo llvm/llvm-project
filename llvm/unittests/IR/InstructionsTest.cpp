@@ -614,7 +614,7 @@ TEST(InstructionsTest, CloneCall) {
 
   // Test cloning an attribute.
   {
-    AttrBuilder AB;
+    AttrBuilder AB(C);
     AB.addAttribute(Attribute::ReadOnly);
     Call->setAttributes(
         AttributeList::get(C, AttributeList::FunctionIndex, AB));
@@ -633,7 +633,7 @@ TEST(InstructionsTest, AlterCallBundles) {
   std::unique_ptr<CallInst> Call(
       CallInst::Create(FnTy, Callee, Args, OldBundle, "result"));
   Call->setTailCallKind(CallInst::TailCallKind::TCK_NoTail);
-  AttrBuilder AB;
+  AttrBuilder AB(C);
   AB.addAttribute(Attribute::Cold);
   Call->setAttributes(AttributeList::get(C, AttributeList::FunctionIndex, AB));
   Call->setDebugLoc(DebugLoc(MDNode::get(C, None)));
@@ -662,7 +662,7 @@ TEST(InstructionsTest, AlterInvokeBundles) {
   std::unique_ptr<InvokeInst> Invoke(
       InvokeInst::Create(FnTy, Callee, NormalDest.get(), UnwindDest.get(), Args,
                          OldBundle, "result"));
-  AttrBuilder AB;
+  AttrBuilder AB(C);
   AB.addAttribute(Attribute::Cold);
   Invoke->setAttributes(
       AttributeList::get(C, AttributeList::FunctionIndex, AB));

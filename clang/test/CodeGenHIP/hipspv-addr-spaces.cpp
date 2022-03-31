@@ -22,25 +22,33 @@ __device__ struct foo_t {
   int* pi;
 } foo;
 
-// CHECK: define{{.*}} spir_func i32 addrspace(4)* @_Z3barPi(i32 addrspace(4)*
+// Check literals are placed in address space 1 (CrossWorkGroup/__global).
+// CHECK: @.str ={{.*}} unnamed_addr addrspace(1) constant
+
+// CHECK: define{{.*}} spir_func noundef i32 addrspace(4)* @_Z3barPi(i32 addrspace(4)*
 __device__ int* bar(int *x) {
   return x;
 }
 
-// CHECK: define{{.*}} spir_func i32 addrspace(4)* @_Z5baz_dv()
+// CHECK: define{{.*}} spir_func noundef i32 addrspace(4)* @_Z5baz_dv()
 __device__ int* baz_d() {
   // CHECK: ret i32 addrspace(4)* addrspacecast (i32 addrspace(1)* @d to i32 addrspace(4)*
   return &d;
 }
 
-// CHECK: define{{.*}} spir_func i32 addrspace(4)* @_Z5baz_cv()
+// CHECK: define{{.*}} spir_func noundef i32 addrspace(4)* @_Z5baz_cv()
 __device__ int* baz_c() {
   // CHECK: ret i32 addrspace(4)* addrspacecast (i32 addrspace(1)* @c to i32 addrspace(4)*
   return &c;
 }
 
-// CHECK: define{{.*}} spir_func i32 addrspace(4)* @_Z5baz_sv()
+// CHECK: define{{.*}} spir_func noundef i32 addrspace(4)* @_Z5baz_sv()
 __device__ int* baz_s() {
   // CHECK: ret i32 addrspace(4)* addrspacecast (i32 addrspace(3)* @s to i32 addrspace(4)*
   return &s;
+}
+
+// CHECK: define{{.*}} spir_func noundef i8 addrspace(4)* @_Z3quzv()
+__device__ const char* quz() {
+  return "abc";
 }

@@ -10,6 +10,5 @@ add_mlir_dialect_library(MLIRArmSVE
   LINK_LIBS PUBLIC
   MLIRIR
   MLIRLLVMIR
-  MLIRStandard
   MLIRSideEffectInterfaces
   )

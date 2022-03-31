@@ -25,7 +25,8 @@ func @inlined_fn(%arg0: memref<?xf32>) {
      ins(%arg0 : memref<?xf32>)
     outs(%arg0 : memref<?xf32>) {
     ^bb(%0 : f32, %1 : f32) :
-      linalg.yield %0 : f32
+      %2 = arith.addf %0, %0: f32
+      linalg.yield %2 : f32
   }
   return
 }

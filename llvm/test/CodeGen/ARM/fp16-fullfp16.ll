@@ -482,11 +482,9 @@ define void @test_copysign(half* %p, half* %q) {
 ; CHECK-NEXT:    vstr.16 s0, [sp]
 ; CHECK-NEXT:    vldr.16 s0, [r0]
 ; CHECK-NEXT:    ldrb r1, [sp, #1]
-; CHECK-NEXT:    ands r1, r1, #128
 ; CHECK-NEXT:    vabs.f16 s0, s0
-; CHECK-NEXT:    movwne r1, #1
+; CHECK-NEXT:    tst r1, #128
 ; CHECK-NEXT:    vneg.f16 s2, s0
-; CHECK-NEXT:    cmp r1, #0
 ; CHECK-NEXT:    vseleq.f16 s0, s0, s2
 ; CHECK-NEXT:    vstr.16 s0, [r0]
 ; CHECK-NEXT:    add sp, sp, #4

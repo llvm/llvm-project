@@ -23,7 +23,7 @@
 
 namespace llvm {
 class Any;
-} // end namespace llvm
+} // namespace llvm
 
 namespace mlir {
 class AnalysisManager;
@@ -39,7 +39,7 @@ struct OpPassManagerImpl;
 class OpToOpPassAdaptor;
 class PassCrashReproducerGenerator;
 struct PassExecutionState;
-} // end namespace detail
+} // namespace detail
 
 //===----------------------------------------------------------------------===//
 // OpPassManager
@@ -98,7 +98,7 @@ public:
   size_t size() const;
 
   /// Return the operation name that this pass manager operates on.
-  StringAttr getOpName(MLIRContext &context) const;
+  OperationName getOpName(MLIRContext &context) const;
 
   /// Return the operation name that this pass manager operates on.
   StringRef getOpName() const;
@@ -421,6 +421,6 @@ void applyPassManagerCLOptions(PassManager &pm);
 /// to the pass manager.
 void applyDefaultTimingPassManagerCLOptions(PassManager &pm);
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_PASS_PASSMANAGER_H

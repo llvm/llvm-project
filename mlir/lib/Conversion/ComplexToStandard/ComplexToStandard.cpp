@@ -15,7 +15,6 @@
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Math/IR/Math.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -32,8 +31,10 @@ struct AbsOpConversion : public OpConversionPattern<complex::AbsOp> {
     auto loc = op.getLoc();
     auto type = op.getType();
 
-    Value real = rewriter.create<complex::ReOp>(loc, type, adaptor.complex());
-    Value imag = rewriter.create<complex::ImOp>(loc, type, adaptor.complex());
+    Value real =
+        rewriter.create<complex::ReOp>(loc, type, adaptor.getComplex());
+    Value imag =
+        rewriter.create<complex::ImOp>(loc, type, adaptor.getComplex());
     Value realSqr = rewriter.create<arith::MulFOp>(loc, real, real);
     Value imagSqr = rewriter.create<arith::MulFOp>(loc, imag, imag);
     Value sqNorm = rewriter.create<arith::AddFOp>(loc, realSqr, imagSqr);
@@ -54,13 +55,15 @@ struct ComparisonOpConversion : public OpConversionPattern<ComparisonOp> {
   matchAndRewrite(ComparisonOp op, typename ComparisonOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = op.getLoc();
-    auto type =
-        adaptor.lhs().getType().template cast<ComplexType>().getElementType();
+    auto type = adaptor.getLhs()
+                    .getType()
+                    .template cast<ComplexType>()
+                    .getElementType();
 
-    Value realLhs = rewriter.create<complex::ReOp>(loc, type, adaptor.lhs());
-    Value imagLhs = rewriter.create<complex::ImOp>(loc, type, adaptor.lhs());
-    Value realRhs = rewriter.create<complex::ReOp>(loc, type, adaptor.rhs());
-    Value imagRhs = rewriter.create<complex::ImOp>(loc, type, adaptor.rhs());
+    Value realLhs = rewriter.create<complex::ReOp>(loc, type, adaptor.getLhs());
+    Value imagLhs = rewriter.create<complex::ImOp>(loc, type, adaptor.getLhs());
+    Value realRhs = rewriter.create<complex::ReOp>(loc, type, adaptor.getRhs());
+    Value imagRhs = rewriter.create<complex::ImOp>(loc, type, adaptor.getRhs());
     Value realComparison =
         rewriter.create<arith::CmpFOp>(loc, p, realLhs, realRhs);
     Value imagComparison =
@@ -82,16 +85,16 @@ struct BinaryComplexOpConversion : public OpConversionPattern<BinaryComplexOp> {
   LogicalResult
   matchAndRewrite(BinaryComplexOp op, typename BinaryComplexOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto type = adaptor.lhs().getType().template cast<ComplexType>();
+    auto type = adaptor.getLhs().getType().template cast<ComplexType>();
     auto elementType = type.getElementType().template cast<FloatType>();
     mlir::ImplicitLocOpBuilder b(op.getLoc(), rewriter);
 
-    Value realLhs = b.create<complex::ReOp>(elementType, adaptor.lhs());
-    Value realRhs = b.create<complex::ReOp>(elementType, adaptor.rhs());
+    Value realLhs = b.create<complex::ReOp>(elementType, adaptor.getLhs());
+    Value realRhs = b.create<complex::ReOp>(elementType, adaptor.getRhs());
     Value resultReal =
         b.create<BinaryStandardOp>(elementType, realLhs, realRhs);
-    Value imagLhs = b.create<complex::ImOp>(elementType, adaptor.lhs());
-    Value imagRhs = b.create<complex::ImOp>(elementType, adaptor.rhs());
+    Value imagLhs = b.create<complex::ImOp>(elementType, adaptor.getLhs());
+    Value imagRhs = b.create<complex::ImOp>(elementType, adaptor.getRhs());
     Value resultImag =
         b.create<BinaryStandardOp>(elementType, imagLhs, imagRhs);
     rewriter.replaceOpWithNewOp<complex::CreateOp>(op, type, resultReal,
@@ -107,17 +110,17 @@ struct DivOpConversion : public OpConversionPattern<complex::DivOp> {
   matchAndRewrite(complex::DivOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = op.getLoc();
-    auto type = adaptor.lhs().getType().cast<ComplexType>();
+    auto type = adaptor.getLhs().getType().cast<ComplexType>();
     auto elementType = type.getElementType().cast<FloatType>();
 
     Value lhsReal =
-        rewriter.create<complex::ReOp>(loc, elementType, adaptor.lhs());
+        rewriter.create<complex::ReOp>(loc, elementType, adaptor.getLhs());
     Value lhsImag =
-        rewriter.create<complex::ImOp>(loc, elementType, adaptor.lhs());
+        rewriter.create<complex::ImOp>(loc, elementType, adaptor.getLhs());
     Value rhsReal =
-        rewriter.create<complex::ReOp>(loc, elementType, adaptor.rhs());
+        rewriter.create<complex::ReOp>(loc, elementType, adaptor.getRhs());
     Value rhsImag =
-        rewriter.create<complex::ImOp>(loc, elementType, adaptor.rhs());
+        rewriter.create<complex::ImOp>(loc, elementType, adaptor.getRhs());
 
     // Smith's algorithm to divide complex numbers. It is just a bit smarter
     // way to compute the following formula:
@@ -223,10 +226,10 @@ struct DivOpConversion : public OpConversionPattern<complex::DivOp> {
     Value one = rewriter.create<arith::ConstantOp>(
         loc, elementType, rewriter.getFloatAttr(elementType, 1));
     Value lhsRealIsInfWithSign = rewriter.create<math::CopySignOp>(
-        loc, rewriter.create<SelectOp>(loc, lhsRealInfinite, one, zero),
+        loc, rewriter.create<arith::SelectOp>(loc, lhsRealInfinite, one, zero),
         lhsReal);
     Value lhsImagIsInfWithSign = rewriter.create<math::CopySignOp>(
-        loc, rewriter.create<SelectOp>(loc, lhsImagInfinite, one, zero),
+        loc, rewriter.create<arith::SelectOp>(loc, lhsImagInfinite, one, zero),
         lhsImag);
     Value lhsRealIsInfWithSignTimesRhsReal =
         rewriter.create<arith::MulFOp>(loc, lhsRealIsInfWithSign, rhsReal);
@@ -261,10 +264,10 @@ struct DivOpConversion : public OpConversionPattern<complex::DivOp> {
     Value finiteNumInfiniteDenom =
         rewriter.create<arith::AndIOp>(loc, lhsFinite, rhsInfinite);
     Value rhsRealIsInfWithSign = rewriter.create<math::CopySignOp>(
-        loc, rewriter.create<SelectOp>(loc, rhsRealInfinite, one, zero),
+        loc, rewriter.create<arith::SelectOp>(loc, rhsRealInfinite, one, zero),
         rhsReal);
     Value rhsImagIsInfWithSign = rewriter.create<math::CopySignOp>(
-        loc, rewriter.create<SelectOp>(loc, rhsImagInfinite, one, zero),
+        loc, rewriter.create<arith::SelectOp>(loc, rhsImagInfinite, one, zero),
         rhsImag);
     Value rhsRealIsInfWithSignTimesLhsReal =
         rewriter.create<arith::MulFOp>(loc, lhsReal, rhsRealIsInfWithSign);
@@ -285,21 +288,21 @@ struct DivOpConversion : public OpConversionPattern<complex::DivOp> {
 
     Value realAbsSmallerThanImagAbs = rewriter.create<arith::CmpFOp>(
         loc, arith::CmpFPredicate::OLT, rhsRealAbs, rhsImagAbs);
-    Value resultReal = rewriter.create<SelectOp>(loc, realAbsSmallerThanImagAbs,
-                                                 resultReal1, resultReal2);
-    Value resultImag = rewriter.create<SelectOp>(loc, realAbsSmallerThanImagAbs,
-                                                 resultImag1, resultImag2);
-    Value resultRealSpecialCase3 = rewriter.create<SelectOp>(
+    Value resultReal = rewriter.create<arith::SelectOp>(
+        loc, realAbsSmallerThanImagAbs, resultReal1, resultReal2);
+    Value resultImag = rewriter.create<arith::SelectOp>(
+        loc, realAbsSmallerThanImagAbs, resultImag1, resultImag2);
+    Value resultRealSpecialCase3 = rewriter.create<arith::SelectOp>(
         loc, finiteNumInfiniteDenom, resultReal4, resultReal);
-    Value resultImagSpecialCase3 = rewriter.create<SelectOp>(
+    Value resultImagSpecialCase3 = rewriter.create<arith::SelectOp>(
         loc, finiteNumInfiniteDenom, resultImag4, resultImag);
-    Value resultRealSpecialCase2 = rewriter.create<SelectOp>(
+    Value resultRealSpecialCase2 = rewriter.create<arith::SelectOp>(
         loc, infNumFiniteDenom, resultReal3, resultRealSpecialCase3);
-    Value resultImagSpecialCase2 = rewriter.create<SelectOp>(
+    Value resultImagSpecialCase2 = rewriter.create<arith::SelectOp>(
         loc, infNumFiniteDenom, resultImag3, resultImagSpecialCase3);
-    Value resultRealSpecialCase1 = rewriter.create<SelectOp>(
+    Value resultRealSpecialCase1 = rewriter.create<arith::SelectOp>(
         loc, resultIsInfinity, infinityResultReal, resultRealSpecialCase2);
-    Value resultImagSpecialCase1 = rewriter.create<SelectOp>(
+    Value resultImagSpecialCase1 = rewriter.create<arith::SelectOp>(
         loc, resultIsInfinity, infinityResultImag, resultImagSpecialCase2);
 
     Value resultRealIsNaN = rewriter.create<arith::CmpFOp>(
@@ -308,9 +311,9 @@ struct DivOpConversion : public OpConversionPattern<complex::DivOp> {
         loc, arith::CmpFPredicate::UNO, resultImag, zero);
     Value resultIsNaN =
         rewriter.create<arith::AndIOp>(loc, resultRealIsNaN, resultImagIsNaN);
-    Value resultRealWithSpecialCases = rewriter.create<SelectOp>(
+    Value resultRealWithSpecialCases = rewriter.create<arith::SelectOp>(
         loc, resultIsNaN, resultRealSpecialCase1, resultReal);
-    Value resultImagWithSpecialCases = rewriter.create<SelectOp>(
+    Value resultImagWithSpecialCases = rewriter.create<arith::SelectOp>(
         loc, resultIsNaN, resultImagSpecialCase1, resultImag);
 
     rewriter.replaceOpWithNewOp<complex::CreateOp>(
@@ -326,13 +329,13 @@ struct ExpOpConversion : public OpConversionPattern<complex::ExpOp> {
   matchAndRewrite(complex::ExpOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = op.getLoc();
-    auto type = adaptor.complex().getType().cast<ComplexType>();
+    auto type = adaptor.getComplex().getType().cast<ComplexType>();
     auto elementType = type.getElementType().cast<FloatType>();
 
     Value real =
-        rewriter.create<complex::ReOp>(loc, elementType, adaptor.complex());
+        rewriter.create<complex::ReOp>(loc, elementType, adaptor.getComplex());
     Value imag =
-        rewriter.create<complex::ImOp>(loc, elementType, adaptor.complex());
+        rewriter.create<complex::ImOp>(loc, elementType, adaptor.getComplex());
     Value expReal = rewriter.create<math::ExpOp>(loc, real);
     Value cosImag = rewriter.create<math::CosOp>(loc, imag);
     Value resultReal = rewriter.create<arith::MulFOp>(loc, expReal, cosImag);
@@ -351,14 +354,14 @@ struct LogOpConversion : public OpConversionPattern<complex::LogOp> {
   LogicalResult
   matchAndRewrite(complex::LogOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto type = adaptor.complex().getType().cast<ComplexType>();
+    auto type = adaptor.getComplex().getType().cast<ComplexType>();
     auto elementType = type.getElementType().cast<FloatType>();
     mlir::ImplicitLocOpBuilder b(op.getLoc(), rewriter);
 
-    Value abs = b.create<complex::AbsOp>(elementType, adaptor.complex());
+    Value abs = b.create<complex::AbsOp>(elementType, adaptor.getComplex());
     Value resultReal = b.create<math::LogOp>(elementType, abs);
-    Value real = b.create<complex::ReOp>(elementType, adaptor.complex());
-    Value imag = b.create<complex::ImOp>(elementType, adaptor.complex());
+    Value real = b.create<complex::ReOp>(elementType, adaptor.getComplex());
+    Value imag = b.create<complex::ImOp>(elementType, adaptor.getComplex());
     Value resultImag = b.create<math::Atan2Op>(elementType, imag, real);
     rewriter.replaceOpWithNewOp<complex::CreateOp>(op, type, resultReal,
                                                    resultImag);
@@ -372,12 +375,12 @@ struct Log1pOpConversion : public OpConversionPattern<complex::Log1pOp> {
   LogicalResult
   matchAndRewrite(complex::Log1pOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto type = adaptor.complex().getType().cast<ComplexType>();
+    auto type = adaptor.getComplex().getType().cast<ComplexType>();
     auto elementType = type.getElementType().cast<FloatType>();
     mlir::ImplicitLocOpBuilder b(op.getLoc(), rewriter);
 
-    Value real = b.create<complex::ReOp>(elementType, adaptor.complex());
-    Value imag = b.create<complex::ImOp>(elementType, adaptor.complex());
+    Value real = b.create<complex::ReOp>(elementType, adaptor.getComplex());
+    Value imag = b.create<complex::ImOp>(elementType, adaptor.getComplex());
     Value one = b.create<arith::ConstantOp>(elementType,
                                             b.getFloatAttr(elementType, 1));
     Value realPlusOne = b.create<arith::AddFOp>(real, one);
@@ -394,16 +397,16 @@ struct MulOpConversion : public OpConversionPattern<complex::MulOp> {
   matchAndRewrite(complex::MulOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     mlir::ImplicitLocOpBuilder b(op.getLoc(), rewriter);
-    auto type = adaptor.lhs().getType().cast<ComplexType>();
+    auto type = adaptor.getLhs().getType().cast<ComplexType>();
     auto elementType = type.getElementType().cast<FloatType>();
 
-    Value lhsReal = b.create<complex::ReOp>(elementType, adaptor.lhs());
+    Value lhsReal = b.create<complex::ReOp>(elementType, adaptor.getLhs());
     Value lhsRealAbs = b.create<math::AbsOp>(lhsReal);
-    Value lhsImag = b.create<complex::ImOp>(elementType, adaptor.lhs());
+    Value lhsImag = b.create<complex::ImOp>(elementType, adaptor.getLhs());
     Value lhsImagAbs = b.create<math::AbsOp>(lhsImag);
-    Value rhsReal = b.create<complex::ReOp>(elementType, adaptor.rhs());
+    Value rhsReal = b.create<complex::ReOp>(elementType, adaptor.getRhs());
     Value rhsRealAbs = b.create<math::AbsOp>(rhsReal);
-    Value rhsImag = b.create<complex::ImOp>(elementType, adaptor.rhs());
+    Value rhsImag = b.create<complex::ImOp>(elementType, adaptor.getRhs());
     Value rhsImagAbs = b.create<math::AbsOp>(rhsImag);
 
     Value lhsRealTimesRhsReal = b.create<arith::MulFOp>(lhsReal, rhsReal);
@@ -446,24 +449,26 @@ struct MulOpConversion : public OpConversionPattern<complex::MulOp> {
         b.create<arith::ConstantOp>(elementType, b.getZeroAttr(elementType));
     Value one = b.create<arith::ConstantOp>(elementType,
                                             b.getFloatAttr(elementType, 1));
-    Value lhsRealIsInfFloat = b.create<SelectOp>(lhsRealIsInf, one, zero);
-    lhsReal = b.create<SelectOp>(
+    Value lhsRealIsInfFloat =
+        b.create<arith::SelectOp>(lhsRealIsInf, one, zero);
+    lhsReal = b.create<arith::SelectOp>(
         lhsIsInf, b.create<math::CopySignOp>(lhsRealIsInfFloat, lhsReal),
         lhsReal);
-    Value lhsImagIsInfFloat = b.create<SelectOp>(lhsImagIsInf, one, zero);
-    lhsImag = b.create<SelectOp>(
+    Value lhsImagIsInfFloat =
+        b.create<arith::SelectOp>(lhsImagIsInf, one, zero);
+    lhsImag = b.create<arith::SelectOp>(
         lhsIsInf, b.create<math::CopySignOp>(lhsImagIsInfFloat, lhsImag),
         lhsImag);
     Value lhsIsInfAndRhsRealIsNan =
         b.create<arith::AndIOp>(lhsIsInf, rhsRealIsNan);
-    rhsReal =
-        b.create<SelectOp>(lhsIsInfAndRhsRealIsNan,
-                           b.create<math::CopySignOp>(zero, rhsReal), rhsReal);
+    rhsReal = b.create<arith::SelectOp>(
+        lhsIsInfAndRhsRealIsNan, b.create<math::CopySignOp>(zero, rhsReal),
+        rhsReal);
     Value lhsIsInfAndRhsImagIsNan =
         b.create<arith::AndIOp>(lhsIsInf, rhsImagIsNan);
-    rhsImag =
-        b.create<SelectOp>(lhsIsInfAndRhsImagIsNan,
-                           b.create<math::CopySignOp>(zero, rhsImag), rhsImag);
+    rhsImag = b.create<arith::SelectOp>(
+        lhsIsInfAndRhsImagIsNan, b.create<math::CopySignOp>(zero, rhsImag),
+        rhsImag);
 
     // Case 2. `rhsReal` or `rhsImag` are infinite.
     Value rhsRealIsInf =
@@ -475,24 +480,26 @@ struct MulOpConversion : public OpConversionPattern<complex::MulOp> {
         b.create<arith::CmpFOp>(arith::CmpFPredicate::UNO, lhsReal, lhsReal);
     Value lhsImagIsNan =
         b.create<arith::CmpFOp>(arith::CmpFPredicate::UNO, lhsImag, lhsImag);
-    Value rhsRealIsInfFloat = b.create<SelectOp>(rhsRealIsInf, one, zero);
-    rhsReal = b.create<SelectOp>(
+    Value rhsRealIsInfFloat =
+        b.create<arith::SelectOp>(rhsRealIsInf, one, zero);
+    rhsReal = b.create<arith::SelectOp>(
         rhsIsInf, b.create<math::CopySignOp>(rhsRealIsInfFloat, rhsReal),
         rhsReal);
-    Value rhsImagIsInfFloat = b.create<SelectOp>(rhsImagIsInf, one, zero);
-    rhsImag = b.create<SelectOp>(
+    Value rhsImagIsInfFloat =
+        b.create<arith::SelectOp>(rhsImagIsInf, one, zero);
+    rhsImag = b.create<arith::SelectOp>(
         rhsIsInf, b.create<math::CopySignOp>(rhsImagIsInfFloat, rhsImag),
         rhsImag);
     Value rhsIsInfAndLhsRealIsNan =
         b.create<arith::AndIOp>(rhsIsInf, lhsRealIsNan);
-    lhsReal =
-        b.create<SelectOp>(rhsIsInfAndLhsRealIsNan,
-                           b.create<math::CopySignOp>(zero, lhsReal), lhsReal);
+    lhsReal = b.create<arith::SelectOp>(
+        rhsIsInfAndLhsRealIsNan, b.create<math::CopySignOp>(zero, lhsReal),
+        lhsReal);
     Value rhsIsInfAndLhsImagIsNan =
         b.create<arith::AndIOp>(rhsIsInf, lhsImagIsNan);
-    lhsImag =
-        b.create<SelectOp>(rhsIsInfAndLhsImagIsNan,
-                           b.create<math::CopySignOp>(zero, lhsImag), lhsImag);
+    lhsImag = b.create<arith::SelectOp>(
+        rhsIsInfAndLhsImagIsNan, b.create<math::CopySignOp>(zero, lhsImag),
+        lhsImag);
     Value recalc = b.create<arith::OrIOp>(lhsIsInf, rhsIsInf);
 
     // Case 3. One of the pairwise products of left hand side with right hand
@@ -518,24 +525,24 @@ struct MulOpConversion : public OpConversionPattern<complex::MulOp> {
     isSpecialCase = b.create<arith::AndIOp>(isSpecialCase, notRecalc);
     Value isSpecialCaseAndLhsRealIsNan =
         b.create<arith::AndIOp>(isSpecialCase, lhsRealIsNan);
-    lhsReal =
-        b.create<SelectOp>(isSpecialCaseAndLhsRealIsNan,
-                           b.create<math::CopySignOp>(zero, lhsReal), lhsReal);
+    lhsReal = b.create<arith::SelectOp>(
+        isSpecialCaseAndLhsRealIsNan, b.create<math::CopySignOp>(zero, lhsReal),
+        lhsReal);
     Value isSpecialCaseAndLhsImagIsNan =
         b.create<arith::AndIOp>(isSpecialCase, lhsImagIsNan);
-    lhsImag =
-        b.create<SelectOp>(isSpecialCaseAndLhsImagIsNan,
-                           b.create<math::CopySignOp>(zero, lhsImag), lhsImag);
+    lhsImag = b.create<arith::SelectOp>(
+        isSpecialCaseAndLhsImagIsNan, b.create<math::CopySignOp>(zero, lhsImag),
+        lhsImag);
     Value isSpecialCaseAndRhsRealIsNan =
         b.create<arith::AndIOp>(isSpecialCase, rhsRealIsNan);
-    rhsReal =
-        b.create<SelectOp>(isSpecialCaseAndRhsRealIsNan,
-                           b.create<math::CopySignOp>(zero, rhsReal), rhsReal);
+    rhsReal = b.create<arith::SelectOp>(
+        isSpecialCaseAndRhsRealIsNan, b.create<math::CopySignOp>(zero, rhsReal),
+        rhsReal);
     Value isSpecialCaseAndRhsImagIsNan =
         b.create<arith::AndIOp>(isSpecialCase, rhsImagIsNan);
-    rhsImag =
-        b.create<SelectOp>(isSpecialCaseAndRhsImagIsNan,
-                           b.create<math::CopySignOp>(zero, rhsImag), rhsImag);
+    rhsImag = b.create<arith::SelectOp>(
+        isSpecialCaseAndRhsImagIsNan, b.create<math::CopySignOp>(zero, rhsImag),
+        rhsImag);
     recalc = b.create<arith::OrIOp>(recalc, isSpecialCase);
     recalc = b.create<arith::AndIOp>(isNan, recalc);
 
@@ -544,16 +551,16 @@ struct MulOpConversion : public OpConversionPattern<complex::MulOp> {
     lhsImagTimesRhsImag = b.create<arith::MulFOp>(lhsImag, rhsImag);
     Value newReal =
         b.create<arith::SubFOp>(lhsRealTimesRhsReal, lhsImagTimesRhsImag);
-    real =
-        b.create<SelectOp>(recalc, b.create<arith::MulFOp>(inf, newReal), real);
+    real = b.create<arith::SelectOp>(
+        recalc, b.create<arith::MulFOp>(inf, newReal), real);
 
     // Recalculate imag part.
     lhsImagTimesRhsReal = b.create<arith::MulFOp>(lhsImag, rhsReal);
     lhsRealTimesRhsImag = b.create<arith::MulFOp>(lhsReal, rhsImag);
     Value newImag =
         b.create<arith::AddFOp>(lhsImagTimesRhsReal, lhsRealTimesRhsImag);
-    imag =
-        b.create<SelectOp>(recalc, b.create<arith::MulFOp>(inf, newImag), imag);
+    imag = b.create<arith::SelectOp>(
+        recalc, b.create<arith::MulFOp>(inf, newImag), imag);
 
     rewriter.replaceOpWithNewOp<complex::CreateOp>(op, type, real, imag);
     return success();
@@ -567,13 +574,13 @@ struct NegOpConversion : public OpConversionPattern<complex::NegOp> {
   matchAndRewrite(complex::NegOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = op.getLoc();
-    auto type = adaptor.complex().getType().cast<ComplexType>();
+    auto type = adaptor.getComplex().getType().cast<ComplexType>();
     auto elementType = type.getElementType().cast<FloatType>();
 
     Value real =
-        rewriter.create<complex::ReOp>(loc, elementType, adaptor.complex());
+        rewriter.create<complex::ReOp>(loc, elementType, adaptor.getComplex());
     Value imag =
-        rewriter.create<complex::ImOp>(loc, elementType, adaptor.complex());
+        rewriter.create<complex::ImOp>(loc, elementType, adaptor.getComplex());
     Value negReal = rewriter.create<arith::NegFOp>(loc, real);
     Value negImag = rewriter.create<arith::NegFOp>(loc, imag);
     rewriter.replaceOpWithNewOp<complex::CreateOp>(op, type, negReal, negImag);
@@ -587,12 +594,12 @@ struct SignOpConversion : public OpConversionPattern<complex::SignOp> {
   LogicalResult
   matchAndRewrite(complex::SignOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto type = adaptor.complex().getType().cast<ComplexType>();
+    auto type = adaptor.getComplex().getType().cast<ComplexType>();
     auto elementType = type.getElementType().cast<FloatType>();
     mlir::ImplicitLocOpBuilder b(op.getLoc(), rewriter);
 
-    Value real = b.create<complex::ReOp>(elementType, adaptor.complex());
-    Value imag = b.create<complex::ImOp>(elementType, adaptor.complex());
+    Value real = b.create<complex::ReOp>(elementType, adaptor.getComplex());
+    Value imag = b.create<complex::ImOp>(elementType, adaptor.getComplex());
     Value zero =
         b.create<arith::ConstantOp>(elementType, b.getZeroAttr(elementType));
     Value realIsZero =
@@ -600,11 +607,12 @@ struct SignOpConversion : public OpConversionPattern<complex::SignOp> {
     Value imagIsZero =
         b.create<arith::CmpFOp>(arith::CmpFPredicate::OEQ, imag, zero);
     Value isZero = b.create<arith::AndIOp>(realIsZero, imagIsZero);
-    auto abs = b.create<complex::AbsOp>(elementType, adaptor.complex());
+    auto abs = b.create<complex::AbsOp>(elementType, adaptor.getComplex());
     Value realSign = b.create<arith::DivFOp>(real, abs);
     Value imagSign = b.create<arith::DivFOp>(imag, abs);
     Value sign = b.create<complex::CreateOp>(type, realSign, imagSign);
-    rewriter.replaceOpWithNewOp<SelectOp>(op, isZero, adaptor.complex(), sign);
+    rewriter.replaceOpWithNewOp<arith::SelectOp>(op, isZero,
+                                                 adaptor.getComplex(), sign);
     return success();
   }
 };
@@ -632,26 +640,23 @@ void mlir::populateComplexToStandardConversionPatterns(
 namespace {
 struct ConvertComplexToStandardPass
     : public ConvertComplexToStandardBase<ConvertComplexToStandardPass> {
-  void runOnFunction() override;
+  void runOnOperation() override;
 };
 
-void ConvertComplexToStandardPass::runOnFunction() {
-  auto function = getFunction();
-
+void ConvertComplexToStandardPass::runOnOperation() {
   // Convert to the Standard dialect using the converter defined above.
   RewritePatternSet patterns(&getContext());
   populateComplexToStandardConversionPatterns(patterns);
 
   ConversionTarget target(getContext());
-  target.addLegalDialect<arith::ArithmeticDialect, StandardOpsDialect,
-                         math::MathDialect>();
+  target.addLegalDialect<arith::ArithmeticDialect, math::MathDialect>();
   target.addLegalOp<complex::CreateOp, complex::ImOp, complex::ReOp>();
-  if (failed(applyPartialConversion(function, target, std::move(patterns))))
+  if (failed(
+          applyPartialConversion(getOperation(), target, std::move(patterns))))
     signalPassFailure();
 }
 } // namespace
 
-std::unique_ptr<OperationPass<FuncOp>>
-mlir::createConvertComplexToStandardPass() {
+std::unique_ptr<Pass> mlir::createConvertComplexToStandardPass() {
   return std::make_unique<ConvertComplexToStandardPass>();
 }

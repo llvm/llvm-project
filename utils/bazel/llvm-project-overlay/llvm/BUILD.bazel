@@ -185,24 +185,38 @@ cc_library(
             "lib/Support/Unix/*.h",
             "lib/Support/Unix/*.inc",
         ]),
-    }),
+    }) + [
+        "lib/Support/BLAKE3/blake3_impl.h",
+        "lib/Support/BLAKE3/blake3.c",
+        "lib/Support/BLAKE3/blake3_dispatch.c",
+        "lib/Support/BLAKE3/blake3_portable.c",
+    ],
     hdrs = glob([
         "include/llvm/Support/**/*.h",
         "include/llvm/ADT/*.h",
     ]) + [
         "include/llvm-c/Core.h",
         "include/llvm-c/DataTypes.h",
+        "include/llvm-c/Deprecated.h",
         "include/llvm-c/DisassemblerTypes.h",
         "include/llvm-c/Error.h",
         "include/llvm-c/ErrorHandling.h",
         "include/llvm-c/ExternC.h",
         "include/llvm-c/Support.h",
         "include/llvm-c/Types.h",
+        "include/llvm-c/blake3.h",
         "include/llvm/ExecutionEngine/JITSymbol.h",
         "include/llvm/Support/Extension.def",
         "include/llvm/Support/VCSRevision.h",
     ],
     copts = llvm_copts,
+    defines = [
+        "BLAKE3_NO_AVX2",
+        "BLAKE3_NO_AVX512",
+        "BLAKE3_NO_SSE2",
+        "BLAKE3_NO_SSE41",
+        "BLAKE3_USE_NEON=0",
+    ],
     includes = ["include"],
     linkopts = select({
         "@bazel_tools//src/conditions:windows": [],
@@ -397,6 +411,21 @@ cc_library(
 )
 
 cc_library(
+    name = "Debuginfod",
+    srcs = glob([
+        "lib/Debuginfod/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/llvm/Debuginfod/*.h",
+    ]),
+    copts = llvm_copts,
+    deps = [
+        ":Support",
+        ":Symbolize",
+    ],
+)
+
+cc_library(
     name = "MC",
     srcs = glob([
         "lib/MC/*.cpp",
@@ -411,7 +440,6 @@ cc_library(
     deps = [
         ":BinaryFormat",
         ":DebugInfoCodeView",
-        ":ProfileData",
         ":Support",
         ":config",
         ":ir_headers",
@@ -769,6 +797,27 @@ cc_library(
 )
 
 cc_library(
+    name = "ObjCopy",
+    srcs = glob([
+        "lib/ObjCopy/**/*.cpp",
+        "lib/ObjCopy/**/*.h",
+    ]),
+    hdrs = glob([
+        "include/llvm/ObjCopy/**/*.h",
+    ]),
+    copts = llvm_copts,
+    includes = ["lib/ObjCopy"],
+    deps = [
+        ":MC",
+        ":Object",
+        ":ObjectYAML",
+        ":Support",
+        ":Target",
+        ":intrinsics_impl_gen",
+    ],
+)
+
+cc_library(
     name = "Object",
     srcs = glob([
         "lib/Object/*.cpp",
@@ -821,7 +870,9 @@ cc_library(
     copts = llvm_copts,
     deps = [
         ":Core",
+        ":DebugInfoDWARF",
         ":Support",
+        ":Symbolize",
         ":config",
     ],
 )
@@ -1328,11 +1379,7 @@ cc_library(
     hdrs = [
         "include/llvm-c/Transforms/Coroutines.h",
         "include/llvm/Transforms/Coroutines.h",
-        "include/llvm/Transforms/Coroutines/CoroCleanup.h",
-        "include/llvm/Transforms/Coroutines/CoroEarly.h",
-        "include/llvm/Transforms/Coroutines/CoroElide.h",
-        "include/llvm/Transforms/Coroutines/CoroSplit.h",
-    ],
+    ] + glob(["include/llvm/Transforms/Coroutines/*.h"]),
     copts = llvm_copts,
     deps = [
         ":Analysis",
@@ -1706,6 +1753,7 @@ llvm_target_lib_list = [lib for lib in [
             ("-gen-subtarget", "lib/Target/X86/X86GenSubtargetInfo.inc"),
             ("-gen-x86-EVEX2VEX-tables", "lib/Target/X86/X86GenEVEX2VEXTables.inc"),
             ("-gen-exegesis", "lib/Target/X86/X86GenExegesis.inc"),
+            ("-gen-x86-mnemonic-tables -asmwriternum=1", "lib/Target/X86/X86GenMnemonicTables.inc"),
         ],
     },
     {
@@ -2374,6 +2422,21 @@ cc_library(
 )
 
 cc_library(
+    name = "WindowsDriver",
+    srcs = glob([
+        "lib/WindowsDriver/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/llvm/WindowsDriver/*.h",
+    ]),
+    copts = llvm_copts,
+    deps = [
+        ":Option",
+        ":Support",
+    ],
+)
+
+cc_library(
     name = "WindowsManifest",
     srcs = glob([
         "lib/WindowsManifest/*.cpp",
@@ -2395,22 +2458,6 @@ cc_library(
         ":Support",
         ":config",
     ],
-)
-
-# FIXME: This library should use `textual_hdrs` instead of `hdrs` as we don't
-# want to parse or build modules for them (and haven't duplicated the necessary
-# dependencies), but unfortunately that doesn't work with
-# `strip_include_prefix`: https://github.com/bazelbuild/bazel/issues/12424
-#
-# For now, we simply disable features that might rely on the headers parsing.
-cc_library(
-    name = "llvm-objcopy-headers",
-    hdrs = glob(["tools/llvm-objcopy/**/*.h"]),
-    features = [
-        "-parse_headers",
-        "-header_modules",
-    ],
-    strip_include_prefix = "tools/llvm-objcopy",
 )
 
 cc_library(
@@ -2971,6 +3018,8 @@ cc_binary(
     copts = llvm_copts,
     stamp = 0,
     deps = [
+        ":AllTargetsAsmParsers",
+        ":AllTargetsCodeGens",
         ":BinaryFormat",
         ":Object",
         ":Support",
@@ -3300,17 +3349,15 @@ cc_binary(
 cc_binary(
     name = "llvm-objcopy",
     srcs = glob([
-        "tools/llvm-objcopy/**/*.cpp",
-        # Note that we redundantly include the headers here to allow files to
-        # include same-directory headers in addition to including headers via
-        # the `llvm-objcopy-headers` rule's stripped include prefix.
-        "tools/llvm-objcopy/**/*.h",
+        "tools/llvm-objcopy/*.cpp",
+        "tools/llvm-objcopy/*.h",
     ]),
     copts = llvm_copts,
     stamp = 0,
     deps = [
         ":BinaryFormat",
         ":MC",
+        ":ObjCopy",
         ":Object",
         ":ObjectYAML",
         ":Option",
@@ -3318,7 +3365,6 @@ cc_binary(
         ":Target",
         ":llvm-bitcode-strip-opts",
         ":llvm-installnametool-opts",
-        ":llvm-objcopy-headers",
         ":llvm-objcopy-opts",
         ":llvm-strip-opts",
     ],
@@ -3573,6 +3619,24 @@ cc_binary(
 )
 
 cc_binary(
+    name = "llvm-remark-size-diff",
+    srcs = glob([
+        "tools/llvm-remark-size-diff/**/*.cpp",
+        "tools/llvm-remark-size-diff/**/*.h",
+    ]),
+    copts = llvm_copts,
+    includes = ["tools/llvm-reark-size-diff"],
+    stamp = 0,
+    deps = [
+        ":Core",
+        ":Demangle",
+        ":Object",
+        ":Remarks",
+        ":Support",
+    ],
+)
+
+cc_binary(
     name = "llvm-rtdyld",
     srcs = glob([
         "tools/llvm-rtdyld/*.cpp",
@@ -3689,6 +3753,7 @@ cc_binary(
     deps = [
         ":DebugInfoDWARF",
         ":DebugInfoPDB",
+        ":Debuginfod",
         ":Object",
         ":Option",
         ":Support",
@@ -4183,6 +4248,45 @@ cc_binary(
     deps = [
         ":Object",
         ":Support",
+        ":TextAPI",
+    ],
+)
+
+gentbl(
+    name = "TLICheckerOptsTableGen",
+    strip_include_prefix = "tools/llvm-tli-checker",
+    tbl_outs = [(
+        "-gen-opt-parser-defs",
+        "tools/llvm-tli-checker/Opts.inc",
+    )],
+    tblgen = ":llvm-tblgen",
+    td_file = "tools/llvm-tli-checker/Opts.td",
+    td_srcs = ["include/llvm/Option/OptParser.td"],
+)
+
+cc_binary(
+    name = "llvm-tli-checker",
+    testonly = True,
+    srcs = glob([
+        "tools/llvm-tli-checker/*.cpp",
+        "tools/llvm-tli-checker/*.h",
+    ]),
+    copts = llvm_copts,
+    stamp = 0,
+    deps = [
+        ":Analysis",
+        ":BinaryFormat",
+        ":BitReader",
+        ":BitstreamReader",
+        ":Core",
+        ":Demangle",
+        ":MC",
+        ":MCParser",
+        ":Object",
+        ":Option",
+        ":Remarks",
+        ":Support",
+        ":TLICheckerOptsTableGen",
         ":TextAPI",
     ],
 )

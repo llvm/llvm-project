@@ -3,7 +3,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos %t/live.s -o %t/live.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos %t/dead.s -o %t/dead.o
-        
+
 # RUN: not %lld -undefined bogus -o /dev/null %t/live.o 2>&1 | \
 # RUN:     FileCheck %s -check-prefix=UNKNOWN
 # RUN: not %lld -undefined error -o /dev/null %t/live.o 2>&1 | \
@@ -17,7 +17,7 @@
 # RUN: llvm-objdump --macho --lazy-bind %t/live.out \
 # RUN:     | FileCheck --check-prefix=BIND %s
 
-# RUN: %no_fatal_warnings_lld -lSystem -flat_namespace -undefined warning \
+# RUN: %no-fatal-warnings-lld -lSystem -flat_namespace -undefined warning \
 # RUN:     -o %t/live.out %t/live.o 2>&1 | \
 # RUN:     FileCheck %s -check-prefix=WARNING
 # RUN: llvm-objdump --macho --lazy-bind %t/live.out \

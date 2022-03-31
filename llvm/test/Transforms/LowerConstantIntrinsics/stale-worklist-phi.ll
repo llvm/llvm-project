@@ -1,6 +1,6 @@
 ; RUN: opt -lower-constant-intrinsics -S < %s | FileCheck %s
 
-; This is a reproducer for a heap-use-after-free bug that occured due to trying
+; This is a reproducer for a heap-use-after-free bug that occurred due to trying
 ; to process a PHI node that was removed in a preceding worklist iteration. The
 ; conditional branch in %cont2.i will be replaced with an unconditional branch
 ; to %cont4.i. As a result of that, the PHI node in %handler.type_mismatch3.i

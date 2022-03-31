@@ -875,12 +875,12 @@ def relocImm : ComplexPattern<iAny, 1, "selectRelocImm",
 // X86 Instruction Predicate Definitions.
 def TruePredicate : Predicate<"true">;
 
-def HasCMov      : Predicate<"Subtarget->hasCMov()">;
-def NoCMov       : Predicate<"!Subtarget->hasCMov()">;
+def HasCMOV      : Predicate<"Subtarget->canUseCMOV()">;
+def NoCMOV       : Predicate<"!Subtarget->canUseCMOV()">;
 
 def HasMMX       : Predicate<"Subtarget->hasMMX()">;
-def Has3DNow     : Predicate<"Subtarget->has3DNow()">;
-def Has3DNowA    : Predicate<"Subtarget->has3DNowA()">;
+def Has3DNow     : Predicate<"Subtarget->hasThreeDNow()">;
+def Has3DNowA    : Predicate<"Subtarget->hasThreeDNowA()">;
 def HasSSE1      : Predicate<"Subtarget->hasSSE1()">;
 def UseSSE1      : Predicate<"Subtarget->hasSSE1() && !Subtarget->hasAVX()">;
 def HasSSE2      : Predicate<"Subtarget->hasSSE2()">;
@@ -981,8 +981,8 @@ def HasWBNOINVD  : Predicate<"Subtarget->hasWBNOINVD()">;
 def HasRDPID     : Predicate<"Subtarget->hasRDPID()">;
 def HasWAITPKG   : Predicate<"Subtarget->hasWAITPKG()">;
 def HasINVPCID   : Predicate<"Subtarget->hasINVPCID()">;
-def HasCmpxchg8b : Predicate<"Subtarget->hasCmpxchg8b()">;
-def HasCmpxchg16b: Predicate<"Subtarget->hasCmpxchg16b()">;
+def HasCX8       : Predicate<"Subtarget->hasCX8()">;
+def HasCX16      : Predicate<"Subtarget->hasCX16()">;
 def HasPCONFIG   : Predicate<"Subtarget->hasPCONFIG()">;
 def HasENQCMD    : Predicate<"Subtarget->hasENQCMD()">;
 def HasKL        : Predicate<"Subtarget->hasKL()">;
@@ -996,17 +996,17 @@ def HasAMXINT8   : Predicate<"Subtarget->hasAMXINT8()">;
 def HasUINTR     : Predicate<"Subtarget->hasUINTR()">;
 def HasCRC32     : Predicate<"Subtarget->hasCRC32()">;
 def Not64BitMode : Predicate<"!Subtarget->is64Bit()">,
-                             AssemblerPredicate<(all_of (not Mode64Bit)), "Not 64-bit mode">;
+                             AssemblerPredicate<(all_of (not Is64Bit)), "Not 64-bit mode">;
 def In64BitMode  : Predicate<"Subtarget->is64Bit()">,
-                             AssemblerPredicate<(all_of Mode64Bit), "64-bit mode">;
+                             AssemblerPredicate<(all_of Is64Bit), "64-bit mode">;
 def IsLP64  : Predicate<"Subtarget->isTarget64BitLP64()">;
 def NotLP64 : Predicate<"!Subtarget->isTarget64BitLP64()">;
 def In16BitMode  : Predicate<"Subtarget->is16Bit()">,
-                             AssemblerPredicate<(all_of Mode16Bit), "16-bit mode">;
+                             AssemblerPredicate<(all_of Is16Bit), "16-bit mode">;
 def Not16BitMode : Predicate<"!Subtarget->is16Bit()">,
-                             AssemblerPredicate<(all_of (not Mode16Bit)), "Not 16-bit mode">;
+                             AssemblerPredicate<(all_of (not Is16Bit)), "Not 16-bit mode">;
 def In32BitMode  : Predicate<"Subtarget->is32Bit()">,
-                             AssemblerPredicate<(all_of Mode32Bit), "32-bit mode">;
+                             AssemblerPredicate<(all_of Is32Bit), "32-bit mode">;
 def IsWin64      : Predicate<"Subtarget->isTargetWin64()">;
 def NotWin64     : Predicate<"!Subtarget->isTargetWin64()">;
 def NotWin64WithoutFP : Predicate<"!Subtarget->isTargetWin64() ||"
@@ -2229,13 +2229,13 @@ def CMPXCHG64rm  : RI<0xB1, MRMDestMem, (outs), (ins i64mem:$dst, GR64:$src),
 
 let Defs = [EAX, EDX, EFLAGS], Uses = [EAX, EBX, ECX, EDX] in
 def CMPXCHG8B : I<0xC7, MRM1m, (outs), (ins i64mem:$dst),
-                  "cmpxchg8b\t$dst", []>, TB, Requires<[HasCmpxchg8b]>;
+                  "cmpxchg8b\t$dst", []>, TB, Requires<[HasCX8]>;
 
 let Defs = [RAX, RDX, EFLAGS], Uses = [RAX, RBX, RCX, RDX] in
 // NOTE: In64BitMode check needed for the AssemblerPredicate.
 def CMPXCHG16B : RI<0xC7, MRM1m, (outs), (ins i128mem:$dst),
                     "cmpxchg16b\t$dst", []>,
-                    TB, Requires<[HasCmpxchg16b,In64BitMode]>;
+                    TB, Requires<[HasCX16,In64BitMode]>;
 } // SchedRW, mayLoad, mayStore, hasSideEffects
 
 
@@ -2939,7 +2939,7 @@ def : InstAlias<"clzero\t{%rax|rax}", (CLZERO64r)>, Requires<[In64BitMode]>;
 let SchedRW = [WriteSystem] in {
   let Uses = [EAX, EDX] in
   def INVLPGB32 : I<0x01, MRM_FE, (outs), (ins),
-                  "invlpgb}", []>,
+                  "invlpgb", []>,
                   PS, Requires<[Not64BitMode]>;
   let Uses = [RAX, EDX] in
   def INVLPGB64 : I<0x01, MRM_FE, (outs), (ins),

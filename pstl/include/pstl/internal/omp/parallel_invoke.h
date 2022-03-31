@@ -31,7 +31,7 @@ __parallel_invoke_body(_F1&& __f1, _F2&& __f2)
 
 template <class _ExecutionPolicy, typename _F1, typename _F2>
 void
-__parallel_invoke(_ExecutionPolicy&&, _F1&& __f1, _F2&& __f2)
+__parallel_invoke(__pstl::__internal::__openmp_backend_tag, _ExecutionPolicy&&, _F1&& __f1, _F2&& __f2)
 {
     if (omp_in_parallel())
     {

@@ -11,11 +11,12 @@ body: |
     liveins: $vgpr0_vgpr1
     ; CHECK-LABEL: name: zextload_from_load_and_mask
     ; CHECK: liveins: $vgpr0_vgpr1
-    ; CHECK: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 255
-    ; CHECK: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[COPY]](p1) :: (load (s64), addrspace 1)
-    ; CHECK: [[AND:%[0-9]+]]:_(s64) = G_AND [[LOAD]], [[C]]
-    ; CHECK: $vgpr0_vgpr1 = COPY [[AND]](s64)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 255
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[COPY]](p1) :: (load (s64), addrspace 1)
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[LOAD]], [[C]]
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[AND]](s64)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(s64) = G_CONSTANT i64 255
     %2:_(s64) = G_LOAD %0 :: (load (s64), align 8, addrspace 1)

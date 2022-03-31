@@ -7,11 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/RichManglingContext.h"
-
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/Logging.h"
-
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
+#include "lldb/Utility/LLDBLog.h"
 
 #include "llvm/ADT/StringRef.h"
 
@@ -47,7 +44,7 @@ bool RichManglingContext::FromItaniumName(ConstString mangled) {
     ResetProvider(ItaniumPartialDemangler);
   }
 
-  if (Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DEMANGLE)) {
+  if (Log *log = GetLog(LLDBLog::Demangle)) {
     if (!err) {
       ParseFullName();
       LLDB_LOG(log, "demangled itanium: {0} -> \"{1}\"", mangled, m_ipd_buf);
@@ -83,15 +80,15 @@ bool RichManglingContext::IsCtorOrDtor() const {
   llvm_unreachable("Fully covered switch above!");
 }
 
-void RichManglingContext::processIPDStrResult(char *ipd_res, size_t res_size) {
+llvm::StringRef RichManglingContext::processIPDStrResult(char *ipd_res,
+                                                         size_t res_size) {
   // Error case: Clear the buffer.
   if (LLVM_UNLIKELY(ipd_res == nullptr)) {
     assert(res_size == m_ipd_buf_size &&
            "Failed IPD queries keep the original size in the N parameter");
 
     m_ipd_buf[0] = '\0';
-    m_buffer = llvm::StringRef(m_ipd_buf, 0);
-    return;
+    return llvm::StringRef(m_ipd_buf, 0);
   }
 
   // IPD's res_size includes null terminator.
@@ -103,66 +100,63 @@ void RichManglingContext::processIPDStrResult(char *ipd_res, size_t res_size) {
     m_ipd_buf = ipd_res;       // std::realloc freed or reused the old buffer.
     m_ipd_buf_size = res_size; // May actually be bigger, but we can't know.
 
-    if (Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DEMANGLE))
+    if (Log *log = GetLog(LLDBLog::Demangle))
       LLDB_LOG(log, "ItaniumPartialDemangler Realloc: new buffer size is {0}",
                m_ipd_buf_size);
   }
 
   // 99% case: Just remember the string length.
-  m_buffer = llvm::StringRef(m_ipd_buf, res_size - 1);
+  return llvm::StringRef(m_ipd_buf, res_size - 1);
 }
 
-void RichManglingContext::ParseFunctionBaseName() {
+llvm::StringRef RichManglingContext::ParseFunctionBaseName() {
   assert(m_provider != None && "Initialize a provider first");
   switch (m_provider) {
   case ItaniumPartialDemangler: {
     auto n = m_ipd_buf_size;
     auto buf = m_ipd.getFunctionBaseName(m_ipd_buf, &n);
-    processIPDStrResult(buf, n);
-    return;
+    return processIPDStrResult(buf, n);
   }
   case PluginCxxLanguage:
-    m_buffer =
-        get<CPlusPlusLanguage::MethodName>(m_cxx_method_parser)->GetBasename();
-    return;
+    return get<CPlusPlusLanguage::MethodName>(m_cxx_method_parser)
+        ->GetBasename();
   case None:
-    return;
+    return {};
   }
+  llvm_unreachable("Fully covered switch above!");
 }
 
-void RichManglingContext::ParseFunctionDeclContextName() {
+llvm::StringRef RichManglingContext::ParseFunctionDeclContextName() {
   assert(m_provider != None && "Initialize a provider first");
   switch (m_provider) {
   case ItaniumPartialDemangler: {
     auto n = m_ipd_buf_size;
     auto buf = m_ipd.getFunctionDeclContextName(m_ipd_buf, &n);
-    processIPDStrResult(buf, n);
-    return;
+    return processIPDStrResult(buf, n);
   }
   case PluginCxxLanguage:
-    m_buffer =
-        get<CPlusPlusLanguage::MethodName>(m_cxx_method_parser)->GetContext();
-    return;
+    return get<CPlusPlusLanguage::MethodName>(m_cxx_method_parser)
+        ->GetContext();
   case None:
-    return;
+    return {};
   }
+  llvm_unreachable("Fully covered switch above!");
 }
 
-void RichManglingContext::ParseFullName() {
+llvm::StringRef RichManglingContext::ParseFullName() {
   assert(m_provider != None && "Initialize a provider first");
   switch (m_provider) {
   case ItaniumPartialDemangler: {
     auto n = m_ipd_buf_size;
     auto buf = m_ipd.finishDemangle(m_ipd_buf, &n);
-    processIPDStrResult(buf, n);
-    return;
+    return processIPDStrResult(buf, n);
   }
   case PluginCxxLanguage:
-    m_buffer = get<CPlusPlusLanguage::MethodName>(m_cxx_method_parser)
-                   ->GetFullName()
-                   .GetStringRef();
-    return;
+    return get<CPlusPlusLanguage::MethodName>(m_cxx_method_parser)
+        ->GetFullName()
+        .GetStringRef();
   case None:
-    return;
+    return {};
   }
+  llvm_unreachable("Fully covered switch above!");
 }

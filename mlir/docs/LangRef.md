@@ -179,6 +179,19 @@ string-literal  ::= `"` [^"\n\f\v\r]* `"`   TODO: define escaping rules
 Not listed here, but MLIR does support comments. They use standard BCPL syntax,
 starting with a `//` and going until the end of the line.
 
+
+### Top level Productions
+
+```
+// Top level production
+toplevel := (operation | attribute-alias-def | type-alias-def)*
+```
+
+The production `toplevel` is the top level production that is parsed by any parsing
+consuming the MLIR syntax. [Operations](#operations),
+[Attribute alises](#attribute-value-aliases), and [Type aliases](#type-aliases)
+can be declared on the toplevel.
+
 ### Identifiers and keywords
 
 Syntax:
@@ -243,10 +256,10 @@ between, and within, different dialects.
 A few of the dialects supported by MLIR:
 
 *   [Affine dialect](Dialects/Affine.md)
+*   [Func dialect](Dialects/Func.md)
 *   [GPU dialect](Dialects/GPU.md)
 *   [LLVM dialect](Dialects/LLVM.md)
 *   [SPIR-V dialect](Dialects/SPIR-V.md)
-*   [Standard dialect](Dialects/Standard.md)
 *   [Vector dialect](Dialects/Vector.md)
 
 ### Target specific operations
@@ -292,7 +305,7 @@ MLIR introduces a uniform concept called *operations* to enable describing many
 different levels of abstractions and computations. Operations in MLIR are fully
 extensible (there is no fixed list of operations) and have application-specific
 semantics. For example, MLIR supports
-[target-independent operations](Dialects/Standard.md#memory-operations),
+[target-independent operations](Dialects/MemRef.md),
 [affine operations](Dialects/Affine.md), and
 [target-specific machine operations](#target-specific-operations).
 
@@ -378,21 +391,21 @@ arguments:
 ```mlir
 func @simple(i64, i1) -> i64 {
 ^bb0(%a: i64, %cond: i1): // Code dominated by ^bb0 may refer to %a
-  cond_br %cond, ^bb1, ^bb2
+  cf.cond_br %cond, ^bb1, ^bb2
 
 ^bb1:
-  br ^bb3(%a: i64)    // Branch passes %a as the argument
+  cf.br ^bb3(%a: i64)    // Branch passes %a as the argument
 
 ^bb2:
   %b = arith.addi %a, %a : i64
-  br ^bb3(%b: i64)    // Branch passes %b as the argument
+  cf.br ^bb3(%b: i64)    // Branch passes %b as the argument
 
 // ^bb3 receives an argument, named %c, from predecessors
 // and passes it on to bb4 along with %a. %a is referenced
 // directly from its defining operation and is not passed through
 // an argument of ^bb3.
 ^bb3(%c: i64):
-  br ^bb4(%c, %a : i64, i64)
+  cf.br ^bb4(%c, %a : i64, i64)
 
 ^bb4(%d : i64, %e : i64):
   %0 = arith.addi %d, %e : i64
@@ -430,7 +443,8 @@ entry block cannot be listed as a successor of any other block. The syntax for a
 region is as follows:
 
 ```
-region ::= `{` block* `}`
+region      ::= `{` entry-block? block* `}`
+entry-block ::= operation+
 ```
 
 A function body is an example of a region: it consists of a CFG of blocks and
@@ -440,6 +454,11 @@ different block, or return from a function where the types of the `return`
 arguments must match the result types of the function signature. Similarly, the
 function arguments must match the types and count of the region arguments. In
 general, operations with regions can define these correspondences arbitrarily.
+
+An *entry block* is a block with no label and no arguments that may occur at
+the beginning of a region. It enables a common pattern of using a region to
+open a new scope.
+
 
 ### Value Scoping
 
@@ -512,12 +531,12 @@ Example:
 ```mlir
 func @accelerator_compute(i64, i1) -> i64 { // An SSACFG region
 ^bb0(%a: i64, %cond: i1): // Code dominated by ^bb0 may refer to %a
-  cond_br %cond, ^bb1, ^bb2
+  cf.cond_br %cond, ^bb1, ^bb2
 
 ^bb1:
   // This def for %value does not dominate ^bb2
   %value = "op.convert"(%a) : (i64) -> i64
-  br ^bb3(%a: i64)    // Branch passes %a as the argument
+  cf.br ^bb3(%a: i64)    // Branch passes %a as the argument
 
 ^bb2:
   accelerator.launch() { // An SSACFG region
@@ -713,8 +732,7 @@ the lighter syntax: `!foo.something<a%%123^^^>>>` because it contains characters
 that are not allowed in the lighter syntax, as well as unbalanced `<>`
 characters.
 
-See [here](Tutorials/DefiningAttributesAndTypes.md) to learn how to define
-dialect types.
+See [here](AttributesAndTypes.md) to learn how to define dialect types.
 
 ### Builtin Types
 
@@ -733,7 +751,7 @@ attribute-value ::= attribute-alias | dialect-attribute | builtin-attribute
 
 Attributes are the mechanism for specifying constant data on operations in
 places where a variable is never allowed - e.g. the comparison predicate of a
-[`cmpi` operation](Dialects/Standard.md#stdcmpi-cmpiop). Each operation has an
+[`cmpi` operation](Dialects/ArithmeticOps.md#arithcmpi-mlirarithcmpiop). Each operation has an
 attribute dictionary, which associates a set of attribute names to attribute
 values. MLIR's builtin dialect provides a rich set of
 [builtin attribute values](#builtin-attribute-values) out of the box (such as
@@ -821,8 +839,7 @@ valid in the lighter syntax: `#foo.something<a%%123^^^>>>` because it contains
 characters that are not allowed in the lighter syntax, as well as unbalanced
 `<>` characters.
 
-See [here](Tutorials/DefiningAttributesAndTypes.md) on how to define dialect
-attribute values.
+See [here](AttributesAndTypes.md) on how to define dialect attribute values.
 
 ### Builtin Attribute Values
 

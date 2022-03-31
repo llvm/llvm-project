@@ -13,6 +13,7 @@
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Lower/Todo.h"
 #include "flang/Optimizer/Builder/DoLoopHelper.h"
+#include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
 
@@ -22,8 +23,8 @@
 // CharacterExprHelper implementation
 //===----------------------------------------------------------------------===//
 
-/// Unwrap base fir.char<kind,len> type.
-static fir::CharacterType recoverCharacterType(mlir::Type type) {
+/// Unwrap all the ref and box types and return the inner element type.
+static mlir::Type unwrapBoxAndRef(mlir::Type type) {
   if (auto boxType = type.dyn_cast<fir::BoxCharType>())
     return boxType.getEleTy();
   while (true) {
@@ -33,13 +34,37 @@ static fir::CharacterType recoverCharacterType(mlir::Type type) {
     else
       break;
   }
-  return fir::unwrapSequenceType(type).cast<fir::CharacterType>();
+  return type;
 }
 
-/// Get fir.char<kind> type with the same kind as inside str.
+/// Unwrap base fir.char<kind,len> type.
+static fir::CharacterType recoverCharacterType(mlir::Type type) {
+  type = fir::unwrapSequenceType(unwrapBoxAndRef(type));
+  if (auto charTy = type.dyn_cast<fir::CharacterType>())
+    return charTy;
+  llvm::report_fatal_error("expected a character type");
+}
+
+bool fir::factory::CharacterExprHelper::isCharacterScalar(mlir::Type type) {
+  type = unwrapBoxAndRef(type);
+  return !type.isa<fir::SequenceType>() && fir::isa_char(type);
+}
+
+bool fir::factory::CharacterExprHelper::isArray(mlir::Type type) {
+  type = unwrapBoxAndRef(type);
+  if (auto seqTy = type.dyn_cast<fir::SequenceType>())
+    return fir::isa_char(seqTy.getEleTy());
+  return false;
+}
+
 fir::CharacterType
 fir::factory::CharacterExprHelper::getCharacterType(mlir::Type type) {
   assert(isCharacterScalar(type) && "expected scalar character");
+  return recoverCharacterType(type);
+}
+
+fir::CharacterType
+fir::factory::CharacterExprHelper::getCharType(mlir::Type type) {
   return recoverCharacterType(type);
 }
 
@@ -67,15 +92,6 @@ getCompileTimeLength(const fir::CharBoxValue &box) {
 /// values will have a type `!fir.array<...x!fir.char<N>>` or `!fir.char<N>`.
 LLVM_ATTRIBUTE_UNUSED static bool needToMaterialize(mlir::Value str) {
   return str.getType().isa<fir::SequenceType>() || fir::isa_char(str.getType());
-}
-
-/// Unwrap integer constant from mlir::Value.
-static llvm::Optional<std::int64_t> getIntIfConstant(mlir::Value value) {
-  if (auto *definingOp = value.getDefiningOp())
-    if (auto cst = mlir::dyn_cast<mlir::ConstantOp>(definingOp))
-      if (auto intAttr = cst.getValue().dyn_cast<mlir::IntegerAttr>())
-        return intAttr.getInt();
-  return {};
 }
 
 /// This is called only if `str` does not reside in memory. Such a bare string
@@ -136,10 +152,10 @@ fir::factory::CharacterExprHelper::toExtendedValue(mlir::Value character,
     // If the embox is accessible, use its operand to avoid filling
     // the generated fir with embox/unbox.
     mlir::Value boxCharLen;
-    if (auto *definingOp = character.getDefiningOp()) {
-      if (auto box = dyn_cast<fir::EmboxCharOp>(definingOp)) {
-        base = box.memref();
-        boxCharLen = box.len();
+    if (auto definingOp = character.getDefiningOp()) {
+      if (auto box = mlir::dyn_cast<fir::EmboxCharOp>(definingOp)) {
+        base = box.getMemref();
+        boxCharLen = box.getLen();
       }
     }
     if (!boxCharLen) {
@@ -210,7 +226,7 @@ fir::CharBoxValue fir::factory::CharacterExprHelper::toScalarCharacter(
   auto lenType = builder.getCharacterLengthType();
   auto len = builder.createConvert(loc, lenType, box.getLen());
   for (auto extent : box.getExtents())
-    len = builder.create<arith::MulIOp>(
+    len = builder.create<mlir::arith::MulIOp>(
         loc, len, builder.createConvert(loc, lenType, extent));
 
   // TODO: typeLen can be improved in compiled constant cases
@@ -295,48 +311,6 @@ mlir::Value fir::factory::CharacterExprHelper::getCharBoxBuffer(
   return buff;
 }
 
-/// Get the LLVM intrinsic for `memcpy`. Use the 64 bit version.
-mlir::FuncOp fir::factory::getLlvmMemcpy(fir::FirOpBuilder &builder) {
-  auto ptrTy = builder.getRefType(builder.getIntegerType(8));
-  llvm::SmallVector<mlir::Type> args = {ptrTy, ptrTy, builder.getI64Type(),
-                                        builder.getI1Type()};
-  auto memcpyTy =
-      mlir::FunctionType::get(builder.getContext(), args, llvm::None);
-  return builder.addNamedFunction(builder.getUnknownLoc(),
-                                  "llvm.memcpy.p0i8.p0i8.i64", memcpyTy);
-}
-
-/// Get the LLVM intrinsic for `memmove`. Use the 64 bit version.
-mlir::FuncOp fir::factory::getLlvmMemmove(fir::FirOpBuilder &builder) {
-  auto ptrTy = builder.getRefType(builder.getIntegerType(8));
-  llvm::SmallVector<mlir::Type> args = {ptrTy, ptrTy, builder.getI64Type(),
-                                        builder.getI1Type()};
-  auto memmoveTy =
-      mlir::FunctionType::get(builder.getContext(), args, llvm::None);
-  return builder.addNamedFunction(builder.getUnknownLoc(),
-                                  "llvm.memmove.p0i8.p0i8.i64", memmoveTy);
-}
-
-/// Get the LLVM intrinsic for `memset`. Use the 64 bit version.
-mlir::FuncOp fir::factory::getLlvmMemset(fir::FirOpBuilder &builder) {
-  auto ptrTy = builder.getRefType(builder.getIntegerType(8));
-  llvm::SmallVector<mlir::Type> args = {ptrTy, ptrTy, builder.getI64Type(),
-                                        builder.getI1Type()};
-  auto memsetTy =
-      mlir::FunctionType::get(builder.getContext(), args, llvm::None);
-  return builder.addNamedFunction(builder.getUnknownLoc(),
-                                  "llvm.memset.p0i8.p0i8.i64", memsetTy);
-}
-
-/// Get the standard `realloc` function.
-mlir::FuncOp fir::factory::getRealloc(fir::FirOpBuilder &builder) {
-  auto ptrTy = builder.getRefType(builder.getIntegerType(8));
-  llvm::SmallVector<mlir::Type> args = {ptrTy, builder.getI64Type()};
-  auto reallocTy = mlir::FunctionType::get(builder.getContext(), args, {ptrTy});
-  return builder.addNamedFunction(builder.getUnknownLoc(), "realloc",
-                                  reallocTy);
-}
-
 /// Create a loop to copy `count` characters from `src` to `dest`. Note that the
 /// KIND indicates the number of bits in a code point. (ASCII, UCS-2, or UCS-4.)
 void fir::factory::CharacterExprHelper::createCopy(
@@ -355,10 +329,11 @@ void fir::factory::CharacterExprHelper::createCopy(
     auto i64Ty = builder.getI64Type();
     auto kindBytes = builder.createIntegerConstant(loc, i64Ty, bytes);
     auto castCount = builder.createConvert(loc, i64Ty, count);
-    auto totalBytes = builder.create<arith::MulIOp>(loc, kindBytes, castCount);
+    auto totalBytes =
+        builder.create<mlir::arith::MulIOp>(loc, kindBytes, castCount);
     auto notVolatile = builder.createBool(loc, false);
     auto memmv = getLlvmMemmove(builder);
-    auto argTys = memmv.getType().getInputs();
+    auto argTys = memmv.getFunctionType().getInputs();
     auto toPtr = builder.createConvert(loc, argTys[0], toBuff);
     auto fromPtr = builder.createConvert(loc, argTys[1], fromBuff);
     builder.create<fir::CallOp>(
@@ -423,18 +398,20 @@ fir::CharBoxValue fir::factory::CharacterExprHelper::createTempFrom(
 void fir::factory::CharacterExprHelper::createLengthOneAssign(
     const fir::CharBoxValue &lhs, const fir::CharBoxValue &rhs) {
   auto addr = lhs.getBuffer();
-  mlir::Value val = builder.create<fir::LoadOp>(loc, rhs.getBuffer());
-  auto addrTy = builder.getRefType(val.getType());
-  addr = builder.createConvert(loc, addrTy, addr);
+  auto toTy = fir::unwrapRefType(addr.getType());
+  mlir::Value val = rhs.getBuffer();
+  if (fir::isa_ref_type(val.getType()))
+    val = builder.create<fir::LoadOp>(loc, val);
+  val = builder.createConvert(loc, toTy, val);
   builder.create<fir::StoreOp>(loc, val, addr);
 }
 
 /// Returns the minimum of integer mlir::Value \p a and \b.
 mlir::Value genMin(fir::FirOpBuilder &builder, mlir::Location loc,
                    mlir::Value a, mlir::Value b) {
-  auto cmp =
-      builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt, a, b);
-  return builder.create<mlir::SelectOp>(loc, cmp, a, b);
+  auto cmp = builder.create<mlir::arith::CmpIOp>(
+      loc, mlir::arith::CmpIPredicate::slt, a, b);
+  return builder.create<mlir::arith::SelectOp>(loc, cmp, a, b);
 }
 
 void fir::factory::CharacterExprHelper::createAssign(
@@ -465,7 +442,8 @@ void fir::factory::CharacterExprHelper::createAssign(
   // Pad if needed.
   if (!compileTimeSameLength) {
     auto one = builder.createIntegerConstant(loc, lhs.getLen().getType(), 1);
-    auto maxPadding = builder.create<arith::SubIOp>(loc, lhs.getLen(), one);
+    auto maxPadding =
+        builder.create<mlir::arith::SubIOp>(loc, lhs.getLen(), one);
     createPadding(lhs, copyCount, maxPadding);
   }
 }
@@ -476,18 +454,18 @@ fir::CharBoxValue fir::factory::CharacterExprHelper::createConcatenate(
                                       lhs.getLen());
   auto rhsLen = builder.createConvert(loc, builder.getCharacterLengthType(),
                                       rhs.getLen());
-  mlir::Value len = builder.create<arith::AddIOp>(loc, lhsLen, rhsLen);
+  mlir::Value len = builder.create<mlir::arith::AddIOp>(loc, lhsLen, rhsLen);
   auto temp = createCharacterTemp(getCharacterType(rhs), len);
   createCopy(temp, lhs, lhsLen);
   auto one = builder.createIntegerConstant(loc, len.getType(), 1);
-  auto upperBound = builder.create<arith::SubIOp>(loc, len, one);
+  auto upperBound = builder.create<mlir::arith::SubIOp>(loc, len, one);
   auto lhsLenIdx = builder.createConvert(loc, builder.getIndexType(), lhsLen);
   auto fromBuff = getCharBoxBuffer(rhs);
   auto toBuff = getCharBoxBuffer(temp);
   fir::factory::DoLoopHelper{builder, loc}.createLoop(
       lhsLenIdx, upperBound, one,
       [&](fir::FirOpBuilder &bldr, mlir::Value index) {
-        auto rhsIndex = bldr.create<arith::SubIOp>(loc, index, lhsLenIdx);
+        auto rhsIndex = bldr.create<mlir::arith::SubIOp>(loc, index, lhsLenIdx);
         auto charVal = createLoadCharAt(fromBuff, rhsIndex);
         createStoreCharAt(toBuff, index, charVal);
       });
@@ -510,7 +488,8 @@ fir::CharBoxValue fir::factory::CharacterExprHelper::createSubstring(
   auto lowerBound = castBounds[0];
   // FIR CoordinateOp is zero based but Fortran substring are one based.
   auto one = builder.createIntegerConstant(loc, lowerBound.getType(), 1);
-  auto offset = builder.create<arith::SubIOp>(loc, lowerBound, one).getResult();
+  auto offset =
+      builder.create<mlir::arith::SubIOp>(loc, lowerBound, one).getResult();
   auto addr = createElementAddr(box.getBuffer(), offset);
   auto kind = getCharacterKind(box.getBuffer().getType());
   auto charTy = fir::CharacterType::getUnknownLen(builder.getContext(), kind);
@@ -521,18 +500,19 @@ fir::CharBoxValue fir::factory::CharacterExprHelper::createSubstring(
   mlir::Value substringLen;
   if (nbounds < 2) {
     substringLen =
-        builder.create<arith::SubIOp>(loc, box.getLen(), castBounds[0]);
+        builder.create<mlir::arith::SubIOp>(loc, box.getLen(), castBounds[0]);
   } else {
     substringLen =
-        builder.create<arith::SubIOp>(loc, castBounds[1], castBounds[0]);
+        builder.create<mlir::arith::SubIOp>(loc, castBounds[1], castBounds[0]);
   }
-  substringLen = builder.create<arith::AddIOp>(loc, substringLen, one);
+  substringLen = builder.create<mlir::arith::AddIOp>(loc, substringLen, one);
 
   // Set length to zero if bounds were reversed (Fortran 2018 9.4.1)
   auto zero = builder.createIntegerConstant(loc, substringLen.getType(), 0);
-  auto cdt = builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt,
-                                           substringLen, zero);
-  substringLen = builder.create<mlir::SelectOp>(loc, cdt, zero, substringLen);
+  auto cdt = builder.create<mlir::arith::CmpIOp>(
+      loc, mlir::arith::CmpIPredicate::slt, substringLen, zero);
+  substringLen =
+      builder.create<mlir::arith::SelectOp>(loc, cdt, zero, substringLen);
 
   return {substringRef, substringLen};
 }
@@ -548,7 +528,7 @@ fir::factory::CharacterExprHelper::createLenTrim(const fir::CharBoxValue &str) {
   auto zero = builder.createIntegerConstant(loc, indexType, 0);
   auto trueVal = builder.createIntegerConstant(loc, builder.getI1Type(), 1);
   auto blank = createBlankConstantCode(getCharacterType(str));
-  mlir::Value lastChar = builder.create<arith::SubIOp>(loc, len, one);
+  mlir::Value lastChar = builder.create<mlir::arith::SubIOp>(loc, len, one);
 
   auto iterWhile =
       builder.create<fir::IterWhileOp>(loc, lastChar, zero, minusOne, trueVal,
@@ -562,16 +542,16 @@ fir::factory::CharacterExprHelper::createLenTrim(const fir::CharBoxValue &str) {
   auto codeAddr =
       builder.createConvert(loc, builder.getRefType(blank.getType()), elemAddr);
   auto c = builder.create<fir::LoadOp>(loc, codeAddr);
-  auto isBlank =
-      builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq, blank, c);
+  auto isBlank = builder.create<mlir::arith::CmpIOp>(
+      loc, mlir::arith::CmpIPredicate::eq, blank, c);
   llvm::SmallVector<mlir::Value> results = {isBlank, index};
   builder.create<fir::ResultOp>(loc, results);
   builder.restoreInsertionPoint(insPt);
   // Compute length after iteration (zero if all blanks)
   mlir::Value newLen =
-      builder.create<arith::AddIOp>(loc, iterWhile.getResult(1), one);
-  auto result =
-      builder.create<mlir::SelectOp>(loc, iterWhile.getResult(0), zero, newLen);
+      builder.create<mlir::arith::AddIOp>(loc, iterWhile.getResult(1), one);
+  auto result = builder.create<mlir::arith::SelectOp>(
+      loc, iterWhile.getResult(0), zero, newLen);
   return builder.createConvert(loc, builder.getCharacterLengthType(), result);
 }
 
@@ -641,16 +621,6 @@ bool fir::factory::CharacterExprHelper::isCharacterLiteral(mlir::Type type) {
   return false;
 }
 
-bool fir::factory::CharacterExprHelper::isCharacterScalar(mlir::Type type) {
-  if (type.isa<fir::BoxCharType>())
-    return true;
-  type = fir::unwrapRefType(type);
-  if (auto boxTy = type.dyn_cast<fir::BoxType>())
-    type = boxTy.getEleTy();
-  type = fir::unwrapRefType(type);
-  return !type.isa<fir::SequenceType>() && fir::isa_char(type);
-}
-
 fir::KindTy
 fir::factory::CharacterExprHelper::getCharacterKind(mlir::Type type) {
   assert(isCharacterScalar(type) && "expected scalar character");
@@ -660,10 +630,6 @@ fir::factory::CharacterExprHelper::getCharacterKind(mlir::Type type) {
 fir::KindTy
 fir::factory::CharacterExprHelper::getCharacterOrSequenceKind(mlir::Type type) {
   return recoverCharacterType(type).getFKind();
-}
-
-bool fir::factory::CharacterExprHelper::isArray(mlir::Type type) {
-  return !isCharacterScalar(type);
 }
 
 bool fir::factory::CharacterExprHelper::hasConstantLengthInType(
@@ -705,7 +671,7 @@ fir::factory::CharacterExprHelper::readLengthFromBox(mlir::Value box) {
   auto width = bits / 8;
   if (width > 1) {
     auto widthVal = builder.createIntegerConstant(loc, lenTy, width);
-    return builder.create<arith::DivSIOp>(loc, size, widthVal);
+    return builder.create<mlir::arith::DivSIOp>(loc, size, widthVal);
   }
   return size;
 }
@@ -724,4 +690,50 @@ mlir::Value fir::factory::CharacterExprHelper::getLength(mlir::Value memref) {
 
   // Length cannot be deduced from memref.
   return {};
+}
+
+std::pair<mlir::Value, mlir::Value>
+fir::factory::extractCharacterProcedureTuple(fir::FirOpBuilder &builder,
+                                             mlir::Location loc,
+                                             mlir::Value tuple) {
+  mlir::TupleType tupleType = tuple.getType().cast<mlir::TupleType>();
+  mlir::Value addr = builder.create<fir::ExtractValueOp>(
+      loc, tupleType.getType(0), tuple,
+      builder.getArrayAttr(
+          {builder.getIntegerAttr(builder.getIndexType(), 0)}));
+  mlir::Value proc = [&]() -> mlir::Value {
+    if (auto addrTy = addr.getType().dyn_cast<fir::BoxProcType>())
+      return builder.create<fir::BoxAddrOp>(loc, addrTy.getEleTy(), addr);
+    return addr;
+  }();
+  mlir::Value len = builder.create<fir::ExtractValueOp>(
+      loc, tupleType.getType(1), tuple,
+      builder.getArrayAttr(
+          {builder.getIntegerAttr(builder.getIndexType(), 1)}));
+  return {proc, len};
+}
+
+mlir::Value fir::factory::createCharacterProcedureTuple(
+    fir::FirOpBuilder &builder, mlir::Location loc, mlir::Type argTy,
+    mlir::Value addr, mlir::Value len) {
+  mlir::TupleType tupleType = argTy.cast<mlir::TupleType>();
+  addr = builder.createConvert(loc, tupleType.getType(0), addr);
+  len = builder.createConvert(loc, tupleType.getType(1), len);
+  mlir::Value tuple = builder.create<fir::UndefOp>(loc, tupleType);
+  tuple = builder.create<fir::InsertValueOp>(
+      loc, tupleType, tuple, addr,
+      builder.getArrayAttr(
+          {builder.getIntegerAttr(builder.getIndexType(), 0)}));
+  tuple = builder.create<fir::InsertValueOp>(
+      loc, tupleType, tuple, len,
+      builder.getArrayAttr(
+          {builder.getIntegerAttr(builder.getIndexType(), 1)}));
+  return tuple;
+}
+
+mlir::Type
+fir::factory::getCharacterProcedureTupleType(mlir::Type funcPointerType) {
+  mlir::MLIRContext *context = funcPointerType.getContext();
+  mlir::Type lenType = mlir::IntegerType::get(context, 64);
+  return mlir::TupleType::get(context, {funcPointerType, lenType});
 }

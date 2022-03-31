@@ -63,9 +63,7 @@ if platform.system() not in ['Windows']:
     config.available_features.add('demangler')
 
 llvm_config.feature_config(
-    [('--build-mode', {'DEBUG': 'debug'}),
-     ('--assertion-mode', {'ON': 'asserts'}),
-     ('--targets-built', {'AArch64': 'aarch64',
+    [('--targets-built', {'AArch64': 'aarch64',
                           'AMDGPU': 'amdgpu',
                           'ARM': 'arm',
                           'AVR': 'avr',
@@ -116,6 +114,24 @@ if config.have_dia_sdk:
 
 if config.sizeof_void_p == 8:
     config.available_features.add("llvm-64-bits")
+
+if config.has_plugins:
+    config.available_features.add('plugins')
+
+if config.build_examples:
+    config.available_features.add('examples')
+
+if config.linked_bye_extension:
+    config.substitutions.append(('%loadbye', ''))
+    config.substitutions.append(('%loadnewpmbye', ''))
+else:
+    config.substitutions.append(('%loadbye',
+                                 '-load={}/Bye{}'.format(config.llvm_shlib_dir,
+                                                         config.llvm_shlib_ext)))
+    config.substitutions.append(('%loadnewpmbye',
+                                 '-load-pass-plugin={}/Bye{}'
+                                 .format(config.llvm_shlib_dir,
+                                         config.llvm_shlib_ext)))
 
 tar_executable = lit.util.which('tar', config.environment['PATH'])
 if tar_executable:

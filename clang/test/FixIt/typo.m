@@ -8,7 +8,7 @@
 + (int)method:(int)x;
 @end
 
-void test() {
+void test(void) {
   NSstring *str = @"A string"; // expected-error{{unknown type name 'NSstring'; did you mean 'NSString'?}}
 }
 

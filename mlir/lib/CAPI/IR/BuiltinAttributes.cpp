@@ -129,6 +129,14 @@ int64_t mlirIntegerAttrGetValueInt(MlirAttribute attr) {
   return unwrap(attr).cast<IntegerAttr>().getInt();
 }
 
+int64_t mlirIntegerAttrGetValueSInt(MlirAttribute attr) {
+  return unwrap(attr).cast<IntegerAttr>().getSInt();
+}
+
+uint64_t mlirIntegerAttrGetValueUInt(MlirAttribute attr) {
+  return unwrap(attr).cast<IntegerAttr>().getUInt();
+}
+
 //===----------------------------------------------------------------------===//
 // Bool attribute.
 //===----------------------------------------------------------------------===//
@@ -426,6 +434,16 @@ MlirAttribute mlirDenseElementsAttrInt8Get(MlirType shapedType,
                                            const int8_t *elements) {
   return getDenseAttribute(shapedType, numElements, elements);
 }
+MlirAttribute mlirDenseElementsAttrUInt16Get(MlirType shapedType,
+                                             intptr_t numElements,
+                                             const uint16_t *elements) {
+  return getDenseAttribute(shapedType, numElements, elements);
+}
+MlirAttribute mlirDenseElementsAttrInt16Get(MlirType shapedType,
+                                            intptr_t numElements,
+                                            const int16_t *elements) {
+  return getDenseAttribute(shapedType, numElements, elements);
+}
 MlirAttribute mlirDenseElementsAttrUInt32Get(MlirType shapedType,
                                              intptr_t numElements,
                                              const uint32_t *elements) {
@@ -529,6 +547,12 @@ int8_t mlirDenseElementsAttrGetInt8Value(MlirAttribute attr, intptr_t pos) {
 }
 uint8_t mlirDenseElementsAttrGetUInt8Value(MlirAttribute attr, intptr_t pos) {
   return unwrap(attr).cast<DenseElementsAttr>().getValues<uint8_t>()[pos];
+}
+int16_t mlirDenseElementsAttrGetInt16Value(MlirAttribute attr, intptr_t pos) {
+  return unwrap(attr).cast<DenseElementsAttr>().getValues<int16_t>()[pos];
+}
+uint16_t mlirDenseElementsAttrGetUInt16Value(MlirAttribute attr, intptr_t pos) {
+  return unwrap(attr).cast<DenseElementsAttr>().getValues<uint16_t>()[pos];
 }
 int32_t mlirDenseElementsAttrGetInt32Value(MlirAttribute attr, intptr_t pos) {
   return unwrap(attr).cast<DenseElementsAttr>().getValues<int32_t>()[pos];

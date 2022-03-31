@@ -198,7 +198,7 @@ int main(int, char**)
 #endif
 
 //  iterators in the libc++ test suite
-    static_assert((!std::__is_cpp17_contiguous_iterator<output_iterator       <char *> >::value), "");
+    static_assert((!std::__is_cpp17_contiguous_iterator<cpp17_output_iterator <char *> >::value), "");
     static_assert((!std::__is_cpp17_contiguous_iterator<cpp17_input_iterator  <char *> >::value), "");
     static_assert((!std::__is_cpp17_contiguous_iterator<forward_iterator      <char *> >::value), "");
     static_assert((!std::__is_cpp17_contiguous_iterator<bidirectional_iterator<char *> >::value), "");

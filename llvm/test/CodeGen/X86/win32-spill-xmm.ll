@@ -4,7 +4,7 @@
 
 ; CHECK-LABEL: spill_ok
 ; CHECK: subl    $32, %esp
-; CHECK: movaps  %xmm3, (%esp)
+; CHECK: movups  %xmm3, (%esp)
 ; CHECK: movl    $0, 16(%esp)
 ; CHECK: calll   _bar
 define void @spill_ok(i32, <16 x float> *) {

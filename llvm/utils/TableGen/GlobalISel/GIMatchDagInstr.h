@@ -9,11 +9,14 @@
 #ifndef LLVM_UTILS_TABLEGEN_GIMATCHDAGINSTR_H
 #define LLVM_UTILS_TABLEGEN_GIMATCHDAGINSTR_H
 
-#include "GIMatchDagOperands.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
+class CodeGenInstruction;
 class GIMatchDag;
+class GIMatchDagOperandList;
 
 /// Represents an instruction in the match DAG. This object knows very little
 /// about the actual instruction to be matched as the bulk of that is in
@@ -61,7 +64,7 @@ protected:
   /// For debugging purposes, it's helpful to have access to a description of
   /// the Opcode. However, this object shouldn't use it for more than debugging
   /// output since predicates are expected to be handled outside the DAG.
-  CodeGenInstruction *OpcodeAnnotation = 0;
+  CodeGenInstruction *OpcodeAnnotation = nullptr;
 
   /// When true, this instruction will be a starting point for a match attempt.
   bool IsMatchRoot = false;

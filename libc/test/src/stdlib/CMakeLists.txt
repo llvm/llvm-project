@@ -71,6 +71,16 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  strtold_test
+  SUITE
+    libc_stdlib_unittests
+  SRCS
+    strtold_test.cpp
+  DEPENDS
+    libc.src.stdlib.strtold
+)
+
+add_libc_unittest(
   strtoll_test
   SUITE
     libc_stdlib_unittests
@@ -98,35 +108,6 @@ add_libc_unittest(
     strtoull_test.cpp
   DEPENDS
     libc.src.stdlib.strtoull
-)
-
-if(NOT LLVM_LIBC_FULL_BUILD)
-  return()
-endif()
-
-add_libc_unittest(
-  _Exit_test
-  SUITE
-    libc_stdlib_unittests
-  SRCS
-    _Exit_test.cpp
-  DEPENDS
-    libc.include.stdlib
-    libc.src.stdlib._Exit
-)
-
-add_libc_unittest(
-  abort_test
-  SUITE
-    libc_stdlib_unittests
-  SRCS
-    abort_test.cpp
-  DEPENDS
-    libc.include.stdlib
-    libc.include.signal
-    libc.src.stdlib.abort
-    libc.src.stdlib._Exit
-    libc.src.signal.raise
 )
 
 add_libc_unittest(
@@ -219,3 +200,48 @@ add_libc_unittest(
     libc.include.stdlib
     libc.src.stdlib.qsort
 )
+
+if(LLVM_LIBC_FULL_BUILD)
+
+  add_libc_unittest(
+    _Exit_test
+    SUITE
+      libc_stdlib_unittests
+    SRCS
+      _Exit_test.cpp
+    DEPENDS
+      libc.include.stdlib
+      libc.src.stdlib._Exit
+      libc.src.stdlib.exit
+  )
+
+  add_libc_unittest(
+    atexit_test
+    SUITE
+      libc_stdlib_unittests
+    SRCS
+      atexit_test.cpp
+    DEPENDS
+      libc.include.stdlib
+      libc.src.stdlib._Exit
+      libc.src.stdlib.exit
+      libc.src.stdlib.atexit
+      libc.src.__support.CPP.array
+      libc.src.__support.CPP.utility
+  )
+
+  # add_libc_unittest(
+  #   abort_test
+  #   SUITE
+  #     libc_stdlib_unittests
+  #   SRCS
+  #     abort_test.cpp
+  #   DEPENDS
+  #     libc.include.stdlib
+  #     libc.include.signal
+  #     libc.src.stdlib.abort
+  #     libc.src.stdlib._Exit
+  #     libc.src.signal.raise
+  # )
+
+endif()

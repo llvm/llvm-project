@@ -219,7 +219,7 @@ std::vector<EnumAttrCase> EnumAttr::getAllCases() const {
   cases.reserve(inits->size());
 
   for (const llvm::Init *init : *inits) {
-    cases.push_back(EnumAttrCase(cast<llvm::DefInit>(init)));
+    cases.emplace_back(cast<llvm::DefInit>(init));
   }
 
   return cases;
@@ -253,7 +253,7 @@ StringRef StructFieldAttr::getName() const {
 }
 
 Attribute StructFieldAttr::getType() const {
-  auto init = def->getValueInit("type");
+  auto *init = def->getValueInit("type");
   return Attribute(cast<llvm::DefInit>(init));
 }
 

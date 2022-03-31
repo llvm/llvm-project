@@ -27,3 +27,20 @@ func @undef() -> () {
   %0 = spv.Undef
   spv.Return
 }
+
+// -----
+
+func @assume_true(%arg : i1) -> () {
+  // CHECK: spv.AssumeTrueKHR %{{.*}}
+  spv.AssumeTrueKHR %arg
+  spv.Return
+}
+
+// -----
+
+func @assume_true(%arg : f32) -> () {
+  // expected-error @+2{{use of value '%arg' expects different type than prior uses: 'i1' vs 'f32'}}
+  // expected-note @-2 {{prior use here}}
+  spv.AssumeTrueKHR %arg
+  spv.Return
+}

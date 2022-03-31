@@ -182,6 +182,11 @@ option specifies "``-``", then the output will also be sent to standard output.
 
   Enable the printing of instruction encodings within the instruction info view.
 
+.. option:: -show-barriers
+
+  Enable the printing of LoadBarrier and StoreBarrier flags within the
+  instruction info view.
+
 .. option:: -all-stats
 
   Print all hardware statistics. This enables extra statistics related to the
@@ -294,9 +299,9 @@ C++. As a workaround, inline assembly directives may be used:
 .. code-block:: c++
 
   int foo(int a, int b) {
-    __asm volatile("# LLVM-MCA-BEGIN foo");
+    __asm volatile("# LLVM-MCA-BEGIN foo":::"memory");
     a += 42;
-    __asm volatile("# LLVM-MCA-END");
+    __asm volatile("# LLVM-MCA-END":::"memory");
     a *= b;
     return a;
   }
@@ -949,15 +954,16 @@ cache.  It only knows if an instruction "MayLoad" and/or "MayStore."  For
 loads, the scheduling model provides an "optimistic" load-to-use latency (which
 usually matches the load-to-use latency for when there is a hit in the L1D).
 
-:program:`llvm-mca` does not know about serializing operations or memory-barrier
-like instructions.  The LSUnit conservatively assumes that an instruction which
-has both "MayLoad" and unmodeled side effects behaves like a "soft"
-load-barrier.  That means, it serializes loads without forcing a flush of the
-load queue.  Similarly, instructions that "MayStore" and have unmodeled side
-effects are treated like store barriers.  A full memory barrier is a "MayLoad"
-and "MayStore" instruction with unmodeled side effects.  This is inaccurate, but
-it is the best that we can do at the moment with the current information
-available in LLVM.
+:program:`llvm-mca` does not (on its own) know about serializing operations or
+memory-barrier like instructions.  The LSUnit used to conservatively use an
+instruction's "MayLoad", "MayStore", and unmodeled side effects flags to
+determine whether an instruction should be treated as a memory-barrier. This was
+inaccurate in general and was changed so that now each instruction has an
+IsAStoreBarrier and IsALoadBarrier flag. These flags are mca specific and
+default to false for every instruction. If any instruction should have either of
+these flags set, it should be done within the target's InstrPostProcess class.
+For an example, look at the `X86InstrPostProcess::postProcessInstruction` method
+within `llvm/lib/Target/X86/MCA/X86CustomBehaviour.cpp`.
 
 A load/store barrier consumes one entry of the load/store queue.  A load/store
 barrier enforces ordering of loads/stores.  A younger load cannot pass a load

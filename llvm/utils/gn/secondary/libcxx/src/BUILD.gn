@@ -55,7 +55,10 @@ config("cxx_config") {
     "-std=c++20",
     "-nostdinc++",
   ]
-  defines = [ "_LIBCPP_BUILDING_LIBRARY" ]
+  defines = [
+    "_LIBCPP_BUILDING_LIBRARY",
+    "_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER",
+  ]
   if (target_os == "win") {
     cflags += [ "/Zl" ]
     defines += [
@@ -112,6 +115,7 @@ config("cxx_config") {
 cxx_sources = [
   "algorithm.cpp",
   "any.cpp",
+  "assert.cpp",
   "atomic.cpp",
   "barrier.cpp",
   "bind.cpp",
@@ -197,7 +201,10 @@ if (target_os == "zos") {
   ]
 }
 if (libcxx_enable_debug_mode) {
-  cxx_sources += [ "debug.cpp" ]
+  cxx_sources += [
+    "debug.cpp",
+    "legacy_debug_handler.cpp",
+  ]
 }
 if (libcxx_enable_filesystem) {
   cxx_sources += [

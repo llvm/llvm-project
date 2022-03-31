@@ -401,7 +401,9 @@ public:
       ArrayRef<const VarDecl *> CXXThreadLocalInitVars) override;
 
   bool usesThreadWrapperFunction(const VarDecl *VD) const override {
-    return false;
+    return getContext().getLangOpts().isCompatibleWithMSVC(
+               LangOptions::MSVC2019_5) &&
+           (!isEmittedWithConstantInitializer(VD) || mayNeedDestruction(VD));
   }
   LValue EmitThreadLocalVarDeclLValue(CodeGenFunction &CGF, const VarDecl *VD,
                                       QualType LValType) override;
@@ -917,7 +919,7 @@ void MicrosoftCXXABI::emitBeginCatch(CodeGenFunction &CGF,
 std::tuple<Address, llvm::Value *, const CXXRecordDecl *>
 MicrosoftCXXABI::performBaseAdjustment(CodeGenFunction &CGF, Address Value,
                                        QualType SrcRecordTy) {
-  Value = CGF.Builder.CreateBitCast(Value, CGF.Int8PtrTy);
+  Value = CGF.Builder.CreateElementBitCast(Value, CGF.Int8Ty);
   const CXXRecordDecl *SrcDecl = SrcRecordTy->getAsCXXRecordDecl();
   const ASTContext &Context = getContext();
 
@@ -946,7 +948,8 @@ MicrosoftCXXABI::performBaseAdjustment(CodeGenFunction &CGF, Address Value,
       Value.getElementType(), Value.getPointer(), Offset);
   CharUnits VBaseAlign =
     CGF.CGM.getVBaseAlignment(Value.getAlignment(), SrcDecl, PolymorphicBase);
-  return std::make_tuple(Address(Ptr, VBaseAlign), Offset, PolymorphicBase);
+  return std::make_tuple(Address(Ptr, CGF.Int8Ty, VBaseAlign), Offset,
+                         PolymorphicBase);
 }
 
 bool MicrosoftCXXABI::shouldTypeidBeNullChecked(bool IsDeref,
@@ -1468,7 +1471,7 @@ Address MicrosoftCXXABI::adjustThisArgumentForVirtualFunctionCall(
         Result.getElementType(), Result.getPointer(), VBaseOffset);
     CharUnits VBaseAlign =
       CGF.CGM.getVBaseAlignment(Result.getAlignment(), Derived, VBase);
-    Result = Address(VBasePtr, VBaseAlign);
+    Result = Address(VBasePtr, CGF.Int8Ty, VBaseAlign);
   }
   if (!StaticOffset.isZero()) {
     assert(StaticOffset.isPositive());
@@ -1944,7 +1947,7 @@ CGCallee MicrosoftCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
   llvm::Value *VFunc;
   if (CGF.ShouldEmitVTableTypeCheckedLoad(MethodDecl->getParent())) {
     VFunc = CGF.EmitVTableTypeCheckedLoad(
-        getObjectWithVPtr(), VTable,
+        getObjectWithVPtr(), VTable, Ty,
         ML.Index * CGM.getContext().getTargetInfo().getPointerWidth(0) / 8);
   } else {
     if (CGM.getCodeGenOpts().PrepareForLTO)
@@ -2215,10 +2218,10 @@ llvm::Value *MicrosoftCXXABI::performThisAdjustment(CodeGenFunction &CGF,
       assert(TA.Virtual.Microsoft.VBPtrOffset > 0);
       assert(TA.Virtual.Microsoft.VBOffsetOffset >= 0);
       llvm::Value *VBPtr;
-      llvm::Value *VBaseOffset =
-          GetVBaseOffsetFromVBPtr(CGF, Address(V, CGF.getPointerAlign()),
-                                  -TA.Virtual.Microsoft.VBPtrOffset,
-                                  TA.Virtual.Microsoft.VBOffsetOffset, &VBPtr);
+      llvm::Value *VBaseOffset = GetVBaseOffsetFromVBPtr(
+          CGF, Address(V, CGF.Int8Ty, CGF.getPointerAlign()),
+          -TA.Virtual.Microsoft.VBPtrOffset,
+          TA.Virtual.Microsoft.VBOffsetOffset, &VBPtr);
       V = CGF.Builder.CreateInBoundsGEP(CGF.Int8Ty, VBPtr, VBaseOffset);
     }
   }
@@ -2397,25 +2400,111 @@ void MicrosoftCXXABI::EmitThreadLocalInitFuncs(
   }
 }
 
+static llvm::GlobalValue *getTlsGuardVar(CodeGenModule &CGM) {
+  // __tls_guard comes from the MSVC runtime and reflects
+  // whether TLS has been initialized for a particular thread.
+  // It is set from within __dyn_tls_init by the runtime.
+  // Every library and executable has its own variable.
+  llvm::Type *VTy = llvm::Type::getInt8Ty(CGM.getLLVMContext());
+  llvm::Constant *TlsGuardConstant =
+      CGM.CreateRuntimeVariable(VTy, "__tls_guard");
+  llvm::GlobalValue *TlsGuard = cast<llvm::GlobalValue>(TlsGuardConstant);
+
+  TlsGuard->setThreadLocal(true);
+
+  return TlsGuard;
+}
+
+static llvm::FunctionCallee getDynTlsOnDemandInitFn(CodeGenModule &CGM) {
+  // __dyn_tls_on_demand_init comes from the MSVC runtime and triggers
+  // dynamic TLS initialization by calling __dyn_tls_init internally.
+  llvm::FunctionType *FTy =
+      llvm::FunctionType::get(llvm::Type::getVoidTy(CGM.getLLVMContext()), {},
+                              /*isVarArg=*/false);
+  return CGM.CreateRuntimeFunction(
+      FTy, "__dyn_tls_on_demand_init",
+      llvm::AttributeList::get(CGM.getLLVMContext(),
+                               llvm::AttributeList::FunctionIndex,
+                               llvm::Attribute::NoUnwind),
+      /*Local=*/true);
+}
+
+static void emitTlsGuardCheck(CodeGenFunction &CGF, llvm::GlobalValue *TlsGuard,
+                              llvm::BasicBlock *DynInitBB,
+                              llvm::BasicBlock *ContinueBB) {
+  llvm::LoadInst *TlsGuardValue =
+      CGF.Builder.CreateLoad(Address(TlsGuard, CGF.Int8Ty, CharUnits::One()));
+  llvm::Value *CmpResult =
+      CGF.Builder.CreateICmpEQ(TlsGuardValue, CGF.Builder.getInt8(0));
+  CGF.Builder.CreateCondBr(CmpResult, DynInitBB, ContinueBB);
+}
+
+static void emitDynamicTlsInitializationCall(CodeGenFunction &CGF,
+                                             llvm::GlobalValue *TlsGuard,
+                                             llvm::BasicBlock *ContinueBB) {
+  llvm::FunctionCallee Initializer = getDynTlsOnDemandInitFn(CGF.CGM);
+  llvm::Function *InitializerFunction =
+      cast<llvm::Function>(Initializer.getCallee());
+  llvm::CallInst *CallVal = CGF.Builder.CreateCall(InitializerFunction);
+  CallVal->setCallingConv(InitializerFunction->getCallingConv());
+
+  CGF.Builder.CreateBr(ContinueBB);
+}
+
+static void emitDynamicTlsInitialization(CodeGenFunction &CGF) {
+  llvm::BasicBlock *DynInitBB =
+      CGF.createBasicBlock("dyntls.dyn_init", CGF.CurFn);
+  llvm::BasicBlock *ContinueBB =
+      CGF.createBasicBlock("dyntls.continue", CGF.CurFn);
+
+  llvm::GlobalValue *TlsGuard = getTlsGuardVar(CGF.CGM);
+
+  emitTlsGuardCheck(CGF, TlsGuard, DynInitBB, ContinueBB);
+  CGF.Builder.SetInsertPoint(DynInitBB);
+  emitDynamicTlsInitializationCall(CGF, TlsGuard, ContinueBB);
+  CGF.Builder.SetInsertPoint(ContinueBB);
+}
+
 LValue MicrosoftCXXABI::EmitThreadLocalVarDeclLValue(CodeGenFunction &CGF,
                                                      const VarDecl *VD,
                                                      QualType LValType) {
-  CGF.CGM.ErrorUnsupported(VD, "thread wrappers");
-  return LValue();
+  // Dynamic TLS initialization works by checking the state of a
+  // guard variable (__tls_guard) to see whether TLS initialization
+  // for a thread has happend yet.
+  // If not, the initialization is triggered on-demand
+  // by calling __dyn_tls_on_demand_init.
+  emitDynamicTlsInitialization(CGF);
+
+  // Emit the variable just like any regular global variable.
+
+  llvm::Value *V = CGF.CGM.GetAddrOfGlobalVar(VD);
+  llvm::Type *RealVarTy = CGF.getTypes().ConvertTypeForMem(VD->getType());
+
+  unsigned AS = cast<llvm::PointerType>(V->getType())->getAddressSpace();
+  V = CGF.Builder.CreateBitCast(V, RealVarTy->getPointerTo(AS));
+
+  CharUnits Alignment = CGF.getContext().getDeclAlign(VD);
+  Address Addr(V, RealVarTy, Alignment);
+
+  LValue LV = VD->getType()->isReferenceType()
+                  ? CGF.EmitLoadOfReferenceLValue(Addr, VD->getType(),
+                                                  AlignmentSource::Decl)
+                  : CGF.MakeAddrLValue(Addr, LValType, AlignmentSource::Decl);
+  return LV;
 }
 
 static ConstantAddress getInitThreadEpochPtr(CodeGenModule &CGM) {
   StringRef VarName("_Init_thread_epoch");
   CharUnits Align = CGM.getIntAlign();
   if (auto *GV = CGM.getModule().getNamedGlobal(VarName))
-    return ConstantAddress(GV, Align);
+    return ConstantAddress(GV, GV->getValueType(), Align);
   auto *GV = new llvm::GlobalVariable(
       CGM.getModule(), CGM.IntTy,
       /*isConstant=*/false, llvm::GlobalVariable::ExternalLinkage,
       /*Initializer=*/nullptr, VarName,
       /*InsertBefore=*/nullptr, llvm::GlobalVariable::GeneralDynamicTLSModel);
   GV->setAlignment(Align.getAsAlign());
-  return ConstantAddress(GV, Align);
+  return ConstantAddress(GV, GV->getValueType(), Align);
 }
 
 static llvm::FunctionCallee getInitThreadHeaderFn(CodeGenModule &CGM) {
@@ -2567,7 +2656,7 @@ void MicrosoftCXXABI::EmitGuardedInit(CodeGenFunction &CGF, const VarDecl &D,
       GI->Guard = GuardVar;
   }
 
-  ConstantAddress GuardAddr(GuardVar, GuardAlign);
+  ConstantAddress GuardAddr(GuardVar, GuardTy, GuardAlign);
 
   assert(GuardVar->getLinkage() == GV->getLinkage() &&
          "static local from the same function had different linkage");

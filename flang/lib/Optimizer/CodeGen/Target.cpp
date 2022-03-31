@@ -238,9 +238,7 @@ struct TargetPPC64le : public GenericTarget<TargetPPC64le> {
 } // namespace
 
 // Instantiate the overloaded target instance based on the triple value.
-// Currently, the implementation only instantiates `i386-unknown-linux-gnu`,
-// `x86_64-unknown-linux-gnu`, aarch64 and ppc64le like triples. Other targets
-// should be added to this file as needed.
+// TODO: Add other targets to this file as needed.
 std::unique_ptr<fir::CodeGenSpecifics>
 fir::CodeGenSpecifics::get(mlir::MLIRContext *ctx, llvm::Triple &&trp,
                            KindMapping &&kindMap) {
@@ -253,6 +251,7 @@ fir::CodeGenSpecifics::get(mlir::MLIRContext *ctx, llvm::Triple &&trp,
       break;
     case llvm::Triple::OSType::Linux:
     case llvm::Triple::OSType::Darwin:
+    case llvm::Triple::OSType::Win32:
       return std::make_unique<TargetI386>(ctx, std::move(trp),
                                           std::move(kindMap));
     }
@@ -263,6 +262,7 @@ fir::CodeGenSpecifics::get(mlir::MLIRContext *ctx, llvm::Triple &&trp,
       break;
     case llvm::Triple::OSType::Linux:
     case llvm::Triple::OSType::Darwin:
+    case llvm::Triple::OSType::Win32:
       return std::make_unique<TargetX86_64>(ctx, std::move(trp),
                                             std::move(kindMap));
     }
@@ -273,6 +273,7 @@ fir::CodeGenSpecifics::get(mlir::MLIRContext *ctx, llvm::Triple &&trp,
       break;
     case llvm::Triple::OSType::Linux:
     case llvm::Triple::OSType::Darwin:
+    case llvm::Triple::OSType::Win32:
       return std::make_unique<TargetAArch64>(ctx, std::move(trp),
                                              std::move(kindMap));
     }

@@ -14,14 +14,14 @@
 #ifndef LLVM_ANALYSIS_ASSUMEBUNDLEQUERIES_H
 #define LLVM_ANALYSIS_ASSUMEBUNDLEQUERIES_H
 
-#include "llvm/IR/Attributes.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/IR/IntrinsicInst.h"
 
 namespace llvm {
 class AssumptionCache;
 class DominatorTree;
+class Instruction;
+class Value;
 
 /// Index of elements in the operand bundle.
 /// If the element exist it is guaranteed to be what is specified in this enum

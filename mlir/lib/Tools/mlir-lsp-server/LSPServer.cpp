@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "LSPServer.h"
+#include "../lsp-server-support/Logging.h"
+#include "../lsp-server-support/Protocol.h"
+#include "../lsp-server-support/Transport.h"
 #include "MLIRServer.h"
-#include "lsp/Logging.h"
-#include "lsp/Protocol.h"
-#include "lsp/Transport.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringMap.h"
 
@@ -198,7 +198,7 @@ void LSPServer::Impl::onDocumentSymbol(
 
 LSPServer::LSPServer(MLIRServer &server, JSONTransport &transport)
     : impl(std::make_unique<Impl>(server, transport)) {}
-LSPServer::~LSPServer() {}
+LSPServer::~LSPServer() = default;
 
 LogicalResult LSPServer::run() {
   MessageHandler messageHandler(impl->transport);

@@ -38,17 +38,36 @@ public:
   explicit NoFolder() = default;
 
   //===--------------------------------------------------------------------===//
+  // Value-based folders.
+  //
+  // Return an existing value or a constant if the operation can be simplified.
+  // Otherwise return nullptr.
+  //===--------------------------------------------------------------------===//
+  Value *FoldAdd(Value *LHS, Value *RHS, bool HasNUW = false,
+                 bool HasNSW = false) const override {
+    return nullptr;
+  }
+
+  Value *FoldAnd(Value *LHS, Value *RHS) const override { return nullptr; }
+
+  Value *FoldOr(Value *LHS, Value *RHS) const override { return nullptr; }
+
+  Value *FoldICmp(CmpInst::Predicate P, Value *LHS, Value *RHS) const override {
+    return nullptr;
+  }
+
+  Value *FoldGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
+                 bool IsInBounds = false) const override {
+    return nullptr;
+  }
+
+  Value *FoldSelect(Value *C, Value *True, Value *False) const override {
+    return nullptr;
+  }
+
+  //===--------------------------------------------------------------------===//
   // Binary Operators
   //===--------------------------------------------------------------------===//
-
-  Instruction *CreateAdd(Constant *LHS, Constant *RHS,
-                         bool HasNUW = false,
-                         bool HasNSW = false) const override {
-    BinaryOperator *BO = BinaryOperator::CreateAdd(LHS, RHS);
-    if (HasNUW) BO->setHasNoUnsignedWrap();
-    if (HasNSW) BO->setHasNoSignedWrap();
-    return BO;
-  }
 
   Instruction *CreateFAdd(Constant *LHS, Constant *RHS) const override {
     return BinaryOperator::CreateFAdd(LHS, RHS);
@@ -132,14 +151,6 @@ public:
     return BinaryOperator::CreateExactAShr(LHS, RHS);
   }
 
-  Instruction *CreateAnd(Constant *LHS, Constant *RHS) const override {
-    return BinaryOperator::CreateAnd(LHS, RHS);
-  }
-
-  Instruction *CreateOr(Constant *LHS, Constant *RHS) const override {
-    return BinaryOperator::CreateOr(LHS, RHS);
-  }
-
   Instruction *CreateXor(Constant *LHS, Constant *RHS) const override {
     return BinaryOperator::CreateXor(LHS, RHS);
   }
@@ -173,46 +184,6 @@ public:
   Instruction *CreateUnOp(Instruction::UnaryOps Opc,
                           Constant *C) const override {
     return UnaryOperator::Create(Opc, C);
-  }
-
-  //===--------------------------------------------------------------------===//
-  // Memory Instructions
-  //===--------------------------------------------------------------------===//
-
-  Constant *CreateGetElementPtr(Type *Ty, Constant *C,
-                                ArrayRef<Constant *> IdxList) const override {
-    return ConstantExpr::getGetElementPtr(Ty, C, IdxList);
-  }
-
-  Constant *CreateGetElementPtr(Type *Ty, Constant *C,
-                                Constant *Idx) const override {
-    // This form of the function only exists to avoid ambiguous overload
-    // warnings about whether to convert Idx to ArrayRef<Constant *> or
-    // ArrayRef<Value *>.
-    return ConstantExpr::getGetElementPtr(Ty, C, Idx);
-  }
-
-  Instruction *CreateGetElementPtr(Type *Ty, Constant *C,
-                                   ArrayRef<Value *> IdxList) const override {
-    return GetElementPtrInst::Create(Ty, C, IdxList);
-  }
-
-  Constant *CreateInBoundsGetElementPtr(
-      Type *Ty, Constant *C, ArrayRef<Constant *> IdxList) const override {
-    return ConstantExpr::getInBoundsGetElementPtr(Ty, C, IdxList);
-  }
-
-  Constant *CreateInBoundsGetElementPtr(Type *Ty, Constant *C,
-                                        Constant *Idx) const override {
-    // This form of the function only exists to avoid ambiguous overload
-    // warnings about whether to convert Idx to ArrayRef<Constant *> or
-    // ArrayRef<Value *>.
-    return ConstantExpr::getInBoundsGetElementPtr(Ty, C, Idx);
-  }
-
-  Instruction *CreateInBoundsGetElementPtr(
-      Type *Ty, Constant *C, ArrayRef<Value *> IdxList) const override {
-    return GetElementPtrInst::CreateInBounds(Ty, C, IdxList);
   }
 
   //===--------------------------------------------------------------------===//
@@ -270,11 +241,6 @@ public:
   // Compare Instructions
   //===--------------------------------------------------------------------===//
 
-  Instruction *CreateICmp(CmpInst::Predicate P,
-                          Constant *LHS, Constant *RHS) const override {
-    return new ICmpInst(P, LHS, RHS);
-  }
-
   Instruction *CreateFCmp(CmpInst::Predicate P,
                           Constant *LHS, Constant *RHS) const override {
     return new FCmpInst(P, LHS, RHS);
@@ -283,11 +249,6 @@ public:
   //===--------------------------------------------------------------------===//
   // Other Instructions
   //===--------------------------------------------------------------------===//
-
-  Instruction *CreateSelect(Constant *C,
-                            Constant *True, Constant *False) const override {
-    return SelectInst::Create(C, True, False);
-  }
 
   Instruction *CreateExtractElement(Constant *Vec,
                                     Constant *Idx) const override {

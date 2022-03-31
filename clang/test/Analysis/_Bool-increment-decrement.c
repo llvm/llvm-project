@@ -2,7 +2,7 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=debug.ExprInspection -verify -std=c11 -Dbool=_Bool -Dtrue=1 -Dfalse=0 %s
 extern void clang_analyzer_eval(bool);
 
-void test__Bool_value() {
+void test__Bool_value(void) {
   {
     bool b = true;
     clang_analyzer_eval(b == 1); // expected-warning{{TRUE}}
@@ -36,7 +36,7 @@ void test__Bool_value() {
   }
 }
 
-void test__Bool_increment() {
+void test__Bool_increment(void) {
   {
     bool b = true;
     b++;
@@ -87,7 +87,7 @@ void test__Bool_increment() {
   }
 }
 
-void test__Bool_decrement() {
+void test__Bool_decrement(void) {
   {
     bool b = true;
     b--;

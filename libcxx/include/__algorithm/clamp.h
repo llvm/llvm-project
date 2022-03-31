@@ -9,12 +9,12 @@
 #ifndef _LIBCPP___ALGORITHM_CLAMP_H
 #define _LIBCPP___ALGORITHM_CLAMP_H
 
-#include <__config>
-#include <__debug>
 #include <__algorithm/comp.h>
+#include <__assert>
+#include <__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD

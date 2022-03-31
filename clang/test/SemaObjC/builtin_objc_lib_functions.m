@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -x objective-c %s -fsyntax-only -verify
 // rdar://8592641
-Class f0() { return objc_getClass("a"); } // expected-warning {{implicitly declaring library function 'objc_getClass' with type 'id (const char *)'}} \
+Class f0(void) { return objc_getClass("a"); } // expected-warning {{implicitly declaring library function 'objc_getClass' with type 'id (const char *)'}} \
 					  // expected-note {{include the header <objc/runtime.h> or explicitly provide a declaration for 'objc_getClass'}}
 
 // rdar://8735023
-Class f1() { return objc_getMetaClass("a"); } // expected-warning {{implicitly declaring library function 'objc_getMetaClass' with type 'id (const char *)'}} \
+Class f1(void) { return objc_getMetaClass("a"); } // expected-warning {{implicitly declaring library function 'objc_getMetaClass' with type 'id (const char *)'}} \
 					  // expected-note {{include the header <objc/runtime.h> or explicitly provide a declaration for 'objc_getMetaClass'}}
 
 void f2(id val) { objc_enumerationMutation(val); } // expected-warning {{implicitly declaring library function 'objc_enumerationMutation' with type 'void (id)'}} \

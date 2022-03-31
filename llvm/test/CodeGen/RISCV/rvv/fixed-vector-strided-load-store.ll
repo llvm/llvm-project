@@ -1,5 +1,5 @@
-; RUN: opt %s -S -riscv-gather-scatter-lowering -mtriple=riscv64 -mattr=+m,+experimental-v -riscv-v-vector-bits-min=256 | FileCheck %s
-; RUN: llc < %s -mtriple=riscv64 -mattr=+m,+experimental-v -riscv-v-vector-bits-min=256 | FileCheck %s --check-prefix=CHECK-ASM
+; RUN: opt %s -S -riscv-gather-scatter-lowering -mtriple=riscv64 -mattr=+m,+v -riscv-v-vector-bits-min=256 | FileCheck %s
+; RUN: llc < %s -mtriple=riscv64 -mattr=+m,+v -riscv-v-vector-bits-min=256 | FileCheck %s --check-prefix=CHECK-ASM
 
 %struct.foo = type { i32, i32, i32, i32 }
 
@@ -32,17 +32,17 @@ define void @gather(i8* noalias nocapture %A, i8* noalias nocapture readonly %B)
 ; CHECK-ASM-LABEL: gather:
 ; CHECK-ASM:       # %bb.0: # %entry
 ; CHECK-ASM-NEXT:    li a2, 0
-; CHECK-ASM-NEXT:    li a6, 32
+; CHECK-ASM-NEXT:    li a3, 32
 ; CHECK-ASM-NEXT:    li a4, 5
 ; CHECK-ASM-NEXT:    li a5, 1024
 ; CHECK-ASM-NEXT:  .LBB0_1: # %vector.body
 ; CHECK-ASM-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-ASM-NEXT:    vsetvli zero, a6, e8, m1, ta, mu
+; CHECK-ASM-NEXT:    vsetvli zero, a3, e8, m1, ta, mu
 ; CHECK-ASM-NEXT:    vlse8.v v8, (a1), a4
-; CHECK-ASM-NEXT:    add a3, a0, a2
-; CHECK-ASM-NEXT:    vle8.v v9, (a3)
+; CHECK-ASM-NEXT:    add a6, a0, a2
+; CHECK-ASM-NEXT:    vle8.v v9, (a6)
 ; CHECK-ASM-NEXT:    vadd.vv v8, v9, v8
-; CHECK-ASM-NEXT:    vse8.v v8, (a3)
+; CHECK-ASM-NEXT:    vse8.v v8, (a6)
 ; CHECK-ASM-NEXT:    addi a2, a2, 32
 ; CHECK-ASM-NEXT:    addi a1, a1, 160
 ; CHECK-ASM-NEXT:    bne a2, a5, .LBB0_1
@@ -101,18 +101,18 @@ define void @gather_masked(i8* noalias nocapture %A, i8* noalias nocapture reado
 ; CHECK-ASM-NEXT:    addiw a3, a3, 873
 ; CHECK-ASM-NEXT:    vsetivli zero, 1, e32, mf2, ta, mu
 ; CHECK-ASM-NEXT:    vmv.s.x v0, a3
-; CHECK-ASM-NEXT:    li a6, 32
+; CHECK-ASM-NEXT:    li a3, 32
 ; CHECK-ASM-NEXT:    li a4, 5
 ; CHECK-ASM-NEXT:    li a5, 1024
 ; CHECK-ASM-NEXT:  .LBB1_1: # %vector.body
 ; CHECK-ASM-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-ASM-NEXT:    vsetvli zero, a6, e8, m1, ta, mu
+; CHECK-ASM-NEXT:    vsetvli zero, a3, e8, m1, ta, mu
 ; CHECK-ASM-NEXT:    vmv1r.v v9, v8
 ; CHECK-ASM-NEXT:    vlse8.v v9, (a1), a4, v0.t
-; CHECK-ASM-NEXT:    add a3, a0, a2
-; CHECK-ASM-NEXT:    vle8.v v10, (a3)
+; CHECK-ASM-NEXT:    add a6, a0, a2
+; CHECK-ASM-NEXT:    vle8.v v10, (a6)
 ; CHECK-ASM-NEXT:    vadd.vv v9, v10, v9
-; CHECK-ASM-NEXT:    vse8.v v9, (a3)
+; CHECK-ASM-NEXT:    vse8.v v9, (a6)
 ; CHECK-ASM-NEXT:    addi a2, a2, 32
 ; CHECK-ASM-NEXT:    addi a1, a1, 160
 ; CHECK-ASM-NEXT:    bne a2, a5, .LBB1_1
@@ -168,17 +168,17 @@ define void @gather_negative_stride(i8* noalias nocapture %A, i8* noalias nocapt
 ; CHECK-ASM:       # %bb.0: # %entry
 ; CHECK-ASM-NEXT:    li a2, 0
 ; CHECK-ASM-NEXT:    addi a1, a1, 155
-; CHECK-ASM-NEXT:    li a6, 32
+; CHECK-ASM-NEXT:    li a3, 32
 ; CHECK-ASM-NEXT:    li a4, -5
 ; CHECK-ASM-NEXT:    li a5, 1024
 ; CHECK-ASM-NEXT:  .LBB2_1: # %vector.body
 ; CHECK-ASM-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-ASM-NEXT:    vsetvli zero, a6, e8, m1, ta, mu
+; CHECK-ASM-NEXT:    vsetvli zero, a3, e8, m1, ta, mu
 ; CHECK-ASM-NEXT:    vlse8.v v8, (a1), a4
-; CHECK-ASM-NEXT:    add a3, a0, a2
-; CHECK-ASM-NEXT:    vle8.v v9, (a3)
+; CHECK-ASM-NEXT:    add a6, a0, a2
+; CHECK-ASM-NEXT:    vle8.v v9, (a6)
 ; CHECK-ASM-NEXT:    vadd.vv v8, v9, v8
-; CHECK-ASM-NEXT:    vse8.v v8, (a3)
+; CHECK-ASM-NEXT:    vse8.v v8, (a6)
 ; CHECK-ASM-NEXT:    addi a2, a2, 32
 ; CHECK-ASM-NEXT:    addi a1, a1, 160
 ; CHECK-ASM-NEXT:    bne a2, a5, .LBB2_1
@@ -303,14 +303,14 @@ define void @scatter(i8* noalias nocapture %A, i8* noalias nocapture readonly %B
 ; CHECK-ASM-LABEL: scatter:
 ; CHECK-ASM:       # %bb.0: # %entry
 ; CHECK-ASM-NEXT:    li a2, 0
-; CHECK-ASM-NEXT:    li a6, 32
+; CHECK-ASM-NEXT:    li a3, 32
 ; CHECK-ASM-NEXT:    li a4, 5
 ; CHECK-ASM-NEXT:    li a5, 1024
 ; CHECK-ASM-NEXT:  .LBB4_1: # %vector.body
 ; CHECK-ASM-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-ASM-NEXT:    add a3, a1, a2
-; CHECK-ASM-NEXT:    vsetvli zero, a6, e8, m1, ta, mu
-; CHECK-ASM-NEXT:    vle8.v v8, (a3)
+; CHECK-ASM-NEXT:    add a6, a1, a2
+; CHECK-ASM-NEXT:    vsetvli zero, a3, e8, m1, ta, mu
+; CHECK-ASM-NEXT:    vle8.v v8, (a6)
 ; CHECK-ASM-NEXT:    vlse8.v v9, (a0), a4
 ; CHECK-ASM-NEXT:    vadd.vv v8, v9, v8
 ; CHECK-ASM-NEXT:    vsse8.v v8, (a0), a4
@@ -369,7 +369,7 @@ define void @scatter_masked(i8* noalias nocapture %A, i8* noalias nocapture read
 ; CHECK-ASM-LABEL: scatter_masked:
 ; CHECK-ASM:       # %bb.0: # %entry
 ; CHECK-ASM-NEXT:    li a2, 0
-; CHECK-ASM-NEXT:    li a6, 32
+; CHECK-ASM-NEXT:    li a3, 32
 ; CHECK-ASM-NEXT:    lui a4, 983765
 ; CHECK-ASM-NEXT:    addiw a4, a4, 873
 ; CHECK-ASM-NEXT:    vsetivli zero, 1, e32, mf2, ta, mu
@@ -378,9 +378,9 @@ define void @scatter_masked(i8* noalias nocapture %A, i8* noalias nocapture read
 ; CHECK-ASM-NEXT:    li a5, 1024
 ; CHECK-ASM-NEXT:  .LBB5_1: # %vector.body
 ; CHECK-ASM-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-ASM-NEXT:    add a3, a1, a2
-; CHECK-ASM-NEXT:    vsetvli zero, a6, e8, m1, ta, mu
-; CHECK-ASM-NEXT:    vle8.v v9, (a3)
+; CHECK-ASM-NEXT:    add a6, a1, a2
+; CHECK-ASM-NEXT:    vsetvli zero, a3, e8, m1, ta, mu
+; CHECK-ASM-NEXT:    vle8.v v9, (a6)
 ; CHECK-ASM-NEXT:    vmv1r.v v10, v8
 ; CHECK-ASM-NEXT:    vlse8.v v10, (a0), a4, v0.t
 ; CHECK-ASM-NEXT:    vadd.vv v9, v10, v9
@@ -978,3 +978,173 @@ define void @scatter_of_pointers(i32** noalias nocapture %0, i32** noalias nocap
 }
 
 declare void @llvm.masked.scatter.v2p0i32.v2p0p0i32(<2 x i32*>, <2 x i32**>, i32 immarg, <2 x i1>)
+
+define void @strided_load_startval_add_with_splat(i8* noalias nocapture %0, i8* noalias nocapture readonly %1, i32 signext %2) {
+; CHECK-LABEL: @strided_load_startval_add_with_splat(
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP2:%.*]], 1024
+; CHECK-NEXT:    br i1 [[TMP4]], label [[TMP31:%.*]], label [[TMP5:%.*]]
+; CHECK:       5:
+; CHECK-NEXT:    [[TMP6:%.*]] = sext i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP7:%.*]] = sub i32 1023, [[TMP2]]
+; CHECK-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP7]] to i64
+; CHECK-NEXT:    [[TMP9:%.*]] = add nuw nsw i64 [[TMP8]], 1
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp ult i32 [[TMP7]], 31
+; CHECK-NEXT:    br i1 [[TMP10]], label [[TMP29:%.*]], label [[TMP11:%.*]]
+; CHECK:       11:
+; CHECK-NEXT:    [[TMP12:%.*]] = and i64 [[TMP9]], 8589934560
+; CHECK-NEXT:    [[TMP13:%.*]] = add nsw i64 [[TMP12]], [[TMP6]]
+; CHECK-NEXT:    [[TMP14:%.*]] = add i64 0, [[TMP6]]
+; CHECK-NEXT:    [[START:%.*]] = mul i64 [[TMP14]], 5
+; CHECK-NEXT:    br label [[TMP15:%.*]]
+; CHECK:       15:
+; CHECK-NEXT:    [[TMP16:%.*]] = phi i64 [ 0, [[TMP11]] ], [ [[TMP25:%.*]], [[TMP15]] ]
+; CHECK-NEXT:    [[DOTSCALAR:%.*]] = phi i64 [ [[START]], [[TMP11]] ], [ [[DOTSCALAR1:%.*]], [[TMP15]] ]
+; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[TMP16]], [[TMP6]]
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i8, i8* [[TMP1:%.*]], i64 [[DOTSCALAR]]
+; CHECK-NEXT:    [[TMP19:%.*]] = call <32 x i8> @llvm.riscv.masked.strided.load.v32i8.p0i8.i64(<32 x i8> undef, i8* [[TMP18]], i64 5, <32 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i8, i8* [[TMP0:%.*]], i64 [[TMP17]]
+; CHECK-NEXT:    [[TMP21:%.*]] = bitcast i8* [[TMP20]] to <32 x i8>*
+; CHECK-NEXT:    [[TMP22:%.*]] = load <32 x i8>, <32 x i8>* [[TMP21]], align 1
+; CHECK-NEXT:    [[TMP23:%.*]] = add <32 x i8> [[TMP22]], [[TMP19]]
+; CHECK-NEXT:    [[TMP24:%.*]] = bitcast i8* [[TMP20]] to <32 x i8>*
+; CHECK-NEXT:    store <32 x i8> [[TMP23]], <32 x i8>* [[TMP24]], align 1
+; CHECK-NEXT:    [[TMP25]] = add nuw i64 [[TMP16]], 32
+; CHECK-NEXT:    [[DOTSCALAR1]] = add i64 [[DOTSCALAR]], 160
+; CHECK-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[TMP25]], [[TMP12]]
+; CHECK-NEXT:    br i1 [[TMP26]], label [[TMP27:%.*]], label [[TMP15]]
+; CHECK:       27:
+; CHECK-NEXT:    [[TMP28:%.*]] = icmp eq i64 [[TMP9]], [[TMP12]]
+; CHECK-NEXT:    br i1 [[TMP28]], label [[TMP31]], label [[TMP29]]
+; CHECK:       29:
+; CHECK-NEXT:    [[TMP30:%.*]] = phi i64 [ [[TMP6]], [[TMP5]] ], [ [[TMP13]], [[TMP27]] ]
+; CHECK-NEXT:    br label [[TMP32:%.*]]
+; CHECK:       31:
+; CHECK-NEXT:    ret void
+; CHECK:       32:
+; CHECK-NEXT:    [[TMP33:%.*]] = phi i64 [ [[TMP40:%.*]], [[TMP32]] ], [ [[TMP30]], [[TMP29]] ]
+; CHECK-NEXT:    [[TMP34:%.*]] = mul nsw i64 [[TMP33]], 5
+; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr inbounds i8, i8* [[TMP1]], i64 [[TMP34]]
+; CHECK-NEXT:    [[TMP36:%.*]] = load i8, i8* [[TMP35]], align 1
+; CHECK-NEXT:    [[TMP37:%.*]] = getelementptr inbounds i8, i8* [[TMP0]], i64 [[TMP33]]
+; CHECK-NEXT:    [[TMP38:%.*]] = load i8, i8* [[TMP37]], align 1
+; CHECK-NEXT:    [[TMP39:%.*]] = add i8 [[TMP38]], [[TMP36]]
+; CHECK-NEXT:    store i8 [[TMP39]], i8* [[TMP37]], align 1
+; CHECK-NEXT:    [[TMP40]] = add nsw i64 [[TMP33]], 1
+; CHECK-NEXT:    [[TMP41:%.*]] = trunc i64 [[TMP40]] to i32
+; CHECK-NEXT:    [[TMP42:%.*]] = icmp eq i32 [[TMP41]], 1024
+; CHECK-NEXT:    br i1 [[TMP42]], label [[TMP31]], label [[TMP32]]
+;
+; CHECK-ASM-LABEL: strided_load_startval_add_with_splat:
+; CHECK-ASM:       # %bb.0:
+; CHECK-ASM-NEXT:    li a3, 1024
+; CHECK-ASM-NEXT:    beq a2, a3, .LBB12_7
+; CHECK-ASM-NEXT:  # %bb.1:
+; CHECK-ASM-NEXT:    li a3, 1023
+; CHECK-ASM-NEXT:    subw a4, a3, a2
+; CHECK-ASM-NEXT:    li a5, 31
+; CHECK-ASM-NEXT:    mv a3, a2
+; CHECK-ASM-NEXT:    bltu a4, a5, .LBB12_5
+; CHECK-ASM-NEXT:  # %bb.2:
+; CHECK-ASM-NEXT:    slli a3, a4, 32
+; CHECK-ASM-NEXT:    srli a3, a3, 32
+; CHECK-ASM-NEXT:    addi a4, a3, 1
+; CHECK-ASM-NEXT:    andi a5, a4, -32
+; CHECK-ASM-NEXT:    add a3, a5, a2
+; CHECK-ASM-NEXT:    slli a6, a2, 2
+; CHECK-ASM-NEXT:    add a6, a6, a2
+; CHECK-ASM-NEXT:    add a2, a0, a2
+; CHECK-ASM-NEXT:    add a6, a1, a6
+; CHECK-ASM-NEXT:    li a7, 32
+; CHECK-ASM-NEXT:    li t0, 5
+; CHECK-ASM-NEXT:    mv t1, a5
+; CHECK-ASM-NEXT:  .LBB12_3: # =>This Inner Loop Header: Depth=1
+; CHECK-ASM-NEXT:    vsetvli zero, a7, e8, m1, ta, mu
+; CHECK-ASM-NEXT:    vlse8.v v8, (a6), t0
+; CHECK-ASM-NEXT:    vle8.v v9, (a2)
+; CHECK-ASM-NEXT:    vadd.vv v8, v9, v8
+; CHECK-ASM-NEXT:    vse8.v v8, (a2)
+; CHECK-ASM-NEXT:    addi t1, t1, -32
+; CHECK-ASM-NEXT:    addi a2, a2, 32
+; CHECK-ASM-NEXT:    addi a6, a6, 160
+; CHECK-ASM-NEXT:    bnez t1, .LBB12_3
+; CHECK-ASM-NEXT:  # %bb.4:
+; CHECK-ASM-NEXT:    beq a4, a5, .LBB12_7
+; CHECK-ASM-NEXT:  .LBB12_5:
+; CHECK-ASM-NEXT:    slli a2, a3, 2
+; CHECK-ASM-NEXT:    add a2, a2, a3
+; CHECK-ASM-NEXT:    add a1, a1, a2
+; CHECK-ASM-NEXT:    li a2, 1024
+; CHECK-ASM-NEXT:  .LBB12_6: # =>This Inner Loop Header: Depth=1
+; CHECK-ASM-NEXT:    lb a4, 0(a1)
+; CHECK-ASM-NEXT:    add a5, a0, a3
+; CHECK-ASM-NEXT:    lb a6, 0(a5)
+; CHECK-ASM-NEXT:    addw a4, a6, a4
+; CHECK-ASM-NEXT:    sb a4, 0(a5)
+; CHECK-ASM-NEXT:    addiw a4, a3, 1
+; CHECK-ASM-NEXT:    addi a3, a3, 1
+; CHECK-ASM-NEXT:    addi a1, a1, 5
+; CHECK-ASM-NEXT:    bne a4, a2, .LBB12_6
+; CHECK-ASM-NEXT:  .LBB12_7:
+; CHECK-ASM-NEXT:    ret
+  %4 = icmp eq i32 %2, 1024
+  br i1 %4, label %36, label %5
+
+5:                                                ; preds = %3
+  %6 = sext i32 %2 to i64
+  %7 = sub i32 1023, %2
+  %8 = zext i32 %7 to i64
+  %9 = add nuw nsw i64 %8, 1
+  %10 = icmp ult i32 %7, 31
+  br i1 %10, label %34, label %11
+
+11:                                               ; preds = %5
+  %12 = and i64 %9, 8589934560
+  %13 = add nsw i64 %12, %6
+  %14 = insertelement <32 x i64> poison, i64 %6, i64 0
+  %15 = shufflevector <32 x i64> %14, <32 x i64> poison, <32 x i32> zeroinitializer
+  %16 = add <32 x i64> %15, <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15, i64 16, i64 17, i64 18, i64 19, i64 20, i64 21, i64 22, i64 23, i64 24, i64 25, i64 26, i64 27, i64 28, i64 29, i64 30, i64 31>
+  br label %17
+
+17:                                               ; preds = %17, %11
+  %18 = phi i64 [ 0, %11 ], [ %29, %17 ]
+  %19 = phi <32 x i64> [ %16, %11 ], [ %30, %17 ]
+  %20 = add i64 %18, %6
+  %21 = mul nsw <32 x i64> %19, <i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5>
+  %22 = getelementptr inbounds i8, i8* %1, <32 x i64> %21
+  %23 = call <32 x i8> @llvm.masked.gather.v32i8.v32p0i8(<32 x i8*> %22, i32 1, <32 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <32 x i8> undef)
+  %24 = getelementptr inbounds i8, i8* %0, i64 %20
+  %25 = bitcast i8* %24 to <32 x i8>*
+  %26 = load <32 x i8>, <32 x i8>* %25, align 1
+  %27 = add <32 x i8> %26, %23
+  %28 = bitcast i8* %24 to <32 x i8>*
+  store <32 x i8> %27, <32 x i8>* %28, align 1
+  %29 = add nuw i64 %18, 32
+  %30 = add <32 x i64> %19, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
+  %31 = icmp eq i64 %29, %12
+  br i1 %31, label %32, label %17
+
+32:                                               ; preds = %17
+  %33 = icmp eq i64 %9, %12
+  br i1 %33, label %36, label %34
+
+34:                                               ; preds = %5, %32
+  %35 = phi i64 [ %6, %5 ], [ %13, %32 ]
+  br label %37
+
+36:                                               ; preds = %37, %32, %3
+  ret void
+
+37:                                               ; preds = %34, %37
+  %38 = phi i64 [ %45, %37 ], [ %35, %34 ]
+  %39 = mul nsw i64 %38, 5
+  %40 = getelementptr inbounds i8, i8* %1, i64 %39
+  %41 = load i8, i8* %40, align 1
+  %42 = getelementptr inbounds i8, i8* %0, i64 %38
+  %43 = load i8, i8* %42, align 1
+  %44 = add i8 %43, %41
+  store i8 %44, i8* %42, align 1
+  %45 = add nsw i64 %38, 1
+  %46 = trunc i64 %45 to i32
+  %47 = icmp eq i32 %46, 1024
+  br i1 %47, label %36, label %37
+}

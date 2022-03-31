@@ -5,6 +5,9 @@
 ; CHECK-LABEL: @f
 ; CHECK-LABEL: @g
 
+; Stack realignment not supported.
+; XFAIL: sparc
+
 define i32 @f(i8* %p) nounwind {
 entry:
   %0 = load i8, i8* %p

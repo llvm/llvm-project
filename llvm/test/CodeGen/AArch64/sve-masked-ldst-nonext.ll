@@ -120,7 +120,7 @@ define <vscale x 4 x i32> @masked_load_passthru(<vscale x 4 x i32> *%a, <vscale 
 ; Masked load requires promotion
 define <vscale x 2 x i16> @masked_load_nxv2i16(<vscale x 2 x i16>* noalias %in, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: masked_load_nxv2i16
-; CHECK:       ld1sh { z0.d }, p0/z, [x0]
+; CHECK:       ld1h { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:  ret
   %wide.load = call <vscale x 2 x i16> @llvm.masked.load.nxv2i16(<vscale x 2 x i16>* %in, i32 2, <vscale x 2 x i1> %mask, <vscale x 2 x i16> undef)
   ret <vscale x 2 x i16> %wide.load

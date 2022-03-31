@@ -1,8 +1,8 @@
-; RUN: opt %loadPolly -polly-opt-isl -analyze < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadPolly -polly-print-opt-isl -disable-output < %s | FileCheck %s -match-full-lines
 ;
 ; Check that the disable_nonforced metadata is honored; optimization
 ; heuristics/rescheduling must not be applied.
-; 
+;
 define void @func(i32 %n, double* noalias nonnull %A) {
 entry:
   br label %for

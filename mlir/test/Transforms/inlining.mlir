@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -inline='default-pipeline=''' | FileCheck %s
+// RUN: mlir-opt %s --mlir-disable-threading -inline='default-pipeline=''' | FileCheck %s
 // RUN: mlir-opt %s -inline='default-pipeline=''' -mlir-print-debuginfo -mlir-print-local-scope | FileCheck %s --check-prefix INLINE-LOC
 // RUN: mlir-opt %s -inline | FileCheck %s --check-prefix INLINE_SIMPLIFY
 
@@ -19,7 +20,7 @@ func @inline_with_arg(%arg0 : i32) -> i32 {
 
 // Inline a function that has multiple return operations.
 func @func_with_multi_return(%a : i1) -> (i32) {
-  cond_br %a, ^bb1, ^bb2
+  cf.cond_br %a, ^bb1, ^bb2
 
 ^bb1:
   %const_0 = arith.constant 0 : i32
@@ -33,13 +34,13 @@ func @func_with_multi_return(%a : i1) -> (i32) {
 // CHECK-LABEL: func @inline_with_multi_return() -> i32
 func @inline_with_multi_return() -> i32 {
 // CHECK-NEXT:    [[VAL_7:%.*]] = arith.constant false
-// CHECK-NEXT:    cond_br [[VAL_7]], ^bb1, ^bb2
+// CHECK-NEXT:    cf.cond_br [[VAL_7]], ^bb1, ^bb2
 // CHECK:       ^bb1:
 // CHECK-NEXT:    [[VAL_8:%.*]] = arith.constant 0 : i32
-// CHECK-NEXT:    br ^bb3([[VAL_8]] : i32)
+// CHECK-NEXT:    cf.br ^bb3([[VAL_8]] : i32)
 // CHECK:       ^bb2:
 // CHECK-NEXT:    [[VAL_9:%.*]] = arith.constant 55 : i32
-// CHECK-NEXT:    br ^bb3([[VAL_9]] : i32)
+// CHECK-NEXT:    cf.br ^bb3([[VAL_9]] : i32)
 // CHECK:       ^bb3([[VAL_10:%.*]]: i32):
 // CHECK-NEXT:    return [[VAL_10]] : i32
 
@@ -132,7 +133,7 @@ func @inline_convert_call() -> i16 {
 }
 
 func @convert_callee_fn_multiblock() -> i32 {
-  br ^bb0
+  cf.br ^bb0
 ^bb0:
   %0 = arith.constant 0 : i32
   return %0 : i32
@@ -140,10 +141,10 @@ func @convert_callee_fn_multiblock() -> i32 {
 
 // CHECK-LABEL: func @inline_convert_result_multiblock
 func @inline_convert_result_multiblock() -> i16 {
-// CHECK:   br ^bb1 {inlined_conversion}
+// CHECK:   cf.br ^bb1 {inlined_conversion}
 // CHECK: ^bb1:
 // CHECK:   %[[C:.+]] = arith.constant {inlined_conversion} 0 : i32
-// CHECK:   br ^bb2(%[[C]] : i32)
+// CHECK:   cf.br ^bb2(%[[C]] : i32)
 // CHECK: ^bb2(%[[BBARG:.+]]: i32):
 // CHECK:   %[[CAST_RESULT:.+]] = "test.cast"(%[[BBARG]]) : (i32) -> i16
 // CHECK:   return %[[CAST_RESULT]] : i16
@@ -188,4 +189,39 @@ func @inline_simplify() -> i32 {
 func @no_inline_invalid_call() -> i32 {
   %res = "test.conversion_call_op"() { callee=@convert_callee_fn_multiblock, noinline } : () -> (i32)
   return %res : i32
+}
+
+func @gpu_alloc() -> memref<1024xf32> {
+  %m = gpu.alloc [] () : memref<1024xf32>
+  return %m : memref<1024xf32>
+}
+
+// CHECK-LABEL: func @inline_gpu_ops
+func @inline_gpu_ops() -> memref<1024xf32> {
+  // CHECK-NEXT: gpu.alloc
+  %m = call @gpu_alloc() : () -> memref<1024xf32>
+  return %m : memref<1024xf32>
+}
+
+// Test block arguments location propagation.
+// Use two call-sites to force cloning.
+func @func_with_block_args_location(%arg0 : i32) {
+  cf.br ^bb1(%arg0 : i32)
+^bb1(%x : i32 loc("foo")):
+  "test.foo" (%x) : (i32) -> () loc("bar")
+  return
+}
+
+// INLINE-LOC-LABEL: func @func_with_block_args_location_callee1
+// INLINE-LOC: cf.br
+// INLINE-LOC: ^bb{{[0-9]+}}(%{{.*}}: i32 loc("foo")
+func @func_with_block_args_location_callee1(%arg0 : i32) {
+  call @func_with_block_args_location(%arg0) : (i32) -> ()
+  return
+}
+
+// CHECK-LABEL: func @func_with_block_args_location_callee2
+func @func_with_block_args_location_callee2(%arg0 : i32) {
+  call @func_with_block_args_location(%arg0) : (i32) -> ()
+  return
 }

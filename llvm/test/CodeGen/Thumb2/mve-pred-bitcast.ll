@@ -367,16 +367,12 @@ define arm_aapcs_vfpcc i2 @bitcast_from_v2i1(<2 x i64> %a) {
 ; CHECK-LE-NEXT:    sub sp, #4
 ; CHECK-LE-NEXT:    vmov r0, r1, d0
 ; CHECK-LE-NEXT:    orrs r0, r1
-; CHECK-LE-NEXT:    cset r0, eq
-; CHECK-LE-NEXT:    cmp r0, #0
-; CHECK-LE-NEXT:    mov.w r0, #0
-; CHECK-LE-NEXT:    csetm r1, ne
+; CHECK-LE-NEXT:    csetm r1, eq
+; CHECK-LE-NEXT:    movs r0, #0
 ; CHECK-LE-NEXT:    bfi r0, r1, #0, #1
 ; CHECK-LE-NEXT:    vmov r1, r2, d1
 ; CHECK-LE-NEXT:    orrs r1, r2
-; CHECK-LE-NEXT:    cset r1, eq
-; CHECK-LE-NEXT:    cmp r1, #0
-; CHECK-LE-NEXT:    csetm r1, ne
+; CHECK-LE-NEXT:    csetm r1, eq
 ; CHECK-LE-NEXT:    bfi r0, r1, #1, #1
 ; CHECK-LE-NEXT:    add sp, #4
 ; CHECK-LE-NEXT:    bx lr
@@ -388,16 +384,12 @@ define arm_aapcs_vfpcc i2 @bitcast_from_v2i1(<2 x i64> %a) {
 ; CHECK-BE-NEXT:    vrev64.32 q1, q0
 ; CHECK-BE-NEXT:    vmov r0, r1, d3
 ; CHECK-BE-NEXT:    orrs r0, r1
-; CHECK-BE-NEXT:    cset r0, eq
-; CHECK-BE-NEXT:    cmp r0, #0
-; CHECK-BE-NEXT:    mov.w r0, #0
-; CHECK-BE-NEXT:    csetm r1, ne
+; CHECK-BE-NEXT:    csetm r1, eq
+; CHECK-BE-NEXT:    movs r0, #0
 ; CHECK-BE-NEXT:    bfi r0, r1, #0, #1
 ; CHECK-BE-NEXT:    vmov r1, r2, d2
 ; CHECK-BE-NEXT:    orrs r1, r2
-; CHECK-BE-NEXT:    cset r1, eq
-; CHECK-BE-NEXT:    cmp r1, #0
-; CHECK-BE-NEXT:    csetm r1, ne
+; CHECK-BE-NEXT:    csetm r1, eq
 ; CHECK-BE-NEXT:    bfi r0, r1, #1, #1
 ; CHECK-BE-NEXT:    add sp, #4
 ; CHECK-BE-NEXT:    bx lr

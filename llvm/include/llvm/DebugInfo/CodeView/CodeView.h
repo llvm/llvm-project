@@ -162,6 +162,8 @@ enum SourceLanguage : uint8_t {
   MSIL = 0x0f,
   HLSL = 0x10,
 
+  Rust = 0x15,
+
   /// The DMD & Swift compilers emit 'D' and 'S', respectively, for the CV
   /// source language. Microsoft does not have enumerators for them yet.
   D = 'D',

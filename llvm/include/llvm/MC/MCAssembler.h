@@ -10,7 +10,6 @@
 #define LLVM_MC_MCASSEMBLER_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
@@ -18,20 +17,34 @@
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCDwarf.h"
-#include "llvm/MC/MCFixup.h"
-#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCLinkerOptimizationHint.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/Support/SMLoc.h"
 #include "llvm/Support/VersionTuple.h"
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
 namespace llvm {
 
+class MCBoundaryAlignFragment;
+class MCCVDefRangeFragment;
+class MCCVInlineLineTableFragment;
+class MCDwarfCallFrameFragment;
+class MCDwarfLineAddrFragment;
+class MCEncodedFragment;
+class MCFixup;
+class MCLEBFragment;
+class MCPseudoProbeAddrFragment;
+class MCRelaxableFragment;
+class MCSymbolRefExpr;
+class raw_ostream;
 class MCAsmBackend;
 class MCAsmLayout;
 class MCContext;
@@ -153,6 +166,7 @@ private:
   MCLOHContainer LOHContainer;
 
   VersionInfoType VersionInfo;
+  VersionInfoType DarwinTargetVariantVersionInfo;
 
   /// Evaluate a fixup to a relocatable expression and the value which should be
   /// placed into the fixup.
@@ -283,6 +297,21 @@ public:
     VersionInfo.Minor = Minor;
     VersionInfo.Update = Update;
     VersionInfo.SDKVersion = SDKVersion;
+  }
+
+  const VersionInfoType &getDarwinTargetVariantVersionInfo() const {
+    return DarwinTargetVariantVersionInfo;
+  }
+  void setDarwinTargetVariantBuildVersion(MachO::PlatformType Platform,
+                                          unsigned Major, unsigned Minor,
+                                          unsigned Update,
+                                          VersionTuple SDKVersion) {
+    DarwinTargetVariantVersionInfo.EmitBuildVersion = true;
+    DarwinTargetVariantVersionInfo.TypeOrPlatform.Platform = Platform;
+    DarwinTargetVariantVersionInfo.Major = Major;
+    DarwinTargetVariantVersionInfo.Minor = Minor;
+    DarwinTargetVariantVersionInfo.Update = Update;
+    DarwinTargetVariantVersionInfo.SDKVersion = SDKVersion;
   }
 
   /// Reuse an assembler instance

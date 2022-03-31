@@ -1,4 +1,6 @@
 #include "llvm/DebugInfo/PDB/Native/NativeTypeTypedef.h"
+#include "llvm/DebugInfo/PDB/Native/NativeSession.h"
+#include "llvm/DebugInfo/PDB/PDBExtras.h"
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -9,7 +11,7 @@ NativeTypeTypedef::NativeTypeTypedef(NativeSession &Session, SymIndexId Id,
     : NativeRawSymbol(Session, PDB_SymType::Typedef, Id),
       Record(std::move(Typedef)) {}
 
-NativeTypeTypedef::~NativeTypeTypedef() {}
+NativeTypeTypedef::~NativeTypeTypedef() = default;
 
 void NativeTypeTypedef::dump(raw_ostream &OS, int Indent,
                              PdbSymbolIdField ShowIdFields,

@@ -17,8 +17,8 @@ using __llvm_libc::time_utils::TimeConstants;
 static inline char *call_asctime_r(struct tm *tm_data, int year, int month,
                                    int mday, int hour, int min, int sec,
                                    int wday, int yday, char *buffer) {
-  __llvm_libc::tmhelper::testing::InitializeTmData(tm_data, year, month, mday,
-                                                   hour, min, sec, wday, yday);
+  __llvm_libc::tmhelper::testing::initialize_tm_data(
+      tm_data, year, month, mday, hour, min, sec, wday, yday);
   return __llvm_libc::asctime_r(tm_data, buffer);
 }
 
@@ -30,7 +30,7 @@ TEST(LlvmLibcAsctimeR, Nullptr) {
   ASSERT_EQ(EINVAL, llvmlibc_errno);
   ASSERT_STREQ(nullptr, result);
 
-  char buffer[TimeConstants::AsctimeBufferSize];
+  char buffer[TimeConstants::ASCTIME_BUFFER_SIZE];
   result = __llvm_libc::asctime_r(nullptr, buffer);
   ASSERT_EQ(EINVAL, llvmlibc_errno);
   ASSERT_STREQ(nullptr, result);
@@ -42,7 +42,7 @@ TEST(LlvmLibcAsctimeR, Nullptr) {
 }
 
 TEST(LlvmLibcAsctimeR, ValidDate) {
-  char buffer[TimeConstants::AsctimeBufferSize];
+  char buffer[TimeConstants::ASCTIME_BUFFER_SIZE];
   struct tm tm_data;
   char *result;
   // 1970-01-01 00:00:00. Test with a valid buffer size.

@@ -21,7 +21,7 @@
 #include <type_traits>
 
 #ifndef _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
@@ -29,7 +29,7 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#if _LIBCPP_STD_VER > 17
 
 // [cmp.alg]
 namespace __strong_order {
@@ -86,11 +86,11 @@ namespace __strong_order {
                 bool __u_is_nan = _VSTD::isnan(__u);
                 bool __t_is_negative = _VSTD::signbit(__t);
                 bool __u_is_negative = _VSTD::signbit(__u);
-                using _IntType = std::conditional_t<
-                    sizeof(__t) == sizeof(int32_t), int32_t, std::conditional_t<
+                using _IntType = conditional_t<
+                    sizeof(__t) == sizeof(int32_t), int32_t, conditional_t<
                     sizeof(__t) == sizeof(int64_t), int64_t, void>
                 >;
-                if constexpr (std::is_same_v<_IntType, void>) {
+                if constexpr (is_same_v<_IntType, void>) {
                     static_assert(sizeof(_Dp) == 0, "std::strong_order is unimplemented for this floating-point type");
                 } else if (__t_is_nan && __u_is_nan) {
                     // Order by sign bit, then by "payload bits" (we'll just use bit_cast).
@@ -127,7 +127,7 @@ inline namespace __cpo {
     inline constexpr auto strong_order = __strong_order::__fn{};
 } // namespace __cpo
 
-#endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#endif // _LIBCPP_STD_VER > 17
 
 _LIBCPP_END_NAMESPACE_STD
 

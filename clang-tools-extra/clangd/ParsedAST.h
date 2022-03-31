@@ -26,14 +26,10 @@
 #include "Headers.h"
 #include "Preamble.h"
 #include "index/CanonicalIncludes.h"
-#include "support/Path.h"
 #include "clang/Frontend/FrontendAction.h"
-#include "clang/Frontend/PrecompiledPreamble.h"
 #include "clang/Lex/Preprocessor.h"
-#include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include <memory>
@@ -43,7 +39,6 @@
 namespace clang {
 namespace clangd {
 class HeuristicResolver;
-class SymbolIndex;
 
 /// Stores and provides access to parsed AST.
 class ParsedAST {

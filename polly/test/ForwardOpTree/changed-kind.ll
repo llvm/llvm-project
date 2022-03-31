@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-optree -analyze < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadPolly -polly-print-optree -disable-output < %s | FileCheck %s -match-full-lines
 
 ; In the code below, %0 is known to be equal to the content of @c (constant 0).
 ; Thus, in order to save a scalar dependency, forward-optree replaces
@@ -43,12 +43,5 @@ lor.end93:
 
 
 ; CHECK: Statistics {
-; CHECK:     Reloads: 1
-; CHECK: }
-
-; CHECK: After statements {
-; CHECK:     Stmt_lor_end93
-; CHECK-NEXT:        ReadAccess :=       [Reduction Type: NONE] [Scalar: 1]
-; CHECK-NEXT:            { Stmt_lor_end93[] -> MemRef3[] };
-; CHECK-NEXT:       new: { Stmt_lor_end93[] -> MemRef_c[0] };
+; CHECK:     Reloads: 0
 ; CHECK: }

@@ -1,3 +1,6 @@
+// Visibility hidden is not currently implemented on AIX.
+// XFAIL: aix
+
 // RUN: %clang_cc1 -verify=expected,lt50,lt51 -fopenmp -fopenmp-version=45 -ferror-limit 100 -o - -std=c++11 %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,ge50,lt51 -fopenmp -fopenmp-version=50 -ferror-limit 100 -o - -std=c++11 %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,ge50,ge51 -fopenmp -fopenmp-version=51 -ferror-limit 100 -o - -std=c++11 %s -Wuninitialized
@@ -6,10 +9,26 @@
 // RUN: %clang_cc1 -verify=expected,ge50,lt51 -fopenmp-simd -fopenmp-version=50 -ferror-limit 100 -o - -std=c++11 %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,ge50,ge51 -fopenmp-simd -fopenmp-version=51 -ferror-limit 100 -o - -std=c++11 %s -Wuninitialized
 
+// RUN: %clang_cc1 -verify=expected,ge50,ge51,cxx2b -fopenmp -fopenmp-simd -fopenmp-version=51 -x c++ -std=c++2b %s -Wuninitialized
+
 void xxx(int argc) {
   int x; // expected-note {{initialize the variable 'x' to silence this warning}}
 #pragma omp target update to(x)
   argc = x; // expected-warning {{variable 'x' is uninitialized when used here}}
+}
+
+static int y;
+#pragma omp declare target(y)
+
+void yyy() {
+#pragma omp target update to(y) // expected-error {{the host cannot update a declare target variable that is not externally visible.}}
+}
+
+int __attribute__((visibility("hidden"))) z;
+#pragma omp declare target(z)
+
+void zzz() {
+#pragma omp target update from(z) // expected-error {{the host cannot update a declare target variable that is not externally visible.}}
 }
 
 void foo() {
@@ -209,3 +228,43 @@ struct bar {
     foo();
   }
 };
+
+#if defined(__cplusplus) && __cplusplus >= 202101L
+
+namespace cxx2b {
+
+struct S {
+  int operator[](auto...);
+};
+
+void f() {
+
+  int test[10];
+
+#pragma omp target update to(test[1])
+
+#pragma omp target update to(test[1, 2]) // cxx2b-error {{type 'int[10]' does not provide a subscript operator}} \
+                                         // cxx2b-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+
+#pragma omp target update to(test [1:1:1])
+
+#pragma omp target update to(test [1, 2:1:1]) // cxx2b-error {{expected ']'}} // expected-note {{'['}} \
+                                            // cxx2b-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+
+#pragma omp target update to(test [1, 2:]) // cxx2b-error {{expected ']'}} // expected-note {{'['}} \
+                                            // cxx2b-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+
+#pragma omp target update to(test[1, 2 ::]) // cxx2b-error {{expected ']'}} // expected-note {{'['}} \
+                                            // cxx2b-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+
+#pragma omp target update to(test[]) // cxx2b-error {{type 'int[10]' does not provide a subscript operator}} \
+                                            // cxx2b-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+  S s;
+  (void)s[0];
+  (void)s[];
+  (void)s[1, 2];
+}
+
+}
+
+#endif

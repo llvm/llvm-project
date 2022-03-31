@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Interfaces/TilingInterface.h"
-#include "mlir/Dialect/Tensor/IR/Tensor.h"
 
 using namespace mlir;
 

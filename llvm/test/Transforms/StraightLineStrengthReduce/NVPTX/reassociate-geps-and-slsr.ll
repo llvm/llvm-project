@@ -42,7 +42,7 @@ define void @slsr_after_reassociate_geps(float* %arr, i32 %i) {
 ; PTX: mul.wide.s32 [[i4:%rd[0-9]+]], [[i]], 4;
 ; PTX: add.s64 [[base1:%rd[0-9]+]], [[arr]], [[i4]];
   %v1 = load float, float* %p1, align 4
-; PTX: ld.f32 {{%f[0-9]+}}, {{\[}}[[base1]]+20];
+; PTX: ld.f32 {{%f[0-9]+}}, [[[base1]]+20];
   call void @foo(float %v1)
 
   %j2 = add nsw i32 %i2, 5
@@ -50,7 +50,7 @@ define void @slsr_after_reassociate_geps(float* %arr, i32 %i) {
 ; CHECK: [[b2:%[0-9]+]] = getelementptr float, float* [[b1]], i64 [[bump]]
 ; PTX: add.s64 [[base2:%rd[0-9]+]], [[base1]], [[i4]];
   %v2 = load float, float* %p2, align 4
-; PTX: ld.f32 {{%f[0-9]+}}, {{\[}}[[base2]]+20];
+; PTX: ld.f32 {{%f[0-9]+}}, [[[base2]]+20];
   call void @foo(float %v2)
 
   %j3 = add nsw i32 %i3, 5
@@ -58,7 +58,7 @@ define void @slsr_after_reassociate_geps(float* %arr, i32 %i) {
 ; CHECK: [[b3:%[0-9]+]] = getelementptr float, float* [[b2]], i64 [[bump]]
 ; PTX: add.s64 [[base3:%rd[0-9]+]], [[base2]], [[i4]];
   %v3 = load float, float* %p3, align 4
-; PTX: ld.f32 {{%f[0-9]+}}, {{\[}}[[base3]]+20];
+; PTX: ld.f32 {{%f[0-9]+}}, [[[base3]]+20];
   call void @foo(float %v3)
 
   %j4 = add nsw i32 %i4, 5
@@ -66,7 +66,7 @@ define void @slsr_after_reassociate_geps(float* %arr, i32 %i) {
 ; CHECK: [[b4:%[0-9]+]] = getelementptr float, float* [[b3]], i64 [[bump]]
 ; PTX: add.s64 [[base4:%rd[0-9]+]], [[base3]], [[i4]];
   %v4 = load float, float* %p4, align 4
-; PTX: ld.f32 {{%f[0-9]+}}, {{\[}}[[base4]]+20];
+; PTX: ld.f32 {{%f[0-9]+}}, [[[base4]]+20];
   call void @foo(float %v4)
 
   ret void

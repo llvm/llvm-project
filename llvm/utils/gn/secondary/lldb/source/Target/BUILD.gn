@@ -43,6 +43,7 @@ static_library("Target") {
     "Memory.cpp",
     "MemoryHistory.cpp",
     "MemoryRegionInfo.cpp",
+    "MemoryTagMap.cpp",
     "ModuleCache.cpp",
     "OperatingSystem.cpp",
     "PathMappingList.cpp",

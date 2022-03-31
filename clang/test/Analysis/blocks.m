@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -analyzer-checker=core -analyzer-store=region -fblocks -analyzer-opt-analyze-nested-blocks -verify %s
+// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -analyzer-checker=core -analyzer-store=region -fblocks -analyzer-opt-analyze-nested-blocks -verify -Wno-strict-prototypes %s
 // RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -analyzer-checker=core -analyzer-store=region -fblocks -analyzer-opt-analyze-nested-blocks -verify -x objective-c++ %s
 
 //===----------------------------------------------------------------------===//
@@ -82,27 +82,27 @@ void test1(NSString *format, ...) {
 
 // test2 - Test that captured variables that are uninitialized are flagged
 // as such.
-void test2() {
+void test2(void) {
   static int y = 0;
   int x;
   ^{ y = x + 1; }();  // expected-warning{{Variable 'x' is uninitialized when captured by block}}
 }
 
-void test2_b() {
+void test2_b(void) {
   static int y = 0;
   __block int x;
   ^{ y = x + 1; }(); // expected-warning {{left operand of '+' is a garbage value}}
 }
 
-void test2_c() {
+void test2_c(void) {
   typedef void (^myblock)(void);
-  myblock f = ^() { f(); }; // expected-warning{{Variable 'f' is uninitialized when captured by block}}
+  myblock f = ^(void) { f(); }; // expected-warning{{Variable 'f' is uninitialized when captured by block}}
 }
 
 
-void testMessaging() {
+void testMessaging(void) {
   // <rdar://problem/12119814>
-  [[^(){} copy] release];
+  [[^(void){} copy] release];
 }
 
 
@@ -133,8 +133,8 @@ void testMessaging() {
 }
 @end
 
-void testReturnVariousSignatures() {
-  (void)^int(){
+void testReturnVariousSignatures(void) {
+  (void)^int(void){
     return 42;
   }();
 
@@ -142,7 +142,7 @@ void testReturnVariousSignatures() {
     return 42;
   }();
 
-  (void)^(){
+  (void)^(void){
     return 42;
   }();
 
@@ -173,7 +173,7 @@ void blockCapturesItselfInTheLoop(int x, int m) {
 void takeNonnullBlock(void (^)(void)) __attribute__((nonnull));
 void takeNonnullIntBlock(int (^)(void)) __attribute__((nonnull));
 
-void testCallContainingWithSignature1()
+void testCallContainingWithSignature1(void)
 {
   takeNonnullBlock(^{
     static const char str[] = "Lost connection to sharingd";
@@ -181,7 +181,7 @@ void testCallContainingWithSignature1()
   });
 }
 
-void testCallContainingWithSignature2()
+void testCallContainingWithSignature2(void)
 {
   takeNonnullBlock(^void{
     static const char str[] = "Lost connection to sharingd";
@@ -189,15 +189,15 @@ void testCallContainingWithSignature2()
   });
 }
 
-void testCallContainingWithSignature3()
+void testCallContainingWithSignature3(void)
 {
-  takeNonnullBlock(^void(){
+  takeNonnullBlock(^void(void){
     static const char str[] = "Lost connection to sharingd";
     testCallContainingWithSignature3();
   });
 }
 
-void testCallContainingWithSignature4()
+void testCallContainingWithSignature4(void)
 {
   takeNonnullBlock(^void(void){
     static const char str[] = "Lost connection to sharingd";
@@ -205,7 +205,7 @@ void testCallContainingWithSignature4()
   });
 }
 
-void testCallContainingWithSignature5()
+void testCallContainingWithSignature5(void)
 {
   takeNonnullIntBlock(^{
     static const char str[] = "Lost connection to sharingd";
@@ -240,13 +240,13 @@ __attribute__((objc_root_class))
 // The incorrect block variable initialization below is a hard compile-time
 // error in C++.
 #if !defined(__cplusplus)
-void call_block_with_fewer_arguments() {
+void call_block_with_fewer_arguments(void) {
   void (^b)() = ^(int a) { };
   b(); // expected-warning {{Block taking 1 argument is called with fewer (0)}}
 }
 #endif
 
-int getBlockFlags() {
+int getBlockFlags(void) {
   int x = 0;
   return ((struct Block_layout *)^{ (void)x; })->flags; // no-warning
 }

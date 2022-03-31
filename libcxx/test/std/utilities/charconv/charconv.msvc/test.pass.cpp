@@ -17,9 +17,6 @@
 // UNSUPPORTED: libcpp-has-no-random-device
 // UNSUPPORTED: libcpp-has-no-localization
 
-// TODO(ldionne): This test fails on Ubuntu Focal on our CI nodes (and only there), in 32 bit mode.
-// UNSUPPORTED: linux && 32bits-on-64bits
-
 // XFAIL: LIBCXX-AIX-FIXME
 
 // <charconv>
@@ -31,6 +28,10 @@
 #  define sprintf_s snprintf
 #endif
 
+#ifdef _MSVC_STL_VERSION
+#include <xutility>
+using std::_Bit_cast;
+#else
 // FUNCTION TEMPLATE _Bit_cast
 template <class _To, class _From,
           std::enable_if_t<sizeof(_To) == sizeof(_From) && std::is_trivially_copyable_v<_To> &&
@@ -39,6 +40,7 @@ template <class _To, class _From,
 [[nodiscard]] constexpr _To _Bit_cast(const _From& _From_obj) noexcept {
   return __builtin_bit_cast(_To, _From_obj);
 }
+#endif
 
 // Includes Microsoft's test that tests the entire header.
 

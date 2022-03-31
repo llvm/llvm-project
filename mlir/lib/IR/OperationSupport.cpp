@@ -34,8 +34,8 @@ NamedAttrList::NamedAttrList(DictionaryAttr attributes)
   dictionarySorted.setPointerAndInt(attributes, true);
 }
 
-NamedAttrList::NamedAttrList(const_iterator in_start, const_iterator in_end) {
-  assign(in_start, in_end);
+NamedAttrList::NamedAttrList(const_iterator inStart, const_iterator inEnd) {
+  assign(inStart, inEnd);
 }
 
 ArrayRef<NamedAttribute> NamedAttrList::getAttrs() const { return attrs; }
@@ -66,8 +66,8 @@ void NamedAttrList::append(StringRef name, Attribute attr) {
 }
 
 /// Replaces the attributes with new list of attributes.
-void NamedAttrList::assign(const_iterator in_start, const_iterator in_end) {
-  DictionaryAttr::sort(ArrayRef<NamedAttribute>{in_start, in_end}, attrs);
+void NamedAttrList::assign(const_iterator inStart, const_iterator inEnd) {
+  DictionaryAttr::sort(ArrayRef<NamedAttribute>{inStart, inEnd}, attrs);
   dictionarySorted.setPointerAndInt(nullptr, true);
 }
 
@@ -170,12 +170,12 @@ OperationState::OperationState(Location location, StringRef name)
 OperationState::OperationState(Location location, OperationName name)
     : location(location), name(name) {}
 
-OperationState::OperationState(Location location, StringRef name,
+OperationState::OperationState(Location location, OperationName name,
                                ValueRange operands, TypeRange types,
                                ArrayRef<NamedAttribute> attributes,
                                BlockRange successors,
                                MutableArrayRef<std::unique_ptr<Region>> regions)
-    : location(location), name(name, location->getContext()),
+    : location(location), name(name),
       operands(operands.begin(), operands.end()),
       types(types.begin(), types.end()),
       attributes(attributes.begin(), attributes.end()),
@@ -183,6 +183,13 @@ OperationState::OperationState(Location location, StringRef name,
   for (std::unique_ptr<Region> &r : regions)
     this->regions.push_back(std::move(r));
 }
+OperationState::OperationState(Location location, StringRef name,
+                               ValueRange operands, TypeRange types,
+                               ArrayRef<NamedAttribute> attributes,
+                               BlockRange successors,
+                               MutableArrayRef<std::unique_ptr<Region>> regions)
+    : OperationState(location, OperationName(name, location.getContext()),
+                     operands, types, attributes, successors, regions) {}
 
 void OperationState::addOperands(ValueRange newOperands) {
   operands.append(newOperands.begin(), newOperands.end());
@@ -286,7 +293,7 @@ void detail::OperandStorage::eraseOperands(unsigned start, unsigned length) {
 }
 
 void detail::OperandStorage::eraseOperands(
-    const llvm::BitVector &eraseIndices) {
+    const BitVector &eraseIndices) {
   MutableArrayRef<OpOperand> operands = getOperands();
   assert(eraseIndices.size() == operands.size());
 

@@ -111,4 +111,17 @@
 /* Define if the xar_open() function is supported this platform. */
 /* #undef HAVE_LIBXAR */
 
+/* Define if building libLLVM shared library */
+/* #undef LLVM_BUILD_LLVM_DYLIB */
+
+/* Define if building LLVM with BUILD_SHARED_LIBS */
+/* #undef LLVM_BUILD_SHARED_LIBS */
+
+/* Define if building LLVM with LLVM_FORCE_USE_OLD_TOOLCHAIN_LIBS */
+/* #undef LLVM_FORCE_USE_OLD_TOOLCHAIN ${LLVM_FORCE_USE_OLD_TOOLCHAIN} */
+
+/* Define if llvm_unreachable should be optimized with undefined behavior
+ * in non assert builds */
+#define LLVM_UNREACHABLE_OPTIMIZE 1
+
 #endif

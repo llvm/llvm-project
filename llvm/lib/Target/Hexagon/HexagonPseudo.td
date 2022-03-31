@@ -182,6 +182,28 @@ let isCodeGenOnly = 1, isCall = 1, hasSideEffects = 1,
     Defs = [PC, R31, R6, R7, P0] in
 def PS_call_stk : T_Call<"">;
 
+// This pseudo instruction is used to replace int_hexagon_instrprof_custom intrinsic
+// with a call to custom handler passed as the first argument to the intrinsic.
+
+// Pleae Note:
+// 1) The call to the custom handler is being treated as a special one as the
+//    callee is responsible for saving and restoring all the registers it needs
+//    to modify. This includes caller saved registers as well as r0-r5 argument
+//    registers. This is done to reduce the impact of instrumentation on the
+//    code being instrumented/profiled.
+// 2) R14, R15 and R28 are reserved for PLT handling and therefore are
+//    part of the def list.
+// 3) R0 is used to pass the unique id associated with an instrumentation site
+//    to the handler.
+// 4) All the other registers (R29, R30, R31, PC) get modified by the call
+//    instruction.
+
+// TODO: It may be a good idea to add a separate pseudo instruction for
+// static relocation which doesn't need to reserve r14, r15 and r28.
+
+let hasSideEffects = 1, isCall = 1, Defs = [R0, R14, R15, R28, R29, R30, R31, PC] in
+def PS_call_instrprof_custom :  Pseudo<(outs), (ins s32_0Imm:$dst, u32_0Imm:$Ii), "">;
+
 // Call, no return.
 let isCall = 1, hasSideEffects = 1, cofMax1 = 1, isCodeGenOnly = 1 in
 def PS_callr_nr: InstHexagon<(outs), (ins IntRegs:$Rs),
@@ -572,3 +594,14 @@ defm PS_storerd : NewCircularStore<DoubleRegs, WordAccess>;
 // __builtin_trap.
 let hasSideEffects = 1, isPseudo = 1, isCodeGenOnly = 1, isSolo = 1 in
 def PS_crash: InstHexagon<(outs), (ins), "", [], "", PSEUDO, TypePSEUDO>;
+
+// This is actual trap1 instruction from before v65. It's here since it is
+// no longer included in DepInstrInfo.td.
+def PS_trap1 : HInst<(outs), (ins u8_0Imm:$Ii), "trap1(#$Ii)", tc_53c851ab,
+                     TypeJ>, Enc_a51a9a, Requires<[HasPreV65]> {
+  let Inst{1-0} = 0b00;
+  let Inst{7-5} = 0b000;
+  let Inst{13-13} = 0b0;
+  let Inst{31-16} = 0b0101010010000000;
+}
+

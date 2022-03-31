@@ -26,8 +26,6 @@ define void @basic_loop(i8* nocapture readonly %ptr, i32 %size, i8** %pos) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i32 [[SIZE]], [[INDEX]]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 0
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, i8* [[PTR]], i32 [[TMP1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, i8* [[NEXT_GEP]], i32 1
@@ -39,7 +37,7 @@ define void @basic_loop(i8* nocapture readonly %ptr, i32 %size, i8** %pos) {
 ; CHECK-NEXT:    store <4 x i8> [[WIDE_LOAD]], <4 x i8>* [[TMP6]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !0
+; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[SIZE]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[END:%.*]], label [[SCALAR_PH]]
@@ -55,7 +53,7 @@ define void @basic_loop(i8* nocapture readonly %ptr, i32 %size, i8** %pos) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i8, i8* [[INCDEC_PTR]], align 1
 ; CHECK-NEXT:    store i8 [[TMP8]], i8* [[BUFF]], align 1
 ; CHECK-NEXT:    [[TOBOOL11:%.*]] = icmp eq i32 [[DEC]], 0
-; CHECK-NEXT:    br i1 [[TOBOOL11]], label [[END]], label [[BODY]], !llvm.loop !2
+; CHECK-NEXT:    br i1 [[TOBOOL11]], label [[END]], label [[BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[INCDEC_PTR_LCSSA:%.*]] = phi i8* [ [[INCDEC_PTR]], [[BODY]] ], [ [[IND_END2]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    store i8* [[INCDEC_PTR_LCSSA]], i8** [[POS]], align 4
@@ -94,8 +92,6 @@ define void @metadata(i8* nocapture readonly %ptr, i32 %size, i8** %pos) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i32 [[SIZE]], [[INDEX]]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 0
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, i8* [[PTR]], i32 [[TMP1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, i8* [[NEXT_GEP]], i32 1
@@ -107,7 +103,7 @@ define void @metadata(i8* nocapture readonly %ptr, i32 %size, i8** %pos) {
 ; CHECK-NEXT:    store <4 x i8> [[WIDE_LOAD]], <4 x i8>* [[TMP6]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !4
+; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[SIZE]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[END:%.*]], label [[SCALAR_PH]]
@@ -123,7 +119,7 @@ define void @metadata(i8* nocapture readonly %ptr, i32 %size, i8** %pos) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i8, i8* [[INCDEC_PTR]], align 1
 ; CHECK-NEXT:    store i8 [[TMP8]], i8* [[BUFF]], align 1
 ; CHECK-NEXT:    [[TOBOOL11:%.*]] = icmp eq i32 [[DEC]], 0
-; CHECK-NEXT:    br i1 [[TOBOOL11]], label [[END]], label [[BODY]], !llvm.loop !5
+; CHECK-NEXT:    br i1 [[TOBOOL11]], label [[END]], label [[BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[INCDEC_PTR_LCSSA:%.*]] = phi i8* [ [[INCDEC_PTR]], [[BODY]] ], [ [[IND_END2]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    store i8* [[INCDEC_PTR_LCSSA]], i8** [[POS]], align 4

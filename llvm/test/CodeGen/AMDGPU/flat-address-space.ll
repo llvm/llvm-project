@@ -5,13 +5,13 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=CHECK,GFX10 %s
 
 ; CHECK-LABEL: {{^}}store_flat_i32:
-; CHECK-DAG: s_load_dwordx2 s{{\[}}[[LO_SREG:[0-9]+]]:[[HI_SREG:[0-9]+]]],
+; CHECK-DAG: s_load_dwordx2 s[[[LO_SREG:[0-9]+]]:[[HI_SREG:[0-9]+]]],
 ; CHECK-DAG: s_load_dword s[[SDATA:[0-9]+]],
 ; CHECK: s_waitcnt lgkmcnt(0)
 ; CHECK-DAG: v_mov_b32_e32 v[[DATA:[0-9]+]], s[[SDATA]]
 ; CHECK-DAG: v_mov_b32_e32 v[[LO_VREG:[0-9]+]], s[[LO_SREG]]
 ; CHECK-DAG: v_mov_b32_e32 v[[HI_VREG:[0-9]+]], s[[HI_SREG]]
-; CHECK: flat_store_dword v{{\[}}[[LO_VREG]]:[[HI_VREG]]{{\]}}, v[[DATA]]
+; CHECK: flat_store_dword v[[[LO_VREG]]:[[HI_VREG]]], v[[DATA]]
 define amdgpu_kernel void @store_flat_i32(i32 addrspace(1)* %gptr, i32 %x) #0 {
   %fptr = addrspacecast i32 addrspace(1)* %gptr to i32*
   store volatile i32 %x, i32* %fptr, align 4

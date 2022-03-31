@@ -1,4 +1,4 @@
-; RUN: opt < %s -cost-model -analyze -mtriple=systemz-unknown -mcpu=z10
+; RUN: opt < %s -passes='print<cost-model>' 2>&1 -disable-output -mtriple=systemz-unknown -mcpu=z10
 ;
 ; Check that some costs can be returned for vector instructions also without
 ; vector support.

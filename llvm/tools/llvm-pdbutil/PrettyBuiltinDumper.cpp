@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "PrettyBuiltinDumper.h"
-#include "LinePrinter.h"
 
+#include "llvm/DebugInfo/PDB/Native/LinePrinter.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeBuiltin.h"
 
 using namespace llvm;
@@ -90,6 +90,8 @@ StringRef BuiltinDumper::getTypeName(const PDBSymbolTypeBuiltin &Symbol) {
     return "char16_t";
   case PDB_BuiltinType::Char32:
     return "char32_t";
+  case PDB_BuiltinType::Char8:
+    return "char8_t";
   case PDB_BuiltinType::None:
     return "...";
   }

@@ -14,10 +14,11 @@
 #ifndef LLVM_MC_MCINSTRDESC_H
 #define LLVM_MC_MCINSTRDESC_H
 
-#include "llvm/MC/MCRegisterInfo.h"
-#include "llvm/Support/DataTypes.h"
+#include "llvm/ADT/iterator_range.h"
+#include "llvm/MC/MCRegister.h"
 
 namespace llvm {
+class MCRegisterInfo;
 
 class MCInst;
 
@@ -148,6 +149,7 @@ enum Flag {
   Variadic,
   HasOptionalDef,
   Pseudo,
+  Meta,
   Return,
   EHScopeReturn,
   Call,
@@ -262,6 +264,10 @@ public:
   /// Return true if this is a pseudo instruction that doesn't
   /// correspond to a real machine instruction.
   bool isPseudo() const { return Flags & (1ULL << MCID::Pseudo); }
+
+  /// Return true if this is a meta instruction that doesn't
+  /// produce any output in the form of executable instructions.
+  bool isMetaInstruction() const { return Flags & (1ULL << MCID::Meta); }
 
   /// Return true if the instruction is a return.
   bool isReturn() const { return Flags & (1ULL << MCID::Return); }

@@ -40,9 +40,6 @@ cl::opt<bool>
                                " instruction output for test purposes only."),
                       cl::init(false));
 
-extern cl::opt<bool> WasmEnableEmEH;
-extern cl::opt<bool> WasmEnableEmSjLj;
-
 static void removeRegisterOperands(const MachineInstr *MI, MCInst &OutMI);
 
 MCSymbol *
@@ -62,32 +59,7 @@ WebAssemblyMCInstLower::GetGlobalAddressSymbol(const MachineOperand &MO) const {
       SmallVector<MVT, 1> VTs;
       computeLegalValueVTs(CurrentFunc, TM, GlobalVT, VTs);
 
-      // Tables are represented as Arrays in LLVM IR therefore
-      // they reach this point as aggregate Array types with an element type
-      // that is a reference type.
-      wasm::ValType Type;
-      if (GlobalVT->isArrayTy() &&
-          WebAssembly::isRefType(GlobalVT->getArrayElementType())) {
-        MVT VT;
-        switch (GlobalVT->getArrayElementType()->getPointerAddressSpace()) {
-        case WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF:
-          VT = MVT::funcref;
-          break;
-        case WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_EXTERNREF:
-          VT = MVT::externref;
-          break;
-        default:
-          report_fatal_error("unhandled address space type");
-        }
-        Type = WebAssembly::toValType(VT);
-      } else if (VTs.size() == 1) {
-        Type = WebAssembly::toValType(VTs[0]);
-      } else
-        report_fatal_error("Aggregate globals not yet implemented");
-
-      WasmSym->setType(wasm::WASM_SYMBOL_TYPE_GLOBAL);
-      WasmSym->setGlobalType(
-          wasm::WasmGlobalType{uint8_t(Type), /*Mutable=*/true});
+      WebAssembly::wasmSymbolSetType(WasmSym, GlobalVT, VTs);
     }
     return WasmSym;
   }
@@ -105,7 +77,8 @@ WebAssemblyMCInstLower::GetGlobalAddressSymbol(const MachineOperand &MO) const {
 
   bool InvokeDetected = false;
   auto *WasmSym = Printer.getMCSymbolForFunction(
-      F, WasmEnableEmEH || WasmEnableEmSjLj, Signature.get(), InvokeDetected);
+      F, WebAssembly::WasmEnableEmEH || WebAssembly::WasmEnableEmSjLj,
+      Signature.get(), InvokeDetected);
   WasmSym->setSignature(Signature.get());
   Printer.addSignature(std::move(Signature));
   WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);

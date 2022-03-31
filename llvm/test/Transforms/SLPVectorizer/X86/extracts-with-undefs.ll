@@ -8,11 +8,11 @@ define void @test() {
 ; CHECK:       body:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x double> [ zeroinitializer, [[ENTRY:%.*]] ], [ zeroinitializer, [[BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> <double poison, double undef>, double [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> <double undef, double poison>, double [[TMP1]], i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast <2 x double> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP3]], i32 1
-; CHECK-NEXT:    [[ADD8_I_I:%.*]] = fadd fast double [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[ADD8_I_I:%.*]] = fadd fast double [[TMP5]], [[TMP4]]
 ; CHECK-NEXT:    [[CMP42_I:%.*]] = fcmp fast ole double [[ADD8_I_I]], 0.000000e+00
 ; CHECK-NEXT:    br i1 false, label [[BODY]], label [[EXIT:%.*]]
 ; CHECK:       exit:

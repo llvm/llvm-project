@@ -11,6 +11,7 @@
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/Support/AArch64TargetParser.h"
 #include "llvm/Support/TargetParser.h"
 #include "llvm/Support/Host.h"
 
@@ -98,12 +99,14 @@ static bool DecodeAArch64Features(const Driver &D, StringRef text,
       Features.push_back("-sve2-sm4");
     }
 
-    // +sve implies +f32mm if the base architecture is v8.6A, v8.7A, v9.1A or
-    // v9.2A. It isn't the case in general that sve implies both f64mm and f32mm
+    // +sve implies +f32mm if the base architecture is >= v8.6A (except v9A)
+    // It isn't the case in general that sve implies both f64mm and f32mm
     if ((ArchKind == llvm::AArch64::ArchKind::ARMV8_6A ||
          ArchKind == llvm::AArch64::ArchKind::ARMV8_7A ||
+         ArchKind == llvm::AArch64::ArchKind::ARMV8_8A ||
          ArchKind == llvm::AArch64::ArchKind::ARMV9_1A ||
-         ArchKind == llvm::AArch64::ArchKind::ARMV9_2A) &&
+         ArchKind == llvm::AArch64::ArchKind::ARMV9_2A ||
+         ArchKind == llvm::AArch64::ArchKind::ARMV9_3A) &&
         Feature == "sve")
       Features.push_back("+f32mm");
   }
@@ -148,6 +151,8 @@ getAArch64ArchFeaturesFromMarch(const Driver &D, StringRef March,
   std::pair<StringRef, StringRef> Split = StringRef(MarchLowerCase).split("+");
 
   llvm::AArch64::ArchKind ArchKind = llvm::AArch64::parseArch(Split.first);
+  if (Split.first == "native")
+    ArchKind = llvm::AArch64::getCPUArchKind(llvm::sys::getHostCPUName().str());
   if (ArchKind == llvm::AArch64::ArchKind::INVALID ||
       !llvm::AArch64::getArchFeatures(ArchKind, Features))
     return false;
@@ -390,9 +395,14 @@ fp16_fml_fallthrough:
   }
 
   if (std::find(ItBegin, ItEnd, "+v8.4a") != ItEnd ||
+      std::find(ItBegin, ItEnd, "+v8.5a") != ItEnd ||
+      std::find(ItBegin, ItEnd, "+v8.6a") != ItEnd ||
+      std::find(ItBegin, ItEnd, "+v8.7a") != ItEnd ||
+      std::find(ItBegin, ItEnd, "+v8.8a") != ItEnd ||
       std::find(ItBegin, ItEnd, "+v9a") != ItEnd ||
       std::find(ItBegin, ItEnd, "+v9.1a") != ItEnd ||
-      std::find(ItBegin, ItEnd, "+v9.2a") != ItEnd) {
+      std::find(ItBegin, ItEnd, "+v9.2a") != ItEnd ||
+      std::find(ItBegin, ItEnd, "+v9.3a") != ItEnd) {
     if (HasCrypto && !NoCrypto) {
       // Check if we have NOT disabled an algorithm with something like:
       //   +crypto, -algorithm
@@ -451,7 +461,8 @@ fp16_fml_fallthrough:
     }
   }
 
-  const char *Archs[] = {"+v8.6a", "+v8.7a", "+v9.1a", "+v9.2a"};
+  const char *Archs[] = {"+v8.6a", "+v8.7a", "+v8.8a",
+                         "+v9.1a", "+v9.2a", "+v9.3a"};
   auto Pos = std::find_first_of(Features.begin(), Features.end(),
                                 std::begin(Archs), std::end(Archs));
   if (Pos != std::end(Features))
@@ -568,4 +579,18 @@ fp16_fml_fallthrough:
 
   if (Args.hasArg(options::OPT_mno_neg_immediates))
     Features.push_back("+no-neg-immediates");
+
+  if (Arg *A = Args.getLastArg(options::OPT_mfix_cortex_a53_835769,
+                               options::OPT_mno_fix_cortex_a53_835769)) {
+    if (A->getOption().matches(options::OPT_mfix_cortex_a53_835769))
+      Features.push_back("+fix-cortex-a53-835769");
+    else
+      Features.push_back("-fix-cortex-a53-835769");
+  } else if (Triple.isAndroid()) {
+    // Enabled A53 errata (835769) workaround by default on android
+    Features.push_back("+fix-cortex-a53-835769");
+  }
+
+  if (Args.getLastArg(options::OPT_mno_bti_at_return_twice))
+    Features.push_back("+no-bti-at-return-twice");
 }

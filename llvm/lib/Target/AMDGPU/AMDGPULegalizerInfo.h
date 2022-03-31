@@ -21,7 +21,6 @@
 namespace llvm {
 
 class GCNTargetMachine;
-class LLVMContext;
 class GCNSubtarget;
 class MachineIRBuilder;
 
@@ -169,6 +168,8 @@ public:
                             Intrinsic::ID IID) const;
 
   bool legalizeBVHIntrinsic(MachineInstr &MI, MachineIRBuilder &B) const;
+
+  bool legalizeFPTruncRound(MachineInstr &MI, MachineIRBuilder &B) const;
 
   bool legalizeImageIntrinsic(
       MachineInstr &MI, MachineIRBuilder &B,

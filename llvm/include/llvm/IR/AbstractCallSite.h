@@ -14,16 +14,16 @@
 #ifndef LLVM_IR_ABSTRACTCALLSITE_H
 #define LLVM_IR_ABSTRACTCALLSITE_H
 
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
-#include "llvm/IR/Instruction.h"
-#include "llvm/IR/Use.h"
-#include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
-#include "llvm/Support/Casting.h"
 #include <cassert>
 
 namespace llvm {
+
+class Argument;
+class Use;
 
 /// AbstractCallSite
 ///

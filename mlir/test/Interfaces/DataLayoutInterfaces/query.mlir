@@ -194,3 +194,84 @@ func @nested_combine_all() {
   >}: () -> ()
   return
 }
+
+// CHECK-LABEL: @integers
+func @integers() {
+  "test.op_with_data_layout"() ({
+    // CHECK: alignment = 8
+    // CHECK: bitsize = 32
+    // CHECK: preferred = 8
+    "test.data_layout_query"() : () -> i32
+    // CHECK: alignment = 16
+    // CHECK: bitsize = 56
+    // CHECK: preferred = 16
+    "test.data_layout_query"() : () -> i56
+    // CHECK: alignment = 16
+    // CHECK: bitsize = 64
+    // CHECK: preferred = 16
+    "test.data_layout_query"() : () -> i64
+    // CHECK: alignment = 16
+    // CHECK: bitsize = 128
+    // CHECK: preferred = 16
+    "test.data_layout_query"() : () -> i128
+    "test.maybe_terminator"() : () -> ()
+  }) { dlti.dl_spec = #dlti.dl_spec<
+      #dlti.dl_entry<i32, dense<64> : vector<1xi32>>,
+      #dlti.dl_entry<i64, dense<128> : vector<1xi32>>
+    >} : () -> ()
+  "test.op_with_data_layout"() ({
+    // CHECK: alignment = 8
+    // CHECK: bitsize = 32
+    // CHECK: preferred = 16
+    "test.data_layout_query"() : () -> i32
+    // CHECK: alignment = 16
+    // CHECK: bitsize = 56
+    // CHECK: preferred = 32
+    "test.data_layout_query"() : () -> i56
+    // CHECK: alignment = 16
+    // CHECK: bitsize = 64
+    // CHECK: preferred = 32
+    "test.data_layout_query"() : () -> i64
+    // CHECK: alignment = 16
+    // CHECK: bitsize = 128
+    // CHECK: preferred = 32
+    "test.data_layout_query"() : () -> i128
+    "test.maybe_terminator"() : () -> ()
+  }) { dlti.dl_spec = #dlti.dl_spec<
+      #dlti.dl_entry<i32, dense<[64, 128]> : vector<2xi32>>,
+      #dlti.dl_entry<i64, dense<[128, 256]> : vector<2xi32>>
+    >} : () -> ()
+  return
+}
+
+func @floats() {
+  "test.op_with_data_layout"() ({
+    // CHECK: alignment = 8
+    // CHECK: bitsize = 32
+    // CHECK: preferred = 8
+    "test.data_layout_query"() : () -> f32
+    // CHECK: alignment = 16
+    // CHECK: bitsize = 80
+    // CHECK: preferred = 16
+    "test.data_layout_query"() : () -> f80
+    "test.maybe_terminator"() : () -> ()
+  }) { dlti.dl_spec = #dlti.dl_spec<
+      #dlti.dl_entry<f32, dense<64> : vector<1xi32>>,
+      #dlti.dl_entry<f80, dense<128> : vector<1xi32>>
+    >} : () -> ()
+  "test.op_with_data_layout"() ({
+    // CHECK: alignment = 8
+    // CHECK: bitsize = 32
+    // CHECK: preferred = 16
+    "test.data_layout_query"() : () -> f32
+    // CHECK: alignment = 16
+    // CHECK: bitsize = 80
+    // CHECK: preferred = 32
+    "test.data_layout_query"() : () -> f80
+    "test.maybe_terminator"() : () -> ()
+  }) { dlti.dl_spec = #dlti.dl_spec<
+      #dlti.dl_entry<f32, dense<[64, 128]> : vector<2xi32>>,
+      #dlti.dl_entry<f80, dense<[128, 256]> : vector<2xi32>>
+    >} : () -> ()
+  return
+}

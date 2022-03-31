@@ -49,7 +49,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     set_property(TARGET c-index-test APPEND PROPERTY INSTALL_RPATH
        "@executable_path/../../lib")
   else()
-    set(INSTALL_DESTINATION bin)
+    set(INSTALL_DESTINATION "${CMAKE_INSTALL_BINDIR}")
   endif()
 
   install(TARGETS c-index-test

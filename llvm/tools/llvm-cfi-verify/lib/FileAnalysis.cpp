@@ -11,6 +11,7 @@
 
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
@@ -349,7 +350,7 @@ uint64_t FileAnalysis::indirectCFOperandClobber(const GraphResult &Graph) const 
           // Add the registers this load reads to those we check for clobbers.
           for (unsigned i = InstrDesc.getNumDefs(),
                         e = InstrDesc.getNumOperands(); i != e; i++) {
-            const auto Operand = NodeInstr.Instruction.getOperand(i);
+            const auto &Operand = NodeInstr.Instruction.getOperand(i);
             if (Operand.isReg())
               CurRegisterNumbers.insert(Operand.getReg());
           }

@@ -230,3 +230,21 @@ namespace within_template_arg_list {
 
   template<int ...N> struct Z { Y<X(N)...> y; };
 }
+
+namespace PR49735 {
+// Ensure that we do not crash when parsing code which looks like an invalid
+// deduction guide declaration.
+template<class> struct B; // expected-note 2{{template is declared here}}
+struct A1 {
+  B() noexcept(false); // expected-error {{deduction guide must be declared in the same scope as template 'PR49735::B'}} \
+                       // expected-error {{deduction guide declaration without trailing return type}}
+};
+
+struct A2 {
+  template <typename Ty> // expected-note {{non-deducible template parameter 'Ty'}}
+  B() noexcept(false); // expected-error {{deduction guide must be declared in the same scope as template 'PR49735::B'}} \
+                       // expected-error {{deduction guide template contains a template parameter that cannot be deduced}} \
+                       // expected-error {{deduction guide declaration without trailing return type}}
+};
+
+}

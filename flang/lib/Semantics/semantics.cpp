@@ -165,7 +165,7 @@ using StatementSemanticsPass2 = SemanticsVisitor<AccStructureChecker,
 
 static bool PerformStatementSemantics(
     SemanticsContext &context, parser::Program &program) {
-  ResolveNames(context, program);
+  ResolveNames(context, program, context.globalScope());
   RewriteParseTree(context, program);
   ComputeOffsets(context, context.globalScope());
   CheckDeclarations(context);
@@ -185,22 +185,15 @@ SemanticsContext::SemanticsContext(
     : defaultKinds_{defaultKinds}, languageFeatures_{languageFeatures},
       allCookedSources_{allCookedSources},
       intrinsics_{evaluate::IntrinsicProcTable::Configure(defaultKinds_)},
-      globalScope_{*this}, foldingContext_{
-                               parser::ContextualMessages{&messages_},
-                               defaultKinds_, intrinsics_} {}
+      globalScope_{*this}, intrinsicModulesScope_{globalScope_.MakeScope(
+                               Scope::Kind::IntrinsicModules, nullptr)},
+      foldingContext_{
+          parser::ContextualMessages{&messages_}, defaultKinds_, intrinsics_} {}
 
 SemanticsContext::~SemanticsContext() {}
 
 int SemanticsContext::GetDefaultKind(TypeCategory category) const {
   return defaultKinds_.GetDefaultKind(category);
-}
-
-bool SemanticsContext::IsEnabled(common::LanguageFeature feature) const {
-  return languageFeatures_.IsEnabled(feature);
-}
-
-bool SemanticsContext::ShouldWarn(common::LanguageFeature feature) const {
-  return languageFeatures_.ShouldWarn(feature);
 }
 
 const DeclTypeSpec &SemanticsContext::MakeNumericType(
@@ -254,7 +247,9 @@ Scope &SemanticsContext::FindScope(parser::CharBlock source) {
   if (auto *scope{globalScope_.FindScope(source)}) {
     return *scope;
   } else {
-    common::die("SemanticsContext::FindScope(): invalid source location");
+    common::die(
+        "SemanticsContext::FindScope(): invalid source location for '%s'",
+        source.ToString().c_str());
   }
 }
 
@@ -276,8 +271,8 @@ void SemanticsContext::CheckIndexVarRedefine(const parser::CharBlock &location,
 
 void SemanticsContext::WarnIndexVarRedefine(
     const parser::CharBlock &location, const Symbol &variable) {
-  CheckIndexVarRedefine(
-      location, variable, "Possible redefinition of %s variable '%s'"_en_US);
+  CheckIndexVarRedefine(location, variable,
+      "Possible redefinition of %s variable '%s'"_warn_en_US);
 }
 
 void SemanticsContext::CheckIndexVarRedefine(
@@ -332,7 +327,7 @@ SourceName SemanticsContext::SaveTempName(std::string &&name) {
 
 SourceName SemanticsContext::GetTempName(const Scope &scope) {
   for (const auto &str : tempNames_) {
-    if (str.size() > 5 && str.substr(0, 5) == ".F18.") {
+    if (IsTempName(str)) {
       SourceName name{str};
       if (scope.find(name) == scope.end()) {
         return name;
@@ -342,9 +337,13 @@ SourceName SemanticsContext::GetTempName(const Scope &scope) {
   return SaveTempName(".F18."s + std::to_string(tempNames_.size()));
 }
 
+bool SemanticsContext::IsTempName(const std::string &name) {
+  return name.size() > 5 && name.substr(0, 5) == ".F18.";
+}
+
 Scope *SemanticsContext::GetBuiltinModule(const char *name) {
-  return ModFileReader{*this}.Read(
-      SourceName{name, std::strlen(name)}, nullptr, true /*silence errors*/);
+  return ModFileReader{*this}.Read(SourceName{name, std::strlen(name)},
+      true /*intrinsic*/, nullptr, true /*silence errors*/);
 }
 
 void SemanticsContext::UseFortranBuiltinsModule() {

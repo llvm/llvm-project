@@ -1,4 +1,4 @@
-void foo();
+void foo(void);
 
 // RUN: %clang -Wall -fsyntax-only %s --serialize-diagnostics %t
 // RUN: c-index-test -read-diagnostics %t 2>&1 | FileCheck %s

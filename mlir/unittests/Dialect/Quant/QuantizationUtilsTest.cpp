@@ -25,7 +25,7 @@ class TestUniformQuantizedValueConverter
 public:
   TestUniformQuantizedValueConverter(UniformQuantizedType type)
       : UniformQuantizedValueConverter(type), qtype(type) {}
-  APInt quantizeFloatToInt(APFloat expressedValue) const {
+  APInt quantizeFloatToInt(APFloat expressedValue) const override {
     return APInt(qtype.getStorageType().cast<IntegerType>().getWidth(), 5L);
   }
 
@@ -169,4 +169,4 @@ TEST(QuantizationUtilsTest, convertRankedSparseAttrUniform) {
   EXPECT_EQ(firstValue.cast<IntegerAttr>().getInt(), 5);
 }
 
-} // end namespace
+} // namespace

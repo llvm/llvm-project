@@ -1,4 +1,4 @@
-; RUN: opt -loop-vectorize -scalable-vectorization=on -S < %s | FileCheck %s
+; RUN: opt -loop-vectorize -S < %s | FileCheck %s
 
 target triple = "aarch64-unknown-linux-gnu"
 
@@ -59,7 +59,7 @@ for.end:                                          ; preds = %for.inc, %entry
   ret void
 }
 
-attributes #0 = { "target-features"="+neon,+sve" vscale_range(0, 16) }
+attributes #0 = { "target-features"="+neon,+sve" vscale_range(1, 16) }
 
 !0 = distinct !{!0, !1, !2, !3, !4, !5}
 !1 = !{!"llvm.loop.mustprogress"}

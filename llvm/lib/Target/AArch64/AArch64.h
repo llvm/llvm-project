@@ -16,6 +16,8 @@
 
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "Utils/AArch64BaseInfo.h"
+#include "llvm/Pass.h"
+#include "llvm/PassRegistry.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -26,7 +28,6 @@ class AArch64Subtarget;
 class AArch64TargetMachine;
 class FunctionPass;
 class InstructionSelector;
-class MachineFunctionPass;
 
 FunctionPass *createAArch64DeadRegisterDefinitions();
 FunctionPass *createAArch64RedundantCopyEliminationPass();

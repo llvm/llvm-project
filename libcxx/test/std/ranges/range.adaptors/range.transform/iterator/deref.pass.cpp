@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // transform_view::<iterator>::operator*
@@ -23,7 +22,7 @@ int main(int, char**) {
     using View = std::ranges::transform_view<MoveOnlyView, PlusOne>;
     View transformView(MoveOnlyView{buff}, PlusOne{});
     assert(*transformView.begin() == 1);
-    static_assert(!noexcept(*std::declval<std::ranges::iterator_t<View>>()));
+    ASSERT_NOT_NOEXCEPT(*std::declval<std::ranges::iterator_t<View>>());
     ASSERT_SAME_TYPE(int, decltype(*std::declval<View>().begin()));
   }
   {
@@ -31,7 +30,7 @@ int main(int, char**) {
     using View = std::ranges::transform_view<MoveOnlyView, PlusOneMutable>;
     View transformView(MoveOnlyView{buff}, PlusOneMutable{});
     assert(*transformView.begin() == 1);
-    static_assert(!noexcept(*std::declval<std::ranges::iterator_t<View>>()));
+    ASSERT_NOT_NOEXCEPT(*std::declval<std::ranges::iterator_t<View>>());
     ASSERT_SAME_TYPE(int, decltype(*std::declval<View>().begin()));
   }
   {
@@ -39,7 +38,7 @@ int main(int, char**) {
     using View = std::ranges::transform_view<MoveOnlyView, PlusOneNoexcept>;
     View transformView(MoveOnlyView{buff}, PlusOneNoexcept{});
     assert(*transformView.begin() == 1);
-    static_assert(noexcept(*std::declval<std::ranges::iterator_t<View>>()));
+    LIBCPP_ASSERT_NOEXCEPT(*std::declval<std::ranges::iterator_t<View>>());
     ASSERT_SAME_TYPE(int, decltype(*std::declval<View>().begin()));
   }
   {
@@ -47,7 +46,7 @@ int main(int, char**) {
     using View = std::ranges::transform_view<MoveOnlyView, Increment>;
     View transformView(MoveOnlyView{buff}, Increment{});
     assert(*transformView.begin() == 1);
-    static_assert(!noexcept(*std::declval<std::ranges::iterator_t<View>>()));
+    ASSERT_NOT_NOEXCEPT(*std::declval<std::ranges::iterator_t<View>>());
     ASSERT_SAME_TYPE(int&, decltype(*std::declval<View>().begin()));
   }
   {
@@ -55,7 +54,7 @@ int main(int, char**) {
     using View = std::ranges::transform_view<MoveOnlyView, IncrementRvalueRef>;
     View transformView(MoveOnlyView{buff}, IncrementRvalueRef{});
     assert(*transformView.begin() == 1);
-    static_assert(!noexcept(*std::declval<std::ranges::iterator_t<View>>()));
+    ASSERT_NOT_NOEXCEPT(*std::declval<std::ranges::iterator_t<View>>());
     ASSERT_SAME_TYPE(int&&, decltype(*std::declval<View>().begin()));
   }
 

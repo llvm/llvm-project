@@ -15,16 +15,15 @@
 #define LLVM_FUZZMUTATE_OPDESCRIPTOR_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include <functional>
 
 namespace llvm {
+class Instruction;
 namespace fuzzerop {
 
 /// @{
@@ -146,7 +145,8 @@ static inline SourcePred sizedPtrType() {
       return false;
 
     if (const auto *PtrT = dyn_cast<PointerType>(V->getType()))
-      return PtrT->getElementType()->isSized();
+      return PtrT->isOpaque() ||
+             PtrT->getNonOpaquePointerElementType()->isSized();
     return false;
   };
   auto Make = [](ArrayRef<Value *>, ArrayRef<Type *> Ts) {

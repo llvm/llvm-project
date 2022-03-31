@@ -253,8 +253,8 @@ public:
       ExternalTypeModuleMap;
 
   /// Return the list of Clang modules imported by this SymbolFile.
-  const ExternalTypeModuleMap& getExternalTypeModules() const {
-      return m_external_type_modules;
+  const ExternalTypeModuleMap &getExternalTypeModules() const {
+    return m_external_type_modules;
   }
 
   virtual DWARFDIE GetDIE(const DIERef &die_ref);
@@ -319,15 +319,14 @@ public:
   /// Same as GetLanguage() but reports all C++ versions as C++ (no version).
   static lldb::LanguageType GetLanguageFamily(DWARFUnit &unit);
 
-  lldb_private::StatsDuration GetDebugInfoParseTime() override {
+  lldb_private::StatsDuration::Duration GetDebugInfoParseTime() override {
     return m_parse_time;
   }
-  lldb_private::StatsDuration GetDebugInfoIndexTime() override;
+  lldb_private::StatsDuration::Duration GetDebugInfoIndexTime() override;
 
   lldb_private::StatsDuration &GetDebugInfoParseTimeRef() {
     return m_parse_time;
   }
-
 
 protected:
   typedef llvm::DenseMap<const DWARFDebugInfoEntry *, lldb_private::Type *>
@@ -428,9 +427,10 @@ protected:
   virtual lldb::TypeSP
   FindDefinitionTypeForDWARFDeclContext(const DWARFDeclContext &die_decl_ctx);
 
-  virtual lldb::TypeSP FindCompleteObjCDefinitionTypeForDIE(
-      const DWARFDIE &die, lldb_private::ConstString type_name,
-      bool must_be_implementation);
+  virtual lldb::TypeSP
+  FindCompleteObjCDefinitionTypeForDIE(const DWARFDIE &die,
+                                       lldb_private::ConstString type_name,
+                                       bool must_be_implementation);
 
   lldb_private::Symbol *
   GetObjCClassSymbol(lldb_private::ConstString objc_class_name);
@@ -559,7 +559,8 @@ protected:
   /// Try to filter out this debug info by comparing it to the lowest code
   /// address in the module.
   lldb::addr_t m_first_code_address = LLDB_INVALID_ADDRESS;
-  lldb_private::StatsDuration m_parse_time{0.0};
+  lldb_private::StatsDuration m_parse_time;
+  std::atomic_flag m_dwo_warning_issued = ATOMIC_FLAG_INIT;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_SYMBOLFILEDWARF_H

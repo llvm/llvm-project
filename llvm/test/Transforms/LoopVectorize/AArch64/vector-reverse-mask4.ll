@@ -125,7 +125,7 @@ for.inc:                                          ; preds = %for.body, %if.then
   br i1 %cmp, label %for.body, label %for.cond.cleanup, !llvm.loop !0
 }
 
-attributes #0 = {"target-cpu"="generic" "target-features"="+neon,+sve"}
+attributes #0 = {"target-cpu"="generic" "target-features"="+neon,+sve" vscale_range(2,0) }
 
 
 !0 = distinct !{!0, !1, !2, !3, !4, !5}

@@ -1,6 +1,6 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-scops \
-; RUN: -polly-invariant-load-hoisting=true \
-; RUN: -analyze -S < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-print-scops \
+; RUN:     -polly-invariant-load-hoisting=true \
+; RUN:     -disable-output < %s | FileCheck %s
 ;
 ; CHECK:          Invariant Accesses: {
 ; CHECK-NEXT:            ReadAccess :=	[Reduction Type: NONE] [Scalar: 0]

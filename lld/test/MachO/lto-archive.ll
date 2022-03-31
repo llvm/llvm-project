@@ -10,15 +10,15 @@
 ; RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/references-foo.s -o %t/references-foo.o
 
 ; RUN: %lld -lSystem %t/references-foo.o %t/foo.a -o /dev/null -why_load | FileCheck %s --check-prefix=FOO
-; FOO: _foo forced load of foo.o
+; FOO: _foo forced load of {{.+}}foo.a(foo.o)
 
 ; RUN: %lld -lSystem -force_load %t/foo.a %t/main.o -o /dev/null -why_load | FileCheck %s --check-prefix=FORCE-LOAD
-; FORCE-LOAD: -force_load forced load of foo.o
+; FORCE-LOAD: -force_load forced load of {{.+}}foo.a(foo.o)
 
 ; RUN: %lld -lSystem -ObjC -framework CoreFoundation %t/objc.a %t/main.o \
 ; RUN:   -o /dev/null -why_load | FileCheck %s --check-prefix=OBJC
-; OBJC: _OBJC_CLASS_$_Foo forced load of has-objc-symbol.o
-; OBJC: -ObjC forced load of has-objc-category.o
+; OBJC: _OBJC_CLASS_$_Foo forced load of {{.+}}objc.a(has-objc-symbol.o)
+; OBJC: -ObjC forced load of {{.+}}objc.a(has-objc-category.o)
 
 ; RUN: %lld -lSystem %t/foo.a %t/main.o -o %t/no-force-load -why_load | count 0
 

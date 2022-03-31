@@ -11,9 +11,9 @@ define <4 x i32> @test(<16 x i32>* %arg1, <16 x i32>* %arg2) {
 ; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x0, x8, lsl #2]
 ; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x0]
 ; CHECK-NEXT:    mov z0.d, z1.d
-; CHECK-NEXT:    add z2.s, p0/m, z2.s, z2.s
+; CHECK-NEXT:    add z2.s, z2.s, z2.s
 ; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #16
-; CHECK-NEXT:    add z1.s, p0/m, z1.s, z1.s
+; CHECK-NEXT:    add z1.s, z1.s, z1.s
 ; CHECK-NEXT:    dup v0.4s, v0.s[2]
 ; CHECK-NEXT:    st1w { z1.s }, p0, [x0, x8, lsl #2]
 ; CHECK-NEXT:    st1w { z2.s }, p0, [x0]
@@ -25,4 +25,28 @@ entry:
   %2 = add <16 x i32> %0, %0
   store <16 x i32> %2, <16 x i32>* %arg1, align 256
   ret <4 x i32> %shvec
+}
+
+define <2 x i32> @test2(<16 x i32>* %arg1, <16 x i32>* %arg2) {
+; CHECK-LABEL: test2:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, #8
+; CHECK-NEXT:    ptrue p0.s, vl8
+; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x0, x8, lsl #2]
+; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.d, z1.d
+; CHECK-NEXT:    add z2.s, z2.s, z2.s
+; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #24
+; CHECK-NEXT:    add z1.s, z1.s, z1.s
+; CHECK-NEXT:    dup v0.2s, v0.s[0]
+; CHECK-NEXT:    st1w { z1.s }, p0, [x0, x8, lsl #2]
+; CHECK-NEXT:    st1w { z2.s }, p0, [x0]
+; CHECK-NEXT:    ret
+entry:
+  %0 = load <16 x i32>, <16 x i32>* %arg1, align 256
+  %1 = load <16 x i32>, <16 x i32>* %arg2, align 256
+  %shvec = shufflevector <16 x i32> %0, <16 x i32> %1, <2 x i32> <i32 14, i32 14>
+  %2 = add <16 x i32> %0, %0
+  store <16 x i32> %2, <16 x i32>* %arg1, align 256
+  ret <2 x i32> %shvec
 }

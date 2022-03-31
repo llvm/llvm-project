@@ -1,4 +1,4 @@
-//===- M68k.h - Top-level interface for M68k representation -*- C++ -*-===//
+//===-- M68k.h - Top-level interface for M68k representation ----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -54,4 +54,4 @@ createM68kInstructionSelector(const M68kTargetMachine &, const M68kSubtarget &,
 
 } // namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_M68K_M68K_H

@@ -47,7 +47,7 @@ static void signed_width(unsigned Width, uint64_t Value,
                   " to " + std::to_string(Max) + ")";
 
     if (Ctx) {
-      Ctx->reportFatalError(Fixup.getLoc(), Diagnostic);
+      Ctx->reportError(Fixup.getLoc(), Diagnostic);
     } else {
       llvm_unreachable(Diagnostic.c_str());
     }
@@ -66,7 +66,7 @@ static void unsigned_width(unsigned Width, uint64_t Value,
         " (expected an integer in the range 0 to " + std::to_string(Max) + ")";
 
     if (Ctx) {
-      Ctx->reportFatalError(Fixup.getLoc(), Diagnostic);
+      Ctx->reportError(Fixup.getLoc(), Diagnostic);
     } else {
       llvm_unreachable(Diagnostic.c_str());
     }

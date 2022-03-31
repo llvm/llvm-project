@@ -16,6 +16,7 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
@@ -41,6 +42,7 @@
 #include <map>
 
 using namespace llvm;
+using lldb_private::LLDBLog;
 
 static std::string PrintValue(const Value *value, bool truncate = false) {
   std::string s;
@@ -95,8 +97,8 @@ public:
   ValueMap m_values;
   DataLayout &m_target_data;
   lldb_private::IRExecutionUnit &m_execution_unit;
-  const BasicBlock *m_bb;
-  const BasicBlock *m_prev_bb;
+  const BasicBlock *m_bb = nullptr;
+  const BasicBlock *m_prev_bb = nullptr;
   BasicBlock::const_iterator m_ii;
   BasicBlock::const_iterator m_ie;
 
@@ -111,8 +113,7 @@ public:
                         lldb_private::IRExecutionUnit &execution_unit,
                         lldb::addr_t stack_frame_bottom,
                         lldb::addr_t stack_frame_top)
-      : m_target_data(target_data), m_execution_unit(execution_unit),
-        m_bb(nullptr), m_prev_bb(nullptr) {
+      : m_target_data(target_data), m_execution_unit(execution_unit) {
     m_byte_order = (target_data.isLittleEndian() ? lldb::eByteOrderLittle
                                                  : lldb::eByteOrderBig);
     m_addr_byte_size = (target_data.getPointerSize(0));
@@ -283,9 +284,11 @@ public:
             return true; // no offset to apply!
 
           SmallVector<Value *, 8> indices(op_cursor, op_end);
-
           Type *src_elem_ty =
               cast<GEPOperator>(constant_expr)->getSourceElementType();
+
+          // DataLayout::getIndexedOffsetInType assumes the indices are
+          // instances of ConstantInt.
           uint64_t offset =
               m_target_data.getIndexedOffsetInType(src_elem_ty, indices);
 
@@ -325,8 +328,7 @@ public:
 
     m_values[value] = data_address;
 
-    lldb_private::Log *log(
-        lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+    lldb_private::Log *log(GetLog(LLDBLog::Expressions));
 
     if (log) {
       LLDB_LOGF(log, "Made an allocation for argument %s",
@@ -465,12 +467,20 @@ static bool CanResolveConstant(llvm::Constant *constant) {
       case Instruction::BitCast:
         return CanResolveConstant(constant_expr->getOperand(0));
       case Instruction::GetElementPtr: {
+        // Check that the base can be constant-resolved.
         ConstantExpr::const_op_iterator op_cursor = constant_expr->op_begin();
         Constant *base = dyn_cast<Constant>(*op_cursor);
-        if (!base)
+        if (!base || !CanResolveConstant(base))
           return false;
 
-        return CanResolveConstant(base);
+        // Check that all other operands are just ConstantInt.
+        for (Value *op : make_range(constant_expr->op_begin() + 1,
+                                    constant_expr->op_end())) {
+          ConstantInt *constant_int = dyn_cast<ConstantInt>(op);
+          if (!constant_int)
+            return false;
+        }
+        return true;
       }
       }
     } else {
@@ -484,8 +494,7 @@ static bool CanResolveConstant(llvm::Constant *constant) {
 bool IRInterpreter::CanInterpret(llvm::Module &module, llvm::Function &function,
                                  lldb_private::Status &error,
                                  const bool support_function_calls) {
-  lldb_private::Log *log(
-      lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  lldb_private::Log *log(GetLog(LLDBLog::Expressions));
 
   bool saw_function_with_body = false;
   for (Function &f : module) {
@@ -637,8 +646,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
                               lldb::addr_t stack_frame_bottom,
                               lldb::addr_t stack_frame_top,
                               lldb_private::ExecutionContext &exe_ctx) {
-  lldb_private::Log *log(
-      lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  lldb_private::Log *log(GetLog(LLDBLog::Expressions));
 
   if (log) {
     std::string s;
@@ -1184,16 +1192,6 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
 
       const Value *pointer_operand = load_inst->getPointerOperand();
 
-      Type *pointer_ty = pointer_operand->getType();
-      PointerType *pointer_ptr_ty = dyn_cast<PointerType>(pointer_ty);
-      if (!pointer_ptr_ty) {
-        LLDB_LOGF(log, "getPointerOperand()->getType() is not a PointerType");
-        error.SetErrorToGenericError();
-        error.SetErrorString(interpreter_internal_error);
-        return false;
-      }
-      Type *target_ty = pointer_ptr_ty->getElementType();
-
       lldb::addr_t D = frame.ResolveValue(load_inst, module);
       lldb::addr_t P = frame.ResolveValue(pointer_operand, module);
 
@@ -1222,6 +1220,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
         return false;
       }
 
+      Type *target_ty = load_inst->getType();
       size_t target_size = data_layout.getTypeStoreSize(target_ty);
       lldb_private::DataBufferHeap buffer(target_size, 0);
 
@@ -1267,12 +1266,6 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
       const Value *value_operand = store_inst->getValueOperand();
       const Value *pointer_operand = store_inst->getPointerOperand();
 
-      Type *pointer_ty = pointer_operand->getType();
-      PointerType *pointer_ptr_ty = dyn_cast<PointerType>(pointer_ty);
-      if (!pointer_ptr_ty)
-        return false;
-      Type *target_ty = pointer_ptr_ty->getElementType();
-
       lldb::addr_t D = frame.ResolveValue(value_operand, module);
       lldb::addr_t P = frame.ResolveValue(pointer_operand, module);
 
@@ -1301,6 +1294,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
         return false;
       }
 
+      Type *target_ty = value_operand->getType();
       size_t target_size = data_layout.getTypeStoreSize(target_ty);
       lldb_private::DataBufferHeap buffer(target_size, 0);
 
@@ -1381,21 +1375,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
       lldb_private::DiagnosticManager diagnostics;
       lldb_private::EvaluateExpressionOptions options;
 
-      // We generally receive a function pointer which we must dereference
-      llvm::Type *prototype = val->getType();
-      if (!prototype->isPointerTy()) {
-        error.SetErrorToGenericError();
-        error.SetErrorString("call need function pointer");
-        return false;
-      }
-
-      // Dereference the function pointer
-      prototype = prototype->getPointerElementType();
-      if (!(prototype->isFunctionTy() || prototype->isFunctionVarArg())) {
-        error.SetErrorToGenericError();
-        error.SetErrorString("call need function pointer");
-        return false;
-      }
+      llvm::FunctionType *prototype = call_inst->getFunctionType();
 
       // Find number of arguments
       const int numArgs = call_inst->arg_size();

@@ -19,14 +19,14 @@
 #include "llvm/Pass.h"
 
 #include "lldb/Target/Process.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 
 using namespace lldb_private;
 
-static bool isRSAPICall(llvm::Module &module, llvm::CallInst *call_inst) {
+static bool isRSAPICall(llvm::CallInst *call_inst) {
   // TODO get the list of renderscript modules from lldb and check if
   // this llvm::Module calls into any of them.
-  (void)module;
   const auto func_name = call_inst->getCalledFunction()->getName();
   if (func_name.startswith("llvm") || func_name.startswith("lldb"))
     return false;
@@ -37,8 +37,7 @@ static bool isRSAPICall(llvm::Module &module, llvm::CallInst *call_inst) {
   return true;
 }
 
-static bool isRSLargeReturnCall(llvm::Module &module,
-                                llvm::CallInst *call_inst) {
+static bool isRSLargeReturnCall(llvm::CallInst *call_inst) {
   // i686 and x86_64 returns for large vectors in the RenderScript API are not
   // handled as normal register pairs, but as a hidden sret type. This is not
   // reflected in the debug info or mangled symbol name, and the android ABI
@@ -49,7 +48,6 @@ static bool isRSLargeReturnCall(llvm::Module &module,
   // It is perhaps an unreliable heuristic, and relies on bcc not generating
   // AVX code, so if the android ABI one day provides for AVX, this function
   // may go out of fashion.
-  (void)module;
   if (!call_inst || !call_inst->getCalledFunction())
     return false;
 
@@ -58,23 +56,19 @@ static bool isRSLargeReturnCall(llvm::Module &module,
              ->getPrimitiveSizeInBits() > 128;
 }
 
-static bool isRSAllocationPtrTy(const llvm::Type *type) {
-  if (!type->isPointerTy())
-    return false;
-  auto ptr_type = type->getPointerElementType();
-
-  return ptr_type->isStructTy() &&
-         ptr_type->getStructName().startswith("struct.rs_allocation");
+static bool isRSAllocationTy(const llvm::Type *type) {
+  return type->isStructTy() &&
+         type->getStructName().startswith("struct.rs_allocation");
 }
 
-static bool isRSAllocationTyCallSite(llvm::Module &module,
-                                     llvm::CallInst *call_inst) {
-  (void)module;
+static bool isRSAllocationTyCallSite(llvm::CallInst *call_inst) {
   if (!call_inst->hasByValArgument())
     return false;
-  for (const auto *param : call_inst->operand_values())
-    if (isRSAllocationPtrTy(param->getType()))
-      return true;
+  for (unsigned i = 0; i < call_inst->arg_size(); ++i) {
+    if (llvm::Type *ByValTy = call_inst->getParamByValType(i))
+      if (isRSAllocationTy(ByValTy))
+        return true;
+  }
   return false;
 }
 
@@ -85,8 +79,7 @@ static llvm::FunctionType *cloneToStructRetFnTy(llvm::CallInst *call_inst) {
   // create a return type by getting the pointer type of the old return type,
   // and inserting a new initial argument of pointer type of the original
   // return type.
-  Log *log(
-      GetLogIfAnyCategoriesSet(LIBLLDB_LOG_LANGUAGE | LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Language | LLDBLog::Expressions);
 
   assert(call_inst && "no CallInst");
   llvm::Function *orig = call_inst->getCalledFunction();
@@ -125,7 +118,7 @@ static llvm::FunctionType *cloneToStructRetFnTy(llvm::CallInst *call_inst) {
 
 static bool
 findRSCallSites(llvm::Module &module, std::set<llvm::CallInst *> &rs_callsites,
-                bool (*predicate)(llvm::Module &, llvm::CallInst *)) {
+                bool (*predicate)(llvm::CallInst *)) {
   bool found = false;
 
   for (auto &func : module.getFunctionList())
@@ -136,7 +129,7 @@ findRSCallSites(llvm::Module &module, std::set<llvm::CallInst *> &rs_callsites,
         if (!call_inst || !call_inst->getCalledFunction())
           // This is not the call-site you are looking for...
           continue;
-        if (isRSAPICall(module, call_inst) && predicate(module, call_inst)) {
+        if (isRSAPICall(call_inst) && predicate(call_inst)) {
           rs_callsites.insert(call_inst);
           found = true;
         }
@@ -187,18 +180,17 @@ static bool fixupX86StructRetCalls(llvm::Module &module) {
     (new llvm::StoreInst(new_func_cast, new_func_ptr, call_inst))
         ->setName("new_func_ptr_load_cast");
     // load the new function address ready for a jump
-    llvm::LoadInst *new_func_addr_load =
-        new llvm::LoadInst(new_func_ptr->getType()->getPointerElementType(),
-                           new_func_ptr, "load_func_pointer", call_inst);
+    llvm::LoadInst *new_func_addr_load = new llvm::LoadInst(
+        new_func_ptr_type, new_func_ptr, "load_func_pointer", call_inst);
     // and create a callinstruction from it
     llvm::CallInst *new_call_inst =
         llvm::CallInst::Create(new_func_type, new_func_addr_load, new_call_args,
                                "new_func_call", call_inst);
     new_call_inst->setCallingConv(call_inst->getCallingConv());
     new_call_inst->setTailCall(call_inst->isTailCall());
-    llvm::LoadInst *lldb_save_result_address = new llvm::LoadInst(
-        return_value_alloc->getType()->getPointerElementType(),
-        return_value_alloc, "save_return_val", call_inst);
+    llvm::LoadInst *lldb_save_result_address =
+        new llvm::LoadInst(func->getReturnType(), return_value_alloc,
+                           "save_return_val", call_inst);
 
     // Now remove the old broken call
     call_inst->replaceAllUsesWith(lldb_save_result_address);

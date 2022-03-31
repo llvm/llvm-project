@@ -12,7 +12,7 @@ int also_after(void) {
   return 0;
 }
 
-int test() {
+int test(void) {
   // Should return 0.
   return also_after() + also_before();
 }
@@ -33,7 +33,7 @@ int test() {
 // CHECK-NEXT: |   `-ReturnStmt [[ADDR_9:0x[a-z0-9]*]] <line:12:3, col:10>
 // CHECK-NEXT: |     `-IntegerLiteral [[ADDR_10:0x[a-z0-9]*]] <col:10> 'int' 0
 // CHECK-NEXT: `-FunctionDecl [[ADDR_11:0x[a-z0-9]*]] <line:15:1, line:18:1> line:15:5 test 'int ({{.*}})'
-// CHECK-NEXT:   `-CompoundStmt [[ADDR_12:0x[a-z0-9]*]] <col:12, line:18:1>
+// CHECK-NEXT:   `-CompoundStmt [[ADDR_12:0x[a-z0-9]*]] <col:16, line:18:1>
 // CHECK-NEXT:     `-ReturnStmt [[ADDR_13:0x[a-z0-9]*]] <line:17:3, col:37>
 // CHECK-NEXT:       `-BinaryOperator [[ADDR_14:0x[a-z0-9]*]] <col:10, col:37> 'int' '+'
 // CHECK-NEXT:         |-CallExpr [[ADDR_15:0x[a-z0-9]*]] <col:10, col:21> 'int'

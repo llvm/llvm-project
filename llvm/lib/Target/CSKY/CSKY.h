@@ -14,13 +14,18 @@
 #ifndef LLVM_LIB_TARGET_CSKY_CSKY_H
 #define LLVM_LIB_TARGET_CSKY_CSKY_H
 
+#include "llvm/PassRegistry.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
 class CSKYTargetMachine;
 class FunctionPass;
+class PassRegistry;
 
 FunctionPass *createCSKYISelDag(CSKYTargetMachine &TM);
+FunctionPass *createCSKYConstantIslandPass();
+
+void initializeCSKYConstantIslandsPass(PassRegistry &);
 
 } // namespace llvm
 

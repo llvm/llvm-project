@@ -5,9 +5,7 @@ void *myAlloc(long long);
 // CHECK-LABEL: f(
 void f(int n) {
   // CHECK: %n.addr = alloca i32
-  // CHECK: %n_copy = alloca i32
   // CHECK: %promise = alloca i32
-  int n_copy;
   int promise;
 
   // CHECK: %[[PROM_ADDR:.+]] = bitcast i32* %promise to i8*
@@ -21,7 +19,7 @@ void f(int n) {
   __builtin_coro_noop();
 
   // CHECK-NEXT: %[[SIZE:.+]] = call i64 @llvm.coro.size.i64()
-  // CHECK-NEXT: %[[MEM:.+]] = call i8* @myAlloc(i64 %[[SIZE]])
+  // CHECK-NEXT: %[[MEM:.+]] = call i8* @myAlloc(i64 noundef %[[SIZE]])
   // CHECK-NEXT: %[[FRAME:.+]] = call i8* @llvm.coro.begin(token %[[COROID]], i8* %[[MEM]])
   __builtin_coro_begin(myAlloc(__builtin_coro_size()));
 
@@ -45,9 +43,4 @@ void f(int n) {
 
   // CHECK-NEXT: call i8 @llvm.coro.suspend(token none, i1 true)
   __builtin_coro_suspend(1);
-
-  // CHECK-NEXT: %[[N_ADDR:.+]] = bitcast i32* %n.addr to i8*
-  // CHECK-NEXT: %[[N_COPY_ADDR:.+]] = bitcast i32* %n_copy to i8*
-  // CHECK-NEXT: call i1 @llvm.coro.param(i8* %[[N_ADDR]], i8* %[[N_COPY_ADDR]])
-  __builtin_coro_param(&n, &n_copy);
 }

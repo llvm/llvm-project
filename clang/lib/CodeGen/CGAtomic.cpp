@@ -86,15 +86,14 @@ namespace {
             lvalue.getAlignment();
         VoidPtrAddr = CGF.Builder.CreateConstGEP1_64(
             CGF.Int8Ty, VoidPtrAddr, OffsetInChars.getQuantity());
+        llvm::Type *IntTy = CGF.Builder.getIntNTy(AtomicSizeInBits);
         auto Addr = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-            VoidPtrAddr,
-            CGF.Builder.getIntNTy(AtomicSizeInBits)->getPointerTo(),
-            "atomic_bitfield_base");
+            VoidPtrAddr, IntTy->getPointerTo(), "atomic_bitfield_base");
         BFI = OrigBFI;
         BFI.Offset = Offset;
         BFI.StorageSize = AtomicSizeInBits;
         BFI.StorageOffset += OffsetInChars;
-        LVal = LValue::MakeBitfield(Address(Addr, lvalue.getAlignment()),
+        LVal = LValue::MakeBitfield(Address(Addr, IntTy, lvalue.getAlignment()),
                                     BFI, lvalue.getType(), lvalue.getBaseInfo(),
                                     lvalue.getTBAAInfo());
         AtomicTy = C.getIntTypeForBitwidth(AtomicSizeInBits, OrigBFI.IsSigned);
@@ -149,7 +148,16 @@ namespace {
       return LVal.getExtVectorPointer();
     }
     Address getAtomicAddress() const {
-      return Address(getAtomicPointer(), getAtomicAlignment());
+      llvm::Type *ElTy;
+      if (LVal.isSimple())
+        ElTy = LVal.getAddress(CGF).getElementType();
+      else if (LVal.isBitField())
+        ElTy = LVal.getBitFieldAddress().getElementType();
+      else if (LVal.isVectorElt())
+        ElTy = LVal.getVectorAddress().getElementType();
+      else
+        ElTy = LVal.getExtVectorAddress().getElementType();
+      return Address(getAtomicPointer(), ElTy, getAtomicAlignment());
     }
 
     Address getAtomicAddressAsAtomicIntPointer() const {
@@ -296,7 +304,8 @@ Address AtomicInfo::CreateTempAlloca() const {
   // Cast to pointer to value type for bitfields.
   if (LVal.isBitField())
     return CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-        TempAlloca, getAtomicAddress().getType());
+        TempAlloca, getAtomicAddress().getType(),
+        getAtomicAddress().getElementType());
   return TempAlloca;
 }
 
@@ -307,7 +316,7 @@ static RValue emitAtomicLibcall(CodeGenFunction &CGF,
   const CGFunctionInfo &fnInfo =
     CGF.CGM.getTypes().arrangeBuiltinFunctionCall(resultType, args);
   llvm::FunctionType *fnTy = CGF.CGM.getTypes().GetFunctionType(fnInfo);
-  llvm::AttrBuilder fnAttrB;
+  llvm::AttrBuilder fnAttrB(CGF.getLLVMContext());
   fnAttrB.addAttribute(llvm::Attribute::NoUnwind);
   fnAttrB.addAttribute(llvm::Attribute::WillReturn);
   llvm::AttributeList fnAttrs = llvm::AttributeList::get(
@@ -351,12 +360,12 @@ bool AtomicInfo::requiresMemSetZero(llvm::Type *type) const {
 
 bool AtomicInfo::emitMemSetZeroIfNecessary() const {
   assert(LVal.isSimple());
-  llvm::Value *addr = LVal.getPointer(CGF);
-  if (!requiresMemSetZero(addr->getType()->getPointerElementType()))
+  Address addr = LVal.getAddress(CGF);
+  if (!requiresMemSetZero(addr.getElementType()))
     return false;
 
   CGF.Builder.CreateMemSet(
-      addr, llvm::ConstantInt::get(CGF.Int8Ty, 0),
+      addr.getPointer(), llvm::ConstantInt::get(CGF.Int8Ty, 0),
       CGF.getContext().toCharUnitsFromBits(AtomicSizeInBits).getQuantity(),
       LVal.getAlignment().getAsAlign());
   return true;
@@ -779,9 +788,9 @@ AddDirectArgument(CodeGenFunction &CGF, CallArgList &Args,
     int64_t SizeInBits = CGF.getContext().toBits(SizeInChars);
     ValTy =
         CGF.getContext().getIntTypeForBitwidth(SizeInBits, /*Signed=*/false);
-    llvm::Type *IPtrTy = llvm::IntegerType::get(CGF.getLLVMContext(),
-                                                SizeInBits)->getPointerTo();
-    Address Ptr = Address(CGF.Builder.CreateBitCast(Val, IPtrTy), Align);
+    llvm::Type *ITy = llvm::IntegerType::get(CGF.getLLVMContext(), SizeInBits);
+    Address Ptr = Address(CGF.Builder.CreateBitCast(Val, ITy->getPointerTo()),
+                          ITy, Align);
     Val = CGF.EmitLoadOfScalar(Ptr, false,
                                CGF.getContext().getPointerType(ValTy),
                                Loc);
@@ -1079,8 +1088,8 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
       if (AS == LangAS::opencl_generic)
         return V;
       auto DestAS = getContext().getTargetAddressSpace(LangAS::opencl_generic);
-      auto T = V->getType();
-      auto *DestType = T->getPointerElementType()->getPointerTo(DestAS);
+      auto T = llvm::cast<llvm::PointerType>(V->getType());
+      auto *DestType = llvm::PointerType::getWithSamePointeeType(T, DestAS);
 
       return getTargetHooks().performAddrSpaceCast(
           *this, V, AS, LangAS::opencl_generic, DestType, false);
@@ -1321,15 +1330,14 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
         ResVal = Builder.CreateNot(ResVal);
 
       Builder.CreateStore(
-          ResVal,
-          Builder.CreateBitCast(Dest, ResVal->getType()->getPointerTo()));
+          ResVal, Builder.CreateElementBitCast(Dest, ResVal->getType()));
     }
 
     if (RValTy->isVoidType())
       return RValue::get(nullptr);
 
     return convertTempToRValue(
-        Builder.CreateBitCast(Dest, ConvertTypeForMem(RValTy)->getPointerTo()),
+        Builder.CreateElementBitCast(Dest, ConvertTypeForMem(RValTy)),
         RValTy, E->getExprLoc());
   }
 
@@ -1382,8 +1390,7 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
       return RValue::get(nullptr);
 
     return convertTempToRValue(
-        Builder.CreateBitCast(Dest, ConvertTypeForMem(RValTy)->getPointerTo(
-                                        Dest.getAddressSpace())),
+        Builder.CreateElementBitCast(Dest, ConvertTypeForMem(RValTy)),
         RValTy, E->getExprLoc());
   }
 
@@ -1455,17 +1462,14 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
 
   assert(Atomics.getValueSizeInBits() <= Atomics.getAtomicSizeInBits());
   return convertTempToRValue(
-      Builder.CreateBitCast(Dest, ConvertTypeForMem(RValTy)->getPointerTo(
-                                      Dest.getAddressSpace())),
+      Builder.CreateElementBitCast(Dest, ConvertTypeForMem(RValTy)),
       RValTy, E->getExprLoc());
 }
 
 Address AtomicInfo::emitCastToAtomicIntPointer(Address addr) const {
-  unsigned addrspace =
-    cast<llvm::PointerType>(addr.getPointer()->getType())->getAddressSpace();
   llvm::IntegerType *ty =
     llvm::IntegerType::get(CGF.getLLVMContext(), AtomicSizeInBits);
-  return CGF.Builder.CreateBitCast(addr, ty->getPointerTo(addrspace));
+  return CGF.Builder.CreateElementBitCast(addr, ty);
 }
 
 Address AtomicInfo::convertToAtomicIntPointer(Address Addr) const {
@@ -1527,7 +1531,7 @@ RValue AtomicInfo::ConvertIntToValueOrAtomic(llvm::Value *IntVal,
        !AsValue)) {
     auto *ValTy = AsValue
                       ? CGF.ConvertTypeForMem(ValueTy)
-                      : getAtomicAddress().getType()->getPointerElementType();
+                      : getAtomicAddress().getElementType();
     if (ValTy->isIntegerTy()) {
       assert(IntVal->getType() == ValTy && "Different integer types.");
       return RValue::get(CGF.EmitFromMemory(IntVal, ValueTy));

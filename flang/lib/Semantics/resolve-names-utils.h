@@ -44,9 +44,9 @@ class SemanticsContext;
 Symbol &Resolve(const parser::Name &, Symbol &);
 Symbol *Resolve(const parser::Name &, Symbol *);
 
-// Create a copy of msg with a new isFatal value.
-parser::MessageFixedText WithIsFatal(
-    const parser::MessageFixedText &msg, bool isFatal);
+// Create a copy of msg with a new severity.
+parser::MessageFixedText WithSeverity(
+    const parser::MessageFixedText &msg, parser::Severity);
 
 bool IsIntrinsicOperator(const SemanticsContext &, const SourceName &);
 bool IsLogicalConstant(const SemanticsContext &, const SourceName &);
@@ -128,8 +128,9 @@ private:
   bool CheckSubstringBound(const parser::Expr &, bool);
   bool IsCharacterSequenceType(const DeclTypeSpec *);
   bool IsDefaultKindNumericType(const IntrinsicTypeSpec &);
-  bool IsNumericSequenceType(const DeclTypeSpec *);
-  bool IsSequenceType(
+  bool IsDefaultNumericSequenceType(const DeclTypeSpec *);
+  static bool IsAnyNumericSequenceType(const DeclTypeSpec *);
+  static bool IsSequenceType(
       const DeclTypeSpec *, std::function<bool(const IntrinsicTypeSpec &)>);
 
   SemanticsContext &context_;

@@ -7,10 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
-// reverse_view() requires default_­initializable<V> = default;
+// reverse_view() requires default_initializable<V> = default;
 
 #include <ranges>
 #include <cassert>

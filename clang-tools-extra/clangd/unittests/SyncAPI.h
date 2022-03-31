@@ -16,6 +16,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_UNITTESTS_SYNCAPI_H
 
 #include "ClangdServer.h"
+#include "Protocol.h"
 #include "index/Index.h"
 
 namespace clang {
@@ -32,7 +33,8 @@ runCodeComplete(ClangdServer &Server, PathRef File, Position Pos,
                 clangd::CodeCompleteOptions Opts);
 
 llvm::Expected<SignatureHelp> runSignatureHelp(ClangdServer &Server,
-                                               PathRef File, Position Pos);
+                                               PathRef File, Position Pos,
+                                               MarkupKind DocumentationFormat);
 
 llvm::Expected<std::vector<LocatedSymbol>>
 runLocateSymbolAt(ClangdServer &Server, PathRef File, Position Pos);

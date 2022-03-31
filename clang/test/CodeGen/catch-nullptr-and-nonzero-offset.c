@@ -41,7 +41,7 @@ extern "C" {
 #endif
 
 char *var_var(char *base, unsigned long offset) {
-  // CHECK: define{{.*}} i8* @var_var(i8* %[[BASE:.*]], i64 %[[OFFSET:.*]])
+  // CHECK: define{{.*}} i8* @var_var(i8* noundef %[[BASE:.*]], i64 noundef %[[OFFSET:.*]])
   // CHECK-NEXT:                      [[ENTRY:.*]]:
   // CHECK-NEXT:                        %[[BASE_ADDR:.*]] = alloca i8*, align 8
   // CHECK-NEXT:                        %[[OFFSET_ADDR:.*]] = alloca i64, align 8
@@ -52,6 +52,7 @@ char *var_var(char *base, unsigned long offset) {
   // CHECK-NEXT:                        %[[ADD_PTR:.*]] = getelementptr inbounds i8, i8* %[[BASE_RELOADED]], i64 %[[OFFSET_RELOADED]]
   // CHECK-SANITIZE-NEXT:               %[[COMPUTED_OFFSET_AGGREGATE:.*]] = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 1, i64 %[[OFFSET_RELOADED]]), !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[COMPUTED_OFFSET_OVERFLOWED:.*]] = extractvalue { i64, i1 } %[[COMPUTED_OFFSET_AGGREGATE]], 1, !nosanitize
+  // CHECK-SANITIZE-NEXT:               %[[OR_OV:.+]] = or i1 %[[COMPUTED_OFFSET_OVERFLOWED]], false, !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[COMPUTED_OFFSET:.*]] = extractvalue { i64, i1 } %[[COMPUTED_OFFSET_AGGREGATE]], 0, !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[BASE_RELOADED_INT:.*]] = ptrtoint i8* %[[BASE_RELOADED]] to i64, !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[COMPUTED_GEP:.*]] = add i64 %[[BASE_RELOADED_INT]], %[[COMPUTED_OFFSET]], !nosanitize
@@ -59,7 +60,7 @@ char *var_var(char *base, unsigned long offset) {
   // CHECK-SANITIZE-NEXT:               %[[COMPUTED_GEP_IS_NOT_NULL:.*]] = icmp ne i64 %[[COMPUTED_GEP]], 0, !nosanitize
   // CHECK-SANITIZE-C-NEXT:             %[[BOTH_POINTERS_ARE_NULL_OR_BOTH_ARE_NONNULL:.*]] = and i1 %[[BASE_IS_NOT_NULLPTR]], %[[COMPUTED_GEP_IS_NOT_NULL]], !nosanitize
   // CHECK-SANITIZE-CPP-NEXT:           %[[BOTH_POINTERS_ARE_NULL_OR_BOTH_ARE_NONNULL:.*]] = icmp eq i1 %[[BASE_IS_NOT_NULLPTR]], %[[COMPUTED_GEP_IS_NOT_NULL]], !nosanitize
-  // CHECK-SANITIZE-NEXT:               %[[COMPUTED_OFFSET_DID_NOT_OVERFLOW:.*]] = xor i1 %[[COMPUTED_OFFSET_OVERFLOWED]], true, !nosanitize
+  // CHECK-SANITIZE-NEXT:               %[[COMPUTED_OFFSET_DID_NOT_OVERFLOW:.*]] = xor i1 %[[OR_OV]], true, !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[COMPUTED_GEP_IS_UGE_BASE:.*]] = icmp uge i64 %[[COMPUTED_GEP]], %[[BASE_RELOADED_INT]], !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[GEP_DID_NOT_OVERFLOW:.*]] = and i1 %[[COMPUTED_GEP_IS_UGE_BASE]], %[[COMPUTED_OFFSET_DID_NOT_OVERFLOW]], !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[GEP_IS_OKAY:.*]] = and i1 %[[BOTH_POINTERS_ARE_NULL_OR_BOTH_ARE_NONNULL]], %[[GEP_DID_NOT_OVERFLOW]], !nosanitize
@@ -76,7 +77,7 @@ char *var_var(char *base, unsigned long offset) {
 }
 
 char *var_zero(char *base) {
-  // CHECK:                             define{{.*}} i8* @var_zero(i8* %[[BASE:.*]])
+  // CHECK:                             define{{.*}} i8* @var_zero(i8* noundef %[[BASE:.*]])
   // CHECK-NEXT:                        [[ENTRY:.*]]:
   // CHECK-NEXT:                          %[[BASE_ADDR:.*]] = alloca i8*, align 8
   // CHECK-NEXT:                          store i8* %[[BASE]], i8** %[[BASE_ADDR]], align 8
@@ -88,7 +89,8 @@ char *var_zero(char *base) {
   // CHECK-SANITIZE-C-NEXT:               %[[COMPUTED_GEP_IS_NOT_NULL:.*]] = icmp ne i64 %[[COMPUTED_GEP]], 0, !nosanitize
   // CHECK-SANITIZE-C-NEXT:             %[[BOTH_POINTERS_ARE_NULL_OR_BOTH_ARE_NONNULL:.*]] = and i1 %[[BASE_IS_NOT_NULLPTR]], %[[COMPUTED_GEP_IS_NOT_NULL]], !nosanitize
   // CHECK-SANITIZE-C-NEXT:               %[[COMPUTED_GEP_IS_UGE_BASE:.*]] = icmp uge i64 %[[COMPUTED_GEP]], %[[BASE_RELOADED_INT]], !nosanitize
-  // CHECK-SANITIZE-C-NEXT:               %[[GEP_IS_OKAY:.*]] = and i1 %[[BOTH_POINTERS_ARE_NULL_OR_BOTH_ARE_NONNULL]], %[[COMPUTED_GEP_IS_UGE_BASE]], !nosanitize
+  // CHECK-SANITIZE-C-NEXT:               %[[AND_TRUE:.*]] = and i1 %[[COMPUTED_GEP_IS_UGE_BASE]], true, !nosanitize
+  // CHECK-SANITIZE-C-NEXT:               %[[GEP_IS_OKAY:.*]] = and i1 %[[BOTH_POINTERS_ARE_NULL_OR_BOTH_ARE_NONNULL]], %[[AND_TRUE]], !nosanitize
   // CHECK-SANITIZE-C-NEXT:               br i1 %[[GEP_IS_OKAY]], label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
   // CHECK-SANITIZE-C:                  [[HANDLER_POINTER_OVERFLOW]]:
   // CHECK-SANITIZE-NORECOVER-C-NEXT:     call void @__ubsan_handle_pointer_overflow_abort(i8* bitcast ({ {{{.*}}} }* @[[LINE_200]] to i8*), i64 %[[BASE_RELOADED_INT]], i64 %[[COMPUTED_GEP]])
@@ -103,7 +105,7 @@ char *var_zero(char *base) {
 }
 
 char *var_one(char *base) {
-  // CHECK:                           define{{.*}} i8* @var_one(i8* %[[BASE:.*]])
+  // CHECK:                           define{{.*}} i8* @var_one(i8* noundef %[[BASE:.*]])
   // CHECK-NEXT:                      [[ENTRY:.*]]:
   // CHECK-NEXT:                        %[[BASE_ADDR:.*]] = alloca i8*, align 8
   // CHECK-NEXT:                        store i8* %[[BASE]], i8** %[[BASE_ADDR]], align 8
@@ -116,7 +118,8 @@ char *var_one(char *base) {
   // CHECK-SANITIZE-C-NEXT:             %[[BOTH_POINTERS_ARE_NULL_OR_BOTH_ARE_NONNULL:.*]] = and i1 %[[BASE_IS_NOT_NULLPTR]], %[[COMPUTED_GEP_IS_NOT_NULL]], !nosanitize
   // CHECK-SANITIZE-CPP-NEXT:           %[[BOTH_POINTERS_ARE_NULL_OR_BOTH_ARE_NONNULL:.*]] = icmp eq i1 %[[BASE_IS_NOT_NULLPTR]], %[[COMPUTED_GEP_IS_NOT_NULL]], !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[COMPUTED_GEP_IS_UGE_BASE:.*]] = icmp uge i64 %[[COMPUTED_GEP]], %[[BASE_RELOADED_INT]], !nosanitize
-  // CHECK-SANITIZE-NEXT:               %[[GEP_IS_OKAY:.*]] = and i1 %[[BOTH_POINTERS_ARE_NULL_OR_BOTH_ARE_NONNULL]], %[[COMPUTED_GEP_IS_UGE_BASE]], !nosanitize
+  // CHECK-SANITIZE-NEXT:               %[[AND_TRUE:.*]] = and i1 %[[COMPUTED_GEP_IS_UGE_BASE]], true, !nosanitize
+  // CHECK-SANITIZE-NEXT:               %[[GEP_IS_OKAY:.*]] = and i1 %[[BOTH_POINTERS_ARE_NULL_OR_BOTH_ARE_NONNULL]], %[[AND_TRUE]], !nosanitize
   // CHECK-SANITIZE-NEXT:               br i1 %[[GEP_IS_OKAY]], label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
   // CHECK-SANITIZE:                  [[HANDLER_POINTER_OVERFLOW]]:
   // CHECK-SANITIZE-NORECOVER-NEXT:     call void @__ubsan_handle_pointer_overflow_abort(i8* bitcast ({ {{{.*}}} }* @[[LINE_300]] to i8*), i64 %[[BASE_RELOADED_INT]], i64 %[[COMPUTED_GEP]])
@@ -131,7 +134,7 @@ char *var_one(char *base) {
 }
 
 char *var_allones(char *base) {
-  // CHECK:                           define{{.*}} i8* @var_allones(i8* %[[BASE:.*]])
+  // CHECK:                           define{{.*}} i8* @var_allones(i8* noundef %[[BASE:.*]])
   // CHECK-NEXT:                      [[ENTRY:.*]]:
   // CHECK-NEXT:                        %[[BASE_ADDR:.*]] = alloca i8*, align 8
   // CHECK-NEXT:                        store i8* %[[BASE]], i8** %[[BASE_ADDR]], align 8
@@ -144,7 +147,8 @@ char *var_allones(char *base) {
   // CHECK-SANITIZE-C-NEXT:             %[[BOTH_POINTERS_ARE_NULL_OR_BOTH_ARE_NONNULL:.*]] = and i1 %[[BASE_IS_NOT_NULLPTR]], %[[COMPUTED_GEP_IS_NOT_NULL]], !nosanitize
   // CHECK-SANITIZE-CPP-NEXT:           %[[BOTH_POINTERS_ARE_NULL_OR_BOTH_ARE_NONNULL:.*]] = icmp eq i1 %[[BASE_IS_NOT_NULLPTR]], %[[COMPUTED_GEP_IS_NOT_NULL]], !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[COMPUTED_GEP_IS_UGE_BASE:.*]] = icmp uge i64 %[[COMPUTED_GEP]], %[[BASE_RELOADED_INT]], !nosanitize
-  // CHECK-SANITIZE-NEXT:               %[[GEP_IS_OKAY:.*]] = and i1 %[[BOTH_POINTERS_ARE_NULL_OR_BOTH_ARE_NONNULL]], %[[COMPUTED_GEP_IS_UGE_BASE]], !nosanitize
+  // CHECK-SANITIZE-NEXT:               %[[AND_TRUE:.*]] = and i1 %[[COMPUTED_GEP_IS_UGE_BASE]], true, !nosanitize
+  // CHECK-SANITIZE-NEXT:               %[[GEP_IS_OKAY:.*]] = and i1 %[[BOTH_POINTERS_ARE_NULL_OR_BOTH_ARE_NONNULL]], %[[AND_TRUE]], !nosanitize
   // CHECK-SANITIZE-NEXT:               br i1 %[[GEP_IS_OKAY]], label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
   // CHECK-SANITIZE:                  [[HANDLER_POINTER_OVERFLOW]]:
   // CHECK-SANITIZE-NORECOVER-NEXT:     call void @__ubsan_handle_pointer_overflow_abort(i8* bitcast ({ {{{.*}}} }* @[[LINE_400]] to i8*), i64 %[[BASE_RELOADED_INT]], i64 %[[COMPUTED_GEP]])
@@ -161,7 +165,7 @@ char *var_allones(char *base) {
 //------------------------------------------------------------------------------
 
 char *nullptr_var(unsigned long offset) {
-  // CHECK:                           define{{.*}} i8* @nullptr_var(i64 %[[OFFSET:.*]])
+  // CHECK:                           define{{.*}} i8* @nullptr_var(i64 noundef %[[OFFSET:.*]])
   // CHECK-NEXT:                      [[ENTRY:.*]]:
   // CHECK-NEXT:                        %[[OFFSET_ADDR:.*]] = alloca i64, align 8
   // CHECK-NEXT:                        store i64 %[[OFFSET]], i64* %[[OFFSET_ADDR]], align 8
@@ -169,12 +173,13 @@ char *nullptr_var(unsigned long offset) {
   // CHECK-NEXT:                        %[[ADD_PTR:.*]] = getelementptr inbounds i8, i8* null, i64 %[[OFFSET_RELOADED]]
   // CHECK-SANITIZE-NEXT:               %[[COMPUTED_OFFSET_AGGREGATE:.*]] = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 1, i64 %[[OFFSET_RELOADED]]), !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[COMPUTED_OFFSET_OVERFLOWED:.*]] = extractvalue { i64, i1 } %[[COMPUTED_OFFSET_AGGREGATE]], 1, !nosanitize
+  // CHECK-SANITIZE-NEXT:               %[[OR_OV:.+]] = or i1 %[[COMPUTED_OFFSET_OVERFLOWED]], false, !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[COMPUTED_OFFSET:.*]] = extractvalue { i64, i1 } %[[COMPUTED_OFFSET_AGGREGATE]], 0, !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[COMPUTED_GEP:.*]] = add i64 0, %[[COMPUTED_OFFSET]], !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[COMPUTED_GEP_IS_NOT_NULL:.*]] = icmp ne i64 %[[COMPUTED_GEP]], 0, !nosanitize
   // CHECK-SANITIZE-C-NEXT:             %[[BOTH_POINTERS_ARE_NULL_OR_BOTH_ARE_NONNULL:.*]] = and i1 false, %[[COMPUTED_GEP_IS_NOT_NULL]], !nosanitize
   // CHECK-SANITIZE-CPP-NEXT:           %[[BOTH_POINTERS_ARE_NULL_OR_BOTH_ARE_NONNULL:.*]] = icmp eq i1 false, %[[COMPUTED_GEP_IS_NOT_NULL]], !nosanitize
-  // CHECK-SANITIZE-NEXT:               %[[COMPUTED_OFFSET_DID_NOT_OVERFLOW:.*]] = xor i1 %[[COMPUTED_OFFSET_OVERFLOWED]], true, !nosanitize
+  // CHECK-SANITIZE-NEXT:               %[[COMPUTED_OFFSET_DID_NOT_OVERFLOW:.*]] = xor i1 %[[OR_OV]], true, !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[COMPUTED_GEP_IS_UGE_BASE:.*]] = icmp uge i64 %[[COMPUTED_GEP]], 0, !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[GEP_DID_NOT_OVERFLOW:.*]] = and i1 %[[COMPUTED_GEP_IS_UGE_BASE]], %[[COMPUTED_OFFSET_DID_NOT_OVERFLOW]], !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[GEP_IS_OKAY:.*]] = and i1 %[[BOTH_POINTERS_ARE_NULL_OR_BOTH_ARE_NONNULL]], %[[GEP_DID_NOT_OVERFLOW]], !nosanitize
@@ -191,7 +196,7 @@ char *nullptr_var(unsigned long offset) {
   return base + offset;
 }
 
-char *nullptr_zero() {
+char *nullptr_zero(void) {
   // CHECK:                             define{{.*}} i8* @nullptr_zero()
   // CHECK-NEXT:                        [[ENTRY:.*]]:
   // CHECK-SANITIZE-C-NEXT:               br i1 false, label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
@@ -208,7 +213,7 @@ char *nullptr_zero() {
   return base + offset;
 }
 
-char *nullptr_one_BAD() {
+char *nullptr_one_BAD(void) {
   // CHECK:                           define{{.*}} i8* @nullptr_one_BAD()
   // CHECK-NEXT:                      [[ENTRY:.*]]:
   // CHECK-SANITIZE-C-NEXT:             br i1 false, label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
@@ -226,7 +231,7 @@ char *nullptr_one_BAD() {
   return base + offset;
 }
 
-char *nullptr_allones_BAD() {
+char *nullptr_allones_BAD(void) {
   // CHECK:                           define{{.*}} i8* @nullptr_allones_BAD()
   // CHECK-NEXT:                      [[ENTRY:.*]]:
   // CHECK-SANITIZE-C-NEXT:             br i1 false, label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
@@ -247,7 +252,7 @@ char *nullptr_allones_BAD() {
 //------------------------------------------------------------------------------
 
 char *one_var(unsigned long offset) {
-  // CHECK:                           define{{.*}} i8* @one_var(i64 %[[OFFSET:.*]])
+  // CHECK:                           define{{.*}} i8* @one_var(i64 noundef %[[OFFSET:.*]])
   // CHECK-NEXT:                      [[ENTRY:.*]]:
   // CHECK-NEXT:                        %[[OFFSET_ADDR:.*]] = alloca i64, align 8
   // CHECK-NEXT:                        store i64 %[[OFFSET]], i64* %[[OFFSET_ADDR]], align 8
@@ -255,12 +260,13 @@ char *one_var(unsigned long offset) {
   // CHECK-NEXT:                        %[[ADD_PTR:.*]] = getelementptr inbounds i8, i8* inttoptr (i64 1 to i8*), i64 %[[OFFSET_RELOADED]]
   // CHECK-SANITIZE-NEXT:               %[[COMPUTED_OFFSET_AGGREGATE:.*]] = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 1, i64 %[[OFFSET_RELOADED]]), !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[COMPUTED_OFFSET_OVERFLOWED:.*]] = extractvalue { i64, i1 } %[[COMPUTED_OFFSET_AGGREGATE]], 1, !nosanitize
+  // CHECK-SANITIZE-NEXT:               %[[OR_OV:.+]] = or i1 %[[COMPUTED_OFFSET_OVERFLOWED]], false, !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[COMPUTED_OFFSET:.*]] = extractvalue { i64, i1 } %[[COMPUTED_OFFSET_AGGREGATE]], 0, !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[COMPUTED_GEP:.*]] = add i64 1, %[[COMPUTED_OFFSET]], !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[COMPUTED_GEP_IS_NOT_NULL:.*]] = icmp ne i64 %[[COMPUTED_GEP]], 0, !nosanitize
   // CHECK-SANITIZE-C-NEXT:             %[[BOTH_POINTERS_ARE_NULL_OR_BOTH_ARE_NONNULL:.*]] = and i1 icmp ne (i8* inttoptr (i64 1 to i8*), i8* null), %[[COMPUTED_GEP_IS_NOT_NULL]], !nosanitize
   // CHECK-SANITIZE-CPP-NEXT:           %[[BOTH_POINTERS_ARE_NULL_OR_BOTH_ARE_NONNULL:.*]] = icmp eq i1 icmp ne (i8* inttoptr (i64 1 to i8*), i8* null), %[[COMPUTED_GEP_IS_NOT_NULL]], !nosanitize
-  // CHECK-SANITIZE-NEXT:               %[[COMPUTED_OFFSET_DID_NOT_OVERFLOW:.*]] = xor i1 %[[COMPUTED_OFFSET_OVERFLOWED]], true, !nosanitize
+  // CHECK-SANITIZE-NEXT:               %[[COMPUTED_OFFSET_DID_NOT_OVERFLOW:.*]] = xor i1 %[[OR_OV]], true, !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[COMPUTED_GEP_IS_UGE_BASE:.*]] = icmp uge i64 %[[COMPUTED_GEP]], 1, !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[GEP_DID_NOT_OVERFLOW:.*]] = and i1 %[[COMPUTED_GEP_IS_UGE_BASE]], %[[COMPUTED_OFFSET_DID_NOT_OVERFLOW]], !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[GEP_IS_OKAY:.*]] = and i1 %[[BOTH_POINTERS_ARE_NULL_OR_BOTH_ARE_NONNULL]], %[[GEP_DID_NOT_OVERFLOW]], !nosanitize
@@ -277,7 +283,7 @@ char *one_var(unsigned long offset) {
   return base + offset;
 }
 
-char *one_zero() {
+char *one_zero(void) {
   // CHECK:                             define{{.*}} i8* @one_zero()
   // CHECK-NEXT:                        [[ENTRY:.*]]:
   // CHECK-SANITIZE-C-NEXT:               br i1 icmp ne (i8* inttoptr (i64 1 to i8*), i8* null), label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
@@ -294,7 +300,7 @@ char *one_zero() {
   return base + offset;
 }
 
-char *one_one_OK() {
+char *one_one_OK(void) {
   // CHECK:                           define{{.*}} i8* @one_one_OK()
   // CHECK-NEXT:                      [[ENTRY:.*]]:
   // CHECK-SANITIZE-C-NEXT:             br i1 and (i1 icmp ne (i8* inttoptr (i64 1 to i8*), i8* null), i1 icmp ne (i64 add (i64 sub (i64 ptrtoint (i8* getelementptr inbounds (i8, i8* inttoptr (i64 1 to i8*), i64 1) to i64), i64 1), i64 1), i64 0)), label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
@@ -312,7 +318,7 @@ char *one_one_OK() {
   return base + offset;
 }
 
-char *one_allones_BAD() {
+char *one_allones_BAD(void) {
   // CHECK:                           define{{.*}} i8* @one_allones_BAD()
   // CHECK-NEXT:                      [[ENTRY:.*]]:
   // CHECK-SANITIZE-C-NEXT:             br i1 and (i1 icmp ne (i8* inttoptr (i64 1 to i8*), i8* null), i1 icmp ne (i64 add (i64 sub (i64 ptrtoint (i8* getelementptr inbounds (i8, i8* inttoptr (i64 1 to i8*), i64 -1) to i64), i64 1), i64 1), i64 0)), label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
@@ -333,7 +339,7 @@ char *one_allones_BAD() {
 //------------------------------------------------------------------------------
 
 char *allones_var(unsigned long offset) {
-  // CHECK:                           define{{.*}} i8* @allones_var(i64 %[[OFFSET:.*]])
+  // CHECK:                           define{{.*}} i8* @allones_var(i64 noundef %[[OFFSET:.*]])
   // CHECK-NEXT:                      [[ENTRY:.*]]:
   // CHECK-NEXT:                        %[[OFFSET_ADDR:.*]] = alloca i64, align 8
   // CHECK-NEXT:                        store i64 %[[OFFSET]], i64* %[[OFFSET_ADDR]], align 8
@@ -341,12 +347,13 @@ char *allones_var(unsigned long offset) {
   // CHECK-NEXT:                        %[[ADD_PTR:.*]] = getelementptr inbounds i8, i8* inttoptr (i64 -1 to i8*), i64 %[[OFFSET_RELOADED]]
   // CHECK-SANITIZE-NEXT:               %[[COMPUTED_OFFSET_AGGREGATE:.*]] = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 1, i64 %[[OFFSET_RELOADED]]), !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[COMPUTED_OFFSET_OVERFLOWED:.*]] = extractvalue { i64, i1 } %[[COMPUTED_OFFSET_AGGREGATE]], 1, !nosanitize
+  // CHECK-SANITIZE-NEXT:               %[[OR_OV:.+]] = or i1 %[[COMPUTED_OFFSET_OVERFLOWED]], false, !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[COMPUTED_OFFSET:.*]] = extractvalue { i64, i1 } %[[COMPUTED_OFFSET_AGGREGATE]], 0, !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[COMPUTED_GEP:.*]] = add i64 -1, %[[COMPUTED_OFFSET]], !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[COMPUTED_GEP_IS_NOT_NULL:.*]] = icmp ne i64 %[[COMPUTED_GEP]], 0, !nosanitize
   // CHECK-SANITIZE-C-NEXT:             %[[BOTH_POINTERS_ARE_NULL_OR_BOTH_ARE_NONNULL:.*]] = and i1 icmp ne (i8* inttoptr (i64 -1 to i8*), i8* null), %[[COMPUTED_GEP_IS_NOT_NULL]], !nosanitize
   // CHECK-SANITIZE-CPP-NEXT:           %[[BOTH_POINTERS_ARE_NULL_OR_BOTH_ARE_NONNULL:.*]] = icmp eq i1 icmp ne (i8* inttoptr (i64 -1 to i8*), i8* null), %[[COMPUTED_GEP_IS_NOT_NULL]], !nosanitize
-  // CHECK-SANITIZE-NEXT:               %[[COMPUTED_OFFSET_DID_NOT_OVERFLOW:.*]] = xor i1 %[[COMPUTED_OFFSET_OVERFLOWED]], true, !nosanitize
+  // CHECK-SANITIZE-NEXT:               %[[COMPUTED_OFFSET_DID_NOT_OVERFLOW:.*]] = xor i1 %[[OR_OV]], true, !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[COMPUTED_GEP_IS_UGE_BASE:.*]] = icmp uge i64 %[[COMPUTED_GEP]], -1, !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[GEP_DID_NOT_OVERFLOW:.*]] = and i1 %[[COMPUTED_GEP_IS_UGE_BASE]], %[[COMPUTED_OFFSET_DID_NOT_OVERFLOW]], !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[GEP_IS_OKAY:.*]] = and i1 %[[BOTH_POINTERS_ARE_NULL_OR_BOTH_ARE_NONNULL]], %[[GEP_DID_NOT_OVERFLOW]], !nosanitize
@@ -363,7 +370,7 @@ char *allones_var(unsigned long offset) {
   return base + offset;
 }
 
-char *allones_zero_OK() {
+char *allones_zero_OK(void) {
   // CHECK:                             define{{.*}} i8* @allones_zero_OK()
   // CHECK-NEXT:                        [[ENTRY:.*]]:
   // CHECK-SANITIZE-C-NEXT:               br i1 icmp ne (i8* inttoptr (i64 -1 to i8*), i8* null), label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
@@ -380,7 +387,7 @@ char *allones_zero_OK() {
   return base + offset;
 }
 
-char *allones_one_BAD() {
+char *allones_one_BAD(void) {
   // CHECK: define{{.*}} i8* @allones_one_BAD()
   // CHECK-NEXT: [[ENTRY:.*]]:
   // CHECK-SANITIZE-C-NEXT:             br i1 and (i1 icmp ne (i8* inttoptr (i64 -1 to i8*), i8* null), i1 icmp ne (i64 add (i64 sub (i64 ptrtoint (i8* getelementptr inbounds (i8, i8* inttoptr (i64 -1 to i8*), i64 1) to i64), i64 -1), i64 -1), i64 0)), label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
@@ -398,7 +405,7 @@ char *allones_one_BAD() {
   return base + offset;
 }
 
-char *allones_allones_OK() {
+char *allones_allones_OK(void) {
   // CHECK: define{{.*}} i8* @allones_allones_OK()
   // CHECK-NEXT: [[ENTRY:.*]]:
   // CHECK-SANITIZE-C-NEXT:             br i1 and (i1 icmp ne (i8* inttoptr (i64 -1 to i8*), i8* null), i1 icmp ne (i64 add (i64 sub (i64 ptrtoint (i8* getelementptr inbounds (i8, i8* inttoptr (i64 -1 to i8*), i64 -1) to i64), i64 -1), i64 -1), i64 0)), label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize

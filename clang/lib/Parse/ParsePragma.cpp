@@ -1560,7 +1560,7 @@ getAttributeSubjectRulesRecoveryPointForToken(const Token &Tok) {
 /// suggests the possible attribute subject rules in a fix-it together with
 /// any other missing tokens.
 DiagnosticBuilder createExpectedAttributeSubjectRulesTokenDiagnostic(
-    unsigned DiagID, ParsedAttr &Attribute,
+    unsigned DiagID, ParsedAttributes &Attrs,
     MissingAttributeSubjectRulesRecoveryPoint Point, Parser &PRef) {
   SourceLocation Loc = PRef.getEndOfPreviousToken();
   if (Loc.isInvalid())
@@ -1580,25 +1580,38 @@ DiagnosticBuilder createExpectedAttributeSubjectRulesTokenDiagnostic(
   SourceRange FixItRange(Loc);
   if (EndPoint == MissingAttributeSubjectRulesRecoveryPoint::None) {
     // Gather the subject match rules that are supported by the attribute.
-    SmallVector<std::pair<attr::SubjectMatchRule, bool>, 4> SubjectMatchRuleSet;
-    Attribute.getMatchRules(PRef.getLangOpts(), SubjectMatchRuleSet);
-    if (SubjectMatchRuleSet.empty()) {
+    // Add all the possible rules initially.
+    llvm::BitVector IsMatchRuleAvailable(attr::SubjectMatchRule_Last + 1, true);
+    // Remove the ones that are not supported by any of the attributes.
+    for (const ParsedAttr &Attribute : Attrs) {
+      SmallVector<std::pair<attr::SubjectMatchRule, bool>, 4> MatchRules;
+      Attribute.getMatchRules(PRef.getLangOpts(), MatchRules);
+      llvm::BitVector IsSupported(attr::SubjectMatchRule_Last + 1);
+      for (const auto &Rule : MatchRules) {
+        // Ensure that the missing rule is reported in the fix-it only when it's
+        // supported in the current language mode.
+        if (!Rule.second)
+          continue;
+        IsSupported[Rule.first] = true;
+      }
+      IsMatchRuleAvailable &= IsSupported;
+    }
+    if (IsMatchRuleAvailable.count() == 0) {
       // FIXME: We can emit a "fix-it" with a subject list placeholder when
       // placeholders will be supported by the fix-its.
       return Diagnostic;
     }
     FixIt += "any(";
     bool NeedsComma = false;
-    for (const auto &I : SubjectMatchRuleSet) {
-      // Ensure that the missing rule is reported in the fix-it only when it's
-      // supported in the current language mode.
-      if (!I.second)
+    for (unsigned I = 0; I <= attr::SubjectMatchRule_Last; I++) {
+      if (!IsMatchRuleAvailable[I])
         continue;
       if (NeedsComma)
         FixIt += ", ";
       else
         NeedsComma = true;
-      FixIt += attr::getSubjectMatchRuleSpelling(I.first);
+      FixIt += attr::getSubjectMatchRuleSpelling(
+          static_cast<attr::SubjectMatchRule>(I));
     }
     FixIt += ")";
     // Check if we need to remove the range
@@ -1668,22 +1681,25 @@ void Parser::HandlePragmaAttribute() {
       return SkipToEnd();
     }
 
-    if (Tok.isNot(tok::identifier)) {
-      Diag(Tok, diag::err_pragma_attribute_expected_attribute_name);
-      SkipToEnd();
-      return;
-    }
-    IdentifierInfo *AttrName = Tok.getIdentifierInfo();
-    SourceLocation AttrNameLoc = ConsumeToken();
+    // Parse the comma-separated list of attributes.
+    do {
+      if (Tok.isNot(tok::identifier)) {
+        Diag(Tok, diag::err_pragma_attribute_expected_attribute_name);
+        SkipToEnd();
+        return;
+      }
+      IdentifierInfo *AttrName = Tok.getIdentifierInfo();
+      SourceLocation AttrNameLoc = ConsumeToken();
 
-    if (Tok.isNot(tok::l_paren))
-      Attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0,
-                   ParsedAttr::AS_GNU);
-    else
-      ParseGNUAttributeArgs(AttrName, AttrNameLoc, Attrs, /*EndLoc=*/nullptr,
-                            /*ScopeName=*/nullptr,
-                            /*ScopeLoc=*/SourceLocation(), ParsedAttr::AS_GNU,
-                            /*Declarator=*/nullptr);
+      if (Tok.isNot(tok::l_paren))
+        Attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0,
+                     ParsedAttr::AS_GNU);
+      else
+        ParseGNUAttributeArgs(AttrName, AttrNameLoc, Attrs, /*EndLoc=*/nullptr,
+                              /*ScopeName=*/nullptr,
+                              /*ScopeLoc=*/SourceLocation(), ParsedAttr::AS_GNU,
+                              /*Declarator=*/nullptr);
+    } while (TryConsumeToken(tok::comma));
 
     if (ExpectAndConsume(tok::r_paren))
       return SkipToEnd();
@@ -1721,26 +1737,19 @@ void Parser::HandlePragmaAttribute() {
     return;
   }
 
-  // Ensure that we don't have more than one attribute.
-  if (Attrs.size() > 1) {
-    SourceLocation Loc = Attrs[1].getLoc();
-    Diag(Loc, diag::err_pragma_attribute_multiple_attributes);
-    SkipToEnd();
-    return;
-  }
-
-  ParsedAttr &Attribute = *Attrs.begin();
-  if (!Attribute.isSupportedByPragmaAttribute()) {
-    Diag(PragmaLoc, diag::err_pragma_attribute_unsupported_attribute)
-        << Attribute;
-    SkipToEnd();
-    return;
+  for (const ParsedAttr &Attribute : Attrs) {
+    if (!Attribute.isSupportedByPragmaAttribute()) {
+      Diag(PragmaLoc, diag::err_pragma_attribute_unsupported_attribute)
+          << Attribute;
+      SkipToEnd();
+      return;
+    }
   }
 
   // Parse the subject-list.
   if (!TryConsumeToken(tok::comma)) {
     createExpectedAttributeSubjectRulesTokenDiagnostic(
-        diag::err_expected, Attribute,
+        diag::err_expected, Attrs,
         MissingAttributeSubjectRulesRecoveryPoint::Comma, *this)
         << tok::comma;
     SkipToEnd();
@@ -1749,7 +1758,7 @@ void Parser::HandlePragmaAttribute() {
 
   if (Tok.isNot(tok::identifier)) {
     createExpectedAttributeSubjectRulesTokenDiagnostic(
-        diag::err_pragma_attribute_invalid_subject_set_specifier, Attribute,
+        diag::err_pragma_attribute_invalid_subject_set_specifier, Attrs,
         MissingAttributeSubjectRulesRecoveryPoint::ApplyTo, *this);
     SkipToEnd();
     return;
@@ -1757,7 +1766,7 @@ void Parser::HandlePragmaAttribute() {
   const IdentifierInfo *II = Tok.getIdentifierInfo();
   if (!II->isStr("apply_to")) {
     createExpectedAttributeSubjectRulesTokenDiagnostic(
-        diag::err_pragma_attribute_invalid_subject_set_specifier, Attribute,
+        diag::err_pragma_attribute_invalid_subject_set_specifier, Attrs,
         MissingAttributeSubjectRulesRecoveryPoint::ApplyTo, *this);
     SkipToEnd();
     return;
@@ -1766,7 +1775,7 @@ void Parser::HandlePragmaAttribute() {
 
   if (!TryConsumeToken(tok::equal)) {
     createExpectedAttributeSubjectRulesTokenDiagnostic(
-        diag::err_expected, Attribute,
+        diag::err_expected, Attrs,
         MissingAttributeSubjectRulesRecoveryPoint::Equals, *this)
         << tok::equal;
     SkipToEnd();
@@ -1796,8 +1805,10 @@ void Parser::HandlePragmaAttribute() {
   if (Info->Action == PragmaAttributeInfo::Push)
     Actions.ActOnPragmaAttributeEmptyPush(PragmaLoc, Info->Namespace);
 
-  Actions.ActOnPragmaAttributeAttribute(Attribute, PragmaLoc,
-                                        std::move(SubjectMatchRules));
+  for (ParsedAttr &Attribute : Attrs) {
+    Actions.ActOnPragmaAttributeAttribute(Attribute, PragmaLoc,
+                                          SubjectMatchRules);
+  }
 }
 
 // #pragma GCC visibility comes in two variants:
@@ -3028,12 +3039,13 @@ void PragmaOptimizeHandler::HandlePragma(Preprocessor &PP,
 namespace {
 /// Used as the annotation value for tok::annot_pragma_fp.
 struct TokFPAnnotValue {
-  enum FlagKinds { Contract, Reassociate, Exceptions };
+  enum FlagKinds { Contract, Reassociate, Exceptions, EvalMethod };
   enum FlagValues { On, Off, Fast };
 
   llvm::Optional<LangOptions::FPModeKind> ContractValue;
   llvm::Optional<LangOptions::FPModeKind> ReassociateValue;
   llvm::Optional<LangOptions::FPExceptionModeKind> ExceptionsValue;
+  llvm::Optional<LangOptions::FPEvalMethodKind> EvalMethodValue;
 };
 } // end anonymous namespace
 
@@ -3060,6 +3072,7 @@ void PragmaFPHandler::HandlePragma(Preprocessor &PP,
             .Case("contract", TokFPAnnotValue::Contract)
             .Case("reassociate", TokFPAnnotValue::Reassociate)
             .Case("exceptions", TokFPAnnotValue::Exceptions)
+            .Case("eval_method", TokFPAnnotValue::EvalMethod)
             .Default(None);
     if (!FlagKind) {
       PP.Diag(Tok.getLocation(), diag::err_pragma_fp_invalid_option)
@@ -3074,8 +3087,11 @@ void PragmaFPHandler::HandlePragma(Preprocessor &PP,
       return;
     }
     PP.Lex(Tok);
+    bool isEvalMethodDouble =
+        Tok.is(tok::kw_double) && FlagKind == TokFPAnnotValue::EvalMethod;
 
-    if (Tok.isNot(tok::identifier)) {
+    // Don't diagnose if we have an eval_metod pragma with "double" kind.
+    if (Tok.isNot(tok::identifier) && !isEvalMethodDouble) {
       PP.Diag(Tok.getLocation(), diag::err_pragma_fp_invalid_argument)
           << PP.getSpelling(Tok) << OptionInfo->getName()
           << static_cast<int>(*FlagKind);
@@ -3117,6 +3133,19 @@ void PragmaFPHandler::HandlePragma(Preprocessor &PP,
               .Case("strict", LangOptions::FPE_Strict)
               .Default(llvm::None);
       if (!AnnotValue->ExceptionsValue) {
+        PP.Diag(Tok.getLocation(), diag::err_pragma_fp_invalid_argument)
+            << PP.getSpelling(Tok) << OptionInfo->getName() << *FlagKind;
+        return;
+      }
+    } else if (FlagKind == TokFPAnnotValue::EvalMethod) {
+      AnnotValue->EvalMethodValue =
+          llvm::StringSwitch<llvm::Optional<LangOptions::FPEvalMethodKind>>(
+              II->getName())
+              .Case("source", LangOptions::FPEvalMethodKind::FEM_Source)
+              .Case("double", LangOptions::FPEvalMethodKind::FEM_Double)
+              .Case("extended", LangOptions::FPEvalMethodKind::FEM_Extended)
+              .Default(llvm::None);
+      if (!AnnotValue->EvalMethodValue) {
         PP.Diag(Tok.getLocation(), diag::err_pragma_fp_invalid_argument)
             << PP.getSpelling(Tok) << OptionInfo->getName() << *FlagKind;
         return;
@@ -3223,6 +3252,9 @@ void Parser::HandlePragmaFP() {
   if (AnnotValue->ExceptionsValue)
     Actions.ActOnPragmaFPExceptions(Tok.getLocation(),
                                     *AnnotValue->ExceptionsValue);
+  if (AnnotValue->EvalMethodValue)
+    Actions.ActOnPragmaFPEvalMethod(Tok.getLocation(),
+                                    *AnnotValue->EvalMethodValue);
   ConsumeAnnotationToken();
 }
 

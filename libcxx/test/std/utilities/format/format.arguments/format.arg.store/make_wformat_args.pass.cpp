@@ -6,7 +6,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: libcpp-has-no-incomplete-format
 // XFAIL: libcpp-has-no-wide-characters
 // TODO FMT Evaluate gcc-11 status
@@ -25,10 +24,10 @@
 #include "test_macros.h"
 
 int main(int, char**) {
-  using Context = std::basic_format_context<
+  using Context [[maybe_unused]] = std::basic_format_context<
       std::back_insert_iterator<std::basic_string<wchar_t>>, wchar_t>;
 
-  auto value = std::make_wformat_args(42, nullptr, false, 1.0);
+  [[maybe_unused]] auto value = std::make_wformat_args(42, nullptr, false, 1.0);
 
   LIBCPP_ASSERT(value.__args.size() == 4);
   LIBCPP_ASSERT(test_basic_format_arg(value.__args[0], 42));

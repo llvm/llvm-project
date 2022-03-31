@@ -67,16 +67,30 @@ int main(int argc, char const *argv[]) {
 
   // Tag the original pointer with 9
   mte_buf = __arm_mte_create_random_tag(mte_buf, ~(1 << 9));
-  // A different tag so that buf_alt_tag > buf if you don't handle the tag
+  // A different tag so that mte_buf_alt_tag > mte_buf if you don't handle the
+  // tag
   char *mte_buf_alt_tag = __arm_mte_create_random_tag(mte_buf, ~(1 << 10));
 
-  // lldb should be removing the whole top byte, not just the tags.
-  // So fill 63-60 with something non zero so we'll fail if we only remove tags.
-#define SET_TOP_NIBBLE(ptr) (char *)((size_t)(ptr) | (0xA << 60))
-  mte_buf = SET_TOP_NIBBLE(mte_buf);
-  mte_buf_alt_tag = SET_TOP_NIBBLE(mte_buf_alt_tag);
-  mte_buf_2 = SET_TOP_NIBBLE(mte_buf_2);
-  mte_read_only = SET_TOP_NIBBLE(mte_read_only);
+  // The memory tag manager should be removing the whole top byte, not just the
+  // tags. So fill 63-60 with something non zero so we'll fail if we only remove
+  // tags.
+#define SET_TOP_NIBBLE(ptr, value)                                             \
+  (char *)((size_t)(ptr) | ((size_t)((value)&0xf) << 60))
+  // mte_buf_alt_tag's nibble > mte_buf to check that lldb isn't just removing
+  // tag bits but the whole top byte when making ranges.
+  mte_buf = SET_TOP_NIBBLE(mte_buf, 0xA);
+  mte_buf_alt_tag = SET_TOP_NIBBLE(mte_buf_alt_tag, 0xB);
+  mte_buf_2 = SET_TOP_NIBBLE(mte_buf_2, 0xC);
+  mte_read_only = SET_TOP_NIBBLE(mte_read_only, 0xD);
+
+// The top level commands should be removing all non-address bits, including
+// pointer signatures. This signs ptr with PAC key A. That signature goes
+// in some bits other than the top byte.
+#define sign_ptr(ptr) __asm__ __volatile__("pacdza %0" : "=r"(ptr) : "r"(ptr))
+  sign_ptr(mte_buf);
+  sign_ptr(mte_buf_alt_tag);
+  sign_ptr(mte_buf_2);
+  sign_ptr(mte_read_only);
 
   // Breakpoint here
   return 0;

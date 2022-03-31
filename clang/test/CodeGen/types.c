@@ -10,7 +10,7 @@ struct ieeeExternal {
 } *exthead;
 
 
-void test1()
+void test1(void)
 {
     struct ieeeExternal *exttmp = exthead;
 }

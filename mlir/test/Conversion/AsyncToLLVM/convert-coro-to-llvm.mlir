@@ -14,7 +14,14 @@ func @coro_begin() {
   // CHECK: %[[ID:.*]] = llvm.intr.coro.id
   %0 = async.coro.id
   // CHECK: %[[SIZE:.*]] = llvm.intr.coro.size : i64
-  // CHECK: %[[ALLOC:.*]] = llvm.call @malloc(%[[SIZE]])
+  // CHECK: %[[ALIGN:.*]] = llvm.intr.coro.align : i64
+  // CHECK: %[[SIZE_PLUS_ALIGN:.*]] = llvm.add %[[SIZE]], %[[ALIGN]] : i64
+  // CHECK: %[[C1:.*]] = llvm.mlir.constant(1 : i64) : i64
+  // CHECK: %[[SIZE_PLUS_ALIGN_MINUS_ONE:.*]] = llvm.sub %[[SIZE_PLUS_ALIGN]], %[[C1]] : i64
+  // CHECK: %[[C0:.*]] = llvm.mlir.constant(0 : i64) : i64
+  // CHECK: %[[NEGATED_ALIGN:.*]] = llvm.sub %[[C0]], %[[ALIGN]]  : i64
+  // CHECK: %[[ROUNDED_SIZE:.*]] = llvm.and %[[SIZE_PLUS_ALIGN_MINUS_ONE]], %[[NEGATED_ALIGN]] : i64
+  // CHECK: %[[ALLOC:.*]] = llvm.call @aligned_alloc(%[[ALIGN]], %[[ROUNDED_SIZE]])
   // CHECK: %[[HDL:.*]] = llvm.intr.coro.begin %[[ID]], %[[ALLOC]]
   %1 = async.coro.begin %0
   return

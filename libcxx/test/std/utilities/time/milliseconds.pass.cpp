@@ -11,8 +11,9 @@
 // typedef duration<signed integral type of at least 45 bits, milli> milliseconds;
 
 #include <chrono>
-#include <type_traits>
 #include <limits>
+#include <ratio>
+#include <type_traits>
 
 #include "test_macros.h"
 

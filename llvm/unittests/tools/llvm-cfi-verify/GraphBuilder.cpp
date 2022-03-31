@@ -12,6 +12,7 @@
 #include "gtest/gtest.h"
 
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"

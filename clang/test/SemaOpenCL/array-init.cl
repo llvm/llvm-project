@@ -11,8 +11,8 @@ __kernel void k2(read_only pipe int p) {
   reserve_id_t i[] = {i1, i2};
 }
 
-event_t create_event();
-__kernel void k3() {
+event_t create_event(void);
+__kernel void k3(void) {
   event_t e1 = create_event();
   event_t e2 = create_event();
   event_t e[] = {e1, e2};

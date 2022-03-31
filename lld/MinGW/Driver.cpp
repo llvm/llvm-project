@@ -100,7 +100,7 @@ opt::InputArgList MinGWOptTable::parse(ArrayRef<const char *> argv) {
   unsigned missingCount;
 
   SmallVector<const char *, 256> vec(argv.data(), argv.data() + argv.size());
-  cl::ExpandResponseFiles(saver, getQuotingStyle(), vec);
+  cl::ExpandResponseFiles(saver(), getQuotingStyle(), vec);
   opt::InputArgList args = this->ParseArgs(vec, missingIndex, missingCount);
 
   if (missingCount)
@@ -154,12 +154,11 @@ searchLibrary(StringRef name, ArrayRef<StringRef> searchPaths, bool bStatic) {
 
 // Convert Unix-ish command line arguments to Windows-ish ones and
 // then call coff::link.
-bool mingw::link(ArrayRef<const char *> argsArr, bool canExitEarly,
-                 raw_ostream &stdoutOS, raw_ostream &stderrOS) {
-  lld::stdoutOS = &stdoutOS;
-  lld::stderrOS = &stderrOS;
-
-  stderrOS.enable_colors(stderrOS.has_colors());
+bool mingw::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
+                 llvm::raw_ostream &stderrOS, bool exitEarly,
+                 bool disableOutput) {
+  auto *ctx = new CommonLinkerContext;
+  ctx->e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
 
   MinGWOptTable parser;
   opt::InputArgList args = parser.parse(argsArr.slice(1));
@@ -265,6 +264,8 @@ bool mingw::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     add("-filealign:" + StringRef(a->getValue()));
   if (auto *a = args.getLastArg(OPT_section_alignment))
     add("-align:" + StringRef(a->getValue()));
+  if (auto *a = args.getLastArg(OPT_heap))
+    add("-heap:" + StringRef(a->getValue()));
 
   if (auto *a = args.getLastArg(OPT_o))
     add("-out:" + StringRef(a->getValue()));
@@ -445,5 +446,9 @@ bool mingw::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   // Pass the actual binary name, to make error messages be printed with
   // the right prefix.
   vec[0] = argsArr[0];
-  return coff::link(vec, canExitEarly, stdoutOS, stderrOS);
+
+  // The context will be re-created in the COFF driver.
+  lld::CommonLinkerContext::destroy();
+
+  return coff::link(vec, stdoutOS, stderrOS, exitEarly, disableOutput);
 }

@@ -12,6 +12,7 @@
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -27,6 +28,7 @@
 namespace lld {
 namespace macho {
 
+class InputSection;
 class Symbol;
 struct SymbolPriorityEntry;
 
@@ -168,12 +170,15 @@ struct Configuration {
   std::vector<SectionAlign> sectionAlignments;
   std::vector<SegmentProtection> segmentProtections;
 
-  llvm::DenseMap<llvm::StringRef, SymbolPriorityEntry> priorities;
+  bool callGraphProfileSort = false;
+  llvm::StringRef printSymbolOrder;
+
   SectionRenameMap sectionRenameMap;
   SegmentRenameMap segmentRenameMap;
 
   SymbolPatterns exportedSymbols;
   SymbolPatterns unexportedSymbols;
+  SymbolPatterns whyLive;
 
   bool zeroModTime = false;
 
@@ -181,7 +186,7 @@ struct Configuration {
 
   llvm::MachO::Architecture arch() const { return platformInfo.target.Arch; }
 
-  llvm::MachO::PlatformKind platform() const {
+  llvm::MachO::PlatformType platform() const {
     return platformInfo.target.Platform;
   }
 };
@@ -207,7 +212,7 @@ enum class ForceLoad {
   No,      // Never load the archive, regardless of other flags
 };
 
-extern Configuration *config;
+extern std::unique_ptr<Configuration> config;
 
 } // namespace macho
 } // namespace lld

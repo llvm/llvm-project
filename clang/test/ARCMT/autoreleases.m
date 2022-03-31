@@ -69,7 +69,7 @@ id test2(A* val) {
   return val;
 }
 
-id test3() {
+id test3(void) {
   id a = [[A alloc] init];
   [a autorelease];
 }

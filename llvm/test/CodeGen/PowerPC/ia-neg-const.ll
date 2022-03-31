@@ -9,7 +9,7 @@ define i64 @main() #0 {
 entry:
   %x = alloca i64, align 8
   store i64 0, i64* %x, align 8
-  %0 = call i64 asm sideeffect "ld       $0,$1\0A\09add${2:I}   $0,$0,$2", "=&r,*m,Ir"(i64* %x, i64 -1) #0
+  %0 = call i64 asm sideeffect "ld       $0,$1\0A\09add${2:I}   $0,$0,$2", "=&r,*m,Ir"(i64* elementtype(i64) %x, i64 -1) #0
   ret i64 %0
 }
 

@@ -1,4 +1,4 @@
-; RUN: opt -deadargelim -S < %s | FileCheck %s
+; RUN: opt -passes=deadargelim -S < %s | FileCheck %s
 
 ; Verify that the dbg.value intrinsics that use the dead argument and return
 ; value are marked as undef to indicate that the values are optimized out.

@@ -32,8 +32,8 @@ int main(int, char**)
 
         char out[100] = {0};
         nstr fmt("prefix: $`, match: $&, suffix: $', m[1]: $1, m[2]: $2");
-        char* r = m.format(output_iterator<char*>(out), fmt).base();
-        assert(r == out + 58);
+        auto r = m.format(cpp17_output_iterator<char*>(out), fmt);
+        assert(base(r) == out + 58);
         assert(std::string(out) == "prefix: ab, match: cdefghi, suffix: jk, m[1]: efg, m[2]: e");
     }
     {
@@ -43,9 +43,8 @@ int main(int, char**)
 
         char out[100] = {0};
         nstr fmt("prefix: $`, match: $&, suffix: $', m[1]: $1, m[2]: $2");
-        char* r = m.format(output_iterator<char*>(out),
-                    fmt, std::regex_constants::format_sed).base();
-        assert(r == out + 59);
+        auto r = m.format(cpp17_output_iterator<char*>(out), fmt, std::regex_constants::format_sed);
+        assert(base(r) == out + 59);
         assert(std::string(out) == "prefix: $`, match: $cdefghi, suffix: $', m[1]: $1, m[2]: $2");
     }
     {
@@ -55,9 +54,8 @@ int main(int, char**)
 
         char out[100] = {0};
         nstr fmt("match: &, m[1]: \\1, m[2]: \\2");
-        char* r = m.format(output_iterator<char*>(out),
-                    fmt, std::regex_constants::format_sed).base();
-        assert(r == out + 34);
+        auto r = m.format(cpp17_output_iterator<char*>(out), fmt, std::regex_constants::format_sed);
+        assert(base(r) == out + 34);
         assert(std::string(out) == "match: cdefghi, m[1]: efg, m[2]: e");
     }
 
@@ -70,8 +68,8 @@ int main(int, char**)
 
         wchar_t out[100] = {0};
         wstr fmt(L"prefix: $`, match: $&, suffix: $', m[1]: $1, m[2]: $2");
-        wchar_t* r = m.format(output_iterator<wchar_t*>(out), fmt).base();
-        assert(r == out + 58);
+        auto r = m.format(cpp17_output_iterator<wchar_t*>(out), fmt);
+        assert(base(r) == out + 58);
         assert(std::wstring(out) == L"prefix: ab, match: cdefghi, suffix: jk, m[1]: efg, m[2]: e");
     }
     {
@@ -81,9 +79,8 @@ int main(int, char**)
 
         wchar_t out[100] = {0};
         wstr fmt(L"prefix: $`, match: $&, suffix: $', m[1]: $1, m[2]: $2");
-        wchar_t* r = m.format(output_iterator<wchar_t*>(out),
-                    fmt, std::regex_constants::format_sed).base();
-        assert(r == out + 59);
+        auto r = m.format(cpp17_output_iterator<wchar_t*>(out), fmt, std::regex_constants::format_sed);
+        assert(base(r) == out + 59);
         assert(std::wstring(out) == L"prefix: $`, match: $cdefghi, suffix: $', m[1]: $1, m[2]: $2");
     }
     {
@@ -93,9 +90,8 @@ int main(int, char**)
 
         wchar_t out[100] = {0};
         wstr fmt(L"match: &, m[1]: \\1, m[2]: \\2");
-        wchar_t* r = m.format(output_iterator<wchar_t*>(out),
-                    fmt, std::regex_constants::format_sed).base();
-        assert(r == out + 34);
+        auto r = m.format(cpp17_output_iterator<wchar_t*>(out), fmt, std::regex_constants::format_sed);
+        assert(base(r) == out + 34);
         assert(std::wstring(out) == L"match: cdefghi, m[1]: efg, m[2]: e");
     }
 #endif // TEST_HAS_NO_WIDE_CHARACTERS

@@ -30,9 +30,8 @@ StringRef yaml::ScalarTraits<yaml::BinaryRef>::input(StringRef Scalar, void *,
     return "BinaryRef hex string must contain an even number of nybbles.";
   // TODO: Can we improve YAMLIO to permit a more accurate diagnostic here?
   // (e.g. a caret pointing to the offending character).
-  for (unsigned I = 0, N = Scalar.size(); I != N; ++I)
-    if (!llvm::isHexDigit(Scalar[I]))
-      return "BinaryRef hex string must contain only hex digits.";
+  if (!llvm::all_of(Scalar, llvm::isHexDigit))
+    return "BinaryRef hex string must contain only hex digits.";
   Val = yaml::BinaryRef(Scalar);
   return {};
 }

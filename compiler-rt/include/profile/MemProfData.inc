@@ -20,11 +20,10 @@
  *
 \*===----------------------------------------------------------------------===*/
 
-
 #ifdef _MSC_VER
-#define PACKED(__decl__) __pragma(pack(push,1)) __decl__ __pragma(pack(pop))
+#define PACKED(...) __pragma(pack(push,1)) __VA_ARGS__ __pragma(pack(pop))
 #else
-#define PACKED(__decl__) __decl__ __attribute__((__packed__))
+#define PACKED(...) __VA_ARGS__ __attribute__((__packed__))
 #endif
 
 // A 64-bit magic number to uniquely identify the raw binary memprof profile file.
@@ -47,14 +46,125 @@ PACKED(struct Header {
   uint64_t StackOffset;
 });
 
+
 // A struct describing the information necessary to describe a /proc/maps
 // segment entry for a particular binary/library identified by its build id.
 PACKED(struct SegmentEntry {
   uint64_t Start;
   uint64_t End;
   uint64_t Offset;
-  uint8_t BuildId[32];
+  // This field is unused until sanitizer procmaps support for build ids for
+  // Linux-Elf is implemented.
+  uint8_t BuildId[32] = {0};
+
+  SegmentEntry(uint64_t S, uint64_t E, uint64_t O) :
+    Start(S), End(E), Offset(O) {}
+
+  SegmentEntry(const SegmentEntry& S) {
+    Start = S.Start;
+    End = S.End;
+    Offset = S.Offset;
+  }
+
+  SegmentEntry& operator=(const SegmentEntry& S) {
+    Start = S.Start;
+    End = S.End;
+    Offset = S.Offset;
+    return *this;
+  }
+
+  bool operator==(const SegmentEntry& S) const {
+    return Start == S.Start &&
+           End == S.End &&
+           Offset == S.Offset;
+  }
 });
+
+// Packed struct definition for MSVC. We can't use the PACKED macro defined in
+// MemProfData.inc since it would mean we are embedding a directive (the
+// #include for MIBEntryDef) into the macros which is undefined behaviour.
+#ifdef _MSC_VER
+__pragma(pack(push,1))
+#endif
+
+// A struct representing the heap allocation characteristics of a particular
+// runtime context. This struct is shared between the compiler-rt runtime and
+// the raw profile reader. The indexed format uses a separate, self-describing
+// backwards compatible format.
+struct MemInfoBlock{
+
+#define MIBEntryDef(NameTag, Name, Type) Type Name;
+#include "MIBEntryDef.inc"
+#undef MIBEntryDef
+
+bool operator==(const MemInfoBlock& Other) const {
+  bool IsEqual = true;
+#define MIBEntryDef(NameTag, Name, Type) \
+  IsEqual = (IsEqual && Name == Other.Name);
+#include "MIBEntryDef.inc"
+#undef MIBEntryDef
+  return IsEqual;
+}
+
+MemInfoBlock() {
+#define MIBEntryDef(NameTag, Name, Type) Name = Type();
+#include "MIBEntryDef.inc"
+#undef MIBEntryDef
+}
+
+MemInfoBlock(uint32_t Size, uint64_t AccessCount, uint32_t AllocTs,
+             uint32_t DeallocTs, uint32_t AllocCpu, uint32_t DeallocCpu)
+    : MemInfoBlock() {
+  AllocCount = 1U;
+  TotalAccessCount = AccessCount;
+  MinAccessCount = AccessCount;
+  MaxAccessCount = AccessCount;
+  TotalSize = Size;
+  MinSize = Size;
+  MaxSize = Size;
+  AllocTimestamp = AllocTs;
+  DeallocTimestamp = DeallocTs;
+  TotalLifetime = DeallocTimestamp - AllocTimestamp;
+  MinLifetime = TotalLifetime;
+  MaxLifetime = TotalLifetime;
+  AllocCpuId = AllocCpu;
+  DeallocCpuId = DeallocCpu;
+  NumMigratedCpu = AllocCpuId != DeallocCpuId;
+}
+
+void Merge(const MemInfoBlock &newMIB) {
+  AllocCount += newMIB.AllocCount;
+
+  TotalAccessCount += newMIB.TotalAccessCount;
+  MinAccessCount = newMIB.MinAccessCount < MinAccessCount ? newMIB.MinAccessCount : MinAccessCount;
+  MaxAccessCount = newMIB.MaxAccessCount < MaxAccessCount ? newMIB.MaxAccessCount : MaxAccessCount;
+
+  TotalSize += newMIB.TotalSize;
+  MinSize = newMIB.MinSize < MinSize ? newMIB.MinSize : MinSize;
+  MaxSize = newMIB.MaxSize < MaxSize ? newMIB.MaxSize : MaxSize;
+
+  TotalLifetime += newMIB.TotalLifetime;
+  MinLifetime = newMIB.MinLifetime < MinLifetime ? newMIB.MinLifetime : MinLifetime;
+  MaxLifetime = newMIB.MaxLifetime > MaxLifetime ? newMIB.MaxLifetime : MaxLifetime;
+
+  // We know newMIB was deallocated later, so just need to check if it was
+  // allocated before last one deallocated.
+  NumLifetimeOverlaps += newMIB.AllocTimestamp < DeallocTimestamp;
+  AllocTimestamp = newMIB.AllocTimestamp;
+  DeallocTimestamp = newMIB.DeallocTimestamp;
+
+  NumSameAllocCpu += AllocCpuId == newMIB.AllocCpuId;
+  NumSameDeallocCpu += DeallocCpuId == newMIB.DeallocCpuId;
+  AllocCpuId = newMIB.AllocCpuId;
+  DeallocCpuId = newMIB.DeallocCpuId;
+}
+
+#ifdef _MSC_VER
+} __pragma(pack(pop));
+#else
+} __attribute__((__packed__));
+#endif
+
 } // namespace memprof
 } // namespace llvm
 

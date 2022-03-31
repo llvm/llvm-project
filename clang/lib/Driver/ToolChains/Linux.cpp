@@ -260,6 +260,14 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
 
   const std::string OSLibDir = std::string(getOSLibDir(Triple, Args));
   const std::string MultiarchTriple = getMultiarchTriple(D, Triple, SysRoot);
+  const std::string &ExtraPath = D.OverlayToolChainPath;
+
+  if (!D.OverlayToolChainPath.empty()) {
+    addPathIfExists(D, ExtraPath + "/lib/" + MultiarchTriple, Paths);
+    addPathIfExists(D, ExtraPath + "/lib/../" + OSLibDir, Paths);
+    addPathIfExists(D, ExtraPath + "/usr/lib/" + MultiarchTriple, Paths);
+    addPathIfExists(D, ExtraPath + "/usr/lib/../" + OSLibDir, Paths);
+  }
 
   // mips32: Debian multilib, we use /libo32, while in other case, /lib is
   // used. We need add both libo32 and /lib.
@@ -277,14 +285,11 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
     // Android sysroots contain a library directory for each supported OS
     // version as well as some unversioned libraries in the usual multiarch
     // directory.
-    unsigned Major;
-    unsigned Minor;
-    unsigned Micro;
-    Triple.getEnvironmentVersion(Major, Minor, Micro);
-    addPathIfExists(D,
-                    SysRoot + "/usr/lib/" + MultiarchTriple + "/" +
-                        llvm::to_string(Major),
-                    Paths);
+    addPathIfExists(
+        D,
+        SysRoot + "/usr/lib/" + MultiarchTriple + "/" +
+            llvm::to_string(Triple.getEnvironmentVersion().getMajor()),
+        Paths);
   }
 
   addPathIfExists(D, SysRoot + "/usr/lib/" + MultiarchTriple, Paths);
@@ -304,17 +309,16 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
 
   Generic_GCC::AddMultiarchPaths(D, SysRoot, OSLibDir, Paths);
 
-  // Similar to the logic for GCC above, if we are currently running Clang
-  // inside of the requested system root, add its parent library path to those
-  // searched.
-  // FIXME: It's not clear whether we should use the driver's installed
-  // directory ('Dir' below) or the ResourceDir.
-  if (StringRef(D.Dir).startswith(SysRoot)) {
-    // Even if OSLibDir != "lib", this is needed for Clang in the build
-    // directory (not installed) to find libc++.
+  // The deprecated -DLLVM_ENABLE_PROJECTS=libcxx configuration installs
+  // libc++.so in D.Dir+"/../lib/". Detect this path.
+  // TODO Remove once LLVM_ENABLE_PROJECTS=libcxx is unsupported.
+  if (StringRef(D.Dir).startswith(SysRoot) &&
+      D.getVFS().exists(D.Dir + "/../lib/libc++.so"))
     addPathIfExists(D, D.Dir + "/../lib", Paths);
-    if (OSLibDir != "lib")
-      addPathIfExists(D, D.Dir + "/../" + OSLibDir, Paths);
+
+  if (!D.OverlayToolChainPath.empty()) {
+    addPathIfExists(D, ExtraPath + "/lib", Paths);
+    addPathIfExists(D, ExtraPath + "/usr/lib", Paths);
   }
 
   addPathIfExists(D, SysRoot + "/lib", Paths);
@@ -325,6 +329,12 @@ ToolChain::RuntimeLibType Linux::GetDefaultRuntimeLibType() const {
   if (getTriple().isAndroid())
     return ToolChain::RLT_CompilerRT;
   return Generic_ELF::GetDefaultRuntimeLibType();
+}
+
+unsigned Linux::GetDefaultDwarfVersion() const {
+  if (getTriple().isAndroid())
+    return 4;
+  return ToolChain::GetDefaultDwarfVersion();
 }
 
 ToolChain::CXXStdlibType Linux::GetDefaultCXXStdlibType() const {
@@ -564,6 +574,10 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   if (DriverArgs.hasArg(options::OPT_nostdlibinc))
     return;
 
+  if (!D.OverlayToolChainPath.empty())
+    addExternCSystemInclude(DriverArgs, CC1Args,
+                            D.OverlayToolChainPath + "/include");
+
   // LOCAL_INCLUDE_DIR
   addSystemInclude(DriverArgs, CC1Args, SysRoot + "/usr/local/include");
   // TOOL_INCLUDE_DIR
@@ -666,8 +680,8 @@ void Linux::AddIAMCUIncludeArgs(const ArgList &DriverArgs,
 }
 
 bool Linux::isPIEDefault(const llvm::opt::ArgList &Args) const {
-  return getTriple().isAndroid() || getTriple().isMusl() ||
-         getSanitizerArgs(Args).requiresPIE();
+  return CLANG_DEFAULT_PIE_ON_LINUX || getTriple().isAndroid() ||
+         getTriple().isMusl() || getSanitizerArgs(Args).requiresPIE();
 }
 
 bool Linux::IsAArch64OutlineAtomicsDefault(const ArgList &Args) const {
@@ -684,7 +698,7 @@ bool Linux::IsAArch64OutlineAtomicsDefault(const ArgList &Args) const {
 }
 
 bool Linux::IsMathErrnoDefault() const {
-  if (getTriple().isAndroid())
+  if (getTriple().isAndroid() || getTriple().isMusl())
     return false;
   return Generic_ELF::IsMathErrnoDefault();
 }

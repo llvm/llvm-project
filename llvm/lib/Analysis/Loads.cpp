@@ -13,19 +13,14 @@
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumeBundleQueries.h"
-#include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
-#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/GlobalAlias.h"
-#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 
@@ -208,7 +203,7 @@ bool llvm::isDereferenceableAndAlignedPointer(const Value *V, Align Alignment,
 }
 
 bool llvm::isDereferenceableAndAlignedPointer(const Value *V, Type *Ty,
-                                              MaybeAlign MA,
+                                              Align Alignment,
                                               const DataLayout &DL,
                                               const Instruction *CtxI,
                                               const DominatorTree *DT,
@@ -223,8 +218,6 @@ bool llvm::isDereferenceableAndAlignedPointer(const Value *V, Type *Ty,
   // determine the exact offset to the attributed variable, we can use that
   // information here.
 
-  // Require ABI alignment for loads without alignment specification
-  const Align Alignment = DL.getValueOrABITypeAlignment(MA, Ty);
   APInt AccessSize(DL.getPointerTypeSizeInBits(V->getType()),
                    DL.getTypeStoreSize(Ty));
   return isDereferenceableAndAlignedPointer(V, Alignment, AccessSize, DL, CtxI,

@@ -366,6 +366,28 @@
 // CKLST2-NOT: openmp-x86_64-pc-linux-gnu
 
 //
+// Check unbundling archive for HIP.
+//
+// When the input to clang-offload-bundler is an archive of bundled bitcodes,
+// for each target, clang-offload-bundler extracts the bitcode from each
+// bundle and archives them. Therefore for each target, the output is an
+// archive of unbundled bitcodes.
+//
+// RUN: clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
+// RUN:   -inputs=%t.tgt1,%t.tgt2 -outputs=%T/hip_bundle1.bc
+// RUN: clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
+// RUN:   -inputs=%t.tgt1,%t.tgt2 -outputs=%T/hip_bundle2.bc
+// RUN: llvm-ar cr %T/hip_archive.a %T/hip_bundle1.bc %T/hip_bundle2.bc
+// RUN: clang-offload-bundler -unbundle -type=a -targets=hip-amdgcn-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
+// RUN:   -outputs=%T/hip_900.a,%T/hip_906.a -inputs=%T/hip_archive.a
+// RUN: llvm-ar t %T/hip_900.a | FileCheck -check-prefix=HIP-AR-900 %s
+// RUN: llvm-ar t %T/hip_906.a | FileCheck -check-prefix=HIP-AR-906 %s
+// HIP-AR-900-DAG: hip_bundle1-hip-amdgcn-amd-amdhsa--gfx900
+// HIP-AR-900-DAG: hip_bundle2-hip-amdgcn-amd-amdhsa--gfx900
+// HIP-AR-906-DAG: hip_bundle1-hip-amdgcn-amd-amdhsa--gfx906
+// HIP-AR-906-DAG: hip_bundle2-hip-amdgcn-amd-amdhsa--gfx906
+
+//
 // Check bundling without host target is allowed for HIP.
 //
 // RUN: clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
@@ -384,7 +406,8 @@
 // Create few code object bundles and archive them to create an input archive
 // RUN: clang-offload-bundler -type=o -targets=host-%itanium_abi_triple,openmp-amdgcn-amd-amdhsa-gfx906,openmp-amdgcn-amd-amdhsa--gfx908 -inputs=%t.o,%t.tgt1,%t.tgt2 -outputs=%t.simple.bundle
 // RUN: clang-offload-bundler -type=o -targets=host-%itanium_abi_triple,openmp-amdgcn-amd-amdhsa--gfx903 -inputs=%t.o,%t.tgt1 -outputs=%t.simple1.bundle
-// RUN: llvm-ar cr %t.input-archive.a %t.simple.bundle %t.simple1.bundle
+// RUN: clang-offload-bundler -type=o -targets=host-%itanium_abi_triple,hip-amdgcn-amd-amdhsa--gfx906 -inputs=%t.o,%t.tgt1 -outputs=%t.simple2.bundle
+// RUN: llvm-ar cr %t.input-archive.a %t.simple.bundle %t.simple1.bundle %t.simple2.bundle
 
 // RUN: clang-offload-bundler -unbundle -type=a -targets=openmp-amdgcn-amd-amdhsa-gfx906,openmp-amdgcn-amd-amdhsa-gfx908 -inputs=%t.input-archive.a -outputs=%t-archive-gfx906-simple.a,%t-archive-gfx908-simple.a
 // RUN: llvm-ar t %t-archive-gfx906-simple.a | FileCheck %s -check-prefix=GFX906
@@ -400,6 +423,19 @@
 // RUN: clang-offload-bundler -unbundle -type=a -targets=openmp-amdgcn-amd-amdhsa-gfx803 -inputs=%t.input-archive.a -outputs=%t-archive-gfx803-empty.a -allow-missing-bundles
 // RUN: cat %t-archive-gfx803-empty.a | FileCheck %s -check-prefix=EMPTYARCHIVE
 // EMPTYARCHIVE: !<arch>
+
+// Check compatibility of OpenMP code objects found in the heterogeneous archive library with HIP code objects of the target
+// RUN: clang-offload-bundler -unbundle -type=a -targets=hip-amdgcn-amd-amdhsa-gfx906,hipv4-amdgcn-amd-amdhsa-gfx908 -inputs=%t.input-archive.a -outputs=%t-hip-archive-gfx906-simple.a,%t-hipv4-archive-gfx908-simple.a -hip-openmp-compatible
+// RUN: llvm-ar t %t-hip-archive-gfx906-simple.a | FileCheck %s -check-prefix=HIPOPENMPCOMPAT
+// HIPOPENMPCOMPAT: simple-openmp-amdgcn-amd-amdhsa-gfx906
+// RUN: llvm-ar t %t-hipv4-archive-gfx908-simple.a | FileCheck %s -check-prefix=HIPv4OPENMPCOMPAT
+// HIPv4OPENMPCOMPAT: simple-openmp-amdgcn-amd-amdhsa--gfx908
+
+// Check compatibility of HIP code objects found in the heterogeneous archive library with OpenMP code objects of the target
+// RUN: clang-offload-bundler -unbundle -type=a -targets=openmp-amdgcn-amd-amdhsa--gfx906 \
+// RUN:   -outputs=%T/hip-openmp_906.a -inputs=%T/hip_archive.a -hip-openmp-compatible
+// RUN: llvm-ar t %T/hip-openmp_906.a | FileCheck -check-prefix=OPENMPHIPCOMPAT %s
+// OPENMPHIPCOMPAT: hip_bundle1-hip-amdgcn-amd-amdhsa--gfx906
 
 // Some code so that we can create a binary out of this file.
 int A = 0;

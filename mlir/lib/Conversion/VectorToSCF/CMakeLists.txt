@@ -12,4 +12,6 @@ add_mlir_conversion_library(MLIRVectorToSCF
   MLIRLLVMIR
   MLIRMemRef
   MLIRTransforms
+  MLIRVector
+  MLIRVectorTransforms
   )

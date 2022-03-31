@@ -273,6 +273,8 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FABS(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FMINNUM(SDNode *N) {
+  if (SDValue SelCC = TLI.createSelectForFMINNUM_FMAXNUM(N, DAG))
+    return SoftenFloatRes_SELECT_CC(SelCC.getNode());
   return SoftenFloatRes_Binary(N, GetFPLibCall(N->getValueType(0),
                                                RTLIB::FMIN_F32,
                                                RTLIB::FMIN_F64,
@@ -282,6 +284,8 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FMINNUM(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FMAXNUM(SDNode *N) {
+  if (SDValue SelCC = TLI.createSelectForFMINNUM_FMAXNUM(N, DAG))
+    return SoftenFloatRes_SELECT_CC(SelCC.getNode());
   return SoftenFloatRes_Binary(N, GetFPLibCall(N->getValueType(0),
                                                RTLIB::FMAX_F32,
                                                RTLIB::FMAX_F64,
@@ -1193,7 +1197,7 @@ void DAGTypeLegalizer::ExpandFloatResult(SDNode *N, unsigned ResNo) {
     llvm_unreachable("Do not know how to expand the result of this operator!");
 
   case ISD::UNDEF:        SplitRes_UNDEF(N, Lo, Hi); break;
-  case ISD::SELECT:       SplitRes_SELECT(N, Lo, Hi); break;
+  case ISD::SELECT:       SplitRes_Select(N, Lo, Hi); break;
   case ISD::SELECT_CC:    SplitRes_SELECT_CC(N, Lo, Hi); break;
 
   case ISD::MERGE_VALUES:       ExpandRes_MERGE_VALUES(N, ResNo, Lo, Hi); break;

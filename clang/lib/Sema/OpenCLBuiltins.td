@@ -57,14 +57,33 @@ class FunctionExtension<string _Ext> : AbstractExtension<_Ext>;
 // disabled.
 class TypeExtension<string _Ext> : AbstractExtension<_Ext>;
 
+// Concatenate zero or more space-separated extensions in NewExts to Base and
+// return the resulting FunctionExtension in ret.
+class concatExtension<FunctionExtension Base, string NewExts> {
+  FunctionExtension ret = FunctionExtension<
+    !cond(
+      // Return Base extension if NewExts is empty,
+      !empty(NewExts) : Base.ExtName,
+
+      // otherwise, return NewExts if Base extension is empty,
+      !empty(Base.ExtName) : NewExts,
+
+      // otherwise, concatenate NewExts to Base.
+      true : Base.ExtName # " " # NewExts
+    )
+  >;
+}
+
 // TypeExtension definitions.
 def NoTypeExt   : TypeExtension<"">;
 def Fp16TypeExt : TypeExtension<"cl_khr_fp16">;
 def Fp64TypeExt : TypeExtension<"cl_khr_fp64">;
+def Atomic64TypeExt : TypeExtension<"cl_khr_int64_base_atomics cl_khr_int64_extended_atomics">;
+def AtomicFp64TypeExt : TypeExtension<"cl_khr_int64_base_atomics cl_khr_int64_extended_atomics cl_khr_fp64">;
 
 // FunctionExtension definitions.
 def FuncExtNone                          : FunctionExtension<"">;
-def FuncExtKhrSubgroups                  : FunctionExtension<"cl_khr_subgroups">;
+def FuncExtKhrSubgroups                  : FunctionExtension<"__opencl_subgroup_builtins">;
 def FuncExtKhrSubgroupExtendedTypes      : FunctionExtension<"cl_khr_subgroup_extended_types">;
 def FuncExtKhrSubgroupNonUniformVote     : FunctionExtension<"cl_khr_subgroup_non_uniform_vote">;
 def FuncExtKhrSubgroupBallot             : FunctionExtension<"cl_khr_subgroup_ballot">;
@@ -80,38 +99,40 @@ def FuncExtKhrLocalInt32ExtendedAtomics  : FunctionExtension<"cl_khr_local_int32
 def FuncExtKhrInt64BaseAtomics           : FunctionExtension<"cl_khr_int64_base_atomics">;
 def FuncExtKhrInt64ExtendedAtomics       : FunctionExtension<"cl_khr_int64_extended_atomics">;
 def FuncExtKhrMipmapImage                : FunctionExtension<"cl_khr_mipmap_image">;
+def FuncExtKhrMipmapImageReadWrite       : FunctionExtension<"cl_khr_mipmap_image __opencl_c_read_write_images">;
 def FuncExtKhrMipmapImageWrites          : FunctionExtension<"cl_khr_mipmap_image_writes">;
 def FuncExtKhrGlMsaaSharing              : FunctionExtension<"cl_khr_gl_msaa_sharing">;
+def FuncExtKhrGlMsaaSharingReadWrite     : FunctionExtension<"cl_khr_gl_msaa_sharing __opencl_c_read_write_images">;
 
+def FuncExtOpenCLCGenericAddressSpace    : FunctionExtension<"__opencl_c_generic_address_space">;
+def FuncExtOpenCLCNamedAddressSpaceBuiltins : FunctionExtension<"__opencl_c_named_address_space_builtins">;
 def FuncExtOpenCLCPipes                  : FunctionExtension<"__opencl_c_pipes">;
 def FuncExtOpenCLCWGCollectiveFunctions  : FunctionExtension<"__opencl_c_work_group_collective_functions">;
-def FuncExtFloatAtomicsFp16GlobalLoadStore  : FunctionExtension<"cl_ext_float_atomics __opencl_c_ext_fp16_global_atomic_load_store">;
-def FuncExtFloatAtomicsFp16LocalLoadStore   : FunctionExtension<"cl_ext_float_atomics __opencl_c_ext_fp16_local_atomic_load_store">;
-def FuncExtFloatAtomicsFp16GenericLoadStore : FunctionExtension<"cl_ext_float_atomics __opencl_c_ext_fp16_global_atomic_load_store __opencl_c_ext_fp16_local_atomic_load_store">;
-def FuncExtFloatAtomicsFp16GlobalAdd     : FunctionExtension<"cl_ext_float_atomics __opencl_c_ext_fp16_global_atomic_add">;
-def FuncExtFloatAtomicsFp32GlobalAdd     : FunctionExtension<"cl_ext_float_atomics __opencl_c_ext_fp32_global_atomic_add">;
-def FuncExtFloatAtomicsFp64GlobalAdd     : FunctionExtension<"cl_ext_float_atomics __opencl_c_ext_fp64_global_atomic_add">;
-def FuncExtFloatAtomicsFp16LocalAdd      : FunctionExtension<"cl_ext_float_atomics __opencl_c_ext_fp16_local_atomic_add">;
-def FuncExtFloatAtomicsFp32LocalAdd      : FunctionExtension<"cl_ext_float_atomics __opencl_c_ext_fp32_local_atomic_add">;
-def FuncExtFloatAtomicsFp64LocalAdd      : FunctionExtension<"cl_ext_float_atomics __opencl_c_ext_fp64_local_atomic_add">;
-def FuncExtFloatAtomicsFp16GenericAdd    : FunctionExtension<"cl_ext_float_atomics __opencl_c_ext_fp16_local_atomic_add __opencl_c_ext_fp16_global_atomic_add">;
-def FuncExtFloatAtomicsFp32GenericAdd    : FunctionExtension<"cl_ext_float_atomics __opencl_c_ext_fp32_local_atomic_add __opencl_c_ext_fp32_global_atomic_add">;
-def FuncExtFloatAtomicsFp64GenericAdd    : FunctionExtension<"cl_ext_float_atomics __opencl_c_ext_fp64_local_atomic_add __opencl_c_ext_fp64_global_atomic_add">;
-def FuncExtFloatAtomicsFp16GlobalMinMax  : FunctionExtension<"cl_ext_float_atomics __opencl_c_ext_fp16_global_atomic_min_max">;
-def FuncExtFloatAtomicsFp32GlobalMinMax  : FunctionExtension<"cl_ext_float_atomics __opencl_c_ext_fp32_global_atomic_min_max">;
-def FuncExtFloatAtomicsFp64GlobalMinMax  : FunctionExtension<"cl_ext_float_atomics __opencl_c_ext_fp64_global_atomic_min_max">;
-def FuncExtFloatAtomicsFp16LocalMinMax   : FunctionExtension<"cl_ext_float_atomics __opencl_c_ext_fp16_local_atomic_min_max">;
-def FuncExtFloatAtomicsFp32LocalMinMax   : FunctionExtension<"cl_ext_float_atomics __opencl_c_ext_fp32_local_atomic_min_max">;
-def FuncExtFloatAtomicsFp64LocalMinMax   : FunctionExtension<"cl_ext_float_atomics __opencl_c_ext_fp64_local_atomic_min_max">;
-def FuncExtFloatAtomicsFp16GenericMinMax : FunctionExtension<"cl_ext_float_atomics __opencl_c_ext_fp16_local_atomic_min_max __opencl_c_ext_fp16_global_atomic_min_max">;
-def FuncExtFloatAtomicsFp32GenericMinMax : FunctionExtension<"cl_ext_float_atomics __opencl_c_ext_fp32_local_atomic_min_max __opencl_c_ext_fp32_global_atomic_min_max">;
-def FuncExtFloatAtomicsFp64GenericMinMax : FunctionExtension<"cl_ext_float_atomics __opencl_c_ext_fp64_local_atomic_min_max __opencl_c_ext_fp64_global_atomic_min_max">;
+def FuncExtOpenCLCReadWriteImages        : FunctionExtension<"__opencl_c_read_write_images">;
+def FuncExtFloatAtomicsFp16GlobalASLoadStore  : FunctionExtension<"cl_ext_float_atomics __opencl_c_ext_fp16_global_atomic_load_store">;
+def FuncExtFloatAtomicsFp16LocalASLoadStore   : FunctionExtension<"cl_ext_float_atomics __opencl_c_ext_fp16_local_atomic_load_store">;
+def FuncExtFloatAtomicsFp16GenericASLoadStore : FunctionExtension<"cl_ext_float_atomics __opencl_c_ext_fp16_global_atomic_load_store __opencl_c_ext_fp16_local_atomic_load_store">;
+def FuncExtFloatAtomicsFp16GlobalASAdd        : FunctionExtension<"cl_ext_float_atomics __opencl_c_ext_fp16_global_atomic_add">;
+def FuncExtFloatAtomicsFp32GlobalASAdd        : FunctionExtension<"cl_ext_float_atomics __opencl_c_ext_fp32_global_atomic_add">;
+def FuncExtFloatAtomicsFp64GlobalASAdd        : FunctionExtension<"cl_ext_float_atomics __opencl_c_ext_fp64_global_atomic_add">;
+def FuncExtFloatAtomicsFp16LocalASAdd         : FunctionExtension<"cl_ext_float_atomics __opencl_c_ext_fp16_local_atomic_add">;
+def FuncExtFloatAtomicsFp32LocalASAdd         : FunctionExtension<"cl_ext_float_atomics __opencl_c_ext_fp32_local_atomic_add">;
+def FuncExtFloatAtomicsFp64LocalASAdd         : FunctionExtension<"cl_ext_float_atomics __opencl_c_ext_fp64_local_atomic_add">;
+def FuncExtFloatAtomicsFp16GenericASAdd       : FunctionExtension<"cl_ext_float_atomics __opencl_c_ext_fp16_local_atomic_add __opencl_c_ext_fp16_global_atomic_add">;
+def FuncExtFloatAtomicsFp32GenericASAdd       : FunctionExtension<"cl_ext_float_atomics __opencl_c_ext_fp32_local_atomic_add __opencl_c_ext_fp32_global_atomic_add">;
+def FuncExtFloatAtomicsFp64GenericASAdd       : FunctionExtension<"cl_ext_float_atomics __opencl_c_ext_fp64_local_atomic_add __opencl_c_ext_fp64_global_atomic_add">;
+def FuncExtFloatAtomicsFp16GlobalASMinMax     : FunctionExtension<"cl_ext_float_atomics __opencl_c_ext_fp16_global_atomic_min_max">;
+def FuncExtFloatAtomicsFp32GlobalASMinMax     : FunctionExtension<"cl_ext_float_atomics __opencl_c_ext_fp32_global_atomic_min_max">;
+def FuncExtFloatAtomicsFp64GlobalASMinMax     : FunctionExtension<"cl_ext_float_atomics __opencl_c_ext_fp64_global_atomic_min_max">;
+def FuncExtFloatAtomicsFp16LocalASMinMax      : FunctionExtension<"cl_ext_float_atomics __opencl_c_ext_fp16_local_atomic_min_max">;
+def FuncExtFloatAtomicsFp32LocalASMinMax      : FunctionExtension<"cl_ext_float_atomics __opencl_c_ext_fp32_local_atomic_min_max">;
+def FuncExtFloatAtomicsFp64LocalASMinMax      : FunctionExtension<"cl_ext_float_atomics __opencl_c_ext_fp64_local_atomic_min_max">;
+def FuncExtFloatAtomicsFp16GenericASMinMax    : FunctionExtension<"cl_ext_float_atomics __opencl_c_ext_fp16_local_atomic_min_max __opencl_c_ext_fp16_global_atomic_min_max">;
+def FuncExtFloatAtomicsFp32GenericASMinMax    : FunctionExtension<"cl_ext_float_atomics __opencl_c_ext_fp32_local_atomic_min_max __opencl_c_ext_fp32_global_atomic_min_max">;
+def FuncExtFloatAtomicsFp64GenericASMinMax    : FunctionExtension<"cl_ext_float_atomics __opencl_c_ext_fp64_local_atomic_min_max __opencl_c_ext_fp64_global_atomic_min_max">;
 
 // Not a real extension, but a workaround to add C++ for OpenCL specific builtins.
 def FuncExtOpenCLCxx                     : FunctionExtension<"__cplusplus">;
-
-// Multiple extensions
-def FuncExtKhrMipmapWritesAndWrite3d     : FunctionExtension<"cl_khr_mipmap_image_writes cl_khr_3d_image_writes">;
 
 // Arm extensions.
 def ArmIntegerDotProductInt8                   : FunctionExtension<"cl_arm_integer_dot_product_int8">;
@@ -222,7 +243,10 @@ class ImageType<Type _Ty, string _AccessQualifier> :
   let IsConst = _Ty.IsConst;
   let IsVolatile = _Ty.IsVolatile;
   let AddrSpace = _Ty.AddrSpace;
-  let Extension = _Ty.Extension;
+  // Add TypeExtension for "write_only image3d_t".
+  let Extension = !cond(
+      !and(!eq(_Ty.Name, "image3d_t"), !eq(_AccessQualifier, "WO")) : TypeExtension<"cl_khr_3d_image_writes">,
+      true : _Ty.Extension);
 }
 
 // OpenCL enum type (e.g. memory_scope).
@@ -367,10 +391,14 @@ def NDRange               : TypedefType<"ndrange_t">;
 // OpenCL v2.0 s6.13.11: Atomic integer and floating-point types.
 def AtomicInt             : Type<"atomic_int", QualType<"Context.getAtomicType(Context.IntTy)">>;
 def AtomicUInt            : Type<"atomic_uint", QualType<"Context.getAtomicType(Context.UnsignedIntTy)">>;
-def AtomicLong            : Type<"atomic_long", QualType<"Context.getAtomicType(Context.LongTy)">>;
-def AtomicULong           : Type<"atomic_ulong", QualType<"Context.getAtomicType(Context.UnsignedLongTy)">>;
+let Extension = Atomic64TypeExt in {
+  def AtomicLong            : Type<"atomic_long", QualType<"Context.getAtomicType(Context.LongTy)">>;
+  def AtomicULong           : Type<"atomic_ulong", QualType<"Context.getAtomicType(Context.UnsignedLongTy)">>;
+}
 def AtomicFloat           : Type<"atomic_float", QualType<"Context.getAtomicType(Context.FloatTy)">>;
-def AtomicDouble          : Type<"atomic_double", QualType<"Context.getAtomicType(Context.DoubleTy)">>;
+let Extension = AtomicFp64TypeExt in {
+  def AtomicDouble          : Type<"atomic_double", QualType<"Context.getAtomicType(Context.DoubleTy)">>;
+}
 def AtomicHalf            : Type<"atomic_half", QualType<"Context.getAtomicType(Context.HalfTy)">>;
 def AtomicIntPtr          : Type<"atomic_intptr_t", QualType<"Context.getAtomicType(Context.getIntPtrType())">>;
 def AtomicUIntPtr         : Type<"atomic_uintptr_t", QualType<"Context.getAtomicType(Context.getUIntPtrType())">>;
@@ -588,10 +616,10 @@ multiclass MathWithPointer<list<AddressSpace> addrspaces> {
   }
 }
 
-let MaxVersion = CL20 in {
+let Extension = FuncExtOpenCLCNamedAddressSpaceBuiltins in {
   defm : MathWithPointer<[GlobalAS, LocalAS, PrivateAS]>;
 }
-let MinVersion = CL20 in {
+let Extension = FuncExtOpenCLCGenericAddressSpace in {
   defm : MathWithPointer<[GenericAS]>;
 }
 
@@ -806,17 +834,17 @@ multiclass VloadVstore<list<AddressSpace> addrspaces, bit defStores> {
   foreach AS = addrspaces in {
     foreach VSize = [2, 3, 4, 8, 16] in {
       foreach name = ["vload" # VSize] in {
-        def : Builtin<name, [VectorType<Char, VSize>, Size, PointerType<ConstType<Char>, AS>]>;
-        def : Builtin<name, [VectorType<UChar, VSize>, Size, PointerType<ConstType<UChar>, AS>]>;
-        def : Builtin<name, [VectorType<Short, VSize>, Size, PointerType<ConstType<Short>, AS>]>;
-        def : Builtin<name, [VectorType<UShort, VSize>, Size, PointerType<ConstType<UShort>, AS>]>;
-        def : Builtin<name, [VectorType<Int, VSize>, Size, PointerType<ConstType<Int>, AS>]>;
-        def : Builtin<name, [VectorType<UInt, VSize>, Size, PointerType<ConstType<UInt>, AS>]>;
-        def : Builtin<name, [VectorType<Long, VSize>, Size, PointerType<ConstType<Long>, AS>]>;
-        def : Builtin<name, [VectorType<ULong, VSize>, Size, PointerType<ConstType<ULong>, AS>]>;
-        def : Builtin<name, [VectorType<Float, VSize>, Size, PointerType<ConstType<Float>, AS>]>;
-        def : Builtin<name, [VectorType<Double, VSize>, Size, PointerType<ConstType<Double>, AS>]>;
-        def : Builtin<name, [VectorType<Half, VSize>, Size, PointerType<ConstType<Half>, AS>]>;
+        def : Builtin<name, [VectorType<Char, VSize>, Size, PointerType<ConstType<Char>, AS>], Attr.Pure>;
+        def : Builtin<name, [VectorType<UChar, VSize>, Size, PointerType<ConstType<UChar>, AS>], Attr.Pure>;
+        def : Builtin<name, [VectorType<Short, VSize>, Size, PointerType<ConstType<Short>, AS>], Attr.Pure>;
+        def : Builtin<name, [VectorType<UShort, VSize>, Size, PointerType<ConstType<UShort>, AS>], Attr.Pure>;
+        def : Builtin<name, [VectorType<Int, VSize>, Size, PointerType<ConstType<Int>, AS>], Attr.Pure>;
+        def : Builtin<name, [VectorType<UInt, VSize>, Size, PointerType<ConstType<UInt>, AS>], Attr.Pure>;
+        def : Builtin<name, [VectorType<Long, VSize>, Size, PointerType<ConstType<Long>, AS>], Attr.Pure>;
+        def : Builtin<name, [VectorType<ULong, VSize>, Size, PointerType<ConstType<ULong>, AS>], Attr.Pure>;
+        def : Builtin<name, [VectorType<Float, VSize>, Size, PointerType<ConstType<Float>, AS>], Attr.Pure>;
+        def : Builtin<name, [VectorType<Double, VSize>, Size, PointerType<ConstType<Double>, AS>], Attr.Pure>;
+        def : Builtin<name, [VectorType<Half, VSize>, Size, PointerType<ConstType<Half>, AS>], Attr.Pure>;
       }
       if defStores then {
         foreach name = ["vstore" # VSize] in {
@@ -837,10 +865,10 @@ multiclass VloadVstore<list<AddressSpace> addrspaces, bit defStores> {
   }
 }
 
-let MaxVersion = CL20 in {
+let Extension = FuncExtOpenCLCNamedAddressSpaceBuiltins in {
   defm : VloadVstore<[GlobalAS, LocalAS, PrivateAS], 1>;
 }
-let MinVersion = CL20 in {
+let Extension = FuncExtOpenCLCGenericAddressSpace in {
   defm : VloadVstore<[GenericAS], 1>;
 }
 // vload with constant address space is available regardless of version.
@@ -848,10 +876,10 @@ defm : VloadVstore<[ConstantAS], 0>;
 
 multiclass VloadVstoreHalf<list<AddressSpace> addrspaces, bit defStores> {
   foreach AS = addrspaces in {
-    def : Builtin<"vload_half", [Float, Size, PointerType<ConstType<Half>, AS>]>;
+    def : Builtin<"vload_half", [Float, Size, PointerType<ConstType<Half>, AS>], Attr.Pure>;
     foreach VSize = [2, 3, 4, 8, 16] in {
       foreach name = ["vload_half" # VSize, "vloada_half" # VSize] in {
-        def : Builtin<name, [VectorType<Float, VSize>, Size, PointerType<ConstType<Half>, AS>]>;
+        def : Builtin<name, [VectorType<Float, VSize>, Size, PointerType<ConstType<Half>, AS>], Attr.Pure>;
       }
     }
     if defStores then {
@@ -871,13 +899,13 @@ multiclass VloadVstoreHalf<list<AddressSpace> addrspaces, bit defStores> {
   }
 }
 
-let MaxVersion = CL20 in {
+let Extension = FuncExtOpenCLCNamedAddressSpaceBuiltins in {
   defm : VloadVstoreHalf<[GlobalAS, LocalAS, PrivateAS], 1>;
 }
-let MinVersion = CL20 in {
+let Extension = FuncExtOpenCLCGenericAddressSpace in {
   defm : VloadVstoreHalf<[GenericAS], 1>;
 }
-// vload with constant address space is available regardless of version.
+// vload_half and vloada_half with constant address space are available regardless of version.
 defm : VloadVstoreHalf<[ConstantAS], 0>;
 
 // OpenCL v3.0 s6.15.8 - Synchronization Functions.
@@ -1036,42 +1064,61 @@ let Extension = FuncExtOpenCLCxx in {
 }
 
 // OpenCL v2.0 s6.13.11 - Atomic Functions.
-let MinVersion = CL20 in {
-  def : Builtin<"atomic_work_item_fence", [Void, MemFenceFlags, MemoryOrder, MemoryScope]>;
 
+// An atomic builtin with 2 additional _explicit variants.
+multiclass BuiltinAtomicExplicit<string Name, list<Type> Types, FunctionExtension BaseExt> {
+  // Without explicit MemoryOrder or MemoryScope.
+  let Extension = concatExtension<BaseExt, "__opencl_c_atomic_order_seq_cst __opencl_c_atomic_scope_device">.ret in {
+    def : Builtin<Name, Types>;
+  }
+
+  // With an explicit MemoryOrder argument.
+  let Extension = concatExtension<BaseExt, "__opencl_c_atomic_scope_device">.ret in {
+    def : Builtin<Name # "_explicit", !listconcat(Types, [MemoryOrder])>;
+  }
+
+  // With explicit MemoryOrder and MemoryScope arguments.
+  let Extension = BaseExt in {
+    def : Builtin<Name # "_explicit", !listconcat(Types, [MemoryOrder, MemoryScope])>;
+  }
+}
+
+// OpenCL 2.0 atomic functions that have a pointer argument in a given address space.
+multiclass OpenCL2Atomics<AddressSpace addrspace, FunctionExtension BaseExt> {
   foreach TypePair = [[AtomicInt, Int], [AtomicUInt, UInt],
                       [AtomicLong, Long], [AtomicULong, ULong],
                       [AtomicFloat, Float], [AtomicDouble, Double]] in {
-    def : Builtin<"atomic_init",
-        [Void, PointerType<VolatileType<TypePair[0]>, GenericAS>, TypePair[1]]>;
-    def : Builtin<"atomic_store",
-        [Void, PointerType<VolatileType<TypePair[0]>, GenericAS>, TypePair[1]]>;
-    def : Builtin<"atomic_store_explicit",
-        [Void, PointerType<VolatileType<TypePair[0]>, GenericAS>, TypePair[1], MemoryOrder]>;
-    def : Builtin<"atomic_store_explicit",
-        [Void, PointerType<VolatileType<TypePair[0]>, GenericAS>, TypePair[1], MemoryOrder, MemoryScope]>;
-    def : Builtin<"atomic_load",
-        [TypePair[1], PointerType<VolatileType<TypePair[0]>, GenericAS>]>;
-    def : Builtin<"atomic_load_explicit",
-        [TypePair[1], PointerType<VolatileType<TypePair[0]>, GenericAS>, MemoryOrder]>;
-    def : Builtin<"atomic_load_explicit",
-        [TypePair[1], PointerType<VolatileType<TypePair[0]>, GenericAS>, MemoryOrder, MemoryScope]>;
-    def : Builtin<"atomic_exchange",
-        [TypePair[1], PointerType<VolatileType<TypePair[0]>, GenericAS>, TypePair[1]]>;
-    def : Builtin<"atomic_exchange_explicit",
-        [TypePair[1], PointerType<VolatileType<TypePair[0]>, GenericAS>, TypePair[1], MemoryOrder]>;
-    def : Builtin<"atomic_exchange_explicit",
-        [TypePair[1], PointerType<VolatileType<TypePair[0]>, GenericAS>, TypePair[1], MemoryOrder, MemoryScope]>;
+    let Extension = BaseExt in {
+      def : Builtin<"atomic_init",
+          [Void, PointerType<VolatileType<TypePair[0]>, addrspace>, TypePair[1]]>;
+    }
+    defm : BuiltinAtomicExplicit<"atomic_store",
+        [Void, PointerType<VolatileType<TypePair[0]>, addrspace>, TypePair[1]], BaseExt>;
+    defm : BuiltinAtomicExplicit<"atomic_load",
+        [TypePair[1], PointerType<VolatileType<TypePair[0]>, addrspace>], BaseExt>;
+    defm : BuiltinAtomicExplicit<"atomic_exchange",
+        [TypePair[1], PointerType<VolatileType<TypePair[0]>, addrspace>, TypePair[1]], BaseExt>;
     foreach Variant = ["weak", "strong"] in {
-      def : Builtin<"atomic_compare_exchange_" # Variant,
-          [Bool, PointerType<VolatileType<TypePair[0]>, GenericAS>,
-           PointerType<TypePair[1], GenericAS>, TypePair[1]]>;
-      def : Builtin<"atomic_compare_exchange_" # Variant # "_explicit",
-          [Bool, PointerType<VolatileType<TypePair[0]>, GenericAS>,
-           PointerType<TypePair[1], GenericAS>, TypePair[1], MemoryOrder, MemoryOrder]>;
-      def : Builtin<"atomic_compare_exchange_" # Variant # "_explicit",
-          [Bool, PointerType<VolatileType<TypePair[0]>, GenericAS>,
-           PointerType<TypePair[1], GenericAS>, TypePair[1], MemoryOrder, MemoryOrder, MemoryScope]>;
+      foreach exp_ptr_addrspace = !cond(
+            !eq(BaseExt, FuncExtOpenCLCGenericAddressSpace): [GenericAS],
+            !eq(BaseExt, FuncExtOpenCLCNamedAddressSpaceBuiltins): [GlobalAS, LocalAS, PrivateAS])
+          in {
+        let Extension = concatExtension<BaseExt, "__opencl_c_atomic_order_seq_cst __opencl_c_atomic_scope_device">.ret in {
+          def : Builtin<"atomic_compare_exchange_" # Variant,
+              [Bool, PointerType<VolatileType<TypePair[0]>, addrspace>,
+               PointerType<TypePair[1], exp_ptr_addrspace>, TypePair[1]]>;
+        }
+        let Extension = concatExtension<BaseExt, "__opencl_c_atomic_scope_device">.ret in {
+          def : Builtin<"atomic_compare_exchange_" # Variant # "_explicit",
+              [Bool, PointerType<VolatileType<TypePair[0]>, addrspace>,
+               PointerType<TypePair[1], exp_ptr_addrspace>, TypePair[1], MemoryOrder, MemoryOrder]>;
+        }
+        let Extension = BaseExt in {
+          def : Builtin<"atomic_compare_exchange_" # Variant # "_explicit",
+              [Bool, PointerType<VolatileType<TypePair[0]>, addrspace>,
+               PointerType<TypePair[1], exp_ptr_addrspace>, TypePair[1], MemoryOrder, MemoryOrder, MemoryScope]>;
+        }
+      }
     }
   }
 
@@ -1079,249 +1126,69 @@ let MinVersion = CL20 in {
                       [AtomicLong, Long, Long], [AtomicULong, ULong, ULong],
                       [AtomicUIntPtr, UIntPtr, PtrDiff]] in {
     foreach ModOp = ["add", "sub"] in {
-      def : Builtin<"atomic_fetch_" # ModOp,
-          [TypePair[1], PointerType<VolatileType<TypePair[0]>, GenericAS>, TypePair[2]]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [TypePair[1], PointerType<VolatileType<TypePair[0]>, GenericAS>, TypePair[2], MemoryOrder]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [TypePair[1], PointerType<VolatileType<TypePair[0]>, GenericAS>, TypePair[2], MemoryOrder, MemoryScope]>;
+      defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
+          [TypePair[1], PointerType<VolatileType<TypePair[0]>, addrspace>, TypePair[2]], BaseExt>;
     }
   }
   foreach TypePair = [[AtomicInt, Int, Int], [AtomicUInt, UInt, UInt],
                       [AtomicLong, Long, Long], [AtomicULong, ULong, ULong]] in {
     foreach ModOp = ["or", "xor", "and", "min", "max"] in {
-      def : Builtin<"atomic_fetch_" # ModOp,
-          [TypePair[1], PointerType<VolatileType<TypePair[0]>, GenericAS>, TypePair[2]]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [TypePair[1], PointerType<VolatileType<TypePair[0]>, GenericAS>, TypePair[2], MemoryOrder]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [TypePair[1], PointerType<VolatileType<TypePair[0]>, GenericAS>, TypePair[2], MemoryOrder, MemoryScope]>;
+      defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
+          [TypePair[1], PointerType<VolatileType<TypePair[0]>, addrspace>, TypePair[2]], BaseExt>;
     }
   }
 
-  def : Builtin<"atomic_flag_clear",
-      [Void, PointerType<VolatileType<AtomicFlag>, GenericAS>]>;
-  def : Builtin<"atomic_flag_clear_explicit",
-      [Void, PointerType<VolatileType<AtomicFlag>, GenericAS>, MemoryOrder]>;
-  def : Builtin<"atomic_flag_clear_explicit",
-      [Void, PointerType<VolatileType<AtomicFlag>, GenericAS>, MemoryOrder, MemoryScope]>;
+  defm : BuiltinAtomicExplicit<"atomic_flag_clear",
+      [Void, PointerType<VolatileType<AtomicFlag>, addrspace>], BaseExt>;
 
-  def : Builtin<"atomic_flag_test_and_set",
-      [Bool, PointerType<VolatileType<AtomicFlag>, GenericAS>]>;
-  def : Builtin<"atomic_flag_test_and_set_explicit",
-      [Bool, PointerType<VolatileType<AtomicFlag>, GenericAS>, MemoryOrder]>;
-  def : Builtin<"atomic_flag_test_and_set_explicit",
-      [Bool, PointerType<VolatileType<AtomicFlag>, GenericAS>, MemoryOrder, MemoryScope]>;
+  defm : BuiltinAtomicExplicit<"atomic_flag_test_and_set",
+      [Bool, PointerType<VolatileType<AtomicFlag>, addrspace>], BaseExt>;
+}
+
+let MinVersion = CL20 in {
+  def : Builtin<"atomic_work_item_fence", [Void, MemFenceFlags, MemoryOrder, MemoryScope]>;
+
+  defm : OpenCL2Atomics<GenericAS, FuncExtOpenCLCGenericAddressSpace>;
+  defm : OpenCL2Atomics<GlobalAS, FuncExtOpenCLCNamedAddressSpaceBuiltins>;
+  defm : OpenCL2Atomics<LocalAS, FuncExtOpenCLCNamedAddressSpaceBuiltins>;
 }
 
 // The functionality added by cl_ext_float_atomics extension
 let MinVersion = CL20 in {
-  let Extension = FuncExtFloatAtomicsFp16GlobalLoadStore in {
-    def : Builtin<"atomic_store",
-        [Void, PointerType<VolatileType<AtomicHalf>, GlobalAS>, AtomicHalf]>;
-    def : Builtin<"atomic_store_explicit",
-        [Void, PointerType<VolatileType<AtomicHalf>, GlobalAS>, AtomicHalf, MemoryOrder]>;
-    def : Builtin<"atomic_store_explicit",
-        [Void, PointerType<VolatileType<AtomicHalf>, GlobalAS>, AtomicHalf, MemoryOrder, MemoryScope]>;
-    def : Builtin<"atomic_load",
-        [Half, PointerType<VolatileType<AtomicHalf>, GlobalAS>]>;
-    def : Builtin<"atomic_load_explicit",
-        [Half, PointerType<VolatileType<AtomicHalf>, GlobalAS>, MemoryOrder]>;
-    def : Builtin<"atomic_load_explicit",
-        [Half, PointerType<VolatileType<AtomicHalf>, GlobalAS>, MemoryOrder, MemoryScope]>;
-    def : Builtin<"atomic_exchange",
-        [Half, PointerType<VolatileType<AtomicHalf>, GlobalAS>, Half]>;
-    def : Builtin<"atomic_exchange_explicit",
-        [Half, PointerType<VolatileType<AtomicHalf>, GlobalAS>, Half, MemoryOrder]>;
-    def : Builtin<"atomic_exchange_explicit",
-        [Half, PointerType<VolatileType<AtomicHalf>, GlobalAS>, Half, MemoryOrder, MemoryScope]>;
-  }
-  let Extension = FuncExtFloatAtomicsFp16LocalLoadStore in {
-    def : Builtin<"atomic_store",
-        [Void, PointerType<VolatileType<AtomicHalf>, LocalAS>, AtomicHalf]>;
-    def : Builtin<"atomic_store_explicit",
-        [Void, PointerType<VolatileType<AtomicHalf>, LocalAS>, AtomicHalf, MemoryOrder]>;
-    def : Builtin<"atomic_store_explicit",
-        [Void, PointerType<VolatileType<AtomicHalf>, LocalAS>, AtomicHalf, MemoryOrder, MemoryScope]>;
-    def : Builtin<"atomic_load",
-        [Half, PointerType<VolatileType<AtomicHalf>, LocalAS>]>;
-    def : Builtin<"atomic_load_explicit",
-        [Half, PointerType<VolatileType<AtomicHalf>, LocalAS>, MemoryOrder]>;
-    def : Builtin<"atomic_load_explicit",
-        [Half, PointerType<VolatileType<AtomicHalf>, LocalAS>, MemoryOrder, MemoryScope]>;
-    def : Builtin<"atomic_exchange",
-        [Half, PointerType<VolatileType<AtomicHalf>, LocalAS>, Half]>;
-    def : Builtin<"atomic_exchange_explicit",
-        [Half, PointerType<VolatileType<AtomicHalf>, LocalAS>, Half, MemoryOrder]>;
-    def : Builtin<"atomic_exchange_explicit",
-        [Half, PointerType<VolatileType<AtomicHalf>, LocalAS>, Half, MemoryOrder, MemoryScope]>;
-  }
-  let Extension = FuncExtFloatAtomicsFp16GenericLoadStore in {
-    def : Builtin<"atomic_store",
-        [Void, PointerType<VolatileType<AtomicHalf>, GenericAS>, AtomicHalf]>;
-    def : Builtin<"atomic_store_explicit",
-        [Void, PointerType<VolatileType<AtomicHalf>, GenericAS>, AtomicHalf, MemoryOrder]>;
-    def : Builtin<"atomic_store_explicit",
-        [Void, PointerType<VolatileType<AtomicHalf>, GenericAS>, AtomicHalf, MemoryOrder, MemoryScope]>;
-    def : Builtin<"atomic_load",
-        [Half, PointerType<VolatileType<AtomicHalf>, GenericAS>]>;
-    def : Builtin<"atomic_load_explicit",
-        [Half, PointerType<VolatileType<AtomicHalf>, GenericAS>, MemoryOrder]>;
-    def : Builtin<"atomic_load_explicit",
-        [Half, PointerType<VolatileType<AtomicHalf>, GenericAS>, MemoryOrder, MemoryScope]>;
-    def : Builtin<"atomic_exchange",
-        [Half, PointerType<VolatileType<AtomicHalf>, GenericAS>, Half]>;
-    def : Builtin<"atomic_exchange_explicit",
-        [Half, PointerType<VolatileType<AtomicHalf>, GenericAS>, Half, MemoryOrder]>;
-    def : Builtin<"atomic_exchange_explicit",
-        [Half, PointerType<VolatileType<AtomicHalf>, GenericAS>, Half, MemoryOrder, MemoryScope]>;
-  }
-  foreach ModOp = ["add", "sub"] in {
-    let Extension = FuncExtFloatAtomicsFp16GlobalAdd in {
-      def : Builtin<"atomic_fetch_" # ModOp,
-          [Half, PointerType<VolatileType<AtomicFloat>, GlobalAS>, Half]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Half, PointerType<VolatileType<AtomicFloat>, GlobalAS>, Half, MemoryOrder]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Half, PointerType<VolatileType<AtomicFloat>, GlobalAS>, Half, MemoryOrder, MemoryScope]>;
+  foreach addrspace = [GlobalAS, LocalAS, GenericAS] in {
+    defvar extension_fp16 = !cast<FunctionExtension>("FuncExtFloatAtomicsFp16" # addrspace # "LoadStore");
+
+    defm : BuiltinAtomicExplicit<"atomic_store",
+        [Void, PointerType<VolatileType<AtomicHalf>, addrspace>, AtomicHalf], extension_fp16>;
+    defm : BuiltinAtomicExplicit<"atomic_load",
+        [Half, PointerType<VolatileType<AtomicHalf>, addrspace>], extension_fp16>;
+    defm : BuiltinAtomicExplicit<"atomic_exchange",
+        [Half, PointerType<VolatileType<AtomicHalf>, addrspace>, Half], extension_fp16>;
+
+    foreach ModOp = ["add", "sub"] in {
+      defvar extension_fp16 = !cast<FunctionExtension>("FuncExtFloatAtomicsFp16" # addrspace # "Add");
+      defvar extension_fp32 = !cast<FunctionExtension>("FuncExtFloatAtomicsFp32" # addrspace # "Add");
+      defvar extension_fp64 = !cast<FunctionExtension>("FuncExtFloatAtomicsFp64" # addrspace # "Add");
+
+      defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
+          [Half, PointerType<VolatileType<AtomicFloat>, addrspace>, Half], extension_fp16>;
+      defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
+          [Float, PointerType<VolatileType<AtomicFloat>, addrspace>, Float], extension_fp32>;
+      defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
+          [Double, PointerType<VolatileType<AtomicDouble>, addrspace>, Double], extension_fp64>;
     }
-    let Extension = FuncExtFloatAtomicsFp32GlobalAdd in {
-      def : Builtin<"atomic_fetch_" # ModOp,
-          [Float, PointerType<VolatileType<AtomicFloat>, GlobalAS>, Float]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Float, PointerType<VolatileType<AtomicFloat>, GlobalAS>, Float, MemoryOrder]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Float, PointerType<VolatileType<AtomicFloat>, GlobalAS>, Float, MemoryOrder, MemoryScope]>;
-    }
-    let Extension = FuncExtFloatAtomicsFp64GlobalAdd in {
-      def : Builtin<"atomic_fetch_" # ModOp,
-          [Double, PointerType<VolatileType<AtomicDouble>, GlobalAS>, Double]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Double, PointerType<VolatileType<AtomicDouble>, GlobalAS>, Double, MemoryOrder]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Double, PointerType<VolatileType<AtomicDouble>, GlobalAS>, Double, MemoryOrder, MemoryScope]>;
-    }
-    let Extension = FuncExtFloatAtomicsFp16LocalAdd in {
-      def : Builtin<"atomic_fetch_" # ModOp,
-          [Half, PointerType<VolatileType<AtomicFloat>, LocalAS>, Half]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Half, PointerType<VolatileType<AtomicFloat>, LocalAS>, Half, MemoryOrder]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Half, PointerType<VolatileType<AtomicFloat>, LocalAS>, Half, MemoryOrder, MemoryScope]>;
-    }
-    let Extension = FuncExtFloatAtomicsFp32LocalAdd in {
-      def : Builtin<"atomic_fetch_" # ModOp,
-          [Float, PointerType<VolatileType<AtomicFloat>, LocalAS>, Float]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Float, PointerType<VolatileType<AtomicFloat>, LocalAS>, Float, MemoryOrder]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Float, PointerType<VolatileType<AtomicFloat>, LocalAS>, Float, MemoryOrder, MemoryScope]>;
-    }
-    let Extension = FuncExtFloatAtomicsFp64LocalAdd in {
-      def : Builtin<"atomic_fetch_" # ModOp,
-          [Double, PointerType<VolatileType<AtomicDouble>, LocalAS>, Double]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Double, PointerType<VolatileType<AtomicDouble>, LocalAS>, Double, MemoryOrder]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Double, PointerType<VolatileType<AtomicDouble>, LocalAS>, Double, MemoryOrder, MemoryScope]>;
-    }
-    let Extension = FuncExtFloatAtomicsFp16GenericAdd in {
-      def : Builtin<"atomic_fetch_" # ModOp,
-          [Half, PointerType<VolatileType<AtomicFloat>, GenericAS>, Half]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Half, PointerType<VolatileType<AtomicFloat>, GenericAS>, Half, MemoryOrder]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Half, PointerType<VolatileType<AtomicFloat>, GenericAS>, Half, MemoryOrder, MemoryScope]>;
-    }
-    let Extension = FuncExtFloatAtomicsFp32GenericAdd in {
-      def : Builtin<"atomic_fetch_" # ModOp,
-          [Float, PointerType<VolatileType<AtomicFloat>, GenericAS>, Float]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Float, PointerType<VolatileType<AtomicFloat>, GenericAS>, Float, MemoryOrder]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Float, PointerType<VolatileType<AtomicFloat>, GenericAS>, Float, MemoryOrder, MemoryScope]>;
-    }
-    let Extension = FuncExtFloatAtomicsFp64GenericAdd in {
-      def : Builtin<"atomic_fetch_" # ModOp,
-          [Double, PointerType<VolatileType<AtomicDouble>, GenericAS>, Double]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Double, PointerType<VolatileType<AtomicDouble>, GenericAS>, Double, MemoryOrder]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Double, PointerType<VolatileType<AtomicDouble>, GenericAS>, Double, MemoryOrder, MemoryScope]>;
-    }
-  }
-  foreach ModOp = ["min", "max"] in {
-    let Extension = FuncExtFloatAtomicsFp16GlobalMinMax in {
-      def : Builtin<"atomic_fetch_" # ModOp,
-          [Half, PointerType<VolatileType<AtomicHalf>, GlobalAS>, Half]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Half, PointerType<VolatileType<AtomicHalf>, GlobalAS>, Half, MemoryOrder]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Half, PointerType<VolatileType<AtomicHalf>, GlobalAS>, Half, MemoryOrder, MemoryScope]>;
-    }
-    let Extension = FuncExtFloatAtomicsFp32GlobalMinMax in {
-      def : Builtin<"atomic_fetch_" # ModOp,
-          [Float, PointerType<VolatileType<AtomicFloat>, GlobalAS>, Float]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Float, PointerType<VolatileType<AtomicFloat>, GlobalAS>, Float, MemoryOrder]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Float, PointerType<VolatileType<AtomicFloat>, GlobalAS>, Float, MemoryOrder, MemoryScope]>;
-    }
-    let Extension = FuncExtFloatAtomicsFp64GlobalMinMax in {
-      def : Builtin<"atomic_fetch_" # ModOp,
-          [Double, PointerType<VolatileType<AtomicDouble>, GlobalAS>, Double]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Double, PointerType<VolatileType<AtomicDouble>, GlobalAS>, Double, MemoryOrder]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Double, PointerType<VolatileType<AtomicDouble>, GlobalAS>, Double, MemoryOrder, MemoryScope]>;
-    }
-    let Extension = FuncExtFloatAtomicsFp16LocalMinMax in {
-      def : Builtin<"atomic_fetch_" # ModOp,
-          [Half, PointerType<VolatileType<AtomicHalf>, LocalAS>, Half]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Half, PointerType<VolatileType<AtomicHalf>, LocalAS>, Half, MemoryOrder]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Half, PointerType<VolatileType<AtomicHalf>, LocalAS>, Half, MemoryOrder, MemoryScope]>;
-    }
-    let Extension = FuncExtFloatAtomicsFp32LocalMinMax in {
-      def : Builtin<"atomic_fetch_" # ModOp,
-          [Float, PointerType<VolatileType<AtomicFloat>, LocalAS>, Float]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Float, PointerType<VolatileType<AtomicFloat>, LocalAS>, Float, MemoryOrder]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Float, PointerType<VolatileType<AtomicFloat>, LocalAS>, Float, MemoryOrder, MemoryScope]>;
-    }
-    let Extension = FuncExtFloatAtomicsFp64LocalMinMax in {
-      def : Builtin<"atomic_fetch_" # ModOp,
-          [Double, PointerType<VolatileType<AtomicDouble>, LocalAS>, Double]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Double, PointerType<VolatileType<AtomicDouble>, LocalAS>, Double, MemoryOrder]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Double, PointerType<VolatileType<AtomicDouble>, LocalAS>, Double, MemoryOrder, MemoryScope]>;
-    }
-    let Extension = FuncExtFloatAtomicsFp16GenericMinMax in {
-      def : Builtin<"atomic_fetch_" # ModOp,
-          [Half, PointerType<VolatileType<AtomicHalf>, GenericAS>, Half]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Half, PointerType<VolatileType<AtomicHalf>, GenericAS>, Half, MemoryOrder]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Half, PointerType<VolatileType<AtomicHalf>, GenericAS>, Half, MemoryOrder, MemoryScope]>;
-    }
-    let Extension = FuncExtFloatAtomicsFp32GenericMinMax in {
-      def : Builtin<"atomic_fetch_" # ModOp,
-          [Float, PointerType<VolatileType<AtomicFloat>, GenericAS>, Float]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Float, PointerType<VolatileType<AtomicFloat>, GenericAS>, Float, MemoryOrder]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Float, PointerType<VolatileType<AtomicFloat>, GenericAS>, Float, MemoryOrder, MemoryScope]>;
-    }
-    let Extension = FuncExtFloatAtomicsFp64GenericMinMax in {
-      def : Builtin<"atomic_fetch_" # ModOp,
-          [Double, PointerType<VolatileType<AtomicDouble>, GenericAS>, Double]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Double, PointerType<VolatileType<AtomicDouble>, GenericAS>, Double, MemoryOrder]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Double, PointerType<VolatileType<AtomicDouble>, GenericAS>, Double, MemoryOrder, MemoryScope]>;
+
+    foreach ModOp = ["min", "max"] in {
+      defvar extension_fp16 = !cast<FunctionExtension>("FuncExtFloatAtomicsFp16" # addrspace # "MinMax");
+      defvar extension_fp32 = !cast<FunctionExtension>("FuncExtFloatAtomicsFp32" # addrspace # "MinMax");
+      defvar extension_fp64 = !cast<FunctionExtension>("FuncExtFloatAtomicsFp64" # addrspace # "MinMax");
+
+      defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
+          [Half, PointerType<VolatileType<AtomicHalf>, addrspace>, Half], extension_fp16>;
+      defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
+          [Float, PointerType<VolatileType<AtomicFloat>, addrspace>, Float], extension_fp32>;
+      defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
+          [Double, PointerType<VolatileType<AtomicDouble>, addrspace>, Double], extension_fp64>;
     }
   }
 }
@@ -1390,30 +1257,35 @@ foreach coordTy = [Int, Float] in {
 }
 
 // --- Table 23: Sampler-less Read Functions ---
+multiclass ImageReadSamplerless<string aQual> {
+  foreach imgTy = [Image2d, Image1dArray] in {
+    def : Builtin<"read_imagef", [VectorType<Float, 4>, ImageType<imgTy, aQual>, VectorType<Int, 2>], Attr.Pure>;
+    def : Builtin<"read_imagei", [VectorType<Int, 4>, ImageType<imgTy, aQual>, VectorType<Int, 2>], Attr.Pure>;
+    def : Builtin<"read_imageui", [VectorType<UInt, 4>, ImageType<imgTy, aQual>, VectorType<Int, 2>], Attr.Pure>;
+  }
+  foreach imgTy = [Image3d, Image2dArray] in {
+    def : Builtin<"read_imagef", [VectorType<Float, 4>, ImageType<imgTy, aQual>, VectorType<Int, 4>], Attr.Pure>;
+    def : Builtin<"read_imagei", [VectorType<Int, 4>, ImageType<imgTy, aQual>, VectorType<Int, 4>], Attr.Pure>;
+    def : Builtin<"read_imageui", [VectorType<UInt, 4>, ImageType<imgTy, aQual>, VectorType<Int, 4>], Attr.Pure>;
+  }
+  foreach imgTy = [Image1d, Image1dBuffer] in {
+    def : Builtin<"read_imagef", [VectorType<Float, 4>, ImageType<imgTy, aQual>, Int], Attr.Pure>;
+    def : Builtin<"read_imagei", [VectorType<Int, 4>, ImageType<imgTy, aQual>, Int], Attr.Pure>;
+    def : Builtin<"read_imageui", [VectorType<UInt, 4>, ImageType<imgTy, aQual>, Int], Attr.Pure>;
+  }
+  def : Builtin<"read_imagef", [Float, ImageType<Image2dDepth, aQual>, VectorType<Int, 2>], Attr.Pure>;
+  def : Builtin<"read_imagef", [Float, ImageType<Image2dArrayDepth, aQual>, VectorType<Int, 4>], Attr.Pure>;
+}
+
 let MinVersion = CL12 in {
-  foreach aQual = ["RO", "RW"] in {
-    foreach imgTy = [Image2d, Image1dArray] in {
-      def : Builtin<"read_imagef", [VectorType<Float, 4>, ImageType<imgTy, aQual>, VectorType<Int, 2>], Attr.Pure>;
-      def : Builtin<"read_imagei", [VectorType<Int, 4>, ImageType<imgTy, aQual>, VectorType<Int, 2>], Attr.Pure>;
-      def : Builtin<"read_imageui", [VectorType<UInt, 4>, ImageType<imgTy, aQual>, VectorType<Int, 2>], Attr.Pure>;
-    }
-    foreach imgTy = [Image3d, Image2dArray] in {
-      def : Builtin<"read_imagef", [VectorType<Float, 4>, ImageType<imgTy, aQual>, VectorType<Int, 4>], Attr.Pure>;
-      def : Builtin<"read_imagei", [VectorType<Int, 4>, ImageType<imgTy, aQual>, VectorType<Int, 4>], Attr.Pure>;
-      def : Builtin<"read_imageui", [VectorType<UInt, 4>, ImageType<imgTy, aQual>, VectorType<Int, 4>], Attr.Pure>;
-    }
-    foreach imgTy = [Image1d, Image1dBuffer] in {
-      def : Builtin<"read_imagef", [VectorType<Float, 4>, ImageType<imgTy, aQual>, Int], Attr.Pure>;
-      def : Builtin<"read_imagei", [VectorType<Int, 4>, ImageType<imgTy, aQual>, Int], Attr.Pure>;
-      def : Builtin<"read_imageui", [VectorType<UInt, 4>, ImageType<imgTy, aQual>, Int], Attr.Pure>;
-    }
-    def : Builtin<"read_imagef", [Float, ImageType<Image2dDepth, aQual>, VectorType<Int, 2>], Attr.Pure>;
-    def : Builtin<"read_imagef", [Float, ImageType<Image2dArrayDepth, aQual>, VectorType<Int, 4>], Attr.Pure>;
+  defm : ImageReadSamplerless<"RO">;
+  let Extension = FuncExtOpenCLCReadWriteImages in {
+    defm : ImageReadSamplerless<"RW">;
   }
 }
 
 // --- Table 24: Image Write Functions ---
-foreach aQual = ["WO", "RW"] in {
+multiclass ImageWrite<string aQual> {
   foreach imgTy = [Image2d] in {
     def : Builtin<"write_imagef", [Void, ImageType<imgTy, aQual>, VectorType<Int, 2>, VectorType<Float, 4>]>;
     def : Builtin<"write_imagei", [Void, ImageType<imgTy, aQual>, VectorType<Int, 2>, VectorType<Int, 4>]>;
@@ -1443,8 +1315,13 @@ foreach aQual = ["WO", "RW"] in {
   def : Builtin<"write_imagef", [Void, ImageType<Image2dArrayDepth, aQual>, VectorType<Int, 4>, Float]>;
 }
 
+defm : ImageWrite<"WO">;
+let Extension = FuncExtOpenCLCReadWriteImages in {
+  defm : ImageWrite<"RW">;
+}
+
 // --- Table 25: Image Query Functions ---
-foreach aQual = ["RO", "WO", "RW"] in {
+multiclass ImageQuery<string aQual> {
   foreach imgTy = [Image1d, Image1dBuffer, Image2d, Image3d,
                    Image1dArray, Image2dArray, Image2dDepth,
                    Image2dArrayDepth] in {
@@ -1468,6 +1345,12 @@ foreach aQual = ["RO", "WO", "RW"] in {
   }
 }
 
+defm : ImageQuery<"RO">;
+defm : ImageQuery<"WO">;
+let Extension = FuncExtOpenCLCReadWriteImages in {
+  defm : ImageQuery<"RW">;
+}
+
 // OpenCL extension v2.0 s5.1.9: Built-in Image Read Functions
 // --- Table 8 ---
 foreach aQual = ["RO"] in {
@@ -1488,7 +1371,7 @@ foreach aQual = ["RO"] in {
 // OpenCL extension v2.0 s5.1.10: Built-in Image Sampler-less Read Functions
 // --- Table 9 ---
 let MinVersion = CL12 in {
-  foreach aQual = ["RO", "RW"] in {
+  multiclass ImageReadHalf<string aQual> {
     foreach name = ["read_imageh"] in {
       foreach imgTy = [Image2d, Image1dArray] in {
         def : Builtin<name, [VectorType<Half, 4>, ImageType<imgTy, aQual>, VectorType<Int, 2>], Attr.Pure>;
@@ -1501,10 +1384,14 @@ let MinVersion = CL12 in {
       }
     }
   }
+  defm : ImageReadHalf<"RO">;
+  let Extension = FuncExtOpenCLCReadWriteImages in {
+    defm : ImageReadHalf<"RW">;
+  }
 }
 // OpenCL extension v2.0 s5.1.11: Built-in Image Write Functions
 // --- Table 10 ---
-foreach aQual = ["WO", "RW"] in {
+multiclass ImageWriteHalf<string aQual> {
   foreach name = ["write_imageh"] in {
     def : Builtin<name, [Void, ImageType<Image2d, aQual>, VectorType<Int, 2>, VectorType<Half, 4>]>;
     def : Builtin<name, [Void, ImageType<Image2dArray, aQual>, VectorType<Int, 4>, VectorType<Half, 4>]>;
@@ -1514,6 +1401,12 @@ foreach aQual = ["WO", "RW"] in {
     def : Builtin<name, [Void, ImageType<Image3d, aQual>, VectorType<Int, 4>, VectorType<Half, 4>]>;
   }
 }
+
+defm : ImageWriteHalf<"WO">;
+let Extension = FuncExtOpenCLCReadWriteImages in {
+  defm : ImageWriteHalf<"RW">;
+}
+
 
 
 //--------------------------------------------------------------------
@@ -1688,12 +1581,22 @@ let Extension = FuncExtKhrMipmapImage in {
       }
     }
   }
-  // Added to section 6.13.14.5
-  foreach aQual = ["RO", "WO", "RW"] in {
-    foreach imgTy = [Image1d, Image2d, Image3d, Image1dArray, Image2dArray, Image2dDepth, Image2dArrayDepth] in {
-      def : Builtin<"get_image_num_mip_levels", [Int, ImageType<imgTy, aQual>]>;
-    }
+}
+
+// Added to section 6.13.14.5
+multiclass ImageQueryNumMipLevels<string aQual> {
+  foreach imgTy = [Image1d, Image2d, Image3d, Image1dArray, Image2dArray, Image2dDepth, Image2dArrayDepth] in {
+    def : Builtin<"get_image_num_mip_levels", [Int, ImageType<imgTy, aQual>]>;
   }
+}
+
+let Extension = FuncExtKhrMipmapImage in {
+  defm : ImageQueryNumMipLevels<"RO">;
+  defm : ImageQueryNumMipLevels<"WO">;
+}
+
+let Extension = FuncExtKhrMipmapImageReadWrite in {
+  defm : ImageQueryNumMipLevels<"RW">;
 }
 
 // Write functions are enabled using a separate extension.
@@ -1722,51 +1625,58 @@ let Extension = FuncExtKhrMipmapImageWrites in {
       def : Builtin<"write_imageui", [Void, ImageType<imgTy, aQual>, VectorType<Int, 4>, Int, VectorType<UInt, 4>]>;
     }
     def : Builtin<"write_imagef", [Void, ImageType<Image2dArrayDepth, aQual>, VectorType<Int, 4>, Int, Float]>;
-    let Extension = FuncExtKhrMipmapWritesAndWrite3d in {
-      foreach imgTy = [Image3d] in {
-        def : Builtin<"write_imagef", [Void, ImageType<imgTy, aQual>, VectorType<Int, 4>, Int, VectorType<Float, 4>]>;
-        def : Builtin<"write_imagei", [Void, ImageType<imgTy, aQual>, VectorType<Int, 4>, Int, VectorType<Int, 4>]>;
-        def : Builtin<"write_imageui", [Void, ImageType<imgTy, aQual>, VectorType<Int, 4>, Int, VectorType<UInt, 4>]>;
-      }
+    foreach imgTy = [Image3d] in {
+      def : Builtin<"write_imagef", [Void, ImageType<imgTy, aQual>, VectorType<Int, 4>, Int, VectorType<Float, 4>]>;
+      def : Builtin<"write_imagei", [Void, ImageType<imgTy, aQual>, VectorType<Int, 4>, Int, VectorType<Int, 4>]>;
+      def : Builtin<"write_imageui", [Void, ImageType<imgTy, aQual>, VectorType<Int, 4>, Int, VectorType<UInt, 4>]>;
     }
   }
 }
 
 //--------------------------------------------------------------------
 // OpenCL Extension v2.0 s18.3 - Creating OpenCL Memory Objects from OpenGL MSAA Textures
-let Extension = FuncExtKhrGlMsaaSharing in {
-  // --- Table 6.13.14.3 ---
-  foreach aQual = ["RO", "RW"] in {
-    foreach imgTy = [Image2dMsaa] in {
-      def : Builtin<"read_imagef", [VectorType<Float, 4>, ImageType<imgTy, aQual>, VectorType<Int, 2>, Int], Attr.Pure>;
-      def : Builtin<"read_imagei", [VectorType<Int, 4>, ImageType<imgTy, aQual>, VectorType<Int, 2>, Int], Attr.Pure>;
-      def : Builtin<"read_imageui", [VectorType<UInt, 4>, ImageType<imgTy, aQual>, VectorType<Int, 2>, Int], Attr.Pure>;
-    }
-    foreach imgTy = [Image2dArrayMsaa] in {
-      def : Builtin<"read_imagef", [VectorType<Float, 4>, ImageType<imgTy, aQual>, VectorType<Int, 4>, Int], Attr.Pure>;
-      def : Builtin<"read_imagei", [VectorType<Int, 4>, ImageType<imgTy, aQual>, VectorType<Int, 4>, Int], Attr.Pure>;
-      def : Builtin<"read_imageui", [VectorType<UInt, 4>, ImageType<imgTy, aQual>, VectorType<Int, 4>, Int], Attr.Pure>;
-    }
-    foreach name = ["read_imagef"] in {
-      def : Builtin<name, [Float, ImageType<Image2dMsaaDepth, aQual>, VectorType<Int, 2>, Int], Attr.Pure>;
-      def : Builtin<name, [Float, ImageType<Image2dArrayMsaaDepth, aQual>, VectorType<Int, 4>, Int], Attr.Pure>;
-    }
+// --- Table 6.13.14.3 ---
+multiclass ImageReadMsaa<string aQual> {
+  foreach imgTy = [Image2dMsaa] in {
+    def : Builtin<"read_imagef", [VectorType<Float, 4>, ImageType<imgTy, aQual>, VectorType<Int, 2>, Int], Attr.Pure>;
+    def : Builtin<"read_imagei", [VectorType<Int, 4>, ImageType<imgTy, aQual>, VectorType<Int, 2>, Int], Attr.Pure>;
+    def : Builtin<"read_imageui", [VectorType<UInt, 4>, ImageType<imgTy, aQual>, VectorType<Int, 2>, Int], Attr.Pure>;
   }
+  foreach imgTy = [Image2dArrayMsaa] in {
+    def : Builtin<"read_imagef", [VectorType<Float, 4>, ImageType<imgTy, aQual>, VectorType<Int, 4>, Int], Attr.Pure>;
+    def : Builtin<"read_imagei", [VectorType<Int, 4>, ImageType<imgTy, aQual>, VectorType<Int, 4>, Int], Attr.Pure>;
+    def : Builtin<"read_imageui", [VectorType<UInt, 4>, ImageType<imgTy, aQual>, VectorType<Int, 4>, Int], Attr.Pure>;
+  }
+  foreach name = ["read_imagef"] in {
+    def : Builtin<name, [Float, ImageType<Image2dMsaaDepth, aQual>, VectorType<Int, 2>, Int], Attr.Pure>;
+    def : Builtin<name, [Float, ImageType<Image2dArrayMsaaDepth, aQual>, VectorType<Int, 4>, Int], Attr.Pure>;
+  }
+}
 
-  // --- Table 6.13.14.5 ---
-  foreach aQual = ["RO", "WO", "RW"] in {
-    foreach imgTy = [Image2dMsaa, Image2dArrayMsaa, Image2dMsaaDepth, Image2dArrayMsaaDepth] in {
-      foreach name = ["get_image_width", "get_image_height",
-                      "get_image_channel_data_type", "get_image_channel_order",
-                      "get_image_num_samples"] in {
-        def : Builtin<name, [Int, ImageType<imgTy, aQual>], Attr.Const>;
-      }
-      def : Builtin<"get_image_dim", [VectorType<Int, 2>, ImageType<imgTy, aQual>], Attr.Const>;
+// --- Table 6.13.14.5 ---
+multiclass ImageQueryMsaa<string aQual> {
+  foreach imgTy = [Image2dMsaa, Image2dArrayMsaa, Image2dMsaaDepth, Image2dArrayMsaaDepth] in {
+    foreach name = ["get_image_width", "get_image_height",
+                    "get_image_channel_data_type", "get_image_channel_order",
+                    "get_image_num_samples"] in {
+      def : Builtin<name, [Int, ImageType<imgTy, aQual>], Attr.Const>;
     }
-    foreach imgTy = [Image2dArrayMsaa, Image2dArrayMsaaDepth] in {
-      def : Builtin<"get_image_array_size", [Size, ImageType<imgTy, aQual>], Attr.Const>;
-    }
+    def : Builtin<"get_image_dim", [VectorType<Int, 2>, ImageType<imgTy, aQual>], Attr.Const>;
   }
+  foreach imgTy = [Image2dArrayMsaa, Image2dArrayMsaaDepth] in {
+    def : Builtin<"get_image_array_size", [Size, ImageType<imgTy, aQual>], Attr.Const>;
+  }
+}
+
+let Extension = FuncExtKhrGlMsaaSharing in {
+  defm : ImageReadMsaa<"RO">;
+  defm : ImageQueryMsaa<"RO">;
+  defm : ImageQueryMsaa<"WO">;
+}
+
+let Extension = FuncExtKhrGlMsaaSharingReadWrite in {
+  defm : ImageReadMsaa<"RW">;
+  defm : ImageQueryMsaa<"RW">;
 }
 
 //--------------------------------------------------------------------

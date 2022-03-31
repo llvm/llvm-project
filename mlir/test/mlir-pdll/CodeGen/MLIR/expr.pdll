@@ -1,0 +1,111 @@
+// RUN: mlir-pdll %s -I %S -I %S/../../../../include -split-input-file -x mlir | FileCheck %s
+
+//===----------------------------------------------------------------------===//
+// AttributeExpr
+//===----------------------------------------------------------------------===//
+
+// CHECK: pdl.pattern @AttrExpr
+// CHECK: %[[ATTR:.*]] = attribute 10
+// CHECK: operation({{.*}}) {"attr" = %[[ATTR]]}
+Pattern AttrExpr => erase op<> { attr = attr<"10"> };
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// CallExpr
+//===----------------------------------------------------------------------===//
+
+// CHECK: pdl.pattern @TestCallWithArgsAndReturn
+// CHECK: %[[ROOT:.*]] = operation
+// CHECK: rewrite %[[ROOT]]
+// CHECK: %[[REPL_OP:.*]] = operation "test.op"
+// CHECK: %[[RESULTS:.*]] = results of %[[REPL_OP]]
+// CHECK: replace %[[ROOT]] with(%[[RESULTS]] : !pdl.range<value>)
+Rewrite TestRewrite(root: Op) -> ValueRange => root;
+Pattern TestCallWithArgsAndReturn => replace root: Op with TestRewrite(op<test.op>);
+
+// -----
+
+// CHECK: pdl.pattern @TestExternalCall
+// CHECK: %[[ROOT:.*]] = operation
+// CHECK: rewrite %[[ROOT]]
+// CHECK: %[[RESULTS:.*]] = apply_native_rewrite "TestRewrite"(%[[ROOT]] : !pdl.operation) : !pdl.range<value>
+// CHECK: replace %[[ROOT]] with(%[[RESULTS]] : !pdl.range<value>)
+Rewrite TestRewrite(op: Op) -> ValueRange;
+Pattern TestExternalCall => replace root: Op with TestRewrite(root);
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// MemberAccessExpr
+//===----------------------------------------------------------------------===//
+
+// Handle implicit "all" operation results access.
+// CHECK: pdl.pattern @OpAllResultMemberAccess
+// CHECK: %[[OP0:.*]] = operation
+// CHECK: %[[OP0_RES:.*]] = result 0 of %[[OP0]]
+// CHECK: %[[OP1:.*]] = operation
+// CHECK: %[[OP1_RES:.*]] = results of %[[OP1]]
+// CHECK: operation(%[[OP0_RES]], %[[OP1_RES]] : !pdl.value, !pdl.range<value>)
+Pattern OpAllResultMemberAccess {
+  let singleVar: Value = op<>;
+  let rangeVar: ValueRange = op<>;
+  erase op<>(singleVar, rangeVar);
+}
+
+// -----
+
+// Handle implicit "named" operation results access.
+
+#include "include/ops.td"
+
+// CHECK: pdl.pattern @OpResultMemberAccess
+// CHECK: %[[OP0:.*]] = operation
+// CHECK: %[[RES:.*]] = results 0 of %[[OP0]] -> !pdl.value
+// CHECK: %[[RES1:.*]] = results 0 of %[[OP0]] -> !pdl.value
+// CHECK: %[[RES2:.*]] = results 1 of %[[OP0]] -> !pdl.range<value>
+// CHECK: %[[RES3:.*]] = results 1 of %[[OP0]] -> !pdl.range<value>
+// CHECK: operation(%[[RES]], %[[RES1]], %[[RES2]], %[[RES3]] : !pdl.value, !pdl.value, !pdl.range<value>, !pdl.range<value>)
+Pattern OpResultMemberAccess {
+  let op: Op<test.with_results>;
+  erase op<>(op.0, op.result, op.1, op.var_result);
+}
+
+// -----
+
+// CHECK: pdl.pattern @TupleMemberAccessNumber
+// CHECK: %[[FIRST:.*]] = operation "test.first"
+// CHECK: %[[SECOND:.*]] = operation "test.second"
+// CHECK: rewrite %[[FIRST]] {
+// CHECK:   replace %[[FIRST]] with %[[SECOND]]
+Pattern TupleMemberAccessNumber {
+  let firstOp = op<test.first>;
+  let secondOp = op<test.second>(firstOp);
+  let tuple = (firstOp, secondOp);
+  replace tuple.0 with tuple.1;
+}
+
+// -----
+
+// CHECK: pdl.pattern @TupleMemberAccessName
+// CHECK: %[[FIRST:.*]] = operation "test.first"
+// CHECK: %[[SECOND:.*]] = operation "test.second"
+// CHECK: rewrite %[[FIRST]] {
+// CHECK:   replace %[[FIRST]] with %[[SECOND]]
+Pattern TupleMemberAccessName {
+  let firstOp = op<test.first>;
+  let secondOp = op<test.second>(firstOp);
+  let tuple = (first = firstOp, second = secondOp);
+  replace tuple.first with tuple.second;
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// TypeExpr
+//===----------------------------------------------------------------------===//
+
+// CHECK: pdl.pattern @TypeExpr
+// CHECK: %[[TYPE:.*]] = type : i32
+// CHECK: operation({{.*}}) -> (%[[TYPE]] : !pdl.type)
+Pattern TypeExpr => erase op<> -> (type<"i32">);

@@ -5,6 +5,7 @@
 // RUN: %clang_cc1 -triple=x86_64-unknown-linux-gnu -DPOSSIBLE_X -emit-llvm %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-X
 // RUN: not %clang_cc1 -triple=x86_64-unknown-linux-gnu -DIMPOSSIBLE_X -emit-llvm %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-IMPOSSIBLE_X
 // RUN: not %clang_cc1 -triple=x86_64-unknown-linux-gnu -DIMPOSSIBLE_9BYTES -emit-llvm %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-IMPOSSIBLE_9BYTES
+// RUN: not %clang_cc1 -triple=x86_64-unknown-linux-gnu -DIMPOSSIBLE_9BYTES_V2 -emit-llvm %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-IMPOSSIBLE_9BYTES_V2
 
 // Make sure Clang doesn't treat |lockval| as asm input.
 void _raw_spin_lock(void) {
@@ -73,7 +74,7 @@ void big_struct(void) {
 // CHECK-IMPOSSIBLE_BIG: impossible constraint in asm: can't store value into a register
 
 // Clang is able to emit LLVM IR for an 16-byte structure.
-void x_constraint_fit() {
+void x_constraint_fit(void) {
 #ifdef POSSIBLE_X
   struct S {
     unsigned x[4];
@@ -90,7 +91,7 @@ void x_constraint_fit() {
 // CHECK-X: ret
 
 // Clang is unable to emit LLVM IR for a 32-byte structure.
-void x_constraint_nofit() {
+void x_constraint_nofit(void) {
 #ifdef IMPOSSIBLE_X
   struct S {
     unsigned x[8];
@@ -106,7 +107,7 @@ void x_constraint_nofit() {
 // Clang used to report the following message:
 //   "impossible constraint in asm: can't store struct into a register"
 // for the assembly directive below, although there's no struct.
-void crbug_999160_regtest() {
+void crbug_999160_regtest(void) {
 #ifdef IMPOSSIBLE_9BYTES
   char buf[9];
   asm(""
@@ -115,3 +116,11 @@ void crbug_999160_regtest() {
 }
 
 // CHECK-IMPOSSIBLE_9BYTES: impossible constraint in asm: can't store value into a register
+
+void crbug_999160_regtest_v2(void) {
+#ifdef IMPOSSIBLE_9BYTES_V2
+  char buf[9];
+  asm("" : "=r"(buf) : "0"(buf));
+#endif
+}
+// CHECK-IMPOSSIBLE_9BYTES_V2: impossible constraint in asm: can't store value into a register

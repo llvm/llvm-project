@@ -10,13 +10,11 @@
 #define LLVM_CLANG_FRONTEND_FRONTENDACTIONS_H
 
 #include "clang/Frontend/FrontendAction.h"
+#include <memory>
 #include <string>
 #include <vector>
 
 namespace clang {
-
-class Module;
-class FileEntry;
 
 //===----------------------------------------------------------------------===//
 // Custom Consumer Actions
@@ -164,6 +162,15 @@ class GenerateHeaderModuleAction : public GenerateModuleAction {
 
 private:
   bool PrepareToExecuteAction(CompilerInstance &CI) override;
+  bool BeginSourceFileAction(CompilerInstance &CI) override;
+
+  std::unique_ptr<raw_pwrite_stream>
+  CreateOutputFile(CompilerInstance &CI, StringRef InFile) override;
+};
+
+class GenerateHeaderUnitAction : public GenerateModuleAction {
+
+private:
   bool BeginSourceFileAction(CompilerInstance &CI) override;
 
   std::unique_ptr<raw_pwrite_stream>

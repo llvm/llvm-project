@@ -9,49 +9,44 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFCONTEXT_H
 #define LLVM_DEBUGINFO_DWARF_DWARFCONTEXT_H
 
-#include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/DebugInfo/DIContext.h"
-#include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
-#include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
-#include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
-#include "llvm/DebugInfo/DWARF/DWARFDebugAranges.h"
-#include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
-#include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
-#include "llvm/DebugInfo/DWARF/DWARFDebugMacro.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
-#include "llvm/DebugInfo/DWARF/DWARFGdbIndex.h"
 #include "llvm/DebugInfo/DWARF/DWARFObject.h"
-#include "llvm/DebugInfo/DWARF/DWARFSection.h"
-#include "llvm/DebugInfo/DWARF/DWARFTypeUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
-#include "llvm/DebugInfo/DWARF/DWARFUnitIndex.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Host.h"
 #include <cstdint>
-#include <deque>
-#include <map>
 #include <memory>
 
 namespace llvm {
 
 class MCRegisterInfo;
 class MemoryBuffer;
-class raw_ostream;
+class AppleAcceleratorTable;
+class DWARFCompileUnit;
+class DWARFDebugAbbrev;
+class DWARFDebugAranges;
+class DWARFDebugFrame;
+class DWARFDebugLoc;
+class DWARFDebugMacro;
+class DWARFDebugNames;
+class DWARFGdbIndex;
+class DWARFTypeUnit;
+class DWARFUnitIndex;
 
 /// DWARFContext
 /// This data structure is the top level entity that deals with dwarf debug
 /// information parsing. The actual data is supplied through DWARFObj.
 class DWARFContext : public DIContext {
   DWARFUnitVector NormalUnits;
+  Optional<DenseMap<uint64_t, DWARFTypeUnit*>> NormalTypeUnits;
   std::unique_ptr<DWARFUnitIndex> CUIndex;
   std::unique_ptr<DWARFGdbIndex> GdbIndex;
   std::unique_ptr<DWARFUnitIndex> TUIndex;
@@ -70,6 +65,7 @@ class DWARFContext : public DIContext {
   std::unique_ptr<AppleAcceleratorTable> AppleObjC;
 
   DWARFUnitVector DWOUnits;
+  Optional<DenseMap<uint64_t, DWARFTypeUnit*>> DWOTypeUnits;
   std::unique_ptr<DWARFDebugAbbrev> AbbrevDWO;
   std::unique_ptr<DWARFDebugMacro> MacinfoDWO;
   std::unique_ptr<DWARFDebugMacro> MacroDWO;
@@ -122,7 +118,7 @@ public:
                    WithColor::defaultErrorHandler,
                std::function<void(Error)> WarningHandler =
                    WithColor::defaultWarningHandler);
-  ~DWARFContext();
+  ~DWARFContext() override;
 
   DWARFContext(DWARFContext &) = delete;
   DWARFContext &operator=(DWARFContext &) = delete;
@@ -187,6 +183,11 @@ public:
     parseDWOUnits();
     return unit_iterator_range(DWOUnits.begin(),
                                DWOUnits.begin() + DWOUnits.getNumInfoUnits());
+  }
+
+  const DWARFUnitVector &getDWOUnitsVector() {
+    parseDWOUnits();
+    return DWOUnits;
   }
 
   /// Get units from .debug_types.dwo in the DWO context.

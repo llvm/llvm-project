@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
 
@@ -88,7 +87,7 @@ struct TestPrintNestingPass
     return llvm::outs();
   }
 };
-} // end anonymous namespace
+} // namespace
 
 namespace mlir {
 void registerTestPrintNestingPass() {

@@ -38,7 +38,7 @@ private:
   void dumpChildren(raw_ostream &OS, StringRef Label, PDB_SymType ChildType,
                     int Indent) const;
 };
+} // namespace pdb
 } // namespace llvm
-}
 
 #endif // LLVM_DEBUGINFO_PDB_PDBSYMBOLEXE_H

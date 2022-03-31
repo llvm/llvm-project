@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // constexpr auto size() const requires see below;
@@ -65,7 +64,8 @@ constexpr bool test() {
   }
   {
     const std::ranges::iota_view<int, int> io(0, std::numeric_limits<int>::max());
-    assert(io.size() == std::numeric_limits<int>::max());
+    constexpr auto imax = std::numeric_limits<int>::max();
+    assert(io.size() == imax);
   }
 
   // Neither are integer like.

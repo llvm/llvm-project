@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple x86_64-unknown-unknown -emit-llvm -o - %s | FileCheck %s
 
 // Basic base class test.
 struct f0_s0 { unsigned a; };

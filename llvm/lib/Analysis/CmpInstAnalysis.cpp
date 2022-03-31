@@ -18,9 +18,7 @@
 
 using namespace llvm;
 
-unsigned llvm::getICmpCode(const ICmpInst *ICI, bool InvertPred) {
-  ICmpInst::Predicate Pred = InvertPred ? ICI->getInversePredicate()
-                                        : ICI->getPredicate();
+unsigned llvm::getICmpCode(CmpInst::Predicate Pred) {
   switch (Pred) {
       // False -> 0
     case ICmpInst::ICMP_UGT: return 1;  // 001
@@ -61,6 +59,18 @@ bool llvm::predicatesFoldable(ICmpInst::Predicate P1, ICmpInst::Predicate P2) {
   return (CmpInst::isSigned(P1) == CmpInst::isSigned(P2)) ||
          (CmpInst::isSigned(P1) && ICmpInst::isEquality(P2)) ||
          (CmpInst::isSigned(P2) && ICmpInst::isEquality(P1));
+}
+
+Constant *llvm::getPredForFCmpCode(unsigned Code, Type *OpTy,
+                                   CmpInst::Predicate &Pred) {
+  Pred = static_cast<FCmpInst::Predicate>(Code);
+  assert(FCmpInst::FCMP_FALSE <= Pred && Pred <= FCmpInst::FCMP_TRUE &&
+         "Unexpected FCmp predicate!");
+  if (Pred == FCmpInst::FCMP_FALSE)
+    return ConstantInt::get(CmpInst::makeCmpResultType(OpTy), 0);
+  if (Pred == FCmpInst::FCMP_TRUE)
+    return ConstantInt::get(CmpInst::makeCmpResultType(OpTy), 1);
+  return nullptr;
 }
 
 bool llvm::decomposeBitTestICmp(Value *LHS, Value *RHS,

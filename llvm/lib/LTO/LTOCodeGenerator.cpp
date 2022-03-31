@@ -132,12 +132,11 @@ LTOCodeGenerator::LTOCodeGenerator(LLVMContext &Context)
   };
 }
 
-LTOCodeGenerator::~LTOCodeGenerator() {}
+LTOCodeGenerator::~LTOCodeGenerator() = default;
 
 void LTOCodeGenerator::setAsmUndefinedRefs(LTOModule *Mod) {
-  const std::vector<StringRef> &undefs = Mod->getAsmUndefinedRefs();
-  for (int i = 0, e = undefs.size(); i != e; ++i)
-    AsmUndefinedRefs.insert(undefs[i]);
+  for (const StringRef &Undef : Mod->getAsmUndefinedRefs())
+    AsmUndefinedRefs.insert(Undef);
 }
 
 bool LTOCodeGenerator::addModule(LTOModule *Mod) {

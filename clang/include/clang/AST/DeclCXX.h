@@ -64,7 +64,6 @@ class CXXFinalOverriderMap;
 class CXXIndirectPrimaryBaseSet;
 class CXXMethodDecl;
 class DecompositionDecl;
-class DiagnosticBuilder;
 class FriendDecl;
 class FunctionTemplateDecl;
 class IdentifierInfo;
@@ -276,6 +275,14 @@ class CXXRecordDecl : public RecordDecl {
     SMF_All = 0x3f
   };
 
+public:
+  enum LambdaDependencyKind {
+    LDK_Unknown = 0,
+    LDK_AlwaysDependent,
+    LDK_NeverDependent,
+  };
+
+private:
   struct DefinitionData {
     #define FIELD(Name, Width, Merge) \
     unsigned Name : Width;
@@ -375,7 +382,7 @@ class CXXRecordDecl : public RecordDecl {
     /// lambda will have been created with the enclosing context as its
     /// declaration context, rather than function. This is an unfortunate
     /// artifact of having to parse the default arguments before.
-    unsigned Dependent : 1;
+    unsigned DependencyKind : 2;
 
     /// Whether this lambda is a generic lambda.
     unsigned IsGenericLambda : 1;
@@ -409,9 +416,9 @@ class CXXRecordDecl : public RecordDecl {
     /// The type of the call method.
     TypeSourceInfo *MethodTyInfo;
 
-    LambdaDefinitionData(CXXRecordDecl *D, TypeSourceInfo *Info, bool Dependent,
+    LambdaDefinitionData(CXXRecordDecl *D, TypeSourceInfo *Info, unsigned DK,
                          bool IsGeneric, LambdaCaptureDefault CaptureDefault)
-        : DefinitionData(D), Dependent(Dependent), IsGenericLambda(IsGeneric),
+        : DefinitionData(D), DependencyKind(DK), IsGenericLambda(IsGeneric),
           CaptureDefault(CaptureDefault), NumCaptures(0),
           NumExplicitCaptures(0), HasKnownInternalLinkage(0), ManglingNumber(0),
           MethodTyInfo(Info) {
@@ -548,7 +555,7 @@ public:
                                bool DelayTypeCreation = false);
   static CXXRecordDecl *CreateLambda(const ASTContext &C, DeclContext *DC,
                                      TypeSourceInfo *Info, SourceLocation Loc,
-                                     bool DependentLambda, bool IsGeneric,
+                                     unsigned DependencyKind, bool IsGeneric,
                                      LambdaCaptureDefault CaptureDefault);
   static CXXRecordDecl *CreateDeserialized(const ASTContext &C, unsigned ID);
 
@@ -1139,6 +1146,9 @@ public:
   ///
   /// \note This does NOT include a check for union-ness.
   bool isEmpty() const { return data().Empty; }
+
+  void setInitMethod(bool Val) { data().HasInitMethod = Val; }
+  bool hasInitMethod() const { return data().HasInitMethod; }
 
   bool hasPrivateFields() const {
     return data().HasPrivateFields;
@@ -1772,7 +1782,17 @@ public:
   /// function declaration itself is dependent. This flag indicates when we
   /// know that the lambda is dependent despite that.
   bool isDependentLambda() const {
-    return isLambda() && getLambdaData().Dependent;
+    return isLambda() && getLambdaData().DependencyKind == LDK_AlwaysDependent;
+  }
+
+  bool isNeverDependentLambda() const {
+    return isLambda() && getLambdaData().DependencyKind == LDK_NeverDependent;
+  }
+
+  unsigned getLambdaDependencyKind() const {
+    if (!isLambda())
+      return LDK_Unknown;
+    return getLambdaData().DependencyKind;
   }
 
   TypeSourceInfo *getLambdaTypeInfo() const {
@@ -3291,7 +3311,7 @@ class BaseUsingDecl : public NamedDecl {
 
 protected:
   BaseUsingDecl(Kind DK, DeclContext *DC, SourceLocation L, DeclarationName N)
-      : NamedDecl(DK, DC, L, N), FirstUsingShadow(nullptr, 0) {}
+      : NamedDecl(DK, DC, L, N), FirstUsingShadow(nullptr, false) {}
 
 private:
   void anchor() override;
@@ -4184,6 +4204,54 @@ public:
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == Decl::MSGuid; }
+};
+
+/// An artificial decl, representing a global anonymous constant value which is
+/// uniquified by value within a translation unit.
+///
+/// These is currently only used to back the LValue returned by
+/// __builtin_source_location, but could potentially be used for other similar
+/// situations in the future.
+class UnnamedGlobalConstantDecl : public ValueDecl,
+                                  public Mergeable<UnnamedGlobalConstantDecl>,
+                                  public llvm::FoldingSetNode {
+
+  // The constant value of this global.
+  APValue Value;
+
+  void anchor() override;
+
+  UnnamedGlobalConstantDecl(const ASTContext &C, DeclContext *DC, QualType T,
+                            const APValue &Val);
+
+  static UnnamedGlobalConstantDecl *Create(const ASTContext &C, QualType T,
+                                           const APValue &APVal);
+  static UnnamedGlobalConstantDecl *CreateDeserialized(ASTContext &C,
+                                                       unsigned ID);
+
+  // Only ASTContext::getUnnamedGlobalConstantDecl and deserialization create
+  // these.
+  friend class ASTContext;
+  friend class ASTReader;
+  friend class ASTDeclReader;
+
+public:
+  /// Print this in a human-readable format.
+  void printName(llvm::raw_ostream &OS) const override;
+
+  const APValue &getValue() const { return Value; }
+
+  static void Profile(llvm::FoldingSetNodeID &ID, QualType Ty,
+                      const APValue &APVal) {
+    Ty.Profile(ID);
+    APVal.Profile(ID);
+  }
+  void Profile(llvm::FoldingSetNodeID &ID) {
+    Profile(ID, getType(), getValue());
+  }
+
+  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+  static bool classofKind(Kind K) { return K == Decl::UnnamedGlobalConstant; }
 };
 
 /// Insertion operator for diagnostics.  This allows sending an AccessSpecifier

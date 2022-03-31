@@ -17,7 +17,7 @@
 declare void @print(i32) nounwind
 
 ; resume part of the coroutine
-define fastcc void @f.resume(i8*) {
+define fastcc void @f.resume(i8* dereferenceable(1)) {
   tail call void @print(i32 0)
   ret void
 }

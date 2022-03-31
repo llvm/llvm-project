@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -triple riscv32 -mattr=+experimental-b,experimental-zbs < %s 2>&1 | FileCheck %s
+# RUN: not llvm-mc -triple riscv32 -mattr=+zbs < %s 2>&1 | FileCheck %s
 
 # Too few operands
 bclr t0, t1 # CHECK: :[[@LINE]]:1: error: too few operands for instruction

@@ -18,10 +18,10 @@
 #include "mlir/Dialect/ArmNeon/ArmNeonDialect.h"
 #include "mlir/Dialect/ArmSVE/ArmSVEDialect.h"
 #include "mlir/Dialect/ArmSVE/Transforms.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/Dialect/Vector/VectorRewritePatterns.h"
+#include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/Dialect/X86Vector/Transforms.h"
 #include "mlir/Dialect/X86Vector/X86VectorDialect.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -34,7 +34,7 @@ struct LowerVectorToLLVMPass
     : public ConvertVectorToLLVMBase<LowerVectorToLLVMPass> {
   LowerVectorToLLVMPass(const LowerVectorToLLVMOptions &options) {
     this->reassociateFPReductions = options.reassociateFPReductions;
-    this->indexOptimizations = options.indexOptimizations;
+    this->force32BitVectorIndices = options.force32BitVectorIndices;
     this->armNeon = options.armNeon;
     this->armSVE = options.armSVE;
     this->amx = options.amx;
@@ -77,18 +77,17 @@ void LowerVectorToLLVMPass::runOnOperation() {
   // Convert to the LLVM IR dialect.
   LLVMTypeConverter converter(&getContext());
   RewritePatternSet patterns(&getContext());
-  populateVectorMaskMaterializationPatterns(patterns, indexOptimizations);
+  populateVectorMaskMaterializationPatterns(patterns, force32BitVectorIndices);
   populateVectorTransferLoweringPatterns(patterns);
   populateVectorToLLVMMatrixConversionPatterns(converter, patterns);
-  populateVectorToLLVMConversionPatterns(converter, patterns,
-                                         reassociateFPReductions);
+  populateVectorToLLVMConversionPatterns(
+      converter, patterns, reassociateFPReductions, force32BitVectorIndices);
   populateVectorToLLVMMatrixConversionPatterns(converter, patterns);
 
   // Architecture specific augmentations.
   LLVMConversionTarget target(getContext());
   target.addLegalDialect<arith::ArithmeticDialect>();
   target.addLegalDialect<memref::MemRefDialect>();
-  target.addLegalDialect<StandardOpsDialect>();
   target.addLegalOp<UnrealizedConversionCastOp>();
   if (armNeon) {
     // TODO: we may or may not want to include in-dialect lowering to

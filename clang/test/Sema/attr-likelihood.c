@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 %s -fsyntax-only -fdouble-square-bracket-attributes -verify
 
-void g() {
+void g(void) {
   if (1)
     [[clang::likely]] {}
 }
-void m() {
+void m(void) {
   [[clang::likely]] int x = 42; // expected-error {{'likely' attribute cannot be applied to a declaration}}
 
   if (x)

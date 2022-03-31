@@ -16,7 +16,7 @@ struct PP_Var {
 };
 
 // CHECK: define{{.*}} { i64, i64 } @f0()
-struct PP_Var f0() {
+struct PP_Var f0(void) {
   struct PP_Var result = { 0, 0, 0 };
   return result;
 }
@@ -30,7 +30,7 @@ long double f5(void) {
   return 0;
 }
 
-// CHECK-LABEL: define{{.*}} void @f6(i8 signext %a0, i16 signext %a1, i32 %a2, i64 %a3, i8* %a4)
+// CHECK-LABEL: define{{.*}} void @f6(i8 noundef signext %a0, i16 noundef signext %a1, i32 noundef %a2, i64 noundef %a3, i8* noundef %a4)
 void f6(char a0, short a1, int a2, long long a3, void *a4) {
 }
 
@@ -40,7 +40,7 @@ union u8 {
   long double a;
   int b;
 };
-union u8 f8_1() { while (1) {} }
+union u8 f8_1(void) { while (1) {} }
 void f8_2(union u8 a0) {}
 
 // CHECK-LABEL: define{{.*}} i64 @f9()
@@ -51,7 +51,7 @@ struct s10 { int a; int b; int : 0; };
 void f10(struct s10 a0) {}
 
 // CHECK-LABEL: define{{.*}} double @f11()
-union { long double a; float b; } f11() { while (1) {} }
+union { long double a; float b; } f11(void) { while (1) {} }
 
 // CHECK-LABEL: define{{.*}} i32 @f12_0()
 // CHECK-LABEL: define{{.*}} void @f12_1(i32 %a0.coerce)
@@ -61,14 +61,14 @@ void f12_1(struct s12 a0) {}
 
 // Check that sret parameter is accounted for when checking available integer
 // registers.
-// CHECK: define{{.*}} void @f13(%struct.s13_0* noalias sret(%struct.s13_0) align 8 %agg.result, i32 %a, i32 %b, i32 %c, i32 %d, {{.*}}* byval({{.*}}) align 8 %e, i32 %f)
+// CHECK: define{{.*}} void @f13(%struct.s13_0* noalias sret(%struct.s13_0) align 8 %agg.result, i32 noundef %a, i32 noundef %b, i32 noundef %c, i32 noundef %d, {{.*}}* noundef byval({{.*}}) align 8 %e, i32 noundef %f)
 
 struct s13_0 { long long f0[3]; };
 struct s13_1 { long long f0[2]; };
 struct s13_0 f13(int a, int b, int c, int d,
                  struct s13_1 e, int f) { while (1) {} }
 
-// CHECK-LABEL: define{{.*}} void @f20(%struct.s20* byval(%struct.s20) align 32 %x)
+// CHECK-LABEL: define{{.*}} void @f20(%struct.s20* noundef byval(%struct.s20) align 32 %x)
 struct __attribute__((aligned(32))) s20 {
   int x;
   int y;
@@ -86,7 +86,7 @@ typedef struct _str {
 
 void func(str s);
 str ss;
-void f9122143()
+void f9122143(void)
 {
   func(ss);
 }

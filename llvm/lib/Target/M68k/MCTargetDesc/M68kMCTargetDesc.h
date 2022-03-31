@@ -1,4 +1,4 @@
-//===-- M68kMCTargetDesc.h - M68k Target Descriptions -------*- C++ -*-===//
+//===-- M68kMCTargetDesc.h - M68k Target Descriptions -----------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -38,7 +38,6 @@ MCAsmBackend *createM68kAsmBackend(const Target &T, const MCSubtargetInfo &STI,
                                    const MCTargetOptions &Options);
 
 MCCodeEmitter *createM68kMCCodeEmitter(const MCInstrInfo &MCII,
-                                       const MCRegisterInfo &MRI,
                                        MCContext &Ctx);
 
 /// Construct an M68k ELF object writer.
@@ -58,4 +57,4 @@ std::unique_ptr<MCObjectTargetWriter> createM68kELFObjectWriter(uint8_t OSABI);
 #define GET_SUBTARGETINFO_ENUM
 #include "M68kGenSubtargetInfo.inc"
 
-#endif
+#endif // LLVM_LIB_TARGET_M68K_MCTARGETDESC_M68KMCTARGETDESC_H

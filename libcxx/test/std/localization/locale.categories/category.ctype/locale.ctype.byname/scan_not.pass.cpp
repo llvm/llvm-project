@@ -13,7 +13,6 @@
 // const charT* scan_not(mask m, const charT* low, const charT* high) const;
 
 // REQUIRES: locale.en_US.UTF-8
-// XFAIL: LIBCXX-WINDOWS-FIXME
 // XFAIL: libcpp-has-no-wide-characters
 
 #include <locale>
@@ -57,17 +56,23 @@ int main(int, char**)
             const std::wstring in(L"\x00DA A\x07.a1");
             std::vector<F::mask> m(in.size());
             assert(f.scan_not(F::space, in.data(), in.data() + in.size()) - in.data() == 0);
-            assert(f.scan_not(F::print, in.data(), in.data() + in.size()) - in.data() == 0);
             assert(f.scan_not(F::cntrl, in.data(), in.data() + in.size()) - in.data() == 0);
-            assert(f.scan_not(F::upper, in.data(), in.data() + in.size()) - in.data() == 0);
             assert(f.scan_not(F::lower, in.data(), in.data() + in.size()) - in.data() == 0);
-            assert(f.scan_not(F::alpha, in.data(), in.data() + in.size()) - in.data() == 0);
             assert(f.scan_not(F::digit, in.data(), in.data() + in.size()) - in.data() == 0);
             assert(f.scan_not(F::punct, in.data(), in.data() + in.size()) - in.data() == 0);
             assert(f.scan_not(F::xdigit, in.data(), in.data() + in.size()) - in.data() == 0);
             assert(f.scan_not(F::blank, in.data(), in.data() + in.size()) - in.data() == 0);
+#if !defined(_WIN32)
+            // On Windows, these wchars are classified according to their
+            // Unicode interpretation even in the "C" locale, where
+            // the scan_is function returns the same as above for the
+            // en_US.UTF-8 locale.
+            assert(f.scan_not(F::print, in.data(), in.data() + in.size()) - in.data() == 0);
+            assert(f.scan_not(F::upper, in.data(), in.data() + in.size()) - in.data() == 0);
+            assert(f.scan_not(F::alpha, in.data(), in.data() + in.size()) - in.data() == 0);
             assert(f.scan_not(F::alnum, in.data(), in.data() + in.size()) - in.data() == 0);
             assert(f.scan_not(F::graph, in.data(), in.data() + in.size()) - in.data() == 0);
+#endif
         }
     }
 

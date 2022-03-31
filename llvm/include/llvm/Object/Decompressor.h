@@ -9,12 +9,14 @@
 #ifndef LLVM_OBJECT_DECOMPRESSOR_H
 #define LLVM_OBJECT_DECOMPRESSOR_H
 
-#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Error.h"
 
 namespace llvm {
 namespace object {
+
+class SectionRef;
 
 /// Decompressor helps to handle decompression of compressed sections.
 class Decompressor {

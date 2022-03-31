@@ -6,7 +6,7 @@ typedef struct { char x[3]; } A0;
 void foo (int i, ...);
 
 
-// CHECK: call void (i32, ...) @foo(i32 1, [1 x i32] {{.*}})
+// CHECK: call void (i32, ...) @foo(i32 noundef 1, [1 x i32] {{.*}})
 int main (void)
 {
   A0 a3;

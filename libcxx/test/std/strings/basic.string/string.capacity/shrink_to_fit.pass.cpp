@@ -17,7 +17,7 @@
 #include "min_allocator.h"
 
 template <class S>
-void
+TEST_CONSTEXPR_CXX20 void
 test(S s)
 {
     typename S::size_type old_cap = s.capacity();
@@ -29,9 +29,8 @@ test(S s)
     assert(s.capacity() >= s.size());
 }
 
-int main(int, char**)
-{
-    {
+bool test() {
+  {
     typedef std::string S;
     S s;
     test(s);
@@ -43,9 +42,9 @@ int main(int, char**)
     s.assign(100, 'a');
     s.erase(50);
     test(s);
-    }
+  }
 #if TEST_STD_VER >= 11
-    {
+  {
     typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
     S s;
     test(s);
@@ -57,7 +56,17 @@ int main(int, char**)
     s.assign(100, 'a');
     s.erase(50);
     test(s);
-    }
+  }
+#endif
+
+  return true;
+}
+
+int main(int, char**)
+{
+  test();
+#if TEST_STD_VER > 17
+  // static_assert(test());
 #endif
 
   return 0;

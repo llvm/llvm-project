@@ -133,7 +133,8 @@ Pass *createIndVarSimplifyPass();
 //
 Pass *createLICMPass();
 Pass *createLICMPass(unsigned LicmMssaOptCap,
-                     unsigned LicmMssaNoAccForPromotionCap);
+                     unsigned LicmMssaNoAccForPromotionCap,
+                     bool AllowSpeculation);
 
 //===----------------------------------------------------------------------===//
 //
@@ -425,6 +426,12 @@ extern char &InferAddressSpacesID;
 // LowerExpectIntrinsics - Removes llvm.expect intrinsics and creates
 // "block_weights" metadata.
 FunctionPass *createLowerExpectIntrinsicPass();
+
+//===----------------------------------------------------------------------===//
+//
+// TLSVariableHoist - This pass reduce duplicated TLS address call.
+//
+FunctionPass *createTLSVariableHoistPass();
 
 //===----------------------------------------------------------------------===//
 //

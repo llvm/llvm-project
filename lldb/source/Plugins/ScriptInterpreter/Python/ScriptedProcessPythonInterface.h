@@ -25,7 +25,8 @@ public:
   StructuredData::GenericSP
   CreatePluginObject(const llvm::StringRef class_name,
                      ExecutionContext &exe_ctx,
-                     StructuredData::DictionarySP args_sp) override;
+                     StructuredData::DictionarySP args_sp,
+                     StructuredData::Generic *script_obj = nullptr) override;
 
   Status Launch() override;
 
@@ -39,6 +40,8 @@ public:
   GetMemoryRegionContainingAddress(lldb::addr_t address,
                                    Status &error) override;
 
+  StructuredData::DictionarySP GetThreadsInfo() override;
+
   StructuredData::DictionarySP GetThreadWithID(lldb::tid_t tid) override;
 
   StructuredData::DictionarySP GetRegistersForThread(lldb::tid_t tid) override;
@@ -46,7 +49,7 @@ public:
   lldb::DataExtractorSP ReadMemoryAtAddress(lldb::addr_t address, size_t size,
                                             Status &error) override;
 
-  StructuredData::DictionarySP GetLoadedImages() override;
+  StructuredData::ArraySP GetLoadedImages() override;
 
   lldb::pid_t GetProcessID() override;
 
@@ -55,7 +58,7 @@ public:
   llvm::Optional<std::string> GetScriptedThreadPluginName() override;
 
 private:
-  lldb::ScriptedThreadInterfaceSP GetScriptedThreadInterface() override;
+  lldb::ScriptedThreadInterfaceSP CreateScriptedThreadInterface() override;
 };
 } // namespace lldb_private
 

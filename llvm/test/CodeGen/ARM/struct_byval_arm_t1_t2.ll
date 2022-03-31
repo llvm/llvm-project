@@ -65,7 +65,7 @@ declare void @use_N(%struct.N* byval(%struct.N))
 
 ;NO_NEON:     ldrb    r{{[0-9]+}}, [{{.*}}], #1
 
-;THUMB1:      ldrb    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldrb    r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #1
 
 ;T1POST-NOT:  ldrb    r{{[0-9]+}}, [{{.*}}], #1
@@ -86,7 +86,7 @@ declare void @use_N(%struct.N* byval(%struct.N))
 
 ;NO_NEON:     ldrh    r{{[0-9]+}}, [{{.*}}], #2
 
-;THUMB1:      ldrh    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldrh    r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #2
 
 ;T1POST-NOT:  ldrh    r{{[0-9]+}}, [{{.*}}], #2
@@ -107,7 +107,7 @@ declare void @use_N(%struct.N* byval(%struct.N))
 
 ;NO_NEON:     ldr     r{{[0-9]+}}, [{{.*}}], #4
 
-;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldr     r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #4
 
 ;T1POST-NOT:  ldr     r{{[0-9]+}}, [{{.*}}], #4
@@ -129,7 +129,7 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     ldr     r{{[0-9]+}}, [{{.*}}], #4
 ;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 
-;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldr     r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #4
 
 ;T1POST-NOT:  vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
@@ -153,7 +153,7 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     ldr     r{{[0-9]+}}, [{{.*}}], #4
 ;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 
-;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldr     r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #4
 
 ;T1POST-NOT:  vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
@@ -174,7 +174,7 @@ declare void @use_N(%struct.N* byval(%struct.N))
 
 ;NO_NEON:     ldrb    r{{[0-9]+}}, [{{.*}}], #1
 
-;THUMB1:      ldrb    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldrb    r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #1
 
 ;T1POST-NOT:  ldrb    r{{[0-9]+}}, [{{.*}}], #1
@@ -198,9 +198,9 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     ldrh    r{{[0-9]+}}, [{{.*}}], #2
 ;NO_NEON:     ldrb    r{{[0-9]+}}, [{{.*}}], #1
 
-;THUMB1:      ldrh    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldrh    r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #2
-;THUMB1:      ldrb    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldrb    r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 
 ;T1POST-NOT:  ldrh    r{{[0-9]+}}, [{{.*}}], #2
   entry:
@@ -223,9 +223,9 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     ldr     r{{[0-9]+}}, [{{.*}}], #4
 ;NO_NEON:     ldrb    r{{[0-9]+}}, [{{.*}}], #1
 
-;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldr     r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #4
-;THUMB1:      ldrb    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldrb    r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 
 ;T1POST-NOT:  ldr     r{{[0-9]+}}, [{{.*}}], #4
   entry:
@@ -249,9 +249,9 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     ldrb    r{{[0-9]+}}, [{{.*}}], #1
 ;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 
-;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldr     r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #4
-;THUMB1:      ldrb    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldrb    r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 
 ;T1POST-NOT:  vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
   entry:
@@ -275,9 +275,9 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     ldrb    r{{[0-9]+}}, [{{.*}}], #1
 ;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 
-;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldr     r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #4
-;THUMB1:      ldrb    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldrb    r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 
 ;T1POST-NOT:  vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
   entry:
@@ -297,7 +297,7 @@ declare void @use_N(%struct.N* byval(%struct.N))
 
 ;NO_NEON:     ldrb    r{{[0-9]+}}, [{{.*}}], #1
 
-;THUMB1:      ldrb    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldrb    r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #1
 
 ;T1POST-NOT:  ldrb    r{{[0-9]+}}, [{{.*}}], #1
@@ -321,9 +321,9 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     ldrh    r{{[0-9]+}}, [{{.*}}], #2
 ;NO_NEON:     ldrb    r{{[0-9]+}}, [{{.*}}], #1
 
-;THUMB1:      ldrh    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldrh    r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #2
-;THUMB1:      ldrb    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldrb    r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 
 ;T1POST-NOT:  ldrh    r{{[0-9]+}}, [{{.*}}], #2
   entry:
@@ -346,9 +346,9 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     ldr     r{{[0-9]+}}, [{{.*}}], #4
 ;NO_NEON:     ldrb    r{{[0-9]+}}, [{{.*}}], #1
 
-;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldr     r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #4
-;THUMB1:      ldrb    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldrb    r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #1
 
 ;T1POST-NOT:  ldr     r{{[0-9]+}}, [{{.*}}], #4
@@ -373,9 +373,9 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     ldrb    r{{[0-9]+}}, [{{.*}}], #1
 ;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 
-;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldr     r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #4
-;THUMB1:      ldrb    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldrb    r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #1
 
 ;T1POST-NOT:  vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
@@ -400,9 +400,9 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     ldrb    r{{[0-9]+}}, [{{.*}}], #1
 ;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 
-;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldr     r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #4
-;THUMB1:      ldrb    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldrb    r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #1
 
 ;T1POST-NOT:  vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
@@ -426,7 +426,7 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     ldrb    r{{[0-9]+}}, [{{.*}}], #1
 ;NO_NEON:     bne
 
-;THUMB1:      ldrb    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldrb    r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #1
 ;THUMB1:      bne
 
@@ -451,7 +451,7 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     ldrh    r{{[0-9]+}}, [{{.*}}], #2
 ;NO_NEON:     bne
 
-;THUMB1:      ldrh    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldrh    r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #2
 ;THUMB1:      bne
 
@@ -476,7 +476,7 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     ldr     r{{[0-9]+}}, [{{.*}}], #4
 ;NO_NEON:     bne
 
-;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldr     r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #4
 ;THUMB1:      bne
 
@@ -502,7 +502,7 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     bne
 ;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 
-;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldr     r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #4
 ;THUMB1:      bne
 
@@ -528,7 +528,7 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     bne
 ;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 
-;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldr     r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #4
 ;THUMB1:      bne
 
@@ -553,7 +553,7 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     ldrb    r{{[0-9]+}}, [{{.*}}], #1
 ;NO_NEON:     bne
 
-;THUMB1:      ldrb    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldrb    r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #1
 ;THUMB1:      bne
 
@@ -581,10 +581,10 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     bne
 ;NO_NEON:     ldrb    r{{[0-9]+}}, [{{.*}}], #1
 
-;THUMB1:      ldrh    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldrh    r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #2
 ;THUMB1:      bne
-;THUMB1:      ldrb    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldrb    r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 
 ;T1POST-NOT:  ldrh    r{{[0-9]+}}, [{{.*}}], #2
   entry:
@@ -610,10 +610,10 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     bne
 ;NO_NEON:     ldrb    r{{[0-9]+}}, [{{.*}}], #1
 
-;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldr     r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #4
 ;THUMB1:      bne
-;THUMB1:      ldrb    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldrb    r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 
 ;T1POST-NOT:  ldr     r{{[0-9]+}}, [{{.*}}], #4
   entry:
@@ -640,10 +640,10 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     ldrb    r{{[0-9]+}}, [{{.*}}], #1
 ;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 
-;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldr     r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #4
 ;THUMB1:      bne
-;THUMB1:      ldrb    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldrb    r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 
 ;T1POST-NOT:  vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
   entry:
@@ -670,10 +670,10 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     ldrb    r{{[0-9]+}}, [{{.*}}], #1
 ;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 
-;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldr     r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #4
 ;THUMB1:      bne
-;THUMB1:      ldrb    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldrb    r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 
 ;T1POST-NOT:  vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
   entry:
@@ -696,7 +696,7 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     ldrb    r{{[0-9]+}}, [{{.*}}], #1
 ;NO_NEON:     bne
 
-;THUMB1:      ldrb    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldrb    r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #1
 ;THUMB1:      bne
 
@@ -724,10 +724,10 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     bne
 ;NO_NEON:     ldrb    r{{[0-9]+}}, [{{.*}}], #1
 
-;THUMB1:      ldrh    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldrh    r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #2
 ;THUMB1:      bne
-;THUMB1:      ldrb    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldrb    r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 
 ;T1POST-NOT:  ldrh    r{{[0-9]+}}, [{{.*}}], #2
   entry:
@@ -753,10 +753,10 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     bne
 ;NO_NEON:     ldrb    r{{[0-9]+}}, [{{.*}}], #1
 
-;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldr     r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #4
 ;THUMB1:      bne
-;THUMB1:      ldrb    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldrb    r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #1
 
 ;T1POST-NOT:  ldr     r{{[0-9]+}}, [{{.*}}], #4
@@ -784,10 +784,10 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     ldrb    r{{[0-9]+}}, [{{.*}}], #1
 ;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 
-;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldr     r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #4
 ;THUMB1:      bne
-;THUMB1:      ldrb    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldrb    r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #1
 
 ;T1POST-NOT:  vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
@@ -815,10 +815,10 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     ldrb    r{{[0-9]+}}, [{{.*}}], #1
 ;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 
-;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldr     r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #4
 ;THUMB1:      bne
-;THUMB1:      ldrb    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldrb    r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #1
 
 ;T1POST-NOT:  vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
@@ -839,7 +839,7 @@ declare void @use_N(%struct.N* byval(%struct.N))
 
 ;NO_NEON:     ldrb    r{{[0-9]+}}, [{{.*}}], #1
 
-;THUMB1:      ldrb    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldrb    r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #1
 
 ;T1POST-NOT:  ldrb    r{{[0-9]+}}, [{{.*}}], #1
@@ -860,7 +860,7 @@ declare void @use_N(%struct.N* byval(%struct.N))
 
 ;NO_NEON:     ldrh    r{{[0-9]+}}, [{{.*}}], #2
 
-;THUMB1:      ldrh    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldrh    r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #2
 
 ;T1POST-NOT:  ldrh    r{{[0-9]+}}, [{{.*}}], #2
@@ -881,7 +881,7 @@ declare void @use_N(%struct.N* byval(%struct.N))
 
 ;NO_NEON:     ldr     r{{[0-9]+}}, [{{.*}}], #4
 
-;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldr     r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #4
 
 ;T1POST-NOT:  ldr     r{{[0-9]+}}, [{{.*}}], #4
@@ -903,7 +903,7 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     ldr     r{{[0-9]+}}, [{{.*}}], #4
 ;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 
-;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldr     r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #4
 
 ;T1POST-NOT:  vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
@@ -925,7 +925,7 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     ldr     r{{[0-9]+}}, [{{.*}}], #4
 ;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 
-;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldr     r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #4
 
 ;T1POST-NOT:  vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
@@ -946,7 +946,7 @@ declare void @use_N(%struct.N* byval(%struct.N))
 
 ;NO_NEON:     ldrb    r{{[0-9]+}}, [{{.*}}], #1
 
-;THUMB1:      ldrb    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldrb    r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #1
 
 ;T1POST-NOT:  ldrb    r{{[0-9]+}}, [{{.*}}], #1
@@ -967,7 +967,7 @@ declare void @use_N(%struct.N* byval(%struct.N))
 
 ;NO_NEON:     ldrh    r{{[0-9]+}}, [{{.*}}], #2
 
-;THUMB1:      ldrh    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldrh    r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #2
 
 ;T1POST-NOT:  ldrh    r{{[0-9]+}}, [{{.*}}], #2
@@ -988,7 +988,7 @@ declare void @use_N(%struct.N* byval(%struct.N))
 
 ;NO_NEON:     ldr     r{{[0-9]+}}, [{{.*}}], #4
 
-;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldr     r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #4
 
 ;T1POST-NOT:  ldr     r{{[0-9]+}}, [{{.*}}], #4
@@ -1010,7 +1010,7 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     ldr     r{{[0-9]+}}, [{{.*}}], #4
 ;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 
-;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldr     r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #4
 
 ;T1POST-NOT:  vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
@@ -1032,7 +1032,7 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     ldr     r{{[0-9]+}}, [{{.*}}], #4
 ;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 
-;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldr     r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #4
 
 ;T1POST-NOT:  vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
@@ -1053,7 +1053,7 @@ declare void @use_N(%struct.N* byval(%struct.N))
 
 ;NO_NEON:     ldrb    r{{[0-9]+}}, [{{.*}}], #1
 
-;THUMB1:      ldrb    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldrb    r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #1
 
 ;T1POST-NOT:  ldrb    r{{[0-9]+}}, [{{.*}}], #1
@@ -1074,7 +1074,7 @@ declare void @use_N(%struct.N* byval(%struct.N))
 
 ;NO_NEON:     ldrh    r{{[0-9]+}}, [{{.*}}], #2
 
-;THUMB1:      ldrh    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldrh    r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #2
 
 ;T1POST-NOT:  ldrh    r{{[0-9]+}}, [{{.*}}], #2
@@ -1095,7 +1095,7 @@ declare void @use_N(%struct.N* byval(%struct.N))
 
 ;NO_NEON:     ldr     r{{[0-9]+}}, [{{.*}}], #4
 
-;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldr     r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #4
 
 ;T1POST-NOT:  ldr     r{{[0-9]+}}, [{{.*}}], #4
@@ -1117,7 +1117,7 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     ldr     r{{[0-9]+}}, [{{.*}}], #4
 ;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 
-;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldr     r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #4
 
 ;T1POST-NOT:  vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
@@ -1139,7 +1139,7 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     ldr     r{{[0-9]+}}, [{{.*}}], #4
 ;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 
-;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldr     r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #4
 
 ;T1POST-NOT:  vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
@@ -1163,7 +1163,7 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     ldrb    r{{[0-9]+}}, [{{.*}}], #1
 ;NO_NEON:     bne
 
-;THUMB1:      ldrb    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldrb    r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #1
 ;THUMB1:      bne
 
@@ -1188,7 +1188,7 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     ldrh    r{{[0-9]+}}, [{{.*}}], #2
 ;NO_NEON:     bne
 
-;THUMB1:      ldrh    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldrh    r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #2
 ;THUMB1:      bne
 
@@ -1213,7 +1213,7 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     ldr     r{{[0-9]+}}, [{{.*}}], #4
 ;NO_NEON:     bne
 
-;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldr     r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #4
 ;THUMB1:      bne
 
@@ -1239,7 +1239,7 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     bne
 ;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 
-;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldr     r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #4
 ;THUMB1:      bne
 
@@ -1265,7 +1265,7 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     bne
 ;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 
-;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldr     r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #4
 ;THUMB1:      bne
 
@@ -1290,7 +1290,7 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     ldrb    r{{[0-9]+}}, [{{.*}}], #1
 ;NO_NEON:     bne
 
-;THUMB1:      ldrb    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldrb    r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #1
 ;THUMB1:      bne
 
@@ -1315,7 +1315,7 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     ldrh    r{{[0-9]+}}, [{{.*}}], #2
 ;NO_NEON:     bne
 
-;THUMB1:      ldrh    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldrh    r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #2
 ;THUMB1:      bne
 
@@ -1340,7 +1340,7 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     ldr     r{{[0-9]+}}, [{{.*}}], #4
 ;NO_NEON:     bne
 
-;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldr     r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #4
 ;THUMB1:      bne
 
@@ -1366,7 +1366,7 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     bne
 ;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 
-;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldr     r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #4
 ;THUMB1:      bne
 
@@ -1392,7 +1392,7 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     bne
 ;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 
-;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldr     r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #4
 ;THUMB1:      bne
 
@@ -1417,7 +1417,7 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     ldrb    r{{[0-9]+}}, [{{.*}}], #1
 ;NO_NEON:     bne
 
-;THUMB1:      ldrb    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldrb    r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #1
 ;THUMB1:      bne
 
@@ -1442,7 +1442,7 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     ldrh    r{{[0-9]+}}, [{{.*}}], #2
 ;NO_NEON:     bne
 
-;THUMB1:      ldrh    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldrh    r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #2
 ;THUMB1:      bne
 
@@ -1467,7 +1467,7 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     ldr     r{{[0-9]+}}, [{{.*}}], #4
 ;NO_NEON:     bne
 
-;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldr     r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #4
 ;THUMB1:      bne
 
@@ -1493,7 +1493,7 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     bne
 ;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 
-;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldr     r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #4
 ;THUMB1:      bne
 
@@ -1519,7 +1519,7 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;NO_NEON:     bne
 ;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 
-;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;THUMB1:      ldr     r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;THUMB1:      adds    [[BASE]], #4
 ;THUMB1:      bne
 
@@ -1532,7 +1532,7 @@ declare void @use_N(%struct.N* byval(%struct.N))
 ;V8MBASE-LABEL: <test_M>:
   define void @test_M() {
 
-;V8MBASE:      ldrb    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;V8MBASE:      ldrb    r{{[0-9]+}}, [[[BASE:r[0-9]+]]]
 ;V8MBASE:      adds    [[BASE]], #1
 ;V8MBASE-NOT:  movw
   entry:

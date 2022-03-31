@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_MATH_MATH_UTILS_H
 #define LLVM_LIBC_SRC_MATH_MATH_UTILS_H
 
+#include "src/__support/CPP/Bit.h"
 #include "src/__support/CPP/TypeTraits.h"
 #include "src/__support/common.h"
 #include <errno.h>
@@ -19,19 +20,19 @@
 namespace __llvm_libc {
 
 static inline uint32_t as_uint32_bits(float x) {
-  return *reinterpret_cast<uint32_t *>(&x);
+  return __llvm_libc::bit_cast<uint32_t>(x);
 }
 
 static inline uint64_t as_uint64_bits(double x) {
-  return *reinterpret_cast<uint64_t *>(&x);
+  return __llvm_libc::bit_cast<uint64_t>(x);
 }
 
 static inline float as_float(uint32_t x) {
-  return *reinterpret_cast<float *>(&x);
+  return __llvm_libc::bit_cast<float>(x);
 }
 
 static inline double as_double(uint64_t x) {
-  return *reinterpret_cast<double *>(&x);
+  return __llvm_libc::bit_cast<double>(x);
 }
 
 static inline uint32_t top12_bits(float x) { return as_uint32_bits(x) >> 20; }
@@ -42,15 +43,15 @@ static inline uint32_t top12_bits(double x) { return as_uint64_bits(x) >> 52; }
 template <typename T> struct XFlowValues;
 
 template <> struct XFlowValues<float> {
-  static const float overflow_value;
-  static const float underflow_value;
-  static const float may_underflow_value;
+  static const float OVERFLOW_VALUE;
+  static const float UNDERFLOW_VALUE;
+  static const float MAY_UNDERFLOW_VALUE;
 };
 
 template <> struct XFlowValues<double> {
-  static const double overflow_value;
-  static const double underflow_value;
-  static const double may_underflow_value;
+  static const double OVERFLOW_VALUE;
+  static const double UNDERFLOW_VALUE;
+  static const double MAY_UNDERFLOW_VALUE;
 };
 
 template <typename T> static inline T with_errno(T x, int err) {
@@ -69,7 +70,8 @@ template <typename T> static inline T opt_barrier(T x) {
 }
 
 template <typename T> struct IsFloatOrDouble {
-  static constexpr bool Value =
+  static constexpr bool
+      Value = // NOLINT so that this Value can match the ones for IsSame
       cpp::IsSame<T, float>::Value || cpp::IsSame<T, double>::Value;
 };
 
@@ -85,16 +87,16 @@ T xflow(uint32_t sign, T y) {
 }
 
 template <typename T, EnableIfFloatOrDouble<T> = 0> T overflow(uint32_t sign) {
-  return xflow(sign, XFlowValues<T>::overflow_value);
+  return xflow(sign, XFlowValues<T>::OVERFLOW_VALUE);
 }
 
 template <typename T, EnableIfFloatOrDouble<T> = 0> T underflow(uint32_t sign) {
-  return xflow(sign, XFlowValues<T>::underflow_value);
+  return xflow(sign, XFlowValues<T>::UNDERFLOW_VALUE);
 }
 
 template <typename T, EnableIfFloatOrDouble<T> = 0>
 T may_underflow(uint32_t sign) {
-  return xflow(sign, XFlowValues<T>::may_underflow_value);
+  return xflow(sign, XFlowValues<T>::MAY_UNDERFLOW_VALUE);
 }
 
 template <typename T, EnableIfFloatOrDouble<T> = 0>

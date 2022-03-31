@@ -25,6 +25,7 @@
 #include "lldb/Target/ThreadPlanRunToAddress.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
 
@@ -434,7 +435,7 @@ lldb_private::UUID
 DynamicLoaderDarwinKernel::CheckForKernelImageAtAddress(lldb::addr_t addr,
                                                         Process *process,
                                                         bool *read_error) {
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
+  Log *log = GetLog(LLDBLog::DynamicLoader);
   if (addr == LLDB_INVALID_ADDRESS) {
     if (read_error)
       *read_error = true;
@@ -645,7 +646,7 @@ UUID DynamicLoaderDarwinKernel::KextImageInfo::GetUUID() const {
 
 bool DynamicLoaderDarwinKernel::KextImageInfo::ReadMemoryModule(
     Process *process) {
-  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
+  Log *log = GetLog(LLDBLog::Host);
   if (m_memory_module_sp.get() != nullptr)
     return true;
   if (m_load_address == LLDB_INVALID_ADDRESS)
@@ -756,7 +757,7 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
   // for the kernel, we'll need to read the load commands out of memory to get it.
   if (m_uuid.IsValid() == false) {
     if (ReadMemoryModule(process) == false) {
-      Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
+      Log *log = GetLog(LLDBLog::DynamicLoader);
       LLDB_LOGF(log,
                 "Unable to read '%s' from memory at address 0x%" PRIx64
                 " to get the segment load addresses.",
@@ -1062,7 +1063,7 @@ bool DynamicLoaderDarwinKernel::BreakpointHitCallback(
 bool DynamicLoaderDarwinKernel::BreakpointHit(StoppointCallbackContext *context,
                                               user_id_t break_id,
                                               user_id_t break_loc_id) {
-  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
+  Log *log = GetLog(LLDBLog::DynamicLoader);
   LLDB_LOGF(log, "DynamicLoaderDarwinKernel::BreakpointHit (...)\n");
 
   ReadAllKextSummaries();
@@ -1158,7 +1159,7 @@ bool DynamicLoaderDarwinKernel::ReadKextSummaryHeader() {
 bool DynamicLoaderDarwinKernel::ParseKextSummaries(
     const Address &kext_summary_addr, uint32_t count) {
   KextImageInfo::collection kext_summaries;
-  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
+  Log *log = GetLog(LLDBLog::DynamicLoader);
   LLDB_LOGF(log,
             "Kexts-changed breakpoint hit, there are %d kexts currently.\n",
             count);
@@ -1514,7 +1515,7 @@ ThreadPlanSP
 DynamicLoaderDarwinKernel::GetStepThroughTrampolinePlan(Thread &thread,
                                                         bool stop_others) {
   ThreadPlanSP thread_plan_sp;
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  Log *log = GetLog(LLDBLog::Step);
   LLDB_LOGF(log, "Could not find symbol for step through.");
   return thread_plan_sp;
 }

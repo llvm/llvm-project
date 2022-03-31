@@ -13,6 +13,7 @@
 #include "clang/Driver/Options.h"
 
 using namespace clang::driver;
+using namespace clang::driver::toolchains;
 using namespace clang::driver::tools;
 using namespace llvm::opt;
 
@@ -27,7 +28,7 @@ void SPIRV::constructTranslateCommand(Compilation &C, const Tool &T,
   if (Input.getType() == types::TY_PP_Asm)
     CmdArgs.push_back("-to-binary");
   if (Output.getType() == types::TY_PP_Asm)
-    CmdArgs.push_back("-spirv-text");
+    CmdArgs.push_back("--spirv-tools-dis");
 
   CmdArgs.append({"-o", Output.getFilename()});
 
@@ -46,4 +47,47 @@ void SPIRV::Translator::ConstructJob(Compilation &C, const JobAction &JA,
   if (Inputs.size() != 1)
     llvm_unreachable("Invalid number of input files.");
   constructTranslateCommand(C, *this, JA, Output, Inputs[0], {});
+}
+
+clang::driver::Tool *SPIRVToolChain::getTranslator() const {
+  if (!Translator)
+    Translator = std::make_unique<SPIRV::Translator>(*this);
+  return Translator.get();
+}
+
+clang::driver::Tool *SPIRVToolChain::SelectTool(const JobAction &JA) const {
+  Action::ActionClass AC = JA.getKind();
+  return SPIRVToolChain::getTool(AC);
+}
+
+clang::driver::Tool *SPIRVToolChain::getTool(Action::ActionClass AC) const {
+  switch (AC) {
+  default:
+    break;
+  case Action::BackendJobClass:
+  case Action::AssembleJobClass:
+    return SPIRVToolChain::getTranslator();
+  }
+  return ToolChain::getTool(AC);
+}
+clang::driver::Tool *SPIRVToolChain::buildLinker() const {
+  return new tools::SPIRV::Linker(*this);
+}
+
+void SPIRV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
+                                 const InputInfo &Output,
+                                 const InputInfoList &Inputs,
+                                 const ArgList &Args,
+                                 const char *LinkingOutput) const {
+  const ToolChain &ToolChain = getToolChain();
+  std::string Linker = ToolChain.GetProgramPath(getShortName());
+  ArgStringList CmdArgs;
+  AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
+
+  CmdArgs.push_back("-o");
+  CmdArgs.push_back(Output.getFilename());
+
+  C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
+                                         Args.MakeArgString(Linker), CmdArgs,
+                                         Inputs, Output));
 }

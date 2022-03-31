@@ -12,4 +12,4 @@
 
 // LEGACYPM: Pass Arguments:
 
-void f() {}
+void f(void) {}

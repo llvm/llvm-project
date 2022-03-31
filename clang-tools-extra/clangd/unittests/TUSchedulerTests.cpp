@@ -25,7 +25,6 @@
 #include "clang/Basic/DiagnosticDriver.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FunctionExtras.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
@@ -132,7 +131,7 @@ protected:
     private:
       void reportDiagnostics(PathRef File, llvm::ArrayRef<Diag> Diags,
                              PublishFn Publish) {
-        auto D = Context::current().get(DiagsCallbackKey);
+        auto *D = Context::current().get(DiagsCallbackKey);
         if (!D)
           return;
         Publish([&]() {
@@ -671,11 +670,11 @@ TEST_F(TUSchedulerTests, EmptyPreamble) {
 
   FS.Files[Header] = "void foo()";
   FS.Timestamps[Header] = time_t(0);
-  auto WithPreamble = R"cpp(
+  auto *WithPreamble = R"cpp(
     #include "foo.h"
     int main() {}
   )cpp";
-  auto WithEmptyPreamble = R"cpp(int main() {})cpp";
+  auto *WithEmptyPreamble = R"cpp(int main() {})cpp";
   S.update(Foo, getInputs(Foo, WithPreamble), WantDiagnostics::Auto);
   S.runWithPreamble(
       "getNonEmptyPreamble", Foo, TUScheduler::Stale,
@@ -748,7 +747,7 @@ TEST_F(TUSchedulerTests, RunWaitsForPreamble) {
   // the same time. All reads should get the same non-null preamble.
   TUScheduler S(CDB, optsForTest());
   auto Foo = testPath("foo.cpp");
-  auto NonEmptyPreamble = R"cpp(
+  auto *NonEmptyPreamble = R"cpp(
     #define FOO 1
     #define BAR 2
 
@@ -844,7 +843,7 @@ TEST_F(TUSchedulerTests, MissingHeader) {
   auto HeaderA = testPath("a/foo.h");
   auto HeaderB = testPath("b/foo.h");
 
-  auto SourceContents = R"cpp(
+  auto *SourceContents = R"cpp(
       #include "foo.h"
       int c = b;
     )cpp";
@@ -1122,8 +1121,7 @@ TEST_F(TUSchedulerTests, AsyncPreambleThread) {
     BlockPreambleThread(llvm::StringRef BlockVersion, Notification &N)
         : BlockVersion(BlockVersion), N(N) {}
     void onPreambleAST(PathRef Path, llvm::StringRef Version, ASTContext &Ctx,
-                       std::shared_ptr<clang::Preprocessor> PP,
-                       const CanonicalIncludes &) override {
+                       Preprocessor &, const CanonicalIncludes &) override {
       if (Version == BlockVersion)
         N.wait();
     }

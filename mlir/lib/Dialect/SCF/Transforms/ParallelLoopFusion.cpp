@@ -15,7 +15,6 @@
 #include "mlir/Dialect/SCF/Passes.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/SCF/Transforms.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/OpDefinition.h"
@@ -41,9 +40,11 @@ static bool equalIterationSpaces(ParallelOp firstPloop,
     // TODO: Extend this to support aliases and equal constants.
     return std::equal(lhs.begin(), lhs.end(), rhs.begin());
   };
-  return matchOperands(firstPloop.lowerBound(), secondPloop.lowerBound()) &&
-         matchOperands(firstPloop.upperBound(), secondPloop.upperBound()) &&
-         matchOperands(firstPloop.step(), secondPloop.step());
+  return matchOperands(firstPloop.getLowerBound(),
+                       secondPloop.getLowerBound()) &&
+         matchOperands(firstPloop.getUpperBound(),
+                       secondPloop.getUpperBound()) &&
+         matchOperands(firstPloop.getStep(), secondPloop.getStep());
 }
 
 /// Checks if the parallel loops have mixed access to the same buffers. Returns

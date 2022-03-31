@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | \
+; RUN: opt < %s -passes=instcombine -S | \
 ; RUN:   grep "icmp sgt"
 ; END.
 target datalayout = "e-p:32:32"

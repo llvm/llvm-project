@@ -25,7 +25,6 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/CodeMetrics.h"
-#include "llvm/Analysis/LazyBlockFrequencyInfo.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
@@ -1136,6 +1135,31 @@ static LoopUnrollResult tryToUnrollLoop(
   TransformationMode TM = hasUnrollTransformation(L);
   if (TM & TM_Disable)
     return LoopUnrollResult::Unmodified;
+
+  // If this loop isn't forced to be unrolled, avoid unrolling it when the
+  // parent loop has an explicit unroll-and-jam pragma. This is to prevent
+  // automatic unrolling from interfering with the user requested
+  // transformation.
+  Loop *ParentL = L->getParentLoop();
+  if (ParentL != nullptr &&
+      hasUnrollAndJamTransformation(ParentL) == TM_ForcedByUser &&
+      hasUnrollTransformation(L) != TM_ForcedByUser) {
+    LLVM_DEBUG(dbgs() << "Not unrolling loop since parent loop has"
+                      << " llvm.loop.unroll_and_jam.\n");
+    return LoopUnrollResult::Unmodified;
+  }
+
+  // If this loop isn't forced to be unrolled, avoid unrolling it when the
+  // loop has an explicit unroll-and-jam pragma. This is to prevent automatic
+  // unrolling from interfering with the user requested transformation.
+  if (hasUnrollAndJamTransformation(L) == TM_ForcedByUser &&
+      hasUnrollTransformation(L) != TM_ForcedByUser) {
+    LLVM_DEBUG(
+        dbgs()
+        << "  Not unrolling loop since it has llvm.loop.unroll_and_jam.\n");
+    return LoopUnrollResult::Unmodified;
+  }
+
   if (!L->isLoopSimplifyForm()) {
     LLVM_DEBUG(
         dbgs() << "  Not unrolling loop which is not in loop-simplify form.\n");
@@ -1256,7 +1280,7 @@ static LoopUnrollResult tryToUnrollLoop(
              << " iterations";
     });
 
-    if (peelLoop(L, PP.PeelCount, LI, &SE, &DT, &AC, PreserveLCSSA)) {
+    if (peelLoop(L, PP.PeelCount, LI, &SE, DT, &AC, PreserveLCSSA)) {
       simplifyLoopAfterUnroll(L, true, LI, &SE, &DT, &AC, &TTI);
       // If the loop was peeled, we already "used up" the profile information
       // we had, so we don't want to unroll or peel again.

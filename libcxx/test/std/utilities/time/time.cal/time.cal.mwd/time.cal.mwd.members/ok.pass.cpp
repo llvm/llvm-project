@@ -44,9 +44,9 @@ int main(int, char**)
             assert(mwd.ok() == (j >= 1 && j <= 5));
         }
 
-//  If the month is not ok, all the weekday_indexed are bad
+    //  If the month is not ok, all the weekday_indexed are bad
     for (unsigned i = 1; i <= 10; ++i)
         assert(!(month_weekday{month{13}, weekday_indexed{Sunday, i}}.ok()));
 
-  return 0;
+    return 0;
 }

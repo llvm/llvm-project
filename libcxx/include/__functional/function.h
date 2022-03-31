@@ -10,22 +10,25 @@
 #ifndef _LIBCPP___FUNCTIONAL_FUNCTION_H
 #define _LIBCPP___FUNCTIONAL_FUNCTION_H
 
+#include <__assert>
 #include <__config>
-#include <__debug>
 #include <__functional/binary_function.h>
 #include <__functional/invoke.h>
 #include <__functional/unary_function.h>
 #include <__iterator/iterator_traits.h>
+#include <__memory/addressof.h>
 #include <__memory/allocator_traits.h>
 #include <__memory/compressed_pair.h>
 #include <__memory/shared_ptr.h>
+#include <__utility/forward.h>
+#include <__utility/move.h>
+#include <__utility/swap.h>
 #include <exception>
 #include <memory> // TODO: replace with <__memory/__builtin_new_allocator.h>
 #include <type_traits>
-#include <utility>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -360,7 +363,7 @@ const void*
 __func<_Fp, _Alloc, _Rp(_ArgTypes...)>::target(const type_info& __ti) const _NOEXCEPT
 {
     if (__ti == typeid(_Fp))
-        return &__f_.__target();
+        return _VSTD::addressof(__f_.__target());
     return nullptr;
 }
 
@@ -1392,7 +1395,7 @@ const void*
 __func<_Fp, _Alloc, _Rp()>::target(const type_info& __ti) const
 {
     if (__ti == typeid(_Fp))
-        return &__f_.first();
+        return _VSTD::addressof(__f_.first());
     return (const void*)0;
 }
 
@@ -1663,7 +1666,7 @@ __func<_Fp, _Alloc, _Rp(_A0, _A1, _A2)>::target_type() const
 
 #endif // _LIBCPP_NO_RTTI
 
-}  // __function
+} // namespace __function
 
 template<class _Rp>
 class _LIBCPP_TEMPLATE_VIS function<_Rp()>
@@ -1717,13 +1720,11 @@ public:
     // 20.7.16.2.3, function capacity:
     _LIBCPP_INLINE_VISIBILITY explicit operator bool() const {return __f_;}
 
-private:
-    // deleted overloads close possible hole in the type system
     template<class _R2>
-      bool operator==(const function<_R2()>&) const;// = delete;
+      bool operator==(const function<_R2()>&) const = delete;
     template<class _R2>
-      bool operator!=(const function<_R2()>&) const;// = delete;
-public:
+      bool operator!=(const function<_R2()>&) const = delete;
+
     // 20.7.16.2.4, function invocation:
     _Rp operator()() const;
 
@@ -1997,13 +1998,11 @@ public:
     // 20.7.16.2.3, function capacity:
     _LIBCPP_INLINE_VISIBILITY explicit operator bool() const {return __f_;}
 
-private:
-    // deleted overloads close possible hole in the type system
     template<class _R2, class _B0>
-      bool operator==(const function<_R2(_B0)>&) const;// = delete;
+      bool operator==(const function<_R2(_B0)>&) const = delete;
     template<class _R2, class _B0>
-      bool operator!=(const function<_R2(_B0)>&) const;// = delete;
-public:
+      bool operator!=(const function<_R2(_B0)>&) const = delete;
+
     // 20.7.16.2.4, function invocation:
     _Rp operator()(_A0) const;
 
@@ -2277,13 +2276,11 @@ public:
     // 20.7.16.2.3, function capacity:
     _LIBCPP_INLINE_VISIBILITY explicit operator bool() const {return __f_;}
 
-private:
-    // deleted overloads close possible hole in the type system
     template<class _R2, class _B0, class _B1>
-      bool operator==(const function<_R2(_B0, _B1)>&) const;// = delete;
+      bool operator==(const function<_R2(_B0, _B1)>&) const = delete;
     template<class _R2, class _B0, class _B1>
-      bool operator!=(const function<_R2(_B0, _B1)>&) const;// = delete;
-public:
+      bool operator!=(const function<_R2(_B0, _B1)>&) const = delete;
+
     // 20.7.16.2.4, function invocation:
     _Rp operator()(_A0, _A1) const;
 
@@ -2556,13 +2553,11 @@ public:
     // 20.7.16.2.3, function capacity:
     _LIBCPP_INLINE_VISIBILITY explicit operator bool() const {return __f_;}
 
-private:
-    // deleted overloads close possible hole in the type system
     template<class _R2, class _B0, class _B1, class _B2>
-      bool operator==(const function<_R2(_B0, _B1, _B2)>&) const;// = delete;
+      bool operator==(const function<_R2(_B0, _B1, _B2)>&) const = delete;
     template<class _R2, class _B0, class _B1, class _B2>
-      bool operator!=(const function<_R2(_B0, _B1, _B2)>&) const;// = delete;
-public:
+      bool operator!=(const function<_R2(_B0, _B1, _B2)>&) const = delete;
+
     // 20.7.16.2.4, function invocation:
     _Rp operator()(_A0, _A1, _A2) const;
 

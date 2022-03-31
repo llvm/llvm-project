@@ -24,7 +24,7 @@
 // CHECK-MOD: distinct !DICompileUnit(language: DW_LANG_{{.*}}C_plus_plus,
 
 // CHECK: distinct !DICompileUnit(language: DW_LANG_{{.*}}C_plus_plus,
-// CHECK-CXX: distinct !DICompileUnit(language: DW_LANG_C_plus_plus,
+// CHECK-CXX: distinct !DICompileUnit(language: DW_LANG_C_plus_plus_11,
 // CHECK-SAME:                    isOptimized: false,
 // CHECK-NOT:                     splitDebugFilename:
 // CHECK-SAME:                    dwoId:

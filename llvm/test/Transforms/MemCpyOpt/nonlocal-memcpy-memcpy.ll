@@ -170,3 +170,28 @@ bb23:                                             ; preds = %bb22, %bb13
 bb25:                                             ; preds = %bb6
   unreachable
 }
+
+define void @memphi_with_unrelated_clobber(i1 %cond, i64* %arg, i8* noalias %a, i8* noalias %b, i8* noalias %c) {
+; CHECK-LABEL: @memphi_with_unrelated_clobber(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[A:%.*]], i8* [[B:%.*]], i64 16, i1 false)
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[THEN:%.*]], label [[EXIT:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    store i64 0, i64* [[ARG:%.*]], align 4
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[C:%.*]], i8* [[B]], i64 16, i1 false)
+; CHECK-NEXT:    ret void
+;
+entry:
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %a, i8* %b, i64 16, i1 false)
+  br i1 %cond, label %then, label %exit
+
+then:
+  store i64 0, i64* %arg
+  br label %exit
+
+exit:
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %c, i8* %a, i64 16, i1 false)
+  ret void
+}

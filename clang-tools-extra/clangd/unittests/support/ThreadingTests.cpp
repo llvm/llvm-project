@@ -29,7 +29,7 @@ TEST_F(ThreadingTest, TaskRunner) {
   int Counter(0); /* GUARDED_BY(Mutex) */
   {
     AsyncTaskRunner Tasks;
-    auto scheduleIncrements = [&]() {
+    auto ScheduleIncrements = [&]() {
       for (int TaskI = 0; TaskI < TasksCnt; ++TaskI) {
         Tasks.runAsync("task", [&Counter, &Mutex, IncrementsPerTask]() {
           for (int Increment = 0; Increment < IncrementsPerTask; ++Increment) {
@@ -44,7 +44,7 @@ TEST_F(ThreadingTest, TaskRunner) {
       // Make sure runAsync is not running tasks synchronously on the same
       // thread by locking the Mutex used for increments.
       std::lock_guard<std::mutex> Lock(Mutex);
-      scheduleIncrements();
+      ScheduleIncrements();
     }
 
     Tasks.wait();
@@ -56,7 +56,7 @@ TEST_F(ThreadingTest, TaskRunner) {
     {
       std::lock_guard<std::mutex> Lock(Mutex);
       Counter = 0;
-      scheduleIncrements();
+      ScheduleIncrements();
     }
   }
   // Check that destructor has waited for tasks to finish.

@@ -109,10 +109,16 @@ exit:
 
 declare void @baz()
 
-; Verify that having the switch block as a determinator is handled correctly.
-define i32 @main() {
-; CHECK: < bb43 bb59 bb3 bb31 bb41 > [ 77, bb43 ]
-; CHECK-NEXT: < bb43 bb49 bb59 bb3 bb31 bb41 > [ 77, bb43 ]
+; Do not jump-thread those paths where the determinator basic block does not
+; precede the basic block that defines the switch condition.
+;
+; Otherwise, it is possible that the state defined in the determinator block
+; defines the state for the next iteration of the loop, rather than for the
+; current one.
+define i32 @wrong_bb_order() {
+; CHECK-LABEL: DFA Jump threading: wrong_bb_order
+; CHECK-NOT: < bb43 bb59 bb3 bb31 bb41 > [ 77, bb43 ]
+; CHECK-NOT: < bb43 bb49 bb59 bb3 bb31 bb41 > [ 77, bb43 ]
 bb:
   %i = alloca [420 x i8], align 1
   %i2 = getelementptr inbounds [420 x i8], [420 x i8]* %i, i64 0, i64 390

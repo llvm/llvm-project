@@ -11,6 +11,7 @@ unittest("ProfileDataTests") {
     "CoverageMappingTest.cpp",
     "InstrProfDataTest.cpp",
     "InstrProfTest.cpp",
+    "MemProfTest.cpp",
     "SampleProfTest.cpp",
   ]
 }

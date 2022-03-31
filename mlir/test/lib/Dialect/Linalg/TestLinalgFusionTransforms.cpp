@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/Analysis/DependenceAnalysis.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/SCF/Transforms.h"
@@ -111,17 +112,18 @@ static void fillFusionPatterns(MLIRContext *context,
 namespace {
 template <LinalgTilingLoopType LoopType>
 struct TestLinalgFusionTransforms
-    : public PassWrapper<TestLinalgFusionTransforms<LoopType>, FunctionPass> {
+    : public PassWrapper<TestLinalgFusionTransforms<LoopType>,
+                         OperationPass<FuncOp>> {
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<AffineDialect, linalg::LinalgDialect, memref::MemRefDialect,
-                    scf::SCFDialect, StandardOpsDialect>();
+                    scf::SCFDialect>();
   }
   TestLinalgFusionTransforms() = default;
   TestLinalgFusionTransforms(const TestLinalgFusionTransforms &pass) {}
 
-  void runOnFunction() override {
+  void runOnOperation() override {
     MLIRContext *context = &this->getContext();
-    FuncOp funcOp = this->getFunction();
+    FuncOp funcOp = this->getOperation();
     RewritePatternSet fusionPatterns(context);
     Aliases alias;
     LinalgDependenceGraph dependenceGraph =
@@ -225,7 +227,7 @@ static LogicalResult fuseLinalgOpsGreedily(FuncOp f) {
 
 namespace {
 struct TestLinalgGreedyFusion
-    : public PassWrapper<TestLinalgGreedyFusion, FunctionPass> {
+    : public PassWrapper<TestLinalgGreedyFusion, OperationPass<FuncOp>> {
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<AffineDialect, linalg::LinalgDialect, memref::MemRefDialect,
                     scf::SCFDialect>();
@@ -234,7 +236,7 @@ struct TestLinalgGreedyFusion
   StringRef getDescription() const final {
     return "Test Linalg fusion by applying a greedy test transformation.";
   }
-  void runOnFunction() override {
+  void runOnOperation() override {
     MLIRContext *context = &getContext();
     RewritePatternSet patterns =
         linalg::getLinalgTilingCanonicalizationPatterns(context);
@@ -242,29 +244,31 @@ struct TestLinalgGreedyFusion
     scf::populateSCFForLoopCanonicalizationPatterns(patterns);
     FrozenRewritePatternSet frozenPatterns(std::move(patterns));
     do {
-      (void)applyPatternsAndFoldGreedily(getFunction(), frozenPatterns);
+      (void)applyPatternsAndFoldGreedily(getOperation(), frozenPatterns);
       PassManager pm(context);
       pm.addPass(createLoopInvariantCodeMotionPass());
       pm.addPass(createCanonicalizerPass());
       pm.addPass(createCSEPass());
-      LogicalResult res = pm.run(getFunction()->getParentOfType<ModuleOp>());
+      LogicalResult res = pm.run(getOperation()->getParentOfType<ModuleOp>());
       if (failed(res))
         this->signalPassFailure();
-    } while (succeeded(fuseLinalgOpsGreedily(getFunction())));
+    } while (succeeded(fuseLinalgOpsGreedily(getOperation())));
   }
 };
 
 /// Pass to test tile and fuse of sequence of operations. Intended only for
 /// testing.
 struct TestLinalgTileAndFuseSequencePass
-    : public PassWrapper<TestLinalgTileAndFuseSequencePass, FunctionPass> {
+    : public PassWrapper<TestLinalgTileAndFuseSequencePass,
+                         OperationPass<FuncOp>> {
   StringRef getArgument() const final { return "test-linalg-tile-and-fuse"; }
   StringRef getDescription() const final {
     return "Test Linalg tiling and fusion of a sequence of Linalg operations.";
   }
   TestLinalgTileAndFuseSequencePass() = default;
   TestLinalgTileAndFuseSequencePass(
-      const TestLinalgTileAndFuseSequencePass &pass){};
+      const TestLinalgTileAndFuseSequencePass &pass)
+      : PassWrapper(pass){};
 
   ListOption<int64_t> tileSizes{
       *this, "tile-sizes", llvm::cl::desc("Tile sizes to use for ops"),
@@ -275,7 +279,7 @@ struct TestLinalgTileAndFuseSequencePass
                     scf::SCFDialect>();
   }
 
-  void runOnFunction() override {
+  void runOnOperation() override {
     FuncOp funcOp = getOperation();
     auto &blocks = funcOp.getBody().getBlocks();
     if (!llvm::hasSingleElement(blocks)) {

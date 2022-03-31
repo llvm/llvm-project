@@ -584,14 +584,16 @@ define dso_local void @test_stores_exceed_vec_size(<4 x i32> %a, i32* nocapture 
 ;
 ; CHECK-BE-LABEL: test_stores_exceed_vec_size:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    xxspltw vs0, vs34, 0
-; CHECK-BE-NEXT:    xxsldwi vs1, vs34, vs34, 1
-; CHECK-BE-NEXT:    li r3, 16
+; CHECK-BE-NEXT:    addis r3, r2, .LCPI16_0@toc@ha
+; CHECK-BE-NEXT:    xxsldwi vs0, vs34, vs34, 1
 ; CHECK-BE-NEXT:    li r4, 20
+; CHECK-BE-NEXT:    addi r3, r3, .LCPI16_0@toc@l
+; CHECK-BE-NEXT:    lxvw4x vs35, 0, r3
+; CHECK-BE-NEXT:    li r3, 16
 ; CHECK-BE-NEXT:    stxsiwx vs34, r5, r3
-; CHECK-BE-NEXT:    xxsldwi vs0, vs34, vs0, 2
-; CHECK-BE-NEXT:    stfiwx f1, r5, r4
-; CHECK-BE-NEXT:    stxvw4x vs0, 0, r5
+; CHECK-BE-NEXT:    stfiwx f0, r5, r4
+; CHECK-BE-NEXT:    vperm v3, v2, v2, v3
+; CHECK-BE-NEXT:    stxvw4x vs35, 0, r5
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test_stores_exceed_vec_size:
@@ -610,14 +612,16 @@ define dso_local void @test_stores_exceed_vec_size(<4 x i32> %a, i32* nocapture 
 ;
 ; CHECK-P9-BE-LABEL: test_stores_exceed_vec_size:
 ; CHECK-P9-BE:       # %bb.0: # %entry
-; CHECK-P9-BE-NEXT:    xxspltw vs0, vs34, 0
+; CHECK-P9-BE-NEXT:    addis r3, r2, .LCPI16_0@toc@ha
+; CHECK-P9-BE-NEXT:    xxsldwi vs0, vs34, vs34, 1
+; CHECK-P9-BE-NEXT:    addi r3, r3, .LCPI16_0@toc@l
+; CHECK-P9-BE-NEXT:    lxv vs35, 0(r3)
 ; CHECK-P9-BE-NEXT:    li r3, 16
 ; CHECK-P9-BE-NEXT:    stxsiwx vs34, r5, r3
 ; CHECK-P9-BE-NEXT:    li r3, 20
-; CHECK-P9-BE-NEXT:    xxsldwi vs0, vs34, vs0, 2
-; CHECK-P9-BE-NEXT:    stxv vs0, 0(r5)
-; CHECK-P9-BE-NEXT:    xxsldwi vs0, vs34, vs34, 1
 ; CHECK-P9-BE-NEXT:    stfiwx f0, r5, r3
+; CHECK-P9-BE-NEXT:    vperm v3, v2, v2, v3
+; CHECK-P9-BE-NEXT:    stxv vs35, 0(r5)
 ; CHECK-P9-BE-NEXT:    blr
 entry:
   %vecext = extractelement <4 x i32> %a, i32 2

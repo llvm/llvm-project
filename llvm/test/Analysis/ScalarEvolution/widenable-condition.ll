@@ -20,7 +20,7 @@ define i32 @wc_max() {
 ; CHECK-NEXT:    %widenable_cond3 = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    --> %widenable_cond3 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %exiplicit_guard_cond4 = and i1 %cond_1, %widenable_cond3
-; CHECK-NEXT:    --> %exiplicit_guard_cond4 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> (%cond_1 umin %widenable_cond3) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @wc_max
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: max backedge-taken count is 1999

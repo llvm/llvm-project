@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/PDB/Native/NativeTypeBuiltin.h"
-#include "llvm/Support/FormatVariadic.h"
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -19,7 +18,7 @@ NativeTypeBuiltin::NativeTypeBuiltin(NativeSession &PDBSession, SymIndexId Id,
     : NativeRawSymbol(PDBSession, PDB_SymType::BuiltinType, Id),
       Session(PDBSession), Mods(Mods), Type(T), Length(L) {}
 
-NativeTypeBuiltin::~NativeTypeBuiltin() {}
+NativeTypeBuiltin::~NativeTypeBuiltin() = default;
 
 void NativeTypeBuiltin::dump(raw_ostream &OS, int Indent,
                              PdbSymbolIdField ShowIdFields,

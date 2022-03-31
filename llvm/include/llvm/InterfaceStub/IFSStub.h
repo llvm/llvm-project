@@ -14,9 +14,8 @@
 #ifndef LLVM_INTERFACESTUB_IFSSTUB_H
 #define LLVM_INTERFACESTUB_IFSSTUB_H
 
-#include "llvm/Support/Error.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/Support/VersionTuple.h"
-#include <set>
 #include <vector>
 
 namespace llvm {
@@ -95,7 +94,7 @@ struct IFSStub {
   std::vector<std::string> NeededLibs;
   std::vector<IFSSymbol> Symbols;
 
-  IFSStub() {}
+  IFSStub() = default;
   IFSStub(const IFSStub &Stub);
   IFSStub(IFSStub &&Stub);
 };
@@ -106,7 +105,7 @@ struct IFSStub {
 // This class makes it possible to map a second traits so the same data
 // structure can be used for 2 different yaml schema.
 struct IFSStubTriple : IFSStub {
-  IFSStubTriple() {}
+  IFSStubTriple() = default;
   IFSStubTriple(const IFSStub &Stub);
   IFSStubTriple(const IFSStubTriple &Stub);
   IFSStubTriple(IFSStubTriple &&Stub);

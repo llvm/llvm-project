@@ -1,7 +1,6 @@
 ; This testcase ensures that CFL AA answers queries soundly when callee tries 
 ; to return one of its parameters
 
-; RUN: opt < %s -disable-basic-aa -cfl-anders-aa -aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s
 ; RUN: opt < %s -aa-pipeline=cfl-anders-aa -passes=aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s
 
 define i32* @return_arg_callee(i32* %arg1, i32* %arg2) {
@@ -21,6 +20,9 @@ define void @test_return_arg() {
   %b = alloca i32, align 4
 
   %c = call i32* @return_arg_callee(i32* %a, i32* %b)
+  load i32, i32* %a
+  load i32, i32* %b
+  load i32, i32* %c
 
   ret void
 }

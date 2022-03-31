@@ -23,11 +23,27 @@
 using namespace llvm;
 using namespace IRSimilarity;
 
+namespace llvm {
 cl::opt<bool>
     DisableBranches("no-ir-sim-branch-matching", cl::init(false),
                     cl::ReallyHidden,
                     cl::desc("disable similarity matching, and outlining, "
                              "across branches for debugging purposes."));
+
+cl::opt<bool>
+    DisableIndirectCalls("no-ir-sim-indirect-calls", cl::init(false),
+                         cl::ReallyHidden,
+                         cl::desc("disable outlining indirect calls."));
+
+cl::opt<bool>
+    MatchCallsByName("ir-sim-calls-by-name", cl::init(false), cl::ReallyHidden,
+                     cl::desc("only allow matching call instructions if the "
+                              "name and type signature match."));
+
+cl::opt<bool>
+    DisableIntrinsics("no-ir-sim-intrinsics", cl::init(false), cl::ReallyHidden,
+                      cl::desc("Don't match or outline intrinsics"));
+} // namespace llvm
 
 IRInstructionData::IRInstructionData(Instruction &I, bool Legality,
                                      IRInstructionDataList &IDList)
@@ -57,10 +73,16 @@ void IRInstructionData::initializeInstruction() {
 
     OperVals.push_back(OI.get());
   }
+
+  // We capture the incoming BasicBlocks as values as well as the incoming
+  // Values in order to check for structural similarity.
+  if (PHINode *PN = dyn_cast<PHINode>(Inst))
+    for (BasicBlock *BB : PN->blocks())
+      OperVals.push_back(BB);
 }
 
 IRInstructionData::IRInstructionData(IRInstructionDataList &IDList)
-    : Inst(nullptr), Legal(false), IDL(&IDList) {}
+    : IDL(&IDList) {}
 
 void IRInstructionData::setBranchSuccessors(
     DenseMap<BasicBlock *, unsigned> &BasicBlockToInteger) {
@@ -82,6 +104,61 @@ void IRInstructionData::setBranchSuccessors(
     int OtherBlockNumber = static_cast<int>(BBNumIt->second);
 
     int Relative = OtherBlockNumber - CurrentBlockNumber;
+    RelativeBlockLocations.push_back(Relative);
+  }
+}
+
+void IRInstructionData::setCalleeName(bool MatchByName) {
+  CallInst *CI = dyn_cast<CallInst>(Inst);
+  assert(CI && "Instruction must be call");
+
+  CalleeName = "";
+  if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(Inst)) {
+    // To hash intrinsics, we use the opcode, and types like the other
+    // instructions, but also, the Intrinsic ID, and the Name of the
+    // intrinsic.
+    Intrinsic::ID IntrinsicID = II->getIntrinsicID();
+    FunctionType *FT = II->getFunctionType();
+    // If there is an overloaded name, we have to use the complex version
+    // of getName to get the entire string.
+    if (Intrinsic::isOverloaded(IntrinsicID))
+      CalleeName =
+          Intrinsic::getName(IntrinsicID, FT->params(), II->getModule(), FT);
+    // If there is not an overloaded name, we only need to use this version.
+    else
+      CalleeName = Intrinsic::getName(IntrinsicID).str();
+
+    return;
+  }
+
+  if (!CI->isIndirectCall() && MatchByName)
+    CalleeName = CI->getCalledFunction()->getName().str();
+}
+
+void IRInstructionData::setPHIPredecessors(
+    DenseMap<BasicBlock *, unsigned> &BasicBlockToInteger) {
+  assert(isa<PHINode>(Inst) && "Instruction must be phi node");
+
+  PHINode *PN = cast<PHINode>(Inst);
+  DenseMap<BasicBlock *, unsigned>::iterator BBNumIt;
+
+  BBNumIt = BasicBlockToInteger.find(PN->getParent());
+  assert(BBNumIt != BasicBlockToInteger.end() &&
+         "Could not find location for BasicBlock!");
+
+  int CurrentBlockNumber = static_cast<int>(BBNumIt->second);
+
+  // Convert the incoming blocks of the PHINode to an integer value, based on
+  // the relative distances between the current block and the incoming block.
+  for (unsigned Idx = 0; Idx < PN->getNumIncomingValues(); Idx++) {
+    BasicBlock *Incoming = PN->getIncomingBlock(Idx);
+    BBNumIt = BasicBlockToInteger.find(Incoming);
+    assert(BBNumIt != BasicBlockToInteger.end() &&
+           "Could not find number for BasicBlock!");
+    int OtherBlockNumber = static_cast<int>(BBNumIt->second);
+
+    int Relative = OtherBlockNumber - CurrentBlockNumber;
+    RelativeBlockLocations.push_back(Relative);
     RelativeBlockLocations.push_back(Relative);
   }
 }
@@ -112,10 +189,13 @@ CmpInst::Predicate IRInstructionData::getPredicate() const {
   return cast<CmpInst>(Inst)->getPredicate();
 }
 
-static StringRef getCalledFunctionName(CallInst &CI) {
-  assert(CI.getCalledFunction() != nullptr && "Called Function is nullptr?");
+StringRef IRInstructionData::getCalleeName() const {
+  assert(isa<CallInst>(Inst) &&
+         "Can only get a name from a call instruction");
 
-  return CI.getCalledFunction()->getName();
+  assert(CalleeName.hasValue() && "CalleeName has not been set");
+
+  return *CalleeName;
 }
 
 bool IRSimilarity::isClose(const IRInstructionData &A,
@@ -170,13 +250,11 @@ bool IRSimilarity::isClose(const IRInstructionData &A,
                   });
   }
 
-  // If the instructions are functions, we make sure that the function name is
-  // the same.  We already know that the types are since is isSameOperationAs is
-  // true.
+  // If the instructions are functions calls, we make sure that the function
+  // name is the same.  We already know that the types are since is
+  // isSameOperationAs is true.
   if (isa<CallInst>(A.Inst) && isa<CallInst>(B.Inst)) {
-    CallInst *CIA = cast<CallInst>(A.Inst);
-    CallInst *CIB = cast<CallInst>(B.Inst);
-    if (getCalledFunctionName(*CIA).compare(getCalledFunctionName(*CIB)) != 0)
+    if (A.getCalleeName().str() != B.getCalleeName().str())
       return false;
   }
 
@@ -211,14 +289,12 @@ void IRInstructionMapper::convertToUnsignedVec(
     }
   }
 
-  if (HaveLegalRange) {
-    if (AddedIllegalLastTime)
-      mapToIllegalUnsigned(It, IntegerMappingForBB, InstrListForBB, true);
-    for (IRInstructionData *ID : InstrListForBB)
-      this->IDL->push_back(*ID);
-    llvm::append_range(InstrList, InstrListForBB);
-    llvm::append_range(IntegerMapping, IntegerMappingForBB);
-  }
+  if (AddedIllegalLastTime)
+    mapToIllegalUnsigned(It, IntegerMappingForBB, InstrListForBB, true);
+  for (IRInstructionData *ID : InstrListForBB)
+    this->IDL->push_back(*ID);
+  llvm::append_range(InstrList, InstrListForBB);
+  llvm::append_range(IntegerMapping, IntegerMappingForBB);
 }
 
 // TODO: This is the same as the MachineOutliner, and should be consolidated
@@ -243,6 +319,12 @@ unsigned IRInstructionMapper::mapToLegalUnsigned(
 
   if (isa<BranchInst>(*It))
     ID->setBranchSuccessors(BasicBlockToInteger);
+
+  if (isa<CallInst>(*It))
+    ID->setCalleeName(EnableMatchCallsByName);
+
+  if (isa<PHINode>(*It))
+    ID->setPHIPredecessors(BasicBlockToInteger);
 
   // Add to the instruction list
   bool WasInserted;
@@ -707,7 +789,8 @@ bool IRSimilarityCandidate::compareStructure(
     // We have different paths for commutative instructions and non-commutative
     // instructions since commutative instructions could allow multiple mappings
     // to certain values.
-    if (IA->isCommutative() && !isa<FPMathOperator>(IA)) {
+    if (IA->isCommutative() && !isa<FPMathOperator>(IA) &&
+        !isa<IntrinsicInst>(IA)) {
       if (!compareCommutativeOperandMapping(
               {A, OperValsA, ValueNumberMappingA},
               {B, OperValsB, ValueNumberMappingB}))
@@ -1075,6 +1158,10 @@ SimilarityGroupList &IRSimilarityIdentifier::findSimilarity(
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> IntegerMapping;
   Mapper.InstClassifier.EnableBranches = this->EnableBranches;
+  Mapper.InstClassifier.EnableIndirectCalls = EnableIndirectCalls;
+  Mapper.EnableMatchCallsByName = EnableMatchingCallsByName;
+  Mapper.InstClassifier.EnableIntrinsics = EnableIntrinsics;
+  Mapper.InstClassifier.EnableMustTailCalls = EnableMustTailCalls;
 
   populateMapper(Modules, InstrList, IntegerMapping);
   findCandidates(InstrList, IntegerMapping);
@@ -1085,6 +1172,10 @@ SimilarityGroupList &IRSimilarityIdentifier::findSimilarity(
 SimilarityGroupList &IRSimilarityIdentifier::findSimilarity(Module &M) {
   resetSimilarityCandidates();
   Mapper.InstClassifier.EnableBranches = this->EnableBranches;
+  Mapper.InstClassifier.EnableIndirectCalls = EnableIndirectCalls;
+  Mapper.EnableMatchCallsByName = EnableMatchingCallsByName;
+  Mapper.InstClassifier.EnableIntrinsics = EnableIntrinsics;
+  Mapper.InstClassifier.EnableMustTailCalls = EnableMustTailCalls;
 
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> IntegerMapping;
@@ -1105,7 +1196,9 @@ IRSimilarityIdentifierWrapperPass::IRSimilarityIdentifierWrapperPass()
 }
 
 bool IRSimilarityIdentifierWrapperPass::doInitialization(Module &M) {
-  IRSI.reset(new IRSimilarityIdentifier(!DisableBranches));
+  IRSI.reset(new IRSimilarityIdentifier(!DisableBranches, !DisableIndirectCalls,
+                                        MatchCallsByName, !DisableIntrinsics,
+                                        false));
   return false;
 }
 
@@ -1122,8 +1215,9 @@ bool IRSimilarityIdentifierWrapperPass::runOnModule(Module &M) {
 AnalysisKey IRSimilarityAnalysis::Key;
 IRSimilarityIdentifier IRSimilarityAnalysis::run(Module &M,
                                                  ModuleAnalysisManager &) {
-
-  auto IRSI = IRSimilarityIdentifier(!DisableBranches);
+  auto IRSI = IRSimilarityIdentifier(!DisableBranches, !DisableIndirectCalls,
+                                     MatchCallsByName, !DisableIntrinsics,
+                                     false);
   IRSI.findSimilarity(M);
   return IRSI;
 }

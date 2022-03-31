@@ -27,7 +27,7 @@ void llvm::printLivesAt(SlotIndex SI,
          << *LIS.getInstructionFromIndex(SI);
   unsigned Num = 0;
   for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
-    const unsigned Reg = Register::index2VirtReg(I);
+    const Register Reg = Register::index2VirtReg(I);
     if (!LIS.hasInterval(Reg))
       continue;
     const auto &LI = LIS.getInterval(Reg);
@@ -487,7 +487,7 @@ void GCNRPTracker::printLiveRegs(raw_ostream &OS, const LiveRegSet& LiveRegs,
                                  const MachineRegisterInfo &MRI) {
   const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
   for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
-    unsigned Reg = Register::index2VirtReg(I);
+    Register Reg = Register::index2VirtReg(I);
     auto It = LiveRegs.find(Reg);
     if (It != LiveRegs.end() && It->second.any())
       OS << ' ' << printVRegOrUnit(Reg, TRI) << ':'

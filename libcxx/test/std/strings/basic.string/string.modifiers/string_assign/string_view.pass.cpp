@@ -20,7 +20,7 @@
 #include "test_allocator.h"
 
 template <class S, class SV>
-void
+TEST_CONSTEXPR_CXX20 void
 test(S s, SV sv, S expected)
 {
     s.assign(sv);
@@ -29,7 +29,7 @@ test(S s, SV sv, S expected)
 }
 
 template <class S, class SV>
-void
+TEST_CONSTEXPR_CXX20 void
 testAlloc(S s, SV sv, const typename S::allocator_type& a)
 {
     s.assign(sv);
@@ -38,9 +38,8 @@ testAlloc(S s, SV sv, const typename S::allocator_type& a)
     assert(s.get_allocator() == a);
 }
 
-int main(int, char**)
-{
-    {
+bool test() {
+  {
     typedef std::string S;
     typedef std::string_view SV;
     test(S(), SV(), S());
@@ -68,10 +67,10 @@ int main(int, char**)
     testAlloc(S(), SV("12345"), std::allocator<char>());
     testAlloc(S(), SV("1234567890"), std::allocator<char>());
     testAlloc(S(), SV("12345678901234567890"), std::allocator<char>());
-    }
+  }
 
 #if TEST_STD_VER >= 11
-    {
+  {
     typedef std::basic_string     <char, std::char_traits<char>, min_allocator<char>> S;
     typedef std::basic_string_view<char, std::char_traits<char> > SV;
     test(S(), SV(), S());
@@ -99,7 +98,17 @@ int main(int, char**)
     testAlloc(S(), SV("12345"), min_allocator<char>());
     testAlloc(S(), SV("1234567890"), min_allocator<char>());
     testAlloc(S(), SV("12345678901234567890"), min_allocator<char>());
-    }
+  }
+#endif
+
+  return true;
+}
+
+int main(int, char**)
+{
+  test();
+#if TEST_STD_VER > 17
+  // static_assert(test());
 #endif
 
   return 0;

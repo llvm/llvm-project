@@ -10,14 +10,16 @@
 #define LLVM_DEBUGINFO_DWARF_DWARFDEBUGRANGELIST_H
 
 #include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
-#include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
-#include <cassert>
 #include <cstdint>
 #include <vector>
 
 namespace llvm {
 
 class raw_ostream;
+class DWARFDataExtractor;
+namespace object {
+struct SectionedAddress;
+}
 
 class DWARFDebugRangeList {
 public:

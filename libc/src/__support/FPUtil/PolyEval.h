@@ -28,12 +28,20 @@ namespace fputil {
 template <typename T> static inline T polyeval(T x, T a0) { return a0; }
 
 template <typename T, typename... Ts>
-static inline T polyeval(T x, T a0, Ts... a) {
+INLINE_FMA static inline T polyeval(T x, T a0, Ts... a) {
   return fma(x, polyeval(x, a...), a0);
 }
 
 } // namespace fputil
 } // namespace __llvm_libc
+
+#ifdef LLVM_LIBC_ARCH_X86_64
+
+// [DISABLED] There is a regression with using vectorized version for polyeval
+// compared to the naive Horner's scheme with fma.  Need further investigation
+// #include "x86_64/PolyEval.h"
+
+#endif // LLVM_LIBC_ARCH_X86_64
 
 #else
 

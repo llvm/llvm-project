@@ -203,10 +203,20 @@ TEST(SelectionTest, CommonAncestor) {
       },
       {
           R"cpp(
-            struct S { S(const char*); };
-            S [[s ^= "foo"]];
+            #define TARGET void foo()
+            [[TAR^GET{ return; }]]
           )cpp",
-          "CXXConstructExpr",
+          "FunctionDecl",
+      },
+      {
+          R"cpp(
+            struct S { S(const char*); };
+            [[S s ^= "foo"]];
+          )cpp",
+          // The AST says a CXXConstructExpr covers the = sign in C++14.
+          // But we consider CXXConstructExpr to only own brackets.
+          // (It's not the interesting constructor anyway, just S(&&)).
+          "VarDecl",
       },
       {
           R"cpp(
@@ -231,7 +241,7 @@ TEST(SelectionTest, CommonAncestor) {
           R"cpp(
             [[void (^*S)(int)]] = nullptr;
           )cpp",
-          "FunctionProtoTypeLoc",
+          "PointerTypeLoc",
       },
       {
           R"cpp(
@@ -243,7 +253,7 @@ TEST(SelectionTest, CommonAncestor) {
           R"cpp(
             [[void ^(*S)(int)]] = nullptr;
           )cpp",
-          "FunctionProtoTypeLoc",
+          "ParenTypeLoc",
       },
       {
           R"cpp(
@@ -318,9 +328,27 @@ TEST(SelectionTest, CommonAncestor) {
       {"[[st^ruct {int x;}]] y;", "CXXRecordDecl"},
       {"[[struct {int x;} ^y]];", "VarDecl"},
       {"struct {[[int ^x]];} y;", "FieldDecl"},
+
+      // Tricky case: nested ArrayTypeLocs have the same token range.
+      {"const int x = 1, y = 2; int array[^[[x]]][10][y];", "DeclRefExpr"},
+      {"const int x = 1, y = 2; int array[x][10][^[[y]]];", "DeclRefExpr"},
+      {"const int x = 1, y = 2; int array[x][^[[10]]][y];", "IntegerLiteral"},
+      {"const int x = 1, y = 2; [[i^nt]] array[x][10][y];", "BuiltinTypeLoc"},
+      {"void func(int x) { int v_array[^[[x]]][10]; }", "DeclRefExpr"},
+
+      {"int (*getFunc([[do^uble]]))(int);", "BuiltinTypeLoc"},
+
+      // Member pointers and pack expansion use declarator syntax, but are
+      // restricted so they don't need special casing.
+      {"class X{}; [[int X::^*]]y[10];", "MemberPointerTypeLoc"},
+      {"template<typename ...T> void foo([[T*^...]]x);",
+       "PackExpansionTypeLoc"},
+      {"template<typename ...T> void foo([[^T]]*...x);",
+       "TemplateTypeParmTypeLoc"},
+
       // FIXME: the AST has no location info for qualifiers.
       {"const [[a^uto]] x = 42;", "AutoTypeLoc"},
-      {"[[co^nst auto x = 42]];", "VarDecl"},
+      {"co^nst auto x = 42;", nullptr},
 
       {"^", nullptr},
       {"void foo() { [[foo^^]] (); }", "DeclRefExpr"},
@@ -377,6 +405,9 @@ TEST(SelectionTest, CommonAncestor) {
         decltype([[^a]] + a) b;
         )cpp",
           "DeclRefExpr"},
+      {"[[decltype^(1)]] b;", "DecltypeTypeLoc"}, // Not the VarDecl.
+      // decltype(auto) is an AutoTypeLoc!
+      {"[[de^cltype(a^uto)]] a = 1;", "AutoTypeLoc"},
 
       // Objective-C nullability attributes.
       {
@@ -485,6 +516,17 @@ TEST(SelectionTest, CommonAncestor) {
         enum Bar : [[Fo^o]];
       )cpp",
        "TypedefTypeLoc"},
+
+      // lambda captured var-decl
+      {R"cpp(
+        void test(int bar) {
+          auto l = [^[[foo = bar]]] { };
+        })cpp",
+       "VarDecl"},
+      {R"cpp(
+        /*error-ok*/
+        void func() [[{^]])cpp",
+       "CompoundStmt"},
   };
 
   for (const Case &C : Cases) {

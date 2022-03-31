@@ -144,7 +144,7 @@ if.end:                                           ; preds = %if.then, %for.body
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
 
-define void @pr30172(i32* nocapture %asd, i32* nocapture %bsd) {
+define void @pr30172(i32* nocapture %asd, i32* nocapture %bsd) !dbg !5 {
 entry:
   br label %for.body
 
@@ -155,8 +155,8 @@ for.cond.cleanup:                                 ; preds = %if.end
 ; CHECK: vector.body:
 ; CHECK: %[[CMP1:.+]] = icmp slt <2 x i32> %[[VAL:.+]], <i32 100, i32 100>
 ; CHECK: %[[CMP2:.+]] = icmp sge <2 x i32> %[[VAL]], <i32 200, i32 200>
-; CHECK: %[[NOT:.+]] = xor <2 x i1> %[[CMP1]], <i1 true, i1 true>
-; CHECK: %[[AND:.+]] = select <2 x i1> %[[NOT]], <2 x i1> %[[CMP2]], <2 x i1> zeroinitializer
+; CHECK: %[[NOT:.+]] = xor <2 x i1> %[[CMP1]], <i1 true, i1 true>, !dbg [[DBG1:![0-9]+]]
+; CHECK: %[[AND:.+]] = select <2 x i1> %[[NOT]], <2 x i1> %[[CMP2]], <2 x i1> zeroinitializer, !dbg [[DBG2:![0-9]+]]
 ; CHECK: %[[OR:.+]] = or <2 x i1> %[[AND]], %[[CMP1]]
 ; CHECK: %[[EXTRACT:.+]] = extractelement <2 x i1> %[[OR]], i32 0
 ; CHECK: br i1 %[[EXTRACT]], label %[[THEN:[a-zA-Z0-9.]+]], label %[[FI:[a-zA-Z0-9.]+]]
@@ -175,11 +175,11 @@ for.body:                                         ; preds = %if.end, %entry
   %lsd.b = load i32, i32* %isd.b, align 4
   %psd = add nsw i32 %lsd, 23
   %cmp1 = icmp slt i32 %lsd, 100
-  br i1 %cmp1, label %if.then, label %check
+  br i1 %cmp1, label %if.then, label %check, !dbg !7
 
 check:                                            ; preds = %for.body
   %cmp2 = icmp sge i32 %lsd, 200
-  br i1 %cmp2, label %if.then, label %if.end
+  br i1 %cmp2, label %if.then, label %if.end, !dbg !8
 
 if.then:                                          ; preds = %check, %for.body
   %sd1 = sdiv i32 %psd, %lsd
@@ -193,7 +193,6 @@ if.end:                                           ; preds = %if.then, %check
   %exitcond = icmp eq i64 %indvars.iv.next, 128
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
-
 
 define i32 @predicated_udiv_scalarized_operand(i32* %a, i1 %c, i32 %x, i64 %n) {
 entry:
@@ -270,3 +269,20 @@ for.end:
   %tmp7 = phi i32 [ %tmp6, %for.inc ]
   ret i32 %tmp7
 }
+
+!llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!3, !4}
+
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: NoDebug, enums: !2)
+!1 = !DIFile(filename: "/tmp/s.c", directory: "/tmp")
+!2 = !{}
+!3 = !{i32 2, !"Debug Info Version", i32 3}
+!4 = !{i32 7, !"PIC Level", i32 2}
+!5 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 4, type: !6, scopeLine: 4, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
+!6 = !DISubroutineType(types: !2)
+!7 = !DILocation(line: 5, column: 21, scope: !5)
+!8 = !DILocation(line: 5, column: 3, scope: !5)
+
+
+; CHECK:      [[DBG1]] = !DILocation(line: 5, column: 21, scope: !26)
+; CHECK-NEXT: [[DBG2]] = !DILocation(line: 5, column: 3, scope: !26)

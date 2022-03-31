@@ -454,3 +454,127 @@ if.end:                                           ; preds = %entry
 }
 
 declare void @use(i1)
+
+define i1 @add_nuw_neg_pr54224_i16(i16 %a) {
+; CHECK-LABEL: @add_nuw_neg_pr54224_i16(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[NEG2:%.*]] = add nuw i16 [[A:%.*]], -305
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i16 0, [[NEG2]]
+; CHECK-NEXT:    br i1 [[C_1]], label [[EXIT_1:%.*]], label [[EXIT_2:%.*]]
+; CHECK:       exit.1:
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i16 [[A]], 0
+; CHECK-NEXT:    ret i1 false
+; CHECK:       exit.2:
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ugt i16 [[A]], 0
+; CHECK-NEXT:    ret i1 [[C_3]]
+;
+entry:
+  %neg2 = add nuw i16 %a, -305
+  %c.1 = icmp ugt i16 0, %neg2
+  br i1 %c.1, label %exit.1, label %exit.2
+
+exit.1:
+  %c.2 = icmp ugt i16 %a, 0
+  ret i1 %c.2
+
+exit.2:
+  %c.3 = icmp ugt i16 %a, 0
+  ret i1 %c.3
+}
+
+define i1 @add_nuw_neg_pr54224_i64(i64 %a) {
+; CHECK-LABEL: @add_nuw_neg_pr54224_i64(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[NEG2:%.*]] = add nuw i64 [[A:%.*]], -305
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i64 0, [[NEG2]]
+; CHECK-NEXT:    br i1 [[C_1]], label [[EXIT_1:%.*]], label [[EXIT_2:%.*]]
+; CHECK:       exit.1:
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i64 [[A]], 0
+; CHECK-NEXT:    ret i1 [[C_2]]
+; CHECK:       exit.2:
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ugt i64 [[A]], 0
+; CHECK-NEXT:    ret i1 [[C_3]]
+;
+entry:
+  %neg2 = add nuw i64 %a, -305
+  %c.1 = icmp ugt i64 0, %neg2
+  br i1 %c.1, label %exit.1, label %exit.2
+
+exit.1:
+  %c.2 = icmp ugt i64 %a, 0
+  ret i1 %c.2
+
+exit.2:
+  %c.3 = icmp ugt i64 %a, 0
+  ret i1 %c.3
+}
+
+define i1 @add_nuw_neg2_i8(i8 %a) {
+; CHECK-LABEL: @add_nuw_neg2_i8(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[NEG2:%.*]] = add nuw i8 [[A:%.*]], -4
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i8 [[NEG2]], -2
+; CHECK-NEXT:    br i1 [[C_1]], label [[EXIT_1:%.*]], label [[EXIT_2:%.*]]
+; CHECK:       exit.1:
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ult i8 [[A]], 2
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ult i8 [[A]], 1
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, [[C_2]]
+; CHECK-NEXT:    ret i1 [[RES_1]]
+; CHECK:       exit.2:
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ult i8 [[A]], 3
+; CHECK-NEXT:    [[F_1:%.*]] = icmp ult i8 [[A]], 2
+; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[C_3]], false
+; CHECK-NEXT:    ret i1 [[RES_2]]
+;
+entry:
+  %neg2 = add nuw i8 %a, -4
+  %c.1 = icmp ult i8 %neg2, -2
+  br i1 %c.1, label %exit.1, label %exit.2
+
+exit.1:
+  %t.1 = icmp ult i8 %a, 2
+  %c.2 = icmp ult i8 %a, 1
+  %res.1 = xor i1 %t.1, %c.2
+  ret i1 %res.1
+
+exit.2:
+  %c.3 = icmp ult i8 %a, 3
+  %f.1 = icmp ult i8 %a, 2
+  %res.2 = xor i1 %c.3, %f.1
+  ret i1 %res.2
+}
+
+define i1 @add_nuw_neg2_i64(i64 %a) {
+; CHECK-LABEL: @add_nuw_neg2_i64(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[NEG2:%.*]] = add nuw i64 [[A:%.*]], -4
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i64 [[NEG2]], -2
+; CHECK-NEXT:    br i1 [[C_1]], label [[EXIT_1:%.*]], label [[EXIT_2:%.*]]
+; CHECK:       exit.1:
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ult i64 [[A]], 2
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ult i64 [[A]], 1
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[T_1]], [[C_2]]
+; CHECK-NEXT:    ret i1 [[RES_1]]
+; CHECK:       exit.2:
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ult i64 [[A]], 3
+; CHECK-NEXT:    [[F_1:%.*]] = icmp ult i64 [[A]], 2
+; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[C_3]], [[F_1]]
+; CHECK-NEXT:    ret i1 [[RES_2]]
+;
+entry:
+  %neg2 = add nuw i64 %a, -4
+  %c.1 = icmp ult i64 %neg2, -2
+  br i1 %c.1, label %exit.1, label %exit.2
+
+exit.1:
+  %t.1 = icmp ult i64 %a, 2
+  %c.2 = icmp ult i64 %a, 1
+  %res.1 = xor i1 %t.1, %c.2
+  ret i1 %res.1
+
+exit.2:
+  %c.3 = icmp ult i64 %a, 3
+  %f.1 = icmp ult i64 %a, 2
+  %res.2 = xor i1 %c.3, %f.1
+  ret i1 %res.2
+}

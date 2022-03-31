@@ -89,10 +89,31 @@ typedef int (*TargetDataFuncPtrTy)(ident_t *, DeviceTy &, int32_t, void **,
 #ifdef __cplusplus
 extern "C" {
 #endif
+/*!
+ * The ident structure that describes a source location.
+ * The struct is identical to the one in the kmp.h file.
+ * We maintain the same data structure for compatibility.
+ */
+typedef int kmp_int32;
+typedef intptr_t kmp_intptr_t;
+// Compiler sends us this info:
+typedef struct kmp_depend_info {
+  kmp_intptr_t base_addr;
+  size_t len;
+  struct {
+    bool in : 1;
+    bool out : 1;
+    bool mtx : 1;
+  } flags;
+} kmp_depend_info_t;
 // functions that extract info from libomp; keep in sync
 int omp_get_default_device(void) __attribute__((weak));
 int32_t __kmpc_global_thread_num(void *) __attribute__((weak));
 int __kmpc_get_target_offload(void) __attribute__((weak));
+void __kmpc_omp_wait_deps(ident_t *loc_ref, kmp_int32 gtid, kmp_int32 ndeps,
+                          kmp_depend_info_t *dep_list, kmp_int32 ndeps_noalias,
+                          kmp_depend_info_t *noalias_dep_list)
+    __attribute__((weak));
 #ifdef __cplusplus
 }
 #endif
@@ -104,7 +125,9 @@ int __kmpc_get_target_offload(void) __attribute__((weak));
 /// dump a table of all the host-target pointer pairs on failure
 static inline void dumpTargetPointerMappings(const ident_t *Loc,
                                              DeviceTy &Device) {
-  if (Device.HostDataToTargetMap.empty())
+  DeviceTy::HDTTMapAccessorTy HDTTMap =
+      Device.HostDataToTargetMap.getExclusiveAccessor();
+  if (HDTTMap->empty())
     return;
 
   SourceInfo Kernel(Loc);
@@ -114,18 +137,16 @@ static inline void dumpTargetPointerMappings(const ident_t *Loc,
   INFO(OMP_INFOTYPE_ALL, Device.DeviceID, "%-18s %-18s %s %s %s %s\n",
        "Host Ptr", "Target Ptr", "Size (B)", "DynRefCount", "HoldRefCount",
        "Declaration");
-  Device.DataMapMtx.lock();
-  for (const auto &HostTargetMap : Device.HostDataToTargetMap) {
-    SourceInfo Info(HostTargetMap.HstPtrName);
+  for (const auto &It : *HDTTMap) {
+    HostDataToTargetTy &HDTT = *It.HDTT;
+    SourceInfo Info(HDTT.HstPtrName);
     INFO(OMP_INFOTYPE_ALL, Device.DeviceID,
          DPxMOD " " DPxMOD " %-8" PRIuPTR " %-11s %-12s %s at %s:%d:%d\n",
-         DPxPTR(HostTargetMap.HstPtrBegin), DPxPTR(HostTargetMap.TgtPtrBegin),
-         HostTargetMap.HstPtrEnd - HostTargetMap.HstPtrBegin,
-         HostTargetMap.dynRefCountToStr().c_str(),
-         HostTargetMap.holdRefCountToStr().c_str(), Info.getName(),
-         Info.getFilename(), Info.getLine(), Info.getColumn());
+         DPxPTR(HDTT.HstPtrBegin), DPxPTR(HDTT.TgtPtrBegin),
+         HDTT.HstPtrEnd - HDTT.HstPtrBegin, HDTT.dynRefCountToStr().c_str(),
+         HDTT.holdRefCountToStr().c_str(), Info.getName(), Info.getFilename(),
+         Info.getLine(), Info.getColumn());
   }
-  Device.DataMapMtx.unlock();
 }
 
 ////////////////////////////////////////////////////////////////////////////////

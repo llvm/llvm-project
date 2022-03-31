@@ -88,6 +88,13 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   switch (Fixup.getTargetKind()) {
   default:
     llvm_unreachable("Unknown fixup kind!");
+  case CSKY::fixup_csky_got32:
+  case CSKY::fixup_csky_got_imm18_scale4:
+  case CSKY::fixup_csky_gotoff:
+  case CSKY::fixup_csky_gotpc:
+  case CSKY::fixup_csky_plt32:
+  case CSKY::fixup_csky_plt_imm18_scale4:
+    llvm_unreachable("Relocation should be unconditionally forced\n");
   case FK_Data_1:
   case FK_Data_2:
   case FK_Data_4:
@@ -123,6 +130,71 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
       Ctx.reportError(Fixup.getLoc(), "fixup value must be 2-byte aligned.");
 
     return (Value >> 1) & 0x3ffff;
+  case CSKY::fixup_csky_pcrel_uimm8_scale4: {
+    if (!isUIntN(10, Value))
+      Ctx.reportError(Fixup.getLoc(), "out of range pc-relative fixup value.");
+    if (Value & 0x3)
+      Ctx.reportError(Fixup.getLoc(), "fixup value must be 4-byte aligned.");
+
+    unsigned IMM4L = (Value >> 2) & 0xf;
+    unsigned IMM4H = (Value >> 6) & 0xf;
+
+    Value = (IMM4H << 21) | (IMM4L << 4);
+    return Value;
+  }
+  case CSKY::fixup_csky_pcrel_imm10_scale2:
+    if (!isIntN(11, Value))
+      Ctx.reportError(Fixup.getLoc(), "out of range pc-relative fixup value.");
+    if (Value & 0x1)
+      Ctx.reportError(Fixup.getLoc(), "fixup value must be 2-byte aligned.");
+
+    return (Value >> 1) & 0x3ff;
+  case CSKY::fixup_csky_pcrel_uimm7_scale4:
+    if (!isUIntN(9, Value))
+      Ctx.reportError(Fixup.getLoc(), "out of range pc-relative fixup value.");
+    if (Value & 0x3)
+      Ctx.reportError(Fixup.getLoc(), "fixup value must be 4-byte aligned.");
+
+    if ((Value & 0xff) <= 0b111111100) {
+      unsigned IMM5L = (Value >> 2) & 0x1f;
+      unsigned IMM2H = (Value >> 7) & 0x3;
+
+      Value = (1 << 12) | (IMM2H << 8) | IMM5L;
+    } else {
+      unsigned IMM5L = (!Value >> 2) & 0x1f;
+      unsigned IMM2H = (!Value >> 7) & 0x3;
+
+      Value = (IMM2H << 8) | IMM5L;
+    }
+
+    return Value & 0xffff;
+  }
+}
+
+bool CSKYAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
+                                                  bool Resolved, uint64_t Value,
+                                                  const MCRelaxableFragment *DF,
+                                                  const MCAsmLayout &Layout,
+                                                  const bool WasForced) const {
+  // Return true if the symbol is actually unresolved.
+  // Resolved could be always false when shouldForceRelocation return true.
+  // We use !WasForced to indicate that the symbol is unresolved and not forced
+  // by shouldForceRelocation.
+  if (!Resolved && !WasForced)
+    return true;
+
+  int64_t Offset = int64_t(Value);
+  switch (Fixup.getTargetKind()) {
+  default:
+    return false;
+  case CSKY::fixup_csky_pcrel_imm10_scale2:
+    return !isShiftedInt<10, 1>(Offset);
+  case CSKY::fixup_csky_pcrel_imm16_scale2:
+    return !isShiftedInt<16, 1>(Offset);
+  case CSKY::fixup_csky_pcrel_imm26_scale2:
+    return !isShiftedInt<26, 1>(Offset);
+  case CSKY::fixup_csky_pcrel_uimm7_scale4:
+    return !isShiftedUInt<8, 2>(Offset);
   }
 }
 
@@ -152,8 +224,9 @@ void CSKYAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
   // For each byte of the fragment that the fixup touches, mask in the
   // bits from the fixup value.
   bool IsLittleEndian = (Endian == support::little);
+  bool IsInstFixup = (Kind >= FirstTargetFixupKind);
 
-  if (IsLittleEndian && (NumBytes == 4)) {
+  if (IsLittleEndian && IsInstFixup && (NumBytes == 4)) {
     Data[Offset + 0] |= uint8_t((Value >> 16) & 0xff);
     Data[Offset + 1] |= uint8_t((Value >> 24) & 0xff);
     Data[Offset + 2] |= uint8_t(Value & 0xff);
@@ -166,6 +239,50 @@ void CSKYAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
   }
 }
 
+bool CSKYAsmBackend::mayNeedRelaxation(const MCInst &Inst,
+                                       const MCSubtargetInfo &STI) const {
+  switch (Inst.getOpcode()) {
+  default:
+    return false;
+  case CSKY::JBR32:
+  case CSKY::JBT32:
+  case CSKY::JBF32:
+  case CSKY::JBSR32:
+    if (!STI.getFeatureBits()[CSKY::Has2E3])
+      return false;
+    return true;
+  case CSKY::JBR16:
+  case CSKY::JBT16:
+  case CSKY::JBF16:
+  case CSKY::LRW16:
+  case CSKY::BR16:
+    return true;
+  }
+}
+
+bool CSKYAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
+                                           const MCFixup &Fixup,
+                                           const MCValue &Target) {
+  if (Fixup.getKind() >= FirstLiteralRelocationKind)
+    return true;
+  switch (Fixup.getTargetKind()) {
+  default:
+    break;
+  case CSKY::fixup_csky_got32:
+  case CSKY::fixup_csky_got_imm18_scale4:
+  case CSKY::fixup_csky_gotoff:
+  case CSKY::fixup_csky_gotpc:
+  case CSKY::fixup_csky_plt32:
+  case CSKY::fixup_csky_plt_imm18_scale4:
+  case CSKY::fixup_csky_doffset_imm18:
+  case CSKY::fixup_csky_doffset_imm18_scale2:
+  case CSKY::fixup_csky_doffset_imm18_scale4:
+    return true;
+  }
+
+  return false;
+}
+
 bool CSKYAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
                                           const MCRelaxableFragment *DF,
                                           const MCAsmLayout &Layout) const {
@@ -174,23 +291,62 @@ bool CSKYAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
 
 void CSKYAsmBackend::relaxInstruction(MCInst &Inst,
                                       const MCSubtargetInfo &STI) const {
-  llvm_unreachable("CSKYAsmBackend::relaxInstruction() unimplemented");
+  MCInst Res;
+
+  switch (Inst.getOpcode()) {
+  default:
+    Inst.dump();
+    llvm_unreachable("Opcode not expected!");
+  case CSKY::LRW16:
+    Res.setOpcode(CSKY::LRW32);
+    Res.addOperand(Inst.getOperand(0));
+    Res.addOperand(Inst.getOperand(1));
+    break;
+  case CSKY::BR16:
+    Res.setOpcode(CSKY::BR32);
+    Res.addOperand(Inst.getOperand(0));
+    break;
+  case CSKY::JBSR32:
+    Res.setOpcode(CSKY::JSRI32);
+    Res.addOperand(Inst.getOperand(1));
+    break;
+  case CSKY::JBR32:
+    Res.setOpcode(CSKY::JMPI32);
+    Res.addOperand(Inst.getOperand(1));
+    break;
+  case CSKY::JBT32:
+  case CSKY::JBF32:
+    Res.setOpcode(Inst.getOpcode() == CSKY::JBT32 ? CSKY::JBT_E : CSKY::JBF_E);
+    Res.addOperand(Inst.getOperand(0));
+    Res.addOperand(Inst.getOperand(1));
+    Res.addOperand(Inst.getOperand(2));
+    break;
+  case CSKY::JBR16:
+    Res.setOpcode(CSKY::JBR32);
+    Res.addOperand(Inst.getOperand(0));
+    Res.addOperand(Inst.getOperand(1));
+    break;
+  case CSKY::JBT16:
+  case CSKY::JBF16:
+    // ck801
+    unsigned opcode;
+    if (STI.getFeatureBits()[CSKY::HasE2])
+      opcode = Inst.getOpcode() == CSKY::JBT16 ? CSKY::JBT32 : CSKY::JBF32;
+    else
+      opcode = Inst.getOpcode() == CSKY::JBT16 ? CSKY::JBT_E : CSKY::JBF_E;
+
+    Res.setOpcode(opcode);
+    Res.addOperand(Inst.getOperand(0));
+    Res.addOperand(Inst.getOperand(1));
+    Res.addOperand(Inst.getOperand(2));
+    break;
+  }
+  Inst = std::move(Res);
 }
 
 bool CSKYAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
                                   const MCSubtargetInfo *STI) const {
-  if (Count % 2)
-    return false;
-
-  // MOV32 r0, r0
-  while (Count >= 4) {
-    OS.write("\xc4\x00\x48\x20", 4);
-    Count -= 4;
-  }
-  // MOV16 r0, r0
-  if (Count)
-    OS.write("\x6c\x03", 2);
-
+  OS.write_zeros(Count);
   return true;
 }
 

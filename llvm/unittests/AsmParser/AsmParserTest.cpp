@@ -252,9 +252,7 @@ TEST(AsmParserTest, TypeWithSlotMappingParsing) {
   ASSERT_TRUE(Ty->isPointerTy());
 
   PointerType *PT = cast<PointerType>(Ty);
-  Ty = PT->getElementType();
-  ASSERT_TRUE(Ty->isIntegerTy());
-  ASSERT_TRUE(Ty->getPrimitiveSizeInBits() == 32);
+  ASSERT_TRUE(PT->isOpaqueOrPointeeTypeMatches(Type::getIntNTy(Ctx, 32)));
 
   // Two indirections.
   Ty = parseType("i32**", Error, M, &Mapping);
@@ -262,13 +260,8 @@ TEST(AsmParserTest, TypeWithSlotMappingParsing) {
   ASSERT_TRUE(Ty->isPointerTy());
 
   PT = cast<PointerType>(Ty);
-  Ty = PT->getElementType();
-  ASSERT_TRUE(Ty->isPointerTy());
-
-  PT = cast<PointerType>(Ty);
-  Ty = PT->getElementType();
-  ASSERT_TRUE(Ty->isIntegerTy());
-  ASSERT_TRUE(Ty->getPrimitiveSizeInBits() == 32);
+  Type *ExpectedElemTy = PointerType::getUnqual(Type::getIntNTy(Ctx, 32));
+  ASSERT_TRUE(PT->isOpaqueOrPointeeTypeMatches(ExpectedElemTy));
 
   // Check that we reject types with garbage.
   Ty = parseType("i32 garbage", Error, M, &Mapping);
@@ -386,9 +379,7 @@ TEST(AsmParserTest, TypeAtBeginningWithSlotMappingParsing) {
   ASSERT_TRUE(Read == 4);
 
   PointerType *PT = cast<PointerType>(Ty);
-  Ty = PT->getElementType();
-  ASSERT_TRUE(Ty->isIntegerTy());
-  ASSERT_TRUE(Ty->getPrimitiveSizeInBits() == 32);
+  ASSERT_TRUE(PT->isOpaqueOrPointeeTypeMatches(Type::getIntNTy(Ctx, 32)));
 
   // Two indirections.
   Ty = parseTypeAtBeginning("i32**", Read, Error, M, &Mapping);
@@ -397,13 +388,8 @@ TEST(AsmParserTest, TypeAtBeginningWithSlotMappingParsing) {
   ASSERT_TRUE(Read == 5);
 
   PT = cast<PointerType>(Ty);
-  Ty = PT->getElementType();
-  ASSERT_TRUE(Ty->isPointerTy());
-
-  PT = cast<PointerType>(Ty);
-  Ty = PT->getElementType();
-  ASSERT_TRUE(Ty->isIntegerTy());
-  ASSERT_TRUE(Ty->getPrimitiveSizeInBits() == 32);
+  Type *ExpectedElemTy = PointerType::getUnqual(Type::getIntNTy(Ctx, 32));
+  ASSERT_TRUE(PT->isOpaqueOrPointeeTypeMatches(ExpectedElemTy));
 
   // Check that we reject types with garbage.
   Ty = parseTypeAtBeginning("i32 garbage", Read, Error, M, &Mapping);

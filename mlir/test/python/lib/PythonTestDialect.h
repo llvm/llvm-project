@@ -18,4 +18,10 @@
 #define GET_OP_CLASSES
 #include "PythonTestOps.h.inc"
 
+#define GET_ATTRDEF_CLASSES
+#include "PythonTestAttributes.h.inc"
+
+#define GET_TYPEDEF_CLASSES
+#include "PythonTestTypes.h.inc"
+
 #endif // MLIR_TEST_PYTHON_LIB_PYTHONTESTDIALECT_H

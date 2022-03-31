@@ -25,7 +25,7 @@ define <8 x i8> @select_v8i8(<8 x i8> %op1, <8 x i8> %op2, <8 x i1> %mask) #0 {
 ; CHECK-LABEL: select_v8i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    shl v2.8b, v2.8b, #7
-; CHECK-NEXT:    sshr v2.8b, v2.8b, #7
+; CHECK-NEXT:    cmlt v2.8b, v2.8b, #0
 ; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-NEXT:    ret
   %sel = select <8 x i1> %mask, <8 x i8> %op1, <8 x i8> %op2
@@ -37,7 +37,7 @@ define <16 x i8> @select_v16i8(<16 x i8> %op1, <16 x i8> %op2, <16 x i1> %mask) 
 ; CHECK-LABEL: select_v16i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    shl v2.16b, v2.16b, #7
-; CHECK-NEXT:    sshr v2.16b, v2.16b, #7
+; CHECK-NEXT:    cmlt v2.16b, v2.16b, #0
 ; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
   %sel = select <16 x i1> %mask, <16 x i8> %op1, <16 x i8> %op2
@@ -48,12 +48,13 @@ define void @select_v32i8(<32 x i8>* %a, <32 x i8>* %b, <32 x i1>* %c) #0 {
 ; CHECK-LABEL: select_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; CHECK-NEXT:    sub x9, sp, #48
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    mov x29, sp
-; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
 ; CHECK-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    sub x9, sp, #48 
+; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0 
 ; CHECK-NEXT:    ldr w8, [x2]
 ; CHECK-NEXT:    ptrue p0.b, vl32
 ; CHECK-NEXT:    ptrue p1.b
@@ -143,12 +144,13 @@ define void @select_v64i8(<64 x i8>* %a, <64 x i8>* %b, <64 x i1>* %c) #0 {
 ; VBITS_GE_512-LABEL: select_v64i8:
 ; VBITS_GE_512:       // %bb.0:
 ; VBITS_GE_512-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    sub x9, sp, #112
+; VBITS_GE_512-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_512-NEXT:    mov x29, sp
-; VBITS_GE_512-NEXT:    and sp, x9, #0xffffffffffffffc0
 ; VBITS_GE_512-NEXT:    .cfi_def_cfa w29, 16
 ; VBITS_GE_512-NEXT:    .cfi_offset w30, -8
 ; VBITS_GE_512-NEXT:    .cfi_offset w29, -16
+; VBITS_GE_512-NEXT:    sub x9, sp, #112 
+; VBITS_GE_512-NEXT:    and sp, x9, #0xffffffffffffffc0 
 ; VBITS_GE_512-NEXT:    ldr x8, [x2]
 ; VBITS_GE_512-NEXT:    ptrue p0.b, vl64
 ; VBITS_GE_512-NEXT:    ptrue p1.b
@@ -302,12 +304,13 @@ define void @select_v128i8(<128 x i8>* %a, <128 x i8>* %b, <128 x i1>* %c) #0 {
 ; VBITS_GE_1024-LABEL: select_v128i8:
 ; VBITS_GE_1024:       // %bb.0:
 ; VBITS_GE_1024-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; VBITS_GE_1024-NEXT:    sub x9, sp, #240
+; VBITS_GE_1024-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_1024-NEXT:    mov x29, sp
-; VBITS_GE_1024-NEXT:    and sp, x9, #0xffffffffffffff80
 ; VBITS_GE_1024-NEXT:    .cfi_def_cfa w29, 16
 ; VBITS_GE_1024-NEXT:    .cfi_offset w30, -8
 ; VBITS_GE_1024-NEXT:    .cfi_offset w29, -16
+; VBITS_GE_1024-NEXT:    sub x9, sp, #240 
+; VBITS_GE_1024-NEXT:    and sp, x9, #0xffffffffffffff80 
 ; VBITS_GE_1024-NEXT:    ldr x8, [x2, #8]
 ; VBITS_GE_1024-NEXT:    ptrue p0.b, vl128
 ; VBITS_GE_1024-NEXT:    ptrue p1.b
@@ -590,12 +593,13 @@ define void @select_v256i8(<256 x i8>* %a, <256 x i8>* %b, <256 x i1>* %c) #0 {
 ; VBITS_GE_2048-LABEL: select_v256i8:
 ; VBITS_GE_2048:       // %bb.0:
 ; VBITS_GE_2048-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; VBITS_GE_2048-NEXT:    sub x9, sp, #496
+; VBITS_GE_2048-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_2048-NEXT:    mov x29, sp
-; VBITS_GE_2048-NEXT:    and sp, x9, #0xffffffffffffff00
 ; VBITS_GE_2048-NEXT:    .cfi_def_cfa w29, 16
 ; VBITS_GE_2048-NEXT:    .cfi_offset w30, -8
 ; VBITS_GE_2048-NEXT:    .cfi_offset w29, -16
+; VBITS_GE_2048-NEXT:    sub x9, sp, #496 
+; VBITS_GE_2048-NEXT:    and sp, x9, #0xffffffffffffff00 
 ; VBITS_GE_2048-NEXT:    ldr x8, [x2, #24]
 ; VBITS_GE_2048-NEXT:    ptrue p0.b, vl256
 ; VBITS_GE_2048-NEXT:    ptrue p1.b
@@ -1137,7 +1141,7 @@ define <4 x i16> @select_v4i16(<4 x i16> %op1, <4 x i16> %op2, <4 x i1> %mask) #
 ; CHECK-LABEL: select_v4i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    shl v2.4h, v2.4h, #15
-; CHECK-NEXT:    sshr v2.4h, v2.4h, #15
+; CHECK-NEXT:    cmlt v2.4h, v2.4h, #0
 ; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-NEXT:    ret
   %sel = select <4 x i1> %mask, <4 x i16> %op1, <4 x i16> %op2
@@ -1150,7 +1154,7 @@ define <8 x i16> @select_v8i16(<8 x i16> %op1, <8 x i16> %op2, <8 x i1> %mask) #
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ushll v2.8h, v2.8b, #0
 ; CHECK-NEXT:    shl v2.8h, v2.8h, #15
-; CHECK-NEXT:    sshr v2.8h, v2.8h, #15
+; CHECK-NEXT:    cmlt v2.8h, v2.8h, #0
 ; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
   %sel = select <8 x i1> %mask, <8 x i16> %op1, <8 x i16> %op2
@@ -1161,12 +1165,13 @@ define void @select_v16i16(<16 x i16>* %a, <16 x i16>* %b, <16 x i1>* %c) #0 {
 ; CHECK-LABEL: select_v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; CHECK-NEXT:    sub x9, sp, #48
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    mov x29, sp
-; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
 ; CHECK-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    sub x9, sp, #48 
+; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0 
 ; CHECK-NEXT:    ldrh w8, [x2]
 ; CHECK-NEXT:    ptrue p0.h, vl16
 ; CHECK-NEXT:    ptrue p1.h
@@ -1224,12 +1229,13 @@ define void @select_v32i16(<32 x i16>* %a, <32 x i16>* %b, <32 x i1>* %c) #0 {
 ; VBITS_GE_512-LABEL: select_v32i16:
 ; VBITS_GE_512:       // %bb.0:
 ; VBITS_GE_512-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    sub x9, sp, #112
+; VBITS_GE_512-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_512-NEXT:    mov x29, sp
-; VBITS_GE_512-NEXT:    and sp, x9, #0xffffffffffffffc0
 ; VBITS_GE_512-NEXT:    .cfi_def_cfa w29, 16
 ; VBITS_GE_512-NEXT:    .cfi_offset w30, -8
 ; VBITS_GE_512-NEXT:    .cfi_offset w29, -16
+; VBITS_GE_512-NEXT:    sub x9, sp, #112 
+; VBITS_GE_512-NEXT:    and sp, x9, #0xffffffffffffffc0 
 ; VBITS_GE_512-NEXT:    ldr w8, [x2]
 ; VBITS_GE_512-NEXT:    ptrue p0.h, vl32
 ; VBITS_GE_512-NEXT:    ptrue p1.h
@@ -1319,12 +1325,13 @@ define void @select_v64i16(<64 x i16>* %a, <64 x i16>* %b, <64 x i1>* %c) #0 {
 ; VBITS_GE_1024-LABEL: select_v64i16:
 ; VBITS_GE_1024:       // %bb.0:
 ; VBITS_GE_1024-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; VBITS_GE_1024-NEXT:    sub x9, sp, #240
+; VBITS_GE_1024-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_1024-NEXT:    mov x29, sp
-; VBITS_GE_1024-NEXT:    and sp, x9, #0xffffffffffffff80
 ; VBITS_GE_1024-NEXT:    .cfi_def_cfa w29, 16
 ; VBITS_GE_1024-NEXT:    .cfi_offset w30, -8
 ; VBITS_GE_1024-NEXT:    .cfi_offset w29, -16
+; VBITS_GE_1024-NEXT:    sub x9, sp, #240 
+; VBITS_GE_1024-NEXT:    and sp, x9, #0xffffffffffffff80 
 ; VBITS_GE_1024-NEXT:    ldr x8, [x2]
 ; VBITS_GE_1024-NEXT:    ptrue p0.h, vl64
 ; VBITS_GE_1024-NEXT:    ptrue p1.h
@@ -1478,12 +1485,13 @@ define void @select_v128i16(<128 x i16>* %a, <128 x i16>* %b, <128 x i1>* %c) #0
 ; VBITS_GE_2048-LABEL: select_v128i16:
 ; VBITS_GE_2048:       // %bb.0:
 ; VBITS_GE_2048-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; VBITS_GE_2048-NEXT:    sub x9, sp, #496
+; VBITS_GE_2048-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_2048-NEXT:    mov x29, sp
-; VBITS_GE_2048-NEXT:    and sp, x9, #0xffffffffffffff00
 ; VBITS_GE_2048-NEXT:    .cfi_def_cfa w29, 16
 ; VBITS_GE_2048-NEXT:    .cfi_offset w30, -8
 ; VBITS_GE_2048-NEXT:    .cfi_offset w29, -16
+; VBITS_GE_2048-NEXT:    sub x9, sp, #496 
+; VBITS_GE_2048-NEXT:    and sp, x9, #0xffffffffffffff00 
 ; VBITS_GE_2048-NEXT:    ldr x8, [x2, #8]
 ; VBITS_GE_2048-NEXT:    ptrue p0.h, vl128
 ; VBITS_GE_2048-NEXT:    ptrue p1.h
@@ -1767,7 +1775,7 @@ define <2 x i32> @select_v2i32(<2 x i32> %op1, <2 x i32> %op2, <2 x i1> %mask) #
 ; CHECK-LABEL: select_v2i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    shl v2.2s, v2.2s, #31
-; CHECK-NEXT:    sshr v2.2s, v2.2s, #31
+; CHECK-NEXT:    cmlt v2.2s, v2.2s, #0
 ; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-NEXT:    ret
   %sel = select <2 x i1> %mask, <2 x i32> %op1, <2 x i32> %op2
@@ -1780,7 +1788,7 @@ define <4 x i32> @select_v4i32(<4 x i32> %op1, <4 x i32> %op2, <4 x i1> %mask) #
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ushll v2.4s, v2.4h, #0
 ; CHECK-NEXT:    shl v2.4s, v2.4s, #31
-; CHECK-NEXT:    sshr v2.4s, v2.4s, #31
+; CHECK-NEXT:    cmlt v2.4s, v2.4s, #0
 ; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
   %sel = select <4 x i1> %mask, <4 x i32> %op1, <4 x i32> %op2
@@ -1791,12 +1799,13 @@ define void @select_v8i32(<8 x i32>* %a, <8 x i32>* %b, <8 x i1>* %c) #0 {
 ; CHECK-LABEL: select_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; CHECK-NEXT:    sub x9, sp, #48
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    mov x29, sp
-; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
 ; CHECK-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    sub x9, sp, #48 
+; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0 
 ; CHECK-NEXT:    ldrb w8, [x2]
 ; CHECK-NEXT:    ptrue p0.s, vl8
 ; CHECK-NEXT:    ptrue p1.s
@@ -1834,12 +1843,13 @@ define void @select_v16i32(<16 x i32>* %a, <16 x i32>* %b, <16 x i1>* %c) #0 {
 ; VBITS_GE_512-LABEL: select_v16i32:
 ; VBITS_GE_512:       // %bb.0:
 ; VBITS_GE_512-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    sub x9, sp, #112
+; VBITS_GE_512-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_512-NEXT:    mov x29, sp
-; VBITS_GE_512-NEXT:    and sp, x9, #0xffffffffffffffc0
 ; VBITS_GE_512-NEXT:    .cfi_def_cfa w29, 16
 ; VBITS_GE_512-NEXT:    .cfi_offset w30, -8
 ; VBITS_GE_512-NEXT:    .cfi_offset w29, -16
+; VBITS_GE_512-NEXT:    sub x9, sp, #112 
+; VBITS_GE_512-NEXT:    and sp, x9, #0xffffffffffffffc0 
 ; VBITS_GE_512-NEXT:    ldrh w8, [x2]
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
 ; VBITS_GE_512-NEXT:    ptrue p1.s
@@ -1889,12 +1899,13 @@ define void @select_v32i32(<32 x i32>* %a, <32 x i32>* %b, <32 x i1>* %c) #0 {
 ; VBITS_GE_1024-LABEL: select_v32i32:
 ; VBITS_GE_1024:       // %bb.0:
 ; VBITS_GE_1024-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; VBITS_GE_1024-NEXT:    sub x9, sp, #240
+; VBITS_GE_1024-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_1024-NEXT:    mov x29, sp
-; VBITS_GE_1024-NEXT:    and sp, x9, #0xffffffffffffff80
 ; VBITS_GE_1024-NEXT:    .cfi_def_cfa w29, 16
 ; VBITS_GE_1024-NEXT:    .cfi_offset w30, -8
 ; VBITS_GE_1024-NEXT:    .cfi_offset w29, -16
+; VBITS_GE_1024-NEXT:    sub x9, sp, #240 
+; VBITS_GE_1024-NEXT:    and sp, x9, #0xffffffffffffff80 
 ; VBITS_GE_1024-NEXT:    ldr w8, [x2]
 ; VBITS_GE_1024-NEXT:    ptrue p0.s, vl32
 ; VBITS_GE_1024-NEXT:    ptrue p1.s
@@ -1968,12 +1979,13 @@ define void @select_v64i32(<64 x i32>* %a, <64 x i32>* %b, <64 x i1>* %c) #0 {
 ; VBITS_GE_2048-LABEL: select_v64i32:
 ; VBITS_GE_2048:       // %bb.0:
 ; VBITS_GE_2048-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; VBITS_GE_2048-NEXT:    sub x9, sp, #496
+; VBITS_GE_2048-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_2048-NEXT:    mov x29, sp
-; VBITS_GE_2048-NEXT:    and sp, x9, #0xffffffffffffff00
 ; VBITS_GE_2048-NEXT:    .cfi_def_cfa w29, 16
 ; VBITS_GE_2048-NEXT:    .cfi_offset w30, -8
 ; VBITS_GE_2048-NEXT:    .cfi_offset w29, -16
+; VBITS_GE_2048-NEXT:    sub x9, sp, #496 
+; VBITS_GE_2048-NEXT:    and sp, x9, #0xffffffffffffff00 
 ; VBITS_GE_2048-NEXT:    ldr x8, [x2]
 ; VBITS_GE_2048-NEXT:    ptrue p0.s, vl64
 ; VBITS_GE_2048-NEXT:    ptrue p1.s
@@ -2110,7 +2122,7 @@ define <2 x i64> @select_v2i64(<2 x i64> %op1, <2 x i64> %op2, <2 x i1> %mask) #
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ushll v2.2d, v2.2s, #0
 ; CHECK-NEXT:    shl v2.2d, v2.2d, #63
-; CHECK-NEXT:    sshr v2.2d, v2.2d, #63
+; CHECK-NEXT:    cmlt v2.2d, v2.2d, #0
 ; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
   %sel = select <2 x i1> %mask, <2 x i64> %op1, <2 x i64> %op2
@@ -2121,12 +2133,13 @@ define void @select_v4i64(<4 x i64>* %a, <4 x i64>* %b, <4 x i1>* %c) #0 {
 ; CHECK-LABEL: select_v4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; CHECK-NEXT:    sub x9, sp, #48
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    mov x29, sp
-; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
 ; CHECK-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    sub x9, sp, #48 
+; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0 
 ; CHECK-NEXT:    ldrb w8, [x2]
 ; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    ptrue p1.d
@@ -2161,12 +2174,13 @@ define void @select_v8i64(<8 x i64>* %a, <8 x i64>* %b, <8 x i1>* %c) #0 {
 ; VBITS_GE_512-LABEL: select_v8i64:
 ; VBITS_GE_512:       // %bb.0:
 ; VBITS_GE_512-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    sub x9, sp, #112
+; VBITS_GE_512-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_512-NEXT:    mov x29, sp
-; VBITS_GE_512-NEXT:    and sp, x9, #0xffffffffffffffc0
 ; VBITS_GE_512-NEXT:    .cfi_def_cfa w29, 16
 ; VBITS_GE_512-NEXT:    .cfi_offset w30, -8
 ; VBITS_GE_512-NEXT:    .cfi_offset w29, -16
+; VBITS_GE_512-NEXT:    sub x9, sp, #112 
+; VBITS_GE_512-NEXT:    and sp, x9, #0xffffffffffffffc0 
 ; VBITS_GE_512-NEXT:    ldrb w8, [x2]
 ; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
 ; VBITS_GE_512-NEXT:    ptrue p1.d
@@ -2211,12 +2225,13 @@ define void @select_v16i64(<16 x i64>* %a, <16 x i64>* %b, <16 x i1>* %c) #0 {
 ; VBITS_GE_1024-LABEL: select_v16i64:
 ; VBITS_GE_1024:       // %bb.0:
 ; VBITS_GE_1024-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; VBITS_GE_1024-NEXT:    sub x9, sp, #240
+; VBITS_GE_1024-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_1024-NEXT:    mov x29, sp
-; VBITS_GE_1024-NEXT:    and sp, x9, #0xffffffffffffff80
 ; VBITS_GE_1024-NEXT:    .cfi_def_cfa w29, 16
 ; VBITS_GE_1024-NEXT:    .cfi_offset w30, -8
 ; VBITS_GE_1024-NEXT:    .cfi_offset w29, -16
+; VBITS_GE_1024-NEXT:    sub x9, sp, #240 
+; VBITS_GE_1024-NEXT:    and sp, x9, #0xffffffffffffff80 
 ; VBITS_GE_1024-NEXT:    ldrh w8, [x2]
 ; VBITS_GE_1024-NEXT:    ptrue p0.d, vl16
 ; VBITS_GE_1024-NEXT:    ptrue p1.d
@@ -2281,12 +2296,13 @@ define void @select_v32i64(<32 x i64>* %a, <32 x i64>* %b, <32 x i1>* %c) #0 {
 ; VBITS_GE_2048-LABEL: select_v32i64:
 ; VBITS_GE_2048:       // %bb.0:
 ; VBITS_GE_2048-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; VBITS_GE_2048-NEXT:    sub x9, sp, #496
+; VBITS_GE_2048-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_2048-NEXT:    mov x29, sp
-; VBITS_GE_2048-NEXT:    and sp, x9, #0xffffffffffffff00
 ; VBITS_GE_2048-NEXT:    .cfi_def_cfa w29, 16
 ; VBITS_GE_2048-NEXT:    .cfi_offset w30, -8
 ; VBITS_GE_2048-NEXT:    .cfi_offset w29, -16
+; VBITS_GE_2048-NEXT:    sub x9, sp, #496 
+; VBITS_GE_2048-NEXT:    and sp, x9, #0xffffffffffffff00 
 ; VBITS_GE_2048-NEXT:    ldr w8, [x2]
 ; VBITS_GE_2048-NEXT:    ptrue p0.d, vl32
 ; VBITS_GE_2048-NEXT:    ptrue p1.d

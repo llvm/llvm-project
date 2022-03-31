@@ -16,7 +16,7 @@
 
 #include "test_macros.h"
 
-void test()
+bool test()
 {
     using S = std::string;
 
@@ -31,11 +31,16 @@ void test()
     assert( s2.contains('c'));
     assert( s2.contains('e'));
     assert(!s2.contains('x'));
+
+    return true;
 }
 
 int main(int, char**)
 {
-    test();
+  test();
+#if TEST_STD_VER > 17
+  // static_assert(test());
+#endif
 
-    return 0;
+  return 0;
 }

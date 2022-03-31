@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_TRANSFORMS_INLINING_UTILS_H
-#define MLIR_TRANSFORMS_INLINING_UTILS_H
+#ifndef MLIR_TRANSFORMS_INLININGUTILS_H
+#define MLIR_TRANSFORMS_INLININGUTILS_H
 
 #include "mlir/IR/DialectInterface.h"
 #include "mlir/IR/Location.h"
@@ -23,7 +23,6 @@ class Block;
 class BlockAndValueMapping;
 class CallableOpInterface;
 class CallOpInterface;
-class FuncOp;
 class OpBuilder;
 class Operation;
 class Region;
@@ -244,6 +243,6 @@ LogicalResult inlineCall(InlinerInterface &interface, CallOpInterface call,
                          CallableOpInterface callable, Region *src,
                          bool shouldCloneInlinedRegion = true);
 
-} // end namespace mlir
+} // namespace mlir
 
-#endif // MLIR_TRANSFORMS_INLINING_UTILS_H
+#endif // MLIR_TRANSFORMS_INLININGUTILS_H

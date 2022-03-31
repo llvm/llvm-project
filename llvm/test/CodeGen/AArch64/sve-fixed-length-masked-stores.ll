@@ -42,7 +42,7 @@ define void @masked_store_v2f16(<2 x half>* %ap, <2 x half>* %bp) #0 {
 ; CHECK-NEXT:    mov v0.h[0], w8
 ; CHECK-NEXT:    mov v0.h[1], w9
 ; CHECK-NEXT:    shl v0.4h, v0.4h, #15
-; CHECK-NEXT:    sshr v0.4h, v0.4h, #15
+; CHECK-NEXT:    cmlt v0.4h, v0.4h, #0
 ; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, #0
 ; CHECK-NEXT:    st1h { z1.h }, p0, [x1]
 ; CHECK-NEXT:    ret
@@ -155,21 +155,13 @@ define void @masked_store_v64f32(<64 x float>* %ap, <64 x float>* %bp) #0 {
 define void @masked_store_trunc_v8i64i8(<8 x i64>* %ap, <8 x i64>* %bp, <8 x i8>* %dest) #0 {
 ; VBITS_GE_512-LABEL: masked_store_trunc_v8i64i8:
 ; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
-; VBITS_GE_512-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; VBITS_GE_512-NEXT:    ld1d { z1.d }, p0/z, [x1]
-; VBITS_GE_512-NEXT:    cmpeq p0.d, p0/z, z0.d, z1.d
-; VBITS_GE_512-NEXT:    uzp1 z0.s, z0.s, z0.s
-; VBITS_GE_512-NEXT:    mov z1.d, p0/z, #-1 // =0xffffffffffffffff
-; VBITS_GE_512-NEXT:    ptrue p0.b, vl8
-; VBITS_GE_512-NEXT:    uzp1 z1.s, z1.s, z1.s
-; VBITS_GE_512-NEXT:    uzp1 z0.h, z0.h, z0.h
-; VBITS_GE_512-NEXT:    uzp1 z1.h, z1.h, z1.h
-; VBITS_GE_512-NEXT:    uzp1 z0.b, z0.b, z0.b
-; VBITS_GE_512-NEXT:    uzp1 z1.b, z1.b, z1.b
-; VBITS_GE_512-NEXT:    cmpne p0.b, p0/z, z1.b, #0
-; VBITS_GE_512-NEXT:    st1b { z0.b }, p0, [x2]
-; VBITS_GE_512-NEXT:    ret
+; VBITS_GE_512-NEXT: ptrue p[[P0:[0-9]+]].d, vl8
+; VBITS_GE_512-NEXT: ld1d { [[Z0:z[0-9]+]].d }, p0/z, [x0]
+; VBITS_GE_512-NEXT: ld1d { [[Z1:z[0-9]+]].d }, p0/z, [x1]
+; VBITS_GE_512-NEXT: cmpeq p[[P1:[0-9]+]].d, p[[P0]]/z, [[Z0]].d, [[Z1]].d
+; VBITS_GE_512-NEXT: st1b { [[Z0]].d }, p[[P1]], [x{{[0-9]+}}]
+; VBITS_GE_512-NEXT: ret
+
   %a = load <8 x i64>, <8 x i64>* %ap
   %b = load <8 x i64>, <8 x i64>* %bp
   %mask = icmp eq <8 x i64> %a, %b
@@ -179,21 +171,13 @@ define void @masked_store_trunc_v8i64i8(<8 x i64>* %ap, <8 x i64>* %bp, <8 x i8>
 }
 
 define void @masked_store_trunc_v8i64i16(<8 x i64>* %ap, <8 x i64>* %bp, <8 x i16>* %dest) #0 {
-; VBITS_GE_512-LABEL: masked_store_trunc_v8i64i16:
-; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
-; VBITS_GE_512-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; VBITS_GE_512-NEXT:    ld1d { z1.d }, p0/z, [x1]
-; VBITS_GE_512-NEXT:    cmpeq p0.d, p0/z, z0.d, z1.d
-; VBITS_GE_512-NEXT:    uzp1 z0.s, z0.s, z0.s
-; VBITS_GE_512-NEXT:    mov z1.d, p0/z, #-1 // =0xffffffffffffffff
-; VBITS_GE_512-NEXT:    ptrue p0.h, vl8
-; VBITS_GE_512-NEXT:    uzp1 z1.s, z1.s, z1.s
-; VBITS_GE_512-NEXT:    uzp1 z0.h, z0.h, z0.h
-; VBITS_GE_512-NEXT:    uzp1 z1.h, z1.h, z1.h
-; VBITS_GE_512-NEXT:    cmpne p0.h, p0/z, z1.h, #0
-; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x2]
-; VBITS_GE_512-NEXT:    ret
+; CHECK-LABEL: masked_store_trunc_v8i64i16:
+; VBITS_GE_512: ptrue p[[P0:[0-9]+]].d, vl8
+; VBITS_GE_512-NEXT: ld1d { [[Z0:z[0-9]+]].d }, p0/z, [x0]
+; VBITS_GE_512-NEXT: ld1d { [[Z1:z[0-9]+]].d }, p0/z, [x1]
+; VBITS_GE_512-NEXT: cmpeq p[[P1:[0-9]+]].d, p[[P0]]/z, [[Z0]].d, [[Z1]].d
+; VBITS_GE_512-NEXT: st1h { [[Z0]].d }, p[[P1]], [x{{[0-9]+}}]
+; VBITS_GE_512-NEXT: ret
   %a = load <8 x i64>, <8 x i64>* %ap
   %b = load <8 x i64>, <8 x i64>* %bp
   %mask = icmp eq <8 x i64> %a, %b
@@ -203,19 +187,13 @@ define void @masked_store_trunc_v8i64i16(<8 x i64>* %ap, <8 x i64>* %bp, <8 x i1
 }
 
 define void @masked_store_trunc_v8i64i32(<8 x i64>* %ap, <8 x i64>* %bp, <8 x i32>* %dest) #0 {
-; VBITS_GE_512-LABEL: masked_store_trunc_v8i64i32:
-; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
-; VBITS_GE_512-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; VBITS_GE_512-NEXT:    ld1d { z1.d }, p0/z, [x1]
-; VBITS_GE_512-NEXT:    cmpeq p0.d, p0/z, z0.d, z1.d
-; VBITS_GE_512-NEXT:    uzp1 z0.s, z0.s, z0.s
-; VBITS_GE_512-NEXT:    mov z1.d, p0/z, #-1 // =0xffffffffffffffff
-; VBITS_GE_512-NEXT:    ptrue p0.s, vl8
-; VBITS_GE_512-NEXT:    uzp1 z1.s, z1.s, z1.s
-; VBITS_GE_512-NEXT:    cmpne p0.s, p0/z, z1.s, #0
-; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x2]
-; VBITS_GE_512-NEXT:    ret
+; CHECK-LABEL: masked_store_trunc_v8i64i32:
+; VBITS_GE_512: ptrue p[[P0:[0-9]+]].d, vl8
+; VBITS_GE_512-NEXT: ld1d { [[Z0:z[0-9]+]].d }, p0/z, [x0]
+; VBITS_GE_512-NEXT: ld1d { [[Z1:z[0-9]+]].d }, p0/z, [x1]
+; VBITS_GE_512-NEXT: cmpeq p[[P1:[0-9]+]].d, p[[P0]]/z, [[Z0]].d, [[Z1]].d
+; VBITS_GE_512-NEXT: st1w { [[Z0]].d }, p[[P1]], [x{{[0-9]+}}]
+; VBITS_GE_512-NEXT: ret
   %a = load <8 x i64>, <8 x i64>* %ap
   %b = load <8 x i64>, <8 x i64>* %bp
   %mask = icmp eq <8 x i64> %a, %b
@@ -225,21 +203,13 @@ define void @masked_store_trunc_v8i64i32(<8 x i64>* %ap, <8 x i64>* %bp, <8 x i3
 }
 
 define void @masked_store_trunc_v16i32i8(<16 x i32>* %ap, <16 x i32>* %bp, <16 x i8>* %dest) #0 {
-; VBITS_GE_512-LABEL: masked_store_trunc_v16i32i8:
-; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
-; VBITS_GE_512-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; VBITS_GE_512-NEXT:    ld1w { z1.s }, p0/z, [x1]
-; VBITS_GE_512-NEXT:    cmpeq p0.s, p0/z, z0.s, z1.s
-; VBITS_GE_512-NEXT:    uzp1 z0.h, z0.h, z0.h
-; VBITS_GE_512-NEXT:    mov z1.s, p0/z, #-1 // =0xffffffffffffffff
-; VBITS_GE_512-NEXT:    ptrue p0.b, vl16
-; VBITS_GE_512-NEXT:    uzp1 z1.h, z1.h, z1.h
-; VBITS_GE_512-NEXT:    uzp1 z0.b, z0.b, z0.b
-; VBITS_GE_512-NEXT:    uzp1 z1.b, z1.b, z1.b
-; VBITS_GE_512-NEXT:    cmpne p0.b, p0/z, z1.b, #0
-; VBITS_GE_512-NEXT:    st1b { z0.b }, p0, [x2]
-; VBITS_GE_512-NEXT:    ret
+; CHECK-LABEL: masked_store_trunc_v16i32i8:
+; VBITS_GE_512: ptrue p[[P0:[0-9]+]].s, vl16
+; VBITS_GE_512-NEXT: ld1w { [[Z0:z[0-9]+]].s }, p0/z, [x0]
+; VBITS_GE_512-NEXT: ld1w { [[Z1:z[0-9]+]].s }, p0/z, [x1]
+; VBITS_GE_512-NEXT: cmpeq p[[P1:[0-9]+]].s, p[[P0]]/z, [[Z0]].s, [[Z1]].s
+; VBITS_GE_512-NEXT: st1b { [[Z0]].s }, p[[P1]], [x{{[0-9]+}}]
+; VBITS_GE_512-NEXT: ret
   %a = load <16 x i32>, <16 x i32>* %ap
   %b = load <16 x i32>, <16 x i32>* %bp
   %mask = icmp eq <16 x i32> %a, %b
@@ -249,19 +219,13 @@ define void @masked_store_trunc_v16i32i8(<16 x i32>* %ap, <16 x i32>* %bp, <16 x
 }
 
 define void @masked_store_trunc_v16i32i16(<16 x i32>* %ap, <16 x i32>* %bp, <16 x i16>* %dest) #0 {
-; VBITS_GE_512-LABEL: masked_store_trunc_v16i32i16:
-; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
-; VBITS_GE_512-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; VBITS_GE_512-NEXT:    ld1w { z1.s }, p0/z, [x1]
-; VBITS_GE_512-NEXT:    cmpeq p0.s, p0/z, z0.s, z1.s
-; VBITS_GE_512-NEXT:    uzp1 z0.h, z0.h, z0.h
-; VBITS_GE_512-NEXT:    mov z1.s, p0/z, #-1 // =0xffffffffffffffff
-; VBITS_GE_512-NEXT:    ptrue p0.h, vl16
-; VBITS_GE_512-NEXT:    uzp1 z1.h, z1.h, z1.h
-; VBITS_GE_512-NEXT:    cmpne p0.h, p0/z, z1.h, #0
-; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x2]
-; VBITS_GE_512-NEXT:    ret
+; CHECK-LABEL: masked_store_trunc_v16i32i16:
+; VBITS_GE_512: ptrue p[[P0:[0-9]+]].s, vl16
+; VBITS_GE_512-NEXT: ld1w { [[Z0:z[0-9]+]].s }, p0/z, [x0]
+; VBITS_GE_512-NEXT: ld1w { [[Z1:z[0-9]+]].s }, p0/z, [x1]
+; VBITS_GE_512-NEXT: cmpeq p[[P1:[0-9]+]].s, p[[P0]]/z, [[Z0]].s, [[Z1]].s
+; VBITS_GE_512-NEXT: st1h { [[Z0]].s }, p[[P1]], [x{{[0-9]+}}]
+; VBITS_GE_512-NEXT: ret
   %a = load <16 x i32>, <16 x i32>* %ap
   %b = load <16 x i32>, <16 x i32>* %bp
   %mask = icmp eq <16 x i32> %a, %b
@@ -271,19 +235,13 @@ define void @masked_store_trunc_v16i32i16(<16 x i32>* %ap, <16 x i32>* %bp, <16 
 }
 
 define void @masked_store_trunc_v32i16i8(<32 x i16>* %ap, <32 x i16>* %bp, <32 x i8>* %dest) #0 {
-; VBITS_GE_512-LABEL: masked_store_trunc_v32i16i8:
-; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    ptrue p0.h, vl32
-; VBITS_GE_512-NEXT:    ld1h { z0.h }, p0/z, [x0]
-; VBITS_GE_512-NEXT:    ld1h { z1.h }, p0/z, [x1]
-; VBITS_GE_512-NEXT:    cmpeq p0.h, p0/z, z0.h, z1.h
-; VBITS_GE_512-NEXT:    uzp1 z0.b, z0.b, z0.b
-; VBITS_GE_512-NEXT:    mov z1.h, p0/z, #-1 // =0xffffffffffffffff
-; VBITS_GE_512-NEXT:    ptrue p0.b, vl32
-; VBITS_GE_512-NEXT:    uzp1 z1.b, z1.b, z1.b
-; VBITS_GE_512-NEXT:    cmpne p0.b, p0/z, z1.b, #0
-; VBITS_GE_512-NEXT:    st1b { z0.b }, p0, [x2]
-; VBITS_GE_512-NEXT:    ret
+; CHECK-LABEL: masked_store_trunc_v32i16i8:
+; VBITS_GE_512: ptrue p[[P0:[0-9]+]].h, vl32
+; VBITS_GE_512-NEXT: ld1h { [[Z0:z[0-9]+]].h }, p0/z, [x0]
+; VBITS_GE_512-NEXT: ld1h { [[Z1:z[0-9]+]].h }, p0/z, [x1]
+; VBITS_GE_512-NEXT: cmpeq p[[P1:[0-9]+]].h, p[[P0]]/z, [[Z0]].h, [[Z1]].h
+; VBITS_GE_512-NEXT: st1b { [[Z0]].h }, p[[P1]], [x{{[0-9]+}}]
+; VBITS_GE_512-NEXT: ret
   %a = load <32 x i16>, <32 x i16>* %ap
   %b = load <32 x i16>, <32 x i16>* %bp
   %mask = icmp eq <32 x i16> %a, %b

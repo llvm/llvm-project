@@ -194,7 +194,7 @@ void ConstantArrayType::Profile(llvm::FoldingSetNodeID &ID,
   ID.AddInteger(ArraySize.getZExtValue());
   ID.AddInteger(SizeMod);
   ID.AddInteger(TypeQuals);
-  ID.AddBoolean(SizeExpr != 0);
+  ID.AddBoolean(SizeExpr != nullptr);
   if (SizeExpr)
     SizeExpr->Profile(ID, Context, true);
 }
@@ -1899,8 +1899,14 @@ bool Type::hasAutoForTrailingReturnType() const {
 bool Type::hasIntegerRepresentation() const {
   if (const auto *VT = dyn_cast<VectorType>(CanonicalType))
     return VT->getElementType()->isIntegerType();
-  else
-    return isIntegerType();
+  if (CanonicalType->isVLSTBuiltinType()) {
+    const auto *VT = cast<BuiltinType>(CanonicalType);
+    return VT->getKind() == BuiltinType::SveBool ||
+           (VT->getKind() >= BuiltinType::SveInt8 &&
+            VT->getKind() <= BuiltinType::SveUint64);
+  }
+
+  return isIntegerType();
 }
 
 /// Determine whether this type is an integral type.
@@ -2105,6 +2111,11 @@ bool Type::hasUnsignedIntegerRepresentation() const {
     return VT->getElementType()->isUnsignedIntegerOrEnumerationType();
   if (const auto *VT = dyn_cast<MatrixType>(CanonicalType))
     return VT->getElementType()->isUnsignedIntegerOrEnumerationType();
+  if (CanonicalType->isVLSTBuiltinType()) {
+    const auto *VT = cast<BuiltinType>(CanonicalType);
+    return VT->getKind() >= BuiltinType::SveUint8 &&
+           VT->getKind() <= BuiltinType::SveUint64;
+  }
   return isUnsignedIntegerOrEnumerationType();
 }
 
@@ -3301,7 +3312,6 @@ CanThrowResult FunctionProtoType::canThrow() const {
   switch (getExceptionSpecType()) {
   case EST_Unparsed:
   case EST_Unevaluated:
-  case EST_Uninstantiated:
     llvm_unreachable("should not call this with unresolved exception specs");
 
   case EST_DynamicNone:
@@ -3323,6 +3333,7 @@ CanThrowResult FunctionProtoType::canThrow() const {
         return CT_Can;
     return CT_Dependent;
 
+  case EST_Uninstantiated:
   case EST_DependentNoexcept:
     return CT_Dependent;
   }
@@ -3405,6 +3416,17 @@ TypedefType::TypedefType(TypeClass tc, const TypedefNameDecl *D,
 
 QualType TypedefType::desugar() const {
   return getDecl()->getUnderlyingType();
+}
+
+UsingType::UsingType(const UsingShadowDecl *Found, QualType Underlying,
+                     QualType Canon)
+    : Type(Using, Canon, Underlying->getDependence()),
+      Found(const_cast<UsingShadowDecl *>(Found)) {
+  assert(Underlying == getUnderlyingType());
+}
+
+QualType UsingType::getUnderlyingType() const {
+  return QualType(cast<TypeDecl>(Found->getTargetDecl())->getTypeForDecl(), 0);
 }
 
 QualType MacroQualifiedType::desugar() const { return getUnderlyingType(); }

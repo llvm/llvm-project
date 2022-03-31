@@ -11,17 +11,14 @@
 #include "Headers.h"
 #include "index/Relation.h"
 #include "index/SymbolOrigin.h"
-#include "support/Logger.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Frontend/CompilerInstance.h"
-#include "clang/Frontend/MultiplexConsumer.h"
+#include "clang/Frontend/FrontendAction.h"
 #include "clang/Index/IndexingAction.h"
 #include "clang/Index/IndexingOptions.h"
-#include "clang/Tooling/Tooling.h"
-#include "llvm/ADT/STLExtras.h"
 #include <cstddef>
 #include <functional>
 #include <memory>
@@ -61,7 +58,7 @@ public:
       return;
 
     const auto FileID = SM.getFileID(Loc);
-    const auto File = SM.getFileEntryForID(FileID);
+    const auto *File = SM.getFileEntryForID(FileID);
     auto URI = toURI(File);
     if (!URI)
       return;

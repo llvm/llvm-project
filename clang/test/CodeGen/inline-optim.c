@@ -18,7 +18,7 @@ int inline_no_hint(int a, int b) { return (a/b); }
 inline __attribute__ ((__always_inline__)) int inline_always(int a, int b) { return(a*b); }
 
 volatile int *pa = (int*) 0x1000;
-void foo() {
+void foo(void) {
 // NOINLINE-LABEL: @foo
 // HINT-LABEL: @foo
 // INLINE-LABEL: @foo

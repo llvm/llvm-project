@@ -650,3 +650,27 @@ define i8 @memset_optimized_access(i8* noalias %dst, i8* noalias %src) {
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 16, i1 false)
   ret i8 %l
 }
+
+; The @use() call is a later non-removable store, but should not affect the
+; removal of the store in the if block.
+define void @later_non_removable_store(i1 %c, i8* %p) {
+; CHECK-LABEL: @later_non_removable_store(
+; CHECK-NEXT:    store i8 1, i8* [[P:%.*]], align 1
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[EXIT:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    call void @use(i8* [[P]]) #[[ATTR6:[0-9]+]]
+; CHECK-NEXT:    ret void
+;
+  store i8 1, i8* %p
+  br i1 %c, label %if, label %exit
+
+if:
+  store i8 1, i8* %p
+  br label %exit
+
+exit:
+  call void @use(i8* %p) argmemonly
+  ret void
+}

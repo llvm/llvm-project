@@ -5,7 +5,7 @@
 ; than s0.
 
 ; GCN-LABEL: {{^}}_amdgpu_hs_main:
-; GCN: s_getpc_b64 s{{\[}}[[GITPTR:[0-9]+]]:
+; GCN: s_getpc_b64 s[[[GITPTR:[0-9]+]]:
 ; PREGFX9: s_mov_b32 s[[GITPTR]], s0
 ; GFX9: s_mov_b32 s[[GITPTR]], s8
 

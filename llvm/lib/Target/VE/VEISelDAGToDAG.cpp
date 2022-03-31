@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "VE.h"
 #include "VETargetMachine.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
@@ -335,6 +336,42 @@ void VEDAGToDAGISel::Select(SDNode *N) {
   }
 
   switch (N->getOpcode()) {
+
+  // Late eliminate the LEGALAVL wrapper
+  case VEISD::LEGALAVL:
+    ReplaceNode(N, N->getOperand(0).getNode());
+    return;
+
+  // Lower (broadcast 1) and (broadcast 0) to VM[P]0
+  case VEISD::VEC_BROADCAST: {
+    MVT SplatResTy = N->getSimpleValueType(0);
+    if (SplatResTy.getVectorElementType() != MVT::i1)
+      break;
+
+    // Constant non-zero broadcast.
+    auto BConst = dyn_cast<ConstantSDNode>(N->getOperand(0));
+    if (!BConst)
+      break;
+    bool BCTrueMask = (BConst->getSExtValue() != 0);
+    if (!BCTrueMask)
+      break;
+
+    // Packed or non-packed.
+    SDValue New;
+    if (SplatResTy.getVectorNumElements() == StandardVectorWidth) {
+      New = CurDAG->getCopyFromReg(CurDAG->getEntryNode(), SDLoc(N), VE::VM0,
+                                   MVT::v256i1);
+    } else if (SplatResTy.getVectorNumElements() == PackedVectorWidth) {
+      New = CurDAG->getCopyFromReg(CurDAG->getEntryNode(), SDLoc(N), VE::VMP0,
+                                   MVT::v512i1);
+    } else
+      break;
+
+    // Replace.
+    ReplaceNode(N, New.getNode());
+    return;
+  }
+
   case VEISD::GLOBAL_BASE_REG:
     ReplaceNode(N, getGlobalBaseReg());
     return;

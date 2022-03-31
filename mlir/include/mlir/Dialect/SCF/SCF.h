@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_SCF_H_
-#define MLIR_DIALECT_SCF_H_
+#ifndef MLIR_DIALECT_SCF_SCF_H
+#define MLIR_DIALECT_SCF_SCF_H
 
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/IR/Attributes.h"
@@ -96,6 +96,6 @@ LoopNest buildLoopNest(OpBuilder &builder, Location loc, ValueRange lbs,
                        function_ref<void(OpBuilder &, Location, ValueRange)>
                            bodyBuilder = nullptr);
 
-} // end namespace scf
-} // end namespace mlir
-#endif // MLIR_DIALECT_SCF_H_
+} // namespace scf
+} // namespace mlir
+#endif // MLIR_DIALECT_SCF_SCF_H

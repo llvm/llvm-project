@@ -164,7 +164,7 @@ body:             |
 ...
 
 # GCN-LABEL: name: test_fmaak_otherimm_src0_f32
-# GCN: %2:vgpr_32 = V_FMAC_F32_e32 1120403456, %0, %2, implicit $mode, implicit $exec
+# GCN: %2:vgpr_32 = V_FMAMK_F32 %0, 1120403456, %1, implicit $mode, implicit $exec
 
 ---
 name:            test_fmaak_otherimm_src0_f32
@@ -271,4 +271,40 @@ body:             |
     %3 = V_FMAC_F32_e32 killed %0.sub0, %2, killed %1, implicit $mode, implicit $exec
     S_NOP 0, implicit %2
 
+...
+
+# GCN-LABEL: name: test_fma_src0mods
+# GCN: %3:vgpr_32 = V_FMA_F32_e64 1, %0, 0, %1, 0, %2, 0, 0, implicit $mode, implicit $exec
+---
+name: test_fma_src0mods
+body: |
+  bb.0:
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:vgpr_32 = IMPLICIT_DEF
+    %3:vgpr_32 = V_FMAC_F32_e64 1, %0, 0, %1, 0, %2, 0, 0, implicit $mode, implicit $exec
+...
+
+# GCN-LABEL: name: test_fma_src1mods
+# GCN: %3:vgpr_32 = V_FMA_F32_e64 0, %0, 1, %1, 0, %2, 0, 0, implicit $mode, implicit $exec
+---
+name: test_fma_src1mods
+body: |
+  bb.0:
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:vgpr_32 = IMPLICIT_DEF
+    %3:vgpr_32 = V_FMAC_F32_e64 0, %0, 1, %1, 0, %2, 0, 0, implicit $mode, implicit $exec
+...
+
+# GCN-LABEL: name: test_fma_src2mods
+# GCN: %3:vgpr_32 = V_FMA_F32_e64 0, %0, 0, %1, 1, %2, 0, 0, implicit $mode, implicit $exec
+---
+name: test_fma_src2mods
+body: |
+  bb.0:
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:vgpr_32 = IMPLICIT_DEF
+    %3:vgpr_32 = V_FMAC_F32_e64 0, %0, 0, %1, 1, %2, 0, 0, implicit $mode, implicit $exec
 ...

@@ -210,8 +210,7 @@ struct QuarantineCallback {
       CHECK_EQ(old_chunk_state, CHUNK_QUARANTINE);
     }
 
-    PoisonShadow(m->Beg(),
-                 RoundUpTo(m->UsedSize(), SHADOW_GRANULARITY),
+    PoisonShadow(m->Beg(), RoundUpTo(m->UsedSize(), ASAN_SHADOW_GRANULARITY),
                  kAsanHeapLeftRedzoneMagic);
 
     // Statistics.
@@ -357,7 +356,7 @@ struct Allocator {
       if (chunk < beg && beg < end && end <= chunk_end) {
         // Looks like a valid AsanChunk in use, poison redzones only.
         PoisonShadow(chunk, beg - chunk, kAsanHeapLeftRedzoneMagic);
-        uptr end_aligned_down = RoundDownTo(end, SHADOW_GRANULARITY);
+        uptr end_aligned_down = RoundDownTo(end, ASAN_SHADOW_GRANULARITY);
         FastPoisonShadowPartialRightRedzone(
             end_aligned_down, end - end_aligned_down,
             chunk_end - end_aligned_down, kAsanHeapLeftRedzoneMagic);
@@ -482,7 +481,7 @@ struct Allocator {
     }
     Flags &fl = *flags();
     CHECK(stack);
-    const uptr min_alignment = SHADOW_GRANULARITY;
+    const uptr min_alignment = ASAN_SHADOW_GRANULARITY;
     const uptr user_requested_alignment_log =
         ComputeUserRequestedAlignmentLog(alignment);
     if (alignment < min_alignment)
@@ -563,7 +562,7 @@ struct Allocator {
     m->SetAllocContext(t ? t->tid() : kMainTid, StackDepotPut(*stack));
 
     uptr size_rounded_down_to_granularity =
-        RoundDownTo(size, SHADOW_GRANULARITY);
+        RoundDownTo(size, ASAN_SHADOW_GRANULARITY);
     // Unpoison the bulk of the memory region.
     if (size_rounded_down_to_granularity)
       PoisonShadow(user_beg, size_rounded_down_to_granularity, 0);
@@ -571,7 +570,7 @@ struct Allocator {
     if (size != size_rounded_down_to_granularity && CanPoisonMemory()) {
       u8 *shadow =
           (u8 *)MemToShadow(user_beg + size_rounded_down_to_granularity);
-      *shadow = fl.poison_partial ? (size & (SHADOW_GRANULARITY - 1)) : 0;
+      *shadow = fl.poison_partial ? (size & (ASAN_SHADOW_GRANULARITY - 1)) : 0;
     }
 
     AsanStats &thread_stats = GetCurrentThreadStats();
@@ -641,8 +640,7 @@ struct Allocator {
     }
 
     // Poison the region.
-    PoisonShadow(m->Beg(),
-                 RoundUpTo(m->UsedSize(), SHADOW_GRANULARITY),
+    PoisonShadow(m->Beg(), RoundUpTo(m->UsedSize(), ASAN_SHADOW_GRANULARITY),
                  kAsanHeapFreeMagic);
 
     AsanStats &thread_stats = GetCurrentThreadStats();
@@ -842,12 +840,12 @@ struct Allocator {
     quarantine.PrintStats();
   }
 
-  void ForceLock() ACQUIRE(fallback_mutex) {
+  void ForceLock() SANITIZER_ACQUIRE(fallback_mutex) {
     allocator.ForceLock();
     fallback_mutex.Lock();
   }
 
-  void ForceUnlock() RELEASE(fallback_mutex) {
+  void ForceUnlock() SANITIZER_RELEASE(fallback_mutex) {
     fallback_mutex.Unlock();
     allocator.ForceUnlock();
   }
@@ -1056,9 +1054,11 @@ uptr asan_mz_size(const void *ptr) {
   return instance.AllocationSize(reinterpret_cast<uptr>(ptr));
 }
 
-void asan_mz_force_lock() NO_THREAD_SAFETY_ANALYSIS { instance.ForceLock(); }
+void asan_mz_force_lock() SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
+  instance.ForceLock();
+}
 
-void asan_mz_force_unlock() NO_THREAD_SAFETY_ANALYSIS {
+void asan_mz_force_unlock() SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
   instance.ForceUnlock();
 }
 

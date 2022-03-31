@@ -9,6 +9,7 @@
 #include "ReduceOperandsToArgs.h"
 #include "Delta.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"

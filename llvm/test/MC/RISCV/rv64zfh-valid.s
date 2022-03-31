@@ -1,10 +1,10 @@
-# RUN: llvm-mc %s -triple=riscv64 -mattr=+experimental-zfh -riscv-no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv64 -mattr=+zfh -riscv-no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
-# RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+experimental-zfh < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-zfh -M no-aliases -d -r - \
+# RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+zfh < %s \
+# RUN:     | llvm-objdump --mattr=+zfh -M no-aliases -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 #
-# RUN: not llvm-mc -triple riscv32 -mattr=+experimental-zfh < %s 2>&1 \
+# RUN: not llvm-mc -triple riscv32 -mattr=+zfh < %s 2>&1 \
 # RUN:     | FileCheck -check-prefix=CHECK-RV32 %s
 
 # CHECK-ASM-AND-OBJ: fcvt.l.h a0, ft0, dyn

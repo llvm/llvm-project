@@ -30,7 +30,6 @@ class MemoryBuffer;
 class ModulePass;
 class Pass;
 class TargetMachine;
-class TargetRegisterClass;
 class raw_ostream;
 
 } // End llvm namespace
@@ -551,6 +550,13 @@ namespace llvm {
   /// The pass transforms amx intrinsics to scalar operation if the function has
   /// optnone attribute or it is O0.
   FunctionPass *createX86LowerAMXIntrinsicsPass();
+
+  /// When learning an eviction policy, extract score(reward) information,
+  /// otherwise this does nothing
+  FunctionPass *createRegAllocScoringPass();
+
+  /// JMC instrument pass.
+  ModulePass *createJMCInstrumenterPass();
 } // End llvm namespace
 
 #endif

@@ -29,6 +29,10 @@ TensorExp::TensorExp(Kind k, unsigned x, unsigned y, Value v)
   case kInvariant:
     assert(x == -1u && y == -1u && v);
     break;
+  case kIndex:
+    assert(x != -1u && y == -1u && !v);
+    index = x;
+    break;
   case kAbsF:
   case kCeilF:
   case kFloorF:
@@ -46,6 +50,7 @@ TensorExp::TensorExp(Kind k, unsigned x, unsigned y, Value v)
   case kCastUF:
   case kCastS:
   case kCastU:
+  case kCastIdx:
   case kTruncI:
   case kBitCast:
     assert(x != -1u && y == -1u && v);
@@ -65,7 +70,7 @@ LatPoint::LatPoint(unsigned n, unsigned e, unsigned b)
   bits.set(b);
 }
 
-LatPoint::LatPoint(const llvm::BitVector &b, unsigned e)
+LatPoint::LatPoint(const BitVector &b, unsigned e)
     : bits(b), simple(), exp(e) {}
 
 //===----------------------------------------------------------------------===//
@@ -93,7 +98,7 @@ unsigned Merger::addSet() {
 
 unsigned Merger::conjLatPoint(Kind kind, unsigned p0, unsigned p1) {
   unsigned p = latPoints.size();
-  llvm::BitVector nb = llvm::BitVector(latPoints[p0].bits);
+  BitVector nb = BitVector(latPoints[p0].bits);
   nb |= latPoints[p1].bits;
   unsigned e = addExp(kind, latPoints[p0].exp, latPoints[p1].exp);
   latPoints.push_back(LatPoint(nb, e));
@@ -137,7 +142,7 @@ unsigned Merger::mapSet(Kind kind, unsigned s0, Value v) {
 
 unsigned Merger::optimizeSet(unsigned s0) {
   unsigned s = addSet();
-  assert(latSets[s0].size() != 0);
+  assert(!latSets[s0].empty());
   unsigned p0 = latSets[s0][0];
   for (unsigned p1 : latSets[s0]) {
     bool add = true;
@@ -164,7 +169,7 @@ unsigned Merger::optimizeSet(unsigned s0) {
   return s;
 }
 
-llvm::BitVector Merger::simplifyCond(unsigned s0, unsigned p0) {
+BitVector Merger::simplifyCond(unsigned s0, unsigned p0) {
   // First determine if this lattice point is a *singleton*, i.e.,
   // the last point in a lattice, no other is less than this one.
   bool isSingleton = true;
@@ -175,7 +180,7 @@ llvm::BitVector Merger::simplifyCond(unsigned s0, unsigned p0) {
     }
   }
   // Now apply the two basic rules.
-  llvm::BitVector simple = latPoints[p0].bits;
+  BitVector simple = latPoints[p0].bits;
   bool reset = isSingleton && hasAnyDimOf(simple, kSparse);
   for (unsigned b = 0, be = simple.size(); b < be; b++) {
     if (simple[b] && !isDim(b, kSparse)) {
@@ -188,8 +193,8 @@ llvm::BitVector Merger::simplifyCond(unsigned s0, unsigned p0) {
 }
 
 bool Merger::latGT(unsigned i, unsigned j) const {
-  const llvm::BitVector &bitsi = latPoints[i].bits;
-  const llvm::BitVector &bitsj = latPoints[j].bits;
+  const BitVector &bitsi = latPoints[i].bits;
+  const BitVector &bitsj = latPoints[j].bits;
   assert(bitsi.size() == bitsj.size());
   if (bitsi.count() > bitsj.count()) {
     for (unsigned b = 0, be = bitsj.size(); b < be; b++)
@@ -201,12 +206,12 @@ bool Merger::latGT(unsigned i, unsigned j) const {
 }
 
 bool Merger::onlyDenseDiff(unsigned i, unsigned j) {
-  llvm::BitVector tmp = latPoints[j].bits;
+  BitVector tmp = latPoints[j].bits;
   tmp ^= latPoints[i].bits;
   return !hasAnyDimOf(tmp, kSparse);
 }
 
-bool Merger::hasAnyDimOf(const llvm::BitVector &bits, Dim d) const {
+bool Merger::hasAnyDimOf(const BitVector &bits, Dim d) const {
   for (unsigned b = 0, be = bits.size(); b < be; b++)
     if (bits[b] && isDim(b, d))
       return true;
@@ -230,6 +235,7 @@ bool Merger::isSingleCondition(unsigned t, unsigned e) const {
   case kCastUF:
   case kCastS:
   case kCastU:
+  case kCastIdx:
   case kTruncI:
   case kBitCast:
     return isSingleCondition(t, tensorExps[e].children.e0);
@@ -273,6 +279,8 @@ static const char *kindToOpSymbol(Kind kind) {
     return "tensor";
   case kInvariant:
     return "invariant";
+  case kIndex:
+    return "index";
   case kAbsF:
     return "abs";
   case kCeilF:
@@ -291,6 +299,7 @@ static const char *kindToOpSymbol(Kind kind) {
   case kCastUF:
   case kCastS:
   case kCastU:
+  case kCastIdx:
   case kTruncI:
   case kBitCast:
     return "cast";
@@ -340,6 +349,9 @@ void Merger::dumpExp(unsigned e) const {
   case kInvariant:
     llvm::dbgs() << "invariant";
     break;
+  case kIndex:
+    llvm::dbgs() << "index_" << tensorExps[e].index;
+    break;
   case kAbsF:
   case kCeilF:
   case kFloorF:
@@ -353,6 +365,7 @@ void Merger::dumpExp(unsigned e) const {
   case kCastUF:
   case kCastS:
   case kCastU:
+  case kCastIdx:
   case kTruncI:
   case kBitCast:
     llvm::dbgs() << kindToOpSymbol(tensorExps[e].kind) << " ";
@@ -386,7 +399,7 @@ void Merger::dumpSet(unsigned s) const {
   llvm::dbgs() << "}\n";
 }
 
-void Merger::dumpBits(const llvm::BitVector &bits) const {
+void Merger::dumpBits(const BitVector &bits) const {
   for (unsigned b = 0, be = bits.size(); b < be; b++) {
     if (bits[b]) {
       unsigned t = tensor(b);
@@ -420,16 +433,20 @@ unsigned Merger::buildLattices(unsigned e, unsigned i) {
   Kind kind = tensorExps[e].kind;
   switch (kind) {
   case kTensor:
-  case kInvariant: {
+  case kInvariant:
+  case kIndex: {
     // Either the index is really used in the tensor expression, or it is
-    // set to the undefined index in that dimension. An invariant expression
-    // and a truly dynamic sparse output tensor are set to a synthetic tensor
-    // with undefined indices only to ensure the iteration space is not
-    // skipped as a result of their contents.
+    // set to the undefined index in that dimension. An invariant expression,
+    // a proper index value, and a truly dynamic sparse output tensor are set
+    // to a synthetic tensor with undefined indices only to ensure the
+    // iteration space is not skipped as a result of their contents.
     unsigned s = addSet();
-    unsigned t = kind == kTensor ? tensorExps[e].tensor : syntheticTensor;
-    if (hasSparseOut && t == outTensor)
-      t = syntheticTensor;
+    unsigned t = syntheticTensor;
+    if (kind == kTensor) {
+      t = tensorExps[e].tensor;
+      if (hasSparseOut && t == outTensor)
+        t = syntheticTensor;
+    }
     latSets[s].push_back(addLat(t, i, e));
     return s;
   }
@@ -446,6 +463,7 @@ unsigned Merger::buildLattices(unsigned e, unsigned i) {
   case kCastUF:
   case kCastS:
   case kCastU:
+  case kCastIdx:
   case kTruncI:
   case kBitCast:
     // A zero preserving operation (viz. f(0) = 0, [Bik96,Ch5]) maps the
@@ -545,7 +563,7 @@ Type Merger::inferType(unsigned e, Value src) {
   // Inspect source type. For vector types, apply the same
   // vectorization to the destination type.
   if (auto vtp = src.getType().dyn_cast<VectorType>())
-    return VectorType::get(vtp.getNumElements(), dtp);
+    return VectorType::get(vtp.getNumElements(), dtp, vtp.getNumScalableDims());
   return dtp;
 }
 
@@ -569,6 +587,11 @@ Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
   Operation *def = v.getDefiningOp();
   if (def->getBlock() != &op.region().front())
     return addExp(kInvariant, v);
+  // Construct index operations.
+  if (def->getNumOperands() == 0) {
+    if (auto indexOp = dyn_cast<linalg::IndexOp>(def))
+      return addExp(kIndex, indexOp.dim());
+  }
   // Construct unary operations if subexpression can be built.
   if (def->getNumOperands() == 1) {
     auto x = buildTensorExp(op, def->getOperand(0));
@@ -598,6 +621,8 @@ Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
         return addExp(kCastS, e, v);
       if (isa<arith::ExtUIOp>(def))
         return addExp(kCastU, e, v);
+      if (isa<arith::IndexCastOp>(def))
+        return addExp(kCastIdx, e, v);
       if (isa<arith::TruncIOp>(def))
         return addExp(kTruncI, e, v);
       if (isa<arith::BitcastOp>(def))
@@ -654,6 +679,7 @@ Value Merger::buildExp(PatternRewriter &rewriter, Location loc, unsigned e,
   switch (tensorExps[e].kind) {
   case kTensor:
   case kInvariant:
+  case kIndex:
     llvm_unreachable("unexpected non-op");
   // Unary ops.
   case kAbsF:
@@ -671,25 +697,27 @@ Value Merger::buildExp(PatternRewriter &rewriter, Location loc, unsigned e,
                                            rewriter.getZeroAttr(v0.getType())),
         v0);
   case kTruncF:
-    return rewriter.create<arith::TruncFOp>(loc, v0, inferType(e, v0));
+    return rewriter.create<arith::TruncFOp>(loc, inferType(e, v0), v0);
   case kExtF:
-    return rewriter.create<arith::ExtFOp>(loc, v0, inferType(e, v0));
+    return rewriter.create<arith::ExtFOp>(loc, inferType(e, v0), v0);
   case kCastFS:
-    return rewriter.create<arith::FPToSIOp>(loc, v0, inferType(e, v0));
+    return rewriter.create<arith::FPToSIOp>(loc, inferType(e, v0), v0);
   case kCastFU:
-    return rewriter.create<arith::FPToUIOp>(loc, v0, inferType(e, v0));
+    return rewriter.create<arith::FPToUIOp>(loc, inferType(e, v0), v0);
   case kCastSF:
-    return rewriter.create<arith::SIToFPOp>(loc, v0, inferType(e, v0));
+    return rewriter.create<arith::SIToFPOp>(loc, inferType(e, v0), v0);
   case kCastUF:
-    return rewriter.create<arith::UIToFPOp>(loc, v0, inferType(e, v0));
+    return rewriter.create<arith::UIToFPOp>(loc, inferType(e, v0), v0);
   case kCastS:
-    return rewriter.create<arith::ExtSIOp>(loc, v0, inferType(e, v0));
+    return rewriter.create<arith::ExtSIOp>(loc, inferType(e, v0), v0);
   case kCastU:
-    return rewriter.create<arith::ExtUIOp>(loc, v0, inferType(e, v0));
+    return rewriter.create<arith::ExtUIOp>(loc, inferType(e, v0), v0);
+  case kCastIdx:
+    return rewriter.create<arith::IndexCastOp>(loc, inferType(e, v0), v0);
   case kTruncI:
-    return rewriter.create<arith::TruncIOp>(loc, v0, inferType(e, v0));
+    return rewriter.create<arith::TruncIOp>(loc, inferType(e, v0), v0);
   case kBitCast:
-    return rewriter.create<arith::BitcastOp>(loc, v0, inferType(e, v0));
+    return rewriter.create<arith::BitcastOp>(loc, inferType(e, v0), v0);
   // Binary ops.
   case kMulF:
     return rewriter.create<arith::MulFOp>(loc, v0, v1);

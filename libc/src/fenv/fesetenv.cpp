@@ -7,13 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/fenv/fesetenv.h"
-#include "src/__support/FPUtil/FEnvUtils.h"
+#include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/common.h"
 
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(int, fesetenv, (const fenv_t *envp)) {
-  return fputil::setEnv(envp);
+  return fputil::set_env(envp);
 }
 
 } // namespace __llvm_libc

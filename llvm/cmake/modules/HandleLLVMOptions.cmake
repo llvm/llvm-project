@@ -34,7 +34,7 @@ string(TOUPPER "${LLVM_ENABLE_LTO}" uppercase_LLVM_ENABLE_LTO)
 set(LLVM_PARALLEL_COMPILE_JOBS "" CACHE STRING
   "Define the maximum number of concurrent compilation jobs (Ninja only).")
 if(LLVM_PARALLEL_COMPILE_JOBS)
-  if(NOT CMAKE_GENERATOR STREQUAL "Ninja")
+  if(NOT CMAKE_GENERATOR MATCHES "Ninja")
     message(WARNING "Job pooling is only available with Ninja generators.")
   else()
     set_property(GLOBAL APPEND PROPERTY JOB_POOLS compile_job_pool=${LLVM_PARALLEL_COMPILE_JOBS})
@@ -44,7 +44,7 @@ endif()
 
 set(LLVM_PARALLEL_LINK_JOBS "" CACHE STRING
   "Define the maximum number of concurrent link jobs (Ninja only).")
-if(CMAKE_GENERATOR STREQUAL "Ninja")
+if(CMAKE_GENERATOR MATCHES "Ninja")
   if(NOT LLVM_PARALLEL_LINK_JOBS AND uppercase_LLVM_ENABLE_LTO STREQUAL "THIN")
     message(STATUS "ThinLTO provides its own parallel linking - limiting parallel link jobs to 2.")
     set(LLVM_PARALLEL_LINK_JOBS "2")
@@ -189,13 +189,15 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
                     ERROR_QUIET
                     )
     if(${RANLIB_RESULT} EQUAL 0)
-      set(CMAKE_C_ARCHIVE_CREATE "<CMAKE_AR> Dqc <TARGET> <LINK_FLAGS> <OBJECTS>")
+      set(CMAKE_C_ARCHIVE_CREATE "<CMAKE_AR> Dqc <TARGET> <LINK_FLAGS> <OBJECTS>"
+          CACHE STRING "archive create command")
       set(CMAKE_C_ARCHIVE_APPEND "<CMAKE_AR> Dq  <TARGET> <LINK_FLAGS> <OBJECTS>")
-      set(CMAKE_C_ARCHIVE_FINISH "<CMAKE_RANLIB> -D <TARGET>")
+      set(CMAKE_C_ARCHIVE_FINISH "<CMAKE_RANLIB> -D <TARGET>" CACHE STRING "ranlib command")
 
-      set(CMAKE_CXX_ARCHIVE_CREATE "<CMAKE_AR> Dqc <TARGET> <LINK_FLAGS> <OBJECTS>")
+      set(CMAKE_CXX_ARCHIVE_CREATE "<CMAKE_AR> Dqc <TARGET> <LINK_FLAGS> <OBJECTS>"
+          CACHE STRING "archive create command")
       set(CMAKE_CXX_ARCHIVE_APPEND "<CMAKE_AR> Dq  <TARGET> <LINK_FLAGS> <OBJECTS>")
-      set(CMAKE_CXX_ARCHIVE_FINISH "<CMAKE_RANLIB> -D <TARGET>")
+      set(CMAKE_CXX_ARCHIVE_FINISH "<CMAKE_RANLIB> -D <TARGET>" CACHE STRING "ranlib command")
     endif()
     file(REMOVE ${CMAKE_BINARY_DIR}/t.a)
   endif()
@@ -275,6 +277,17 @@ function(add_flag_or_print_warning flag name)
   endif()
 endfunction()
 
+function(has_msvc_incremental_no_flag flags incr_no_flag_on)
+  set(${incr_no_flag_on} OFF PARENT_SCOPE)
+  string(FIND "${flags}" "/INCREMENTAL" idx REVERSE)
+  if (${idx} GREATER -1)
+    string(SUBSTRING "${flags}" ${idx} 15 no_flag)
+    if (${no_flag} MATCHES "/INCREMENTAL:NO")
+      set(${incr_no_flag_on} ON PARENT_SCOPE)
+    endif()
+  endif()
+endfunction()
+
 if( LLVM_ENABLE_LLD )
   if ( LLVM_USE_LINKER )
     message(FATAL_ERROR "LLVM_ENABLE_LLD and LLVM_USE_LINKER can't be set at the same time")
@@ -313,12 +326,11 @@ if( LLVM_ENABLE_PIC )
     # Note: GCC<10.3 has a bug on SystemZ.
     #
     # Note: Clang allows IPO for -fPIC so this optimization is less effective.
-    # Older Clang may support -fno-semantic-interposition but it used local
-    # aliases to optimize global variables, which is incompatible with copy
-    # relocations due to -fno-pic.
+    # Clang 13 has a bug related to -fsanitize-coverage
+    # -fno-semantic-interposition (https://reviews.llvm.org/D117183).
     if ((CMAKE_COMPILER_IS_GNUCXX AND
          NOT (LLVM_NATIVE_ARCH STREQUAL "SystemZ" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 10.3))
-       OR (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_VERSION GREATER_EQUAL 13))
+       OR (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_VERSION GREATER_EQUAL 14))
       add_flag_if_supported("-fno-semantic-interposition" FNO_SEMANTIC_INTERPOSITION)
     endif()
   endif()
@@ -488,8 +500,13 @@ if( MSVC )
   endif()
 
   # Get all linker flags in upper case form so we can search them.
-  set(all_linker_flags_uppercase
-    "${CMAKE_EXE_LINKER_FLAGS} ${CMAKE_MODULE_LINKER_FLAGS} ${CMAKE_SHARED_LINKER_FLAGS}")
+  string(CONCAT all_linker_flags_uppercase
+     ${CMAKE_EXE_LINKER_FLAGS_${uppercase_CMAKE_BUILD_TYPE}} " "
+     ${CMAKE_EXE_LINKER_FLAGS} " "
+     ${CMAKE_MODULE_LINKER_FLAGS_${uppercase_CMAKE_BUILD_TYPE}} " "
+     ${CMAKE_MODULE_LINKER_FLAGS} " "
+     ${CMAKE_SHARED_LINKER_FLAGS_${uppercase_CMAKE_BUILD_TYPE}} " "
+     ${CMAKE_SHARED_LINKER_FLAGS})
   string(TOUPPER "${all_linker_flags_uppercase}" all_linker_flags_uppercase)
 
   if (CLANG_CL AND LINKER_IS_LLD)
@@ -529,11 +546,13 @@ if( MSVC )
     if (SUPPORTS_BREPRO)
       # Check if /INCREMENTAL is passed to the linker and complain that it
       # won't work with /Brepro.
-      string(FIND "${all_linker_flags_uppercase}" "/INCREMENTAL" linker_flag_idx)
-      if (${linker_flag_idx} GREATER -1)
-        message(WARNING "/Brepro not compatible with /INCREMENTAL linking - builds will be non-deterministic")
-      else()
+      has_msvc_incremental_no_flag("${CMAKE_EXE_LINKER_FLAGS_${uppercase_CMAKE_BUILD_TYPE}} ${CMAKE_EXE_LINKER_FLAGS}" NO_INCR_EXE)
+      has_msvc_incremental_no_flag("${CMAKE_MODULE_LINKER_FLAGS_${uppercase_CMAKE_BUILD_TYPE}} ${CMAKE_MODULE_LINKER_FLAGS}" NO_INCR_MODULE)
+      has_msvc_incremental_no_flag("${CMAKE_SHARED_LINKER_FLAGS_${uppercase_CMAKE_BUILD_TYPE}} ${CMAKE_SHARED_LINKER_FLAGS}" NO_INCR_SHARED)
+      if (NO_INCR_EXE AND NO_INCR_MODULE AND NO_INCR_SHARED)
         append("/Brepro" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+      else()
+        message(WARNING "/Brepro not compatible with /INCREMENTAL linking - builds will be non-deterministic")
       endif()
     endif()
   endif()
@@ -901,7 +920,7 @@ add_definitions( -D__STDC_LIMIT_MACROS )
 
 # clang and gcc don't default-print colored diagnostics when invoked from Ninja.
 if (UNIX AND
-    CMAKE_GENERATOR STREQUAL "Ninja" AND
+    CMAKE_GENERATOR MATCHES "Ninja" AND
     (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR
      (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND
       NOT (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.9))))
@@ -909,7 +928,7 @@ if (UNIX AND
 endif()
 
 # lld doesn't print colored diagnostics when invoked from Ninja
-if (UNIX AND CMAKE_GENERATOR STREQUAL "Ninja")
+if (UNIX AND CMAKE_GENERATOR MATCHES "Ninja")
   include(LLVMCheckLinkerFlag)
   llvm_check_linker_flag(CXX "-Wl,--color-diagnostics" LINKER_SUPPORTS_COLOR_DIAGNOSTICS)
   append_if(LINKER_SUPPORTS_COLOR_DIAGNOSTICS "-Wl,--color-diagnostics"
@@ -1063,6 +1082,8 @@ if (LLVM_BUILD_INSTRUMENTED AND LLVM_BUILD_INSTRUMENTED_COVERAGE)
   message(FATAL_ERROR "LLVM_BUILD_INSTRUMENTED and LLVM_BUILD_INSTRUMENTED_COVERAGE cannot both be specified")
 endif()
 
+set(LLVM_THINLTO_CACHE_PATH "${PROJECT_BINARY_DIR}/lto.cache" CACHE STRING "Set ThinLTO cache path. This can be used when building LLVM from several different directiories.")
+
 if(LLVM_ENABLE_LTO AND LLVM_ON_WIN32 AND NOT LINKER_IS_LLD_LINK AND NOT MINGW)
   message(FATAL_ERROR "When compiling for Windows, LLVM_ENABLE_LTO requires using lld as the linker (point CMAKE_LINKER at lld-link.exe)")
 endif()
@@ -1076,16 +1097,16 @@ if(uppercase_LLVM_ENABLE_LTO STREQUAL "THIN")
   # improves incremental build time.
   # FIXME: We should move all this logic into the clang driver.
   if(APPLE)
-    append("-Wl,-cache_path_lto,${PROJECT_BINARY_DIR}/lto.cache"
+    append("-Wl,-cache_path_lto,${LLVM_THINLTO_CACHE_PATH}"
            CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
   elseif((UNIX OR MINGW) AND LLVM_USE_LINKER STREQUAL "lld")
-    append("-Wl,--thinlto-cache-dir=${PROJECT_BINARY_DIR}/lto.cache"
+    append("-Wl,--thinlto-cache-dir=${LLVM_THINLTO_CACHE_PATH}"
            CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
   elseif(LLVM_USE_LINKER STREQUAL "gold")
-    append("-Wl,--plugin-opt,cache-dir=${PROJECT_BINARY_DIR}/lto.cache"
+    append("-Wl,--plugin-opt,cache-dir=${LLVM_THINLTO_CACHE_PATH}"
            CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
   elseif(LINKER_IS_LLD_LINK)
-    append("/lldltocache:${PROJECT_BINARY_DIR}/lto.cache"
+    append("/lldltocache:${LLVM_THINLTO_CACHE_PATH}"
            CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
   endif()
 elseif(uppercase_LLVM_ENABLE_LTO STREQUAL "FULL")

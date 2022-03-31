@@ -41,7 +41,7 @@ int main(int, char**)
 #if TEST_STD_VER > 17 && defined(__cpp_char8_t)
     test<char8_t, integral_types_trap>();
 #endif
-#ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
+#ifndef TEST_HAS_NO_UNICODE_CHARS
     test<char16_t, integral_types_trap>();
     test<char32_t, integral_types_trap>();
 #endif
@@ -53,7 +53,7 @@ int main(int, char**)
     test<unsigned long, integral_types_trap>();
     test<long long, integral_types_trap>();
     test<unsigned long long, integral_types_trap>();
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
     test<__int128_t, integral_types_trap>();
     test<__uint128_t, integral_types_trap>();
 #endif

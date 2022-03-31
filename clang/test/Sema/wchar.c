@@ -28,7 +28,7 @@ typedef __WCHAR_TYPE__ wchar_t;
  
 int check_wchar_size[sizeof(*L"") == sizeof(wchar_t) ? 1 : -1];
  
-void foo() {
+void foo(void) {
   WCHAR_T_TYPE t1[] = L"x";
   wchar_t tab[] = L"x";
   WCHAR_T_TYPE t2[] = "x";     // expected-error {{initializing wide char array with non-wide string literal}}

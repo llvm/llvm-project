@@ -2355,10 +2355,10 @@ There are built-in sources, propagations and sinks defined in code inside ``Gene
 These operations are handled even if no external taint configuration is provided.
 
 Default sources defined by ``GenericTaintChecker``:
-``fdopen``, ``fopen``, ``freopen``, ``getch``, ``getchar``, ``getchar_unlocked``, ``gets``, ``scanf``, ``socket``, ``wgetch``
+ ``_IO_getc``, ``fdopen``, ``fopen``, ``freopen``, ``get_current_dir_name``, ``getch``, ``getchar``, ``getchar_unlocked``, ``getwd``, ``getcwd``, ``getgroups``, ``gethostname``, ``getlogin``, ``getlogin_r``, ``getnameinfo``, ``gets``, ``gets_s``, ``getseuserbyname``, ``readlink``, ``readlinkat``, ``scanf``, ``scanf_s``, ``socket``, ``wgetch``
 
 Default propagations defined by ``GenericTaintChecker``:
-``atoi``, ``atol``, ``atoll``, ``fgetc``, ``fgetln``, ``fgets``, ``fscanf``, ``sscanf``, ``getc``, ``getc_unlocked``, ``getdelim``, ``getline``, ``getw``, ``pread``, ``read``, ``strchr``, ``strrchr``, ``tolower``, ``toupper``
+``atoi``, ``atol``, ``atoll``, ``basename``, ``dirname``, ``fgetc``, ``fgetln``, ``fgets``, ``fnmatch``, ``fread``, ``fscanf``, ``fscanf_s``, ``index``, ``inflate``, ``isalnum``, ``isalpha``, ``isascii``, ``isblank``, ``iscntrl``, ``isdigit``, ``isgraph``, ``islower``, ``isprint``, ``ispunct``, ``isspace``, ``isupper``, ``isxdigit``, ``memchr``, ``memrchr``, ``sscanf``, ``getc``, ``getc_unlocked``, ``getdelim``, ``getline``, ``getw``, ``memcmp``, ``memcpy``, ``memmem``, ``memmove``, ``mbtowc``, ``pread``, ``qsort``, ``qsort_r``, ``rawmemchr``, ``read``, ``recv``, ``recvfrom``, ``rindex``, ``strcasestr``, ``strchr``, ``strchrnul``, ``strcasecmp``, ``strcmp``, ``strcspn``, ``strlen``, ``strncasecmp``, ``strncmp``, ``strndup``, ``strndupa``, ``strnlen``, ``strpbrk``, ``strrchr``, ``strsep``, ``strspn``, ``strstr``, ``strtol``, ``strtoll``, ``strtoul``, ``strtoull``, ``tolower``, ``toupper``, ``ttyname``, ``ttyname_r``, ``wctomb``, ``wcwidth``
 
 Default sinks defined in ``GenericTaintChecker``:
 ``printf``, ``setproctitle``, ``system``, ``popen``, ``execl``, ``execle``, ``execlp``, ``execv``, ``execvp``, ``execvP``, ``execve``, ``dlopen``, ``memcpy``, ``memmove``, ``strncpy``, ``strndup``, ``malloc``, ``calloc``, ``alloca``, ``memccpy``, ``realloc``, ``bcopy``
@@ -2372,6 +2372,88 @@ For a more detailed description of configuration options, please see the :doc:`u
 
 alpha.unix
 ^^^^^^^^^^^
+
+.. _alpha-unix-StdCLibraryFunctionArgs:
+
+alpha.unix.StdCLibraryFunctionArgs (C)
+""""""""""""""""""""""""""""""""""""""
+Check for calls of standard library functions that violate predefined argument
+constraints. For example, it is stated in the C standard that for the ``int
+isalnum(int ch)`` function the behavior is undefined if the value of ``ch`` is
+not representable as unsigned char and is not equal to ``EOF``.
+
+.. code-block:: c
+
+  void test_alnum_concrete(int v) {
+    int ret = isalnum(256); // \
+    // warning: Function argument constraint is not satisfied
+    (void)ret;
+  }
+
+If the argument's value is unknown then the value is assumed to hold the proper value range.
+
+.. code-block:: c
+
+  #define EOF -1
+  int test_alnum_symbolic(int x) {
+    int ret = isalnum(x);
+    // after the call, ret is assumed to be in the range [-1, 255]
+
+    if (ret > 255)      // impossible (infeasible branch)
+      if (x == 0)
+        return ret / x; // division by zero is not reported
+    return ret;
+  }
+
+If the user disables the checker then the argument violation warning is
+suppressed. However, the assumption about the argument is still modeled. This
+is because exploring an execution path that already contains undefined behavior
+is not valuable.
+
+There are different kind of constraints modeled: range constraint, not null
+constraint, buffer size constraint. A **range constraint** requires the
+argument's value to be in a specific range, see ``isalnum`` as an example above.
+A **not null constraint** requires the pointer argument to be non-null.
+
+A **buffer size** constraint specifies the minimum size of the buffer
+argument. The size might be a known constant. For example, ``asctime_r`` requires
+that the buffer argument's size must be greater than or equal to ``26`` bytes. In
+other cases, the size is denoted by another argument or as a multiplication of
+two arguments.
+For instance, ``size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream)``.
+Here, ``ptr`` is the buffer, and its minimum size is ``size * nmemb``
+
+.. code-block:: c
+
+  void buffer_size_constraint_violation(FILE *file) {
+    enum { BUFFER_SIZE = 1024 };
+    wchar_t wbuf[BUFFER_SIZE];
+
+    const size_t size = sizeof(*wbuf);   // 4
+    const size_t nitems = sizeof(wbuf);  // 4096
+
+    // Below we receive a warning because the 3rd parameter should be the
+    // number of elements to read, not the size in bytes. This case is a known
+    // vulnerability described by the the ARR38-C SEI-CERT rule.
+    fread(wbuf, size, nitems, file);
+  }
+
+**Limitations**
+
+The checker is in alpha because the reports cannot provide notes about the
+values of the arguments. Without this information it is hard to confirm if the
+constraint is indeed violated. For example, consider the above case for
+``fread``. We display in the warning message that the size of the 1st arg
+should be equal to or less than the value of the 2nd arg times the 3rd arg.
+However, we fail to display the concrete values (``4`` and ``4096``) for those
+arguments.
+
+**Parameters**
+
+The checker models functions (and emits diagnostics) from the C standard by
+default. The ``ModelPOSIX`` option enables the checker to model (and emit
+diagnostics) for functions that are defined in the POSIX standard. This option
+is disabled by default.
 
 .. _alpha-unix-BlockInCriticalSection:
 
@@ -2543,13 +2625,45 @@ alpha.unix.cstring.OutOfBounds (C)
 """"""""""""""""""""""""""""""""""
 Check for out-of-bounds access in string functions; applies to:`` strncopy, strncat``.
 
-
 .. code-block:: c
 
  void test() {
    int y = strlen((char *)&test); // warn
  }
 
+.. _alpha-unix-cstring-UninitializedRead:
+
+alpha.unix.cstring.UninitializedRead (C)
+""""""""""""""""""""""""""""""""""""""""
+Check for uninitialized reads from common memory copy/manipulation functions such as:
+ ``memcpy, mempcpy, memmove, memcmp, strcmp, strncmp, strcpy, strlen, strsep`` and many more.
+
+.. code-block:: c 
+
+ void test() {
+  char src[10];
+  char dst[5];
+  memcpy(dst,src,sizeof(dst)); // warn: Bytes string function accesses uninitialized/garbage values
+ }
+
+Limitations:
+  
+   - Due to limitations of the memory modeling in the analyzer, one can likely
+     observe a lot of false-positive reports like this:
+
+      .. code-block:: c
+  
+        void false_positive() {
+          int src[] = {1, 2, 3, 4};
+          int dst[5] = {0};
+          memcpy(dst, src, 4 * sizeof(int)); // false-positive:
+          // The 'src' buffer was correctly initialized, yet we cannot conclude
+          // that since the analyzer could not see a direct initialization of the
+          // very last byte of the source buffer.
+        }
+  
+     More details at the corresponding `GitHub issue <https://github.com/llvm/llvm-project/issues/43459>`_.
+  
 .. _alpha-nondeterminism-PointerIteration:
 
 alpha.nondeterminism.PointerIteration (C++)

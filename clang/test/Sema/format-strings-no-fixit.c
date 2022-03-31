@@ -10,7 +10,7 @@
 int printf(char const *, ...);
 int scanf(char const *, ...);
 
-void pr9751() {
+void pr9751(void) {
   const char kFormat1[] = "%s";
   printf(kFormat1, 5);
   printf("%s", 5);

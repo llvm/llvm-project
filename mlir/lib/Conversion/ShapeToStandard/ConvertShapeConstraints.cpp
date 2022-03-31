@@ -9,9 +9,9 @@
 #include "mlir/Conversion/ShapeToStandard/ShapeToStandard.h"
 
 #include "../PassDetail.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/Shape/IR/Shape.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
@@ -29,7 +29,7 @@ public:
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(shape::CstrRequireOp op,
                                 PatternRewriter &rewriter) const override {
-    rewriter.create<AssertOp>(op.getLoc(), op.getPred(), op.getMsgAttr());
+    rewriter.create<cf::AssertOp>(op.getLoc(), op.getPred(), op.getMsgAttr());
     rewriter.replaceOpWithNewOp<shape::ConstWitnessOp>(op, true);
     return success();
   }
@@ -63,7 +63,6 @@ class ConvertShapeConstraints
 };
 } // namespace
 
-std::unique_ptr<OperationPass<FuncOp>>
-mlir::createConvertShapeConstraintsPass() {
+std::unique_ptr<Pass> mlir::createConvertShapeConstraintsPass() {
   return std::make_unique<ConvertShapeConstraints>();
 }

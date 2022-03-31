@@ -32,7 +32,6 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachinePassRegistry.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/RegisterPressure.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
@@ -90,12 +89,17 @@ cl::opt<bool> VerifyScheduling(
     "verify-misched", cl::Hidden,
     cl::desc("Verify machine instrs before and after machine scheduling"));
 
+#ifndef NDEBUG
+cl::opt<bool> ViewMISchedDAGs(
+    "view-misched-dags", cl::Hidden,
+    cl::desc("Pop up a window to show MISched dags after they are processed"));
+#else
+const bool ViewMISchedDAGs = false;
+#endif // NDEBUG
+
 } // end namespace llvm
 
 #ifndef NDEBUG
-static cl::opt<bool> ViewMISchedDAGs("view-misched-dags", cl::Hidden,
-  cl::desc("Pop up a window to show MISched dags after they are processed"));
-
 /// In some situations a few uninteresting nodes depend on nearly all other
 /// nodes in the graph, provide a cutoff to hide them.
 static cl::opt<unsigned> ViewMISchedCutoff("view-misched-cutoff", cl::Hidden,
@@ -111,7 +115,6 @@ static cl::opt<unsigned> SchedOnlyBlock("misched-only-block", cl::Hidden,
 static cl::opt<bool> PrintDAGs("misched-print-dags", cl::Hidden,
                               cl::desc("Print schedule DAGs"));
 #else
-static const bool ViewMISchedDAGs = false;
 static const bool PrintDAGs = false;
 #endif // NDEBUG
 
@@ -748,7 +751,7 @@ void ScheduleDAGMI::moveInstruction(
 }
 
 bool ScheduleDAGMI::checkSchedLimit() {
-#ifndef NDEBUG
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   if (NumInstrsScheduled == MISchedCutoff && MISchedCutoff != ~0U) {
     CurrentTop = CurrentBottom;
     return false;
@@ -916,12 +919,10 @@ void ScheduleDAGMI::placeDebugValues() {
     MachineBasicBlock::iterator OrigPrevMI = P.second;
     if (&*RegionBegin == DbgValue)
       ++RegionBegin;
-    BB->splice(++OrigPrevMI, BB, DbgValue);
-    if (OrigPrevMI == std::prev(RegionEnd))
+    BB->splice(std::next(OrigPrevMI), BB, DbgValue);
+    if (RegionEnd != BB->end() && OrigPrevMI == &*RegionEnd)
       RegionEnd = DbgValue;
   }
-  DbgValues.clear();
-  FirstDbgValue = nullptr;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2004,7 +2005,7 @@ void SchedBoundary::reset() {
   ReservedCycles.clear();
   ReservedCyclesIndex.clear();
   ResourceGroupSubUnitMasks.clear();
-#ifndef NDEBUG
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   // Track the maximum number of stall cycles that could arise either from the
   // latency of a DAG edge or the number of cycles that a processor resource is
   // reserved (SchedBoundary::ReservedCycles).
@@ -2192,7 +2193,7 @@ bool SchedBoundary::checkHazard(SUnit *SU) {
       unsigned NRCycle, InstanceIdx;
       std::tie(NRCycle, InstanceIdx) = getNextResourceCycle(SC, ResIdx, Cycles);
       if (NRCycle > CurrCycle) {
-#ifndef NDEBUG
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
         MaxObservedStall = std::max(Cycles, MaxObservedStall);
 #endif
         LLVM_DEBUG(dbgs() << "  SU(" << SU->NodeNum << ") "
@@ -2259,7 +2260,7 @@ void SchedBoundary::releaseNode(SUnit *SU, unsigned ReadyCycle, bool InPQueue,
                                 unsigned Idx) {
   assert(SU->getInstr() && "Scheduled SUnit must have instr");
 
-#ifndef NDEBUG
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   // ReadyCycle was been bumped up to the CurrCycle when this node was
   // scheduled, but CurrCycle may have been eagerly advanced immediately after
   // scheduling, so may now be greater than ReadyCycle.

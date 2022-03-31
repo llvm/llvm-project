@@ -6,7 +6,7 @@ The Opaque Pointer Type
 =======================
 
 Traditionally, LLVM IR pointer types have contained a pointee type. For example,
-``i32 *`` is a pointer that points to an ``i32`` somewhere in memory. However,
+``i32*`` is a pointer that points to an ``i32`` somewhere in memory. However,
 due to a lack of pointee type semantics and various issues with having pointee
 types, there is a desire to remove pointee types from pointers.
 
@@ -18,21 +18,22 @@ Address spaces are still used to distinguish between different kinds of pointers
 where the distinction is relevant for lowering (e.g. data vs function pointers
 have different sizes on some architectures). Opaque pointers are not changing
 anything related to address spaces and lowering. For more information, see
-`DataLayout <LangRef.html#langref-datalayout>`_.
+`DataLayout <LangRef.html#langref-datalayout>`_. Opaque pointers in non-default
+address space are spelled ``ptr addrspace(N)``.
 
 Issues with explicit pointee types
 ==================================
 
 LLVM IR pointers can be cast back and forth between pointers with different
-pointee types. The pointee type does not necessarily actually represent the
-actual underlying type in memory. In other words, the pointee type contains no
-real semantics.
+pointee types. The pointee type does not necessarily represent the actual
+underlying type in memory. In other words, the pointee type carries no real
+semantics.
 
 Lots of operations do not actually care about the underlying type. These
-operations, typically intrinsics, usually end up taking an ``i8 *``. This causes
+operations, typically intrinsics, usually end up taking an ``i8*``. This causes
 lots of redundant no-op bitcasts in the IR to and from a pointer with a
 different pointee type. The extra bitcasts take up space and require extra work
-to look through in optimizations. And more bitcasts increases the chances of
+to look through in optimizations. And more bitcasts increase the chances of
 incorrect bitcasts, especially in regards to address spaces.
 
 Some instructions still need to know what type to treat the memory pointed to by
@@ -57,103 +58,152 @@ LLVM IR distinguished between unsigned and signed integer types. The transition
 from manifesting signedness in types to instructions happened early on in LLVM's
 life to the betterment of LLVM IR.
 
-I Still Need Pointee Types!
-===========================
+Opaque Pointers Mode
+====================
 
-The frontend should already know what type each operation operates on based on
-the input source code. However, some frontends like Clang may end up relying on
-LLVM pointer pointee types to keep track of pointee types. The frontend needs to
-keep track of frontend pointee types on its own.
+During the transition phase, LLVM can be used in two modes: In typed pointer
+mode (currently still the default) all pointer types have a pointee type and
+opaque pointers cannot be used. In opaque pointers mode, all pointers are
+opaque. The opaque pointer mode can be enabled using ``-opaque-pointers`` in
+LLVM tools like ``opt``, or ``-mllvm -opaque-pointers`` in clang. Additionally,
+opaque pointer mode is automatically enabled for IR and bitcode files that use
+the ``ptr`` type.
 
-For optimizations around frontend types, pointee types are not useful due their
-lack of semantics. Rather, since LLVM IR works on untyped memory, for a frontend
-to tell LLVM about frontend types for the purposes of alias analysis, extra
-metadata is added to the IR. For more information, see `TBAA
-<LangRef.html#tbaa-metadata>`_.
-
-Some specific operations still need to know what type a pointer types to. For
-the most part, this is codegen and ABI specific. For example, `byval
-<LangRef.html#parameter-attributes>`_ arguments are pointers, but backends need
-to know the underlying type of the argument to properly lower it. In cases like
-these, the attributes contain a type argument. For example,
+In opaque pointer mode, all typed pointers used in IR, bitcode, or created
+using ``PointerType::get()`` and similar APIs are automatically converted into
+opaque pointers. This simplifies migration and allows testing existing IR with
+opaque pointers.
 
 .. code-block:: llvm
 
-  call void @f(ptr byval(i32) %p)
+   define i8* @test(i8* %p) {
+     %p2 = getelementptr i8, i8* %p, i64 1
+     ret i8* %p2
+   }
 
-signifies that ``%p`` as an argument should be lowered as an ``i32`` passed
-indirectly.
+   ; Is automatically converted into the following if -opaque-pointers
+   ; is enabled:
 
-If you have use cases that this sort of fix doesn't cover, please email
-llvm-dev.
+   define ptr @test(ptr %p) {
+     %p2 = getelementptr i8, ptr %p, i64 1
+     ret ptr %p2
+   }
 
-Transition Plan
-===============
+Migration Instructions
+======================
 
-LLVM currently has many places that depend on pointee types. Each dependency on
-pointee types needs to be resolved in some way or another. This essentially
-translates to figuring out how to remove all calls to
-``PointerType::getElementType`` and ``Type::getPointerElementType()``.
+In order to support opaque pointers, two types of changes tend to be necessary.
+The first is the removal of all calls to ``PointerType::getElementType()`` and
+``Type::getPointerElementType()``.
 
-Making everything use opaque pointers in one huge commit is infeasible. This
-needs to be done incrementally. The following steps need to be done, in no
-particular order:
+In the LLVM middle-end and backend, this is usually accomplished by inspecting
+the type of relevant operations instead. For example, memory access related
+analyses and optimizations should use the types encoded in the load and store
+instructions instead of querying the pointer type.
 
-* Introduce the opaque pointer type
+Here are some common ways to avoid pointer element type accesses:
 
-  * Already done
+* For loads, use ``getType()``.
+* For stores, use ``getValueOperand()->getType()``.
+* Use ``getLoadStoreType()`` to handle both of the above in one call.
+* For getelementptr instructions, use ``getSourceElementType()``.
+* For calls, use ``getFunctionType()``.
+* For allocas, use ``getAllocatedType()``.
+* For globals, use ``getValueType()``.
+* For consistency assertions, use
+  ``PointerType::isOpaqueOrPointeeTypeEquals()``.
+* To create a pointer type in a different address space, use
+  ``PointerType::getWithSamePointeeType()``.
+* To check that two pointers have the same element type, use
+  ``PointerType::hasSameElementTypeAs()``.
+* While it is preferred to write code in a way that accepts both typed and
+  opaque pointers, ``Type::isOpaquePointerTy()`` and
+  ``PointerType::isOpaque()`` can be used to handle opaque pointers specially.
+  ``PointerType::getNonOpaquePointerElementType()`` can be used as a marker in
+  code-paths where opaque pointers have been explicitly excluded.
+* To get the type of a byval argument, use ``getParamByValType()``. Similar
+  method exists for other ABI-affecting attributes that need to know the
+  element type, such as byref, sret, inalloca and preallocated.
+* Some intrinsics require an ``elementtype`` attribute, which can be retrieved
+  using ``getParamElementType()``. This attribute is required in cases where
+  the intrinsic does not naturally encode a needed element type. This is also
+  used for inline assembly.
 
-* Remove remaining in-tree users of pointee types
+Note that some of the methods mentioned above only exist to support both typed
+and opaque pointers at the same time, and will be dropped once the migration
+has completed. For example, ``isOpaqueOrPointeeTypeEquals()`` becomes
+meaningless once all pointers are opaque.
 
-  * There are many miscellaneous uses that should be cleaned up individually
+While direct usage of pointer element types is immediately apparent in code,
+there is a more subtle issue that opaque pointers need to contend with: A lot
+of code assumes that pointer equality also implies that the used load/store
+type or GEP source element type is the same. Consider the following examples
+with typed an opaque pointers:
 
-  * Some of the larger use cases are mentioned below
+.. code-block:: llvm
 
-* Various ABI attributes and instructions that rely on pointee types need to be
-  modified to specify the type separately
+    define i32 @test(i32* %p) {
+      store i32 0, i32* %p
+      %bc = bitcast i32* %p to i64*
+      %v = load i64, i64* %bc
+      ret i64 %v
+    }
 
-  * This has already happened for all instructions like loads, stores, GEPs,
-    and various attributes like ``byval``
+    define i32 @test(ptr %p) {
+      store i32 0, ptr %p
+      %v = load i64, ptr %p
+      ret i64 %v
+    }
 
-  * More cases may be found as work continues
+Without opaque pointers, a check that the pointer operand of the load and
+store are the same also ensures that the accessed type is the same. Using a
+different type requires a bitcast, which will result in distinct pointer
+operands.
 
-* Remove calls to and deprecate ``IRBuilder`` methods that rely on pointee types
+With opaque pointers, the bitcast is not present, and this check is no longer
+sufficient. In the above example, it could result in store to load forwarding
+of an incorrect type. Code making such assumptions needs to be adjusted to
+check the accessed type explicitly:
+``LI->getType() == SI->getValueOperand()->getType()``.
 
-  * For example, some of the ``IRBuilder::CreateGEP()`` methods use the pointer
-    operand's pointee type to determine the GEP operand type
+Frontends
+---------
 
-  * Some methods are already deprecated with ``LLVM_ATTRIBUTE_DEPRECATED``, such
-    as some overloads of ``IRBuilder::CreateLoad()``
+Frontends need to be adjusted to track pointee types independently of LLVM,
+insofar as they are necessary for lowering. For example, clang now tracks the
+pointee type in the ``Address`` structure.
 
-* Allow bitcode auto-upgrade of legacy pointer type to the new opaque pointer
-  type (not to be turned on until ready)
+Frontends using the C API through an FFI interface should be aware that a
+number of C API functions are deprecated and will be removed as part of the
+opaque pointer transition::
 
-  * To support legacy bitcode, such as legacy stores/loads, we need to track
-    pointee types for all values since legacy instructions may infer the types
-    from a pointer operand's pointee type
+    LLVMBuildLoad -> LLVMBuildLoad2
+    LLVMBuildCall -> LLVMBuildCall2
+    LLVMBuildInvoke -> LLVMBuildInvoke2
+    LLVMBuildGEP -> LLVMBuildGEP2
+    LLVMBuildInBoundsGEP -> LLVMBuildInBoundsGEP2
+    LLVMBuildStructGEP -> LLVMBuildStructGEP2
+    LLVMBuildPtrDiff -> LLVMBuildPtrDiff2
+    LLVMConstGEP -> LLVMConstGEP2
+    LLVMConstInBoundsGEP -> LLVMConstInBoundsGEP2
+    LLVMAddAlias -> LLVMAddAlias2
 
-* Migrate frontends to not keep track of frontend pointee types via LLVM pointer
-  pointee types
+Additionally, it will no longer be possible to call ``LLVMGetElementType()``
+on a pointer type.
 
-  * This is mostly Clang, see ``clang::CodeGen::Address::getElementType()``
+Transition State
+================
 
-* Add option to internally treat all pointer types opaque pointers and see what
-  breaks, starting with LLVM tests, then run Clang over large codebases
+As of March 2022 most parts of LLVM support opaque pointers. It is possible
+to build most C and C++ code in opaque pointer mode, both with and without
+optimization, and produce working binaries. However, thes are still some
+open problems:
 
-  * We don't want to start mass-updating tests until we're fairly confident that opaque pointers won't cause major issues
+* We do not yet have a firm strategy for enabling opaque pointers. A large
+  number of tests will have to be migrated to use opaque pointers.
 
-* Replace legacy pointer types in LLVM tests with opaque pointer types
+* Some pointer element type uses remain in LLVM.
 
-Frontend Migration Steps
-========================
+* Some pointer element type uses remain in MLIR.
 
-If you have your own frontend, there are a couple of things to do after opaque
-pointer types fully work.
-
-* Don't rely on LLVM pointee types to keep track of frontend pointee types
-
-* Migrate away from LLVM IR instruction builders that rely on pointee types
-
-  * For example, ``IRBuilder::CreateGEP()`` has multiple overloads; make sure to
-    use one where the source element type is explicitly passed in, not inferred
-    from the pointer operand pointee type
+* Some pointer element type uses remain in Polly.

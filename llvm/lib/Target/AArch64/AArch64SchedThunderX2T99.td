@@ -1499,7 +1499,7 @@ def : InstRW<[THX2T99Write_5Cyc_F01],
 // ASIMD duplicate, gen reg
 // ASIMD duplicate, element
 def : InstRW<[THX2T99Write_5Cyc_F01], (instregex "^DUPv")>;
-def : InstRW<[THX2T99Write_5Cyc_F01], (instregex "^CPY")>;
+def : InstRW<[THX2T99Write_5Cyc_F01], (instregex "^DUP(i8|i16|i32|i64)$")>;
 def : InstRW<[THX2T99Write_5Cyc_F01], (instregex "^DUPv.+gpr")>;
 
 // ASIMD extract

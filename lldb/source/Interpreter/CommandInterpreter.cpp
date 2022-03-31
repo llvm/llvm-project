@@ -45,6 +45,7 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/StreamFile.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Reproducer.h"
 #include "lldb/Utility/State.h"
@@ -82,6 +83,10 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/ScopedPrinter.h"
+
+#if defined(__APPLE__)
+#include <TargetConditionals.h>
+#endif
 
 using namespace lldb;
 using namespace lldb_private;
@@ -433,7 +438,7 @@ void CommandInterpreter::Initialize() {
   if (cmd_obj_sp) {
     alias_arguments_vector_sp = std::make_shared<OptionArgVector>();
 #if defined(__APPLE__)
-#if defined(TARGET_OS_IPHONE)
+#if TARGET_OS_IPHONE
     AddAlias("r", cmd_obj_sp, "--");
     AddAlias("run", cmd_obj_sp, "--");
 #else
@@ -1825,7 +1830,7 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
   std::string command_string(command_line);
   std::string original_command_string(command_line);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_COMMANDS));
+  Log *log = GetLog(LLDBLog::Commands);
   llvm::PrettyStackTraceFormat stack_trace("HandleCommand(command = \"%s\")",
                                    command_line);
 
@@ -1943,16 +1948,21 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
   // arguments.
 
   if (cmd_obj != nullptr) {
-    if (add_to_history) {
+    // If we got here when empty_command was true, then this command is a
+    // stored "repeat command" which we should give a chance to produce it's
+    // repeat command, even though we don't add repeat commands to the history.
+    if (add_to_history || empty_command) {
       Args command_args(command_string);
-      const char *repeat_command = cmd_obj->GetRepeatCommand(command_args, 0);
-      if (repeat_command != nullptr)
-        m_repeat_command.assign(repeat_command);
+      llvm::Optional<std::string> repeat_command =
+          cmd_obj->GetRepeatCommand(command_args, 0);
+      if (repeat_command)
+        m_repeat_command.assign(*repeat_command);
       else
         m_repeat_command.assign(original_command_string);
-
-      m_command_history.AppendString(original_command_string);
     }
+
+    if (add_to_history)
+      m_command_history.AppendString(original_command_string);
 
     std::string remainder;
     const std::size_t actual_cmd_name_len = cmd_obj->GetCommandName().size();
@@ -2216,7 +2226,6 @@ void CommandInterpreter::BuildAliasCommandArgs(CommandObject *alias_cmd_obj,
   }
 
   result.SetStatus(eReturnStatusSuccessFinishNoResult);
-  return;
 }
 
 int CommandInterpreter::GetOptionArgumentPosition(const char *in_string) {
@@ -2260,13 +2269,15 @@ static void GetHomeInitFile(llvm::SmallVectorImpl<char> &init_file,
   FileSystem::Instance().Resolve(init_file);
 }
 
-static void GetHomeREPLInitFile(llvm::SmallVectorImpl<char> &init_file) {
-  LanguageSet repl_languages = Language::GetLanguagesSupportingREPLs();
-  LanguageType language = eLanguageTypeUnknown;
-  if (auto main_repl_language = repl_languages.GetSingularLanguage())
-    language = *main_repl_language;
-  else
-    return;
+static void GetHomeREPLInitFile(llvm::SmallVectorImpl<char> &init_file,
+                                LanguageType language) {
+  if (language == eLanguageTypeUnknown) {
+    LanguageSet repl_languages = Language::GetLanguagesSupportingREPLs();
+    if (auto main_repl_language = repl_languages.GetSingularLanguage())
+      language = *main_repl_language;
+    else
+      return;
+  }
 
   std::string init_file_name =
       (llvm::Twine(".lldbinit-") +
@@ -2356,7 +2367,7 @@ void CommandInterpreter::SourceInitFileHome(CommandReturnObject &result,
   llvm::SmallString<128> init_file;
 
   if (is_repl)
-    GetHomeREPLInitFile(init_file);
+    GetHomeREPLInitFile(init_file, GetDebugger().GetREPLLanguage());
 
   if (init_file.empty())
     GetHomeInitFile(init_file);
@@ -2371,6 +2382,21 @@ void CommandInterpreter::SourceInitFileHome(CommandReturnObject &result,
   }
 
   SourceInitFile(FileSpec(init_file.str()), result);
+}
+
+void CommandInterpreter::SourceInitFileGlobal(CommandReturnObject &result) {
+#ifdef LLDB_GLOBAL_INIT_DIRECTORY
+  if (!m_skip_lldbinit_files) {
+    FileSpec init_file(LLDB_GLOBAL_INIT_DIRECTORY);
+    if (init_file)
+      init_file.MakeAbsolute(HostInfo::GetShlibDir());
+
+    init_file.AppendPathComponent("lldbinit");
+    SourceInitFile(init_file, result);
+    return;
+  }
+#endif
+  result.SetStatus(eReturnStatusSuccessFinishNoResult);
 }
 
 const char *CommandInterpreter::GetCommandPrefix() {
@@ -2563,8 +2589,6 @@ void CommandInterpreter::HandleCommands(const StringList &commands,
 
   result.SetStatus(eReturnStatusSuccessFinishResult);
   m_debugger.SetAsyncExecution(old_async_execution);
-
-  return;
 }
 
 // Make flags that we can pass into the IOHandler so our delegates can do the
@@ -2842,12 +2866,10 @@ void CommandInterpreter::OutputHelpText(Stream &strm, llvm::StringRef word_text,
 
 void CommandInterpreter::FindCommandsForApropos(
     llvm::StringRef search_word, StringList &commands_found,
-    StringList &commands_help, CommandObject::CommandMap &command_map) {
-  CommandObject::CommandMap::const_iterator pos;
-
-  for (pos = command_map.begin(); pos != command_map.end(); ++pos) {
-    llvm::StringRef command_name = pos->first;
-    CommandObject *cmd_obj = pos->second.get();
+    StringList &commands_help, const CommandObject::CommandMap &command_map) {
+  for (const auto &pair : command_map) {
+    llvm::StringRef command_name = pair.first;
+    CommandObject *cmd_obj = pair.second.get();
 
     const bool search_short_help = true;
     const bool search_long_help = false;
@@ -2857,14 +2879,19 @@ void CommandInterpreter::FindCommandsForApropos(
         cmd_obj->HelpTextContainsWord(search_word, search_short_help,
                                       search_long_help, search_syntax,
                                       search_options)) {
-      commands_found.AppendString(cmd_obj->GetCommandName());
+      commands_found.AppendString(command_name);
       commands_help.AppendString(cmd_obj->GetHelp());
     }
 
-    if (cmd_obj->IsMultiwordObject()) {
-      CommandObjectMultiword *cmd_multiword = cmd_obj->GetAsMultiwordCommand();
-      FindCommandsForApropos(search_word, commands_found, commands_help,
-                             cmd_multiword->GetSubcommandDictionary());
+    if (auto *multiword_cmd = cmd_obj->GetAsMultiwordCommand()) {
+      StringList subcommands_found;
+      FindCommandsForApropos(search_word, subcommands_found, commands_help,
+                             multiword_cmd->GetSubcommandDictionary());
+      for (const auto &subcommand_name : subcommands_found) {
+        std::string qualified_name =
+            (command_name + " " + subcommand_name).str();
+        commands_found.AppendString(qualified_name);
+      }
     }
   }
 }
@@ -2948,28 +2975,31 @@ bool CommandInterpreter::WasInterrupted() const {
   return was_interrupted;
 }
 
-void CommandInterpreter::PrintCommandOutput(Stream &stream,
-                                            llvm::StringRef str) {
+void CommandInterpreter::PrintCommandOutput(IOHandler &io_handler,
+                                            llvm::StringRef str,
+                                            bool is_stdout) {
+
+  lldb::StreamFileSP stream = is_stdout ? io_handler.GetOutputStreamFileSP()
+                                        : io_handler.GetErrorStreamFileSP();
   // Split the output into lines and poll for interrupt requests
-  const char *data = str.data();
   size_t size = str.size();
   while (size > 0 && !WasInterrupted()) {
-    size_t chunk_size = 0;
-    for (; chunk_size < size; ++chunk_size) {
-      lldbassert(data[chunk_size] != '\0');
-      if (data[chunk_size] == '\n') {
-        ++chunk_size;
-        break;
-      }
+    llvm::StringRef line;
+    size_t written = 0;
+    std::tie(line, str) = str.split('\n');
+    {
+      std::lock_guard<std::recursive_mutex> guard(io_handler.GetOutputMutex());
+      written += stream->Write(line.data(), line.size());
+      written += stream->Write("\n", 1);
     }
-    chunk_size = stream.Write(data, chunk_size);
-    lldbassert(size >= chunk_size);
-    data += chunk_size;
-    size -= chunk_size;
+    lldbassert(size >= written);
+    size -= written;
   }
-  if (size > 0) {
-    stream.Printf("\n... Interrupted.\n");
-  }
+
+  std::lock_guard<std::recursive_mutex> guard(io_handler.GetOutputMutex());
+  if (size > 0)
+    stream->Printf("\n... Interrupted.\n");
+  stream->Flush();
 }
 
 bool CommandInterpreter::EchoCommandNonInteractive(
@@ -3005,9 +3035,11 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
     // When using a non-interactive file handle (like when sourcing commands
     // from a file) we need to echo the command out so we don't just see the
     // command output and no command...
-    if (EchoCommandNonInteractive(line, io_handler.GetFlags()))
+    if (EchoCommandNonInteractive(line, io_handler.GetFlags())) {
+      std::lock_guard<std::recursive_mutex> guard(io_handler.GetOutputMutex());
       io_handler.GetOutputStreamFileSP()->Printf(
           "%s%s\n", io_handler.GetPrompt(), line.c_str());
+    }
   }
 
   StartHandlingCommand();
@@ -3029,13 +3061,13 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
 
     if (!result.GetImmediateOutputStream()) {
       llvm::StringRef output = result.GetOutputData();
-      PrintCommandOutput(*io_handler.GetOutputStreamFileSP(), output);
+      PrintCommandOutput(io_handler, output, true);
     }
 
     // Now emit the command error text from the command we just executed
     if (!result.GetImmediateErrorStream()) {
       llvm::StringRef error = result.GetErrorData();
-      PrintCommandOutput(*io_handler.GetErrorStreamFileSP(), error);
+      PrintCommandOutput(io_handler, error, false);
     }
   }
 
@@ -3120,8 +3152,8 @@ bool CommandInterpreter::SaveTranscript(
   }
 
   auto error_out = [&](llvm::StringRef error_message, std::string description) {
-    LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_COMMANDS), "{0} ({1}:{2})",
-             error_message, output_file, description);
+    LLDB_LOG(GetLog(LLDBLog::Commands), "{0} ({1}:{2})", error_message,
+             output_file, description);
     result.AppendErrorWithFormatv(
         "Failed to save session's transcripts to {0}!", *output_file);
     return false;
@@ -3152,6 +3184,10 @@ bool CommandInterpreter::SaveTranscript(
                                  output_file->c_str());
 
   return true;
+}
+
+bool CommandInterpreter::IsInteractive() {
+  return (GetIOHandler() ? GetIOHandler()->GetIsInteractive() : false);
 }
 
 FileSpec CommandInterpreter::GetCurrentSourceDir() {

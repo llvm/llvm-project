@@ -1,8 +1,6 @@
 // Purpose:
 //      Test that LimitStep commands can exist on the same from line.
 //
-// REQUIRES: system-linux
-//
 // RUN: %dexter_regression_test -- %s | FileCheck %s
 // CHECK: limit_steps_same_line_conditional.cpp
 

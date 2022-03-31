@@ -12,7 +12,7 @@
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
-#include "mlir/Parser.h"
+#include "mlir/Parser/Parser.h"
 
 #include <gtest/gtest.h>
 
@@ -54,8 +54,7 @@ struct SequentialRegionsOp
   void getSuccessorRegions(Optional<unsigned> index,
                            ArrayRef<Attribute> operands,
                            SmallVectorImpl<RegionSuccessor> &regions) {
-    assert(index.hasValue() && "expected index");
-    if (*index == 0) {
+    if (index == 0u) {
       Operation *thisOp = this->getOperation();
       regions.push_back(RegionSuccessor(&thisOp->getRegion(1)));
     }
@@ -83,7 +82,7 @@ TEST(RegionBranchOpInterface, MutuallyExclusiveOps) {
   registry.insert<CFTestDialect>();
   MLIRContext ctx(registry);
 
-  OwningModuleRef module = parseSourceString(ir, &ctx);
+  OwningOpRef<ModuleOp> module = parseSourceString<ModuleOp>(ir, &ctx);
   Operation *testOp = &module->getBody()->getOperations().front();
   Operation *op1 = &testOp->getRegion(0).front().front();
   Operation *op2 = &testOp->getRegion(1).front().front();
@@ -104,7 +103,7 @@ TEST(RegionBranchOpInterface, NotMutuallyExclusiveOps) {
   registry.insert<CFTestDialect>();
   MLIRContext ctx(registry);
 
-  OwningModuleRef module = parseSourceString(ir, &ctx);
+  OwningOpRef<ModuleOp> module = parseSourceString<ModuleOp>(ir, &ctx);
   Operation *testOp = &module->getBody()->getOperations().front();
   Operation *op1 = &testOp->getRegion(0).front().front();
   Operation *op2 = &testOp->getRegion(1).front().front();
@@ -131,7 +130,7 @@ TEST(RegionBranchOpInterface, NestedMutuallyExclusiveOps) {
   registry.insert<CFTestDialect>();
   MLIRContext ctx(registry);
 
-  OwningModuleRef module = parseSourceString(ir, &ctx);
+  OwningOpRef<ModuleOp> module = parseSourceString<ModuleOp>(ir, &ctx);
   Operation *testOp = &module->getBody()->getOperations().front();
   Operation *op1 =
       &testOp->getRegion(0).front().front().getRegion(0).front().front();

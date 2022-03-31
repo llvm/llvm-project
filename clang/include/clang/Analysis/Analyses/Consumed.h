@@ -153,8 +153,7 @@ namespace consumed {
   public:
     ConsumedStateMap() = default;
     ConsumedStateMap(const ConsumedStateMap &Other)
-        : Reachable(Other.Reachable), From(Other.From), VarMap(Other.VarMap),
-          TmpMap() {}
+        : Reachable(Other.Reachable), From(Other.From), VarMap(Other.VarMap) {}
 
     /// Warn if any of the parameters being tracked are not in the state
     /// they were declared to be in upon return from a function.

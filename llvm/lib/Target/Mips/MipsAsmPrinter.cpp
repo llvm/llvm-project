@@ -80,13 +80,9 @@ bool MipsAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 
   MipsFI = MF.getInfo<MipsFunctionInfo>();
   if (Subtarget->inMips16Mode())
-    for (std::map<
-             const char *,
-             const Mips16HardFloatInfo::FuncSignature *>::const_iterator
-             it = MipsFI->StubsNeeded.begin();
-         it != MipsFI->StubsNeeded.end(); ++it) {
-      const char *Symbol = it->first;
-      const Mips16HardFloatInfo::FuncSignature *Signature = it->second;
+    for (const auto &I : MipsFI->StubsNeeded) {
+      const char *Symbol = I.first;
+      const Mips16HardFloatInfo::FuncSignature *Signature = I.second;
       if (StubsNeeded.find(Symbol) == StubsNeeded.end())
         StubsNeeded[Symbol] = Signature;
     }
@@ -341,7 +337,7 @@ void MipsAsmPrinter::printSavedRegsBitmask() {
   unsigned CSFPRegsSize = 0;
 
   for (const auto &I : CSI) {
-    unsigned Reg = I.getReg();
+    Register Reg = I.getReg();
     unsigned RegNum = TRI->getEncodingValue(Reg);
 
     // If it's a floating point register, set the FPU Bitmask.
@@ -1279,11 +1275,11 @@ void MipsAsmPrinter::NaClAlignIndirectJumpTargets(MachineFunction &MF) {
   // Align all blocks that are jumped to through jump table.
   if (MachineJumpTableInfo *JtInfo = MF.getJumpTableInfo()) {
     const std::vector<MachineJumpTableEntry> &JT = JtInfo->getJumpTables();
-    for (unsigned I = 0; I < JT.size(); ++I) {
-      const std::vector<MachineBasicBlock*> &MBBs = JT[I].MBBs;
+    for (const auto &I : JT) {
+      const std::vector<MachineBasicBlock *> &MBBs = I.MBBs;
 
-      for (unsigned J = 0; J < MBBs.size(); ++J)
-        MBBs[J]->setAlignment(MIPS_NACL_BUNDLE_ALIGN);
+      for (MachineBasicBlock *MBB : MBBs)
+        MBB->setAlignment(MIPS_NACL_BUNDLE_ALIGN);
     }
   }
 

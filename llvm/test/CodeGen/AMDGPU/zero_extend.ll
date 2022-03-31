@@ -8,7 +8,7 @@
 
 ; GCN: {{^}}s_mad_zext_i32_to_i64:
 ; GCN: v_mov_b32_e32 v[[V_ZERO:[0-9]]], 0{{$}}
-; GCN: buffer_store_dwordx2 v[0:[[V_ZERO]]{{\]}}
+; GCN: buffer_store_dwordx2 v[0:[[V_ZERO]]]
 define amdgpu_kernel void @s_mad_zext_i32_to_i64(i64 addrspace(1)* %out, i32 %a, i32 %b, i32 %c) #0 {
 entry:
   %tmp0 = mul i32 %a, %b

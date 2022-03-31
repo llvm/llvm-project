@@ -29,6 +29,7 @@
 // execution, this mechanism is not used by default and only executes binaries
 // in the paths that are explicitly included by the user.
 
+#include "CompileCommands.h"
 #include "GlobalCompilationDatabase.h"
 #include "support/Logger.h"
 #include "support/Path.h"
@@ -38,12 +39,10 @@
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Driver/Types.h"
 #include "clang/Tooling/CompilationDatabase.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -276,6 +275,10 @@ std::string convertGlobToRegex(llvm::StringRef Glob) {
         // Single star, accept any sequence without a slash.
         RegStream << "[^/]*";
       }
+    } else if (llvm::sys::path::is_separator(Glob[I]) &&
+               llvm::sys::path::is_separator('/') &&
+               llvm::sys::path::is_separator('\\')) {
+      RegStream << R"([/\\])"; // Accept either slash on windows.
     } else {
       RegStream << llvm::Regex::escape(Glob.substr(I, 1));
     }
@@ -293,6 +296,7 @@ llvm::Regex convertGlobsToRegex(llvm::ArrayRef<std::string> Globs) {
   for (llvm::StringRef Glob : Globs)
     RegTexts.push_back(convertGlobToRegex(Glob));
 
+  // Tempting to pass IgnoreCase, but we don't know the FS sensitivity.
   llvm::Regex Reg(llvm::join(RegTexts, "|"));
   assert(Reg.isValid(RegTexts.front()) &&
          "Created an invalid regex from globs");

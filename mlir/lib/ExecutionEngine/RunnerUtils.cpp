@@ -16,6 +16,8 @@
 #include "mlir/ExecutionEngine/RunnerUtils.h"
 #include <chrono>
 
+// NOLINTBEGIN(*-identifier-naming)
+
 extern "C" void
 _mlir_ciface_print_memref_shape_i8(UnrankedMemRefType<int8_t> *M) {
   std::cout << "Unranked Memref ";
@@ -104,6 +106,8 @@ extern "C" void print_memref_f64(int64_t rank, void *ptr) {
   _mlir_ciface_print_memref_f64(&descriptor);
 }
 
+extern "C" void print_c_string(char *str) { printf("%s", str); }
+
 extern "C" void
 _mlir_ciface_print_memref_0d_f32(StridedMemRefType<float, 0> *M) {
   impl::printMemRef(*M);
@@ -163,3 +167,5 @@ extern "C" int64_t verifyMemRefF64(int64_t rank, void *actualPtr,
   UnrankedMemRefType<double> expectedDesc = {rank, expectedPtr};
   return _mlir_ciface_verifyMemRefF64(&actualDesc, &expectedDesc);
 }
+
+// NOLINTEND(*-identifier-naming)

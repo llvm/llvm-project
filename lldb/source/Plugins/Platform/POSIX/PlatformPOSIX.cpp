@@ -28,6 +28,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -89,7 +90,7 @@ lldb_private::Status
 PlatformPOSIX::PutFile(const lldb_private::FileSpec &source,
                        const lldb_private::FileSpec &destination, uint32_t uid,
                        uint32_t gid) {
-  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM));
+  Log *log = GetLog(LLDBLog::Platform);
 
   if (IsHost()) {
     if (source == destination)
@@ -154,7 +155,7 @@ lldb_private::Status PlatformPOSIX::GetFile(
     const lldb_private::FileSpec &source,      // remote file path
     const lldb_private::FileSpec &destination) // local file path
 {
-  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM));
+  Log *log = GetLog(LLDBLog::Platform);
 
   // Check the args, first.
   std::string src_path(source.GetPath());
@@ -360,7 +361,7 @@ lldb::ProcessSP PlatformPOSIX::Attach(ProcessAttachInfo &attach_info,
                                       Debugger &debugger, Target *target,
                                       Status &error) {
   lldb::ProcessSP process_sp;
-  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM));
+  Log *log = GetLog(LLDBLog::Platform);
 
   if (IsHost()) {
     if (target == nullptr) {
@@ -413,7 +414,7 @@ lldb::ProcessSP PlatformPOSIX::Attach(ProcessAttachInfo &attach_info,
 lldb::ProcessSP PlatformPOSIX::DebugProcess(ProcessLaunchInfo &launch_info,
                                             Debugger &debugger, Target &target,
                                             Status &error) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
+  Log *log = GetLog(LLDBLog::Platform);
   LLDB_LOG(log, "target {0}", &target);
 
   ProcessSP process_sp;
@@ -442,9 +443,8 @@ lldb::ProcessSP PlatformPOSIX::DebugProcess(ProcessLaunchInfo &launch_info,
 
   // Now create the gdb-remote process.
   LLDB_LOG(log, "having target create process with gdb-remote plugin");
-  process_sp =
-      target.CreateProcess(launch_info.GetListener(), "gdb-remote", nullptr,
-                            true);
+  process_sp = target.CreateProcess(launch_info.GetListener(), "gdb-remote",
+                                    nullptr, true);
 
   if (!process_sp) {
     error.SetErrorString("CreateProcess() failed for gdb-remote process");
@@ -453,15 +453,8 @@ lldb::ProcessSP PlatformPOSIX::DebugProcess(ProcessLaunchInfo &launch_info,
   }
 
   LLDB_LOG(log, "successfully created process");
-  // Adjust launch for a hijacker.
-  ListenerSP listener_sp;
-  if (!launch_info.GetHijackListener()) {
-    LLDB_LOG(log, "setting up hijacker");
-    listener_sp =
-        Listener::MakeListener("lldb.PlatformLinux.DebugProcess.hijack");
-    launch_info.SetHijackListener(listener_sp);
-    process_sp->HijackProcessEvents(listener_sp);
-  }
+
+  process_sp->HijackProcessEvents(launch_info.GetHijackListener());
 
   // Log file actions.
   if (log) {
@@ -479,14 +472,6 @@ lldb::ProcessSP PlatformPOSIX::DebugProcess(ProcessLaunchInfo &launch_info,
   // Do the launch.
   error = process_sp->Launch(launch_info);
   if (error.Success()) {
-    // Handle the hijacking of process events.
-    if (listener_sp) {
-      const StateType state = process_sp->WaitForProcessToStop(
-          llvm::None, nullptr, false, listener_sp);
-
-      LLDB_LOG(log, "pid {0} state {0}", process_sp->GetID(), state);
-    }
-
     // Hook up process PTY if we have one (which we should for local debugging
     // with llgs).
     int pty_fd = launch_info.GetPTY().ReleasePrimaryFileDescriptor();
@@ -575,8 +560,8 @@ PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
     const char *error_str;
   };
   
-  extern void *memcpy(void *, const void *, size_t size);
-  extern size_t strlen(const char *);
+  extern "C" void *memcpy(void *, const void *, size_t size);
+  extern "C" size_t strlen(const char *);
   
 
   void * __lldb_dlopen_wrapper (const char *name, 
@@ -589,6 +574,8 @@ PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
       result_ptr->image_ptr = dlopen(name, RTLD_LAZY);
       if (result_ptr->image_ptr)
         result_ptr->error_str = nullptr;
+      else
+        result_ptr->error_str = dlerror();
       return nullptr;
     }
     
@@ -621,7 +608,7 @@ PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
   DiagnosticManager diagnostics;
 
   auto utility_fn_or_error = process->GetTarget().CreateUtilityFunction(
-      std::move(expr), dlopen_wrapper_name, eLanguageTypeObjC, exe_ctx);
+      std::move(expr), dlopen_wrapper_name, eLanguageTypeC_plus_plus, exe_ctx);
   if (!utility_fn_or_error) {
     std::string error_str = llvm::toString(utility_fn_or_error.takeError());
     error.SetErrorStringWithFormat("dlopen error: could not create utility"

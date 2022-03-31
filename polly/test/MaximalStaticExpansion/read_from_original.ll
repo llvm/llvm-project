@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-mse -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-mse -pass-remarks-analysis="polly-mse" -analyze < %s 2>&1| FileCheck %s --check-prefix=MSE
+; RUN: opt %loadPolly -polly-mse -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-mse -polly-print-scops -pass-remarks-analysis="polly-mse" -disable-output < %s 2>&1| FileCheck %s --check-prefix=MSE
 ;
 ; Verify that Polly detects problems and does not expand the array
 ;
@@ -7,7 +7,7 @@
 ;
 ; #define Ni 2000
 ; #define Nj 3000
-; 
+;
 ; double mse(double A[Ni], double B[Nj]) {
 ;   int i;
 ;   double tmp = 6;
@@ -15,7 +15,7 @@
 ;     for (int j = 2; j<Nj; j++) {
 ;       B[j-1] = j;
 ;     }
-;     A[i] = B[i]; 
+;     A[i] = B[i];
 ;   }
 ;   return tmp;
 ; }

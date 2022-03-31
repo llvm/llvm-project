@@ -67,9 +67,23 @@
 #if (__OPENCL_CPP_VERSION__ == 202100 || __OPENCL_C_VERSION__ == 300)
 // For the SPIR and SPIR-V target all features are supported.
 #if defined(__SPIR__) || defined(__SPIRV__)
+#define __opencl_c_atomic_order_seq_cst 1
+#define __opencl_c_atomic_scope_device 1
 #define __opencl_c_atomic_scope_all_devices 1
+#define __opencl_c_read_write_images 1
 #endif // defined(__SPIR__)
 #endif // (__OPENCL_CPP_VERSION__ == 202100 || __OPENCL_C_VERSION__ == 300)
+
+#if !defined(__opencl_c_generic_address_space)
+// Internal feature macro to provide named (global, local, private) address
+// space overloads for builtin functions that take a pointer argument.
+#define __opencl_c_named_address_space_builtins 1
+#endif // !defined(__opencl_c_generic_address_space)
+
+#if defined(cl_intel_subgroups) || defined(cl_khr_subgroups) || defined(__opencl_c_subgroups)
+// Internal feature macro to provide subgroup builtins.
+#define __opencl_subgroup_builtins 1
+#endif
 
 // built-in scalar data types:
 
@@ -498,12 +512,14 @@ typedef int clk_profiling_info;
 
 #define MAX_WORK_DIM 3
 
+#ifdef __opencl_c_device_enqueue
 typedef struct {
   unsigned int workDimension;
   size_t globalWorkOffset[MAX_WORK_DIM];
   size_t globalWorkSize[MAX_WORK_DIM];
   size_t localWorkSize[MAX_WORK_DIM];
 } ndrange_t;
+#endif // __opencl_c_device_enqueue
 
 #endif // defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_2_0)
 
@@ -600,9 +616,11 @@ typedef struct {
 // C++ for OpenCL - __remove_address_space
 #if defined(__OPENCL_CPP_VERSION__)
 template <typename _Tp> struct __remove_address_space { using type = _Tp; };
+#if defined(__opencl_c_generic_address_space)
 template <typename _Tp> struct __remove_address_space<__generic _Tp> {
   using type = _Tp;
 };
+#endif
 template <typename _Tp> struct __remove_address_space<__global _Tp> {
   using type = _Tp;
 };

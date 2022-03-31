@@ -32,10 +32,9 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/EHPersonalities.h"
-#include "llvm/CodeGen/GlobalISel/RegisterBank.h"
 #include "llvm/CodeGen/LiveInterval.h"
-#include "llvm/CodeGen/LiveIntervalCalc.h"
 #include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/LiveRangeCalc.h"
 #include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -48,6 +47,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
+#include "llvm/CodeGen/RegisterBank.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -55,6 +55,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
@@ -442,7 +443,7 @@ unsigned MachineVerifier::verify(const MachineFunction &MF) {
       for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I) {
         const MachineOperand &Op = MI.getOperand(I);
         if (Op.getParent() != &MI) {
-          // Make sure to use correct addOperand / RemoveOperand / ChangeTo
+          // Make sure to use correct addOperand / removeOperand / ChangeTo
           // functions when replacing operands of a MachineInstr.
           report("Instruction has operand with wrong parent set", &MI);
         }
@@ -1608,12 +1609,16 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     }
     break;
   }
+  case TargetOpcode::G_SHL:
+  case TargetOpcode::G_LSHR:
+  case TargetOpcode::G_ASHR:
   case TargetOpcode::G_ROTR:
   case TargetOpcode::G_ROTL: {
     LLT Src1Ty = MRI->getType(MI->getOperand(1).getReg());
     LLT Src2Ty = MRI->getType(MI->getOperand(2).getReg());
     if (Src1Ty.isVector() != Src2Ty.isVector()) {
-      report("Rotate requires operands to be either all scalars or all vectors",
+      report("Shifts and rotates require operands to be either all scalars or "
+             "all vectors",
              MI);
       break;
     }
@@ -1905,7 +1910,7 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
     const Register Reg = MO->getReg();
     if (!Reg)
       return;
-    if (MRI->tracksLiveness() && !MI->isDebugValue())
+    if (MRI->tracksLiveness() && !MI->isDebugInstr())
       checkLiveness(MO, MONum);
 
     // Verify the consistency of tied operands.
@@ -2229,8 +2234,8 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
   if (LiveInts && Reg.isVirtual()) {
     if (LiveInts->hasInterval(Reg)) {
       LI = &LiveInts->getInterval(Reg);
-      if (SubRegIdx != 0 && !LI->empty() && !LI->hasSubRanges() &&
-          MRI->shouldTrackSubRegLiveness(Reg))
+      if (SubRegIdx != 0 && (MO->isDef() || !MO->isUndef()) && !LI->empty() &&
+          !LI->hasSubRanges() && MRI->shouldTrackSubRegLiveness(Reg))
         report("Live interval for subreg operand has no subranges", MO, MONum);
     } else {
       report("Virtual register has no live interval", MO, MONum);

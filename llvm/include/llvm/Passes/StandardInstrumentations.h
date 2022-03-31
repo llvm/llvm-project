@@ -75,7 +75,7 @@ private:
 
 class OptBisectInstrumentation {
 public:
-  OptBisectInstrumentation() {}
+  OptBisectInstrumentation() = default;
   void registerCallbacks(PassInstrumentationCallbacks &PIC);
 };
 
@@ -186,17 +186,6 @@ public:
 protected:
   // Register required callbacks.
   void registerRequiredCallbacks(PassInstrumentationCallbacks &PIC);
-
-  // Return true when this is a defined function for which printing
-  // of changes is desired.
-  bool isInterestingFunction(const Function &F);
-
-  // Return true when this is a pass for which printing of changes is desired.
-  bool isInterestingPass(StringRef PassID);
-
-  // Return true when this is a pass on IR for which printing
-  // of changes is desired.
-  bool isInteresting(Any IR, StringRef PassID);
 
   // Called on the first IR processed.
   virtual void handleInitialIR(Any IR) = 0;
@@ -432,7 +421,7 @@ public:
   }
 
   // Return the label of the basic block reached on a transition on \p S.
-  const StringRef getSuccessorLabel(StringRef S) const {
+  StringRef getSuccessorLabel(StringRef S) const {
     assert(Successors.count(S) == 1 && "Expected to find successor.");
     return Successors.find(S)->getValue();
   }

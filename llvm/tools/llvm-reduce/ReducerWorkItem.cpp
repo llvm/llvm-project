@@ -16,6 +16,7 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
+#include "llvm/Support/SourceMgr.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 
@@ -88,7 +89,7 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF) {
     }
   }
 
-  DstMF->verify(nullptr, "", /*AbortOnErrors=*/true);
+  DstMF->verify(nullptr, "", /*AbortOnError=*/true);
   return DstMF;
 }
 
@@ -159,7 +160,7 @@ cloneReducerWorkItem(const ReducerWorkItem &MMM) {
 bool verifyReducerWorkItem(const ReducerWorkItem &MMM, raw_fd_ostream *OS) {
   if (verifyModule(*MMM.M, OS))
     return true;
-  if (MMM.MF && !MMM.MF->verify(nullptr, "", /*AbortOnErrors=*/false))
+  if (MMM.MF && !MMM.MF->verify(nullptr, "", /*AbortOnError=*/false))
     return true;
   return false;
 }
@@ -169,6 +170,7 @@ void ReducerWorkItem::print(raw_ostream &ROS, void *p) const {
     printMIR(ROS, *M);
     printMIR(ROS, *MF);
   } else {
-    M->print(ROS, nullptr);
+    M->print(ROS, /*AssemblyAnnotationWriter=*/nullptr,
+             /*ShouldPreserveUseListOrder=*/true);
   }
 }

@@ -15,6 +15,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include <cctype>
 #include <memory>
@@ -97,8 +98,8 @@ private:
 
   class EvalResult {
   public:
-    EvalResult() : Value(0), ErrorMsg("") {}
-    EvalResult(uint64_t Value) : Value(Value), ErrorMsg("") {}
+    EvalResult() : Value(0) {}
+    EvalResult(uint64_t Value) : Value(Value) {}
     EvalResult(std::string ErrorMsg)
         : Value(0), ErrorMsg(std::move(ErrorMsg)) {}
     uint64_t getValue() const { return Value; }
@@ -892,7 +893,7 @@ RuntimeDyldChecker::RuntimeDyldChecker(
           std::move(GetGOTInfo), Endianness, Disassembler, InstPrinter,
           ErrStream)) {}
 
-RuntimeDyldChecker::~RuntimeDyldChecker() {}
+RuntimeDyldChecker::~RuntimeDyldChecker() = default;
 
 bool RuntimeDyldChecker::check(StringRef CheckExpr) const {
   return Impl->check(CheckExpr);

@@ -27,12 +27,12 @@ entry:
 define <2 x i32> @utest_f64i32(<2 x double> %x) {
 ; CHECK-LABEL: utest_f64i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v1.2d, #0x000000ffffffff
-; CHECK-NEXT:    fcvtzu v0.2d, v0.2d
-; CHECK-NEXT:    cmhi v1.2d, v1.2d, v0.2d
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    orn v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    xtn v0.2s, v0.2d
+; CHECK-NEXT:    mov d1, v0.d[1]
+; CHECK-NEXT:    fcvtzu w8, d0
+; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    fcvtzu w8, d1
+; CHECK-NEXT:    mov v0.s[1], w8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %conv = fptoui <2 x double> %x to <2 x i64>
@@ -80,19 +80,7 @@ entry:
 define <4 x i32> @utest_f32i32(<4 x float> %x) {
 ; CHECK-LABEL: utest_f32i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fcvtl v2.2d, v0.2s
-; CHECK-NEXT:    fcvtl2 v0.2d, v0.4s
-; CHECK-NEXT:    movi v1.2d, #0x000000ffffffff
-; CHECK-NEXT:    fcvtzu v2.2d, v2.2d
-; CHECK-NEXT:    fcvtzu v0.2d, v0.2d
-; CHECK-NEXT:    cmhi v3.2d, v1.2d, v2.2d
-; CHECK-NEXT:    cmhi v1.2d, v1.2d, v0.2d
-; CHECK-NEXT:    and v2.16b, v2.16b, v3.16b
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    orn v2.16b, v2.16b, v3.16b
-; CHECK-NEXT:    orn v1.16b, v0.16b, v1.16b
-; CHECK-NEXT:    xtn v0.2s, v2.2d
-; CHECK-NEXT:    xtn2 v0.4s, v1.2d
+; CHECK-NEXT:    fcvtzu v0.4s, v0.4s
 ; CHECK-NEXT:    ret
 entry:
   %conv = fptoui <4 x float> %x to <4 x i64>
@@ -134,59 +122,11 @@ entry:
 }
 
 define <4 x i32> @utesth_f16i32(<4 x half> %x) {
-; CHECK-CVT-LABEL: utesth_f16i32:
-; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-CVT-NEXT:    mov h2, v0.h[2]
-; CHECK-CVT-NEXT:    mov h3, v0.h[1]
-; CHECK-CVT-NEXT:    fcvt s4, h0
-; CHECK-CVT-NEXT:    mov h0, v0.h[3]
-; CHECK-CVT-NEXT:    movi v1.2d, #0x000000ffffffff
-; CHECK-CVT-NEXT:    fcvt s2, h2
-; CHECK-CVT-NEXT:    fcvt s3, h3
-; CHECK-CVT-NEXT:    fcvtzu x8, s4
-; CHECK-CVT-NEXT:    fcvt s0, h0
-; CHECK-CVT-NEXT:    fcvtzu x9, s2
-; CHECK-CVT-NEXT:    fmov d2, x8
-; CHECK-CVT-NEXT:    fcvtzu x8, s3
-; CHECK-CVT-NEXT:    fmov d3, x9
-; CHECK-CVT-NEXT:    fcvtzu x9, s0
-; CHECK-CVT-NEXT:    mov v2.d[1], x8
-; CHECK-CVT-NEXT:    mov v3.d[1], x9
-; CHECK-CVT-NEXT:    cmhi v0.2d, v1.2d, v2.2d
-; CHECK-CVT-NEXT:    cmhi v1.2d, v1.2d, v3.2d
-; CHECK-CVT-NEXT:    and v2.16b, v2.16b, v0.16b
-; CHECK-CVT-NEXT:    and v3.16b, v3.16b, v1.16b
-; CHECK-CVT-NEXT:    orn v0.16b, v2.16b, v0.16b
-; CHECK-CVT-NEXT:    orn v1.16b, v3.16b, v1.16b
-; CHECK-CVT-NEXT:    xtn v0.2s, v0.2d
-; CHECK-CVT-NEXT:    xtn2 v0.4s, v1.2d
-; CHECK-CVT-NEXT:    ret
-;
-; CHECK-FP16-LABEL: utesth_f16i32:
-; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-FP16-NEXT:    mov h2, v0.h[2]
-; CHECK-FP16-NEXT:    mov h3, v0.h[1]
-; CHECK-FP16-NEXT:    fcvtzu x8, h0
-; CHECK-FP16-NEXT:    mov h0, v0.h[3]
-; CHECK-FP16-NEXT:    movi v1.2d, #0x000000ffffffff
-; CHECK-FP16-NEXT:    fcvtzu x9, h2
-; CHECK-FP16-NEXT:    fmov d2, x8
-; CHECK-FP16-NEXT:    fcvtzu x8, h3
-; CHECK-FP16-NEXT:    fmov d3, x9
-; CHECK-FP16-NEXT:    fcvtzu x9, h0
-; CHECK-FP16-NEXT:    mov v2.d[1], x8
-; CHECK-FP16-NEXT:    mov v3.d[1], x9
-; CHECK-FP16-NEXT:    cmhi v0.2d, v1.2d, v2.2d
-; CHECK-FP16-NEXT:    cmhi v1.2d, v1.2d, v3.2d
-; CHECK-FP16-NEXT:    and v2.16b, v2.16b, v0.16b
-; CHECK-FP16-NEXT:    and v3.16b, v3.16b, v1.16b
-; CHECK-FP16-NEXT:    orn v0.16b, v2.16b, v0.16b
-; CHECK-FP16-NEXT:    orn v1.16b, v3.16b, v1.16b
-; CHECK-FP16-NEXT:    xtn v0.2s, v0.2d
-; CHECK-FP16-NEXT:    xtn2 v0.4s, v1.2d
-; CHECK-FP16-NEXT:    ret
+; CHECK-LABEL: utesth_f16i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtl v0.4s, v0.4h
+; CHECK-NEXT:    fcvtzu v0.4s, v0.4s
+; CHECK-NEXT:    ret
 entry:
   %conv = fptoui <4 x half> %x to <4 x i64>
   %0 = icmp ult <4 x i64> %conv, <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
@@ -318,16 +258,12 @@ entry:
 define <8 x i16> @stest_f16i16(<8 x half> %x) {
 ; CHECK-CVT-LABEL: stest_f16i16:
 ; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    fcvtl2 v2.4s, v0.8h
-; CHECK-CVT-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-CVT-NEXT:    movi v1.4s, #127, msl #8
-; CHECK-CVT-NEXT:    mvni v3.4s, #127, msl #8
-; CHECK-CVT-NEXT:    fcvtzs v2.4s, v2.4s
-; CHECK-CVT-NEXT:    fcvtzs v0.4s, v0.4s
-; CHECK-CVT-NEXT:    smin v1.4s, v2.4s, v1.4s
-; CHECK-CVT-NEXT:    sqxtn v0.4h, v0.4s
-; CHECK-CVT-NEXT:    smax v1.4s, v1.4s, v3.4s
-; CHECK-CVT-NEXT:    xtn2 v0.8h, v1.4s
+; CHECK-CVT-NEXT:    fcvtl v1.4s, v0.4h
+; CHECK-CVT-NEXT:    fcvtl2 v0.4s, v0.8h
+; CHECK-CVT-NEXT:    fcvtzs v1.4s, v1.4s
+; CHECK-CVT-NEXT:    fcvtzs v2.4s, v0.4s
+; CHECK-CVT-NEXT:    sqxtn v0.4h, v1.4s
+; CHECK-CVT-NEXT:    sqxtn2 v0.8h, v2.4s
 ; CHECK-CVT-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: stest_f16i16:
@@ -345,17 +281,22 @@ entry:
 }
 
 define <8 x i16> @utesth_f16i16(<8 x half> %x) {
-; CHECK-LABEL: utesth_f16i16:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fcvtl2 v2.4s, v0.8h
-; CHECK-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-NEXT:    movi v1.2d, #0x00ffff0000ffff
-; CHECK-NEXT:    fcvtzu v2.4s, v2.4s
-; CHECK-NEXT:    fcvtzu v0.4s, v0.4s
-; CHECK-NEXT:    umin v1.4s, v2.4s, v1.4s
-; CHECK-NEXT:    uqxtn v0.4h, v0.4s
-; CHECK-NEXT:    xtn2 v0.8h, v1.4s
-; CHECK-NEXT:    ret
+; CHECK-CVT-LABEL: utesth_f16i16:
+; CHECK-CVT:       // %bb.0: // %entry
+; CHECK-CVT-NEXT:    fcvtl2 v2.4s, v0.8h
+; CHECK-CVT-NEXT:    fcvtl v0.4s, v0.4h
+; CHECK-CVT-NEXT:    movi v1.2d, #0x00ffff0000ffff
+; CHECK-CVT-NEXT:    fcvtzu v2.4s, v2.4s
+; CHECK-CVT-NEXT:    fcvtzu v0.4s, v0.4s
+; CHECK-CVT-NEXT:    umin v2.4s, v2.4s, v1.4s
+; CHECK-CVT-NEXT:    umin v0.4s, v0.4s, v1.4s
+; CHECK-CVT-NEXT:    uzp1 v0.8h, v0.8h, v2.8h
+; CHECK-CVT-NEXT:    ret
+;
+; CHECK-FP16-LABEL: utesth_f16i16:
+; CHECK-FP16:       // %bb.0: // %entry
+; CHECK-FP16-NEXT:    fcvtzu v0.8h, v0.8h
+; CHECK-FP16-NEXT:    ret
 entry:
   %conv = fptoui <8 x half> %x to <8 x i32>
   %0 = icmp ult <8 x i32> %conv, <i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535>
@@ -372,9 +313,9 @@ define <8 x i16> @ustest_f16i16(<8 x half> %x) {
 ; CHECK-CVT-NEXT:    movi v1.2d, #0x00ffff0000ffff
 ; CHECK-CVT-NEXT:    fcvtzu v2.4s, v2.4s
 ; CHECK-CVT-NEXT:    fcvtzu v0.4s, v0.4s
-; CHECK-CVT-NEXT:    umin v1.4s, v2.4s, v1.4s
-; CHECK-CVT-NEXT:    uqxtn v0.4h, v0.4s
-; CHECK-CVT-NEXT:    xtn2 v0.8h, v1.4s
+; CHECK-CVT-NEXT:    umin v2.4s, v2.4s, v1.4s
+; CHECK-CVT-NEXT:    umin v0.4s, v0.4s, v1.4s
+; CHECK-CVT-NEXT:    uzp1 v0.8h, v0.8h, v2.8h
 ; CHECK-CVT-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: ustest_f16i16:
@@ -412,9 +353,9 @@ define <2 x i64> @utest_f64i64(<2 x double> %x) {
 ; CHECK-LABEL: utest_f64i64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w30, -32
@@ -449,9 +390,9 @@ define <2 x i64> @ustest_f64i64(<2 x double> %x) {
 ; CHECK-LABEL: ustest_f64i64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w30, -32
@@ -524,9 +465,9 @@ define <2 x i64> @utest_f32i64(<2 x float> %x) {
 ; CHECK-LABEL: utest_f32i64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w30, -32
@@ -562,9 +503,9 @@ define <2 x i64> @ustest_f32i64(<2 x float> %x) {
 ; CHECK-LABEL: ustest_f32i64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w30, -32
@@ -650,9 +591,9 @@ define <2 x i64> @utesth_f16i64(<2 x half> %x) {
 ; CHECK-LABEL: utesth_f16i64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w30, -32
@@ -688,9 +629,9 @@ define <2 x i64> @ustest_f16i64(<2 x half> %x) {
 ; CHECK-LABEL: ustest_f16i64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w30, -32
@@ -765,12 +706,12 @@ entry:
 define <2 x i32> @utest_f64i32_mm(<2 x double> %x) {
 ; CHECK-LABEL: utest_f64i32_mm:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v1.2d, #0x000000ffffffff
-; CHECK-NEXT:    fcvtzu v0.2d, v0.2d
-; CHECK-NEXT:    cmhi v1.2d, v1.2d, v0.2d
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    orn v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    xtn v0.2s, v0.2d
+; CHECK-NEXT:    mov d1, v0.d[1]
+; CHECK-NEXT:    fcvtzu w8, d0
+; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    fcvtzu w8, d1
+; CHECK-NEXT:    mov v0.s[1], w8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %conv = fptoui <2 x double> %x to <2 x i64>
@@ -813,19 +754,7 @@ entry:
 define <4 x i32> @utest_f32i32_mm(<4 x float> %x) {
 ; CHECK-LABEL: utest_f32i32_mm:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fcvtl v2.2d, v0.2s
-; CHECK-NEXT:    fcvtl2 v0.2d, v0.4s
-; CHECK-NEXT:    movi v1.2d, #0x000000ffffffff
-; CHECK-NEXT:    fcvtzu v2.2d, v2.2d
-; CHECK-NEXT:    fcvtzu v0.2d, v0.2d
-; CHECK-NEXT:    cmhi v3.2d, v1.2d, v2.2d
-; CHECK-NEXT:    cmhi v1.2d, v1.2d, v0.2d
-; CHECK-NEXT:    and v2.16b, v2.16b, v3.16b
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    orn v2.16b, v2.16b, v3.16b
-; CHECK-NEXT:    orn v1.16b, v0.16b, v1.16b
-; CHECK-NEXT:    xtn v0.2s, v2.2d
-; CHECK-NEXT:    xtn2 v0.4s, v1.2d
+; CHECK-NEXT:    fcvtzu v0.4s, v0.4s
 ; CHECK-NEXT:    ret
 entry:
   %conv = fptoui <4 x float> %x to <4 x i64>
@@ -862,59 +791,11 @@ entry:
 }
 
 define <4 x i32> @utesth_f16i32_mm(<4 x half> %x) {
-; CHECK-CVT-LABEL: utesth_f16i32_mm:
-; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-CVT-NEXT:    mov h2, v0.h[2]
-; CHECK-CVT-NEXT:    mov h3, v0.h[1]
-; CHECK-CVT-NEXT:    fcvt s4, h0
-; CHECK-CVT-NEXT:    mov h0, v0.h[3]
-; CHECK-CVT-NEXT:    movi v1.2d, #0x000000ffffffff
-; CHECK-CVT-NEXT:    fcvt s2, h2
-; CHECK-CVT-NEXT:    fcvt s3, h3
-; CHECK-CVT-NEXT:    fcvtzu x8, s4
-; CHECK-CVT-NEXT:    fcvt s0, h0
-; CHECK-CVT-NEXT:    fcvtzu x9, s2
-; CHECK-CVT-NEXT:    fmov d2, x8
-; CHECK-CVT-NEXT:    fcvtzu x8, s3
-; CHECK-CVT-NEXT:    fmov d3, x9
-; CHECK-CVT-NEXT:    fcvtzu x9, s0
-; CHECK-CVT-NEXT:    mov v2.d[1], x8
-; CHECK-CVT-NEXT:    mov v3.d[1], x9
-; CHECK-CVT-NEXT:    cmhi v0.2d, v1.2d, v2.2d
-; CHECK-CVT-NEXT:    cmhi v1.2d, v1.2d, v3.2d
-; CHECK-CVT-NEXT:    and v2.16b, v2.16b, v0.16b
-; CHECK-CVT-NEXT:    and v3.16b, v3.16b, v1.16b
-; CHECK-CVT-NEXT:    orn v0.16b, v2.16b, v0.16b
-; CHECK-CVT-NEXT:    orn v1.16b, v3.16b, v1.16b
-; CHECK-CVT-NEXT:    xtn v0.2s, v0.2d
-; CHECK-CVT-NEXT:    xtn2 v0.4s, v1.2d
-; CHECK-CVT-NEXT:    ret
-;
-; CHECK-FP16-LABEL: utesth_f16i32_mm:
-; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-FP16-NEXT:    mov h2, v0.h[2]
-; CHECK-FP16-NEXT:    mov h3, v0.h[1]
-; CHECK-FP16-NEXT:    fcvtzu x8, h0
-; CHECK-FP16-NEXT:    mov h0, v0.h[3]
-; CHECK-FP16-NEXT:    movi v1.2d, #0x000000ffffffff
-; CHECK-FP16-NEXT:    fcvtzu x9, h2
-; CHECK-FP16-NEXT:    fmov d2, x8
-; CHECK-FP16-NEXT:    fcvtzu x8, h3
-; CHECK-FP16-NEXT:    fmov d3, x9
-; CHECK-FP16-NEXT:    fcvtzu x9, h0
-; CHECK-FP16-NEXT:    mov v2.d[1], x8
-; CHECK-FP16-NEXT:    mov v3.d[1], x9
-; CHECK-FP16-NEXT:    cmhi v0.2d, v1.2d, v2.2d
-; CHECK-FP16-NEXT:    cmhi v1.2d, v1.2d, v3.2d
-; CHECK-FP16-NEXT:    and v2.16b, v2.16b, v0.16b
-; CHECK-FP16-NEXT:    and v3.16b, v3.16b, v1.16b
-; CHECK-FP16-NEXT:    orn v0.16b, v2.16b, v0.16b
-; CHECK-FP16-NEXT:    orn v1.16b, v3.16b, v1.16b
-; CHECK-FP16-NEXT:    xtn v0.2s, v0.2d
-; CHECK-FP16-NEXT:    xtn2 v0.4s, v1.2d
-; CHECK-FP16-NEXT:    ret
+; CHECK-LABEL: utesth_f16i32_mm:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtl v0.4s, v0.4h
+; CHECK-NEXT:    fcvtzu v0.4s, v0.4s
+; CHECK-NEXT:    ret
 entry:
   %conv = fptoui <4 x half> %x to <4 x i64>
   %spec.store.select = call <4 x i64> @llvm.umin.v4i64(<4 x i64> %conv, <4 x i64> <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>)
@@ -1033,16 +914,12 @@ entry:
 define <8 x i16> @stest_f16i16_mm(<8 x half> %x) {
 ; CHECK-CVT-LABEL: stest_f16i16_mm:
 ; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    fcvtl2 v2.4s, v0.8h
-; CHECK-CVT-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-CVT-NEXT:    movi v1.4s, #127, msl #8
-; CHECK-CVT-NEXT:    mvni v3.4s, #127, msl #8
-; CHECK-CVT-NEXT:    fcvtzs v2.4s, v2.4s
-; CHECK-CVT-NEXT:    fcvtzs v0.4s, v0.4s
-; CHECK-CVT-NEXT:    smin v1.4s, v2.4s, v1.4s
-; CHECK-CVT-NEXT:    sqxtn v0.4h, v0.4s
-; CHECK-CVT-NEXT:    smax v1.4s, v1.4s, v3.4s
-; CHECK-CVT-NEXT:    xtn2 v0.8h, v1.4s
+; CHECK-CVT-NEXT:    fcvtl v1.4s, v0.4h
+; CHECK-CVT-NEXT:    fcvtl2 v0.4s, v0.8h
+; CHECK-CVT-NEXT:    fcvtzs v1.4s, v1.4s
+; CHECK-CVT-NEXT:    fcvtzs v2.4s, v0.4s
+; CHECK-CVT-NEXT:    sqxtn v0.4h, v1.4s
+; CHECK-CVT-NEXT:    sqxtn2 v0.8h, v2.4s
 ; CHECK-CVT-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: stest_f16i16_mm:
@@ -1058,17 +935,22 @@ entry:
 }
 
 define <8 x i16> @utesth_f16i16_mm(<8 x half> %x) {
-; CHECK-LABEL: utesth_f16i16_mm:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fcvtl2 v2.4s, v0.8h
-; CHECK-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-NEXT:    movi v1.2d, #0x00ffff0000ffff
-; CHECK-NEXT:    fcvtzu v2.4s, v2.4s
-; CHECK-NEXT:    fcvtzu v0.4s, v0.4s
-; CHECK-NEXT:    umin v1.4s, v2.4s, v1.4s
-; CHECK-NEXT:    uqxtn v0.4h, v0.4s
-; CHECK-NEXT:    xtn2 v0.8h, v1.4s
-; CHECK-NEXT:    ret
+; CHECK-CVT-LABEL: utesth_f16i16_mm:
+; CHECK-CVT:       // %bb.0: // %entry
+; CHECK-CVT-NEXT:    fcvtl2 v2.4s, v0.8h
+; CHECK-CVT-NEXT:    fcvtl v0.4s, v0.4h
+; CHECK-CVT-NEXT:    movi v1.2d, #0x00ffff0000ffff
+; CHECK-CVT-NEXT:    fcvtzu v2.4s, v2.4s
+; CHECK-CVT-NEXT:    fcvtzu v0.4s, v0.4s
+; CHECK-CVT-NEXT:    umin v2.4s, v2.4s, v1.4s
+; CHECK-CVT-NEXT:    umin v0.4s, v0.4s, v1.4s
+; CHECK-CVT-NEXT:    uzp1 v0.8h, v0.8h, v2.8h
+; CHECK-CVT-NEXT:    ret
+;
+; CHECK-FP16-LABEL: utesth_f16i16_mm:
+; CHECK-FP16:       // %bb.0: // %entry
+; CHECK-FP16-NEXT:    fcvtzu v0.8h, v0.8h
+; CHECK-FP16-NEXT:    ret
 entry:
   %conv = fptoui <8 x half> %x to <8 x i32>
   %spec.store.select = call <8 x i32> @llvm.umin.v8i32(<8 x i32> %conv, <8 x i32> <i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535>)
@@ -1084,9 +966,9 @@ define <8 x i16> @ustest_f16i16_mm(<8 x half> %x) {
 ; CHECK-CVT-NEXT:    movi v1.2d, #0x00ffff0000ffff
 ; CHECK-CVT-NEXT:    fcvtzu v2.4s, v2.4s
 ; CHECK-CVT-NEXT:    fcvtzu v0.4s, v0.4s
-; CHECK-CVT-NEXT:    umin v1.4s, v2.4s, v1.4s
-; CHECK-CVT-NEXT:    uqxtn v0.4h, v0.4s
-; CHECK-CVT-NEXT:    xtn2 v0.8h, v1.4s
+; CHECK-CVT-NEXT:    umin v2.4s, v2.4s, v1.4s
+; CHECK-CVT-NEXT:    umin v0.4s, v0.4s, v1.4s
+; CHECK-CVT-NEXT:    uzp1 v0.8h, v0.8h, v2.8h
 ; CHECK-CVT-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: ustest_f16i16_mm:
@@ -1120,9 +1002,9 @@ define <2 x i64> @utest_f64i64_mm(<2 x double> %x) {
 ; CHECK-LABEL: utest_f64i64_mm:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w30, -32
@@ -1160,9 +1042,9 @@ define <2 x i64> @ustest_f64i64_mm(<2 x double> %x) {
 ; CHECK-LABEL: ustest_f64i64_mm:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w30, -32
@@ -1225,9 +1107,9 @@ define <2 x i64> @utest_f32i64_mm(<2 x float> %x) {
 ; CHECK-LABEL: utest_f32i64_mm:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w30, -32
@@ -1266,9 +1148,9 @@ define <2 x i64> @ustest_f32i64_mm(<2 x float> %x) {
 ; CHECK-LABEL: ustest_f32i64_mm:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w30, -32
@@ -1344,9 +1226,9 @@ define <2 x i64> @utesth_f16i64_mm(<2 x half> %x) {
 ; CHECK-LABEL: utesth_f16i64_mm:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w30, -32
@@ -1385,9 +1267,9 @@ define <2 x i64> @ustest_f16i64_mm(<2 x half> %x) {
 ; CHECK-LABEL: ustest_f16i64_mm:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w30, -32

@@ -8,9 +8,9 @@
 
 #include "llvm/DebugInfo/CodeView/SymbolSerializer.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cstdint>
 #include <cstring>

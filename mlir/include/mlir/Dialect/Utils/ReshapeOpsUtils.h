@@ -74,31 +74,6 @@ getReassociationIndicesForReshape(ShapedType sourceType, ShapedType targetType);
 bool isReassociationValid(ArrayRef<AffineMap> reassociation,
                           int *invalidIndex = nullptr);
 
-/// Parse a reshape-like op, i.e. linalg::(Tensor)ExpandShapeOp,
-/// linalg::(Tensor)CollapseShapeOp.
-ParseResult parseReshapeLikeOp(OpAsmParser &parser, OperationState &result);
-
-/// Print a reshape-like op, i.e. linalg::(Tensor)ExpandShapeOp,
-/// linalg::(Tensor)CollapseShapeOp.
-template <typename ReshapeLikeOp>
-void printReshapeOp(OpAsmPrinter &p, ReshapeLikeOp op) {
-  p << ' ' << op.src() << " [";
-
-  llvm::interleaveComma(op.reassociation(), p, [&](const Attribute &attr) {
-    p << '[';
-    auto arrayAttr = attr.template cast<ArrayAttr>();
-    llvm::interleaveComma(arrayAttr, p, [&](const Attribute &attr) {
-      p << attr.cast<IntegerAttr>().getInt();
-    });
-    p << ']';
-  });
-
-  p << "] ";
-  p.printOptionalAttrDict(op->getAttrs(),
-                          /*elidedAttrs=*/{getReassociationAttrName()});
-  p << ": " << op.src().getType() << " into " << op.getType();
-}
-
 template <typename ReshapeOpTy, typename InverseReshapeOpTy>
 static OpFoldResult foldReshapeOp(ReshapeOpTy reshapeOp,
                                   ArrayRef<Attribute> operands) {
@@ -166,47 +141,19 @@ static LogicalResult verifyReshapeLikeTypes(Op op, T expandedType,
 /// 2) if a dimension in the collaped type is dynamic, one and only one of the
 ///    corresponding dimensions in the expanded type should be dynamic. This
 ///    rule is only needed with reshape operations that are expanding.
+LogicalResult reshapeLikeShapesAreCompatible(
+    function_ref<LogicalResult(const Twine &)> emitError,
+    ArrayRef<int64_t> collapsedShape, ArrayRef<int64_t> expandedShape,
+    ArrayRef<ReassociationIndices> reassociationMaps, bool isExpandingReshape);
+
 template <typename OpTy>
 static LogicalResult verifyReshapeLikeShapes(OpTy op, ShapedType collapsedType,
                                              ShapedType expandedType,
                                              bool isExpandingReshape) {
-  ArrayRef<int64_t> collapsedShape = collapsedType.getShape();
-  ArrayRef<int64_t> expandedShape = expandedType.getShape();
-  unsigned expandedDimStart = 0;
-  for (auto map : llvm::enumerate(op.getReassociationMaps())) {
-    Optional<int64_t> dynamicShape;
-    int64_t linearizedStaticShape = 1;
-    for (auto dim : llvm::enumerate(expandedShape.slice(
-             expandedDimStart, map.value().getNumResults()))) {
-      if (ShapedType::isDynamic(dim.value())) {
-        if (isExpandingReshape && dynamicShape) {
-          return op->emitOpError("invalid to have a single dimension (")
-                 << map.index() << ") expanded into multiple dynamic dims ("
-                 << expandedDimStart + dynamicShape.getValue() << ","
-                 << expandedDimStart + dim.index() << ")";
-        }
-        dynamicShape = dim.index();
-      } else {
-        linearizedStaticShape *= dim.value();
-      }
-    }
-    if (dynamicShape) {
-      if (!ShapedType::isDynamic(collapsedShape[map.index()])) {
-        return op->emitOpError("expected dimension ")
-               << map.index()
-               << " of collapsed type to be dynamic since one or more of the "
-                  "corresponding dimensions in the expanded type is dynamic";
-      }
-    } else {
-      if (collapsedShape[map.index()] != linearizedStaticShape) {
-        return op->emitOpError("expected dimension ")
-               << map.index() << " of collapsed type to be static value of "
-               << linearizedStaticShape << " ";
-      }
-    }
-    expandedDimStart += map.value().getNumResults();
-  }
-  return success();
+  return reshapeLikeShapesAreCompatible(
+      [&](const Twine &msg) { return op->emitOpError(msg); },
+      collapsedType.getShape(), expandedType.getShape(),
+      op.getReassociationIndices(), isExpandingReshape);
 }
 
 /// Pattern to collapse producer/consumer reshape ops that are both collapsing

@@ -1,6 +1,6 @@
 // REQUIRES: riscv-registered-target
 // RUN: not %clang_cc1 -triple riscv64 -fsyntax-only -verify \
-// RUN:   -target-feature +experimental-v %s 2>&1 \
+// RUN:   -target-feature +v %s 2>&1 \
 // RUN: | FileCheck %s
 
 #include <riscv_vector.h>

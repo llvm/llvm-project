@@ -137,6 +137,12 @@ private:
   llvm::DenseMap<clang::Decl *, DeclStatus> m_decl_to_status;
   llvm::DenseMap<lldb::user_id_t, clang::Decl *> m_uid_to_decl;
   llvm::DenseMap<lldb::user_id_t, clang::QualType> m_uid_to_type;
+
+  // From class/struct's opaque_compiler_type_t to a set containing the pairs of
+  // method's name and CompilerType.
+  llvm::DenseMap<lldb::opaque_compiler_type_t,
+                 llvm::SmallSet<std::pair<llvm::StringRef, CompilerType>, 8>>
+      m_cxx_record_map;
 };
 
 } // namespace npdb

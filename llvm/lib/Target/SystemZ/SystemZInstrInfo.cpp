@@ -18,6 +18,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -30,6 +31,7 @@
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/BranchProbability.h"
@@ -119,9 +121,11 @@ void SystemZInstrInfo::splitAdjDynAlloc(MachineBasicBlock::iterator MI) const {
   MachineFunction &MF = *MBB->getParent();
   MachineFrameInfo &MFFrame = MF.getFrameInfo();
   MachineOperand &OffsetMO = MI->getOperand(2);
+  SystemZCallingConventionRegisters *Regs = STI.getSpecialRegisters();
 
   uint64_t Offset = (MFFrame.getMaxCallFrameSize() +
-                     SystemZMC::ELFCallFrameSize +
+                     Regs->getCallFrameSize() +
+                     Regs->getStackPointerBias() +
                      OffsetMO.getImm());
   unsigned NewOpcode = getOpcodeForOffset(SystemZ::LA, Offset);
   assert(NewOpcode && "No support for huge argument lists yet");
@@ -674,6 +678,7 @@ bool SystemZInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
 bool SystemZInstrInfo::isPredicable(const MachineInstr &MI) const {
   unsigned Opcode = MI.getOpcode();
   if (Opcode == SystemZ::Return ||
+      Opcode == SystemZ::Return_XPLINK ||
       Opcode == SystemZ::Trap ||
       Opcode == SystemZ::CallJG ||
       Opcode == SystemZ::CallBR)
@@ -731,18 +736,20 @@ bool SystemZInstrInfo::PredicateInstruction(
       .addReg(SystemZ::CC, RegState::Implicit);
     return true;
   }
-  if (Opcode == SystemZ::Return) {
-    MI.setDesc(get(SystemZ::CondReturn));
+  if (Opcode == SystemZ::Return || Opcode == SystemZ::Return_XPLINK) {
+    MI.setDesc(get(Opcode == SystemZ::Return ? SystemZ::CondReturn
+                                             : SystemZ::CondReturn_XPLINK));
     MachineInstrBuilder(*MI.getParent()->getParent(), MI)
-      .addImm(CCValid).addImm(CCMask)
-      .addReg(SystemZ::CC, RegState::Implicit);
+        .addImm(CCValid)
+        .addImm(CCMask)
+        .addReg(SystemZ::CC, RegState::Implicit);
     return true;
   }
   if (Opcode == SystemZ::CallJG) {
     MachineOperand FirstOp = MI.getOperand(0);
     const uint32_t *RegMask = MI.getOperand(1).getRegMask();
-    MI.RemoveOperand(1);
-    MI.RemoveOperand(0);
+    MI.removeOperand(1);
+    MI.removeOperand(0);
     MI.setDesc(get(SystemZ::CallBRCL));
     MachineInstrBuilder(*MI.getParent()->getParent(), MI)
         .addImm(CCValid)
@@ -755,8 +762,8 @@ bool SystemZInstrInfo::PredicateInstruction(
   if (Opcode == SystemZ::CallBR) {
     MachineOperand Target = MI.getOperand(0);
     const uint32_t *RegMask = MI.getOperand(1).getRegMask();
-    MI.RemoveOperand(1);
-    MI.RemoveOperand(0);
+    MI.removeOperand(1);
+    MI.removeOperand(0);
     MI.setDesc(get(SystemZ::CallBCR));
     MachineInstrBuilder(*MI.getParent()->getParent(), MI)
       .addImm(CCValid).addImm(CCMask)
@@ -1309,7 +1316,7 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
     // allocated regs are in an FP reg-class per previous check above.
     for (const MachineOperand &MO : MIB->operands())
       if (MO.isReg() && Register::isVirtualRegister(MO.getReg())) {
-        unsigned Reg = MO.getReg();
+        Register Reg = MO.getReg();
         if (MRI.getRegClass(Reg) == &SystemZ::VR32BitRegClass)
           MRI.setRegClass(Reg, &SystemZ::FP32BitRegClass);
         else if (MRI.getRegClass(Reg) == &SystemZ::VR64BitRegClass)
@@ -1650,6 +1657,13 @@ unsigned SystemZInstrInfo::getOpcodeForOffset(unsigned Opcode,
       return Opcode;
   }
   return 0;
+}
+
+bool SystemZInstrInfo::hasDisplacementPairInsn(unsigned Opcode) const {
+  const MCInstrDesc &MCID = get(Opcode);
+  if (MCID.TSFlags & SystemZII::Has20BitOffset)
+    return SystemZ::getDisp12Opcode(Opcode) >= 0;
+  return SystemZ::getDisp20Opcode(Opcode) >= 0;
 }
 
 unsigned SystemZInstrInfo::getLoadAndTest(unsigned Opcode) const {

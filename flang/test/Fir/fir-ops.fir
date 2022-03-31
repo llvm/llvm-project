@@ -53,13 +53,20 @@ func @instructions() {
   %6 = fir.embox %5 : (!fir.heap<!fir.array<100xf32>>) -> !fir.box<!fir.array<100xf32>>
 
 // CHECK: [[VAL_7:%.*]] = fir.box_addr [[VAL_6]] : (!fir.box<!fir.array<100xf32>>) -> !fir.ref<!fir.array<100xf32>>
+  %7 = fir.box_addr %6 : (!fir.box<!fir.array<100xf32>>) -> !fir.ref<!fir.array<100xf32>>
+// CHECK: %[[WAL_2:.*]] = fir.undefined !fir.boxproc<() -> ()>
+  %ba1 = fir.undefined !fir.boxproc<() -> ()>
+// CHECK: %{{.*}} = fir.box_addr %[[WAL_2]] : (!fir.boxproc<() -> ()>) -> (() -> ())
+  %ba2 = fir.box_addr %ba1 : (!fir.boxproc<() -> ()>) -> (() -> ())
+  %ba3 = fir.undefined !fir.boxchar<1>
+// CHECK: %{{.*}} = fir.box_addr %{{.*}} : (!fir.boxchar<1>) -> !fir.ref<!fir.char<1>>
+  %ba4 = fir.box_addr %ba3 : (!fir.boxchar<1>) -> !fir.ref<!fir.char<1>>
+  %c0 = arith.constant 0 : index
+  %d1:3 = fir.box_dims %6, %c0 : (!fir.box<!fir.array<100xf32>>, index) -> (index, index, index)
 // CHECK: [[VAL_8:%.*]] = arith.constant 0 : index
 // CHECK: [[VAL_9:%.*]]:3 = fir.box_dims [[VAL_6]], [[VAL_8]] : (!fir.box<!fir.array<100xf32>>, index) -> (index, index, index)
 // CHECK: fir.call @print_index3([[VAL_9]]#0, [[VAL_9]]#1, [[VAL_9]]#2) : (index, index, index) -> ()
 // CHECK: [[VAL_10:%.*]] = fir.call @it1() : () -> !fir.int<4>
-  %7 = fir.box_addr %6 : (!fir.box<!fir.array<100xf32>>) -> !fir.ref<!fir.array<100xf32>>
-  %c0 = arith.constant 0 : index
-  %d1:3 = fir.box_dims %6, %c0 : (!fir.box<!fir.array<100xf32>>, index) -> (index, index, index)
   fir.call @print_index3(%d1#0, %d1#1, %d1#2) : (index, index, index) -> ()
   %8 = fir.call @it1() : () -> !fir.int<4>
 
@@ -121,7 +128,7 @@ func @instructions() {
   %31 = fir.no_reassoc %29 : i64
 
 // CHECK: fir.call @user_i64([[VAL_35]]) : (i64) -> ()
-// CHECK: fir.freemem [[VAL_5]] : !fir.heap<!fir.array<100xf32>>
+// CHECK: fir.freemem [[VAL_5]] : <!fir.array<100xf32>>
 // CHECK: [[VAL_36:%.*]] = fir.call @get_func() : () -> (() -> ())
 // CHECK: fir.call [[VAL_36]]() : () -> ()
 // CHECK: [[VAL_37:%.*]] = fir.address_of(@it1) : !fir.ref<() -> !fir.int<4>>
@@ -154,7 +161,8 @@ func @boxing_match() {
 // CHECK: [[VAL_53:%.*]] = arith.constant 4.213000e+01 : f64
 // CHECK: [[VAL_54:%.*]] = fir.insert_value [[VAL_48]], [[VAL_53]], [1 : i32] : (!fir.type<qq2{f1:i32,f2:f64}>, f64) -> !fir.type<qq2{f1:i32,f2:f64}>
 // CHECK: fir.store [[VAL_54]] to [[VAL_39]] : !fir.ref<!fir.type<qq2{f1:i32,f2:f64}>>
-// CHECK: [[VAL_55:%.*]] = fir.emboxproc @method_impl, [[VAL_41]] : ((!fir.box<!fir.type<derived3{f:f32}>>) -> (), !fir.ref<tuple<i32, f64>>) -> !fir.boxproc<(!fir.box<!fir.type<derived3{f:f32}>>) -> ()>
+// CHECK: %[[WAL_1:.*]] = fir.address_of(@method_impl)
+// CHECK: [[VAL_55:%.*]] = fir.emboxproc %[[WAL_1]], [[VAL_41]] : ((!fir.box<!fir.type<derived3{f:f32}>>) -> (), !fir.ref<tuple<i32, f64>>) -> !fir.boxproc<(!fir.box<!fir.type<derived3{f:f32}>>) -> ()>
 // CHECK: [[VAL_56:%.*]], [[VAL_57:%.*]] = fir.unboxproc [[VAL_55]] : (!fir.boxproc<(!fir.box<!fir.type<derived3{f:f32}>>) -> ()>) -> ((!fir.box<!fir.type<derived3{f:f32}>>) -> (), !fir.ref<tuple<!fir.type<qq2{f1:i32,f2:f64}>>>)
 // CHECK: [[VAL_58:%.*]] = fir.call @box2() : () -> !fir.boxproc<(i32, i32) -> i64>
 // CHECK: [[VAL_59:%.*]], [[VAL_60:%.*]] = fir.unboxproc [[VAL_58]] : (!fir.boxproc<(i32, i32) -> i64>) -> ((i32, i32) -> i64, !fir.ref<tuple<!fir.type<qq1{f1:i32}>>>)
@@ -179,7 +187,8 @@ func @boxing_match() {
   %c42 = arith.constant 42.13 : f64
   %a3 = fir.insert_value %6, %c42, [1 : i32] : (!fir.type<qq2{f1:i32,f2:f64}>, f64) -> !fir.type<qq2{f1:i32,f2:f64}>
   fir.store %a3 to %d6 : !fir.ref<!fir.type<qq2{f1:i32,f2:f64}>>
-  %7 = fir.emboxproc @method_impl, %e6 : ((!fir.box<!fir.type<derived3{f:f32}>>) -> (), !fir.ref<tuple<i32,f64>>) -> !fir.boxproc<(!fir.box<!fir.type<derived3{f:f32}>>) -> ()>
+  %mi = fir.address_of(@method_impl) : (!fir.box<!fir.type<derived3{f:f32}>>) -> ()
+  %7 = fir.emboxproc %mi, %e6 : ((!fir.box<!fir.type<derived3{f:f32}>>) -> (), !fir.ref<tuple<i32,f64>>) -> !fir.boxproc<(!fir.box<!fir.type<derived3{f:f32}>>) -> ()>
   %8:2 = fir.unboxproc %7 : (!fir.boxproc<(!fir.box<!fir.type<derived3{f:f32}>>) -> ()>) -> ((!fir.box<!fir.type<derived3{f:f32}>>) -> (), !fir.ref<tuple<!fir.type<qq2{f1:i32,f2:f64}>>>)
   %9 = fir.call @box2() : () -> !fir.boxproc<(i32, i32) -> i64>
   %10:2 = fir.unboxproc %9 : (!fir.boxproc<(i32, i32) -> i64>) -> ((i32, i32) -> i64, !fir.ref<tuple<!fir.type<qq1{f1:i32}>>>)
@@ -430,6 +439,15 @@ fir.global @global_derived : !fir.type<minez(f:i32)> {
   fir.global_len f, 1 : i32
   %0 = fir.undefined !fir.type<minez>
   fir.has_value %0 : !fir.type<minez>
+}
+
+// CHECK-LABEL: fir.global linkonce_odr @global_linkonce_odr : i32 {
+// CHECK: [[VAL_130:%.*]] = arith.constant 1 : i32
+// CHECK: fir.has_value [[VAL_130]] : i32
+// CHECK: }
+fir.global linkonce_odr @global_linkonce_odr : i32 {
+  %0 = arith.constant 1 : i32
+  fir.has_value %0 : i32
 }
 
 // CHECK-LABEL: fir.dispatch_table @dispatch_tbl {
@@ -703,6 +721,23 @@ func @test_rebox(%arg0: !fir.box<!fir.array<?xf32>>) {
   return
 }
 
+func private @bar_rebox_test_char(!fir.box<!fir.array<?x!fir.char<1,?>>>)
+// CHECK-LABEL: @test_rebox_char(
+func @test_rebox_char(%arg0: !fir.box<!fir.array<?x!fir.char<1,20>>>) {
+  %c7_i64 = arith.constant 7 : i64
+  %c1_i64 = arith.constant 1 : i64
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %0:3 = fir.box_dims %arg0, %c0 : (!fir.box<!fir.array<?x!fir.char<1,20>>>, index) -> (index, index, index)
+  %1 = fir.slice %c1, %0#1, %c1_i64 substr %c1_i64, %c7_i64 : (index, index, i64, i64, i64) -> !fir.slice<1>
+  // CHECK: fir.rebox %{{.*}} [%{{.*}}] : (!fir.box<!fir.array<?x!fir.char<1,20>>>, !fir.slice<1>) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
+  %2 = fir.rebox %arg0 [%1] : (!fir.box<!fir.array<?x!fir.char<1,20>>>, !fir.slice<1>) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
+  fir.call @bar_rebox_test_char(%2) : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> ()
+  return
+}
+
+
+func private @array_func() -> !fir.array<?x!fir.char<1,?>>
 // CHECK-LABEL: @test_save_result(
 func @test_save_result(%buffer: !fir.ref<!fir.array<?x!fir.char<1,?>>>) {
   %c100 = arith.constant 100 : index
@@ -746,4 +781,27 @@ func @llvm_ptr_load_store_coordinate(%arg0: !fir.ref<tuple<!fir.ref<!fir.box<!fi
   // CHECK-NEXT: fir.load %[[LLVMPTR]] : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.ptr<f32>>>>
   %1 = fir.load %0 : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.ptr<f32>>>>
   return %1 : !fir.ref<!fir.box<!fir.ptr<f32>>>
+}
+
+func @array_access_ops(%a : !fir.ref<!fir.array<?x?xf32>>) {
+  %c1 = arith.constant 1 : index
+  %n = arith.constant 0 : index
+  %m = arith.constant 50 : index
+  %s = fir.shape %n, %m : (index, index) -> !fir.shape<2>
+  %v = fir.array_load %a(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.array<?x?xf32>
+  %p = fir.array_access %v, %c1, %c1 : (!fir.array<?x?xf32>, index, index) -> !fir.ref<f32>
+  // CHECK: %{{.*}} = fir.array_access %{{.*}}, %{{.*}}, %{{.*}} : (!fir.array<?x?xf32>, index, index) -> !fir.ref<f32>
+  return
+}
+
+func @array_amend_ops(%a : !fir.ref<!fir.array<?x?xf32>>) {
+  %c1 = arith.constant 1 : index
+  %n = arith.constant 0 : index
+  %m = arith.constant 50 : index
+  %s = fir.shape %n, %m : (index, index) -> !fir.shape<2>
+  %v = fir.array_load %a(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.array<?x?xf32>
+  %p = fir.array_access %v, %c1, %c1 : (!fir.array<?x?xf32>, index, index) -> !fir.ref<f32>
+  %res = fir.array_amend %v, %p : (!fir.array<?x?xf32>, !fir.ref<f32>) -> !fir.array<?x?xf32>
+  // CHECK: %{{.*}} = fir.array_amend %{{.*}}, %{{.*}} : (!fir.array<?x?xf32>, !fir.ref<f32>) -> !fir.array<?x?xf32>
+  return
 }

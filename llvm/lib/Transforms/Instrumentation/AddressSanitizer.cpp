@@ -42,14 +42,12 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
-#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
@@ -71,7 +69,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerCommon.h"
@@ -87,7 +84,6 @@
 #include <cstdint>
 #include <iomanip>
 #include <limits>
-#include <memory>
 #include <sstream>
 #include <string>
 #include <tuple>
@@ -116,7 +112,7 @@ static const uint64_t kFreeBSDKasan_ShadowOffset64 = 0xdffff7c000000000;
 static const uint64_t kNetBSD_ShadowOffset32 = 1ULL << 30;
 static const uint64_t kNetBSD_ShadowOffset64 = 1ULL << 46;
 static const uint64_t kNetBSDKasan_ShadowOffset64 = 0xdfff900000000000;
-static const uint64_t kPS4CPU_ShadowOffset64 = 1ULL << 40;
+static const uint64_t kPS4_ShadowOffset64 = 1ULL << 40;
 static const uint64_t kWindowsShadowOffset32 = 3ULL << 28;
 static const uint64_t kEmscriptenShadowOffset = 0;
 
@@ -465,11 +461,12 @@ struct ShadowMapping {
 static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
                                       bool IsKasan) {
   bool IsAndroid = TargetTriple.isAndroid();
-  bool IsIOS = TargetTriple.isiOS() || TargetTriple.isWatchOS();
+  bool IsIOS = TargetTriple.isiOS() || TargetTriple.isWatchOS() ||
+               TargetTriple.isDriverKit();
   bool IsMacOS = TargetTriple.isMacOSX();
   bool IsFreeBSD = TargetTriple.isOSFreeBSD();
   bool IsNetBSD = TargetTriple.isOSNetBSD();
-  bool IsPS4CPU = TargetTriple.isPS4CPU();
+  bool IsPS4 = TargetTriple.isPS4();
   bool IsLinux = TargetTriple.isOSLinux();
   bool IsPPC64 = TargetTriple.getArch() == Triple::ppc64 ||
                  TargetTriple.getArch() == Triple::ppc64le;
@@ -528,8 +525,8 @@ static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
         Mapping.Offset = kNetBSDKasan_ShadowOffset64;
       else
         Mapping.Offset = kNetBSD_ShadowOffset64;
-    } else if (IsPS4CPU)
-      Mapping.Offset = kPS4CPU_ShadowOffset64;
+    } else if (IsPS4)
+      Mapping.Offset = kPS4_ShadowOffset64;
     else if (IsLinux && IsX86_64) {
       if (IsKasan)
         Mapping.Offset = kLinuxKasan_ShadowOffset64;
@@ -568,7 +565,7 @@ static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
   // offset is not necessary 1/8-th of the address space.  On SystemZ,
   // we could OR the constant in a single instruction, but it's more
   // efficient to load it once and use indexed addressing.
-  Mapping.OrShadowOffset = !IsAArch64 && !IsPPC64 && !IsSystemZ && !IsPS4CPU &&
+  Mapping.OrShadowOffset = !IsAArch64 && !IsPPC64 && !IsSystemZ && !IsPS4 &&
                            !IsRISCV64 &&
                            !(Mapping.Offset & (Mapping.Offset - 1)) &&
                            Mapping.Offset != kDynamicShadowSentinel;
@@ -1270,36 +1267,6 @@ GlobalsMetadata ASanGlobalsMetadataAnalysis::run(Module &M,
   return GlobalsMetadata(M);
 }
 
-PreservedAnalyses AddressSanitizerPass::run(Function &F,
-                                            AnalysisManager<Function> &AM) {
-  auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
-  Module &M = *F.getParent();
-  if (auto *R = MAMProxy.getCachedResult<ASanGlobalsMetadataAnalysis>(M)) {
-    const TargetLibraryInfo *TLI = &AM.getResult<TargetLibraryAnalysis>(F);
-    AddressSanitizer Sanitizer(M, R, nullptr, Options.CompileKernel,
-                               Options.Recover, Options.UseAfterScope,
-                               Options.UseAfterReturn);
-    if (Sanitizer.instrumentFunction(F, TLI))
-      return PreservedAnalyses::none();
-    return PreservedAnalyses::all();
-  }
-
-  report_fatal_error(
-      "The ASanGlobalsMetadataAnalysis is required to run before "
-      "AddressSanitizer can run");
-  return PreservedAnalyses::all();
-}
-
-void AddressSanitizerPass::printPipeline(
-    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
-  static_cast<PassInfoMixin<AddressSanitizerPass> *>(this)->printPipeline(
-      OS, MapClassName2PassName);
-  OS << "<";
-  if (Options.CompileKernel)
-    OS << "kernel";
-  OS << ">";
-}
-
 void ModuleAddressSanitizerPass::printPipeline(
     raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
   static_cast<PassInfoMixin<ModuleAddressSanitizerPass> *>(this)->printPipeline(
@@ -1527,39 +1494,38 @@ void AddressSanitizer::getInterestingMemoryOperands(
     return;
 
   if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
-    if (!ClInstrumentReads || ignoreAccess(LI, LI->getPointerOperand()))
+    if (!ClInstrumentReads || ignoreAccess(I, LI->getPointerOperand()))
       return;
     Interesting.emplace_back(I, LI->getPointerOperandIndex(), false,
                              LI->getType(), LI->getAlign());
   } else if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
-    if (!ClInstrumentWrites || ignoreAccess(LI, SI->getPointerOperand()))
+    if (!ClInstrumentWrites || ignoreAccess(I, SI->getPointerOperand()))
       return;
     Interesting.emplace_back(I, SI->getPointerOperandIndex(), true,
                              SI->getValueOperand()->getType(), SI->getAlign());
   } else if (AtomicRMWInst *RMW = dyn_cast<AtomicRMWInst>(I)) {
-    if (!ClInstrumentAtomics || ignoreAccess(LI, RMW->getPointerOperand()))
+    if (!ClInstrumentAtomics || ignoreAccess(I, RMW->getPointerOperand()))
       return;
     Interesting.emplace_back(I, RMW->getPointerOperandIndex(), true,
                              RMW->getValOperand()->getType(), None);
   } else if (AtomicCmpXchgInst *XCHG = dyn_cast<AtomicCmpXchgInst>(I)) {
-    if (!ClInstrumentAtomics || ignoreAccess(LI, XCHG->getPointerOperand()))
+    if (!ClInstrumentAtomics || ignoreAccess(I, XCHG->getPointerOperand()))
       return;
     Interesting.emplace_back(I, XCHG->getPointerOperandIndex(), true,
                              XCHG->getCompareOperand()->getType(), None);
   } else if (auto CI = dyn_cast<CallInst>(I)) {
-    auto *F = CI->getCalledFunction();
-    if (F && (F->getName().startswith("llvm.masked.load.") ||
-              F->getName().startswith("llvm.masked.store."))) {
-      bool IsWrite = F->getName().startswith("llvm.masked.store.");
+    if (CI->getIntrinsicID() == Intrinsic::masked_load ||
+        CI->getIntrinsicID() == Intrinsic::masked_store) {
+      bool IsWrite = CI->getIntrinsicID() == Intrinsic::masked_store;
       // Masked store has an initial operand for the value.
       unsigned OpOffset = IsWrite ? 1 : 0;
       if (IsWrite ? !ClInstrumentWrites : !ClInstrumentReads)
         return;
 
       auto BasePtr = CI->getOperand(OpOffset);
-      if (ignoreAccess(LI, BasePtr))
+      if (ignoreAccess(I, BasePtr))
         return;
-      auto Ty = cast<PointerType>(BasePtr->getType())->getElementType();
+      Type *Ty = IsWrite ? CI->getArgOperand(0)->getType() : CI->getType();
       MaybeAlign Alignment = Align(1);
       // Otherwise no alignment guarantees. We probably got Undef.
       if (auto *Op = dyn_cast<ConstantInt>(CI->getOperand(1 + OpOffset)))
@@ -1569,7 +1535,7 @@ void AddressSanitizer::getInterestingMemoryOperands(
     } else {
       for (unsigned ArgNo = 0; ArgNo < CI->arg_size(); ArgNo++) {
         if (!ClInstrumentByval || !CI->isByValArgument(ArgNo) ||
-            ignoreAccess(LI, CI->getArgOperand(ArgNo)))
+            ignoreAccess(I, CI->getArgOperand(ArgNo)))
           continue;
         Type *Ty = CI->getParamByValType(ArgNo);
         Interesting.emplace_back(I, ArgNo, false, Ty, Align(1));
@@ -1653,11 +1619,10 @@ static void instrumentMaskedLoadOrStore(AddressSanitizer *Pass,
                                         const DataLayout &DL, Type *IntptrTy,
                                         Value *Mask, Instruction *I,
                                         Value *Addr, MaybeAlign Alignment,
-                                        unsigned Granularity, uint32_t TypeSize,
+                                        unsigned Granularity, Type *OpType,
                                         bool IsWrite, Value *SizeArgument,
                                         bool UseCalls, uint32_t Exp) {
-  auto *VTy = cast<FixedVectorType>(
-      cast<PointerType>(Addr->getType())->getElementType());
+  auto *VTy = cast<FixedVectorType>(OpType);
   uint64_t ElemTypeSize = DL.getTypeStoreSizeInBits(VTy->getScalarType());
   unsigned Num = VTy->getNumElements();
   auto Zero = ConstantInt::get(IntptrTy, 0);
@@ -1735,7 +1700,7 @@ void AddressSanitizer::instrumentMop(ObjectSizeOffsetVisitor &ObjSizeVis,
   unsigned Granularity = 1 << Mapping.Scale;
   if (O.MaybeMask) {
     instrumentMaskedLoadOrStore(this, DL, IntptrTy, O.MaybeMask, O.getInsn(),
-                                Addr, O.Alignment, Granularity, O.TypeSize,
+                                Addr, O.Alignment, Granularity, O.OpType,
                                 O.IsWrite, nullptr, UseCalls, Exp);
   } else {
     doInstrumentAddress(this, O.getInsn(), O.getInsn(), Addr, O.Alignment,
@@ -2127,6 +2092,8 @@ bool ModuleAddressSanitizer::ShouldUseMachOGlobalsSection() const {
     return true;
   if (TargetTriple.isWatchOS() && !TargetTriple.isOSVersionLT(2))
     return true;
+  if (TargetTriple.isDriverKit())
+    return true;
 
   return false;
 }
@@ -2139,6 +2106,7 @@ StringRef ModuleAddressSanitizer::getGlobalMetadataSection() const {
   case Triple::Wasm:
   case Triple::GOFF:
   case Triple::XCOFF:
+  case Triple::DXContainer:
     report_fatal_error(
         "ModuleAddressSanitizer not implemented for object file format");
   case Triple::UnknownObjectFormat:
@@ -2890,6 +2858,9 @@ bool AddressSanitizer::instrumentFunction(Function &F,
   // Leave if the function doesn't need instrumentation.
   if (!F.hasFnAttribute(Attribute::SanitizeAddress)) return FunctionModified;
 
+  if (F.hasFnAttribute(Attribute::DisableSanitizerInstrumentation))
+    return FunctionModified;
+
   LLVM_DEBUG(dbgs() << "ASAN instrumenting:\n" << F << "\n");
 
   initializeCallbacks(*F.getParent());
@@ -2910,7 +2881,6 @@ bool AddressSanitizer::instrumentFunction(Function &F,
   SmallVector<Instruction *, 8> NoReturnCalls;
   SmallVector<BasicBlock *, 16> AllBlocks;
   SmallVector<Instruction *, 16> PointerComparisonsOrSubtracts;
-  int NumAllocas = 0;
 
   // Fill the set of memory operations to instrument.
   for (auto &BB : F) {
@@ -2950,7 +2920,6 @@ bool AddressSanitizer::instrumentFunction(Function &F,
         IntrinToInstrument.push_back(MI);
         NumInsnsPerBB++;
       } else {
-        if (isa<AllocaInst>(Inst)) NumAllocas++;
         if (auto *CB = dyn_cast<CallBase>(&Inst)) {
           // A call inside BB.
           TempsToInstrument.clear();

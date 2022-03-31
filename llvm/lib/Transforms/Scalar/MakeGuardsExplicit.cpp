@@ -33,13 +33,11 @@
 
 #include "llvm/Transforms/Scalar/MakeGuardsExplicit.h"
 #include "llvm/Analysis/GuardUtils.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
-#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/GuardUtils.h"
 
 using namespace llvm;

@@ -20,7 +20,6 @@
 #include "index/SymbolCollector.h"
 #include "support/Logger.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
-#include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Execution.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/CommandLine.h"

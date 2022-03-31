@@ -1,4 +1,4 @@
-; RUN: opt -S -instsimplify < %s | FileCheck %s
+; RUN: opt -S -passes=instsimplify < %s | FileCheck %s
 %S = type { i16, i32 }
 
 define <2 x i16> @test1() {

@@ -81,17 +81,21 @@ let RegAltNameIndices = [ABIRegAltName] in {
   def R29 : CSKYReg<29, "r29", ["rtb"]>, DwarfRegNum<[29]>;
   def R30 : CSKYReg<30, "r30", ["svbr"]>, DwarfRegNum<[30]>;
   def R31 : CSKYReg<31, "r31", ["tls"]>, DwarfRegNum<[31]>;
-  def C : CSKYReg<32, "cr0", ["psr"]>;
+
+  // Faked for GPRTuple
+  def R32 : CSKYReg<32, "r32", ["r32"]>, DwarfRegNum<[32]>;
+
+  def C : CSKYReg<33, "cr0", ["psr"]>;
 
 }
 
 def GPRTuple : RegisterTuples<
           [sub32_0, sub32_32],
-          [(add (sequence "R%u", 0, 30)), (add (sequence "R%u", 1, 31))],
+          [(add (sequence "R%u", 0, 31)), (add (sequence "R%u", 1, 32))],
           [ "r0",  "r1",  "r2",  "r3",  "r4",  "r5",  "r6",  "r7",
             "r8",  "r9",  "r10", "r11", "r12", "r13", "r14", "r15",
             "r16", "r17", "r18", "r19", "r20", "r21", "r22", "r23",
-            "r24", "r25", "r26", "r27", "r28", "r29", "r30"
+            "r24", "r25", "r26", "r27", "r28", "r29", "r30", "r31"
           ]>;
 
 // Floating point registers
@@ -193,6 +197,8 @@ def FPR64 : RegisterClass<"CSKY", [f64], 64,
                          (add (sequence "F%u_64", 0, 31))>;
 def sFPR64 : RegisterClass<"CSKY", [f64], 64,
                          (add (sequence "F%u_64", 0, 15))>;
+
+def sFPR64_V : RegisterClass<"CSKY", [v2f32], 32, (add sFPR64)>;
 
 def FPR128 : RegisterClass<"CSKY",
              [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64, v8f16], 128,

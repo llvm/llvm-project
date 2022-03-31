@@ -87,18 +87,6 @@ static bool getMRCDeprecationInfo(MCInst &MI, const MCSubtargetInfo &STI,
   return false;
 }
 
-static bool getITDeprecationInfo(MCInst &MI, const MCSubtargetInfo &STI,
-                                 std::string &Info) {
-  if (STI.getFeatureBits()[llvm::ARM::HasV8Ops] && MI.getOperand(1).isImm() &&
-      MI.getOperand(1).getImm() != 8) {
-    Info = "applying IT instruction to more than one subsequent instruction is "
-           "deprecated";
-    return true;
-  }
-
-  return false;
-}
-
 static bool getARMStoreDeprecationInfo(MCInst &MI, const MCSubtargetInfo &STI,
                                        std::string &Info) {
   assert(!STI.getFeatureBits()[llvm::ARM::ModeThumb] &&
@@ -338,8 +326,8 @@ void ARM_MC::initLLVMToCVRegMapping(MCRegisterInfo *MRI) {
       {codeview::RegisterId::ARM_NQ14, ARM::Q14},
       {codeview::RegisterId::ARM_NQ15, ARM::Q15},
   };
-  for (unsigned I = 0; I < array_lengthof(RegMap); ++I)
-    MRI->mapLLVMRegToCVReg(RegMap[I].Reg, static_cast<int>(RegMap[I].CVReg));
+  for (const auto &I : RegMap)
+    MRI->mapLLVMRegToCVReg(I.Reg, static_cast<int>(I.CVReg));
 }
 
 static MCRegisterInfo *createARMMCRegisterInfo(const Triple &Triple) {

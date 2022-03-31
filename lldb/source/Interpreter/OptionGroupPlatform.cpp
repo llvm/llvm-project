@@ -23,17 +23,17 @@ PlatformSP OptionGroupPlatform::CreatePlatformWithOptions(
   if (!m_platform_name.empty()) {
     platform_sp = Platform::Create(ConstString(m_platform_name.c_str()), error);
     if (platform_sp) {
-      if (platform_arch.IsValid() &&
-          !platform_sp->IsCompatibleArchitecture(arch, false, &platform_arch)) {
-        error.SetErrorStringWithFormat("platform '%s' doesn't support '%s'",
-                                       platform_sp->GetName().GetCString(),
-                                       arch.GetTriple().getTriple().c_str());
+      if (platform_arch.IsValid() && !platform_sp->IsCompatibleArchitecture(
+                                         arch, {}, false, &platform_arch)) {
+        error.SetErrorStringWithFormatv("platform '{0}' doesn't support '{1}'",
+                                        platform_sp->GetPluginName(),
+                                        arch.GetTriple().getTriple());
         platform_sp.reset();
         return platform_sp;
       }
     }
   } else if (arch.IsValid()) {
-    platform_sp = Platform::Create(arch, &platform_arch, error);
+    platform_sp = Platform::Create(arch, {}, &platform_arch, error);
   }
 
   if (platform_sp) {
@@ -122,7 +122,7 @@ bool OptionGroupPlatform::PlatformMatches(
     const lldb::PlatformSP &platform_sp) const {
   if (platform_sp) {
     if (!m_platform_name.empty()) {
-      if (platform_sp->GetName() != ConstString(m_platform_name.c_str()))
+      if (platform_sp->GetName() != m_platform_name)
         return false;
     }
 

@@ -56,7 +56,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR2:[0-9]+]] personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) {
+// CHECK1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR2:[0-9]+]] personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -73,7 +73,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP2]], align 4
 // CHECK1-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB1]], i32 [[TMP3]], [8 x i32]* @.gomp_critical_user_.var) [ "funclet"(token [[TMP1]]) ]
 // CHECK1-NEXT:    invoke void @"?bar@@YAXXZ"() [ "funclet"(token [[TMP1]]) ]
-// CHECK1-NEXT:    to label [[INVOKE_CONT1:%.*]] unwind label [[EHCLEANUP:%.*]]
+// CHECK1-NEXT:    to label [[INVOKE_CONT1:%.*]] unwind label [[TERMINATE2:%.*]]
 // CHECK1:       invoke.cont1:
 // CHECK1-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB1]], i32 [[TMP3]], [8 x i32]* @.gomp_critical_user_.var) [ "funclet"(token [[TMP1]]) ]
 // CHECK1-NEXT:    catchret from [[TMP1]] to label [[CATCHRET_DEST:%.*]]
@@ -83,22 +83,18 @@ int main() {
 // CHECK1-NEXT:    ret void
 // CHECK1:       invoke.cont:
 // CHECK1-NEXT:    br label [[TRY_CONT]]
-// CHECK1:       ehcleanup:
-// CHECK1-NEXT:    [[TMP4:%.*]] = cleanuppad within [[TMP1]] []
-// CHECK1-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB1]], i32 [[TMP3]], [8 x i32]* @.gomp_critical_user_.var) [ "funclet"(token [[TMP4]]) ]
-// CHECK1-NEXT:    cleanupret from [[TMP4]] unwind label [[TERMINATE2:%.*]]
 // CHECK1:       terminate:
-// CHECK1-NEXT:    [[TMP5:%.*]] = cleanuppad within none []
-// CHECK1-NEXT:    call void @"?terminate@@YAXXZ"() #[[ATTR7:[0-9]+]] [ "funclet"(token [[TMP5]]) ]
+// CHECK1-NEXT:    [[TMP4:%.*]] = cleanuppad within none []
+// CHECK1-NEXT:    call void @"?terminate@@YAXXZ"() #[[ATTR7:[0-9]+]] [ "funclet"(token [[TMP4]]) ]
 // CHECK1-NEXT:    unreachable
 // CHECK1:       terminate2:
-// CHECK1-NEXT:    [[TMP6:%.*]] = cleanuppad within [[TMP1]] []
-// CHECK1-NEXT:    call void @"?terminate@@YAXXZ"() #[[ATTR7]] [ "funclet"(token [[TMP6]]) ]
+// CHECK1-NEXT:    [[TMP5:%.*]] = cleanuppad within [[TMP1]] []
+// CHECK1-NEXT:    call void @"?terminate@@YAXXZ"() #[[ATTR7]] [ "funclet"(token [[TMP5]]) ]
 // CHECK1-NEXT:    unreachable
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[J:%.*]]) #[[ATTR2]] {
+// CHECK1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[J:%.*]]) #[[ATTR2]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[J_ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -135,7 +131,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp.copyprivate.copy_func
-// CHECK1-SAME: (i8* [[TMP0:%.*]], i8* [[TMP1:%.*]]) #[[ATTR6:[0-9]+]] {
+// CHECK1-SAME: (i8* noundef [[TMP0:%.*]], i8* noundef [[TMP1:%.*]]) #[[ATTR6:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 8
 // CHECK1-NEXT:    [[DOTADDR1:%.*]] = alloca i8*, align 8
@@ -154,5 +150,4 @@ int main() {
 // CHECK1-NEXT:    [[TMP12:%.*]] = load i32, i32* [[TMP11]], align 4
 // CHECK1-NEXT:    store i32 [[TMP12]], i32* [[TMP8]], align 4
 // CHECK1-NEXT:    ret void
-//
 //

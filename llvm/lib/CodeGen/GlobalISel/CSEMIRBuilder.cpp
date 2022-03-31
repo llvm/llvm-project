@@ -12,6 +12,7 @@
 //
 
 #include "llvm/CodeGen/GlobalISel/CSEMIRBuilder.h"
+#include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -174,6 +175,7 @@ MachineInstrBuilder CSEMIRBuilder::buildInstr(unsigned Opc,
   default:
     break;
   case TargetOpcode::G_ADD:
+  case TargetOpcode::G_PTR_ADD:
   case TargetOpcode::G_AND:
   case TargetOpcode::G_ASHR:
   case TargetOpcode::G_LSHR:
@@ -185,21 +187,52 @@ MachineInstrBuilder CSEMIRBuilder::buildInstr(unsigned Opc,
   case TargetOpcode::G_UDIV:
   case TargetOpcode::G_SDIV:
   case TargetOpcode::G_UREM:
-  case TargetOpcode::G_SREM: {
+  case TargetOpcode::G_SREM:
+  case TargetOpcode::G_SMIN:
+  case TargetOpcode::G_SMAX:
+  case TargetOpcode::G_UMIN:
+  case TargetOpcode::G_UMAX: {
     // Try to constant fold these.
     assert(SrcOps.size() == 2 && "Invalid sources");
     assert(DstOps.size() == 1 && "Invalid dsts");
-    if (SrcOps[0].getLLTTy(*getMRI()).isVector()) {
+    LLT SrcTy = SrcOps[0].getLLTTy(*getMRI());
+
+    if (Opc == TargetOpcode::G_PTR_ADD &&
+        getDataLayout().isNonIntegralAddressSpace(SrcTy.getAddressSpace()))
+      break;
+
+    if (SrcTy.isVector()) {
       // Try to constant fold vector constants.
-      auto VecCst = ConstantFoldVectorBinop(
+      Register VecCst = ConstantFoldVectorBinop(
           Opc, SrcOps[0].getReg(), SrcOps[1].getReg(), *getMRI(), *this);
       if (VecCst)
-        return MachineInstrBuilder(getMF(), *VecCst);
+        return buildCopy(DstOps[0], VecCst);
       break;
     }
+
     if (Optional<APInt> Cst = ConstantFoldBinOp(Opc, SrcOps[0].getReg(),
                                                 SrcOps[1].getReg(), *getMRI()))
       return buildConstant(DstOps[0], *Cst);
+    break;
+  }
+  case TargetOpcode::G_FADD:
+  case TargetOpcode::G_FSUB:
+  case TargetOpcode::G_FMUL:
+  case TargetOpcode::G_FDIV:
+  case TargetOpcode::G_FREM:
+  case TargetOpcode::G_FMINNUM:
+  case TargetOpcode::G_FMAXNUM:
+  case TargetOpcode::G_FMINNUM_IEEE:
+  case TargetOpcode::G_FMAXNUM_IEEE:
+  case TargetOpcode::G_FMINIMUM:
+  case TargetOpcode::G_FMAXIMUM:
+  case TargetOpcode::G_FCOPYSIGN: {
+    // Try to constant fold these.
+    assert(SrcOps.size() == 2 && "Invalid sources");
+    assert(DstOps.size() == 1 && "Invalid dsts");
+    if (Optional<APFloat> Cst = ConstantFoldFPBinOp(
+            Opc, SrcOps[0].getReg(), SrcOps[1].getReg(), *getMRI()))
+      return buildFConstant(DstOps[0], *Cst);
     break;
   }
   case TargetOpcode::G_SEXT_INREG: {

@@ -12,8 +12,6 @@
 
 // REQUIRES: locale.en_US.UTF-8
 
-// XFAIL: LIBCXX-WINDOWS-FIXME
-
 #include <iomanip>
 #include <istream>
 #include <cassert>
@@ -44,7 +42,11 @@ public:
 int main(int, char**)
 {
     {
+#if defined(_WIN32)
+        testbuf<char> sb("  ($1,234,567.89)");
+#else
         testbuf<char> sb("  -$1,234,567.89");
+#endif
         std::istream is(&sb);
         is.imbue(std::locale(LOCALE_en_US_UTF_8));
         long double x = 0;
@@ -52,7 +54,11 @@ int main(int, char**)
         assert(x == -123456789);
     }
     {
+#if defined(_WIN32)
+        testbuf<char> sb("  (USD 1,234,567.89)");
+#else
         testbuf<char> sb("  -USD 1,234,567.89");
+#endif
         std::istream is(&sb);
         is.imbue(std::locale(LOCALE_en_US_UTF_8));
         long double x = 0;
@@ -61,7 +67,11 @@ int main(int, char**)
     }
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
+#if defined(_WIN32)
+        testbuf<wchar_t> sb(L"  ($1,234,567.89)");
+#else
         testbuf<wchar_t> sb(L"  -$1,234,567.89");
+#endif
         std::wistream is(&sb);
         is.imbue(std::locale(LOCALE_en_US_UTF_8));
         long double x = 0;
@@ -69,7 +79,11 @@ int main(int, char**)
         assert(x == -123456789);
     }
     {
+#if defined(_WIN32)
+        testbuf<wchar_t> sb(L"  (USD 1,234,567.89)");
+#else
         testbuf<wchar_t> sb(L"  -USD 1,234,567.89");
+#endif
         std::wistream is(&sb);
         is.imbue(std::locale(LOCALE_en_US_UTF_8));
         long double x = 0;

@@ -47,6 +47,10 @@ def gi_vop3pmods :
     GIComplexOperandMatcher<s32, "selectVOP3PMods">,
     GIComplexPatternEquiv<VOP3PMods>;
 
+def gi_vop3pmodsdot :
+    GIComplexOperandMatcher<s32, "selectVOP3PModsDOT">,
+    GIComplexPatternEquiv<VOP3PModsDOT>;
+
 def gi_vop3opselmods :
     GIComplexOperandMatcher<s32, "selectVOP3OpSelMods">,
     GIComplexPatternEquiv<VOP3OpSelMods>;
@@ -93,6 +97,10 @@ def gi_flat_scratch_saddr :
     GIComplexOperandMatcher<s32, "selectScratchSAddr">,
     GIComplexPatternEquiv<ScratchSAddr>;
 
+def gi_flat_scratch_svaddr :
+    GIComplexOperandMatcher<s32, "selectScratchSVAddr">,
+    GIComplexPatternEquiv<ScratchSVAddr>;
+
 def gi_ds_1addr_1offset :
     GIComplexOperandMatcher<s32, "selectDS1Addr1Offset">,
     GIComplexPatternEquiv<DS1Addr1Offset>;
@@ -123,7 +131,7 @@ def gi_smrd_buffer_imm32 :
 
 // Separate load nodes are defined to glue m0 initialization in
 // SelectionDAG. The GISel selector can just insert m0 initialization
-// directly before before selecting a glue-less load, so hide this
+// directly before selecting a glue-less load, so hide this
 // distinction.
 
 def : GINodeEquiv<G_LOAD, AMDGPUld_glue> {
@@ -221,6 +229,9 @@ def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_FMIN, SIbuffer_atomic_fmin>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_FMAX, SIbuffer_atomic_fmax>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_CMPSWAP, SIbuffer_atomic_cmpswap>;
 def : GINodeEquiv<G_AMDGPU_S_BUFFER_LOAD, SIsbuffer_load>;
+
+def : GINodeEquiv<G_FPTRUNC_ROUND_UPWARD, SIfptrunc_round_upward>;
+def : GINodeEquiv<G_FPTRUNC_ROUND_DOWNWARD, SIfptrunc_round_downward>;
 
 class GISelSop2Pat <
   SDPatternOperator node,

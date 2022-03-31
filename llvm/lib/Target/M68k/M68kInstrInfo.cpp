@@ -1,4 +1,4 @@
-//===-- M68kInstrInfo.cpp - M68k Instruction Information ----*- C++ -*-===//
+//===-- M68kInstrInfo.cpp - M68k Instruction Information --------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -348,8 +348,8 @@ void M68kInstrInfo::AddZExt(MachineBasicBlock &MBB,
 bool M68kInstrInfo::ExpandMOVX_RR(MachineInstrBuilder &MIB, MVT MVTDst,
                                   MVT MVTSrc) const {
   unsigned Move = MVTDst == MVT::i16 ? M68k::MOV16rr : M68k::MOV32rr;
-  unsigned Dst = MIB->getOperand(0).getReg();
-  unsigned Src = MIB->getOperand(1).getReg();
+  Register Dst = MIB->getOperand(0).getReg();
+  Register Src = MIB->getOperand(1).getReg();
 
   assert(Dst != Src && "You cannot use the same Regs with MOVX_RR");
 
@@ -394,8 +394,8 @@ bool M68kInstrInfo::ExpandMOVSZX_RR(MachineInstrBuilder &MIB, bool IsSigned,
   else // i32
     Move = M68k::MOV32rr;
 
-  unsigned Dst = MIB->getOperand(0).getReg();
-  unsigned Src = MIB->getOperand(1).getReg();
+  Register Dst = MIB->getOperand(0).getReg();
+  Register Src = MIB->getOperand(1).getReg();
 
   assert(Dst != Src && "You cannot use the same Regs with MOVSX_RR");
 
@@ -437,7 +437,7 @@ bool M68kInstrInfo::ExpandMOVSZX_RM(MachineInstrBuilder &MIB, bool IsSigned,
                                     MVT MVTSrc) const {
   LLVM_DEBUG(dbgs() << "Expand " << *MIB.getInstr() << " to LOAD and ");
 
-  unsigned Dst = MIB->getOperand(0).getReg();
+  Register Dst = MIB->getOperand(0).getReg();
 
   // We need the subreg of Dst to make instruction verifier happy because the
   // real machine instruction consumes and produces values of the same size and
@@ -559,7 +559,7 @@ bool M68kInstrInfo::ExpandMOVEM(MachineInstrBuilder &MIB,
 static bool Expand2AddrUndef(MachineInstrBuilder &MIB,
                              const MCInstrDesc &Desc) {
   assert(Desc.getNumOperands() == 3 && "Expected two-addr instruction.");
-  unsigned Reg = MIB->getOperand(0).getReg();
+  Register Reg = MIB->getOperand(0).getReg();
   MIB->setDesc(Desc);
 
   // MachineInstr::addOperand() will insert explicit operands before any

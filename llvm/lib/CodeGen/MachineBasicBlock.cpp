@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -26,12 +26,10 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -53,8 +51,7 @@ MachineBasicBlock::MachineBasicBlock(MachineFunction &MF, const BasicBlock *B)
     IrrLoopHeaderWeight = B->getIrrLoopHeaderWeight();
 }
 
-MachineBasicBlock::~MachineBasicBlock() {
-}
+MachineBasicBlock::~MachineBasicBlock() = default;
 
 /// Return the MCSymbol for this basic block.
 MCSymbol *MachineBasicBlock::getSymbol() const {
@@ -135,7 +132,7 @@ void ilist_callback_traits<MachineBasicBlock>::addNodeToList(
   // Make sure the instructions have their operands in the reginfo lists.
   MachineRegisterInfo &RegInfo = MF.getRegInfo();
   for (MachineInstr &MI : N->instrs())
-    MI.AddRegOperandsToUseLists(RegInfo);
+    MI.addRegOperandsToUseLists(RegInfo);
 }
 
 void ilist_callback_traits<MachineBasicBlock>::removeNodeFromList(
@@ -153,7 +150,7 @@ void ilist_traits<MachineInstr>::addNodeToList(MachineInstr *N) {
   // Add the instruction's register operands to their corresponding
   // use/def lists.
   MachineFunction *MF = Parent->getParent();
-  N->AddRegOperandsToUseLists(MF->getRegInfo());
+  N->addRegOperandsToUseLists(MF->getRegInfo());
   MF->handleInsertion(*N);
 }
 
@@ -165,7 +162,7 @@ void ilist_traits<MachineInstr>::removeNodeFromList(MachineInstr *N) {
   // Remove from the use/def lists.
   if (MachineFunction *MF = N->getMF()) {
     MF->handleRemoval(*N);
-    N->RemoveRegOperandsFromUseLists(MF->getRegInfo());
+    N->removeRegOperandsFromUseLists(MF->getRegInfo());
   }
 
   N->setParent(nullptr);
@@ -193,7 +190,7 @@ void ilist_traits<MachineInstr>::transferNodesFromList(ilist_traits &FromList,
 
 void ilist_traits<MachineInstr>::deleteNode(MachineInstr *MI) {
   assert(!MI->getParent() && "MI is still in a block!");
-  Parent->getParent()->DeleteMachineInstr(MI);
+  Parent->getParent()->deleteMachineInstr(MI);
 }
 
 MachineBasicBlock::iterator MachineBasicBlock::getFirstNonPHI() {

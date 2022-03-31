@@ -1,4 +1,4 @@
-; RUN: opt -sroa -S < %s | FileCheck %s
+; RUN: opt -passes=sroa -S < %s | FileCheck %s
 
 ; This test checks that SROA does not introduce ptrtoint and inttoptr
 ; casts from and to non-integral pointers.  The "ni:4" bit in the

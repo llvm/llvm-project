@@ -13,12 +13,12 @@
 #include "mlir/Conversion/GPUToSPIRV/GPUToSPIRV.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "llvm/ADT/StringSwitch.h"
 
 using namespace mlir;
 
@@ -55,7 +55,8 @@ public:
 /// attribute on the surrounding FuncOp is used to replace the gpu::BlockDimOp.
 class WorkGroupSizeConversion : public OpConversionPattern<gpu::BlockDimOp> {
 public:
-  using OpConversionPattern<gpu::BlockDimOp>::OpConversionPattern;
+  WorkGroupSizeConversion(TypeConverter &typeConverter, MLIRContext *context)
+      : OpConversionPattern(typeConverter, context, /*benefit*/ 10) {}
 
   LogicalResult
   matchAndRewrite(gpu::BlockDimOp op, OpAdaptor adaptor,
@@ -109,32 +110,26 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
+/// Pattern to convert a gpu.barrier op into a spv.ControlBarrier op.
+class GPUBarrierConversion final : public OpConversionPattern<gpu::BarrierOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(gpu::BarrierOp barrierOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
 // Builtins.
 //===----------------------------------------------------------------------===//
 
-static Optional<int32_t> getLaunchConfigIndex(Operation *op) {
-  auto dimAttr = op->getAttrOfType<StringAttr>("dimension");
-  if (!dimAttr)
-    return llvm::None;
-
-  return llvm::StringSwitch<Optional<int32_t>>(dimAttr.getValue())
-      .Case("x", 0)
-      .Case("y", 1)
-      .Case("z", 2)
-      .Default(llvm::None);
-}
-
 template <typename SourceOp, spirv::BuiltIn builtin>
 LogicalResult LaunchConfigConversion<SourceOp, builtin>::matchAndRewrite(
     SourceOp op, typename SourceOp::Adaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
-  auto index = getLaunchConfigIndex(op);
-  if (!index)
-    return failure();
-
   auto *typeConverter = this->template getTypeConverter<SPIRVTypeConverter>();
   auto indexType = typeConverter->getIndexType();
 
@@ -143,7 +138,7 @@ LogicalResult LaunchConfigConversion<SourceOp, builtin>::matchAndRewrite(
       spirv::getBuiltinVariableValue(op, builtin, indexType, rewriter);
   rewriter.replaceOpWithNewOp<spirv::CompositeExtractOp>(
       op, indexType, spirvBuiltin,
-      rewriter.getI32ArrayAttr({index.getValue()}));
+      rewriter.getI32ArrayAttr({static_cast<int32_t>(op.dimension())}));
   return success();
 }
 
@@ -164,12 +159,12 @@ SingleDimLaunchConfigConversion<SourceOp, builtin>::matchAndRewrite(
 LogicalResult WorkGroupSizeConversion::matchAndRewrite(
     gpu::BlockDimOp op, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
-  auto index = getLaunchConfigIndex(op);
-  if (!index)
+  auto workGroupSizeAttr = spirv::lookupLocalWorkGroupSize(op);
+  if (!workGroupSizeAttr)
     return failure();
 
-  auto workGroupSizeAttr = spirv::lookupLocalWorkGroupSize(op);
-  auto val = workGroupSizeAttr.getValues<int32_t>()[index.getValue()];
+  auto val = workGroupSizeAttr
+                 .getValues<int32_t>()[static_cast<int32_t>(op.dimension())];
   auto convertedType =
       getTypeConverter()->convertType(op.getResult().getType());
   if (!convertedType)
@@ -189,7 +184,7 @@ lowerAsEntryFunction(gpu::GPUFuncOp funcOp, TypeConverter &typeConverter,
                      ConversionPatternRewriter &rewriter,
                      spirv::EntryPointABIAttr entryPointInfo,
                      ArrayRef<spirv::InterfaceVarABIAttr> argABIInfo) {
-  auto fnType = funcOp.getType();
+  auto fnType = funcOp.getFunctionType();
   if (fnType.getNumResults()) {
     funcOp.emitError("SPIR-V lowering only supports entry functions"
                      "with no return values right now");
@@ -206,7 +201,8 @@ lowerAsEntryFunction(gpu::GPUFuncOp funcOp, TypeConverter &typeConverter,
   // LowerABIAttributesPass.
   TypeConverter::SignatureConversion signatureConverter(fnType.getNumInputs());
   {
-    for (auto argType : enumerate(funcOp.getType().getInputs())) {
+    for (const auto &argType :
+         enumerate(funcOp.getFunctionType().getInputs())) {
       auto convertedType = typeConverter.convertType(argType.value());
       signatureConverter.addInputs(argType.index(), convertedType);
     }
@@ -216,7 +212,7 @@ lowerAsEntryFunction(gpu::GPUFuncOp funcOp, TypeConverter &typeConverter,
       rewriter.getFunctionType(signatureConverter.getConvertedTypes(),
                                llvm::None));
   for (const auto &namedAttr : funcOp->getAttrs()) {
-    if (namedAttr.getName() == function_like_impl::getTypeAttrName() ||
+    if (namedAttr.getName() == FunctionOpInterface::getTypeAttrName() ||
         namedAttr.getName() == SymbolTable::getSymbolAttrName())
       continue;
     newFuncOp->setAttr(namedAttr.getName(), namedAttr.getValue());
@@ -346,18 +342,40 @@ LogicalResult GPUReturnOpConversion::matchAndRewrite(
 }
 
 //===----------------------------------------------------------------------===//
+// Barrier.
+//===----------------------------------------------------------------------===//
+
+LogicalResult GPUBarrierConversion::matchAndRewrite(
+    gpu::BarrierOp barrierOp, OpAdaptor adaptor,
+    ConversionPatternRewriter &rewriter) const {
+  MLIRContext *context = getContext();
+  // Both execution and memory scope should be workgroup.
+  auto scope = spirv::ScopeAttr::get(context, spirv::Scope::Workgroup);
+  // Require acquire and release memory semantics for workgroup memory.
+  auto memorySemantics = spirv::MemorySemanticsAttr::get(
+      context, spirv::MemorySemantics::WorkgroupMemory |
+                   spirv::MemorySemantics::AcquireRelease);
+  rewriter.replaceOpWithNewOp<spirv::ControlBarrierOp>(barrierOp, scope, scope,
+                                                       memorySemantics);
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // GPU To SPIRV Patterns.
 //===----------------------------------------------------------------------===//
 
 void mlir::populateGPUToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                       RewritePatternSet &patterns) {
   patterns.add<
-      GPUFuncOpConversion, GPUModuleConversion, GPUModuleEndConversion,
-      GPUReturnOpConversion,
+      GPUBarrierConversion, GPUFuncOpConversion, GPUModuleConversion,
+      GPUModuleEndConversion, GPUReturnOpConversion,
       LaunchConfigConversion<gpu::BlockIdOp, spirv::BuiltIn::WorkgroupId>,
       LaunchConfigConversion<gpu::GridDimOp, spirv::BuiltIn::NumWorkgroups>,
+      LaunchConfigConversion<gpu::BlockDimOp, spirv::BuiltIn::WorkgroupSize>,
       LaunchConfigConversion<gpu::ThreadIdOp,
                              spirv::BuiltIn::LocalInvocationId>,
+      LaunchConfigConversion<gpu::GlobalIdOp,
+                             spirv::BuiltIn::GlobalInvocationId>,
       SingleDimLaunchConfigConversion<gpu::SubgroupIdOp,
                                       spirv::BuiltIn::SubgroupId>,
       SingleDimLaunchConfigConversion<gpu::NumSubgroupsOp,

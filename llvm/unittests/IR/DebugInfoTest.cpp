@@ -11,8 +11,10 @@
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/SourceMgr.h"
@@ -245,6 +247,45 @@ TEST(DIBuilder, CreateSetType) {
   EXPECT_TRUE(isa_and_nonnull<DIDerivedType>(SetType));
 }
 
+TEST(DIBuilder, CreateStringType) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M(new Module("MyModule", Ctx));
+  DIBuilder DIB(*M);
+  DIScope *Scope = DISubprogram::getDistinct(
+      Ctx, nullptr, "", "", nullptr, 0, nullptr, 0, nullptr, 0, 0,
+      DINode::FlagZero, DISubprogram::SPFlagZero, nullptr);
+  DIFile *F = DIB.createFile("main.c", "/");
+  StringRef StrName = "string";
+  DIVariable *StringLen = DIB.createAutoVariable(Scope, StrName, F, 0, nullptr,
+                                                 false, DINode::FlagZero, 0);
+  auto getDIExpression = [&DIB](int offset) {
+    SmallVector<uint64_t, 4> ops;
+    ops.push_back(llvm::dwarf::DW_OP_push_object_address);
+    DIExpression::appendOffset(ops, offset);
+    ops.push_back(llvm::dwarf::DW_OP_deref);
+
+    return DIB.createExpression(ops);
+  };
+  DIExpression *StringLocationExp = getDIExpression(1);
+  DIStringType *StringType =
+      DIB.createStringType(StrName, StringLen, StringLocationExp);
+
+  EXPECT_TRUE(isa_and_nonnull<DIStringType>(StringType));
+  EXPECT_EQ(StringType->getName(), StrName);
+  EXPECT_EQ(StringType->getStringLength(), StringLen);
+  EXPECT_EQ(StringType->getStringLocationExp(), StringLocationExp);
+
+  StringRef StrNameExp = "stringexp";
+  DIExpression *StringLengthExp = getDIExpression(2);
+  DIStringType *StringTypeExp =
+      DIB.createStringType(StrNameExp, StringLengthExp, StringLocationExp);
+
+  EXPECT_TRUE(isa_and_nonnull<DIStringType>(StringTypeExp));
+  EXPECT_EQ(StringTypeExp->getName(), StrNameExp);
+  EXPECT_EQ(StringTypeExp->getStringLocationExp(), StringLocationExp);
+  EXPECT_EQ(StringTypeExp->getStringLengthExp(), StringLengthExp);
+}
+
 TEST(DIBuilder, DIEnumerator) {
   LLVMContext Ctx;
   std::unique_ptr<Module> M(new Module("MyModule", Ctx));
@@ -260,6 +301,71 @@ TEST(DIBuilder, DIEnumerator) {
 
   auto *E2 = DIEnumerator::getIfExists(Ctx, I2, I1.isSigned(), "name");
   EXPECT_FALSE(E2);
+}
+
+TEST(DIBuilder, createDbgAddr) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"(
+    define void @f() !dbg !6 {
+      %a = alloca i16, align 8
+      ;; It is important that we put the debug marker on the return.
+      ;; We take advantage of that to conjure up a debug loc without
+      ;; having to synthesize one programatically.
+      ret void, !dbg !11
+    }
+    declare void @llvm.dbg.value(metadata, metadata, metadata) #0
+    attributes #0 = { nounwind readnone speculatable willreturn }
+
+    !llvm.dbg.cu = !{!0}
+    !llvm.module.flags = !{!5}
+
+    !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+    !1 = !DIFile(filename: "t.ll", directory: "/")
+    !2 = !{}
+    !5 = !{i32 2, !"Debug Info Version", i32 3}
+    !6 = distinct !DISubprogram(name: "foo", linkageName: "foo", scope: null, file: !1, line: 1, type: !7, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !8)
+    !7 = !DISubroutineType(types: !2)
+    !8 = !{!9}
+    !9 = !DILocalVariable(name: "1", scope: !6, file: !1, line: 1, type: !10)
+    !10 = !DIBasicType(name: "ty16", size: 16, encoding: DW_ATE_unsigned)
+    !11 = !DILocation(line: 1, column: 1, scope: !6)
+)");
+  auto *F = M->getFunction("f");
+  auto *EntryBlock = &F->getEntryBlock();
+
+  auto *CU =
+      cast<DICompileUnit>(M->getNamedMetadata("llvm.dbg.cu")->getOperand(0));
+  auto *Alloca = &*EntryBlock->begin();
+  auto *Ret = EntryBlock->getTerminator();
+
+  auto *SP = cast<DISubprogram>(F->getMetadata(LLVMContext::MD_dbg));
+  auto *File = SP->getFile();
+  std::string Name = "myName";
+  const auto *Loc = Ret->getDebugLoc().get();
+
+  IRBuilder<> Builder(EntryBlock);
+  DIBuilder DIB(*M, true, CU);
+  DIType *DT = DIB.createBasicType("ty16", 16, dwarf::DW_ATE_unsigned);
+
+  DILocalVariable *LocalVar =
+      DIB.createAutoVariable(SP, Name, File, 5 /*line*/, DT,
+                             /*AlwaysPreserve=*/true);
+
+  auto *Inst = DIB.insertDbgAddrIntrinsic(Alloca, LocalVar,
+                                          DIB.createExpression(), Loc, Ret);
+
+  DIB.finalize();
+
+  EXPECT_EQ(Inst->getDebugLoc().get(), Loc);
+
+  auto *MD0 = cast<MetadataAsValue>(Inst->getOperand(0))->getMetadata();
+  auto *MD0Local = cast<LocalAsMetadata>(MD0);
+  EXPECT_EQ(MD0Local->getValue(), Alloca);
+  auto *MD1 = cast<MetadataAsValue>(Inst->getOperand(1))->getMetadata();
+  EXPECT_EQ(MD1->getMetadataID(), Metadata::MetadataKind::DILocalVariableKind);
+  auto *MD2 = cast<MetadataAsValue>(Inst->getOperand(2))->getMetadata();
+  auto *MDExp = cast<DIExpression>(MD2);
+  EXPECT_EQ(MDExp->getNumElements(), 0u);
 }
 
 } // end namespace

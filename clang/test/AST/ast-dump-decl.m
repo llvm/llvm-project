@@ -153,7 +153,7 @@ void TestBlockDecl(int x) {
 + (int) foo;
 @end
 
-void f() {
+void f(void) {
   __typeof__(B.foo) Test;
 }
 // CHECK: VarDecl{{.*}}Test 'typeof (B.foo)':'int'

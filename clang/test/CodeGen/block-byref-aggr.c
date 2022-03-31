@@ -7,7 +7,7 @@ Agg makeAgg(void);
 // When assigning into a __block variable, ensure that we compute that
 // address *after* evaluating the RHS when the RHS has the capacity to
 // cause a block copy.  rdar://9309454
-void test0() {
+void test0(void) {
   __block Agg a = {100};
   ^{ (void)a; };
 
@@ -35,7 +35,7 @@ void test0() {
 // When chaining assignments into __block variables, make sure we
 // propagate the actual value into the outer variable.
 // rdar://11757470
-void test1() {
+void test1(void) {
   __block Agg a, b;
   ^{ (void)a; (void)b; };
   a = b = makeAgg();

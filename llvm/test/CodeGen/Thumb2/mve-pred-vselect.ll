@@ -73,36 +73,26 @@ define arm_aapcs_vfpcc <2 x i64> @cmpeqz_v2i1(<2 x i64> %a, <2 x i64> %b, <2 x i
 ; CHECK-NEXT:    vmov r0, r1, d4
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    vmov r1, r2, d0
-; CHECK-NEXT:    cset r0, eq
 ; CHECK-NEXT:    orrs r1, r2
 ; CHECK-NEXT:    vmov r2, r3, d2
 ; CHECK-NEXT:    cset r1, eq
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    cset r1, ne
 ; CHECK-NEXT:    orrs r2, r3
 ; CHECK-NEXT:    cset r2, eq
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    cset r2, ne
 ; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csel r0, r1, r2, ne
+; CHECK-NEXT:    csel r0, r1, r2, eq
 ; CHECK-NEXT:    movs r1, #0
 ; CHECK-NEXT:    rsbs r0, r0, #0
 ; CHECK-NEXT:    bfi r1, r0, #0, #8
 ; CHECK-NEXT:    vmov r0, r2, d5
-; CHECK-NEXT:    orrs r0, r2
+; CHECK-NEXT:    orr.w r12, r0, r2
 ; CHECK-NEXT:    vmov r2, r3, d1
-; CHECK-NEXT:    cset r12, eq
 ; CHECK-NEXT:    orrs r2, r3
 ; CHECK-NEXT:    vmov r3, r0, d3
 ; CHECK-NEXT:    cset r2, eq
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    cset r2, ne
 ; CHECK-NEXT:    orrs r0, r3
 ; CHECK-NEXT:    cset r0, eq
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    cset r0, ne
 ; CHECK-NEXT:    cmp.w r12, #0
-; CHECK-NEXT:    csel r0, r2, r0, ne
+; CHECK-NEXT:    csel r0, r2, r0, eq
 ; CHECK-NEXT:    rsbs r0, r0, #0
 ; CHECK-NEXT:    bfi r1, r0, #8, #8
 ; CHECK-NEXT:    vmsr p0, r1
@@ -397,24 +387,16 @@ define arm_aapcs_vfpcc <2 x i64> @cmpeqz_v2i1_i1(<2 x i64> %a, <2 x i64> %b, i64
 ; CHECK-NEXT:    vmov r0, r1, d2
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    vmov r1, r3, d3
-; CHECK-NEXT:    cset r0, eq
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    mov.w r0, #0
-; CHECK-NEXT:    csetm r12, ne
+; CHECK-NEXT:    csetm r12, eq
+; CHECK-NEXT:    movs r0, #0
 ; CHECK-NEXT:    orrs r1, r3
-; CHECK-NEXT:    cset r1, eq
-; CHECK-NEXT:    cmp r1, #0
 ; CHECK-NEXT:    vmov r1, r3, d0
-; CHECK-NEXT:    csetm lr, ne
+; CHECK-NEXT:    csetm lr, eq
 ; CHECK-NEXT:    orrs r1, r3
-; CHECK-NEXT:    cset r1, eq
-; CHECK-NEXT:    cmp r1, #0
 ; CHECK-NEXT:    vmov r1, r4, d1
-; CHECK-NEXT:    csetm r3, ne
+; CHECK-NEXT:    csetm r3, eq
 ; CHECK-NEXT:    orrs r1, r4
-; CHECK-NEXT:    cset r1, eq
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, ne
+; CHECK-NEXT:    csetm r1, eq
 ; CHECK-NEXT:    cbz r2, .LBB15_2
 ; CHECK-NEXT:  @ %bb.1: @ %select.false
 ; CHECK-NEXT:    bfi r0, r12, #0, #8

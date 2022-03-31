@@ -18,10 +18,8 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
-#include "llvm/IR/User.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
@@ -97,7 +95,7 @@ static bool lowerObjCCall(Function &F, const char *NewFn,
       objcarc::ARCInstKind Kind = objcarc::getAttachedARCFunctionKind(CB);
       (void)Kind;
       assert((Kind == objcarc::ARCInstKind::RetainRV ||
-              Kind == objcarc::ARCInstKind::ClaimRV) &&
+              Kind == objcarc::ARCInstKind::UnsafeClaimRV) &&
              "use expected to be the argument of operand bundle "
              "\"clang.arc.attachedcall\"");
       U.set(FCache.getCallee());

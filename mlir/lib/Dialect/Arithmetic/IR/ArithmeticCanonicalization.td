@@ -9,6 +9,7 @@
 #ifndef ARITHMETIC_PATTERNS
 #define ARITHMETIC_PATTERNS
 
+include "mlir/IR/PatternBase.td"
 include "mlir/Dialect/Arithmetic/IR/ArithmeticOps.td"
 
 // Add two integer attributes and create a new one with the result.
@@ -107,6 +108,28 @@ def XOrINotCmpI :
         (Arith_CmpIOp (InvertPredicate $pred), $a, $b)>;
 
 //===----------------------------------------------------------------------===//
+// CmpIOp
+//===----------------------------------------------------------------------===//
+
+// cmpi(== or !=, a ext iNN, b ext iNN) == cmpi(== or !=, a, b)
+def CmpIExtSI :
+    Pat<(Arith_CmpIOp $pred,
+          (Arith_ExtSIOp $a),
+          (Arith_ExtSIOp $b)),
+        (Arith_CmpIOp $pred, $a, $b),
+        [(Constraint<CPred<"$0.getType() == $1.getType()">> $a, $b),
+         (Constraint<CPred<"$0.getValue() == arith::CmpIPredicate::eq || $0.getValue() == arith::CmpIPredicate::ne">> $pred)]>;
+
+// cmpi(== or !=, a ext iNN, b ext iNN) == cmpi(== or !=, a, b)
+def CmpIExtUI :
+    Pat<(Arith_CmpIOp $pred,
+          (Arith_ExtUIOp $a),
+          (Arith_ExtUIOp $b)),
+        (Arith_CmpIOp $pred, $a, $b),
+        [(Constraint<CPred<"$0.getType() == $1.getType()">> $a, $b),
+         (Constraint<CPred<"$0.getValue() == arith::CmpIPredicate::eq || $0.getValue() == arith::CmpIPredicate::ne">> $pred)]>;
+
+//===----------------------------------------------------------------------===//
 // IndexCastOp
 //===----------------------------------------------------------------------===//
 
@@ -127,5 +150,41 @@ def IndexCastOfExtSI :
 // bitcast(bitcast(x)) -> x
 def BitcastOfBitcast :
     Pat<(Arith_BitcastOp (Arith_BitcastOp $x)), (replaceWithValue $x)>;
+
+//===----------------------------------------------------------------------===//
+// ExtSIOp
+//===----------------------------------------------------------------------===//
+
+// extsi(extui(x iN : iM) : iL) -> extui(x : iL)
+def ExtSIOfExtUI :
+    Pat<(Arith_ExtSIOp (Arith_ExtUIOp $x)), (Arith_ExtUIOp $x)>;
+
+//===----------------------------------------------------------------------===//
+// AndIOp
+//===----------------------------------------------------------------------===//
+
+// and extui(x), extui(y) -> extui(and(x,y))
+def AndOfExtUI :
+    Pat<(Arith_AndIOp (Arith_ExtUIOp $x), (Arith_ExtUIOp $y)), (Arith_ExtUIOp (Arith_AndIOp $x, $y)),
+      [(Constraint<CPred<"$0.getType() == $1.getType()">> $x, $y)]>;
+
+// and extsi(x), extsi(y) -> extsi(and(x,y))
+def AndOfExtSI :
+    Pat<(Arith_AndIOp (Arith_ExtSIOp $x), (Arith_ExtSIOp $y)), (Arith_ExtSIOp (Arith_AndIOp $x, $y)),
+      [(Constraint<CPred<"$0.getType() == $1.getType()">> $x, $y)]>;
+
+//===----------------------------------------------------------------------===//
+// OrIOp
+//===----------------------------------------------------------------------===//
+
+// or extui(x), extui(y) -> extui(or(x,y))
+def OrOfExtUI :
+    Pat<(Arith_OrIOp (Arith_ExtUIOp $x), (Arith_ExtUIOp $y)), (Arith_ExtUIOp (Arith_OrIOp $x, $y)),
+      [(Constraint<CPred<"$0.getType() == $1.getType()">> $x, $y)]>;
+
+// or extsi(x), extsi(y) -> extsi(or(x,y))
+def OrOfExtSI :
+    Pat<(Arith_OrIOp (Arith_ExtSIOp $x), (Arith_ExtSIOp $y)), (Arith_ExtSIOp (Arith_OrIOp $x, $y)),
+      [(Constraint<CPred<"$0.getType() == $1.getType()">> $x, $y)]>;
 
 #endif // ARITHMETIC_PATTERNS

@@ -15,16 +15,17 @@
 namespace mlir {
 namespace spirv {
 
-/// Converts unary and binary standard operations to SPIR-V operations.
+/// Converts elementwise unary, binary and ternary standard operations to SPIR-V
+/// operations.
 template <typename Op, typename SPIRVOp>
-class UnaryAndBinaryOpPattern final : public OpConversionPattern<Op> {
+class ElementwiseOpPattern final : public OpConversionPattern<Op> {
 public:
   using OpConversionPattern<Op>::OpConversionPattern;
 
   LogicalResult
   matchAndRewrite(Op op, typename Op::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    assert(adaptor.getOperands().size() <= 2);
+    assert(adaptor.getOperands().size() <= 3);
     auto dstType = this->getTypeConverter()->convertType(op.getType());
     if (!dstType)
       return failure();
@@ -39,7 +40,7 @@ public:
   }
 };
 
-} // end namespace spirv
-} // end namespace mlir
+} // namespace spirv
+} // namespace mlir
 
 #endif // MLIR_CONVERSION_SPIRVCOMMON_PATTERN_H

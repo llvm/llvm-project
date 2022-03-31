@@ -14,6 +14,8 @@
 
 #include "JSONUtils.h"
 
+#include <chrono>
+
 namespace lldb_vscode {
 
 /// Struct that controls the life of a fifo file in the filesystem.

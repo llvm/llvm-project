@@ -9,12 +9,12 @@
 #ifndef _LIBCPP___ALGORITHM_REMOVE_IF_H
 #define _LIBCPP___ALGORITHM_REMOVE_IF_H
 
-#include <__config>
 #include <__algorithm/find_if.h>
-#include <utility>
+#include <__config>
+#include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD

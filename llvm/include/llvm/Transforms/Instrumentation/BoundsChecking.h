@@ -12,6 +12,8 @@
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
+class Function;
+class FunctionPass;
 
 /// A pass to instrument code and perform run-time bounds checking on loads,
 /// stores, and other memory intrinsics.

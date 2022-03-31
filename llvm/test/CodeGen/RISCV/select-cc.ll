@@ -98,16 +98,15 @@ define signext i32 @foo(i32 signext %a, i32 *%b) nounwind {
 ; RV32IBT-NEXT:    cmov a0, a4, a3, a0
 ; RV32IBT-NEXT:    lw a3, 0(a1)
 ; RV32IBT-NEXT:    slt a4, a0, a2
-; RV32IBT-NEXT:    lw a5, 0(a1)
 ; RV32IBT-NEXT:    cmov a0, a4, a0, a2
-; RV32IBT-NEXT:    slt a2, a3, a0
-; RV32IBT-NEXT:    cmov a0, a2, a3, a0
-; RV32IBT-NEXT:    slti a2, a5, 1
+; RV32IBT-NEXT:    lw a2, 0(a1)
+; RV32IBT-NEXT:    slt a4, a3, a0
+; RV32IBT-NEXT:    cmov a0, a4, a3, a0
 ; RV32IBT-NEXT:    lw a1, 0(a1)
-; RV32IBT-NEXT:    cmov a0, a2, a0, a5
-; RV32IBT-NEXT:    li a2, -1
-; RV32IBT-NEXT:    slt a2, a2, a5
-; RV32IBT-NEXT:    cmov a0, a2, a0, a1
+; RV32IBT-NEXT:    slti a3, a2, 1
+; RV32IBT-NEXT:    cmov a0, a3, a0, a2
+; RV32IBT-NEXT:    sltz a2, a2
+; RV32IBT-NEXT:    cmov a0, a2, a1, a0
 ; RV32IBT-NEXT:    ret
   %val1 = load volatile i32, i32* %b
   %tst1 = icmp eq i32 %a, %val1

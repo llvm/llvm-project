@@ -21,7 +21,6 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineSizeOpts.h"
 #include "llvm/CodeGen/MachineTraceMetrics.h"
-#include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -693,7 +692,7 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
         // use for them.
         MachineFunction *MF = MBB->getParent();
         for (auto *InstrPtr : InsInstrs)
-          MF->DeleteMachineInstr(InstrPtr);
+          MF->deleteMachineInstr(InstrPtr);
       }
       InstrIdxForVirtReg.clear();
     }

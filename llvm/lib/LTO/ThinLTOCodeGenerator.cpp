@@ -378,7 +378,8 @@ std::unique_ptr<MemoryBuffer> codegenModule(Module &TheModule,
     // Run codegen now. resulting binary is in OutputBuffer.
     PM.run(TheModule);
   }
-  return std::make_unique<SmallVectorMemoryBuffer>(std::move(OutputBuffer));
+  return std::make_unique<SmallVectorMemoryBuffer>(
+      std::move(OutputBuffer), /*RequiresNullTerminator=*/false);
 }
 
 /// Manage caching for a single Module.
@@ -541,7 +542,8 @@ ProcessThinLTOModule(Module &TheModule, ModuleSummaryIndex &Index,
       auto Index = buildModuleSummaryIndex(TheModule, nullptr, &PSI);
       WriteBitcodeToFile(TheModule, OS, true, &Index);
     }
-    return std::make_unique<SmallVectorMemoryBuffer>(std::move(OutputBuffer));
+    return std::make_unique<SmallVectorMemoryBuffer>(
+        std::move(OutputBuffer), /*RequiresNullTerminator=*/false);
   }
 
   return codegenModule(TheModule, TM);
@@ -1050,7 +1052,7 @@ void ThinLTOCodeGenerator::run() {
     if (EC)
       report_fatal_error(Twine("Failed to open ") + SaveTempPath +
                          " to save optimized bitcode\n");
-    WriteIndexToFile(*Index, OS);
+    writeIndexToFile(*Index, OS);
   }
 
 

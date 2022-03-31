@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // constexpr auto begin();
@@ -18,6 +17,17 @@
 
 #include "test_macros.h"
 #include "types.h"
+
+struct NonSimpleParentView : std::ranges::view_base {
+  ChildView* begin() { return nullptr; }
+  const ChildView* begin() const;
+  const ChildView* end() const;
+};
+
+struct SimpleParentView : std::ranges::view_base {
+  const ChildView* begin() const;
+  const ChildView* end() const;
+};
 
 constexpr bool test() {
   int buffer[4][4] = {{1111, 2222, 3333, 4444}, {555, 666, 777, 888}, {99, 1010, 1111, 1212}, {13, 14, 15, 16}};
@@ -84,6 +94,20 @@ constexpr bool test() {
   {
     const std::ranges::join_view jv(buffer);
     assert(*jv.begin() == 1111);
+  }
+
+  // !simple-view<V>
+  {
+    std::ranges::join_view<NonSimpleParentView> jv;
+    static_assert(!std::same_as<decltype(jv.begin()),
+                                decltype(std::as_const(jv).begin())>);
+  }
+
+  // simple-view<V> && is_reference_v<range_reference_t<V>>;
+  {
+    std::ranges::join_view<SimpleParentView> jv;
+    static_assert(std::same_as<decltype(jv.begin()),
+                               decltype(std::as_const(jv).begin())>);
   }
 
   return true;

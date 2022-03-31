@@ -140,6 +140,7 @@ cc_library(
         "//llvm:Support",
         "//llvm:Symbolize",
         "//llvm:TransformUtils",
+        "//llvm:WindowsDriver",
         "//llvm:WindowsManifest",
     ],
 )

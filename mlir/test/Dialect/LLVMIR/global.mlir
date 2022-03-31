@@ -80,8 +80,8 @@ llvm.mlir.global internal constant @sectionvar("teststring")  {section = ".mysec
 
 // -----
 
-// expected-error @+1 {{requires string attribute 'sym_name'}}
-"llvm.mlir.global"() ({}) {type = i64, constant, value = 42 : i64} : () -> ()
+// expected-error @+1 {{op requires attribute 'sym_name'}}
+"llvm.mlir.global"() ({}) {type = i64, constant, global_type = i64, value = 42 : i64} : () -> ()
 
 // -----
 
@@ -172,8 +172,7 @@ llvm.func @bar() {
 
 // -----
 
-// expected-error @+2 {{'llvm.mlir.global' op expects regions to end with 'llvm.return', found 'llvm.mlir.constant'}}
-// expected-note @+1 {{in custom textual format, the absence of terminator implies 'llvm.return'}}
+// expected-error @+2 {{block with no terminator}}
 llvm.mlir.global internal @g() : i64 {
   %c = llvm.mlir.constant(42 : i64) : i64
 }

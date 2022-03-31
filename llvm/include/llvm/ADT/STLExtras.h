@@ -5,19 +5,23 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file contains some templates that are useful if you are working with the
-// STL at all.
-//
-// No library is required when using these functions.
-//
+///
+/// \file
+/// This file contains some templates that are useful if you are working with
+/// the STL at all.
+///
+/// No library is required when using these functions.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_STLEXTRAS_H
 #define LLVM_ADT_STLEXTRAS_H
 
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLArrayExtras.h"
 #include "llvm/ADT/STLForwardCompat.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/identity.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Config/abi-breaking.h"
@@ -144,64 +148,60 @@ template <typename ReturnType, typename... Args>
 struct function_traits<ReturnType (&)(Args...), false>
     : public function_traits<ReturnType (*)(Args...)> {};
 
-//===----------------------------------------------------------------------===//
-//     Extra additions to <functional>
-//===----------------------------------------------------------------------===//
+/// traits class for checking whether type T is one of any of the given
+/// types in the variadic list.
+template <typename T, typename... Ts>
+using is_one_of = disjunction<std::is_same<T, Ts>...>;
 
-template <class Ty> struct identity {
-  using argument_type = Ty;
+/// traits class for checking whether type T is a base class for all
+///  the given types in the variadic list.
+template <typename T, typename... Ts>
+using are_base_of = conjunction<std::is_base_of<T, Ts>...>;
 
-  Ty &operator()(Ty &self) const {
-    return self;
-  }
-  const Ty &operator()(const Ty &self) const {
-    return self;
-  }
-};
+namespace detail {
+template <typename T, typename... Us> struct TypesAreDistinct;
+template <typename T, typename... Us>
+struct TypesAreDistinct
+    : std::integral_constant<bool, !is_one_of<T, Us...>::value &&
+                                       TypesAreDistinct<Us...>::value> {};
+template <typename T> struct TypesAreDistinct<T> : std::true_type {};
+} // namespace detail
 
-/// An efficient, type-erasing, non-owning reference to a callable. This is
-/// intended for use as the type of a function parameter that is not used
-/// after the function in question returns.
+/// Determine if all types in Ts are distinct.
 ///
-/// This class does not own the callable, so it is not in general safe to store
-/// a function_ref.
-template<typename Fn> class function_ref;
+/// Useful to statically assert when Ts is intended to describe a non-multi set
+/// of types.
+///
+/// Expensive (currently quadratic in sizeof(Ts...)), and so should only be
+/// asserted once per instantiation of a type which requires it.
+template <typename... Ts> struct TypesAreDistinct;
+template <> struct TypesAreDistinct<> : std::true_type {};
+template <typename... Ts>
+struct TypesAreDistinct
+    : std::integral_constant<bool, detail::TypesAreDistinct<Ts...>::value> {};
 
-template<typename Ret, typename ...Params>
-class function_ref<Ret(Params...)> {
-  Ret (*callback)(intptr_t callable, Params ...params) = nullptr;
-  intptr_t callable;
+/// Find the first index where a type appears in a list of types.
+///
+/// FirstIndexOfType<T, Us...>::value is the first index of T in Us.
+///
+/// Typically only meaningful when it is otherwise statically known that the
+/// type pack has no duplicate types. This should be guaranteed explicitly with
+/// static_assert(TypesAreDistinct<Us...>::value).
+///
+/// It is a compile-time error to instantiate when T is not present in Us, i.e.
+/// if is_one_of<T, Us...>::value is false.
+template <typename T, typename... Us> struct FirstIndexOfType;
+template <typename T, typename U, typename... Us>
+struct FirstIndexOfType<T, U, Us...>
+    : std::integral_constant<size_t, 1 + FirstIndexOfType<T, Us...>::value> {};
+template <typename T, typename... Us>
+struct FirstIndexOfType<T, T, Us...> : std::integral_constant<size_t, 0> {};
 
-  template<typename Callable>
-  static Ret callback_fn(intptr_t callable, Params ...params) {
-    return (*reinterpret_cast<Callable*>(callable))(
-        std::forward<Params>(params)...);
-  }
-
-public:
-  function_ref() = default;
-  function_ref(std::nullptr_t) {}
-
-  template <typename Callable>
-  function_ref(
-      Callable &&callable,
-      // This is not the copy-constructor.
-      std::enable_if_t<!std::is_same<remove_cvref_t<Callable>,
-                                     function_ref>::value> * = nullptr,
-      // Functor must be callable and return a suitable type.
-      std::enable_if_t<std::is_void<Ret>::value ||
-                       std::is_convertible<decltype(std::declval<Callable>()(
-                                               std::declval<Params>()...)),
-                                           Ret>::value> * = nullptr)
-      : callback(callback_fn<typename std::remove_reference<Callable>::type>),
-        callable(reinterpret_cast<intptr_t>(&callable)) {}
-
-  Ret operator()(Params ...params) const {
-    return callback(callable, std::forward<Params>(params)...);
-  }
-
-  explicit operator bool() const { return callback; }
-};
+/// Find the type at a given index in a list of types.
+///
+/// TypeAtIndex<I, Ts...> is the type at index I in Ts.
+template <size_t I, typename... Ts>
+using TypeAtIndex = std::tuple_element_t<I, std::tuple<Ts...>>;
 
 //===----------------------------------------------------------------------===//
 //     Extra additions to <iterator>
@@ -266,6 +266,13 @@ template <typename ContainerTy> bool hasSingleElement(ContainerTy &&C) {
 template <typename T> auto drop_begin(T &&RangeOrContainer, size_t N = 1) {
   return make_range(std::next(adl_begin(RangeOrContainer), N),
                     adl_end(RangeOrContainer));
+}
+
+/// Return a range covering \p RangeOrContainer with the last N elements
+/// excluded.
+template <typename T> auto drop_end(T &&RangeOrContainer, size_t N = 1) {
+  return make_range(adl_begin(RangeOrContainer),
+                    std::prev(adl_end(RangeOrContainer), N));
 }
 
 // mapped_iterator - This is a simple iterator adapter that causes a function to
@@ -361,20 +368,14 @@ auto reverse(ContainerTy &&C,
   return make_range(C.rbegin(), C.rend());
 }
 
-// Returns a std::reverse_iterator wrapped around the given iterator.
-template <typename IteratorTy>
-std::reverse_iterator<IteratorTy> make_reverse_iterator(IteratorTy It) {
-  return std::reverse_iterator<IteratorTy>(It);
-}
-
 // Returns an iterator_range over the given container which iterates in reverse.
 // Note that the container must have begin()/end() methods which return
 // bidirectional iterators for this to work.
 template <typename ContainerTy>
 auto reverse(ContainerTy &&C,
              std::enable_if_t<!has_rbegin<ContainerTy>::value> * = nullptr) {
-  return make_range(llvm::make_reverse_iterator(std::end(C)),
-                    llvm::make_reverse_iterator(std::begin(C)));
+  return make_range(std::make_reverse_iterator(std::end(C)),
+                    std::make_reverse_iterator(std::begin(C)));
 }
 
 /// An iterator adaptor that filters the elements of given inner iterators.
@@ -1418,7 +1419,7 @@ constexpr decltype(auto) makeVisitor(CallableTs &&...Callables) {
 }
 
 //===----------------------------------------------------------------------===//
-//     Extra additions for arrays
+//     Extra additions to <algorithm>
 //===----------------------------------------------------------------------===//
 
 // We have a copy here so that LLVM behaves the same when using different
@@ -1436,12 +1437,6 @@ void shuffle(Iterator first, Iterator last, RNG &&g) {
     if (offset != difference_type(0))
       std::iter_swap(first, first + offset);
   }
-}
-
-/// Find the length of an array.
-template <class T, std::size_t N>
-constexpr inline size_t array_lengthof(T (&)[N]) {
-  return N;
 }
 
 /// Adapt std::less<T> for array_pod_sort.
@@ -1571,10 +1566,6 @@ inline void sort(Container &&C, Compare Comp) {
   llvm::sort(adl_begin(C), adl_end(C), Comp);
 }
 
-//===----------------------------------------------------------------------===//
-//     Extra additions to <algorithm>
-//===----------------------------------------------------------------------===//
-
 /// Get the size of a range. This is a wrapper function around std::distance
 /// which is only enabled when the operation is O(1).
 template <typename R>
@@ -1664,6 +1655,15 @@ OutputIt move(R &&Range, OutputIt Out) {
 template <typename R, typename E>
 bool is_contained(R &&Range, const E &Element) {
   return std::find(adl_begin(Range), adl_end(Range), Element) != adl_end(Range);
+}
+
+template <typename T>
+constexpr bool is_contained(std::initializer_list<T> Set, T Value) {
+  // TODO: Use std::find when we switch to C++20.
+  for (T V : Set)
+    if (V == Value)
+      return true;
+  return false;
 }
 
 /// Wrapper function around std::is_sorted to check if elements in a range \p R

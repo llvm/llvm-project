@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK
 
-void test_sve_asm() {
+void test_sve_asm(void) {
   asm volatile(
       "ptrue p0.d\n"
       "ptrue p15.d\n"

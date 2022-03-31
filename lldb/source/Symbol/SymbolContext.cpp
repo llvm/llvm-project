@@ -19,6 +19,7 @@
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
@@ -30,7 +31,7 @@ SymbolContext::SymbolContext() : target_sp(), module_sp(), line_entry() {}
 SymbolContext::SymbolContext(const ModuleSP &m, CompileUnit *cu, Function *f,
                              Block *b, LineEntry *le, Symbol *s)
     : target_sp(), module_sp(m), comp_unit(cu), function(f), block(b),
-      line_entry(), symbol(s), variable(nullptr) {
+      line_entry(), symbol(s) {
   if (le)
     line_entry = *le;
 }
@@ -39,14 +40,13 @@ SymbolContext::SymbolContext(const TargetSP &t, const ModuleSP &m,
                              CompileUnit *cu, Function *f, Block *b,
                              LineEntry *le, Symbol *s)
     : target_sp(t), module_sp(m), comp_unit(cu), function(f), block(b),
-      line_entry(), symbol(s), variable(nullptr) {
+      line_entry(), symbol(s) {
   if (le)
     line_entry = *le;
 }
 
 SymbolContext::SymbolContext(SymbolContextScope *sc_scope)
-    : target_sp(), module_sp(), comp_unit(nullptr), function(nullptr),
-      block(nullptr), line_entry(), symbol(nullptr), variable(nullptr) {
+    : target_sp(), module_sp(), line_entry() {
   sc_scope->CalculateSymbolContext(this);
 }
 
@@ -477,7 +477,7 @@ bool SymbolContext::GetParentOfInlinedScope(const Address &curr_frame_pc,
             curr_inlined_block_inlined_info->GetCallSite().GetColumn();
         return true;
       } else {
-        Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYMBOLS));
+        Log *log = GetLog(LLDBLog::Symbols);
 
         if (log) {
           LLDB_LOGF(

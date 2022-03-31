@@ -11,13 +11,14 @@
 
 #include <__algorithm/upper_bound.h>
 #include <__config>
+#include <__random/is_valid.h>
 #include <__random/uniform_real_distribution.h>
 #include <iosfwd>
 #include <numeric>
 #include <vector>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
@@ -284,6 +285,7 @@ template<class _URNG>
 _RealType
 piecewise_constant_distribution<_RealType>::operator()(_URNG& __g, const param_type& __p)
 {
+    static_assert(__libcpp_random_is_valid_urng<_URNG>::value, "");
     typedef uniform_real_distribution<result_type> _Gen;
     result_type __u = _Gen()(__g);
     ptrdiff_t __k = _VSTD::upper_bound(__p.__areas_.begin(), __p.__areas_.end(),

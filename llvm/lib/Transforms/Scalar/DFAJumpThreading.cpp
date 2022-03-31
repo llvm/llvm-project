@@ -60,29 +60,30 @@
 #include "llvm/Transforms/Scalar/DFAJumpThreading.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CodeMetrics.h"
-#include "llvm/Analysis/LoopIterator.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Verifier.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/SSAUpdaterBulk.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
 #include <deque>
+
+#ifdef EXPENSIVE_CHECKS
+#include "llvm/IR/Verifier.h"
+#endif
 
 using namespace llvm;
 
@@ -357,7 +358,7 @@ typedef DenseMap<BasicBlock *, CloneList> DuplicateBlockMap;
 
 // This map keeps track of all the new definitions for an instruction. This
 // information is needed when restoring SSA form after cloning blocks.
-typedef DenseMap<Instruction *, std::vector<Instruction *>> DefMap;
+typedef MapVector<Instruction *, std::vector<Instruction *>> DefMap;
 
 inline raw_ostream &operator<<(raw_ostream &OS, const PathType &Path) {
   OS << "< ";
@@ -588,7 +589,7 @@ struct AllSwitchPaths {
         PrevBB = BB;
       }
 
-      if (TPath.isExitValueSet())
+      if (TPath.isExitValueSet() && isSupported(TPath))
         TPaths.push_back(TPath);
     }
   }
@@ -681,6 +682,62 @@ private:
     }
 
     return Res;
+  }
+
+  /// The determinator BB should precede the switch-defining BB.
+  ///
+  /// Otherwise, it is possible that the state defined in the determinator block
+  /// defines the state for the next iteration of the loop, rather than for the
+  /// current one.
+  ///
+  /// Currently supported paths:
+  /// \code
+  /// < switch bb1 determ def > [ 42, determ ]
+  /// < switch_and_def bb1 determ > [ 42, determ ]
+  /// < switch_and_def_and_determ bb1 > [ 42, switch_and_def_and_determ ]
+  /// \endcode
+  ///
+  /// Unsupported paths:
+  /// \code
+  /// < switch bb1 def determ > [ 43, determ ]
+  /// < switch_and_determ bb1 def > [ 43, switch_and_determ ]
+  /// \endcode
+  bool isSupported(const ThreadingPath &TPath) {
+    Instruction *SwitchCondI = dyn_cast<Instruction>(Switch->getCondition());
+    assert(SwitchCondI);
+    if (!SwitchCondI)
+      return false;
+
+    const BasicBlock *SwitchCondDefBB = SwitchCondI->getParent();
+    const BasicBlock *SwitchCondUseBB = Switch->getParent();
+    const BasicBlock *DeterminatorBB = TPath.getDeterminatorBB();
+
+    assert(
+        SwitchCondUseBB == TPath.getPath().front() &&
+        "The first BB in a threading path should have the switch instruction");
+    if (SwitchCondUseBB != TPath.getPath().front())
+      return false;
+
+    // Make DeterminatorBB the first element in Path.
+    PathType Path = TPath.getPath();
+    auto ItDet = std::find(Path.begin(), Path.end(), DeterminatorBB);
+    std::rotate(Path.begin(), ItDet, Path.end());
+
+    bool IsDetBBSeen = false;
+    bool IsDefBBSeen = false;
+    bool IsUseBBSeen = false;
+    for (BasicBlock *BB : Path) {
+      if (BB == DeterminatorBB)
+        IsDetBBSeen = true;
+      if (BB == SwitchCondDefBB)
+        IsDefBBSeen = true;
+      if (BB == SwitchCondUseBB)
+        IsUseBBSeen = true;
+      if (IsDetBBSeen && IsUseBBSeen && !IsDefBBSeen)
+        return false;
+    }
+
+    return true;
   }
 
   SwitchInst *Switch;
@@ -1070,6 +1127,9 @@ private:
   /// Add new value mappings to the DefMap to keep track of all new definitions
   /// for a particular instruction. These will be used while updating SSA form.
   void updateDefMap(DefMap &NewDefs, ValueToValueMapTy &VMap) {
+    SmallVector<std::pair<Instruction *, Instruction *>> NewDefsVector;
+    NewDefsVector.reserve(VMap.size());
+
     for (auto Entry : VMap) {
       Instruction *Inst =
           dyn_cast<Instruction>(const_cast<Value *>(Entry.first));
@@ -1082,11 +1142,18 @@ private:
       if (!Cloned)
         continue;
 
-      if (NewDefs.find(Inst) == NewDefs.end())
-        NewDefs[Inst] = {Cloned};
-      else
-        NewDefs[Inst].push_back(Cloned);
+      NewDefsVector.push_back({Inst, Cloned});
     }
+
+    // Sort the defs to get deterministic insertion order into NewDefs.
+    sort(NewDefsVector, [](const auto &LHS, const auto &RHS) {
+      if (LHS.first == RHS.first)
+        return LHS.second->comesBefore(RHS.second);
+      return LHS.first->comesBefore(RHS.first);
+    });
+
+    for (const auto &KV : NewDefsVector)
+      NewDefs[KV.first].push_back(KV.second);
   }
 
   /// Update the last branch of a particular cloned path to point to the correct

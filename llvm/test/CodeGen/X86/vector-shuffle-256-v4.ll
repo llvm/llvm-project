@@ -729,9 +729,9 @@ define <4 x double> @shuffle_v4f64_0044(<4 x double> %a, <4 x double> %b) {
 define <4 x double> @shuffle_v4f64_0044_v2f64(<2 x double> %a, <2 x double> %b) {
 ; ALL-LABEL: shuffle_v4f64_0044_v2f64:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
-; ALL-NEXT:    vmovddup {{.*#+}} xmm1 = xmm1[0,0]
+; ALL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; ALL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; ALL-NEXT:    vmovddup {{.*#+}} ymm0 = ymm0[0,0,2,2]
 ; ALL-NEXT:    retq
   %1 = shufflevector <2 x double> %a, <2 x double> undef, <2 x i32> <i32 0, i32 0>
   %2 = shufflevector <2 x double> %b, <2 x double> undef, <2 x i32> <i32 0, i32 0>
@@ -742,9 +742,9 @@ define <4 x double> @shuffle_v4f64_0044_v2f64(<2 x double> %a, <2 x double> %b) 
 define <4 x double> @shuffle_v4f64_1032_v2f64(<2 x double> %a, <2 x double> %b) {
 ; ALL-LABEL: shuffle_v4f64_1032_v2f64:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; ALL-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm1[1,0]
+; ALL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; ALL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; ALL-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,0,3,2]
 ; ALL-NEXT:    retq
   %1 = shufflevector <2 x double> %a, <2 x double> undef, <2 x i32> <i32 1, i32 0>
   %2 = shufflevector <2 x double> %b, <2 x double> undef, <2 x i32> <i32 1, i32 0>

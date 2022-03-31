@@ -17,7 +17,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include <algorithm>
 #include <cstdint>
 #include <cstring>
 #include <memory>

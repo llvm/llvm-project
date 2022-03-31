@@ -143,12 +143,14 @@ void DataSection::finalizeContents() {
       });
 #endif
 
-  assert((config->sharedMemory || !config->isPic || activeCount <= 1) &&
+  assert((config->sharedMemory || !config->isPic || config->extendedConst ||
+          activeCount <= 1) &&
          "output segments should have been combined by now");
 
   writeUleb128(os, segmentCount, "data segment count");
   os.flush();
   bodySize = dataSectionHeader.size();
+  bool is64 = config->is64.getValueOr(false);
 
   for (OutputSegment *segment : segments) {
     if (!segment->requiredInBinary())
@@ -158,14 +160,27 @@ void DataSection::finalizeContents() {
     if (segment->initFlags & WASM_DATA_SEGMENT_HAS_MEMINDEX)
       writeUleb128(os, 0, "memory index");
     if ((segment->initFlags & WASM_DATA_SEGMENT_IS_PASSIVE) == 0) {
-      WasmInitExpr initExpr;
-      if (config->isPic) {
-        initExpr.Opcode = WASM_OPCODE_GLOBAL_GET;
-        initExpr.Value.Global = WasmSym::memoryBase->getGlobalIndex();
+      if (config->isPic && config->extendedConst) {
+        writeU8(os, WASM_OPCODE_GLOBAL_GET, "global get");
+        writeUleb128(os, WasmSym::memoryBase->getGlobalIndex(),
+                     "literal (global index)");
+        if (segment->startVA) {
+          writePtrConst(os, segment->startVA, is64, "offset");
+          writeU8(os, is64 ? WASM_OPCODE_I64_ADD : WASM_OPCODE_I32_ADD, "add");
+        }
+        writeU8(os, WASM_OPCODE_END, "opcode:end");
       } else {
-        initExpr = intConst(segment->startVA, config->is64.getValueOr(false));
+        WasmInitExpr initExpr;
+        initExpr.Extended = false;
+        if (config->isPic) {
+          assert(segment->startVA == 0);
+          initExpr.Inst.Opcode = WASM_OPCODE_GLOBAL_GET;
+          initExpr.Inst.Value.Global = WasmSym::memoryBase->getGlobalIndex();
+        } else {
+          initExpr = intConst(segment->startVA, is64);
+        }
+        writeInitExpr(os, initExpr);
       }
-      writeInitExpr(os, initExpr);
     }
     writeUleb128(os, segment->size, "segment size");
     os.flush();

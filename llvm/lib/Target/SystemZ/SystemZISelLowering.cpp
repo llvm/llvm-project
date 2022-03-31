@@ -318,8 +318,6 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::DYNAMIC_STACKALLOC, PtrVT, Custom);
   setOperationAction(ISD::GET_DYNAMIC_AREA_OFFSET, PtrVT, Custom);
 
-  // Use custom expanders so that we can force the function to use
-  // a frame pointer.
   setOperationAction(ISD::STACKSAVE,    MVT::Other, Custom);
   setOperationAction(ISD::STACKRESTORE, MVT::Other, Custom);
 
@@ -642,26 +640,26 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::VAEND,   MVT::Other, Expand);
 
   // Codes for which we want to perform some z-specific combinations.
-  setTargetDAGCombine(ISD::ZERO_EXTEND);
-  setTargetDAGCombine(ISD::SIGN_EXTEND);
-  setTargetDAGCombine(ISD::SIGN_EXTEND_INREG);
-  setTargetDAGCombine(ISD::LOAD);
-  setTargetDAGCombine(ISD::STORE);
-  setTargetDAGCombine(ISD::VECTOR_SHUFFLE);
-  setTargetDAGCombine(ISD::EXTRACT_VECTOR_ELT);
-  setTargetDAGCombine(ISD::FP_ROUND);
-  setTargetDAGCombine(ISD::STRICT_FP_ROUND);
-  setTargetDAGCombine(ISD::FP_EXTEND);
-  setTargetDAGCombine(ISD::SINT_TO_FP);
-  setTargetDAGCombine(ISD::UINT_TO_FP);
-  setTargetDAGCombine(ISD::STRICT_FP_EXTEND);
-  setTargetDAGCombine(ISD::BSWAP);
-  setTargetDAGCombine(ISD::SDIV);
-  setTargetDAGCombine(ISD::UDIV);
-  setTargetDAGCombine(ISD::SREM);
-  setTargetDAGCombine(ISD::UREM);
-  setTargetDAGCombine(ISD::INTRINSIC_VOID);
-  setTargetDAGCombine(ISD::INTRINSIC_W_CHAIN);
+  setTargetDAGCombine({ISD::ZERO_EXTEND,
+                       ISD::SIGN_EXTEND,
+                       ISD::SIGN_EXTEND_INREG,
+                       ISD::LOAD,
+                       ISD::STORE,
+                       ISD::VECTOR_SHUFFLE,
+                       ISD::EXTRACT_VECTOR_ELT,
+                       ISD::FP_ROUND,
+                       ISD::STRICT_FP_ROUND,
+                       ISD::FP_EXTEND,
+                       ISD::SINT_TO_FP,
+                       ISD::UINT_TO_FP,
+                       ISD::STRICT_FP_EXTEND,
+                       ISD::BSWAP,
+                       ISD::SDIV,
+                       ISD::UDIV,
+                       ISD::SREM,
+                       ISD::UREM,
+                       ISD::INTRINSIC_VOID,
+                       ISD::INTRINSIC_W_CHAIN});
 
   // Handle intrinsics.
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::Other, Custom);
@@ -1500,8 +1498,16 @@ SDValue SystemZTargetLowering::LowerFormalArguments(
       assert(VA.isMemLoc() && "Argument not register or memory");
 
       // Create the frame index object for this incoming parameter.
-      int FI = MFI.CreateFixedObject(LocVT.getSizeInBits() / 8,
-                                     VA.getLocMemOffset(), true);
+      // FIXME: Pre-include call frame size in the offset, should not
+      // need to manually add it here.
+      int64_t ArgSPOffset = VA.getLocMemOffset();
+      if (Subtarget.isTargetXPLINK64()) {
+        auto &XPRegs =
+            Subtarget.getSpecialRegisters<SystemZXPLINK64Registers>();
+        ArgSPOffset += XPRegs.getCallFrameSize();
+      }
+      int FI =
+          MFI.CreateFixedObject(LocVT.getSizeInBits() / 8, ArgSPOffset, true);
 
       // Create the SelectionDAG nodes corresponding to a load
       // from this parameter.  Unpromoted ints and floats are
@@ -1563,7 +1569,7 @@ SDValue SystemZTargetLowering::LowerFormalArguments(
         int FI =
           MFI.CreateFixedObject(8, -SystemZMC::ELFCallFrameSize + Offset, true);
         SDValue FIN = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
-        unsigned VReg = MF.addLiveIn(SystemZ::ELFArgFPRs[I],
+        Register VReg = MF.addLiveIn(SystemZ::ELFArgFPRs[I],
                                      &SystemZ::FP64BitRegClass);
         SDValue ArgValue = DAG.getCopyFromReg(Chain, DL, VReg, MVT::f64);
         MemOps[I] = DAG.getStore(ArgValue.getValue(1), DL, ArgValue, FIN,
@@ -1825,6 +1831,40 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
   return Chain;
+}
+
+// Generate a call taking the given operands as arguments and returning a
+// result of type RetVT.
+std::pair<SDValue, SDValue> SystemZTargetLowering::makeExternalCall(
+    SDValue Chain, SelectionDAG &DAG, const char *CalleeName, EVT RetVT,
+    ArrayRef<SDValue> Ops, CallingConv::ID CallConv, bool IsSigned, SDLoc DL,
+    bool DoesNotReturn, bool IsReturnValueUsed) const {
+  TargetLowering::ArgListTy Args;
+  Args.reserve(Ops.size());
+
+  TargetLowering::ArgListEntry Entry;
+  for (SDValue Op : Ops) {
+    Entry.Node = Op;
+    Entry.Ty = Entry.Node.getValueType().getTypeForEVT(*DAG.getContext());
+    Entry.IsSExt = shouldSignExtendTypeInLibCall(Op.getValueType(), IsSigned);
+    Entry.IsZExt = !shouldSignExtendTypeInLibCall(Op.getValueType(), IsSigned);
+    Args.push_back(Entry);
+  }
+
+  SDValue Callee =
+      DAG.getExternalSymbol(CalleeName, getPointerTy(DAG.getDataLayout()));
+
+  Type *RetTy = RetVT.getTypeForEVT(*DAG.getContext());
+  TargetLowering::CallLoweringInfo CLI(DAG);
+  bool SignExtend = shouldSignExtendTypeInLibCall(RetVT, IsSigned);
+  CLI.setDebugLoc(DL)
+      .setChain(Chain)
+      .setCallee(CallConv, RetTy, Callee, std::move(Args))
+      .setNoReturn(DoesNotReturn)
+      .setDiscardResult(!IsReturnValueUsed)
+      .setSExtResult(SignExtend)
+      .setZExtResult(!SignExtend);
+  return LowerCallTo(CLI);
 }
 
 bool SystemZTargetLowering::
@@ -3409,7 +3449,7 @@ SDValue SystemZTargetLowering::lowerRETURNADDR(SDValue Op,
   }
 
   // Return R14D, which has the return address. Mark it an implicit live-in.
-  unsigned LinkReg = MF.addLiveIn(SystemZ::R14D, &SystemZ::GR64BitRegClass);
+  Register LinkReg = MF.addLiveIn(SystemZ::R14D, &SystemZ::GR64BitRegClass);
   return DAG.getCopyFromReg(DAG.getEntryNode(), DL, LinkReg, PtrVT);
 }
 
@@ -3465,6 +3505,32 @@ SDValue SystemZTargetLowering::lowerBITCAST(SDValue Op,
 
 SDValue SystemZTargetLowering::lowerVASTART(SDValue Op,
                                             SelectionDAG &DAG) const {
+
+  if (Subtarget.isTargetXPLINK64())
+    return lowerVASTART_XPLINK(Op, DAG);
+  else
+    return lowerVASTART_ELF(Op, DAG);
+}
+
+SDValue SystemZTargetLowering::lowerVASTART_XPLINK(SDValue Op,
+                                                   SelectionDAG &DAG) const {
+  MachineFunction &MF = DAG.getMachineFunction();
+  SystemZMachineFunctionInfo *FuncInfo =
+      MF.getInfo<SystemZMachineFunctionInfo>();
+
+  SDLoc DL(Op);
+
+  // vastart just stores the address of the VarArgsFrameIndex slot into the
+  // memory location argument.
+  EVT PtrVT = getPointerTy(DAG.getDataLayout());
+  SDValue FR = DAG.getFrameIndex(FuncInfo->getVarArgsFrameIndex(), PtrVT);
+  const Value *SV = cast<SrcValueSDNode>(Op.getOperand(2))->getValue();
+  return DAG.getStore(Op.getOperand(0), DL, FR, Op.getOperand(1),
+                      MachinePointerInfo(SV));
+}
+
+SDValue SystemZTargetLowering::lowerVASTART_ELF(SDValue Op,
+                                                SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
   SystemZMachineFunctionInfo *FuncInfo =
     MF.getInfo<SystemZMachineFunctionInfo>();
@@ -3508,14 +3574,90 @@ SDValue SystemZTargetLowering::lowerVACOPY(SDValue Op,
   const Value *SrcSV = cast<SrcValueSDNode>(Op.getOperand(4))->getValue();
   SDLoc DL(Op);
 
-  return DAG.getMemcpy(Chain, DL, DstPtr, SrcPtr, DAG.getIntPtrConstant(32, DL),
+  uint32_t Sz =
+      Subtarget.isTargetXPLINK64() ? getTargetMachine().getPointerSize(0) : 32;
+  return DAG.getMemcpy(Chain, DL, DstPtr, SrcPtr, DAG.getIntPtrConstant(Sz, DL),
                        Align(8), /*isVolatile*/ false, /*AlwaysInline*/ false,
                        /*isTailCall*/ false, MachinePointerInfo(DstSV),
                        MachinePointerInfo(SrcSV));
 }
 
-SDValue SystemZTargetLowering::
-lowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const {
+SDValue
+SystemZTargetLowering::lowerDYNAMIC_STACKALLOC(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  if (Subtarget.isTargetXPLINK64())
+    return lowerDYNAMIC_STACKALLOC_XPLINK(Op, DAG);
+  else
+    return lowerDYNAMIC_STACKALLOC_ELF(Op, DAG);
+}
+
+SDValue
+SystemZTargetLowering::lowerDYNAMIC_STACKALLOC_XPLINK(SDValue Op,
+                                                      SelectionDAG &DAG) const {
+  const TargetFrameLowering *TFI = Subtarget.getFrameLowering();
+  MachineFunction &MF = DAG.getMachineFunction();
+  bool RealignOpt = !MF.getFunction().hasFnAttribute("no-realign-stack");
+  SDValue Chain = Op.getOperand(0);
+  SDValue Size = Op.getOperand(1);
+  SDValue Align = Op.getOperand(2);
+  SDLoc DL(Op);
+
+  // If user has set the no alignment function attribute, ignore
+  // alloca alignments.
+  uint64_t AlignVal =
+      (RealignOpt ? cast<ConstantSDNode>(Align)->getZExtValue() : 0);
+
+  uint64_t StackAlign = TFI->getStackAlignment();
+  uint64_t RequiredAlign = std::max(AlignVal, StackAlign);
+  uint64_t ExtraAlignSpace = RequiredAlign - StackAlign;
+
+  SDValue NeededSpace = Size;
+
+  // Add extra space for alignment if needed.
+  EVT PtrVT = getPointerTy(MF.getDataLayout());
+  if (ExtraAlignSpace)
+    NeededSpace = DAG.getNode(ISD::ADD, DL, PtrVT, NeededSpace,
+                              DAG.getConstant(ExtraAlignSpace, DL, PtrVT));
+
+  bool IsSigned = false;
+  bool DoesNotReturn = false;
+  bool IsReturnValueUsed = false;
+  EVT VT = Op.getValueType();
+  SDValue AllocaCall =
+      makeExternalCall(Chain, DAG, "@@ALCAXP", VT, makeArrayRef(NeededSpace),
+                       CallingConv::C, IsSigned, DL, DoesNotReturn,
+                       IsReturnValueUsed)
+          .first;
+
+  // Perform a CopyFromReg from %GPR4 (stack pointer register). Chain and Glue
+  // to end of call in order to ensure it isn't broken up from the call
+  // sequence.
+  auto &Regs = Subtarget.getSpecialRegisters<SystemZXPLINK64Registers>();
+  Register SPReg = Regs.getStackPointerRegister();
+  Chain = AllocaCall.getValue(1);
+  SDValue Glue = AllocaCall.getValue(2);
+  SDValue NewSPRegNode = DAG.getCopyFromReg(Chain, DL, SPReg, PtrVT, Glue);
+  Chain = NewSPRegNode.getValue(1);
+
+  MVT PtrMVT = getPointerMemTy(MF.getDataLayout());
+  SDValue ArgAdjust = DAG.getNode(SystemZISD::ADJDYNALLOC, DL, PtrMVT);
+  SDValue Result = DAG.getNode(ISD::ADD, DL, PtrMVT, NewSPRegNode, ArgAdjust);
+
+  // Dynamically realign if needed.
+  if (ExtraAlignSpace) {
+    Result = DAG.getNode(ISD::ADD, DL, PtrVT, Result,
+                         DAG.getConstant(ExtraAlignSpace, DL, PtrVT));
+    Result = DAG.getNode(ISD::AND, DL, PtrVT, Result,
+                         DAG.getConstant(~(RequiredAlign - 1), DL, PtrVT));
+  }
+
+  SDValue Ops[2] = {Result, Chain};
+  return DAG.getMergeValues(Ops, DL);
+}
+
+SDValue
+SystemZTargetLowering::lowerDYNAMIC_STACKALLOC_ELF(SDValue Op,
+                                                   SelectionDAG &DAG) const {
   const TargetFrameLowering *TFI = Subtarget.getFrameLowering();
   MachineFunction &MF = DAG.getMachineFunction();
   bool RealignOpt = !MF.getFunction().hasFnAttribute("no-realign-stack");
@@ -4186,7 +4328,6 @@ SDValue SystemZTargetLowering::lowerSTACKSAVE(SDValue Op,
   MachineFunction &MF = DAG.getMachineFunction();
   const SystemZSubtarget *Subtarget = &MF.getSubtarget<SystemZSubtarget>();
   auto *Regs = Subtarget->getSpecialRegisters();
-  MF.getInfo<SystemZMachineFunctionInfo>()->setManipulatesSP(true);
   if (MF.getFunction().getCallingConv() == CallingConv::GHC)
     report_fatal_error("Variable-sized stack allocations are not supported "
                        "in GHC calling convention");
@@ -4199,7 +4340,6 @@ SDValue SystemZTargetLowering::lowerSTACKRESTORE(SDValue Op,
   MachineFunction &MF = DAG.getMachineFunction();
   const SystemZSubtarget *Subtarget = &MF.getSubtarget<SystemZSubtarget>();
   auto *Regs = Subtarget->getSpecialRegisters();
-  MF.getInfo<SystemZMachineFunctionInfo>()->setManipulatesSP(true);
   bool StoreBackchain = MF.getFunction().hasFnAttribute("backchain");
 
   if (MF.getFunction().getCallingConv() == CallingConv::GHC)
@@ -8310,13 +8450,11 @@ MachineBasicBlock *SystemZTargetLowering::emitTransactionBegin(
   // Add FPR/VR clobbers.
   if (!NoFloat && (Control & 4) != 0) {
     if (Subtarget.hasVector()) {
-      for (int I = 0; I < 32; I++) {
-        unsigned Reg = SystemZMC::VR128Regs[I];
+      for (unsigned Reg : SystemZMC::VR128Regs) {
         MI.addOperand(MachineOperand::CreateReg(Reg, true, true));
       }
     } else {
-      for (int I = 0; I < 16; I++) {
-        unsigned Reg = SystemZMC::FP64Regs[I];
+      for (unsigned Reg : SystemZMC::FP64Regs) {
         MI.addOperand(MachineOperand::CreateReg(Reg, true, true));
       }
     }

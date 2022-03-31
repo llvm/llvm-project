@@ -29,7 +29,7 @@ M68kTargetInfo::M68kTargetInfo(const llvm::Triple &Triple,
                                const TargetOptions &)
     : TargetInfo(Triple) {
 
-  std::string Layout = "";
+  std::string Layout;
 
   // M68k is Big Endian
   Layout += "E";

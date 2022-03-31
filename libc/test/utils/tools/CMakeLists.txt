@@ -16,15 +16,15 @@ function(add_libc_tool_unittest target_name)
   )
   target_link_libraries(${target_name}
     PRIVATE
-    gtest_main
-    gtest
+    llvm_gtest_main
+    llvm_gtest
     ${LIBC_TOOL_UNITTEST_DEPENDS}
   )
 
   add_custom_command(
     TARGET ${target_name}
     POST_BUILD
-    COMMAND $<TARGET_FILE:${target_name}> 
+    COMMAND $<TARGET_FILE:${target_name}>
             ${LIBC_TOOL_UNITTEST_ARGS}
   )
   add_dependencies(libc-tool-unittests ${target_name})

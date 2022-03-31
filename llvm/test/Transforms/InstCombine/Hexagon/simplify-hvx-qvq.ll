@@ -1,4 +1,4 @@
-; RUN: opt -instcombine -S < %s | FileCheck %s
+; RUN: opt -passes=instcombine -S < %s | FileCheck %s
 
 ; Simplify the Q -> V -> Q sequence, i.e. (vandvrt (vandqrt q b) m) -> q
 ; when every byte in (b & m) is non-zero.

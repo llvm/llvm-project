@@ -37,6 +37,7 @@
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
 #include "clang/Serialization/InMemoryModuleCache.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/CrashRecoveryContext.h"
@@ -996,6 +997,11 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
   // DesiredStackSpace available.
   noteBottomOfStack();
 
+  auto FinishDiagnosticClient = llvm::make_scope_exit([&]() {
+    // Notify the diagnostic client that all files were processed.
+    getDiagnosticClient().finish();
+  });
+
   raw_ostream &OS = getVerboseOutputStream();
 
   if (!Act.PrepareToExecute(*this))
@@ -1033,9 +1039,6 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
       Act.EndSourceFile();
     }
   }
-
-  // Notify the diagnostic client that all files were processed.
-  getDiagnostics().getClient()->finish();
 
   if (getDiagnosticOpts().ShowCarets) {
     // We can have multiple diagnostics sharing one diagnostic client.
@@ -1154,12 +1157,12 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
   // Remove any macro definitions that are explicitly ignored by the module.
   // They aren't supposed to affect how the module is built anyway.
   HeaderSearchOptions &HSOpts = Invocation->getHeaderSearchOpts();
-  llvm::erase_if(
-      PPOpts.Macros, [&HSOpts](const std::pair<std::string, bool> &def) {
-        StringRef MacroDef = def.first;
-        return HSOpts.ModulesIgnoreMacros.count(
-                   llvm::CachedHashString(MacroDef.split('=').first)) > 0;
-      });
+  llvm::erase_if(PPOpts.Macros,
+                 [&HSOpts](const std::pair<std::string, bool> &def) {
+                   StringRef MacroDef = def.first;
+                   return HSOpts.ModulesIgnoreMacros.contains(
+                       llvm::CachedHashString(MacroDef.split('=').first));
+                 });
 
   // If the original compiler invocation had -fmodule-name, pass it through.
   Invocation->getLangOpts()->ModuleName =
@@ -1414,7 +1417,7 @@ static bool compileModuleAndReadASTBehindLock(
   StringRef Dir = llvm::sys::path::parent_path(ModuleFileName);
   llvm::sys::fs::create_directories(Dir);
 
-  while (1) {
+  while (true) {
     llvm::LockFileManager Locked(ModuleFileName);
     switch (Locked) {
     case llvm::LockFileManager::LFS_Error:

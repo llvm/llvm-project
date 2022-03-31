@@ -1,6 +1,7 @@
 // RUN: mlir-tblgen -gen-attrdef-defs -I %S/../../include %s | FileCheck %s --check-prefix=ATTR
 // RUN: mlir-tblgen -gen-typedef-defs -I %S/../../include %s | FileCheck %s --check-prefix=TYPE
 
+include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/OpBase.td"
 
 /// Test that attribute and type printers and parsers are correctly generated.
@@ -45,7 +46,7 @@ def AttrA : TestAttr<"AttrA"> {
 // ATTR:     return;
 // ATTR: }
 
-// ATTR: } // end namespace test
+// ATTR: } // namespace test
 
 def TypeA : TestType<"TypeA"> {
   let mnemonic = "type_a";
@@ -73,4 +74,4 @@ def TypeA : TestType<"TypeA"> {
 // TYPE:     return;
 // TYPE: }
 
-// TYPE: } // end namespace test
+// TYPE: } // namespace test

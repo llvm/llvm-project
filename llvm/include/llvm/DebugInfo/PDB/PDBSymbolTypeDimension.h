@@ -14,7 +14,6 @@
 
 namespace llvm {
 
-class raw_ostream;
 namespace pdb {
 
 class PDBSymbolTypeDimension : public PDBSymbol {
@@ -26,7 +25,7 @@ public:
   FORWARD_SYMBOL_METHOD(getUpperBoundId)
 };
 
+} // namespace pdb
 } // namespace llvm
-}
 
 #endif // LLVM_DEBUGINFO_PDB_PDBSYMBOLTYPEDIMENSION_H

@@ -83,12 +83,8 @@ private:
   const DataLayout *DL = nullptr;
   MemoryDependenceResults *MDA = nullptr;
 
-  bool checkArgumentUses(Value &Arg) const;
-  bool isOutArgumentCandidate(Argument &Arg) const;
-
-#ifndef NDEBUG
-  bool isVec3ToVec4Shuffle(Type *Ty0, Type* Ty1) const;
-#endif
+  Type *getStoredType(Value &Arg) const;
+  Type *getOutArgumentType(Argument &Arg) const;
 
 public:
   static char ID;
@@ -114,94 +110,67 @@ INITIALIZE_PASS_END(AMDGPURewriteOutArguments, DEBUG_TYPE,
 
 char AMDGPURewriteOutArguments::ID = 0;
 
-bool AMDGPURewriteOutArguments::checkArgumentUses(Value &Arg) const {
+Type *AMDGPURewriteOutArguments::getStoredType(Value &Arg) const {
   const int MaxUses = 10;
   int UseCount = 0;
 
-  for (Use &U : Arg.uses()) {
-    StoreInst *SI = dyn_cast<StoreInst>(U.getUser());
-    if (UseCount > MaxUses)
-      return false;
+  SmallVector<Use *> Worklist;
+  for (Use &U : Arg.uses())
+    Worklist.push_back(&U);
 
-    if (!SI) {
-      auto *BCI = dyn_cast<BitCastInst>(U.getUser());
-      if (!BCI || !BCI->hasOneUse())
-        return false;
+  Type *StoredType = nullptr;
+  while (!Worklist.empty()) {
+    Use *U = Worklist.pop_back_val();
 
-      // We don't handle multiple stores currently, so stores to aggregate
-      // pointers aren't worth the trouble since they are canonically split up.
-      Type *DestEltTy = BCI->getType()->getPointerElementType();
-      if (DestEltTy->isAggregateType())
-        return false;
-
-      // We could handle these if we had a convenient way to bitcast between
-      // them.
-      Type *SrcEltTy = Arg.getType()->getPointerElementType();
-      if (SrcEltTy->isArrayTy())
-        return false;
-
-      // Special case handle structs with single members. It is useful to handle
-      // some casts between structs and non-structs, but we can't bitcast
-      // directly between them. Blender uses some casts that look like
-      // { <3 x float> }* to <4 x float>*
-      if ((SrcEltTy->isStructTy() && (SrcEltTy->getStructNumElements() != 1)))
-        return false;
-
-      // Clang emits OpenCL 3-vector type accesses with a bitcast to the
-      // equivalent 4-element vector and accesses that, and we're looking for
-      // this pointer cast.
-      if (DL->getTypeAllocSize(SrcEltTy) != DL->getTypeAllocSize(DestEltTy))
-        return false;
-
-      return checkArgumentUses(*BCI);
+    if (auto *BCI = dyn_cast<BitCastInst>(U->getUser())) {
+      for (Use &U : BCI->uses())
+        Worklist.push_back(&U);
+      continue;
     }
 
-    if (!SI->isSimple() ||
-        U.getOperandNo() != StoreInst::getPointerOperandIndex())
-      return false;
+    if (auto *SI = dyn_cast<StoreInst>(U->getUser())) {
+      if (UseCount++ > MaxUses)
+        return nullptr;
 
-    ++UseCount;
+      if (!SI->isSimple() ||
+          U->getOperandNo() != StoreInst::getPointerOperandIndex())
+        return nullptr;
+
+      if (StoredType && StoredType != SI->getValueOperand()->getType())
+        return nullptr; // More than one type.
+      StoredType = SI->getValueOperand()->getType();
+      continue;
+    }
+
+    // Unsupported user.
+    return nullptr;
   }
 
-  // Skip unused arguments.
-  return UseCount > 0;
+  return StoredType;
 }
 
-bool AMDGPURewriteOutArguments::isOutArgumentCandidate(Argument &Arg) const {
+Type *AMDGPURewriteOutArguments::getOutArgumentType(Argument &Arg) const {
   const unsigned MaxOutArgSizeBytes = 4 * MaxNumRetRegs;
   PointerType *ArgTy = dyn_cast<PointerType>(Arg.getType());
 
   // TODO: It might be useful for any out arguments, not just privates.
   if (!ArgTy || (ArgTy->getAddressSpace() != DL->getAllocaAddrSpace() &&
                  !AnyAddressSpace) ||
-      Arg.hasByValAttr() || Arg.hasStructRetAttr() ||
-      DL->getTypeStoreSize(ArgTy->getPointerElementType()) > MaxOutArgSizeBytes) {
-    return false;
+      Arg.hasByValAttr() || Arg.hasStructRetAttr()) {
+    return nullptr;
   }
 
-  return checkArgumentUses(Arg);
+  Type *StoredType = getStoredType(Arg);
+  if (!StoredType || DL->getTypeStoreSize(StoredType) > MaxOutArgSizeBytes)
+    return nullptr;
+
+  return StoredType;
 }
 
 bool AMDGPURewriteOutArguments::doInitialization(Module &M) {
   DL = &M.getDataLayout();
   return false;
 }
-
-#ifndef NDEBUG
-bool AMDGPURewriteOutArguments::isVec3ToVec4Shuffle(Type *Ty0, Type* Ty1) const {
-  auto *VT0 = dyn_cast<FixedVectorType>(Ty0);
-  auto *VT1 = dyn_cast<FixedVectorType>(Ty1);
-  if (!VT0 || !VT1)
-    return false;
-
-  if (VT0->getNumElements() != 3 ||
-      VT1->getNumElements() != 4)
-    return false;
-
-  return DL->getTypeSizeInBits(VT0->getElementType()) ==
-         DL->getTypeSizeInBits(VT1->getElementType());
-}
-#endif
 
 bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
   if (skipFunction(F))
@@ -215,7 +184,7 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
   MDA = &getAnalysis<MemoryDependenceWrapperPass>().getMemDep();
 
   unsigned ReturnNumRegs = 0;
-  SmallSet<int, 4> OutArgIndexes;
+  SmallDenseMap<int, Type *, 4> OutArgIndexes;
   SmallVector<Type *, 4> ReturnTypes;
   Type *RetTy = F.getReturnType();
   if (!RetTy->isVoidTy()) {
@@ -227,12 +196,12 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
     ReturnTypes.push_back(RetTy);
   }
 
-  SmallVector<Argument *, 4> OutArgs;
+  SmallVector<std::pair<Argument *, Type *>, 4> OutArgs;
   for (Argument &Arg : F.args()) {
-    if (isOutArgumentCandidate(Arg)) {
+    if (Type *Ty = getOutArgumentType(Arg)) {
       LLVM_DEBUG(dbgs() << "Found possible out argument " << Arg
                         << " in function " << F.getName() << '\n');
-      OutArgs.push_back(&Arg);
+      OutArgs.push_back({&Arg, Ty});
     }
   }
 
@@ -264,11 +233,12 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
     // first. On the second iteration we've removed that out clobbering argument
     // (by effectively moving it into another function) and will find the second
     // argument is OK to move.
-    for (Argument *OutArg : OutArgs) {
+    for (const auto &Pair : OutArgs) {
       bool ThisReplaceable = true;
       SmallVector<std::pair<ReturnInst *, StoreInst *>, 4> ReplaceableStores;
 
-      Type *ArgTy = OutArg->getType()->getPointerElementType();
+      Argument *OutArg = Pair.first;
+      Type *ArgTy = Pair.second;
 
       // Skip this argument if converting it will push us over the register
       // count to return limit.
@@ -324,7 +294,7 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
 
       if (ThisReplaceable) {
         ReturnTypes.push_back(ArgTy);
-        OutArgIndexes.insert(OutArg->getArgNo());
+        OutArgIndexes.insert({OutArg->getArgNo(), ArgTy});
         ++NumOutArgumentsReplaced;
         Changing = true;
       }
@@ -353,7 +323,7 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
   // off any return attributes, e.g. zeroext doesn't make sense with a struct.
   NewFunc->stealArgumentListFrom(F);
 
-  AttrBuilder RetAttrs;
+  AttributeMask RetAttrs;
   RetAttrs.addAttribute(Attribute::SExt);
   RetAttrs.addAttribute(Attribute::ZExt);
   RetAttrs.addAttribute(Attribute::NoAlias);
@@ -376,32 +346,8 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
     if (RetVal)
       NewRetVal = B.CreateInsertValue(NewRetVal, RetVal, RetIdx++);
 
-    for (std::pair<Argument *, Value *> ReturnPoint : Replacement.second) {
-      Argument *Arg = ReturnPoint.first;
-      Value *Val = ReturnPoint.second;
-      Type *EltTy = Arg->getType()->getPointerElementType();
-      if (Val->getType() != EltTy) {
-        Type *EffectiveEltTy = EltTy;
-        if (StructType *CT = dyn_cast<StructType>(EltTy)) {
-          assert(CT->getNumElements() == 1);
-          EffectiveEltTy = CT->getElementType(0);
-        }
-
-        if (DL->getTypeSizeInBits(EffectiveEltTy) !=
-            DL->getTypeSizeInBits(Val->getType())) {
-          assert(isVec3ToVec4Shuffle(EffectiveEltTy, Val->getType()));
-          Val = B.CreateShuffleVector(Val, ArrayRef<int>{0, 1, 2});
-        }
-
-        Val = B.CreateBitCast(Val, EffectiveEltTy);
-
-        // Re-create single element composite.
-        if (EltTy != EffectiveEltTy)
-          Val = B.CreateInsertValue(UndefValue::get(EltTy), Val, 0);
-      }
-
-      NewRetVal = B.CreateInsertValue(NewRetVal, Val, RetIdx++);
-    }
+    for (std::pair<Argument *, Value *> ReturnPoint : Replacement.second)
+      NewRetVal = B.CreateInsertValue(NewRetVal, ReturnPoint.second, RetIdx++);
 
     if (RetVal)
       RI->setOperand(0, NewRetVal);
@@ -433,7 +379,7 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
 
     PointerType *ArgType = cast<PointerType>(Arg.getType());
 
-    auto *EltTy = ArgType->getElementType();
+    Type *EltTy = OutArgIndexes[Arg.getArgNo()];
     const auto Align =
         DL->getValueOrABITypeAlignment(Arg.getParamAlign(), EltTy);
 

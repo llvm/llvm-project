@@ -19,10 +19,6 @@
 
 using namespace mlir;
 
-StringAttr Builder::getIdentifier(const Twine &str) {
-  return getStringAttr(str);
-}
-
 //===----------------------------------------------------------------------===//
 // Locations.
 //===----------------------------------------------------------------------===//
@@ -342,7 +338,7 @@ AffineMap Builder::getShiftedAffineMap(AffineMap map, int64_t shift) {
 // OpBuilder
 //===----------------------------------------------------------------------===//
 
-OpBuilder::Listener::~Listener() {}
+OpBuilder::Listener::~Listener() = default;
 
 /// Insert the given operation at the current insertion point and return it.
 Operation *OpBuilder::insert(Operation *op) {
@@ -354,12 +350,10 @@ Operation *OpBuilder::insert(Operation *op) {
   return op;
 }
 
-/// Add new block with 'argTypes' arguments and set the insertion point to the
-/// end of it. The block is inserted at the provided insertion point of
-/// 'parent'.
 Block *OpBuilder::createBlock(Region *parent, Region::iterator insertPt,
                               TypeRange argTypes, ArrayRef<Location> locs) {
   assert(parent && "expected valid parent region");
+  assert(argTypes.size() == locs.size() && "argument location mismatch");
   if (insertPt == Region::iterator())
     insertPt = parent->end();
 
@@ -383,8 +377,19 @@ Block *OpBuilder::createBlock(Block *insertBefore, TypeRange argTypes,
 }
 
 /// Create an operation given the fields represented as an OperationState.
-Operation *OpBuilder::createOperation(const OperationState &state) {
+Operation *OpBuilder::create(const OperationState &state) {
   return insert(Operation::create(state));
+}
+
+/// Creates an operation with the given fields.
+Operation *OpBuilder::create(Location loc, StringAttr opName,
+                             ValueRange operands, TypeRange types,
+                             ArrayRef<NamedAttribute> attributes,
+                             BlockRange successors,
+                             MutableArrayRef<std::unique_ptr<Region>> regions) {
+  OperationState state(loc, opName, operands, types, attributes, successors,
+                       regions);
+  return create(state);
 }
 
 /// Attempts to fold the given operation and places new results within

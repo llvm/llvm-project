@@ -200,3 +200,17 @@ action (i.e. the same as using `-add-plugin`):
   PluginASTAction::ActionType getActionType() override {
     return AddAfterMainAction;
   }
+
+Interaction with ``-clear-ast-before-backend``
+----------------------------------------------
+
+To reduce peak memory usage of the compiler, plugins are recommended to run
+*before* the main action, which is usually code generation. This is because
+having any plugins that run after the codegen action automatically turns off
+``-clear-ast-before-backend``.  ``-clear-ast-before-backend`` reduces peak
+memory by clearing the Clang AST after generating IR and before running IR
+optimizations. Use ``CmdlineBeforeMainAction`` or ``AddBeforeMainAction`` as
+``getActionType`` to run plugins while still benefitting from
+``-clear-ast-before-backend``. Plugins must make sure not to modify the AST,
+otherwise they should run after the main action.
+

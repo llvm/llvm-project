@@ -6,12 +6,12 @@ stmxcsr (%rsp)
 
 # CHECK:      Iterations:        2
 # CHECK-NEXT: Instructions:      4
-# CHECK-NEXT: Total Cycles:      205
+# CHECK-NEXT: Total Cycles:      104
 # CHECK-NEXT: Total uOps:        4
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.02
-# CHECK-NEXT: IPC:               0.02
+# CHECK-NEXT: uOps Per Cycle:    0.04
+# CHECK-NEXT: IPC:               0.04
 # CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      Instruction Info:
@@ -31,7 +31,9 @@ stmxcsr (%rsp)
 # CHECK-NEXT: Index     0123456789          0123456789          0123456789          0123456789          0123456789          0123
 
 # CHECK:      [0,0]     DeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeER.   int3
-# CHECK-NEXT: [0,1]     D====================================================================================================eER   stmxcsr	(%rsp)
+# CHECK-NEXT: [0,1]     DeE---------------------------------------------------------------------------------------------------R.   stmxcsr	(%rsp)
+# CHECK-NEXT: [1,0]     .DeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeER   int3
+# CHECK-NEXT: [1,1]     .DeE---------------------------------------------------------------------------------------------------R   stmxcsr	(%rsp)
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -40,6 +42,6 @@ stmxcsr (%rsp)
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     2     51.0   0.5    0.0       int3
-# CHECK-NEXT: 1.     2     151.0  0.0    0.0       stmxcsr	(%rsp)
-# CHECK-NEXT:        2     101.0  0.3    0.0       <total>
+# CHECK-NEXT: 0.     2     1.0    1.0    0.0       int3
+# CHECK-NEXT: 1.     2     1.0    0.0    99.0      stmxcsr	(%rsp)
+# CHECK-NEXT:        2     1.0    0.5    49.5      <total>

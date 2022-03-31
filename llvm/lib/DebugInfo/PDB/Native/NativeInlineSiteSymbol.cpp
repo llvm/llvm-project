@@ -12,8 +12,14 @@
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
+#include "llvm/DebugInfo/PDB/Native/ModuleDebugStream.h"
 #include "llvm/DebugInfo/PDB/Native/NativeEnumLineNumbers.h"
+#include "llvm/DebugInfo/PDB/Native/NativeLineNumber.h"
+#include "llvm/DebugInfo/PDB/Native/NativeSession.h"
+#include "llvm/DebugInfo/PDB/Native/PDBFile.h"
+#include "llvm/DebugInfo/PDB/Native/SymbolCache.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
+#include "llvm/DebugInfo/PDB/PDBExtras.h"
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -25,7 +31,7 @@ NativeInlineSiteSymbol::NativeInlineSiteSymbol(
     : NativeRawSymbol(Session, PDB_SymType::InlineSite, Id), Sym(Sym),
       ParentAddr(ParentAddr) {}
 
-NativeInlineSiteSymbol::~NativeInlineSiteSymbol() {}
+NativeInlineSiteSymbol::~NativeInlineSiteSymbol() = default;
 
 void NativeInlineSiteSymbol::dump(raw_ostream &OS, int Indent,
                                   PdbSymbolIdField ShowIdFields,

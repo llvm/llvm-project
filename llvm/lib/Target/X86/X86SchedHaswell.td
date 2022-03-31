@@ -257,6 +257,7 @@ defm : X86WriteRes<WriteFMaskedStore64Y, [HWPort0,HWPort4,HWPort237,HWPort15], 5
 defm : X86WriteRes<WriteFMove,         [HWPort5], 1, [1], 1>;
 defm : X86WriteRes<WriteFMoveX,        [HWPort5], 1, [1], 1>;
 defm : X86WriteRes<WriteFMoveY,        [HWPort5], 1, [1], 1>;
+defm : X86WriteResUnsupported<WriteFMoveZ>;
 defm : X86WriteRes<WriteEMMS,          [HWPort01,HWPort15,HWPort015,HWPort0156], 31, [8,1,21,1], 31>;
 
 defm : HWWriteResPair<WriteFAdd,    [HWPort1],  3, [1], 1, 5>;
@@ -416,6 +417,7 @@ defm : X86WriteRes<WriteVecMaskedStore64Y, [HWPort0,HWPort4,HWPort237,HWPort15],
 defm : X86WriteRes<WriteVecMove,         [HWPort015], 1, [1], 1>;
 defm : X86WriteRes<WriteVecMoveX,        [HWPort015], 1, [1], 1>;
 defm : X86WriteRes<WriteVecMoveY,        [HWPort015], 1, [1], 1>;
+defm : X86WriteResUnsupported<WriteVecMoveZ>;
 defm : X86WriteRes<WriteVecMoveToGpr,    [HWPort0], 1, [1], 1>;
 defm : X86WriteRes<WriteVecMoveFromGpr,  [HWPort5], 1, [1], 1>;
 
@@ -995,7 +997,7 @@ def HWWriteResGroup12 : SchedWriteRes<[HWPort1,HWPort23]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[HWWriteResGroup12], (instrs MMX_CVTPI2PSirm)>;
+def: InstRW<[HWWriteResGroup12], (instrs MMX_CVTPI2PSrm)>;
 def: InstRW<[HWWriteResGroup12], (instregex "P(DEP|EXT)(32|64)rm")>;
 
 def HWWriteResGroup13 : SchedWriteRes<[HWPort5,HWPort23]> {
@@ -1164,9 +1166,9 @@ def HWWriteResGroup36_2 : SchedWriteRes<[HWPort5,HWPort23]> {
   let NumMicroOps = 3;
   let ResourceCycles = [2,1];
 }
-def: InstRW<[HWWriteResGroup36_2], (instrs MMX_PACKSSDWirm,
-                                           MMX_PACKSSWBirm,
-                                           MMX_PACKUSWBirm)>;
+def: InstRW<[HWWriteResGroup36_2], (instrs MMX_PACKSSDWrm,
+                                           MMX_PACKSSWBrm,
+                                           MMX_PACKUSWBrm)>;
 
 def HWWriteResGroup37 : SchedWriteRes<[HWPort23,HWPort0156]> {
   let Latency = 7;
@@ -1240,7 +1242,7 @@ def HWWriteResGroup50 : SchedWriteRes<[HWPort1]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[HWWriteResGroup50], (instrs MMX_CVTPI2PSirr)>;
+def: InstRW<[HWWriteResGroup50], (instrs MMX_CVTPI2PSrr)>;
 def: InstRW<[HWWriteResGroup50], (instregex "P(DEP|EXT)(32|64)rr",
                                             "(V?)CVTDQ2PS(Y?)rr")>;
 
@@ -1285,9 +1287,9 @@ def HWWriteResGroup57 : SchedWriteRes<[HWPort5,HWPort0156]> {
   let NumMicroOps = 3;
   let ResourceCycles = [2,1];
 }
-def: InstRW<[HWWriteResGroup57], (instrs MMX_PACKSSDWirr,
-                                         MMX_PACKSSWBirr,
-                                         MMX_PACKUSWBirr)>;
+def: InstRW<[HWWriteResGroup57], (instrs MMX_PACKSSDWrr,
+                                         MMX_PACKSSWBrr,
+                                         MMX_PACKUSWBrr)>;
 
 def HWWriteResGroup58 : SchedWriteRes<[HWPort6,HWPort0156]> {
   let Latency = 3;
@@ -1297,12 +1299,26 @@ def HWWriteResGroup58 : SchedWriteRes<[HWPort6,HWPort0156]> {
 def: InstRW<[HWWriteResGroup58], (instregex "CLD")>;
 
 def HWWriteResGroup59 : SchedWriteRes<[HWPort06,HWPort0156]> {
-  let Latency = 3;
+  let Latency = 2;
   let NumMicroOps = 3;
   let ResourceCycles = [1,2];
 }
-def: InstRW<[HWWriteResGroup59], (instregex "RCL(8|16|32|64)r(1|i)",
-                                            "RCR(8|16|32|64)r(1|i)")>;
+def: InstRW<[HWWriteResGroup59], (instrs RCL8r1, RCL16r1, RCL32r1, RCL64r1,
+                                         RCR8r1, RCR16r1, RCR32r1, RCR64r1)>;
+
+def HWWriteResGroup60 : SchedWriteRes<[HWPort1,HWPort06,HWPort0156]> {
+  let Latency = 5;
+  let NumMicroOps = 8;
+  let ResourceCycles = [2,4,2];
+}
+def: InstRW<[HWWriteResGroup60], (instrs RCR8ri, RCR16ri, RCR32ri, RCR64ri)>;
+
+def HWWriteResGroup60b : SchedWriteRes<[HWPort1,HWPort06,HWPort0156]> {
+  let Latency = 6;
+  let NumMicroOps = 8;
+  let ResourceCycles = [2,4,2];
+}
+def: InstRW<[HWWriteResGroup60b], (instrs RCL8ri, RCL16ri, RCL32ri, RCL64ri)>;
 
 def HWWriteResGroup61 : SchedWriteRes<[HWPort0,HWPort4,HWPort237]> {
   let Latency = 4;
@@ -1373,11 +1389,11 @@ def HWWriteResGroup73 : SchedWriteRes<[HWPort1,HWPort5]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[HWWriteResGroup73], (instrs MMX_CVTPI2PDirr,
-                                         MMX_CVTPD2PIirr,
-                                         MMX_CVTPS2PIirr,
-                                         MMX_CVTTPD2PIirr,
-                                         MMX_CVTTPS2PIirr)>;
+def: InstRW<[HWWriteResGroup73], (instrs MMX_CVTPI2PDrr,
+                                         MMX_CVTPD2PIrr,
+                                         MMX_CVTPS2PIrr,
+                                         MMX_CVTTPD2PIrr,
+                                         MMX_CVTTPS2PIrr)>;
 def: InstRW<[HWWriteResGroup73], (instregex "(V?)CVTDQ2PDrr",
                                             "(V?)CVTPD2PSrr",
                                             "(V?)CVTSD2SSrr",
@@ -1418,8 +1434,8 @@ def HWWriteResGroup78 : SchedWriteRes<[HWPort1,HWPort5,HWPort23]> {
 def: InstRW<[HWWriteResGroup78], (instrs CVTPD2PSrm,
                                          CVTPD2DQrm,
                                          CVTTPD2DQrm,
-                                         MMX_CVTPD2PIirm,
-                                         MMX_CVTTPD2PIirm,
+                                         MMX_CVTPD2PIrm,
+                                         MMX_CVTTPD2PIrm,
                                          CVTDQ2PDrm,
                                          VCVTDQ2PDrm)>;
 
@@ -1428,7 +1444,7 @@ def HWWriteResGroup78_1 : SchedWriteRes<[HWPort1,HWPort5,HWPort23]> {
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
 }
-def: InstRW<[HWWriteResGroup78_1], (instrs MMX_CVTPI2PDirm,
+def: InstRW<[HWWriteResGroup78_1], (instrs MMX_CVTPI2PDrm,
                                            CVTSD2SSrm, CVTSD2SSrm_Int,
                                            VCVTSD2SSrm, VCVTSD2SSrm_Int)>;
 
@@ -2029,5 +2045,41 @@ def HWSETA_SETBErm :  SchedWriteVariant<[
 
 def : InstRW<[HWSETA_SETBErr], (instrs SETCCr)>;
 def : InstRW<[HWSETA_SETBErm], (instrs SETCCm)>;
+
+///////////////////////////////////////////////////////////////////////////////
+// Dependency breaking instructions.
+///////////////////////////////////////////////////////////////////////////////
+
+def : IsZeroIdiomFunction<[
+  // GPR Zero-idioms.
+  DepBreakingClass<[ SUB32rr, SUB64rr, XOR32rr, XOR64rr ], ZeroIdiomPredicate>,
+
+  // SSE Zero-idioms.
+  DepBreakingClass<[
+    // fp variants.
+    XORPSrr, XORPDrr,
+
+    // int variants.
+    PXORrr,
+    PSUBBrr, PSUBWrr, PSUBDrr, PSUBQrr,
+    PCMPGTBrr, PCMPGTDrr, PCMPGTQrr, PCMPGTWrr
+  ], ZeroIdiomPredicate>,
+
+  // AVX Zero-idioms.
+  DepBreakingClass<[
+    // xmm fp variants.
+    VXORPSrr, VXORPDrr,
+
+    // xmm int variants.
+    VPXORrr,
+    VPSUBBrr, VPSUBWrr, VPSUBDrr, VPSUBQrr,
+    VPCMPGTBrr, VPCMPGTWrr, VPCMPGTDrr, VPCMPGTQrr,
+
+    // ymm variants.
+    VXORPSYrr, VXORPDYrr, VPXORYrr,
+    VPSUBBYrr, VPSUBWYrr, VPSUBDYrr, VPSUBQYrr,
+    VPCMPGTBYrr, VPCMPGTWYrr, VPCMPGTDYrr
+  ], ZeroIdiomPredicate>,
+]>;
 
 } // SchedModel

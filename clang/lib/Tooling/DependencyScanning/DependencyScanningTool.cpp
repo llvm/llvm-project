@@ -9,23 +9,37 @@
 #include "clang/Tooling/DependencyScanning/DependencyScanningTool.h"
 #include "clang/Frontend/Utils.h"
 
-namespace clang{
-namespace tooling{
-namespace dependencies{
+namespace clang {
+namespace tooling {
+namespace dependencies {
 
-std::vector<std::string> FullDependencies::getAdditionalArgs(
-    std::function<StringRef(ModuleID)> LookupPCMPath,
-    std::function<const ModuleDeps &(ModuleID)> LookupModuleDeps) const {
-  std::vector<std::string> Ret = getAdditionalArgsWithoutModulePaths();
+std::vector<std::string> FullDependencies::getCommandLine(
+    std::function<StringRef(ModuleID)> LookupPCMPath) const {
+  std::vector<std::string> Ret = getCommandLineWithoutModulePaths();
 
-  std::vector<std::string> PCMPaths;
-  std::vector<std::string> ModMapPaths;
-  dependencies::detail::collectPCMAndModuleMapPaths(
-      ClangModuleDeps, LookupPCMPath, LookupModuleDeps, PCMPaths, ModMapPaths);
-  for (const std::string &PCMPath : PCMPaths)
-    Ret.push_back("-fmodule-file=" + PCMPath);
+  for (ModuleID MID : ClangModuleDeps)
+    Ret.push_back(("-fmodule-file=" + LookupPCMPath(MID)).str());
 
   return Ret;
+}
+
+std::vector<std::string>
+FullDependencies::getCommandLineWithoutModulePaths() const {
+  std::vector<std::string> Args = OriginalCommandLine;
+
+  std::vector<std::string> AdditionalArgs =
+      getAdditionalArgsWithoutModulePaths();
+  Args.insert(Args.end(), AdditionalArgs.begin(), AdditionalArgs.end());
+
+  // This argument is unused in explicit compiles.
+  llvm::erase_if(Args, [](const std::string &Arg) {
+    return Arg.find("-fmodules-cache-path=") == 0;
+  });
+
+  // TODO: Filter out the remaining implicit modules leftovers
+  // (e.g. "-fmodules-prune-interval=" or "-fmodules-prune-after=").
+
+  return Args;
 }
 
 std::vector<std::string>
@@ -138,8 +152,12 @@ DependencyScanningTool::getFullDependencies(
       ContextHash = std::move(Hash);
     }
 
-    FullDependenciesResult getFullDependencies() const {
+    FullDependenciesResult getFullDependencies(
+        const std::vector<std::string> &OriginalCommandLine) const {
       FullDependencies FD;
+
+      FD.OriginalCommandLine =
+          ArrayRef<std::string>(OriginalCommandLine).slice(1);
 
       FD.ID.ContextHash = std::move(ContextHash);
 
@@ -181,7 +199,7 @@ DependencyScanningTool::getFullDependencies(
       Worker.computeDependencies(CWD, CommandLine, Consumer, ModuleName);
   if (Result)
     return std::move(Result);
-  return Consumer.getFullDependencies();
+  return Consumer.getFullDependencies(CommandLine);
 }
 
 } // end namespace dependencies

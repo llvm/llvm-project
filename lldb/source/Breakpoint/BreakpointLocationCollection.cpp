@@ -17,8 +17,7 @@ using namespace lldb;
 using namespace lldb_private;
 
 // BreakpointLocationCollection constructor
-BreakpointLocationCollection::BreakpointLocationCollection()
-    : m_break_loc_collection(), m_collection_mutex() {}
+BreakpointLocationCollection::BreakpointLocationCollection() = default;
 
 // Destructor
 BreakpointLocationCollection::~BreakpointLocationCollection() = default;
@@ -123,8 +122,11 @@ bool BreakpointLocationCollection::ShouldStop(
   size_t i = 0;
   size_t prev_size = GetSize();
   while (i < prev_size) {
-    // ShouldStop can remove the breakpoint from the list
-    if (GetByIndex(i)->ShouldStop(context))
+    // ShouldStop can remove the breakpoint from the list, or even delete
+    // it, so we should 
+    BreakpointLocationSP cur_loc_sp = GetByIndex(i);
+    BreakpointSP keep_bkpt_alive_sp = cur_loc_sp->GetBreakpoint().shared_from_this();
+    if (cur_loc_sp->ShouldStop(context))
       shouldStop = true;
 
     if (prev_size == GetSize())

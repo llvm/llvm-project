@@ -109,7 +109,7 @@ private:
 
 namespace detail {
 class AttributeUniquer;
-} // end namespace detail
+} // namespace detail
 
 /// Base storage class appearing in an attribute. Derived storage classes should
 /// only be constructed within the context of the AttributeUniquer.
@@ -152,7 +152,7 @@ private:
   Type type;
 
   /// The abstract descriptor for this attribute.
-  const AbstractAttribute *abstractAttribute;
+  const AbstractAttribute *abstractAttribute = nullptr;
 };
 
 /// Default storage type for attributes that require no additional
@@ -251,6 +251,6 @@ private:
 };
 } // namespace detail
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif

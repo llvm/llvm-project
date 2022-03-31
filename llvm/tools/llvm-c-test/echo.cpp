@@ -16,6 +16,7 @@
 
 #include "llvm-c-test.h"
 #include "llvm-c/DebugInfo.h"
+#include "llvm-c/ErrorHandling.h"
 #include "llvm-c/Target.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
@@ -402,6 +403,19 @@ static LLVMValueRef clone_constant_impl(LLVMValueRef Cst, LLVMModuleRef M) {
     case LLVMBitCast:
       return LLVMConstBitCast(clone_constant(LLVMGetOperand(Cst, 0), M),
                               TypeCloner(M).Clone(Cst));
+    case LLVMGetElementPtr: {
+      LLVMTypeRef ElemTy =
+          TypeCloner(M).Clone(LLVMGetGEPSourceElementType(Cst));
+      LLVMValueRef Ptr = clone_constant(LLVMGetOperand(Cst, 0), M);
+      int NumIdx = LLVMGetNumIndices(Cst);
+      SmallVector<LLVMValueRef, 8> Idx;
+      for (int i = 1; i <= NumIdx; i++)
+        Idx.push_back(clone_constant(LLVMGetOperand(Cst, i), M));
+      if (LLVMIsInBounds(Cst))
+        return LLVMConstInBoundsGEP2(ElemTy, Ptr, Idx.data(), NumIdx);
+      else
+        return LLVMConstGEP2(ElemTy, Ptr, Idx.data(), NumIdx);
+    }
     default:
       fprintf(stderr, "%d is not a supported opcode for constant expressions\n",
               Op);

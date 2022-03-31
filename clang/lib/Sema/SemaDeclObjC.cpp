@@ -2212,9 +2212,8 @@ void Sema::CheckImplementationIvars(ObjCImplementationDecl *ImpDecl,
     Diag(IVI->getLocation(), diag::err_inconsistent_ivar_count);
 }
 
-static void WarnUndefinedMethod(Sema &S, SourceLocation ImpLoc,
-                                ObjCMethodDecl *method,
-                                bool &IncompleteImpl,
+static void WarnUndefinedMethod(Sema &S, ObjCImplDecl *Impl,
+                                ObjCMethodDecl *method, bool &IncompleteImpl,
                                 unsigned DiagID,
                                 NamedDecl *NeededFor = nullptr) {
   // No point warning no definition of method which is 'unavailable'.
@@ -2227,10 +2226,19 @@ static void WarnUndefinedMethod(Sema &S, SourceLocation ImpLoc,
   // separate warnings.  We will give that approach a try, as that
   // matches what we do with protocols.
   {
-    const Sema::SemaDiagnosticBuilder &B = S.Diag(ImpLoc, DiagID);
+    const Sema::SemaDiagnosticBuilder &B = S.Diag(Impl->getLocation(), DiagID);
     B << method;
     if (NeededFor)
       B << NeededFor;
+
+    // Add an empty definition at the end of the @implementation.
+    std::string FixItStr;
+    llvm::raw_string_ostream Out(FixItStr);
+    method->print(Out, Impl->getASTContext().getPrintingPolicy());
+    Out << " {\n}\n\n";
+
+    SourceLocation Loc = Impl->getAtEndRange().getBegin();
+    B << FixItHint::CreateInsertion(Loc, FixItStr);
   }
 
   // Issue a note to the original declaration.
@@ -2679,14 +2687,10 @@ static void findProtocolsWithExplicitImpls(const ObjCInterfaceDecl *Super,
 
 /// CheckProtocolMethodDefs - This routine checks unimplemented methods
 /// Declared in protocol, and those referenced by it.
-static void CheckProtocolMethodDefs(Sema &S,
-                                    SourceLocation ImpLoc,
-                                    ObjCProtocolDecl *PDecl,
-                                    bool& IncompleteImpl,
-                                    const Sema::SelectorSet &InsMap,
-                                    const Sema::SelectorSet &ClsMap,
-                                    ObjCContainerDecl *CDecl,
-                                    LazyProtocolNameSet &ProtocolsExplictImpl) {
+static void CheckProtocolMethodDefs(
+    Sema &S, ObjCImplDecl *Impl, ObjCProtocolDecl *PDecl, bool &IncompleteImpl,
+    const Sema::SelectorSet &InsMap, const Sema::SelectorSet &ClsMap,
+    ObjCContainerDecl *CDecl, LazyProtocolNameSet &ProtocolsExplictImpl) {
   ObjCCategoryDecl *C = dyn_cast<ObjCCategoryDecl>(CDecl);
   ObjCInterfaceDecl *IDecl = C ? C->getClassInterface()
                                : dyn_cast<ObjCInterfaceDecl>(CDecl);
@@ -2773,9 +2777,8 @@ static void CheckProtocolMethodDefs(Sema &S,
               if (C || MethodInClass->isPropertyAccessor())
                 continue;
             unsigned DIAG = diag::warn_unimplemented_protocol_method;
-            if (!S.Diags.isIgnored(DIAG, ImpLoc)) {
-              WarnUndefinedMethod(S, ImpLoc, method, IncompleteImpl, DIAG,
-                                  PDecl);
+            if (!S.Diags.isIgnored(DIAG, Impl->getLocation())) {
+              WarnUndefinedMethod(S, Impl, method, IncompleteImpl, DIAG, PDecl);
             }
           }
     }
@@ -2796,15 +2799,15 @@ static void CheckProtocolMethodDefs(Sema &S,
         continue;
 
       unsigned DIAG = diag::warn_unimplemented_protocol_method;
-      if (!S.Diags.isIgnored(DIAG, ImpLoc)) {
-        WarnUndefinedMethod(S, ImpLoc, method, IncompleteImpl, DIAG, PDecl);
+      if (!S.Diags.isIgnored(DIAG, Impl->getLocation())) {
+        WarnUndefinedMethod(S, Impl, method, IncompleteImpl, DIAG, PDecl);
       }
     }
   }
   // Check on this protocols's referenced protocols, recursively.
   for (auto *PI : PDecl->protocols())
-    CheckProtocolMethodDefs(S, ImpLoc, PI, IncompleteImpl, InsMap, ClsMap,
-                            CDecl, ProtocolsExplictImpl);
+    CheckProtocolMethodDefs(S, Impl, PI, IncompleteImpl, InsMap, ClsMap, CDecl,
+                            ProtocolsExplictImpl);
 }
 
 /// MatchAllMethodDeclarations - Check methods declared in interface
@@ -2827,7 +2830,7 @@ void Sema::MatchAllMethodDeclarations(const SelectorSet &InsMap,
     if (!I->isPropertyAccessor() &&
         !InsMap.count(I->getSelector())) {
       if (ImmediateClass)
-        WarnUndefinedMethod(*this, IMPDecl->getLocation(), I, IncompleteImpl,
+        WarnUndefinedMethod(*this, IMPDecl, I, IncompleteImpl,
                             diag::warn_undef_method_impl);
       continue;
     } else {
@@ -2857,7 +2860,7 @@ void Sema::MatchAllMethodDeclarations(const SelectorSet &InsMap,
     if (!I->isPropertyAccessor() &&
         !ClsMap.count(I->getSelector())) {
       if (ImmediateClass)
-        WarnUndefinedMethod(*this, IMPDecl->getLocation(), I, IncompleteImpl,
+        WarnUndefinedMethod(*this, IMPDecl, I, IncompleteImpl,
                             diag::warn_undef_method_impl);
     } else {
       ObjCMethodDecl *ImpMethodDecl =
@@ -3024,16 +3027,15 @@ void Sema::ImplMethodsVsClassMethods(Scope *S, ObjCImplDecl* IMPDecl,
 
   if (ObjCInterfaceDecl *I = dyn_cast<ObjCInterfaceDecl> (CDecl)) {
     for (auto *PI : I->all_referenced_protocols())
-      CheckProtocolMethodDefs(*this, IMPDecl->getLocation(), PI, IncompleteImpl,
-                              InsMap, ClsMap, I, ExplicitImplProtocols);
+      CheckProtocolMethodDefs(*this, IMPDecl, PI, IncompleteImpl, InsMap,
+                              ClsMap, I, ExplicitImplProtocols);
   } else if (ObjCCategoryDecl *C = dyn_cast<ObjCCategoryDecl>(CDecl)) {
     // For extended class, unimplemented methods in its protocols will
     // be reported in the primary class.
     if (!C->IsClassExtension()) {
       for (auto *P : C->protocols())
-        CheckProtocolMethodDefs(*this, IMPDecl->getLocation(), P,
-                                IncompleteImpl, InsMap, ClsMap, CDecl,
-                                ExplicitImplProtocols);
+        CheckProtocolMethodDefs(*this, IMPDecl, P, IncompleteImpl, InsMap,
+                                ClsMap, CDecl, ExplicitImplProtocols);
       DiagnoseUnimplementedProperties(S, IMPDecl, CDecl,
                                       /*SynthesizeProperties=*/false);
     }

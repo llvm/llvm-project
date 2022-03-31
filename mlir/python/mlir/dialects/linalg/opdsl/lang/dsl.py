@@ -20,13 +20,14 @@ _CONTEXT = threading.local()
 StructuredOpOuts = Union[ir.Operation, ir.OpView, ir.OpResultList,
                          Sequence[Union[ir.Value, ir.Operation, ir.OpView]]]
 
+
 @contextmanager
-def bind_op_def(model: LinalgOpDef):
+def bind_op_def(op_def: LinalgOpDef):
   if hasattr(_CONTEXT, "current_op_def"):
     raise ValueError("Cannot recursively define an operation")
-  _CONTEXT.current_op_def = model
+  _CONTEXT.current_op_def = op_def
   try:
-    yield model
+    yield op_def
   finally:
     del _CONTEXT.current_op_def
 
@@ -52,9 +53,9 @@ def _prepare_structured_op_outs(outs: StructuredOpOuts) -> ValueList:
 class DefinedOpCallable:
   """Callable that wraps any defined op function."""
 
-  def __init__(self, op_name: str, model: LinalgOpDef):
+  def __init__(self, op_name: str, op_def: LinalgOpDef):
     self.op_name = op_name
-    self.model = model
+    self.op_def = op_def
 
   def __call__(self, *ins: Union[ir.Operation, ir.OpView, ir.Value],
                outs: StructuredOpOuts, **kwargs):
@@ -72,7 +73,7 @@ class DefinedOpCallable:
                        f" of type bool but got {type(emit_generic)}")
 
     op_configs = LinalgOpConfig.from_linalg_op_def(
-        self.model, context=ir.Context.current)
+        self.op_def, context=ir.Context.current)
 
     if len(op_configs) != 1:
       # TODO: Support composite ops.
@@ -96,7 +97,7 @@ class DefinedOpCallable:
         return emit_named_structured_op(
             op_config.structured_op,
             self.op_name,
-            self.model.metadata.cpp_class_name,
+            self.op_def.metadata.cpp_class_name,
             *in_values,
             outs=out_values,
             **kwargs)
@@ -120,7 +121,7 @@ def linalg_structured_op(dsl_func=None,
     # Camel case it.
     op_class_name = f"{''.join(x.title() for x in op_name.split('_'))}Op"
 
-  tc_model = LinalgOpDef(
+  op_def = LinalgOpDef(
       name=op_name, cpp_class_name=op_class_name, doc=inspect.getdoc(dsl_func))
 
   # Extract arguments and TensorDefs from the signature.
@@ -128,31 +129,41 @@ def linalg_structured_op(dsl_func=None,
   sig = inspect.signature(dsl_func)
   for param_name, param in sig.parameters.items():
     param_default = param.default
-    if isinstance(param_default, (TensorDef, ScalarDef, AttributeDef)):
-      tc_model.add_operand(param_name, param_default.operand_def)
+    if isinstance(param_default,
+                  (TensorDef, ScalarDef, IndexAttrDef, UnaryFnAttrDef,
+                   BinaryFnAttrDef, TypeFnAttrDef)):
+      op_def.add_operand(param_name, param_default.operand_def)
     else:
       raise ValueError(
           f"@linalg_structured_op function parameters must be defaulted as "
-          f"TensorDef(...), ScalarDef(...), or AttributeDef(...): "
+          f"TensorDef(...), ScalarDef(...), or IndexAttrDef(...): "
           f"Found {param_name}: {param_default}")
     dsl_func_args.append(param_default)
 
-  # Invoke the DSL func to finish populating the model.
-  with bind_op_def(tc_model):
+  # Invoke the DSL func to finish populating the op definition.
+  with bind_op_def(op_def):
     dsl_func(*dsl_func_args)
 
   # TODO: The returned callable should be an IR emitter but that is not
   # upstreamed yet.
-  return DefinedOpCallable(op_name, tc_model)
-
-
-def implements(*interfaces: OpInterfaceDef):
-  current_op_def().metadata.implements.extend(interfaces)
+  return DefinedOpCallable(op_name, op_def)
 
 
 def domain(*dimensions: DimDef):
-  if current_op_def().domain:
-    raise ValueError(f"Expected only one set of domain dimensions per operator")
-  if any(not isinstance(dim, DimDef) for dim in dimensions):
+  if any(not isinstance(d, DimDef) for d in dimensions):
     raise ValueError(f"Expected dimensions of type DimDef but got {dimensions}")
   current_op_def().domain.extend(dimensions)
+
+
+def implements(*interfaces: OpInterfaceDef):
+  if any(not isinstance(intr, OpInterfaceDef) for intr in interfaces):
+    raise ValueError(
+        f"Expected interfaces of type OpInterfaceDef but got {interfaces}")
+  current_op_def().metadata.implements.extend(interfaces)
+
+
+def defines(*definitions: OpDefinitionDef):
+  if any(not isinstance(defi, OpDefinitionDef) for defi in definitions):
+    raise ValueError(
+        f"Expected definitions of type OpDefinitionDef but got {definitions}")
+  current_op_def().metadata.defines.extend(definitions)

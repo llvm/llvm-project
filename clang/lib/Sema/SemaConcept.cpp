@@ -18,7 +18,6 @@
 #include "clang/Sema/Template.h"
 #include "clang/Sema/Overload.h"
 #include "clang/Sema/Initialization.h"
-#include "clang/Sema/SemaInternal.h"
 #include "clang/AST/ExprConcepts.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/OperatorPrecedence.h"
@@ -408,6 +407,52 @@ bool Sema::EnsureTemplateArgumentListConstraints(
     return true;
   }
   return false;
+}
+
+bool Sema::CheckInstantiatedFunctionTemplateConstraints(
+    SourceLocation PointOfInstantiation, FunctionDecl *Decl,
+    ArrayRef<TemplateArgument> TemplateArgs,
+    ConstraintSatisfaction &Satisfaction) {
+  // In most cases we're not going to have constraints, so check for that first.
+  FunctionTemplateDecl *Template = Decl->getPrimaryTemplate();
+  // Note - code synthesis context for the constraints check is created
+  // inside CheckConstraintsSatisfaction.
+  SmallVector<const Expr *, 3> TemplateAC;
+  Template->getAssociatedConstraints(TemplateAC);
+  if (TemplateAC.empty()) {
+    Satisfaction.IsSatisfied = true;
+    return false;
+  }
+
+  // Enter the scope of this instantiation. We don't use
+  // PushDeclContext because we don't have a scope.
+  Sema::ContextRAII savedContext(*this, Decl);
+  LocalInstantiationScope Scope(*this);
+
+  // If this is not an explicit specialization - we need to get the instantiated
+  // version of the template arguments and add them to scope for the
+  // substitution.
+  if (Decl->isTemplateInstantiation()) {
+    InstantiatingTemplate Inst(*this, Decl->getPointOfInstantiation(),
+        InstantiatingTemplate::ConstraintsCheck{}, Decl->getPrimaryTemplate(),
+        TemplateArgs, SourceRange());
+    if (Inst.isInvalid())
+      return true;
+    MultiLevelTemplateArgumentList MLTAL(
+        *Decl->getTemplateSpecializationArgs());
+    if (addInstantiatedParametersToScope(
+            Decl, Decl->getPrimaryTemplate()->getTemplatedDecl(), Scope, MLTAL))
+      return true;
+  }
+  Qualifiers ThisQuals;
+  CXXRecordDecl *Record = nullptr;
+  if (auto *Method = dyn_cast<CXXMethodDecl>(Decl)) {
+    ThisQuals = Method->getMethodQualifiers();
+    Record = Method->getParent();
+  }
+  CXXThisScopeRAII ThisScope(*this, Record, ThisQuals, Record != nullptr);
+  return CheckConstraintSatisfaction(Template, TemplateAC, TemplateArgs,
+                                     PointOfInstantiation, Satisfaction);
 }
 
 static void diagnoseUnsatisfiedRequirement(Sema &S,
@@ -1058,7 +1103,7 @@ concepts::ExprRequirement::ExprRequirement(
 
 concepts::ExprRequirement::ReturnTypeRequirement::
 ReturnTypeRequirement(TemplateParameterList *TPL) :
-    TypeConstraintInfo(TPL, 0) {
+    TypeConstraintInfo(TPL, false) {
   assert(TPL->size() == 1);
   const TypeConstraint *TC =
       cast<TemplateTypeParmDecl>(TPL->getParam(0))->getTypeConstraint();
@@ -1070,7 +1115,7 @@ ReturnTypeRequirement(TemplateParameterList *TPL) :
       Constraint->getTemplateArgsAsWritten() &&
       TemplateSpecializationType::anyInstantiationDependentTemplateArguments(
           Constraint->getTemplateArgsAsWritten()->arguments().drop_front(1));
-  TypeConstraintInfo.setInt(Dependent ? 1 : 0);
+  TypeConstraintInfo.setInt(Dependent ? true : false);
 }
 
 concepts::TypeRequirement::TypeRequirement(TypeSourceInfo *T) :

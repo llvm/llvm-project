@@ -948,6 +948,32 @@ Semantics:
 The `coro.size` intrinsic is lowered to a constant representing the size of
 the coroutine frame.
 
+.. _coro.align:
+
+'llvm.coro.align' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+::
+
+    declare i32 @llvm.coro.align.i32()
+    declare i64 @llvm.coro.align.i64()
+
+Overview:
+"""""""""
+
+The '``llvm.coro.align``' intrinsic returns the alignment of a `coroutine frame`_.
+This is only supported for switched-resume coroutines.
+
+Arguments:
+""""""""""
+
+None
+
+Semantics:
+""""""""""
+
+The `coro.align` intrinsic is lowered to a constant representing the alignment of
+the coroutine frame.
+
 .. _coro.begin:
 
 'llvm.coro.begin' Intrinsic
@@ -1175,6 +1201,8 @@ duplicated.
 
 A frontend should emit exactly one `coro.id` intrinsic per coroutine.
 
+A frontend should emit function attribute `"coroutine.presplit"` for the coroutine.
+
 .. _coro.id.async:
 
 'llvm.coro.id.async' Intrinsic
@@ -1213,6 +1241,8 @@ Semantics:
 """"""""""
 
 A frontend should emit exactly one `coro.id.async` intrinsic per coroutine.
+
+A frontend should emit function attribute `"coroutine.presplit"` for the coroutine.
 
 .. _coro.id.retcon:
 
@@ -1266,6 +1296,11 @@ or throwing an exception.  It must take an integer and return a pointer.
 The sixth argument must be a reference to a global function that will
 be used to deallocate memory.  It must take a pointer and return ``void``.
 
+Semantics:
+""""""""""
+
+A frontend should emit function attribute `"coroutine.presplit"` for the coroutine.
+
 'llvm.coro.id.retcon.once' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ::
@@ -1286,6 +1321,11 @@ Arguments:
 As for ``llvm.core.id.retcon``, except that the return type of the
 continuation prototype must be `void` instead of matching the
 coroutine's return type.
+
+Semantics:
+""""""""""
+
+A frontend should emit function attribute `"coroutine.presplit"` for the coroutine.
 
 .. _coro.end:
 
@@ -1377,17 +1417,23 @@ The `CoroSplit` pass, if the funclet bundle is present, will insert
 ``cleanupret from %tok unwind to caller`` before
 the `coro.end`_ intrinsic and will remove the rest of the block.
 
+In the unwind path (when the argument is `true`), `coro.end` will mark the coroutine
+as done, making it undefined behavior to resume the coroutine again and causing 
+`llvm.coro.done` to return `true`.  This is not necessary in the normal path because
+the coroutine will already be marked as done by the final suspend.
+
 The following table summarizes the handling of `coro.end`_ intrinsic.
 
-+--------------------------+-------------------+-------------------------------+
-|                          | In Start Function | In Resume/Destroy Functions   |
-+--------------------------+-------------------+-------------------------------+
-|unwind=false              | nothing           |``ret void``                   |
-+------------+-------------+-------------------+-------------------------------+
-|            | WinEH       | nothing           |``cleanupret unwind to caller``|
-|unwind=true +-------------+-------------------+-------------------------------+
-|            | Landingpad  | nothing           | nothing                       |
-+------------+-------------+-------------------+-------------------------------+
++--------------------------+------------------------+---------------------------------+
+|                          | In Start Function      | In Resume/Destroy Functions     |
++--------------------------+------------------------+---------------------------------+
+|unwind=false              | nothing                |``ret void``                     |
++------------+-------------+------------------------+---------------------------------+
+|            | WinEH       | mark coroutine as done || ``cleanupret unwind to caller``|
+|            |             |                        || mark coroutine done            |
+|unwind=true +-------------+------------------------+---------------------------------+
+|            | Landingpad  | mark coroutine as done | mark coroutine done             |
++------------+-------------+------------------------+---------------------------------+
 
 
 'llvm.coro.end.async' Intrinsic
@@ -1643,89 +1689,6 @@ a call to ``llvm.coro.suspend.retcon`` after resuming abnormally.
 
 In a yield-once coroutine, it is undefined behavior if the coroutine
 executes a call to ``llvm.coro.suspend.retcon`` after resuming in any way.
-
-.. _coro.param:
-
-'llvm.coro.param' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-::
-
-  declare i1 @llvm.coro.param(i8* <original>, i8* <copy>)
-
-Overview:
-"""""""""
-
-The '``llvm.coro.param``' is used by a frontend to mark up the code used to
-construct and destruct copies of the parameters. If the optimizer discovers that
-a particular parameter copy is not used after any suspends, it can remove the
-construction and destruction of the copy by replacing corresponding coro.param
-with `i1 false` and replacing any use of the `copy` with the `original`.
-
-Arguments:
-""""""""""
-
-The first argument points to an `alloca` storing the value of a parameter to a
-coroutine.
-
-The second argument points to an `alloca` storing the value of the copy of that
-parameter.
-
-Semantics:
-""""""""""
-
-The optimizer is free to always replace this intrinsic with `i1 true`.
-
-The optimizer is also allowed to replace it with `i1 false` provided that the
-parameter copy is only used prior to control flow reaching any of the suspend
-points. The code that would be DCE'd if the `coro.param` is replaced with
-`i1 false` is not considered to be a use of the parameter copy.
-
-The frontend can emit this intrinsic if its language rules allow for this
-optimization.
-
-Example:
-""""""""
-Consider the following example. A coroutine takes two parameters `a` and `b`
-that has a destructor and a move constructor.
-
-.. code-block:: c++
-
-  struct A { ~A(); A(A&&); bool foo(); void bar(); };
-
-  task<int> f(A a, A b) {
-    if (a.foo())
-      return 42;
-
-    a.bar();
-    co_await read_async(); // introduces suspend point
-    b.bar();
-  }
-
-Note that, uses of `b` is used after a suspend point and thus must be copied
-into a coroutine frame, whereas `a` does not have to, since it never used
-after suspend.
-
-A frontend can create parameter copies for `a` and `b` as follows:
-
-.. code-block:: text
-
-  task<int> f(A a', A b') {
-    a = alloca A;
-    b = alloca A;
-    // move parameters to its copies
-    if (coro.param(a', a)) A::A(a, A&& a');
-    if (coro.param(b', b)) A::A(b, A&& b');
-    ...
-    // destroy parameters copies
-    if (coro.param(a', a)) A::~A(a);
-    if (coro.param(b', b)) A::~A(b);
-  }
-
-The optimizer can replace coro.param(a',a) with `i1 false` and replace all uses
-of `a` with `a'`, since it is not used after suspend.
-
-The optimizer must replace coro.param(b', b) with `i1 true`, since `b` is used
-after suspend and therefore, it has to reside in the coroutine frame.
 
 Coroutine Transformation Passes
 ===============================

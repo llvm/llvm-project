@@ -359,22 +359,34 @@ void test() {
   // expected-note@-1 {{is not a constant expression}}
   { A k = to_lvalue_ref(A()); } // expected-error {{is not a constant expression}}
   // expected-note@-1 {{is not a constant expression}} expected-note@-1 {{temporary created here}}
-  { A k = to_lvalue_ref(A().ret_a()); } // expected-error {{is not a constant expression}}
-  // expected-note@-1 {{is not a constant expression}} expected-note@-1 {{temporary created here}}
+  { A k = to_lvalue_ref(A().ret_a()); }
+  // expected-error@-1 {{'alloc::A::ret_a' is not a constant expression}}
+  // expected-note@-2 {{heap-allocated object is not a constant expression}}
+  // expected-error@-3 {{'alloc::to_lvalue_ref' is not a constant expression}}
+  // expected-note@-4 {{reference to temporary is not a constant expression}}
+  // expected-note@-5 {{temporary created here}}
   { int k = A().ret_a().ret_i(); }
+  // expected-error@-1 {{'alloc::A::ret_a' is not a constant expression}}
+  // expected-note@-2 {{heap-allocated object is not a constant expression}}
   { int k = by_value_a(A()); }
   { int k = const_a_ref(A()); }
   { int k = const_a_ref(a); }
   { int k = rvalue_ref(A()); }
   { int k = rvalue_ref(std::move(a)); }
   { int k = const_a_ref(A().ret_a()); }
+  // expected-error@-1 {{'alloc::A::ret_a' is not a constant expression}}
+  // expected-note@-2 {{is not a constant expression}}
   { int k = const_a_ref(to_lvalue_ref(A().ret_a())); }
+  // expected-error@-1 {{'alloc::A::ret_a' is not a constant expression}}
+  // expected-note@-2 {{is not a constant expression}}
   { int k = const_a_ref(to_lvalue_ref(std::move(a))); }
   { int k = by_value_a(A().ret_a()); }
   { int k = by_value_a(to_lvalue_ref(static_cast<const A&&>(a))); }
   { int k = (A().ret_a(), A().ret_i()); }// expected-error {{is not a constant expression}}
   // expected-note@-1 {{is not a constant expression}}
   { int k = (const_a_ref(A().ret_a()), A().ret_i()); }
+  // expected-error@-1 {{'alloc::A::ret_a' is not a constant expression}}
+  // expected-note@-2 {{is not a constant expression}}
 }
 
 }
@@ -613,6 +625,32 @@ static_assert(is_same<long, T>::value);
 
 } // namespace unevaluated
 
+namespace value_dependent {
+
+consteval int foo(int x) {
+  return x;
+}
+
+template <int X> constexpr int bar() {
+  // Previously this call was rejected as value-dependent constant expressions
+  // can't be immediately evaluated. Now we show that we don't immediately
+  // evaluate them until they are instantiated.
+  return foo(X);
+}
+
+template <typename T> constexpr int baz() {
+  constexpr int t = sizeof(T);
+  // Previously this call was rejected as `t` is value-dependent and its value
+  // is unknown until the function is instantiated. Now we show that we don't
+  // reject such calls.
+  return foo(t);
+}
+
+static_assert(bar<15>() == 15);
+static_assert(baz<int>() == sizeof(int));
+
+} // namespace value_dependent
+
 namespace PR50779 {
 struct derp {
   int b = 0;
@@ -663,3 +701,47 @@ struct A {
   }
 };
 } // PR48235
+
+namespace NamespaceScopeConsteval {
+struct S {
+  int Val; // expected-note {{subobject declared here}}
+  consteval S() {}
+};
+
+S s1; // expected-error {{call to consteval function 'NamespaceScopeConsteval::S::S' is not a constant expression}} \
+         expected-note {{subobject of type 'int' is not initialized}}
+
+template <typename Ty>
+struct T {
+  Ty Val; // expected-note {{subobject declared here}}
+  consteval T() {}
+};
+
+T<int> t; // expected-error {{call to consteval function 'NamespaceScopeConsteval::T<int>::T' is not a constant expression}} \
+             expected-note {{subobject of type 'int' is not initialized}}
+
+} // namespace NamespaceScopeConsteval
+
+namespace Issue54578 {
+// We expect the user-defined literal to be resovled entirely at compile time
+// despite being instantiated through a template.
+inline consteval unsigned char operator""_UC(const unsigned long long n) {
+  return static_cast<unsigned char>(n);
+}
+
+inline constexpr char f1(const auto octet) {
+  return 4_UC;
+}
+
+template <typename Ty>
+inline constexpr char f2(const Ty octet) {
+  return 4_UC;
+}
+
+void test() {
+  static_assert(f1('a') == 4);
+  static_assert(f2('a') == 4);
+  constexpr int c = f1('a') + f2('a');
+  static_assert(c == 8);
+}
+}

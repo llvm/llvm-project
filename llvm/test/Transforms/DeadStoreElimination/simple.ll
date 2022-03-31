@@ -8,6 +8,7 @@ declare void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* nocapture, i8, i
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
 declare void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32) nounwind
 declare void @llvm.init.trampoline(i8*, i8*, i8*)
+declare void @llvm.matrix.column.major.store(<6 x float>, float*, i64, i1, i32, i32)
 
 define void @test1(i32* %Q, i32* %P) {
 ; CHECK-LABEL: @test1(
@@ -193,48 +194,78 @@ define void @test11() {
   ret void
 }
 
+; Specialized store intrinsics should be removed if dead.
+define void @test_matrix_store(i64 %stride) {
+; CHECK-LABEL: @test_matrix_store(
+; CHECK-NEXT:    ret void
+;
+  %a = alloca [6 x float]
+  %cast = bitcast [6 x float]* %a to float*
+  call void @llvm.matrix.column.major.store(<6 x float> zeroinitializer, float* %cast, i64 %stride, i1 false, i32 3, i32 2)
+  ret void
+}
+
 ; %P doesn't escape, the DEAD instructions should be removed.
-declare void @test13f()
-define i32* @test13() {
-; CHECK-LABEL: @test13(
-; CHECK-NEXT:    [[PTR:%.*]] = tail call i8* @malloc(i32 4)
+declare void @may_unwind()
+define i32* @test_malloc_no_escape_before_return() {
+; CHECK-LABEL: @test_malloc_no_escape_before_return(
+; CHECK-NEXT:    [[PTR:%.*]] = tail call i8* @malloc(i64 4)
 ; CHECK-NEXT:    [[P:%.*]] = bitcast i8* [[PTR]] to i32*
-; CHECK-NEXT:    call void @test13f()
+; CHECK-NEXT:    call void @may_unwind()
 ; CHECK-NEXT:    store i32 0, i32* [[P]], align 4
 ; CHECK-NEXT:    ret i32* [[P]]
 ;
-  %ptr = tail call i8* @malloc(i32 4)
+  %ptr = tail call i8* @malloc(i64 4)
   %P = bitcast i8* %ptr to i32*
   %DEAD = load i32, i32* %P
   %DEAD2 = add i32 %DEAD, 1
   store i32 %DEAD2, i32* %P
-  call void @test13f( )
+  call void @may_unwind()
+  store i32 0, i32* %P
+  ret i32* %P
+}
+
+define i32* @test_custom_malloc_no_escape_before_return() {
+; CHECK-LABEL: @test_custom_malloc_no_escape_before_return(
+; CHECK-NEXT:    [[PTR:%.*]] = tail call i8* @custom_malloc(i32 4)
+; CHECK-NEXT:    [[P:%.*]] = bitcast i8* [[PTR]] to i32*
+; CHECK-NEXT:    call void @may_unwind()
+; CHECK-NEXT:    store i32 0, i32* [[P]], align 4
+; CHECK-NEXT:    ret i32* [[P]]
+;
+  %ptr = tail call i8* @custom_malloc(i32 4)
+  %P = bitcast i8* %ptr to i32*
+  %DEAD = load i32, i32* %P
+  %DEAD2 = add i32 %DEAD, 1
+  store i32 %DEAD2, i32* %P
+  call void @may_unwind()
   store i32 0, i32* %P
   ret i32* %P
 }
 
 define i32 addrspace(1)* @test13_addrspacecast() {
 ; CHECK-LABEL: @test13_addrspacecast(
-; CHECK-NEXT:    [[P:%.*]] = tail call i8* @malloc(i32 4)
+; CHECK-NEXT:    [[P:%.*]] = tail call i8* @malloc(i64 4)
 ; CHECK-NEXT:    [[P_BC:%.*]] = bitcast i8* [[P]] to i32*
 ; CHECK-NEXT:    [[P:%.*]] = addrspacecast i32* [[P_BC]] to i32 addrspace(1)*
-; CHECK-NEXT:    call void @test13f()
+; CHECK-NEXT:    call void @may_unwind()
 ; CHECK-NEXT:    store i32 0, i32 addrspace(1)* [[P]], align 4
 ; CHECK-NEXT:    ret i32 addrspace(1)* [[P]]
 ;
-  %p = tail call i8* @malloc(i32 4)
+  %p = tail call i8* @malloc(i64 4)
   %p.bc = bitcast i8* %p to i32*
   %P = addrspacecast i32* %p.bc to i32 addrspace(1)*
   %DEAD = load i32, i32 addrspace(1)* %P
   %DEAD2 = add i32 %DEAD, 1
   store i32 %DEAD2, i32 addrspace(1)* %P
-  call void @test13f( )
+  call void @may_unwind()
   store i32 0, i32 addrspace(1)* %P
   ret i32 addrspace(1)* %P
 }
 
 
-declare noalias i8* @malloc(i32) willreturn
+declare noalias i8* @malloc(i64) willreturn
+declare noalias i8* @custom_malloc(i32) willreturn
 declare noalias i8* @calloc(i32, i32) willreturn
 
 define void @test14(i32* %Q) {
@@ -267,11 +298,21 @@ bb:
 
 }
 
-define void @test20() {
-; CHECK-LABEL: @test20(
+define void @malloc_no_escape() {
+; CHECK-LABEL: @malloc_no_escape(
 ; CHECK-NEXT:    ret void
 ;
-  %m = call i8* @malloc(i32 24)
+  %m = call i8* @malloc(i64 24)
+  store i8 0, i8* %m
+  ret void
+}
+
+define void @custom_malloc_no_escape() {
+; CHECK-LABEL: @custom_malloc_no_escape(
+; CHECK-NEXT:    [[M:%.*]] = call i8* @custom_malloc(i32 24)
+; CHECK-NEXT:    ret void
+;
+  %m = call i8* @custom_malloc(i32 24)
   store i8 0, i8* %m
   ret void
 }
@@ -312,7 +353,7 @@ define noalias i8* @test23() nounwind uwtable ssp {
 ; CHECK-NEXT:    store i8 97, i8* [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [2 x i8], [2 x i8]* [[X]], i64 0, i64 1
 ; CHECK-NEXT:    store i8 0, i8* [[ARRAYIDX1]], align 1
-; CHECK-NEXT:    [[CALL:%.*]] = call i8* @strdup(i8* [[ARRAYIDX]]) [[ATTR3:#.*]]
+; CHECK-NEXT:    [[CALL:%.*]] = call i8* @strdup(i8* [[ARRAYIDX]]) #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    ret i8* [[CALL]]
 ;
   %x = alloca [2 x i8], align 1
@@ -350,7 +391,7 @@ define i8* @test25(i8* %p) nounwind {
 ; CHECK-NEXT:    [[P_4:%.*]] = getelementptr i8, i8* [[P:%.*]], i64 4
 ; CHECK-NEXT:    [[TMP:%.*]] = load i8, i8* [[P_4]], align 1
 ; CHECK-NEXT:    store i8 0, i8* [[P_4]], align 1
-; CHECK-NEXT:    [[Q:%.*]] = call i8* @strdup(i8* [[P]]) [[ATTR6:#.*]]
+; CHECK-NEXT:    [[Q:%.*]] = call i8* @strdup(i8* [[P]]) #[[ATTR10:[0-9]+]]
 ; CHECK-NEXT:    store i8 [[TMP]], i8* [[P_4]], align 1
 ; CHECK-NEXT:    ret i8* [[Q]]
 ;
@@ -481,6 +522,20 @@ bb2:
 ; may read %p while unwinding.
 define void @test34(i32* noalias %p) {
 ; CHECK-LABEL: @test34(
+; CHECK-NEXT:    store i32 1, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    call void @unknown_func()
+; CHECK-NEXT:    store i32 0, i32* [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+  store i32 1, i32* %p
+  call void @unknown_func()
+  store i32 0, i32* %p
+  ret void
+}
+; Same as previous case, but with an sret argument.
+; TODO: The first store could be eliminated if sret is not visible on unwind.
+define void @test34_sret(i32* noalias sret(i32) %p) {
+; CHECK-LABEL: @test34_sret(
 ; CHECK-NEXT:    store i32 1, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    call void @unknown_func()
 ; CHECK-NEXT:    store i32 0, i32* [[P]], align 4

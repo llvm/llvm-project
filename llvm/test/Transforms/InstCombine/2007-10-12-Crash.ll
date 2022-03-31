@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -disable-output
+; RUN: opt < %s -passes=instcombine -disable-output
 
 	%struct.Ray = type { %struct.Vec, %struct.Vec }
 	%struct.Scene = type { i32 (...)** }

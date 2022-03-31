@@ -30,12 +30,10 @@
 #include "deleter_types.h"
 #include "unique_ptr_test_helper.h"
 
-#if defined(_LIBCPP_VERSION) && TEST_STD_VER >= 11
-_LIBCPP_SAFE_STATIC std::unique_ptr<int> global_static_unique_ptr_single;
-_LIBCPP_SAFE_STATIC std::unique_ptr<int[]> global_static_unique_ptr_runtime;
-#endif
-
 #if TEST_STD_VER >= 11
+TEST_CONSTINIT std::unique_ptr<int> global_static_unique_ptr_single;
+TEST_CONSTINIT std::unique_ptr<int[]> global_static_unique_ptr_runtime;
+
 struct NonDefaultDeleter {
   NonDefaultDeleter() = delete;
   void operator()(void*) const {}

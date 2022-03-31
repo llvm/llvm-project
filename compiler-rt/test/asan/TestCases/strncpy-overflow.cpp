@@ -8,9 +8,23 @@
 
 #include <string.h>
 #include <stdlib.h>
+
+// We need a way to prevent the optimize from eliminating the
+// strncpy below (which otherwises writes to dead storage).  We
+// need the read to be out-of-line to prevent memory forwarding
+// from making the memory dead again.
+int sink_memory(int N, char *p) __attribute__((noinline));
+int sink_memory(int N, char *p) {
+  int sum = 0;
+  for (int i = 0; i < N; i++)
+    sum += p[i];
+  return sum;
+}
+
 int main(int argc, char **argv) {
   char *hello = (char*)malloc(6);
   strcpy(hello, "hello");
+  int rval = sink_memory(6, hello);
   char *short_buffer = (char*)malloc(9);
   strncpy(short_buffer, hello, 10);  // BOOM
   // CHECK: {{WRITE of size 10 at 0x.* thread T0}}
@@ -20,5 +34,5 @@ int main(int argc, char **argv) {
   // CHECK: {{allocated by thread T0 here:}}
   // CHECK: {{    #0 0x.* in .*malloc}}
   // CHECK: {{    #1 0x.* in main .*strncpy-overflow.cpp:}}[[@LINE-8]]
-  return short_buffer[8];
+  return rval + sink_memory(9, short_buffer);
 }

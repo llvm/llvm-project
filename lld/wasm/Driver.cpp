@@ -81,18 +81,15 @@ private:
 };
 } // anonymous namespace
 
-bool link(ArrayRef<const char *> args, bool canExitEarly, raw_ostream &stdoutOS,
-          raw_ostream &stderrOS) {
-  lld::stdoutOS = &stdoutOS;
-  lld::stderrOS = &stderrOS;
+bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
+          llvm::raw_ostream &stderrOS, bool exitEarly, bool disableOutput) {
+  // This driver-specific context will be freed later by lldMain().
+  auto *ctx = new CommonLinkerContext;
 
-  errorHandler().cleanupCallback = []() { freeArena(); };
-
-  errorHandler().logName = args::getFilenameWithoutExe(args[0]);
-  errorHandler().errorLimitExceededMsg =
-      "too many errors emitted, stopping now (use "
-      "-error-limit=0 to see all errors)";
-  stderrOS.enable_colors(stderrOS.has_colors());
+  ctx->e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
+  ctx->e.logName = args::getFilenameWithoutExe(args[0]);
+  ctx->e.errorLimitExceededMsg = "too many errors emitted, stopping now (use "
+                                 "-error-limit=0 to see all errors)";
 
   config = make<Configuration>();
   symtab = make<SymbolTable>();
@@ -100,13 +97,7 @@ bool link(ArrayRef<const char *> args, bool canExitEarly, raw_ostream &stdoutOS,
   initLLVM();
   LinkerDriver().linkerMain(args);
 
-  // Exit immediately if we don't need to return to the caller.
-  // This saves time because the overhead of calling destructors
-  // for all globally-allocated objects is not negligible.
-  if (canExitEarly)
-    exitLld(errorCount() ? 1 : 0);
-
-  return !errorCount();
+  return errorCount() == 0;
 }
 
 // Create prefix string literals used in Options.td
@@ -189,7 +180,7 @@ opt::InputArgList WasmOptTable::parse(ArrayRef<const char *> argv) {
 
   // Expand response files (arguments in the form of @<filename>)
   // and then parse the argument again.
-  cl::ExpandResponseFiles(saver, getQuotingStyle(args), vec);
+  cl::ExpandResponseFiles(saver(), getQuotingStyle(args), vec);
   args = this->ParseArgs(vec, missingIndex, missingCount);
 
   handleColorDiagnostics(args);
@@ -344,6 +335,8 @@ static UnresolvedPolicy getUnresolvedSymbolPolicy(opt::InputArgList &args) {
     StringRef s = arg->getValue();
     if (s == "ignore-all")
       return UnresolvedPolicy::Ignore;
+    if (s == "import-dynamic")
+      return UnresolvedPolicy::ImportDynamic;
     if (s == "report-all")
       return errorOrWarn;
     error("unknown --unresolved-symbols value: " + s);
@@ -366,8 +359,6 @@ static void readConfigs(opt::InputArgList &args) {
   config->exportAll = args.hasArg(OPT_export_all);
   config->exportTable = args.hasArg(OPT_export_table);
   config->growableTable = args.hasArg(OPT_growable_table);
-  errorHandler().fatalWarnings =
-      args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false);
   config->importMemory = args.hasArg(OPT_import_memory);
   config->sharedMemory = args.hasArg(OPT_shared_memory);
   config->importTable = args.hasArg(OPT_import_table);
@@ -483,7 +474,6 @@ static void setConfigs() {
   if (config->shared) {
     config->importMemory = true;
     config->importUndefined = true;
-    config->unresolvedSymbols = UnresolvedPolicy::Ignore;
   }
 }
 
@@ -539,6 +529,11 @@ static void checkOptions(opt::InputArgList &args) {
     // -pie will change meaning when Module Linking is implemented.
     if (config->pie) {
       warn("creating PIEs, with -pie, is not yet stable");
+    }
+
+    if (config->unresolvedSymbols == UnresolvedPolicy::ImportDynamic) {
+      warn("dynamic imports are not yet stable "
+           "(--unresolved-symbols=import-dynamic)");
     }
   }
 
@@ -760,8 +755,8 @@ static std::vector<WrappedSymbol> addWrappedSymbols(opt::InputArgList &args) {
     if (!sym)
       continue;
 
-    Symbol *real = addUndefined(saver.save("__real_" + name));
-    Symbol *wrap = addUndefined(saver.save("__wrap_" + name));
+    Symbol *real = addUndefined(saver().save("__real_" + name));
+    Symbol *wrap = addUndefined(saver().save("__wrap_" + name));
     v.push_back({sym, real, wrap});
 
     // We want to tell LTO not to inline symbols to be overwritten
@@ -818,9 +813,27 @@ static void splitSections() {
   });
 }
 
+static bool isKnownZFlag(StringRef s) {
+  // For now, we only support a very limited set of -z flags
+  return s.startswith("stack-size=");
+}
+
+// Report a warning for an unknown -z option.
+static void checkZOptions(opt::InputArgList &args) {
+  for (auto *arg : args.filtered(OPT_z))
+    if (!isKnownZFlag(arg->getValue()))
+      warn("unknown -z value: " + StringRef(arg->getValue()));
+}
+
 void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   WasmOptTable parser;
   opt::InputArgList args = parser.parse(argsArr.slice(1));
+
+  // Interpret these flags early because error()/warn() depend on them.
+  errorHandler().errorLimit = args::getInteger(args, OPT_error_limit, 20);
+  errorHandler().fatalWarnings =
+      args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false);
+  checkZOptions(args);
 
   // Handle --help
   if (args.hasArg(OPT_help)) {
@@ -857,8 +870,6 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     v.push_back(arg->getValue());
   cl::ResetAllOptionOccurrences();
   cl::ParseCommandLineOptions(v.size(), v.data());
-
-  errorHandler().errorLimit = args::getInteger(args, OPT_error_limit, 20);
 
   readConfigs(args);
 

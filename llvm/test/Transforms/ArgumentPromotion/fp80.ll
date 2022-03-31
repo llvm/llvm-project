@@ -13,14 +13,19 @@ target triple = "x86_64-unknown-linux-gnu"
 @a = internal global %struct.Foo { i32 1, i64 2 }, align 8
 
 define void @run() {
-; CHECK-LABEL: define {{[^@]+}}@run()
+; CHECK-LABEL: define {{[^@]+}}@run() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call i8 @UseLongDoubleUnsafely(%union.u* byval(%union.u) align 16 bitcast (%struct.s* @b to %union.u*))
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast %union.u* bitcast (%struct.s* @b to %union.u*) to i8*
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, i8* [[TMP0]], i64 10
+; CHECK-NEXT:    [[DOTVAL:%.*]] = load i8, i8* [[TMP1]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call i8 @UseLongDoubleUnsafely(i8 [[DOTVAL]])
 ; CHECK-NEXT:    [[DOT0:%.*]] = getelementptr [[UNION_U:%.*]], %union.u* bitcast (%struct.s* @b to %union.u*), i32 0, i32 0
-; CHECK-NEXT:    [[DOT0_VAL:%.*]] = load x86_fp80, x86_fp80* [[DOT0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call x86_fp80 @UseLongDoubleSafely(x86_fp80 [[DOT0_VAL]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @AccessPaddingOfStruct(%struct.Foo* byval(%struct.Foo) @a)
-; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @CaptureAStruct(%struct.Foo* byval(%struct.Foo) @a)
+; CHECK-NEXT:    [[DOT0_VAL:%.*]] = load x86_fp80, x86_fp80* [[DOT0]], align 16
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call x86_fp80 @UseLongDoubleSafely(x86_fp80 [[DOT0_VAL]])
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast %struct.Foo* @a to i64*
+; CHECK-NEXT:    [[A_VAL:%.*]] = load i64, i64* [[TMP4]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @AccessPaddingOfStruct(i64 [[A_VAL]])
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @CaptureAStruct(%struct.Foo* byval([[STRUCT_FOO:%.*]]) @a)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -33,12 +38,9 @@ entry:
 
 define internal i8 @UseLongDoubleUnsafely(%union.u* byval(%union.u) align 16 %arg) {
 ; CHECK-LABEL: define {{[^@]+}}@UseLongDoubleUnsafely
-; CHECK-SAME: (%union.u* byval(%union.u) align 16 [[ARG:%.*]])
+; CHECK-SAME: (i8 [[ARG_10_VAL:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast %union.u* [[ARG]] to %struct.s*
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], %struct.s* [[BITCAST]], i64 0, i32 2
-; CHECK-NEXT:    [[RESULT:%.*]] = load i8, i8* [[GEP]]
-; CHECK-NEXT:    ret i8 [[RESULT]]
+; CHECK-NEXT:    ret i8 [[ARG_10_VAL]]
 ;
 entry:
   %bitcast = bitcast %union.u* %arg to %struct.s*
@@ -49,12 +51,12 @@ entry:
 
 define internal x86_fp80 @UseLongDoubleSafely(%union.u* byval(%union.u) align 16 %arg) {
 ; CHECK-LABEL: define {{[^@]+}}@UseLongDoubleSafely
-; CHECK-SAME: (x86_fp80 [[ARG_0:%.*]])
+; CHECK-SAME: (x86_fp80 [[ARG_0:%.*]]) {
 ; CHECK-NEXT:    [[ARG:%.*]] = alloca [[UNION_U:%.*]], align 16
 ; CHECK-NEXT:    [[DOT0:%.*]] = getelementptr [[UNION_U]], %union.u* [[ARG]], i32 0, i32 0
-; CHECK-NEXT:    store x86_fp80 [[ARG_0]], x86_fp80* [[DOT0]]
+; CHECK-NEXT:    store x86_fp80 [[ARG_0]], x86_fp80* [[DOT0]], align 16
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [[UNION_U]], %union.u* [[ARG]], i64 0, i32 0
-; CHECK-NEXT:    [[FP80:%.*]] = load x86_fp80, x86_fp80* [[GEP]]
+; CHECK-NEXT:    [[FP80:%.*]] = load x86_fp80, x86_fp80* [[GEP]], align 16
 ; CHECK-NEXT:    ret x86_fp80 [[FP80]]
 ;
   %gep = getelementptr inbounds %union.u, %union.u* %arg, i64 0, i32 0
@@ -64,10 +66,8 @@ define internal x86_fp80 @UseLongDoubleSafely(%union.u* byval(%union.u) align 16
 
 define internal i64 @AccessPaddingOfStruct(%struct.Foo* byval(%struct.Foo) %a) {
 ; CHECK-LABEL: define {{[^@]+}}@AccessPaddingOfStruct
-; CHECK-SAME: (%struct.Foo* byval(%struct.Foo) [[A:%.*]])
-; CHECK-NEXT:    [[P:%.*]] = bitcast %struct.Foo* [[A]] to i64*
-; CHECK-NEXT:    [[V:%.*]] = load i64, i64* [[P]]
-; CHECK-NEXT:    ret i64 [[V]]
+; CHECK-SAME: (i64 [[A_0_VAL:%.*]]) {
+; CHECK-NEXT:    ret i64 [[A_0_VAL]]
 ;
   %p = bitcast %struct.Foo* %a to i64*
   %v = load i64, i64* %p
@@ -76,15 +76,15 @@ define internal i64 @AccessPaddingOfStruct(%struct.Foo* byval(%struct.Foo) %a) {
 
 define internal i64 @CaptureAStruct(%struct.Foo* byval(%struct.Foo) %a) {
 ; CHECK-LABEL: define {{[^@]+}}@CaptureAStruct
-; CHECK-SAME: (%struct.Foo* byval(%struct.Foo) [[A:%.*]])
+; CHECK-SAME: (%struct.Foo* byval([[STRUCT_FOO:%.*]]) [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A_PTR:%.*]] = alloca %struct.Foo*
+; CHECK-NEXT:    [[A_PTR:%.*]] = alloca %struct.Foo*, align 8
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi %struct.Foo* [ null, [[ENTRY:%.*]] ], [ [[GEP:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi %struct.Foo* [ [[A]], [[ENTRY]] ], [ [[TMP0]], [[LOOP]] ]
-; CHECK-NEXT:    store %struct.Foo* [[PHI]], %struct.Foo** [[A_PTR]]
-; CHECK-NEXT:    [[GEP]] = getelementptr [[STRUCT_FOO:%.*]], %struct.Foo* [[A]], i64 0
+; CHECK-NEXT:    store %struct.Foo* [[PHI]], %struct.Foo** [[A_PTR]], align 8
+; CHECK-NEXT:    [[GEP]] = getelementptr [[STRUCT_FOO]], %struct.Foo* [[A]], i64 0
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 entry:

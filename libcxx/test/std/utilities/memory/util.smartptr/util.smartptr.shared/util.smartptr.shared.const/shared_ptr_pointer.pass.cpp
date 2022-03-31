@@ -61,6 +61,26 @@ int main(int, char**)
     assert(A::count == 0);
     assert(B::count == 0);
 
+    {
+        std::shared_ptr<A const> pA(new A);
+        assert(pA.use_count() == 1);
+
+        {
+            B const b;
+            std::shared_ptr<B const> pB(pA, &b);
+            assert(A::count == 1);
+            assert(B::count == 1);
+            assert(pA.use_count() == 2);
+            assert(pB.use_count() == 2);
+            assert(pB.get() == &b);
+        }
+        assert(pA.use_count() == 1);
+        assert(A::count == 1);
+        assert(B::count == 0);
+    }
+    assert(A::count == 0);
+    assert(B::count == 0);
+
     int *pi = new int;
     {
       std::shared_ptr<int> p1(nullptr);

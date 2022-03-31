@@ -1,0 +1,14 @@
+# Tests the peephole that adds trap instructions following indirect tail calls.
+
+RUN: %clang %cflags %p/Inputs/tailcall_traps.s -o %t.exe
+RUN: llvm-bolt %t.exe -o %t -peepholes=tailcall-traps \
+RUN:   -print-peepholes -funcs=foo,bar 2>&1 | FileCheck %s
+
+CHECK:  Binary Function "foo"
+CHECK:    jmpl     *%rax # TAILCALL
+CHECK:    ud2
+CHECK:  End of Function "foo"
+
+CHECK:  Binary Function "bar"
+CHECK:    jmp     moo # TAILCALL
+CHECK:  End of Function "bar"

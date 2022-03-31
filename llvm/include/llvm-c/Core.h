@@ -18,6 +18,7 @@
 #include "llvm-c/Deprecated.h"
 #include "llvm-c/ErrorHandling.h"
 #include "llvm-c/ExternC.h"
+
 #include "llvm-c/Types.h"
 
 LLVM_C_EXTERN_C_BEGIN
@@ -1390,9 +1391,9 @@ LLVMBool LLVMIsLiteralStruct(LLVMTypeRef StructTy);
  */
 
 /**
- * Obtain the type of elements within a sequential type.
+ * Obtain the element type of an array or vector type.
  *
- * This works on array, vector, and pointer types.
+ * This currently also works for pointer types, but this usage is deprecated.
  *
  * @see llvm::SequentialType::getElementType()
  */
@@ -2152,13 +2153,18 @@ LLVMValueRef LLVMConstFCmp(LLVMRealPredicate Predicate,
 LLVMValueRef LLVMConstShl(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
 LLVMValueRef LLVMConstLShr(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
 LLVMValueRef LLVMConstAShr(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
-LLVMValueRef LLVMConstGEP(LLVMValueRef ConstantVal,
-                          LLVMValueRef *ConstantIndices, unsigned NumIndices);
+LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMValueRef LLVMConstGEP(LLVMValueRef ConstantVal,
+                              LLVMValueRef *ConstantIndices,
+                              unsigned NumIndices),
+    "Use LLVMConstGEP2 instead to support opaque pointers");
 LLVMValueRef LLVMConstGEP2(LLVMTypeRef Ty, LLVMValueRef ConstantVal,
                            LLVMValueRef *ConstantIndices, unsigned NumIndices);
-LLVMValueRef LLVMConstInBoundsGEP(LLVMValueRef ConstantVal,
-                                  LLVMValueRef *ConstantIndices,
-                                  unsigned NumIndices);
+LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMValueRef LLVMConstInBoundsGEP(LLVMValueRef ConstantVal,
+                                      LLVMValueRef *ConstantIndices,
+                                      unsigned NumIndices),
+    "Use LLVMConstInBoundsGEP2 instead to support opaque pointers");
 LLVMValueRef LLVMConstInBoundsGEP2(LLVMTypeRef Ty, LLVMValueRef ConstantVal,
                                    LLVMValueRef *ConstantIndices,
                                    unsigned NumIndices);
@@ -3499,7 +3505,7 @@ LLVMTypeRef LLVMGetAllocatedType(LLVMValueRef Alloca);
  */
 
 /**
- * Check whether the given GEP instruction is inbounds.
+ * Check whether the given GEP operator is inbounds.
  */
 LLVMBool LLVMIsInBounds(LLVMValueRef GEP);
 
@@ -3509,7 +3515,7 @@ LLVMBool LLVMIsInBounds(LLVMValueRef GEP);
 void LLVMSetIsInBounds(LLVMValueRef GEP, LLVMBool InBounds);
 
 /**
- * Get the source element type of the given GEP instruction.
+ * Get the source element type of the given GEP operator.
  */
 LLVMTypeRef LLVMGetGEPSourceElementType(LLVMValueRef GEP);
 
@@ -3563,7 +3569,7 @@ LLVMBasicBlockRef LLVMGetIncomingBlock(LLVMValueRef PhiNode, unsigned Index);
 
 /**
  * Obtain the number of indices.
- * NB: This also works on GEP.
+ * NB: This also works on GEP operators.
  */
 unsigned LLVMGetNumIndices(LLVMValueRef Inst);
 
@@ -4015,8 +4021,13 @@ LLVMValueRef LLVMBuildIsNull(LLVMBuilderRef, LLVMValueRef Val,
                              const char *Name);
 LLVMValueRef LLVMBuildIsNotNull(LLVMBuilderRef, LLVMValueRef Val,
                                 const char *Name);
-LLVMValueRef LLVMBuildPtrDiff(LLVMBuilderRef, LLVMValueRef LHS,
-                              LLVMValueRef RHS, const char *Name);
+LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMValueRef LLVMBuildPtrDiff(LLVMBuilderRef, LLVMValueRef LHS,
+                                  LLVMValueRef RHS, const char *Name),
+    "Use LLVMBuildPtrDiff2 instead to support opaque pointers");
+LLVMValueRef LLVMBuildPtrDiff2(LLVMBuilderRef, LLVMTypeRef ElemTy,
+                               LLVMValueRef LHS, LLVMValueRef RHS,
+                               const char *Name);
 LLVMValueRef LLVMBuildFence(LLVMBuilderRef B, LLVMAtomicOrdering ordering,
                             LLVMBool singleThread, const char *Name);
 LLVMValueRef LLVMBuildAtomicRMW(LLVMBuilderRef B, LLVMAtomicRMWBinOp op,

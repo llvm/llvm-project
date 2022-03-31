@@ -5,10 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// Generic implementation of equivalence classes through the use Tarjan's
-// efficient union-find algorithm.
-//
+///
+/// \file
+/// Generic implementation of equivalence classes through the use Tarjan's
+/// efficient union-find algorithm.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_EQUIVALENCECLASSES_H
@@ -160,7 +161,8 @@ public:
   //
 
   /// iterator* - Provides a way to iterate over all values in the set.
-  using iterator = typename std::set<ECValue>::const_iterator;
+  using iterator =
+      typename std::set<ECValue, ECValueComparator>::const_iterator;
 
   iterator begin() const { return TheMapping.begin(); }
   iterator end() const { return TheMapping.end(); }

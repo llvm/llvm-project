@@ -41,8 +41,8 @@ specific section:
    variants depending on base language.
 -  :ref:`C++ Language <cxx>`
 -  :ref:`Objective C++ Language <objcxx>`
--  :ref:`OpenCL Kernel Language <opencl>`: OpenCL C v1.0, v1.1, v1.2, v2.0,
-   plus C++ for OpenCL.
+-  :ref:`OpenCL Kernel Language <opencl>`: OpenCL C 1.0, 1.1, 1.2, 2.0, 3.0,
+   and C++ for OpenCL 1.0 and 2021.
 
 In addition to these base languages and their dialects, Clang supports a
 broad variety of language extensions, which are documented in the
@@ -843,6 +843,8 @@ a special character, which is the convention used by GNU Make. The -MV
 option tells Clang to put double-quotes around the entire filename, which
 is the convention used by NMake and Jom.
 
+.. _configuration-files:
+
 Configuration files
 -------------------
 
@@ -916,6 +918,22 @@ Files included by `@file` directives in configuration files are resolved
 relative to the including file. For example, if a configuration file
 `~/.llvm/target.cfg` contains the directive `@os/linux.opts`, the file
 `linux.opts` is searched for in the directory `~/.llvm/os`.
+
+To generate paths relative to the configuration file, the `<CFGDIR>` token may
+be used. This will expand to the absolute path of the directory containing the
+configuration file.
+
+In cases where a configuration file is deployed alongside SDK contents, the
+SDK directory can remain fully portable by using `<CFGDIR>` prefixed paths.
+In this way, the user may only need to specify a root configuration file with
+`--config` to establish every aspect of the SDK with the compiler:
+
+::
+
+    --target=foo
+    -isystem <CFGDIR>/include
+    -L <CFGDIR>/lib
+    -T <CFGDIR>/ldscripts/link.ld
 
 Language and Target-Independent Features
 ========================================
@@ -1114,10 +1132,28 @@ A ``#include`` directive which finds a file relative to the current
 directory is treated as including a system header if the including file
 is treated as a system header.
 
+Controlling Deprecation Diagnostics in Clang-Provided C Runtime Headers
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Clang is responsible for providing some of the C runtime headers that cannot be
+provided by a platform CRT, such as implementation limits or when compiling in
+freestanding mode. Define the ``_CLANG_DISABLE_CRT_DEPRECATION_WARNINGS`` macro
+prior to including such a C runtime header to disable the deprecation warnings.
+Note that the C Standard Library headers are allowed to transitively include
+other standard library headers (see 7.1.2p5), and so the most appropriate use
+of this macro is to set it within the build system using ``-D`` or before any
+include directives in the translation unit.
+
+.. code-block:: c
+
+  #define _CLANG_DISABLE_CRT_DEPRECATION_WARNINGS
+  #include <stdint.h>    // Clang CRT deprecation warnings are disabled.
+  #include <stdatomic.h> // Clang CRT deprecation warnings are disabled.
+
 .. _diagnostics_enable_everything:
 
 Enabling All Diagnostics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 In addition to the traditional ``-W`` flags, one can enable **all** diagnostics
 by passing :option:`-Weverything`. This works as expected with
@@ -1362,8 +1398,8 @@ floating point semantic models: precise (the default), strict, and fast.
    When a floating-point value is not representable in a destination integer
    type, the code has undefined behavior according to the language standard.
    By default, Clang will not guarantee any particular result in that case.
-   With the 'no-strict' option, Clang attempts to match the overflowing behavior
-   of the target's native float-to-int conversion instructions.
+   With the 'no-strict' option, Clang will saturate towards the smallest and
+   largest representable integer values instead. NaNs will be converted to zero.
 
 .. _opt_fmath-errno:
 
@@ -1530,6 +1566,22 @@ Note that floating-point operations performed as part of constant initialization
    * ``maytrap`` The compiler avoids transformations that may raise exceptions that would not have been raised by the original code. Constant folding performed by the compiler is exempt from this option.
    * ``strict`` The compiler ensures that all transformations strictly preserve the floating point exception semantics of the original code.
 
+.. option:: -ffp-eval-method=<value>
+
+   Specify the floating-point evaluation method for intermediate results within
+   a single expression of the code.
+
+   Valid values are: ``source``, ``double``, and ``extended``.
+   For 64-bit targets, the default value is ``source``. For 32-bit x86 targets
+   however, in the case of NETBSD 6.99.26 and under, the default value is
+   ``double``; in the case of NETBSD greater than 6.99.26, with NoSSE, the
+   default value is ``extended``, with SSE the default value is ``source``.
+   Details:
+
+   * ``source`` The compiler uses the floating-point type declared in the source program as the evaluation method.
+   * ``double`` The compiler uses ``double`` as the floating-point evaluation method for all float expressions of type that is narrower than ``double``.
+   * ``extended`` The compiler uses ``long double`` as the floating-point evaluation method for all float expressions of type that is narrower than ``long double``.
+
 .. option:: -f[no-]protect-parens:
 
    This option pertains to floating-point types, complex types with
@@ -1550,6 +1602,17 @@ Note that floating-point operations performed as part of constant initialization
    modes, such as `-ffp-model=precise` or `-ffp-model=strict`, this option
    has no effect because the optimizer is prohibited from making unsafe
    transformations.
+
+.. _FLT_EVAL_METHOD:
+
+A note about ``__FLT_EVAL_METHOD__``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The macro ``__FLT_EVAL_METHOD__`` will expand to either the value set from the
+command line option ``ffp-eval-method`` or to the value from the target info
+setting. The ``__FLT_EVAL_METHOD__`` macro cannot expand to the correct
+evaluation method in the presence of a ``#pragma`` which alters the evaluation
+method. An error is issued if ``__FLT_EVAL_METHOD__`` is expanded inside a scope
+modified by ``#pragma clang fp eval_method``.
 
 .. _fp-constant-eval:
 
@@ -3024,9 +3087,8 @@ profile.
 Starting from clang 9 a C++ mode is available for OpenCL (see
 :ref:`C++ for OpenCL <cxx_for_opencl>`).
 
-There is ongoing support for OpenCL v3.0 that is documented along with other
-experimental functionality and features in development on :doc:`OpenCLSupport`
-page.
+OpenCL v3.0 support is complete but it remains in experimental state, see more
+details about the experimental features in :doc:`OpenCLSupport` page.
 
 OpenCL Specific Options
 -----------------------
@@ -3092,6 +3154,15 @@ There is a set of concrete HW architectures that OpenCL can be compiled for.
 
 Generic Targets
 ^^^^^^^^^^^^^^^
+
+- A SPIR-V binary can be produced for 32 or 64 bit targets.
+
+   .. code-block:: console
+
+    $ clang -target spirv32 test.cl
+    $ clang -target spirv64 test.cl
+
+  More details can be found in :ref:`the SPIR-V support section <spir-v>`.
 
 - SPIR is available as a generic target to allow portable bitcode to be produced
   that can be used across GPU toolchains. The implementation follows `the SPIR
@@ -3294,20 +3365,25 @@ implementation of `OpenCL C++
 <https://www.khronos.org/registry/OpenCL/specs/2.2/pdf/OpenCL_Cxx.pdf>`_ and
 there is no plan to support it in clang in any new releases in the near future.
 
-
-Clang currently supports C++ for OpenCL v1.0.
+Clang currently supports C++ for OpenCL 1.0 and 2021.
 For detailed information about this language refer to the C++ for OpenCL
 Programming Language Documentation available
 in `the latest build
 <https://www.khronos.org/opencl/assets/CXX_for_OpenCL.html>`_
 or in `the official release
-<https://github.com/KhronosGroup/OpenCL-Docs/releases/tag/cxxforopencl-v1.0-r2>`_.
+<https://github.com/KhronosGroup/OpenCL-Docs/releases/tag/cxxforopencl-docrev2021.12>`_.
 
 To enable the C++ for OpenCL mode, pass one of following command line options when
-compiling ``.cl`` file ``-cl-std=clc++``, ``-cl-std=CLC++``, ``-cl-std=clc++1.0``,
-``-cl-std=CLC++1.0``, ``-std=clc++``, ``-std=CLC++``, ``-std=clc++1.0`` or
-``-std=CLC++1.0``.
+compiling ``.clcpp`` file:
 
+- C++ for OpenCL 1.0: ``-cl-std=clc++``, ``-cl-std=CLC++``, ``-cl-std=clc++1.0``,
+  ``-cl-std=CLC++1.0``, ``-std=clc++``, ``-std=CLC++``, ``-std=clc++1.0`` or
+  ``-std=CLC++1.0``.
+
+- C++ for OpenCL 2021: ``-cl-std=clc++2021``, ``-cl-std=CLC++2021``,
+  ``-std=clc++2021``, ``-std=CLC++2021``.
+
+Example of use:
    .. code-block:: c++
 
      template<class T> T add( T x, T y )
@@ -3324,14 +3400,26 @@ compiling ``.cl`` file ``-cl-std=clc++``, ``-cl-std=CLC++``, ``-cl-std=clc++1.0`
 
    .. code-block:: console
 
-     clang -cl-std=clc++ test.cl
+     clang -cl-std=clc++1.0 test.clcpp
 
-Alternatively, files with ``.clcpp`` extension are compiled with the C++ for OpenCL
-mode.
+
+By default, files with ``.clcpp`` extension are compiled with the C++ for
+OpenCL 1.0 mode.
 
    .. code-block:: console
 
      clang test.clcpp
+
+For backward compatibility files with ``.cl`` extensions can also be compiled
+in C++ for OpenCL mode but the desirable language mode must be activated with
+a flag.
+
+   .. code-block:: console
+
+     clang -cl-std=clc++ test.cl
+
+Support of C++ for OpenCL 2021 is currently in experimental phase, refer to
+:doc:`OpenCLSupport` for more details.
 
 C++ for OpenCL kernel sources can also be compiled online in drivers supporting
 `cl_ext_cxx_for_opencl
@@ -3510,6 +3598,58 @@ Clang expects the GCC executable "gcc.exe" compiled for
 `Some tests might fail <https://bugs.llvm.org/show_bug.cgi?id=9072>`_ on
 ``x86_64-w64-mingw32``.
 
+.. _spir-v:
+
+SPIR-V support
+--------------
+
+Clang supports generation of SPIR-V conformant to `the OpenCL Environment
+Specification
+<https://www.khronos.org/registry/OpenCL/specs/3.0-unified/html/OpenCL_Env.html>`_.
+
+To generate SPIR-V binaries, Clang uses the external ``llvm-spirv`` tool from the
+`SPIRV-LLVM-Translator repo
+<https://github.com/KhronosGroup/SPIRV-LLVM-Translator>`_.
+
+Prior to the generation of SPIR-V binary with Clang, ``llvm-spirv``
+should be built or installed. Please refer to `the following instructions
+<https://github.com/KhronosGroup/SPIRV-LLVM-Translator#build-instructions>`_
+for more details. Clang will expects the ``llvm-spirv`` executable to
+be present in the ``PATH`` environment variable. Clang uses ``llvm-spirv``
+with `the widely adopted assembly syntax package
+<https://github.com/KhronosGroup/SPIRV-LLVM-Translator/#build-with-spirv-tools>`_.
+
+`The versioning
+<https://github.com/KhronosGroup/SPIRV-LLVM-Translator/releases>`_ of
+``llvm-spirv`` is aligned with Clang major releases. The same applies to the
+main development branch. It is therefore important to ensure the ``llvm-spirv``
+version is in alignment with the Clang version. For troubleshooting purposes
+``llvm-spirv`` can be `tested in isolation
+<https://github.com/KhronosGroup/SPIRV-LLVM-Translator#test-instructions>`_.
+
+Example usage for OpenCL kernel compilation:
+
+   .. code-block:: console
+
+     $ clang -target spirv32 test.cl
+     $ clang -target spirv64 test.cl
+
+Both invocations of Clang will result in the generation of a SPIR-V binary file
+`test.o` for 32 bit and 64 bit respectively. This file can be imported
+by an OpenCL driver that support SPIR-V consumption or it can be compiled
+further by offline SPIR-V consumer tools.
+
+Converting to SPIR-V produced with the optimization levels other than `-O0` is
+currently available as an experimental feature and it is not guaranteed to work
+in all cases.
+
+Linking is done using ``spirv-link`` from `the SPIRV-Tools project
+<https://github.com/KhronosGroup/SPIRV-Tools#linker>`_. Similar to other external
+linkers, Clang will expect ``spirv-link`` to be installed separately and to be
+present in the ``PATH`` environment variable. Please refer to `the build and
+installation instructions
+<https://github.com/KhronosGroup/SPIRV-Tools#build>`_.
+
 .. _clang-cl:
 
 clang-cl
@@ -3543,7 +3683,7 @@ When using CMake and the Visual Studio generators, the toolset can be set with t
 
   ::
 
-    cmake -G"Visual Studio 15 2017" -T LLVM ..
+    cmake -G"Visual Studio 16 2019" -T LLVM ..
 
 When using CMake with the Ninja generator, set the ``CMAKE_C_COMPILER`` and
 ``CMAKE_CXX_COMPILER`` variables to clang-cl:

@@ -232,6 +232,18 @@ ObjCPropertyDecl::getDefaultSynthIvarName(ASTContext &Ctx) const {
   return &Ctx.Idents.get(ivarName.str());
 }
 
+ObjCPropertyDecl *ObjCContainerDecl::getProperty(const IdentifierInfo *Id,
+                                                 bool IsInstance) const {
+  for (auto *LookupResult : lookup(Id)) {
+    if (auto *Prop = dyn_cast<ObjCPropertyDecl>(LookupResult)) {
+      if (Prop->isInstanceProperty() == IsInstance) {
+        return Prop;
+      }
+    }
+  }
+  return nullptr;
+}
+
 /// FindPropertyDeclaration - Finds declaration of the property given its name
 /// in 'PropertyId' and returns it. It returns 0, if not found.
 ObjCPropertyDecl *ObjCContainerDecl::FindPropertyDeclaration(

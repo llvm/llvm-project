@@ -2,7 +2,7 @@
 
 // CHECK-LABEL: @merge_blocks
 func @merge_blocks(%arg0: i32, %arg1 : i32) -> () {
-  //      CHECK: "test.merge_blocks"() ( {
+  //      CHECK: "test.merge_blocks"() ({
   // CHECK-NEXT:   "test.return"
   // CHECK-NEXT: })
   // CHECK-NEXT: "test.return"

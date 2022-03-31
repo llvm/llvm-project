@@ -12,12 +12,14 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR COMPILER_RT_STANDALONE
   set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 endif()
 
+set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
+
 # Add path for custom compiler-rt modules.
 list(INSERT CMAKE_MODULE_PATH 0
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules"
-  "${CMAKE_CURRENT_SOURCE_DIR}/../cmake"
-  "${CMAKE_CURRENT_SOURCE_DIR}/../cmake/Modules"
+  "${LLVM_COMMON_CMAKE_UTILS}"
+  "${LLVM_COMMON_CMAKE_UTILS}/Modules"
   )
 
 if(CMAKE_CONFIGURATION_TYPES)
@@ -26,6 +28,7 @@ else()
   set(CMAKE_CFG_RESOLVED_INTDIR "")
 endif()
 
+include(SetPlatformToolchainTools)
 include(base-config-ix)
 include(CompilerRTUtils)
 
@@ -51,25 +54,7 @@ option(COMPILER_RT_BUILD_ORC "Build ORC runtime" ON)
 mark_as_advanced(COMPILER_RT_BUILD_ORC)
 option(COMPILER_RT_BUILD_GWP_ASAN "Build GWP-ASan, and link it into SCUDO" ON)
 mark_as_advanced(COMPILER_RT_BUILD_GWP_ASAN)
-
-set(COMPILER_RT_ASAN_SHADOW_SCALE ""
-    CACHE STRING "Override the shadow scale to be used in ASan runtime")
-
-if (NOT COMPILER_RT_ASAN_SHADOW_SCALE STREQUAL "")
-  # Check that the shadow scale value is valid.
-  if (NOT (COMPILER_RT_ASAN_SHADOW_SCALE GREATER -1 AND
-           COMPILER_RT_ASAN_SHADOW_SCALE LESS 8))
-    message(FATAL_ERROR "
-      Invalid ASan Shadow Scale '${COMPILER_RT_ASAN_SHADOW_SCALE}'.")
-  endif()
-
-  set(COMPILER_RT_ASAN_SHADOW_SCALE_LLVM_FLAG
-      -mllvm -asan-mapping-scale=${COMPILER_RT_ASAN_SHADOW_SCALE})
-  set(COMPILER_RT_ASAN_SHADOW_SCALE_DEFINITION
-      ASAN_SHADOW_SCALE=${COMPILER_RT_ASAN_SHADOW_SCALE})
-  set(COMPILER_RT_ASAN_SHADOW_SCALE_FLAG
-      -D${COMPILER_RT_ASAN_SHADOW_SCALE_DEFINITION})
-endif()
+option(COMPILER_RT_ENABLE_CET "Build Compiler RT with CET enabled" OFF)
 
 if(FUCHSIA)
   set(COMPILER_RT_HWASAN_WITH_INTERCEPTORS_DEFAULT OFF)
@@ -246,6 +231,15 @@ option(SANITIZER_USE_STATIC_CXX_ABI
   "Use static libc++abi." ${DEFAULT_SANITIZER_USE_STATIC_CXX_ABI})
 pythonize_bool(SANITIZER_USE_STATIC_CXX_ABI)
 
+set(DEFAULT_SANITIZER_USE_STATIC_TEST_CXX OFF)
+if (DEFINED LIBCXX_ENABLE_SHARED AND NOT LIBCXX_ENABLE_SHARED)
+  set(DEFAULT_SANITIZER_USE_STATIC_TEST_CXX ON)
+endif()
+
+option(SANITIZER_USE_STATIC_TEST_CXX
+  "Use static libc++ for tests." ${DEFAULT_SANITIZER_USE_STATIC_TEST_CXX})
+pythonize_bool(SANITIZER_USE_STATIC_TEST_CXX)
+
 set(DEFAULT_COMPILER_RT_USE_BUILTINS_LIBRARY OFF)
 if (FUCHSIA)
   set(DEFAULT_COMPILER_RT_USE_BUILTINS_LIBRARY ON)
@@ -259,6 +253,14 @@ include(config-ix)
 #================================
 # Setup Compiler Flags
 #================================
+
+# fcf-protection is a gcc/clang option for CET support on Linux platforms.
+# We need to handle MSVC CET option on Windows platforms.
+if (NOT MSVC)
+  if (COMPILER_RT_ENABLE_CET AND NOT COMPILER_RT_HAS_FCF_PROTECTION_FLAG)
+    message(FATAL_ERROR "Compiler used to build compiler-rt doesn't support CET!")
+  endif()
+endif()
 
 if(MSVC)
   # Override any existing /W flags with /W4. This is what LLVM does.  Failing to
@@ -529,9 +531,18 @@ elseif (SANITIZER_CXX_ABI_LIBNAME STREQUAL "libstdc++")
 endif()
 
 if (SANITIZER_TEST_CXX_LIBNAME STREQUAL "libc++")
-  append_libcxx_libs(SANITIZER_TEST_CXX)
+  if (SANITIZER_TEST_CXX_INTREE)
+    if (SANITIZER_USE_STATIC_TEST_CXX)
+      set(cxx_target cxx_static)
+    else()
+      set(cxx_target cxx_shared)
+    endif()
+    list(APPEND SANITIZER_TEST_CXX_LIBRARIES "$<$<BOOL:$<TARGET_NAME_IF_EXISTS:${cxx_target}>>:$<TARGET_LINKER_FILE:${cxx_target}>>")
+  else()
+    append_list_if(COMPILER_RT_HAS_LIBCXX -lc++ SANITIZER_TEST_CXX_LIBRARIES)
+  endif()
 elseif (SANITIZER_TEST_CXX_LIBNAME STREQUAL "libstdc++")
-  append_list_if(COMPILER_RT_HAS_LIBSTDCXX stdc++ SANITIZER_TEST_CXX_LIBRARIES)
+  append_list_if(COMPILER_RT_HAS_LIBSTDCXX -lstdc++ SANITIZER_TEST_CXX_LIBRARIES)
 endif()
 
 # TODO: There's a lot of duplication across lib/*/tests/CMakeLists.txt files,
@@ -591,15 +602,6 @@ if (CMAKE_LINKER MATCHES "link.exe$")
   set(CMAKE_STATIC_LINKER_FLAGS "${CMAKE_STATIC_LINKER_FLAGS} /IGNORE:4221")
 endif()
 
-if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
-  set(CMAKE_C_ARCHIVE_CREATE "<CMAKE_AR> -X32_64 qc <TARGET> <LINK_FLAGS> <OBJECTS>")
-  set(CMAKE_CXX_ARCHIVE_CREATE "<CMAKE_AR> -X32_64 qc <TARGET> <LINK_FLAGS> <OBJECTS>")
-  set(CMAKE_C_ARCHIVE_APPEND "<CMAKE_AR> -X32_64 q <TARGET> <LINK_FLAGS> <OBJECTS>")
-  set(CMAKE_CXX_ARCHIVE_APPEND "<CMAKE_AR> -X32_64 q <TARGET> <LINK_FLAGS> <OBJECTS>")
-  set(CMAKE_C_ARCHIVE_FINISH "<CMAKE_RANLIB> -X32_64 <TARGET>")
-  set(CMAKE_CXX_ARCHIVE_FINISH "<CMAKE_RANLIB> -X32_64 <TARGET>")
-endif()
-
 add_subdirectory(include)
 
 option(COMPILER_RT_USE_LIBCXX
@@ -646,9 +648,6 @@ if(ANDROID)
   set(COMPILER_RT_TEST_USE_LLD TRUE)
   append_list_if(COMPILER_RT_HAS_FUSE_LD_LLD_FLAG -fuse-ld=lld SANITIZER_COMMON_LINK_FLAGS)
   append_list_if(COMPILER_RT_HAS_LLD -fuse-ld=lld COMPILER_RT_UNITTEST_LINK_FLAGS)
-  if(COMPILER_RT_HAS_FUSE_LD_LLD_FLAG)
-    set(COMPILER_RT_HAS_GNU_VERSION_SCRIPT_COMPAT FALSE)
-  endif()
 endif()
 pythonize_bool(COMPILER_RT_HAS_LLD)
 pythonize_bool(COMPILER_RT_TEST_USE_LLD)

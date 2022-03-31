@@ -104,6 +104,19 @@ void llvm::HexagonLowerToMC(const MCInstrInfo &MCII, const MachineInstr *MI,
     HexagonMCInstrInfo::setOuterLoop(MCB);
     return;
   }
+  if (MI->getOpcode() == Hexagon::PATCHABLE_FUNCTION_ENTER) {
+    AP.EmitSled(*MI, HexagonAsmPrinter::SledKind::FUNCTION_ENTER);
+    return;
+  }
+  if (MI->getOpcode() == Hexagon::PATCHABLE_FUNCTION_EXIT) {
+    AP.EmitSled(*MI, HexagonAsmPrinter::SledKind::FUNCTION_EXIT);
+    return;
+  }
+  if (MI->getOpcode() == Hexagon::PATCHABLE_TAIL_CALL) {
+    AP.EmitSled(*MI, HexagonAsmPrinter::SledKind::TAIL_CALL);
+    return;
+  }
+
   MCInst *MCI = AP.OutContext.createMCInst();
   MCI->setOpcode(MI->getOpcode());
   assert(MCI->getOpcode() == static_cast<unsigned>(MI->getOpcode()) &&

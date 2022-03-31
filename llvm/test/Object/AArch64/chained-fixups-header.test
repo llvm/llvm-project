@@ -1,0 +1,24 @@
+REQUIRES: host-byteorder-little-endian
+RUN: cat %p/../Inputs/MachO/chained-fixups.yaml \
+RUN:   | sed 's/__LINKEDIT:      00000000/__LINKEDIT:      AB000000/' \
+RUN:   | yaml2obj | not llvm-objdump --macho --dyld_info - 2>&1 \
+RUN:   | FileCheck %s --check-prefix=HEADER1
+HEADER1: truncated or malformed object (bad chained fixups: unknown version: 171)
+
+RUN: cat %p/../Inputs/MachO/chained-fixups.yaml \
+RUN:   | sed 's/1000000010000000/1000000AB0000000/' \
+RUN:   | yaml2obj | not llvm-objdump --macho --dyld_info - 2>&1 \
+RUN:   | FileCheck %s --check-prefix=HEADER2
+HEADER2: truncated or malformed object (bad chained fixups: unknown imports format: 171)
+
+RUN: cat %p/../Inputs/MachO/chained-fixups.yaml \
+RUN:   | sed 's/20000000/01000000/' \
+RUN:   | yaml2obj | not llvm-objdump --macho --dyld_info - 2>&1 \
+RUN:   | FileCheck %s --check-prefix=HEADER3
+HEADER3: truncated or malformed object (bad chained fixups: image starts offset 1 overlaps with chained fixups header)
+
+RUN: cat %p/../Inputs/MachO/chained-fixups.yaml \
+RUN:   | sed 's/20000000/FF000000/' \
+RUN:   | yaml2obj | not llvm-objdump --macho --dyld_info - 2>&1 \
+RUN:   | FileCheck %s --check-prefix=HEADER4
+HEADER4: truncated or malformed object (bad chained fixups: image starts end 33031 extends past end 32856)

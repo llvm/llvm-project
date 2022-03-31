@@ -135,10 +135,9 @@ class SystemZLongBranch : public MachineFunctionPass {
 public:
   static char ID;
 
-  SystemZLongBranch(const SystemZTargetMachine &tm)
-    : MachineFunctionPass(ID) {}
-
-  StringRef getPassName() const override { return "SystemZ Long Branch"; }
+  SystemZLongBranch() : MachineFunctionPass(ID) {
+    initializeSystemZLongBranchPass(*PassRegistry::getPassRegistry());
+  }
 
   bool runOnMachineFunction(MachineFunction &F) override;
 
@@ -173,6 +172,9 @@ const uint64_t MaxBackwardRange = 0x10000;
 const uint64_t MaxForwardRange = 0xfffe;
 
 } // end anonymous namespace
+
+INITIALIZE_PASS(SystemZLongBranch, DEBUG_TYPE, "SystemZ Long Branch", false,
+                false)
 
 // Position describes the state immediately before Block.  Update Block
 // accordingly and move Position to the end of the block's non-terminator
@@ -481,5 +483,5 @@ bool SystemZLongBranch::runOnMachineFunction(MachineFunction &F) {
 }
 
 FunctionPass *llvm::createSystemZLongBranchPass(SystemZTargetMachine &TM) {
-  return new SystemZLongBranch(TM);
+  return new SystemZLongBranch();
 }

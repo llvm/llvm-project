@@ -21,7 +21,7 @@
 #include "test_iterators.h"
 
 template <class S, class It>
-void
+TEST_CONSTEXPR_CXX20 void
 test(S s, typename S::size_type pos1, typename S::size_type n1, It f, It l, S expected)
 {
     typename S::size_type old_size = s.size();
@@ -39,7 +39,7 @@ test(S s, typename S::size_type pos1, typename S::size_type n1, It f, It l, S ex
 struct Widget { operator char() const { throw 42; } };
 
 template <class S, class It>
-void
+TEST_CONSTEXPR_CXX20 void
 test_exceptions(S s, typename S::size_type pos1, typename S::size_type n1, It f, It l)
 {
     typename S::const_iterator first = s.begin() + pos1;
@@ -66,7 +66,7 @@ test_exceptions(S s, typename S::size_type pos1, typename S::size_type n1, It f,
 const char* str = "12345678901234567890";
 
 template <class S>
-void test0()
+TEST_CONSTEXPR_CXX20 bool test0()
 {
     test(S(""), 0, 0, str, str+0, S(""));
     test(S(""), 0, 0, str, str+0, S(""));
@@ -168,10 +168,12 @@ void test0()
     test(S("abcde"), 1, 0, str, str+0, S("abcde"));
     test(S("abcde"), 1, 0, str, str+1, S("a1bcde"));
     test(S("abcde"), 1, 0, str, str+2, S("a12bcde"));
+
+    return true;
 }
 
 template <class S>
-void test1()
+TEST_CONSTEXPR_CXX20 bool test1()
 {
     test(S("abcde"), 1, 0, str, str+4, S("a1234bcde"));
     test(S("abcde"), 1, 0, str, str+5, S("a12345bcde"));
@@ -273,10 +275,12 @@ void test1()
     test(S("abcde"), 2, 1, str, str+5, S("ab12345de"));
     test(S("abcde"), 2, 1, str, str+0, S("abde"));
     test(S("abcde"), 2, 1, str, str+1, S("ab1de"));
+
+    return true;
 }
 
 template <class S>
-void test2()
+TEST_CONSTEXPR_CXX20 bool test2()
 {
     test(S("abcde"), 2, 1, str, str+5, S("ab12345de"));
     test(S("abcde"), 2, 1, str, str+9, S("ab123456789de"));
@@ -378,10 +382,12 @@ void test2()
     test(S("abcdefghij"), 0, 0, str, str+9, S("123456789abcdefghij"));
     test(S("abcdefghij"), 0, 0, str, str+10, S("1234567890abcdefghij"));
     test(S("abcdefghij"), 0, 0, str, str+0, S("abcdefghij"));
+
+    return true;
 }
 
 template <class S>
-void test3()
+TEST_CONSTEXPR_CXX20 bool test3()
 {
     test(S("abcdefghij"), 0, 0, str, str+1, S("1abcdefghij"));
     test(S("abcdefghij"), 0, 0, str, str+10, S("1234567890abcdefghij"));
@@ -483,10 +489,12 @@ void test3()
     test(S("abcdefghij"), 1, 1, str, str+10, S("a1234567890cdefghij"));
     test(S("abcdefghij"), 1, 1, str, str+19, S("a1234567890123456789cdefghij"));
     test(S("abcdefghij"), 1, 1, str, str+20, S("a12345678901234567890cdefghij"));
+
+    return true;
 }
 
 template <class S>
-void test4()
+TEST_CONSTEXPR_CXX20 bool test4()
 {
     test(S("abcdefghij"), 1, 4, str, str+0, S("afghij"));
     test(S("abcdefghij"), 1, 4, str, str+0, S("afghij"));
@@ -588,10 +596,12 @@ void test4()
     test(S("abcdefghij"), 5, 4, str, str+0, S("abcdej"));
     test(S("abcdefghij"), 5, 4, str, str+1, S("abcde1j"));
     test(S("abcdefghij"), 5, 4, str, str+2, S("abcde12j"));
+
+    return true;
 }
 
 template <class S>
-void test5()
+TEST_CONSTEXPR_CXX20 bool test5()
 {
     test(S("abcdefghij"), 5, 4, str, str+4, S("abcde1234j"));
     test(S("abcdefghij"), 5, 4, str, str+5, S("abcde12345j"));
@@ -693,10 +703,12 @@ void test5()
     test(S("abcdefghijklmnopqrst"), 0, 1, str, str+5, S("12345bcdefghijklmnopqrst"));
     test(S("abcdefghijklmnopqrst"), 0, 1, str, str+0, S("bcdefghijklmnopqrst"));
     test(S("abcdefghijklmnopqrst"), 0, 1, str, str+1, S("1bcdefghijklmnopqrst"));
+
+    return true;
 }
 
 template <class S>
-void test6()
+TEST_CONSTEXPR_CXX20 bool test6()
 {
     test(S("abcdefghijklmnopqrst"), 0, 1, str, str+5, S("12345bcdefghijklmnopqrst"));
     test(S("abcdefghijklmnopqrst"), 0, 1, str, str+9, S("123456789bcdefghijklmnopqrst"));
@@ -798,10 +810,12 @@ void test6()
     test(S("abcdefghijklmnopqrst"), 1, 9, str, str+9, S("a123456789klmnopqrst"));
     test(S("abcdefghijklmnopqrst"), 1, 9, str, str+10, S("a1234567890klmnopqrst"));
     test(S("abcdefghijklmnopqrst"), 1, 9, str, str+0, S("aklmnopqrst"));
+
+    return true;
 }
 
 template <class S>
-void test7()
+TEST_CONSTEXPR_CXX20 bool test7()
 {
     test(S("abcdefghijklmnopqrst"), 1, 9, str, str+1, S("a1klmnopqrst"));
     test(S("abcdefghijklmnopqrst"), 1, 9, str, str+10, S("a1234567890klmnopqrst"));
@@ -903,10 +917,12 @@ void test7()
     test(S("abcdefghijklmnopqrst"), 10, 9, str, str+10, S("abcdefghij1234567890t"));
     test(S("abcdefghijklmnopqrst"), 10, 9, str, str+19, S("abcdefghij1234567890123456789t"));
     test(S("abcdefghijklmnopqrst"), 10, 9, str, str+20, S("abcdefghij12345678901234567890t"));
+
+    return true;
 }
 
 template <class S>
-void test8()
+TEST_CONSTEXPR_CXX20 bool test8()
 {
     test(S("abcdefghijklmnopqrst"), 10, 10, str, str+0, S("abcdefghij"));
     test(S("abcdefghijklmnopqrst"), 10, 10, str, str+0, S("abcdefghij"));
@@ -972,45 +988,20 @@ void test8()
     test(S("abcdefghijklmnopqrst"), 20, 0, str, str+10, S("abcdefghijklmnopqrst1234567890"));
     test(S("abcdefghijklmnopqrst"), 20, 0, str, str+19, S("abcdefghijklmnopqrst1234567890123456789"));
     test(S("abcdefghijklmnopqrst"), 20, 0, str, str+20, S("abcdefghijklmnopqrst12345678901234567890"));
+
+    return true;
 }
 
-int main(int, char**)
-{
-    {
-    typedef std::string S;
-    test0<S>();
-    test1<S>();
-    test2<S>();
-    test3<S>();
-    test4<S>();
-    test5<S>();
-    test6<S>();
-    test7<S>();
-    test8<S>();
-    }
-#if TEST_STD_VER >= 11
-    {
-    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
-    test0<S>();
-    test1<S>();
-    test2<S>();
-    test3<S>();
-    test4<S>();
-    test5<S>();
-    test6<S>();
-    test7<S>();
-    test8<S>();
-    }
-#endif
+template <class S>
+bool test9() {
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    { // test iterator operations that throw
-    typedef std::string S;
+  { // test iterator operations that throw
     typedef ThrowingIterator<char> TIter;
     typedef cpp17_input_iterator<TIter> IIter;
     const char* s = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-    test_exceptions(S("abcdefghijklmnopqrst"), 10, 5, IIter(TIter(s, s+10, 4, TIter::TAIncrement)), IIter());
-    test_exceptions(S("abcdefghijklmnopqrst"), 10, 5, IIter(TIter(s, s+10, 5, TIter::TADereference)), IIter());
-    test_exceptions(S("abcdefghijklmnopqrst"), 10, 5, IIter(TIter(s, s+10, 6, TIter::TAComparison)), IIter());
+    test_exceptions(S("abcdefghijklmnopqrst"), 10, 5, IIter(TIter(s, s+10, 4, TIter::TAIncrement)), IIter(TIter()));
+    test_exceptions(S("abcdefghijklmnopqrst"), 10, 5, IIter(TIter(s, s+10, 5, TIter::TADereference)), IIter(TIter()));
+    test_exceptions(S("abcdefghijklmnopqrst"), 10, 5, IIter(TIter(s, s+10, 6, TIter::TAComparison)), IIter(TIter()));
 
     test_exceptions(S("abcdefghijklmnopqrst"), 10, 5, TIter(s, s+10, 4, TIter::TAIncrement), TIter());
     test_exceptions(S("abcdefghijklmnopqrst"), 10, 5, TIter(s, s+10, 5, TIter::TADereference), TIter());
@@ -1018,11 +1009,10 @@ int main(int, char**)
 
     Widget w[100];
     test_exceptions(S("abcdefghijklmnopqrst"), 10, 5, w, w+100);
-    }
+  }
 #endif
 
-    { // test replacing into self
-    typedef std::string S;
+  { // test replacing into self
     S s_short = "123/";
     S s_long  = "Lorem ipsum dolor sit amet, consectetur/";
 
@@ -1035,10 +1025,9 @@ int main(int, char**)
 
     s_long.replace(s_long.begin(), s_long.begin(), s_long.begin(), s_long.end());
     assert(s_long == "Lorem ipsum dolor sit amet, consectetur/Lorem ipsum dolor sit amet, consectetur/");
-    }
+  }
 
-    { // test assigning a different type
-    typedef std::string S;
+  { // test assigning a different type
     const uint8_t pc[] = "ABCD";
     uint8_t        p[] = "EFGH";
 
@@ -1049,7 +1038,44 @@ int main(int, char**)
     s.clear();
     s.replace(s.begin(), s.end(), p, p + 4);
     assert(s == "EFGH");
-    }
+  }
+
+  return true;
+}
+
+template <class S>
+void test() {
+  test0<S>();
+  test1<S>();
+  test2<S>();
+  test3<S>();
+  test4<S>();
+  test5<S>();
+  test6<S>();
+  test7<S>();
+  test8<S>();
+  test9<S>();
+
+#if TEST_STD_VER > 17
+  // static_assert(test0<S>());
+  // static_assert(test1<S>());
+  // static_assert(test2<S>());
+  // static_assert(test3<S>());
+  // static_assert(test4<S>());
+  // static_assert(test5<S>());
+  // static_assert(test6<S>());
+  // static_assert(test7<S>());
+  // static_assert(test8<S>());
+  // static_assert(test9<S>());
+#endif
+}
+
+int main(int, char**)
+{
+  test<std::string>();
+#if TEST_STD_VER >= 11
+  test<std::basic_string<char, std::char_traits<char>, min_allocator<char>>>();
+#endif
 
   return 0;
 }

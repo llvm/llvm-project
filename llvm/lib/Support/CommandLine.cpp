@@ -22,7 +22,7 @@
 #include "llvm-c/Support.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
@@ -45,7 +45,6 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdlib>
-#include <map>
 #include <string>
 using namespace llvm;
 using namespace cl;
@@ -1078,11 +1077,45 @@ static bool hasUTF8ByteOrderMark(ArrayRef<char> S) {
   return (S.size() >= 3 && S[0] == '\xef' && S[1] == '\xbb' && S[2] == '\xbf');
 }
 
+// Substitute <CFGDIR> with the file's base path.
+static void ExpandBasePaths(StringRef BasePath, StringSaver &Saver,
+                            const char *&Arg) {
+  assert(sys::path::is_absolute(BasePath));
+  constexpr StringLiteral Token("<CFGDIR>");
+  const StringRef ArgString(Arg);
+
+  SmallString<128> ResponseFile;
+  StringRef::size_type StartPos = 0;
+  for (StringRef::size_type TokenPos = ArgString.find(Token);
+       TokenPos != StringRef::npos;
+       TokenPos = ArgString.find(Token, StartPos)) {
+    // Token may appear more than once per arg (e.g. comma-separated linker
+    // args). Support by using path-append on any subsequent appearances.
+    const StringRef LHS = ArgString.substr(StartPos, TokenPos - StartPos);
+    if (ResponseFile.empty())
+      ResponseFile = LHS;
+    else
+      llvm::sys::path::append(ResponseFile, LHS);
+    ResponseFile.append(BasePath);
+    StartPos = TokenPos + Token.size();
+  }
+
+  if (!ResponseFile.empty()) {
+    // Path-append the remaining arg substring if at least one token appeared.
+    const StringRef Remaining = ArgString.substr(StartPos);
+    if (!Remaining.empty())
+      llvm::sys::path::append(ResponseFile, Remaining);
+    Arg = Saver.save(ResponseFile.str()).data();
+  }
+}
+
 // FName must be an absolute path.
-static llvm::Error ExpandResponseFile(
-    StringRef FName, StringSaver &Saver, TokenizerCallback Tokenizer,
-    SmallVectorImpl<const char *> &NewArgv, bool MarkEOLs, bool RelativeNames,
-    llvm::vfs::FileSystem &FS) {
+static llvm::Error ExpandResponseFile(StringRef FName, StringSaver &Saver,
+                                      TokenizerCallback Tokenizer,
+                                      SmallVectorImpl<const char *> &NewArgv,
+                                      bool MarkEOLs, bool RelativeNames,
+                                      bool ExpandBasePath,
+                                      llvm::vfs::FileSystem &FS) {
   assert(sys::path::is_absolute(FName));
   llvm::ErrorOr<std::unique_ptr<MemoryBuffer>> MemBufOrErr =
       FS.getBufferForFile(FName);
@@ -1116,8 +1149,15 @@ static llvm::Error ExpandResponseFile(
   // file, replace the included response file names with their full paths
   // obtained by required resolution.
   for (auto &Arg : NewArgv) {
+    if (!Arg)
+      continue;
+
+    // Substitute <CFGDIR> with the file's base path.
+    if (ExpandBasePath)
+      ExpandBasePaths(BasePath, Saver, Arg);
+
     // Skip non-rsp file arguments.
-    if (!Arg || Arg[0] != '@')
+    if (Arg[0] != '@')
       continue;
 
     StringRef FileName(Arg + 1);
@@ -1129,7 +1169,7 @@ static llvm::Error ExpandResponseFile(
     ResponseFile.push_back('@');
     ResponseFile.append(BasePath);
     llvm::sys::path::append(ResponseFile, FileName);
-    Arg = Saver.save(ResponseFile.c_str()).data();
+    Arg = Saver.save(ResponseFile.str()).data();
   }
   return Error::success();
 }
@@ -1138,7 +1178,7 @@ static llvm::Error ExpandResponseFile(
 /// StringSaver and tokenization strategy.
 bool cl::ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
                              SmallVectorImpl<const char *> &Argv, bool MarkEOLs,
-                             bool RelativeNames,
+                             bool RelativeNames, bool ExpandBasePath,
                              llvm::Optional<llvm::StringRef> CurrentDir,
                              llvm::vfs::FileSystem &FS) {
   bool AllExpanded = true;
@@ -1218,7 +1258,7 @@ bool cl::ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
     SmallVector<const char *, 0> ExpandedArgv;
     if (llvm::Error Err =
             ExpandResponseFile(FName, Saver, Tokenizer, ExpandedArgv, MarkEOLs,
-                               RelativeNames, FS)) {
+                               RelativeNames, ExpandBasePath, FS)) {
       // We couldn't read this file, so we leave it in the argument stream and
       // move on.
       // TODO: The error should be propagated up the stack.
@@ -1250,11 +1290,11 @@ bool cl::ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
 
 bool cl::ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
                              SmallVectorImpl<const char *> &Argv, bool MarkEOLs,
-                             bool RelativeNames,
+                             bool RelativeNames, bool ExpandBasePath,
                              llvm::Optional<StringRef> CurrentDir) {
   return ExpandResponseFiles(Saver, std::move(Tokenizer), Argv, MarkEOLs,
-                             RelativeNames, std::move(CurrentDir),
-                             *vfs::getRealFileSystem());
+                             RelativeNames, ExpandBasePath,
+                             std::move(CurrentDir), *vfs::getRealFileSystem());
 }
 
 bool cl::expandResponseFiles(int Argc, const char *const *Argv,
@@ -1281,16 +1321,17 @@ bool cl::readConfigFile(StringRef CfgFile, StringSaver &Saver,
     llvm::sys::path::append(AbsPath, CfgFile);
     CfgFile = AbsPath.str();
   }
-  if (llvm::Error Err =
-          ExpandResponseFile(CfgFile, Saver, cl::tokenizeConfigFile, Argv,
-                             /*MarkEOLs=*/false, /*RelativeNames=*/true,
-                             *llvm::vfs::getRealFileSystem())) {
+  if (llvm::Error Err = ExpandResponseFile(
+          CfgFile, Saver, cl::tokenizeConfigFile, Argv,
+          /*MarkEOLs=*/false, /*RelativeNames=*/true, /*ExpandBasePath=*/true,
+          *llvm::vfs::getRealFileSystem())) {
     // TODO: The error should be propagated up the stack.
     llvm::consumeError(std::move(Err));
     return false;
   }
   return ExpandResponseFiles(Saver, cl::tokenizeConfigFile, Argv,
-                             /*MarkEOLs=*/false, /*RelativeNames=*/true);
+                             /*MarkEOLs=*/false, /*RelativeNames=*/true,
+                             /*ExpandBasePath=*/true, llvm::None);
 }
 
 static void initCommonOptions();
@@ -1538,10 +1579,8 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
 
         ErrorParsing = true;
       } else {
-        for (SmallVectorImpl<Option *>::iterator I = SinkOpts.begin(),
-                                                 E = SinkOpts.end();
-             I != E; ++I)
-          (*I)->addOccurrence(i, "", StringRef(argv[i]));
+        for (Option *SinkOpt : SinkOpts)
+          SinkOpt->addOccurrence(i, "", StringRef(argv[i]));
       }
       continue;
     }
@@ -1697,21 +1736,6 @@ bool Option::addOccurrence(unsigned pos, StringRef ArgName, StringRef Value,
                            bool MultiArg) {
   if (!MultiArg)
     NumOccurrences++; // Increment the number of times we have been seen
-
-  switch (getNumOccurrencesFlag()) {
-  case Optional:
-    if (NumOccurrences > 1)
-      return error("may only occur zero or one times!", ArgName);
-    break;
-  case Required:
-    if (NumOccurrences > 1)
-      return error("must occur exactly one time!", ArgName);
-    LLVM_FALLTHROUGH;
-  case OneOrMore:
-  case ZeroOrMore:
-  case ConsumeAfter:
-    break;
-  }
 
   return handleOccurrence(pos, ArgName, Value);
 }
@@ -2197,7 +2221,7 @@ protected:
 
 public:
   explicit HelpPrinter(bool showHidden) : ShowHidden(showHidden) {}
-  virtual ~HelpPrinter() {}
+  virtual ~HelpPrinter() = default;
 
   // Invoke the printer.
   void operator=(bool Value) {
@@ -2299,27 +2323,17 @@ public:
 protected:
   void printOptions(StrOptionPairVector &Opts, size_t MaxArgLen) override {
     std::vector<OptionCategory *> SortedCategories;
-    std::map<OptionCategory *, std::vector<Option *>> CategorizedOptions;
+    DenseMap<OptionCategory *, std::vector<Option *>> CategorizedOptions;
 
     // Collect registered option categories into vector in preparation for
     // sorting.
-    for (auto I = GlobalParser->RegisteredOptionCategories.begin(),
-              E = GlobalParser->RegisteredOptionCategories.end();
-         I != E; ++I) {
-      SortedCategories.push_back(*I);
-    }
+    for (OptionCategory *Category : GlobalParser->RegisteredOptionCategories)
+      SortedCategories.push_back(Category);
 
     // Sort the different option categories alphabetically.
     assert(SortedCategories.size() > 0 && "No option categories registered!");
     array_pod_sort(SortedCategories.begin(), SortedCategories.end(),
                    OptionCategoryCompare);
-
-    // Create map to empty vectors.
-    for (std::vector<OptionCategory *>::const_iterator
-             I = SortedCategories.begin(),
-             E = SortedCategories.end();
-         I != E; ++I)
-      CategorizedOptions[*I] = std::vector<Option *>();
 
     // Walk through pre-sorted options and assign into categories.
     // Because the options are already alphabetically sorted the
@@ -2327,30 +2341,27 @@ protected:
     for (size_t I = 0, E = Opts.size(); I != E; ++I) {
       Option *Opt = Opts[I].second;
       for (auto &Cat : Opt->Categories) {
-        assert(CategorizedOptions.count(Cat) > 0 &&
+        assert(find(SortedCategories, Cat) != SortedCategories.end() &&
                "Option has an unregistered category");
         CategorizedOptions[Cat].push_back(Opt);
       }
     }
 
     // Now do printing.
-    for (std::vector<OptionCategory *>::const_iterator
-             Category = SortedCategories.begin(),
-             E = SortedCategories.end();
-         Category != E; ++Category) {
+    for (OptionCategory *Category : SortedCategories) {
       // Hide empty categories for --help, but show for --help-hidden.
-      const auto &CategoryOptions = CategorizedOptions[*Category];
+      const auto &CategoryOptions = CategorizedOptions[Category];
       bool IsEmptyCategory = CategoryOptions.empty();
       if (!ShowHidden && IsEmptyCategory)
         continue;
 
       // Print category information.
       outs() << "\n";
-      outs() << (*Category)->getName() << ":\n";
+      outs() << Category->getName() << ":\n";
 
       // Check if description is set.
-      if (!(*Category)->getDescription().empty())
-        outs() << (*Category)->getDescription() << "\n\n";
+      if (!Category->getDescription().empty())
+        outs() << Category->getDescription() << "\n\n";
       else
         outs() << "\n";
 

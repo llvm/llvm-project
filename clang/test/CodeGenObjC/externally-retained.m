@@ -25,14 +25,14 @@ void param(ObjTy *p) EXT_RET {
   // CHECK: ret
 }
 
-void local() {
+void local(void) {
   EXT_RET ObjTy *local = global;
   // CHECK-LABEL: define{{.*}} void @local
   // CHECK-NOT: llvm.objc.
   // CHECK: ret
 }
 
-void in_init() {
+void in_init(void) {
   // Test that we do the right thing when a variable appears in it's own
   // initializer. Here, we release the value stored in 'wat' after overwriting
   // it, in case it was somehow set to point to a non-null object while it's
@@ -52,7 +52,7 @@ void in_init() {
   // CHECK: ret
 }
 
-void esc(void (^)());
+void esc(void (^)(void));
 
 void block_capture(ObjTy *obj) EXT_RET {
   esc(^{ (void)obj; });
@@ -82,7 +82,7 @@ void block_capture(ObjTy *obj) EXT_RET {
 
 void escp(void (^)(ObjTy *));
 
-void block_param() {
+void block_param(void) {
   escp(^(ObjTy *p) EXT_RET {});
 
   // CHECK-LABEL: define internal void @__block_param_block_invoke

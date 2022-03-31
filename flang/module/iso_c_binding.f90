@@ -90,7 +90,7 @@ module iso_c_binding
 
  contains
 
-  logical function c_associated_c_ptr(c_ptr_1, c_ptr_2)
+  pure logical function c_associated_c_ptr(c_ptr_1, c_ptr_2)
     type(c_ptr), intent(in) :: c_ptr_1
     type(c_ptr), intent(in), optional :: c_ptr_2
     if (c_ptr_1%__address == c_null_ptr%__address) then
@@ -102,7 +102,7 @@ module iso_c_binding
     end if
   end function c_associated_c_ptr
 
-  logical function c_associated_c_funptr(c_funptr_1, c_funptr_2)
+  pure logical function c_associated_c_funptr(c_funptr_1, c_funptr_2)
     type(c_funptr), intent(in) :: c_funptr_1
     type(c_funptr), intent(in), optional :: c_funptr_2
     if (c_funptr_1%__address == c_null_ptr%__address) then

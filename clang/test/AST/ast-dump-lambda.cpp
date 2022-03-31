@@ -305,7 +305,7 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:      | | `-Destructor simple irrelevant trivial needs_implicit
 // CHECK-NEXT:      | |-CXXMethodDecl {{.*}} <col:20, col:23> col:3{{( imported)?}} operator() 'auto () const' inline
 // CHECK-NEXT:      | | |-CompoundStmt {{.*}} <col:22, col:23>
-// CHECK-NEXT:      | | `-CXX11NoReturnAttr {{.*}} <col:8>
+// CHECK-NEXT:      | | `-CXX11NoReturnAttr {{.*}} <col:8> noreturn
 // CHECK-NEXT:      | |-CXXConversionDecl {{.*}} <col:3, col:23> col:3{{( imported)?}} implicit constexpr operator auto (*)() 'auto (*() const noexcept)()' inline
 // CHECK-NEXT:      | `-CXXMethodDecl {{.*}} <col:3, col:23> col:3{{( imported)?}} implicit __invoke 'auto ()' static inline
 // CHECK-NEXT:      `-CompoundStmt {{.*}} <col:22, col:23>

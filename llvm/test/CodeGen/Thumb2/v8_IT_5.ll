@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=thumbv8 -arm-atomic-cfg-tidy=0 | FileCheck %s
+; RUN: llc < %s -mtriple=thumbv8 -arm-atomic-cfg-tidy=0 -arm-restrict-it | FileCheck %s
 ; RUN: llc < %s -mtriple=thumbv7 -arm-atomic-cfg-tidy=0 -arm-restrict-it | FileCheck %s
 ; CHECK: it ne
 ; CHECK-NEXT: cmpne

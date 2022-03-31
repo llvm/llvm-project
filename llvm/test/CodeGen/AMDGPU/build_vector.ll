@@ -9,7 +9,7 @@
 ; R600-NOT: MOV
 ; SI-DAG: v_mov_b32_e32 v[[X:[0-9]]], 5
 ; SI-DAG: v_mov_b32_e32 v[[Y:[0-9]]], 6
-; GFX678: buffer_store_dwordx2 v{{\[}}[[X]]:[[Y]]{{\]}}
+; GFX678: buffer_store_dwordx2 v[[[X]]:[[Y]]]
 ; GFX10: global_store_dwordx2 v2, v[0:1], s[0:1]
 define amdgpu_kernel void @build_vector2 (<2 x i32> addrspace(1)* %out) {
 entry:
@@ -27,7 +27,7 @@ entry:
 ; SI-DAG: v_mov_b32_e32 v[[Y:[0-9]]], 6
 ; SI-DAG: v_mov_b32_e32 v[[Z:[0-9]]], 7
 ; SI-DAG: v_mov_b32_e32 v[[W:[0-9]]], 8
-; GFX678: buffer_store_dwordx4 v{{\[}}[[X]]:[[W]]{{\]}}
+; GFX678: buffer_store_dwordx4 v[[[X]]:[[W]]]
 ; GFX10: global_store_dwordx4 v4, v[0:3], s[0:1]
 define amdgpu_kernel void @build_vector4 (<4 x i32> addrspace(1)* %out) {
 entry:

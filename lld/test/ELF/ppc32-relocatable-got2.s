@@ -3,10 +3,11 @@
 ## If r_addend indicates .got2, adjust it by the local .got2's output section offset.
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc %s -o %t.o
-# RUN: ld.lld -r %t.o %t.o -o %t
+# RUN: echo 'bl f+0x8000@plt' | llvm-mc -filetype=obj -triple=powerpc - -o %t2.o
+# RUN: ld.lld -r %t.o %t.o %t2.o -o %t
 # RUN: llvm-readobj -r %t | FileCheck %s
 
-# RUN: ld.lld -shared --emit-relocs %t.o %t.o -o %t.so
+# RUN: ld.lld -shared --emit-relocs %t.o %t.o %t2.o -o %t.so
 # RUN: llvm-readobj -r %t.so | FileCheck %s
 
 # CHECK:      .rela.adjust {
@@ -22,6 +23,11 @@
 # CHECK-NEXT: .rela.no_adjust {
 # CHECK-NEXT:   R_PPC_PLTREL24 foo 0x0
 # CHECK-NEXT:   R_PPC_PLTREL24 foo 0x0
+# CHECK-NEXT: }
+## %t2.o has an invalid relocation with r_addend=0x8000. Test we don't crash.
+## The addend doesn't matter.
+# CHECK-NEXT: .rela.text {
+# CHECK-NEXT:   R_PPC_PLTREL24 f 0x8000
 # CHECK-NEXT: }
 .section .got2,"aw"
 .long 0

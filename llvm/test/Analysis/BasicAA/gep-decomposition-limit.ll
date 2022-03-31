@@ -1,4 +1,4 @@
-; RUN: opt -S -basic-aa -aa-eval -print-all-alias-modref-info -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -S -aa-pipeline=basic-aa -passes=aa-eval -print-all-alias-modref-info -disable-output < %s 2>&1 | FileCheck %s
 
 ; CHECK-LABEL: Function: test
 ;; Before limit:
@@ -26,6 +26,15 @@ define void @test(i8* %base) {
   %gep.inc5 = getelementptr i8, i8* %gep.inc4, i64 1
   %gep.inc6 = getelementptr i8, i8* %gep.inc5, i64 1
   %gep.inc7 = getelementptr i8, i8* %gep.inc6, i64 1
+
+  load i8, i8* %gep.add5
+  load i8, i8* %gep.add6
+  load i8, i8* %gep.add7
+  load i8, i8* %gep.inc3
+  load i8, i8* %gep.inc4
+  load i8, i8* %gep.inc5
+  load i8, i8* %gep.inc6
+  load i8, i8* %gep.inc7
 
   ret void
 }

@@ -286,6 +286,15 @@ int Test6() {
   return sum;
 }
 
+#ifdef __SIZEOF_INT128__
+template <__int128_t N> 
+#else
+template <long N> // Fallback for platforms which do not define `__int128_t`
+#endif
+bool Baz() { return sizeof(A) < N; }
+// CHECK-MESSAGES: :[[@LINE-1]]:21: warning: suspicious comparison of 'sizeof(expr)' to a constant
+bool Test7() { return Baz<-1>(); }
+
 int ValidExpressions() {
   int A[] = {1, 2, 3, 4};
   static const char str[] = "hello";

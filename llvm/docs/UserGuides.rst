@@ -27,6 +27,7 @@ intermediate LLVM representation.
    CommandLine
    CompileCudaWithLLVM
    CoverageMappingFormat
+   CycleTerminology
    DebuggingJITedCode
    Docker
    ExtendingLLVM
@@ -137,6 +138,9 @@ Optimizations
 :doc:`LoopTerminology`
   A document describing Loops and associated terms as used in LLVM.
 
+:doc:`CycleTerminology`
+  A document describing cycles as a generalization of loops.
+
 :doc:`Vectorizers`
    This document describes the current status of vectorization in LLVM.
 
@@ -222,3 +226,8 @@ Additional Topics
 :doc:`AMDGPUDwarfExtensionsForHeterogeneousDebugging`
    This document describes DWARF extensions to support heterogeneous debugging
    for targets such as the AMDGPU backend.
+
+:doc:`AMDGPUDwarfExtensionAllowLocationDescriptionOnTheDwarfExpressionStack/AMDGPUDwarfExtensionAllowLocationDescriptionOnTheDwarfExpressionStack`
+   This document describes a DWARF extension to allow location descriptions on
+   the DWARF expression stack. It is part of
+   :doc:`AMDGPUDwarfExtensionsForHeterogeneousDebugging`.

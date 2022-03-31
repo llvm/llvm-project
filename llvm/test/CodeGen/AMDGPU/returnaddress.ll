@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck --check-prefix=GCN %s
-; RUN: llc -global-isel -amdgpu-fixed-function-abi -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck --check-prefix=GCN %s
+; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck --check-prefix=GCN %s
 
 ; Test with zero frame
 ; GCN-LABEL: {{^}}func1
@@ -67,9 +67,9 @@ declare void @callee()
 ; GCN-LABEL: {{^}}multi_use:
 ; GCN-DAG: v_mov_b32_e32 v[[LO:4[0-9]+]], s30
 ; GCN-DAG: v_mov_b32_e32 v[[HI:4[0-9]+]], s31
-; GCN: global_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
+; GCN: global_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v[[[LO]]:[[HI]]]
 ; GCN: s_swappc_b64
-; GCN: global_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
+; GCN: global_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v[[[LO]]:[[HI]]]
 define void @multi_use() nounwind {
 entry:
   %ret0 = tail call i8* @llvm.returnaddress(i32 0)

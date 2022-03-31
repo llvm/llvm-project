@@ -1,7 +1,0 @@
-; RUN: mkdir -p %t
-; RUN: yaml2obj %S/Inputs/macho.yaml -o %t/macho.dylib
-; RUN: not llvm-tapi-diff %S/Inputs/v4A.tbd %t/macho.dylib 2>&1 | FileCheck %s
-
-; CHECK: {{.*}}: error: {{.*}}macho.dylib: Error when parsing file, unsupported file format
-; CHECK-NOT: error:
-; CHECK-NOT: warning:

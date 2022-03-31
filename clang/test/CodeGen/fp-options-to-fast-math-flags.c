@@ -14,29 +14,29 @@ float test(float a) {
   return a + fn(a);
 }
 
-// CHECK-PRECISE: [[CALL_RES:%.+]] = call float @fn(float {{%.+}})
+// CHECK-PRECISE: [[CALL_RES:%.+]] = call float @fn(float noundef {{%.+}})
 // CHECK-PRECISE: {{%.+}} = fadd float {{%.+}}, [[CALL_RES]]
 
-// CHECK-NO-NANS: [[CALL_RES:%.+]] = call nnan float @fn(float {{%.+}})
+// CHECK-NO-NANS: [[CALL_RES:%.+]] = call nnan float @fn(float noundef {{%.+}})
 // CHECK-NO-NANS: {{%.+}} = fadd nnan float {{%.+}}, [[CALL_RES]]
 
-// CHECK-NO-INFS: [[CALL_RES:%.+]] = call ninf float @fn(float {{%.+}})
+// CHECK-NO-INFS: [[CALL_RES:%.+]] = call ninf float @fn(float noundef {{%.+}})
 // CHECK-NO-INFS: {{%.+}} = fadd ninf float {{%.+}}, [[CALL_RES]]
 
-// CHECK-FINITE: [[CALL_RES:%.+]] = call nnan ninf float @fn(float {{%.+}})
+// CHECK-FINITE: [[CALL_RES:%.+]] = call nnan ninf float @fn(float noundef {{%.+}})
 // CHECK-FINITE: {{%.+}} = fadd nnan ninf float {{%.+}}, [[CALL_RES]]
 
-// CHECK-NO-SIGNED-ZEROS: [[CALL_RES:%.+]] = call nsz float @fn(float {{%.+}})
+// CHECK-NO-SIGNED-ZEROS: [[CALL_RES:%.+]] = call nsz float @fn(float noundef {{%.+}})
 // CHECK-NO-SIGNED-ZEROS: {{%.+}} = fadd nsz float {{%.+}}, [[CALL_RES]]
 
-// CHECK-REASSOC: [[CALL_RES:%.+]] = call reassoc float @fn(float {{%.+}})
+// CHECK-REASSOC: [[CALL_RES:%.+]] = call reassoc float @fn(float noundef {{%.+}})
 // CHECK-REASSOC: {{%.+}} = fadd reassoc float {{%.+}}, [[CALL_RES]]
 
-// CHECK-RECIP: [[CALL_RES:%.+]] = call arcp float @fn(float {{%.+}})
+// CHECK-RECIP: [[CALL_RES:%.+]] = call arcp float @fn(float noundef {{%.+}})
 // CHECK-RECIP: {{%.+}} = fadd arcp float {{%.+}}, [[CALL_RES]]
 
-// CHECK-UNSAFE: [[CALL_RES:%.+]] = call reassoc nsz arcp afn float @fn(float {{%.+}})
+// CHECK-UNSAFE: [[CALL_RES:%.+]] = call reassoc nsz arcp afn float @fn(float noundef {{%.+}})
 // CHECK-UNSAFE: {{%.+}} = fadd reassoc nsz arcp afn float {{%.+}}, [[CALL_RES]]
 
-// CHECK-FAST: [[CALL_RES:%.+]] = call reassoc nnan ninf nsz arcp afn float @fn(float {{%.+}})
+// CHECK-FAST: [[CALL_RES:%.+]] = call reassoc nnan ninf nsz arcp afn float @fn(float noundef {{%.+}})
 // CHECK-FAST: {{%.+}} = fadd reassoc nnan ninf nsz arcp afn float {{%.+}}, [[CALL_RES]]

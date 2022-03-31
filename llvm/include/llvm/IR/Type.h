@@ -15,7 +15,6 @@
 #define LLVM_IR_TYPE_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
@@ -33,6 +32,7 @@ class LLVMContext;
 class PointerType;
 class raw_ostream;
 class StringRef;
+template <typename PtrType> class SmallPtrSetImpl;
 
 /// The instances of the Type class are immutable: once they are created,
 /// they are never changed.  Also note that only one instance of a particular
@@ -366,7 +366,16 @@ public:
     return ContainedTys[0];
   }
 
+  /// This method is deprecated without replacement. Pointer element types are
+  /// not available with opaque pointers.
   Type *getPointerElementType() const {
+    return getNonOpaquePointerElementType();
+  }
+
+  /// Only use this method in code that is not reachable with opaque pointers,
+  /// or part of deprecated methods that will be removed as part of the opaque
+  /// pointers transition.
+  Type *getNonOpaquePointerElementType() const {
     assert(getTypeID() == PointerTyID);
     assert(NumContainedTys &&
            "Attempting to get element type of opaque pointer");

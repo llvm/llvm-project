@@ -399,8 +399,6 @@ into a form that will resemble:
 
 ```mlir
 // Run: mlir-opt example4.mlir -convert-linalg-to-std
-// Note that we lower the Linalg dialect directly to the Standard dialect.
-// See this doc: https://mlir.llvm.org/docs/Dialects/Standard/
 
 #map0 = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
 
@@ -417,7 +415,7 @@ func @pointwise_add(memref<?x?xf32, #map0>, memref<?x?xf32, #map0>, memref<?x?xf
 Which, after lowering to LLVM resembles:
 
 ```mlir
-// Run: mlir-opt example4.mlir -convert-linalg-to-std | mlir-opt -convert-std-to-llvm
+// Run: mlir-opt example4.mlir -convert-linalg-to-std | mlir-opt -convert-func-to-llvm
 // Some generated code are omitted here.
 func @example(%arg0: !llvm<"float*">, ...) {
   ...
@@ -520,7 +518,6 @@ generally alias the operand `view`. At the moment the existing ops are:
 * `memref.view`,
 * `memref.subview`,
 * `memref.transpose`.
-* `linalg.range`,
 * `linalg.slice`,
 * `linalg.reshape`,
 ```
@@ -546,7 +543,6 @@ seem generally appealing.
 Additionally, `linalg` provides a small subset of commonly named operations:
 
 ```
-* `linalg.copy`,
 * `linalg.fill`,
 * `linalg.dot`,
 * `linalg.matmul`,

@@ -18,12 +18,13 @@ using namespace mlir;
 
 namespace {
 struct TestDiagnosticFilterPass
-    : public PassWrapper<TestDiagnosticFilterPass, OperationPass<FuncOp>> {
+    : public PassWrapper<TestDiagnosticFilterPass,
+                         InterfacePass<SymbolOpInterface>> {
   StringRef getArgument() const final { return "test-diagnostic-filter"; }
   StringRef getDescription() const final {
     return "Test diagnostic filtering support.";
   }
-  TestDiagnosticFilterPass() {}
+  TestDiagnosticFilterPass() = default;
   TestDiagnosticFilterPass(const TestDiagnosticFilterPass &) {}
 
   void runOnOperation() override {
@@ -57,7 +58,7 @@ struct TestDiagnosticFilterPass
       llvm::cl::desc("Specifies the diagnostic file name filters.")};
 };
 
-} // end anonymous namespace
+} // namespace
 
 namespace mlir {
 namespace test {

@@ -34,7 +34,7 @@
 # RUN:     -rename_segment __FROM_SEG __TO_SEG \
 # RUN:     -rename_section __TEXT __cstring __RODATA __cstring \
 # RUN:   -o %t.out %t.o
-# RN: llvm-otool -l %t.out | FileCheck %s
+# RUN: llvm-otool -l %t.out | FileCheck %s
 
 # CHECK:      {{^}}Section{{$}}
 # CHECK-NEXT: sectname __text

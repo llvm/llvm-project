@@ -56,7 +56,7 @@ CLASS-DAG:             static const N0::N1::(anonymous namespace)::Enum ClassSta
 CLASS-DAG:             static const N0::N1::(anonymous namespace)::ScopedEnum ClassStaticConstScopedEnum = 4;
 CLASS-DAG:             N0::N1::Class::Inner m_inner;
 CLASS-DAG:             {{(inline )?}}Class(N0::N1::(anonymous namespace)::Enum);
-CLASS-DAG:             static {{(inline )?}}int StaticFunc(const N0::N1::Class &);
+CLASS-DAG:             {{(static )?}}{{(inline )?}}int StaticFunc(const N0::N1::Class &);
 CLASS-DAG:             {{(inline )?}}int PrivateFunc(const N0::N1::Class::Inner &);
 CLASS:         };
 CLASS:     }

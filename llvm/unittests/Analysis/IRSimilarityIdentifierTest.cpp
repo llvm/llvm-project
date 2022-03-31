@@ -757,26 +757,13 @@ TEST(IRInstructionMapper, BranchLegal) {
   ASSERT_TRUE(UnsignedVec[1] < UnsignedVec[2]);
 }
 
-// In most cases, the illegal instructions we are collecting don't require any
-// sort of setup.  In these cases, we can just only have illegal instructions,
-// and the mapper will create 0 length vectors, and we can check that.
-
-// In cases where we have legal instructions needed to set up the illegal
-// instruction, to check illegal instructions are assigned unsigned integers
-// from the maximum value decreasing to 0, it will be greater than a legal
-// instruction that comes after.  So to check that we have an illegal
-// instruction, we place a legal instruction after an illegal instruction, and
-// check that the illegal unsigned integer is greater than the unsigned integer
-// of the legal instruction.
-
-// Checks that a PHINode is mapped to be illegal since there is extra checking
-// needed to ensure that a branch in one region is bin an isomorphic
-// location in a different region.
-TEST(IRInstructionMapper, PhiIllegal) {
+// Checks that a PHINode is mapped to be legal.
+TEST(IRInstructionMapper, PhiLegal) {
   StringRef ModuleString = R"(
                           define i32 @f(i32 %a, i32 %b) {
                           bb0:
                              %0 = phi i1 [ 0, %bb0 ], [ %0, %bb1 ]
+                             %1 = add i32 %a, %b
                              ret i32 0
                           bb1:
                              ret i32 1
@@ -790,11 +777,53 @@ TEST(IRInstructionMapper, PhiIllegal) {
   SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
   SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
   IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  Mapper.InstClassifier.EnableBranches = true;
+  Mapper.initializeForBBs(*M);
   getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
-  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(0));
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(3));
 }
+
+// Checks that a PHINode is mapped to be legal.
+TEST(IRInstructionMapper, PhiIllegal) {
+  StringRef ModuleString = R"(
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = phi i1 [ 0, %bb0 ], [ %0, %bb1 ]
+                             %1 = add i32 %a, %b
+                             ret i32 0
+                          bb1:
+                             ret i32 1
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  Mapper.initializeForBBs(*M);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  ASSERT_EQ(InstrList.size(), UnsignedVec.size());
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(3));
+  ASSERT_GT(UnsignedVec[0], Mapper.IllegalInstrNumber);
+}
+
+// In most cases, the illegal instructions we are collecting don't require any
+// sort of setup.  In these cases, we can just only have illegal instructions,
+// and the mapper will create 0 length vectors, and we can check that.
+
+// In cases where we have legal instructions needed to set up the illegal
+// instruction, to check illegal instructions are assigned unsigned integers
+// from the maximum value decreasing to 0, it will be greater than a legal
+// instruction that comes after.  So to check that we have an illegal
+// instruction, we place a legal instruction after an illegal instruction, and
+// check that the illegal unsigned integer is greater than the unsigned integer
+// of the legal instruction.
 
 // Checks that an alloca instruction is mapped to be illegal.
 TEST(IRInstructionMapper, AllocaIllegal) {
@@ -816,7 +845,8 @@ TEST(IRInstructionMapper, AllocaIllegal) {
   getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
-  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(0));
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(1));
+  ASSERT_GT(UnsignedVec[0], Mapper.IllegalInstrNumber);
 }
 
 // Checks that an getelementptr instruction is mapped to be legal.  And that
@@ -933,8 +963,8 @@ TEST(IRInstructionMapper, GetElementPtrDifferentInBounds) {
   ASSERT_NE(UnsignedVec[0], UnsignedVec[1]);
 }
 
-// Checks that indirect call instructions are mapped to be illegal since we
-// cannot guarantee the same function in two different cases.
+// Checks that indirect call instructions are mapped to be illegal when it is
+// specified to disallow them.
 TEST(IRInstructionMapper, CallsIllegalIndirect) {
   StringRef ModuleString = R"(
                           define i32 @f(void()* %func) {
@@ -951,10 +981,38 @@ TEST(IRInstructionMapper, CallsIllegalIndirect) {
   SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
   SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
   IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  Mapper.InstClassifier.EnableIndirectCalls = false;
   getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
-  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(0));
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(1));
+  ASSERT_GT(UnsignedVec[0], Mapper.IllegalInstrNumber);
+}
+
+// Checks that indirect call instructions are mapped to be legal when it is not
+// specified to disallow them.
+TEST(IRInstructionMapper, CallsLegalIndirect) {
+  StringRef ModuleString = R"(
+                          define i32 @f(void()* %func) {
+                          bb0:
+                             call void %func()
+                             call void %func()
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  Mapper.InstClassifier.EnableIndirectCalls = true;
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  ASSERT_EQ(InstrList.size(), UnsignedVec.size());
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(3));
 }
 
 // Checks that a call instruction is mapped to be legal.  Here we check that
@@ -986,7 +1044,36 @@ TEST(IRInstructionMapper, CallsSameTypeSameName) {
 }
 
 // Here we check that a calls with different names, but the same arguments types
-// are mapped to different value.
+// are mapped to different value when specified that the name must match.
+TEST(IRInstructionMapper, CallsSameArgTypeDifferentNameDisallowed) {
+  StringRef ModuleString = R"(
+                          declare i32 @f1(i32, i32)
+                          declare i32 @f2(i32, i32)
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = call i32 @f1(i32 %a, i32 %b)
+                             %1 = call i32 @f2(i32 %a, i32 %b)
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  Mapper.EnableMatchCallsByName = true;
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  ASSERT_EQ(InstrList.size(), UnsignedVec.size());
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(3));
+  ASSERT_NE(UnsignedVec[0], UnsignedVec[1]);
+}
+
+// Here we check that a calls with different names, but the same arguments types
+// are mapped to the same value when it is not specifed that they must match.
 TEST(IRInstructionMapper, CallsSameArgTypeDifferentName) {
   StringRef ModuleString = R"(
                           declare i32 @f1(i32, i32)
@@ -1006,11 +1093,12 @@ TEST(IRInstructionMapper, CallsSameArgTypeDifferentName) {
   SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
   SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
   IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  Mapper.EnableMatchCallsByName = false;
   getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
   ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(3));
-  ASSERT_NE(UnsignedVec[0], UnsignedVec[1]);
+  ASSERT_EQ(UnsignedVec[0], UnsignedVec[1]);
 }
 
 // Here we check that a calls with different names, and different arguments
@@ -1180,7 +1268,8 @@ TEST(IRInstructionMapper, InvokeIllegal) {
   getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
-  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(0));
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(1));
+  ASSERT_GT(UnsignedVec[0], Mapper.IllegalInstrNumber);
 }
 
 // Checks that an callbr instructions are considered to be illegal.  Callbr
@@ -1213,7 +1302,8 @@ TEST(IRInstructionMapper, CallBrInstIllegal) {
   getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
-  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(0));
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(1));
+  ASSERT_GT(UnsignedVec[0], Mapper.IllegalInstrNumber);
 }
 
 // Checks that an debuginfo intrinsics are mapped to be invisible.  Since they
@@ -1271,7 +1361,8 @@ TEST(IRInstructionMapper, ExceptionHandlingTypeIdIllegal) {
   getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
-  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(0));
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(1));
+  ASSERT_GT(UnsignedVec[0], Mapper.IllegalInstrNumber);
 }
 
 // Checks that an eh.exceptioncode intrinsic is mapped to be illegal.
@@ -1303,7 +1394,8 @@ TEST(IRInstructionMapper, ExceptionHandlingExceptionCodeIllegal) {
   getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
-  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(0));
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(1));
+  ASSERT_GT(UnsignedVec[0], Mapper.IllegalInstrNumber);
 }
 
 // Checks that an eh.unwind intrinsic is mapped to be illegal.
@@ -1328,7 +1420,8 @@ TEST(IRInstructionMapper, ExceptionHandlingUnwindIllegal) {
   getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
-  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(0));
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(1));
+  ASSERT_GT(UnsignedVec[0], Mapper.IllegalInstrNumber);
 }
 
 // Checks that an eh.exceptionpointer intrinsic is mapped to be illegal.
@@ -1353,7 +1446,8 @@ TEST(IRInstructionMapper, ExceptionHandlingExceptionPointerIllegal) {
   getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
-  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(0));
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(1));
+  ASSERT_GT(UnsignedVec[0], Mapper.IllegalInstrNumber);
 }
 
 // Checks that a catchpad instruction is mapped to an illegal value.
@@ -1384,7 +1478,8 @@ TEST(IRInstructionMapper, CatchpadIllegal) {
   getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
-  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(0));
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(1));
+  ASSERT_GT(UnsignedVec[0], Mapper.IllegalInstrNumber);
 }
 
 // Checks that a cleanuppad instruction is mapped to an illegal value.
@@ -1415,14 +1510,16 @@ TEST(IRInstructionMapper, CleanuppadIllegal) {
   getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
-  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(0));
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(1));
+  ASSERT_GT(UnsignedVec[0], Mapper.IllegalInstrNumber);
 }
 
 // The following three instructions are memory transfer and setting based, which
 // are considered illegal since is extra checking needed to handle the address
 // space checking.
 
-// Checks that a memset instruction is mapped to an illegal value.
+// Checks that a memset instruction is mapped to an illegal value when
+// specified.
 TEST(IRInstructionMapper, MemSetIllegal) {
   StringRef ModuleString = R"(
   declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i32, i1)
@@ -1446,6 +1543,7 @@ TEST(IRInstructionMapper, MemSetIllegal) {
   SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
   SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
   IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  Mapper.InstClassifier.EnableIntrinsics = false;
   getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
@@ -1453,7 +1551,8 @@ TEST(IRInstructionMapper, MemSetIllegal) {
   ASSERT_TRUE(UnsignedVec[2] < UnsignedVec[0]);
 }
 
-// Checks that a memcpy instruction is mapped to an illegal value.
+// Checks that a memcpy instruction is mapped to an illegal value  when
+// specified.
 TEST(IRInstructionMapper, MemCpyIllegal) {
   StringRef ModuleString = R"(
   declare void @llvm.memcpy.p0i8.i64(i8* nocapture writeonly, i8, i64, i32, i1)
@@ -1477,6 +1576,7 @@ TEST(IRInstructionMapper, MemCpyIllegal) {
   SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
   SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
   IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  Mapper.InstClassifier.EnableIntrinsics = false;
   getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
@@ -1485,7 +1585,8 @@ TEST(IRInstructionMapper, MemCpyIllegal) {
   ASSERT_LT(UnsignedVec[2], UnsignedVec[0]);
 }
 
-// Checks that a memmove instruction is mapped to an illegal value.
+// Checks that a memmove instruction is mapped to an illegal value  when
+// specified.
 TEST(IRInstructionMapper, MemMoveIllegal) {
   StringRef ModuleString = R"(
   declare void @llvm.memmove.p0i8.i64(i8* nocapture writeonly, i8, i64, i32, i1)
@@ -1509,11 +1610,51 @@ TEST(IRInstructionMapper, MemMoveIllegal) {
   SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
   SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
   IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  Mapper.InstClassifier.EnableIntrinsics = false;
   getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
   ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(7));
   ASSERT_LT(UnsignedVec[2], UnsignedVec[0]);
+}
+
+// Checks that mem* instructions are mapped to an legal value when not
+// specified, and that all the intrinsics are marked differently.
+TEST(IRInstructionMapper, MemOpsLegal) {
+  StringRef ModuleString = R"(
+  declare void @llvm.memmove.p0i8.i64(i8* nocapture writeonly, i8, i64, i32, i1)
+  declare void @llvm.memcpy.p0i8.i64(i8* nocapture writeonly, i8, i64, i32, i1)
+  declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i32, i1)
+
+  define i64 @function(i64 %x, i64 %z, i64 %n) {
+  entry:
+    %pool = alloca [59 x i64], align 4
+    %tmp = bitcast [59 x i64]* %pool to i8*
+    call void @llvm.memmove.p0i8.i64(i8* nonnull %tmp, i8 0, i64 236, i32 4, i1 false)
+    call void @llvm.memcpy.p0i8.i64(i8* nonnull %tmp, i8 0, i64 236, i32 4, i1 false)
+    call void @llvm.memset.p0i8.i64(i8* nonnull %tmp, i8 0, i64 236, i32 4, i1 false)
+    %cmp3 = icmp eq i64 %n, 0
+    %a = add i64 %x, %z
+    %c = add i64 %x, %z
+    ret i64 0
+  })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  Mapper.InstClassifier.EnableIntrinsics = true;
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  ASSERT_EQ(InstrList.size(), UnsignedVec.size());
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(9));
+  ASSERT_LT(UnsignedVec[2], UnsignedVec[3]);
+  ASSERT_LT(UnsignedVec[3], UnsignedVec[4]);
+  ASSERT_LT(UnsignedVec[4], UnsignedVec[5]);
 }
 
 // Checks that a variable argument instructions are mapped to an illegal value.
@@ -1557,6 +1698,7 @@ TEST(IRInstructionMapper, VarArgsIllegal) {
   SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
   SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
   IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  Mapper.InstClassifier.EnableIntrinsics = false;
   getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
@@ -2289,6 +2431,108 @@ TEST(IRSimilarityCandidate, DifferentBranchStructureOutside) {
   ASSERT_TRUE(longSimCandCompare(InstrList, true, 3, 0, 6));
 }
 
+// Checks that the same structure is recognized between two candidates,
+// when the phi predecessor are other blocks inside the same region,
+// the relative distance between the blocks must be the same.
+TEST(IRSimilarityCandidate, SamePHIStructureInternal) {
+  StringRef ModuleString = R"(
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             br label %bb2
+                          bb1:
+                             br label %bb2
+                          bb2:
+                             %0 = phi i32 [ %a, %bb0 ], [ %b, %bb1 ] 
+                             %1 = add i32 %b, %a
+                             %2 = add i32 %a, %b
+                             ret i32 0
+                          }
+                          
+                          define i32 @f2(i32 %a, i32 %b) {
+                          bb0:
+                             br label %bb2
+                          bb1:
+                             br label %bb2
+                          bb2:
+                             %0 = phi i32 [ %a, %bb0 ], [ %b, %bb1 ]
+                             %1 = add i32 %b, %a
+                             %2 = add i32 %a, %b
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  Mapper.InstClassifier.EnableBranches = true;
+  Mapper.initializeForBBs(*M);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  // Check to make sure that we have a long enough region.
+  ASSERT_EQ(InstrList.size(), static_cast<unsigned>(12));
+  // Check that the instructions were added correctly to both vectors.
+  ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
+
+  ASSERT_TRUE(longSimCandCompare(InstrList, true, 4, 0, 6));
+}
+
+// Checks that the different structure is recognized between two candidates,
+// when the phi predecessor are other blocks inside the same region,
+// the relative distance between the blocks must be the same.
+TEST(IRSimilarityCandidate, DifferentPHIStructureInternal) {
+  StringRef ModuleString = R"(
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             br label %bb2
+                          bb1:
+                             br label %bb2
+                          bb3:
+                             br label %bb2
+                          bb2:
+                             %0 = phi i32 [ %a, %bb0 ], [ %b, %bb1 ] 
+                             %1 = add i32 %b, %a
+                             %2 = add i32 %a, %b
+                             ret i32 0
+                          }
+                          
+                          define i32 @f2(i32 %a, i32 %b) {
+                          bb0:
+                             br label %bb2
+                          bb1:
+                             br label %bb2
+                          bb3:
+                             br label %bb2
+                          bb2:
+                             %0 = phi i32 [ %a, %bb0 ], [ %b, %bb3 ] 
+                             %1 = add i32 %b, %a
+                             %2 = add i32 %a, %b
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  Mapper.InstClassifier.EnableBranches = true;
+  Mapper.initializeForBBs(*M);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  // Check to make sure that we have a long enough region.
+  ASSERT_EQ(InstrList.size(), static_cast<unsigned>(14));
+  // Check that the instructions were added correctly to both vectors.
+  ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
+
+  ASSERT_FALSE(longSimCandCompare(InstrList, true, 5, 0, 7));
+}
+
 // Checks that two sets of identical instructions are found to be the same.
 // Both sequences of adds have the same operand ordering, and the same
 // instructions, making them strcturally equivalent.
@@ -2373,6 +2617,39 @@ TEST(IRSimilarityIdentifier, CommutativeSimilarity) {
       InstIdx += 3;
     }
   }
+}
+
+// This test makes sure that intrinsic functions that are marked commutative
+// are still treated as non-commutative since they are function calls.
+TEST(IRSimilarityIdentifier, InstrinsicCommutative) {
+  // If treated as commutative, we will fail to find a valid mapping, causing
+  // an assertion error.
+  StringRef ModuleString = R"(
+  define void @foo() {
+    entry:
+      %0 = call i16 @llvm.smul.fix.i16(i16 16384, i16 16384, i32 15)
+      store i16 %0, i16* undef, align 1
+      %1 = icmp eq i16 undef, 8192
+      call void @bar()
+      %2 = call i16 @llvm.smul.fix.i16(i16 -16384, i16 16384, i32 15)
+      store i16 %2, i16* undef, align 1
+      %3 = icmp eq i16 undef, -8192
+      call void @bar()
+      %4 = call i16 @llvm.smul.fix.i16(i16 -16384, i16 -16384, i32 15)
+      ret void
+  }
+
+  declare void @bar()
+
+  ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
+  declare i16 @llvm.smul.fix.i16(i16, i16, i32 immarg))";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<std::vector<IRSimilarityCandidate>> SimilarityCandidates;
+  getSimilarities(*M, SimilarityCandidates);
+
+  ASSERT_TRUE(SimilarityCandidates.size() == 0);
 }
 
 // This test checks to see whether we can detect different structure in

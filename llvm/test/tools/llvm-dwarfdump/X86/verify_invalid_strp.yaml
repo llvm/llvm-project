@@ -2,7 +2,8 @@
 # RUN: not llvm-dwarfdump -debug-info -verify %t.o | FileCheck %s
 
 #      CHECK: Verifying non-dwo Units... 
-# CHECK-NEXT: error: DW_FORM_strp offset beyond .debug_str bounds:
+# CHECK-NEXT: Verifying unit: 1 / 1 
+# CHECK-NEXT: error: DW_FORM_strp offset 4660 is beyond .debug_str bounds:
 
 --- !ELF
 FileHeader:

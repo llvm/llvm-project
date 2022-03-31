@@ -22,6 +22,8 @@ spv.module Physical64 OpenCL requires #spv.vce<v1.0, [Kernel, Addresses], []> {
     %8 = spv.OCL.pow %arg0, %arg0 : f32
     // CHECK: {{%.*}} = spv.OCL.rsqrt {{%.*}} : f32
     %9 = spv.OCL.rsqrt %arg0 : f32
+    // CHECK: {{%.*}} = spv.OCL.erf {{%.*}} : f32
+    %10 = spv.OCL.erf %arg0 : f32
     spv.Return
   }
 
@@ -34,6 +36,12 @@ spv.module Physical64 OpenCL requires #spv.vce<v1.0, [Kernel, Addresses], []> {
   spv.func @vector_size16(%arg0 : vector<16xf32>) "None" {
     // CHECK: {{%.*}} = spv.OCL.fabs {{%.*}} : vector<16xf32>
     %0 = spv.OCL.fabs %arg0 : vector<16xf32>
+    spv.Return
+  }
+
+  spv.func @fma(%arg0 : f32, %arg1 : f32, %arg2 : f32) "None" {
+    // CHECK: spv.OCL.fma {{%[^,]*}}, {{%[^,]*}}, {{%[^,]*}} : f32
+    %13 = spv.OCL.fma %arg0, %arg1, %arg2 : f32
     spv.Return
   }
 }

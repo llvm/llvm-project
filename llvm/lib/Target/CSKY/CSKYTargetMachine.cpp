@@ -13,7 +13,9 @@
 #include "CSKYTargetMachine.h"
 #include "CSKY.h"
 #include "CSKYSubtarget.h"
+#include "CSKYTargetObjectFile.h"
 #include "TargetInfo/CSKYTargetInfo.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -23,6 +25,9 @@ using namespace llvm;
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeCSKYTarget() {
   RegisterTargetMachine<CSKYTargetMachine> X(getTheCSKYTarget());
+
+  PassRegistry *Registry = PassRegistry::getPassRegistry();
+  initializeCSKYConstantIslandsPass(*Registry);
 }
 
 static std::string computeDataLayout(const Triple &TT) {
@@ -49,7 +54,7 @@ CSKYTargetMachine::CSKYTargetMachine(const Target &T, const Triple &TT,
     : LLVMTargetMachine(T, computeDataLayout(TT), TT, CPU, FS, Options,
                         RM.getValueOr(Reloc::Static),
                         getEffectiveCodeModel(CM, CodeModel::Small), OL),
-      TLOF(std::make_unique<TargetLoweringObjectFileELF>()) {
+      TLOF(std::make_unique<CSKYELFTargetObjectFile>()) {
   initAsmInfo();
 }
 
@@ -92,6 +97,7 @@ public:
   }
 
   bool addInstSelector() override;
+  void addPreEmitPass() override;
 };
 
 } // namespace
@@ -104,4 +110,8 @@ bool CSKYPassConfig::addInstSelector() {
   addPass(createCSKYISelDag(getCSKYTargetMachine()));
 
   return false;
+}
+
+void CSKYPassConfig::addPreEmitPass() {
+  addPass(createCSKYConstantIslandPass());
 }

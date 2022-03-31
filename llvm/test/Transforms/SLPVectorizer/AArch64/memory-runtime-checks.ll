@@ -325,12 +325,10 @@ exit:
 define void @no_version(i32* nocapture %dst, i32* nocapture readonly %src) {
 ; CHECK-LABEL: @no_version(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SRC_GEP_1:%.*]] = getelementptr inbounds i32, i32* [[SRC:%.*]], i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[SRC]] to <2 x i32>*
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[SRC:%.*]] to <2 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, <2 x i32>* [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = ashr <2 x i32> [[TMP1]], <i32 16, i32 16>
-; CHECK-NEXT:    [[DST_GEP_1:%.*]] = getelementptr inbounds i32, i32* [[DST:%.*]], i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32* [[DST]] to <2 x i32>*
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32* [[DST:%.*]] to <2 x i32>*
 ; CHECK-NEXT:    store <2 x i32> [[TMP2]], <2 x i32>* [[TMP3]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -610,7 +608,6 @@ define void @test_bounds_removed_before_runtime_checks(%struct * %A, i32** %B, i
 ; CHECK-LABEL: @test_bounds_removed_before_runtime_checks(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT:%.*]], %struct* [[A:%.*]], i64 0, i32 0
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[STRUCT]], %struct* [[A]], i64 0, i32 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[TMP11]] to <2 x i32>*
 ; CHECK-NEXT:    store <2 x i32> <i32 10, i32 300>, <2 x i32>* [[TMP0]], align 8
 ; CHECK-NEXT:    [[TMP13:%.*]] = load i32*, i32** [[B:%.*]], align 8
@@ -873,57 +870,12 @@ define i32 @block_partly_vectorized_without_versioning(%struct.spam* readonly %a
 ; CHECK-NEXT:    [[T19:%.*]] = bitcast i8* [[ARG1:%.*]] to <16 x i8>*
 ; CHECK-NEXT:    [[A_GEP_0:%.*]] = getelementptr i8, i8* [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[B_GEP_0:%.*]] = getelementptr i8, i8* [[B:%.*]], i64 0
-; CHECK-NEXT:    [[A_GEP_1:%.*]] = getelementptr i8, i8* [[A]], i64 1
-; CHECK-NEXT:    [[B_GEP_1:%.*]] = getelementptr i8, i8* [[B]], i64 1
-; CHECK-NEXT:    [[A_GEP_2:%.*]] = getelementptr i8, i8* [[A]], i64 2
-; CHECK-NEXT:    [[B_GEP_2:%.*]] = getelementptr i8, i8* [[B]], i64 2
-; CHECK-NEXT:    [[A_GEP_3:%.*]] = getelementptr i8, i8* [[A]], i64 3
-; CHECK-NEXT:    [[B_GEP_3:%.*]] = getelementptr i8, i8* [[B]], i64 3
-; CHECK-NEXT:    [[A_GEP_4:%.*]] = getelementptr i8, i8* [[A]], i64 4
-; CHECK-NEXT:    [[B_GEP_4:%.*]] = getelementptr i8, i8* [[B]], i64 4
-; CHECK-NEXT:    [[A_GEP_5:%.*]] = getelementptr i8, i8* [[A]], i64 5
-; CHECK-NEXT:    [[B_GEP_5:%.*]] = getelementptr i8, i8* [[B]], i64 5
-; CHECK-NEXT:    [[A_GEP_6:%.*]] = getelementptr i8, i8* [[A]], i64 6
-; CHECK-NEXT:    [[B_GEP_6:%.*]] = getelementptr i8, i8* [[B]], i64 6
-; CHECK-NEXT:    [[A_GEP_7:%.*]] = getelementptr i8, i8* [[A]], i64 7
-; CHECK-NEXT:    [[B_GEP_7:%.*]] = getelementptr i8, i8* [[B]], i64 7
-; CHECK-NEXT:    [[A_GEP_8:%.*]] = getelementptr i8, i8* [[A]], i64 8
-; CHECK-NEXT:    [[B_GEP_8:%.*]] = getelementptr i8, i8* [[B]], i64 8
-; CHECK-NEXT:    [[A_GEP_9:%.*]] = getelementptr i8, i8* [[A]], i64 9
-; CHECK-NEXT:    [[B_GEP_9:%.*]] = getelementptr i8, i8* [[B]], i64 9
-; CHECK-NEXT:    [[A_GEP_10:%.*]] = getelementptr i8, i8* [[A]], i64 10
-; CHECK-NEXT:    [[B_GEP_10:%.*]] = getelementptr i8, i8* [[B]], i64 10
-; CHECK-NEXT:    [[A_GEP_11:%.*]] = getelementptr i8, i8* [[A]], i64 11
-; CHECK-NEXT:    [[B_GEP_11:%.*]] = getelementptr i8, i8* [[B]], i64 11
-; CHECK-NEXT:    [[A_GEP_12:%.*]] = getelementptr i8, i8* [[A]], i64 12
-; CHECK-NEXT:    [[B_GEP_12:%.*]] = getelementptr i8, i8* [[B]], i64 12
-; CHECK-NEXT:    [[A_GEP_13:%.*]] = getelementptr i8, i8* [[A]], i64 13
-; CHECK-NEXT:    [[B_GEP_13:%.*]] = getelementptr i8, i8* [[B]], i64 13
-; CHECK-NEXT:    [[A_GEP_14:%.*]] = getelementptr i8, i8* [[A]], i64 14
-; CHECK-NEXT:    [[B_GEP_14:%.*]] = getelementptr i8, i8* [[B]], i64 14
-; CHECK-NEXT:    [[A_GEP_15:%.*]] = getelementptr i8, i8* [[A]], i64 15
+; CHECK-NEXT:    [[R_GEP_0:%.*]] = getelementptr i8, i8* [[ARG1]], i64 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[A_GEP_0]] to <16 x i8>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i8>, <16 x i8>* [[TMP0]], align 1
-; CHECK-NEXT:    [[B_GEP_15:%.*]] = getelementptr i8, i8* [[B]], i64 15
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8* [[B_GEP_0]] to <16 x i8>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i8>, <16 x i8>* [[TMP2]], align 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor <16 x i8> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[R_GEP_0:%.*]] = getelementptr i8, i8* [[ARG1]], i64 0
-; CHECK-NEXT:    [[R_GEP_1:%.*]] = getelementptr i8, i8* [[ARG1]], i64 1
-; CHECK-NEXT:    [[R_GEP_2:%.*]] = getelementptr i8, i8* [[ARG1]], i64 2
-; CHECK-NEXT:    [[R_GEP_3:%.*]] = getelementptr i8, i8* [[ARG1]], i64 3
-; CHECK-NEXT:    [[R_GEP_4:%.*]] = getelementptr i8, i8* [[ARG1]], i64 4
-; CHECK-NEXT:    [[R_GEP_5:%.*]] = getelementptr i8, i8* [[ARG1]], i64 5
-; CHECK-NEXT:    [[R_GEP_6:%.*]] = getelementptr i8, i8* [[ARG1]], i64 6
-; CHECK-NEXT:    [[R_GEP_7:%.*]] = getelementptr i8, i8* [[ARG1]], i64 7
-; CHECK-NEXT:    [[R_GEP_8:%.*]] = getelementptr i8, i8* [[ARG1]], i64 8
-; CHECK-NEXT:    [[R_GEP_9:%.*]] = getelementptr i8, i8* [[ARG1]], i64 9
-; CHECK-NEXT:    [[R_GEP_10:%.*]] = getelementptr i8, i8* [[ARG1]], i64 10
-; CHECK-NEXT:    [[R_GEP_11:%.*]] = getelementptr i8, i8* [[ARG1]], i64 11
-; CHECK-NEXT:    [[R_GEP_12:%.*]] = getelementptr i8, i8* [[ARG1]], i64 12
-; CHECK-NEXT:    [[R_GEP_13:%.*]] = getelementptr i8, i8* [[ARG1]], i64 13
-; CHECK-NEXT:    [[R_GEP_14:%.*]] = getelementptr i8, i8* [[ARG1]], i64 14
-; CHECK-NEXT:    [[R_GEP_15:%.*]] = getelementptr i8, i8* [[ARG1]], i64 15
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i8* [[R_GEP_0]] to <16 x i8>*
 ; CHECK-NEXT:    store <16 x i8> [[TMP4]], <16 x i8>* [[TMP5]], align 1
 ; CHECK-NEXT:    [[T21:%.*]] = getelementptr inbounds i8, i8* [[ARG3]], i64 15
@@ -1234,7 +1186,6 @@ define void @crash_instructions_deleted(float* %t, i32* %a, i32** noalias %ptr) 
 ; CHECK-LABEL: @crash_instructions_deleted(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[T15:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i32 2
-; CHECK-NEXT:    [[T16:%.*]] = getelementptr inbounds i32, i32* [[A]], i32 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[T15]] to <2 x i32>*
 ; CHECK-NEXT:    store <2 x i32> <i32 0, i32 10>, <2 x i32>* [[TMP0]], align 8
 ; CHECK-NEXT:    [[T17:%.*]] = load i32*, i32** [[PTR:%.*]], align 8

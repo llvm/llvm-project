@@ -2,9 +2,9 @@
 ;; Test that (mul (add x, c1), c2) can be transformed to
 ;; (add (mul x, c2), c1*c2) if profitable.
 
-; RUN: llc -mtriple=riscv32 -mattr=+m,+experimental-zba -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv32 -mattr=+m,+zba -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV32IMB %s
-; RUN: llc -mtriple=riscv64 -mattr=+m,+experimental-zba -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv64 -mattr=+m,+zba -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64IMB %s
 
 define i32 @add_mul_combine_accept_a1(i32 %x) {
@@ -871,4 +871,26 @@ define i64 @mulneg3000_sub8990_c(i64 %x) {
   %tmp0 = mul i64 %x, -3000
   %tmp1 = add i64 %tmp0, -8990
   ret i64 %tmp1
+}
+
+; This test case previously caused an infinite loop between transformations
+; performed in RISCVISelLowering;:transformAddImmMulImm and
+; DAGCombiner::visitMUL.
+define i1 @pr53831(i32 %x) {
+; RV32IMB-LABEL: pr53831:
+; RV32IMB:       # %bb.0:
+; RV32IMB-NEXT:    li a0, 0
+; RV32IMB-NEXT:    ret
+;
+; RV64IMB-LABEL: pr53831:
+; RV64IMB:       # %bb.0:
+; RV64IMB-NEXT:    li a0, 0
+; RV64IMB-NEXT:    ret
+  %tmp0 = add i32 %x, 1
+  %tmp1 = mul i32 %tmp0, 24
+  %tmp2 = add i32 %tmp1, 1
+  %tmp3 = mul i32 %x, 24
+  %tmp4 = add i32 %tmp3, 2048
+  %tmp5 = icmp eq i32 %tmp4, %tmp2
+  ret i1 %tmp5
 }

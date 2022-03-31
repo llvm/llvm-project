@@ -51,7 +51,7 @@ __attribute__((objc_runtime_name("foo")))
 + (instancetype)alloc;
 @end
 
-id Test16877359() {
+id Test16877359(void) {
     return [SLREarth alloc];
 }
 

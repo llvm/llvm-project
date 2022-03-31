@@ -119,6 +119,8 @@ class LLVMConfig(object):
                 features.add('target-x86_64')
             elif re.match(r'^aarch64.*', target_triple):
                 features.add('target-aarch64')
+            elif re.match(r'^arm64.*', target_triple):
+                features.add('target-aarch64')
             elif re.match(r'^arm.*', target_triple):
                 features.add('target-arm')
 
@@ -487,7 +489,6 @@ class LLVMConfig(object):
 
         lib_dir_props = [
             self.config.name.lower() + '_libs_dir',
-            'clang_libs_dir',
             'llvm_shlib_dir',
             'llvm_libs_dir',
             ]

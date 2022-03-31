@@ -2261,15 +2261,32 @@ public:
 
   bool isArray() const { return CXXNewExprBits.IsArray; }
 
+  /// This might return None even if isArray() returns true,
+  /// since there might not be an array size expression.
+  /// If the result is not-None, it will never wrap a nullptr.
   Optional<Expr *> getArraySize() {
     if (!isArray())
       return None;
-    return cast_or_null<Expr>(getTrailingObjects<Stmt *>()[arraySizeOffset()]);
+
+    if (auto *Result =
+            cast_or_null<Expr>(getTrailingObjects<Stmt *>()[arraySizeOffset()]))
+      return Result;
+
+    return None;
   }
+
+  /// This might return None even if isArray() returns true,
+  /// since there might not be an array size expression.
+  /// If the result is not-None, it will never wrap a nullptr.
   Optional<const Expr *> getArraySize() const {
     if (!isArray())
       return None;
-    return cast_or_null<Expr>(getTrailingObjects<Stmt *>()[arraySizeOffset()]);
+
+    if (auto *Result =
+            cast_or_null<Expr>(getTrailingObjects<Stmt *>()[arraySizeOffset()]))
+      return Result;
+
+    return None;
   }
 
   unsigned getNumPlacementArgs() const {

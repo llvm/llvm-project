@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11
-// XFAIL: LIBCXX-AIX-FIXME
 
 #include <cassert>
 #include <cmath>

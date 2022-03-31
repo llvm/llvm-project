@@ -137,7 +137,7 @@ double sind(double);
 // CHECK-NEXT:    %[[ARRAYIDX:.+]] = getelementptr inbounds float, float* %[[TMP20]], i64 %[[IDXPROM]]
 // CHECK-NEXT:    %[[TMP22:.+]] = load float, float* %[[ARRAYIDX]], align 4
 // CHECK-NEXT:    %[[CONV28:.+]] = fpext float %[[TMP22]] to double
-// CHECK-NEXT:    %[[CALL:.+]] = call double @sind(double %[[CONV28]])
+// CHECK-NEXT:    %[[CALL:.+]] = call double @sind(double noundef %[[CONV28]])
 // CHECK-NEXT:    %[[TMP23:.+]] = load float*, float** %[[C_ADDR]], align 8
 // CHECK-NEXT:    %[[TMP24:.+]] = load i32, i32* %[[I6]], align 4
 // CHECK-NEXT:    %[[IDXPROM29:.+]] = sext i32 %[[TMP24]] to i64
@@ -205,6 +205,7 @@ double sind(double);
 // CHECK-NEXT:    ret void
 // CHECK-NEXT:  }
 
+
 void unroll_partial_heuristic_for(int m, float *a, float *b, float *c, float *d, float *e, float offset) {
 #pragma omp for collapse(2)
   for (int i = 0; i < m; i++) {
@@ -216,6 +217,7 @@ void unroll_partial_heuristic_for(int m, float *a, float *b, float *c, float *d,
 }
 
 #endif // HEADER
+//
 
 // CHECK: ![[META0:[0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 // CHECK: ![[META1:[0-9]+]] = !{i32 7, !"openmp", i32 51}

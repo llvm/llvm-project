@@ -30,9 +30,6 @@ class LLVMContext;
 namespace clang {
 class ASTConsumer;
 class CompilerInstance;
-class CodeGenerator;
-class DeclGroupRef;
-class FrontendAction;
 class IncrementalAction;
 class Parser;
 

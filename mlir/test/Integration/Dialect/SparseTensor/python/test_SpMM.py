@@ -4,18 +4,20 @@
 import ctypes
 import numpy as np
 import os
-
-import mlir.all_passes_registration
+import sys
 
 from mlir import ir
 from mlir import runtime as rt
 from mlir import execution_engine
-from mlir import passmanager
 
 from mlir.dialects import sparse_tensor as st
 from mlir.dialects import builtin
+from mlir.dialects import func
 from mlir.dialects.linalg.opdsl import lang as dsl
 
+_SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(_SCRIPT_PATH)
+from tools import sparse_compiler
 
 @dsl.linalg_structured_op
 def matmul_dsl(
@@ -40,7 +42,7 @@ def build_SpMM(attr: st.EncodingAttr):
   arguments = [a, b, c]
   with ir.InsertionPoint(module.body):
 
-    @builtin.FuncOp.from_py_func(*arguments)
+    @func.FuncOp.from_py_func(*arguments)
     def spMxM(*args):
       return matmul_dsl(args[0], args[1], outs=[args[2]])
 
@@ -85,12 +87,14 @@ def build_compile_and_run_SpMM(attr: st.EncodingAttr, support_lib: str,
       np.float64)
   b = np.array([[1.0, 2.0], [4.0, 3.0], [5.0, 6.0], [8.0, 7.0]], np.float64)
   c = np.zeros((3, 2), np.float64)
-  out = np.zeros((3, 2), np.float64)
 
   mem_a = ctypes.pointer(ctypes.pointer(rt.get_ranked_memref_descriptor(a)))
   mem_b = ctypes.pointer(ctypes.pointer(rt.get_ranked_memref_descriptor(b)))
   mem_c = ctypes.pointer(ctypes.pointer(rt.get_ranked_memref_descriptor(c)))
-  mem_out = ctypes.pointer(ctypes.pointer(rt.get_ranked_memref_descriptor(out)))
+  # Allocate a MemRefDescriptor to receive the output tensor.
+  # The buffer itself is allocated inside the MLIR code generation.
+  ref_out = rt.make_nd_memref_descriptor(2, ctypes.c_double)()
+  mem_out = ctypes.pointer(ctypes.pointer(ref_out))
 
   # Invoke the kernel and get numpy output.
   # Built-in bufferization uses in-out buffers.
@@ -104,30 +108,6 @@ def build_compile_and_run_SpMM(attr: st.EncodingAttr, support_lib: str,
     pass
   else:
     quit(f'FAILURE')
-
-
-class SparseCompiler:
-  """Sparse compiler passes."""
-
-  def __init__(self, options: str):
-    pipeline = (
-        f'builtin.func(linalg-generalize-named-ops,linalg-fuse-elementwise-ops),'
-        f'sparsification{{{options}}},'
-        f'sparse-tensor-conversion,'
-        f'builtin.func(linalg-bufferize,convert-linalg-to-loops,convert-vector-to-scf),'
-        f'convert-scf-to-std,'
-        f'func-bufferize,'
-        f'tensor-constant-bufferize,'
-        f'builtin.func(tensor-bufferize,std-bufferize,finalizing-bufferize),'
-        f'convert-vector-to-llvm{{reassociate-fp-reductions=1 enable-index-optimizations=1}},'
-        f'lower-affine,'
-        f'convert-memref-to-llvm,'
-        f'convert-std-to-llvm,'
-        f'reconcile-unrealized-casts')
-    self.pipeline = pipeline
-
-  def __call__(self, module: ir.Module):
-    passmanager.PassManager.parse(self.pipeline).run(module)
 
 
 def main():
@@ -165,11 +145,12 @@ def main():
         for pwidth in bitwidths:
           for iwidth in bitwidths:
             attr = st.EncodingAttr.get(level, ordering, pwidth, iwidth)
-            compiler = SparseCompiler(options=opt)
+            compiler = sparse_compiler.SparseCompiler(options=opt)
             build_compile_and_run_SpMM(attr, support_lib, compiler)
             count = count + 1
     # CHECK: Passed 8 tests
     print('Passed ', count, 'tests')
+
 
 if __name__ == '__main__':
   main()

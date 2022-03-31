@@ -125,8 +125,8 @@ namespace {
     };
 
     LatticeCell() : Kind(Top), Size(0), IsSpecial(false) {
-      for (unsigned i = 0; i < MaxCellSize; ++i)
-        Values[i] = nullptr;
+      for (const Constant *&Value : Values)
+        Value = nullptr;
     }
 
     bool meet(const LatticeCell &L);
@@ -868,8 +868,8 @@ void MachineConstPropagator::removeCFGEdge(MachineBasicBlock *From,
     int N = PN.getNumOperands() - 2;
     while (N > 0) {
       if (PN.getOperand(N + 1).getMBB() == From) {
-        PN.RemoveOperand(N + 1);
-        PN.RemoveOperand(N);
+        PN.removeOperand(N + 1);
+        PN.removeOperand(N);
       }
       N -= 2;
     }
@@ -1029,8 +1029,8 @@ bool MachineConstPropagator::rewrite(MachineFunction &MF) {
           ToRemove.push_back(const_cast<MachineBasicBlock*>(SB));
         Targets.remove(SB);
       }
-      for (unsigned i = 0, n = ToRemove.size(); i < n; ++i)
-        removeCFGEdge(B, ToRemove[i]);
+      for (MachineBasicBlock *MBB : ToRemove)
+        removeCFGEdge(B, MBB);
       // If there are any blocks left in the computed targets, it means that
       // we think that the block could go somewhere, but the CFG does not.
       // This could legitimately happen in blocks that have non-returning
@@ -2510,7 +2510,7 @@ APInt HexagonConstEvaluator::getCmpImm(unsigned Opc, unsigned OpX,
 void HexagonConstEvaluator::replaceWithNop(MachineInstr &MI) {
   MI.setDesc(HII.get(Hexagon::A2_nop));
   while (MI.getNumOperands() > 0)
-    MI.RemoveOperand(0);
+    MI.removeOperand(0);
 }
 
 bool HexagonConstEvaluator::evaluateHexRSEQ32(RegisterSubReg RL, RegisterSubReg RH,
@@ -3165,7 +3165,7 @@ bool HexagonConstEvaluator::rewriteHexBranch(MachineInstr &BrI,
                   .addMBB(TargetB);
       BrI.setDesc(JD);
       while (BrI.getNumOperands() > 0)
-        BrI.RemoveOperand(0);
+        BrI.removeOperand(0);
       // This ensures that all implicit operands (e.g. implicit-def %r31, etc)
       // are present in the rewritten branch.
       for (auto &Op : NI->operands())

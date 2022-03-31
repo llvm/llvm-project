@@ -48,9 +48,11 @@ MODULE_PASS("openmp-opt", OpenMPOptPass())
 MODULE_PASS("called-value-propagation", CalledValuePropagationPass())
 MODULE_PASS("canonicalize-aliases", CanonicalizeAliasesPass())
 MODULE_PASS("cg-profile", CGProfilePass())
+MODULE_PASS("check-debugify", NewPMCheckDebugifyPass())
 MODULE_PASS("constmerge", ConstantMergePass())
 MODULE_PASS("cross-dso-cfi", CrossDSOCFIPass())
 MODULE_PASS("deadargelim", DeadArgumentEliminationPass())
+MODULE_PASS("debugify", NewPMDebugifyPass())
 MODULE_PASS("elim-avail-extern", EliminateAvailableExternallyPass())
 MODULE_PASS("extract-blocks", BlockExtractorPass())
 MODULE_PASS("forceattrs", ForceFunctionAttrsPass())
@@ -62,6 +64,7 @@ MODULE_PASS("globalsplit", GlobalSplitPass())
 MODULE_PASS("hotcoldsplit", HotColdSplittingPass())
 MODULE_PASS("inferattrs", InferFunctionAttrsPass())
 MODULE_PASS("inliner-wrapper", ModuleInlinerWrapperPass())
+MODULE_PASS("print<inline-advisor>", InlineAdvisorAnalysisPrinterPass(dbgs()))
 MODULE_PASS("inliner-wrapper-no-mandatory-first", ModuleInlinerWrapperPass(
   getInlineParams(),
   false))
@@ -73,6 +76,7 @@ MODULE_PASS("invalidate<all>", InvalidateAllAnalysesPass())
 MODULE_PASS("ipsccp", IPSCCPPass())
 MODULE_PASS("iroutliner", IROutlinerPass())
 MODULE_PASS("print-ir-similarity", IRSimilarityAnalysisPrinterPass(dbgs()))
+MODULE_PASS("lower-global-dtors", LowerGlobalDtorsPass())
 MODULE_PASS("lowertypetests", LowerTypeTestsPass())
 MODULE_PASS("metarenamer", MetaRenamerPass())
 MODULE_PASS("mergefunc", MergeFunctionsPass())
@@ -91,6 +95,7 @@ MODULE_PASS("print-lcg-dot", LazyCallGraphDOTPrinterPass(dbgs()))
 MODULE_PASS("print-must-be-executed-contexts", MustBeExecutedContextPrinterPass(dbgs()))
 MODULE_PASS("print-stack-safety", StackSafetyGlobalPrinterPass(dbgs()))
 MODULE_PASS("print<module-debuginfo>", ModuleDebugInfoPrinterPass(dbgs()))
+MODULE_PASS("recompute-globalsaa", RecomputeGlobalsAAPass())
 MODULE_PASS("rel-lookup-table-converter", RelLookupTableConverterPass())
 MODULE_PASS("rewrite-statepoints-for-gc", RewriteStatepointsForGC())
 MODULE_PASS("rewrite-symbols", RewriteSymbolPass())
@@ -185,6 +190,7 @@ FUNCTION_ANALYSIS("aa", AAManager())
 FUNCTION_ANALYSIS("assumptions", AssumptionAnalysis())
 FUNCTION_ANALYSIS("block-freq", BlockFrequencyAnalysis())
 FUNCTION_ANALYSIS("branch-prob", BranchProbabilityAnalysis())
+FUNCTION_ANALYSIS("cycles", CycleAnalysis())
 FUNCTION_ANALYSIS("domtree", DominatorTreeAnalysis())
 FUNCTION_ANALYSIS("postdomtree", PostDominatorTreeAnalysis())
 FUNCTION_ANALYSIS("demanded-bits", DemandedBitsAnalysis())
@@ -202,6 +208,7 @@ FUNCTION_ANALYSIS("no-op-function", NoOpFunctionAnalysis())
 FUNCTION_ANALYSIS("opt-remark-emit", OptimizationRemarkEmitterAnalysis())
 FUNCTION_ANALYSIS("scalar-evolution", ScalarEvolutionAnalysis())
 FUNCTION_ANALYSIS("should-not-run-function-passes", ShouldNotRunFunctionPassesAnalysis())
+FUNCTION_ANALYSIS("should-run-extra-vector-passes", ShouldRunExtraVectorPasses())
 FUNCTION_ANALYSIS("stack-safety-local", StackSafetyAnalysis())
 FUNCTION_ANALYSIS("targetlibinfo", TargetLibraryAnalysis())
 FUNCTION_ANALYSIS("targetir",
@@ -252,7 +259,10 @@ FUNCTION_PASS("div-rem-pairs", DivRemPairsPass())
 FUNCTION_PASS("dse", DSEPass())
 FUNCTION_PASS("dot-cfg", CFGPrinterPass())
 FUNCTION_PASS("dot-cfg-only", CFGOnlyPrinterPass())
+FUNCTION_PASS("dot-dom", DomTreePrinterPass())
+FUNCTION_PASS("dot-dom-only", DomTreeOnlyPrinterPass())
 FUNCTION_PASS("fix-irreducible", FixIrreduciblePass())
+FUNCTION_PASS("flattencfg", FlattenCFGPass())
 FUNCTION_PASS("make-guards-explicit", MakeGuardsExplicitPass())
 FUNCTION_PASS("gvn-hoist", GVNHoistPass())
 FUNCTION_PASS("gvn-sink", GVNSinkPass())
@@ -303,6 +313,7 @@ FUNCTION_PASS("print<assumptions>", AssumptionPrinterPass(dbgs()))
 FUNCTION_PASS("print<block-freq>", BlockFrequencyPrinterPass(dbgs()))
 FUNCTION_PASS("print<branch-prob>", BranchProbabilityPrinterPass(dbgs()))
 FUNCTION_PASS("print<cost-model>", CostModelPrinterPass(dbgs()))
+FUNCTION_PASS("print<cycles>", CycleInfoPrinterPass(dbgs()))
 FUNCTION_PASS("print<da>", DependenceAnalysisPrinterPass(dbgs()))
 FUNCTION_PASS("print<divergence>", DivergenceAnalysisPrinterPass(dbgs()))
 FUNCTION_PASS("print<domtree>", DominatorTreePrinterPass(dbgs()))
@@ -352,6 +363,7 @@ FUNCTION_PASS("verify<safepoint-ir>", SafepointIRVerifierPass())
 FUNCTION_PASS("verify<scalar-evolution>", ScalarEvolutionVerifierPass())
 FUNCTION_PASS("view-cfg", CFGViewerPass())
 FUNCTION_PASS("view-cfg-only", CFGOnlyViewerPass())
+FUNCTION_PASS("tlshoist", TLSVariableHoistPass())
 FUNCTION_PASS("transform-warning", WarnMissedTransformationsPass())
 FUNCTION_PASS("tsan", ThreadSanitizerPass())
 FUNCTION_PASS("memprof", MemProfilerPass())
@@ -393,20 +405,13 @@ FUNCTION_PASS_WITH_PARAMS("loop-unroll",
                           "no-profile-peeling;profile-peeling;"
                           "no-runtime;runtime;"
                           "no-upperbound;upperbound")
-FUNCTION_PASS_WITH_PARAMS("asan",
-                          "AddressSanitizerPass",
-                           [](AddressSanitizerOptions Opts) {
-                             return AddressSanitizerPass(Opts);
-                           },
-                          parseASanPassOptions,
-                          "kernel")
 FUNCTION_PASS_WITH_PARAMS("msan",
                           "MemorySanitizerPass",
                            [](MemorySanitizerOptions Opts) {
                              return MemorySanitizerPass(Opts);
                            },
                           parseMSanPassOptions,
-                          "recover;kernel;track-origins=N")
+                          "recover;kernel;eager-checks;track-origins=N")
 FUNCTION_PASS_WITH_PARAMS("simplifycfg",
                           "SimplifyCFGPass",
                            [](SimplifyCFGOptions Opts) {
@@ -414,6 +419,7 @@ FUNCTION_PASS_WITH_PARAMS("simplifycfg",
                            },
                           parseSimplifyCFGOptions,
                           "no-forward-switch-cond;forward-switch-cond;"
+                          "no-switch-range-to-icmp;switch-range-to-icmp;"
                           "no-switch-to-lookup;switch-to-lookup;"
                           "no-keep-loops;keep-loops;"
                           "no-hoist-common-insts;hoist-common-insts;"
@@ -457,7 +463,6 @@ FUNCTION_PASS_WITH_PARAMS("print<stack-lifetime>",
 #ifndef LOOPNEST_PASS
 #define LOOPNEST_PASS(NAME, CREATE_PASS)
 #endif
-LOOPNEST_PASS("lnicm", LNICMPass())
 LOOPNEST_PASS("loop-flatten", LoopFlattenPass())
 LOOPNEST_PASS("loop-interchange", LoopInterchangePass())
 LOOPNEST_PASS("loop-unroll-and-jam", LoopUnrollAndJamPass())
@@ -480,7 +485,6 @@ LOOP_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PIC))
 LOOP_PASS("canon-freeze", CanonicalizeFreezeInLoopsPass())
 LOOP_PASS("dot-ddg", DDGDotPrinterPass())
 LOOP_PASS("invalidate<all>", InvalidateAllAnalysesPass())
-LOOP_PASS("licm", LICMPass())
 LOOP_PASS("loop-idiom", LoopIdiomRecognizePass())
 LOOP_PASS("loop-instsimplify", LoopInstSimplifyPass())
 LOOP_PASS("loop-rotate", LoopRotatePass())
@@ -513,4 +517,18 @@ LOOP_PASS_WITH_PARAMS("simple-loop-unswitch",
                       },
                       parseLoopUnswitchOptions,
                       "nontrivial;no-nontrivial;trivial;no-trivial")
+
+LOOP_PASS_WITH_PARAMS("licm", "LICMPass",
+                      [](LICMOptions Params) {
+                        return LICMPass(Params);
+                      },
+                      parseLICMOptions,
+                      "allowspeculation");
+
+LOOP_PASS_WITH_PARAMS("lnicm", "LNICMPass",
+                      [](LICMOptions Params) {
+                        return LNICMPass(Params);
+                      },
+                      parseLICMOptions,
+                      "allowspeculation");
 #undef LOOP_PASS_WITH_PARAMS

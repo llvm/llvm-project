@@ -704,7 +704,7 @@ static bool getLiteralInfo(SourceRange literalRange,
     }
   };
 
-  while (1) {
+  while (true) {
     if (Suff::has("u", text)) {
       UpperU = false;
     } else if (Suff::has("U", text)) {

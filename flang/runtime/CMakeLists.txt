@@ -48,10 +48,12 @@ add_flang_library(FortranRuntime
   edit-input.cpp
   edit-output.cpp
   environment.cpp
+  extensions.cpp
   extrema.cpp
   file.cpp
   findloc.cpp
   format.cpp
+  inquiry.cpp
   internal-unit.cpp
   iostat.cpp
   io-api.cpp
@@ -63,6 +65,7 @@ add_flang_library(FortranRuntime
   misc-intrinsic.cpp
   namelist.cpp
   numeric.cpp
+  ragged.cpp
   random.cpp
   reduction.cpp
   pointer.cpp
@@ -79,6 +82,7 @@ add_flang_library(FortranRuntime
   type-info.cpp
   unit.cpp
   unit-map.cpp
+  utf.cpp
 
   LINK_LIBS
   FortranDecimal

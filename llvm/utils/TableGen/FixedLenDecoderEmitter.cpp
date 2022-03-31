@@ -427,9 +427,9 @@ protected:
     // disassembler should return SoftFail instead of Success.
     //
     // This is used for marking UNPREDICTABLE instructions in the ARM world.
-    BitsInit *SFBits =
-        AllInstructions[Opcode].EncodingDef->getValueAsBitsInit("SoftFail");
-
+    const RecordVal *RV =
+        AllInstructions[Opcode].EncodingDef->getValue("SoftFail");
+    const BitsInit *SFBits = RV ? dyn_cast<BitsInit>(RV->getValue()) : nullptr;
     for (unsigned i = 0; i < BitWidth; ++i) {
       if (SFBits && bitFromBits(*SFBits, i) == BIT_TRUE)
         Insn.push_back(BIT_UNSET);
@@ -969,8 +969,9 @@ emitDecoderFunction(formatted_raw_ostream &OS, DecoderSet &Decoders,
   OS.indent(Indentation) << "template <typename InsnType>\n";
   OS.indent(Indentation) << "static DecodeStatus decodeToMCInst(DecodeStatus S,"
     << " unsigned Idx, InsnType insn, MCInst &MI,\n";
-  OS.indent(Indentation) << "                                   uint64_t "
-    << "Address, const void *Decoder, bool &DecodeComplete) {\n";
+  OS.indent(Indentation)
+      << "                                   uint64_t "
+      << "Address, const MCDisassembler *Decoder, bool &DecodeComplete) {\n";
   Indentation += 2;
   OS.indent(Indentation) << "DecodeComplete = true;\n";
   // TODO: When InsnType is large, using uint64_t limits all fields to 64 bits
@@ -1309,8 +1310,9 @@ void FilterChooser::emitPredicateTableEntry(DecoderTableInfo &TableInfo,
 
 void FilterChooser::emitSoftFailTableEntry(DecoderTableInfo &TableInfo,
                                            unsigned Opc) const {
-  BitsInit *SFBits =
-      AllInstructions[Opc].EncodingDef->getValueAsBitsInit("SoftFail");
+  const RecordVal *RV = AllInstructions[Opc].EncodingDef->getValue("SoftFail");
+  BitsInit *SFBits = RV ? dyn_cast<BitsInit>(RV->getValue()) : nullptr;
+
   if (!SFBits) return;
   BitsInit *InstBits =
       AllInstructions[Opc].EncodingDef->getValueAsBitsInit("Inst");
@@ -2220,7 +2222,7 @@ static void emitDecodeInstruction(formatted_raw_ostream &OS) {
         "MCInst &MI,\n"
      << "                                      InsnType insn, uint64_t "
         "Address,\n"
-     << "                                      const void *DisAsm,\n"
+     << "                                      const MCDisassembler *DisAsm,\n"
      << "                                      const MCSubtargetInfo &STI) {\n"
      << "  const FeatureBitset &Bits = STI.getFeatureBits();\n"
      << "\n"
@@ -2402,6 +2404,8 @@ static void emitDecodeInstruction(formatted_raw_ostream &OS) {
 void FixedLenDecoderEmitter::run(raw_ostream &o) {
   formatted_raw_ostream OS(o);
   OS << "#include \"llvm/MC/MCInst.h\"\n";
+  OS << "#include \"llvm/MC/MCSubtargetInfo.h\"\n";
+  OS << "#include \"llvm/MC/SubtargetFeature.h\"\n";
   OS << "#include \"llvm/Support/DataTypes.h\"\n";
   OS << "#include \"llvm/Support/Debug.h\"\n";
   OS << "#include \"llvm/Support/LEB128.h\"\n";

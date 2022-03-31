@@ -1,6 +1,16 @@
-static_library("liblldb") {
-  # XXX if win -DEXPORT_LIBLLDB
+# The LLDB_IN_LIBLLDB setup requires that liblldb is a shared_library
+# on Windows.
+# FIXME: Consider making it a shared_library everywhere like in cmake?
+# (Having it a static_library is simpler -- no need for
+# -Wl,-runpath=$ORIGIN/../lib in executables on unix or the corresponding @loader_path on mac,
+# no need for .exports files, etc.)
+if (current_os == "win") {
+  liblldb_type = "shared_library"
+} else {
+  liblldb_type = "static_library"
+}
 
+target(liblldb_type, "liblldb") {
   # XXX LLDB_BUILD_FRAMEWORK
   # XXX LLDB_ENABLE_PYTHON
   # XXX LLDB_ENABLE_LUA
@@ -9,7 +19,6 @@ static_library("liblldb") {
   configs += [ "//llvm/utils/gn/build:lldb_code" ]
   deps = [
     "//lldb/include/lldb/Host:Config",
-    "//lldb/source:lldbBase",
     "//lldb/source/Breakpoint",
     "//lldb/source/Core",
     "//lldb/source/DataFormatters",
@@ -21,6 +30,7 @@ static_library("liblldb") {
     "//lldb/source/Symbol",
     "//lldb/source/Target",
     "//lldb/source/Utility",
+    "//lldb/source/Version",
     "//lldb/tools/argdumper:lldb-argdumper",
     "//llvm/lib/Support",
   ]
@@ -99,6 +109,10 @@ static_library("liblldb") {
     "SBWatchpoint.cpp",
     "SystemInitializerFull.cpp",
   ]
+
+  if (current_os == "win") {
+    defines = [ "LLDB_IN_LIBLLDB" ]
+  }
 
   # XXX liblldb.exports or liblldb-private.expoorts
   # XXX dep on clang resource directory

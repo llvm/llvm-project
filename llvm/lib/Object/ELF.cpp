@@ -166,6 +166,13 @@ StringRef llvm::object::getELFRelocationTypeName(uint32_t Machine,
       break;
     }
     break;
+  case ELF::EM_LOONGARCH:
+    switch (Type) {
+#include "llvm/BinaryFormat/ELFRelocs/LoongArch.def"
+    default:
+      break;
+    }
+    break;
   default:
     break;
   }
@@ -210,6 +217,8 @@ uint32_t llvm::object::getELFRelativeRelocationType(uint32_t Machine) {
     return ELF::R_SPARC_RELATIVE;
   case ELF::EM_CSKY:
     return ELF::R_CKCORE_RELATIVE;
+  case ELF::EM_VE:
+    return ELF::R_VE_RELATIVE;
   case ELF::EM_AMDGPU:
     break;
   case ELF::EM_BPF:
@@ -559,11 +568,9 @@ Expected<typename ELFT::DynRange> ELFFile<ELFT>::dynamicEntries() const {
   }
 
   if (Dyn.empty())
-    // TODO: this error is untested.
     return createError("invalid empty dynamic section");
 
   if (Dyn.back().d_tag != ELF::DT_NULL)
-    // TODO: this error is untested.
     return createError("dynamic sections must be DT_NULL terminated");
 
   return Dyn;

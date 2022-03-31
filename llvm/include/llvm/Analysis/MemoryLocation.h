@@ -36,6 +36,7 @@ class AnyMemTransferInst;
 class AnyMemIntrinsic;
 class TargetLibraryInfo;
 class VAArgInst;
+class Value;
 
 // Represents the size of a MemoryLocation. Logically, it's an
 // Optional<uint63_t> that also carries a bit to represent whether the integer
@@ -284,8 +285,7 @@ public:
     return T.isScalable() ? UnknownSize : T.getFixedSize();
   }
 
-  MemoryLocation()
-      : Ptr(nullptr), Size(LocationSize::beforeOrAfterPointer()), AATags() {}
+  MemoryLocation() : Ptr(nullptr), Size(LocationSize::beforeOrAfterPointer()) {}
 
   explicit MemoryLocation(const Value *Ptr, LocationSize Size,
                           const AAMDNodes &AATags = AAMDNodes())

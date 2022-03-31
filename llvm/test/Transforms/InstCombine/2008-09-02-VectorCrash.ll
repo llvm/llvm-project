@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine
+; RUN: opt < %s -passes=instcombine
 
 define void @entry(i32 %m_task_id, i32 %start_x, i32 %end_x, i32 %start_y, i32 %end_y) {
 	br label %1

@@ -201,7 +201,7 @@ void HexagonDCE::removeOperand(NodeAddr<InstrNode*> IA, unsigned OpNum) {
   for (NodeAddr<RefNode*> RA : Refs)
     OpMap.insert(std::make_pair(RA.Id, getOpNum(RA.Addr->getOp())));
 
-  MI->RemoveOperand(OpNum);
+  MI->removeOperand(OpNum);
 
   for (NodeAddr<RefNode*> RA : Refs) {
     unsigned N = OpMap[RA.Id];

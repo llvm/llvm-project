@@ -16,7 +16,7 @@ struct S {
 S s;
 
 // CHECK: define internal void @"??__Es@@YAXXZ"()
-// CHECK: call x86_thiscallcc %struct.S* @"??0S@@QAE@XZ"
+// CHECK: call x86_thiscallcc noundef %struct.S* @"??0S@@QAE@XZ"
 // CHECK: call i32 @atexit(void ()* @"??__Fs@@YAXXZ")
 // CHECK: ret void
 
@@ -30,11 +30,11 @@ __declspec(selectany) S selectany1;
 __declspec(selectany) S selectany2;
 // CHECK: define linkonce_odr dso_local void @"??__Eselectany1@@YAXXZ"() {{.*}} comdat
 // CHECK-NOT: @"??_Bselectany1
-// CHECK: call x86_thiscallcc %struct.S* @"??0S@@QAE@XZ"
+// CHECK: call x86_thiscallcc noundef %struct.S* @"??0S@@QAE@XZ"
 // CHECK: ret void
 // CHECK: define linkonce_odr dso_local void @"??__Eselectany2@@YAXXZ"() {{.*}} comdat
 // CHECK-NOT: @"??_Bselectany2
-// CHECK: call x86_thiscallcc %struct.S* @"??0S@@QAE@XZ"
+// CHECK: call x86_thiscallcc noundef %struct.S* @"??0S@@QAE@XZ"
 // CHECK: ret void
 
 // The implicitly instantiated static data member should have initializer
@@ -133,7 +133,7 @@ inline S &UnreachableStatic() {
   return s;
 }
 
-// CHECK-LABEL: define linkonce_odr dso_local nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.S* @"?UnreachableStatic@@YAAAUS@@XZ"() {{.*}} comdat
+// CHECK-LABEL: define linkonce_odr dso_local noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.S* @"?UnreachableStatic@@YAAAUS@@XZ"() {{.*}} comdat
 // CHECK: and i32 {{.*}}, 2
 // CHECK: or i32 {{.*}}, 2
 // CHECK: ret
@@ -143,7 +143,7 @@ inline S &getS() {
   return TheS;
 }
 
-// CHECK-LABEL: define linkonce_odr dso_local nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.S* @"?getS@@YAAAUS@@XZ"() {{.*}} comdat
+// CHECK-LABEL: define linkonce_odr dso_local noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.S* @"?getS@@YAAAUS@@XZ"() {{.*}} comdat
 // CHECK: load i32, i32* @"??_B?1??getS@@YAAAUS@@XZ@51"
 // CHECK: and i32 {{.*}}, 1
 // CHECK: icmp eq i32 {{.*}}, 0
@@ -151,14 +151,14 @@ inline S &getS() {
 //   init:
 // CHECK: or i32 {{.*}}, 1
 // CHECK: store i32 {{.*}}, i32* @"??_B?1??getS@@YAAAUS@@XZ@51"
-// CHECK: call x86_thiscallcc %struct.S* @"??0S@@QAE@XZ"(%struct.S* {{[^,]*}} @"?TheS@?1??getS@@YAAAUS@@XZ@4U2@A")
+// CHECK: call x86_thiscallcc noundef %struct.S* @"??0S@@QAE@XZ"(%struct.S* {{[^,]*}} @"?TheS@?1??getS@@YAAAUS@@XZ@4U2@A")
 // CHECK: call i32 @atexit(void ()* @"??__FTheS@?1??getS@@YAAAUS@@XZ@YAXXZ")
 // CHECK: br label
 //   init.end:
 // CHECK: ret %struct.S* @"?TheS@?1??getS@@YAAAUS@@XZ@4U2@A"
 
 inline int enum_in_function() {
-  // CHECK-LABEL: define linkonce_odr dso_local i32 @"?enum_in_function@@YAHXZ"() {{.*}} comdat
+  // CHECK-LABEL: define linkonce_odr dso_local noundef i32 @"?enum_in_function@@YAHXZ"() {{.*}} comdat
   static enum e { foo, bar, baz } x;
   // CHECK: @"?x@?1??enum_in_function@@YAHXZ@4W4e@?1??1@YAHXZ@A"
   static int y;
@@ -169,7 +169,7 @@ inline int enum_in_function() {
 struct T {
   enum e { foo, bar, baz };
   int enum_in_struct() {
-    // CHECK-LABEL: define linkonce_odr dso_local x86_thiscallcc i32 @"?enum_in_struct@T@@QAEHXZ"({{.*}}) {{.*}} comdat
+    // CHECK-LABEL: define linkonce_odr dso_local x86_thiscallcc noundef i32 @"?enum_in_struct@T@@QAEHXZ"({{.*}}) {{.*}} comdat
     static int x;
     // CHECK: @"?x@?1??enum_in_struct@T@@QAEHXZ@4HA"
     return x++;
@@ -177,7 +177,7 @@ struct T {
 };
 
 inline int switch_test(int x) {
-  // CHECK-LABEL: define linkonce_odr dso_local i32 @"?switch_test@@YAHH@Z"(i32 %x) {{.*}} comdat
+  // CHECK-LABEL: define linkonce_odr dso_local noundef i32 @"?switch_test@@YAHH@Z"(i32 noundef %x) {{.*}} comdat
   switch (x) {
     static int a;
     // CHECK: @"?a@?3??switch_test@@YAHH@Z@4HA"
@@ -213,7 +213,7 @@ namespace DynamicDLLImportInitVSMangling {
   template struct __declspec(dllimport) A<int>;
 
   inline int switch_test3() {
-    // CHECK-LABEL: define linkonce_odr dso_local i32 @"?switch_test3@DynamicDLLImportInitVSMangling@@YAHXZ"() {{.*}} comdat
+    // CHECK-LABEL: define linkonce_odr dso_local noundef i32 @"?switch_test3@DynamicDLLImportInitVSMangling@@YAHXZ"() {{.*}} comdat
     static int local;
     // CHECK: @"?local@?1??switch_test3@DynamicDLLImportInitVSMangling@@YAHXZ@4HA"
     return local++;
@@ -234,11 +234,11 @@ void force_usage() {
 // CHECK: define linkonce_odr dso_local void @"??__E?foo@?$B@H@@2VA@@A@@YAXXZ"() {{.*}} comdat
 // CHECK-NOT: and
 // CHECK-NOT: ?_Bfoo@
-// CHECK: call x86_thiscallcc %class.A* @"??0A@@QAE@XZ"
+// CHECK: call x86_thiscallcc noundef %class.A* @"??0A@@QAE@XZ"
 // CHECK: call i32 @atexit(void ()* @"??__F?foo@?$B@H@@2VA@@A@@YAXXZ")
 // CHECK: ret void
 
-// CHECK: define linkonce_odr dso_local x86_thiscallcc %class.A* @"??0A@@QAE@XZ"({{.*}}) {{.*}} comdat
+// CHECK: define linkonce_odr dso_local x86_thiscallcc noundef %class.A* @"??0A@@QAE@XZ"({{.*}}) {{.*}} comdat
 
 // CHECK: define linkonce_odr dso_local x86_thiscallcc void @"??1A@@QAE@XZ"({{.*}}) {{.*}} comdat
 

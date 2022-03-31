@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Triggers a Clang assertion: https://bugs.llvm.org/show_bug.cgi?id=45879
-// UNSUPPORTED: clang-13, clang-14
+// Triggers a Clang assertion: llvm.org/PR45879
+// UNSUPPORTED: clang-13, clang-14, clang-15
 
 // <tuple>
 
@@ -40,10 +40,12 @@ struct NonAssignable {
 };
 
 struct NothrowCopyAssignable {
+    NothrowCopyAssignable(NothrowCopyAssignable const&) = delete;
     NothrowCopyAssignable& operator=(NothrowCopyAssignable const&) noexcept { return *this; }
 };
 
 struct PotentiallyThrowingCopyAssignable {
+    PotentiallyThrowingCopyAssignable(PotentiallyThrowingCopyAssignable const&) = delete;
     PotentiallyThrowingCopyAssignable& operator=(PotentiallyThrowingCopyAssignable const&) { return *this; }
 };
 

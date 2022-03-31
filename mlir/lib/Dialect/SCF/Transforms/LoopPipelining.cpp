@@ -14,8 +14,7 @@
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/SCF/Transforms.h"
-#include "mlir/Dialect/SCF/Utils.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/MathExtras.h"
@@ -41,6 +40,7 @@ protected:
   int64_t ub;
   int64_t lb;
   int64_t step;
+  PipeliningOption::AnnotationlFnType annotateFn = nullptr;
 
   // When peeling the kernel we generate several version of each value for
   // different stage of the prologue. This map tracks the mapping between
@@ -82,10 +82,10 @@ bool LoopPipelinerInternal::initializeLoopInfo(
     ForOp op, const PipeliningOption &options) {
   forOp = op;
   auto upperBoundCst =
-      forOp.upperBound().getDefiningOp<arith::ConstantIndexOp>();
+      forOp.getUpperBound().getDefiningOp<arith::ConstantIndexOp>();
   auto lowerBoundCst =
-      forOp.lowerBound().getDefiningOp<arith::ConstantIndexOp>();
-  auto stepCst = forOp.step().getDefiningOp<arith::ConstantIndexOp>();
+      forOp.getLowerBound().getDefiningOp<arith::ConstantIndexOp>();
+  auto stepCst = forOp.getStep().getDefiningOp<arith::ConstantIndexOp>();
   if (!upperBoundCst || !lowerBoundCst || !stepCst)
     return false;
   ub = upperBoundCst.value();
@@ -126,6 +126,7 @@ bool LoopPipelinerInternal::initializeLoopInfo(
                      return !def || stages.find(def) == stages.end();
                    }))
     return false;
+  annotateFn = options.annotateFn;
   return true;
 }
 
@@ -138,7 +139,8 @@ void LoopPipelinerInternal::emitPrologue(PatternRewriter &rewriter) {
   auto yield = cast<scf::YieldOp>(forOp.getBody()->getTerminator());
   for (int64_t i = 0; i < maxStage; i++) {
     // special handling for induction variable as the increment is implicit.
-    Value iv = rewriter.create<arith::ConstantIndexOp>(forOp.getLoc(), lb + i);
+    Value iv =
+        rewriter.create<arith::ConstantIndexOp>(forOp.getLoc(), lb + i * step);
     setValueMapping(forOp.getInductionVar(), iv, i);
     for (Operation *op : opOrder) {
       if (stages[op] > i)
@@ -149,6 +151,8 @@ void LoopPipelinerInternal::emitPrologue(PatternRewriter &rewriter) {
         if (it != valueMapping.end())
           newOp->setOperand(opIdx, it->second[i - stages[op]]);
       }
+      if (annotateFn)
+        annotateFn(newOp, PipeliningOption::PipelinerPart::Prologue, i);
       for (unsigned destId : llvm::seq(unsigned(0), op->getNumResults())) {
         setValueMapping(op->getResult(destId), newOp->getResult(destId),
                         i - stages[op]);
@@ -198,7 +202,7 @@ scf::ForOp LoopPipelinerInternal::createKernelLoop(
   llvm::SmallVector<Value> newLoopArg;
   // For existing loop argument initialize them with the right version from the
   // prologue.
-  for (auto retVal :
+  for (const auto &retVal :
        llvm::enumerate(forOp.getBody()->getTerminator()->getOperands())) {
     Operation *def = retVal.value().getDefiningOp();
     assert(def && "Only support loop carried dependencies of distance 1");
@@ -226,8 +230,9 @@ scf::ForOp LoopPipelinerInternal::createKernelLoop(
   // iteration we change the upper bound to remove those iterations.
   Value newUb = rewriter.create<arith::ConstantIndexOp>(forOp.getLoc(),
                                                         ub - maxStage * step);
-  auto newForOp = rewriter.create<scf::ForOp>(
-      forOp.getLoc(), forOp.lowerBound(), newUb, forOp.step(), newLoopArg);
+  auto newForOp =
+      rewriter.create<scf::ForOp>(forOp.getLoc(), forOp.getLowerBound(), newUb,
+                                  forOp.getStep(), newLoopArg);
   return newForOp;
 }
 
@@ -244,7 +249,7 @@ void LoopPipelinerInternal::createKernel(
   rewriter.setInsertionPoint(newForOp.getBody(), newForOp.getBody()->begin());
   BlockAndValueMapping mapping;
   mapping.map(forOp.getInductionVar(), newForOp.getInductionVar());
-  for (auto arg : llvm::enumerate(forOp.getRegionIterArgs())) {
+  for (const auto &arg : llvm::enumerate(forOp.getRegionIterArgs())) {
     mapping.map(arg.value(), newForOp.getRegionIterArgs()[arg.index()]);
   }
   for (Operation *op : opOrder) {
@@ -295,6 +300,8 @@ void LoopPipelinerInternal::createKernel(
       newOp->setOperand(operand.getOperandNumber(),
                         newForOp.getRegionIterArgs()[remap->second]);
     }
+    if (annotateFn)
+      annotateFn(newOp, PipeliningOption::PipelinerPart::Kernel, 0);
   }
 
   // Collect the Values that need to be returned by the forOp. For each
@@ -324,7 +331,7 @@ void LoopPipelinerInternal::createKernel(
     yieldOperands.push_back(mapping.lookupOrDefault(it.first));
   }
   // Map the yield operand to the forOp returned value.
-  for (auto retVal :
+  for (const auto &retVal :
        llvm::enumerate(forOp.getBody()->getTerminator()->getOperands())) {
     Operation *def = retVal.value().getDefiningOp();
     assert(def && "Only support loop carried dependencies of distance 1");
@@ -361,6 +368,8 @@ LoopPipelinerInternal::emitEpilogue(PatternRewriter &rewriter) {
           newOp->setOperand(opIdx, v);
         }
       }
+      if (annotateFn)
+        annotateFn(newOp, PipeliningOption::PipelinerPart::Epilogue, i - 1);
       for (unsigned destId : llvm::seq(unsigned(0), op->getNumResults())) {
         setValueMapping(op->getResult(destId), newOp->getResult(destId),
                         maxStage - stages[op] + i);

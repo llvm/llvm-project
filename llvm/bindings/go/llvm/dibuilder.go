@@ -563,10 +563,10 @@ func (d *DIBuilder) getOrCreateTypeArray(values []Metadata) Metadata {
 
 // CreateExpression creates a new descriptor for the specified
 // variable which has a complex address expression for its address.
-func (d *DIBuilder) CreateExpression(addr []int64) Metadata {
-	var data *C.int64_t
+func (d *DIBuilder) CreateExpression(addr []uint64) Metadata {
+	var data *C.uint64_t
 	if len(addr) > 0 {
-		data = (*C.int64_t)(unsafe.Pointer(&addr[0]))
+		data = (*C.uint64_t)(unsafe.Pointer(&addr[0]))
 	}
 	result := C.LLVMDIBuilderCreateExpression(d.ref, data, C.size_t(len(addr)))
 	return Metadata{C: result}

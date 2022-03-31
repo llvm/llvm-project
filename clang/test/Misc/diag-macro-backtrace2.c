@@ -10,7 +10,7 @@
 #define g(x) h(x)
 #define h(x) x
 
-void PR16799() {
+void PR16799(void) {
   const char str[] = "string";
   a(str);
   // CHECK: :15:3: error: invalid operands to binary expression

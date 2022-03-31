@@ -12,9 +12,6 @@
 #include "../utils/RenamerClangTidyCheck.h"
 #include "llvm/ADT/Optional.h"
 namespace clang {
-
-class MacroInfo;
-
 namespace tidy {
 namespace readability {
 

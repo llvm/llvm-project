@@ -212,12 +212,16 @@ StringRef ARMTargetInfo::getCPUAttr() const {
     return "8_6A";
   case llvm::ARM::ArchKind::ARMV8_7A:
     return "8_7A";
+  case llvm::ARM::ArchKind::ARMV8_8A:
+    return "8_8A";
   case llvm::ARM::ArchKind::ARMV9A:
     return "9A";
   case llvm::ARM::ArchKind::ARMV9_1A:
     return "9_1A";
   case llvm::ARM::ArchKind::ARMV9_2A:
     return "9_2A";
+  case llvm::ARM::ArchKind::ARMV9_3A:
+    return "9_3A";
   case llvm::ARM::ArchKind::ARMV8MBaseline:
     return "8M_BASE";
   case llvm::ARM::ArchKind::ARMV8MMainline:
@@ -367,11 +371,32 @@ bool ARMTargetInfo::setABI(const std::string &Name) {
   return false;
 }
 
-bool ARMTargetInfo::validateBranchProtection(StringRef Spec,
+bool ARMTargetInfo::isBranchProtectionSupportedArch(StringRef Arch) const {
+  llvm::ARM::ArchKind CPUArch = llvm::ARM::parseCPUArch(Arch);
+  if (CPUArch == llvm::ARM::ArchKind::INVALID)
+    CPUArch = llvm::ARM::parseArch(getTriple().getArchName());
+
+  if (CPUArch == llvm::ARM::ArchKind::INVALID)
+    return false;
+
+  StringRef ArchFeature = llvm::ARM::getArchName(CPUArch);
+  auto a =
+      llvm::Triple(ArchFeature, getTriple().getVendorName(),
+                   getTriple().getOSName(), getTriple().getEnvironmentName());
+
+  StringRef SubArch = llvm::ARM::getSubArch(CPUArch);
+  llvm::ARM::ProfileKind Profile = llvm::ARM::parseArchProfile(SubArch);
+  return a.isArmT32() && (Profile == llvm::ARM::ProfileKind::M);
+}
+
+bool ARMTargetInfo::validateBranchProtection(StringRef Spec, StringRef Arch,
                                              BranchProtectionInfo &BPI,
                                              StringRef &Err) const {
   llvm::ARM::ParsedBranchProtection PBP;
   if (!llvm::ARM::parseBranchProtection(Spec, PBP, Err))
+    return false;
+
+  if (!isBranchProtectionSupportedArch(Arch))
     return false;
 
   BPI.SignReturnAddr =
@@ -465,6 +490,8 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   HWDiv = 0;
   DotProd = 0;
   HasMatMul = 0;
+  HasPAC = 0;
+  HasBTI = 0;
   HasFloat16 = true;
   ARMCDECoprocMask = 0;
   HasBFloat16 = false;
@@ -547,6 +574,9 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasBFloat16 = true;
     } else if (Feature == "-fpregs") {
       FPRegsDisabled = true;
+    } else if (Feature == "+pacbti") {
+      HasPAC = 1;
+      HasBTI = 1;
     }
   }
 
@@ -890,6 +920,12 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasMatMul)
     Builder.defineMacro("__ARM_FEATURE_MATMUL_INT8", "1");
 
+  if (HasPAC)
+    Builder.defineMacro("__ARM_FEATURE_PAUTH", "1");
+
+  if (HasBTI)
+    Builder.defineMacro("__ARM_FEATURE_BTI", "1");
+
   if (HasBFloat16) {
     Builder.defineMacro("__ARM_FEATURE_BF16", "1");
     Builder.defineMacro("__ARM_FEATURE_BF16_VECTOR_ARITHMETIC", "1");
@@ -900,7 +936,7 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__ARM_FEATURE_BTI_DEFAULT", "1");
 
   if (Opts.hasSignReturnAddress()) {
-    unsigned Value = Opts.isSignReturnAddressWithAKey() ? 1 : 2;
+    unsigned Value = 1;
     if (Opts.isSignReturnAddressScopeAll())
       Value |= 1 << 2;
     Builder.defineMacro("__ARM_FEATURE_PAC_DEFAULT", Twine(Value));
@@ -919,9 +955,12 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   case llvm::ARM::ArchKind::ARMV8_4A:
   case llvm::ARM::ArchKind::ARMV8_5A:
   case llvm::ARM::ArchKind::ARMV8_6A:
+  case llvm::ARM::ArchKind::ARMV8_7A:
+  case llvm::ARM::ArchKind::ARMV8_8A:
   case llvm::ARM::ArchKind::ARMV9A:
   case llvm::ARM::ArchKind::ARMV9_1A:
   case llvm::ARM::ArchKind::ARMV9_2A:
+  case llvm::ARM::ArchKind::ARMV9_3A:
     getTargetDefinesARMV83A(Opts, Builder);
     break;
   }

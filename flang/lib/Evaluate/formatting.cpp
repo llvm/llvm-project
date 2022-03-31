@@ -56,12 +56,14 @@ llvm::raw_ostream &ConstantBase<RESULT, VALUE>::AsFortran(
     } else if constexpr (Result::category == TypeCategory::Character) {
       o << Result::kind << '_' << parser::QuoteCharacterLiteral(value, true);
     } else if constexpr (Result::category == TypeCategory::Logical) {
-      if (value.IsTrue()) {
-        o << ".true.";
+      if (!value.IsCanonical()) {
+        o << "transfer(" << value.word().ToInt64() << "_8,.false._"
+          << Result::kind << ')';
+      } else if (value.IsTrue()) {
+        o << ".true." << '_' << Result::kind;
       } else {
-        o << ".false.";
+        o << ".false." << '_' << Result::kind;
       }
-      o << '_' << Result::kind;
     } else {
       StructureConstructor{result_.derivedTypeSpec(), value}.AsFortran(o);
     }
@@ -730,20 +732,23 @@ llvm::raw_ostream &DescriptorInquiry::AsFortran(llvm::raw_ostream &o) const {
     o << "%STRIDE(";
     break;
   case Field::Rank:
-    o << "rank(";
+    o << "int(rank(";
     break;
   case Field::Len:
+    o << "int(";
     break;
   }
   base_.AsFortran(o);
   if (field_ == Field::Len) {
-    return o << "%len";
+    o << "%len";
+  } else if (field_ == Field::Rank) {
+    o << ")";
   } else {
-    if (field_ != Field::Rank && dimension_ >= 0) {
+    if (dimension_ >= 0) {
       o << ",dim=" << (dimension_ + 1);
     }
-    return o << ')';
   }
+  return o << ",kind=" << DescriptorInquiry::Result::kind << ")";
 }
 
 llvm::raw_ostream &Assignment::AsFortran(llvm::raw_ostream &o) const {
@@ -783,6 +788,9 @@ llvm::raw_ostream &Assignment::AsFortran(llvm::raw_ostream &o) const {
   return o;
 }
 
+#ifdef _MSC_VER // disable bogus warning about missing definitions
+#pragma warning(disable : 4661)
+#endif
 INSTANTIATE_CONSTANT_TEMPLATES
 INSTANTIATE_EXPRESSION_TEMPLATES
 INSTANTIATE_VARIABLE_TEMPLATES

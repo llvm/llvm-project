@@ -19,14 +19,14 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Triple.h"
-#include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/MC/MCSymbol.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -573,9 +573,7 @@ void llvm::calculateClrEHStateNumbers(const Function *Fn,
       const auto *CatchSwitch = cast<CatchSwitchInst>(Pad);
       int CatchState = -1, FollowerState = -1;
       SmallVector<const BasicBlock *, 4> CatchBlocks(CatchSwitch->handlers());
-      for (auto CBI = CatchBlocks.rbegin(), CBE = CatchBlocks.rend();
-           CBI != CBE; ++CBI, FollowerState = CatchState) {
-        const BasicBlock *CatchBlock = *CBI;
+      for (const BasicBlock *CatchBlock : llvm::reverse(CatchBlocks)) {
         // Create the entry for this catch with the appropriate handler
         // properties.
         const auto *Catch = cast<CatchPadInst>(CatchBlock->getFirstNonPHI());
@@ -591,6 +589,7 @@ void llvm::calculateClrEHStateNumbers(const Function *Fn,
               Worklist.emplace_back(I, CatchState);
         // Remember this catch's state.
         FuncInfo.EHPadStateMap[Catch] = CatchState;
+        FollowerState = CatchState;
       }
       // Associate the catchswitch with the state of its first catch.
       assert(CatchSwitch->getNumHandlers());
@@ -601,11 +600,9 @@ void llvm::calculateClrEHStateNumbers(const Function *Fn,
   // Step two: record the TryParentState of each state.  For cleanuppads that
   // don't have cleanuprets, we may need to infer this from their child pads,
   // so visit pads in descendant-most to ancestor-most order.
-  for (auto Entry = FuncInfo.ClrEHUnwindMap.rbegin(),
-            End = FuncInfo.ClrEHUnwindMap.rend();
-       Entry != End; ++Entry) {
+  for (ClrEHUnwindMapEntry &Entry : llvm::reverse(FuncInfo.ClrEHUnwindMap)) {
     const Instruction *Pad =
-        Entry->Handler.get<const BasicBlock *>()->getFirstNonPHI();
+        Entry.Handler.get<const BasicBlock *>()->getFirstNonPHI();
     // For most pads, the TryParentState is the state associated with the
     // unwind dest of exceptional exits from it.
     const BasicBlock *UnwindDest;
@@ -615,7 +612,7 @@ void llvm::calculateClrEHStateNumbers(const Function *Fn,
       // that's not the unwind dest of exceptions escaping the catch.  Those
       // cases were already assigned a TryParentState in the first pass, so
       // skip them.
-      if (Entry->TryParentState != -1)
+      if (Entry.TryParentState != -1)
         continue;
       // Otherwise, get the unwind dest from the catchswitch.
       UnwindDest = Catch->getCatchSwitch()->getUnwindDest();
@@ -692,7 +689,7 @@ void llvm::calculateClrEHStateNumbers(const Function *Fn,
       UnwindDestState = FuncInfo.EHPadStateMap[UnwindDest->getFirstNonPHI()];
     }
 
-    Entry->TryParentState = UnwindDestState;
+    Entry.TryParentState = UnwindDestState;
   }
 
   // Step three: transfer information from pads to invokes.
@@ -1259,4 +1256,4 @@ void WinEHFuncInfo::addIPToStateRange(const InvokeInst *II,
   LabelToStateMap[InvokeBegin] = std::make_pair(InvokeStateMap[II], InvokeEnd);
 }
 
-WinEHFuncInfo::WinEHFuncInfo() {}
+WinEHFuncInfo::WinEHFuncInfo() = default;

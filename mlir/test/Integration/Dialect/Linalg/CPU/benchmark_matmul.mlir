@@ -2,10 +2,10 @@
 // RUN: cat %s | sed 's@${M}@'"$M"'@g'| sed 's@${K}@'"$K"'@g' | sed 's@${N}@'"$N"'@g'| sed 's@${ITERS}@'"$ITERS"'@g'| \
 // RUN: mlir-opt -test-linalg-codegen-strategy="anchor-func=matmul anchor-op=linalg.matmul register-tile-sizes=12,32,16 vectorize" | \
 // RUN: mlir-opt -test-linalg-codegen-strategy="anchor-func=matmul anchor-op=linalg.fill register-tile-sizes=4,32 vectorize" | \
-// RUN: mlir-opt -test-linalg-codegen-strategy="anchor-func=matmul anchor-op=linalg.copy register-tile-sizes=4,32 vectorize" | \
+// RUN: mlir-opt -test-linalg-codegen-strategy="anchor-func=matmul anchor-op=memref.copy register-tile-sizes=4,32 vectorize" | \
 
-// RUN: mlir-opt -canonicalize -convert-vector-to-scf -lower-affine -convert-linalg-to-loops | \
-// RUN: mlir-opt -canonicalize -convert-scf-to-std -convert-vector-to-llvm -convert-memref-to-llvm -convert-std-to-llvm -reconcile-unrealized-casts | \
+// RUN: mlir-opt -pass-pipeline="func.func(canonicalize,convert-vector-to-scf,lower-affine,convert-linalg-to-loops)" | \
+// RUN: mlir-opt -pass-pipeline="func.func(canonicalize,convert-scf-to-cf),convert-vector-to-llvm,convert-memref-to-llvm,convert-func-to-llvm,reconcile-unrealized-casts" | \
 // RUN: mlir-cpu-runner -O3 -e main -entry-point-result=void \
 // Activate to dump assembly
 // R_UN:   -dump-object-file -object-filename=/tmp/a.o \
@@ -59,9 +59,9 @@ func @main() {
   %B = memref.alloc() : !row_major_B
   %C = memref.alloc() : !row_major_C
 
-  linalg.fill(%v1, %A) : !elem_type_a, !row_major_A
-  linalg.fill(%v1, %B) : !elem_type_b, !row_major_B
-  linalg.fill(%v0, %C) : !elem_type_c, !row_major_C
+  linalg.fill ins(%v1 : !elem_type_a) outs(%A : !row_major_A)
+  linalg.fill ins(%v1 : !elem_type_b) outs(%B : !row_major_B)
+  linalg.fill ins(%v0 : !elem_type_c) outs(%C : !row_major_C)
 
   %c0 = arith.constant 0: index
   %c1 = arith.constant 1: index
@@ -71,7 +71,7 @@ func @main() {
   /// Preheating run:
   scf.for %arg0 = %c0 to %iters step %c1 {
     %z = arith.constant 0.0 : !elem_type_c
-    linalg.fill(%z, %C) : !elem_type_c, !row_major_C
+    linalg.fill ins(%z : !elem_type_c) outs(%C : !row_major_C)
     call @matmul(%A, %B, %C) : (!row_major_A, !row_major_B, !row_major_C) -> ()
   }
   %t_start_matmul = call @rtclock() : () -> f64
@@ -81,7 +81,7 @@ func @main() {
     // Once linalg on tensors is ready, fusing fill at the register level will
     // be easy.
     %z = arith.constant 0.0 : !elem_type_c
-    linalg.fill(%z, %C) : !elem_type_c, !row_major_C
+    linalg.fill ins(%z : !elem_type_c) outs(%C : !row_major_C)
     call @matmul(%A, %B, %C) : (!row_major_A, !row_major_B, !row_major_C) -> ()
   }
   %t_end_matmul = call @rtclock() : () -> f64
@@ -90,7 +90,7 @@ func @main() {
 
   // CHECK: {{^0$}}
   %C_ref = memref.alloc() : !row_major_C
-  linalg.fill(%v0, %C_ref) : !elem_type_c, !row_major_C
+  linalg.fill ins(%v0 : !elem_type_c) outs(%C_ref : !row_major_C)
   linalg.matmul ins(%A, %B : !row_major_A, !row_major_B)
     outs(%C_ref: !row_major_C)
   %act = memref.cast %C : !row_major_C to memref<*xf32>

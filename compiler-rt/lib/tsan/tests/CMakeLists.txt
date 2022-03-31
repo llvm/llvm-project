@@ -24,10 +24,10 @@ append_list_if(COMPILER_RT_HAS_MSSE4_2_FLAG -msse4.2 TSAN_UNITTEST_CFLAGS)
 
 set(TSAN_TEST_ARCH ${TSAN_SUPPORTED_ARCH})
 
-set(LINK_FLAGS ${COMPILER_RT_UNITTEST_LINK_FLAGS})
-foreach(lib ${SANITIZER_TEST_CXX_LIBRARIES})
-  list(APPEND LINK_FLAGS -l${lib})
-endforeach()
+set(LINK_FLAGS
+  ${COMPILER_RT_UNITTEST_LINK_FLAGS}
+  ${SANITIZER_TEST_CXX_LIBRARIES}
+  )
 
 if(APPLE)
 
@@ -62,7 +62,7 @@ foreach (header ${TSAN_HEADERS})
   list(APPEND TSAN_RTL_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/../${header})
 endforeach()
 
-set(TSAN_DEPS gtest tsan)
+set(TSAN_DEPS llvm_gtest tsan)
 # TSan uses C++ standard library headers.
 if (TARGET cxx-headers OR HAVE_LIBCXX)
   set(TSAN_DEPS cxx-headers)

@@ -11,7 +11,7 @@
 
 #include "lld/Common/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
-#include <map>
+#include "llvm/ADT/STLExtras.h"
 #include <vector>
 
 namespace lld {
@@ -117,8 +117,8 @@ struct Relocation {
 // jump instruction opcodes at basic block boundaries and are particularly
 // useful when basic block sections are enabled.
 struct JumpInstrMod {
-  JumpModType original;
   uint64_t offset;
+  JumpModType original;
   unsigned size;
 };
 
@@ -126,8 +126,8 @@ struct JumpInstrMod {
 // Call reportUndefinedSymbols() after calling scanRelocations() to emit
 // the diagnostics.
 template <class ELFT> void scanRelocations(InputSectionBase &);
-
-template <class ELFT> void reportUndefinedSymbols();
+void reportUndefinedSymbols();
+void postScanRelocations();
 
 void hexagonTLSSymbolUpdate(ArrayRef<OutputSection *> outputSections);
 bool hexagonNeedsTLSSymbol(ArrayRef<OutputSection *> outputSections);

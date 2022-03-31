@@ -6,11 +6,11 @@
 // ENABLE: define{{.*}} i32 @f1() [[ATTRFALSE:#[0-9]+]] {
 // ENABLE: define{{.*}} i32 @f2() [[ATTRTRUE:#[0-9]+]] {
 
-int f1() {
+int f1(void) {
   return 0;
 }
 
-int f2() __attribute__((disable_tail_calls)) {
+int f2(void) __attribute__((disable_tail_calls)) {
   return 0;
 }
 

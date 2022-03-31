@@ -28,9 +28,8 @@ public:
   llvm::SmallVector<TokenList, 1>
   lexArgs(const std::vector<std::string> &Args) {
     llvm::SmallVector<TokenList, 1> Result;
-    for (const auto &Arg : Args) {
+    for (const auto &Arg : Args)
       Result.push_back(uneof(Lex.lex(Arg)));
-    }
     return Result;
   }
 
@@ -78,9 +77,8 @@ protected:
 TEST_F(MacroExpanderTest, SkipsDefinitionOnError) {
   auto Macros =
       create({"A(", "B(,", "C(a,", "D(a a", "E(a, a", "F(,)", "G(a;"});
-  for (const auto *Name : {"A", "B", "C", "D", "E", "F", "G"}) {
+  for (const auto *Name : {"A", "B", "C", "D", "E", "F", "G"})
     EXPECT_FALSE(Macros->defined(Name)) << "for Name " << Name;
-  }
 }
 
 TEST_F(MacroExpanderTest, ExpandsWithoutArguments) {

@@ -255,16 +255,16 @@ define <4 x float> @testFloat2(<4 x float> %a, i8* %b, i32 zeroext %idx1, i32 ze
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    lwz r3, 0(r5)
 ; CHECK-P9-NEXT:    rlwinm r4, r6, 2, 28, 29
-; CHECK-P9-NEXT:    addi r6, r1, -32
-; CHECK-P9-NEXT:    stxv v2, -32(r1)
+; CHECK-P9-NEXT:    addi r6, r1, -16
+; CHECK-P9-NEXT:    stxv v2, -16(r1)
 ; CHECK-P9-NEXT:    stwx r3, r6, r4
 ; CHECK-P9-NEXT:    rlwinm r4, r7, 2, 28, 29
-; CHECK-P9-NEXT:    lxv vs0, -32(r1)
+; CHECK-P9-NEXT:    lxv vs0, -16(r1)
 ; CHECK-P9-NEXT:    lwz r3, 1(r5)
-; CHECK-P9-NEXT:    addi r5, r1, -16
-; CHECK-P9-NEXT:    stxv vs0, -16(r1)
+; CHECK-P9-NEXT:    addi r5, r1, -32
+; CHECK-P9-NEXT:    stxv vs0, -32(r1)
 ; CHECK-P9-NEXT:    stwx r3, r5, r4
-; CHECK-P9-NEXT:    lxv v2, -16(r1)
+; CHECK-P9-NEXT:    lxv v2, -32(r1)
 ; CHECK-P9-NEXT:    blr
 entry:
   %0 = bitcast i8* %b to float*
@@ -310,19 +310,19 @@ define <4 x float> @testFloat3(<4 x float> %a, i8* %b, i32 zeroext %idx1, i32 ze
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    lis r3, 1
 ; CHECK-P9-NEXT:    rlwinm r4, r6, 2, 28, 29
-; CHECK-P9-NEXT:    addi r6, r1, -32
+; CHECK-P9-NEXT:    addi r6, r1, -16
 ; CHECK-P9-NEXT:    lwzx r3, r5, r3
-; CHECK-P9-NEXT:    stxv v2, -32(r1)
+; CHECK-P9-NEXT:    stxv v2, -16(r1)
 ; CHECK-P9-NEXT:    stwx r3, r6, r4
 ; CHECK-P9-NEXT:    li r3, 1
 ; CHECK-P9-NEXT:    rlwinm r4, r7, 2, 28, 29
-; CHECK-P9-NEXT:    lxv vs0, -32(r1)
+; CHECK-P9-NEXT:    lxv vs0, -16(r1)
 ; CHECK-P9-NEXT:    rldic r3, r3, 36, 27
 ; CHECK-P9-NEXT:    lwzx r3, r5, r3
-; CHECK-P9-NEXT:    addi r5, r1, -16
-; CHECK-P9-NEXT:    stxv vs0, -16(r1)
+; CHECK-P9-NEXT:    addi r5, r1, -32
+; CHECK-P9-NEXT:    stxv vs0, -32(r1)
 ; CHECK-P9-NEXT:    stwx r3, r5, r4
-; CHECK-P9-NEXT:    lxv v2, -16(r1)
+; CHECK-P9-NEXT:    lxv v2, -32(r1)
 ; CHECK-P9-NEXT:    blr
 entry:
   %add.ptr = getelementptr inbounds i8, i8* %b, i64 65536
@@ -384,11 +384,11 @@ define <4 x float> @testFloatImm2(<4 x float> %a, i32* %b) {
 ;
 ; CHECK-P9-LABEL: testFloatImm2:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    lfs f0, 0(r5)
-; CHECK-P9-NEXT:    xscvdpspn vs0, f0
+; CHECK-P9-NEXT:    lwz r3, 0(r5)
+; CHECK-P9-NEXT:    mtfprwz f0, r3
+; CHECK-P9-NEXT:    lwz r3, 4(r5)
 ; CHECK-P9-NEXT:    xxinsertw v2, vs0, 0
-; CHECK-P9-NEXT:    lfs f0, 4(r5)
-; CHECK-P9-NEXT:    xscvdpspn vs0, f0
+; CHECK-P9-NEXT:    mtfprwz f0, r3
 ; CHECK-P9-NEXT:    xxinsertw v2, vs0, 8
 ; CHECK-P9-NEXT:    blr
 entry:
@@ -426,13 +426,13 @@ define <4 x float> @testFloatImm3(<4 x float> %a, i32* %b) {
 ; CHECK-P9-LABEL: testFloatImm3:
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    lis r3, 4
-; CHECK-P9-NEXT:    lfsx f0, r5, r3
+; CHECK-P9-NEXT:    lwzx r3, r5, r3
+; CHECK-P9-NEXT:    mtfprwz f0, r3
 ; CHECK-P9-NEXT:    li r3, 1
 ; CHECK-P9-NEXT:    rldic r3, r3, 38, 25
-; CHECK-P9-NEXT:    xscvdpspn vs0, f0
 ; CHECK-P9-NEXT:    xxinsertw v2, vs0, 0
-; CHECK-P9-NEXT:    lfsx f0, r5, r3
-; CHECK-P9-NEXT:    xscvdpspn vs0, f0
+; CHECK-P9-NEXT:    lwzx r3, r5, r3
+; CHECK-P9-NEXT:    mtfprwz f0, r3
 ; CHECK-P9-NEXT:    xxinsertw v2, vs0, 8
 ; CHECK-P9-NEXT:    blr
 entry:

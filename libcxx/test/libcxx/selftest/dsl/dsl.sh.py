@@ -6,8 +6,6 @@
 #
 #===----------------------------------------------------------------------===##
 
-# XFAIL: LIBCXX-WINDOWS-FIXME
-
 # Note: We prepend arguments with 'x' to avoid thinking there are too few
 #       arguments in case an argument is an empty string.
 # RUN: %{python} %s x%S x%T x%{substitutions}
@@ -216,6 +214,28 @@ class TestProgramOutput(SetupConfigs):
         self.assertEqual(dsl.programOutput(self.config, source), "STDOUT-OUTPUT")
 
 
+class TestProgramSucceeds(SetupConfigs):
+    """
+    Tests for libcxx.test.dsl.programSucceeds
+    """
+    def test_success(self):
+        source = """
+        int main(int, char**) { return 0; }
+        """
+        self.assertTrue(dsl.programSucceeds(self.config, source))
+
+    def test_failure(self):
+        source = """
+        int main(int, char**) { return 1; }
+        """
+        self.assertFalse(dsl.programSucceeds(self.config, source))
+
+    def test_compile_failure(self):
+        source = """
+        this does not compile
+        """
+        self.assertRaises(dsl.ConfigurationCompilationError, lambda: dsl.programSucceeds(self.config, source))
+
 class TestHasLocale(SetupConfigs):
     """
     Tests for libcxx.test.dsl.hasLocale
@@ -229,7 +249,7 @@ class TestHasLocale(SetupConfigs):
             self.fail("checking for hasLocale should not explode")
 
     def test_nonexistent_locale(self):
-        self.assertFalse(dsl.hasAnyLocale(self.config, ['for_sure_this_is_not_an_existing_locale']))
+        self.assertFalse(dsl.hasAnyLocale(self.config, ['forsurethisisnotanexistinglocale']))
 
     def test_localization_program_doesnt_compile(self):
         compilerIndex = findIndex(self.config.substitutions, lambda x: x[0] == '%{cxx}')

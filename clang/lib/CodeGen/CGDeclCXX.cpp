@@ -136,6 +136,7 @@ static void EmitDeclDestroy(CodeGenFunction &CGF, const VarDecl &D,
     }
   // Otherwise, the standard logic requires a helper function.
   } else {
+    Addr = Addr.getElementBitCast(CGF.ConvertTypeForMem(Type));
     Func = CodeGenFunction(CGM)
            .generateDestroyHelper(Addr, Type, CGF.getDestroyer(DtorKind),
                                   CGF.needsEHCleanup(DtorKind), &D);
@@ -172,7 +173,7 @@ void CodeGenFunction::EmitInvariantStart(llvm::Constant *Addr, CharUnits Size) {
 }
 
 void CodeGenFunction::EmitCXXGlobalVarDeclInit(const VarDecl &D,
-                                               llvm::Constant *DeclPtr,
+                                               llvm::GlobalVariable *GV,
                                                bool PerformInit) {
 
   const Expr *Init = D.getInit();
@@ -194,14 +195,16 @@ void CodeGenFunction::EmitCXXGlobalVarDeclInit(const VarDecl &D,
   // "shared" address space qualifier, but the constructor of StructWithCtor
   // expects "this" in the "generic" address space.
   unsigned ExpectedAddrSpace = getContext().getTargetAddressSpace(T);
-  unsigned ActualAddrSpace = DeclPtr->getType()->getPointerAddressSpace();
+  unsigned ActualAddrSpace = GV->getAddressSpace();
+  llvm::Constant *DeclPtr = GV;
   if (ActualAddrSpace != ExpectedAddrSpace) {
-    llvm::Type *LTy = CGM.getTypes().ConvertTypeForMem(T);
-    llvm::PointerType *PTy = llvm::PointerType::get(LTy, ExpectedAddrSpace);
+    llvm::PointerType *PTy = llvm::PointerType::getWithSamePointeeType(
+        GV->getType(), ExpectedAddrSpace);
     DeclPtr = llvm::ConstantExpr::getAddrSpaceCast(DeclPtr, PTy);
   }
 
-  ConstantAddress DeclAddr(DeclPtr, getContext().getDeclAlign(&D));
+  ConstantAddress DeclAddr(
+      DeclPtr, GV->getValueType(), getContext().getDeclAlign(&D));
 
   if (!T->isReferenceType()) {
     if (getLangOpts().OpenMP && !getLangOpts().OpenMPSimd &&
@@ -422,9 +425,8 @@ void CodeGenFunction::EmitCXXGuardedInitBranch(llvm::Value *NeedsInit,
 
 llvm::Function *CodeGenModule::CreateGlobalInitOrCleanUpFunction(
     llvm::FunctionType *FTy, const Twine &Name, const CGFunctionInfo &FI,
-    SourceLocation Loc, bool TLS) {
-  llvm::Function *Fn = llvm::Function::Create(
-      FTy, llvm::GlobalValue::InternalLinkage, Name, &getModule());
+    SourceLocation Loc, bool TLS, llvm::GlobalVariable::LinkageTypes Linkage) {
+  llvm::Function *Fn = llvm::Function::Create(FTy, Linkage, Name, &getModule());
 
   if (!getLangOpts().AppleKext && !TLS) {
     // Set the section if needed.
@@ -432,7 +434,8 @@ llvm::Function *CodeGenModule::CreateGlobalInitOrCleanUpFunction(
       Fn->setSection(Section);
   }
 
-  SetInternalFunctionAttributes(GlobalDecl(), Fn, FI);
+  if (Linkage == llvm::GlobalVariable::InternalLinkage)
+    SetInternalFunctionAttributes(GlobalDecl(), Fn, FI);
 
   Fn->setCallingConv(getRuntimeCC());
 

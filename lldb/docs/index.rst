@@ -102,10 +102,10 @@ Additionally it builds:
 
 See the :doc:`LLDB Build Page <resources/build>` for build instructions.
 
-Discussions about LLDB should go to the `lldb-dev
-<http://lists.llvm.org/mailman/listinfo/lldb-dev>`__ mailing list. Commit
+Discussions about LLDB should go to the `LLDB forum
+<https://discourse.llvm.org/c/subprojects/lldb>`__. Commit
 messages are automatically sent to the `lldb-commits
-<http://lists.llvm.org/mailman/listinfo/lldb-commits>`__ mailing list , and
+<http://lists.llvm.org/mailman/listinfo/lldb-commits>`__ mailing list, and
 this is also the preferred mailing list for patch submissions.
 
 See the :doc:`Projects page <status/projects>` if you are looking for some
@@ -137,6 +137,7 @@ interesting areas to contribute to lldb.
    use/python-reference
    use/remote
    use/qemu-testing
+   use/intel_pt
    use/troubleshooting
    use/links
 
@@ -158,7 +159,6 @@ interesting areas to contribute to lldb.
    :caption: Design
 
    design/overview
-   design/reproducers
    design/sbapi
 
 .. toctree::
@@ -178,4 +178,4 @@ interesting areas to contribute to lldb.
 
    Source Code <https://github.com/llvm/llvm-project>
    Code Reviews <https://reviews.llvm.org>
-   Bug Reports <https://bugs.llvm.org/>
+   Bug Reports <https://github.com/llvm/llvm-project/issues/labels/lldb/>

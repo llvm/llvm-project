@@ -7,13 +7,13 @@ declare i32 @"personality_function"()
 define i1 @test_trivial(i32 addrspace(1)* %in) gc "statepoint-example" {
 ; CHECK-LABEL: @test_trivial(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SAFEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @func, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(i32 addrspace(1)* [[IN:%.*]]) ]
+; CHECK-NEXT:    [[SAFEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(i32 addrspace(1)* [[IN:%.*]]) ]
 ; CHECK-NEXT:    [[A:%.*]] = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token [[SAFEPOINT_TOKEN]], i32 0, i32 0)
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 addrspace(1)* [[A]], null
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
 entry:
-  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @func, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i32 addrspace(1)* %in)]
+  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i32 addrspace(1)* %in)]
   %a = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 0, i32 0)
   %b = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 0, i32 0)
   %cmp1 = icmp eq i32 addrspace(1)* %a, null
@@ -27,14 +27,14 @@ entry:
 define i1 @test_readnone(i32 addrspace(1)* %in) gc "statepoint-example" {
 ; CHECK-LABEL: @test_readnone(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SAFEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @func, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(i32 addrspace(1)* [[IN:%.*]]) ]
+; CHECK-NEXT:    [[SAFEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(i32 addrspace(1)* [[IN:%.*]]) ]
 ; CHECK-NEXT:    [[A:%.*]] = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token [[SAFEPOINT_TOKEN]], i32 0, i32 0)
 ; CHECK-NEXT:    store i32 0, i32* @G, align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 addrspace(1)* [[A]], null
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
 entry:
-  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @func, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i32 addrspace(1)* %in)]
+  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i32 addrspace(1)* %in)]
   %a = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 0, i32 0)
   store i32 0, i32* @G
   %b = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 0, i32 0)
@@ -47,9 +47,9 @@ entry:
 define i1 @test_call(i32 addrspace(1)* %in) gc "statepoint-example" {
 ; CHECK-LABEL: @test_call(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SAFEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @func, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(i32 addrspace(1)* [[IN:%.*]], i32 addrspace(1)* [[IN]]) ]
+; CHECK-NEXT:    [[SAFEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(i32 addrspace(1)* [[IN:%.*]], i32 addrspace(1)* [[IN]]) ]
 ; CHECK-NEXT:    [[BASE:%.*]] = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token [[SAFEPOINT_TOKEN]], i32 0, i32 0)
-; CHECK-NEXT:    [[SAFEPOINT_TOKEN2:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @func, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(i32 addrspace(1)* [[BASE]], i32 addrspace(1)* [[BASE]]) ]
+; CHECK-NEXT:    [[SAFEPOINT_TOKEN2:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(i32 addrspace(1)* [[BASE]], i32 addrspace(1)* [[BASE]]) ]
 ; CHECK-NEXT:    br label [[NEXT:%.*]]
 ; CHECK:       next:
 ; CHECK-NEXT:    [[BASE_RELOC:%.*]] = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token [[SAFEPOINT_TOKEN2]], i32 0, i32 0)
@@ -57,10 +57,10 @@ define i1 @test_call(i32 addrspace(1)* %in) gc "statepoint-example" {
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
 entry:
-  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @func, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i32 addrspace(1)* %in, i32 addrspace(1)* %in)]
+  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i32 addrspace(1)* %in, i32 addrspace(1)* %in)]
   %base = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 0, i32 0)
   %derived = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 0, i32 1)
-  %safepoint_token2 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @func, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i32 addrspace(1)* %base, i32 addrspace(1)* %derived)]
+  %safepoint_token2 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i32 addrspace(1)* %base, i32 addrspace(1)* %derived)]
   br label %next
 
 next:
@@ -76,19 +76,19 @@ next:
 define i1 @test_two_calls(i32 addrspace(1)* %in1, i32 addrspace(1)* %in2) gc "statepoint-example" {
 ; CHECK-LABEL: @test_two_calls(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SAFEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @func, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(i32 addrspace(1)* [[IN1:%.*]], i32 addrspace(1)* [[IN2:%.*]]) ]
+; CHECK-NEXT:    [[SAFEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(i32 addrspace(1)* [[IN1:%.*]], i32 addrspace(1)* [[IN2:%.*]]) ]
 ; CHECK-NEXT:    [[IN1_RELOC1:%.*]] = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token [[SAFEPOINT_TOKEN]], i32 0, i32 0)
 ; CHECK-NEXT:    [[IN2_RELOC1:%.*]] = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token [[SAFEPOINT_TOKEN]], i32 1, i32 1)
-; CHECK-NEXT:    [[SAFEPOINT_TOKEN2:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @func, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(i32 addrspace(1)* [[IN1_RELOC1]], i32 addrspace(1)* [[IN2_RELOC1]]) ]
+; CHECK-NEXT:    [[SAFEPOINT_TOKEN2:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(i32 addrspace(1)* [[IN1_RELOC1]], i32 addrspace(1)* [[IN2_RELOC1]]) ]
 ; CHECK-NEXT:    [[IN1_RELOC2:%.*]] = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token [[SAFEPOINT_TOKEN2]], i32 0, i32 1)
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 addrspace(1)* [[IN1_RELOC2]], null
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
 entry:
-  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @func, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i32 addrspace(1)* %in1, i32 addrspace(1)* %in2)]
+  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i32 addrspace(1)* %in1, i32 addrspace(1)* %in2)]
   %in1.reloc1 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 0, i32 0)
   %in2.reloc1 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 1, i32 1)
-  %safepoint_token2 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @func, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i32 addrspace(1)* %in1.reloc1, i32 addrspace(1)* %in2.reloc1)]
+  %safepoint_token2 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i32 addrspace(1)* %in1.reloc1, i32 addrspace(1)* %in2.reloc1)]
   %in1.reloc2 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token2,  i32 0, i32 1)
   %in2.reloc2 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token2,  i32 0, i32 1)
   %cmp1 = icmp eq i32 addrspace(1)* %in1.reloc2, null
@@ -100,7 +100,7 @@ entry:
 ; Negative test: Check that relocates from normal and exceptional pathes are not be CSE'd
 define i32 addrspace(1)* @test_invoke(i32 addrspace(1)* %in) gc "statepoint-example" personality i32 ()* @"personality_function" {
 ; CHECK-LABEL: @test_invoke(
-; CHECK-NEXT:    [[SAFEPOINT_TOKEN:%.*]] = invoke token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @func, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(i32 addrspace(1)* [[IN:%.*]]) ]
+; CHECK-NEXT:    [[SAFEPOINT_TOKEN:%.*]] = invoke token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(i32 addrspace(1)* [[IN:%.*]]) ]
 ; CHECK-NEXT:    to label [[INVOKE_NORMAL_DEST:%.*]] unwind label [[EXCEPTIONAL_RETURN:%.*]]
 ; CHECK:       invoke_normal_dest:
 ; CHECK-NEXT:    [[OUT:%.*]] = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token [[SAFEPOINT_TOKEN]], i32 0, i32 0)
@@ -111,7 +111,7 @@ define i32 addrspace(1)* @test_invoke(i32 addrspace(1)* %in) gc "statepoint-exam
 ; CHECK-NEXT:    [[OUT1:%.*]] = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token [[LANDING_PAD]], i32 0, i32 0)
 ; CHECK-NEXT:    ret i32 addrspace(1)* [[OUT1]]
 ;
-  %safepoint_token = invoke token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @func, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i32 addrspace(1)* %in)]
+  %safepoint_token = invoke token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i32 addrspace(1)* %in)]
   to label %invoke_normal_dest unwind label %exceptional_return
 
 invoke_normal_dest:
@@ -130,7 +130,7 @@ define i1 @test_non_dominating(i1 %c, i32 addrspace(1)* %in) gc "statepoint-exam
 ;
 ; CHECK-LABEL: @test_non_dominating(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SAFEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @func, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(i32 addrspace(1)* [[IN:%.*]]) ]
+; CHECK-NEXT:    [[SAFEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(i32 addrspace(1)* [[IN:%.*]]) ]
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[TAKEN:%.*]], label [[UNTAKEN:%.*]]
 ; CHECK:       taken:
 ; CHECK-NEXT:    [[A:%.*]] = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token [[SAFEPOINT_TOKEN]], i32 0, i32 0)
@@ -142,7 +142,7 @@ define i1 @test_non_dominating(i1 %c, i32 addrspace(1)* %in) gc "statepoint-exam
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
 entry:
-  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @func, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i32 addrspace(1)* %in)]
+  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i32 addrspace(1)* %in)]
   br i1 %c, label %taken, label %untaken
 taken:
   %a = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 0, i32 0)

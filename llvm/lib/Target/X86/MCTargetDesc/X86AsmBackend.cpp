@@ -8,6 +8,7 @@
 
 #include "MCTargetDesc/X86BaseInfo.h"
 #include "MCTargetDesc/X86FixupKinds.h"
+#include "MCTargetDesc/X86InstrRelaxTables.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -222,87 +223,7 @@ static unsigned getRelaxedOpcodeBranch(const MCInst &Inst, bool Is16BitMode) {
 
 static unsigned getRelaxedOpcodeArith(const MCInst &Inst) {
   unsigned Op = Inst.getOpcode();
-  switch (Op) {
-  default:
-    return Op;
-
-    // IMUL
-  case X86::IMUL16rri8: return X86::IMUL16rri;
-  case X86::IMUL16rmi8: return X86::IMUL16rmi;
-  case X86::IMUL32rri8: return X86::IMUL32rri;
-  case X86::IMUL32rmi8: return X86::IMUL32rmi;
-  case X86::IMUL64rri8: return X86::IMUL64rri32;
-  case X86::IMUL64rmi8: return X86::IMUL64rmi32;
-
-    // AND
-  case X86::AND16ri8: return X86::AND16ri;
-  case X86::AND16mi8: return X86::AND16mi;
-  case X86::AND32ri8: return X86::AND32ri;
-  case X86::AND32mi8: return X86::AND32mi;
-  case X86::AND64ri8: return X86::AND64ri32;
-  case X86::AND64mi8: return X86::AND64mi32;
-
-    // OR
-  case X86::OR16ri8: return X86::OR16ri;
-  case X86::OR16mi8: return X86::OR16mi;
-  case X86::OR32ri8: return X86::OR32ri;
-  case X86::OR32mi8: return X86::OR32mi;
-  case X86::OR64ri8: return X86::OR64ri32;
-  case X86::OR64mi8: return X86::OR64mi32;
-
-    // XOR
-  case X86::XOR16ri8: return X86::XOR16ri;
-  case X86::XOR16mi8: return X86::XOR16mi;
-  case X86::XOR32ri8: return X86::XOR32ri;
-  case X86::XOR32mi8: return X86::XOR32mi;
-  case X86::XOR64ri8: return X86::XOR64ri32;
-  case X86::XOR64mi8: return X86::XOR64mi32;
-
-    // ADD
-  case X86::ADD16ri8: return X86::ADD16ri;
-  case X86::ADD16mi8: return X86::ADD16mi;
-  case X86::ADD32ri8: return X86::ADD32ri;
-  case X86::ADD32mi8: return X86::ADD32mi;
-  case X86::ADD64ri8: return X86::ADD64ri32;
-  case X86::ADD64mi8: return X86::ADD64mi32;
-
-   // ADC
-  case X86::ADC16ri8: return X86::ADC16ri;
-  case X86::ADC16mi8: return X86::ADC16mi;
-  case X86::ADC32ri8: return X86::ADC32ri;
-  case X86::ADC32mi8: return X86::ADC32mi;
-  case X86::ADC64ri8: return X86::ADC64ri32;
-  case X86::ADC64mi8: return X86::ADC64mi32;
-
-    // SUB
-  case X86::SUB16ri8: return X86::SUB16ri;
-  case X86::SUB16mi8: return X86::SUB16mi;
-  case X86::SUB32ri8: return X86::SUB32ri;
-  case X86::SUB32mi8: return X86::SUB32mi;
-  case X86::SUB64ri8: return X86::SUB64ri32;
-  case X86::SUB64mi8: return X86::SUB64mi32;
-
-   // SBB
-  case X86::SBB16ri8: return X86::SBB16ri;
-  case X86::SBB16mi8: return X86::SBB16mi;
-  case X86::SBB32ri8: return X86::SBB32ri;
-  case X86::SBB32mi8: return X86::SBB32mi;
-  case X86::SBB64ri8: return X86::SBB64ri32;
-  case X86::SBB64mi8: return X86::SBB64mi32;
-
-    // CMP
-  case X86::CMP16ri8: return X86::CMP16ri;
-  case X86::CMP16mi8: return X86::CMP16mi;
-  case X86::CMP32ri8: return X86::CMP32ri;
-  case X86::CMP32mi8: return X86::CMP32mi;
-  case X86::CMP64ri8: return X86::CMP64ri32;
-  case X86::CMP64mi8: return X86::CMP64mi32;
-
-    // PUSH
-  case X86::PUSH32i8:  return X86::PUSHi32;
-  case X86::PUSH16i8:  return X86::PUSHi16;
-  case X86::PUSH64i8:  return X86::PUSH64i32;
-  }
+  return X86::getRelaxedOpcodeArith(Op);
 }
 
 static unsigned getRelaxedOpcode(const MCInst &Inst, bool Is16BitMode) {
@@ -372,7 +293,7 @@ static bool isFirstMacroFusibleInst(const MCInst &Inst,
 ///   - If the instruction has a ESP/EBP base register, use SS.
 ///   - Otherwise use DS.
 uint8_t X86AsmBackend::determinePaddingPrefix(const MCInst &Inst) const {
-  assert((STI.hasFeature(X86::Mode32Bit) || STI.hasFeature(X86::Mode64Bit)) &&
+  assert((STI.hasFeature(X86::Is32Bit) || STI.hasFeature(X86::Is64Bit)) &&
          "Prefixes can be added only in 32-bit or 64-bit mode.");
   const MCInstrDesc &Desc = MCII->get(Inst.getOpcode());
   uint64_t TSFlags = Desc.TSFlags;
@@ -413,7 +334,7 @@ uint8_t X86AsmBackend::determinePaddingPrefix(const MCInst &Inst) const {
   if (SegmentReg != 0)
     return X86::getSegmentOverridePrefixForReg(SegmentReg);
 
-  if (STI.hasFeature(X86::Mode64Bit))
+  if (STI.hasFeature(X86::Is64Bit))
     return X86::CS_Encoding;
 
   if (MemoryOperand >= 0) {
@@ -572,7 +493,7 @@ bool X86AsmBackend::canPadBranches(MCObjectStreamer &OS) const {
     return false;
 
   // Branches only need to be aligned in 32-bit or 64-bit mode.
-  if (!(STI.hasFeature(X86::Mode64Bit) || STI.hasFeature(X86::Mode32Bit)))
+  if (!(STI.hasFeature(X86::Is64Bit) || STI.hasFeature(X86::Is32Bit)))
     return false;
 
   return true;
@@ -834,7 +755,7 @@ bool X86AsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
 void X86AsmBackend::relaxInstruction(MCInst &Inst,
                                      const MCSubtargetInfo &STI) const {
   // The only relaxations X86 does is from a 1byte pcrel to a 4byte pcrel.
-  bool Is16BitMode = STI.getFeatureBits()[X86::Mode16Bit];
+  bool Is16BitMode = STI.getFeatureBits()[X86::Is16Bit];
   unsigned RelaxedOp = getRelaxedOpcode(Inst, Is16BitMode);
 
   if (RelaxedOp == Inst.getOpcode()) {
@@ -853,7 +774,7 @@ void X86AsmBackend::relaxInstruction(MCInst &Inst,
 static bool isFullyRelaxed(const MCRelaxableFragment &RF) {
   auto &Inst = RF.getInst();
   auto &STI = *RF.getSubtargetInfo();
-  bool Is16BitMode = STI.getFeatureBits()[X86::Mode16Bit];
+  bool Is16BitMode = STI.getFeatureBits()[X86::Is16Bit];
   return getRelaxedOpcode(Inst, Is16BitMode) == Inst.getOpcode();
 }
 
@@ -1077,9 +998,9 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm,
 }
 
 unsigned X86AsmBackend::getMaximumNopSize(const MCSubtargetInfo &STI) const {
-  if (STI.hasFeature(X86::Mode16Bit))
+  if (STI.hasFeature(X86::Is16Bit))
     return 4;
-  if (!STI.hasFeature(X86::FeatureNOPL) && !STI.hasFeature(X86::Mode64Bit))
+  if (!STI.hasFeature(X86::FeatureNOPL) && !STI.hasFeature(X86::Is64Bit))
     return 1;
   if (STI.getFeatureBits()[X86::TuningFast7ByteNOP])
     return 7;
@@ -1134,7 +1055,7 @@ bool X86AsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   };
 
   const char(*Nops)[11] =
-      STI->getFeatureBits()[X86::Mode16Bit] ? Nops16Bit : Nops32Bit;
+      STI->getFeatureBits()[X86::Is16Bit] ? Nops16Bit : Nops32Bit;
 
   uint64_t MaxNopLength = (uint64_t)getMaximumNopSize(*STI);
 
@@ -1449,7 +1370,6 @@ public:
     unsigned InstrOffset = 0;
     unsigned StackAdjust = 0;
     unsigned StackSize = 0;
-    unsigned NumDefCFAOffsets = 0;
     int MinAbsOffset = std::numeric_limits<int>::max();
 
     for (const MCCFIInstruction &Inst : Instrs) {
@@ -1497,7 +1417,6 @@ public:
         //     .cfi_def_cfa_offset 80
         //
         StackSize = Inst.getOffset() / StackDivide;
-        ++NumDefCFAOffsets;
         break;
       }
       case MCCFIInstruction::OpOffset: {

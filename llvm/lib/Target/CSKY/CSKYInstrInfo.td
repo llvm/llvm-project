@@ -15,21 +15,41 @@
 // CSKY specific DAG Nodes.
 //===----------------------------------------------------------------------===//
 
+// Target-independent type requirements, but with target-specific formats.
 def SDT_CallSeqStart : SDCallSeqStart<[SDTCisVT<0, i32>,
                                        SDTCisVT<1, i32>]>;
 
 def SDT_CallSeqEnd   : SDCallSeqEnd<[SDTCisVT<0, i32>,
                                      SDTCisVT<1, i32>]>;
 
+def SDT_CSKYCall : SDTypeProfile<0, 2, [SDTCisVT<0, iPTR>, SDTCisVT<1, iPTR>]>;
+
+def SDT_CSKYCallReg : SDTypeProfile<0, 1, [SDTCisVT<0, iPTR>]>;
+
+def SDT_CSKY_LOADADDR : SDTypeProfile<1, 2, [SDTCisVT<0, i32>,
+                        SDTCisVT<1, iPTR>, SDTCisVT<2, iPTR>]>;
+
 def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_CallSeqStart,
                            [SDNPHasChain, SDNPOutGlue]>;
-
 def callseq_end   : SDNode<"ISD::CALLSEQ_END", SDT_CallSeqEnd,
                            [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 
-// Target-dependent nodes.
 def CSKY_RET : SDNode<"CSKYISD::RET", SDTNone,
     [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+
+def CSKY_CALL : SDNode<"CSKYISD::CALL", SDT_CSKYCall,
+  [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue, SDNPVariadic]>;
+
+def CSKY_CALLReg : SDNode<"CSKYISD::CALLReg", SDT_CSKYCallReg,
+  [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue, SDNPVariadic]>;
+
+def CSKY_TAIL : SDNode<"CSKYISD::TAIL", SDT_CSKYCall,
+  [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue, SDNPVariadic]>;
+
+def CSKY_TAILReg : SDNode<"CSKYISD::TAILReg", SDT_CSKYCallReg,
+  [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue, SDNPVariadic]>;
+
+def CSKY_LOAD_ADDR : SDNode<"CSKYISD::LOAD_ADDR", SDT_CSKY_LOADADDR>;
 
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
@@ -51,6 +71,29 @@ class UImmAsmOperand<int width, string suffix = "">
 class OImmAsmOperand<int width, string suffix = "">
     : ImmAsmOperand<"O", width, suffix> {
 }
+
+def to_tframeindex : SDNodeXForm<frameindex, [{
+  auto FI = cast<FrameIndexSDNode>(N);
+  return CurDAG->getTargetFrameIndex(FI->getIndex(), TLI->getPointerTy(CurDAG->getDataLayout()));
+}]>;
+
+def to_tconstpool : SDNodeXForm<constpool, [{
+  auto CP = cast<ConstantPoolSDNode>(N);
+  return CurDAG->getTargetConstantPool(CP->getConstVal(), TLI->getPointerTy(CurDAG->getDataLayout()),
+                    CP->getAlign(), CP->getOffset(), CSKYII::MO_None);
+}]>;
+
+def to_tconstpool_hi16 : SDNodeXForm<constpool, [{
+  auto CP = cast<ConstantPoolSDNode>(N);
+  return CurDAG->getTargetConstantPool(CP->getConstVal(), TLI->getPointerTy(CurDAG->getDataLayout()),
+                    CP->getAlign(), CP->getOffset(), CSKYII::MO_ADDR_HI16);
+}]>;
+
+def to_tconstpool_lo16 : SDNodeXForm<constpool, [{
+  auto CP = cast<ConstantPoolSDNode>(N);
+  return CurDAG->getTargetConstantPool(CP->getConstVal(), TLI->getPointerTy(CurDAG->getDataLayout()),
+                    CP->getAlign(), CP->getOffset(), CSKYII::MO_ADDR_LO16);
+}]>;
 
 class oimm<int num> : Operand<i32>,
   ImmLeaf<i32, "return isUInt<"#num#">(Imm - 1);"> {
@@ -370,6 +413,19 @@ def psrflag : Operand<i32>, ImmLeaf<i32, "return isShiftedUInt<5, 0>(Imm);"> {
   let PrintMethod = "printPSRFlag";
 }
 
+multiclass uimm8SRLXForm<SDNode opc> {
+  def _0: SDNodeXForm<opc,
+    [{return CurDAG->getTargetConstant((N->getZExtValue() >> 0) & 0xFF, SDLoc(N), MVT::i32);}]>;
+  def _8: SDNodeXForm<opc,
+    [{return CurDAG->getTargetConstant((N->getZExtValue() >> 8) & 0xFF, SDLoc(N), MVT::i32);}]>;
+  def _16: SDNodeXForm<opc,
+    [{return CurDAG->getTargetConstant((N->getZExtValue() >> 16) & 0xFF, SDLoc(N), MVT::i32);}]>;
+  def _24: SDNodeXForm<opc,
+    [{return CurDAG->getTargetConstant((N->getZExtValue() >> 24) & 0xFF, SDLoc(N), MVT::i32);}]>;
+}
+
+defm uimm8SRL : uimm8SRLXForm<imm>;
+
 //===----------------------------------------------------------------------===//
 // Instruction Formats
 //===----------------------------------------------------------------------===//
@@ -666,8 +722,6 @@ let Predicates= [iHasE2] in {
   def MOVI32 : I_16_MOV<0x10, "movi32", uimm16>;
   let Size = 4, isCodeGenOnly = 0 in
   def BGENI : CSKYPseudo<(outs GPR:$dst), (ins uimm5:$imm), "bgeni\t$dst, $imm", []>;
-  def : InstAlias<"bgeni16 $dst, $imm", (BGENI GPR:$dst, uimm5:$imm)>;
-  def : InstAlias<"bgeni32 $dst, $imm", (BGENI GPR:$dst, uimm5:$imm)>;
   def MOVIH32 : I_16_MOV<0x11, "movih32", uimm16_16_xform>;
   def MVC32 : R_Z_1<0x1, 0x8, "mvc32">;
   let isCodeGenOnly = 1 in
@@ -736,8 +790,6 @@ def BNEZAD32 : CSKY32Inst<AddrModeNone, 0x3a,
 
 def BSR32 : J<0x38, (outs), (ins call_symbol:$offset), "bsr32", []>;
 
-def : InstAlias<"bsr $dst", (BSR32 call_symbol:$dst)>;
-
 def BSR32_BR : J<0x38, (outs), (ins call_symbol:$offset), "bsr32", []>{
   let isCodeGenOnly = 1;
   let isBranch = 1;
@@ -761,7 +813,6 @@ let Predicates = [iHas2E3] in {
 
 def GRS32 : I_18_Z_L<0x3, "grs32\t$rz, $offset",
                     (outs GPR:$rz), (ins bare_symbol:$offset), []>;
-def : InstAlias<"grs\t$rz, $offset", (GRS32 GPR:$rz, bare_symbol:$offset)>;
 
 let Uses = [R28] in {
 def LRS32B : I_18_Z_L<0x0, "lrs32.b\t$rz, $offset",
@@ -972,6 +1023,274 @@ def TRAP32 : CSKY32Inst<AddrModeNone, 0x30, (outs), (ins uimm2:$imm2), "trap32 $
 
 }
 
+//===----------------------------------------------------------------------===//
+// Instruction Patterns.
+//===----------------------------------------------------------------------===//
+
+// Load & Store Patterns
+multiclass LdPat<PatFrag LoadOp, ImmLeaf imm_type, Instruction Inst, ValueType Type> {
+  def : Pat<(Type (LoadOp GPR:$rs1)), (Inst GPR:$rs1, 0)>;
+  def : Pat<(Type (LoadOp (i32 frameindex:$rs1))), (Inst (i32 (to_tframeindex tframeindex:$rs1)), 0)>;
+  def : Pat<(Type (LoadOp (add GPR:$rs1, imm_type:$uimm))),
+            (Inst GPR:$rs1, imm_type:$uimm)>;
+  def : Pat<(Type (LoadOp (add frameindex:$rs1, imm_type:$uimm))),
+            (Inst (i32 (to_tframeindex tframeindex:$rs1)), imm_type:$uimm)>;
+  def : Pat<(Type (LoadOp (eqToAdd frameindex:$rs1, imm_type:$uimm))),
+            (Inst (i32 (to_tframeindex tframeindex:$rs1)), imm_type:$uimm)>;
+  def : Pat<(Type (LoadOp (add GPR:$rs1, tglobaladdr:$gd))),
+            (Inst GPR:$rs1, tglobaladdr:$gd)>;
+}
+
+defm : LdPat<extloadi8, uimm12, LD32B, i32>;
+defm : LdPat<zextloadi8, uimm12, LD32B, i32>;
+let Predicates = [iHasE2] in {
+  defm : LdPat<sextloadi8, uimm12, LD32BS, i32>;
+}
+defm : LdPat<extloadi16, uimm12_1, LD32H, i32>;
+defm : LdPat<zextloadi16, uimm12_1, LD32H, i32>;
+let Predicates = [iHasE2] in {
+defm : LdPat<sextloadi16, uimm12_1, LD32HS, i32>;
+}
+defm : LdPat<load, uimm12_2, LD32W, i32>;
+
+multiclass LdrPat<PatFrag LoadOp, Instruction Inst, ValueType Type> {
+  def : Pat<(Type (LoadOp (add GPR:$rs1, GPR:$rs2))), (Inst GPR:$rs1, GPR:$rs2, 0)>;
+  def : Pat<(Type (LoadOp (add GPR:$rs1, (shl GPR:$rs2, (i32 1))))), (Inst GPR:$rs1, GPR:$rs2, 1)>;
+  def : Pat<(Type (LoadOp (add GPR:$rs1, (shl GPR:$rs2, (i32 2))))), (Inst GPR:$rs1, GPR:$rs2, 2)>;
+  def : Pat<(Type (LoadOp (add GPR:$rs1, (shl GPR:$rs2, (i32 3))))), (Inst GPR:$rs1, GPR:$rs2, 3)>;
+}
+
+let Predicates = [iHas2E3] in {
+  defm : LdrPat<zextloadi8, LDR32B, i32>;
+  defm : LdrPat<sextloadi8, LDR32BS, i32>;
+  defm : LdrPat<extloadi8, LDR32BS, i32>;
+  defm : LdrPat<zextloadi16, LDR32H, i32>;
+  defm : LdrPat<sextloadi16, LDR32HS, i32>;
+  defm : LdrPat<extloadi16, LDR32HS, i32>;
+  defm : LdrPat<load, LDR32W, i32>;
+}
+
+multiclass StPat<PatFrag StoreOp, ValueType Type, ImmLeaf imm_type, Instruction Inst> {
+  def : Pat<(StoreOp Type:$rs2, GPR:$rs1), (Inst Type:$rs2, GPR:$rs1, 0)>;
+  def : Pat<(StoreOp Type:$rs2, frameindex:$rs1), (Inst Type:$rs2, (i32 (to_tframeindex tframeindex:$rs1)), 0)>;
+  def : Pat<(StoreOp Type:$rs2, (add GPR:$rs1, imm_type:$uimm12)),
+            (Inst Type:$rs2, GPR:$rs1, imm_type:$uimm12)>;
+  def : Pat<(StoreOp Type:$rs2, (add frameindex:$rs1, imm_type:$uimm12)),
+            (Inst Type:$rs2, (i32 (to_tframeindex tframeindex:$rs1)), imm_type:$uimm12)>;
+  def : Pat<(StoreOp Type:$rs2, (eqToAdd frameindex:$rs1, imm_type:$uimm12)),
+            (Inst Type:$rs2, (i32 (to_tframeindex tframeindex:$rs1)), imm_type:$uimm12)>;
+}
+
+defm : StPat<truncstorei8, i32, uimm12, ST32B>;
+defm : StPat<truncstorei16, i32, uimm12_1, ST32H>;
+defm : StPat<store, i32, uimm12_2, ST32W>;
+
+multiclass StrPat<PatFrag StoreOp, ValueType Type, Instruction Inst> {
+  def : Pat<(StoreOp Type:$rz, (add GPR:$rs1, GPR:$rs2)), (Inst Type:$rz, GPR:$rs1, GPR:$rs2, 0)>;
+  def : Pat<(StoreOp Type:$rz, (add GPR:$rs1, (shl GPR:$rs2, (i32 1)))), (Inst Type:$rz, GPR:$rs1, GPR:$rs2, 1)>;
+  def : Pat<(StoreOp Type:$rz, (add GPR:$rs1, (shl GPR:$rs2, (i32 2)))), (Inst Type:$rz, GPR:$rs1, GPR:$rs2, 2)>;
+  def : Pat<(StoreOp Type:$rz, (add GPR:$rs1, (shl GPR:$rs2, (i32 3)))), (Inst Type:$rz, GPR:$rs1, GPR:$rs2, 3)>;
+}
+
+let Predicates = [iHas2E3] in {
+  defm : StrPat<truncstorei8, i32, STR32B>;
+  defm : StrPat<truncstorei16, i32, STR32H>;
+  defm : StrPat<store, i32, STR32W>;
+
+  // Sext & Zext Patterns
+  def : Pat<(sext_inreg GPR:$src, i1), (SEXT32 GPR:$src, 0, 0)>;
+  def : Pat<(and GPR:$src, 255), (ZEXT32 GPR:$src, 7, 0)>;
+  def : Pat<(and GPR:$src, 65535), (ZEXT32 GPR:$src, 15, 0)>;
+
+   // Call Patterns
+  def : Pat<(CSKY_CALL tglobaladdr, tconstpool:$src2), (JSRI32 tconstpool:$src2)>;
+  def : Pat<(CSKY_CALL texternalsym, tconstpool:$src2), (JSRI32 tconstpool:$src2)>;
+  def : Pat<(CSKY_TAIL tglobaladdr, tconstpool:$src2), (JMPI32 tconstpool:$src2)>;
+  def : Pat<(CSKY_TAIL texternalsym, tconstpool:$src2), (JMPI32 tconstpool:$src2)>;
+
+  def : Pat<(CSKY_CALLReg GPR:$src), (JSR32 GPR:$src)>;
+  def : Pat<(CSKY_TAILReg GPR:$src), (JMP32 GPR:$src)>;
+}
+
+// Symbol address Patterns
+def : Pat<(CSKY_LOAD_ADDR tglobaladdr, tconstpool:$src2), (LRW32 tconstpool:$src2)>;
+def : Pat<(CSKY_LOAD_ADDR tblockaddress, tconstpool:$src2), (LRW32 tconstpool:$src2)>;
+def : Pat<(CSKY_LOAD_ADDR tjumptable:$src1, tconstpool:$src2), (LRW32_Gen tjumptable:$src1, tconstpool:$src2)>;
+def : Pat<(CSKY_LOAD_ADDR texternalsym, tconstpool:$src2), (LRW32 tconstpool:$src2)>;
+
+let Predicates = [iHas2E3] in
+  def : Pat<(i32 constpool:$src), (GRS32 (to_tconstpool tconstpool:$src))>;
+
+let Predicates = [iHasE2] in
+  def : Pat<(i32 constpool:$src),
+    (ORI32 (MOVIH32 (to_tconstpool_hi16 tconstpool:$src)),
+           (to_tconstpool_lo16 tconstpool:$src))>;
+
+def : Pat<(i32 (load constpool:$src)), (LRW32 (to_tconstpool tconstpool:$src))>;
+
+// Branch Patterns.
+let Predicates = [iHasE2] in {
+  def : Pat<(brcond CARRY:$ca, bb:$imm16),
+          (BT32 CARRY:$ca, bb:$imm16)>;
+
+  def : Pat<(brcond (i32 (setne GPR:$rs1, uimm16:$rs2)), bb:$imm16),
+          (BT32 (CMPNEI32 GPR:$rs1, uimm16:$rs2), bb:$imm16)>;
+  def : Pat<(brcond (i32 (seteq GPR:$rs1, uimm16:$rs2)), bb:$imm16),
+          (BF32 (CMPNEI32 GPR:$rs1, uimm16:$rs2), bb:$imm16)>;
+  def : Pat<(brcond (i32 (setuge GPR:$rs1, oimm16:$rs2)), bb:$imm16),
+          (BT32 (CMPHSI32 GPR:$rs1, oimm16:$rs2), bb:$imm16)>;
+  def : Pat<(brcond (i32 (setult GPR:$rs1, oimm16:$rs2)), bb:$imm16),
+          (BF32 (CMPHSI32 GPR:$rs1, oimm16:$rs2), bb:$imm16)>;
+  def : Pat<(brcond (i32 (setlt GPR:$rs1, oimm16:$rs2)), bb:$imm16),
+          (BT32 (CMPLTI32 GPR:$rs1, oimm16:$rs2), bb:$imm16)>;
+  def : Pat<(brcond (i32 (setge GPR:$rs1, oimm16:$rs2)), bb:$imm16),
+          (BF32 (CMPLTI32 GPR:$rs1, oimm16:$rs2), bb:$imm16)>;
+
+}
+
+let Predicates = [iHas2E3] in {
+
+def : Pat<(brcond (i32 (setne GPR:$rs1, GPR:$rs2)), bb:$imm16),
+          (BT32 (CMPNE32 GPR:$rs1, GPR:$rs2), bb:$imm16)>;
+def : Pat<(brcond (i32 (seteq GPR:$rs1, GPR:$rs2)), bb:$imm16),
+          (BF32 (CMPNE32 GPR:$rs1, GPR:$rs2), bb:$imm16)>;
+def : Pat<(brcond (i32 (setuge GPR:$rs1, GPR:$rs2)), bb:$imm16),
+          (BT32 (CMPHS32 GPR:$rs1, GPR:$rs2), bb:$imm16)>;
+def : Pat<(brcond (i32 (setule GPR:$rs1, GPR:$rs2)), bb:$imm16),
+          (BT32 (CMPHS32 GPR:$rs2, GPR:$rs1), bb:$imm16)>;
+def : Pat<(brcond (i32 (setult GPR:$rs1, GPR:$rs2)), bb:$imm16),
+          (BF32 (CMPHS32 GPR:$rs1, GPR:$rs2), bb:$imm16)>;
+def : Pat<(brcond (i32 (setugt GPR:$rs1, GPR:$rs2)), bb:$imm16),
+          (BF32 (CMPHS32 GPR:$rs2, GPR:$rs1), bb:$imm16)>;
+def : Pat<(brcond (i32 (setlt GPR:$rs1, GPR:$rs2)), bb:$imm16),
+          (BT32 (CMPLT32 GPR:$rs1, GPR:$rs2), bb:$imm16)>;
+def : Pat<(brcond (i32 (setgt GPR:$rs1, GPR:$rs2)), bb:$imm16),
+          (BT32 (CMPLT32 GPR:$rs2, GPR:$rs1), bb:$imm16)>;
+def : Pat<(brcond (i32 (setge GPR:$rs1, GPR:$rs2)), bb:$imm16),
+          (BF32 (CMPLT32 GPR:$rs1, GPR:$rs2), bb:$imm16)>;
+def : Pat<(brcond (i32 (setle GPR:$rs1, GPR:$rs2)), bb:$imm16),
+          (BF32 (CMPLT32 GPR:$rs2, GPR:$rs1), bb:$imm16)>;
+
+def : Pat<(brcond (i32 (seteq GPR:$rs1, (i32 0))), bb:$imm16),
+          (BEZ32 GPR:$rs1, bb:$imm16)>;
+def : Pat<(brcond (i32 (setne GPR:$rs1, (i32 0))), bb:$imm16),
+          (BNEZ32 GPR:$rs1, bb:$imm16)>;
+def : Pat<(brcond (i32 (setlt GPR:$rs1, (i32 0))), bb:$imm16),
+          (BLZ32 GPR:$rs1, bb:$imm16)>;
+def : Pat<(brcond (i32 (setge GPR:$rs1, (i32 0))), bb:$imm16),
+          (BHSZ32 GPR:$rs1, bb:$imm16)>;
+def : Pat<(brcond (i32 (setgt GPR:$rs1, (i32 0))), bb:$imm16),
+          (BHZ32 GPR:$rs1, bb:$imm16)>;
+def : Pat<(brcond (i32 (setle GPR:$rs1, (i32 0))), bb:$imm16),
+          (BLSZ32 GPR:$rs1, bb:$imm16)>;
+}
+
+// Compare Patterns.
+let Predicates = [iHas2E3] in {
+  def : Pat<(setne GPR:$rs1, GPR:$rs2),
+            (CMPNE32 GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(i32 (seteq GPR:$rs1, GPR:$rs2)),
+            (MVCV32 (CMPNE32 GPR:$rs1, GPR:$rs2))>;
+  def : Pat<(setuge GPR:$rs1, GPR:$rs2),
+            (CMPHS32 GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(setule GPR:$rs1, GPR:$rs2),
+            (CMPHS32 GPR:$rs2, GPR:$rs1)>;
+  def : Pat<(i32 (setult GPR:$rs1, GPR:$rs2)),
+            (MVCV32 (CMPHS32 GPR:$rs1, GPR:$rs2))>;
+  def : Pat<(i32 (setugt GPR:$rs1, GPR:$rs2)),
+            (MVCV32 (CMPHS32 GPR:$rs2, GPR:$rs1))>;
+  def : Pat<(setlt GPR:$rs1, GPR:$rs2),
+            (CMPLT32 GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(setgt GPR:$rs1, GPR:$rs2),
+            (CMPLT32 GPR:$rs2, GPR:$rs1)>;
+  def : Pat<(i32 (setge GPR:$rs1, GPR:$rs2)),
+            (MVCV32 (CMPLT32 GPR:$rs1, GPR:$rs2))>;
+  def : Pat<(i32 (setle GPR:$rs1, GPR:$rs2)),
+            (MVCV32 (CMPLT32 GPR:$rs2, GPR:$rs1))>;
+}
+
+let Predicates = [iHasE2] in {
+  def : Pat<(setne GPR:$rs1, uimm16:$rs2),
+            (CMPNEI32 GPR:$rs1, uimm16:$rs2)>;
+  let Predicates = [iHas2E3] in
+  def : Pat<(i32 (seteq GPR:$rs1, uimm16:$rs2)),
+            (MVCV32 (CMPNEI32 GPR:$rs1, uimm16:$rs2))>;
+  def : Pat<(setuge GPR:$rs1, oimm16:$rs2),
+            (CMPHSI32 GPR:$rs1, oimm16:$rs2)>;
+  let Predicates = [iHas2E3] in
+  def : Pat<(i32 (setult GPR:$rs1, oimm16:$rs2)),
+            (MVCV32 (CMPHSI32 GPR:$rs1, oimm16:$rs2))>;
+  def : Pat<(setlt GPR:$rs1, oimm16:$rs2),
+            (CMPLTI32 GPR:$rs1, oimm16:$rs2)>;
+  let Predicates = [iHas2E3] in
+  def : Pat<(i32 (setge GPR:$rs1, oimm16:$rs2)),
+            (MVCV32 (CMPLTI32 GPR:$rs1, oimm16:$rs2))>;
+}
+
+// Select Patterns.
+let Predicates = [iHasE2] in {
+def : Pat<(select CARRY:$ca, GPR:$rx, GPR:$false),
+          (MOVT32 CARRY:$ca, GPR:$rx, GPR:$false)>;
+def : Pat<(select (and CARRY:$ca, 1), GPR:$rx, GPR:$false),
+          (MOVT32 CARRY:$ca, GPR:$rx, GPR:$false)>;
+
+def : Pat<(select (i32 (setne GPR:$rs1, GPR:$rs2)), GPR:$rx, GPR:$false),
+          (MOVT32 (CMPNE32 GPR:$rs1, GPR:$rs2), GPR:$rx, GPR:$false)>;
+def : Pat<(select (i32 (setne GPR:$rs1, uimm16:$rs2)), GPR:$rx, GPR:$false),
+          (MOVT32 (CMPNEI32 GPR:$rs1, uimm16:$rs2), GPR:$rx, GPR:$false)>;
+def : Pat<(select (i32 (seteq GPR:$rs1, GPR:$rs2)), GPR:$rx, GPR:$false),
+          (MOVF32 (CMPNE32 GPR:$rs1, GPR:$rs2), GPR:$rx, GPR:$false)>;
+def : Pat<(select (i32 (seteq GPR:$rs1, uimm16:$rs2)), GPR:$rx, GPR:$false),
+          (MOVF32 (CMPNEI32 GPR:$rs1, uimm16:$rs2), GPR:$rx, GPR:$false)>;
+
+def : Pat<(select (i32 (setuge GPR:$rs1, GPR:$rs2)), GPR:$rx, GPR:$false),
+          (MOVT32 (CMPHS32 GPR:$rs1, GPR:$rs2), GPR:$rx, GPR:$false)>;
+def : Pat<(select (i32 (setuge GPR:$rs1, oimm16:$rs2)), GPR:$rx, GPR:$false),
+          (MOVT32 (CMPHSI32 GPR:$rs1, oimm16:$rs2), GPR:$rx, GPR:$false)>;
+def : Pat<(select (i32 (setule GPR:$rs1, GPR:$rs2)), GPR:$rx, GPR:$false),
+          (MOVT32 (CMPHS32 GPR:$rs2, GPR:$rs1), GPR:$rx, GPR:$false)>;
+def : Pat<(select (i32 (setult GPR:$rs1, GPR:$rs2)), GPR:$rx, GPR:$false),
+          (MOVF32 (CMPHS32 GPR:$rs1, GPR:$rs2), GPR:$rx, GPR:$false)>;
+def : Pat<(select (i32 (setult GPR:$rs1, oimm16:$rs2)), GPR:$rx, GPR:$false),
+          (MOVF32 (CMPHSI32 GPR:$rs1, oimm16:$rs2), GPR:$rx, GPR:$false)>;
+def : Pat<(select (i32 (setugt GPR:$rs1, GPR:$rs2)), GPR:$rx, GPR:$false),
+          (MOVF32 (CMPHS32 GPR:$rs2, GPR:$rs1), GPR:$rx, GPR:$false)>;
+
+def : Pat<(select (i32 (setlt GPR:$rs1, GPR:$rs2)), GPR:$rx, GPR:$false),
+          (MOVT32 (CMPLT32 GPR:$rs1, GPR:$rs2), GPR:$rx, GPR:$false)>;
+def : Pat<(select (i32 (setlt GPR:$rs1, oimm16:$rs2)), GPR:$rx, GPR:$false),
+          (MOVT32 (CMPLTI32 GPR:$rs1, oimm16:$rs2), GPR:$rx, GPR:$false)>;
+def : Pat<(select (i32 (setgt GPR:$rs1, GPR:$rs2)), GPR:$rx, GPR:$false),
+          (MOVT32 (CMPLT32 GPR:$rs2, GPR:$rs1), GPR:$rx, GPR:$false)>;
+def : Pat<(select (i32 (setge GPR:$rs1, GPR:$rs2)), GPR:$rx, GPR:$false),
+          (MOVF32 (CMPLT32 GPR:$rs1, GPR:$rs2), GPR:$rx, GPR:$false)>;
+def : Pat<(select (i32 (setge GPR:$rs1, oimm16:$rs2)), GPR:$rx, GPR:$false),
+          (MOVF32 (CMPLTI32 GPR:$rs1, oimm16:$rs2), GPR:$rx, GPR:$false)>;
+def : Pat<(select (i32 (setle GPR:$rs1, GPR:$rs2)), GPR:$rx, GPR:$false),
+          (MOVF32 (CMPLT32 GPR:$rs2, GPR:$rs1), GPR:$rx, GPR:$false)>;
+
+def : Pat<(select CARRY:$ca, GPR:$rx, GPR:$false),
+          (ISEL32 CARRY:$ca, GPR:$rx, GPR:$false)>;
+def : Pat<(select (and CARRY:$ca, 1), GPR:$rx, GPR:$false),
+          (ISEL32 CARRY:$ca, GPR:$rx, GPR:$false)>;
+}
+
+// Constant materialize patterns.
+let Predicates = [iHasE2] in
+  def : Pat<(i32 imm:$imm),
+            (ORI32 (MOVIH32 (uimm32_hi16 imm:$imm)), (uimm32_lo16 imm:$imm))>;
+
+
+// Other operations.
+let Predicates = [iHasE2] in {
+  def : Pat<(rotl GPR:$rs1, GPR:$rs2),
+            (ROTL32 GPR:$rs1, (ANDI32 GPR:$rs2, 0x1f))>;
+  let Predicates = [iHas2E3] in {
+    def : Pat<(bitreverse GPR:$rx), (BREV32 GPR:$rx)>;
+    def : Pat<(bswap GPR:$rx), (REVB32 GPR:$rx)>;
+  }
+  def : Pat<(i32 (ctlz GPR:$rx)), (FF1 GPR:$rx)>;
+}
 
 //===----------------------------------------------------------------------===//
 // Pseudo for assembly
@@ -979,8 +1298,6 @@ def TRAP32 : CSKY32Inst<AddrModeNone, 0x30, (outs), (ins uimm2:$imm2), "trap32 $
 
 let isCall = 1, Defs = [ R15 ], mayLoad = 1, Size = 4, isCodeGenOnly = 0 in
 def JBSR32 : CSKYPseudo<(outs), (ins call_symbol:$src1), "jbsr32\t$src1", []>;
-
-def : InstAlias<"jbsr\t$src1", (JBSR32 call_symbol:$src1)>;
 
 def JBR32 : CSKYPseudo<(outs), (ins br_symbol:$src1), "jbr32\t$src1", []> {
   let isBranch = 1;
@@ -1027,18 +1344,13 @@ let mayLoad = 1, Size = 2, isCodeGenOnly = 0 in
 def PseudoLRW32 : CSKYPseudo<(outs GPR:$rz), (ins bare_symbol:$src), "lrw32 $rz, $src", []>;
 
 
-def : InstAlias<"lrw $rz, $src", (PseudoLRW32 GPR:$rz, bare_symbol:$src)>;
-def : InstAlias<"lrw $rz, $src", (LRW32 GPR:$rz, constpool_symbol:$src)>;
+
 
 let mayLoad = 1, Size = 4, isCodeGenOnly = 0 in
 def PseudoJSRI32 : CSKYPseudo<(outs), (ins call_symbol:$src), "jsri32 $src", []>;
-def : InstAlias<"jsri $dst", (PseudoJSRI32 call_symbol:$dst)>;
-def : InstAlias<"jsri $dst", (JSRI32 constpool_symbol:$dst)>;
 
 let mayLoad = 1, Size = 4, isCodeGenOnly = 0 in
 def PseudoJMPI32 : CSKYPseudo<(outs), (ins br_symbol:$src), "jmpi32 $src", []>;
-def : InstAlias<"jmpi $dst", (PseudoJMPI32 br_symbol:$dst)>;
-def : InstAlias<"jmpi $dst", (JMPI32 constpool_symbol:$dst)>;
 
 let isNotDuplicable = 1, mayLoad = 1, mayStore = 0, Size = 8 in
 def PseudoTLSLA32 : CSKYPseudo<(outs GPR:$dst1, GPR:$dst2),
@@ -1049,3 +1361,6 @@ def CONSTPOOL_ENTRY : CSKYPseudo<(outs),
   (ins i32imm:$instid, i32imm:$cpidx, i32imm:$size), "", []>;
 
 include "CSKYInstrInfo16Instr.td"
+include "CSKYInstrInfoF1.td"
+include "CSKYInstrInfoF2.td"
+include "CSKYInstrAlias.td"

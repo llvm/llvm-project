@@ -1,11 +1,19 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -Wreserved-identifier -Wno-visibility %s
+// RUN: %clang_cc1 -isystem %S/Inputs -fsyntax-only -verify -Wreserved-identifier -Wno-visibility %s
+
+#include <reserved-identifier.h>
+
+__I_AM_A_SYSTEM_MACRO() // no-warning
+
+void test_system_macro_expansion(void) {
+  SOME_SYSTEM_MACRO(); // no-warning
+}
 
 #define __oof foo__ // expected-warning {{macro name is a reserved identifier}}
 
-int foo__bar() { return 0; }    // no-warning
-static int _bar() { return 0; } // expected-warning {{identifier '_bar' is reserved because it starts with '_' at global scope}}
-static int _Bar() { return 0; } // expected-warning {{identifier '_Bar' is reserved because it starts with '_' followed by a capital letter}}
-int _foo() { return 0; }        // expected-warning {{identifier '_foo' is reserved because it starts with '_' at global scope}}
+int foo__bar(void) { return 0; }    // no-warning
+static int _bar(void) { return 0; } // expected-warning {{identifier '_bar' is reserved because it starts with '_' at global scope}}
+static int _Bar(void) { return 0; } // expected-warning {{identifier '_Bar' is reserved because it starts with '_' followed by a capital letter}}
+int _foo(void) { return 0; }        // expected-warning {{identifier '_foo' is reserved because it starts with '_' at global scope}}
 
 // This one is explicitly skipped by -Wreserved-identifier
 void *_; // no-warning
@@ -41,7 +49,7 @@ typedef struct {
   int _field; // no-warning
 } _Typedef;   // expected-warning {{identifier '_Typedef' is reserved because it starts with '_' followed by a capital letter}}
 
-int foobar() {
+int foobar(void) {
   return foo__bar(); // no-warning
 }
 
@@ -58,10 +66,10 @@ void func(struct _preserved { int a; } r) {} // expected-warning {{identifier '_
 
 extern char *_strdup(const char *); // expected-warning {{identifier '_strdup' is reserved because it starts with '_' at global scope}}
 
-// Don't warn on redecleration
+// Don't warn on redeclaration
 extern char *_strdup(const char *); // no-warning
 
-void ok() {
-  void _ko();           // expected-warning {{identifier '_ko' is reserved because it starts with '_' at global scope}}
+void ok(void) {
+  void _ko(void);           // expected-warning {{identifier '_ko' is reserved because it starts with '_' at global scope}}
   extern int _ko_again; // expected-warning {{identifier '_ko_again' is reserved because it starts with '_' at global scope}}
 }

@@ -17,12 +17,12 @@
 #define LLVM_UTILS_TABLEGEN_PREDICATEEXPANDER_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/TableGen/Record.h"
+#include <vector>
 
 namespace llvm {
 
 class raw_ostream;
+class Record;
 
 class PredicateExpander {
   bool EmitCallsByRef;
@@ -111,7 +111,7 @@ class STIPredicateExpander : public PredicateExpander {
 
 public:
   STIPredicateExpander(StringRef Target)
-      : PredicateExpander(Target), ClassPrefix(), ExpandDefinition(false) {}
+      : PredicateExpander(Target), ExpandDefinition(false) {}
 
   bool shouldExpandDefinition() const { return ExpandDefinition; }
   StringRef getClassPrefix() const { return ClassPrefix; }

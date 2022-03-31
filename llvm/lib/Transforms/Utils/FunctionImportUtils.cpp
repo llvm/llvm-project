@@ -12,8 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/FunctionImportUtils.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/InstIterator.h"
 using namespace llvm;
 
 /// Checks if we should import SGV as a definition, otherwise import as a

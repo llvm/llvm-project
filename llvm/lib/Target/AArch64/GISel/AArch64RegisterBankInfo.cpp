@@ -18,14 +18,14 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
-#include "llvm/CodeGen/GlobalISel/RegisterBank.h"
-#include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterBank.h"
+#include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -42,8 +42,8 @@
 
 using namespace llvm;
 
-AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
-    : AArch64GenRegisterBankInfo() {
+AArch64RegisterBankInfo::AArch64RegisterBankInfo(
+    const TargetRegisterInfo &TRI) {
   static llvm::once_flag InitializeRegisterBankFlag;
 
   static auto InitializeRegisterBankOnce = [&]() {
@@ -430,6 +430,8 @@ static bool isPreISelGenericFloatingPointOpcode(unsigned Opc) {
   case TargetOpcode::G_INTRINSIC_ROUND:
   case TargetOpcode::G_FMAXNUM:
   case TargetOpcode::G_FMINNUM:
+  case TargetOpcode::G_FMAXIMUM:
+  case TargetOpcode::G_FMINIMUM:
     return true;
   }
   return false;
@@ -600,6 +602,8 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_FSUB:
   case TargetOpcode::G_FMUL:
   case TargetOpcode::G_FDIV:
+  case TargetOpcode::G_FMAXIMUM:
+  case TargetOpcode::G_FMINIMUM:
     return getSameKindOfOperandsMapping(MI);
   case TargetOpcode::G_FPEXT: {
     LLT DstTy = MRI.getType(MI.getOperand(0).getReg());

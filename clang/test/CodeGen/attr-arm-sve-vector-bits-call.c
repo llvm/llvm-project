@@ -59,7 +59,7 @@ svint32_t sizeless_caller(svint32_t x) {
 // CHECK-LABEL: @call_int32_ff(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.sel.nxv4i32(<vscale x 4 x i1> [[TMP0]], <vscale x 4 x i32> [[OP1_COERCE:%.*]], <vscale x 4 x i32> [[OP2_COERCE:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = select <vscale x 4 x i1> [[TMP0]], <vscale x 4 x i32> [[OP1_COERCE:%.*]], <vscale x 4 x i32> [[OP2_COERCE:%.*]]
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 fixed_int32_t call_int32_ff(svbool_t pg, fixed_int32_t op1, fixed_int32_t op2) {
@@ -69,7 +69,7 @@ fixed_int32_t call_int32_ff(svbool_t pg, fixed_int32_t op1, fixed_int32_t op2) {
 // CHECK-LABEL: @call_float64_ff(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.sel.nxv2f64(<vscale x 2 x i1> [[TMP0]], <vscale x 2 x double> [[OP1_COERCE:%.*]], <vscale x 2 x double> [[OP2_COERCE:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = select <vscale x 2 x i1> [[TMP0]], <vscale x 2 x double> [[OP1_COERCE:%.*]], <vscale x 2 x double> [[OP2_COERCE:%.*]]
 // CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 //
 fixed_float64_t call_float64_ff(svbool_t pg, fixed_float64_t op1, fixed_float64_t op2) {
@@ -78,8 +78,8 @@ fixed_float64_t call_float64_ff(svbool_t pg, fixed_float64_t op1, fixed_float64_
 
 // CHECK-LABEL: @call_bool_ff(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.sel.nxv16i1(<vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i1> [[OP1_COERCE:%.*]], <vscale x 16 x i1> [[OP2_COERCE:%.*]])
-// CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
+// CHECK-NEXT:    [[TMP2:%.*]] = select <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i1> [[TMP0:%.*]], <vscale x 16 x i1> [[TMP1:%.*]]
+// CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP2]]
 //
 fixed_bool_t call_bool_ff(svbool_t pg, fixed_bool_t op1, fixed_bool_t op2) {
   return svsel(pg, op1, op2);
@@ -92,7 +92,7 @@ fixed_bool_t call_bool_ff(svbool_t pg, fixed_bool_t op1, fixed_bool_t op2) {
 // CHECK-LABEL: @call_int32_fs(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.sel.nxv4i32(<vscale x 4 x i1> [[TMP0]], <vscale x 4 x i32> [[OP1_COERCE:%.*]], <vscale x 4 x i32> [[OP2:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = select <vscale x 4 x i1> [[TMP0]], <vscale x 4 x i32> [[OP1_COERCE:%.*]], <vscale x 4 x i32> [[OP2:%.*]]
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 fixed_int32_t call_int32_fs(svbool_t pg, fixed_int32_t op1, svint32_t op2) {
@@ -102,7 +102,7 @@ fixed_int32_t call_int32_fs(svbool_t pg, fixed_int32_t op1, svint32_t op2) {
 // CHECK-LABEL: @call_float64_fs(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.sel.nxv2f64(<vscale x 2 x i1> [[TMP0]], <vscale x 2 x double> [[OP1_COERCE:%.*]], <vscale x 2 x double> [[OP2:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = select <vscale x 2 x i1> [[TMP0]], <vscale x 2 x double> [[OP1_COERCE:%.*]], <vscale x 2 x double> [[OP2:%.*]]
 // CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 //
 fixed_float64_t call_float64_fs(svbool_t pg, fixed_float64_t op1, svfloat64_t op2) {
@@ -111,8 +111,8 @@ fixed_float64_t call_float64_fs(svbool_t pg, fixed_float64_t op1, svfloat64_t op
 
 // CHECK-LABEL: @call_bool_fs(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.sel.nxv16i1(<vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i1> [[OP1_COERCE:%.*]], <vscale x 16 x i1> [[OP2_COERCE:%.*]])
-// CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
+// CHECK-NEXT:    [[TMP1:%.*]] = select <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i1> [[TMP0:%.*]], <vscale x 16 x i1> [[OP2:%.*]]
+// CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
 fixed_bool_t call_bool_fs(svbool_t pg, fixed_bool_t op1, svbool_t op2) {
   return svsel(pg, op1, op2);
@@ -125,7 +125,7 @@ fixed_bool_t call_bool_fs(svbool_t pg, fixed_bool_t op1, svbool_t op2) {
 // CHECK-LABEL: @call_int32_ss(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.sel.nxv4i32(<vscale x 4 x i1> [[TMP0]], <vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = select <vscale x 4 x i1> [[TMP0]], <vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]]
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 fixed_int32_t call_int32_ss(svbool_t pg, svint32_t op1, svint32_t op2) {
@@ -135,7 +135,7 @@ fixed_int32_t call_int32_ss(svbool_t pg, svint32_t op1, svint32_t op2) {
 // CHECK-LABEL: @call_float64_ss(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.sel.nxv2f64(<vscale x 2 x i1> [[TMP0]], <vscale x 2 x double> [[OP1:%.*]], <vscale x 2 x double> [[OP2:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = select <vscale x 2 x i1> [[TMP0]], <vscale x 2 x double> [[OP1:%.*]], <vscale x 2 x double> [[OP2:%.*]]
 // CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 //
 fixed_float64_t call_float64_ss(svbool_t pg, svfloat64_t op1, svfloat64_t op2) {
@@ -144,7 +144,7 @@ fixed_float64_t call_float64_ss(svbool_t pg, svfloat64_t op1, svfloat64_t op2) {
 
 // CHECK-LABEL: @call_bool_ss(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.sel.nxv16i1(<vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i1> [[OP1_COERCE:%.*]], <vscale x 16 x i1> [[OP2_COERCE:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = select <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i1> [[OP1:%.*]], <vscale x 16 x i1> [[OP2:%.*]]
 // CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 //
 fixed_bool_t call_bool_ss(svbool_t pg, svbool_t op1, svbool_t op2) {

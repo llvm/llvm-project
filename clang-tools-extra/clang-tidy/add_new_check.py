@@ -37,7 +37,7 @@ def adapt_cmake(module_path, check_name_camel):
       return False
 
   print('Updating %s...' % filename)
-  with io.open(filename, 'w', encoding='utf8') as f:
+  with io.open(filename, 'w', encoding='utf8', newline='\n') as f:
     cpp_found = False
     file_added = False
     for line in lines:
@@ -57,7 +57,7 @@ def write_header(module_path, module, namespace, check_name, check_name_camel):
   check_name_dashes = module + '-' + check_name
   filename = os.path.join(module_path, check_name_camel) + '.h'
   print('Creating %s...' % filename)
-  with io.open(filename, 'w', encoding='utf8') as f:
+  with io.open(filename, 'w', encoding='utf8', newline='\n') as f:
     header_guard = ('LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_' + module.upper() + '_'
                     + check_name_camel.upper() + '_H')
     f.write('//===--- ')
@@ -110,7 +110,7 @@ public:
 def write_implementation(module_path, module, namespace, check_name_camel):
   filename = os.path.join(module_path, check_name_camel) + '.cpp'
   print('Creating %s...' % filename)
-  with io.open(filename, 'w', encoding='utf8') as f:
+  with io.open(filename, 'w', encoding='utf8', newline='\n') as f:
     f.write('//===--- ')
     f.write(os.path.basename(filename))
     f.write(' - clang-tidy ')
@@ -168,7 +168,7 @@ def adapt_module(module_path, module, check_name, check_name_camel):
     lines = f.readlines()
 
   print('Updating %s...' % filename)
-  with io.open(filename, 'w', encoding='utf8') as f:
+  with io.open(filename, 'w', encoding='utf8', newline='\n') as f:
     header_added = False
     header_found = False
     check_added = False
@@ -231,7 +231,7 @@ def add_release_notes(module_path, module, check_name):
   checkMatcher = re.compile('- New :doc:`(.*)')
 
   print('Updating %s...' % filename)
-  with io.open(filename, 'w', encoding='utf8') as f:
+  with io.open(filename, 'w', encoding='utf8', newline='\n') as f:
     note_added = False
     header_found = False
     add_note_here = False
@@ -277,7 +277,7 @@ def write_test(module_path, module, check_name, test_extension):
   filename = os.path.normpath(os.path.join(module_path, '../../test/clang-tidy/checkers',
                                            check_name_dashes + '.' + test_extension))
   print('Creating %s...' % filename)
-  with io.open(filename, 'w', encoding='utf8') as f:
+  with io.open(filename, 'w', encoding='utf8', newline='\n') as f:
     f.write("""// RUN: %%check_clang_tidy %%s %(check_name_dashes)s %%t
 
 // FIXME: Add something that triggers the check here.
@@ -297,7 +297,7 @@ void awesome_f2();
 
 def get_actual_filename(dirname, filename):
   if not os.path.isdir(dirname): 
-    return ""
+    return ''
   name = os.path.join(dirname, filename)
   if (os.path.isfile(name)):
     return name
@@ -305,7 +305,7 @@ def get_actual_filename(dirname, filename):
   for file in os.listdir(dirname):
     if (file.lower() == caselessname):
       return os.path.join(dirname, file)
-  return ""
+  return ''
 
 
 # Recreates the list of checks in the docs/clang-tidy/checks directory.
@@ -321,20 +321,24 @@ def update_checks_list(clang_tidy_path):
   doc_files.sort()
 
   def has_auto_fix(check_name):
-    dirname, _, check_name = check_name.partition("-")
+    dirname, _, check_name = check_name.partition('-')
 
     checker_code = get_actual_filename(os.path.join(clang_tidy_path, dirname),
-                                       get_camel_name(check_name) + '.cpp')
-
+                                       get_camel_check_name(check_name) + '.cpp')
     if not os.path.isfile(checker_code):
-      return ""
+      # Some older checks don't end with 'Check.cpp'
+      checker_code = get_actual_filename(os.path.join(clang_tidy_path, dirname),
+                                         get_camel_name(check_name) + '.cpp')
+      if not os.path.isfile(checker_code):
+        return ''
 
     with io.open(checker_code, encoding='utf8') as f:
       code = f.read()
-      if 'FixItHint' in code or "ReplacementText" in code or "fixit" in code:
-        # Some simple heuristics to figure out if a checker has an autofix or not.
-        return ' "Yes"'
-    return ""
+      for needle in ['FixItHint', 'ReplacementText', 'fixit', 'TransformerClangTidyCheck']:
+        if needle in code:
+          # Some simple heuristics to figure out if a checker has an autofix or not.
+          return ' "Yes"'
+    return ''
 
   def process_doc(doc_file):
     check_name = doc_file.replace('.rst', '')
@@ -382,10 +386,10 @@ def update_checks_list(clang_tidy_path):
   checks_alias = map(format_link_alias, doc_files)
 
   print('Updating %s...' % filename)
-  with io.open(filename, 'w', encoding='utf8') as f:
+  with io.open(filename, 'w', encoding='utf8', newline='\n') as f:
     for line in lines:
       f.write(line)
-      if line.strip() == ".. csv-table::":
+      if line.strip() == '.. csv-table::':
         # We dump the checkers
         f.write('   :header: "Name", "Offers fixes"\n\n')
         f.writelines(checks)
@@ -403,7 +407,7 @@ def write_docs(module_path, module, check_name):
   filename = os.path.normpath(os.path.join(
       module_path, '../../docs/clang-tidy/checks/', check_name_dashes + '.rst'))
   print('Creating %s...' % filename)
-  with io.open(filename, 'w', encoding='utf8') as f:
+  with io.open(filename, 'w', encoding='utf8', newline='\n') as f:
     f.write(""".. title:: clang-tidy - %(check_name_dashes)s
 
 %(check_name_dashes)s
@@ -416,7 +420,11 @@ FIXME: Describe what patterns does the check detect and why. Give examples.
 
 def get_camel_name(check_name):
   return ''.join(map(lambda elem: elem.capitalize(),
-                     check_name.split('-'))) + 'Check'
+                     check_name.split('-')))
+
+
+def get_camel_check_name(check_name):
+  return get_camel_name(check_name) + 'Check'
 
 
 def main():
@@ -458,7 +466,7 @@ def main():
 
   module = args.module
   check_name = args.check
-  check_name_camel = get_camel_name(check_name)
+  check_name_camel = get_camel_check_name(check_name)
   if check_name.startswith(module):
     print('Check name "%s" must not start with the module "%s". Exiting.' % (
         check_name, module))

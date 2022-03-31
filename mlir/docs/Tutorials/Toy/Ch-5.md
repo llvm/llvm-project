@@ -51,21 +51,21 @@ To use this framework, we need to provide two things (and an optional third):
 ## Conversion Target
 
 For our purposes, we want to convert the compute-intensive `Toy` operations into
-a combination of operations from the `Affine`, `MemRef` and `Standard` dialects
+a combination of operations from the `Affine`, `Arithmetic`, `Func`, and `MemRef` dialects
 for further optimization. To start off the lowering, we first define our
 conversion target:
 
 ```c++
-void ToyToAffineLoweringPass::runOnFunction() {
+void ToyToAffineLoweringPass::runOnOperation() {
   // The first thing to define is the conversion target. This will define the
   // final target for this lowering.
   mlir::ConversionTarget target(getContext());
 
   // We define the specific operations, or dialects, that are legal targets for
   // this lowering. In our case, we are lowering to a combination of the
-  // `Affine`, `Arithmetic`, `MemRef`, and `Standard` dialects.
+  // `Affine`, `Arithmetic`, `Func`, and `MemRef` dialects.
   target.addLegalDialect<AffineDialect, arith::ArithmeticDialect,
-                         memref::MemRefDialect, StandardOpsDialect>();
+                         func::FuncDialect, memref::MemRefDialect>();
 
   // We also define the Toy dialect as Illegal so that the conversion will fail
   // if any of these operations are *not* converted. Given that we actually want
@@ -147,7 +147,7 @@ struct TransposeOpLowering : public mlir::ConversionPattern {
 Now we can prepare the list of patterns to use during the lowering process:
 
 ```c++
-void ToyToAffineLoweringPass::runOnFunction() {
+void ToyToAffineLoweringPass::runOnOperation() {
   ...
 
   // Now that the conversion target has been defined, we just need to provide
@@ -166,14 +166,13 @@ for our purposes, we will perform a partial lowering, as we will not convert
 `toy.print` at this time.
 
 ```c++
-void ToyToAffineLoweringPass::runOnFunction() {
+void ToyToAffineLoweringPass::runOnOperation() {
   ...
 
   // With the target and rewrite patterns defined, we can now attempt the
   // conversion. The conversion will signal failure if any of our *illegal*
   // operations were not converted successfully.
-  auto function = getFunction();
-  if (mlir::failed(mlir::applyPartialConversion(function, target, patterns)))
+  if (mlir::failed(mlir::applyPartialConversion(getOperation(), target, patterns)))
     signalPassFailure();
 }
 ```
@@ -232,7 +231,7 @@ def PrintOp : Toy_Op<"print"> {
 Let's take a concrete example:
 
 ```mlir
-func @main() {
+toy.func @main() {
   %0 = toy.constant dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>
   %2 = toy.transpose(%0 : tensor<2x3xf64>) to tensor<3x2xf64>
   %3 = toy.mul %2, %2 : tensor<3x2xf64>

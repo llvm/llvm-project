@@ -12,9 +12,10 @@
 #include "../src/cxa_guard_impl.h"
 #include <cassert>
 
-// Disable GCC warning about tautological comparison of a function's address
-#if defined(__GNUC__) && !defined(__clang__)
-# pragma GCC diagnostic ignored "-Waddress"
+#if defined(__clang__)
+#  pragma clang diagnostic ignored "-Wtautological-pointer-compare"
+#elif defined(__GNUC__)
+#  pragma GCC diagnostic ignored "-Waddress"
 #endif
 
 using namespace __cxxabiv1;
@@ -118,42 +119,35 @@ int main(int, char**) {
   {
 #if defined(_LIBCXXABI_HAS_NO_THREADS)
     static_assert(CurrentImplementation == Implementation::NoThreads, "");
-    static_assert(
-        std::is_same<SelectedImplementation, InitByteNoThreads>::value, "");
+    static_assert(std::is_same<SelectedImplementation, NoThreadsGuard>::value, "");
 #else
-    static_assert(CurrentImplementation == Implementation::GlobalLock, "");
-    static_assert(
-        std::is_same<
-            SelectedImplementation,
-            InitByteGlobalMutex<LibcppMutex, LibcppCondVar,
-                                GlobalStatic<LibcppMutex>::instance,
-                                GlobalStatic<LibcppCondVar>::instance>>::value,
-        "");
+    static_assert(CurrentImplementation == Implementation::GlobalMutex, "");
+    static_assert(std::is_same<SelectedImplementation,
+                               GlobalMutexGuard<LibcppMutex, LibcppCondVar, GlobalStatic<LibcppMutex>::instance,
+                                                GlobalStatic<LibcppCondVar>::instance>>::value,
+                  "");
 #endif
   }
   {
 #if (defined(__APPLE__) || defined(__linux__))  && !defined(_LIBCXXABI_HAS_NO_THREADS)
     assert(PlatformThreadID);
 #endif
-    if (PlatformSupportsThreadID()) {
+    if (PlatformThreadID != nullptr) {
       assert(PlatformThreadID() != 0);
       assert(PlatformThreadID() == PlatformThreadID());
     }
   }
   {
-    Tests<uint32_t, InitByteNoThreads>::test();
-    Tests<uint64_t, InitByteNoThreads>::test();
+    Tests<uint32_t, NoThreadsGuard>::test();
+    Tests<uint64_t, NoThreadsGuard>::test();
   }
   {
-    using MutexImpl =
-        InitByteGlobalMutex<NopMutex, NopCondVar, global_nop_mutex,
-                            global_nop_cond, MockGetThreadID>;
+    using MutexImpl = GlobalMutexGuard<NopMutex, NopCondVar, global_nop_mutex, global_nop_cond, MockGetThreadID>;
     Tests<uint32_t, MutexImpl>::test();
     Tests<uint64_t, MutexImpl>::test();
   }
   {
-    using FutexImpl =
-        InitByteFutex<&NopFutexWait, &NopFutexWake, &MockGetThreadID>;
+    using FutexImpl = FutexGuard<&NopFutexWait, &NopFutexWake, &MockGetThreadID>;
     Tests<uint32_t, FutexImpl>::test();
     Tests<uint64_t, FutexImpl>::test();
   }

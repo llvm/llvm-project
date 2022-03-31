@@ -12,12 +12,14 @@
 #include "flang/Optimizer/Support/KindMapping.h"
 #include <string>
 
+using namespace mlir;
+
 struct DoLoopHelperTest : public testing::Test {
 public:
   void SetUp() {
-    fir::KindMapping kindMap(&context);
+    kindMap = std::make_unique<fir::KindMapping>(&context);
     mlir::OpBuilder builder(&context);
-    firBuilder = new fir::FirOpBuilder(builder, kindMap);
+    firBuilder = new fir::FirOpBuilder(builder, *kindMap);
     fir::support::loadDialects(context);
   }
   void TearDown() { delete firBuilder; }
@@ -25,12 +27,13 @@ public:
   fir::FirOpBuilder &getBuilder() { return *firBuilder; }
 
   mlir::MLIRContext context;
+  std::unique_ptr<fir::KindMapping> kindMap;
   fir::FirOpBuilder *firBuilder;
 };
 
 void checkConstantValue(const mlir::Value &value, int64_t v) {
-  EXPECT_TRUE(mlir::isa<ConstantOp>(value.getDefiningOp()));
-  auto cstOp = dyn_cast<ConstantOp>(value.getDefiningOp());
+  EXPECT_TRUE(mlir::isa<mlir::arith::ConstantOp>(value.getDefiningOp()));
+  auto cstOp = dyn_cast<mlir::arith::ConstantOp>(value.getDefiningOp());
   auto valueAttr = cstOp.getValue().dyn_cast_or_null<IntegerAttr>();
   EXPECT_EQ(v, valueAttr.getInt());
 }
@@ -43,12 +46,12 @@ TEST_F(DoLoopHelperTest, createLoopWithCountTest) {
       firBuilder.getUnknownLoc(), firBuilder.getIndexType(), 10);
   auto loop =
       helper.createLoop(c10, [&](fir::FirOpBuilder &, mlir::Value index) {});
-  checkConstantValue(loop.lowerBound(), 0);
-  EXPECT_TRUE(mlir::isa<arith::SubIOp>(loop.upperBound().getDefiningOp()));
-  auto subOp = dyn_cast<arith::SubIOp>(loop.upperBound().getDefiningOp());
-  EXPECT_EQ(c10, subOp.lhs());
-  checkConstantValue(subOp.rhs(), 1);
-  checkConstantValue(loop.step(), 1);
+  checkConstantValue(loop.getLowerBound(), 0);
+  EXPECT_TRUE(mlir::isa<arith::SubIOp>(loop.getUpperBound().getDefiningOp()));
+  auto subOp = dyn_cast<arith::SubIOp>(loop.getUpperBound().getDefiningOp());
+  EXPECT_EQ(c10, subOp.getLhs());
+  checkConstantValue(subOp.getRhs(), 1);
+  checkConstantValue(loop.getStep(), 1);
 }
 
 TEST_F(DoLoopHelperTest, createLoopWithLowerAndUpperBound) {
@@ -61,9 +64,9 @@ TEST_F(DoLoopHelperTest, createLoopWithLowerAndUpperBound) {
       firBuilder.getUnknownLoc(), firBuilder.getIndexType(), 20);
   auto loop =
       helper.createLoop(lb, ub, [&](fir::FirOpBuilder &, mlir::Value index) {});
-  checkConstantValue(loop.lowerBound(), 1);
-  checkConstantValue(loop.upperBound(), 20);
-  checkConstantValue(loop.step(), 1);
+  checkConstantValue(loop.getLowerBound(), 1);
+  checkConstantValue(loop.getUpperBound(), 20);
+  checkConstantValue(loop.getStep(), 1);
 }
 
 TEST_F(DoLoopHelperTest, createLoopWithStep) {
@@ -78,7 +81,7 @@ TEST_F(DoLoopHelperTest, createLoopWithStep) {
       firBuilder.getUnknownLoc(), firBuilder.getIndexType(), 2);
   auto loop = helper.createLoop(
       lb, ub, step, [&](fir::FirOpBuilder &, mlir::Value index) {});
-  checkConstantValue(loop.lowerBound(), 1);
-  checkConstantValue(loop.upperBound(), 20);
-  checkConstantValue(loop.step(), 2);
+  checkConstantValue(loop.getLowerBound(), 1);
+  checkConstantValue(loop.getUpperBound(), 20);
+  checkConstantValue(loop.getStep(), 2);
 }

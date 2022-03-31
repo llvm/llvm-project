@@ -17,7 +17,6 @@
 #include "llvm/Support/TypeSize.h"
 
 namespace llvm {
-class SystemZTargetMachine;
 class SystemZSubtarget;
 
 class SystemZFrameLowering : public TargetFrameLowering {
@@ -78,6 +77,9 @@ public:
   bool hasFP(const MachineFunction &MF) const override;
   StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,
                                      Register &FrameReg) const override;
+  void
+  orderFrameObjects(const MachineFunction &MF,
+                    SmallVectorImpl<int> &ObjectsToAllocate) const override;
 
   // Return the byte offset from the incoming stack pointer of Reg's
   // ABI-defined save slot.  Return 0 if no slot is defined for Reg.  Adjust
@@ -115,11 +117,23 @@ public:
                                  ArrayRef<CalleeSavedInfo> CSI,
                                  const TargetRegisterInfo *TRI) const override;
 
+  bool
+  restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator MBBII,
+                              MutableArrayRef<CalleeSavedInfo> CSI,
+                              const TargetRegisterInfo *TRI) const override;
+
   void emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
 
   void emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
 
+  void inlineStackProbe(MachineFunction &MF,
+                        MachineBasicBlock &PrologMBB) const override;
+
   bool hasFP(const MachineFunction &MF) const override;
+
+  void processFunctionBeforeFrameFinalized(MachineFunction &MF,
+                                           RegScavenger *RS) const override;
 };
 } // end namespace llvm
 

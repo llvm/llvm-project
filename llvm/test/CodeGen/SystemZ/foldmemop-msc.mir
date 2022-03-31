@@ -13,7 +13,7 @@
 
 # CHECK-LABEL: fun0:
 # CHECK-LABEL: .LBB0_2:
-# CHECK:	msc     %r0, 164(%r15)                  # 4-byte Folded Reload
+# CHECK:	msc     %r0, 160(%r15)                  # 4-byte Folded Reload
 ---
 name:            fun0
 alignment:       16
@@ -65,7 +65,7 @@ body:             |
 
 # CHECK-LABEL: fun1:
 # CHECK-LABEL: .LBB1_2:
-# CHECK:	msc     %r0, 164(%r15)                  # 4-byte Folded Reload
+# CHECK:	msc     %r0, 160(%r15)                  # 4-byte Folded Reload
 ---
 name:            fun1
 alignment:       16
@@ -117,7 +117,7 @@ body:             |
 
 # CHECK-LABEL: fun2:
 # CHECK-LABEL: .LBB2_2:
-# CHECK:	msgc    %r0, 168(%r15)                  # 8-byte Folded Reload
+# CHECK:	msgc    %r0, 160(%r15)                  # 8-byte Folded Reload
 ---
 name:            fun2
 alignment:       16
@@ -169,7 +169,7 @@ body:             |
 
 # CHECK-LABEL: fun3:
 # CHECK-LABEL: .LBB3_2:
-# CHECK:	msgc    %r0, 168(%r15)                  # 8-byte Folded Reload
+# CHECK:	msgc    %r0, 160(%r15)                  # 8-byte Folded Reload
 ---
 name:            fun3
 alignment:       16

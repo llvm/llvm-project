@@ -2063,7 +2063,7 @@ DeclResult Sema::CheckClassTemplate(
   }
 
   if (PrevClassTemplate)
-    CheckRedeclarationModuleOwnership(NewTemplate, PrevClassTemplate);
+    CheckRedeclarationInModule(NewTemplate, PrevClassTemplate);
 
   if (Invalid) {
     NewTemplate->setInvalidDecl();
@@ -2184,10 +2184,24 @@ struct ConvertConstructorToDeductionGuideTransform {
         SubstArgs.push_back(SemaRef.Context.getCanonicalTemplateArgument(
             SemaRef.Context.getInjectedTemplateArg(NewParam)));
       }
+
+      // Substitute new template parameters into requires-clause if present.
+      Expr *RequiresClause = nullptr;
+      if (Expr *InnerRC = InnerParams->getRequiresClause()) {
+        MultiLevelTemplateArgumentList Args;
+        Args.setKind(TemplateSubstitutionKind::Rewrite);
+        Args.addOuterTemplateArguments(SubstArgs);
+        Args.addOuterRetainedLevel();
+        ExprResult E = SemaRef.SubstExpr(InnerRC, Args);
+        if (E.isInvalid())
+          return nullptr;
+        RequiresClause = E.getAs<Expr>();
+      }
+
       TemplateParams = TemplateParameterList::Create(
           SemaRef.Context, InnerParams->getTemplateLoc(),
           InnerParams->getLAngleLoc(), AllParams, InnerParams->getRAngleLoc(),
-          /*FIXME: RequiresClause*/ nullptr);
+          RequiresClause);
     }
 
     // If we built a new template-parameter-list, track that we need to
@@ -3672,7 +3686,7 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
   SmallVector<TemplateArgument, 4> Converted;
   if (CheckTemplateArgumentList(Template, TemplateLoc, TemplateArgs,
                                 false, Converted,
-                                /*UpdateArgsWithConversion=*/true))
+                                /*UpdateArgsWithConversions=*/true))
     return QualType();
 
   QualType CanonType;
@@ -4280,7 +4294,7 @@ DeclResult Sema::ActOnVarTemplateSpecialization(
     bool IsPartialSpecialization) {
   // D must be variable template id.
   assert(D.getName().getKind() == UnqualifiedIdKind::IK_TemplateId &&
-         "Variable template specialization is declared with a template it.");
+         "Variable template specialization is declared with a template id.");
 
   TemplateIdAnnotation *TemplateId = D.getName().TemplateId;
   TemplateArgumentListInfo TemplateArgs =
@@ -4318,7 +4332,7 @@ DeclResult Sema::ActOnVarTemplateSpecialization(
   SmallVector<TemplateArgument, 4> Converted;
   if (CheckTemplateArgumentList(VarTemplate, TemplateNameLoc, TemplateArgs,
                                 false, Converted,
-                                /*UpdateArgsWithConversion=*/true))
+                                /*UpdateArgsWithConversions=*/true))
     return true;
 
   // Find the variable template (partial) specialization declaration that
@@ -4489,7 +4503,7 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
   if (CheckTemplateArgumentList(
           Template, TemplateNameLoc,
           const_cast<TemplateArgumentListInfo &>(TemplateArgs), false,
-          Converted, /*UpdateArgsWithConversion=*/true))
+          Converted, /*UpdateArgsWithConversions=*/true))
     return true;
 
   // Produce a placeholder value if the specialization is dependent.
@@ -4677,7 +4691,7 @@ Sema::CheckConceptTemplateId(const CXXScopeSpec &SS,
   if (CheckTemplateArgumentList(NamedConcept, ConceptNameInfo.getLoc(),
                            const_cast<TemplateArgumentListInfo&>(*TemplateArgs),
                                 /*PartialTemplateArgs=*/false, Converted,
-                                /*UpdateArgsWithConversion=*/false))
+                                /*UpdateArgsWithConversions=*/false))
     return ExprError();
 
   ConstraintSatisfaction Satisfaction;
@@ -6995,7 +7009,9 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
       // -- a predefined __func__ variable
       APValue::LValueBase Base = Value.getLValueBase();
       auto *VD = const_cast<ValueDecl *>(Base.dyn_cast<const ValueDecl *>());
-      if (Base && (!VD || isa<LifetimeExtendedTemporaryDecl>(VD))) {
+      if (Base &&
+          (!VD ||
+           isa<LifetimeExtendedTemporaryDecl, UnnamedGlobalConstantDecl>(VD))) {
         Diag(Arg->getBeginLoc(), diag::err_template_arg_not_decl_ref)
             << Arg->getSourceRange();
         return ExprError();
@@ -8343,7 +8359,7 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
   SmallVector<TemplateArgument, 4> Converted;
   if (CheckTemplateArgumentList(ClassTemplate, TemplateNameLoc,
                                 TemplateArgs, false, Converted,
-                                /*UpdateArgsWithConversion=*/true))
+                                /*UpdateArgsWithConversions=*/true))
     return true;
 
   // Find the class template (partial) specialization declaration that
@@ -9595,7 +9611,7 @@ DeclResult Sema::ActOnExplicitInstantiation(
   SmallVector<TemplateArgument, 4> Converted;
   if (CheckTemplateArgumentList(ClassTemplate, TemplateNameLoc,
                                 TemplateArgs, false, Converted,
-                                /*UpdateArgsWithConversion=*/true))
+                                /*UpdateArgsWithConversions=*/true))
     return true;
 
   // Find the class template specialization declaration that
@@ -9740,7 +9756,7 @@ DeclResult Sema::ActOnExplicitInstantiation(
 
       if (!getDLLAttr(Def) && getDLLAttr(Specialization) &&
           (Context.getTargetInfo().shouldDLLImportComdatSymbols() &&
-           !Context.getTargetInfo().getTriple().isPS4CPU())) {
+           !Context.getTargetInfo().getTriple().isPS4())) {
         // An explicit instantiation definition can add a dll attribute to a
         // template with a previous instantiation declaration. MinGW doesn't
         // allow this.
@@ -9758,7 +9774,7 @@ DeclResult Sema::ActOnExplicitInstantiation(
         !PreviouslyDLLExported && Specialization->hasAttr<DLLExportAttr>();
     if (Old_TSK == TSK_ImplicitInstantiation && NewlyDLLExported &&
         (Context.getTargetInfo().shouldDLLImportComdatSymbols() &&
-         !Context.getTargetInfo().getTriple().isPS4CPU())) {
+         !Context.getTargetInfo().getTriple().isPS4())) {
       // An explicit instantiation definition can add a dll attribute to a
       // template with a previous implicit instantiation. MinGW doesn't allow
       // this. We limit clang to only adding dllexport, to avoid potentially
@@ -10116,7 +10132,7 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
     }
 
     // Check the new variable specialization against the parsed input.
-    if (PrevTemplate && Prev && !Context.hasSameType(Prev->getType(), R)) {
+    if (PrevTemplate && !Context.hasSameType(Prev->getType(), R)) {
       Diag(T->getTypeLoc().getBeginLoc(),
            diag::err_invalid_var_template_spec_type)
           << 0 << PrevTemplate << R << Prev->getType();

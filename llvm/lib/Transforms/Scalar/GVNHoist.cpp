@@ -54,11 +54,9 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Use.h"
@@ -126,7 +124,7 @@ using HoistingPointInfo = std::pair<BasicBlock *, SmallVecInsn>;
 using HoistingPointList = SmallVector<HoistingPointInfo, 4>;
 
 // A map from a pair of VNs to all the instructions with those VNs.
-using VNType = std::pair<unsigned, unsigned>;
+using VNType = std::pair<unsigned, uintptr_t>;
 
 using VNtoInsns = DenseMap<VNType, SmallVector<Instruction *, 4>>;
 
@@ -161,7 +159,7 @@ using InValuesType =
 
 // An invalid value number Used when inserting a single value number into
 // VNtoInsns.
-enum : unsigned { InvalidVN = ~2U };
+enum : uintptr_t { InvalidVN = ~(uintptr_t)2 };
 
 // Records all scalar instructions candidate for code hoisting.
 class InsnInfo {
@@ -187,7 +185,9 @@ public:
   void insert(LoadInst *Load, GVNPass::ValueTable &VN) {
     if (Load->isSimple()) {
       unsigned V = VN.lookupOrAdd(Load->getPointerOperand());
-      VNtoLoads[{V, InvalidVN}].push_back(Load);
+      // With opaque pointers we may have loads from the same pointer with
+      // different result types, which should be disambiguated.
+      VNtoLoads[{V, (uintptr_t)Load->getType()}].push_back(Load);
     }
   }
 
@@ -261,7 +261,9 @@ public:
   GVNHoist(DominatorTree *DT, PostDominatorTree *PDT, AliasAnalysis *AA,
            MemoryDependenceResults *MD, MemorySSA *MSSA)
       : DT(DT), PDT(PDT), AA(AA), MD(MD), MSSA(MSSA),
-        MSSAUpdater(std::make_unique<MemorySSAUpdater>(MSSA)) {}
+        MSSAUpdater(std::make_unique<MemorySSAUpdater>(MSSA)) {
+    MSSA->ensureOptimizedUses();
+  }
 
   bool run(Function &F);
 

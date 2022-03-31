@@ -111,7 +111,7 @@ func @tensor_encoding_mismatch(%arg0: tensor<8xi32, "enc">) -> (tensor<8xi32>) {
 
 func @bad_branch() {
 ^bb12:
-  br ^missing  // expected-error {{reference to an undefined block}}
+  cf.br ^missing  // expected-error {{reference to an undefined block}}
 }
 
 // -----
@@ -136,7 +136,7 @@ func @no_terminator() {   // expected-error {{empty block: expect at least a ter
 // -----
 
 func @block_no_rparen() {
-^bb42 (%bb42 : i32: // expected-error {{expected ')' to end argument list}}
+^bb42 (%bb42 : i32: // expected-error {{expected ')'}}
   return
 }
 
@@ -158,7 +158,7 @@ func @block_arg_no_type() {
 
 func @block_arg_no_close_paren() {
 ^bb42:
-  br ^bb2( // expected-error@+1 {{expected ':'}}
+  cf.br ^bb2( // expected-error@+1 {{expected ':'}}
   return
 }
 
@@ -167,9 +167,9 @@ func @block_arg_no_close_paren() {
 func @block_first_has_predecessor() {
 // expected-error@-1 {{entry block of region may not have predecessors}}
 ^bb42:
-  br ^bb43
+  cf.br ^bb43
 ^bb43:
-  br ^bb42
+  cf.br ^bb42
 }
 
 // -----
@@ -182,12 +182,18 @@ func @no_return() {
 // -----
 
 func @no_terminator() {
-  br ^bb1
+  cf.br ^bb1
 ^bb1:
   %x = arith.constant 0 : i32
   %y = arith.constant 1 : i32  // expected-error {{block with no terminator}}
 }
 
+// -----
+
+func @no_block_arg_enclosing_parens() {
+^bb %x: i32 : // expected-error {{expected ':' after block name}}
+  return
+}
 
 // -----
 
@@ -355,20 +361,20 @@ func @malformed_type(%a : intt) { // expected-error {{expected non-function type
 
 func @resulterror() -> i32 {
 ^bb42:
-  return    // expected-error {{'std.return' op has 0 operands, but enclosing function (@resulterror) returns 1}}
+  return    // expected-error {{'func.return' op has 0 operands, but enclosing function (@resulterror) returns 1}}
 }
 
 // -----
 
 func @func_resulterror() -> i32 {
-  return // expected-error {{'std.return' op has 0 operands, but enclosing function (@func_resulterror) returns 1}}
+  return // expected-error {{'func.return' op has 0 operands, but enclosing function (@func_resulterror) returns 1}}
 }
 
 // -----
 
 func @argError() {
 ^bb1(%a: i64):  // expected-note {{previously defined here}}
-  br ^bb2
+  cf.br ^bb2
 ^bb2(%a: i64):  // expected-error{{redefinition of SSA value '%a'}}
   return
 }
@@ -379,7 +385,7 @@ func @br_mismatch() {
 ^bb0:
   %0:2 = "foo"() : () -> (i1, i17)
   // expected-error @+1 {{branch has 2 operands for successor #0, but target block has 1}}
-  br ^bb1(%0#1, %0#0 : i17, i1)
+  cf.br ^bb1(%0#1, %0#0 : i17, i1)
 
 ^bb1(%x: i17):
   return
@@ -391,7 +397,7 @@ func @succ_arg_type_mismatch() {
 ^bb0:
   %0 = "getBool"() : () -> i1
   // expected-error @+1 {{type mismatch for bb argument #0 of successor #0}}
-  br ^bb1(%0 : i1)
+  cf.br ^bb1(%0 : i1)
 
 ^bb1(%x: i32):
   return
@@ -409,7 +415,7 @@ func @vectors(vector<1 x vector<1xi32>>, vector<2x4xf32>)
 func @condbr_notbool() {
 ^bb0:
   %a = "foo"() : () -> i32 // expected-note {{prior use here}}
-  cond_br %a, ^bb0, ^bb0 // expected-error {{use of value '%a' expects different type than prior uses: 'i1' vs 'i32'}}
+  cf.cond_br %a, ^bb0, ^bb0 // expected-error {{use of value '%a' expects different type than prior uses: 'i1' vs 'i32'}}
 }
 
 // -----
@@ -418,7 +424,7 @@ func @condbr_badtype() {
 ^bb0:
   %c = "foo"() : () -> i1
   %a = "foo"() : () -> i32
-  cond_br %c, ^bb0(%a, %a : i32, ^bb0) // expected-error {{expected non-function type}}
+  cf.cond_br %c, ^bb0(%a, %a : i32, ^bb0) // expected-error {{expected non-function type}}
 }
 
 // -----
@@ -427,7 +433,7 @@ func @condbr_a_bb_is_not_a_type() {
 ^bb0:
   %c = "foo"() : () -> i1
   %a = "foo"() : () -> i32
-  cond_br %c, ^bb0(%a, %a : i32, i32), i32 // expected-error {{expected block name}}
+  cf.cond_br %c, ^bb0(%a, %a : i32, i32), i32 // expected-error {{expected block name}}
 }
 
 // -----
@@ -477,7 +483,7 @@ func @name_scope_failure() {
 func @dominance_failure() {
 ^bb0:
   "foo"(%x) : (i32) -> ()    // expected-error {{operand #0 does not dominate this use}}
-  br ^bb1
+  cf.br ^bb1
 ^bb1:
   %x = "bar"() : () -> i32    // expected-note {{operand defined here (op in the same region)}}
   return
@@ -489,7 +495,7 @@ func @dominance_failure() {
 ^bb0:
   "foo"(%x) : (i32) -> ()    // expected-error {{operand #0 does not dominate this use}}
   %x = "bar"() : () -> i32    // expected-note {{operand defined here (op in the same block)}}
-  br ^bb1
+  cf.br ^bb1
 ^bb1:
   return
 }
@@ -508,7 +514,7 @@ func @dominance_failure() {
 
 func @dominance_failure() {  //  expected-note {{operand defined as a block argument (block #1 in the same region)}}
 ^bb0:
-  br ^bb1(%x : i32)    // expected-error {{operand #0 does not dominate this use}}
+  cf.br ^bb1(%x : i32)    // expected-error {{operand #0 does not dominate this use}}
 ^bb1(%x : i32):
   return
 }
@@ -520,7 +526,7 @@ func @dominance_failure() {  //  expected-note {{operand defined as a block argu
   %f = "foo"() ({
     "foo"(%x) : (i32) -> ()    // expected-error {{operand #0 does not dominate this use}}
   }) : () -> (i32)
-  br ^bb1(%f : i32)
+  cf.br ^bb1(%f : i32)
 ^bb1(%x : i32):
   return
 }
@@ -536,8 +542,7 @@ func @return_type_mismatch() -> i32 {
 
 func @return_inside_loop() {
   affine.for %i = 1 to 100 {
-    // expected-error@-1 {{op expects regions to end with 'affine.yield', found 'std.return'}}
-    // expected-note@-2 {{in custom textual format, the absence of terminator implies}}
+    // expected-error@+1 {{'func.return' op expects parent op 'func.func'}}
     return
   }
   return
@@ -675,7 +680,7 @@ func @calls(%arg0: i32) {
   %z = "casdasda"(%x) : (ppop32) -> i32
 }
 // -----
-// expected-error@+2 {{expected SSA operand}}
+// expected-error@+1 {{expected SSA operand}}
 func@n(){^b(
 // -----
 
@@ -877,7 +882,7 @@ func @type_alias_unknown(!unknown_alias) -> () { // expected-error {{undefined s
 
 // -----
 
-!missing_type_alias = type // expected-error@+2 {{expected non-function type}}
+!missing_type_alias = type // expected-error@+1 {{expected non-function type}}
 
 // -----
 
@@ -988,7 +993,7 @@ func @invalid_nested_dominance() {
   "test.ssacfg_region"() ({
     // expected-error @+1 {{operand #0 does not dominate this use}}
     "foo.use" (%1) : (i32) -> ()
-    br ^bb2
+    cf.br ^bb2
 
   ^bb2:
     // expected-note @+1 {{operand defined here}}
@@ -1588,7 +1593,7 @@ test.format_symbol_name_attr_op @name { attr = "xx" }
 // -----
 
 func @forward_reference_type_check() -> (i8) {
-  br ^bb2
+  cf.br ^bb2
 
 ^bb1:
   // expected-note @+1 {{previously used here with type 'i8'}}
@@ -1597,7 +1602,7 @@ func @forward_reference_type_check() -> (i8) {
 ^bb2:
   // expected-error @+1 {{definition of SSA value '%1#0' has type 'f32'}}
   %1 = "bar"() : () -> (f32)
-  br ^bb1
+  cf.br ^bb1
 }
 
 // -----
@@ -1610,9 +1615,9 @@ func @dominance_error_in_unreachable_op() -> i1 {
     ^bb1:
 // expected-error @+1 {{operand #0 does not dominate this use}}
       %2:3 = "bar"(%1) : (i64) -> (i1,i1,i1)
-      br ^bb4
+      cf.br ^bb4
     ^bb2:
-      br ^bb2
+      cf.br ^bb2
     ^bb4:
       %1 = "foo"() : ()->i64   // expected-note {{operand defined here}}
   }) : () -> ()

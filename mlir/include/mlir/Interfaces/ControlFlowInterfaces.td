@@ -24,6 +24,13 @@ def BranchOpInterface : OpInterface<"BranchOpInterface"> {
   let description = [{
     This interface provides information for branching terminator operations,
     i.e. terminator operations with successors.
+
+    This interface is meant to model well-defined cases of control-flow of
+    value propagation, where what occurs along control-flow edges is assumed to
+    be side-effect free. For example, corresponding successor operands and
+    successor block arguments may have different types. In such cases,
+    `areTypesCompatible` can be implemented to compare types along control-flow
+    edges. By default, type equality is used.
   }];
   let cppNamespace = "::mlir";
 
@@ -73,7 +80,15 @@ def BranchOpInterface : OpInterface<"BranchOpInterface"> {
       "::mlir::Block *", "getSuccessorForOperands",
       (ins "::mlir::ArrayRef<::mlir::Attribute>":$operands), [{}],
       /*defaultImplementation=*/[{ return nullptr; }]
-    >
+    >,
+    InterfaceMethod<[{
+        This method is called to compare types along control-flow edges. By
+        default, the types are checked as equal.
+      }],
+      "bool", "areTypesCompatible",
+      (ins "::mlir::Type":$lhs, "::mlir::Type":$rhs), [{}],
+       [{ return lhs == rhs; }]
+    >,
   ];
 
   let verify = [{
@@ -96,15 +111,23 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
     This interface provides information for region operations that contain
     branching behavior between held regions, i.e. this interface allows for
     expressing control flow information for region holding operations.
+
+    This interface is meant to model well-defined cases of control-flow of
+    value propagation, where what occurs along control-flow edges is assumed to
+    be side-effect free. For example, corresponding successor operands and
+    successor block arguments may have different types. In such cases,
+    `areTypesCompatible` can be implemented to compare types along control-flow
+    edges. By default, type equality is used.
   }];
   let cppNamespace = "::mlir";
 
   let methods = [
     InterfaceMethod<[{
         Returns the operands of this operation used as the entry arguments when
-        entering the region at `index`, which was specified as a successor of this
-        operation by `getSuccessorRegions`. These operands should correspond 1-1
-        with the successor inputs specified in `getSuccessorRegions`.
+        entering the region at `index`, which was specified as a successor of
+        this operation by `getSuccessorRegions`. These operands should
+        correspond 1-1 with the successor inputs specified in
+        `getSuccessorRegions`.
       }],
       "::mlir::OperandRange", "getSuccessorEntryOperands",
       (ins "unsigned":$index), [{}], /*defaultImplementation=*/[{
@@ -127,36 +150,50 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
         successor region must be non-empty.
       }],
       "void", "getSuccessorRegions",
-      (ins "::mlir::Optional<unsigned>":$index, "::mlir::ArrayRef<::mlir::Attribute>":$operands,
+      (ins "::mlir::Optional<unsigned>":$index,
+           "::mlir::ArrayRef<::mlir::Attribute>":$operands,
            "::mlir::SmallVectorImpl<::mlir::RegionSuccessor> &":$regions)
     >,
     InterfaceMethod<[{
-        Populates countPerRegion with the number of times this operation will
-        invoke the attached regions (assuming the regions yield normally, i.e.
-        do not abort or invoke an infinite loop). If the number of region
-        invocations is not known statically it will set the number of
-        invocations to `kUnknownNumRegionInvocations`.
+        Populates `invocationBounds` with the minimum and maximum number of
+        times this operation will invoke the attached regions (assuming the
+        regions yield normally, i.e. do not abort or invoke an infinite loop).
+        The minimum number of invocations is at least 0. If the maximum number
+        of invocations cannot be statically determined, then it will not have a
+        value (i.e., it is set to `llvm::None`).
 
-        `operands` is a set of optional attributes that either correspond to a
-        constant values for each operand of this operation, or null if that
+        `operands` is a set of optional attributes that either correspond to
+        constant values for each operand of this operation or null if that
         operand is not a constant.
+
+        This method may be called speculatively on operations where the provided
+        operands are not necessarily the same as the operation's current
+        operands. This may occur in analyses that wish to determine "what would
+        be the region invocations if these were the operands?"
       }],
-      "void", "getNumRegionInvocations",
+      "void", "getRegionInvocationBounds",
       (ins "::mlir::ArrayRef<::mlir::Attribute>":$operands,
-           "::mlir::SmallVectorImpl<int64_t> &":$countPerRegion), [{}],
-      /*defaultImplementation=*/[{
-        unsigned numRegions = this->getOperation()->getNumRegions();
-        assert(countPerRegion.empty());
-        countPerRegion.resize(numRegions, kUnknownNumRegionInvocations);
-      }]
-    >
+           "::llvm::SmallVectorImpl<::mlir::InvocationBounds> &"
+             :$invocationBounds), [{}],
+       [{ invocationBounds.append($_op->getNumRegions(),
+                                  ::mlir::InvocationBounds::getUnknown()); }]
+    >,
+    InterfaceMethod<[{
+        This method is called to compare types along control-flow edges. By
+        default, the types are checked as equal.
+      }],
+      "bool", "areTypesCompatible",
+      (ins "::mlir::Type":$lhs, "::mlir::Type":$rhs), [{}],
+       [{ return lhs == rhs; }]
+    >,
   ];
 
   let verify = [{
     static_assert(!ConcreteOp::template hasTrait<OpTrait::ZeroRegion>(),
                   "expected operation to have non-zero regions");
-    return success();
+    return detail::verifyTypesAlongControlFlowEdges($_op);
   }];
+  let verifyWithRegions = 1;
 
   let extraClassDeclaration = [{
     /// Convenience helper in case none of the operands is known.
@@ -164,11 +201,6 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
                              SmallVectorImpl<RegionSuccessor> &regions) {
        SmallVector<Attribute, 2> nullAttrs(getOperation()->getNumOperands());
        getSuccessorRegions(index, nullAttrs, regions);
-    }
-
-    /// Verify types along control flow edges described by this interface.
-    static LogicalResult verifyTypes(Operation *op) {
-      return detail::verifyTypesAlongControlFlowEdges(op);
     }
   }];
 }

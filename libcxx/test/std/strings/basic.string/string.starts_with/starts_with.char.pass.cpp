@@ -16,9 +16,8 @@
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    {
+bool test() {
+  {
     typedef std::string S;
     S  s1 {};
     S  s2 { "abcde", 5 };
@@ -29,7 +28,17 @@ int main(int, char**)
     assert (!s1.starts_with('x'));
     assert ( s2.starts_with('a'));
     assert (!s2.starts_with('x'));
-    }
+  }
+
+  return true;
+}
+
+int main(int, char**)
+{
+  test();
+#if TEST_STD_VER > 17
+  // static_assert(test());
+#endif
 
   return 0;
 }

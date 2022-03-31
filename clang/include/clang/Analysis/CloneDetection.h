@@ -11,8 +11,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_AST_CLONEDETECTION_H
-#define LLVM_CLANG_AST_CLONEDETECTION_H
+#ifndef LLVM_CLANG_ANALYSIS_CLONEDETECTION_H
+#define LLVM_CLANG_ANALYSIS_CLONEDETECTION_H
 
 #include "clang/AST/StmtVisitor.h"
 #include "llvm/Support/Regex.h"
@@ -208,13 +208,7 @@ public:
     // The initial assumption is that there is only one clone group and every
     // statement is a clone of the others. This clone group will then be
     // split up with the help of the constraints.
-    CloneGroup AllClones;
-    AllClones.reserve(Sequences.size());
-    for (const auto &C : Sequences) {
-      AllClones.push_back(C);
-    }
-
-    Result.push_back(AllClones);
+    Result.push_back(Sequences);
 
     constrainClones(Result, ConstraintList...);
   }
@@ -441,4 +435,4 @@ struct MatchingVariablePatternConstraint {
 
 } // end namespace clang
 
-#endif // LLVM_CLANG_AST_CLONEDETECTION_H
+#endif // LLVM_CLANG_ANALYSIS_CLONEDETECTION_H

@@ -84,7 +84,7 @@ define amdgpu_kernel void @div_minus_1_by_minus_x_25ulp(float addrspace(1)* %arg
 }
 
 ; GCN-LABEL: {{^}}div_v4_1_by_x_25ulp:
-; GCN-DAG:        s_load_dwordx4 s{{\[}}[[VAL0:[0-9]+]]:[[VAL3:[0-9]+]]], s[{{[0-9:]+}}], 0x0{{$}}
+; GCN-DAG:        s_load_dwordx4 s[[[VAL0:[0-9]+]]:[[VAL3:[0-9]+]]], s[{{[0-9:]+}}], 0x0{{$}}
 ; GCN-DENORM-DAG: v_mov_b32_e32 [[L:v[0-9]+]], 0x6f800000
 ; GCN-DENORM-DAG: v_mov_b32_e32 [[S:v[0-9]+]], 0x2f800000
 ; GCN-DENORM-DAG: v_cmp_gt_f32_e64 vcc, |s{{[0-9]+}}|, [[L]]
@@ -112,7 +112,7 @@ define amdgpu_kernel void @div_minus_1_by_minus_x_25ulp(float addrspace(1)* %arg
 ; GCN-FLUSH:      v_rcp_f32_e32
 ; GCN-FLUSH:      v_rcp_f32_e32
 ; GCN-FLUSH:      v_rcp_f32_e32 v[[OUT3:[0-9]+]], s[[VAL3]]
-; GCN-FLUSH:      global_store_dwordx4 v{{[0-9]+}}, v{{\[}}[[OUT0]]:[[OUT3]]], s{{\[[0-9]+:[0-9]+\]}}
+; GCN-FLUSH:      global_store_dwordx4 v{{[0-9]+}}, v[[[OUT0]]:[[OUT3]]], s{{\[[0-9]+:[0-9]+\]}}
 define amdgpu_kernel void @div_v4_1_by_x_25ulp(<4 x float> addrspace(1)* %arg) {
   %load = load <4 x float>, <4 x float> addrspace(1)* %arg, align 16
   %div = fdiv <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, %load, !fpmath !0
@@ -121,7 +121,7 @@ define amdgpu_kernel void @div_v4_1_by_x_25ulp(<4 x float> addrspace(1)* %arg) {
 }
 
 ; GCN-LABEL: {{^}}div_v4_minus_1_by_x_25ulp:
-; GCN-DAG:        s_load_dwordx4 s{{\[}}[[VAL0:[0-9]+]]:[[VAL3:[0-9]+]]], s[{{[0-9:]+}}], 0x0{{$}}
+; GCN-DAG:        s_load_dwordx4 s[[[VAL0:[0-9]+]]:[[VAL3:[0-9]+]]], s[{{[0-9:]+}}], 0x0{{$}}
 ; GCN-DENORM-DAG: v_mov_b32_e32 [[L:v[0-9]+]], 0x6f800000
 ; GCN-DENORM-DAG: v_mov_b32_e32 [[S:v[0-9]+]], 0x2f800000
 ; GCN-DENORM-DAG: v_cmp_gt_f32_e64 vcc, |s{{[0-9]+}}|, [[L]]
@@ -157,7 +157,7 @@ define amdgpu_kernel void @div_v4_minus_1_by_x_25ulp(<4 x float> addrspace(1)* %
 }
 
 ; GCN-LABEL: {{^}}div_v4_1_by_minus_x_25ulp:
-; GCN-DAG:        s_load_dwordx4 s{{\[}}[[VAL0:[0-9]+]]:[[VAL3:[0-9]+]]], s[{{[0-9:]+}}], 0x0{{$}}
+; GCN-DAG:        s_load_dwordx4 s[[[VAL0:[0-9]+]]:[[VAL3:[0-9]+]]], s[{{[0-9:]+}}], 0x0{{$}}
 ; GCN-DENORM-DAG: v_mov_b32_e32 [[L:v[0-9]+]], 0x6f800000
 ; GCN-DENORM-DAG: v_mov_b32_e32 [[S:v[0-9]+]], 0x2f800000
 ; GCN-DENORM-DAG: v_cmp_gt_f32_e64 vcc, |s{{[0-9]+}}|, [[L]]
@@ -185,7 +185,7 @@ define amdgpu_kernel void @div_v4_minus_1_by_x_25ulp(<4 x float> addrspace(1)* %
 ; GCN-FLUSH:      v_rcp_f32_e64
 ; GCN-FLUSH:      v_rcp_f32_e64
 ; GCN-FLUSH:      v_rcp_f32_e64 v[[OUT3:[0-9]+]], -s[[VAL3]]
-; GCN-FLUSH:      global_store_dwordx4 v{{[0-9]+}}, v{{\[}}[[OUT0]]:[[OUT3]]], s{{\[[0-9]+:[0-9]+\]}}
+; GCN-FLUSH:      global_store_dwordx4 v{{[0-9]+}}, v[[[OUT0]]:[[OUT3]]], s{{\[[0-9]+:[0-9]+\]}}
 define amdgpu_kernel void @div_v4_1_by_minus_x_25ulp(<4 x float> addrspace(1)* %arg) {
   %load = load <4 x float>, <4 x float> addrspace(1)* %arg, align 16
   %neg = fneg <4 x float> %load
@@ -195,7 +195,7 @@ define amdgpu_kernel void @div_v4_1_by_minus_x_25ulp(<4 x float> addrspace(1)* %
 }
 
 ; GCN-LABEL: {{^}}div_v4_minus_1_by_minus_x_25ulp:
-; GCN-DAG:        s_load_dwordx4 s{{\[}}[[VAL0:[0-9]+]]:[[VAL3:[0-9]+]]], s[{{[0-9:]+}}], 0x0{{$}}
+; GCN-DAG:        s_load_dwordx4 s[[[VAL0:[0-9]+]]:[[VAL3:[0-9]+]]], s[{{[0-9:]+}}], 0x0{{$}}
 ; GCN-DENORM-DAG: v_mov_b32_e32 [[L:v[0-9]+]], 0x6f800000
 ; GCN-DENORM-DAG: v_mov_b32_e32 [[S:v[0-9]+]], 0x2f800000
 ; GCN-DENORM-DAG: v_cmp_gt_f32_e64 vcc, |s{{[0-9]+}}|, [[L]]
@@ -223,7 +223,7 @@ define amdgpu_kernel void @div_v4_1_by_minus_x_25ulp(<4 x float> addrspace(1)* %
 ; GCN-FLUSH:      v_rcp_f32_e32
 ; GCN-FLUSH:      v_rcp_f32_e32
 ; GCN-FLUSH:      v_rcp_f32_e32 v[[OUT3:[0-9]+]], s[[VAL3]]
-; GCN-FLUSH:      global_store_dwordx4 v{{[0-9]+}}, v{{\[}}[[OUT0]]:[[OUT3]]], s{{\[[0-9]+:[0-9]+\]}}
+; GCN-FLUSH:      global_store_dwordx4 v{{[0-9]+}}, v[[[OUT0]]:[[OUT3]]], s{{\[[0-9]+:[0-9]+\]}}
 define amdgpu_kernel void @div_v4_minus_1_by_minus_x_25ulp(<4 x float> addrspace(1)* %arg) {
   %load = load <4 x float>, <4 x float> addrspace(1)* %arg, align 16
   %neg = fneg <4 x float> %load

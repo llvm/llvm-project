@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-match-reduction -verify-diagnostics -split-input-file
+// RUN: mlir-opt %s -pass-pipeline="func.func(test-match-reduction)" -verify-diagnostics -split-input-file
 
 // Verify that the generic reduction detection utility works on different
 // dialects.
@@ -52,7 +52,7 @@ func @linalg_red_max(%in0t: tensor<4x4xf32>, %out0t: tensor<4xf32>) {
    outs(%out0t : tensor<4xf32>) {
     ^bb0(%in0: f32, %out0: f32):
       %cmp = arith.cmpf ogt, %in0, %out0 : f32
-      %sel = select %cmp, %in0, %out0 : f32
+      %sel = arith.select %cmp, %in0, %out0 : f32
       linalg.yield %sel : f32
     } -> tensor<4xf32>
   return

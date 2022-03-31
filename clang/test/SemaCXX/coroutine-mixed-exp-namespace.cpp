@@ -1,9 +1,9 @@
 // This file is to test the mixed use of `std::experimental::coroutine*` and `std::coroutine*`
-// wouldn't make the compliler to crash and emit the diagnostic message correctly.
+// wouldn't make the compiler to crash and emit the diagnostic message correctly.
 // RUN: %clang_cc1 -verify -std=c++20 -fsyntax-only %s
 
 #include "Inputs/std-coroutine-exp-namespace.h"
-#include "Inputs/std-coroutine.h"
+#include "Inputs/std-coroutine.h" // Second
 
 struct my_awaitable {
   bool await_ready() noexcept;
@@ -23,5 +23,8 @@ template <>
 struct std::coroutine_traits<void> { using promise_type = promise_void; };
 
 void test() {
-  co_return; // expected-error {{Found mixed use of std namespace and std::experimental namespace for coroutine, which is disallowed. The coroutine components in std::experimental namespace is deprecated. Please use coroutine components under std namespace.}}
+  co_return; // expected-error {{mixed use of std and std::experimental namespaces for coroutine components}}
+  // expected-warning@-1{{support for std::experimental::coroutine_traits will be removed}}
+  // expected-note@Inputs/std-coroutine-exp-namespace.h:8 {{'coroutine_traits' declared here}}
+  // expected-note@Inputs/std-coroutine.h:8 {{'coroutine_traits' declared here}}
 }

@@ -17,7 +17,9 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVOpTraits.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
@@ -45,13 +47,13 @@ namespace llvm {
 template <>
 struct PointerLikeTypeTraits<mlir::spirv::FuncOp> {
 public:
-  static inline void *getAsVoidPointer(mlir::spirv::FuncOp I) {
-    return const_cast<void *>(I.getAsOpaquePointer());
+  static inline void *getAsVoidPointer(mlir::spirv::FuncOp i) {
+    return const_cast<void *>(i.getAsOpaquePointer());
   }
-  static inline mlir::spirv::FuncOp getFromVoidPointer(void *P) {
-    return mlir::spirv::FuncOp::getFromOpaquePointer(P);
+  static inline mlir::spirv::FuncOp getFromVoidPointer(void *p) {
+    return mlir::spirv::FuncOp::getFromOpaquePointer(p);
   }
-  static constexpr int NumLowBitsAvailable = 3;
+  static constexpr int numLowBitsAvailable = 3;
 };
 
 } // namespace llvm

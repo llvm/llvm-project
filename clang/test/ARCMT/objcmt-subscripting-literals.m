@@ -209,7 +209,7 @@ void test1(NSString *str) {
 - (void)setObject:(id)obj atIndexedSubscript:(unsigned)idx __attribute__((unavailable));
 @end
 
-void test2() {
+void test2(void) {
   MutableCustom *mutc;
   id o = [mutc objectAtIndex:4];
   [mutc replaceObjectAtIndex:2 withObject:@"val"];

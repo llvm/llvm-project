@@ -194,8 +194,13 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
     // we are in DISTRIBUTE construct
     schedtype += kmp_sch_static -
                  kmp_distribute_static; // AC: convert to usual schedule type
-    tid = th->th.th_team->t.t_master_tid;
-    team = th->th.th_team->t.t_parent;
+    if (th->th.th_team->t.t_serialized > 1) {
+      tid = 0;
+      team = th->th.th_team;
+    } else {
+      tid = th->th.th_team->t.t_master_tid;
+      team = th->th.th_team->t.t_parent;
+    }
   } else {
     tid = __kmp_tid_from_gtid(global_tid);
     team = th->th.th_team;

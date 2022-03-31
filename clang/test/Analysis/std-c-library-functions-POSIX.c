@@ -299,6 +299,6 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex);
 
 // Must have at least one call expression to initialize the summary map.
 int bar(void);
-void foo() {
+void foo(void) {
   bar();
 }

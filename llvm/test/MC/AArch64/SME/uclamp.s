@@ -126,7 +126,7 @@ uclamp  z31.d, z31.d, z31.d
 movprfx z23, z27
 // CHECK-INST: movprfx  z23, z27
 // CHECK-ENCODING: [0x77,0xbf,0x20,0x04]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: 77 bf 20 04 <unknown>
 
 uclamp  z23.b, z13.b, z8.b
@@ -138,7 +138,7 @@ uclamp  z23.b, z13.b, z8.b
 movprfx z23, z27
 // CHECK-INST: movprfx  z23, z27
 // CHECK-ENCODING: [0x77,0xbf,0x20,0x04]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: 77 bf 20 04 <unknown>
 
 uclamp  z23.h, z13.h, z8.h
@@ -150,7 +150,7 @@ uclamp  z23.h, z13.h, z8.h
 movprfx z23, z27
 // CHECK-INST: movprfx  z23, z27
 // CHECK-ENCODING: [0x77,0xbf,0x20,0x04]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: 77 bf 20 04 <unknown>
 
 uclamp  z23.s, z13.s, z8.s
@@ -162,7 +162,7 @@ uclamp  z23.s, z13.s, z8.s
 movprfx z23, z27
 // CHECK-INST: movprfx  z23, z27
 // CHECK-ENCODING: [0x77,0xbf,0x20,0x04]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: 77 bf 20 04 <unknown>
 
 uclamp  z23.d, z13.d, z8.d

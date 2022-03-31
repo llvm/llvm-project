@@ -51,7 +51,7 @@
 // CHECK:               %[[VAL_36:.*]] = memref.load %[[VAL_10]]{{\[}}%[[VAL_33]]] : memref<?xindex>
 // CHECK:               %[[VAL_37:.*]] = memref.load %[[VAL_13]]{{\[}}%[[VAL_34]]] : memref<?xindex>
 // CHECK:               %[[VAL_38:.*]] = arith.cmpi ult, %[[VAL_37]], %[[VAL_36]] : index
-// CHECK:               %[[VAL_39:.*]] = select %[[VAL_38]], %[[VAL_37]], %[[VAL_36]] : index
+// CHECK:               %[[VAL_39:.*]] = arith.select %[[VAL_38]], %[[VAL_37]], %[[VAL_36]] : index
 // CHECK:               %[[VAL_40:.*]] = arith.cmpi eq, %[[VAL_36]], %[[VAL_39]] : index
 // CHECK:               %[[VAL_41:.*]] = arith.cmpi eq, %[[VAL_37]], %[[VAL_39]] : index
 // CHECK:               %[[VAL_42:.*]] = arith.andi %[[VAL_40]], %[[VAL_41]] : i1
@@ -82,10 +82,10 @@
 // CHECK:               }
 // CHECK:               %[[VAL_58:.*]] = arith.cmpi eq, %[[VAL_36]], %[[VAL_39]] : index
 // CHECK:               %[[VAL_59:.*]] = arith.addi %[[VAL_33]], %[[VAL_8]] : index
-// CHECK:               %[[VAL_60:.*]] = select %[[VAL_58]], %[[VAL_59]], %[[VAL_33]] : index
+// CHECK:               %[[VAL_60:.*]] = arith.select %[[VAL_58]], %[[VAL_59]], %[[VAL_33]] : index
 // CHECK:               %[[VAL_61:.*]] = arith.cmpi eq, %[[VAL_37]], %[[VAL_39]] : index
 // CHECK:               %[[VAL_62:.*]] = arith.addi %[[VAL_34]], %[[VAL_8]] : index
-// CHECK:               %[[VAL_63:.*]] = select %[[VAL_61]], %[[VAL_62]], %[[VAL_34]] : index
+// CHECK:               %[[VAL_63:.*]] = arith.select %[[VAL_61]], %[[VAL_62]], %[[VAL_34]] : index
 // CHECK:               scf.yield %[[VAL_60]], %[[VAL_63]], %[[VAL_64:.*]] : index, index, f64
 // CHECK:             }
 // CHECK:             %[[VAL_65:.*]] = vector.insertelement %[[VAL_66:.*]]#2, %[[VAL_3]]{{\[}}%[[VAL_6]] : index] : vector<8xf64>
@@ -94,7 +94,7 @@
 // CHECK:               %[[VAL_71:.*]] = vector.create_mask %[[VAL_70]] : vector<8xi1>
 // CHECK:               %[[VAL_72:.*]] = vector.maskedload %[[VAL_11]]{{\[}}%[[VAL_68]]], %[[VAL_71]], %[[VAL_3]] : memref<?xf64>, vector<8xi1>, vector<8xf64> into vector<8xf64>
 // CHECK:               %[[VAL_73:.*]] = arith.addf %[[VAL_69]], %[[VAL_72]] : vector<8xf64>
-// CHECK:               %[[VAL_74:.*]] = select %[[VAL_71]], %[[VAL_73]], %[[VAL_69]] : vector<8xi1>, vector<8xf64>
+// CHECK:               %[[VAL_74:.*]] = arith.select %[[VAL_71]], %[[VAL_73]], %[[VAL_69]] : vector<8xi1>, vector<8xf64>
 // CHECK:               scf.yield %[[VAL_74]] : vector<8xf64>
 // CHECK:             }
 // CHECK:             %[[VAL_75:.*]] = scf.for %[[VAL_76:.*]] = %[[VAL_66]]#1 to %[[VAL_25]] step %[[VAL_4]] iter_args(%[[VAL_77:.*]] = %[[VAL_78:.*]]) -> (vector<8xf64>) {
@@ -102,10 +102,10 @@
 // CHECK:               %[[VAL_80:.*]] = vector.create_mask %[[VAL_79]] : vector<8xi1>
 // CHECK:               %[[VAL_81:.*]] = vector.maskedload %[[VAL_14]]{{\[}}%[[VAL_76]]], %[[VAL_80]], %[[VAL_3]] : memref<?xf64>, vector<8xi1>, vector<8xf64> into vector<8xf64>
 // CHECK:               %[[VAL_82:.*]] = arith.addf %[[VAL_77]], %[[VAL_81]] : vector<8xf64>
-// CHECK:               %[[VAL_83:.*]] = select %[[VAL_80]], %[[VAL_82]], %[[VAL_77]] : vector<8xi1>, vector<8xf64>
+// CHECK:               %[[VAL_83:.*]] = arith.select %[[VAL_80]], %[[VAL_82]], %[[VAL_77]] : vector<8xi1>, vector<8xf64>
 // CHECK:               scf.yield %[[VAL_83]] : vector<8xf64>
 // CHECK:             }
-// CHECK:             %[[VAL_84:.*]] = vector.reduction "add", %[[VAL_85:.*]] : vector<8xf64> into f64
+// CHECK:             %[[VAL_84:.*]] = vector.reduction <add>, %[[VAL_85:.*]] : vector<8xf64> into f64
 // CHECK:             scf.yield %[[VAL_84]] : f64
 // CHECK:           }
 // CHECK:           memref.store %[[VAL_86:.*]], %[[VAL_15]][] : memref<f64>

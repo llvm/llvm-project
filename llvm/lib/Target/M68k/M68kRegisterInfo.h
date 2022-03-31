@@ -1,4 +1,4 @@
-//===-- M68kRegisterInfo.h - M68k Register Information Impl --*- C++ --===//
+//===-- M68kRegisterInfo.h - M68k Register Information Impl -----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -97,6 +97,14 @@ public:
   bool canRealignStack(const MachineFunction &MF) const override;
 
   Register getFrameRegister(const MachineFunction &MF) const override;
+
+  const TargetRegisterClass *
+  getCrossCopyRegClass(const TargetRegisterClass *RC) const override {
+    if (RC == &M68k::CCRCRegClass)
+      return &M68k::DR32RegClass;
+    return RC;
+  }
+
   unsigned getStackRegister() const { return StackPtr; }
   unsigned getBaseRegister() const { return BasePtr; }
   unsigned getGlobalBaseRegister() const { return GlobalBasePtr; }
@@ -106,4 +114,4 @@ public:
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_M68K_M68KREGISTERINFO_H

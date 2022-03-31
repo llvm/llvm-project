@@ -44,23 +44,9 @@ CHECK-NEXT:              DW_AT_producer	("clang version 7.0.0 (trunk {{.*}})")
 CHECK-NEXT:              DW_AT_language	(DW_LANG_C99)
 CHECK-NEXT:              DW_AT_name	("hi_foo.c")
 
-CHECK:   DW_TAG_subprogram
-CHECK-NEXT:                DW_AT_low_pc
-CHECK-NEXT:                DW_AT_high_pc
-CHECK-NEXT:                DW_AT_frame_base
-CHECK-NEXT:                DW_AT_name	("foo")
-CHECK-NEXT:                DW_AT_decl_file	("{{.*}}hi_foo.c")
-CHECK-NEXT:                DW_AT_decl_line	(3)
-
-CHECK:     DW_TAG_formal_parameter
-CHECK-NEXT:                  DW_AT_location (DW_OP_WASM_location 0x0 0x0, DW_OP_stack_value)
-CHECK-NEXT:                  DW_AT_name	("p")
-CHECK-NEXT:                  DW_AT_decl_file	("{{.*}}hi_foo.c")
-CHECK-NEXT:                  DW_AT_decl_line	(3)
-
 CHECK:   DW_TAG_variable
 CHECK-NEXT:                DW_AT_name	("y")
-CHECK-NEXT:                DW_AT_type	(0x000000d4 "int[2]")
+CHECK-NEXT:                DW_AT_type	(0x000000ac "int[2]")
 CHECK-NEXT:                DW_AT_external	(true)
 CHECK-NEXT:                DW_AT_decl_file	("{{.*}}hi_foo.c")
 CHECK-NEXT:                DW_AT_decl_line	(1)
@@ -82,9 +68,23 @@ CHECK-NEXT:                DW_AT_encoding	(DW_ATE_unsigned)
 
 CHECK:   DW_TAG_variable
 CHECK-NEXT:                DW_AT_name	("z")
-CHECK-NEXT:                DW_AT_type	(0x000000d4 "int[2]")
+CHECK-NEXT:                DW_AT_type	(0x000000ac "int[2]")
 CHECK-NEXT:                DW_AT_external	(true)
 CHECK-NEXT:                DW_AT_decl_file	("{{.*}}hi_foo.c")
 CHECK-NEXT:                DW_AT_decl_line	(8)
 CHECK-NEXT:                DW_AT_location	(DW_OP_addr 0xffffffff)
+
+CHECK:   DW_TAG_subprogram
+CHECK-NEXT:                DW_AT_low_pc
+CHECK-NEXT:                DW_AT_high_pc
+CHECK-NEXT:                DW_AT_frame_base
+CHECK-NEXT:                DW_AT_name	("foo")
+CHECK-NEXT:                DW_AT_decl_file	("{{.*}}hi_foo.c")
+CHECK-NEXT:                DW_AT_decl_line	(3)
+
+CHECK:     DW_TAG_formal_parameter
+CHECK-NEXT:                  DW_AT_location (DW_OP_WASM_location 0x0 0x0, DW_OP_stack_value)
+CHECK-NEXT:                  DW_AT_name	("p")
+CHECK-NEXT:                  DW_AT_decl_file	("{{.*}}hi_foo.c")
+CHECK-NEXT:                  DW_AT_decl_line	(3)
 

@@ -35,22 +35,27 @@ namespace format {
   TYPE(BinaryOperator)                                                         \
   TYPE(BitFieldColon)                                                          \
   TYPE(BlockComment)                                                           \
+  TYPE(BracedListLBrace)                                                       \
   TYPE(CastRParen)                                                             \
+  TYPE(ClassLBrace)                                                            \
+  TYPE(CompoundRequirementLBrace)                                              \
   TYPE(ConditionalExpr)                                                        \
   TYPE(ConflictAlternative)                                                    \
   TYPE(ConflictEnd)                                                            \
   TYPE(ConflictStart)                                                          \
-  TYPE(ConstraintJunctions)                                                    \
+  TYPE(CppCastLParen)                                                          \
   TYPE(CtorInitializerColon)                                                   \
   TYPE(CtorInitializerComma)                                                   \
   TYPE(DesignatedInitializerLSquare)                                           \
   TYPE(DesignatedInitializerPeriod)                                            \
   TYPE(DictLiteral)                                                            \
+  TYPE(EnumLBrace)                                                             \
   TYPE(FatArrow)                                                               \
   TYPE(ForEachMacro)                                                           \
   TYPE(FunctionAnnotationRParen)                                               \
   TYPE(FunctionDeclarationName)                                                \
   TYPE(FunctionLBrace)                                                         \
+  TYPE(FunctionLikeOrFreestandingMacro)                                        \
   TYPE(FunctionTypeLParen)                                                     \
   TYPE(IfMacro)                                                                \
   TYPE(ImplicitStringLiteral)                                                  \
@@ -95,11 +100,18 @@ namespace format {
   TYPE(PointerOrReference)                                                     \
   TYPE(PureVirtualSpecifier)                                                   \
   TYPE(RangeBasedForLoopColon)                                                 \
+  TYPE(RecordLBrace)                                                           \
   TYPE(RegexLiteral)                                                           \
+  TYPE(RequiresClause)                                                         \
+  TYPE(RequiresClauseInARequiresExpression)                                    \
+  TYPE(RequiresExpression)                                                     \
+  TYPE(RequiresExpressionLBrace)                                               \
+  TYPE(RequiresExpressionLParen)                                               \
   TYPE(SelectorName)                                                           \
   TYPE(StartOfName)                                                            \
   TYPE(StatementAttributeLikeMacro)                                            \
   TYPE(StatementMacro)                                                         \
+  TYPE(StructLBrace)                                                           \
   TYPE(StructuredBindingLSquare)                                               \
   TYPE(TemplateCloser)                                                         \
   TYPE(TemplateOpener)                                                         \
@@ -111,6 +123,7 @@ namespace format {
   TYPE(TypeDeclarationParen)                                                   \
   TYPE(TypenameMacro)                                                          \
   TYPE(UnaryOperator)                                                          \
+  TYPE(UnionLBrace)                                                            \
   TYPE(UntouchableMacroFunc)                                                   \
   TYPE(CSharpStringLiteral)                                                    \
   TYPE(CSharpNamedArgumentColon)                                               \
@@ -215,8 +228,9 @@ struct FormatToken {
         CanBreakBefore(false), ClosesTemplateDeclaration(false),
         StartsBinaryExpression(false), EndsBinaryExpression(false),
         PartOfMultiVariableDeclStmt(false), ContinuesLineCommentSection(false),
-        Finalized(false), BlockKind(BK_Unknown), Decision(FD_Unformatted),
-        PackingKind(PPK_Inconclusive), Type(TT_Unknown) {}
+        Finalized(false), ClosesRequiresClause(false), BlockKind(BK_Unknown),
+        Decision(FD_Unformatted), PackingKind(PPK_Inconclusive),
+        TypeIsFinalized(false), Type(TT_Unknown) {}
 
   /// The \c Token.
   Token Tok;
@@ -282,6 +296,9 @@ struct FormatToken {
   /// changes.
   unsigned Finalized : 1;
 
+  /// \c true if this is the last token within requires clause.
+  unsigned ClosesRequiresClause : 1;
+
 private:
   /// Contains the kind of block if this token is a brace.
   unsigned BlockKind : 2;
@@ -322,13 +339,31 @@ public:
   }
 
 private:
+  unsigned TypeIsFinalized : 1;
   TokenType Type;
 
 public:
   /// Returns the token's type, e.g. whether "<" is a template opener or
   /// binary operator.
   TokenType getType() const { return Type; }
-  void setType(TokenType T) { Type = T; }
+  void setType(TokenType T) {
+    assert((!TypeIsFinalized || T == Type) &&
+           "Please use overwriteFixedType to change a fixed type.");
+    Type = T;
+  }
+  /// Sets the type and also the finalized flag. This prevents the type to be
+  /// reset in TokenAnnotator::resetTokenMetadata(). If the type needs to be set
+  /// to another one please use overwriteFixedType, or even better remove the
+  /// need to reassign the type.
+  void setFinalizedType(TokenType T) {
+    Type = T;
+    TypeIsFinalized = true;
+  }
+  void overwriteFixedType(TokenType T) {
+    TypeIsFinalized = false;
+    setType(T);
+  }
+  bool isTypeFinalized() const { return TypeIsFinalized; }
 
   /// The number of newlines immediately before the \c Token.
   ///
@@ -442,6 +477,15 @@ public:
   /// This starts an array initializer.
   bool IsArrayInitializer = false;
 
+  /// Is optional and can be removed.
+  bool Optional = false;
+
+  /// Number of optional braces to be inserted after this token:
+  ///   -1: a single left brace
+  ///    0: no braces
+  ///   >0: number of right braces
+  int8_t BraceCount = 0;
+
   /// If this token starts a block, this contains all the unwrapped lines
   /// in it.
   SmallVector<AnnotatedLine *, 1> Children;
@@ -521,7 +565,9 @@ public:
   }
 
   /// Determine whether the token is a simple-type-specifier.
-  bool isSimpleTypeSpecifier() const;
+  LLVM_NODISCARD bool isSimpleTypeSpecifier() const;
+
+  LLVM_NODISCARD bool isTypeOrIdentifier() const;
 
   bool isObjCAccessSpecifier() const {
     return is(tok::at) && Next &&
@@ -632,13 +678,19 @@ public:
     return WhitespaceRange.getEnd();
   }
 
+  /// Returns \c true if the range of whitespace immediately preceding the \c
+  /// Token is not empty.
+  bool hasWhitespaceBefore() const {
+    return WhitespaceRange.getBegin() != WhitespaceRange.getEnd();
+  }
+
   prec::Level getPrecedence() const {
     return getBinOpPrecedence(Tok.getKind(), /*GreaterThanIsOperator=*/true,
                               /*CPlusPlus11=*/true);
   }
 
   /// Returns the previous token ignoring comments.
-  FormatToken *getPreviousNonComment() const {
+  LLVM_NODISCARD FormatToken *getPreviousNonComment() const {
     FormatToken *Tok = Previous;
     while (Tok && Tok->is(tok::comment))
       Tok = Tok->Previous;
@@ -646,7 +698,7 @@ public:
   }
 
   /// Returns the next token ignoring comments.
-  const FormatToken *getNextNonComment() const {
+  LLVM_NODISCARD const FormatToken *getNextNonComment() const {
     const FormatToken *Tok = Next;
     while (Tok && Tok->is(tok::comment))
       Tok = Tok->Next;
@@ -655,19 +707,7 @@ public:
 
   /// Returns \c true if this tokens starts a block-type list, i.e. a
   /// list that should be indented with a block indent.
-  bool opensBlockOrBlockTypeList(const FormatStyle &Style) const {
-    // C# Does not indent object initialisers as continuations.
-    if (is(tok::l_brace) && getBlockKind() == BK_BracedInit && Style.isCSharp())
-      return true;
-    if (is(TT_TemplateString) && opensScope())
-      return true;
-    return is(TT_ArrayInitializerLSquare) || is(TT_ProtoExtensionLSquare) ||
-           (is(tok::l_brace) &&
-            (getBlockKind() == BK_Block || is(TT_DictLiteral) ||
-             (!Style.Cpp11BracedListStyle && NestingLevel == 0))) ||
-           (is(tok::less) && (Style.Language == FormatStyle::LK_Proto ||
-                              Style.Language == FormatStyle::LK_TextProto));
-  }
+  LLVM_NODISCARD bool opensBlockOrBlockTypeList(const FormatStyle &Style) const;
 
   /// Returns whether the token is the left square bracket of a C++
   /// structured binding declaration.
@@ -900,6 +940,10 @@ struct AdditionalKeywords {
     kw_slots = &IdentTable.get("slots");
     kw_qslots = &IdentTable.get("Q_SLOTS");
 
+    // For internal clang-format use.
+    kw_internal_ident_after_define =
+        &IdentTable.get("__CLANG_FORMAT_INTERNAL_IDENT_AFTER_DEFINE__");
+
     // C# keywords
     kw_dollar = &IdentTable.get("dollar");
     kw_base = &IdentTable.get("base");
@@ -910,6 +954,7 @@ struct AdditionalKeywords {
     kw_event = &IdentTable.get("event");
     kw_fixed = &IdentTable.get("fixed");
     kw_foreach = &IdentTable.get("foreach");
+    kw_init = &IdentTable.get("init");
     kw_implicit = &IdentTable.get("implicit");
     kw_internal = &IdentTable.get("internal");
     kw_lock = &IdentTable.get("lock");
@@ -942,11 +987,11 @@ struct AdditionalKeywords {
 
     CSharpExtraKeywords = std::unordered_set<IdentifierInfo *>(
         {kw_base, kw_byte, kw_checked, kw_decimal, kw_delegate, kw_event,
-         kw_fixed, kw_foreach, kw_implicit, kw_in, kw_interface, kw_internal,
-         kw_is, kw_lock, kw_null, kw_object, kw_out, kw_override, kw_params,
-         kw_readonly, kw_ref, kw_string, kw_stackalloc, kw_sbyte, kw_sealed,
-         kw_uint, kw_ulong, kw_unchecked, kw_unsafe, kw_ushort, kw_when,
-         kw_where,
+         kw_fixed, kw_foreach, kw_implicit, kw_in, kw_init, kw_interface,
+         kw_internal, kw_is, kw_lock, kw_null, kw_object, kw_out, kw_override,
+         kw_params, kw_readonly, kw_ref, kw_string, kw_stackalloc, kw_sbyte,
+         kw_sealed, kw_uint, kw_ulong, kw_unchecked, kw_unsafe, kw_ushort,
+         kw_when, kw_where,
          // Keywords from the JavaScript section.
          kw_as, kw_async, kw_await, kw_declare, kw_finally, kw_from,
          kw_function, kw_get, kw_import, kw_is, kw_let, kw_module, kw_readonly,
@@ -1020,6 +1065,9 @@ struct AdditionalKeywords {
   IdentifierInfo *kw_slots;
   IdentifierInfo *kw_qslots;
 
+  // For internal use by clang-format.
+  IdentifierInfo *kw_internal_ident_after_define;
+
   // C# keywords
   IdentifierInfo *kw_dollar;
   IdentifierInfo *kw_base;
@@ -1031,6 +1079,7 @@ struct AdditionalKeywords {
   IdentifierInfo *kw_fixed;
   IdentifierInfo *kw_foreach;
   IdentifierInfo *kw_implicit;
+  IdentifierInfo *kw_init;
   IdentifierInfo *kw_internal;
 
   IdentifierInfo *kw_lock;

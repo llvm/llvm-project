@@ -7,23 +7,25 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 @a = common global [2048 x i32] zeroinitializer, align 16
 
 ;CHECK-LABEL: @example12(
-;CHECK: %vec.ind1 = phi <4 x i32>
-;CHECK: store <4 x i32>
-;CHECK: ret void
-define void @example12() nounwind uwtable ssp {
-  br label %1
+; CHECK-LABEL: vector.body:
+; CHECK: [[VEC_IND:%.+]] = phi <4 x i32>
+; CHECK: store <4 x i32> [[VEC_IND]]
+; CHECK: ret void
+define void @example12() {
+entry:
+  br label %loop
 
-; <label>:1                                       ; preds = %1, %0
-  %indvars.iv = phi i64 [ 0, %0 ], [ %indvars.iv.next, %1 ]
-  %2 = getelementptr inbounds [2048 x i32], [2048 x i32]* @a, i64 0, i64 %indvars.iv
-  %3 = trunc i64 %indvars.iv to i32
-  store i32 %3, i32* %2, align 4
+loop:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %loop ]
+  %gep = getelementptr inbounds [2048 x i32], [2048 x i32]* @a, i64 0, i64 %indvars.iv
+  %iv.trunc = trunc i64 %indvars.iv to i32
+  store i32 %iv.trunc, i32* %gep, align 4
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, 1024
-  br i1 %exitcond, label %4, label %1
+  br i1 %exitcond, label %exit, label %loop
 
-; <label>:4                                       ; preds = %1
+exit:
   ret void
 }
 

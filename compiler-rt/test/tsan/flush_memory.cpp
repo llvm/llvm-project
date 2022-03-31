@@ -1,5 +1,5 @@
 // RUN: %clangxx_tsan -O1 %s -o %t
-// RUN: %env_tsan_opts=flush_memory_ms=1:flush_symbolizer_ms=1:memory_limit_mb=1 %deflake %run %t | FileCheck %s
+// RUN: %env_tsan_opts=flush_memory_ms=1:flush_symbolizer_ms=1:memory_limit_mb=1 not %run %t 2>&1 | FileCheck %s
 #include "test.h"
 
 long X, Y;
@@ -29,8 +29,10 @@ int main() {
   sleep(2);
   __tsan_flush_memory();
   fprintf(stderr, "DONE\n");
-  return 0;
+  // The race may not be detected since we are doing aggressive flushes
+  // (if the state flush happens between racing accesses, tsan won't
+  // detect the race). So return 1 to make the test deterministic.
+  return 1;
 }
 
-// CHECK: WARNING: ThreadSanitizer: data race
 // CHECK: DONE

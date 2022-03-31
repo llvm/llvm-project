@@ -483,18 +483,20 @@ inline unsigned getNumElementsFromSVEPredPattern(unsigned Pattern) {
 }
 
 /// Return specific VL predicate pattern based on the number of elements.
-inline unsigned getSVEPredPatternFromNumElements(unsigned MinNumElts) {
+inline Optional<unsigned>
+getSVEPredPatternFromNumElements(unsigned MinNumElts) {
   switch (MinNumElts) {
   default:
-    llvm_unreachable("unexpected element count for SVE predicate");
+    return None;
   case 1:
-    return AArch64SVEPredPattern::vl1;
   case 2:
-    return AArch64SVEPredPattern::vl2;
+  case 3:
   case 4:
-    return AArch64SVEPredPattern::vl4;
+  case 5:
+  case 6:
+  case 7:
   case 8:
-    return AArch64SVEPredPattern::vl8;
+    return MinNumElts;
   case 16:
     return AArch64SVEPredPattern::vl16;
   case 32:
@@ -757,7 +759,6 @@ namespace AArch64 {
 // <n x (M*P) x t> vector (such as index 1) are undefined.
 static constexpr unsigned SVEBitsPerBlock = 128;
 static constexpr unsigned SVEMaxBitsPerVector = 2048;
-const unsigned NeonBitsPerVector = 128;
 } // end namespace AArch64
 } // end namespace llvm
 

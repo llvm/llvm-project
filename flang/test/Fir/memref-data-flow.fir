@@ -9,10 +9,10 @@ func @load_store_chain_removal(%arg0: !fir.ref<!fir.array<60xi32>>, %arg1: !fir.
   %c1 = arith.constant 1 : index
   %0 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFf1dcEi"}
   %1 = fir.alloca !fir.array<60xi32> {bindc_name = "t1", uniq_name = "_QFf1dcEt1"}
-  br ^bb1(%c1, %c60 : index, index)
+  cf.br ^bb1(%c1, %c60 : index, index)
 ^bb1(%2: index, %3: index):  // 2 preds: ^bb0, ^bb2
   %4 = arith.cmpi sgt, %3, %c0 : index
-  cond_br %4, ^bb2, ^bb3
+  cf.cond_br %4, ^bb2, ^bb3
 ^bb2:  // pred: ^bb1
   %5 = fir.convert %2 : (index) -> i32
   fir.store %5 to %0 : !fir.ref<i32>
@@ -26,14 +26,14 @@ func @load_store_chain_removal(%arg0: !fir.ref<!fir.array<60xi32>>, %arg1: !fir.
   fir.store %11 to %12 : !fir.ref<i32>
   %13 = arith.addi %2, %c1 : index
   %14 = arith.subi %3, %c1 : index
-  br ^bb1(%13, %14 : index, index)
+  cf.br ^bb1(%13, %14 : index, index)
 ^bb3:  // pred: ^bb1
   %15 = fir.convert %2 : (index) -> i32
   fir.store %15 to %0 : !fir.ref<i32>
-  br ^bb4(%c1, %c60 : index, index)
+  cf.br ^bb4(%c1, %c60 : index, index)
 ^bb4(%16: index, %17: index):  // 2 preds: ^bb3, ^bb5
   %18 = arith.cmpi sgt, %17, %c0 : index
-  cond_br %18, ^bb5, ^bb6
+  cf.cond_br %18, ^bb5, ^bb6
 ^bb5:  // pred: ^bb4
   %19 = fir.convert %16 : (index) -> i32
   fir.store %19 to %0 : !fir.ref<i32>
@@ -49,7 +49,7 @@ func @load_store_chain_removal(%arg0: !fir.ref<!fir.array<60xi32>>, %arg1: !fir.
   fir.store %27 to %28 : !fir.ref<i32>
   %29 = arith.addi %16, %c1 : index
   %30 = arith.subi %17, %c1 : index
-  br ^bb4(%29, %30 : index, index)
+  cf.br ^bb4(%29, %30 : index, index)
 ^bb6:  // pred: ^bb4
   %31 = fir.convert %16 : (index) -> i32
   fir.store %31 to %0 : !fir.ref<i32>

@@ -183,7 +183,7 @@ define amdgpu_kernel void @dynamic_extract_vector_elt_v4i8(i8 addrspace(1)* %out
 ; VI: s_load_dwordx2 [[VEC8:s\[[0-9]+:[0-9]+\]]], s{{\[[0-9]+:[0-9]+\]}}, 0x0
 
 ; VI: s_lshl_b32 [[SCALED_IDX:s[0-9]+]], [[IDX]], 3
-; VI: s_lshr_b64 s{{\[}}[[EXTRACT_LO:[0-9]+]]:{{[0-9]+\]}}, [[VEC8]], [[SCALED_IDX]]
+; VI: s_lshr_b64 s[[[EXTRACT_LO:[0-9]+]]:{{[0-9]+\]}}, [[VEC8]], [[SCALED_IDX]]
 ; VI: v_mov_b32_e32 [[V_EXTRACT:v[0-9]+]], s[[EXTRACT_LO]]
 ; VI: buffer_store_byte [[V_EXTRACT]]
 define amdgpu_kernel void @dynamic_extract_vector_elt_v8i8(i8 addrspace(1)* %out, <8 x i8> addrspace(4)* %vec.ptr, i32 %idx) #0 {

@@ -40,7 +40,7 @@ while.cond:                                       ; preds = %while.body, %while.
   br i1 undef, label %while.body, label %while.end
 
 while.body:                                       ; preds = %while.cond
-  %0 = call i8 asm sideeffect "\09lock ; \09\09\09cmpxchgl $2,$1 ;\09       sete\09$0 ;\09\091:\09\09\09\09# atomic_cmpset_int", "={ax},=*m,r,{ax},*m,~{memory},~{dirflag},~{fpsr},~{flags}"(i32* %tmp4, i32 undef, i32 undef, i32* %tmp4) nounwind, !srcloc !0
+  %0 = call i8 asm sideeffect "\09lock ; \09\09\09cmpxchgl $2,$1 ;\09       sete\09$0 ;\09\091:\09\09\09\09# atomic_cmpset_int", "={ax},=*m,r,{ax},*m,~{memory},~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) %tmp4, i32 undef, i32 undef, i32* elementtype(i32) %tmp4) nounwind, !srcloc !0
   br i1 undef, label %while.cond, label %return
 
 while.end:                                        ; preds = %while.cond

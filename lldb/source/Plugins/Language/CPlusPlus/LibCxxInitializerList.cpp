@@ -36,18 +36,17 @@ public:
   size_t GetIndexOfChildWithName(ConstString name) override;
 
 private:
-  ValueObject *m_start;
+  ValueObject *m_start = nullptr;
   CompilerType m_element_type;
-  uint32_t m_element_size;
-  size_t m_num_elements;
+  uint32_t m_element_size = 0;
+  size_t m_num_elements = 0;
 };
 } // namespace formatters
 } // namespace lldb_private
 
 lldb_private::formatters::LibcxxInitializerListSyntheticFrontEnd::
     LibcxxInitializerListSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp)
-    : SyntheticChildrenFrontEnd(*valobj_sp), m_start(nullptr), m_element_type(),
-      m_element_size(0), m_num_elements(0) {
+    : SyntheticChildrenFrontEnd(*valobj_sp), m_element_type() {
   if (valobj_sp)
     Update();
 }
@@ -61,9 +60,9 @@ lldb_private::formatters::LibcxxInitializerListSyntheticFrontEnd::
 
 size_t lldb_private::formatters::LibcxxInitializerListSyntheticFrontEnd::
     CalculateNumChildren() {
-  static ConstString g___size_("__size_");
+  static ConstString g_size_("__size_");
   m_num_elements = 0;
-  ValueObjectSP size_sp(m_backend.GetChildMemberWithName(g___size_, true));
+  ValueObjectSP size_sp(m_backend.GetChildMemberWithName(g_size_, true));
   if (size_sp)
     m_num_elements = size_sp->GetValueAsUnsigned(0);
   return m_num_elements;
@@ -85,7 +84,7 @@ lldb::ValueObjectSP lldb_private::formatters::
 
 bool lldb_private::formatters::LibcxxInitializerListSyntheticFrontEnd::
     Update() {
-  static ConstString g___begin_("__begin_");
+  static ConstString g_begin_("__begin_");
 
   m_start = nullptr;
   m_num_elements = 0;
@@ -96,7 +95,7 @@ bool lldb_private::formatters::LibcxxInitializerListSyntheticFrontEnd::
   if (llvm::Optional<uint64_t> size = m_element_type.GetByteSize(nullptr)) {
     m_element_size = *size;
     // Store raw pointers or end up with a circular dependency.
-    m_start = m_backend.GetChildMemberWithName(g___begin_, true).get();
+    m_start = m_backend.GetChildMemberWithName(g_begin_, true).get();
   }
 
   return false;

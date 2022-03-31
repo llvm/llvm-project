@@ -132,10 +132,7 @@ struct VariadicFunction {
   // We also allow calls with an already created array, in case the caller
   // already had it.
   ResultT operator()(ArrayRef<ArgT> Args) const {
-    SmallVector<const ArgT*, 8> InnerArgs;
-    for (const ArgT &Arg : Args)
-      InnerArgs.push_back(&Arg);
-    return Func(InnerArgs);
+    return Func(llvm::to_vector<8>(llvm::make_pointer_range(Args)));
   }
 
 private:
@@ -600,17 +597,15 @@ public:
   /// Convert \c this into a \c Matcher<T> by applying dyn_cast<> to the
   /// argument.
   /// \c To must be a base class of \c T.
-  template <typename To> Matcher<To> dynCastTo() const LLVM_LVALUE_FUNCTION {
+  template <typename To> Matcher<To> dynCastTo() const & {
     static_assert(std::is_base_of<To, T>::value, "Invalid dynCast call.");
     return Matcher<To>(Implementation);
   }
 
-#if LLVM_HAS_RVALUE_REFERENCE_THIS
   template <typename To> Matcher<To> dynCastTo() && {
     static_assert(std::is_base_of<To, T>::value, "Invalid dynCast call.");
     return Matcher<To>(std::move(Implementation));
   }
-#endif
 
   /// Forwards the call to the underlying MatcherInterface<T> pointer.
   bool matches(const T &Node,
@@ -628,13 +623,9 @@ public:
   ///
   /// The returned matcher keeps the same restrictions as \c this and remembers
   /// that it is meant to support nodes of type \c T.
-  operator DynTypedMatcher() const LLVM_LVALUE_FUNCTION {
-    return Implementation;
-  }
+  operator DynTypedMatcher() const & { return Implementation; }
 
-#if LLVM_HAS_RVALUE_REFERENCE_THIS
   operator DynTypedMatcher() && { return std::move(Implementation); }
-#endif
 
   /// Allows the conversion of a \c Matcher<Type> to a \c
   /// Matcher<QualType>.
@@ -1090,6 +1081,12 @@ private:
     if (const auto *S = dyn_cast<ElaboratedType>(&Node)) {
       return matchesSpecialized(S->desugar(), Finder, Builder);
     }
+    // Similarly types found via using declarations.
+    // These are *usually* meaningless sugar, and this matches the historical
+    // behavior prior to the introduction of UsingType.
+    if (const auto *S = dyn_cast<UsingType>(&Node)) {
+      return matchesSpecialized(S->desugar(), Finder, Builder);
+    }
     return false;
   }
 
@@ -1355,35 +1352,31 @@ public:
   VariadicOperatorMatcher(DynTypedMatcher::VariadicOperator Op, Ps &&... Params)
       : Op(Op), Params(std::forward<Ps>(Params)...) {}
 
-  template <typename T> operator Matcher<T>() const LLVM_LVALUE_FUNCTION {
+  template <typename T> operator Matcher<T>() const & {
     return DynTypedMatcher::constructVariadic(
                Op, ASTNodeKind::getFromNodeKind<T>(),
                getMatchers<T>(std::index_sequence_for<Ps...>()))
         .template unconditionalConvertTo<T>();
   }
 
-#if LLVM_HAS_RVALUE_REFERENCE_THIS
   template <typename T> operator Matcher<T>() && {
     return DynTypedMatcher::constructVariadic(
                Op, ASTNodeKind::getFromNodeKind<T>(),
                getMatchers<T>(std::index_sequence_for<Ps...>()))
         .template unconditionalConvertTo<T>();
   }
-#endif
+
 private:
   // Helper method to unpack the tuple into a vector.
   template <typename T, std::size_t... Is>
-  std::vector<DynTypedMatcher>
-  getMatchers(std::index_sequence<Is...>) const LLVM_LVALUE_FUNCTION {
+  std::vector<DynTypedMatcher> getMatchers(std::index_sequence<Is...>) const & {
     return {Matcher<T>(std::get<Is>(Params))...};
   }
 
-#if LLVM_HAS_RVALUE_REFERENCE_THIS
   template <typename T, std::size_t... Is>
   std::vector<DynTypedMatcher> getMatchers(std::index_sequence<Is...>) && {
     return {Matcher<T>(std::get<Is>(std::move(Params)))...};
   }
-#endif
 
   const DynTypedMatcher::VariadicOperator Op;
   std::tuple<Ps...> Params;
@@ -1473,15 +1466,13 @@ public:
 
   using ReturnTypes = ToTypes;
 
-  template <typename To> operator Matcher<To>() const LLVM_LVALUE_FUNCTION {
+  template <typename To> operator Matcher<To>() const & {
     return Matcher<To>(new ArgumentAdapterT<To, T>(InnerMatcher));
   }
 
-#if LLVM_HAS_RVALUE_REFERENCE_THIS
   template <typename To> operator Matcher<To>() && {
     return Matcher<To>(new ArgumentAdapterT<To, T>(std::move(InnerMatcher)));
   }
-#endif
 
 private:
   Matcher<T> InnerMatcher;
@@ -1552,21 +1543,19 @@ public:
   TraversalWrapper(TraversalKind TK, const MatcherType &InnerMatcher)
       : TK(TK), InnerMatcher(InnerMatcher) {}
 
-  template <typename T> operator Matcher<T>() const LLVM_LVALUE_FUNCTION {
+  template <typename T> operator Matcher<T>() const & {
     return internal::DynTypedMatcher::constructRestrictedWrapper(
                new internal::TraversalMatcher<T>(TK, InnerMatcher),
                ASTNodeKind::getFromNodeKind<T>())
         .template unconditionalConvertTo<T>();
   }
 
-#if LLVM_HAS_RVALUE_REFERENCE_THIS
   template <typename T> operator Matcher<T>() && {
     return internal::DynTypedMatcher::constructRestrictedWrapper(
                new internal::TraversalMatcher<T>(TK, std::move(InnerMatcher)),
                ASTNodeKind::getFromNodeKind<T>())
         .template unconditionalConvertTo<T>();
   }
-#endif
 
 private:
   TraversalKind TK;
@@ -1593,20 +1582,18 @@ public:
 
   using ReturnTypes = typename ExtractFunctionArgMeta<ReturnTypesF>::type;
 
-  template <typename T> operator Matcher<T>() const LLVM_LVALUE_FUNCTION {
+  template <typename T> operator Matcher<T>() const & {
     static_assert(TypeListContainsSuperOf<ReturnTypes, T>::value,
                   "right polymorphic conversion");
     return Matcher<T>(new_from_tuple<MatcherT<T, ParamTypes...>>(Params));
   }
 
-#if LLVM_HAS_RVALUE_REFERENCE_THIS
   template <typename T> operator Matcher<T>() && {
     static_assert(TypeListContainsSuperOf<ReturnTypes, T>::value,
                   "right polymorphic conversion");
     return Matcher<T>(
         new_from_tuple<MatcherT<T, ParamTypes...>>(std::move(Params)));
   }
-#endif
 
 private:
   std::tuple<ParamTypes...> Params;

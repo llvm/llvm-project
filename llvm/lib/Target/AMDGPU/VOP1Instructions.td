@@ -112,7 +112,8 @@ class getVOP1Pat64 <SDPatternOperator node, VOPProfile P> : LetDummies {
 multiclass VOP1Inst <string opName, VOPProfile P,
                      SDPatternOperator node = null_frag> {
   // We only want to set this on the basic, non-SDWA or DPP forms.
-  defvar should_mov_imm = !eq(opName, "v_mov_b32");
+  defvar should_mov_imm = !or(!eq(opName, "v_mov_b32"),
+                              !eq(opName, "v_mov_b64"));
 
   let isMoveImm = should_mov_imm in {
     def _e32 : VOP1_Pseudo <opName, P>;
@@ -170,6 +171,9 @@ defm V_NOP : VOP1Inst <"v_nop", VOP_NONE>;
 
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
 defm V_MOV_B32 : VOP1Inst <"v_mov_b32", VOP_I32_I32>;
+
+let SubtargetPredicate = isGFX940Plus in
+defm V_MOV_B64 : VOP1Inst <"v_mov_b64", VOP_I64_I64>;
 } // End isMoveImm = 1
 
 // FIXME: Specify SchedRW for READFIRSTLANE_B32
@@ -282,7 +286,7 @@ defm V_COS_F32 : VOP1Inst <"v_cos_f32", VOP_F32_F32, AMDGPUcos>;
 } // End TRANS = 1, SchedRW = [WriteTrans32]
 
 defm V_NOT_B32 : VOP1Inst <"v_not_b32", VOP_I32_I32>;
-defm V_BFREV_B32 : VOP1Inst <"v_bfrev_b32", VOP_I32_I32, bitreverse>;
+defm V_BFREV_B32 : VOP1Inst <"v_bfrev_b32", VOP_I32_I32, DivergentUnaryFrag<bitreverse>>;
 defm V_FFBH_U32 : VOP1Inst <"v_ffbh_u32", VOP_I32_I32, AMDGPUffbh_u32>;
 defm V_FFBL_B32 : VOP1Inst <"v_ffbl_b32", VOP_I32_I32, AMDGPUffbl_b32>;
 defm V_FFBH_I32 : VOP1Inst <"v_ffbh_i32", VOP_I32_I32, AMDGPUffbh_i32>;
@@ -948,6 +952,9 @@ multiclass VOP1_Real_gfx9 <bits<10> op> {
 }
 
 defm V_SCREEN_PARTITION_4SE_B32 : VOP1_Real_gfx9 <0x37>;
+
+let AssemblerPredicate = isGFX940Plus, DecoderNamespace = "GFX9" in
+defm V_MOV_B64 : VOP1_Real_gfx9 <0x38>;
 
 //===----------------------------------------------------------------------===//
 // GFX10

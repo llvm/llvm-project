@@ -739,8 +739,7 @@ define <2 x half> @test_s8tofp2(<2 x i8> %arg0) {
 define <2 x half> @test_u1tofp2(<2 x i1> %arg0) {
 ; CHECK-LABEL: test_u1tofp2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; CHECK-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
+; CHECK-NEXT:    vpmovqw %xmm0, %xmm0
 ; CHECK-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    vcvtuw2ph %xmm0, %xmm0
 ; CHECK-NEXT:    retq

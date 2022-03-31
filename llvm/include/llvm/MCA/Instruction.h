@@ -406,7 +406,7 @@ public:
   bool operator<(const CycleSegment &Other) const {
     return Begin < Other.Begin;
   }
-  CycleSegment &operator--(void) {
+  CycleSegment &operator--() {
     if (Begin)
       Begin--;
     if (End)
@@ -472,13 +472,6 @@ struct InstrDesc {
   // subtarget when computing the reciprocal throughput.
   unsigned SchedClassID;
 
-  unsigned MayLoad : 1;
-  unsigned MayStore : 1;
-  unsigned HasSideEffects : 1;
-  unsigned BeginGroup : 1;
-  unsigned EndGroup : 1;
-  unsigned RetireOOO : 1;
-
   // True if all buffered resources are in-order, and there is at least one
   // buffer which is a dispatch hazard (BufferSize = 0).
   unsigned MustIssueImmediately : 1;
@@ -517,9 +510,22 @@ class InstructionBase {
   // Instruction opcode which can be used by mca::CustomBehaviour
   unsigned Opcode;
 
+  // Flags used by the LSUnit.
+  bool IsALoadBarrier : 1;
+  bool IsAStoreBarrier : 1;
+  // Flags copied from the InstrDesc and potentially modified by
+  // CustomBehaviour or (more likely) InstrPostProcess.
+  bool MayLoad : 1;
+  bool MayStore : 1;
+  bool HasSideEffects : 1;
+  bool BeginGroup : 1;
+  bool EndGroup : 1;
+  bool RetireOOO : 1;
+
 public:
   InstructionBase(const InstrDesc &D, const unsigned Opcode)
-      : Desc(D), IsOptimizableMove(false), Operands(0), Opcode(Opcode) {}
+      : Desc(D), IsOptimizableMove(false), Operands(0), Opcode(Opcode),
+        IsALoadBarrier(false), IsAStoreBarrier(false) {}
 
   SmallVectorImpl<WriteState> &getDefs() { return Defs; }
   ArrayRef<WriteState> getDefs() const { return Defs; }
@@ -530,6 +536,10 @@ public:
   unsigned getLatency() const { return Desc.MaxLatency; }
   unsigned getNumMicroOps() const { return Desc.NumMicroOps; }
   unsigned getOpcode() const { return Opcode; }
+  bool isALoadBarrier() const { return IsALoadBarrier; }
+  bool isAStoreBarrier() const { return IsAStoreBarrier; }
+  void setLoadBarrier(bool IsBarrier) { IsALoadBarrier = IsBarrier; }
+  void setStoreBarrier(bool IsBarrier) { IsAStoreBarrier = IsBarrier; }
 
   /// Return the MCAOperand which corresponds to index Idx within the original
   /// MCInst.
@@ -559,7 +569,22 @@ public:
   // Returns true if this instruction is a candidate for move elimination.
   bool isOptimizableMove() const { return IsOptimizableMove; }
   void setOptimizableMove() { IsOptimizableMove = true; }
-  bool isMemOp() const { return Desc.MayLoad || Desc.MayStore; }
+  bool isMemOp() const { return MayLoad || MayStore; }
+
+  // Getters and setters for general instruction flags.
+  void setMayLoad(bool newVal) { MayLoad = newVal; }
+  void setMayStore(bool newVal) { MayStore = newVal; }
+  void setHasSideEffects(bool newVal) { HasSideEffects = newVal; }
+  void setBeginGroup(bool newVal) { BeginGroup = newVal; }
+  void setEndGroup(bool newVal) { EndGroup = newVal; }
+  void setRetireOOO(bool newVal) { RetireOOO = newVal; }
+
+  bool getMayLoad() const { return MayLoad; }
+  bool getMayStore() const { return MayStore; }
+  bool getHasSideEffects() const { return HasSideEffects; }
+  bool getBeginGroup() const { return BeginGroup; }
+  bool getEndGroup() const { return EndGroup; }
+  bool getRetireOOO() const { return RetireOOO; }
 };
 
 /// An instruction propagated through the simulated instruction pipeline.

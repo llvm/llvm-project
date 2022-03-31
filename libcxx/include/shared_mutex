@@ -122,6 +122,7 @@ template <class Mutex>
 
 */
 
+#include <__assert> // all public C++ headers provide the assertion handler
 #include <__availability>
 #include <__config>
 #include <version>
@@ -135,7 +136,7 @@ _LIBCPP_PUSH_MACROS
 #include <__mutex_base>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 #ifdef _LIBCPP_HAS_NO_THREADS

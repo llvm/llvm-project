@@ -19,16 +19,8 @@ define void @load_clamped_index(i32* %A, i32* %B, i32 %N) {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; CHECK:       vector.scevcheck:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[TMP0]] to i2
-; CHECK-NEXT:    [[TMP2:%.*]] = add i2 0, [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = sub i2 0, [[TMP1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i2 [[TMP3]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i2 [[TMP2]], 0
-; CHECK-NEXT:    [[TMP6:%.*]] = select i1 false, i1 [[TMP4]], i1 [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ugt i32 [[TMP0]], 3
-; CHECK-NEXT:    [[TMP8:%.*]] = or i1 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = or i1 false, [[TMP8]]
-; CHECK-NEXT:    br i1 [[TMP9]], label [[SCALAR_PH]], label [[VECTOR_MEMCHECK:%.*]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[SCALAR_PH]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[TMP10:%.*]] = add i32 [[N]], -1
 ; CHECK-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP10]] to i64
@@ -110,16 +102,8 @@ define void @store_clamped_index(i32* %A, i32* %B, i32 %N) {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; CHECK:       vector.scevcheck:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[TMP0]] to i2
-; CHECK-NEXT:    [[TMP2:%.*]] = add i2 0, [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = sub i2 0, [[TMP1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i2 [[TMP3]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i2 [[TMP2]], 0
-; CHECK-NEXT:    [[TMP6:%.*]] = select i1 false, i1 [[TMP4]], i1 [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ugt i32 [[TMP0]], 3
-; CHECK-NEXT:    [[TMP8:%.*]] = or i1 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = or i1 false, [[TMP8]]
-; CHECK-NEXT:    br i1 [[TMP9]], label [[SCALAR_PH]], label [[VECTOR_MEMCHECK:%.*]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[SCALAR_PH]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[TMP10:%.*]] = add i32 [[N]], -1
 ; CHECK-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP10]] to i64
@@ -280,16 +264,8 @@ define void @clamped_index_equal_dependence(i32* %A, i32* %B, i32 %N) {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; CHECK:       vector.scevcheck:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[TMP0]] to i2
-; CHECK-NEXT:    [[TMP2:%.*]] = add i2 0, [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = sub i2 0, [[TMP1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i2 [[TMP3]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i2 [[TMP2]], 0
-; CHECK-NEXT:    [[TMP6:%.*]] = select i1 false, i1 [[TMP4]], i1 [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ugt i32 [[TMP0]], 3
-; CHECK-NEXT:    [[TMP8:%.*]] = or i1 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = or i1 false, [[TMP8]]
-; CHECK-NEXT:    br i1 [[TMP9]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 2
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]

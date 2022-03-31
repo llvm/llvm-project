@@ -4,7 +4,7 @@
 // CHECK-SAME: ([[ARG0:%.+]]: tensor<i32>)
 func @while_test(%arg0 : tensor<i32>) -> (tensor<i32>) {
   // CHECK: [[WHILE:%.+]] = scf.while ([[ARG1:%.+]] = [[ARG0]])
-  %1 = "tosa.while_loop"(%arg0) ( {
+  %1 = "tosa.while_loop"(%arg0) ({
   ^bb0(%arg2: tensor<i32>):
     // CHECK: "tosa.const"
     %2 = "tosa.const"() {value = dense<3> : tensor<i32>} : () -> tensor<i32>
@@ -30,7 +30,7 @@ func @while_test(%arg0 : tensor<i32>) -> (tensor<i32>) {
   return %1 : tensor<i32>
 }
 
-// ----
+// -----
 
 // CHECK-LABEL: func @if_test
 // CHECK-SAME: ([[ARG0:%.+]]: tensor<f32>, [[ARG1:%.+]]: tensor<f32>, [[ARG2:%.+]]: tensor<i1>)

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // views::iota
@@ -42,11 +41,6 @@ constexpr void testType(U u) {
   {
     ASSERT_SAME_TYPE(decltype(std::views::iota(T(10))), std::ranges::iota_view<T>);
     ASSERT_SAME_TYPE(decltype(std::views::iota(T(10), u)), std::ranges::iota_view<T, U>);
-  }
-  // Test that this is semiregular.
-  // Note: we cannot test perfect forwarding because both T and U must be copyable.
-  {
-    static_assert(std::semiregular<std::remove_const_t<decltype(std::views::iota)>>);
   }
 }
 

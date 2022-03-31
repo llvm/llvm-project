@@ -8,6 +8,7 @@
 
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAddr.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugArangeSet.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugPubTable.h"
@@ -51,7 +52,7 @@ Error dumpDebugAddr(DWARFContext &DCtx, DWARFYAML::Data &Y) {
   DWARFDebugAddrTable AddrTable;
   DWARFDataExtractor AddrData(DCtx.getDWARFObj(),
                               DCtx.getDWARFObj().getAddrSection(),
-                              DCtx.isLittleEndian(), /*AddrSize=*/0);
+                              DCtx.isLittleEndian(), /*AddressSize=*/0);
   std::vector<DWARFYAML::AddrTableEntry> AddrTables;
   uint64_t Offset = 0;
   while (AddrData.isValidOffset(Offset)) {
@@ -291,8 +292,8 @@ void dumpDebugInfo(DWARFContext &DCtx, DWARFYAML::Data &Y) {
                 NewValue.Value = Val.getValue();
               break;
             case dwarf::DW_FORM_string:
-              if (auto Val = FormValue.getValue().getAsCString())
-                NewValue.CStr = Val.getValue();
+              if (auto Val = dwarf::toString(FormValue))
+                NewValue.CStr = *Val;
               break;
             case dwarf::DW_FORM_indirect:
               indirect = true;

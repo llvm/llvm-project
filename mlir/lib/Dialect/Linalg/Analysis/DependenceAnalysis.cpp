@@ -12,8 +12,8 @@
 
 #include "mlir/Dialect/Linalg/Analysis/DependenceAnalysis.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
-#include "mlir/Dialect/Linalg/IR/LinalgOps.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/IR/BuiltinOps.h"
 
 #include "llvm/Support/CommandLine.h"
@@ -103,7 +103,7 @@ LinalgDependenceGraph::buildDependenceGraph(Aliases &aliases, FuncOp f) {
 LinalgDependenceGraph::LinalgDependenceGraph(Aliases &aliases,
                                              ArrayRef<LinalgOp> ops)
     : aliases(aliases), linalgOps(ops.begin(), ops.end()) {
-  for (auto en : llvm::enumerate(linalgOps)) {
+  for (const auto &en : llvm::enumerate(linalgOps)) {
     linalgOpPositions.insert(
         std::make_pair(en.value().getOperation(), en.index()));
   }

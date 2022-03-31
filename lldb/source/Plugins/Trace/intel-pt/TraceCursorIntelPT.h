@@ -24,11 +24,11 @@ public:
 
   virtual bool Next() override;
 
-  llvm::Error GetError() override;
+  const char *GetError() override;
 
   lldb::addr_t GetLoadAddress() override;
 
-  llvm::Optional<uint64_t> GetTimestampCounter() override;
+  llvm::Optional<uint64_t> GetCounter(lldb::TraceCounter counter_type) override;
 
   lldb::TraceInstructionControlFlowType
   GetInstructionControlFlowType() override;

@@ -62,7 +62,7 @@ Tester::Interestingness Tester::isInteresting(StringRef testCase) const {
   testerArgs.push_back(testCase);
 
   for (const std::string &arg : testScriptArgs)
-    testerArgs.push_back(arg);
+    testerArgs.emplace_back(arg);
 
   testerArgs.push_back(testCase);
 

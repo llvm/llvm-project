@@ -22,8 +22,7 @@ return:		; preds = %entry
 ; EABI: add sp, sp, #4
 ; EABI: add sp, sp, #12
 
-; OABI: add sp, sp, #12
-; OABI: add sp, sp, #12
+; OABI: add sp, sp, #24
 }
 
 declare void @llvm.va_start(i8*) nounwind

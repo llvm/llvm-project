@@ -63,7 +63,7 @@ class LLVM_LIBRARY_VISIBILITY Linker : public MachOTool {
   bool NeedsTempPath(const InputInfoList &Inputs) const;
   void AddLinkArgs(Compilation &C, const llvm::opt::ArgList &Args,
                    llvm::opt::ArgStringList &CmdArgs,
-                   const InputInfoList &Inputs, unsigned Version[5],
+                   const InputInfoList &Inputs, VersionTuple Version,
                    bool LinkerIsLLD) const;
 
 public:
@@ -147,6 +147,9 @@ private:
   mutable std::unique_ptr<tools::darwin::Dsymutil> Dsymutil;
   mutable std::unique_ptr<tools::darwin::VerifyDebug> VerifyDebug;
 
+  /// The version of the linker known to be available in the tool chain.
+  mutable Optional<VersionTuple> LinkerVersion;
+
 public:
   MachO(const Driver &D, const llvm::Triple &Triple,
         const llvm::opt::ArgList &Args);
@@ -158,6 +161,10 @@ public:
   /// Get the "MachO" arch name for a particular compiler invocation. For
   /// example, Apple treats different ARM variations as distinct architectures.
   StringRef getMachOArchName(const llvm::opt::ArgList &Args) const;
+
+  /// Get the version of the linker known to be available for a particular
+  /// compiler invocation (via the `-mlinker-version=` arg).
+  VersionTuple getLinkerVersion(const llvm::opt::ArgList &Args) const;
 
   /// Add the linker arguments to link the ARC runtime library.
   virtual void AddLinkARCArgs(const llvm::opt::ArgList &Args,
@@ -260,6 +267,7 @@ public:
   bool SupportsProfiling() const override;
 
   bool UseDwarfDebugFlags() const override;
+  std::string GetGlobalDebugPathRemapping() const override;
 
   llvm::ExceptionHandling
   GetExceptionModel(const llvm::opt::ArgList &Args) const override {
@@ -309,6 +317,9 @@ public:
 
   /// The information about the darwin SDK that was used.
   mutable Optional<DarwinSDKInfo> SDKInfo;
+
+  /// The target variant triple that was specified (if any).
+  mutable Optional<llvm::Triple> TargetVariantTriple;
 
   CudaInstallationDetector CudaInstallation;
   RocmInstallationDetector RocmInstallation;

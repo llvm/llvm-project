@@ -47,6 +47,7 @@
 // requests will receive latest build preamble, which might possibly be stale.
 
 #include "TUScheduler.h"
+#include "CompileCommands.h"
 #include "Compiler.h"
 #include "Diagnostics.h"
 #include "GlobalCompilationDatabase.h"
@@ -97,13 +98,40 @@ namespace clangd {
 using std::chrono::steady_clock;
 
 namespace {
+// Tracks latency (in seconds) of FS operations done during a preamble build.
+// build_type allows to split by expected VFS cache state (cold on first
+// preamble, somewhat warm after that when building first preamble for new file,
+// likely ~everything cached on preamble rebuild.
+constexpr trace::Metric
+    PreambleBuildFilesystemLatency("preamble_fs_latency",
+                                   trace::Metric::Distribution, "build_type");
+// Tracks latency of FS operations done during a preamble build as a ratio of
+// preamble build time. build_type is same as above.
+constexpr trace::Metric PreambleBuildFilesystemLatencyRatio(
+    "preamble_fs_latency_ratio", trace::Metric::Distribution, "build_type");
+
+void reportPreambleBuild(const PreambleBuildStats &Stats,
+                         bool IsFirstPreamble) {
+  static llvm::once_flag OnceFlag;
+  llvm::call_once(OnceFlag, [&] {
+    PreambleBuildFilesystemLatency.record(Stats.FileSystemTime, "first_build");
+  });
+
+  const std::string Label =
+      IsFirstPreamble ? "first_build_for_file" : "rebuild";
+  PreambleBuildFilesystemLatency.record(Stats.FileSystemTime, Label);
+  if (Stats.TotalBuildTime > 0) // Avoid division by zero.
+    PreambleBuildFilesystemLatencyRatio.record(
+        Stats.FileSystemTime / Stats.TotalBuildTime, Label);
+}
+
 class ASTWorker;
 } // namespace
 
-static clang::clangd::Key<std::string> kFileBeingProcessed;
+static clang::clangd::Key<std::string> FileBeingProcessed;
 
 llvm::Optional<llvm::StringRef> TUScheduler::getFileBeingProcessedInContext() {
-  if (auto *File = Context::current().get(kFileBeingProcessed))
+  if (auto *File = Context::current().get(FileBeingProcessed))
     return llvm::StringRef(*File);
   return None;
 }
@@ -856,7 +884,6 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags,
       // LatestPreamble is only populated by ASTWorker thread.
       return LatestPreamble || !PreambleRequests.empty() || Done;
     });
-    return;
   };
   startTask(TaskName, std::move(Task), UpdateType{WantDiags, ContentChanged},
             TUScheduler::NoInvalidation);
@@ -975,15 +1002,19 @@ void PreambleThread::build(Request Req) {
     crashDumpParseInputs(llvm::errs(), Inputs);
   });
 
+  PreambleBuildStats Stats;
+  bool IsFirstPreamble = !LatestBuild;
   LatestBuild = clang::clangd::buildPreamble(
       FileName, *Req.CI, Inputs, StoreInMemory,
-      [this, Version(Inputs.Version)](ASTContext &Ctx,
-                                      std::shared_ptr<clang::Preprocessor> PP,
+      [this, Version(Inputs.Version)](ASTContext &Ctx, Preprocessor &PP,
                                       const CanonicalIncludes &CanonIncludes) {
-        Callbacks.onPreambleAST(FileName, Version, Ctx, std::move(PP),
-                                CanonIncludes);
-      });
-  if (LatestBuild && isReliable(LatestBuild->CompileCommand))
+        Callbacks.onPreambleAST(FileName, Version, Ctx, PP, CanonIncludes);
+      },
+      &Stats);
+  if (!LatestBuild)
+    return;
+  reportPreambleBuild(Stats, IsFirstPreamble);
+  if (isReliable(LatestBuild->CompileCommand))
     HeaderIncluders.update(FileName, LatestBuild->Includes.allHeaders());
 }
 
@@ -1231,7 +1262,7 @@ void ASTWorker::startTask(llvm::StringRef Name,
     }
 
     // Allow this request to be cancelled if invalidated.
-    Context Ctx = Context::current().derive(kFileBeingProcessed, FileName);
+    Context Ctx = Context::current().derive(FileBeingProcessed, FileName);
     Canceler Invalidate = nullptr;
     if (Invalidation) {
       WithContext WC(std::move(Ctx));
@@ -1506,7 +1537,7 @@ TUScheduler::TUScheduler(const GlobalCompilationDatabase &CDB,
                          const Options &Opts,
                          std::unique_ptr<ParsingCallbacks> Callbacks)
     : CDB(CDB), Opts(Opts),
-      Callbacks(Callbacks ? move(Callbacks)
+      Callbacks(Callbacks ? std::move(Callbacks)
                           : std::make_unique<ParsingCallbacks>()),
       Barrier(Opts.AsyncThreadsCount), QuickRunBarrier(Opts.AsyncThreadsCount),
       IdleASTs(
@@ -1659,7 +1690,7 @@ void TUScheduler::runWithPreamble(llvm::StringRef Name, PathRef File,
   auto Task = [Worker, Consistency, Name = Name.str(), File = File.str(),
                Contents = It->second->Contents,
                Command = Worker->getCurrentCompileCommand(),
-               Ctx = Context::current().derive(kFileBeingProcessed,
+               Ctx = Context::current().derive(FileBeingProcessed,
                                                std::string(File)),
                Action = std::move(Action), this]() mutable {
     ThreadCrashReporter ScopedReporter([&Name, &Contents, &Command]() {
@@ -1717,7 +1748,7 @@ DebouncePolicy::compute(llvm::ArrayRef<clock::duration> History) const {
   // nth_element needs a mutable array, take the chance to bound the data size.
   History = History.take_back(15);
   llvm::SmallVector<clock::duration, 15> Recent(History.begin(), History.end());
-  auto Median = Recent.begin() + Recent.size() / 2;
+  auto *Median = Recent.begin() + Recent.size() / 2;
   std::nth_element(Recent.begin(), Median, Recent.end());
 
   clock::duration Target =

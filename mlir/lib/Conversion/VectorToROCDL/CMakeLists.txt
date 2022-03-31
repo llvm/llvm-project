@@ -12,10 +12,10 @@ add_mlir_conversion_library(MLIRVectorToROCDL
   Core
 
   LINK_LIBS PUBLIC
+  MLIRFuncToLLVM
   MLIRROCDLIR
   MLIRLLVMCommonConversion
   MLIRMemRefToLLVM
-  MLIRStandardToLLVM
   MLIRVector
   MLIRTransforms
   )

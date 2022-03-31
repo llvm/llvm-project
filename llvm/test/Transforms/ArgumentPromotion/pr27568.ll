@@ -4,7 +4,7 @@
 target triple = "x86_64-pc-windows-msvc"
 
 define internal void @callee(i8*) {
-; CHECK-LABEL: define {{[^@]+}}@callee()
+; CHECK-LABEL: define {{[^@]+}}@callee() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @thunk()
 ; CHECK-NEXT:    ret void
@@ -15,7 +15,7 @@ entry:
 }
 
 define void @test1() personality i32 (...)* @__CxxFrameHandler3 {
-; CHECK-LABEL: define {{[^@]+}}@test1() personality i32 (...)* @__CxxFrameHandler3
+; CHECK-LABEL: define {{[^@]+}}@test1() personality i32 (...)* @__CxxFrameHandler3 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    invoke void @thunk()
 ; CHECK-NEXT:    to label [[OUT:%.*]] unwind label [[CPAD:%.*]]

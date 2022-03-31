@@ -9,6 +9,7 @@
 #include <map>
 #include <set>
 
+#include "lldb/Core/DataFileCache.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/RichManglingContext.h"
 #include "lldb/Core/Section.h"
@@ -17,11 +18,15 @@
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/Symtab.h"
 #include "lldb/Target/Language.h"
+#include "lldb/Utility/DataEncoder.h"
+#include "lldb/Utility/Endian.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/Timer.h"
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/DJB.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -29,7 +34,8 @@ using namespace lldb_private;
 Symtab::Symtab(ObjectFile *objfile)
     : m_objfile(objfile), m_symbols(), m_file_addr_to_index(*this),
       m_name_to_symbol_indices(), m_mutex(),
-      m_file_addr_to_index_computed(false), m_name_indexes_computed(false) {
+      m_file_addr_to_index_computed(false), m_name_indexes_computed(false),
+      m_loaded_from_cache(false), m_saved_to_cache(false) {
   m_name_to_symbol_indices.emplace(std::make_pair(
       lldb::eFunctionNameTypeNone, UniqueCStringMap<uint32_t>()));
   m_name_to_symbol_indices.emplace(std::make_pair(
@@ -109,7 +115,8 @@ void Symtab::Dump(Stream *s, Target *target, SortOrder sort_order,
         s->Indent();
         pos->Dump(s, target, std::distance(begin, pos), name_preference);
       }
-    } break;
+    }
+    break;
 
     case eSortOrderByName: {
       // Although we maintain a lookup by exact name map, the table isn't
@@ -321,8 +328,10 @@ void Symtab::InitNameIndexes() {
 
         const SymbolType type = symbol->GetType();
         if (type == eSymbolTypeCode || type == eSymbolTypeResolver) {
-          if (mangled.DemangleWithRichManglingInfo(rmc, lldb_skip_name))
+          if (mangled.GetRichManglingInfo(rmc, lldb_skip_name)) {
             RegisterMangledNameEntry(value, class_contexts, backlog, rmc);
+            continue;
+          }
         }
       }
 
@@ -376,16 +385,13 @@ void Symtab::RegisterMangledNameEntry(
     std::vector<std::pair<NameToIndexMap::Entry, const char *>> &backlog,
     RichManglingContext &rmc) {
   // Only register functions that have a base name.
-  rmc.ParseFunctionBaseName();
-  llvm::StringRef base_name = rmc.GetBufferRef();
+  llvm::StringRef base_name = rmc.ParseFunctionBaseName();
   if (base_name.empty())
     return;
 
   // The base name will be our entry's name.
   NameToIndexMap::Entry entry(ConstString(base_name), value);
-
-  rmc.ParseFunctionDeclContextName();
-  llvm::StringRef decl_context = rmc.GetBufferRef();
+  llvm::StringRef decl_context = rmc.ParseFunctionDeclContextName();
 
   // Register functions with no context.
   if (decl_context.empty()) {
@@ -663,7 +669,6 @@ uint32_t Symtab::AppendSymbolIndexesWithName(ConstString symbol_name,
                                              std::vector<uint32_t> &indexes) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
-  LLDB_SCOPED_TIMER();
   if (symbol_name) {
     if (!m_name_indexes_computed)
       InitNameIndexes();
@@ -808,7 +813,6 @@ Symtab::FindAllSymbolsWithNameAndType(ConstString name,
                                       std::vector<uint32_t> &symbol_indexes) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
-  LLDB_SCOPED_TIMER();
   // Initialize all of the lookup by name indexes before converting NAME to a
   // uniqued string NAME_STR below.
   if (!m_name_indexes_computed)
@@ -1006,6 +1010,7 @@ void Symtab::Finalize() {
     collection new_symbols(m_symbols.begin(), m_symbols.end());
     m_symbols.swap(new_symbols);
   }
+  SaveToCache();
 }
 
 Symbol *Symtab::FindSymbolAtFileAddress(addr_t file_addr) {
@@ -1151,4 +1156,195 @@ const Symbol *Symtab::GetParent(Symbol *child_symbol) const {
     }
   }
   return nullptr;
+}
+
+std::string Symtab::GetCacheKey() {
+  std::string key;
+  llvm::raw_string_ostream strm(key);
+  // Symbol table can come from different object files for the same module. A
+  // module can have one object file as the main executable and might have
+  // another object file in a separate symbol file.
+  strm << m_objfile->GetModule()->GetCacheKey() << "-symtab-"
+      << llvm::format_hex(m_objfile->GetCacheHash(), 10);
+  return strm.str();
+}
+
+void Symtab::SaveToCache() {
+  DataFileCache *cache = Module::GetIndexCache();
+  if (!cache)
+    return; // Caching is not enabled.
+  InitNameIndexes(); // Init the name indexes so we can cache them as well.
+  const auto byte_order = endian::InlHostByteOrder();
+  DataEncoder file(byte_order, /*addr_size=*/8);
+  // Encode will return false if the symbol table's object file doesn't have
+  // anything to make a signature from.
+  if (Encode(file))
+    if (cache->SetCachedData(GetCacheKey(), file.GetData()))
+      SetWasSavedToCache();
+}
+
+constexpr llvm::StringLiteral kIdentifierCStrMap("CMAP");
+
+static void EncodeCStrMap(DataEncoder &encoder, ConstStringTable &strtab,
+                          const UniqueCStringMap<uint32_t> &cstr_map) {
+  encoder.AppendData(kIdentifierCStrMap);
+  encoder.AppendU32(cstr_map.GetSize());
+  for (const auto &entry: cstr_map) {
+    // Make sure there are no empty strings.
+    assert((bool)entry.cstring);
+    encoder.AppendU32(strtab.Add(entry.cstring));
+    encoder.AppendU32(entry.value);
+  }
+}
+
+bool DecodeCStrMap(const DataExtractor &data, lldb::offset_t *offset_ptr,
+                   const StringTableReader &strtab,
+                   UniqueCStringMap<uint32_t> &cstr_map) {
+  llvm::StringRef identifier((const char *)data.GetData(offset_ptr, 4), 4);
+  if (identifier != kIdentifierCStrMap)
+    return false;
+  const uint32_t count = data.GetU32(offset_ptr);
+  for (uint32_t i=0; i<count; ++i)
+  {
+    llvm::StringRef str(strtab.Get(data.GetU32(offset_ptr)));
+    uint32_t value = data.GetU32(offset_ptr);
+    // No empty strings in the name indexes in Symtab
+    if (str.empty())
+      return false;
+    cstr_map.Append(ConstString(str), value);
+  }
+  return true;
+}
+
+constexpr llvm::StringLiteral kIdentifierSymbolTable("SYMB");
+constexpr uint32_t CURRENT_CACHE_VERSION = 1;
+
+/// The encoding format for the symbol table is as follows:
+///
+/// Signature signature;
+/// ConstStringTable strtab;
+/// Identifier four character code: 'SYMB'
+/// uint32_t version;
+/// uint32_t num_symbols;
+/// Symbol symbols[num_symbols];
+/// uint8_t num_cstr_maps;
+/// UniqueCStringMap<uint32_t> cstr_maps[num_cstr_maps]
+bool Symtab::Encode(DataEncoder &encoder) const {
+  // Name indexes must be computed before calling this function.
+  assert(m_name_indexes_computed);
+
+  // Encode the object file's signature
+  CacheSignature signature(m_objfile);
+  if (!signature.Encode(encoder))
+    return false;
+  ConstStringTable strtab;
+
+  // Encoder the symbol table into a separate encoder first. This allows us
+  // gather all of the strings we willl need in "strtab" as we will need to
+  // write the string table out before the symbol table.
+  DataEncoder symtab_encoder(encoder.GetByteOrder(),
+                              encoder.GetAddressByteSize());
+  symtab_encoder.AppendData(kIdentifierSymbolTable);
+  // Encode the symtab data version.
+  symtab_encoder.AppendU32(CURRENT_CACHE_VERSION);
+  // Encode the number of symbols.
+  symtab_encoder.AppendU32(m_symbols.size());
+  // Encode the symbol data for all symbols.
+  for (const auto &symbol: m_symbols)
+    symbol.Encode(symtab_encoder, strtab);
+
+  // Emit a byte for how many C string maps we emit. We will fix this up after
+  // we emit the C string maps since we skip emitting C string maps if they are
+  // empty.
+  size_t num_cmaps_offset = symtab_encoder.GetByteSize();
+  uint8_t num_cmaps = 0;
+  symtab_encoder.AppendU8(0);
+  for (const auto &pair: m_name_to_symbol_indices) {
+    if (pair.second.IsEmpty())
+      continue;
+    ++num_cmaps;
+    symtab_encoder.AppendU8(pair.first);
+    EncodeCStrMap(symtab_encoder, strtab, pair.second);
+  }
+  if (num_cmaps > 0)
+    symtab_encoder.PutU8(num_cmaps_offset, num_cmaps);
+
+  // Now that all strings have been gathered, we will emit the string table.
+  strtab.Encode(encoder);
+  // Followed the the symbol table data.
+  encoder.AppendData(symtab_encoder.GetData());
+  return true;
+}
+
+bool Symtab::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
+                    bool &signature_mismatch) {
+  signature_mismatch = false;
+  CacheSignature signature;
+  StringTableReader strtab;
+  { // Scope for "elapsed" object below so it can measure the time parse.
+    ElapsedTime elapsed(m_objfile->GetModule()->GetSymtabParseTime());
+    if (!signature.Decode(data, offset_ptr))
+      return false;
+    if (CacheSignature(m_objfile) != signature) {
+      signature_mismatch = true;
+      return false;
+    }
+    // We now decode the string table for all strings in the data cache file.
+    if (!strtab.Decode(data, offset_ptr))
+      return false;
+
+    // And now we can decode the symbol table with string table we just decoded.
+    llvm::StringRef identifier((const char *)data.GetData(offset_ptr, 4), 4);
+    if (identifier != kIdentifierSymbolTable)
+      return false;
+    const uint32_t version = data.GetU32(offset_ptr);
+    if (version != CURRENT_CACHE_VERSION)
+      return false;
+    const uint32_t num_symbols = data.GetU32(offset_ptr);
+    if (num_symbols == 0)
+      return true;
+    m_symbols.resize(num_symbols);
+    SectionList *sections = m_objfile->GetModule()->GetSectionList();
+    for (uint32_t i=0; i<num_symbols; ++i) {
+      if (!m_symbols[i].Decode(data, offset_ptr, sections, strtab))
+        return false;
+    }
+  }
+
+  { // Scope for "elapsed" object below so it can measure the time to index.
+    ElapsedTime elapsed(m_objfile->GetModule()->GetSymtabIndexTime());
+    const uint8_t num_cstr_maps = data.GetU8(offset_ptr);
+    for (uint8_t i=0; i<num_cstr_maps; ++i) {
+      uint8_t type = data.GetU8(offset_ptr);
+      UniqueCStringMap<uint32_t> &cstr_map =
+          GetNameToSymbolIndexMap((lldb::FunctionNameType)type);
+      if (!DecodeCStrMap(data, offset_ptr, strtab, cstr_map))
+        return false;
+    }
+    m_name_indexes_computed = true;
+  }
+  return true;
+}
+
+bool Symtab::LoadFromCache() {
+  DataFileCache *cache = Module::GetIndexCache();
+  if (!cache)
+    return false;
+
+  std::unique_ptr<llvm::MemoryBuffer> mem_buffer_up =
+      cache->GetCachedData(GetCacheKey());
+  if (!mem_buffer_up)
+    return false;
+  DataExtractor data(mem_buffer_up->getBufferStart(),
+                     mem_buffer_up->getBufferSize(),
+                     m_objfile->GetByteOrder(),
+                     m_objfile->GetAddressByteSize());
+  bool signature_mismatch = false;
+  lldb::offset_t offset = 0;
+  const bool result = Decode(data, &offset, signature_mismatch);
+  if (signature_mismatch)
+    cache->RemoveCacheFile(GetCacheKey());
+  if (result)
+    SetWasLoadedFromCache();
+  return result;
 }

@@ -11,7 +11,6 @@
 #include "Driver.h"
 #include "InputFiles.h"
 #include "SymbolTable.h"
-#include "lld/Common/ErrorHandler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Object/COFF.h"
@@ -184,8 +183,8 @@ void lld::coff::writeDefFile(StringRef name) {
 static StringRef mangle(Twine sym) {
   assert(config->machine != IMAGE_FILE_MACHINE_UNKNOWN);
   if (config->machine == I386)
-    return saver.save("_" + sym);
-  return saver.save(sym);
+    return saver().save("_" + sym);
+  return saver().save(sym);
 }
 
 // Handles -wrap option.
@@ -249,7 +248,7 @@ void lld::coff::wrapSymbols(COFFLinkerContext &ctx,
       // referenced it or not, though.)
       if (imp) {
         DefinedLocalImport *wrapimp = make<DefinedLocalImport>(
-            saver.save("__imp_" + w.wrap->getName()), d);
+            saver().save("__imp_" + w.wrap->getName()), d);
         ctx.symtab.localImportChunks.push_back(wrapimp->getChunk());
         map[imp] = wrapimp;
       }

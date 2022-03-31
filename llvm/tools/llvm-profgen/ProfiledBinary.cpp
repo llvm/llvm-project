@@ -10,6 +10,7 @@
 #include "ErrorHandling.h"
 #include "ProfileGenerator.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -42,6 +43,11 @@ static cl::opt<bool> UseDwarfCorrelation(
     "use-dwarf-correlation", cl::init(false), cl::ZeroOrMore,
     cl::desc("Use dwarf for profile correlation even when binary contains "
              "pseudo probe."));
+
+static cl::opt<std::string>
+    DWPPath("dwp", cl::init(""), cl::ZeroOrMore,
+            cl::desc("Path of .dwp file. When not specified, it will be "
+                     "<binary>.dwp in the same directory as the main binary."));
 
 static cl::list<std::string> DisassembleFunctions(
     "disassemble-functions", cl::CommaSeparated,
@@ -150,7 +156,8 @@ void BinarySizeContextTracker::trackInlineesOptimizedAway(
   for (const auto &ChildNode : ProbeNode.getChildren()) {
     InlineSite Location = ChildNode.first;
     ProbeContext.back().second = std::get<1>(Location);
-    trackInlineesOptimizedAway(ProbeDecoder, *ChildNode.second.get(), ProbeContext);
+    trackInlineesOptimizedAway(ProbeDecoder, *ChildNode.second.get(),
+                               ProbeContext);
   }
 
   ProbeContext.pop_back();
@@ -187,9 +194,9 @@ void ProfiledBinary::warnNoFuncEntry() {
 void ProfiledBinary::load() {
   // Attempt to open the binary.
   OwningBinary<Binary> OBinary = unwrapOrError(createBinary(Path), Path);
-  Binary &Binary = *OBinary.getBinary();
+  Binary &ExeBinary = *OBinary.getBinary();
 
-  auto *Obj = dyn_cast<ELFObjectFileBase>(&Binary);
+  auto *Obj = dyn_cast<ELFObjectFileBase>(&ExeBinary);
   if (!Obj)
     exitWithError("not a valid Elf image", Path);
 
@@ -202,18 +209,24 @@ void ProfiledBinary::load() {
   // Find the preferred load address for text sections.
   setPreferredTextSegmentAddresses(Obj);
 
-  // Decode pseudo probe related section
-  decodePseudoProbe(Obj);
+  checkPseudoProbe(Obj);
+
+  if (ShowDisassemblyOnly)
+    decodePseudoProbe(Obj);
 
   // Load debug info of subprograms from DWARF section.
-  loadSymbolsFromDWARF(*dyn_cast<ObjectFile>(&Binary));
+  // If path of debug info binary is specified, use the debug info from it,
+  // otherwise use the debug info from the executable binary.
+  if (!DebugBinaryPath.empty()) {
+    OwningBinary<Binary> DebugPath =
+        unwrapOrError(createBinary(DebugBinaryPath), DebugBinaryPath);
+    loadSymbolsFromDWARF(*cast<ObjectFile>(DebugPath.getBinary()));
+  } else {
+    loadSymbolsFromDWARF(*cast<ObjectFile>(&ExeBinary));
+  }
 
   // Disassemble the text sections.
   disassemble(Obj);
-
-  // Track size for optimized inlinees when probe is available
-  if (UsePseudoProbes && TrackFuncContextSize)
-    FuncSizeTracker.trackInlineesOptimizedAway(ProbeDecoder);
 
   // Use function start and return address to infer prolog and epilog
   ProEpilogTracker.inferPrologOffsets(StartOffset2FuncRangeMap);
@@ -277,7 +290,8 @@ ProfiledBinary::getExpandedContext(const SmallVectorImpl<uint64_t> &Stack,
 }
 
 template <class ELFT>
-void ProfiledBinary::setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj, StringRef FileName) {
+void ProfiledBinary::setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj,
+                                                      StringRef FileName) {
   const auto &PhdrRange = unwrapOrError(Obj.program_headers(), FileName);
   // FIXME: This should be the page size of the system running profiling.
   // However such info isn't available at post-processing time, assuming
@@ -301,7 +315,8 @@ void ProfiledBinary::setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj, 
     exitWithError("no executable segment found", FileName);
 }
 
-void ProfiledBinary::setPreferredTextSegmentAddresses(const ELFObjectFileBase *Obj) {
+void ProfiledBinary::setPreferredTextSegmentAddresses(
+    const ELFObjectFileBase *Obj) {
   if (const auto *ELFObj = dyn_cast<ELF32LEObjectFile>(Obj))
     setPreferredTextSegmentAddresses(ELFObj->getELFFile(), Obj->getFileName());
   else if (const auto *ELFObj = dyn_cast<ELF32BEObjectFile>(Obj))
@@ -314,9 +329,37 @@ void ProfiledBinary::setPreferredTextSegmentAddresses(const ELFObjectFileBase *O
     llvm_unreachable("invalid ELF object format");
 }
 
-void ProfiledBinary::decodePseudoProbe(const ELFObjectFileBase *Obj) {
+void ProfiledBinary::checkPseudoProbe(const ELFObjectFileBase *Obj) {
   if (UseDwarfCorrelation)
     return;
+
+  bool HasProbeDescSection = false;
+  bool HasPseudoProbeSection = false;
+
+  StringRef FileName = Obj->getFileName();
+  for (section_iterator SI = Obj->section_begin(), SE = Obj->section_end();
+       SI != SE; ++SI) {
+    const SectionRef &Section = *SI;
+    StringRef SectionName = unwrapOrError(Section.getName(), FileName);
+    if (SectionName == ".pseudo_probe_desc") {
+      HasProbeDescSection = true;
+    } else if (SectionName == ".pseudo_probe") {
+      HasPseudoProbeSection = true;
+    }
+  }
+
+  // set UsePseudoProbes flag, used for PerfReader
+  UsePseudoProbes = HasProbeDescSection && HasPseudoProbeSection;
+}
+
+void ProfiledBinary::decodePseudoProbe(const ELFObjectFileBase *Obj) {
+  if (!UsePseudoProbes)
+    return;
+
+  std::unordered_set<uint64_t> ProfiledGuids;
+  if (!ShowDisassemblyOnly)
+    for (auto *F : ProfiledFunctions)
+      ProfiledGuids.insert(Function::getGUID(F->FuncName));
 
   StringRef FileName = Obj->getFileName();
   for (section_iterator SI = Obj->section_begin(), SE = Obj->section_end();
@@ -329,20 +372,37 @@ void ProfiledBinary::decodePseudoProbe(const ELFObjectFileBase *Obj) {
       if (!ProbeDecoder.buildGUID2FuncDescMap(
               reinterpret_cast<const uint8_t *>(Contents.data()),
               Contents.size()))
-        exitWithError("Pseudo Probe decoder fail in .pseudo_probe_desc section");
+        exitWithError(
+            "Pseudo Probe decoder fail in .pseudo_probe_desc section");
     } else if (SectionName == ".pseudo_probe") {
       StringRef Contents = unwrapOrError(Section.getContents(), FileName);
       if (!ProbeDecoder.buildAddress2ProbeMap(
               reinterpret_cast<const uint8_t *>(Contents.data()),
-              Contents.size()))
+              Contents.size(), ProfiledGuids))
         exitWithError("Pseudo Probe decoder fail in .pseudo_probe section");
-      // set UsePseudoProbes flag, used for PerfReader
-      UsePseudoProbes = true;
+    }
+  }
+
+  // Build TopLevelProbeFrameMap to track size for optimized inlinees when probe
+  // is available
+  if (TrackFuncContextSize) {
+    for (const auto &Child : ProbeDecoder.getDummyInlineRoot().getChildren()) {
+      auto *Frame = Child.second.get();
+      StringRef FuncName =
+          ProbeDecoder.getFuncDescForGUID(Frame->Guid)->FuncName;
+      TopLevelProbeFrameMap[FuncName] = Frame;
     }
   }
 
   if (ShowPseudoProbe)
     ProbeDecoder.printGUID2FuncDescMap(outs());
+}
+
+void ProfiledBinary::decodePseudoProbe() {
+  OwningBinary<Binary> OBinary = unwrapOrError(createBinary(Path), Path);
+  Binary &ExeBinary = *OBinary.getBinary();
+  auto *Obj = dyn_cast<ELFObjectFileBase>(&ExeBinary);
+  decodePseudoProbe(Obj);
 }
 
 void ProfiledBinary::setIsFuncEntry(uint64_t Offset, StringRef RangeSymName) {
@@ -545,13 +605,17 @@ void ProfiledBinary::disassemble(const ELFObjectFileBase *Obj) {
     // Register the text section.
     TextSections.insert({SectionOffset, SectSize});
 
+    StringRef SectionName = unwrapOrError(Section.getName(), FileName);
+
     if (ShowDisassemblyOnly) {
-      StringRef SectionName = unwrapOrError(Section.getName(), FileName);
       outs() << "\nDisassembly of section " << SectionName;
       outs() << " [" << format("0x%" PRIx64, Section.getAddress()) << ", "
              << format("0x%" PRIx64, Section.getAddress() + SectSize)
              << "]:\n\n";
     }
+
+    if (SectionName == ".plt")
+      continue;
 
     // Get the section data.
     ArrayRef<uint8_t> Bytes =
@@ -591,69 +655,94 @@ void ProfiledBinary::checkUseFSDiscriminator(
   }
 }
 
-void ProfiledBinary::loadSymbolsFromDWARF(ObjectFile &Obj) {
-  auto DebugContext = llvm::DWARFContext::create(Obj);
-  if (!DebugContext)
-    exitWithError("Misssing debug info.", Path);
+void ProfiledBinary::loadSymbolsFromDWARFUnit(DWARFUnit &CompilationUnit) {
+  for (const auto &DieInfo : CompilationUnit.dies()) {
+    llvm::DWARFDie Die(&CompilationUnit, &DieInfo);
 
-  for (const auto &CompilationUnit : DebugContext->compile_units()) {
-    for (const auto &DieInfo : CompilationUnit->dies()) {
-      llvm::DWARFDie Die(CompilationUnit.get(), &DieInfo);
+    if (!Die.isSubprogramDIE())
+      continue;
+    auto Name = Die.getName(llvm::DINameKind::LinkageName);
+    if (!Name)
+      Name = Die.getName(llvm::DINameKind::ShortName);
+    if (!Name)
+      continue;
 
-      if (!Die.isSubprogramDIE())
+    auto RangesOrError = Die.getAddressRanges();
+    if (!RangesOrError)
+      continue;
+    const DWARFAddressRangesVector &Ranges = RangesOrError.get();
+
+    if (Ranges.empty())
+      continue;
+
+    // Different DWARF symbols can have same function name, search or create
+    // BinaryFunction indexed by the name.
+    auto Ret = BinaryFunctions.emplace(Name, BinaryFunction());
+    auto &Func = Ret.first->second;
+    if (Ret.second)
+      Func.FuncName = Ret.first->first;
+
+    for (const auto &Range : Ranges) {
+      uint64_t FuncStart = Range.LowPC;
+      uint64_t FuncSize = Range.HighPC - FuncStart;
+
+      if (FuncSize == 0 || FuncStart < getPreferredBaseAddress())
         continue;
-      auto Name = Die.getName(llvm::DINameKind::LinkageName);
-      if (!Name)
-        Name = Die.getName(llvm::DINameKind::ShortName);
-      if (!Name)
-        continue;
 
-      auto RangesOrError = Die.getAddressRanges();
-      if (!RangesOrError)
-        continue;
-      const DWARFAddressRangesVector &Ranges = RangesOrError.get();
+      uint64_t StartOffset = FuncStart - getPreferredBaseAddress();
+      uint64_t EndOffset = Range.HighPC - getPreferredBaseAddress();
 
-      if (Ranges.empty())
-        continue;
+      // We may want to know all ranges for one function. Here group the
+      // ranges and store them into BinaryFunction.
+      Func.Ranges.emplace_back(StartOffset, EndOffset);
 
-      // Different DWARF symbols can have same function name, search or create
-      // BinaryFunction indexed by the name.
-      auto Ret = BinaryFunctions.emplace(Name, BinaryFunction());
-      auto &Func = Ret.first->second;
-      if (Ret.second)
-        Func.FuncName = Ret.first->first;
-
-      for (const auto &Range : Ranges) {
-        uint64_t FuncStart = Range.LowPC;
-        uint64_t FuncSize = Range.HighPC - FuncStart;
-
-        if (FuncSize == 0 || FuncStart < getPreferredBaseAddress())
-          continue;
-
-        uint64_t StartOffset = FuncStart - getPreferredBaseAddress();
-        uint64_t EndOffset = Range.HighPC - getPreferredBaseAddress();
-
-        // We may want to know all ranges for one function. Here group the
-        // ranges and store them into BinaryFunction.
-        Func.Ranges.emplace_back(StartOffset, EndOffset);
-
-        auto R = StartOffset2FuncRangeMap.emplace(StartOffset, FuncRange());
-        if (R.second) {
-          FuncRange &FRange = R.first->second;
-          FRange.Func = &Func;
-          FRange.StartOffset = StartOffset;
-          FRange.EndOffset = EndOffset;
-        } else {
-          WithColor::warning()
-              << "Duplicated symbol start address at "
-              << format("%8" PRIx64, StartOffset + getPreferredBaseAddress())
-              << " " << R.first->second.getFuncName() << " and " << Name
-              << "\n";
-        }
+      auto R = StartOffset2FuncRangeMap.emplace(StartOffset, FuncRange());
+      if (R.second) {
+        FuncRange &FRange = R.first->second;
+        FRange.Func = &Func;
+        FRange.StartOffset = StartOffset;
+        FRange.EndOffset = EndOffset;
+      } else {
+        WithColor::warning()
+            << "Duplicated symbol start address at "
+            << format("%8" PRIx64, StartOffset + getPreferredBaseAddress())
+            << " " << R.first->second.getFuncName() << " and " << Name << "\n";
       }
     }
   }
-  assert(!StartOffset2FuncRangeMap.empty() && "Misssing debug info.");
+}
+
+void ProfiledBinary::loadSymbolsFromDWARF(ObjectFile &Obj) {
+  auto DebugContext = llvm::DWARFContext::create(
+      Obj, DWARFContext::ProcessDebugRelocations::Process, nullptr, DWPPath);
+  if (!DebugContext)
+    exitWithError("Error creating the debug info context", Path);
+
+  for (const auto &CompilationUnit : DebugContext->compile_units())
+    loadSymbolsFromDWARFUnit(*CompilationUnit.get());
+
+  // Handles DWO sections that can either be in .o, .dwo or .dwp files.
+  for (const auto &CompilationUnit : DebugContext->compile_units()) {
+    DWARFUnit *const DwarfUnit = CompilationUnit.get();
+    if (llvm::Optional<uint64_t> DWOId = DwarfUnit->getDWOId()) {
+      DWARFUnit *DWOCU = DwarfUnit->getNonSkeletonUnitDIE(false).getDwarfUnit();
+      if (!DWOCU->isDWOUnit()) {
+        std::string DWOName = dwarf::toString(
+            DwarfUnit->getUnitDIE().find(
+                {dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name}),
+            "");
+        WithColor::warning()
+            << "DWO debug information for " << DWOName
+            << " was not loaded. Please check the .o, .dwo or .dwp path.\n";
+        continue;
+      }
+      loadSymbolsFromDWARFUnit(*DWOCU);
+    }
+  }
+
+  if (BinaryFunctions.empty())
+    WithColor::warning() << "Loading of DWARF info completed, but no binary "
+                            "functions have been retrieved.\n";
 }
 
 void ProfiledBinary::populateSymbolListFromDWARF(
@@ -670,6 +759,7 @@ void ProfiledBinary::setupSymbolizer() {
   SymbolizerOpts.DefaultArch = TheTriple.getArchName().str();
   SymbolizerOpts.UseSymbolTable = false;
   SymbolizerOpts.RelativeAddresses = false;
+  SymbolizerOpts.DWPName = DWPPath;
   Symbolizer = std::make_unique<symbolize::LLVMSymbolizer>(SymbolizerOpts);
 }
 
@@ -680,8 +770,9 @@ SampleContextFrameVector ProfiledBinary::symbolize(const InstructionPointer &IP,
          "Binary should only symbolize its own instruction");
   auto Addr = object::SectionedAddress{IP.Offset + getPreferredBaseAddress(),
                                        object::SectionedAddress::UndefSection};
-  DIInliningInfo InlineStack =
-      unwrapOrError(Symbolizer->symbolizeInlinedCode(Path, Addr), getName());
+  DIInliningInfo InlineStack = unwrapOrError(
+      Symbolizer->symbolizeInlinedCode(SymbolizerPath.str(), Addr),
+      SymbolizerPath);
 
   SampleContextFrameVector CallStack;
   for (int32_t I = InlineStack.getNumberOfFrames() - 1; I >= 0; I--) {
@@ -694,15 +785,11 @@ SampleContextFrameVector ProfiledBinary::symbolize(const InstructionPointer &IP,
       FunctionName = FunctionSamples::getCanonicalFnName(FunctionName);
 
     uint32_t Discriminator = CallerFrame.Discriminator;
-    uint32_t LineOffset = CallerFrame.Line - CallerFrame.StartLine;
+    uint32_t LineOffset = (CallerFrame.Line - CallerFrame.StartLine) & 0xffff;
     if (UseProbeDiscriminator) {
       LineOffset =
           PseudoProbeDwarfDiscriminator::extractProbeIndex(Discriminator);
       Discriminator = 0;
-    } else {
-      // Filter out invalid negative(int type) lineOffset
-      if (LineOffset & 0xffff0000)
-        return SampleContextFrameVector();
     }
 
     LineLocation Line(LineOffset, Discriminator);
@@ -736,6 +823,25 @@ void ProfiledBinary::computeInlinedContextSizeForRange(uint64_t StartOffset,
     FuncSizeTracker.addInstructionForContext(SymbolizedCallStack, Size);
 
   } while (IP.advance() && IP.Address < RangeEnd);
+}
+
+void ProfiledBinary::computeInlinedContextSizeForFunc(
+    const BinaryFunction *Func) {
+  // Note that a function can be spilt into multiple ranges, so compute for all
+  // ranges of the function.
+  for (const auto &Range : Func->Ranges)
+    computeInlinedContextSizeForRange(Range.first, Range.second);
+
+  // Track optimized-away inlinee for probed binary. A function inlined and then
+  // optimized away should still have their probes left over in places.
+  if (usePseudoProbes()) {
+    auto I = TopLevelProbeFrameMap.find(Func->FuncName);
+    if (I != TopLevelProbeFrameMap.end()) {
+      BinarySizeContextTracker::ProbeFrameStack ProbeContext;
+      FuncSizeTracker.trackInlineesOptimizedAway(ProbeDecoder, *I->second,
+                                                 ProbeContext);
+    }
+  }
 }
 
 InstructionPointer::InstructionPointer(const ProfiledBinary *Binary,

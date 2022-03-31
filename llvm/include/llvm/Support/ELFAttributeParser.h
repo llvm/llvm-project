@@ -10,15 +10,16 @@
 #define LLVM_SUPPORT_ELFATTRIBUTEPARSER_H
 
 #include "ELFAttributes.h"
-#include "ScopedPrinter.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/DataExtractor.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 
 #include <unordered_map>
 
 namespace llvm {
 class StringRef;
+class ScopedPrinter;
 
 class ELFAttributeParser {
   StringRef vendor;

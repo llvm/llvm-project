@@ -17,6 +17,7 @@
 // CHECK-UBSAN: @[[LINE_700:.*]] = {{.*}}, i32 700, i32 14 {{.*}} @[[STRUCT_S]], i8 2, i8 3 }
 // CHECK-UBSAN: @[[LINE_800:.*]] = {{.*}}, i32 800, i32 12 {{.*}} @{{.*}} }
 // CHECK-UBSAN: @[[LINE_900:.*]] = {{.*}}, i32 900, i32 11 {{.*}} @{{.*}} }
+// CHECK-UBSAN: @[[LINE_1000:.*]] = {{.*}}, i32 1000, i32 11 {{.*}} @{{.*}} }
 // CHECK-UBSAN: @[[FP16:.*]] = private unnamed_addr constant { i16, i16, [9 x i8] } { i16 1, i16 16, [9 x i8] c"'__fp16'\00" }
 // CHECK-UBSAN: @[[LINE_1200:.*]] = {{.*}}, i32 1200, i32 10 {{.*}} @{{.*}} }
 // CHECK-UBSAN: @[[LINE_1300:.*]] = {{.*}}, i32 1300, i32 10 {{.*}} @{{.*}} }
@@ -28,7 +29,7 @@
 
 // PR6805
 // CHECK-COMMON-LABEL: @foo
-void foo() {
+void foo(void) {
   union { int i; } u;
 
   // CHECK-COMMON:      %[[I8PTR:.*]] = bitcast i32* %[[PTR:.*]] to i8*
@@ -167,7 +168,7 @@ int signed_overflow(int a, int b) {
 }
 
 // CHECK-COMMON-LABEL: @no_return
-int no_return() {
+int no_return(void) {
   // Reaching the end of a noreturn function is fine in C.
   // FIXME: If the user explicitly requests -fsanitize=return, we should catch
   //        that here even though it's not undefined behavior.
@@ -183,6 +184,16 @@ void vla_bound(int n) {
   // CHECK-UBSAN:      %[[ARG:.*]] = zext i32 %[[PARAM]] to i64
   // CHECK-UBSAN-NEXT: call void @__ubsan_handle_vla_bound_not_positive(i8* bitcast ({{.*}} @[[LINE_900]] to i8*), i64 %[[ARG]])
 #line 900
+  int arr[n * 3];
+}
+
+// CHECK-UBSAN-LABEL: @vla_bound_unsigned
+void vla_bound_unsigned(unsigned int n) {
+  // CHECK-UBSAN:      icmp ugt i32 %[[PARAM:.*]], 0
+  //
+  // CHECK-UBSAN:      %[[ARG:.*]] = zext i32 %[[PARAM]] to i64
+  // CHECK-UBSAN-NEXT: call void @__ubsan_handle_vla_bound_not_positive(i8* bitcast ({{.*}} @[[LINE_1000]] to i8*), i64 %[[ARG]])
+#line 1000
   int arr[n * 3];
 }
 

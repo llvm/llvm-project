@@ -11,7 +11,7 @@ add_mlir_translation_library(MLIRSPIRVDeserialization
   MLIRSPIRV
   MLIRSPIRVBinaryUtils
   MLIRSupport
-  MLIRTranslation
+  MLIRTranslateLib
   )
 
 

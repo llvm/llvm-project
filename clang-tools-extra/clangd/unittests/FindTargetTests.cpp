@@ -946,11 +946,9 @@ TEST_F(TargetDeclTest, ObjC) {
   EXPECT_DECLS("ObjCCategoryImplDecl", "@interface Foo(Ext)");
 
   Code = R"cpp(
-    @protocol Foo
-    @end
-    void test([[id<Foo>]] p);
+    void test(id</*error-ok*/[[InvalidProtocol]]> p);
   )cpp";
-  EXPECT_DECLS("ObjCObjectTypeLoc", "@protocol Foo");
+  EXPECT_DECLS("ParmVarDecl", "id p");
 
   Code = R"cpp(
     @class C;
@@ -966,7 +964,7 @@ TEST_F(TargetDeclTest, ObjC) {
     @end
     void test(C<[[Foo]]> *p);
   )cpp";
-  EXPECT_DECLS("ObjCObjectTypeLoc", "@protocol Foo");
+  EXPECT_DECLS("ObjCProtocolLoc", "@protocol Foo");
 
   Code = R"cpp(
     @class C;
@@ -976,8 +974,17 @@ TEST_F(TargetDeclTest, ObjC) {
     @end
     void test(C<[[Foo]], Bar> *p);
   )cpp";
-  // FIXME: We currently can't disambiguate between multiple protocols.
-  EXPECT_DECLS("ObjCObjectTypeLoc", "@protocol Foo", "@protocol Bar");
+  EXPECT_DECLS("ObjCProtocolLoc", "@protocol Foo");
+
+  Code = R"cpp(
+    @class C;
+    @protocol Foo
+    @end
+    @protocol Bar
+    @end
+    void test(C<Foo, [[Bar]]> *p);
+  )cpp";
+  EXPECT_DECLS("ObjCProtocolLoc", "@protocol Bar");
 
   Code = R"cpp(
     @interface Foo
@@ -1283,11 +1290,7 @@ TEST_F(FindExplicitReferencesTest, All) {
         "0: targets = {x}, decl\n"
         "1: targets = {vector}\n"
         "2: targets = {x}\n"},
-// Handle UnresolvedLookupExpr.
-// FIXME
-// This case fails when expensive checks are enabled.
-// Seems like the order of ns1::func and ns2::func isn't defined.
-#ifndef EXPENSIVE_CHECKS
+       // Handle UnresolvedLookupExpr.
        {R"cpp(
             namespace ns1 { void func(char*); }
             namespace ns2 { void func(int*); }
@@ -1301,7 +1304,6 @@ TEST_F(FindExplicitReferencesTest, All) {
         )cpp",
         "0: targets = {ns1::func, ns2::func}\n"
         "1: targets = {t}\n"},
-#endif
        // Handle UnresolvedMemberExpr.
        {R"cpp(
             struct X {

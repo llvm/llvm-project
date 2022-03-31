@@ -233,17 +233,6 @@ def capture: F<"capture">,
 def capture_path: Separate<["--", "-"], "capture-path">,
   MetaVarName<"<filename>">,
   HelpText<"Tells the debugger to use the given filename for the reproducer.">;
-def replay: Separate<["--", "-"], "replay">,
-  MetaVarName<"<filename>">,
-  HelpText<"Tells the debugger to replay a reproducer from <filename>.">;
-def reproducer_finalize: Separate<["--", "-"], "reproducer-finalize">,
-  MetaVarName<"<filename>">;
-def no_version_check: F<"reproducer-no-version-check">,
-  HelpText<"Disable the reproducer version check.">;
-def no_verification: F<"reproducer-no-verify">,
-  HelpText<"Disable the reproducer verification.">;
-def no_generate_on_signal: F<"reproducer-no-generate-on-signal">,
-  HelpText<"Don't generate reproducer when a signal is received.">;
 def generate_on_exit: F<"reproducer-generate-on-exit">,
   HelpText<"Generate reproducer on exit.">;
 

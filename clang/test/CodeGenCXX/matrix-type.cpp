@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fenable-matrix -triple x86_64-apple-darwin %s -emit-llvm -disable-llvm-passes -o - -std=c++17 | FileCheck %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fenable-matrix -triple x86_64-apple-darwin %s -emit-llvm -disable-llvm-passes -o - -std=c++17 | FileCheck %s
 
 typedef double dx5x5_t __attribute__((matrix_type(5, 5)));
 typedef float fx3x4_t __attribute__((matrix_type(3, 4)));

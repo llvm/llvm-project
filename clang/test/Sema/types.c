@@ -15,17 +15,17 @@ restrict S y; // expected-error {{restrict requires a pointer or reference ('S' 
 
 
 // int128_t is available.
-int a() {
+int a(void) {
   __int128_t s;
   __uint128_t t;
 }
 // but not a keyword
-int b() {
+int b(void) {
   int __int128_t;
   int __uint128_t;
 }
 // __int128 is a keyword
-int c() {
+int c(void) {
   __int128 i;
   unsigned __int128 j;
   long unsigned __int128 k; // expected-error {{'long __int128' is invalid}}
@@ -88,7 +88,7 @@ int x4 __attribute__((ext_vector_type(64)));  // expected-error {{'ext_vector_ty
 // rdar://16492792
 typedef __attribute__ ((ext_vector_type(32),__aligned__(32))) unsigned char uchar32;
 
-void convert() {
+void convert(void) {
     uchar32 r = 0;
     r.s[ 1234 ] = 1; // expected-error {{illegal vector component name 's'}}
 }

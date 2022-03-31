@@ -1,6 +1,8 @@
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 -ferror-limit 100 -o - -std=c++11 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -fopenmp-version=50 -ferror-limit 100 -o - -std=c++11 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp51 -fopenmp -fopenmp-version=51 -ferror-limit 100 -o - -std=c++11 %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=50 -ferror-limit 100 -o - -std=c++11 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -fopenmp-version=50 -ferror-limit 100 -o - -std=c++11 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp51 -fopenmp-simd -fopenmp-version=51 -ferror-limit 100 -o - -std=c++11 %s -Wuninitialized
 
 void foo() {
 }
@@ -23,11 +25,11 @@ int main(int argc, char **argv, char *env[]) {
   auto arr = x; // expected-error {{use of undeclared identifier 'x'}}
 
   #pragma omp taskwait depend // expected-error {{expected '(' after 'depend'}}
-  #pragma omp taskwait depend ( // expected-error {{expected depend modifier(iterator) or 'in', 'out', 'inout', 'mutexinoutset' or 'depobj' in OpenMP clause 'depend'}} expected-error {{expected ')'}} expected-note {{to match this '('}} expected-warning {{missing ':' after dependency type - ignoring}}
-  #pragma omp taskwait depend () // expected-error {{expected depend modifier(iterator) or 'in', 'out', 'inout', 'mutexinoutset' or 'depobj' in OpenMP clause 'depend'}} expected-warning {{missing ':' after dependency type - ignoring}}
-  #pragma omp taskwait depend (argc // expected-error {{expected depend modifier(iterator) or 'in', 'out', 'inout', 'mutexinoutset' or 'depobj' in OpenMP clause 'depend'}} expected-warning {{missing ':' after dependency type - ignoring}} expected-error {{expected ')'}} expected-note {{to match this '('}}
-  #pragma omp taskwait depend (source : argc) // expected-error {{expected depend modifier(iterator) or 'in', 'out', 'inout', 'mutexinoutset' or 'depobj' in OpenMP clause 'depend'}}
-  #pragma omp taskwait depend (source) // expected-error {{expected expression}} expected-warning {{missing ':' after dependency type - ignoring}} expected-error {{expected depend modifier(iterator) or 'in', 'out', 'inout', 'mutexinoutset' or 'depobj' in OpenMP clause 'depend'}}
+  #pragma omp taskwait depend ( // omp50-error {{expected depend modifier(iterator) or 'in', 'out', 'inout', 'mutexinoutset' or 'depobj' in OpenMP clause 'depend'}} omp51-error {{expected depend modifier(iterator) or 'in', 'out', 'inout', 'mutexinoutset', 'depobj' or 'inoutset' in OpenMP clause 'depend'}} expected-error {{expected ')'}} expected-note {{to match this '('}} expected-warning {{missing ':' after dependency type - ignoring}}
+  #pragma omp taskwait depend () // omp50-error {{expected depend modifier(iterator) or 'in', 'out', 'inout', 'mutexinoutset' or 'depobj' in OpenMP clause 'depend'}} omp51-error {{expected depend modifier(iterator) or 'in', 'out', 'inout', 'mutexinoutset', 'depobj' or 'inoutset' in OpenMP clause 'depend'}} expected-warning {{missing ':' after dependency type - ignoring}}
+  #pragma omp taskwait depend (argc // omp50-error {{expected depend modifier(iterator) or 'in', 'out', 'inout', 'mutexinoutset' or 'depobj' in OpenMP clause 'depend'}} omp51-error {{expected depend modifier(iterator) or 'in', 'out', 'inout', 'mutexinoutset', 'depobj' or 'inoutset' in OpenMP clause 'depend'}} expected-warning {{missing ':' after dependency type - ignoring}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+  #pragma omp taskwait depend (source : argc) // omp50-error {{expected depend modifier(iterator) or 'in', 'out', 'inout', 'mutexinoutset' or 'depobj' in OpenMP clause 'depend'}} omp51-error {{expected depend modifier(iterator) or 'in', 'out', 'inout', 'mutexinoutset', 'depobj' or 'inoutset' in OpenMP clause 'depend'}}
+  #pragma omp taskwait depend (source) // expected-error {{expected expression}} expected-warning {{missing ':' after dependency type - ignoring}} omp50-error {{expected depend modifier(iterator) or 'in', 'out', 'inout', 'mutexinoutset' or 'depobj' in OpenMP clause 'depend'}} omp51-error {{expected depend modifier(iterator) or 'in', 'out', 'inout', 'mutexinoutset', 'depobj' or 'inoutset' in OpenMP clause 'depend'}}
   #pragma omp taskwait depend(mutexinoutset: argc) // expected-error{{'mutexinoutset' modifier not allowed in 'depend' clause on 'taskwait' directive}}
   #pragma omp taskwait depend (in : argc)) // expected-warning {{extra tokens at the end of '#pragma omp taskwait' are ignored}}
   #pragma omp taskwait depend (out: ) // expected-error {{expected expression}}

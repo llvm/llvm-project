@@ -12,7 +12,7 @@ char a2[2][5] = { "asdf" };
 // Double-implicit-conversions of array/functions (not legal C, but
 // clang accepts it for gcc compat).
 intptr_t b = a; // expected-warning {{incompatible pointer to integer conversion}}
-int c();
+int c(void);
 void *d = c;
 intptr_t e = c; // expected-warning {{incompatible pointer to integer conversion}}
 
@@ -67,7 +67,7 @@ struct {
 
 // Global references
 // CHECK: @g11.l0 = internal global i32 ptrtoint (i32 ()* @g11 to i32)
-long g11() { 
+long g11(void) { 
   static long l0 = (long) g11;
   return l0; 
 }
@@ -123,17 +123,17 @@ struct g23 g24 = {1,2,3,4};
 
 // CHECK: @g25.g26 = internal global i8* getelementptr inbounds ([4 x i8], [4 x i8]* @[[FUNC:.*]], i32 0, i32 0)
 // CHECK: @[[FUNC]] = private unnamed_addr constant [4 x i8] c"g25\00"
-int g25() {
+int g25(void) {
   static const char *g26 = __func__;
   return *g26;
 }
 
 // CHECK: @g27.x = internal global i8* bitcast (i8** @g27.x to i8*), align 4
-void g27() { // PR8073
+void g27(void) { // PR8073
   static void *x = &x;
 }
 
-void g28() {
+void g28(void) {
   typedef long long v1i64 __attribute((vector_size(8)));
   typedef short v12i16 __attribute((vector_size(24)));
   typedef long double v2f80 __attribute((vector_size(24)));
@@ -146,7 +146,7 @@ void g28() {
 }
 
 // PR13643
-void g29() {
+void g29(void) {
   typedef char DCC_PASSWD[2];
   typedef struct
   {
@@ -161,7 +161,7 @@ void g29() {
 }
 
 // PR21300
-void g30() {
+void g30(void) {
 #pragma pack(1)
   static struct {
     int : 1;
@@ -171,7 +171,7 @@ void g30() {
 #pragma pack()
 }
 
-void g31() {
+void g31(void) {
 #pragma pack(4)
   static struct {
     short a;

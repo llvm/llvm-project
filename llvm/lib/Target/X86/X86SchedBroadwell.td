@@ -255,6 +255,7 @@ defm : X86WriteRes<WriteFMaskedStore64Y, [BWPort0,BWPort4,BWPort237,BWPort15], 5
 defm : X86WriteRes<WriteFMove,         [BWPort5], 1, [1], 1>;
 defm : X86WriteRes<WriteFMoveX,        [BWPort5], 1, [1], 1>;
 defm : X86WriteRes<WriteFMoveY,        [BWPort5], 1, [1], 1>;
+defm : X86WriteResUnsupported<WriteFMoveZ>;
 defm : X86WriteRes<WriteEMMS,          [BWPort01,BWPort15,BWPort015,BWPort0156], 31, [8,1,21,1], 31>;
 
 defm : BWWriteResPair<WriteFAdd,    [BWPort1],  3, [1], 1, 5>; // Floating point add/sub.
@@ -418,6 +419,7 @@ defm : X86WriteRes<WriteVecMaskedStore64Y, [BWPort0,BWPort4,BWPort237,BWPort15],
 defm : X86WriteRes<WriteVecMove,         [BWPort015], 1, [1], 1>;
 defm : X86WriteRes<WriteVecMoveX,        [BWPort015], 1, [1], 1>;
 defm : X86WriteRes<WriteVecMoveY,        [BWPort015], 1, [1], 1>;
+defm : X86WriteResUnsupported<WriteVecMoveZ>;
 defm : X86WriteRes<WriteVecMoveToGpr,    [BWPort0], 1, [1], 1>;
 defm : X86WriteRes<WriteVecMoveFromGpr,  [BWPort5], 1, [1], 1>;
 
@@ -783,7 +785,7 @@ def BWWriteResGroup27 : SchedWriteRes<[BWPort1]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[BWWriteResGroup27], (instrs MMX_CVTPI2PSirr)>;
+def: InstRW<[BWWriteResGroup27], (instrs MMX_CVTPI2PSrr)>;
 def: InstRW<[BWWriteResGroup27], (instregex "P(DEP|EXT)(32|64)rr",
                                             "(V?)CVTDQ2PS(Y?)rr")>;
 
@@ -800,9 +802,9 @@ def BWWriteResGroup33 : SchedWriteRes<[BWPort5,BWPort0156]> {
   let NumMicroOps = 3;
   let ResourceCycles = [2,1];
 }
-def: InstRW<[BWWriteResGroup33], (instrs MMX_PACKSSDWirr,
-                                         MMX_PACKSSWBirr,
-                                         MMX_PACKUSWBirr)>;
+def: InstRW<[BWWriteResGroup33], (instrs MMX_PACKSSDWrr,
+                                         MMX_PACKSSWBrr,
+                                         MMX_PACKUSWBrr)>;
 
 def BWWriteResGroup34 : SchedWriteRes<[BWPort6,BWPort0156]> {
   let Latency = 3;
@@ -812,12 +814,26 @@ def BWWriteResGroup34 : SchedWriteRes<[BWPort6,BWPort0156]> {
 def: InstRW<[BWWriteResGroup34], (instregex "CLD")>;
 
 def BWWriteResGroup35 : SchedWriteRes<[BWPort06,BWPort0156]> {
-  let Latency = 3;
+  let Latency = 2;
   let NumMicroOps = 3;
   let ResourceCycles = [1,2];
 }
-def: InstRW<[BWWriteResGroup35], (instregex "RCL(8|16|32|64)r(1|i)",
-                                            "RCR(8|16|32|64)r(1|i)")>;
+def: InstRW<[BWWriteResGroup35], (instrs RCL8r1, RCL16r1, RCL32r1, RCL64r1,
+                                         RCR8r1, RCR16r1, RCR32r1, RCR64r1)>;
+
+def BWWriteResGroup36 : SchedWriteRes<[BWPort1,BWPort06,BWPort0156]> {
+  let Latency = 5;
+  let NumMicroOps = 8;
+  let ResourceCycles = [2,4,2];
+}
+def: InstRW<[BWWriteResGroup36], (instrs RCR8ri, RCR16ri, RCR32ri, RCR64ri)>;
+
+def BWWriteResGroup36b : SchedWriteRes<[BWPort1,BWPort06,BWPort0156]> {
+  let Latency = 6;
+  let NumMicroOps = 8;
+  let ResourceCycles = [2,4,2];
+}
+def: InstRW<[BWWriteResGroup36b], (instrs RCL8ri, RCL16ri, RCL32ri, RCL64ri)>;
 
 def BWWriteResGroup37 : SchedWriteRes<[BWPort4,BWPort6,BWPort237,BWPort0156]> {
   let Latency = 3;
@@ -862,9 +878,9 @@ def BWWriteResGroup42 : SchedWriteRes<[BWPort1,BWPort5]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[BWWriteResGroup42], (instrs MMX_CVTPI2PDirr)>;
-def: InstRW<[BWWriteResGroup42], (instregex "MMX_CVT(T?)PD2PIirr",
-                                            "MMX_CVT(T?)PS2PIirr",
+def: InstRW<[BWWriteResGroup42], (instrs MMX_CVTPI2PDrr)>;
+def: InstRW<[BWWriteResGroup42], (instregex "MMX_CVT(T?)PD2PIrr",
+                                            "MMX_CVT(T?)PS2PIrr",
                                             "(V?)CVTDQ2PDrr",
                                             "(V?)CVTPD2PSrr",
                                             "(V?)CVTSD2SSrr",
@@ -1086,9 +1102,9 @@ def BWWriteResGroup79 : SchedWriteRes<[BWPort5,BWPort23]> {
   let NumMicroOps = 3;
   let ResourceCycles = [2,1];
 }
-def: InstRW<[BWWriteResGroup79], (instrs MMX_PACKSSDWirm,
-                                         MMX_PACKSSWBirm,
-                                         MMX_PACKUSWBirm)>;
+def: InstRW<[BWWriteResGroup79], (instrs MMX_PACKSSDWrm,
+                                         MMX_PACKSSWBrm,
+                                         MMX_PACKUSWBrm)>;
 
 def BWWriteResGroup80 : SchedWriteRes<[BWPort23,BWPort0156]> {
   let Latency = 7;
@@ -1155,7 +1171,7 @@ def BWWriteResGroup91 : SchedWriteRes<[BWPort1,BWPort23]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[BWWriteResGroup91], (instrs MMX_CVTPI2PSirm,
+def: InstRW<[BWWriteResGroup91], (instrs MMX_CVTPI2PSrm,
                                          CVTDQ2PSrm,
                                          VCVTDQ2PSrm)>;
 def: InstRW<[BWWriteResGroup91], (instregex "P(DEP|EXT)(32|64)rm")>;
@@ -1236,8 +1252,8 @@ def BWWriteResGroup107 : SchedWriteRes<[BWPort1,BWPort5,BWPort23]> {
 def: InstRW<[BWWriteResGroup107], (instrs CVTPD2PSrm,
                                           CVTPD2DQrm,
                                           CVTTPD2DQrm,
-                                          MMX_CVTPI2PDirm)>;
-def: InstRW<[BWWriteResGroup107], (instregex "MMX_CVT(T?)PD2PIirm",
+                                          MMX_CVTPI2PDrm)>;
+def: InstRW<[BWWriteResGroup107], (instregex "MMX_CVT(T?)PD2PIrm",
                                              "(V?)CVTDQ2PDrm",
                                              "(V?)CVTSD2SSrm")>;
 
@@ -1740,5 +1756,41 @@ def BWSETA_SETBErm :  SchedWriteVariant<[
 
 def : InstRW<[BWSETA_SETBErr], (instrs SETCCr)>;
 def : InstRW<[BWSETA_SETBErm], (instrs SETCCm)>;
+
+///////////////////////////////////////////////////////////////////////////////
+// Dependency breaking instructions.
+///////////////////////////////////////////////////////////////////////////////
+
+def : IsZeroIdiomFunction<[
+  // GPR Zero-idioms.
+  DepBreakingClass<[ SUB32rr, SUB64rr, XOR32rr, XOR64rr ], ZeroIdiomPredicate>,
+
+  // SSE Zero-idioms.
+  DepBreakingClass<[
+    // fp variants.
+    XORPSrr, XORPDrr,
+
+    // int variants.
+    PXORrr,
+    PSUBBrr, PSUBWrr, PSUBDrr, PSUBQrr,
+    PCMPGTBrr, PCMPGTDrr, PCMPGTQrr, PCMPGTWrr
+  ], ZeroIdiomPredicate>,
+
+  // AVX Zero-idioms.
+  DepBreakingClass<[
+    // xmm fp variants.
+    VXORPSrr, VXORPDrr,
+
+    // xmm int variants.
+    VPXORrr,
+    VPSUBBrr, VPSUBWrr, VPSUBDrr, VPSUBQrr,
+    VPCMPGTBrr, VPCMPGTWrr, VPCMPGTDrr, VPCMPGTQrr,
+
+    // ymm variants.
+    VXORPSYrr, VXORPDYrr, VPXORYrr,
+    VPSUBBYrr, VPSUBWYrr, VPSUBDYrr, VPSUBQYrr,
+    VPCMPGTBYrr, VPCMPGTWYrr, VPCMPGTDYrr, VPCMPGTQYrr
+  ], ZeroIdiomPredicate>,
+]>;
 
 } // SchedModel

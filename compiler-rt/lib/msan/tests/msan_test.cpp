@@ -1560,6 +1560,7 @@ TEST(MemorySanitizer, memccpy_nomatch_positive) {
   char* y = new char[5];
   strcpy(x, "abc");
   EXPECT_UMR(memccpy(y, x, 'd', 5));
+  break_optimization(y);
   delete[] x;
   delete[] y;
 }
@@ -1570,6 +1571,7 @@ TEST(MemorySanitizer, memccpy_match_positive) {
   x[0] = 'a';
   x[2] = 'b';
   EXPECT_UMR(memccpy(y, x, 'b', 5));
+  break_optimization(y);
   delete[] x;
   delete[] y;
 }
@@ -4423,7 +4425,8 @@ TEST(MemorySanitizerOrigins, EQ) {
   if (!TrackingOrigins()) return;
   EXPECT_POISONED_O(*GetPoisonedO<S4>(0, __LINE__) <= 11, __LINE__);
   EXPECT_POISONED_O(*GetPoisonedO<S4>(0, __LINE__) == 11, __LINE__);
-  EXPECT_POISONED_O(*GetPoisonedO<float>(0, __LINE__) == 1.1, __LINE__);
+  EXPECT_POISONED_O(*GetPoisonedO<float>(0, __LINE__) == 1.1f, __LINE__);
+  EXPECT_POISONED_O(*GetPoisonedO<double>(0, __LINE__) == 1.1, __LINE__);
 }
 
 TEST(MemorySanitizerOrigins, DIV) {

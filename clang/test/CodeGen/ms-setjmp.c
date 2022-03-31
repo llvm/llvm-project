@@ -13,7 +13,7 @@ int _setjmpex(jmp_buf env);
 
 jmp_buf jb;
 
-int test_setjmp() {
+int test_setjmp(void) {
   return _setjmp(jb);
   // I386-LABEL: define dso_local i32 @test_setjmp
   // I386:       %[[call:.*]] = call i32 (i8*, i32, ...) @_setjmp3(i8* getelementptr inbounds ([1 x i8], [1 x i8]* @jb, i32 0, i32 0), i32 0)
@@ -30,7 +30,7 @@ int test_setjmp() {
   // AARCH64-NEXT:  ret i32 %[[call]]
 }
 
-int test_setjmpex() {
+int test_setjmpex(void) {
   return _setjmpex(jb);
   // X64-LABEL: define dso_local i32 @test_setjmpex
   // X64:       %[[addr:.*]] = call i8* @llvm.frameaddress.p0i8(i32 0)

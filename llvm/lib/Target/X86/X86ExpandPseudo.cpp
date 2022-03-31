@@ -19,6 +19,7 @@
 #include "X86MachineFunctionInfo.h"
 #include "X86Subtarget.h"
 #include "llvm/Analysis/EHPersonalities.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/Passes.h" // For IDs of passes that are preserved.
@@ -191,8 +192,6 @@ void X86ExpandPseudo::expandCALL_RVMARKER(MachineBasicBlock &MBB,
                                           MachineBasicBlock::iterator MBBI) {
   // Expand CALL_RVMARKER pseudo to call instruction, followed by the special
   //"movq %rax, %rdi" marker.
-  // TODO: Mark the sequence as bundle, to avoid passes moving other code
-  // in between.
   MachineInstr &MI = *MBBI;
 
   MachineInstr *OriginalCall;
@@ -236,15 +235,23 @@ void X86ExpandPseudo::expandCALL_RVMARKER(MachineBasicBlock &MBB,
   // Emit call to ObjC runtime.
   const uint32_t *RegMask =
       TRI->getCallPreservedMask(*MBB.getParent(), CallingConv::C);
-  BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(X86::CALL64pcrel32))
-      .addGlobalAddress(MI.getOperand(0).getGlobal(), 0, 0)
-      .addRegMask(RegMask)
-      .addReg(X86::RAX,
-              RegState::Implicit |
-                  (RAXImplicitDead ? (RegState::Dead | RegState::Define)
-                                   : RegState::Define))
-      .getInstr();
+  MachineInstr *RtCall =
+      BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(X86::CALL64pcrel32))
+          .addGlobalAddress(MI.getOperand(0).getGlobal(), 0, 0)
+          .addRegMask(RegMask)
+          .addReg(X86::RAX,
+                  RegState::Implicit |
+                      (RAXImplicitDead ? (RegState::Dead | RegState::Define)
+                                       : RegState::Define))
+          .getInstr();
   MI.eraseFromParent();
+
+  auto &TM = MBB.getParent()->getTarget();
+  // On Darwin platforms, wrap the expanded sequence in a bundle to prevent
+  // later optimizations from breaking up the sequence.
+  if (TM.getTargetTriple().isOSDarwin())
+    finalizeBundle(MBB, OriginalCall->getIterator(),
+                   std::next(RtCall->getIterator()));
 }
 
 /// If \p MBBI is a pseudo instruction, this method expands
@@ -546,7 +553,7 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
   case X86::PTILELOADDV:
   case X86::PTILELOADDT1V: {
     for (unsigned i = 2; i > 0; --i)
-      MI.RemoveOperand(i);
+      MI.removeOperand(i);
     unsigned Opc =
         Opcode == X86::PTILELOADDV ? X86::TILELOADD : X86::TILELOADDT1;
     MI.setDesc(TII->get(Opc));
@@ -559,7 +566,7 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
   case X86::PTDPBF16PSV: {
     MI.untieRegOperand(4);
     for (unsigned i = 3; i > 0; --i)
-      MI.RemoveOperand(i);
+      MI.removeOperand(i);
     unsigned Opc;
     switch (Opcode) {
     case X86::PTDPBSSDV:   Opc = X86::TDPBSSD; break;
@@ -575,13 +582,13 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
   }
   case X86::PTILESTOREDV: {
     for (int i = 1; i >= 0; --i)
-      MI.RemoveOperand(i);
+      MI.removeOperand(i);
     MI.setDesc(TII->get(X86::TILESTORED));
     return true;
   }
   case X86::PTILEZEROV: {
     for (int i = 2; i > 0; --i) // Remove row, col
-      MI.RemoveOperand(i);
+      MI.removeOperand(i);
     MI.setDesc(TII->get(X86::TILEZERO));
     return true;
   }

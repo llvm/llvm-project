@@ -129,7 +129,7 @@ class SourceFileCompleter : public Completer {
 public:
   SourceFileCompleter(CommandInterpreter &interpreter,
                       CompletionRequest &request)
-      : Completer(interpreter, request), m_matching_files() {
+      : Completer(interpreter, request) {
     FileSpec partial_spec(m_request.GetCursorArgumentPrefix());
     m_file_name = partial_spec.GetFilename().GetCString();
     m_dir_name = partial_spec.GetDirectory().GetCString();
@@ -600,7 +600,7 @@ void CommandCompletions::VariablePath(CommandInterpreter &interpreter,
 void CommandCompletions::Registers(CommandInterpreter &interpreter,
                                    CompletionRequest &request,
                                    SearchFilter *searcher) {
-  std::string reg_prefix = "";
+  std::string reg_prefix;
   if (request.GetCursorArgumentPrefix().startswith("$"))
     reg_prefix = "$";
 

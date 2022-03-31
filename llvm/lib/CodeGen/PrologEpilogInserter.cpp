@@ -55,10 +55,8 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -130,6 +128,7 @@ private:
   void replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &MF,
                            int &SPAdj);
   void insertPrologEpilogCode(MachineFunction &MF);
+  void insertZeroCallUsedRegs(MachineFunction &MF);
 };
 
 } // end anonymous namespace
@@ -855,47 +854,34 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &MF) {
     if (FixedOff > Offset) Offset = FixedOff;
   }
 
+  Align MaxAlign = MFI.getMaxAlign();
   // First assign frame offsets to stack objects that are used to spill
   // callee saved registers.
-  if (StackGrowsDown && MaxCSFrameIndex >= MinCSFrameIndex) {
-    for (unsigned i = MinCSFrameIndex; i <= MaxCSFrameIndex; ++i) {
-      if (MFI.getStackID(i) !=
-          TargetStackID::Default) // Only allocate objects on the default stack.
+  if (MaxCSFrameIndex >= MinCSFrameIndex) {
+    for (unsigned i = 0; i <= MaxCSFrameIndex - MinCSFrameIndex; ++i) {
+      unsigned FrameIndex =
+          StackGrowsDown ? MinCSFrameIndex + i : MaxCSFrameIndex - i;
+
+      // Only allocate objects on the default stack.
+      if (MFI.getStackID(FrameIndex) != TargetStackID::Default)
         continue;
 
-      // If the stack grows down, we need to add the size to find the lowest
-      // address of the object.
-      Offset += MFI.getObjectSize(i);
-
-      // Adjust to alignment boundary
-      Offset = alignTo(Offset, MFI.getObjectAlign(i), Skew);
-
-      LLVM_DEBUG(dbgs() << "alloc FI(" << i << ") at SP[" << -Offset << "]\n");
-      MFI.setObjectOffset(i, -Offset);        // Set the computed offset
-    }
-  } else if (MaxCSFrameIndex >= MinCSFrameIndex) {
-    // Be careful about underflow in comparisons agains MinCSFrameIndex.
-    for (unsigned i = MaxCSFrameIndex; i != MinCSFrameIndex - 1; --i) {
-      if (MFI.getStackID(i) !=
-          TargetStackID::Default) // Only allocate objects on the default stack.
+      // TODO: should this just be if (MFI.isDeadObjectIndex(FrameIndex))
+      if (!StackGrowsDown && MFI.isDeadObjectIndex(FrameIndex))
         continue;
 
-      if (MFI.isDeadObjectIndex(i))
-        continue;
-
-      // Adjust to alignment boundary
-      Offset = alignTo(Offset, MFI.getObjectAlign(i), Skew);
-
-      LLVM_DEBUG(dbgs() << "alloc FI(" << i << ") at SP[" << Offset << "]\n");
-      MFI.setObjectOffset(i, Offset);
-      Offset += MFI.getObjectSize(i);
+      AdjustStackOffset(MFI, FrameIndex, StackGrowsDown, Offset, MaxAlign,
+                        Skew);
     }
   }
+
+  assert(MaxAlign == MFI.getMaxAlign() &&
+         "MFI.getMaxAlign should already account for all callee-saved "
+         "registers without a fixed stack slot");
 
   // FixedCSEnd is the stack offset to the end of the fixed and callee-save
   // stack area.
   int64_t FixedCSEnd = Offset;
-  Align MaxAlign = MFI.getMaxAlign();
 
   // Make sure the special register scavenging spill slot is closest to the
   // incoming stack pointer if a frame pointer is required and is closer
@@ -953,12 +939,22 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &MF) {
     // LocalStackSlotPass didn't already allocate a slot for it.
     // If we are told to use the LocalStackAllocationBlock, the stack protector
     // is expected to be already pre-allocated.
-    if (!MFI.getUseLocalStackAllocationBlock())
+    if (MFI.getStackID(StackProtectorFI) != TargetStackID::Default) {
+      // If the stack protector isn't on the default stack then it's up to the
+      // target to set the stack offset.
+      assert(MFI.getObjectOffset(StackProtectorFI) != 0 &&
+             "Offset of stack protector on non-default stack expected to be "
+             "already set.");
+      assert(!MFI.isObjectPreAllocated(MFI.getStackProtectorIndex()) &&
+             "Stack protector on non-default stack expected to not be "
+             "pre-allocated by LocalStackSlotPass.");
+    } else if (!MFI.getUseLocalStackAllocationBlock()) {
       AdjustStackOffset(MFI, StackProtectorFI, StackGrowsDown, Offset, MaxAlign,
                         Skew);
-    else if (!MFI.isObjectPreAllocated(MFI.getStackProtectorIndex()))
+    } else if (!MFI.isObjectPreAllocated(MFI.getStackProtectorIndex())) {
       llvm_unreachable(
           "Stack protector not pre-allocated by LocalStackSlotPass.");
+    }
 
     // Assign large stack objects first.
     for (unsigned i = 0, e = MFI.getObjectIndexEnd(); i != e; ++i) {
@@ -1135,6 +1131,9 @@ void PEI::insertPrologEpilogCode(MachineFunction &MF) {
   for (MachineBasicBlock *RestoreBlock : RestoreBlocks)
     TFI.emitEpilogue(MF, *RestoreBlock);
 
+  // Zero call used registers before restoring callee-saved registers.
+  insertZeroCallUsedRegs(MF);
+
   for (MachineBasicBlock *SaveBlock : SaveBlocks)
     TFI.inlineStackProbe(MF, *SaveBlock);
 
@@ -1159,6 +1158,95 @@ void PEI::insertPrologEpilogCode(MachineFunction &MF) {
   if (MF.getFunction().getCallingConv() == CallingConv::HiPE)
     for (MachineBasicBlock *SaveBlock : SaveBlocks)
       TFI.adjustForHiPEPrologue(MF, *SaveBlock);
+}
+
+/// insertZeroCallUsedRegs - Zero out call used registers.
+void PEI::insertZeroCallUsedRegs(MachineFunction &MF) {
+  const Function &F = MF.getFunction();
+
+  if (!F.hasFnAttribute("zero-call-used-regs"))
+    return;
+
+  using namespace ZeroCallUsedRegs;
+
+  ZeroCallUsedRegsKind ZeroRegsKind =
+      StringSwitch<ZeroCallUsedRegsKind>(
+          F.getFnAttribute("zero-call-used-regs").getValueAsString())
+          .Case("skip", ZeroCallUsedRegsKind::Skip)
+          .Case("used-gpr-arg", ZeroCallUsedRegsKind::UsedGPRArg)
+          .Case("used-gpr", ZeroCallUsedRegsKind::UsedGPR)
+          .Case("used-arg", ZeroCallUsedRegsKind::UsedArg)
+          .Case("used", ZeroCallUsedRegsKind::Used)
+          .Case("all-gpr-arg", ZeroCallUsedRegsKind::AllGPRArg)
+          .Case("all-gpr", ZeroCallUsedRegsKind::AllGPR)
+          .Case("all-arg", ZeroCallUsedRegsKind::AllArg)
+          .Case("all", ZeroCallUsedRegsKind::All);
+
+  if (ZeroRegsKind == ZeroCallUsedRegsKind::Skip)
+    return;
+
+  const bool OnlyGPR = static_cast<unsigned>(ZeroRegsKind) & ONLY_GPR;
+  const bool OnlyUsed = static_cast<unsigned>(ZeroRegsKind) & ONLY_USED;
+  const bool OnlyArg = static_cast<unsigned>(ZeroRegsKind) & ONLY_ARG;
+
+  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+  const BitVector AllocatableSet(TRI.getAllocatableSet(MF));
+
+  // Mark all used registers.
+  BitVector UsedRegs(TRI.getNumRegs());
+  if (OnlyUsed)
+    for (const MachineBasicBlock &MBB : MF)
+      for (const MachineInstr &MI : MBB)
+        for (const MachineOperand &MO : MI.operands()) {
+          if (!MO.isReg())
+            continue;
+
+          MCRegister Reg = MO.getReg();
+          if (AllocatableSet[Reg] && !MO.isImplicit() &&
+              (MO.isDef() || MO.isUse()))
+            UsedRegs.set(Reg);
+        }
+
+  BitVector RegsToZero(TRI.getNumRegs());
+  for (MCRegister Reg : AllocatableSet.set_bits()) {
+    // Skip over fixed registers.
+    if (TRI.isFixedRegister(MF, Reg))
+      continue;
+
+    // Want only general purpose registers.
+    if (OnlyGPR && !TRI.isGeneralPurposeRegister(MF, Reg))
+      continue;
+
+    // Want only used registers.
+    if (OnlyUsed && !UsedRegs[Reg])
+      continue;
+
+    // Want only registers used for arguments.
+    if (OnlyArg && !TRI.isArgumentRegister(MF, Reg))
+      continue;
+
+    RegsToZero.set(Reg);
+  }
+
+  // Remove registers that are live when leaving the function.
+  for (const MachineBasicBlock &MBB : MF)
+    for (const MachineInstr &MI : MBB.terminators()) {
+      if (!MI.isReturn())
+        continue;
+
+      for (const auto &MO : MI.operands()) {
+        if (!MO.isReg())
+          continue;
+
+        for (MCPhysReg SReg : TRI.sub_and_superregs_inclusive(MO.getReg()))
+          RegsToZero.reset(SReg);
+      }
+    }
+
+  const TargetFrameLowering &TFI = *MF.getSubtarget().getFrameLowering();
+  for (MachineBasicBlock &MBB : MF)
+    if (MBB.isReturnBlock())
+      TFI.emitZeroCallUsedRegs(RegsToZero, MBB);
 }
 
 /// replaceFrameIndices - Replace all MO_FrameIndex operands with physical

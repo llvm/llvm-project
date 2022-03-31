@@ -170,9 +170,9 @@ public:
   /// the trace.
   ///
   /// \return
-  ///     \b llvm::Error::success if the cursor is not pointing to an error in
-  ///     the trace. Otherwise return an \a llvm::Error describing the issue.
-  virtual llvm::Error GetError() = 0;
+  ///     \b nullptr if the cursor is not pointing to an error in
+  ///     the trace. Otherwise return the actual error message.
+  virtual const char *GetError() = 0;
 
   /// \return
   ///     The load address of the instruction the cursor is pointing at. If the
@@ -180,14 +180,16 @@ public:
   ///     LLDB_INVALID_ADDRESS.
   virtual lldb::addr_t GetLoadAddress() = 0;
 
-  /// Get the timestamp counter associated with the current instruction.
-  /// Modern Intel, ARM and AMD processors support this counter. However, a
-  /// trace plugin might decide to use a different time unit instead of an
-  /// actual TSC.
+  /// Get the hardware counter of a given type associated with the current
+  /// instruction. Each architecture might support different counters. It might
+  /// happen that only some instructions of an entire trace have a given counter
+  /// associated with them.
   ///
+  /// \param[in] counter_type
+  ///    The counter type.
   /// \return
-  ///     The timestamp or \b llvm::None if not available.
-  virtual llvm::Optional<uint64_t> GetTimestampCounter() = 0;
+  ///     The value of the counter or \b llvm::None if not available.
+  virtual llvm::Optional<uint64_t> GetCounter(lldb::TraceCounter counter_type) = 0;
 
   /// \return
   ///     The \a lldb::TraceInstructionControlFlowType categories the

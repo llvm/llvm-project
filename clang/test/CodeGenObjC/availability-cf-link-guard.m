@@ -15,7 +15,7 @@
 struct CFBundle;
 typedef struct CFBundle *CFBundleRef;
 unsigned CFBundleGetVersionNumber(CFBundleRef bundle);
-// CHECK_CF: declare i32 @CFBundleGetVersionNumber(%struct.CFBundle*)
+// CHECK_CF: declare i32 @CFBundleGetVersionNumber(%struct.CFBundle* noundef)
 // CHECK_CF: @__clang_at_available_requires_core_foundation_framework
 // CHECK_CF-NEXT: call {{.*}}@CFBundleGetVersionNumber
 #endif
@@ -24,7 +24,7 @@ unsigned CFBundleGetVersionNumber(CFBundleRef bundle);
 #define CHECK_OS macos 10.12
 #endif
 
-void use_at_available() {
+void use_at_available(void) {
 #ifdef DEF_CF
   CFBundleGetVersionNumber(0);
 #endif

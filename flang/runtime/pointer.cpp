@@ -76,9 +76,11 @@ void RTNAME(PointerAssociateLowerBounds)(Descriptor &pointer,
   Terminator terminator{__FILE__, __LINE__};
   std::size_t boundElementBytes{lowerBounds.ElementBytes()};
   for (int j{0}; j < rank; ++j) {
-    pointer.GetDimension(j).SetLowerBound(
-        GetInt64(lowerBounds.ZeroBasedIndexedElement<const char>(j),
-            boundElementBytes, terminator));
+    Dimension &dim{pointer.GetDimension(j)};
+    dim.SetLowerBound(dim.Extent() == 0
+            ? 1
+            : GetInt64(lowerBounds.ZeroBasedIndexedElement<const char>(j),
+                  boundElementBytes, terminator));
   }
 }
 
@@ -139,7 +141,7 @@ int RTNAME(PointerDeallocate)(Descriptor &pointer, bool hasStat,
   if (!pointer.IsAllocated()) {
     return ReturnError(terminator, StatBaseNull, errMsg, hasStat);
   }
-  return ReturnError(terminator, pointer.Destroy(true), errMsg, hasStat);
+  return ReturnError(terminator, pointer.Destroy(true, true), errMsg, hasStat);
 }
 
 bool RTNAME(PointerIsAssociated)(const Descriptor &pointer) {
@@ -147,16 +149,22 @@ bool RTNAME(PointerIsAssociated)(const Descriptor &pointer) {
 }
 
 bool RTNAME(PointerIsAssociatedWith)(
-    const Descriptor &pointer, const Descriptor &target) {
+    const Descriptor &pointer, const Descriptor *target) {
+  if (!target) {
+    return pointer.raw().base_addr != nullptr;
+  }
+  if (!target->raw().base_addr || target->ElementBytes() == 0) {
+    return false;
+  }
   int rank{pointer.rank()};
-  if (pointer.raw().base_addr != target.raw().base_addr ||
-      pointer.ElementBytes() != target.ElementBytes() ||
-      rank != target.rank()) {
+  if (pointer.raw().base_addr != target->raw().base_addr ||
+      pointer.ElementBytes() != target->ElementBytes() ||
+      rank != target->rank()) {
     return false;
   }
   for (int j{0}; j < rank; ++j) {
     const Dimension &pDim{pointer.GetDimension(j)};
-    const Dimension &tDim{target.GetDimension(j)};
+    const Dimension &tDim{target->GetDimension(j)};
     if (pDim.Extent() != tDim.Extent() ||
         pDim.ByteStride() != tDim.ByteStride()) {
       return false;

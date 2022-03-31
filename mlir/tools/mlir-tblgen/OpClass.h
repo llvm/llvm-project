@@ -25,7 +25,8 @@ public:
   /// - inheritance of `print`
   /// - a type alias for the associated adaptor class
   ///
-  OpClass(StringRef name, StringRef extraClassDeclaration);
+  OpClass(StringRef name, StringRef extraClassDeclaration,
+          std::string extraClassDefinition);
 
   /// Add an op trait.
   void addTrait(Twine trait) { parent.addTemplateParam(trait.str()); }
@@ -39,11 +40,13 @@ public:
 private:
   /// Hand-written extra class declarations.
   StringRef extraClassDeclaration;
+  /// Hand-written extra class definitions.
+  std::string extraClassDefinition;
   /// The parent class, which also contains the traits to be inherited.
   ParentClass &parent;
 };
 
-} // end namespace tblgen
-} // end namespace mlir
+} // namespace tblgen
+} // namespace mlir
 
 #endif // MLIR_TOOLS_MLIRTBLGEN_OPCLASS_H_

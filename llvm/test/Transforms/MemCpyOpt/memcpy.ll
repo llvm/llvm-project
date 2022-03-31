@@ -207,21 +207,13 @@ define void @test4_write_between(i8 *%P) {
 }
 
 define i8 @test4_read_between(i8 *%P) {
-; NO_MSSA-LABEL: @test4_read_between(
-; NO_MSSA-NEXT:    [[A1:%.*]] = alloca [[TMP1:%.*]], align 8
-; NO_MSSA-NEXT:    [[A2:%.*]] = bitcast %1* [[A1]] to i8*
-; NO_MSSA-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[A2]], i8* align 4 [[P:%.*]], i64 8, i1 false)
-; NO_MSSA-NEXT:    [[X:%.*]] = load i8, i8* [[A2]], align 1
-; NO_MSSA-NEXT:    call void @test4a(i8* byval align 1 [[A2]])
-; NO_MSSA-NEXT:    ret i8 [[X]]
-;
-; MSSA-LABEL: @test4_read_between(
-; MSSA-NEXT:    [[A1:%.*]] = alloca [[TMP1:%.*]], align 8
-; MSSA-NEXT:    [[A2:%.*]] = bitcast %1* [[A1]] to i8*
-; MSSA-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[A2]], i8* align 4 [[P:%.*]], i64 8, i1 false)
-; MSSA-NEXT:    [[X:%.*]] = load i8, i8* [[A2]], align 1
-; MSSA-NEXT:    call void @test4a(i8* byval align 1 [[P]])
-; MSSA-NEXT:    ret i8 [[X]]
+; CHECK-LABEL: @test4_read_between(
+; CHECK-NEXT:    [[A1:%.*]] = alloca [[TMP1:%.*]], align 8
+; CHECK-NEXT:    [[A2:%.*]] = bitcast %1* [[A1]] to i8*
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[A2]], i8* align 4 [[P:%.*]], i64 8, i1 false)
+; CHECK-NEXT:    [[X:%.*]] = load i8, i8* [[A2]], align 1
+; CHECK-NEXT:    call void @test4a(i8* byval(i8) align 1 [[P]])
+; CHECK-NEXT:    ret i8 [[X]]
 ;
   %a1 = alloca %1
   %a2 = bitcast %1* %a1 to i8*
@@ -232,27 +224,16 @@ define i8 @test4_read_between(i8 *%P) {
 }
 
 define void @test4_non_local(i8 *%P, i1 %c) {
-; NO_MSSA-LABEL: @test4_non_local(
-; NO_MSSA-NEXT:    [[A1:%.*]] = alloca [[TMP1:%.*]], align 8
-; NO_MSSA-NEXT:    [[A2:%.*]] = bitcast %1* [[A1]] to i8*
-; NO_MSSA-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[A2]], i8* align 4 [[P:%.*]], i64 8, i1 false)
-; NO_MSSA-NEXT:    br i1 [[C:%.*]], label [[CALL:%.*]], label [[EXIT:%.*]]
-; NO_MSSA:       call:
-; NO_MSSA-NEXT:    call void @test4a(i8* byval align 1 [[A2]])
-; NO_MSSA-NEXT:    br label [[EXIT]]
-; NO_MSSA:       exit:
-; NO_MSSA-NEXT:    ret void
-;
-; MSSA-LABEL: @test4_non_local(
-; MSSA-NEXT:    [[A1:%.*]] = alloca [[TMP1:%.*]], align 8
-; MSSA-NEXT:    [[A2:%.*]] = bitcast %1* [[A1]] to i8*
-; MSSA-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[A2]], i8* align 4 [[P:%.*]], i64 8, i1 false)
-; MSSA-NEXT:    br i1 [[C:%.*]], label [[CALL:%.*]], label [[EXIT:%.*]]
-; MSSA:       call:
-; MSSA-NEXT:    call void @test4a(i8* byval align 1 [[P]])
-; MSSA-NEXT:    br label [[EXIT]]
-; MSSA:       exit:
-; MSSA-NEXT:    ret void
+; CHECK-LABEL: @test4_non_local(
+; CHECK-NEXT:    [[A1:%.*]] = alloca [[TMP1:%.*]], align 8
+; CHECK-NEXT:    [[A2:%.*]] = bitcast %1* [[A1]] to i8*
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[A2]], i8* align 4 [[P:%.*]], i64 8, i1 false)
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[CALL:%.*]], label [[EXIT:%.*]]
+; CHECK:       call:
+; CHECK-NEXT:    call void @test4a(i8* byval(i8) align 1 [[P]])
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
 ;
   %a1 = alloca %1
   %a2 = bitcast %1* %a1 to i8*

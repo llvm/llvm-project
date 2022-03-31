@@ -38,20 +38,14 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerIntPair.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/IR/Constant.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <iterator>
@@ -60,8 +54,11 @@
 
 namespace llvm {
 
+class Constant;
+class Function;
 template <class GraphType> struct GraphTraits;
 class Module;
+class TargetLibraryInfo;
 class Value;
 
 /// A lazily constructed view of the call graph of a module.
@@ -884,7 +881,9 @@ public:
     RefSCC *RC = nullptr;
 
     /// Build the begin iterator for a node.
-    postorder_ref_scc_iterator(LazyCallGraph &G) : G(&G), RC(getRC(G, 0)) {}
+    postorder_ref_scc_iterator(LazyCallGraph &G) : G(&G), RC(getRC(G, 0)) {
+      incrementUntilNonEmptyRefSCC();
+    }
 
     /// Build the end iterator for a node. This is selected purely by overload.
     postorder_ref_scc_iterator(LazyCallGraph &G, IsAtEndT /*Nonce*/) : G(&G) {}
@@ -899,6 +898,17 @@ public:
       return G.PostOrderRefSCCs[Index];
     }
 
+    // Keep incrementing until RC is non-empty (or null).
+    void incrementUntilNonEmptyRefSCC() {
+      while (RC && RC->size() == 0)
+        increment();
+    }
+
+    void increment() {
+      assert(RC && "Cannot increment the end iterator!");
+      RC = getRC(*G, G->RefSCCIndices.find(RC)->second + 1);
+    }
+
   public:
     bool operator==(const postorder_ref_scc_iterator &Arg) const {
       return G == Arg.G && RC == Arg.RC;
@@ -908,8 +918,8 @@ public:
 
     using iterator_facade_base::operator++;
     postorder_ref_scc_iterator &operator++() {
-      assert(RC && "Cannot increment the end iterator!");
-      RC = getRC(*G, G->RefSCCIndices.find(RC)->second + 1);
+      increment();
+      incrementUntilNonEmptyRefSCC();
       return *this;
     }
   };
@@ -1190,7 +1200,7 @@ private:
   }
 };
 
-inline LazyCallGraph::Edge::Edge() : Value() {}
+inline LazyCallGraph::Edge::Edge() = default;
 inline LazyCallGraph::Edge::Edge(Node &N, Kind K) : Value(&N, K) {}
 
 inline LazyCallGraph::Edge::operator bool() const {

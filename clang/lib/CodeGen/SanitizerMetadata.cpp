@@ -73,6 +73,8 @@ void SanitizerMetadata::reportGlobalToASan(llvm::GlobalVariable *GV,
   for (auto Attr : D.specific_attrs<NoSanitizeAttr>())
     if (Attr->getMask() & SanitizerKind::Address)
       IsExcluded = true;
+  if (D.hasAttr<DisableSanitizerInstrumentationAttr>())
+    IsExcluded = true;
   reportGlobalToASan(GV, D.getLocation(), OS.str(), D.getType(), IsDynInit,
                      IsExcluded);
 }

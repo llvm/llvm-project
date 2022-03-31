@@ -7,21 +7,14 @@ define void @_Z2azv() local_unnamed_addr {
 ; CHECK-LABEL: @_Z2azv(
 ; CHECK-NEXT:  for.body.lr.ph:
 ; CHECK-NEXT:    [[DOTSROA_CAST_4:%.*]] = getelementptr inbounds %"struct.std::h.0.4.8.12.16.20.24.28.248.0.1.2.3.76", %"struct.std::h.0.4.8.12.16.20.24.28.248.0.1.2.3.76"* undef, i64 4, i32 0
-; CHECK-NEXT:    [[DOTSROA_RAW_IDX_4:%.*]] = getelementptr inbounds %"struct.std::h.0.4.8.12.16.20.24.28.248.0.1.2.3.76", %"struct.std::h.0.4.8.12.16.20.24.28.248.0.1.2.3.76"* undef, i64 4, i32 1
-; CHECK-NEXT:    [[DOTSROA_CAST_5:%.*]] = getelementptr inbounds %"struct.std::h.0.4.8.12.16.20.24.28.248.0.1.2.3.76", %"struct.std::h.0.4.8.12.16.20.24.28.248.0.1.2.3.76"* undef, i64 5, i32 0
-; CHECK-NEXT:    [[DOTSROA_RAW_IDX_5:%.*]] = getelementptr inbounds %"struct.std::h.0.4.8.12.16.20.24.28.248.0.1.2.3.76", %"struct.std::h.0.4.8.12.16.20.24.28.248.0.1.2.3.76"* undef, i64 5, i32 1
-; CHECK-NEXT:    [[DOTSROA_CAST_6:%.*]] = getelementptr inbounds %"struct.std::h.0.4.8.12.16.20.24.28.248.0.1.2.3.76", %"struct.std::h.0.4.8.12.16.20.24.28.248.0.1.2.3.76"* undef, i64 6, i32 0
-; CHECK-NEXT:    [[DOTSROA_RAW_IDX_6:%.*]] = getelementptr inbounds %"struct.std::h.0.4.8.12.16.20.24.28.248.0.1.2.3.76", %"struct.std::h.0.4.8.12.16.20.24.28.248.0.1.2.3.76"* undef, i64 6, i32 1
-; CHECK-NEXT:    [[DOTSROA_CAST_7:%.*]] = getelementptr inbounds %"struct.std::h.0.4.8.12.16.20.24.28.248.0.1.2.3.76", %"struct.std::h.0.4.8.12.16.20.24.28.248.0.1.2.3.76"* undef, i64 7, i32 0
-; CHECK-NEXT:    [[DOTSROA_RAW_IDX_7:%.*]] = getelementptr inbounds %"struct.std::h.0.4.8.12.16.20.24.28.248.0.1.2.3.76", %"struct.std::h.0.4.8.12.16.20.24.28.248.0.1.2.3.76"* undef, i64 7, i32 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[DOTSROA_CAST_4]] to <8 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, <8 x i32>* [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.smax.v8i32(<8 x i32> [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[TMP2]], undef
-; CHECK-NEXT:    [[OP_EXTRA:%.*]] = select i1 [[TMP3]], i32 [[TMP2]], i32 undef
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[OP_EXTRA]], undef
-; CHECK-NEXT:    [[OP_EXTRA1:%.*]] = select i1 [[TMP4]], i32 [[OP_EXTRA]], i32 undef
-; CHECK-NEXT:    [[DOTSROA_SPECULATED_9:%.*]] = select i1 undef, i32 undef, i32 [[OP_EXTRA1]]
+; CHECK-NEXT:    [[OP_EXTRA:%.*]] = icmp sgt i32 [[TMP2]], undef
+; CHECK-NEXT:    [[OP_EXTRA1:%.*]] = select i1 [[OP_EXTRA]], i32 [[TMP2]], i32 undef
+; CHECK-NEXT:    [[OP_EXTRA2:%.*]] = icmp sgt i32 [[OP_EXTRA1]], undef
+; CHECK-NEXT:    [[OP_EXTRA3:%.*]] = select i1 [[OP_EXTRA2]], i32 [[OP_EXTRA1]], i32 undef
+; CHECK-NEXT:    [[DOTSROA_SPECULATED_9:%.*]] = select i1 undef, i32 undef, i32 [[OP_EXTRA3]]
 ; CHECK-NEXT:    [[CMP_I1_10:%.*]] = icmp slt i32 [[DOTSROA_SPECULATED_9]], undef
 ; CHECK-NEXT:    ret void
 ;

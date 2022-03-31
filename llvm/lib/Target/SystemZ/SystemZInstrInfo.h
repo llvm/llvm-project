@@ -312,6 +312,9 @@ public:
   // exists.
   unsigned getOpcodeForOffset(unsigned Opcode, int64_t Offset) const;
 
+  // Return true if Opcode has a mapping in 12 <-> 20 bit displacements.
+  bool hasDisplacementPairInsn(unsigned Opcode) const;
+
   // If Opcode is a load instruction that has a LOAD AND TEST form,
   // return the opcode for the testing form, otherwise return 0.
   unsigned getLoadAndTest(unsigned Opcode) const;

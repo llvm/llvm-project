@@ -49,4 +49,4 @@ prec::Level getBinOpPrecedence(tok::TokenKind Kind, bool GreaterThanIsOperator,
 
 }  // end namespace clang
 
-#endif  // LLVM_CLANG_OPERATOR_PRECEDENCE_H
+#endif // LLVM_CLANG_BASIC_OPERATORPRECEDENCE_H

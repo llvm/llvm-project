@@ -204,7 +204,7 @@ func @dim_reshape_expansion(%arg0 : tensor<6x5x?xf32>) -> (index, index, index)
   %c1 = arith.constant 1 : index
   %c3 = arith.constant 3 : index
   %c4 = arith.constant 4 : index
-  %0 = linalg.tensor_expand_shape %arg0 [[0, 1], [2], [3, 4, 5]]
+  %0 = tensor.expand_shape %arg0 [[0, 1], [2], [3, 4, 5]]
       : tensor<6x5x?xf32> into tensor<2x3x5x4x?x7xf32>
   %1 = tensor.dim %0, %c1 : tensor<2x3x5x4x?x7xf32>
   %2 = tensor.dim %0, %c3 : tensor<2x3x5x4x?x7xf32>
@@ -227,7 +227,7 @@ func @dim_reshape_collapse(%arg0 : tensor<2x3x5x4x?x7xf32>) -> (index, index)
 {
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
-  %0 = linalg.tensor_collapse_shape %arg0 [[0, 1], [2], [3, 4, 5]]
+  %0 = tensor.collapse_shape %arg0 [[0, 1], [2], [3, 4, 5]]
       : tensor<2x3x5x4x?x7xf32> into tensor<6x5x?xf32>
   %1 = tensor.dim %0, %c1 : tensor<6x5x?xf32>
   %2 = tensor.dim %0, %c2 : tensor<6x5x?xf32>
@@ -253,9 +253,9 @@ func @dim_of_pad_op(%arg0 : tensor<2x?x?xf32>, %arg1 : index, %arg2 : index,
    %c3 = arith.constant 3 : index
    %c4 = arith.constant 4 : index
    %c5 = arith.constant 5 : index
-   %0 = linalg.pad_tensor %arg0 low[%c3, %arg1, %c4] high[7, %c5, %arg2] {
+   %0 = tensor.pad %arg0 low[%c3, %arg1, %c4] high[7, %c5, %arg2] {
      ^bb0(%arg4: index, %arg5: index, %arg6: index):
-       linalg.yield %arg3 : f32
+       tensor.yield %arg3 : f32
    } : tensor<2x?x?xf32> to tensor<?x?x?xf32>
    %1 = tensor.dim %0, %c0 : tensor<?x?x?xf32>
    %2 = tensor.dim %0, %c1 : tensor<?x?x?xf32>

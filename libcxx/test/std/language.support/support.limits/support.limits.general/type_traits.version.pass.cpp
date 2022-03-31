@@ -31,9 +31,11 @@
     __cpp_lib_is_scoped_enum                       202011L [C++2b]
     __cpp_lib_is_swappable                         201603L [C++17]
     __cpp_lib_logical_traits                       201510L [C++17]
+    __cpp_lib_reference_from_temporary             202202L [C++2b]
     __cpp_lib_remove_cvref                         201711L [C++20]
     __cpp_lib_result_of_sfinae                     201210L [C++14]
     __cpp_lib_transformation_trait_aliases         201304L [C++14]
+    __cpp_lib_type_identity                        201806L [C++20]
     __cpp_lib_type_trait_variable_templates        201510L [C++17]
     __cpp_lib_void_t                               201411L [C++17]
 */
@@ -103,6 +105,10 @@
 #   error "__cpp_lib_logical_traits should not be defined before c++17"
 # endif
 
+# ifdef __cpp_lib_reference_from_temporary
+#   error "__cpp_lib_reference_from_temporary should not be defined before c++2b"
+# endif
+
 # ifdef __cpp_lib_remove_cvref
 #   error "__cpp_lib_remove_cvref should not be defined before c++20"
 # endif
@@ -113,6 +119,10 @@
 
 # ifdef __cpp_lib_transformation_trait_aliases
 #   error "__cpp_lib_transformation_trait_aliases should not be defined before c++14"
+# endif
+
+# ifdef __cpp_lib_type_identity
+#   error "__cpp_lib_type_identity should not be defined before c++20"
 # endif
 
 # ifdef __cpp_lib_type_trait_variable_templates
@@ -194,6 +204,10 @@
 #   error "__cpp_lib_logical_traits should not be defined before c++17"
 # endif
 
+# ifdef __cpp_lib_reference_from_temporary
+#   error "__cpp_lib_reference_from_temporary should not be defined before c++2b"
+# endif
+
 # ifdef __cpp_lib_remove_cvref
 #   error "__cpp_lib_remove_cvref should not be defined before c++20"
 # endif
@@ -210,6 +224,10 @@
 # endif
 # if __cpp_lib_transformation_trait_aliases != 201304L
 #   error "__cpp_lib_transformation_trait_aliases should have the value 201304L in c++14"
+# endif
+
+# ifdef __cpp_lib_type_identity
+#   error "__cpp_lib_type_identity should not be defined before c++20"
 # endif
 
 # ifdef __cpp_lib_type_trait_variable_templates
@@ -309,6 +327,10 @@
 #   error "__cpp_lib_logical_traits should have the value 201510L in c++17"
 # endif
 
+# ifdef __cpp_lib_reference_from_temporary
+#   error "__cpp_lib_reference_from_temporary should not be defined before c++2b"
+# endif
+
 # ifdef __cpp_lib_remove_cvref
 #   error "__cpp_lib_remove_cvref should not be defined before c++20"
 # endif
@@ -325,6 +347,10 @@
 # endif
 # if __cpp_lib_transformation_trait_aliases != 201304L
 #   error "__cpp_lib_transformation_trait_aliases should have the value 201304L in c++17"
+# endif
+
+# ifdef __cpp_lib_type_identity
+#   error "__cpp_lib_type_identity should not be defined before c++20"
 # endif
 
 # ifndef __cpp_lib_type_trait_variable_templates
@@ -457,6 +483,10 @@
 #   error "__cpp_lib_logical_traits should have the value 201510L in c++20"
 # endif
 
+# ifdef __cpp_lib_reference_from_temporary
+#   error "__cpp_lib_reference_from_temporary should not be defined before c++2b"
+# endif
+
 # ifndef __cpp_lib_remove_cvref
 #   error "__cpp_lib_remove_cvref should be defined in c++20"
 # endif
@@ -476,6 +506,13 @@
 # endif
 # if __cpp_lib_transformation_trait_aliases != 201304L
 #   error "__cpp_lib_transformation_trait_aliases should have the value 201304L in c++20"
+# endif
+
+# ifndef __cpp_lib_type_identity
+#   error "__cpp_lib_type_identity should be defined in c++20"
+# endif
+# if __cpp_lib_type_identity != 201806L
+#   error "__cpp_lib_type_identity should have the value 201806L in c++20"
 # endif
 
 # ifndef __cpp_lib_type_trait_variable_templates
@@ -611,6 +648,19 @@
 #   error "__cpp_lib_logical_traits should have the value 201510L in c++2b"
 # endif
 
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_reference_from_temporary
+#     error "__cpp_lib_reference_from_temporary should be defined in c++2b"
+#   endif
+#   if __cpp_lib_reference_from_temporary != 202202L
+#     error "__cpp_lib_reference_from_temporary should have the value 202202L in c++2b"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_reference_from_temporary
+#     error "__cpp_lib_reference_from_temporary should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
 # ifndef __cpp_lib_remove_cvref
 #   error "__cpp_lib_remove_cvref should be defined in c++2b"
 # endif
@@ -630,6 +680,13 @@
 # endif
 # if __cpp_lib_transformation_trait_aliases != 201304L
 #   error "__cpp_lib_transformation_trait_aliases should have the value 201304L in c++2b"
+# endif
+
+# ifndef __cpp_lib_type_identity
+#   error "__cpp_lib_type_identity should be defined in c++2b"
+# endif
+# if __cpp_lib_type_identity != 201806L
+#   error "__cpp_lib_type_identity should have the value 201806L in c++2b"
 # endif
 
 # ifndef __cpp_lib_type_trait_variable_templates

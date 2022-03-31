@@ -19,9 +19,6 @@
 #define DEBUG_TYPE "jitlink"
 
 namespace llvm {
-
-class MemoryBufferRef;
-
 namespace jitlink {
 
 /// Base class for a JIT linker.
@@ -161,4 +158,4 @@ void prune(LinkGraph &G);
 
 #undef DEBUG_TYPE // "jitlink"
 
-#endif // LLVM_EXECUTIONENGINE_JITLINK_JITLINKGENERIC_H
+#endif // LIB_EXECUTIONENGINE_JITLINK_JITLINKGENERIC_H

@@ -98,6 +98,7 @@ private:
                                           const BuiltinType &ToType) const;
 
   const bool WarnOnIntegerNarrowingConversion;
+  const bool WarnOnIntegerToFloatingPointNarrowingConversion;
   const bool WarnOnFloatingPointNarrowingConversion;
   const bool WarnWithinTemplateInstantiation;
   const bool WarnOnEquivalentBitWidth;

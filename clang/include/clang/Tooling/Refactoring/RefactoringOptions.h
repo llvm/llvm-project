@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_REFACTOR_REFACTORING_OPTIONS_H
-#define LLVM_CLANG_TOOLING_REFACTOR_REFACTORING_OPTIONS_H
+#ifndef LLVM_CLANG_TOOLING_REFACTORING_REFACTORINGOPTIONS_H
+#define LLVM_CLANG_TOOLING_REFACTORING_REFACTORINGOPTIONS_H
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Tooling/Refactoring/RefactoringActionRuleRequirements.h"
@@ -54,4 +54,4 @@ public:
 } // end namespace tooling
 } // end namespace clang
 
-#endif // LLVM_CLANG_TOOLING_REFACTOR_REFACTORING_OPTIONS_H
+#endif // LLVM_CLANG_TOOLING_REFACTORING_REFACTORINGOPTIONS_H

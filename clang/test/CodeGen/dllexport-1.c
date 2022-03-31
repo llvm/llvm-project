@@ -18,7 +18,7 @@ __declspec(dllexport) const int y;
 // expected-warning@+1 {{'extern' variable has an initializer}}
 extern int const z = 4;
 
-int main() {
+int main(void) {
   int a = x + y + z;
   return a;
 }

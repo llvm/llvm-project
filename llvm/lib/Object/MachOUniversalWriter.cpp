@@ -12,14 +12,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Object/MachOUniversalWriter.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/Binary.h"
-#include "llvm/Object/Error.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/MachOUniversal.h"
-#include "llvm/Support/SmallVectorMemoryBuffer.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/MathExtras.h"
+#include "llvm/Support/MemoryBufferRef.h"
+#include "llvm/Support/SwapByteOrder.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 using namespace object;
@@ -206,7 +213,7 @@ Expected<Slice> Slice::create(const Archive &A, LLVMContext *LLVMCtx) {
             .c_str());
 
   if (MFO) {
-    Slice ArchiveSlice(*(MFO.get()), MFO->is64Bit() ? 3 : 2);
+    Slice ArchiveSlice(*(MFO), MFO->is64Bit() ? 3 : 2);
     ArchiveSlice.B = &A;
     return ArchiveSlice;
   }

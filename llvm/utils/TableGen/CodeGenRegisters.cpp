@@ -12,21 +12,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeGenRegisters.h"
-#include "CodeGenTarget.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntEqClasses.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -204,12 +201,16 @@ namespace {
 class RegUnitIterator {
   CodeGenRegister::Vec::const_iterator RegI, RegE;
   CodeGenRegister::RegUnitList::iterator UnitI, UnitE;
+  static CodeGenRegister::RegUnitList Sentinel;
 
 public:
   RegUnitIterator(const CodeGenRegister::Vec &Regs):
     RegI(Regs.begin()), RegE(Regs.end()) {
 
-    if (RegI != RegE) {
+    if (RegI == RegE) {
+      UnitI = Sentinel.end();
+      UnitE = Sentinel.end();
+    } else {
       UnitI = (*RegI)->getRegUnits().begin();
       UnitE = (*RegI)->getRegUnits().end();
       advance();
@@ -239,6 +240,8 @@ protected:
     }
   }
 };
+
+CodeGenRegister::RegUnitList RegUnitIterator::Sentinel;
 
 } // end anonymous namespace
 
@@ -1106,6 +1109,17 @@ void CodeGenRegisterClass::buildRegUnitSet(const CodeGenRegBank &RegBank,
 }
 
 //===----------------------------------------------------------------------===//
+//                           CodeGenRegisterCategory
+//===----------------------------------------------------------------------===//
+
+CodeGenRegisterCategory::CodeGenRegisterCategory(CodeGenRegBank &RegBank,
+                                                 Record *R)
+    : TheDef(R), Name(std::string(R->getName())) {
+  for (Record *RegClass : R->getValueAsListOfDefs("Classes"))
+    Classes.push_back(RegBank.getRegClass(RegClass));
+}
+
+//===----------------------------------------------------------------------===//
 //                               CodeGenRegBank
 //===----------------------------------------------------------------------===//
 
@@ -1222,6 +1236,12 @@ CodeGenRegBank::CodeGenRegBank(RecordKeeper &Records,
   for (auto &RC : RegClasses)
     RC.EnumValue = i++;
   CodeGenRegisterClass::computeSubClasses(*this);
+
+  // Read in the register category definitions.
+  std::vector<Record *> RCats =
+      Records.getAllDerivedDefinitions("RegisterCategory");
+  for (auto *R : RCats)
+    RegCategories.emplace_back(*this, R);
 }
 
 // Create a synthetic CodeGenSubRegIndex without a corresponding Record.

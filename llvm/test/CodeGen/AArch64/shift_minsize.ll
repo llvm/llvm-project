@@ -16,6 +16,11 @@ define i64 @f0(i64 %val, i64 %amt) minsize optsize {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    lsl x0, x0, x1
 ; CHECK-NEXT:    ret
+;
+; CHECK-DARWIN-LABEL: f0:
+; CHECK-DARWIN:       ; %bb.0:
+; CHECK-DARWIN-NEXT:    lsl x0, x0, x1
+; CHECK-DARWIN-NEXT:    ret
   %res = shl i64 %val, %amt
   ret i64 %res
 }
@@ -26,6 +31,12 @@ define i32 @f1(i64 %x, i64 %y) minsize optsize {
 ; CHECK-NEXT:    lsl x0, x0, x1
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
+;
+; CHECK-DARWIN-LABEL: f1:
+; CHECK-DARWIN:       ; %bb.0:
+; CHECK-DARWIN-NEXT:    lsl x0, x0, x1
+; CHECK-DARWIN-NEXT:    ; kill: def $w0 killed $w0 killed $x0
+; CHECK-DARWIN-NEXT:    ret
 	%a = shl i64 %x, %y
 	%b = trunc i64 %a to i32
 	ret i32 %b
@@ -37,6 +48,12 @@ define i32 @f2(i64 %x, i64 %y) minsize optsize {
 ; CHECK-NEXT:    asr x0, x0, x1
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
+;
+; CHECK-DARWIN-LABEL: f2:
+; CHECK-DARWIN:       ; %bb.0:
+; CHECK-DARWIN-NEXT:    asr x0, x0, x1
+; CHECK-DARWIN-NEXT:    ; kill: def $w0 killed $w0 killed $x0
+; CHECK-DARWIN-NEXT:    ret
 	%a = ashr i64 %x, %y
 	%b = trunc i64 %a to i32
 	ret i32 %b
@@ -48,6 +65,12 @@ define i32 @f3(i64 %x, i64 %y) minsize optsize {
 ; CHECK-NEXT:    lsr x0, x0, x1
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
+;
+; CHECK-DARWIN-LABEL: f3:
+; CHECK-DARWIN:       ; %bb.0:
+; CHECK-DARWIN-NEXT:    lsr x0, x0, x1
+; CHECK-DARWIN-NEXT:    ; kill: def $w0 killed $w0 killed $x0
+; CHECK-DARWIN-NEXT:    ret
 	%a = lshr i64 %x, %y
 	%b = trunc i64 %a to i32
 	ret i32 %b
@@ -62,6 +85,20 @@ define dso_local { i64, i64 } @shl128(i64 %x.coerce0, i64 %x.coerce1, i8 signext
 ; CHECK-NEXT:    bl __ashlti3
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
+;
+; CHECK-DARWIN-LABEL: shl128:
+; CHECK-DARWIN:       ; %bb.0: ; %entry
+; CHECK-DARWIN-NEXT:    mvn w8, w2
+; CHECK-DARWIN-NEXT:    mov w9, w2
+; CHECK-DARWIN-NEXT:    lsr x10, x0, #1
+; CHECK-DARWIN-NEXT:    tst x9, #0x40
+; CHECK-DARWIN-NEXT:    lsr x8, x10, x8
+; CHECK-DARWIN-NEXT:    lsl x10, x1, x9
+; CHECK-DARWIN-NEXT:    orr x8, x10, x8
+; CHECK-DARWIN-NEXT:    lsl x10, x0, x9
+; CHECK-DARWIN-NEXT:    csel x1, x10, x8, ne
+; CHECK-DARWIN-NEXT:    csel x0, xzr, x10, ne
+; CHECK-DARWIN-NEXT:    ret
 
 entry:
   %x.sroa.2.0.insert.ext = zext i64 %x.coerce1 to i128
@@ -88,6 +125,21 @@ define dso_local { i64, i64 } @ashr128(i64 %x.coerce0, i64 %x.coerce1, i8 signex
 ; CHECK-NEXT:    bl __ashrti3
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
+;
+; CHECK-DARWIN-LABEL: ashr128:
+; CHECK-DARWIN:       ; %bb.0: ; %entry
+; CHECK-DARWIN-NEXT:    mov w8, w2
+; CHECK-DARWIN-NEXT:    mvn w9, w2
+; CHECK-DARWIN-NEXT:    lsl x10, x1, #1
+; CHECK-DARWIN-NEXT:    tst x8, #0x40
+; CHECK-DARWIN-NEXT:    lsr x11, x0, x8
+; CHECK-DARWIN-NEXT:    lsl x9, x10, x9
+; CHECK-DARWIN-NEXT:    asr x10, x1, x8
+; CHECK-DARWIN-NEXT:    orr x9, x9, x11
+; CHECK-DARWIN-NEXT:    asr x8, x1, #63
+; CHECK-DARWIN-NEXT:    csel x0, x10, x9, ne
+; CHECK-DARWIN-NEXT:    csel x1, x8, x10, ne
+; CHECK-DARWIN-NEXT:    ret
 entry:
   %x.sroa.2.0.insert.ext = zext i64 %x.coerce1 to i128
   %x.sroa.2.0.insert.shift = shl nuw i128 %x.sroa.2.0.insert.ext, 64
@@ -113,6 +165,20 @@ define dso_local { i64, i64 } @lshr128(i64 %x.coerce0, i64 %x.coerce1, i8 signex
 ; CHECK-NEXT:    bl __lshrti3
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
+;
+; CHECK-DARWIN-LABEL: lshr128:
+; CHECK-DARWIN:       ; %bb.0: ; %entry
+; CHECK-DARWIN-NEXT:    mov w8, w2
+; CHECK-DARWIN-NEXT:    mvn w9, w2
+; CHECK-DARWIN-NEXT:    lsl x10, x1, #1
+; CHECK-DARWIN-NEXT:    tst x8, #0x40
+; CHECK-DARWIN-NEXT:    lsr x11, x0, x8
+; CHECK-DARWIN-NEXT:    lsl x9, x10, x9
+; CHECK-DARWIN-NEXT:    orr x9, x9, x11
+; CHECK-DARWIN-NEXT:    lsr x10, x1, x8
+; CHECK-DARWIN-NEXT:    csel x0, x10, x9, ne
+; CHECK-DARWIN-NEXT:    csel x1, xzr, x10, ne
+; CHECK-DARWIN-NEXT:    ret
 entry:
   %x.sroa.2.0.insert.ext = zext i64 %x.coerce1 to i128
   %x.sroa.2.0.insert.shift = shl nuw i128 %x.sroa.2.0.insert.ext, 64

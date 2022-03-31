@@ -101,7 +101,7 @@ private:
   llvm::ScopedPrinter logger{llvm::dbgs()};
 #endif
 };
-} // end anonymous namespace
+} // namespace
 
 GreedyPatternRewriteDriver::GreedyPatternRewriteDriver(
     MLIRContext *ctx, const FrozenRewritePatternSet &patterns,
@@ -255,11 +255,6 @@ bool GreedyPatternRewriteDriver::simplify(MutableArrayRef<Region> regions) {
 #else
       LogicalResult matchResult = matcher.matchAndRewrite(op, *this);
 #endif
-
-
-#ifndef NDEBUG
-#endif
-
       changed |= succeeded(matchResult);
     }
 
@@ -436,7 +431,7 @@ private:
   bool opErasedViaPatternRewrites = false;
 };
 
-} // anonymous namespace
+} // namespace
 
 /// Performs the rewrites and folding only on `op`. The simplification
 /// converges if the op is erased as a result of being folded, replaced, or
@@ -543,7 +538,7 @@ private:
   llvm::SmallDenseSet<Operation *, 4> strictModeFilteredOps;
 };
 
-} // end anonymous namespace
+} // namespace
 
 /// Performs the specified rewrites on `ops` while also trying to fold these ops
 /// as well as any other ops that were in turn created due to these rewrite

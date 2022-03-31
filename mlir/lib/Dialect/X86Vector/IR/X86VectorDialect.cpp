@@ -28,17 +28,15 @@ void x86vector::X86VectorDialect::initialize() {
       >();
 }
 
-static LogicalResult verify(x86vector::MaskCompressOp op) {
-  if (op.src() && op.constant_src())
-    return emitError(op.getLoc(), "cannot use both src and constant_src");
+LogicalResult x86vector::MaskCompressOp::verify() {
+  if (src() && constant_src())
+    return emitError("cannot use both src and constant_src");
 
-  if (op.src() && (op.src().getType() != op.dst().getType()))
-    return emitError(op.getLoc(),
-                     "failed to verify that src and dst have same type");
+  if (src() && (src().getType() != dst().getType()))
+    return emitError("failed to verify that src and dst have same type");
 
-  if (op.constant_src() && (op.constant_src()->getType() != op.dst().getType()))
+  if (constant_src() && (constant_src()->getType() != dst().getType()))
     return emitError(
-        op.getLoc(),
         "failed to verify that constant_src and dst have same type");
 
   return success();

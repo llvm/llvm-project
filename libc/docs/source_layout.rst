@@ -31,7 +31,7 @@ The ``docs`` directory contains design docs and also informative documents like
 this document on source layout.
 
 The ``fuzzing`` directory
-----------------------
+-------------------------
 
 This directory contains fuzzing tests for the various components of llvm-libc. The
 directory structure within this directory mirrors the directory structure of the

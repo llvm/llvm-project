@@ -253,7 +253,6 @@ getBranchOnRegTargetOpValue(const MCInst &MI, unsigned OpNo,
 #include "SparcGenMCCodeEmitter.inc"
 
 MCCodeEmitter *llvm::createSparcMCCodeEmitter(const MCInstrInfo &MCII,
-                                              const MCRegisterInfo &MRI,
                                               MCContext &Ctx) {
   return new SparcMCCodeEmitter(MCII, Ctx);
 }

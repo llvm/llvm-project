@@ -21,7 +21,9 @@
 // CHECK-NEXT: alpha.unix.Stream
 // CHECK-NEXT: apiModeling.StdCLibraryFunctions
 // CHECK-NEXT: alpha.unix.StdCLibraryFunctionArgs
+// CHECK-NEXT: apiModeling.Errno
 // CHECK-NEXT: apiModeling.TrustNonnull
+// CHECK-NEXT: apiModeling.TrustReturnsNonnull
 // CHECK-NEXT: apiModeling.llvm.CastValue
 // CHECK-NEXT: apiModeling.llvm.ReturnValue
 // CHECK-NEXT: core.DivideZero

@@ -6,7 +6,7 @@ try:
   from typing import Optional, Sequence, Union
   from ..ir import *
   from ._ods_common import get_default_loc_context
-  from .._mlir_libs._mlir.dialects.linalg import fill_builtin_region
+  from .._mlir_libs._mlirDialectsLinalg import fill_builtin_region
 except ImportError as e:
   raise RuntimeError("Error loading imports from extension module") from e
 
@@ -19,23 +19,6 @@ def isa(cls: Type, ty: Type):
   except ValueError:
     return False
 
-
-class FillOp:
-  """Extends the linalg.fill op."""
-
-  def __init__(self, output: Value, value: Value, *, loc=None, ip=None):
-    results = []
-    if isa(RankedTensorType, output.type):
-      results = [output.type]
-    op = self.build_generic(
-        results=results,
-        operands=[_get_op_result_or_value(o) for o in [value, output]],
-        attributes=None,
-        loc=loc,
-        ip=ip)
-    OpView.__init__(self, op)
-    linalgDialect = Context.current.get_dialect_descriptor("linalg")
-    fill_builtin_region(linalgDialect, self.operation)
 
 class InitTensorOp:
   """Extends the linalg.init_tensor op."""

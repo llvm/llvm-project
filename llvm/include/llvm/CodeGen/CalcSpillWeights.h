@@ -9,7 +9,6 @@
 #ifndef LLVM_CODEGEN_CALCSPILLWEIGHTS_H
 #define LLVM_CODEGEN_CALCSPILLWEIGHTS_H
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 
 namespace llvm {
@@ -79,6 +78,18 @@ class VirtRegMap;
     /// Compute spill weights and allocation hints for all virtual register
     /// live intervals.
     void calculateSpillWeightsAndHints();
+
+    /// Return the preferred allocation register for reg, given a COPY
+    /// instruction.
+    static Register copyHint(const MachineInstr *MI, unsigned Reg,
+                             const TargetRegisterInfo &TRI,
+                             const MachineRegisterInfo &MRI);
+
+    /// Determine if all values in LI are rematerializable.
+    static bool isRematerializable(const LiveInterval &LI,
+                                   const LiveIntervals &LIS,
+                                   const VirtRegMap &VRM,
+                                   const TargetInstrInfo &TII);
 
   protected:
     /// Helper function for weight calculations.

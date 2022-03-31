@@ -49,7 +49,7 @@ __attribute__((ns_returns_retained)) id objc_retainedObject(objc_objectptr_t __a
 __attribute__((ns_returns_not_retained)) id objc_unretainedObject(objc_objectptr_t pointer);
 
 // Test the analyzer is working at all.
-void test_working() {
+void test_working(void) {
   int *p = 0;
   *p = 0xDEADBEEF; // expected-warning {{null}}
 }
@@ -75,7 +75,7 @@ void testblock_qux(int x) {
 }
 
 // Test that Objective-C pointers are null initialized.
-void test_nil_initialized() {
+void test_nil_initialized(void) {
   id x;
   if (x == 0)
     return;
@@ -84,12 +84,12 @@ void test_nil_initialized() {
 }
 
 // Test that we don't flag leaks of Objective-C objects.
-void test_alloc() {
+void test_alloc(void) {
   [NSObject alloc]; // no-warning
 }
 
 // Test that CF allocations are still caught as leaks.
-void test_cf_leak() {
+void test_cf_leak(void) {
   CFAbsoluteTime t = CFAbsoluteTimeGetCurrent();
   CFDateRef date = CFDateCreate(0, t); // expected-warning {{Potential leak}}
   (void) date;
@@ -115,7 +115,7 @@ void test_cf_leak() {
 @end
 
 // Test that dead store checking works in the prescence of "cleanups" in the AST.
-void rdar9424882() {
+void rdar9424882(void) {
   id x = [NSObject alloc]; // expected-warning {{Value stored to 'x' during its initialization is never read}}
 }
 
@@ -127,15 +127,15 @@ typedef const struct __CFString *CFStringRef;
 - (id) self;
 @end
 
-CFTypeRef CFCreateSomething();
-CFStringRef CFCreateString();
-CFTypeRef CFGetSomething();
-CFStringRef CFGetString();
+CFTypeRef CFCreateSomething(void);
+CFStringRef CFCreateString(void);
+CFTypeRef CFGetSomething(void);
+CFStringRef CFGetString(void);
 
-id CreateSomething();
-NSString *CreateNSString();
+id CreateSomething(void);
+NSString *CreateNSString(void);
 
-void from_cf() {
+void from_cf(void) {
   id obj1 = (__bridge_transfer id)CFCreateSomething(); // expected-warning{{never read}}
   id obj2 = (__bridge_transfer NSString*)CFCreateString();
   [obj2 self]; // Add a use, to show we can use the object after it has been transferred.
@@ -153,14 +153,14 @@ void to_cf(id obj) {
   CFStringRef cf4 = (__bridge CFStringRef)CreateNSString();  // expected-warning{{never read}}
 }
 
-void test_objc_retainedObject() {
+void test_objc_retainedObject(void) {
   CFAbsoluteTime t = CFAbsoluteTimeGetCurrent();
   CFDateRef date = CFDateCreate(0, t);
   id x = objc_retainedObject(date);
   (void) x;
 }
 
-void test_objc_unretainedObject() {
+void test_objc_unretainedObject(void) {
   CFAbsoluteTime t = CFAbsoluteTimeGetCurrent();
   CFDateRef date = CFDateCreate(0, t);  // expected-warning {{Potential leak}}
   id x = objc_unretainedObject(date);
@@ -168,12 +168,12 @@ void test_objc_unretainedObject() {
 }
 
 // Previously this resulted in a "return of stack address" warning.
-id test_return() {
+id test_return(void) {
   id x = (__bridge_transfer id) CFCreateString();
   return x; // no-warning
 }
 
-void test_objc_arrays() {
+void test_objc_arrays(void) {
     { // CASE ONE -- OBJECT IN ARRAY CREATED DIRECTLY
         NSObject *o = [[NSObject alloc] init];
         NSArray *a = [[NSArray alloc] initWithObjects:o, (void*)0];
@@ -210,20 +210,20 @@ void rdar11059275(dispatch_object_t object) {
   NSObject *o = [[NSObject alloc] init];
   dispatch_set_context(object, CFBridgingRetain(o)); // no-warning  
 }
-void rdar11059275_positive() {
+void rdar11059275_positive(void) {
   NSObject *o = [[NSObject alloc] init]; // expected-warning {{leak}}
   CFBridgingRetain(o);
 }
-void rdar11059275_negative() {
+void rdar11059275_negative(void) {
   NSObject *o = [[NSObject alloc] init]; // no-warning
   (void) o;
 }
 
-__attribute__((ns_returns_retained)) id rdar14061675_helper() {
+__attribute__((ns_returns_retained)) id rdar14061675_helper(void) {
   return [[NSObject alloc] init];
 }
 
-id rdar14061675() {
+id rdar14061675(void) {
   // ARC produces an implicit cast here. We need to make sure the combination
   // of that and the inlined call don't produce a spurious edge cycle.
   id result = rdar14061675_helper();
@@ -240,7 +240,7 @@ extern CFTypeRef CFRetain(CFTypeRef cf);
 extern void CFRelease(CFTypeRef cf);
 
 
-void check_bridge_retained_cast() {
+void check_bridge_retained_cast(void) {
     NSString *nsStr = [[NSString alloc] init];
     CFStringRef cfStr = (__bridge_retained CFStringRef)nsStr;
     CFRelease(cfStr); // no-warning
@@ -255,7 +255,7 @@ void check_bridge_to_non_cocoa(CFStringRef s) {
 
 struct B;
 
-struct B * check_bridge_to_non_cf() {
+struct B * check_bridge_to_non_cf(void) {
   NSString *s = [[NSString alloc] init];
   return (__bridge struct B*) s;
 }

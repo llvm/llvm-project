@@ -6,9 +6,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: libcpp-has-no-incomplete-format
-// XFAIL: LIBCXX-AIX-FIXME
 
 // <format>
 
@@ -160,19 +158,14 @@ constexpr void test_as_string() {
 
   test_exception<Parser<CharT>>("End of input while parsing format-spec arg-id",
                                 CSTR("{"));
-  test_exception<Parser<CharT>>(
-      "A format-spec arg-id should terminate at a '}'", CSTR("{0"));
+  test_exception<Parser<CharT>>("Invalid arg-id", CSTR("{0"));
   test_exception<Parser<CharT>>(
       "The arg-id of the format-spec starts with an invalid character",
       CSTR("{a"));
-  test_exception<Parser<CharT>>(
-      "A format-spec arg-id should terminate at a '}'", CSTR("{1"));
-  test_exception<Parser<CharT>>(
-      "A format-spec arg-id should terminate at a '}'", CSTR("{9"));
-  test_exception<Parser<CharT>>(
-      "A format-spec arg-id should terminate at a '}'", CSTR("{9:"));
-  test_exception<Parser<CharT>>(
-      "A format-spec arg-id should terminate at a '}'", CSTR("{9a"));
+  test_exception<Parser<CharT>>("Invalid arg-id", CSTR("{1"));
+  test_exception<Parser<CharT>>("Invalid arg-id", CSTR("{9"));
+  test_exception<Parser<CharT>>("Invalid arg-id", CSTR("{9:"));
+  test_exception<Parser<CharT>>("Invalid arg-id", CSTR("{9a"));
 
   static_assert(std::__format::__number_max == 2'147'483'647,
                 "Update the assert and the test.");
@@ -199,76 +192,6 @@ constexpr void test_as_string() {
   // *** Locale-specific form ***
   test({.locale_specific_form = true}, 1, CSTR("L}"));
   test({.locale_specific_form = true}, 2, CSTR("Ls}"));
-}
-
-template <class CharT>
-constexpr void test_as_char() {
-
-  test({.type = _Flags::_Type::__char}, 1, CSTR("c}"));
-
-  // *** Align-fill ***
-  test({.alignment = _Flags::_Alignment::__left, .type = _Flags::_Type::__char},
-       2, CSTR("<c}"));
-  test({.alignment = _Flags::_Alignment::__center,
-        .type = _Flags::_Type::__char},
-       2, "^c}");
-  test(
-      {.alignment = _Flags::_Alignment::__right, .type = _Flags::_Type::__char},
-      2, ">c}");
-
-  test({.fill = CharT('L'),
-        .alignment = _Flags::_Alignment::__left,
-        .type = _Flags::_Type::__char},
-       3, CSTR("L<c}"));
-  test({.fill = CharT('#'),
-        .alignment = _Flags::_Alignment::__center,
-        .type = _Flags::_Type::__char},
-       3, CSTR("#^c}"));
-  test({.fill = CharT('0'),
-        .alignment = _Flags::_Alignment::__right,
-        .type = _Flags::_Type::__char},
-       3, CSTR("0>c}"));
-
-  // *** Sign ***
-  test_exception<Parser<CharT>>(
-      "A sign field isn't allowed in this format-spec", CSTR("-c}"));
-
-  // *** Alternate form ***
-  test_exception<Parser<CharT>>(
-      "An alternate form field isn't allowed in this format-spec", CSTR("#c}"));
-
-  // *** Zero padding ***
-  test_exception<Parser<CharT>>(
-      "A zero-padding field isn't allowed in this format-spec", CSTR("0c}"));
-
-  // *** Width ***
-  test({.width = 0, .width_as_arg = false, .type = _Flags::_Type::__char}, 1,
-       CSTR("c}"));
-  test({.width = 1, .width_as_arg = false, .type = _Flags::_Type::__char}, 2,
-       CSTR("1c}"));
-  test({.width = 10, .width_as_arg = false, .type = _Flags::_Type::__char}, 3,
-       CSTR("10c}"));
-  test({.width = 1000, .width_as_arg = false, .type = _Flags::_Type::__char}, 5,
-       CSTR("1000c}"));
-  test({.width = 1000000, .width_as_arg = false, .type = _Flags::_Type::__char},
-       8, CSTR("1000000c}"));
-
-  test({.width = 0, .width_as_arg = true, .type = _Flags::_Type::__char}, 3,
-       CSTR("{}c}"));
-  test({.width = 0, .width_as_arg = true, .type = _Flags::_Type::__char}, 4,
-       CSTR("{0}c}"));
-  test({.width = 1, .width_as_arg = true, .type = _Flags::_Type::__char}, 4,
-       CSTR("{1}c}"));
-
-  // *** Precision ***
-  test_exception<Parser<CharT>>(
-      "The format-spec should consume the input or end with a '}'", CSTR("."));
-  test_exception<Parser<CharT>>(
-      "The format-spec should consume the input or end with a '}'", CSTR(".1"));
-
-  // *** Locale-specific form ***
-  test({.locale_specific_form = true, .type = _Flags::_Type::__char}, 2,
-       CSTR("Lc}"));
 }
 
 template <class CharT>
@@ -406,7 +329,6 @@ constexpr void test() {
   test({}, 0, CSTR("}"));
 
   test_as_string<CharT>();
-  test_as_char<CharT>();
   test_as_integer<CharT>();
 
   // *** Type ***
@@ -418,6 +340,7 @@ constexpr void test() {
     test_exception<Parser<CharT>>(expected, CSTR("F}"));
     test_exception<Parser<CharT>>(expected, CSTR("G}"));
     test_exception<Parser<CharT>>(expected, CSTR("a}"));
+    test_exception<Parser<CharT>>(expected, CSTR("c}"));
     test_exception<Parser<CharT>>(expected, CSTR("e}"));
     test_exception<Parser<CharT>>(expected, CSTR("f}"));
     test_exception<Parser<CharT>>(expected, CSTR("g}"));

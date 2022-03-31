@@ -219,6 +219,7 @@ static Optional<const char *> GetCodeName(unsigned CodeID, unsigned BlockID,
       STRINGIFY_CODE(CST_CODE, CE_SHUFVEC_EX)
       STRINGIFY_CODE(CST_CODE, CE_UNOP)
       STRINGIFY_CODE(CST_CODE, DSO_LOCAL_EQUIVALENT)
+      STRINGIFY_CODE(CST_CODE, NO_CFI_VALUE)
     case bitc::CST_CODE_BLOCKADDRESS:
       return "CST_CODE_BLOCKADDRESS";
       STRINGIFY_CODE(CST_CODE, DATA)
@@ -780,7 +781,7 @@ Error BitcodeAnalyzer::parseBlock(unsigned BlockID, unsigned IndentLevel,
   uint64_t MetadataIndexOffset = 0;
 
   // Read all the records for this block.
-  while (1) {
+  while (true) {
     if (Stream.AtEndOfStream())
       return reportError("Premature end of bitstream");
 
@@ -863,7 +864,10 @@ Error BitcodeAnalyzer::parseBlock(unsigned BlockID, unsigned IndentLevel,
         O->OS << " codeid=" << Code;
       const BitCodeAbbrev *Abbv = nullptr;
       if (Entry.ID != bitc::UNABBREV_RECORD) {
-        Abbv = Stream.getAbbrev(Entry.ID);
+        Expected<const BitCodeAbbrev *> MaybeAbbv = Stream.getAbbrev(Entry.ID);
+        if (!MaybeAbbv)
+          return MaybeAbbv.takeError();
+        Abbv = MaybeAbbv.get();
         O->OS << " abbrevid=" << Entry.ID;
       }
 

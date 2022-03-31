@@ -57,7 +57,7 @@ double sind(double);
 // CHECK-NEXT:    store i32 %[[TMP7]], i32* %[[P_UPPERBOUND]], align 4
 // CHECK-NEXT:    store i32 1, i32* %[[P_STRIDE]], align 4
 // CHECK-NEXT:    %[[OMP_GLOBAL_THREAD_NUM:.+]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @1)
-// CHECK-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @1, i32 %[[OMP_GLOBAL_THREAD_NUM]], i32 34, i32* %[[P_LASTITER]], i32* %[[P_LOWERBOUND]], i32* %[[P_UPPERBOUND]], i32* %[[P_STRIDE]], i32 1, i32 1)
+// CHECK-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @1, i32 %[[OMP_GLOBAL_THREAD_NUM]], i32 34, i32* %[[P_LASTITER]], i32* %[[P_LOWERBOUND]], i32* %[[P_UPPERBOUND]], i32* %[[P_STRIDE]], i32 1, i32 0)
 // CHECK-NEXT:    %[[TMP8:.+]] = load i32, i32* %[[P_LOWERBOUND]], align 4
 // CHECK-NEXT:    %[[TMP9:.+]] = load i32, i32* %[[P_UPPERBOUND]], align 4
 // CHECK-NEXT:    %[[TMP10:.+]] = sub i32 %[[TMP9]], %[[TMP8]]
@@ -102,7 +102,7 @@ double sind(double);
 // CHECK-NEXT:    %[[ARRAYIDX:.+]] = getelementptr inbounds float, float* %[[TMP17]], i64 %[[IDXPROM]]
 // CHECK-NEXT:    %[[TMP19:.+]] = load float, float* %[[ARRAYIDX]], align 4
 // CHECK-NEXT:    %[[CONV:.+]] = fpext float %[[TMP19]] to double
-// CHECK-NEXT:    %[[CALL:.+]] = call double @sind(double %[[CONV]])
+// CHECK-NEXT:    %[[CALL:.+]] = call double @sind(double noundef %[[CONV]])
 // CHECK-NEXT:    %[[TMP20:.+]] = load float*, float** %[[C_ADDR]], align 8
 // CHECK-NEXT:    %[[TMP21:.+]] = load i32, i32* %[[I]], align 4
 // CHECK-NEXT:    %[[IDXPROM2:.+]] = sext i32 %[[TMP21]] to i64
@@ -201,7 +201,10 @@ void unroll_partial_heuristic_constant_for(float *a, float *b, float *c, float *
 // CHECK-NEXT:    %[[TMP7:.+]] = load i32, i32* %[[DOTSTART]], align 4
 // CHECK-NEXT:    %[[SUB:.+]] = sub nsw i32 %[[TMP6]], %[[TMP7]]
 // CHECK-NEXT:    %[[TMP8:.+]] = load i32, i32* %[[DOTSTEP]], align 4
-// CHECK-NEXT:    %[[DIV:.+]] = udiv i32 %[[SUB]], %[[TMP8]]
+// CHECK-NEXT:    %[[SUB1:.+]] = sub i32 %[[TMP8]], 1
+// CHECK-NEXT:    %[[ADD:.+]] = add i32 %[[SUB]], %[[SUB1]]
+// CHECK-NEXT:    %[[TMP9:.+]] = load i32, i32* %[[DOTSTEP]], align 4
+// CHECK-NEXT:    %[[DIV:.+]] = udiv i32 %[[ADD]], %[[TMP9]]
 // CHECK-NEXT:    br label %[[COND_END:.+]]
 // CHECK-EMPTY:
 // CHECK-NEXT:  [[COND_FALSE]]:
@@ -209,8 +212,8 @@ void unroll_partial_heuristic_constant_for(float *a, float *b, float *c, float *
 // CHECK-EMPTY:
 // CHECK-NEXT:  [[COND_END]]:
 // CHECK-NEXT:    %[[COND:.+]] = phi i32 [ %[[DIV]], %[[COND_TRUE]] ], [ 0, %[[COND_FALSE]] ]
-// CHECK-NEXT:    %[[TMP9:.+]] = load i32*, i32** %[[DISTANCE_ADDR]], align 8
-// CHECK-NEXT:    store i32 %[[COND]], i32* %[[TMP9]], align 4
+// CHECK-NEXT:    %[[TMP10:.+]] = load i32*, i32** %[[DISTANCE_ADDR]], align 8
+// CHECK-NEXT:    store i32 %[[COND]], i32* %[[TMP10]], align 4
 // CHECK-NEXT:    ret void
 // CHECK-NEXT:  }
 

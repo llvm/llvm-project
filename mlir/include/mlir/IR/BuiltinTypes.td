@@ -14,6 +14,7 @@
 #ifndef BUILTIN_TYPES
 #define BUILTIN_TYPES
 
+include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinDialect.td"
 include "mlir/IR/BuiltinTypeInterfaces.td"
 include "mlir/IR/SubElementInterfaces.td"
@@ -154,6 +155,10 @@ def Builtin_Function : Builtin_Type<"Function", [
     unsigned getNumResults() const;
     Type getResult(unsigned i) const { return getResults()[i]; }
 
+    /// Returns a clone of this function type with the given argument
+    /// and result types.
+    FunctionType clone(TypeRange inputs, TypeRange results) const;
+
     /// Returns a new function type with the specified arguments and results
     /// inserted.
     FunctionType getWithArgsAndResults(ArrayRef<unsigned> argIndices,
@@ -162,8 +167,8 @@ def Builtin_Function : Builtin_Type<"Function", [
                                        TypeRange resultTypes);
 
     /// Returns a new function type without the specified arguments and results.
-    FunctionType getWithoutArgsAndResults(ArrayRef<unsigned> argIndices,
-                                          ArrayRef<unsigned> resultIndices);
+    FunctionType getWithoutArgsAndResults(const BitVector &argIndices,
+                                          const BitVector &resultIndices);
   }];
 }
 
@@ -182,7 +187,7 @@ def Builtin_Index : Builtin_Type<"Index"> {
     ```
 
     The index type is a signless integer whose size is equal to the natural
-    machine word of the target ( [rationale](https://mlir.llvm.org/docs/Rationale/Rationale/#integer-signedness-semantics) )
+    machine word of the target ( [rationale](../../Rationale/Rationale/#integer-signedness-semantics) )
     and is used by the affine constructs in MLIR.
 
     **Rationale:** integers of platform-specific bit widths are practical to
@@ -266,7 +271,7 @@ def Builtin_Integer : Builtin_Type<"Integer"> {
 //===----------------------------------------------------------------------===//
 
 def Builtin_MemRef : Builtin_Type<"MemRef", [
-    DeclareTypeInterfaceMethods<SubElementTypeInterface>
+    DeclareTypeInterfaceMethods<SubElementTypeInterface>, ShapedTypeInterface
   ], "BaseMemRefType"> {
   let summary = "Shaped reference to a region of memory";
   let description = [{
@@ -541,6 +546,16 @@ def Builtin_MemRef : Builtin_Type<"MemRef", [
       "unsigned":$memorySpaceInd)>
   ];
   let extraClassDeclaration = [{
+    using ShapedType::Trait<MemRefType>::clone;
+    using ShapedType::Trait<MemRefType>::getElementTypeBitWidth;
+    using ShapedType::Trait<MemRefType>::getRank;
+    using ShapedType::Trait<MemRefType>::getNumElements;
+    using ShapedType::Trait<MemRefType>::isDynamicDim;
+    using ShapedType::Trait<MemRefType>::hasStaticShape;
+    using ShapedType::Trait<MemRefType>::getNumDynamicDims;
+    using ShapedType::Trait<MemRefType>::getDimSize;
+    using ShapedType::Trait<MemRefType>::getDynamicDimIndex;
+
     /// This is a builder type that keeps local references to arguments.
     /// Arguments that are passed into the builder must outlive the builder.
     class Builder;
@@ -620,7 +635,7 @@ def Builtin_Opaque : Builtin_Type<"Opaque"> {
 //===----------------------------------------------------------------------===//
 
 def Builtin_RankedTensor : Builtin_Type<"RankedTensor", [
-    DeclareTypeInterfaceMethods<SubElementTypeInterface>
+    DeclareTypeInterfaceMethods<SubElementTypeInterface>, ShapedTypeInterface
   ], "TensorType"> {
   let summary = "Multi-dimensional array with a fixed number of dimensions";
   let description = [{
@@ -702,6 +717,16 @@ def Builtin_RankedTensor : Builtin_Type<"RankedTensor", [
     }]>
   ];
   let extraClassDeclaration = [{
+    using ShapedType::Trait<RankedTensorType>::clone;
+    using ShapedType::Trait<RankedTensorType>::getElementTypeBitWidth;
+    using ShapedType::Trait<RankedTensorType>::getRank;
+    using ShapedType::Trait<RankedTensorType>::getNumElements;
+    using ShapedType::Trait<RankedTensorType>::isDynamicDim;
+    using ShapedType::Trait<RankedTensorType>::hasStaticShape;
+    using ShapedType::Trait<RankedTensorType>::getNumDynamicDims;
+    using ShapedType::Trait<RankedTensorType>::getDimSize;
+    using ShapedType::Trait<RankedTensorType>::getDynamicDimIndex;
+
     /// This is a builder type that keeps local references to arguments.
     /// Arguments that are passed into the builder must outlive the builder.
     class Builder;
@@ -730,7 +755,7 @@ def Builtin_Tuple : Builtin_Type<"Tuple", [
 
     **Rationale:** Though this type is first class in the type system, MLIR
     provides no standard operations for operating on `tuple` types
-    ([rationale](Rationale/Rationale/#tuple-types)).
+    ([rationale](../../Rationale/Rationale/#tuple-types)).
 
     Examples:
 
@@ -784,7 +809,7 @@ def Builtin_Tuple : Builtin_Type<"Tuple", [
 //===----------------------------------------------------------------------===//
 
 def Builtin_UnrankedMemRef : Builtin_Type<"UnrankedMemRef", [
-    DeclareTypeInterfaceMethods<SubElementTypeInterface>
+    DeclareTypeInterfaceMethods<SubElementTypeInterface>, ShapedTypeInterface
   ], "BaseMemRefType"> {
   let summary = "Shaped reference, with unknown rank, to a region of memory";
   let description = [{
@@ -831,6 +856,16 @@ def Builtin_UnrankedMemRef : Builtin_Type<"UnrankedMemRef", [
     }]>
   ];
   let extraClassDeclaration = [{
+    using ShapedType::Trait<UnrankedMemRefType>::clone;
+    using ShapedType::Trait<UnrankedMemRefType>::getElementTypeBitWidth;
+    using ShapedType::Trait<UnrankedMemRefType>::getRank;
+    using ShapedType::Trait<UnrankedMemRefType>::getNumElements;
+    using ShapedType::Trait<UnrankedMemRefType>::isDynamicDim;
+    using ShapedType::Trait<UnrankedMemRefType>::hasStaticShape;
+    using ShapedType::Trait<UnrankedMemRefType>::getNumDynamicDims;
+    using ShapedType::Trait<UnrankedMemRefType>::getDimSize;
+    using ShapedType::Trait<UnrankedMemRefType>::getDynamicDimIndex;
+
     ArrayRef<int64_t> getShape() const { return llvm::None; }
 
     /// [deprecated] Returns the memory space in old raw integer representation.
@@ -846,7 +881,7 @@ def Builtin_UnrankedMemRef : Builtin_Type<"UnrankedMemRef", [
 //===----------------------------------------------------------------------===//
 
 def Builtin_UnrankedTensor : Builtin_Type<"UnrankedTensor", [
-    DeclareTypeInterfaceMethods<SubElementTypeInterface>
+    DeclareTypeInterfaceMethods<SubElementTypeInterface>, ShapedTypeInterface
   ], "TensorType"> {
   let summary = "Multi-dimensional array with unknown dimensions";
   let description = [{
@@ -874,6 +909,16 @@ def Builtin_UnrankedTensor : Builtin_Type<"UnrankedTensor", [
     }]>
   ];
   let extraClassDeclaration = [{
+    using ShapedType::Trait<UnrankedTensorType>::clone;
+    using ShapedType::Trait<UnrankedTensorType>::getElementTypeBitWidth;
+    using ShapedType::Trait<UnrankedTensorType>::getRank;
+    using ShapedType::Trait<UnrankedTensorType>::getNumElements;
+    using ShapedType::Trait<UnrankedTensorType>::isDynamicDim;
+    using ShapedType::Trait<UnrankedTensorType>::hasStaticShape;
+    using ShapedType::Trait<UnrankedTensorType>::getNumDynamicDims;
+    using ShapedType::Trait<UnrankedTensorType>::getDimSize;
+    using ShapedType::Trait<UnrankedTensorType>::getDynamicDimIndex;
+
     ArrayRef<int64_t> getShape() const { return llvm::None; }
   }];
   let skipDefaultBuilders = 1;
@@ -885,23 +930,28 @@ def Builtin_UnrankedTensor : Builtin_Type<"UnrankedTensor", [
 //===----------------------------------------------------------------------===//
 
 def Builtin_Vector : Builtin_Type<"Vector", [
-    DeclareTypeInterfaceMethods<SubElementTypeInterface>
-  ], "ShapedType"> {
+    DeclareTypeInterfaceMethods<SubElementTypeInterface>, ShapedTypeInterface
+  ], "Type"> {
   let summary = "Multi-dimensional SIMD vector type";
   let description = [{
     Syntax:
 
     ```
-    vector-type ::= `vector` `<` static-dimension-list vector-element-type `>`
+    vector-type ::= `vector` `<` vector-dim-list vector-element-type `>`
     vector-element-type ::= float-type | integer-type | index-type
-
-    static-dimension-list ::= (decimal-literal `x`)*
+    vector-dim-list := (static-dim-list `x`)? (`[` static-dim-list `]` `x`)?
+    static-dim-list ::= decimal-literal (`x` decimal-literal)*
     ```
 
-    The vector type represents a SIMD style vector, used by target-specific
-    operation sets like AVX. While the most common use is for 1D vectors (e.g.
-    vector<16 x f32>) we also support multidimensional registers on targets that
-    support them (like TPUs).
+    The vector type represents a SIMD style vector used by target-specific
+    operation sets like AVX or SVE. While the most common use is for 1D
+    vectors (e.g. vector<16 x f32>) we also support multidimensional registers
+    on targets that support them (like TPUs). The dimensions of a vector type
+    can be fixed-length, scalable, or a combination of the two. The scalable
+    dimensions in a vector are indicated between square brackets ([ ]), and
+    all fixed-length dimensions, if present, must precede the set of scalable
+    dimensions. That is, a `vector<2x[4]xf32>` is valid, but `vector<[4]x2xf32>`
+    is not.
 
     Vector shapes must be positive decimal integers. 0D vectors are allowed by
     omitting the dimension: `vector<f32>`.
@@ -913,19 +963,31 @@ def Builtin_Vector : Builtin_Type<"Vector", [
     Examples:
 
     ```mlir
+    // A 2D fixed-length vector of 3x42 i32 elements.
     vector<3x42xi32>
+
+    // A 1D scalable-length vector that contains a multiple of 4 f32 elements.
+    vector<[4]xf32>
+
+    // A 2D scalable-length vector that contains a multiple of 2x8 i8 elements.
+    vector<[2x8]xf32>
+
+    // A 2D mixed fixed/scalable vector that contains 4 scalable vectors of 4 f32 elements.
+    vector<4x[4]xf32>
     ```
   }];
   let parameters = (ins
     ArrayRefParameter<"int64_t">:$shape,
-    "Type":$elementType
+    "Type":$elementType,
+    "unsigned":$numScalableDims
   );
-
   let builders = [
     TypeBuilderWithInferredContext<(ins
-      "ArrayRef<int64_t>":$shape, "Type":$elementType
+      "ArrayRef<int64_t>":$shape, "Type":$elementType,
+      CArg<"unsigned", "0">:$numScalableDims
     ), [{
-      return $_get(elementType.getContext(), shape, elementType);
+      return $_get(elementType.getContext(), shape, elementType,
+                   numScalableDims);
     }]>
   ];
   let extraClassDeclaration = [{
@@ -933,17 +995,30 @@ def Builtin_Vector : Builtin_Type<"Vector", [
     /// Arguments that are passed into the builder must outlive the builder.
     class Builder;
 
-    /// Returns true of the given type can be used as an element of a vector
+    /// Returns true if the given type can be used as an element of a vector
     /// type. In particular, vectors can consist of integer, index, or float
     /// primitives.
     static bool isValidElementType(Type t) {
       return t.isa<IntegerType, IndexType, FloatType>();
     }
 
+    /// Returns true if the vector contains scalable dimensions.
+    bool isScalable() const {
+      return getNumScalableDims() > 0;
+    }
+
     /// Get or create a new VectorType with the same shape as `this` and an
     /// element type of bitwidth scaled by `scale`.
     /// Return null if the scaled element type cannot be represented.
     VectorType scaleElementBitwidth(unsigned scale);
+
+    /// Returns if this type is ranked (always true).
+    bool hasRank() const { return true; }
+
+    /// Clone this vector type with the given shape and element type. If the
+    /// provided shape is `None`, the current shape of the type is used.
+    VectorType cloneWith(Optional<ArrayRef<int64_t>> shape,
+                         Type elementType) const;
   }];
   let skipDefaultBuilders = 1;
   let genVerifyDecl = 1;

@@ -12,9 +12,7 @@
 #include "DwarfUnit.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/IR/DebugInfoMetadata.h"
-#include "llvm/IR/Metadata.h"
 #include "llvm/MC/MCStreamer.h"
-#include <algorithm>
 #include <cstdint>
 
 using namespace llvm;
@@ -92,7 +90,8 @@ unsigned DwarfFile::computeSizeAndOffsetsForUnit(DwarfUnit *TheU) {
 // Compute the size and offset of a DIE. The offset is relative to start of the
 // CU. It returns the offset after laying out the DIE.
 unsigned DwarfFile::computeSizeAndOffset(DIE &Die, unsigned Offset) {
-  return Die.computeOffsetsAndAbbrevs(Asm, Abbrevs, Offset);
+  return Die.computeOffsetsAndAbbrevs(Asm->getDwarfFormParams(), Abbrevs,
+                                      Offset);
 }
 
 void DwarfFile::emitAbbrevs(MCSection *Section) { Abbrevs.Emit(Asm, Section); }

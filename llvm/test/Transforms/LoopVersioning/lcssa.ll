@@ -2,8 +2,19 @@
 target triple = "x86_64-unknown-linux-gnu"
 
 define void @fill(i8** %ls1.20, i8** %ls2.21, i8* %cse3.22) {
-; CHECK: bb1.lver.check:
-; CHECK:   br i1 %found.conflict, label %bb1.ph.lver.orig, label %bb1.ph
+; CHECK-LABEL: @fill(
+; CHECK-NEXT:  bb1.lver.check:
+; CHECK-NEXT:    [[LS1_20_PROMOTED:%.*]] = load i8*, i8** [[LS1_20:%.*]], align 8
+; CHECK-NEXT:    [[LS2_21_PROMOTED:%.*]] = load i8*, i8** [[LS2_21:%.*]], align 8
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, i8* [[LS1_20_PROMOTED]], i64 -1
+; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, i8* [[LS1_20_PROMOTED]], i64 1
+; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, i8* [[LS2_21_PROMOTED]], i64 1
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult i8* [[SCEVGEP]], [[SCEVGEP2]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult i8* [[LS2_21_PROMOTED]], [[SCEVGEP1]]
+; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %bb1.ph.lver.orig, label %bb1.ph
+; CHECK:       bb1.ph.lver.orig:
+;
 bb1.ph:
   %ls1.20.promoted = load i8*, i8** %ls1.20
   %ls2.21.promoted = load i8*, i8** %ls2.21
@@ -35,10 +46,20 @@ bb3:
 }
 
 define void @fill_no_null_opt(i8** %ls1.20, i8** %ls2.21, i8* %cse3.22) #0 {
-; CHECK-LABEL: fill_no_null_opt(
-; CHECK: bb1.lver.check:
-; CHECK: %lver.safe = or i1 %found.conflict, %{{.*}}
-; CHECK:  br i1 %lver.safe, label %bb1.ph.lver.orig, label %bb1.ph
+; CHECK-LABEL: @fill_no_null_opt(
+; CHECK-NEXT:  bb1.lver.check:
+; CHECK-NEXT:    [[LS1_20_PROMOTED:%.*]] = load i8*, i8** [[LS1_20:%.*]], align 8
+; CHECK-NEXT:    [[LS2_21_PROMOTED:%.*]] = load i8*, i8** [[LS2_21:%.*]], align 8
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, i8* [[LS1_20_PROMOTED]], i64 -1
+; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, i8* [[LS1_20_PROMOTED]], i64 1
+; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, i8* [[LS2_21_PROMOTED]], i64 1
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult i8* [[SCEVGEP]], [[SCEVGEP2]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult i8* [[LS2_21_PROMOTED]], [[SCEVGEP1]]
+; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, i8* [[LS1_20_PROMOTED]], i64 -1
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %bb1.ph.lver.orig, label %bb1.ph
+; CHECK:       bb1.ph.lver.orig:
+;
 bb1.ph:
   %ls1.20.promoted = load i8*, i8** %ls1.20
   %ls2.21.promoted = load i8*, i8** %ls2.21

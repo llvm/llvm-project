@@ -79,7 +79,7 @@ public:
 
   StructuredData::ObjectSP
   CreateScriptedThreadPlan(const char *class_name,
-                           StructuredDataImpl *args_data,
+                           const StructuredDataImpl &args_data,
                            std::string &error_str,
                            lldb::ThreadPlanSP thread_plan) override;
 
@@ -99,7 +99,7 @@ public:
 
   StructuredData::GenericSP
   CreateScriptedBreakpointResolver(const char *class_name,
-                                   StructuredDataImpl *args_data,
+                                   const StructuredDataImpl &args_data,
                                    lldb::BreakpointSP &bkpt_sp) override;
   bool ScriptedBreakpointResolverSearchCallback(
       StructuredData::GenericSP implementor_sp,
@@ -110,7 +110,8 @@ public:
 
   StructuredData::GenericSP
   CreateScriptedStopHook(lldb::TargetSP target_sp, const char *class_name,
-                         StructuredDataImpl *args_data, Status &error) override;
+                         const StructuredDataImpl &args_data,
+                         Status &error) override;
 
   bool ScriptedStopHookHandleStop(StructuredData::GenericSP implementor_sp,
                                   ExecutionContext &exc_ctx,
@@ -340,7 +341,7 @@ public:
   static bool WatchpointCallbackFunction(void *baton,
                                          StoppointCallbackContext *context,
                                          lldb::user_id_t watch_id);
-  static void InitializePrivate();
+  static void Initialize();
 
   class SynchronicityHandler {
   private:

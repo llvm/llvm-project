@@ -267,7 +267,7 @@
 // CHECK-DEFS:#define __ARM_SIZEOF_WCHAR_T 4
 
 // RUN: %clang -target arm-none-linux-gnu -fno-math-errno -fno-signed-zeros\
-// RUN:        -fno-trapping-math -fassociative-math -freciprocal-math\
+// RUN:        -fno-trapping-math -fassociative-math -freciprocal-math -fapprox-func\
 // RUN:        -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-FASTMATH %s
 // RUN: %clang -target arm-none-linux-gnu -ffast-math -x c -E -dM %s -o -\
 // RUN:        | FileCheck -match-full-lines --check-prefix=CHECK-FASTMATH %s
@@ -859,6 +859,11 @@
 // CHECK-V87A: #define __ARM_ARCH_8_7A__ 1
 // CHECK-V87A: #define __ARM_ARCH_PROFILE 'A'
 
+// RUN: %clang -target armv8.8a-none-none-eabi -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V88A %s
+// CHECK-V88A: #define __ARM_ARCH 8
+// CHECK-V88A: #define __ARM_ARCH_8_8A__ 1
+// CHECK-V88A: #define __ARM_ARCH_PROFILE 'A'
+//
 // RUN: %clang -target armv9a-none-none-eabi -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V9A %s
 // CHECK-V9A: #define __ARM_ARCH 9
 // CHECK-V9A: #define __ARM_ARCH_9A__ 1
@@ -874,6 +879,11 @@
 // CHECK-V92A: #define __ARM_ARCH_9_2A__ 1
 // CHECK-V92A: #define __ARM_ARCH_PROFILE 'A'
 
+// RUN: %clang -target armv9.3a-none-none-eabi -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V93A %s
+// CHECK-V93A: #define __ARM_ARCH 9
+// CHECK-V93A: #define __ARM_ARCH_9_3A__ 1
+// CHECK-V93A: #define __ARM_ARCH_PROFILE 'A'
+
 // RUN: %clang -target arm-none-none-eabi -march=armv7-m -mfpu=softvfp -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SOFTVFP %s
 // CHECK-SOFTVFP-NOT: #define __ARM_FP 0x
 
@@ -881,20 +891,25 @@
 // RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-NOBTI,CHECK-NOPAC %s
 // RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main -mbranch-protection=bti -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-BTI,CHECK-NOPAC %s
 // RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main -mbranch-protection=pac-ret -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-PAC,CHECK-NOBTI %s
-// RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main -mbranch-protection=pac-ret+b-key -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-PAC-BKEY,CHECK-NOBTI %s
+// RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main -mbranch-protection=pac-ret+b-key -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-PAC,CHECK-NOBTI %s
 // RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main -mbranch-protection=pac-ret+leaf -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-PAC-LEAF,CHECK-NOBTI %s
-// RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main -mbranch-protection=pac-ret+b-key+leaf -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-PAC-BKEY-LEAF,CHECK-NOBTI %s
+// RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main -mbranch-protection=pac-ret+b-key+leaf -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-PAC-LEAF,CHECK-NOBTI %s
 // RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main -mbranch-protection=bti+pac-ret -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-PAC,CHECK-BTI %s
-// RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main -mbranch-protection=bti+pac-ret+b-key -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-PAC-BKEY,CHECK-BTI %s
+// RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main -mbranch-protection=bti+pac-ret+b-key -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-PAC,CHECK-BTI %s
 // RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main -mbranch-protection=bti+pac-ret+leaf -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-PAC-LEAF,CHECK-BTI %s
-// RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main -mbranch-protection=bti+pac-ret+b-key+leaf -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-PAC-BKEY-LEAF,CHECK-BTI %s
+// RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main -mbranch-protection=bti+pac-ret+b-key+leaf -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-PAC-LEAF,CHECK-BTI %s
 // CHECK-NOBTI-NOT: #define __ARM_FEATURE_BTI_DEFAULT
 // CHECK-NOPAC-NOT: #define __ARM_FEATURE_PAC_DEFAULT
 // CHECK-BTI: #define __ARM_FEATURE_BTI_DEFAULT 1
 // CHECK-PAC: #define __ARM_FEATURE_PAC_DEFAULT 1
-// CHECK-PAC-BKEY: #define __ARM_FEATURE_PAC_DEFAULT 2
 // CHECK-PAC-LEAF: #define __ARM_FEATURE_PAC_DEFAULT 5
-// CHECK-PAC-BKEY-LEAF: #define __ARM_FEATURE_PAC_DEFAULT 6
+
+// RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-NOBTI-EXT,CHECK-NOPAC-EXT %s
+// RUN: %clang -target arm-arm-none-eabi -march=armv7-m+pacbti -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-PACBTI-EXT %s
+// CHECK-NOBTI-EXT-NOT: #define __ARM_FEATURE_BTI 1
+// CHECK-NOPAC-EXT-NOT: #define __ARM_FEATURE_PAUTH 1
+// CHECK-PACBTI-EXT: #define __ARM_FEATURE_BTI 1
+// CHECK-PACBTI-EXT: #define __ARM_FEATURE_PAUTH 1
 
 // ================== Check BFloat16 Extensions.
 // RUN: %clang -target arm-arm-none-eabi -march=armv8.6-a+bf16 -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-BFLOAT %s
@@ -923,3 +938,20 @@
 // CHECK-SHA2-NOT: #define __ARM_FEATURE_AES 1
 // CHECK-SHA2-NOT: #define __ARM_FEATURE_CRYPTO 1
 // CHECK-SHA2: #define __ARM_FEATURE_SHA2 1
+
+// ================== Check default macros for Armv8.1-A and later
+// RUN: %clang -target arm-arm-none-eabi -march=armv8.1-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-BEFORE-V83   %s
+// RUN: %clang -target arm-arm-none-eabi -march=armv8.2-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-BEFORE-V83   %s
+// RUN: %clang -target arm-arm-none-eabi -march=armv8.3-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER %s
+// RUN: %clang -target arm-arm-none-eabi -march=armv8.4-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER %s
+// RUN: %clang -target arm-arm-none-eabi -march=armv8.5-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER %s
+// RUN: %clang -target arm-arm-none-eabi -march=armv8.6-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER %s
+// RUN: %clang -target arm-arm-none-eabi -march=armv8.7-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER %s
+// RUN: %clang -target arm-arm-none-eabi -march=armv8.8-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER %s
+// RUN: %clang -target arm-arm-none-eabi -march=armv9-a   -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER %s
+// RUN: %clang -target arm-arm-none-eabi -march=armv9.1-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER %s
+// RUN: %clang -target arm-arm-none-eabi -march=armv9.2-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER %s
+// RUN: %clang -target arm-arm-none-eabi -march=armv9.3-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER %s
+// CHECK-V83-OR-LATER: __ARM_FEATURE_COMPLEX 1
+// CHECK-V81-OR-LATER: __ARM_FEATURE_QRDMX 1
+// CHECK-BEFORE-V83-NOT: __ARM_FEATURE_COMPLEX 1

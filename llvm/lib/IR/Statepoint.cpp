@@ -13,8 +13,6 @@
 
 #include "llvm/IR/Statepoint.h"
 
-#include "llvm/IR/Function.h"
-
 using namespace llvm;
 
 bool llvm::isStatepointDirectiveAttr(Attribute Attr) {

@@ -9,54 +9,7 @@ class TestGdbRemote_qThreadStopInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
     mydir = TestBase.compute_mydir(__file__)
     THREAD_COUNT = 5
 
-    def gather_stop_replies_via_qThreadStopInfo(self, thread_count):
-        # Set up the inferior args.
-        inferior_args = []
-        for i in range(thread_count - 1):
-            inferior_args.append("thread:new")
-        inferior_args.append("sleep:10")
-        procs = self.prep_debug_monitor_and_inferior(
-            inferior_args=inferior_args)
-
-        # Assumes test_sequence has anything added needed to setup the initial state.
-        # (Like optionally enabling QThreadsInStopReply.)
-        self.test_sequence.add_log_lines([
-            "read packet: $c#63"
-        ], True)
-        context = self.expect_gdbremote_sequence()
-        self.assertIsNotNone(context)
-
-        # Give threads time to start up, then break.
-        time.sleep(self.DEFAULT_SLEEP)
-        self.reset_test_sequence()
-        self.test_sequence.add_log_lines(
-            [
-                "read packet: {}".format(
-                    chr(3)),
-                {
-                    "direction": "send",
-                    "regex": r"^\$T([0-9a-fA-F]+)([^#]+)#[0-9a-fA-F]{2}$",
-                    "capture": {
-                        1: "stop_result",
-                        2: "key_vals_text"}},
-            ],
-            True)
-        context = self.expect_gdbremote_sequence()
-        self.assertIsNotNone(context)
-
-        # Wait until all threads have started.
-        threads = self.wait_for_thread_count(thread_count)
-        self.assertIsNotNone(threads)
-
-        # On Windows, there could be more threads spawned. For example, DebugBreakProcess will
-        # create a new thread from the debugged process to handle an exception event. So here we
-        # assert 'GreaterEqual' condition.
-        triple = self.dbg.GetSelectedPlatform().GetTriple()
-        if re.match(".*-.*-windows", triple):
-            self.assertGreaterEqual(len(threads), thread_count)
-        else:
-            self.assertEqual(len(threads), thread_count)
-
+    def gather_stop_replies_via_qThreadStopInfo(self, threads):
         # Grab stop reply for each thread via qThreadStopInfo{tid:hex}.
         stop_replies = {}
         thread_dicts = {}
@@ -98,13 +51,14 @@ class TestGdbRemote_qThreadStopInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
             # Hang on to the key-val dictionary for the thread.
             thread_dicts[kv_thread_id] = kv_dict
 
-        return (stop_replies, thread_dicts)
+        return stop_replies
 
     @skipIfNetBSD
     def test_qThreadStopInfo_works_for_multiple_threads(self):
         self.build()
         self.set_inferior_startup_launch()
-        (stop_replies, _) = self.gather_stop_replies_via_qThreadStopInfo(self.THREAD_COUNT)
+        _, threads = self.launch_with_threads(self.THREAD_COUNT)
+        stop_replies = self.gather_stop_replies_via_qThreadStopInfo(threads)
         triple = self.dbg.GetSelectedPlatform().GetTriple()
         # Consider one more thread created by calling DebugBreakProcess.
         if re.match(".*-.*-windows", triple):
@@ -114,11 +68,25 @@ class TestGdbRemote_qThreadStopInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr48418")
     @expectedFailureNetBSD
+    @expectedFailureAll(oslist=["windows"]) # Output forwarding not implemented
     def test_qThreadStopInfo_only_reports_one_thread_stop_reason_during_interrupt(self):
         self.build()
         self.set_inferior_startup_launch()
+        procs = self.prep_debug_monitor_and_inferior(
+                inferior_args=["thread:new"]*4 + ["stop-me-now", "sleep:60"])
 
-        (stop_replies, _) = self.gather_stop_replies_via_qThreadStopInfo(self.THREAD_COUNT)
+        self.test_sequence.add_log_lines([
+                "read packet: $c#00",
+                {"type": "output_match",
+                    "regex": self.maybe_strict_output_regex(r"stop-me-now\r\n")},
+                "read packet: \x03",
+                {"direction": "send",
+                    "regex": r"^\$T([0-9a-fA-F]{2})([^#]*)#..$"}], True)
+        self.add_threadinfo_collection_packets()
+        context = self.expect_gdbremote_sequence()
+        threads = self.parse_threadinfo_packets(context)
+
+        stop_replies = self.gather_stop_replies_via_qThreadStopInfo(threads)
         self.assertIsNotNone(stop_replies)
 
         no_stop_reason_count = sum(

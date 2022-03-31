@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -pass-pipeline='builtin.func(canonicalize)' | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -pass-pipeline='func.func(canonicalize)' | FileCheck %s
 
 // -----
 
@@ -475,6 +475,112 @@ func @fold_empty_loops() -> index {
 
 // -----
 
+// CHECK-LABEL:  func @fold_empty_loop()
+func @fold_empty_loop() -> (index, index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %res:2 = affine.for %i = 0 to 10 iter_args(%arg0 = %c0, %arg1 = %c1) -> (index, index) {
+    affine.yield %c2, %arg1 : index, index
+  }
+  // CHECK-DAG: %[[one:.*]] = arith.constant 1
+  // CHECK-DAG: %[[two:.*]] = arith.constant 2
+  // CHECK-NEXT: return %[[two]], %[[one]]
+  return %res#0, %res#1 : index, index
+}
+
+// -----
+
+// CHECK-LABEL:  func @fold_empty_loops_trip_count_1()
+func @fold_empty_loops_trip_count_1() -> (index, index, index, index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %res1:2 = affine.for %i = 0 to 1 iter_args(%arg0 = %c2, %arg1 = %c0) -> (index, index) {
+    affine.yield %c1, %arg0 : index, index
+  }
+  %res2:2 = affine.for %i = 0 to 2 step 3 iter_args(%arg0 = %c2, %arg1 = %c0) -> (index, index) {
+    affine.yield %arg1, %arg0 : index, index
+  }
+  // CHECK-DAG: %[[zero:.*]] = arith.constant 0
+  // CHECK-DAG: %[[one:.*]] = arith.constant 1
+  // CHECK-DAG: %[[two:.*]] = arith.constant 2
+  // CHECK-NEXT: return %[[one]], %[[two]], %[[zero]], %[[two]]
+  return %res1#0, %res1#1, %res2#0, %res2#1 : index, index, index, index
+}
+
+// -----
+
+// CHECK-LABEL:  func @fold_empty_loop_trip_count_0()
+func @fold_empty_loop_trip_count_0() -> (index, index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %res:2 = affine.for %i = 0 to 0 iter_args(%arg0 = %c2, %arg1 = %c0) -> (index, index) {
+    affine.yield %c1, %arg0 : index, index
+  }
+  // CHECK-DAG: %[[zero:.*]] = arith.constant 0
+  // CHECK-DAG: %[[two:.*]] = arith.constant 2
+  // CHECK-NEXT: return %[[two]], %[[zero]]
+  return %res#0, %res#1 : index, index
+}
+
+// -----
+
+// CHECK-LABEL:  func @fold_empty_loop_trip_count_unknown
+func @fold_empty_loop_trip_count_unknown(%in : index) -> (index, index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %res:2 = affine.for %i = 0 to %in iter_args(%arg0 = %c0, %arg1 = %c1) -> (index, index) {
+    affine.yield %arg0, %arg1 : index, index
+  }
+  // CHECK-DAG: %[[zero:.*]] = arith.constant 0
+  // CHECK-DAG: %[[one:.*]] = arith.constant 1
+  // CHECK-NEXT: return %[[zero]], %[[one]]
+  return %res#0, %res#1 : index, index
+}
+
+// -----
+
+// CHECK-LABEL:  func @empty_loops_not_folded_1
+func @empty_loops_not_folded_1(%in : index) -> index {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  // CHECK: affine.for
+  %res = affine.for %i = 0 to %in iter_args(%arg = %c0) -> index {
+    affine.yield %c1 : index
+  }
+  return %res : index
+}
+
+// -----
+
+// CHECK-LABEL:  func @empty_loops_not_folded_2
+func @empty_loops_not_folded_2(%in : index) -> (index, index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  // CHECK: affine.for
+  %res:2 = affine.for %i = 0 to %in iter_args(%arg0 = %c0, %arg1 = %c1) -> (index, index) {
+    affine.yield %arg1, %arg0 : index, index
+  }
+  return %res#0, %res#1 : index, index
+}
+
+// -----
+
+// CHECK-LABEL:  func @empty_loops_not_folded_3
+func @empty_loops_not_folded_3() -> (index, index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  // CHECK: affine.for
+  %res:2 = affine.for %i = 0 to 10 iter_args(%arg0 = %c0, %arg1 = %c1) -> (index, index) {
+    affine.yield %arg1, %arg0 : index, index
+  }
+  return %res#0, %res#1 : index, index
+}
+
+// -----
+
 // CHECK-LABEL:  func @fold_zero_iter_loops
 // CHECK-SAME: %[[ARG:.*]]: index
 func @fold_zero_iter_loops(%in : index) -> index {
@@ -622,7 +728,7 @@ func @affine_max(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 // -----
 
-// CHECK: #[[$MAP:.*]] = affine_map<(d0, d1) -> (d0, d1 - 2)>
+// CHECK: #[[$MAP:.*]] = affine_map<(d0, d1) -> (d1 - 2, d0)>
 
 func @affine_min(%arg0: index) {
   affine.for %i = 0 to %arg0 {
@@ -739,8 +845,8 @@ func @deduplicate_affine_max_expressions(%i0: index, %i1: index) -> index {
 
 // -----
 
-// CHECK-DAG: #[[MAP0:.+]] = affine_map<()[s0, s1, s2] -> (s0 * 3, 16, -s1 + s2)>
-// CHECK-DAG: #[[MAP1:.+]] = affine_map<()[s0, s1, s2] -> (-s2 + 5, 16, -s0 + s1)>
+// CHECK-DAG: #[[MAP0:.+]] = affine_map<()[s0, s1, s2] -> (-s1 + s2, 16, s0 * 3)>
+// CHECK-DAG: #[[MAP1:.+]] = affine_map<()[s0, s1, s2] -> (-s0 + s1, -s2 + 5, 16)>
 
 // CHECK: func @merge_affine_min_ops
 // CHECK-SAME: (%[[I0:.+]]: index, %[[I1:.+]]: index, %[[I2:.+]]: index, %[[I3:.+]]: index)
@@ -757,7 +863,7 @@ func @merge_affine_min_ops(%i0: index, %i1: index, %i2: index, %i3: index) -> (i
 
 // -----
 
-// CHECK: #[[MAP:.+]] = affine_map<()[s0, s1, s2] -> (s0 + 7, s1 + 16, s1 * 8, s2 + 8, s2 * 4)>
+// CHECK: #[[MAP:.+]] = affine_map<()[s0, s1, s2] -> (s2 + 8, s2 * 4, s1 + 16, s1 * 8, s0 + 7)>
 
 // CHECK: func @merge_multiple_affine_min_ops
 // CHECK-SAME: (%[[I0:.+]]: index, %[[I1:.+]]: index, %[[I2:.+]]: index)
@@ -771,7 +877,7 @@ func @merge_multiple_affine_min_ops(%i0: index, %i1: index, %i2: index) -> index
 
 // -----
 
-// CHECK-DAG: #[[MAP:.+]] = affine_map<()[s0, s1] -> (s0 * 2, s1 + 16, s1 * 8)>
+// CHECK-DAG: #[[MAP:.+]] = affine_map<()[s0, s1] -> (s1 + 16, s1 * 8, s0 * 2)>
 
 // CHECK: func @merge_multiple_uses_of_affine_min_ops
 // CHECK-SAME: (%[[I0:.+]]: index, %[[I1:.+]]: index)
@@ -785,7 +891,7 @@ func @merge_multiple_uses_of_affine_min_ops(%i0: index, %i1: index) -> index {
 // -----
 
 // CHECK-DAG: #[[MAP0:.+]] = affine_map<()[s0] -> (s0 + 16, s0 * 8)>
-// CHECK-DAG: #[[MAP1:.+]] = affine_map<()[s0, s1, s2] -> (s0 + 1, s1 * 2, s2 + 16, s2 * 8)>
+// CHECK-DAG: #[[MAP1:.+]] = affine_map<()[s0, s1, s2] -> (s2 + 16, s2 * 8, s1 * 2, s0 + 1)>
 
 // CHECK: func @merge_mixed_uses_of_affine_min_ops
 // CHECK-SAME: (%[[I0:.+]]: index, %[[I1:.+]]: index)
@@ -821,8 +927,8 @@ func @dont_merge_affine_min_if_not_single_sym(%i0: index, %i1: index, %i2: index
 
 // -----
 
-// CHECK-DAG: #[[MAP0:.+]] = affine_map<()[s0, s1, s2] -> (s0 * 3, 16, -s1 + s2)>
-// CHECK-DAG: #[[MAP1:.+]] = affine_map<()[s0, s1, s2] -> (-s2 + 5, 16, -s0 + s1)>
+// CHECK-DAG: #[[MAP0:.+]] = affine_map<()[s0, s1, s2] -> (-s1 + s2, 16, s0 * 3)>
+// CHECK-DAG: #[[MAP1:.+]] = affine_map<()[s0, s1, s2] -> (-s0 + s1, -s2 + 5, 16)>
 
 // CHECK: func @merge_affine_max_ops
 // CHECK-SAME: (%[[I0:.+]]: index, %[[I1:.+]]: index, %[[I2:.+]]: index, %[[I3:.+]]: index)
@@ -839,7 +945,7 @@ func @merge_affine_max_ops(%i0: index, %i1: index, %i2: index, %i3: index) -> (i
 
 // -----
 
-// CHECK: #[[MAP:.+]] = affine_map<()[s0, s1, s2] -> (s0 + 7, s1 + 16, s1 * 8, s2 + 8, s2 * 4)>
+// CHECK: #[[MAP:.+]] = affine_map<()[s0, s1, s2] -> (s2 + 8, s2 * 4, s1 + 16, s1 * 8, s0 + 7)>
 
 // CHECK: func @merge_multiple_affine_max_ops
 // CHECK-SAME: (%[[I0:.+]]: index, %[[I1:.+]]: index, %[[I2:.+]]: index)
@@ -853,7 +959,7 @@ func @merge_multiple_affine_max_ops(%i0: index, %i1: index, %i2: index) -> index
 
 // -----
 
-// CHECK-DAG: #[[MAP:.+]] = affine_map<()[s0, s1] -> (s0 * 2, s1 + 16, s1 * 8)>
+// CHECK-DAG: #[[MAP:.+]] = affine_map<()[s0, s1] -> (s1 + 16, s1 * 8, s0 * 2)>
 
 // CHECK: func @merge_multiple_uses_of_affine_max_ops
 // CHECK-SAME: (%[[I0:.+]]: index, %[[I1:.+]]: index)
@@ -867,7 +973,7 @@ func @merge_multiple_uses_of_affine_max_ops(%i0: index, %i1: index) -> index {
 // -----
 
 // CHECK-DAG: #[[MAP0:.+]] = affine_map<()[s0] -> (s0 + 16, s0 * 8)>
-// CHECK-DAG: #[[MAP1:.+]] = affine_map<()[s0, s1, s2] -> (s0 + 1, s1 * 2, s2 + 16, s2 * 8)>
+// CHECK-DAG: #[[MAP1:.+]] = affine_map<()[s0, s1, s2] -> (s2 + 16, s2 * 8, s1 * 2, s0 + 1)>
 
 // CHECK: func @merge_mixed_uses_of_affine_max_ops
 // CHECK-SAME: (%[[I0:.+]]: index, %[[I1:.+]]: index)
@@ -973,4 +1079,52 @@ func @canonicalize_single_min_max(%i0: index, %i1: index) -> (index, index) {
   %1 = affine.min affine_map<()[s0] -> (s0 * 4)> ()[%i1]
 
   return %0, %1: index, index
+}
+
+// -----
+
+// CHECK: #[[$MAP:.+]] = affine_map<()[s0, s1] -> (32, s1 + 16, s0 + s1)>
+
+// CHECK-LABEL: func @canonicalize_multi_min_max
+// CHECK-SAME: (%[[I0:.+]]: index, %[[I1:.+]]: index)
+func @canonicalize_multi_min_max(%i0: index, %i1: index) -> (index, index) {
+  // CHECK-NEXT: affine.min #[[$MAP]]()[%[[I0]], %[[I1]]]
+  %0 = affine.min affine_map<()[s0, s1] -> (s0 + s1, s1 + 16, 32)> ()[%i0, %i1]
+
+  // CHECK-NEXT: affine.max #[[$MAP]]()[%[[I0]], %[[I1]]]
+  %1 = affine.max affine_map<()[s0, s1] -> (s0 + s1, 32, s1 + 16)> ()[%i0, %i1]
+
+  return %0, %1: index, index
+}
+
+// -----
+
+module {
+  memref.global "private" constant @__constant_1x5x1xf32 : memref<1x5x1xf32> = dense<[[[6.250000e-02], [2.500000e-01], [3.750000e-01], [2.500000e-01], [6.250000e-02]]]>
+  memref.global "private" constant @__constant_32x64xf32 : memref<32x64xf32> = dense<0.000000e+00>
+  // CHECK-LABEL: func @fold_const_init_global_memref
+  func @fold_const_init_global_memref() -> (f32, f32) {
+    %m = memref.get_global @__constant_1x5x1xf32 : memref<1x5x1xf32>
+    %v0 = affine.load %m[0, 0, 0] : memref<1x5x1xf32>
+    %v1 = affine.load %m[0, 1, 0] : memref<1x5x1xf32>
+    return %v0, %v1 : f32, f32
+    // CHECK-DAG: %[[C0:.*]] = arith.constant 6.250000e-02 : f32
+    // CHECK-DAG: %[[C1:.*]] = arith.constant 2.500000e-01 : f32
+    // CHECK-NEXT: return %[[C0]], %[[C1]]
+  }
+
+  // CHECK-LABEL: func @fold_const_splat_global
+  func @fold_const_splat_global() -> memref<32x64xf32> {
+    // CHECK-NEXT: %[[CST:.*]] = arith.constant 0.000000e+00 : f32
+    %m = memref.get_global @__constant_32x64xf32 : memref<32x64xf32>
+    %s = memref.alloc() : memref<32x64xf32>
+    affine.for %i = 0 to 32 {
+      affine.for %j = 0 to 64 {
+        %v = affine.load %m[%i, %j] : memref<32x64xf32>
+        affine.store %v, %s[%i, %j] : memref<32x64xf32>
+        // CHECK: affine.store %[[CST]], %{{.*}}
+      }
+    }
+    return %s: memref<32x64xf32>
+  }
 }

@@ -8,11 +8,11 @@
 
 define internal i32 @test(%T* %p) {
 ; CHECK-LABEL: define {{[^@]+}}@test
-; CHECK-SAME: (%T* [[P:%.*]])
+; CHECK-SAME: (%T* [[P:%.*]]) {
 ; CHECK-NEXT:    [[A_GEP:%.*]] = getelementptr [[T:%.*]], %T* [[P]], i64 0, i32 3
 ; CHECK-NEXT:    [[B_GEP:%.*]] = getelementptr [[T]], %T* [[P]], i64 0, i32 2
-; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[A_GEP]]
-; CHECK-NEXT:    [[B:%.*]] = load i32, i32* [[B_GEP]]
+; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[A_GEP]], align 4
+; CHECK-NEXT:    [[B:%.*]] = load i32, i32* [[B_GEP]], align 4
 ; CHECK-NEXT:    [[V:%.*]] = add i32 [[A]], [[B]]
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
@@ -26,7 +26,7 @@ define internal i32 @test(%T* %p) {
 
 define i32 @caller(%T* %p) {
 ; CHECK-LABEL: define {{[^@]+}}@caller
-; CHECK-SAME: (%T* [[P:%.*]])
+; CHECK-SAME: (%T* [[P:%.*]]) {
 ; CHECK-NEXT:    [[V:%.*]] = musttail call i32 @test(%T* [[P]])
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
@@ -38,7 +38,7 @@ define i32 @caller(%T* %p) {
 
 define i32 @foo(%T* %p, i32 %v) {
 ; CHECK-LABEL: define {{[^@]+}}@foo
-; CHECK-SAME: (%T* [[P:%.*]], i32 [[V:%.*]])
+; CHECK-SAME: (%T* [[P:%.*]], i32 [[V:%.*]]) {
 ; CHECK-NEXT:    ret i32 0
 ;
   ret i32 0
@@ -46,11 +46,11 @@ define i32 @foo(%T* %p, i32 %v) {
 
 define internal i32 @test2(%T* %p, i32 %p2) {
 ; CHECK-LABEL: define {{[^@]+}}@test2
-; CHECK-SAME: (%T* [[P:%.*]], i32 [[P2:%.*]])
+; CHECK-SAME: (%T* [[P:%.*]], i32 [[P2:%.*]]) {
 ; CHECK-NEXT:    [[A_GEP:%.*]] = getelementptr [[T:%.*]], %T* [[P]], i64 0, i32 3
 ; CHECK-NEXT:    [[B_GEP:%.*]] = getelementptr [[T]], %T* [[P]], i64 0, i32 2
-; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[A_GEP]]
-; CHECK-NEXT:    [[B:%.*]] = load i32, i32* [[B_GEP]]
+; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[A_GEP]], align 4
+; CHECK-NEXT:    [[B:%.*]] = load i32, i32* [[B_GEP]], align 4
 ; CHECK-NEXT:    [[V:%.*]] = add i32 [[A]], [[B]]
 ; CHECK-NEXT:    [[CA:%.*]] = musttail call i32 @foo(%T* undef, i32 [[V]])
 ; CHECK-NEXT:    ret i32 [[CA]]
@@ -66,7 +66,7 @@ define internal i32 @test2(%T* %p, i32 %p2) {
 
 define i32 @caller2(%T* %g) {
 ; CHECK-LABEL: define {{[^@]+}}@caller2
-; CHECK-SAME: (%T* [[G:%.*]])
+; CHECK-SAME: (%T* [[G:%.*]]) {
 ; CHECK-NEXT:    [[V:%.*]] = call i32 @test2(%T* [[G]], i32 0)
 ; CHECK-NEXT:    ret i32 [[V]]
 ;

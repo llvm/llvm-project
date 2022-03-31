@@ -10,12 +10,12 @@
 ;
 ; CHECK: main:
 ; CHECK: aghi    %r15, -568
-; CHECK: la      %r2, 164(%r11)
+; CHECK: la      %r2, 168(%r11)
 ; CHECK: brasl   %r14, populate_array@PLT
 
 ; DEBUG: DW_TAG_variable
 ; DEBUG-NOT: DW_TAG
-; DEBUG: DW_AT_location {{.*}}(DW_OP_fbreg +164)
+; DEBUG: DW_AT_location {{.*}}(DW_OP_fbreg +168)
 ; DEBUG-NOT: DW_TAG
 ; DEBUG: DW_AT_name {{.*}} "main_arr"
 

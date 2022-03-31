@@ -84,7 +84,6 @@ class GlobalModuleIndex;
 struct HeaderFileInfo;
 class HeaderSearchOptions;
 class LangOptions;
-class LazyASTUnresolvedSet;
 class MacroInfo;
 class InMemoryModuleCache;
 class NamedDecl;
@@ -94,7 +93,6 @@ class ObjCInterfaceDecl;
 class PCHContainerReader;
 class Preprocessor;
 class PreprocessorOptions;
-struct QualifierInfo;
 class Sema;
 class SourceManager;
 class Stmt;
@@ -1331,6 +1329,7 @@ private:
   llvm::Error ReadSourceManagerBlock(ModuleFile &F);
   llvm::BitstreamCursor &SLocCursorForID(int ID);
   SourceLocation getImportLocation(ModuleFile *F);
+  void readIncludedFiles(ModuleFile &F, StringRef Blob, Preprocessor &PP);
   ASTReadResult ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
                                        const ModuleFile *ImportedBy,
                                        unsigned ClientLoadCapabilities);

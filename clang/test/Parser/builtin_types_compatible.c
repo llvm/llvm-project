@@ -18,7 +18,7 @@ extern double funcDouble(double);
     __builtin_choose_expr(__builtin_types_compatible_p(typeof(expr), float), funcFloat(expr), \
       __builtin_choose_expr(__builtin_types_compatible_p(typeof(expr), double), funcDouble(expr), (void)0)))
 
-static void test()
+static void test(void)
 {
   int a;
   float b;
@@ -44,7 +44,7 @@ static void test()
 enum E1 { E1Foo };
 enum E2 { E2Foo };
 
-static void testGccCompatibility() {
+static void testGccCompatibility(void) {
   _Static_assert(__builtin_types_compatible_p(const volatile int, int), "");
   _Static_assert(__builtin_types_compatible_p(int[5], int[]), "");
   _Static_assert(!__builtin_types_compatible_p(int[5], int[4]), "");

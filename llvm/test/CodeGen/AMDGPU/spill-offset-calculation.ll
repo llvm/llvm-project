@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -enable-misched=0 -post-RA-scheduler=0 -stress-regalloc=8 < %s | FileCheck -check-prefixes=GCN,MUBUF %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -enable-misched=0 -post-RA-scheduler=0 -stress-regalloc=8 -amdgpu-enable-flat-scratch < %s | FileCheck -check-prefixes=GCN,FLATSCR %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -enable-misched=0 -post-RA-scheduler=0 -stress-regalloc=8 -mattr=+enable-flat-scratch < %s | FileCheck -check-prefixes=GCN,FLATSCR %s
 
 ; Test that the VGPR spiller correctly switches to SGPR offsets when the
 ; instruction offset field would overflow, and that it accounts for memory
@@ -55,8 +55,8 @@ entry:
 ; FIXME: If we fail to scavenge an SGPR in a kernel we don't have a stack
 ; pointer to temporarily update, so we just crash.
 
-; GCN-LABEL: test_sgpr_offset_function_scavenge_fail
-define void @test_sgpr_offset_function_scavenge_fail() #2 {
+; GCN-LABEL: test_sgpr_offset_function_scavenge_fail_func
+define void @test_sgpr_offset_function_scavenge_fail_func() #2 {
 entry:
   ; Occupy 4096 bytes of scratch, so the offset of the spill of %a does not
   ; fit in the instruction, and has to live in the SGPR offset.
@@ -78,10 +78,10 @@ entry:
   ; 0x40000 / 64 = 4096 (for wave64)
   %a = load volatile i32, i32 addrspace(5)* %aptr
 
-  ; MUBUF:   s_add_i32 s32, s32, 0x40100
-  ; MUBUF:   buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s32 ; 4-byte Folded Spill
-  ; MUBUF:   s_add_i32 s32, s32, 0xfffbff00
-  ; FLATSCR: s_add_i32 [[SOFF:s[0-9]+]], s32, 0x1004
+  ; MUBUF:   v_mov_b32_e32 [[OFFSET:v[0-9]+]], 0x1004
+  ; MUBUF-NEXT: buffer_store_dword v{{[0-9]+}}, [[OFFSET]], s[{{[0-9]+:[0-9]+}}], s32 offen ; 4-byte Folded Spill
+
+; FLATSCR: s_add_i32 [[SOFF:s[0-9]+]], s32, 0x1004
   ; FLATSCR: scratch_store_dword off, v{{[0-9]+}}, [[SOFF]] ; 4-byte Folded Spill
   call void asm sideeffect "", "s,s,s,s,s,s,s,s,v"(i32 %asm0.0, i32 %asm1.0, i32 %asm2.0, i32 %asm3.0, i32 %asm4.0, i32 %asm5.0, i32 %asm6.0, i32 %asm7.0, i32 %a)
 
@@ -97,10 +97,60 @@ entry:
 
   call void asm sideeffect "", "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7}"() #0
 
-  ; MUBUF:   s_add_i32 s32, s32, 0x40100
-  ; MUBUF:   buffer_load_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s32 ; 4-byte Folded Reload
-  ; MUBUF:   s_add_i32 s32, s32, 0xfffbff00
+  ; MUBUF:   v_mov_b32_e32 [[OFFSET:v[0-9]+]], 0x1004
+  ; MUBUF-NEXT: buffer_load_dword v{{[0-9]+}}, [[OFFSET]], s[{{[0-9]+:[0-9]+}}], s32 offen ; 4-byte Folded Reload
   ; FLATSCR: s_add_i32 [[SOFF:s[0-9]+]], s32, 0x1004
+  ; FLATSCR: scratch_load_dword v{{[0-9]+}}, off, [[SOFF]] ; 4-byte Folded Reload
+
+   ; Force %a to spill with no free SGPRs
+  call void asm sideeffect "", "s,s,s,s,s,s,s,s,v"(i32 %asm0, i32 %asm1, i32 %asm2, i32 %asm3, i32 %asm4, i32 %asm5, i32 %asm6, i32 %asm7, i32 %a)
+  ret void
+}
+
+define amdgpu_kernel void @test_sgpr_offset_function_scavenge_fail_kernel() #3 {
+entry:
+  ; Occupy 4096 bytes of scratch, so the offset of the spill of %a does not
+  ; fit in the instruction, and has to live in the SGPR offset.
+  %alloca = alloca i8, i32 4096, align 4, addrspace(5)
+  %buf = bitcast i8 addrspace(5)* %alloca to i32 addrspace(5)*
+
+  %aptr = getelementptr i32, i32 addrspace(5)* %buf, i32 1
+
+  %asm.0 = call { i32, i32, i32, i32, i32, i32, i32, i32 } asm sideeffect "", "=s,=s,=s,=s,=s,=s,=s,=s"()
+  %asm0.0 = extractvalue { i32, i32, i32, i32, i32, i32, i32, i32 } %asm.0, 0
+  %asm1.0 = extractvalue { i32, i32, i32, i32, i32, i32, i32, i32 } %asm.0, 1
+  %asm2.0 = extractvalue { i32, i32, i32, i32, i32, i32, i32, i32 } %asm.0, 2
+  %asm3.0 = extractvalue { i32, i32, i32, i32, i32, i32, i32, i32 } %asm.0, 3
+  %asm4.0 = extractvalue { i32, i32, i32, i32, i32, i32, i32, i32 } %asm.0, 4
+  %asm5.0 = extractvalue { i32, i32, i32, i32, i32, i32, i32, i32 } %asm.0, 5
+  %asm6.0 = extractvalue { i32, i32, i32, i32, i32, i32, i32, i32 } %asm.0, 6
+  %asm7.0 = extractvalue { i32, i32, i32, i32, i32, i32, i32, i32 } %asm.0, 7
+
+  ; 0x40000 / 64 = 4096 (for wave64)
+  %a = load volatile i32, i32 addrspace(5)* %aptr
+
+  ; MUBUF: v_mov_b32_e32 [[OFFSET:v[0-9]+]], 0x1004
+  ; MUBUF: buffer_store_dword v{{[0-9]+}}, [[OFFSET]], s[{{[0-9]+:[0-9]+}}], 0 offen ; 4-byte Folded Spill
+
+  ; FLATSCR: s_movk_i32 [[SOFF:s[0-9]+]], 0x1004
+  ; FLATSCR: scratch_store_dword off, v{{[0-9]+}}, [[SOFF]] ; 4-byte Folded Spill
+  call void asm sideeffect "", "s,s,s,s,s,s,s,s,v"(i32 %asm0.0, i32 %asm1.0, i32 %asm2.0, i32 %asm3.0, i32 %asm4.0, i32 %asm5.0, i32 %asm6.0, i32 %asm7.0, i32 %a)
+
+  %asm = call { i32, i32, i32, i32, i32, i32, i32, i32 } asm sideeffect "", "=s,=s,=s,=s,=s,=s,=s,=s"()
+  %asm0 = extractvalue { i32, i32, i32, i32, i32, i32, i32, i32 } %asm, 0
+  %asm1 = extractvalue { i32, i32, i32, i32, i32, i32, i32, i32 } %asm, 1
+  %asm2 = extractvalue { i32, i32, i32, i32, i32, i32, i32, i32 } %asm, 2
+  %asm3 = extractvalue { i32, i32, i32, i32, i32, i32, i32, i32 } %asm, 3
+  %asm4 = extractvalue { i32, i32, i32, i32, i32, i32, i32, i32 } %asm, 4
+  %asm5 = extractvalue { i32, i32, i32, i32, i32, i32, i32, i32 } %asm, 5
+  %asm6 = extractvalue { i32, i32, i32, i32, i32, i32, i32, i32 } %asm, 6
+  %asm7 = extractvalue { i32, i32, i32, i32, i32, i32, i32, i32 } %asm, 7
+
+  call void asm sideeffect "", "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7}"() #0
+
+  ; MUBUF: v_mov_b32_e32 [[OFFSET:v[0-9]+]], 0x1004
+  ; MUBUF: buffer_load_dword v{{[0-9]+}}, [[OFFSET]], s[{{[0-9]+:[0-9]+}}], 0 offen ; 4-byte Folded Reload
+  ; FLATSCR: s_movk_i32 [[SOFF:s[0-9]+]], 0x1004
   ; FLATSCR: scratch_load_dword v{{[0-9]+}}, off, [[SOFF]] ; 4-byte Folded Reload
 
    ; Force %a to spill with no free SGPRs
@@ -287,3 +337,4 @@ entry:
 attributes #0 = { nounwind }
 attributes #1 = { nounwind "amdgpu-num-sgpr"="17" "amdgpu-num-vgpr"="8" }
 attributes #2 = { nounwind "amdgpu-num-sgpr"="14" "amdgpu-num-vgpr"="8" }
+attributes #3 = { nounwind "amdgpu-num-sgpr"="16" "amdgpu-num-vgpr"="8" }

@@ -10,22 +10,25 @@
 #define FORTRAN_OPTIMIZER_DIALECT_FIROPSSUPPORT_H
 
 #include "flang/Optimizer/Dialect/FIROps.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinOps.h"
 
 namespace fir {
 
-/// return true iff the Operation is a non-volatile LoadOp
+/// Return true iff the Operation is a non-volatile LoadOp or ArrayLoadOp.
 inline bool nonVolatileLoad(mlir::Operation *op) {
-  if (auto load = dyn_cast<fir::LoadOp>(op))
+  if (auto load = mlir::dyn_cast<fir::LoadOp>(op))
     return !load->getAttr("volatile");
+  if (auto arrLoad = mlir::dyn_cast<fir::ArrayLoadOp>(op))
+    return !arrLoad->getAttr("volatile");
   return false;
 }
 
-/// return true iff the Operation is a call
+/// Return true iff the Operation is a call.
 inline bool isaCall(mlir::Operation *op) {
-  return isa<fir::CallOp>(op) || isa<fir::DispatchOp>(op) ||
-         isa<mlir::CallOp>(op) || isa<mlir::CallIndirectOp>(op);
+  return mlir::isa<fir::CallOp>(op) || mlir::isa<fir::DispatchOp>(op) ||
+         mlir::isa<mlir::func::CallOp>(op) ||
+         mlir::isa<mlir::func::CallIndirectOp>(op);
 }
 
 /// return true iff the Operation is a fir::CallOp, fir::DispatchOp,
@@ -68,6 +71,24 @@ constexpr llvm::StringRef getOptionalAttrName() { return "fir.optional"; }
 /// Attribute to mark Fortran entities with the TARGET attribute.
 static constexpr llvm::StringRef getTargetAttrName() { return "fir.target"; }
 
+/// Attribute to mark that a function argument is a character dummy procedure.
+/// Character dummy procedure have special ABI constraints.
+static constexpr llvm::StringRef getCharacterProcedureDummyAttrName() {
+  return "fir.char_proc";
+}
+
+/// Attribute to keep track of Fortran scoping information for a symbol.
+static constexpr llvm::StringRef getSymbolAttrName() { return "fir.sym_name"; }
+
+/// Attribute to mark a function that takes a host associations argument.
+static constexpr llvm::StringRef getHostAssocAttrName() {
+  return "fir.host_assoc";
+}
+
+/// Does the function, \p func, have a host-associations tuple argument?
+/// Some internal procedures may have access to host procedure variables.
+bool hasHostAssociationArgument(mlir::FuncOp func);
+
 /// Tell if \p value is:
 ///   - a function argument that has attribute \p attributeName
 ///   - or, the result of fir.alloca/fir.allocamem op that has attribute \p
@@ -77,6 +98,11 @@ static constexpr llvm::StringRef getTargetAttrName() { return "fir.target"; }
 ///   - or, a fir.box loaded from a fir.ref<fir.box> that matches one of the
 ///     previous cases.
 bool valueHasFirAttribute(mlir::Value value, llvm::StringRef attributeName);
+
+/// Scan the arguments of a FuncOp to determine if any arguments have the
+/// attribute `attr` placed on them. This can be used to determine if the
+/// function has any host associations, for example.
+bool anyFuncArgsHaveAttr(mlir::FuncOp func, llvm::StringRef attr);
 
 } // namespace fir
 

@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s -fblocks
+// RUN: %clang_cc1 -fsyntax-only -Wno-strict-prototypes -verify %s -fblocks
 
 int (*FP)();
 int (^IFP) ();
 int (^II) (int);
-int main() {
+int main(void) {
   int (*FPL) (int) = FP; // C doesn't consider this an error.
 
   // For Blocks, the ASTContext::typesAreBlockCompatible() makes sure this is an error.
@@ -40,7 +40,7 @@ int main() {
   int (^z)() = a+4;   // expected-error {{invalid block pointer conversion initializing 'int (^)()' with an expression of type 'int'}}
 }
 
-int blah() {
+int blah(void) {
   int (^IFP) (float);
   char (^PCP)(double, double, char);
 

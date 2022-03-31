@@ -36,7 +36,7 @@ _Bool b;
 // CHECK-NEXT:    store i16 [[TMP2]], i16* @sa, align 2
 // CHECK-NEXT:    ret void
 //
-void sadd_sasasa() {
+void sadd_sasasa(void) {
   sa = sa + sa;
 }
 
@@ -50,7 +50,7 @@ void sadd_sasasa() {
 // CHECK-NEXT:    store i32 [[TMP2]], i32* @a, align 4
 // CHECK-NEXT:    ret void
 //
-void sadd_asaa() {
+void sadd_asaa(void) {
   a = sa + a;
 }
 
@@ -63,7 +63,7 @@ void sadd_asaa() {
 // CHECK-NEXT:    store i16 [[TMP2]], i16* @sa, align 2
 // CHECK-NEXT:    ret void
 //
-void sadd_sasasf() {
+void sadd_sasasf(void) {
   sa = sa + sf;
 }
 
@@ -80,7 +80,7 @@ void sadd_sasasf() {
 // CHECK-NEXT:    store i16 [[RESIZE2]], i16* @sa, align 2
 // CHECK-NEXT:    ret void
 //
-void sadd_sasaf() {
+void sadd_sasaf(void) {
   sa = sa + f;
 }
 
@@ -94,7 +94,7 @@ void sadd_sasaf() {
 // CHECK-NEXT:    store i32 [[TMP2]], i32* @a, align 4
 // CHECK-NEXT:    ret void
 //
-void sadd_aasf() {
+void sadd_aasf(void) {
   a = a + sf;
 }
 
@@ -111,7 +111,7 @@ void sadd_aasf() {
 // CHECK-NEXT:    store i32 [[RESIZE2]], i32* @a, align 4
 // CHECK-NEXT:    ret void
 //
-void sadd_aalf() {
+void sadd_aalf(void) {
   a = a + lf;
 }
 
@@ -136,7 +136,7 @@ void sadd_aalf() {
 // UNSIGNED-NEXT:    store i16 [[TMP2]], i16* @sa, align 2
 // UNSIGNED-NEXT:    ret void
 //
-void sadd_sasausa() {
+void sadd_sasausa(void) {
   sa = sa + usa;
 }
 
@@ -163,7 +163,7 @@ void sadd_sasausa() {
 // UNSIGNED-NEXT:    store i32 [[TMP2]], i32* @a, align 4
 // UNSIGNED-NEXT:    ret void
 //
-void sadd_asaua() {
+void sadd_asaua(void) {
   a = sa + ua;
 }
 
@@ -189,7 +189,7 @@ void sadd_asaua() {
 // UNSIGNED-NEXT:    store i16 [[TMP2]], i16* @sa, align 2
 // UNSIGNED-NEXT:    ret void
 //
-void sadd_sasausf() {
+void sadd_sasausf(void) {
   sa = sa + usf;
 }
 
@@ -219,7 +219,7 @@ void sadd_sasausf() {
 // UNSIGNED-NEXT:    store i16 [[RESIZE2]], i16* @sa, align 2
 // UNSIGNED-NEXT:    ret void
 //
-void sadd_sasaulf() {
+void sadd_sasaulf(void) {
   sa = sa + ulf;
 }
 
@@ -235,7 +235,7 @@ void sadd_sasaulf() {
 // CHECK-NEXT:    store i32 [[TMP6]], i32* @a, align 4
 // CHECK-NEXT:    ret void
 //
-void sadd_aaaaa() {
+void sadd_aaaaa(void) {
   a = a + a2 + a3 + a4;
 }
 
@@ -248,7 +248,7 @@ void sadd_aaaaa() {
 // CHECK-NEXT:    store i16 [[TMP2]], i16* @usa, align 2
 // CHECK-NEXT:    ret void
 //
-void uadd_usausausa() {
+void uadd_usausausa(void) {
   usa = usa + usa;
 }
 
@@ -262,7 +262,7 @@ void uadd_usausausa() {
 // CHECK-NEXT:    store i32 [[TMP2]], i32* @ua, align 4
 // CHECK-NEXT:    ret void
 //
-void uadd_uausaua() {
+void uadd_uausaua(void) {
   ua = usa + ua;
 }
 
@@ -275,7 +275,7 @@ void uadd_uausaua() {
 // CHECK-NEXT:    store i16 [[TMP2]], i16* @usa, align 2
 // CHECK-NEXT:    ret void
 //
-void uadd_usausausf() {
+void uadd_usausausf(void) {
   usa = usa + usf;
 }
 
@@ -292,7 +292,7 @@ void uadd_usausausf() {
 // CHECK-NEXT:    store i16 [[RESIZE2]], i16* @usa, align 2
 // CHECK-NEXT:    ret void
 //
-void uadd_usausauf() {
+void uadd_usausauf(void) {
   usa = usa + uf;
 }
 
@@ -309,7 +309,7 @@ void uadd_usausauf() {
 // CHECK-NEXT:    store i16 [[RESIZE2]], i16* @sa, align 2
 // CHECK-NEXT:    ret void
 //
-void int_sasai() {
+void int_sasai(void) {
   sa = sa + i;
 }
 
@@ -325,7 +325,7 @@ void int_sasai() {
 // CHECK-NEXT:    store i16 [[RESIZE2]], i16* @sa, align 2
 // CHECK-NEXT:    ret void
 //
-void int_sasaui() {
+void int_sasaui(void) {
   sa = sa + ui;
 }
 
@@ -353,7 +353,7 @@ void int_sasaui() {
 // UNSIGNED-NEXT:    store i16 [[RESIZE2]], i16* @usa, align 2
 // UNSIGNED-NEXT:    ret void
 //
-void int_usausai() {
+void int_usausai(void) {
   usa = usa + i;
 }
 
@@ -381,7 +381,7 @@ void int_usausai() {
 // UNSIGNED-NEXT:    store i16 [[RESIZE2]], i16* @usa, align 2
 // UNSIGNED-NEXT:    ret void
 //
-void int_usausaui() {
+void int_usausaui(void) {
   usa = usa + ui;
 }
 
@@ -397,7 +397,7 @@ void int_usausaui() {
 // CHECK-NEXT:    store i32 [[RESIZE2]], i32* @lf, align 4
 // CHECK-NEXT:    ret void
 //
-void int_lflfui() {
+void int_lflfui(void) {
   lf = lf + ui;
 }
 
@@ -415,7 +415,7 @@ void int_lflfui() {
 // CHECK-NEXT:    store i32 [[RESIZE2]], i32* @a, align 4
 // CHECK-NEXT:    ret void
 //
-void int_aab() {
+void int_aab(void) {
   a = a + b;
 }
 
@@ -428,7 +428,7 @@ void int_aab() {
 // CHECK-NEXT:    store i16 [[TMP2]], i16* @sa_sat, align 2
 // CHECK-NEXT:    ret void
 //
-void sat_sassasas() {
+void sat_sassasas(void) {
   sa_sat = sa + sa_sat;
 }
 
@@ -450,7 +450,7 @@ void sat_sassasas() {
 // UNSIGNED-NEXT:    store i16 [[RESIZE1]], i16* @usa_sat, align 2
 // UNSIGNED-NEXT:    ret void
 //
-void sat_usasusausas() {
+void sat_usasusausas(void) {
   usa_sat = usa + usa_sat;
 }
 
@@ -476,7 +476,7 @@ void sat_usasusausas() {
 // UNSIGNED-NEXT:    store i32 [[RESIZE2]], i32* @ua_sat, align 4
 // UNSIGNED-NEXT:    ret void
 //
-void sat_uasuausas() {
+void sat_uasuausas(void) {
   ua_sat = ua + usa_sat;
 }
 
@@ -496,7 +496,7 @@ void sat_uasuausas() {
 // CHECK-NEXT:    store i16 [[RESIZE2]], i16* @sa_sat, align 2
 // CHECK-NEXT:    ret void
 //
-void sat_sassasi() {
+void sat_sassasi(void) {
   sa_sat = sa_sat + i;
 }
 
@@ -516,7 +516,7 @@ void sat_sassasi() {
 // CHECK-NEXT:    store i16 [[RESIZE2]], i16* @sa_sat, align 2
 // CHECK-NEXT:    ret void
 //
-void sat_sassasui() {
+void sat_sassasui(void) {
   sa_sat = sa_sat + ui;
 }
 
@@ -538,7 +538,7 @@ void sat_sassasui() {
 // UNSIGNED-NEXT:    store i16 [[RESIZE1]], i16* @uf_sat, align 2
 // UNSIGNED-NEXT:    ret void
 //
-void sat_ufsufsufs() {
+void sat_ufsufsufs(void) {
   uf_sat = uf_sat + uf_sat;
 }
 
@@ -574,6 +574,6 @@ void sat_ufsufsufs() {
 // UNSIGNED-NEXT:    store i16 [[RESIZE2]], i16* @usa_sat, align 2
 // UNSIGNED-NEXT:    ret void
 //
-void sat_usasusasi() {
+void sat_usasusasi(void) {
   usa_sat = usa_sat + i;
 }

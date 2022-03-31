@@ -11,7 +11,7 @@ define void @test_and(i16 %in) {
 ; CHECK-NEXT:    %_tmp6.i = add nsw i16 %_tmp25.i, 1
 ; CHECK-NEXT:    --> {(1 + %in),+,1}<nsw><%bb1.i> U: full-set S: full-set Exits: 2 LoopDispositions: { %bb1.i: Computable, %bb2: Variant }
 ; CHECK-NEXT:    %or.cond = and i1 %_tmp10.i, %exitcond.i
-; CHECK-NEXT:    --> %or.cond U: full-set S: full-set Exits: true LoopDispositions: { %bb1.i: Variant, %bb2: Variant }
+; CHECK-NEXT:    --> (%_tmp10.i umin %exitcond.i) U: full-set S: full-set Exits: true LoopDispositions: { %bb1.i: Variant, %bb2: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_and
 ; CHECK-NEXT:  Loop %bb1.i: backedge-taken count is (1 + (-1 * %in))
 ; CHECK-NEXT:  Loop %bb1.i: max backedge-taken count is -1
@@ -51,7 +51,7 @@ define void @test_or() {
 ; CHECK-NEXT:    %B3 = add i32 %1, %2
 ; CHECK-NEXT:    --> {(-2 + undef),+,-1}<%BB> U: full-set S: full-set Exits: -2 LoopDispositions: { %BB: Computable }
 ; CHECK-NEXT:    %B = or i1 %C5, %C11
-; CHECK-NEXT:    --> %B U: full-set S: full-set Exits: false LoopDispositions: { %BB: Variant }
+; CHECK-NEXT:    --> (%C11 umax %C5) U: full-set S: full-set Exits: false LoopDispositions: { %BB: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_or
 ; CHECK-NEXT:  Loop %BB: backedge-taken count is undef
 ; CHECK-NEXT:  Loop %BB: max backedge-taken count is -1

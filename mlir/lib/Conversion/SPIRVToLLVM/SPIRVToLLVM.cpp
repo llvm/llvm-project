@@ -17,7 +17,6 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/Utils/LayoutUtils.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LogicalResult.h"
@@ -1292,11 +1291,11 @@ public:
 
     // Convert function signature. At the moment LLVMType converter is enough
     // for currently supported types.
-    auto funcType = funcOp.getType();
+    auto funcType = funcOp.getFunctionType();
     TypeConverter::SignatureConversion signatureConverter(
         funcType.getNumInputs());
     auto llvmType = typeConverter.convertFunctionSignature(
-        funcOp.getType(), /*isVariadic=*/false, signatureConverter);
+        funcType, /*isVariadic=*/false, signatureConverter);
     if (!llvmType)
       return failure();
 
@@ -1390,7 +1389,7 @@ public:
     auto dstType = typeConverter.convertType(op.getType());
     auto scalarType = dstType.cast<VectorType>().getElementType();
     auto componentsArray = components.getValue();
-    auto context = rewriter.getContext();
+    auto *context = rewriter.getContext();
     auto llvmI32Type = IntegerType::get(context, 32);
     Value targetOp = rewriter.create<LLVM::UndefOp>(loc, dstType);
     for (unsigned i = 0; i < componentsArray.size(); i++) {

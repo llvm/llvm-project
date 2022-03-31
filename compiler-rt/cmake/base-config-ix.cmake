@@ -3,8 +3,11 @@
 # .o files. This is particularly useful in producing larger, more complex
 # runtime libraries.
 
+include(BuiltinTests)
 include(CheckIncludeFile)
 include(CheckCXXSourceCompiles)
+include(GNUInstallDirs)
+include(ExtendPath)
 
 check_include_file(unwind.h HAVE_UNWIND_H)
 
@@ -85,20 +88,6 @@ else()
   set(COMPILER_RT_TEST_COMPILER_ID GNU)
 endif()
 
-function(extend_install_path joined_path current_segment)
-  if("${current_segment}" STREQUAL "")
-    set(temp_path "${COMPILER_RT_INSTALL_PATH}")
-  elseif("${COMPILER_RT_INSTALL_PATH}" STREQUAL "")
-    set(temp_path "${current_segment}")
-  elseif(IS_ABSOLUTE "${current_segment}")
-    message(WARNING "Since \"${current_segment}\" is absolute, it overrides COMPILER_RT_INSTALL_PATH: \"${COMPILER_RT_INSTALL_PATH}\".")
-    set(temp_path "${current_segment}")
-  else()
-    set(temp_path "${COMPILER_RT_INSTALL_PATH}/${current_segment}")
-  endif()
-  set(${joined_path} "${temp_path}" PARENT_SCOPE)
-endfunction()
-
 if(NOT DEFINED COMPILER_RT_OS_DIR)
   if(ANDROID)
     # The CMAKE_SYSTEM_NAME for Android is Android, but the OS is Linux and the
@@ -111,23 +100,23 @@ endif()
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   set(COMPILER_RT_OUTPUT_LIBRARY_DIR
     ${COMPILER_RT_OUTPUT_DIR}/lib)
-  extend_install_path(default_install_path lib)
+  extend_path(default_install_path "${COMPILER_RT_INSTALL_PATH}" lib)
   set(COMPILER_RT_INSTALL_LIBRARY_DIR "${default_install_path}" CACHE PATH
     "Path where built compiler-rt libraries should be installed.")
 else(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   set(COMPILER_RT_OUTPUT_LIBRARY_DIR
     ${COMPILER_RT_OUTPUT_DIR}/lib/${COMPILER_RT_OS_DIR})
-  extend_install_path(default_install_path "lib/${COMPILER_RT_OS_DIR}")
+  extend_path(default_install_path "${COMPILER_RT_INSTALL_PATH}" "lib/${COMPILER_RT_OS_DIR}")
   set(COMPILER_RT_INSTALL_LIBRARY_DIR "${default_install_path}" CACHE PATH
     "Path where built compiler-rt libraries should be installed.")
 endif()
-extend_install_path(default_install_path bin)
+extend_path(default_install_path "${COMPILER_RT_INSTALL_PATH}" "${CMAKE_INSTALL_BINDIR}")
 set(COMPILER_RT_INSTALL_BINARY_DIR "${default_install_path}" CACHE PATH
   "Path where built compiler-rt executables should be installed.")
-extend_install_path(default_install_path include)
+extend_path(default_install_path "${COMPILER_RT_INSTALL_PATH}" "${CMAKE_INSTALL_INCLUDEDIR}")
 set(COMPILER_RT_INSTALL_INCLUDE_DIR "${default_install_path}" CACHE PATH
   "Path where compiler-rt headers should be installed.")
-extend_install_path(default_install_path share)
+extend_path(default_install_path "${COMPILER_RT_INSTALL_PATH}" "${CMAKE_INSTALL_DATADIR}")
 set(COMPILER_RT_INSTALL_DATA_DIR "${default_install_path}" CACHE PATH
   "Path where compiler-rt data files should be installed.")
 
@@ -150,6 +139,12 @@ if(APPLE)
     set(OSX_SYSROOT_FLAG "")
   endif()
 
+  try_compile_only(COMPILER_RT_HAS_DARWIN_TARGET_VARIANT_FLAG
+                   FLAGS
+                   "-target" "x86_64-apple-macos10.15"
+                   "-darwin-target-variant" "x86_64-apple-ios13.1-macabi"
+                   "-Werror")
+  option(COMPILER_RT_ENABLE_MACCATALYST "Enable building for Mac Catalyst" ${COMPILER_RT_HAS_DARWIN_TARGET_VARIANT_FLAG})
   option(COMPILER_RT_ENABLE_IOS "Enable building for iOS" On)
   option(COMPILER_RT_ENABLE_WATCHOS "Enable building for watchOS - Experimental" Off)
   option(COMPILER_RT_ENABLE_TVOS "Enable building for tvOS - Experimental" Off)

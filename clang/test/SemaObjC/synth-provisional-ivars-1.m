@@ -11,7 +11,7 @@ typedef unsigned char BOOL;
 @property(assign) BOOL isAppleInternal;
 @end
 
-static BOOL isAppleInternal() {return 0; }
+static BOOL isAppleInternal(void) {return 0; }
 
 @implementation MailApp
 

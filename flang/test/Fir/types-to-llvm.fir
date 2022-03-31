@@ -4,10 +4,11 @@
 
 
 // Test sequence types `!fir.array`
+// Note that we're switching from column-major to row-major here.
 
-func private @foo0(%arg0: !fir.array<10x10xi64>)
+func private @foo0(%arg0: !fir.array<10x12xi64>)
 // CHECK-LABEL: foo0
-// CHECK-SAME: !llvm.array<10 x array<10 x i64>>
+// CHECK-SAME: !llvm.array<12 x array<10 x i64>>
 func private @foo1(%arg0: !fir.array<?xf32>)
 // CHECK-LABEL: foo1
 // CHECK-SAME: !llvm.ptr<f32>
@@ -17,6 +18,21 @@ func private @foo2(%arg0: !fir.array<?x?xf128>)
 func private @foo3(%arg0: !fir.array<*:i32>)
 // CHECK-LABEL: foo3
 // CHECK-SAME: !llvm.ptr<i32>
+func private @foo4(%arg0: !fir.array<3x?xi32>)
+// CHECK-LABEL: foo4
+// CHECK-SAME: !llvm.ptr<array<3 x i32>>
+func private @foo5(%arg0: !fir.array<?x6xi32>)
+// CHECK-LABEL: foo5
+// CHECK-SAME: !llvm.ptr<i32>
+func private @foo6(%arg0: !fir.array<2x?x3x?x4xi32>)
+// CHECK-LABEL: foo6
+// CHECK-SAME: !llvm.ptr<array<2 x i32>
+func private @foo7(%arg0: !fir.array<6x?x!fir.char<1,?>>)
+// CHECK-LABEL: foo7
+// CHECK-SAME: !llvm.ptr<i8>
+func private @foo8(%arg0: !fir.array<6x?x!fir.char<1,3>>)
+// CHECK-LABEL: foo8
+// CHECK-SAME: !llvm.ptr<array<6 x array<3 x i8>
 
 // -----
 
@@ -31,6 +47,21 @@ func private @foo1(%arg0: !fir.ref<!fir.array<10xf32>>)
 func private @foo2(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.type<_QMs1Ta1{x:i32,y:f32}>>>>)
 // CHECK-LABEL: foo2
 // CHECK-SAME: !llvm.ptr<struct<(ptr<struct<"_QMs1Ta1", (i32, f32)>>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, ptr<i{{.*}}>, array<1 x i{{.*}}>)>>
+func private @foo3(%arg0: !fir.ref<!fir.array<10x?x11xf32>>)
+// CHECK-LABEL: foo3
+// CHECK-SAME: !llvm.ptr<f32>
+func private @foo4(%arg0: !fir.ref<!fir.array<10x11x?x?xf32>>)
+// CHECK-LABEL: foo4
+// CHECK-SAME: !llvm.ptr<array<11 x array<10 x f32>>>
+func private @foo5(%arg0: !fir.ref<!fir.array<10x!fir.char<1,?>>>)
+// CHECK-LABEL: foo5
+// CHECK-SAME: !llvm.ptr<i8>
+func private @foo6(%arg0: !fir.ref<!fir.array<10x!fir.char<2,8>>>)
+// CHECK-LABEL: foo6
+// CHECK-SAME: !llvm.ptr<array<10 x array<8 x i16>
+func private @foo7(%arg0: !fir.ref<!fir.box<!fir.array<?xf32>>>)
+// CHECK-LABEL: foo7
+// CHECK-SAME: !llvm.ptr<struct<(ptr<f32>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i{{.*}}>>)>>
 
 // -----
 
@@ -369,3 +400,29 @@ func private @foo2(%arg : !fir.tdesc<f32>)
 func private @foo3(%arg : !fir.tdesc<!fir.type<derived7{f1:f32,f2:f32}>>)
 // CHECK-LABEL: foo3
 // CHECK-SAME:  !llvm.ptr<i8>
+
+// -----
+
+// Test nested tuple types
+func private @foo0(%arg0: tuple<i64, tuple<f32, i64>>)
+// CHECK-LABEL: foo0
+// CHECK-SAME: !llvm.struct<(i64, struct<(f32, i64)>)>
+
+// -----
+
+// Test that fir.box inside tuple and derived type are lowered to struct type.
+func private @foo0(%arg0: tuple<i64, !fir.box<i32>>)
+// CHECK-LABEL: foo0
+// CHECK-SAME: !llvm.struct<(i64, struct<(ptr<i32>, i{{.*}})>)>
+
+func private @foo1(%arg0: !fir.type<derived8{a:i64,b:!fir.box<i32>}>)
+// CHECK-LABEL: foo1
+// CHECK-SAME: !llvm.struct<"derived8", (i64, struct<(ptr<i32>, i{{.*}})>)>
+
+// -----
+
+// Test fir.box<none> translation.
+// `none` is used for polymorphic type.
+func private @foo0(%arg0: !fir.box<none>)
+// CHECK-LABEL: foo0
+// CHECK-SAME: !llvm.ptr<struct<(ptr<struct<()>>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>>)

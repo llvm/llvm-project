@@ -1,10 +1,10 @@
 // RUN: %clang -emit-llvm %s -o - -S | FileCheck %s -check-prefix=SLH
 
-int main() __attribute__((speculative_load_hardening)) {
+int main(void) __attribute__((speculative_load_hardening)) {
   return 0;
 }
 
-int test() __attribute__((no_speculative_load_hardening)) {
+int test(void) __attribute__((no_speculative_load_hardening)) {
   return 0;
 }
 

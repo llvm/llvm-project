@@ -6,9 +6,9 @@
 
 define internal i32 @test(%T* %p) {
 ; CHECK-LABEL: define {{[^@]+}}@test
-; CHECK-SAME: (i32 [[P_0_3_VAL:%.*]]) {
+; CHECK-SAME: (i32 [[P_12_VAL:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[V:%.*]] = add i32 [[P_0_3_VAL]], 10
+; CHECK-NEXT:    [[V:%.*]] = add i32 [[P_12_VAL]], 10
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
 entry:
@@ -22,9 +22,9 @@ entry:
 define i32 @caller() {
 ; CHECK-LABEL: define {{[^@]+}}@caller() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[G_IDX:%.*]] = getelementptr [[T:%.*]], %T* @G, i64 0, i32 3
-; CHECK-NEXT:    [[G_IDX_VAL:%.*]] = load i32, i32* [[G_IDX]], align 4
-; CHECK-NEXT:    [[V:%.*]] = call i32 @test(i32 [[G_IDX_VAL]])
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [[T:%.*]], %T* @G, i64 0, i32 3
+; CHECK-NEXT:    [[G_VAL:%.*]] = load i32, i32* [[TMP0]], align 4
+; CHECK-NEXT:    [[V:%.*]] = call i32 @test(i32 [[G_VAL]])
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
 entry:

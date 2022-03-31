@@ -1,0 +1,56 @@
+## NB: This is a yaml file because llvm gnu-style writing support in 14.0
+## (2022, D117744). In due time we may want to remove it from lldb as well.
+
+## Debug info generated from the following sources using clang-13
+## struct A {
+##  long a = 42;
+## };
+## extern constexpr short s = 47;
+## extern constexpr A a{};
+
+# REQUIRES: zlib
+
+# RUN: yaml2obj %s > %t
+# RUN: %lldb %t -o "target var s a" -b | FileCheck %s
+
+# CHECK: (const short) s = 47
+# CHECK: (const A) a = (a = 42)
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+  Entry:           0x401000
+Sections:
+  - Name:            .rodata
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x401000
+    AddressAlign:    0x8
+    Offset:          0x1000
+    Content:         2F000000000000002A00000000000000
+  - Name:            .zdebug_info
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         5A4C49420000000000000077789C2B666060606100010E4610A9C820CA00012640CCE407248C81989197939941C0012CC16C01D2130024589998C280540848011F2733074C4124488E35116C28171B48493E480937505B04488A830100368605A7
+  - Name:            .debug_abbrev
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         011101250E1305030E10171B0E0000023400030E49133F193A0B3B0B0218000003260049130000042400030E3E0B0B0B0000051301360B030E0B0B3A0B3B0B0000060D00030E49133A0B3B0B380B000000
+  - Name:            .debug_line
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         3C000000040036000000010101FB0E0D0001010101000000010000012F746D700000676E752D7374796C652D636F6D7072657373696F6E2E6370700001000000
+DWARF:
+  debug_str:
+    - clang version 13.0.0
+    - '/tmp/gnu-style-compression.cpp'
+    - '/tmp/my_working_directory'
+    - s
+    - short
+    - a
+    - long int
+    - A
+...

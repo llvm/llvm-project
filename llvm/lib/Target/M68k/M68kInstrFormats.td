@@ -1,4 +1,4 @@
-//=== M68kInstrFormats.td - M68k Instruction Formats ---*- tablegen -*-===//
+//===-- M68kInstrFormats.td - M68k Instruction Formats -----*- tablegen -*-===//
 //                     The LLVM Compiler Infrastructure
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -200,6 +200,11 @@ class MxEncEA<MxBead reg, MxBead mode, MxBead da = MxBeadIgnore> {
   MxBead DA = da;
 }
 
+class MxEncMemOp {
+  dag EA = (ascend);
+  dag Supplement = (ascend);
+}
+
 // FIXME: Is there a way to factorize the addressing mode suffix (i.e.
 // 'r', 'd', 'a' etc.) and use something like multiclass to replace?
 def MxEncEAr_0: MxEncEA<MxBeadDAReg<0>, MxBead2Bits<0b00>>;
@@ -236,6 +241,112 @@ def MxEncEAb : MxEncEA<MxBead3Bits<0b001>, MxBead2Bits<0b11>, MxBead1Bit<1>>;
 def MxEncEAq : MxEncEA<MxBead3Bits<0b010>, MxBead2Bits<0b11>, MxBead1Bit<1>>;
 def MxEncEAk : MxEncEA<MxBead3Bits<0b011>, MxBead2Bits<0b11>, MxBead1Bit<1>>;
 def MxEncEAi : MxEncEA<MxBead3Bits<0b100>, MxBead2Bits<0b11>, MxBead1Bit<1>>;
+
+class MxEncBriefExt<string reg_opnd, string disp_opnd,
+                    bit size_w_l = false, int scale = 1,
+                    string disp_encoder = ""> {
+  dag Value = (descend
+    // D/A + REGISTER
+    (operand "$"#reg_opnd, 4),
+    // W/L
+    size_w_l,
+    // SCALE
+    !cond(
+      !eq(scale, 1) : 0b00,
+      !eq(scale, 2) : 0b01,
+      !eq(scale, 4) : 0b10,
+      !eq(scale, 8) : 0b11
+    ),
+    0b0,
+    // Displacement
+    (operand "$"#disp_opnd, 8, (encoder disp_encoder))
+  );
+}
+
+class MxEncAddrMode_r<string reg_opnd> : MxEncMemOp {
+  let EA = (descend /*MODE without the last bit*/0b00,
+                    /*REGISTER with D/A bit*/(operand "$"#reg_opnd, 4));
+}
+
+class MxEncAddrMode_k<string opnd_name> : MxEncMemOp {
+  let EA = (descend /*MODE*/0b111,
+                    /*REGISTER*/0b011);
+
+  let Supplement = MxEncBriefExt<opnd_name#".index", opnd_name#".disp",
+                                 /*W/L*/true, /*SCALE*/1,
+                                 "encodePCRelImm<8>">.Value;
+}
+
+class MxEncAddrMode_q<string opnd_name> : MxEncMemOp {
+  let EA = (descend /*MODE*/0b111,
+                     /*REGISTER*/0b010);
+
+  // 16-bit Displacement
+  let Supplement = (operand "$"#opnd_name, 16,
+                            (encoder "encodePCRelImm<16>"));
+}
+
+class MxEncAddrMode_p<string opnd_name> : MxEncMemOp {
+  let EA = (descend /*MODE*/0b101,
+                     /*REGISTER*/(operand "$"#opnd_name#".reg", 3));
+
+  // 16-bit Displacement
+  let Supplement = (operand "$"#opnd_name#".disp", 16,
+                            (encoder "encodeRelocImm<16>"));
+}
+
+class MxEncAddrMode_f<string opnd_name> : MxEncMemOp {
+  let EA = (descend /*MODE*/0b110,
+                     /*REGISTER*/(operand "$"#opnd_name#".reg", 3));
+
+  let Supplement = MxEncBriefExt<opnd_name#".index", opnd_name#".disp",
+                                 /*W/L*/true, /*SCALE*/1,
+                                 "encodeRelocImm<8>">.Value;
+}
+
+class MxEncAddrMode_j<string reg_opnd> : MxEncMemOp {
+  let EA = (descend /*MODE*/0b010,
+                     /*REGISTER*/(operand "$"#reg_opnd, 3));
+}
+
+class MxEncAddrMode_i<string opnd_name, int size> : MxEncMemOp {
+  let EA = (descend /*MODE*/0b111,
+                     /*REGISTER*/0b100);
+
+  // Immediate
+  let Supplement =
+    !cond(
+      !eq(size, 8)  : (descend 0b00000000, (operand "$"#opnd_name, 8)),
+      !eq(size, 16) : (operand "$"#opnd_name, 16),
+      !eq(size, 32) : (ascend (slice "$"#opnd_name, 31, 16),
+                              (slice "$"#opnd_name, 15, 0))
+    );
+}
+
+// abs.W -> size_w_l = false
+// abs.L -> size_w_l = true
+class MxEncAddrMode_abs<string opnd_name, bit size_w_l = false> : MxEncMemOp {
+  let EA = (descend /*MODE*/0b111,
+                     /*REGISTER*/0b00, size_w_l);
+
+  // Absolute address
+  let Supplement = !if(size_w_l,
+    // abs.L
+    (operand "$"#opnd_name, 32, (encoder "encodeRelocImm<32>")),
+    // abs.W
+    (operand "$"#opnd_name, 16, (encoder "encodeRelocImm<16>"))
+  );
+}
+
+class MxEncAddrMode_o<string reg_opnd> : MxEncMemOp {
+  let EA = (descend /*MODE*/0b011,
+                    /*REGISTER*/(operand "$"#reg_opnd, 3));
+}
+
+class MxEncAddrMode_e<string reg_opnd> : MxEncMemOp {
+  let EA = (descend /*MODE*/0b100,
+                    /*REGISTER*/(operand "$"#reg_opnd, 3));
+}
 
 // Allows you to specify each bit of opcode
 class MxEncOpMode<MxBead b0, MxBead b1 = MxBeadIgnore, MxBead b2 = MxBeadIgnore> {
@@ -332,6 +443,16 @@ def MxEncSize16 : MxEncSize<0b01>;
 def MxEncSize32 : MxEncSize<0b10>;
 def MxEncSize64 : MxEncSize<0b11>;
 
+// TODO: Remove "New" in the name after the codebead-based
+// representation is deprecated.
+class MxNewEncSize<bits<2> value> {
+  bits<2> Value = value;
+}
+def MxNewEncSize8  : MxNewEncSize<0b00>;
+def MxNewEncSize16 : MxNewEncSize<0b01>;
+def MxNewEncSize32 : MxNewEncSize<0b10>;
+def MxNewEncSize64 : MxNewEncSize<0b11>;
+
 // M68k INSTRUCTION. Most instructions specify the location of an operand by
 // using the effective address field in the operation word. The effective address
 // is composed of two 3-bit fields: the mode field and the register field. The
@@ -357,6 +478,7 @@ class MxInst<dag outs, dag ins,
 
   // Byte stream
   field bits<192> Beads = beads.Value;
+  dag Inst = (ascend);
 
   // Number of bytes
   let Size = 0;

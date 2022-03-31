@@ -28,7 +28,7 @@ struct BufferizationInlinerInterface : public DialectInlinerInterface {
     return true;
   }
 };
-} // end anonymous namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // Bufferization Dialect

@@ -128,7 +128,7 @@ struct UnwrapperHelper {
 
   template <typename A, typename B, bool COPY>
   static auto Unwrap(const Indirection<B, COPY> &p) -> Constify<A, B> * {
-    return Unwrap<A>(*p);
+    return Unwrap<A>(p.value());
   }
 
   template <typename A, typename B>

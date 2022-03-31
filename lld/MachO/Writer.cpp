@@ -14,6 +14,7 @@
 #include "MapFile.h"
 #include "OutputSection.h"
 #include "OutputSegment.h"
+#include "SectionPriorities.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
@@ -21,14 +22,14 @@
 #include "UnwindInfoSection.h"
 
 #include "lld/Common/Arrays.h"
-#include "lld/Common/ErrorHandler.h"
-#include "lld/Common/Memory.h"
+#include "lld/Common/CommonLinkerContext.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/xxhash.h"
 
@@ -64,6 +65,7 @@ public:
 
   template <class LP> void run();
 
+  ThreadPool threadPool;
   std::unique_ptr<FileOutputBuffer> &buffer;
   uint64_t addr = 0;
   uint64_t fileOff = 0;
@@ -413,19 +415,19 @@ public:
   void writeTo(uint8_t *buf) const override {
     auto *c = reinterpret_cast<version_min_command *>(buf);
     switch (platformInfo.target.Platform) {
-    case PlatformKind::macOS:
+    case PLATFORM_MACOS:
       c->cmd = LC_VERSION_MIN_MACOSX;
       break;
-    case PlatformKind::iOS:
-    case PlatformKind::iOSSimulator:
+    case PLATFORM_IOS:
+    case PLATFORM_IOSSIMULATOR:
       c->cmd = LC_VERSION_MIN_IPHONEOS;
       break;
-    case PlatformKind::tvOS:
-    case PlatformKind::tvOSSimulator:
+    case PLATFORM_TVOS:
+    case PLATFORM_TVOSSIMULATOR:
       c->cmd = LC_VERSION_MIN_TVOS;
       break;
-    case PlatformKind::watchOS:
-    case PlatformKind::watchOSSimulator:
+    case PLATFORM_WATCHOS:
+    case PLATFORM_WATCHOSSIMULATOR:
       c->cmd = LC_VERSION_MIN_WATCHOS;
       break;
     default:
@@ -592,6 +594,9 @@ static void prepareBranchTarget(Symbol *sym) {
         in.weakBinding->addEntry(sym, in.lazyPointers->isec,
                                  sym->stubsIndex * target->wordSize);
       }
+    } else if (defined->interposable) {
+      if (in.stubs->addEntry(sym))
+        in.lazyBinding->addEntry(sym);
     }
   } else {
     llvm_unreachable("invalid branch target symbol type");
@@ -603,12 +608,12 @@ static bool needsBinding(const Symbol *sym) {
   if (isa<DylibSymbol>(sym))
     return true;
   if (const auto *defined = dyn_cast<Defined>(sym))
-    return defined->isExternalWeakDef();
+    return defined->isExternalWeakDef() || defined->interposable;
   return false;
 }
 
 static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
-                                    const Reloc &r) {
+                                    const lld::macho::Reloc &r) {
   assert(sym->isLive());
   const RelocAttrs &relocAttrs = target->getRelocAttrs(r.type);
 
@@ -641,7 +646,7 @@ void Writer::scanRelocations() {
       continue;
 
     for (auto it = isec->relocs.begin(); it != isec->relocs.end(); ++it) {
-      Reloc &r = *it;
+      lld::macho::Reloc &r = *it;
       if (target->hasAttr(r.type, RelocAttrBits::SUBTRAHEND)) {
         // Skip over the following UNSIGNED relocation -- it's just there as the
         // minuend, and doesn't have the usual UNSIGNED semantics. We don't want
@@ -707,14 +712,14 @@ void Writer::scanSymbols() {
 
 // TODO: ld64 enforces the old load commands in a few other cases.
 static bool useLCBuildVersion(const PlatformInfo &platformInfo) {
-  static const std::vector<std::pair<PlatformKind, VersionTuple>> minVersion = {
-      {PlatformKind::macOS, VersionTuple(10, 14)},
-      {PlatformKind::iOS, VersionTuple(12, 0)},
-      {PlatformKind::iOSSimulator, VersionTuple(13, 0)},
-      {PlatformKind::tvOS, VersionTuple(12, 0)},
-      {PlatformKind::tvOSSimulator, VersionTuple(13, 0)},
-      {PlatformKind::watchOS, VersionTuple(5, 0)},
-      {PlatformKind::watchOSSimulator, VersionTuple(6, 0)}};
+  static const std::vector<std::pair<PlatformType, VersionTuple>> minVersion = {
+      {PLATFORM_MACOS, VersionTuple(10, 14)},
+      {PLATFORM_IOS, VersionTuple(12, 0)},
+      {PLATFORM_IOSSIMULATOR, VersionTuple(13, 0)},
+      {PLATFORM_TVOS, VersionTuple(12, 0)},
+      {PLATFORM_TVOSSIMULATOR, VersionTuple(13, 0)},
+      {PLATFORM_WATCHOS, VersionTuple(5, 0)},
+      {PLATFORM_WATCHOSSIMULATOR, VersionTuple(6, 0)}};
   auto it = llvm::find_if(minVersion, [&](const auto &p) {
     return p.first == platformInfo.target.Platform;
   });
@@ -847,52 +852,6 @@ template <class LP> void Writer::createLoadCommands() {
                               : 0));
 }
 
-static size_t getSymbolPriority(const SymbolPriorityEntry &entry,
-                                const InputFile *f) {
-  // We don't use toString(InputFile *) here because it returns the full path
-  // for object files, and we only want the basename.
-  StringRef filename;
-  if (f->archiveName.empty())
-    filename = path::filename(f->getName());
-  else
-    filename = saver.save(path::filename(f->archiveName) + "(" +
-                          path::filename(f->getName()) + ")");
-  return std::max(entry.objectFiles.lookup(filename), entry.anyObjectFile);
-}
-
-// Each section gets assigned the priority of the highest-priority symbol it
-// contains.
-static DenseMap<const InputSection *, size_t> buildInputSectionPriorities() {
-  DenseMap<const InputSection *, size_t> sectionPriorities;
-
-  if (config->priorities.empty())
-    return sectionPriorities;
-
-  auto addSym = [&](Defined &sym) {
-    if (sym.isAbsolute())
-      return;
-
-    auto it = config->priorities.find(sym.getName());
-    if (it == config->priorities.end())
-      return;
-
-    SymbolPriorityEntry &entry = it->second;
-    size_t &priority = sectionPriorities[sym.isec];
-    priority =
-        std::max(priority, getSymbolPriority(entry, sym.isec->getFile()));
-  };
-
-  // TODO: Make sure this handles weak symbols correctly.
-  for (const InputFile *file : inputFiles) {
-    if (isa<ObjFile>(file))
-      for (Symbol *sym : file->symbols)
-        if (auto *d = dyn_cast_or_null<Defined>(sym))
-          addSym(*d);
-  }
-
-  return sectionPriorities;
-}
-
 // Sorting only can happen once all outputs have been collected. Here we sort
 // segments, output sections within each segment, and input sections within each
 // output segment.
@@ -901,18 +860,33 @@ static void sortSegmentsAndSections() {
   sortOutputSegments();
 
   DenseMap<const InputSection *, size_t> isecPriorities =
-      buildInputSectionPriorities();
+      priorityBuilder.buildInputSectionPriorities();
 
   uint32_t sectionIndex = 0;
   for (OutputSegment *seg : outputSegments) {
     seg->sortOutputSections();
+    // References from thread-local variable sections are treated as offsets
+    // relative to the start of the thread-local data memory area, which
+    // is initialized via copying all the TLV data sections (which are all
+    // contiguous). If later data sections require a greater alignment than
+    // earlier ones, the offsets of data within those sections won't be
+    // guaranteed to aligned unless we normalize alignments. We therefore use
+    // the largest alignment for all TLV data sections.
+    uint32_t tlvAlign = 0;
+    for (const OutputSection *osec : seg->getSections())
+      if (isThreadLocalData(osec->flags) && osec->align > tlvAlign)
+        tlvAlign = osec->align;
+
     for (OutputSection *osec : seg->getSections()) {
       // Now that the output sections are sorted, assign the final
       // output section indices.
       if (!osec->isHidden())
         osec->index = ++sectionIndex;
-      if (!firstTLVDataSection && isThreadLocalData(osec->flags))
-        firstTLVDataSection = osec;
+      if (isThreadLocalData(osec->flags)) {
+        if (!firstTLVDataSection)
+          firstTLVDataSection = osec;
+        osec->align = tlvAlign;
+      }
 
       if (!isecPriorities.empty()) {
         if (auto *merged = dyn_cast<ConcatOutputSection>(osec)) {
@@ -1035,10 +1009,14 @@ void Writer::finalizeLinkEditSegment() {
       dataInCodeSection,
       functionStartsSection,
   };
-  parallelForEach(linkEditSections, [](LinkEditSection *osec) {
+  SmallVector<std::shared_future<void>> threadFutures;
+  threadFutures.reserve(linkEditSections.size());
+  for (LinkEditSection *osec : linkEditSections)
     if (osec)
-      osec->finalizeContents();
-  });
+      threadFutures.emplace_back(threadPool.async(
+          [](LinkEditSection *osec) { osec->finalizeContents(); }, osec));
+  for (std::shared_future<void> &future : threadFutures)
+    future.wait();
 
   // Now that __LINKEDIT is filled out, do a proper calculation of its
   // addresses and offsets.
@@ -1073,10 +1051,10 @@ void Writer::openFile() {
                                FileOutputBuffer::F_executable);
 
   if (!bufferOrErr)
-    error("failed to open " + config->outputFile + ": " +
+    fatal("failed to open " + config->outputFile + ": " +
           llvm::toString(bufferOrErr.takeError()));
-  else
-    buffer = std::move(*bufferOrErr);
+  buffer = std::move(*bufferOrErr);
+  in.bufferStart = buffer->getBufferStart();
 }
 
 void Writer::writeSections() {
@@ -1091,14 +1069,21 @@ void Writer::writeSections() {
 // values.
 void Writer::writeUuid() {
   TimeTraceScope timeScope("Computing UUID");
+
   ArrayRef<uint8_t> data{buffer->getBufferStart(), buffer->getBufferEnd()};
   unsigned chunkCount = parallel::strategy.compute_thread_count() * 10;
   // Round-up integer division
   size_t chunkSize = (data.size() + chunkCount - 1) / chunkCount;
   std::vector<ArrayRef<uint8_t>> chunks = split(data, chunkSize);
   std::vector<uint64_t> hashes(chunks.size());
-  parallelForEachN(0, chunks.size(),
-                   [&](size_t i) { hashes[i] = xxHash64(chunks[i]); });
+  SmallVector<std::shared_future<void>> threadFutures;
+  threadFutures.reserve(chunks.size());
+  for (size_t i = 0; i < chunks.size(); ++i)
+    threadFutures.emplace_back(threadPool.async(
+        [&](size_t j) { hashes[j] = xxHash64(chunks[j]); }, i));
+  for (std::shared_future<void> &future : threadFutures)
+    future.wait();
+
   uint64_t digest = xxHash64({reinterpret_cast<uint8_t *>(hashes.data()),
                               hashes.size() * sizeof(uint64_t)});
   uuidCommand->writeUuid(digest);
@@ -1126,8 +1111,10 @@ template <class LP> void Writer::run() {
   treatSpecialUndefineds();
   if (config->entry && !isa<Undefined>(config->entry))
     prepareBranchTarget(config->entry);
+
   // Canonicalization of all pointers to InputSections should be handled by
-  // these two methods.
+  // these two scan* methods. I.e. from this point onward, for all live
+  // InputSections, we should have `isec->canonical() == isec`.
   scanSymbols();
   scanRelocations();
 
@@ -1137,6 +1124,8 @@ template <class LP> void Writer::run() {
 
   if (in.stubHelper->isNeeded())
     in.stubHelper->setup();
+  // At this point, we should know exactly which output sections are needed,
+  // courtesy of scanSymbols() and scanRelocations().
   createOutputSections<LP>();
 
   // After this point, we create no new segments; HOWEVER, we might
@@ -1147,8 +1136,14 @@ template <class LP> void Writer::run() {
   sortSegmentsAndSections();
   createLoadCommands<LP>();
   finalizeAddresses();
+  threadPool.async([&] {
+    if (LLVM_ENABLE_THREADS && config->timeTraceEnabled)
+      timeTraceProfilerInitialize(config->timeTraceGranularity, "writeMapFile");
+    writeMapFile();
+    if (LLVM_ENABLE_THREADS && config->timeTraceEnabled)
+      timeTraceProfilerFinishThread();
+  });
   finalizeLinkEditSegment();
-  writeMapFile();
   writeOutputFile();
 }
 
@@ -1158,11 +1153,10 @@ void macho::resetWriter() { LCDylib::resetInstanceCount(); }
 
 void macho::createSyntheticSections() {
   in.header = make<MachHeaderSection>();
-  if (config->dedupLiterals) {
+  if (config->dedupLiterals)
     in.cStringSection = make<DeduplicatedCStringSection>();
-  } else {
+  else
     in.cStringSection = make<CStringSection>();
-  }
   in.wordLiteralSection =
       config->dedupLiterals ? make<WordLiteralSection>() : nullptr;
   in.rebase = make<RebaseSection>();
@@ -1179,12 +1173,12 @@ void macho::createSyntheticSections() {
 
   // This section contains space for just a single word, and will be used by
   // dyld to cache an address to the image loader it uses.
-  uint8_t *arr = bAlloc.Allocate<uint8_t>(target->wordSize);
+  uint8_t *arr = bAlloc().Allocate<uint8_t>(target->wordSize);
   memset(arr, 0, target->wordSize);
-  in.imageLoaderCache = make<ConcatInputSection>(
-      segment_names::data, section_names::data, /*file=*/nullptr,
+  in.imageLoaderCache = makeSyntheticInputSection(
+      segment_names::data, section_names::data, S_REGULAR,
       ArrayRef<uint8_t>{arr, target->wordSize},
-      /*align=*/target->wordSize, /*flags=*/S_REGULAR);
+      /*align=*/target->wordSize);
   // References from dyld are not visible to us, so ensure this section is
   // always treated as live.
   in.imageLoaderCache->live = true;

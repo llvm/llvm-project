@@ -12,9 +12,9 @@
 #define _LARGE_TIME_API
 #endif
 
-#include "chrono"
-#include "cerrno"        // errno
-#include "system_error"  // __throw_system_error
+#include <cerrno>        // errno
+#include <chrono>
+#include <system_error>  // __throw_system_error
 
 #if defined(__MVS__)
 #include <__support/ibm/gettod_zos.h> // gettimeofdayMonotonic
@@ -43,6 +43,10 @@
 #    include <winapifamily.h>
 #  endif
 #endif // defined(_LIBCPP_WIN32API)
+
+#if defined(__Fuchsia__)
+#  include <zircon/syscalls.h>
+#endif
 
 #if __has_include(<mach/mach_time.h>)
 # include <mach/mach_time.h>
@@ -80,9 +84,9 @@ public:
   GetSystemTimeAsFileTimePtr fp;
 };
 
-# 83 "chrono.cpp" 1 3
-GetSystemTimeInit GetSystemTimeAsFileTimeFunc _LIBCPP_INIT_PRIORITY_MAX;
-# 85 "chrono.cpp" 2
+// Pretend we're inside a system header so the compiler doesn't flag the use of the init_priority
+// attribute with a value that's reserved for the implementation (we're the implementation).
+#include "chrono_system_time_init.h"
 } // namespace
 
 #endif
@@ -266,7 +270,18 @@ static steady_clock::time_point __libcpp_steady_clock_now() {
   return steady_clock::time_point(seconds(ts.tv_sec) + nanoseconds(ts.tv_nsec));
 }
 
-#elif defined(CLOCK_MONOTONIC)
+#  elif defined(__Fuchsia__)
+
+static steady_clock::time_point __libcpp_steady_clock_now() noexcept {
+  // Implicitly link against the vDSO system call ABI without
+  // requiring the final link to specify -lzircon explicitly when
+  // statically linking libc++.
+#    pragma comment(lib, "zircon")
+
+  return steady_clock::time_point(nanoseconds(_zx_clock_get_monotonic()));
+}
+
+#  elif defined(CLOCK_MONOTONIC)
 
 static steady_clock::time_point __libcpp_steady_clock_now() {
     struct timespec tp;
@@ -275,9 +290,9 @@ static steady_clock::time_point __libcpp_steady_clock_now() {
     return steady_clock::time_point(seconds(tp.tv_sec) + nanoseconds(tp.tv_nsec));
 }
 
-#else
-#   error "Monotonic clock not implemented on this platform"
-#endif
+#  else
+#    error "Monotonic clock not implemented on this platform"
+#  endif
 
 const bool steady_clock::is_steady;
 

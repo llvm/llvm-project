@@ -2,7 +2,9 @@
 // since __config may be included from C headers which may create an
 // include cycle.
 module std_config [system] [extern_c] {
-    header "__config"
+  header "__config"
+  header "__config_site"
+  export *
 }
 
 module std [system] {
@@ -78,7 +80,10 @@ module std [system] {
       header "string.h"
       export *
     }
-    // FIXME: <uchar.h> is missing.
+    module uchar_h {
+      header "uchar.h"
+      export *
+    }
     // <time.h> provided by C library.
     module wchar_h {
       // <wchar.h>'s __need_* macros require textual inclusion.
@@ -201,7 +206,10 @@ module std [system] {
       header "ctime"
       export *
     }
-    // FIXME: <cuchar> is missing.
+    module cuchar {
+      header "cuchar"
+      export *
+    }
     module cwchar {
       header "cwchar"
       export depr.stdio_h
@@ -246,6 +254,12 @@ module std [system] {
       module generate                 { private header "__algorithm/generate.h" }
       module generate_n               { private header "__algorithm/generate_n.h" }
       module half_positive            { private header "__algorithm/half_positive.h" }
+      module in_found_result          { private header "__algorithm/in_found_result.h" }
+      module in_fun_result            { private header "__algorithm/in_fun_result.h" }
+      module in_in_out_result         { private header "__algorithm/in_in_out_result.h" }
+      module in_in_result             { private header "__algorithm/in_in_result.h" }
+      module in_out_out_result        { private header "__algorithm/in_out_out_result.h" }
+      module in_out_result            { private header "__algorithm/in_out_result.h" }
       module includes                 { private header "__algorithm/includes.h" }
       module inplace_merge            { private header "__algorithm/inplace_merge.h" }
       module is_heap                  { private header "__algorithm/is_heap.h" }
@@ -263,6 +277,7 @@ module std [system] {
       module merge                    { private header "__algorithm/merge.h" }
       module min                      { private header "__algorithm/min.h" }
       module min_element              { private header "__algorithm/min_element.h" }
+      module min_max_result           { private header "__algorithm/min_max_result.h" }
       module minmax                   { private header "__algorithm/minmax.h" }
       module minmax_element           { private header "__algorithm/minmax_element.h" }
       module mismatch                 { private header "__algorithm/mismatch.h" }
@@ -279,6 +294,14 @@ module std [system] {
       module pop_heap                 { private header "__algorithm/pop_heap.h" }
       module prev_permutation         { private header "__algorithm/prev_permutation.h" }
       module push_heap                { private header "__algorithm/push_heap.h" }
+      module ranges_find              { private header "__algorithm/ranges_find.h" }
+      module ranges_find_if           { private header "__algorithm/ranges_find_if.h" }
+      module ranges_find_if_not       { private header "__algorithm/ranges_find_if_not.h" }
+      module ranges_max_element       { private header "__algorithm/ranges_max_element.h" }
+      module ranges_min               { private header "__algorithm/ranges_min.h" }
+      module ranges_min_element       { private header "__algorithm/ranges_min_element.h" }
+      module ranges_mismatch          { private header "__algorithm/ranges_mismatch.h" }
+      module ranges_swap_ranges       { private header "__algorithm/ranges_swap_ranges.h" }
       module remove                   { private header "__algorithm/remove.h" }
       module remove_copy              { private header "__algorithm/remove_copy.h" }
       module remove_copy_if           { private header "__algorithm/remove_copy_if.h" }
@@ -362,6 +385,17 @@ module std [system] {
   module chrono {
     header "chrono"
     export *
+
+    module __chrono {
+      module calendar              { private header "__chrono/calendar.h" }
+      module convert_to_timespec   { private header "__chrono/convert_to_timespec.h" }
+      module duration              { private header "__chrono/duration.h" }
+      module file_clock            { private header "__chrono/file_clock.h" }
+      module high_resolution_clock { private header "__chrono/high_resolution_clock.h" }
+      module steady_clock          { private header "__chrono/steady_clock.h" }
+      module system_clock          { private header "__chrono/system_clock.h" }
+      module time_point            { private header "__chrono/time_point.h" }
+    }
   }
   module codecvt {
     header "codecvt"
@@ -372,16 +406,19 @@ module std [system] {
     export *
 
     module __compare {
-      module common_comparison_category { private header "__compare/common_comparison_category.h" }
-      module compare_three_way          { private header "__compare/compare_three_way.h" }
-      module compare_three_way_result   { private header "__compare/compare_three_way_result.h" }
-      module is_eq                      { private header "__compare/is_eq.h" }
-      module ordering                   { private header "__compare/ordering.h" }
-      module partial_order              { private header "__compare/partial_order.h" }
-      module strong_order               { private header "__compare/strong_order.h" }
-      module synth_three_way            { private header "__compare/synth_three_way.h" }
-      module three_way_comparable       { private header "__compare/three_way_comparable.h" }
-      module weak_order                 { private header "__compare/weak_order.h" }
+      module common_comparison_category     { private header "__compare/common_comparison_category.h" }
+      module compare_partial_order_fallback { private header "__compare/compare_partial_order_fallback.h" }
+      module compare_strong_order_fallback  { private header "__compare/compare_strong_order_fallback.h" }
+      module compare_three_way              { private header "__compare/compare_three_way.h" }
+      module compare_three_way_result       { private header "__compare/compare_three_way_result.h" }
+      module compare_weak_order_fallback    { private header "__compare/compare_weak_order_fallback.h" }
+      module is_eq                          { private header "__compare/is_eq.h" }
+      module ordering                       { private header "__compare/ordering.h" }
+      module partial_order                  { private header "__compare/partial_order.h" }
+      module strong_order                   { private header "__compare/strong_order.h" }
+      module synth_three_way                { private header "__compare/synth_three_way.h" }
+      module three_way_comparable           { private header "__compare/three_way_comparable.h" }
+      module weak_order                     { private header "__compare/weak_order.h" }
     }
   }
   module complex {
@@ -430,8 +467,8 @@ module std [system] {
     module __coroutine {
       module coroutine_handle           { private header "__coroutine/coroutine_handle.h" }
       module coroutine_traits           { private header "__coroutine/coroutine_traits.h" }
-      module trivial_awaitables         { private header "__coroutine/trivial_awaitables.h" }
       module noop_coroutine_handle      { private header "__coroutine/noop_coroutine_handle.h" }
+      module trivial_awaitables         { private header "__coroutine/trivial_awaitables.h" }
     }
   }
   module deque {
@@ -450,31 +487,53 @@ module std [system] {
   module filesystem {
     header "filesystem"
     export *
+
+    module __filesystem {
+      module copy_options                 { private header "__filesystem/copy_options.h" }
+      module directory_entry              { private header "__filesystem/directory_entry.h" }
+      module directory_iterator           { private header "__filesystem/directory_iterator.h" }
+      module directory_options            { private header "__filesystem/directory_options.h" }
+      module file_status                  { private header "__filesystem/file_status.h" }
+      module file_time_type               { private header "__filesystem/file_time_type.h" }
+      module file_type                    { private header "__filesystem/file_type.h" }
+      module filesystem_error             { private header "__filesystem/filesystem_error.h" }
+      module operations                   { private header "__filesystem/operations.h" }
+      module path                         { private header "__filesystem/path.h" }
+      module path_iterator                { private header "__filesystem/path_iterator.h" }
+      module perm_options                 { private header "__filesystem/perm_options.h" }
+      module perms                        { private header "__filesystem/perms.h" }
+      module recursive_directory_iterator { private header "__filesystem/recursive_directory_iterator.h" }
+      module space_info                   { private header "__filesystem/space_info.h" }
+      module u8path                       { private header "__filesystem/u8path.h" }
+    }
   }
   module format {
     header "format"
     export *
 
     module __format {
-      module format_arg             { private header "__format/format_arg.h" }
-      module format_args            { private header "__format/format_args.h" }
+      module buffer                   { private header "__format/buffer.h" }
+      module format_arg               { private header "__format/format_arg.h" }
+      module format_args              { private header "__format/format_args.h" }
       module format_context {
         private header "__format/format_context.h"
         export optional
         export locale
       }
-      module format_error           { private header "__format/format_error.h" }
-      module format_fwd             { private header "__format/format_fwd.h" }
-      module format_parse_context   { private header "__format/format_parse_context.h" }
-      module format_string          { private header "__format/format_string.h" }
-      module format_to_n_result     { private header "__format/format_to_n_result.h" }
-      module formatter              { private header "__format/formatter.h" }
-      module formatter_bool         { private header "__format/formatter_bool.h" }
-      module formatter_char         { private header "__format/formatter_char.h" }
-      module formatter_integer      { private header "__format/formatter_integer.h" }
-      module formatter_integral     { private header "__format/formatter_integral.h" }
-      module formatter_string       { private header "__format/formatter_string.h" }
-      module parser_std_format_spec { private header "__format/parser_std_format_spec.h" }
+      module format_error             { private header "__format/format_error.h" }
+      module format_fwd               { private header "__format/format_fwd.h" }
+      module format_parse_context     { private header "__format/format_parse_context.h" }
+      module format_string            { private header "__format/format_string.h" }
+      module format_to_n_result       { private header "__format/format_to_n_result.h" }
+      module formatter                { private header "__format/formatter.h" }
+      module formatter_bool           { private header "__format/formatter_bool.h" }
+      module formatter_char           { private header "__format/formatter_char.h" }
+      module formatter_floating_point { private header "__format/formatter_floating_point.h" }
+      module formatter_integer        { private header "__format/formatter_integer.h" }
+      module formatter_integral       { private header "__format/formatter_integral.h" }
+      module formatter_pointer        { private header "__format/formatter_pointer.h" }
+      module formatter_string         { private header "__format/formatter_string.h" }
+      module parser_std_format_spec   { private header "__format/parser_std_format_spec.h" }
     }
   }
   module forward_list {
@@ -536,6 +595,10 @@ module std [system] {
     header "ios"
     export iosfwd
     export *
+
+    module __ios {
+      module fpos { private header "__ios/fpos.h" }
+    }
   }
   module iosfwd {
     header "iosfwd"
@@ -560,10 +623,7 @@ module std [system] {
 
     module __iterator {
       module access                { private header "__iterator/access.h" }
-      module advance               {
-        private header "__iterator/advance.h"
-        export __function_like
-      }
+      module advance               { private header "__iterator/advance.h" }
       module back_insert_iterator  { private header "__iterator/back_insert_iterator.h" }
       module common_iterator       { private header "__iterator/common_iterator.h" }
       module concepts              { private header "__iterator/concepts.h" }
@@ -575,6 +635,7 @@ module std [system] {
       module erase_if_container    { private header "__iterator/erase_if_container.h" }
       module front_insert_iterator { private header "__iterator/front_insert_iterator.h" }
       module incrementable_traits  { private header "__iterator/incrementable_traits.h" }
+      module indirectly_comparable { private header "__iterator/indirectly_comparable.h" }
       module insert_iterator       { private header "__iterator/insert_iterator.h" }
       module istream_iterator      { private header "__iterator/istream_iterator.h" }
       module istreambuf_iterator   { private header "__iterator/istreambuf_iterator.h" }
@@ -582,22 +643,19 @@ module std [system] {
       module iter_swap             { private header "__iterator/iter_swap.h" }
       module iterator              { private header "__iterator/iterator.h" }
       module iterator_traits       { private header "__iterator/iterator_traits.h" }
+      module mergeable             { private header "__iterator/mergeable.h" }
       module move_iterator         { private header "__iterator/move_iterator.h" }
-      module next                  {
-        private header "__iterator/next.h"
-        export __function_like
-      }
+      module next                  { private header "__iterator/next.h" }
       module ostream_iterator      { private header "__iterator/ostream_iterator.h" }
       module ostreambuf_iterator   { private header "__iterator/ostreambuf_iterator.h" }
-      module prev                  {
-        private header "__iterator/prev.h"
-        export __function_like
-      }
+      module permutable            { private header "__iterator/permutable.h" }
+      module prev                  { private header "__iterator/prev.h" }
       module projected             { private header "__iterator/projected.h" }
       module readable_traits       { private header "__iterator/readable_traits.h" }
       module reverse_access        { private header "__iterator/reverse_access.h" }
       module reverse_iterator      { private header "__iterator/reverse_iterator.h" }
       module size                  { private header "__iterator/size.h" }
+      module sortable              { private header "__iterator/sortable.h" }
       module unreachable_sentinel  { private header "__iterator/unreachable_sentinel.h" }
       module wrap_iter             { private header "__iterator/wrap_iter.h" }
     }
@@ -630,22 +688,25 @@ module std [system] {
     export *
 
     module __memory {
-      module addressof                { private header "__memory/addressof.h" }
-      module allocation_guard         { private header "__memory/allocation_guard.h" }
-      module allocator                { private header "__memory/allocator.h" }
-      module allocator_arg_t          { private header "__memory/allocator_arg_t.h" }
-      module allocator_traits         { private header "__memory/allocator_traits.h" }
-      module auto_ptr                 { private header "__memory/auto_ptr.h" }
-      module compressed_pair          { private header "__memory/compressed_pair.h" }
-      module concepts                 { private header "__memory/concepts.h" }
-      module construct_at             { private header "__memory/construct_at.h" }
-      module pointer_traits           { private header "__memory/pointer_traits.h" }
-      module raw_storage_iterator     { private header "__memory/raw_storage_iterator.h" }
-      module shared_ptr               { private header "__memory/shared_ptr.h" }
-      module temporary_buffer         { private header "__memory/temporary_buffer.h" }
-      module uninitialized_algorithms { private header "__memory/uninitialized_algorithms.h" }
-      module unique_ptr               { private header "__memory/unique_ptr.h" }
-      module uses_allocator           { private header "__memory/uses_allocator.h" }
+      module addressof                       { private header "__memory/addressof.h" }
+      module allocation_guard                { private header "__memory/allocation_guard.h" }
+      module allocator                       { private header "__memory/allocator.h" }
+      module allocator_arg_t                 { private header "__memory/allocator_arg_t.h" }
+      module allocator_traits                { private header "__memory/allocator_traits.h" }
+      module auto_ptr                        { private header "__memory/auto_ptr.h" }
+      module compressed_pair                 { private header "__memory/compressed_pair.h" }
+      module concepts                        { private header "__memory/concepts.h" }
+      module construct_at                    { private header "__memory/construct_at.h" }
+      module pointer_traits                  { private header "__memory/pointer_traits.h" }
+      module ranges_construct_at             { private header "__memory/ranges_construct_at.h" }
+      module ranges_uninitialized_algorithms { private header "__memory/ranges_uninitialized_algorithms.h" }
+      module raw_storage_iterator            { private header "__memory/raw_storage_iterator.h" }
+      module shared_ptr                      { private header "__memory/shared_ptr.h" }
+      module temporary_buffer                { private header "__memory/temporary_buffer.h" }
+      module uninitialized_algorithms        { private header "__memory/uninitialized_algorithms.h" }
+      module unique_ptr                      { private header "__memory/unique_ptr.h" }
+      module uses_allocator                  { private header "__memory/uses_allocator.h" }
+      module voidify                         { private header "__memory/voidify.h" }
     }
   }
   module mutex {
@@ -704,6 +765,7 @@ module std [system] {
       module binomial_distribution           { private header "__random/binomial_distribution.h" }
       module cauchy_distribution             { private header "__random/cauchy_distribution.h" }
       module chi_squared_distribution        { private header "__random/chi_squared_distribution.h" }
+      module clamp_to_integral               { private header "__random/clamp_to_integral.h" }
       module default_random_engine           { private header "__random/default_random_engine.h" }
       module discard_block_engine            { private header "__random/discard_block_engine.h" }
       module discrete_distribution           { private header "__random/discrete_distribution.h" }
@@ -715,6 +777,7 @@ module std [system] {
       module geometric_distribution          { private header "__random/geometric_distribution.h" }
       module independent_bits_engine         { private header "__random/independent_bits_engine.h" }
       module is_seed_sequence                { private header "__random/is_seed_sequence.h" }
+      module is_valid                        { private header "__random/is_valid.h" }
       module knuth_b                         { private header "__random/knuth_b.h" }
       module linear_congruential_engine      { private header "__random/linear_congruential_engine.h" }
       module log2                            { private header "__random/log2.h" }
@@ -754,7 +817,10 @@ module std [system] {
       module common_view            { private header "__ranges/common_view.h" }
       module concepts               { private header "__ranges/concepts.h" }
       module copyable_box           { private header "__ranges/copyable_box.h" }
-      module counted                { private header "__ranges/counted.h" }
+      module counted                {
+        private header "__ranges/counted.h"
+        export span
+      }
       module dangling               { private header "__ranges/dangling.h" }
       module data                   { private header "__ranges/data.h" }
       module drop_view              { private header "__ranges/drop_view.h" }
@@ -765,11 +831,14 @@ module std [system] {
       module iota_view              { private header "__ranges/iota_view.h" }
       module join_view              { private header "__ranges/join_view.h" }
       module non_propagating_cache  { private header "__ranges/non_propagating_cache.h" }
+      module owning_view            { private header "__ranges/owning_view.h" }
       module range_adaptor          { private header "__ranges/range_adaptor.h" }
+      module rbegin                 { private header "__ranges/rbegin.h" }
       module ref_view               { private header "__ranges/ref_view.h" }
+      module rend                   { private header "__ranges/rend.h" }
       module reverse_view           { private header "__ranges/reverse_view.h" }
-      module size                   { private header "__ranges/size.h" }
       module single_view            { private header "__ranges/single_view.h" }
+      module size                   { private header "__ranges/size.h" }
       module subrange               { private header "__ranges/subrange.h" }
       module take_view              { private header "__ranges/take_view.h" }
       module transform_view         {
@@ -778,6 +847,7 @@ module std [system] {
         export functional.__functional.perfect_forward
       }
       module view_interface         { private header "__ranges/view_interface.h" }
+      module views                  { private header "__ranges/views.h" }
     }
   }
   module ratio {
@@ -856,7 +926,8 @@ module std [system] {
     export *
 
     module __thread {
-      module poll_with_backoff { private header "__thread/poll_with_backoff.h" }
+      module poll_with_backoff    { private header "__thread/poll_with_backoff.h" }
+      module timed_backoff_policy { private header "__thread/timed_backoff_policy.h" }
     }
   }
   module tuple {
@@ -893,8 +964,8 @@ module std [system] {
 
     module __utility {
       module as_const            { private header "__utility/as_const.h" }
+      module auto_cast           { private header "__utility/auto_cast.h" }
       module cmp                 { private header "__utility/cmp.h" }
-      module decay_copy          { private header "__utility/decay_copy.h" }
       module declval             { private header "__utility/declval.h" }
       module exchange            { private header "__utility/exchange.h" }
       module forward             { private header "__utility/forward.h" }
@@ -907,6 +978,8 @@ module std [system] {
       module rel_ops             { private header "__utility/rel_ops.h" }
       module swap                { private header "__utility/swap.h" }
       module to_underlying       { private header "__utility/to_underlying.h" }
+      module transaction         { private header "__utility/transaction.h" }
+      module unreachable         { private header "__utility/unreachable.h" }
     }
   }
   module valarray {
@@ -934,18 +1007,17 @@ module std [system] {
 
   // __config not modularised due to a bug in Clang
   // FIXME: These should be private.
+  module __assert            {         header "__assert"            export * }
   module __availability      { private header "__availability"      export * }
   module __bit_reference     { private header "__bit_reference"     export * }
   module __bits              { private header "__bits"              export * }
   module __debug             {         header "__debug"             export * }
   module __errc              { private header "__errc"              export * }
-  module __function_like     { private header "__function_like.h"   export * }
   module __hash_table        {         header "__hash_table"        export * }
   module __locale            { private header "__locale"            export * }
-  module __mbstate           { private header "__mbstate_t.h"       export * }
+  module __mbstate_t         { private header "__mbstate_t.h"       export * }
   module __mutex_base        { private header "__mutex_base"        export * }
   module __node_handle       { private header "__node_handle"       export * }
-  module __nullptr           {         header "__nullptr"           export * }
   module __split_buffer      { private header "__split_buffer"      export * }
   module __std_stream        { private header "__std_stream"        export * }
   module __string            { private header "__string"            export * }
@@ -961,17 +1033,13 @@ module std [system] {
       header "experimental/algorithm"
       export *
     }
-     module coroutine {
+    module coroutine {
       requires coroutines
       header "experimental/coroutine"
       export *
     }
     module deque {
       header "experimental/deque"
-      export *
-    }
-    module filesystem {
-      header "experimental/filesystem"
       export *
     }
     module forward_list {

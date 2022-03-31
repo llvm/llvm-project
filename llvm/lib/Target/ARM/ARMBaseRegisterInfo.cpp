@@ -530,6 +530,8 @@ getFrameIndexInstrOffset(const MachineInstr *MI, int Idx) const {
   unsigned ImmIdx = 0;
   switch (AddrMode) {
   case ARMII::AddrModeT2_i8:
+  case ARMII::AddrModeT2_i8neg:
+  case ARMII::AddrModeT2_i8pos:
   case ARMII::AddrModeT2_i12:
   case ARMII::AddrMode_i12:
     InstrOffs = MI->getOperand(Idx+1).getImm();
@@ -728,6 +730,8 @@ bool ARMBaseRegisterInfo::isFrameOffsetLegal(const MachineInstr *MI,
   bool isSigned = true;
   switch (AddrMode) {
   case ARMII::AddrModeT2_i8:
+  case ARMII::AddrModeT2_i8pos:
+  case ARMII::AddrModeT2_i8neg:
   case ARMII::AddrModeT2_i12:
     // i8 supports only negative, and i12 supports only positive, so
     // based on Offset sign, consider the appropriate instruction

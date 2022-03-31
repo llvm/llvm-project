@@ -493,6 +493,11 @@ bool HexagonEvaluator::evaluate(const MachineInstr &MI,
       RegisterCell RC = eADD(rc(1), lo(M, W0));
       return rr0(RC, Outputs);
     }
+    case M2_mnaci: {
+      RegisterCell M = eMLS(rc(2), rc(3));
+      RegisterCell RC = eSUB(rc(1), lo(M, W0));
+      return rr0(RC, Outputs);
+    }
     case M2_mpysmi: {
       RegisterCell M = eMLS(rc(1), eIMM(im(2), W0));
       return rr0(lo(M, 32), Outputs);

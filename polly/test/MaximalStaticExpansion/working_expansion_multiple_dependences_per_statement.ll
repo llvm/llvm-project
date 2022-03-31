@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-mse -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-mse -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ; Verify that the accesses are correctly expanded
 ;
@@ -12,10 +12,10 @@
 ;   for (j = 0; j < Ni; j++) {
 ;     for (int i = 0; i<Nj; i++)
 ;       B[i] = i;
-; 
+;
 ;     for (int i = 0; i<Nj; i++)
 ;       D[i] = i;
-; 
+;
 ;     A[j] = B[j];
 ;     C[j] = D[j];
 ;   }

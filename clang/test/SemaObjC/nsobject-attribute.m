@@ -55,7 +55,7 @@ int main(int argc, char *argv[]) {
   // <rdar://problem/10930507>
 @property (nonatomic, retain) __attribute__((NSObject)) CGColorRefNoNSObject color; // // no-warning
 @end
-void test_10453342() {
+void test_10453342(void) {
     char* __attribute__((NSObject)) string2 = 0; // expected-warning {{'NSObject' attribute may be put on a typedef only; attribute is ignored}}
 }
 

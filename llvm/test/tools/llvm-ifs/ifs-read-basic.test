@@ -1,4 +1,4 @@
-# RUN: llvm-ifs --output-format=IFS --output=- %s | FileCheck %s
+# RUN: llvm-ifs --output-ifs=- %s | FileCheck %s
 
 --- !ifs-v1
 SoName: somelib.so

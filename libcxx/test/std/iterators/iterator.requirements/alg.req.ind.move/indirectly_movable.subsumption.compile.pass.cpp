@@ -7,14 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
 
 // template<class In, class Out>
 // concept indirectly_movable;
 
 #include <iterator>
-
-#include <concepts>
 
 template<std::indirectly_readable I, class O>
 constexpr bool indirectly_movable_subsumption() {

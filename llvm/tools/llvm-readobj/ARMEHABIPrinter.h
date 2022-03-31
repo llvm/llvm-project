@@ -158,9 +158,8 @@ inline void OpcodeDecoder::Decode_10110001_0000iiii(const uint8_t *Opcodes,
   uint8_t Opcode0 = Opcodes[OI++ ^ 3];
   uint8_t Opcode1 = Opcodes[OI++ ^ 3];
 
-  SW.startLine()
-    << format("0x%02X 0x%02X ; %s", Opcode0, Opcode1,
-              ((Opcode1 & 0xf0) || Opcode1 == 0x00) ? "spare" : "pop ");
+  SW.startLine() << format("0x%02X 0x%02X ; %s", Opcode0, Opcode1,
+                           (Opcode1 & 0xf0) ? "spare" : "pop ");
   if (((Opcode1 & 0xf0) == 0x00) && Opcode1)
     PrintGPR((Opcode1 & 0x0f));
   OS << '\n';
@@ -195,7 +194,8 @@ inline void OpcodeDecoder::Decode_10110011_sssscccc(const uint8_t *Opcodes,
 inline void OpcodeDecoder::Decode_101101nn(const uint8_t *Opcodes,
                                            unsigned &OI) {
   uint8_t Opcode = Opcodes[OI++ ^ 3];
-  SW.startLine() << format("0x%02X      ; spare\n", Opcode);
+  SW.startLine() << format("0x%02X      ; %s\n", Opcode,
+                           (Opcode == 0xb4) ? "pop ra_auth_code" : "spare");
 }
 inline void OpcodeDecoder::Decode_10111nnn(const uint8_t *Opcodes,
                                            unsigned &OI) {
@@ -512,7 +512,7 @@ template <typename ET>
 void PrinterContext<ET>::PrintOpcodes(const uint8_t *Entry,
                                       size_t Length, off_t Offset) const {
   ListScope OCC(SW, "Opcodes");
-  OpcodeDecoder(OCC.W).Decode(Entry, Offset, Length);
+  OpcodeDecoder(SW).Decode(Entry, Offset, Length);
 }
 
 template <typename ET>

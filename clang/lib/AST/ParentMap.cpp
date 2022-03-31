@@ -133,8 +133,7 @@ void ParentMap::setParent(const Stmt *S, const Stmt *Parent) {
 
 Stmt* ParentMap::getParent(Stmt* S) const {
   MapTy* M = (MapTy*) Impl;
-  MapTy::iterator I = M->find(S);
-  return I == M->end() ? nullptr : I->second;
+  return M->lookup(S);
 }
 
 Stmt *ParentMap::getParentIgnoreParens(Stmt *S) const {

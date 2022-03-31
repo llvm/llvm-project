@@ -384,12 +384,12 @@ entry:
   br i1 %tobool, label %if.then, label %if.end
 
 if.then:
-  %t1 = tail call i32 asm sideeffect "bar", "=r,=*m,~{dirflag},~{fpsr},~{flags}"(i32* @__force_order) nounwind
+  %t1 = tail call i32 asm sideeffect "bar", "=r,=*m,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) @__force_order) nounwind
   br label %if.end
 
 if.end:
   %t6 = inttoptr i32 %t0 to i64*
-  %t11 = tail call i64 asm sideeffect "foo", "=*m,=A,{bx},{cx},1,~{memory},~{dirflag},~{fpsr},~{flags}"(i64* %t6, i32 0, i32 0, i64 0) nounwind
+  %t11 = tail call i64 asm sideeffect "foo", "=*m,=A,{bx},{cx},1,~{memory},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %t6, i32 0, i32 0, i64 0) nounwind
   ret void
 }
 

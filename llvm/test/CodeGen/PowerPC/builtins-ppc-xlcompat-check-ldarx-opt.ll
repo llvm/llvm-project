@@ -65,7 +65,7 @@ entry:
   br label %do.body
 
 do.body:                                          ; preds = %do.body, %entry
-  %1 = call i64 asm sideeffect "ldarx $0, ${1:y}", "=r,*Z,~{memory}"(i64* nonnull %x64)
+  %1 = call i64 asm sideeffect "ldarx $0, ${1:y}", "=r,*Z,~{memory}"(i64* elementtype(i64) nonnull %x64)
   %2 = call i32 @llvm.ppc.stdcx(i8* nonnull %0, i64 0)
   %tobool.not = icmp eq i32 %2, 0
   br i1 %tobool.not, label %do.body, label %do.end

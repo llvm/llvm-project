@@ -40,7 +40,7 @@ void IsOverloaded(void *p PS(0)) overloaded; // expected-note 2 {{candidate addr
 // char* inestead of void* is intentional
 void IsOverloaded(char *p) overloaded; // expected-note{{passing argument to parameter 'p' here}} expected-note 2 {{type mismatch}}
 
-void FunctionPtrs() {
+void FunctionPtrs(void) {
   void (*p)(void *) = NotOverloaded; //expected-error{{cannot take address of function 'NotOverloaded' because parameter 1 has pass_object_size attribute}}
   void (*p2)(void *) = &NotOverloaded; //expected-error{{cannot take address of function 'NotOverloaded' because parameter 1 has pass_object_size attribute}}
 

@@ -62,7 +62,8 @@ detail::verifyBranchSuccessorOperands(Operation *op, unsigned succNo,
   // Check the types.
   auto operandIt = operands->begin();
   for (unsigned i = 0; i != operandCount; ++i, ++operandIt) {
-    if ((*operandIt).getType() != destBB->getArgument(i).getType())
+    if (!cast<BranchOpInterface>(op).areTypesCompatible(
+            (*operandIt).getType(), destBB->getArgument(i).getType()))
       return op->emitError() << "type mismatch for bb argument #" << i
                              << " of successor #" << succNo;
   }
@@ -72,9 +73,6 @@ detail::verifyBranchSuccessorOperands(Operation *op, unsigned succNo,
 //===----------------------------------------------------------------------===//
 // RegionBranchOpInterface
 //===----------------------------------------------------------------------===//
-
-// A constant value to represent unknown number of region invocations.
-const int64_t mlir::kUnknownNumRegionInvocations = -1;
 
 /// Verify that types match along all region control flow edges originating from
 /// `sourceNo` (region # if source is a region, llvm::None if source is parent
@@ -131,11 +129,11 @@ verifyTypesAlongAllEdges(Operation *op, Optional<unsigned> sourceNo,
                                  << succInputsTypes.size();
     }
 
-    for (auto typesIdx :
+    for (const auto &typesIdx :
          llvm::enumerate(llvm::zip(*sourceTypes, succInputsTypes))) {
       Type sourceType = std::get<0>(typesIdx.value());
       Type inputType = std::get<1>(typesIdx.value());
-      if (sourceType != inputType) {
+      if (!regionInterface.areTypesCompatible(sourceType, inputType)) {
         InFlightDiagnostic diag = op->emitOpError(" along control flow edge ");
         return printEdgeName(diag)
                << ": source type #" << typesIdx.index() << " " << sourceType
@@ -172,6 +170,18 @@ LogicalResult detail::verifyTypesAlongControlFlowEdges(Operation *op) {
   // attached regions.
   assert(op->getNumRegions() != 0);
 
+  auto areTypesCompatible = [&](TypeRange lhs, TypeRange rhs) {
+    if (lhs.size() != rhs.size())
+      return false;
+    for (auto types : llvm::zip(lhs, rhs)) {
+      if (!regionInterface.areTypesCompatible(std::get<0>(types),
+                                              std::get<1>(types))) {
+        return false;
+      }
+    }
+    return true;
+  };
+
   // Verify types along control flow edges originating from each region.
   for (unsigned regionNo : llvm::seq(0U, op->getNumRegions())) {
     Region &region = op->getRegion(regionNo);
@@ -195,7 +205,8 @@ LogicalResult detail::verifyTypesAlongControlFlowEdges(Operation *op) {
 
       // Found more than one ReturnLike terminator. Make sure the operand types
       // match with the first one.
-      if (regionReturnOperands->getTypes() != terminatorOperands->getTypes())
+      if (!areTypesCompatible(regionReturnOperands->getTypes(),
+                              terminatorOperands->getTypes()))
         return op->emitOpError("Region #")
                << regionNo
                << " operands mismatch between return-like terminators";
@@ -266,7 +277,7 @@ bool mlir::insideMutuallyExclusiveRegions(Operation *a, Operation *b) {
             return false;
           // Compute index of region.
           int64_t beginIndex = -1;
-          for (auto it : llvm::enumerate(branchOp->getRegions()))
+          for (const auto &it : llvm::enumerate(branchOp->getRegions()))
             if (&it.value() == begin)
               beginIndex = it.index();
           assert(beginIndex != -1 && "could not find region in op");

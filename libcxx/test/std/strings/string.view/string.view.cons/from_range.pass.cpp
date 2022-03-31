@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // <string_view>
@@ -122,7 +121,7 @@ static_assert(!std::ranges::contiguous_range<SizedButNotContiguousRange>);
 static_assert(std::ranges::sized_range<SizedButNotContiguousRange>);
 static_assert(!std::is_constructible_v<std::string_view, SizedButNotContiguousRange>);
 
-using ContiguousButNotSizedRange = std::ranges::subrange<contiguous_iterator<char*>, sentinel_wrapper<char*>, std::ranges::subrange_kind::unsized>;
+using ContiguousButNotSizedRange = std::ranges::subrange<contiguous_iterator<char*>, sentinel_wrapper<contiguous_iterator<char*>>, std::ranges::subrange_kind::unsized>;
 static_assert(std::ranges::contiguous_range<ContiguousButNotSizedRange>);
 static_assert(!std::ranges::sized_range<ContiguousButNotSizedRange>);
 static_assert(!std::is_constructible_v<std::string_view, ContiguousButNotSizedRange>);

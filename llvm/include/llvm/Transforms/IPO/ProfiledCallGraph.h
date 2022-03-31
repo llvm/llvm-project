@@ -51,10 +51,10 @@ struct ProfiledCallGraphNode {
     }
   };
 
-  using iterator = std::set<ProfiledCallGraphEdge>::iterator;
-  using const_iterator = std::set<ProfiledCallGraphEdge>::const_iterator;
   using edge = ProfiledCallGraphEdge;
-  using edges = std::set<ProfiledCallGraphEdge, ProfiledCallGraphEdgeComparer>;
+  using edges = std::set<edge, ProfiledCallGraphEdgeComparer>;
+  using iterator = edges::iterator;
+  using const_iterator = edges::const_iterator;
 
   ProfiledCallGraphNode(StringRef FName = StringRef()) : Name(FName) {}
 
@@ -64,11 +64,12 @@ struct ProfiledCallGraphNode {
 
 class ProfiledCallGraph {
 public:
-  using iterator = std::set<ProfiledCallGraphEdge>::iterator;
+  using iterator = ProfiledCallGraphNode::iterator;
 
   // Constructor for non-CS profile.
   ProfiledCallGraph(SampleProfileMap &ProfileMap) {
-    assert(!FunctionSamples::ProfileIsCS && "CS profile is not handled here");
+    assert(!FunctionSamples::ProfileIsCSFlat &&
+           "CS flat profile is not handled here");
     for (const auto &Samples : ProfileMap) {
       addProfiledCalls(Samples.second);
     }

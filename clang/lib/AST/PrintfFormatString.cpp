@@ -428,7 +428,7 @@ bool clang::analyze_format_string::ParsePrintfString(FormatStringHandler &H,
       continue;
     // We have a format specifier.  Pass it to the callback.
     if (!H.HandlePrintfSpecifier(FSR.getValue(), FSR.getStart(),
-                                 I - FSR.getStart()))
+                                 I - FSR.getStart(), Target))
       return true;
   }
   assert(I == E && "Format string not exhausted");
@@ -711,8 +711,8 @@ bool PrintfSpecifier::fixType(QualType QT, const LangOptions &LangOpt,
     CS.setKind(ConversionSpecifier::sArg);
 
     // Disable irrelevant flags
-    HasAlternativeForm = 0;
-    HasLeadingZeroes = 0;
+    HasAlternativeForm = false;
+    HasLeadingZeroes = false;
 
     // Set the long length modifier for wide characters
     if (QT->getPointeeType()->isWideCharType())
@@ -878,9 +878,9 @@ bool PrintfSpecifier::fixType(QualType QT, const LangOptions &LangOpt,
     CS.setKind(ConversionSpecifier::cArg);
     LM.setKind(LengthModifier::None);
     Precision.setHowSpecified(OptionalAmount::NotSpecified);
-    HasAlternativeForm = 0;
-    HasLeadingZeroes = 0;
-    HasPlusPrefix = 0;
+    HasAlternativeForm = false;
+    HasLeadingZeroes = false;
+    HasPlusPrefix = false;
   }
   // Test for Floating type first as LongDouble can pass isUnsignedIntegerType
   else if (QT->isRealFloatingType()) {
@@ -888,12 +888,12 @@ bool PrintfSpecifier::fixType(QualType QT, const LangOptions &LangOpt,
   }
   else if (QT->isSignedIntegerType()) {
     CS.setKind(ConversionSpecifier::dArg);
-    HasAlternativeForm = 0;
+    HasAlternativeForm = false;
   }
   else if (QT->isUnsignedIntegerType()) {
     CS.setKind(ConversionSpecifier::uArg);
-    HasAlternativeForm = 0;
-    HasPlusPrefix = 0;
+    HasAlternativeForm = false;
+    HasPlusPrefix = false;
   } else {
     llvm_unreachable("Unexpected type");
   }

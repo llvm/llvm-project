@@ -90,9 +90,9 @@ static void visit(Operation *op, DenseSet<Operation *> &visited) {
 // pdl::ApplyNativeConstraintOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verify(ApplyNativeConstraintOp op) {
-  if (op.getNumOperands() == 0)
-    return op.emitOpError("expected at least one argument");
+LogicalResult ApplyNativeConstraintOp::verify() {
+  if (getNumOperands() == 0)
+    return emitOpError("expected at least one argument");
   return success();
 }
 
@@ -100,9 +100,9 @@ static LogicalResult verify(ApplyNativeConstraintOp op) {
 // pdl::ApplyNativeRewriteOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verify(ApplyNativeRewriteOp op) {
-  if (op.getNumOperands() == 0 && op.getNumResults() == 0)
-    return op.emitOpError("expected at least one argument or result");
+LogicalResult ApplyNativeRewriteOp::verify() {
+  if (getNumOperands() == 0 && getNumResults() == 0)
+    return emitOpError("expected at least one argument or result");
   return success();
 }
 
@@ -110,43 +110,47 @@ static LogicalResult verify(ApplyNativeRewriteOp op) {
 // pdl::AttributeOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verify(AttributeOp op) {
-  Value attrType = op.type();
-  Optional<Attribute> attrValue = op.value();
+LogicalResult AttributeOp::verify() {
+  Value attrType = type();
+  Optional<Attribute> attrValue = value();
 
-  if (!attrValue && isa<RewriteOp>(op->getParentOp()))
-    return op.emitOpError("expected constant value when specified within a "
-                          "`pdl.rewrite`");
-  if (attrValue && attrType)
-    return op.emitOpError("expected only one of [`type`, `value`] to be set");
-  return verifyHasBindingUse(op);
+  if (!attrValue) {
+    if (isa<RewriteOp>((*this)->getParentOp()))
+      return emitOpError(
+          "expected constant value when specified within a `pdl.rewrite`");
+    return verifyHasBindingUse(*this);
+  }
+  if (attrType)
+    return emitOpError("expected only one of [`type`, `value`] to be set");
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
 // pdl::OperandOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verify(OperandOp op) { return verifyHasBindingUse(op); }
+LogicalResult OperandOp::verify() { return verifyHasBindingUse(*this); }
 
 //===----------------------------------------------------------------------===//
 // pdl::OperandsOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verify(OperandsOp op) { return verifyHasBindingUse(op); }
+LogicalResult OperandsOp::verify() { return verifyHasBindingUse(*this); }
 
 //===----------------------------------------------------------------------===//
 // pdl::OperationOp
 //===----------------------------------------------------------------------===//
 
 static ParseResult parseOperationOpAttributes(
-    OpAsmParser &p, SmallVectorImpl<OpAsmParser::OperandType> &attrOperands,
+    OpAsmParser &p,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &attrOperands,
     ArrayAttr &attrNamesAttr) {
   Builder &builder = p.getBuilder();
   SmallVector<Attribute, 4> attrNames;
   if (succeeded(p.parseOptionalLBrace())) {
     do {
       StringAttr nameAttr;
-      OpAsmParser::OperandType operand;
+      OpAsmParser::UnresolvedOperand operand;
       if (p.parseAttribute(nameAttr) || p.parseEqual() ||
           p.parseOperand(operand))
         return failure();
@@ -195,7 +199,7 @@ static LogicalResult verifyResultTypesAreInferrable(OperationOp op,
     return success();
 
   // Otherwise, make sure each of the types can be inferred.
-  for (auto it : llvm::enumerate(resultTypes)) {
+  for (const auto &it : llvm::enumerate(resultTypes)) {
     Operation *resultTypeOp = it.value().getDefiningOp();
     assert(resultTypeOp && "expected valid result type operation");
 
@@ -204,16 +208,17 @@ static LogicalResult verifyResultTypesAreInferrable(OperationOp op,
     if (isa<ApplyNativeRewriteOp>(resultTypeOp))
       continue;
 
-    // If the type operation was defined in the matcher and constrains the
-    // result of an input operation, it can be used.
-    auto constrainsInputOp = [rewriterBlock](Operation *user) {
-      return user->getBlock() != rewriterBlock && isa<OperationOp>(user);
+    // If the type operation was defined in the matcher and constrains an
+    // operand or the result of an input operation, it can be used.
+    auto constrainsInput = [rewriterBlock](Operation *user) {
+      return user->getBlock() != rewriterBlock &&
+             isa<OperandOp, OperandsOp, OperationOp>(user);
     };
     if (TypeOp typeOp = dyn_cast<TypeOp>(resultTypeOp)) {
-      if (typeOp.type() || llvm::any_of(typeOp->getUsers(), constrainsInputOp))
+      if (typeOp.type() || llvm::any_of(typeOp->getUsers(), constrainsInput))
         continue;
     } else if (TypesOp typeOp = dyn_cast<TypesOp>(resultTypeOp)) {
-      if (typeOp.types() || llvm::any_of(typeOp->getUsers(), constrainsInputOp))
+      if (typeOp.types() || llvm::any_of(typeOp->getUsers(), constrainsInput))
         continue;
     }
 
@@ -226,15 +231,15 @@ static LogicalResult verifyResultTypesAreInferrable(OperationOp op,
   return success();
 }
 
-static LogicalResult verify(OperationOp op) {
-  bool isWithinRewrite = isa<RewriteOp>(op->getParentOp());
-  if (isWithinRewrite && !op.name())
-    return op.emitOpError("must have an operation name when nested within "
-                          "a `pdl.rewrite`");
-  ArrayAttr attributeNames = op.attributeNames();
-  auto attributeValues = op.attributes();
+LogicalResult OperationOp::verify() {
+  bool isWithinRewrite = isa<RewriteOp>((*this)->getParentOp());
+  if (isWithinRewrite && !name())
+    return emitOpError("must have an operation name when nested within "
+                       "a `pdl.rewrite`");
+  ArrayAttr attributeNames = attributeNamesAttr();
+  auto attributeValues = attributes();
   if (attributeNames.size() != attributeValues.size()) {
-    return op.emitOpError()
+    return emitOpError()
            << "expected the same number of attribute values and attribute "
               "names, got "
            << attributeNames.size() << " names and " << attributeValues.size()
@@ -243,12 +248,12 @@ static LogicalResult verify(OperationOp op) {
 
   // If the operation is within a rewrite body and doesn't have type inference,
   // ensure that the result types can be resolved.
-  if (isWithinRewrite && !op.hasTypeInference()) {
-    if (failed(verifyResultTypesAreInferrable(op, op.types())))
+  if (isWithinRewrite && !hasTypeInference()) {
+    if (failed(verifyResultTypesAreInferrable(*this, types())))
       return failure();
   }
 
-  return verifyHasBindingUse(op);
+  return verifyHasBindingUse(*this);
 }
 
 bool OperationOp::hasTypeInference() {
@@ -265,12 +270,12 @@ bool OperationOp::hasTypeInference() {
 // pdl::PatternOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verify(PatternOp pattern) {
-  Region &body = pattern.body();
+LogicalResult PatternOp::verifyRegions() {
+  Region &body = getBodyRegion();
   Operation *term = body.front().getTerminator();
-  auto rewrite_op = dyn_cast<RewriteOp>(term);
-  if (!rewrite_op) {
-    return pattern.emitOpError("expected body to terminate with `pdl.rewrite`")
+  auto rewriteOp = dyn_cast<RewriteOp>(term);
+  if (!rewriteOp) {
+    return emitOpError("expected body to terminate with `pdl.rewrite`")
         .attachNote(term->getLoc())
         .append("see terminator defined here");
   }
@@ -279,8 +284,7 @@ static LogicalResult verify(PatternOp pattern) {
   // dialect.
   WalkResult result = body.walk([&](Operation *op) -> WalkResult {
     if (!isa_and_nonnull<PDLDialect>(op->getDialect())) {
-      pattern
-          .emitOpError("expected only `pdl` operations within the pattern body")
+      emitOpError("expected only `pdl` operations within the pattern body")
           .attachNote(op->getLoc())
           .append("see non-`pdl` operation defined here");
       return WalkResult::interrupt();
@@ -292,8 +296,7 @@ static LogicalResult verify(PatternOp pattern) {
 
   // Check that there is at least one operation.
   if (body.front().getOps<OperationOp>().empty())
-    return pattern.emitOpError(
-        "the pattern must contain at least one `pdl.operation`");
+    return emitOpError("the pattern must contain at least one `pdl.operation`");
 
   // Determine if the operations within the pdl.pattern form a connected
   // component. This is determined by starting the search from the first
@@ -329,8 +332,7 @@ static LogicalResult verify(PatternOp pattern) {
       first = false;
     } else if (!visited.count(&op)) {
       // For the subsequent operations, check if already visited.
-      return pattern
-          .emitOpError("the operations must form a connected component")
+      return emitOpError("the operations must form a connected component")
           .attachNote(op.getLoc())
           .append("see a disconnected value / operation here");
     }
@@ -351,14 +353,19 @@ RewriteOp PatternOp::getRewriter() {
   return cast<RewriteOp>(body().front().getTerminator());
 }
 
+/// The default dialect is `pdl`.
+StringRef PatternOp::getDefaultDialect() {
+  return PDLDialect::getDialectNamespace();
+}
+
 //===----------------------------------------------------------------------===//
 // pdl::ReplaceOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verify(ReplaceOp op) {
-  if (op.replOperation() && !op.replValues().empty())
-    return op.emitOpError() << "expected no replacement values to be provided"
-                               " when the replacement operation is present";
+LogicalResult ReplaceOp::verify() {
+  if (replOperation() && !replValues().empty())
+    return emitOpError() << "expected no replacement values to be provided"
+                            " when the replacement operation is present";
   return success();
 }
 
@@ -383,11 +390,11 @@ static void printResultsValueType(OpAsmPrinter &p, ResultsOp op,
     p << " -> " << resultType;
 }
 
-static LogicalResult verify(ResultsOp op) {
-  if (!op.index() && op.getType().isa<pdl::ValueType>()) {
-    return op.emitOpError() << "expected `pdl.range<value>` result type when "
-                               "no index is specified, but got: "
-                            << op.getType();
+LogicalResult ResultsOp::verify() {
+  if (!index() && getType().isa<pdl::ValueType>()) {
+    return emitOpError() << "expected `pdl.range<value>` result type when "
+                            "no index is specified, but got: "
+                         << getType();
   }
   return success();
 }
@@ -396,13 +403,13 @@ static LogicalResult verify(ResultsOp op) {
 // pdl::RewriteOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verify(RewriteOp op) {
-  Region &rewriteRegion = op.body();
+LogicalResult RewriteOp::verifyRegions() {
+  Region &rewriteRegion = body();
 
   // Handle the case where the rewrite is external.
-  if (op.name()) {
+  if (name()) {
     if (!rewriteRegion.empty()) {
-      return op.emitOpError()
+      return emitOpError()
              << "expected rewrite region to be empty when rewrite is external";
     }
     return success();
@@ -410,34 +417,43 @@ static LogicalResult verify(RewriteOp op) {
 
   // Otherwise, check that the rewrite region only contains a single block.
   if (rewriteRegion.empty()) {
-    return op.emitOpError() << "expected rewrite region to be non-empty if "
-                               "external name is not specified";
+    return emitOpError() << "expected rewrite region to be non-empty if "
+                            "external name is not specified";
   }
 
   // Check that no additional arguments were provided.
-  if (!op.externalArgs().empty()) {
-    return op.emitOpError() << "expected no external arguments when the "
-                               "rewrite is specified inline";
-  }
-  if (op.externalConstParams()) {
-    return op.emitOpError() << "expected no external constant parameters when "
-                               "the rewrite is specified inline";
+  if (!externalArgs().empty()) {
+    return emitOpError() << "expected no external arguments when the "
+                            "rewrite is specified inline";
   }
 
   return success();
+}
+
+/// The default dialect is `pdl`.
+StringRef RewriteOp::getDefaultDialect() {
+  return PDLDialect::getDialectNamespace();
 }
 
 //===----------------------------------------------------------------------===//
 // pdl::TypeOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verify(TypeOp op) { return verifyHasBindingUse(op); }
+LogicalResult TypeOp::verify() {
+  if (!typeAttr())
+    return verifyHasBindingUse(*this);
+  return success();
+}
 
 //===----------------------------------------------------------------------===//
 // pdl::TypesOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verify(TypesOp op) { return verifyHasBindingUse(op); }
+LogicalResult TypesOp::verify() {
+  if (!typesAttr())
+    return verifyHasBindingUse(*this);
+  return success();
+}
 
 //===----------------------------------------------------------------------===//
 // TableGen'd op method definitions

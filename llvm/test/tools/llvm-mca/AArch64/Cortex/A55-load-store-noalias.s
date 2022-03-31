@@ -10,12 +10,12 @@ ldr x3, [x10]
 
 # CHECK:      Iterations:        3
 # CHECK-NEXT: Instructions:      18
-# CHECK-NEXT: Total Cycles:      19
+# CHECK-NEXT: Total Cycles:      16
 # CHECK-NEXT: Total uOps:        18
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.95
-# CHECK-NEXT: IPC:               0.95
+# CHECK-NEXT: uOps Per Cycle:    1.13
+# CHECK-NEXT: IPC:               1.13
 # CHECK-NEXT: Block RThroughput: 3.0
 
 # CHECK:      Instruction Info:
@@ -62,27 +62,27 @@ ldr x3, [x10]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -     ldr	x3, [x10]
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     012345678
+# CHECK-NEXT:                     012345
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DE   .    .    .  .   str	x1, [x10]
-# CHECK-NEXT: [0,1]     .DE  .    .    .  .   str	x1, [x10]
-# CHECK-NEXT: [0,2]     .DeeE.    .    .  .   ldr	x2, [x10]
-# CHECK-NEXT: [0,3]     .  DE.    .    .  .   nop
-# CHECK-NEXT: [0,4]     .   DeeE  .    .  .   ldr	x2, [x10]
-# CHECK-NEXT: [0,5]     .    DeeE .    .  .   ldr	x3, [x10]
-# CHECK-NEXT: [1,0]     .    DE   .    .  .   str	x1, [x10]
-# CHECK-NEXT: [1,1]     .    .DE  .    .  .   str	x1, [x10]
-# CHECK-NEXT: [1,2]     .    .DeeE.    .  .   ldr	x2, [x10]
-# CHECK-NEXT: [1,3]     .    .  DE.    .  .   nop
-# CHECK-NEXT: [1,4]     .    .   DeeE  .  .   ldr	x2, [x10]
-# CHECK-NEXT: [1,5]     .    .    DeeE .  .   ldr	x3, [x10]
-# CHECK-NEXT: [2,0]     .    .    DE   .  .   str	x1, [x10]
-# CHECK-NEXT: [2,1]     .    .    .DE  .  .   str	x1, [x10]
-# CHECK-NEXT: [2,2]     .    .    .DeeE.  .   ldr	x2, [x10]
-# CHECK-NEXT: [2,3]     .    .    .  DE.  .   nop
-# CHECK-NEXT: [2,4]     .    .    .   DeeE.   ldr	x2, [x10]
-# CHECK-NEXT: [2,5]     .    .    .    DeeE   ldr	x3, [x10]
+# CHECK:      [0,0]     DE   .    .    .   str	x1, [x10]
+# CHECK-NEXT: [0,1]     .DE  .    .    .   str	x1, [x10]
+# CHECK-NEXT: [0,2]     .DeeE.    .    .   ldr	x2, [x10]
+# CHECK-NEXT: [0,3]     .  DE.    .    .   nop
+# CHECK-NEXT: [0,4]     .  DeeE   .    .   ldr	x2, [x10]
+# CHECK-NEXT: [0,5]     .   DeeE  .    .   ldr	x3, [x10]
+# CHECK-NEXT: [1,0]     .   DE    .    .   str	x1, [x10]
+# CHECK-NEXT: [1,1]     .    DE   .    .   str	x1, [x10]
+# CHECK-NEXT: [1,2]     .    DeeE .    .   ldr	x2, [x10]
+# CHECK-NEXT: [1,3]     .    . DE .    .   nop
+# CHECK-NEXT: [1,4]     .    . DeeE    .   ldr	x2, [x10]
+# CHECK-NEXT: [1,5]     .    .  DeeE   .   ldr	x3, [x10]
+# CHECK-NEXT: [2,0]     .    .  DE.    .   str	x1, [x10]
+# CHECK-NEXT: [2,1]     .    .   DE    .   str	x1, [x10]
+# CHECK-NEXT: [2,2]     .    .   DeeE  .   ldr	x2, [x10]
+# CHECK-NEXT: [2,3]     .    .    .DE  .   nop
+# CHECK-NEXT: [2,4]     .    .    .DeeE.   ldr	x2, [x10]
+# CHECK-NEXT: [2,5]     .    .    . DeeE   ldr	x3, [x10]
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

@@ -24,11 +24,13 @@ void ThrowKeywordMissingCheck::registerMatchers(MatchFinder *Finder) {
       cxxConstructExpr(
           hasType(cxxRecordDecl(
               isSameOrDerivedFrom(matchesName("[Ee]xception|EXCEPTION")))),
-          unless(anyOf(hasAncestor(stmt(
-                           anyOf(cxxThrowExpr(), callExpr(), returnStmt()))),
-                       hasAncestor(decl(anyOf(varDecl(), fieldDecl()))),
-                       allOf(hasAncestor(CtorInitializerList),
-                             unless(hasAncestor(cxxCatchStmt()))))))
+          unless(anyOf(
+              hasAncestor(
+                  stmt(anyOf(cxxThrowExpr(), callExpr(), returnStmt()))),
+              hasAncestor(decl(anyOf(varDecl(), fieldDecl()))),
+              hasAncestor(expr(cxxNewExpr(hasAnyPlacementArg(anything())))),
+              allOf(hasAncestor(CtorInitializerList),
+                    unless(hasAncestor(cxxCatchStmt()))))))
           .bind("temporary-exception-not-thrown"),
       this);
 }

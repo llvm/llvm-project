@@ -649,3 +649,281 @@ define i32 @formulated_invalid(i32 %a) {
   %r = and i32 %s2, 16777215
   ret i32 %r
 }
+
+
+define i32 @mm_sat_base_32bit(i32 %x) {
+; V4T-LABEL: mm_sat_base_32bit:
+; V4T:       @ %bb.0: @ %entry
+; V4T-NEXT:    ldr r1, .LCPI18_0
+; V4T-NEXT:    cmp r0, r1
+; V4T-NEXT:    movge r0, r1
+; V4T-NEXT:    mov r1, #1065353216
+; V4T-NEXT:    orr r1, r1, #-1073741824
+; V4T-NEXT:    cmn r0, #8388608
+; V4T-NEXT:    movle r0, r1
+; V4T-NEXT:    bx lr
+; V4T-NEXT:    .p2align 2
+; V4T-NEXT:  @ %bb.1:
+; V4T-NEXT:  .LCPI18_0:
+; V4T-NEXT:    .long 8388607 @ 0x7fffff
+;
+; V6T2-LABEL: mm_sat_base_32bit:
+; V6T2:       @ %bb.0: @ %entry
+; V6T2-NEXT:    ssat r0, #24, r0
+; V6T2-NEXT:    bx lr
+entry:
+  %0 = call i32 @llvm.smin.i32(i32 %x, i32 8388607)
+  %1 = call i32 @llvm.smax.i32(i32 %0, i32 -8388608)
+  ret i32 %1
+}
+
+define i16 @mm_sat_base_16bit(i16 %x) {
+; V4T-LABEL: mm_sat_base_16bit:
+; V4T:       @ %bb.0: @ %entry
+; V4T-NEXT:    mov r2, #255
+; V4T-NEXT:    lsl r0, r0, #16
+; V4T-NEXT:    orr r2, r2, #1792
+; V4T-NEXT:    asr r1, r0, #16
+; V4T-NEXT:    cmp r1, r2
+; V4T-NEXT:    asrlt r2, r0, #16
+; V4T-NEXT:    ldr r0, .LCPI19_0
+; V4T-NEXT:    cmn r2, #2048
+; V4T-NEXT:    movgt r0, r2
+; V4T-NEXT:    bx lr
+; V4T-NEXT:    .p2align 2
+; V4T-NEXT:  @ %bb.1:
+; V4T-NEXT:  .LCPI19_0:
+; V4T-NEXT:    .long 4294965248 @ 0xfffff800
+;
+; V6T2-LABEL: mm_sat_base_16bit:
+; V6T2:       @ %bb.0: @ %entry
+; V6T2-NEXT:    sxth r0, r0
+; V6T2-NEXT:    ssat r0, #12, r0
+; V6T2-NEXT:    bx lr
+entry:
+  %0 = call i16 @llvm.smin.i16(i16 %x, i16 2047)
+  %1 = call i16 @llvm.smax.i16(i16 %0, i16 -2048)
+  ret i16 %1
+}
+
+define i8 @mm_sat_base_8bit(i8 %x) {
+; V4T-LABEL: mm_sat_base_8bit:
+; V4T:       @ %bb.0: @ %entry
+; V4T-NEXT:    lsl r1, r0, #24
+; V4T-NEXT:    mov r0, #31
+; V4T-NEXT:    asr r2, r1, #24
+; V4T-NEXT:    cmp r2, #31
+; V4T-NEXT:    asrlt r0, r1, #24
+; V4T-NEXT:    cmn r0, #32
+; V4T-NEXT:    mvnle r0, #31
+; V4T-NEXT:    bx lr
+;
+; V6T2-LABEL: mm_sat_base_8bit:
+; V6T2:       @ %bb.0: @ %entry
+; V6T2-NEXT:    sxtb r0, r0
+; V6T2-NEXT:    ssat r0, #6, r0
+; V6T2-NEXT:    bx lr
+entry:
+  %0 = call i8 @llvm.smin.i8(i8 %x, i8 31)
+  %1 = call i8 @llvm.smax.i8(i8 %0, i8 -32)
+  ret i8 %1
+}
+
+define i32 @mm_sat_lower_upper_1(i32 %x) {
+; V4T-LABEL: mm_sat_lower_upper_1:
+; V4T:       @ %bb.0: @ %entry
+; V4T-NEXT:    ldr r1, .LCPI21_0
+; V4T-NEXT:    cmp r0, r1
+; V4T-NEXT:    movge r0, r1
+; V4T-NEXT:    mov r1, #1065353216
+; V4T-NEXT:    orr r1, r1, #-1073741824
+; V4T-NEXT:    cmn r0, #8388608
+; V4T-NEXT:    movle r0, r1
+; V4T-NEXT:    bx lr
+; V4T-NEXT:    .p2align 2
+; V4T-NEXT:  @ %bb.1:
+; V4T-NEXT:  .LCPI21_0:
+; V4T-NEXT:    .long 8388607 @ 0x7fffff
+;
+; V6T2-LABEL: mm_sat_lower_upper_1:
+; V6T2:       @ %bb.0: @ %entry
+; V6T2-NEXT:    ssat r0, #24, r0
+; V6T2-NEXT:    bx lr
+entry:
+  %0 = call i32 @llvm.smin.i32(i32 %x, i32 8388607)
+  %1 = call i32 @llvm.smax.i32(i32 %0, i32 -8388608)
+  ret i32 %1
+}
+
+define i32 @mm_sat_lower_upper_2(i32 %x) {
+; V4T-LABEL: mm_sat_lower_upper_2:
+; V4T:       @ %bb.0: @ %entry
+; V4T-NEXT:    ldr r1, .LCPI22_0
+; V4T-NEXT:    cmp r0, r1
+; V4T-NEXT:    movge r0, r1
+; V4T-NEXT:    mov r1, #1065353216
+; V4T-NEXT:    orr r1, r1, #-1073741824
+; V4T-NEXT:    cmn r0, #8388608
+; V4T-NEXT:    movle r0, r1
+; V4T-NEXT:    bx lr
+; V4T-NEXT:    .p2align 2
+; V4T-NEXT:  @ %bb.1:
+; V4T-NEXT:  .LCPI22_0:
+; V4T-NEXT:    .long 8388607 @ 0x7fffff
+;
+; V6T2-LABEL: mm_sat_lower_upper_2:
+; V6T2:       @ %bb.0: @ %entry
+; V6T2-NEXT:    ssat r0, #24, r0
+; V6T2-NEXT:    bx lr
+entry:
+  %0 = call i32 @llvm.smin.i32(i32 %x, i32 8388607)
+  %1 = call i32 @llvm.smax.i32(i32 %0, i32 -8388608)
+  ret i32 %1
+}
+
+define i32 @mm_sat_upper_lower_1(i32 %x) {
+; V4T-LABEL: mm_sat_upper_lower_1:
+; V4T:       @ %bb.0: @ %entry
+; V4T-NEXT:    mov r1, #1065353216
+; V4T-NEXT:    cmn r0, #8388608
+; V4T-NEXT:    orr r1, r1, #-1073741824
+; V4T-NEXT:    movle r0, r1
+; V4T-NEXT:    ldr r1, .LCPI23_0
+; V4T-NEXT:    cmp r0, r1
+; V4T-NEXT:    movge r0, r1
+; V4T-NEXT:    bx lr
+; V4T-NEXT:    .p2align 2
+; V4T-NEXT:  @ %bb.1:
+; V4T-NEXT:  .LCPI23_0:
+; V4T-NEXT:    .long 8388607 @ 0x7fffff
+;
+; V6T2-LABEL: mm_sat_upper_lower_1:
+; V6T2:       @ %bb.0: @ %entry
+; V6T2-NEXT:    ssat r0, #24, r0
+; V6T2-NEXT:    bx lr
+entry:
+  %0 = call i32 @llvm.smax.i32(i32 %x, i32 -8388608)
+  %1 = call i32 @llvm.smin.i32(i32 %0, i32 8388607)
+  ret i32 %1
+}
+
+define i32 @mm_sat_upper_lower_2(i32 %x) {
+; V4T-LABEL: mm_sat_upper_lower_2:
+; V4T:       @ %bb.0: @ %entry
+; V4T-NEXT:    mov r1, #1065353216
+; V4T-NEXT:    cmn r0, #8388608
+; V4T-NEXT:    orr r1, r1, #-1073741824
+; V4T-NEXT:    movle r0, r1
+; V4T-NEXT:    ldr r1, .LCPI24_0
+; V4T-NEXT:    cmp r0, r1
+; V4T-NEXT:    movge r0, r1
+; V4T-NEXT:    bx lr
+; V4T-NEXT:    .p2align 2
+; V4T-NEXT:  @ %bb.1:
+; V4T-NEXT:  .LCPI24_0:
+; V4T-NEXT:    .long 8388607 @ 0x7fffff
+;
+; V6T2-LABEL: mm_sat_upper_lower_2:
+; V6T2:       @ %bb.0: @ %entry
+; V6T2-NEXT:    ssat r0, #24, r0
+; V6T2-NEXT:    bx lr
+entry:
+  %0 = call i32 @llvm.smax.i32(i32 %x, i32 -8388608)
+  %1 = call i32 @llvm.smin.i32(i32 %0, i32 8388607)
+  ret i32 %1
+}
+
+define i32 @mm_sat_upper_lower_3(i32 %x) {
+; V4T-LABEL: mm_sat_upper_lower_3:
+; V4T:       @ %bb.0: @ %entry
+; V4T-NEXT:    mov r1, #1065353216
+; V4T-NEXT:    cmn r0, #8388608
+; V4T-NEXT:    orr r1, r1, #-1073741824
+; V4T-NEXT:    movle r0, r1
+; V4T-NEXT:    ldr r1, .LCPI25_0
+; V4T-NEXT:    cmp r0, r1
+; V4T-NEXT:    movge r0, r1
+; V4T-NEXT:    bx lr
+; V4T-NEXT:    .p2align 2
+; V4T-NEXT:  @ %bb.1:
+; V4T-NEXT:  .LCPI25_0:
+; V4T-NEXT:    .long 8388607 @ 0x7fffff
+;
+; V6T2-LABEL: mm_sat_upper_lower_3:
+; V6T2:       @ %bb.0: @ %entry
+; V6T2-NEXT:    ssat r0, #24, r0
+; V6T2-NEXT:    bx lr
+entry:
+  %0 = call i32 @llvm.smax.i32(i32 %x, i32 -8388608)
+  %1 = call i32 @llvm.smin.i32(i32 %0, i32 8388607)
+  ret i32 %1
+}
+
+define i32 @mm_sat_le_ge(i32 %x) {
+; V4T-LABEL: mm_sat_le_ge:
+; V4T:       @ %bb.0: @ %entry
+; V4T-NEXT:    mov r1, #1065353216
+; V4T-NEXT:    cmn r0, #8388608
+; V4T-NEXT:    orr r1, r1, #-1073741824
+; V4T-NEXT:    movle r0, r1
+; V4T-NEXT:    ldr r1, .LCPI26_0
+; V4T-NEXT:    cmp r0, r1
+; V4T-NEXT:    movge r0, r1
+; V4T-NEXT:    bx lr
+; V4T-NEXT:    .p2align 2
+; V4T-NEXT:  @ %bb.1:
+; V4T-NEXT:  .LCPI26_0:
+; V4T-NEXT:    .long 8388607 @ 0x7fffff
+;
+; V6T2-LABEL: mm_sat_le_ge:
+; V6T2:       @ %bb.0: @ %entry
+; V6T2-NEXT:    ssat r0, #24, r0
+; V6T2-NEXT:    bx lr
+entry:
+  %0 = call i32 @llvm.smax.i32(i32 %x, i32 -8388608)
+  %1 = call i32 @llvm.smin.i32(i32 %0, i32 8388607)
+  ret i32 %1
+}
+
+define i32 @mm_no_sat_incorrect_interval(i32 %x) {
+; V4T-LABEL: mm_no_sat_incorrect_interval:
+; V4T:       @ %bb.0: @ %entry
+; V4T-NEXT:    ldr r1, .LCPI27_0
+; V4T-NEXT:    cmp r0, r1
+; V4T-NEXT:    movle r0, r1
+; V4T-NEXT:    ldr r1, .LCPI27_1
+; V4T-NEXT:    cmp r0, r1
+; V4T-NEXT:    movge r0, r1
+; V4T-NEXT:    bx lr
+; V4T-NEXT:    .p2align 2
+; V4T-NEXT:  @ %bb.1:
+; V4T-NEXT:  .LCPI27_0:
+; V4T-NEXT:    .long 4275878552 @ 0xfedcba98
+; V4T-NEXT:  .LCPI27_1:
+; V4T-NEXT:    .long 8388607 @ 0x7fffff
+;
+; V6T2-LABEL: mm_no_sat_incorrect_interval:
+; V6T2:       @ %bb.0: @ %entry
+; V6T2-NEXT:    movw r1, #47768
+; V6T2-NEXT:    movt r1, #65244
+; V6T2-NEXT:    cmp r0, r1
+; V6T2-NEXT:    movle r0, r1
+; V6T2-NEXT:    movw r1, #65535
+; V6T2-NEXT:    movt r1, #127
+; V6T2-NEXT:    cmp r0, r1
+; V6T2-NEXT:    movge r0, r1
+; V6T2-NEXT:    bx lr
+entry:
+  %0 = call i32 @llvm.smax.i32(i32 %x, i32 -19088744)
+  %1 = call i32 @llvm.smin.i32(i32 %0, i32 8388607)
+  ret i32 %1
+}
+
+declare i32 @llvm.smin.i32(i32, i32)
+declare i32 @llvm.smax.i32(i32, i32)
+declare i16 @llvm.smin.i16(i16, i16)
+declare i16 @llvm.smax.i16(i16, i16)
+declare i8 @llvm.smin.i8(i8, i8)
+declare i8 @llvm.smax.i8(i8, i8)
+
+

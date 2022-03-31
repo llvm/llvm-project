@@ -16,8 +16,9 @@
 //   constexpr duration<Rep, Period> abs(duration<Rep, Period> d)
 
 #include <chrono>
-#include <type_traits>
 #include <cassert>
+#include <ratio>
+#include <type_traits>
 
 #include "test_macros.h"
 

@@ -18,7 +18,7 @@ include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 class SPV_CastOp<string mnemonic, Type resultType, Type operandType,
-                 list<OpTrait> traits = []> :
+                 list<Trait> traits = []> :
       SPV_Op<mnemonic,
              !listconcat(traits,
                          [NoSideEffect, SameOperandsAndResultShape])> {
@@ -29,10 +29,9 @@ class SPV_CastOp<string mnemonic, Type resultType, Type operandType,
   let results = (outs
     SPV_ScalarOrVectorOrCoopMatrixOf<resultType>:$result
   );
-
-  let parser = [{ return mlir::impl::parseCastOp(parser, result); }];
-  let printer = [{ mlir::impl::printCastOp(this->getOperation(), p); }];
-  let verifier = [{ return verifyCastOp(this->getOperation()); }];
+  let assemblyFormat = [{
+    $operand attr-dict `:` type($operand) `to` type($result)
+  }];
 }
 
 // -----
@@ -86,9 +85,9 @@ def SPV_BitcastOp : SPV_Op<"Bitcast", [NoSideEffect]> {
     SPV_ScalarOrVectorOrPtr:$result
   );
 
-  let parser = [{ return mlir::impl::parseCastOp(parser, result); }];
-  let printer = [{ mlir::impl::printCastOp(this->getOperation(), p); }];
-
+  let assemblyFormat = [{
+    $operand attr-dict `:` type($operand) `to` type($result)
+  }];
   let hasCanonicalizer = 1;
 }
 
@@ -122,8 +121,6 @@ def SPV_ConvertFToSOp : SPV_CastOp<"ConvertFToS", SPV_Integer, SPV_Float, []> {
     %3 = spv.ConvertFToS %2 : vector<3xf32> to vector<3xi32>
     ```
   }];
-
-  let verifier = [{ return verifyCastOp(this->getOperation(), false, true); }];
 }
 
 // -----
@@ -157,8 +154,6 @@ def SPV_ConvertFToUOp : SPV_CastOp<"ConvertFToU", SPV_Integer, SPV_Float, []> {
     %3 = spv.ConvertFToU %2 : vector<3xf32> to vector<3xi32>
     ```
   }];
-
-  let verifier = [{ return verifyCastOp(this->getOperation(), false, true); }];
 }
 
 // -----
@@ -193,8 +188,6 @@ def SPV_ConvertSToFOp : SPV_CastOp<"ConvertSToF",
     %3 = spv.ConvertSToF %2 : vector<3xi32> to vector<3xf32>
     ```
   }];
-
-  let verifier = [{ return verifyCastOp(this->getOperation(), false, true); }];
 }
 
 // -----
@@ -229,8 +222,6 @@ def SPV_ConvertUToFOp : SPV_CastOp<"ConvertUToF",
     %3 = spv.ConvertUToF %2 : vector<3xi32> to vector<3xf32>
     ```
   }];
-
-  let verifier = [{ return verifyCastOp(this->getOperation(), false, true); }];
 }
 
 // -----
@@ -267,8 +258,6 @@ def SPV_FConvertOp : SPV_CastOp<"FConvert",
     %3 = spv.FConvertOp %2 : vector<3xf32> to vector<3xf64>
     ```
   }];
-
-  let verifier = [{ return verifyCastOp(this->getOperation(), false); }];
 }
 
 // -----
@@ -304,8 +293,6 @@ def SPV_SConvertOp : SPV_CastOp<"SConvert",
     %3 = spv.SConvertOp %2 : vector<3xi32> to vector<3xi64>
     ```
   }];
-
-  let verifier = [{ return verifyCastOp(this->getOperation(), false); }];
 }
 
 // -----
@@ -342,8 +329,6 @@ def SPV_UConvertOp : SPV_CastOp<"UConvert",
     %3 = spv.UConvertOp %2 : vector<3xi32> to vector<3xi64>
     ```
   }];
-
-  let verifier = [{ return verifyCastOp(this->getOperation(), false); }];
 }
 
 #endif // MLIR_DIALECT_SPIRV_IR_CAST_OPS

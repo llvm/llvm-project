@@ -998,13 +998,26 @@ struct ComponentDecl {
       t;
 };
 
+// A %FILL component for a DEC STRUCTURE.  The name will be replaced
+// with a distinct compiler-generated name.
+struct FillDecl {
+  TUPLE_CLASS_BOILERPLATE(FillDecl);
+  std::tuple<Name, std::optional<ComponentArraySpec>, std::optional<CharLength>>
+      t;
+};
+
+struct ComponentOrFill {
+  UNION_CLASS_BOILERPLATE(ComponentOrFill);
+  std::variant<ComponentDecl, FillDecl> u;
+};
+
 // R737 data-component-def-stmt ->
 //        declaration-type-spec [[, component-attr-spec-list] ::]
 //        component-decl-list
 struct DataComponentDefStmt {
   TUPLE_CLASS_BOILERPLATE(DataComponentDefStmt);
   std::tuple<DeclarationTypeSpec, std::list<ComponentAttrSpec>,
-      std::list<ComponentDecl>>
+      std::list<ComponentOrFill>>
       t;
 };
 
@@ -3258,7 +3271,7 @@ struct Union {
 
 struct StructureStmt {
   TUPLE_CLASS_BOILERPLATE(StructureStmt);
-  std::tuple<Name, bool /*slashes*/, std::list<EntityDecl>> t;
+  std::tuple<std::optional<Name>, std::list<EntityDecl>> t;
 };
 
 struct StructureDef {
@@ -3502,7 +3515,15 @@ struct OmpEndSectionsDirective {
 // [!$omp section
 //    structured-block]
 // ...
-WRAPPER_CLASS(OmpSectionBlocks, std::list<Block>);
+struct OpenMPSectionConstruct {
+  WRAPPER_CLASS_BOILERPLATE(OpenMPSectionConstruct, Block);
+  CharBlock source;
+};
+
+// `OmpSectionBlocks` is a list of section constructs. The parser guarentees
+// that the `OpenMPConstruct` here always encapsulates an
+// `OpenMPSectionConstruct` and not any other OpenMP construct.
+WRAPPER_CLASS(OmpSectionBlocks, std::list<OpenMPConstruct>);
 
 struct OpenMPSectionsConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPSectionsConstruct);
@@ -3804,9 +3825,9 @@ struct OpenMPLoopConstruct {
 struct OpenMPConstruct {
   UNION_CLASS_BOILERPLATE(OpenMPConstruct);
   std::variant<OpenMPStandaloneConstruct, OpenMPSectionsConstruct,
-      OpenMPLoopConstruct, OpenMPBlockConstruct, OpenMPAtomicConstruct,
-      OpenMPDeclarativeAllocate, OpenMPExecutableAllocate,
-      OpenMPCriticalConstruct>
+      OpenMPSectionConstruct, OpenMPLoopConstruct, OpenMPBlockConstruct,
+      OpenMPAtomicConstruct, OpenMPDeclarativeAllocate,
+      OpenMPExecutableAllocate, OpenMPCriticalConstruct>
       u;
 };
 

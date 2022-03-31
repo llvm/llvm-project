@@ -61,7 +61,7 @@ SymbolFileDWARFDebugMap::CompileUnitInfo::GetFileRangeMap(
   if (!oso_objfile)
     return file_range_map;
 
-  Log *log(LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_MAP));
+  Log *log = GetLog(DWARFLog::DebugMap);
   LLDB_LOGF(
       log,
       "%p: SymbolFileDWARFDebugMap::CompileUnitInfo::GetFileRangeMap ('%s')",
@@ -281,7 +281,7 @@ void SymbolFileDWARFDebugMap::InitOSO() {
 
   Symtab *symtab = m_objfile_sp->GetSymtab();
   if (symtab) {
-    Log *log(LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_MAP));
+    Log *log = GetLog(DWARFLog::DebugMap);
 
     std::vector<uint32_t> oso_indexes;
     // When a mach-o symbol is encoded, the n_type field is encoded in bits
@@ -409,7 +409,6 @@ Module *SymbolFileDWARFDebugMap::GetModuleByCompUnitInfo(
       FileSpec oso_file(oso_path);
       ConstString oso_object;
       if (FileSystem::Instance().Exists(oso_file)) {
-        FileSystem::Instance().Collect(oso_file);
         // The modification time returned by the FS can have a higher precision
         // than the one from the CU.
         auto oso_mod_time = std::chrono::time_point_cast<std::chrono::seconds>(
@@ -1185,24 +1184,12 @@ void SymbolFileDWARFDebugMap::FindTypes(
     llvm::ArrayRef<CompilerContext> context, LanguageSet languages,
     llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
     TypeMap &types) {
+  LLDB_SCOPED_TIMER();
   ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) -> bool {
     oso_dwarf->FindTypes(context, languages, searched_symbol_files, types);
     return false;
   });
 }
-
-//
-// uint32_t
-// SymbolFileDWARFDebugMap::FindTypes (const SymbolContext& sc, const
-// RegularExpression& regex, bool append, uint32_t max_matches, Type::Encoding
-// encoding, lldb::user_id_t udt_uid, TypeList& types)
-//{
-//  SymbolFileDWARF *oso_dwarf = GetSymbolFile (sc);
-//  if (oso_dwarf)
-//      return oso_dwarf->FindTypes (sc, regex, append, max_matches, encoding,
-//      udt_uid, types);
-//  return 0;
-//}
 
 CompilerDeclContext SymbolFileDWARFDebugMap::FindNamespace(
     lldb_private::ConstString name,
@@ -1430,53 +1417,16 @@ SymbolFileDWARFDebugMap::AddOSOARanges(SymbolFileDWARF *dwarf2Data,
   return num_line_entries_added;
 }
 
-uint64_t SymbolFileDWARFDebugMap::GetDebugInfoSize() {
-  uint64_t debug_info_size = 0;
-  ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) -> bool {
-    ObjectFile *oso_objfile = oso_dwarf->GetObjectFile();
-    if (!oso_objfile)
-      return false; // Keep iterating
-    ModuleSP module_sp = oso_objfile->GetModule();
-    if (!module_sp)
-      return false; // Keep iterating
-    SectionList *section_list = module_sp->GetSectionList();
-    if (section_list)
-      debug_info_size += section_list->GetDebugInfoSize();
-    return false; // Keep iterating
-  });
-  return debug_info_size;
-}
-
-StatsDuration SymbolFileDWARFDebugMap::GetDebugInfoParseTime() {
-  StatsDuration elapsed(0.0);
+ModuleList SymbolFileDWARFDebugMap::GetDebugInfoModules() {
+  ModuleList oso_modules;
   ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) -> bool {
     ObjectFile *oso_objfile = oso_dwarf->GetObjectFile();
     if (oso_objfile) {
       ModuleSP module_sp = oso_objfile->GetModule();
-      if (module_sp) {
-        SymbolFile *symfile = module_sp->GetSymbolFile();
-        if (symfile)
-          elapsed += symfile->GetDebugInfoParseTime();
-      }
+      if (module_sp)
+        oso_modules.Append(module_sp);
     }
     return false; // Keep iterating
   });
-  return elapsed;
-}
-
-StatsDuration SymbolFileDWARFDebugMap::GetDebugInfoIndexTime() {
-  StatsDuration elapsed(0.0);
-  ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) -> bool {
-    ObjectFile *oso_objfile = oso_dwarf->GetObjectFile();
-    if (oso_objfile) {
-      ModuleSP module_sp = oso_objfile->GetModule();
-      if (module_sp) {
-        SymbolFile *symfile = module_sp->GetSymbolFile();
-        if (symfile)
-          elapsed += symfile->GetDebugInfoIndexTime();
-      }
-    }
-    return false; // Keep iterating
-  });
-  return elapsed;
+  return oso_modules;
 }

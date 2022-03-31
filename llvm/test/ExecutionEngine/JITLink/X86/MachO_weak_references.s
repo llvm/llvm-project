@@ -1,6 +1,6 @@
 # RUN: rm -rf %t && mkdir -p %t
 # RUN: llvm-mc -triple=x86_64-apple-macosx10.9 -filetype=obj -o %t/macho_weak_refs.o %s
-# RUN: llvm-jitlink -noexec -check-name=jitlink-check-bar-present -define-abs bar=0x1 -check=%s %t/macho_weak_refs.o
+# RUN: llvm-jitlink -noexec -check-name=jitlink-check-bar-present -abs bar=0x1 -check=%s %t/macho_weak_refs.o
 # RUN: llvm-jitlink -noexec -check-name=jitlink-check-bar-absent -check=%s %t/macho_weak_refs.o
 
 # Test weak reference handling by linking with and without a definition of 'bar' available.

@@ -41,8 +41,8 @@ struct dat {
 #pragma omp declare mapper(struct dat d) map(to: d.d)
 // CHECK: #pragma omp declare mapper (default : struct dat d) map(to: d.d){{$}}
 
-// CHECK: int main() {
-int main() {
+// CHECK: int main(void) {
+int main(void) {
 #pragma omp declare mapper(id: struct vec v) map(v.len)
 // CHECK: #pragma omp declare mapper (id : struct vec v) map(tofrom: v.len)
   {

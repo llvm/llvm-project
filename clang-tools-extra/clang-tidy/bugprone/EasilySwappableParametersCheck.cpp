@@ -23,42 +23,53 @@ namespace optutils = clang::tidy::utils::options;
 static constexpr std::size_t DefaultMinimumLength = 2;
 
 /// The default value for ignored parameter names.
-static const std::string DefaultIgnoredParameterNames =
-    optutils::serializeStringList({"\"\"", "iterator", "Iterator", "begin",
-                                   "Begin", "end", "End", "first", "First",
-                                   "last", "Last", "lhs", "LHS", "rhs", "RHS"});
+static constexpr llvm::StringLiteral DefaultIgnoredParameterNames = "\"\";"
+                                                                    "iterator;"
+                                                                    "Iterator;"
+                                                                    "begin;"
+                                                                    "Begin;"
+                                                                    "end;"
+                                                                    "End;"
+                                                                    "first;"
+                                                                    "First;"
+                                                                    "last;"
+                                                                    "Last;"
+                                                                    "lhs;"
+                                                                    "LHS;"
+                                                                    "rhs;"
+                                                                    "RHS";
 
 /// The default value for ignored parameter type suffixes.
-static const std::string DefaultIgnoredParameterTypeSuffixes =
-    optutils::serializeStringList({"bool",
-                                   "Bool",
-                                   "_Bool",
-                                   "it",
-                                   "It",
-                                   "iterator",
-                                   "Iterator",
-                                   "inputit",
-                                   "InputIt",
-                                   "forwardit",
-                                   "ForwardIt",
-                                   "bidirit",
-                                   "BidirIt",
-                                   "constiterator",
-                                   "const_iterator",
-                                   "Const_Iterator",
-                                   "Constiterator",
-                                   "ConstIterator",
-                                   "RandomIt",
-                                   "randomit",
-                                   "random_iterator",
-                                   "ReverseIt",
-                                   "reverse_iterator",
-                                   "reverse_const_iterator",
-                                   "ConstReverseIterator",
-                                   "Const_Reverse_Iterator",
-                                   "const_reverse_iterator",
-                                   "Constreverseiterator",
-                                   "constreverseiterator"});
+static constexpr llvm::StringLiteral DefaultIgnoredParameterTypeSuffixes =
+    "bool;"
+    "Bool;"
+    "_Bool;"
+    "it;"
+    "It;"
+    "iterator;"
+    "Iterator;"
+    "inputit;"
+    "InputIt;"
+    "forwardit;"
+    "ForwardIt;"
+    "bidirit;"
+    "BidirIt;"
+    "constiterator;"
+    "const_iterator;"
+    "Const_Iterator;"
+    "Constiterator;"
+    "ConstIterator;"
+    "RandomIt;"
+    "randomit;"
+    "random_iterator;"
+    "ReverseIt;"
+    "reverse_iterator;"
+    "reverse_const_iterator;"
+    "ConstReverseIterator;"
+    "Const_Reverse_Iterator;"
+    "const_reverse_iterator;"
+    "Constreverseiterator;"
+    "constreverseiterator";
 
 /// The default value for the QualifiersMix check option.
 static constexpr bool DefaultQualifiersMix = false;

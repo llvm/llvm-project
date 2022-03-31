@@ -74,11 +74,6 @@ if(LLVM_WITH_Z3)
   set(system_libs ${system_libs} ${Z3_LIBRARIES})
 endif()
 
-# Link LibCURL if the user wants it
-if (LLVM_ENABLE_CURL)
-  set(system_libs ${system_libs} ${CURL_LIBRARIES})
-endif()
-
 # Override the C runtime allocator on Windows and embed it into LLVM tools & libraries
 if(LLVM_INTEGRATED_CRT_ALLOC)
   if (CMAKE_BUILD_TYPE AND NOT ${LLVM_USE_CRT_${uppercase_CMAKE_BUILD_TYPE}} MATCHES "^(MT|MTd)$")
@@ -105,6 +100,8 @@ if(LLVM_INTEGRATED_CRT_ALLOC)
     set(system_libs ${system_libs} "${MIMALLOC_LIB}" "-INCLUDE:malloc")
   endif()
 endif()
+
+add_subdirectory(BLAKE3)
 
 add_llvm_component_library(LLVMSupport
   AArch64TargetParser.cpp
@@ -139,6 +136,9 @@ add_llvm_component_library(LLVMSupport
   ConvertUTF.cpp
   ConvertUTFWrapper.cpp
   CrashRecoveryContext.cpp
+  CSKYAttributes.cpp
+  CSKYAttributeParser.cpp
+  CSKYTargetParser.cpp
   DataExtractor.cpp
   Debug.cpp
   DebugCounter.cpp
@@ -160,7 +160,6 @@ add_llvm_component_library(LLVMSupport
   GlobPattern.cpp
   GraphWriter.cpp
   Hashing.cpp
-  HTTPClient.cpp
   InitLLVM.cpp
   InstructionCost.cpp
   IntEqClasses.cpp
@@ -238,6 +237,7 @@ add_llvm_component_library(LLVMSupport
   Z3Solver.cpp
 
   ${ALLOCATOR_FILES}
+  $<TARGET_OBJECTS:LLVMSupportBlake3>
 
 # System
   Atomic.cpp

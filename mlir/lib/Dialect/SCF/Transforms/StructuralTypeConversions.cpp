@@ -10,7 +10,6 @@
 #include "mlir/Dialect/SCF/Passes.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/SCF/Transforms.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
@@ -102,10 +101,10 @@ public:
     // See comments in the ForOp pattern for why we clone without regions and
     // then inline.
     IfOp newOp = cast<IfOp>(rewriter.cloneWithoutRegions(*op.getOperation()));
-    rewriter.inlineRegionBefore(op.thenRegion(), newOp.thenRegion(),
-                                newOp.thenRegion().end());
-    rewriter.inlineRegionBefore(op.elseRegion(), newOp.elseRegion(),
-                                newOp.elseRegion().end());
+    rewriter.inlineRegionBefore(op.getThenRegion(), newOp.getThenRegion(),
+                                newOp.getThenRegion().end());
+    rewriter.inlineRegionBefore(op.getElseRegion(), newOp.getElseRegion(),
+                                newOp.getElseRegion().end());
 
     // Update the operands and types.
     newOp->setOperands(adaptor.getOperands());

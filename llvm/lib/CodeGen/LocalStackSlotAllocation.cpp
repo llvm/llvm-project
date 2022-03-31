@@ -118,7 +118,7 @@ bool LocalStackSlotPass::runOnMachineFunction(MachineFunction &MF) {
   // If the target doesn't want/need this pass, or if there are no locals
   // to consider, early exit.
   if (LocalObjectCount == 0 || !TRI->requiresVirtualBaseRegisters(MF))
-    return true;
+    return false;
 
   // Make sure we have enough space to store the local offsets.
   LocalOffsets.resize(MFI.getObjectIndexEnd());
@@ -210,7 +210,11 @@ void LocalStackSlotPass::calculateFrameObjectOffsets(MachineFunction &Fn) {
     StackObjSet SmallArrayObjs;
     StackObjSet AddrOfObjs;
 
-    AdjustStackOffset(MFI, StackProtectorFI, Offset, StackGrowsDown, MaxAlign);
+    // Only place the stack protector in the local stack area if the target
+    // allows it.
+    if (TFI.isStackIdSafeForLocalArea(MFI.getStackID(StackProtectorFI)))
+      AdjustStackOffset(MFI, StackProtectorFI, Offset, StackGrowsDown,
+                        MaxAlign);
 
     // Assign large stack objects first.
     for (unsigned i = 0, e = MFI.getObjectIndexEnd(); i != e; ++i) {

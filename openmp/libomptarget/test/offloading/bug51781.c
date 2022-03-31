@@ -21,14 +21,33 @@
 // RUN: %fcheck-amdgcn-amd-amdhsa -check-prefix=CUSTOM -input-file=%t.custom
 // RUN: %libomptarget-run-generic 2>&1 | %fcheck-generic
 //
+// Repeat with reduction clause, which has managed to break the custom state
+// machine in the past.
+//
+// RUN: %libomptarget-compile-generic -O1 -Rpass=openmp-opt -DADD_REDUCTION \
+// RUN:   -mllvm -openmp-opt-disable-spmdization > %t.custom 2>&1
+// RUN: %fcheck-nvptx64-nvidia-cuda -check-prefix=CUSTOM -input-file=%t.custom
+// RUN: %fcheck-amdgcn-amd-amdhsa -check-prefix=CUSTOM -input-file=%t.custom
+// RUN: %libomptarget-run-generic 2>&1 | %fcheck-generic
+//
 // CUSTOM: Rewriting generic-mode kernel with a customized state machine.
+
+// Hangs
+// UNSUPPORTED: amdgcn-amd-amdhsa
+// UNSUPPORTED: amdgcn-amd-amdhsa-newDriver
+
+#if ADD_REDUCTION
+# define REDUCTION(...) reduction(__VA_ARGS__)
+#else
+# define REDUCTION(...)
+#endif
 
 #include <stdio.h>
 int main() {
   int x = 0, y = 1;
-  #pragma omp target teams num_teams(1) map(tofrom:x, y)
+  #pragma omp target teams num_teams(1) map(tofrom:x, y) REDUCTION(+:x)
   {
-    x = 5;
+    x += 5;
     #pragma omp parallel
     y = 6;
   }

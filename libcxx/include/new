@@ -86,6 +86,7 @@ void  operator delete[](void* ptr, void*) noexcept;
 
 */
 
+#include <__assert> // all public C++ headers provide the assertion handler
 #include <__availability>
 #include <__config>
 #include <cstddef>
@@ -99,7 +100,7 @@ void  operator delete[](void* ptr, void*) noexcept;
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 #if !defined(__cpp_sized_deallocation) || __cpp_sized_deallocation  < 201309L

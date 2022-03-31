@@ -23,9 +23,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include <algorithm>
 #include <memory>
 #include <system_error>
 
@@ -84,6 +82,7 @@ Expected<std::unique_ptr<Binary>> object::createBinary(MemoryBufferRef Buffer,
     // PDB does not support the Binary interface.
     return errorCodeToError(object_error::invalid_file_type);
   case file_magic::unknown:
+  case file_magic::cuda_fatbinary:
   case file_magic::coff_cl_gl_object:
     // Unrecognized object file format.
     return errorCodeToError(object_error::invalid_file_type);

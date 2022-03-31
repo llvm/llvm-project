@@ -6,29 +6,28 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_INCLUDE_MLIR_CONVERSION_VECTORTOSCF_VECTORTOGPU_H_
-#define MLIR_INCLUDE_MLIR_CONVERSION_VECTORTOSCF_VECTORTOGPU_H_
+#ifndef MLIR_CONVERSION_VECTORTOGPU_VECTORTOGPU_H
+#define MLIR_CONVERSION_VECTORTOGPU_VECTORTOGPU_H
 
 #include "mlir/IR/PatternMatch.h"
 
 namespace mlir {
 class MLIRContext;
 class Pass;
-class FuncOp;
 class RewritePatternSet;
 
 /// Patterns to transform vector ops into a canonical form to convert to MMA
 /// matrix operations.
 void populatePrepareVectorToMMAPatterns(RewritePatternSet &patterns);
 
-/// Convert vector ops to MMA matrix operations. This will convert slice of
-/// operations that can be legally converted to MMA operations. The rest of the
-/// vector operations are left untouched.
-void convertVectorToMMAOps(FuncOp funcOp);
+/// Convert vector ops to MMA matrix operations nested under `rootOp`. This will
+/// convert slice of operations that can be legally converted to MMA operations.
+/// The rest of the vector operations are left untouched.
+void convertVectorToMMAOps(Operation *rootOp);
 
 /// Convert from vector to GPU ops.
 std::unique_ptr<Pass> createConvertVectorToGPUPass();
 
 } // namespace mlir
 
-#endif // MLIR_INCLUDE_MLIR_CONVERSION_VECTORTOSCF_VECTORTOGPU_H_
+#endif // MLIR_CONVERSION_VECTORTOGPU_VECTORTOGPU_H

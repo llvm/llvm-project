@@ -416,12 +416,14 @@ namespace std
 }
 
 */
+
+#include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <cstddef>
 #include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -450,9 +452,6 @@ _LIBCPP_CONSTEXPR const _Tp integral_constant<_Tp, __v>::value;
 #if _LIBCPP_STD_VER > 14
 template <bool __b>
 using bool_constant = integral_constant<bool, __b>;
-#define _LIBCPP_BOOL_CONSTANT(__b) bool_constant<(__b)>
-#else
-#define _LIBCPP_BOOL_CONSTANT(__b) integral_constant<bool,(__b)>
 #endif
 
 template <bool, class _Tp = void> struct _LIBCPP_TEMPLATE_VIS enable_if {};
@@ -464,8 +463,8 @@ template <bool _Bp, class _Tp = void> using __enable_if_t _LIBCPP_NODEBUG = type
 template <bool _Bp, class _Tp = void> using enable_if_t = typename enable_if<_Bp, _Tp>::type;
 #endif
 
-typedef _LIBCPP_BOOL_CONSTANT(true)  true_type;
-typedef _LIBCPP_BOOL_CONSTANT(false) false_type;
+typedef integral_constant<bool, true>  true_type;
+typedef integral_constant<bool, false> false_type;
 
 template <bool _Val>
 using _BoolConstant _LIBCPP_NODEBUG = integral_constant<bool, _Val>;
@@ -529,12 +528,6 @@ using _IsValidExpansion _LIBCPP_NODEBUG = decltype(__sfinae_test_impl<_Templ, _A
 template <class>
 struct __void_t { typedef void type; };
 
-template <class _Tp>
-struct __identity { typedef _Tp type; };
-
-template <class _Tp>
-using __identity_t _LIBCPP_NODEBUG = typename __identity<_Tp>::type;
-
 template <class _Tp, bool>
 struct _LIBCPP_TEMPLATE_VIS __dependent_type : public _Tp {};
 
@@ -550,8 +543,6 @@ template <bool _Bp, class _If, class _Then> using conditional_t = typename condi
 
 // is_same
 
-#if __has_keyword(__is_same)
-
 template <class _Tp, class _Up>
 struct _LIBCPP_TEMPLATE_VIS is_same : _BoolConstant<__is_same(_Tp, _Up)> { };
 
@@ -560,36 +551,18 @@ template <class _Tp, class _Up>
 inline constexpr bool is_same_v = __is_same(_Tp, _Up);
 #endif
 
-#else
-
-template <class _Tp, class _Up> struct _LIBCPP_TEMPLATE_VIS is_same           : public false_type {};
-template <class _Tp>            struct _LIBCPP_TEMPLATE_VIS is_same<_Tp, _Tp> : public true_type {};
-
-#if _LIBCPP_STD_VER > 14
-template <class _Tp, class _Up>
-inline constexpr bool is_same_v = is_same<_Tp, _Up>::value;
-#endif
-
-#endif // __is_same
+// _IsSame<T,U> has the same effect as is_same<T,U> but instantiates fewer types:
+// is_same<A,B> and is_same<C,D> are guaranteed to be different types, but
+// _IsSame<A,B> and _IsSame<C,D> are the same type (namely, false_type).
+// Neither GCC nor Clang can mangle the __is_same builtin, so _IsSame
+// mustn't be directly used anywhere that contributes to name-mangling
+// (such as in a dependent return type).
 
 template <class _Tp, class _Up>
-using _IsSame = _BoolConstant<
-#ifdef __clang__
-    __is_same(_Tp, _Up)
-#else
-    is_same<_Tp, _Up>::value
-#endif
->;
+using _IsSame = _BoolConstant<__is_same(_Tp, _Up)>;
 
 template <class _Tp, class _Up>
-using _IsNotSame = _BoolConstant<
-#ifdef __clang__
-    !__is_same(_Tp, _Up)
-#else
-    !is_same<_Tp, _Up>::value
-#endif
->;
-
+using _IsNotSame = _BoolConstant<!__is_same(_Tp, _Up)>;
 
 template <class _Tp>
 using __test_for_primary_template = __enable_if_t<
@@ -600,9 +573,9 @@ using __is_primary_template = _IsValidExpansion<
     __test_for_primary_template, _Tp
   >;
 
-struct __two {char __lx[2];};
+// helper class
 
-// helper class:
+struct __two {char __lx[2];};
 
 // is_const
 
@@ -654,37 +627,13 @@ inline constexpr bool is_volatile_v = is_volatile<_Tp>::value;
 
 // remove_const
 
-#if __has_keyword(__remove_const)
-
-template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS remove_const {typedef __remove_const(_Tp) type;};
-
-#if _LIBCPP_STD_VER > 11
-template <class _Tp> using remove_const_t = __remove_const(_Tp);
-#endif
-
-#else
-
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS remove_const            {typedef _Tp type;};
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS remove_const<const _Tp> {typedef _Tp type;};
 #if _LIBCPP_STD_VER > 11
 template <class _Tp> using remove_const_t = typename remove_const<_Tp>::type;
 #endif
 
-#endif // __has_keyword(__remove_const)
-
 // remove_volatile
-
-#if __has_keyword(__remove_volatile)
-
-template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS remove_volatile {typedef __remove_volatile(_Tp) type;};
-
-#if _LIBCPP_STD_VER > 11
-template <class _Tp> using remove_volatile_t = __remove_volatile(_Tp);
-#endif
-
-#else
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS remove_volatile               {typedef _Tp type;};
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS remove_volatile<volatile _Tp> {typedef _Tp type;};
@@ -692,28 +641,13 @@ template <class _Tp> struct _LIBCPP_TEMPLATE_VIS remove_volatile<volatile _Tp> {
 template <class _Tp> using remove_volatile_t = typename remove_volatile<_Tp>::type;
 #endif
 
-#endif // __has_keyword(__remove_volatile)
-
 // remove_cv
-
-#if __has_keyword(__remove_cv)
-
-template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS remove_cv {typedef __remove_cv(_Tp) type;};
-
-#if _LIBCPP_STD_VER > 11
-template <class _Tp> using remove_cv_t = __remove_cv(_Tp);
-#endif
-
-#else
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS remove_cv
 {typedef typename remove_volatile<typename remove_const<_Tp>::type>::type type;};
 #if _LIBCPP_STD_VER > 11
 template <class _Tp> using remove_cv_t = typename remove_cv<_Tp>::type;
 #endif
-
-#endif // __has_keyword(__remove_cv)
 
 // is_void
 
@@ -1292,13 +1226,6 @@ template <class _Tp> using add_cv_t = typename add_cv<_Tp>::type;
 
 // remove_reference
 
-#if __has_keyword(__remove_reference)
-
-template<class _Tp>
-struct _LIBCPP_TEMPLATE_VIS remove_reference { typedef __remove_reference(_Tp) type; };
-
-#else // __has_keyword(__remove_reference)
-
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS remove_reference        {typedef _LIBCPP_NODEBUG _Tp type;};
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS remove_reference<_Tp&>  {typedef _LIBCPP_NODEBUG _Tp type;};
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS remove_reference<_Tp&&> {typedef _LIBCPP_NODEBUG _Tp type;};
@@ -1306,8 +1233,6 @@ template <class _Tp> struct _LIBCPP_TEMPLATE_VIS remove_reference<_Tp&&> {typede
 #if _LIBCPP_STD_VER > 11
 template <class _Tp> using remove_reference_t = typename remove_reference<_Tp>::type;
 #endif
-
-#endif // __has_keyword(__remove_reference)
 
 // add_lvalue_reference
 
@@ -1342,33 +1267,25 @@ template <class _Tp>
 decltype(__declval<_Tp>(0))
 declval() _NOEXCEPT;
 
-// __uncvref
-
-template <class _Tp>
-struct __uncvref  {
-    typedef _LIBCPP_NODEBUG typename remove_cv<typename remove_reference<_Tp>::type>::type type;
-};
-
 template <class _Tp>
 struct __unconstref {
     typedef _LIBCPP_NODEBUG typename remove_const<typename remove_reference<_Tp>::type>::type type;
 };
 
-#ifndef _LIBCPP_CXX03_LANG
 template <class _Tp>
-using __uncvref_t _LIBCPP_NODEBUG = typename __uncvref<_Tp>::type;
-#endif
+using __uncvref_t _LIBCPP_NODEBUG = typename remove_cv<typename remove_reference<_Tp>::type>::type;
 
 // __is_same_uncvref
 
 template <class _Tp, class _Up>
-struct __is_same_uncvref : _IsSame<typename __uncvref<_Tp>::type,
-                                   typename __uncvref<_Up>::type> {};
+struct __is_same_uncvref : _IsSame<__uncvref_t<_Tp>, __uncvref_t<_Up> > {};
 
 #if _LIBCPP_STD_VER > 17
 // remove_cvref - same as __uncvref
 template <class _Tp>
-struct remove_cvref : public __uncvref<_Tp> {};
+struct remove_cvref {
+    using type _LIBCPP_NODEBUG = __uncvref_t<_Tp>;
+};
 
 template <class _Tp> using remove_cvref_t = typename remove_cvref<_Tp>::type;
 #endif
@@ -1409,6 +1326,13 @@ template <class _Tp> using add_pointer_t = typename add_pointer<_Tp>::type;
 #endif
 
 // type_identity
+
+template <class _Tp>
+struct __type_identity { typedef _Tp type; };
+
+template <class _Tp>
+using __type_identity_t _LIBCPP_NODEBUG = typename __type_identity<_Tp>::type;
+
 #if _LIBCPP_STD_VER > 17
 template<class _Tp> struct type_identity { typedef _Tp type; };
 template<class _Tp> using type_identity_t = typename type_identity<_Tp>::type;
@@ -1429,7 +1353,7 @@ inline constexpr bool is_signed_v = __is_signed(_Tp);
 #else // __has_keyword(__is_signed)
 
 template <class _Tp, bool = is_integral<_Tp>::value>
-struct __libcpp_is_signed_impl : public _LIBCPP_BOOL_CONSTANT(_Tp(-1) < _Tp(0)) {};
+struct __libcpp_is_signed_impl : public _BoolConstant<(_Tp(-1) < _Tp(0))> {};
 
 template <class _Tp>
 struct __libcpp_is_signed_impl<_Tp, false> : public true_type {};  // floating point
@@ -1467,7 +1391,7 @@ inline constexpr bool is_unsigned_v = __is_unsigned(_Tp);
 #else // __has_keyword(__is_unsigned)
 
 template <class _Tp, bool = is_integral<_Tp>::value>
-struct __libcpp_is_unsigned_impl : public _LIBCPP_BOOL_CONSTANT(_Tp(0) < _Tp(-1)) {};
+struct __libcpp_is_unsigned_impl : public _BoolConstant<(_Tp(0) < _Tp(-1))> {};
 
 template <class _Tp>
 struct __libcpp_is_unsigned_impl<_Tp, false> : public false_type {};  // floating point
@@ -2338,7 +2262,7 @@ struct __common_type_impl {};
 // Clang provides variadic templates in C++03 as an extension.
 #if !defined(_LIBCPP_CXX03_LANG) || defined(__clang__)
 # define _LIBCPP_OPTIONAL_PACK(...) , __VA_ARGS__
-template <class... Tp>
+template <class... _Tp>
 struct __common_types;
 template <class... _Tp>
 struct _LIBCPP_TEMPLATE_VIS common_type;
@@ -2462,7 +2386,7 @@ using __copy_cvref_t = typename __copy_cvref<_From, _To>::type;
 #endif // _LIBCPP_STD_VER > 11
 
 // common_reference
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#if _LIBCPP_STD_VER > 17
 // Let COND_RES(X, Y) be:
 template <class _Xp, class _Yp>
 using __cond_res =
@@ -2616,7 +2540,7 @@ struct common_reference<_Tp, _Up, _Vp, _Rest...>
 // bullet 5 - Otherwise, there shall be no member `type`.
 template <class...> struct common_reference {};
 
-#endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#endif // _LIBCPP_STD_VER > 17
 
 // is_assignable
 

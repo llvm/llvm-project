@@ -12,11 +12,11 @@ unsigned foo(int x, ...) {
   return a;
 }
 
-void foo1() {
+void foo1(void) {
   unsigned f = 0xffffffe0;
   foo(1,f);
 }
 
-//N64: call signext i32 (i32, ...) @foo(i32 signext undef, i32 signext -32)
-//N32: call signext i32 (i32, ...) @foo(i32 signext undef, i32 signext -32)
-//O32: call i32 (i32, ...) @foo(i32 signext undef, i32 signext -32)
+//N64: call signext i32 (i32, ...) @foo(i32 signext undef, i32 noundef signext -32)
+//N32: call signext i32 (i32, ...) @foo(i32 signext undef, i32 noundef signext -32)
+//O32: call i32 (i32, ...) @foo(i32 signext undef, i32 noundef signext -32)

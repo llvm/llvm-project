@@ -60,7 +60,7 @@ static Status
 GetWoW64ThreadContextHelper(lldb::thread_t thread_handle,
                             PWOW64_CONTEXT context_ptr,
                             const DWORD control_flag = kWoW64ContextFlags) {
-  Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_REGISTERS);
+  Log *log = GetLog(WindowsLog::Registers);
   Status error;
   memset(context_ptr, 0, sizeof(::WOW64_CONTEXT));
   context_ptr->ContextFlags = control_flag;
@@ -75,7 +75,7 @@ GetWoW64ThreadContextHelper(lldb::thread_t thread_handle,
 
 static Status SetWoW64ThreadContextHelper(lldb::thread_t thread_handle,
                                           PWOW64_CONTEXT context_ptr) {
-  Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_REGISTERS);
+  Log *log = GetLog(WindowsLog::Registers);
   Status error;
   if (!::Wow64SetThreadContext(thread_handle, context_ptr)) {
     error.SetError(GetLastError(), eErrorTypeWin32);

@@ -38,10 +38,6 @@ class LinkGraph;
 class Symbol;
 } // namespace jitlink
 
-namespace object {
-class ObjectFile;
-} // namespace object
-
 namespace orc {
 
 class ObjectLinkingLayerJITLinkContext;
@@ -220,17 +216,11 @@ public:
                                    ResourceKey SrcKey) override;
 
 private:
-
-  struct EHFrameRange {
-    JITTargetAddress Addr = 0;
-    size_t Size;
-  };
-
   std::mutex EHFramePluginMutex;
   ExecutionSession &ES;
   std::unique_ptr<jitlink::EHFrameRegistrar> Registrar;
-  DenseMap<MaterializationResponsibility *, EHFrameRange> InProcessLinks;
-  DenseMap<ResourceKey, std::vector<EHFrameRange>> EHFrameRanges;
+  DenseMap<MaterializationResponsibility *, ExecutorAddrRange> InProcessLinks;
+  DenseMap<ResourceKey, std::vector<ExecutorAddrRange>> EHFrameRanges;
 };
 
 } // end namespace orc

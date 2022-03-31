@@ -10,11 +10,14 @@
 #include "FileDistance.h"
 #include "FuzzyMatch.h"
 #include "Quality.h"
+#include "URI.h"
 #include "index/Index.h"
 #include "index/dex/Iterator.h"
+#include "index/dex/Trigram.h"
 #include "support/Logger.h"
 #include "support/Trace.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include <algorithm>
 #include <queue>
@@ -203,7 +206,7 @@ bool Dex::fuzzyFind(const FuzzyFindRequest &Req,
   std::vector<std::unique_ptr<Iterator>> TrigramIterators;
   for (const auto &Trigram : TrigramTokens)
     TrigramIterators.push_back(iterator(Trigram));
-  Criteria.push_back(Corpus.intersect(move(TrigramIterators)));
+  Criteria.push_back(Corpus.intersect(std::move(TrigramIterators)));
 
   // Generate scope tokens for search query.
   std::vector<std::unique_ptr<Iterator>> ScopeIterators;
@@ -212,7 +215,7 @@ bool Dex::fuzzyFind(const FuzzyFindRequest &Req,
   if (Req.AnyScope)
     ScopeIterators.push_back(
         Corpus.boost(Corpus.all(), ScopeIterators.empty() ? 1.0 : 0.2));
-  Criteria.push_back(Corpus.unionOf(move(ScopeIterators)));
+  Criteria.push_back(Corpus.unionOf(std::move(ScopeIterators)));
 
   // Add proximity paths boosting (all symbols, some boosted).
   Criteria.push_back(createFileProximityIterator(Req.ProximityPaths));
@@ -224,12 +227,12 @@ bool Dex::fuzzyFind(const FuzzyFindRequest &Req,
 
   // Use TRUE iterator if both trigrams and scopes from the query are not
   // present in the symbol index.
-  auto Root = Corpus.intersect(move(Criteria));
+  auto Root = Corpus.intersect(std::move(Criteria));
   // Retrieve more items than it was requested: some of  the items with high
   // final score might not be retrieved otherwise.
   // FIXME(kbobyrev): Tune this ratio.
   if (Req.Limit)
-    Root = Corpus.limit(move(Root), *Req.Limit * 100);
+    Root = Corpus.limit(std::move(Root), *Req.Limit * 100);
   SPAN_ATTACH(Tracer, "query", llvm::to_string(*Root));
   vlog("Dex query tree: {0}", *Root);
 

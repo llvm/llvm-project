@@ -30,7 +30,7 @@ int main(int, char**)
         f.pubseekoff(1, std::ios_base::beg);
         assert(f.sgetc() == '2');
         std::filebuf f2;
-        f2 = move(f);
+        f2 = std::move(f);
         assert(!f.is_open());
         assert(f2.is_open());
         assert(f2.sgetc() == '2');
@@ -47,7 +47,7 @@ int main(int, char**)
         f.pubseekoff(1, std::ios_base::beg);
         assert(f.sgetc() == L'2');
         std::wfilebuf f2;
-        f2 = move(f);
+        f2 = std::move(f);
         assert(!f.is_open());
         assert(f2.is_open());
         assert(f2.sgetc() == L'2');

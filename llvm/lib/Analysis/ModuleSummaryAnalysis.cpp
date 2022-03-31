@@ -38,7 +38,6 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
@@ -232,6 +231,18 @@ static bool isNonVolatileStore(const Instruction *I) {
     return !SI->isVolatile();
 
   return false;
+}
+
+// Returns true if the function definition must be unreachable.
+//
+// Note if this helper function returns true, `F` is guaranteed
+// to be unreachable; if it returns false, `F` might still
+// be unreachable but not covered by this helper function.
+static bool mustBeUnreachableFunction(const Function &F) {
+  // A function must be unreachable if its entry block ends with an
+  // 'unreachable'.
+  assert(!F.isDeclaration());
+  return isa<UnreachableInst>(F.getEntryBlock().getTerminator());
 }
 
 static void computeFunctionSummary(
@@ -478,8 +489,7 @@ static void computeFunctionSummary(
                               HasIndirBranchToBlockAddress;
   GlobalValueSummary::GVFlags Flags(
       F.getLinkage(), F.getVisibility(), NotEligibleForImport,
-      /* Live = */ false, F.isDSOLocal(),
-      F.hasLinkOnceODRLinkage() && F.hasGlobalUnnamedAddr());
+      /* Live = */ false, F.isDSOLocal(), F.canBeOmittedFromSymbolTable());
   FunctionSummary::FFlags FunFlags{
       F.hasFnAttribute(Attribute::ReadNone),
       F.hasFnAttribute(Attribute::ReadOnly),
@@ -488,7 +498,8 @@ static void computeFunctionSummary(
       // Don't try to import functions with noinline attribute.
       F.getAttributes().hasFnAttr(Attribute::NoInline),
       F.hasFnAttribute(Attribute::AlwaysInline),
-      F.hasFnAttribute(Attribute::NoUnwind), MayThrow, HasUnknownCall};
+      F.hasFnAttribute(Attribute::NoUnwind), MayThrow, HasUnknownCall,
+      mustBeUnreachableFunction(F)};
   std::vector<FunctionSummary::ParamAccess> ParamAccesses;
   if (auto *SSI = GetSSICallback(F))
     ParamAccesses = SSI->getParamAccesses(Index);
@@ -599,8 +610,7 @@ static void computeVariableSummary(ModuleSummaryIndex &Index,
   bool NonRenamableLocal = isNonRenamableLocal(V);
   GlobalValueSummary::GVFlags Flags(
       V.getLinkage(), V.getVisibility(), NonRenamableLocal,
-      /* Live = */ false, V.isDSOLocal(),
-      V.hasLinkOnceODRLinkage() && V.hasGlobalUnnamedAddr());
+      /* Live = */ false, V.isDSOLocal(), V.canBeOmittedFromSymbolTable());
 
   VTableFuncList VTableFuncs;
   // If splitting is not enabled, then we compute the summary information
@@ -642,8 +652,7 @@ computeAliasSummary(ModuleSummaryIndex &Index, const GlobalAlias &A,
   bool NonRenamableLocal = isNonRenamableLocal(A);
   GlobalValueSummary::GVFlags Flags(
       A.getLinkage(), A.getVisibility(), NonRenamableLocal,
-      /* Live = */ false, A.isDSOLocal(),
-      A.hasLinkOnceODRLinkage() && A.hasGlobalUnnamedAddr());
+      /* Live = */ false, A.isDSOLocal(), A.canBeOmittedFromSymbolTable());
   auto AS = std::make_unique<AliasSummary>(Flags);
   auto *Aliasee = A.getAliaseeObject();
   auto AliaseeVI = Index.getValueInfo(Aliasee->getGUID());
@@ -720,8 +729,7 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
               GlobalValue::InternalLinkage, GlobalValue::DefaultVisibility,
               /* NotEligibleToImport = */ true,
               /* Live = */ true,
-              /* Local */ GV->isDSOLocal(),
-              GV->hasLinkOnceODRLinkage() && GV->hasGlobalUnnamedAddr());
+              /* Local */ GV->isDSOLocal(), GV->canBeOmittedFromSymbolTable());
           CantBePromoted.insert(GV->getGUID());
           // Create the appropriate summary type.
           if (Function *F = dyn_cast<Function>(GV)) {
@@ -737,7 +745,8 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
                         F->hasFnAttribute(Attribute::AlwaysInline),
                         F->hasFnAttribute(Attribute::NoUnwind),
                         /* MayThrow */ true,
-                        /* HasUnknownCall */ true},
+                        /* HasUnknownCall */ true,
+                        /* MustBeUnreachable */ false},
                     /*EntryCount=*/0, ArrayRef<ValueInfo>{},
                     ArrayRef<FunctionSummary::EdgeTy>{},
                     ArrayRef<GlobalValue::GUID>{},

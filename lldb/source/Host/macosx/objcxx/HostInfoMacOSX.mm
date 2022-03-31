@@ -11,6 +11,7 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/macosx/HostInfoMacOSX.h"
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Timer.h"
 #include "Utility/UuidCompatibility.h"
@@ -34,6 +35,10 @@
 #include <CoreFoundation/CoreFoundation.h>
 #include <Foundation/Foundation.h>
 #include <mach-o/dyld.h>
+#if __has_include(<mach-o/dyld_introspection.h>)
+#include <mach-o/dyld_introspection.h>
+#define SDK_HAS_NEW_DYLD_INTROSPECTION_SPIS
+#endif
 #include <objc/objc-auto.h>
 
 // These are needed when compiling on systems
@@ -144,7 +149,7 @@ bool HostInfoMacOSX::ComputeSupportExeDirectory(FileSpec &file_spec) {
     FileSpec support_dir_spec(raw_path);
     FileSystem::Instance().Resolve(support_dir_spec);
     if (!FileSystem::Instance().IsDirectory(support_dir_spec)) {
-      Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
+      Log *log = GetLog(LLDBLog::Host);
       LLDB_LOGF(log, "HostInfoMacOSX::%s(): failed to find support directory",
                 __FUNCTION__);
       return false;
@@ -378,6 +383,13 @@ static std::string GetXcodeSDK(XcodeSDK sdk) {
     args.AppendArgument("--sdk");
     args.AppendArgument(sdk);
 
+    Log *log = GetLog(LLDBLog::Host);
+    if (log) {
+      std::string cmdstr;
+      args.GetCommandString(cmdstr);
+      log->Printf("GetXcodeSDK() running shell cmd '%s'", cmdstr.c_str());
+    }
+
     int status = 0;
     int signo = 0;
     std::string output_str;
@@ -443,7 +455,7 @@ static std::string GetXcodeSDK(XcodeSDK sdk) {
       if (!path.empty())
         break;
     }
-    Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
+    Log *log = GetLog(LLDBLog::Host);
     LLDB_LOGF(log, "Couldn't find SDK %s on host", sdk_name.c_str());
 
     // Try without the version.
@@ -517,6 +529,41 @@ private:
 }
 
 SharedCacheInfo::SharedCacheInfo() {
+#if defined(SDK_HAS_NEW_DYLD_INTROSPECTION_SPIS)
+  if (__builtin_available(macOS 12, *)) {
+    if (dyld_process_create_for_current_task) {
+      auto dyld_process = dyld_process_create_for_current_task();
+      auto snapshot =
+          dyld_process_snapshot_create_for_process(dyld_process, nullptr);
+      auto shared_cache = dyld_process_snapshot_get_shared_cache(snapshot);
+      assert(dyld_process && snapshot && shared_cache);
+
+      dyld_shared_cache_for_each_image(shared_cache, ^(dyld_image_t image) {
+        __block uint64_t minVmAddr = UINT64_MAX;
+        __block uint64_t maxVmAddr = 0;
+        uuid_t uuidStore;
+        __block uuid_t *uuid = &uuidStore;
+
+        dyld_image_for_each_segment_info(image, ^(const char *segmentName,
+                                                  uint64_t vmAddr,
+                                                  uint64_t vmSize, int perm) {
+          minVmAddr = std::min(minVmAddr, vmAddr);
+          maxVmAddr = std::max(maxVmAddr, vmAddr + vmSize);
+          dyld_image_copy_uuid(image, uuid);
+        });
+        assert(minVmAddr != UINT_MAX);
+        assert(maxVmAddr != 0);
+        m_images[dyld_image_get_installname(image)] = SharedCacheImageInfo{
+            UUID::fromData(uuid, 16),
+            std::make_shared<DataBufferUnowned>((uint8_t *)minVmAddr,
+                                                maxVmAddr - minVmAddr)};
+      });
+      dyld_process_snapshot_dispose(snapshot);
+      return;
+    }
+  }
+#endif
+
   size_t shared_cache_size;
   uint8_t *shared_cache_start =
       _dyld_get_shared_cache_range(&shared_cache_size);

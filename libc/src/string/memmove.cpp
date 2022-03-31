@@ -10,59 +10,41 @@
 
 #include "src/__support/common.h"
 #include "src/__support/integer_operations.h"
-#include "src/string/memory_utils/memcpy_implementations.h"
+#include "src/string/memory_utils/elements.h"
 #include <stddef.h> // size_t, ptrdiff_t
 
 namespace __llvm_libc {
 
-static inline void move_byte_forward(char *dest_m, const char *src_m,
-                                     size_t count) {
-  for (size_t offset = 0; count; --count, ++offset)
-    dest_m[offset] = src_m[offset];
-}
+static inline void inline_memmove(char *dst, const char *src, size_t count) {
+  using namespace __llvm_libc::scalar;
+  if (count == 0)
+    return;
+  if (count == 1)
+    return move<_1>(dst, src);
+  if (count <= 4)
+    return move<HeadTail<_2>>(dst, src, count);
+  if (count <= 8)
+    return move<HeadTail<_4>>(dst, src, count);
+  if (count <= 16)
+    return move<HeadTail<_8>>(dst, src, count);
+  if (count <= 32)
+    return move<HeadTail<_16>>(dst, src, count);
+  if (count <= 64)
+    return move<HeadTail<_32>>(dst, src, count);
+  if (count <= 128)
+    return move<HeadTail<_64>>(dst, src, count);
 
-static inline void move_byte_backward(char *dest_m, const char *src_m,
-                                      size_t count) {
-  for (size_t offset = count - 1; count; --count, --offset)
-    dest_m[offset] = src_m[offset];
+  using AlignedMoveLoop = Align<_16, Arg::Src>::Then<Loop<_64>>;
+  if (dst < src)
+    return move<AlignedMoveLoop>(dst, src, count);
+  else if (dst > src)
+    return move_backward<AlignedMoveLoop>(dst, src, count);
 }
 
 LLVM_LIBC_FUNCTION(void *, memmove,
                    (void *dst, const void *src, size_t count)) {
-  char *dest_c = reinterpret_cast<char *>(dst);
-  const char *src_c = reinterpret_cast<const char *>(src);
-
-  // If the distance between `src_c` and `dest_c` is equal to or greater
-  // than `count` (integerAbs(src_c - dest_c) >= count), they would not overlap.
-  // e.g.   greater     equal       overlapping
-  //        [12345678]  [12345678]  [12345678]
-  // src_c: [_ab_____]  [_ab_____]  [_ab_____]
-  // dest_c:[_____yz_]  [___yz___]  [__yz____]
-
-  // Call `memcpy` if `src_c` and `dest_c` do not overlap.
-  if (__llvm_libc::integerAbs(src_c - dest_c) >=
-      static_cast<ptrdiff_t>(count)) {
-    inline_memcpy(dest_c, src_c, count);
-    return dest_c;
-  }
-
-  // Overlapping cases.
-  // If `dest_c` starts before `src_c` (dest_c < src_c), copy
-  // forward(pointer add 1) from beginning to end.
-  // If `dest_c` starts after `src_c` (dest_c > src_c), copy
-  // backward(pointer add -1) from end to beginning.
-  // If `dest_c` and `src_c` start at the same address (dest_c == src_c),
-  // just return dest.
-  // e.g.    forward      backward
-  //                *->    <-*
-  // src_c : [___abcde_]  [_abcde___]
-  // dest_c: [_abc--___]  [___--cde_]
-
-  // TODO: Optimize `move_byte_xxx(...)` functions.
-  if (dest_c < src_c)
-    move_byte_forward(dest_c, src_c, count);
-  if (dest_c > src_c)
-    move_byte_backward(dest_c, src_c, count);
+  inline_memmove(reinterpret_cast<char *>(dst),
+                 reinterpret_cast<const char *>(src), count);
   return dst;
 }
 

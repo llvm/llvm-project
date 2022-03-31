@@ -28,7 +28,6 @@
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/TrailingObjects.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -44,7 +43,6 @@ struct RecordContext;
 } // namespace detail
 
 class ListRecTy;
-struct MultiClass;
 class Record;
 class RecordKeeper;
 class RecordVal;
@@ -1897,6 +1895,11 @@ public:
   std::vector<Record *> getAllDerivedDefinitions(
       ArrayRef<StringRef> ClassNames) const;
 
+  /// Get all the concrete records that inherit from specified class, if the
+  /// class is defined. Returns an empty vector if the class is not defined.
+  std::vector<Record *>
+  getAllDerivedDefinitionsIfDefined(StringRef ClassName) const;
+
   void dump() const;
 };
 
@@ -2016,7 +2019,7 @@ class Resolver {
 
 public:
   explicit Resolver(Record *CurRec) : CurRec(CurRec) {}
-  virtual ~Resolver() {}
+  virtual ~Resolver() = default;
 
   Record *getCurrentRecord() const { return CurRec; }
 

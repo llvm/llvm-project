@@ -54,7 +54,7 @@ attributes #3 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp
 !16 = distinct !DISubprogram(name: "main", line: 7, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 7, file: !1, scope: !13, type: !17, retainedNodes: !2)
 !17 = !DISubroutineType(types: !18)
 !18 = !{!8}
-!19 = !{i32 2, !"Dwarf Version", i32 2}
+!19 = !{i32 2, !"Dwarf Version", i32 3}
 !20 = !DILocalVariable(name: "a", line: 4, arg: 1, scope: !12, file: !13, type: !8)
 !21 = !DILocation(line: 4, scope: !12)
 !22 = !DILocalVariable(name: "t", line: 5, scope: !12, file: !13, type: !4)

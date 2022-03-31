@@ -185,10 +185,22 @@ of variants. It's very tempting to add more variants because it's an easy way
 to increase test coverage. It doesn't scale. It's easy to set up, but increases
 the runtime of the tests and has a large ongoing cost.
 
-The key take away is that the different variants don't obviate the need for
-focused tests. So relying on it to test say DWARF5 is a really bad idea.
-Instead you should write tests that check the specific DWARF5 feature, and have
-the variant as a nice-to-have.
+The test variants are most useful when developing a larger feature (e.g. support
+for a new DWARF version). The test suite contains a large number of fairly
+generic tests, so running the test suite with the feature enabled is a good way
+to gain confidence that you haven't missed an important aspect. However, this
+genericness makes them poor regression tests. Because it's not clear what a
+specific test covers, a random modification to the test case can make it start
+(or stop) testing a completely different part of your feature. And since these
+tests tend to look very similar, it's easy for a simple bug to cause hundreds of
+tests to fail in the same way.
+
+For this reason, we recommend using test variants only while developing a new
+feature. This can often be done by running the test suite with different
+arguments -- without any modifications to the code. You can create a focused
+test for any bug found that way. Often, there will be many tests failing, but a
+lot of then will have the same root cause.  These tests will be easier to debug
+and will not put undue burden on all other bots and developers.
 
 In conclusion, you'll want to opt for an API test to test the API itself or
 when you need the expressivity, either for the test case itself or for the
@@ -599,7 +611,7 @@ A quick guide to getting started with PTVS is as follows:
     #. Right click the Project node in Solution Explorer.
     #. In the General tab, Make sure Python 3.5 Debug is the selected Interpreter.
     #. In Debug/Search Paths, enter the path to your ninja/lib/site-packages directory.
-    #. In Debug/Environment Variables, enter ``VCINSTALLDIR=C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\``.
+    #. In Debug/Environment Variables, enter ``VCINSTALLDIR=C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\``.
     #. If you want to enabled mixed mode debugging, check Enable native code debugging (this slows down debugging, so enable it only on an as-needed basis.)
 #. Set the command line for the test suite to run.
     #. Right click the project in solution explorer and choose the Debug tab.

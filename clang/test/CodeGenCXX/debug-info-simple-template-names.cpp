@@ -1,6 +1,11 @@
-// RUN: %clang_cc1 -emit-llvm -triple x86_64-unknown_unknown -debug-info-kind=limited -gsimple-template-names=mangled %s -o - -w -std=c++17 | FileCheck %s
-// RUN: %clang_cc1 -emit-llvm -triple x86_64-unknown_unknown -debug-info-kind=limited -gsimple-template-names=simple %s -o - -w -std=c++17 | FileCheck --check-prefix=SIMPLE --implicit-check-not=_STN %s
-// RUN: %clang_cc1 -emit-llvm -triple x86_64-unknown_unknown -debug-info-kind=limited %s -o - -w -std=c++17 | FileCheck --check-prefix=FULL --implicit-check-not=_STN %s
+// RUN: %clang_cc1 -emit-llvm -triple x86_64-unknown_unknown -std=c++17 %s -o - -w -debug-info-kind=limited -gsimple-template-names=mangled \
+// RUN:   | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -triple x86_64-unknown_unknown -std=c++17 %s -o - -w -debug-info-kind=limited -gsimple-template-names=simple \
+// RUN:   | FileCheck %s --implicit-check-not=_STN --check-prefix=SIMPLE
+// RUN: %clang_cc1 -emit-llvm -triple x86_64-unknown_unknown -std=c++17 %s -o - -w -debug-info-kind=limited \
+// RUN:   | FileCheck %s --implicit-check-not=_STN --check-prefix=FULL
+// RUN: %clang_cc1 -emit-llvm -triple x86_64-unknown_unknown -std=c++17 %s -o - -w -debug-info-kind=line-tables-only -gsimple-template-names=mangled -fdebug-info-for-profiling \
+// RUN:   | FileCheck %s --implicit-check-not=_STN --check-prefix=FULL
 
 template <typename... T>
 void f1() {}
@@ -16,6 +21,17 @@ struct t2 {
 };
 template <template <typename...> class T>
 void f3() {}
+namespace {
+enum LocalEnum { LocalEnum1 };
+}
+template<typename T, T ... ts>
+struct t3 { };
+struct t4 {
+  t3<LocalEnum, LocalEnum1> m1;
+};
+  
+t4 v1;
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "t3<(anonymous namespace)::LocalEnum, (anonymous namespace)::LocalEnum1>"
 void f() {
   // Basic examples of simplifiable/rebuildable names
   f1<>();
@@ -48,9 +64,11 @@ void f() {
   // since we don't emit the column number. Also lambdas and unnamed classes are
   // ambiguous with each other - there's no DWARF that designates a lambda as
   // anything other than another unnamed class/struct.
-  auto A = [] {};
-  f1<decltype(A)>();
-  // CHECK: !DISubprogram(name: "f1<(lambda at {{.*}}debug-info-simple-template-names.cpp:[[# @LINE - 2]]:12)>",
+  auto Lambda = [] {};
+  f1<decltype(Lambda)>();
+  // CHECK: !DISubprogram(name: "f1<(lambda at {{.*}}debug-info-simple-template-names.cpp:[[# @LINE - 2]]:17)>",
+  f1<t1<t1<decltype(Lambda)>>>();
+  // CHECK: !DISubprogram(name: "f1<t1<t1<(lambda at {{.*}}> > >",
   struct {
   } unnamed_struct;
   f1<decltype(unnamed_struct)>();
@@ -92,4 +110,16 @@ void f() {
 
   f3<t1>();
   // CHECK: !DISubprogram(name: "_STNf3|<t1>",
+  
+  f1<_BitInt(3)>();
+  // CHECK: !DISubprogram(name: "f1<_BitInt(3)>",
+
+  f1<const unsigned _BitInt(5)>();
+  // CHECK: !DISubprogram(name: "f1<const unsigned _BitInt(5)>",
+
+  // Add a parameter just so this differs from other attributed function types
+  // that don't mangle differently.
+  int fnrt() __attribute__((noreturn));
+  f1<decltype(fnrt)>();
+  // CHECK: !DISubprogram(name: "f1<int () __attribute__((noreturn))>",
 }

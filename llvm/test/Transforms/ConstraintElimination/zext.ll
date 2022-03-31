@@ -169,7 +169,7 @@ define i1 @sge_zext(i8 %x, i16 %y) {
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp sge i16 [[X_EXT]], [[Y]]
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp sge i16 [[X_EXT]], 10
-; CHECK-NEXT:    [[R_1:%.*]] = xor i1 [[T_1]], [[C_2]]
+; CHECK-NEXT:    [[R_1:%.*]] = xor i1 true, [[C_2]]
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp sge i16 [[Y]], [[X_EXT]]
 ; CHECK-NEXT:    [[R_2:%.*]] = xor i1 [[R_1]], [[C_3]]
 ; CHECK-NEXT:    [[C_4:%.*]] = icmp sge i16 10, [[X_EXT]]
@@ -178,7 +178,7 @@ define i1 @sge_zext(i8 %x, i16 %y) {
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[T_2:%.*]] = icmp sge i16 [[Y]], [[X_EXT]]
 ; CHECK-NEXT:    [[F_1:%.*]] = icmp sge i16 [[X_EXT]], [[Y]]
-; CHECK-NEXT:    [[R_4:%.*]] = xor i1 [[T_2]], [[F_1]]
+; CHECK-NEXT:    [[R_4:%.*]] = xor i1 true, false
 ; CHECK-NEXT:    [[C_5:%.*]] = icmp sge i16 [[X_EXT]], 10
 ; CHECK-NEXT:    [[R_5:%.*]] = xor i1 [[R_4]], [[C_5]]
 ; CHECK-NEXT:    [[C_6:%.*]] = icmp sge i16 10, [[X_EXT]]

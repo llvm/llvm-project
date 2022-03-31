@@ -10,6 +10,7 @@
 #define FORTRAN_SEMANTICS_MOD_FILE_H_
 
 #include "flang/Semantics/attr.h"
+#include "flang/Semantics/symbol.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
 
@@ -42,6 +43,8 @@ private:
   std::string useExtraAttrsBuf_;
   std::string declsBuf_;
   std::string containsBuf_;
+  // Tracks nested DEC structures and fields of that type
+  UnorderedSymbolSet emittedDECStructures_, emittedDECFields_;
 
   llvm::raw_string_ostream uses_{usesBuf_};
   llvm::raw_string_ostream useExtraAttrs_{
@@ -53,10 +56,18 @@ private:
   void WriteOne(const Scope &);
   void Write(const Symbol &);
   std::string GetAsString(const Symbol &);
+  void PutSymbols(const Scope &);
   // Returns true if a derived type with bindings and "contains" was emitted
-  bool PutSymbols(const Scope &);
+  bool PutComponents(const Symbol &);
   void PutSymbol(llvm::raw_ostream &, const Symbol &);
-  void PutDerivedType(const Symbol &);
+  void PutEntity(llvm::raw_ostream &, const Symbol &);
+  void PutEntity(
+      llvm::raw_ostream &, const Symbol &, std::function<void()>, Attrs);
+  void PutObjectEntity(llvm::raw_ostream &, const Symbol &);
+  void PutProcEntity(llvm::raw_ostream &, const Symbol &);
+  void PutDerivedType(const Symbol &, const Scope * = nullptr);
+  void PutDECStructure(const Symbol &, const Scope * = nullptr);
+  void PutTypeParam(llvm::raw_ostream &, const Symbol &);
   void PutSubprogram(const Symbol &);
   void PutGeneric(const Symbol &);
   void PutUse(const Symbol &);
@@ -70,8 +81,8 @@ public:
   // Find and read the module file for a module or submodule.
   // If ancestor is specified, look for a submodule of that module.
   // Return the Scope for that module/submodule or nullptr on error.
-  Scope *Read(
-      const SourceName &, Scope *ancestor = nullptr, bool silent = false);
+  Scope *Read(const SourceName &, std::optional<bool> isIntrinsic,
+      Scope *ancestor, bool silent = false);
 
 private:
   SemanticsContext &context_;

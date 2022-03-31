@@ -845,6 +845,90 @@ entry:
   ret <2 x double> %fmla1
 }
 
+define <2 x float> @fmls_indexed_2s_strict(<2 x float> %a, <2 x float> %b, <2 x float> %c) nounwind readnone ssp {
+; CHECK-LABEL: fmls_indexed_2s_strict:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    fmls.2s v0, v2, v1[0]
+; CHECK-NEXT:    ret
+entry:
+  %0 = fneg <2 x float> %c
+  %lane = shufflevector <2 x float> %b, <2 x float> undef, <2 x i32> zeroinitializer
+  %fmls1 = tail call <2 x float> @llvm.experimental.constrained.fma.v2f32(<2 x float> %0, <2 x float> %lane, <2 x float> %a, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret <2 x float> %fmls1
+}
+
+define <4 x float> @fmls_indexed_4s_strict(<4 x float> %a, <4 x float> %b, <4 x float> %c) nounwind readnone ssp {
+; CHECK-LABEL: fmls_indexed_4s_strict:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmls.4s v0, v2, v1[0]
+; CHECK-NEXT:    ret
+entry:
+  %0 = fneg <4 x float> %c
+  %lane = shufflevector <4 x float> %b, <4 x float> undef, <4 x i32> zeroinitializer
+  %fmls1 = tail call <4 x float> @llvm.experimental.constrained.fma.v4f32(<4 x float> %0, <4 x float> %lane, <4 x float> %a, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret <4 x float> %fmls1
+}
+
+define <2 x double> @fmls_indexed_2d_strict(<2 x double> %a, <2 x double> %b, <2 x double> %c) nounwind readnone ssp {
+; CHECK-LABEL: fmls_indexed_2d_strict:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmls.2d v0, v2, v1[0]
+; CHECK-NEXT:    ret
+entry:
+  %0 = fneg <2 x double> %c
+  %lane = shufflevector <2 x double> %b, <2 x double> undef, <2 x i32> zeroinitializer
+  %fmls1 = tail call <2 x double> @llvm.experimental.constrained.fma.v2f64(<2 x double> %0, <2 x double> %lane, <2 x double> %a, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret <2 x double> %fmls1
+}
+
+define <2 x float> @fmla_indexed_scalar_2s_strict(<2 x float> %a, <2 x float> %b, float %c) nounwind readnone ssp {
+; CHECK-LABEL: fmla_indexed_scalar_2s_strict:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $s2 killed $s2 def $q2
+; CHECK-NEXT:    fmla.2s v0, v1, v2[0]
+; CHECK-NEXT:    ret
+entry:
+  %v1 = insertelement <2 x float> undef, float %c, i32 0
+  %v2 = insertelement <2 x float> %v1, float %c, i32 1
+  %fmla1 = tail call <2 x float> @llvm.experimental.constrained.fma.v2f32(<2 x float> %v2, <2 x float> %b, <2 x float> %a, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret <2 x float> %fmla1
+}
+
+define <4 x float> @fmla_indexed_scalar_4s_strict(<4 x float> %a, <4 x float> %b, float %c) nounwind readnone ssp {
+; CHECK-LABEL: fmla_indexed_scalar_4s_strict:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $s2 killed $s2 def $q2
+; CHECK-NEXT:    fmla.4s v0, v1, v2[0]
+; CHECK-NEXT:    ret
+entry:
+  %v1 = insertelement <4 x float> undef, float %c, i32 0
+  %v2 = insertelement <4 x float> %v1, float %c, i32 1
+  %v3 = insertelement <4 x float> %v2, float %c, i32 2
+  %v4 = insertelement <4 x float> %v3, float %c, i32 3
+  %fmla1 = tail call <4 x float> @llvm.experimental.constrained.fma.v4f32(<4 x float> %v4, <4 x float> %b, <4 x float> %a, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret <4 x float> %fmla1
+}
+
+define <2 x double> @fmla_indexed_scalar_2d_strict(<2 x double> %a, <2 x double> %b, double %c) nounwind readnone ssp {
+; CHECK-LABEL: fmla_indexed_scalar_2d_strict:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-NEXT:    fmla.2d v0, v1, v2[0]
+; CHECK-NEXT:    ret
+entry:
+  %v1 = insertelement <2 x double> undef, double %c, i32 0
+  %v2 = insertelement <2 x double> %v1, double %c, i32 1
+  %fmla1 = tail call <2 x double> @llvm.experimental.constrained.fma.v2f64(<2 x double> %v2, <2 x double> %b, <2 x double> %a, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret <2 x double> %fmla1
+}
+
+attributes #0 = { strictfp }
+
+declare <2 x float> @llvm.experimental.constrained.fma.v2f32(<2 x float>, <2 x float>, <2 x float>, metadata, metadata)
+declare <4 x float> @llvm.experimental.constrained.fma.v4f32(<4 x float>, <4 x float>, <4 x float>, metadata, metadata)
+declare <2 x double> @llvm.experimental.constrained.fma.v2f64(<2 x double>, <2 x double>, <2 x double>, metadata, metadata)
+
 define <4 x i16> @mul_4h(<4 x i16>* %A, <4 x i16>* %B) nounwind {
 ; CHECK-LABEL: mul_4h:
 ; CHECK:       // %bb.0:

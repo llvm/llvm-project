@@ -16,6 +16,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
 #include "llvm/Object/ELFObjectFile.h"
+#include "llvm/Support/MathExtras.h"
 
 #define DEBUG_TYPE "jitlink"
 
@@ -41,16 +42,17 @@ private:
 
     char *BlockWorkingMem = B.getAlreadyMutableContent().data();
     char *FixupPtr = BlockWorkingMem + E.getOffset();
-    JITTargetAddress FixupAddress = B.getAddress() + E.getOffset();
+    auto FixupAddress = B.getAddress() + E.getOffset();
     switch (E.getKind()) {
     case aarch64::R_AARCH64_CALL26: {
-      assert((FixupAddress & 0x3) == 0 && "Call-inst is not 32-bit aligned");
+      assert((FixupAddress.getValue() & 0x3) == 0 &&
+             "Call-inst is not 32-bit aligned");
       int64_t Value = E.getTarget().getAddress() - FixupAddress + E.getAddend();
 
       if (static_cast<uint64_t>(Value) & 0x3)
         return make_error<JITLinkError>("Call target is not 32-bit aligned");
 
-      if (!fitsRangeSignedInt<27>(Value))
+      if (!isInt<28>(Value))
         return makeTargetOutOfRangeError(G, B, E);
 
       uint32_t RawInstr = *(little32_t *)FixupPtr;
@@ -63,10 +65,6 @@ private:
     }
     }
     return Error::success();
-  }
-
-  template <uint8_t Bits> static bool fitsRangeSignedInt(int64_t Value) {
-    return Value >= -(1ll << Bits) && Value < (1ll << Bits);
   }
 };
 
@@ -100,7 +98,7 @@ private:
 
   Error addSingleRelocation(const typename ELFT::Rela &Rel,
                             const typename ELFT::Shdr &FixupSect,
-                            Section &GraphSection) {
+                            Block &BlockToFix) {
     using Base = ELFLinkGraphBuilder<ELFT>;
 
     uint32_t SymbolIndex = Rel.getSymbol(false);
@@ -123,17 +121,17 @@ private:
       return Kind.takeError();
 
     int64_t Addend = Rel.r_addend;
-    Block *BlockToFix = *(GraphSection.blocks().begin());
-    JITTargetAddress FixupAddress = FixupSect.sh_addr + Rel.r_offset;
-    Edge::OffsetT Offset = FixupAddress - BlockToFix->getAddress();
+    orc::ExecutorAddr FixupAddress =
+        orc::ExecutorAddr(FixupSect.sh_addr) + Rel.r_offset;
+    Edge::OffsetT Offset = FixupAddress - BlockToFix.getAddress();
     Edge GE(*Kind, Offset, *GraphSymbol, Addend);
     LLVM_DEBUG({
       dbgs() << "    ";
-      printEdge(dbgs(), *BlockToFix, GE, aarch64::getEdgeKindName(*Kind));
+      printEdge(dbgs(), BlockToFix, GE, aarch64::getEdgeKindName(*Kind));
       dbgs() << "\n";
     });
 
-    BlockToFix->addEdge(std::move(GE));
+    BlockToFix.addEdge(std::move(GE));
     return Error::success();
   }
 

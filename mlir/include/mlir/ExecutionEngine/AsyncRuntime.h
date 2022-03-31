@@ -29,13 +29,13 @@ namespace runtime {
 //===----------------------------------------------------------------------===//
 
 // Runtime implementation of `async.token` data type.
-typedef struct AsyncToken AsyncToken;
+using AsyncToken = struct AsyncToken;
 
 // Runtime implementation of `async.group` data type.
-typedef struct AsyncGroup AsyncGroup;
+using AsyncGroup = struct AsyncGroup;
 
 // Runtime implementation of `async.value` data type.
-typedef struct AsyncValue AsyncValue;
+using AsyncValue = struct AsyncValue;
 
 // Async value payload stored in a memory owned by the async.value.
 using ValueStorage = void *;
@@ -122,6 +122,9 @@ extern "C" void mlirAsyncRuntimeAwaitValueAndExecute(AsyncValue *, CoroHandle,
 // managed by the runtime after the all members of the group become ready.
 extern "C" void
 mlirAsyncRuntimeAwaitAllInGroupAndExecute(AsyncGroup *, CoroHandle, CoroResume);
+
+// Returns the current number of available worker threads in the threadpool.
+extern "C" int64_t mlirAsyncRuntimGetNumWorkerThreads();
 
 //===----------------------------------------------------------------------===//
 // Small async runtime support library for testing.

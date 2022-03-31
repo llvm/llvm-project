@@ -15,8 +15,10 @@
 
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64InstrInfo.h"
-#include <llvm/IR/Metadata.h>
-#include <llvm/IR/Module.h>
+#include "llvm/MC/MCAsmInfo.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 
 using namespace llvm;
 
@@ -113,4 +115,20 @@ bool AArch64FunctionInfo::shouldSignReturnAddress() const {
   return shouldSignReturnAddress(llvm::any_of(
       MF.getFrameInfo().getCalleeSavedInfo(),
       [](const auto &Info) { return Info.getReg() == AArch64::LR; }));
+}
+
+bool AArch64FunctionInfo::needsDwarfUnwindInfo() const {
+  if (!NeedsDwarfUnwindInfo.hasValue())
+    NeedsDwarfUnwindInfo = MF.needsFrameMoves() &&
+                           !MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
+
+  return NeedsDwarfUnwindInfo.getValue();
+}
+
+bool AArch64FunctionInfo::needsAsyncDwarfUnwindInfo() const {
+  if (!NeedsDwarfAsyncUnwindInfo.hasValue())
+    NeedsDwarfAsyncUnwindInfo =
+        needsDwarfUnwindInfo() &&
+        MF.getFunction().getUWTableKind() == UWTableKind::Async;
+  return NeedsDwarfAsyncUnwindInfo.getValue();
 }

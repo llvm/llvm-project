@@ -6,19 +6,19 @@ void f_void(void) {}
 
 // Arguments and return values smaller than the word size are extended.
 
-// CHECK-LABEL: define{{.*}} signext i32 @f_int_1(i32 signext %x)
+// CHECK-LABEL: define{{.*}} signext i32 @f_int_1(i32 noundef signext %x)
 int f_int_1(int x) { return x; }
 
-// CHECK-LABEL: define{{.*}} zeroext i32 @f_int_2(i32 zeroext %x)
+// CHECK-LABEL: define{{.*}} zeroext i32 @f_int_2(i32 noundef zeroext %x)
 unsigned f_int_2(unsigned x) { return x; }
 
-// CHECK-LABEL: define{{.*}} i64 @f_int_3(i64 %x)
+// CHECK-LABEL: define{{.*}} i64 @f_int_3(i64 noundef %x)
 long long f_int_3(long long x) { return x; }
 
-// CHECK-LABEL: define{{.*}} signext i8 @f_int_4(i8 signext %x)
+// CHECK-LABEL: define{{.*}} signext i8 @f_int_4(i8 noundef signext %x)
 char f_int_4(char x) { return x; }
 
-// CHECK-LABEL: define{{.*}} fp128 @f_ld(fp128 %x)
+// CHECK-LABEL: define{{.*}} fp128 @f_ld(fp128 noundef %x)
 long double f_ld(long double x) { return x; }
 
 // Small structs are passed in registers.
@@ -39,7 +39,7 @@ struct medium {
   int *c, *d;
 };
 
-// CHECK-LABEL: define{{.*}} %struct.medium @f_medium(%struct.medium* %x)
+// CHECK-LABEL: define{{.*}} %struct.medium @f_medium(%struct.medium* noundef %x)
 struct medium f_medium(struct medium x) {
   x.a += *x.b;
   x.b = 0;
@@ -53,7 +53,7 @@ struct large {
   int x;
 };
 
-// CHECK-LABEL: define{{.*}} void @f_large(%struct.large* noalias sret(%struct.large) align 8 %agg.result, %struct.large* %x)
+// CHECK-LABEL: define{{.*}} void @f_large(%struct.large* noalias sret(%struct.large) align 8 %agg.result, %struct.large* noundef %x)
 struct large f_large(struct large x) {
   x.a += *x.b;
   x.b = 0;
@@ -115,12 +115,12 @@ struct tiny f_tiny(struct tiny x) {
 // CHECK: %[[XV:[^ ]+]] = zext i8 %{{[^ ]+}} to i64
 // CHECK: %[[HB:[^ ]+]] = shl i64 %[[XV]], 56
 // CHECK: = call i64 @f_tiny(i64 %[[HB]])
-void call_tiny() {
+void call_tiny(void) {
   struct tiny x = { 1 };
   f_tiny(x);
 }
 
-// CHECK-LABEL: define{{.*}} signext i32 @f_variable(i8* %f, ...)
+// CHECK-LABEL: define{{.*}} signext i32 @f_variable(i8* noundef %f, ...)
 // CHECK: %ap = alloca i8*
 // CHECK: call void @llvm.va_start
 //

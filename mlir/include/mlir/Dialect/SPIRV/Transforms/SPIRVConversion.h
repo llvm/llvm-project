@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_SPIRV_SPIRVCONVERSION_H
-#define MLIR_DIALECT_SPIRV_SPIRVCONVERSION_H
+#ifndef MLIR_DIALECT_SPIRV_TRANSFORMS_SPIRVCONVERSION_H
+#define MLIR_DIALECT_SPIRV_TRANSFORMS_SPIRVCONVERSION_H
 
 #include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
@@ -47,20 +47,20 @@ public:
     ///
     /// If the original scalar type has less than 32-bit, a multiple of its
     /// values will be packed into one 32-bit value to be memory efficient.
-    bool emulateNon32BitScalarTypes;
+    bool emulateNon32BitScalarTypes{true};
 
     /// Use 64-bit integers to convert index types.
-    bool use64bitIndex;
+    bool use64bitIndex{false};
 
     /// The number of bits to store a boolean value. It is eight bits by
     /// default.
-    unsigned boolNumBits;
+    unsigned boolNumBits{8};
 
     // Note: we need this instead of inline initializers because of
     // https://bugs.llvm.org/show_bug.cgi?id=36684
     Options()
-        : emulateNon32BitScalarTypes(true), use64bitIndex(false),
-          boolNumBits(8) {}
+
+    {}
   };
 
   explicit SPIRVTypeConverter(spirv::TargetEnvAttr targetAttr,
@@ -168,4 +168,4 @@ spirv::AccessChainOp getElementPtr(SPIRVTypeConverter &typeConverter,
 } // namespace spirv
 } // namespace mlir
 
-#endif // MLIR_DIALECT_SPIRV_SPIRVCONVERSION_H
+#endif // MLIR_DIALECT_SPIRV_TRANSFORMS_SPIRVCONVERSION_H

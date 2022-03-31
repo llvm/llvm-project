@@ -31,7 +31,6 @@ add_definitions(-DTARGET_NAME=CUDA)
 
 include_directories(
   ${LIBOMPTARGET_DEP_LIBELF_INCLUDE_DIRS}
-  ${LIBOMPTARGET_LLVM_INCLUDE_DIRS}
 )
 
 set(LIBOMPTARGET_DLOPEN_LIBCUDA OFF)
@@ -72,7 +71,7 @@ target_link_libraries(omptarget.rtl.cuda
 # Otherwise this plugin is being built speculatively and there may be no cuda available
 if (LIBOMPTARGET_CAN_LINK_LIBCUDA OR LIBOMPTARGET_FORCE_DLOPEN_LIBCUDA)
   libomptarget_say("Enable tests using CUDA plugin")
-  set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS} nvptx64-nvidia-cuda nvptx64-nvidia-cuda-newRTL" PARENT_SCOPE)
+  set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS} nvptx64-nvidia-cuda nvptx64-nvidia-cuda-newDriver" PARENT_SCOPE)
 else()
   libomptarget_say("Disabling tests using CUDA plugin as cuda may not be available")
 endif()

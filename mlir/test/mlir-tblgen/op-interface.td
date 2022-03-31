@@ -3,6 +3,24 @@
 
 include "mlir/IR/OpBase.td"
 
+def ExtraShardDeclsInterface : OpInterface<"ExtraShardDeclsInterface"> {
+  let extraSharedClassDeclaration = [{
+    bool sharedMethodDeclaration() {
+      return $_op.someOtherMethod();
+    }
+  }];
+}
+
+// DECL: class ExtraShardDeclsInterface
+// DECL:      bool sharedMethodDeclaration() {
+// DECL-NEXT:   return (*this).someOtherMethod();
+// DECL-NEXT: }
+
+// DECL: struct ExtraShardDeclsInterfaceTrait
+// DECL:      bool sharedMethodDeclaration() {
+// DECL-NEXT:   return (*static_cast<ConcreteOp *>(this)).someOtherMethod();
+// DECL-NEXT: }
+
 def TestOpInterface : OpInterface<"TestOpInterface"> {
   let description = [{some op interface description}];
 
@@ -22,6 +40,19 @@ def TestOpInterface : OpInterface<"TestOpInterface"> {
       /*defaultBody=*/[{ return 0; }]
     >,
   ];
+}
+
+def TestOpInterfaceVerify : OpInterface<"TestOpInterfaceVerify"> {
+  let verify = [{
+    return foo();
+  }];
+}
+
+def TestOpInterfaceVerifyRegion : OpInterface<"TestOpInterfaceVerifyRegion"> {
+  let verify = [{
+    return foo();
+  }];
+  let verifyWithRegions = 1;
 }
 
 // Define Ops with TestOpInterface and
@@ -46,6 +77,12 @@ def DeclareMethodsWithDefaultOp : Op<TestDialect, "declare_methods_op",
 
 // DECL: template<typename ConcreteOp>
 // DECL: int detail::TestOpInterfaceInterfaceTraits::Model<ConcreteOp>::foo
+
+// DECL-LABEL: struct TestOpInterfaceVerifyTrait
+// DECL: verifyTrait
+
+// DECL-LABEL: struct TestOpInterfaceVerifyRegionTrait
+// DECL: verifyRegionTrait
 
 // OP_DECL-LABEL: class DeclareMethodsOp : public
 // OP_DECL: int foo(int input);

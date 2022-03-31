@@ -16,7 +16,6 @@
 #include "GIMatchDagPredicateDependencyEdge.h"
 
 namespace llvm {
-class GIMatchDag;
 
 /// This class manages lifetimes for data associated with the GIMatchDag object.
 class GIMatchDagContext {
@@ -84,9 +83,7 @@ protected:
   bool HasPostMatchPredicate = false;
 
 public:
-  GIMatchDag(GIMatchDagContext &Ctx)
-      : Ctx(Ctx), InstrNodes(), PredicateNodes(), Edges(),
-        PredicateDependencies() {}
+  GIMatchDag(GIMatchDagContext &Ctx) : Ctx(Ctx) {}
   GIMatchDag(const GIMatchDag &) = delete;
 
   GIMatchDagContext &getContext() const { return Ctx; }

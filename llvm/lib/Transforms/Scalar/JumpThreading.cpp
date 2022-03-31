@@ -56,7 +56,6 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
-#include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -74,7 +73,6 @@
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
 #include <cassert>
-#include <cstddef>
 #include <cstdint>
 #include <iterator>
 #include <memory>
@@ -728,8 +726,8 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
   // Handle some boolean conditions.
   if (I->getType()->getPrimitiveSizeInBits() == 1) {
     using namespace PatternMatch;
-
-    assert(Preference == WantInteger && "One-bit non-integer type?");
+    if (Preference != WantInteger)
+      return false;
     // X | true -> true
     // X & false -> false
     Value *Op0, *Op1;
@@ -789,8 +787,8 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
 
   // Try to simplify some other binary operator values.
   } else if (BinaryOperator *BO = dyn_cast<BinaryOperator>(I)) {
-    assert(Preference != WantBlockAddress
-            && "A binary operator creating a block address?");
+    if (Preference != WantInteger)
+      return false;
     if (ConstantInt *CI = dyn_cast<ConstantInt>(BO->getOperand(1))) {
       PredValueInfoTy LHSVals;
       computeValueKnownInPredecessorsImpl(BO->getOperand(0), BB, LHSVals,
@@ -811,7 +809,8 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
 
   // Handle compare with phi operand, where the PHI is defined in this block.
   if (CmpInst *Cmp = dyn_cast<CmpInst>(I)) {
-    assert(Preference == WantInteger && "Compares only produce integers");
+    if (Preference != WantInteger)
+      return false;
     Type *CmpType = Cmp->getType();
     Value *CmpLHS = Cmp->getOperand(0);
     Value *CmpRHS = Cmp->getOperand(1);

@@ -127,3 +127,39 @@ struct AssignmentCallAtReturn {
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: operator=() should always return '*this'
   }
 };
+
+// Check that no false positives are issued when using type aliases.
+struct TypeAlias {
+  using Alias = TypeAlias;
+  // This is correct and should not produce any warnings:
+  Alias &operator=(const Alias &) { return *this; }
+
+  using AliasRef = Alias &;
+  // So is this (assignments from other types are fine):
+  AliasRef operator=(int) { return *this; }
+};
+
+// Same check as above with typedef instead of using
+struct TypeAliasTypedef {
+  typedef TypeAliasTypedef Alias;
+  Alias &operator=(const Alias &) { return *this; }
+
+  typedef Alias &AliasRef;
+  AliasRef operator=(int) { return *this; }
+};
+
+// Same check as above for a template class
+template <typename T>
+struct TemplateTypeAlias {
+  using Alias1 = TemplateTypeAlias &;
+  using Alias2 = TemplateTypeAlias const &;
+  Alias1 operator=(Alias2) { return *this; }
+
+  template <typename U>
+  using Alias3 = TemplateTypeAlias<U>;
+  Alias3<T> &operator=(int) { return *this; }
+
+  // Using a different type parameter in the return type should give a warning
+  Alias3<TypeAlias::Alias> &operator=(double) { return *this; }
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: operator=() should return 'TemplateTypeAlias&' [misc-unconventional-assign-operator]
+};

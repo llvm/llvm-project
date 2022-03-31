@@ -51,7 +51,7 @@
 // CHECK-NEXT:    store i32 %[[TMP8]], i32* %[[P_UPPERBOUND]], align 4
 // CHECK-NEXT:    store i32 1, i32* %[[P_STRIDE]], align 4
 // CHECK-NEXT:    %[[OMP_GLOBAL_THREAD_NUM:.+]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @1)
-// CHECK-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @1, i32 %[[OMP_GLOBAL_THREAD_NUM]], i32 34, i32* %[[P_LASTITER]], i32* %[[P_LOWERBOUND]], i32* %[[P_UPPERBOUND]], i32* %[[P_STRIDE]], i32 1, i32 1)
+// CHECK-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @1, i32 %[[OMP_GLOBAL_THREAD_NUM]], i32 34, i32* %[[P_LASTITER]], i32* %[[P_LOWERBOUND]], i32* %[[P_UPPERBOUND]], i32* %[[P_STRIDE]], i32 1, i32 0)
 // CHECK-NEXT:    %[[TMP9:.+]] = load i32, i32* %[[P_LOWERBOUND]], align 4
 // CHECK-NEXT:    %[[TMP10:.+]] = load i32, i32* %[[P_UPPERBOUND]], align 4
 // CHECK-NEXT:    %[[TMP11:.+]] = sub i32 %[[TMP10]], %[[TMP9]]
@@ -180,7 +180,10 @@ void unroll_partial_heuristic_for(int n, float *a, float *b, float *c, float *d)
 // CHECK-NEXT:    %[[TMP10:.+]] = load i32, i32* %[[DOTSTART]], align 4
 // CHECK-NEXT:    %[[SUB:.+]] = sub nsw i32 %[[TMP9]], %[[TMP10]]
 // CHECK-NEXT:    %[[TMP11:.+]] = load i32, i32* %[[DOTSTEP]], align 4
-// CHECK-NEXT:    %[[DIV:.+]] = udiv i32 %[[SUB]], %[[TMP11]]
+// CHECK-NEXT:    %[[SUB1:.+]] = sub i32 %[[TMP11]], 1
+// CHECK-NEXT:    %[[ADD:.+]] = add i32 %[[SUB]], %[[SUB1]]
+// CHECK-NEXT:    %[[TMP12:.+]] = load i32, i32* %[[DOTSTEP]], align 4
+// CHECK-NEXT:    %[[DIV:.+]] = udiv i32 %[[ADD]], %[[TMP12]]
 // CHECK-NEXT:    br label %[[COND_END:.+]]
 // CHECK-EMPTY:
 // CHECK-NEXT:  [[COND_FALSE]]:
@@ -188,8 +191,8 @@ void unroll_partial_heuristic_for(int n, float *a, float *b, float *c, float *d)
 // CHECK-EMPTY:
 // CHECK-NEXT:  [[COND_END]]:
 // CHECK-NEXT:    %[[COND:.+]] = phi i32 [ %[[DIV]], %[[COND_TRUE]] ], [ 0, %[[COND_FALSE]] ]
-// CHECK-NEXT:    %[[TMP12:.+]] = load i32*, i32** %[[DISTANCE_ADDR]], align 8
-// CHECK-NEXT:    store i32 %[[COND]], i32* %[[TMP12]], align 4
+// CHECK-NEXT:    %[[TMP13:.+]] = load i32*, i32** %[[DISTANCE_ADDR]], align 8
+// CHECK-NEXT:    store i32 %[[COND]], i32* %[[TMP13]], align 4
 // CHECK-NEXT:    ret void
 // CHECK-NEXT:  }
 

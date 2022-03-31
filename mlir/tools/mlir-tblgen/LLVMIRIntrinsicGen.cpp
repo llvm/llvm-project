@@ -24,31 +24,31 @@
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 
-static llvm::cl::OptionCategory IntrinsicGenCat("Intrinsics Generator Options");
+static llvm::cl::OptionCategory intrinsicGenCat("Intrinsics Generator Options");
 
 static llvm::cl::opt<std::string>
     nameFilter("llvmir-intrinsics-filter",
                llvm::cl::desc("Only keep the intrinsics with the specified "
                               "substring in their record name"),
-               llvm::cl::cat(IntrinsicGenCat));
+               llvm::cl::cat(intrinsicGenCat));
 
 static llvm::cl::opt<std::string>
     opBaseClass("dialect-opclass-base",
                 llvm::cl::desc("The base class for the ops in the dialect we "
                                "are planning to emit"),
-                llvm::cl::init("LLVM_IntrOp"), llvm::cl::cat(IntrinsicGenCat));
+                llvm::cl::init("LLVM_IntrOp"), llvm::cl::cat(intrinsicGenCat));
 
 static llvm::cl::opt<std::string> accessGroupRegexp(
     "llvmir-intrinsics-access-group-regexp",
     llvm::cl::desc("Mark intrinsics that match the specified "
                    "regexp as taking an access group metadata"),
-    llvm::cl::cat(IntrinsicGenCat));
+    llvm::cl::cat(intrinsicGenCat));
 
 static llvm::cl::opt<std::string> aliasScopesRegexp(
     "llvmir-intrinsics-alias-scopes-regexp",
     llvm::cl::desc("Mark intrinsics that match the specified "
                    "regexp as taking alias.scopes and noalias metadata"),
-    llvm::cl::cat(IntrinsicGenCat));
+    llvm::cl::cat(intrinsicGenCat));
 
 // Used to represent the indices of overloadable operands/results.
 using IndicesTy = llvm::SmallBitVector;
@@ -65,7 +65,7 @@ static IndicesTy getOverloadableTypeIdxs(const llvm::Record &record,
                                          const char *listName) {
   auto results = record.getValueAsListOfDefs(listName);
   IndicesTy overloadedOps(results.size());
-  for (auto r : llvm::enumerate(results)) {
+  for (const auto &r : llvm::enumerate(results)) {
     llvm::MVT::SimpleValueType vt = getValueType(r.value());
     switch (vt) {
     case llvm::MVT::iAny:
@@ -104,7 +104,7 @@ public:
     llvm::SmallVector<llvm::StringRef, 8> chunks;
     llvm::StringRef targetPrefix = record.getValueAsString("TargetPrefix");
     name.split(chunks, '_');
-    auto chunksBegin = chunks.begin();
+    auto *chunksBegin = chunks.begin();
     // Remove the target prefix from target specific intrinsics.
     if (!targetPrefix.empty()) {
       assert(targetPrefix == *chunksBegin &&

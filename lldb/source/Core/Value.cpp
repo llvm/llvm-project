@@ -41,13 +41,10 @@ using namespace lldb_private;
 Value::Value() : m_value(), m_compiler_type(), m_data_buffer() {}
 
 Value::Value(const Scalar &scalar)
-    : m_value(scalar), m_compiler_type(), m_context(nullptr),
-      m_value_type(ValueType::Scalar), m_context_type(ContextType::Invalid),
-      m_data_buffer() {}
+    : m_value(scalar), m_compiler_type(), m_data_buffer() {}
 
 Value::Value(const void *bytes, int len)
-    : m_value(), m_compiler_type(), m_context(nullptr),
-      m_value_type(ValueType::HostAddress), m_context_type(ContextType::Invalid),
+    : m_value(), m_compiler_type(), m_value_type(ValueType::HostAddress),
       m_data_buffer() {
   SetBytes(bytes, len);
 }
@@ -663,13 +660,6 @@ void Value::ConvertToLoadAddress(Module *module, Target *target) {
 
   SetValueType(Value::ValueType::LoadAddress);
   GetScalar() = load_addr;
-}
-
-ValueList::ValueList(const ValueList &rhs) { m_values = rhs.m_values; }
-
-const ValueList &ValueList::operator=(const ValueList &rhs) {
-  m_values = rhs.m_values;
-  return *this;
 }
 
 void ValueList::PushValue(const Value &value) { m_values.push_back(value); }

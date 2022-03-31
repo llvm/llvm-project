@@ -14,7 +14,6 @@
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/SCF/SCF.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 #include "llvm/ADT/ArrayRef.h"
@@ -34,8 +33,9 @@ struct ForLoopMapper : public ConvertAffineForToGPUBase<ForLoopMapper> {
     this->numThreadDims = numThreadDims;
   }
 
-  void runOnFunction() override {
-    for (Operation &op : llvm::make_early_inc_range(getFunction().getOps())) {
+  void runOnOperation() override {
+    for (Operation &op :
+         llvm::make_early_inc_range(getOperation().getBody().getOps())) {
       if (auto forOp = dyn_cast<AffineForOp>(&op)) {
         if (failed(convertAffineLoopNestToGPULaunch(forOp, numBlockDims,
                                                     numThreadDims)))
@@ -62,11 +62,12 @@ struct ParallelLoopToGpuPass
 
 } // namespace
 
-std::unique_ptr<OperationPass<FuncOp>>
+std::unique_ptr<InterfacePass<FunctionOpInterface>>
 mlir::createAffineForToGPUPass(unsigned numBlockDims, unsigned numThreadDims) {
   return std::make_unique<ForLoopMapper>(numBlockDims, numThreadDims);
 }
-std::unique_ptr<OperationPass<FuncOp>> mlir::createAffineForToGPUPass() {
+std::unique_ptr<InterfacePass<FunctionOpInterface>>
+mlir::createAffineForToGPUPass() {
   return std::make_unique<ForLoopMapper>();
 }
 

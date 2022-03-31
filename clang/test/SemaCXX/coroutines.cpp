@@ -929,7 +929,7 @@ struct std::coroutine_traits<int, mismatch_gro_type_tag2> {
 
 extern "C" int f(mismatch_gro_type_tag2) {
   // cxx2b-error@-1 {{cannot initialize return object of type 'int' with an rvalue of type 'void *'}}
-  // cxx14_20-error@-2 {{cannot initialize return object of type 'int' with an lvalue of type 'void *'}}
+  // cxx14_20-error@-2 {{cannot initialize return object of type 'int' with an rvalue of type 'void *'}}
   co_return; //expected-note {{function is a coroutine due to use of 'co_return' here}}
 }
 
@@ -970,17 +970,34 @@ extern "C" int f(mismatch_gro_type_tag4) {
   co_return; //expected-note {{function is a coroutine due to use of 'co_return' here}}
 }
 
-struct bad_promise_no_return_func { // expected-note {{'bad_promise_no_return_func' defined here}}
-  coro<bad_promise_no_return_func> get_return_object();
+struct promise_no_return_func {
+  coro<promise_no_return_func> get_return_object();
   suspend_always initial_suspend();
   suspend_always final_suspend() noexcept;
   void unhandled_exception();
 };
-// FIXME: The PDTS currently specifies this as UB, technically forbidding a
-// diagnostic.
-coro<bad_promise_no_return_func> no_return_value_or_return_void() {
-  // expected-error@-1 {{'bad_promise_no_return_func' must declare either 'return_value' or 'return_void'}}
+// [dcl.fct.def.coroutine]/p6
+// If searches for the names return_­void and return_­value in the scope of
+// the promise type each find any declarations, the program is ill-formed.
+// [Note 1: If return_­void is found, flowing off the end of a coroutine is
+// equivalent to a co_­return with no operand. Otherwise, flowing off the end
+// of a coroutine results in undefined behavior ([stmt.return.coroutine]). —
+// end note]
+//
+// So it isn't ill-formed if the promise doesn't define return_value and return_void.
+// It is just a potential UB.
+coro<promise_no_return_func> no_return_value_or_return_void() {
   co_await a;
+}
+
+// The following two tests that it would emit correct diagnostic message
+// if we co_return in `promise_no_return_func`.
+coro<promise_no_return_func> no_return_value_or_return_void_2() {
+  co_return; // expected-error {{no member named 'return_void'}}
+}
+
+coro<promise_no_return_func> no_return_value_or_return_void_3() {
+  co_return 43; // expected-error {{no member named 'return_value'}}
 }
 
 struct bad_await_suspend_return {
@@ -1442,4 +1459,14 @@ void test_missing_awaitable_members() {
   co_await missing_await_ready{}; // expected-error {{no member named 'await_ready' in 'missing_await_ready'}}
   co_await missing_await_suspend{}; // expected-error {{no member named 'await_suspend' in 'missing_await_suspend'}}
   co_await missing_await_resume{}; // expected-error {{no member named 'await_resume' in 'missing_await_resume'}}
+}
+
+__attribute__((__always_inline__))
+void warn_always_inline() { // expected-warning {{this coroutine may be split into pieces; not every piece is guaranteed to be inlined}}
+  co_await suspend_always{};
+}
+
+[[gnu::always_inline]]
+void warn_gnu_always_inline() { // expected-warning {{this coroutine may be split into pieces; not every piece is guaranteed to be inlined}}
+  co_await suspend_always{};
 }

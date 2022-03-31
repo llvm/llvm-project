@@ -18,7 +18,7 @@
 #include "min_allocator.h"
 
 template <class S>
-void
+TEST_CONSTEXPR_CXX20 void
 test(S& s, typename S::const_iterator p, typename S::value_type c, S expected)
 {
     bool sufficient_cap = s.size() < s.capacity();
@@ -32,9 +32,8 @@ test(S& s, typename S::const_iterator p, typename S::value_type c, S expected)
         assert(i == p);
 }
 
-int main(int, char**)
-{
-    {
+bool test() {
+  {
     typedef std::string S;
     S s;
     test(s, s.begin(), '1', S("1"));
@@ -51,9 +50,9 @@ int main(int, char**)
     test(s, s.begin()+4, 'A', S("a567A1432dcb"));
     test(s, s.begin()+5, 'B', S("a567AB1432dcb"));
     test(s, s.begin()+6, 'C', S("a567ABC1432dcb"));
-    }
+  }
 #if TEST_STD_VER >= 11
-    {
+  {
     typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
     S s;
     test(s, s.begin(), '1', S("1"));
@@ -70,7 +69,17 @@ int main(int, char**)
     test(s, s.begin()+4, 'A', S("a567A1432dcb"));
     test(s, s.begin()+5, 'B', S("a567AB1432dcb"));
     test(s, s.begin()+6, 'C', S("a567ABC1432dcb"));
-    }
+  }
+#endif
+
+  return true;
+}
+
+int main(int, char**)
+{
+  test();
+#if TEST_STD_VER > 17
+  // static_assert(test());
 #endif
 
   return 0;

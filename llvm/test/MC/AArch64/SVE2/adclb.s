@@ -12,13 +12,13 @@
 adclb z0.s, z1.s, z31.s
 // CHECK-INST: adclb z0.s, z1.s, z31.s
 // CHECK-ENCODING: [0x20,0xd0,0x1f,0x45]
-// CHECK-ERROR: instruction requires: streaming-sve or sve2
+// CHECK-ERROR: instruction requires: sve2 or sme
 // CHECK-UNKNOWN: 20 d0 1f 45 <unknown>
 
 adclb z0.d, z1.d, z31.d
 // CHECK-INST: adclb z0.d, z1.d, z31.d
 // CHECK-ENCODING: [0x20,0xd0,0x5f,0x45]
-// CHECK-ERROR: instruction requires: streaming-sve or sve2
+// CHECK-ERROR: instruction requires: sve2 or sme
 // CHECK-UNKNOWN: 20 d0 5f 45 <unknown>
 
 
@@ -28,11 +28,11 @@ adclb z0.d, z1.d, z31.d
 movprfx z0, z7
 // CHECK-INST: movprfx	z0, z7
 // CHECK-ENCODING: [0xe0,0xbc,0x20,0x04]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: e0 bc 20 04 <unknown>
 
 adclb z0.d, z1.d, z31.d
 // CHECK-INST: adclb z0.d, z1.d, z31.d
 // CHECK-ENCODING: [0x20,0xd0,0x5f,0x45]
-// CHECK-ERROR: instruction requires: streaming-sve or sve2
+// CHECK-ERROR: instruction requires: sve2 or sme
 // CHECK-UNKNOWN: 20 d0 5f 45 <unknown>

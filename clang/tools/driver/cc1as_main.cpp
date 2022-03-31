@@ -228,7 +228,6 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
         llvm::StringSwitch<llvm::DebugCompressionType>(A->getValue())
             .Case("none", llvm::DebugCompressionType::None)
             .Case("zlib", llvm::DebugCompressionType::Z)
-            .Case("zlib-gnu", llvm::DebugCompressionType::GNU)
             .Default(llvm::DebugCompressionType::None);
   }
 
@@ -456,7 +455,7 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
 
     std::unique_ptr<MCCodeEmitter> CE;
     if (Opts.ShowEncoding)
-      CE.reset(TheTarget->createMCCodeEmitter(*MCII, *MRI, Ctx));
+      CE.reset(TheTarget->createMCCodeEmitter(*MCII, Ctx));
     std::unique_ptr<MCAsmBackend> MAB(
         TheTarget->createMCAsmBackend(*STI, *MRI, MCOptions));
 
@@ -476,7 +475,7 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
     }
 
     std::unique_ptr<MCCodeEmitter> CE(
-        TheTarget->createMCCodeEmitter(*MCII, *MRI, Ctx));
+        TheTarget->createMCCodeEmitter(*MCII, Ctx));
     std::unique_ptr<MCAsmBackend> MAB(
         TheTarget->createMCAsmBackend(*STI, *MRI, MCOptions));
     assert(MAB && "Unable to create asm backend!");

@@ -16,6 +16,8 @@
 #include "llvm-objdump.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
+#include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/FormatVariadic.h"
 

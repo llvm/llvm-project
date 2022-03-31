@@ -28,6 +28,7 @@
 #include "lldb/Target/ThreadPlanRunToAddress.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
 
@@ -166,7 +167,7 @@ void DynamicLoaderDarwin::UnloadImages(
   if (m_process->GetStopID() == m_dyld_image_infos_stop_id)
     return;
 
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
+  Log *log = GetLog(LLDBLog::DynamicLoader);
   Target &target = m_process->GetTarget();
   LLDB_LOGF(log, "Removing %" PRId64 " modules.",
             (uint64_t)solib_addresses.size());
@@ -209,7 +210,7 @@ void DynamicLoaderDarwin::UnloadImages(
 }
 
 void DynamicLoaderDarwin::UnloadAllImages() {
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
+  Log *log = GetLog(LLDBLog::DynamicLoader);
   ModuleList unloaded_modules_list;
 
   Target &target = m_process->GetTarget();
@@ -533,7 +534,7 @@ void DynamicLoaderDarwin::UpdateSpecialBinariesFromNewImageInfos(
   uint32_t exe_idx = UINT32_MAX;
   uint32_t dyld_idx = UINT32_MAX;
   Target &target = m_process->GetTarget();
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
+  Log *log = GetLog(LLDBLog::DynamicLoader);
   ConstString g_dyld_sim_filename("dyld_sim");
 
   ArchSpec target_arch = target.GetArchitecture();
@@ -615,7 +616,7 @@ bool DynamicLoaderDarwin::AddModulesUsingImageInfos(
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   // Now add these images to the main list.
   ModuleList loaded_module_list;
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
+  Log *log = GetLog(LLDBLog::DynamicLoader);
   Target &target = m_process->GetTarget();
   ModuleList &target_images = target.GetImages();
 
@@ -850,7 +851,7 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
   const SymbolContext &current_context =
       current_frame->GetSymbolContext(eSymbolContextSymbol);
   Symbol *current_symbol = current_context.symbol;
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  Log *log = GetLog(LLDBLog::Step);
   TargetSP target_sp(thread.CalculateTarget());
 
   if (current_symbol != nullptr) {
@@ -1134,7 +1135,7 @@ DynamicLoaderDarwin::GetThreadLocalData(const lldb::ModuleSP module_sp,
 }
 
 bool DynamicLoaderDarwin::UseDYLDSPI(Process *process) {
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
+  Log *log = GetLog(LLDBLog::DynamicLoader);
   bool use_new_spi_interface = false;
 
   llvm::VersionTuple version = process->GetHostOSVersion();

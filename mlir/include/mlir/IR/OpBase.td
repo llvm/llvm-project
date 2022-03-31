@@ -38,6 +38,12 @@ class StrFunc<string r> {
   string result = r;
 }
 
+// Helper for marking deprecated classes or defs. To mark a def as deprecated,
+// mix in the `Deprecate` class with a reason.
+class Deprecated<string reason> {
+  string odsDeprecated = reason;
+}
+
 //===----------------------------------------------------------------------===//
 // Predicate definitions
 //===----------------------------------------------------------------------===//
@@ -213,7 +219,16 @@ def IsVectorTypePred : And<[CPred<"$_self.isa<::mlir::VectorType>()">,
                             CPred<"$_self.cast<::mlir::VectorType>().getRank() > 0">]>;
 
 // Temporary vector type clone that allows gradual transition to 0-D vectors.
+// TODO: Remove this when all ops support 0-D vectors.
 def IsVectorOfAnyRankTypePred : CPred<"$_self.isa<::mlir::VectorType>()">;
+
+// Whether a type is a fixed-length VectorType.
+def IsFixedVectorTypePred : CPred<[{$_self.isa<::mlir::VectorType>() &&
+                                  !$_self.cast<VectorType>().isScalable()}]>;
+
+// Whether a type is a scalable VectorType.
+def IsScalableVectorTypePred : CPred<[{$_self.isa<::mlir::VectorType>() &&
+                                   $_self.cast<VectorType>().isScalable()}]>;
 
 // Whether a type is a TensorType.
 def IsTensorTypePred : CPred<"$_self.isa<::mlir::TensorType>()">;
@@ -305,11 +320,11 @@ class Dialect {
 
   // If this dialect should use default generated attribute parser boilerplate:
   // it'll dispatch the parsing to every individual attributes directly.
-  bit useDefaultAttributePrinterParser = 0;
+  bit useDefaultAttributePrinterParser = 1;
 
   // If this dialect should use default generated type parser boilerplate:
   // it'll dispatch the parsing to every individual types directly.
-  bit useDefaultTypePrinterParser = 0;
+  bit useDefaultTypePrinterParser = 1;
 
   // If this dialect overrides the hook for canonicalization patterns.
   bit hasCanonicalizer = 0;
@@ -354,7 +369,8 @@ class DialectType<Dialect d, Pred condition, string descr = "",
 
 // A variadic type constraint. It expands to zero or more of the base type. This
 // class is used for supporting variadic operands/results.
-class Variadic<Type type> : TypeConstraint<type.predicate, type.summary> {
+class Variadic<Type type> : TypeConstraint<type.predicate, type.summary,
+                                           type.cppClassName> {
   Type baseType = type;
 }
 
@@ -370,7 +386,8 @@ class VariadicOfVariadic<Type type, string variadicSegmentAttrName>
 
 // An optional type constraint. It expands to either zero or one of the base
 // type. This class is used for supporting optional operands/results.
-class Optional<Type type> : TypeConstraint<type.predicate, type.summary> {
+class Optional<Type type> : TypeConstraint<type.predicate, type.summary,
+                                           type.cppClassName> {
   Type baseType = type;
 }
 
@@ -603,10 +620,20 @@ class HasAnyRankOfPred<list<int> ranks> : And<[
 class VectorOf<list<Type> allowedTypes> :
   ShapedContainerType<allowedTypes, IsVectorTypePred, "vector",
                       "::mlir::VectorType">;
+
 // Temporary vector type clone that allows gradual transition to 0-D vectors.
+// TODO: Remove this when all ops support 0-D vectors.
 class VectorOfAnyRankOf<list<Type> allowedTypes> :
   ShapedContainerType<allowedTypes, IsVectorOfAnyRankTypePred, "vector",
                       "::mlir::VectorType">;
+
+class FixedVectorOf<list<Type> allowedTypes> :
+  ShapedContainerType<allowedTypes, IsFixedVectorTypePred,
+          "fixed-length vector", "::mlir::VectorType">;
+
+class ScalableVectorOf<list<Type> allowedTypes> :
+  ShapedContainerType<allowedTypes, IsScalableVectorTypePred,
+          "scalable vector", "::mlir::VectorType">;
 
 // Whether the number of elements of a vector is from the given
 // `allowedRanks` list
@@ -640,10 +667,42 @@ class IsVectorOfLengthPred<list<int> allowedLengths> :
                            == }]
                          # allowedlength>)>]>;
 
+// Whether the number of elements of a fixed-length vector is from the given
+// `allowedLengths` list
+class IsFixedVectorOfLengthPred<list<int> allowedLengths> :
+  And<[IsFixedVectorTypePred,
+       Or<!foreach(allowedlength, allowedLengths,
+                   CPred<[{$_self.cast<::mlir::VectorType>().getNumElements()
+                           == }]
+                         # allowedlength>)>]>;
+
+// Whether the number of elements of a scalable vector is from the given
+// `allowedLengths` list
+class IsScalableVectorOfLengthPred<list<int> allowedLengths> :
+  And<[IsScalableVectorTypePred,
+       Or<!foreach(allowedlength, allowedLengths,
+                   CPred<[{$_self.cast<::mlir::VectorType>().getNumElements()
+                           == }]
+                         # allowedlength>)>]>;
+
 // Any vector where the number of elements is from the given
 // `allowedLengths` list
 class VectorOfLength<list<int> allowedLengths> : Type<
   IsVectorOfLengthPred<allowedLengths>,
+  " of length " # !interleave(allowedLengths, "/"),
+  "::mlir::VectorType">;
+
+// Any fixed-length vector where the number of elements is from the given
+// `allowedLengths` list
+class FixedVectorOfLength<list<int> allowedLengths> : Type<
+  IsFixedVectorOfLengthPred<allowedLengths>,
+  " of length " # !interleave(allowedLengths, "/"),
+  "::mlir::VectorType">;
+
+// Any scalable vector where the number of elements is from the given
+// `allowedLengths` list
+class ScalableVectorOfLength<list<int> allowedLengths> : Type<
+  IsScalableVectorOfLengthPred<allowedLengths>,
   " of length " # !interleave(allowedLengths, "/"),
   "::mlir::VectorType">;
 
@@ -657,9 +716,33 @@ class VectorOfLengthAndType<list<int> allowedLengths,
   VectorOf<allowedTypes>.summary # VectorOfLength<allowedLengths>.summary,
   "::mlir::VectorType">;
 
+// Any fixed-length vector where the number of elements is from the given
+// `allowedLengths` list and the type is from the given `allowedTypes` list
+class FixedVectorOfLengthAndType<list<int> allowedLengths,
+                                    list<Type> allowedTypes> : Type<
+  And<[FixedVectorOf<allowedTypes>.predicate,
+       FixedVectorOfLength<allowedLengths>.predicate]>,
+  FixedVectorOf<allowedTypes>.summary #
+  FixedVectorOfLength<allowedLengths>.summary,
+  "::mlir::VectorType">;
+
+// Any scalable vector where the number of elements is from the given
+// `allowedLengths` list and the type is from the given `allowedTypes` list
+class ScalableVectorOfLengthAndType<list<int> allowedLengths,
+                                    list<Type> allowedTypes> : Type<
+  And<[ScalableVectorOf<allowedTypes>.predicate,
+       ScalableVectorOfLength<allowedLengths>.predicate]>,
+  ScalableVectorOf<allowedTypes>.summary #
+  ScalableVectorOfLength<allowedLengths>.summary,
+  "::mlir::VectorType">;
+
 def AnyVector : VectorOf<[AnyType]>;
 // Temporary vector type clone that allows gradual transition to 0-D vectors.
 def AnyVectorOfAnyRank : VectorOfAnyRankOf<[AnyType]>;
+
+def AnyFixedVector : FixedVectorOf<[AnyType]>;
+
+def AnyScalableVector : ScalableVectorOf<[AnyType]>;
 
 // Shaped types.
 
@@ -799,9 +882,10 @@ class MixedContainerType<Type etype, Pred containerPred, code elementTypesCall,
         And<[
             containerPred,
             Concat<
-                "::llvm::all_of(" # elementTypesCall # ", [](Type t) { return ",
+                "::llvm::all_of(" # elementTypesCall # ", [](Type t) { "
+                "return t && (",
                 SubstLeaves<"$_self", "t", etype.predicate>,
-                "; })"
+                "); })"
             >
         ]>,
         descr # " with any combination of " # etype.summary # " values"> {
@@ -828,25 +912,38 @@ class NestedTupleOf<list<Type> allowedTypes> :
 //===----------------------------------------------------------------------===//
 // Common type constraints
 //===----------------------------------------------------------------------===//
+// Type constraint for types that are "like" some type or set of types T, that is
+// they're either a T, a vector of Ts, or a tensor of Ts
+class TypeOrContainer<Type allowedType, string name> : TypeConstraint<Or<[
+  allowedType.predicate, VectorOf<[allowedType]>.predicate,
+  TensorOf<[allowedType]>.predicate]>,
+  name>;
+
+// Temporary constraint to allow gradual transition to supporting 0-D vectors.
+// TODO: Remove this when all ops support 0-D vectors.
+class TypeOrContainerOfAnyRank<Type allowedType, string name> : TypeConstraint<Or<[
+  allowedType.predicate, VectorOfAnyRankOf<[allowedType]>.predicate,
+  TensorOf<[allowedType]>.predicate]>,
+  name>;
+
 
 // Type constraint for bool-like types: bools, vectors of bools, tensors of
 // bools.
-def BoolLike : TypeConstraint<Or<[I1.predicate, VectorOf<[I1]>.predicate,
-                                  TensorOf<[I1]>.predicate]>,
-    "bool-like">;
+def BoolLike : TypeOrContainer<I1, "bool-like">;
+
+def BoolLikeOfAnyRank : TypeOrContainerOfAnyRank<I1, "bool-like">;
 
 // Type constraint for signless-integer-like types: signless integers, indices,
 // vectors of signless integers or indices, tensors of signless integers.
-def SignlessIntegerLike : TypeConstraint<Or<[
-        AnySignlessIntegerOrIndex.predicate,
-        VectorOf<[AnySignlessIntegerOrIndex]>.predicate,
-        TensorOf<[AnySignlessIntegerOrIndex]>.predicate]>,
+def SignlessIntegerLike : TypeOrContainer<AnySignlessIntegerOrIndex,
+    "signless-integer-like">;
+
+def SignlessIntegerLikeOfAnyRank : TypeOrContainerOfAnyRank<
+    AnySignlessIntegerOrIndex,
     "signless-integer-like">;
 
 // Type constraint for float-like types: floats, vectors or tensors thereof.
-def FloatLike : TypeConstraint<Or<[AnyFloat.predicate,
-        VectorOf<[AnyFloat]>.predicate, TensorOf<[AnyFloat]>.predicate]>,
-    "floating-point-like">;
+def FloatLike : TypeOrContainer<AnyFloat, "floating-point-like">;
 
 // Type constraint for signless-integer-like or float-like types.
 def SignlessIntegerOrFloatLike : TypeConstraint<Or<[
@@ -1177,6 +1274,11 @@ def TypeAttr : TypeAttrBase<"::mlir::Type", "any type attribute"> {
   let constBuilderCall = "::mlir::TypeAttr::get($0)";
 }
 
+class TypeAttrOf<Type ty>
+   : TypeAttrBase<ty.cppClassName, "type attribute of " # ty.summary> {
+  let constBuilderCall = "::mlir::TypeAttr::get($0)";
+}
+
 // The mere presence of unit attributes has a meaning.  Therefore, unit
 // attributes are always treated as optional and accessors to them return
 // "true" if the attribute is present and "false" otherwise.
@@ -1232,12 +1334,30 @@ class I64EnumAttrCase<string sym, int val, string str = sym>
 // A bit enum case stored with 32-bit IntegerAttr. `val` here is *not* the
 // ordinal number of the bit that is set. It is the 32-bit integer with only
 // one bit set.
-class BitEnumAttrCase<string sym, int val, string str = sym> :
-    EnumAttrCaseInfo<sym, val, str>,
-    SignlessIntegerAttrBase<I32, "case " # str> {
-  let predicate = CPred<
-    "$_self.cast<::mlir::IntegerAttr>().getValue().getZExtValue() & "
-    # val # "u">;
+class BitEnumAttrCase<string sym, int val, string str = sym>
+    : EnumAttrCaseInfo<sym, val, str>,
+      SignlessIntegerAttrBase<I32, "case " #str>;
+
+// The special bit enum case for no bits set (i.e. value = 0).
+class BitEnumAttrCaseNone<string sym, string str = sym>
+    : BitEnumAttrCase<sym, 0, str>;
+
+// The bit enum case for a single bit, specified by the bit position.
+// The pos argument refers to the index of the bit, and is currently
+// limited to be in the range [0, 31].
+class BitEnumAttrCaseBit<string sym, int pos, string str = sym>
+    : BitEnumAttrCase<sym, !shl(1, pos), str> {
+  assert !and(!ge(pos, 0), !le(pos, 31)),
+      "bit position must be between 0 and 31";
+}
+
+// A bit enum case for a group/list of previously declared single bits,
+// providing a convenient alias for that group.
+class BitEnumAttrCaseGroup<string sym, list<BitEnumAttrCaseBit> cases,
+                           string str = sym>
+    : BitEnumAttrCase<
+          sym, !foldl(0, cases, value, bitcase, !or(value, bitcase.value)),
+          str> {
 }
 
 // Additional information for an enum attribute.
@@ -1361,7 +1481,7 @@ class I64EnumAttr<string name, string summary, list<I64EnumAttrCase> cases> :
 // A bit enum stored with 32-bit IntegerAttr.
 //
 // Op attributes of this kind are stored as IntegerAttr. Extra verification will
-// be generated on the integer to make sure only allowed bit are set. Besides,
+// be generated on the integer to make sure only allowed bits are set. Besides,
 // helper methods are generated to parse a string separated with a specified
 // delimiter to a symbol and vice versa.
 class BitEnumAttrBase<list<BitEnumAttrCase> cases, string summary> :
@@ -1378,6 +1498,9 @@ class BitEnumAttrBase<list<BitEnumAttrCase> cases, string summary> :
 class BitEnumAttr<string name, string summary, list<BitEnumAttrCase> cases> :
     EnumAttrInfo<name, cases, BitEnumAttrBase<cases, summary>> {
   let underlyingType = "uint32_t";
+
+  // Determine "valid" bits from enum cases for error checking
+  int validBits = !foldl(0, cases, value, bitcase, !or(value, bitcase.value));
 
   // We need to return a string because we may concatenate symbols for multiple
   // bits together.
@@ -1546,6 +1669,7 @@ class ArrayAttrBase<Pred condition, string summary> : Attr<condition, summary> {
   let returnType = [{ ::mlir::ArrayAttr }];
   let valueType = NoneType;
   let convertFromStorage = "$_self";
+  let constBuilderCall = "$_builder.getArrayAttr($0)";
 }
 
 def ArrayAttr : ArrayAttrBase<CPred<"$_self.isa<::mlir::ArrayAttr>()">,
@@ -1559,11 +1683,10 @@ class TypedArrayAttrBase<Attr element, string summary>: ArrayAttrBase<
       CPred<"$_self.isa<::mlir::ArrayAttr>()">,
       // Guarantee all elements satisfy the constraints from `element`
       Concat<"::llvm::all_of($_self.cast<::mlir::ArrayAttr>(), "
-                            "[&](::mlir::Attribute attr) { return ",
+                            "[&](::mlir::Attribute attr) { return attr && (",
                                SubstLeaves<"$_self", "attr", element.predicate>,
-                            "; })">]>,
+                            "); })">]>,
     summary> {
-  let constBuilderCall = "$_builder.getArrayAttr($0)";
 
   Attr elementAttr = element;
 }
@@ -1597,6 +1720,8 @@ def StrArrayAttr : TypedArrayAttrBase<StrAttr, "string array attribute"> {
 def TypeArrayAttr : TypedArrayAttrBase<TypeAttr, "type array attribute"> {
   let constBuilderCall = "$_builder.getTypeArrayAttr($0)";
 }
+def IndexListArrayAttr :
+  TypedArrayAttrBase<I64ArrayAttr, "Array of 64-bit integer array attributes">;
 
 // Attribute information for an Attribute field within a StructAttr.
 class StructFieldAttr<string thisName, Attr thisType> {
@@ -1823,6 +1948,11 @@ class SizedRegion<int numBlocks> : Region<
   CPred<"::llvm::hasNItems($_self, " # numBlocks # ")">,
   "region with " # numBlocks # " blocks">;
 
+// A region with at least the given number of blocks.
+class MinSizedRegion<int numBlocks> : Region<
+  CPred<"::llvm::hasNItemsOrMore($_self, " # numBlocks # ")">,
+  "region with at least " # numBlocks # " blocks">;
+
 // A variadic region constraint. It expands to zero or more of the base region.
 class VariadicRegion<Region region>
   : Region<region.predicate, region.summary>;
@@ -1849,6 +1979,13 @@ class VariadicSuccessor<Successor successor>
 
 // Trait represents a trait regarding an attribute, operation, or type.
 class Trait;
+
+// Define a Trait corresponding to a list of Traits, this allows for specifying
+// a list of traits as trait. Avoids needing to do `[Traits, ...] # ListOfTraits
+// # [Others, ...]` while still allowing providing convenient groupings.
+class TraitList<list<Trait> props> : Trait {
+  list<Trait> traits = props;
+}
 
 // NativeTrait corresponds to the MLIR C++ trait mechanism. The purpose to wrap
 // around C++ symbol string with this class is to make traits specified for
@@ -1880,79 +2017,58 @@ class PredTrait<string descr, Pred pred> : Trait {
 }
 
 //===----------------------------------------------------------------------===//
-// TypeTrait definitions
-//===----------------------------------------------------------------------===//
-
-// TypeTrait represents a trait regarding a type.
-// TODO: Remove this class in favor of using Trait.
-class TypeTrait;
-
-// These classes are used to define type specific traits.
-class NativeTypeTrait<string name> : NativeTrait<name, "Type">, TypeTrait;
-class ParamNativeTypeTrait<string prop, string params>
-    : ParamNativeTrait<prop, params, "Type">, TypeTrait;
-class GenInternalTypeTrait<string prop>
-    : GenInternalTrait<prop, "Type">, TypeTrait;
-class PredTypeTrait<string descr, Pred pred>
-    : PredTrait<descr, pred>, TypeTrait;
-
-//===----------------------------------------------------------------------===//
-// AttrTrait definitions
-//===----------------------------------------------------------------------===//
-
-// AttrTrait represents a trait regarding an attribute.
-// TODO: Remove this class in favor of using Trait.
-class AttrTrait;
-
-// These classes are used to define attribute specific traits.
-class NativeAttrTrait<string name> : NativeTrait<name, "Attribute">, AttrTrait;
-class ParamNativeAttrTrait<string prop, string params>
-    : ParamNativeTrait<prop, params, "Attribute">, AttrTrait;
-class GenInternalAttrTrait<string prop>
-    : GenInternalTrait<prop, "Attribute">, AttrTrait;
-class PredAttrTrait<string descr, Pred pred>
-    : PredTrait<descr, pred>, AttrTrait;
-
-//===----------------------------------------------------------------------===//
 // OpTrait definitions
 //===----------------------------------------------------------------------===//
 
-// OpTrait represents a trait regarding an operation.
-// TODO: Remove this class in favor of using Trait.
-class OpTrait;
-
-// Define a OpTrait corresponding to a list of OpTraits, this allows for
-// specifying a list of traits as trait. Avoids needing to do
-// `[Traits, ...] # ListOfTraits # [Others, ...]` while still allowing providing
-// convenient groupings.
-class OpTraitList<list<OpTrait> props> : OpTrait {
-  list<OpTrait> traits = props;
-}
+// A trait that describes the structure of operation will be marked with
+// `StructuralOpTrait` and they will be verified first.
+class StructuralOpTrait;
 
 // These classes are used to define operation specific traits.
-class NativeOpTrait<string name> : NativeTrait<name, "Op">, OpTrait;
-class ParamNativeOpTrait<string prop, string params>
-    : ParamNativeTrait<prop, params, "Op">, OpTrait;
-class GenInternalOpTrait<string prop> : GenInternalTrait<prop, "Op">, OpTrait;
-class PredOpTrait<string descr, Pred pred> : PredTrait<descr, pred>, OpTrait;
+class NativeOpTrait<string name, list<Trait> traits = []>
+    : NativeTrait<name, "Op"> {
+  // Specify the list of traits that need to be verified before the verification
+  // of this NativeOpTrait.
+  list<Trait> dependentTraits = traits;
+}
+class ParamNativeOpTrait<string prop, string params,
+                         list<Trait> traits = []>
+    : ParamNativeTrait<prop, params, "Op"> {
+  // Specify the list of traits that need to be verified before the verification
+  // of this ParamNativeOpTrait.
+  list<Trait> dependentTraits = traits;
+}
+class GenInternalOpTrait<string prop, list<Trait> traits = []>
+    : GenInternalTrait<prop, "Op"> {
+  // Specify the list of traits that need to be verified before the verification
+  // of this GenInternalOpTrait.
+  list<Trait> dependentTraits = traits;
+}
+class PredOpTrait<string descr, Pred pred, list<Trait> traits = []>
+    : PredTrait<descr, pred> {
+  // Specify the list of traits that need to be verified before the verification
+  // of this PredOpTrait.
+  list<Trait> dependentTraits = traits;
+}
 
 // Op defines an affine scope.
 def AffineScope : NativeOpTrait<"AffineScope">;
 // Op defines an automatic allocation scope.
-def AutomaticAllocationScope : NativeOpTrait<"AutomaticAllocationScope">;
+def AutomaticAllocationScope :
+  NativeOpTrait<"AutomaticAllocationScope">;
 // Op supports operand broadcast behavior.
 def ResultsBroadcastableShape :
   NativeOpTrait<"ResultsBroadcastableShape">;
 // X op Y == Y op X
 def Commutative  : NativeOpTrait<"IsCommutative">;
 // op op X == op X (unary) / X op X == X (binary)
-def Idempotent  : NativeOpTrait<"IsIdempotent">;
+// FIXME: Idempotent should depend on SameOperandsAndResultType
+def Idempotent : NativeOpTrait<"IsIdempotent">;
 // op op X == X
-def Involution  : NativeOpTrait<"IsInvolution">;
+// FIXME: Involution should depend on SameOperandsAndResultType
+def Involution : NativeOpTrait<"IsInvolution">;
 // Op behaves like a constant.
 def ConstantLike : NativeOpTrait<"ConstantLike">;
-// Op behaves like a function.
-def FunctionLike : NativeOpTrait<"FunctionLike">;
 // Op is isolated from above.
 def IsolatedFromAbove : NativeOpTrait<"IsIsolatedFromAbove">;
 // Op results are float or vectors/tensors thereof.
@@ -1962,9 +2078,11 @@ def SameTypeOperands : NativeOpTrait<"SameTypeOperands">;
 // Op has same shape for all operands.
 def SameOperandsShape : NativeOpTrait<"SameOperandsShape">;
 // Op has same operand and result shape.
-def SameOperandsAndResultShape : NativeOpTrait<"SameOperandsAndResultShape">;
+def SameOperandsAndResultShape :
+  NativeOpTrait<"SameOperandsAndResultShape">;
 // Op has the same element type (or type itself, if scalar) for all operands.
-def SameOperandsElementType : NativeOpTrait<"SameOperandsElementType">;
+def SameOperandsElementType :
+  NativeOpTrait<"SameOperandsElementType">;
 // Op has the same operand and result element type (or type itself, if scalar).
 def SameOperandsAndResultElementType :
   NativeOpTrait<"SameOperandsAndResultElementType">;
@@ -1976,39 +2094,39 @@ def MemRefsNormalizable : NativeOpTrait<"MemRefsNormalizable">;
 // Op is elementwise on tensor/vector operands and results.
 def Elementwise : NativeOpTrait<"Elementwise">;
 // Elementwise op can be applied to scalars instead tensor/vector operands.
-def Scalarizable : NativeOpTrait<"Scalarizable">;
+def Scalarizable : NativeOpTrait<"Scalarizable", [Elementwise]>;
 // Elementwise op can be applied to all-vector operands.
-def Vectorizable : NativeOpTrait<"Vectorizable">;
+def Vectorizable : NativeOpTrait<"Vectorizable", [Elementwise]>;
 // Elementwise op can be applied to all-tensor operands.
-def Tensorizable : NativeOpTrait<"Tensorizable">;
+def Tensorizable : NativeOpTrait<"Tensorizable", [Elementwise]>;
 
 // Group together `Elementwise`, `Scalarizable`, `Vectorizable`, and
 // `Tensorizable` for convenience.
-def ElementwiseMappable {
-  list<OpTrait> traits = [
+def ElementwiseMappable : TraitList<[
     Elementwise,
     Scalarizable,
     Vectorizable,
     Tensorizable,
-  ];
-}
+]>;
 
 // Op's regions have a single block.
-def SingleBlock : NativeOpTrait<"SingleBlock">;
+def SingleBlock : NativeOpTrait<"SingleBlock">, StructuralOpTrait;
 
 // Op's regions have a single block with the specified terminator.
 class SingleBlockImplicitTerminator<string op>
-    : ParamNativeOpTrait<"SingleBlockImplicitTerminator", op>;
+    : ParamNativeOpTrait<"SingleBlockImplicitTerminator", op>,
+      StructuralOpTrait;
 
 // Op's regions don't have terminator.
-def NoTerminator : NativeOpTrait<"NoTerminator">;
+def NoTerminator : NativeOpTrait<"NoTerminator">, StructuralOpTrait;
 
 // Op's parent operation is the provided one.
 class HasParent<string op>
-    : ParamNativeOpTrait<"HasParent", op>;
+    : ParamNativeOpTrait<"HasParent", op>, StructuralOpTrait;
 
 class ParentOneOf<list<string> ops>
-    : ParamNativeOpTrait<"HasParent", !interleave(ops, ", ")>;
+    : ParamNativeOpTrait<"HasParent", !interleave(ops, ", ")>,
+      StructuralOpTrait;
 
 // Op result type is derived from the first attribute. If the attribute is an
 // subclass of `TypeAttrBase`, its value is used, otherwise, the type of the
@@ -2037,13 +2155,15 @@ def SameVariadicResultSize : GenInternalOpTrait<"SameVariadicResultSize">;
 // vector that has the same number of elements as the number of ODS declared
 // operands. That means even if some operands are non-variadic, the attribute
 // still need to have an element for its size, which is always 1.
-def AttrSizedOperandSegments : NativeOpTrait<"AttrSizedOperandSegments">;
+def AttrSizedOperandSegments :
+  NativeOpTrait<"AttrSizedOperandSegments">, StructuralOpTrait;
 // Similar to AttrSizedOperandSegments, but used for results. The attribute
 // should be named as `result_segment_sizes`.
-def AttrSizedResultSegments  : NativeOpTrait<"AttrSizedResultSegments">;
+def AttrSizedResultSegments  :
+  NativeOpTrait<"AttrSizedResultSegments">, StructuralOpTrait;
 
 // Op attached regions have no arguments
-def NoRegionArguments : NativeOpTrait<"NoRegionArguments">;
+def NoRegionArguments : NativeOpTrait<"NoRegionArguments">, StructuralOpTrait;
 
 //===----------------------------------------------------------------------===//
 // OpInterface definitions
@@ -2074,11 +2194,21 @@ class InterfaceTrait<string name> : NativeTrait<"", ""> {
 // OpInterfaceTrait corresponds to a specific 'OpInterface' class defined in
 // C++. The purpose to wrap around C++ symbol string with this class is to make
 // interfaces specified for ops in TableGen less alien and more integrated.
-class OpInterfaceTrait<string name, code verifyBody = [{}]>
-    : InterfaceTrait<name>, OpTrait {
+class OpInterfaceTrait<string name, code verifyBody = [{}],
+                       list<Trait> traits = []>
+    : InterfaceTrait<name> {
   // Specify the body of the verification function. `$_op` will be replaced with
   // the operation being verified.
   code verify = verifyBody;
+
+  // A bit indicating if the verifier needs to access the ops in the regions. If
+  // it set to `1`, the region ops will be verified before invoking this
+  // verifier.
+  bit verifyWithRegions = 0;
+
+  // Specify the list of traits that need to be verified before the verification
+  // of this OpInterfaceTrait.
+  list<Trait> dependentTraits = traits;
 }
 
 // This class represents a single, optionally static, interface method.
@@ -2133,6 +2263,10 @@ class Interface<string name> {
   // An optional code block containing extra declarations to place in the
   // interface declaration.
   code extraClassDeclaration = "";
+
+  // An optional code block containing extra declarations to place in both
+  // the interface and trait declaration.
+  code extraSharedClassDeclaration = "";
 }
 
 // AttrInterface represents an interface registered to an attribute.
@@ -2263,7 +2397,7 @@ class Res<Constraint constraint, string desc = "",
   : OpVariable<constraint, desc, decorators>;
 
 // Base class for all ops.
-class Op<Dialect dialect, string mnemonic, list<OpTrait> props = []> {
+class Op<Dialect dialect, string mnemonic, list<Trait> props = []> {
   // The dialect of the op.
   Dialect opDialect = dialect;
 
@@ -2323,17 +2457,36 @@ class Op<Dialect dialect, string mnemonic, list<OpTrait> props = []> {
   // provided.
   bit skipDefaultBuilders = 0;
 
-  // Custom parser.
-  code parser = ?;
-
-  // Custom printer.
-  code printer = ?;
-
   // Custom assembly format.
+  /// This field corresponds to a declarative description of the assembly format
+  /// for this operation. If populated, the `hasCustomAssemblyFormat` field is
+  /// ignored.
   string assemblyFormat = ?;
+  /// This field indicates that the operation has a custom assembly format
+  /// implemented in C++. When set to `1` a `parse` and `print` method are generated
+  /// on the operation class. The operation should implement these methods to
+  /// support the custom format of the operation. The methods have the form:
+  ///   * ParseResult parse(OpAsmParser &parser, OperationState &result)
+  ///   * void print(OpAsmPrinter &p)
+  bit hasCustomAssemblyFormat = 0;
 
-  // Custom verifier.
-  code verifier = ?;
+  // A bit indicating if the operation has additional invariants that need to
+  // verified (aside from those verified by other ODS constructs). If set to `1`,
+  // an additional `LogicalResult verify()` declaration will be generated on the
+  // operation class. The operation should implement this method and verify the
+  // additional necessary invariants. This verifier shouldn't access any nested
+  // operations because those operations may ill-formed. Use the
+  // `hasRegionVerifier` below instead.
+  bit hasVerifier = 0;
+
+  // A bit indicating if the operation has additional invariants that need to
+  // verified and which associate with regions (aside from those verified by the
+  // traits). If set to `1`, an additional `LogicalResult verifyRegions()`
+  // declaration will be generated on the operation class. The operation should
+  // implement this method and verify the additional necessary invariants
+  // associated with regions. Note that this method is invoked after all the
+  // region ops are verified.
+  bit hasRegionVerifier = 0;
 
   // Whether this op has associated canonicalization patterns.
   bit hasCanonicalizer = 0;
@@ -2347,40 +2500,16 @@ class Op<Dialect dialect, string mnemonic, list<OpTrait> props = []> {
 
   // Op traits.
   // Note: The list of traits will be uniqued by ODS.
-  list<OpTrait> traits = props;
+  list<Trait> traits = props;
 
   // Additional code that will be added to the public part of the generated
   // C++ code of the op declaration.
   code extraClassDeclaration = ?;
-}
 
-// Base class for ops with static/dynamic offset, sizes and strides
-// attributes/arguments.
-class BaseOpWithOffsetSizesAndStrides<Dialect dialect, string mnemonic,
-                                      list<OpTrait> traits = []> :
-  Op<dialect, mnemonic, traits> {
-
-  // For every such op, there needs to be a:
-  //   * void print(OpAsmPrinter &p, ${C++ class of Op} op)
-  //   * LogicalResult verify(${C++ class of Op} op)
-  //   * ParseResult parse${C++ class of Op}(OpAsmParser &parser,
-  //                                         OperationState &result)
-  // functions.
-  let printer = [{ return ::print(p, *this); }];
-  let verifier = [{ return ::verify(*this); }];
-  let parser = [{ return ::parse$cppClass(parser, result); }];
-
-  code extraBaseClassDeclaration = [{
-    /// Returns the dynamic sizes for this subview operation if specified.
-    operand_range getDynamicSizes() { return sizes(); }
-
-    /// Return the list of Range (i.e. offset, size, stride). Each
-    /// Range entry contains either the dynamic value or a ConstantIndexOp
-    /// constructed with `b` at location `loc`.
-    SmallVector<Range, 8> getOrCreateRanges(OpBuilder &b, Location loc) {
-      return mlir::getOrCreateRanges(*this, b, loc);
-    }
-  }];
+  // Additional code that will be added to the generated source file. The
+  // generated code is placed inside the op's C++ namespace. `$cppClass` is
+  // replaced by the op's C++ class name.
+  code extraClassDefinition = ?;
 }
 
 // The arguments of an op.
@@ -2392,13 +2521,6 @@ class Arguments<dag args> {
 class Results<dag rets> {
   dag results = rets;
 }
-
-//===----------------------------------------------------------------------===//
-// Common value constraints
-//===----------------------------------------------------------------------===//
-
-def HasNoUseOf: Constraint<
-    CPred<"$_self.use_empty()">, "has no use">;
 
 //===----------------------------------------------------------------------===//
 // Common op type constraints
@@ -2567,509 +2689,5 @@ class TCopVTEtAreSameAt<list<int> indices> : CPred<
       "::mlir::ArrayRef<unsigned>({" # !interleave(indices, ", ") # "}), "
       "[this](unsigned i) { return getElementTypeOrSelf(this->getOperand(i)); "
       "}))">;
-
-//===----------------------------------------------------------------------===//
-// Pattern definitions
-//===----------------------------------------------------------------------===//
-
-// Marker used to identify the delta value added to the default benefit value.
-def addBenefit;
-
-// Base class for op+ -> op+ rewrite rules. These allow declaratively
-// specifying rewrite rules.
-//
-// A rewrite rule contains two components: a source pattern and one or more
-// result patterns. Each pattern is specified as a (recursive) DAG node (tree)
-// in the form of `(node arg0, arg1, ...)`.
-//
-// The `node` are normally MLIR ops, but it can also be one of the directives
-// listed later in this section.
-//
-// ## Symbol binding
-//
-// In the source pattern, `argN` can be used to specify matchers (e.g., using
-// type/attribute type constraints, etc.) and bound to a name for later use.
-// We can also bind names to op instances to reference them later in
-// multi-entity constraints. Operands in the source pattern can have
-// the same name. This bounds one operand to the name while verifying
-// the rest are all equal.
-//
-//
-// In the result pattern, `argN` can be used to refer to a previously bound
-// name, with potential transformations (e.g., using tAttr, etc.). `argN` can
-// itself be nested DAG node. We can also bound names to ops to reference
-// them later in other result patterns.
-//
-// For example,
-//
-// ```
-// def : Pattern<(OneResultOp1:$op1 $arg0, $arg1, $arg0),
-//               [(OneResultOp2:$op2 $arg0, $arg1),
-//                (OneResultOp3 $op2 (OneResultOp4))],
-//               [(HasStaticShapePred $op1)]>;
-// ```
-//
-// First `$arg0` and '$arg1' are bound to the `OneResultOp1`'s first
-// and second arguments and used later to build `OneResultOp2`. Second '$arg0'
-// is verified to be equal to the first '$arg0' operand.
-// `$op1` is bound to `OneResultOp1` and used to check whether the result's
-// shape is static. `$op2` is bound to `OneResultOp2` and used to
-// build `OneResultOp3`.
-//
-// ## Multi-result op
-//
-// To create multi-result ops in result pattern, you can use a syntax similar
-// to uni-result op, and it will act as a value pack for all results:
-//
-// ```
-// def : Pattern<(ThreeResultOp ...),
-//               [(TwoResultOp ...), (OneResultOp ...)]>;
-// ```
-//
-// Then `TwoResultOp` will replace the first two values of `ThreeResultOp`.
-//
-// You can also use `$<name>__N` to explicitly access the N-th result.
-// ```
-// def : Pattern<(FiveResultOp ...),
-//               [(TwoResultOp1:$res1__1 ...), (replaceWithValue $res1__0),
-//                (TwoResultOp2:$res2 ...), (replaceWithValue $res2__1)]>;
-// ```
-//
-// Then the values generated by `FiveResultOp` will be replaced by
-//
-// * `FiveResultOp`#0: `TwoResultOp1`#1
-// * `FiveResultOp`#1: `TwoResultOp1`#0
-// * `FiveResultOp`#2: `TwoResultOp2`#0
-// * `FiveResultOp`#3: `TwoResultOp2`#1
-// * `FiveResultOp`#4: `TwoResultOp2`#1
-class Pattern<dag source, list<dag> results, list<dag> preds = [],
-  dag benefitAdded = (addBenefit 0)> {
-  dag sourcePattern = source;
-  // Result patterns. Each result pattern is expected to replace one result
-  // of the root op in the source pattern. In the case of more result patterns
-  // than needed to replace the source op, only the last N results generated
-  // by the last N result pattern is used to replace a N-result source op.
-  // So that the beginning result patterns can be used to generate additional
-  // ops to aid building the results used for replacement.
-  list<dag> resultPatterns = results;
-  // Multi-entity constraints. Each constraint here involves multiple entities
-  // matched in source pattern and places further constraints on them as a
-  // whole.
-  list<dag> constraints = preds;
-  // The delta value added to the default benefit value. The default value is
-  // the number of ops in the source pattern. The rule with the highest final
-  // benefit value will be applied first if there are multiple rules matches.
-  // This delta value can be either positive or negative.
-  dag benefitDelta = benefitAdded;
-}
-
-// Form of a pattern which produces a single result.
-class Pat<dag pattern, dag result, list<dag> preds = [],
-  dag benefitAdded = (addBenefit 0)> :
-  Pattern<pattern, [result], preds, benefitAdded>;
-
-// Native code call wrapper. This allows invoking an arbitrary C++ expression
-// to create an op operand/attribute or replace an op result.
-//
-// ## Placeholders
-//
-// If used as a DAG leaf, i.e., `(... NativeCodeCall<"...">:$arg, ...)`,
-// the wrapped expression can take special placeholders listed below:
-//
-// * `$_builder` will be replaced by the current `mlir::PatternRewriter`.
-// * `$_self` will be replaced by the defining operation in a source pattern.
-//   E.g., `NativeCodeCall<"Foo($_self, &$0)> I32Attr:$attr)>`, `$_self` will be
-//   replaced with the defining operation of the first operand of OneArgOp.
-//
-// If used as a DAG node, i.e., `(NativeCodeCall<"..."> <arg0>, ..., <argN>)`,
-// then positional placeholders are also supported; placeholder `$N` in the
-// wrapped C++ expression will be replaced by `<argN>`.
-//
-// ## Bind multiple results
-//
-// To bind multi-results and access the N-th result with `$<name>__N`, specify
-// the number of return values in the template. Note that only `Value` type is
-// supported for multiple results binding.
-
-class NativeCodeCall<string expr, int returns = 1> {
-  string expression = expr;
-  int numReturns = returns;
-}
-
-class NativeCodeCallVoid<string expr> : NativeCodeCall<expr, 0>;
-
-def ConstantLikeMatcher : NativeCodeCall<"success(matchPattern($_self->getResult(0), m_Constant(&$0)))">;
-
-//===----------------------------------------------------------------------===//
-// Rewrite directives
-//===----------------------------------------------------------------------===//
-
-// Directive used in result pattern to indicate that no new op are generated,
-// so to replace the matched DAG with an existing SSA value.
-def replaceWithValue;
-
-// Directive used in result patterns to specify the location of the generated
-// op. This directive must be used as a trailing argument to op creation or
-// native code calls.
-//
-// Usage:
-// * Create a named location: `(location "myLocation")`
-// * Copy the location of a captured symbol: `(location $arg)`
-// * Create a fused location: `(location "metadata", $arg0, $arg1)`
-
-def location;
-
-// Directive used in result patterns to specify return types for a created op.
-// This allows ops to be created without relying on type inference with
-// `OpTraits` or an op builder with deduction.
-//
-// This directive must be used as a trailing argument to op creation.
-//
-// Specify one return type with a string literal:
-//
-// ```
-// (AnOp $val, (returnType "$_builder.getI32Type()"))
-// ```
-//
-// Pass a captured value to copy its return type:
-//
-// ```
-// (AnOp $val, (returnType $val));
-// ```
-//
-// Pass a native code call inside a DAG to create a new type with arguments.
-//
-// ```
-// (AnOp $val,
-//       (returnType (NativeCodeCall<"$_builder.getTupleType({$0})"> $val)));
-// ```
-//
-// Specify multiple return types with multiple of any of the above.
-
-def returnType;
-
-// Directive used to specify the operands may be matched in either order. When
-// two adjacents are marked with `either`, it'll try to match the operands in
-// either ordering of constraints. Example:
-//
-// ```
-// (TwoArgOp (either $firstArg, (AnOp $secondArg)))
-// ```
-// The above pattern will accept either `"test.TwoArgOp"(%I32Arg, %AnOpArg)` and
-// `"test.TwoArgOp"(%AnOpArg, %I32Arg)`.
-//
-// Only operand is supported with `either` and note that an operation with
-// `Commutative` trait doesn't imply that it'll have the same behavior than
-// `either` while pattern matching.
-def either;
-
-//===----------------------------------------------------------------------===//
-// Attribute and Type generation
-//===----------------------------------------------------------------------===//
-
-// Class for defining a custom getter.
-//
-// TableGen generates several generic getter methods for each attribute and type
-// by default, corresponding to the specified dag parameters. If the default
-// generated ones cannot cover some use case, custom getters can be defined
-// using instances of this class.
-//
-// The signature of the `get` is always either:
-//
-// ```c++
-// static <ClassName> get(MLIRContext *context, <other-parameters>...) {
-//   <body>...
-// }
-// ```
-//
-// or:
-//
-// ```c++
-// static <ClassName> get(MLIRContext *context, <parameters>...);
-// ```
-//
-// To define a custom getter, the parameter list and body should be passed
-// in as separate template arguments to this class. The parameter list is a
-// TableGen DAG with `ins` operation with named arguments, which has either:
-//   - string initializers ("Type":$name) to represent a typed parameter, or
-//   - CArg-typed initializers (CArg<"Type", "default">:$name) to represent a
-//     typed parameter that may have a default value.
-// The type string is used verbatim to produce code and, therefore, must be a
-// valid C++ type. It is used inside the C++ namespace of the parent Type's
-// dialect; explicit namespace qualification like `::mlir` may be necessary if
-// Types are not placed inside the `mlir` namespace. The default value string is
-// used verbatim to produce code and must be a valid C++ initializer the given
-// type. For example, the following signature specification
-//
-// ```
-// AttrOrTypeBuilder<(ins "int":$integerArg, CArg<"float", "3.0f">:$floatArg)>
-// ```
-//
-// has an integer parameter and a float parameter with a default value.
-//
-// If an empty string is passed in for `body`, then *only* the builder
-// declaration will be generated; this provides a way to define complicated
-// builders entirely in C++. If a `body` string is provided, the `Base::get`
-// method should be invoked using `$_get`, e.g.:
-//
-// ```
-// AttrOrTypeBuilder<(ins "int":$integerArg, CArg<"float", "3.0f">:$floatArg), [{
-//   return $_get($_ctxt, integerArg, floatArg);
-// }]>
-// ```
-//
-// This is necessary because the `body` is also used to generate `getChecked`
-// methods, which have a different underlying `Base::get*` call.
-//
-class AttrOrTypeBuilder<dag parameters, code bodyCode = ""> {
-  dag dagParams = parameters;
-  code body = bodyCode;
-
-  // The context parameter can be inferred from one of the other parameters and
-  // is not implicitly added to the parameter list.
-  bit hasInferredContextParam = 0;
-}
-class AttrBuilder<dag parameters, code bodyCode = "">
-  : AttrOrTypeBuilder<parameters, bodyCode>;
-class TypeBuilder<dag parameters, code bodyCode = "">
-  : AttrOrTypeBuilder<parameters, bodyCode>;
-
-// A class of AttrOrTypeBuilder that is able to infer the MLIRContext parameter
-// from one of the other builder parameters. Instances of this builder do not
-// have `MLIRContext *` implicitly added to the parameter list.
-class AttrOrTypeBuilderWithInferredContext<dag parameters, code bodyCode = "">
-  : TypeBuilder<parameters, bodyCode> {
-  let hasInferredContextParam = 1;
-}
-class AttrBuilderWithInferredContext<dag parameters, code bodyCode = "">
-  : AttrOrTypeBuilderWithInferredContext<parameters, bodyCode>;
-class TypeBuilderWithInferredContext<dag parameters, code bodyCode = "">
-  : AttrOrTypeBuilderWithInferredContext<parameters, bodyCode>;
-
-// Define a new attribute or type, named `name`, that inherits from the given
-// C++ base class.
-class AttrOrTypeDef<string valueType, string name, list<Trait> defTraits,
-                    string baseCppClass> {
-  // The name of the C++ base class to use for this def.
-  string cppBaseClassName = baseCppClass;
-
-  // Additional, longer human-readable description of what the def does.
-  string description = "";
-
-  // Name of storage class to generate or use.
-  string storageClass = name # valueType # "Storage";
-
-  // Namespace (withing dialect c++ namespace) in which the storage class
-  // resides.
-  string storageNamespace = "detail";
-
-  // Specify if the storage class is to be generated.
-  bit genStorageClass = 1;
-
-  // Specify that the generated storage class has a constructor which is written
-  // in C++.
-  bit hasStorageCustomConstructor = 0;
-
-  // The list of parameters for this type. Parameters will become both
-  // parameters to the get() method and storage class member variables.
-  //
-  // The format of this dag is:
-  //    (ins
-  //        "<c++ type>":$param1Name,
-  //        "<c++ type>":$param2Name,
-  //        AttrOrTypeParameter<"c++ type", "param description">:$param3Name)
-  // AttrOrTypeParameters (or more likely one of their subclasses) are required
-  // to add more information about the parameter, specifically:
-  //  - Documentation
-  //  - Code to allocate the parameter (if allocation is needed in the storage
-  //    class constructor)
-  //
-  // For example:
-  //    (ins "int":$width,
-  //         ArrayRefParameter<"bool", "list of bools">:$yesNoArray)
-  //
-  // (ArrayRefParameter is a subclass of AttrOrTypeParameter which has
-  // allocation code for re-allocating ArrayRefs. It is defined below.)
-  dag parameters = (ins);
-
-  // Custom builder methods.
-  // In addition to the custom builders provided here, and unless
-  // skipDefaultBuilders is set, a default builder is generated with the
-  // following signature:
-  //
-  // ```c++
-  // static <ClassName> get(MLIRContext *, <parameters>);
-  // ```
-  //
-  // Note that builders should only be provided when a def has parameters.
-  list<AttrOrTypeBuilder> builders = ?;
-
-  // The list of traits attached to this def.
-  list<Trait> traits = defTraits;
-
-  // Use the lowercased name as the keyword for parsing/printing. Specify only
-  // if you want tblgen to generate declarations and/or definitions of
-  // the printer/parser.
-  string mnemonic = ?;
-
-  // If 'mnemonic' specified,
-  //   If null, generate just the declarations.
-  //   If a non-empty code block, just use that code as the definition code.
-  //   Error if an empty code block.
-  code printer = ?;
-  code parser = ?;
-
-  // Custom assembly format. Requires 'mnemonic' to be specified. Cannot be
-  // specified at the same time as either 'printer' or 'parser'. The generated
-  // printer requires 'genAccessors' to be true.
-  string assemblyFormat = ?;
-
-  // If set, generate accessors for each parameter.
-  bit genAccessors = 1;
-
-  // Avoid generating default get/getChecked functions. Custom get methods must
-  // be provided.
-  bit skipDefaultBuilders = 0;
-
-  // Generate the verify and getChecked methods.
-  bit genVerifyDecl = 0;
-
-  // Extra code to include in the class declaration.
-  code extraClassDeclaration = [{}];
-}
-
-// Define a new attribute, named `name`, belonging to `dialect` that inherits
-// from the given C++ base class.
-class AttrDef<Dialect dialect, string name, list<Trait> traits = [],
-              string baseCppClass = "::mlir::Attribute">
-    : DialectAttr<dialect, CPred<"">, /*descr*/"">,
-      AttrOrTypeDef<"Attr", name, traits, baseCppClass> {
-  // The name of the C++ Attribute class.
-  string cppClassName = name # "Attr";
-  let storageType = dialect.cppNamespace # "::" # name # "Attr";
-
-  // The underlying C++ value type
-  let returnType = dialect.cppNamespace # "::" # cppClassName;
-
-  // Make it possible to use such attributes as parameters for other attributes.
-  string cppType = dialect.cppNamespace # "::" # cppClassName;
-
-  // The call expression to convert from the storage type to the return
-  // type. For example, an enum can be stored as an int but returned as an
-  // enum class.
-  //
-  // Format: $_self will be expanded to the attribute.
-  //
-  // For example, `$_self.getValue().getSExtValue()` for `IntegerAttr val` will
-  // expand to `getAttrOfType<IntegerAttr>("val").getValue().getSExtValue()`.
-  let convertFromStorage = "$_self.cast<" # dialect.cppNamespace #
-                                 "::" # cppClassName # ">()";
-
-  // A code block used to build the value 'Type' of an Attribute when
-  // initializing its storage instance. This field is optional, and if not
-  // present the attribute will have its value type set to `NoneType`. This code
-  // block may reference any of the attributes parameters via
-  // `$_<parameter-name`. If one of the parameters of the attribute is of type
-  // `AttributeSelfTypeParameter`, this field is ignored.
-  code typeBuilder = ?;
-
-  // The predicate for when this def is used as a constraint.
-  let predicate = CPred<"$_self.isa<" # dialect.cppNamespace #
-                                 "::" # cppClassName # ">()">;
-}
-
-// Define a new type, named `name`, belonging to `dialect` that inherits from
-// the given C++ base class.
-class TypeDef<Dialect dialect, string name, list<Trait> traits = [],
-              string baseCppClass = "::mlir::Type">
-    : DialectType<dialect, CPred<"">, /*descr*/"", name # "Type">,
-      AttrOrTypeDef<"Type", name, traits, baseCppClass> {
-  // A constant builder provided when the type has no parameters.
-  let builderCall = !if(!empty(parameters),
-                           "$_builder.getType<" # dialect.cppNamespace #
-                               "::" # cppClassName # ">()",
-                           "");
-  // The predicate for when this def is used as a constraint.
-  let predicate = CPred<"$_self.isa<" # dialect.cppNamespace #
-                                 "::" # cppClassName # ">()">;
-}
-
-// 'Parameters' should be subclasses of this or simple strings (which is a
-// shorthand for AttrOrTypeParameter<"C++Type">).
-class AttrOrTypeParameter<string type, string desc, string accessorType = ""> {
-  // Custom memory allocation code for storage constructor.
-  code allocator = ?;
-  // Custom comparator used to compare two instances for equality.
-  code comparator = ?;
-  // The C++ type of this parameter.
-  string cppType = type;
-  // The C++ type of the accessor for this parameter.
-  string cppAccessorType = !if(!empty(accessorType), type, accessorType);
-  // The C++ storage type of of this parameter if it is a reference, e.g.
-  // `std::string` for `StringRef` or `SmallVector` for `ArrayRef`.
-  string cppStorageType = ?;
-  // One-line human-readable description of the argument.
-  string summary = desc;
-  // The format string for the asm syntax (documentation only).
-  string syntax = ?;
-  // The default parameter parser is `::mlir::parseField<T>($_parser)`, which
-  // returns `FailureOr<T>`. Overload `parseField` to support parsing for your
-  // type. Or you can provide a customer printer. For attributes, "$_type" will
-  // be replaced with the required attribute type.
-  string parser = ?;
-  // The default parameter printer is `$_printer << $_self`. Overload the stream
-  // operator of `AsmPrinter` as necessary to print your type. Or you can
-  // provide a custom printer.
-  string printer = ?;
-}
-class AttrParameter<string type, string desc, string accessorType = "">
- : AttrOrTypeParameter<type, desc, accessorType>;
-class TypeParameter<string type, string desc, string accessorType = "">
- : AttrOrTypeParameter<type, desc, accessorType>;
-
-// For StringRefs, which require allocation.
-class StringRefParameter<string desc = ""> :
-    AttrOrTypeParameter<"::llvm::StringRef", desc> {
-  let allocator = [{$_dst = $_allocator.copyInto($_self);}];
-  let printer = [{$_printer << '"' << $_self << '"';}];
-  let cppStorageType = "std::string";
-}
-
-// For APFloats, which require comparison.
-class APFloatParameter<string desc> :
-    AttrOrTypeParameter<"::llvm::APFloat", desc> {
-  let comparator = "$_lhs.bitwiseIsEqual($_rhs)";
-}
-
-// For standard ArrayRefs, which require allocation.
-class ArrayRefParameter<string arrayOf, string desc = ""> :
-    AttrOrTypeParameter<"::llvm::ArrayRef<" # arrayOf # ">", desc> {
-  let allocator = [{$_dst = $_allocator.copyInto($_self);}];
-  let cppStorageType = "::llvm::SmallVector<" # arrayOf # ">";
-}
-
-// For classes which require allocation and have their own allocateInto method.
-class SelfAllocationParameter<string type, string desc> :
-    AttrOrTypeParameter<type, desc> {
-  let allocator = [{$_dst = $_self.allocateInto($_allocator);}];
-}
-
-// For ArrayRefs which contain things which allocate themselves.
-class ArrayRefOfSelfAllocationParameter<string arrayOf, string desc> :
-    AttrOrTypeParameter<"::llvm::ArrayRef<" # arrayOf # ">", desc> {
-  let allocator = [{
-    llvm::SmallVector<}] # arrayOf # [{, 4> tmpFields;
-    for (size_t i = 0, e = $_self.size(); i < e; ++i)
-      tmpFields.push_back($_self[i].allocateInto($_allocator));
-    $_dst = $_allocator.copyInto(ArrayRef<}] # arrayOf # [{>(tmpFields));
-  }];
-}
-
-// This is a special parameter used for AttrDefs that represents a `mlir::Type`
-// that is also used as the value `Type` of the attribute. Only one parameter
-// of the attribute may be of this type.
-class AttributeSelfTypeParameter<string desc,
-                                 string derivedType = "::mlir::Type"> :
-    AttrOrTypeParameter<derivedType, desc> {}
 
 #endif // OP_BASE

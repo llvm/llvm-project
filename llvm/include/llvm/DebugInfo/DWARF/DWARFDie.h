@@ -18,7 +18,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
 #include "llvm/DebugInfo/DWARF/DWARFAttribute.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugInfoEntry.h"
-#include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
+#include "llvm/DebugInfo/DWARF/DWARFLocationExpression.h"
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -463,12 +463,16 @@ inline bool operator!=(const std::reverse_iterator<DWARFDie::iterator> &LHS,
 }
 
 inline std::reverse_iterator<DWARFDie::iterator> DWARFDie::rbegin() const {
-  return llvm::make_reverse_iterator(end());
+  return std::make_reverse_iterator(end());
 }
 
 inline std::reverse_iterator<DWARFDie::iterator> DWARFDie::rend() const {
-  return llvm::make_reverse_iterator(begin());
+  return std::make_reverse_iterator(begin());
 }
+
+void dumpTypeQualifiedName(const DWARFDie &DIE, raw_ostream &OS);
+void dumpTypeUnqualifiedName(const DWARFDie &DIE, raw_ostream &OS,
+                             std::string *OriginalFullName = nullptr);
 
 } // end namespace llvm
 

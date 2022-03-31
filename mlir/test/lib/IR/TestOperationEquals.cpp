@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
 
@@ -46,7 +45,7 @@ struct TestOperationEqualPass
       llvm::outs() << " compares NOT equals!\n";
   }
 };
-} // end anonymous namespace
+} // namespace
 
 namespace mlir {
 void registerTestOperationEqualPass() {

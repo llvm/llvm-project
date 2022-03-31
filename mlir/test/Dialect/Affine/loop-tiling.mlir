@@ -240,6 +240,43 @@ func @separate_full_tile_2d(%M : index, %N : index) {
   return
 }
 
+// -----
+
+#ub = affine_map<(d0)[s0] -> (d0, s0)>
+// CHECK-LABEL: func @non_hyperrectangular_loop
+func @non_hyperrectangular_loop() {
+  %N = arith.constant 128 : index
+  affine.for %i = 0 to %N {
+    affine.for %j = 0 to min #ub(%i)[%N] {
+      "test.foo"() : () -> ()
+    }
+ }
+  // No tiling is performed here.
+  // CHECK:      arith.constant
+  // CHECK-NEXT: affine.for
+  // CHECK-NEXT:   affine.for
+  // CHECK-NEXT:     test.foo
+  return
+}
+
+// -----
+
+// No tiling supported on loops with yield values.
+
+// CHECK-LABEL: func @yield_values
+func @yield_values(%init : index) {
+  %r = affine.for %i = 0 to 10 iter_args(%s = %init) -> index {
+    "test.foo"() : () -> ()
+    affine.yield %s : index
+  }
+  // No tiling here.
+  // CHECK-NEXT: affine.for {{.*}} {
+  // CHECK-NEXT:   test.foo
+  return
+}
+
+// -----
+
 // SEPARATE-DAG: #[[$SEP_COND:.*]] = affine_set<(d0, d1)[s0, s1] : (-d0 + s0 - 32 >= 0, -d1 + s1 - 32 >= 0)>
 // SEPARATE-DAG: #[[$LB:.*]] = affine_map<(d0) -> (d0)>
 // SEPARATE-DAG: #[[$FULL_TILE_UB:.*]] = affine_map<(d0) -> (d0 + 32)>

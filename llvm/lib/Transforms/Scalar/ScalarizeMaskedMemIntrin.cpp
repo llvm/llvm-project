@@ -24,11 +24,9 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
@@ -36,7 +34,6 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include <algorithm>
 #include <cassert>
 
 using namespace llvm;
@@ -959,7 +956,8 @@ static bool optimizeCallInst(CallInst *CI, bool &ModifiedDT,
       Type *LoadTy = CI->getType();
       Align Alignment = DL.getValueOrABITypeAlignment(MA,
                                                       LoadTy->getScalarType());
-      if (TTI.isLegalMaskedGather(LoadTy, Alignment))
+      if (TTI.isLegalMaskedGather(LoadTy, Alignment) &&
+          !TTI.forceScalarizeMaskedGather(cast<VectorType>(LoadTy), Alignment))
         return false;
       scalarizeMaskedGather(DL, CI, DTU, ModifiedDT);
       return true;
@@ -970,7 +968,9 @@ static bool optimizeCallInst(CallInst *CI, bool &ModifiedDT,
       Type *StoreTy = CI->getArgOperand(0)->getType();
       Align Alignment = DL.getValueOrABITypeAlignment(MA,
                                                       StoreTy->getScalarType());
-      if (TTI.isLegalMaskedScatter(StoreTy, Alignment))
+      if (TTI.isLegalMaskedScatter(StoreTy, Alignment) &&
+          !TTI.forceScalarizeMaskedScatter(cast<VectorType>(StoreTy),
+                                           Alignment))
         return false;
       scalarizeMaskedScatter(DL, CI, DTU, ModifiedDT);
       return true;

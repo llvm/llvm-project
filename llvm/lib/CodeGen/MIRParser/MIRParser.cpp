@@ -13,13 +13,10 @@
 
 #include "llvm/CodeGen/MIRParser/MIRParser.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/AsmParser/SlotMapping.h"
-#include "llvm/CodeGen/GlobalISel/RegisterBank.h"
-#include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
 #include "llvm/CodeGen/MIRParser/MIParser.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
@@ -29,7 +26,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
@@ -46,6 +43,8 @@
 using namespace llvm;
 
 namespace llvm {
+class MDNode;
+class RegisterBank;
 
 /// This class implements the parsing of LLVM IR that's embedded inside a MIR
 /// file.
@@ -182,8 +181,7 @@ static void handleYAMLDiag(const SMDiagnostic &Diag, void *Context) {
 MIRParserImpl::MIRParserImpl(std::unique_ptr<MemoryBuffer> Contents,
                              StringRef Filename, LLVMContext &Context,
                              std::function<void(Function &)> Callback)
-    : SM(),
-      Context(Context),
+    : Context(Context),
       In(SM.getMemoryBuffer(SM.AddNewSourceBuffer(std::move(Contents), SMLoc()))
              ->getBuffer(),
          nullptr, handleYAMLDiag, this),
@@ -350,17 +348,32 @@ void MIRParserImpl::computeFunctionProperties(MachineFunction &MF) {
 
   bool HasPHI = false;
   bool HasInlineAsm = false;
+  bool AllTiedOpsRewritten = true, HasTiedOps = false;
   for (const MachineBasicBlock &MBB : MF) {
     for (const MachineInstr &MI : MBB) {
       if (MI.isPHI())
         HasPHI = true;
       if (MI.isInlineAsm())
         HasInlineAsm = true;
+      for (unsigned I = 0; I < MI.getNumOperands(); ++I) {
+        const MachineOperand &MO = MI.getOperand(I);
+        if (!MO.isReg() || !MO.getReg())
+          continue;
+        unsigned DefIdx;
+        if (MO.isUse() && MI.isRegTiedToDefOperand(I, &DefIdx)) {
+          HasTiedOps = true;
+          if (MO.getReg() != MI.getOperand(DefIdx).getReg())
+            AllTiedOpsRewritten = false;
+        }
+      }
     }
   }
   if (!HasPHI)
     Properties.set(MachineFunctionProperties::Property::NoPHIs);
   MF.setHasInlineAsm(HasInlineAsm);
+
+  if (HasTiedOps && AllTiedOpsRewritten)
+    Properties.set(MachineFunctionProperties::Property::TiedOpsRewritten);
 
   if (isSSA(MF))
     Properties.set(MachineFunctionProperties::Property::IsSSA);
@@ -1009,7 +1022,7 @@ SMDiagnostic MIRParserImpl::diagFromBlockStringDiag(const SMDiagnostic &Error,
 MIRParser::MIRParser(std::unique_ptr<MIRParserImpl> Impl)
     : Impl(std::move(Impl)) {}
 
-MIRParser::~MIRParser() {}
+MIRParser::~MIRParser() = default;
 
 std::unique_ptr<Module>
 MIRParser::parseIRModule(DataLayoutCallbackTy DataLayoutCallback) {

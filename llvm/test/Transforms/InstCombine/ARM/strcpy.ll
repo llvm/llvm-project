@@ -1,5 +1,5 @@
 ; Test that the strcpy library call simplifier works correctly for ARM procedure calls
-; RUN: opt < %s -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 ;
 ; This transformation requires the pointer size, as it assumes that size_t is
 ; the size of a pointer.

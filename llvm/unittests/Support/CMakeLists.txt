@@ -11,6 +11,7 @@ add_llvm_unittest(SupportTests
   ArrayRecyclerTest.cpp
   Base64Test.cpp
   BinaryStreamTest.cpp
+  BLAKE3Test.cpp
   BlockFrequencyTest.cpp
   BranchProbabilityTest.cpp
   CachePruningTest.cpp
@@ -22,6 +23,8 @@ add_llvm_unittest(SupportTests
   CompressionTest.cpp
   ConvertUTFTest.cpp
   CRCTest.cpp
+  CSKYAttributeParserTest.cpp
+  CSKYTargetParserTest.cpp
   DataExtractorTest.cpp
   DebugTest.cpp
   DebugCounterTest.cpp
@@ -41,7 +44,6 @@ add_llvm_unittest(SupportTests
   GlobPatternTest.cpp
   HashBuilderTest.cpp
   Host.cpp
-  HTTPClient.cpp
   IndexedAccessorTest.cpp
   InstructionCostTest.cpp
   ItaniumManglingCanonicalizerTest.cpp
@@ -69,6 +71,7 @@ add_llvm_unittest(SupportTests
   ReplaceFileTest.cpp
   RISCVAttributeParserTest.cpp
   ScaledNumberTest.cpp
+  ScopedPrinterTest.cpp
   SHA256.cpp
   SourceMgrTest.cpp
   SpecialCaseListTest.cpp

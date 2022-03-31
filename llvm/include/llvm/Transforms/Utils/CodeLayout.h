@@ -20,8 +20,6 @@
 
 namespace llvm {
 
-class MachineBasicBlock;
-
 /// Find a layout of nodes (basic blocks) of a given CFG optimizing jump
 /// locality and thus processor I-cache utilization. This is achieved via
 /// increasing the number of fall-through jumps and co-locating frequently

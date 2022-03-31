@@ -5,7 +5,7 @@
 
 int a;
 
-void foo() {
+void foo(void) {
   int(*b)[a];
   int *(**c)[a];
 #pragma omp parallel if (0)
@@ -43,7 +43,7 @@ void bar(int n, int *a) {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[VLA:%.*]], i32** nonnull align 8 dereferenceable(8) [[B:%.*]], i64 [[VLA1:%.*]], i32**** nonnull align 8 dereferenceable(8) [[C:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[VLA:%.*]], i32** noundef nonnull align 8 dereferenceable(8) [[B:%.*]], i64 noundef [[VLA1:%.*]], i32**** noundef nonnull align 8 dereferenceable(8) [[C:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -83,7 +83,7 @@ void bar(int n, int *a) {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@bar
-// CHECK1-SAME: (i32 signext [[N:%.*]], i32* [[A:%.*]]) #[[ATTR0]] {
+// CHECK1-SAME: (i32 noundef signext [[N:%.*]], i32* noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca i32*, align 8
@@ -106,7 +106,7 @@ void bar(int n, int *a) {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[VLA:%.*]], i32** nonnull align 8 dereferenceable(8) [[P:%.*]], i32** nonnull align 8 dereferenceable(8) [[A:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[VLA:%.*]], i32** noundef nonnull align 8 dereferenceable(8) [[P:%.*]], i32** noundef nonnull align 8 dereferenceable(8) [[A:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8

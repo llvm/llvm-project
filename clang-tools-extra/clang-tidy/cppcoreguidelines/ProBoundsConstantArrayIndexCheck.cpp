@@ -71,13 +71,12 @@ void ProBoundsConstantArrayIndexCheck::check(
       BaseRange = ArraySubscriptE->getBase()->getSourceRange();
     else
       BaseRange =
-          dyn_cast<CXXOperatorCallExpr>(Matched)->getArg(0)->getSourceRange();
+          cast<CXXOperatorCallExpr>(Matched)->getArg(0)->getSourceRange();
     SourceRange IndexRange = IndexExpr->getSourceRange();
 
     auto Diag = diag(Matched->getExprLoc(),
                      "do not use array subscript when the index is "
-                     "not an integer constant expression; use gsl::at() "
-                     "instead");
+                     "not an integer constant expression");
     if (!GslHeader.empty()) {
       Diag << FixItHint::CreateInsertion(BaseRange.getBegin(), "gsl::at(")
            << FixItHint::CreateReplacement(

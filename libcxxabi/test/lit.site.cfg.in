@@ -24,8 +24,8 @@ config.executor                 = "@LIBCXXABI_EXECUTOR@"
 config.libcxxabi_shared         = @LIBCXXABI_LINK_TESTS_WITH_SHARED_LIBCXXABI@
 config.enable_shared            = @LIBCXXABI_LINK_TESTS_WITH_SHARED_LIBCXX@
 config.host_triple              = "@LLVM_HOST_TRIPLE@"
-config.sysroot                  = "@LIBCXXABI_SYSROOT@"
-config.gcc_toolchain            = "@LIBCXXABI_GCC_TOOLCHAIN@"
+config.sysroot                  = "@CMAKE_SYSROOT@"
+config.gcc_toolchain            = "@CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN@"
 config.cxx_ext_threads          = @LIBCXXABI_BUILD_EXTERNAL_THREAD_LIBRARY@
 
 config.pstl_src_root            = "@ParallelSTL_SOURCE_DIR@" if @LIBCXX_ENABLE_PARALLEL_ALGORITHMS@ else None

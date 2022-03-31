@@ -1256,28 +1256,28 @@ merge:
 }
 
 
-%T = type {i32, i32}
+%TP = type {i32, i32}
 
-define i32 @test_insertvalue(i1 zeroext %flag, %T %P) {
+define i32 @test_insertvalue(i1 zeroext %flag, %TP %P) {
 ; CHECK-LABEL: @test_insertvalue(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[FLAG:%.*]], i32 0, i32 1
-; CHECK-NEXT:    [[T2:%.*]] = insertvalue [[T:%.*]] [[P:%.*]], i32 [[DOT]], 0
+; CHECK-NEXT:    [[I2:%.*]] = insertvalue [[TP:%.*]] [[P:%.*]], i32 [[DOT]], 0
 ; CHECK-NEXT:    ret i32 1
 ;
 entry:
   br i1 %flag, label %if.then, label %if.else
 
 if.then:
-  %t1 = insertvalue %T %P, i32 0, 0
+  %i1 = insertvalue %TP %P, i32 0, 0
   br label %if.end
 
 if.else:
-  %t2 = insertvalue %T %P, i32 1, 0
+  %i2 = insertvalue %TP %P, i32 1, 0
   br label %if.end
 
 if.end:
-  %t = phi %T [%t1, %if.then], [%t2, %if.else]
+  %i = phi %TP [%i1, %if.then], [%i2, %if.else]
   ret i32 1
 }
 

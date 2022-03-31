@@ -18,7 +18,45 @@ include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
 
 // -----
 
-def SPV_UndefOp : SPV_Op<"Undef", []> {
+def SPV_AssumeTrueKHROp : SPV_Op<"AssumeTrueKHR", []> {
+  let summary = "TBD";
+
+  let description = [{
+
+
+    <!-- End of AutoGen section -->
+
+    ```
+    assumetruekhr-op ::= `spv.AssumeTrueKHR` ssa-use
+    ```mlir
+
+    #### Example:
+
+    ```
+    spv.AssumeTrueKHR %arg
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPV_V_1_0>,
+    MaxVersion<SPV_V_1_5>,
+    Extension<[SPV_KHR_expect_assume]>,
+    Capability<[SPV_C_ExpectAssumeKHR]>
+  ];
+
+  let arguments = (ins
+    SPV_Bool:$condition
+  );
+
+  let results = (outs);
+
+  let hasVerifier = 0;
+  let assemblyFormat = "$condition attr-dict";
+}
+
+// -----
+
+def SPV_UndefOp : SPV_Op<"Undef", [NoSideEffect]> {
   let summary = "Make an intermediate object whose value is undefined.";
 
   let description = [{
@@ -48,7 +86,7 @@ def SPV_UndefOp : SPV_Op<"Undef", []> {
     SPV_Type:$result
   );
 
-  let verifier = [{ return success(); }];
+  let hasVerifier = 0;
 
   let hasOpcode = 0;
   let autogenSerialization = 0;

@@ -18,7 +18,7 @@
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -43,10 +43,7 @@ public:
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11 __wrap_iter() _NOEXCEPT
                 : __i()
     {
-#if _LIBCPP_DEBUG_LEVEL == 2
-      if (!__libcpp_is_constant_evaluated())
-        __get_db()->__insert_i(this);
-#endif
+        _VSTD::__debug_db_insert_i(this);
     }
     template <class _Up> _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
         __wrap_iter(const __wrap_iter<_Up>& __u,
@@ -69,9 +66,10 @@ public:
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
     __wrap_iter& operator=(const __wrap_iter& __x)
     {
-        if (this != _VSTD::addressof(__x) && !__libcpp_is_constant_evaluated())
+        if (this != _VSTD::addressof(__x))
         {
-            __get_db()->__iterator_copy(this, _VSTD::addressof(__x));
+            if (!__libcpp_is_constant_evaluated())
+                __get_db()->__iterator_copy(this, _VSTD::addressof(__x));
             __i = __x.__i;
         }
         return *this;
@@ -85,29 +83,20 @@ public:
 #endif
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11 reference operator*() const _NOEXCEPT
     {
-#if _LIBCPP_DEBUG_LEVEL == 2
-      if (!__libcpp_is_constant_evaluated())
-        _LIBCPP_ASSERT(__get_const_db()->__dereferenceable(this),
-                       "Attempted to dereference a non-dereferenceable iterator");
-#endif
+        _LIBCPP_DEBUG_ASSERT(__get_const_db()->__dereferenceable(this),
+                             "Attempted to dereference a non-dereferenceable iterator");
         return *__i;
     }
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11 pointer operator->() const _NOEXCEPT
     {
-#if _LIBCPP_DEBUG_LEVEL == 2
-      if (!__libcpp_is_constant_evaluated())
-        _LIBCPP_ASSERT(__get_const_db()->__dereferenceable(this),
-                       "Attempted to dereference a non-dereferenceable iterator");
-#endif
+        _LIBCPP_DEBUG_ASSERT(__get_const_db()->__dereferenceable(this),
+                             "Attempted to dereference a non-dereferenceable iterator");
         return _VSTD::__to_address(__i);
     }
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11 __wrap_iter& operator++() _NOEXCEPT
     {
-#if _LIBCPP_DEBUG_LEVEL == 2
-      if (!__libcpp_is_constant_evaluated())
-        _LIBCPP_ASSERT(__get_const_db()->__dereferenceable(this),
-                       "Attempted to increment a non-incrementable iterator");
-#endif
+        _LIBCPP_DEBUG_ASSERT(__get_const_db()->__dereferenceable(this),
+                             "Attempted to increment a non-incrementable iterator");
         ++__i;
         return *this;
     }
@@ -116,11 +105,8 @@ public:
 
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11 __wrap_iter& operator--() _NOEXCEPT
     {
-#if _LIBCPP_DEBUG_LEVEL == 2
-      if (!__libcpp_is_constant_evaluated())
-        _LIBCPP_ASSERT(__get_const_db()->__decrementable(this),
-                       "Attempted to decrement a non-decrementable iterator");
-#endif
+        _LIBCPP_DEBUG_ASSERT(__get_const_db()->__decrementable(this),
+                             "Attempted to decrement a non-decrementable iterator");
         --__i;
         return *this;
     }
@@ -130,11 +116,8 @@ public:
         {__wrap_iter __w(*this); __w += __n; return __w;}
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11 __wrap_iter& operator+=(difference_type __n) _NOEXCEPT
     {
-#if _LIBCPP_DEBUG_LEVEL == 2
-      if (!__libcpp_is_constant_evaluated())
-        _LIBCPP_ASSERT(__get_const_db()->__addable(this, __n),
-                   "Attempted to add/subtract an iterator outside its valid range");
-#endif
+        _LIBCPP_DEBUG_ASSERT(__get_const_db()->__addable(this, __n),
+                             "Attempted to add/subtract an iterator outside its valid range");
         __i += __n;
         return *this;
     }
@@ -144,11 +127,8 @@ public:
         {*this += -__n; return *this;}
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11 reference    operator[](difference_type __n) const _NOEXCEPT
     {
-#if _LIBCPP_DEBUG_LEVEL == 2
-      if (!__libcpp_is_constant_evaluated())
-        _LIBCPP_ASSERT(__get_const_db()->__subscriptable(this, __n),
-                   "Attempted to subscript an iterator outside its valid range");
-#endif
+        _LIBCPP_DEBUG_ASSERT(__get_const_db()->__subscriptable(this, __n),
+                             "Attempted to subscript an iterator outside its valid range");
         return __i[__n];
     }
 
@@ -156,13 +136,15 @@ public:
 
 private:
 #if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11 __wrap_iter(const void* __p, iterator_type __x) : __i(__x)
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
+    explicit __wrap_iter(const void* __p, iterator_type __x) : __i(__x)
     {
       if (!__libcpp_is_constant_evaluated())
         __get_db()->__insert_ic(this, __p);
     }
 #else
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11 __wrap_iter(iterator_type __x) _NOEXCEPT : __i(__x) {}
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
+    explicit __wrap_iter(iterator_type __x) _NOEXCEPT : __i(__x) {}
 #endif
 
     template <class _Up> friend class __wrap_iter;
@@ -189,11 +171,8 @@ template <class _Iter1>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
 bool operator<(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter1>& __y) _NOEXCEPT
 {
-#if _LIBCPP_DEBUG_LEVEL == 2
-  if (!__libcpp_is_constant_evaluated())
-    _LIBCPP_ASSERT(__get_const_db()->__less_than_comparable(_VSTD::addressof(__x), _VSTD::addressof(__y)),
-                   "Attempted to compare incomparable iterators");
-#endif
+    _LIBCPP_DEBUG_ASSERT(__get_const_db()->__less_than_comparable(_VSTD::addressof(__x), _VSTD::addressof(__y)),
+                         "Attempted to compare incomparable iterators");
     return __x.base() < __y.base();
 }
 
@@ -201,11 +180,8 @@ template <class _Iter1, class _Iter2>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
 bool operator<(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT
 {
-#if _LIBCPP_DEBUG_LEVEL == 2
-  if (!__libcpp_is_constant_evaluated())
-    _LIBCPP_ASSERT(__get_const_db()->__less_than_comparable(&__x, &__y),
-                   "Attempted to compare incomparable iterators");
-#endif
+    _LIBCPP_DEBUG_ASSERT(__get_const_db()->__less_than_comparable(&__x, &__y),
+                         "Attempted to compare incomparable iterators");
     return __x.base() < __y.base();
 }
 
@@ -275,11 +251,8 @@ typename __wrap_iter<_Iter1>::difference_type
 operator-(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT
 #endif // C++03
 {
-#if _LIBCPP_DEBUG_LEVEL == 2
-  if (!__libcpp_is_constant_evaluated())
-    _LIBCPP_ASSERT(__get_const_db()->__less_than_comparable(_VSTD::addressof(__x), _VSTD::addressof(__y)),
-                   "Attempted to subtract incompatible iterators");
-#endif
+    _LIBCPP_DEBUG_ASSERT(__get_const_db()->__less_than_comparable(_VSTD::addressof(__x), _VSTD::addressof(__y)),
+                         "Attempted to subtract incompatible iterators");
     return __x.base() - __y.base();
 }
 

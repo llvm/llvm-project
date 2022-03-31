@@ -22,7 +22,7 @@
 extern std::atomic_flag global;
 struct X { X() { global.test_and_set(); }};
 X x;
-std::atomic_flag global = ATOMIC_FLAG_INIT;
+std::atomic_flag global{false};
 #endif
 
 int main(int, char**)

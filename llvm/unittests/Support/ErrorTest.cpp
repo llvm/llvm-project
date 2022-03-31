@@ -179,7 +179,7 @@ TEST(Error, HandleCustomError) {
     CaughtErrorInfo = CE.getInfo();
   });
 
-  EXPECT_TRUE(CaughtErrorInfo == 42) << "Wrong result from CustomError handler";
+  EXPECT_EQ(CaughtErrorInfo, 42) << "Wrong result from CustomError handler";
 }
 
 // Check that handler type deduction also works for handlers
@@ -253,7 +253,8 @@ TEST(Error, HandleCustomErrorWithCustomBaseClass) {
                     CaughtErrorExtraInfo = SE.getExtraInfo();
                   });
 
-  EXPECT_TRUE(CaughtErrorInfo == 42 && CaughtErrorExtraInfo == 7)
+  EXPECT_EQ(CaughtErrorInfo, 42) << "Wrong result from CustomSubError handler";
+  EXPECT_EQ(CaughtErrorExtraInfo, 7)
       << "Wrong result from CustomSubError handler";
 }
 
@@ -270,9 +271,9 @@ TEST(Error, FirstHandlerOnly) {
                   },
                   [&](const CustomError &CE) { DummyInfo = CE.getInfo(); });
 
-  EXPECT_TRUE(CaughtErrorInfo == 42 && CaughtErrorExtraInfo == 7 &&
-              DummyInfo == 0)
-      << "Activated the wrong Error handler(s)";
+  EXPECT_EQ(CaughtErrorInfo, 42) << "Activated the wrong Error handler(s)";
+  EXPECT_EQ(CaughtErrorExtraInfo, 7) << "Activated the wrong Error handler(s)";
+  EXPECT_EQ(DummyInfo, 0) << "Activated the wrong Error handler(s)";
 }
 
 // Check that general handlers shadow specific ones.
@@ -289,7 +290,11 @@ TEST(Error, HandlerShadowing) {
         DummyExtraInfo = SE.getExtraInfo();
       });
 
-  EXPECT_TRUE(CaughtErrorInfo == 42 && DummyInfo == 0 && DummyExtraInfo == 0)
+  EXPECT_EQ(CaughtErrorInfo, 42)
+      << "General Error handler did not shadow specific handler";
+  EXPECT_EQ(DummyInfo, 0)
+      << "General Error handler did not shadow specific handler";
+  EXPECT_EQ(DummyExtraInfo, 0)
       << "General Error handler did not shadow specific handler";
 }
 
@@ -317,9 +322,9 @@ TEST(Error, CheckJoinErrors) {
                     CustomErrorInfo1 = CE.getInfo();
                   });
 
-  EXPECT_TRUE(CustomErrorInfo1 == 7 && CustomErrorInfo2 == 42 &&
-              CustomErrorExtraInfo == 7)
-      << "Failed handling compound Error.";
+  EXPECT_EQ(CustomErrorInfo1, 7) << "Failed handling compound Error.";
+  EXPECT_EQ(CustomErrorInfo2, 42) << "Failed handling compound Error.";
+  EXPECT_EQ(CustomErrorExtraInfo, 7) << "Failed handling compound Error.";
 
   // Test appending a single item to a list.
   {

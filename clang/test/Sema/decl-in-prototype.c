@@ -53,7 +53,7 @@ void enum_in_fun_in_fun(void (*fp)(enum { AA, BB } e)) { // expected-warning {{w
   SA(2, BB == 0);
 }
 
-void f7() {
+void f7(void) {
   extern void ext(struct S { enum E7 { a, b } o; } p); // expected-warning 2 {{will not be visible}}
   ext(a); // expected-error {{use of undeclared identifier}}
 }
@@ -87,7 +87,7 @@ int f11(
   } // expected-error {{expected member name or ';'}}
   e);
 
-void f12() {
+void f12(void) {
   extern int ext12(
       struct S12 { } e // expected-warning {{will not be visible}}
       );

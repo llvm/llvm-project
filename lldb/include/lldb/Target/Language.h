@@ -57,8 +57,7 @@ public:
   class ImageListTypeScavenger : public TypeScavenger {
     class Result : public Language::TypeScavenger::Result {
     public:
-      Result(CompilerType type)
-          : Language::TypeScavenger::Result(), m_compiler_type(type) {}
+      Result(CompilerType type) : m_compiler_type(type) {}
 
       bool IsValid() override { return m_compiler_type.IsValid(); }
 
@@ -95,7 +94,7 @@ public:
   template <typename... ScavengerTypes>
   class EitherTypeScavenger : public TypeScavenger {
   public:
-    EitherTypeScavenger() : TypeScavenger(), m_scavengers() {
+    EitherTypeScavenger() : TypeScavenger() {
       for (std::shared_ptr<TypeScavenger> scavenger : { std::shared_ptr<TypeScavenger>(new ScavengerTypes())... }) {
         if (scavenger)
           m_scavengers.push_back(scavenger);
@@ -118,7 +117,7 @@ public:
   template <typename... ScavengerTypes>
   class UnionTypeScavenger : public TypeScavenger {
   public:
-    UnionTypeScavenger() : TypeScavenger(), m_scavengers() {
+    UnionTypeScavenger() : TypeScavenger() {
       for (std::shared_ptr<TypeScavenger> scavenger : { std::shared_ptr<TypeScavenger>(new ScavengerTypes())... }) {
         if (scavenger)
           m_scavengers.push_back(scavenger);

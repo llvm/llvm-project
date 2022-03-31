@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
+#include "AArch64Subtarget.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -116,8 +117,13 @@ INITIALIZE_PASS(AArch64A53Fix835769, "aarch64-fix-cortex-a53-835769-pass",
 bool
 AArch64A53Fix835769::runOnMachineFunction(MachineFunction &F) {
   LLVM_DEBUG(dbgs() << "***** AArch64A53Fix835769 *****\n");
+  auto &STI = F.getSubtarget<AArch64Subtarget>();
+  // Fix not requested, skip pass.
+  if (!STI.fixCortexA53_835769())
+    return false;
+
   bool Changed = false;
-  TII = F.getSubtarget().getInstrInfo();
+  TII = STI.getInstrInfo();
 
   for (auto &MBB : F) {
     Changed |= runOnBasicBlock(MBB);

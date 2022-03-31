@@ -66,8 +66,7 @@ public:
                             "commands previously added to it.",
                             nullptr, eCommandRequiresTarget),
         IOHandlerDelegateMultiline("DONE",
-                                   IOHandlerDelegate::Completion::LLDBCommand),
-        m_options() {
+                                   IOHandlerDelegate::Completion::LLDBCommand) {
     SetHelpLong(
         R"(
 General information about entering watchpoint commands
@@ -314,7 +313,7 @@ are no syntax errors may indicate that a function was declared but never called.
 
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options(), m_one_liner(), m_function_name() {}
+    CommandOptions() {}
 
     ~CommandOptions() override = default;
 

@@ -15,17 +15,17 @@
 ; 3: DwarfUnit::addUInt()
 ; 4: addUInt(Block, (dwarf::Attribute)0, Form, Integer);
 
-; CHECK: DW_AT_noreturn
 ; CHECK: DW_AT_name      ("var")
 ; CHECK-NOT: DW_TAG_
 ; CHECK: DW_AT_alignment
 ; CHECK: DW_AT_location  (DW_OP_addr 0x0)
+; CHECK: DW_AT_noreturn
 ;
-; STRICT-NOT: DW_AT_noreturn
 ; STRICT: DW_AT_name      ("var")
 ; STRICT-NOT: DW_AT_alignment
 ; STRICT-NOT: DW_TAG_
 ; STRICT: DW_AT_location  (DW_OP_addr 0x0)
+; STRICT-NOT: DW_AT_noreturn
 
 @_ZL3var = internal global i32 0, align 16, !dbg !0
 

@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_C_DIALECT_H
-#define MLIR_C_DIALECT_H
+#ifndef MLIR_C_INTERFACES_H
+#define MLIR_C_INTERFACES_H
 
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
@@ -64,4 +64,4 @@ MLIR_CAPI_EXPORTED MlirLogicalResult mlirInferTypeOpInterfaceInferReturnTypes(
 }
 #endif
 
-#endif // MLIR_C_DIALECT_H
+#endif // MLIR_C_INTERFACES_H

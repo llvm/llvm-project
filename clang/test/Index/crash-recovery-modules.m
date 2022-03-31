@@ -19,7 +19,7 @@
 #pragma clang __debug crash
 #endif
 
-void test() {
+void test(void) {
   const char* error = getCrashString();
 }
 

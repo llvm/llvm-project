@@ -19,6 +19,7 @@
 #include "lldb/Host/linux/Ptrace.h"
 #include "lldb/Host/linux/Support.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
 #include "lldb/lldb-enumerations.h"
@@ -110,7 +111,7 @@ lldb::StateType NativeThreadLinux::GetState() { return m_state; }
 
 bool NativeThreadLinux::GetStopReason(ThreadStopInfo &stop_info,
                                       std::string &description) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD));
+  Log *log = GetLog(LLDBLog::Thread);
 
   description.clear();
 
@@ -277,7 +278,7 @@ Status NativeThreadLinux::SingleStep(uint32_t signo) {
 
 void NativeThreadLinux::SetStoppedBySignal(uint32_t signo,
                                            const siginfo_t *info) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD));
+  Log *log = GetLog(LLDBLog::Thread);
   LLDB_LOGF(log, "NativeThreadLinux::%s called with signal 0x%02" PRIx32,
             __FUNCTION__, signo);
 
@@ -391,7 +392,7 @@ void NativeThreadLinux::SetStopped() {
 }
 
 void NativeThreadLinux::SetStoppedByExec() {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD));
+  Log *log = GetLog(LLDBLog::Thread);
   LLDB_LOGF(log, "NativeThreadLinux::%s()", __FUNCTION__);
 
   SetStopped();
@@ -493,7 +494,7 @@ void NativeThreadLinux::SetExited() {
 }
 
 Status NativeThreadLinux::RequestStop() {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD));
+  Log *log = GetLog(LLDBLog::Thread);
 
   NativeProcessLinux &process = GetProcess();
 
@@ -519,7 +520,7 @@ Status NativeThreadLinux::RequestStop() {
 }
 
 void NativeThreadLinux::MaybeLogStateChange(lldb::StateType new_state) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD));
+  Log *log = GetLog(LLDBLog::Thread);
   // If we're not logging, we're done.
   if (!log)
     return;
@@ -535,4 +536,19 @@ void NativeThreadLinux::MaybeLogStateChange(lldb::StateType new_state) {
 
 NativeProcessLinux &NativeThreadLinux::GetProcess() {
   return static_cast<NativeProcessLinux &>(m_process);
+}
+
+const NativeProcessLinux &NativeThreadLinux::GetProcess() const {
+  return static_cast<const NativeProcessLinux &>(m_process);
+}
+
+llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
+NativeThreadLinux::GetSiginfo() const {
+  auto siginfo_buf =
+      llvm::WritableMemoryBuffer::getNewUninitMemBuffer(sizeof(siginfo_t));
+  Status error =
+      GetProcess().GetSignalInfo(GetID(), siginfo_buf->getBufferStart());
+  if (!error.Success())
+    return error.ToError();
+  return std::move(siginfo_buf);
 }

@@ -17,8 +17,6 @@
 
 namespace llvm {
 
-class SystemZTargetMachine;
-
 class SystemZSelectionDAGInfo : public SelectionDAGTargetInfo {
 public:
   explicit SystemZSelectionDAGInfo() = default;

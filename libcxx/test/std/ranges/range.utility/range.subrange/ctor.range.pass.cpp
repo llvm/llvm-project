@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // class std::ranges::subrange;
@@ -29,15 +28,15 @@ static_assert( std::is_constructible_v<DifferentSentinelWithSizeMemberSubrange, 
 
 constexpr bool test() {
   ForwardSubrange a{ForwardBorrowedRange()};
-  assert(a.begin().base() == globalBuff);
-  assert(a.end().base() == globalBuff + 8);
+  assert(base(a.begin()) == globalBuff);
+  assert(base(a.end()) == globalBuff + 8);
 
   ConvertibleForwardSubrange b{ConvertibleForwardBorrowedRange()};
   assert(b.begin() == globalBuff);
   assert(b.end() == globalBuff + 8);
 
   DifferentSentinelSubrange c{ForwardBorrowedRangeDifferentSentinel()};
-  assert(c.begin().base() == globalBuff);
+  assert(base(c.begin()) == globalBuff);
   assert(c.end().value == globalBuff + 8);
 
   return true;

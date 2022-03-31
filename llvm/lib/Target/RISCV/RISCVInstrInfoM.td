@@ -96,24 +96,11 @@ def : Pat<(srem (sexti32 (i64 GPR:$rs1)), (sexti32 (i64 GPR:$rs2))),
           (REMW GPR:$rs1, GPR:$rs2)>;
 } // Predicates = [HasStdExtM, IsRV64]
 
-// Pattern to detect constants with no more than 32 active bits that can't
-// be materialized with lui+addiw.
-def uimm32_not_simm32 : PatLeaf<(XLenVT GPR:$a), [{
-  auto *C = dyn_cast<ConstantSDNode>(N);
-  return C && C->hasOneUse() && isUInt<32>(C->getZExtValue()) &&
-         !isInt<32>(C->getSExtValue());
-}]>;
-
 let Predicates = [HasStdExtM, IsRV64, NotHasStdExtZba] in {
 // Special case for calculating the full 64-bit product of a 32x32 unsigned
 // multiply where the inputs aren't known to be zero extended. We can shift the
 // inputs left by 32 and use a MULHU. This saves two SRLIs needed to finish
 // zeroing the upper 32 bits.
 def : Pat<(i64 (mul (and GPR:$rs1, 0xffffffff), (and GPR:$rs2, 0xffffffff))),
-          (MULHU (SLLI GPR:$rs1, 32), (SLLI GPR:$rs2, 32))>;
-// The RHS could also be a constant that is hard to materialize. By shifting
-// left we can allow constant materialization to use LUI+ADDIW via
-// hasAllWUsers.
-def : Pat<(i64 (mul (and GPR:$rs1, 0xffffffff), uimm32_not_simm32:$rs2)),
           (MULHU (SLLI GPR:$rs1, 32), (SLLI GPR:$rs2, 32))>;
 } // Predicates = [HasStdExtM, IsRV64, NotHasStdExtZba]

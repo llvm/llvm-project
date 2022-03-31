@@ -37,6 +37,7 @@
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Target/ThreadPlanCallUserExpression.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
@@ -141,8 +142,7 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
                          llvm::StringRef expr, llvm::StringRef prefix,
                          lldb::ValueObjectSP &result_valobj_sp, Status &error,
                          std::string *fixed_expression, ValueObject *ctx_obj) {
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS |
-                                                  LIBLLDB_LOG_STEP));
+  Log *log(GetLog(LLDBLog::Expressions | LLDBLog::Step));
 
   if (ctx_obj) {
     static unsigned const ctx_type_mask =
@@ -254,9 +254,7 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
   if (fixed_expression == nullptr)
     fixed_expression = &tmp_fixed_expression;
 
-  const char *fixed_text = user_expression_sp->GetFixedText();
-  if (fixed_text != nullptr)
-    fixed_expression->append(fixed_text);
+  *fixed_expression = user_expression_sp->GetFixedText().str();
 
   // If there is a fixed expression, try to parse it:
   if (!parse_success) {
@@ -265,8 +263,7 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
     user_expression_sp.reset();
 
     execution_results = lldb::eExpressionParseError;
-    if (fixed_expression && !fixed_expression->empty() &&
-        options.GetAutoApplyFixIts()) {
+    if (!fixed_expression->empty() && options.GetAutoApplyFixIts()) {
       const uint64_t max_fix_retries = options.GetRetriesWithFixIts();
       for (uint64_t i = 0; i < max_fix_retries; ++i) {
         // Try parsing the fixed expression.
@@ -285,8 +282,8 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
         } else {
           // The fixed expression also didn't parse. Let's check for any new
           // Fix-Its we could try.
-          if (fixed_expression_sp->GetFixedText()) {
-            *fixed_expression = fixed_expression_sp->GetFixedText();
+          if (!fixed_expression_sp->GetFixedText().empty()) {
+            *fixed_expression = fixed_expression_sp->GetFixedText().str();
           } else {
             // Fixed expression didn't compile without a fixit, don't retry and
             // don't tell the user about it.

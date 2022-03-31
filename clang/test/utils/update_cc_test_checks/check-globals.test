@@ -44,10 +44,10 @@ END.
  BOTH-NEXT:// RUN: true
  BOTH-NEXT:// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -emit-llvm -o - %s | FileCheck %s
 BOTH-EMPTY:
-  IGF-NEXT:void foo() {
+  IGF-NEXT:void foo(void) {
   IGF-NEXT:  static int i, j;
   IGF-NEXT:}
-  IGF-NEXT:void bar() {
+  IGF-NEXT:void bar(void) {
   IGF-NEXT:  static int i, j;
   IGF-NEXT:}
  BOTH-NEXT://.
@@ -60,7 +60,7 @@ BOTH-EMPTY:
  BOTH-NEXT:// CHECK-NEXT:  entry:
  BOTH-NEXT:// CHECK-NEXT:    ret void
  BOTH-NEXT://
-  NRM-NEXT:void foo() {
+  NRM-NEXT:void foo(void) {
   NRM-NEXT:  static int i, j;
   NRM-NEXT:}
   IGF-NEXT://
@@ -68,7 +68,7 @@ BOTH-EMPTY:
  BOTH-NEXT:// CHECK-NEXT:  entry:
  BOTH-NEXT:// CHECK-NEXT:    ret void
  BOTH-NEXT://
-  NRM-NEXT:void bar() {
+  NRM-NEXT:void bar(void) {
   NRM-NEXT:  static int i, j;
   NRM-NEXT:}
  BOTH-NEXT://.

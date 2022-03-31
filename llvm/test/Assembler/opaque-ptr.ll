@@ -4,12 +4,18 @@
 ; CHECK: @global = external global ptr
 @global = external global ptr
 
+; CHECK: @global_const_gep = global ptr getelementptr inbounds (i47, ptr @global, i64 1)
+@global_const_gep = global ptr getelementptr (i47, ptr @global, i64 1)
+
 ; CHECK: @fptr1 = external global ptr
 ; CHECK: @fptr2 = external global ptr addrspace(1)
 ; CHECK: @fptr3 = external global ptr addrspace(2)
 @fptr1 = external global ptr ()*
 @fptr2 = external global ptr () addrspace(1)*
 @fptr3 = external global ptr () addrspace(1)* addrspace(2)*
+
+; CHECK: @ifunc = ifunc void (), ptr @f
+@ifunc = ifunc void (), ptr @f
 
 ; CHECK: define ptr @f(ptr %a) {
 ; CHECK:     %b = bitcast ptr %a to ptr
@@ -144,5 +150,17 @@ cleanup:
 
 ; CHECK: define void @byval(ptr byval({ i32, i32 }) %0)
 define void @byval(ptr byval({ i32, i32 }) %0) {
+  ret void
+}
+
+; CHECK: define void @call_unnamed_fn() {
+; CHECK:  call void @0()
+define void @call_unnamed_fn() {
+  call void @0()
+  ret void
+}
+
+; CHECK: define void @0() {
+define void @0() {
   ret void
 }

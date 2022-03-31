@@ -25,8 +25,8 @@ typedef int (*_Atomic atomic_int_ptr); // ext-warning {{'_Atomic' is a C11 exten
 typedef int _Atomic *int_atomic_ptr; // ext-warning {{'_Atomic' is a C11 extension}}
 typedef _Atomic(int) *int_atomic_ptr; // ext-warning {{'_Atomic' is a C11 extension}}
 
-typedef int int_fn();
-typedef _Atomic int_fn atomic_int_fn; // expected-error {{_Atomic cannot be applied to function type 'int_fn' (aka 'int ()')}} \
+typedef int int_fn(void);
+typedef _Atomic int_fn atomic_int_fn; // expected-error {{_Atomic cannot be applied to function type 'int_fn' (aka 'int (void)')}} \
                                       // ext-warning {{'_Atomic' is a C11 extension}}
 typedef _Atomic int atomic_int_array[3]; // ext-warning {{'_Atomic' is a C11 extension}}
 typedef _Atomic atomic_int_array atomic_int_atomic_array; // expected-error {{_Atomic cannot be applied to array type 'atomic_int_array' (aka '_Atomic(int)[3]')}} \
@@ -44,4 +44,4 @@ typedef _Atomic(int __attribute__((vector_size(16)))) atomic_vector_int; // ext-
 struct S
 _Atomic atomic_s_no_missing_semicolon; // ext-warning {{'_Atomic' is a C11 extension}}
 
-int *const _Atomic atomic_return_type(); // ext-warning {{'_Atomic' is a C11 extension}}
+int *const _Atomic atomic_return_type(void); // ext-warning {{'_Atomic' is a C11 extension}}

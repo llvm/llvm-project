@@ -225,3 +225,80 @@ def testOptionalOperandOp():
       op2 = test.OptionalOperandOp(op1)
       # CHECK: op2.input is None: False
       print(f"op2.input is None: {op2.input is None}")
+
+
+# CHECK-LABEL: TEST: testCustomAttribute
+@run
+def testCustomAttribute():
+  with Context() as ctx:
+    test.register_python_test_dialect(ctx)
+    a = test.TestAttr.get()
+    # CHECK: #python_test.test_attr
+    print(a)
+
+    # The following cast must not assert.
+    b = test.TestAttr(a)
+
+    unit = UnitAttr.get()
+    try:
+      test.TestAttr(unit)
+    except ValueError as e:
+      assert "Cannot cast attribute to TestAttr" in str(e)
+    else:
+      raise
+
+    # The following must trigger a TypeError from our adaptors and must not
+    # crash.
+    try:
+      test.TestAttr(42)
+    except TypeError as e:
+      assert "Expected an MLIR object" in str(e)
+    else:
+      raise
+
+    # The following must trigger a TypeError from pybind (therefore, not
+    # checking its message) and must not crash.
+    try:
+      test.TestAttr(42, 56)
+    except TypeError:
+      pass
+    else:
+      raise
+
+
+@run
+def testCustomType():
+  with Context() as ctx:
+    test.register_python_test_dialect(ctx)
+    a = test.TestType.get()
+    # CHECK: !python_test.test_type
+    print(a)
+
+    # The following cast must not assert.
+    b = test.TestType(a)
+
+    i8 = IntegerType.get_signless(8)
+    try:
+      test.TestType(i8)
+    except ValueError as e:
+      assert "Cannot cast type to TestType" in str(e)
+    else:
+      raise
+
+    # The following must trigger a TypeError from our adaptors and must not
+    # crash.
+    try:
+      test.TestType(42)
+    except TypeError as e:
+      assert "Expected an MLIR object" in str(e)
+    else:
+      raise
+
+    # The following must trigger a TypeError from pybind (therefore, not
+    # checking its message) and must not crash.
+    try:
+      test.TestType(42, 56)
+    except TypeError:
+      pass
+    else:
+      raise

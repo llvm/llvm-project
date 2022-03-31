@@ -12,11 +12,11 @@
 pfirst p0.b, p15, p0.b
 // CHECK-INST: pfirst	p0.b, p15, p0.b
 // CHECK-ENCODING: [0xe0,0xc1,0x58,0x25]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: e0 c1 58 25 <unknown>
 
 pfirst p15.b, p15, p15.b
 // CHECK-INST: pfirst	p15.b, p15, p15.b
 // CHECK-ENCODING: [0xef,0xc1,0x58,0x25]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: ef c1 58 25 <unknown>

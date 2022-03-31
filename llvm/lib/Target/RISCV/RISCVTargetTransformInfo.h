@@ -58,30 +58,49 @@ public:
   bool supportsScalableVectors() const { return ST->hasVInstructions(); }
   Optional<unsigned> getMaxVScale() const;
 
-  TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
-    switch (K) {
-    case TargetTransformInfo::RGK_Scalar:
-      return TypeSize::getFixed(ST->getXLen());
-    case TargetTransformInfo::RGK_FixedWidthVector:
-      return TypeSize::getFixed(
-          ST->hasVInstructions() ? ST->getMinRVVVectorSizeInBits() : 0);
-    case TargetTransformInfo::RGK_ScalableVector:
-      return TypeSize::getScalable(
-          ST->hasVInstructions() ? RISCV::RVVBitsPerBlock : 0);
-    }
+  TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const;
 
-    llvm_unreachable("Unsupported register kind");
-  }
+  InstructionCost getRegUsageForType(Type *Ty);
+
+  InstructionCost getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
+                                        Align Alignment, unsigned AddressSpace,
+                                        TTI::TargetCostKind CostKind);
+
+  void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
+                               TTI::UnrollingPreferences &UP,
+                               OptimizationRemarkEmitter *ORE);
+
+  void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
+                             TTI::PeelingPreferences &PP);
 
   unsigned getMinVectorRegisterBitWidth() const {
-    return ST->hasVInstructions() ? ST->getMinRVVVectorSizeInBits() : 0;
+    return ST->useRVVForFixedLengthVectors() ? 16 : 0;
   }
+
+  InstructionCost getSpliceCost(VectorType *Tp, int Index);
+  InstructionCost getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
+                                 ArrayRef<int> Mask, int Index,
+                                 VectorType *SubTp,
+                                 ArrayRef<Value *> Args = None);
 
   InstructionCost getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
                                          const Value *Ptr, bool VariableMask,
                                          Align Alignment,
                                          TTI::TargetCostKind CostKind,
                                          const Instruction *I);
+
+  InstructionCost getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
+                                   TTI::CastContextHint CCH,
+                                   TTI::TargetCostKind CostKind,
+                                   const Instruction *I = nullptr);
+
+  InstructionCost getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
+                                         bool IsUnsigned,
+                                         TTI::TargetCostKind CostKind);
+
+  InstructionCost getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
+                                             Optional<FastMathFlags> FMF,
+                                             TTI::TargetCostKind CostKind);
 
   bool isLegalMaskedLoadStore(Type *DataType, Align Alignment) {
     if (!ST->hasVInstructions())
@@ -178,7 +197,23 @@ public:
   }
 
   unsigned getMaxInterleaveFactor(unsigned VF) {
-    return ST->getMaxInterleaveFactor();
+    // If the loop will not be vectorized, don't interleave the loop.
+    // Let regular unroll to unroll the loop.
+    return VF == 1 ? 1 : ST->getMaxInterleaveFactor();
+  }
+
+  // TODO: We should define RISC-V's own register classes.
+  //       e.g. register class for FPR.
+  unsigned getNumberOfRegisters(unsigned ClassID) const {
+    bool Vector = (ClassID == 1);
+    if (Vector) {
+      if (ST->hasVInstructions())
+        return 32;
+      return 0;
+    }
+    // 31 = 32 GPR - x0 (zero register)
+    // FIXME: Should we exclude fixed registers like SP, TP or GP?
+    return 31;
   }
 };
 

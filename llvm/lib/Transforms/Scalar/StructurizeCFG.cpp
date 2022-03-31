@@ -18,10 +18,8 @@
 #include "llvm/Analysis/RegionInfo.h"
 #include "llvm/Analysis/RegionIterator.h"
 #include "llvm/Analysis/RegionPass.h"
-#include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
-#include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
@@ -33,7 +31,6 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
-#include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
@@ -41,7 +38,6 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils.h"
@@ -275,6 +271,8 @@ class StructurizeCFG {
   void collectInfos();
 
   void insertConditions(bool Loops);
+
+  void simplifyConditions();
 
   void delPhiValues(BasicBlock *From, BasicBlock *To);
 
@@ -584,6 +582,28 @@ void StructurizeCFG::insertConditions(bool Loops) {
       Term->setCondition(PhiInserter.GetValueInMiddleOfBlock(Parent));
     }
   }
+}
+
+/// Simplify any inverted conditions that were built by buildConditions.
+void StructurizeCFG::simplifyConditions() {
+  SmallVector<Instruction *> InstToErase;
+  for (auto &I : concat<PredMap::value_type>(Predicates, LoopPreds)) {
+    auto &Preds = I.second;
+    for (auto &J : Preds) {
+      auto &Cond = J.second;
+      Instruction *Inverted;
+      if (match(Cond, m_Not(m_OneUse(m_Instruction(Inverted)))) &&
+          !Cond->use_empty()) {
+        if (auto *InvertedCmp = dyn_cast<CmpInst>(Inverted)) {
+          InvertedCmp->setPredicate(InvertedCmp->getInversePredicate());
+          Cond->replaceAllUsesWith(InvertedCmp);
+          InstToErase.push_back(cast<Instruction>(Cond));
+        }
+      }
+    }
+  }
+  for (auto *I : InstToErase)
+    I->eraseFromParent();
 }
 
 /// Remove all PHI values coming from "From" into "To" and remember
@@ -1066,6 +1086,7 @@ bool StructurizeCFG::run(Region *R, DominatorTree *DT) {
   insertConditions(false);
   insertConditions(true);
   setPhiValues();
+  simplifyConditions();
   simplifyAffectedPhis();
   rebuildSSA();
 

@@ -34,7 +34,6 @@ using namespace llvm;
 STATISTIC(MCNumEmitted, "Number of MC instructions emitted");
 
 MCCodeEmitter *llvm::createPPCMCCodeEmitter(const MCInstrInfo &MCII,
-                                            const MCRegisterInfo &MRI,
                                             MCContext &Ctx) {
   return new PPCMCCodeEmitter(MCII, Ctx);
 }
@@ -50,7 +49,8 @@ getDirectBrEncoding(const MCInst &MI, unsigned OpNo,
   // Add a fixup for the branch target.
   Fixups.push_back(MCFixup::create(0, MO.getExpr(),
                                    ((MI.getOpcode() == PPC::BL8_NOTOC ||
-                                     MI.getOpcode() == PPC::BL8_NOTOC_TLS)
+                                     MI.getOpcode() == PPC::BL8_NOTOC_TLS ||
+                                     MI.getOpcode() == PPC::BL8_NOTOC_RM)
                                         ? (MCFixupKind)PPC::fixup_ppc_br24_notoc
                                         : (MCFixupKind)PPC::fixup_ppc_br24)));
   return 0;
@@ -198,8 +198,8 @@ unsigned PPCMCCodeEmitter::getMemRIX16Encoding(const MCInst &MI, unsigned OpNo,
   }
 
   // Otherwise add a fixup for the displacement field.
-  Fixups.push_back(MCFixup::create(IsLittleEndian? 0 : 2, MO.getExpr(),
-                                   (MCFixupKind)PPC::fixup_ppc_half16ds));
+  Fixups.push_back(MCFixup::create(IsLittleEndian ? 0 : 2, MO.getExpr(),
+                                   (MCFixupKind)PPC::fixup_ppc_half16dq));
   return RegBits;
 }
 

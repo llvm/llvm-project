@@ -223,8 +223,12 @@ bool TemplateName::containsUnexpandedParameterPack() const {
 void TemplateName::print(raw_ostream &OS, const PrintingPolicy &Policy,
                          Qualified Qual) const {
   if (TemplateDecl *Template = Storage.dyn_cast<TemplateDecl *>())
-    if (Qual == Qualified::Fully &&
-        getDependence() != TemplateNameDependenceScope::DependentInstantiation)
+    if (Policy.CleanUglifiedParameters &&
+        isa<TemplateTemplateParmDecl>(Template) && Template->getIdentifier())
+      OS << Template->getIdentifier()->deuglifiedName();
+    else if (Qual == Qualified::Fully &&
+             getDependence() !=
+                 TemplateNameDependenceScope::DependentInstantiation)
       Template->printQualifiedName(OS, Policy);
     else
       OS << *Template;

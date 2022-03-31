@@ -73,9 +73,9 @@ class Z
 {
     int i_;
 public:
-    constexpr explicit Z(int i) : i_(i) { TEST_THROW(6);}
+    explicit Z(int i) : i_(i) {TEST_THROW(6);}
 
-    friend constexpr bool operator==(const Z& x, const Z& y) {return x.i_ == y.i_;}
+    friend bool operator==(const Z& x, const Z& y) {return x.i_ == y.i_;}
 };
 
 template<class T, class U>

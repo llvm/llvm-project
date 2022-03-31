@@ -73,7 +73,7 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
   const uint64_t BaseOffset = ST.getExplicitKernelArgOffset(F);
 
   Align MaxAlign;
-  // FIXME: Alignment is broken broken with explicit arg offset.;
+  // FIXME: Alignment is broken with explicit arg offset.;
   const uint64_t TotalKernArgSize = ST.getKernArgSegmentSize(F, MaxAlign);
   if (TotalKernArgSize == 0)
     return false;

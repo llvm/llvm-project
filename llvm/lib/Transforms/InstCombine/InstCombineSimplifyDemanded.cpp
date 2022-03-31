@@ -12,8 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "InstCombineInternal.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/KnownBits.h"
@@ -153,6 +153,29 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
   // operand of a trunc without duplicating all the logic below.
   if (Depth == 0 && !V->hasOneUse())
     DemandedMask.setAllBits();
+
+  // If the high-bits of an ADD/SUB/MUL are not demanded, then we do not care
+  // about the high bits of the operands.
+  auto simplifyOperandsBasedOnUnusedHighBits = [&](APInt &DemandedFromOps) {
+    unsigned NLZ = DemandedMask.countLeadingZeros();
+    // Right fill the mask of bits for the operands to demand the most
+    // significant bit and all those below it.
+    DemandedFromOps = APInt::getLowBitsSet(BitWidth, BitWidth - NLZ);
+    if (ShrinkDemandedConstant(I, 0, DemandedFromOps) ||
+        SimplifyDemandedBits(I, 0, DemandedFromOps, LHSKnown, Depth + 1) ||
+        ShrinkDemandedConstant(I, 1, DemandedFromOps) ||
+        SimplifyDemandedBits(I, 1, DemandedFromOps, RHSKnown, Depth + 1)) {
+      if (NLZ > 0) {
+        // Disable the nsw and nuw flags here: We can no longer guarantee that
+        // we won't wrap after simplification. Removing the nsw/nuw flags is
+        // legal here because the top bit is not demanded.
+        I->setHasNoSignedWrap(false);
+        I->setHasNoUnsignedWrap(false);
+      }
+      return true;
+    }
+    return false;
+  };
 
   switch (I->getOpcode()) {
   default:
@@ -311,33 +334,6 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     break;
   }
   case Instruction::Select: {
-    Value *LHS, *RHS;
-    SelectPatternFlavor SPF = matchSelectPattern(I, LHS, RHS).Flavor;
-    if (SPF == SPF_UMAX) {
-      // UMax(A, C) == A if ...
-      // The lowest non-zero bit of DemandMask is higher than the highest
-      // non-zero bit of C.
-      const APInt *C;
-      unsigned CTZ = DemandedMask.countTrailingZeros();
-      if (match(RHS, m_APInt(C)) && CTZ >= C->getActiveBits())
-        return LHS;
-    } else if (SPF == SPF_UMIN) {
-      // UMin(A, C) == A if ...
-      // The lowest non-zero bit of DemandMask is higher than the highest
-      // non-one bit of C.
-      // This comes from using DeMorgans on the above umax example.
-      const APInt *C;
-      unsigned CTZ = DemandedMask.countTrailingZeros();
-      if (match(RHS, m_APInt(C)) &&
-          CTZ >= C->getBitWidth() - C->countLeadingOnes())
-        return LHS;
-    }
-
-    // If this is a select as part of any other min/max pattern, don't simplify
-    // any further in case we break the structure.
-    if (SPF != SPF_UNKNOWN)
-      return nullptr;
-
     if (SimplifyDemandedBits(I, 2, DemandedMask, RHSKnown, Depth + 1) ||
         SimplifyDemandedBits(I, 1, DemandedMask, LHSKnown, Depth + 1))
       return I;
@@ -507,26 +503,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     }
     LLVM_FALLTHROUGH;
   case Instruction::Sub: {
-    /// If the high-bits of an ADD/SUB are not demanded, then we do not care
-    /// about the high bits of the operands.
-    unsigned NLZ = DemandedMask.countLeadingZeros();
-    // Right fill the mask of bits for this ADD/SUB to demand the most
-    // significant bit and all those below it.
-    APInt DemandedFromOps(APInt::getLowBitsSet(BitWidth, BitWidth-NLZ));
-    if (ShrinkDemandedConstant(I, 0, DemandedFromOps) ||
-        SimplifyDemandedBits(I, 0, DemandedFromOps, LHSKnown, Depth + 1) ||
-        ShrinkDemandedConstant(I, 1, DemandedFromOps) ||
-        SimplifyDemandedBits(I, 1, DemandedFromOps, RHSKnown, Depth + 1)) {
-      if (NLZ > 0) {
-        // Disable the nsw and nuw flags here: We can no longer guarantee that
-        // we won't wrap after simplification. Removing the nsw/nuw flags is
-        // legal here because the top bit is not demanded.
-        BinaryOperator &BinOP = *cast<BinaryOperator>(I);
-        BinOP.setHasNoSignedWrap(false);
-        BinOP.setHasNoUnsignedWrap(false);
-      }
+    APInt DemandedFromOps;
+    if (simplifyOperandsBasedOnUnusedHighBits(DemandedFromOps))
       return I;
-    }
 
     // If we are known to be adding/subtracting zeros to every bit below
     // the highest demanded bit, we just return the other side.
@@ -542,6 +521,36 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     bool NSW = cast<OverflowingBinaryOperator>(I)->hasNoSignedWrap();
     Known = KnownBits::computeForAddSub(I->getOpcode() == Instruction::Add,
                                         NSW, LHSKnown, RHSKnown);
+    break;
+  }
+  case Instruction::Mul: {
+    APInt DemandedFromOps;
+    if (simplifyOperandsBasedOnUnusedHighBits(DemandedFromOps))
+      return I;
+
+    if (DemandedMask.isPowerOf2()) {
+      // The LSB of X*Y is set only if (X & 1) == 1 and (Y & 1) == 1.
+      // If we demand exactly one bit N and we have "X * (C' << N)" where C' is
+      // odd (has LSB set), then the left-shifted low bit of X is the answer.
+      unsigned CTZ = DemandedMask.countTrailingZeros();
+      const APInt *C;
+      if (match(I->getOperand(1), m_APInt(C)) &&
+          C->countTrailingZeros() == CTZ) {
+        Constant *ShiftC = ConstantInt::get(I->getType(), CTZ);
+        Instruction *Shl = BinaryOperator::CreateShl(I->getOperand(0), ShiftC);
+        return InsertNewInstWith(Shl, *I);
+      }
+    }
+    // For a squared value "X * X", the bottom 2 bits are 0 and X[0] because:
+    // X * X is odd iff X is odd.
+    // 'Quadratic Reciprocity': X * X -> 0 for bit[1]
+    if (I->getOperand(0) == I->getOperand(1) && DemandedMask.ult(4)) {
+      Constant *One = ConstantInt::get(VTy, 1);
+      Instruction *And1 = BinaryOperator::CreateAnd(I->getOperand(0), One);
+      return InsertNewInstWith(And1, *I);
+    }
+
+    computeKnownBits(I, Known, Depth, CxtI);
     break;
   }
   case Instruction::Shl: {
@@ -628,6 +637,14 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     break;
   }
   case Instruction::AShr: {
+    unsigned SignBits = ComputeNumSignBits(I->getOperand(0), Depth + 1, CxtI);
+
+    // If we only want bits that already match the signbit then we don't need
+    // to shift.
+    unsigned NumHiDemandedBits = BitWidth - DemandedMask.countTrailingZeros();
+    if (SignBits >= NumHiDemandedBits)
+      return I->getOperand(0);
+
     // If this is an arithmetic shift right and only the low-bit is set, we can
     // always convert this into a logical shr, even if the shift amount is
     // variable.  The low bit of the shift cannot be an input sign bit unless
@@ -638,11 +655,6 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
                         I->getOperand(0), I->getOperand(1), I->getName());
       return InsertNewInstWith(NewVal, *I);
     }
-
-    // If the sign bit is the only bit demanded by this ashr, then there is no
-    // need to do it, the shift doesn't change the high bit.
-    if (DemandedMask.isSignMask())
-      return I->getOperand(0);
 
     const APInt *SA;
     if (match(I->getOperand(1), m_APInt(SA))) {
@@ -662,8 +674,6 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
 
       if (SimplifyDemandedBits(I, 0, DemandedMaskIn, Known, Depth + 1))
         return I;
-
-      unsigned SignBits = ComputeNumSignBits(I->getOperand(0), Depth + 1, CxtI);
 
       assert(!Known.hasConflict() && "Bits known to be one AND zero?");
       // Compute the new bits that are at the top now plus sign bits.
@@ -800,22 +810,21 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
         // Round NTZ down to the next byte.  If we have 11 trailing zeros, then
         // we need all the bits down to bit 8.  Likewise, round NLZ.  If we
         // have 14 leading zeros, round to 8.
-        NLZ &= ~7;
-        NTZ &= ~7;
+        NLZ = alignDown(NLZ, 8);
+        NTZ = alignDown(NTZ, 8);
         // If we need exactly one byte, we can do this transformation.
-        if (BitWidth-NLZ-NTZ == 8) {
-          unsigned ResultBit = NTZ;
-          unsigned InputBit = BitWidth-NTZ-8;
-
+        if (BitWidth - NLZ - NTZ == 8) {
           // Replace this with either a left or right shift to get the byte into
           // the right place.
           Instruction *NewVal;
-          if (InputBit > ResultBit)
-            NewVal = BinaryOperator::CreateLShr(II->getArgOperand(0),
-                    ConstantInt::get(I->getType(), InputBit-ResultBit));
+          if (NLZ > NTZ)
+            NewVal = BinaryOperator::CreateLShr(
+                II->getArgOperand(0),
+                ConstantInt::get(I->getType(), NLZ - NTZ));
           else
-            NewVal = BinaryOperator::CreateShl(II->getArgOperand(0),
-                    ConstantInt::get(I->getType(), ResultBit-InputBit));
+            NewVal = BinaryOperator::CreateShl(
+                II->getArgOperand(0),
+                ConstantInt::get(I->getType(), NTZ - NLZ));
           NewVal->takeName(I);
           return InsertNewInstWith(NewVal, *I);
         }
@@ -1220,7 +1229,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
       for (auto I = gep_type_begin(GEP), E = gep_type_end(GEP);
            I != E; I++)
         if (I.isStruct())
-          return true;;
+          return true;
       return false;
     };
     if (mayIndexStructType(cast<GetElementPtrInst>(*I)))
@@ -1229,10 +1238,11 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
     // Conservatively track the demanded elements back through any vector
     // operands we may have.  We know there must be at least one, or we
     // wouldn't have a vector result to get here. Note that we intentionally
-    // merge the undef bits here since gepping with either an undef base or
-    // index results in undef.
+    // merge the undef bits here since gepping with either an poison base or
+    // index results in poison.
     for (unsigned i = 0; i < I->getNumOperands(); i++) {
-      if (match(I->getOperand(i), m_Undef())) {
+      if (i == 0 ? match(I->getOperand(i), m_Undef())
+                 : match(I->getOperand(i), m_Poison())) {
         // If the entire vector is undefined, just return this info.
         UndefElts = EltMask;
         return nullptr;
@@ -1240,7 +1250,11 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
       if (I->getOperand(i)->getType()->isVectorTy()) {
         APInt UndefEltsOp(VWidth, 0);
         simplifyAndSetOp(I, i, DemandedElts, UndefEltsOp);
-        UndefElts |= UndefEltsOp;
+        // gep(x, undef) is not undef, so skip considering idx ops here
+        // Note that we could propagate poison, but we can't distinguish between
+        // undef & poison bits ATM
+        if (i == 0)
+          UndefElts |= UndefEltsOp;
       }
     }
 
@@ -1594,12 +1608,6 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
   if (match(I, m_BinOp(BO)) && !BO->isIntDivRem() && !BO->isShift()) {
     simplifyAndSetOp(I, 0, DemandedElts, UndefElts);
     simplifyAndSetOp(I, 1, DemandedElts, UndefElts2);
-
-    // Any change to an instruction with potential poison must clear those flags
-    // because we can not guarantee those constraints now. Other analysis may
-    // determine that it is safe to re-apply the flags.
-    if (MadeChange)
-      BO->dropPoisonGeneratingFlags();
 
     // Output elements are undefined if both are undefined. Consider things
     // like undef & 0. The result is known zero, not undef.

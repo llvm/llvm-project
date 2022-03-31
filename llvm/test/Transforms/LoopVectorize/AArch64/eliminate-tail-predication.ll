@@ -1,4 +1,4 @@
-; RUN: opt -loop-vectorize -scalable-vectorization=on -force-target-instruction-cost=1 -prefer-predicate-over-epilogue=predicate-dont-vectorize -S < %s 2>&1 | FileCheck %s
+; RUN: opt -loop-vectorize -force-target-instruction-cost=1 -prefer-predicate-over-epilogue=predicate-dont-vectorize -S < %s 2>&1 | FileCheck %s
 
 ; This test currently fails when the LV calculates a maximums safe
 ; distance for scalable vectors, because the code to eliminate the tail is

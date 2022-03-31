@@ -9,6 +9,7 @@
 #include "lldb/Host/linux/HostInfoLinux.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/FileSystem.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 
 #include "llvm/Support/Threading.h"
@@ -80,8 +81,7 @@ llvm::StringRef HostInfoLinux::GetDistributionId() {
   // Try to run 'lbs_release -i', and use that response for the distribution
   // id.
   llvm::call_once(g_fields->m_distribution_once_flag, []() {
-
-    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST));
+    Log *log = GetLog(LLDBLog::Host);
     LLDB_LOGF(log, "attempting to determine Linux distribution...");
 
     // check if the lsb_release command exists at one of the following paths

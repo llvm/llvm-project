@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_BASIC_DIAGNOSTIC_ERROR_H
-#define LLVM_CLANG_BASIC_DIAGNOSTIC_ERROR_H
+#ifndef LLVM_CLANG_BASIC_DIAGNOSTICERROR_H
+#define LLVM_CLANG_BASIC_DIAGNOSTICERROR_H
 
 #include "clang/Basic/PartialDiagnostic.h"
 #include "llvm/Support/Error.h"
@@ -57,4 +57,4 @@ private:
 
 } // end namespace clang
 
-#endif // LLVM_CLANG_BASIC_DIAGNOSTIC_ERROR_H
+#endif // LLVM_CLANG_BASIC_DIAGNOSTICERROR_H

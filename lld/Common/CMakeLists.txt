@@ -28,6 +28,7 @@ set_source_files_properties("${version_inc}"
 
 add_lld_library(lldCommon
   Args.cpp
+  CommonLinkerContext.cpp
   DWARF.cpp
   ErrorHandler.cpp
   Filesystem.cpp

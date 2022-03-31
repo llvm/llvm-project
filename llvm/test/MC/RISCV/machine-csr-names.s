@@ -69,6 +69,20 @@ csrrs t1, mhartid, zero
 # uimm12
 csrrs t2, 0xF14, zero
 
+# mconfigptr
+# name
+# CHECK-INST: csrrs t1, mconfigptr, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x50,0xf1]
+# CHECK-INST-ALIAS: csrr t1, mconfigptr
+# uimm12
+# CHECK-INST: csrrs t2, mconfigptr, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x50,0xf1]
+# CHECK-INST-ALIAS: csrr t2, mconfigptr
+# name
+csrrs t1, mconfigptr, zero
+# uimm12
+csrrs t2, 0xF15, zero
+
 ##################################
 # Machine Trap Setup
 ##################################
@@ -243,6 +257,66 @@ csrrs t1, mip, zero
 # uimm12
 csrrs t2, 0x344, zero
 
+# mtinst
+# name
+# CHECK-INST: csrrs t1, mtinst, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xa0,0x34]
+# CHECK-INST-ALIAS: csrr t1, mtinst
+# uimm12
+# CHECK-INST: csrrs t2, mtinst, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xa0,0x34]
+# CHECK-INST-ALIAS: csrr t2, mtinst
+# name
+csrrs t1, mtinst, zero
+# uimm12
+csrrs t2, 0x34A, zero
+
+# mtval2
+# name
+# CHECK-INST: csrrs t1, mtval2, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xb0,0x34]
+# CHECK-INST-ALIAS: csrr t1, mtval2
+# uimm12
+# CHECK-INST: csrrs t2, mtval2, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xb0,0x34]
+# CHECK-INST-ALIAS: csrr t2, mtval2
+# name
+csrrs t1, mtval2, zero
+# uimm12
+csrrs t2, 0x34B, zero
+
+#########################
+# Machine Configuration
+#########################
+
+# menvcfg
+# name
+# CHECK-INST: csrrs t1, menvcfg, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xa0,0x30]
+# CHECK-INST-ALIAS: csrr t1, menvcfg
+# uimm12
+# CHECK-INST: csrrs t2, menvcfg, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xa0,0x30]
+# CHECK-INST-ALIAS: csrr t2, menvcfg
+# name
+csrrs t1, menvcfg, zero
+# uimm12
+csrrs t2, 0x30A, zero
+
+# mseccfg
+# name
+# CHECK-INST: csrrs t1, mseccfg, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x70,0x74]
+# CHECK-INST-ALIAS: csrr t1, mseccfg
+# uimm12
+# CHECK-INST: csrrs t2, mseccfg, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x70,0x74]
+# CHECK-INST-ALIAS: csrr t2, mseccfg
+# name
+csrrs t1, mseccfg, zero
+# uimm12
+csrrs t2, 0x747, zero
+
 ######################################
 # Machine Protection and Translation
 ######################################
@@ -276,6 +350,985 @@ csrrs t1, pmpcfg2, zero
 # uimm12
 csrrs t2, 0x3A2, zero
 
+# pmpcfg4
+# name
+# CHECK-INST: csrrs t1, pmpcfg4, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x40,0x3a]
+# CHECK-INST-ALIAS: csrr t1, pmpcfg4
+# uimm12
+# CHECK-INST: csrrs t2, pmpcfg4, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x40,0x3a]
+# CHECK-INST-ALIAS: csrr t2, pmpcfg4
+# name
+csrrs t1, pmpcfg4, zero
+# uimm12
+csrrs t2, 0x3A4, zero
+
+# pmpcfg6
+# name
+# CHECK-INST: csrrs t1, pmpcfg6, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x60,0x3a]
+# CHECK-INST-ALIAS: csrr t1, pmpcfg6
+# uimm12
+# CHECK-INST: csrrs t2, pmpcfg6, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x60,0x3a]
+# CHECK-INST-ALIAS: csrr t2, pmpcfg6
+# name
+csrrs t1, pmpcfg6, zero
+# uimm12
+csrrs t2, 0x3A6, zero
+
+# pmpcfg8
+# name
+# CHECK-INST: csrrs t1, pmpcfg8, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x80,0x3a]
+# CHECK-INST-ALIAS: csrr t1, pmpcfg8
+# uimm12
+# CHECK-INST: csrrs t2, pmpcfg8, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x80,0x3a]
+# CHECK-INST-ALIAS: csrr t2, pmpcfg8
+# name
+csrrs t1, pmpcfg8, zero
+# uimm12
+csrrs t2, 0x3A8, zero
+
+# pmpcfg10
+# name
+# CHECK-INST: csrrs t1, pmpcfg10, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xa0,0x3a]
+# CHECK-INST-ALIAS: csrr t1, pmpcfg10
+# uimm12
+# CHECK-INST: csrrs t2, pmpcfg10, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xa0,0x3a]
+# CHECK-INST-ALIAS: csrr t2, pmpcfg10
+# name
+csrrs t1, pmpcfg10, zero
+# uimm12
+csrrs t2, 0x3AA, zero
+
+# pmpcfg12
+# name
+# CHECK-INST: csrrs t1, pmpcfg12, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xc0,0x3a]
+# CHECK-INST-ALIAS: csrr t1, pmpcfg12
+# uimm12
+# CHECK-INST: csrrs t2, pmpcfg12, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xc0,0x3a]
+# CHECK-INST-ALIAS: csrr t2, pmpcfg12
+# name
+csrrs t1, pmpcfg12, zero
+# uimm12
+csrrs t2, 0x3AC, zero
+
+# pmpcfg14
+# name
+# CHECK-INST: csrrs t1, pmpcfg14, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xe0,0x3a]
+# CHECK-INST-ALIAS: csrr t1, pmpcfg14
+# uimm12
+# CHECK-INST: csrrs t2, pmpcfg14, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xe0,0x3a]
+# CHECK-INST-ALIAS: csrr t2, pmpcfg14
+# name
+csrrs t1, pmpcfg14, zero
+# uimm12
+csrrs t2, 0x3AE, zero
+
+# pmpaddr0
+# name
+# CHECK-INST: csrrs t1, pmpaddr0, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x00,0x3b]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr0
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr0, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x00,0x3b]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr0
+# name
+csrrs t1, pmpaddr0, zero
+# uimm12
+csrrs t2, 0x3B0, zero
+
+# pmpaddr1
+# name
+# CHECK-INST: csrrs t1, pmpaddr1, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x10,0x3b]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr1
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr1, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x10,0x3b]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr1
+# name
+csrrs t1, pmpaddr1, zero
+# uimm12
+csrrs t2, 0x3B1, zero
+
+# pmpaddr2
+# name
+# CHECK-INST: csrrs t1, pmpaddr2, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x20,0x3b]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr2
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr2, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x20,0x3b]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr2
+# name
+csrrs t1, pmpaddr2, zero
+# uimm12
+csrrs t2, 0x3B2, zero
+
+# pmpaddr3
+# name
+# CHECK-INST: csrrs t1, pmpaddr3, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x30,0x3b]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr3
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr3, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x30,0x3b]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr3
+# name
+csrrs t1, pmpaddr3, zero
+# uimm12
+csrrs t2, 0x3B3, zero
+
+# pmpaddr4
+# name
+# CHECK-INST: csrrs t1, pmpaddr4, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x40,0x3b]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr4
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr4, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x40,0x3b]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr4
+# name
+csrrs t1, pmpaddr4, zero
+# uimm12
+csrrs t2, 0x3B4, zero
+
+# pmpaddr5
+# name
+# CHECK-INST: csrrs t1, pmpaddr5, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x50,0x3b]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr5
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr5, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x50,0x3b]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr5
+# name
+csrrs t1, pmpaddr5, zero
+# uimm12
+csrrs t2, 0x3B5, zero
+
+# pmpaddr6
+# name
+# CHECK-INST: csrrs t1, pmpaddr6, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x60,0x3b]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr6
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr6, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x60,0x3b]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr6
+# name
+csrrs t1, pmpaddr6, zero
+# uimm12
+csrrs t2, 0x3B6, zero
+
+# pmpaddr7
+# name
+# CHECK-INST: csrrs t1, pmpaddr7, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x70,0x3b]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr7
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr7, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x70,0x3b]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr7
+# name
+csrrs t1, pmpaddr7, zero
+# uimm12
+csrrs t2, 0x3B7, zero
+
+# pmpaddr8
+# name
+# CHECK-INST: csrrs t1, pmpaddr8, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x80,0x3b]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr8
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr8, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x80,0x3b]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr8
+# name
+csrrs t1, pmpaddr8, zero
+# uimm12
+csrrs t2, 0x3B8, zero
+
+# pmpaddr9
+# name
+# CHECK-INST: csrrs t1, pmpaddr9, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x90,0x3b]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr9
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr9, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x90,0x3b]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr9
+# name
+csrrs t1, pmpaddr9, zero
+# uimm12
+csrrs t2, 0x3B9, zero
+
+# pmpaddr10
+# name
+# CHECK-INST: csrrs t1, pmpaddr10, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xa0,0x3b]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr10
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr10, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xa0,0x3b]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr10
+# name
+csrrs t1, pmpaddr10, zero
+# uimm12
+csrrs t2, 0x3BA, zero
+
+# pmpaddr11
+# name
+# CHECK-INST: csrrs t1, pmpaddr11, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xb0,0x3b]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr11
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr11, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xb0,0x3b]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr11
+# name
+csrrs t1, pmpaddr11, zero
+# uimm12
+csrrs t2, 0x3BB, zero
+
+# pmpaddr12
+# name
+# CHECK-INST: csrrs t1, pmpaddr12, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xc0,0x3b]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr12
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr12, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xc0,0x3b]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr12
+# name
+csrrs t1, pmpaddr12, zero
+# uimm12
+csrrs t2, 0x3BC, zero
+
+# pmpaddr13
+# name
+# CHECK-INST: csrrs t1, pmpaddr13, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xd0,0x3b]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr13
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr13, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xd0,0x3b]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr13
+# name
+csrrs t1, pmpaddr13, zero
+# uimm12
+csrrs t2, 0x3BD, zero
+
+# pmpaddr14
+# name
+# CHECK-INST: csrrs t1, pmpaddr14, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xe0,0x3b]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr14
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr14, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xe0,0x3b]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr14
+# name
+csrrs t1, pmpaddr14, zero
+# uimm12
+csrrs t2, 0x3BE, zero
+
+# pmpaddr15
+# name
+# CHECK-INST: csrrs t1, pmpaddr15, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xf0,0x3b]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr15
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr15, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xf0,0x3b]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr15
+# name
+csrrs t1, pmpaddr15, zero
+# uimm12
+csrrs t2, 0x3BF, zero
+
+# pmpaddr16
+# name
+# CHECK-INST: csrrs t1, pmpaddr16, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x00,0x3c]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr16
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr16, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x00,0x3c]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr16
+# name
+csrrs t1, pmpaddr16, zero
+# uimm12
+csrrs t2, 0X3C0, zero
+
+# pmpaddr17
+# name
+# CHECK-INST: csrrs t1, pmpaddr17, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x10,0x3c]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr17
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr17, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x10,0x3c]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr17
+# name
+csrrs t1, pmpaddr17, zero
+# uimm12
+csrrs t2, 0X3C1, zero
+
+# pmpaddr18
+# name
+# CHECK-INST: csrrs t1, pmpaddr18, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x20,0x3c]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr18
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr18, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x20,0x3c]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr18
+# name
+csrrs t1, pmpaddr18, zero
+# uimm12
+csrrs t2, 0X3C2, zero
+
+# pmpaddr19
+# name
+# CHECK-INST: csrrs t1, pmpaddr19, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x30,0x3c]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr19
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr19, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x30,0x3c]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr19
+# name
+csrrs t1, pmpaddr19, zero
+# uimm12
+csrrs t2, 0X3C3, zero
+
+# pmpaddr20
+# name
+# CHECK-INST: csrrs t1, pmpaddr20, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x40,0x3c]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr20
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr20, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x40,0x3c]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr20
+# name
+csrrs t1, pmpaddr20, zero
+# uimm12
+csrrs t2, 0X3C4, zero
+
+# pmpaddr21
+# name
+# CHECK-INST: csrrs t1, pmpaddr21, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x50,0x3c]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr21
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr21, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x50,0x3c]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr21
+# name
+csrrs t1, pmpaddr21, zero
+# uimm12
+csrrs t2, 0X3C5, zero
+
+# pmpaddr22
+# name
+# CHECK-INST: csrrs t1, pmpaddr22, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x60,0x3c]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr22
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr22, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x60,0x3c]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr22
+# name
+csrrs t1, pmpaddr22, zero
+# uimm12
+csrrs t2, 0X3C6, zero
+
+# pmpaddr23
+# name
+# CHECK-INST: csrrs t1, pmpaddr23, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x70,0x3c]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr23
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr23, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x70,0x3c]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr23
+# name
+csrrs t1, pmpaddr23, zero
+# uimm12
+csrrs t2, 0X3C7, zero
+
+# pmpaddr24
+# name
+# CHECK-INST: csrrs t1, pmpaddr24, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x80,0x3c]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr24
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr24, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x80,0x3c]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr24
+# name
+csrrs t1, pmpaddr24, zero
+# uimm12
+csrrs t2, 0X3C8, zero
+
+# pmpaddr25
+# name
+# CHECK-INST: csrrs t1, pmpaddr25, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x90,0x3c]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr25
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr25, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x90,0x3c]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr25
+# name
+csrrs t1, pmpaddr25, zero
+# uimm12
+csrrs t2, 0X3C9, zero
+
+# pmpaddr26
+# name
+# CHECK-INST: csrrs t1, pmpaddr26, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xa0,0x3c]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr26
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr26, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xa0,0x3c]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr26
+# name
+csrrs t1, pmpaddr26, zero
+# uimm12
+csrrs t2, 0X3CA, zero
+
+# pmpaddr27
+# name
+# CHECK-INST: csrrs t1, pmpaddr27, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xb0,0x3c]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr27
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr27, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xb0,0x3c]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr27
+# name
+csrrs t1, pmpaddr27, zero
+# uimm12
+csrrs t2, 0X3CB, zero
+
+# pmpaddr28
+# name
+# CHECK-INST: csrrs t1, pmpaddr28, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xc0,0x3c]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr28
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr28, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xc0,0x3c]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr28
+# name
+csrrs t1, pmpaddr28, zero
+# uimm12
+csrrs t2, 0X3CC, zero
+
+# pmpaddr29
+# name
+# CHECK-INST: csrrs t1, pmpaddr29, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xd0,0x3c]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr29
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr29, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xd0,0x3c]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr29
+# name
+csrrs t1, pmpaddr29, zero
+# uimm12
+csrrs t2, 0X3CD, zero
+
+# pmpaddr30
+# name
+# CHECK-INST: csrrs t1, pmpaddr30, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xe0,0x3c]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr30
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr30, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xe0,0x3c]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr30
+# name
+csrrs t1, pmpaddr30, zero
+# uimm12
+csrrs t2, 0X3CE, zero
+
+# pmpaddr31
+# name
+# CHECK-INST: csrrs t1, pmpaddr31, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xf0,0x3c]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr31
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr31, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xf0,0x3c]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr31
+# name
+csrrs t1, pmpaddr31, zero
+# uimm12
+csrrs t2, 0X3CF, zero
+
+# pmpaddr32
+# name
+# CHECK-INST: csrrs t1, pmpaddr32, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x00,0x3d]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr32
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr32, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x00,0x3d]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr32
+# name
+csrrs t1, pmpaddr32, zero
+# uimm12
+csrrs t2, 0X3D0, zero
+
+# pmpaddr33
+# name
+# CHECK-INST: csrrs t1, pmpaddr33, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x10,0x3d]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr33
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr33, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x10,0x3d]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr33
+# name
+csrrs t1, pmpaddr33, zero
+# uimm12
+csrrs t2, 0X3D1, zero
+
+# pmpaddr34
+# name
+# CHECK-INST: csrrs t1, pmpaddr34, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x20,0x3d]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr34
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr34, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x20,0x3d]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr34
+# name
+csrrs t1, pmpaddr34, zero
+# uimm12
+csrrs t2, 0X3D2, zero
+
+# pmpaddr35
+# name
+# CHECK-INST: csrrs t1, pmpaddr35, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x30,0x3d]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr35
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr35, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x30,0x3d]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr35
+# name
+csrrs t1, pmpaddr35, zero
+# uimm12
+csrrs t2, 0X3D3, zero
+
+# pmpaddr36
+# name
+# CHECK-INST: csrrs t1, pmpaddr36, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x40,0x3d]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr36
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr36, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x40,0x3d]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr36
+# name
+csrrs t1, pmpaddr36, zero
+# uimm12
+csrrs t2, 0X3D4, zero
+
+# pmpaddr37
+# name
+# CHECK-INST: csrrs t1, pmpaddr37, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x50,0x3d]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr37
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr37, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x50,0x3d]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr37
+# name
+csrrs t1, pmpaddr37, zero
+# uimm12
+csrrs t2, 0X3D5, zero
+
+# pmpaddr38
+# name
+# CHECK-INST: csrrs t1, pmpaddr38, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x60,0x3d]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr38
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr38, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x60,0x3d]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr38
+# name
+csrrs t1, pmpaddr38, zero
+# uimm12
+csrrs t2, 0X3D6, zero
+
+# pmpaddr39
+# name
+# CHECK-INST: csrrs t1, pmpaddr39, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x70,0x3d]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr39
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr39, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x70,0x3d]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr39
+# name
+csrrs t1, pmpaddr39, zero
+# uimm12
+csrrs t2, 0X3D7, zero
+
+# pmpaddr40
+# name
+# CHECK-INST: csrrs t1, pmpaddr40, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x80,0x3d]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr40
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr40, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x80,0x3d]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr40
+# name
+csrrs t1, pmpaddr40, zero
+# uimm12
+csrrs t2, 0X3D8, zero
+
+# pmpaddr41
+# name
+# CHECK-INST: csrrs t1, pmpaddr41, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x90,0x3d]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr41
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr41, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x90,0x3d]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr41
+# name
+csrrs t1, pmpaddr41, zero
+# uimm12
+csrrs t2, 0X3D9, zero
+
+# pmpaddr42
+# name
+# CHECK-INST: csrrs t1, pmpaddr42, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xa0,0x3d]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr42
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr42, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xa0,0x3d]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr42
+# name
+csrrs t1, pmpaddr42, zero
+# uimm12
+csrrs t2, 0X3DA, zero
+
+# pmpaddr43
+# name
+# CHECK-INST: csrrs t1, pmpaddr43, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xb0,0x3d]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr43
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr43, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xb0,0x3d]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr43
+# name
+csrrs t1, pmpaddr43, zero
+# uimm12
+csrrs t2, 0X3DB, zero
+
+# pmpaddr44
+# name
+# CHECK-INST: csrrs t1, pmpaddr44, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xc0,0x3d]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr44
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr44, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xc0,0x3d]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr44
+# name
+csrrs t1, pmpaddr44, zero
+# uimm12
+csrrs t2, 0X3DC, zero
+
+# pmpaddr45
+# name
+# CHECK-INST: csrrs t1, pmpaddr45, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xd0,0x3d]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr45
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr45, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xd0,0x3d]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr45
+# name
+csrrs t1, pmpaddr45, zero
+# uimm12
+csrrs t2, 0X3DD, zero
+
+# pmpaddr46
+# name
+# CHECK-INST: csrrs t1, pmpaddr46, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xe0,0x3d]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr46
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr46, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xe0,0x3d]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr46
+# name
+csrrs t1, pmpaddr46, zero
+# uimm12
+csrrs t2, 0X3DE, zero
+
+# pmpaddr47
+# name
+# CHECK-INST: csrrs t1, pmpaddr47, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xf0,0x3d]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr47
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr47, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xf0,0x3d]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr47
+# name
+csrrs t1, pmpaddr47, zero
+# uimm12
+csrrs t2, 0X3DF, zero
+
+# pmpaddr48
+# name
+# CHECK-INST: csrrs t1, pmpaddr48, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x00,0x3e]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr48
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr48, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x00,0x3e]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr48
+# name
+csrrs t1, pmpaddr48, zero
+# uimm12
+csrrs t2, 0X3E0, zero
+
+# pmpaddr49
+# name
+# CHECK-INST: csrrs t1, pmpaddr49, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x10,0x3e]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr49
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr49, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x10,0x3e]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr49
+# name
+csrrs t1, pmpaddr49, zero
+# uimm12
+csrrs t2, 0X3E1, zero
+
+# pmpaddr50
+# name
+# CHECK-INST: csrrs t1, pmpaddr50, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x20,0x3e]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr50
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr50, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x20,0x3e]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr50
+# name
+csrrs t1, pmpaddr50, zero
+# uimm12
+csrrs t2, 0X3E2, zero
+
+# pmpaddr51
+# name
+# CHECK-INST: csrrs t1, pmpaddr51, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x30,0x3e]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr51
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr51, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x30,0x3e]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr51
+# name
+csrrs t1, pmpaddr51, zero
+# uimm12
+csrrs t2, 0X3E3, zero
+
+# pmpaddr52
+# name
+# CHECK-INST: csrrs t1, pmpaddr52, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x40,0x3e]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr52
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr52, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x40,0x3e]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr52
+# name
+csrrs t1, pmpaddr52, zero
+# uimm12
+csrrs t2, 0X3E4, zero
+
+# pmpaddr53
+# name
+# CHECK-INST: csrrs t1, pmpaddr53, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x50,0x3e]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr53
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr53, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x50,0x3e]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr53
+# name
+csrrs t1, pmpaddr53, zero
+# uimm12
+csrrs t2, 0X3E5, zero
+
+# pmpaddr54
+# name
+# CHECK-INST: csrrs t1, pmpaddr54, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x60,0x3e]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr54
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr54, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x60,0x3e]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr54
+# name
+csrrs t1, pmpaddr54, zero
+# uimm12
+csrrs t2, 0X3E6, zero
+
+# pmpaddr55
+# name
+# CHECK-INST: csrrs t1, pmpaddr55, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x70,0x3e]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr55
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr55, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x70,0x3e]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr55
+# name
+csrrs t1, pmpaddr55, zero
+# uimm12
+csrrs t2, 0X3E7, zero
+
+# pmpaddr56
+# name
+# CHECK-INST: csrrs t1, pmpaddr56, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x80,0x3e]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr56
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr56, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x80,0x3e]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr56
+# name
+csrrs t1, pmpaddr56, zero
+# uimm12
+csrrs t2, 0X3E8, zero
+
+# pmpaddr57
+# name
+# CHECK-INST: csrrs t1, pmpaddr57, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x90,0x3e]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr57
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr57, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x90,0x3e]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr57
+# name
+csrrs t1, pmpaddr57, zero
+# uimm12
+csrrs t2, 0X3E9, zero
+
+# pmpaddr58
+# name
+# CHECK-INST: csrrs t1, pmpaddr58, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xa0,0x3e]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr58
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr58, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xa0,0x3e]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr58
+# name
+csrrs t1, pmpaddr58, zero
+# uimm12
+csrrs t2, 0X3EA, zero
+
+# pmpaddr59
+# name
+# CHECK-INST: csrrs t1, pmpaddr59, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xb0,0x3e]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr59
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr59, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xb0,0x3e]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr59
+# name
+csrrs t1, pmpaddr59, zero
+# uimm12
+csrrs t2, 0X3EB, zero
+
+# pmpaddr60
+# name
+# CHECK-INST: csrrs t1, pmpaddr60, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xc0,0x3e]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr60
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr60, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xc0,0x3e]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr60
+# name
+csrrs t1, pmpaddr60, zero
+# uimm12
+csrrs t2, 0X3EC, zero
+
+# pmpaddr61
+# name
+# CHECK-INST: csrrs t1, pmpaddr61, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xd0,0x3e]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr61
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr61, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xd0,0x3e]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr61
+# name
+csrrs t1, pmpaddr61, zero
+# uimm12
+csrrs t2, 0X3ED, zero
+
+# pmpaddr62
+# name
+# CHECK-INST: csrrs t1, pmpaddr62, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xe0,0x3e]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr62
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr62, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xe0,0x3e]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr62
+# name
+csrrs t1, pmpaddr62, zero
+# uimm12
+csrrs t2, 0X3EE, zero
+
+# pmpaddr63
+# name
+# CHECK-INST: csrrs t1, pmpaddr63, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xf0,0x3e]
+# CHECK-INST-ALIAS: csrr t1, pmpaddr63
+# uimm12
+# CHECK-INST: csrrs t2, pmpaddr63, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xf0,0x3e]
+# CHECK-INST-ALIAS: csrr t2, pmpaddr63
+# name
+csrrs t1, pmpaddr63, zero
+# uimm12
+csrrs t2, 0X3EF, zero
 
 ######################################
 # Machine Counter and Timers
@@ -352,7 +1405,7 @@ csrrs t1, tdata2, zero
 # uimm12
 csrrs t2, 0x7A2, zero
 
-#tdata3
+# tdata3
 # name
 # CHECK-INST: csrrs t1, tdata3, zero
 # CHECK-ENC: encoding: [0x73,0x23,0x30,0x7a]
@@ -365,6 +1418,20 @@ csrrs t2, 0x7A2, zero
 csrrs t1, tdata3, zero
 # uimm12
 csrrs t2, 0x7A3, zero
+
+# mcontext
+# name
+# CHECK-INST: csrrs t1, mcontext, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x80,0x7a]
+# CHECK-INST-ALIAS: csrr t1, mcontext
+# uimm12
+# CHECK-INST: csrrs t2, mcontext, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x80,0x7a]
+# CHECK-INST-ALIAS: csrr t2, mcontext
+# name
+csrrs t1, mcontext, zero
+# uimm12
+csrrs t2, 0x7A8, zero
 
 #######################
 # Debug Mode Registers
@@ -1283,3 +2350,63 @@ csrrs t2, 0x33E, zero
 csrrs t1, mhpmevent31, zero
 # uimm12
 csrrs t2, 0x33F, zero
+
+#########################################
+# State Enable Extension (Smstateen)
+#########################################
+
+# mstateen0
+# name
+# CHECK-INST: csrrs t1, mstateen0, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xc0,0x30]
+# CHECK-INST-ALIAS: csrr t1, mstateen0
+# uimm12
+# CHECK-INST: csrrs t2, mstateen0, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xc0,0x30]
+# CHECK-INST-ALIAS: csrr t2, mstateen0
+# name
+csrrs t1, mstateen0, zero
+# uimm12
+csrrs t2, 0x30C, zero
+
+# mstateen1
+# name
+# CHECK-INST: csrrs t1, mstateen1, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xd0,0x30]
+# CHECK-INST-ALIAS: csrr t1, mstateen1
+# uimm12
+# CHECK-INST: csrrs t2, mstateen1, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xd0,0x30]
+# CHECK-INST-ALIAS: csrr t2, mstateen1
+# name
+csrrs t1, mstateen1, zero
+# uimm12
+csrrs t2, 0x30D, zero
+
+# mstateen2
+# name
+# CHECK-INST: csrrs t1, mstateen2, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xe0,0x30]
+# CHECK-INST-ALIAS: csrr t1, mstateen2
+# uimm12
+# CHECK-INST: csrrs t2, mstateen2, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xe0,0x30]
+# CHECK-INST-ALIAS: csrr t2, mstateen2
+# name
+csrrs t1, mstateen2, zero
+# uimm12
+csrrs t2, 0x30E, zero
+
+# mstateen3
+# name
+# CHECK-INST: csrrs t1, mstateen3, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xf0,0x30]
+# CHECK-INST-ALIAS: csrr t1, mstateen3
+# uimm12
+# CHECK-INST: csrrs t2, mstateen3, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xf0,0x30]
+# CHECK-INST-ALIAS: csrr t2, mstateen3
+# name
+csrrs t1, mstateen3, zero
+# uimm12
+csrrs t2, 0x30F, zero

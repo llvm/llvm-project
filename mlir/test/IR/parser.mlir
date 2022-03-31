@@ -181,13 +181,19 @@ func @simpleCFGUsingBBArgs(i32, i64) {
 // CHECK: }
 }
 
+// CHECK-LABEL: func @block_label_empty_list
+func @block_label_empty_list() {
+^bb0():
+  return
+}
+
 // CHECK-LABEL: func @multiblock() {
 func @multiblock() {
   return     // CHECK:   return
 ^bb1:         // CHECK: ^bb1:   // no predecessors
-  br ^bb4     // CHECK:   br ^bb3
+  cf.br ^bb4     // CHECK:   cf.br ^bb3
 ^bb2:         // CHECK: ^bb2:   // pred: ^bb2
-  br ^bb2     // CHECK:   br ^bb2
+  cf.br ^bb2     // CHECK:   cf.br ^bb2
 ^bb4:         // CHECK: ^bb3:   // pred: ^bb1
   return     // CHECK:   return
 }            // CHECK: }
@@ -416,7 +422,7 @@ func @attributes() {
 func @ssa_values() -> (i16, i8) {
   // CHECK: %{{.*}}:2 = "foo"() : () -> (i1, i17)
   %0:2 = "foo"() : () -> (i1, i17)
-  br ^bb2
+  cf.br ^bb2
 
 ^bb1:       // CHECK: ^bb1: // pred: ^bb2
   // CHECK: %{{.*}}:2 = "baz"(%{{.*}}#1, %{{.*}}#0, %{{.*}}#1) : (f32, i11, i17) -> (i16, i8)
@@ -428,14 +434,14 @@ func @ssa_values() -> (i16, i8) {
 ^bb2:       // CHECK: ^bb2:  // pred: ^bb0
   // CHECK: %{{.*}}:2 = "bar"(%{{.*}}#0, %{{.*}}#1) : (i1, i17) -> (i11, f32)
   %2:2 = "bar"(%0#0, %0#1) : (i1, i17) -> (i11, f32)
-  br ^bb1
+  cf.br ^bb1
 }
 
 // CHECK-LABEL: func @bbargs() -> (i16, i8) {
 func @bbargs() -> (i16, i8) {
   // CHECK: %{{.*}}:2 = "foo"() : () -> (i1, i17)
   %0:2 = "foo"() : () -> (i1, i17)
-  br ^bb1(%0#1, %0#0 : i17, i1)
+  cf.br ^bb1(%0#1, %0#0 : i17, i1)
 
 ^bb1(%x: i17, %y: i1):       // CHECK: ^bb1(%{{.*}}: i17, %{{.*}}: i1):
   // CHECK: %{{.*}}:2 = "baz"(%{{.*}}, %{{.*}}, %{{.*}}#1) : (i17, i1, i17) -> (i16, i8)
@@ -446,21 +452,21 @@ func @bbargs() -> (i16, i8) {
 // CHECK-LABEL: func @verbose_terminators() -> (i1, i17)
 func @verbose_terminators() -> (i1, i17) {
   %0:2 = "foo"() : () -> (i1, i17)
-// CHECK:  br ^bb1(%{{.*}}#0, %{{.*}}#1 : i1, i17)
-  "std.br"(%0#0, %0#1)[^bb1] : (i1, i17) -> ()
+// CHECK:  cf.br ^bb1(%{{.*}}#0, %{{.*}}#1 : i1, i17)
+  "cf.br"(%0#0, %0#1)[^bb1] : (i1, i17) -> ()
 
 ^bb1(%x : i1, %y : i17):
-// CHECK:  cond_br %{{.*}}, ^bb2(%{{.*}} : i17), ^bb3(%{{.*}}, %{{.*}} : i1, i17)
-  "std.cond_br"(%x, %y, %x, %y) [^bb2, ^bb3] {operand_segment_sizes = dense<[1, 1, 2]>: vector<3xi32>} : (i1, i17, i1, i17) -> ()
+// CHECK:  cf.cond_br %{{.*}}, ^bb2(%{{.*}} : i17), ^bb3(%{{.*}}, %{{.*}} : i1, i17)
+  "cf.cond_br"(%x, %y, %x, %y) [^bb2, ^bb3] {operand_segment_sizes = dense<[1, 1, 2]>: vector<3xi32>} : (i1, i17, i1, i17) -> ()
 
 ^bb2(%a : i17):
   %true = arith.constant true
 // CHECK:  return %{{.*}}, %{{.*}} : i1, i17
-  "std.return"(%true, %a) : (i1, i17) -> ()
+  "func.return"(%true, %a) : (i1, i17) -> ()
 
 ^bb3(%b : i1, %c : i17):
 // CHECK:  return %{{.*}}, %{{.*}} : i1, i17
-  "std.return"(%b, %c) : (i1, i17) -> ()
+  "func.return"(%b, %c) : (i1, i17) -> ()
 }
 
 // CHECK-LABEL: func @condbr_simple
@@ -468,12 +474,12 @@ func @condbr_simple() -> (i32) {
   %cond = "foo"() : () -> i1
   %a = "bar"() : () -> i32
   %b = "bar"() : () -> i64
-  // CHECK: cond_br %{{.*}}, ^bb1(%{{.*}} : i32), ^bb2(%{{.*}} : i64)
-  cond_br %cond, ^bb1(%a : i32), ^bb2(%b : i64)
+  // CHECK: cf.cond_br %{{.*}}, ^bb1(%{{.*}} : i32), ^bb2(%{{.*}} : i64)
+  cf.cond_br %cond, ^bb1(%a : i32), ^bb2(%b : i64)
 
 // CHECK: ^bb1({{.*}}: i32): // pred: ^bb0
 ^bb1(%x : i32):
-  br ^bb2(%b: i64)
+  cf.br ^bb2(%b: i64)
 
 // CHECK: ^bb2({{.*}}: i64): // 2 preds: ^bb0, ^bb1
 ^bb2(%y : i64):
@@ -486,8 +492,8 @@ func @condbr_moarargs() -> (i32) {
   %cond = "foo"() : () -> i1
   %a = "bar"() : () -> i32
   %b = "bar"() : () -> i64
-  // CHECK: cond_br %{{.*}}, ^bb1(%{{.*}}, %{{.*}} : i32, i64), ^bb2(%{{.*}}, %{{.*}}, %{{.*}} : i64, i32, i32)
-  cond_br %cond, ^bb1(%a, %b : i32, i64), ^bb2(%b, %a, %a : i64, i32, i32)
+  // CHECK: cf.cond_br %{{.*}}, ^bb1(%{{.*}}, %{{.*}} : i32, i64), ^bb2(%{{.*}}, %{{.*}}, %{{.*}} : i64, i32, i32)
+  cf.cond_br %cond, ^bb1(%a, %b : i32, i64), ^bb2(%b, %a, %a : i64, i32, i32)
 
 ^bb1(%x : i32, %y : i64):
   return %x : i32
@@ -864,7 +870,7 @@ func @verbose_if(%N: index) {
 // CHECK-LABEL: func @terminator_with_regions
 func @terminator_with_regions() {
   // Combine successors and regions in the same operation.
-  // CHECK: "region"()[^bb1] ( {
+  // CHECK: "region"()[^bb1] ({
   // CHECK: }) : () -> ()
   "region"()[^bb2] ({}) : () -> ()
 ^bb2:
@@ -1132,7 +1138,7 @@ func @special_float_values_in_tensors() {
 
 // CHECK-LABEL: func @op_with_region_args
 func @op_with_region_args() {
-  // CHECK: "test.polyfor"() ( {
+  // CHECK: "test.polyfor"() ({
   // CHECK-NEXT: ^bb{{.*}}(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index):
   test.polyfor %i, %j, %k {
     "foo"() : () -> ()
@@ -1209,18 +1215,15 @@ func private @string_attr_name() attributes {"0 . 0", nested = {"0 . 0"}}
 func private @nested_reference() attributes {test.ref = @some_symbol::@some_nested_symbol }
 
 // CHECK-LABEL: func @custom_asm_names
-func @custom_asm_names() -> (i32, i32, i32, i32, i32, i32, i32) {
+func @custom_asm_names() -> (i32, i32, i32, i32, i32, i32) {
   // CHECK: %[[FIRST:first.*]], %[[MIDDLE:middle_results.*]]:2, %[[LAST:[0-9]+]]
   %0, %1:2, %2 = "test.asm_interface_op"() : () -> (i32, i32, i32, i32)
 
   // CHECK: %[[FIRST_2:first.*]], %[[LAST_2:[0-9]+]]
   %3, %4 = "test.asm_interface_op"() : () -> (i32, i32)
 
-  // CHECK: %[[RESULT:result.*]]
-  %5 = "test.asm_dialect_interface_op"() : () -> (i32)
-
   // CHECK: return %[[FIRST]], %[[MIDDLE]]#0, %[[MIDDLE]]#1, %[[LAST]], %[[FIRST_2]], %[[LAST_2]]
-  return %0, %1#0, %1#1, %2, %3, %4, %5 : i32, i32, i32, i32, i32, i32, i32
+  return %0, %1#0, %1#1, %2, %3, %4 : i32, i32, i32, i32, i32, i32
 }
 
 
@@ -1279,18 +1282,11 @@ func @default_dialect(%bool : i1) {
     // example.
     // CHECK:  "test.op_with_attr"() {test.attr = "test.value"} : () -> ()
     "test.op_with_attr"() {test.attr = "test.value"} : () -> ()
-
-    // TODO: remove this after removing the special casing for std in the printer.
-    // Verify that operations in the standard dialect keep the `std.` prefix.
-    // CHECK: std.assert
-    assert %bool, "Assertion"
     "test.terminator"() : ()->()
   }
-  // The same operation outside of the region does not have an std. prefix.
-  // CHECK-NOT: std.assert
-  // CHECK: assert
-  assert %bool, "Assertion"
-  return
+  // The same operation outside of the region does not have an func. prefix.
+  // CHECK: return
+  func.return
 }
 
 // CHECK-LABEL: func @unreachable_dominance_violation_ok
@@ -1299,9 +1295,9 @@ func @unreachable_dominance_violation_ok() -> i1 {
 // CHECK:   return [[VAL]] : i1
 // CHECK: ^bb1:   // no predecessors
 // CHECK:   [[VAL2:%.*]]:3 = "bar"([[VAL3:%.*]]) : (i64) -> (i1, i1, i1)
-// CHECK:   br ^bb3
+// CHECK:   cf.br ^bb3
 // CHECK: ^bb2:   // pred: ^bb2
-// CHECK:   br ^bb2
+// CHECK:   cf.br ^bb2
 // CHECK: ^bb3:   // pred: ^bb1
 // CHECK:   [[VAL3]] = "foo"() : () -> i64
 // CHECK:   return [[VAL2]]#1 : i1
@@ -1311,9 +1307,9 @@ func @unreachable_dominance_violation_ok() -> i1 {
 ^bb1:
   // %1 is not dominated by it's definition, but block is not reachable.
   %2:3 = "bar"(%1) : (i64) -> (i1,i1,i1)
-  br ^bb3
+  cf.br ^bb3
 ^bb2:
-  br ^bb2
+  cf.br ^bb2
 ^bb3:
   %1 = "foo"() : ()->i64
   return %2#1 : i1
@@ -1321,28 +1317,28 @@ func @unreachable_dominance_violation_ok() -> i1 {
 
 // CHECK-LABEL: func @graph_region_in_hierarchy_ok
 func @graph_region_in_hierarchy_ok() -> i64 {
-// CHECK:   br ^bb2
+// CHECK:   cf.br ^bb2
 // CHECK: ^bb1:
 // CHECK:   test.graph_region {
 // CHECK:     [[VAL2:%.*]]:3 = "bar"([[VAL3:%.*]]) : (i64) -> (i1, i1, i1)
 // CHECK:   }
-// CHECK:   br ^bb3
+// CHECK:   cf.br ^bb3
 // CHECK: ^bb2:   // pred: ^bb0
 // CHECK:   [[VAL3]] = "foo"() : () -> i64
-// CHECK:   br ^bb1
+// CHECK:   cf.br ^bb1
 // CHECK: ^bb3:   // pred: ^bb1
 // CHECK:   return [[VAL3]] : i64
 // CHECK: }
-  br ^bb2
+  cf.br ^bb2
 ^bb1:
   test.graph_region {
     // %1 is well-defined here, since bb2 dominates bb1.
     %2:3 = "bar"(%1) : (i64) -> (i1,i1,i1)
   }
-  br ^bb4
+  cf.br ^bb4
 ^bb2:
   %1 = "foo"() : ()->i64
-  br ^bb1
+  cf.br ^bb1
 ^bb4:
   return %1 : i64
 }
@@ -1399,7 +1395,7 @@ test.graph_region {
 // CHECK: test.graph_region {
 test.graph_region {
 // CHECK:   [[VAL1:%.*]] = "op1"([[VAL3:%.*]]) : (i32) -> i32
-// CHECK:   [[VAL2:%.*]] = "test.ssacfg_region"([[VAL1]], [[VAL2]], [[VAL3]], [[VAL4:%.*]]) ( {
+// CHECK:   [[VAL2:%.*]] = "test.ssacfg_region"([[VAL1]], [[VAL2]], [[VAL3]], [[VAL4:%.*]]) ({
 // CHECK:     [[VAL5:%.*]] = "op2"([[VAL1]], [[VAL2]], [[VAL3]], [[VAL4]]) : (i32, i32, i32, i32) -> i32
 // CHECK:   }) : (i32, i32, i32, i32) -> i32
 // CHECK:   [[VAL3]] = "op2"([[VAL1]], [[VAL4]]) : (i32, i32) -> i32
@@ -1413,15 +1409,24 @@ test.graph_region {
   %4 = "op3"(%1) : (i32) -> (i32)
 }
 
-// CHECK: "unregistered_func_might_have_graph_region"() ( {
+// CHECK: "unregistered_func_might_have_graph_region"() ({
 // CHECK: [[VAL1:%.*]] = "foo"([[VAL1]], [[VAL2:%.*]]) : (i64, i64) -> i64
 // CHECK: [[VAL2]] = "bar"([[VAL1]])
-"unregistered_func_might_have_graph_region"() ( {
+"unregistered_func_might_have_graph_region"() ({
   %1 = "foo"(%1, %2) : (i64, i64) -> i64
   %2 = "bar"(%1) : (i64) -> i64
   "unregistered_terminator"() : () -> ()
-}) {sym_name = "unregistered_op_dominance_violation_ok", type = () -> i1} : () -> ()
+}) {sym_name = "unregistered_op_dominance_violation_ok", function_type = () -> i1} : () -> ()
 
 // This is an unregister operation, the printing/parsing is handled by the dialect.
 // CHECK: test.dialect_custom_printer custom_format
 test.dialect_custom_printer custom_format
+
+// This is a registered operation with no custom parser and printer, and should
+// be handled by the dialect.
+// CHECK: test.dialect_custom_format_fallback custom_format_fallback
+test.dialect_custom_format_fallback custom_format_fallback
+
+// Check that an op with an optional result parses f80 as type.
+// CHECK: test.format_optional_result_d_op : f80
+test.format_optional_result_d_op : f80

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -15,6 +16,7 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
+#include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAddr.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugArangeSet.h"
@@ -29,7 +31,11 @@
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFGdbIndex.h"
+#include "llvm/DebugInfo/DWARF/DWARFListTable.h"
+#include "llvm/DebugInfo/DWARF/DWARFLocationExpression.h"
+#include "llvm/DebugInfo/DWARF/DWARFRelocMap.h"
 #include "llvm/DebugInfo/DWARF/DWARFSection.h"
+#include "llvm/DebugInfo/DWARF/DWARFTypeUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnitIndex.h"
 #include "llvm/DebugInfo/DWARF/DWARFVerifier.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -695,14 +701,30 @@ void DWARFContext::dump(
 
 DWARFTypeUnit *DWARFContext::getTypeUnitForHash(uint16_t Version, uint64_t Hash,
                                                 bool IsDWO) {
-  // FIXME: Check for/use the tu_index here, if there is one.
-  for (const auto &U : IsDWO ? dwo_units() : normal_units()) {
-    if (DWARFTypeUnit *TU = dyn_cast<DWARFTypeUnit>(U.get())) {
-      if (TU->getTypeHash() == Hash)
-        return TU;
+  parseDWOUnits(LazyParse);
+
+  if (const auto &TUI = getTUIndex()) {
+    if (const auto *R = TUI.getFromHash(Hash))
+      return dyn_cast_or_null<DWARFTypeUnit>(
+          DWOUnits.getUnitForIndexEntry(*R));
+    return nullptr;
+  }
+
+  struct UnitContainers {
+    const DWARFUnitVector &Units;
+    Optional<DenseMap<uint64_t, DWARFTypeUnit *>> &Map;
+  };
+  UnitContainers Units = IsDWO ? UnitContainers{DWOUnits, DWOTypeUnits}
+                               : UnitContainers{NormalUnits, NormalTypeUnits};
+  if (!Units.Map) {
+    Units.Map.emplace();
+    for (const auto &U : IsDWO ? dwo_units() : normal_units()) {
+      if (DWARFTypeUnit *TU = dyn_cast<DWARFTypeUnit>(U.get()))
+        (*Units.Map)[TU->getTypeHash()] = TU;
     }
   }
-  return nullptr;
+
+  return (*Units.Map)[Hash];
 }
 
 DWARFCompileUnit *DWARFContext::getDWOCompileUnitForHash(uint64_t Hash) {
@@ -1098,6 +1120,7 @@ static Optional<uint64_t> getTypeSize(DWARFDie Type, uint64_t PointerSize) {
     return PointerSize;
   }
   case DW_TAG_const_type:
+  case DW_TAG_immutable_type:
   case DW_TAG_volatile_type:
   case DW_TAG_restrict_type:
   case DW_TAG_typedef: {
@@ -1195,7 +1218,7 @@ void DWARFContext::addLocalsForDie(DWARFCompileUnit *CU, DWARFDie Subprogram,
             Die.getAttributeValueAsReferencedDie(DW_AT_abstract_origin))
       Die = Origin;
     if (auto NameAttr = Die.find(DW_AT_name))
-      if (Optional<const char *> Name = NameAttr->getAsCString())
+      if (Optional<const char *> Name = dwarf::toString(*NameAttr))
         Local.Name = *Name;
     if (auto Type = Die.getAttributeValueAsReferencedDie(DW_AT_type))
       Local.Size = getTypeSize(Type, getCUAddrSize());

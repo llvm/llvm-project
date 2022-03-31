@@ -321,6 +321,10 @@ def err_pragma_include_instead_system_reserved : Error<
   "header '%0' is an implementation detail; #include %select{'%2'|either '%2' "
   "or '%3'|one of %2}1 instead">;
 
+def err_illegal_use_of_flt_eval_macro : Error<
+  "'__FLT_EVAL_METHOD__' cannot be expanded inside a scope containing "
+  "'#pragma clang fp eval_method'">;
+
 def pp_poisoning_existing_macro : Warning<"poisoning existing macro">;
 def pp_out_of_date_dependency : Warning<
   "current file is older than dependency %0">;

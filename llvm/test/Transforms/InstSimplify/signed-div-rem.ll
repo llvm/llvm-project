@@ -1,4 +1,4 @@
-; RUN: opt < %s -instsimplify -S | FileCheck %s
+; RUN: opt < %s -passes=instsimplify -S | FileCheck %s
 
 define i32 @sdiv_sext_big_divisor(i8 %x) {
 ; CHECK-LABEL: @sdiv_sext_big_divisor(

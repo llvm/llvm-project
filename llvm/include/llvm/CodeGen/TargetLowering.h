@@ -25,7 +25,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLArrayExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/DAGCombine.h"
@@ -63,7 +63,6 @@
 
 namespace llvm {
 
-class BranchProbability;
 class CCState;
 class CCValAssign;
 class Constant;
@@ -254,7 +253,9 @@ public:
     LLOnly,  // Expand the (load) instruction into just a load-linked, which has
              // greater atomic guarantees than a normal load.
     CmpXChg, // Expand the instruction into cmpxchg; used by at least X86.
-    MaskedIntrinsic, // Use a target-specific intrinsic for the LL/SC loop.
+    MaskedIntrinsic,  // Use a target-specific intrinsic for the LL/SC loop.
+    BitTestIntrinsic, // Use a target-specific intrinsic for special bit
+                      // operations; used by X86.
   };
 
   /// Enum that specifies when a multiplication should be expanded.
@@ -852,6 +853,20 @@ public:
     return getBooleanContents(Type.isVector(), Type.isFloatingPoint());
   }
 
+  /// Promote the given target boolean to a target boolean of the given type.
+  /// A target boolean is an integer value, not necessarily of type i1, the bits
+  /// of which conform to getBooleanContents.
+  ///
+  /// ValVT is the type of values that produced the boolean.
+  SDValue promoteTargetBoolean(SelectionDAG &DAG, SDValue Bool,
+                               EVT ValVT) const {
+    SDLoc dl(Bool);
+    EVT BoolVT =
+        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), ValVT);
+    ISD::NodeType ExtendCode = getExtendForContent(getBooleanContents(ValVT));
+    return DAG.getNode(ExtendCode, dl, BoolVT, Bool);
+  }
+
   /// Return target scheduling preference.
   Sched::Preference getSchedulingPreference() const {
     return SchedPreferenceInfo;
@@ -1056,6 +1071,11 @@ public:
   virtual bool isVectorClearMaskLegal(ArrayRef<int> /*Mask*/,
                                       EVT /*VT*/) const {
     return false;
+  }
+
+  /// How to legalize this custom operation?
+  virtual LegalizeAction getCustomOperationAction(SDNode &Op) const {
+    return Legal;
   }
 
   /// Return how this operation should be treated: either it is legal, needs to
@@ -1788,11 +1808,14 @@ public:
   /// Return the preferred loop alignment.
   virtual Align getPrefLoopAlignment(MachineLoop *ML = nullptr) const;
 
+  /// Return the maximum amount of bytes allowed to be emitted when padding for
+  /// alignment
+  virtual unsigned
+  getMaxPermittedBytesForAlignment(MachineBasicBlock *MBB) const;
+
   /// Should loops be aligned even when the function is marked OptSize (but not
   /// MinSize).
-  virtual bool alignLoopsWithOptSize() const {
-    return false;
-  }
+  virtual bool alignLoopsWithOptSize() const { return false; }
 
   /// If the target has a standard location for the stack protector guard,
   /// returns the address of that location. Otherwise, returns nullptr.
@@ -1822,8 +1845,8 @@ public:
   virtual Function *getSSPStackGuardCheck(const Module &M) const;
 
   /// \returns true if a constant G_UBFX is legal on the target.
-  virtual bool isConstantUnsignedBitfieldExtactLegal(unsigned Opc, LLT Ty1,
-                                                     LLT Ty2) const {
+  virtual bool isConstantUnsignedBitfieldExtractLegal(unsigned Opc, LLT Ty1,
+                                                      LLT Ty2) const {
     return false;
   }
 
@@ -1928,6 +1951,14 @@ public:
                                               Value *Mask, Value *ShiftAmt,
                                               AtomicOrdering Ord) const {
     llvm_unreachable("Masked atomicrmw expansion unimplemented on this target");
+  }
+
+  /// Perform a bit test atomicrmw using a target-specific intrinsic. This
+  /// represents the combined bit test intrinsic which will be lowered at a late
+  /// stage by the backend.
+  virtual void emitBitTestAtomicRMWIntrinsic(AtomicRMWInst *AI) const {
+    llvm_unreachable(
+        "Bit test atomicrmw expansion unimplemented on this target");
   }
 
   /// Perform a masked cmpxchg using a target-specific intrinsic. This
@@ -2107,8 +2138,8 @@ public:
   /// about some cases, a default true can be returned to let the DAGCombiner
   /// decide.
   /// AddNode is (add x, c1), and ConstNode is c2.
-  virtual bool isMulAddWithConstProfitable(const SDValue &AddNode,
-                                           const SDValue &ConstNode) const {
+  virtual bool isMulAddWithConstProfitable(SDValue AddNode,
+                                           SDValue ConstNode) const {
     return true;
   }
 
@@ -2312,6 +2343,11 @@ protected:
     TargetDAGCombineArray[NT >> 3] |= 1 << (NT&7);
   }
 
+  void setTargetDAGCombine(ArrayRef<ISD::NodeType> NTs) {
+    for (auto NT : NTs)
+      setTargetDAGCombine(NT);
+  }
+
   /// Set the target's minimum function alignment.
   void setMinFunctionAlignment(Align Alignment) {
     MinFunctionAlignment = Alignment;
@@ -2327,6 +2363,9 @@ protected:
   /// means the target does not care about loop alignment. The target may also
   /// override getPrefLoopAlignment to provide per-loop values.
   void setPrefLoopAlignment(Align Alignment) { PrefLoopAlignment = Alignment; }
+  void setMaxBytesForAlignment(unsigned MaxBytes) {
+    MaxBytesForAlignment = MaxBytes;
+  }
 
   /// Set the minimum stack alignment of an argument.
   void setMinStackArgumentAlignment(Align Alignment) {
@@ -2491,6 +2530,10 @@ public:
     case ISD::FMAXNUM_IEEE:
     case ISD::FMINIMUM:
     case ISD::FMAXIMUM:
+    case ISD::AVGFLOORS:
+    case ISD::AVGFLOORU:
+    case ISD::AVGCEILS:
+    case ISD::AVGCEILU:
       return true;
     default: return false;
     }
@@ -2507,6 +2550,8 @@ public:
     case ISD::SHL:
     case ISD::SRL:
     case ISD::SRA:
+    case ISD::ROTL:
+    case ISD::ROTR:
     case ISD::SDIV:
     case ISD::UDIV:
     case ISD::SREM:
@@ -2830,6 +2875,14 @@ public:
     return false;
   }
 
+  /// Return true if pulling a binary operation into a select with an identity
+  /// constant is profitable. This is the inverse of an IR transform.
+  /// Example: X + (Cond ? Y : 0) --> Cond ? (X + Y) : X
+  virtual bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode,
+                                                    EVT VT) const {
+    return false;
+  }
+
   /// Return true if it is beneficial to convert a load of a constant to
   /// just the constant itself.
   /// On some targets it might be more efficient to use a combination of
@@ -3016,6 +3069,8 @@ private:
 
   /// The preferred loop alignment (in log2 bot in bytes).
   Align PrefLoopAlignment;
+  /// The maximum amount of bytes permitted to be emitted for alignment.
+  unsigned MaxBytesForAlignment;
 
   /// Size in bits of the maximum atomics size the backend supports.
   /// Accesses larger than this will be expanded by AtomicExpandPass.
@@ -3269,6 +3324,17 @@ public:
     return false;
   }
 
+  // Lets target to control the following reassociation of operands: (op (op x,
+  // c1), y) -> (op (op x, y), c1) where N0 is (op x, c1) and N1 is y. By
+  // default consider profitable any case where N0 has single use.  This
+  // behavior reflects the condition replaced by this target hook call in the
+  // DAGCombiner.  Any particular target can implement its own heuristic to
+  // restrict common combiner.
+  virtual bool isReassocProfitable(SelectionDAG &DAG, SDValue N0,
+                                   SDValue N1) const {
+    return N0.hasOneUse();
+  }
+
   virtual bool isSDNodeAlwaysUniform(const SDNode * N) const {
     return false;
   }
@@ -3451,13 +3517,19 @@ public:
   bool SimplifyDemandedBits(SDValue Op, const APInt &DemandedBits,
                             DAGCombinerInfo &DCI) const;
 
+  /// Helper wrapper around SimplifyDemandedBits.
+  /// Adds Op back to the worklist upon success.
+  bool SimplifyDemandedBits(SDValue Op, const APInt &DemandedBits,
+                            const APInt &DemandedElts,
+                            DAGCombinerInfo &DCI) const;
+
   /// More limited version of SimplifyDemandedBits that can be used to "look
   /// through" ops that don't contribute to the DemandedBits/DemandedElts -
   /// bitwise ops etc.
   SDValue SimplifyMultipleUseDemandedBits(SDValue Op, const APInt &DemandedBits,
                                           const APInt &DemandedElts,
                                           SelectionDAG &DAG,
-                                          unsigned Depth) const;
+                                          unsigned Depth = 0) const;
 
   /// Helper wrapper around SimplifyMultipleUseDemandedBits, demanding all
   /// elements.
@@ -3494,8 +3566,15 @@ public:
   /// Helper wrapper around SimplifyDemandedVectorElts.
   /// Adds Op back to the worklist upon success.
   bool SimplifyDemandedVectorElts(SDValue Op, const APInt &DemandedElts,
-                                  APInt &KnownUndef, APInt &KnownZero,
                                   DAGCombinerInfo &DCI) const;
+
+  /// Return true if the target supports simplifying demanded vector elements by
+  /// converting them to undefs.
+  virtual bool
+  shouldSimplifyDemandedVectorElts(SDValue Op,
+                                   const TargetLoweringOpt &TLO) const {
+    return true;
+  }
 
   /// Determine which of the bits specified in Mask are known to be either zero
   /// or one and return them in the KnownZero/KnownOne bitsets. The DemandedElts
@@ -3606,6 +3685,13 @@ public:
                                             const SelectionDAG &DAG,
                                             bool SNaN = false,
                                             unsigned Depth = 0) const;
+
+  /// Return true if vector \p Op has the same value across all \p DemandedElts,
+  /// indicating any elements which may be undef in the output \p UndefElts.
+  virtual bool isSplatValueForTargetNode(SDValue Op, const APInt &DemandedElts,
+                                         APInt &UndefElts,
+                                         unsigned Depth = 0) const;
+
   struct DAGCombinerInfo {
     void *DC;  // The DAG Combiner object.
     CombineLevel Level;
@@ -3635,11 +3721,11 @@ public:
 
   /// Return if the N is a constant or constant vector equal to the true value
   /// from getBooleanContents().
-  bool isConstTrueVal(const SDNode *N) const;
+  bool isConstTrueVal(SDValue N) const;
 
   /// Return if the N is a constant or constant vector equal to the false value
   /// from getBooleanContents().
-  bool isConstFalseVal(const SDNode *N) const;
+  bool isConstFalseVal(SDValue N) const;
 
   /// Return if \p N is a True value when extended to \p VT.
   bool isExtendedTrueVal(const ConstantSDNode *N, EVT VT, bool SExt) const;
@@ -3758,7 +3844,7 @@ public:
     if (Neg && Cost == NegatibleCost::Cheaper)
       return Neg;
     // Remove the new created node to avoid the side effect to the DAG.
-    if (Neg && Neg.getNode()->use_empty())
+    if (Neg && Neg->use_empty())
       DAG.RemoveDeadNode(Neg.getNode());
     return SDValue();
   }
@@ -4395,6 +4481,13 @@ public:
     return SDValue();
   }
 
+  /// Try to convert the fminnum/fmaxnum to a compare/select sequence. This is
+  /// required for correctness since InstCombine might have canonicalized a
+  /// fcmp+select sequence to a FMINNUM/FMAXNUM intrinsic.  If we were to fall
+  /// through to the default expansion/soften to libcall, we might introduce a
+  /// link-time dependency on libm into a file that originally did not have one.
+  SDValue createSelectForFMINNUM_FMAXNUM(SDNode *Node, SelectionDAG &DAG) const;
+
   /// Return a reciprocal estimate value for the input operand.
   /// \p Enabled is a ReciprocalEstimate enum with value either 'Unspecified' or
   /// 'Enabled' as set by a potential default override attribute.
@@ -4460,18 +4553,15 @@ public:
 
   /// Expand funnel shift.
   /// \param N Node to expand
-  /// \param Result output after conversion
-  /// \returns True, if the expansion was successful, false otherwise
-  bool expandFunnelShift(SDNode *N, SDValue &Result, SelectionDAG &DAG) const;
+  /// \returns The expansion if successful, SDValue() otherwise
+  SDValue expandFunnelShift(SDNode *N, SelectionDAG &DAG) const;
 
   /// Expand rotations.
   /// \param N Node to expand
   /// \param AllowVectorOps expand vector rotate, this should only be performed
   ///        if the legalization is happening outside of LegalizeVectorOps
-  /// \param Result output after conversion
-  /// \returns True, if the expansion was successful, false otherwise
-  bool expandROT(SDNode *N, bool AllowVectorOps, SDValue &Result,
-                 SelectionDAG &DAG) const;
+  /// \returns The expansion if successful, SDValue() otherwise
+  SDValue expandROT(SDNode *N, bool AllowVectorOps, SelectionDAG &DAG) const;
 
   /// Expand shift-by-parts.
   /// \param N Node to expand

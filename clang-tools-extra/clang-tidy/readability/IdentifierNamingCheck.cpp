@@ -1404,8 +1404,8 @@ IdentifierNamingCheck::getMacroFailureInfo(const Token &MacroNameTok,
   if (!Style.isActive())
     return llvm::None;
 
-  return getFailureInfo("", MacroNameTok.getIdentifierInfo()->getName(), NULL,
-                        Loc, Style.getStyles(), Style.getHNOption(),
+  return getFailureInfo("", MacroNameTok.getIdentifierInfo()->getName(),
+                        nullptr, Loc, Style.getStyles(), Style.getHNOption(),
                         SK_MacroDefinition, SM, IgnoreFailedSplit);
 }
 

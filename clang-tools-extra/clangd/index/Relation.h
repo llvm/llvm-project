@@ -9,9 +9,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_RELATION_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_RELATION_H
 
-#include "SymbolID.h"
-#include "SymbolLocation.h"
-#include "clang/Index/IndexSymbol.h"
+#include "index/SymbolID.h"
 #include "llvm/ADT/iterator_range.h"
 #include <cstdint>
 #include <utility>

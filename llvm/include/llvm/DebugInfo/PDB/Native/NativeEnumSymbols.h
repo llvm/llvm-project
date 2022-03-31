@@ -9,9 +9,9 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_NATIVEENUMSYMBOLS_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_NATIVEENUMSYMBOLS_H
 
-#include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/PDBSymbol.h"
+#include "llvm/DebugInfo/PDB/PDBTypes.h"
 
 #include <vector>
 

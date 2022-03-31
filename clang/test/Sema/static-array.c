@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.14.0 -fsyntax-only -fblocks -pedantic -verify %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.14.0 -fsyntax-only -fblocks -pedantic -Wno-strict-prototypes -verify %s
 
 void cat0(int a[static 0]) {} // expected-warning {{zero size arrays are an extension}} \
                               // expected-note {{callee declares array parameter as static here}}

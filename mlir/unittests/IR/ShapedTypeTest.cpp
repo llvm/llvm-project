@@ -30,14 +30,14 @@ TEST(ShapedTypeTest, CloneMemref) {
   AffineMap map = makeStridedLinearLayoutMap({2, 3}, 5, &context);
 
   ShapedType memrefType =
-      MemRefType::Builder(memrefOriginalShape, memrefOriginalType)
+      (ShapedType)MemRefType::Builder(memrefOriginalShape, memrefOriginalType)
           .setMemorySpace(memSpace)
           .setLayout(AffineMapAttr::get(map));
   // Update shape.
   llvm::SmallVector<int64_t> memrefNewShape({30, 40});
   ASSERT_NE(memrefOriginalShape, memrefNewShape);
   ASSERT_EQ(memrefType.clone(memrefNewShape),
-            (MemRefType)MemRefType::Builder(memrefNewShape, memrefOriginalType)
+            (ShapedType)MemRefType::Builder(memrefNewShape, memrefOriginalType)
                 .setMemorySpace(memSpace)
                 .setLayout(AffineMapAttr::get(map)));
   // Update type.
@@ -81,25 +81,29 @@ TEST(ShapedTypeTest, CloneTensor) {
   // Update shape.
   llvm::SmallVector<int64_t> tensorNewShape({30, 40});
   ASSERT_NE(tensorOriginalShape, tensorNewShape);
-  ASSERT_EQ(tensorType.clone(tensorNewShape),
-            RankedTensorType::get(tensorNewShape, tensorOriginalType));
+  ASSERT_EQ(
+      tensorType.clone(tensorNewShape),
+      (ShapedType)RankedTensorType::get(tensorNewShape, tensorOriginalType));
   // Update type.
   Type tensorNewType = f32;
   ASSERT_NE(tensorOriginalType, tensorNewType);
-  ASSERT_EQ(tensorType.clone(tensorNewType),
-            RankedTensorType::get(tensorOriginalShape, tensorNewType));
+  ASSERT_EQ(
+      tensorType.clone(tensorNewType),
+      (ShapedType)RankedTensorType::get(tensorOriginalShape, tensorNewType));
   // Update both.
   ASSERT_EQ(tensorType.clone(tensorNewShape, tensorNewType),
-            RankedTensorType::get(tensorNewShape, tensorNewType));
+            (ShapedType)RankedTensorType::get(tensorNewShape, tensorNewType));
 
   // Test unranked tensor cloning.
   ShapedType unrankedTensorType = UnrankedTensorType::get(tensorOriginalType);
-  ASSERT_EQ(unrankedTensorType.clone(tensorNewShape),
-            RankedTensorType::get(tensorNewShape, tensorOriginalType));
+  ASSERT_EQ(
+      unrankedTensorType.clone(tensorNewShape),
+      (ShapedType)RankedTensorType::get(tensorNewShape, tensorOriginalType));
   ASSERT_EQ(unrankedTensorType.clone(tensorNewType),
-            UnrankedTensorType::get(tensorNewType));
-  ASSERT_EQ(unrankedTensorType.clone(tensorNewShape),
-            RankedTensorType::get(tensorNewShape, tensorOriginalType));
+            (ShapedType)UnrankedTensorType::get(tensorNewType));
+  ASSERT_EQ(
+      unrankedTensorType.clone(tensorNewShape),
+      (ShapedType)RankedTensorType::get(tensorNewShape, tensorOriginalType));
 }
 
 TEST(ShapedTypeTest, CloneVector) {
@@ -127,4 +131,4 @@ TEST(ShapedTypeTest, CloneVector) {
             VectorType::get(vectorNewShape, vectorNewType));
 }
 
-} // end namespace
+} // namespace

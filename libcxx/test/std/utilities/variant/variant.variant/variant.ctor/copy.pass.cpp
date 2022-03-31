@@ -239,15 +239,15 @@ void test_constexpr_copy_ctor() {
   // Make sure we properly propagate triviality, which implies constexpr-ness (see P0602R4).
 #if TEST_STD_VER > 17
   using V = std::variant<long, void*, const int>;
-#ifdef TEST_WORKAROUND_C1XX_BROKEN_IS_TRIVIALLY_COPYABLE
+#ifdef TEST_WORKAROUND_MSVC_BROKEN_IS_TRIVIALLY_COPYABLE
   static_assert(std::is_trivially_destructible<V>::value, "");
   static_assert(std::is_trivially_copy_constructible<V>::value, "");
   static_assert(std::is_trivially_move_constructible<V>::value, "");
   static_assert(!std::is_copy_assignable<V>::value, "");
   static_assert(!std::is_move_assignable<V>::value, "");
-#else // TEST_WORKAROUND_C1XX_BROKEN_IS_TRIVIALLY_COPYABLE
+#else // TEST_WORKAROUND_MSVC_BROKEN_IS_TRIVIALLY_COPYABLE
   static_assert(std::is_trivially_copyable<V>::value, "");
-#endif // TEST_WORKAROUND_C1XX_BROKEN_IS_TRIVIALLY_COPYABLE
+#endif // TEST_WORKAROUND_MSVC_BROKEN_IS_TRIVIALLY_COPYABLE
   static_assert(test_constexpr_copy_ctor_imp<0>(V(42l)), "");
   static_assert(test_constexpr_copy_ctor_imp<1>(V(nullptr)), "");
   static_assert(test_constexpr_copy_ctor_imp<2>(V(101)), "");

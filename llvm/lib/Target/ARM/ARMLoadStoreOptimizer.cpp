@@ -24,6 +24,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -33,6 +34,7 @@
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -2121,7 +2123,7 @@ bool ARMLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
   bool Modified = false;
   for (MachineBasicBlock &MBB : Fn) {
     Modified |= LoadStoreMultipleOpti(MBB);
-    if (STI->hasV5TOps())
+    if (STI->hasV5TOps() && !AFI->shouldSignReturnAddress())
       Modified |= MergeReturnIntoLDM(MBB);
     if (isThumb1)
       Modified |= CombineMovBx(MBB);
@@ -2349,9 +2351,8 @@ bool ARMPreAllocLoadStoreOpt::RescheduleOps(MachineBasicBlock *MBB,
     unsigned LastOpcode = 0;
     unsigned LastBytes = 0;
     unsigned NumMove = 0;
-    for (int i = Ops.size() - 1; i >= 0; --i) {
+    for (MachineInstr *Op : llvm::reverse(Ops)) {
       // Make sure each operation has the same kind.
-      MachineInstr *Op = Ops[i];
       unsigned LSMOpcode
         = getLoadStoreMultipleOpcode(Op->getOpcode(), ARM_AM::ia);
       if (LastOpcode && LSMOpcode != LastOpcode)

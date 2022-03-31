@@ -13,9 +13,7 @@
 #include "CodeGenDAGPatterns.h"
 #include "DAGISelMatcher.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Support/CommandLine.h"
@@ -169,7 +167,6 @@ static std::string GetPatFromTreePatternNode(const TreePatternNode *N) {
   std::string str;
   raw_string_ostream Stream(str);
   Stream << *N;
-  Stream.str();
   return str;
 }
 
@@ -235,7 +232,6 @@ static std::string getIncludePath(const Record *R) {
 
   Stream << SrcMgr.getBufferInfo(CurBuf).Buffer->getBufferIdentifier() << ":"
          << SrcMgr.FindLineNumber(L, CurBuf);
-  Stream.str();
   return str;
 }
 

@@ -14,14 +14,13 @@
 #define LLVM_LIB_CODEGEN_ASMPRINTER_DWARFDEBUG_H
 
 #include "AddressPool.h"
-#include "DebugLocStream.h"
 #include "DebugLocEntry.h"
+#include "DebugLocStream.h"
 #include "DwarfFile.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -31,7 +30,6 @@
 #include "llvm/CodeGen/AccelTable.h"
 #include "llvm/CodeGen/DbgEntityHistoryCalculator.h"
 #include "llvm/CodeGen/DebugHandlerBase.h"
-#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Metadata.h"
@@ -80,7 +78,7 @@ private:
 public:
   DbgEntity(const DINode *N, const DILocation *IA, DbgEntityKind ID)
       : Entity(N), InlinedAt(IA), SubclassID(ID) {}
-  virtual ~DbgEntity() {}
+  virtual ~DbgEntity() = default;
 
   /// Accessors.
   /// @{
@@ -316,13 +314,11 @@ class DwarfDebug : public DebugHandlerBase {
   /// can refer to them in spite of insertions into this list.
   DebugLocStream DebugLocs;
 
-  using SubprogramSetVector =
-      SetVector<const DISubprogram *, SmallVector<const DISubprogram *, 16>,
-                SmallPtrSet<const DISubprogram *, 16>>;
-
   /// This is a collection of subprogram MDNodes that are processed to
   /// create DIEs.
-  SubprogramSetVector ProcessedSPNodes;
+  SetVector<const DISubprogram *, SmallVector<const DISubprogram *, 16>,
+            SmallPtrSet<const DISubprogram *, 16>>
+      ProcessedSPNodes;
 
   /// If nonnull, stores the current machine function we're processing.
   const MachineFunction *CurFn = nullptr;
@@ -600,6 +596,10 @@ private:
   void finishUnitAttributes(const DICompileUnit *DIUnit,
                             DwarfCompileUnit &NewCU);
 
+  /// Construct imported_module or imported_declaration DIE.
+  void constructAndAddImportedEntityDIE(DwarfCompileUnit &TheCU,
+                                        const DIImportedEntity *N);
+
   /// Register a source line with debug info. Returns the unique
   /// label that was emitted and which provides correspondence to the
   /// source line list.
@@ -664,19 +664,6 @@ public:
   /// type units.
   void addDwarfTypeUnitType(DwarfCompileUnit &CU, StringRef Identifier,
                             DIE &Die, const DICompositeType *CTy);
-
-  class NonTypeUnitContext {
-    DwarfDebug *DD;
-    decltype(DwarfDebug::TypeUnitsUnderConstruction) TypeUnitsUnderConstruction;
-    bool AddrPoolUsed;
-    friend class DwarfDebug;
-    NonTypeUnitContext(DwarfDebug *DD);
-  public:
-    NonTypeUnitContext(NonTypeUnitContext&&) = default;
-    ~NonTypeUnitContext();
-  };
-
-  NonTypeUnitContext enterNonTypeUnitContext();
 
   /// Add a label so that arange data can be generated for it.
   void addArangeLabel(SymbolCU SCU) { ArangeLabels.push_back(SCU); }

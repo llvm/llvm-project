@@ -299,8 +299,9 @@ struct Allocator {
   NOINLINE bool isRssLimitExceeded();
 
   // Allocates a chunk.
-  void *allocate(uptr Size, uptr Alignment, AllocType Type,
-                 bool ForceZeroContents = false) NO_THREAD_SAFETY_ANALYSIS {
+  void *
+  allocate(uptr Size, uptr Alignment, AllocType Type,
+           bool ForceZeroContents = false) SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
     initThreadMaybe();
 
     if (UNLIKELY(Alignment > MaxAlignment)) {
@@ -404,8 +405,8 @@ struct Allocator {
   // Place a chunk in the quarantine or directly deallocate it in the event of
   // a zero-sized quarantine, or if the size of the chunk is greater than the
   // quarantine chunk size threshold.
-  void quarantineOrDeallocateChunk(void *Ptr, UnpackedHeader *Header,
-                                   uptr Size) NO_THREAD_SAFETY_ANALYSIS {
+  void quarantineOrDeallocateChunk(void *Ptr, UnpackedHeader *Header, uptr Size)
+      SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
     const bool BypassQuarantine = !Size || (Size > QuarantineChunksUpToSize);
     if (BypassQuarantine) {
       UnpackedHeader NewHeader = *Header;

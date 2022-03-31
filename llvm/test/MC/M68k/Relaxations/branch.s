@@ -1,5 +1,6 @@
 ; RUN: llvm-mc -triple=m68k -motorola-integers -filetype=obj < %s \
 ; RUN:     | llvm-objdump -d - | FileCheck %s
+; XFAIL: *
 
 ; CHECK-LABEL: <TIGHT>:
 TIGHT:
@@ -49,4 +50,3 @@ ZERO:
 .LBB2_1:
 	add.l	#0, %d0
 	rts
-

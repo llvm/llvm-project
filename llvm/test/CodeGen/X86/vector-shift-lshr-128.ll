@@ -811,19 +811,11 @@ define <2 x i64> @splatvar_modulo_shift_v2i64(<2 x i64> %a, <2 x i64> %b) nounwi
 }
 
 define <4 x i32> @splatvar_modulo_shift_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
-; SSE2-LABEL: splatvar_modulo_shift_v4i32:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movd %xmm1, %eax
-; SSE2-NEXT:    andl $31, %eax
-; SSE2-NEXT:    movd %eax, %xmm1
-; SSE2-NEXT:    psrld %xmm1, %xmm0
-; SSE2-NEXT:    retq
-;
-; SSE41-LABEL: splatvar_modulo_shift_v4i32:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE41-NEXT:    psrld %xmm1, %xmm0
-; SSE41-NEXT:    retq
+; SSE-LABEL: splatvar_modulo_shift_v4i32:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    psrld %xmm1, %xmm0
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: splatvar_modulo_shift_v4i32:
 ; AVX:       # %bb.0:
@@ -851,9 +843,7 @@ define <4 x i32> @splatvar_modulo_shift_v4i32(<4 x i32> %a, <4 x i32> %b) nounwi
 ;
 ; X86-SSE-LABEL: splatvar_modulo_shift_v4i32:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    movd %xmm1, %eax
-; X86-SSE-NEXT:    andl $31, %eax
-; X86-SSE-NEXT:    movd %eax, %xmm1
+; X86-SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-SSE-NEXT:    psrld %xmm1, %xmm0
 ; X86-SSE-NEXT:    retl
   %mod = and <4 x i32> %b, <i32 31, i32 31, i32 31, i32 31>
@@ -863,19 +853,11 @@ define <4 x i32> @splatvar_modulo_shift_v4i32(<4 x i32> %a, <4 x i32> %b) nounwi
 }
 
 define <8 x i16> @splatvar_modulo_shift_v8i16(<8 x i16> %a, <8 x i16> %b) nounwind {
-; SSE2-LABEL: splatvar_modulo_shift_v8i16:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE2-NEXT:    pslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0,1]
-; SSE2-NEXT:    psrldq {{.*#+}} xmm1 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; SSE2-NEXT:    psrlw %xmm1, %xmm0
-; SSE2-NEXT:    retq
-;
-; SSE41-LABEL: splatvar_modulo_shift_v8i16:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE41-NEXT:    psrlw %xmm1, %xmm0
-; SSE41-NEXT:    retq
+; SSE-LABEL: splatvar_modulo_shift_v8i16:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    psrlw %xmm1, %xmm0
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: splatvar_modulo_shift_v8i16:
 ; AVX:       # %bb.0:
@@ -904,8 +886,6 @@ define <8 x i16> @splatvar_modulo_shift_v8i16(<8 x i16> %a, <8 x i16> %b) nounwi
 ; X86-SSE-LABEL: splatvar_modulo_shift_v8i16:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
-; X86-SSE-NEXT:    pslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0,1]
-; X86-SSE-NEXT:    psrldq {{.*#+}} xmm1 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; X86-SSE-NEXT:    psrlw %xmm1, %xmm0
 ; X86-SSE-NEXT:    retl
   %mod = and <8 x i16> %b, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
@@ -918,8 +898,6 @@ define <16 x i8> @splatvar_modulo_shift_v16i8(<16 x i8> %a, <16 x i8> %b) nounwi
 ; SSE2-LABEL: splatvar_modulo_shift_v16i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE2-NEXT:    pslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0]
-; SSE2-NEXT:    psrldq {{.*#+}} xmm1 = xmm1[15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; SSE2-NEXT:    psrlw %xmm1, %xmm0
 ; SSE2-NEXT:    pcmpeqd %xmm2, %xmm2
 ; SSE2-NEXT:    psrlw %xmm1, %xmm2
@@ -1023,8 +1001,6 @@ define <16 x i8> @splatvar_modulo_shift_v16i8(<16 x i8> %a, <16 x i8> %b) nounwi
 ; X86-SSE-LABEL: splatvar_modulo_shift_v16i8:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
-; X86-SSE-NEXT:    pslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0]
-; X86-SSE-NEXT:    psrldq {{.*#+}} xmm1 = xmm1[15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; X86-SSE-NEXT:    psrlw %xmm1, %xmm0
 ; X86-SSE-NEXT:    pcmpeqd %xmm2, %xmm2
 ; X86-SSE-NEXT:    psrlw %xmm1, %xmm2

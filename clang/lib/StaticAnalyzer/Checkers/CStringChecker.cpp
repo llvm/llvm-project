@@ -80,7 +80,7 @@ class CStringChecker : public Checker< eval::Call,
                                          check::RegionChanges
                                          > {
   mutable std::unique_ptr<BugType> BT_Null, BT_Bounds, BT_Overlap,
-      BT_NotCString, BT_AdditionOverflow;
+      BT_NotCString, BT_AdditionOverflow, BT_UninitRead;
 
   mutable const char *CurrentFunctionDescription;
 
@@ -92,11 +92,13 @@ public:
     DefaultBool CheckCStringOutOfBounds;
     DefaultBool CheckCStringBufferOverlap;
     DefaultBool CheckCStringNotNullTerm;
+    DefaultBool CheckCStringUninitializedRead;
 
     CheckerNameRef CheckNameCStringNullArg;
     CheckerNameRef CheckNameCStringOutOfBounds;
     CheckerNameRef CheckNameCStringBufferOverlap;
     CheckerNameRef CheckNameCStringNotNullTerm;
+    CheckerNameRef CheckNameCStringUninitializedRead;
   };
 
   CStringChecksFilter Filter;
@@ -257,7 +259,8 @@ public:
   void emitNotCStringBug(CheckerContext &C, ProgramStateRef State,
                          const Stmt *S, StringRef WarningMsg) const;
   void emitAdditionOverflowBug(CheckerContext &C, ProgramStateRef State) const;
-
+  void emitUninitializedReadBug(CheckerContext &C, ProgramStateRef State,
+                             const Expr *E) const;
   ProgramStateRef checkAdditionOverflow(CheckerContext &C,
                                             ProgramStateRef state,
                                             NonLoc left,
@@ -368,6 +371,15 @@ ProgramStateRef CStringChecker::CheckLocation(CheckerContext &C,
     return nullptr;
   }
 
+  // Ensure that we wouldn't read uninitialized value.
+  if (Access == AccessKind::read) {
+    if (Filter.CheckCStringUninitializedRead &&
+        StInBound->getSVal(ER).isUndef()) {
+      emitUninitializedReadBug(C, StInBound, Buffer.Expression);
+      return nullptr;
+    }
+  }
+
   // Array bound check succeeded.  From this point forward the array bound
   // should always succeed.
   return StInBound;
@@ -420,7 +432,6 @@ ProgramStateRef CStringChecker::CheckBufferAccess(CheckerContext &C,
 
     SVal BufEnd =
         svalBuilder.evalBinOpLN(State, BO_Add, *BufLoc, LastOffset, PtrTy);
-
     State = CheckLocation(C, State, Buffer, BufEnd, Access);
 
     // If the buffer isn't large enough, abort.
@@ -580,6 +591,26 @@ void CStringChecker::emitNullArgBug(CheckerContext &C, ProgramStateRef State,
   }
 }
 
+void CStringChecker::emitUninitializedReadBug(CheckerContext &C,
+                                              ProgramStateRef State,
+                                              const Expr *E) const {
+  if (ExplodedNode *N = C.generateErrorNode(State)) {
+    const char *Msg =
+        "Bytes string function accesses uninitialized/garbage values";
+    if (!BT_UninitRead)
+      BT_UninitRead.reset(
+          new BuiltinBug(Filter.CheckNameCStringUninitializedRead,
+                         "Accessing unitialized/garbage values", Msg));
+
+    BuiltinBug *BT = static_cast<BuiltinBug *>(BT_UninitRead.get());
+
+    auto Report = std::make_unique<PathSensitiveBugReport>(*BT, Msg, N);
+    Report->addRange(E->getSourceRange());
+    bugreporter::trackExpressionValue(N, E, *Report);
+    C.emitReport(std::move(Report));
+  }
+}
+
 void CStringChecker::emitOutOfBoundsBug(CheckerContext &C,
                                         ProgramStateRef State, const Stmt *S,
                                         StringRef WarningMsg) const {
@@ -622,8 +653,8 @@ void CStringChecker::emitNotCStringBug(CheckerContext &C, ProgramStateRef State,
 void CStringChecker::emitAdditionOverflowBug(CheckerContext &C,
                                              ProgramStateRef State) const {
   if (ExplodedNode *N = C.generateErrorNode(State)) {
-    if (!BT_NotCString)
-      BT_NotCString.reset(
+    if (!BT_AdditionOverflow)
+      BT_AdditionOverflow.reset(
           new BuiltinBug(Filter.CheckNameCStringOutOfBounds, "API",
                          "Sum of expressions causes overflow."));
 
@@ -634,8 +665,8 @@ void CStringChecker::emitAdditionOverflowBug(CheckerContext &C,
         "This expression will create a string whose length is too big to "
         "be represented as a size_t";
 
-    auto Report =
-        std::make_unique<PathSensitiveBugReport>(*BT_NotCString, WarningMsg, N);
+    auto Report = std::make_unique<PathSensitiveBugReport>(*BT_AdditionOverflow,
+                                                           WarningMsg, N);
     C.emitReport(std::move(Report));
   }
 }
@@ -2460,3 +2491,4 @@ REGISTER_CHECKER(CStringNullArg)
 REGISTER_CHECKER(CStringOutOfBounds)
 REGISTER_CHECKER(CStringBufferOverlap)
 REGISTER_CHECKER(CStringNotNullTerm)
+REGISTER_CHECKER(CStringUninitializedRead)

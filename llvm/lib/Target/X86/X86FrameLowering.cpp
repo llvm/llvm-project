@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86FrameLowering.h"
+#include "MCTargetDesc/X86MCTargetDesc.h"
 #include "X86InstrBuilder.h"
 #include "X86InstrInfo.h"
 #include "X86MachineFunctionInfo.h"
@@ -19,6 +20,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/EHPersonalities.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -99,7 +101,7 @@ bool X86FrameLowering::hasFP(const MachineFunction &MF) const {
           MF.getInfo<X86MachineFunctionInfo>()->hasPreallocatedCall() ||
           MF.callsUnwindInit() || MF.hasEHFunclets() || MF.callsEHReturn() ||
           MFI.hasStackMap() || MFI.hasPatchPoint() ||
-          MFI.hasCopyImplyingStackAdjustment());
+          (isWin64Prologue(MF) && MFI.hasCopyImplyingStackAdjustment()));
 }
 
 static unsigned getSUBriOpcode(bool IsLP64, int64_t Imm) {
@@ -147,6 +149,17 @@ static unsigned getANDriOpcode(bool IsLP64, int64_t Imm) {
 
 static unsigned getLEArOpcode(bool IsLP64) {
   return IsLP64 ? X86::LEA64r : X86::LEA32r;
+}
+
+static unsigned getMOVriOpcode(bool Use64BitReg, int64_t Imm) {
+  if (Use64BitReg) {
+    if (isUInt<32>(Imm))
+      return X86::MOV32ri64;
+    if (isInt<32>(Imm))
+      return X86::MOV64ri32;
+    return X86::MOV64ri;
+  }
+  return X86::MOV32ri;
 }
 
 static bool isEAXLiveIn(MachineBasicBlock &MBB) {
@@ -237,11 +250,10 @@ void X86FrameLowering::emitSPUpdate(MachineBasicBlock &MBB,
     else
       Reg = TRI->findDeadCallerSavedReg(MBB, MBBI);
 
-    unsigned MovRIOpc = Is64Bit ? X86::MOV64ri : X86::MOV32ri;
     unsigned AddSubRROpc =
         isSub ? getSUBrrOpcode(Is64Bit) : getADDrrOpcode(Is64Bit);
     if (Reg) {
-      BuildMI(MBB, MBBI, DL, TII.get(MovRIOpc), Reg)
+      BuildMI(MBB, MBBI, DL, TII.get(getMOVriOpcode(Is64Bit, Offset)), Reg)
           .addImm(Offset)
           .setMIFlag(Flag);
       MachineInstr *MI = BuildMI(MBB, MBBI, DL, TII.get(AddSubRROpc), StackPtr)
@@ -267,7 +279,7 @@ void X86FrameLowering::emitSPUpdate(MachineBasicBlock &MBB,
         Offset = -(Offset - SlotSize);
       else
         Offset = Offset + SlotSize;
-      BuildMI(MBB, MBBI, DL, TII.get(MovRIOpc), Rax)
+      BuildMI(MBB, MBBI, DL, TII.get(getMOVriOpcode(Is64Bit, Offset)), Rax)
           .addImm(Offset)
           .setMIFlag(Flag);
       MachineInstr *MI = BuildMI(MBB, MBBI, DL, TII.get(X86::ADD64rr), Rax)
@@ -434,7 +446,7 @@ void X86FrameLowering::BuildCFI(MachineBasicBlock &MBB,
 
 /// Emits Dwarf Info specifying offsets of callee saved registers and
 /// frame pointer. This is called only when basic block sections are enabled.
-void X86FrameLowering::emitCalleeSavedFrameMoves(
+void X86FrameLowering::emitCalleeSavedFrameMovesFullCFA(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) const {
   MachineFunction &MF = *MBB.getParent();
   if (!hasFP(MF)) {
@@ -469,7 +481,7 @@ void X86FrameLowering::emitCalleeSavedFrameMoves(
   // Calculate offsets.
   for (const CalleeSavedInfo &I : CSI) {
     int64_t Offset = MFI.getObjectOffset(I.getFrameIdx());
-    unsigned Reg = I.getReg();
+    Register Reg = I.getReg();
     unsigned DwarfReg = MRI->getDwarfRegNum(Reg, true);
 
     if (IsPrologue) {
@@ -479,6 +491,103 @@ void X86FrameLowering::emitCalleeSavedFrameMoves(
       BuildCFI(MBB, MBBI, DL,
                MCCFIInstruction::createRestore(nullptr, DwarfReg));
     }
+  }
+}
+
+void X86FrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
+                                            MachineBasicBlock &MBB) const {
+  const MachineFunction &MF = *MBB.getParent();
+
+  // Don't clear registers that will just be reset before exiting.
+  for (const CalleeSavedInfo &CSI : MF.getFrameInfo().getCalleeSavedInfo())
+    for (MCRegister Reg : TRI->sub_and_superregs_inclusive(CSI.getReg()))
+      RegsToZero.reset(Reg);
+
+  // Insertion point.
+  MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
+
+  // We don't need to zero out registers that are clobbered by "pop"
+  // instructions.
+  for (MachineBasicBlock::iterator I = MBBI, E = MBB.end(); I != E; ++I)
+    for (const MachineOperand &MO : I->operands()) {
+      if (!MO.isReg())
+        continue;
+
+      for (const MCPhysReg &Reg : TRI->sub_and_superregs_inclusive(MO.getReg()))
+        RegsToZero.reset(Reg);
+    }
+
+  // Fake a debug loc.
+  DebugLoc DL;
+  if (MBBI != MBB.end())
+    DL = MBBI->getDebugLoc();
+
+  // Zero out FP stack if referenced. Do this outside of the loop below so that
+  // it's done only once.
+  const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
+  for (MCRegister Reg : RegsToZero.set_bits()) {
+    if (!X86::RFP80RegClass.contains(Reg))
+      continue;
+
+    unsigned NumFPRegs = ST.is64Bit() ? 8 : 7;
+    for (unsigned i = 0; i != NumFPRegs; ++i)
+      BuildMI(MBB, MBBI, DL, TII.get(X86::LD_F0));
+
+    for (unsigned i = 0; i != NumFPRegs; ++i)
+      BuildMI(MBB, MBBI, DL, TII.get(X86::ST_FPrr)).addReg(X86::ST0);
+    break;
+  }
+
+  // For GPRs, we only care to clear out the 32-bit register.
+  BitVector GPRsToZero(TRI->getNumRegs());
+  for (MCRegister Reg : RegsToZero.set_bits())
+    if (TRI->isGeneralPurposeRegister(MF, Reg)) {
+      GPRsToZero.set(getX86SubSuperRegisterOrZero(Reg, 32));
+      RegsToZero.reset(Reg);
+    }
+
+  for (MCRegister Reg : GPRsToZero.set_bits())
+    BuildMI(MBB, MBBI, DL, TII.get(X86::XOR32rr), Reg)
+        .addReg(Reg, RegState::Undef)
+        .addReg(Reg, RegState::Undef);
+
+  // Zero out registers.
+  for (MCRegister Reg : RegsToZero.set_bits()) {
+    if (ST.hasMMX() && X86::VR64RegClass.contains(Reg))
+      // FIXME: Ignore MMX registers?
+      continue;
+
+    unsigned XorOp;
+    if (X86::VR128RegClass.contains(Reg)) {
+      // XMM#
+      if (!ST.hasSSE1())
+        continue;
+      XorOp = X86::PXORrr;
+    } else if (X86::VR256RegClass.contains(Reg)) {
+      // YMM#
+      if (!ST.hasAVX())
+        continue;
+      XorOp = X86::VPXORrr;
+    } else if (X86::VR512RegClass.contains(Reg)) {
+      // ZMM#
+      if (!ST.hasAVX512())
+        continue;
+      XorOp = X86::VPXORYrr;
+    } else if (X86::VK1RegClass.contains(Reg) ||
+               X86::VK2RegClass.contains(Reg) ||
+               X86::VK4RegClass.contains(Reg) ||
+               X86::VK8RegClass.contains(Reg) ||
+               X86::VK16RegClass.contains(Reg)) {
+      if (!ST.hasVLX())
+        continue;
+      XorOp = ST.hasBWI() ? X86::KXORQrr : X86::KXORWrr;
+    } else {
+      continue;
+    }
+
+    BuildMI(MBB, MBBI, DL, TII.get(XorOp), Reg)
+      .addReg(Reg, RegState::Undef)
+      .addReg(Reg, RegState::Undef);
   }
 }
 
@@ -637,6 +746,8 @@ void X86FrameLowering::emitStackProbeInlineGenericLoop(
     uint64_t AlignOffset) const {
   assert(Offset && "null offset");
 
+  const bool NeedsDwarfCFI = needsDwarfCFI(MF);
+  const bool HasFP = hasFP(MF);
   const X86Subtarget &STI = MF.getSubtarget<X86Subtarget>();
   const X86TargetLowering &TLI = *STI.getTargetLowering();
   const unsigned MovMIOpc = Is64Bit ? X86::MOV64mi32 : X86::MOV32mi;
@@ -676,17 +787,36 @@ void X86FrameLowering::emitStackProbeInlineGenericLoop(
   Register FinalStackProbed = Uses64BitFramePtr ? X86::R11
                               : Is64Bit         ? X86::R11D
                                                 : X86::EAX;
+
   BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::COPY), FinalStackProbed)
       .addReg(StackPtr)
       .setMIFlag(MachineInstr::FrameSetup);
 
   // save loop bound
   {
-    const unsigned SUBOpc = getSUBriOpcode(Uses64BitFramePtr, Offset);
+    const unsigned BoundOffset = alignDown(Offset, StackProbeSize);
+    const unsigned SUBOpc = getSUBriOpcode(Uses64BitFramePtr, BoundOffset);
     BuildMI(MBB, MBBI, DL, TII.get(SUBOpc), FinalStackProbed)
         .addReg(FinalStackProbed)
-        .addImm(Offset / StackProbeSize * StackProbeSize)
+        .addImm(BoundOffset)
         .setMIFlag(MachineInstr::FrameSetup);
+
+    // while in the loop, use loop-invariant reg for CFI,
+    // instead of the stack pointer, which changes during the loop
+    if (!HasFP && NeedsDwarfCFI) {
+      // x32 uses the same DWARF register numbers as x86-64,
+      // so there isn't a register number for r11d, we must use r11 instead
+      const Register DwarfFinalStackProbed =
+          STI.isTarget64BitILP32()
+              ? Register(getX86SubSuperRegister(FinalStackProbed, 64))
+              : FinalStackProbed;
+
+      BuildCFI(MBB, MBBI, DL,
+               MCCFIInstruction::createDefCfaRegister(
+                   nullptr, TRI->getDwarfRegNum(DwarfFinalStackProbed, true)));
+      BuildCFI(MBB, MBBI, DL,
+               MCCFIInstruction::createAdjustCfaOffset(nullptr, BoundOffset));
+    }
   }
 
   // allocate a page
@@ -725,13 +855,28 @@ void X86FrameLowering::emitStackProbeInlineGenericLoop(
   MBB.addSuccessor(testMBB);
 
   // handle tail
-  unsigned TailOffset = Offset % StackProbeSize;
+  const unsigned TailOffset = Offset % StackProbeSize;
+  MachineBasicBlock::iterator TailMBBIter = tailMBB->begin();
   if (TailOffset) {
     const unsigned Opc = getSUBriOpcode(Uses64BitFramePtr, TailOffset);
-    BuildMI(*tailMBB, tailMBB->begin(), DL, TII.get(Opc), StackPtr)
+    BuildMI(*tailMBB, TailMBBIter, DL, TII.get(Opc), StackPtr)
         .addReg(StackPtr)
         .addImm(TailOffset)
         .setMIFlag(MachineInstr::FrameSetup);
+  }
+
+  // after the loop, switch back to stack pointer for CFI
+  if (!HasFP && NeedsDwarfCFI) {
+    // x32 uses the same DWARF register numbers as x86-64,
+    // so there isn't a register number for esp, we must use rsp instead
+    const Register DwarfStackPtr =
+        STI.isTarget64BitILP32()
+            ? Register(getX86SubSuperRegister(StackPtr, 64))
+            : Register(StackPtr);
+
+    BuildCFI(*tailMBB, TailMBBIter, DL,
+             MCCFIInstruction::createDefCfaRegister(
+                 nullptr, TRI->getDwarfRegNum(DwarfStackPtr, true)));
   }
 
   // Update Live In information
@@ -1243,6 +1388,9 @@ bool X86FrameLowering::has128ByteRedZone(const MachineFunction& MF) const {
   return Is64Bit && !IsWin64CC && !Fn.hasFnAttribute(Attribute::NoRedZone);
 }
 
+/// Return true if we need to use the restricted Windows x64 prologue and
+/// epilogue code patterns that can be described with WinCFI (.seh_*
+/// directives).
 bool X86FrameLowering::isWin64Prologue(const MachineFunction &MF) const {
   return MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
 }
@@ -1705,19 +1853,9 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
       // Handle the 64-bit Windows ABI case where we need to call __chkstk.
       // Function prologue is responsible for adjusting the stack pointer.
       int64_t Alloc = isEAXAlive ? NumBytes - 8 : NumBytes;
-      if (isUInt<32>(Alloc)) {
-        BuildMI(MBB, MBBI, DL, TII.get(X86::MOV32ri), X86::EAX)
-            .addImm(Alloc)
-            .setMIFlag(MachineInstr::FrameSetup);
-      } else if (isInt<32>(Alloc)) {
-        BuildMI(MBB, MBBI, DL, TII.get(X86::MOV64ri32), X86::RAX)
-            .addImm(Alloc)
-            .setMIFlag(MachineInstr::FrameSetup);
-      } else {
-        BuildMI(MBB, MBBI, DL, TII.get(X86::MOV64ri), X86::RAX)
-            .addImm(Alloc)
-            .setMIFlag(MachineInstr::FrameSetup);
-      }
+      BuildMI(MBB, MBBI, DL, TII.get(getMOVriOpcode(Is64Bit, Alloc)), X86::RAX)
+          .addImm(Alloc)
+          .setMIFlag(MachineInstr::FrameSetup);
     } else {
       // Allocate NumBytes-4 bytes on stack in case of isEAXAlive.
       // We'll also use 4 already allocated bytes for EAX.
@@ -2496,8 +2634,8 @@ bool X86FrameLowering::assignCalleeSavedSpillSlots(
   }
 
   // Assign slots for GPRs. It increases frame size.
-  for (unsigned i = CSI.size(); i != 0; --i) {
-    unsigned Reg = CSI[i - 1].getReg();
+  for (CalleeSavedInfo &I : llvm::reverse(CSI)) {
+    Register Reg = I.getReg();
 
     if (!X86::GR64RegClass.contains(Reg) && !X86::GR32RegClass.contains(Reg))
       continue;
@@ -2506,15 +2644,15 @@ bool X86FrameLowering::assignCalleeSavedSpillSlots(
     CalleeSavedFrameSize += SlotSize;
 
     int SlotIndex = MFI.CreateFixedSpillStackObject(SlotSize, SpillSlotOffset);
-    CSI[i - 1].setFrameIdx(SlotIndex);
+    I.setFrameIdx(SlotIndex);
   }
 
   X86FI->setCalleeSavedFrameSize(CalleeSavedFrameSize);
   MFI.setCVBytesOfCalleeSavedRegisters(CalleeSavedFrameSize);
 
   // Assign slots for XMMs.
-  for (unsigned i = CSI.size(); i != 0; --i) {
-    unsigned Reg = CSI[i - 1].getReg();
+  for (CalleeSavedInfo &I : llvm::reverse(CSI)) {
+    Register Reg = I.getReg();
     if (X86::GR64RegClass.contains(Reg) || X86::GR32RegClass.contains(Reg))
       continue;
 
@@ -2533,7 +2671,7 @@ bool X86FrameLowering::assignCalleeSavedSpillSlots(
     // spill into slot
     SpillSlotOffset -= Size;
     int SlotIndex = MFI.CreateFixedSpillStackObject(Size, SpillSlotOffset);
-    CSI[i - 1].setFrameIdx(SlotIndex);
+    I.setFrameIdx(SlotIndex);
     MFI.ensureMaxAlignment(Alignment);
 
     // Save the start offset and size of XMM in stack frame for funclets.
@@ -2559,8 +2697,8 @@ bool X86FrameLowering::spillCalleeSavedRegisters(
   // Push GPRs. It increases frame size.
   const MachineFunction &MF = *MBB.getParent();
   unsigned Opc = STI.is64Bit() ? X86::PUSH64r : X86::PUSH32r;
-  for (unsigned i = CSI.size(); i != 0; --i) {
-    unsigned Reg = CSI[i - 1].getReg();
+  for (const CalleeSavedInfo &I : llvm::reverse(CSI)) {
+    Register Reg = I.getReg();
 
     if (!X86::GR64RegClass.contains(Reg) && !X86::GR32RegClass.contains(Reg))
       continue;
@@ -2593,8 +2731,8 @@ bool X86FrameLowering::spillCalleeSavedRegisters(
 
   // Make XMM regs spilled. X86 does not have ability of push/pop XMM.
   // It can be done by spilling XMMs to stack frame.
-  for (unsigned i = CSI.size(); i != 0; --i) {
-    unsigned Reg = CSI[i-1].getReg();
+  for (const CalleeSavedInfo &I : llvm::reverse(CSI)) {
+    Register Reg = I.getReg();
     if (X86::GR64RegClass.contains(Reg) || X86::GR32RegClass.contains(Reg))
       continue;
 
@@ -2607,8 +2745,7 @@ bool X86FrameLowering::spillCalleeSavedRegisters(
     MBB.addLiveIn(Reg);
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg, VT);
 
-    TII.storeRegToStackSlot(MBB, MI, Reg, true, CSI[i - 1].getFrameIdx(), RC,
-                            TRI);
+    TII.storeRegToStackSlot(MBB, MI, Reg, true, I.getFrameIdx(), RC, TRI);
     --MI;
     MI->setFlag(MachineInstr::FrameSetup);
     ++MI;
@@ -2673,7 +2810,7 @@ bool X86FrameLowering::restoreCalleeSavedRegisters(
 
   // Reload XMMs from stack frame.
   for (const CalleeSavedInfo &I : CSI) {
-    unsigned Reg = I.getReg();
+    Register Reg = I.getReg();
     if (X86::GR64RegClass.contains(Reg) ||
         X86::GR32RegClass.contains(Reg))
       continue;
@@ -2690,7 +2827,7 @@ bool X86FrameLowering::restoreCalleeSavedRegisters(
   // POP GPRs.
   unsigned Opc = STI.is64Bit() ? X86::POP64r : X86::POP32r;
   for (const CalleeSavedInfo &I : CSI) {
-    unsigned Reg = I.getReg();
+    Register Reg = I.getReg();
     if (!X86::GR64RegClass.contains(Reg) &&
         !X86::GR32RegClass.contains(Reg))
       continue;
@@ -2945,15 +3082,16 @@ void X86FrameLowering::adjustForSegmentedStacks(
     const unsigned Reg10 = IsLP64 ? X86::R10 : X86::R10D;
     const unsigned Reg11 = IsLP64 ? X86::R11 : X86::R11D;
     const unsigned MOVrr = IsLP64 ? X86::MOV64rr : X86::MOV32rr;
-    const unsigned MOVri = IsLP64 ? X86::MOV64ri : X86::MOV32ri;
 
     if (IsNested)
       BuildMI(allocMBB, DL, TII.get(MOVrr), RegAX).addReg(Reg10);
 
-    BuildMI(allocMBB, DL, TII.get(MOVri), Reg10)
-      .addImm(StackSize);
-    BuildMI(allocMBB, DL, TII.get(MOVri), Reg11)
-      .addImm(X86FI->getArgumentStackSize());
+    BuildMI(allocMBB, DL, TII.get(getMOVriOpcode(IsLP64, StackSize)), Reg10)
+        .addImm(StackSize);
+    BuildMI(allocMBB, DL,
+            TII.get(getMOVriOpcode(IsLP64, X86FI->getArgumentStackSize())),
+            Reg11)
+        .addImm(X86FI->getArgumentStackSize());
   } else {
     BuildMI(allocMBB, DL, TII.get(X86::PUSHi32))
       .addImm(X86FI->getArgumentStackSize());

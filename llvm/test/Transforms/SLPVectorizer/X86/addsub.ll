@@ -301,22 +301,18 @@ define void @reorder_alt_subTree() #0 {
 
 define void @reorder_alt_rightsubTree(double* nocapture %c, double* noalias nocapture readonly %a, double* noalias nocapture readonly %b, double* noalias nocapture readonly %d) {
 ; CHECK-LABEL: @reorder_alt_rightsubTree(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, double* [[D:%.*]], i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast double* [[D]] to <2 x double>*
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, <2 x double>* [[TMP2]], align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds double, double* [[A:%.*]], i64 1
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast double* [[A]] to <2 x double>*
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast double* [[D:%.*]] to <2 x double>*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, <2 x double>* [[TMP1]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast double* [[A:%.*]] to <2 x double>*
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x double>, <2 x double>* [[TMP3]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast double* [[B:%.*]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP6:%.*]] = load <2 x double>, <2 x double>* [[TMP5]], align 8
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds double, double* [[B:%.*]], i64 1
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast double* [[B]] to <2 x double>*
-; CHECK-NEXT:    [[TMP9:%.*]] = load <2 x double>, <2 x double>* [[TMP8]], align 8
-; CHECK-NEXT:    [[TMP10:%.*]] = fadd <2 x double> [[TMP6]], [[TMP9]]
-; CHECK-NEXT:    [[TMP11:%.*]] = fsub <2 x double> [[TMP10]], [[TMP3]]
-; CHECK-NEXT:    [[TMP12:%.*]] = fadd <2 x double> [[TMP10]], [[TMP3]]
-; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x double> [[TMP11]], <2 x double> [[TMP12]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds double, double* [[C:%.*]], i64 1
-; CHECK-NEXT:    [[TMP15:%.*]] = bitcast double* [[C]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP13]], <2 x double>* [[TMP15]], align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = fadd <2 x double> [[TMP4]], [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fsub <2 x double> [[TMP7]], [[TMP2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = fadd <2 x double> [[TMP7]], [[TMP2]]
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x double> [[TMP8]], <2 x double> [[TMP9]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast double* [[C:%.*]] to <2 x double>*
+; CHECK-NEXT:    store <2 x double> [[TMP10]], <2 x double>* [[TMP11]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %1 = load double, double* %a
@@ -342,18 +338,18 @@ define void @vec_shuff_reorder() #0 {
 ; CHECK-LABEL: @vec_shuff_reorder(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* getelementptr inbounds ([4 x float], [4 x float]* @fb, i32 0, i64 0), align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load float, float* getelementptr inbounds ([4 x float], [4 x float]* @fa, i32 0, i64 0), align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x float>, <2 x float>* bitcast (float* getelementptr inbounds ([4 x float], [4 x float]* @fa, i32 0, i64 1) to <2 x float>*), align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x float>, <2 x float>* bitcast (float* getelementptr inbounds ([4 x float], [4 x float]* @fb, i32 0, i64 1) to <2 x float>*), align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = load float, float* getelementptr inbounds ([4 x float], [4 x float]* @fb, i32 0, i64 3), align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = load float, float* getelementptr inbounds ([4 x float], [4 x float]* @fa, i32 0, i64 3), align 4
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> poison, float [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x float> [[TMP7]], <4 x float> [[TMP8]], <4 x i32> <i32 0, i32 4, i32 5, i32 3>
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x float> [[TMP9]], float [[TMP5]], i32 3
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <4 x float> [[TMP11]], <4 x float> [[TMP12]], <4 x i32> <i32 0, i32 4, i32 5, i32 3>
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x float> [[TMP13]], float [[TMP6]], i32 3
+; CHECK-NEXT:    [[TMP3:%.*]] = load float, float* getelementptr inbounds ([4 x float], [4 x float]* @fa, i32 0, i64 1), align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load float, float* getelementptr inbounds ([4 x float], [4 x float]* @fb, i32 0, i64 1), align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x float>, <2 x float>* bitcast (float* getelementptr inbounds ([4 x float], [4 x float]* @fb, i32 0, i64 2) to <2 x float>*), align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = load <2 x float>, <2 x float>* bitcast (float* getelementptr inbounds ([4 x float], [4 x float]* @fa, i32 0, i64 2) to <2 x float>*), align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x float> [[TMP7]], float [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x float> [[TMP8]], <4 x float> [[TMP9]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x float> poison, float [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x float> [[TMP11]], float [[TMP4]], i32 1
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <4 x float> [[TMP12]], <4 x float> [[TMP13]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; CHECK-NEXT:    [[TMP15:%.*]] = fadd <4 x float> [[TMP10]], [[TMP14]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = fsub <4 x float> [[TMP10]], [[TMP14]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <4 x float> [[TMP15]], <4 x float> [[TMP16]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>

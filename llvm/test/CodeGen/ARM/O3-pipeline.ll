@@ -41,6 +41,7 @@
 ; CHECK-NEXT:      Scalarize Masked Memory Intrinsics
 ; CHECK-NEXT:      Expand reduction intrinsics
 ; CHECK-NEXT:      Natural Loop Information
+; CHECK-NEXT:      TLS Variable Hoist
 ; CHECK-NEXT:      Scalar Evolution Analysis
 ; CHECK-NEXT:      Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:      Function Alias Analysis Results
@@ -123,6 +124,7 @@
 ; CHECK-NEXT:      Machine Optimization Remark Emitter
 ; CHECK-NEXT:      Greedy Register Allocator
 ; CHECK-NEXT:      Virtual Register Rewriter
+; CHECK-NEXT:      Register Allocation Pass Scoring
 ; CHECK-NEXT:      Stack Slot Coloring
 ; CHECK-NEXT:      Machine Copy Propagation Pass
 ; CHECK-NEXT:      Machine Loop Invariant Code Motion

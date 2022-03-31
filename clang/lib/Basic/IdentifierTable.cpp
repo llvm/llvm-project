@@ -309,6 +309,14 @@ IdentifierInfo::isReserved(const LangOptions &LangOpts) const {
   return ReservedIdentifierStatus::NotReserved;
 }
 
+StringRef IdentifierInfo::deuglifiedName() const {
+  StringRef Name = getName();
+  if (Name.size() >= 2 && Name.front() == '_' &&
+      (Name[1] == '_' || (Name[1] >= 'A' && Name[1] <= 'Z')))
+    return Name.ltrim('_');
+  return Name;
+}
+
 tok::PPKeywordKind IdentifierInfo::getPPKeywordID() const {
   // We use a perfect hash function here involving the length of the keyword,
   // the first and third character.  For preprocessor ID's there are no

@@ -356,24 +356,21 @@ struct WmmaElementwiseOpToNVVMLowering
   }
 };
 
-} // anonymous namespace
-
-namespace mlir {
+} // namespace
 
 /// Return the LLVMStructureType corresponding to the MMAMatrixType `type`.
-LLVM::LLVMStructType convertMMAToLLVMType(gpu::MMAMatrixType type) {
+LLVM::LLVMStructType mlir::convertMMAToLLVMType(gpu::MMAMatrixType type) {
   NVVM::MMAFrag frag = convertOperand(type.getOperand());
   NVVM::MMATypes eltType = getElementType(type);
   std::pair<Type, unsigned> typeInfo =
-      inferMMAType(eltType, frag, type.getContext());
+      NVVM::inferMMAType(eltType, frag, type.getContext());
   return LLVM::LLVMStructType::getLiteral(
       type.getContext(), SmallVector<Type, 8>(typeInfo.second, typeInfo.first));
 }
 
-void populateGpuWMMAToNVVMConversionPatterns(LLVMTypeConverter &converter,
-                                             RewritePatternSet &patterns) {
-  patterns.insert<WmmaLoadOpToNVVMLowering, WmmaMmaOpToNVVMLowering,
-                  WmmaStoreOpToNVVMLowering, WmmaConstantOpToNVVMLowering,
-                  WmmaElementwiseOpToNVVMLowering>(converter);
+void mlir::populateGpuWMMAToNVVMConversionPatterns(
+    LLVMTypeConverter &converter, RewritePatternSet &patterns) {
+  patterns.add<WmmaLoadOpToNVVMLowering, WmmaMmaOpToNVVMLowering,
+               WmmaStoreOpToNVVMLowering, WmmaConstantOpToNVVMLowering,
+               WmmaElementwiseOpToNVVMLowering>(converter);
 }
-} // namespace mlir

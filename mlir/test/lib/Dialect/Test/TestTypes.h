@@ -25,6 +25,7 @@
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 
 namespace test {
+class TestAttrWithFormatAttr;
 
 /// FieldInfo represents a field in the StructType data type. It is used as a
 /// parameter in TestTypeDefs.td.
@@ -63,12 +64,29 @@ struct FieldParser<test::CustomParam> {
     return test::CustomParam{value.getValue()};
   }
 };
-} // end namespace mlir
 
 inline mlir::AsmPrinter &operator<<(mlir::AsmPrinter &printer,
-                                    const test::CustomParam &param) {
+                                    test::CustomParam param) {
   return printer << param.value;
 }
+
+/// Overload the attribute parameter parser for optional integers.
+template <>
+struct FieldParser<Optional<int>> {
+  static FailureOr<Optional<int>> parse(AsmParser &parser) {
+    Optional<int> value;
+    value.emplace();
+    OptionalParseResult result = parser.parseOptionalInteger(*value);
+    if (result.hasValue()) {
+      if (succeeded(*result))
+        return value;
+      return failure();
+    }
+    value.reset();
+    return value;
+  }
+};
+} // namespace mlir
 
 #include "TestTypeInterfaces.h.inc"
 

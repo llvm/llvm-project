@@ -3,7 +3,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
 # RUN: ld.lld %t -o %t2
 # RUN: llvm-readobj --sections --symbols %t2 | FileCheck -check-prefix=NOGC %s
-# RUN: ld.lld --gc-sections %t -o %t2
+# RUN: ld.lld --gc-sections --print-gc-sections %t -o %t2 | FileCheck --check-prefix=GC1-DISCARD %s
 # RUN: llvm-readobj --sections --symbols %t2 | FileCheck -check-prefix=GC1 %s
 # RUN: ld.lld --export-dynamic --gc-sections %t -o %t2
 # RUN: llvm-readobj --sections --symbols %t2 | FileCheck -check-prefix=GC2 %s
@@ -11,11 +11,16 @@
 # NOGC: Name: .eh_frame
 # NOGC: Name: .text
 # NOGC: Name: .init
+# NOGC: Name: .init_x
 # NOGC: Name: .fini
 # NOGC: Name: .tdata
 # NOGC: Name: .tbss
 # NOGC: Name: .ctors
 # NOGC: Name: .dtors
+# NOGC: Name: .init_array
+# NOGC: Name: .preinit_array
+# NOGC: Name: .jcr
+# NOGC: Name: .jcr_x
 # NOGC: Name: .debug_pubtypes
 # NOGC: Name: .comment
 # NOGC: Name: a
@@ -29,6 +34,15 @@
 # NOGC: Name: y
 # NOGC: Name: d
 
+# GC1-DISCARD:      removing unused section {{.*}}:(.text.d)
+# GC1-DISCARD-NEXT: removing unused section {{.*}}:(.text.x)
+# GC1-DISCARD-NEXT: removing unused section {{.*}}:(.text.y)
+# GC1-DISCARD-NEXT: removing unused section {{.*}}:(.tbss.f)
+# GC1-DISCARD-NEXT: removing unused section {{.*}}:(.tdata.h)
+# GC1-DISCARD-NEXT: removing unused section {{.*}}:(.init_x)
+# GC1-DISCARD-NEXT: removing unused section {{.*}}:(.jcr_x)
+# GC1-DISCARD-EMPTY:
+
 # GC1:     Name: .eh_frame
 # GC1:     Name: .text
 # GC1:     Name: .init
@@ -37,6 +51,9 @@
 # GC1:     Name: .tbss
 # GC1:     Name: .ctors
 # GC1:     Name: .dtors
+# GC1:     Name: .init_array
+# GC1:     Name: .preinit_array
+# GC1:     Name: .jcr
 # GC1:     Name: .debug_pubtypes
 # GC1:     Name: .comment
 # GC1:     Name: a
@@ -58,6 +75,9 @@
 # GC2:     Name: .tbss
 # GC2:     Name: .ctors
 # GC2:     Name: .dtors
+# GC2:     Name: .init_array
+# GC2:     Name: .preinit_array
+# GC2:     Name: .jcr
 # GC2:     Name: .debug_pubtypes
 # GC2:     Name: .comment
 # GC2:     Name: a
@@ -124,13 +144,30 @@ h:
 .section .dtors,"aw",@progbits
   .quad 0
 
-.section .init,"aw",@init_array
+.section .init,"ax"
   .quad 0
 
-.section .fini,"aw",@fini_array
+.section .init_x,"ax"
+  .quad 0
+
+.section .fini,"ax"
+  .quad 0
+
+# https://golang.org/cl/373734
+.section .init_array,"aw",@progbits
+  .quad 0
+
+# Work around https://github.com/rust-lang/rust/issues/92181
+.section .init_array.00001,"aw",@progbits
   .quad 0
 
 .section .preinit_array,"aw",@preinit_array
+  .quad 0
+
+.section .jcr,"aw"
+  .quad 0
+
+.section .jcr_x,"aw"
   .quad 0
 
 .section .eh_frame,"a",@unwind

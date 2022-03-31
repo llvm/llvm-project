@@ -2,8 +2,8 @@
 // RUN: %clang -target x86_64-linux-gnu -gdwarf-3 -S -emit-llvm -o - %s | FileCheck %s --check-prefix=VER3
 // RUN: %clang -target x86_64-linux-gnu -gdwarf-4 -S -emit-llvm -o - %s | FileCheck %s --check-prefix=VER4
 // RUN: %clang -target x86_64-linux-gnu -gdwarf-5 -S -emit-llvm -o - %s | FileCheck %s --check-prefix=VER5
-// RUN: %clang -target x86_64-linux-gnu -g -S -emit-llvm -o - %s | FileCheck %s --check-prefix=VER4
-// RUN: %clang -target x86_64-linux-gnu -gdwarf -S -emit-llvm -o - %s | FileCheck %s --check-prefix=VER4
+// RUN: %clang -target x86_64-linux-gnu -g -S -emit-llvm -o - %s | FileCheck %s --check-prefix=VER5
+// RUN: %clang -target x86_64-linux-gnu -gdwarf -S -emit-llvm -o - %s | FileCheck %s --check-prefix=VER5
 
 // The -isysroot is used as a hack to avoid LIT messing with the SDKROOT
 // environment variable which indirecty overrides the version in the target
@@ -32,6 +32,11 @@
 //     Explicitly request both.
 // RUN: %clang -target i686-pc-windows-msvc -gdwarf -gcodeview -S -emit-llvm -o - %s \
 // RUN:     | FileCheck %s --check-prefixes=VER4,CODEVIEW
+
+// Check what version of dwarf is used for MinGW targets.
+// RUN: %clang -target i686-pc-windows-gnu -g -S -emit-llvm -o - %s | \
+// RUN:   FileCheck %s --check-prefixes=VER4
+
 // RUN: %clang -target powerpc-ibm-aix-xcoff -g -S -emit-llvm -o - %s | \
 // RUN:   FileCheck %s --check-prefix=VER3
 // RUN: %clang -target powerpc-ibm-aix-xcoff -gdwarf-2 -S -emit-llvm -o - %s | \

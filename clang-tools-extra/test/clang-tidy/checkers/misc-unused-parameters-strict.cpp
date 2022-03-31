@@ -22,4 +22,8 @@ public:
 // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: parameter 'j' is unused
 // CHECK-FIXES: {{^}}  F(int  /*j*/) : i() {}{{$}}
 };
+
+// Do not warn on naked functions.
+[[gnu::naked]] int nakedFunction(int a, float b, const char *c) { ; }
+__attribute__((naked)) void nakedFunction(int a, int b) { ; }
 }

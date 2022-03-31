@@ -40,7 +40,7 @@ void StringFindStartswithCheck::registerMatchers(MatchFinder *Finder) {
 
   auto StringFind = cxxMemberCallExpr(
       // .find()-call on a string...
-      callee(cxxMethodDecl(hasName("find"))),
+      callee(cxxMethodDecl(hasName("find")).bind("findfun")),
       on(hasType(StringType)),
       // ... with some search expression ...
       hasArgument(0, expr().bind("needle")),
@@ -53,6 +53,25 @@ void StringFindStartswithCheck::registerMatchers(MatchFinder *Finder) {
           hasAnyOperatorName("==", "!="),
           hasOperands(ignoringParenImpCasts(ZeroLiteral),
                       ignoringParenImpCasts(StringFind.bind("findexpr"))))
+          .bind("expr"),
+      this);
+
+  auto StringRFind = cxxMemberCallExpr(
+      // .rfind()-call on a string...
+      callee(cxxMethodDecl(hasName("rfind")).bind("findfun")),
+      on(hasType(StringType)),
+      // ... with some search expression ...
+      hasArgument(0, expr().bind("needle")),
+      // ... and "0" as second argument.
+      hasArgument(1, ZeroLiteral));
+
+  Finder->addMatcher(
+      // Match [=!]= with either a zero or npos on one side and a string.rfind
+      // on the other.
+      binaryOperator(
+          hasAnyOperatorName("==", "!="),
+          hasOperands(ignoringParenImpCasts(ZeroLiteral),
+                      ignoringParenImpCasts(StringRFind.bind("findexpr"))))
           .bind("expr"),
       this);
 }
@@ -69,6 +88,11 @@ void StringFindStartswithCheck::check(const MatchFinder::MatchResult &Result) {
   const Expr *Haystack = Result.Nodes.getNodeAs<CXXMemberCallExpr>("findexpr")
                              ->getImplicitObjectArgument();
   assert(Haystack != nullptr);
+  const CXXMethodDecl *FindFun =
+      Result.Nodes.getNodeAs<CXXMethodDecl>("findfun");
+  assert(FindFun != nullptr);
+
+  bool Rev = FindFun->getName().contains("rfind");
 
   if (ComparisonExpr->getBeginLoc().isMacroID())
     return;
@@ -86,10 +110,11 @@ void StringFindStartswithCheck::check(const MatchFinder::MatchResult &Result) {
   bool Neg = ComparisonExpr->getOpcode() == BO_NE;
 
   // Create the warning message and a FixIt hint replacing the original expr.
-  auto Diagnostic = diag(ComparisonExpr->getBeginLoc(),
-                         "use %select{absl::StartsWith|!absl::StartsWith}0 "
-                         "instead of find() %select{==|!=}0 0")
-                    << Neg;
+  auto Diagnostic =
+      diag(ComparisonExpr->getBeginLoc(),
+           "use %select{absl::StartsWith|!absl::StartsWith}0 "
+           "instead of %select{find()|rfind()}1 %select{==|!=}0 0")
+      << Neg << Rev;
 
   Diagnostic << FixItHint::CreateReplacement(
       ComparisonExpr->getSourceRange(),

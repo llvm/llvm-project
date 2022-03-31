@@ -14,7 +14,6 @@
 #ifndef LLVM_BITCODE_BITCODEWRITERPASS_H
 #define LLVM_BITCODE_BITCODEWRITERPASS_H
 
-#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {

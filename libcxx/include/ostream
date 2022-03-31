@@ -134,6 +134,7 @@ template <class Stream, class T>
 
 */
 
+#include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <bitset>
 #include <ios>
@@ -143,7 +144,7 @@ template <class Stream, class T>
 #include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -249,12 +250,11 @@ class _LIBCPP_TEMPLATE_VIS basic_ostream<_CharT, _Traits>::sentry
     bool __ok_;
     basic_ostream<_CharT, _Traits>& __os_;
 
-    sentry(const sentry&); // = delete;
-    sentry& operator=(const sentry&); // = delete;
-
 public:
     explicit sentry(basic_ostream<_CharT, _Traits>& __os);
     ~sentry();
+    sentry(const sentry&) = delete;
+    sentry& operator=(const sentry&) = delete;
 
     _LIBCPP_INLINE_VISIBILITY
     explicit operator bool() const {return __ok_;}

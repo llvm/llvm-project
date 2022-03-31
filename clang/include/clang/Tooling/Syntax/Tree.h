@@ -18,8 +18,8 @@
 // This is still work in progress and highly experimental, we leave room for
 // ourselves to completely change the design and/or implementation.
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_CLANG_TOOLING_SYNTAX_TREE_CASCADE_H
-#define LLVM_CLANG_TOOLING_SYNTAX_TREE_CASCADE_H
+#ifndef LLVM_CLANG_TOOLING_SYNTAX_TREE_H
+#define LLVM_CLANG_TOOLING_SYNTAX_TREE_H
 
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
@@ -181,7 +181,10 @@ class Tree : public Node {
     ChildIteratorBase() = default;
     explicit ChildIteratorBase(NodeT *N) : N(N) {}
 
-    bool operator==(const DerivedT &O) const { return O.N == N; }
+    friend bool operator==(const DerivedT &LHS, const DerivedT &RHS) {
+      return LHS.N == RHS.N;
+    }
+
     NodeT &operator*() const { return *N; }
     DerivedT &operator++() {
       N = N->getNextSibling();
@@ -268,14 +271,6 @@ private:
   Node *FirstChild = nullptr;
   Node *LastChild = nullptr;
 };
-
-// Provide missing non_const == const overload.
-// iterator_facade_base requires == to be a member, but implicit conversions
-// don't work on the LHS of a member operator.
-inline bool operator==(const Tree::ConstChildIterator &A,
-                       const Tree::ConstChildIterator &B) {
-  return A.operator==(B);
-}
 
 /// A list of Elements separated or terminated by a fixed token.
 ///

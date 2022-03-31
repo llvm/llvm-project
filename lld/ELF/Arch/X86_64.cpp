@@ -6,13 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "InputFiles.h"
 #include "OutputSections.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "lld/Common/ErrorHandler.h"
-#include "llvm/Object/ELF.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/Endian.h"
 
 using namespace llvm;
@@ -264,7 +263,7 @@ bool X86_64::deleteFallThruJmpInsn(InputSection &is, InputFile *file,
   Relocation &r = is.relocations[rIndex];
 
   // Check if the relocation corresponds to a direct jmp.
-  const uint8_t *secContents = is.data().data();
+  const uint8_t *secContents = is.rawData.data();
   // If it is not a direct jmp instruction, there is nothing to do here.
   if (*(secContents + r.offset - 1) != 0xe9)
     return false;
@@ -282,12 +281,12 @@ bool X86_64::deleteFallThruJmpInsn(InputSection &is, InputFile *file,
   const unsigned sizeOfJmpCCInsn = 6;
   // To flip, there must be atleast one JmpCC and one direct jmp.
   if (is.getSize() < sizeOfDirectJmpInsn + sizeOfJmpCCInsn)
-    return 0;
+    return false;
 
   unsigned rbIndex =
       getRelocationWithOffset(is, (is.getSize() - sizeOfDirectJmpInsn - 4));
   if (rbIndex == is.relocations.size())
-    return 0;
+    return false;
 
   Relocation &rB = is.relocations[rbIndex];
 
@@ -304,7 +303,8 @@ bool X86_64::deleteFallThruJmpInsn(InputSection &is, InputFile *file,
   JmpInsnOpcode jInvert = invertJmpOpcode(jmpOpcodeB);
   if (jInvert == J_UNKNOWN)
     return false;
-  is.jumpInstrMods.push_back({jInvert, (rB.offset - 1), 4});
+  is.jumpInstrMod = make<JumpInstrMod>();
+  *is.jumpInstrMod = {rB.offset - 1, jInvert, 4};
   // Move R's values to rB except the offset.
   rB = {r.expr, r.type, rB.offset, r.addend, r.sym};
   // Cancel R
@@ -416,7 +416,7 @@ void X86_64::writePlt(uint8_t *buf, const Symbol &sym,
   memcpy(buf, inst, sizeof(inst));
 
   write32le(buf + 2, sym.getGotPltVA() - pltEntryAddr - 6);
-  write32le(buf + 7, sym.pltIndex);
+  write32le(buf + 7, sym.getPltIdx());
   write32le(buf + 12, in.plt->getVA() - pltEntryAddr - 16);
 }
 
@@ -946,7 +946,7 @@ void X86_64::relaxGot(uint8_t *loc, const Relocation &rel, uint64_t val) const {
 bool X86_64::adjustPrologueForCrossSplitStack(uint8_t *loc, uint8_t *end,
                                               uint8_t stOther) const {
   if (!config->is64) {
-    error("Target doesn't support split stacks.");
+    error("target doesn't support split stacks");
     return false;
   }
 
@@ -994,7 +994,7 @@ IntelIBT::IntelIBT() { pltHeaderSize = 0; }
 
 void IntelIBT::writeGotPlt(uint8_t *buf, const Symbol &s) const {
   uint64_t va =
-      in.ibtPlt->getVA() + IBTPltHeaderSize + s.pltIndex * pltEntrySize;
+      in.ibtPlt->getVA() + IBTPltHeaderSize + s.getPltIdx() * pltEntrySize;
   write64le(buf, va);
 }
 
@@ -1106,7 +1106,7 @@ void Retpoline::writePlt(uint8_t *buf, const Symbol &sym,
   write32le(buf + 3, sym.getGotPltVA() - pltEntryAddr - 7);
   write32le(buf + 8, -off - 12 + 32);
   write32le(buf + 13, -off - 17 + 18);
-  write32le(buf + 18, sym.pltIndex);
+  write32le(buf + 18, sym.getPltIdx());
   write32le(buf + 23, -off - 27);
 }
 

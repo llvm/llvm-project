@@ -2,7 +2,6 @@
 ; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck %s
 
 ; Check that any type can have a vtable holder.
-; CHECK: DW_TAG_structure_type
 ; CHECK: [[SP:.*]]: DW_TAG_structure_type
 ; CHECK-NOT: TAG
 ; CHECK: DW_AT_containing_type [DW_FORM_ref4]

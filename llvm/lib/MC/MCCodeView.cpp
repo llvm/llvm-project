@@ -17,6 +17,7 @@
 #include "llvm/DebugInfo/CodeView/Line.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/MC/MCAsmLayout.h"
+#include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCValue.h"
@@ -25,7 +26,7 @@
 using namespace llvm;
 using namespace llvm::codeview;
 
-CodeViewContext::CodeViewContext() {}
+CodeViewContext::CodeViewContext() = default;
 
 CodeViewContext::~CodeViewContext() {
   // If someone inserted strings into the string table but never actually

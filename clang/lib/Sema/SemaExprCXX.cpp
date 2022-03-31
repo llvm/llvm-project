@@ -564,7 +564,7 @@ ExprResult Sema::BuildCXXTypeId(QualType TypeInfoType,
                                 SourceLocation RParenLoc) {
   bool WasEvaluated = false;
   if (E && !E->isTypeDependent()) {
-    if (E->getType()->isPlaceholderType()) {
+    if (E->hasPlaceholderType()) {
       ExprResult result = CheckPlaceholderExpr(E);
       if (result.isInvalid()) return ExprError();
       E = result.get();
@@ -1346,7 +1346,7 @@ bool Sema::CheckCXXThisCapture(SourceLocation Loc, const bool Explicit,
   // implicitly capturing the *enclosing  object* by reference (see loop
   // above)).
   assert((!ByCopy ||
-          dyn_cast<LambdaScopeInfo>(FunctionScopes[MaxFunctionScopesIndex])) &&
+          isa<LambdaScopeInfo>(FunctionScopes[MaxFunctionScopesIndex])) &&
          "Only a lambda can capture the enclosing object (referred to by "
          "*this) by copy");
   QualType ThisTy = getCurrentThisType();
@@ -1467,12 +1467,50 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
   // C++1z [expr.type.conv]p1:
   //   If the type is a placeholder for a deduced class type, [...perform class
   //   template argument deduction...]
+  // C++2b:
+  //   Otherwise, if the type contains a placeholder type, it is replaced by the
+  //   type determined by placeholder type deduction.
   DeducedType *Deduced = Ty->getContainedDeducedType();
   if (Deduced && isa<DeducedTemplateSpecializationType>(Deduced)) {
     Ty = DeduceTemplateSpecializationFromInitializer(TInfo, Entity,
                                                      Kind, Exprs);
     if (Ty.isNull())
       return ExprError();
+    Entity = InitializedEntity::InitializeTemporary(TInfo, Ty);
+  } else if (Deduced) {
+    MultiExprArg Inits = Exprs;
+    if (ListInitialization) {
+      auto *ILE = cast<InitListExpr>(Exprs[0]);
+      Inits = MultiExprArg(ILE->getInits(), ILE->getNumInits());
+    }
+
+    if (Inits.empty())
+      return ExprError(Diag(TyBeginLoc, diag::err_auto_expr_init_no_expression)
+                       << Ty << FullRange);
+    if (Inits.size() > 1) {
+      Expr *FirstBad = Inits[1];
+      return ExprError(Diag(FirstBad->getBeginLoc(),
+                            diag::err_auto_expr_init_multiple_expressions)
+                       << Ty << FullRange);
+    }
+    if (getLangOpts().CPlusPlus2b) {
+      if (Ty->getAs<AutoType>())
+        Diag(TyBeginLoc, diag::warn_cxx20_compat_auto_expr) << FullRange;
+    }
+    Expr *Deduce = Inits[0];
+    if (isa<InitListExpr>(Deduce))
+      return ExprError(
+          Diag(Deduce->getBeginLoc(), diag::err_auto_expr_init_paren_braces)
+          << ListInitialization << Ty << FullRange);
+    QualType DeducedType;
+    if (DeduceAutoType(TInfo, Deduce, DeducedType) == DAR_Failed)
+      return ExprError(Diag(TyBeginLoc, diag::err_auto_expr_deduction_failure)
+                       << Ty << Deduce->getType() << FullRange
+                       << Deduce->getSourceRange());
+    if (DeducedType.isNull())
+      return ExprError();
+
+    Ty = DeducedType;
     Entity = InitializedEntity::InitializeTemporary(TInfo, Ty);
   }
 
@@ -1936,12 +1974,10 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     initStyle = CXXNewExpr::NoInit;
   }
 
-  Expr **Inits = &Initializer;
-  unsigned NumInits = Initializer ? 1 : 0;
+  MultiExprArg Exprs(&Initializer, Initializer ? 1 : 0);
   if (ParenListExpr *List = dyn_cast_or_null<ParenListExpr>(Initializer)) {
     assert(initStyle == CXXNewExpr::CallInit && "paren init for non-call init");
-    Inits = List->getExprs();
-    NumInits = List->getNumExprs();
+    Exprs = MultiExprArg(List->getExprs(), List->getNumExprs());
   }
 
   // C++11 [expr.new]p15:
@@ -1977,23 +2013,21 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     InitializedEntity Entity
       = InitializedEntity::InitializeNew(StartLoc, AllocType);
     AllocType = DeduceTemplateSpecializationFromInitializer(
-        AllocTypeInfo, Entity, Kind, MultiExprArg(Inits, NumInits));
+        AllocTypeInfo, Entity, Kind, Exprs);
     if (AllocType.isNull())
       return ExprError();
   } else if (Deduced) {
+    MultiExprArg Inits = Exprs;
     bool Braced = (initStyle == CXXNewExpr::ListInit);
-    if (NumInits == 1) {
-      if (auto p = dyn_cast_or_null<InitListExpr>(Inits[0])) {
-        Inits = p->getInits();
-        NumInits = p->getNumInits();
-        Braced = true;
-      }
+    if (Braced) {
+      auto *ILE = cast<InitListExpr>(Exprs[0]);
+      Inits = MultiExprArg(ILE->getInits(), ILE->getNumInits());
     }
 
-    if (initStyle == CXXNewExpr::NoInit || NumInits == 0)
+    if (initStyle == CXXNewExpr::NoInit || Inits.empty())
       return ExprError(Diag(StartLoc, diag::err_auto_new_requires_ctor_arg)
                        << AllocType << TypeRange);
-    if (NumInits > 1) {
+    if (Inits.size() > 1) {
       Expr *FirstBad = Inits[1];
       return ExprError(Diag(FirstBad->getBeginLoc(),
                             diag::err_auto_new_ctor_multiple_expressions)
@@ -2003,6 +2037,10 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
       Diag(Initializer->getBeginLoc(), diag::ext_auto_new_list_init)
           << AllocType << TypeRange;
     Expr *Deduce = Inits[0];
+    if (isa<InitListExpr>(Deduce))
+      return ExprError(
+          Diag(Deduce->getBeginLoc(), diag::err_auto_expr_init_paren_braces)
+          << Braced << AllocType << TypeRange);
     QualType DeducedType;
     if (DeduceAutoType(AllocTypeInfo, Deduce, DeducedType) == DAR_Failed)
       return ExprError(Diag(StartLoc, diag::err_auto_new_deduction_failure)
@@ -2303,8 +2341,8 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
   // Initializer lists are also allowed, in C++11. Rely on the parser for the
   // dialect distinction.
   if (ArraySize && !isLegalArrayNewInitializer(initStyle, Initializer)) {
-    SourceRange InitRange(Inits[0]->getBeginLoc(),
-                          Inits[NumInits - 1]->getEndLoc());
+    SourceRange InitRange(Exprs.front()->getBeginLoc(),
+                          Exprs.back()->getEndLoc());
     Diag(StartLoc, diag::err_new_array_init_args) << InitRange;
     return ExprError();
   }
@@ -2312,8 +2350,7 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
   // If we can perform the initialization, and we've not already done so,
   // do it now.
   if (!AllocType->isDependentType() &&
-      !Expr::hasAnyTypeDependentArguments(
-          llvm::makeArrayRef(Inits, NumInits))) {
+      !Expr::hasAnyTypeDependentArguments(Exprs)) {
     // The type we initialize is the complete type, including the array bound.
     QualType InitType;
     if (KnownArraySize)
@@ -2330,10 +2367,8 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
 
     InitializedEntity Entity
       = InitializedEntity::InitializeNew(StartLoc, InitType);
-    InitializationSequence InitSeq(*this, Entity, Kind,
-                                   MultiExprArg(Inits, NumInits));
-    ExprResult FullInit = InitSeq.Perform(*this, Entity, Kind,
-                                          MultiExprArg(Inits, NumInits));
+    InitializationSequence InitSeq(*this, Entity, Kind, Exprs);
+    ExprResult FullInit = InitSeq.Perform(*this, Entity, Kind, Exprs);
     if (FullInit.isInvalid())
       return ExprError();
 
@@ -4605,6 +4640,13 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
             From->getType()->getPointeeType().getAddressSpace())
       CK = CK_AddressSpaceConversion;
 
+    if (!isCast(CCK) &&
+        !ToType->getPointeeType().getQualifiers().hasUnaligned() &&
+        From->getType()->getPointeeType().getQualifiers().hasUnaligned()) {
+      Diag(From->getBeginLoc(), diag::warn_imp_cast_drops_unaligned)
+          << InitialFromType << ToType;
+    }
+
     From = ImpCastExprToType(From, ToType.getNonLValueExprType(Context), CK, VK,
                              /*BasePath=*/nullptr, CCK)
                .get();
@@ -5704,7 +5746,7 @@ ExprResult Sema::BuildExpressionTrait(ExpressionTrait ET,
                                       SourceLocation RParen) {
   if (Queried->isTypeDependent()) {
     // Delay type-checking for type-dependent expressions.
-  } else if (Queried->getType()->isPlaceholderType()) {
+  } else if (Queried->hasPlaceholderType()) {
     ExprResult PE = CheckPlaceholderExpr(Queried);
     if (PE.isInvalid()) return ExprError();
     return BuildExpressionTrait(ET, KWLoc, PE.get(), RParen);
@@ -5720,8 +5762,7 @@ QualType Sema::CheckPointerToMemberOperands(ExprResult &LHS, ExprResult &RHS,
                                             ExprValueKind &VK,
                                             SourceLocation Loc,
                                             bool isIndirect) {
-  assert(!LHS.get()->getType()->isPlaceholderType() &&
-         !RHS.get()->getType()->isPlaceholderType() &&
+  assert(!LHS.get()->hasPlaceholderType() && !RHS.get()->hasPlaceholderType() &&
          "placeholders should have been weeded out by now");
 
   // The LHS undergoes lvalue conversions if this is ->*, and undergoes the
@@ -6049,8 +6090,7 @@ static bool isValidVectorForConditionalCondition(ASTContext &Ctx,
     return false;
   const QualType EltTy =
       cast<VectorType>(CondTy.getCanonicalType())->getElementType();
-  assert(!EltTy->isBooleanType() && !EltTy->isEnumeralType() &&
-         "Vectors cant be boolean or enum types");
+  assert(!EltTy->isEnumeralType() && "Vectors cant be enum types");
   return EltTy->isIntegralType(Ctx);
 }
 
@@ -6089,7 +6129,9 @@ QualType Sema::CheckVectorConditionalTypes(ExprResult &Cond, ExprResult &LHS,
   } else if (LHSVT || RHSVT) {
     ResultType = CheckVectorOperands(
         LHS, RHS, QuestionLoc, /*isCompAssign*/ false, /*AllowBothBool*/ true,
-        /*AllowBoolConversions*/ false);
+        /*AllowBoolConversions*/ false,
+        /*AllowBoolOperation*/ true,
+        /*ReportInvalid*/ true);
     if (ResultType.isNull())
       return {};
   } else {
@@ -6416,9 +6458,11 @@ QualType Sema::CXXCheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
 
   // Extension: conditional operator involving vector types.
   if (LTy->isVectorType() || RTy->isVectorType())
-    return CheckVectorOperands(LHS, RHS, QuestionLoc, /*isCompAssign*/false,
-                               /*AllowBothBool*/true,
-                               /*AllowBoolConversions*/false);
+    return CheckVectorOperands(LHS, RHS, QuestionLoc, /*isCompAssign*/ false,
+                               /*AllowBothBool*/ true,
+                               /*AllowBoolConversions*/ false,
+                               /*AllowBoolOperation*/ false,
+                               /*ReportInvalid*/ true);
 
   //   -- The second and third operands have arithmetic or enumeration type;
   //      the usual arithmetic conversions are performed to bring them to a
@@ -6614,7 +6658,7 @@ QualType Sema::FindCompositePointerType(SourceLocation Loc,
     const Type *ClassOrBound;
 
     Step(Kind K, const Type *ClassOrBound = nullptr)
-        : K(K), Quals(), ClassOrBound(ClassOrBound) {}
+        : K(K), ClassOrBound(ClassOrBound) {}
     QualType rebuild(ASTContext &Ctx, QualType T) const {
       T = Ctx.getQualifiedType(T, Quals);
       switch (K) {
@@ -7410,8 +7454,10 @@ ExprResult Sema::ActOnStartCXXMemberReference(Scope *S, Expr *Base,
   //   the member function body.
   if (!BaseType->isDependentType() &&
       !isThisOutsideMemberFunctionBody(BaseType) &&
-      RequireCompleteType(OpLoc, BaseType, diag::err_incomplete_member_access))
-    return ExprError();
+      RequireCompleteType(OpLoc, BaseType,
+                          diag::err_incomplete_member_access)) {
+    return CreateRecoveryExpr(Base->getBeginLoc(), Base->getEndLoc(), {Base});
+  }
 
   // C++ [basic.lookup.classref]p2:
   //   If the id-expression in a class member access (5.2.5) is an
@@ -7767,7 +7813,8 @@ ExprResult Sema::ActOnPseudoDestructorExpr(Scope *S, Expr *Base,
 
   TypeLocBuilder TLB;
   DecltypeTypeLoc DecltypeTL = TLB.push<DecltypeTypeLoc>(T);
-  DecltypeTL.setNameLoc(DS.getTypeSpecTypeLoc());
+  DecltypeTL.setDecltypeLoc(DS.getTypeSpecTypeLoc());
+  DecltypeTL.setRParenLoc(DS.getTypeofParensRange().getEnd());
   TypeSourceInfo *DestructedTypeInfo = TLB.getTypeSourceInfo(Context, T);
   PseudoDestructorTypeStorage Destructed(DestructedTypeInfo);
 
@@ -7873,6 +7920,8 @@ ExprResult Sema::ActOnNoexceptExpr(SourceLocation KeyLoc, SourceLocation,
 static void MaybeDecrementCount(
     Expr *E, llvm::DenseMap<const VarDecl *, int> &RefsMinusAssignments) {
   DeclRefExpr *LHS = nullptr;
+  bool IsCompoundAssign = false;
+  bool isIncrementDecrementUnaryOp = false;
   if (BinaryOperator *BO = dyn_cast<BinaryOperator>(E)) {
     if (BO->getLHS()->getType()->isDependentType() ||
         BO->getRHS()->getType()->isDependentType()) {
@@ -7880,16 +7929,29 @@ static void MaybeDecrementCount(
         return;
     } else if (!BO->isAssignmentOp())
       return;
+    else
+      IsCompoundAssign = BO->isCompoundAssignmentOp();
     LHS = dyn_cast<DeclRefExpr>(BO->getLHS());
   } else if (CXXOperatorCallExpr *COCE = dyn_cast<CXXOperatorCallExpr>(E)) {
     if (COCE->getOperator() != OO_Equal)
       return;
     LHS = dyn_cast<DeclRefExpr>(COCE->getArg(0));
+  } else if (UnaryOperator *UO = dyn_cast<UnaryOperator>(E)) {
+    if (!UO->isIncrementDecrementOp())
+      return;
+    isIncrementDecrementUnaryOp = true;
+    LHS = dyn_cast<DeclRefExpr>(UO->getSubExpr());
   }
   if (!LHS)
     return;
   VarDecl *VD = dyn_cast<VarDecl>(LHS->getDecl());
   if (!VD)
+    return;
+  // Don't decrement RefsMinusAssignments if volatile variable with compound
+  // assignment (+=, ...) or increment/decrement unary operator to avoid
+  // potential unused-but-set-variable warning.
+  if ((IsCompoundAssign || isIncrementDecrementUnaryOp) &&
+      VD->getType().isVolatileQualified())
     return;
   auto iter = RefsMinusAssignments.find(VD);
   if (iter == RefsMinusAssignments.end())
@@ -8697,7 +8759,7 @@ Sema::ActOnTypeRequirement(SourceLocation TypenameKWLoc, CXXScopeSpec &SS,
   if (TypeName) {
     QualType T = CheckTypenameType(ETK_Typename, TypenameKWLoc,
                                    SS.getWithLocInContext(Context), *TypeName,
-                                   NameLoc, &TSI, /*DeducedTypeContext=*/false);
+                                   NameLoc, &TSI, /*DeducedTSTContext=*/false);
     if (T.isNull())
       return nullptr;
   } else {
@@ -8748,7 +8810,7 @@ Sema::ActOnCompoundRequirement(
                                               /*HasTypeConstraint=*/true);
 
   if (BuildTypeConstraint(SS, TypeConstraint, TParam,
-                          /*EllpsisLoc=*/SourceLocation(),
+                          /*EllipsisLoc=*/SourceLocation(),
                           /*AllowUnexpandedPack=*/true))
     // Just produce a requirement with no type requirements.
     return BuildExprRequirement(E, /*IsSimple=*/false, NoexceptLoc, {});

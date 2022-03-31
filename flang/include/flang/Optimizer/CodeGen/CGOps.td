@@ -24,7 +24,7 @@ def fircg_Dialect : Dialect {
 
 // Base class for FIR CG operations.
 // All operations automatically get a prefix of "fircg.".
-class fircg_Op<string mnemonic, list<OpTrait> traits>
+class fircg_Op<string mnemonic, list<Trait> traits>
   : Op<fircg_Dialect, mnemonic, traits>;
 
 // Extended embox operation.
@@ -79,7 +79,7 @@ def fircg_XEmboxOp : fircg_Op<"ext_embox", [AttrSizedOperandSegments]> {
     unsigned sliceOffset() { return shiftOffset() + shift().size(); }
     unsigned subcomponentOffset() { return sliceOffset() + slice().size(); }
     unsigned substrOffset() {
-       return subcomponentOffset() + subcomponent().size();
+      return subcomponentOffset() + subcomponent().size();
     }
     unsigned lenParamOffset() { return substrOffset() + substr().size(); }
   }];
@@ -127,6 +127,14 @@ def fircg_XReboxOp : fircg_Op<"ext_rebox", [AttrSizedOperandSegments]> {
     unsigned getRank();
     // The rank of the result box
     unsigned getOutRank();
+
+    unsigned shapeOffset() { return 1; }
+    unsigned shiftOffset() { return shapeOffset() + shape().size(); }
+    unsigned sliceOffset() { return shiftOffset() + shift().size(); }
+    unsigned subcomponentOffset() { return sliceOffset() + slice().size(); }
+    unsigned substrOffset() {
+      return subcomponentOffset() + subcomponent().size();
+    }
   }];
 }
 

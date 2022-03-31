@@ -17,9 +17,6 @@
 
 #include "llvm/Config/llvm-config.h"
 
-#ifdef __cplusplus
-#include <new>
-#endif
 #include <stddef.h>
 
 #if defined(_MSC_VER)
@@ -40,6 +37,10 @@
 
 #ifndef __has_builtin
 # define __has_builtin(x) 0
+#endif
+
+#ifndef __has_include
+# define __has_include(x) 0
 #endif
 
 // Only use __has_cpp_attribute in C++ mode. GCC defines __has_cpp_attribute in
@@ -80,38 +81,27 @@
 /// * 1916: VS2017, version 15.9
 /// * 1920: VS2019, version 16.0
 /// * 1921: VS2019, version 16.1
+/// * 1922: VS2019, version 16.2
+/// * 1923: VS2019, version 16.3
+/// * 1924: VS2019, version 16.4
+/// * 1925: VS2019, version 16.5
+/// * 1926: VS2019, version 16.6
+/// * 1927: VS2019, version 16.7
+/// * 1928: VS2019, version 16.8 + 16.9
+/// * 1929: VS2019, version 16.10 + 16.11
+/// * 1930: VS2022, version 17.0
 #ifdef _MSC_VER
 #define LLVM_MSC_PREREQ(version) (_MSC_VER >= (version))
 
-// We require at least MSVC 2017.
-#if !LLVM_MSC_PREREQ(1910)
-#error LLVM requires at least MSVC 2017.
+// We require at least VS 2019.
+#if !defined(LLVM_FORCE_USE_OLD_TOOLCHAIN)
+#if !LLVM_MSC_PREREQ(1920)
+#error LLVM requires at least VS 2019.
+#endif
 #endif
 
 #else
 #define LLVM_MSC_PREREQ(version) 0
-#endif
-
-/// Does the compiler support ref-qualifiers for *this?
-///
-/// Sadly, this is separate from just rvalue reference support because GCC
-/// and MSVC implemented this later than everything else. This appears to be
-/// corrected in MSVC 2019 but not MSVC 2017.
-#if __has_feature(cxx_rvalue_references) || defined(__GNUC__) ||               \
-    LLVM_MSC_PREREQ(1920)
-#define LLVM_HAS_RVALUE_REFERENCE_THIS 1
-#else
-#define LLVM_HAS_RVALUE_REFERENCE_THIS 0
-#endif
-
-/// Expands to '&' if ref-qualifiers for *this are supported.
-///
-/// This can be used to provide lvalue/rvalue overrides of member functions.
-/// The rvalue override should be guarded by LLVM_HAS_RVALUE_REFERENCE_THIS
-#if LLVM_HAS_RVALUE_REFERENCE_THIS
-#define LLVM_LVALUE_FUNCTION &
-#else
-#define LLVM_LVALUE_FUNCTION
 #endif
 
 /// LLVM_LIBRARY_VISIBILITY - If a class marked with this attribute is linked
@@ -126,7 +116,11 @@
 #if __has_attribute(visibility) && !defined(__MINGW32__) &&                    \
     !defined(__CYGWIN__) && !defined(_WIN32)
 #define LLVM_LIBRARY_VISIBILITY __attribute__ ((visibility("hidden")))
-#define LLVM_EXTERNAL_VISIBILITY __attribute__ ((visibility("default")))
+#if defined(LLVM_BUILD_LLVM_DYLIB) || defined(LLVM_BUILD_SHARED_LIBS)
+#define LLVM_EXTERNAL_VISIBILITY __attribute__((visibility("default")))
+#else
+#define LLVM_EXTERNAL_VISIBILITY
+#endif
 #else
 #define LLVM_LIBRARY_VISIBILITY
 #define LLVM_EXTERNAL_VISIBILITY
@@ -327,12 +321,14 @@
 /// LLVM_BUILTIN_UNREACHABLE - On compilers which support it, expands
 /// to an expression which states that it is undefined behavior for the
 /// compiler to reach this point.  Otherwise is not defined.
+///
+/// '#else' is intentionally left out so that other macro logic (e.g.,
+/// LLVM_ASSUME_ALIGNED and llvm_unreachable()) can detect whether
+/// LLVM_BUILTIN_UNREACHABLE has a definition.
 #if __has_builtin(__builtin_unreachable) || defined(__GNUC__)
 # define LLVM_BUILTIN_UNREACHABLE __builtin_unreachable()
 #elif defined(_MSC_VER)
 # define LLVM_BUILTIN_UNREACHABLE __assume(false)
-#else
-# define LLVM_BUILTIN_UNREACHABLE
 #endif
 
 /// LLVM_BUILTIN_TRAP - On compilers which support it, expands to an expression
@@ -438,7 +434,20 @@
 /// Whether LLVM itself is built with AddressSanitizer instrumentation.
 #if __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)
 # define LLVM_ADDRESS_SANITIZER_BUILD 1
+#if __has_include(<sanitizer/asan_interface.h>)
 # include <sanitizer/asan_interface.h>
+#else
+// These declarations exist to support ASan with MSVC. If MSVC eventually ships
+// asan_interface.h in their headers, then we can remove this.
+#ifdef __cplusplus
+extern "C" {
+#endif
+void __asan_poison_memory_region(void const volatile *addr, size_t size);
+void __asan_unpoison_memory_region(void const volatile *addr, size_t size);
+#ifdef __cplusplus
+} // extern "C"
+#endif
+#endif
 #else
 # define LLVM_ADDRESS_SANITIZER_BUILD 0
 # define __asan_poison_memory_region(p, size)

@@ -1,7 +1,7 @@
-// RUN: %check_clang_tidy -check-suffix=OLDCLOLDAOC %s altera-single-work-item-barrier %t -- -header-filter=.* "--" -cl-std=CL1.2 -c --include opencl-c.h -DOLDCLOLDAOC
-// RUN: %check_clang_tidy -check-suffix=NEWCLOLDAOC %s altera-single-work-item-barrier %t -- -header-filter=.* "--" -cl-std=CL2.0 -c --include opencl-c.h -DNEWCLOLDAOC
-// RUN: %check_clang_tidy -check-suffix=OLDCLNEWAOC %s altera-single-work-item-barrier %t -- -config='{CheckOptions: [{key: altera-single-work-item-barrier.AOCVersion, value: 1701}]}' -header-filter=.* "--" -cl-std=CL1.2 -c --include opencl-c.h -DOLDCLNEWAOC
-// RUN: %check_clang_tidy -check-suffix=NEWCLNEWAOC %s altera-single-work-item-barrier %t -- -config='{CheckOptions: [{key: altera-single-work-item-barrier.AOCVersion, value: 1701}]}' -header-filter=.* "--" -cl-std=CL2.0 -c --include opencl-c.h -DNEWCLNEWAOC
+// RUN: %check_clang_tidy -check-suffix=OLDCLOLDAOC %s altera-single-work-item-barrier %t -- -header-filter=.* "--" -cl-std=CL1.2 -c -DOLDCLOLDAOC
+// RUN: %check_clang_tidy -check-suffix=NEWCLOLDAOC %s altera-single-work-item-barrier %t -- -header-filter=.* "--" -cl-std=CL2.0 -c -DNEWCLOLDAOC
+// RUN: %check_clang_tidy -check-suffix=OLDCLNEWAOC %s altera-single-work-item-barrier %t -- -config='{CheckOptions: [{key: altera-single-work-item-barrier.AOCVersion, value: 1701}]}' -header-filter=.* "--" -cl-std=CL1.2 -c -DOLDCLNEWAOC
+// RUN: %check_clang_tidy -check-suffix=NEWCLNEWAOC %s altera-single-work-item-barrier %t -- -config='{CheckOptions: [{key: altera-single-work-item-barrier.AOCVersion, value: 1701}]}' -header-filter=.* "--" -cl-std=CL2.0 -c -DNEWCLNEWAOC
 
 #ifdef OLDCLOLDAOC  // OpenCL 1.2 Altera Offline Compiler < 17.1
 void __kernel error_barrier_no_id(__global int * foo, int size) {

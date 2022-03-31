@@ -125,8 +125,16 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirIntegerAttrGet(MlirType type,
                                                     int64_t value);
 
 /// Returns the value stored in the given integer attribute, assuming the value
-/// fits into a 64-bit integer.
+/// is of signless type and fits into a signed 64-bit integer.
 MLIR_CAPI_EXPORTED int64_t mlirIntegerAttrGetValueInt(MlirAttribute attr);
+
+/// Returns the value stored in the given integer attribute, assuming the value
+/// is of signed type and fits into a signed 64-bit integer.
+MLIR_CAPI_EXPORTED int64_t mlirIntegerAttrGetValueSInt(MlirAttribute attr);
+
+/// Returns the value stored in the given integer attribute, assuming the value
+/// is of unsigned type and fits into an unsigned 64-bit integer.
+MLIR_CAPI_EXPORTED uint64_t mlirIntegerAttrGetValueUInt(MlirAttribute attr);
 
 //===----------------------------------------------------------------------===//
 // Bool attribute.
@@ -355,6 +363,10 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirDenseElementsAttrUInt8Get(
     MlirType shapedType, intptr_t numElements, const uint8_t *elements);
 MLIR_CAPI_EXPORTED MlirAttribute mlirDenseElementsAttrInt8Get(
     MlirType shapedType, intptr_t numElements, const int8_t *elements);
+MLIR_CAPI_EXPORTED MlirAttribute mlirDenseElementsAttrUInt16Get(
+    MlirType shapedType, intptr_t numElements, const uint16_t *elements);
+MLIR_CAPI_EXPORTED MlirAttribute mlirDenseElementsAttrInt16Get(
+    MlirType shapedType, intptr_t numElements, const int16_t *elements);
 MLIR_CAPI_EXPORTED MlirAttribute mlirDenseElementsAttrUInt32Get(
     MlirType shapedType, intptr_t numElements, const uint32_t *elements);
 MLIR_CAPI_EXPORTED MlirAttribute mlirDenseElementsAttrInt32Get(
@@ -416,6 +428,10 @@ MLIR_CAPI_EXPORTED int8_t mlirDenseElementsAttrGetInt8Value(MlirAttribute attr,
                                                             intptr_t pos);
 MLIR_CAPI_EXPORTED uint8_t
 mlirDenseElementsAttrGetUInt8Value(MlirAttribute attr, intptr_t pos);
+MLIR_CAPI_EXPORTED int16_t
+mlirDenseElementsAttrGetInt16Value(MlirAttribute attr, intptr_t pos);
+MLIR_CAPI_EXPORTED uint16_t
+mlirDenseElementsAttrGetUInt16Value(MlirAttribute attr, intptr_t pos);
 MLIR_CAPI_EXPORTED int32_t
 mlirDenseElementsAttrGetInt32Value(MlirAttribute attr, intptr_t pos);
 MLIR_CAPI_EXPORTED uint32_t

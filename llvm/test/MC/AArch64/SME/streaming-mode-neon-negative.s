@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -triple=aarch64 -show-encoding -mattr=+streaming-sve,+bf16 2>&1 < %s| FileCheck %s
+// RUN: not llvm-mc -triple=aarch64 -show-encoding -mattr=-neon,+sme 2>&1 < %s| FileCheck %s
 
 // ------------------------------------------------------------------------- //
 // Check FABD is illegal in streaming mode

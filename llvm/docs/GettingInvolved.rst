@@ -18,6 +18,7 @@ LLVM welcomes contributions of all kinds. To get started, please review the foll
    HowToSubmitABug
    BugLifeCycle
    CodingStandards
+   GitHub
    GitBisecting
    GitRepositoryPolicy
 
@@ -51,6 +52,9 @@ LLVM welcomes contributions of all kinds. To get started, please review the foll
 :doc:`CodingStandards`
   Details the LLVM coding standards and provides useful information on writing
   efficient C++ code.
+
+:doc:`GitHub`
+  Describes how to use the llvm-project repository on GitHub.
 
 :doc:`GitBisecting`
   Describes how to use ``git bisect`` on LLVM's repository.
@@ -96,21 +100,18 @@ Information about LLVM's development process.
 :doc:`Release notes for the current release <ReleaseNotes>`
    This describes new features, known bugs, and other limitations.
 
-.. _mailing-lists:
+.. _lists-forums:
 
-Mailing Lists
--------------
+Forums & Mailing Lists
+----------------------
 
-If you can't find what you need in these docs, try consulting the mailing
-lists. In addition to the traditional mailing lists there is also a
-`Discourse server <https://llvm.discourse.group>`_ available.
+If you can't find what you need in these docs, try consulting the
+Discourse forums. There are also commit mailing lists for all commits to the LLVM Project.
 
-`Developer's List (llvm-dev)`__
-  This list is for people who want to be included in technical discussions of
-  LLVM. People post to this list when they have questions about writing code
-  for or using the LLVM tools. It is relatively low volume.
+`LLVM Discourse`__
+  The forums for all things LLVM and related sub-projects. There are categories and subcategories for a wide variety of areas within LLVM. You can also view tags or search for a specific topic. 
 
-  .. __: http://lists.llvm.org/mailman/listinfo/llvm-dev
+  .. __: https://discourse.llvm.org/
 
 `Commits Archive (llvm-commits)`__
   This list contains all commit messages that are made when LLVM developers
@@ -127,18 +128,10 @@ lists. In addition to the traditional mailing lists there is also a
 
   .. __: http://lists.llvm.org/pipermail/llvm-bugs/
 
-`Test Results Archive (llvm-testresults)`__
-  A message is automatically sent to this list by every active nightly tester
-  when it completes.  As such, this list gets email several times each day,
-  making it a high volume list.
+`LLVM Announcements`__
+  If you just want project wide announcements such as releases, developers meetings, or blog posts, then you should check out the Announcement category on LLVM Discourse. 
 
-  .. __: http://lists.llvm.org/pipermail/llvm-testresults/
-
-`LLVM Announcements List (llvm-announce)`__
-  This is a low volume list that provides important announcements regarding
-  LLVM.  It gets email about once a month.
-
-  .. __: http://lists.llvm.org/mailman/listinfo/llvm-announce
+  .. __: https://discourse.llvm.org/c/announce/46 
 
 .. _online-sync-ups:
 
@@ -217,6 +210,66 @@ writing, the following sync-ups are organized:
      - `ics <https://calendar.google.com/calendar/ical/c_1mincouiltpa24ac14of14lhi4%40group.calendar.google.com/public/basic.ics>`__
        `gcal <https://calendar.google.com/calendar/embed?src=c_1mincouiltpa24ac14of14lhi4%40group.calendar.google.com>`__
      - `Minutes/docs <https://docs.google.com/document/d/1-uEEZfmRdPThZlctOq9eXlmUaSSAAi8oKxhrPY_lpjk/edit#>`__
+   * - LLVM Embedded Toolchains
+     - Every 4 weeks on Thursdays
+     - `ics <https://drive.google.com/file/d/1uNa-PFYkhAfT83kR2Nc4Fi706TAQFBEL/view?usp=sharing>`__
+       `gcal <https://calendar.google.com/calendar/u/0?cid=ZDQyc3ZlajJmbjIzNG1jaTUybjFsdjA2dWNAZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ>`__
+     - `Minutes/docs <https://docs.google.com/document/d/1GahxppHJ7o1O_fn1Mbidu1DHEg7V2aOr92LXCtNV1_o/edit?usp=sharing>`__
+   * - Clang C and C++ Language Working Group
+     - 1st and 3rd Wednesday of the month
+     - `gcal <https://calendar.google.com/calendar/u/0?cid=cW1lZGg0ZXNpMnIyZDN2aTVydGVrdWF1YzRAZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ>`__
+     - `Minutes/docs <https://docs.google.com/document/d/1x5-RbOC6-jnI_NcJ9Dp4pSmGhhNe7lUevuWUIB46TeM/edit?usp=sharing>`__
+
+
+Office hours
+------------
+
+A number of experienced LLVM contributors make themselves available for a chat
+on a regular schedule, to anyone who is looking for some guidance. Please find
+the list of who is available when, through which medium, and what their area of
+expertise is. Don't be too shy to dial in!
+
+Of course, people take time off from time to time, so if you dial in and you
+don't find anyone present, chances are they happen to be off that day.
+
+.. list-table:: LLVM office hours
+  :widths: 15 40 15 15 15
+  :header-rows: 1
+
+  * - Name
+    - In-scope topics
+    - When?
+    - Where?
+    - Languages
+  * - Kristof Beyls
+    - General questions on how to contribute to LLVM; organizing meetups;
+      submitting talks; and other general LLVM-related topics. Arm/AArch64
+      codegen. LLVM security group.
+    - Every 2nd and 4th Wednesday of the month at 9.30am CET, for 30 minutes.
+      `ics <https://calendar.google.com/calendar/ical/co0h4ndpvtfe64opn7eraiq3ac%40group.calendar.google.com/public/basic.ics>`__
+    - `Jitsi <https://meet.jit.si/KristofBeylsLLVMOfficeHour>`__
+    - English, Flemish, Dutch
+  * - Alina Sbirlea
+    - General questions on how to contribute to LLVM; women in compilers;
+      MemorySSA, BatchAA, various loop passes, new pass manager.
+    - Monthly, 2nd Tuesdays, 10.00am PT/7:00pm CET, for 30 minutes.
+      `ics <https://calendar.google.com/calendar/ical/c_pm6e7160iq7n5fcm1s6m3rjhh4%40group.calendar.google.com/public/basic.ics>`__
+      `gcal <https://calendar.google.com/calendar/embed?src=c_pm6e7160iq7n5fcm1s6m3rjhh4%40group.calendar.google.com>`__
+    - `GoogleMeet <https://meet.google.com/hhk-xpdj-gvx>`__
+    - English, Romanian
+  * - Aaron Ballman
+    - Clang internals; frontend attributes; clang-tidy; clang-query; AST matchers
+    - Monthly, 2nd Monday of the month at 10:00am Eastern, for 30 minutes.
+      `ics <https://calendar.google.com/calendar/ical/npgke5dug0uliud0qapptmps58%40group.calendar.google.com/public/basic.ics>`__
+      `gcal <https://calendar.google.com/calendar/embed?src=npgke5dug0uliud0qapptmps58%40group.calendar.google.com>`__
+    - `GoogleMeet <https://meet.google.com/xok-iqne-gmi>`__
+    - English, Norwegian (not fluently)
+  * - Johannes Doerfert (he/him)
+    - OpenMP, LLVM-IR, interprocedural optimizations, Attributor, workshops, research, ...
+    - Every 2 weeks, Wednesdays 10:30am (Chicago Time), for 1 hour.
+      `ics <https://outlook.office365.com/owa/calendar/5c93bae7d8fc48f5bd150f9efda8806f@anl.gov/4929bd0f955b4f9b82b7bc995cb3b1bf665030567582422766/S-1-8-2190330107-3188380388-3000953923-1819937831/reachcalendar.ics>`__
+    - `MS Teams <https://teams.microsoft.com/l/meetup-join/19%3ameeting_MTM2ZDNkNGUtZjg3My00ZDFjLTk5NjctYTIwMmI3MWM4MjFj%40thread.v2/0?context=%7b%22Tid%22%3a%220cfca185-25f7-49e3-8ae7-704d5326e285%22%2c%22Oid%22%3a%220cacfb51-1523-4455-a443-adca936d1af0%22%7d>`__
+    - English, German
 
 IRC
 ---
@@ -273,7 +326,6 @@ can be better.
    CodeOfConduct
    Proposals/GitHubMove
    BugpointRedesign
-   Proposals/LLVMLibC
    Proposals/TestSuite
    Proposals/VariableNames
    Proposals/VectorizationPlan
@@ -288,9 +340,6 @@ can be better.
 
 :doc:`BugpointRedesign`
    Design doc for a redesign of the Bugpoint tool.
-
-:doc:`Proposals/LLVMLibC`
-   Proposal to add a libc implementation under the LLVM project.
 
 :doc:`Proposals/TestSuite`
    Proposals for additional benchmarks/programs for llvm's test-suite.

@@ -71,7 +71,7 @@ class ObjCPropertyTestCase(TestBase):
         nonexistant_value = frame.EvaluateExpression(
             "mine.nonexistantInt", False)
         nonexistant_error = nonexistant_value.GetError()
-        self.assertTrue(nonexistant_error.Success())
+        self.assertSuccess(nonexistant_error)
         nonexistant_int = nonexistant_value.GetValueAsUnsigned(123456)
         self.assertEquals(nonexistant_int, 6)
 
@@ -87,7 +87,7 @@ class ObjCPropertyTestCase(TestBase):
         nonexistant_change = frame.EvaluateExpression(
             "mine.nonexistantInt = 10", False)
         nonexistant_error = nonexistant_change.GetError()
-        self.assertTrue(nonexistant_error.Success())
+        self.assertSuccess(nonexistant_error)
 
         # Calling the setter function would up the access count, so make sure
         # that happened.
@@ -103,39 +103,39 @@ class ObjCPropertyTestCase(TestBase):
 
         backed_value = frame.EvaluateExpression("mine.backedInt", False)
         backed_error = backed_value.GetError()
-        self.assertTrue(backed_error.Success())
+        self.assertSuccess(backed_error)
         backing_value = mine.GetChildMemberWithName("_backedInt")
         self.assertTrue(backing_value.IsValid())
         self.assertTrue(backed_value.GetValueAsUnsigned(12345)
                         == backing_value.GetValueAsUnsigned(23456))
 
         value_from_typedef = frame.EvaluateExpression("typedefd.backedInt", False)
-        self.assertTrue(value_from_typedef.GetError().Success())
+        self.assertSuccess(value_from_typedef.GetError())
         self.assertEqual(value_from_typedef.GetValueAsUnsigned(12345),
                          backing_value.GetValueAsUnsigned(23456))
 
         unbacked_value = frame.EvaluateExpression("mine.unbackedInt", False)
         unbacked_error = unbacked_value.GetError()
-        self.assertTrue(unbacked_error.Success())
+        self.assertSuccess(unbacked_error)
 
         idWithProtocol_value = frame.EvaluateExpression(
             "mine.idWithProtocol", False)
         idWithProtocol_error = idWithProtocol_value.GetError()
-        self.assertTrue(idWithProtocol_error.Success())
+        self.assertSuccess(idWithProtocol_error)
         self.assertEquals(idWithProtocol_value.GetTypeName(), "id")
 
         # Make sure that class property getter works as expected
         value = frame.EvaluateExpression("BaseClass.classInt", False)
-        self.assertTrue(value.GetError().Success())
+        self.assertSuccess(value.GetError())
         self.assertEquals(value.GetValueAsUnsigned(11111), 123)
 
         # Make sure that class property setter works as expected
         value = frame.EvaluateExpression("BaseClass.classInt = 234", False)
-        self.assertTrue(value.GetError().Success())
+        self.assertSuccess(value.GetError())
 
         # Verify that setter above actually worked
         value = frame.EvaluateExpression("BaseClass.classInt", False)
-        self.assertTrue(value.GetError().Success())
+        self.assertSuccess(value.GetError())
         self.assertEquals(value.GetValueAsUnsigned(11111), 234)
 
         # Test that accessing two distinct class and instance properties that

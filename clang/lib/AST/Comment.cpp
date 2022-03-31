@@ -108,12 +108,7 @@ Comment::child_iterator Comment::child_end() const {
 }
 
 bool TextComment::isWhitespaceNoCache() const {
-  for (StringRef::const_iterator I = Text.begin(), E = Text.end();
-       I != E; ++I) {
-    if (!clang::isWhitespace(*I))
-      return false;
-  }
-  return true;
+  return llvm::all_of(Text, clang::isWhitespace);
 }
 
 bool ParagraphComment::isWhitespaceNoCache() const {

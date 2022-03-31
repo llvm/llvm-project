@@ -31,7 +31,3 @@
 # RUN: rm -rf %t.root
 # RUN: rm -rf %t.clang-cache
 # RUN: rm -rf %t.lldb-cache
-
-# Replay the debug session.
-# RUN: %lldb -x -b -o 'settings set symbols.clang-modules-cache-path %t.lldb-cache' -s %S/Inputs/ModuleCXX.in --replay %t.repro %t.root/a.out | FileCheck %s --check-prefix REPLAY
-# REPLAY: (success = 0)

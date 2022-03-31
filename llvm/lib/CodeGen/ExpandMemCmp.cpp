@@ -19,7 +19,6 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Dominators.h"
@@ -31,6 +30,10 @@
 #include "llvm/Transforms/Utils/SizeOpts.h"
 
 using namespace llvm;
+
+namespace llvm {
+class TargetLowering;
+}
 
 #define DEBUG_TYPE "expandmemcmp"
 
@@ -70,8 +73,8 @@ class MemCmpExpansion {
   CallInst *const CI;
   ResultBlock ResBlock;
   const uint64_t Size;
-  unsigned MaxLoadSize;
-  uint64_t NumLoadsNonOneByte;
+  unsigned MaxLoadSize = 0;
+  uint64_t NumLoadsNonOneByte = 0;
   const uint64_t NumLoadsPerBlockForZeroCmp;
   std::vector<BasicBlock *> LoadCmpBlocks;
   BasicBlock *EndBlock;
@@ -219,8 +222,7 @@ MemCmpExpansion::MemCmpExpansion(
     const TargetTransformInfo::MemCmpExpansionOptions &Options,
     const bool IsUsedForZeroCmp, const DataLayout &TheDataLayout,
     DomTreeUpdater *DTU)
-    : CI(CI), Size(Size), MaxLoadSize(0), NumLoadsNonOneByte(0),
-      NumLoadsPerBlockForZeroCmp(Options.NumLoadsPerBlock),
+    : CI(CI), Size(Size), NumLoadsPerBlockForZeroCmp(Options.NumLoadsPerBlock),
       IsUsedForZeroCmp(IsUsedForZeroCmp), DL(TheDataLayout), DTU(DTU),
       Builder(CI) {
   assert(Size > 0 && "zero blocks");

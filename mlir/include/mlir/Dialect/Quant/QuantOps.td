@@ -21,7 +21,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 // Base classes
 //===----------------------------------------------------------------------===//
 
-class quant_Op<string mnemonic, list<OpTrait> traits> :
+class quant_Op<string mnemonic, list<Trait> traits> :
     Op<Quantization_Dialect, mnemonic, traits>;
 
 //===----------------------------------------------------------------------===//
@@ -103,7 +103,7 @@ def quant_QuantizeRegionOp : quant_Op<"region", [
                     StrAttr:$logical_kernel);
   let results = (outs Variadic<AnyType>:$outputs);
   let regions = (region SizedRegion<1>:$body);
-  let verifier = [{ return verifyRegionOp(*this); }];
+  let hasVerifier = 1;
 }
 
 def quant_ReturnOp : quant_Op<"return", [Terminator]> {
@@ -227,43 +227,7 @@ def quant_StatisticsOp : quant_Op<"stats", [SameOperandsAndResultType]> {
     OptionalAttr<ElementsAttr>:$axisStats,
     OptionalAttr<I64Attr>:$axis);
   let results = (outs quant_RealValueType);
-
-  let verifier = [{
-    auto tensorArg = arg().getType().dyn_cast<TensorType>();
-    if (!tensorArg) return emitOpError("arg needs to be tensor type.");
-
-    // Verify layerStats attribute.
-    {
-      auto layerStatsType = layerStats().getType();
-      if (!layerStatsType.getElementType().isa<FloatType>()) {
-        return emitOpError(
-            "layerStats must have a floating point element type");
-      }
-      if (layerStatsType.getRank() != 1 || layerStatsType.getDimSize(0) != 2) {
-        return emitOpError("layerStats must have shape [2]");
-      }
-    }
-    // Verify axisStats (optional) attribute.
-    if (axisStats()) {
-      if (!axis()) return emitOpError("axis must be specified for axisStats");
-
-      auto shape = tensorArg.getShape();
-      auto argSliceSize = std::accumulate(std::next(shape.begin(),
-        *axis()), shape.end(), 1, std::multiplies<int64_t>());
-
-      auto axisStatsType = axisStats()->getType();
-      if (!axisStatsType.getElementType().isa<FloatType>()) {
-        return emitOpError("axisStats must have a floating point element type");
-      }
-      if (axisStatsType.getRank() != 2 ||
-          axisStatsType.getDimSize(1) != 2 ||
-          axisStatsType.getDimSize(0) != argSliceSize) {
-        return emitOpError("axisStats must have shape [N,2] "
-                           "where N = the slice size defined by the axis dim");
-      }
-    }
-    return success();
-  }];
+  let hasVerifier = 1;
 }
 
 def quant_CoupledRefOp : quant_Op<"coupled_ref", [SameOperandsAndResultType]> {

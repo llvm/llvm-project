@@ -11,9 +11,9 @@
 
 ; We should have all three linkage names in the .debug_info and .debug_names
 ; ALL: .debug_info contents:
+; ALL: DW_AT_linkage_name	("_ZN1n1vE")
 ; ALL: DW_AT_linkage_name	("_Z1fi")
 ; ALL: DW_AT_linkage_name	("_Z1gi")
-; ALL: DW_AT_linkage_name	("_ZN1n1vE")
 ; ALL: .debug_names contents:
 ; ALL: String: {{.*}} "_Z1fi"
 ; ALL: String: {{.*}} "_Z1gi"

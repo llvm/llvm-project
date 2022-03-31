@@ -16,6 +16,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/MachOUniversal.h"
+#include "llvm/Support/MemAlloc.h"
 
 using namespace llvm;
 using namespace object;

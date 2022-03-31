@@ -1,5 +1,6 @@
 import lldb
 import json
+import os
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -7,10 +8,6 @@ from lldbsuite.test import lldbutil
 class TestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
-
-    def setUp(self):
-        TestBase.setUp(self)
-        self.build()
 
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -22,6 +19,7 @@ class TestCase(TestBase):
         of LLDB and test that enabling and disabling stops expesive information
         from being gathered.
         """
+        self.build()
         target = self.createTestTarget()
 
         self.expect("statistics disable", substrs=['need to enable statistics before disabling'], error=True)
@@ -89,6 +87,7 @@ class TestCase(TestBase):
         return None
 
     def test_expressions_frame_var_counts(self):
+        self.build()
         lldbutil.run_to_source_breakpoint(self, "// break here",
                                           lldb.SBFileSpec("main.c"))
 
@@ -135,6 +134,7 @@ class TestCase(TestBase):
 
         (lldb) statistics dump
         {
+          "memory" : {...},
           "modules" : [...],
           "targets" : [
             {
@@ -157,15 +157,21 @@ class TestCase(TestBase):
           "totalSymbolTableIndexTime": 0.234,
         }
         """
+        self.build()
         target = self.createTestTarget()
         debug_stats = self.get_stats()
         debug_stat_keys = [
+            'memory',
             'modules',
             'targets',
             'totalSymbolTableParseTime',
             'totalSymbolTableIndexTime',
+            'totalSymbolTablesLoadedFromCache',
+            'totalSymbolTablesSavedToCache',
             'totalDebugInfoByteSize',
             'totalDebugInfoIndexTime',
+            'totalDebugInfoIndexLoadedFromCache',
+            'totalDebugInfoIndexSavedToCache',
             'totalDebugInfoParseTime',
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
@@ -193,6 +199,7 @@ class TestCase(TestBase):
 
         (lldb) statistics dump
         {
+          "memory" : {...},
           "modules" : [...],
           "targets" : [
                 {
@@ -218,17 +225,23 @@ class TestCase(TestBase):
         }
 
         """
+        self.build()
         target = self.createTestTarget()
         lldbutil.run_to_source_breakpoint(self, "// break here",
                                           lldb.SBFileSpec("main.c"))
         debug_stats = self.get_stats()
         debug_stat_keys = [
+            'memory',
             'modules',
             'targets',
             'totalSymbolTableParseTime',
             'totalSymbolTableIndexTime',
+            'totalSymbolTablesLoadedFromCache',
+            'totalSymbolTablesSavedToCache',
             'totalDebugInfoByteSize',
             'totalDebugInfoIndexTime',
+            'totalDebugInfoIndexLoadedFromCache',
+            'totalDebugInfoIndexSavedToCache',
             'totalDebugInfoParseTime',
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
@@ -246,6 +259,45 @@ class TestCase(TestBase):
         self.assertGreater(stats['launchOrAttachTime'], 0.0)
         self.assertGreater(stats['targetCreateTime'], 0.0)
 
+    def test_memory(self):
+        """
+            Test "statistics dump" and the memory information.
+        """
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        target = self.createTestTarget(file_path=exe)
+        debug_stats = self.get_stats()
+        debug_stat_keys = [
+            'memory',
+            'modules',
+            'targets',
+            'totalSymbolTableParseTime',
+            'totalSymbolTableIndexTime',
+            'totalSymbolTablesLoadedFromCache',
+            'totalSymbolTablesSavedToCache',
+            'totalDebugInfoParseTime',
+            'totalDebugInfoIndexTime',
+            'totalDebugInfoIndexLoadedFromCache',
+            'totalDebugInfoIndexSavedToCache',
+            'totalDebugInfoByteSize'
+        ]
+        self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
+
+        memory = debug_stats['memory']
+        memory_keys= [
+            'strings',
+        ]
+        self.verify_keys(memory, '"memory"', memory_keys, None)
+
+        strings = memory['strings']
+        strings_keys= [
+            'bytesTotal',
+            'bytesUsed',
+            'bytesUnused',
+        ]
+        self.verify_keys(strings, '"strings"', strings_keys, None)
+
+
     def find_module_in_metrics(self, path, stats):
         modules = stats['modules']
         for module in modules:
@@ -253,20 +305,33 @@ class TestCase(TestBase):
                 return module
         return None
 
+    def find_module_by_id_in_metrics(self, id, stats):
+        modules = stats['modules']
+        for module in modules:
+            if module['identifier'] == id:
+                return module
+        return None
+
     def test_modules(self):
         """
             Test "statistics dump" and the module information.
         """
+        self.build()
         exe = self.getBuildArtifact("a.out")
         target = self.createTestTarget(file_path=exe)
         debug_stats = self.get_stats()
         debug_stat_keys = [
+            'memory',
             'modules',
             'targets',
             'totalSymbolTableParseTime',
             'totalSymbolTableIndexTime',
+            'totalSymbolTablesLoadedFromCache',
+            'totalSymbolTablesSavedToCache',
             'totalDebugInfoParseTime',
             'totalDebugInfoIndexTime',
+            'totalDebugInfoIndexLoadedFromCache',
+            'totalDebugInfoIndexSavedToCache',
             'totalDebugInfoByteSize'
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
@@ -278,12 +343,16 @@ class TestCase(TestBase):
         exe_module = self.find_module_in_metrics(exe, debug_stats)
         module_keys = [
             'debugInfoByteSize',
+            'debugInfoIndexLoadedFromCache',
             'debugInfoIndexTime',
+            'debugInfoIndexSavedToCache',
             'debugInfoParseTime',
             'identifier',
             'path',
             'symbolTableIndexTime',
+            'symbolTableLoadedFromCache',
             'symbolTableParseTime',
+            'symbolTableSavedToCache',
             'triple',
             'uuid',
         ]
@@ -296,6 +365,7 @@ class TestCase(TestBase):
         Output expected to be something like:
 
         {
+          "memory" : {...},
           "modules" : [...],
           "targets" : [
                 {
@@ -334,17 +404,23 @@ class TestCase(TestBase):
         }
 
         """
+        self.build()
         target = self.createTestTarget()
         self.runCmd("b main.cpp:7")
         self.runCmd("b a_function")
         debug_stats = self.get_stats()
         debug_stat_keys = [
+            'memory',
             'modules',
             'targets',
             'totalSymbolTableParseTime',
             'totalSymbolTableIndexTime',
+            'totalSymbolTablesLoadedFromCache',
+            'totalSymbolTablesSavedToCache',
             'totalDebugInfoParseTime',
             'totalDebugInfoIndexTime',
+            'totalDebugInfoIndexLoadedFromCache',
+            'totalDebugInfoIndexSavedToCache',
             'totalDebugInfoByteSize',
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
@@ -371,3 +447,108 @@ class TestCase(TestBase):
         for breakpoint in breakpoints:
             self.verify_keys(breakpoint, 'target_stats["breakpoints"]',
                              bp_keys_exist, None)
+
+
+    @skipUnlessDarwin
+    @no_debug_info_test
+    def test_dsym_binary_has_symfile_in_stats(self):
+        """
+            Test that if our executable has a stand alone dSYM file containing
+            debug information, that the dSYM file path is listed as a key/value
+            pair in the "a.out" binaries module stats. Also verify the the main
+            executable's module statistics has a debug info size that is greater
+            than zero as the dSYM contains debug info.
+        """
+        self.build(debug_info="dsym")
+        exe_name = 'a.out'
+        exe = self.getBuildArtifact(exe_name)
+        dsym = self.getBuildArtifact(exe_name + ".dSYM")
+        # Make sure the executable file exists after building.
+        self.assertEqual(os.path.exists(exe), True)
+        # Make sure the dSYM file exists after building.
+        self.assertEqual(os.path.isdir(dsym), True)
+
+        # Create the target
+        target = self.createTestTarget(file_path=exe)
+
+        debug_stats = self.get_stats()
+
+        exe_stats = self.find_module_in_metrics(exe, debug_stats)
+        # If we have a dSYM file, there should be a key/value pair in the module
+        # statistics and the path should match the dSYM file path in the build
+        # artifacts.
+        self.assertIn('symbolFilePath', exe_stats)
+        stats_dsym = exe_stats['symbolFilePath']
+
+        # Make sure main executable's module info has debug info size that is
+        # greater than zero as the dSYM file and main executable work together
+        # in the lldb.SBModule class to provide the data.
+        self.assertGreater(exe_stats['debugInfoByteSize'], 0)
+
+        # The "dsym" variable contains the bundle directory for the dSYM, while
+        # the "stats_dsym" will have the
+        self.assertIn(dsym, stats_dsym)
+        # Since we have a dSYM file, we should not be loading DWARF from the .o
+        # files and the .o file module identifiers should NOT be in the module
+        # statistics.
+        self.assertNotIn('symbolFileModuleIdentifiers', exe_stats)
+
+    @skipUnlessDarwin
+    @no_debug_info_test
+    def test_no_dsym_binary_has_symfile_identifiers_in_stats(self):
+        """
+            Test that if our executable loads debug info from the .o files,
+            that the module statistics contains a 'symbolFileModuleIdentifiers'
+            key which is a list of module identifiers, and verify that the
+            module identifier can be used to find the .o file's module stats.
+            Also verify the the main executable's module statistics has a debug
+            info size that is zero, as the main executable itself has no debug
+            info, but verify that the .o files have debug info size that is
+            greater than zero. This test ensures that we don't double count
+            debug info.
+        """
+        self.build(debug_info="dwarf")
+        exe_name = 'a.out'
+        exe = self.getBuildArtifact(exe_name)
+        dsym = self.getBuildArtifact(exe_name + ".dSYM")
+        print("carp: dsym = '%s'" % (dsym))
+        # Make sure the executable file exists after building.
+        self.assertEqual(os.path.exists(exe), True)
+        # Make sure the dSYM file doesn't exist after building.
+        self.assertEqual(os.path.isdir(dsym), False)
+
+        # Create the target
+        target = self.createTestTarget(file_path=exe)
+
+        # Force the 'main.o' .o file's DWARF to be loaded so it will show up
+        # in the stats.
+        self.runCmd("b main.cpp:7")
+
+        debug_stats = self.get_stats()
+
+        exe_stats = self.find_module_in_metrics(exe, debug_stats)
+        # If we don't have a dSYM file, there should not be a key/value pair in
+        # the module statistics.
+        self.assertNotIn('symbolFilePath', exe_stats)
+
+        # Make sure main executable's module info has debug info size that is
+        # zero as there is no debug info in the main executable, only in the
+        # .o files. The .o files will also only be loaded if something causes
+        # them to be loaded, so we set a breakpoint to force the .o file debug
+        # info to be loaded.
+        self.assertEqual(exe_stats['debugInfoByteSize'], 0)
+
+        # When we don't have a dSYM file, the SymbolFileDWARFDebugMap class
+        # should create modules for each .o file that contains DWARF that the
+        # symbol file creates, so we need to verify that we have a valid module
+        # identifier for main.o that is we should not be loading DWARF from the .o
+        # files and the .o file module identifiers should NOT be in the module
+        # statistics.
+        self.assertIn('symbolFileModuleIdentifiers', exe_stats)
+
+        symfileIDs = exe_stats['symbolFileModuleIdentifiers']
+        for symfileID in symfileIDs:
+            o_module = self.find_module_by_id_in_metrics(symfileID, debug_stats)
+            self.assertNotEqual(o_module, None)
+            # Make sure each .o file has some debug info bytes.
+            self.assertGreater(o_module['debugInfoByteSize'], 0)

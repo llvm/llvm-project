@@ -612,8 +612,9 @@ void NVPTX::OpenMPLinker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(CubinF);
   }
 
-  AddStaticDeviceLibsLinking(C, *this, JA, Inputs, Args, CmdArgs, "nvptx", GPUArch,
-                      false, false);
+  AddStaticDeviceLibsLinking(C, *this, JA, Inputs, Args, CmdArgs, "nvptx",
+                             GPUArch, /*isBitCodeSDL=*/false,
+                             /*postClangLink=*/false);
 
   // Find nvlink and pass it as "--nvlink-path=" argument of
   // clang-nvlink-wrapper.
@@ -627,6 +628,43 @@ void NVPTX::OpenMPLinker::ConstructJob(Compilation &C, const JobAction &JA,
       ResponseFileSupport{ResponseFileSupport::RF_Full, llvm::sys::WEM_UTF8,
                           "--options-file"},
       Exec, CmdArgs, Inputs, Output));
+}
+
+void NVPTX::getNVPTXTargetFeatures(const Driver &D, const llvm::Triple &Triple,
+                                   const llvm::opt::ArgList &Args,
+                                   std::vector<StringRef> &Features,
+                                   Optional<clang::CudaVersion> Version) {
+  if (!Version) {
+    CudaInstallationDetector CudaInstallation(D, Triple, Args);
+    Version = CudaInstallation.version();
+  }
+
+  // New CUDA versions often introduce new instructions that are only supported
+  // by new PTX version, so we need to raise PTX level to enable them in NVPTX
+  // back-end.
+  const char *PtxFeature = nullptr;
+  switch (*Version) {
+#define CASE_CUDA_VERSION(CUDA_VER, PTX_VER)                                   \
+  case CudaVersion::CUDA_##CUDA_VER:                                           \
+    PtxFeature = "+ptx" #PTX_VER;                                              \
+    break;
+    CASE_CUDA_VERSION(115, 75);
+    CASE_CUDA_VERSION(114, 74);
+    CASE_CUDA_VERSION(113, 73);
+    CASE_CUDA_VERSION(112, 72);
+    CASE_CUDA_VERSION(111, 71);
+    CASE_CUDA_VERSION(110, 70);
+    CASE_CUDA_VERSION(102, 65);
+    CASE_CUDA_VERSION(101, 64);
+    CASE_CUDA_VERSION(100, 63);
+    CASE_CUDA_VERSION(92, 61);
+    CASE_CUDA_VERSION(91, 61);
+    CASE_CUDA_VERSION(90, 60);
+#undef CASE_CUDA_VERSION
+  default:
+    PtxFeature = "+ptx42";
+  }
+  Features.push_back(PtxFeature);
 }
 
 /// CUDA toolchain.  Our assembler is ptxas, and our "linker" is fatbinary,
@@ -700,32 +738,11 @@ void CudaToolChain::addClangTargetOptions(
 
   clang::CudaVersion CudaInstallationVersion = CudaInstallation.version();
 
-  // New CUDA versions often introduce new instructions that are only supported
-  // by new PTX version, so we need to raise PTX level to enable them in NVPTX
-  // back-end.
-  const char *PtxFeature = nullptr;
-  switch (CudaInstallationVersion) {
-#define CASE_CUDA_VERSION(CUDA_VER, PTX_VER)                                   \
-  case CudaVersion::CUDA_##CUDA_VER:                                           \
-    PtxFeature = "+ptx" #PTX_VER;                                              \
-    break;
-    CASE_CUDA_VERSION(115, 75);
-    CASE_CUDA_VERSION(114, 74);
-    CASE_CUDA_VERSION(113, 73);
-    CASE_CUDA_VERSION(112, 72);
-    CASE_CUDA_VERSION(111, 71);
-    CASE_CUDA_VERSION(110, 70);
-    CASE_CUDA_VERSION(102, 65);
-    CASE_CUDA_VERSION(101, 64);
-    CASE_CUDA_VERSION(100, 63);
-    CASE_CUDA_VERSION(92, 61);
-    CASE_CUDA_VERSION(91, 61);
-    CASE_CUDA_VERSION(90, 60);
-#undef CASE_CUDA_VERSION
-  default:
-    PtxFeature = "+ptx42";
-  }
-  CC1Args.append({"-target-feature", PtxFeature});
+  std::vector<StringRef> Features;
+  NVPTX::getNVPTXTargetFeatures(getDriver(), getTriple(), DriverArgs, Features,
+                                CudaInstallationVersion);
+  for (StringRef PtxFeature : Features)
+    CC1Args.append({"-target-feature", DriverArgs.MakeArgString(PtxFeature)});
   if (DriverArgs.hasFlag(options::OPT_fcuda_short_ptr,
                          options::OPT_fno_cuda_short_ptr, false))
     CC1Args.append({"-mllvm", "--nvptx-short-ptr"});
@@ -743,17 +760,15 @@ void CudaToolChain::addClangTargetOptions(
       return;
     }
 
-    std::string BitcodeSuffix;
-    if (DriverArgs.hasFlag(options::OPT_fopenmp_target_new_runtime,
-                           options::OPT_fno_openmp_target_new_runtime, true))
-      BitcodeSuffix = "new-nvptx-" + GpuArch.str();
-    else
-      BitcodeSuffix = "nvptx-" + GpuArch.str();
+    // Link the bitcode library late if we're using device LTO.
+    if (getDriver().isUsingLTO(/* IsOffload */ true))
+      return;
 
-    addOpenMPDeviceRTL(getDriver(), DriverArgs, CC1Args, BitcodeSuffix,
+    addOpenMPDeviceRTL(getDriver(), DriverArgs, CC1Args, GpuArch.str(),
                        getTriple());
-    AddStaticDeviceLibsPostLinking(getDriver(), DriverArgs, CC1Args, "nvptx", GpuArch,
-                        /* bitcode SDL?*/ true, /* PostClang Link? */ true);
+    AddStaticDeviceLibsPostLinking(getDriver(), DriverArgs, CC1Args, "nvptx",
+                                   GpuArch, /*isBitCodeSDL=*/true,
+                                   /*postClangLink=*/true);
   }
 }
 

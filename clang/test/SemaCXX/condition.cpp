@@ -20,6 +20,8 @@ void test() {
   while (struct S {} *x=0) ; // expected-error {{'S' cannot be defined in a condition}}
   while (struct {} *x=0) ; // expected-error-re {{'(unnamed struct at {{.*}})' cannot be defined in a condition}}
   switch (enum {E} x=0) ; // expected-error-re {{'(unnamed enum at {{.*}})' cannot be defined in a condition}}
+                          // expected-warning@-1 {{switch statement has empty body}}
+                          // expected-note@-2 {{put the semicolon on a separate line}}
 
   if (int x=0) { // expected-note 2 {{previous definition is here}}
     int x;  // expected-error {{redefinition of 'x'}}

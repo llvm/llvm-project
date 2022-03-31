@@ -18,11 +18,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/LowerMatrixIntrinsics.h"
-#include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -220,9 +220,7 @@ class LowerMatrixIntrinsics {
     bool IsColumnMajor = true;
 
   public:
-    MatrixTy()
-        : Vectors(),
-          IsColumnMajor(MatrixLayout == MatrixLayoutTy::ColumnMajor) {}
+    MatrixTy() : IsColumnMajor(MatrixLayout == MatrixLayoutTy::ColumnMajor) {}
     MatrixTy(ArrayRef<Value *> Vectors)
         : Vectors(Vectors.begin(), Vectors.end()),
           IsColumnMajor(MatrixLayout == MatrixLayoutTy::ColumnMajor) {}
@@ -720,7 +718,7 @@ public:
         Instruction *NewInst = nullptr;
 
         IRBuilder<> IB(&I);
-        MatrixBuilder<IRBuilder<>> Builder(IB);
+        MatrixBuilder Builder(IB);
 
         Value *TA, *TAMA, *TAMB;
         ConstantInt *R, *K, *C;
@@ -781,7 +779,7 @@ public:
             match(A, m_Intrinsic<Intrinsic::matrix_transpose>(m_Value(AT))) &&
             match(B, m_Intrinsic<Intrinsic::matrix_transpose>(m_Value((BT))))) {
           IRBuilder<> IB(&*I);
-          MatrixBuilder<IRBuilder<>> Builder(IB);
+          MatrixBuilder Builder(IB);
           Value *M = Builder.CreateMatrixMultiply(
               BT, AT, C->getZExtValue(), K->getZExtValue(), R->getZExtValue());
           setShapeInfo(M, {C, R});
@@ -1341,16 +1339,21 @@ public:
 
     // Copy load operand to new alloca.
     Builder.SetInsertPoint(Copy, Copy->begin());
-    AllocaInst *NewLd =
-        Builder.CreateAlloca(Load->getType(), Load->getPointerAddressSpace());
-    Builder.CreateMemCpy(NewLd, NewLd->getAlign(),
-                         Load->getPointerOperand(), Load->getAlign(),
-                         LoadLoc.Size.getValue());
+    auto *VT = cast<FixedVectorType>(Load->getType());
+    // Use an array type for the alloca, to avoid potentially huge alignment
+    // requirements for large vector types.
+    auto *ArrayTy = ArrayType::get(VT->getElementType(), VT->getNumElements());
+    AllocaInst *Alloca =
+        Builder.CreateAlloca(ArrayTy, Load->getPointerAddressSpace());
+    Value *BC = Builder.CreateBitCast(Alloca, VT->getPointerTo());
+
+    Builder.CreateMemCpy(BC, Alloca->getAlign(), Load->getPointerOperand(),
+                         Load->getAlign(), LoadLoc.Size.getValue());
     Builder.SetInsertPoint(Fusion, Fusion->begin());
     PHINode *PHI = Builder.CreatePHI(Load->getPointerOperandType(), 3);
     PHI->addIncoming(Load->getPointerOperand(), Check0);
     PHI->addIncoming(Load->getPointerOperand(), Check1);
-    PHI->addIncoming(NewLd, Copy);
+    PHI->addIncoming(BC, Copy);
 
     // Adjust DT.
     DTUpdates.push_back({DT->Insert, Check0, Check1});
@@ -1393,7 +1396,8 @@ public:
     // reloads necessary.
     unsigned Op0Regs = (R + VF - 1) / VF * M;
     unsigned Op1Regs = (M + VF - 1) / VF * C;
-    return Op0Regs + Op1Regs > TTI.getNumberOfRegisters(true);
+    return Op0Regs + Op1Regs >
+           TTI.getNumberOfRegisters(TTI.getRegisterClassForType(true));
   }
 
   MatrixTy getZeroMatrix(Type *EltType, unsigned R, unsigned C) {
@@ -1832,7 +1836,7 @@ public:
                    const DenseMap<Value *, SmallPtrSet<Value *, 2>> &Shared,
                    const SmallSetVector<Value *, 32> &ExprsInSubprogram,
                    Value *Leaf)
-        : Str(), Stream(Str), DL(DL), Inst2Matrix(Inst2Matrix), Shared(Shared),
+        : Stream(Str), DL(DL), Inst2Matrix(Inst2Matrix), Shared(Shared),
           ExprsInSubprogram(ExprsInSubprogram), Leaf(Leaf) {}
 
     void indent(unsigned N) {
@@ -1895,7 +1899,7 @@ public:
           write(Name);
           return;
         }
-        IntrinsicInst *II = dyn_cast<IntrinsicInst>(CI);
+        auto *II = cast<IntrinsicInst>(CI);
         write(Intrinsic::getBaseName(II->getIntrinsicID())
                   .drop_front(StringRef("llvm.matrix.").size()));
         write(".");

@@ -337,7 +337,7 @@ private:
   //
   // The method returns true upon reaching the first non-whitespace symbol
   // or EOF, CurPtr is set to point to this symbol.  The method returns false,
-  // if an error occured during skipping of a C-style comment.
+  // if an error occurred during skipping of a C-style comment.
   bool prepSkipLineBegin();
 
   // Skip any whitespaces or comments after a preprocessing directive.
@@ -345,7 +345,7 @@ private:
   // or end of the file.  If there is a multiline C-style comment
   // after the preprocessing directive, the method skips
   // the comment, so the final CurPtr may point to one of the next lines.
-  // The method returns false, if an error occured during skipping
+  // The method returns false, if an error occurred during skipping
   // C- or C++-style comment, or a non-whitespace symbol appears
   // after the preprocessing directive.
   //

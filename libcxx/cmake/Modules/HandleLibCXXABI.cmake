@@ -1,7 +1,8 @@
-
 #===============================================================================
 # Add an ABI library if appropriate
 #===============================================================================
+
+include(GNUInstallDirs)
 
 #
 # _setup_abi: Set up the build to use an ABI library
@@ -14,8 +15,7 @@
 #               libc++ build tree for the build.  These files will be copied
 #               twice: once into include/, so the libc++ build itself can find
 #               them, and once into include/c++/v1, so that a clang built into
-#               the same build area will find them.  These files will also be
-#               installed alongside the libc++ headers.
+#               the same build area will find them.
 #   abidirs   : A list of relative paths to create under an include directory
 #               in the libc++ build directory.
 #
@@ -60,14 +60,6 @@ macro(setup_abi_lib abidefines abishared abistatic abifiles abidirs)
             COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src} ${dst}
             COMMENT "Copying C++ ABI header ${fpath}...")
         list(APPEND abilib_headers "${dst}")
-
-        if (LIBCXX_INSTALL_HEADERS)
-          install(FILES "${LIBCXX_BINARY_INCLUDE_DIR}/${fpath}"
-            DESTINATION include/c++/v1/${dstdir}
-            COMPONENT cxx-headers
-            PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
-            )
-        endif()
       else()
         message(STATUS "Looking for ${fpath} in ${incpath} - not found")
       endif()
@@ -117,6 +109,10 @@ elseif ("${LIBCXX_CXX_ABI_LIBNAME}" STREQUAL "libcxxabi")
   setup_abi_lib(
     "-DLIBCXX_BUILDING_LIBCXXABI"
     "${shared}" "${static}" "cxxabi.h;__cxxabi_config.h" "")
+elseif ("${LIBCXX_CXX_ABI_LIBNAME}" STREQUAL "system-libcxxabi")
+  setup_abi_lib(
+    "-DLIBCXX_BUILDING_LIBCXXABI"
+    "c++abi" "c++abi" "cxxabi.h;__cxxabi_config.h" "")
 elseif ("${LIBCXX_CXX_ABI_LIBNAME}" STREQUAL "libcxxrt")
   if(NOT LIBCXX_CXX_ABI_INCLUDE_PATHS)
     set(LIBCXX_CXX_ABI_INCLUDE_PATHS "/usr/include/c++/v1")

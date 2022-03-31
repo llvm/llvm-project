@@ -618,8 +618,8 @@ std::vector<int> ScheduleDAGTopologicalSort::GetSubGraph(const SUnit &StartSU,
   do {
     const SUnit *SU = WorkList.back();
     WorkList.pop_back();
-    for (int I = SU->Succs.size()-1; I >= 0; --I) {
-      const SUnit *Succ = SU->Succs[I].getSUnit();
+    for (const SDep &SD : llvm::reverse(SU->Succs)) {
+      const SUnit *Succ = SD.getSUnit();
       unsigned s = Succ->NodeNum;
       // Edges to non-SUnits are allowed but ignored (e.g. ExitSU).
       if (Succ->isBoundaryNode())
@@ -652,8 +652,8 @@ std::vector<int> ScheduleDAGTopologicalSort::GetSubGraph(const SUnit &StartSU,
   do {
     const SUnit *SU = WorkList.back();
     WorkList.pop_back();
-    for (int I = SU->Preds.size()-1; I >= 0; --I) {
-      const SUnit *Pred = SU->Preds[I].getSUnit();
+    for (const SDep &SD : llvm::reverse(SU->Preds)) {
+      const SUnit *Pred = SD.getSUnit();
       unsigned s = Pred->NodeNum;
       // Edges to non-SUnits are allowed but ignored (e.g. EntrySU).
       if (Pred->isBoundaryNode())

@@ -6,7 +6,7 @@ void g(void);
 // __leave with __except
 
 // Nothing in the __try block can trap, so __try.cont isn't created.
-int __leave_with___except_simple() {
+int __leave_with___except_simple(void) {
   int myres = 0;
   __try {
     myres = 15;
@@ -26,7 +26,7 @@ int __leave_with___except_simple() {
 
 
 // The "normal" case.
-int __leave_with___except() {
+int __leave_with___except(void) {
   int myres = 0;
   __try {
     g();
@@ -58,7 +58,7 @@ void abort(void) __attribute__((noreturn));
 
 // Nothing in the __try block can trap, so __finally.cont and friends aren't
 // created.
-int __leave_with___finally_simple() {
+int __leave_with___finally_simple(void) {
   int myres = 0;
   __try {
     myres = 15;
@@ -75,10 +75,10 @@ int __leave_with___finally_simple() {
 // CHECK-NOT: store i32 23
 // CHECK: [[tryleave]]
 // CHECK-NEXT: %[[fp:[^ ]*]] = call i8* @llvm.localaddress()
-// CHECK-NEXT: call void @"?fin$0@0@__leave_with___finally_simple@@"(i8 0, i8* %[[fp]])
+// CHECK-NEXT: call void @"?fin$0@0@__leave_with___finally_simple@@"(i8 noundef 0, i8* noundef %[[fp]])
 
 // __finally block doesn't return, __finally.cont doesn't exist.
-int __leave_with___finally_noreturn() {
+int __leave_with___finally_noreturn(void) {
   int myres = 0;
   __try {
     myres = 15;
@@ -95,10 +95,10 @@ int __leave_with___finally_noreturn() {
 // CHECK-NOT: store i32 23
 // CHECK: [[tryleave]]
 // CHECK-NEXT: %[[fp:[^ ]*]] = call i8* @llvm.localaddress()
-// CHECK-NEXT: call void @"?fin$0@0@__leave_with___finally_noreturn@@"(i8 0, i8* %[[fp]])
+// CHECK-NEXT: call void @"?fin$0@0@__leave_with___finally_noreturn@@"(i8 noundef 0, i8* noundef %[[fp]])
 
 // The "normal" case.
-int __leave_with___finally() {
+int __leave_with___finally(void) {
   int myres = 0;
   __try {
     g();
@@ -119,13 +119,13 @@ int __leave_with___finally() {
 // CHECK-NOT: store i32 23
 // CHECK: [[tryleave]]
 // CHECK-NEXT: %[[fp:[^ ]*]] = call i8* @llvm.localaddress()
-// CHECK-NEXT: call void @"?fin$0@0@__leave_with___finally@@"(i8 0, i8* %[[fp]])
+// CHECK-NEXT: call void @"?fin$0@0@__leave_with___finally@@"(i8 noundef 0, i8* noundef %[[fp]])
 
 
 //////////////////////////////////////////////////////////////////////////////
 // Mixed, nested cases.
 
-int nested___except___finally() {
+int nested___except___finally(void) {
   int myres = 0;
   __try {
     __try {
@@ -149,7 +149,7 @@ int nested___except___finally() {
 
 // CHECK: [[g1_cont1]]
 // CHECK-NEXT: %[[fp:[^ ]*]] = call i8* @llvm.localaddress()
-// CHECK-NEXT: invoke void @"?fin$0@0@nested___except___finally@@"(i8 0, i8* %[[fp]])
+// CHECK-NEXT: invoke void @"?fin$0@0@nested___except___finally@@"(i8 noundef 0, i8* noundef %[[fp]])
 // CHECK-NEXT:       to label %[[fin_cont:.*]] unwind label %[[g2_lpad:.*]]
 
 // CHECK: [[fin_cont]]
@@ -159,7 +159,7 @@ int nested___except___finally() {
 // CHECK: [[g1_lpad]]
 // CHECK-NEXT: cleanuppad
 // CHECK-NEXT: %[[fp:[^ ]*]] = call i8* @llvm.localaddress()
-// CHECK-NEXT: invoke void @"?fin$0@0@nested___except___finally@@"(i8 1, i8* %[[fp]])
+// CHECK-NEXT: invoke void @"?fin$0@0@nested___except___finally@@"(i8 noundef 1, i8* noundef %[[fp]])
 // CHECK-NEXT:       to label %[[g1_resume:.*]] unwind label %[[g2_lpad]]
 // CHECK: cleanupret {{.*}} unwind label %[[g2_lpad]]
 
@@ -171,11 +171,11 @@ int nested___except___finally() {
 // CHECK: [[trycont]]
 // CHECK-NEXT: ret i32 1
 
-// CHECK-LABEL: define internal void @"?fin$0@0@nested___except___finally@@"(i8 %abnormal_termination, i8* %frame_pointer)
+// CHECK-LABEL: define internal void @"?fin$0@0@nested___except___finally@@"(i8 noundef %abnormal_termination, i8* noundef %frame_pointer)
 // CHECK: call void @g()
 // CHECK: unreachable
 
-int nested___except___except() {
+int nested___except___except(void) {
   int myres = 0;
   __try {
     __try {
@@ -229,7 +229,7 @@ int nested___except___except() {
 // CHECK: [[tryleave]]
 // CHECK-NEXT: br label %[[trycont4]]
 
-int nested___finally___except() {
+int nested___finally___except(void) {
   int myres = 0;
   __try {
     __try {
@@ -271,19 +271,19 @@ int nested___finally___except() {
 
 // CHECK: [[tryleave]]
 // CHECK: %[[fp:[^ ]*]] = call i8* @llvm.localaddress()
-// CHECK-NEXT: call void @"?fin$0@0@nested___finally___except@@"(i8 0, i8* %[[fp]])
+// CHECK-NEXT: call void @"?fin$0@0@nested___finally___except@@"(i8 noundef 0, i8* noundef %[[fp]])
 // CHECK-NEXT: ret i32 1
 
 // CHECK: [[g2_lpad]]
 // CHECK: cleanuppad
 // CHECK: %[[fp:[^ ]*]] = call i8* @llvm.localaddress()
-// CHECK-NEXT: call void @"?fin$0@0@nested___finally___except@@"(i8 1, i8* %[[fp]])
+// CHECK-NEXT: call void @"?fin$0@0@nested___finally___except@@"(i8 noundef 1, i8* noundef %[[fp]])
 // CHECK: cleanupret {{.*}} unwind to caller
 
-// CHECK-LABEL: define internal void @"?fin$0@0@nested___finally___except@@"(i8 %abnormal_termination, i8* %frame_pointer)
+// CHECK-LABEL: define internal void @"?fin$0@0@nested___finally___except@@"(i8 noundef %abnormal_termination, i8* noundef %frame_pointer)
 // CHECK: ret void
 
-int nested___finally___finally() {
+int nested___finally___finally(void) {
   int myres = 0;
   __try {
     __try {
@@ -310,19 +310,19 @@ int nested___finally___finally() {
 // CHECK: [[g1_cont]]
 // CHECK: store i32 16, i32* %[[myres:[^ ]*]],
 // CHECK: %[[fp:[^ ]*]] = call i8* @llvm.localaddress()
-// CHECK-NEXT: invoke void @"?fin$1@0@nested___finally___finally@@"(i8 0, i8* %[[fp]])
+// CHECK-NEXT: invoke void @"?fin$1@0@nested___finally___finally@@"(i8 noundef 0, i8* noundef %[[fp]])
 // CHECK-NEXT:       to label %[[finally_cont:.*]] unwind label %[[g2_lpad:.*]]
 
 // CHECK: [[finally_cont]]
 // CHECK: store i32 51, i32* %[[myres]]
 // CHECK: %[[fp:[^ ]*]] = call i8* @llvm.localaddress()
-// CHECK-NEXT: call void @"?fin$0@0@nested___finally___finally@@"(i8 0, i8* %[[fp]])
+// CHECK-NEXT: call void @"?fin$0@0@nested___finally___finally@@"(i8 noundef 0, i8* noundef %[[fp]])
 // CHECK-NEXT: ret i32 1
 
 // CHECK: [[g1_lpad]]
 // CHECK-NEXT: %[[padtoken:[^ ]*]] = cleanuppad within none []
 // CHECK-NEXT: %[[fp:[^ ]*]] = call i8* @llvm.localaddress()
-// CHECK-NEXT: invoke void @"?fin$1@0@nested___finally___finally@@"(i8 1, i8* %[[fp]])
+// CHECK-NEXT: invoke void @"?fin$1@0@nested___finally___finally@@"(i8 noundef 1, i8* noundef %[[fp]])
 // CHECK-NEXT:       to label %[[finally_cont2:.*]] unwind label %[[g2_lpad]]
 // CHECK: [[finally_cont2]]
 // CHECK: cleanupret from %[[padtoken]] unwind label %[[g2_lpad]]
@@ -330,12 +330,12 @@ int nested___finally___finally() {
 // CHECK: [[g2_lpad]]
 // CHECK-NEXT: %[[padtoken:[^ ]*]] = cleanuppad within none []
 // CHECK-NEXT: %[[fp:[^ ]*]] = call i8* @llvm.localaddress()
-// CHECK-NEXT: call void @"?fin$0@0@nested___finally___finally@@"(i8 1, i8* %[[fp]])
+// CHECK-NEXT: call void @"?fin$0@0@nested___finally___finally@@"(i8 noundef 1, i8* noundef %[[fp]])
 // CHECK: cleanupret from %[[padtoken]] unwind to caller
 
-// CHECK-LABEL: define internal void @"?fin$0@0@nested___finally___finally@@"(i8 %abnormal_termination, i8* %frame_pointer)
+// CHECK-LABEL: define internal void @"?fin$0@0@nested___finally___finally@@"(i8 noundef %abnormal_termination, i8* noundef %frame_pointer)
 // CHECK: ret void
 
-// CHECK-LABEL: define internal void @"?fin$1@0@nested___finally___finally@@"(i8 %abnormal_termination, i8* %frame_pointer)
+// CHECK-LABEL: define internal void @"?fin$1@0@nested___finally___finally@@"(i8 noundef %abnormal_termination, i8* noundef %frame_pointer)
 // CHECK: call void @g()
 // CHECK: unreachable

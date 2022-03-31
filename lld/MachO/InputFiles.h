@@ -58,11 +58,37 @@ struct Subsection {
 };
 
 using Subsections = std::vector<Subsection>;
+class InputFile;
 
 struct Section {
-  uint64_t address = 0;
+  InputFile *file;
+  StringRef segname;
+  StringRef name;
+  uint32_t flags;
+  uint64_t addr;
   Subsections subsections;
-  Section(uint64_t addr) : address(addr){};
+
+  Section(InputFile *file, StringRef segname, StringRef name, uint32_t flags,
+          uint64_t addr)
+      : file(file), segname(segname), name(name), flags(flags), addr(addr) {}
+  // Ensure pointers to Sections are never invalidated.
+  Section(const Section &) = delete;
+  Section &operator=(const Section &) = delete;
+  Section(Section &&) = delete;
+  Section &operator=(Section &&) = delete;
+};
+
+// Represents a call graph profile edge.
+struct CallGraphEntry {
+  // The index of the caller in the symbol table.
+  uint32_t fromIndex;
+  // The index of the callee in the symbol table.
+  uint32_t toIndex;
+  // Number of calls from callee to caller in the profile.
+  uint64_t count;
+
+  CallGraphEntry(uint32_t fromIndex, uint32_t toIndex, uint64_t count)
+      : fromIndex(fromIndex), toIndex(toIndex), count(count) {}
 };
 
 class InputFile {
@@ -83,17 +109,22 @@ public:
   MemoryBufferRef mb;
 
   std::vector<Symbol *> symbols;
-  std::vector<Section> sections;
-  // Provides an easy way to sort InputFiles deterministically.
-  const int id;
+  std::vector<Section *> sections;
 
   // If not empty, this stores the name of the archive containing this file.
   // We use this string for creating error messages.
   std::string archiveName;
 
+  // Provides an easy way to sort InputFiles deterministically.
+  const int id;
+
+  // True if this is a lazy ObjFile or BitcodeFile.
+  bool lazy = false;
+
 protected:
-  InputFile(Kind kind, MemoryBufferRef mb)
-      : mb(mb), id(idCount++), fileKind(kind), name(mb.getBufferIdentifier()) {}
+  InputFile(Kind kind, MemoryBufferRef mb, bool lazy = false)
+      : mb(mb), id(idCount++), lazy(lazy), fileKind(kind),
+        name(mb.getBufferIdentifier()) {}
 
   InputFile(Kind, const llvm::MachO::InterfaceFile &);
 
@@ -107,18 +138,22 @@ private:
 // .o file
 class ObjFile final : public InputFile {
 public:
-  ObjFile(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName);
+  ObjFile(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName,
+          bool lazy = false);
+  ArrayRef<llvm::MachO::data_in_code_entry> getDataInCode() const;
+  template <class LP> void parse();
+
   static bool classof(const InputFile *f) { return f->kind() == ObjKind; }
 
   llvm::DWARFUnit *compileUnit = nullptr;
   const uint32_t modTime;
   std::vector<ConcatInputSection *> debugSections;
-  ArrayRef<llvm::MachO::data_in_code_entry> dataInCodeEntries;
+  std::vector<CallGraphEntry> callGraph;
 
 private:
   Section *compactUnwindSection = nullptr;
 
-  template <class LP> void parse();
+  template <class LP> void parseLazy();
   template <class SectionHeader> void parseSections(ArrayRef<SectionHeader>);
   template <class LP>
   void parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
@@ -128,9 +163,8 @@ private:
   Symbol *parseNonSectionSymbol(const NList &sym, StringRef name);
   template <class SectionHeader>
   void parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
-                        const SectionHeader &, Subsections &);
+                        const SectionHeader &, Section &);
   void parseDebugInfo();
-  void parseDataInCode();
   void registerCompactUnwind();
 };
 
@@ -159,6 +193,7 @@ public:
 
   void parseLoadCommands(MemoryBufferRef mb);
   void parseReexports(const llvm::MachO::InterfaceFile &interface);
+  bool isReferenced() const { return numReferencedSymbols > 0; }
 
   static bool classof(const InputFile *f) { return f->kind() == DylibKind; }
 
@@ -169,28 +204,27 @@ public:
   uint32_t compatibilityVersion = 0;
   uint32_t currentVersion = 0;
   int64_t ordinal = 0; // Ordinal numbering starts from 1, so 0 is a sentinel
+  unsigned numReferencedSymbols = 0;
   RefState refState;
   bool reexport = false;
   bool forceNeeded = false;
   bool forceWeakImport = false;
   bool deadStrippable = false;
   bool explicitlyLinked = false;
-
-  unsigned numReferencedSymbols = 0;
-
-  bool isReferenced() const { return numReferencedSymbols > 0; }
-
   // An executable can be used as a bundle loader that will load the output
   // file being linked, and that contains symbols referenced, but not
   // implemented in the bundle. When used like this, it is very similar
-  // to a Dylib, so we re-used the same class to represent it.
+  // to a dylib, so we've used the same class to represent it.
   bool isBundleLoader;
 
 private:
   bool handleLDSymbol(StringRef originalName);
   void handleLDPreviousSymbol(StringRef name, StringRef originalName);
   void handleLDInstallNameSymbol(StringRef name, StringRef originalName);
+  void handleLDHideSymbol(StringRef name, StringRef originalName);
   void checkAppExtensionSafety(bool dylibIsAppExtensionSafe) const;
+
+  llvm::DenseSet<llvm::CachedHashStringRef> hiddenSymbols;
 };
 
 // .a file
@@ -215,16 +249,22 @@ private:
 class BitcodeFile final : public InputFile {
 public:
   explicit BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
-                       uint64_t offsetInArchive);
+                       uint64_t offsetInArchive, bool lazy = false);
   static bool classof(const InputFile *f) { return f->kind() == BitcodeKind; }
+  void parse();
 
   std::unique_ptr<llvm::lto::InputFile> obj;
+
+private:
+  void parseLazy();
 };
 
 extern llvm::SetVector<InputFile *> inputFiles;
 extern llvm::DenseMap<llvm::CachedHashStringRef, MemoryBufferRef> cachedReads;
 
 llvm::Optional<MemoryBufferRef> readFile(StringRef path);
+
+void extract(InputFile &file, StringRef reason);
 
 namespace detail {
 

@@ -6,8 +6,8 @@ struct S {
   int i, j;
 };
 
-// CHECK: File 0, [[@LINE+1]]:12 -> [[@LINE+11]]:2 = #0
-int main() {
+// CHECK: File 0, [[@LINE+1]]:16 -> [[@LINE+11]]:2 = #0
+int main(void) {
   struct S arr[32] = { 0 };
   int n = 0;
   // CHECK-NEXT: Expansion,File 0, [[@LINE+3]]:7 -> [[@LINE+3]]:12 = #0

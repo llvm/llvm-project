@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -test-scf-pipelining -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -test-scf-pipelining=annotate -split-input-file | FileCheck %s --check-prefix ANNOTATE
 
 // CHECK-LABEL: simple_pipeline(
 //  CHECK-SAME:   %[[A:.*]]: memref<?xf32>, %[[R:.*]]: memref<?xf32>) {
@@ -34,6 +35,45 @@ func @simple_pipeline(%A: memref<?xf32>, %result: memref<?xf32>) {
 
 // -----
 
+// CHECK-LABEL: simple_pipeline_step(
+//  CHECK-SAME:   %[[A:.*]]: memref<?xf32>, %[[R:.*]]: memref<?xf32>) {
+//   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
+//   CHECK-DAG:   %[[C3:.*]] = arith.constant 3 : index
+//   CHECK-DAG:   %[[C5:.*]] = arith.constant 5 : index
+//   CHECK-DAG:   %[[C6:.*]] = arith.constant 6 : index
+//   CHECK-DAG:   %[[C9:.*]] = arith.constant 9 : index
+// Prologue:
+//       CHECK:   %[[L0:.*]] = memref.load %[[A]][%[[C0]]] : memref<?xf32>
+//       CHECK:   %[[L1:.*]] = memref.load %[[A]][%[[C3]]] : memref<?xf32>
+// Kernel:
+//  CHECK-NEXT:   %[[L2:.*]]:2 = scf.for %[[IV:.*]] = %[[C0]] to %[[C5]]
+//  CHECK-SAME:     step %[[C3]] iter_args(%[[LARG0:.*]] = %[[L0]], %[[LARG1:.*]] = %[[L1]]) -> (f32, f32) {
+//  CHECK-NEXT:     %[[ADD0:.*]] = arith.addf %[[LARG0]], %{{.*}} : f32
+//  CHECK-NEXT:     memref.store %[[ADD0]], %[[R]][%[[IV]]] : memref<?xf32>
+//  CHECK-NEXT:     %[[IV1:.*]] = arith.addi %[[IV]], %[[C6]] : index
+//  CHECK-NEXT:     %[[LR:.*]] = memref.load %[[A]][%[[IV1]]] : memref<?xf32>
+//  CHECK-NEXT:     scf.yield %[[LARG1]], %[[LR]] : f32, f32
+//  CHECK-NEXT:   }
+// Epilogue:
+//  CHECK-NEXT:   %[[ADD1:.*]] = arith.addf %[[L2]]#0, %{{.*}} : f32
+//  CHECK-NEXT:   memref.store %[[ADD1]], %[[R]][%[[C6]]] : memref<?xf32>
+//  CHECK-NEXT:   %[[ADD2:.*]] = arith.addf %[[L2]]#1, %{{.*}} : f32
+//  CHECK-NEXT:   memref.store %[[ADD2]], %[[R]][%[[C9]]] : memref<?xf32>
+func @simple_pipeline_step(%A: memref<?xf32>, %result: memref<?xf32>) {
+  %c0 = arith.constant 0 : index
+  %c3 = arith.constant 3 : index
+  %c11 = arith.constant 11 : index
+  %cf = arith.constant 1.0 : f32
+  scf.for %i0 = %c0 to %c11 step %c3 {
+    %A_elem = memref.load %A[%i0] { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 2 } : memref<?xf32>
+    %A1_elem = arith.addf %A_elem, %cf { __test_pipelining_stage__ = 2, __test_pipelining_op_order__ = 0 } : f32
+    memref.store %A1_elem, %result[%i0] { __test_pipelining_stage__ = 2, __test_pipelining_op_order__ = 1 } : memref<?xf32>
+  }  { __test_pipelining_loop__ }
+  return
+}
+
+// -----
+
 // CHECK-LABEL: three_stage(
 //  CHECK-SAME:   %[[A:.*]]: memref<?xf32>, %[[R:.*]]: memref<?xf32>) {
 //   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
@@ -58,6 +98,22 @@ func @simple_pipeline(%A: memref<?xf32>, %result: memref<?xf32>) {
 //  CHECK-NEXT:   memref.store %[[LR]]#0, %[[R]][%[[C2]]] : memref<?xf32>
 //  CHECK-NEXT:   %[[ADD2:.*]] = arith.addf %[[LR]]#1, %{{.*}} : f32
 //  CHECK-NEXT:   memref.store %[[ADD2]], %[[R]][%[[C3]]] : memref<?xf32>
+
+// Prologue:
+//  ANNOTATE:   memref.load {{.*}} {__test_pipelining_iteration = 0 : i32, __test_pipelining_part = "prologue"}
+//  ANNOTATE:   memref.load {{.*}} {__test_pipelining_iteration = 1 : i32, __test_pipelining_part = "prologue"}
+// Kernel:
+//  ANNOTATE:   scf.for
+//  ANNOTATE:     memref.store {{.*}} {__test_pipelining_iteration = 0 : i32, __test_pipelining_part = "kernel"}
+//  ANNOTATE:     arith.addf {{.*}} {__test_pipelining_iteration = 0 : i32, __test_pipelining_part = "kernel"}
+//  ANNOTATE:     memref.load {{.*}} {__test_pipelining_iteration = 0 : i32, __test_pipelining_part = "kernel"}
+//  ANNOTATE:     scf.yield
+//  ANNOTATE:   }
+// Epilogue:
+//  ANNOTATE:   memref.store {{.*}} {__test_pipelining_iteration = 0 : i32, __test_pipelining_part = "epilogue"}
+//  ANNOTATE:   arith.addf {{.*}} {__test_pipelining_iteration = 0 : i32, __test_pipelining_part = "epilogue"}
+//  ANNOTATE:   memref.store {{.*}} {__test_pipelining_iteration = 1 : i32, __test_pipelining_part = "epilogue"}
+
 func @three_stage(%A: memref<?xf32>, %result: memref<?xf32>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -224,17 +280,14 @@ func @loop_carried(%A: memref<?xf32>, %result: memref<?xf32>) {
 //  CHECK-NEXT:   %[[R:.*]]:3 = scf.for %[[IV:.*]] = %[[C0]] to %[[C2]]
 //  CHECK-SAME:     step %[[C1]] iter_args(%[[C:.*]] = %[[CSTF]],
 //  CHECK-SAME:     %[[ADDARG:.*]] = %[[ADD0]], %[[LARG:.*]] = %[[L1]]) -> (f32, f32, f32) {
-//  CHECK-NEXT:     %[[MUL0:.*]] = arith.mulf %[[CSTF]], %[[ADDARG]] : f32
-//  CHECK-NEXT:     %[[ADD1:.*]] = arith.addf %[[LARG]], %[[MUL0]] : f32
+//  CHECK-NEXT:     %[[ADD1:.*]] = arith.addf %[[LARG]], %[[ADDARG]] : f32
 //  CHECK-NEXT:     %[[IV2:.*]] = arith.addi %[[IV]], %[[C2]] : index
 //  CHECK-NEXT:     %[[L2:.*]] = memref.load %[[A]][%[[IV2]]] : memref<?xf32>
-//  CHECK-NEXT:     scf.yield %[[MUL0]], %[[ADD1]], %[[L2]] : f32, f32, f32
+//  CHECK-NEXT:     scf.yield %[[ADDARG]], %[[ADD1]], %[[L2]] : f32, f32, f32
 //  CHECK-NEXT:   }
 // Epilogue:
-//  CHECK-NEXT:   %[[MUL1:.*]] = arith.mulf %[[CSTF]], %[[R]]#1 : f32
-//  CHECK-NEXT:   %[[ADD2:.*]] = arith.addf %[[R]]#2, %[[MUL1]] : f32
-//  CHECK-NEXT:   %[[MUL2:.*]] = arith.mulf %[[CSTF]], %[[ADD2]] : f32
-//  CHECK-NEXT:   return %[[MUL2]] : f32
+//  CHECK-NEXT:   %[[ADD2:.*]] = arith.addf %[[R]]#2, %[[R]]#1 : f32
+//  CHECK-NEXT:   return %[[ADD2]] : f32
 func @backedge_different_stage(%A: memref<?xf32>) -> f32 {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -264,15 +317,13 @@ func @backedge_different_stage(%A: memref<?xf32>) -> f32 {
 //  CHECK-SAME:     step %[[C1]] iter_args(%[[C:.*]] = %[[CSTF]],
 //  CHECK-SAME:     %[[LARG:.*]] = %[[L0]]) -> (f32, f32) {
 //  CHECK-NEXT:     %[[ADD0:.*]] = arith.addf %[[LARG]], %[[C]] : f32
-//  CHECK-NEXT:     %[[MUL0:.*]] = arith.mulf %[[CSTF]], %[[ADD0]] : f32
 //  CHECK-NEXT:     %[[IV1:.*]] = arith.addi %[[IV]], %[[C1]] : index
 //  CHECK-NEXT:     %[[L2:.*]] = memref.load %[[A]][%[[IV1]]] : memref<?xf32>
-//  CHECK-NEXT:     scf.yield %[[MUL0]], %[[L2]] : f32, f32
+//  CHECK-NEXT:     scf.yield %[[ADD0]], %[[L2]] : f32, f32
 //  CHECK-NEXT:   }
 // Epilogue:
 //  CHECK-NEXT:   %[[ADD1:.*]] = arith.addf %[[R]]#1, %[[R]]#0 : f32
-//  CHECK-NEXT:   %[[MUL1:.*]] = arith.mulf %[[CSTF]], %[[ADD1]] : f32
-//  CHECK-NEXT:   return %[[MUL1]] : f32
+//  CHECK-NEXT:   return %[[ADD1]] : f32
 func @backedge_same_stage(%A: memref<?xf32>) -> f32 {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index

@@ -15,29 +15,22 @@
 #ifndef LLVM_TRANSFORMS_IPO_FUNCTIONATTRS_H
 #define LLVM_TRANSFORMS_IPO_FUNCTIONATTRS_H
 
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/LazyCallGraph.h"
-#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
 
-class AAResults;
+class GlobalValueSummary;
+class ModuleSummaryIndex;
 class Function;
 class Module;
 class Pass;
 
-/// The three kinds of memory access relevant to 'readonly' and
-/// 'readnone' attributes.
-enum MemoryAccessKind {
-  MAK_ReadNone = 0,
-  MAK_ReadOnly = 1,
-  MAK_MayWrite = 2,
-  MAK_WriteOnly = 3
-};
-
 /// Returns the memory access properties of this copy of the function.
-MemoryAccessKind computeFunctionBodyMemoryAccess(Function &F, AAResults &AAR);
+FunctionModRefBehavior computeFunctionBodyMemoryAccess(Function &F,
+                                                       AAResults &AAR);
 
 /// Propagate function attributes for function summaries along the index's
 /// callgraph during thinlink

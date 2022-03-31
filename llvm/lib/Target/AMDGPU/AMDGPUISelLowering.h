@@ -320,8 +320,9 @@ public:
 
   enum ImplicitParameter {
     FIRST_IMPLICIT,
-    GRID_DIM = FIRST_IMPLICIT,
-    GRID_OFFSET,
+    PRIVATE_BASE,
+    SHARED_BASE,
+    QUEUE_PTR,
   };
 
   /// Helper function that returns the byte offset of the given
@@ -335,8 +336,8 @@ public:
 
   AtomicExpansionKind shouldExpandAtomicRMWInIR(AtomicRMWInst *) const override;
 
-  bool isConstantUnsignedBitfieldExtactLegal(unsigned Opc, LLT Ty1,
-                                             LLT Ty2) const override;
+  bool isConstantUnsignedBitfieldExtractLegal(unsigned Opc, LLT Ty1,
+                                              LLT Ty2) const override;
 };
 
 namespace AMDGPUISD {
@@ -366,9 +367,6 @@ enum NodeType : unsigned {
 
   // Return with values from a non-entry function.
   RET_FLAG,
-
-  // Return with values from a non-entry function (AMDGPU_Gfx CC).
-  RET_GFX_FLAG,
 
   DWORDADDR,
   FRACT,
@@ -483,6 +481,9 @@ enum NodeType : unsigned {
   CONST_DATA_PTR,
   PC_ADD_REL_OFFSET,
   LDS,
+  FPTRUNC_ROUND_UPWARD,
+  FPTRUNC_ROUND_DOWNWARD,
+
   DUMMY_CHAIN,
   FIRST_MEM_OPCODE_NUMBER = ISD::FIRST_TARGET_MEMORY_OPCODE,
   LOAD_D16_HI,

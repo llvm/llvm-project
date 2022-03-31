@@ -8,7 +8,7 @@ struct Y { short X; };
 // Variable shadows type, PR3872
 
 typedef struct foo { int x; } foo;
-void test() {
+void test(void) {
    foo *foo;
    foo->x = 0;
 }

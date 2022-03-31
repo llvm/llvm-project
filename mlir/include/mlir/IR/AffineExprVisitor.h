@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_IR_AFFINE_EXPR_VISITOR_H
-#define MLIR_IR_AFFINE_EXPR_VISITOR_H
+#ifndef MLIR_IR_AFFINEEXPRVISITOR_H
+#define MLIR_IR_AFFINEEXPRVISITOR_H
 
 #include "mlir/IR/AffineExpr.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -340,6 +340,6 @@ private:
   inline unsigned getDimStartIndex() const { return 0; }
 };
 
-} // end namespace mlir
+} // namespace mlir
 
-#endif // MLIR_IR_AFFINE_EXPR_VISITOR_H
+#endif // MLIR_IR_AFFINEEXPRVISITOR_H

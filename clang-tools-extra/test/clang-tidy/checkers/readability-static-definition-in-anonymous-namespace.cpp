@@ -36,6 +36,21 @@ DEFINE_STATIC int h = 1;
 DEFINE_STATIC_VAR(i);
 // CHECK-FIXES: {{^}}DEFINE_STATIC_VAR(i);
 
+namespace inner {
+int a = 1;
+const int b = 1;
+static int c = 1;
+// CHECK-MESSAGES: :[[@LINE-1]]:12: warning: 'c' is a static definition in anonymous namespace; static is redundant here [readability-static-definition-in-anonymous-namespace]
+// CHECK-FIXES: {{^}}int c = 1;
+namespace deep_inner {
+int a = 1;
+const int b = 1;
+static int c = 1;
+// CHECK-MESSAGES: :[[@LINE-1]]:12: warning: 'c' is a static definition in anonymous namespace; static is redundant here [readability-static-definition-in-anonymous-namespace]
+// CHECK-FIXES: {{^}}int c = 1;
+} // namespace deep_inner
+} // namespace inner
+
 } // namespace
 
 namespace N {

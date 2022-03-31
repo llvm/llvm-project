@@ -25,7 +25,7 @@ config.name = 'Clang'
 config.test_format = lit.formats.ShTest(not llvm_config.use_lit_shell)
 
 # suffixes: A list of file extensions to treat as test files.
-config.suffixes = ['.c', '.cpp', '.i', '.cppm', '.m', '.mm', '.cu', '.hip',
+config.suffixes = ['.c', '.cpp', '.i', '.cppm', '.m', '.mm', '.cu', '.hip', '.hlsl',
                    '.ll', '.cl', '.clcpp', '.s', '.S', '.modulemap', '.test', '.rs', '.ifs', '.rc']
 
 # excludes: A list of directories to exclude from the testsuite. The 'Inputs'
@@ -98,8 +98,10 @@ if config.clang_staticanalyzer:
     config.available_features.add('staticanalyzer')
     tools.append('clang-check')
 
-    if config.clang_staticanalyzer_z3 == '1':
+    if config.clang_staticanalyzer_z3:
         config.available_features.add('z3')
+    else:
+        config.available_features.add('no-z3')
 
     check_analyzer_fixit_path = os.path.join(
         config.test_source_root, "Analysis", "check-analyzer-fixit.py")
@@ -113,6 +115,11 @@ config.substitutions.append(
     ('%hmaptool', "'%s' %s" % (config.python_executable,
                              os.path.join(config.clang_tools_dir, 'hmaptool'))))
 
+config.substitutions.append(
+    ('%deps-to-rsp',
+     '"%s" %s' % (config.python_executable, os.path.join(config.clang_src_dir, 'utils',
+                                                         'module-deps-to-rsp.py'))))
+
 config.substitutions.append(('%host_cc', config.host_cc))
 config.substitutions.append(('%host_cxx', config.host_cxx))
 
@@ -120,6 +127,9 @@ config.substitutions.append(('%host_cxx', config.host_cxx))
 # Plugins (loadable modules)
 if config.has_plugins and config.llvm_plugin_ext:
     config.available_features.add('plugins')
+
+if config.clang_default_pie_on_linux:
+    config.available_features.add('default-pie-on-linux')
 
 # Set available features we allow tests to conditionalize on.
 #
@@ -240,3 +250,24 @@ if config.enable_shared:
 # Add a vendor-specific feature.
 if config.clang_vendor_uti:
     config.available_features.add('clang-vendor=' + config.clang_vendor_uti)
+
+def exclude_unsupported_files_for_aix(dirname):
+    for filename in os.listdir(dirname):
+        source_path = os.path.join( dirname, filename)
+        if os.path.isdir(source_path):
+            continue
+        f = open(source_path, 'r', encoding='ISO-8859-1')
+        try:
+           data = f.read()
+           # 64-bit object files are not supported on AIX, so exclude the tests.
+           if (any(option in data for option in ('-emit-obj', '-fmodule-format=obj', '-fintegrated-as')) and
+              '64' in config.target_triple):
+               config.excludes += [ filename ]
+        finally:
+           f.close()
+
+if 'aix' in config.target_triple:
+    for directory in ('/CodeGenCXX', '/Misc', '/Modules', '/PCH', '/Driver',
+                      '/ASTMerge/anonymous-fields', '/ASTMerge/injected-class-name-decl'):
+        exclude_unsupported_files_for_aix(config.test_source_root + directory)
+

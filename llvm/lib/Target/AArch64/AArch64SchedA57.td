@@ -526,7 +526,7 @@ def : InstRW<[A57Write_5cyc_2V], (instregex "^FRINT[AIMNPXZ](v4f32|v2f64)")>;
 def : InstRW<[A57Write_3cyc_2V], (instregex "^(BIF|BIT|BSL|BSP)v16i8")>;
 
 // ASIMD duplicate, gen reg, D-form and Q-form
-def : InstRW<[A57Write_8cyc_1L_1V], (instregex "^CPY")>;
+def : InstRW<[A57Write_8cyc_1L_1V], (instregex "^DUP(i8|i16|i32|i64)$")>;
 def : InstRW<[A57Write_8cyc_1L_1V], (instregex "^DUPv.+gpr")>;
 
 // ASIMD move, saturating

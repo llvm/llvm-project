@@ -79,9 +79,9 @@ public:
   }
 
 private:
-  void lowerCopiesFromI1();
-  void lowerPhis();
-  void lowerCopiesToI1();
+  bool lowerCopiesFromI1();
+  bool lowerPhis();
+  bool lowerCopiesToI1();
   bool isConstantLaneMask(Register Reg, bool &Val) const;
   void buildMergeLaneMasks(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator I, const DebugLoc &DL,
@@ -473,15 +473,17 @@ bool SILowerI1Copies::runOnMachineFunction(MachineFunction &TheMF) {
     OrN2Op = AMDGPU::S_ORN2_B64;
   }
 
-  lowerCopiesFromI1();
-  lowerPhis();
-  lowerCopiesToI1();
+  bool Changed = false;
+  Changed |= lowerCopiesFromI1();
+  Changed |= lowerPhis();
+  Changed |= lowerCopiesToI1();
 
+  assert(Changed || ConstrainRegs.empty());
   for (unsigned Reg : ConstrainRegs)
     MRI->constrainRegClass(Reg, &AMDGPU::SReg_1_XEXECRegClass);
   ConstrainRegs.clear();
 
-  return true;
+  return Changed;
 }
 
 #ifndef NDEBUG
@@ -493,7 +495,8 @@ static bool isVRegCompatibleReg(const SIRegisterInfo &TRI,
 }
 #endif
 
-void SILowerI1Copies::lowerCopiesFromI1() {
+bool SILowerI1Copies::lowerCopiesFromI1() {
+  bool Changed = false;
   SmallVector<MachineInstr *, 4> DeadCopies;
 
   for (MachineBasicBlock &MBB : *MF) {
@@ -508,6 +511,8 @@ void SILowerI1Copies::lowerCopiesFromI1() {
 
       if (isLaneMaskReg(DstReg) || isVreg1(DstReg))
         continue;
+
+      Changed = true;
 
       // Copy into a 32-bit vector register.
       LLVM_DEBUG(dbgs() << "Lower copy from i1: " << MI);
@@ -530,9 +535,10 @@ void SILowerI1Copies::lowerCopiesFromI1() {
       MI->eraseFromParent();
     DeadCopies.clear();
   }
+  return Changed;
 }
 
-void SILowerI1Copies::lowerPhis() {
+bool SILowerI1Copies::lowerPhis() {
   MachineSSAUpdater SSAUpdater(*MF);
   LoopFinder LF(*DT, *PDT);
   PhiIncomingAnalysis PIA(*PDT);
@@ -550,6 +556,8 @@ void SILowerI1Copies::lowerPhis() {
         Vreg1Phis.push_back(&MI);
     }
   }
+  if (Vreg1Phis.empty())
+    return false;
 
   MachineBasicBlock *PrevMBB = nullptr;
   for (MachineInstr *MI : Vreg1Phis) {
@@ -662,9 +670,11 @@ void SILowerI1Copies::lowerPhis() {
     IncomingRegs.clear();
     IncomingUpdated.clear();
   }
+  return true;
 }
 
-void SILowerI1Copies::lowerCopiesToI1() {
+bool SILowerI1Copies::lowerCopiesToI1() {
+  bool Changed = false;
   MachineSSAUpdater SSAUpdater(*MF);
   LoopFinder LF(*DT, *PDT);
   SmallVector<MachineInstr *, 4> DeadCopies;
@@ -680,6 +690,8 @@ void SILowerI1Copies::lowerCopiesToI1() {
       Register DstReg = MI.getOperand(0).getReg();
       if (!isVreg1(DstReg))
         continue;
+
+      Changed = true;
 
       if (MRI->use_empty(DstReg)) {
         DeadCopies.push_back(&MI);
@@ -731,6 +743,7 @@ void SILowerI1Copies::lowerCopiesToI1() {
       MI->eraseFromParent();
     DeadCopies.clear();
   }
+  return Changed;
 }
 
 bool SILowerI1Copies::isConstantLaneMask(Register Reg, bool &Val) const {

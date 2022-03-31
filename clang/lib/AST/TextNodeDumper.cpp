@@ -283,6 +283,8 @@ void TextNodeDumper::Visit(const Decl *D) {
       OS << " constexpr";
     if (FD->isConsteval())
       OS << " consteval";
+    if (FD->isMultiVersion())
+      OS << " multiversion";
   }
 
   if (!isa<FunctionDecl>(*D)) {
@@ -1532,6 +1534,10 @@ void TextNodeDumper::VisitFunctionProtoType(const FunctionProtoType *T) {
 
 void TextNodeDumper::VisitUnresolvedUsingType(const UnresolvedUsingType *T) {
   dumpDeclRef(T->getDecl());
+}
+
+void TextNodeDumper::VisitUsingType(const UsingType *T) {
+  dumpDeclRef(T->getFoundDecl());
 }
 
 void TextNodeDumper::VisitTypedefType(const TypedefType *T) {

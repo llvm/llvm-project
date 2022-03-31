@@ -32,7 +32,7 @@
 
 // CHECK-WITHOUT-G-NOT: -debug-info-kind
 // CHECK-WITH-G: "-debug-info-kind=constructor"
-// CHECK-WITH-G: "-dwarf-version=4"
+// CHECK-WITH-G: "-dwarf-version=5"
 // CHECK-WITH-G-DWARF2: "-dwarf-version=2"
 
 // CHECK-WITH-G-STANDALONE: "-debug-info-kind=standalone"

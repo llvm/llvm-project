@@ -128,7 +128,7 @@ define void @nc2(i32* %p, i32* %q) {
 }
 
 
-; FNATTR: define void @nc3(void ()* nocapture %p)
+; FNATTR: define void @nc3(void ()* nocapture readonly %p)
 define void @nc3(void ()* %p) {
 	call void %p()
 	ret void
@@ -141,7 +141,7 @@ define void @nc4(i8* %p) {
 	ret void
 }
 
-; FNATTR: define void @nc5(void (i8*)* nocapture %f, i8* nocapture %p)
+; FNATTR: define void @nc5(void (i8*)* nocapture readonly %f, i8* nocapture %p)
 define void @nc5(void (i8*)* %f, i8* %p) {
 	call void %f(i8* %p) readonly nounwind
 	call void %f(i8* nocapture %p)
@@ -316,6 +316,29 @@ define i1 @captureDereferenceableOrNullICmp(i32* dereferenceable_or_null(4) %x) 
   %2 = icmp eq i8* %1, null
   ret i1 %2
 }
+
+declare void @capture(i8*)
+
+; FNATTR: define void @nocapture_fptr(i8* (i8*)* nocapture readonly %f, i8* %p)
+define void @nocapture_fptr(i8* (i8*)* %f, i8* %p) {
+  %res = call i8* %f(i8* %p)
+  call void @capture(i8* %res)
+  ret void
+}
+
+; FNATTR: define void @recurse_fptr(i8* (i8*)* nocapture readonly %f, i8* %p)
+define void @recurse_fptr(i8* (i8*)* %f, i8* %p) {
+  %res = call i8* %f(i8* %p)
+  store i8 0, i8* %res
+  ret void
+}
+
+; FNATTR: define void @readnone_indirec(void (i8*)* nocapture readonly %f, i8* readnone %p)
+define void @readnone_indirec(void (i8*)* %f, i8* %p) {
+  call void %f(i8* %p) readnone
+  ret void
+}
+
 
 declare i8* @llvm.launder.invariant.group.p0i8(i8*)
 declare i8* @llvm.strip.invariant.group.p0i8(i8*)

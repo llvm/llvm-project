@@ -35,7 +35,6 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Flags.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/Logging.h"
 #include "lldb/lldb-enumerations.h"
 
 class DWARFASTParserClang;
@@ -195,6 +194,11 @@ public:
   void SetMetadata(const clang::Type *object, ClangASTMetadata &meta_data);
   ClangASTMetadata *GetMetadata(const clang::Decl *object);
   ClangASTMetadata *GetMetadata(const clang::Type *object);
+
+  void SetCXXRecordDeclAccess(const clang::CXXRecordDecl *object,
+                              clang::AccessSpecifier access);
+  clang::AccessSpecifier
+  GetCXXRecordDeclAccess(const clang::CXXRecordDecl *object);
 
   // Basic Types
   CompilerType GetBuiltinTypeForEncodingAndBitSize(lldb::Encoding encoding,
@@ -1079,6 +1083,12 @@ private:
   typedef llvm::DenseMap<const clang::Type *, ClangASTMetadata> TypeMetadataMap;
   /// Maps Types to their associated ClangASTMetadata.
   TypeMetadataMap m_type_metadata;
+
+  typedef llvm::DenseMap<const clang::CXXRecordDecl *, clang::AccessSpecifier>
+      CXXRecordDeclAccessMap;
+  /// Maps CXXRecordDecl to their most recent added method/field's
+  /// AccessSpecifier.
+  CXXRecordDeclAccessMap m_cxx_record_decl_access;
 
   /// The sema associated that is currently used to build this ASTContext.
   /// May be null if we are already done parsing this ASTContext or the

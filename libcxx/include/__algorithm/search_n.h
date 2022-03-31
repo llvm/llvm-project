@@ -10,13 +10,13 @@
 #ifndef _LIBCPP___ALGORITHM_SEARCH_N_H
 #define _LIBCPP___ALGORITHM_SEARCH_N_H
 
-#include <__config>
 #include <__algorithm/comp.h>
+#include <__config>
 #include <__iterator/iterator_traits.h>
 #include <type_traits>  // __convert_to_integral
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD

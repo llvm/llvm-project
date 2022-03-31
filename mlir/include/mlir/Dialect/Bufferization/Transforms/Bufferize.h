@@ -28,6 +28,10 @@
 namespace mlir {
 namespace bufferization {
 
+class AnalysisState;
+struct BufferizationState;
+struct BufferizationOptions;
+
 /// A helper type converter class that automatically populates the relevant
 /// materializations and type conversions for bufferization.
 class BufferizeTypeConverter : public TypeConverter {
@@ -52,7 +56,47 @@ void populateBufferizeMaterializationLegality(ConversionTarget &target);
 void populateEliminateBufferizeMaterializationsPatterns(
     BufferizeTypeConverter &typeConverter, RewritePatternSet &patterns);
 
-} // end namespace bufferization
-} // end namespace mlir
+/// Bufferize `op` and its nested ops that implement `BufferizableOpInterface`.
+/// Whether buffer copies are needed or not is queried from `state`.
+///
+/// Note: If `allowUnknownOps` is set to false, bufferization fails when an
+/// unknown op (that does not implement `BufferizableOpInterface`) is found. No
+/// to_tensor/to_memref ops are inserted in that case.
+///
+/// Note: The layout map chosen to bufferize is the most dynamic canonical
+/// strided layout of the proper rank. This ensures compatibility with expected
+/// layouts after transformations. Combinations of memref.cast +
+/// canonicalization are responsible for clean ups.
+// TODO: Extract `options` from `state` and pass as separate argument.
+LogicalResult bufferizeOp(Operation *op, const AnalysisState &analysisState);
+
+/// Bufferize `op` and its nested ops that implement `BufferizableOpInterface`.
+/// Buffers are duplicated and copied before any tensor use that bufferizes to
+/// a memory write.
+///
+/// Note: This function bufferizes ops without utilizing analysis results. It
+/// can be used to implement partial bufferization passes.
+LogicalResult bufferizeOp(Operation *op, const BufferizationOptions &options);
+
+BufferizationOptions getPartialBufferizationOptions();
+
+//===----------------------------------------------------------------------===//
+// Helper functions for extending Bufferization
+//===----------------------------------------------------------------------===//
+
+/// Bufferize `op` and its nested ops that implement `BufferizableOpInterface`.
+/// Reuse an existing `BufferizationState`.
+///
+/// Note: This function overload is useful for extending the bufferization.
+LogicalResult bufferizeOp(Operation *op,
+                          BufferizationState &bufferizationState);
+
+/// Finalize all buffer allocations.
+/// * Hoist buffer allocations as much as possible.
+/// * Create alloc/dealloc ops as specified by the bufferization options.
+LogicalResult finalizeBuffers(Operation *op,
+                              const BufferizationOptions &options);
+} // namespace bufferization
+} // namespace mlir
 
 #endif // MLIR_DIALECT_BUFFERIZATION_TRANSFORMS_BUFFERIZE_H

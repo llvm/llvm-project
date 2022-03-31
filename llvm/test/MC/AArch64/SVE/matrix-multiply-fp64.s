@@ -239,13 +239,13 @@ ld1rod z0.d, p1/z, [x2, x3, lsl #3]
 zip1 z0.q, z1.q, z2.q
 // CHECK-INST: zip1 z0.q, z1.q, z2.q
 // CHECK-ENCODING: [0x20,0x00,0xa2,0x05]
-// CHECK-ERROR: instruction requires: f64mm streaming-sve
+// CHECK-ERROR: instruction requires: f64mm sve or sme
 // CHECK-UNKNOWN: 20 00 a2 05 <unknown>
 
 zip2 z0.q, z1.q, z2.q
 // CHECK-INST: zip2 z0.q, z1.q, z2.q
 // CHECK-ENCODING: [0x20,0x04,0xa2,0x05]
-// CHECK-ERROR: instruction requires: f64mm streaming-sve
+// CHECK-ERROR: instruction requires: f64mm sve or sme
 // CHECK-UNKNOWN: 20 04 a2 05 <unknown>
 
 
@@ -255,13 +255,13 @@ zip2 z0.q, z1.q, z2.q
 uzp1 z0.q, z1.q, z2.q
 // CHECK-INST: uzp1 z0.q, z1.q, z2.q
 // CHECK-ENCODING: [0x20,0x08,0xa2,0x05]
-// CHECK-ERROR: instruction requires: f64mm streaming-sve
+// CHECK-ERROR: instruction requires: f64mm sve or sme
 // CHECK-UNKNOWN: 20 08 a2 05 <unknown>
 
 uzp2 z0.q, z1.q, z2.q
 // CHECK-INST: uzp2 z0.q, z1.q, z2.q
 // CHECK-ENCODING: [0x20,0x0c,0xa2,0x05]
-// CHECK-ERROR: instruction requires: f64mm streaming-sve
+// CHECK-ERROR: instruction requires: f64mm sve or sme
 // CHECK-UNKNOWN: 20 0c a2 05 <unknown>
 
 
@@ -271,11 +271,11 @@ uzp2 z0.q, z1.q, z2.q
 trn1 z0.q, z1.q, z2.q
 // CHECK-INST: trn1 z0.q, z1.q, z2.q
 // CHECK-ENCODING: [0x20,0x18,0xa2,0x05]
-// CHECK-ERROR: instruction requires: f64mm streaming-sve
+// CHECK-ERROR: instruction requires: f64mm sve or sme
 // CHECK-UNKNOWN: 20 18 a2 05 <unknown>
 
 trn2 z0.q, z1.q, z2.q
 // CHECK-INST: trn2 z0.q, z1.q, z2.q
 // CHECK-ENCODING: [0x20,0x1c,0xa2,0x05]
-// CHECK-ERROR: instruction requires: f64mm streaming-sve
+// CHECK-ERROR: instruction requires: f64mm sve or sme
 // CHECK-UNKNOWN: 20 1c a2 05 <unknown>

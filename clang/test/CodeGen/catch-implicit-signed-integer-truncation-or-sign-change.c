@@ -15,7 +15,7 @@
 //============================================================================//
 
 // CHECK-LABEL: @unsigned_int_to_signed_char
-// CHECK-SAME: (i32 %[[SRC:.*]])
+// CHECK-SAME: i32 noundef %[[SRC:.*]])
 signed char unsigned_int_to_signed_char(unsigned int src) {
   // CHECK-NEXT: [[ENTRY:.*]]:
   // CHECK-NEXT: %[[SRC_ADDR:.*]] = alloca i32
@@ -47,7 +47,7 @@ signed char unsigned_int_to_signed_char(unsigned int src) {
 //============================================================================//
 
 // CHECK-LABEL: @unsigned_int_to_signed_char__no_truncation_sanitizer
-// CHECK-SAME: (i32 %[[SRC:.*]])
+// CHECK-SAME: i32 noundef %[[SRC:.*]])
 __attribute__((no_sanitize("implicit-integer-truncation"))) signed char
 unsigned_int_to_signed_char__no_truncation_sanitizer(unsigned int src) {
   // CHECK-NEXT: [[ENTRY:.*]]:
@@ -77,7 +77,7 @@ unsigned_int_to_signed_char__no_truncation_sanitizer(unsigned int src) {
 //============================================================================//
 
 // CHECK-LABEL: @unsigned_int_to_signed_char__no_signed_truncation_sanitizer
-// CHECK-SAME: (i32 %[[SRC:.*]])
+// CHECK-SAME: i32 noundef %[[SRC:.*]])
 __attribute__((no_sanitize("implicit-signed-integer-truncation"))) signed char
 unsigned_int_to_signed_char__no_signed_truncation_sanitizer(unsigned int src) {
   // CHECK-NEXT: [[ENTRY:.*]]:
@@ -107,7 +107,7 @@ unsigned_int_to_signed_char__no_signed_truncation_sanitizer(unsigned int src) {
 //============================================================================//
 
 // CHECK-LABEL: @unsigned_int_to_signed_char__no_sign_change_sanitizer
-// CHECK-SAME: (i32 %[[SRC:.*]])
+// CHECK-SAME: i32 noundef %[[SRC:.*]])
 __attribute__((no_sanitize("implicit-integer-sign-change"))) signed char
 unsigned_int_to_signed_char__no_sign_change_sanitizer(unsigned int src) {
   // CHECK-NEXT: [[ENTRY:.*]]:
@@ -137,7 +137,7 @@ unsigned_int_to_signed_char__no_sign_change_sanitizer(unsigned int src) {
 //============================================================================//
 
 // CHECK-LABEL: @unsigned_int_to_signed_char__no_sanitizers
-// CHECK-SAME: (i32 %[[SRC:.*]])
+// CHECK-SAME: i32 noundef %[[SRC:.*]])
 __attribute__((no_sanitize("implicit-integer-truncation"),
                no_sanitize("implicit-integer-sign-change"))) signed char
 unsigned_int_to_signed_char__no_sanitizers(unsigned int src) {

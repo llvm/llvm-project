@@ -17,6 +17,7 @@
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 
 namespace mlir {
@@ -92,6 +93,8 @@ private:
 
   // See TypeIDExported below for an explanation of the trampoline behavior.
   friend struct detail::TypeIDExported;
+
+  friend class TypeIDAllocator;
 };
 
 /// Enable hashing TypeID.
@@ -138,7 +141,35 @@ TypeID TypeID::get() {
   return detail::TypeIDExported::get<Trait>();
 }
 
-} // end namespace mlir
+/// This class provides a way to define new TypeIDs at runtime.
+/// When the allocator is destructed, all allocated TypeIDs become invalid and
+/// therefore should not be used.
+class TypeIDAllocator {
+public:
+  /// Allocate a new TypeID, that is ensured to be unique for the lifetime
+  /// of the TypeIDAllocator.
+  TypeID allocate() { return TypeID(ids.Allocate()); }
+
+private:
+  /// The TypeIDs allocated are the addresses of the different storages.
+  /// Keeping those in memory ensure uniqueness of the TypeIDs.
+  llvm::SpecificBumpPtrAllocator<TypeID::Storage> ids;
+};
+
+/// Defines a TypeID for each instance of this class by using a pointer to the
+/// instance. Thus, the copy and move constructor are deleted.
+class SelfOwningTypeID {
+public:
+  SelfOwningTypeID() = default;
+  SelfOwningTypeID(const SelfOwningTypeID &) = delete;
+  SelfOwningTypeID &operator=(const SelfOwningTypeID &) = delete;
+  SelfOwningTypeID(SelfOwningTypeID &&) = delete;
+  SelfOwningTypeID &operator=(SelfOwningTypeID &&) = delete;
+
+  TypeID getTypeID() const { return TypeID::getFromOpaquePointer(this); }
+};
+
+} // namespace mlir
 
 // Declare/define an explicit specialization for TypeID: this forces the
 // compiler to emit a strong definition for a class and controls which
@@ -193,6 +224,6 @@ template <> struct PointerLikeTypeTraits<mlir::TypeID> {
   static constexpr int NumLowBitsAvailable = 3;
 };
 
-} // end namespace llvm
+} // namespace llvm
 
 #endif // MLIR_SUPPORT_TYPEID_H

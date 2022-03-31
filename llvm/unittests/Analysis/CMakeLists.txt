@@ -6,10 +6,11 @@ set(LLVM_LINK_COMPONENTS
   TransformUtils
   )
 
+set(MLGO_TESTS TFUtilsTest.cpp MLModelRunnerTest.cpp)
 if (DEFINED LLVM_HAVE_TF_API)
-  LIST(APPEND EXTRA_TESTS TFUtilsTest.cpp)
+  LIST(APPEND EXTRA_TESTS ${MLGO_TESTS})
 else()
-  LIST(APPEND LLVM_OPTIONAL_SOURCES TFUtilsTest.cpp)
+  LIST(APPEND LLVM_OPTIONAL_SOURCES ${MLGO_TESTS})
 endif()
 
 add_llvm_unittest_with_input_files(AnalysisTests

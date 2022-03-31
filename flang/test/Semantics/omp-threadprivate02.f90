@@ -40,18 +40,10 @@ contains
 
     !$omp threadprivate(/blk2/)
 
-    !ERROR: Implicitly typed local entity 'blk2' not allowed in specification expression
-    !ERROR: A variable that appears in a THREADPRIVATE directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
-    !$omp threadprivate(blk2)
-
     !ERROR: A variable in a THREADPRIVATE directive cannot be an element of a common block
     !$omp threadprivate(a2)
 
     !$omp threadprivate(/blk3/)
-
-    !ERROR: Implicitly typed local entity 'blk3' not allowed in specification expression
-    !ERROR: A variable that appears in a THREADPRIVATE directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
-    !$omp threadprivate(blk3)
 
     !ERROR: A variable in a THREADPRIVATE directive cannot be an element of a common block
     !$omp threadprivate(a3)

@@ -43,7 +43,7 @@ unsigned u;
 // CHECK-NEXT:    store i16 [[TMP3]], i16* @sa, align 2
 // CHECK-NEXT:    ret void
 //
-void sleft_sasai() {
+void sleft_sasai(void) {
   sa = sa << i;
 }
 
@@ -55,7 +55,7 @@ void sleft_sasai() {
 // CHECK-NEXT:    store i32 [[TMP2]], i32* @a, align 4
 // CHECK-NEXT:    ret void
 //
-void sleft_aai() {
+void sleft_aai(void) {
   a = a << i;
 }
 
@@ -68,7 +68,7 @@ void sleft_aai() {
 // CHECK-NEXT:    store i64 [[TMP3]], i64* @la, align 8
 // CHECK-NEXT:    ret void
 //
-void sleft_lalai() {
+void sleft_lalai(void) {
   la = la << i;
 }
 
@@ -81,7 +81,7 @@ void sleft_lalai() {
 // CHECK-NEXT:    store i8 [[TMP3]], i8* @sf, align 1
 // CHECK-NEXT:    ret void
 //
-void sleft_sfsfi() {
+void sleft_sfsfi(void) {
   sf = sf << i;
 }
 
@@ -94,7 +94,7 @@ void sleft_sfsfi() {
 // CHECK-NEXT:    store i16 [[TMP3]], i16* @f, align 2
 // CHECK-NEXT:    ret void
 //
-void sleft_ffi() {
+void sleft_ffi(void) {
   f = f << i;
 }
 
@@ -106,7 +106,7 @@ void sleft_ffi() {
 // CHECK-NEXT:    store i32 [[TMP2]], i32* @lf, align 4
 // CHECK-NEXT:    ret void
 //
-void sleft_lflfi() {
+void sleft_lflfi(void) {
   lf = lf << i;
 }
 
@@ -118,7 +118,7 @@ void sleft_lflfi() {
 // CHECK-NEXT:    store i32 [[TMP2]], i32* @a, align 4
 // CHECK-NEXT:    ret void
 //
-void sleft_aau() {
+void sleft_aau(void) {
   a = a << u;
 }
 
@@ -131,7 +131,7 @@ void sleft_aau() {
 // CHECK-NEXT:    store i16 [[TMP3]], i16* @f, align 2
 // CHECK-NEXT:    ret void
 //
-void sleft_ffu() {
+void sleft_ffu(void) {
   f = f << u;
 }
 
@@ -145,7 +145,7 @@ void sleft_ffu() {
 // CHECK-NEXT:    store i16 [[TMP3]], i16* @usa, align 2
 // CHECK-NEXT:    ret void
 //
-void uleft_usausai() {
+void uleft_usausai(void) {
   usa = usa << i;
 }
 
@@ -157,7 +157,7 @@ void uleft_usausai() {
 // CHECK-NEXT:    store i32 [[TMP2]], i32* @ua, align 4
 // CHECK-NEXT:    ret void
 //
-void uleft_uauai() {
+void uleft_uauai(void) {
   ua = ua << i;
 }
 
@@ -170,7 +170,7 @@ void uleft_uauai() {
 // CHECK-NEXT:    store i64 [[TMP3]], i64* @ula, align 8
 // CHECK-NEXT:    ret void
 //
-void uleft_ulaulai() {
+void uleft_ulaulai(void) {
   ula = ula << i;
 }
 
@@ -183,7 +183,7 @@ void uleft_ulaulai() {
 // CHECK-NEXT:    store i8 [[TMP3]], i8* @usf, align 1
 // CHECK-NEXT:    ret void
 //
-void uleft_usfusfi() {
+void uleft_usfusfi(void) {
   usf = usf << i;
 }
 
@@ -196,7 +196,7 @@ void uleft_usfusfi() {
 // CHECK-NEXT:    store i16 [[TMP3]], i16* @uf, align 2
 // CHECK-NEXT:    ret void
 //
-void uleft_ufufi() {
+void uleft_ufufi(void) {
   uf = uf << i;
 }
 
@@ -208,7 +208,7 @@ void uleft_ufufi() {
 // CHECK-NEXT:    store i32 [[TMP2]], i32* @ulf, align 4
 // CHECK-NEXT:    ret void
 //
-void uleft_ulfulfi() {
+void uleft_ulfulfi(void) {
   ulf = ulf << i;
 }
 
@@ -220,7 +220,7 @@ void uleft_ulfulfi() {
 // CHECK-NEXT:    store i32 [[TMP2]], i32* @ua, align 4
 // CHECK-NEXT:    ret void
 //
-void uleft_uauau() {
+void uleft_uauau(void) {
   ua = ua << u;
 }
 
@@ -233,7 +233,7 @@ void uleft_uauau() {
 // CHECK-NEXT:    store i16 [[TMP3]], i16* @uf, align 2
 // CHECK-NEXT:    ret void
 //
-void uleft_ufufu() {
+void uleft_ufufu(void) {
   uf = uf << u;
 }
 
@@ -247,7 +247,7 @@ void uleft_ufufu() {
 // CHECK-NEXT:    store i16 [[TMP3]], i16* @sa, align 2
 // CHECK-NEXT:    ret void
 //
-void sright_sasai() {
+void sright_sasai(void) {
   sa = sa >> i;
 }
 
@@ -259,7 +259,7 @@ void sright_sasai() {
 // CHECK-NEXT:    store i32 [[TMP2]], i32* @a, align 4
 // CHECK-NEXT:    ret void
 //
-void sright_aai() {
+void sright_aai(void) {
   a = a >> i;
 }
 
@@ -272,7 +272,7 @@ void sright_aai() {
 // CHECK-NEXT:    store i64 [[TMP3]], i64* @la, align 8
 // CHECK-NEXT:    ret void
 //
-void sright_lalai() {
+void sright_lalai(void) {
   la = la >> i;
 }
 
@@ -285,7 +285,7 @@ void sright_lalai() {
 // CHECK-NEXT:    store i8 [[TMP3]], i8* @sf, align 1
 // CHECK-NEXT:    ret void
 //
-void sright_sfsfi() {
+void sright_sfsfi(void) {
   sf = sf >> i;
 }
 
@@ -298,7 +298,7 @@ void sright_sfsfi() {
 // CHECK-NEXT:    store i16 [[TMP3]], i16* @f, align 2
 // CHECK-NEXT:    ret void
 //
-void sright_ffi() {
+void sright_ffi(void) {
   f = f >> i;
 }
 
@@ -310,7 +310,7 @@ void sright_ffi() {
 // CHECK-NEXT:    store i32 [[TMP2]], i32* @lf, align 4
 // CHECK-NEXT:    ret void
 //
-void sright_lflfi() {
+void sright_lflfi(void) {
   lf = lf >> i;
 }
 
@@ -322,7 +322,7 @@ void sright_lflfi() {
 // CHECK-NEXT:    store i32 [[TMP2]], i32* @a, align 4
 // CHECK-NEXT:    ret void
 //
-void sright_aau() {
+void sright_aau(void) {
   a = a >> u;
 }
 
@@ -335,7 +335,7 @@ void sright_aau() {
 // CHECK-NEXT:    store i16 [[TMP3]], i16* @f, align 2
 // CHECK-NEXT:    ret void
 //
-void sright_ffu() {
+void sright_ffu(void) {
   f = f >> u;
 }
 
@@ -349,7 +349,7 @@ void sright_ffu() {
 // CHECK-NEXT:    store i16 [[TMP3]], i16* @usa, align 2
 // CHECK-NEXT:    ret void
 //
-void uright_usausai() {
+void uright_usausai(void) {
   usa = usa >> i;
 }
 
@@ -361,7 +361,7 @@ void uright_usausai() {
 // CHECK-NEXT:    store i32 [[TMP2]], i32* @ua, align 4
 // CHECK-NEXT:    ret void
 //
-void uright_uauai() {
+void uright_uauai(void) {
   ua = ua >> i;
 }
 
@@ -374,7 +374,7 @@ void uright_uauai() {
 // CHECK-NEXT:    store i64 [[TMP3]], i64* @ula, align 8
 // CHECK-NEXT:    ret void
 //
-void uright_ulaulai() {
+void uright_ulaulai(void) {
   ula = ula >> i;
 }
 
@@ -387,7 +387,7 @@ void uright_ulaulai() {
 // CHECK-NEXT:    store i8 [[TMP3]], i8* @usf, align 1
 // CHECK-NEXT:    ret void
 //
-void uright_usfusfi() {
+void uright_usfusfi(void) {
   usf = usf >> i;
 }
 
@@ -400,7 +400,7 @@ void uright_usfusfi() {
 // CHECK-NEXT:    store i16 [[TMP3]], i16* @uf, align 2
 // CHECK-NEXT:    ret void
 //
-void uright_ufufi() {
+void uright_ufufi(void) {
   uf = uf >> i;
 }
 
@@ -412,7 +412,7 @@ void uright_ufufi() {
 // CHECK-NEXT:    store i32 [[TMP2]], i32* @ulf, align 4
 // CHECK-NEXT:    ret void
 //
-void uright_ulfulfi() {
+void uright_ulfulfi(void) {
   ulf = ulf >> i;
 }
 
@@ -424,7 +424,7 @@ void uright_ulfulfi() {
 // CHECK-NEXT:    store i32 [[TMP2]], i32* @ua, align 4
 // CHECK-NEXT:    ret void
 //
-void uright_uauau() {
+void uright_uauau(void) {
   ua = ua >> u;
 }
 
@@ -437,7 +437,7 @@ void uright_uauau() {
 // CHECK-NEXT:    store i16 [[TMP3]], i16* @uf, align 2
 // CHECK-NEXT:    ret void
 //
-void uright_ufufu() {
+void uright_ufufu(void) {
   uf = uf >> u;
 }
 
@@ -451,7 +451,7 @@ void uright_ufufu() {
 // CHECK-NEXT:    store i16 [[TMP3]], i16* @sa_sat, align 2
 // CHECK-NEXT:    ret void
 //
-void satleft_sassasi() {
+void satleft_sassasi(void) {
   sa_sat = sa_sat << i;
 }
 
@@ -463,7 +463,7 @@ void satleft_sassasi() {
 // CHECK-NEXT:    store i32 [[TMP2]], i32* @a_sat, align 4
 // CHECK-NEXT:    ret void
 //
-void satleft_asasi() {
+void satleft_asasi(void) {
   a_sat = a_sat << i;
 }
 
@@ -476,7 +476,7 @@ void satleft_asasi() {
 // CHECK-NEXT:    store i8 [[TMP3]], i8* @sf_sat, align 1
 // CHECK-NEXT:    ret void
 //
-void satleft_sfssfsi() {
+void satleft_sfssfsi(void) {
   sf_sat = sf_sat << i;
 }
 
@@ -489,7 +489,7 @@ void satleft_sfssfsi() {
 // CHECK-NEXT:    store i16 [[TMP3]], i16* @f_sat, align 2
 // CHECK-NEXT:    ret void
 //
-void satleft_fsfsi() {
+void satleft_fsfsi(void) {
   f_sat = f_sat << i;
 }
 
@@ -511,7 +511,7 @@ void satleft_fsfsi() {
 // UNSIGNED-NEXT:    store i16 [[TMP3]], i16* @usa_sat, align 2
 // UNSIGNED-NEXT:    ret void
 //
-void satleft_usasusasi() {
+void satleft_usasusasi(void) {
   usa_sat = usa_sat << i;
 }
 
@@ -531,7 +531,7 @@ void satleft_usasusasi() {
 // UNSIGNED-NEXT:    store i32 [[TMP2]], i32* @ua_sat, align 4
 // UNSIGNED-NEXT:    ret void
 //
-void satleft_uasuasi() {
+void satleft_uasuasi(void) {
   ua_sat = ua_sat << i;
 }
 
@@ -553,7 +553,7 @@ void satleft_uasuasi() {
 // UNSIGNED-NEXT:    store i8 [[TMP3]], i8* @usf_sat, align 1
 // UNSIGNED-NEXT:    ret void
 //
-void satleft_usfsusfsi() {
+void satleft_usfsusfsi(void) {
   usf_sat = usf_sat << i;
 }
 
@@ -575,6 +575,6 @@ void satleft_usfsusfsi() {
 // UNSIGNED-NEXT:    store i16 [[TMP3]], i16* @uf_sat, align 2
 // UNSIGNED-NEXT:    ret void
 //
-void satleft_ufsufsi() {
+void satleft_ufsufsi(void) {
   uf_sat = uf_sat << i;
 }

@@ -30,8 +30,7 @@ using namespace llvm;
 ScoreboardHazardRecognizer::ScoreboardHazardRecognizer(
     const InstrItineraryData *II, const ScheduleDAG *SchedDAG,
     const char *ParentDebugType)
-    : ScheduleHazardRecognizer(), DebugType(ParentDebugType), ItinData(II),
-      DAG(SchedDAG) {
+    : DebugType(ParentDebugType), ItinData(II), DAG(SchedDAG) {
   (void)DebugType;
   // Determine the maximum depth of any itinerary. This determines the depth of
   // the scoreboard. We always make the scoreboard at least 1 cycle deep to

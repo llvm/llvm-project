@@ -117,6 +117,12 @@ static cl::opt<unsigned>
                     cl::desc("Alignment of bundle for binary files"),
                     cl::init(1), cl::cat(ClangOffloadBundlerCategory));
 
+static cl::opt<bool> HipOpenmpCompatible(
+    "hip-openmp-compatible",
+    cl::desc("Treat hip and hipv4 offload kinds as "
+             "compatible with openmp kind, and vice versa.\n"),
+    cl::init(false), cl::cat(ClangOffloadBundlerCategory));
+
 /// Magic string that marks the existence of offloading data.
 #define OFFLOAD_BUNDLER_MAGIC_STR "__CLANG_OFFLOAD_BUNDLE__"
 
@@ -164,6 +170,21 @@ struct OffloadTargetInfo {
   bool isOffloadKindValid() const {
     return OffloadKind == "host" || OffloadKind == "openmp" ||
            OffloadKind == "hip" || OffloadKind == "hipv4";
+  }
+
+  bool isOffloadKindCompatible(const StringRef TargetOffloadKind) const {
+    if (OffloadKind == TargetOffloadKind)
+      return true;
+    if (HipOpenmpCompatible) {
+      bool HIPCompatibleWithOpenMP =
+          OffloadKind.startswith_insensitive("hip") &&
+          TargetOffloadKind == "openmp";
+      bool OpenMPCompatibleWithHIP =
+          OffloadKind == "openmp" &&
+          TargetOffloadKind.startswith_insensitive("hip");
+      return HIPCompatibleWithOpenMP || OpenMPCompatibleWithHIP;
+    }
+    return false;
   }
 
   bool isTripleValid() const {
@@ -356,7 +377,7 @@ class BinaryFileHandler final : public FileHandler {
   std::string CurWriteBundleTarget;
 
 public:
-  BinaryFileHandler() : FileHandler() {}
+  BinaryFileHandler() {}
 
   ~BinaryFileHandler() final {}
 
@@ -576,8 +597,7 @@ class ObjectFileHandler final : public FileHandler {
 
 public:
   ObjectFileHandler(std::unique_ptr<ObjectFile> ObjIn)
-      : FileHandler(), Obj(std::move(ObjIn)),
-        CurrentSection(Obj->section_begin()),
+      : Obj(std::move(ObjIn)), CurrentSection(Obj->section_begin()),
         NextSection(Obj->section_begin()) {}
 
   ~ObjectFileHandler() final {}
@@ -813,8 +833,7 @@ protected:
   }
 
 public:
-  TextFileHandler(StringRef Comment)
-      : FileHandler(), Comment(Comment), ReadChars(0) {
+  TextFileHandler(StringRef Comment) : Comment(Comment), ReadChars(0) {
     BundleStartString =
         "\n" + Comment.str() + " " OFFLOAD_BUNDLER_MAGIC_STR "__START__ ";
     BundleEndString =
@@ -1099,7 +1118,7 @@ bool isCodeObjectCompatible(OffloadTargetInfo &CodeObjectInfo,
   }
 
   // Incompatible if Kinds or Triples mismatch.
-  if (CodeObjectInfo.OffloadKind != TargetInfo.OffloadKind ||
+  if (!CodeObjectInfo.isOffloadKindCompatible(TargetInfo.OffloadKind) ||
       !CodeObjectInfo.Triple.isCompatibleWith(TargetInfo.Triple)) {
     DEBUG_WITH_TYPE(
         "CodeObjectCompatibility",
@@ -1292,7 +1311,7 @@ static Error UnbundleArchive() {
     } // End of processing of all bundle entries of this child of input archive.
   }   // End of while over children of input archive.
 
-  assert(!ArchiveErr && "Error occured while reading archive!");
+  assert(!ArchiveErr && "Error occurred while reading archive!");
 
   /// Write out an archive for each target
   for (auto &Target : TargetNames) {

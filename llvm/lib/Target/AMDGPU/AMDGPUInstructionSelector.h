@@ -30,7 +30,6 @@ namespace AMDGPU {
 struct ImageDimIntrinsicInfo;
 }
 
-class AMDGPUInstrInfo;
 class AMDGPURegisterBankInfo;
 class AMDGPUTargetMachine;
 class BlockFrequencyInfo;
@@ -42,7 +41,6 @@ class MachineOperand;
 class MachineRegisterInfo;
 class RegisterBank;
 class SIInstrInfo;
-class SIMachineFunctionInfo;
 class SIRegisterInfo;
 class TargetRegisterClass;
 
@@ -135,7 +133,6 @@ private:
 
   void initM0(MachineInstr &I) const;
   bool selectG_LOAD_STORE_ATOMICRMW(MachineInstr &I) const;
-  bool selectG_AMDGPU_ATOMIC_CMPXCHG(MachineInstr &I) const;
   bool selectG_SELECT(MachineInstr &I) const;
   bool selectG_BRCOND(MachineInstr &I) const;
   bool selectG_GLOBAL_VALUE(MachineInstr &I) const;
@@ -147,6 +144,8 @@ private:
   bool selectGlobalAtomicFadd(MachineInstr &I, MachineOperand &AddrOp,
                               MachineOperand &DataOp) const;
   bool selectBVHIntrinsic(MachineInstr &I) const;
+  bool selectSMFMACIntrin(MachineInstr &I) const;
+  bool selectWaveAddress(MachineInstr &I) const;
 
   std::pair<Register, unsigned> selectVOP3ModsImpl(MachineOperand &Root,
                                                    bool AllowAbs = true) const;
@@ -174,10 +173,14 @@ private:
   selectVOP3Mods_nnan(MachineOperand &Root) const;
 
   std::pair<Register, unsigned>
-  selectVOP3PModsImpl(Register Src, const MachineRegisterInfo &MRI) const;
+  selectVOP3PModsImpl(Register Src, const MachineRegisterInfo &MRI,
+                      bool IsDOT = false) const;
 
   InstructionSelector::ComplexRendererFns
   selectVOP3PMods(MachineOperand &Root) const;
+
+  InstructionSelector::ComplexRendererFns
+  selectVOP3PModsDOT(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
   selectVOP3OpSelMods(MachineOperand &Root) const;
@@ -204,6 +207,8 @@ private:
 
   InstructionSelector::ComplexRendererFns
   selectScratchSAddr(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectScratchSVAddr(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
   selectMUBUFScratchOffen(MachineOperand &Root) const;

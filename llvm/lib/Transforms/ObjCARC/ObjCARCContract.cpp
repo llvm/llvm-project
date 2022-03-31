@@ -102,11 +102,8 @@ public:
 };
 
 class ObjCARCContractLegacyPass : public FunctionPass {
-  ObjCARCContract OCARCC;
-
 public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
-  bool doInitialization(Module &M) override;
   bool runOnFunction(Function &F) override;
 
   static char ID;
@@ -433,23 +430,20 @@ bool ObjCARCContract::tryToPeepholeInstruction(
     // If we succeed in our optimization, fall through.
     LLVM_FALLTHROUGH;
   case ARCInstKind::RetainRV:
-  case ARCInstKind::ClaimRV: {
-    bool IsInstContainedInBundle = BundledInsts->contains(Inst);
-
-    // Return now if the target doesn't need a special inline-asm marker. Return
-    // true if this is a bundled retainRV/claimRV call, which is going to be
-    // erased at the end of this pass, to avoid undoing objc-arc-expand and
+  case ARCInstKind::UnsafeClaimRV: {
+    // Return true if this is a bundled retainRV/claimRV call, which is always
+    // redundant with the attachedcall in the bundle, and is going to be erased
+    // at the end of this pass.  This avoids undoing objc-arc-expand and
     // replacing uses of the retainRV/claimRV call's argument with its result.
+    if (BundledInsts->contains(Inst))
+      return true;
+
+    // If this isn't a bundled call, and the target doesn't need a special
+    // inline-asm marker, we're done: return now, and undo objc-arc-expand.
     if (!RVInstMarker)
-      return IsInstContainedInBundle;
-
-    // The target needs a special inline-asm marker.
-
-    // We don't have to emit the marker if this is a bundled call since the
-    // backend is responsible for emitting it. Return false to undo
-    // objc-arc-expand.
-    if (IsInstContainedInBundle)
       return false;
+
+    // The target needs a special inline-asm marker.  Insert it.
 
     BasicBlock::iterator BBI = Inst->getIterator();
     BasicBlock *InstParent = Inst->getParent();
@@ -548,7 +542,7 @@ bool ObjCARCContract::run(Function &F, AAResults *A, DominatorTree *D) {
   AA = A;
   DT = D;
   PA.setAA(A);
-  BundledRetainClaimRVs BRV(true, RVInstMarker);
+  BundledRetainClaimRVs BRV(/*ContractPass=*/true);
   BundledInsts = &BRV;
 
   std::pair<bool, bool> R = BundledInsts->insertAfterInvokes(F, DT);
@@ -740,11 +734,9 @@ Pass *llvm::createObjCARCContractPass() {
   return new ObjCARCContractLegacyPass();
 }
 
-bool ObjCARCContractLegacyPass::doInitialization(Module &M) {
-  return OCARCC.init(M);
-}
-
 bool ObjCARCContractLegacyPass::runOnFunction(Function &F) {
+  ObjCARCContract OCARCC;
+  OCARCC.init(*F.getParent());
   auto *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   return OCARCC.run(F, AA, DT);

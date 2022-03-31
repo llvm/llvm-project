@@ -12,29 +12,29 @@
 st4d    { z0.d, z1.d, z2.d, z3.d }, p0, [x0, x0, lsl #3]
 // CHECK-INST: st4d    { z0.d, z1.d, z2.d, z3.d }, p0, [x0, x0, lsl #3]
 // CHECK-ENCODING: [0x00,0x60,0xe0,0xe5]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: 00 60 e0 e5 <unknown>
 
 st4d    { z5.d, z6.d, z7.d, z8.d }, p3, [x17, x16, lsl #3]
 // CHECK-INST: st4d    { z5.d, z6.d, z7.d, z8.d }, p3, [x17, x16, lsl #3]
 // CHECK-ENCODING: [0x25,0x6e,0xf0,0xe5]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: 25 6e f0 e5 <unknown>
 
 st4d    { z0.d, z1.d, z2.d, z3.d }, p0, [x0]
 // CHECK-INST: st4d    { z0.d, z1.d, z2.d, z3.d }, p0, [x0]
 // CHECK-ENCODING: [0x00,0xe0,0xf0,0xe5]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: 00 e0 f0 e5 <unknown>
 
 st4d    { z23.d, z24.d, z25.d, z26.d }, p3, [x13, #-32, mul vl]
 // CHECK-INST: st4d    { z23.d, z24.d, z25.d, z26.d }, p3, [x13, #-32, mul vl]
 // CHECK-ENCODING: [0xb7,0xed,0xf8,0xe5]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: b7 ed f8 e5 <unknown>
 
 st4d    { z21.d, z22.d, z23.d, z24.d }, p5, [x10, #20, mul vl]
 // CHECK-INST: st4d    { z21.d, z22.d, z23.d, z24.d }, p5, [x10, #20, mul vl]
 // CHECK-ENCODING: [0x55,0xf5,0xf5,0xe5]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: 55 f5 f5 e5 <unknown>

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s
 ;
 ; This crased at some point as we place %1 and %4 in the same equivalence class
 ; for invariant loads and when we remap SCEVs to use %4 instead of %1 AddRec SCEVs

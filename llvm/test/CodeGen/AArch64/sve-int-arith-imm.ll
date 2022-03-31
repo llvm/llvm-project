@@ -133,9 +133,8 @@ define <vscale x 2 x i64> @smax_i64_neg(<vscale x 2 x i64> %a) {
 define <vscale x 2 x i64> @smax_i64_out_of_range(<vscale x 2 x i64> %a) {
 ; CHECK-LABEL: smax_i64_out_of_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #65535
+; CHECK-NEXT:    mov z1.d, #65535 // =0xffff
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov z1.d, x8
 ; CHECK-NEXT:    smax z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %elt = insertelement <vscale x 2 x i64> undef, i64 65535, i32 0
@@ -277,9 +276,8 @@ define <vscale x 2 x i64> @smin_i64_neg(<vscale x 2 x i64> %a) {
 define <vscale x 2 x i64> @smin_i64_out_of_range(<vscale x 2 x i64> %a) {
 ; CHECK-LABEL: smin_i64_out_of_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #65535
+; CHECK-NEXT:    mov z1.d, #65535 // =0xffff
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov z1.d, x8
 ; CHECK-NEXT:    smin z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %elt = insertelement <vscale x 2 x i64> undef, i64 65535, i32 0
@@ -385,9 +383,8 @@ define <vscale x 2 x i64> @umax_i64_pos(<vscale x 2 x i64> %a) {
 define <vscale x 2 x i64> @umax_i64_out_of_range(<vscale x 2 x i64> %a) {
 ; CHECK-LABEL: umax_i64_out_of_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #65535
+; CHECK-NEXT:    mov z1.d, #65535 // =0xffff
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov z1.d, x8
 ; CHECK-NEXT:    umax z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %elt = insertelement <vscale x 2 x i64> undef, i64 65535, i32 0
@@ -493,9 +490,8 @@ define <vscale x 2 x i64> @umin_i64_pos(<vscale x 2 x i64> %a) {
 define <vscale x 2 x i64> @umin_i64_out_of_range(<vscale x 2 x i64> %a) {
 ; CHECK-LABEL: umin_i64_out_of_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #65535
+; CHECK-NEXT:    mov z1.d, #65535 // =0xffff
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov z1.d, x8
 ; CHECK-NEXT:    umin z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %elt = insertelement <vscale x 2 x i64> undef, i64 65535, i32 0
@@ -627,9 +623,8 @@ define <vscale x 4 x i32> @mul_i32_range(<vscale x 4 x i32> %a) {
 define <vscale x 2 x i64> @mul_i64_range(<vscale x 2 x i64> %a) {
 ; CHECK-LABEL: mul_i64_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #255
+; CHECK-NEXT:    mov z1.d, #255 // =0xff
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov z1.d, x8
 ; CHECK-NEXT:    mul z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %elt = insertelement <vscale x 2 x i64> undef, i64 255, i32 0

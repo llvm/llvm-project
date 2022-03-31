@@ -12,6 +12,16 @@
 ;
 ; CHECK: DW_TAG_subprogram
 ; CHECK-NOT: DW_TAG
+; CHECK: DW_AT_name ("a")
+; CHECK-NOT: DW_TAG
+; CHECK: DW_TAG_formal_parameter
+; CHECK-NOT: DW_TAG
+; CHECK: DW_TAG_formal_parameter
+; CHECK-NOT: DW_TAG
+; CHECK: DW_TAG_unspecified_parameters
+;
+; CHECK: DW_TAG_subprogram
+; CHECK-NOT: DW_TAG
 ; CHECK: DW_AT_name ("b")
 ; CHECK-NOT: DW_TAG
 ; CHECK: DW_TAG_formal_parameter
@@ -19,16 +29,6 @@
 ; CHECK: DW_TAG_variable
 ; CHECK-NOT: DW_TAG
 ; CHECK: DW_TAG_variable
-; CHECK-NOT: DW_TAG
-; CHECK: DW_TAG_unspecified_parameters
-;
-; CHECK: DW_TAG_subprogram
-; CHECK-NOT: DW_TAG
-; CHECK: DW_AT_name ("a")
-; CHECK-NOT: DW_TAG
-; CHECK: DW_TAG_formal_parameter
-; CHECK-NOT: DW_TAG
-; CHECK: DW_TAG_formal_parameter
 ; CHECK-NOT: DW_TAG
 ; CHECK: DW_TAG_unspecified_parameters
 ;
@@ -86,7 +86,7 @@ attributes #1 = { nounwind readnone }
 !15 = !DIFile(filename: "llvm/tools/clang/test/CodeGenCXX/debug-info-varargs.cpp", directory: "radar/13690847")
 !16 = !DISubroutineType(types: !17)
 !17 = !{null, !10, null}
-!18 = !{i32 2, !"Dwarf Version", i32 2}
+!18 = !{i32 2, !"Dwarf Version", i32 3}
 !19 = !{i32 1, !"Debug Info Version", i32 3}
 !20 = !{!"clang version 3.5 "}
 !21 = !DILocalVariable(name: "c", line: 13, arg: 1, scope: !14, file: !15, type: !10)

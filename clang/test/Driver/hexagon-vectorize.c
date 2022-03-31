@@ -6,4 +6,4 @@
 // CHECK-DEFAULT-NOT: hexagon-autohvx
 // CHECK-VECTOR: "-mllvm" "-hexagon-autohvx"
 // CHECK-NOVECTOR-NOT: hexagon-autohvx
-// CHECK-NEEDHVX: warning: auto-vectorization requires HVX, use -mhvx to enable it
+// CHECK-NEEDHVX: warning: auto-vectorization requires HVX, use -mhvx/-mhvx= to enable it

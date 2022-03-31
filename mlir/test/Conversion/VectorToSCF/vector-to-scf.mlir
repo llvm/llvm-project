@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -convert-vector-to-scf -split-input-file -allow-unregistered-dialect | FileCheck %s
-// RUN: mlir-opt %s -convert-vector-to-scf=full-unroll=true -split-input-file -allow-unregistered-dialect | FileCheck %s --check-prefix=FULL-UNROLL
+// RUN: mlir-opt %s -pass-pipeline="func.func(convert-vector-to-scf)" -split-input-file -allow-unregistered-dialect | FileCheck %s
+// RUN: mlir-opt %s -pass-pipeline="func.func(convert-vector-to-scf{full-unroll=true})" -split-input-file -allow-unregistered-dialect | FileCheck %s --check-prefix=FULL-UNROLL
 
 // CHECK-LABEL: func @vector_transfer_ops_0d(
 func @vector_transfer_ops_0d(%M: memref<f32>) {
@@ -83,7 +83,6 @@ func @materialize_read_1d_partially_specialized(%dyn1 : index, %dyn2 : index, %d
 // CHECK-LABEL: func @materialize_read(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index, %{{.*}}: index) {
 func @materialize_read(%M: index, %N: index, %O: index, %P: index) {
   %f0 = arith.constant 0.0: f32
-  // CHECK-DAG:  %[[ALLOC:.*]] = memref.alloca() : memref<vector<5x4x3xf32>>
   // CHECK-DAG:  %[[C0:.*]] = arith.constant 0 : index
   // CHECK-DAG:  %[[C1:.*]] = arith.constant 1 : index
   // CHECK-DAG:  %[[C3:.*]] = arith.constant 3 : index
@@ -94,6 +93,7 @@ func @materialize_read(%M: index, %N: index, %O: index, %P: index) {
   // CHECK-NEXT:    affine.for %[[I1:.*]] = 0 to %{{.*}} {
   // CHECK-NEXT:      affine.for %[[I2:.*]] = 0 to %{{.*}} {
   // CHECK-NEXT:        affine.for %[[I3:.*]] = 0 to %{{.*}} step 5 {
+  // CHECK:               %[[ALLOC:.*]] = memref.alloca() : memref<vector<5x4x3xf32>>
   // CHECK:               scf.for %[[I4:.*]] = %[[C0]] to %[[C5]] step %[[C1]] {
   // CHECK:                 scf.if
   // CHECK:                   %[[L3:.*]] = affine.apply #[[$ADD]](%[[I3]], %[[I4]])
@@ -149,7 +149,6 @@ func @materialize_read(%M: index, %N: index, %O: index, %P: index) {
 
 // CHECK-LABEL:func @materialize_write(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index, %{{.*}}: index) {
 func @materialize_write(%M: index, %N: index, %O: index, %P: index) {
-  // CHECK-DAG:  %[[ALLOC:.*]] = memref.alloca() : memref<vector<5x4x3xf32>>
   // CHECK-DAG:  %{{.*}} = arith.constant dense<1.000000e+00> : vector<5x4x3xf32>
   // CHECK-DAG:  %[[C0:.*]] = arith.constant 0 : index
   // CHECK-DAG:  %[[C1:.*]] = arith.constant 1 : index
@@ -161,6 +160,7 @@ func @materialize_write(%M: index, %N: index, %O: index, %P: index) {
   // CHECK-NEXT:   affine.for %[[I1:.*]] = 0 to %{{.*}} step 4 {
   // CHECK-NEXT:     affine.for %[[I2:.*]] = 0 to %{{.*}} {
   // CHECK-NEXT:       affine.for %[[I3:.*]] = 0 to %{{.*}} step 5 {
+  // CHECK:              %[[ALLOC:.*]] = memref.alloca() : memref<vector<5x4x3xf32>>
   // CHECK:              memref.store %{{.*}}, %[[ALLOC]][] : memref<vector<5x4x3xf32>>
   // CHECK:              %[[VECTOR_VIEW1:.*]] = vector.type_cast %[[ALLOC]] : memref<vector<5x4x3xf32>> to memref<5xvector<4x3xf32>>
   // CHECK:              scf.for %[[I4:.*]] = %[[C0]] to %[[C5]] step %[[C1]] {
@@ -481,3 +481,22 @@ func @transfer_write_strided(%A : vector<4xf32>, %B : memref<8x4xf32, affine_map
 // CHECK-LABEL: transfer_write_strided(
 // CHECK: scf.for
 // CHECK: store
+
+// -----
+
+func private @fake_side_effecting_fun(%0: vector<2x2xf32>) -> ()
+
+// CHECK-LABEL: transfer_read_within_async_execute
+func @transfer_read_within_async_execute(%A : memref<2x2xf32>) -> !async.token {
+  %c0 = arith.constant 0 : index
+  %f0 = arith.constant 0.0 : f32
+  // CHECK-NOT: alloca
+  //     CHECK: async.execute
+  //     CHECK:   alloca
+  %token = async.execute {
+    %0 = vector.transfer_read %A[%c0, %c0], %f0 : memref<2x2xf32>, vector<2x2xf32>
+    call @fake_side_effecting_fun(%0) : (vector<2x2xf32>) -> ()
+    async.yield
+  }
+  return %token : !async.token
+}

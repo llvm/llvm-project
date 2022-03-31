@@ -129,16 +129,16 @@ func @resume(%arg0: !async.coro.handle) {
 
 // CHECK-LABEL: @store
 func @store(%arg0: f32, %arg1: !async.value<f32>) {
-  // CHECK: async.runtime.store %arg0, %arg1 : !async.value<f32>
-  async.runtime.store %arg0, %arg1 : !async.value<f32>
+  // CHECK: async.runtime.store %arg0, %arg1 : <f32>
+  async.runtime.store %arg0, %arg1 : <f32>
   return
 }
 
 // CHECK-LABEL: @load
 func @load(%arg0: !async.value<f32>) -> f32 {
-  // CHECK: %0 = async.runtime.load %arg0 : !async.value<f32>
+  // CHECK: %0 = async.runtime.load %arg0 : <f32>
   // CHECK: return %0 : f32
-  %0 = async.runtime.load %arg0 : !async.value<f32>
+  %0 = async.runtime.load %arg0 : <f32>
   return %0 : f32
 }
 

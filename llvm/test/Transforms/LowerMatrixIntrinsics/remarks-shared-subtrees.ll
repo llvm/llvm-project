@@ -2,7 +2,7 @@
 
 ; This test needs to be target specific due to the cost estimate in the output.
 
-; RUN: opt -lower-matrix-intrinsics -pass-remarks-output=%t -pass-remarks=lower-matrix-intrinsics -mtriple=arm64-apple-iphoneos %s 2>&1 -disable-output | FileCheck --check-prefix=STDERR %s
+; RUN: opt -passes=lower-matrix-intrinsics -pass-remarks-output=%t -pass-remarks=lower-matrix-intrinsics -mtriple=arm64-apple-iphoneos %s 2>&1 -disable-output | FileCheck --check-prefix=STDERR %s
 ; RUN: FileCheck --input-file=%t --check-prefix=YAML %s
 
 ; YAML-LABEL: --- !Passed

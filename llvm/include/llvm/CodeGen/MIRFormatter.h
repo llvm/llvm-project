@@ -23,7 +23,6 @@ namespace llvm {
 class MachineFunction;
 class MachineInstr;
 struct PerFunctionMIParsingState;
-struct SlotMapping;
 
 /// MIRFormater - Interface to format MIR operand based on target
 class MIRFormatter {
@@ -31,7 +30,7 @@ public:
   typedef function_ref<bool(StringRef::iterator Loc, const Twine &)>
       ErrorCallbackType;
 
-  MIRFormatter() {}
+  MIRFormatter() = default;
   virtual ~MIRFormatter() = default;
 
   /// Implement target specific printing for machine operand immediate value, so

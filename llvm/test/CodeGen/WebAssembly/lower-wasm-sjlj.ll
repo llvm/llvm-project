@@ -1,4 +1,5 @@
 ; RUN: opt < %s -wasm-lower-em-ehsjlj -wasm-enable-sjlj -S | FileCheck %s -DPTR=i32
+; RUN: opt < %s -wasm-lower-em-ehsjlj -wasm-enable-sjlj -S --mattr=+atomics,+bulk-memory | FileCheck %s -DPTR=i32
 ; RUN: opt < %s -wasm-lower-em-ehsjlj -wasm-enable-sjlj --mtriple=wasm64-unknown-unknown -data-layout="e-m:e-p:64:64-i64:64-n32:64-S128" -S | FileCheck %s -DPTR=i64
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
@@ -6,12 +7,17 @@ target triple = "wasm32-unknown-unknown"
 
 %struct.__jmp_buf_tag = type { [6 x i32], i32, [32 x i32] }
 
+; These variables are only used in Emscripten EH/SjLj, so they shouldn't be
+; generated.
+; CHECK-NOT: @__THREW__ =
+; CHECK-NOT: @__threwValue =
+
 @global_longjmp_ptr = global void (%struct.__jmp_buf_tag*, i32)* @longjmp, align 4
 ; CHECK-DAG: @global_longjmp_ptr = global void (%struct.__jmp_buf_tag*, i32)* bitcast (void (i8*, i32)* @__wasm_longjmp to void (%struct.__jmp_buf_tag*, i32)*)
 
 ; Test a simple setjmp - longjmp sequence
 define void @setjmp_longjmp() {
-; CHECK-LABEL: @setjmp_longjmp() personality {{.*}} @__gxx_wasm_personality_v0
+; CHECK-LABEL: @setjmp_longjmp()
 entry:
   %buf = alloca [1 x %struct.__jmp_buf_tag], align 16
   %arraydecay = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %buf, i32 0, i32 0
@@ -52,9 +58,9 @@ entry:
 ; CHECK-NEXT: %arraydecay1 = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %buf8, i32 0, i32 0
 ; CHECK-NEXT: %env = bitcast %struct.__jmp_buf_tag* %arraydecay1 to i8*
 ; CHECK-NEXT: invoke void @__wasm_longjmp(i8* %env, i32 1)
-; CHECK-NEXT:         to label %entry.split.split.split unwind label %catch.dispatch.longjmp
+; CHECK-NEXT:         to label %.noexc unwind label %catch.dispatch.longjmp
 
-; CHECK:    entry.split.split.split:
+; CHECK:    .noexc:
 ; CHECK-NEXT: unreachable
 
 ; CHECK:    catch.dispatch.longjmp:
@@ -101,7 +107,7 @@ entry:
 ; CHECK:   invoke void @foo()
 ; CHECK:           to label %{{.*}} unwind label %catch.dispatch.longjmp
 
-; CHECK: entry.split.split.split:
+; CHECK: .noexc:
 ; CHECK:   invoke void @foo()
 ; CHECK:           to label %{{.*}} unwind label %catch.dispatch.longjmp
 }
@@ -151,7 +157,6 @@ declare void @free(i8*)
 
 ; JS glue function declarations
 ; CHECK-DAG: declare i32 @getTempRet0()
-; CHECK-DAG: declare void @setTempRet0(i32)
 ; CHECK-DAG: declare i32* @saveSetjmp(%struct.__jmp_buf_tag*, i32, i32*, i32)
 ; CHECK-DAG: declare i32 @testSetjmp([[PTR]], i32*, i32)
 ; CHECK-DAG: declare void @__wasm_longjmp(i8*, i32)

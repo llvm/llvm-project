@@ -61,13 +61,49 @@ public:
 /// Traversal order for region, block and operation walk utilities.
 enum class WalkOrder { PreOrder, PostOrder };
 
+/// A utility class to encode the current walk stage for "generic" walkers.
+/// When walking an operation, we can either choose a Pre/Post order walker
+/// which invokes the callback on an operation before/after all its attached
+/// regions have been visited, or choose a "generic" walker where the callback
+/// is invoked on the operation N+1 times where N is the number of regions
+/// attached to that operation. The `WalkStage` class below encodes the current
+/// stage of the walk, i.e., which regions have already been visited, and the
+/// callback accepts an additional argument for the current stage. Such
+/// generic walkers that accept stage-aware callbacks are only applicable when
+/// the callback operates on an operation (i.e., not applicable for callbacks
+/// on Blocks or Regions).
+class WalkStage {
+public:
+  explicit WalkStage(Operation *op);
+
+  /// Return true if parent operation is being visited before all regions.
+  bool isBeforeAllRegions() const { return nextRegion == 0; }
+  /// Returns true if parent operation is being visited just before visiting
+  /// region number `region`.
+  bool isBeforeRegion(int region) const { return nextRegion == region; }
+  /// Returns true if parent operation is being visited just after visiting
+  /// region number `region`.
+  bool isAfterRegion(int region) const { return nextRegion == region + 1; }
+  /// Return true if parent operation is being visited after all regions.
+  bool isAfterAllRegions() const { return nextRegion == numRegions; }
+  /// Advance the walk stage.
+  void advance() { nextRegion++; }
+  /// Returns the next region that will be visited.
+  int getNextRegion() const { return nextRegion; }
+
+private:
+  const int numRegions;
+  int nextRegion;
+};
+
 namespace detail {
 /// Helper templates to deduce the first argument of a callback parameter.
-template <typename Ret, typename Arg> Arg first_argument_type(Ret (*)(Arg));
-template <typename Ret, typename F, typename Arg>
-Arg first_argument_type(Ret (F::*)(Arg));
-template <typename Ret, typename F, typename Arg>
-Arg first_argument_type(Ret (F::*)(Arg) const);
+template <typename Ret, typename Arg, typename... Rest>
+Arg first_argument_type(Ret (*)(Arg, Rest...));
+template <typename Ret, typename F, typename Arg, typename... Rest>
+Arg first_argument_type(Ret (F::*)(Arg, Rest...));
+template <typename Ret, typename F, typename Arg, typename... Rest>
+Arg first_argument_type(Ret (F::*)(Arg, Rest...) const);
 template <typename F>
 decltype(first_argument_type(&F::operator())) first_argument_type(F);
 
@@ -197,10 +233,91 @@ walk(Operation *op, FuncTy &&callback) {
   return detail::walk(op, function_ref<RetT(Operation *)>(wrapperFn), Order);
 }
 
+/// Generic walkers with stage aware callbacks.
+
+/// Walk all the operations nested under (and including) the given operation,
+/// with the callback being invoked on each operation N+1 times, where N is the
+/// number of regions attached to the operation. The `stage` input to the
+/// callback indicates the current walk stage. This method is invoked for void
+/// returning callbacks.
+void walk(Operation *op,
+          function_ref<void(Operation *, const WalkStage &stage)> callback);
+
+/// Walk all the operations nested under (and including) the given operation,
+/// with the callback being invoked on each operation N+1 times, where N is the
+/// number of regions attached to the operation. The `stage` input to the
+/// callback indicates the current walk stage. This method is invoked for
+/// skippable or interruptible callbacks.
+WalkResult
+walk(Operation *op,
+     function_ref<WalkResult(Operation *, const WalkStage &stage)> callback);
+
+/// Walk all of the operations nested under and including the given operation.
+/// This method is selected for stage-aware callbacks that operate on
+/// Operation*.
+///
+/// Example:
+///   op->walk([](Operation *op, const WalkStage &stage) { ... });
+template <typename FuncTy, typename ArgT = detail::first_argument<FuncTy>,
+          typename RetT = decltype(std::declval<FuncTy>()(
+              std::declval<ArgT>(), std::declval<const WalkStage &>()))>
+typename std::enable_if<std::is_same<ArgT, Operation *>::value, RetT>::type
+walk(Operation *op, FuncTy &&callback) {
+  return detail::walk(op,
+                      function_ref<RetT(ArgT, const WalkStage &)>(callback));
+}
+
+/// Walk all of the operations of type 'ArgT' nested under and including the
+/// given operation. This method is selected for void returning callbacks that
+/// operate on a specific derived operation type.
+///
+/// Example:
+///   op->walk([](ReturnOp op, const WalkStage &stage) { ... });
+template <typename FuncTy, typename ArgT = detail::first_argument<FuncTy>,
+          typename RetT = decltype(std::declval<FuncTy>()(
+              std::declval<ArgT>(), std::declval<const WalkStage &>()))>
+typename std::enable_if<!std::is_same<ArgT, Operation *>::value &&
+                            std::is_same<RetT, void>::value,
+                        RetT>::type
+walk(Operation *op, FuncTy &&callback) {
+  auto wrapperFn = [&](Operation *op, const WalkStage &stage) {
+    if (auto derivedOp = dyn_cast<ArgT>(op))
+      callback(derivedOp, stage);
+  };
+  return detail::walk(
+      op, function_ref<RetT(Operation *, const WalkStage &)>(wrapperFn));
+}
+
+/// Walk all of the operations of type 'ArgT' nested under and including the
+/// given operation. This method is selected for WalkReturn returning
+/// interruptible callbacks that operate on a specific derived operation type.
+///
+/// Example:
+///   op->walk(op, [](ReturnOp op, const WalkStage &stage) {
+///     if (some_invariant)
+///       return WalkResult::interrupt();
+///     return WalkResult::advance();
+///   });
+template <typename FuncTy, typename ArgT = detail::first_argument<FuncTy>,
+          typename RetT = decltype(std::declval<FuncTy>()(
+              std::declval<ArgT>(), std::declval<const WalkStage &>()))>
+typename std::enable_if<!std::is_same<ArgT, Operation *>::value &&
+                            std::is_same<RetT, WalkResult>::value,
+                        RetT>::type
+walk(Operation *op, FuncTy &&callback) {
+  auto wrapperFn = [&](Operation *op, const WalkStage &stage) {
+    if (auto derivedOp = dyn_cast<ArgT>(op))
+      return callback(derivedOp, stage);
+    return WalkResult::advance();
+  };
+  return detail::walk(
+      op, function_ref<RetT(Operation *, const WalkStage &)>(wrapperFn));
+}
+
 /// Utility to provide the return type of a templated walk method.
 template <typename FnT>
 using walkResultType = decltype(walk(nullptr, std::declval<FnT>()));
-} // end namespace detail
+} // namespace detail
 
 } // namespace mlir
 

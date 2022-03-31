@@ -19,9 +19,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <functional>
-#include <numeric>
 #include <utility>
-#include <vector>
 
 using namespace llvm;
 using namespace llvm::itanium_demangle;
@@ -173,6 +171,10 @@ struct DumpVisitor {
     case TemplateParamKind::Template:
       return printStr("TemplateParamKind::Template");
     }
+  }
+  void print(llvm::itanium_demangle::Node::Prec) {
+    // Do nothing, the printing functions handle precedence with parentheses
+    // already.
   }
 
   void newLine() {
@@ -406,8 +408,8 @@ char *ItaniumPartialDemangler::getFunctionBaseName(char *Buf, size_t *N) const {
     case Node::KAbiTagAttr:
       Name = static_cast<const AbiTagAttr *>(Name)->Base;
       continue;
-    case Node::KStdQualifiedName:
-      Name = static_cast<const StdQualifiedName *>(Name)->Child;
+    case Node::KModuleEntity:
+      Name = static_cast<const ModuleEntity *>(Name)->Name;
       continue;
     case Node::KNestedName:
       Name = static_cast<const NestedName *>(Name)->Name;
@@ -447,10 +449,10 @@ char *ItaniumPartialDemangler::getFunctionDeclContextName(char *Buf,
     break;
   }
 
+  if (Name->getKind() == Node::KModuleEntity)
+    Name = static_cast<const ModuleEntity *>(Name)->Name;
+
   switch (Name->getKind()) {
-  case Node::KStdQualifiedName:
-    OB += "std";
-    break;
   case Node::KNestedName:
     static_cast<const NestedName *>(Name)->Qual->print(OB);
     break;
@@ -552,8 +554,8 @@ bool ItaniumPartialDemangler::isCtorOrDtor() const {
     case Node::KNestedName:
       N = static_cast<const NestedName *>(N)->Name;
       break;
-    case Node::KStdQualifiedName:
-      N = static_cast<const StdQualifiedName *>(N)->Child;
+    case Node::KModuleEntity:
+      N = static_cast<const ModuleEntity *>(N)->Name;
       break;
     }
   }

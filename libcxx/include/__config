@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_CONFIG
-#define _LIBCPP_CONFIG
+#ifndef _LIBCPP___CONFIG
+#define _LIBCPP___CONFIG
 
 #include <__config_site>
 
@@ -19,16 +19,12 @@
 #endif
 
 #ifndef _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 #ifdef __cplusplus
 
-#define _LIBCPP_VERSION 14000
-
-#ifndef _LIBCPP_ABI_VERSION
-#  define _LIBCPP_ABI_VERSION 1
-#endif
+#define _LIBCPP_VERSION 15000
 
 #if __STDC_HOSTED__ == 0
 #  define _LIBCPP_FREESTANDING
@@ -44,7 +40,7 @@
 #  elif __cplusplus <= 202002L
 #    define _LIBCPP_STD_VER 20
 #  else
-#    define _LIBCPP_STD_VER 21  // current year, or date of c++2b ratification
+#    define _LIBCPP_STD_VER 22  // current year, or date of c++2b ratification
 #  endif
 #endif // _LIBCPP_STD_VER
 
@@ -60,7 +56,7 @@
    // ... add new file formats here ...
 #endif
 
-#if defined(_LIBCPP_ABI_UNSTABLE) || _LIBCPP_ABI_VERSION >= 2
+#if _LIBCPP_ABI_VERSION >= 2
 // Change short string representation so that string data starts at offset 0,
 // improving its alignment in some cases.
 #  define _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
@@ -107,6 +103,17 @@
 #  define _LIBCPP_ABI_ENABLE_UNIQUE_PTR_TRIVIAL_ABI
 // Enable clang::trivial_abi on std::shared_ptr and std::weak_ptr
 #  define _LIBCPP_ABI_ENABLE_SHARED_PTR_TRIVIAL_ABI
+// std::random_device holds some state when it uses an implementation that gets
+// entropy from a file (see _LIBCPP_USING_DEV_RANDOM). When switching from this
+// implementation to another one on a platform that has already shipped
+// std::random_device, one needs to retain the same object layout to remain ABI
+// compatible. This switch removes these workarounds for platforms that don't care
+// about ABI compatibility.
+#  define _LIBCPP_ABI_NO_RANDOM_DEVICE_COMPATIBILITY_LAYOUT
+// Remove basic_string common base
+#  define _LIBCPP_ABI_DO_NOT_EXPORT_BASIC_STRING_COMMON
+// Remove vector base class
+#  define _LIBCPP_ABI_DO_NOT_EXPORT_VECTOR_BASE_COMMON
 #elif _LIBCPP_ABI_VERSION == 1
 #  if !defined(_LIBCPP_OBJECT_FORMAT_COFF)
 // Enable compiling copies of now inline methods into the dylib to support
@@ -123,24 +130,7 @@
 #  endif
 #endif
 
-// By default, don't use a nullptr_t emulation type in C++03.
-//
-// This is technically an ABI break from previous releases, however it is
-// very unlikely to impact anyone. If a user is impacted by this break,
-// they can return to using the C++03 nullptr emulation by defining
-// _LIBCPP_ABI_USE_CXX03_NULLPTR_EMULATION.
-//
-// This switch will be removed entirely in favour of never providing a
-// C++03 emulation after one release.
-//
-// IMPORTANT: IF YOU ARE READING THIS AND YOU TURN THIS MACRO ON, PLEASE LEAVE
-//            A COMMENT ON https://reviews.llvm.org/D109459 OR YOU WILL BE BROKEN
-//            IN THE FUTURE WHEN WE REMOVE THE ABILITY TO USE THE C++03 EMULATION.
-#ifndef _LIBCPP_ABI_USE_CXX03_NULLPTR_EMULATION
-# define _LIBCPP_ABI_ALWAYS_USE_CXX11_NULLPTR
-#endif
-
-#if defined(_LIBCPP_BUILDING_LIBRARY) || defined(_LIBCPP_ABI_UNSTABLE) || _LIBCPP_ABI_VERSION >= 2
+#if defined(_LIBCPP_BUILDING_LIBRARY) || _LIBCPP_ABI_VERSION >= 2
 // Enable additional explicit instantiations of iostreams components. This
 // reduces the number of weak definitions generated in programs that use
 // iostreams by providing a single strong definition in the shared library.
@@ -152,12 +142,8 @@
 #  define _LIBCPP_ABI_BAD_FUNCTION_CALL_KEY_FUNCTION
 #endif
 
-#define _LIBCPP_CONCAT1(_LIBCPP_X,_LIBCPP_Y) _LIBCPP_X##_LIBCPP_Y
-#define _LIBCPP_CONCAT(_LIBCPP_X,_LIBCPP_Y) _LIBCPP_CONCAT1(_LIBCPP_X,_LIBCPP_Y)
-
-#ifndef _LIBCPP_ABI_NAMESPACE
-# define _LIBCPP_ABI_NAMESPACE _LIBCPP_CONCAT(__,_LIBCPP_ABI_VERSION)
-#endif
+#define _LIBCPP_TOSTRING2(x) #x
+#define _LIBCPP_TOSTRING(x) _LIBCPP_TOSTRING2(x)
 
 #if __cplusplus < 201103L
 #define _LIBCPP_CXX03_LANG
@@ -250,6 +236,10 @@
 #  endif // defined(__GLIBC_PREREQ)
 #endif // defined(__linux__)
 
+#if defined(__MVS__)
+#  include <features.h> // for __NATIVE_ASCII_F
+#endif
+
 #ifdef __LITTLE_ENDIAN__
 #  if __LITTLE_ENDIAN__
 #    define _LIBCPP_LITTLE_ENDIAN
@@ -304,19 +294,6 @@
 #    define _LIBCPP_HAS_BITSCAN64
 #  endif
 #  define _LIBCPP_HAS_OPEN_WITH_WCHAR
-#  if defined(_LIBCPP_MSVCRT)
-#    define _LIBCPP_HAS_QUICK_EXIT
-#  endif
-
-// Some CRT APIs are unavailable to store apps
-#  if defined(WINAPI_FAMILY)
-#    include <winapifamily.h>
-#    if !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP) &&                  \
-        (!defined(WINAPI_PARTITION_SYSTEM) ||                                  \
-         !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_SYSTEM))
-#      define _LIBCPP_WINDOWS_STORE_APP
-#    endif
-#  endif
 #endif // defined(_WIN32)
 
 #ifdef __sun__
@@ -333,18 +310,51 @@
 #  define _LIBCPP_SHORT_WCHAR   1
 #endif
 
-#if defined(__OpenBSD__)
-   // Certain architectures provide arc4random(). Prefer using
-   // arc4random() over /dev/{u,}random to make it possible to obtain
-   // random data even when using sandboxing mechanisms such as chroots,
-   // Capsicum, etc.
+// Libc++ supports various implementations of std::random_device.
+//
+// _LIBCPP_USING_DEV_RANDOM
+//      Read entropy from the given file, by default `/dev/urandom`.
+//      If a token is provided, it is assumed to be the path to a file
+//      to read entropy from. This is the default behavior if nothing
+//      else is specified. This implementation requires storing state
+//      inside `std::random_device`.
+//
+// _LIBCPP_USING_ARC4_RANDOM
+//      Use arc4random(). This allows obtaining random data even when
+//      using sandboxing mechanisms. On some platforms like Apple, this
+//      is the recommended source of entropy for user-space programs.
+//      When this option is used, the token passed to `std::random_device`'s
+//      constructor *must* be "/dev/urandom" -- anything else is an error.
+//
+// _LIBCPP_USING_GETENTROPY
+//      Use getentropy().
+//      When this option is used, the token passed to `std::random_device`'s
+//      constructor *must* be "/dev/urandom" -- anything else is an error.
+//
+// _LIBCPP_USING_FUCHSIA_CPRNG
+//      Use Fuchsia's zx_cprng_draw() system call, which is specified to
+//      deliver high-quality entropy and cannot fail.
+//      When this option is used, the token passed to `std::random_device`'s
+//      constructor *must* be "/dev/urandom" -- anything else is an error.
+//
+// _LIBCPP_USING_NACL_RANDOM
+//      NaCl's sandbox (which PNaCl also runs in) doesn't allow filesystem access,
+//      including accesses to the special files under `/dev`. This implementation
+//      uses the NaCL syscall `nacl_secure_random_init()` to get entropy.
+//      When this option is used, the token passed to `std::random_device`'s
+//      constructor *must* be "/dev/urandom" -- anything else is an error.
+//
+// _LIBCPP_USING_WIN32_RANDOM
+//      Use rand_s(), for use on Windows.
+//      When this option is used, the token passed to `std::random_device`'s
+//      constructor *must* be "/dev/urandom" -- anything else is an error.
+#if defined(__OpenBSD__) || defined(__APPLE__)
 #  define _LIBCPP_USING_ARC4_RANDOM
-#elif defined(__Fuchsia__) || defined(__wasi__)
+#elif defined(__wasi__)
 #  define _LIBCPP_USING_GETENTROPY
+#elif defined(__Fuchsia__)
+#  define _LIBCPP_USING_FUCHSIA_CPRNG
 #elif defined(__native_client__)
-   // NaCl's sandbox (which PNaCl also runs in) doesn't allow filesystem access,
-   // including accesses to the special files under /dev. C++11's
-   // std::random_device is instead exposed through a NaCl syscall.
 #  define _LIBCPP_USING_NACL_RANDOM
 #elif defined(_LIBCPP_WIN32API)
 #  define _LIBCPP_USING_WIN32_RANDOM
@@ -368,72 +378,6 @@
 #else
 #  define _LIBCPP_NO_CFI
 #endif
-
-// If the compiler supports using_if_exists, pretend we have those functions and they'll
-// be picked up if the C library provides them.
-//
-// TODO: Once we drop support for Clang 12, we can assume the compiler supports using_if_exists
-//       for platforms that don't have a conforming C11 library, so we can drop this whole thing.
-#if __has_attribute(using_if_exists)
-# define _LIBCPP_HAS_TIMESPEC_GET
-# define _LIBCPP_HAS_QUICK_EXIT
-# define _LIBCPP_HAS_ALIGNED_ALLOC
-#else
-#if (defined(__ISO_C_VISIBLE) && (__ISO_C_VISIBLE >= 2011)) || __cplusplus >= 201103L
-#  if defined(__FreeBSD__)
-#    define _LIBCPP_HAS_ALIGNED_ALLOC
-#    define _LIBCPP_HAS_QUICK_EXIT
-#    if __FreeBSD_version >= 1300064 || \
-       (__FreeBSD_version >= 1201504 && __FreeBSD_version < 1300000)
-#      define _LIBCPP_HAS_TIMESPEC_GET
-#    endif
-#  elif defined(__BIONIC__)
-#    if __ANDROID_API__ >= 21
-#      define _LIBCPP_HAS_QUICK_EXIT
-#    endif
-#    if __ANDROID_API__ >= 28
-#      define _LIBCPP_HAS_ALIGNED_ALLOC
-#    endif
-#    if __ANDROID_API__ >= 29
-#      define _LIBCPP_HAS_TIMESPEC_GET
-#    endif
-#  elif defined(__Fuchsia__) || defined(__wasi__) || defined(__NetBSD__)
-#    define _LIBCPP_HAS_ALIGNED_ALLOC
-#    define _LIBCPP_HAS_QUICK_EXIT
-#    define _LIBCPP_HAS_TIMESPEC_GET
-#  elif defined(__OpenBSD__)
-#    define _LIBCPP_HAS_ALIGNED_ALLOC
-#    define _LIBCPP_HAS_TIMESPEC_GET
-#  elif defined(__linux__)
-#    if !defined(_LIBCPP_HAS_MUSL_LIBC)
-#      if _LIBCPP_GLIBC_PREREQ(2, 15) || defined(__BIONIC__)
-#        define _LIBCPP_HAS_QUICK_EXIT
-#      endif
-#      if _LIBCPP_GLIBC_PREREQ(2, 17)
-#        define _LIBCPP_HAS_ALIGNED_ALLOC
-#        define _LIBCPP_HAS_TIMESPEC_GET
-#      endif
-#    else // defined(_LIBCPP_HAS_MUSL_LIBC)
-#      define _LIBCPP_HAS_ALIGNED_ALLOC
-#      define _LIBCPP_HAS_QUICK_EXIT
-#      define _LIBCPP_HAS_TIMESPEC_GET
-#    endif
-#  elif defined(_LIBCPP_MSVCRT)
-     // Using Microsoft's C Runtime library, not MinGW
-#    define _LIBCPP_HAS_TIMESPEC_GET
-#  elif defined(__APPLE__)
-     // timespec_get and aligned_alloc were introduced in macOS 10.15 and
-     // aligned releases
-#    if ((defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ >= 101500) || \
-         (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ >= 130000) || \
-         (defined(__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__ >= 130000) || \
-         (defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ >= 60000))
-#      define _LIBCPP_HAS_ALIGNED_ALLOC
-#      define _LIBCPP_HAS_TIMESPEC_GET
-#    endif
-#  endif // __APPLE__
-#endif
-#endif // __has_attribute(using_if_exists)
 
 #ifndef _LIBCPP_CXX03_LANG
 # define _LIBCPP_ALIGNOF(_Tp) alignof(_Tp)
@@ -472,22 +416,14 @@ typedef __char32_t char32_t;
 #  define _LIBCPP_NO_EXCEPTIONS
 #endif
 
-#if !(__has_feature(cxx_strong_enums))
-#define _LIBCPP_HAS_NO_STRONG_ENUMS
-#endif
-
 #if __has_feature(cxx_attributes)
 #  define _LIBCPP_NORETURN [[noreturn]]
 #else
 #  define _LIBCPP_NORETURN __attribute__ ((noreturn))
 #endif
 
-#if !(__has_feature(cxx_nullptr))
-#  if (__has_extension(cxx_nullptr) || __has_keyword(__nullptr)) && defined(_LIBCPP_ABI_ALWAYS_USE_CXX11_NULLPTR)
-#    define nullptr __nullptr
-#  else
-#    define _LIBCPP_HAS_NO_NULLPTR
-#  endif
+#ifdef _LIBCPP_CXX03_LANG
+# define nullptr __nullptr
 #endif
 
 // Objective-C++ features (opt-in)
@@ -545,8 +481,6 @@ typedef __char32_t char32_t;
 
 #elif defined(_LIBCPP_COMPILER_MSVC)
 
-#define _LIBCPP_TOSTRING2(x) #x
-#define _LIBCPP_TOSTRING(x) _LIBCPP_TOSTRING2(x)
 #define _LIBCPP_WARNING(x) __pragma(message(__FILE__ "(" _LIBCPP_TOSTRING(__LINE__) ") : warning note: " x))
 
 #if _MSC_VER < 1900
@@ -775,10 +709,10 @@ typedef __char32_t char32_t;
 // Inline namespaces are available in Clang/GCC/MSVC regardless of C++ dialect.
 #define _LIBCPP_BEGIN_NAMESPACE_STD namespace std { inline namespace _LIBCPP_ABI_NAMESPACE {
 #define _LIBCPP_END_NAMESPACE_STD  } }
-#define _VSTD std::_LIBCPP_ABI_NAMESPACE
+#define _VSTD std
 _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 17
+#if _LIBCPP_STD_VER > 14
 #define _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM \
   _LIBCPP_BEGIN_NAMESPACE_STD inline namespace __fs { namespace filesystem {
 #else
@@ -789,7 +723,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #define _LIBCPP_END_NAMESPACE_FILESYSTEM \
   _LIBCPP_END_NAMESPACE_STD } }
 
-#define _VSTD_FS _VSTD::__fs::filesystem
+#define _VSTD_FS std::__fs::filesystem
 
 #if __has_attribute(__enable_if__)
 #   define _LIBCPP_PREFERRED_OVERLOAD __attribute__ ((__enable_if__(true, "")))
@@ -829,20 +763,6 @@ typedef unsigned int   char32_t;
 #  define _LIBCPP_CONSTEVAL consteval
 #endif
 
-#if !defined(__cpp_concepts) || __cpp_concepts < 201907L
-#define _LIBCPP_HAS_NO_CONCEPTS
-#endif
-
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_HAS_NO_CONCEPTS)
-#define _LIBCPP_HAS_NO_RANGES
-#endif
-
-#ifdef _LIBCPP_CXX03_LANG
-#  define _LIBCPP_DEFAULT {}
-#else
-#  define _LIBCPP_DEFAULT = default;
-#endif
-
 #ifdef __GNUC__
 #  define _LIBCPP_NOALIAS __attribute__((__malloc__))
 #else
@@ -855,7 +775,7 @@ typedef unsigned int   char32_t;
 # define _LIBCPP_USING_IF_EXISTS
 #endif
 
-#ifdef _LIBCPP_HAS_NO_STRONG_ENUMS
+#ifdef _LIBCPP_CXX03_LANG
 #  define _LIBCPP_DECLARE_STRONG_ENUM(x) struct _LIBCPP_TYPE_VIS x { enum __lx
 #  define _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(x) \
      __lx __v_; \
@@ -863,10 +783,10 @@ typedef unsigned int   char32_t;
      _LIBCPP_INLINE_VISIBILITY explicit x(int __v) : __v_(static_cast<__lx>(__v)) {} \
      _LIBCPP_INLINE_VISIBILITY operator int() const {return __v_;} \
      };
-#else  // _LIBCPP_HAS_NO_STRONG_ENUMS
+#else  // _LIBCPP_CXX03_LANG
 #  define _LIBCPP_DECLARE_STRONG_ENUM(x) enum class _LIBCPP_ENUM_VIS x
 #  define _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(x)
-#endif // _LIBCPP_HAS_NO_STRONG_ENUMS
+#endif // _LIBCPP_CXX03_LANG
 
 // _LIBCPP_DEBUG potential values:
 //  - undefined: No assertions. This is the default.
@@ -982,13 +902,13 @@ typedef unsigned int   char32_t;
 #  define _LIBCPP_DEPRECATED_IN_CXX11
 #endif
 
-#if _LIBCPP_STD_VER >= 14
+#if _LIBCPP_STD_VER > 11
 #  define _LIBCPP_DEPRECATED_IN_CXX14 _LIBCPP_DEPRECATED
 #else
 #  define _LIBCPP_DEPRECATED_IN_CXX14
 #endif
 
-#if _LIBCPP_STD_VER >= 17
+#if _LIBCPP_STD_VER > 14
 #  define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
 #else
 #  define _LIBCPP_DEPRECATED_IN_CXX17
@@ -1185,9 +1105,9 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 #   define _LIBCPP_C_HAS_NO_GETS
 #endif
 
-#if defined(__BIONIC__) || defined(__NuttX__) ||      \
-    defined(__Fuchsia__) || defined(__wasi__) || defined(_LIBCPP_HAS_MUSL_LIBC) || \
-    defined(__MVS__) || defined(__OpenBSD__)
+#if defined(__BIONIC__) || defined(__NuttX__) ||           \
+    defined(__Fuchsia__) || defined(__wasi__) ||           \
+    defined(_LIBCPP_HAS_MUSL_LIBC) || defined(__OpenBSD__)
 #define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE
 #endif
 
@@ -1218,8 +1138,9 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 #  if defined(__clang__) && __has_attribute(acquire_capability)
 // Work around the attribute handling in clang.  When both __declspec and
 // __attribute__ are present, the processing goes awry preventing the definition
-// of the types.
-#    if !defined(_LIBCPP_OBJECT_FORMAT_COFF)
+// of the types. In MinGW mode, __declspec evaluates to __attribute__, and thus
+// combining the two does work.
+#    if !defined(_MSC_VER)
 #      define _LIBCPP_HAS_THREAD_SAFETY_ANNOTATIONS
 #    endif
 #  endif
@@ -1231,10 +1152,12 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 #   define _LIBCPP_THREAD_SAFETY_ANNOTATION(x)
 #endif
 
-#if __has_attribute(require_constant_initialization)
-#  define _LIBCPP_SAFE_STATIC __attribute__((__require_constant_initialization__))
+#if _LIBCPP_STD_VER > 17
+#  define _LIBCPP_CONSTINIT constinit
+#elif __has_attribute(require_constant_initialization)
+#  define _LIBCPP_CONSTINIT __attribute__((__require_constant_initialization__))
 #else
-#  define _LIBCPP_SAFE_STATIC
+#  define _LIBCPP_CONSTINIT
 #endif
 
 #if __has_attribute(diagnose_if) && !defined(_LIBCPP_DISABLE_ADDITIONAL_DIAGNOSTICS)
@@ -1248,7 +1171,7 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 #endif
 
 // Use a function like macro to imply that it must be followed by a semicolon
-#if __cplusplus > 201402L && __has_cpp_attribute(fallthrough)
+#if _LIBCPP_STD_VER > 14 && __has_cpp_attribute(fallthrough)
 #  define _LIBCPP_FALLTHROUGH() [[fallthrough]]
 #elif __has_cpp_attribute(clang::fallthrough)
 #  define _LIBCPP_FALLTHROUGH() [[clang::fallthrough]]
@@ -1391,6 +1314,53 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 # define _LIBCPP_ATTRIBUTE_FORMAT(archetype, format_string_index, first_format_arg_index) /* nothing */
 #endif
 
+#if __has_cpp_attribute(msvc::no_unique_address)
+   // MSVC implements [[no_unique_address]] as a silent no-op currently.
+   // (If/when MSVC breaks its C++ ABI, it will be changed to work as intended.)
+   // However, MSVC implements [[msvc::no_unique_address]] which does what
+   // [[no_unique_address]] is supposed to do, in general.
+
+   // Clang-cl does not yet (14.0) implement either [[no_unique_address]] or
+   // [[msvc::no_unique_address]] though. If/when it does implement
+   // [[msvc::no_unique_address]], this should be preferred though.
+#  define _LIBCPP_NO_UNIQUE_ADDRESS [[msvc::no_unique_address]]
+#elif __has_cpp_attribute(no_unique_address)
+#  define _LIBCPP_NO_UNIQUE_ADDRESS [[no_unique_address]]
+#else
+#  define _LIBCPP_NO_UNIQUE_ADDRESS /* nothing */
+   // Note that this can be replaced by #error as soon as clang-cl
+   // implements msvc::no_unique_address, since there should be no C++20
+   // compiler that doesn't support one of the two attributes at that point.
+   // We generally don't want to use this macro outside of C++20-only code,
+   // because using it conditionally in one language version only would make
+   // the ABI inconsistent.
+#endif
+
+#ifdef _LIBCPP_COMPILER_CLANG_BASED
+#  define _LIBCPP_DIAGNOSTIC_PUSH _Pragma("clang diagnostic push")
+#  define _LIBCPP_DIAGNOSTIC_POP _Pragma("clang diagnostic pop")
+#  define _LIBCPP_CLANG_DIAGNOSTIC_IGNORED(str) _Pragma(_LIBCPP_TOSTRING(clang diagnostic ignored str))
+#  define _LIBCPP_GCC_DIAGNOSTIC_IGNORED(str)
+#elif defined(_LIBCPP_COMPILER_GCC)
+#  define _LIBCPP_DIAGNOSTIC_PUSH _Pragma("GCC diagnostic push")
+#  define _LIBCPP_DIAGNOSTIC_POP _Pragma("GCC diagnostic pop")
+#  define _LIBCPP_CLANG_DIAGNOSTIC_IGNORED(str)
+#  define _LIBCPP_GCC_DIAGNOSTIC_IGNORED(str) _Pragma(_LIBCPP_TOSTRING(GCC diagnostic ignored str))
+#else
+#  define _LIBCPP_DIAGNOSTIC_PUSH
+#  define _LIBCPP_DIAGNOSTIC_POP
+#  define _LIBCPP_CLANG_DIAGNOSTIC_IGNORED(str)
+#  define _LIBCPP_GCC_DIAGNOSTIC_IGNORED(str)
+#endif
+
+#if defined(_AIX) && !defined(_LIBCPP_COMPILER_GCC)
+#  define _LIBCPP_PACKED_BYTE_FOR_AIX _Pragma("pack(1)")
+#  define _LIBCPP_PACKED_BYTE_FOR_AIX_END _Pragma("pack(pop)")
+#else
+#  define _LIBCPP_PACKED_BYTE_FOR_AIX      /* empty */
+#  define _LIBCPP_PACKED_BYTE_FOR_AIX_END  /* empty */
+#endif
+
 #endif // __cplusplus
 
-#endif // _LIBCPP_CONFIG
+#endif // _LIBCPP___CONFIG

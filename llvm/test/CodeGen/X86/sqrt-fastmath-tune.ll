@@ -2,7 +2,9 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=nehalem     | FileCheck %s --check-prefixes=NHM
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=sandybridge | FileCheck %s --check-prefixes=FAST-SCALAR,SNB
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=broadwell   | FileCheck %s --check-prefixes=FAST-SCALAR,BDW
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=skylake     | FileCheck %s --check-prefixes=FAST-SCALAR,SKL
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=skylake     | FileCheck %s --check-prefixes=FAST-SCALAR,FAST-VECTOR
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver1      | FileCheck %s --check-prefixes=FAST-SCALAR,FAST-VECTOR
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver3      | FileCheck %s --check-prefixes=FAST-SCALAR,FAST-VECTOR
 
 define float @f32_no_daz(float %f) #0 {
 ; NHM-LABEL: f32_no_daz:
@@ -76,10 +78,10 @@ define <4 x float> @v4f32_no_daz(<4 x float> %f) #0 {
 ; BDW-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; BDW-NEXT:    retq
 ;
-; SKL-LABEL: v4f32_no_daz:
-; SKL:       # %bb.0:
-; SKL-NEXT:    vsqrtps %xmm0, %xmm0
-; SKL-NEXT:    retq
+; FAST-VECTOR-LABEL: v4f32_no_daz:
+; FAST-VECTOR:       # %bb.0:
+; FAST-VECTOR-NEXT:    vsqrtps %xmm0, %xmm0
+; FAST-VECTOR-NEXT:    retq
   %call = tail call fast <4 x float> @llvm.sqrt.v4f32(<4 x float> %f) #2
   ret <4 x float> %call
 }
@@ -147,10 +149,10 @@ define <8 x float> @v8f32_no_daz(<8 x float> %f) #0 {
 ; BDW-NEXT:    vandps %ymm1, %ymm0, %ymm0
 ; BDW-NEXT:    retq
 ;
-; SKL-LABEL: v8f32_no_daz:
-; SKL:       # %bb.0:
-; SKL-NEXT:    vsqrtps %ymm0, %ymm0
-; SKL-NEXT:    retq
+; FAST-VECTOR-LABEL: v8f32_no_daz:
+; FAST-VECTOR:       # %bb.0:
+; FAST-VECTOR-NEXT:    vsqrtps %ymm0, %ymm0
+; FAST-VECTOR-NEXT:    retq
   %call = tail call fast <8 x float> @llvm.sqrt.v8f32(<8 x float> %f) #2
   ret <8 x float> %call
 }
@@ -224,10 +226,10 @@ define <4 x float> @v4f32_daz(<4 x float> %f) #1 {
 ; BDW-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; BDW-NEXT:    retq
 ;
-; SKL-LABEL: v4f32_daz:
-; SKL:       # %bb.0:
-; SKL-NEXT:    vsqrtps %xmm0, %xmm0
-; SKL-NEXT:    retq
+; FAST-VECTOR-LABEL: v4f32_daz:
+; FAST-VECTOR:       # %bb.0:
+; FAST-VECTOR-NEXT:    vsqrtps %xmm0, %xmm0
+; FAST-VECTOR-NEXT:    retq
   %call = tail call fast <4 x float> @llvm.sqrt.v4f32(<4 x float> %f) #2
   ret <4 x float> %call
 }
@@ -286,10 +288,10 @@ define <8 x float> @v8f32_daz(<8 x float> %f) #1 {
 ; BDW-NEXT:    vandps %ymm1, %ymm0, %ymm0
 ; BDW-NEXT:    retq
 ;
-; SKL-LABEL: v8f32_daz:
-; SKL:       # %bb.0:
-; SKL-NEXT:    vsqrtps %ymm0, %ymm0
-; SKL-NEXT:    retq
+; FAST-VECTOR-LABEL: v8f32_daz:
+; FAST-VECTOR:       # %bb.0:
+; FAST-VECTOR-NEXT:    vsqrtps %ymm0, %ymm0
+; FAST-VECTOR-NEXT:    retq
   %call = tail call fast <8 x float> @llvm.sqrt.v8f32(<8 x float> %f) #2
   ret <8 x float> %call
 }

@@ -20,7 +20,7 @@ using namespace llvm;
 using namespace llvm::object;
 
 void objdump::printWasmFileHeader(const object::ObjectFile *Obj) {
-  const auto *File = dyn_cast<const WasmObjectFile>(Obj);
+  const auto *File = cast<const WasmObjectFile>(Obj);
 
   outs() << "Program Header:\n";
   outs() << "Version: 0x";

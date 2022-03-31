@@ -420,9 +420,9 @@ define void @func_call_too_many_args_use_workitem_id_x(i32 %arg0) #1 {
 ; GCN-LABEL: {{^}}too_many_args_call_too_many_args_use_workitem_id_x:
 ; GCN-DAG: s_addk_i32 s32, 0x400{{$}}
 ; GCN-DAG: buffer_store_dword v40, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
-; GCN-DAG: buffer_load_dword v32, off, s[0:3], s33{{$}}
+; GCN-DAG: buffer_load_dword [[TMP_REG:v[0-9]+]], off, s[0:3], s33{{$}}
 
-; GCN: buffer_store_dword v32, off, s[0:3], s32{{$}}
+; GCN: buffer_store_dword [[TMP_REG]], off, s[0:3], s32{{$}}
 
 ; GCN: s_swappc_b64
 

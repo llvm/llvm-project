@@ -12,8 +12,8 @@
 
 #include <__algorithm/find_if.h>
 #include <__algorithm/min.h>
+#include <__assert>
 #include <__config>
-#include <__debug>
 #include <__format/format_arg.h>
 #include <__format/format_error.h>
 #include <__format/format_string.h>
@@ -24,7 +24,7 @@
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-# pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
@@ -34,24 +34,19 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER > 17
 
-// TODO FMT Remove this once we require compilers with proper C++20 support.
-// If the compiler has no concepts support, the format header will be disabled.
-// Without concepts support enable_if needs to be used and that too much effort
-// to support compilers with partial C++20 support.
-# if !defined(_LIBCPP_HAS_NO_CONCEPTS)
-
 namespace __format_spec {
 
 /**
  * Contains the flags for the std-format-spec.
  *
- * Some format-options can only be used for specific C++types and may depend on
+ * Some format-options can only be used for specific C++ types and may depend on
  * the selected format-type.
  * * The C++type filtering can be done using the proper policies for
  *   @ref __parser_std.
  * * The format-type filtering needs to be done post parsing in the parser
  *   derived from @ref __parser_std.
  */
+_LIBCPP_PACKED_BYTE_FOR_AIX
 class _LIBCPP_TYPE_VIS _Flags {
 public:
   enum class _LIBCPP_ENUM_VIS _Alignment : uint8_t {
@@ -109,6 +104,7 @@ public:
 
   _Type __type{_Type::__default};
 };
+_LIBCPP_PACKED_BYTE_FOR_AIX_END
 
 namespace __detail {
 template <class _CharT>
@@ -214,7 +210,7 @@ __parse_arg_id(const _CharT* __begin, const _CharT* __end, auto& __parse_ctx) {
       __format::__parse_arg_id(__begin, __end, __parse_ctx);
 
   if (__r.__ptr == __end || *__r.__ptr != _CharT('}'))
-    __throw_format_error("A format-spec arg-id should terminate at a '}'");
+    __throw_format_error("Invalid arg-id");
 
   ++__r.__ptr;
   return __r;
@@ -222,7 +218,7 @@ __parse_arg_id(const _CharT* __begin, const _CharT* __end, auto& __parse_ctx) {
 
 template <class _Context>
 _LIBCPP_HIDE_FROM_ABI constexpr uint32_t
-__substitute_arg_id(basic_format_arg<_Context> __arg) {
+__substitute_arg_id(basic_format_arg<_Context> _Arg) {
   return visit_format_arg(
       [](auto __arg) -> uint32_t {
         using _Type = decltype(__arg);
@@ -246,7 +242,7 @@ __substitute_arg_id(basic_format_arg<_Context> __arg) {
           __throw_format_error("A format-spec arg-id replacement argument "
                                "isn't an integral type");
       },
-      __arg);
+      _Arg);
 }
 
 class _LIBCPP_TYPE_VIS __parser_width {
@@ -363,17 +359,6 @@ protected:
     if (__begin == __end)
       __throw_format_error("End of input while parsing format-spec precision");
 
-    if (*__begin == _CharT('0')) {
-      ++__begin;
-      if (__begin != __end && *__begin >= '0' && *__begin <= '9')
-        __throw_format_error(
-            "A format-spec precision field shouldn't have a leading zero");
-
-      __precision = 0;
-      __precision_as_arg = 0;
-      return __begin;
-    }
-
     if (*__begin == _CharT('{')) {
       __format::__parse_number_result __arg_id =
           __parse_arg_id(++__begin, __end, __parse_ctx);
@@ -484,6 +469,21 @@ __parse_type(const _CharT* __begin, _Flags& __flags) {
     return __begin;
   }
   return ++__begin;
+}
+
+/**
+ * Process the parsed alignment and zero-padding state of arithmetic types.
+ *
+ * [format.string.std]/13
+ *   If the 0 character and an align option both appear, the 0 character is
+ *   ignored.
+ *
+ * For the formatter a @ref __default alignment means zero-padding.
+ */
+_LIBCPP_HIDE_FROM_ABI constexpr void __process_arithmetic_alignment(_Flags& __flags) {
+  __flags.__zero_padding &= __flags.__alignment == _Flags::_Alignment::__default;
+  if (!__flags.__zero_padding && __flags.__alignment == _Flags::_Alignment::__default)
+    __flags.__alignment = _Flags::_Alignment::__right;
 }
 
 /**
@@ -659,23 +659,9 @@ protected:
     return __begin;
   }
 
-  /**
-   * Handles the post-parsing updates for the integer types.
-   *
-   * Updates the zero-padding and alignment for integer types.
-   *
-   * [format.string.std]/13
-   *   If the 0 character and an align option both appear, the 0 character is
-   *   ignored.
-   *
-   * For the formatter a @ref __default alignment means zero-padding. Update
-   * the alignment based on parsed format string.
-   */
+  /** Handles the post-parsing updates for the integer types. */
   _LIBCPP_HIDE_FROM_ABI constexpr void __handle_integer() noexcept {
-    this->__zero_padding &= this->__alignment == _Flags::_Alignment::__default;
-    if (!this->__zero_padding &&
-        this->__alignment == _Flags::_Alignment::__default)
-      this->__alignment = _Flags::_Alignment::__right;
+    __process_arithmetic_alignment(static_cast<_Flags&>(*this));
   }
 
   /**
@@ -712,8 +698,232 @@ protected:
   }
 };
 
-// TODO FMT Add a parser for floating-point values.
-// TODO FMT Add a parser for pointer values.
+/**
+ * The parser for the std-format-spec.
+ *
+ * This implements the parser for the floating-point types.
+ *
+ * See @ref __parser_string.
+ */
+template <class _CharT>
+class _LIBCPP_TEMPLATE_VIS __parser_floating_point
+    : public __parser_width,              // provides __width(|as_arg)
+      public __parser_precision,          // provides __precision(|as_arg)
+      public __parser_fill_align<_CharT>, // provides __fill and uses __flags
+      public _Flags                       // provides __flags
+{
+public:
+  using char_type = _CharT;
+
+  /**
+   * The low-level std-format-spec parse function.
+   *
+   * @pre __begin points at the beginning of the std-format-spec. This means
+   * directly after the ':'.
+   * @pre The std-format-spec parses the entire input, or the first unmatched
+   * character is a '}'.
+   *
+   * @returns The iterator pointing at the last parsed character.
+   */
+  _LIBCPP_HIDE_FROM_ABI constexpr auto parse(auto& __parse_ctx)
+      -> decltype(__parse_ctx.begin()) {
+    auto __it = __parse(__parse_ctx);
+    __process_arithmetic_alignment(static_cast<_Flags&>(*this));
+    __process_display_type();
+    return __it;
+  }
+protected:
+  /**
+   * The low-level std-format-spec parse function.
+   *
+   * @pre __begin points at the beginning of the std-format-spec. This means
+   * directly after the ':'.
+   * @pre The std-format-spec parses the entire input, or the first unmatched
+   * character is a '}'.
+   *
+   * @returns The iterator pointing at the last parsed character.
+   */
+  _LIBCPP_HIDE_FROM_ABI constexpr auto __parse(auto& __parse_ctx)
+      -> decltype(__parse_ctx.begin()) {
+    auto __begin = __parse_ctx.begin();
+    auto __end = __parse_ctx.end();
+    if (__begin == __end)
+      return __begin;
+
+    __begin = __parser_fill_align<_CharT>::__parse(__begin, __end,
+                                                   static_cast<_Flags&>(*this));
+    if (__begin == __end)
+      return __begin;
+
+    __begin = __parse_sign(__begin, static_cast<_Flags&>(*this));
+    if (__begin == __end)
+      return __begin;
+
+    __begin = __parse_alternate_form(__begin, static_cast<_Flags&>(*this));
+    if (__begin == __end)
+      return __begin;
+
+    __begin = __parse_zero_padding(__begin, static_cast<_Flags&>(*this));
+    if (__begin == __end)
+      return __begin;
+
+    __begin = __parser_width::__parse(__begin, __end, __parse_ctx);
+    if (__begin == __end)
+      return __begin;
+
+    __begin = __parser_precision::__parse(__begin, __end, __parse_ctx);
+    if (__begin == __end)
+      return __begin;
+
+    __begin =
+        __parse_locale_specific_form(__begin, static_cast<_Flags&>(*this));
+    if (__begin == __end)
+      return __begin;
+
+    __begin = __parse_type(__begin, static_cast<_Flags&>(*this));
+
+    if (__begin != __end && *__begin != _CharT('}'))
+      __throw_format_error(
+          "The format-spec should consume the input or end with a '}'");
+
+    return __begin;
+  }
+
+  /** Processes the parsed std-format-spec based on the parsed display type. */
+  _LIBCPP_HIDE_FROM_ABI constexpr void __process_display_type() {
+    switch (this->__type) {
+    case _Flags::_Type::__default:
+      // When no precision specified then it keeps default since that
+      // formatting differs from the other types.
+      if (this->__has_precision_field())
+        this->__type = _Flags::_Type::__general_lower_case;
+      break;
+    case _Flags::_Type::__float_hexadecimal_lower_case:
+    case _Flags::_Type::__float_hexadecimal_upper_case:
+      // Precision specific behavior will be handled later.
+      break;
+    case _Flags::_Type::__scientific_lower_case:
+    case _Flags::_Type::__scientific_upper_case:
+    case _Flags::_Type::__fixed_lower_case:
+    case _Flags::_Type::__fixed_upper_case:
+    case _Flags::_Type::__general_lower_case:
+    case _Flags::_Type::__general_upper_case:
+      if (!this->__has_precision_field()) {
+        // Set the default precision for the call to to_chars.
+        this->__precision = 6;
+        this->__precision_as_arg = false;
+      }
+      break;
+
+    default:
+      __throw_format_error("The format-spec type has a type not supported for "
+                           "a floating-point argument");
+    }
+  }
+};
+
+/**
+ * The parser for the std-format-spec.
+ *
+ * This implements the parser for the pointer types.
+ *
+ * See @ref __parser_string.
+ */
+template <class _CharT>
+class _LIBCPP_TEMPLATE_VIS __parser_pointer : public __parser_width,              // provides __width(|as_arg)
+                                              public __parser_fill_align<_CharT>, // provides __fill and uses __flags
+                                              public _Flags                       // provides __flags
+{
+public:
+  using char_type = _CharT;
+
+  _LIBCPP_HIDE_FROM_ABI constexpr __parser_pointer() {
+    // Implements LWG3612 Inconsistent pointer alignment in std::format.
+    // The issue's current status is "Tentatively Ready" and libc++ status is
+    // still experimental.
+    //
+    // TODO FMT Validate this with the final resolution of LWG3612.
+    this->__alignment = _Flags::_Alignment::__right;
+  }
+
+  /**
+   * The low-level std-format-spec parse function.
+   *
+   * @pre __begin points at the beginning of the std-format-spec. This means
+   * directly after the ':'.
+   * @pre The std-format-spec parses the entire input, or the first unmatched
+   * character is a '}'.
+   *
+   * @returns The iterator pointing at the last parsed character.
+   */
+  _LIBCPP_HIDE_FROM_ABI constexpr auto parse(auto& __parse_ctx) -> decltype(__parse_ctx.begin()) {
+    auto __it = __parse(__parse_ctx);
+    __process_display_type();
+    return __it;
+  }
+
+protected:
+  /**
+   * The low-level std-format-spec parse function.
+   *
+   * @pre __begin points at the beginning of the std-format-spec. This means
+   * directly after the ':'.
+   * @pre The std-format-spec parses the entire input, or the first unmatched
+   * character is a '}'.
+   *
+   * @returns The iterator pointing at the last parsed character.
+   */
+  _LIBCPP_HIDE_FROM_ABI constexpr auto __parse(auto& __parse_ctx) -> decltype(__parse_ctx.begin()) {
+    auto __begin = __parse_ctx.begin();
+    auto __end = __parse_ctx.end();
+    if (__begin == __end)
+      return __begin;
+
+    __begin = __parser_fill_align<_CharT>::__parse(__begin, __end, static_cast<_Flags&>(*this));
+    if (__begin == __end)
+      return __begin;
+
+    // An integer presentation type isn't defined in the Standard.
+    // Since a pointer is formatted as an integer it can be argued it's an
+    // integer presentation type. However there are two LWG-issues asserting it
+    // isn't an integer presentation type:
+    // - LWG3612 Inconsistent pointer alignment in std::format
+    // - LWG3644 std::format does not define "integer presentation type"
+    //
+    // There's a paper to make additional clarifications on the status of
+    // formatting pointers and proposes additional fields to be valid. That
+    // paper hasn't been reviewed by the Committee yet.
+    // - P2510 Formatting pointers
+    //
+    // The current implementation assumes formatting pointers isn't covered by
+    // "integer presentation type".
+    // TODO FMT Apply the LWG-issues/papers after approval/rejection by the Committee.
+
+    __begin = __parser_width::__parse(__begin, __end, __parse_ctx);
+    if (__begin == __end)
+      return __begin;
+
+    __begin = __parse_type(__begin, static_cast<_Flags&>(*this));
+
+    if (__begin != __end && *__begin != _CharT('}'))
+      __throw_format_error("The format-spec should consume the input or end with a '}'");
+
+    return __begin;
+  }
+
+  /** Processes the parsed std-format-spec based on the parsed display type. */
+  _LIBCPP_HIDE_FROM_ABI constexpr void __process_display_type() {
+    switch (this->__type) {
+    case _Flags::_Type::__default:
+      this->__type = _Flags::_Type::__pointer;
+      break;
+    case _Flags::_Type::__pointer:
+      break;
+    default:
+      __throw_format_error("The format-spec type has a type not supported for a pointer argument");
+    }
+  }
+};
 
 /** Helper struct returned from @ref __get_string_alignment. */
 template <class _CharT>
@@ -827,7 +1037,7 @@ concept __utf16_or_32_character = __utf16_character<_CharT> || __utf32_character
  * character.
  */
 _LIBCPP_HIDE_FROM_ABI inline constexpr int __column_width_3(uint32_t __c) noexcept {
-  _LIBCPP_ASSERT(__c < 0x1'0000,
+  _LIBCPP_ASSERT(__c < 0x10000,
                  "Use __column_width_4 or __column_width for larger values");
 
   // clang-format off
@@ -852,7 +1062,7 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr int __column_width_3(uint32_t __c) noexce
  * 4-byte UTF-8 character.
  */
 _LIBCPP_HIDE_FROM_ABI inline constexpr int __column_width_4(uint32_t __c) noexcept {
-  _LIBCPP_ASSERT(__c >= 0x1'0000,
+  _LIBCPP_ASSERT(__c >= 0x10000,
                  "Use __column_width_3 or __column_width for smaller values");
 
   // clang-format off
@@ -870,7 +1080,7 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr int __column_width_4(uint32_t __c) noexce
  * The general case, accepting all values.
  */
 _LIBCPP_HIDE_FROM_ABI inline constexpr int __column_width(uint32_t __c) noexcept {
-  if (__c < 0x1'0000)
+  if (__c < 0x10000)
     return __column_width_3(__c);
 
   return __column_width_4(__c);
@@ -1030,7 +1240,7 @@ __estimate_column_width(const _CharT* __first, const _CharT* __last,
       __c -= 0xd800;
       __c <<= 10;
       __c += (*(__first + 1) - 0xdc00);
-      __c += 0x10'000;
+      __c += 0x10000;
 
       __result += __column_width_4(__c);
       if (__result > __maximum)
@@ -1057,7 +1267,7 @@ __estimate_column_width(const _CharT* __first, const _CharT* __last,
   size_t __result = 0;
 
   while (__first != __last) {
-    wchar_t __c = *__first;
+    uint32_t __c = *__first;
     __result += __column_width(__c);
 
     if (__result > __maximum)
@@ -1172,8 +1382,6 @@ __get_string_alignment(const _CharT* __first, const _CharT* __last,
 #endif // _LIBCPP_HAS_NO_UNICODE
 
 } // namespace __format_spec
-
-# endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 #endif //_LIBCPP_STD_VER > 17
 

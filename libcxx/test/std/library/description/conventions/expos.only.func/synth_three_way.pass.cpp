@@ -6,19 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17, libcpp-no-concepts
-// ADDITIONAL_COMPILE_FLAGS: -Wno-sign-compare
+// UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // constexpr auto synth-three-way = ...;
 //   via std::tuple<T>(t) <=> std::tuple<U>(u), which exposes its behavior most directly
+
+#include "test_macros.h"
+
+TEST_CLANG_DIAGNOSTIC_IGNORED("-Wsign-compare")
+TEST_GCC_DIAGNOSTIC_IGNORED("-Wsign-compare")
+TEST_MSVC_DIAGNOSTIC_IGNORED(4242 4244) // Various truncation warnings
 
 #include <cassert>
 #include <compare>
 #include <limits>  // quiet_NaN
 #include <tuple>
 #include <utility> // declval
-
-#include "test_macros.h"
 
 template <typename T, typename U = T>
 concept can_synth_three_way = requires(T t, U u) { std::tuple<T>(t) <=> std::tuple<U>(u); };

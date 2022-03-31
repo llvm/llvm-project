@@ -29,8 +29,8 @@ static constexpr int BestSizeCompression = 9;
 
 bool isAvailable();
 
-Error compress(StringRef InputBuffer, SmallVectorImpl<char> &CompressedBuffer,
-               int Level = DefaultCompression);
+void compress(StringRef InputBuffer, SmallVectorImpl<char> &CompressedBuffer,
+              int Level = DefaultCompression);
 
 Error uncompress(StringRef InputBuffer, char *UncompressedBuffer,
                  size_t &UncompressedSize);

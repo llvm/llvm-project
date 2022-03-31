@@ -196,6 +196,12 @@ const CompilerInstance *Interpreter::getCompilerInstance() const {
   return IncrParser->getCI();
 }
 
+const llvm::orc::LLJIT *Interpreter::getExecutionEngine() const {
+  if (IncrExecutor)
+    return IncrExecutor->getExecutionEngine();
+  return nullptr;
+}
+
 llvm::Expected<PartialTranslationUnit &>
 Interpreter::Parse(llvm::StringRef Code) {
   return IncrParser->Parse(Code);

@@ -17,7 +17,7 @@
 define i32 @test_memcpy(i32 addrspace(1)* nocapture %p, i32 addrspace(1)* nocapture readonly %q) {
 ; Check loads of %q are scheduled ahead of that store of the memcpy on %p.
 ; CHECK-LABEL: test_memcpy:
-; CHECK-DAG:    global_load_dwordx2 v{{\[}}[[Q0:[0-9]+]]:[[Q1:[0-9]+]]{{\]}}, v[2:3], off
+; CHECK-DAG:    global_load_dwordx2 v[[[Q0:[0-9]+]]:[[Q1:[0-9]+]]], v[2:3], off
 ; CHECK-DAG:    global_load_dwordx4 [[PVAL:v\[[0-9]+:[0-9]+\]]], v[0:1], off offset:16
 ; CHECK-DAG:    v_add_nc_u32_e32 v{{[0-9]+}}, v[[Q0]], v[[Q1]]
 ; CHECK:        global_store_dwordx4 v[0:1], [[PVAL]], off
@@ -39,7 +39,7 @@ define i32 @test_memcpy(i32 addrspace(1)* nocapture %p, i32 addrspace(1)* nocapt
 define i32 @test_memcpy_inline(i32 addrspace(1)* nocapture %p, i32 addrspace(1)* nocapture readonly %q) {
 ; Check loads of %q are scheduled ahead of that store of the memcpy on %p.
 ; CHECK-LABEL: test_memcpy_inline:
-; CHECK-DAG:    global_load_dwordx2 v{{\[}}[[Q0:[0-9]+]]:[[Q1:[0-9]+]]{{\]}}, v[2:3], off
+; CHECK-DAG:    global_load_dwordx2 v[[[Q0:[0-9]+]]:[[Q1:[0-9]+]]], v[2:3], off
 ; CHECK-DAG:    global_load_dwordx4 [[PVAL:v\[[0-9]+:[0-9]+\]]], v[0:1], off offset:16
 ; CHECK-DAG:    v_add_nc_u32_e32 v{{[0-9]+}}, v[[Q0]], v[[Q1]]
 ; CHECK:        global_store_dwordx4 v[0:1], [[PVAL]], off
@@ -61,7 +61,7 @@ define i32 @test_memcpy_inline(i32 addrspace(1)* nocapture %p, i32 addrspace(1)*
 define i32 @test_memmove(i32 addrspace(1)* nocapture %p, i32 addrspace(1)* nocapture readonly %q) {
 ; Check loads of %q are scheduled ahead of that store of the memmove on %p.
 ; CHECK-LABEL: test_memmove:
-; CHECK-DAG:    global_load_dwordx2 v{{\[}}[[Q0:[0-9]+]]:[[Q1:[0-9]+]]{{\]}}, v[2:3], off
+; CHECK-DAG:    global_load_dwordx2 v[[[Q0:[0-9]+]]:[[Q1:[0-9]+]]], v[2:3], off
 ; CHECK-DAG:    global_load_dwordx4 [[PVAL:v\[[0-9]+:[0-9]+\]]], v[0:1], off offset:16
 ; CHECK-DAG:    v_add_nc_u32_e32 v{{[0-9]+}}, v[[Q0]], v[[Q1]]
 ; CHECK:        global_store_dwordx4 v[0:1], [[PVAL]]
@@ -82,9 +82,9 @@ define i32 @test_memmove(i32 addrspace(1)* nocapture %p, i32 addrspace(1)* nocap
 define i32 @test_memset(i32 addrspace(1)* nocapture %p, i32 addrspace(1)* nocapture readonly %q) {
 ; Check loads of %q are scheduled ahead of that store of the memset on %p.
 ; CHECK-LABEL: test_memset:
-; CHECK-DAG:    global_load_dwordx2 v{{\[}}[[Q0:[0-9]+]]:[[Q1:[0-9]+]]{{\]}}, v[2:3], off
+; CHECK-DAG:    global_load_dwordx2 v[[[Q0:[0-9]+]]:[[Q1:[0-9]+]]], v[2:3], off
 ; CHECK-DAG:    v_mov_b32_e32 v[[PVAL:[0-9]+]], 0xaaaaaaaa
-; CHECK:        global_store_dwordx4 v[0:1], v{{\[}}[[PVAL]]{{:[0-9]+\]}}, off
+; CHECK:        global_store_dwordx4 v[0:1], v[[[PVAL]]{{:[0-9]+\]}}, off
 ; CHECK:        v_add_nc_u32_e32 v{{[0-9]+}}, v[[Q0]], v[[Q1]]
 ; CHECK:        s_setpc_b64 s[30:31]
   %p0 = bitcast i32 addrspace(1)* %p to i8 addrspace(1)*

@@ -19,6 +19,7 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/UUID.h"
 #include "lldb/lldb-private.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/VersionTuple.h"
 
@@ -526,11 +527,15 @@ public:
   /// binary is exactly which removes ambiguity when there are multiple
   /// binaries present in the captured memory pages.
   ///
-  /// \param[out] address
-  ///   If the address of the binary is specified, this will be set.
-  ///   This is an address is the virtual address space of the core file
-  ///   memory segments; it is not an offset into the object file.
-  ///   If no address is available, will be set to LLDB_INVALID_ADDRESS.
+  /// \param[out] value
+  ///   The address or offset (slide) where the binary is loaded in memory.
+  ///   LLDB_INVALID_ADDRESS for unspecified.  If an offset is given,
+  ///   this offset should be added to the binary's file address to get
+  ///   the load address.
+  ///
+  /// \param[out] value_is_offset
+  ///   Specifies if \b value is a load address, or an offset to calculate
+  ///   the load address.
   ///
   /// \param[out] uuid
   ///   If the uuid of the binary is specified, this will be set.
@@ -542,9 +547,11 @@ public:
   ///
   /// \return
   ///   Returns true if either address or uuid has been set.
-  virtual bool GetCorefileMainBinaryInfo(lldb::addr_t &address, UUID &uuid,
+  virtual bool GetCorefileMainBinaryInfo(lldb::addr_t &value,
+                                         bool &value_is_offset, UUID &uuid,
                                          ObjectFile::BinaryType &type) {
-    address = LLDB_INVALID_ADDRESS;
+    value = LLDB_INVALID_ADDRESS;
+    value_is_offset = false;
     uuid.Clear();
     return false;
   }
@@ -707,6 +714,15 @@ public:
     return false;
   }
 
+  /// Get a hash that can be used for caching object file releated information.
+  ///
+  /// Data for object files can be cached between runs of debug sessions and
+  /// a module can end up using a main file and a symbol file, both of which
+  /// can be object files. So we need a unique hash that identifies an object
+  /// file when storing cached data.
+  uint32_t GetCacheHash();
+
+
 protected:
   // Member variables.
   FileSpec m_file;
@@ -729,6 +745,7 @@ protected:
   /// need to use a std::unique_ptr to a llvm::once_flag so if we clear the
   /// symbol table, we can have a new once flag to use when it is created again.
   std::unique_ptr<llvm::once_flag> m_symtab_once_up;
+  llvm::Optional<uint32_t> m_cache_hash;
 
   /// Sets the architecture for a module.  At present the architecture can
   /// only be set if it is invalid.  It is not allowed to switch from one

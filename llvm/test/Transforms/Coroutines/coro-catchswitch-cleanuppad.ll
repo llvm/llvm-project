@@ -1,6 +1,6 @@
 ; Tests the PHI nodes in cleanuppads for catchswitch instructions are correctly
 ; split up.
-; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg<switch-range-to-icmp>,early-cse' -S | FileCheck %s
 
 declare i32 @__CxxFrameHandler3(...)
 define i8* @f2(i1 %val) "coroutine.presplit"="1" personality i32 (...)* @__CxxFrameHandler3 {

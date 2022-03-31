@@ -10,6 +10,7 @@
 
 #include "lldb/Expression/FunctionCaller.h"
 #include "lldb/Target/ABI.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 
 using namespace lldb;
@@ -77,6 +78,7 @@ bool ClassDescriptorV2::objc_class_t::Read(Process *process,
   if (ABISP abi_sp = process->GetABI()) {
     m_isa = abi_sp->FixCodeAddress(m_isa);
     m_superclass = abi_sp->FixCodeAddress(m_superclass);
+    m_data_ptr = abi_sp->FixCodeAddress(m_data_ptr);
   }
   return true;
 }
@@ -542,7 +544,7 @@ void ClassDescriptorV2::iVarsStorage::fill(AppleObjCRuntimeV2 &runtime,
   if (m_filled)
     return;
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+  Log *log = GetLog(LLDBLog::Types);
   LLDB_LOGV(log, "class_name = {0}", descriptor.GetClassName());
   m_filled = true;
   ObjCLanguageRuntime::EncodingToTypeSP encoding_to_type_sp(

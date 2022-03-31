@@ -78,7 +78,7 @@ struct PassManagerOptions {
           clEnumValN(PassDisplayMode::Pipeline, "pipeline",
                      "display the results with a nested pipeline view"))};
 };
-} // end anonymous namespace
+} // namespace
 
 static llvm::ManagedStatic<PassManagerOptions> options;
 

@@ -27,7 +27,6 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 // Google Mock - a framework for writing C++ mock classes.
 //
 // This file implements the ON_CALL() and EXPECT_CALL() macros.
@@ -59,6 +58,7 @@
 // GOOGLETEST_CM0002 DO NOT DELETE
 
 // IWYU pragma: private, include "gmock/gmock.h"
+// IWYU pragma: friend gmock/.*
 
 #ifndef GMOCK_INCLUDE_GMOCK_GMOCK_SPEC_BUILDERS_H_
 #define GMOCK_INCLUDE_GMOCK_GMOCK_SPEC_BUILDERS_H_

@@ -58,9 +58,9 @@ done:                                             ; preds = %loop
 ; GCN: v_readfirstlane_b32 s[[PTR_LO:[0-9]+]], v{{[0-9]+}}
 ; GCN: v_readfirstlane_b32 s[[PTR_HI:[0-9]+]], v{{[0-9]+}}
 ; SI-DAG: s_mov_b32
-; SI-DAG: s_load_dword [[OUT:s[0-9]+]], s{{\[}}[[PTR_LO]]:[[PTR_HI]]{{\]}}, [[OFFSET]]
+; SI-DAG: s_load_dword [[OUT:s[0-9]+]], s[[[PTR_LO]]:[[PTR_HI]]], [[OFFSET]]
 
-; CI: s_load_dword [[OUT:s[0-9]+]], s{{\[}}[[PTR_LO]]:[[PTR_HI]]{{\]}}, 0xbb8
+; CI: s_load_dword [[OUT:s[0-9]+]], s[[[PTR_LO]]:[[PTR_HI]]], 0xbb8
 ; GCN: v_mov_b32_e32 [[V_OUT:v[0-9]+]], [[OUT]]
 ; GCN-NOHSA: buffer_store_dword [[V_OUT]]
 ; GCN-HSA: flat_store_dword {{.*}}, [[V_OUT]]
@@ -438,7 +438,6 @@ entry:
 ; {{^}}sopc_vopc_legalize_bug:
 ; GCN: s_load_dword [[SGPR:s[0-9]+]]
 ; GCN: v_cmp_le_u32_e32 vcc, [[SGPR]], v{{[0-9]+}}
-; GCN: s_and_b64 vcc, exec, vcc
 ; GCN: s_cbranch_vccnz [[EXIT:.L[A-Z0-9_]+]]
 ; GCN: v_mov_b32_e32 [[ONE:v[0-9]+]], 1
 ; GCN-NOHSA: buffer_store_dword [[ONE]]

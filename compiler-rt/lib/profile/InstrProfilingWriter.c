@@ -244,8 +244,8 @@ COMPILER_RT_VISIBILITY int lprofWriteData(ProfDataWriter *Writer,
   /* Match logic in __llvm_profile_write_buffer(). */
   const __llvm_profile_data *DataBegin = __llvm_profile_begin_data();
   const __llvm_profile_data *DataEnd = __llvm_profile_end_data();
-  const uint64_t *CountersBegin = __llvm_profile_begin_counters();
-  const uint64_t *CountersEnd = __llvm_profile_end_counters();
+  const char *CountersBegin = __llvm_profile_begin_counters();
+  const char *CountersEnd = __llvm_profile_end_counters();
   const char *NamesBegin = __llvm_profile_begin_names();
   const char *NamesEnd = __llvm_profile_end_names();
   return lprofWriteDataImpl(Writer, DataBegin, DataEnd, CountersBegin,
@@ -256,19 +256,27 @@ COMPILER_RT_VISIBILITY int lprofWriteData(ProfDataWriter *Writer,
 COMPILER_RT_VISIBILITY int
 lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
                    const __llvm_profile_data *DataEnd,
-                   const uint64_t *CountersBegin, const uint64_t *CountersEnd,
+                   const char *CountersBegin, const char *CountersEnd,
                    VPDataReaderType *VPDataReader, const char *NamesBegin,
                    const char *NamesEnd, int SkipNameDataWrite) {
+  int DebugInfoCorrelate =
+      (__llvm_profile_get_version() & VARIANT_MASK_DBG_CORRELATE) != 0ULL;
 
   /* Calculate size of sections. */
-  const uint64_t DataSize = __llvm_profile_get_data_size(DataBegin, DataEnd);
-  const uint64_t CountersSize = CountersEnd - CountersBegin;
-  const uint64_t NamesSize = NamesEnd - NamesBegin;
+  const uint64_t DataSize =
+      DebugInfoCorrelate ? 0 : __llvm_profile_get_data_size(DataBegin, DataEnd);
+  const uint64_t NumData =
+      DebugInfoCorrelate ? 0 : __llvm_profile_get_num_data(DataBegin, DataEnd);
+  const uint64_t CountersSize =
+      __llvm_profile_get_counters_size(CountersBegin, CountersEnd);
+  const uint64_t NumCounters =
+      __llvm_profile_get_num_counters(CountersBegin, CountersEnd);
+  const uint64_t NamesSize = DebugInfoCorrelate ? 0 : NamesEnd - NamesBegin;
 
   /* Create the header. */
   __llvm_profile_header Header;
 
-  if (!DataSize)
+  if (!NumData && (!DebugInfoCorrelate || !NumCounters))
     return 0;
 
   /* Determine how much padding is needed before/after the counters and after
@@ -279,15 +287,28 @@ lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
       DataSize, CountersSize, NamesSize, &PaddingBytesBeforeCounters,
       &PaddingBytesAfterCounters, &PaddingBytesAfterNames);
 
+  {
+    // TODO: Unfortunately the header's fields are named DataSize and
+    // CountersSize when they should be named NumData and NumCounters,
+    // respectively.
+    const uint64_t CountersSize = NumCounters;
+    const uint64_t DataSize = NumData;
 /* Initialize header structure.  */
 #define INSTR_PROF_RAW_HEADER(Type, Name, Init) Header.Name = Init;
 #include "profile/InstrProfData.inc"
+  }
 
   /* On WIN64, label differences are truncated 32-bit values. Truncate
    * CountersDelta to match. */
 #ifdef _WIN64
   Header.CountersDelta = (uint32_t)Header.CountersDelta;
 #endif
+
+  /* The data and names sections are omitted in lightweight mode. */
+  if (DebugInfoCorrelate) {
+    Header.CountersDelta = 0;
+    Header.NamesDelta = 0;
+  }
 
   /* Write the profile header. */
   ProfDataIOVec IOVec[] = {{&Header, sizeof(__llvm_profile_header), 1, 0}};
@@ -300,11 +321,12 @@ lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
 
   /* Write the profile data. */
   ProfDataIOVec IOVecData[] = {
-      {DataBegin, sizeof(__llvm_profile_data), DataSize, 0},
+      {DebugInfoCorrelate ? NULL : DataBegin, sizeof(uint8_t), DataSize, 0},
       {NULL, sizeof(uint8_t), PaddingBytesBeforeCounters, 1},
-      {CountersBegin, sizeof(uint64_t), CountersSize, 0},
+      {CountersBegin, sizeof(uint8_t), CountersSize, 0},
       {NULL, sizeof(uint8_t), PaddingBytesAfterCounters, 1},
-      {SkipNameDataWrite ? NULL : NamesBegin, sizeof(uint8_t), NamesSize, 0},
+      {(SkipNameDataWrite || DebugInfoCorrelate) ? NULL : NamesBegin,
+       sizeof(uint8_t), NamesSize, 0},
       {NULL, sizeof(uint8_t), PaddingBytesAfterNames, 1}};
   if (Writer->Write(Writer, IOVecData, sizeof(IOVecData) / sizeof(*IOVecData)))
     return -1;

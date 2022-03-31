@@ -417,7 +417,7 @@ public:
   bool isIntN(unsigned N) const { return getActiveBits() <= N; }
 
   /// Check if this APInt has an N-bits signed integer value.
-  bool isSignedIntN(unsigned N) const { return getMinSignedBits() <= N; }
+  bool isSignedIntN(unsigned N) const { return getSignificantBits() <= N; }
 
   /// Check if this APInt's value is a power of two greater than zero.
   ///
@@ -486,7 +486,7 @@ public:
     return (Ones > 0) && ((Ones + countLeadingZerosSlowCase()) == BitWidth);
   }
 
-  /// Return true if this APInt value contains a sequence of ones with
+  /// Return true if this APInt value contains a non-empty sequence of ones with
   /// the remainder zero.
   bool isShiftedMask() const {
     if (isSingleWord())
@@ -494,6 +494,23 @@ public:
     unsigned Ones = countPopulationSlowCase();
     unsigned LeadZ = countLeadingZerosSlowCase();
     return (Ones + LeadZ + countTrailingZeros()) == BitWidth;
+  }
+
+  /// Return true if this APInt value contains a non-empty sequence of ones with
+  /// the remainder zero. If true, \p MaskIdx will specify the index of the
+  /// lowest set bit and \p MaskLen is updated to specify the length of the
+  /// mask, else neither are updated.
+  bool isShiftedMask(unsigned &MaskIdx, unsigned &MaskLen) const {
+    if (isSingleWord())
+      return isShiftedMask_64(U.VAL, MaskIdx, MaskLen);
+    unsigned Ones = countPopulationSlowCase();
+    unsigned LeadZ = countLeadingZerosSlowCase();
+    unsigned TrailZ = countTrailingZerosSlowCase();
+    if ((Ones + LeadZ + TrailZ) != BitWidth)
+      return false;
+    MaskLen = Ones;
+    MaskIdx = TrailZ;
+    return true;
   }
 
   /// Compute an APInt containing numBits highbits from this APInt.
@@ -1069,8 +1086,9 @@ public:
   ///
   /// \returns true if *this < RHS when considered signed.
   bool slt(int64_t RHS) const {
-    return (!isSingleWord() && getMinSignedBits() > 64) ? isNegative()
-                                                        : getSExtValue() < RHS;
+    return (!isSingleWord() && getSignificantBits() > 64)
+               ? isNegative()
+               : getSExtValue() < RHS;
   }
 
   /// Unsigned less or equal comparison
@@ -1139,8 +1157,9 @@ public:
   ///
   /// \returns true if *this > RHS when considered signed.
   bool sgt(int64_t RHS) const {
-    return (!isSingleWord() && getMinSignedBits() > 64) ? !isNegative()
-                                                        : getSExtValue() > RHS;
+    return (!isSingleWord() && getSignificantBits() > 64)
+               ? !isNegative()
+               : getSExtValue() > RHS;
   }
 
   /// Unsigned greater or equal comparison
@@ -1450,7 +1469,12 @@ public:
   /// returns the smallest bit width that will retain the negative value. For
   /// example, -1 can be written as 0b1 or 0xFFFFFFFFFF. 0b1 is shorter and so
   /// for -1, this function will always return 1.
-  unsigned getMinSignedBits() const { return BitWidth - getNumSignBits() + 1; }
+  unsigned getSignificantBits() const {
+    return BitWidth - getNumSignBits() + 1;
+  }
+
+  /// NOTE: This is soft-deprecated.  Please use `getSignificantBits()` instead.
+  unsigned getMinSignedBits() const { return getSignificantBits(); }
 
   /// Get zero extended value
   ///
@@ -1472,7 +1496,7 @@ public:
   int64_t getSExtValue() const {
     if (isSingleWord())
       return SignExtend64(U.VAL, BitWidth);
-    assert(getMinSignedBits() <= 64 && "Too many bits for int64_t");
+    assert(getSignificantBits() <= 64 && "Too many bits for int64_t");
     return int64_t(U.pVal[0]);
   }
 
@@ -1481,6 +1505,11 @@ public:
   /// This method determines how many bits are required to hold the APInt
   /// equivalent of the string given by \p str.
   static unsigned getBitsNeeded(StringRef str, uint8_t radix);
+
+  /// Get the bits that are sufficient to represent the string value. This may
+  /// over estimate the amount of bits required, but it does not require
+  /// parsing the value in the string.
+  static unsigned getSufficientBitsNeeded(StringRef Str, uint8_t Radix);
 
   /// The APInt version of the countLeadingZeros functions in
   ///   MathExtras.h.

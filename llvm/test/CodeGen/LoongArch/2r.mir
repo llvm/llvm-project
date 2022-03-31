@@ -1,0 +1,230 @@
+# RUN: llc %s -mtriple=loongarch64 -start-after=prologepilog -O0 -filetype=obj -o - \
+# RUN:   | extract-section .text \
+# RUN:   | FileCheck %s -check-prefix=CHECK-ENC
+# RUN: llc %s -mtriple=loongarch64 -start-after=prologepilog -O0 -filetype=asm -o - \
+# RUN:   | FileCheck %s -check-prefix=CHECK-ASM
+
+# -------------------------------------------------------------------------------------------------
+#                                           Encoding format: 2R
+# -------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------+--------------+---------------
+#  31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10 09 08 07 06 05 04 03 02 01 00
+# ------------------------------------------------------------------+--------------+---------------
+#                           opcode                                  |      rj      |      rd
+# ------------------------------------------------------------------+--------------+---------------
+
+---
+# CHECK-LABEL: test_CLO_W:
+# CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ASM: clo.w	$a0, $a1
+name: test_CLO_W
+body: |
+  bb.0:
+    $r4 = CLO_W $r5
+...
+---
+# CHECK-LABEL: test_CLZ_W:
+# CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 1 0 0 1 0 1 0 0 1 0 0
+# CHECK-ASM: clz.w	$a0, $a1
+name: test_CLZ_W
+body: |
+  bb.0:
+    $r4 = CLZ_W $r5
+...
+---
+# CHECK-LABEL: test_CTO_W:
+# CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ASM: cto.w	$a0, $a1
+name: test_CTO_W
+body: |
+  bb.0:
+    $r4 = CTO_W $r5
+...
+---
+# CHECK-LABEL: test_CTZ_W:
+# CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 0 0 1 0 1 0 0 1 0 0
+# CHECK-ASM: ctz.w	$a0, $a1
+name: test_CTZ_W
+body: |
+  bb.0:
+    $r4 = CTZ_W $r5
+...
+---
+# CHECK-LABEL: test_CLO_D:
+# CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ASM: clo.d	$a0, $a1
+name: test_CLO_D
+body: |
+  bb.0:
+    $r4 = CLO_D $r5
+...
+---
+# CHECK-LABEL: test_CLZ_D:
+# CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 1 0 0 1 0 1 0 0 1 0 0
+# CHECK-ASM: clz.d	$a0, $a1
+name: test_CLZ_D
+body: |
+  bb.0:
+    $r4 = CLZ_D $r5
+...
+---
+# CHECK-LABEL: test_CTO_D:
+# CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 1 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ASM: cto.d	$a0, $a1
+name: test_CTO_D
+body: |
+  bb.0:
+    $r4 = CTO_D $r5
+...
+---
+# CHECK-LABEL: test_CTZ_D:
+# CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 1 1 0 0 1 0 1 0 0 1 0 0
+# CHECK-ASM: ctz.d	$a0, $a1
+name: test_CTZ_D
+body: |
+  bb.0:
+    $r4 = CTZ_D $r5
+...
+---
+# CHECK-LABEL: test_REVB_2H:
+# CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ASM: revb.2h	$a0, $a1
+name: test_REVB_2H
+body: |
+  bb.0:
+    $r4 = REVB_2H $r5
+...
+---
+# CHECK-LABEL: test_REVB_4H:
+# CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0 1 0 0 1 0 1 0 0 1 0 0
+# CHECK-ASM: revb.4h	$a0, $a1
+name: test_REVB_4H
+body: |
+  bb.0:
+    $r4 = REVB_4H $r5
+...
+---
+# CHECK-LABEL: test_REVB_2W:
+# CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ASM: revb.2w	$a0, $a1
+name: test_REVB_2W
+body: |
+  bb.0:
+    $r4 = REVB_2W $r5
+...
+---
+# CHECK-LABEL: test_REVB_D:
+# CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 0 0 1 0 1 0 0 1 0 0
+# CHECK-ASM: revb.d	$a0, $a1
+name: test_REVB_D
+body: |
+  bb.0:
+    $r4 = REVB_D $r5
+...
+---
+# CHECK-LABEL: test_REVH_2W:
+# CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ASM: revh.2w	$a0, $a1
+name: test_REVH_2W
+body: |
+  bb.0:
+    $r4 = REVH_2W $r5
+...
+---
+# CHECK-LABEL: test_REVH_D:
+# CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 1 0 0 1 0 1 0 0 1 0 0
+# CHECK-ASM: revh.d	$a0, $a1
+name: test_REVH_D
+body: |
+  bb.0:
+    $r4 = REVH_D $r5
+...
+---
+# CHECK-LABEL: test_BITREV_4B:
+# CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 1 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ASM: bitrev.4b	$a0, $a1
+name: test_BITREV_4B
+body: |
+  bb.0:
+    $r4 = BITREV_4B $r5
+...
+---
+# CHECK-LABEL: test_BITREV_8B:
+# CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 1 1 0 0 1 0 1 0 0 1 0 0
+# CHECK-ASM: bitrev.8b	$a0, $a1
+name: test_BITREV_8B
+body: |
+  bb.0:
+    $r4 = BITREV_8B $r5
+...
+---
+# CHECK-LABEL: test_BITREV_W:
+# CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 1 0 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ASM: bitrev.w	$a0, $a1
+name: test_BITREV_W
+body: |
+  bb.0:
+    $r4 = BITREV_W $r5
+...
+---
+# CHECK-LABEL: test_BITREV_D:
+# CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 1 0 1 0 0 1 0 1 0 0 1 0 0
+# CHECK-ASM: bitrev.d	$a0, $a1
+name: test_BITREV_D
+body: |
+  bb.0:
+    $r4 = BITREV_D $r5
+...
+---
+# CHECK-LABEL: test_EXT_W_H:
+# CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 1 1 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ASM: ext.w.h	$a0, $a1
+name: test_EXT_W_H
+body: |
+  bb.0:
+    $r4 = EXT_W_H $r5
+...
+---
+# CHECK-LABEL: test_EXT_W_B:
+# CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 1 1 1 0 0 1 0 1 0 0 1 0 0
+# CHECK-ASM: ext.w.b	$a0, $a1
+name: test_EXT_W_B
+body: |
+  bb.0:
+    $r4 = EXT_W_B $r5
+...
+---
+# CHECK-LABEL: test_CPUCFG:
+# CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0 1 1 0 0 1 0 1 0 0 1 0 0
+# CHECK-ASM: cpucfg	$a0, $a1
+name: test_CPUCFG
+body: |
+  bb.0:
+    $r4 = CPUCFG $r5
+...
+---
+# CHECK-LABEL: test_RDTIMEL_W:
+# CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0 0 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ASM: rdtimel.w	$a0, $a1
+name: test_RDTIMEL_W
+body: |
+  bb.0:
+    $r4, $r5 = RDTIMEL_W
+...
+---
+# CHECK-LABEL: test_RDTIMEH_W:
+# CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0 0 1 0 0 1 0 1 0 0 1 0 0
+# CHECK-ASM: rdtimeh.w	$a0, $a1
+name: test_RDTIMEH_W
+body: |
+  bb.0:
+    $r4, $r5 = RDTIMEH_W
+...
+---
+# CHECK-LABEL: test_RDTIME_D:
+# CHECK-ENC: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0 1 0 0 0 1 0 1 0 0 1 0 0
+# CHECK-ASM: rdtime.d	$a0, $a1
+name: test_RDTIME_D
+body: |
+  bb.0:
+    $r4, $r5 = RDTIME_D

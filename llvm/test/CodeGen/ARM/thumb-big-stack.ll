@@ -11,7 +11,7 @@ target triple = "thumbv7s-apple-ios"
 ; CHECK-LABEL: f:
 ; CHECK: movw [[ADDR:(r[0-9]+|lr)]], #
 ; CHECK-NEXT: add [[ADDR]], sp
-; CHECK-NEXT: vst1.64 {d{{[0-9]+}}, d{{[0-9]+}}}, {{\[}}[[ADDR]]:128]
+; CHECK-NEXT: vst1.64 {d{{[0-9]+}}, d{{[0-9]+}}}, [[[ADDR]]:128]
 define <4 x float> @f(<4 x float> %x) {
 entry:
   %.compoundliteral7837 = alloca <4 x float>, align 16

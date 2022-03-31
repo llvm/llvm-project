@@ -112,7 +112,7 @@ bool RegisterContextWindows::AddHardwareBreakpoint(uint32_t slot,
   return ApplyAllRegisterValues();
 
 #else
-  Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_REGISTERS);
+  Log *log = GetLog(WindowsLog::Registers);
   LLDB_LOG(log, "hardware breakpoints not currently supported on this arch");
   return false;
 #endif
@@ -149,7 +149,7 @@ uint32_t RegisterContextWindows::GetTriggeredHardwareBreakpointSlotId() {
 }
 
 bool RegisterContextWindows::CacheAllRegisterValues() {
-  Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_REGISTERS);
+  Log *log = GetLog(WindowsLog::Registers);
   if (!m_context_stale)
     return true;
 

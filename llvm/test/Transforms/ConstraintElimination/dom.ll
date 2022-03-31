@@ -33,6 +33,69 @@ bb2:
   ret i1 %c.3
 }
 
+define i1 @test_chain_1(i8 %x) {
+; CHECK-LABEL: @test_chain_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i8 [[X:%.*]], 10
+; CHECK-NEXT:    br i1 [[C_1]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ule i8 [[X]], 10
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ugt i8 [[X]], 10
+; CHECK-NEXT:    ret i1 [[C_3]]
+;
+entry:
+  %c.1 = icmp ule i8 %x, 10
+  br i1 %c.1, label %then, label %else
+
+then:
+  %c.2 = icmp ule i8 %x, 10
+  call void @use(i1 %c.2)
+  br label %exit
+
+else:
+  br label %exit
+
+exit:
+  %c.3 = icmp ugt i8 %x, 10
+  ret i1 %c.3
+}
+
+define i1 @test_chain_2(i8 %x) {
+; CHECK-LABEL: @test_chain_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i8 [[X:%.*]], 10
+; CHECK-NEXT:    br i1 [[C_1]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ule i8 [[X]], 10
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ugt i8 [[X]], 10
+; CHECK-NEXT:    ret i1 [[C_3]]
+;
+entry:
+  %c.1 = icmp ule i8 %x, 10
+  br i1 %c.1, label %then, label %else
+
+then:
+  br label %exit
+
+else:
+  %c.2 = icmp ule i8 %x, 10
+  call void @use(i1 %c.2)
+  br label %exit
+
+exit:
+  %c.3 = icmp ugt i8 %x, 10
+  ret i1 %c.3
+}
 
 define i1 @test2(i8 %x) {
 ; CHECK-LABEL: @test2(
@@ -60,7 +123,6 @@ bb2:
   call void @use(i1 %c.3)
   br label %bb1
 }
-
 
 ; Test cases where the true/false successors are not domianted by the conditional branching block.
 define i1 @test3(i8 %x, i1 %c) {
@@ -529,4 +591,80 @@ loop:
 exit.1:
   %t.1 = icmp ule i8 %y, 100
   ret i1 %t.1
+}
+
+; Test case from PR49819.
+define i1 @both_branch_to_same_block(i4 %x) {
+; CHECK-LABEL: @both_branch_to_same_block(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ne i4 [[X:%.*]], 0
+; CHECK-NEXT:    br i1 [[C_1]], label [[EXIT:%.*]], label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ne i4 [[X]], 0
+; CHECK-NEXT:    [[C_3:%.*]] = icmp eq i4 [[X]], 0
+; CHECK-NEXT:    [[RES:%.*]] = xor i1 [[C_2]], [[C_3]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+entry:
+  %c.1 = icmp ne i4 %x, 0
+  br i1 %c.1, label %exit, label %exit
+
+exit:
+  %c.2 = icmp ne i4 %x, 0
+  %c.3 = icmp eq i4 %x, 0
+  %res = xor i1 %c.2, %c.3
+  ret i1 %res
+}
+
+define i1 @both_branch_to_same_block_and(i4 %x, i4 %y) {
+; CHECK-LABEL: @both_branch_to_same_block_and(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ne i4 [[X:%.*]], 0
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ne i4 [[Y:%.*]], -6
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_1]], [[C_2]]
+; CHECK-NEXT:    br i1 [[AND]], label [[EXIT:%.*]], label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ne i4 [[X]], 0
+; CHECK-NEXT:    [[C_4:%.*]] = icmp eq i4 [[X]], 0
+; CHECK-NEXT:    [[RES:%.*]] = xor i1 [[C_3]], [[C_4]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+entry:
+  %c.1 = icmp ne i4 %x, 0
+  %c.2 = icmp ne i4 %y, 10
+  %and = and i1 %c.1, %c.2
+  br i1 %and, label %exit, label %exit
+
+exit:
+  %c.3 = icmp ne i4 %x, 0
+  %c.4 = icmp eq i4 %x, 0
+  %res = xor i1 %c.3, %c.4
+  ret i1 %res
+}
+
+
+define i1 @both_branch_to_same_block_or(i4 %x, i4 %y) {
+; CHECK-LABEL: @both_branch_to_same_block_or(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ne i4 [[X:%.*]], 0
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ne i4 [[Y:%.*]], -6
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[C_1]], [[C_2]]
+; CHECK-NEXT:    br i1 [[OR]], label [[EXIT:%.*]], label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ne i4 [[X]], 0
+; CHECK-NEXT:    [[C_4:%.*]] = icmp eq i4 [[X]], 0
+; CHECK-NEXT:    [[RES:%.*]] = xor i1 [[C_3]], [[C_4]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+entry:
+  %c.1 = icmp ne i4 %x, 0
+  %c.2 = icmp ne i4 %y, 10
+  %or = or i1 %c.1, %c.2
+  br i1 %or, label %exit, label %exit
+
+exit:
+  %c.3 = icmp ne i4 %x, 0
+  %c.4 = icmp eq i4 %x, 0
+  %res = xor i1 %c.3, %c.4
+  ret i1 %res
 }

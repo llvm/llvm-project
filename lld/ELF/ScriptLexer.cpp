@@ -34,6 +34,8 @@
 #include "ScriptLexer.h"
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/ErrorHandling.h"
+#include <algorithm>
 
 using namespace llvm;
 using namespace lld;

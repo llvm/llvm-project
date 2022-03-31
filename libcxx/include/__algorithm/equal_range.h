@@ -9,16 +9,16 @@
 #ifndef _LIBCPP___ALGORITHM_EQUAL_RANGE_H
 #define _LIBCPP___ALGORITHM_EQUAL_RANGE_H
 
-#include <__config>
 #include <__algorithm/comp.h>
 #include <__algorithm/comp_ref_type.h>
 #include <__algorithm/half_positive.h>
 #include <__algorithm/lower_bound.h>
 #include <__algorithm/upper_bound.h>
+#include <__config>
 #include <iterator>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD

@@ -69,22 +69,26 @@ bool Builtin::Context::builtinIsSupported(const Builtin::Info &BuiltinInfo,
   bool MSModeUnsupported =
       !LangOpts.MicrosoftExt && (BuiltinInfo.Langs & MS_LANG);
   bool ObjCUnsupported = !LangOpts.ObjC && BuiltinInfo.Langs == OBJC_LANG;
-  bool OclC1Unsupported = (LangOpts.OpenCLVersion / 100) != 1 &&
-                          (BuiltinInfo.Langs & ALL_OCLC_LANGUAGES ) ==  OCLC1X_LANG;
-  bool OclC2Unsupported =
-      (LangOpts.getOpenCLCompatibleVersion() != 200) &&
-      (BuiltinInfo.Langs & ALL_OCLC_LANGUAGES) == OCLC20_LANG;
-  bool OclCUnsupported = !LangOpts.OpenCL &&
-                         (BuiltinInfo.Langs & ALL_OCLC_LANGUAGES);
+  bool OclCUnsupported =
+      !LangOpts.OpenCL && (BuiltinInfo.Langs & ALL_OCL_LANGUAGES);
+  bool OclGASUnsupported =
+      !LangOpts.OpenCLGenericAddressSpace && (BuiltinInfo.Langs & OCL_GAS);
+  bool OclPipeUnsupported =
+      !LangOpts.OpenCLPipes && (BuiltinInfo.Langs & OCL_PIPE);
+  // Device side enqueue is not supported until OpenCL 2.0. In 2.0 and higher
+  // support is indicated with language option for blocks.
+  bool OclDSEUnsupported =
+      (LangOpts.getOpenCLCompatibleVersion() < 200 || !LangOpts.Blocks) &&
+      (BuiltinInfo.Langs & OCL_DSE);
   bool OpenMPUnsupported = !LangOpts.OpenMP && BuiltinInfo.Langs == OMP_LANG;
   bool CUDAUnsupported = !LangOpts.CUDA && BuiltinInfo.Langs == CUDA_LANG;
   bool CPlusPlusUnsupported =
       !LangOpts.CPlusPlus && BuiltinInfo.Langs == CXX_LANG;
   return !BuiltinsUnsupported && !CorBuiltinsUnsupported &&
-         !MathBuiltinsUnsupported && !OclCUnsupported && !OclC1Unsupported &&
-         !OclC2Unsupported && !OpenMPUnsupported && !GnuModeUnsupported &&
-         !MSModeUnsupported && !ObjCUnsupported && !CPlusPlusUnsupported &&
-         !CUDAUnsupported;
+         !MathBuiltinsUnsupported && !OclCUnsupported && !OclGASUnsupported &&
+         !OclPipeUnsupported && !OclDSEUnsupported && !OpenMPUnsupported &&
+         !GnuModeUnsupported && !MSModeUnsupported && !ObjCUnsupported &&
+         !CPlusPlusUnsupported && !CUDAUnsupported;
 }
 
 /// initializeBuiltins - Mark the identifiers for all the builtins with their

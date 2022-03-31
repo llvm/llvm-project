@@ -17,7 +17,10 @@
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/GCMetadata.h"
@@ -27,6 +30,7 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/SelectionDAG.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
@@ -990,6 +994,24 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
   return ReturnVal;
 }
 
+/// Return two gc.results if present.  First result is a block local
+/// gc.result, second result is a non-block local gc.result.  Corresponding
+/// entry will be nullptr if not present.
+static std::pair<const GCResultInst*, const GCResultInst*>
+getGCResultLocality(const GCStatepointInst &S) {
+  std::pair<const GCResultInst *, const GCResultInst*> Res(nullptr, nullptr);
+  for (auto *U : S.users()) {
+    auto *GRI = dyn_cast<GCResultInst>(U);
+    if (!GRI)
+      continue;
+    if (GRI->getParent() == S.getParent())
+      Res.first = GRI;
+    else
+      Res.second = GRI;
+  }
+  return Res;
+}
+
 void
 SelectionDAGBuilder::LowerStatepoint(const GCStatepointInst &I,
                                      const BasicBlock *EHPadBB /*= nullptr*/) {
@@ -1075,12 +1097,11 @@ SelectionDAGBuilder::LowerStatepoint(const GCStatepointInst &I,
   SDValue ReturnValue = LowerAsSTATEPOINT(SI);
 
   // Export the result value if needed
-  const std::pair<bool, bool> GCResultLocality = I.getGCResultLocality();
-  Type *RetTy = I.getActualReturnType();
+  const auto GCResultLocality = getGCResultLocality(I);
 
-  if (RetTy->isVoidTy() ||
-      (!GCResultLocality.first && !GCResultLocality.second)) {
-    // The return value is not needed, just generate a poison value. 
+  if (!GCResultLocality.first && !GCResultLocality.second) {
+    // The return value is not needed, just generate a poison value.
+    // Note: This covers the void return case.
     setValue(&I, DAG.getIntPtrConstant(-1, getCurSDLoc()));
     return;
   }
@@ -1102,6 +1123,7 @@ SelectionDAGBuilder::LowerStatepoint(const GCStatepointInst &I,
   // manually.
   // TODO: To eliminate this problem we can remove gc.result intrinsics
   //       completely and make statepoint call to return a tuple.
+  Type *RetTy = GCResultLocality.second->getType();
   unsigned Reg = FuncInfo.CreateRegs(RetTy);
   RegsForValue RFV(*DAG.getContext(), DAG.getTargetLoweringInfo(),
                    DAG.getDataLayout(), Reg, RetTy,
@@ -1168,7 +1190,7 @@ void SelectionDAGBuilder::visitGCResult(const GCResultInst &CI) {
   // register because statepoint and actual call return types can be
   // different, and getValue() will use CopyFromReg of the wrong type,
   // which is always i32 in our case.
-  Type *RetTy = SI->getActualReturnType();
+  Type *RetTy = CI.getType();
   SDValue CopyFromReg = getCopyFromRegs(SI, RetTy);
   
   assert(CopyFromReg.getNode());

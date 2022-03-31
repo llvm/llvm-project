@@ -1,8 +1,10 @@
-// RUN: %clang_analyze_cc1 -verify %s \
+// FIXME -Wno-aix-compat added temporarily while the diagnostic is being
+// refined.
+// RUN: %clang_analyze_cc1 -verify -Wno-aix-compat %s \
 // RUN:   -analyzer-checker=optin.performance \
 // RUN:   -analyzer-config optin.performance.Padding:AllowedPad=2
 
-// RUN: not %clang_analyze_cc1 -verify %s \
+// RUN: not %clang_analyze_cc1 -verify -Wno-aix-compat %s \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=optin.performance.Padding \
 // RUN:   -analyzer-config optin.performance.Padding:AllowedPad=-10 \
@@ -176,7 +178,7 @@ struct HoldsOverlyAlignedChar { // expected-warning{{Excessive padding in 'struc
   char c2;
 };
 
-void internalStructFunc() {
+void internalStructFunc(void) {
   struct X { // expected-warning{{Excessive padding in 'struct X'}}
     char c1;
     int t;
@@ -185,7 +187,7 @@ void internalStructFunc() {
   struct X obj;
 }
 
-void typedefStructFunc() {
+void typedefStructFunc(void) {
   typedef struct { // expected-warning{{Excessive padding in 'S'}}
     char c1;
     int t;
@@ -194,7 +196,7 @@ void typedefStructFunc() {
   S obj;
 }
 
-void anonStructFunc() {
+void anonStructFunc(void) {
   struct { // expected-warning{{Excessive padding in 'struct (unnamed}}
     char c1;
     int t;
@@ -228,7 +230,7 @@ struct SmallArrayInFunc {
   char c2;
 };
 
-void arrayHolder() {
+void arrayHolder(void) {
   struct SmallArrayInFunc Arr[15];
 }
 
@@ -243,6 +245,6 @@ struct HoldsSmallArray {
   struct SmallArrayInStruct Field[20];
 } HoldsSmallArrayElt;
 
-void nestedPadding() {
+void nestedPadding(void) {
   struct HoldsSmallArray Arr[15];
 }

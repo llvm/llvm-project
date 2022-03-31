@@ -43,8 +43,7 @@ class TestStopReasonAfterExpression(TestBase):
         options.SetStopOthers(True)
 
         result = thread.frames[0].EvaluateExpression('(int) printf("Hello\\n")', options)
-        self.assertTrue(result.GetError().Success(),
-                        "Expression failed: '%s'"%(result.GetError().GetCString()))
+        self.assertSuccess(result.GetError(), "Expression failed")
 
         stop_reason = other_thread.GetStopReason()
 

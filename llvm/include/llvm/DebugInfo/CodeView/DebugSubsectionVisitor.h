@@ -9,7 +9,6 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_DEBUGSUBSECTIONVISITOR_H
 #define LLVM_DEBUGINFO_CODEVIEW_DEBUGSUBSECTIONVISITOR_H
 
-#include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/StringsAndChecksums.h"
 #include "llvm/Support/Error.h"
 

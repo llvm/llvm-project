@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 // Functions to construct a syntax tree from an AST.
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_CLANG_TOOLING_SYNTAX_TREE_H
-#define LLVM_CLANG_TOOLING_SYNTAX_TREE_H
+#ifndef LLVM_CLANG_TOOLING_SYNTAX_BUILDTREE_H
+#define LLVM_CLANG_TOOLING_SYNTAX_BUILDTREE_H
 
 #include "clang/AST/Decl.h"
 #include "clang/Basic/TokenKinds.h"

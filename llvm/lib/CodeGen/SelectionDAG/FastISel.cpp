@@ -72,7 +72,6 @@
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -94,7 +93,6 @@
 #include "llvm/IR/Value.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstrDesc.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -1408,16 +1406,6 @@ bool FastISel::selectCast(const User *I, unsigned Opcode) {
 }
 
 bool FastISel::selectBitCast(const User *I) {
-  // If the bitcast doesn't change the type, just use the operand value.
-  if (I->getType() == I->getOperand(0)->getType()) {
-    Register Reg = getRegForValue(I->getOperand(0));
-    if (!Reg)
-      return false;
-    updateValueMap(I, Reg);
-    return true;
-  }
-
-  // Bitcasts of other values become reg-reg copies or BITCAST operators.
   EVT SrcEVT = TLI.getValueType(DL, I->getOperand(0)->getType());
   EVT DstEVT = TLI.getValueType(DL, I->getType());
   if (SrcEVT == MVT::Other || DstEVT == MVT::Other ||
@@ -1431,23 +1419,14 @@ bool FastISel::selectBitCast(const User *I) {
   if (!Op0) // Unhandled operand. Halt "fast" selection and bail.
     return false;
 
-  // First, try to perform the bitcast by inserting a reg-reg copy.
-  Register ResultReg;
+  // If the bitcast doesn't change the type, just use the operand value.
   if (SrcVT == DstVT) {
-    const TargetRegisterClass *SrcClass = TLI.getRegClassFor(SrcVT);
-    const TargetRegisterClass *DstClass = TLI.getRegClassFor(DstVT);
-    // Don't attempt a cross-class copy. It will likely fail.
-    if (SrcClass == DstClass) {
-      ResultReg = createResultReg(DstClass);
-      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
-              TII.get(TargetOpcode::COPY), ResultReg).addReg(Op0);
-    }
+    updateValueMap(I, Op0);
+    return true;
   }
 
-  // If the reg-reg copy failed, select a BITCAST opcode.
-  if (!ResultReg)
-    ResultReg = fastEmit_r(SrcVT, DstVT, ISD::BITCAST, Op0);
-
+  // Otherwise, select a BITCAST opcode.
+  Register ResultReg = fastEmit_r(SrcVT, DstVT, ISD::BITCAST, Op0);
   if (!ResultReg)
     return false;
 
@@ -1775,12 +1754,13 @@ bool FastISel::selectOperator(const User *I, unsigned Opcode) {
     return false;
 
   case Instruction::Call:
-    // On AIX, call lowering uses the DAG-ISEL path currently so that the
+    // On AIX, normal call lowering uses the DAG-ISEL path currently so that the
     // callee of the direct function call instruction will be mapped to the
     // symbol for the function's entry point, which is distinct from the
     // function descriptor symbol. The latter is the symbol whose XCOFF symbol
     // name is the C-linkage name of the source level function.
-    if (TM.getTargetTriple().isOSAIX())
+    // But fast isel still has the ability to do selection for intrinsics.
+    if (TM.getTargetTriple().isOSAIX() && !isa<IntrinsicInst>(I))
       return false;
     return selectCall(I);
 
@@ -1837,8 +1817,7 @@ FastISel::FastISel(FunctionLoweringInfo &FuncInfo,
       TII(*MF->getSubtarget().getInstrInfo()),
       TLI(*MF->getSubtarget().getTargetLowering()),
       TRI(*MF->getSubtarget().getRegisterInfo()), LibInfo(LibInfo),
-      SkipTargetIndependentISel(SkipTargetIndependentISel),
-      LastLocalValue(nullptr), EmitStartPt(nullptr) {}
+      SkipTargetIndependentISel(SkipTargetIndependentISel) {}
 
 FastISel::~FastISel() = default;
 

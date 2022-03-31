@@ -332,10 +332,9 @@ class CXIndexDataConsumer : public index::IndexDataConsumer {
 
 public:
   CXIndexDataConsumer(CXClientData clientData, IndexerCallbacks &indexCallbacks,
-                  unsigned indexOptions, CXTranslationUnit cxTU)
-    : Ctx(nullptr), ClientData(clientData), CB(indexCallbacks),
-      IndexOptions(indexOptions), CXTU(cxTU),
-      StrScratch(), StrAdapterCount(0) { }
+                      unsigned indexOptions, CXTranslationUnit cxTU)
+      : Ctx(nullptr), ClientData(clientData), CB(indexCallbacks),
+        IndexOptions(indexOptions), CXTU(cxTU), StrAdapterCount(0) {}
 
   ASTContext &getASTContext() const { return *Ctx; }
   CXTranslationUnit getCXTU() const { return CXTU; }

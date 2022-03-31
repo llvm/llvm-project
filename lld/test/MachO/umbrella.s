@@ -4,7 +4,7 @@
 # RUN: %lld -dylib -o %t.dylib -umbrella umbrella.dylib %t.o
 # RUN: llvm-otool -lv %t.dylib | FileCheck %s
 
-# RUN: %no_fatal_warnings_lld -bundle -o %t.so -umbrella umbrella.dylib %t.o \
+# RUN: %no-fatal-warnings-lld -bundle -o %t.so -umbrella umbrella.dylib %t.o \
 # RUN:   2>&1 | FileCheck --check-prefix=WARN %s
 # WARN: warning: -umbrella used, but not creating dylib
 # RUN: llvm-otool -lv %t.so | FileCheck %s

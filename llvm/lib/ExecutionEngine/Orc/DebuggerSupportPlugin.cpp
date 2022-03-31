@@ -48,7 +48,7 @@ public:
 
   MachODebugObjectSynthesizerBase(LinkGraph &G, ExecutorAddr RegisterActionAddr)
       : G(G), RegisterActionAddr(RegisterActionAddr) {}
-  virtual ~MachODebugObjectSynthesizerBase() {}
+  virtual ~MachODebugObjectSynthesizerBase() = default;
 
   Error preserveDebugSections() {
     if (G.findSectionByName(SynthDebugSectionName)) {
@@ -129,8 +129,8 @@ public:
       Section *Sec = nullptr;
       StringRef SegName;
       StringRef SecName;
-      JITTargetAddress Alignment = 0;
-      JITTargetAddress StartAddr = 0;
+      uint64_t Alignment = 0;
+      orc::ExecutorAddr StartAddr;
       uint64_t Size = 0;
     };
 
@@ -153,9 +153,26 @@ public:
           return Error::success();
         }
         DebugSecInfos.push_back({&Sec, Sec.getName().substr(0, SepPos),
-                                 Sec.getName().substr(SepPos + 1), 0, 0});
-      } else
+                                 Sec.getName().substr(SepPos + 1), 0,
+                                 orc::ExecutorAddr(), 0});
+      } else {
         NonDebugSections.push_back(&Sec);
+
+        // If the first block in the section has a non-zero alignment offset
+        // then we need to add a padding block, since the section command in
+        // the header doesn't allow for aligment offsets.
+        SectionRange R(Sec);
+        if (!R.empty()) {
+          auto &FB = *R.getFirstBlock();
+          if (FB.getAlignmentOffset() != 0) {
+            auto Padding = G.allocateBuffer(FB.getAlignmentOffset());
+            memset(Padding.data(), 0, Padding.size());
+            G.createContentBlock(Sec, Padding,
+                                 FB.getAddress() - FB.getAlignmentOffset(),
+                                 FB.getAlignment(), 0);
+          }
+        }
+      }
     }
 
     // Create container block.
@@ -166,11 +183,11 @@ public:
     size_t ContainerBlockSize =
         sizeof(typename MachOTraits::Header) + SegmentLCSize;
     auto ContainerBlockContent = G.allocateBuffer(ContainerBlockSize);
-    MachOContainerBlock =
-        &G.createMutableContentBlock(SDOSec, ContainerBlockContent, 0, 8, 0);
+    MachOContainerBlock = &G.createMutableContentBlock(
+        SDOSec, ContainerBlockContent, orc::ExecutorAddr(), 8, 0);
 
     // Copy debug section blocks and symbols.
-    JITTargetAddress NextBlockAddr = MachOContainerBlock->getSize();
+    orc::ExecutorAddr NextBlockAddr(MachOContainerBlock->getSize());
     for (auto &SI : DebugSecInfos) {
       assert(!llvm::empty(SI.Sec->blocks()) && "Empty debug info section?");
 
@@ -203,7 +220,8 @@ public:
       G.mergeSections(SDOSec, *SI.Sec);
       SI.Sec = nullptr;
     }
-    size_t DebugSectionsSize = NextBlockAddr - MachOContainerBlock->getSize();
+    size_t DebugSectionsSize =
+        NextBlockAddr - orc::ExecutorAddr(MachOContainerBlock->getSize());
 
     // Write MachO header and debug section load commands.
     MachOStructWriter Writer(MachOContainerBlock->getAlreadyMutableContent());
@@ -250,9 +268,9 @@ public:
       memset(&Sec, 0, sizeof(Sec));
       memcpy(Sec.sectname, SI.SecName.data(), SI.SecName.size());
       memcpy(Sec.segname, SI.SegName.data(), SI.SegName.size());
-      Sec.addr = SI.StartAddr;
+      Sec.addr = SI.StartAddr.getValue();
       Sec.size = SI.Size;
-      Sec.offset = SI.StartAddr;
+      Sec.offset = SI.StartAddr.getValue();
       Sec.align = SI.Alignment;
       Sec.reloff = 0;
       Sec.nreloc = 0;
@@ -320,7 +338,7 @@ public:
       memset(&SecCmd, 0, sizeof(SecCmd));
       memcpy(SecCmd.sectname, SecName.data(), SecName.size());
       memcpy(SecCmd.segname, SegName.data(), SegName.size());
-      SecCmd.addr = R.getStart();
+      SecCmd.addr = R.getStart().getValue();
       SecCmd.size = R.getSize();
       SecCmd.offset = 0;
       SecCmd.align = R.getFirstBlock()->getAlignment();
@@ -332,7 +350,10 @@ public:
 
     SectionRange R(MachOContainerBlock->getSection());
     G.allocActions().push_back(
-        {{RegisterActionAddr.getValue(), R.getStart(), R.getSize()}, {}});
+        {cantFail(shared::WrapperFunctionCall::Create<
+                  shared::SPSArgList<shared::SPSExecutorAddrRange>>(
+             RegisterActionAddr, R.getRange())),
+         {}});
     return Error::success();
   }
 

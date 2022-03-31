@@ -417,8 +417,8 @@ bool TerminalState::Save(Terminal term, bool save_process_group) {
   Clear();
   m_tty = term;
   if (m_tty.IsATerminal()) {
-    int fd = m_tty.GetFileDescriptor();
 #if LLDB_ENABLE_POSIX
+    int fd = m_tty.GetFileDescriptor();
     m_tflags = ::fcntl(fd, F_GETFL, 0);
 #if LLDB_ENABLE_TERMIOS
     std::unique_ptr<Terminal::Data> new_data{new Terminal::Data()};

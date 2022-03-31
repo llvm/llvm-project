@@ -53,6 +53,9 @@ private:
                                    uint64_t Offset, Align Alignment,
                                    bool Signed,
                                    const ISD::InputArg *Arg = nullptr) const;
+  SDValue loadImplicitKernelArgument(SelectionDAG &DAG, MVT VT, const SDLoc &DL,
+                                     Align Alignment,
+                                     ImplicitParameter Param) const;
 
   SDValue lowerStackParameter(SelectionDAG &DAG, CCValAssign &VA,
                               const SDLoc &SL, SDValue Chain,
@@ -449,6 +452,11 @@ public:
   bool isSDNodeSourceOfDivergence(const SDNode *N,
     FunctionLoweringInfo *FLI, LegacyDivergenceAnalysis *DA) const override;
 
+  bool hasMemSDNodeUser(SDNode *N) const;
+
+  bool isReassocProfitable(SelectionDAG &DAG, SDValue N0,
+                           SDValue N1) const override;
+
   bool isCanonicalized(SelectionDAG &DAG, SDValue Op,
                        unsigned MaxDepth = 5) const;
   bool isCanonicalized(Register Reg, MachineFunction &MF,
@@ -500,6 +508,9 @@ public:
 
   std::pair<InstructionCost, MVT> getTypeLegalizationCost(const DataLayout &DL,
                                                           Type *Ty) const;
+
+  MachineMemOperand::Flags
+  getTargetMMOFlags(const Instruction &I) const override;
 };
 
 } // End namespace llvm

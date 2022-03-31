@@ -474,3 +474,52 @@ define void @atomic_store_relaxed(i128 %in, i128* %p) {
    store atomic i128 %in, i128* %p unordered, align 16
    ret void
 }
+
+; Since we store the original value to ensure no tearing for the unsuccessful
+; case, the register used must not be xzr.
+define void @cmpxchg_dead(i128* %ptr, i128 %desired, i128 %new) {
+; NOOUTLINE-LABEL: cmpxchg_dead:
+; NOOUTLINE:       // %bb.0:
+; NOOUTLINE-NEXT:  .LBB17_1: // =>This Inner Loop Header: Depth=1
+; NOOUTLINE-NEXT:    ldxp x8, x9, [x0]
+; NOOUTLINE-NEXT:    cmp x8, x2
+; NOOUTLINE-NEXT:    cset w10, ne
+; NOOUTLINE-NEXT:    cmp x9, x3
+; NOOUTLINE-NEXT:    cinc w10, w10, ne
+; NOOUTLINE-NEXT:    cbz w10, .LBB17_3
+; NOOUTLINE-NEXT:  // %bb.2: // in Loop: Header=BB17_1 Depth=1
+; NOOUTLINE-NEXT:    stxp w10, x8, x9, [x0]
+; NOOUTLINE-NEXT:    cbnz w10, .LBB17_1
+; NOOUTLINE-NEXT:    b .LBB17_4
+; NOOUTLINE-NEXT:  .LBB17_3: // in Loop: Header=BB17_1 Depth=1
+; NOOUTLINE-NEXT:    stxp w10, x4, x5, [x0]
+; NOOUTLINE-NEXT:    cbnz w10, .LBB17_1
+; NOOUTLINE-NEXT:  .LBB17_4:
+; NOOUTLINE-NEXT:    ret
+;
+; OUTLINE-LABEL: cmpxchg_dead:
+; OUTLINE:       // %bb.0:
+; OUTLINE-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-NEXT:    .cfi_def_cfa_offset 16
+; OUTLINE-NEXT:    .cfi_offset w30, -16
+; OUTLINE-NEXT:    mov x1, x3
+; OUTLINE-NEXT:    mov x8, x0
+; OUTLINE-NEXT:    mov x0, x2
+; OUTLINE-NEXT:    mov x2, x4
+; OUTLINE-NEXT:    mov x3, x5
+; OUTLINE-NEXT:    mov x4, x8
+; OUTLINE-NEXT:    bl __aarch64_cas16_relax
+; OUTLINE-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; OUTLINE-NEXT:    ret
+;
+; LSE-LABEL: cmpxchg_dead:
+; LSE:       // %bb.0:
+; LSE-NEXT:    // kill: def $x5 killed $x5 killed $x4_x5 def $x4_x5
+; LSE-NEXT:    // kill: def $x3 killed $x3 killed $x2_x3 def $x2_x3
+; LSE-NEXT:    // kill: def $x4 killed $x4 killed $x4_x5 def $x4_x5
+; LSE-NEXT:    // kill: def $x2 killed $x2 killed $x2_x3 def $x2_x3
+; LSE-NEXT:    casp x2, x3, x4, x5, [x0]
+; LSE-NEXT:    ret
+  cmpxchg i128* %ptr, i128 %desired, i128 %new monotonic monotonic
+  ret void
+}

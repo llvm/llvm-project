@@ -32,6 +32,14 @@ using namespace llvm;
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZTarget() {
   // Register the target.
   RegisterTargetMachine<SystemZTargetMachine> X(getTheSystemZTarget());
+  auto &PR = *PassRegistry::getPassRegistry();
+  initializeSystemZElimComparePass(PR);
+  initializeSystemZShortenInstPass(PR);
+  initializeSystemZLongBranchPass(PR);
+  initializeSystemZLDCleanupPass(PR);
+  initializeSystemZShortenInstPass(PR);
+  initializeSystemZPostRewritePass(PR);
+  initializeSystemZTDCPassPass(PR);
 }
 
 // Determine whether we use the vector ABI.
@@ -326,6 +334,6 @@ TargetPassConfig *SystemZTargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 TargetTransformInfo
-SystemZTargetMachine::getTargetTransformInfo(const Function &F) {
+SystemZTargetMachine::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(SystemZTTIImpl(this, F));
 }

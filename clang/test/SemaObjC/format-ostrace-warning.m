@@ -41,7 +41,7 @@ extern void MyFStringCreateWithFormat(const char *format, ...) __attribute__((fo
 extern void XMyOSLog(int, const char* format, ...) __attribute__((format(os_trace, 2, 3)));
 extern void os_trace(const char *format, ...) __attribute__((format(os_trace, 1, 2)));
 
-void Test2() {
+void Test2(void) {
   MyOSLog("%s\n", "Hello");
 
   MyFStringCreateWithFormat("%s", "Hello"); 

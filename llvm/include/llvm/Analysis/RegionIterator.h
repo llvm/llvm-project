@@ -15,7 +15,6 @@
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/Analysis/RegionInfo.h"
-#include "llvm/IR/CFG.h"
 #include <cassert>
 #include <iterator>
 #include <type_traits>
@@ -23,6 +22,7 @@
 namespace llvm {
 
 class BasicBlock;
+class RegionInfo;
 
 //===----------------------------------------------------------------------===//
 /// Hierarchical RegionNode successor iterator.

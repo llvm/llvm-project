@@ -1,4 +1,4 @@
-; RUN: opt -S -instcombine < %s | FileCheck %s
+; RUN: opt -S -passes=instcombine < %s | FileCheck %s
 
 ; Instcombine should preserve metadata and alignment while
 ; folding a bitcast into a store.

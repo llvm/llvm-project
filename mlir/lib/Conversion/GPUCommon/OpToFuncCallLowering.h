@@ -11,7 +11,6 @@
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Builders.h"
 
 namespace mlir {
@@ -24,16 +23,16 @@ namespace mlir {
 /// function called and then the result casted back.
 ///
 /// Example with NVVM:
-///   %exp_f32 = std.exp %arg_f32 : f32
+///   %exp_f32 = math.exp %arg_f32 : f32
 ///
 /// will be transformed into
 ///   llvm.call @__nv_expf(%arg_f32) : (f32) -> f32
 template <typename SourceOp>
 struct OpToFuncCallLowering : public ConvertOpToLLVMPattern<SourceOp> {
 public:
-  explicit OpToFuncCallLowering(LLVMTypeConverter &lowering_, StringRef f32Func,
+  explicit OpToFuncCallLowering(LLVMTypeConverter &lowering, StringRef f32Func,
                                 StringRef f64Func)
-      : ConvertOpToLLVMPattern<SourceOp>(lowering_), f32Func(f32Func),
+      : ConvertOpToLLVMPattern<SourceOp>(lowering), f32Func(f32Func),
         f64Func(f64Func) {}
 
   LogicalResult

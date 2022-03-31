@@ -19,9 +19,7 @@
 #include "llvm/Bitstream/BitCodes.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MathExtras.h"
-#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/MemoryBufferRef.h"
 #include <algorithm>
 #include <cassert>
 #include <climits>
@@ -98,8 +96,6 @@ private:
   unsigned BitsInCurWord = 0;
 
 public:
-  static const constexpr size_t MaxChunkSize = sizeof(word_t) * 8;
-
   SimpleBitstreamCursor() = default;
   explicit SimpleBitstreamCursor(ArrayRef<uint8_t> BitcodeBytes)
       : BitcodeBytes(BitcodeBytes) {}
@@ -188,7 +184,7 @@ public:
   }
 
   Expected<word_t> Read(unsigned NumBits) {
-    static const unsigned BitsInWord = MaxChunkSize;
+    static const unsigned BitsInWord = sizeof(word_t) * 8;
 
     assert(NumBits && NumBits <= BitsInWord &&
            "Cannot return zero or more than BitsInWord bits!");
@@ -230,24 +226,32 @@ public:
     return R;
   }
 
-  Expected<uint32_t> ReadVBR(unsigned NumBits) {
+  Expected<uint32_t> ReadVBR(const unsigned NumBits) {
     Expected<unsigned> MaybeRead = Read(NumBits);
     if (!MaybeRead)
       return MaybeRead;
     uint32_t Piece = MaybeRead.get();
 
-    if ((Piece & (1U << (NumBits-1))) == 0)
+    assert(NumBits <= 32 && NumBits >= 1 && "Invalid NumBits value");
+    const uint32_t MaskBitOrder = (NumBits - 1);
+    const uint32_t Mask = 1UL << MaskBitOrder;
+
+    if ((Piece & Mask) == 0)
       return Piece;
 
     uint32_t Result = 0;
     unsigned NextBit = 0;
     while (true) {
-      Result |= (Piece & ((1U << (NumBits-1))-1)) << NextBit;
+      Result |= (Piece & (Mask - 1)) << NextBit;
 
-      if ((Piece & (1U << (NumBits-1))) == 0)
+      if ((Piece & Mask) == 0)
         return Result;
 
       NextBit += NumBits-1;
+      if (NextBit >= 32)
+        return createStringError(std::errc::illegal_byte_sequence,
+                                 "Unterminated VBR");
+
       MaybeRead = Read(NumBits);
       if (!MaybeRead)
         return MaybeRead;
@@ -257,24 +261,31 @@ public:
 
   // Read a VBR that may have a value up to 64-bits in size. The chunk size of
   // the VBR must still be <= 32 bits though.
-  Expected<uint64_t> ReadVBR64(unsigned NumBits) {
+  Expected<uint64_t> ReadVBR64(const unsigned NumBits) {
     Expected<uint64_t> MaybeRead = Read(NumBits);
     if (!MaybeRead)
       return MaybeRead;
     uint32_t Piece = MaybeRead.get();
+    assert(NumBits <= 32 && NumBits >= 1 && "Invalid NumBits value");
+    const uint32_t MaskBitOrder = (NumBits - 1);
+    const uint32_t Mask = 1UL << MaskBitOrder;
 
-    if ((Piece & (1U << (NumBits-1))) == 0)
+    if ((Piece & Mask) == 0)
       return uint64_t(Piece);
 
     uint64_t Result = 0;
     unsigned NextBit = 0;
     while (true) {
-      Result |= uint64_t(Piece & ((1U << (NumBits-1))-1)) << NextBit;
+      Result |= uint64_t(Piece & (Mask - 1)) << NextBit;
 
-      if ((Piece & (1U << (NumBits-1))) == 0)
+      if ((Piece & Mask) == 0)
         return Result;
 
       NextBit += NumBits-1;
+      if (NextBit >= 64)
+        return createStringError(std::errc::illegal_byte_sequence,
+                                 "Unterminated VBR");
+
       MaybeRead = Read(NumBits);
       if (!MaybeRead)
         return MaybeRead;
@@ -300,6 +311,13 @@ public:
 
   /// Skip to the end of the file.
   void skipToEnd() { NextChar = BitcodeBytes.size(); }
+
+  /// Check whether a reservation of Size elements is plausible.
+  bool isSizePlausible(size_t Size) const {
+    // Don't allow reserving more elements than the number of bits, assuming
+    // at least one bit is needed to encode an element.
+    return Size < BitcodeBytes.size() * 8;
+  }
 };
 
 /// When advancing through a bitstream cursor, each advance can discover a few
@@ -358,7 +376,7 @@ class BitstreamCursor : SimpleBitstreamCursor {
   BitstreamBlockInfo *BlockInfo = nullptr;
 
 public:
-  static const size_t MaxChunkSize = sizeof(word_t) * 8;
+  static const size_t MaxChunkSize = 32;
 
   BitstreamCursor() = default;
   explicit BitstreamCursor(ArrayRef<uint8_t> BitcodeBytes)
@@ -522,10 +540,11 @@ private:
 
 public:
   /// Return the abbreviation for the specified AbbrevId.
-  const BitCodeAbbrev *getAbbrev(unsigned AbbrevID) {
+  Expected<const BitCodeAbbrev *> getAbbrev(unsigned AbbrevID) {
     unsigned AbbrevNo = AbbrevID - bitc::FIRST_APPLICATION_ABBREV;
     if (AbbrevNo >= CurAbbrevs.size())
-      report_fatal_error("Invalid abbrev number");
+      return createStringError(
+          std::errc::illegal_byte_sequence, "Invalid abbrev number");
     return CurAbbrevs[AbbrevNo].get();
   }
 

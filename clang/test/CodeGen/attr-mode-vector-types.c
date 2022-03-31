@@ -7,7 +7,7 @@ typedef int __attribute__((mode(DI))) __attribute__((vector_size(64)))vec_t4;
 typedef float __attribute__((mode(SF))) __attribute__((vector_size(128))) vec_t5;
 typedef float __attribute__((mode(DF))) __attribute__((vector_size(256))) vec_t6;
 
-void check() {
+void check(void) {
   // CHECK: alloca <4 x i8>
   vec_t1 v1;
   // CHECK: alloca <8 x i8>
@@ -23,19 +23,19 @@ void check() {
 }
 
 // CHECK: ret i32 4
-int check_size1() { return sizeof(vec_t1); }
+int check_size1(void) { return sizeof(vec_t1); }
 
 // CHECK: ret i32 8
-int check_size2() { return sizeof(vec_t2); }
+int check_size2(void) { return sizeof(vec_t2); }
 
 // CHECK: ret i32 16
-int check_size3() { return sizeof(vec_t3); }
+int check_size3(void) { return sizeof(vec_t3); }
 
 // CHECK: ret i32 64
-int check_size4() { return sizeof(vec_t4); }
+int check_size4(void) { return sizeof(vec_t4); }
 
 // CHECK: ret i32 128
-int check_size5() { return sizeof(vec_t5); }
+int check_size5(void) { return sizeof(vec_t5); }
 
 // CHECK: ret i32 256
-int check_size6() { return sizeof(vec_t6); }
+int check_size6(void) { return sizeof(vec_t6); }

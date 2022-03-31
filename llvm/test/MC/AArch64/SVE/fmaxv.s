@@ -12,17 +12,17 @@
 fmaxv h0, p7, z31.h
 // CHECK-INST: fmaxv	h0, p7, z31.h
 // CHECK-ENCODING: [0xe0,0x3f,0x46,0x65]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: e0 3f 46 65 <unknown>
 
 fmaxv s0, p7, z31.s
 // CHECK-INST: fmaxv	s0, p7, z31.s
 // CHECK-ENCODING: [0xe0,0x3f,0x86,0x65]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: e0 3f 86 65 <unknown>
 
 fmaxv d0, p7, z31.d
 // CHECK-INST: fmaxv	d0, p7, z31.d
 // CHECK-ENCODING: [0xe0,0x3f,0xc6,0x65]
-// CHECK-ERROR: instruction requires: streaming-sve or sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: e0 3f c6 65 <unknown>

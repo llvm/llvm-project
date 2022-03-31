@@ -1,5 +1,11 @@
-// RUN: %clang -cc1 -triple x86_64-gnu-linux -x c++ -S -emit-llvm -enable-noundef-analysis %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-INTEL
-// RUN: %clang -cc1 -triple aarch64-gnu-linux -x c++ -S -emit-llvm -enable-noundef-analysis %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-AARCH
+// RUN: %clang -cc1 -triple x86_64-gnu-linux -x c++ -S -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-INTEL
+// RUN: %clang -cc1 -triple aarch64-gnu-linux -x c++ -S -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-AARCH
+// RUN: %clang -cc1 -triple x86_64-gnu-linux -x c++ -S -emit-llvm -fsanitize-memory-param-retval %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-INTEL
+// RUN: %clang -cc1 -triple aarch64-gnu-linux -x c++ -S -emit-llvm -fsanitize-memory-param-retval %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-AARCH
+
+// no-sanitize-memory-param-retval does NOT conflict with enable-noundef-analysis
+// RUN: %clang -cc1 -triple x86_64-gnu-linux -x c++ -S -emit-llvm -fno-sanitize-memory-param-retval %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-INTEL
+// RUN: %clang -cc1 -triple x86_64-gnu-linux -x c++ -S -emit-llvm -fno-sanitize-memory-param-retval %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-INTEL
 
 //************ Passing structs by value
 // TODO: No structs may currently be marked noundef
@@ -80,9 +86,9 @@ void use_object() {
   obj.getData();
   obj.getThis();
 }
-// CHECK: define linkonce_odr void @{{.*}}Object{{.*}}(%"struct.check_this::Object"* noundef %
-// CHECK: define linkonce_odr noundef i32 @{{.*}}Object{{.*}}getData{{.*}}(%"struct.check_this::Object"* noundef %
-// CHECK: define linkonce_odr noundef %"struct.check_this::Object"* @{{.*}}Object{{.*}}getThis{{.*}}(%"struct.check_this::Object"* noundef %
+// CHECK: define linkonce_odr void @{{.*}}Object{{.*}}(%"struct.check_this::Object"* noundef nonnull align 4 dereferenceable(1) %
+// CHECK: define linkonce_odr noundef i32 @{{.*}}Object{{.*}}getData{{.*}}(%"struct.check_this::Object"* noundef nonnull align 4 dereferenceable(1) %
+// CHECK: define linkonce_odr noundef %"struct.check_this::Object"* @{{.*}}Object{{.*}}getThis{{.*}}(%"struct.check_this::Object"* noundef nonnull align 4 dereferenceable(1) %
 } // namespace check_this
 
 //************ Passing vector types

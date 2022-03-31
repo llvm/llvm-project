@@ -42,7 +42,7 @@ public:
 
   // Add an object to the list of referenced objects whose lifetime must exceed
   // those of the ExecutionEngine.
-  void addReferencedObject(pybind11::object obj) {
+  void addReferencedObject(const pybind11::object &obj) {
     referencedObjects.push_back(obj);
   }
 
@@ -62,7 +62,7 @@ private:
   std::vector<py::object> referencedObjects;
 };
 
-} // anonymous namespace
+} // namespace
 
 /// Create the `mlir.execution_engine` module here.
 PYBIND11_MODULE(_mlirExecutionEngine, m) {

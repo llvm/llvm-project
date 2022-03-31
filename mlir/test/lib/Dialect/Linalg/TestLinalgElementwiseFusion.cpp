@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
@@ -46,7 +47,10 @@ static bool setFusedOpOperandLimit(const OpResult &producer,
 
 namespace {
 struct TestLinalgElementwiseFusion
-    : public PassWrapper<TestLinalgElementwiseFusion, FunctionPass> {
+    : public PassWrapper<TestLinalgElementwiseFusion, OperationPass<FuncOp>> {
+  TestLinalgElementwiseFusion() = default;
+  TestLinalgElementwiseFusion(const TestLinalgElementwiseFusion &pass)
+      : PassWrapper(pass) {}
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<AffineDialect, linalg::LinalgDialect, memref::MemRefDialect,
                     tensor::TensorDialect>();
@@ -58,99 +62,115 @@ struct TestLinalgElementwiseFusion
     return "Test Linalg element wise operation fusion patterns";
   }
 
-  void runOnFunction() override {
+  Option<bool> fuseGenericOps{
+      *this, "fuse-generic-ops",
+      llvm::cl::desc("Test fusion of generic operations."),
+      llvm::cl::init(false)};
+
+  Option<bool> controlFuseByExpansion{
+      *this, "control-fusion-by-expansion",
+      llvm::cl::desc(
+          "Test controlling fusion of reshape with generic op by expansion"),
+      llvm::cl::init(false)};
+
+  Option<bool> pushExpandingReshape{
+      *this, "push-expanding-reshape",
+      llvm::cl::desc("Test linalg expand_shape -> generic "
+                     "to generic -> expand_shape pattern"),
+      llvm::cl::init(false)};
+
+  Option<bool> fuseWithReshapeByCollapsing{
+      *this, "fuse-with-reshape-by-collapsing",
+      llvm::cl::desc("Test linalg expand_shape -> generic fusion patterns that "
+                     "collapse the iteration space of the consumer"),
+      llvm::cl::init(false)};
+
+  Option<bool> fuseWithReshapeByCollapsingWithControlFn{
+      *this, "fuse-with-reshape-by-collapsing-control",
+      llvm::cl::desc("Test controlling the linalg expand_shape -> generic "
+                     "fusion patterns that "
+                     "collapse the iteration space of the consumer"),
+      llvm::cl::init(false)};
+
+  void runOnOperation() override {
     MLIRContext *context = &this->getContext();
-    FuncOp funcOp = this->getFunction();
-    RewritePatternSet fusionPatterns(context);
+    FuncOp funcOp = this->getOperation();
 
-    linalg::populateElementwiseOpsFusionPatterns(
-        fusionPatterns,
-        linalg::LinalgElementwiseFusionOptions()
-            .setControlElementwiseOpsFusionFn(setFusedOpOperandLimit<4>));
+    if (fuseGenericOps) {
+      RewritePatternSet fusionPatterns(context);
+      linalg::populateElementwiseOpsFusionPatterns(
+          fusionPatterns,
+          linalg::LinalgElementwiseFusionOptions()
+              .setControlElementwiseOpsFusionFn(setFusedOpOperandLimit<4>));
 
-    (void)applyPatternsAndFoldGreedily(funcOp.getBody(),
-                                       std::move(fusionPatterns));
-  }
-};
+      (void)applyPatternsAndFoldGreedily(funcOp.getBody(),
+                                         std::move(fusionPatterns));
+      return;
+    }
 
-struct TestLinalgControlFuseByExpansion
-    : public PassWrapper<TestLinalgControlFuseByExpansion, FunctionPass> {
-  void getDependentDialects(DialectRegistry &registry) const override {
-    registry
-        .insert<AffineDialect, linalg::LinalgDialect, tensor::TensorDialect>();
-  }
-  StringRef getArgument() const final {
-    return "test-linalg-control-fusion-by-expansion";
-  }
-  StringRef getDescription() const final {
-    return "Test controlling of fusion of elementwise ops with reshape by "
-           "expansion";
-  }
+    if (controlFuseByExpansion) {
+      RewritePatternSet fusionPatterns(context);
 
-  void runOnFunction() override {
-    MLIRContext *context = &this->getContext();
-    FuncOp funcOp = this->getFunction();
-    RewritePatternSet fusionPatterns(context);
-
-    linalg::ControlElementwiseOpsFusionFn controlReshapeFusionFn =
-        [](const OpResult &producer, OpOperand &consumer) {
-          if (auto collapseOp =
-                  producer.getDefiningOp<linalg::TensorCollapseShapeOp>()) {
-            if (!collapseOp.src().getDefiningOp<linalg::LinalgOp>()) {
-              return false;
+      linalg::ControlElementwiseOpsFusionFn controlReshapeFusionFn =
+          [](const OpResult &producer, OpOperand &consumer) {
+            if (auto collapseOp =
+                    producer.getDefiningOp<tensor::CollapseShapeOp>()) {
+              if (!collapseOp.src().getDefiningOp<linalg::LinalgOp>()) {
+                return false;
+              }
             }
-          }
-          if (auto expandOp =
-                  dyn_cast<linalg::TensorExpandShapeOp>(consumer.getOwner())) {
-            if (expandOp->hasOneUse()) {
-              OpOperand &use = *expandOp->getUses().begin();
-              auto linalgOp = dyn_cast<linalg::LinalgOp>(use.getOwner());
-              if (linalgOp && linalgOp.isOutputTensor(&use))
-                return true;
+            if (auto expandOp =
+                    dyn_cast<tensor::ExpandShapeOp>(consumer.getOwner())) {
+              if (expandOp->hasOneUse()) {
+                OpOperand &use = *expandOp->getUses().begin();
+                auto linalgOp = dyn_cast<linalg::LinalgOp>(use.getOwner());
+                if (linalgOp && linalgOp.isOutputTensor(&use))
+                  return true;
+              }
             }
-          }
-          return linalg::skipUnitDimReshape(producer, consumer);
-        };
+            return linalg::skipUnitDimReshape(producer, consumer);
+          };
 
-    linalg::populateFoldReshapeOpsByExpansionPatterns(fusionPatterns,
-                                                      controlReshapeFusionFn);
-    (void)applyPatternsAndFoldGreedily(funcOp.getBody(),
-                                       std::move(fusionPatterns));
+      linalg::populateFoldReshapeOpsByExpansionPatterns(fusionPatterns,
+                                                        controlReshapeFusionFn);
+      (void)applyPatternsAndFoldGreedily(funcOp.getBody(),
+                                         std::move(fusionPatterns));
+      return;
+    }
+
+    if (pushExpandingReshape) {
+      RewritePatternSet patterns(context);
+      linalg::populatePushReshapeOpsPatterns(patterns);
+      (void)applyPatternsAndFoldGreedily(funcOp.getBody(), std::move(patterns));
+    }
+
+    if (fuseWithReshapeByCollapsing) {
+      RewritePatternSet patterns(context);
+      linalg::populateFoldReshapeOpsByCollapsingPatterns(patterns);
+      (void)applyPatternsAndFoldGreedily(funcOp.getBody(), std::move(patterns));
+    }
+
+    if (fuseWithReshapeByCollapsingWithControlFn) {
+      RewritePatternSet patterns(context);
+      linalg::ControlElementwiseOpsFusionFn controlFn =
+          [](const OpResult &producer, OpOperand &consumer) -> bool {
+        if (isa<tensor::ExpandShapeOp>(producer.getDefiningOp())) {
+          // Skip fusing the first operand.
+          return consumer.getOperandNumber();
+        }
+        return true;
+      };
+      linalg::populateFoldReshapeOpsByCollapsingPatterns(patterns, controlFn);
+      (void)applyPatternsAndFoldGreedily(funcOp.getBody(), std::move(patterns));
+    }
   }
 };
 
-struct TestPushExpandingReshape
-    : public PassWrapper<TestPushExpandingReshape, FunctionPass> {
-  void getDependentDialects(DialectRegistry &registry) const override {
-    registry
-        .insert<AffineDialect, linalg::LinalgDialect, tensor::TensorDialect>();
-  }
-  StringRef getArgument() const final { return "test-linalg-push-reshape"; }
-  StringRef getDescription() const final {
-    return "Test Linalg reshape push patterns";
-  }
-
-  void runOnFunction() override {
-    MLIRContext *context = &this->getContext();
-    FuncOp funcOp = this->getFunction();
-    RewritePatternSet patterns(context);
-    linalg::populatePushReshapeOpsPatterns(patterns);
-    (void)applyPatternsAndFoldGreedily(funcOp.getBody(), std::move(patterns));
-  }
-};
 } // namespace
 
 namespace test {
 void registerTestLinalgElementwiseFusion() {
   PassRegistration<TestLinalgElementwiseFusion>();
-}
-
-void registerTestLinalgControlFuseByExpansion() {
-  PassRegistration<TestLinalgControlFuseByExpansion>();
-}
-
-void registerTestPushExpandingReshape() {
-  PassRegistration<TestPushExpandingReshape>();
 }
 } // namespace test
 

@@ -206,13 +206,15 @@ void AMDGPUInstPrinter::printCPol(const MCInst *MI, unsigned OpNo,
                                   const MCSubtargetInfo &STI, raw_ostream &O) {
   auto Imm = MI->getOperand(OpNo).getImm();
   if (Imm & CPol::GLC)
-    O << " glc";
+    O << ((AMDGPU::isGFX940(STI) &&
+           !(MII.get(MI->getOpcode()).TSFlags & SIInstrFlags::SMRD)) ? " sc0"
+                                                                     : " glc");
   if (Imm & CPol::SLC)
-    O << " slc";
+    O << (AMDGPU::isGFX940(STI) ? " nt" : " slc");
   if ((Imm & CPol::DLC) && AMDGPU::isGFX10Plus(STI))
     O << " dlc";
   if ((Imm & CPol::SCC) && AMDGPU::isGFX90A(STI))
-    O << " scc";
+    O << (AMDGPU::isGFX940(STI) ? " sc1" : " scc");
   if (Imm & ~CPol::ALL)
     O << " /* unexpected cache policy bit */";
 }
@@ -547,6 +549,18 @@ void AMDGPUInstPrinter::printBLGP(const MCInst *MI, unsigned OpNo,
   unsigned Imm = MI->getOperand(OpNo).getImm();
   if (!Imm)
     return;
+
+  if (AMDGPU::isGFX940(STI)) {
+    switch (MI->getOpcode()) {
+    case AMDGPU::V_MFMA_F64_16X16X4F64_gfx940_acd:
+    case AMDGPU::V_MFMA_F64_16X16X4F64_gfx940_vcd:
+    case AMDGPU::V_MFMA_F64_4X4X4F64_gfx940_acd:
+    case AMDGPU::V_MFMA_F64_4X4X4F64_gfx940_vcd:
+      O << " neg:[" << (Imm & 1) << ',' << ((Imm >> 1) & 1) << ','
+        << ((Imm >> 2) & 1) << ']';
+      return;
+    }
+  }
 
   O << " blgp:" << Imm;
 }
@@ -1264,10 +1278,11 @@ void AMDGPUInstPrinter::printSendMsg(const MCInst *MI, unsigned OpNo,
   uint16_t StreamId;
   decodeMsg(Imm16, MsgId, OpId, StreamId);
 
-  if (isValidMsgId(MsgId, STI) &&
-      isValidMsgOp(MsgId, OpId, STI) &&
+  StringRef MsgName = getMsgName(MsgId, STI);
+
+  if (!MsgName.empty() && isValidMsgOp(MsgId, OpId, STI) &&
       isValidMsgStream(MsgId, OpId, StreamId, STI)) {
-    O << "sendmsg(" << getMsgName(MsgId);
+    O << "sendmsg(" << MsgName;
     if (msgRequiresOp(MsgId)) {
       O << ", " << getMsgOpName(MsgId, OpId);
       if (msgSupportsStream(MsgId, OpId)) {
@@ -1397,21 +1412,26 @@ void AMDGPUInstPrinter::printWaitFlag(const MCInst *MI, unsigned OpNo,
   unsigned Vmcnt, Expcnt, Lgkmcnt;
   decodeWaitcnt(ISA, SImm16, Vmcnt, Expcnt, Lgkmcnt);
 
+  bool IsDefaultVmcnt = Vmcnt == getVmcntBitMask(ISA);
+  bool IsDefaultExpcnt = Expcnt == getExpcntBitMask(ISA);
+  bool IsDefaultLgkmcnt = Lgkmcnt == getLgkmcntBitMask(ISA);
+  bool PrintAll = IsDefaultVmcnt && IsDefaultExpcnt && IsDefaultLgkmcnt;
+
   bool NeedSpace = false;
 
-  if (Vmcnt != getVmcntBitMask(ISA)) {
+  if (!IsDefaultVmcnt || PrintAll) {
     O << "vmcnt(" << Vmcnt << ')';
     NeedSpace = true;
   }
 
-  if (Expcnt != getExpcntBitMask(ISA)) {
+  if (!IsDefaultExpcnt || PrintAll) {
     if (NeedSpace)
       O << ' ';
     O << "expcnt(" << Expcnt << ')';
     NeedSpace = true;
   }
 
-  if (Lgkmcnt != getLgkmcntBitMask(ISA)) {
+  if (!IsDefaultLgkmcnt || PrintAll) {
     if (NeedSpace)
       O << ' ';
     O << "lgkmcnt(" << Lgkmcnt << ')';

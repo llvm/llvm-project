@@ -2,15 +2,21 @@ cmake_minimum_required(VERSION 3.13.4)
 
 # If we are not building as a part of LLVM, build Clang as an
 # standalone project, using LLVM as an external library:
-if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   project(Clang)
+  set(CLANG_BUILT_STANDALONE TRUE)
+endif()
 
+# Must go below project(..)
+include(GNUInstallDirs)
+
+if(CLANG_BUILT_STANDALONE)
   set(CMAKE_CXX_STANDARD 14 CACHE STRING "C++ standard to conform to")
   set(CMAKE_CXX_STANDARD_REQUIRED YES)
   set(CMAKE_CXX_EXTENSIONS NO)
 
   # Rely on llvm-config.
-  set(CONFIG_OUTPUT)
+  set(LLVM_CONFIG_OUTPUT)
   if(LLVM_CONFIG)
     set (LLVM_CONFIG_FOUND 1)
     message(STATUS "Found LLVM_CONFIG as ${LLVM_CONFIG}")
@@ -20,35 +26,36 @@ if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
           automatically, but you can also use LLVM_DIR to specify \
           the path containing LLVMConfig.cmake.")
     set(CONFIG_COMMAND ${LLVM_CONFIG}
-      "--assertion-mode"
-      "--bindir"
-      "--libdir"
       "--includedir"
       "--prefix"
       "--src-root"
-      "--cmakedir")
+      "--cmakedir"
+      "--bindir"
+      "--libdir"
+      "--assertion-mode"
+      )
     execute_process(
       COMMAND ${CONFIG_COMMAND}
       RESULT_VARIABLE HAD_ERROR
-      OUTPUT_VARIABLE CONFIG_OUTPUT
+      OUTPUT_VARIABLE LLVM_CONFIG_OUTPUT
     )
     if(NOT HAD_ERROR)
       string(REGEX REPLACE
         "[ \t]*[\r\n]+[ \t]*" ";"
-        CONFIG_OUTPUT ${CONFIG_OUTPUT})
+        LLVM_CONFIG_OUTPUT ${LLVM_CONFIG_OUTPUT})
     else()
       string(REPLACE ";" " " CONFIG_COMMAND_STR "${CONFIG_COMMAND}")
       message(STATUS "${CONFIG_COMMAND_STR}")
       message(FATAL_ERROR "llvm-config failed with status ${HAD_ERROR}")
     endif()
 
-    list(GET CONFIG_OUTPUT 0 ENABLE_ASSERTIONS)
-    list(GET CONFIG_OUTPUT 1 TOOLS_BINARY_DIR)
-    list(GET CONFIG_OUTPUT 2 LIBRARY_DIR)
-    list(GET CONFIG_OUTPUT 3 INCLUDE_DIR)
-    list(GET CONFIG_OUTPUT 4 LLVM_OBJ_ROOT)
-    list(GET CONFIG_OUTPUT 5 MAIN_SRC_DIR)
-    list(GET CONFIG_OUTPUT 6 LLVM_CONFIG_CMAKE_DIR)
+    list(GET LLVM_CONFIG_OUTPUT 0 MAIN_INCLUDE_DIR)
+    list(GET LLVM_CONFIG_OUTPUT 1 LLVM_OBJ_ROOT)
+    list(GET LLVM_CONFIG_OUTPUT 2 MAIN_SRC_DIR)
+    list(GET LLVM_CONFIG_OUTPUT 3 LLVM_CONFIG_CMAKE_DIR)
+    list(GET LLVM_CONFIG_OUTPUT 4 TOOLS_BINARY_DIR)
+    list(GET LLVM_CONFIG_OUTPUT 5 LIBRARY_DIR)
+    list(GET LLVM_CONFIG_OUTPUT 6 ENABLE_ASSERTIONS)
 
     # Normalize LLVM_CMAKE_DIR. --cmakedir might contain backslashes.
     # CMake assumes slashes as PATH.
@@ -64,24 +71,26 @@ if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
   endif()
 
   find_package(LLVM REQUIRED HINTS "${LLVM_CMAKE_DIR}")
-  list(APPEND CMAKE_MODULE_PATH ${LLVM_DIR})
+  list(APPEND CMAKE_MODULE_PATH "${LLVM_DIR}")
 
   # We can't check LLVM_CONFIG here, because find_package(LLVM ...) also sets
   # LLVM_CONFIG.
   if (NOT LLVM_CONFIG_FOUND)
     # Pull values from LLVMConfig.cmake.  We can drop this once the llvm-config
     # path is removed.
-    set(TOOLS_BINARY_DIR ${LLVM_TOOLS_BINARY_DIR})
-    set(LIBRARY_DIR ${LLVM_LIBRARY_DIR})
-    set(INCLUDE_DIR ${LLVM_INCLUDE_DIR})
-    set(LLVM_OBJ_DIR ${LLVM_BINARY_DIR})
+    set(MAIN_INCLUDE_DIR "${LLVM_INCLUDE_DIR}")
+    set(LLVM_OBJ_DIR "${LLVM_BINARY_DIR}")
+    # N.B. this is just a default value, the CACHE PATHs below can be overriden.
+    set(MAIN_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../llvm")
+    set(TOOLS_BINARY_DIR "${LLVM_TOOLS_BINARY_DIR}")
+    set(LIBRARY_DIR "${LLVM_LIBRARY_DIR}")
   endif()
 
-  set(LLVM_TOOLS_BINARY_DIR ${TOOLS_BINARY_DIR} CACHE PATH "Path to llvm/bin")
-  set(LLVM_LIBRARY_DIR ${LIBRARY_DIR} CACHE PATH "Path to llvm/lib")
-  set(LLVM_MAIN_INCLUDE_DIR ${INCLUDE_DIR} CACHE PATH "Path to llvm/include")
-  set(LLVM_BINARY_DIR ${LLVM_OBJ_ROOT} CACHE PATH "Path to LLVM build tree")
-  set(LLVM_MAIN_SRC_DIR ${MAIN_SRC_DIR} CACHE PATH "Path to LLVM source tree")
+  set(LLVM_MAIN_INCLUDE_DIR "${MAIN_INCLUDE_DIR}" CACHE PATH "Path to llvm/include")
+  set(LLVM_BINARY_DIR "${LLVM_OBJ_ROOT}" CACHE PATH "Path to LLVM build tree")
+  set(LLVM_MAIN_SRC_DIR "${MAIN_SRC_DIR}" CACHE PATH "Path to LLVM source tree")
+  set(LLVM_TOOLS_BINARY_DIR "${TOOLS_BINARY_DIR}" CACHE PATH "Path to llvm/bin")
+  set(LLVM_LIBRARY_DIR "${LIBRARY_DIR}" CACHE PATH "Path to llvm/lib")
 
   find_program(LLVM_TABLEGEN_EXE "llvm-tblgen" ${LLVM_TOOLS_BINARY_DIR}
     NO_DEFAULT_PATH)
@@ -184,15 +193,21 @@ if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
     endif()
   endif()
 
-  set( CLANG_BUILT_STANDALONE 1 )
   set(BACKEND_PACKAGE_STRING "LLVM ${LLVM_PACKAGE_VERSION}")
 else()
   set(BACKEND_PACKAGE_STRING "${PACKAGE_STRING}")
+endif() # standalone
+
+if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
+  set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
 endif()
 
 # Make sure that our source directory is on the current cmake module path so that
 # we can include cmake files from this directory.
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
+list(INSERT CMAKE_MODULE_PATH 0
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
+  "${LLVM_COMMON_CMAKE_UTILS}/Modules"
+  )
 
 if(LLVM_ENABLE_LIBXML2)
   # Don't look for libxml if we're using MSan, since uninstrumented third party
@@ -224,8 +239,13 @@ set(ENABLE_LINKER_BUILD_ID OFF CACHE BOOL "pass --build-id to ld")
 set(ENABLE_X86_RELAX_RELOCATIONS ON CACHE BOOL
     "enable x86 relax relocations by default")
 
+set(PPC_LINUX_DEFAULT_IEEELONGDOUBLE OFF CACHE BOOL
+    "Enable IEEE binary128 as default long double format on PowerPC Linux.")
+
 set(CLANG_SPAWN_CC1 OFF CACHE BOOL
     "Whether clang should use a new process for the CC1 invocation")
+
+option(CLANG_DEFAULT_PIE_ON_LINUX "Default to -fPIE and -pie on Linux" OFF)
 
 # TODO: verify the values against LangStandards.def?
 set(CLANG_DEFAULT_STD_C "" CACHE STRING
@@ -383,7 +403,7 @@ endif ()
 
 # Determine HOST_LINK_VERSION on Darwin.
 set(HOST_LINK_VERSION)
-if (APPLE)
+if (APPLE AND NOT CMAKE_LINKER MATCHES ".*lld.*")
   set(LD_V_OUTPUT)
   execute_process(
     COMMAND sh -c "${CMAKE_LINKER} -v 2>&1 | head -1"
@@ -413,7 +433,7 @@ include_directories(BEFORE
 
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   install(DIRECTORY include/clang include/clang-c
-    DESTINATION include
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
     COMPONENT clang-headers
     FILES_MATCHING
     PATTERN "*.def"
@@ -422,7 +442,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     )
 
   install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/clang
-    DESTINATION include
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
     COMPONENT clang-headers
     FILES_MATCHING
     PATTERN "CMakeFiles" EXCLUDE
@@ -442,7 +462,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
 
   add_custom_target(bash-autocomplete DEPENDS utils/bash-autocomplete.sh)
   install(PROGRAMS utils/bash-autocomplete.sh
-          DESTINATION share/clang
+          DESTINATION "${CMAKE_INSTALL_DATADIR}/clang"
           COMPONENT bash-autocomplete)
   if(NOT LLVM_ENABLE_IDE)
     add_llvm_install_targets(install-bash-autocomplete
@@ -455,6 +475,15 @@ add_definitions( -D_GNU_SOURCE )
 
 option(CLANG_BUILD_TOOLS
   "Build the Clang tools. If OFF, just generate build targets." ON)
+
+if(LLVM_ENABLE_PLUGINS OR LLVM_EXPORT_SYMBOLS_FOR_PLUGINS)
+  set(HAVE_CLANG_PLUGIN_SUPPORT ON)
+else()
+  set(HAVE_CLANG_PLUGIN_SUPPORT OFF)
+endif()
+CMAKE_DEPENDENT_OPTION(CLANG_PLUGIN_SUPPORT
+  "Build clang with plugin support" ON
+  "HAVE_CLANG_PLUGIN_SUPPORT" OFF)
 
 option(CLANG_ENABLE_ARCMT "Build ARCMT." ON)
 option(CLANG_ENABLE_STATIC_ANALYZER

@@ -13,12 +13,15 @@
 
 #include "VPlanTransforms.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/Analysis/IVDescriptors.h"
 
 using namespace llvm;
 
 void VPlanTransforms::VPInstructionsToVPRecipes(
     Loop *OrigLoop, VPlanPtr &Plan,
-    LoopVectorizationLegality::InductionList &Inductions,
+    function_ref<const InductionDescriptor *(PHINode *)>
+        GetIntOrFpInductionDescriptor,
     SmallPtrSetImpl<Instruction *> &DeadInstructions, ScalarEvolution &SE) {
 
   auto *TopRegion = cast<VPRegionBlock>(Plan->getEntry());
@@ -44,11 +47,10 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
       VPRecipeBase *NewRecipe = nullptr;
       if (auto *VPPhi = dyn_cast<VPWidenPHIRecipe>(&Ingredient)) {
         auto *Phi = cast<PHINode>(VPPhi->getUnderlyingValue());
-        InductionDescriptor II = Inductions.lookup(Phi);
-        if (II.getKind() == InductionDescriptor::IK_IntInduction ||
-            II.getKind() == InductionDescriptor::IK_FpInduction) {
-          VPValue *Start = Plan->getOrAddVPValue(II.getStartValue());
-          NewRecipe = new VPWidenIntOrFpInductionRecipe(Phi, Start);
+        if (const auto *II = GetIntOrFpInductionDescriptor(Phi)) {
+          VPValue *Start = Plan->getOrAddVPValue(II->getStartValue());
+          NewRecipe = new VPWidenIntOrFpInductionRecipe(Phi, Start, *II, false,
+                                                        true, SE);
         } else {
           Plan->addVPValue(Phi, VPPhi);
           continue;
@@ -158,8 +160,7 @@ bool VPlanTransforms::sinkScalarOperands(VPlan &Plan) {
       // TODO: add ".cloned" suffix to name of Clone's VPValue.
 
       Clone->insertBefore(SinkCandidate);
-      SmallVector<VPUser *, 4> Users(SinkCandidate->user_begin(),
-                                     SinkCandidate->user_end());
+      SmallVector<VPUser *, 4> Users(SinkCandidate->users());
       for (auto *U : Users) {
         auto *UI = cast<VPRecipeBase>(U);
         if (UI->getParent() == SinkTo)
@@ -266,8 +267,7 @@ bool VPlanTransforms::mergeReplicateRegions(VPlan &Plan) {
       VPValue *PredInst1 =
           cast<VPPredInstPHIRecipe>(&Phi1ToMove)->getOperand(0);
       VPValue *Phi1ToMoveV = Phi1ToMove.getVPSingleValue();
-      SmallVector<VPUser *> Users(Phi1ToMoveV->user_begin(),
-                                  Phi1ToMoveV->user_end());
+      SmallVector<VPUser *> Users(Phi1ToMoveV->users());
       for (VPUser *U : Users) {
         auto *UI = dyn_cast<VPRecipeBase>(U);
         if (!UI || UI->getParent() != Then2)
@@ -294,4 +294,175 @@ bool VPlanTransforms::mergeReplicateRegions(VPlan &Plan) {
   for (VPRegionBlock *ToDelete : DeletedRegions)
     delete ToDelete;
   return Changed;
+}
+
+void VPlanTransforms::removeRedundantInductionCasts(VPlan &Plan) {
+  for (auto &Phi : Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
+    auto *IV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
+    if (!IV || IV->getTruncInst())
+      continue;
+
+    // A sequence of IR Casts has potentially been recorded for IV, which
+    // *must be bypassed* when the IV is vectorized, because the vectorized IV
+    // will produce the desired casted value. This sequence forms a def-use
+    // chain and is provided in reverse order, ending with the cast that uses
+    // the IV phi. Search for the recipe of the last cast in the chain and
+    // replace it with the original IV. Note that only the final cast is
+    // expected to have users outside the cast-chain and the dead casts left
+    // over will be cleaned up later.
+    auto &Casts = IV->getInductionDescriptor().getCastInsts();
+    VPValue *FindMyCast = IV;
+    for (Instruction *IRCast : reverse(Casts)) {
+      VPRecipeBase *FoundUserCast = nullptr;
+      for (auto *U : FindMyCast->users()) {
+        auto *UserCast = cast<VPRecipeBase>(U);
+        if (UserCast->getNumDefinedValues() == 1 &&
+            UserCast->getVPSingleValue()->getUnderlyingValue() == IRCast) {
+          FoundUserCast = UserCast;
+          break;
+        }
+      }
+      FindMyCast = FoundUserCast->getVPSingleValue();
+    }
+    FindMyCast->replaceAllUsesWith(IV);
+  }
+}
+
+void VPlanTransforms::removeRedundantCanonicalIVs(VPlan &Plan) {
+  VPCanonicalIVPHIRecipe *CanonicalIV = Plan.getCanonicalIV();
+  VPWidenCanonicalIVRecipe *WidenNewIV = nullptr;
+  for (VPUser *U : CanonicalIV->users()) {
+    WidenNewIV = dyn_cast<VPWidenCanonicalIVRecipe>(U);
+    if (WidenNewIV)
+      break;
+  }
+
+  if (!WidenNewIV)
+    return;
+
+  VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
+  for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
+    auto *WidenOriginalIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
+
+    if (!WidenOriginalIV || !WidenOriginalIV->isCanonical() ||
+        WidenOriginalIV->getScalarType() != WidenNewIV->getScalarType())
+      continue;
+
+    // Replace WidenNewIV with WidenOriginalIV if WidenOriginalIV provides
+    // everything WidenNewIV's users need. That is, WidenOriginalIV will
+    // generate a vector phi or all users of WidenNewIV demand the first lane
+    // only.
+    if (WidenOriginalIV->needsVectorIV() ||
+        vputils::onlyFirstLaneUsed(WidenNewIV)) {
+      WidenNewIV->replaceAllUsesWith(WidenOriginalIV);
+      WidenNewIV->eraseFromParent();
+      return;
+    }
+  }
+}
+
+// Check for live-out users currently not modeled in VPlan.
+// Note that exit values of inductions are generated independent of
+// the recipe. This means  VPWidenIntOrFpInductionRecipe &
+// VPScalarIVStepsRecipe can be removed, independent of uses outside
+// the loop.
+// TODO: Remove once live-outs are modeled in VPlan.
+static bool hasOutsideUser(Instruction &I, Loop &OrigLoop) {
+  return any_of(I.users(), [&OrigLoop](User *U) {
+    if (!OrigLoop.contains(cast<Instruction>(U)))
+      return true;
+
+    // Look through single-value phis in the loop, as they won't be modeled in
+    // VPlan and may be used outside the loop.
+    if (auto *PN = dyn_cast<PHINode>(U))
+      if (PN->getNumIncomingValues() == 1)
+        return hasOutsideUser(*PN, OrigLoop);
+
+    return false;
+  });
+}
+
+void VPlanTransforms::removeDeadRecipes(VPlan &Plan, Loop &OrigLoop) {
+  VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
+  // Check if \p R is used outside the loop, if required.
+  // TODO: Remove once live-outs are modeled in VPlan.
+  auto HasUsersOutsideLoop = [&OrigLoop](VPRecipeBase &R) {
+    // Exit values for induction recipes are generated independent of the
+    // recipes, expect for truncated inductions. Hence there is no need to check
+    // for users outside the loop for them.
+    if (isa<VPScalarIVStepsRecipe>(&R) ||
+        (isa<VPWidenIntOrFpInductionRecipe>(&R) &&
+         !isa<TruncInst>(R.getUnderlyingInstr())))
+      return false;
+    return R.getUnderlyingInstr() &&
+           hasOutsideUser(*R.getUnderlyingInstr(), OrigLoop);
+  };
+  // Remove dead recipes in header block. The recipes in the block are processed
+  // in reverse order, to catch chains of dead recipes.
+  // TODO: Remove dead recipes across whole plan.
+  for (VPRecipeBase &R : make_early_inc_range(reverse(*Header))) {
+    if (R.mayHaveSideEffects() ||
+        any_of(R.definedValues(),
+               [](VPValue *V) { return V->getNumUsers() > 0; }) ||
+        HasUsersOutsideLoop(R))
+      continue;
+    R.eraseFromParent();
+  }
+}
+
+void VPlanTransforms::optimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
+  SmallVector<VPRecipeBase *> ToRemove;
+  VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
+  for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
+    auto *IV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
+    if (!IV || !IV->needsScalarIV())
+      continue;
+
+    const InductionDescriptor &ID = IV->getInductionDescriptor();
+    const SCEV *StepSCEV = ID.getStep();
+    VPValue *Step = nullptr;
+    if (auto *E = dyn_cast<SCEVConstant>(StepSCEV)) {
+      Step = new VPValue(E->getValue());
+      Plan.addExternalDef(Step);
+    } else if (auto *E = dyn_cast<SCEVUnknown>(StepSCEV)) {
+      Step = new VPValue(E->getValue());
+      Plan.addExternalDef(Step);
+    } else {
+      Step = new VPExpandSCEVRecipe(StepSCEV, SE);
+    }
+
+    Instruction *TruncI = IV->getTruncInst();
+    VPScalarIVStepsRecipe *Steps = new VPScalarIVStepsRecipe(
+        IV->getPHINode()->getType(), ID, Plan.getCanonicalIV(),
+        IV->getStartValue(), Step, TruncI ? TruncI->getType() : nullptr);
+
+    HeaderVPBB->insert(Steps, HeaderVPBB->getFirstNonPhi());
+    if (Step->getDef()) {
+      // TODO: Place the step in the preheader, once it is explicitly modeled in
+      // VPlan.
+      HeaderVPBB->insert(cast<VPRecipeBase>(Step->getDef()),
+                         HeaderVPBB->getFirstNonPhi());
+    }
+
+    // If there are no vector users of IV, simply update all users to use Step
+    // instead.
+    if (!IV->needsVectorIV()) {
+      IV->replaceAllUsesWith(Steps);
+      continue;
+    }
+
+    // Otherwise only update scalar users of IV to use Step instead. Use
+    // SetVector to ensure the list of users doesn't contain duplicates.
+    SetVector<VPUser *> Users(IV->user_begin(), IV->user_end());
+    for (VPUser *U : Users) {
+      VPRecipeBase *R = cast<VPRecipeBase>(U);
+      if (!R->usesScalars(IV))
+        continue;
+      for (unsigned I = 0, E = R->getNumOperands(); I != E; I++) {
+        if (R->getOperand(I) != IV)
+          continue;
+        R->setOperand(I, Steps);
+      }
+    }
+  }
 }

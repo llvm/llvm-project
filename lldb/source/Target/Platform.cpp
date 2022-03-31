@@ -34,6 +34,7 @@
 #include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StructuredData.h"
@@ -279,7 +280,7 @@ PlatformSP Platform::Find(ConstString name) {
 
     std::lock_guard<std::recursive_mutex> guard(GetPlatformListMutex());
     for (const auto &platform_sp : GetPlatformList()) {
-      if (platform_sp->GetName() == name)
+      if (platform_sp->GetName() == name.GetStringRef())
         return platform_sp;
     }
   }
@@ -313,8 +314,9 @@ PlatformSP Platform::Create(ConstString name, Status &error) {
   return platform_sp;
 }
 
-PlatformSP Platform::Create(const ArchSpec &arch, ArchSpec *platform_arch_ptr,
-                            Status &error) {
+PlatformSP Platform::Create(const ArchSpec &arch,
+                            const ArchSpec &process_host_arch,
+                            ArchSpec *platform_arch_ptr, Status &error) {
   lldb::PlatformSP platform_sp;
   if (arch.IsValid()) {
     // Scope for locker
@@ -322,15 +324,15 @@ PlatformSP Platform::Create(const ArchSpec &arch, ArchSpec *platform_arch_ptr,
       // First try exact arch matches across all platforms already created
       std::lock_guard<std::recursive_mutex> guard(GetPlatformListMutex());
       for (const auto &platform_sp : GetPlatformList()) {
-        if (platform_sp->IsCompatibleArchitecture(arch, true,
+        if (platform_sp->IsCompatibleArchitecture(arch, process_host_arch, true,
                                                   platform_arch_ptr))
           return platform_sp;
       }
 
       // Next try compatible arch matches across all platforms already created
       for (const auto &platform_sp : GetPlatformList()) {
-        if (platform_sp->IsCompatibleArchitecture(arch, false,
-                                                  platform_arch_ptr))
+        if (platform_sp->IsCompatibleArchitecture(arch, process_host_arch,
+                                                  false, platform_arch_ptr))
           return platform_sp;
       }
     }
@@ -344,7 +346,7 @@ PlatformSP Platform::Create(const ArchSpec &arch, ArchSpec *platform_arch_ptr,
       if (create_callback) {
         platform_sp = create_callback(false, &arch);
         if (platform_sp &&
-            platform_sp->IsCompatibleArchitecture(arch, true,
+            platform_sp->IsCompatibleArchitecture(arch, process_host_arch, true,
                                                   platform_arch_ptr)) {
           std::lock_guard<std::recursive_mutex> guard(GetPlatformListMutex());
           GetPlatformList().push_back(platform_sp);
@@ -359,8 +361,8 @@ PlatformSP Platform::Create(const ArchSpec &arch, ArchSpec *platform_arch_ptr,
       if (create_callback) {
         platform_sp = create_callback(false, &arch);
         if (platform_sp &&
-            platform_sp->IsCompatibleArchitecture(arch, false,
-                                                  platform_arch_ptr)) {
+            platform_sp->IsCompatibleArchitecture(arch, process_host_arch,
+                                                  false, platform_arch_ptr)) {
           std::lock_guard<std::recursive_mutex> guard(GetPlatformListMutex());
           GetPlatformList().push_back(platform_sp);
           return platform_sp;
@@ -384,14 +386,13 @@ ArchSpec Platform::GetAugmentedArchSpec(Platform *platform, llvm::StringRef trip
 /// Default Constructor
 Platform::Platform(bool is_host)
     : m_is_host(is_host), m_os_version_set_while_connected(false),
-      m_system_arch_set_while_connected(false), m_sdk_sysroot(), m_sdk_build(),
-      m_working_dir(), m_remote_url(), m_name(), m_system_arch(), m_mutex(),
-      m_max_uid_name_len(0), m_max_gid_name_len(0), m_supports_rsync(false),
-      m_rsync_opts(), m_rsync_prefix(), m_supports_ssh(false), m_ssh_opts(),
+      m_system_arch_set_while_connected(false), m_max_uid_name_len(0),
+      m_max_gid_name_len(0), m_supports_rsync(false), m_rsync_opts(),
+      m_rsync_prefix(), m_supports_ssh(false), m_ssh_opts(),
       m_ignores_remote_hostname(false), m_trap_handlers(),
       m_calculated_trap_handlers(false),
       m_module_cache(std::make_unique<ModuleCache>()) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
+  Log *log = GetLog(LLDBLog::Object);
   LLDB_LOGF(log, "%p Platform::Platform()", static_cast<void *>(this));
 }
 
@@ -428,6 +429,9 @@ void Platform::GetStatus(Stream &strm) {
     strm.Printf(" Connected: %s\n", is_connected ? "yes" : "no");
   }
 
+  if (GetSDKRootDirectory()) {
+    strm.Format("   Sysroot: {0}\n", GetSDKRootDirectory());
+  }
   if (GetWorkingDirectory()) {
     strm.Printf("WorkingDir: %s\n", GetWorkingDirectory().GetCString());
   }
@@ -620,7 +624,7 @@ RecurseCopy_Callback(void *baton, llvm::sys::fs::file_type ft,
 Status Platform::Install(const FileSpec &src, const FileSpec &dst) {
   Status error;
 
-  Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM);
+  Log *log = GetLog(LLDBLog::Platform);
   LLDB_LOGF(log, "Platform::Install (src='%s', dst='%s')",
             src.GetPath().c_str(), dst.GetPath().c_str());
   FileSpec fixed_dst(dst);
@@ -730,7 +734,7 @@ Status Platform::Install(const FileSpec &src, const FileSpec &dst) {
 
 bool Platform::SetWorkingDirectory(const FileSpec &file_spec) {
   if (IsHost()) {
-    Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM);
+    Log *log = GetLog(LLDBLog::Platform);
     LLDB_LOG(log, "{0}", file_spec);
     if (std::error_code ec = llvm::sys::fs::set_current_path(file_spec.GetPath())) {
       LLDB_LOG(log, "error: {0}", ec.message());
@@ -783,15 +787,13 @@ Status Platform::SetFilePermissions(const FileSpec &file_spec,
   }
 }
 
-ConstString Platform::GetName() { return ConstString(GetPluginName()); }
-
 const char *Platform::GetHostname() {
   if (IsHost())
     return "127.0.0.1";
 
-  if (m_name.empty())
+  if (m_hostname.empty())
     return nullptr;
-  return m_name.c_str();
+  return m_hostname.c_str();
 }
 
 ConstString Platform::GetFullNameForDylib(ConstString basename) {
@@ -799,7 +801,7 @@ ConstString Platform::GetFullNameForDylib(ConstString basename) {
 }
 
 bool Platform::SetRemoteWorkingDirectory(const FileSpec &working_dir) {
-  Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM);
+  Log *log = GetLog(LLDBLog::Platform);
   LLDB_LOGF(log, "Platform::SetRemoteWorkingDirectory('%s')",
             working_dir.GetCString());
   m_working_dir = working_dir;
@@ -844,7 +846,9 @@ Platform::ResolveExecutable(const ModuleSpec &module_spec,
       // architectures that we should be using (in the correct order) and see
       // if we can find a match that way
       ModuleSpec arch_module_spec(module_spec);
-      for (const ArchSpec &arch : GetSupportedArchitectures()) {
+      ArchSpec process_host_arch;
+      for (const ArchSpec &arch :
+           GetSupportedArchitectures(process_host_arch)) {
         arch_module_spec.GetArchitecture() = arch;
         error = ModuleList::GetSharedModule(arch_module_spec, exe_module_sp,
                                             module_search_paths_ptr, nullptr,
@@ -891,7 +895,8 @@ Platform::ResolveRemoteExecutable(const ModuleSpec &module_spec,
     // correct order) and see if we can find a match that way
     StreamString arch_names;
     llvm::ListSeparator LS;
-    for (const ArchSpec &arch : GetSupportedArchitectures()) {
+    ArchSpec process_host_arch;
+    for (const ArchSpec &arch : GetSupportedArchitectures(process_host_arch)) {
       resolved_module_spec.GetArchitecture() = arch;
       error = ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
                                           module_search_paths_ptr, nullptr,
@@ -989,7 +994,7 @@ ArchSpec Platform::GetAugmentedArchSpec(llvm::StringRef triple) {
 
   ArchSpec compatible_arch;
   ArchSpec raw_arch(triple);
-  if (!IsCompatibleArchitecture(raw_arch, false, &compatible_arch))
+  if (!IsCompatibleArchitecture(raw_arch, {}, false, &compatible_arch))
     return raw_arch;
 
   if (!compatible_arch.IsValid())
@@ -1053,7 +1058,7 @@ uint32_t Platform::FindProcesses(const ProcessInstanceInfoMatch &match_info,
 
 Status Platform::LaunchProcess(ProcessLaunchInfo &launch_info) {
   Status error;
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
+  Log *log = GetLog(LLDBLog::Platform);
   LLDB_LOGF(log, "Platform::%s()", __FUNCTION__);
 
   // Take care of the host case so that each subclass can just call this
@@ -1106,7 +1111,7 @@ Status Platform::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
 }
 
 Status Platform::KillProcess(const lldb::pid_t pid) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
+  Log *log = GetLog(LLDBLog::Platform);
   LLDB_LOGF(log, "Platform::%s, pid %" PRIu64, __FUNCTION__, pid);
 
   if (!IsHost()) {
@@ -1120,7 +1125,7 @@ Status Platform::KillProcess(const lldb::pid_t pid) {
 lldb::ProcessSP Platform::DebugProcess(ProcessLaunchInfo &launch_info,
                                        Debugger &debugger, Target &target,
                                        Status &error) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
+  Log *log = GetLog(LLDBLog::Platform);
   LLDB_LOG(log, "target = {0})", &target);
 
   ProcessSP process_sp;
@@ -1201,11 +1206,13 @@ lldb::ProcessSP Platform::DebugProcess(ProcessLaunchInfo &launch_info,
 
 lldb::PlatformSP
 Platform::GetPlatformForArchitecture(const ArchSpec &arch,
+                                     const ArchSpec &process_host_arch,
                                      ArchSpec *platform_arch_ptr) {
   lldb::PlatformSP platform_sp;
   Status error;
   if (arch.IsValid())
-    platform_sp = Platform::Create(arch, platform_arch_ptr, error);
+    platform_sp =
+        Platform::Create(arch, process_host_arch, platform_arch_ptr, error);
   return platform_sp;
 }
 
@@ -1225,6 +1232,7 @@ Platform::CreateArchList(llvm::ArrayRef<llvm::Triple::ArchType> archs,
 /// Lets a platform answer if it is compatible with a given
 /// architecture and the target triple contained within.
 bool Platform::IsCompatibleArchitecture(const ArchSpec &arch,
+                                        const ArchSpec &process_host_arch,
                                         bool exact_arch_match,
                                         ArchSpec *compatible_arch_ptr) {
   // If the architecture is invalid, we must answer true...
@@ -1232,7 +1240,8 @@ bool Platform::IsCompatibleArchitecture(const ArchSpec &arch,
     ArchSpec platform_arch;
     auto match = exact_arch_match ? &ArchSpec::IsExactMatch
                                   : &ArchSpec::IsCompatibleMatch;
-    for (const ArchSpec &platform_arch : GetSupportedArchitectures()) {
+    for (const ArchSpec &platform_arch :
+         GetSupportedArchitectures(process_host_arch)) {
       if ((arch.*match)(platform_arch)) {
         if (compatible_arch_ptr)
           *compatible_arch_ptr = platform_arch;
@@ -1247,7 +1256,7 @@ bool Platform::IsCompatibleArchitecture(const ArchSpec &arch,
 
 Status Platform::PutFile(const FileSpec &source, const FileSpec &destination,
                          uint32_t uid, uint32_t gid) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
+  Log *log = GetLog(LLDBLog::Platform);
   LLDB_LOGF(log, "[PutFile] Using block by block transfer....\n");
 
   auto source_open_options =
@@ -1570,8 +1579,10 @@ Status Platform::GetRemoteSharedModule(const ModuleSpec &module_spec,
                                        bool *did_create_ptr) {
   // Get module information from a target.
   ModuleSpec resolved_module_spec;
+  ArchSpec process_host_arch;
   bool got_module_spec = false;
   if (process) {
+    process_host_arch = process->GetSystemArchitecture();
     // Try to get module information from the process
     if (process->GetModuleSpec(module_spec.GetFileSpec(),
                                module_spec.GetArchitecture(),
@@ -1589,7 +1600,7 @@ Status Platform::GetRemoteSharedModule(const ModuleSpec &module_spec,
     // architectures that we should be using (in the correct order) and see if
     // we can find a match that way
     ModuleSpec arch_module_spec(module_spec);
-    for (const ArchSpec &arch : GetSupportedArchitectures()) {
+    for (const ArchSpec &arch : GetSupportedArchitectures(process_host_arch)) {
       arch_module_spec.GetArchitecture() = arch;
       error = ModuleList::GetSharedModule(arch_module_spec, module_sp, nullptr,
                                           nullptr, nullptr);
@@ -1643,7 +1654,7 @@ bool Platform::GetCachedSharedModule(const ModuleSpec &module_spec,
       !GetGlobalPlatformProperties().GetModuleCacheDirectory())
     return false;
 
-  Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM);
+  Log *log = GetLog(LLDBLog::Platform);
 
   // Check local cache for a module.
   auto error = m_module_cache->GetAndPut(
@@ -1725,7 +1736,7 @@ Status Platform::DownloadSymbolFile(const lldb::ModuleSP &module_sp,
 
 FileSpec Platform::GetModuleCacheRoot() {
   auto dir_spec = GetGlobalPlatformProperties().GetModuleCacheDirectory();
-  dir_spec.AppendPathComponent(GetName().AsCString());
+  dir_spec.AppendPathComponent(GetPluginName());
   return dir_spec;
 }
 
@@ -1999,4 +2010,8 @@ size_t Platform::GetSoftwareBreakpointTrapOpcode(Target &target,
     return trap_opcode_size;
 
   return 0;
+}
+
+CompilerType Platform::GetSiginfoType(const llvm::Triple& triple) {
+  return CompilerType();
 }

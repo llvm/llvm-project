@@ -74,8 +74,8 @@ entry:
 
 ; FUNC-LABEL: {{^}}local_load_v16i8:
 ; GFX9-NOT: m0
-; GCN: ds_read2_b64  v{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}}, v{{[0-9]+}} offset1:1{{$}}
-; GCN: ds_write2_b64 v{{[0-9]+}}, v{{\[}}[[LO]]:{{[0-9]+}}], v[{{[0-9]+}}:[[HI]]{{\]}} offset1:1{{$}}
+; GCN: ds_read2_b64  v[[[LO:[0-9]+]]:[[HI:[0-9]+]]], v{{[0-9]+}} offset1:1{{$}}
+; GCN: ds_write2_b64 v{{[0-9]+}}, v[[[LO]]:{{[0-9]+}}], v[{{[0-9]+}}:[[HI]]] offset1:1{{$}}
 
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
@@ -455,7 +455,7 @@ define amdgpu_kernel void @local_sextload_v64i8_to_v64i32(<64 x i32> addrspace(3
 
 ; GCN-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0{{$}}
 ; GCN-DAG: ds_read_u8 v[[LO:[0-9]+]],
-; GCN: ds_write_b64 v{{[0-9]+}}, v{{\[}}[[LO]]:[[HI]]]
+; GCN: ds_write_b64 v{{[0-9]+}}, v[[[LO]]:[[HI]]]
 
 ; EG: LDS_UBYTE_READ_RET
 ; EG: MOV {{.*}}, literal
@@ -474,7 +474,7 @@ define amdgpu_kernel void @local_zextload_i8_to_i64(i64 addrspace(3)* %out, i8 a
 ; GCN: ds_read_i8 v[[LO:[0-9]+]],
 ; GCN: v_ashrrev_i32_e32 v[[HI:[0-9]+]], 31, v[[LO]]
 
-; GCN: ds_write_b64 v{{[0-9]+}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
+; GCN: ds_write_b64 v{{[0-9]+}}, v[[[LO]]:[[HI]]]
 
 ; EG: LDS_UBYTE_READ_RET
 ; EG: ASHR

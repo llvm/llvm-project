@@ -74,27 +74,27 @@ attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="all" }
 ; CHECK-NEXT:    .cfi_def_cfa_register %r11
 ; CHECK-NEXT:    mvhi 180(%r11), 0
 ; CHECK-NEXT:    lhi %r0, 0
-; CHECK-NEXT:    mvhi 176(%r11), 0
+; CHECK-NEXT:    mvhi 168(%r11), 0
 ; CHECK-NEXT:    cije %r0, 0, .LBB0_3
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mvhi 168(%r11), 1
-; CHECK-NEXT:    chsi 176(%r11), 0
+; CHECK-NEXT:    mvhi 164(%r11), 1
+; CHECK-NEXT:    chsi 168(%r11), 0
 ; CHECK-NEXT:    je .LBB0_4
 ; CHECK-NEXT:  .LBB0_2:
-; CHECK-NEXT:    mvhi 168(%r11), 1
+; CHECK-NEXT:    mvhi 164(%r11), 1
 ; CHECK-NEXT:    j .LBB0_5
 ; CHECK-NEXT:  .LBB0_3:
-; CHECK-NEXT:    mvhi 176(%r11), 1
-; CHECK-NEXT:    mvhi 172(%r11), 2
-; CHECK-NEXT:    mvhi 168(%r11), 3
-; CHECK-NEXT:    mvhi 164(%r11), 4
-; CHECK-NEXT:    chsi 176(%r11), 0
+; CHECK-NEXT:    mvhi 168(%r11), 1
+; CHECK-NEXT:    mvhi 176(%r11), 2
+; CHECK-NEXT:    mvhi 164(%r11), 3
+; CHECK-NEXT:    mvhi 172(%r11), 4
+; CHECK-NEXT:    chsi 168(%r11), 0
 ; CHECK-NEXT:    jlh .LBB0_2
 ; CHECK-NEXT:  .LBB0_4:
-; CHECK-NEXT:    mvhi 176(%r11), 1
-; CHECK-NEXT:    mvhi 172(%r11), 2
-; CHECK-NEXT:    mvhi 168(%r11), 3
-; CHECK-NEXT:    mvhi 164(%r11), 4
+; CHECK-NEXT:    mvhi 168(%r11), 1
+; CHECK-NEXT:    mvhi 176(%r11), 2
+; CHECK-NEXT:    mvhi 164(%r11), 3
+; CHECK-NEXT:    mvhi 172(%r11), 4
 ; CHECK-NEXT:  .LBB0_5:
 ; CHECK-NEXT:    lhi %r2, 0
 ; CHECK-NEXT:    lmg %r11, %r15, 272(%r11)

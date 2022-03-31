@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -fsyntax-only -verify -flax-vector-conversions=none -Wconversion %s
 
-typedef __attribute__((ext_vector_type(8))) _Bool BoolVector; // expected-error {{invalid vector element type '_Bool'}}
+typedef __attribute__((ext_vector_type(8))) _Bool BoolVector;
 
 typedef __attribute__(( ext_vector_type(2) )) float float2;
 typedef __attribute__(( ext_vector_type(3) )) float float3;
@@ -12,7 +12,7 @@ typedef __typeof__(sizeof(int)) size_t;
 typedef unsigned long ulong2 __attribute__ ((ext_vector_type(2)));
 typedef size_t stride4 __attribute__((ext_vector_type(4)));
 
-static void test() {
+static void test(void) {
     float2 vec2;
     float3 vec3;
     float4 vec4, vec4_2;

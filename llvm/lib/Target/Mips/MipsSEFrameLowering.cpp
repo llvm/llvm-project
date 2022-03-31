@@ -454,7 +454,7 @@ void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
     // directives.
     for (const CalleeSavedInfo &I : CSI) {
       int64_t Offset = MFI.getObjectOffset(I.getFrameIdx());
-      unsigned Reg = I.getReg();
+      Register Reg = I.getReg();
 
       // If Reg is a double precision register, emit two cfa_offsets,
       // one for each of the paired single precision registers.
@@ -801,7 +801,7 @@ bool MipsSEFrameLowering::spillCalleeSavedRegisters(
     // method MipsTargetLowering::lowerRETURNADDR.
     // It's killed at the spill, unless the register is RA and return address
     // is taken.
-    unsigned Reg = I.getReg();
+    Register Reg = I.getReg();
     bool IsRAAndRetAddrIsTaken = (Reg == Mips::RA || Reg == Mips::RA_64)
         && MF->getFrameInfo().isReturnAddressTaken();
     if (!IsRAAndRetAddrIsTaken)

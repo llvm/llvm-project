@@ -209,6 +209,7 @@ MIPS_DYNAMIC_TAG(MIPS_RWPLT, 0x70000034)        // Points to the base
                                                 // of a writable PLT.
 MIPS_DYNAMIC_TAG(MIPS_RLD_MAP_REL, 0x70000035)  // Relative offset of run time loader
                                                 // map, used for debugging.
+MIPS_DYNAMIC_TAG(MIPS_XHASH, 0x70000036)        // GNU-style hash table with xlat.
 
 // PPC specific dynamic table entries.
 PPC_DYNAMIC_TAG(PPC_GOT, 0x70000000) // Uses Secure PLT ABI.

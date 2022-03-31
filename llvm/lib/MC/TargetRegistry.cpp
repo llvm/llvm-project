@@ -124,10 +124,10 @@ void TargetRegistry::printRegisteredTargetsForVersion(raw_ostream &OS) {
   array_pod_sort(Targets.begin(), Targets.end(), TargetArraySortFn);
 
   OS << "  Registered Targets:\n";
-  for (unsigned i = 0, e = Targets.size(); i != e; ++i) {
-    OS << "    " << Targets[i].first;
-    OS.indent(Width - Targets[i].first.size()) << " - "
-      << Targets[i].second->getShortDescription() << '\n';
+  for (const auto &Target : Targets) {
+    OS << "    " << Target.first;
+    OS.indent(Width - Target.first.size())
+        << " - " << Target.second->getShortDescription() << '\n';
   }
   if (Targets.empty())
     OS << "    (none)\n";

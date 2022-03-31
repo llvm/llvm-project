@@ -12,13 +12,13 @@
 // decls so that the dwarf generator can describe information needed for tail
 // call frame reconstrution.
 //
-// RUN: %clang -g -O2 -target x86_64-none-linux-gnu -ggdb -S -emit-llvm %s -o - \
+// RUN: %clang -gdwarf-4 -O2 -target x86_64-none-linux-gnu -ggdb -S -emit-llvm %s -o - \
 // RUN:   | FileCheck %s -check-prefix=DECLS-FOR-EXTERN
 //
 // Do not emit a subprogram for extern decls when entry values are disabled and
 // the tuning is not set to gdb.
 //
-// RUN: %clang -g -O2 -target x86_64-none-linux-gnu -gsce -S -emit-llvm %s -o - \
+// RUN: %clang -gdwarf-4 -O2 -target x86_64-none-linux-gnu -gsce -S -emit-llvm %s -o - \
 // RUN:   | FileCheck %s -check-prefix=NO-DECLS-FOR-EXTERN
 
 // DECLS-FOR-EXTERN-NOT: !DICompileUnit({{.*}}retainedTypes: !{{[0-9]+}}

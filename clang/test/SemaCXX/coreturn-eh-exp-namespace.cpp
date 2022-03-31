@@ -39,7 +39,8 @@ struct std::experimental::coroutine_traits<void, T1> { using promise_type = prom
 VoidTagReturnValue test() {
   object x = {};
   try {
-    co_return {}; // expected-warning {{Please move from std::experimental::coroutine_traits to std::coroutine_traits}}
+    co_return {}; // expected-warning {{support for std::experimental::coroutine_traits will be removed}}
+    // expected-note@Inputs/std-coroutine-exp-namespace.h:8 {{'coroutine_traits' declared here}}
   } catch (...) {
     throw;
   }
