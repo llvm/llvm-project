@@ -262,24 +262,28 @@ public:
 
     /// Normalizes the control flow of the extracted regions, such as ensuring
     /// that the extracted region does not contain a return instruction.
-    void normalizeCFGForExtraction(BasicBlock *&Header);
+    void normalizeCFGForExtraction(BasicBlock *&header);
 
     /// Generates the function declaration for the function containing the
     /// extracted code.
     Function *constructFunctionDeclaration(const ValueSet &inputs,
                                            const ValueSet &outputs,
                                            BlockFrequency EntryFreq,
-                                           const Twine &Name);
+                                           const Twine &Name,
+                                           ValueSet &StructValues,
+                                           StructType *&StructTy);
 
     /// Generates the code for the extracted function. That is: a prolog, the
     /// moved or copied code from the original function, and epilogs for each
     /// exit.
     void emitFunctionBody(const ValueSet &inputs, const ValueSet &outputs,
-                          Function *newFunction, StructType *StructArgTy,
-                          BasicBlock *header, const ValueSet &SinkingCands);
+                          const ValueSet &StructValues, Function *newFunction,
+                          StructType *StructArgTy, BasicBlock *header,
+                          const ValueSet &SinkingCands);
 
     /// Generates a Basic Block that calls the extracted function.
     CallInst *emitReplacerCall(const ValueSet &inputs, const ValueSet &outputs,
+                               const ValueSet &StructValues,
                                Function *newFunction, StructType *StructArgTy,
                                Function *oldFunction, BasicBlock *ReplIP,
                                BlockFrequency EntryFreq,
