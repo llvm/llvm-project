@@ -172,7 +172,7 @@ template <typename CHAR> CHAR FormatValidator<CHAR>::NextChar() {
 
 template <typename CHAR> CHAR FormatValidator<CHAR>::LookAheadChar() {
   for (laCursor_ = cursor_ + 1; laCursor_ < end_; ++laCursor_) {
-    if (!IsWhite(*cursor_)) {
+    if (!IsWhite(*laCursor_)) {
       return toupper(*laCursor_);
     }
   }
