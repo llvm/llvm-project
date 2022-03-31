@@ -151,10 +151,10 @@ void kernel foo(int x) {
   local int *constant L10 = &L2;              // expected-error {{initializer element is not a compile-time constant}}
 }
 
-static void kernel bar() { // expected-error{{kernel functions cannot be declared static}}
+static void kernel bar(void) { // expected-error{{kernel functions cannot be declared static}}
 }
 
-void f() {
+void f(void) {
   constant int L1 = 0;                        // expected-error{{non-kernel function variable cannot be declared in constant address space}}
   local int L2;                               // expected-error{{non-kernel function variable cannot be declared in local address space}}
   global int L3;                              // expected-error{{function scope variable cannot be declared in global address space}}

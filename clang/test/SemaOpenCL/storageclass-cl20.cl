@@ -19,10 +19,10 @@ extern local float g_local_extern_var;     // expected-error {{extern variable m
 extern private float g_private_extern_var; // expected-error {{extern variable must reside in global or constant address space}}
 extern generic float g_generic_extern_var; // expected-error {{extern variable must reside in global or constant address space}}
 
-static void kernel bar() { // expected-error{{kernel functions cannot be declared static}}
+static void kernel bar(void) { // expected-error{{kernel functions cannot be declared static}}
 }
 
-void kernel foo() {
+void kernel foo(void) {
   constant int L1 = 0;
   local int L2;
   global int L3;                              // expected-error{{function scope variable cannot be declared in global address space}}

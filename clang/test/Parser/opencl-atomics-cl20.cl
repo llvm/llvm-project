@@ -8,7 +8,7 @@
 #define LANG_VER_OK
 #endif
 
-void atomic_types_test() {
+void atomic_types_test(void) {
 // OpenCL v2.0 s6.13.11.6 defines supported atomic types.
 
 // Non-optional types
