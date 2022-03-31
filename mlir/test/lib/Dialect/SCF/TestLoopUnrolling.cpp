@@ -30,9 +30,10 @@ static unsigned getNestingDepth(Operation *op) {
   return depth;
 }
 
-class TestLoopUnrollingPass
+struct TestLoopUnrollingPass
     : public PassWrapper<TestLoopUnrollingPass, OperationPass<>> {
-public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestLoopUnrollingPass)
+
   StringRef getArgument() const final { return "test-loop-unrolling"; }
   StringRef getDescription() const final {
     return "Tests loop unrolling transformation";

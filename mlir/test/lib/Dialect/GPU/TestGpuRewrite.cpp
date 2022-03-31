@@ -22,6 +22,8 @@ using namespace mlir;
 namespace {
 struct TestGpuRewritePass
     : public PassWrapper<TestGpuRewritePass, OperationPass<ModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestGpuRewritePass)
+
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<arith::ArithmeticDialect, func::FuncDialect,
                     memref::MemRefDialect>();

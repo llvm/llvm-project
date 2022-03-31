@@ -67,6 +67,8 @@ static void customRewriter(ArrayRef<PDLValue> args, PatternRewriter &rewriter,
 namespace {
 struct TestPDLByteCodePass
     : public PassWrapper<TestPDLByteCodePass, OperationPass<ModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestPDLByteCodePass)
+
   StringRef getArgument() const final { return "test-pdl-bytecode-pass"; }
   StringRef getDescription() const final {
     return "Test PDL ByteCode functionality";

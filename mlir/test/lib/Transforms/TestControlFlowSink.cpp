@@ -24,6 +24,8 @@ namespace {
 /// `was_sunk` into the first region of `test.sink_target` ops.
 struct TestControlFlowSinkPass
     : public PassWrapper<TestControlFlowSinkPass, OperationPass<FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestControlFlowSinkPass)
+
   /// Get the command-line argument of the test pass.
   StringRef getArgument() const final { return "test-control-flow-sink"; }
   /// Get the description of the test pass.

@@ -32,9 +32,10 @@ public:
   }
 };
 
-class TestConvertCallOp
+struct TestConvertCallOp
     : public PassWrapper<TestConvertCallOp, OperationPass<ModuleOp>> {
-public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestConvertCallOp)
+
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<LLVM::LLVMDialect>();
   }

@@ -33,6 +33,8 @@ using namespace mlir::linalg;
 namespace {
 struct TestLinalgTransforms
     : public PassWrapper<TestLinalgTransforms, OperationPass<FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestLinalgTransforms)
+
   TestLinalgTransforms() = default;
   TestLinalgTransforms(const TestLinalgTransforms &pass) : PassWrapper(pass) {}
 

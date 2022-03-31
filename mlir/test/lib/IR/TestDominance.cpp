@@ -92,6 +92,8 @@ private:
 
 struct TestDominancePass
     : public PassWrapper<TestDominancePass, InterfacePass<SymbolOpInterface>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestDominancePass)
+
   StringRef getArgument() const final { return "test-print-dominance"; }
   StringRef getDescription() const final {
     return "Print the dominance information for multiple regions.";

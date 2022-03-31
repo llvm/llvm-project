@@ -22,6 +22,8 @@ namespace {
 /// "crashOp" in the input MLIR file and crashes the mlir-opt tool if the
 /// operation is found.
 struct TestReducer : public PassWrapper<TestReducer, OperationPass<>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestReducer)
+
   StringRef getArgument() const final { return "test-mlir-reducer"; }
   StringRef getDescription() const final {
     return "Tests MLIR Reduce tool by generating failures";

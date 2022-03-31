@@ -20,6 +20,8 @@ namespace {
 struct TestDiagnosticFilterPass
     : public PassWrapper<TestDiagnosticFilterPass,
                          InterfacePass<SymbolOpInterface>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestDiagnosticFilterPass)
+
   StringRef getArgument() const final { return "test-diagnostic-filter"; }
   StringRef getDescription() const final {
     return "Test diagnostic filtering support.";

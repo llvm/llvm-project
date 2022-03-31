@@ -47,6 +47,8 @@ namespace {
 /// Pass to test slice generated from slice analysis.
 struct SliceAnalysisTestPass
     : public PassWrapper<SliceAnalysisTestPass, OperationPass<ModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(SliceAnalysisTestPass)
+
   StringRef getArgument() const final { return "slice-analysis-test"; }
   StringRef getDescription() const final {
     return "Test Slice analysis functionality.";

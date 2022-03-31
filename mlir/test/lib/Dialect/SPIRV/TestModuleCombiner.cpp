@@ -20,6 +20,8 @@ class TestModuleCombinerPass
     : public PassWrapper<TestModuleCombinerPass,
                          OperationPass<mlir::ModuleOp>> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestModuleCombinerPass)
+
   StringRef getArgument() const final { return "test-spirv-module-combiner"; }
   StringRef getDescription() const final {
     return "Tests SPIR-V module combiner library";

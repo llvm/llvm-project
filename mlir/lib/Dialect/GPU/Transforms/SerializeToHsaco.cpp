@@ -61,6 +61,8 @@ namespace {
 class SerializeToHsacoPass
     : public PassWrapper<SerializeToHsacoPass, gpu::SerializeToBlobPass> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(SerializeToHsacoPass)
+
   SerializeToHsacoPass(StringRef triple, StringRef arch, StringRef features,
                        int optLevel);
   SerializeToHsacoPass(const SerializeToHsacoPass &other);

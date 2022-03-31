@@ -8,12 +8,12 @@
 #ifndef MLIR_CONVERSION_SCFTOGPU_SCFTOGPUPASS_H_
 #define MLIR_CONVERSION_SCFTOGPU_SCFTOGPUPASS_H_
 
+#include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/Support/LLVM.h"
 
 #include <memory>
 
 namespace mlir {
-class FunctionOpInterface;
 template <typename T>
 class InterfacePass;
 class Pass;

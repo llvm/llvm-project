@@ -18,6 +18,8 @@ namespace {
 /// This is a test pass for verifying matchers.
 struct TestMatchers
     : public PassWrapper<TestMatchers, InterfacePass<FunctionOpInterface>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestMatchers)
+
   void runOnOperation() override;
   StringRef getArgument() const final { return "test-matchers"; }
   StringRef getDescription() const final {

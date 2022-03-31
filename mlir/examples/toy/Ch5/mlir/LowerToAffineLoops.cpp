@@ -310,6 +310,8 @@ struct TransposeOpLowering : public ConversionPattern {
 namespace {
 struct ToyToAffineLoweringPass
     : public PassWrapper<ToyToAffineLoweringPass, OperationPass<ModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ToyToAffineLoweringPass)
+
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<AffineDialect, func::FuncDialect, memref::MemRefDialect>();
   }

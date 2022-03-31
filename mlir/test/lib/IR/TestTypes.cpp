@@ -16,6 +16,8 @@ using namespace test;
 namespace {
 struct TestRecursiveTypesPass
     : public PassWrapper<TestRecursiveTypesPass, OperationPass<FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestRecursiveTypesPass)
+
   LogicalResult createIRWithTypes();
 
   StringRef getArgument() const final { return "test-recursive-types"; }

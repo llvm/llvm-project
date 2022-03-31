@@ -25,9 +25,10 @@
 using namespace mlir;
 
 namespace {
-class TestSCFForUtilsPass
+struct TestSCFForUtilsPass
     : public PassWrapper<TestSCFForUtilsPass, OperationPass<FuncOp>> {
-public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestSCFForUtilsPass)
+
   StringRef getArgument() const final { return "test-scf-for-utils"; }
   StringRef getDescription() const final { return "test scf.for utils"; }
   explicit TestSCFForUtilsPass() = default;
@@ -57,9 +58,10 @@ public:
   }
 };
 
-class TestSCFIfUtilsPass
+struct TestSCFIfUtilsPass
     : public PassWrapper<TestSCFIfUtilsPass, OperationPass<ModuleOp>> {
-public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestSCFIfUtilsPass)
+
   StringRef getArgument() const final { return "test-scf-if-utils"; }
   StringRef getDescription() const final { return "test scf.if utils"; }
   explicit TestSCFIfUtilsPass() = default;
@@ -95,9 +97,10 @@ static const StringLiteral kTestPipeliningAnnotationPart =
 static const StringLiteral kTestPipeliningAnnotationIteration =
     "__test_pipelining_iteration";
 
-class TestSCFPipeliningPass
+struct TestSCFPipeliningPass
     : public PassWrapper<TestSCFPipeliningPass, OperationPass<FuncOp>> {
-public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestSCFPipeliningPass)
+
   TestSCFPipeliningPass() = default;
   TestSCFPipeliningPass(const TestSCFPipeliningPass &) {}
   StringRef getArgument() const final { return "test-scf-pipelining"; }

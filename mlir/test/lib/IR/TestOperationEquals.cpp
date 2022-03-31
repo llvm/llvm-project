@@ -15,6 +15,8 @@ namespace {
 /// This pass illustrates the IR def-use chains through printing.
 struct TestOperationEqualPass
     : public PassWrapper<TestOperationEqualPass, OperationPass<ModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestOperationEqualPass)
+
   StringRef getArgument() const final { return "test-operations-equality"; }
   StringRef getDescription() const final { return "Test operations equality."; }
   void runOnOperation() override {

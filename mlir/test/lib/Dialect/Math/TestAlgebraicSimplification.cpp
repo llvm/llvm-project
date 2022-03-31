@@ -21,6 +21,9 @@ using namespace mlir;
 namespace {
 struct TestMathAlgebraicSimplificationPass
     : public PassWrapper<TestMathAlgebraicSimplificationPass, OperationPass<>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
+      TestMathAlgebraicSimplificationPass)
+
   void runOnOperation() override;
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<vector::VectorDialect, math::MathDialect>();

@@ -28,6 +28,8 @@ namespace {
 
 struct TestAffineDataCopy
     : public PassWrapper<TestAffineDataCopy, OperationPass<FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestAffineDataCopy)
+
   StringRef getArgument() const final { return PASS_NAME; }
   StringRef getDescription() const final {
     return "Tests affine data copy utility functions.";

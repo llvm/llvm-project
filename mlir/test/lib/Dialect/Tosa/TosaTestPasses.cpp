@@ -179,6 +179,8 @@ namespace {
 
 struct TosaTestQuantUtilAPI
     : public PassWrapper<TosaTestQuantUtilAPI, OperationPass<FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TosaTestQuantUtilAPI)
+
   StringRef getArgument() const final { return PASS_NAME; }
   StringRef getDescription() const final {
     return "TOSA Test: Exercise the APIs in QuantUtils.cpp.";

@@ -20,6 +20,8 @@ static Operation *createOp(MLIRContext *context) {
 
 namespace {
 struct DummyOp {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(DummyOp)
+
   static StringRef getOperationName() { return "foo.bar"; }
 };
 

@@ -3391,6 +3391,8 @@ private:
 struct LLVMIRLoweringPass
     : public mlir::PassWrapper<LLVMIRLoweringPass,
                                mlir::OperationPass<mlir::ModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(LLVMIRLoweringPass)
+
   using Printer = fir::LLVMIRLoweringPrinter;
   LLVMIRLoweringPass(raw_ostream &output, Printer p)
       : output{output}, printer{p} {}

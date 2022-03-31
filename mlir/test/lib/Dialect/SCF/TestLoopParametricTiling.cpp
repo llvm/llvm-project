@@ -24,6 +24,8 @@ namespace {
 class SimpleParametricLoopTilingPass
     : public PassWrapper<SimpleParametricLoopTilingPass, OperationPass<>> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(SimpleParametricLoopTilingPass)
+
   StringRef getArgument() const final {
     return "test-extract-fixed-outer-loops";
   }

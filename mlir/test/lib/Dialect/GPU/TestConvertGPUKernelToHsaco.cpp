@@ -20,6 +20,8 @@ namespace {
 class TestSerializeToHsacoPass
     : public PassWrapper<TestSerializeToHsacoPass, gpu::SerializeToBlobPass> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestSerializeToHsacoPass)
+
   StringRef getArgument() const final { return "test-gpu-to-hsaco"; }
   StringRef getDescription() const final {
     return "Lower GPU kernel function to HSAco binary annotations";

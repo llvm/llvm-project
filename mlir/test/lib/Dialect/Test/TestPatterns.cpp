@@ -149,6 +149,8 @@ public:
 
 struct TestPatternDriver
     : public PassWrapper<TestPatternDriver, OperationPass<FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestPatternDriver)
+
   StringRef getArgument() const final { return "test-patterns"; }
   StringRef getDescription() const final { return "Run test dialect patterns"; }
   void runOnOperation() override {
@@ -214,6 +216,8 @@ static void reifyReturnShape(Operation *op) {
 
 struct TestReturnTypeDriver
     : public PassWrapper<TestReturnTypeDriver, OperationPass<FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestReturnTypeDriver)
+
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<tensor::TensorDialect>();
   }
@@ -254,6 +258,8 @@ struct TestReturnTypeDriver
 namespace {
 struct TestDerivedAttributeDriver
     : public PassWrapper<TestDerivedAttributeDriver, OperationPass<FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestDerivedAttributeDriver)
+
   StringRef getArgument() const final { return "test-derived-attr"; }
   StringRef getDescription() const final {
     return "Run test derived attributes";
@@ -655,6 +661,8 @@ struct TestTypeConverter : public TypeConverter {
 
 struct TestLegalizePatternDriver
     : public PassWrapper<TestLegalizePatternDriver, OperationPass<ModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestLegalizePatternDriver)
+
   StringRef getArgument() const final { return "test-legalize-patterns"; }
   StringRef getDescription() const final {
     return "Run test dialect legalization patterns";
@@ -864,6 +872,8 @@ struct TestRemapValueInRegion
 
 struct TestRemappedValue
     : public mlir::PassWrapper<TestRemappedValue, OperationPass<FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestRemappedValue)
+
   StringRef getArgument() const final { return "test-remapped-value"; }
   StringRef getDescription() const final {
     return "Test public remapped value mechanism in ConversionPatternRewriter";
@@ -922,6 +932,8 @@ struct RemoveTestDialectOps : public RewritePattern {
 
 struct TestUnknownRootOpDriver
     : public mlir::PassWrapper<TestUnknownRootOpDriver, OperationPass<FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestUnknownRootOpDriver)
+
   StringRef getArgument() const final {
     return "test-legalize-unknown-root-patterns";
   }
@@ -1041,6 +1053,8 @@ struct TestTypeConversionAnotherProducer
 
 struct TestTypeConversionDriver
     : public PassWrapper<TestTypeConversionDriver, OperationPass<ModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestTypeConversionDriver)
+
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<TestDialect>();
   }
@@ -1177,6 +1191,9 @@ struct ForwardOperandPattern : public OpConversionPattern<TestTypeChangerOp> {
 struct TestTargetMaterializationWithNoUses
     : public PassWrapper<TestTargetMaterializationWithNoUses,
                          OperationPass<ModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
+      TestTargetMaterializationWithNoUses)
+
   StringRef getArgument() const final {
     return "test-target-materialization-with-no-uses";
   }
@@ -1283,6 +1300,8 @@ struct TestMergeSingleBlockOps
 struct TestMergeBlocksPatternDriver
     : public PassWrapper<TestMergeBlocksPatternDriver,
                          OperationPass<ModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestMergeBlocksPatternDriver)
+
   StringRef getArgument() const final { return "test-merge-blocks"; }
   StringRef getDescription() const final {
     return "Test Merging operation in ConversionPatternRewriter";
@@ -1354,6 +1373,9 @@ struct TestSelectiveOpReplacementPattern : public OpRewritePattern<TestCastOp> {
 struct TestSelectiveReplacementPatternDriver
     : public PassWrapper<TestSelectiveReplacementPatternDriver,
                          OperationPass<>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
+      TestSelectiveReplacementPatternDriver)
+
   StringRef getArgument() const final {
     return "test-pattern-selective-replacement";
   }

@@ -24,6 +24,8 @@ namespace {
 struct TestAffineLoopParametricTiling
     : public PassWrapper<TestAffineLoopParametricTiling,
                          OperationPass<FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestAffineLoopParametricTiling)
+
   StringRef getArgument() const final { return "test-affine-parametric-tile"; }
   StringRef getDescription() const final {
     return "Tile affine loops using SSA values as tile sizes";

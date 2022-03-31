@@ -63,6 +63,8 @@ namespace {
 /// loop-carried, then the arrays are conflict-free and no copies are required.
 class ArrayCopyAnalysis {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ArrayCopyAnalysis)
+
   using ConflictSetT = llvm::SmallPtrSet<mlir::Operation *, 16>;
   using UseSetT = llvm::SmallPtrSet<mlir::OpOperand *, 8>;
   using LoadMapSetsT = llvm::DenseMap<mlir::Operation *, UseSetT>;

@@ -16,6 +16,8 @@ using namespace test;
 namespace {
 struct TestElementsAttrInterface
     : public PassWrapper<TestElementsAttrInterface, OperationPass<ModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestElementsAttrInterface)
+
   StringRef getArgument() const final { return "test-elements-attr-interface"; }
   StringRef getDescription() const final {
     return "Test ElementsAttr interface support.";
