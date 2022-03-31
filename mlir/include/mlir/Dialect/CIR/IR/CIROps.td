@@ -601,6 +601,12 @@ def SwitchOp : CIR_Op<"switch",
 
   let hasVerifier = 1;
 
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<(ins "Value":$condition,
+               "function_ref<void(OpBuilder &, Location)>":$switchBuilder)>
+  ];
+
   let assemblyFormat = [{
     custom<SwitchOp>(
       $regions, $cases, $condition, type($condition)

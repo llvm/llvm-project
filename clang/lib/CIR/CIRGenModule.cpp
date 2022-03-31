@@ -1305,6 +1305,53 @@ static mlir::Location getIfLocs(CIRGenModule &CGM, const clang::Stmt *thenS,
   return mlir::FusedLoc::get(ifLocs, metadata, CGM.getBuilder().getContext());
 }
 
+mlir::LogicalResult CIRGenModule::buildSwitchStmt(const SwitchStmt &S) {
+  // FIXME: track switch to handle nested stmts.
+
+  // TODO: LLVM codegen does some early optimization to fold the condition and
+  // only emit live cases. CIR should use MLIR to achieve similar things,
+  // nothing to be done here.
+  // if (ConstantFoldsToSimpleInteger(S.getCond(), ConstantCondValue))...
+  mlir::LogicalResult res = mlir::success();
+
+  // C99 6.8.4.1: The first substatement is executed if the expression
+  // compares unequal to 0.  The condition must be a scalar type.
+  auto switchStmtBuilder = [&]() -> mlir::LogicalResult {
+    if (S.getInit())
+      if (buildStmt(S.getInit(), /*useCurrentScope=*/true).failed())
+        return mlir::failure();
+
+    if (S.getConditionVariable())
+      buildDecl(*S.getConditionVariable());
+
+    mlir::Value condV = buildScalarExpr(S.getCond());
+
+    // TODO: PGO and likelihood (e.g. PGO.haveRegionCounts())
+    // TODO: if the switch has a condition wrapped by __builtin_unpredictable?
+    builder.create<SwitchOp>(
+        getLoc(S.getBeginLoc()), condV,
+        /*switchBuilder=*/[&](mlir::OpBuilder &b, mlir::Location loc) {
+          res = buildStmt(S.getBody(), /*useCurrentScope=*/true);
+        });
+    return res;
+  };
+
+  // The switch scope contains the full source range for SwitchStmt.
+  auto scopeLoc = getLoc(S.getSourceRange());
+  builder.create<mlir::cir::ScopeOp>(
+      scopeLoc, mlir::TypeRange(), /*scopeBuilder=*/
+      [&](mlir::OpBuilder &b, mlir::Location loc) {
+        auto fusedLoc = loc.cast<mlir::FusedLoc>();
+        auto scopeLocBegin = fusedLoc.getLocations()[0];
+        auto scopeLocEnd = fusedLoc.getLocations()[1];
+        LexicalScopeContext lexScope{scopeLocBegin, scopeLocEnd};
+        LexicalScopeGuard lexIfScopeGuard{*this, &lexScope};
+        res = switchStmtBuilder();
+      });
+
+  return res;
+}
+
 mlir::LogicalResult CIRGenModule::buildIfStmt(const IfStmt &S) {
   // The else branch of a consteval if statement is always the only branch
   // that can be runtime evaluated.
@@ -1432,12 +1479,15 @@ mlir::LogicalResult CIRGenModule::buildStmt(const Stmt *S,
     if (buildIfStmt(cast<IfStmt>(*S)).failed())
       return mlir::failure();
     break;
+  case Stmt::SwitchStmtClass:
+    if (buildSwitchStmt(cast<SwitchStmt>(*S)).failed())
+      return mlir::failure();
+    break;
   case Stmt::IndirectGotoStmtClass:
   case Stmt::WhileStmtClass:
   case Stmt::DoStmtClass:
   case Stmt::ForStmtClass:
   case Stmt::ReturnStmtClass:
-  case Stmt::SwitchStmtClass:
   // When implemented, GCCAsmStmtClass should fall-through to MSAsmStmtClass.
   case Stmt::GCCAsmStmtClass:
   case Stmt::MSAsmStmtClass:
