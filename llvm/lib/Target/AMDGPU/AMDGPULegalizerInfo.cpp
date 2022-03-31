@@ -134,7 +134,6 @@ static LegalizeMutation moreEltsToNext32Bit(unsigned TypeIdx) {
 static LLT getBitcastRegisterType(const LLT Ty) {
   const unsigned Size = Ty.getSizeInBits();
 
-  LLT CoercedTy;
   if (Size <= 32) {
     // <2 x s8> -> s16
     // <4 x s8> -> s32
