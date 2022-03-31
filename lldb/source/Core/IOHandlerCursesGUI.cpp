@@ -2282,7 +2282,7 @@ protected:
 
 class FormDelegate {
 public:
-  FormDelegate() {}
+  FormDelegate() = default;
 
   virtual ~FormDelegate() = default;
 
@@ -3644,7 +3644,7 @@ protected:
 
 class SearcherDelegate {
 public:
-  SearcherDelegate() {}
+  SearcherDelegate() = default;
 
   virtual ~SearcherDelegate() = default;
 

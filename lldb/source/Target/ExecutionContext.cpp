@@ -19,9 +19,7 @@ using namespace lldb_private;
 ExecutionContext::ExecutionContext()
     : m_target_sp(), m_process_sp(), m_thread_sp(), m_frame_sp() {}
 
-ExecutionContext::ExecutionContext(const ExecutionContext &rhs)
-    : m_target_sp(rhs.m_target_sp), m_process_sp(rhs.m_process_sp),
-      m_thread_sp(rhs.m_thread_sp), m_frame_sp(rhs.m_frame_sp) {}
+ExecutionContext::ExecutionContext(const ExecutionContext &rhs) = default;
 
 ExecutionContext::ExecutionContext(const lldb::TargetSP &target_sp,
                                    bool get_process)
@@ -414,9 +412,8 @@ ExecutionContextRef::ExecutionContextRef(Target *target, bool adopt_selected)
 }
 
 ExecutionContextRef::ExecutionContextRef(const ExecutionContextRef &rhs)
-    : m_target_wp(rhs.m_target_wp), m_process_wp(rhs.m_process_wp),
-      m_thread_wp(rhs.m_thread_wp), m_tid(rhs.m_tid),
-      m_stack_id(rhs.m_stack_id) {}
+
+    = default;
 
 ExecutionContextRef &ExecutionContextRef::
 operator=(const ExecutionContextRef &rhs) {

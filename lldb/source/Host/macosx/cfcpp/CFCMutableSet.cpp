@@ -14,8 +14,7 @@ CFCMutableSet::CFCMutableSet(CFMutableSetRef s)
     : CFCReleaser<CFMutableSetRef>(s) {}
 
 // CFCMutableSet copy constructor
-CFCMutableSet::CFCMutableSet(const CFCMutableSet &rhs)
-    : CFCReleaser<CFMutableSetRef>(rhs) {}
+CFCMutableSet::CFCMutableSet(const CFCMutableSet &rhs) = default;
 
 // CFCMutableSet copy constructor
 const CFCMutableSet &CFCMutableSet::operator=(const CFCMutableSet &rhs) {

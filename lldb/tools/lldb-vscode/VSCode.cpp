@@ -58,7 +58,7 @@ VSCode::VSCode()
     log.reset(new std::ofstream(log_file_path));
 }
 
-VSCode::~VSCode() {}
+VSCode::~VSCode() = default;
 
 int64_t VSCode::GetLineForPC(int64_t sourceReference, lldb::addr_t pc) const {
   auto pos = source_map.find(sourceReference);

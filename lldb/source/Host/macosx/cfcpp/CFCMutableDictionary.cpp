@@ -13,8 +13,8 @@ CFCMutableDictionary::CFCMutableDictionary(CFMutableDictionaryRef s)
     : CFCReleaser<CFMutableDictionaryRef>(s) {}
 
 // CFCMutableDictionary copy constructor
-CFCMutableDictionary::CFCMutableDictionary(const CFCMutableDictionary &rhs)
-    : CFCReleaser<CFMutableDictionaryRef>(rhs) {}
+CFCMutableDictionary::CFCMutableDictionary(const CFCMutableDictionary &rhs) =
+    default;
 
 // CFCMutableDictionary copy constructor
 const CFCMutableDictionary &CFCMutableDictionary::

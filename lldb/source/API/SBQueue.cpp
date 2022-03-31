@@ -27,7 +27,7 @@ namespace lldb_private {
 
 class QueueImpl {
 public:
-  QueueImpl() {}
+  QueueImpl() = default;
 
   QueueImpl(const lldb::QueueSP &queue_sp) { m_queue_wp = queue_sp; }
 

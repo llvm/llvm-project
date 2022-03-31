@@ -138,7 +138,7 @@ class CommandObjectMemoryTagWrite : public CommandObjectParsed {
 public:
   class OptionGroupTagWrite : public OptionGroup {
   public:
-    OptionGroupTagWrite() {}
+    OptionGroupTagWrite() = default;
 
     ~OptionGroupTagWrite() override = default;
 
