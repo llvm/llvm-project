@@ -1298,7 +1298,8 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
   // lvalue. Because this is inherently unsafe as an atomic operation, the
   // warning defaults to an error.
   if (const auto *ATy = BaseType->getAs<AtomicType>()) {
-    S.Diag(OpLoc, diag::warn_atomic_member_access);
+    S.DiagRuntimeBehavior(OpLoc, nullptr,
+                          S.PDiag(diag::warn_atomic_member_access));
     BaseType = ATy->getValueType().getUnqualifiedType();
     BaseExpr = ImplicitCastExpr::Create(
         S.Context, IsArrow ? S.Context.getPointerType(BaseType) : BaseType,

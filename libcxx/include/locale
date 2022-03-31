@@ -192,7 +192,7 @@ template <class charT> class messages_byname;
 #include <__algorithm/max.h>
 #include <__algorithm/reverse.h>
 #include <__algorithm/unwrap_iter.h>
-#include <__assert>
+#include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <__debug>
 #include <__locale>

@@ -252,7 +252,7 @@ VPBasicBlock::createEmptyBasicBlock(VPTransformState::CFGState &CFG) {
   // Pred stands for Predessor. Prev stands for Previous - last visited/created.
   BasicBlock *PrevBB = CFG.PrevBB;
   BasicBlock *NewBB = BasicBlock::Create(PrevBB->getContext(), getName(),
-                                         PrevBB->getParent(), CFG.LastBB);
+                                         PrevBB->getParent(), CFG.ExitBB);
   LLVM_DEBUG(dbgs() << "LV: created " << NewBB->getName() << '\n');
 
   // Hook up the new basic block to its predecessors.
@@ -319,8 +319,7 @@ void VPBasicBlock::execute(VPTransformState *State) {
     UnreachableInst *Terminator = State->Builder.CreateUnreachable();
     State->Builder.SetInsertPoint(Terminator);
     // Register NewBB in its loop. In innermost loops its the same for all BB's.
-    Loop *L = State->LI->getLoopFor(State->CFG.LastBB);
-    L->addBasicBlockToLoop(NewBB, *State->LI);
+    State->CurrentVectorLoop->addBasicBlockToLoop(NewBB, *State->LI);
     State->CFG.PrevBB = NewBB;
   }
 
@@ -756,9 +755,8 @@ void VPInstruction::generateInstruction(VPTransformState &State,
       Header = cast<VPBasicBlock>(Header->getSingleSuccessor());
     }
     // TODO: Once the exit block is modeled in VPlan, use it instead of going
-    // through State.CFG.LastBB.
-    BasicBlock *Exit =
-        cast<BranchInst>(State.CFG.LastBB->getTerminator())->getSuccessor(0);
+    // through State.CFG.ExitBB.
+    BasicBlock *Exit = State.CFG.ExitBB;
 
     Builder.CreateCondBr(Cond, Exit, State.CFG.VPBB2IRBB[Header]);
     Builder.GetInsertBlock()->getTerminator()->eraseFromParent();
@@ -909,11 +907,10 @@ void VPlan::execute(VPTransformState *State) {
   BasicBlock *VectorHeaderBB = VectorPreHeaderBB->getSingleSuccessor();
   assert(VectorHeaderBB && "Loop preheader does not have a single successor.");
 
-  // 1. Make room to generate basic-blocks inside loop body if needed.
-  BasicBlock *VectorLatchBB = VectorHeaderBB->splitBasicBlock(
-      VectorHeaderBB->getFirstInsertionPt(), "vector.body.latch");
   Loop *L = State->LI->getLoopFor(VectorHeaderBB);
-  L->addBasicBlockToLoop(VectorLatchBB, *State->LI);
+  State->CurrentVectorLoop = L;
+  State->CFG.ExitBB = L->getExitBlock();
+
   // Remove the edge between Header and Latch to allow other connections.
   // Temporarily terminate with unreachable until CFG is rewired.
   // Note: this asserts the generated code's assumption that
@@ -923,10 +920,9 @@ void VPlan::execute(VPTransformState *State) {
   UnreachableInst *Terminator = State->Builder.CreateUnreachable();
   State->Builder.SetInsertPoint(Terminator);
 
-  // 2. Generate code in loop body.
+  // Generate code in loop body.
   State->CFG.PrevVPBB = nullptr;
   State->CFG.PrevBB = VectorHeaderBB;
-  State->CFG.LastBB = VectorLatchBB;
 
   for (VPBlockBase *Block : depth_first(Entry))
     Block->execute(State);
@@ -949,28 +945,7 @@ void VPlan::execute(VPTransformState *State) {
     }
   }
 
-  // 3. Merge the temporary latch created with the last basic-block filled.
-  BasicBlock *LastBB = State->CFG.PrevBB;
-  assert(isa<BranchInst>(LastBB->getTerminator()) &&
-         "Expected VPlan CFG to terminate with branch");
-
-  // Move both the branch and check from LastBB to VectorLatchBB.
-  auto *LastBranch = cast<BranchInst>(LastBB->getTerminator());
-  LastBranch->moveBefore(VectorLatchBB->getTerminator());
-  VectorLatchBB->getTerminator()->eraseFromParent();
-  // Move condition so it is guaranteed to be next to branch. This is only done
-  // to avoid excessive test updates.
-  // TODO: Remove special handling once the increments for all inductions are
-  // modeled explicitly in VPlan.
-  cast<Instruction>(LastBranch->getCondition())->moveBefore(LastBranch);
-  // Connect LastBB to VectorLatchBB to facilitate their merge.
-  BranchInst::Create(VectorLatchBB, LastBB);
-
-  // Merge LastBB with Latch.
-  bool Merged = MergeBlockIntoPredecessor(VectorLatchBB, nullptr, State->LI);
-  (void)Merged;
-  assert(Merged && "Could not merge last basic block with latch.");
-  VectorLatchBB = LastBB;
+  BasicBlock *VectorLatchBB = State->CFG.PrevBB;
 
   // Fix the latch value of canonical, reduction and first-order recurrences
   // phis in the vector loop.
@@ -1031,7 +1006,7 @@ void VPlan::execute(VPTransformState *State) {
 
   // We do not attempt to preserve DT for outer loop vectorization currently.
   if (!EnableVPlanNativePath)
-    updateDominatorTree(State->DT, VectorPreHeaderBB, VectorLatchBB,
+    updateDominatorTree(State->DT, VectorHeaderBB, VectorLatchBB,
                         L->getExitBlock());
 }
 
@@ -1071,11 +1046,9 @@ LLVM_DUMP_METHOD
 void VPlan::dump() const { print(dbgs()); }
 #endif
 
-void VPlan::updateDominatorTree(DominatorTree *DT, BasicBlock *LoopPreHeaderBB,
+void VPlan::updateDominatorTree(DominatorTree *DT, BasicBlock *LoopHeaderBB,
                                 BasicBlock *LoopLatchBB,
                                 BasicBlock *LoopExitBB) {
-  BasicBlock *LoopHeaderBB = LoopPreHeaderBB->getSingleSuccessor();
-  assert(LoopHeaderBB && "Loop preheader does not have a single successor.");
   // The vector body may be more than a single basic-block by this point.
   // Update the dominator tree information inside the vector body by propagating
   // it from header to latch, expecting only triangular control-flow, if any.
@@ -1570,7 +1543,7 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
       ScalarPHI ? PN->getType() : VectorType::get(PN->getType(), State.VF);
 
   BasicBlock *HeaderBB = State.CFG.PrevBB;
-  assert(State.LI->getLoopFor(HeaderBB)->getHeader() == HeaderBB &&
+  assert(State.CurrentVectorLoop->getHeader() == HeaderBB &&
          "recipe must be in the vector loop header");
   unsigned LastPartForNewPhi = isOrdered() ? 1 : State.UF;
   for (unsigned Part = 0; Part < LastPartForNewPhi; ++Part) {

@@ -724,8 +724,12 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 
     uint64_t C1 = N1C->getZExtValue();
 
-    // Keep track of whether this is an andi.
-    bool IsANDI = isInt<12>(N1C->getSExtValue());
+    // Keep track of whether this is a c.andi. If we can't use c.andi, the
+    // shift pair might offer more compression opportunities.
+    // TODO: We could check for C extension here, but we don't have many lit
+    // tests with the C extension enabled so not checking gets better coverage.
+    // TODO: What if ANDI faster than shift?
+    bool IsCANDI = isInt<6>(N1C->getSExtValue());
 
     // Clear irrelevant bits in the mask.
     if (LeftShift)
@@ -776,7 +780,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
         bool Skip = Subtarget->hasStdExtZba() && C3 == 32 &&
                     X.getOpcode() == ISD::SIGN_EXTEND_INREG &&
                     cast<VTSDNode>(X.getOperand(1))->getVT() == MVT::i32;
-        if (OneUseOrZExtW && !IsANDI && !Skip) {
+        if (OneUseOrZExtW && !IsCANDI && !Skip) {
           SDNode *SLLI = CurDAG->getMachineNode(
               RISCV::SLLI, DL, XLenVT, X,
               CurDAG->getTargetConstant(C3 - C2, DL, XLenVT));
@@ -806,7 +810,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
         }
 
         // (srli (slli c2+c3), c3)
-        if (OneUseOrZExtW && !IsANDI) {
+        if (OneUseOrZExtW && !IsCANDI) {
           SDNode *SLLI = CurDAG->getMachineNode(
               RISCV::SLLI, DL, XLenVT, X,
               CurDAG->getTargetConstant(C2 + C3, DL, XLenVT));
@@ -824,9 +828,16 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     if (!LeftShift && isShiftedMask_64(C1)) {
       uint64_t Leading = XLen - (64 - countLeadingZeros(C1));
       uint64_t C3 = countTrailingZeros(C1);
-      if (Leading == C2 && C2 + C3 < XLen && OneUseOrZExtW && !IsANDI) {
+      if (Leading == C2 && C2 + C3 < XLen && OneUseOrZExtW && !IsCANDI) {
+        unsigned SrliOpc = RISCV::SRLI;
+        // If the input is zexti32 we should use SRLIW.
+        if (X.getOpcode() == ISD::AND && isa<ConstantSDNode>(X.getOperand(1)) &&
+            X.getConstantOperandVal(1) == UINT64_C(0xFFFFFFFF)) {
+          SrliOpc = RISCV::SRLIW;
+          X = X.getOperand(0);
+        }
         SDNode *SRLI = CurDAG->getMachineNode(
-            RISCV::SRLI, DL, XLenVT, X,
+            SrliOpc, DL, XLenVT, X,
             CurDAG->getTargetConstant(C2 + C3, DL, XLenVT));
         SDNode *SLLI =
             CurDAG->getMachineNode(RISCV::SLLI, DL, XLenVT, SDValue(SRLI, 0),
@@ -836,7 +847,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       }
       // If the leading zero count is C2+32, we can use SRLIW instead of SRLI.
       if (Leading > 32 && (Leading - 32) == C2 && C2 + C3 < 32 &&
-          OneUseOrZExtW && !IsANDI) {
+          OneUseOrZExtW && !IsCANDI) {
         SDNode *SRLIW = CurDAG->getMachineNode(
             RISCV::SRLIW, DL, XLenVT, X,
             CurDAG->getTargetConstant(C2 + C3, DL, XLenVT));
@@ -853,7 +864,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     if (LeftShift && isShiftedMask_64(C1)) {
       uint64_t Leading = XLen - (64 - countLeadingZeros(C1));
       uint64_t C3 = countTrailingZeros(C1);
-      if (Leading == 0 && C2 < C3 && OneUseOrZExtW && !IsANDI) {
+      if (Leading == 0 && C2 < C3 && OneUseOrZExtW && !IsCANDI) {
         SDNode *SRLI = CurDAG->getMachineNode(
             RISCV::SRLI, DL, XLenVT, X,
             CurDAG->getTargetConstant(C3 - C2, DL, XLenVT));
@@ -864,7 +875,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
         return;
       }
       // If we have (32-C2) leading zeros, we can use SRLIW instead of SRLI.
-      if (C2 < C3 && Leading + C2 == 32 && OneUseOrZExtW && !IsANDI) {
+      if (C2 < C3 && Leading + C2 == 32 && OneUseOrZExtW && !IsCANDI) {
         SDNode *SRLIW = CurDAG->getMachineNode(
             RISCV::SRLIW, DL, XLenVT, X,
             CurDAG->getTargetConstant(C3 - C2, DL, XLenVT));

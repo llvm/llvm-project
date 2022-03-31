@@ -1005,9 +1005,15 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
       return true;
   }
 
-  if (auto *ST = dyn_cast<StructType>(F->getReturnType())) {
-    if (!ST->isLiteral() || ST->isPacked()) {
-      // Replace return type with literal non-packed struct.
+  auto *ST = dyn_cast<StructType>(F->getReturnType());
+  if (ST && (!ST->isLiteral() || ST->isPacked())) {
+    // Replace return type with literal non-packed struct. Only do this for
+    // intrinsics declared to return a struct, not for intrinsics with
+    // overloaded return type, in which case the exact struct type will be
+    // mangled into the name.
+    SmallVector<Intrinsic::IITDescriptor> Desc;
+    Intrinsic::getIntrinsicInfoTableEntries(F->getIntrinsicID(), Desc);
+    if (Desc.front().Kind == Intrinsic::IITDescriptor::Struct) {
       auto *FT = F->getFunctionType();
       auto *NewST = StructType::get(ST->getContext(), ST->elements());
       auto *NewFT = FunctionType::get(NewST, FT->params(), FT->isVarArg());
@@ -3802,9 +3808,9 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
 
     // This must be an upgrade from a named to a literal struct.
     auto *OldST = cast<StructType>(CI->getType());
-    auto *NewST = cast<StructType>(NewFn->getReturnType());
-    assert(OldST != NewST && "Return type must have changed");
-    assert(OldST->getNumElements() == NewST->getNumElements() &&
+    assert(OldST != NewFn->getReturnType() && "Return type must have changed");
+    assert(OldST->getNumElements() ==
+               cast<StructType>(NewFn->getReturnType())->getNumElements() &&
            "Must have same number of elements");
 
     SmallVector<Value *> Args(CI->args());

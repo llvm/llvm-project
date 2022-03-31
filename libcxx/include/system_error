@@ -142,6 +142,7 @@ template <> struct hash<std::error_condition>;
 
 */
 
+#include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <__errc>
 #include <__functional/unary_function.h>

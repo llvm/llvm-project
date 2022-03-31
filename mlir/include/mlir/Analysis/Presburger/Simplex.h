@@ -166,21 +166,21 @@ public:
   /// false otherwise.
   bool isEmpty() const;
 
+  /// Add an inequality to the tableau. If coeffs is c_0, c_1, ... c_n, where n
+  /// is the current number of variables, then the corresponding inequality is
+  /// c_n + c_0*x_0 + c_1*x_1 + ... + c_{n-1}*x_{n-1} >= 0.
+  virtual void addInequality(ArrayRef<int64_t> coeffs) = 0;
+
   /// Returns the number of variables in the tableau.
   unsigned getNumVariables() const;
 
   /// Returns the number of constraints in the tableau.
   unsigned getNumConstraints() const;
 
-  /// Add an inequality to the tableau. If coeffs is c_0, c_1, ... c_n, where n
-  /// is the current number of variables, then the corresponding inequality is
-  /// c_n + c_0*x_0 + c_1*x_1 + ... + c_{n-1}*x_{n-1} >= 0.
-  virtual void addInequality(ArrayRef<int64_t> coeffs) = 0;
-
   /// Add an equality to the tableau. If coeffs is c_0, c_1, ... c_n, where n
   /// is the current number of variables, then the corresponding equality is
   /// c_n + c_0*x_0 + c_1*x_1 + ... + c_{n-1}*x_{n-1} == 0.
-  virtual void addEquality(ArrayRef<int64_t> coeffs) = 0;
+  void addEquality(ArrayRef<int64_t> coeffs);
 
   /// Add new variables to the end of the list of variables.
   void appendVariable(unsigned count = 1);
@@ -249,14 +249,6 @@ protected:
   /// coefficient for it.
   Optional<unsigned> findAnyPivotRow(unsigned col);
 
-  /// Return any column that this row can be pivoted with, ignoring tableau
-  /// consistency. Equality rows are not considered.
-  ///
-  /// Returns an empty optional if no pivot is possible, which happens only when
-  /// the column unknown is a variable and no constraint has a non-zero
-  /// coefficient for it.
-  Optional<unsigned> findAnyPivotCol(unsigned row);
-
   /// Swap the row with the column in the tableau's data structures but not the
   /// tableau itself. This is used by pivot.
   void swapRowWithCol(unsigned row, unsigned col);
@@ -303,7 +295,6 @@ protected:
     RemoveLastVariable,
     UnmarkEmpty,
     UnmarkLastRedundant,
-    UnmarkLastEquality,
     RestoreBasis
   };
 
@@ -317,13 +308,12 @@ protected:
   /// Undo the operation represented by the log entry.
   void undo(UndoLogEntry entry);
 
-  unsigned getNumFixedCols() const { return numFixedCols; }
+  /// Return the number of fixed columns, as described in the constructor above,
+  /// this is the number of columns beyond those for the variables in var.
+  unsigned getNumFixedCols() const { return usingBigM ? 3u : 2u; }
 
   /// Stores whether or not a big M column is present in the tableau.
   bool usingBigM;
-
-  /// denom + const + maybe M + equality columns
-  unsigned numFixedCols;
 
   /// The number of rows in the tableau.
   unsigned nRow;
@@ -445,12 +435,9 @@ public:
   ///
   /// This just adds the inequality to the tableau and does not try to create a
   /// consistent tableau configuration.
-  void addInequality(ArrayRef<int64_t> coeffs) final;
-
-  /// Add an equality to the tableau. If coeffs is c_0, c_1, ... c_n, where n
-  /// is the current number of variables, then the corresponding equality is
-  /// c_n + c_0*x_0 + c_1*x_1 + ... + c_{n-1}*x_{n-1} == 0.
-  void addEquality(ArrayRef<int64_t> coeffs) final;
+  void addInequality(ArrayRef<int64_t> coeffs) final {
+    addRow(coeffs, /*makeRestricted=*/true);
+  }
 
   /// Get a snapshot of the current state. This is used for rolling back.
   unsigned getSnapshot() { return SimplexBase::getSnapshotBasis(); }
@@ -545,11 +532,6 @@ public:
   /// This also tries to restore the tableau configuration to a consistent
   /// state and marks the Simplex empty if this is not possible.
   void addInequality(ArrayRef<int64_t> coeffs) final;
-
-  /// Add an equality to the tableau. If coeffs is c_0, c_1, ... c_n, where n
-  /// is the current number of variables, then the corresponding equality is
-  /// c_n + c_0*x_0 + c_1*x_1 + ... + c_{n-1}*x_{n-1} == 0.
-  void addEquality(ArrayRef<int64_t> coeffs) final;
 
   /// Compute the maximum or minimum value of the given row, depending on
   /// direction. The specified row is never pivoted. On return, the row may
