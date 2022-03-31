@@ -109,6 +109,24 @@ StructRecord *APISet::addStruct(StringRef Name, StringRef USR, PresumedLoc Loc,
                            Declaration, SubHeading);
 }
 
+ObjCCategoryRecord *APISet::addObjCCategory(
+    StringRef Name, StringRef USR, PresumedLoc Loc,
+    const AvailabilityInfo &Availability, const DocComment &Comment,
+    DeclarationFragments Declaration, DeclarationFragments SubHeading,
+    SymbolReference Interface) {
+  // Create the category record.
+  auto *Record = addTopLevelRecord(ObjCCategories, Name, USR, Loc, Availability,
+                                   Comment, Declaration, SubHeading, Interface);
+
+  // If this category is extending a known interface, associate it with the
+  // ObjCInterfaceRecord.
+  auto It = ObjCInterfaces.find(Interface.Name);
+  if (It != ObjCInterfaces.end())
+    It->second->Categories.push_back(Record);
+
+  return Record;
+}
+
 ObjCInterfaceRecord *APISet::addObjCInterface(
     StringRef Name, StringRef USR, PresumedLoc Loc,
     const AvailabilityInfo &Availability, LinkageInfo Linkage,
@@ -219,6 +237,7 @@ void StructRecord::anchor() {}
 void ObjCPropertyRecord::anchor() {}
 void ObjCInstanceVariableRecord::anchor() {}
 void ObjCMethodRecord::anchor() {}
+void ObjCCategoryRecord::anchor() {}
 void ObjCInterfaceRecord::anchor() {}
 void ObjCProtocolRecord::anchor() {}
 void MacroDefinitionRecord::anchor() {}

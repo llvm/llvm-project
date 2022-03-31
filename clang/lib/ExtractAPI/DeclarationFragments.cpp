@@ -526,6 +526,25 @@ DeclarationFragmentsBuilder::getFragmentsForMacro(StringRef Name,
   return Fragments;
 }
 
+DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForObjCCategory(
+    const ObjCCategoryDecl *Category) {
+  DeclarationFragments Fragments;
+
+  SmallString<128> InterfaceUSR;
+  index::generateUSRForDecl(Category->getClassInterface(), InterfaceUSR);
+
+  Fragments.append("@interface", DeclarationFragments::FragmentKind::Keyword)
+      .appendSpace()
+      .append(Category->getClassInterface()->getName(),
+              DeclarationFragments::FragmentKind::TypeIdentifier, InterfaceUSR)
+      .append(" (", DeclarationFragments::FragmentKind::Text)
+      .append(Category->getName(),
+              DeclarationFragments::FragmentKind::Identifier)
+      .append(")", DeclarationFragments::FragmentKind::Text);
+
+  return Fragments;
+}
+
 DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForObjCInterface(
     const ObjCInterfaceDecl *Interface) {
   DeclarationFragments Fragments;

@@ -338,6 +338,39 @@ public:
     return true;
   }
 
+  bool VisitObjCCategoryDecl(const ObjCCategoryDecl *Decl) {
+    // Collect symbol information.
+    StringRef Name = Decl->getName();
+    StringRef USR = API.recordUSR(Decl);
+    PresumedLoc Loc =
+        Context.getSourceManager().getPresumedLoc(Decl->getLocation());
+    AvailabilityInfo Availability = getAvailability(Decl);
+    DocComment Comment;
+    if (auto *RawComment = Context.getRawCommentForDeclNoCache(Decl))
+      Comment = RawComment->getFormattedLines(Context.getSourceManager(),
+                                              Context.getDiagnostics());
+    // Build declaration fragments and sub-heading for the category.
+    DeclarationFragments Declaration =
+        DeclarationFragmentsBuilder::getFragmentsForObjCCategory(Decl);
+    DeclarationFragments SubHeading =
+        DeclarationFragmentsBuilder::getSubHeading(Decl);
+
+    const ObjCInterfaceDecl *InterfaceDecl = Decl->getClassInterface();
+    SymbolReference Interface(InterfaceDecl->getName(),
+                              API.recordUSR(InterfaceDecl));
+
+    ObjCCategoryRecord *ObjCCategoryRecord =
+        API.addObjCCategory(Name, USR, Loc, Availability, Comment, Declaration,
+                            SubHeading, Interface);
+
+    recordObjCMethods(ObjCCategoryRecord, Decl->methods());
+    recordObjCProperties(ObjCCategoryRecord, Decl->properties());
+    recordObjCInstanceVariables(ObjCCategoryRecord, Decl->ivars());
+    recordObjCProtocols(ObjCCategoryRecord, Decl->protocols());
+
+    return true;
+  }
+
 private:
   /// Get availability information of the declaration \p D.
   AvailabilityInfo getAvailability(const Decl *D) const {
