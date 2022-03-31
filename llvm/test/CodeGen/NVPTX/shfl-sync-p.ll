@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_30 | FileCheck %s
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_30 -mattr=+ptx60 | FileCheck %s
 
 declare {i32, i1} @llvm.nvvm.shfl.sync.down.i32p(i32, i32, i32, i32)
 declare {float, i1} @llvm.nvvm.shfl.sync.down.f32p(i32, float, i32, i32)
