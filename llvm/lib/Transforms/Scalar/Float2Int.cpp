@@ -237,56 +237,6 @@ void Float2IntPass::walkBackwards() {
 
 // Calculate result range from operand ranges
 ConstantRange Float2IntPass::calcRange(Instruction *I) {
-  std::function<ConstantRange(ArrayRef<ConstantRange>)> Op;
-  switch (I->getOpcode()) {
-    // FIXME: Handle select and phi nodes.
-  default:
-  case Instruction::UIToFP:
-  case Instruction::SIToFP:
-    llvm_unreachable("Should have been handled in walkForwards!");
-
-  case Instruction::FNeg:
-    Op = [](ArrayRef<ConstantRange> Ops) {
-      assert(Ops.size() == 1 && "FNeg is a unary operator!");
-      unsigned Size = Ops[0].getBitWidth();
-      auto Zero = ConstantRange(APInt::getZero(Size));
-      return Zero.sub(Ops[0]);
-    };
-    break;
-
-  case Instruction::FAdd:
-  case Instruction::FSub:
-  case Instruction::FMul:
-    Op = [I](ArrayRef<ConstantRange> Ops) {
-      assert(Ops.size() == 2 && "its a binary operator!");
-      auto BinOp = (Instruction::BinaryOps) I->getOpcode();
-      return Ops[0].binaryOp(BinOp, Ops[1]);
-    };
-    break;
-
-  //
-  // Root-only instructions - we'll only see these if they're the
-  //                          first node in a walk.
-  //
-  case Instruction::FPToUI:
-  case Instruction::FPToSI:
-    Op = [I](ArrayRef<ConstantRange> Ops) {
-      assert(Ops.size() == 1 && "FPTo[US]I is a unary operator!");
-      // Note: We're ignoring the casts output size here as that's what the
-      // caller expects.
-      auto CastOp = (Instruction::CastOps)I->getOpcode();
-      return Ops[0].castOp(CastOp, MaxIntegerBW+1);
-    };
-    break;
-
-  case Instruction::FCmp:
-    Op = [](ArrayRef<ConstantRange> Ops) {
-      assert(Ops.size() == 2 && "FCmp is a binary operator!");
-      return Ops[0].unionWith(Ops[1]);
-    };
-    break;
-  }
-
   SmallVector<ConstantRange, 4> OpRanges;
   for (Value *O : I->operands()) {
     if (Instruction *OI = dyn_cast<Instruction>(O)) {
@@ -330,8 +280,45 @@ ConstantRange Float2IntPass::calcRange(Instruction *I) {
     }
   }
 
-  // Reduce the operands' ranges to a single range.
-  return Op(OpRanges);
+  switch (I->getOpcode()) {
+  // FIXME: Handle select and phi nodes.
+  default:
+  case Instruction::UIToFP:
+  case Instruction::SIToFP:
+    llvm_unreachable("Should have been handled in walkForwards!");
+
+  case Instruction::FNeg: {
+    assert(OpRanges.size() == 1 && "FNeg is a unary operator!");
+    unsigned Size = OpRanges[0].getBitWidth();
+    auto Zero = ConstantRange(APInt::getZero(Size));
+    return Zero.sub(OpRanges[0]);
+  }
+
+  case Instruction::FAdd:
+  case Instruction::FSub:
+  case Instruction::FMul: {
+    assert(OpRanges.size() == 2 && "its a binary operator!");
+    auto BinOp = (Instruction::BinaryOps) I->getOpcode();
+    return OpRanges[0].binaryOp(BinOp, OpRanges[1]);
+  }
+
+  //
+  // Root-only instructions - we'll only see these if they're the
+  //                          first node in a walk.
+  //
+  case Instruction::FPToUI:
+  case Instruction::FPToSI: {
+    assert(OpRanges.size() == 1 && "FPTo[US]I is a unary operator!");
+    // Note: We're ignoring the casts output size here as that's what the
+    // caller expects.
+    auto CastOp = (Instruction::CastOps)I->getOpcode();
+    return OpRanges[0].castOp(CastOp, MaxIntegerBW+1);
+  }
+
+  case Instruction::FCmp:
+    assert(OpRanges.size() == 2 && "FCmp is a binary operator!");
+    return OpRanges[0].unionWith(OpRanges[1]);
+  }
 }
 
 // Walk forwards down the list of seen instructions, so we visit defs before
