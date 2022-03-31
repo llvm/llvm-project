@@ -13,6 +13,7 @@
 #include "ObjDumper.h"
 #include "StackMapPrinter.h"
 #include "llvm-readobj.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Object/MachO.h"
@@ -39,6 +40,11 @@ public:
 
   void printNeededLibraries() override;
 
+  bool canCompareSymbols() const override { return true; }
+  bool compareSymbolsByName(object::SymbolRef LHS,
+                            object::SymbolRef RHS) const override;
+  bool compareSymbolsByType(object::SymbolRef LHS,
+                            object::SymbolRef RHS) const override;
   // MachO-specific.
   void printMachODataInCode() override;
   void printMachOVersionMin() override;
@@ -51,10 +57,14 @@ private:
   template<class MachHeader>
   void printFileHeaders(const MachHeader &Header);
 
-  StringRef getSymbolName(const SymbolRef &Symbol);
+  StringRef getSymbolName(const SymbolRef &Symbol) const;
+  uint8_t getSymbolType(const SymbolRef &Symbol) const;
 
   void printSymbols() override;
+  void printSymbols(Optional<SymbolComparator> SymComp) override;
   void printDynamicSymbols() override;
+  void printDynamicSymbols(Optional<SymbolComparator> SymComp) override;
+  void printSymbol(const SymbolRef &Symbol, ScopedPrinter &W);
   void printSymbol(const SymbolRef &Symbol);
 
   void printRelocation(const RelocationRef &Reloc);
@@ -602,7 +612,7 @@ void MachODumper::printRelocation(const MachOObjectFile *Obj,
   }
 }
 
-StringRef MachODumper::getSymbolName(const SymbolRef &Symbol) {
+StringRef MachODumper::getSymbolName(const SymbolRef &Symbol) const {
   Expected<StringRef> SymbolNameOrErr = Symbol.getName();
   if (!SymbolNameOrErr) {
     reportError(SymbolNameOrErr.takeError(), Obj->getFileName());
@@ -610,19 +620,48 @@ StringRef MachODumper::getSymbolName(const SymbolRef &Symbol) {
   return *SymbolNameOrErr;
 }
 
-void MachODumper::printSymbols() {
-  ListScope Group(W, "Symbols");
+uint8_t MachODumper::getSymbolType(const SymbolRef &Symbol) const {
+  return Obj->getSymbol64TableEntry(Symbol.getRawDataRefImpl()).n_type;
+}
 
-  for (const SymbolRef &Symbol : Obj->symbols()) {
-    printSymbol(Symbol);
+bool MachODumper::compareSymbolsByName(SymbolRef LHS, SymbolRef RHS) const {
+  return getSymbolName(LHS).str().compare(getSymbolName(RHS).str()) < 0;
+}
+
+bool MachODumper::compareSymbolsByType(SymbolRef LHS, SymbolRef RHS) const {
+  return getSymbolType(LHS) < getSymbolType(RHS);
+}
+
+void MachODumper::printSymbols() { printSymbols(None); }
+
+void MachODumper::printSymbols(Optional<SymbolComparator> SymComp) {
+  ListScope Group(W, "Symbols");
+  if (SymComp) {
+    auto SymbolRange = Obj->symbols();
+    std::vector<SymbolRef> SortedSymbols(SymbolRange.begin(),
+                                         SymbolRange.end());
+    llvm::stable_sort(SortedSymbols, *SymComp);
+    for (SymbolRef Symbol : SortedSymbols)
+      printSymbol(Symbol);
+  } else {
+    for (const SymbolRef &Symbol : Obj->symbols()) {
+      printSymbol(Symbol);
+    }
   }
 }
 
 void MachODumper::printDynamicSymbols() {
   ListScope Group(W, "DynamicSymbols");
 }
+void MachODumper::printDynamicSymbols(Optional<SymbolComparator> SymComp) {
+  ListScope Group(W, "DynamicSymbols");
+}
 
 void MachODumper::printSymbol(const SymbolRef &Symbol) {
+  printSymbol(Symbol, W);
+}
+
+void MachODumper::printSymbol(const SymbolRef &Symbol, ScopedPrinter &W) {
   StringRef SymbolName = getSymbolName(Symbol);
 
   MachOSymbol MOSymbol;
