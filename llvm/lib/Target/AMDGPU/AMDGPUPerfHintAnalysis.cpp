@@ -153,7 +153,7 @@ bool AMDGPUPerfHint::isIndirectAccess(const Instruction *Inst) const {
 
     if (auto LD = dyn_cast<LoadInst>(V)) {
       auto M = LD->getPointerOperand();
-      if (isGlobalAddr(M) || isLocalAddr(M) || isConstantAddr(M)) {
+      if (isGlobalAddr(M)) {
         LLVM_DEBUG(dbgs() << "    is IA\n");
         return true;
       }

@@ -6,8 +6,8 @@
 ; SI-MINREG: NumSgprs: {{[1-9]$}}
 ; SI-MINREG: NumVgprs: {{[1-9]$}}
 
-; SI-MAXOCC: NumSgprs: {{[0-4][0-9]$}}
-; SI-MAXOCC: NumVgprs: {{[0-4][0-9]$}}
+; SI-MAXOCC: NumSgprs: {{[1-4]?[0-9]$}}
+; SI-MAXOCC: NumVgprs: {{[1-4]?[0-9]$}}
 
 ; stores may alias loads
 ; VI: NumSgprs: {{[0-9]$}}
