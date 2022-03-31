@@ -9,7 +9,7 @@
 #ifndef LLVM_TOOLS_LLVM_READOBJ_OBJDUMPER_H
 #define LLVM_TOOLS_LLVM_READOBJ_OBJDUMPER_H
 
-#include <functional.
+#include <functional>
 #include <memory>
 #include <system_error>
 
