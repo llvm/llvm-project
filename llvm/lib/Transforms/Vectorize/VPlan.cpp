@@ -907,9 +907,8 @@ void VPlan::execute(VPTransformState *State) {
   BasicBlock *VectorHeaderBB = VectorPreHeaderBB->getSingleSuccessor();
   assert(VectorHeaderBB && "Loop preheader does not have a single successor.");
 
-  Loop *L = State->LI->getLoopFor(VectorHeaderBB);
-  State->CurrentVectorLoop = L;
-  State->CFG.ExitBB = L->getExitBlock();
+  State->CurrentVectorLoop = State->LI->getLoopFor(VectorHeaderBB);
+  State->CFG.ExitBB = State->CurrentVectorLoop->getExitBlock();
 
   // Remove the edge between Header and Latch to allow other connections.
   // Temporarily terminate with unreachable until CFG is rewired.
@@ -1007,7 +1006,7 @@ void VPlan::execute(VPTransformState *State) {
   // We do not attempt to preserve DT for outer loop vectorization currently.
   if (!EnableVPlanNativePath)
     updateDominatorTree(State->DT, VectorHeaderBB, VectorLatchBB,
-                        L->getExitBlock());
+                        State->CFG.ExitBB);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
