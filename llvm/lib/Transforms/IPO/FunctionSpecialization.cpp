@@ -21,8 +21,6 @@
 //   but that's off by default under an option.
 // - The cost-model could be further looked into (it mainly focuses on inlining
 //   benefits),
-// - We are not yet caching analysis results, but profiling and checking where
-//   extra compile time is spent didn't suggest this to be a problem.
 //
 // Ideas:
 // - With a function specialization attribute for arguments, we could have
@@ -281,6 +279,7 @@ class FunctionSpecializer {
   SmallPtrSet<Function *, 4> SpecializedFuncs;
   SmallPtrSet<Function *, 4> FullySpecialized;
   SmallVector<Instruction *> ReplacedWithConstant;
+  DenseMap<Function *, CodeMetrics> FunctionMetrics;
 
 public:
   FunctionSpecializer(SCCPSolver &Solver,
@@ -389,6 +388,24 @@ private:
   // The number of functions specialised, used for collecting statistics and
   // also in the cost model.
   unsigned NbFunctionsSpecialized = 0;
+
+  // Compute the code metrics for function \p F.
+  CodeMetrics &analyzeFunction(Function *F) {
+    auto I = FunctionMetrics.insert({F, CodeMetrics()});
+    CodeMetrics &Metrics = I.first->second;
+    if (I.second) {
+      // The code metrics were not cached.
+      SmallPtrSet<const Value *, 32> EphValues;
+      CodeMetrics::collectEphemeralValues(F, &(GetAC)(*F), EphValues);
+      for (BasicBlock &BB : *F)
+        Metrics.analyzeBasicBlock(&BB, (GetTTI)(*F), EphValues);
+
+      LLVM_DEBUG(dbgs() << "FnSpecialization: Code size of function "
+                        << F->getName() << " is " << Metrics.NumInsts
+                        << " instructions\n");
+    }
+    return Metrics;
+  }
 
   /// Clone the function \p F and remove the ssa_copy intrinsics added by
   /// the SCCPSolver in the cloned version.
@@ -528,13 +545,7 @@ private:
 
   /// Compute and return the cost of specializing function \p F.
   InstructionCost getSpecializationCost(Function *F) {
-    // Compute the code metrics for the function.
-    SmallPtrSet<const Value *, 32> EphValues;
-    CodeMetrics::collectEphemeralValues(F, &(GetAC)(*F), EphValues);
-    CodeMetrics Metrics;
-    for (BasicBlock &BB : *F)
-      Metrics.analyzeBasicBlock(&BB, (GetTTI)(*F), EphValues);
-
+    CodeMetrics &Metrics = analyzeFunction(F);
     // If the code metrics reveal that we shouldn't duplicate the function, we
     // shouldn't specialize it. Set the specialization cost to Invalid.
     // Or if the lines of codes implies that this function is easy to get
