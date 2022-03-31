@@ -101,6 +101,10 @@ public:
     // If true, varargs functions can be extracted.
     bool AllowVarArgs;
 
+    /// If true, copies the code into the extracted function instead of moving
+    /// it.
+    bool KeepOldBlocks;
+
     // Bits of intermediate state computed at various phases of extraction.
     SetVector<BasicBlock *> Blocks;
     unsigned NumExitBlocks = std::numeric_limits<unsigned>::max();
@@ -132,13 +136,19 @@ public:
     /// Any new allocations will be placed in the AllocationBlock, unless
     /// it is null, in which case it will be placed in the entry block of
     /// the function from which the code is being extracted.
+    ///
+    /// If KeepOldBlocks is true, the original instances of the extracted region
+    /// remains in the original function so they can still be branched to from
+    /// non-extracted blocks. However, only branches to the first block will
+    /// call the extracted function.
     CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT = nullptr,
                   bool AggregateArgs = false, BlockFrequencyInfo *BFI = nullptr,
                   BranchProbabilityInfo *BPI = nullptr,
                   AssumptionCache *AC = nullptr, bool AllowVarArgs = false,
                   bool AllowAlloca = false,
                   BasicBlock *AllocationBlock = nullptr,
-                  std::string Suffix = "");
+                  std::string Suffix = "",
+                  bool KeepOldBlocks = false);
 
     /// Create a code extractor for a loop body.
     ///

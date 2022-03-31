@@ -43,7 +43,8 @@ static cl::opt<bool>
 namespace {
 class BlockExtractor {
 public:
-  BlockExtractor(bool EraseFunctions) : EraseFunctions(EraseFunctions) {}
+  BlockExtractor(bool EraseFunctions, bool KeepOldBlocks = false)
+      : EraseFunctions(EraseFunctions), KeepOldBlocks(KeepOldBlocks) {}
   bool runOnModule(Module &M);
   void init(const SmallVectorImpl<SmallVector<BasicBlock *, 16>>
                 &GroupsOfBlocksToExtract) {
@@ -60,6 +61,7 @@ public:
 private:
   SmallVector<SmallVector<BasicBlock *, 16>, 4> GroupsOfBlocks;
   bool EraseFunctions;
+  bool KeepOldBlocks;
   /// Map a function name to groups of blocks.
   SmallVector<std::pair<std::string, SmallVector<std::string, 4>>, 4>
       BlocksByName;
@@ -75,8 +77,8 @@ class BlockExtractorLegacyPass : public ModulePass {
 public:
   static char ID;
   BlockExtractorLegacyPass(const SmallVectorImpl<BasicBlock *> &BlocksToExtract,
-                           bool EraseFunctions)
-      : ModulePass(ID), BE(EraseFunctions) {
+                           bool EraseFunctions, bool KeepOldBlocks)
+      : ModulePass(ID), BE(EraseFunctions, KeepOldBlocks) {
     // We want one group per element of the input list.
     SmallVector<SmallVector<BasicBlock *, 16>, 4> MassagedGroupsOfBlocks;
     for (BasicBlock *BB : BlocksToExtract) {
@@ -89,13 +91,14 @@ public:
 
   BlockExtractorLegacyPass(const SmallVectorImpl<SmallVector<BasicBlock *, 16>>
                                &GroupsOfBlocksToExtract,
-                           bool EraseFunctions)
-      : ModulePass(ID), BE(EraseFunctions) {
+                           bool EraseFunctions, bool KeepOldBlocks)
+      : ModulePass(ID), BE(EraseFunctions, KeepOldBlocks) {
     BE.init(GroupsOfBlocksToExtract);
   }
 
   BlockExtractorLegacyPass()
-      : BlockExtractorLegacyPass(SmallVector<BasicBlock *, 0>(), false) {}
+      : BlockExtractorLegacyPass(SmallVector<BasicBlock *, 0>(), false, false) {
+  }
 };
 
 } // end anonymous namespace
@@ -108,14 +111,17 @@ ModulePass *llvm::createBlockExtractorPass() {
   return new BlockExtractorLegacyPass();
 }
 ModulePass *llvm::createBlockExtractorPass(
-    const SmallVectorImpl<BasicBlock *> &BlocksToExtract, bool EraseFunctions) {
-  return new BlockExtractorLegacyPass(BlocksToExtract, EraseFunctions);
+    const SmallVectorImpl<BasicBlock *> &BlocksToExtract, bool EraseFunctions,
+    bool KeepOldBlocks) {
+  return new BlockExtractorLegacyPass(BlocksToExtract, EraseFunctions,
+                                      KeepOldBlocks);
 }
 ModulePass *llvm::createBlockExtractorPass(
     const SmallVectorImpl<SmallVector<BasicBlock *, 16>>
         &GroupsOfBlocksToExtract,
-    bool EraseFunctions) {
-  return new BlockExtractorLegacyPass(GroupsOfBlocksToExtract, EraseFunctions);
+    bool EraseFunctions, bool KeepOldBlocks) {
+  return new BlockExtractorLegacyPass(GroupsOfBlocksToExtract, EraseFunctions,
+                                      KeepOldBlocks);
 }
 
 /// Gets all of the blocks specified in the input file.
@@ -223,7 +229,13 @@ bool BlockExtractor::runOnModule(Module &M) {
       Changed = true;
     }
     CodeExtractorAnalysisCache CEAC(*BBs[0]->getParent());
-    Function *F = CodeExtractor(BlocksToExtractVec).extractCodeRegion(CEAC);
+    Function *F =
+        CodeExtractor(BlocksToExtractVec, /* DT */ nullptr,
+                      /* AggregateArgs*/ false, /* BFI */ nullptr,
+                      /* BPI */ nullptr, /* AC */ nullptr,
+                      /* AllowVarArgs */ false, /* AllowAlloca */ false,
+                      /* Suffix */ "", KeepOldBlocks)
+            .extractCodeRegion(CEAC);
     if (F)
       LLVM_DEBUG(dbgs() << "Extracted group '" << (*BBs.begin())->getName()
                         << "' in: " << F->getName() << '\n');
