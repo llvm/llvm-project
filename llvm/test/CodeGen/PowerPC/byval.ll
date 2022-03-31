@@ -22,7 +22,7 @@ define dso_local i32 @bar() {
 ; CHECK-NEXT:    addi 3, 1, 40
 ; CHECK-NEXT:    bl foo
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    ld 7, 72(1)
+; CHECK-NEXT:    lwz 7, 72(1)
 ; CHECK-NEXT:    ld 6, 64(1)
 ; CHECK-NEXT:    ld 5, 56(1)
 ; CHECK-NEXT:    ld 4, 48(1)
