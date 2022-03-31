@@ -46,7 +46,8 @@ RUN apt-get update && apt-get install -y ninja-build python3 python3-sphinx pyth
 
 # Locales for gdb and localization tests
 RUN apt-get update && apt-get install -y language-pack-en language-pack-fr \
-                                         language-pack-ru language-pack-zh-hans
+                                         language-pack-ja language-pack-ru \
+                                         language-pack-zh-hans
 # These two are not enabled by default so generate them
 RUN printf "fr_CA ISO-8859-1\ncs_CZ ISO-8859-2" >> /etc/locale.gen
 RUN mkdir /usr/local/share/i1en/
