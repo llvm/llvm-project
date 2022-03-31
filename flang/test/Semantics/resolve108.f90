@@ -45,25 +45,27 @@ subroutine s2
   !If we got the type of foo right, this declaration will fail
   !due to an attempted division by zero.
   !ERROR: Must be a constant value
-  integer, parameter :: test = 1 / (kind(foo(1)) - kind(1.e0))
+  integer, parameter :: test = 1 / (kind(foo(1)) - kind(1.d0))
 end subroutine
 
 module m3
-  integer, parameter :: k = kind(1.e0)
+  real(kind=kind(1.0e0)) :: x
  contains
   real(kind=kind(x)) function foo(x)
-    !ERROR: The type of 'x' has already been implicitly declared
     real(kind=kind(1.0d0)) x
+    !ERROR: Must be a constant value
+    integer, parameter :: test = 1 / (kind(foo) - kind(1.d0))
     foo = n
   end function
 end module
 
 module m4
  contains
-  !ERROR: Must be a constant value
   real(n) function foo(x)
+    !ERROR: 'foo' is not an object that can appear in an expression
     integer, parameter :: n = kind(foo)
     real(n), intent(in) :: x
+    !ERROR: 'x' is not an object that can appear in an expression
     foo = x
   end function
 end module
