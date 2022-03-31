@@ -11,6 +11,7 @@
 #include "FileIndexRecord.h"
 #include "IndexDataStoreUtils.h"
 #include "IndexingContext.h"
+#include "clang/Basic/PathRemapper.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
@@ -828,11 +829,14 @@ static void writeUnitData(const CompilerInstance &CI,
         return Mod;
     return nullptr;
   };
+  PathRemapper Remapper;
+  for (const auto &KV : CI.getCodeGenOpts().DebugPrefixMap)
+    Remapper.addMapping(KV.first, KV.second);
 
   IndexUnitWriter UnitWriter(
       CI.getFileManager(), DataPath, "clang", getClangVersion(), OutputFile,
       ModuleName, RootFile, IsSystemUnit, IsModuleUnit, IsDebugCompilation,
-      CI.getTargetOpts().Triple, SysrootPath, getModuleInfo);
+      CI.getTargetOpts().Triple, SysrootPath, Remapper, getModuleInfo);
 
   DepProvider.visitFileDependencies(
       CI, [&](const FileEntry *FE, bool isSystemFile) {
