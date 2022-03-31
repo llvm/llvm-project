@@ -111,7 +111,9 @@ func @expand_collapse_shape_static(
     %arg2: tensor<3x?x5xf32>,
     %arg3: memref<30x20xf32, offset : 100, strides : [4000, 2]>,
     %arg4: memref<1x5xf32, affine_map<(d0, d1)[s0] -> (d0 * 5 + s0 + d1)>>,
-    %arg5: memref<f32>) {
+    %arg5: memref<f32>,
+    %arg6: memref<3x4x5xf32, offset: 0, strides: [240, 60, 10]>,
+    %arg7: memref<1x2049xi64, affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>>) {
   // Reshapes that collapse and expand back a contiguous buffer.
 //       CHECK:   memref.collapse_shape {{.*}} {{\[}}[0, 1], [2]]
 //  CHECK-SAME:     memref<3x4x5xf32> into memref<12x5xf32>
@@ -163,6 +165,17 @@ func @expand_collapse_shape_static(
   %r4 = memref.expand_shape %arg4 [[0], [1, 2]] :
       memref<1x5xf32, affine_map<(d0, d1)[s0] -> (d0 * 5 + s0 + d1)>> into
       memref<1x1x5xf32, affine_map<(d0, d1, d2)[s0] -> (d0 * 5 + s0 + d2 + d1 * 5)>>
+
+  // Note: Only the collapsed two shapes are contiguous in the follow test case.
+//       CHECK:   memref.collapse_shape {{.*}} {{\[}}[0, 1], [2]]
+  %r6 = memref.collapse_shape %arg6 [[0, 1], [2]] :
+      memref<3x4x5xf32, offset: 0, strides: [240, 60, 10]> into
+      memref<12x5xf32, offset: 0, strides: [60, 10]>
+
+//       CHECK:   memref.collapse_shape {{.*}} {{\[}}[0, 1]]
+  %r7 = memref.collapse_shape %arg7 [[0, 1]] :
+      memref<1x2049xi64, affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>> into
+      memref<2049xi64, affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>>
 
   // Reshapes that expand and collapse back a contiguous buffer with some 1's.
 //       CHECK:   memref.expand_shape {{.*}} {{\[}}[0, 1], [2], [3, 4]]
