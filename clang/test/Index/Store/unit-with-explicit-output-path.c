@@ -20,7 +20,7 @@ void foo(int i);
 // ALL: main-path: {{.*}}{{/|\\}}unit-with-explicit-output-path.c
 // DEFAULT: out-file: {{.*}}{{/|\\}}unit-with-explicit-output-path.c.o
 // OUT: out-file: {{.*}}{{/|\\}}unit-with-explicit-output-path.o
-// UNITOUT: out-file: custom-unit.o
+// UNITOUT: out-file: {{.*}}{{/|\\}}custom-unit.o
 // ALL: target: x86_64-apple-macosx10.8
 // ALL: is-debug: 1
 

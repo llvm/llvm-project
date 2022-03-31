@@ -14,6 +14,7 @@
 #define LLVM_CLANG_INDEXSTORE_INDEXSTORECXX_H
 
 #include "indexstore/indexstore.h"
+#include "clang/Basic/PathRemapper.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
@@ -101,10 +102,16 @@ class IndexStore {
   friend class IndexUnitReader;
 
 public:
-  IndexStore(StringRef path, std::string &error) {
+  IndexStore(StringRef path, const clang::PathRemapper &remapper,
+             std::string &error) {
     llvm::SmallString<64> buf = path;
     indexstore_error_t c_err = nullptr;
-    obj = indexstore_store_create(buf.c_str(), &c_err);
+    indexstore_creation_options_t options = indexstore_creation_options_create();
+    for (const auto &Mapping : remapper.getMappings())
+      indexstore_creation_options_add_prefix_mapping(options, Mapping.first.c_str(), Mapping.second.c_str());
+
+    obj = indexstore_store_create_with_options(buf.c_str(), options, &c_err);
+    indexstore_creation_options_dispose(options);
     if (c_err) {
       error = indexstore_error_get_description(c_err);
       indexstore_error_dispose(c_err);
@@ -119,8 +126,9 @@ public:
     indexstore_store_dispose(obj);
   }
 
-  static IndexStoreRef create(StringRef path, std::string &error) {
-    auto storeRef = std::make_shared<IndexStore>(path, error);
+  static IndexStoreRef create(StringRef path, clang::PathRemapper remapper,
+                              std::string &error) {
+    auto storeRef = std::make_shared<IndexStore>(path, remapper, error);
     if (storeRef->isInvalid())
       return nullptr;
     return storeRef;
