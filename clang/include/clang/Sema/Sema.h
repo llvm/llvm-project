@@ -3471,6 +3471,9 @@ public:
   EnforceTCBLeafAttr *mergeEnforceTCBLeafAttr(Decl *D,
                                               const EnforceTCBLeafAttr &AL);
   BTFDeclTagAttr *mergeBTFDeclTagAttr(Decl *D, const BTFDeclTagAttr &AL);
+  HLSLNumThreadsAttr *mergeHLSLNumThreadsAttr(Decl *D,
+                                              const AttributeCommonInfo &AL,
+                                              int X, int Y, int Z);
 
   void mergeDeclAttributes(NamedDecl *New, Decl *Old,
                            AvailabilityMergeKind AMK = AMK_Redeclaration);
