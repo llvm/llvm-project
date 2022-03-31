@@ -20,7 +20,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 
 namespace ranges {
 template <class _I1, class _O1, class _O2>
@@ -40,12 +40,12 @@ struct in_out_out_result {
     requires convertible_to<_I1, _II1> && convertible_to<_O1, _OO1> && convertible_to<_O2, _OO2>
   _LIBCPP_HIDE_FROM_ABI constexpr
   operator in_out_out_result<_II1, _OO1, _OO2>() && {
-    return {_VSTD::move(in), _VSTD::move(out1), _VSTD::move(out2)};
+    return {std::move(in), std::move(out1), std::move(out2)};
   }
 };
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -18,22 +18,16 @@
 
 #include "MoveOnly.h"
 
-template <class T>
-struct ConvertibleFrom {
-  constexpr ConvertibleFrom(T c) : content{c} {}
-  T content;
-};
-
 struct A {
   explicit A(int);
 };
-// conversion is not implicit
-static_assert(!std::is_constructible_v<std::ranges::in_out_out_result<A, A, A>,
-                                       std::ranges::in_out_out_result<int, int, int>>);
+// no implicit conversion
+static_assert(!std::is_constructible_v<std::ranges::in_out_out_result<A, A, A>, std::ranges::in_out_out_result<int, int, int>>);
 
 struct B {
   B(int);
 };
+// implicit conversion
 static_assert(std::is_constructible_v<std::ranges::in_out_out_result<B, B, B>, std::ranges::in_out_out_result<int, int, int>>);
 static_assert(std::is_constructible_v<std::ranges::in_out_out_result<B, B, B>, std::ranges::in_out_out_result<int, int, int>&>);
 static_assert(std::is_constructible_v<std::ranges::in_out_out_result<B, B, B>, const std::ranges::in_out_out_result<int, int, int>>);
@@ -44,26 +38,13 @@ struct C {
 };
 static_assert(!std::is_constructible_v<std::ranges::in_out_out_result<C, C, C>, std::ranges::in_out_out_result<int, int, int>&>);
 
-static_assert(std::is_convertible_v<std::ranges::in_out_out_result<int, int, int>&,
-                                    std::ranges::in_out_out_result<long, long, long>>);
-static_assert(std::is_convertible_v<const std::ranges::in_out_out_result<int, int, int>&,
-                                    std::ranges::in_out_out_result<long, long, long>>);
-static_assert(std::is_convertible_v<std::ranges::in_out_out_result<int, int, int>&&,
-                                    std::ranges::in_out_out_result<long, long, long>>);
-static_assert(std::is_convertible_v<const std::ranges::in_out_out_result<int, int, int>&&,
-                                    std::ranges::in_out_out_result<long, long, long>>);
+// has to be convertible via const&
+static_assert(std::is_convertible_v<std::ranges::in_out_out_result<int, int, int>&, std::ranges::in_out_out_result<long, long, long>>);
+static_assert(std::is_convertible_v<const std::ranges::in_out_out_result<int, int, int>&, std::ranges::in_out_out_result<long, long, long>>);
+static_assert(std::is_convertible_v<std::ranges::in_out_out_result<int, int, int>&&, std::ranges::in_out_out_result<long, long, long>>);
+static_assert(std::is_convertible_v<const std::ranges::in_out_out_result<int, int, int>&&, std::ranges::in_out_out_result<long, long, long>>);
 
-struct NotConvertible {};
-static_assert(!std::is_convertible_v<std::ranges::in_out_out_result<NotConvertible, int, int>,
-                                     std::ranges::in_out_out_result<int, int, int>>);
-static_assert(!std::is_convertible_v<std::ranges::in_out_out_result<int, NotConvertible, int>,
-                                     std::ranges::in_out_out_result<int, int, int>>);
-static_assert(!std::is_convertible_v<std::ranges::in_out_out_result<int, int, NotConvertible>,
-                                     std::ranges::in_out_out_result<int, int, int>>);
-
-static_assert(std::is_constructible_v<std::ranges::in_out_out_result<MoveOnly, MoveOnly, MoveOnly>,
-                                      std::ranges::in_out_out_result<int, int, int>&>);
-
+// should be move constructible
 static_assert(std::is_move_constructible_v<std::ranges::in_out_out_result<MoveOnly, int, int>>);
 static_assert(std::is_move_constructible_v<std::ranges::in_out_out_result<int, MoveOnly, int>>);
 static_assert(std::is_move_constructible_v<std::ranges::in_out_out_result<int, int, MoveOnly>>);
@@ -71,6 +52,18 @@ static_assert(std::is_move_constructible_v<std::ranges::in_out_out_result<int, i
 static_assert(!std::is_copy_constructible_v<std::ranges::in_out_out_result<MoveOnly, int, int>>);
 static_assert(!std::is_copy_constructible_v<std::ranges::in_out_out_result<int, MoveOnly, int>>);
 static_assert(!std::is_copy_constructible_v<std::ranges::in_out_out_result<int, int, MoveOnly>>);
+
+struct NotConvertible {};
+// conversions should not work if there is no conversion
+static_assert(!std::is_convertible_v<std::ranges::in_out_out_result<NotConvertible, int, int>, std::ranges::in_out_out_result<int, int, int>>);
+static_assert(!std::is_convertible_v<std::ranges::in_out_out_result<int, NotConvertible, int>, std::ranges::in_out_out_result<int, int, int>>);
+static_assert(!std::is_convertible_v<std::ranges::in_out_out_result<int, int, NotConvertible>, std::ranges::in_out_out_result<int, int, int>>);
+
+template <class T>
+struct ConvertibleFrom {
+  constexpr ConvertibleFrom(T c) : content{c} {}
+  T content;
+};
 
 constexpr bool test() {
   {
