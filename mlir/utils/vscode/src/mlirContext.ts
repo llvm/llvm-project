@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import * as path from 'path';
 import * as vscode from 'vscode';
 import * as vscodelc from 'vscode-languageclient';
 
@@ -20,31 +21,36 @@ export class MLIRContext implements vscode.Disposable {
   async activate(outputChannel: vscode.OutputChannel,
                  warnOnEmptyServerPath: boolean) {
     // Create the language clients for mlir and pdll.
-    this.pdllClient = this.startLanguageClient(
+    let mlirServerPath: string, pdllServerPath: string;
+    [this.client, mlirServerPath] = await this.startLanguageClient(
+        outputChannel, warnOnEmptyServerPath, 'server_path', 'mlir');
+    [this.pdllClient, pdllServerPath] = await this.startLanguageClient(
         outputChannel, warnOnEmptyServerPath, 'pdll_server_path', 'pdll');
-    this.client = this.startLanguageClient(outputChannel, warnOnEmptyServerPath,
-                                           'server_path', 'mlir');
 
     // Watch for configuration changes.
-    configWatcher.activate(this);
+    const serverPathsToWatch = [ mlirServerPath, pdllServerPath ];
+    await configWatcher.activate(this, serverPathsToWatch);
   }
 
   /**
-   *  Start a new language client for the given language.
+   *  Start a new language client for the given language. Returns an array
+   *  containing the opened server, or null if the server could not be started,
+   *  and the resolved server path.
    */
-  startLanguageClient(outputChannel: vscode.OutputChannel,
-                      warnOnEmptyServerPath: boolean, serverSettingName: string,
-                      languageName: string): vscodelc.LanguageClient {
+  async startLanguageClient(outputChannel: vscode.OutputChannel,
+                            warnOnEmptyServerPath: boolean,
+                            serverSettingName: string, languageName: string):
+      Promise<[ vscodelc.LanguageClient, string ]> {
     const clientTitle = languageName.toUpperCase() + ' Language Client';
 
     // Get the path of the lsp-server that is used to provide language
     // functionality.
-    const serverPath = config.get<string>(serverSettingName);
+    var serverPath = await this.resolveServerPath(serverSettingName);
 
     // If we aren't emitting warnings on an empty server path, and the server
     // path is empty, bail.
     if (!warnOnEmptyServerPath && serverPath === '') {
-      return null;
+      return [ null, serverPath ];
     }
 
     // Check that the file actually exists.
@@ -61,7 +67,7 @@ export class MLIRContext implements vscode.Disposable {
                   {openToSide : false, query : `mlir.${serverSettingName}`});
             }
           });
-      return null;
+      return [ null, serverPath ];
     }
 
     // Configure the server options.
@@ -94,7 +100,53 @@ export class MLIRContext implements vscode.Disposable {
     let languageClient = new vscodelc.LanguageClient(
         languageName + '-lsp', clientTitle, serverOptions, clientOptions);
     this.subscriptions.push(languageClient.start());
-    return languageClient;
+    return [ languageClient, serverPath ];
+  }
+
+  /**
+   * Given a server setting, return the default server path.
+   */
+  static getDefaultServerFilename(serverSettingName: string): string {
+    if (serverSettingName === 'pdll_server_path') {
+      return 'mlir-pdll-lsp-server';
+    }
+    if (serverSettingName === 'server_path') {
+      return 'mlir-lsp-server';
+    }
+    return '';
+  }
+
+  /**
+   * Try to resolve the path for the given server setting.
+   */
+  async resolveServerPath(serverSettingName: string): Promise<string> {
+    let configServerPath = config.get<string>(serverSettingName);
+    let serverPath = configServerPath;
+
+    // If the path is already fully resolved, there is nothing to do.
+    if (path.isAbsolute(serverPath)) {
+      return serverPath;
+    }
+
+    // If a path hasn't been set, try to use the default path.
+    if (serverPath === '') {
+      serverPath = MLIRContext.getDefaultServerFilename(serverSettingName);
+      if (serverPath === '') {
+        return serverPath;
+      }
+      // Fallthrough to try resolving the default path.
+    }
+
+    // Try to resolve the path relative to the workspace.
+    const foundUris: vscode.Uri[] =
+        await vscode.workspace.findFiles('**/' + serverPath, null, 1);
+    if (foundUris.length === 0) {
+      // If we couldn't resolve it, just return the current configuration path
+      // anyways. The file might not exist yet.
+      return configServerPath;
+    }
+    // Otherwise, return the resolved path.
+    return foundUris[0].fsPath;
   }
 
   dispose() {
