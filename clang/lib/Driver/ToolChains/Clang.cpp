@@ -4668,9 +4668,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     if (JA.getType() == types::TY_LLVM_BC)
       CmdArgs.push_back("-emit-llvm-uselists");
 
-    if (IsUsingLTO && !Args.hasArg(options::OPT_fopenmp_new_driver)) {
+    if (IsUsingLTO) {
       // Only AMDGPU supports device-side LTO.
-      if (IsDeviceOffloadAction && !Triple.isAMDGPU()) {
+      if (IsDeviceOffloadAction &&
+          Args.hasArg(options::OPT_fno_openmp_new_driver) &&
+          !Triple.isAMDGPU()) {
         D.Diag(diag::err_drv_unsupported_opt_for_target)
             << Args.getLastArg(options::OPT_foffload_lto,
                                options::OPT_foffload_lto_EQ)

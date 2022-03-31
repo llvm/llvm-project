@@ -54,7 +54,7 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "${tmachine}$")
 
       # Report to the parent scope that we are building a plugin.
       set(LIBOMPTARGET_SYSTEM_TARGETS
-        "${LIBOMPTARGET_SYSTEM_TARGETS} ${tmachine_triple} ${tmachine_triple}-newDriver" PARENT_SCOPE)
+        "${LIBOMPTARGET_SYSTEM_TARGETS} ${tmachine_triple} ${tmachine_triple}-oldDriver" PARENT_SCOPE)
       set(LIBOMPTARGET_TESTED_PLUGINS
         "${LIBOMPTARGET_TESTED_PLUGINS}" PARENT_SCOPE)
 
