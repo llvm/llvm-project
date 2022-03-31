@@ -415,6 +415,46 @@ define dso_local void @__tile_stored(i8* %0, i64 %1, %struct.__tile_str* nocaptu
   ret void
 }
 
+define void @dead_code(i8 *%buf) {
+; CHECK-LABEL: @dead_code(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = alloca <256 x i32>, align 64
+; CHECK-NEXT:    br i1 undef, label [[L1:%.*]], label [[L2:%.*]]
+; CHECK:       l1:
+; CHECK-NEXT:    [[T1:%.*]] = call x86_amx @llvm.x86.tilezero.internal(i16 8, i16 32)
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <256 x i32>* [[TMP0]] to i8*
+; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 8, i16 32, i8* [[TMP1]], i64 32, x86_amx [[T1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = load <256 x i32>, <256 x i32>* [[TMP0]], align 1024
+; CHECK-NEXT:    br i1 undef, label [[L2]], label [[EXIT:%.*]]
+; CHECK:       l2:
+; CHECK-NEXT:    [[T3:%.*]] = phi <256 x i32> [ undef, [[ENTRY:%.*]] ], [ [[TMP2]], [[L1]] ]
+; CHECK-NEXT:    [[P:%.*]] = bitcast i8* [[BUF:%.*]] to <256 x i32>*
+; CHECK-NEXT:    store <256 x i32> [[T3]], <256 x i32>* [[P]], align 1024
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 undef, label %l1, label %l2
+
+l1:
+  %t1 = call x86_amx @llvm.x86.tilezero.internal(i16 8, i16 32)
+  %t2 = call <256 x i32> @llvm.x86.cast.tile.to.vector.v256i32(x86_amx %t1)
+  br i1 undef, label %l2, label %exit
+
+l2:
+  %t3 = phi <256 x i32> [ undef, %entry ], [ %t2, %l1 ]
+  %t4 = call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> %t3)
+  %t5 = call <256 x i32> @llvm.x86.cast.tile.to.vector.v256i32(x86_amx %t4)
+  %p = bitcast i8* %buf to <256 x i32>*
+  store <256 x i32> %t5, <256 x i32>* %p
+  br label %exit
+
+exit:
+  ret void
+}
+
+declare x86_amx @llvm.x86.tilezero.internal(i16, i16)
 declare x86_amx @llvm.x86.tileloadd64.internal(i16, i16, i8*, i64)
 declare x86_amx @llvm.x86.tdpbssd.internal(i16, i16, i16, x86_amx, x86_amx, x86_amx)
 declare x86_amx @llvm.x86.tdpbsud.internal(i16, i16, i16, x86_amx, x86_amx, x86_amx)

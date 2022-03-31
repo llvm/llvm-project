@@ -488,6 +488,23 @@ public:
   /// @}
 };
 
+class VPCmpIntrinsic : public VPIntrinsic {
+public:
+  static bool isVPCmp(Intrinsic::ID ID);
+
+  CmpInst::Predicate getPredicate() const;
+
+  /// Methods for support type inquiry through isa, cast, and dyn_cast:
+  /// @{
+  static bool classof(const IntrinsicInst *I) {
+    return VPCmpIntrinsic::isVPCmp(I->getIntrinsicID());
+  }
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+  /// @}
+};
+
 /// This is the common base class for constrained floating point intrinsics.
 class ConstrainedFPIntrinsic : public IntrinsicInst {
 public:

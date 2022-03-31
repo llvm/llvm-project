@@ -22,6 +22,7 @@ Macros:
 
 */
 
+#include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <errno.h>
 

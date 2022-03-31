@@ -438,9 +438,10 @@ define i1 @PR51238(i1 %b, i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: PR51238:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    notb %cl
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    addb %dl, %cl
-; CHECK-NEXT:    movb $1, %al
-; CHECK-NEXT:    adcb $0, %al
+; CHECK-NEXT:    adcb $1, %al
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
    %ny = xor i8 %y, -1
    %nz = xor i8 %z, -1

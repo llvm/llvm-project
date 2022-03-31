@@ -70,6 +70,7 @@ After branching for an LLVM release:
 2. Update the ``libcxx/include/__libcpp_version`` file
 3. Update the version number in ``libcxx/docs/conf.py``
 4. Update ``_LIBCPPABI_VERSION`` in ``libcxxabi/include/cxxabi.h``
+5. Update ``_LIBUNWIND_VERSION`` in ``libunwind/include/__libunwind_config.h``
 
 Exporting new symbols from the library
 ======================================

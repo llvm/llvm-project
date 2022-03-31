@@ -307,9 +307,9 @@ struct VPTransformState {
     /// header BasicBlock.
     BasicBlock *PrevBB = nullptr;
 
-    /// The last IR BasicBlock in the output IR. Set to the new latch
-    /// BasicBlock, used for placing the newly created BasicBlocks.
-    BasicBlock *LastBB = nullptr;
+    /// The last IR BasicBlock in the output IR. Set to the exit block of the
+    /// vector loop.
+    BasicBlock *ExitBB = nullptr;
 
     /// The IR BasicBlock that is the preheader of the vector loop in the output
     /// IR.
@@ -352,6 +352,9 @@ struct VPTransformState {
   /// Holds recipes that may generate a poison value that is used after
   /// vectorization, even when their operands are not poison.
   SmallPtrSet<VPRecipeBase *, 16> MayGeneratePoisonRecipes;
+
+  /// The loop object for the current parent region, or nullptr.
+  Loop *CurrentVectorLoop = nullptr;
 };
 
 /// VPUsers instance used by VPBlockBase to manage CondBit and the block

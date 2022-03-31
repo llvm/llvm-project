@@ -25,17 +25,18 @@ constexpr void h() {
 label:; // expected-warning {{use of this statement in a constexpr function is incompatible with C++ standards before C++2b}}
 }
 
-struct NonLiteral {
+struct NonLiteral { // expected-note 2 {{'NonLiteral' is not literal}}
   NonLiteral() {}
 };
 
 constexpr void non_literal() { // expected-error {{constexpr function never produces a constant expression}}
-  NonLiteral n;                // expected-note {{non-literal type 'NonLiteral' cannot be used in a constant expression}}
+  NonLiteral n;                // expected-note {{non-literal type 'NonLiteral' cannot be used in a constant expression}} \
+                               // expected-warning {{definition of a variable of non-literal type in a constexpr function is incompatible with C++ standards before C++2b}}
 }
 
 constexpr void non_literal2(bool b) {
   if (!b)
-    NonLiteral n;
+    NonLiteral n; // expected-warning {{definition of a variable of non-literal type in a constexpr function is incompatible with C++ standards before C++2b}}
 }
 
 constexpr int c_thread_local(int n) {

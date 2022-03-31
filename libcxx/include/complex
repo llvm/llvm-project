@@ -231,6 +231,7 @@ template<class T> complex<T> tanh (const complex<T>&);
 
 */
 
+#include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <cmath>
 #include <iosfwd>

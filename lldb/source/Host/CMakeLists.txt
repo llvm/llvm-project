@@ -66,7 +66,6 @@ if (CMAKE_SYSTEM_NAME MATCHES "Windows")
     windows/PipeWindows.cpp
     windows/ProcessLauncherWindows.cpp
     windows/ProcessRunLock.cpp
-    windows/Windows.cpp
     )
 else()
   add_host_subdirectory(posix
