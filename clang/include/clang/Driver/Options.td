@@ -2363,7 +2363,6 @@ defm use_cxa_atexit : BoolFOption<"use-cxa-atexit",
   CodeGenOpts<"CXAAtExit">, DefaultTrue,
   NegFlag<SetFalse, [CC1Option], "Don't use __cxa_atexit for calling destructors">,
   PosFlag<SetTrue>>;
-def fno_unit_at_a_time : Flag<["-"], "fno-unit-at-a-time">, Group<f_Group>;
 def fno_unwind_tables : Flag<["-"], "fno-unwind-tables">, Group<f_Group>;
 def fno_verbose_asm : Flag<["-"], "fno-verbose-asm">, Group<f_Group>, Flags<[CC1Option]>,
   MarshallingInfoNegativeFlag<CodeGenOpts<"AsmVerbose">>;
@@ -2787,7 +2786,6 @@ def ftrapv_handler : Separate<["-"], "ftrapv-handler">, Group<f_Group>, Flags<[C
 def ftrap_function_EQ : Joined<["-"], "ftrap-function=">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Issue call to specified function rather than a trap instruction">,
   MarshallingInfoString<CodeGenOpts<"TrapFuncName">>;
-def funit_at_a_time : Flag<["-"], "funit-at-a-time">, Group<f_Group>;
 def funroll_loops : Flag<["-"], "funroll-loops">, Group<f_Group>,
   HelpText<"Turn on loop unroller">, Flags<[CC1Option]>;
 def fno_unroll_loops : Flag<["-"], "fno-unroll-loops">, Group<f_Group>,
@@ -4609,6 +4607,7 @@ defm tree_salias : BooleanFFlag<"tree-salias">, Group<clang_ignored_f_Group>;
 defm tree_ter : BooleanFFlag<"tree-ter">, Group<clang_ignored_gcc_optimization_f_Group>;
 defm tree_vectorizer_verbose : BooleanFFlag<"tree-vectorizer-verbose">, Group<clang_ignored_f_Group>;
 defm tree_vrp : BooleanFFlag<"tree-vrp">, Group<clang_ignored_gcc_optimization_f_Group>;
+defm : BooleanFFlag<"unit-at-a-time">, Group<clang_ignored_gcc_optimization_f_Group>;
 defm unroll_all_loops : BooleanFFlag<"unroll-all-loops">, Group<clang_ignored_gcc_optimization_f_Group>;
 defm unsafe_loop_optimizations : BooleanFFlag<"unsafe-loop-optimizations">,
     Group<clang_ignored_gcc_optimization_f_Group>;
