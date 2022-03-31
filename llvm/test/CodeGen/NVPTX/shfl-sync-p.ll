@@ -9,8 +9,8 @@ declare {float, i1} @llvm.nvvm.shfl.sync.bfly.f32p(i32, float, i32, i32)
 declare {i32, i1} @llvm.nvvm.shfl.sync.idx.i32p(i32, i32, i32, i32)
 declare {float, i1} @llvm.nvvm.shfl.sync.idx.f32p(i32, float, i32, i32)
 
-; CHECK-LABEL: .func{{.*}}shfl.sync.i32.rrr
-define {i32, i1} @shfl.sync.i32.rrr(i32 %mask, i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: .func{{.*}}shfl_sync_i32_rrr
+define {i32, i1} @shfl_sync_i32_rrr(i32 %mask, i32 %a, i32 %b, i32 %c) {
   ; CHECK: ld.param.u32 [[MASK:%r[0-9]+]]
   ; CHECK: ld.param.u32 [[A:%r[0-9]+]]
   ; CHECK: ld.param.u32 [[B:%r[0-9]+]]
@@ -21,8 +21,8 @@ define {i32, i1} @shfl.sync.i32.rrr(i32 %mask, i32 %a, i32 %b, i32 %c) {
   ret {i32, i1} %val
 }
 
-; CHECK-LABEL: .func{{.*}}shfl.sync.i32.irr
-define {i32, i1} @shfl.sync.i32.irr(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: .func{{.*}}shfl_sync_i32_irr
+define {i32, i1} @shfl_sync_i32_irr(i32 %a, i32 %b, i32 %c) {
   ; CHECK: ld.param.u32 [[A:%r[0-9]+]]
   ; CHECK: ld.param.u32 [[B:%r[0-9]+]]
   ; CHECK: ld.param.u32 [[C:%r[0-9]+]]
@@ -32,8 +32,8 @@ define {i32, i1} @shfl.sync.i32.irr(i32 %a, i32 %b, i32 %c) {
   ret {i32, i1} %val
 }
 
-; CHECK-LABEL: .func{{.*}}shfl.sync.i32.rri
-define {i32, i1} @shfl.sync.i32.rri(i32 %mask, i32 %a, i32 %b) {
+; CHECK-LABEL: .func{{.*}}shfl_sync_i32_rri
+define {i32, i1} @shfl_sync_i32_rri(i32 %mask, i32 %a, i32 %b) {
   ; CHECK: ld.param.u32 [[MASK:%r[0-9]+]]
   ; CHECK: ld.param.u32 [[A:%r[0-9]+]]
   ; CHECK: ld.param.u32 [[B:%r[0-9]+]]
@@ -43,8 +43,8 @@ define {i32, i1} @shfl.sync.i32.rri(i32 %mask, i32 %a, i32 %b) {
   ret {i32, i1} %val
 }
 
-; CHECK-LABEL: .func{{.*}}shfl.sync.i32.iri
-define {i32, i1} @shfl.sync.i32.iri(i32 %a, i32 %b) {
+; CHECK-LABEL: .func{{.*}}shfl_sync_i32_iri
+define {i32, i1} @shfl_sync_i32_iri(i32 %a, i32 %b) {
   ; CHECK: ld.param.u32 [[A:%r[0-9]+]]
   ; CHECK: ld.param.u32 [[B:%r[0-9]+]]
   ; CHECK: shfl.sync.down.b32 [[OUT:%r[0-9]+]]|[[OUTP:%p[0-9]+]], [[A]], [[B]], 2, 1;
@@ -53,8 +53,8 @@ define {i32, i1} @shfl.sync.i32.iri(i32 %a, i32 %b) {
   ret {i32, i1} %val
 }
 
-; CHECK-LABEL: .func{{.*}}shfl.sync.i32.rir
-define {i32, i1} @shfl.sync.i32.rir(i32 %mask, i32 %a, i32 %c) {
+; CHECK-LABEL: .func{{.*}}shfl_sync_i32_rir
+define {i32, i1} @shfl_sync_i32_rir(i32 %mask, i32 %a, i32 %c) {
   ; CHECK: ld.param.u32 [[MASK:%r[0-9]+]]
   ; CHECK: ld.param.u32 [[A:%r[0-9]+]]
   ; CHECK: ld.param.u32 [[C:%r[0-9]+]]
@@ -64,8 +64,8 @@ define {i32, i1} @shfl.sync.i32.rir(i32 %mask, i32 %a, i32 %c) {
   ret {i32, i1} %val
 }
 
-; CHECK-LABEL: .func{{.*}}shfl.sync.i32.iir
-define {i32, i1} @shfl.sync.i32.iir(i32 %a, i32 %c) {
+; CHECK-LABEL: .func{{.*}}shfl_sync_i32_iir
+define {i32, i1} @shfl_sync_i32_iir(i32 %a, i32 %c) {
   ; CHECK: ld.param.u32 [[A:%r[0-9]+]]
   ; CHECK: ld.param.u32 [[C:%r[0-9]+]]
   ; CHECK: shfl.sync.down.b32 [[OUT:%r[0-9]+]]|[[OUTP:%p[0-9]+]], [[A]], 2, [[C]], 1;
@@ -74,8 +74,8 @@ define {i32, i1} @shfl.sync.i32.iir(i32 %a, i32 %c) {
   ret {i32, i1} %val
 }
 
-; CHECK-LABEL: .func{{.*}}shfl.sync.i32.rii
-define {i32, i1} @shfl.sync.i32.rii(i32 %mask, i32 %a) {
+; CHECK-LABEL: .func{{.*}}shfl_sync_i32_rii
+define {i32, i1} @shfl_sync_i32_rii(i32 %mask, i32 %a) {
   ; CHECK: ld.param.u32 [[MASK:%r[0-9]+]]
   ; CHECK: ld.param.u32 [[A:%r[0-9]+]]
   ; CHECK: shfl.sync.down.b32 [[OUT:%r[0-9]+]]|[[OUTP:%p[0-9]+]], [[A]], 1, 2, [[MASK]];
@@ -84,8 +84,8 @@ define {i32, i1} @shfl.sync.i32.rii(i32 %mask, i32 %a) {
   ret {i32, i1} %val
 }
 
-; CHECK-LABEL: .func{{.*}}shfl.sync.i32.iii
-define {i32, i1} @shfl.sync.i32.iii(i32 %a, i32 %b) {
+; CHECK-LABEL: .func{{.*}}shfl_sync_i32_iii
+define {i32, i1} @shfl_sync_i32_iii(i32 %a, i32 %b) {
   ; CHECK: ld.param.u32 [[A:%r[0-9]+]]
   ; CHECK: shfl.sync.down.b32 [[OUT:%r[0-9]+]]|[[OUTP:%p[0-9]+]], [[A]], 2, 3, 1;
   ; CHECK: st.param.{{.}}32 {{.*}}, [[OUT]]
@@ -95,8 +95,8 @@ define {i32, i1} @shfl.sync.i32.iii(i32 %a, i32 %b) {
 
 ;; Same intrinsics, but for float
 
-; CHECK-LABEL: .func{{.*}}shfl.sync.f32.rrr
-define {float, i1} @shfl.sync.f32.rrr(i32 %mask, float %a, i32 %b, i32 %c) {
+; CHECK-LABEL: .func{{.*}}shfl_sync_f32_rrr
+define {float, i1} @shfl_sync_f32_rrr(i32 %mask, float %a, i32 %b, i32 %c) {
   ; CHECK: ld.param.u32 [[MASK:%r[0-9]+]]
   ; CHECK: ld.param.f32 [[A:%f[0-9]+]]
   ; CHECK: ld.param.u32 [[B:%r[0-9]+]]
@@ -107,8 +107,8 @@ define {float, i1} @shfl.sync.f32.rrr(i32 %mask, float %a, i32 %b, i32 %c) {
   ret {float, i1} %val
 }
 
-; CHECK-LABEL: .func{{.*}}shfl.sync.f32.irr
-define {float, i1} @shfl.sync.f32.irr(float %a, i32 %b, i32 %c) {
+; CHECK-LABEL: .func{{.*}}shfl_sync_f32_irr
+define {float, i1} @shfl_sync_f32_irr(float %a, i32 %b, i32 %c) {
   ; CHECK: ld.param.f32 [[A:%f[0-9]+]]
   ; CHECK: ld.param.u32 [[B:%r[0-9]+]]
   ; CHECK: ld.param.u32 [[C:%r[0-9]+]]
@@ -118,8 +118,8 @@ define {float, i1} @shfl.sync.f32.irr(float %a, i32 %b, i32 %c) {
   ret {float, i1} %val
 }
 
-; CHECK-LABEL: .func{{.*}}shfl.sync.f32.rri
-define {float, i1} @shfl.sync.f32.rri(i32 %mask, float %a, i32 %b) {
+; CHECK-LABEL: .func{{.*}}shfl_sync_f32_rri
+define {float, i1} @shfl_sync_f32_rri(i32 %mask, float %a, i32 %b) {
   ; CHECK: ld.param.u32 [[MASK:%r[0-9]+]]
   ; CHECK: ld.param.f32 [[A:%f[0-9]+]]
   ; CHECK: ld.param.u32 [[B:%r[0-9]+]]
@@ -129,8 +129,8 @@ define {float, i1} @shfl.sync.f32.rri(i32 %mask, float %a, i32 %b) {
   ret {float, i1} %val
 }
 
-; CHECK-LABEL: .func{{.*}}shfl.sync.f32.iri
-define {float, i1} @shfl.sync.f32.iri(float %a, i32 %b) {
+; CHECK-LABEL: .func{{.*}}shfl_sync_f32_iri
+define {float, i1} @shfl_sync_f32_iri(float %a, i32 %b) {
   ; CHECK: ld.param.f32 [[A:%f[0-9]+]]
   ; CHECK: ld.param.u32 [[B:%r[0-9]+]]
   ; CHECK: shfl.sync.down.b32 [[OUT:%f[0-9]+]]|[[OUTP:%p[0-9]+]], [[A]], [[B]], 2, 1;
@@ -139,8 +139,8 @@ define {float, i1} @shfl.sync.f32.iri(float %a, i32 %b) {
   ret {float, i1} %val
 }
 
-; CHECK-LABEL: .func{{.*}}shfl.sync.f32.rir
-define {float, i1} @shfl.sync.f32.rir(i32 %mask, float %a, i32 %c) {
+; CHECK-LABEL: .func{{.*}}shfl_sync_f32_rir
+define {float, i1} @shfl_sync_f32_rir(i32 %mask, float %a, i32 %c) {
   ; CHECK: ld.param.u32 [[MASK:%r[0-9]+]]
   ; CHECK: ld.param.f32 [[A:%f[0-9]+]]
   ; CHECK: ld.param.u32 [[C:%r[0-9]+]]
@@ -150,8 +150,8 @@ define {float, i1} @shfl.sync.f32.rir(i32 %mask, float %a, i32 %c) {
   ret {float, i1} %val
 }
 
-; CHECK-LABEL: .func{{.*}}shfl.sync.f32.iir
-define {float, i1} @shfl.sync.f32.iir(float %a, i32 %c) {
+; CHECK-LABEL: .func{{.*}}shfl_sync_f32_iir
+define {float, i1} @shfl_sync_f32_iir(float %a, i32 %c) {
   ; CHECK: ld.param.f32 [[A:%f[0-9]+]]
   ; CHECK: ld.param.u32 [[C:%r[0-9]+]]
   ; CHECK: shfl.sync.down.b32 [[OUT:%f[0-9]+]]|[[OUTP:%p[0-9]+]], [[A]], 2, [[C]], 1;
@@ -160,8 +160,8 @@ define {float, i1} @shfl.sync.f32.iir(float %a, i32 %c) {
   ret {float, i1} %val
 }
 
-; CHECK-LABEL: .func{{.*}}shfl.sync.f32.rii
-define {float, i1} @shfl.sync.f32.rii(i32 %mask, float %a) {
+; CHECK-LABEL: .func{{.*}}shfl_sync_f32_rii
+define {float, i1} @shfl_sync_f32_rii(i32 %mask, float %a) {
   ; CHECK: ld.param.u32 [[MASK:%r[0-9]+]]
   ; CHECK: ld.param.f32 [[A:%f[0-9]+]]
   ; CHECK: shfl.sync.down.b32 [[OUT:%f[0-9]+]]|[[OUTP:%p[0-9]+]], [[A]], 1, 2, [[MASK]];
@@ -170,8 +170,8 @@ define {float, i1} @shfl.sync.f32.rii(i32 %mask, float %a) {
   ret {float, i1} %val
 }
 
-; CHECK-LABEL: .func{{.*}}shfl.sync.f32.iii
-define {float, i1} @shfl.sync.f32.iii(float %a, i32 %b) {
+; CHECK-LABEL: .func{{.*}}shfl_sync_f32_iii
+define {float, i1} @shfl_sync_f32_iii(float %a, i32 %b) {
   ; CHECK: ld.param.f32 [[A:%f[0-9]+]]
   ; CHECK: shfl.sync.down.b32 [[OUT:%f[0-9]+]]|[[OUTP:%p[0-9]+]], [[A]], 2, 3, 1;
   ; CHECK: st.param.{{.}}32 {{.*}}, [[OUT]]

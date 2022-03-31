@@ -12,8 +12,8 @@ declare float @llvm.nvvm.shfl.idx.f32(float, i32, i32)
 ; Try all four permutations of register and immediate parameters with
 ; shfl.down.
 
-; CHECK-LABEL: .func{{.*}}shfl.down1
-define i32 @shfl.down1(i32 %in) {
+; CHECK-LABEL: .func{{.*}}shfl_down1
+define i32 @shfl_down1(i32 %in) {
   ; CHECK: ld.param.u32 [[IN:%r[0-9]+]]
   ; CHECK: shfl.down.b32 [[OUT:%r[0-9]+]], [[IN]], 1, 2;
   ; CHECK: st.param.{{.}}32 {{.*}}, [[OUT]]
@@ -21,8 +21,8 @@ define i32 @shfl.down1(i32 %in) {
   ret i32 %val
 }
 
-; CHECK-LABEL: .func{{.*}}shfl.down2
-define i32 @shfl.down2(i32 %in, i32 %width) {
+; CHECK-LABEL: .func{{.*}}shfl_down2
+define i32 @shfl_down2(i32 %in, i32 %width) {
   ; CHECK: ld.param.u32 [[IN1:%r[0-9]+]]
   ; CHECK: ld.param.u32 [[IN2:%r[0-9]+]]
   ; CHECK: shfl.down.{{.}}32 %r{{[0-9]+}}, [[IN1]], [[IN2]], 3;
@@ -30,8 +30,8 @@ define i32 @shfl.down2(i32 %in, i32 %width) {
   ret i32 %val
 }
 
-; CHECK-LABEL: .func{{.*}}shfl.down3
-define i32 @shfl.down3(i32 %in, i32 %mask) {
+; CHECK-LABEL: .func{{.*}}shfl_down3
+define i32 @shfl_down3(i32 %in, i32 %mask) {
   ; CHECK: ld.param.u32 [[IN1:%r[0-9]+]]
   ; CHECK: ld.param.u32 [[IN2:%r[0-9]+]]
   ; CHECK: shfl.down.{{.}}32 %r{{[0-9]+}}, [[IN1]], 4, [[IN2]];
@@ -39,8 +39,8 @@ define i32 @shfl.down3(i32 %in, i32 %mask) {
   ret i32 %val
 }
 
-; CHECK-LABEL: .func{{.*}}shfl.down4
-define i32 @shfl.down4(i32 %in, i32 %width, i32 %mask) {
+; CHECK-LABEL: .func{{.*}}shfl_down4
+define i32 @shfl_down4(i32 %in, i32 %width, i32 %mask) {
   ; CHECK: ld.param.u32 [[IN1:%r[0-9]+]]
   ; CHECK: ld.param.u32 [[IN2:%r[0-9]+]]
   ; CHECK: ld.param.u32 [[IN3:%r[0-9]+]]
@@ -50,8 +50,8 @@ define i32 @shfl.down4(i32 %in, i32 %width, i32 %mask) {
 }
 
 ; Try shfl.down with floating-point params.
-; CHECK-LABEL: .func{{.*}}shfl.down.float
-define float @shfl.down.float(float %in) {
+; CHECK-LABEL: .func{{.*}}shfl_down_float
+define float @shfl_down_float(float %in) {
   ; CHECK: ld.param.f32 [[IN:%f[0-9]+]]
   ; CHECK: shfl.down.b32 [[OUT:%f[0-9]+]], [[IN]], 5, 6;
   ; CHECK: st.param.{{.}}32 {{.*}}, [[OUT]]
@@ -61,7 +61,7 @@ define float @shfl.down.float(float %in) {
 
 ; Try the rest of the shfl modes.  Hopefully they're declared in such a way
 ; that if shfl.down works correctly, they also work correctly.
-define void @shfl.rest(i32 %in_i32, float %in_float, i32* %out_i32, float* %out_float) {
+define void @shfl_rest(i32 %in_i32, float %in_float, i32* %out_i32, float* %out_float) {
   ; CHECK: shfl.up.b32 %r{{[0-9]+}}, %r{{[0-9]+}}, 1, 2;
   %up_i32 = call i32 @llvm.nvvm.shfl.up.i32(i32 %in_i32, i32 1, i32 2)
   store i32 %up_i32, i32* %out_i32
