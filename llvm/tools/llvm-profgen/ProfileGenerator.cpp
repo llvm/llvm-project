@@ -712,7 +712,21 @@ FunctionSamples &CSProfileGenerator::getFunctionProfileForContext(
     FunctionSamples &FProfile = Ret.first->second;
     FProfile.setContext(FContext);
     return Ret.first->second;
+  } else {
+    // Update ContextWasInlined attribute for existing contexts.
+    // The current function can be called in two ways:
+    //  - when processing a probe of the current frame
+    //  - when processing the entry probe of an inlinee's frame, which
+    //    is then used to update the callsite count of the current frame.
+    // The two can happen in any order, hence here we are making sure
+    // `ContextWasInlined` is always set as expected.
+    // TODO: Note that the former does not always happen if no probes of the
+    // current frame has samples, and if the latter happens, we could lose the
+    // attribute. This should be fixed.
+    if (WasLeafInlined)
+      I->second.getContext().setAttribute(ContextWasInlined);
   }
+
   return I->second;
 }
 
