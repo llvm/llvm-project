@@ -1,0 +1,68 @@
+## Test that we print a warning for ELF, WASM, and COFF but still dump the contents for all.
+
+# RUN: yaml2obj --docnum=1 %s -o %t_macho
+# RUN: yaml2obj --docnum=2 %s -o %t_coff
+# RUN: yaml2obj --docnum=3 %s -o %t_elf
+# RUN: yaml2obj --docnum=4 %s -o %t_wasm
+# RUN: yaml2obj --docnum=5 %s -o %t_xcoff
+
+# RUN: llvm-readobj --syms --sort-symbols=type,name \
+# RUN:   %t_coff %t_elf %t_wasm %t_xcoff %t_macho 2>&1 | FileCheck %s \
+# RUN:  -DMSG="--sort-symbols is not supported yet for this format"
+
+# CHECK: warning: '{{.+}}_coff': [[MSG]]
+# CHECK: Format: COFF-ARM
+# CHECK: warning: '{{.+}}_elf': [[MSG]]
+# CHECK: Format: elf64-unknown
+# CHECK: warning: '{{.+}}_wasm': [[MSG]]
+# CHECK: Format: WASM
+# CHECK: warning: '{{.+}}_xcoff': [[MSG]]
+# CHECK: Format: aixcoff-rs6000
+# CHECK-NOT: warning '{{.+}}_macho': [[MSG]]
+# CHECK: Format: Mach-O 64-bit x86-64
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x1000007
+  cpusubtype:      0x3
+  filetype:        0x1
+  ncmds:           0
+  sizeofcmds:      0
+  flags:           0x2000
+  reserved:        0x0
+...
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_ARMNT
+  Characteristics: [  ]
+sections:
+symbols:
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:    .gnu.version
+    Type:    SHT_GNU_versym
+...
+--- !WASM
+FileHeader:
+  Version:         0x00000001
+Sections:
+  - Type:            DATA
+    Segments:
+      - SectionOffset:   6
+        InitFlags:       0
+        Offset:
+          Opcode:          GLOBAL_GET
+          Index:           1
+        Content:         '64'
+...
+--- !XCOFF
+FileHeader:
+  MagicNumber:         0x01DF
+  CreationTime:        1
+  EntriesInSymbolTable: 1
+...
