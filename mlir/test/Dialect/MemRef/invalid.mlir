@@ -393,8 +393,17 @@ func @copy_different_eltype(%arg0: memref<2xf32>, %arg1: memref<2xf16>) {
 // -----
 
 func @expand_shape(%arg0: memref<f32>) {
-  // expected-error @+1 {{expected non-zero memref ranks}}
+  // expected-error @+1 {{invalid number of reassociation groups: found 1, expected 0}}
   %0 = memref.expand_shape %arg0 [[0]] : memref<f32> into memref<f32>
+  return
+}
+
+// -----
+
+func @expand_shape(%arg0: memref<f32>) {
+  // expected-error @+1 {{rank 0 memrefs can only be extended/collapsed with/from ones}}
+  %0 = memref.expand_shape %arg0 [] : memref<f32> into memref<1x2xf32>
+  return
 }
 
 // -----
@@ -407,8 +416,18 @@ func @collapse_shape_to_higher_rank(%arg0: memref<f32>) {
 // -----
 
 func @expand_shape_to_smaller_rank(%arg0: memref<1xf32>) {
-  // expected-error @+1 {{expected the type 'memref<f32>' to have higher rank than the type = 'memref<1xf32>'}}
+  // expected-error @+1 {{op reassociation index 0 is out of bounds}}
   %0 = memref.expand_shape %arg0 [[0]] : memref<1xf32> into memref<f32>
+}
+
+// -----
+
+func @expand_shape_invalid_result_layout(
+    %arg0: memref<30x20xf32, offset : 100, strides : [4000, 2]>) {
+  // expected-error @+1 {{expected expanded type to be 'memref<2x15x20xf32, affine_map<(d0, d1, d2) -> (d0 * 60000 + d1 * 4000 + d2 * 2 + 100)>>' but found 'memref<2x15x20xf32, affine_map<(d0, d1, d2) -> (d0 * 5000 + d1 * 4000 + d2 * 2 + 100)>>'}}
+  %0 = memref.expand_shape %arg0 [[0, 1], [2]] :
+      memref<30x20xf32, offset : 100, strides : [4000, 2]>
+      into memref<2x15x20xf32, offset : 100, strides : [5000, 4000, 2]>
 }
 
 // -----
@@ -446,7 +465,7 @@ func @collapse_shape_wrong_collapsed_type(%arg0: memref<?x?x?xf32>) {
 
 func @expand_shape_illegal_dynamic_memref
   (%arg0: memref<?x?x?xf32>) -> memref<?x?x?x4x?xf32> {
-  // expected-error @+1 {{invalid to have a single dimension (2) expanded into multiple dynamic dims (2,4)}}
+  // expected-error @+1 {{at most one dimension in a reassociation group may be dynamic}}
   %0 = memref.expand_shape %arg0 [[0], [1], [2, 3, 4]]
       : memref<?x?x?xf32> into memref<?x?x?x4x?xf32>
   return %0 : memref<?x?x?x4x?xf32>
@@ -456,7 +475,7 @@ func @expand_shape_illegal_dynamic_memref
 
 func @expand_shape_illegal_static_memref
   (%arg0: memref<2x3x20xf32>) -> memref<2x3x2x4x5xf32> {
-  // expected-error @+1 {{expected dimension 2 of collapsed type to be static value of 40}}
+  // expected-error @+1 {{collapsed dim size (20) must equal reassociation group size (40)}}
   %0 = memref.expand_shape %arg0 [[0], [1], [2, 3, 4]]
       : memref<2x3x20xf32> into memref<2x3x2x4x5xf32>
   return %0 : memref<2x3x2x4x5xf32>
@@ -476,7 +495,7 @@ func @collapse_shape_illegal_static_memref
 
 func @expand_shape_illegal_mixed_memref(%arg0 : memref<?x?xf32>)
     -> memref<?x4x5xf32> {
-  // expected-error @+1 {{expected dimension 1 of collapsed type to be static value of 5}}
+  // expected-error @+1 {{collapsed dim (1) must be dynamic if and only if reassociation group is dynamic}}
   %0 = memref.expand_shape %arg0 [[0, 1], [2]]
       : memref<?x?xf32> into memref<?x4x5xf32>
   return %0 : memref<?x4x5xf32>
@@ -486,9 +505,31 @@ func @expand_shape_illegal_mixed_memref(%arg0 : memref<?x?xf32>)
 
 func @expand_shape_illegal_mixed_memref_2(%arg0 : memref<?x?xf32>)
     -> memref<?x4x5xf32> {
-  // expected-error @+1 {{expected dimension 1 of collapsed type to be static value of 20}}
+  // expected-error @+1 {{collapsed dim (1) must be dynamic if and only if reassociation group is dynamic}}
   %0 = memref.expand_shape %arg0 [[0], [1, 2]]
       : memref<?x?xf32> into memref<?x4x5xf32>
+  return %0 : memref<?x4x5xf32>
+}
+
+// -----
+
+func @expand_shape_unsupported_src_layout(
+    %arg0 : memref<20x2x10x5xf32, offset: 0, strides: [100, 10, 50, 1]>)
+    -> memref<20x2x2x5x5xf32, offset : 0, strides : [100, 10, 250, 50, 1]> {
+  // expected-error @+1 {{invalid source layout map}}
+  %0 = memref.expand_shape %arg0 [[0], [1], [2, 3], [4]] :
+      memref<20x2x10x5xf32, offset: 0, strides: [100, 10, 50, 1]>
+      into memref<20x2x2x5x5xf32, offset : 0, strides : [100, 10, 250, 50, 1]>
+  return %0 : memref<20x2x2x5x5xf32, offset : 0, strides : [100, 10, 250, 50, 1]>
+}
+
+// -----
+
+func @expand_shape_invalid_static_dim_size(%arg0 : memref<?x21xf32>)
+    -> memref<?x4x5xf32> {
+  // expected-error @+1 {{collapsed dim size (21) must equal reassociation group size (20)}}
+  %0 = memref.expand_shape %arg0 [[0], [1, 2]]
+      : memref<?x21xf32> into memref<?x4x5xf32>
   return %0 : memref<?x4x5xf32>
 }
 
