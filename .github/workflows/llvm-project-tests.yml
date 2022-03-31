@@ -1,0 +1,62 @@
+name: LLVM Project Tests
+
+on:
+  workflow_call:
+    inputs:
+      build_target:
+        required: true
+        type: string
+
+      projects:
+        required: true
+        type: string
+
+concurrency:
+  # Skip intermediate builds: always.
+  # Cancel intermediate builds: only if it is a pull request build.
+  # If the group name here is the same as the group name in the workflow that includes
+  # this one, then the action will try to wait on itself and get stuck.
+  group: llvm-project-${{ github.workflow }}-${{ inputs.projects}}${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
+env:
+  # Workaround for build faliure on Mac OS X: llvm.org/PR46190, https://github.com/actions/virtual-environments/issues/2274
+  CPLUS_INCLUDE_PATH: /usr/local/opt/llvm/include/c++/v1:/Library/Developer/CommandLineTools/SDKs/MacOSX10.15.sdk/usr/include
+
+jobs:
+  lit-tests:
+    name: Lit Tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+          # Use a specific version of macOS to ensure the CPLUS_INCLUDE_PATH workaround works.
+          - macOS-10.15
+    steps:
+      - name: Setup Windows
+        if: startsWith(matrix.os, 'windows')
+        uses: llvm/actions/setup-windows@main
+        with:
+          arch: amd64
+      - name: Install Ninja
+        uses: llvm/actions/install-ninja@main
+      - uses: actions/checkout@v1
+        with:
+          fetch-depth: 250
+      - name: Build and Test
+        uses: llvm/actions/build-test-llvm-project@main
+        with:
+          cmake_args: '-GNinja -DLLVM_ENABLE_PROJECTS="${{ inputs.projects }}" -DCMAKE_BUILD_TYPE=Release -DLLDB_INCLUDE_TESTS=OFF'
+          build_target:  '${{ inputs.build_target }}'
+
+      - name: Build and Test libclc
+        if: "!startsWith(matrix.os, 'windows') && contains(inputs.projects, 'libclc')"
+        run: |
+          # Make sure all of LLVM libraries that llvm-config needs are built.
+          ninja -C build
+          cmake -G Ninja -S libclc -B libclc-build -DLLVM_CONFIG=`pwd`/build/bin/llvm-config -DLIBCLC_TARGETS_TO_BUILD="amdgcn--;amdgcn--amdhsa;r600--;nvptx--;nvptx64--;nvptx--nvidiacl;nvptx64--nvidiacl"
+          ninja -C libclc-build
+          ninja -C libclc-build test

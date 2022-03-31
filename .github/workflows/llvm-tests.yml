@@ -7,10 +7,12 @@ on:
     paths:
       - 'llvm/**'
       - '.github/workflows/llvm-tests.yml'
+      - '.github/workflows/llvm-project-tests.yml'
   pull_request:
     paths:
       - 'llvm/**'
       - '.github/workflows/llvm-tests.yml'
+      - '.github/workflows/llvm-project-tests.yml'
 
 concurrency:
   # Skip intermediate builds: always.
@@ -20,31 +22,28 @@ concurrency:
 
 
 jobs:
-  build_llvm:
-    name: llvm check-all
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os:
-          - ubuntu-latest
-          - windows-latest
-          - macOS-latest
-    steps:
-    - name: Setup Windows
-      if: startsWith(matrix.os, 'windows')
-      uses: llvm/actions/setup-windows@main
-      with:
-        arch: amd64
-    - name: Install Ninja
-      uses: llvm/actions/install-ninja@main
-    - uses: actions/checkout@v1
-      with:
-        fetch-depth: 250
-    - name: Test llvm
-      uses: llvm/actions/build-test-llvm-project@main
-      with:
-        cmake_args: -G Ninja -DCMAKE_BUILD_TYPE=Release
+  check_all:
+    name: Test llvm,clang,libclc
+    uses: llvm/llvm-project/.github/workflows/llvm-project-tests.yml@release/14.x
+    with:
+      build_target: check-all
+      projects: clang;libclc
+
+  # These need to be separate from the check_all job, becuase there is not enough disk
+  # space to build all these projects on Windows.
+  build_lldb:
+    name: Build lldb
+    uses: llvm/llvm-project/.github/workflows/llvm-project-tests.yml@release/14.x
+    with:
+      build_target: ''
+      projects: clang;lldb
+
+  check_lld:
+    name: Test lld
+    uses: llvm/llvm-project/.github/workflows/llvm-project-tests.yml@release/14.x
+    with:
+      build_target: check-lld
+      projects: lld
 
   abi-dump-setup:
     runs-on: ubuntu-latest
