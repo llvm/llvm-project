@@ -282,9 +282,17 @@ protected:
     };
 
     void Clear() {
+      switch (m_mode) {
+      case Mode::Inlined:
+        m_inlined.Clear();
+        break;
+      case Mode::Outsourced:
+        m_outsourced.Clear();
+        break;
+      case Mode::Invalid:
+        break;
+      }
       m_mode = Mode::Invalid;
-      m_inlined.Clear();
-      m_outsourced.Clear();
     }
 
     Impl() {}
