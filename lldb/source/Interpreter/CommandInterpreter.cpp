@@ -244,6 +244,12 @@ bool CommandInterpreter::GetRepeatPreviousCommand() const {
       nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
 }
 
+bool CommandInterpreter::GetRequireCommandOverwrite() const {
+  const uint32_t idx = ePropertyRequireCommandOverwrite;
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(
+      nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
+}
+
 void CommandInterpreter::Initialize() {
   LLDB_SCOPED_TIMER();
 
