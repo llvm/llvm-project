@@ -3,3 +3,6 @@ Name: CxxInterop
 Classes:
 - Name: NSSomeClass
   SwiftName: SomeClass
+Enumerators:
+- Name: SomeClassRed
+  SwiftName: red

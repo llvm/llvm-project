@@ -7,3 +7,7 @@
 // CHECK: Dumping NSSomeClass:
 // CHECK-NEXT: ObjCInterfaceDecl {{.+}} imported in CxxInteropKit <undeserialized declarations> NSSomeClass
 // CHECK-NEXT: SwiftNameAttr {{.+}} <<invalid sloc>> "SomeClass"
+
+// CHECK: Dumping SomeClassRed:
+// CHECK-NEXT: EnumConstantDecl {{.+}} imported in CxxInteropKit SomeClassRed 'ColorEnum'
+// CHECK-NEXT: SwiftNameAttr {{.+}} <<invalid sloc>> "red"

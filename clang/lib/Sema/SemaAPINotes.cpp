@@ -884,12 +884,11 @@ void Sema::ProcessAPINotes(Decl *D) {
 
       return;
     }
-
-    return;
   }
 
   // Enumerators.
-  if (D->getDeclContext()->getRedeclContext()->isFileContext()) {
+  if (D->getDeclContext()->getRedeclContext()->isFileContext() ||
+      D->getDeclContext()->getRedeclContext()->isExternCContext()) {
     if (auto EnumConstant = dyn_cast<EnumConstantDecl>(D)) {
       for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
         auto Info = Reader->lookupEnumConstant(EnumConstant->getName());
