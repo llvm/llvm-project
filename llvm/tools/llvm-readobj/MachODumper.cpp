@@ -621,7 +621,9 @@ StringRef MachODumper::getSymbolName(const SymbolRef &Symbol) const {
 }
 
 uint8_t MachODumper::getSymbolType(const SymbolRef &Symbol) const {
-  return Obj->getSymbol64TableEntry(Symbol.getRawDataRefImpl()).n_type;
+  return Obj->is64Bit()
+      ? Obj->getSymbol64TableEntry(Symbol.getRawDataRefImpl()).n_type
+      : Obj->getSymbolTableEntry(Symbol.getRawDataRefImpl()).n_type;
 }
 
 bool MachODumper::compareSymbolsByName(SymbolRef LHS, SymbolRef RHS) const {
