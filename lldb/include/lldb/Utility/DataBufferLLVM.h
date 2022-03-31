@@ -18,7 +18,7 @@
 namespace llvm {
 class WritableMemoryBuffer;
 class Twine;
-}
+} // namespace llvm
 
 namespace lldb_private {
 
@@ -31,8 +31,6 @@ public:
   const uint8_t *GetBytes() const override;
   lldb::offset_t GetByteSize() const override;
 
-  char *GetChars() { return reinterpret_cast<char *>(GetBytes()); }
-
 private:
   friend FileSystem;
   /// Construct a DataBufferLLVM from \p Buffer.  \p Buffer must be a valid
@@ -41,6 +39,6 @@ private:
 
   std::unique_ptr<llvm::WritableMemoryBuffer> Buffer;
 };
-}
+} // namespace lldb_private
 
 #endif
