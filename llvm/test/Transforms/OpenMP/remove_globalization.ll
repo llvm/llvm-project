@@ -32,7 +32,7 @@ define void @kernel() {
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* nonnull null, i8 1, i1 false, i1 true)
 ; CHECK-NEXT:    call void @foo() #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    call void @bar() #[[ATTR0]]
-; CHECK-NEXT:    call void @unknown_no_openmp() #[[ATTR5:[0-9]+]]
+; CHECK-NEXT:    call void @unknown_no_openmp()
 ; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* nonnull null, i8 1, i1 true)
 ; CHECK-NEXT:    ret void
 ;
@@ -41,7 +41,7 @@ define void @kernel() {
 ; CHECK-DISABLED-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* nonnull null, i8 1, i1 false, i1 true)
 ; CHECK-DISABLED-NEXT:    call void @foo() #[[ATTR0:[0-9]+]]
 ; CHECK-DISABLED-NEXT:    call void @bar() #[[ATTR0]]
-; CHECK-DISABLED-NEXT:    call void @unknown_no_openmp() #[[ATTR5:[0-9]+]]
+; CHECK-DISABLED-NEXT:    call void @unknown_no_openmp()
 ; CHECK-DISABLED-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* nonnull null, i8 1, i1 true)
 ; CHECK-DISABLED-NEXT:    ret void
 ;
@@ -185,7 +185,7 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ; CHECK: attributes #[[ATTR2]] = { nounwind readnone }
 ; CHECK: attributes #[[ATTR3]] = { nofree nosync nounwind writeonly }
 ; CHECK: attributes #[[ATTR4:[0-9]+]] = { nosync nounwind allocsize(0) }
-; CHECK: attributes #[[ATTR5]] = { "llvm.assume"="omp_no_openmp" }
+; CHECK: attributes #[[ATTR5:[0-9]+]] = { "llvm.assume"="omp_no_openmp" }
 ; CHECK: attributes #[[ATTR6]] = { nosync nounwind writeonly }
 ;.
 ; CHECK-DISABLED: attributes #[[ATTR0]] = { nounwind }
@@ -193,7 +193,7 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ; CHECK-DISABLED: attributes #[[ATTR2]] = { nounwind readnone }
 ; CHECK-DISABLED: attributes #[[ATTR3]] = { nofree nosync nounwind writeonly }
 ; CHECK-DISABLED: attributes #[[ATTR4:[0-9]+]] = { nosync nounwind allocsize(0) }
-; CHECK-DISABLED: attributes #[[ATTR5]] = { "llvm.assume"="omp_no_openmp" }
+; CHECK-DISABLED: attributes #[[ATTR5:[0-9]+]] = { "llvm.assume"="omp_no_openmp" }
 ; CHECK-DISABLED: attributes #[[ATTR6]] = { nosync nounwind writeonly }
 ;.
 ; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 13.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)

@@ -8,9 +8,9 @@ define dso_local void @entry(i1 %cond) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@entry
 ; CHECK-SAME: (i1 [[COND:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @foo(i1 [[COND]]) #[[ATTR1:[0-9]+]]
-; CHECK-NEXT:    call void @bar() #[[ATTR2:[0-9]+]]
-; CHECK-NEXT:    call void @qux() #[[ATTR1]]
+; CHECK-NEXT:    call void @foo(i1 [[COND]])
+; CHECK-NEXT:    call void @bar()
+; CHECK-NEXT:    call void @qux() #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -24,7 +24,7 @@ define internal void @foo(i1 %cond) #1 {
 ; CHECK-LABEL: define {{[^@]+}}@foo
 ; CHECK-SAME: (i1 [[COND:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @baz(i1 [[COND]]) #[[ATTR1]]
+; CHECK-NEXT:    call void @baz(i1 [[COND]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -34,7 +34,7 @@ entry:
 
 define internal void @bar() #2 {
 ; CHECK-LABEL: define {{[^@]+}}@bar
-; CHECK-SAME: () #[[ATTR2]] {
+; CHECK-SAME: () #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @baz(i1 noundef false) #[[ATTR2]]
 ; CHECK-NEXT:    ret void
@@ -51,10 +51,10 @@ define internal void @baz(i1 %Cond) {
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i1 [[COND]], false
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    call void @baz(i1 noundef false) #[[ATTR1]]
+; CHECK-NEXT:    call void @baz(i1 noundef false)
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    call void @qux() #[[ATTR1]]
+; CHECK-NEXT:    call void @qux()
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -74,7 +74,7 @@ define internal void @qux() {
 ; CHECK-LABEL: define {{[^@]+}}@qux
 ; CHECK-SAME: () #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @call() #[[ATTR2]]
+; CHECK-NEXT:    call void @call()
 ; CHECK-NEXT:    ret void
 ;
 entry:

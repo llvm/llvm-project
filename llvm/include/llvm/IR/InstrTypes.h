@@ -1613,12 +1613,18 @@ public:
 
   /// Get the attribute of a given kind for the function.
   Attribute getFnAttr(StringRef Kind) const {
-    return getAttributes().getFnAttr(Kind);
+    Attribute Attr = getAttributes().getFnAttr(Kind);
+    if (Attr.isValid())
+      return Attr;
+    return getFnAttrOnCalledFunction(Kind);
   }
 
   /// Get the attribute of a given kind for the function.
   Attribute getFnAttr(Attribute::AttrKind Kind) const {
-    return getAttributes().getFnAttr(Kind);
+    Attribute A = getAttributes().getFnAttr(Kind);
+    if (A.isValid())
+      return A;
+    return getFnAttrOnCalledFunction(Kind);
   }
 
   /// Get the attribute of a given kind from a given arg
@@ -2311,6 +2317,7 @@ private:
 
     return hasFnAttrOnCalledFunction(Kind);
   }
+  template <typename AK> Attribute getFnAttrOnCalledFunction(AK Kind) const;
 
   /// A specialized version of hasFnAttrImpl for when the caller wants to
   /// know if an attribute's semantics are implied, not whether the attribute
