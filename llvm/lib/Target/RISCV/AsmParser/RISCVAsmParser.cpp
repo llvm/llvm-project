@@ -2598,8 +2598,7 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
   }
 
   const MCInstrDesc &MCID = MII.get(Inst.getOpcode());
-  RISCVII::VConstraintType Constraints =
-      RISCVII::getConstraint(MCID.TSFlags);
+  RISCVII::VConstraintType Constraints = RISCVII::getConstraint(MCID.TSFlags);
   if (Constraints == RISCVII::NoConstraint)
     return false;
 
