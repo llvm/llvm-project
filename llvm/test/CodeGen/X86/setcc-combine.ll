@@ -364,12 +364,7 @@ define float @olt(float %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; CHECK-NEXT:    xorps %xmm0, %xmm1
-; CHECK-NEXT:    xorps %xmm2, %xmm2
-; CHECK-NEXT:    movaps %xmm0, %xmm3
-; CHECK-NEXT:    cmpltss %xmm2, %xmm3
-; CHECK-NEXT:    andps %xmm3, %xmm0
-; CHECK-NEXT:    andnps %xmm1, %xmm3
-; CHECK-NEXT:    orps %xmm3, %xmm0
+; CHECK-NEXT:    minss %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %cmp = fcmp olt float %x, 0.0
   %neg = fneg float %x
@@ -382,11 +377,7 @@ define double @ogt(double %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movapd {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0]
 ; CHECK-NEXT:    xorpd %xmm0, %xmm1
-; CHECK-NEXT:    xorpd %xmm2, %xmm2
-; CHECK-NEXT:    cmpltsd %xmm0, %xmm2
-; CHECK-NEXT:    andpd %xmm2, %xmm0
-; CHECK-NEXT:    andnpd %xmm1, %xmm2
-; CHECK-NEXT:    orpd %xmm2, %xmm0
+; CHECK-NEXT:    maxsd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %neg = fneg double %x
   %cmp = fcmp ogt double %x, 0.0
@@ -395,28 +386,13 @@ define double @ogt(double %x) {
 }
 
 define <4 x float> @olt_swap(<4 x float> %x) {
-; SSE2-LABEL: olt_swap:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    xorps %xmm1, %xmm1
-; SSE2-NEXT:    movaps %xmm0, %xmm2
-; SSE2-NEXT:    cmpltps %xmm1, %xmm2
-; SSE2-NEXT:    movaps %xmm2, %xmm1
-; SSE2-NEXT:    andnps %xmm0, %xmm1
-; SSE2-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE2-NEXT:    andps %xmm2, %xmm0
-; SSE2-NEXT:    orps %xmm1, %xmm0
-; SSE2-NEXT:    retq
-;
-; SSE41-LABEL: olt_swap:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    movaps %xmm0, %xmm1
-; SSE41-NEXT:    xorps %xmm2, %xmm2
-; SSE41-NEXT:    cmpltps %xmm2, %xmm0
-; SSE41-NEXT:    movaps {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
-; SSE41-NEXT:    xorps %xmm1, %xmm2
-; SSE41-NEXT:    blendvps %xmm0, %xmm2, %xmm1
-; SSE41-NEXT:    movaps %xmm1, %xmm0
-; SSE41-NEXT:    retq
+; CHECK-LABEL: olt_swap:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    xorps %xmm0, %xmm1
+; CHECK-NEXT:    maxps %xmm0, %xmm1
+; CHECK-NEXT:    movaps %xmm1, %xmm0
+; CHECK-NEXT:    retq
   %cmp = fcmp olt <4 x float> %x, zeroinitializer
   %neg = fneg <4 x float> %x
   %r = select <4 x i1> %cmp, <4 x float> %neg, <4 x float> %x
@@ -424,28 +400,13 @@ define <4 x float> @olt_swap(<4 x float> %x) {
 }
 
 define <2 x double> @ogt_swap(<2 x double> %x) {
-; SSE2-LABEL: ogt_swap:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movapd {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0]
-; SSE2-NEXT:    xorpd %xmm0, %xmm2
-; SSE2-NEXT:    xorpd %xmm1, %xmm1
-; SSE2-NEXT:    cmpltpd %xmm0, %xmm1
-; SSE2-NEXT:    andpd %xmm1, %xmm2
-; SSE2-NEXT:    andnpd %xmm0, %xmm1
-; SSE2-NEXT:    orpd %xmm2, %xmm1
-; SSE2-NEXT:    movapd %xmm1, %xmm0
-; SSE2-NEXT:    retq
-;
-; SSE41-LABEL: ogt_swap:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    movapd %xmm0, %xmm1
-; SSE41-NEXT:    movapd {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0]
-; SSE41-NEXT:    xorpd %xmm0, %xmm2
-; SSE41-NEXT:    xorpd %xmm0, %xmm0
-; SSE41-NEXT:    cmpltpd %xmm1, %xmm0
-; SSE41-NEXT:    blendvpd %xmm0, %xmm2, %xmm1
-; SSE41-NEXT:    movapd %xmm1, %xmm0
-; SSE41-NEXT:    retq
+; CHECK-LABEL: ogt_swap:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movapd {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    xorpd %xmm0, %xmm1
+; CHECK-NEXT:    minpd %xmm0, %xmm1
+; CHECK-NEXT:    movapd %xmm1, %xmm0
+; CHECK-NEXT:    retq
   %neg = fneg <2 x double> %x
   %cmp = fcmp ogt <2 x double> %x, zeroinitializer
   %r = select <2 x i1> %cmp, <2 x double> %neg, <2 x double> %x
@@ -455,23 +416,22 @@ define <2 x double> @ogt_swap(<2 x double> %x) {
 define <4 x float> @ole(<4 x float> %x) {
 ; SSE2-LABEL: ole:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    xorps %xmm1, %xmm1
-; SSE2-NEXT:    movaps %xmm0, %xmm2
-; SSE2-NEXT:    cmpleps %xmm1, %xmm2
-; SSE2-NEXT:    movaps %xmm2, %xmm1
+; SSE2-NEXT:    movaps {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; SSE2-NEXT:    xorps %xmm0, %xmm2
+; SSE2-NEXT:    movaps %xmm0, %xmm1
+; SSE2-NEXT:    cmpleps %xmm2, %xmm1
+; SSE2-NEXT:    andps %xmm1, %xmm2
 ; SSE2-NEXT:    andnps %xmm0, %xmm1
-; SSE2-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE2-NEXT:    andps %xmm2, %xmm0
-; SSE2-NEXT:    orps %xmm1, %xmm0
+; SSE2-NEXT:    orps %xmm2, %xmm1
+; SSE2-NEXT:    movaps %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: ole:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movaps %xmm0, %xmm1
-; SSE41-NEXT:    xorps %xmm2, %xmm2
-; SSE41-NEXT:    cmpleps %xmm2, %xmm0
 ; SSE41-NEXT:    movaps {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
-; SSE41-NEXT:    xorps %xmm1, %xmm2
+; SSE41-NEXT:    xorps %xmm0, %xmm2
+; SSE41-NEXT:    cmpleps %xmm2, %xmm0
 ; SSE41-NEXT:    blendvps %xmm0, %xmm2, %xmm1
 ; SSE41-NEXT:    movaps %xmm1, %xmm0
 ; SSE41-NEXT:    retq
@@ -486,7 +446,7 @@ define <2 x double> @oge(<2 x double> %x) {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movapd {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0]
 ; SSE2-NEXT:    xorpd %xmm0, %xmm2
-; SSE2-NEXT:    xorpd %xmm1, %xmm1
+; SSE2-NEXT:    movapd %xmm2, %xmm1
 ; SSE2-NEXT:    cmplepd %xmm0, %xmm1
 ; SSE2-NEXT:    andpd %xmm1, %xmm2
 ; SSE2-NEXT:    andnpd %xmm0, %xmm1
@@ -499,7 +459,7 @@ define <2 x double> @oge(<2 x double> %x) {
 ; SSE41-NEXT:    movapd %xmm0, %xmm1
 ; SSE41-NEXT:    movapd {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0]
 ; SSE41-NEXT:    xorpd %xmm0, %xmm2
-; SSE41-NEXT:    xorpd %xmm0, %xmm0
+; SSE41-NEXT:    movapd %xmm2, %xmm0
 ; SSE41-NEXT:    cmplepd %xmm1, %xmm0
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm2, %xmm1
 ; SSE41-NEXT:    movapd %xmm1, %xmm0
@@ -509,6 +469,8 @@ define <2 x double> @oge(<2 x double> %x) {
   %r = select <2 x i1> %cmp, <2 x double> %neg, <2 x double> %x
   ret <2 x double> %r
 }
+
+; negative test - don't create an fneg to replace 0.0 operand
 
 define double @ogt_no_fneg(double %x, double %y) {
 ; CHECK-LABEL: ogt_no_fneg:
@@ -523,6 +485,8 @@ define double @ogt_no_fneg(double %x, double %y) {
   %r = select i1 %cmp, double %x, double %y
   ret double %r
 }
+
+; negative test - can't change the setcc for non-zero constant
 
 define double @ogt_no_zero(double %x) {
 ; CHECK-LABEL: ogt_no_zero:
