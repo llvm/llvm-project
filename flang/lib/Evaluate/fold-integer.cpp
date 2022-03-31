@@ -562,6 +562,28 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
           }
           return std::invoke(fptr, i, posVal);
         }));
+  } else if (name == "ibits") {
+    return FoldElementalIntrinsic<T, T, Int4, Int4>(context, std::move(funcRef),
+        ScalarFunc<T, T, Int4, Int4>([&](const Scalar<T> &i,
+                                         const Scalar<Int4> &pos,
+                                         const Scalar<Int4> &len) -> Scalar<T> {
+          auto posVal{static_cast<int>(pos.ToInt64())};
+          auto lenVal{static_cast<int>(len.ToInt64())};
+          if (posVal < 0) {
+            context.messages().Say(
+                "bit position for IBITS(POS=%d,LEN=%d) is negative"_err_en_US,
+                posVal, lenVal);
+          } else if (lenVal < 0) {
+            context.messages().Say(
+                "bit length for IBITS(POS=%d,LEN=%d) is negative"_err_en_US,
+                posVal, lenVal);
+          } else if (posVal + lenVal > i.bits) {
+            context.messages().Say(
+                "IBITS(POS=%d,LEN=%d) must have POS+LEN no greater than %d"_err_en_US,
+                posVal + lenVal, i.bits);
+          }
+          return i.IBITS(posVal, lenVal);
+        }));
   } else if (name == "index" || name == "scan" || name == "verify") {
     if (auto *charExpr{UnwrapExpr<Expr<SomeCharacter>>(args[0])}) {
       return std::visit(
@@ -949,7 +971,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
   } else if (name == "ubound") {
     return UBOUND(context, std::move(funcRef));
   }
-  // TODO: dot_product, ibits, ishftc, matmul, sign, transfer
+  // TODO: dot_product, ishftc, matmul, sign, transfer
   return Expr<T>{std::move(funcRef)};
 }
 
