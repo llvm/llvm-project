@@ -1672,35 +1672,6 @@ SmallVector<ReassociationExprs, 4> ExpandShapeOp::getReassociationExprs() {
                                             getReassociationIndices());
 }
 
-/// Detect whether memref dims [dim, dim + extent) can be reshaped without
-/// copies.
-static bool isReshapableDimBand(unsigned dim, unsigned extent,
-                                ArrayRef<int64_t> sizes,
-                                ArrayRef<AffineExpr> strides) {
-  // Bands of extent one can be reshaped, as they are not reshaped at all.
-  if (extent == 1)
-    return true;
-  // Otherwise, the size of the first dimension needs to be known.
-  if (ShapedType::isDynamic(sizes[dim]))
-    return false;
-  assert(sizes.size() == strides.size() && "mismatched ranks");
-  // off by 1 indexing to avoid out of bounds
-  //                       V
-  for (auto idx = dim, e = dim + extent; idx + 1 < e; ++idx) {
-    // Only bands of static shapes are reshapable. This is due to the fact that
-    // there is no relation between dynamic sizes and dynamic strides: we do not
-    // have enough information to know whether a "-1" size corresponds to the
-    // proper symbol in the AffineExpr of a stride.
-    if (ShapedType::isDynamic(sizes[idx + 1]))
-      return false;
-    // TODO: Refine this by passing the proper nDims and nSymbols so we can
-    // simplify on the fly and catch more reshapable cases.
-    if (strides[idx] != strides[idx + 1] * sizes[idx + 1])
-      return false;
-  }
-  return true;
-}
-
 /// Compute the layout map after expanding a given source MemRef type with the
 /// specified reassociation indices.
 static FailureOr<AffineMap>
@@ -2032,9 +2003,11 @@ void CollapseShapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
               CollapseMixedReshapeOps<CollapseShapeOp, ExpandShapeOp>,
               CollapseShapeOpMemRefCastFolder>(context);
 }
+
 OpFoldResult ExpandShapeOp::fold(ArrayRef<Attribute> operands) {
   return foldReshapeOp<ExpandShapeOp, CollapseShapeOp>(*this, operands);
 }
+
 OpFoldResult CollapseShapeOp::fold(ArrayRef<Attribute> operands) {
   return foldReshapeOp<CollapseShapeOp, ExpandShapeOp>(*this, operands);
 }
