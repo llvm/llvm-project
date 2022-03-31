@@ -331,6 +331,11 @@ static cl::opt<std::string> ClMemoryAccessCallbackPrefix(
     cl::desc("Prefix for memory access callbacks"), cl::Hidden,
     cl::init("__asan_"));
 
+static cl::opt<bool> ClKasanMemIntrinCallbackPrefix(
+    "asan-kernel-mem-intrinsic-prefix",
+    cl::desc("Use prefix for memory intrinsics in KASAN mode"), cl::Hidden,
+    cl::init(false));
+
 static cl::opt<bool>
     ClInstrumentDynamicAllocas("asan-instrument-dynamic-allocas",
                                cl::desc("instrument dynamic allocas"),
@@ -2729,7 +2734,9 @@ void AddressSanitizer::initializeCallbacks(Module &M) {
   }
 
   const std::string MemIntrinCallbackPrefix =
-      CompileKernel ? std::string("") : ClMemoryAccessCallbackPrefix;
+      (CompileKernel && !ClKasanMemIntrinCallbackPrefix)
+          ? std::string("")
+          : ClMemoryAccessCallbackPrefix;
   AsanMemmove = M.getOrInsertFunction(MemIntrinCallbackPrefix + "memmove",
                                       IRB.getInt8PtrTy(), IRB.getInt8PtrTy(),
                                       IRB.getInt8PtrTy(), IntptrTy);

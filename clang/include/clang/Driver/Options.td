@@ -4182,8 +4182,6 @@ def _output_class_directory_EQ : Joined<["--"], "output-class-directory=">, Alia
 def _output_class_directory : Separate<["--"], "output-class-directory">, Alias<foutput_class_dir_EQ>;
 def _output_EQ : Joined<["--"], "output=">, Alias<o>;
 def _output : Separate<["--"], "output">, Alias<o>;
-def _overlay_platform_toolchain_EQ : Joined<["--"], "overlay-platform-toolchain=">;
-def _overlay_platform_toolchain : Separate<["--"], "overlay-platform-toolchain">, Alias<_overlay_platform_toolchain_EQ>;
 def _param : Separate<["--"], "param">, Group<CompileOnly_Group>;
 def _param_EQ : Joined<["--"], "param=">, Alias<_param>;
 def _precompile : Flag<["--"], "precompile">, Flags<[NoXarchOption]>,

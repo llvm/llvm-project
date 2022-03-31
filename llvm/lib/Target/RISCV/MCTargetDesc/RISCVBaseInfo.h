@@ -97,7 +97,7 @@ enum {
   UsesMaskPolicyMask = 1 << UsesMaskPolicyShift,
 };
 
-// Match with the definitions in RISCVInstrFormatsV.td
+// Match with the definitions in RISCVInstrFormats.td
 enum VConstraintType {
   NoConstraint = 0,
   VS2Constraint = 0b001,
