@@ -410,11 +410,6 @@ bool ExternalFileUnit::SetVariableFormattedRecordLength() {
   return false;
 }
 
-void ExternalFileUnit::SetLeftTabLimit() {
-  leftTabLimit = furthestPositionInRecord;
-  positionInRecord = furthestPositionInRecord;
-}
-
 bool ExternalFileUnit::BeginReadingRecord(IoErrorHandler &handler) {
   RUNTIME_CHECK(handler, direction_ == Direction::Input);
   if (!beganReadingRecord_) {
