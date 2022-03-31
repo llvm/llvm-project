@@ -1558,9 +1558,106 @@ OpFoldResult ReinterpretCastOp::fold(ArrayRef<Attribute> /*operands*/) {
 // Reassociative reshape ops
 //===----------------------------------------------------------------------===//
 
+/// Helper function that computes a stride based on the size/stride of the
+/// previous dimension.
+///
+/// E.g., memref<20x10x5xf32, offset: 0, strides: [50, 5, 1]>
+///                                                ^^
+///                                        compute this one
+///   prevStride = 5, prevDimSize = 10
+///   nextStride = 5 * 10 = 50
+static int64_t computeNextStride(int64_t prevStride, int64_t prevDimSize) {
+  if (ShapedType::isDynamicStrideOrOffset(prevStride))
+    return ShapedType::kDynamicStrideOrOffset;
+
+  if (ShapedType::isDynamic(prevDimSize))
+    return ShapedType::kDynamicStrideOrOffset;
+
+  return prevStride * prevDimSize;
+}
+
+/// Helper function for verifying the shape of ExpandShapeOp and ResultShapeOp
+/// result and operand. Layout maps are verified separately.
+///
+/// If `allowMultipleDynamicDimsPerGroup`, multiple dynamic dimensions are
+/// allowed in a reassocation group.
+static LogicalResult
+verifyCollapsedShape(Operation *op, ArrayRef<int64_t> collapsedShape,
+                     ArrayRef<int64_t> expandedShape,
+                     ArrayRef<ReassociationIndices> reassociation,
+                     bool allowMultipleDynamicDimsPerGroup) {
+  // There must be one reassociation group per collapsed dimension.
+  if (collapsedShape.size() != reassociation.size())
+    return op->emitOpError("invalid number of reassociation groups: found ")
+           << reassociation.size() << ", expected " << collapsedShape.size();
+
+  // The next expected expanded dimension index (while iterating over
+  // reassociation indices).
+  int64_t nextDim = 0;
+  for (const auto &it : llvm::enumerate(reassociation)) {
+    ReassociationIndices group = it.value();
+    int64_t collapsedDim = it.index();
+
+    bool foundDynamic = false;
+    for (int64_t expandedDim : group) {
+      if (expandedDim != nextDim++)
+        return op->emitOpError("reassociation indices must be contiguous");
+
+      if (expandedDim >= static_cast<int64_t>(expandedShape.size()))
+        return op->emitOpError("reassociation index ")
+               << expandedDim << " is out of bounds";
+
+      // Check if there are multiple dynamic dims in a reassociation group.
+      if (ShapedType::isDynamic(expandedShape[expandedDim])) {
+        if (foundDynamic && !allowMultipleDynamicDimsPerGroup)
+          return op->emitOpError(
+              "at most one dimension in a reassociation group may be dynamic");
+        foundDynamic = true;
+      }
+    }
+
+    // ExpandShapeOp/CollapseShapeOp may not be used to cast dynamicity.
+    if (ShapedType::isDynamic(collapsedShape[collapsedDim]) != foundDynamic)
+      return op->emitOpError("collapsed dim (")
+             << collapsedDim
+             << ") must be dynamic if and only if reassociation group is "
+                "dynamic";
+
+    // If all dims in the reassociation group are static, the size of the
+    // collapsed dim can be verified.
+    if (!foundDynamic) {
+      int64_t groupSize = 1;
+      for (int64_t expandedDim : group)
+        groupSize *= expandedShape[expandedDim];
+      if (groupSize != collapsedShape[collapsedDim])
+        return op->emitOpError("collapsed dim size (")
+               << collapsedShape[collapsedDim]
+               << ") must equal reassociation group size (" << groupSize << ")";
+    }
+  }
+
+  if (collapsedShape.empty()) {
+    // Rank 0: All expanded dimensions must be 1.
+    for (int64_t d : expandedShape)
+      if (d != 1)
+        return op->emitOpError(
+            "rank 0 memrefs can only be extended/collapsed with/from ones");
+  } else if (nextDim != static_cast<int64_t>(expandedShape.size())) {
+    // Rank >= 1: Number of dimensions among all reassociation groups must match
+    // the result memref rank.
+    return op->emitOpError("expanded rank (")
+           << expandedShape.size()
+           << ") inconsistent with number of reassociation indices (" << nextDim
+           << ")";
+  }
+
+  return success();
+}
+
 SmallVector<AffineMap, 4> CollapseShapeOp::getReassociationMaps() {
   return getSymbolLessAffineMaps(getReassociationExprs());
 }
+
 SmallVector<ReassociationExprs, 4> CollapseShapeOp::getReassociationExprs() {
   return convertReassociationIndicesToExprs(getContext(),
                                             getReassociationIndices());
@@ -1569,6 +1666,7 @@ SmallVector<ReassociationExprs, 4> CollapseShapeOp::getReassociationExprs() {
 SmallVector<AffineMap, 4> ExpandShapeOp::getReassociationMaps() {
   return getSymbolLessAffineMaps(getReassociationExprs());
 }
+
 SmallVector<ReassociationExprs, 4> ExpandShapeOp::getReassociationExprs() {
   return convertReassociationIndicesToExprs(getContext(),
                                             getReassociationIndices());
@@ -1702,8 +1800,123 @@ static LogicalResult verifyReshapeOp(ReshapeOp op, MemRefType expandedType,
   return success();
 }
 
+/// Compute the layout map after expanding a given source MemRef type with the
+/// specified reassociation indices.
+static FailureOr<AffineMap>
+computeExpandedLayoutMap(MemRefType srcType, ArrayRef<int64_t> resultShape,
+                         ArrayRef<ReassociationIndices> reassociation) {
+  SmallVector<int64_t> srcStrides, resultStrides(resultShape.size(), 0);
+  int64_t srcOffset;
+  if (failed(getStridesAndOffset(srcType, srcStrides, srcOffset)))
+    return failure();
+  assert(srcStrides.size() == reassociation.size() && "invalid reassociation");
+
+  // Ensure that inner strides are the fastest-varying ones. Other source layout
+  // maps are currently not supported.
+  int64_t lastStride = 0;
+  for (int64_t s : llvm::reverse(srcStrides)) {
+    if (!ShapedType::isDynamicStrideOrOffset(s)) {
+      if (s < lastStride)
+        return failure();
+      lastStride = s;
+    }
+  }
+
+  // Iterate over all reassociation groups from the back. Example:
+  // strides       = [1000, ?, 2]
+  // source shape  = [20,  10, 5]
+  // result shape  = [ 2, 10,   2, 5,   5]
+  // reassociation = [[0,  1], [2, 3], [4]]
+  for (const auto &it : llvm::reverse(llvm::zip(reassociation, srcStrides))) {
+    ReassociationIndices indices = std::get<0>(it);
+    int64_t srcGroupStride = std::get<1>(it);
+
+    // The first result dimension (least significant one) in each reassociation
+    // group has the same stride as the corresponding source dimension. E.g.:
+    // reassociation = [[0, 1], [2, 3], [4]]
+    //                      |       |    |
+    //                      v       v    v
+    //                    1000      ?    2
+    resultStrides[indices.pop_back_val()] = srcGroupStride;
+
+    // Compute the strides for the remaining dims in the reassociation group.
+    for (int64_t resultDim : llvm::reverse(indices)) {
+      // E.g.:
+      // reassociation = [[0, 1], [2, 3], [4]]
+      //                   |
+      //                   v
+      //               1000 * 10 = 10000
+      //
+      // If the previous stride or the previous dimension was dynamic, then this
+      // stride will also be dynamic.
+      resultStrides[resultDim] = computeNextStride(resultStrides[resultDim + 1],
+                                                   resultShape[resultDim + 1]);
+    }
+  }
+
+  return makeStridedLinearLayoutMap(resultStrides, srcOffset,
+                                    srcType.getContext());
+}
+
+static FailureOr<MemRefType>
+computeExpandedType(MemRefType srcType, ArrayRef<int64_t> resultShape,
+                    ArrayRef<ReassociationIndices> reassociation) {
+  if (srcType.getLayout().isIdentity()) {
+    // If the source is contiguous (i.e., no layout map specified), so is the
+    // result.
+    MemRefLayoutAttrInterface layout;
+    return MemRefType::get(resultShape, srcType.getElementType(), layout,
+                           srcType.getMemorySpace());
+  }
+
+  // Source may not be contiguous. Compute the layout map.
+  FailureOr<AffineMap> computedLayout =
+      computeExpandedLayoutMap(srcType, resultShape, reassociation);
+  if (failed(computedLayout))
+    return failure();
+  auto computedType =
+      MemRefType::get(resultShape, srcType.getElementType(), *computedLayout,
+                      srcType.getMemorySpaceAsInt());
+  return canonicalizeStridedLayout(computedType);
+}
+
+void ExpandShapeOp::build(OpBuilder &builder, OperationState &result,
+                          ArrayRef<int64_t> resultShape, Value src,
+                          ArrayRef<ReassociationIndices> reassociation) {
+  // Only ranked memref source values are supported.
+  auto srcType = src.getType().cast<MemRefType>();
+  FailureOr<MemRefType> resultType =
+      computeExpandedType(srcType, resultShape, reassociation);
+  // Failure of this assertion usually indicates a problem with the source
+  // type, e.g., could not get strides/offset.
+  assert(succeeded(resultType) && "could not compute layout");
+  build(builder, result, *resultType, src, reassociation);
+}
+
 LogicalResult ExpandShapeOp::verify() {
-  return verifyReshapeOp(*this, getResultType(), getSrcType());
+  MemRefType srcType = getSrcType();
+  MemRefType resultType = getResultType();
+
+  // Verify result shape.
+  if (failed(verifyCollapsedShape(getOperation(), srcType.getShape(),
+                                  resultType.getShape(),
+                                  getReassociationIndices(),
+                                  /*allowMultipleDynamicDimsPerGroup=*/false)))
+    return failure();
+
+  // Compute expected result type (including layout map).
+  FailureOr<MemRefType> expectedResultType = computeExpandedType(
+      srcType, resultType.getShape(), getReassociationIndices());
+  if (failed(expectedResultType))
+    return emitOpError("invalid source layout map");
+
+  // Check actual result type.
+  auto canonicalizedResultType = canonicalizeStridedLayout(resultType);
+  if (*expectedResultType != canonicalizedResultType)
+    return emitOpError("expected expanded type to be ")
+           << *expectedResultType << " but found " << canonicalizedResultType;
+
+  return success();
 }
 
 void ExpandShapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
