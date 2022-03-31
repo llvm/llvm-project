@@ -870,11 +870,17 @@ mlir::LogicalResult CIRGenModule::buildSimpleStmt(const Stmt *S,
   case Stmt::LabelStmtClass:
     return buildLabelStmt(cast<LabelStmt>(*S));
 
-  case Stmt::AttributedStmtClass:
+  case Stmt::CaseStmtClass:
+    assert(0 &&
+           "Should not get here, currently handled directly from SwitchStmt");
+    break;
+
   case Stmt::BreakStmtClass:
+    return buildBreakStmt(cast<BreakStmt>(*S));
+
+  case Stmt::AttributedStmtClass:
   case Stmt::ContinueStmtClass:
   case Stmt::DefaultStmtClass:
-  case Stmt::CaseStmtClass:
   case Stmt::SEHLeaveStmtClass:
     llvm::errs() << "CIR codegen for '" << S->getStmtClassName()
                  << "' not implemented\n";
@@ -1305,17 +1311,41 @@ static mlir::Location getIfLocs(CIRGenModule &CGM, const clang::Stmt *thenS,
   return mlir::FusedLoc::get(ifLocs, metadata, CGM.getBuilder().getContext());
 }
 
-mlir::LogicalResult CIRGenModule::buildSwitchStmt(const SwitchStmt &S) {
-  // FIXME: track switch to handle nested stmts.
+mlir::LogicalResult CIRGenModule::buildBreakStmt(const clang::BreakStmt &S) {
+  // FIXME: add proper tracking for "break" in yield.
+  builder.create<YieldOp>(getLoc(S.getBreakLoc()));
+  return mlir::success();
+}
 
+mlir::LogicalResult CIRGenModule::buildCaseStmt(const CaseStmt &S,
+                                                mlir::Type condType,
+                                                CaseAttr &caseEntry) {
+  assert((!S.getRHS() || !S.caseStmtIsGNURange()) &&
+         "case ranges not implemented");
+  auto res = mlir::success();
+
+  auto intVal = S.getLHS()->EvaluateKnownConstInt(getASTContext());
+  auto *ctx = builder.getContext();
+  caseEntry = mlir::cir::CaseAttr::get(
+      ctx, builder.getArrayAttr({}),
+      CaseOpKindAttr::get(ctx, mlir::cir::CaseOpKind::Equal));
+  {
+    mlir::OpBuilder::InsertionGuard guardCase(builder);
+    res = buildStmt(S.getSubStmt(),
+                    /*useCurrentScope=*/!isa<CompoundStmt>(S.getSubStmt()));
+  }
+
+  // TODO: likelihood
+  return res;
+}
+
+mlir::LogicalResult CIRGenModule::buildSwitchStmt(const SwitchStmt &S) {
   // TODO: LLVM codegen does some early optimization to fold the condition and
   // only emit live cases. CIR should use MLIR to achieve similar things,
   // nothing to be done here.
   // if (ConstantFoldsToSimpleInteger(S.getCond(), ConstantCondValue))...
-  mlir::LogicalResult res = mlir::success();
 
-  // C99 6.8.4.1: The first substatement is executed if the expression
-  // compares unequal to 0.  The condition must be a scalar type.
+  auto res = mlir::success();
   auto switchStmtBuilder = [&]() -> mlir::LogicalResult {
     if (S.getInit())
       if (buildStmt(S.getInit(), /*useCurrentScope=*/true).failed())
@@ -1328,10 +1358,46 @@ mlir::LogicalResult CIRGenModule::buildSwitchStmt(const SwitchStmt &S) {
 
     // TODO: PGO and likelihood (e.g. PGO.haveRegionCounts())
     // TODO: if the switch has a condition wrapped by __builtin_unpredictable?
+
+    // FIXME: track switch to handle nested stmts.
     builder.create<SwitchOp>(
         getLoc(S.getBeginLoc()), condV,
-        /*switchBuilder=*/[&](mlir::OpBuilder &b, mlir::Location loc) {
-          res = buildStmt(S.getBody(), /*useCurrentScope=*/true);
+        /*switchBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc, mlir::OperationState &os) {
+          auto *cs = dyn_cast<CompoundStmt>(S.getBody());
+          assert(cs && "expected compound stmt");
+          SmallVector<mlir::Attribute, 4> caseAttrs;
+
+          mlir::Block *lastCaseBlock = nullptr;
+          for (auto *c : cs->body()) {
+            auto *newCase = dyn_cast<CaseStmt>(c);
+            if (!newCase) {
+              // This means it's a random stmt following up a case, just
+              // emit it as part of previous known case.
+              assert(lastCaseBlock && "expects pre-existing case block");
+              mlir::OpBuilder::InsertionGuard guardCase(builder);
+              builder.setInsertionPointToEnd(lastCaseBlock);
+              res = buildStmt(c, /*useCurrentScope=*/!isa<CompoundStmt>(c));
+              continue;
+            }
+            assert(newCase && "expected case stmt");
+            const CaseStmt *nestedCase =
+                dyn_cast<CaseStmt>(newCase->getSubStmt());
+            assert(!nestedCase && "empty case fallthrough NYI");
+
+            CaseAttr caseAttr;
+            {
+              mlir::OpBuilder::InsertionGuard guardCase(builder);
+              mlir::Region *caseRegion = os.addRegion();
+              lastCaseBlock = builder.createBlock(caseRegion);
+              res = buildCaseStmt(*newCase, condV.getType(), caseAttr);
+              if (res.failed())
+                break;
+            }
+            caseAttrs.push_back(caseAttr);
+          }
+
+          os.addAttribute("cases", builder.getArrayAttr(caseAttrs));
         });
     return res;
   };

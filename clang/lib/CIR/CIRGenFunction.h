@@ -58,7 +58,7 @@ public:
 
   CIRGenModule &CGM;
 
-  // CurFuncDecl - Holds the Decl for the current outermost non-closure context
+  // Holds the Decl for the current outermost non-closure context
   const clang::Decl *CurFuncDecl;
 
   // The CallExpr within the current statement that the musttail attribute

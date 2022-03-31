@@ -465,6 +465,11 @@ public:
                                         const clang::Stmt *elseS);
 
   mlir::LogicalResult buildIfStmt(const clang::IfStmt &S);
+  mlir::LogicalResult buildCaseStmt(const clang::CaseStmt &S,
+                                    mlir::Type condType,
+                                    mlir::cir::CaseAttr &caseEntry);
+
+  mlir::LogicalResult buildBreakStmt(const clang::BreakStmt &S);
   mlir::LogicalResult buildSwitchStmt(const clang::SwitchStmt &S);
 
   // Build CIR for a statement. useCurrentScope should be true if no
