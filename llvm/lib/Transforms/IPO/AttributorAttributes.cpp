@@ -5899,7 +5899,8 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
         if (nullptr != getInitialValueOfAllocation(CB, TLI, I8Ty)) {
           AllocationInfo *AI = new (A.Allocator) AllocationInfo{CB};
           AllocationInfos[CB] = AI;
-          TLI->getLibFunc(*CB, AI->LibraryFunctionId);
+          if (TLI)
+            TLI->getLibFunc(*CB, AI->LibraryFunctionId);
         }
       }
       return true;
