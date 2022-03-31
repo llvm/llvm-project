@@ -758,7 +758,9 @@ inline constexpr bool is_floating_point_v = is_floating_point<_Tp>::value;
 
 // is_array
 
-#if __has_keyword(__is_array)
+// TODO: Clang incorrectly reports that __is_array is true for T[0].
+//       Re-enable the branch once https://llvm.org/PR54705 is fixed.
+#if __has_keyword(__is_array) && 0
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_array : _BoolConstant<__is_array(_Tp)> { };
