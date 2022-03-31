@@ -2215,8 +2215,31 @@ struct RemoveOutsDependency : public OpRewritePattern<GenericOp> {
     return success();
   }
 };
-} // namespace
 
+/// Fold linalg.fill into linalg.generic
+struct FoldFillWithGenericOp : public OpRewritePattern<GenericOp> {
+  using OpRewritePattern<GenericOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(GenericOp genericOp,
+                                PatternRewriter &rewriter) const override {
+    if (!genericOp.hasTensorSemantics())
+      return failure();
+    bool fillFound = false;
+    Block &payload = genericOp.region().front();
+    for (OpOperand *opOperand : genericOp.getInputOperands()) {
+      if (!genericOp.payloadUsesValueFromOperand(opOperand))
+        continue;
+      FillOp fillOp = opOperand->get().getDefiningOp<FillOp>();
+      if (!fillOp)
+        continue;
+      fillFound = true;
+      payload.getArgument(opOperand->getOperandNumber())
+          .replaceAllUsesWith(fillOp.value());
+    }
+    return success(fillFound);
+  }
+};
+} // namespace
 //===---------------------------------------------------------------------===//
 // Methods that add patterns described in this file to a pattern list.
 //===---------------------------------------------------------------------===//
@@ -2261,7 +2284,7 @@ void mlir::linalg::populateElementwiseOpsFusionPatterns(
   patterns.add<FuseElementwiseOps, FoldScalarOrSplatConstant,
                FoldConstantTranspose>(context,
                                       options.controlElementwiseOpsFusionFn);
-  patterns.add<RemoveOutsDependency>(context);
+  patterns.add<RemoveOutsDependency, FoldFillWithGenericOp>(context);
   populateSparseTensorRewriting(patterns);
   populateFoldReshapeOpsByExpansionPatterns(patterns,
                                             options.controlFoldingReshapesFn);
