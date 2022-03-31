@@ -2,11 +2,17 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-from typing import Sequence
+from typing import Any, Sequence
 
 import os
 
 _this_dir = os.path.dirname(__file__)
+
+
+# These submodules have no type stubs and are thus opaque to the type checker.
+_mlirConversions: Any
+_mlirTransforms: Any
+_mlirAllPassesRegistration: Any
 
 
 def get_lib_dirs() -> Sequence[str]:
