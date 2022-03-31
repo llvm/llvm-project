@@ -288,33 +288,21 @@ GCNTTIImpl::GCNTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
     : BaseT(TM, F.getParent()->getDataLayout()),
       ST(static_cast<const GCNSubtarget *>(TM->getSubtargetImpl(F))),
       TLI(ST->getTargetLowering()), CommonTTI(TM, F),
-      IsGraphics(AMDGPU::isGraphics(F.getCallingConv())),
-      MaxVGPRs(ST->getMaxNumVGPRs(
-          std::max(ST->getWavesPerEU(F).first,
-                   ST->getWavesPerEUForWorkGroup(
-                       ST->getFlatWorkGroupSizes(F).second)))) {
+      IsGraphics(AMDGPU::isGraphics(F.getCallingConv())) {
   AMDGPU::SIModeRegisterDefaults Mode(F);
   HasFP32Denormals = Mode.allFP32Denormals();
   HasFP64FP16Denormals = Mode.allFP64FP16Denormals();
 }
 
-unsigned GCNTTIImpl::getHardwareNumberOfRegisters(bool Vec) const {
-  // The concept of vector registers doesn't really exist. Some packed vector
-  // operations operate on the normal 32-bit registers.
-  return MaxVGPRs;
-}
+unsigned GCNTTIImpl::getNumberOfRegisters(unsigned RCID) const {
+  // NB: RCID is not an RCID. In fact it is 0 or 1 for scalar or vector
+  // registers. See getRegisterClassForType for the implementation.
+  // In this case vector registers are not vector in terms of
+  // VGPRs, but those which can hold multiple values.
 
-unsigned GCNTTIImpl::getNumberOfRegisters(bool Vec) const {
   // This is really the number of registers to fill when vectorizing /
   // interleaving loops, so we lie to avoid trying to use all registers.
-  return getHardwareNumberOfRegisters(Vec) >> 3;
-}
-
-unsigned GCNTTIImpl::getNumberOfRegisters(unsigned RCID) const {
-  const SIRegisterInfo *TRI = ST->getRegisterInfo();
-  const TargetRegisterClass *RC = TRI->getRegClass(RCID);
-  unsigned NumVGPRs = (TRI->getRegSizeInBits(*RC) + 31) / 32;
-  return getHardwareNumberOfRegisters(false) / NumVGPRs;
+  return 4;
 }
 
 TypeSize
