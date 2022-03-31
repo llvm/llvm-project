@@ -156,6 +156,7 @@ def hasPTX71 : Predicate<"Subtarget->getPTXVersion() >= 71">;
 def hasPTX72 : Predicate<"Subtarget->getPTXVersion() >= 72">;
 
 def hasSM30 : Predicate<"Subtarget->getSmVersion() >= 30">;
+def hasSM32 : Predicate<"Subtarget->getSmVersion() >= 32">;
 def hasSM53 : Predicate<"Subtarget->getSmVersion() >= 53">;
 def hasSM70 : Predicate<"Subtarget->getSmVersion() >= 70">;
 def hasSM72 : Predicate<"Subtarget->getSmVersion() >= 72">;
