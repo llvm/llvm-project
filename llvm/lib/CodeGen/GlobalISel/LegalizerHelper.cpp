@@ -4243,6 +4243,14 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_INTTOPTR:
   case G_PTRTOINT:
   case G_ADDRSPACE_CAST:
+  case G_UADDO:
+  case G_USUBO:
+  case G_UADDE:
+  case G_USUBE:
+  case G_SADDO:
+  case G_SSUBO:
+  case G_SADDE:
+  case G_SSUBE:
     return fewerElementsVectorMultiEltType(GMI, NumElts);
   case G_ICMP:
   case G_FCMP:

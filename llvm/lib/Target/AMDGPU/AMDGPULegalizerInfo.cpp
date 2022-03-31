@@ -631,7 +631,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                                G_UADDE, G_SADDE, G_USUBE, G_SSUBE})
     .legalFor({{S32, S1}, {S32, S32}})
     .minScalar(0, S32)
-    // TODO: .scalarize(0)
+    .scalarize(0)
     .lower();
 
   getActionDefinitionsBuilder(G_BITCAST)
