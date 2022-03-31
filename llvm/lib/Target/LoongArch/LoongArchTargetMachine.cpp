@@ -29,12 +29,11 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLoongArchTarget() {
   RegisterTargetMachine<LoongArchTargetMachine> Y(getTheLoongArch64Target());
 }
 
-// FIXME: This is just a placeholder to make current commit buildable. Body of
-// this function will be filled in later commits.
 static std::string computeDataLayout(const Triple &TT) {
-  std::string Ret;
-  Ret += "e";
-  return Ret;
+  if (TT.isArch64Bit())
+    return "e-m:e-p:64:64-i64:64-i128:128-n64-S128";
+  assert(TT.isArch32Bit() && "only LA32 and LA64 are currently supported");
+  return "e-m:e-p:32:32-i64:64-n32-S128";
 }
 
 static Reloc::Model getEffectiveRelocModel(const Triple &TT,

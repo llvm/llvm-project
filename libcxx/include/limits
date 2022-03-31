@@ -101,6 +101,8 @@ template<> class numeric_limits<cv long double>;
 }  // std
 
 */
+
+#include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <type_traits>
 

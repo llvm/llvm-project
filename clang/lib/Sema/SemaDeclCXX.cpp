@@ -1893,7 +1893,7 @@ static bool CheckConstexprDeclStmt(Sema &SemaRef, const FunctionDecl *Dcl,
           if (Kind == Sema::CheckConstexprKind::Diagnose) {
             SemaRef.Diag(VD->getLocation(),
                          SemaRef.getLangOpts().CPlusPlus2b
-                             ? diag::warn_cxx20_compat_constexpr_static_var
+                             ? diag::warn_cxx20_compat_constexpr_var
                              : diag::ext_constexpr_static_var)
                 << isa<CXXConstructorDecl>(Dcl)
                 << (VD->getTLSKind() == VarDecl::TLS_Dynamic);
@@ -1901,11 +1901,17 @@ static bool CheckConstexprDeclStmt(Sema &SemaRef, const FunctionDecl *Dcl,
             return false;
           }
         }
-        if (!SemaRef.LangOpts.CPlusPlus2b &&
-            CheckLiteralType(SemaRef, Kind, VD->getLocation(), VD->getType(),
-                             diag::err_constexpr_local_var_non_literal_type,
-                             isa<CXXConstructorDecl>(Dcl)))
+        if (SemaRef.LangOpts.CPlusPlus2b) {
+          CheckLiteralType(SemaRef, Kind, VD->getLocation(), VD->getType(),
+                           diag::warn_cxx20_compat_constexpr_var,
+                           isa<CXXConstructorDecl>(Dcl),
+                           /*variable of non-literal type*/ 2);
+        } else if (CheckLiteralType(
+                       SemaRef, Kind, VD->getLocation(), VD->getType(),
+                       diag::err_constexpr_local_var_non_literal_type,
+                       isa<CXXConstructorDecl>(Dcl))) {
           return false;
+        }
         if (!VD->getType()->isDependentType() &&
             !VD->hasInit() && !VD->isCXXForRangeDecl()) {
           if (Kind == Sema::CheckConstexprKind::Diagnose) {

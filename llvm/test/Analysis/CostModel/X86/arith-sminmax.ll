@@ -31,9 +31,9 @@ declare <64 x i8>  @llvm.smax.v64i8(<64 x i8>, <64 x i8>)
 define i32 @smax(i32 %arg) {
 ; SSE2-LABEL: 'smax'
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I64 = call i64 @llvm.smax.i64(i64 undef, i64 undef)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %V2I64 = call <2 x i64> @llvm.smax.v2i64(<2 x i64> undef, <2 x i64> undef)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %V4I64 = call <4 x i64> @llvm.smax.v4i64(<4 x i64> undef, <4 x i64> undef)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 44 for instruction: %V8I64 = call <8 x i64> @llvm.smax.v8i64(<8 x i64> undef, <8 x i64> undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2I64 = call <2 x i64> @llvm.smax.v2i64(<2 x i64> undef, <2 x i64> undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4I64 = call <4 x i64> @llvm.smax.v4i64(<4 x i64> undef, <4 x i64> undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8I64 = call <8 x i64> @llvm.smax.v8i64(<8 x i64> undef, <8 x i64> undef)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I32 = call i32 @llvm.smax.i32(i32 undef, i32 undef)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I32 = call <4 x i32> @llvm.smax.v4i32(<4 x i32> undef, <4 x i32> undef)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I32 = call <8 x i32> @llvm.smax.v8i32(<8 x i32> undef, <8 x i32> undef)
@@ -50,9 +50,9 @@ define i32 @smax(i32 %arg) {
 ;
 ; SSSE3-LABEL: 'smax'
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I64 = call i64 @llvm.smax.i64(i64 undef, i64 undef)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %V2I64 = call <2 x i64> @llvm.smax.v2i64(<2 x i64> undef, <2 x i64> undef)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %V4I64 = call <4 x i64> @llvm.smax.v4i64(<4 x i64> undef, <4 x i64> undef)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 44 for instruction: %V8I64 = call <8 x i64> @llvm.smax.v8i64(<8 x i64> undef, <8 x i64> undef)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2I64 = call <2 x i64> @llvm.smax.v2i64(<2 x i64> undef, <2 x i64> undef)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4I64 = call <4 x i64> @llvm.smax.v4i64(<4 x i64> undef, <4 x i64> undef)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8I64 = call <8 x i64> @llvm.smax.v8i64(<8 x i64> undef, <8 x i64> undef)
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I32 = call i32 @llvm.smax.i32(i32 undef, i32 undef)
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I32 = call <4 x i32> @llvm.smax.v4i32(<4 x i32> undef, <4 x i32> undef)
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I32 = call <8 x i32> @llvm.smax.v8i32(<8 x i32> undef, <8 x i32> undef)
@@ -227,9 +227,9 @@ declare <64 x i8>  @llvm.smin.v64i8(<64 x i8>, <64 x i8>)
 define i32 @smin(i32 %arg) {
 ; SSE2-LABEL: 'smin'
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I64 = call i64 @llvm.smin.i64(i64 undef, i64 undef)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %V2I64 = call <2 x i64> @llvm.smin.v2i64(<2 x i64> undef, <2 x i64> undef)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %V4I64 = call <4 x i64> @llvm.smin.v4i64(<4 x i64> undef, <4 x i64> undef)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 44 for instruction: %V8I64 = call <8 x i64> @llvm.smin.v8i64(<8 x i64> undef, <8 x i64> undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2I64 = call <2 x i64> @llvm.smin.v2i64(<2 x i64> undef, <2 x i64> undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4I64 = call <4 x i64> @llvm.smin.v4i64(<4 x i64> undef, <4 x i64> undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8I64 = call <8 x i64> @llvm.smin.v8i64(<8 x i64> undef, <8 x i64> undef)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I32 = call i32 @llvm.smin.i32(i32 undef, i32 undef)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I32 = call <4 x i32> @llvm.smin.v4i32(<4 x i32> undef, <4 x i32> undef)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I32 = call <8 x i32> @llvm.smin.v8i32(<8 x i32> undef, <8 x i32> undef)
@@ -246,9 +246,9 @@ define i32 @smin(i32 %arg) {
 ;
 ; SSSE3-LABEL: 'smin'
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I64 = call i64 @llvm.smin.i64(i64 undef, i64 undef)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %V2I64 = call <2 x i64> @llvm.smin.v2i64(<2 x i64> undef, <2 x i64> undef)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %V4I64 = call <4 x i64> @llvm.smin.v4i64(<4 x i64> undef, <4 x i64> undef)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 44 for instruction: %V8I64 = call <8 x i64> @llvm.smin.v8i64(<8 x i64> undef, <8 x i64> undef)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2I64 = call <2 x i64> @llvm.smin.v2i64(<2 x i64> undef, <2 x i64> undef)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4I64 = call <4 x i64> @llvm.smin.v4i64(<4 x i64> undef, <4 x i64> undef)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8I64 = call <8 x i64> @llvm.smin.v8i64(<8 x i64> undef, <8 x i64> undef)
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I32 = call i32 @llvm.smin.i32(i32 undef, i32 undef)
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I32 = call <4 x i32> @llvm.smin.v4i32(<4 x i32> undef, <4 x i32> undef)
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I32 = call <8 x i32> @llvm.smin.v8i32(<8 x i32> undef, <8 x i32> undef)

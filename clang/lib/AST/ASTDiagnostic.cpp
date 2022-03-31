@@ -270,9 +270,9 @@ ConvertTypeToDiagnosticString(ASTContext &Context, QualType Ty,
   std::string S = Ty.getAsString(Context.getPrintingPolicy());
   std::string CanS = CanTy.getAsString(Context.getPrintingPolicy());
 
-  for (unsigned I = 0, E = QualTypeVals.size(); I != E; ++I) {
+  for (const intptr_t &QualTypeVal : QualTypeVals) {
     QualType CompareTy =
-        QualType::getFromOpaquePtr(reinterpret_cast<void*>(QualTypeVals[I]));
+        QualType::getFromOpaquePtr(reinterpret_cast<void *>(QualTypeVal));
     if (CompareTy.isNull())
       continue;
     if (CompareTy == Ty)
@@ -302,11 +302,11 @@ ConvertTypeToDiagnosticString(ASTContext &Context, QualType Ty,
   // Check to see if we already desugared this type in this
   // diagnostic.  If so, don't do it again.
   bool Repeated = false;
-  for (unsigned i = 0, e = PrevArgs.size(); i != e; ++i) {
+  for (const auto &PrevArg : PrevArgs) {
     // TODO: Handle ak_declcontext case.
-    if (PrevArgs[i].first == DiagnosticsEngine::ak_qualtype) {
-      void *Ptr = (void*)PrevArgs[i].second;
-      QualType PrevTy(QualType::getFromOpaquePtr(Ptr));
+    if (PrevArg.first == DiagnosticsEngine::ak_qualtype) {
+      QualType PrevTy(
+          QualType::getFromOpaquePtr(reinterpret_cast<void *>(PrevArg.second)));
       if (PrevTy == Ty) {
         Repeated = true;
         break;

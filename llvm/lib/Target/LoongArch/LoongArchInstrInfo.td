@@ -15,6 +15,9 @@
 //===----------------------------------------------------------------------===//
 
 // TODO: Add LoongArch specific DAG Nodes
+// Target-dependent nodes.
+def loongarch_ret : SDNode<"LoongArchISD::RET", SDTNone,
+                           [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
@@ -493,6 +496,12 @@ class PatGprImm_32<SDPatternOperator OpNode, LAInst Inst, Operand ImmOpnd>
 def : PatGprGpr<and, AND>;
 def : PatGprGpr<or, OR>;
 def : PatGprGpr<xor, XOR>;
+
+/// Branches and jumps
+
+let isBarrier = 1, isReturn = 1, isTerminator = 1 in
+def PseudoRET : Pseudo<(outs), (ins), [(loongarch_ret)]>,
+                PseudoInstExpansion<(JIRL R0, R1, 0)>;
 
 /// LA32 patterns
 

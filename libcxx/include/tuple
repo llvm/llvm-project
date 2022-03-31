@@ -165,6 +165,7 @@ template <class... Types>
 
 */
 
+#include <__assert> // all public C++ headers provide the assertion handler
 #include <__compare/common_comparison_category.h>
 #include <__compare/synth_three_way.h>
 #include <__config>
