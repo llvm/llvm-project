@@ -9,6 +9,7 @@
 #include "Annotations.h"
 #include "IncludeCleaner.h"
 #include "SourceCode.h"
+#include "TestFS.h"
 #include "TestTU.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
@@ -280,8 +281,9 @@ TEST(IncludeCleaner, Stdlib) {
 
     ReferencedLocations Locs = findReferencedLocations(AST);
     EXPECT_THAT(Locs.Stdlib, ElementsAreArray(WantSyms));
-    ReferencedFiles Files = findReferencedFiles(Locs, AST.getIncludeStructure(),
-                                                AST.getSourceManager());
+    ReferencedFiles Files =
+        findReferencedFiles(Locs, AST.getIncludeStructure(),
+                            AST.getCanonicalIncludes(), AST.getSourceManager());
     EXPECT_THAT(Files.Stdlib, ElementsAreArray(WantHeaders));
   }
 }
@@ -392,8 +394,8 @@ TEST(IncludeCleaner, VirtualBuffers) {
   auto &SM = AST.getSourceManager();
   auto &Includes = AST.getIncludeStructure();
 
-  auto ReferencedFiles =
-      findReferencedFiles(findReferencedLocations(AST), Includes, SM);
+  auto ReferencedFiles = findReferencedFiles(
+      findReferencedLocations(AST), Includes, AST.getCanonicalIncludes(), SM);
   llvm::StringSet<> ReferencedFileNames;
   for (FileID FID : ReferencedFiles.User)
     ReferencedFileNames.insert(
@@ -412,7 +414,9 @@ TEST(IncludeCleaner, VirtualBuffers) {
   EXPECT_THAT(ReferencedHeaderNames, ElementsAre(testPath("macros.h")));
 
   // Sanity check.
-  EXPECT_THAT(getUnused(AST, ReferencedHeaders), IsEmpty());
+  EXPECT_THAT(
+      getUnused(AST, ReferencedHeaders, ReferencedFiles.SpelledUmbrellas),
+      IsEmpty());
 }
 
 TEST(IncludeCleaner, DistinctUnguardedInclusions) {
@@ -441,9 +445,9 @@ TEST(IncludeCleaner, DistinctUnguardedInclusions) {
 
   ParsedAST AST = TU.build();
 
-  auto ReferencedFiles =
-      findReferencedFiles(findReferencedLocations(AST),
-                          AST.getIncludeStructure(), AST.getSourceManager());
+  auto ReferencedFiles = findReferencedFiles(
+      findReferencedLocations(AST), AST.getIncludeStructure(),
+      AST.getCanonicalIncludes(), AST.getSourceManager());
   llvm::StringSet<> ReferencedFileNames;
   auto &SM = AST.getSourceManager();
   for (FileID FID : ReferencedFiles.User)
@@ -475,9 +479,9 @@ TEST(IncludeCleaner, NonSelfContainedHeaders) {
 
   ParsedAST AST = TU.build();
 
-  auto ReferencedFiles =
-      findReferencedFiles(findReferencedLocations(AST),
-                          AST.getIncludeStructure(), AST.getSourceManager());
+  auto ReferencedFiles = findReferencedFiles(
+      findReferencedLocations(AST), AST.getIncludeStructure(),
+      AST.getCanonicalIncludes(), AST.getSourceManager());
   llvm::StringSet<> ReferencedFileNames;
   auto &SM = AST.getSourceManager();
   for (FileID FID : ReferencedFiles.User)
@@ -493,15 +497,31 @@ TEST(IncludeCleaner, IWYUPragmas) {
   TestTU TU;
   TU.Code = R"cpp(
     #include "behind_keep.h" // IWYU pragma: keep
+    #include "public.h"
+
+    void bar() { foo(); }
     )cpp";
   TU.AdditionalFiles["behind_keep.h"] = guard("");
+  TU.AdditionalFiles["public.h"] = guard("#include \"private.h\"");
+  TU.AdditionalFiles["private.h"] = guard(R"cpp(
+    // IWYU pragma: private, include "public.h"
+    void foo() {}
+  )cpp");
   ParsedAST AST = TU.build();
 
-  auto ReferencedFiles =
-      findReferencedFiles(findReferencedLocations(AST),
-                          AST.getIncludeStructure(), AST.getSourceManager());
-  EXPECT_TRUE(ReferencedFiles.User.empty());
+  auto ReferencedFiles = findReferencedFiles(
+      findReferencedLocations(AST), AST.getIncludeStructure(),
+      AST.getCanonicalIncludes(), AST.getSourceManager());
+  EXPECT_EQ(ReferencedFiles.SpelledUmbrellas.size(), 1u);
+  EXPECT_EQ(ReferencedFiles.SpelledUmbrellas.begin()->getKey(), "\"public.h\"");
+  EXPECT_EQ(ReferencedFiles.User.size(), 2u);
+  EXPECT_TRUE(
+      ReferencedFiles.User.contains(AST.getSourceManager().getMainFileID()));
+  EXPECT_TRUE(
+      ReferencedFiles.User.contains(AST.getSourceManager().getMainFileID()));
   EXPECT_THAT(AST.getDiagnostics(), llvm::ValueIs(IsEmpty()));
+  auto Unused = computeUnusedIncludes(AST);
+  EXPECT_THAT(Unused, IsEmpty());
 }
 
 } // namespace
