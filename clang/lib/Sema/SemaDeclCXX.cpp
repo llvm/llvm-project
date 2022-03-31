@@ -13415,14 +13415,13 @@ CXXConstructorDecl *Sema::DeclareImplicitDefaultConstructor(
   DefaultCon->setAccess(AS_public);
   DefaultCon->setDefaulted();
 
-  if (getLangOpts().CUDA) {
+  setupImplicitSpecialMemberType(DefaultCon, Context.VoidTy, None);
+
+  if (getLangOpts().CUDA)
     inferCUDATargetForImplicitSpecialMember(ClassDecl, CXXDefaultConstructor,
                                             DefaultCon,
                                             /* ConstRHS */ false,
                                             /* Diagnose */ false);
-  }
-
-  setupImplicitSpecialMemberType(DefaultCon, Context.VoidTy, None);
 
   // We don't need to use SpecialMemberIsTrivial here; triviality for default
   // constructors is easy to compute.
@@ -13696,14 +13695,13 @@ CXXDestructorDecl *Sema::DeclareImplicitDestructor(CXXRecordDecl *ClassDecl) {
   Destructor->setAccess(AS_public);
   Destructor->setDefaulted();
 
-  if (getLangOpts().CUDA) {
+  setupImplicitSpecialMemberType(Destructor, Context.VoidTy, None);
+
+  if (getLangOpts().CUDA)
     inferCUDATargetForImplicitSpecialMember(ClassDecl, CXXDestructor,
                                             Destructor,
                                             /* ConstRHS */ false,
                                             /* Diagnose */ false);
-  }
-
-  setupImplicitSpecialMemberType(Destructor, Context.VoidTy, None);
 
   // We don't need to use SpecialMemberIsTrivial here; triviality for
   // destructors is easy to compute.
@@ -14336,14 +14334,13 @@ CXXMethodDecl *Sema::DeclareImplicitCopyAssignment(CXXRecordDecl *ClassDecl) {
   CopyAssignment->setDefaulted();
   CopyAssignment->setImplicit();
 
-  if (getLangOpts().CUDA) {
+  setupImplicitSpecialMemberType(CopyAssignment, RetType, ArgType);
+
+  if (getLangOpts().CUDA)
     inferCUDATargetForImplicitSpecialMember(ClassDecl, CXXCopyAssignment,
                                             CopyAssignment,
                                             /* ConstRHS */ Const,
                                             /* Diagnose */ false);
-  }
-
-  setupImplicitSpecialMemberType(CopyAssignment, RetType, ArgType);
 
   // Add the parameter to the operator.
   ParmVarDecl *FromParam = ParmVarDecl::Create(Context, CopyAssignment,
@@ -14671,14 +14668,13 @@ CXXMethodDecl *Sema::DeclareImplicitMoveAssignment(CXXRecordDecl *ClassDecl) {
   MoveAssignment->setDefaulted();
   MoveAssignment->setImplicit();
 
-  if (getLangOpts().CUDA) {
+  setupImplicitSpecialMemberType(MoveAssignment, RetType, ArgType);
+
+  if (getLangOpts().CUDA)
     inferCUDATargetForImplicitSpecialMember(ClassDecl, CXXMoveAssignment,
                                             MoveAssignment,
                                             /* ConstRHS */ false,
                                             /* Diagnose */ false);
-  }
-
-  setupImplicitSpecialMemberType(MoveAssignment, RetType, ArgType);
 
   // Add the parameter to the operator.
   ParmVarDecl *FromParam = ParmVarDecl::Create(Context, MoveAssignment,
@@ -15050,14 +15046,13 @@ CXXConstructorDecl *Sema::DeclareImplicitCopyConstructor(
   CopyConstructor->setAccess(AS_public);
   CopyConstructor->setDefaulted();
 
-  if (getLangOpts().CUDA) {
+  setupImplicitSpecialMemberType(CopyConstructor, Context.VoidTy, ArgType);
+
+  if (getLangOpts().CUDA)
     inferCUDATargetForImplicitSpecialMember(ClassDecl, CXXCopyConstructor,
                                             CopyConstructor,
                                             /* ConstRHS */ Const,
                                             /* Diagnose */ false);
-  }
-
-  setupImplicitSpecialMemberType(CopyConstructor, Context.VoidTy, ArgType);
 
   // During template instantiation of special member functions we need a
   // reliable TypeSourceInfo for the parameter types in order to allow functions
@@ -15190,14 +15185,13 @@ CXXConstructorDecl *Sema::DeclareImplicitMoveConstructor(
   MoveConstructor->setAccess(AS_public);
   MoveConstructor->setDefaulted();
 
-  if (getLangOpts().CUDA) {
+  setupImplicitSpecialMemberType(MoveConstructor, Context.VoidTy, ArgType);
+
+  if (getLangOpts().CUDA)
     inferCUDATargetForImplicitSpecialMember(ClassDecl, CXXMoveConstructor,
                                             MoveConstructor,
                                             /* ConstRHS */ false,
                                             /* Diagnose */ false);
-  }
-
-  setupImplicitSpecialMemberType(MoveConstructor, Context.VoidTy, ArgType);
 
   // Add the parameter to the constructor.
   ParmVarDecl *FromParam = ParmVarDecl::Create(Context, MoveConstructor,
