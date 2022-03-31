@@ -32,7 +32,7 @@
 ! CHECK:    fir.result
 ! CHECK:  }
 ! CHECK:  fir.array_merge_store %[[Z_BOX]], %[[Z_COPY_FROM_RESULT]] to %[[Z]] : !fir.array<2x2xf32>, !fir.array<2x2xf32>, !fir.ref<!fir.array<2x2xf32>>
-! CHECK:  fir.freemem %[[RESULT_TMP]] : <!fir.array<?x?xf32>>
+! CHECK:  fir.freemem %[[RESULT_TMP]] : !fir.heap<!fir.array<?x?xf32>>
 subroutine matmul_test(x,y,z)
   real :: x(3,1), y(1,3), z(2,2)
   z = matmul(x,y)
@@ -59,7 +59,7 @@ end subroutine
 !CHECK:    fir.result
 !CHECK:  }
 !CHECK:  fir.array_merge_store %[[Z]], %[[Z_COPY_FROM_RESULT]] to %[[Z_BOX]] : !fir.array<?x!fir.logical<4>>, !fir.array<?x!fir.logical<4>>, !fir.box<!fir.array<?x!fir.logical<4>>>
-!CHECK:  fir.freemem %[[RESULT_TMP]] : <!fir.array<?x!fir.logical<4>>>
+!CHECK:  fir.freemem %[[RESULT_TMP]] : !fir.heap<!fir.array<?x!fir.logical<4>>>
 subroutine matmul_test2(X, Y, Z)
   logical :: X(:,:)
   logical :: Y(:)
