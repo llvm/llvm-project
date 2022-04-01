@@ -2117,6 +2117,14 @@ m_MaskedLoad(const Opnd0 &Op0, const Opnd1 &Op1, const Opnd2 &Op2,
   return m_Intrinsic<Intrinsic::masked_load>(Op0, Op1, Op2, Op3);
 }
 
+/// Matches MaskedGather Intrinsic.
+template <typename Opnd0, typename Opnd1, typename Opnd2, typename Opnd3>
+inline typename m_Intrinsic_Ty<Opnd0, Opnd1, Opnd2, Opnd3>::Ty
+m_MaskedGather(const Opnd0 &Op0, const Opnd1 &Op1, const Opnd2 &Op2,
+               const Opnd3 &Op3) {
+  return m_Intrinsic<Intrinsic::masked_gather>(Op0, Op1, Op2, Op3);
+}
+
 template <Intrinsic::ID IntrID, typename T0>
 inline typename m_Intrinsic_Ty<T0>::Ty m_Intrinsic(const T0 &Op0) {
   return m_CombineAnd(m_Intrinsic<IntrID>(), m_Argument<0>(Op0));
