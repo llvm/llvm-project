@@ -44,7 +44,6 @@ intermediate LLVM representation.
    MemorySSA
    MergeFunctions
    MCJITDesignAndImplementation
-   MisExpect
    ORCv2
    OpaquePointers
    JITLink
