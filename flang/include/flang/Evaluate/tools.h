@@ -417,6 +417,27 @@ const Symbol *UnwrapWholeSymbolOrComponentDataRef(const A &x) {
   return nullptr;
 }
 
+// If an expression is a whole symbol or a whole component designator,
+// potentially followed by an image selector, extract and return that symbol,
+// else null.
+template <typename A>
+const Symbol *UnwrapWholeSymbolOrComponentOrCoarrayRef(const A &x) {
+  if (auto dataRef{ExtractDataRef(x)}) {
+    if (const SymbolRef * p{std::get_if<SymbolRef>(&dataRef->u)}) {
+      return &p->get();
+    } else if (const Component * c{std::get_if<Component>(&dataRef->u)}) {
+      if (c->base().Rank() == 0) {
+        return &c->GetLastSymbol();
+      }
+    } else if (const CoarrayRef * c{std::get_if<CoarrayRef>(&dataRef->u)}) {
+      if (c->subscript().empty()) {
+        return &c->GetLastSymbol();
+      }
+    }
+  }
+  return nullptr;
+}
+
 // GetFirstSymbol(A%B%C[I]%D) -> A
 template <typename A> const Symbol *GetFirstSymbol(const A &x) {
   if (auto dataRef{ExtractDataRef(x, true)}) {
@@ -892,6 +913,8 @@ template <typename A> bool IsAllocatableOrPointer(const A &x) {
 // Like IsAllocatableOrPointer, but accepts pointer function results as being
 // pointers.
 bool IsAllocatableOrPointerObject(const Expr<SomeType> &, FoldingContext &);
+
+bool IsAllocatableDesignator(const Expr<SomeType> &);
 
 // Procedure and pointer detection predicates
 bool IsProcedure(const Expr<SomeType> &);
