@@ -21,6 +21,7 @@
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
+#include "clang/Analysis/FlowSensitive/Value.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Casting.h"
@@ -35,6 +36,26 @@ static const Expr *skipExprWithCleanups(const Expr *E) {
   if (auto *C = dyn_cast_or_null<ExprWithCleanups>(E))
     return C->getSubExpr();
   return E;
+}
+
+static BoolValue &evaluateBooleanEquality(const Expr &LHS, const Expr &RHS,
+                                          Environment &Env) {
+  // Equality of booleans involves implicit integral casts. Ignore these casts
+  // for now and focus on the values associated with the wrapped expressions.
+  // FIXME: Consider changing this once the framework offers better support for
+  // integral casts.
+  const Expr *LHSNorm = LHS.IgnoreCasts();
+  const Expr *RHSNorm = RHS.IgnoreCasts();
+  assert(LHSNorm != nullptr);
+  assert(RHSNorm != nullptr);
+
+  if (auto *LHSValue = dyn_cast_or_null<BoolValue>(
+          Env.getValue(*LHSNorm, SkipPast::Reference)))
+    if (auto *RHSValue = dyn_cast_or_null<BoolValue>(
+            Env.getValue(*RHSNorm, SkipPast::Reference)))
+      return Env.makeIff(*LHSValue, *RHSValue);
+
+  return Env.makeAtomicBoolValue();
 }
 
 class TransferVisitor : public ConstStmtVisitor<TransferVisitor> {
@@ -83,8 +104,16 @@ public:
         Env.setValue(Loc, Env.makeOr(LHSVal, RHSVal));
       break;
     }
+    case BO_NE:
+    case BO_EQ: {
+      auto &LHSEqRHSValue = evaluateBooleanEquality(*LHS, *RHS, Env);
+      auto &Loc = Env.createStorageLocation(*S);
+      Env.setStorageLocation(*S, Loc);
+      Env.setValue(Loc, S->getOpcode() == BO_EQ ? LHSEqRHSValue
+                                                : Env.makeNot(LHSEqRHSValue));
+      break;
+    }
     default:
-      // FIXME: Add support for BO_EQ, BO_NE.
       break;
     }
   }
