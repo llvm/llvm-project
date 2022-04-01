@@ -206,6 +206,68 @@ define <64 x i8> @shuffle_v64i8_02_03_04_05_06_07_00_01_10_11_12_13_14_15_08_09_
   ret <64 x i8> %shuffle
 }
 
+; PR54658
+define <64 x i8> @shuffle_v64i8_01_03_02_05_07_06_09_11_10_13_15_14_17_19_18_21_23_22_25_27_26_29_31_30_33_35_34_37_39_38_41_43_42_45_47_46_49_51_50_53_55_54_57_59_58_61_63_62_01_03_02_05_01_03_02_05_01_03_02_05_01_03_02_05(<64 x i8> %a) {
+; AVX512F-LABEL: shuffle_v64i8_01_03_02_05_07_06_09_11_10_13_15_14_17_19_18_21_23_22_25_27_26_29_31_30_33_35_34_37_39_38_41_43_42_45_47_46_49_51_50_53_55_54_57_59_58_61_63_62_01_03_02_05_01_03_02_05_01_03_02_05_01_03_02_05:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
+; AVX512F-NEXT:    vpshufb {{.*#+}} xmm2 = xmm1[10,13,15,14,u,u,u,u,u,u,u,u,u,u,u,u]
+; AVX512F-NEXT:    vperm2i128 {{.*#+}} ymm3 = ymm1[2,3],ymm0[0,1]
+; AVX512F-NEXT:    vpshufb {{.*#+}} ymm3 = ymm3[u,u,u,u,1,3,2,5,7,6,9,11,10,13,15,14,17,19,18,21,17,19,18,21,17,19,18,21,17,19,18,21]
+; AVX512F-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0],ymm3[1,2,3,4,5,6,7]
+; AVX512F-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[u,u,u,u,u,u,u,u,1,3,2,5,7,6,9,11]
+; AVX512F-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm1
+; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm3
+; AVX512F-NEXT:    vpshufb {{.*#+}} xmm3 = xmm3[u,u,u,u,u,u,u,u,u,u,u,u,1,3,2,5]
+; AVX512F-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[1,3,2,5,7,6,9,11,10,13,15,14,u,u,u,u,23,22,25,27,26,29,31,30,u,u,u,u,u,u,u,u]
+; AVX512F-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2],ymm3[3],ymm0[4,5,6,7]
+; AVX512F-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5],ymm1[6,7]
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: shuffle_v64i8_01_03_02_05_07_06_09_11_10_13_15_14_17_19_18_21_23_22_25_27_26_29_31_30_33_35_34_37_39_38_41_43_42_45_47_46_49_51_50_53_55_54_57_59_58_61_63_62_01_03_02_05_01_03_02_05_01_03_02_05_01_03_02_05:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
+; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm2 = xmm1[10,13,15,14,u,u,u,u,u,u,u,u,u,u,u,u]
+; AVX512BW-NEXT:    vperm2i128 {{.*#+}} ymm3 = ymm1[2,3],ymm0[0,1]
+; AVX512BW-NEXT:    vpshufb {{.*#+}} ymm3 = ymm3[u,u,u,u,1,3,2,5,7,6,9,11,10,13,15,14,17,19,18,21,17,19,18,21,17,19,18,21,17,19,18,21]
+; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0],ymm3[1,2,3,4,5,6,7]
+; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[u,u,u,u,u,u,u,u,1,3,2,5,7,6,9,11]
+; AVX512BW-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm1
+; AVX512BW-NEXT:    vextracti128 $1, %ymm0, %xmm3
+; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm3 = xmm3[u,u,u,u,u,u,u,u,u,u,u,u,1,3,2,5]
+; AVX512BW-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[1,3,2,5,7,6,9,11,10,13,15,14,u,u,u,u,23,22,25,27,26,29,31,30,u,u,u,u,u,u,u,u]
+; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2],ymm3[3],ymm0[4,5,6,7]
+; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5],ymm1[6,7]
+; AVX512BW-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
+; AVX512BW-NEXT:    retq
+;
+; AVX512DQ-LABEL: shuffle_v64i8_01_03_02_05_07_06_09_11_10_13_15_14_17_19_18_21_23_22_25_27_26_29_31_30_33_35_34_37_39_38_41_43_42_45_47_46_49_51_50_53_55_54_57_59_58_61_63_62_01_03_02_05_01_03_02_05_01_03_02_05_01_03_02_05:
+; AVX512DQ:       # %bb.0:
+; AVX512DQ-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
+; AVX512DQ-NEXT:    vpshufb {{.*#+}} xmm2 = xmm1[10,13,15,14,u,u,u,u,u,u,u,u,u,u,u,u]
+; AVX512DQ-NEXT:    vperm2i128 {{.*#+}} ymm3 = ymm1[2,3],ymm0[0,1]
+; AVX512DQ-NEXT:    vpshufb {{.*#+}} ymm3 = ymm3[u,u,u,u,1,3,2,5,7,6,9,11,10,13,15,14,17,19,18,21,17,19,18,21,17,19,18,21,17,19,18,21]
+; AVX512DQ-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0],ymm3[1,2,3,4,5,6,7]
+; AVX512DQ-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[u,u,u,u,u,u,u,u,1,3,2,5,7,6,9,11]
+; AVX512DQ-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm1
+; AVX512DQ-NEXT:    vextracti128 $1, %ymm0, %xmm3
+; AVX512DQ-NEXT:    vpshufb {{.*#+}} xmm3 = xmm3[u,u,u,u,u,u,u,u,u,u,u,u,1,3,2,5]
+; AVX512DQ-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[1,3,2,5,7,6,9,11,10,13,15,14,u,u,u,u,23,22,25,27,26,29,31,30,u,u,u,u,u,u,u,u]
+; AVX512DQ-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2],ymm3[3],ymm0[4,5,6,7]
+; AVX512DQ-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5],ymm1[6,7]
+; AVX512DQ-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
+; AVX512DQ-NEXT:    retq
+;
+; AVX512VBMI-LABEL: shuffle_v64i8_01_03_02_05_07_06_09_11_10_13_15_14_17_19_18_21_23_22_25_27_26_29_31_30_33_35_34_37_39_38_41_43_42_45_47_46_49_51_50_53_55_54_57_59_58_61_63_62_01_03_02_05_01_03_02_05_01_03_02_05_01_03_02_05:
+; AVX512VBMI:       # %bb.0:
+; AVX512VBMI-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [1,3,2,5,7,6,9,11,10,13,15,14,17,19,18,21,23,22,25,27,26,29,31,30,33,35,34,37,39,38,41,43,42,45,47,46,49,51,50,53,55,54,57,59,58,61,63,62,1,3,2,5,1,3,2,5,1,3,2,5,1,3,2,5]
+; AVX512VBMI-NEXT:    vpermb %zmm0, %zmm1, %zmm0
+; AVX512VBMI-NEXT:    retq
+  %shuffle = shufflevector <64 x i8> %a, <64 x i8> poison, <64 x i32> <i32 1, i32 3, i32 2, i32 5, i32 7, i32 6, i32 9, i32 11, i32 10, i32 13, i32 15, i32 14, i32 17, i32 19, i32 18, i32 21, i32 23, i32 22, i32 25, i32 27, i32 26, i32 29, i32 31, i32 30, i32 33, i32 35, i32 34, i32 37, i32 39, i32 38, i32 41, i32 43, i32 42, i32 45, i32 47, i32 46, i32 49, i32 51, i32 50, i32 53, i32 55, i32 54, i32 57, i32 59, i32 58, i32 61, i32 63, i32 62, i32 1, i32 3, i32 2, i32 5, i32 1, i32 3, i32 2, i32 5, i32 1, i32 3, i32 2, i32 5, i32 1, i32 3, i32 2, i32 5>
+  ret <64 x i8> %shuffle
+}
+
 define <64 x i8> @insert_dup_mem_v64i8_i32(i32* %ptr) {
 ; AVX512F-LABEL: insert_dup_mem_v64i8_i32:
 ; AVX512F:       # %bb.0:
