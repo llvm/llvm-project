@@ -12,8 +12,8 @@ config.name = 'ThreadSanitizer-Unit'
 config.test_exec_root = "@COMPILER_RT_BINARY_DIR@/lib/tsan/tests"
 config.test_source_root = config.test_exec_root
 
-if config.host_os == 'Darwin':
-  config.parallelism_group = config.darwin_sanitizer_parallelism_group_func
+if not config.parallelism_group:
+  config.parallelism_group = 'shadow-memory'
 
 # For Swift, the following also applies on Linux.
 if config.host_os == 'Darwin' or config.host_os == 'Linux':

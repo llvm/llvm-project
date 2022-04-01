@@ -50,13 +50,3 @@ if config.host_os == 'Darwin':
   #
   # rdar://80086125
   config.environment['MallocNanoZone'] = '0'
-
-  # The test config gets pickled and sent to multiprocessing workers, and that
-  # only works for code if it is stored at the top level of some module.
-  # Therefore, we have to put the code in a .py file, add it to path, and import
-  # it to store it in the config.
-  import site
-  site.addsitedir(os.path.dirname(__file__))
-  import lit_unittest_cfg_utils
-  config.darwin_sanitizer_parallelism_group_func = \
-    lit_unittest_cfg_utils.darwin_sanitizer_parallelism_group_func
