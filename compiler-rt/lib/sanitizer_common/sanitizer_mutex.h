@@ -208,6 +208,20 @@ class SANITIZER_MUTEX Mutex : CheckedMutex {
     }
   }
 
+  bool TryLock() SANITIZER_TRY_ACQUIRE(true) {
+    u64 state = atomic_load_relaxed(&state_);
+    for (;;) {
+      if (UNLIKELY(state & (kWriterLock | kReaderLockMask)))
+        return false;
+      // The mutex is not read-/write-locked, try to lock.
+      if (LIKELY(atomic_compare_exchange_weak(
+              &state_, &state, state | kWriterLock, memory_order_acquire))) {
+        CheckedMutex::Lock();
+        return true;
+      }
+    }
+  }
+
   void Unlock() SANITIZER_RELEASE() {
     CheckedMutex::Unlock();
     bool wake_writer;
