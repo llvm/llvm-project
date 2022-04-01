@@ -1396,23 +1396,18 @@ bool lldb_private::operator==(const ArchSpec &lhs, const ArchSpec &rhs) {
 }
 
 bool ArchSpec::IsFullySpecifiedTriple() const {
-  const auto &user_specified_triple = GetTriple();
+  if (!TripleOSWasSpecified())
+    return false;
 
-  bool user_triple_fully_specified = false;
+  if (!TripleVendorWasSpecified())
+    return false;
 
-  if ((user_specified_triple.getOS() != llvm::Triple::UnknownOS) ||
-      TripleOSWasSpecified()) {
-    if ((user_specified_triple.getVendor() != llvm::Triple::UnknownVendor) ||
-        TripleVendorWasSpecified()) {
-      const unsigned unspecified = 0;
-      if (!user_specified_triple.isOSDarwin() ||
-          user_specified_triple.getOSMajorVersion() != unspecified) {
-        user_triple_fully_specified = true;
-      }
-    }
-  }
+  const unsigned unspecified = 0;
+  const llvm::Triple &triple = GetTriple();
+  if (triple.isOSDarwin() && triple.getOSMajorVersion() == unspecified)
+    return false;
 
-  return user_triple_fully_specified;
+  return true;
 }
 
 void ArchSpec::PiecewiseTripleCompare(
