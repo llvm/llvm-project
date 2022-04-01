@@ -78,10 +78,6 @@ public:
     return Analysis->isBranch(Inst) && !isTailCall(Inst);
   }
 
-  bool isUnconditionalBranch(const MCInst &Inst) const override {
-    return Analysis->isUnconditionalBranch(Inst) && !isTailCall(Inst);
-  }
-
   bool isNoop(const MCInst &Inst) const override {
     return X86::isNOP(Inst.getOpcode());
   }
