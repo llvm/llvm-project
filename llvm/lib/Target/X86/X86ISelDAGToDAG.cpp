@@ -2435,9 +2435,8 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
     // We want to look through a transform in InstCombine that
     // turns 'add' with min_signed_val into 'xor', so we can treat this 'xor'
     // exactly like an 'add'.
-    if (auto *NC1 = dyn_cast<ConstantSDNode>(N.getOperand(1)))
-      if (NC1->isMinSignedValue() && !matchAdd(N, AM, Depth))
-        return false;
+    if (isMinSignedConstant(N.getOperand(1)) && !matchAdd(N, AM, Depth))
+      return false;
     break;
 
   case ISD::AND: {
