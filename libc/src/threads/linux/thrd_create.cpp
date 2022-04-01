@@ -8,21 +8,26 @@
 
 #include "Futex.h"
 
-#include "include/errno.h"                // For E* error values.
-#include "include/sys/mman.h"             // For PROT_* and MAP_* definitions.
-#include "include/sys/syscall.h"          // For syscall numbers.
-#include "include/threads.h"              // For thrd_* type definitions.
 #include "src/__support/OSUtil/syscall.h" // For syscall function.
 #include "src/__support/architectures.h"
 #include "src/__support/common.h"
-#include "src/errno/llvmlibc_errno.h"
-#include "src/sys/mman/mmap.h"
-#include "src/sys/mman/munmap.h"
 #include "src/threads/linux/Thread.h"
 #include "src/threads/thrd_create.h"
 
+#include <errno.h>       // For E* error values.
 #include <linux/sched.h> // For CLONE_* flags.
 #include <stdint.h>
+#include <sys/mman.h>    // For PROT_* and MAP_* definitions.
+#include <sys/syscall.h> // For syscall numbers.
+#include <threads.h>     // For thrd_* type definitions.
+
+#ifdef SYS_mmap2
+constexpr long MMAP_SYSCALL_NUMBER = SYS_mmap2;
+#elif SYS_mmap
+constexpr long MMAP_SYSCALL_NUMBER = SYS_mmap;
+#else
+#error "SYS_mmap or SYS_mmap2 not available on the target platform"
+#endif
 
 namespace __llvm_libc {
 
@@ -73,11 +78,21 @@ LLVM_LIBC_FUNCTION(int, thrd_create,
   // TODO: Add the CLONE_SETTLS flag and setup the TLS area correctly when
   // making the clone syscall.
 
-  void *stack = __llvm_libc::mmap(nullptr, ThreadParams::DEFAULT_STACK_SIZE,
-                                  PROT_READ | PROT_WRITE,
-                                  MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-  if (stack == MAP_FAILED)
-    return llvmlibc_errno == ENOMEM ? thrd_nomem : thrd_error;
+  // Allocate thread stack.
+  long mmap_result =
+      __llvm_libc::syscall(MMAP_SYSCALL_NUMBER,
+                           0, // No special address
+                           ThreadParams::DEFAULT_STACK_SIZE,
+                           PROT_READ | PROT_WRITE,      // Read and write stack
+                           MAP_ANONYMOUS | MAP_PRIVATE, // Process private
+                           -1, // Not backed by any file
+                           0   // No offset
+      );
+  if (mmap_result < 0 && (uintptr_t(mmap_result) >=
+                          UINTPTR_MAX - ThreadParams::DEFAULT_STACK_SIZE)) {
+    return -mmap_result == ENOMEM ? thrd_nomem : thrd_error;
+  }
+  void *stack = reinterpret_cast<void *>(mmap_result);
 
   thread->__stack = stack;
   thread->__stack_size = ThreadParams::DEFAULT_STACK_SIZE;
@@ -126,7 +141,8 @@ LLVM_LIBC_FUNCTION(int, thrd_create,
   if (clone_result == 0) {
     start_thread();
   } else if (clone_result < 0) {
-    __llvm_libc::munmap(thread->__stack, thread->__stack_size);
+    __llvm_libc::syscall(SYS_munmap, mmap_result,
+                         ThreadParams::DEFAULT_STACK_SIZE);
     int error_val = -clone_result;
     return error_val == ENOMEM ? thrd_nomem : thrd_error;
   }
