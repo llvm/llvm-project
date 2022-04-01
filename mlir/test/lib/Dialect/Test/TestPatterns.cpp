@@ -153,6 +153,7 @@ struct TestPatternDriver
   StringRef getDescription() const final { return "Run test dialect patterns"; }
   void runOnOperation() override {
     mlir::RewritePatternSet patterns(&getContext());
+    populateWithGenerated(patterns);
 
     // Verify named pattern is generated with expected name.
     patterns.add<FoldingPattern, TestNamedPatternRule,
