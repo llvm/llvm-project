@@ -17,7 +17,7 @@ using namespace mlir;
 using namespace presburger;
 
 PresburgerRelation::PresburgerRelation(const IntegerRelation &disjunct)
-    : PresburgerSpace(disjunct) {
+    : PresburgerSpace(disjunct.getCompatibleSpace()) {
   unionInPlace(disjunct);
 }
 
@@ -67,19 +67,15 @@ bool PresburgerRelation::containsPoint(ArrayRef<int64_t> point) const {
   });
 }
 
-PresburgerRelation PresburgerRelation::getUniverse(unsigned numDomain,
-                                                   unsigned numRange,
-                                                   unsigned numSymbols) {
-  PresburgerRelation result(numDomain, numRange, numSymbols);
-  result.unionInPlace(
-      IntegerRelation::getUniverse(numDomain, numRange, numSymbols));
+PresburgerRelation
+PresburgerRelation::getUniverse(const PresburgerSpace &space) {
+  PresburgerRelation result(space);
+  result.unionInPlace(IntegerRelation::getUniverse(space));
   return result;
 }
 
-PresburgerRelation PresburgerRelation::getEmpty(unsigned numDomain,
-                                                unsigned numRange,
-                                                unsigned numSymbols) {
-  return PresburgerRelation(numDomain, numRange, numSymbols);
+PresburgerRelation PresburgerRelation::getEmpty(const PresburgerSpace &space) {
+  return PresburgerRelation(space);
 }
 
 // Return the intersection of this set with the given set.
@@ -93,8 +89,7 @@ PresburgerRelation
 PresburgerRelation::intersect(const PresburgerRelation &set) const {
   assert(isSpaceCompatible(set) && "Spaces should match");
 
-  PresburgerRelation result(getNumDomainIds(), getNumRangeIds(),
-                            getNumSymbolIds());
+  PresburgerRelation result(getSpace());
   for (const IntegerRelation &csA : integerRelations) {
     for (const IntegerRelation &csB : set.integerRelations) {
       IntegerRelation intersection = csA.intersect(csB);
@@ -283,13 +278,10 @@ static PresburgerRelation getSetDifference(IntegerRelation disjunct,
                                            const PresburgerRelation &set) {
   assert(disjunct.isSpaceCompatible(set) && "Spaces should match");
   if (disjunct.isEmptyByGCDTest())
-    return PresburgerRelation::getEmpty(disjunct.getNumDomainIds(),
-                                        disjunct.getNumRangeIds(),
-                                        disjunct.getNumSymbolIds());
+    return PresburgerRelation::getEmpty(disjunct.getCompatibleSpace());
 
-  PresburgerRelation result = PresburgerRelation::getEmpty(
-      disjunct.getNumDomainIds(), disjunct.getNumRangeIds(),
-      disjunct.getNumSymbolIds());
+  PresburgerRelation result =
+      PresburgerRelation::getEmpty(disjunct.getCompatibleSpace());
   Simplex simplex(disjunct);
   subtractRecursively(disjunct, simplex, set, 0, result);
   return result;
@@ -297,10 +289,7 @@ static PresburgerRelation getSetDifference(IntegerRelation disjunct,
 
 /// Return the complement of this set.
 PresburgerRelation PresburgerRelation::complement() const {
-  return getSetDifference(IntegerRelation::getUniverse(getNumDomainIds(),
-                                                       getNumRangeIds(),
-                                                       getNumSymbolIds()),
-                          *this);
+  return getSetDifference(IntegerRelation::getUniverse(getSpace()), *this);
 }
 
 /// Return the result of subtract the given set from this set, i.e.,
@@ -308,8 +297,7 @@ PresburgerRelation PresburgerRelation::complement() const {
 PresburgerRelation
 PresburgerRelation::subtract(const PresburgerRelation &set) const {
   assert(isSpaceCompatible(set) && "Spaces should match");
-  PresburgerRelation result(getNumDomainIds(), getNumRangeIds(),
-                            getNumSymbolIds());
+  PresburgerRelation result(getSpace());
   // We compute (U_i t_i) \ (U_i set_i) as U_i (t_i \ V_i set_i).
   for (const IntegerRelation &disjunct : integerRelations)
     result.unionInPlace(getSetDifference(disjunct, set));
@@ -505,7 +493,8 @@ PresburgerRelation SetCoalescer::coalesce() {
   }
 
   PresburgerRelation newSet =
-      PresburgerRelation::getEmpty(numDomainIds, numRangeIds, numSymbolIds);
+      PresburgerRelation::getEmpty(PresburgerSpace::getRelationSpace(
+          numDomainIds, numRangeIds, numSymbolIds));
   for (unsigned i = 0, e = disjuncts.size(); i < e; ++i)
     newSet.unionInPlace(disjuncts[i]);
 
@@ -584,8 +573,7 @@ LogicalResult SetCoalescer::coalescePairCutCase(unsigned i, unsigned j) {
         return !isFacetContained(curr, simp);
       }))
     return failure();
-  IntegerRelation newSet(disjunct.getNumDomainIds(), disjunct.getNumRangeIds(),
-                         disjunct.getNumSymbolIds(), disjunct.getNumLocalIds());
+  IntegerRelation newSet(disjunct.getSpace());
 
   for (ArrayRef<int64_t> curr : redundantIneqsA)
     newSet.addInequality(curr);
@@ -707,15 +695,14 @@ void PresburgerRelation::print(raw_ostream &os) const {
 
 void PresburgerRelation::dump() const { print(llvm::errs()); }
 
-PresburgerSet PresburgerSet::getUniverse(unsigned numDims,
-                                         unsigned numSymbols) {
-  PresburgerSet result(numDims, numSymbols);
-  result.unionInPlace(IntegerPolyhedron::getUniverse(numDims, numSymbols));
+PresburgerSet PresburgerSet::getUniverse(const PresburgerSpace &space) {
+  PresburgerSet result(space);
+  result.unionInPlace(IntegerPolyhedron::getUniverse(space));
   return result;
 }
 
-PresburgerSet PresburgerSet::getEmpty(unsigned numDims, unsigned numSymbols) {
-  return PresburgerSet(numDims, numSymbols);
+PresburgerSet PresburgerSet::getEmpty(const PresburgerSpace &space) {
+  return PresburgerSet(space);
 }
 
 PresburgerSet::PresburgerSet(const IntegerPolyhedron &disjunct)
