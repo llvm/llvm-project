@@ -871,11 +871,17 @@ void CoroCloner::create() {
                                   OrigF.getParent()->end(), ActiveSuspend);
   }
 
-  // Replace all args with undefs. The buildCoroutineFrame algorithm already
-  // rewritten access to the args that occurs after suspend points with loads
-  // and stores to/from the coroutine frame.
-  for (Argument &A : OrigF.args())
-    VMap[&A] = UndefValue::get(A.getType());
+  // Replace all args with dummy instructions. If an argument is the old frame
+  // pointer, the dummy will be replaced by the new frame pointer once it is
+  // computed below. Uses of all other arguments should have already been
+  // rewritten by buildCoroutineFrame() to use loads/stores on the coroutine
+  // frame.
+  SmallVector<Instruction *> DummyArgs;
+  for (Argument &A : OrigF.args()) {
+    DummyArgs.push_back(
+        new BitCastInst(UndefValue::get(A.getType()), A.getType()));
+    VMap[&A] = DummyArgs.back();
+  }
 
   SmallVector<ReturnInst *, 4> Returns;
 
@@ -1018,6 +1024,13 @@ void CoroCloner::create() {
   Value *OldVFrame = cast<Value>(VMap[Shape.CoroBegin]);
   if (OldVFrame != NewVFrame)
     OldVFrame->replaceAllUsesWith(NewVFrame);
+
+  // All uses of the arguments should have been resolved by this point,
+  // so we can safely remove the dummy values.
+  for (Instruction *DummyArg : DummyArgs) {
+    DummyArg->replaceAllUsesWith(UndefValue::get(DummyArg->getType()));
+    DummyArg->deleteValue();
+  }
 
   switch (Shape.ABI) {
   case coro::ABI::Switch:
