@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s -test-linalg-codegen-strategy="anchor-op=linalg.matvec pad hoist-paddings=1,1,0 run-enable-pass=false" -cse -canonicalize -split-input-file | FileCheck %s --check-prefix=MATVEC
-// RUN: mlir-opt %s -test-linalg-codegen-strategy="anchor-op=linalg.matvec pad hoist-paddings=1,1,0 transpose-paddings=1:0,0,0 run-enable-pass=false" -cse -canonicalize -split-input-file | FileCheck %s --check-prefix=TRANSP
+// RUN: mlir-opt %s -test-linalg-codegen-strategy="anchor-op=linalg.matvec pad hoist-paddings=1,1,0 transpose-paddings=[1,0],[0],[0] run-enable-pass=false" -cse -canonicalize -split-input-file | FileCheck %s --check-prefix=TRANSP
 // RUN: mlir-opt %s -test-linalg-codegen-strategy="anchor-op=linalg.matmul pad hoist-paddings=1,2,1 run-enable-pass=false" -cse -canonicalize -split-input-file | FileCheck %s --check-prefix=MATMUL
 
 //  MATVEC-DAG: #[[DIV4:[0-9a-z]+]] = affine_map<(d0) -> (d0 ceildiv 4)>

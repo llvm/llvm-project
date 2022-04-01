@@ -48,11 +48,9 @@ class TestOptionsPass
 public:
   struct Options : public PassPipelineOptions<Options> {
     ListOption<int> listOption{*this, "list",
-                               llvm::cl::MiscFlags::CommaSeparated,
                                llvm::cl::desc("Example list option")};
     ListOption<std::string> stringListOption{
-        *this, "string-list", llvm::cl::MiscFlags::CommaSeparated,
-        llvm::cl::desc("Example string list option")};
+        *this, "string-list", llvm::cl::desc("Example string list option")};
     Option<std::string> stringOption{*this, "string",
                                      llvm::cl::desc("Example string option")};
   };
@@ -70,11 +68,10 @@ public:
     return "Test options parsing capabilities";
   }
 
-  ListOption<int> listOption{*this, "list", llvm::cl::MiscFlags::CommaSeparated,
+  ListOption<int> listOption{*this, "list",
                              llvm::cl::desc("Example list option")};
   ListOption<std::string> stringListOption{
-      *this, "string-list", llvm::cl::MiscFlags::CommaSeparated,
-      llvm::cl::desc("Example string list option")};
+      *this, "string-list", llvm::cl::desc("Example string list option")};
   Option<std::string> stringOption{*this, "string",
                                    llvm::cl::desc("Example string option")};
 };

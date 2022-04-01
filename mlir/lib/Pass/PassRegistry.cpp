@@ -142,6 +142,43 @@ const PassInfo *mlir::Pass::lookupPassInfo(StringRef passArg) {
 // PassOptions
 //===----------------------------------------------------------------------===//
 
+LogicalResult detail::pass_options::parseCommaSeparatedList(
+    llvm::cl::Option &opt, StringRef argName, StringRef optionStr,
+    function_ref<LogicalResult(StringRef)> elementParseFn) {
+  // Functor used for finding a character in a string, and skipping over
+  // various "range" characters.
+  llvm::unique_function<size_t(StringRef, size_t, char)> findChar =
+      [&](StringRef str, size_t index, char c) -> size_t {
+    for (size_t i = index, e = str.size(); i < e; ++i) {
+      if (str[i] == c)
+        return i;
+      // Check for various range characters.
+      if (str[i] == '{')
+        i = findChar(str, i + 1, '}');
+      else if (str[i] == '(')
+        i = findChar(str, i + 1, ')');
+      else if (str[i] == '[')
+        i = findChar(str, i + 1, ']');
+      else if (str[i] == '\"')
+        i = str.find_first_of('\"', i + 1);
+      else if (str[i] == '\'')
+        i = str.find_first_of('\'', i + 1);
+    }
+    return StringRef::npos;
+  };
+
+  size_t nextElePos = findChar(optionStr, 0, ',');
+  while (nextElePos != StringRef::npos) {
+    // Process the portion before the comma.
+    if (failed(elementParseFn(optionStr.substr(0, nextElePos))))
+      return failure();
+
+    optionStr = optionStr.substr(nextElePos + 1);
+    nextElePos = findChar(optionStr, 0, ',');
+  }
+  return elementParseFn(optionStr.substr(0, nextElePos));
+}
+
 /// Out of line virtual function to provide home for the class.
 void detail::PassOptions::OptionBase::anchor() {}
 

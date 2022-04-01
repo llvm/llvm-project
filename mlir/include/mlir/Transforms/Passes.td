@@ -85,8 +85,7 @@ def Inliner : Pass<"inline"> {
            /*default=*/"", "The default optimizer pipeline used for callables">,
     ListOption<"opPipelineStrs", "op-pipelines", "std::string",
                "Callable operation specific optimizer pipelines (in the form "
-               "of `dialect.op(pipeline)`)",
-               "llvm::cl::MiscFlags::CommaSeparated">,
+               "of `dialect.op(pipeline)`)">,
     Option<"maxInliningIterations", "max-iterations", "unsigned",
            /*default=*/"4",
            "Maximum number of iterations when inlining within an SCC">,
@@ -226,8 +225,7 @@ def SymbolPrivatize : Pass<"symbol-privatize"> {
   }];
   let options = [
     ListOption<"exclude", "exclude", "std::string",
-       "Comma separated list of symbols that should not be marked private",
-       "llvm::cl::MiscFlags::CommaSeparated">
+       "Comma separated list of symbols that should not be marked private">
   ];
   let constructor = "mlir::createSymbolPrivatizePass()";
 }

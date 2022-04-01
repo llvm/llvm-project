@@ -38,7 +38,7 @@ private:
   /// transformed nest (with i going from outermost to innermost).
   ListOption<unsigned> permList{*this, "permutation-map",
                                 llvm::cl::desc("Specify the loop permutation"),
-                                llvm::cl::OneOrMore, llvm::cl::CommaSeparated};
+                                llvm::cl::OneOrMore};
 };
 
 } // namespace

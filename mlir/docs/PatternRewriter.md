@@ -439,12 +439,10 @@ below:
 
 ```tablegen
 ListOption<"disabledPatterns", "disable-patterns", "std::string",
-           "Labels of patterns that should be filtered out during application",
-           "llvm::cl::MiscFlags::CommaSeparated">,
+           "Labels of patterns that should be filtered out during application">,
 ListOption<"enabledPatterns", "enable-patterns", "std::string",
            "Labels of patterns that should be used during application, all "
-           "other patterns are filtered out",
-           "llvm::cl::MiscFlags::CommaSeparated">,
+           "other patterns are filtered out">,
 ```
 
 These options may be used to provide filtering behavior when constructing any
