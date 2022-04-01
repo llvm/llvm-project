@@ -4212,11 +4212,33 @@ public:
   }
 };
 
+// Folds transpose(broadcast(<scalar>)) into brodcast(<scalar>).
+struct FoldTransposedScalarBroadcast final
+    : public OpRewritePattern<vector::TransposeOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::TransposeOp transposeOp,
+                                PatternRewriter &rewriter) const override {
+    auto bcastOp = transposeOp.getVector().getDefiningOp<vector::BroadcastOp>();
+    if (!bcastOp)
+      return failure();
+
+    auto srcVectorType = bcastOp.getSourceType().dyn_cast<VectorType>();
+    if (!srcVectorType || srcVectorType.getNumElements() == 1) {
+      rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
+          transposeOp, transposeOp.getResultType(), bcastOp.getSource());
+      return success();
+    }
+
+    return failure();
+  }
+};
+
 } // namespace
 
 void vector::TransposeOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
-  results.add<TransposeFolder>(context);
+  results.add<FoldTransposedScalarBroadcast, TransposeFolder>(context);
 }
 
 void vector::TransposeOp::getTransp(SmallVectorImpl<int64_t> &results) {
