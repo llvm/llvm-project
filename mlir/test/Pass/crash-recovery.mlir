@@ -20,7 +20,7 @@ module @inner_mod1 {
   module @foo {}
 }
 
-// REPRO: configuration: -pass-pipeline='builtin.module(test-module-pass, test-pass-crash)'
+// REPRO: configuration: -pass-pipeline='builtin.module(test-module-pass,test-pass-crash)'
 
 // REPRO: module @inner_mod1
 // REPRO: module @foo {

@@ -73,6 +73,9 @@ public:
     return {begin(), end()};
   }
 
+  /// Returns true if the pass manager has no passes.
+  bool empty() const { return begin() == end(); }
+
   /// Nest a new operation pass manager for the given operation kind under this
   /// pass manager.
   OpPassManager &nest(StringAttr nestedName);
@@ -110,7 +113,7 @@ public:
   /// of pipelines.
   /// Note: The quality of the string representation depends entirely on the
   /// the correctness of per-pass overrides of Pass::printAsTextualPipeline.
-  void printAsTextualPipeline(raw_ostream &os);
+  void printAsTextualPipeline(raw_ostream &os) const;
 
   /// Raw dump of the pass manager to llvm::errs().
   void dump();

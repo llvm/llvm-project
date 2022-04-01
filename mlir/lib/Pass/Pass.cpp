@@ -54,12 +54,14 @@ void Pass::copyOptionValuesFrom(const Pass *other) {
 void Pass::printAsTextualPipeline(raw_ostream &os) {
   // Special case for adaptors to use the 'op_name(sub_passes)' format.
   if (auto *adaptor = dyn_cast<OpToOpPassAdaptor>(this)) {
-    llvm::interleaveComma(adaptor->getPassManagers(), os,
-                          [&](OpPassManager &pm) {
-                            os << pm.getOpName() << "(";
-                            pm.printAsTextualPipeline(os);
-                            os << ")";
-                          });
+    llvm::interleave(
+        adaptor->getPassManagers(),
+        [&](OpPassManager &pm) {
+          os << pm.getOpName() << "(";
+          pm.printAsTextualPipeline(os);
+          os << ")";
+        },
+        [&] { os << ","; });
     return;
   }
   // Otherwise, print the pass argument followed by its options. If the pass
@@ -295,14 +297,17 @@ OperationName OpPassManager::getOpName(MLIRContext &context) const {
 /// Prints out the given passes as the textual representation of a pipeline.
 static void printAsTextualPipeline(ArrayRef<std::unique_ptr<Pass>> passes,
                                    raw_ostream &os) {
-  llvm::interleaveComma(passes, os, [&](const std::unique_ptr<Pass> &pass) {
-    pass->printAsTextualPipeline(os);
-  });
+  llvm::interleave(
+      passes,
+      [&](const std::unique_ptr<Pass> &pass) {
+        pass->printAsTextualPipeline(os);
+      },
+      [&] { os << ","; });
 }
 
 /// Prints out the passes of the pass manager as the textual representation
 /// of pipelines.
-void OpPassManager::printAsTextualPipeline(raw_ostream &os) {
+void OpPassManager::printAsTextualPipeline(raw_ostream &os) const {
   ::printAsTextualPipeline(impl->passes, os);
 }
 

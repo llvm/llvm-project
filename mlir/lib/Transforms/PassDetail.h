@@ -10,6 +10,7 @@
 #define TRANSFORMS_PASSDETAIL_H_
 
 #include "mlir/Pass/Pass.h"
+#include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/Passes.h"
 
 namespace mlir {
