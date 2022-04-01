@@ -278,7 +278,7 @@ public:
 
   virtual bool SetRemoteWorkingDirectory(const FileSpec &working_dir);
 
-  virtual UserIDResolver &GetUserIDResolver() = 0;
+  virtual UserIDResolver &GetUserIDResolver();
 
   /// Locate a file for a platform.
   ///
@@ -516,34 +516,20 @@ public:
 
   virtual lldb::user_id_t OpenFile(const FileSpec &file_spec,
                                    File::OpenOptions flags, uint32_t mode,
-                                   Status &error) {
-    return UINT64_MAX;
-  }
+                                   Status &error);
 
-  virtual bool CloseFile(lldb::user_id_t fd, Status &error) { return false; }
+  virtual bool CloseFile(lldb::user_id_t fd, Status &error);
 
-  virtual lldb::user_id_t GetFileSize(const FileSpec &file_spec) {
-    return UINT64_MAX;
-  }
+  virtual lldb::user_id_t GetFileSize(const FileSpec &file_spec);
 
   virtual void AutoCompleteDiskFileOrDirectory(CompletionRequest &request,
                                                bool only_dir) {}
 
   virtual uint64_t ReadFile(lldb::user_id_t fd, uint64_t offset, void *dst,
-                            uint64_t dst_len, Status &error) {
-    error.SetErrorStringWithFormatv(
-        "Platform::ReadFile() is not supported in the {0} platform",
-        GetPluginName());
-    return -1;
-  }
+                            uint64_t dst_len, Status &error);
 
   virtual uint64_t WriteFile(lldb::user_id_t fd, uint64_t offset,
-                             const void *src, uint64_t src_len, Status &error) {
-    error.SetErrorStringWithFormatv(
-        "Platform::WriteFile() is not supported in the {0} platform",
-        GetPluginName());
-    return -1;
-  }
+                             const void *src, uint64_t src_len, Status &error);
 
   virtual Status GetFile(const FileSpec &source, const FileSpec &destination);
 
