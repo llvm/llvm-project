@@ -78,8 +78,6 @@ enum class IdentFlag {
 enum class OMPScheduleType {
   StaticChunked = 33,
   Static = 34, // static unspecialized
-  DistributeChunked = 91,
-  Distribute = 92,
   DynamicChunked = 35,
   GuidedChunked = 36, // guided unspecialized
   Runtime = 37,
@@ -88,6 +86,16 @@ enum class OMPScheduleType {
   StaticBalancedChunked = 45, // static with chunk adjustment (e.g., simd)
   GuidedSimd = 46,            // guided with chunk adjustment
   RuntimeSimd = 47,           // runtime with chunk adjustment
+
+  OrderedStaticChunked = 65,
+  OrderedStatic = 66, // ordered static unspecialized
+  OrderedDynamicChunked = 67,
+  OrderedGuidedChunked = 68,
+  OrderedRuntime = 69,
+  OrderedAuto = 70, // ordered auto
+
+  DistributeChunked = 91, // distribute static chunked
+  Distribute = 92,        // distribute static unspecialized
 
   ModifierMonotonic =
       (1 << 29), // Set if the monotonic schedule modifier was present

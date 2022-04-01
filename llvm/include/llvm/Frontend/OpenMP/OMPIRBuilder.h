@@ -403,13 +403,16 @@ public:
   ///                     the loop.
   /// \param Chunk    The size of loop chunk considered as a unit when
   ///                 scheduling. If \p nullptr, defaults to 1.
+  /// \param Ordered  Indicates whether the ordered clause is specified without
+  ///                 parameter.
   ///
   /// \returns Point where to insert code after the workshare construct.
   InsertPointTy applyDynamicWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
                                           InsertPointTy AllocaIP,
                                           omp::OMPScheduleType SchedType,
                                           bool NeedsBarrier,
-                                          Value *Chunk = nullptr);
+                                          Value *Chunk = nullptr,
+                                          bool Ordered = false);
 
   /// Modifies the canonical loop to be a workshare loop.
   ///
