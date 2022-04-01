@@ -2,7 +2,7 @@
 Test lldb's handling of job control signals (SIGTSTP, SIGCONT).
 """
 
-
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.lldbpexpect import PExpectTest
 
