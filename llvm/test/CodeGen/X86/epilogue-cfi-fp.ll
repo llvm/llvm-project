@@ -15,7 +15,7 @@ define i32 @foo(i32 %i, i32 %j, i32 %k, i32 %l, i32 %m) #0 {
 
 ; PEI-LABEL: name: foo
 ; PEI:         $ebp = frame-destroy POP32r implicit-def $esp, implicit $esp
-; PEI-NEXT:    {{^ +}}CFI_INSTRUCTION def_cfa $esp, 4
+; PEI-NEXT:    frame-destroy CFI_INSTRUCTION def_cfa $esp, 4
 ; PEI-NEXT:    RET 0, killed $eax
 
 entry:
