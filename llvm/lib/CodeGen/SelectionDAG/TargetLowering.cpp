@@ -8723,8 +8723,18 @@ void TargetLowering::expandUADDSUBO(
   EVT ResultType = Node->getValueType(1);
   EVT SetCCType = getSetCCResultType(
       DAG.getDataLayout(), *DAG.getContext(), Node->getValueType(0));
-  ISD::CondCode CC = IsAdd ? ISD::SETULT : ISD::SETUGT;
-  SDValue SetCC = DAG.getSetCC(dl, SetCCType, Result, LHS, CC);
+  SDValue SetCC;
+  if (IsAdd && isOneConstant(RHS)) {
+    // Special case: uaddo X, 1 overflowed if X+1 is 0. This potential reduces
+    // the live range of X. We assume comparing with 0 is cheap.
+    // TODO: This generalizes to (X + C) < C.
+    SetCC =
+        DAG.getSetCC(dl, SetCCType, Result,
+                     DAG.getConstant(0, dl, Node->getValueType(0)), ISD::SETEQ);
+  } else {
+    ISD::CondCode CC = IsAdd ? ISD::SETULT : ISD::SETUGT;
+    SetCC = DAG.getSetCC(dl, SetCCType, Result, LHS, CC);
+  }
   Overflow = DAG.getBoolExtOrTrunc(SetCC, dl, ResultType, ResultType);
 }
 

@@ -6824,12 +6824,20 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     Res = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, MVT::i64, Res,
                       DAG.getValueType(MVT::i32));
 
-    // Sign extend the LHS and perform an unsigned compare with the ADDW result.
-    // Since the inputs are sign extended from i32, this is equivalent to
-    // comparing the lower 32 bits.
-    LHS = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, N->getOperand(0));
-    SDValue Overflow = DAG.getSetCC(DL, N->getValueType(1), Res, LHS,
-                                    IsAdd ? ISD::SETULT : ISD::SETUGT);
+    SDValue Overflow;
+    if (IsAdd && isOneConstant(RHS)) {
+      // Special case uaddo X, 1 overflowed if the addition result is 0.
+      // FIXME: We can do this for any constant RHS by using (X + C) < C.
+      Overflow = DAG.getSetCC(DL, N->getValueType(1), Res,
+                              DAG.getConstant(0, DL, MVT::i64), ISD::SETEQ);
+    } else {
+      // Sign extend the LHS and perform an unsigned compare with the ADDW
+      // result. Since the inputs are sign extended from i32, this is equivalent
+      // to comparing the lower 32 bits.
+      LHS = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, N->getOperand(0));
+      Overflow = DAG.getSetCC(DL, N->getValueType(1), Res, LHS,
+                              IsAdd ? ISD::SETULT : ISD::SETUGT);
+    }
 
     Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
     Results.push_back(Overflow);
