@@ -51,10 +51,11 @@ MakeRangeList(const PdbIndex &index, const LocalVariableAddrRange &range,
 
 namespace {
 struct FindMembersSize : public TypeVisitorCallbacks {
-  FindMembersSize(std::vector<std::pair<RegisterId, uint32_t>> &members_info,
-                  TpiStream &tpi)
+  FindMembersSize(
+      llvm::SmallVectorImpl<std::pair<RegisterId, uint32_t>> &members_info,
+      TpiStream &tpi)
       : members_info(members_info), tpi(tpi) {}
-  std::vector<std::pair<RegisterId, uint32_t>> &members_info;
+  llvm::SmallVectorImpl<std::pair<RegisterId, uint32_t>> &members_info;
   TpiStream &tpi;
   llvm::Error visitKnownMember(CVMemberRecord &cvr,
                                DataMemberRecord &member) override {
@@ -670,7 +671,7 @@ VariableInfo lldb_private::npdb::GetVariableLocationInfo(
         result.ranges = std::move(ranges);
       }
       break;
-    } 
+    }
     case S_DEFRANGE_REGISTER_REL: {
       DefRangeRegisterRelSym loc(SymbolRecordKind::DefRangeRegisterRelSym);
       cantFail(SymbolDeserializer::deserializeAs<DefRangeRegisterRelSym>(
@@ -707,22 +708,32 @@ VariableInfo lldb_private::npdb::GetVariableLocationInfo(
       break;
     }
     case S_DEFRANGE_SUBFIELD_REGISTER: {
-      CVType class_cvt = index.tpi().getType(result.type);
-      ClassRecord class_record = CVTagRecord::create(class_cvt).asClass();
-      CVType field_list = index.tpi().getType(class_record.FieldList);
-      std::vector<std::pair<RegisterId, uint32_t>> members_info;
-      FindMembersSize find_members_size(members_info, index.tpi());
-      if (llvm::Error err =
-              visitMemberRecordStream(field_list.data(), find_members_size))
-        llvm::consumeError(std::move(err));
+      // A vector of register id and member size pairs. If the variable is a
+      // simple type, then we don't know the number of subfields. Otherwise, the
+      // vector size will be the number of subfields in the udt type.
+      llvm::SmallVector<std::pair<RegisterId, uint32_t>> members_info;
+      bool is_simple_type = result.type.isSimple();
+      if (!is_simple_type) {
+        CVType class_cvt = index.tpi().getType(result.type);
+        ClassRecord class_record = CVTagRecord::create(class_cvt).asClass();
+        CVType field_list = index.tpi().getType(class_record.FieldList);
+        FindMembersSize find_members_size(members_info, index.tpi());
+        if (llvm::Error err =
+                visitMemberRecordStream(field_list.data(), find_members_size)) {
+          llvm::consumeError(std::move(err));
+          break;
+        }
+      }
 
-      std::vector<Variable::RangeList> range_lists;
+      uint32_t prev_offset = 0;
       uint32_t cur_offset = 0;
       size_t member_idx = 0;
       // Assuming S_DEFRANGE_SUBFIELD_REGISTER is followed only by
       // S_DEFRANGE_SUBFIELD_REGISTER, need to verify.
-      while (loc_specifier_cvs.kind() == S_DEFRANGE_SUBFIELD_REGISTER &&
-             member_idx < members_info.size()) {
+      while (loc_specifier_cvs.kind() == S_DEFRANGE_SUBFIELD_REGISTER) {
+        if (!is_simple_type && member_idx >= members_info.size())
+          break;
+
         DefRangeSubfieldRegisterSym loc(
             SymbolRecordKind::DefRangeSubfieldRegisterSym);
         cantFail(SymbolDeserializer::deserializeAs<DefRangeSubfieldRegisterSym>(
@@ -736,17 +747,27 @@ VariableInfo lldb_private::npdb::GetVariableLocationInfo(
           result.ranges->Sort();
         }
 
-        // Some fields maybe optimized away and have no
-        // S_DEFRANGE_SUBFIELD_REGISTER to describe them. Skip them.
-        while (loc.Hdr.OffsetInParent != cur_offset) {
-          cur_offset += members_info[member_idx].second;
-          ++member_idx;
-        }
-        if (member_idx < members_info.size()) {
-          members_info[member_idx].first =
-              (RegisterId)(uint16_t)loc.Hdr.Register;
-          cur_offset += members_info[member_idx].second;
-          ++member_idx;
+        if (is_simple_type) {
+          // Fix last member's size.
+          if (!members_info.empty())
+            members_info.back().second =
+                loc.Hdr.OffsetInParent - prev_offset;
+          members_info.emplace_back((RegisterId)(uint16_t)loc.Hdr.Register, 0);
+          prev_offset = loc.Hdr.OffsetInParent;
+        } else {
+          // Some fields maybe optimized away and have no
+          // S_DEFRANGE_SUBFIELD_REGISTER to describe them. Skip them.
+          while (loc.Hdr.OffsetInParent != cur_offset &&
+                 member_idx < members_info.size()) {
+            cur_offset += members_info[member_idx].second;
+            ++member_idx;
+          }
+          if (member_idx < members_info.size()) {
+            members_info[member_idx].first =
+                (RegisterId)(uint16_t)loc.Hdr.Register;
+            cur_offset += members_info[member_idx].second;
+            ++member_idx;
+          }
         }
         // Go to next S_DEFRANGE_SUBFIELD_REGISTER.
         loc_specifier_id = PdbCompilandSymId(
@@ -754,6 +775,9 @@ VariableInfo lldb_private::npdb::GetVariableLocationInfo(
             loc_specifier_id.offset + loc_specifier_cvs.RecordData.size());
         loc_specifier_cvs = index.ReadSymbolRecord(loc_specifier_id);
       }
+      if (is_simple_type && !members_info.empty())
+        members_info.back().second =
+            GetTypeSizeForSimpleKind(result.type.getSimpleKind()) - prev_offset;
       auto member_info_ref = llvm::makeArrayRef(members_info);
       result.location =
           MakeEnregisteredLocationExpressionForClass(member_info_ref, module);
