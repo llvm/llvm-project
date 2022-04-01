@@ -27,11 +27,11 @@ class SetCoalescer;
 /// the same PresburgerSpace with support for union, intersection, subtraction,
 /// and complement operations, as well as sampling.
 ///
-/// The IntegerRelations (relations) are stored in a vector, and the set
+/// The IntegerRelations (disjuncts) are stored in a vector, and the set
 /// represents the union of these relations. An empty list corresponds to
 /// the empty set.
 ///
-/// Note that there are no invariants guaranteed on the list of relations
+/// Note that there are no invariants guaranteed on the list of disjuncts
 /// other than that they are all in the same PresburgerSpace. For example, the
 /// relations may overlap with each other.
 class PresburgerRelation : public PresburgerSpace {
@@ -44,17 +44,17 @@ public:
 
   explicit PresburgerRelation(const IntegerRelation &disjunct);
 
-  /// Return the number of Disjuncts in the union.
+  /// Return the number of disjuncts in the union.
   unsigned getNumDisjuncts() const;
 
-  /// Return a reference to the list of IntegerRelations.
+  /// Return a reference to the list of disjuncts.
   ArrayRef<IntegerRelation> getAllDisjuncts() const;
 
-  /// Return the IntegerRelation at the specified index.
+  /// Return the disjunct at the specified index.
   const IntegerRelation &getDisjunct(unsigned index) const;
 
   /// Mutate this set, turning it into the union of this set and the given
-  /// IntegerRelation.
+  /// disjunct.
   void unionInPlace(const IntegerRelation &disjunct);
 
   /// Mutate this set, turning it into the union of this set and the given set.
@@ -122,7 +122,7 @@ protected:
   }
 
   /// The list of disjuncts that this set is the union of.
-  SmallVector<IntegerRelation, 2> integerRelations;
+  SmallVector<IntegerRelation, 2> disjuncts;
 
   friend class SetCoalescer;
 };
