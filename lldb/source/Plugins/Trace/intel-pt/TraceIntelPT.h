@@ -9,7 +9,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_TRACEINTELPT_H
 #define LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_TRACEINTELPT_H
 
-#include "IntelPTDecoder.h"
+#include "ThreadDecoder.h"
 #include "TraceIntelPTSessionFileParser.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-types.h"

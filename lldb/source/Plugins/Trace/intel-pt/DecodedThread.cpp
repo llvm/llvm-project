@@ -9,10 +9,10 @@
 #include "DecodedThread.h"
 
 #include <intel-pt.h>
-#include <memory>
 
 #include "TraceCursorIntelPT.h"
-#include "lldb/Utility/StreamString.h"
+
+#include <memory>
 
 using namespace lldb;
 using namespace lldb_private;
