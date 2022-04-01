@@ -22915,6 +22915,36 @@ static SDValue LowerFGETSIGN(SDValue Op, SelectionDAG &DAG) {
   return Res;
 }
 
+/// Helper for attempting to create a X86ISD::BT node.
+static SDValue getBT(SDValue Src, SDValue BitNo, const SDLoc &DL, SelectionDAG &DAG) {
+  // If Src is i8, promote it to i32 with any_extend.  There is no i8 BT
+  // instruction.  Since the shift amount is in-range-or-undefined, we know
+  // that doing a bittest on the i32 value is ok.  We extend to i32 because
+  // the encoding for the i16 version is larger than the i32 version.
+  // Also promote i16 to i32 for performance / code size reason.
+  if (Src.getValueType().getScalarSizeInBits() < 32)
+    Src = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Src);
+
+  // No legal type found, give up.
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(Src.getValueType()))
+    return SDValue();
+
+  // See if we can use the 32-bit instruction instead of the 64-bit one for a
+  // shorter encoding. Since the former takes the modulo 32 of BitNo and the
+  // latter takes the modulo 64, this is only valid if the 5th bit of BitNo is
+  // known to be zero.
+  if (Src.getValueType() == MVT::i64 &&
+      DAG.MaskedValueIsZero(BitNo, APInt(BitNo.getValueSizeInBits(), 32)))
+    Src = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Src);
+
+  // If the operand types disagree, extend the shift amount to match.  Since
+  // BT ignores high bits (like shifts) we can use anyextend.
+  if (Src.getValueType() != BitNo.getValueType())
+    BitNo = DAG.getNode(ISD::ANY_EXTEND, DL, Src.getValueType(), BitNo);
+
+  return DAG.getNode(X86ISD::BT, DL, MVT::i32, Src, BitNo);
+}
+
 /// Helper for creating a X86ISD::SETCC node.
 static SDValue getSETCC(X86::CondCode Cond, SDValue EFLAGS, const SDLoc &dl,
                         SelectionDAG &DAG) {
@@ -23601,33 +23631,11 @@ static SDValue LowerAndToBT(SDValue And, ISD::CondCode CC, const SDLoc &dl,
     CC = CC == ISD::SETEQ ? ISD::SETNE : ISD::SETEQ;
   }
 
-  // If Src is i8, promote it to i32 with any_extend.  There is no i8 BT
-  // instruction.  Since the shift amount is in-range-or-undefined, we know
-  // that doing a bittest on the i32 value is ok.  We extend to i32 because
-  // the encoding for the i16 version is larger than the i32 version.
-  // Also promote i16 to i32 for performance / code size reason.
-  if (Src.getValueType().getScalarSizeInBits() < 32)
-    Src = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::i32, Src);
-
-  // No legal type found, give up.
-  if (!DAG.getTargetLoweringInfo().isTypeLegal(Src.getValueType()))
-    return SDValue();
-
-  // See if we can use the 32-bit instruction instead of the 64-bit one for a
-  // shorter encoding. Since the former takes the modulo 32 of BitNo and the
-  // latter takes the modulo 64, this is only valid if the 5th bit of BitNo is
-  // known to be zero.
-  if (Src.getValueType() == MVT::i64 &&
-      DAG.MaskedValueIsZero(BitNo, APInt(BitNo.getValueSizeInBits(), 32)))
-    Src = DAG.getNode(ISD::TRUNCATE, dl, MVT::i32, Src);
-
-  // If the operand types disagree, extend the shift amount to match.  Since
-  // BT ignores high bits (like shifts) we can use anyextend.
-  if (Src.getValueType() != BitNo.getValueType())
-    BitNo = DAG.getNode(ISD::ANY_EXTEND, dl, Src.getValueType(), BitNo);
-
-  X86CC = CC == ISD::SETEQ ? X86::COND_AE : X86::COND_B;
-  return DAG.getNode(X86ISD::BT, dl, MVT::i32, Src, BitNo);
+  // Attempt to create the X86ISD::BT node.
+  if (SDValue BT = getBT(Src, BitNo, dl, DAG)) {
+    X86CC = CC == ISD::SETEQ ? X86::COND_AE : X86::COND_B;
+    return BT;
+  }
 }
 
 // Check if pre-AVX condcode can be performed by a single FCMP op.
@@ -44760,14 +44768,7 @@ static SDValue combineCarryThroughADD(SDValue EFLAGS, SelectionDAG &DAG) {
           BitNo = Carry.getOperand(1);
           Carry = Carry.getOperand(0);
         }
-        if (Carry.getScalarValueSizeInBits() < 32)
-          Carry = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Carry);
-        EVT CarryVT = Carry.getValueType();
-        if (DAG.getTargetLoweringInfo().isTypeLegal(CarryVT)) {
-          if (CarryVT != BitNo.getValueType())
-            BitNo = DAG.getNode(ISD::ANY_EXTEND, DL, CarryVT, BitNo);
-          return DAG.getNode(X86ISD::BT, DL, MVT::i32, Carry, BitNo);
-        }
+        return getBT(Carry, BitNo, DL, DAG);
       }
     }
   }
