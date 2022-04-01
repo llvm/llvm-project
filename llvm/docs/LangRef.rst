@@ -2125,7 +2125,7 @@ example:
 
 ``"tls-load-hoist"``
     This attribute indicates that the function will try to reduce redundant
-    tls address caculation by hoisting tls variable.
+    tls address calculation by hoisting tls variable.
 
 ``uwtable[(sync|async)]``
     This attribute indicates that the ABI being targeted requires that
