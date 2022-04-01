@@ -63,6 +63,20 @@ uint64_t atomicAdd(uint64_t *Address, uint64_t Val, int Ordering) {
 }
 ///}
 
+constexpr uint32_t UNSET = 0;
+constexpr uint32_t SET = 1;
+
+// TODO: This seems to hide a bug in the declare variant handling. If it is
+// called before it is defined
+//       here the overload won't happen. Investigate lalter!
+void unsetLock(omp_lock_t *Lock) {
+  (void)atomicExchange((uint32_t *)Lock, UNSET, __ATOMIC_SEQ_CST);
+}
+
+int testLock(omp_lock_t *Lock) {
+  return atomicAdd((uint32_t *)Lock, 0u, __ATOMIC_SEQ_CST);
+}
+
 /// AMDGCN Implementation
 ///
 ///{
@@ -194,12 +208,19 @@ void syncWarp(__kmpc_impl_lanemask_t) {
 void syncThreads() { __builtin_amdgcn_s_barrier(); }
 void syncThreadsAligned() { syncThreads(); }
 
-// TODO: Don't have wavefront lane locks. Possibly can't have them.
-void unsetLock(omp_lock_t *) { __builtin_trap(); }
-int testLock(omp_lock_t *) { __builtin_trap(); }
-void initLock(omp_lock_t *) { __builtin_trap(); }
-void destroyLock(omp_lock_t *) { __builtin_trap(); }
-void setLock(omp_lock_t *) { __builtin_trap(); }
+void initLock(omp_lock_t *Lock) { unsetLock(Lock); }
+
+void destroyLock(omp_lock_t *Lock) { unsetLock(Lock); }
+
+void setLock(omp_lock_t *Lock) {
+  uint64_t lowestActiveThread = utils::ffs(mapping::activemask()) - 1;
+  if (mapping::getThreadIdInWarp() == lowestActiveThread) {
+    while (atomicCAS((uint32_t *)Lock, UNSET, SET, __ATOMIC_SEQ_CST) != UNSET) {
+      __builtin_amdgcn_s_sleep(0);
+    }
+  }
+  // test_lock will now return true for any thread in the warp
+}
 
 #pragma omp end declare variant
 ///}
@@ -245,19 +266,6 @@ void syncThreads() {
 void syncThreadsAligned() { __syncthreads(); }
 
 constexpr uint32_t OMP_SPIN = 1000;
-constexpr uint32_t UNSET = 0;
-constexpr uint32_t SET = 1;
-
-// TODO: This seems to hide a bug in the declare variant handling. If it is
-// called before it is defined
-//       here the overload won't happen. Investigate lalter!
-void unsetLock(omp_lock_t *Lock) {
-  (void)atomicExchange((uint32_t *)Lock, UNSET, __ATOMIC_SEQ_CST);
-}
-
-int testLock(omp_lock_t *Lock) {
-  return atomicAdd((uint32_t *)Lock, 0u, __ATOMIC_SEQ_CST);
-}
 
 void initLock(omp_lock_t *Lock) { unsetLock(Lock); }
 
