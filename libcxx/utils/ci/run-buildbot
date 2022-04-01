@@ -84,6 +84,8 @@ function generate-cmake-base() {
           -DCMAKE_BUILD_TYPE=RelWithDebInfo \
           -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
           -DLIBCXX_ENABLE_WERROR=YES \
+          -DLIBCXXABI_ENABLE_WERROR=YES \
+          -DLIBUNWIND_ENABLE_WERROR=YES \
           -DLLVM_LIT_ARGS="-sv --show-unsupported --xunit-xml-output test-results.xml" \
           "${@}"
 }
@@ -286,7 +288,9 @@ generic-gcc)
     export CXX=g++-11
     clean
     generate-cmake -DLIBUNWIND_TEST_CONFIG="llvm-libunwind-shared.cfg.in" \
-                   -DLIBCXX_ENABLE_WERROR=NO
+                   -DLIBCXX_ENABLE_WERROR=NO \
+                   -DLIBCXXABI_ENABLE_WERROR=NO \
+                   -DLIBUNWIND_ENABLE_WERROR=NO
     check-runtimes
 ;;
 generic-gcc-cxx11)
@@ -295,7 +299,9 @@ generic-gcc-cxx11)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx11.cmake" \
                    -DLIBUNWIND_TEST_CONFIG="llvm-libunwind-shared.cfg.in" \
-                   -DLIBCXX_ENABLE_WERROR=NO
+                   -DLIBCXX_ENABLE_WERROR=NO \
+                   -DLIBCXXABI_ENABLE_WERROR=NO \
+                   -DLIBUNWIND_ENABLE_WERROR=NO
     check-runtimes
 ;;
 generic-asan)
