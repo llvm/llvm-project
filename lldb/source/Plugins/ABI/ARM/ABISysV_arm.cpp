@@ -1668,7 +1668,7 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
     ProcessSP process_sp(thread.GetProcess());
     ByteOrder byte_order = process_sp->GetByteOrder();
 
-    DataBufferSP data_sp(new DataBufferHeap(*byte_size, 0));
+    WritableDataBufferSP data_sp(new DataBufferHeap(*byte_size, 0));
     uint32_t data_offset = 0;
 
     for (uint32_t reg_index = 0; reg_index < vfp_count; reg_index++) {

@@ -679,7 +679,7 @@ public:
   bool IsCStringContainer(bool check_pointer = false);
 
   std::pair<size_t, bool>
-  ReadPointedString(lldb::DataBufferSP &buffer_sp, Status &error,
+  ReadPointedString(lldb::WritableDataBufferSP &buffer_sp, Status &error,
                     uint32_t max_length = 0, bool honor_array = true,
                     lldb::Format item_format = lldb::eFormatCharArray);
 

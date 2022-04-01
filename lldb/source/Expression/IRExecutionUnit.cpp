@@ -151,7 +151,8 @@ Status IRExecutionUnit::DisassembleFunction(Stream &stream,
     return ret;
   }
 
-  lldb::DataBufferSP buffer_sp(new DataBufferHeap(func_range.second, 0));
+  lldb::WritableDataBufferSP buffer_sp(
+      new DataBufferHeap(func_range.second, 0));
 
   Process *process = exe_ctx.GetProcessPtr();
   Status err;

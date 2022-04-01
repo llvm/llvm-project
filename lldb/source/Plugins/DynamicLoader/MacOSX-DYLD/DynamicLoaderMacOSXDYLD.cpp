@@ -804,7 +804,8 @@ bool DynamicLoaderMacOSXDYLD::ReadMachHeader(lldb::addr_t addr,
         return true; // We were able to read the mach_header and weren't asked
                      // to read the load command bytes
 
-      DataBufferSP load_cmd_data_sp(new DataBufferHeap(header->sizeofcmds, 0));
+      WritableDataBufferSP load_cmd_data_sp(
+          new DataBufferHeap(header->sizeofcmds, 0));
 
       size_t load_cmd_bytes_read =
           m_process->ReadMemory(load_cmd_addr, load_cmd_data_sp->GetBytes(),

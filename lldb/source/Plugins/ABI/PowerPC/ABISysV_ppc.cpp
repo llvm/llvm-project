@@ -666,7 +666,7 @@ ValueObjectSP ABISysV_ppc::GetReturnValueObjectImpl(
     bool is_memory = true;
     if (*bit_width <= 128) {
       ByteOrder target_byte_order = target->GetArchitecture().GetByteOrder();
-      DataBufferSP data_sp(new DataBufferHeap(16, 0));
+      WritableDataBufferSP data_sp(new DataBufferHeap(16, 0));
       DataExtractor return_ext(data_sp, target_byte_order,
                                target->GetArchitecture().GetAddressByteSize());
 

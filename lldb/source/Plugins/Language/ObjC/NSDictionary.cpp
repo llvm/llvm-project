@@ -713,7 +713,7 @@ lldb_private::formatters::NSDictionaryISyntheticFrontEnd::GetChildAtIndex(
     if (!m_pair_type.IsValid())
       return ValueObjectSP();
 
-    DataBufferSP buffer_sp(new DataBufferHeap(2 * m_ptr_size, 0));
+    WritableDataBufferSP buffer_sp(new DataBufferHeap(2 * m_ptr_size, 0));
 
     if (m_ptr_size == 8) {
       uint64_t *data_ptr = (uint64_t *)buffer_sp->GetBytes();
@@ -840,7 +840,7 @@ lldb_private::formatters::NSCFDictionarySyntheticFrontEnd::GetChildAtIndex(
     if (!m_pair_type.IsValid())
       return ValueObjectSP();
 
-    DataBufferSP buffer_sp(new DataBufferHeap(2 * m_ptr_size, 0));
+    WritableDataBufferSP buffer_sp(new DataBufferHeap(2 * m_ptr_size, 0));
 
     switch (m_ptr_size) {
     case 0: // architecture has no clue - fail
@@ -961,7 +961,7 @@ lldb::ValueObjectSP lldb_private::formatters::
     if (!m_pair_type.IsValid())
       return ValueObjectSP();
 
-    DataBufferSP buffer_sp(new DataBufferHeap(2 * m_ptr_size, 0));
+    WritableDataBufferSP buffer_sp(new DataBufferHeap(2 * m_ptr_size, 0));
 
     if (m_ptr_size == 8) {
       uint64_t *data_ptr = (uint64_t *)buffer_sp->GetBytes();
@@ -1038,7 +1038,7 @@ lldb_private::formatters::NSDictionary1SyntheticFrontEnd::GetChildAtIndex(
   auto pair_type =
       GetLLDBNSPairType(process_sp->GetTarget().shared_from_this());
 
-  DataBufferSP buffer_sp(new DataBufferHeap(2 * ptr_size, 0));
+  WritableDataBufferSP buffer_sp(new DataBufferHeap(2 * ptr_size, 0));
 
   if (ptr_size == 8) {
     uint64_t *data_ptr = (uint64_t *)buffer_sp->GetBytes();
@@ -1203,7 +1203,7 @@ lldb_private::formatters::GenericNSDictionaryMSyntheticFrontEnd<
     if (!m_pair_type.IsValid())
       return ValueObjectSP();
 
-    DataBufferSP buffer_sp(new DataBufferHeap(2 * m_ptr_size, 0));
+    WritableDataBufferSP buffer_sp(new DataBufferHeap(2 * m_ptr_size, 0));
 
     if (m_ptr_size == 8) {
       uint64_t *data_ptr = (uint64_t *)buffer_sp->GetBytes();
@@ -1357,7 +1357,7 @@ lldb_private::formatters::Foundation1100::
     if (!m_pair_type.IsValid())
       return ValueObjectSP();
 
-    DataBufferSP buffer_sp(new DataBufferHeap(2 * m_ptr_size, 0));
+    WritableDataBufferSP buffer_sp(new DataBufferHeap(2 * m_ptr_size, 0));
 
     if (m_ptr_size == 8) {
       uint64_t *data_ptr = (uint64_t *)buffer_sp->GetBytes();

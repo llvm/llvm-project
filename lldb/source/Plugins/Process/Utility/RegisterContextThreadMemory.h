@@ -51,7 +51,7 @@ public:
   // is a somewhat disruptive operation,
   // so these API's should only be used when this behavior is needed.
 
-  bool ReadAllRegisterValues(lldb::DataBufferSP &data_sp) override;
+  bool ReadAllRegisterValues(lldb::WritableDataBufferSP &data_sp) override;
 
   bool WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) override;
 

@@ -158,7 +158,7 @@ bool lldb_private::formatters::CFBitVectorSummaryProvider(
   // make sure we do not try to read huge amounts of data
   if (num_bytes > 1024)
     num_bytes = 1024;
-  DataBufferSP buffer_sp(new DataBufferHeap(num_bytes, 0));
+  WritableDataBufferSP buffer_sp(new DataBufferHeap(num_bytes, 0));
   num_bytes =
       process_sp->ReadMemory(data_ptr, buffer_sp->GetBytes(), num_bytes, error);
   if (error.Fail() || num_bytes == 0)

@@ -848,7 +848,7 @@ bool ValueObject::SetData(DataExtractor &data, Status &error) {
 }
 
 static bool CopyStringDataToBufferSP(const StreamString &source,
-                                     lldb::DataBufferSP &destination) {
+                                     lldb::WritableDataBufferSP &destination) {
   llvm::StringRef src = source.GetString();
   src = src.rtrim('\0');
   destination = std::make_shared<DataBufferHeap>(src.size(), 0);
@@ -857,9 +857,9 @@ static bool CopyStringDataToBufferSP(const StreamString &source,
 }
 
 std::pair<size_t, bool>
-ValueObject::ReadPointedString(lldb::DataBufferSP &buffer_sp, Status &error,
-                               uint32_t max_length, bool honor_array,
-                               Format item_format) {
+ValueObject::ReadPointedString(lldb::WritableDataBufferSP &buffer_sp,
+                               Status &error, uint32_t max_length,
+                               bool honor_array, Format item_format) {
   bool was_capped = false;
   StreamString s;
   ExecutionContext exe_ctx(GetExecutionContextRef());
@@ -1184,7 +1184,7 @@ bool ValueObject::DumpPrintableRepresentation(
                eFormatVectorOfChar)) // print char[] & char* directly
       {
         Status error;
-        lldb::DataBufferSP buffer_sp;
+        lldb::WritableDataBufferSP buffer_sp;
         std::pair<size_t, bool> read_string = ReadPointedString(
             buffer_sp, error, 0, (custom_format == eFormatVectorOfChar) ||
                                      (custom_format == eFormatCharArray));

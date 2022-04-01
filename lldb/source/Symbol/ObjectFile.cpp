@@ -30,6 +30,7 @@ using namespace lldb;
 using namespace lldb_private;
 
 char ObjectFile::ID;
+size_t ObjectFile::g_initial_bytes_to_read = 512;
 
 static ObjectFileSP
 CreateObjectFromContainer(const lldb::ModuleSP &module_sp, const FileSpec *file,
@@ -81,8 +82,8 @@ ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp, const FileSpec *file,
     // container plug-ins can use these bytes to see if they can parse this
     // file.
     if (file_size > 0) {
-      data_sp = FileSystem::Instance().CreateDataBuffer(file->GetPath(), 512,
-                                                        file_offset);
+      data_sp = FileSystem::Instance().CreateDataBuffer(
+          file->GetPath(), g_initial_bytes_to_read, file_offset);
       data_offset = 0;
     }
   }
@@ -115,7 +116,7 @@ ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp, const FileSpec *file,
         // We failed to find any cached object files in the container plug-
         // ins, so lets read the first 512 bytes and try again below...
         data_sp = FileSystem::Instance().CreateDataBuffer(
-            archive_file.GetPath(), 512, file_offset);
+            archive_file.GetPath(), g_initial_bytes_to_read, file_offset);
       }
     }
   }
@@ -189,8 +190,8 @@ size_t ObjectFile::GetModuleSpecifications(const FileSpec &file,
                                            ModuleSpecList &specs,
                                            DataBufferSP data_sp) {
   if (!data_sp)
-    data_sp = FileSystem::Instance().CreateDataBuffer(file.GetPath(), 512,
-                                                      file_offset);
+    data_sp = FileSystem::Instance().CreateDataBuffer(
+        file.GetPath(), g_initial_bytes_to_read, file_offset);
   if (data_sp) {
     if (file_size == 0) {
       const lldb::offset_t actual_file_size =

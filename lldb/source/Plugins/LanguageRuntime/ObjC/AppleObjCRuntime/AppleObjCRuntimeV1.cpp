@@ -222,7 +222,7 @@ void AppleObjCRuntimeV1::ClassDescriptorV1::Initialize(
     return;
   }
 
-  lldb::DataBufferSP buffer_sp(new DataBufferHeap(1024, 0));
+  lldb::WritableDataBufferSP buffer_sp(new DataBufferHeap(1024, 0));
 
   size_t count = process_sp->ReadCStringFromMemory(
       name_ptr, (char *)buffer_sp->GetBytes(), 1024, error);
@@ -233,7 +233,7 @@ void AppleObjCRuntimeV1::ClassDescriptorV1::Initialize(
   }
 
   if (count)
-    m_name = ConstString((char *)buffer_sp->GetBytes());
+    m_name = ConstString(reinterpret_cast<const char *>(buffer_sp->GetBytes()));
   else
     m_name = ConstString();
 

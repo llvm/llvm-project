@@ -138,9 +138,10 @@ private:
 
   ObjectFile &m_objfile;
   lldb::SectionSP m_section_sp;
-  lldb::DataBufferSP m_section_contents_if_encrypted; // if the binary is
-                                                      // encrypted, read the
-                                                      // sect contents
+  lldb::WritableDataBufferSP
+      m_section_contents_if_encrypted; // if the binary is
+                                       // encrypted, read the
+                                       // sect contents
   // out of live memory and cache them here
   std::mutex m_mutex;
   std::vector<UnwindIndex> m_indexes;

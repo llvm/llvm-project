@@ -643,7 +643,7 @@ bool RegisterContextDarwin_arm64::WriteRegister(const RegisterInfo *reg_info,
 }
 
 bool RegisterContextDarwin_arm64::ReadAllRegisterValues(
-    lldb::DataBufferSP &data_sp) {
+    lldb::WritableDataBufferSP &data_sp) {
   data_sp = std::make_shared<DataBufferHeap>(REG_CONTEXT_SIZE, 0);
   if (ReadGPR(false) == KERN_SUCCESS && ReadFPU(false) == KERN_SUCCESS &&
       ReadEXC(false) == KERN_SUCCESS) {

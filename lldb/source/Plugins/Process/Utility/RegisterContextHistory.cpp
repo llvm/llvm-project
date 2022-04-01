@@ -104,7 +104,7 @@ bool RegisterContextHistory::WriteRegister(
 }
 
 bool RegisterContextHistory::ReadAllRegisterValues(
-    lldb::DataBufferSP &data_sp) {
+    lldb::WritableDataBufferSP &data_sp) {
   return false;
 }
 

@@ -43,7 +43,7 @@ public:
   virtual bool WriteRegister(const RegisterInfo *reg_info,
                              const RegisterValue &reg_value) = 0;
 
-  virtual bool ReadAllRegisterValues(lldb::DataBufferSP &data_sp) {
+  virtual bool ReadAllRegisterValues(lldb::WritableDataBufferSP &data_sp) {
     return false;
   }
 

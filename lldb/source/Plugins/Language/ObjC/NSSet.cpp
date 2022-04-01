@@ -635,7 +635,7 @@ lldb_private::formatters::NSCFSetSyntheticFrontEnd::GetChildAtIndex(
   SetItemDescriptor &set_item = m_children[idx];
   if (!set_item.valobj_sp) {
 
-    DataBufferSP buffer_sp(new DataBufferHeap(m_ptr_size, 0));
+    WritableDataBufferSP buffer_sp(new DataBufferHeap(m_ptr_size, 0));
 
     switch (m_ptr_size) {
     case 0: // architecture has no clue - fail

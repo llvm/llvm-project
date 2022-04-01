@@ -645,7 +645,7 @@ ValueObjectSP ABISysV_x86_64::GetReturnValueObjectImpl(
                           0, aggregate_field_offsets,
                           aggregate_compiler_types)) {
       ByteOrder byte_order = target->GetArchitecture().GetByteOrder();
-      DataBufferSP data_sp(new DataBufferHeap(16, 0));
+      WritableDataBufferSP data_sp(new DataBufferHeap(16, 0));
       DataExtractor return_ext(data_sp, byte_order,
                                target->GetArchitecture().GetAddressByteSize());
 

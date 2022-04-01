@@ -20,12 +20,12 @@
 namespace lldb_private {
 
 /// \class DataBuffer DataBuffer.h "lldb/Core/DataBuffer.h"
-/// A pure virtual protocol class for abstracted data buffers.
+/// A pure virtual protocol class for abstracted read only data buffers.
 ///
-/// DataBuffer is an abstract class that gets packaged into a shared pointer
-/// that can use to implement various ways to store data (on the heap, memory
-/// mapped, cached inferior memory). It gets used by DataExtractor so many
-/// DataExtractor objects can share the same data and sub-ranges of that
+/// DataBuffer is an abstract class that gets packaged into a shared
+/// pointer that can use to implement various ways to store data (on the heap,
+/// memory mapped, cached inferior memory). It gets used by DataExtractor so
+/// many DataExtractor objects can share the same data and sub-ranges of that
 /// shared data, and the last object that contains a reference to the shared
 /// data will free it.
 ///
@@ -42,27 +42,7 @@ namespace lldb_private {
 /// with some extra function calls to load the data before it gets accessed.
 class DataBuffer {
 public:
-  /// Destructor
-  ///
-  /// The destructor is virtual as other classes will inherit from this class
-  /// and be downcast to the DataBuffer pure virtual interface. The virtual
-  /// destructor ensures that destructing the base class will destruct the
-  /// class that inherited from it correctly.
   virtual ~DataBuffer() = default;
-
-  /// Get a pointer to the data.
-  ///
-  /// \return
-  ///     A pointer to the bytes owned by this object, or NULL if the
-  ///     object contains no bytes.
-  virtual uint8_t *GetBytes() = 0;
-
-  /// Get a const pointer to the data.
-  ///
-  /// \return
-  ///     A const pointer to the bytes owned by this object, or NULL
-  ///     if the object contains no bytes.
-  virtual const uint8_t *GetBytes() const = 0;
 
   /// Get the number of bytes in the data buffer.
   ///
@@ -70,24 +50,98 @@ public:
   ///     The number of bytes this object currently contains.
   virtual lldb::offset_t GetByteSize() const = 0;
 
+  /// Get a const pointer to the data.
+  ///
+  /// \return
+  ///     A const pointer to the bytes owned by this object, or NULL
+  ///     if the object contains no bytes.
+  const uint8_t *GetBytes() const { return GetBytesImpl(); }
+
   llvm::ArrayRef<uint8_t> GetData() const {
     return llvm::ArrayRef<uint8_t>(GetBytes(), GetByteSize());
   }
 
+  /// LLVM RTTI support.
+  /// {
+  static char ID;
+  virtual bool isA(const void *ClassID) const { return ClassID == &ID; }
+  static bool classof(const DataBuffer *data_buffer) {
+    return data_buffer->isA(&ID);
+  }
+  /// }
+
+protected:
+  /// Get a const pointer to the data.
+  ///
+  /// \return
+  ///     A const pointer to the bytes owned by this object, or NULL
+  ///     if the object contains no bytes.
+  virtual const uint8_t *GetBytesImpl() const = 0;
+};
+
+/// \class DataBuffer DataBuffer.h "lldb/Core/DataBuffer.h"
+/// A pure virtual protocol class for abstracted writable data buffers.
+///
+/// DataBuffer is an abstract class that gets packaged into a shared pointer
+/// that can use to implement various ways to store data (on the heap, memory
+/// mapped, cached inferior memory). It gets used by DataExtractor so many
+/// DataExtractor objects can share the same data and sub-ranges of that
+/// shared data, and the last object that contains a reference to the shared
+/// data will free it.
+class WritableDataBuffer : public DataBuffer {
+public:
+  /// Destructor
+  ///
+  /// The destructor is virtual as other classes will inherit from this class
+  /// and be downcast to the DataBuffer pure virtual interface. The virtual
+  /// destructor ensures that destructing the base class will destruct the
+  /// class that inherited from it correctly.
+  virtual ~WritableDataBuffer() = default;
+
+  using DataBuffer::GetBytes;
+  using DataBuffer::GetData;
+
+  /// Get a pointer to the data.
+  ///
+  /// \return
+  ///     A pointer to the bytes owned by this object, or NULL if the
+  ///     object contains no bytes.
+  uint8_t *GetBytes() { return const_cast<uint8_t *>(GetBytesImpl()); }
+
   llvm::MutableArrayRef<uint8_t> GetData() {
     return llvm::MutableArrayRef<uint8_t>(GetBytes(), GetByteSize());
   }
+
+  /// LLVM RTTI support.
+  /// {
+  static char ID;
+  bool isA(const void *ClassID) const override {
+    return ClassID == &ID || DataBuffer::isA(ClassID);
+  }
+  static bool classof(const DataBuffer *data_buffer) {
+    return data_buffer->isA(&ID);
+  }
+  /// }
 };
 
-class DataBufferUnowned : public DataBuffer {
+class DataBufferUnowned : public WritableDataBuffer {
 public:
   DataBufferUnowned(uint8_t *bytes, lldb::offset_t size)
       : m_bytes(bytes), m_size(size) {}
 
-  uint8_t *GetBytes() override { return m_bytes; }
-  const uint8_t *GetBytes() const override { return m_bytes; }
+  const uint8_t *GetBytesImpl() const override { return m_bytes; }
   lldb::offset_t GetByteSize() const override { return m_size; }
 
+  /// LLVM RTTI support.
+  /// {
+  static char ID;
+  bool isA(const void *ClassID) const override {
+    return ClassID == &ID || WritableDataBuffer::isA(ClassID);
+  }
+  static bool classof(const DataBuffer *data_buffer) {
+    return data_buffer->isA(&ID);
+  }
+  /// }
 private:
   uint8_t *m_bytes;
   lldb::offset_t m_size;

@@ -759,6 +759,9 @@ protected:
   ///     false otherwise.
   bool SetModulesArchitecture(const ArchSpec &new_arch);
 
+  /// The number of bytes to read when going through the plugins.
+  static size_t g_initial_bytes_to_read;
+
   static lldb::DataBufferSP MapFileData(const FileSpec &file, uint64_t Size,
                                         uint64_t Offset);
 

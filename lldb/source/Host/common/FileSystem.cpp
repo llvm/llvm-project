@@ -273,25 +273,52 @@ void FileSystem::Resolve(FileSpec &file_spec) {
   file_spec.SetIsResolved(true);
 }
 
-std::shared_ptr<DataBuffer>
-FileSystem::CreateDataBuffer(const llvm::Twine &path, uint64_t size,
-                             uint64_t offset) {
-  const bool is_volatile = !IsLocal(path);
-  std::unique_ptr<llvm::WritableMemoryBuffer> buffer;
+template <typename T>
+static std::unique_ptr<T> GetMemoryBuffer(const llvm::Twine &path,
+                                          uint64_t size, uint64_t offset,
+                                          bool is_volatile) {
+  std::unique_ptr<T> buffer;
   if (size == 0) {
-    auto buffer_or_error =
-        llvm::WritableMemoryBuffer::getFile(path, is_volatile);
+    auto buffer_or_error = T::getFile(path, is_volatile);
     if (!buffer_or_error)
       return nullptr;
     buffer = std::move(*buffer_or_error);
   } else {
-    auto buffer_or_error = llvm::WritableMemoryBuffer::getFileSlice(
-        path, size, offset, is_volatile);
+    auto buffer_or_error = T::getFileSlice(path, size, offset, is_volatile);
     if (!buffer_or_error)
       return nullptr;
     buffer = std::move(*buffer_or_error);
   }
+  return buffer;
+}
+
+std::shared_ptr<WritableDataBuffer>
+FileSystem::CreateWritableDataBuffer(const llvm::Twine &path, uint64_t size,
+                                     uint64_t offset) {
+  const bool is_volatile = !IsLocal(path);
+  auto buffer = GetMemoryBuffer<llvm::WritableMemoryBuffer>(path, size, offset,
+                                                            is_volatile);
+  if (!buffer)
+    return {};
+  return std::shared_ptr<WritableDataBufferLLVM>(
+      new WritableDataBufferLLVM(std::move(buffer)));
+}
+
+std::shared_ptr<DataBuffer>
+FileSystem::CreateDataBuffer(const llvm::Twine &path, uint64_t size,
+                             uint64_t offset) {
+  const bool is_volatile = !IsLocal(path);
+  auto buffer =
+      GetMemoryBuffer<llvm::MemoryBuffer>(path, size, offset, is_volatile);
+  if (!buffer)
+    return {};
   return std::shared_ptr<DataBufferLLVM>(new DataBufferLLVM(std::move(buffer)));
+}
+
+std::shared_ptr<WritableDataBuffer>
+FileSystem::CreateWritableDataBuffer(const FileSpec &file_spec, uint64_t size,
+                                     uint64_t offset) {
+  return CreateWritableDataBuffer(file_spec.GetPath(), size, offset);
 }
 
 std::shared_ptr<DataBuffer>

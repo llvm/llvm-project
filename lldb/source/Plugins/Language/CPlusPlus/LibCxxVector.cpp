@@ -214,7 +214,7 @@ lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEnd::GetChildAtIndex(
   llvm::Optional<uint64_t> size = m_bool_type.GetByteSize(nullptr);
   if (!size)
     return {};
-  DataBufferSP buffer_sp(new DataBufferHeap(*size, 0));
+  WritableDataBufferSP buffer_sp(new DataBufferHeap(*size, 0));
   if (bit_set && buffer_sp && buffer_sp->GetBytes()) {
     // regardless of endianness, anything non-zero is true
     *(buffer_sp->GetBytes()) = 1;

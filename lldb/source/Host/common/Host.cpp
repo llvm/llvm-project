@@ -524,8 +524,9 @@ Status Host::RunShellCommand(llvm::StringRef shell_path, const Args &args,
             error.SetErrorStringWithFormat(
                 "shell command output is too large to fit into a std::string");
           } else {
-            auto Buffer =
-                FileSystem::Instance().CreateDataBuffer(output_file_spec);
+            WritableDataBufferSP Buffer =
+                FileSystem::Instance().CreateWritableDataBuffer(
+                    output_file_spec);
             if (error.Success())
               command_output_ptr->assign(
                   reinterpret_cast<char *>(Buffer->GetBytes()),

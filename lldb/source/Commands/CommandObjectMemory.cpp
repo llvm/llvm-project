@@ -639,7 +639,7 @@ protected:
       return false;
     }
 
-    DataBufferSP data_sp;
+    WritableDataBufferSP data_sp;
     size_t bytes_read = 0;
     if (compiler_type.GetOpaqueQualType()) {
       // Make sure we don't display our type as ASCII bytes like the default

@@ -27,7 +27,7 @@ lldb::DataBufferSP lldb_private::minidump::ConvertMinidumpContext_x86_32(
 
   const RegisterInfo *reg_info = target_reg_interface->GetRegisterInfo();
 
-  lldb::DataBufferSP result_context_buf(
+  lldb::WritableDataBufferSP result_context_buf(
       new DataBufferHeap(target_reg_interface->GetGPRSize(), 0));
   uint8_t *result_base = result_context_buf->GetBytes();
 

@@ -296,7 +296,7 @@ bool lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::Update() {
         llvm::Optional<uint64_t> size = tree_node_type.GetByteSize(nullptr);
         if (!size)
           return false;
-        DataBufferSP buffer_sp(new DataBufferHeap(*size, 0));
+        WritableDataBufferSP buffer_sp(new DataBufferHeap(*size, 0));
         ProcessSP process_sp(target_sp->GetProcessSP());
         Status error;
         process_sp->ReadMemory(addr, buffer_sp->GetBytes(),

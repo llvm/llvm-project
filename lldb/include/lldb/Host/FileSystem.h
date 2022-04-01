@@ -148,6 +148,12 @@ public:
   std::shared_ptr<DataBuffer> CreateDataBuffer(const FileSpec &file_spec,
                                                uint64_t size = 0,
                                                uint64_t offset = 0);
+  std::shared_ptr<WritableDataBuffer>
+  CreateWritableDataBuffer(const llvm::Twine &path, uint64_t size = 0,
+                           uint64_t offset = 0);
+  std::shared_ptr<WritableDataBuffer>
+  CreateWritableDataBuffer(const FileSpec &file_spec, uint64_t size = 0,
+                           uint64_t offset = 0);
   /// \}
 
   /// Call into the Host to see if it can help find the file.
