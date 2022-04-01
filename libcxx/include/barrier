@@ -45,6 +45,7 @@ namespace std
 
 */
 
+#include <__assert> // all public C++ headers provide the assertion handler
 #include <__availability>
 #include <__config>
 #include <__thread/timed_backoff_policy.h>

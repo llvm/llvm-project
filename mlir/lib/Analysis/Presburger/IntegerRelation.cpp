@@ -142,7 +142,7 @@ void IntegerRelation::truncate(const CountsSnapshot &counts) {
   truncateIdKind(IdKind::Symbol, counts);
   truncateIdKind(IdKind::Local, counts);
   removeInequalityRange(counts.getNumIneqs(), getNumInequalities());
-  removeInequalityRange(counts.getNumEqs(), getNumEqualities());
+  removeEqualityRange(counts.getNumEqs(), getNumEqualities());
 }
 
 unsigned IntegerRelation::insertId(IdKind kind, unsigned pos, unsigned num) {
@@ -1104,7 +1104,20 @@ void IntegerRelation::mergeLocalIds(IntegerRelation &other) {
 
   // Merge all divisions by removing duplicate divisions.
   unsigned localOffset = getIdKindOffset(IdKind::Local);
-  removeDuplicateDivs(divsA, denomsA, localOffset, merge);
+  presburger::removeDuplicateDivs(divsA, denomsA, localOffset, merge);
+}
+
+void IntegerRelation::removeDuplicateDivs() {
+  std::vector<SmallVector<int64_t, 8>> divs;
+  SmallVector<unsigned, 4> denoms;
+
+  getLocalReprs(divs, denoms);
+  auto merge = [this](unsigned i, unsigned j) -> bool {
+    eliminateRedundantLocalId(i, j);
+    return true;
+  };
+  presburger::removeDuplicateDivs(divs, denoms, getIdKindOffset(IdKind::Local),
+                                  merge);
 }
 
 /// Removes local variables using equalities. Each equality is checked if it
@@ -1702,20 +1715,14 @@ void IntegerRelation::fourierMotzkinEliminate(unsigned pos, bool darkShadow,
     }
   }
 
-  // Set the number of dimensions, symbols, locals in the resulting system.
-  unsigned newNumDomain =
-      getNumDomainIds() - getIdKindOverlap(IdKind::Domain, pos, pos + 1);
-  unsigned newNumRange =
-      getNumRangeIds() - getIdKindOverlap(IdKind::Range, pos, pos + 1);
-  unsigned newNumSymbols =
-      getNumSymbolIds() - getIdKindOverlap(IdKind::Symbol, pos, pos + 1);
-  unsigned newNumLocals =
-      getNumLocalIds() - getIdKindOverlap(IdKind::Local, pos, pos + 1);
+  PresburgerSpace newSpace = getSpace();
+  IdKind idKindRemove = newSpace.getIdKindAt(pos);
+  unsigned relativePos = pos - newSpace.getIdKindOffset(idKindRemove);
+  newSpace.removeIdRange(idKindRemove, relativePos, relativePos + 1);
 
   /// Create the new system which has one identifier less.
   IntegerRelation newRel(lbIndices.size() * ubIndices.size() + nbIndices.size(),
-                         getNumEqualities(), getNumCols() - 1, newNumDomain,
-                         newNumRange, newNumSymbols, newNumLocals);
+                         getNumEqualities(), getNumCols() - 1, newSpace);
 
   // This will be used to check if the elimination was integer exact.
   unsigned lcmProducts = 1;
@@ -1866,8 +1873,7 @@ static BoundCmpResult compareBounds(ArrayRef<int64_t> a, ArrayRef<int64_t> b) {
 // Returns constraints that are common to both A & B.
 static void getCommonConstraints(const IntegerRelation &a,
                                  const IntegerRelation &b, IntegerRelation &c) {
-  c = IntegerRelation(a.getNumDomainIds(), a.getNumRangeIds(),
-                      a.getNumSymbolIds(), a.getNumLocalIds());
+  c = IntegerRelation(a.getSpace());
   // a naive O(n^2) check should be enough here given the input sizes.
   for (unsigned r = 0, e = a.getNumInequalities(); r < e; ++r) {
     for (unsigned s = 0, f = b.getNumInequalities(); s < f; ++s) {
@@ -1896,7 +1902,7 @@ IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
 
   // Get the constraints common to both systems; these will be added as is to
   // the union.
-  IntegerRelation commonCst;
+  IntegerRelation commonCst(PresburgerSpace::getRelationSpace());
   getCommonConstraints(*this, otherCst, commonCst);
 
   std::vector<SmallVector<int64_t, 8>> boundingLbs;

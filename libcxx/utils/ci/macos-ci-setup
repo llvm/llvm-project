@@ -103,6 +103,7 @@ else
       brew install "${package}"
     fi
   done
+  python3 -m pip install --upgrade psutil
 
   echo "Setting up BuildKite Agent config"
   version="$(sw_vers -productVersion | sed -E 's/([0-9]+).([0-9]+).[0-9]+/\1.\2/')"

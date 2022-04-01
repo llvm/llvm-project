@@ -193,6 +193,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 
 */
 
+#include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

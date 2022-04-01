@@ -27,8 +27,7 @@ static SmallVector<int64_t, 8> subtract(ArrayRef<int64_t> vecA,
 }
 
 PresburgerSet PWMAFunction::getDomain() const {
-  PresburgerSet domain =
-      PresburgerSet::getEmpty(getNumDimIds(), getNumSymbolIds());
+  PresburgerSet domain = PresburgerSet::getEmpty(getSpace());
   for (const MultiAffineFunction &piece : pieces)
     domain.unionInPlace(piece.getDomain());
   return domain;
@@ -110,7 +109,8 @@ void MultiAffineFunction::removeIdRange(IdKind kind, unsigned idStart,
 
 void MultiAffineFunction::eliminateRedundantLocalId(unsigned posA,
                                                     unsigned posB) {
-  output.addToColumn(posB, posA, /*scale=*/1);
+  unsigned localOffset = getIdKindOffset(IdKind::Local);
+  output.addToColumn(localOffset + posB, localOffset + posA, /*scale=*/1);
   IntegerPolyhedron::eliminateRedundantLocalId(posA, posB);
 }
 

@@ -8,13 +8,12 @@ define float @foo(float* %col) {
 ; BASE:       # %bb.0:
 ; BASE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; BASE-NEXT:    flds (%eax)
-; BASE-NEXT:    fldz
-; BASE-NEXT:    fucomp %st(1)
+; BASE-NEXT:    fld %st(0)
+; BASE-NEXT:    fchs
+; BASE-NEXT:    fucom %st(1)
 ; BASE-NEXT:    fnstsw %ax
 ; BASE-NEXT:    # kill: def $ah killed $ah killed $ax
 ; BASE-NEXT:    sahf
-; BASE-NEXT:    fld %st(0)
-; BASE-NEXT:    fchs
 ; BASE-NEXT:    ja .LBB0_2
 ; BASE-NEXT:  # %bb.1:
 ; BASE-NEXT:    fstp %st(0)
@@ -28,10 +27,9 @@ define float @foo(float* %col) {
 ; CMOV:       # %bb.0:
 ; CMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CMOV-NEXT:    flds (%eax)
-; CMOV-NEXT:    fldz
-; CMOV-NEXT:    fucompi %st(1), %st
 ; CMOV-NEXT:    fld %st(0)
 ; CMOV-NEXT:    fchs
+; CMOV-NEXT:    fucomi %st(1), %st
 ; CMOV-NEXT:    fxch %st(1)
 ; CMOV-NEXT:    fcmovnbe %st(1), %st
 ; CMOV-NEXT:    fstp %st(1)

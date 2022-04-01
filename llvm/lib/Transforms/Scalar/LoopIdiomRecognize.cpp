@@ -1172,6 +1172,8 @@ bool LoopIdiomRecognize::processLoopStridedStore(
   CallInst *NewCall;
   if (SplatValue) {
     AAMDNodes AATags = TheStore->getAAMetadata();
+    for (Instruction *Store : Stores)
+      AATags = AATags.merge(Store->getAAMetadata());
     if (auto CI = dyn_cast<ConstantInt>(NumBytes))
       AATags = AATags.extendTo(CI->getZExtValue());
     else

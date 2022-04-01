@@ -7,12 +7,14 @@
 //===----------------------------------------------------------------------===//
 #include "ProfileGenerator.h"
 #include "ErrorHandling.h"
+#include "PerfReader.h"
 #include "ProfiledBinary.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/ProfileData/ProfileCommon.h"
 #include <algorithm>
 #include <float.h>
 #include <unordered_set>
+#include <utility>
 
 cl::opt<std::string> OutputFilename("output", cl::value_desc("output"),
                                     cl::Required,
@@ -109,7 +111,7 @@ bool ProfileGeneratorBase::UseFSDiscriminator = false;
 
 std::unique_ptr<ProfileGeneratorBase>
 ProfileGeneratorBase::create(ProfiledBinary *Binary,
-                             const ContextSampleCounterMap &SampleCounters,
+                             const ContextSampleCounterMap *SampleCounters,
                              bool ProfileIsCSFlat) {
   std::unique_ptr<ProfileGeneratorBase> Generator;
   if (ProfileIsCSFlat) {
@@ -118,6 +120,24 @@ ProfileGeneratorBase::create(ProfiledBinary *Binary,
     Generator.reset(new CSProfileGenerator(Binary, SampleCounters));
   } else {
     Generator.reset(new ProfileGenerator(Binary, SampleCounters));
+  }
+  ProfileGeneratorBase::UseFSDiscriminator = Binary->useFSDiscriminator();
+  FunctionSamples::ProfileIsFS = Binary->useFSDiscriminator();
+
+  return Generator;
+}
+
+std::unique_ptr<ProfileGeneratorBase>
+ProfileGeneratorBase::create(ProfiledBinary *Binary,
+                             const SampleProfileMap &&Profiles,
+                             bool ProfileIsCSFlat) {
+  std::unique_ptr<ProfileGeneratorBase> Generator;
+  if (ProfileIsCSFlat) {
+    if (Binary->useFSDiscriminator())
+      exitWithError("FS discriminator is not supported in CS profile.");
+    Generator.reset(new CSProfileGenerator(Binary, std::move(Profiles)));
+  } else {
+    Generator.reset(new ProfileGenerator(Binary, std::move(Profiles)));
   }
   ProfileGeneratorBase::UseFSDiscriminator = Binary->useFSDiscriminator();
   FunctionSamples::ProfileIsFS = Binary->useFSDiscriminator();
@@ -372,31 +392,39 @@ void ProfileGeneratorBase::updateTotalSamples() {
 
 void ProfileGeneratorBase::collectProfiledFunctions() {
   std::unordered_set<const BinaryFunction *> ProfiledFunctions;
-  // Go through all the stacks, ranges and branches in sample counters, use the
-  // start of the range to look up the function it belongs and record the
-  // function.
-  for (const auto &CI : SampleCounters) {
-    if (const auto *CtxKey = dyn_cast<AddrBasedCtxKey>(CI.first.getPtr())) {
-      for (auto Addr : CtxKey->Context) {
-        if (FuncRange *FRange = Binary->findFuncRangeForOffset(
-                Binary->virtualAddrToOffset(Addr)))
+  if (SampleCounters) {
+    // Go through all the stacks, ranges and branches in sample counters, use
+    // the start of the range to look up the function it belongs and record the
+    // function.
+    for (const auto &CI : *SampleCounters) {
+      if (const auto *CtxKey = dyn_cast<AddrBasedCtxKey>(CI.first.getPtr())) {
+        for (auto Addr : CtxKey->Context) {
+          if (FuncRange *FRange = Binary->findFuncRangeForOffset(
+                  Binary->virtualAddrToOffset(Addr)))
+            ProfiledFunctions.insert(FRange->Func);
+        }
+      }
+
+      for (auto Item : CI.second.RangeCounter) {
+        uint64_t StartOffset = Item.first.first;
+        if (FuncRange *FRange = Binary->findFuncRangeForOffset(StartOffset))
+          ProfiledFunctions.insert(FRange->Func);
+      }
+
+      for (auto Item : CI.second.BranchCounter) {
+        uint64_t SourceOffset = Item.first.first;
+        uint64_t TargetOffset = Item.first.first;
+        if (FuncRange *FRange = Binary->findFuncRangeForOffset(SourceOffset))
+          ProfiledFunctions.insert(FRange->Func);
+        if (FuncRange *FRange = Binary->findFuncRangeForOffset(TargetOffset))
           ProfiledFunctions.insert(FRange->Func);
       }
     }
-
-    for (auto Item : CI.second.RangeCounter) {
-      uint64_t StartOffset = Item.first.first;
-      if (FuncRange *FRange = Binary->findFuncRangeForOffset(StartOffset))
-        ProfiledFunctions.insert(FRange->Func);
-    }
-
-    for (auto Item : CI.second.BranchCounter) {
-      uint64_t SourceOffset = Item.first.first;
-      uint64_t TargetOffset = Item.first.first;
-      if (FuncRange *FRange = Binary->findFuncRangeForOffset(SourceOffset))
-        ProfiledFunctions.insert(FRange->Func);
-      if (FuncRange *FRange = Binary->findFuncRangeForOffset(TargetOffset))
-        ProfiledFunctions.insert(FRange->Func);
+  } else {
+    // This is for the case the input is a llvm sample profile.
+    for (const auto &FS : ProfileMap) {
+      if (auto *Func = Binary->getBinaryFunction(FS.first.getName()))
+        ProfiledFunctions.insert(Func);
     }
   }
 
@@ -416,11 +444,18 @@ ProfileGenerator::getTopLevelFunctionProfile(StringRef FuncName) {
 
 void ProfileGenerator::generateProfile() {
   collectProfiledFunctions();
-  if (Binary->usePseudoProbes()) {
-    generateProbeBasedProfile();
-  } else {
-    generateLineNumBasedProfile();
+
+  if (Binary->usePseudoProbes())
+    Binary->decodePseudoProbe();
+
+  if (SampleCounters) {
+    if (Binary->usePseudoProbes()) {
+      generateProbeBasedProfile();
+    } else {
+      generateLineNumBasedProfile();
+    }
   }
+
   postProcessProfiles();
 }
 
@@ -448,9 +483,9 @@ void ProfileGenerator::trimColdProfiles(const SampleProfileMap &Profiles,
 }
 
 void ProfileGenerator::generateLineNumBasedProfile() {
-  assert(SampleCounters.size() == 1 &&
+  assert(SampleCounters->size() == 1 &&
          "Must have one entry for profile generation.");
-  const SampleCounter &SC = SampleCounters.begin()->second;
+  const SampleCounter &SC = SampleCounters->begin()->second;
   // Fill in function body samples
   populateBodySamplesForAllFunctions(SC.RangeCounter);
   // Fill in boundary sample counts as well as call site samples for calls
@@ -460,12 +495,11 @@ void ProfileGenerator::generateLineNumBasedProfile() {
 }
 
 void ProfileGenerator::generateProbeBasedProfile() {
-  assert(SampleCounters.size() == 1 &&
+  assert(SampleCounters->size() == 1 &&
          "Must have one entry for profile generation.");
-  Binary->decodePseudoProbe();
   // Enable pseudo probe functionalities in SampleProf
   FunctionSamples::ProfileIsProbeBased = true;
-  const SampleCounter &SC = SampleCounters.begin()->second;
+  const SampleCounter &SC = SampleCounters->begin()->second;
   // Fill in function body samples
   populateBodySamplesWithProbesForAllFunctions(SC.RangeCounter);
   // Fill in boundary sample counts as well as call site samples for calls
@@ -678,7 +712,21 @@ FunctionSamples &CSProfileGenerator::getFunctionProfileForContext(
     FunctionSamples &FProfile = Ret.first->second;
     FProfile.setContext(FContext);
     return Ret.first->second;
+  } else {
+    // Update ContextWasInlined attribute for existing contexts.
+    // The current function can be called in two ways:
+    //  - when processing a probe of the current frame
+    //  - when processing the entry probe of an inlinee's frame, which
+    //    is then used to update the callsite count of the current frame.
+    // The two can happen in any order, hence here we are making sure
+    // `ContextWasInlined` is always set as expected.
+    // TODO: Note that the former does not always happen if no probes of the
+    // current frame has samples, and if the latter happens, we could lose the
+    // attribute. This should be fixed.
+    if (WasLeafInlined)
+      I->second.getContext().setAttribute(ContextWasInlined);
   }
+
   return I->second;
 }
 
@@ -687,10 +735,15 @@ void CSProfileGenerator::generateProfile() {
 
   collectProfiledFunctions();
 
-  if (Binary->usePseudoProbes()) {
-    generateProbeBasedProfile();
-  } else {
-    generateLineNumBasedProfile();
+  if (Binary->usePseudoProbes())
+    Binary->decodePseudoProbe();
+
+  if (SampleCounters) {
+    if (Binary->usePseudoProbes()) {
+      generateProbeBasedProfile();
+    } else {
+      generateLineNumBasedProfile();
+    }
   }
 
   if (Binary->getTrackFuncContextSize())
@@ -709,7 +762,7 @@ void CSProfileGenerator::computeSizeForProfiledFunctions() {
 }
 
 void CSProfileGenerator::generateLineNumBasedProfile() {
-  for (const auto &CI : SampleCounters) {
+  for (const auto &CI : *SampleCounters) {
     const auto *CtxKey = cast<StringBasedCtxKey>(CI.first.getPtr());
 
     // Get or create function profile for the range
@@ -967,10 +1020,9 @@ extractPrefixContextStack(SampleContextFrameVector &ContextStack,
 }
 
 void CSProfileGenerator::generateProbeBasedProfile() {
-  Binary->decodePseudoProbe();
   // Enable pseudo probe functionalities in SampleProf
   FunctionSamples::ProfileIsProbeBased = true;
-  for (const auto &CI : SampleCounters) {
+  for (const auto &CI : *SampleCounters) {
     const AddrBasedCtxKey *CtxKey =
         dyn_cast<AddrBasedCtxKey>(CI.first.getPtr());
     SampleContextFrameVector ContextStack;

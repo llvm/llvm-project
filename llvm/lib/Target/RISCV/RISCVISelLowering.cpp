@@ -2172,18 +2172,18 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
       VID = convertFromScalableVector(VT, VID, DAG, Subtarget);
       if ((StepOpcode == ISD::MUL && SplatStepVal != 1) ||
           (StepOpcode == ISD::SHL && SplatStepVal != 0)) {
-        SDValue SplatStep = DAG.getSplatVector(
+        SDValue SplatStep = DAG.getSplatBuildVector(
             VT, DL, DAG.getConstant(SplatStepVal, DL, XLenVT));
         VID = DAG.getNode(StepOpcode, DL, VT, VID, SplatStep);
       }
       if (StepDenominator != 1) {
-        SDValue SplatStep = DAG.getSplatVector(
+        SDValue SplatStep = DAG.getSplatBuildVector(
             VT, DL, DAG.getConstant(Log2_64(StepDenominator), DL, XLenVT));
         VID = DAG.getNode(ISD::SRL, DL, VT, VID, SplatStep);
       }
       if (Addend != 0 || Negate) {
-        SDValue SplatAddend =
-            DAG.getSplatVector(VT, DL, DAG.getConstant(Addend, DL, XLenVT));
+        SDValue SplatAddend = DAG.getSplatBuildVector(
+            VT, DL, DAG.getConstant(Addend, DL, XLenVT));
         VID = DAG.getNode(Negate ? ISD::SUB : ISD::ADD, DL, VT, SplatAddend, VID);
       }
       return VID;

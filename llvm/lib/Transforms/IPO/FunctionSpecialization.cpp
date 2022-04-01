@@ -19,11 +19,8 @@
 // Current limitations:
 // - It does not yet handle integer ranges. We do support "literal constants",
 //   but that's off by default under an option.
-// - Only 1 argument per function is specialised,
 // - The cost-model could be further looked into (it mainly focuses on inlining
 //   benefits),
-// - We are not yet caching analysis results, but profiling and checking where
-//   extra compile time is spent didn't suggest this to be a problem.
 //
 // Ideas:
 // - With a function specialization attribute for arguments, we could have
@@ -210,35 +207,39 @@ static void constantArgPropagation(FuncList &WorkList, Module &M,
   // are any new constant values for the call instruction via
   // stack variables.
   for (auto *F : WorkList) {
-    // TODO: Generalize for any read only arguments.
-    if (F->arg_size() != 1)
-      continue;
-
-    auto &Arg = *F->arg_begin();
-    if (!Arg.onlyReadsMemory() || !Arg.getType()->isPointerTy())
-      continue;
 
     for (auto *User : F->users()) {
+
       auto *Call = dyn_cast<CallInst>(User);
       if (!Call)
-        break;
-      auto *ArgOp = Call->getArgOperand(0);
-      auto *ArgOpType = ArgOp->getType();
-      auto *ConstVal = getConstantStackValue(Call, ArgOp, Solver);
-      if (!ConstVal)
-        break;
+        continue;
 
-      Value *GV = new GlobalVariable(M, ConstVal->getType(), true,
-                                     GlobalValue::InternalLinkage, ConstVal,
-                                     "funcspec.arg");
+      bool Changed = false;
+      for (const Use &U : Call->args()) {
+        unsigned Idx = Call->getArgOperandNo(&U);
+        Value *ArgOp = Call->getArgOperand(Idx);
+        Type *ArgOpType = ArgOp->getType();
 
-      if (ArgOpType != ConstVal->getType())
-        GV = ConstantExpr::getBitCast(cast<Constant>(GV), ArgOp->getType());
+        if (!Call->onlyReadsMemory(Idx) || !ArgOpType->isPointerTy())
+          continue;
 
-      Call->setArgOperand(0, GV);
+        auto *ConstVal = getConstantStackValue(Call, ArgOp, Solver);
+        if (!ConstVal)
+          continue;
+
+        Value *GV = new GlobalVariable(M, ConstVal->getType(), true,
+                                       GlobalValue::InternalLinkage, ConstVal,
+                                       "funcspec.arg");
+        if (ArgOpType != ConstVal->getType())
+          GV = ConstantExpr::getBitCast(cast<Constant>(GV), ArgOpType);
+
+        Call->setArgOperand(Idx, GV);
+        Changed = true;
+      }
 
       // Add the changed CallInst to Solver Worklist
-      Solver.visitCall(*Call);
+      if (Changed)
+        Solver.visitCall(*Call);
     }
   }
 }
@@ -278,6 +279,7 @@ class FunctionSpecializer {
   SmallPtrSet<Function *, 4> SpecializedFuncs;
   SmallPtrSet<Function *, 4> FullySpecialized;
   SmallVector<Instruction *> ReplacedWithConstant;
+  DenseMap<Function *, CodeMetrics> FunctionMetrics;
 
 public:
   FunctionSpecializer(SCCPSolver &Solver,
@@ -386,6 +388,24 @@ private:
   // The number of functions specialised, used for collecting statistics and
   // also in the cost model.
   unsigned NbFunctionsSpecialized = 0;
+
+  // Compute the code metrics for function \p F.
+  CodeMetrics &analyzeFunction(Function *F) {
+    auto I = FunctionMetrics.insert({F, CodeMetrics()});
+    CodeMetrics &Metrics = I.first->second;
+    if (I.second) {
+      // The code metrics were not cached.
+      SmallPtrSet<const Value *, 32> EphValues;
+      CodeMetrics::collectEphemeralValues(F, &(GetAC)(*F), EphValues);
+      for (BasicBlock &BB : *F)
+        Metrics.analyzeBasicBlock(&BB, (GetTTI)(*F), EphValues);
+
+      LLVM_DEBUG(dbgs() << "FnSpecialization: Code size of function "
+                        << F->getName() << " is " << Metrics.NumInsts
+                        << " instructions\n");
+    }
+    return Metrics;
+  }
 
   /// Clone the function \p F and remove the ssa_copy intrinsics added by
   /// the SCCPSolver in the cloned version.
@@ -525,13 +545,7 @@ private:
 
   /// Compute and return the cost of specializing function \p F.
   InstructionCost getSpecializationCost(Function *F) {
-    // Compute the code metrics for the function.
-    SmallPtrSet<const Value *, 32> EphValues;
-    CodeMetrics::collectEphemeralValues(F, &(GetAC)(*F), EphValues);
-    CodeMetrics Metrics;
-    for (BasicBlock &BB : *F)
-      Metrics.analyzeBasicBlock(&BB, (GetTTI)(*F), EphValues);
-
+    CodeMetrics &Metrics = analyzeFunction(F);
     // If the code metrics reveal that we shouldn't duplicate the function, we
     // shouldn't specialize it. Set the specialization cost to Invalid.
     // Or if the lines of codes implies that this function is easy to get

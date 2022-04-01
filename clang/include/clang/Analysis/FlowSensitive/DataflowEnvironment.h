@@ -293,6 +293,10 @@ public:
                : makeAnd(makeImplication(LHS, RHS), makeImplication(RHS, LHS));
   }
 
+  const llvm::DenseSet<BoolValue *> &getFlowConditionConstraints() const {
+    return FlowConditionConstraints;
+  }
+
   /// Adds `Val` to the set of clauses that constitute the flow condition.
   void addToFlowCondition(BoolValue &Val);
 

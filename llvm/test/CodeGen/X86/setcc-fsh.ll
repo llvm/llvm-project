@@ -261,3 +261,268 @@ define <4 x i1> @or_rotl_ne_eq0(<4 x i32> %x, <4 x i32> %y) nounwind {
   %r = icmp eq <4 x i32> %or, <i32 0, i32 0, i32 0, i32 poison>
   ret <4 x i1> %r
 }
+
+define i1 @fshl_or_eq_0(i32 %x, i32 %y) {
+; CHECK-LABEL: fshl_or_eq_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    orl %edi, %esi
+; CHECK-NEXT:    shldl $5, %edi, %esi
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+  %or = or i32 %x, %y
+  %f = call i32 @llvm.fshl.i32(i32 %or, i32 %x, i32 5)
+  %r = icmp eq i32 %f, 0
+  ret i1 %r
+}
+
+define i1 @fshl_or_commute_eq_0(i32 %x, i32 %y) {
+; CHECK-LABEL: fshl_or_commute_eq_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    orl %edi, %esi
+; CHECK-NEXT:    shldl $5, %edi, %esi
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+  %or = or i32 %y, %x
+  %f = call i32 @llvm.fshl.i32(i32 %or, i32 %x, i32 5)
+  %r = icmp eq i32 %f, 0
+  ret i1 %r
+}
+
+define <4 x i1> @fshl_or2_eq_0(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: fshl_or2_eq_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    por %xmm0, %xmm1
+; CHECK-NEXT:    psrld $7, %xmm1
+; CHECK-NEXT:    pslld $25, %xmm0
+; CHECK-NEXT:    por %xmm1, %xmm0
+; CHECK-NEXT:    pxor %xmm1, %xmm1
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %or = or <4 x i32> %x, %y
+  %f = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %x, <4 x i32> %or, <4 x i32> <i32 25, i32 25, i32 25, i32 25>)
+  %r = icmp eq <4 x i32> %f, zeroinitializer
+  ret <4 x i1> %r
+}
+
+define <4 x i1> @fshl_or2_commute_eq_0(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: fshl_or2_commute_eq_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    por %xmm0, %xmm1
+; CHECK-NEXT:    psrld $7, %xmm1
+; CHECK-NEXT:    pslld $25, %xmm0
+; CHECK-NEXT:    por %xmm1, %xmm0
+; CHECK-NEXT:    pxor %xmm1, %xmm1
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %or = or <4 x i32> %y, %x
+  %f = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %x, <4 x i32> %or, <4 x i32> <i32 25, i32 25, i32 25, i32 25>)
+  %r = icmp eq <4 x i32> %f, zeroinitializer
+  ret <4 x i1> %r
+}
+
+define i1 @fshr_or_eq_0(i16 %x, i16 %y) {
+; CHECK-LABEL: fshr_or_eq_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    orl %edi, %esi
+; CHECK-NEXT:    shldw $8, %di, %si
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+  %or = or i16 %x, %y
+  %f = call i16 @llvm.fshr.i16(i16 %or, i16 %x, i16 8)
+  %r = icmp eq i16 %f, 0
+  ret i1 %r
+}
+
+define i1 @fshr_or_commute_eq_0(i16 %x, i16 %y) {
+; CHECK-LABEL: fshr_or_commute_eq_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    orl %edi, %esi
+; CHECK-NEXT:    shldw $8, %di, %si
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+  %or = or i16 %y, %x
+  %f = call i16 @llvm.fshr.i16(i16 %or, i16 %x, i16 8)
+  %r = icmp eq i16 %f, 0
+  ret i1 %r
+}
+
+define i1 @fshr_or2_eq_0(i64 %x, i64 %y) {
+; CHECK-LABEL: fshr_or2_eq_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    orq %rdi, %rsi
+; CHECK-NEXT:    shrdq $3, %rdi, %rsi
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+  %or = or i64 %x, %y
+  %f = call i64 @llvm.fshr.i64(i64 %x, i64 %or, i64 3)
+  %r = icmp eq i64 %f, 0
+  ret i1 %r
+}
+
+define i1 @fshr_or2_commute_eq_0(i64 %x, i64 %y) {
+; CHECK-LABEL: fshr_or2_commute_eq_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    orq %rdi, %rsi
+; CHECK-NEXT:    shrdq $3, %rdi, %rsi
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+  %or = or i64 %y, %x
+  %f = call i64 @llvm.fshr.i64(i64 %x, i64 %or, i64 3)
+  %r = icmp eq i64 %f, 0
+  ret i1 %r
+}
+
+define i1 @fshl_or_ne_0(i32 %x, i32 %y) {
+; CHECK-LABEL: fshl_or_ne_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    orl %edi, %esi
+; CHECK-NEXT:    shldl $7, %edi, %esi
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    retq
+  %or = or i32 %x, %y
+  %f = call i32 @llvm.fshl.i32(i32 %or, i32 %x, i32 7)
+  %r = icmp ne i32 %f, 0
+  ret i1 %r
+}
+
+define i1 @fshl_or_commute_ne_0(i32 %x, i32 %y) {
+; CHECK-LABEL: fshl_or_commute_ne_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    orl %edi, %esi
+; CHECK-NEXT:    shldl $7, %edi, %esi
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    retq
+  %or = or i32 %y, %x
+  %f = call i32 @llvm.fshl.i32(i32 %or, i32 %x, i32 7)
+  %r = icmp ne i32 %f, 0
+  ret i1 %r
+}
+
+define <4 x i1> @fshl_or2_ne_0(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: fshl_or2_ne_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    por %xmm0, %xmm1
+; CHECK-NEXT:    psrld $27, %xmm1
+; CHECK-NEXT:    pslld $5, %xmm0
+; CHECK-NEXT:    por %xmm1, %xmm0
+; CHECK-NEXT:    pxor %xmm1, %xmm1
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm0
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
+; CHECK-NEXT:    pxor %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %or = or <4 x i32> %x, %y
+  %f = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %x, <4 x i32> %or, <4 x i32> <i32 5, i32 5, i32 5, i32 5>)
+  %r = icmp ne <4 x i32> %f, zeroinitializer
+  ret <4 x i1> %r
+}
+
+define <4 x i1> @fshl_or2_commute_ne_0(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: fshl_or2_commute_ne_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    por %xmm0, %xmm1
+; CHECK-NEXT:    psrld $27, %xmm1
+; CHECK-NEXT:    pslld $5, %xmm0
+; CHECK-NEXT:    por %xmm1, %xmm0
+; CHECK-NEXT:    pxor %xmm1, %xmm1
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm0
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
+; CHECK-NEXT:    pxor %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %or = or <4 x i32> %y, %x
+  %f = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %x, <4 x i32> %or, <4 x i32> <i32 5, i32 5, i32 5, i32 5>)
+  %r = icmp ne <4 x i32> %f, zeroinitializer
+  ret <4 x i1> %r
+}
+
+define i1 @fshr_or_ne_0(i64 %x, i64 %y) {
+; CHECK-LABEL: fshr_or_ne_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    orl %edi, %esi
+; CHECK-NEXT:    shldq $63, %rdi, %rsi
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    retq
+  %or = or i64 %x, %y
+  %f = call i64 @llvm.fshr.i64(i64 %or, i64 %x, i64 1)
+  %r = icmp ne i64 %f, 0
+  ret i1 %r
+}
+
+define i1 @fshr_or_commute_ne_0(i64 %x, i64 %y) {
+; CHECK-LABEL: fshr_or_commute_ne_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    orl %edi, %esi
+; CHECK-NEXT:    shldq $63, %rdi, %rsi
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    retq
+  %or = or i64 %y, %x
+  %f = call i64 @llvm.fshr.i64(i64 %or, i64 %x, i64 1)
+  %r = icmp ne i64 %f, 0
+  ret i1 %r
+}
+
+define i1 @fshr_or2_ne_0(i16 %x, i16 %y) {
+; CHECK-LABEL: fshr_or2_ne_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    orl %edi, %esi
+; CHECK-NEXT:    shrdw $2, %di, %si
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    retq
+  %or = or i16 %x, %y
+  %f = call i16 @llvm.fshr.i16(i16 %x, i16 %or, i16 2)
+  %r = icmp ne i16 %f, 0
+  ret i1 %r
+}
+
+define i1 @fshr_or2_commute_ne_0(i16 %x, i16 %y) {
+; CHECK-LABEL: fshr_or2_commute_ne_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    orl %edi, %esi
+; CHECK-NEXT:    shrdw $2, %di, %si
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    retq
+  %or = or i16 %y, %x
+  %f = call i16 @llvm.fshr.i16(i16 %x, i16 %or, i16 2)
+  %r = icmp ne i16 %f, 0
+  ret i1 %r
+}
+
+define i1 @fshl_xor_eq_0(i32 %x, i32 %y) {
+; CHECK-LABEL: fshl_xor_eq_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %edi, %esi
+; CHECK-NEXT:    shldl $2, %edi, %esi
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+  %or = xor i32 %x, %y
+  %f = call i32 @llvm.fshl.i32(i32 %or, i32 %x, i32 2)
+  %r = icmp eq i32 %f, 0
+  ret i1 %r
+}
+
+define i1 @fshl_or_sgt_0(i32 %x, i32 %y) {
+; CHECK-LABEL: fshl_or_sgt_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    orl %edi, %esi
+; CHECK-NEXT:    shldl $2, %edi, %esi
+; CHECK-NEXT:    testl %esi, %esi
+; CHECK-NEXT:    setg %al
+; CHECK-NEXT:    retq
+  %or = or i32 %x, %y
+  %f = call i32 @llvm.fshl.i32(i32 %or, i32 %x, i32 2)
+  %r = icmp sgt i32 %f, 0
+  ret i1 %r
+}
+
+define i1 @fshl_or_ne_2(i32 %x, i32 %y) {
+; CHECK-LABEL: fshl_or_ne_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    orl %edi, %esi
+; CHECK-NEXT:    shldl $2, %edi, %esi
+; CHECK-NEXT:    cmpl $2, %esi
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    retq
+  %or = or i32 %x, %y
+  %f = call i32 @llvm.fshl.i32(i32 %or, i32 %x, i32 2)
+  %r = icmp ne i32 %f, 2
+  ret i1 %r
+}

@@ -1770,7 +1770,26 @@ ShuffleOp::inferReturnTypes(MLIRContext *, Optional<Location>,
   return success();
 }
 
+static bool isStepIndexArray(ArrayAttr idxArr, int64_t begin, int64_t width) {
+  int64_t expected = begin;
+  return idxArr.size() == width &&
+         llvm::all_of(idxArr.getAsValueRange<IntegerAttr>(),
+                      [&expected](auto attr) {
+                        return attr.getZExtValue() == expected++;
+                      });
+}
+
 OpFoldResult vector::ShuffleOp::fold(ArrayRef<Attribute> operands) {
+  // fold shuffle V1, V2, [0, 1, 2, 3] : <4xi32>, <2xi32> -> V1
+  if (!getV1VectorType().isScalable() &&
+      isStepIndexArray(getMask(), 0, getV1VectorType().getDimSize(0)))
+    return getV1();
+  // fold shuffle V1, V2, [4, 5] : <4xi32>, <2xi32> -> V2
+  if (!getV1VectorType().isScalable() && !getV2VectorType().isScalable() &&
+      isStepIndexArray(getMask(), getV1VectorType().getDimSize(0),
+                       getV2VectorType().getDimSize(0)))
+    return getV2();
+
   Attribute lhs = operands.front(), rhs = operands.back();
   if (!lhs || !rhs)
     return {};
@@ -2482,24 +2501,27 @@ public:
     if (!broadcast)
       return failure();
     auto srcVecType = broadcast.getSource().getType().dyn_cast<VectorType>();
-    unsigned srcRrank = srcVecType ? srcVecType.getRank() : 0;
+    unsigned srcRank = srcVecType ? srcVecType.getRank() : 0;
     auto dstVecType = op.getType().cast<VectorType>();
     unsigned dstRank = dstVecType.getRank();
-    unsigned rankDiff = dstRank - srcRrank;
+    unsigned rankDiff = dstRank - srcRank;
     // Check if the most inner dimensions of the source of the broadcast are the
     // same as the destination of the extract. If this is the case we can just
     // use a broadcast as the original dimensions are untouched.
     bool lowerDimMatch = true;
-    for (unsigned i = 0; i < srcRrank; i++) {
+    for (unsigned i = 0; i < srcRank; i++) {
       if (srcVecType.getDimSize(i) != dstVecType.getDimSize(i + rankDiff)) {
         lowerDimMatch = false;
         break;
       }
     }
     Value source = broadcast.getSource();
-    if (!lowerDimMatch) {
-      // The inner dimensions don't match, it means we need to extract from the
-      // source of the orignal broadcast and then broadcast the extracted value.
+    // If the inner dimensions don't match, it means we need to extract from the
+    // source of the orignal broadcast and then broadcast the extracted value.
+    // We also need to handle degenerated cases where the source is effectively
+    // just a single scalar.
+    bool isScalarSrc = (srcRank == 0 || srcVecType.getNumElements() == 1);
+    if (!lowerDimMatch && !isScalarSrc) {
       source = rewriter.create<ExtractStridedSliceOp>(
           op->getLoc(), source,
           getI64SubArray(op.getOffsets(), /* dropFront=*/rankDiff),

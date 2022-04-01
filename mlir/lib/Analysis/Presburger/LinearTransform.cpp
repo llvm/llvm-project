@@ -113,7 +113,7 @@ LinearTransform::makeTransformToColumnEchelon(Matrix m) {
 }
 
 IntegerRelation LinearTransform::applyTo(const IntegerRelation &rel) const {
-  IntegerRelation result(rel.getNumIds());
+  IntegerRelation result(rel.getSpace());
 
   for (unsigned i = 0, e = rel.getNumEqualities(); i < e; ++i) {
     ArrayRef<int64_t> eq = rel.getEquality(i);
