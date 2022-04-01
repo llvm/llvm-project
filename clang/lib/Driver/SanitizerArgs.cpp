@@ -14,9 +14,9 @@
 #include "clang/Driver/ToolChain.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/AArch64TargetParser.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SpecialCaseList.h"
-#include "llvm/Support/AArch64TargetParser.h"
 #include "llvm/Support/TargetParser.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
@@ -218,9 +218,9 @@ static SanitizerMask setGroupBits(SanitizerMask Kinds) {
 static SanitizerMask parseSanitizeTrapArgs(const Driver &D,
                                            const llvm::opt::ArgList &Args,
                                            bool DiagnoseErrors) {
-  SanitizerMask TrapRemove;     // During the loop below, the accumulated set of
-                                // sanitizers disabled by the current sanitizer
-                                // argument or any argument after it.
+  SanitizerMask TrapRemove; // During the loop below, the accumulated set of
+                            // sanitizers disabled by the current sanitizer
+                            // argument or any argument after it.
   SanitizerMask TrappingKinds;
   SanitizerMask TrappingSupportedWithGroups = setGroupBits(TrappingSupported);
 
@@ -233,8 +233,8 @@ static SanitizerMask parseSanitizeTrapArgs(const Driver &D,
       if (InvalidValues && DiagnoseErrors) {
         SanitizerSet S;
         S.Mask = InvalidValues;
-        D.Diag(diag::err_drv_unsupported_option_argument) << "-fsanitize-trap"
-                                                          << toString(S);
+        D.Diag(diag::err_drv_unsupported_option_argument)
+            << "-fsanitize-trap" << toString(S);
       }
       TrappingKinds |= expandSanitizerGroups(Add) & ~TrapRemove;
     } else if (Arg->getOption().matches(options::OPT_fno_sanitize_trap_EQ)) {
@@ -293,13 +293,13 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   SanitizerMask AllRemove;      // During the loop below, the accumulated set of
                                 // sanitizers disabled by the current sanitizer
                                 // argument or any argument after it.
-  SanitizerMask AllAddedKinds;      // Mask of all sanitizers ever enabled by
-                                    // -fsanitize= flags (directly or via group
-                                    // expansion), some of which may be disabled
-                                    // later. Used to carefully prune
-                                    // unused-argument diagnostics.
-  SanitizerMask DiagnosedKinds;      // All Kinds we have diagnosed up to now.
-                                     // Used to deduplicate diagnostics.
+  SanitizerMask AllAddedKinds;  // Mask of all sanitizers ever enabled by
+                                // -fsanitize= flags (directly or via group
+                                // expansion), some of which may be disabled
+                                // later. Used to carefully prune
+                                // unused-argument diagnostics.
+  SanitizerMask DiagnosedKinds; // All Kinds we have diagnosed up to now.
+                                // Used to deduplicate diagnostics.
   SanitizerMask Kinds;
   const SanitizerMask Supported = setGroupBits(TC.getSupportedSanitizers());
 
@@ -402,7 +402,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       if ((Add & SanitizerKind::Vptr) && (RTTIMode == ToolChain::RM_Disabled)) {
         if (const llvm::opt::Arg *NoRTTIArg = TC.getRTTIArg()) {
           assert(NoRTTIArg->getOption().matches(options::OPT_fno_rtti) &&
-                  "RTTI disabled without -fno-rtti option?");
+                 "RTTI disabled without -fno-rtti option?");
           // The user explicitly passed -fno-rtti with -fsanitize=vptr, but
           // the vptr sanitizer requires RTTI, so this is a user error.
           if (DiagnoseErrors)
@@ -638,10 +638,9 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         }
       }
     }
-    MsanUseAfterDtor =
-        Args.hasFlag(options::OPT_fsanitize_memory_use_after_dtor,
-                     options::OPT_fno_sanitize_memory_use_after_dtor,
-                     MsanUseAfterDtor);
+    MsanUseAfterDtor = Args.hasFlag(
+        options::OPT_fsanitize_memory_use_after_dtor,
+        options::OPT_fno_sanitize_memory_use_after_dtor, MsanUseAfterDtor);
     MsanParamRetval = Args.hasFlag(
         options::OPT_fsanitize_memory_param_retval,
         options::OPT_fno_sanitize_memory_param_retval, MsanParamRetval);
@@ -805,13 +804,13 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     NeedPIE |= TC.getTriple().isOSFuchsia();
     if (Arg *A =
             Args.getLastArg(options::OPT_fsanitize_address_field_padding)) {
-        StringRef S = A->getValue();
-        // Legal values are 0 and 1, 2, but in future we may add more levels.
-        if ((S.getAsInteger(0, AsanFieldPadding) || AsanFieldPadding < 0 ||
-             AsanFieldPadding > 2) &&
-            DiagnoseErrors) {
-          D.Diag(clang::diag::err_drv_invalid_value) << A->getAsString(Args) << S;
-        }
+      StringRef S = A->getValue();
+      // Legal values are 0 and 1, 2, but in future we may add more levels.
+      if ((S.getAsInteger(0, AsanFieldPadding) || AsanFieldPadding < 0 ||
+           AsanFieldPadding > 2) &&
+          DiagnoseErrors) {
+        D.Diag(clang::diag::err_drv_invalid_value) << A->getAsString(Args) << S;
+      }
     }
 
     if (Arg *WindowsDebugRTArg =
@@ -995,7 +994,8 @@ static void addIncludeLinkerOption(const ToolChain &TC,
 }
 
 static bool hasTargetFeatureMTE(const llvm::opt::ArgStringList &CmdArgs) {
-  for (auto Start = CmdArgs.begin(), End = CmdArgs.end(); Start != End; ++Start) {
+  for (auto Start = CmdArgs.begin(), End = CmdArgs.end(); Start != End;
+       ++Start) {
     auto It = std::find(Start, End, StringRef("+mte"));
     if (It == End)
       break;
@@ -1320,8 +1320,8 @@ std::string lastArgumentForMask(const Driver &D, const llvm::opt::ArgList &Args,
 }
 
 std::string describeSanitizeArg(const llvm::opt::Arg *A, SanitizerMask Mask) {
-  assert(A->getOption().matches(options::OPT_fsanitize_EQ)
-         && "Invalid argument in describeSanitizerArg!");
+  assert(A->getOption().matches(options::OPT_fsanitize_EQ) &&
+         "Invalid argument in describeSanitizerArg!");
 
   std::string Sanitizers;
   for (int i = 0, n = A->getNumValues(); i != n; ++i) {
