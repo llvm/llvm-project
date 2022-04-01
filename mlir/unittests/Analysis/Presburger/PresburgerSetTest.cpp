@@ -457,6 +457,16 @@ TEST(SetTest, divisions) {
   EXPECT_TRUE(setA.subtract(setB).isEqual(setA));
 }
 
+TEST(SetTest, subtractDuplicateDivsRegression) {
+  // Previously, subtracting sets with duplicate divs might result in crashes
+  // due to existing divs being removed when merging local ids, due to being
+  // identified as being duplicates for the first time.
+  IntegerPolyhedron setA(PresburgerSpace::getSetSpace(1));
+  setA.addLocalFloorDiv({1, 0}, 2);
+  setA.addLocalFloorDiv({1, 0, 0}, 2);
+  EXPECT_TRUE(setA.isEqual(setA));
+}
+
 /// Coalesce `set` and check that the `newSet` is equal to `set` and that
 /// `expectedNumPoly` matches the number of Poly in the coalesced set.
 void expectCoalesce(size_t expectedNumPoly, const PresburgerSet &set) {

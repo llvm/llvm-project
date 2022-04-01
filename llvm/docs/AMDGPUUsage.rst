@@ -18,6 +18,7 @@ User Guide for AMDGPU Backend
    AMDGPU/AMDGPUAsmGFX90a
    AMDGPU/AMDGPUAsmGFX10
    AMDGPU/AMDGPUAsmGFX1011
+   AMDGPU/AMDGPUAsmGFX1013
    AMDGPU/AMDGPUAsmGFX1030
    AMDGPUModifierSyntax
    AMDGPUOperandSyntax
@@ -14203,6 +14204,8 @@ in this description.
                                                                 :doc:`gfx1011<AMDGPU/AMDGPUAsmGFX1011>`
 
                                                                 :doc:`gfx1012<AMDGPU/AMDGPUAsmGFX1011>`
+
+                                                                :doc:`gfx1013<AMDGPU/AMDGPUAsmGFX1013>`
 
     RDNA 2        :doc:`GFX10 RDNA2<AMDGPU/AMDGPUAsmGFX1030>`   :doc:`gfx1030<AMDGPU/AMDGPUAsmGFX1030>`
 
