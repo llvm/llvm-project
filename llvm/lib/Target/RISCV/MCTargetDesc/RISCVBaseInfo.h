@@ -97,7 +97,7 @@ enum {
   UsesMaskPolicyMask = 1 << UsesMaskPolicyShift,
 };
 
-// Match with the definitions in RISCVInstrFormatsV.td
+// Match with the definitions in RISCVInstrFormats.td
 enum VConstraintType {
   NoConstraint = 0,
   VS2Constraint = 0b001,
@@ -128,8 +128,8 @@ static inline unsigned getFormat(uint64_t TSFlags) {
 }
 /// \returns the constraint for the instruction.
 static inline VConstraintType getConstraint(uint64_t TSFlags) {
-  return static_cast<VConstraintType>
-             ((TSFlags & ConstraintMask) >> ConstraintShift);
+  return static_cast<VConstraintType>((TSFlags & ConstraintMask) >>
+                                      ConstraintShift);
 }
 /// \returns the LMUL for the instruction.
 static inline VLMUL getLMul(uint64_t TSFlags) {

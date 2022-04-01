@@ -67,24 +67,18 @@ define i32 @PR40483_add2(i32*, i32) nounwind {
   ret i32 %10
 }
 
-; FIXME: Fail to convert add+lshr+and to BT
 define i32 @adc_merge_constants(i32 %a0) nounwind {
 ; X86-LABEL: adc_merge_constants:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    shrl $11, %ecx
-; X86-NEXT:    andb $1, %cl
 ; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    addb $-1, %cl
+; X86-NEXT:    btl $11, {{[0-9]+}}(%esp)
 ; X86-NEXT:    adcl $54, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: adc_merge_constants:
 ; X64:       # %bb.0:
-; X64-NEXT:    shrl $11, %edi
-; X64-NEXT:    andb $1, %dil
 ; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    addb $-1, %dil
+; X64-NEXT:    btl $11, %edi
 ; X64-NEXT:    adcl $54, %eax
 ; X64-NEXT:    retq
   %bit = lshr i32 %a0, 11

@@ -715,11 +715,41 @@ static SVal evalBinOpFieldRegionFieldRegion(const FieldRegion *LeftFR,
   llvm_unreachable("Fields not found in parent record's definition");
 }
 
+// This is used in debug builds only for now because some downstream users
+// may hit this assert in their subsequent merges.
+// There are still places in the analyzer where equal bitwidth Locs
+// are compared, and need to be found and corrected. Recent previous fixes have
+// addressed the known problems of making NULLs with specific bitwidths
+// for Loc comparisons along with deprecation of APIs for the same purpose.
+//
+static void assertEqualBitWidths(ProgramStateRef State, Loc RhsLoc,
+                                 Loc LhsLoc) {
+  // Implements a "best effort" check for RhsLoc and LhsLoc bit widths
+  ASTContext &Ctx = State->getStateManager().getContext();
+  uint64_t RhsBitwidth =
+      RhsLoc.getType(Ctx).isNull() ? 0 : Ctx.getTypeSize(RhsLoc.getType(Ctx));
+  uint64_t LhsBitwidth =
+      LhsLoc.getType(Ctx).isNull() ? 0 : Ctx.getTypeSize(LhsLoc.getType(Ctx));
+  if (RhsBitwidth && LhsBitwidth &&
+      (LhsLoc.getSubKind() == RhsLoc.getSubKind())) {
+    assert(RhsBitwidth == LhsBitwidth &&
+           "RhsLoc and LhsLoc bitwidth must be same!");
+  }
+}
+
 // FIXME: all this logic will change if/when we have MemRegion::getLocation().
 SVal SimpleSValBuilder::evalBinOpLL(ProgramStateRef state,
                                   BinaryOperator::Opcode op,
                                   Loc lhs, Loc rhs,
                                   QualType resultTy) {
+
+  // Assert that bitwidth of lhs and rhs are the same.
+  // This can happen if two different address spaces are used,
+  // and the bitwidths of the address spaces are different.
+  // See LIT case clang/test/Analysis/cstring-checker-addressspace.c
+  // FIXME: See comment above in the function assertEqualBitWidths
+  assertEqualBitWidths(state, rhs, lhs);
+
   // Only comparisons and subtractions are valid operations on two pointers.
   // See [C99 6.5.5 through 6.5.14] or [C++0x 5.6 through 5.15].
   // However, if a pointer is casted to an integer, evalBinOpNN may end up
