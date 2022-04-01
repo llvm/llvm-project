@@ -2130,6 +2130,18 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
 
     TheCall->setType(Context.VoidPtrTy);
     break;
+  case Builtin::BImove:
+  case Builtin::BImove_if_noexcept:
+  case Builtin::BIforward:
+    if (checkArgCount(*this, TheCall, 1))
+      return ExprError();
+    if (!Context.hasSameUnqualifiedType(TheCall->getType(),
+                                        TheCall->getArg(0)->getType())) {
+      Diag(TheCall->getBeginLoc(), diag::err_builtin_move_forward_unsupported)
+          << (BuiltinID == Builtin::BIforward);
+      return ExprError();
+    }
+    break;
   // OpenCL v2.0, s6.13.16 - Pipe functions
   case Builtin::BIread_pipe:
   case Builtin::BIwrite_pipe:
