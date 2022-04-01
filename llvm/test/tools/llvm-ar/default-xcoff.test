@@ -7,4 +7,4 @@
 ; RUN: echo "test big archive" > %t.txt
 ; RUN: not llvm-ar cr %t.ar %t.txt 2>&1 | FileCheck %s
 
-; CHECK: unsupported big AIX write operation
+; CHECK: big archive writer operation on AIX not yet supported
