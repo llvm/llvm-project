@@ -474,6 +474,7 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
           Entry.IgnoreSysRoot ? Entry.Path : HSOpts.Sysroot + Entry.Path);
   Options.MCOptions.Argv0 = CodeGenOpts.Argv0;
   Options.MCOptions.CommandLineArgs = CodeGenOpts.CommandLineArgs;
+  Options.MisExpect = CodeGenOpts.MisExpect;
 
   return true;
 }

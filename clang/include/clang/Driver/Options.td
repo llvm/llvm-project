@@ -1430,6 +1430,9 @@ def fdiagnostics_hotness_threshold_EQ : Joined<["-"], "fdiagnostics-hotness-thre
     Group<f_Group>, Flags<[CC1Option]>, MetaVarName<"<value>">,
     HelpText<"Prevent optimization remarks from being output if they do not have at least this profile count. "
     "Use 'auto' to apply the threshold from profile summary">;
+def fdiagnostics_misexpect_tolerance_EQ : Joined<["-"], "fdiagnostics-misexpect-tolerance=">,
+    Group<f_Group>, Flags<[CC1Option]>, MetaVarName<"<value>">,
+    HelpText<"Prevent misexpect diagnostics from being output if the profile counts are within N% of the expected. ">;
 defm diagnostics_show_option : BoolFOption<"diagnostics-show-option",
     DiagnosticOpts<"ShowOptionNames">, DefaultTrue,
     NegFlag<SetFalse, [CC1Option]>, PosFlag<SetTrue, [], "Print option name with mappable diagnostics">>;
