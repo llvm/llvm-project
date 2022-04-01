@@ -3760,7 +3760,7 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
       return_message +=
           cstring_to_asciihex_string("debugserver is x86_64 binary running in "
                                      "translation, attached failed.");
-      SendPacket(return_message.c_str());
+      SendPacket(return_message);
       return rnb_err;
     }
 
@@ -3853,14 +3853,14 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
           DNBLogError("Tried to attach to pid that doesn't exist");
           std::string return_message = "E96;";
           return_message += cstring_to_asciihex_string("no such process.");
-          return SendPacket(return_message.c_str());
+          return SendPacket(return_message);
         }
         if (process_is_already_being_debugged (pid_attaching_to)) {
           DNBLogError("Tried to attach to process already being debugged");
           std::string return_message = "E96;";
           return_message += cstring_to_asciihex_string("tried to attach to "
                                            "process already being debugged");
-          return SendPacket(return_message.c_str());
+          return SendPacket(return_message);
         }
         uid_t my_uid, process_uid;
         if (attach_failed_due_to_uid_mismatch (pid_attaching_to, 
@@ -3881,7 +3881,7 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
                             + my_username + "' and process is running "
                             "as user '" + process_username + "'";
           return_message += cstring_to_asciihex_string(msg.c_str());
-          return SendPacket(return_message.c_str());
+          return SendPacket(return_message);
         }
         if (!login_session_has_gui_access() && !developer_mode_enabled()) {
           DNBLogError("Developer mode is not enabled and this is a "
@@ -3891,7 +3891,7 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
                                            "not enabled on this machine "
                                            "and this is a non-interactive "
                                            "debug session.");
-          return SendPacket(return_message.c_str());
+          return SendPacket(return_message);
         }
         if (!login_session_has_gui_access()) {
           DNBLogError("This is a non-interactive session");
@@ -3900,7 +3900,7 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
                                            "non-interactive debug session, "
                                            "cannot get permission to debug "
                                            "processes.");
-          return SendPacket(return_message.c_str());
+          return SendPacket(return_message);
         }
       }
 
@@ -3923,7 +3923,7 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
       std::string default_return_msg = "E96;";
       default_return_msg += cstring_to_asciihex_string 
                               (error_explainer.c_str());
-      SendPacket (default_return_msg.c_str());
+      SendPacket (default_return_msg);
       DNBLogError("Attach failed: \"%s\".", err_str);
       return rnb_err;
     }
@@ -4347,7 +4347,7 @@ rnb_err_t RNBRemote::HandlePacket_GetProfileData(const char *p) {
 
   std::string data = DNBProcessGetProfileData(pid, scan_type);
   if (!data.empty()) {
-    return SendPacket(data.c_str());
+    return SendPacket(data);
   } else {
     return SendPacket("OK");
   }
@@ -5557,9 +5557,10 @@ rnb_err_t RNBRemote::HandlePacket_jThreadsInfo(const char *p) {
     if (threads_info_sp) {
       std::ostringstream strm;
       threads_info_sp->Dump(strm);
+      threads_info_sp->Clear();
       std::string binary_packet = binary_encode_string(strm.str());
       if (!binary_packet.empty())
-        return SendPacket(binary_packet.c_str());
+        return SendPacket(binary_packet);
     }
   }
   return SendPacket("E85");
@@ -5881,9 +5882,10 @@ RNBRemote::HandlePacket_jGetLoadedDynamicLibrariesInfos(const char *p) {
     if (json_sp.get()) {
       std::ostringstream json_str;
       json_sp->Dump(json_str);
+      json_sp->Clear();
       if (json_str.str().size() > 0) {
         std::string json_str_quoted = binary_encode_string(json_str.str());
-        return SendPacket(json_str_quoted.c_str());
+        return SendPacket(json_str_quoted);
       } else {
         SendPacket("E84");
       }
@@ -5914,9 +5916,10 @@ rnb_err_t RNBRemote::HandlePacket_jGetSharedCacheInfo(const char *p) {
     if (json_sp.get()) {
       std::ostringstream json_str;
       json_sp->Dump(json_str);
+      json_sp->Clear();
       if (json_str.str().size() > 0) {
         std::string json_str_quoted = binary_encode_string(json_str.str());
-        return SendPacket(json_str_quoted.c_str());
+        return SendPacket(json_str_quoted);
       } else {
         SendPacket("E86");
       }
@@ -6116,7 +6119,7 @@ rnb_err_t RNBRemote::HandlePacket_qSymbol(const char *command) {
     reply << "qSymbol:";
     for (size_t i = 0; i < symbol_name.size(); ++i)
       reply << RAWHEX8(symbol_name[i]);
-    return SendPacket(reply.str().c_str());
+    return SendPacket(reply.str());
   }
 }
 
