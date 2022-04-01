@@ -289,7 +289,7 @@ public:
       return true;
 
     if (VD->hasExternalStorage() || VD->isStaticDataMember()) {
-      if (!cross_tu::containsConst(VD, *Ctx))
+      if (!cross_tu::shouldImport(VD, *Ctx))
         return true;
     } else {
       // Cannot be initialized in another TU.
