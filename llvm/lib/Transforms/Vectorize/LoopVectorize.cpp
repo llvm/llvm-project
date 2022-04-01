@@ -912,7 +912,9 @@ public:
       BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI,
       GeneratedRTChecks &Checks)
       : InnerLoopAndEpilogueVectorizer(OrigLoop, PSE, LI, DT, TLI, TTI, AC, ORE,
-                                       EPI, LVL, CM, BFI, PSI, Checks) {}
+                                       EPI, LVL, CM, BFI, PSI, Checks) {
+    TripCount = EPI.TripCount;
+  }
   /// Implements the interface for creating a vectorized skeleton using the
   /// *epilogue loop* strategy (ie the second pass of vplan execution).
   std::pair<BasicBlock *, Value *>

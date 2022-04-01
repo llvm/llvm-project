@@ -84,10 +84,7 @@ define void @uaddsat(i16* nocapture readonly %pSrc, i16 signext %offset, i16* no
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]]
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[TMP22:%.*]] = add i32 [[BLOCKSIZE]], -1
-; CHECK-NEXT:    [[TMP23:%.*]] = zext i32 [[TMP22]] to i64
-; CHECK-NEXT:    [[TMP24:%.*]] = add nuw nsw i64 [[TMP23]], 1
-; CHECK-NEXT:    [[N_VEC19:%.*]] = and i64 [[TMP24]], 8589934584
+; CHECK-NEXT:    [[N_VEC19:%.*]] = and i64 [[TMP2]], 8589934584
 ; CHECK-NEXT:    [[CAST_CRD:%.*]] = trunc i64 [[N_VEC19]] to i32
 ; CHECK-NEXT:    [[IND_END:%.*]] = sub i32 [[BLOCKSIZE]], [[CAST_CRD]]
 ; CHECK-NEXT:    [[IND_END25:%.*]] = getelementptr i16, i16* [[PSRC]], i64 [[N_VEC19]]
@@ -108,7 +105,7 @@ define void @uaddsat(i16* nocapture readonly %pSrc, i16 signext %offset, i16* no
 ; CHECK-NEXT:    [[TMP28:%.*]] = icmp eq i64 [[INDEX_NEXT21]], [[N_VEC19]]
 ; CHECK-NEXT:    br i1 [[TMP28]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
-; CHECK-NEXT:    [[CMP_N30:%.*]] = icmp eq i64 [[TMP24]], [[N_VEC19]]
+; CHECK-NEXT:    [[CMP_N30:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC19]]
 ; CHECK-NEXT:    br i1 [[CMP_N30]], label [[WHILE_END]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END23]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[BLOCKSIZE]], [[ITER_CHECK]] ]
@@ -230,10 +227,7 @@ define void @cttz(i8* nocapture readonly %pSrc, i8 signext %offset, i8* nocaptur
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]]
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[TMP22:%.*]] = add i32 [[BLOCKSIZE]], -1
-; CHECK-NEXT:    [[TMP23:%.*]] = zext i32 [[TMP22]] to i64
-; CHECK-NEXT:    [[TMP24:%.*]] = add nuw nsw i64 [[TMP23]], 1
-; CHECK-NEXT:    [[N_VEC19:%.*]] = and i64 [[TMP24]], 8589934576
+; CHECK-NEXT:    [[N_VEC19:%.*]] = and i64 [[TMP2]], 8589934576
 ; CHECK-NEXT:    [[CAST_CRD:%.*]] = trunc i64 [[N_VEC19]] to i32
 ; CHECK-NEXT:    [[IND_END:%.*]] = sub i32 [[BLOCKSIZE]], [[CAST_CRD]]
 ; CHECK-NEXT:    [[IND_END25:%.*]] = getelementptr i8, i8* [[PSRC]], i64 [[N_VEC19]]
@@ -254,7 +248,7 @@ define void @cttz(i8* nocapture readonly %pSrc, i8 signext %offset, i8* nocaptur
 ; CHECK-NEXT:    [[TMP28:%.*]] = icmp eq i64 [[INDEX_NEXT21]], [[N_VEC19]]
 ; CHECK-NEXT:    br i1 [[TMP28]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
-; CHECK-NEXT:    [[CMP_N30:%.*]] = icmp eq i64 [[TMP24]], [[N_VEC19]]
+; CHECK-NEXT:    [[CMP_N30:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC19]]
 ; CHECK-NEXT:    br i1 [[CMP_N30]], label [[WHILE_END]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END23]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[BLOCKSIZE]], [[ITER_CHECK]] ]
