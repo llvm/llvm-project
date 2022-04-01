@@ -250,7 +250,7 @@ def fir_FreeMemOp : fir_Op<"freemem", [MemoryEffects<[MemFree]>]> {
 
   let arguments = (ins Arg<fir_HeapType, "", [MemFree]>:$heapref);
 
-  let assemblyFormat = "$heapref attr-dict `:` type($heapref)";
+  let assemblyFormat = "$heapref attr-dict `:` qualified(type($heapref))";
 }
 
 def fir_LoadOp : fir_OneResultOp<"load"> {
