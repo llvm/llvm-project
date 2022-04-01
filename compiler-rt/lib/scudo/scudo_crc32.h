@@ -16,14 +16,13 @@
 #include "sanitizer_common/sanitizer_internal_defs.h"
 
 // Hardware CRC32 is supported at compilation via the following:
-// - for i386 & x86_64: -mcrc32 (earlier: -msse4.2)
+// - for i386 & x86_64: -msse4.2
 // - for ARM & AArch64: -march=armv8-a+crc or -mcrc
 // An additional check must be performed at runtime as well to make sure the
 // emitted instructions are valid on the target host.
 
-#if defined(__CRC32__) || defined(__SSE4_2__) || defined(__ARM_FEATURE_CRC32)
-# if defined(__CRC32__) || defined(__SSE4_2__)
-// NB: clang has <crc32intrin.h> but GCC does not
+#if defined(__SSE4_2__) || defined(__ARM_FEATURE_CRC32)
+# ifdef __SSE4_2__
 #  include <smmintrin.h>
 #  define CRC32_INTRINSIC FIRST_32_SECOND_64(_mm_crc32_u32, _mm_crc32_u64)
 # endif
@@ -31,7 +30,7 @@
 #  include <arm_acle.h>
 #  define CRC32_INTRINSIC FIRST_32_SECOND_64(__crc32cw, __crc32cd)
 # endif
-#endif  // defined(__CRC32__) || defined(__SSE4_2__) || defined(__ARM_FEATURE_CRC32)
+#endif  // defined(__SSE4_2__) || defined(__ARM_FEATURE_CRC32)
 
 namespace __scudo {
 
