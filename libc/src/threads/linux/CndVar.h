@@ -13,6 +13,7 @@
 #include "include/threads.h"     // For values like thrd_success etc.
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/OSUtil/syscall.h" // For syscall functions.
+#include "src/__support/threads/linux/futex_word.h"
 #include "src/__support/threads/mutex.h"
 
 #include <linux/futex.h> // For futex operations.
@@ -106,7 +107,7 @@ struct CndVar {
     if (waitq_front == nullptr)
       waitq_back = nullptr;
 
-    qmtx.futex_word = Mutex::FutexWordType(Mutex::LockState::Free);
+    qmtx.futex_word = FutexWordType(Mutex::LockState::Free);
 
     __llvm_libc::syscall(
         SYS_futex, &qmtx.futex_word.val, FUTEX_WAKE_OP, 1, 1,
