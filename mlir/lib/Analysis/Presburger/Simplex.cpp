@@ -169,7 +169,7 @@ MaybeOptimum<SmallVector<Fraction, 8>> LexSimplex::findRationalLexMin() {
   return getRationalSample();
 }
 
-LogicalResult LexSimplex::addCut(unsigned row) {
+LogicalResult LexSimplexBase::addCut(unsigned row) {
   int64_t denom = tableau(row, 0);
   addZeroRow(/*makeRestricted=*/true);
   tableau(nRow - 1, 0) = denom;
@@ -307,7 +307,7 @@ void LexSimplex::restoreRationalConsistency() {
 // which is in contradiction to the fact that B.col(j) / B(i,j) must be
 // lexicographically smaller than B.col(k) / B(i,k), since it lexicographically
 // minimizes the change in sample value.
-LogicalResult LexSimplex::moveRowUnknownToColumn(unsigned row) {
+LogicalResult LexSimplexBase::moveRowUnknownToColumn(unsigned row) {
   Optional<unsigned> maybeColumn;
   for (unsigned col = 3; col < nCol; ++col) {
     if (tableau(row, col) <= 0)
@@ -325,8 +325,8 @@ LogicalResult LexSimplex::moveRowUnknownToColumn(unsigned row) {
   return success();
 }
 
-unsigned LexSimplex::getLexMinPivotColumn(unsigned row, unsigned colA,
-                                          unsigned colB) const {
+unsigned LexSimplexBase::getLexMinPivotColumn(unsigned row, unsigned colA,
+                                              unsigned colB) const {
   // A pivot causes the following change. (in the diagram the matrix elements
   // are shown as rationals and there is no common denominator used)
   //
@@ -735,7 +735,7 @@ void Simplex::undoLastConstraint() {
 
 // It's not valid to remove the constraint by deleting the column since this
 // would result in an invalid basis.
-void LexSimplex::undoLastConstraint() {
+void LexSimplexBase::undoLastConstraint() {
   if (con.back().orientation == Orientation::Column) {
     // When removing the last constraint during a rollback, we just need to find
     // any pivot at all, i.e., any row with non-zero coefficient for the
@@ -1108,6 +1108,10 @@ Optional<SmallVector<Fraction, 8>> Simplex::getRationalSample() const {
     }
   }
   return sample;
+}
+
+void LexSimplexBase::addInequality(ArrayRef<int64_t> coeffs) {
+  addRow(coeffs, /*makeRestricted=*/true);
 }
 
 MaybeOptimum<SmallVector<Fraction, 8>> LexSimplex::getRationalSample() const {

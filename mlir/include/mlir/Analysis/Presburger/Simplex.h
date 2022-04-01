@@ -419,15 +419,9 @@ protected:
 /// (A_k)*y is not zero then we have that A*y is lexicopositive and if not we
 /// ignore more columns; eventually if all these dot products become zero then
 /// A*y is zero and we are done.
-class LexSimplex : public SimplexBase {
+class LexSimplexBase : public SimplexBase {
 public:
-  explicit LexSimplex(unsigned nVar)
-      : SimplexBase(nVar, /*mustUseBigM=*/true) {}
-  explicit LexSimplex(const IntegerRelation &constraints)
-      : LexSimplex(constraints.getNumIds()) {
-    intersectIntegerRelation(constraints);
-  }
-  ~LexSimplex() override = default;
+  ~LexSimplexBase() override = default;
 
   /// Add an inequality to the tableau. If coeffs is c_0, c_1, ... c_n, where n
   /// is the current number of variables, then the corresponding inequality is
@@ -435,30 +429,23 @@ public:
   ///
   /// This just adds the inequality to the tableau and does not try to create a
   /// consistent tableau configuration.
-  void addInequality(ArrayRef<int64_t> coeffs) final {
-    addRow(coeffs, /*makeRestricted=*/true);
-  }
+  void addInequality(ArrayRef<int64_t> coeffs) final;
 
   /// Get a snapshot of the current state. This is used for rolling back.
   unsigned getSnapshot() { return SimplexBase::getSnapshotBasis(); }
 
-  /// Return the lexicographically minimum rational solution to the constraints.
-  MaybeOptimum<SmallVector<Fraction, 8>> findRationalLexMin();
-
-  /// Return the lexicographically minimum integer solution to the constraints.
-  ///
-  /// Note: this should be used only when the lexmin is really needed. To obtain
-  /// any integer sample, use Simplex::findIntegerSample as that is more robust.
-  MaybeOptimum<SmallVector<int64_t, 8>> findIntegerLexMin();
-
 protected:
-  /// Returns the current sample point, which may contain non-integer (rational)
-  /// coordinates. Returns an empty optimum when the tableau is empty.
-  ///
-  /// Returns an unbounded optimum when the big M parameter is used and a
-  /// variable has a non-zero big M coefficient, meaning its value is infinite
-  /// or unbounded.
-  MaybeOptimum<SmallVector<Fraction, 8>> getRationalSample() const;
+  LexSimplexBase(unsigned nVar) : SimplexBase(nVar, /*mustUseBigM=*/true) {}
+  explicit LexSimplexBase(const IntegerRelation &constraints)
+      : LexSimplexBase(constraints.getNumIds()) {
+    intersectIntegerRelation(constraints);
+  }
+
+  /// Try to move the specified row to column orientation while preserving the
+  /// lexicopositivity of the basis transform. If this is not possible, return
+  /// failure. This only occurs when the constraints have no solution; the
+  /// tableau will be marked empty in such a case.
+  LogicalResult moveRowUnknownToColumn(unsigned row);
 
   /// Given a row that has a non-integer sample value, add an inequality such
   /// that this fractional sample value is cut away from the polytope. The added
@@ -472,6 +459,39 @@ protected:
   /// Undo the addition of the last constraint. This is only called while
   /// rolling back.
   void undoLastConstraint() final;
+
+  /// Given two potential pivot columns for a row, return the one that results
+  /// in the lexicographically smallest sample vector.
+  unsigned getLexMinPivotColumn(unsigned row, unsigned colA,
+                                unsigned colB) const;
+};
+
+class LexSimplex : public LexSimplexBase {
+public:
+  explicit LexSimplex(unsigned nVar) : LexSimplexBase(nVar) {}
+  explicit LexSimplex(const IntegerRelation &constraints)
+      : LexSimplexBase(constraints) {
+    assert(constraints.getNumSymbolIds() == 0 &&
+           "LexSimplex does not support symbols!");
+  }
+
+  /// Return the lexicographically minimum rational solution to the constraints.
+  MaybeOptimum<SmallVector<Fraction, 8>> findRationalLexMin();
+
+  /// Return the lexicographically minimum integer solution to the constraints.
+  ///
+  /// Note: this should be used only when the lexmin is really needed. To obtain
+  /// any integer sample, use Simplex::findIntegerSample as that is more robust.
+  MaybeOptimum<SmallVector<int64_t, 8>> findIntegerLexMin();
+
+private:
+  /// Returns the current sample point, which may contain non-integer (rational)
+  /// coordinates. Returns an empty optimum when the tableau is empty.
+  ///
+  /// Returns an unbounded optimum when the big M parameter is used and a
+  /// variable has a non-zero big M coefficient, meaning its value is infinite
+  /// or unbounded.
+  MaybeOptimum<SmallVector<Fraction, 8>> getRationalSample() const;
 
   /// Make the tableau configuration consistent.
   void restoreRationalConsistency();
@@ -491,12 +511,6 @@ protected:
   /// in the lexicographically smallest sample vector.
   unsigned getLexMinPivotColumn(unsigned row, unsigned colA,
                                 unsigned colB) const;
-
-  /// Try to move the specified row to column orientation while preserving the
-  /// lexicopositivity of the basis transform. If this is not possible, return
-  /// failure. This only occurs when the constraints have no solution; the
-  /// tableau will be marked empty in such a case.
-  LogicalResult moveRowUnknownToColumn(unsigned row);
 };
 
 /// The Simplex class uses the Normal pivot rule and supports integer emptiness
