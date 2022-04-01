@@ -530,6 +530,7 @@ def Vector_ExtractElementOp :
     }
   }];
   let hasVerifier = 1;
+  let hasFolder = 1;
 }
 
 def Vector_ExtractOp :

@@ -943,6 +943,24 @@ LogicalResult vector::ExtractElementOp::verify() {
   return success();
 }
 
+OpFoldResult vector::ExtractElementOp::fold(ArrayRef<Attribute> operands) {
+  // Skip the 0-D vector here now.
+  if (operands.size() < 2)
+    return {};
+
+  Attribute src = operands[0];
+  Attribute pos = operands[1];
+  if (!src || !pos)
+    return {};
+
+  auto srcElements = src.cast<DenseElementsAttr>().getValues<Attribute>();
+
+  auto attr = pos.dyn_cast<IntegerAttr>();
+  uint64_t posIdx = attr.getInt();
+
+  return srcElements[posIdx];
+}
+
 //===----------------------------------------------------------------------===//
 // ExtractOp
 //===----------------------------------------------------------------------===//

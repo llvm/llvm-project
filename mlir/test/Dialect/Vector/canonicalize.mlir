@@ -1385,3 +1385,15 @@ func @insert_element_fold() -> vector<4xi32> {
   %1 = vector.insertelement %s, %v[%i : i32] : vector<4xi32>
   return %1 : vector<4xi32>
 }
+
+// -----
+
+// CHECK-LABEL: func @extract_element_fold
+//       CHECK:   %[[C:.+]] = arith.constant 5 : i32
+//       CHECK:   return %[[C]]
+func @extract_element_fold() -> i32 {
+  %v = arith.constant dense<[1, 3, 5, 7]> : vector<4xi32>
+  %i = arith.constant 2 : i32
+  %1 = vector.extractelement %v[%i : i32] : vector<4xi32>
+  return %1 : i32
+}
