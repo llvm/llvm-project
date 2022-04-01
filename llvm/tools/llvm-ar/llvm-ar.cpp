@@ -22,6 +22,7 @@
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/SymbolicFile.h"
+#include "llvm/Object/XCOFFObjectFile.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ConvertUTF.h"
@@ -881,9 +882,11 @@ computeNewArchiveMembers(ArchiveOperation Operation,
 }
 
 static object::Archive::Kind getDefaultForHost() {
-  return Triple(sys::getProcessTriple()).isOSDarwin()
+  Triple HostTriple(sys::getProcessTriple());
+  return HostTriple.isOSDarwin()
              ? object::Archive::K_DARWIN
-             : object::Archive::K_GNU;
+             : (HostTriple.isOSAIX() ? object::Archive::K_AIXBIG
+                                     : object::Archive::K_GNU);
 }
 
 static object::Archive::Kind getKindFromMember(const NewArchiveMember &Member) {
@@ -894,7 +897,9 @@ static object::Archive::Kind getKindFromMember(const NewArchiveMember &Member) {
   if (OptionalObject)
     return isa<object::MachOObjectFile>(**OptionalObject)
                ? object::Archive::K_DARWIN
-               : object::Archive::K_GNU;
+               : (isa<object::XCOFFObjectFile>(**OptionalObject)
+                      ? object::Archive::K_AIXBIG
+                      : object::Archive::K_GNU);
 
   // squelch the error in case we had a non-object file
   consumeError(OptionalObject.takeError());
@@ -939,6 +944,8 @@ static void performWriteOperation(ArchiveOperation Operation,
     else
       Kind = !NewMembers.empty() ? getKindFromMember(NewMembers.front())
                                  : getDefaultForHost();
+    if (Kind == object::Archive::K_AIXBIG)
+      fail("unsupported big AIX write operation");
     break;
   case GNU:
     Kind = object::Archive::K_GNU;

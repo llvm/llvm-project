@@ -1,3 +1,4 @@
+# XFAIL: system-aix
 ## Test Display of empty archives.
 
 # RUN: rm -rf %t && mkdir -p %t

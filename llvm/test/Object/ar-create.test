@@ -1,3 +1,4 @@
+XFAIL: system-aix
 Test which operations create an archive and which don't.
 
 RUN: touch %t

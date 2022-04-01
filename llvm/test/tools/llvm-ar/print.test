@@ -1,5 +1,5 @@
 ## Test Print output
-# XFAIL: system-darwin
+# XFAIL: system-darwin,system-aix
 
 # RUN: rm -rf %t && mkdir -p %t
 # RUN: echo file1 > %t/1.txt

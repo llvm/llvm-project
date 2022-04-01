@@ -1,3 +1,4 @@
+# XFAIL: system-aix
 ## Check that response files can cope with non-ascii characters.
 
 # RUN: echo 'contents' > %t-£.txt

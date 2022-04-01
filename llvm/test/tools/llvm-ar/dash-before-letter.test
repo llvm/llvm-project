@@ -1,3 +1,4 @@
+XFAIL: system-aix
 # Test the use of dash before key letters.
 
 RUN: touch %t1.txt
