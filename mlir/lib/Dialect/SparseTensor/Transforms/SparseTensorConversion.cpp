@@ -253,6 +253,14 @@ static Value genIndexAndValueForDense(ConversionPatternRewriter &rewriter,
   return val;
 }
 
+/// Generates a call to release/delete a `SparseTensorCOO`.
+static void genDelCOOCall(OpBuilder &builder, Operation *op, Type elemTp,
+                          Value coo) {
+  SmallString<21> name{"delSparseTensorCOO", primaryTypeFunctionSuffix(elemTp)};
+  TypeRange noTp;
+  createFuncCall(builder, op, name, noTp, coo, EmitCInterface::Off);
+}
+
 /// Generates a call that adds one element to a coordinate scheme.
 /// In particular, this generates code like the following:
 ///   val = a[i1,..,ik];
@@ -501,7 +509,9 @@ public:
       params[4] = constantIndexTypeEncoding(rewriter, loc, encDst);
       params[6] = constantAction(rewriter, loc, Action::kFromCOO);
       params[7] = coo;
-      rewriter.replaceOp(op, genNewCall(rewriter, op, params));
+      Value dst = genNewCall(rewriter, op, params);
+      genDelCOOCall(rewriter, op, stp.getElementType(), coo);
+      rewriter.replaceOp(op, dst);
       return success();
     }
     if (!encDst && encSrc) {
@@ -545,6 +555,7 @@ public:
       insertScalarIntoDenseTensor(rewriter, loc, elemPtr, dst, rank, ind);
       rewriter.create<scf::YieldOp>(loc);
       rewriter.setInsertionPointAfter(whileOp);
+      genDelCOOCall(rewriter, op, elemTp, iter);
       rewriter.replaceOpWithNewOp<bufferization::ToTensorOp>(op, resType, dst);
       return success();
     }
@@ -584,7 +595,7 @@ public:
     SmallVector<Value, 8> params;
     sizesFromSrc(rewriter, sizes, loc, src);
     newParams(rewriter, params, op, stp, encDst, Action::kEmptyCOO, sizes);
-    Value ptr = genNewCall(rewriter, op, params);
+    Value coo = genNewCall(rewriter, op, params);
     Value ind = genAlloca(rewriter, loc, rank, rewriter.getIndexType());
     Value perm = params[2];
     SmallVector<Value> lo;
@@ -620,13 +631,15 @@ public:
                                             ivs, rank);
           else
             val = genIndexAndValueForDense(rewriter, loc, src, ind, ivs);
-          genAddEltCall(rewriter, op, eltType, ptr, val, ind, perm);
+          genAddEltCall(rewriter, op, eltType, coo, val, ind, perm);
           return {};
         });
     // Final call to construct sparse tensor storage.
     params[6] = constantAction(rewriter, loc, Action::kFromCOO);
-    params[7] = ptr;
-    rewriter.replaceOp(op, genNewCall(rewriter, op, params));
+    params[7] = coo;
+    Value dst = genNewCall(rewriter, op, params);
+    genDelCOOCall(rewriter, op, eltType, coo);
+    rewriter.replaceOp(op, dst);
     return success();
   }
 };
@@ -822,8 +835,9 @@ public:
     Type eltType = srcType.getElementType();
     SmallString<18> name{"outSparseTensor", primaryTypeFunctionSuffix(eltType)};
     TypeRange noTp;
-    replaceOpWithFuncCall(rewriter, op, name, noTp, params,
-                          EmitCInterface::Off);
+    createFuncCall(rewriter, op, name, noTp, params, EmitCInterface::Off);
+    genDelCOOCall(rewriter, op, eltType, coo);
+    rewriter.eraseOp(op);
     return success();
   }
 };

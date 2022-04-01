@@ -56,6 +56,19 @@ unsigned PresburgerSpace::getIdKindOverlap(IdKind kind, unsigned idStart,
   return overlapEnd - overlapStart;
 }
 
+IdKind PresburgerSpace::getIdKindAt(unsigned pos) const {
+  assert(pos < getNumIds() && "`pos` should represent a valid id position");
+  if (pos < getIdKindEnd(IdKind::Domain))
+    return IdKind::Domain;
+  if (pos < getIdKindEnd(IdKind::Range))
+    return IdKind::Range;
+  if (pos < getIdKindEnd(IdKind::Symbol))
+    return IdKind::Symbol;
+  if (pos < getIdKindEnd(IdKind::Local))
+    return IdKind::Local;
+  llvm_unreachable("`pos` should represent a valid id position");
+}
+
 unsigned PresburgerSpace::insertId(IdKind kind, unsigned pos, unsigned num) {
   assert(pos <= getNumIdKind(kind));
 

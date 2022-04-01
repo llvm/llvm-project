@@ -148,7 +148,10 @@ cc_library(
         "lib/Demangle/*.cpp",
         "lib/Demangle/*.h",
     ]),
-    hdrs = glob(["include/llvm/Demangle/*.h"]),
+    hdrs = glob([
+        "include/llvm/Demangle/*.h",
+        "include/llvm/Demangle/*.def",
+    ]),
     copts = llvm_copts,
     deps = [":config"],
 )
