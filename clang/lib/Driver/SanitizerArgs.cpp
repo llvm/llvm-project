@@ -44,8 +44,8 @@ static const SanitizerMask NeedsUnwindTables =
 static const SanitizerMask SupportsCoverage =
     SanitizerKind::Address | SanitizerKind::HWAddress |
     SanitizerKind::KernelAddress | SanitizerKind::KernelHWAddress |
-    SanitizerKind::MemTag | SanitizerKind::Memory |
-    SanitizerKind::KernelMemory | SanitizerKind::Leak |
+    SanitizerKind::MemtagStack | SanitizerKind::MemtagHeap |
+    SanitizerKind::Memory | SanitizerKind::KernelMemory | SanitizerKind::Leak |
     SanitizerKind::Undefined | SanitizerKind::Integer | SanitizerKind::Bounds |
     SanitizerKind::ImplicitConversion | SanitizerKind::Nullability |
     SanitizerKind::DataFlow | SanitizerKind::Fuzzer |
@@ -73,7 +73,7 @@ static const SanitizerMask CFIClasses =
     SanitizerKind::CFIUnrelatedCast;
 static const SanitizerMask CompatibleWithMinimalRuntime =
     TrappingSupported | SanitizerKind::Scudo | SanitizerKind::ShadowCallStack |
-    SanitizerKind::MemTag;
+    SanitizerKind::MemtagStack | SanitizerKind::MemtagHeap;
 
 enum CoverageFeature {
   CoverageFunc = 1 << 0,
@@ -649,6 +649,17 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   } else {
     MsanUseAfterDtor = false;
     MsanParamRetval = false;
+  }
+
+  if (AllAddedKinds & SanitizerKind::MemTag) {
+    StringRef S =
+        Args.getLastArgValue(options::OPT_fsanitize_memtag_mode_EQ, "sync");
+    if (S == "async" || S == "sync") {
+      MemtagMode = S.str();
+    } else {
+      D.Diag(clang::diag::err_drv_invalid_value_with_suggestion)
+          << "-fsanitize-memtag-mode=" << S << "{async, sync}";
+    }
   }
 
   if (AllAddedKinds & SanitizerKind::Thread) {
@@ -1231,7 +1242,8 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
         << "-fvisibility=";
   }
 
-  if (Sanitizers.has(SanitizerKind::MemTag) && !hasTargetFeatureMTE(CmdArgs))
+  if (Sanitizers.has(SanitizerKind::MemtagStack) &&
+      !hasTargetFeatureMTE(CmdArgs))
     TC.getDriver().Diag(diag::err_stack_tagging_requires_hardware_feature);
 }
 
