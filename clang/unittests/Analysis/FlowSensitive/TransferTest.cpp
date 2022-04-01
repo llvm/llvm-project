@@ -35,6 +35,7 @@ using ::testing::ElementsAre;
 using ::testing::IsNull;
 using ::testing::NotNull;
 using ::testing::Pair;
+using ::testing::SizeIs;
 
 class TransferTest : public ::testing::Test {
 protected:
@@ -2645,6 +2646,60 @@ TEST_F(TransferTest, BooleanInequality) {
         auto &BarValElse =
             *cast<BoolValue>(EnvElse.getValue(*BarDecl, SkipPast::None));
         EXPECT_TRUE(EnvElse.flowConditionImplies(BarValElse));
+      });
+}
+
+TEST_F(TransferTest, CorrelatedBranches) {
+  std::string Code = R"(
+    void target(bool B, bool C) {
+      if (B) {
+        return;
+      }
+      (void)0;
+      /*[[p0]]*/
+      if (C) {
+        B = true;
+        /*[[p1]]*/
+      }
+      if (B) {
+        (void)0;
+        /*[[p2]]*/
+      }
+    }
+  )";
+  runDataflow(
+      Code, [](llvm::ArrayRef<
+                   std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                   Results,
+               ASTContext &ASTCtx) {
+        ASSERT_THAT(Results, SizeIs(3));
+
+        const ValueDecl *CDecl = findValueDecl(ASTCtx, "C");
+        ASSERT_THAT(CDecl, NotNull());
+
+        {
+          ASSERT_THAT(Results[2], Pair("p0", _));
+          const Environment &Env = Results[2].second.Env;
+          const ValueDecl *BDecl = findValueDecl(ASTCtx, "B");
+          ASSERT_THAT(BDecl, NotNull());
+          auto &BVal = *cast<BoolValue>(Env.getValue(*BDecl, SkipPast::None));
+
+          EXPECT_TRUE(Env.flowConditionImplies(Env.makeNot(BVal)));
+        }
+
+        {
+          ASSERT_THAT(Results[1], Pair("p1", _));
+          const Environment &Env = Results[1].second.Env;
+          auto &CVal = *cast<BoolValue>(Env.getValue(*CDecl, SkipPast::None));
+          EXPECT_TRUE(Env.flowConditionImplies(CVal));
+        }
+
+        {
+          ASSERT_THAT(Results[0], Pair("p2", _));
+          const Environment &Env = Results[0].second.Env;
+          auto &CVal = *cast<BoolValue>(Env.getValue(*CDecl, SkipPast::None));
+          EXPECT_TRUE(Env.flowConditionImplies(CVal));
+        }
       });
 }
 
