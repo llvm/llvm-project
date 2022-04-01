@@ -26,11 +26,12 @@ namespace impl {
 double getWTick() { return ((double)1E-9); }
 
 double getWTime() {
-  // The intrinsics for measuring time have undocumented frequency
-  // This will probably need to be found by measurement on a number of
-  // architectures. Until then, return 0, which is very inaccurate as a
-  // timer but resolves the undefined symbol at link time.
-  return 0;
+#if __gfx700__ || __gfx701__ || __gfx702__
+  uint64_t t = __builtin_amdgcn_s_memtime();
+#else
+  uint64_t t = __builtin_amdgcn_s_memrealtime();
+#endif
+  return ((double)1.0 / 745000000.0) * t;
 }
 
 #pragma omp end declare variant
