@@ -129,11 +129,44 @@ define void @umin(i8* nocapture readonly %pSrc, i8 signext %offset, i8* nocaptur
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[WHILE_END]], label [[SCALAR_PH]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[BLOCKSIZE]], [[WHILE_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i8* [ [[IND_END2]], [[MIDDLE_BLOCK]] ], [ [[PSRC]], [[WHILE_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i8* [ [[IND_END4]], [[MIDDLE_BLOCK]] ], [ [[PDST]], [[WHILE_BODY_PREHEADER]] ]
+; CHECK-NEXT:    br i1 [[CMP_N]], label [[WHILE_END]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
+; CHECK:       vec.epilog.iter.check:
+; CHECK-NEXT:    [[IND_END19:%.*]] = getelementptr i8, i8* [[PDST]], i64 [[N_VEC]]
+; CHECK-NEXT:    [[IND_END16:%.*]] = getelementptr i8, i8* [[PSRC]], i64 [[N_VEC]]
+; CHECK-NEXT:    [[CAST_CRD12:%.*]] = trunc i64 [[N_VEC]] to i32
+; CHECK-NEXT:    [[IND_END13:%.*]] = sub i32 [[BLOCKSIZE]], [[CAST_CRD12]]
+; CHECK-NEXT:    [[N_VEC_REMAINING:%.*]] = and i64 [[TMP2]], 24
+; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp eq i64 [[N_VEC_REMAINING]], 0
+; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]]
+; CHECK:       vec.epilog.ph:
+; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; CHECK-NEXT:    [[N_VEC9:%.*]] = and i64 [[TMP2]], 8589934584
+; CHECK-NEXT:    [[CAST_CRD:%.*]] = trunc i64 [[N_VEC9]] to i32
+; CHECK-NEXT:    [[IND_END:%.*]] = sub i32 [[BLOCKSIZE]], [[CAST_CRD]]
+; CHECK-NEXT:    [[IND_END15:%.*]] = getelementptr i8, i8* [[PSRC]], i64 [[N_VEC9]]
+; CHECK-NEXT:    [[IND_END18:%.*]] = getelementptr i8, i8* [[PDST]], i64 [[N_VEC9]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT25:%.*]] = insertelement <8 x i8> poison, i8 [[OFFSET]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT26:%.*]] = shufflevector <8 x i8> [[BROADCAST_SPLATINSERT25]], <8 x i8> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
+; CHECK:       vec.epilog.vector.body:
+; CHECK-NEXT:    [[INDEX10:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT11:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[NEXT_GEP22:%.*]] = getelementptr i8, i8* [[PSRC]], i64 [[INDEX10]]
+; CHECK-NEXT:    [[NEXT_GEP23:%.*]] = getelementptr i8, i8* [[PDST]], i64 [[INDEX10]]
+; CHECK-NEXT:    [[TMP15:%.*]] = bitcast i8* [[NEXT_GEP22]] to <8 x i8>*
+; CHECK-NEXT:    [[WIDE_LOAD24:%.*]] = load <8 x i8>, <8 x i8>* [[TMP15]], align 2
+; CHECK-NEXT:    [[TMP16:%.*]] = call <8 x i8> @llvm.umin.v8i8(<8 x i8> [[WIDE_LOAD24]], <8 x i8> [[BROADCAST_SPLAT26]])
+; CHECK-NEXT:    [[TMP17:%.*]] = bitcast i8* [[NEXT_GEP23]] to <8 x i8>*
+; CHECK-NEXT:    store <8 x i8> [[TMP16]], <8 x i8>* [[TMP17]], align 2
+; CHECK-NEXT:    [[INDEX_NEXT11]] = add nuw i64 [[INDEX10]], 8
+; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT11]], [[N_VEC9]]
+; CHECK-NEXT:    br i1 [[TMP18]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK:       vec.epilog.middle.block:
+; CHECK-NEXT:    [[CMP_N20:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC9]]
+; CHECK-NEXT:    br i1 [[CMP_N20]], label [[WHILE_END]], label [[VEC_EPILOG_SCALAR_PH]]
+; CHECK:       vec.epilog.scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END13]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[BLOCKSIZE]], [[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL14:%.*]] = phi i8* [ [[IND_END15]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END16]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[PSRC]], [[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL17:%.*]] = phi i8* [ [[IND_END18]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END19]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[PDST]], [[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK:       while.body:
 ; CHECK-NEXT:    [[BLKCNT_09:%.*]] = phi i32 [ [[DEC:%.*]], [[WHILE_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]

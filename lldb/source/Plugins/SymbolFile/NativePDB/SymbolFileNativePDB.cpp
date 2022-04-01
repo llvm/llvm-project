@@ -1356,7 +1356,6 @@ void SymbolFileNativePDB::ParseInlineSite(PdbCompilandSymId id,
           func_base + code_offset, decl_line + line_offset, 0, decl_file_idx,
           is_start_of_statement, false, is_prologue_end, false, false);
       inline_site_sp->line_entries.push_back(line_entry);
-      has_base = false;
     } else {
       // Add line entry in next call to change_code_offset.
       is_new_line_offset = true;

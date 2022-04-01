@@ -64,7 +64,7 @@ void MapExtDefNamesConsumer::handleDecl(const Decl *D) {
       if (const Stmt *Body = FD->getBody())
         addIfInMain(FD, Body->getBeginLoc());
   } else if (const auto *VD = dyn_cast<VarDecl>(D)) {
-    if (cross_tu::containsConst(VD, Ctx) && VD->hasInit())
+    if (cross_tu::shouldImport(VD, Ctx) && VD->hasInit())
       if (const Expr *Init = VD->getInit())
         addIfInMain(VD, Init->getBeginLoc());
   }
