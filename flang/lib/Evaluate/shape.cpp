@@ -53,7 +53,7 @@ Shape GetShapeHelper::ConstantShape(const Constant<ExtentType> &arrayConstant) {
   return result;
 }
 
-auto GetShapeHelper::AsShape(ExtentExpr &&arrayExpr) const -> Result {
+auto GetShapeHelper::AsShapeResult(ExtentExpr &&arrayExpr) const -> Result {
   if (context_) {
     arrayExpr = Fold(*context_, std::move(arrayExpr));
   }
@@ -63,17 +63,17 @@ auto GetShapeHelper::AsShape(ExtentExpr &&arrayExpr) const -> Result {
   if (auto *constructor{UnwrapExpr<ArrayConstructor<ExtentType>>(arrayExpr)}) {
     Shape result;
     for (auto &value : *constructor) {
-      if (auto *expr{std::get_if<ExtentExpr>(&value.u)}) {
-        if (expr->Rank() == 0) {
-          result.emplace_back(std::move(*expr));
-          continue;
-        }
+      auto *expr{std::get_if<ExtentExpr>(&value.u)};
+      if (expr && expr->Rank() == 0) {
+        result.emplace_back(std::move(*expr));
+      } else {
+        return std::nullopt;
       }
-      return std::nullopt;
     }
     return result;
+  } else {
+    return std::nullopt;
   }
-  return std::nullopt;
 }
 
 Shape GetShapeHelper::CreateShape(int rank, NamedEntity &base) {
@@ -847,15 +847,6 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
           }
         }
       }
-    } else if (intrinsic->name == "reshape") {
-      if (call.arguments().size() >= 2 && call.arguments().at(1)) {
-        // SHAPE(RESHAPE(array,shape)) -> shape
-        if (const auto *shapeExpr{
-                call.arguments().at(1).value().UnwrapExpr()}) {
-          auto shape{std::get<Expr<SomeInteger>>(shapeExpr->u)};
-          return AsShape(ConvertToType<ExtentType>(std::move(shape)));
-        }
-      }
     } else if (intrinsic->name == "pack") {
       if (call.arguments().size() >= 3 && call.arguments().at(2)) {
         // SHAPE(PACK(,,VECTOR=v)) -> SHAPE(v)
@@ -888,6 +879,18 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
             return Shape{ExtentExpr{FunctionRef<ExtentType>{
                 ProcedureDesignator{std::move(specific->specificIntrinsic)},
                 std::move(specific->arguments)}}};
+          }
+        }
+      }
+    } else if (intrinsic->name == "reshape") {
+      if (call.arguments().size() >= 2 && call.arguments().at(1)) {
+        // SHAPE(RESHAPE(array,shape)) -> shape
+        if (const auto *shapeExpr{
+                call.arguments().at(1).value().UnwrapExpr()}) {
+          auto shapeArg{std::get<Expr<SomeInteger>>(shapeExpr->u)};
+          if (auto result{AsShapeResult(
+                  ConvertToType<ExtentType>(std::move(shapeArg)))}) {
+            return result;
           }
         }
       }
@@ -966,7 +969,8 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
       // TODO: shapes of other non-elemental intrinsic results
     }
   }
-  return std::nullopt;
+  // The rank is always known even if the extents are not.
+  return Shape(static_cast<std::size_t>(call.Rank()), MaybeExtentExpr{});
 }
 
 // Check conformance of the passed shapes.

@@ -161,7 +161,7 @@ public:
 private:
   static Result ScalarShape() { return Shape{}; }
   static Shape ConstantShape(const Constant<ExtentType> &);
-  Result AsShape(ExtentExpr &&) const;
+  Result AsShapeResult(ExtentExpr &&) const;
   static Shape CreateShape(int rank, NamedEntity &);
 
   template <typename T>
