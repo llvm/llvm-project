@@ -484,6 +484,14 @@ public:
   /// any integer sample, use Simplex::findIntegerSample as that is more robust.
   MaybeOptimum<SmallVector<int64_t, 8>> findIntegerLexMin();
 
+  /// Return whether the specified inequality is redundant/separate for the
+  /// polytope. Redundant means every point satisfies the given inequality, and
+  /// separate means no point satisfies it.
+  ///
+  /// These checks are integer-exact.
+  bool isSeparateInequality(ArrayRef<int64_t> coeffs);
+  bool isRedundantInequality(ArrayRef<int64_t> coeffs);
+
 private:
   /// Returns the current sample point, which may contain non-integer (rational)
   /// coordinates. Returns an empty optimum when the tableau is empty.
@@ -685,7 +693,7 @@ private:
 /// which get rolled back on scope exit.
 class SimplexRollbackScopeExit {
 public:
-  SimplexRollbackScopeExit(Simplex &simplex) : simplex(simplex) {
+  SimplexRollbackScopeExit(SimplexBase &simplex) : simplex(simplex) {
     snapshot = simplex.getSnapshot();
   };
   ~SimplexRollbackScopeExit() { simplex.rollback(snapshot); }
