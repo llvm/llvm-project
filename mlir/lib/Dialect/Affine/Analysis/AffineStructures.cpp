@@ -158,8 +158,9 @@ FlatAffineValueConstraints::clone() const {
 FlatAffineConstraints::FlatAffineConstraints(IntegerSet set)
     : IntegerPolyhedron(set.getNumInequalities(), set.getNumEqualities(),
                         set.getNumDims() + set.getNumSymbols() + 1,
-                        set.getNumDims(), set.getNumSymbols(),
-                        /*numLocals=*/0) {
+                        PresburgerSpace::getSetSpace(set.getNumDims(),
+                                                     set.getNumSymbols(),
+                                                     /*numLocals=*/0)) {
 
   // Flatten expressions and add them to the constraint system.
   std::vector<SmallVector<int64_t, 8>> flatExprs;

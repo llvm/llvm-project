@@ -65,18 +65,19 @@ public:
                         unsigned numReservedEqualities,
                         unsigned numReservedCols, unsigned numDims,
                         unsigned numSymbols, unsigned numLocals)
-      : IntegerPolyhedron(numReservedInequalities, numReservedEqualities,
-                          numReservedCols, numDims, numSymbols, numLocals) {}
+      : IntegerPolyhedron(
+            numReservedInequalities, numReservedEqualities, numReservedCols,
+            PresburgerSpace::getSetSpace(numDims, numSymbols, numLocals)) {}
 
   /// Constructs a constraint system with the specified number of
   /// dimensions and symbols.
   FlatAffineConstraints(unsigned numDims = 0, unsigned numSymbols = 0,
                         unsigned numLocals = 0)
-      : IntegerPolyhedron(/*numReservedInequalities=*/0,
-                          /*numReservedEqualities=*/0,
-                          /*numReservedCols=*/numDims + numSymbols + numLocals +
-                              1,
-                          numDims, numSymbols, numLocals) {}
+      : FlatAffineConstraints(/*numReservedInequalities=*/0,
+                              /*numReservedEqualities=*/0,
+                              /*numReservedCols=*/numDims + numSymbols +
+                                  numLocals + 1,
+                              numDims, numSymbols, numLocals) {}
 
   explicit FlatAffineConstraints(const IntegerPolyhedron &poly)
       : IntegerPolyhedron(poly) {}

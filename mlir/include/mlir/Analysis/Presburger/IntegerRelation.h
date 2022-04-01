@@ -57,9 +57,8 @@ public:
   /// of constraints and identifiers.
   IntegerRelation(unsigned numReservedInequalities,
                   unsigned numReservedEqualities, unsigned numReservedCols,
-                  unsigned numDomain, unsigned numRange, unsigned numSymbols,
-                  unsigned numLocals)
-      : PresburgerSpace(numDomain, numRange, numSymbols, numLocals),
+                  const PresburgerSpace &space)
+      : PresburgerSpace(space),
         equalities(0, getNumIds() + 1, numReservedEqualities, numReservedCols),
         inequalities(0, getNumIds() + 1, numReservedInequalities,
                      numReservedCols) {
@@ -67,20 +66,15 @@ public:
   }
 
   /// Constructs a relation with the specified number of dimensions and symbols.
-  IntegerRelation(unsigned numDomain = 0, unsigned numRange = 0,
-                  unsigned numSymbols = 0, unsigned numLocals = 0)
+  IntegerRelation(const PresburgerSpace &space)
       : IntegerRelation(/*numReservedInequalities=*/0,
                         /*numReservedEqualities=*/0,
-                        /*numReservedCols=*/numDomain + numRange + numSymbols +
-                            numLocals + 1,
-                        numDomain, numRange, numSymbols, numLocals) {}
+                        /*numReservedCols=*/space.getNumIds() + 1, space) {}
 
   /// Return a system with no constraints, i.e., one which is satisfied by all
   /// points.
-  static IntegerRelation getUniverse(unsigned numDomain = 0,
-                                     unsigned numRange = 0,
-                                     unsigned numSymbols = 0) {
-    return IntegerRelation(numDomain, numRange, numSymbols);
+  static IntegerRelation getUniverse(const PresburgerSpace &space) {
+    return IntegerRelation(space);
   }
 
   /// Return the kind of this IntegerRelation.
@@ -562,25 +556,24 @@ public:
   /// of constraints and identifiers.
   IntegerPolyhedron(unsigned numReservedInequalities,
                     unsigned numReservedEqualities, unsigned numReservedCols,
-                    unsigned numDims, unsigned numSymbols, unsigned numLocals)
+                    const PresburgerSpace &space)
       : IntegerRelation(numReservedInequalities, numReservedEqualities,
-                        numReservedCols, /*numDomain=*/0, /*numRange=*/numDims,
-                        numSymbols, numLocals) {}
+                        numReservedCols, space) {
+    assert(space.getNumDomainIds() == 0 &&
+           "Number of domain id's should be zero in Set kind space.");
+  }
 
-  /// Constructs a relation with the specified number of dimensions and symbols.
-  IntegerPolyhedron(unsigned numDims = 0, unsigned numSymbols = 0,
-                    unsigned numLocals = 0)
+  /// Constructs a relation with the specified number of dimensions and
+  /// symbols.
+  IntegerPolyhedron(const PresburgerSpace &space)
       : IntegerPolyhedron(/*numReservedInequalities=*/0,
                           /*numReservedEqualities=*/0,
-                          /*numReservedCols=*/numDims + numSymbols + numLocals +
-                              1,
-                          numDims, numSymbols, numLocals) {}
+                          /*numReservedCols=*/space.getNumIds() + 1, space) {}
 
   /// Return a system with no constraints, i.e., one which is satisfied by all
   /// points.
-  static IntegerPolyhedron getUniverse(unsigned numDims = 0,
-                                       unsigned numSymbols = 0) {
-    return IntegerPolyhedron(numDims, numSymbols);
+  static IntegerPolyhedron getUniverse(const PresburgerSpace &space) {
+    return IntegerPolyhedron(space);
   }
 
   /// Return the kind of this IntegerRelation.
