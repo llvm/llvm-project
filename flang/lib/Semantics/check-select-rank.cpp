@@ -71,7 +71,7 @@ void SelectRankConstructChecker::Leave(
                     .Say(rankCaseStmt.source,
                         "Not more than one of the selectors of SELECT RANK "
                         "statement may be DEFAULT"_err_en_US)
-                    .Attach(prevLocDefault, "Previous use"_err_en_US);
+                    .Attach(prevLocDefault, "Previous use"_en_US);
               }
             },
             [&](const parser::Star &) { // C1153
@@ -83,7 +83,7 @@ void SelectRankConstructChecker::Leave(
                     .Say(rankCaseStmt.source,
                         "Not more than one of the selectors of SELECT RANK "
                         "statement may be '*'"_err_en_US)
-                    .Attach(prevLocStar, "Previous use"_err_en_US);
+                    .Attach(prevLocStar, "Previous use"_en_US);
               }
               if (saveSelSymbol &&
                   IsAllocatableOrPointer(*saveSelSymbol)) { // C1155
@@ -111,7 +111,7 @@ void SelectRankConstructChecker::Leave(
                         .Say(rankCaseStmt.source,
                             "Same rank value (%d) not allowed more than once"_err_en_US,
                             *val)
-                        .Attach(prevloc, "Previous use"_err_en_US);
+                        .Attach(prevloc, "Previous use"_en_US);
                   }
                 }
               }

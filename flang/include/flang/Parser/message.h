@@ -29,9 +29,16 @@
 
 namespace Fortran::parser {
 
-// Use "..."_err_en_US, "..."_warn_en_US, and "..."_en_US literals to define
-// the static text and fatality of a message.
-enum class Severity { Error, Warning, Portability, None };
+// Use "..."_err_en_US, "..."_warn_en_US, "..."_port_en_US, and "..."_en_US
+// string literals to define the static text and fatality of a message.
+//
+// Error: fatal error that prevents code and module file generation
+// Warning: likely problem,
+// Portability: nonstandard or obsolete features
+// Because: for AttachTo(), explanatory attachment in support of another message
+// Context (internal): attachment from SetContext()
+// None: everything else, common for attachments with source locations
+enum class Severity { Error, Warning, Portability, Because, Context, None };
 
 class MessageFixedText {
 public:
@@ -46,6 +53,10 @@ public:
 
   CharBlock text() const { return text_; }
   Severity severity() const { return severity_; }
+  MessageFixedText &set_severity(Severity severity) {
+    severity_ = severity;
+    return *this;
+  }
   bool isFatal() const { return severity_ == Severity::Error; }
 
 private:
@@ -90,6 +101,10 @@ public:
   const std::string &string() const { return string_; }
   bool isFatal() const { return severity_ == Severity::Error; }
   Severity severity() const { return severity_; }
+  MessageFormattedText &set_severity(Severity severity) {
+    severity_ = severity;
+    return *this;
+  }
   std::string MoveString() { return std::move(string_); }
 
 private:
@@ -183,7 +198,6 @@ public:
       : location_{r}, text_{MessageFormattedText{
                           t, std::forward<A>(x), std::forward<As>(xs)...}} {}
 
-  bool attachmentIsContext() const { return attachmentIsContext_; }
   Reference attachment() const { return attachment_; }
 
   void SetContext(Message *c) {
@@ -199,6 +213,7 @@ public:
   bool SortBefore(const Message &that) const;
   bool IsFatal() const;
   Severity severity() const;
+  Message &set_severity(Severity);
   std::string ToString() const;
   std::optional<ProvenanceRange> GetProvenanceRange(
       const AllCookedSources &) const;
@@ -252,7 +267,7 @@ public:
   void ResolveProvenances(const AllCookedSources &);
   void Emit(llvm::raw_ostream &, const AllCookedSources &,
       bool echoSourceLines = true) const;
-  void AttachTo(Message &);
+  void AttachTo(Message &, std::optional<Severity> = std::nullopt);
   bool AnyFatalError() const;
 
 private:

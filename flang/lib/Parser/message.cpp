@@ -167,6 +167,17 @@ Severity Message::severity() const {
       text_);
 }
 
+Message &Message::set_severity(Severity severity) {
+  std::visit(
+      common::visitors{
+          [](const MessageExpectedText &) {},
+          [severity](MessageFixedText &x) { x.set_severity(severity); },
+          [severity](MessageFormattedText &x) { x.set_severity(severity); },
+      },
+      text_);
+  return *this;
+}
+
 std::string Message::ToString() const {
   return std::visit(
       common::visitors{
@@ -201,58 +212,59 @@ std::optional<ProvenanceRange> Message::GetProvenanceRange(
       location_);
 }
 
-void Message::Emit(llvm::raw_ostream &o, const AllCookedSources &allCooked,
-    bool echoSourceLine) const {
-  std::optional<ProvenanceRange> provenanceRange{GetProvenanceRange(allCooked)};
-  std::string text;
-  switch (severity()) {
+static std::string Prefix(Severity severity) {
+  switch (severity) {
   case Severity::Error:
-    text = "error: ";
-    break;
+    return "error: ";
   case Severity::Warning:
-    text = "warning: ";
-    break;
+    return "warning: ";
   case Severity::Portability:
-    text = "portability: ";
-    break;
+    return "portability: ";
+  case Severity::Because:
+    return "because: ";
+  case Severity::Context:
+    return "in the context: ";
   case Severity::None:
     break;
   }
-  text += ToString();
+  return "";
+}
+
+void Message::Emit(llvm::raw_ostream &o, const AllCookedSources &allCooked,
+    bool echoSourceLine) const {
+  std::optional<ProvenanceRange> provenanceRange{GetProvenanceRange(allCooked)};
   const AllSources &sources{allCooked.allSources()};
-  sources.EmitMessage(o, provenanceRange, text, echoSourceLine);
+  sources.EmitMessage(
+      o, provenanceRange, Prefix(severity()) + ToString(), echoSourceLine);
   bool isContext{attachmentIsContext_};
   for (const Message *attachment{attachment_.get()}; attachment;
        attachment = attachment->attachment_.get()) {
-    text.clear();
-    if (isContext) {
-      text = "in the context: ";
-    }
-    text += attachment->ToString();
-    sources.EmitMessage(
-        o, attachment->GetProvenanceRange(allCooked), text, echoSourceLine);
-    isContext = attachment->attachmentIsContext_;
+    sources.EmitMessage(o, attachment->GetProvenanceRange(allCooked),
+        Prefix(isContext ? Severity::Context : attachment->severity()) +
+            attachment->ToString(),
+        echoSourceLine);
   }
 }
 
 // Messages are equal if they're for the same location and text, and the user
 // visible aspects of their attachments are the same
 bool Message::operator==(const Message &that) const {
-  if (!AtSameLocation(that) || ToString() != that.ToString()) {
+  if (!AtSameLocation(that) || ToString() != that.ToString() ||
+      severity() != that.severity() ||
+      attachmentIsContext_ != that.attachmentIsContext_) {
     return false;
   }
   const Message *thatAttachment{that.attachment_.get()};
   for (const Message *attachment{attachment_.get()}; attachment;
        attachment = attachment->attachment_.get()) {
-    if (!thatAttachment ||
-        attachment->attachmentIsContext_ !=
-            thatAttachment->attachmentIsContext_ ||
-        *attachment != *thatAttachment) {
+    if (!thatAttachment || !attachment->AtSameLocation(*thatAttachment) ||
+        attachment->ToString() != thatAttachment->ToString() ||
+        attachment->severity() != thatAttachment->severity()) {
       return false;
     }
     thatAttachment = thatAttachment->attachment_.get();
   }
-  return true;
+  return !thatAttachment;
 }
 
 bool Message::Merge(const Message &that) {
@@ -360,9 +372,13 @@ void Messages::Emit(llvm::raw_ostream &o, const AllCookedSources &allCooked,
   }
 }
 
-void Messages::AttachTo(Message &msg) {
+void Messages::AttachTo(Message &msg, std::optional<Severity> severity) {
   for (Message &m : messages_) {
-    msg.Attach(std::move(m));
+    Message m2{std::move(m)};
+    if (severity) {
+      m2.set_severity(*severity);
+    }
+    msg.Attach(std::move(m2));
   }
   messages_.clear();
 }
