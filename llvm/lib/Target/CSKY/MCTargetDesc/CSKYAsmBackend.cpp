@@ -295,7 +295,7 @@ void CSKYAsmBackend::relaxInstruction(MCInst &Inst,
 
   switch (Inst.getOpcode()) {
   default:
-    Inst.dump();
+    LLVM_DEBUG(Inst.dump());
     llvm_unreachable("Opcode not expected!");
   case CSKY::LRW16:
     Res.setOpcode(CSKY::LRW32);
