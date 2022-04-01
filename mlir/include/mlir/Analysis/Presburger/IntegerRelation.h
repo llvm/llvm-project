@@ -409,6 +409,8 @@ public:
   /// O(VC) time.
   void removeRedundantConstraints();
 
+  void removeDuplicateDivs();
+
   /// Converts identifiers of kind srcKind in the range [idStart, idLimit) to
   /// variables of kind dstKind and placed after all the other variables of kind
   /// dstKind. The internal ordering among the moved variables is preserved.

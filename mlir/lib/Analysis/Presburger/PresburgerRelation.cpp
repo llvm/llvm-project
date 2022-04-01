@@ -135,6 +135,10 @@ PresburgerRelation::intersect(const PresburgerRelation &set) const {
 ///
 /// b and simplex are callee saved, i.e., their values on return are
 /// semantically equivalent to their values when the function is called.
+///
+/// b should not have duplicate divs because this might lead to existing
+/// divs disappearing in the call to mergeLocalIds below, which cannot be
+/// handled.
 static void subtractRecursively(IntegerRelation &b, Simplex &simplex,
                                 const PresburgerRelation &s, unsigned i,
                                 PresburgerRelation &result) {
@@ -142,7 +146,11 @@ static void subtractRecursively(IntegerRelation &b, Simplex &simplex,
     result.unionInPlace(b);
     return;
   }
+
   IntegerRelation sI = s.getDisjunct(i);
+  // Remove the duplicate divs up front to avoid them possibly disappearing
+  // in the call to mergeLocalIds below.
+  sI.removeDuplicateDivs();
 
   // Below, we append some additional constraints and ids to b. We want to
   // rollback b to its initial state before returning, which we will do by
@@ -279,6 +287,10 @@ static PresburgerRelation getSetDifference(IntegerRelation disjunct,
   assert(disjunct.isSpaceCompatible(set) && "Spaces should match");
   if (disjunct.isEmptyByGCDTest())
     return PresburgerRelation::getEmpty(disjunct.getCompatibleSpace());
+
+  // Remove duplicate divs up front here as subtractRecursively does not support
+  // this set having duplicate divs.
+  disjunct.removeDuplicateDivs();
 
   PresburgerRelation result =
       PresburgerRelation::getEmpty(disjunct.getCompatibleSpace());
