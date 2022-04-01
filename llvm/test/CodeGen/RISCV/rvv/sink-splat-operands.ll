@@ -288,12 +288,11 @@ define void @sink_splat_mul_scalable(i32* nocapture %a, i32 signext %x) {
 ; CHECK-NEXT:  .LBB7_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lw a3, 0(a0)
-; CHECK-NEXT:    mv a4, a2
-; CHECK-NEXT:    mulw a2, a3, a1
-; CHECK-NEXT:    sw a2, 0(a0)
-; CHECK-NEXT:    addi a2, a4, 1
+; CHECK-NEXT:    mulw a3, a3, a1
+; CHECK-NEXT:    sw a3, 0(a0)
+; CHECK-NEXT:    addi a2, a2, 1
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    bgeu a2, a4, .LBB7_6
+; CHECK-NEXT:    bnez a2, .LBB7_6
 ; CHECK-NEXT:  .LBB7_7: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -381,12 +380,11 @@ define void @sink_splat_add_scalable(i32* nocapture %a, i32 signext %x) {
 ; CHECK-NEXT:  .LBB8_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lw a3, 0(a0)
-; CHECK-NEXT:    mv a4, a2
-; CHECK-NEXT:    addw a2, a3, a1
-; CHECK-NEXT:    sw a2, 0(a0)
-; CHECK-NEXT:    addi a2, a4, 1
+; CHECK-NEXT:    addw a3, a3, a1
+; CHECK-NEXT:    sw a3, 0(a0)
+; CHECK-NEXT:    addi a2, a2, 1
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    bgeu a2, a4, .LBB8_6
+; CHECK-NEXT:    bnez a2, .LBB8_6
 ; CHECK-NEXT:  .LBB8_7: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -474,12 +472,11 @@ define void @sink_splat_sub_scalable(i32* nocapture %a, i32 signext %x) {
 ; CHECK-NEXT:  .LBB9_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lw a3, 0(a0)
-; CHECK-NEXT:    mv a4, a2
-; CHECK-NEXT:    addw a2, a3, a1
-; CHECK-NEXT:    sw a2, 0(a0)
-; CHECK-NEXT:    addi a2, a4, 1
+; CHECK-NEXT:    addw a3, a3, a1
+; CHECK-NEXT:    sw a3, 0(a0)
+; CHECK-NEXT:    addi a2, a2, 1
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    bgeu a2, a4, .LBB9_6
+; CHECK-NEXT:    bnez a2, .LBB9_6
 ; CHECK-NEXT:  .LBB9_7: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -567,12 +564,11 @@ define void @sink_splat_rsub_scalable(i32* nocapture %a, i32 signext %x) {
 ; CHECK-NEXT:  .LBB10_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lw a3, 0(a0)
-; CHECK-NEXT:    mv a4, a2
-; CHECK-NEXT:    subw a2, a1, a3
-; CHECK-NEXT:    sw a2, 0(a0)
-; CHECK-NEXT:    addi a2, a4, 1
+; CHECK-NEXT:    subw a3, a1, a3
+; CHECK-NEXT:    sw a3, 0(a0)
+; CHECK-NEXT:    addi a2, a2, 1
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    bgeu a2, a4, .LBB10_6
+; CHECK-NEXT:    bnez a2, .LBB10_6
 ; CHECK-NEXT:  .LBB10_7: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -660,12 +656,11 @@ define void @sink_splat_and_scalable(i32* nocapture %a, i32 signext %x) {
 ; CHECK-NEXT:  .LBB11_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lw a3, 0(a0)
-; CHECK-NEXT:    mv a4, a2
-; CHECK-NEXT:    and a2, a3, a1
-; CHECK-NEXT:    sw a2, 0(a0)
-; CHECK-NEXT:    addi a2, a4, 1
+; CHECK-NEXT:    and a3, a3, a1
+; CHECK-NEXT:    sw a3, 0(a0)
+; CHECK-NEXT:    addi a2, a2, 1
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    bgeu a2, a4, .LBB11_6
+; CHECK-NEXT:    bnez a2, .LBB11_6
 ; CHECK-NEXT:  .LBB11_7: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -753,12 +748,11 @@ define void @sink_splat_or_scalable(i32* nocapture %a, i32 signext %x) {
 ; CHECK-NEXT:  .LBB12_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lw a3, 0(a0)
-; CHECK-NEXT:    mv a4, a2
-; CHECK-NEXT:    or a2, a3, a1
-; CHECK-NEXT:    sw a2, 0(a0)
-; CHECK-NEXT:    addi a2, a4, 1
+; CHECK-NEXT:    or a3, a3, a1
+; CHECK-NEXT:    sw a3, 0(a0)
+; CHECK-NEXT:    addi a2, a2, 1
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    bgeu a2, a4, .LBB12_6
+; CHECK-NEXT:    bnez a2, .LBB12_6
 ; CHECK-NEXT:  .LBB12_7: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -846,12 +840,11 @@ define void @sink_splat_xor_scalable(i32* nocapture %a, i32 signext %x) {
 ; CHECK-NEXT:  .LBB13_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lw a3, 0(a0)
-; CHECK-NEXT:    mv a4, a2
-; CHECK-NEXT:    xor a2, a3, a1
-; CHECK-NEXT:    sw a2, 0(a0)
-; CHECK-NEXT:    addi a2, a4, 1
+; CHECK-NEXT:    xor a3, a3, a1
+; CHECK-NEXT:    sw a3, 0(a0)
+; CHECK-NEXT:    addi a2, a2, 1
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    bgeu a2, a4, .LBB13_6
+; CHECK-NEXT:    bnez a2, .LBB13_6
 ; CHECK-NEXT:  .LBB13_7: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -1047,12 +1040,11 @@ define void @sink_splat_shl_scalable(i32* nocapture %a, i32 signext %x) {
 ; CHECK-NEXT:  .LBB17_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lw a3, 0(a0)
-; CHECK-NEXT:    mv a4, a2
-; CHECK-NEXT:    sllw a2, a3, a1
-; CHECK-NEXT:    sw a2, 0(a0)
-; CHECK-NEXT:    addi a2, a4, 1
+; CHECK-NEXT:    sllw a3, a3, a1
+; CHECK-NEXT:    sw a3, 0(a0)
+; CHECK-NEXT:    addi a2, a2, 1
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    bgeu a2, a4, .LBB17_6
+; CHECK-NEXT:    bnez a2, .LBB17_6
 ; CHECK-NEXT:  .LBB17_7: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -1140,12 +1132,11 @@ define void @sink_splat_lshr_scalable(i32* nocapture %a, i32 signext %x) {
 ; CHECK-NEXT:  .LBB18_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lw a3, 0(a0)
-; CHECK-NEXT:    mv a4, a2
-; CHECK-NEXT:    srlw a2, a3, a1
-; CHECK-NEXT:    sw a2, 0(a0)
-; CHECK-NEXT:    addi a2, a4, 1
+; CHECK-NEXT:    srlw a3, a3, a1
+; CHECK-NEXT:    sw a3, 0(a0)
+; CHECK-NEXT:    addi a2, a2, 1
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    bgeu a2, a4, .LBB18_6
+; CHECK-NEXT:    bnez a2, .LBB18_6
 ; CHECK-NEXT:  .LBB18_7: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -1233,12 +1224,11 @@ define void @sink_splat_ashr_scalable(i32* nocapture %a) {
 ; CHECK-NEXT:  .LBB19_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lw a2, 0(a0)
-; CHECK-NEXT:    mv a3, a1
-; CHECK-NEXT:    srli a1, a2, 2
-; CHECK-NEXT:    sw a1, 0(a0)
-; CHECK-NEXT:    addi a1, a3, 1
+; CHECK-NEXT:    srli a2, a2, 2
+; CHECK-NEXT:    sw a2, 0(a0)
+; CHECK-NEXT:    addi a1, a1, 1
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    bgeu a1, a3, .LBB19_6
+; CHECK-NEXT:    bnez a1, .LBB19_6
 ; CHECK-NEXT:  .LBB19_7: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -1541,12 +1531,11 @@ define void @sink_splat_fmul_scalable(float* nocapture %a, float %x) {
 ; CHECK-NEXT:  .LBB26_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    flw ft0, 0(a0)
-; CHECK-NEXT:    mv a2, a1
 ; CHECK-NEXT:    fmul.s ft0, ft0, fa0
 ; CHECK-NEXT:    fsw ft0, 0(a0)
 ; CHECK-NEXT:    addi a1, a1, 1
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    bgeu a1, a2, .LBB26_6
+; CHECK-NEXT:    bnez a1, .LBB26_6
 ; CHECK-NEXT:  .LBB26_7: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -1633,12 +1622,11 @@ define void @sink_splat_fdiv_scalable(float* nocapture %a, float %x) {
 ; CHECK-NEXT:  .LBB27_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    flw ft0, 0(a0)
-; CHECK-NEXT:    mv a2, a1
 ; CHECK-NEXT:    fdiv.s ft0, ft0, fa0
 ; CHECK-NEXT:    fsw ft0, 0(a0)
 ; CHECK-NEXT:    addi a1, a1, 1
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    bgeu a1, a2, .LBB27_6
+; CHECK-NEXT:    bnez a1, .LBB27_6
 ; CHECK-NEXT:  .LBB27_7: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -1725,12 +1713,11 @@ define void @sink_splat_frdiv_scalable(float* nocapture %a, float %x) {
 ; CHECK-NEXT:  .LBB28_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    flw ft0, 0(a0)
-; CHECK-NEXT:    mv a2, a1
 ; CHECK-NEXT:    fdiv.s ft0, fa0, ft0
 ; CHECK-NEXT:    fsw ft0, 0(a0)
 ; CHECK-NEXT:    addi a1, a1, 1
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    bgeu a1, a2, .LBB28_6
+; CHECK-NEXT:    bnez a1, .LBB28_6
 ; CHECK-NEXT:  .LBB28_7: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -1817,12 +1804,11 @@ define void @sink_splat_fadd_scalable(float* nocapture %a, float %x) {
 ; CHECK-NEXT:  .LBB29_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    flw ft0, 0(a0)
-; CHECK-NEXT:    mv a2, a1
 ; CHECK-NEXT:    fadd.s ft0, ft0, fa0
 ; CHECK-NEXT:    fsw ft0, 0(a0)
 ; CHECK-NEXT:    addi a1, a1, 1
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    bgeu a1, a2, .LBB29_6
+; CHECK-NEXT:    bnez a1, .LBB29_6
 ; CHECK-NEXT:  .LBB29_7: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -1909,12 +1895,11 @@ define void @sink_splat_fsub_scalable(float* nocapture %a, float %x) {
 ; CHECK-NEXT:  .LBB30_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    flw ft0, 0(a0)
-; CHECK-NEXT:    mv a2, a1
 ; CHECK-NEXT:    fsub.s ft0, ft0, fa0
 ; CHECK-NEXT:    fsw ft0, 0(a0)
 ; CHECK-NEXT:    addi a1, a1, 1
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    bgeu a1, a2, .LBB30_6
+; CHECK-NEXT:    bnez a1, .LBB30_6
 ; CHECK-NEXT:  .LBB30_7: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -2001,12 +1986,11 @@ define void @sink_splat_frsub_scalable(float* nocapture %a, float %x) {
 ; CHECK-NEXT:  .LBB31_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    flw ft0, 0(a0)
-; CHECK-NEXT:    mv a2, a1
 ; CHECK-NEXT:    fsub.s ft0, fa0, ft0
 ; CHECK-NEXT:    fsw ft0, 0(a0)
 ; CHECK-NEXT:    addi a1, a1, 1
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    bgeu a1, a2, .LBB31_6
+; CHECK-NEXT:    bnez a1, .LBB31_6
 ; CHECK-NEXT:  .LBB31_7: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -2180,13 +2164,12 @@ define void @sink_splat_fma_scalable(float* noalias nocapture %a, float* noalias
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    flw ft0, 0(a0)
 ; CHECK-NEXT:    flw ft1, 0(a1)
-; CHECK-NEXT:    mv a3, a2
 ; CHECK-NEXT:    fmadd.s ft0, ft0, fa0, ft1
 ; CHECK-NEXT:    fsw ft0, 0(a0)
 ; CHECK-NEXT:    addi a2, a2, 1
 ; CHECK-NEXT:    addi a1, a1, 4
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    bgeu a2, a3, .LBB34_6
+; CHECK-NEXT:    bnez a2, .LBB34_6
 ; CHECK-NEXT:  .LBB34_7: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -2283,13 +2266,12 @@ define void @sink_splat_fma_commute_scalable(float* noalias nocapture %a, float*
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    flw ft0, 0(a0)
 ; CHECK-NEXT:    flw ft1, 0(a1)
-; CHECK-NEXT:    mv a3, a2
 ; CHECK-NEXT:    fmadd.s ft0, fa0, ft0, ft1
 ; CHECK-NEXT:    fsw ft0, 0(a0)
 ; CHECK-NEXT:    addi a2, a2, 1
 ; CHECK-NEXT:    addi a1, a1, 4
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    bgeu a2, a3, .LBB35_6
+; CHECK-NEXT:    bnez a2, .LBB35_6
 ; CHECK-NEXT:  .LBB35_7: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -2607,12 +2589,11 @@ define void @sink_splat_udiv_scalable(i32* nocapture %a, i32 signext %x) {
 ; CHECK-NEXT:  .LBB42_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lw a3, 0(a0)
-; CHECK-NEXT:    mv a4, a2
-; CHECK-NEXT:    divuw a2, a3, a1
-; CHECK-NEXT:    sw a2, 0(a0)
-; CHECK-NEXT:    addi a2, a4, 1
+; CHECK-NEXT:    divuw a3, a3, a1
+; CHECK-NEXT:    sw a3, 0(a0)
+; CHECK-NEXT:    addi a2, a2, 1
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    bgeu a2, a4, .LBB42_6
+; CHECK-NEXT:    bnez a2, .LBB42_6
 ; CHECK-NEXT:  .LBB42_7: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -2700,12 +2681,11 @@ define void @sink_splat_sdiv_scalable(i32* nocapture %a, i32 signext %x) {
 ; CHECK-NEXT:  .LBB43_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lw a3, 0(a0)
-; CHECK-NEXT:    mv a4, a2
-; CHECK-NEXT:    divw a2, a3, a1
-; CHECK-NEXT:    sw a2, 0(a0)
-; CHECK-NEXT:    addi a2, a4, 1
+; CHECK-NEXT:    divw a3, a3, a1
+; CHECK-NEXT:    sw a3, 0(a0)
+; CHECK-NEXT:    addi a2, a2, 1
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    bgeu a2, a4, .LBB43_6
+; CHECK-NEXT:    bnez a2, .LBB43_6
 ; CHECK-NEXT:  .LBB43_7: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -2793,12 +2773,11 @@ define void @sink_splat_urem_scalable(i32* nocapture %a, i32 signext %x) {
 ; CHECK-NEXT:  .LBB44_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lw a3, 0(a0)
-; CHECK-NEXT:    mv a4, a2
-; CHECK-NEXT:    remuw a2, a3, a1
-; CHECK-NEXT:    sw a2, 0(a0)
-; CHECK-NEXT:    addi a2, a4, 1
+; CHECK-NEXT:    remuw a3, a3, a1
+; CHECK-NEXT:    sw a3, 0(a0)
+; CHECK-NEXT:    addi a2, a2, 1
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    bgeu a2, a4, .LBB44_6
+; CHECK-NEXT:    bnez a2, .LBB44_6
 ; CHECK-NEXT:  .LBB44_7: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -2886,12 +2865,11 @@ define void @sink_splat_srem_scalable(i32* nocapture %a, i32 signext %x) {
 ; CHECK-NEXT:  .LBB45_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lw a3, 0(a0)
-; CHECK-NEXT:    mv a4, a2
-; CHECK-NEXT:    remw a2, a3, a1
-; CHECK-NEXT:    sw a2, 0(a0)
-; CHECK-NEXT:    addi a2, a4, 1
+; CHECK-NEXT:    remw a3, a3, a1
+; CHECK-NEXT:    sw a3, 0(a0)
+; CHECK-NEXT:    addi a2, a2, 1
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    bgeu a2, a4, .LBB45_6
+; CHECK-NEXT:    bnez a2, .LBB45_6
 ; CHECK-NEXT:  .LBB45_7: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:

@@ -400,7 +400,6 @@ public:
         assert(shape[r] == 0 || shape[r] == tensor->getSizes()[perm[r]]);
       n = new SparseTensorStorage<P, I, V>(tensor->getSizes(), perm, sparsity,
                                            tensor);
-      delete tensor;
     } else {
       std::vector<uint64_t> permsz(rank);
       for (uint64_t r = 0; r < rank; r++) {
@@ -748,7 +747,6 @@ static void outSparseTensor(void *tensor, void *dest, bool sort) {
   file.flush();
   file.close();
   assert(file.good());
-  delete coo;
 }
 
 /// Initializes sparse tensor from an external COO-flavored format.
@@ -780,17 +778,19 @@ toMLIRSparseTensor(uint64_t rank, uint64_t nse, uint64_t *shape, V *values,
 #endif
 
   // Convert external format to internal COO.
-  auto *tensor = SparseTensorCOO<V>::newSparseTensorCOO(rank, shape, perm, nse);
+  auto *coo = SparseTensorCOO<V>::newSparseTensorCOO(rank, shape, perm, nse);
   std::vector<uint64_t> idx(rank);
   for (uint64_t i = 0, base = 0; i < nse; i++) {
     for (uint64_t r = 0; r < rank; r++)
       idx[perm[r]] = indices[base + r];
-    tensor->add(idx, values[i]);
+    coo->add(idx, values[i]);
     base += rank;
   }
   // Return sparse tensor storage format as opaque pointer.
-  return SparseTensorStorage<uint64_t, uint64_t, V>::newSparseTensor(
-      rank, shape, perm, sparsity, tensor);
+  auto *tensor = SparseTensorStorage<uint64_t, uint64_t, V>::newSparseTensor(
+      rank, shape, perm, sparsity, coo);
+  delete coo;
+  return tensor;
 }
 
 /// Converts a sparse tensor to an external COO-flavored format.
@@ -847,28 +847,31 @@ extern "C" {
 
 #define CASE(p, i, v, P, I, V)                                                 \
   if (ptrTp == (p) && indTp == (i) && valTp == (v)) {                          \
-    SparseTensorCOO<V> *tensor = nullptr;                                      \
+    SparseTensorCOO<V> *coo = nullptr;                                         \
     if (action <= Action::kFromCOO) {                                          \
       if (action == Action::kFromFile) {                                       \
         char *filename = static_cast<char *>(ptr);                             \
-        tensor = openSparseTensorCOO<V>(filename, rank, shape, perm);          \
+        coo = openSparseTensorCOO<V>(filename, rank, shape, perm);             \
       } else if (action == Action::kFromCOO) {                                 \
-        tensor = static_cast<SparseTensorCOO<V> *>(ptr);                       \
+        coo = static_cast<SparseTensorCOO<V> *>(ptr);                          \
       } else {                                                                 \
         assert(action == Action::kEmpty);                                      \
       }                                                                        \
-      return SparseTensorStorage<P, I, V>::newSparseTensor(rank, shape, perm,  \
-                                                           sparsity, tensor);  \
+      auto *tensor = SparseTensorStorage<P, I, V>::newSparseTensor(            \
+          rank, shape, perm, sparsity, coo);                                   \
+      if (action == Action::kFromFile)                                         \
+        delete coo;                                                            \
+      return tensor;                                                           \
     }                                                                          \
     if (action == Action::kEmptyCOO)                                           \
       return SparseTensorCOO<V>::newSparseTensorCOO(rank, shape, perm);        \
-    tensor = static_cast<SparseTensorStorage<P, I, V> *>(ptr)->toCOO(perm);    \
+    coo = static_cast<SparseTensorStorage<P, I, V> *>(ptr)->toCOO(perm);       \
     if (action == Action::kToIterator) {                                       \
-      tensor->startIterator();                                                 \
+      coo->startIterator();                                                    \
     } else {                                                                   \
       assert(action == Action::kToCOO);                                        \
     }                                                                          \
-    return tensor;                                                             \
+    return coo;                                                                \
   }
 
 #define CASE_SECSAME(p, v, P, V) CASE(p, p, v, P, P, V)
@@ -924,10 +927,8 @@ extern "C" {
     const uint64_t isize = iref->sizes[0];                                     \
     auto iter = static_cast<SparseTensorCOO<V> *>(tensor);                     \
     const Element<V> *elem = iter->getNext();                                  \
-    if (elem == nullptr) {                                                     \
-      delete iter;                                                             \
+    if (elem == nullptr)                                                       \
       return false;                                                            \
-    }                                                                          \
     for (uint64_t r = 0; r < isize; r++)                                       \
       indx[r] = elem->indices[r];                                              \
     *value = elem->value;                                                      \
@@ -1207,6 +1208,19 @@ void endInsert(void *tensor) {
 void delSparseTensor(void *tensor) {
   delete static_cast<SparseTensorStorageBase *>(tensor);
 }
+
+/// Releases sparse tensor coordinate scheme.
+#define IMPL_DELCOO(VNAME, V)                                                  \
+  void delSparseTensorCOO##VNAME(void *coo) {                                  \
+    delete static_cast<SparseTensorCOO<V> *>(coo);                             \
+  }
+IMPL_DELCOO(F64, double)
+IMPL_DELCOO(F32, float)
+IMPL_DELCOO(I64, int64_t)
+IMPL_DELCOO(I32, int32_t)
+IMPL_DELCOO(I16, int16_t)
+IMPL_DELCOO(I8, int8_t)
+#undef IMPL_DELCOO
 
 /// Initializes sparse tensor from a COO-flavored format expressed using C-style
 /// data structures. The expected parameters are:
