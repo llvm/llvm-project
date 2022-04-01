@@ -89,7 +89,8 @@ static void testComplementAtPoints(const PresburgerSet &s,
 /// local ids.
 static PresburgerSet makeSetFromPoly(unsigned numDims,
                                      ArrayRef<IntegerPolyhedron> polys) {
-  PresburgerSet set = PresburgerSet::getEmpty(numDims);
+  PresburgerSet set =
+      PresburgerSet::getEmpty(PresburgerSpace::getSetSpace(numDims));
   for (const IntegerPolyhedron &poly : polys)
     set.unionInPlace(poly);
   return set;
@@ -131,23 +132,26 @@ TEST(SetTest, Union) {
       {"(x) : (x - 2 >= 0, -x + 8 >= 0)", "(x) : (x - 10 >= 0, -x + 20 >= 0)"});
 
   // Universe union set.
-  testUnionAtPoints(PresburgerSet::getUniverse(1), set,
-                    {{1}, {2}, {8}, {9}, {10}, {20}, {21}});
+  testUnionAtPoints(PresburgerSet::getUniverse(PresburgerSpace::getSetSpace(1)),
+                    set, {{1}, {2}, {8}, {9}, {10}, {20}, {21}});
 
   // empty set union set.
-  testUnionAtPoints(PresburgerSet::getEmpty(1), set,
-                    {{1}, {2}, {8}, {9}, {10}, {20}, {21}});
+  testUnionAtPoints(PresburgerSet::getEmpty(PresburgerSpace::getSetSpace(1)),
+                    set, {{1}, {2}, {8}, {9}, {10}, {20}, {21}});
 
   // empty set union Universe.
-  testUnionAtPoints(PresburgerSet::getEmpty(1), PresburgerSet::getUniverse(1),
+  testUnionAtPoints(PresburgerSet::getEmpty(PresburgerSpace::getSetSpace(1)),
+                    PresburgerSet::getUniverse(PresburgerSpace::getSetSpace(1)),
                     {{1}, {2}, {0}, {-1}});
 
   // Universe union empty set.
-  testUnionAtPoints(PresburgerSet::getUniverse(1), PresburgerSet::getEmpty(1),
+  testUnionAtPoints(PresburgerSet::getUniverse(PresburgerSpace::getSetSpace(1)),
+                    PresburgerSet::getEmpty(PresburgerSpace::getSetSpace(1)),
                     {{1}, {2}, {0}, {-1}});
 
   // empty set union empty set.
-  testUnionAtPoints(PresburgerSet::getEmpty(1), PresburgerSet::getEmpty(1),
+  testUnionAtPoints(PresburgerSet::getEmpty(PresburgerSpace::getSetSpace((1))),
+                    PresburgerSet::getEmpty(PresburgerSpace::getSetSpace((1))),
                     {{1}, {2}, {0}, {-1}});
 }
 
@@ -157,24 +161,32 @@ TEST(SetTest, Intersect) {
       {"(x) : (x - 2 >= 0, -x + 8 >= 0)", "(x) : (x - 10 >= 0, -x + 20 >= 0)"});
 
   // Universe intersection set.
-  testIntersectAtPoints(PresburgerSet::getUniverse(1), set,
-                        {{1}, {2}, {8}, {9}, {10}, {20}, {21}});
+  testIntersectAtPoints(
+      PresburgerSet::getUniverse(PresburgerSpace::getSetSpace((1))), set,
+      {{1}, {2}, {8}, {9}, {10}, {20}, {21}});
 
   // empty set intersection set.
-  testIntersectAtPoints(PresburgerSet::getEmpty(1), set,
-                        {{1}, {2}, {8}, {9}, {10}, {20}, {21}});
+  testIntersectAtPoints(
+      PresburgerSet::getEmpty(PresburgerSpace::getSetSpace((1))), set,
+      {{1}, {2}, {8}, {9}, {10}, {20}, {21}});
 
   // empty set intersection Universe.
-  testIntersectAtPoints(PresburgerSet::getEmpty(1),
-                        PresburgerSet::getUniverse(1), {{1}, {2}, {0}, {-1}});
+  testIntersectAtPoints(
+      PresburgerSet::getEmpty(PresburgerSpace::getSetSpace((1))),
+      PresburgerSet::getUniverse(PresburgerSpace::getSetSpace((1))),
+      {{1}, {2}, {0}, {-1}});
 
   // Universe intersection empty set.
-  testIntersectAtPoints(PresburgerSet::getUniverse(1),
-                        PresburgerSet::getEmpty(1), {{1}, {2}, {0}, {-1}});
+  testIntersectAtPoints(
+      PresburgerSet::getUniverse(PresburgerSpace::getSetSpace((1))),
+      PresburgerSet::getEmpty(PresburgerSpace::getSetSpace((1))),
+      {{1}, {2}, {0}, {-1}});
 
   // Universe intersection Universe.
-  testIntersectAtPoints(PresburgerSet::getUniverse(1),
-                        PresburgerSet::getUniverse(1), {{1}, {2}, {0}, {-1}});
+  testIntersectAtPoints(
+      PresburgerSet::getUniverse(PresburgerSpace::getSetSpace((1))),
+      PresburgerSet::getUniverse(PresburgerSpace::getSetSpace((1))),
+      {{1}, {2}, {0}, {-1}});
 }
 
 TEST(SetTest, Subtract) {
@@ -329,12 +341,12 @@ TEST(SetTest, Subtract) {
 TEST(SetTest, Complement) {
   // Complement of universe.
   testComplementAtPoints(
-      PresburgerSet::getUniverse(1),
+      PresburgerSet::getUniverse(PresburgerSpace::getSetSpace((1))),
       {{-1}, {-2}, {-8}, {1}, {2}, {8}, {9}, {10}, {20}, {21}});
 
   // Complement of empty set.
   testComplementAtPoints(
-      PresburgerSet::getEmpty(1),
+      PresburgerSet::getEmpty(PresburgerSpace::getSetSpace((1))),
       {{-1}, {-2}, {-8}, {1}, {2}, {8}, {9}, {10}, {20}, {21}});
 
   testComplementAtPoints(
@@ -356,8 +368,10 @@ TEST(SetTest, Complement) {
 
 TEST(SetTest, isEqual) {
   // set = [2, 8] U [10, 20].
-  PresburgerSet universe = PresburgerSet::getUniverse(1);
-  PresburgerSet emptySet = PresburgerSet::getEmpty(1);
+  PresburgerSet universe =
+      PresburgerSet::getUniverse(PresburgerSpace::getSetSpace((1)));
+  PresburgerSet emptySet =
+      PresburgerSet::getEmpty(PresburgerSpace::getSetSpace((1)));
   PresburgerSet set = parsePresburgerSetFromPolyStrings(
       1,
       {"(x) : (x - 2 >= 0, -x + 8 >= 0)", "(x) : (x - 10 >= 0, -x + 20 >= 0)"});
@@ -431,7 +445,8 @@ TEST(SetTest, divisions) {
   // evens /\ odds = empty.
   expectEmpty(PresburgerSet(evens).intersect(PresburgerSet(odds)));
   // evens U odds = universe.
-  expectEqual(evens.unionSet(odds), PresburgerSet::getUniverse(1));
+  expectEqual(evens.unionSet(odds),
+              PresburgerSet::getUniverse(PresburgerSpace::getSetSpace((1))));
   expectEqual(evens.complement(), odds);
   expectEqual(odds.complement(), evens);
   // even multiples of 3 = multiples of 6.
