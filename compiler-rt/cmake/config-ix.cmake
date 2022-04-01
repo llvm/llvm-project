@@ -78,7 +78,6 @@ check_cxx_compiler_flag(-fno-profile-generate COMPILER_RT_HAS_FNO_PROFILE_GENERA
 check_cxx_compiler_flag(-fno-profile-instr-generate COMPILER_RT_HAS_FNO_PROFILE_INSTR_GENERATE_FLAG)
 check_cxx_compiler_flag(-fno-profile-instr-use COMPILER_RT_HAS_FNO_PROFILE_INSTR_USE_FLAG)
 check_cxx_compiler_flag(-fno-coverage-mapping COMPILER_RT_HAS_FNO_COVERAGE_MAPPING_FLAG)
-check_cxx_compiler_flag("-Werror -mcrc32"    COMPILER_RT_HAS_MCRC32_FLAG)
 check_cxx_compiler_flag("-Werror -msse3" COMPILER_RT_HAS_MSSE3_FLAG)
 check_cxx_compiler_flag("-Werror -msse4.2"   COMPILER_RT_HAS_MSSE4_2_FLAG)
 check_cxx_compiler_flag(--sysroot=.          COMPILER_RT_HAS_SYSROOT_FLAG)

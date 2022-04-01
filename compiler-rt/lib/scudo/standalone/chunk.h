@@ -25,7 +25,7 @@ inline u16 computeChecksum(u32 Seed, uptr Value, uptr *Array, uptr ArraySize) {
   // as opposed to only for crc32_hw.cpp. This means that other hardware
   // specific instructions were likely emitted at other places, and as a result
   // there is no reason to not use it here.
-#if defined(__CRC32__) || defined(__SSE4_2__) || defined(__ARM_FEATURE_CRC32)
+#if defined(__SSE4_2__) || defined(__ARM_FEATURE_CRC32)
   u32 Crc = static_cast<u32>(CRC32_INTRINSIC(Seed, Value));
   for (uptr I = 0; I < ArraySize; I++)
     Crc = static_cast<u32>(CRC32_INTRINSIC(Crc, Array[I]));
@@ -42,7 +42,7 @@ inline u16 computeChecksum(u32 Seed, uptr Value, uptr *Array, uptr ArraySize) {
       Checksum = computeBSDChecksum(Checksum, Array[I]);
     return Checksum;
   }
-#endif // defined(__CRC32__) || defined(__SSE4_2__) || defined(__ARM_FEATURE_CRC32)
+#endif // defined(__SSE4_2__) || defined(__ARM_FEATURE_CRC32)
 }
 
 namespace Chunk {
