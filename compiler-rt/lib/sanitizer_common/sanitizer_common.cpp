@@ -154,7 +154,7 @@ void LoadedModule::setUuid(const char *uuid, uptr size) {
 void LoadedModule::clear() {
   InternalFree(full_name_);
   base_address_ = 0;
-  max_executable_address_ = 0;
+  max_address_ = 0;
   full_name_ = nullptr;
   arch_ = kModuleArchUnknown;
   internal_memset(uuid_, 0, kModuleUUIDSize);
@@ -172,8 +172,7 @@ void LoadedModule::addAddressRange(uptr beg, uptr end, bool executable,
   AddressRange *r =
       new(mem) AddressRange(beg, end, executable, writable, name);
   ranges_.push_back(r);
-  if (executable && end > max_executable_address_)
-    max_executable_address_ = end;
+  max_address_ = Max(max_address_, end);
 }
 
 bool LoadedModule::containsAddress(uptr address) const {
