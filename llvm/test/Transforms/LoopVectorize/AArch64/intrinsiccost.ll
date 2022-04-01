@@ -157,10 +157,7 @@ define void @umin(i8* nocapture readonly %pSrc, i8 signext %offset, i8* nocaptur
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]]
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[TMP12:%.*]] = add i32 [[BLOCKSIZE]], -1
-; CHECK-NEXT:    [[TMP13:%.*]] = zext i32 [[TMP12]] to i64
-; CHECK-NEXT:    [[TMP14:%.*]] = add nuw nsw i64 [[TMP13]], 1
-; CHECK-NEXT:    [[N_VEC9:%.*]] = and i64 [[TMP14]], 8589934584
+; CHECK-NEXT:    [[N_VEC9:%.*]] = and i64 [[TMP2]], 8589934584
 ; CHECK-NEXT:    [[CAST_CRD:%.*]] = trunc i64 [[N_VEC9]] to i32
 ; CHECK-NEXT:    [[IND_END:%.*]] = sub i32 [[BLOCKSIZE]], [[CAST_CRD]]
 ; CHECK-NEXT:    [[IND_END15:%.*]] = getelementptr i8, i8* [[PSRC]], i64 [[N_VEC9]]
@@ -181,7 +178,7 @@ define void @umin(i8* nocapture readonly %pSrc, i8 signext %offset, i8* nocaptur
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT11]], [[N_VEC9]]
 ; CHECK-NEXT:    br i1 [[TMP18]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
-; CHECK-NEXT:    [[CMP_N20:%.*]] = icmp eq i64 [[TMP14]], [[N_VEC9]]
+; CHECK-NEXT:    [[CMP_N20:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC9]]
 ; CHECK-NEXT:    br i1 [[CMP_N20]], label [[WHILE_END]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END13]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[BLOCKSIZE]], [[ITER_CHECK]] ]
