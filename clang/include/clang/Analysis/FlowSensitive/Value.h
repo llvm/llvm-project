@@ -189,7 +189,9 @@ public:
   }
 };
 
-/// Models a value of `struct` or `class` type.
+/// Models a value of `struct` or `class` type, with a flat map of fields to
+/// child storage locations, containing all accessible members of base struct
+/// and class types.
 class StructValue final : public Value {
 public:
   StructValue() : StructValue(llvm::DenseMap<const ValueDecl *, Value *>()) {}

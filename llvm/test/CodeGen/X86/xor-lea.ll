@@ -257,8 +257,8 @@ define i32 @sub_xor_sminval_i32(i32 %x) {
 ; X64-LABEL: sub_xor_sminval_i32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    xorl $-2147483648, %edi # imm = 0x80000000
-; X64-NEXT:    leal -512(%rdi), %eax
+; X64-NEXT:    movl $-512, %eax # imm = 0xFE00
+; X64-NEXT:    leal -2147483648(%rdi,%rax), %eax
 ; X64-NEXT:    retq
   %r = xor i32 %x, 2147483648
   %s = sub i32 %r, 512
@@ -335,15 +335,13 @@ define i32 @xor_shl_sminval_i32(i32 %x) {
 ; X86-LABEL: xor_shl_sminval_i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    shll $3, %eax
-; X86-NEXT:    xorl $-2147483648, %eax # imm = 0x80000000
+; X86-NEXT:    leal -2147483648(,%eax,8), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: xor_shl_sminval_i32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    leal (,%rdi,8), %eax
-; X64-NEXT:    xorl $-2147483648, %eax # imm = 0x80000000
+; X64-NEXT:    leal -2147483648(,%rdi,8), %eax
 ; X64-NEXT:    retq
   %s = shl i32 %x, 3
   %r = xor i32 %s, 2147483648
@@ -382,9 +380,8 @@ define i64 @xor_shl_sminval_i64(i64 %x) {
 ;
 ; X64-LABEL: xor_shl_sminval_i64:
 ; X64:       # %bb.0:
-; X64-NEXT:    leaq (,%rdi,4), %rcx
 ; X64-NEXT:    movabsq $-9223372036854775808, %rax # imm = 0x8000000000000000
-; X64-NEXT:    xorq %rcx, %rax
+; X64-NEXT:    leaq (%rax,%rdi,4), %rax
 ; X64-NEXT:    retq
   %s = shl i64 %x, 2
   %r = xor i64 %s, -9223372036854775808

@@ -41,7 +41,8 @@ inline IntegerPolyhedron parsePoly(StringRef str) {
 /// number of dimensions as is specified by the numDims argument.
 inline PresburgerSet
 parsePresburgerSetFromPolyStrings(unsigned numDims, ArrayRef<StringRef> strs) {
-  PresburgerSet set = PresburgerSet::getEmpty(numDims);
+  PresburgerSet set =
+      PresburgerSet::getEmpty(PresburgerSpace::getSetSpace(numDims));
   for (StringRef str : strs)
     set.unionInPlace(parsePoly(str));
   return set;
@@ -70,7 +71,9 @@ inline PWMAFunction parsePWMAF(
     unsigned numSymbols = 0) {
   static MLIRContext context;
 
-  PWMAFunction result(numInputs - numSymbols, numSymbols, numOutputs);
+  PWMAFunction result(
+      PresburgerSpace::getSetSpace(numInputs - numSymbols, numSymbols),
+      numOutputs);
   for (const auto &pair : data) {
     IntegerPolyhedron domain = parsePoly(pair.first);
 
