@@ -75,14 +75,8 @@ LogicalResult OperationFolder::tryToFold(
 
   // If this is a unique'd constant, return failure as we know that it has
   // already been folded.
-  if (isFolderOwnedConstant(op)) {
-    // Check to see if we should rehoist, i.e. if a non-constant operation was
-    // inserted before this one.
-    Block *opBlock = op->getBlock();
-    if (&opBlock->front() != op && !isFolderOwnedConstant(op->getPrevNode()))
-      op->moveBefore(&opBlock->front());
+  if (referencedDialects.count(op))
     return failure();
-  }
 
   // Try to fold the operation.
   SmallVector<Value, 8> results;
@@ -108,59 +102,6 @@ LogicalResult OperationFolder::tryToFold(
     op->getResult(i).replaceAllUsesWith(results[i]);
   op->erase();
   return success();
-}
-
-bool OperationFolder::insertKnownConstant(Operation *op, Attribute constValue) {
-  Block *opBlock = op->getBlock();
-
-  // If this is a constant we unique'd, we don't need to insert, but we can
-  // check to see if we should rehoist it.
-  if (isFolderOwnedConstant(op)) {
-    if (&opBlock->front() != op && !isFolderOwnedConstant(op->getPrevNode()))
-      op->moveBefore(&opBlock->front());
-    return true;
-  }
-
-  // Get the constant value of the op if necessary.
-  if (!constValue) {
-    matchPattern(op, m_Constant(&constValue));
-    assert(constValue && "expected `op` to be a constant");
-  } else {
-    // Ensure that the provided constant was actually correct.
-#ifndef NDEBUG
-    Attribute expectedValue;
-    matchPattern(op, m_Constant(&expectedValue));
-    assert(
-        expectedValue == constValue &&
-        "provided constant value was not the expected value of the constant");
-#endif
-  }
-
-  // Check for an existing constant operation for the attribute value.
-  Region *insertRegion = getInsertionRegion(interfaces, opBlock);
-  auto &uniquedConstants = foldScopes[insertRegion];
-  Operation *&folderConstOp = uniquedConstants[std::make_tuple(
-      op->getDialect(), constValue, *op->result_type_begin())];
-
-  // If there is an existing constant, replace `op`.
-  if (folderConstOp) {
-    op->replaceAllUsesWith(folderConstOp);
-    op->erase();
-    return false;
-  }
-
-  // Otherwise, we insert `op`. If `op` is in the insertion block and is either
-  // already at the front of the block, or the previous operation is already a
-  // constant we unique'd (i.e. one we inserted), then we don't need to do
-  // anything. Otherwise, we move the constant to the insertion block.
-  Block *insertBlock = &insertRegion->front();
-  if (opBlock != insertBlock || (&insertBlock->front() != op &&
-                                 !isFolderOwnedConstant(op->getPrevNode())))
-    op->moveBefore(&insertBlock->front());
-
-  folderConstOp = op;
-  referencedDialects[op].push_back(op->getDialect());
-  return true;
 }
 
 /// Notifies that the given constant `op` should be remove from this
@@ -213,10 +154,6 @@ Value OperationFolder::getOrCreateConstant(OpBuilder &builder, Dialect *dialect,
   Operation *constOp = tryGetOrCreateConstant(uniquedConstants, dialect,
                                               builder, value, type, loc);
   return constOp ? constOp->getResult(0) : Value();
-}
-
-bool OperationFolder::isFolderOwnedConstant(Operation *op) const {
-  return referencedDialects.count(op);
 }
 
 /// Tries to perform folding on the given `op`. If successful, populates
