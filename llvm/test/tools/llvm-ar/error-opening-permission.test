@@ -1,3 +1,4 @@
+# XFAIL: system-aix
 ## Unsupported on windows as marking files "unreadable"
 ## is non-trivial on windows.
 # UNSUPPORTED: system-windows

@@ -1,3 +1,4 @@
+XFAIL: system-aix
 ## Test moving files after a file.
 
 RUN: touch %t1.txt

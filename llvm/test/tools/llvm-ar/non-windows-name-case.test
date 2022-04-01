@@ -1,3 +1,4 @@
+# XFAIL: system-aix
 ## Test that on windows, members are case insensitive.
 # UNSUPPORTED: system-windows
 

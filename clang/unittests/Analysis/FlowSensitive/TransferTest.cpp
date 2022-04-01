@@ -35,6 +35,7 @@ using ::testing::ElementsAre;
 using ::testing::IsNull;
 using ::testing::NotNull;
 using ::testing::Pair;
+using ::testing::SizeIs;
 
 class TransferTest : public ::testing::Test {
 protected:
@@ -2576,6 +2577,130 @@ TEST_F(TransferTest, AssignMemberBeforeCopy) {
                     cast<StructValue>(Env.getValue(*A2Decl, SkipPast::None));
                 EXPECT_EQ(A2Val->getChild(*FooDecl), BarVal);
               });
+}
+
+TEST_F(TransferTest, BooleanEquality) {
+  std::string Code = R"(
+    void target(bool Bar) {
+      bool Foo = true;
+      if (Bar == Foo) {
+        (void)0;
+        /*[[p-then]]*/
+      } else {
+        (void)0;
+        /*[[p-else]]*/
+      }
+    }
+  )";
+  runDataflow(
+      Code, [](llvm::ArrayRef<
+                   std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                   Results,
+               ASTContext &ASTCtx) {
+        ASSERT_THAT(Results, ElementsAre(Pair("p-else", _), Pair("p-then", _)));
+        const Environment &EnvElse = Results[0].second.Env;
+        const Environment &EnvThen = Results[1].second.Env;
+
+        const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
+        ASSERT_THAT(BarDecl, NotNull());
+
+        auto &BarValThen =
+            *cast<BoolValue>(EnvThen.getValue(*BarDecl, SkipPast::None));
+        EXPECT_TRUE(EnvThen.flowConditionImplies(BarValThen));
+
+        auto &BarValElse =
+            *cast<BoolValue>(EnvElse.getValue(*BarDecl, SkipPast::None));
+        EXPECT_FALSE(EnvElse.flowConditionImplies(BarValElse));
+      });
+}
+
+TEST_F(TransferTest, BooleanInequality) {
+  std::string Code = R"(
+    void target(bool Bar) {
+      bool Foo = true;
+      if (Bar != Foo) {
+        (void)0;
+        /*[[p-then]]*/
+      } else {
+        (void)0;
+        /*[[p-else]]*/
+      }
+    }
+  )";
+  runDataflow(
+      Code, [](llvm::ArrayRef<
+                   std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                   Results,
+               ASTContext &ASTCtx) {
+        ASSERT_THAT(Results, ElementsAre(Pair("p-else", _), Pair("p-then", _)));
+        const Environment &EnvElse = Results[0].second.Env;
+        const Environment &EnvThen = Results[1].second.Env;
+
+        const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
+        ASSERT_THAT(BarDecl, NotNull());
+
+        auto &BarValThen =
+            *cast<BoolValue>(EnvThen.getValue(*BarDecl, SkipPast::None));
+        EXPECT_FALSE(EnvThen.flowConditionImplies(BarValThen));
+
+        auto &BarValElse =
+            *cast<BoolValue>(EnvElse.getValue(*BarDecl, SkipPast::None));
+        EXPECT_TRUE(EnvElse.flowConditionImplies(BarValElse));
+      });
+}
+
+TEST_F(TransferTest, CorrelatedBranches) {
+  std::string Code = R"(
+    void target(bool B, bool C) {
+      if (B) {
+        return;
+      }
+      (void)0;
+      /*[[p0]]*/
+      if (C) {
+        B = true;
+        /*[[p1]]*/
+      }
+      if (B) {
+        (void)0;
+        /*[[p2]]*/
+      }
+    }
+  )";
+  runDataflow(
+      Code, [](llvm::ArrayRef<
+                   std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                   Results,
+               ASTContext &ASTCtx) {
+        ASSERT_THAT(Results, SizeIs(3));
+
+        const ValueDecl *CDecl = findValueDecl(ASTCtx, "C");
+        ASSERT_THAT(CDecl, NotNull());
+
+        {
+          ASSERT_THAT(Results[2], Pair("p0", _));
+          const Environment &Env = Results[2].second.Env;
+          const ValueDecl *BDecl = findValueDecl(ASTCtx, "B");
+          ASSERT_THAT(BDecl, NotNull());
+          auto &BVal = *cast<BoolValue>(Env.getValue(*BDecl, SkipPast::None));
+
+          EXPECT_TRUE(Env.flowConditionImplies(Env.makeNot(BVal)));
+        }
+
+        {
+          ASSERT_THAT(Results[1], Pair("p1", _));
+          const Environment &Env = Results[1].second.Env;
+          auto &CVal = *cast<BoolValue>(Env.getValue(*CDecl, SkipPast::None));
+          EXPECT_TRUE(Env.flowConditionImplies(CVal));
+        }
+
+        {
+          ASSERT_THAT(Results[0], Pair("p2", _));
+          const Environment &Env = Results[0].second.Env;
+          auto &CVal = *cast<BoolValue>(Env.getValue(*CDecl, SkipPast::None));
+          EXPECT_TRUE(Env.flowConditionImplies(CVal));
+        }
+      });
 }
 
 } // namespace

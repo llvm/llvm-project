@@ -1,3 +1,4 @@
+# XFAIL: system-aix
 ## Test thin archives do not siletly convert to full archives on write.
 
 # RUN: rm -f %tthin.a %tfull.a 
