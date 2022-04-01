@@ -170,6 +170,17 @@ APISet::addMacroDefinition(StringRef Name, StringRef USR, PresumedLoc Loc,
   return addTopLevelRecord(Macros, Name, USR, Loc, Declaration, SubHeading);
 }
 
+TypedefRecord *APISet::addTypedef(StringRef Name, StringRef USR,
+                                  PresumedLoc Loc,
+                                  const AvailabilityInfo &Availability,
+                                  const DocComment &Comment,
+                                  DeclarationFragments Declaration,
+                                  DeclarationFragments SubHeading,
+                                  SymbolReference UnderlyingType) {
+  return addTopLevelRecord(Typedefs, Name, USR, Loc, Availability, Comment,
+                           Declaration, SubHeading, UnderlyingType);
+}
+
 StringRef APISet::recordUSR(const Decl *D) {
   SmallString<128> USR;
   index::generateUSRForDecl(D, USR);
@@ -211,3 +222,4 @@ void ObjCMethodRecord::anchor() {}
 void ObjCInterfaceRecord::anchor() {}
 void ObjCProtocolRecord::anchor() {}
 void MacroDefinitionRecord::anchor() {}
+void TypedefRecord::anchor() {}

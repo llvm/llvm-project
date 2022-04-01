@@ -408,6 +408,11 @@ Object serializeSymbolKind(const APIRecord &Record, Language Lang) {
   case APIRecord::RK_MacroDefinition:
     Kind["identifier"] = AddLangPrefix("macro");
     Kind["displayName"] = "Macro";
+    break;
+  case APIRecord::RK_Typedef:
+    Kind["identifier"] = AddLangPrefix("typealias");
+    Kind["displayName"] = "Type Alias";
+    break;
   }
 
   return Kind;
@@ -618,6 +623,27 @@ void SymbolGraphSerializer::serializeMacroDefinitionRecord(
   Symbols.emplace_back(std::move(*Macro));
 }
 
+void SymbolGraphSerializer::serializeTypedefRecord(
+    const TypedefRecord &Record) {
+  // Typedefs of anonymous types have their entries unified with the underlying
+  // type.
+  bool ShouldDrop = Record.UnderlyingType.Name.empty();
+  // enums declared with `NS_OPTION` have a named enum and a named typedef, with
+  // the same name
+  ShouldDrop |= (Record.UnderlyingType.Name == Record.Name);
+  if (ShouldDrop)
+    return;
+
+  auto TypedefPathComponentGuard = makePathComponentGuard(Record.Name);
+  auto Typedef = serializeAPIRecord(Record);
+  if (!Typedef)
+    return;
+
+  (*Typedef)["type"] = Record.UnderlyingType.USR;
+
+  Symbols.emplace_back(std::move(*Typedef));
+}
+
 SymbolGraphSerializer::PathComponentGuard
 SymbolGraphSerializer::makePathComponentGuard(StringRef Component) {
   return PathComponentGuard(PathComponents, Component);
@@ -650,6 +676,9 @@ Object SymbolGraphSerializer::serialize() {
 
   for (const auto &Macro : API.getMacros())
     serializeMacroDefinitionRecord(*Macro.second);
+
+  for (const auto &Typedef : API.getTypedefs())
+    serializeTypedefRecord(*Typedef.second);
 
   Root["symbols"] = std::move(Symbols);
   Root["relationships"] = std::move(Relationships);
