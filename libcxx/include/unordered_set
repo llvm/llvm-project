@@ -843,7 +843,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     void reserve(size_type __n) {__table_.reserve(__n);}
 
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
 
     bool __dereferenceable(const const_iterator* __i) const
         {return __table_.__dereferenceable(__i);}
@@ -854,7 +854,7 @@ public:
     bool __subscriptable(const const_iterator* __i, ptrdiff_t __n) const
         {return __table_.__addable(__i, __n);}
 
-#endif // _LIBCPP_DEBUG_LEVEL == 2
+#endif // _LIBCPP_ENABLE_DEBUG_MODE
 
 };
 
@@ -1481,7 +1481,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     void reserve(size_type __n) {__table_.reserve(__n);}
 
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
 
     bool __dereferenceable(const const_iterator* __i) const
         {return __table_.__dereferenceable(__i);}
@@ -1492,7 +1492,7 @@ public:
     bool __subscriptable(const const_iterator* __i, ptrdiff_t __n) const
         {return __table_.__addable(__i, __n);}
 
-#endif // _LIBCPP_DEBUG_LEVEL == 2
+#endif // _LIBCPP_ENABLE_DEBUG_MODE
 
 };
 

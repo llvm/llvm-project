@@ -197,7 +197,7 @@ concept __span_compatible_range =
   is_convertible_v<remove_reference_t<ranges::range_reference_t<_Range>>(*)[], _ElementType(*)[]>;
 #endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 
-#if (_LIBCPP_DEBUG_LEVEL == 2) || defined(_LIBCPP_ABI_SPAN_POINTER_ITERATORS)
+#if defined(_LIBCPP_ENABLE_DEBUG_MODE) || defined(_LIBCPP_ABI_SPAN_POINTER_ITERATORS)
 #   define _LIBCPP_SPAN_USE_POINTER_ITERATOR
 #endif
 

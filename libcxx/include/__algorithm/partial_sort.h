@@ -15,6 +15,7 @@
 #include <__algorithm/sift_down.h>
 #include <__algorithm/sort_heap.h>
 #include <__config>
+#include <__debug>
 #include <__iterator/iterator_traits.h>
 #include <__utility/swap.h>
 
