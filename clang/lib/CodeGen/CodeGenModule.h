@@ -1472,9 +1472,7 @@ private:
   // the resolver symbol for the provided declaration. The value returned
   // will be for an ifunc (llvm::GlobalIFunc) if the current target supports
   // that feature and for a regular function (llvm::GlobalValue) otherwise.
-  llvm::Constant *GetOrCreateMultiVersionResolver(GlobalDecl GD,
-                                                  llvm::Type *DeclTy,
-                                                  const FunctionDecl *FD);
+  llvm::Constant *GetOrCreateMultiVersionResolver(GlobalDecl GD);
 
   // In scenarios where a function is not known to be a multiversion function
   // until a later declaration, it is sometimes necessary to change the
