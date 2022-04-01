@@ -105,24 +105,31 @@ lldb::TraceCursorUP TraceIntelPT::GetCursor(Thread &thread) {
 
 void TraceIntelPT::DumpTraceInfo(Thread &thread, Stream &s, bool verbose) {
   Optional<size_t> raw_size = GetRawTraceSize(thread);
-  s.Printf("\nthread #%u: tid = %" PRIu64, thread.GetIndexID(), thread.GetID());
+  s.Format("\nthread #{0}: tid = {1}", thread.GetIndexID(), thread.GetID());
   if (!raw_size) {
-    s.Printf(", not traced\n");
+    s << ", not traced\n";
     return;
   }
-  s.Printf("\n");
+  s << "\n";
+  DecodedThreadSP decoded_trace_sp = Decode(thread);
+  size_t insn_len = decoded_trace_sp->GetInstructions().size();
+  size_t mem_used = decoded_trace_sp->CalculateApproximateMemoryUsage();
 
-  size_t insn_len = Decode(thread)->GetInstructions().size();
-  size_t mem_used = Decode(thread)->CalculateApproximateMemoryUsage();
-
-  s.Printf("  Raw trace size: %zu KiB\n", *raw_size / 1024);
-  s.Printf("  Total number of instructions: %zu\n", insn_len);
-  s.Printf("  Total approximate memory usage: %0.2lf KiB\n",
+  s.Format("  Raw trace size: {0} KiB\n", *raw_size / 1024);
+  s.Format("  Total number of instructions: {0}\n", insn_len);
+  s.Format("  Total approximate memory usage: {0:2} KiB\n",
            (double)mem_used / 1024);
   if (insn_len != 0)
-    s.Printf("  Average memory usage per instruction: %0.2lf bytes\n",
+    s.Format("  Average memory usage per instruction: {0:2} bytes\n",
              (double)mem_used / insn_len);
-  return;
+
+  const DecodedThread::LibiptErrors &tsc_errors =
+      decoded_trace_sp->GetTscErrors();
+  s.Format("\n  Number of TSC decoding errors: {0}\n", tsc_errors.total_count);
+  for (const auto &error_message_to_count : tsc_errors.libipt_errors) {
+    s.Format("    {0}: {1}\n", error_message_to_count.first,
+             error_message_to_count.second);
+  }
 }
 
 Optional<size_t> TraceIntelPT::GetRawTraceSize(Thread &thread) {

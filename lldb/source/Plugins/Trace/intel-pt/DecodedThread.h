@@ -155,6 +155,15 @@ public:
     const DecodedThread *m_decoded_thread;
   };
 
+  // Struct holding counts for libipts errors;
+  struct LibiptErrors {
+    // libipt error -> count
+    llvm::DenseMap<const char *, int> libipt_errors;
+    int total_count = 0;
+
+    void RecordError(int libipt_error_code);
+  };
+
   DecodedThread(lldb::ThreadSP thread_sp);
 
   /// Utility constructor that initializes the trace with a provided error.
@@ -195,6 +204,17 @@ public:
   ///   points to a valid instruction.
   const char *GetErrorByInstructionIndex(size_t ins_idx);
 
+  /// Append a decoding error with a corresponding TSC.
+  void AppendError(llvm::Error &&error, uint64_t TSC);
+
+  /// Record an error decoding a TSC timestamp.
+  ///
+  /// See \a GetTscErrors() for more documentation.
+  ///
+  /// \param[in] libipt_error_code
+  ///   An error returned by the libipt library.
+  void RecordTscError(int libipt_error_code);
+
   /// Get a new cursor for the decoded thread.
   lldb::TraceCursorUP GetCursor();
 
@@ -207,6 +227,14 @@ public:
   ///   The size of the trace, or \b llvm::None if not available.
   llvm::Optional<size_t> GetRawTraceSize() const;
 
+  /// Return the number of TSC decoding errors that happened. A TSC error
+  /// is not a fatal error and doesn't create gaps in the trace. Instead
+  /// we only keep track of them as a statistic.
+  ///
+  /// \return
+  ///   The number of TSC decoding errors.
+  const LibiptErrors &GetTscErrors() const;
+
   /// The approximate size in bytes used by this instance,
   /// including all the already decoded instructions.
   size_t CalculateApproximateMemoryUsage() const;
@@ -214,6 +242,10 @@ public:
   lldb::ThreadSP GetThread();
 
 private:
+  /// Notify this class that the last added instruction or error has
+  /// an associated TSC.
+  void RecordTscForLastInstruction(uint64_t tsc);
+
   /// When adding new members to this class, make sure
   /// to update \a CalculateApproximateMemoryUsage() accordingly.
   lldb::ThreadSP m_thread_sp;
@@ -235,6 +267,8 @@ private:
   /// The size in bytes of the raw buffer before decoding. It might be None if
   /// the decoding failed.
   llvm::Optional<size_t> m_raw_trace_size;
+  /// All occurrences of libipt errors when decoding TSCs.
+  LibiptErrors m_tsc_errors;
 };
 
 using DecodedThreadSP = std::shared_ptr<DecodedThread>;
