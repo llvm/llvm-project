@@ -22,6 +22,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
+#include "clang/Basic/Builtins.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Casting.h"
@@ -444,6 +445,9 @@ public:
   }
 
   void VisitCallExpr(const CallExpr *S) {
+    // Of clang's builtins, only `__builtin_expect` is handled explicitly, since
+    // others (like trap, debugtrap, and unreachable) are handled by CFG
+    // construction.
     if (S->isCallToStdMove()) {
       assert(S->getNumArgs() == 1);
 
@@ -454,6 +458,18 @@ public:
       if (ArgLoc == nullptr)
         return;
 
+      Env.setStorageLocation(*S, *ArgLoc);
+    } else if (S->getDirectCallee() != nullptr &&
+               S->getDirectCallee()->getBuiltinID() ==
+                   Builtin::BI__builtin_expect) {
+      assert(S->getNumArgs() > 0);
+      assert(S->getArg(0) != nullptr);
+      // `__builtin_expect` returns by-value, so strip away any potential
+      // references in the argument.
+      auto *ArgLoc = Env.getStorageLocation(
+          *S->getArg(0)->IgnoreParenImpCasts(), SkipPast::Reference);
+      if (ArgLoc == nullptr)
+        return;
       Env.setStorageLocation(*S, *ArgLoc);
     }
   }
