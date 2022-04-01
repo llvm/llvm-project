@@ -878,8 +878,7 @@ void CoroCloner::create() {
   // frame.
   SmallVector<Instruction *> DummyArgs;
   for (Argument &A : OrigF.args()) {
-    DummyArgs.push_back(
-        new BitCastInst(UndefValue::get(A.getType()), A.getType()));
+    DummyArgs.push_back(new FreezeInst(UndefValue::get(A.getType())));
     VMap[&A] = DummyArgs.back();
   }
 
