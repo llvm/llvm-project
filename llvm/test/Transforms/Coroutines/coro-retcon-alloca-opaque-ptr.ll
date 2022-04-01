@@ -5,7 +5,7 @@
 target datalayout = "p:64:64:64"
 
 declare {i8*, i8*, i32} @prototype_f(i8*, i1)
-define {i8*, i8*, i32} @f(i8* %buffer, i32 %n) {
+define {i8*, i8*, i32} @f(i8* %buffer, i32 %n, { i32 } %dummy) {
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:  coro.return:
 ; CHECK-NEXT:    [[N_VAL_SPILL_ADDR:%.*]] = getelementptr inbounds [[F_FRAME:%.*]], ptr [[BUFFER:%.*]], i64 0, i32 1
