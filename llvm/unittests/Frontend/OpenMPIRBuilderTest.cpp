@@ -2212,7 +2212,6 @@ TEST_F(OpenMPIRBuilderTest, DynamicWorkShareLoopOrdered) {
 
   // Collect all the info from CLI, as it isn't usable after the call to
   // createDynamicWorkshareLoop.
-  InsertPointTy AfterIP = CLI->getAfterIP();
   BasicBlock *Preheader = CLI->getPreheader();
   BasicBlock *ExitBlock = CLI->getExit();
   BasicBlock *LatchBlock = CLI->getLatch();
