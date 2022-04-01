@@ -28,86 +28,6 @@
 #include <limits>
 #include <utility>
 
-#define FOR_EACH_NODE_KIND(X)                                                  \
-  X(NodeArrayNode)                                                             \
-  X(DotSuffix)                                                                 \
-  X(VendorExtQualType)                                                         \
-  X(QualType)                                                                  \
-  X(ConversionOperatorType)                                                    \
-  X(PostfixQualifiedType)                                                      \
-  X(ElaboratedTypeSpefType)                                                    \
-  X(NameType)                                                                  \
-  X(AbiTagAttr)                                                                \
-  X(EnableIfAttr)                                                              \
-  X(ObjCProtoName)                                                             \
-  X(PointerType)                                                               \
-  X(ReferenceType)                                                             \
-  X(PointerToMemberType)                                                       \
-  X(ArrayType)                                                                 \
-  X(FunctionType)                                                              \
-  X(NoexceptSpec)                                                              \
-  X(DynamicExceptionSpec)                                                      \
-  X(FunctionEncoding)                                                          \
-  X(LiteralOperator)                                                           \
-  X(SpecialName)                                                               \
-  X(CtorVtableSpecialName)                                                     \
-  X(QualifiedName)                                                             \
-  X(NestedName)                                                                \
-  X(LocalName)                                                                 \
-  X(ModuleName)                                                                \
-  X(ModuleEntity)                                                              \
-  X(VectorType)                                                                \
-  X(PixelVectorType)                                                           \
-  X(BinaryFPType)                                                              \
-  X(SyntheticTemplateParamName)                                                \
-  X(TypeTemplateParamDecl)                                                     \
-  X(NonTypeTemplateParamDecl)                                                  \
-  X(TemplateTemplateParamDecl)                                                 \
-  X(TemplateParamPackDecl)                                                     \
-  X(ParameterPack)                                                             \
-  X(TemplateArgumentPack)                                                      \
-  X(ParameterPackExpansion)                                                    \
-  X(TemplateArgs)                                                              \
-  X(ForwardTemplateReference)                                                  \
-  X(NameWithTemplateArgs)                                                      \
-  X(GlobalQualifiedName)                                                       \
-  X(ExpandedSpecialSubstitution)                                               \
-  X(SpecialSubstitution)                                                       \
-  X(CtorDtorName)                                                              \
-  X(DtorName)                                                                  \
-  X(UnnamedTypeName)                                                           \
-  X(ClosureTypeName)                                                           \
-  X(StructuredBindingName)                                                     \
-  X(BinaryExpr)                                                                \
-  X(ArraySubscriptExpr)                                                        \
-  X(PostfixExpr)                                                               \
-  X(ConditionalExpr)                                                           \
-  X(MemberExpr)                                                                \
-  X(SubobjectExpr)                                                             \
-  X(EnclosingExpr)                                                             \
-  X(CastExpr)                                                                  \
-  X(SizeofParamPackExpr)                                                       \
-  X(CallExpr)                                                                  \
-  X(NewExpr)                                                                   \
-  X(DeleteExpr)                                                                \
-  X(PrefixExpr)                                                                \
-  X(FunctionParam)                                                             \
-  X(ConversionExpr)                                                            \
-  X(PointerToMemberConversionExpr)                                             \
-  X(InitListExpr)                                                              \
-  X(FoldExpr)                                                                  \
-  X(ThrowExpr)                                                                 \
-  X(BoolExpr)                                                                  \
-  X(StringLiteral)                                                             \
-  X(LambdaExpr)                                                                \
-  X(EnumLiteral)                                                               \
-  X(IntegerLiteral)                                                            \
-  X(FloatLiteral)                                                              \
-  X(DoubleLiteral)                                                             \
-  X(LongDoubleLiteral)                                                         \
-  X(BracedExpr)                                                                \
-  X(BracedRangeExpr)
-
 DEMANGLE_NAMESPACE_BEGIN
 
 template <class T, size_t N> class PODSmallVector {
@@ -235,9 +155,8 @@ public:
 class Node {
 public:
   enum Kind : unsigned char {
-#define ENUMERATOR(NodeKind) K ## NodeKind,
-    FOR_EACH_NODE_KIND(ENUMERATOR)
-#undef ENUMERATOR
+#define NODE(NodeKind) K##NodeKind,
+#include "ItaniumNodes.def"
   };
 
   /// Three-way bool to track a cached value. Unknown is possible if this node
@@ -2440,24 +2359,22 @@ using LongDoubleLiteral = FloatLiteralImpl<long double>;
 template<typename Fn>
 void Node::visit(Fn F) const {
   switch (K) {
-#define CASE(X) case K ## X: return F(static_cast<const X*>(this));
-    FOR_EACH_NODE_KIND(CASE)
-#undef CASE
+#define NODE(X)                                                                \
+  case K##X:                                                                   \
+    return F(static_cast<const X *>(this));
+#include "ItaniumNodes.def"
   }
   assert(0 && "unknown mangling node kind");
 }
 
 /// Determine the kind of a node from its type.
 template<typename NodeT> struct NodeKind;
-#define SPECIALIZATION(X) \
-  template<> struct NodeKind<X> { \
-    static constexpr Node::Kind Kind = Node::K##X; \
-    static constexpr const char *name() { return #X; } \
+#define NODE(X)                                                                \
+  template <> struct NodeKind<X> {                                             \
+    static constexpr Node::Kind Kind = Node::K##X;                             \
+    static constexpr const char *name() { return #X; }                         \
   };
-FOR_EACH_NODE_KIND(SPECIALIZATION)
-#undef SPECIALIZATION
-
-#undef FOR_EACH_NODE_KIND
+#include "ItaniumNodes.def"
 
 template <typename Derived, typename Alloc> struct AbstractManglingParser {
   const char *First;
