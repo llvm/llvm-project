@@ -34,7 +34,7 @@ public:
 };
 } // namespace
 
-namespace {
+namespace NodeMatcher {
 // Make sure the node matchers provide constructor parameters. This is a
 // compilation test.
 template <typename NT> struct Ctor {
@@ -50,11 +50,11 @@ template <typename NT> void Visit(const NT *Node) { Node->match(Ctor<NT>{}); }
 NOMATCHER(ForwardTemplateReference)
 #undef NOMATCHER
 
-void __attribute__((used)) Visitor() {
+void Visitor() {
 #define NODE(X) Visit(static_cast<const itanium_demangle::X *>(nullptr));
 #include "llvm/Demangle/ItaniumNodes.def"
 }
-} // namespace
+} // namespace NodeMatcher
 
 TEST(ItaniumDemangle, MethodOverride) {
   struct TestParser : AbstractManglingParser<TestParser, TestAllocator> {
