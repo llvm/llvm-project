@@ -22,23 +22,23 @@ PresburgerRelation::PresburgerRelation(const IntegerRelation &disjunct)
 }
 
 unsigned PresburgerRelation::getNumDisjuncts() const {
-  return integerRelations.size();
+  return disjuncts.size();
 }
 
 ArrayRef<IntegerRelation> PresburgerRelation::getAllDisjuncts() const {
-  return integerRelations;
+  return disjuncts;
 }
 
 const IntegerRelation &PresburgerRelation::getDisjunct(unsigned index) const {
-  assert(index < integerRelations.size() && "index out of bounds!");
-  return integerRelations[index];
+  assert(index < disjuncts.size() && "index out of bounds!");
+  return disjuncts[index];
 }
 
 /// Mutate this set, turning it into the union of this set and the given
 /// IntegerRelation.
 void PresburgerRelation::unionInPlace(const IntegerRelation &disjunct) {
   assert(isSpaceCompatible(disjunct) && "Spaces should match");
-  integerRelations.push_back(disjunct);
+  disjuncts.push_back(disjunct);
 }
 
 /// Mutate this set, turning it into the union of this set and the given set.
@@ -47,7 +47,7 @@ void PresburgerRelation::unionInPlace(const IntegerRelation &disjunct) {
 /// to this set.
 void PresburgerRelation::unionInPlace(const PresburgerRelation &set) {
   assert(isSpaceCompatible(set) && "Spaces should match");
-  for (const IntegerRelation &disjunct : set.integerRelations)
+  for (const IntegerRelation &disjunct : set.disjuncts)
     unionInPlace(disjunct);
 }
 
@@ -62,7 +62,7 @@ PresburgerRelation::unionSet(const PresburgerRelation &set) const {
 
 /// A point is contained in the union iff any of the parts contain the point.
 bool PresburgerRelation::containsPoint(ArrayRef<int64_t> point) const {
-  return llvm::any_of(integerRelations, [&](const IntegerRelation &disjunct) {
+  return llvm::any_of(disjuncts, [&](const IntegerRelation &disjunct) {
     return (disjunct.containsPoint(point));
   });
 }
@@ -90,8 +90,8 @@ PresburgerRelation::intersect(const PresburgerRelation &set) const {
   assert(isSpaceCompatible(set) && "Spaces should match");
 
   PresburgerRelation result(getSpace());
-  for (const IntegerRelation &csA : integerRelations) {
-    for (const IntegerRelation &csB : set.integerRelations) {
+  for (const IntegerRelation &csA : disjuncts) {
+    for (const IntegerRelation &csB : set.disjuncts) {
       IntegerRelation intersection = csA.intersect(csB);
       if (!intersection.isEmpty())
         result.unionInPlace(intersection);
@@ -311,7 +311,7 @@ PresburgerRelation::subtract(const PresburgerRelation &set) const {
   assert(isSpaceCompatible(set) && "Spaces should match");
   PresburgerRelation result(getSpace());
   // We compute (U_i t_i) \ (U_i set_i) as U_i (t_i \ V_i set_i).
-  for (const IntegerRelation &disjunct : integerRelations)
+  for (const IntegerRelation &disjunct : disjuncts)
     result.unionInPlace(getSetDifference(disjunct, set));
   return result;
 }
@@ -333,13 +333,12 @@ bool PresburgerRelation::isEqual(const PresburgerRelation &set) const {
 /// false otherwise.
 bool PresburgerRelation::isIntegerEmpty() const {
   // The set is empty iff all of the disjuncts are empty.
-  return llvm::all_of(integerRelations,
-                      std::mem_fn(&IntegerRelation::isIntegerEmpty));
+  return llvm::all_of(disjuncts, std::mem_fn(&IntegerRelation::isIntegerEmpty));
 }
 
 bool PresburgerRelation::findIntegerSample(SmallVectorImpl<int64_t> &sample) {
   // A sample exists iff any of the disjuncts contains a sample.
-  for (const IntegerRelation &disjunct : integerRelations) {
+  for (const IntegerRelation &disjunct : disjuncts) {
     if (Optional<SmallVector<int64_t, 8>> opt = disjunct.findIntegerSample()) {
       sample = std::move(*opt);
       return true;
@@ -353,7 +352,7 @@ Optional<uint64_t> PresburgerRelation::computeVolume() const {
   // The sum of the volumes of the disjuncts is a valid overapproximation of the
   // volume of their union, even if they overlap.
   uint64_t result = 0;
-  for (const IntegerRelation &disjunct : integerRelations) {
+  for (const IntegerRelation &disjunct : disjuncts) {
     Optional<uint64_t> volume = disjunct.computeVolume();
     if (!volume)
       return {};
@@ -452,7 +451,7 @@ private:
 /// `IntegerRelation`s to the `disjuncts` vector.
 SetCoalescer::SetCoalescer(const PresburgerRelation &s) {
 
-  disjuncts = s.integerRelations;
+  disjuncts = s.disjuncts;
 
   simplices.reserve(s.getNumDisjuncts());
   // Note that disjuncts.size() changes during the loop.
@@ -699,7 +698,7 @@ PresburgerRelation PresburgerRelation::coalesce() const {
 
 void PresburgerRelation::print(raw_ostream &os) const {
   os << "Number of Disjuncts: " << getNumDisjuncts() << "\n";
-  for (const IntegerRelation &disjunct : integerRelations) {
+  for (const IntegerRelation &disjunct : disjuncts) {
     disjunct.print(os);
     os << '\n';
   }
