@@ -28,7 +28,7 @@ template <typename T>
 static std::string debugString(T &&op) {
   std::string instrStr;
   llvm::raw_string_ostream os(instrStr);
-  op.print(os);
+  os << op;
   return os.str();
 }
 
