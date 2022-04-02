@@ -28,7 +28,7 @@ class TestingConfig(object):
                      'TMPDIR', 'TMP', 'TEMP', 'TEMPDIR', 'AVRLIT_BOARD',
                      'AVRLIT_PORT', 'FILECHECK_OPTS', 'VCINSTALLDIR',
                      'VCToolsinstallDir', 'VSINSTALLDIR', 'WindowsSdkDir',
-                     'WindowsSDKLibVersion', 'SOURCE_DATE_EPOCH']
+                     'WindowsSDKLibVersion', 'SOURCE_DATE_EPOCH','GTEST_FILTER']
 
         if sys.platform == 'win32':
             pass_vars.append('COMSPEC')
