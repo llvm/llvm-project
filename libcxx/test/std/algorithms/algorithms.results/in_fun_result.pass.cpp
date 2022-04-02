@@ -37,9 +37,9 @@ static_assert(std::is_constructible_v<std::ranges::in_fun_result<B, B>, const st
 struct C {
   C(int&);
 };
-// has to be convertible via const&
 static_assert(!std::is_constructible_v<std::ranges::in_fun_result<C, C>, std::ranges::in_fun_result<int, int>&>);
 
+// has to be convertible via const&
 static_assert(std::is_convertible_v<std::ranges::in_fun_result<int, int>&, std::ranges::in_fun_result<long, long>>);
 static_assert(std::is_convertible_v<const std::ranges::in_fun_result<int, int>&, std::ranges::in_fun_result<long, long>>);
 static_assert(std::is_convertible_v<std::ranges::in_fun_result<int, int>&&, std::ranges::in_fun_result<long, long>>);
@@ -55,10 +55,8 @@ static_assert(!std::is_copy_constructible_v<std::ranges::in_fun_result<int, Move
 
 struct NotConvertible {};
 // conversions should not work if there is no conversion
-static_assert(!std::is_convertible_v<std::ranges::in_fun_result<NotConvertible, int>,
-                                     std::ranges::in_fun_result<int, int>>);
-static_assert(!std::is_convertible_v<std::ranges::in_fun_result<int, NotConvertible>,
-                                     std::ranges::in_fun_result<int, int>>);
+static_assert(!std::is_convertible_v<std::ranges::in_fun_result<NotConvertible, int>, std::ranges::in_fun_result<int, int>>);
+static_assert(!std::is_convertible_v<std::ranges::in_fun_result<int, NotConvertible>, std::ranges::in_fun_result<int, int>>);
 
 template <class T>
 struct ConvertibleFrom {

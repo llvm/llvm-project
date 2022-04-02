@@ -415,4 +415,12 @@ inline void DoNotOptimize(Tp const& value) {
 #  define TEST_MSVC_DIAGNOSTIC_IGNORED(num)
 #endif
 
+#if __has_cpp_attribute(msvc::no_unique_address)
+#define TEST_NO_UNIQUE_ADDRESS [[msvc::no_unique_address]]
+#elif __has_cpp_attribute(no_unique_address)
+#define TEST_NO_UNIQUE_ADDRESS [[no_unique_address]]
+#else
+#define TEST_NO_UNIQUE_ADDRESS
+#endif
+
 #endif // SUPPORT_TEST_MACROS_HPP
