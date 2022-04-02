@@ -13,6 +13,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/UUID.h"
 #include "lldb/lldb-forward.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Caching.h"
 #include <mutex>
 
@@ -190,7 +191,7 @@ public:
 
 private:
   std::vector<ConstString> m_strings;
-  std::map<ConstString, uint32_t> m_string_to_offset;
+  llvm::DenseMap<ConstString, uint32_t> m_string_to_offset;
   /// Skip one byte to start the string table off with an empty string.
   uint32_t m_next_offset = 1;
 };
