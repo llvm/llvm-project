@@ -47,7 +47,7 @@ public:
   }
 
   ListOption<int64_t> sizes{
-      *this, "test-outer-loop-sizes", llvm::cl::MiscFlags::CommaSeparated,
+      *this, "test-outer-loop-sizes",
       llvm::cl::desc(
           "fixed number of iterations that the outer loops should have")};
 };

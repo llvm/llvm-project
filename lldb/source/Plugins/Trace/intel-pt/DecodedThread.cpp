@@ -86,12 +86,7 @@ IntelPTInstruction::GetControlFlowType(lldb::addr_t next_load_address) const {
 
 ThreadSP DecodedThread::GetThread() { return m_thread_sp; }
 
-void DecodedThread::AppendInstruction(const pt_insn &insn) {
-  m_instructions.emplace_back(insn);
-}
-
-void DecodedThread::AppendInstruction(const pt_insn &insn, uint64_t tsc) {
-  m_instructions.emplace_back(insn);
+void DecodedThread::RecordTscForLastInstruction(uint64_t tsc) {
   if (!m_last_tsc || *m_last_tsc != tsc) {
     // In case the first instructions are errors or did not have a TSC, we'll
     // get a first valid TSC not in position 0. We can safely force these error
@@ -103,9 +98,36 @@ void DecodedThread::AppendInstruction(const pt_insn &insn, uint64_t tsc) {
   }
 }
 
+void DecodedThread::AppendInstruction(const pt_insn &insn) {
+  m_instructions.emplace_back(insn);
+}
+
+void DecodedThread::AppendInstruction(const pt_insn &insn, uint64_t tsc) {
+  AppendInstruction(insn);
+  RecordTscForLastInstruction(tsc);
+}
+
 void DecodedThread::AppendError(llvm::Error &&error) {
   m_errors.try_emplace(m_instructions.size(), toString(std::move(error)));
   m_instructions.emplace_back();
+}
+
+void DecodedThread::AppendError(llvm::Error &&error, uint64_t tsc) {
+  AppendError(std::move(error));
+  RecordTscForLastInstruction(tsc);
+}
+
+void DecodedThread::LibiptErrors::RecordError(int libipt_error_code) {
+  libipt_errors[pt_errstr(pt_errcode(libipt_error_code))]++;
+  total_count++;
+}
+
+void DecodedThread::RecordTscError(int libipt_error_code) {
+  m_tsc_errors.RecordError(libipt_error_code);
+}
+
+const DecodedThread::LibiptErrors &DecodedThread::GetTscErrors() const {
+  return m_tsc_errors;
 }
 
 ArrayRef<IntelPTInstruction> DecodedThread::GetInstructions() const {
