@@ -153,15 +153,6 @@ public:
   SimplexBase() = delete;
   virtual ~SimplexBase() = default;
 
-  /// Construct a SimplexBase with the specified number of variables and fixed
-  /// columns.
-  ///
-  /// For example, Simplex uses two fixed columns: the denominator and the
-  /// constant term, whereas LexSimplex has an extra fixed column for the
-  /// so-called big M parameter. For more information see the documentation for
-  /// LexSimplex.
-  SimplexBase(unsigned nVar, bool mustUseBigM);
-
   /// Returns true if the tableau is empty (has conflicting constraints),
   /// false otherwise.
   bool isEmpty() const;
@@ -213,6 +204,15 @@ public:
   void dump() const;
 
 protected:
+  /// Construct a SimplexBase with the specified number of variables and fixed
+  /// columns.
+  ///
+  /// For example, Simplex uses two fixed columns: the denominator and the
+  /// constant term, whereas LexSimplex has an extra fixed column for the
+  /// so-called big M parameter. For more information see the documentation for
+  /// LexSimplex.
+  SimplexBase(unsigned nVar, bool mustUseBigM);
+
   enum class Orientation { Row, Column };
 
   /// An Unknown is either a variable or a constraint. It is always associated
