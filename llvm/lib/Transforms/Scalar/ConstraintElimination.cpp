@@ -392,6 +392,34 @@ struct StackEntry {
       : NumIn(NumIn), NumOut(NumOut), Condition(Condition), IsNot(IsNot),
         IsSigned(IsSigned), ValuesToRelease(ValuesToRelease) {}
 };
+
+/// Keep state required to build worklist.
+struct State {
+  DominatorTree &DT;
+  SmallVector<ConstraintOrBlock, 64> WorkList;
+
+  State(DominatorTree &DT) : DT(DT) {}
+
+  /// Process block \p BB and add known facts to work-list.
+  void addInfoFor(BasicBlock &BB);
+
+  /// Returns true if we can add a known condition from BB to its successor
+  /// block Succ. Each predecessor of Succ can either be BB or be dominated
+  /// by Succ (e.g. the case when adding a condition from a pre-header to a
+  /// loop header).
+  bool canAddSuccessor(BasicBlock &BB, BasicBlock *Succ) const {
+    if (BB.getSingleSuccessor()) {
+      assert(BB.getSingleSuccessor() == Succ);
+      return DT.properlyDominates(&BB, Succ);
+    }
+    return any_of(successors(&BB),
+                  [Succ](const BasicBlock *S) { return S != Succ; }) &&
+           all_of(predecessors(Succ), [&BB, Succ, this](BasicBlock *Pred) {
+             return Pred == &BB || DT.dominates(Succ, Pred);
+           });
+  }
+};
+
 } // namespace
 
 #ifndef NDEBUG
@@ -407,121 +435,107 @@ static void dumpWithNames(ConstraintTy &C,
 }
 #endif
 
+void State::addInfoFor(BasicBlock &BB) {
+  WorkList.emplace_back(DT.getNode(&BB));
+
+  // True as long as long as the current instruction is guaranteed to execute.
+  bool GuaranteedToExecute = true;
+  // Scan BB for assume calls.
+  // TODO: also use this scan to queue conditions to simplify, so we can
+  // interleave facts from assumes and conditions to simplify in a single
+  // basic block. And to skip another traversal of each basic block when
+  // simplifying.
+  for (Instruction &I : BB) {
+    Value *Cond;
+    // For now, just handle assumes with a single compare as condition.
+    if (match(&I, m_Intrinsic<Intrinsic::assume>(m_Value(Cond))) &&
+        isa<ICmpInst>(Cond)) {
+      if (GuaranteedToExecute) {
+        // The assume is guaranteed to execute when BB is entered, hence Cond
+        // holds on entry to BB.
+        WorkList.emplace_back(DT.getNode(&BB), cast<ICmpInst>(Cond), false);
+      } else {
+        // Otherwise the condition only holds in the successors.
+        for (BasicBlock *Succ : successors(&BB)) {
+          if (!canAddSuccessor(BB, Succ))
+            continue;
+          WorkList.emplace_back(DT.getNode(Succ), cast<ICmpInst>(Cond), false);
+        }
+      }
+    }
+    GuaranteedToExecute &= isGuaranteedToTransferExecutionToSuccessor(&I);
+  }
+
+  auto *Br = dyn_cast<BranchInst>(BB.getTerminator());
+  if (!Br || !Br->isConditional())
+    return;
+
+  // If the condition is an OR of 2 compares and the false successor only has
+  // the current block as predecessor, queue both negated conditions for the
+  // false successor.
+  Value *Op0, *Op1;
+  if (match(Br->getCondition(), m_LogicalOr(m_Value(Op0), m_Value(Op1))) &&
+      isa<ICmpInst>(Op0) && isa<ICmpInst>(Op1)) {
+    BasicBlock *FalseSuccessor = Br->getSuccessor(1);
+    if (canAddSuccessor(BB, FalseSuccessor)) {
+      WorkList.emplace_back(DT.getNode(FalseSuccessor), cast<ICmpInst>(Op0),
+                            true);
+      WorkList.emplace_back(DT.getNode(FalseSuccessor), cast<ICmpInst>(Op1),
+                            true);
+    }
+    return;
+  }
+
+  // If the condition is an AND of 2 compares and the true successor only has
+  // the current block as predecessor, queue both conditions for the true
+  // successor.
+  if (match(Br->getCondition(), m_LogicalAnd(m_Value(Op0), m_Value(Op1))) &&
+      isa<ICmpInst>(Op0) && isa<ICmpInst>(Op1)) {
+    BasicBlock *TrueSuccessor = Br->getSuccessor(0);
+    if (canAddSuccessor(BB, TrueSuccessor)) {
+      WorkList.emplace_back(DT.getNode(TrueSuccessor), cast<ICmpInst>(Op0),
+                            false);
+      WorkList.emplace_back(DT.getNode(TrueSuccessor), cast<ICmpInst>(Op1),
+                            false);
+    }
+    return;
+  }
+
+  auto *CmpI = dyn_cast<ICmpInst>(Br->getCondition());
+  if (!CmpI)
+    return;
+  if (canAddSuccessor(BB, Br->getSuccessor(0)))
+    WorkList.emplace_back(DT.getNode(Br->getSuccessor(0)), CmpI, false);
+  if (canAddSuccessor(BB, Br->getSuccessor(1)))
+    WorkList.emplace_back(DT.getNode(Br->getSuccessor(1)), CmpI, true);
+}
+
 static bool eliminateConstraints(Function &F, DominatorTree &DT) {
   bool Changed = false;
   DT.updateDFSNumbers();
 
   ConstraintInfo Info;
-
-  SmallVector<ConstraintOrBlock, 64> WorkList;
+  State S(DT);
 
   // First, collect conditions implied by branches and blocks with their
   // Dominator DFS in and out numbers.
   for (BasicBlock &BB : F) {
     if (!DT.getNode(&BB))
       continue;
-    WorkList.emplace_back(DT.getNode(&BB));
-
-    // Returns true if we can add a known condition from BB to its successor
-    // block Succ. Each predecessor of Succ can either be BB or be dominated by
-    // Succ (e.g. the case when adding a condition from a pre-header to a loop
-    // header).
-    auto CanAdd = [&BB, &DT](BasicBlock *Succ) {
-      if (BB.getSingleSuccessor()) {
-        assert(BB.getSingleSuccessor() == Succ);
-        return DT.properlyDominates(&BB, Succ);
-      }
-      return any_of(successors(&BB),
-                    [Succ](const BasicBlock *S) { return S != Succ; }) &&
-             all_of(predecessors(Succ), [&BB, &DT, Succ](BasicBlock *Pred) {
-               return Pred == &BB || DT.dominates(Succ, Pred);
-             });
-    };
-
-    // True as long as long as the current instruction is guaranteed to execute.
-    bool GuaranteedToExecute = true;
-    // Scan BB for assume calls.
-    // TODO: also use this scan to queue conditions to simplify, so we can
-    // interleave facts from assumes and conditions to simplify in a single
-    // basic block. And to skip another traversal of each basic block when
-    // simplifying.
-    for (Instruction &I : BB) {
-      Value *Cond;
-      // For now, just handle assumes with a single compare as condition.
-      if (match(&I, m_Intrinsic<Intrinsic::assume>(m_Value(Cond))) &&
-          isa<ICmpInst>(Cond)) {
-        if (GuaranteedToExecute) {
-          // The assume is guaranteed to execute when BB is entered, hence Cond
-          // holds on entry to BB.
-          WorkList.emplace_back(DT.getNode(&BB), cast<ICmpInst>(Cond), false);
-        } else {
-          // Otherwise the condition only holds in the successors.
-          for (BasicBlock *Succ : successors(&BB)) {
-            if (!CanAdd(Succ))
-              continue;
-            WorkList.emplace_back(DT.getNode(Succ), cast<ICmpInst>(Cond),
-                                  false);
-          }
-        }
-      }
-      GuaranteedToExecute &= isGuaranteedToTransferExecutionToSuccessor(&I);
-    }
-
-    auto *Br = dyn_cast<BranchInst>(BB.getTerminator());
-    if (!Br || !Br->isConditional())
-      continue;
-
-    // If the condition is an OR of 2 compares and the false successor only has
-    // the current block as predecessor, queue both negated conditions for the
-    // false successor.
-    Value *Op0, *Op1;
-    if (match(Br->getCondition(), m_LogicalOr(m_Value(Op0), m_Value(Op1))) &&
-        isa<ICmpInst>(Op0) && isa<ICmpInst>(Op1)) {
-      BasicBlock *FalseSuccessor = Br->getSuccessor(1);
-      if (CanAdd(FalseSuccessor)) {
-        WorkList.emplace_back(DT.getNode(FalseSuccessor), cast<ICmpInst>(Op0),
-                              true);
-        WorkList.emplace_back(DT.getNode(FalseSuccessor), cast<ICmpInst>(Op1),
-                              true);
-      }
-      continue;
-    }
-
-    // If the condition is an AND of 2 compares and the true successor only has
-    // the current block as predecessor, queue both conditions for the true
-    // successor.
-    if (match(Br->getCondition(), m_LogicalAnd(m_Value(Op0), m_Value(Op1))) &&
-        isa<ICmpInst>(Op0) && isa<ICmpInst>(Op1)) {
-      BasicBlock *TrueSuccessor = Br->getSuccessor(0);
-      if (CanAdd(TrueSuccessor)) {
-        WorkList.emplace_back(DT.getNode(TrueSuccessor), cast<ICmpInst>(Op0),
-                              false);
-        WorkList.emplace_back(DT.getNode(TrueSuccessor), cast<ICmpInst>(Op1),
-                              false);
-      }
-      continue;
-    }
-
-    auto *CmpI = dyn_cast<ICmpInst>(Br->getCondition());
-    if (!CmpI)
-      continue;
-    if (CanAdd(Br->getSuccessor(0)))
-      WorkList.emplace_back(DT.getNode(Br->getSuccessor(0)), CmpI, false);
-    if (CanAdd(Br->getSuccessor(1)))
-      WorkList.emplace_back(DT.getNode(Br->getSuccessor(1)), CmpI, true);
+    S.addInfoFor(BB);
   }
 
   // Next, sort worklist by dominance, so that dominating blocks and conditions
   // come before blocks and conditions dominated by them. If a block and a
   // condition have the same numbers, the condition comes before the block, as
   // it holds on entry to the block.
-  sort(WorkList, [](const ConstraintOrBlock &A, const ConstraintOrBlock &B) {
+  sort(S.WorkList, [](const ConstraintOrBlock &A, const ConstraintOrBlock &B) {
     return std::tie(A.NumIn, A.IsBlock) < std::tie(B.NumIn, B.IsBlock);
   });
 
   // Finally, process ordered worklist and eliminate implied conditions.
   SmallVector<StackEntry, 16> DFSInStack;
-  for (ConstraintOrBlock &CB : WorkList) {
+  for (ConstraintOrBlock &CB : S.WorkList) {
     // First, pop entries from the stack that are out-of-scope for CB. Remove
     // the corresponding entry from the constraint system.
     while (!DFSInStack.empty()) {
