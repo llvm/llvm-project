@@ -500,16 +500,6 @@ bool llvm::wouldInstructionBeTriviallyDead(Instruction *I,
     if (isMathLibCallNoop(Call, TLI))
       return true;
 
-  // To express possible interaction with floating point environment constrained
-  // intrinsics are described as if they access memory. So they look like having
-  // side effect but actually do not have it unless they raise floating point
-  // exception. If FP exceptions are ignored, the intrinsic may be deleted.
-  if (auto *CI = dyn_cast<ConstrainedFPIntrinsic>(I)) {
-    Optional<fp::ExceptionBehavior> EB = CI->getExceptionBehavior();
-    if (!EB || *EB == fp::ExceptionBehavior::ebIgnore)
-      return true;
-  }
-
   return false;
 }
 
