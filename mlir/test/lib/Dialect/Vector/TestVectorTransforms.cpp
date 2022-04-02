@@ -330,7 +330,7 @@ struct TestVectorDistributePatterns
     registry.insert<AffineDialect>();
   }
   ListOption<int32_t> multiplicity{
-      *this, "distribution-multiplicity", llvm::cl::MiscFlags::CommaSeparated,
+      *this, "distribution-multiplicity",
       llvm::cl::desc("Set the multiplicity used for distributing vector")};
 
   void runOnOperation() override {

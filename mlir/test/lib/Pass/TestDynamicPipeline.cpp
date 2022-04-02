@@ -99,7 +99,7 @@ public:
       llvm::cl::desc("The pipeline description that "
                      "will run on the filtered function.")};
   ListOption<std::string> opNames{
-      *this, "op-name", llvm::cl::MiscFlags::CommaSeparated,
+      *this, "op-name",
       llvm::cl::desc("List of function name to apply the pipeline to")};
 };
 } // namespace

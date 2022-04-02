@@ -56,8 +56,15 @@ public:
       return;
     Guid = expectedInfo->getGuid();
     auto it = ctx.typeServerSourceMappings.emplace(Guid, this);
-    assert(it.second);
-    (void)it;
+    if (!it.second) {
+      // If we hit here we have collision on Guid's in two PDB files.
+      // This can happen if the PDB Guid is invalid or if we are really
+      // unlucky. This should fall back on stright file-system lookup.
+      TypeServerSource *tSrc = (TypeServerSource *)it.first->second;
+      log("GUID collision between " + file.getFilePath() + " and " +
+          tSrc->pdbInputFile->session->getPDBFile().getFilePath());
+      ctx.typeServerSourceMappings.erase(Guid);
+    }
   }
 
   Error mergeDebugT(TypeMerger *m) override;
