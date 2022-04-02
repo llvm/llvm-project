@@ -14,7 +14,7 @@ define void @sink_replicate_region_1(i32 %x, i8* %ptr) optsize {
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
-; CHECK-NEXT: loop:
+; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:   FIRST-ORDER-RECURRENCE-PHI ir<%0> = phi ir<0>, ir<%conv>
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
@@ -29,7 +29,7 @@ define void @sink_replicate_region_1(i32 %x, i8* %ptr) optsize {
 ; CHECK-NEXT:   pred.load.entry:
 ; CHECK-NEXT:     BRANCH-ON-MASK vp<[[MASK]]>
 ; CHECK-NEXT:   Successor(s): pred.load.if, pred.load.continue
-; CHECK-NEXT:   CondBit: vp<[[MASK]]> (loop)
+; CHECK-NEXT:   CondBit: vp<[[MASK]]> (vector.body)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.load.if:
 ; CHECK-NEXT:     REPLICATE ir<%gep> = getelementptr ir<%ptr>, vp<[[STEPS]]>
@@ -51,7 +51,7 @@ define void @sink_replicate_region_1(i32 %x, i8* %ptr) optsize {
 ; CHECK-NEXT:   pred.srem.entry:
 ; CHECK-NEXT:     BRANCH-ON-MASK vp<[[MASK]]>
 ; CHECK-NEXT:   Successor(s): pred.srem.if, pred.srem.continue
-; CHECK-NEXT:   CondBit: vp<[[MASK]]> (loop)
+; CHECK-NEXT:   CondBit: vp<[[MASK]]> (vector.body)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.srem.if:
 ; CHECK-NEXT:     REPLICATE ir<%rem> = srem vp<[[SPLICE]]>, ir<%x> (S->V)
@@ -99,7 +99,7 @@ define void @sink_replicate_region_2(i32 %x, i8 %y, i32* %ptr) optsize {
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
-; CHECK-NEXT: loop:
+; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:   FIRST-ORDER-RECURRENCE-PHI ir<%recur> = phi ir<0>, ir<%recur.next>
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
@@ -119,7 +119,7 @@ define void @sink_replicate_region_2(i32 %x, i8 %y, i32* %ptr) optsize {
 ; CHECK-NEXT:  pred.store.entry:
 ; CHECK-NEXT:    BRANCH-ON-MASK vp<[[MASK]]>
 ; CHECK-NEXT:  Successor(s): pred.store.if, pred.store.continue
-; CHECK-NEXT:  CondBit: vp<[[MASK]]> (loop)
+; CHECK-NEXT:  CondBit: vp<[[MASK]]> (vector.body)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.store.if:
 ; CHECK-NEXT:     REPLICATE ir<%rem> = srem vp<[[SPLICE]]>, ir<%x>
@@ -169,7 +169,7 @@ define i32 @sink_replicate_region_3_reduction(i32 %x, i8 %y, i32* %ptr) optsize 
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
-; CHECK-NEXT: loop:
+; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:   FIRST-ORDER-RECURRENCE-PHI ir<%recur> = phi ir<0>, ir<%recur.next>
 ; CHECK-NEXT:   WIDEN-REDUCTION-PHI ir<%and.red> = phi ir<1234>, ir<%and.red.next>
@@ -186,7 +186,7 @@ define i32 @sink_replicate_region_3_reduction(i32 %x, i8 %y, i32* %ptr) optsize 
 ; CHECK-NEXT:   pred.srem.entry:
 ; CHECK-NEXT:     BRANCH-ON-MASK vp<[[MASK]]>
 ; CHECK-NEXT:   Successor(s): pred.srem.if, pred.srem.continue
-; CHECK-NEXT:   CondBit: vp<[[MASK]]> (loop)
+; CHECK-NEXT:   CondBit: vp<[[MASK]]> (vector.body)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.srem.if:
 ; CHECK-NEXT:     REPLICATE ir<%rem> = srem vp<[[SPLICE]]>, ir<%x> (S->V)
@@ -239,7 +239,7 @@ define void @sink_replicate_region_4_requires_split_at_end_of_block(i32 %x, i8* 
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
-; CHECK-NEXT: loop:
+; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:   FIRST-ORDER-RECURRENCE-PHI ir<%0> = phi ir<0>, ir<%conv>
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
@@ -255,7 +255,7 @@ define void @sink_replicate_region_4_requires_split_at_end_of_block(i32 %x, i8* 
 ; CHECK-NEXT:   pred.load.entry:
 ; CHECK-NEXT:     BRANCH-ON-MASK vp<[[MASK]]>
 ; CHECK-NEXT:   Successor(s): pred.load.if, pred.load.continue
-; CHECK-NEXT:   CondBit: vp<[[MASK]]> (loop)
+; CHECK-NEXT:   CondBit: vp<[[MASK]]> (vector.body)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.load.if:
 ; CHECK-NEXT:     REPLICATE ir<%lv> = load ir<%gep> (S->V)
@@ -279,7 +279,7 @@ define void @sink_replicate_region_4_requires_split_at_end_of_block(i32 %x, i8* 
 ; CHECK-NEXT:   pred.load.entry:
 ; CHECK-NEXT:     BRANCH-ON-MASK vp<[[MASK]]>
 ; CHECK-NEXT:   Successor(s): pred.load.if, pred.load.continue
-; CHECK-NEXT:   CondBit: vp<[[MASK]]> (loop)
+; CHECK-NEXT:   CondBit: vp<[[MASK]]> (vector.body)
 
 ; CHECK:        pred.load.if:
 ; CHECK-NEXT:     REPLICATE ir<%rem> = srem vp<[[SPLICE]]>, ir<%x> (S->V)
@@ -334,7 +334,7 @@ define void @sink_replicate_region_after_replicate_region(i32* %ptr, i32 %x, i8 
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
-; CHECK-NEXT: loop:
+; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:   FIRST-ORDER-RECURRENCE-PHI ir<%recur> = phi ir<0>, ir<%recur.next>
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
@@ -354,7 +354,7 @@ define void @sink_replicate_region_after_replicate_region(i32* %ptr, i32 %x, i8 
 ; CHECK-NEXT:   pred.srem.entry:
 ; CHECK-NEXT:     BRANCH-ON-MASK vp<[[MASK]]>
 ; CHECK-NEXT:   Successor(s): pred.srem.if, pred.srem.continue
-; CHECK-NEXT:   CondBit: vp<[[MASK]]> (loop)
+; CHECK-NEXT:   CondBit: vp<[[MASK]]> (vector.body)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.srem.if:
 ; CHECK-NEXT:     REPLICATE ir<%rem> = srem vp<[[SPLICE]]>, ir<%x>
@@ -373,7 +373,7 @@ define void @sink_replicate_region_after_replicate_region(i32* %ptr, i32 %x, i8 
 ; CHECK-NEXT:   pred.store.entry:
 ; CHECK-NEXT:     BRANCH-ON-MASK vp<[[MASK]]>
 ; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
-; CHECK-NEXT:   CondBit: vp<[[MASK]]> (loop)
+; CHECK-NEXT:   CondBit: vp<[[MASK]]> (vector.body)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.if:
 ; CHECK-NEXT:     REPLICATE ir<%rem.div> = sdiv ir<20>, vp<[[PRED]]>

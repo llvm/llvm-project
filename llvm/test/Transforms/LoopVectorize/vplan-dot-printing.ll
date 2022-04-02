@@ -11,7 +11,7 @@ define void @print_call_and_memory(i64 %n, float* noalias %y, float* noalias %x)
 ; CHECK-NEXT:    fontname=Courier
 ; CHECK-NEXT:    label="\<x1\> vector loop"
 ; CHECK-NEXT:    N1 [label =
-; CHECK-NEXT:    "for.body:\l" +
+; CHECK-NEXT:    "vector.body:\l" +
 ; CHECK-NEXT:    "  EMIT vp\<[[CAN_IV:%.+]]\> = CANONICAL-INDUCTION\l" +
 ; CHECK-NEXT:    "  vp\<[[STEPS:%.+]]\> = SCALAR-STEPS vp\<[[CAN_IV]]\>, ir\<0\>, ir\<1\>\l" +
 ; CHECK-NEXT:    "  CLONE ir\<%arrayidx\> = getelementptr ir\<%y\>, vp\<[[STEPS]]\>\l" +
