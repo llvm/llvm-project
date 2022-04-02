@@ -84,15 +84,17 @@ void ConcatOutputSection::addInput(ConcatInputSection *input) {
 //   distant call sites might be unable to reach the same thunk, so multiple
 //   thunks are necessary to serve all call sites in a very large program. A
 //   thunkInfo stores state for all thunks associated with a particular
-//   function: (a) thunk symbol, (b) input section containing stub code, and
-//   (c) sequence number for the active thunk incarnation. When an old thunk
-//   goes out of range, we increment the sequence number and create a new
-//   thunk named <FUNCTION>.thunk.<SEQUENCE>.
+//   function:
+//     (a) thunk symbol
+//     (b) input section containing stub code, and
+//     (c) sequence number for the active thunk incarnation.
+//   When an old thunk goes out of range, we increment the sequence number and
+//   create a new thunk named <FUNCTION>.thunk.<SEQUENCE>.
 //
-// * A thunk consists of (a) a Defined symbol pointing to
-//   (b) an InputSection holding machine instructions (similar to a MachO
-//   stub), and (c) Reloc(s) that reference the real function for fixing-up
-//   the stub code.
+// * A thunk consists of
+//     (a) a Defined symbol pointing to
+//     (b) an InputSection holding machine code (similar to a MachO stub), and
+//     (c) relocs referencing the real function for fixing up the stub code.
 //
 // * std::vector<InputSection *> MergedInputSection::thunks: A vector parallel
 //   to the inputs vector. We store new thunks via cheap vector append, rather
