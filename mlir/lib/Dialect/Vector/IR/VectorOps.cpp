@@ -943,6 +943,24 @@ LogicalResult vector::ExtractElementOp::verify() {
   return success();
 }
 
+OpFoldResult vector::ExtractElementOp::fold(ArrayRef<Attribute> operands) {
+  // Skip the 0-D vector here now.
+  if (operands.size() < 2)
+    return {};
+
+  Attribute src = operands[0];
+  Attribute pos = operands[1];
+  if (!src || !pos)
+    return {};
+
+  auto srcElements = src.cast<DenseElementsAttr>().getValues<Attribute>();
+
+  auto attr = pos.dyn_cast<IntegerAttr>();
+  uint64_t posIdx = attr.getInt();
+
+  return srcElements[posIdx];
+}
+
 //===----------------------------------------------------------------------===//
 // ExtractOp
 //===----------------------------------------------------------------------===//
@@ -1837,6 +1855,29 @@ LogicalResult InsertElementOp::verify() {
   if (!getPosition())
     return emitOpError("expected position for 1-D vector");
   return success();
+}
+
+OpFoldResult vector::InsertElementOp::fold(ArrayRef<Attribute> operands) {
+  // Skip the 0-D vector here.
+  if (operands.size() < 3)
+    return {};
+
+  Attribute src = operands[0];
+  Attribute dst = operands[1];
+  Attribute pos = operands[2];
+  if (!src || !dst || !pos)
+    return {};
+
+  auto dstElements = dst.cast<DenseElementsAttr>().getValues<Attribute>();
+
+  SmallVector<Attribute> results(dstElements);
+
+  auto attr = pos.dyn_cast<IntegerAttr>();
+  uint64_t posIdx = attr.getInt();
+
+  results[posIdx] = src;
+
+  return DenseElementsAttr::get(getDestVectorType(), results);
 }
 
 //===----------------------------------------------------------------------===//
