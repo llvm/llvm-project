@@ -62,7 +62,7 @@
 // RDC: {{"[^"]*clang[^"]*".* "-emit-llvm-bc".* "-fcuda-is-device".* "-mlink-bitcode-file" ".*asanrtl.bc".* "-mlink-builtin-bitcode" ".*hip.bc".* "-fsanitize=address".*}} "-o" "[[OUT:[^"]*.bc]]"
 // RDC-NOT: {{"[^"]*lld(\.exe){0,1}".*}} "[[OUT]]" {{".*asanrtl.bc" ".*hip.bc"}}
 
-// FAIL: AMDGPU address sanitizer runtime library (asanrtl) is not found. Please install ROCm device library which supports address sanitizer
+// FAIL: error: AMDGPU address sanitizer runtime library (asanrtl) is not found. Please install ROCm device library which supports address sanitizer
 
 // XNACK-DAG: warning: ignoring '-fsanitize=leak' option as it is not currently supported for target 'amdgcn-amd-amdhsa'
 // XNACK-DAG: warning: ignoring '-fsanitize=address' option as it is not currently supported for offload arch 'gfx900:xnack-'. Use it with an offload arch containing 'xnack+' instead
