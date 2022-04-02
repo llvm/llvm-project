@@ -16,6 +16,7 @@
 
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -23,6 +24,55 @@
 
 namespace mlir {
 namespace detail {
+namespace pass_options {
+/// Parse a string containing a list of comma-delimited elements, invoking the
+/// given parser for each sub-element and passing them to the provided
+/// element-append functor.
+LogicalResult
+parseCommaSeparatedList(llvm::cl::Option &opt, StringRef argName,
+                        StringRef optionStr,
+                        function_ref<LogicalResult(StringRef)> elementParseFn);
+template <typename ElementParser, typename ElementAppendFn>
+LogicalResult parseCommaSeparatedList(llvm::cl::Option &opt, StringRef argName,
+                                      StringRef optionStr,
+                                      ElementParser &elementParser,
+                                      ElementAppendFn &&appendFn) {
+  return parseCommaSeparatedList(
+      opt, argName, optionStr, [&](StringRef valueStr) {
+        typename ElementParser::parser_data_type value = {};
+        if (elementParser.parse(opt, argName, valueStr, value))
+          return failure();
+        appendFn(value);
+        return success();
+      });
+}
+
+/// Trait used to detect if a type has a operator<< method.
+template <typename T>
+using has_stream_operator_trait =
+    decltype(std::declval<raw_ostream &>() << std::declval<T>());
+template <typename T>
+using has_stream_operator = llvm::is_detected<has_stream_operator_trait, T>;
+
+/// Utility methods for printing option values.
+template <typename ParserT>
+static void printOptionValue(raw_ostream &os, const bool &value) {
+  os << (value ? StringRef("true") : StringRef("false"));
+}
+template <typename ParserT, typename DataT>
+static std::enable_if_t<has_stream_operator<DataT>::value>
+printOptionValue(raw_ostream &os, const DataT &value) {
+  os << value;
+}
+template <typename ParserT, typename DataT>
+static std::enable_if_t<!has_stream_operator<DataT>::value>
+printOptionValue(raw_ostream &os, const DataT &value) {
+  // If the value can't be streamed, fallback to checking for a print in the
+  // parser.
+  ParserT::print(os, value);
+}
+} // namespace pass_options
+
 /// Base container class and manager for all pass options.
 class PassOptions : protected llvm::cl::SubCommand {
 private:
@@ -85,11 +135,7 @@ private:
   }
   template <typename DataT, typename ParserT>
   static void printValue(raw_ostream &os, ParserT &parser, const DataT &value) {
-    os << value;
-  }
-  template <typename ParserT>
-  static void printValue(raw_ostream &os, ParserT &parser, const bool &value) {
-    os << (value ? StringRef("true") : StringRef("false"));
+    detail::pass_options::printOptionValue<ParserT>(os, value);
   }
 
 public:
@@ -149,22 +195,27 @@ public:
   };
 
   /// This class represents a specific pass option that contains a list of
-  /// values of the provided data type.
+  /// values of the provided data type. The elements within the textual form of
+  /// this option are parsed assuming they are comma-separated. Delimited
+  /// sub-ranges within individual elements of the list may contain commas that
+  /// are not treated as separators for the top-level list.
   template <typename DataType, typename OptionParser = OptionParser<DataType>>
   class ListOption
       : public llvm::cl::list<DataType, /*StorageClass=*/bool, OptionParser>,
         public OptionBase {
   public:
     template <typename... Args>
-    ListOption(PassOptions &parent, StringRef arg, Args &&... args)
+    ListOption(PassOptions &parent, StringRef arg, Args &&...args)
         : llvm::cl::list<DataType, /*StorageClass=*/bool, OptionParser>(
-              arg, llvm::cl::sub(parent), std::forward<Args>(args)...) {
+              arg, llvm::cl::sub(parent), std::forward<Args>(args)...),
+          elementParser(*this) {
       assert(!this->isPositional() && !this->isSink() &&
              "sink and positional options are not supported");
+      assert(!(this->getMiscFlags() & llvm::cl::MiscFlags::CommaSeparated) &&
+             "ListOption is implicitly comma separated, specifying "
+             "CommaSeparated is extraneous");
       parent.options.push_back(this);
-
-      // Set a callback to track if this option has a value.
-      this->setCallback([this](const auto &) { this->optHasValue = true; });
+      elementParser.initialize();
     }
     ~ListOption() override = default;
     ListOption<DataType, OptionParser> &
@@ -172,6 +223,14 @@ public:
       *this = ArrayRef<DataType>(other);
       this->optHasValue = other.optHasValue;
       return *this;
+    }
+
+    bool handleOccurrence(unsigned pos, StringRef argName,
+                          StringRef arg) override {
+      this->optHasValue = true;
+      return failed(detail::pass_options::parseCommaSeparatedList(
+          *this, argName, arg, elementParser,
+          [&](const DataType &value) { this->addValue(value); }));
     }
 
     /// Allow assigning from an ArrayRef.
@@ -211,6 +270,9 @@ public:
     void copyValueFrom(const OptionBase &other) final {
       *this = static_cast<const ListOption<DataType, OptionParser> &>(other);
     }
+
+    /// The parser to use for parsing the list elements.
+    OptionParser elementParser;
   };
 
   PassOptions() = default;
@@ -255,9 +317,7 @@ private:
 /// Usage:
 ///
 /// struct MyPipelineOptions : PassPipelineOptions<MyPassOptions> {
-///   ListOption<int> someListFlag{
-///        *this, "flag-name", llvm::cl::MiscFlags::CommaSeparated,
-///        llvm::cl::desc("...")};
+///   ListOption<int> someListFlag{*this, "flag-name", llvm::cl::desc("...")};
 /// };
 template <typename T> class PassPipelineOptions : public detail::PassOptions {
 public:
@@ -277,6 +337,78 @@ struct EmptyPipelineOptions : public PassPipelineOptions<EmptyPipelineOptions> {
 };
 
 } // namespace mlir
+
+//===----------------------------------------------------------------------===//
+// MLIR Options
+//===----------------------------------------------------------------------===//
+
+namespace llvm {
+namespace cl {
+//===----------------------------------------------------------------------===//
+// std::vector+SmallVector
+
+namespace detail {
+template <typename VectorT, typename ElementT>
+class VectorParserBase : public basic_parser_impl {
+public:
+  VectorParserBase(Option &opt) : basic_parser_impl(opt), elementParser(opt) {}
+
+  using parser_data_type = VectorT;
+
+  bool parse(Option &opt, StringRef argName, StringRef arg,
+             parser_data_type &vector) {
+    if (!arg.consume_front("[") || !arg.consume_back("]")) {
+      return opt.error("expected vector option to be wrapped with '[]'",
+                       argName);
+    }
+
+    return failed(mlir::detail::pass_options::parseCommaSeparatedList(
+        opt, argName, arg, elementParser,
+        [&](const ElementT &value) { vector.push_back(value); }));
+  }
+
+  static void print(raw_ostream &os, const VectorT &vector) {
+    llvm::interleave(
+        vector, os,
+        [&](const ElementT &value) {
+          mlir::detail::pass_options::printOptionValue<
+              llvm::cl::parser<ElementT>>(os, value);
+        },
+        ",");
+  }
+
+  void printOptionInfo(const Option &opt, size_t globalWidth) const {
+    // Add the `vector<>` qualifier to the option info.
+    outs() << "  --" << opt.ArgStr;
+    outs() << "=<vector<" << elementParser.getValueName() << ">>";
+    Option::printHelpStr(opt.HelpStr, globalWidth, getOptionWidth(opt));
+  }
+
+  size_t getOptionWidth(const Option &opt) const {
+    // Add the `vector<>` qualifier to the option width.
+    StringRef vectorExt("vector<>");
+    return elementParser.getOptionWidth(opt) + vectorExt.size();
+  }
+
+private:
+  llvm::cl::parser<ElementT> elementParser;
+};
+} // namespace detail
+
+template <typename T>
+class parser<std::vector<T>>
+    : public detail::VectorParserBase<std::vector<T>, T> {
+public:
+  parser(Option &opt) : detail::VectorParserBase<std::vector<T>, T>(opt) {}
+};
+template <typename T, unsigned N>
+class parser<SmallVector<T, N>>
+    : public detail::VectorParserBase<SmallVector<T, N>, T> {
+public:
+  parser(Option &opt) : detail::VectorParserBase<SmallVector<T, N>, T>(opt) {}
+};
+} // end namespace cl
+} // end namespace llvm
 
 #endif // MLIR_PASS_PASSOPTIONS_H_
 
