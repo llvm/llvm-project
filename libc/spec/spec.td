@@ -84,6 +84,7 @@ def ThrdTType : NamedType<"thrd_t">;
 def ThrdTTypePtr : PtrType<ThrdTType>;
 
 def IntPtr : PtrType<IntType>;
+def RestrictedIntPtr : RestrictedPtrType<IntType>;
 def FloatPtr : PtrType<FloatType>;
 def DoublePtr : PtrType<DoubleType>;
 

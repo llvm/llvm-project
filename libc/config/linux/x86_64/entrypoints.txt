@@ -222,6 +222,16 @@ if(LLVM_LIBC_FULL_BUILD)
     # assert.h entrypoints
     # libc.src.assert.__assert_fail
 
+    # pthread.h entrypoints
+    libc.src.pthread.pthread_mutexattr_destroy
+    libc.src.pthread.pthread_mutexattr_init
+    libc.src.pthread.pthread_mutexattr_getpshared
+    libc.src.pthread.pthread_mutexattr_getrobust
+    libc.src.pthread.pthread_mutexattr_gettype
+    libc.src.pthread.pthread_mutexattr_setpshared
+    libc.src.pthread.pthread_mutexattr_setrobust
+    libc.src.pthread.pthread_mutexattr_settype
+
     # stdlib.h entrypoints
     libc.src.stdlib._Exit
     # libc.src.stdlib.abort

@@ -155,6 +155,15 @@ add_gen_header(
     .llvm-libc-types.ssize_t
 )
 
+add_gen_header(
+  pthread
+  DEF_FILE pthread.h.def
+  GEN_HDR pthread.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.pthread_mutexattr_t
+)
+
 # TODO: Not all platforms will have a include/sys directory. Add the sys
 # directory and the targets for sys/*.h files conditional to the OS requiring
 # them.
