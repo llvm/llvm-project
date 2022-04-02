@@ -524,14 +524,18 @@
 // CHECK-LSE: __ARM_FEATURE_ATOMICS 1
 
 // ================== Check Armv8.8-A/Armv9.3-A memcpy and memset acceleration instructions (MOPS)
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.7-a      -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOMOPS %s
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.7-a+mops -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-MOPS   %s
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.8-a      -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-MOPS   %s
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.8-a+mops -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-MOPS   %s
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv9.2-a      -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOMOPS %s
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv9.2-a+mops -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-MOPS   %s
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv9.3-a      -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-MOPS   %s
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv9.3-a+mops -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-MOPS   %s
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.7-a             -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOMOPS %s
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.7-a+mops        -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-MOPS   %s
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.8-a             -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-MOPS   %s
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.8-a+nomops      -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOMOPS %s
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.8-a+nomops+mops -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-MOPS   %s
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.8-a+mops        -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-MOPS   %s
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.8-a+mops+nomops -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOMOPS %s
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv9.2-a             -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOMOPS %s
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv9.2-a+mops        -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-MOPS   %s
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv9.3-a             -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-MOPS   %s
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv9.3-a+nomops      -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOMOPS %s
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv9.3-a+mops        -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-MOPS   %s
 // CHECK-MOPS: __ARM_FEATURE_MOPS 1
 // CHECK-NOMOPS-NOT: __ARM_FEATURE_MOPS 1
 
