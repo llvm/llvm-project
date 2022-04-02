@@ -9,125 +9,85 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
-// <algorithm>
-//
-// namespace ranges {
-//   template<class InputIterator, class OutputIterator>
-//     struct in_out_result;
-// }
+// template <class I1, class O1>
+// struct in_out_result;
 
 #include <algorithm>
 #include <cassert>
 #include <type_traits>
 
-struct A {
-  A(int&);
-};
-static_assert(!std::is_constructible_v<std::ranges::in_out_result<A, A>, std::ranges::in_out_result<int, int>&>);
+#include "MoveOnly.h"
 
-static_assert(std::is_convertible_v<std::ranges::in_out_result<int, int>&,
-    std::ranges::in_out_result<long, long>>);
-static_assert(!std::is_nothrow_convertible_v<std::ranges::in_out_result<int, int>&,
-    std::ranges::in_out_result<long, long>>);
-static_assert(std::is_convertible_v<const std::ranges::in_out_result<int, int>&,
-    std::ranges::in_out_result<long, long>>);
-static_assert(!std::is_nothrow_convertible_v<const std::ranges::in_out_result<int, int>&,
-    std::ranges::in_out_result<long, long>>);
-static_assert(std::is_convertible_v<std::ranges::in_out_result<int, int>&&,
-    std::ranges::in_out_result<long, long>>);
-static_assert(!std::is_nothrow_convertible_v<std::ranges::in_out_result<int, int>&&,
-    std::ranges::in_out_result<long, long>>);
-static_assert(std::is_convertible_v<const std::ranges::in_out_result<int, int>&&,
-    std::ranges::in_out_result<long, long>>);
-static_assert(!std::is_nothrow_convertible_v<const std::ranges::in_out_result<int, int>&&,
-    std::ranges::in_out_result<long, long>>);
+struct A {
+  explicit A(int);
+};
+// no implicit conversion
+static_assert(!std::is_constructible_v<std::ranges::in_out_result<A, A>, std::ranges::in_out_result<int, int>>);
+
+struct B {
+  B(int);
+};
+// implicit conversion
+static_assert(std::is_constructible_v<std::ranges::in_out_result<B, B>, std::ranges::in_out_result<int, int>>);
+static_assert(std::is_constructible_v<std::ranges::in_out_result<B, B>, std::ranges::in_out_result<int, int>&>);
+static_assert(std::is_constructible_v<std::ranges::in_out_result<B, B>, const std::ranges::in_out_result<int, int>>);
+static_assert(std::is_constructible_v<std::ranges::in_out_result<B, B>, const std::ranges::in_out_result<int, int>&>);
+
+struct C {
+  C(int&);
+};
+static_assert(!std::is_constructible_v<std::ranges::in_out_result<C, C>, std::ranges::in_out_result<int, int>&>);
+
+// has to be convertible via const&
+static_assert(std::is_convertible_v<std::ranges::in_out_result<int, int>&, std::ranges::in_out_result<long, long>>);
+static_assert(std::is_convertible_v<const std::ranges::in_out_result<int, int>&, std::ranges::in_out_result<long, long>>);
+static_assert(std::is_convertible_v<std::ranges::in_out_result<int, int>&&, std::ranges::in_out_result<long, long>>);
+static_assert(std::is_convertible_v<const std::ranges::in_out_result<int, int>&&, std::ranges::in_out_result<long, long>>);
+
+// should be move constructible
+static_assert(std::is_move_constructible_v<std::ranges::in_out_result<MoveOnly, int>>);
+static_assert(std::is_move_constructible_v<std::ranges::in_out_result<int, MoveOnly>>);
+
+struct NotConvertible {};
+// conversions should not work if there is no conversion
+static_assert(!std::is_convertible_v<std::ranges::in_out_result<NotConvertible, int>, std::ranges::in_out_result<int, NotConvertible>>);
+static_assert(!std::is_convertible_v<std::ranges::in_out_result<int, NotConvertible>, std::ranges::in_out_result<NotConvertible, int>>);
+
+template <class T>
+struct ConvertibleFrom {
+  constexpr ConvertibleFrom(T c) : content{c} {}
+  T content;
+};
+
+constexpr bool test() {
+  {
+    std::ranges::in_out_result<double, int> res{10, 1};
+    assert(res.in == 10);
+    assert(res.out == 1);
+    std::ranges::in_out_result<ConvertibleFrom<double>, ConvertibleFrom<int>> res2 = res;
+    assert(res2.in.content == 10);
+    assert(res2.out.content == 1);
+  }
+  {
+    std::ranges::in_out_result<MoveOnly, int> res{MoveOnly{}, 10};
+    assert(res.in.get() == 1);
+    assert(res.out == 10);
+    auto res2 = std::move(res);
+    assert(res.in.get() == 0);
+    assert(res.out == 10);
+    assert(res2.in.get() == 1);
+    assert(res2.out == 10);
+  }
+  {
+    auto [min, max] = std::ranges::in_out_result<int, int>{1, 2};
+    assert(min == 1);
+    assert(max == 2);
+  }
+
+  return true;
+}
 
 int main(int, char**) {
-  // Conversion, fundamental types.
-  {
-    std::ranges::in_out_result<int, bool> x = {2, false};
-    // FIXME(varconst): try a narrowing conversion.
-    std::ranges::in_out_result<long, char> y = x;
-    assert(y.in == 2);
-    assert(y.out == '\0');
-  }
-
-  // Conversion, user-defined types.
-  {
-    struct From1 {
-      int value = 0;
-      From1(int v) : value(v) {}
-    };
-
-    struct To1 {
-      int value = 0;
-      To1(int v) : value(v) {}
-
-      To1(const From1& f) : value(f.value) {};
-    };
-
-    struct To2 {
-      int value = 0;
-      To2(int v) : value(v) {}
-    };
-    struct From2 {
-      int value = 0;
-      From2(int v) : value(v) {}
-
-      operator To2() const { return To2(value); }
-    };
-
-    std::ranges::in_out_result<From1, From2> x{42, 99};
-    std::ranges::in_out_result<To1, To2> y = x;
-    assert(y.in.value == 42);
-    assert(y.out.value == 99);
-  }
-
-  // Copy-only type.
-  {
-    struct CopyOnly {
-      int value = 0;
-      CopyOnly() = default;
-      CopyOnly(int v) : value(v) {}
-
-      CopyOnly(const CopyOnly&) = default;
-      CopyOnly(CopyOnly&&) = delete;
-    };
-
-    std::ranges::in_out_result<CopyOnly, CopyOnly> x;
-    x.in.value = 42;
-    x.out.value = 99;
-
-    auto y = x;
-    assert(y.in.value == 42);
-    assert(y.out.value == 99);
-  }
-
-  // Move-only type.
-  {
-    struct MoveOnly {
-      int value = 0;
-      MoveOnly(int v) : value(v) {}
-
-      MoveOnly(MoveOnly&&) = default;
-      MoveOnly(const MoveOnly&) = delete;
-    };
-
-    std::ranges::in_out_result<MoveOnly, MoveOnly> x{42, 99};
-    auto y = std::move(x);
-    assert(y.in.value == 42);
-    assert(y.out.value == 99);
-  }
-
-  // Unsuccessful conversion.
-  {
-    struct Foo1 {};
-    struct Foo2 {};
-    struct Bar1 {};
-    struct Bar2 {};
-    static_assert(
-        !std::is_convertible_v<std::ranges::in_out_result<Foo1, Foo2>, std::ranges::in_out_result<Bar1, Bar2>>);
-  }
-
-  return 0;
+  test();
+  static_assert(test());
 }

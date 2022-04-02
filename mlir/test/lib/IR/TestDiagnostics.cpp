@@ -54,7 +54,7 @@ struct TestDiagnosticFilterPass
   }
 
   ListOption<std::string> filters{
-      *this, "filters", llvm::cl::MiscFlags::CommaSeparated,
+      *this, "filters",
       llvm::cl::desc("Specifies the diagnostic file name filters.")};
 };
 

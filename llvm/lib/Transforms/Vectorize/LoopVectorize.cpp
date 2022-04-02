@@ -8826,6 +8826,8 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
     VPBB = cast<VPBasicBlock>(VPBB->getSingleSuccessor());
   }
 
+  HeaderVPBB->setName("vector.body");
+
   // Fold the last, empty block into its predecessor.
   VPBB = VPBlockUtils::tryToMergeBlockIntoPredecessor(VPBB);
   assert(VPBB && "expected to fold last (empty) block");
@@ -10546,6 +10548,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                                                  Checks);
 
         VPlan &BestEpiPlan = LVP.getBestPlanFor(EPI.EpilogueVF);
+        BestEpiPlan.getVectorLoopRegion()->getEntryBasicBlock()->setName(
+            "vec.epilog.vector.body");
 
         // Ensure that the start values for any VPReductionPHIRecipes are
         // updated before vectorising the epilogue loop.

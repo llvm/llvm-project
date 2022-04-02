@@ -41,7 +41,7 @@ struct in_in_out_result {
     requires convertible_to<_I1, _II1> && convertible_to<_I2, _II2> && convertible_to<_O1, _OO1>
   _LIBCPP_HIDE_FROM_ABI constexpr
   operator in_in_out_result<_II1, _II2, _OO1>() && {
-    return {_VSTD::move(in1), _VSTD::move(in2), _VSTD::move(out)};
+    return {std::move(in1), std::move(in2), std::move(out)};
   }
 };
 

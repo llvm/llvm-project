@@ -816,6 +816,7 @@ TEST_F(QualifierFixerTest, NoOpQualifierReplacements) {
   EXPECT_EQ(ReplacementCount, 0);
   verifyFormat("static const uint32 foo[] = {0, 31};", Style);
   verifyFormat("#define MACRO static const", Style);
+  verifyFormat("using sc = static const", Style);
   EXPECT_EQ(ReplacementCount, 0);
 }
 
