@@ -2250,18 +2250,30 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
                  target_triple.str().c_str());
       computed_triple = target_triple;
     } else {
+      // Underspecified means that one or more of vendor, os, or os
+      // version (Darwin only) is missing.
       LOG_PRINTF(GetLog(LLDBLog::Types), "Underspecified target triple %s.",
                  target_triple.str().c_str());
       PlatformSP platform_sp(target.GetPlatform());
-      if (platform_sp && !target_triple.hasEnvironment()) {
+      // Try to fill in the platform OS version. Don't do this when an
+      // environment is present, since there might be some ambiguity
+      // about the plaform (e.g., ios-macabi runs on the macOS, but
+      // uses iOS version numbers).
+      if (platform_sp &&
+          target_triple.getEnvironment() != llvm::Triple::UnknownEnvironment) {
         llvm::VersionTuple version =
             platform_sp->GetOSVersion(target.GetProcessSP().get());
-        std::string buffer;
-        llvm::raw_string_ostream(buffer)
-            << target_triple.getArchName() << '-'
-            << target_triple.getVendorName() << '-'
-            << llvm::Triple::getOSTypeName(target_triple.getOS())
-            << version.getAsString();
+        llvm::SmallString<32> buffer;
+        {
+          llvm::raw_svector_ostream os(buffer);
+          os << target_triple.getArchName() << '-';
+          os << target_triple.getVendorName() << '-';
+          os << llvm::Triple::getOSTypeName(target_triple.getOS());
+          os << version.getAsString();
+          StringRef env = target_triple.getEnvironmentName();
+          if (!env.empty())
+            os << '-' << env;
+        }
         computed_triple = llvm::Triple(buffer);
       } else {
         computed_triple = get_executable_triple();
