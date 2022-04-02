@@ -1372,3 +1372,16 @@ func @transpose_scalar_broadcast2(%value: f32) -> vector<1x8xf32> {
   %t = vector.transpose %bcast, [1, 0] : vector<8x1xf32> to vector<1x8xf32>
   return %t : vector<1x8xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @insert_element_fold
+//       CHECK:   %[[V:.+]] = arith.constant dense<[0, 1, 7, 3]> : vector<4xi32>
+//       CHECK:   return %[[V]]
+func @insert_element_fold() -> vector<4xi32> {
+  %v = arith.constant dense<[0, 1, 2, 3]> : vector<4xi32>
+  %s = arith.constant 7 : i32
+  %i = arith.constant 2 : i32
+  %1 = vector.insertelement %s, %v[%i : i32] : vector<4xi32>
+  return %1 : vector<4xi32>
+}
