@@ -66,7 +66,7 @@ public:
   }
 
   /// Constructs a relation with the specified number of dimensions and symbols.
-  IntegerRelation(const PresburgerSpace &space)
+  explicit IntegerRelation(const PresburgerSpace &space)
       : IntegerRelation(/*numReservedInequalities=*/0,
                         /*numReservedEqualities=*/0,
                         /*numReservedCols=*/space.getNumIds() + 1, space) {}
@@ -567,7 +567,7 @@ public:
 
   /// Constructs a relation with the specified number of dimensions and
   /// symbols.
-  IntegerPolyhedron(const PresburgerSpace &space)
+  explicit IntegerPolyhedron(const PresburgerSpace &space)
       : IntegerPolyhedron(/*numReservedInequalities=*/0,
                           /*numReservedEqualities=*/0,
                           /*numReservedCols=*/space.getNumIds() + 1, space) {}
