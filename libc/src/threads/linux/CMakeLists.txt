@@ -35,12 +35,11 @@ add_entrypoint_object(
   DEPENDS
     .threads_utils
     libc.include.errno
+    libc.include.sys_mman
     libc.include.sys_syscall
     libc.include.threads
     libc.src.__support.common
     libc.src.__support.OSUtil.osutil
-    libc.src.errno.errno
-    libc.src.sys.mman.mmap
   COMPILE_OPTIONS
     -O3
     -fno-omit-frame-pointer # This allows us to sniff out the thread args from
@@ -60,7 +59,6 @@ add_entrypoint_object(
     libc.src.__support.CPP.atomic
     libc.src.__support.common
     libc.src.__support.OSUtil.osutil
-    libc.src.sys.mman.munmap
 )
 
 add_entrypoint_object(
