@@ -99,6 +99,12 @@ public:
   /// Needed for translating LTO options.
   const char *getDefaultLinker() const override { return "ld.lld"; }
 
+  /// Should skip Sanitize options
+  bool shouldSkipSanitizeOption(const ToolChain &TC,
+                                const llvm::opt::ArgList &DriverArgs,
+                                StringRef TargetID,
+                                const llvm::opt::Arg *A) const;
+
   /// Should skip argument.
   bool shouldSkipArgument(const llvm::opt::Arg *Arg) const;
 

@@ -16,6 +16,7 @@
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
+#include "clang/Driver/SanitizerArgs.h"
 #include "clang/Driver/Tool.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/FileSystem.h"
@@ -304,7 +305,8 @@ llvm::opt::DerivedArgList *AMDGPUOpenMPToolChain::TranslateArgs(
 
   if (DeviceOffloadKind == Action::OFK_OpenMP) {
     for (Arg *A : Args)
-      if (!llvm::is_contained(*DAL, A))
+      if (!shouldSkipSanitizeOption(*this, Args, BoundArch, A) &&
+          !llvm::is_contained(*DAL, A))
         DAL->append(A);
 
     std::string Arch = DAL->getLastArgValue(options::OPT_march_EQ).str();
