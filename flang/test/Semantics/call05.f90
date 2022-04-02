@@ -118,3 +118,79 @@ module m
   end subroutine
 
 end module
+
+module m2
+
+  character(len=10), allocatable :: t1, t2, t3, t4
+  character(len=:), allocatable :: t5, t6, t7, t8(:)
+
+  character(len=10), pointer :: p1
+  character(len=:), pointer :: p2
+
+  integer, allocatable :: x(:)
+
+ contains
+
+  subroutine sma(a)
+    character(len=:), allocatable, intent(in) :: a
+  end
+
+  subroutine sma2(a)
+    character(len=10), allocatable, intent(in) :: a
+  end
+
+  subroutine smp(p)
+    character(len=:), pointer, intent(in) :: p
+  end
+
+  subroutine smp2(p)
+    character(len=10), pointer, intent(in) :: p
+  end
+
+  subroutine smb(b)
+    integer, allocatable, intent(in) :: b(:)
+  end
+
+  subroutine test()
+
+    call sma2(t1) ! ok
+
+    call smp2(p1) ! ok
+
+    !ERROR: ALLOCATABLE dummy argument 'a=' must be associated with an ALLOCATABLE actual argument
+    call sma(t2(:))
+
+    !ERROR: ALLOCATABLE dummy argument 'a=' must be associated with an ALLOCATABLE actual argument
+    call sma(t3(1))
+
+    !ERROR: ALLOCATABLE dummy argument 'a=' must be associated with an ALLOCATABLE actual argument
+    call sma(t4(1:2))
+
+    call sma(t5) ! ok
+
+    call smp(p2) ! ok
+
+    !ERROR: ALLOCATABLE dummy argument 'a=' must be associated with an ALLOCATABLE actual argument
+    call sma(t5(:))
+
+    !ERROR: ALLOCATABLE dummy argument 'a=' must be associated with an ALLOCATABLE actual argument
+    call sma(t6(1))
+
+    !ERROR: ALLOCATABLE dummy argument 'a=' must be associated with an ALLOCATABLE actual argument
+    call sma(t7(1:2))
+
+    !ERROR: ALLOCATABLE dummy argument 'a=' must be associated with an ALLOCATABLE actual argument
+    call sma(t8(1))
+
+    !ERROR: ALLOCATABLE dummy argument 'b=' must be associated with an ALLOCATABLE actual argument
+    call smb(x(:))
+
+    !ERROR: ALLOCATABLE dummy argument 'b=' must be associated with an ALLOCATABLE actual argument
+    call smb(x(2))
+
+    !ERROR: ALLOCATABLE dummy argument 'b=' must be associated with an ALLOCATABLE actual argument
+    call smb(x(1:2))
+
+  end subroutine
+
+end module

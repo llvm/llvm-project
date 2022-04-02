@@ -10412,6 +10412,11 @@ bool llvm::isOneConstant(SDValue V) {
   return Const != nullptr && Const->isOne();
 }
 
+bool llvm::isMinSignedConstant(SDValue V) {
+  ConstantSDNode *Const = dyn_cast<ConstantSDNode>(V);
+  return Const != nullptr && Const->isMinSignedValue();
+}
+
 SDValue llvm::peekThroughBitcasts(SDValue V) {
   while (V.getOpcode() == ISD::BITCAST)
     V = V.getOperand(0);

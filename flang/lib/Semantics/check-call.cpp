@@ -401,8 +401,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   // 15.5.2.6 -- dummy is ALLOCATABLE
   bool dummyIsAllocatable{
       dummy.attrs.test(characteristics::DummyDataObject::Attr::Allocatable)};
-  bool actualIsAllocatable{
-      actualLastSymbol && IsAllocatable(*actualLastSymbol)};
+  bool actualIsAllocatable{evaluate::IsAllocatableDesignator(actual)};
   if (dummyIsAllocatable) {
     if (!actualIsAllocatable) {
       messages.Say(

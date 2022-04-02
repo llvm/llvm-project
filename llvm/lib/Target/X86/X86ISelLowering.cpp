@@ -17277,8 +17277,13 @@ static SDValue lowerShuffleAsRepeatedMaskAndLanePermute(
     return SDValue();
 
   // On AVX2 targets we can permute 256-bit vectors as 64-bit sub-lanes
-  // (with PERMQ/PERMPD), otherwise we can only permute whole 128-bit lanes.
-  int SubLaneScale = Subtarget.hasAVX2() && VT.is256BitVector() ? 2 : 1;
+  // (with PERMQ/PERMPD). On AVX512BW targets, permuting 64-bit sub-lanes, even
+  // with a variable shuffle, is worth it for 64xi8 vectors. Otherwise we can
+  // only permute whole 128-bit lanes.
+  int SubLaneScale = 1;
+  if ((Subtarget.hasAVX2() && VT.is256BitVector()) ||
+      (Subtarget.hasBWI() && VT == MVT::v64i8))
+    SubLaneScale = 2;
   int NumSubLanes = NumLanes * SubLaneScale;
   int NumSubLaneElts = NumLaneElts / SubLaneScale;
 
@@ -47323,6 +47328,19 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
 
   if (SDValue R = combineAndLoadToBZHI(N, DAG, Subtarget))
     return R;
+
+  // Fold AND(SRL(X,Y),1) -> SETCC(BT(X,Y), COND_B) iff Y is not a constant
+  // avoids slow variable shift (moving shift amount to ECX etc.)
+  if (isOneConstant(N1) && N0->hasOneUse()) {
+    SDValue Src = N0;
+    while ((Src.getOpcode() == ISD::ZERO_EXTEND ||
+            Src.getOpcode() == ISD::TRUNCATE) &&
+           Src.getOperand(0)->hasOneUse())
+      Src = Src.getOperand(0);
+    if (Src.getOpcode() == ISD::SRL && !isa<ConstantSDNode>(Src.getOperand(1)))
+      if (SDValue BT = getBT(Src.getOperand(0), Src.getOperand(1), dl, DAG))
+        return DAG.getZExtOrTrunc(getSETCC(X86::COND_B, BT, dl, DAG), dl, VT);
+  }
 
   if (VT.isVector() && (VT.getScalarSizeInBits() % 8) == 0) {
     // Attempt to recursively combine a bitmask AND with shuffles.
