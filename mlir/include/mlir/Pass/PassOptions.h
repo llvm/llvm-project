@@ -23,6 +23,8 @@
 #include <memory>
 
 namespace mlir {
+class OpPassManager;
+
 namespace detail {
 namespace pass_options {
 /// Parse a string containing a list of comma-delimited elements, invoking the
@@ -158,7 +160,7 @@ public:
         public OptionBase {
   public:
     template <typename... Args>
-    Option(PassOptions &parent, StringRef arg, Args &&... args)
+    Option(PassOptions &parent, StringRef arg, Args &&...args)
         : llvm::cl::opt<DataType, /*ExternalStorage=*/false, OptionParser>(
               arg, llvm::cl::sub(parent), std::forward<Args>(args)...) {
       assert(!this->isPositional() && !this->isSink() &&
@@ -319,7 +321,8 @@ private:
 /// struct MyPipelineOptions : PassPipelineOptions<MyPassOptions> {
 ///   ListOption<int> someListFlag{*this, "flag-name", llvm::cl::desc("...")};
 /// };
-template <typename T> class PassPipelineOptions : public detail::PassOptions {
+template <typename T>
+class PassPipelineOptions : public detail::PassOptions {
 public:
   /// Factory that parses the provided options and returns a unique_ptr to the
   /// struct.
@@ -335,7 +338,6 @@ public:
 /// any options.
 struct EmptyPipelineOptions : public PassPipelineOptions<EmptyPipelineOptions> {
 };
-
 } // namespace mlir
 
 //===----------------------------------------------------------------------===//
@@ -407,8 +409,92 @@ class parser<SmallVector<T, N>>
 public:
   parser(Option &opt) : detail::VectorParserBase<SmallVector<T, N>, T>(opt) {}
 };
-} // end namespace cl
-} // end namespace llvm
+
+//===----------------------------------------------------------------------===//
+// OpPassManager: OptionValue
+
+template <>
+struct OptionValue<mlir::OpPassManager> final : GenericOptionValue {
+  using WrapperType = mlir::OpPassManager;
+
+  OptionValue();
+  OptionValue(const mlir::OpPassManager &value);
+  OptionValue<mlir::OpPassManager> &operator=(const mlir::OpPassManager &rhs);
+  ~OptionValue();
+
+  /// Returns if the current option has a value.
+  bool hasValue() const { return value.get(); }
+
+  /// Returns the current value of the option.
+  mlir::OpPassManager &getValue() const {
+    assert(hasValue() && "invalid option value");
+    return *value;
+  }
+
+  /// Set the value of the option.
+  void setValue(const mlir::OpPassManager &newValue);
+  void setValue(StringRef pipelineStr);
+
+  /// Compare the option with the provided value.
+  bool compare(const mlir::OpPassManager &rhs) const;
+  bool compare(const GenericOptionValue &rhs) const override {
+    const auto &rhsOV =
+        static_cast<const OptionValue<mlir::OpPassManager> &>(rhs);
+    if (!rhsOV.hasValue())
+      return false;
+    return compare(rhsOV.getValue());
+  }
+
+private:
+  void anchor() override;
+
+  /// The underlying pass manager. We use a unique_ptr to avoid the need for the
+  /// full type definition.
+  std::unique_ptr<mlir::OpPassManager> value;
+};
+
+//===----------------------------------------------------------------------===//
+// OpPassManager: Parser
+
+extern template class basic_parser<mlir::OpPassManager>;
+
+template <>
+class parser<mlir::OpPassManager> : public basic_parser<mlir::OpPassManager> {
+public:
+  /// A utility struct used when parsing a pass manager that prevents the need
+  /// for a default constructor on OpPassManager.
+  struct ParsedPassManager {
+    ParsedPassManager();
+    ParsedPassManager(ParsedPassManager &&);
+    ~ParsedPassManager();
+    operator const mlir::OpPassManager &() const {
+      assert(value && "parsed value was invalid");
+      return *value;
+    }
+
+    std::unique_ptr<mlir::OpPassManager> value;
+  };
+  using parser_data_type = ParsedPassManager;
+  using OptVal = OptionValue<mlir::OpPassManager>;
+
+  parser(Option &opt) : basic_parser(opt) {}
+
+  bool parse(Option &, StringRef, StringRef arg, ParsedPassManager &value);
+
+  /// Print an instance of the underling option value to the given stream.
+  static void print(raw_ostream &os, const mlir::OpPassManager &value);
+
+  // Overload in subclass to provide a better default value.
+  StringRef getValueName() const override { return "pass-manager"; }
+
+  void printOptionDiff(const Option &opt, mlir::OpPassManager &pm,
+                       const OptVal &defaultValue, size_t globalWidth) const;
+
+  // An out-of-line virtual method to provide a 'home' for this class.
+  void anchor() override;
+};
+
+} // namespace cl
+} // namespace llvm
 
 #endif // MLIR_PASS_PASSOPTIONS_H_
-

@@ -83,7 +83,7 @@ def Inliner : Pass<"inline"> {
   let options = [
     Option<"defaultPipelineStr", "default-pipeline", "std::string",
            /*default=*/"", "The default optimizer pipeline used for callables">,
-    ListOption<"opPipelineStrs", "op-pipelines", "std::string",
+    ListOption<"opPipelineList", "op-pipelines", "OpPassManager",
                "Callable operation specific optimizer pipelines (in the form "
                "of `dialect.op(pipeline)`)">,
     Option<"maxInliningIterations", "max-iterations", "unsigned",
