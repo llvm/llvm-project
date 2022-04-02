@@ -365,4 +365,14 @@ class LLVM_VectorReductionAcc<string mnem>
   }];
 }
 
+// LLVM vector predication intrinsics.
+class LLVM_VPBinaryBase<string mnem, Type element>
+    : LLVM_OneResultIntrOp<"vp." # mnem, [0], [], [NoSideEffect]>,
+      Arguments<(ins LLVM_VectorOf<element>:$lhs, LLVM_VectorOf<element>:$rhs,
+                     LLVM_VectorOf<I1>:$mask, I32:$evl)>;
+
+class LLVM_VPBinaryI<string mnem> : LLVM_VPBinaryBase<mnem, AnyInteger>;
+
+class LLVM_VPBinaryF<string mnem> : LLVM_VPBinaryBase<mnem, AnyFloat>;
+
 #endif  // LLVMIR_OP_BASE
