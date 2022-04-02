@@ -68,9 +68,6 @@ def err_drv_no_rocm_device_lib : Error<
   "cannot find ROCm device library%select{| for %1|for ABI version %1}0; provide its path via "
   "'--rocm-path' or '--rocm-device-lib-path', or pass '-nogpulib' to build "
   "without ROCm device library">;
-def err_drv_no_asan_rt_lib : Error<
-  "AMDGPU address sanitizer runtime library (asanrtl) is not found. "
-  "Please install ROCm device library which supports address sanitizer">;
 def err_drv_no_hip_runtime : Error<
   "cannot find HIP runtime; provide its path via '--rocm-path', or pass "
   "'-nogpuinc' to build without HIP runtime">;
