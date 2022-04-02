@@ -17,7 +17,7 @@ using namespace mlir;
 using namespace presburger;
 
 PresburgerRelation::PresburgerRelation(const IntegerRelation &disjunct)
-    : PresburgerSpace(disjunct.getCompatibleSpace()) {
+    : PresburgerSpace(disjunct.getSpaceWithoutLocals()) {
   unionInPlace(disjunct);
 }
 
@@ -286,14 +286,14 @@ static PresburgerRelation getSetDifference(IntegerRelation disjunct,
                                            const PresburgerRelation &set) {
   assert(disjunct.isSpaceCompatible(set) && "Spaces should match");
   if (disjunct.isEmptyByGCDTest())
-    return PresburgerRelation::getEmpty(disjunct.getCompatibleSpace());
+    return PresburgerRelation::getEmpty(disjunct.getSpaceWithoutLocals());
 
   // Remove duplicate divs up front here as subtractRecursively does not support
   // this set having duplicate divs.
   disjunct.removeDuplicateDivs();
 
   PresburgerRelation result =
-      PresburgerRelation::getEmpty(disjunct.getCompatibleSpace());
+      PresburgerRelation::getEmpty(disjunct.getSpaceWithoutLocals());
   Simplex simplex(disjunct);
   subtractRecursively(disjunct, simplex, set, 0, result);
   return result;

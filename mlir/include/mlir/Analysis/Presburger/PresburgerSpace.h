@@ -78,8 +78,13 @@ public:
                            numLocals);
   }
 
+  /// Returns the space. This function is primarily intended to be used from
+  /// derived classes.
   PresburgerSpace getSpace() const { return *this; }
-  PresburgerSpace getCompatibleSpace() const {
+
+  /// Returns the space without locals. This function is primarily intended to
+  /// be used from derived classes.
+  PresburgerSpace getSpaceWithoutLocals() const {
     return PresburgerSpace(numDomain, numRange, numSymbols);
   }
 
