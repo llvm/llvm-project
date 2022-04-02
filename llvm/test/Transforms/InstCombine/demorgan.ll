@@ -384,8 +384,8 @@ define i32 @demorganize_constant1(i32 %a) {
 
 define i32 @demorganize_constant2(i32 %a) {
 ; CHECK-LABEL: @demorganize_constant2(
-; CHECK-NEXT:    [[AND:%.*]] = or i32 [[A:%.*]], 15
-; CHECK-NEXT:    [[AND1:%.*]] = xor i32 [[AND]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], -16
+; CHECK-NEXT:    [[AND1:%.*]] = xor i32 [[TMP1]], -16
 ; CHECK-NEXT:    ret i32 [[AND1]]
 ;
   %and = or i32 %a, 15
