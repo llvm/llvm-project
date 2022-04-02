@@ -303,6 +303,8 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
 
   if (LastQual && Qual != LastQual && Qual->is(QualifierType)) {
     rotateTokens(SourceMgr, Fixes, Tok, Qual, /*Left=*/true);
+    if (!Qual->Next)
+      return Tok;
     Tok = Qual->Next;
   } else if (Tok->startsSequence(tok::identifier, QualifierType)) {
     if (Tok->Next->Next && Tok->Next->Next->isOneOf(tok::identifier, tok::star,
