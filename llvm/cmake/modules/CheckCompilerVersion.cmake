@@ -5,11 +5,11 @@
 include(CheckCXXSourceCompiles)
 
 set(GCC_MIN 5.1)
-set(GCC_SOFT_ERROR 5.1)
+set(GCC_SOFT_ERROR 7.1)
 set(CLANG_MIN 3.5)
-set(CLANG_SOFT_ERROR 3.5)
+set(CLANG_SOFT_ERROR 5.0)
 set(APPLECLANG_MIN 6.0)
-set(APPLECLANG_SOFT_ERROR 6.0)
+set(APPLECLANG_SOFT_ERROR 9.3)
 
 # https://en.wikipedia.org/wiki/Microsoft_Visual_C#Internal_version_numbering
 # _MSC_VER == 1920 MSVC++ 14.20 Visual Studio 2019 Version 16.0
@@ -19,7 +19,7 @@ set(MSVC_SOFT_ERROR 19.27)
 
 # Map the above GCC versions to dates: https://gcc.gnu.org/develop.html#timeline
 set(GCC_MIN_DATE 20150422)
-set(GCC_SOFT_ERROR_DATE 20150422)
+set(LIBSTDCXX_SOFT_ERROR 7)
 
 
 if(DEFINED LLVM_COMPILER_CHECKED)
@@ -97,27 +97,21 @@ int main() { ++chk; return 0; }
     if(NOT LLVM_LIBSTDCXX_MIN)
       message(FATAL_ERROR "libstdc++ version must be at least ${GCC_MIN}.")
     endif()
-    # Test for libstdc++ version of at least 5.1 by checking for std::iostream_category().
-    # Note: We should check _GLIBCXX_RELEASE when possible (i.e., for GCC 7.1 and up).
     check_cxx_source_compiles("
 #include <iosfwd>
 #if defined(__GLIBCXX__)
-#if __GLIBCXX__ < ${GCC_SOFT_ERROR_DATE}
+#if !defined(_GLIBCXX_RELEASE) || _GLIBCXX_RELEASE < ${LIBSTDCXX_SOFT_ERROR}
 #error Unsupported libstdc++ version
 #endif
-#endif
-#if defined(__GLIBCXX__)
-#include <ios>
-void foo(void) { (void) std::iostream_category(); }
 #endif
 int main() { return 0; }
 "
       LLVM_LIBSTDCXX_SOFT_ERROR)
     if(NOT LLVM_LIBSTDCXX_SOFT_ERROR)
       if(LLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN)
-        message(WARNING "libstdc++ version should be at least ${GCC_SOFT_ERROR} because LLVM will soon use new C++ features which your toolchain version doesn't support. Ignoring because you've set LLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN, but very soon your toolchain won't be supported.")
+        message(WARNING "libstdc++ version should be at least ${LIBSTDCXX_SOFT_ERROR} because LLVM will soon use new C++ features which your toolchain version doesn't support. Ignoring because you've set LLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN, but very soon your toolchain won't be supported.")
       else()
-        message(FATAL_ERROR "libstdc++ version should be at least ${GCC_SOFT_ERROR} because LLVM will soon use new C++ features which your toolchain version doesn't support. You can temporarily opt out using LLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN, but very soon your toolchain won't be supported.")
+        message(FATAL_ERROR "libstdc++ version should be at least ${LIBSTDCXX_SOFT_ERROR} because LLVM will soon use new C++ features which your toolchain version doesn't support. You can temporarily opt out using LLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN, but very soon your toolchain won't be supported.")
       endif()
     endif()
     set(CMAKE_REQUIRED_FLAGS ${OLD_CMAKE_REQUIRED_FLAGS})

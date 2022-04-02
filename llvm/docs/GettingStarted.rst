@@ -175,7 +175,7 @@ uses the package and provides other details.
 Package                                                     Version      Notes
 =========================================================== ============ ==========================================
 `CMake <http://cmake.org/>`__                               >=3.13.4     Makefile/workspace generator
-`GCC <http://gcc.gnu.org/>`_                                >=5.1.0      C/C++ compiler\ :sup:`1`
+`GCC <http://gcc.gnu.org/>`_                                >=7.1.0      C/C++ compiler\ :sup:`1`
 `python <http://www.python.org/>`_                          >=3.6        Automated test suite\ :sup:`2`
 `zlib <http://zlib.net>`_                                   >=1.2.3.4    Compression library\ :sup:`3`
 `GNU Make <http://savannah.gnu.org/projects/make>`_         3.79, 3.79.1 Makefile/build processor\ :sup:`4`
@@ -235,10 +235,10 @@ LLVM is written using the subset of C++ documented in :doc:`coding
 standards<CodingStandards>`. To enforce this language version, we check the most
 popular host toolchains for specific minimum versions in our build systems:
 
-* Clang 3.5
-* Apple Clang 6.0
-* GCC 5.1
-* Visual Studio 2019
+* Clang 5.0
+* Apple Clang 9.3
+* GCC 7.1
+* Visual Studio 2019 16.7
 
 Anything older than these toolchains *may* work, but will require forcing the
 build system with a special option and is not really a supported host platform.
@@ -303,11 +303,11 @@ GCC from source. It is also quite easy to do these days.
 .. _github gist:
   https://gist.github.com/application2000/73fd6f4bf1be6600a2cf9f56315a2d91
 
-Easy steps for installing GCC 5.1.0:
+Easy steps for installing GCC 7.1.0:
 
 .. code-block:: console
 
-  % gcc_version=5.1.0
+  % gcc_version=7.1.0
   % wget https://ftp.gnu.org/gnu/gcc/gcc-${gcc_version}/gcc-${gcc_version}.tar.bz2
   % wget https://ftp.gnu.org/gnu/gcc/gcc-${gcc_version}/gcc-${gcc_version}.tar.bz2.sig
   % wget https://ftp.gnu.org/gnu/gnu-keyring.gpg
