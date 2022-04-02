@@ -330,7 +330,11 @@ def ADDI_D : ALU_2RI12<0b0000001011, "addi.d", simm12>;
 def ADDU16I_D : ALU_2RI16<0b000100, "addu16i.d", simm16>;
 def ALSL_WU : ALU_3RI2<0b000000000000011, "alsl.wu", uimm2_plus1>;
 def ALSL_D  : ALU_3RI2<0b000000000010110, "alsl.d", uimm2_plus1>;
-def LU32I_D : ALU_1RI20<0b0001011, "lu32i.d", simm20>;
+let Constraints = "$rd = $dst" in {
+def LU32I_D : Fmt1RI20<0b0001011, (outs GPR:$dst),
+                       (ins GPR:$rd, simm20:$imm20),
+                       "lu32i.d\t$rd, $imm20">;
+}
 def LU52I_D : ALU_2RI12<0b0000001100, "lu52i.d", simm12>;
 def PCADDU18I : ALU_1RI20<0b0001111, "pcaddu18i", simm20>;
 def MUL_D     : ALU_3R<0b00000000000111011, "mul.d">;
