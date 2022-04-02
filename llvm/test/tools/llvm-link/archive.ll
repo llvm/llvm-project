@@ -1,3 +1,5 @@
+# XFAIL: system-aix
+
 # RUN: llvm-as %S/Inputs/f.ll -o %t.f.bc
 # RUN: llvm-as %S/Inputs/g.ll -o %t.g.bc
 # RUN: llvm-ar cr %t.fg.a %t.f.bc %t.g.bc

@@ -1228,7 +1228,8 @@ void SelectionDAGBuilder::resolveDanglingDebugInfo(const Value *V,
       // in the first place we should not be more successful here). Unless we
       // have some test case that prove this to be correct we should avoid
       // calling EmitFuncArgumentDbgValue here.
-      if (!EmitFuncArgumentDbgValue(V, Variable, Expr, dl, false, Val)) {
+      if (!EmitFuncArgumentDbgValue(V, Variable, Expr, dl,
+                                    FuncArgumentDbgValueKind::Value, Val)) {
         LLVM_DEBUG(dbgs() << "Resolve dangling debug info [order="
                           << DbgSDNodeOrder << "] for:\n  " << *DI << "\n");
         LLVM_DEBUG(dbgs() << "  By mapping to:\n    "; Val.dump());
@@ -1359,7 +1360,9 @@ bool SelectionDAGBuilder::handleDebugValue(ArrayRef<const Value *> Values,
       N = UnusedArgNodeMap[V];
     if (N.getNode()) {
       // Only emit func arg dbg value for non-variadic dbg.values for now.
-      if (!IsVariadic && EmitFuncArgumentDbgValue(V, Var, Expr, dl, false, N))
+      if (!IsVariadic &&
+          EmitFuncArgumentDbgValue(V, Var, Expr, dl,
+                                   FuncArgumentDbgValueKind::Value, N))
         return true;
       if (auto *FISDN = dyn_cast<FrameIndexSDNode>(N.getNode())) {
         // Construct a FrameIndexDbgValue for FrameIndexSDNodes so we can
@@ -5486,7 +5489,7 @@ getUnderlyingArgRegs(SmallVectorImpl<std::pair<unsigned, TypeSize>> &Regs,
 /// appear for function arguments or in the prologue.
 bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
     const Value *V, DILocalVariable *Variable, DIExpression *Expr,
-    DILocation *DL, bool IsDbgDeclare, const SDValue &N) {
+    DILocation *DL, FuncArgumentDbgValueKind Kind, const SDValue &N) {
   const Argument *Arg = dyn_cast<Argument>(V);
   if (!Arg)
     return false;
@@ -5520,7 +5523,7 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
     }
   };
 
-  if (!IsDbgDeclare) {
+  if (Kind == FuncArgumentDbgValueKind::Value) {
     // ArgDbgValues are hoisted to the beginning of the entry block. So we
     // should only emit as ArgDbgValue if the dbg.value intrinsic is found in
     // the entry block.
@@ -5607,7 +5610,7 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
     }
     if (Reg) {
       Op = MachineOperand::CreateReg(Reg, false);
-      IsIndirect = IsDbgDeclare;
+      IsIndirect = Kind != FuncArgumentDbgValueKind::Value;
     }
   }
 
@@ -5655,7 +5658,8 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
           continue;
         }
         MachineInstr *NewMI =
-            MakeVRegDbgValue(RegAndSize.first, *FragmentExpr, IsDbgDeclare);
+            MakeVRegDbgValue(RegAndSize.first, *FragmentExpr,
+                             Kind != FuncArgumentDbgValueKind::Value);
         FuncInfo.ArgDbgValues.push_back(NewMI);
       }
     };
@@ -5673,7 +5677,7 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
       }
 
       Op = MachineOperand::CreateReg(VMI->second, false);
-      IsIndirect = IsDbgDeclare;
+      IsIndirect = Kind != FuncArgumentDbgValueKind::Value;
     } else if (ArgRegsAndSizes.size() > 1) {
       // This was split due to the calling convention, and no virtual register
       // mapping exists for the value.
@@ -5695,6 +5699,7 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
     NewMI = BuildMI(MF, DL, TII->get(TargetOpcode::DBG_VALUE), true, *Op,
                     Variable, Expr);
 
+  // Otherwise, use ArgDbgValues.
   FuncInfo.ArgDbgValues.push_back(NewMI);
   return true;
 }
@@ -6070,7 +6075,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
       } else if (isa<Argument>(Address)) {
         // Address is an argument, so try to emit its dbg value using
         // virtual register info from the FuncInfo.ValueMap.
-        EmitFuncArgumentDbgValue(Address, Variable, Expression, dl, true, N);
+        EmitFuncArgumentDbgValue(Address, Variable, Expression, dl,
+                                 FuncArgumentDbgValueKind::Declare, N);
         return;
       } else {
         SDV = DAG.getDbgValue(Variable, Expression, N.getNode(), N.getResNo(),
@@ -6080,8 +6086,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     } else {
       // If Address is an argument then try to emit its dbg value using
       // virtual register info from the FuncInfo.ValueMap.
-      if (!EmitFuncArgumentDbgValue(Address, Variable, Expression, dl, true,
-                                    N)) {
+      if (!EmitFuncArgumentDbgValue(Address, Variable, Expression, dl,
+                                    FuncArgumentDbgValueKind::Declare, N)) {
         LLVM_DEBUG(dbgs() << "Dropping debug info for " << DI
                           << " (could not emit func-arg dbg_value)\n");
       }

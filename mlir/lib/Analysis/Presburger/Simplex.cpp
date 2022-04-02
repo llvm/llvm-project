@@ -219,6 +219,15 @@ MaybeOptimum<SmallVector<int64_t, 8>> LexSimplex::findIntegerLexMin() {
   return OptimumKind::Empty;
 }
 
+bool LexSimplex::isSeparateInequality(ArrayRef<int64_t> coeffs) {
+  SimplexRollbackScopeExit scopeExit(*this);
+  addInequality(coeffs);
+  return findIntegerLexMin().isEmpty();
+}
+
+bool LexSimplex::isRedundantInequality(ArrayRef<int64_t> coeffs) {
+  return isSeparateInequality(getComplementIneq(coeffs));
+}
 bool LexSimplex::rowIsViolated(unsigned row) const {
   if (tableau(row, 2) < 0)
     return true;

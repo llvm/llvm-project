@@ -56,7 +56,6 @@
 #include "lldb/Host/ProcessLauncher.h"
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Host/posix/ConnectionFileDescriptorPosix.h"
-#include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -528,8 +527,9 @@ Status Host::RunShellCommand(llvm::StringRef shell_path, const Args &args,
             auto Buffer =
                 FileSystem::Instance().CreateDataBuffer(output_file_spec);
             if (error.Success())
-              command_output_ptr->assign(Buffer->GetChars(),
-                                         Buffer->GetByteSize());
+              command_output_ptr->assign(
+                  reinterpret_cast<char *>(Buffer->GetBytes()),
+                  Buffer->GetByteSize());
           }
         }
       }

@@ -607,12 +607,22 @@ private:
 
   void emitInlineAsmError(const CallBase &Call, const Twine &Message);
 
+  /// An enum that states to emit func argument dbg value the kind of intrinsic
+  /// it originally had. This controls the internal behavior of
+  /// EmitFuncArgumentDbgValue.
+  enum class FuncArgumentDbgValueKind {
+    Value,   // This was originally a llvm.dbg.value.
+    Addr,    // This was originally a llvm.dbg.addr.
+    Declare, // This was originally a llvm.dbg.declare.
+  };
+
   /// If V is an function argument then create corresponding DBG_VALUE machine
   /// instruction for it now. At the end of instruction selection, they will be
   /// inserted to the entry BB.
   bool EmitFuncArgumentDbgValue(const Value *V, DILocalVariable *Variable,
                                 DIExpression *Expr, DILocation *DL,
-                                bool IsDbgDeclare, const SDValue &N);
+                                FuncArgumentDbgValueKind Kind,
+                                const SDValue &N);
 
   /// Return the next block after MBB, or nullptr if there is none.
   MachineBasicBlock *NextBlock(MachineBasicBlock *MBB);
