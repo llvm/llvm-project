@@ -502,7 +502,7 @@ define i32 @sub_eq_zero_select(i32 %a, i32 %b, i32* %p) {
   ret i32 %sel
 }
 
-; TODO: Replacing the "SUB == 0" regresses codegen, and it may be hard to recover from that.
+; Replacing the "SUB == 0" regresses codegen, and it may be hard to recover from that.
 
 declare i32 @llvm.umin.i32(i32, i32)
 
@@ -515,7 +515,7 @@ define void @PR54558_reduced(i32 %arg) {
 ; CHECK-NEXT:    [[MIN:%.*]] = tail call i32 @llvm.umin.i32(i32 [[PHI_OUTER]], i32 43)
 ; CHECK-NEXT:    call void @use(i32 [[MIN]])
 ; CHECK-NEXT:    [[SUB]] = sub i32 [[PHI_OUTER]], [[MIN]]
-; CHECK-NEXT:    [[COND_OUTER:%.*]] = icmp ult i32 [[PHI_OUTER]], 44
+; CHECK-NEXT:    [[COND_OUTER:%.*]] = icmp eq i32 [[SUB]], 0
 ; CHECK-NEXT:    br i1 [[COND_OUTER]], label [[BB_EXIT:%.*]], label [[BB_LOOP]]
 ; CHECK:       bb_exit:
 ; CHECK-NEXT:    ret void
@@ -535,6 +535,8 @@ bb_exit:
   ret void
 }
 
+; TODO: It might be ok to replace the "SUB == 0" in this example if codegen can invert it.
+
 define void @PR54558_reduced_more(i32 %x, i32 %y) {
 ; CHECK-LABEL: @PR54558_reduced_more(
 ; CHECK-NEXT:  bb_entry:
@@ -542,7 +544,7 @@ define void @PR54558_reduced_more(i32 %x, i32 %y) {
 ; CHECK:       bb_loop:
 ; CHECK-NEXT:    [[PHI_OUTER:%.*]] = phi i32 [ [[SUB:%.*]], [[BB_LOOP]] ], [ [[X:%.*]], [[BB_ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[SUB]] = sub i32 [[PHI_OUTER]], [[Y:%.*]]
-; CHECK-NEXT:    [[COND_OUTER:%.*]] = icmp eq i32 [[PHI_OUTER]], [[Y]]
+; CHECK-NEXT:    [[COND_OUTER:%.*]] = icmp eq i32 [[SUB]], 0
 ; CHECK-NEXT:    br i1 [[COND_OUTER]], label [[BB_EXIT:%.*]], label [[BB_LOOP]]
 ; CHECK:       bb_exit:
 ; CHECK-NEXT:    ret void
