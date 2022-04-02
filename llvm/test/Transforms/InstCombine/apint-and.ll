@@ -42,8 +42,8 @@ define i1 @test4(i37 %x) {
 
 define i7 @test5(i7 %A, i7* %P) {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    [[B:%.*]] = or i7 [[A:%.*]], 3
-; CHECK-NEXT:    [[C:%.*]] = xor i7 [[B]], 12
+; CHECK-NEXT:    [[TMP1:%.*]] = and i7 [[A:%.*]], -4
+; CHECK-NEXT:    [[C:%.*]] = xor i7 [[TMP1]], 15
 ; CHECK-NEXT:    store i7 [[C]], i7* [[P:%.*]], align 1
 ; CHECK-NEXT:    ret i7 3
 ;
@@ -103,8 +103,8 @@ define i1 @test11(i737 %x) {
 
 define i117 @test12(i117 %A, i117* %P) {
 ; CHECK-LABEL: @test12(
-; CHECK-NEXT:    [[B:%.*]] = or i117 [[A:%.*]], 3
-; CHECK-NEXT:    [[C:%.*]] = xor i117 [[B]], 12
+; CHECK-NEXT:    [[TMP1:%.*]] = and i117 [[A:%.*]], -4
+; CHECK-NEXT:    [[C:%.*]] = xor i117 [[TMP1]], 15
 ; CHECK-NEXT:    store i117 [[C]], i117* [[P:%.*]], align 4
 ; CHECK-NEXT:    ret i117 3
 ;

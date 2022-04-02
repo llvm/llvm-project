@@ -16,8 +16,8 @@ define i4 @t0(i4 %x, i4 %y, i4 %z) {
 ; If the second operands are immediate constants, we can perform the fold.
 define i4 @t1(i4 %x) {
 ; CHECK-LABEL: @t1(
-; CHECK-NEXT:    [[I0:%.*]] = or i4 [[X:%.*]], -4
-; CHECK-NEXT:    [[I1:%.*]] = xor i4 [[I0]], -6
+; CHECK-NEXT:    [[TMP1:%.*]] = and i4 [[X:%.*]], 3
+; CHECK-NEXT:    [[I1:%.*]] = xor i4 [[TMP1]], 6
 ; CHECK-NEXT:    ret i4 [[I1]]
 ;
   %i0 = or i4 %x, 12   ; 0b1100
@@ -42,8 +42,8 @@ define i4 @t2(i4 %x) {
 ; Splat constants are fine too.
 define <2 x i4> @t3(<2 x i4> %x) {
 ; CHECK-LABEL: @t3(
-; CHECK-NEXT:    [[I0:%.*]] = or <2 x i4> [[X:%.*]], <i4 -4, i4 -4>
-; CHECK-NEXT:    [[I1:%.*]] = xor <2 x i4> [[I0]], <i4 -6, i4 -6>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i4> [[X:%.*]], <i4 3, i4 3>
+; CHECK-NEXT:    [[I1:%.*]] = xor <2 x i4> [[TMP1]], <i4 6, i4 6>
 ; CHECK-NEXT:    ret <2 x i4> [[I1]]
 ;
   %i0 = or <2 x i4> %x, <i4 12, i4 12>
@@ -54,8 +54,8 @@ define <2 x i4> @t3(<2 x i4> %x) {
 ; Non-splat constants are fine too.
 define <2 x i4> @t4(<2 x i4> %x) {
 ; CHECK-LABEL: @t4(
-; CHECK-NEXT:    [[I0:%.*]] = or <2 x i4> [[X:%.*]], <i4 -4, i4 -6>
-; CHECK-NEXT:    [[I1:%.*]] = xor <2 x i4> [[I0]], <i4 -6, i4 -4>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i4> [[X:%.*]], <i4 3, i4 5>
+; CHECK-NEXT:    [[I1:%.*]] = xor <2 x i4> [[TMP1]], <i4 6, i4 6>
 ; CHECK-NEXT:    ret <2 x i4> [[I1]]
 ;
   %i0 = or <2 x i4> %x, <i4 12, i4 10>
@@ -66,8 +66,8 @@ define <2 x i4> @t4(<2 x i4> %x) {
 ; Partially-undef constants are fine.
 define <2 x i4> @t5(<2 x i4> %x) {
 ; CHECK-LABEL: @t5(
-; CHECK-NEXT:    [[I0:%.*]] = or <2 x i4> [[X:%.*]], <i4 -4, i4 -4>
-; CHECK-NEXT:    [[I1:%.*]] = xor <2 x i4> [[I0]], <i4 -6, i4 undef>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i4> [[X:%.*]], <i4 3, i4 undef>
+; CHECK-NEXT:    [[I1:%.*]] = xor <2 x i4> [[TMP1]], <i4 6, i4 undef>
 ; CHECK-NEXT:    ret <2 x i4> [[I1]]
 ;
   %i0 = or <2 x i4> %x, <i4 12, i4 12>
@@ -76,8 +76,8 @@ define <2 x i4> @t5(<2 x i4> %x) {
 }
 define <2 x i4> @t6(<2 x i4> %x) {
 ; CHECK-LABEL: @t6(
-; CHECK-NEXT:    [[I0:%.*]] = or <2 x i4> [[X:%.*]], <i4 -4, i4 undef>
-; CHECK-NEXT:    [[I1:%.*]] = xor <2 x i4> [[I0]], <i4 -6, i4 -6>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i4> [[X:%.*]], <i4 3, i4 0>
+; CHECK-NEXT:    [[I1:%.*]] = xor <2 x i4> [[TMP1]], <i4 6, i4 5>
 ; CHECK-NEXT:    ret <2 x i4> [[I1]]
 ;
   %i0 = or <2 x i4> %x, <i4 12, i4 undef>
@@ -86,8 +86,8 @@ define <2 x i4> @t6(<2 x i4> %x) {
 }
 define <2 x i4> @t7(<2 x i4> %x) {
 ; CHECK-LABEL: @t7(
-; CHECK-NEXT:    [[I0:%.*]] = or <2 x i4> [[X:%.*]], <i4 -4, i4 undef>
-; CHECK-NEXT:    [[I1:%.*]] = xor <2 x i4> [[I0]], <i4 -6, i4 undef>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i4> [[X:%.*]], <i4 3, i4 undef>
+; CHECK-NEXT:    [[I1:%.*]] = xor <2 x i4> [[TMP1]], <i4 6, i4 undef>
 ; CHECK-NEXT:    ret <2 x i4> [[I1]]
 ;
   %i0 = or <2 x i4> %x, <i4 12, i4 undef>
@@ -98,8 +98,8 @@ define <2 x i4> @t7(<2 x i4> %x) {
 ; Partially-poison constants are fine.
 define <2 x i4> @t8(<2 x i4> %x) {
 ; CHECK-LABEL: @t8(
-; CHECK-NEXT:    [[I0:%.*]] = or <2 x i4> [[X:%.*]], <i4 -4, i4 -4>
-; CHECK-NEXT:    [[I1:%.*]] = xor <2 x i4> [[I0]], <i4 -6, i4 poison>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i4> [[X:%.*]], <i4 3, i4 undef>
+; CHECK-NEXT:    [[I1:%.*]] = xor <2 x i4> [[TMP1]], <i4 6, i4 poison>
 ; CHECK-NEXT:    ret <2 x i4> [[I1]]
 ;
   %i0 = or <2 x i4> %x, <i4 12, i4 12>
@@ -108,8 +108,8 @@ define <2 x i4> @t8(<2 x i4> %x) {
 }
 define <2 x i4> @t9(<2 x i4> %x) {
 ; CHECK-LABEL: @t9(
-; CHECK-NEXT:    [[I0:%.*]] = or <2 x i4> [[X:%.*]], <i4 -4, i4 poison>
-; CHECK-NEXT:    [[I1:%.*]] = xor <2 x i4> [[I0]], <i4 -6, i4 -6>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i4> [[X:%.*]], <i4 3, i4 0>
+; CHECK-NEXT:    [[I1:%.*]] = xor <2 x i4> [[TMP1]], <i4 6, i4 5>
 ; CHECK-NEXT:    ret <2 x i4> [[I1]]
 ;
   %i0 = or <2 x i4> %x, <i4 12, i4 poison>
@@ -118,8 +118,8 @@ define <2 x i4> @t9(<2 x i4> %x) {
 }
 define <2 x i4> @t10(<2 x i4> %x) {
 ; CHECK-LABEL: @t10(
-; CHECK-NEXT:    [[I0:%.*]] = or <2 x i4> [[X:%.*]], <i4 -4, i4 poison>
-; CHECK-NEXT:    [[I1:%.*]] = xor <2 x i4> [[I0]], <i4 -6, i4 poison>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i4> [[X:%.*]], <i4 3, i4 undef>
+; CHECK-NEXT:    [[I1:%.*]] = xor <2 x i4> [[TMP1]], <i4 6, i4 poison>
 ; CHECK-NEXT:    ret <2 x i4> [[I1]]
 ;
   %i0 = or <2 x i4> %x, <i4 12, i4 poison>
