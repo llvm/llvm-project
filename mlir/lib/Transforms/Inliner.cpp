@@ -585,14 +585,8 @@ InlinerPass::InlinerPass(std::function<void(OpPassManager &)> defaultPipeline,
     return;
 
   // Update the option for the op specific optimization pipelines.
-  for (auto &it : opPipelines) {
-    std::string pipeline;
-    llvm::raw_string_ostream pipelineOS(pipeline);
-    pipelineOS << it.getKey() << "(";
-    it.second.printAsTextualPipeline(pipelineOS);
-    pipelineOS << ")";
-    opPipelineStrs.addValue(pipeline);
-  }
+  for (auto &it : opPipelines)
+    opPipelineList.addValue(it.second);
   this->opPipelines.emplace_back(std::move(opPipelines));
 }
 
@@ -751,15 +745,9 @@ LogicalResult InlinerPass::initializeOptions(StringRef options) {
 
   // Initialize the op specific pass pipelines.
   llvm::StringMap<OpPassManager> pipelines;
-  for (StringRef pipeline : opPipelineStrs) {
-    // Skip empty pipelines.
-    if (pipeline.empty())
-      continue;
-    FailureOr<OpPassManager> pm = parsePassPipeline(pipeline);
-    if (failed(pm))
-      return failure();
-    pipelines.try_emplace(pm->getOpName(), std::move(*pm));
-  }
+  for (OpPassManager pipeline : opPipelineList)
+    if (!pipeline.empty())
+      pipelines.try_emplace(pipeline.getOpName(), pipeline);
   opPipelines.assign({std::move(pipelines)});
 
   return success();

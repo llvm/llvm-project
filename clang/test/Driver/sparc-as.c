@@ -1,7 +1,7 @@
-// Make sure Sparc does not use the integrated assembler by default.
+// Make sure Sparc does use the integrated assembler by default.
 
 // RUN: %clang -target sparc-linux -### -c %s 2>&1 \
-// RUN: | FileCheck -check-prefix=NO-IAS %s
+// RUN: | FileCheck -check-prefix=IAS %s
 
 // RUN: %clang -target sparc-linux -fintegrated-as -### -c %s 2>&1 \
 // RUN: | FileCheck -check-prefix=IAS %s

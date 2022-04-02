@@ -25,7 +25,6 @@
 #include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataBuffer.h"
-#include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/lldb-enumerations.h"

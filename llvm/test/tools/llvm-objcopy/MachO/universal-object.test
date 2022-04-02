@@ -1,3 +1,4 @@
+# XFAIL: system-aix
 # This test verifies that llvm-objcopy copies a univeral Mach-O object file properly.
 
 # RUN: yaml2obj %p/Inputs/i386.yaml -o %t.i386

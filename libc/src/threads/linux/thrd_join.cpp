@@ -8,16 +8,15 @@
 
 #include "Futex.h"
 
-#include "include/sys/syscall.h" // For syscall numbers.
-#include "include/threads.h"     // For thrd_* type definitions.
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/OSUtil/syscall.h" // For syscall function.
 #include "src/__support/common.h"
-#include "src/sys/mman/munmap.h"
 #include "src/threads/linux/Thread.h"
 #include "src/threads/thrd_join.h"
 
 #include <linux/futex.h> // For futex operations.
+#include <sys/syscall.h> // For syscall numbers.
+#include <threads.h>     // For thrd_* type definitions.
 
 namespace __llvm_libc {
 
@@ -37,7 +36,8 @@ LLVM_LIBC_FUNCTION(int, thrd_join, (thrd_t * thread, int *retval)) {
 
   *retval = thread->__retval;
 
-  if (__llvm_libc::munmap(thread->__stack, thread->__stack_size) == -1)
+  if (__llvm_libc::syscall(SYS_munmap, reinterpret_cast<long>(thread->__stack),
+                           thread->__stack_size) == -1)
     return thrd_error;
 
   return thrd_success;

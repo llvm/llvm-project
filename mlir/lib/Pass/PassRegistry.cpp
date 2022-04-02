@@ -142,6 +142,43 @@ const PassInfo *mlir::Pass::lookupPassInfo(StringRef passArg) {
 // PassOptions
 //===----------------------------------------------------------------------===//
 
+LogicalResult detail::pass_options::parseCommaSeparatedList(
+    llvm::cl::Option &opt, StringRef argName, StringRef optionStr,
+    function_ref<LogicalResult(StringRef)> elementParseFn) {
+  // Functor used for finding a character in a string, and skipping over
+  // various "range" characters.
+  llvm::unique_function<size_t(StringRef, size_t, char)> findChar =
+      [&](StringRef str, size_t index, char c) -> size_t {
+    for (size_t i = index, e = str.size(); i < e; ++i) {
+      if (str[i] == c)
+        return i;
+      // Check for various range characters.
+      if (str[i] == '{')
+        i = findChar(str, i + 1, '}');
+      else if (str[i] == '(')
+        i = findChar(str, i + 1, ')');
+      else if (str[i] == '[')
+        i = findChar(str, i + 1, ']');
+      else if (str[i] == '\"')
+        i = str.find_first_of('\"', i + 1);
+      else if (str[i] == '\'')
+        i = str.find_first_of('\'', i + 1);
+    }
+    return StringRef::npos;
+  };
+
+  size_t nextElePos = findChar(optionStr, 0, ',');
+  while (nextElePos != StringRef::npos) {
+    // Process the portion before the comma.
+    if (failed(elementParseFn(optionStr.substr(0, nextElePos))))
+      return failure();
+
+    optionStr = optionStr.substr(nextElePos + 1);
+    nextElePos = findChar(optionStr, 0, ',');
+  }
+  return elementParseFn(optionStr.substr(0, nextElePos));
+}
+
 /// Out of line virtual function to provide home for the class.
 void detail::PassOptions::OptionBase::anchor() {}
 
@@ -294,6 +331,104 @@ size_t detail::PassOptions::getOptionWidth() const {
     max = std::max(max, option->getOption()->getOptionWidth());
   return max;
 }
+
+//===----------------------------------------------------------------------===//
+// MLIR Options
+//===----------------------------------------------------------------------===//
+
+//===----------------------------------------------------------------------===//
+// OpPassManager: OptionValue
+
+llvm::cl::OptionValue<OpPassManager>::OptionValue() = default;
+llvm::cl::OptionValue<OpPassManager>::OptionValue(
+    const mlir::OpPassManager &value) {
+  setValue(value);
+}
+llvm::cl::OptionValue<OpPassManager> &
+llvm::cl::OptionValue<OpPassManager>::operator=(
+    const mlir::OpPassManager &rhs) {
+  setValue(rhs);
+  return *this;
+}
+
+llvm::cl::OptionValue<OpPassManager>::~OptionValue<OpPassManager>() = default;
+
+void llvm::cl::OptionValue<OpPassManager>::setValue(
+    const OpPassManager &newValue) {
+  if (hasValue())
+    *value = newValue;
+  else
+    value = std::make_unique<mlir::OpPassManager>(newValue);
+}
+void llvm::cl::OptionValue<OpPassManager>::setValue(StringRef pipelineStr) {
+  FailureOr<OpPassManager> pipeline = parsePassPipeline(pipelineStr);
+  assert(succeeded(pipeline) && "invalid pass pipeline");
+  setValue(*pipeline);
+}
+
+bool llvm::cl::OptionValue<OpPassManager>::compare(
+    const mlir::OpPassManager &rhs) const {
+  std::string lhsStr, rhsStr;
+  {
+    raw_string_ostream lhsStream(lhsStr);
+    value->printAsTextualPipeline(lhsStream);
+
+    raw_string_ostream rhsStream(rhsStr);
+    rhs.printAsTextualPipeline(rhsStream);
+  }
+
+  // Use the textual format for pipeline comparisons.
+  return lhsStr == rhsStr;
+}
+
+void llvm::cl::OptionValue<OpPassManager>::anchor() {}
+
+//===----------------------------------------------------------------------===//
+// OpPassManager: Parser
+
+namespace llvm {
+namespace cl {
+template class basic_parser<OpPassManager>;
+} // namespace cl
+} // namespace llvm
+
+bool llvm::cl::parser<OpPassManager>::parse(Option &, StringRef, StringRef arg,
+                                            ParsedPassManager &value) {
+  FailureOr<OpPassManager> pipeline = parsePassPipeline(arg);
+  if (failed(pipeline))
+    return true;
+  value.value = std::make_unique<OpPassManager>(std::move(*pipeline));
+  return false;
+}
+
+void llvm::cl::parser<OpPassManager>::print(raw_ostream &os,
+                                            const OpPassManager &value) {
+  value.printAsTextualPipeline(os);
+}
+
+void llvm::cl::parser<OpPassManager>::printOptionDiff(
+    const Option &opt, OpPassManager &pm, const OptVal &defaultValue,
+    size_t globalWidth) const {
+  printOptionName(opt, globalWidth);
+  outs() << "= ";
+  pm.printAsTextualPipeline(outs());
+
+  if (defaultValue.hasValue()) {
+    outs().indent(2) << " (default: ";
+    defaultValue.getValue().printAsTextualPipeline(outs());
+    outs() << ")";
+  }
+  outs() << "\n";
+}
+
+void llvm::cl::parser<OpPassManager>::anchor() {}
+
+llvm::cl::parser<OpPassManager>::ParsedPassManager::ParsedPassManager() =
+    default;
+llvm::cl::parser<OpPassManager>::ParsedPassManager::ParsedPassManager(
+    ParsedPassManager &&) = default;
+llvm::cl::parser<OpPassManager>::ParsedPassManager::~ParsedPassManager() =
+    default;
 
 //===----------------------------------------------------------------------===//
 // TextualPassPipeline Parser
