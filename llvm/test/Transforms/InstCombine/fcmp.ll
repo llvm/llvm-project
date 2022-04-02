@@ -674,9 +674,7 @@ define i1 @is_signbit_set_simplify_nan(double %x) {
 
 define <2 x i1> @lossy_oeq(<2 x float> %x) {
 ; CHECK-LABEL: @lossy_oeq(
-; CHECK-NEXT:    [[E:%.*]] = fpext <2 x float> [[X:%.*]] to <2 x double>
-; CHECK-NEXT:    [[R:%.*]] = fcmp oeq <2 x double> [[E]], <double 1.000000e-01, double 1.000000e-01>
-; CHECK-NEXT:    ret <2 x i1> [[R]]
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %e = fpext <2 x float> %x to <2 x double>
   %r = fcmp oeq <2 x double> %e, <double 0.1, double 0.1>
@@ -687,7 +685,7 @@ define i1 @lossy_one(float %x, double* %p) {
 ; CHECK-LABEL: @lossy_one(
 ; CHECK-NEXT:    [[E:%.*]] = fpext float [[X:%.*]] to double
 ; CHECK-NEXT:    store double [[E]], double* [[P:%.*]], align 8
-; CHECK-NEXT:    [[R:%.*]] = fcmp one double [[E]], 1.000000e-01
+; CHECK-NEXT:    [[R:%.*]] = fcmp ord float [[X]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %e = fpext float %x to double
@@ -698,8 +696,7 @@ define i1 @lossy_one(float %x, double* %p) {
 
 define i1 @lossy_ueq(half %x) {
 ; CHECK-LABEL: @lossy_ueq(
-; CHECK-NEXT:    [[E:%.*]] = fpext half [[X:%.*]] to double
-; CHECK-NEXT:    [[R:%.*]] = fcmp ueq double [[E]], 6.553600e+04
+; CHECK-NEXT:    [[R:%.*]] = fcmp uno half [[X:%.*]], 0xH0000
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %e = fpext half %x to double
@@ -709,9 +706,7 @@ define i1 @lossy_ueq(half %x) {
 
 define i1 @lossy_une(half %x) {
 ; CHECK-LABEL: @lossy_une(
-; CHECK-NEXT:    [[E:%.*]] = fpext half [[X:%.*]] to float
-; CHECK-NEXT:    [[R:%.*]] = fcmp une float [[E]], 2.049000e+03
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %e = fpext half %x to float
   %r = fcmp une float %e, 2049.0
