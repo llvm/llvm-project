@@ -377,10 +377,8 @@ public:
   SetCoalescer(const PresburgerRelation &s);
 
 private:
-  /// The dimensionality of the set the SetCoalescer is coalescing.
-  unsigned numDomainIds;
-  unsigned numRangeIds;
-  unsigned numSymbolIds;
+  /// The space of the set the SetCoalescer is coalescing.
+  PresburgerSpace space;
 
   /// The current list of `IntegerRelation`s that the currently coalesced set is
   /// the union of.
@@ -449,7 +447,7 @@ private:
 
 /// Constructs a `SetCoalescer` from a `PresburgerRelation`. Only adds non-empty
 /// `IntegerRelation`s to the `disjuncts` vector.
-SetCoalescer::SetCoalescer(const PresburgerRelation &s) {
+SetCoalescer::SetCoalescer(const PresburgerRelation &s) : space(s.getSpace()) {
 
   disjuncts = s.disjuncts;
 
@@ -466,9 +464,6 @@ SetCoalescer::SetCoalescer(const PresburgerRelation &s) {
     ++i;
     simplices.push_back(simp);
   }
-  numDomainIds = s.getNumDomainIds();
-  numRangeIds = s.getNumRangeIds();
-  numSymbolIds = s.getNumSymbolIds();
 }
 
 /// Simplifies the representation of a PresburgerSet.
@@ -503,9 +498,7 @@ PresburgerRelation SetCoalescer::coalesce() {
       ++i;
   }
 
-  PresburgerRelation newSet =
-      PresburgerRelation::getEmpty(PresburgerSpace::getRelationSpace(
-          numDomainIds, numRangeIds, numSymbolIds));
+  PresburgerRelation newSet = PresburgerRelation::getEmpty(space);
   for (unsigned i = 0, e = disjuncts.size(); i < e; ++i)
     newSet.unionInPlace(disjuncts[i]);
 
