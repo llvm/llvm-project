@@ -1,4 +1,5 @@
 # REQUIRES: x86
+# UNSUPPORTED: system-windows
 # RUN: rm -rf %t && mkdir -p %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t/test.o
 # RUN: %lld -lSystem %t/test.o -o %t/a

@@ -55,14 +55,11 @@ def SCFParallelLoopCollapsing : Pass<"scf-parallel-loop-collapsing"> {
   let constructor = "mlir::createParallelLoopCollapsingPass()";
   let options = [
     ListOption<"clCollapsedIndices0", "collapsed-indices-0", "unsigned",
-               "Which loop indices to combine 0th loop index",
-               "llvm::cl::MiscFlags::CommaSeparated">,
+               "Which loop indices to combine 0th loop index">,
     ListOption<"clCollapsedIndices1", "collapsed-indices-1", "unsigned",
-               "Which loop indices to combine into the position 1 loop index",
-               "llvm::cl::MiscFlags::CommaSeparated">,
+               "Which loop indices to combine into the position 1 loop index">,
     ListOption<"clCollapsedIndices2", "collapsed-indices-2", "unsigned",
-               "Which loop indices to combine into the position 2 loop index",
-               "llvm::cl::MiscFlags::CommaSeparated">,
+               "Which loop indices to combine into the position 2 loop index">,
   ];
 }
 
@@ -77,8 +74,7 @@ def SCFParallelLoopTiling : Pass<"scf-parallel-loop-tiling", "FuncOp"> {
   let constructor = "mlir::createParallelLoopTilingPass()";
   let options = [
     ListOption<"tileSizes", "parallel-loop-tile-sizes", "int64_t",
-               "Factors to tile parallel loops by",
-               "llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated">,
+               "Factors to tile parallel loops by", "llvm::cl::ZeroOrMore">,
     Option<"noMinMaxBounds", "no-min-max-bounds", "bool",
            /*default=*/"false",
            "Perform tiling with fixed upper bound with inbound check "

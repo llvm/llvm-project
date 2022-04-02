@@ -10,7 +10,7 @@
 #define LLDB_HOST_FILESYSTEM_H
 
 #include "lldb/Host/File.h"
-#include "lldb/Utility/DataBufferLLVM.h"
+#include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
 
@@ -142,12 +142,12 @@ public:
 
   //// Create memory buffer from path.
   /// \{
-  std::shared_ptr<DataBufferLLVM> CreateDataBuffer(const llvm::Twine &path,
-                                                   uint64_t size = 0,
-                                                   uint64_t offset = 0);
-  std::shared_ptr<DataBufferLLVM> CreateDataBuffer(const FileSpec &file_spec,
-                                                   uint64_t size = 0,
-                                                   uint64_t offset = 0);
+  std::shared_ptr<DataBuffer> CreateDataBuffer(const llvm::Twine &path,
+                                               uint64_t size = 0,
+                                               uint64_t offset = 0);
+  std::shared_ptr<DataBuffer> CreateDataBuffer(const FileSpec &file_spec,
+                                               uint64_t size = 0,
+                                               uint64_t offset = 0);
   /// \}
 
   /// Call into the Host to see if it can help find the file.

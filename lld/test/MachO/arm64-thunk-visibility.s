@@ -1,7 +1,7 @@
 # REQUIRES: aarch64
 
 # foo.s and bar.s both contain TU-local symbols (think static function)
-# with the same name, and both need a thunk..  This tests that ld64.lld doesn't
+# with the same name, and both need a thunk.  This tests that ld64.lld doesn't
 # create a duplicate symbol for the two functions.
 
 # Test this both when the TU-local symbol is the branch source or target,
