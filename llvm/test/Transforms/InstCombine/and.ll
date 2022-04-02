@@ -133,8 +133,8 @@ define i32 @test10(i32 %A) {
 
 define i32 @test11(i32 %A, i32* %P) {
 ; CHECK-LABEL: @test11(
-; CHECK-NEXT:    [[B:%.*]] = or i32 [[A:%.*]], 3
-; CHECK-NEXT:    [[C:%.*]] = xor i32 [[B]], 12
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], -4
+; CHECK-NEXT:    [[C:%.*]] = xor i32 [[TMP1]], 15
 ; CHECK-NEXT:    store i32 [[C]], i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    ret i32 3
 ;

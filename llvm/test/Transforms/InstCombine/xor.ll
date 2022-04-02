@@ -623,8 +623,8 @@ define i8 @xor_and_not(i8 %x, i8* %p) {
 ; CHECK-LABEL: @xor_and_not(
 ; CHECK-NEXT:    [[NX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    store i8 [[NX]], i8* [[P:%.*]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[X]], -43
-; CHECK-NEXT:    [[R:%.*]] = xor i8 [[TMP1]], -32
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X]], 42
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[TMP1]], 53
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %nx = xor i8 %x, -1
