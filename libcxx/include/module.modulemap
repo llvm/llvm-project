@@ -391,12 +391,23 @@ module std [system] {
     module __chrono {
       module calendar              { private header "__chrono/calendar.h" }
       module convert_to_timespec   { private header "__chrono/convert_to_timespec.h" }
+      module day                   { private header "__chrono/day.h" }
       module duration              { private header "__chrono/duration.h" }
       module file_clock            { private header "__chrono/file_clock.h" }
+      module hh_mm_ss              { private header "__chrono/hh_mm_ss.h" }
       module high_resolution_clock { private header "__chrono/high_resolution_clock.h" }
+      module literals              { private header "__chrono/literals.h" }
+      module month                 { private header "__chrono/month.h" }
+      module month_weekday         { private header "__chrono/month_weekday.h" }
+      module monthday              { private header "__chrono/monthday.h" }
       module steady_clock          { private header "__chrono/steady_clock.h" }
       module system_clock          { private header "__chrono/system_clock.h" }
       module time_point            { private header "__chrono/time_point.h" }
+      module weekday               { private header "__chrono/weekday.h" }
+      module year                  { private header "__chrono/year.h" }
+      module year_month            { private header "__chrono/year_month.h" }
+      module year_month_day        { private header "__chrono/year_month_day.h" }
+      module year_month_weekday    { private header "__chrono/year_month_weekday.h" }
     }
   }
   module codecvt {
