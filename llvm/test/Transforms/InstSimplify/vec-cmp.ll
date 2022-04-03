@@ -30,7 +30,7 @@ define <2 x i1> @nonzero_vec_undef_elt(<2 x i32> %x) {
 
 define <2 x i1> @may_be_zero_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @may_be_zero_vec(
-; CHECK-NEXT:    [[Y:%.*]] = or <2 x i32> %x, <i32 0, i32 1>
+; CHECK-NEXT:    [[Y:%.*]] = or <2 x i32> [[X:%.*]], <i32 0, i32 1>
 ; CHECK-NEXT:    [[C:%.*]] = icmp ne <2 x i32> [[Y]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;

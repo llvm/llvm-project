@@ -3,7 +3,7 @@
 
 define i32 @foo(i32 %x) {
 ; CHECK-LABEL: @foo(
-; CHECK-NEXT:    [[O:%.*]] = and i32 %x, 1
+; CHECK-NEXT:    [[O:%.*]] = and i32 [[X:%.*]], 1
 ; CHECK-NEXT:    [[N:%.*]] = add i32 [[O]], -1
 ; CHECK-NEXT:    ret i32 [[N]]
 ;

@@ -98,8 +98,8 @@ end:
 }
 
 ; We know the condition of the select is true based on a dominating condition.
-; Therefore, we can replace %cond with %len. 
-; TODO: len == 8 is known false in bb. This is handled by other passes, but should it be handled here? 
+; Therefore, we can replace %cond with %len.
+; TODO: len == 8 is known false in bb. This is handled by other passes, but should it be handled here?
 
 define void @test4(i32 %len) {
 ; CHECK-LABEL: @test4(

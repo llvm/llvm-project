@@ -6,9 +6,9 @@ declare double @llvm.pow.f64(double, double)
 
 define double @log10_pow10(double %x) {
 ; CHECK-LABEL: @log10_pow10(
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.pow.f64(double 1.000000e+01, double [[X:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.log10.f64(double [[TMP1]])
-; CHECK-NEXT:    ret double [[TMP2]]
+; CHECK-NEXT:    [[TMP:%.*]] = call double @llvm.pow.f64(double 1.000000e+01, double [[X:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.log10.f64(double [[TMP]])
+; CHECK-NEXT:    ret double [[TMP1]]
 ;
   %tmp = call double @llvm.pow.f64(double 1.000000e+01, double %x)
   %tmp1 = call double @llvm.log10.f64(double %tmp)
@@ -17,9 +17,9 @@ define double @log10_pow10(double %x) {
 
 define double @log10_strict_pow10_reassoc(double %x) {
 ; CHECK-LABEL: @log10_strict_pow10_reassoc(
-; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc double @llvm.pow.f64(double 1.000000e+01, double [[X:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.log10.f64(double [[TMP1]])
-; CHECK-NEXT:    ret double [[TMP2]]
+; CHECK-NEXT:    [[TMP:%.*]] = call reassoc double @llvm.pow.f64(double 1.000000e+01, double [[X:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.log10.f64(double [[TMP]])
+; CHECK-NEXT:    ret double [[TMP1]]
 ;
   %tmp = call reassoc double @llvm.pow.f64(double 1.000000e+01, double %x)
   %tmp1 = call double @llvm.log10.f64(double %tmp)

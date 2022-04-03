@@ -43,7 +43,7 @@ define i32 @negated_operand_2(i32 %t) {
 ; CHECK-LABEL: @negated_operand_2(
 ; CHECK-NEXT:    ret i32 -1
 ;
-  %x = sub i32 %t, 5 
+  %x = sub i32 %t, 5
   %negx = sub nsw i32 0, %x
   %div = sdiv i32 %negx, %x
   ret i32 %div
