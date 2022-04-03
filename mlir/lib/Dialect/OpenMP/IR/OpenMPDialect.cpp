@@ -218,7 +218,7 @@ verifyScheduleModifiers(OpAsmParser &parser,
 /// sched-mod-val ::=  `monotonic` | `nonmonotonic` | `simd` | `none`
 static ParseResult parseScheduleClause(
     OpAsmParser &parser, ClauseScheduleKindAttr &scheduleAttr,
-    ScheduleModifierAttr &schedule_modifier, UnitAttr &simdModifier,
+    ScheduleModifierAttr &scheduleModifier, UnitAttr &simdModifier,
     Optional<OpAsmParser::UnresolvedOperand> &chunkSize, Type &chunkType) {
   StringRef keyword;
   if (parser.parseKeyword(&keyword))
@@ -262,7 +262,7 @@ static ParseResult parseScheduleClause(
     SMLoc loc = parser.getCurrentLocation();
     if (Optional<ScheduleModifier> mod =
             symbolizeScheduleModifier(modifiers[0])) {
-      schedule_modifier = ScheduleModifierAttr::get(parser.getContext(), *mod);
+      scheduleModifier = ScheduleModifierAttr::get(parser.getContext(), *mod);
     } else {
       return parser.emitError(loc, "invalid schedule modifier");
     }
@@ -761,11 +761,10 @@ LogicalResult CriticalDeclareOp::verify() {
   return verifySynchronizationHint(*this, hint_val());
 }
 
-LogicalResult
-CriticalOp::verifySymbolUses(SymbolTableCollection &symbol_table) {
+LogicalResult CriticalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   if (nameAttr()) {
     SymbolRefAttr symbolRef = nameAttr();
-    auto decl = symbol_table.lookupNearestSymbolFrom<CriticalDeclareOp>(
+    auto decl = symbolTable.lookupNearestSymbolFrom<CriticalDeclareOp>(
         *this, symbolRef);
     if (!decl) {
       return emitOpError() << "expected symbol reference " << symbolRef
