@@ -55,7 +55,7 @@ define void @pr45679(i32* %A) optsize {
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], <i32 4, i32 4, i32 4, i32 4>
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[INDEX_NEXT]], 16
-; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !0
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -67,7 +67,7 @@ define void @pr45679(i32* %A) optsize {
 ; CHECK-NEXT:    store i32 13, i32* [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[RIVPLUS1]] = add nuw nsw i32 [[RIV]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[RIVPLUS1]], 14
-; CHECK-NEXT:    br i1 [[COND]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[COND]], label [[EXIT]], label [[LOOP]], !llvm.loop !2
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -117,7 +117,7 @@ define void @pr45679(i32* %A) optsize {
 ; VF2UF2-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
 ; VF2UF2-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[STEP_ADD]], <i32 2, i32 2>
 ; VF2UF2-NEXT:    [[TMP14:%.*]] = icmp eq i32 [[INDEX_NEXT]], 16
-; VF2UF2-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; VF2UF2-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !0
 ; VF2UF2:       middle.block:
 ; VF2UF2-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; VF2UF2:       scalar.ph:
@@ -129,7 +129,7 @@ define void @pr45679(i32* %A) optsize {
 ; VF2UF2-NEXT:    store i32 13, i32* [[ARRAYIDX]], align 1
 ; VF2UF2-NEXT:    [[RIVPLUS1]] = add nuw nsw i32 [[RIV]], 1
 ; VF2UF2-NEXT:    [[COND:%.*]] = icmp eq i32 [[RIVPLUS1]], 14
-; VF2UF2-NEXT:    br i1 [[COND]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP2:![0-9]+]]
+; VF2UF2-NEXT:    br i1 [[COND]], label [[EXIT]], label [[LOOP]], !llvm.loop !2
 ; VF2UF2:       exit:
 ; VF2UF2-NEXT:    ret void
 ;
@@ -139,46 +139,46 @@ define void @pr45679(i32* %A) optsize {
 ; VF1UF4:       vector.ph:
 ; VF1UF4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF1UF4:       vector.body:
-; VF1UF4-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE12:%.*]] ]
-; VF1UF4-NEXT:    [[VEC_IV:%.*]] = add i32 [[INDEX]], 0
-; VF1UF4-NEXT:    [[VEC_IV4:%.*]] = add i32 [[INDEX]], 1
-; VF1UF4-NEXT:    [[VEC_IV5:%.*]] = add i32 [[INDEX]], 2
-; VF1UF4-NEXT:    [[VEC_IV6:%.*]] = add i32 [[INDEX]], 3
-; VF1UF4-NEXT:    [[TMP0:%.*]] = icmp ule i32 [[VEC_IV]], 13
-; VF1UF4-NEXT:    [[TMP1:%.*]] = icmp ule i32 [[VEC_IV4]], 13
-; VF1UF4-NEXT:    [[TMP2:%.*]] = icmp ule i32 [[VEC_IV5]], 13
-; VF1UF4-NEXT:    [[TMP3:%.*]] = icmp ule i32 [[VEC_IV6]], 13
+; VF1UF4-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE9:%.*]] ]
+; VF1UF4-NEXT:    [[INDUCTION:%.*]] = add i32 [[INDEX]], 0
+; VF1UF4-NEXT:    [[INDUCTION1:%.*]] = add i32 [[INDEX]], 1
+; VF1UF4-NEXT:    [[INDUCTION2:%.*]] = add i32 [[INDEX]], 2
+; VF1UF4-NEXT:    [[INDUCTION3:%.*]] = add i32 [[INDEX]], 3
+; VF1UF4-NEXT:    [[TMP0:%.*]] = icmp ule i32 [[INDUCTION]], 13
+; VF1UF4-NEXT:    [[TMP1:%.*]] = icmp ule i32 [[INDUCTION1]], 13
+; VF1UF4-NEXT:    [[TMP2:%.*]] = icmp ule i32 [[INDUCTION2]], 13
+; VF1UF4-NEXT:    [[TMP3:%.*]] = icmp ule i32 [[INDUCTION3]], 13
 ; VF1UF4-NEXT:    br i1 [[TMP0]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; VF1UF4:       pred.store.if:
-; VF1UF4-NEXT:    [[INDUCTION:%.*]] = add i32 [[INDEX]], 0
-; VF1UF4-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i32 [[INDUCTION]]
+; VF1UF4-NEXT:    [[SUNK_IND0:%.*]] = add i32 [[INDEX]], 0
+; VF1UF4-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i32 [[SUNK_IND0]]
 ; VF1UF4-NEXT:    store i32 13, i32* [[TMP4]], align 1
 ; VF1UF4-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; VF1UF4:       pred.store.continue:
-; VF1UF4-NEXT:    br i1 [[TMP1]], label [[PRED_STORE_IF7:%.*]], label [[PRED_STORE_CONTINUE8:%.*]]
+; VF1UF4-NEXT:    br i1 [[TMP1]], label [[PRED_STORE_IF4:%.*]], label [[PRED_STORE_CONTINUE5:%.*]]
 ; VF1UF4:       pred.store.if7:
-; VF1UF4-NEXT:    [[INDUCTION1:%.*]] = add i32 [[INDEX]], 1
-; VF1UF4-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, i32* [[A]], i32 [[INDUCTION1]]
+; VF1UF4-NEXT:    [[SUNK_IND1:%.*]] = add i32 [[INDEX]], 1
+; VF1UF4-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, i32* [[A]], i32 [[SUNK_IND1]]
 ; VF1UF4-NEXT:    store i32 13, i32* [[TMP5]], align 1
-; VF1UF4-NEXT:    br label [[PRED_STORE_CONTINUE8]]
+; VF1UF4-NEXT:    br label [[PRED_STORE_CONTINUE5]]
 ; VF1UF4:       pred.store.continue8:
-; VF1UF4-NEXT:    br i1 [[TMP2]], label [[PRED_STORE_IF9:%.*]], label [[PRED_STORE_CONTINUE10:%.*]]
+; VF1UF4-NEXT:    br i1 [[TMP2]], label [[PRED_STORE_IF6:%.*]], label [[PRED_STORE_CONTINUE7:%.*]]
 ; VF1UF4:       pred.store.if9:
-; VF1UF4-NEXT:    [[INDUCTION2:%.*]] = add i32 [[INDEX]], 2
-; VF1UF4-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* [[A]], i32 [[INDUCTION2]]
+; VF1UF4-NEXT:    [[SUNK_IND2:%.*]] = add i32 [[INDEX]], 2
+; VF1UF4-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* [[A]], i32 [[SUNK_IND2]]
 ; VF1UF4-NEXT:    store i32 13, i32* [[TMP6]], align 1
-; VF1UF4-NEXT:    br label [[PRED_STORE_CONTINUE10]]
+; VF1UF4-NEXT:    br label [[PRED_STORE_CONTINUE7]]
 ; VF1UF4:       pred.store.continue10:
-; VF1UF4-NEXT:    br i1 [[TMP3]], label [[PRED_STORE_IF11:%.*]], label [[PRED_STORE_CONTINUE12]]
+; VF1UF4-NEXT:    br i1 [[TMP3]], label [[PRED_STORE_IF8:%.*]], label [[PRED_STORE_CONTINUE9]]
 ; VF1UF4:       pred.store.if11:
-; VF1UF4-NEXT:    [[INDUCTION3:%.*]] = add i32 [[INDEX]], 3
-; VF1UF4-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, i32* [[A]], i32 [[INDUCTION3]]
+; VF1UF4-NEXT:    [[SUNK_IND3:%.*]] = add i32 [[INDEX]], 3
+; VF1UF4-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, i32* [[A]], i32 [[SUNK_IND3]]
 ; VF1UF4-NEXT:    store i32 13, i32* [[TMP7]], align 1
-; VF1UF4-NEXT:    br label [[PRED_STORE_CONTINUE12]]
+; VF1UF4-NEXT:    br label [[PRED_STORE_CONTINUE9]]
 ; VF1UF4:       pred.store.continue12:
 ; VF1UF4-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
 ; VF1UF4-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], 16
-; VF1UF4-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; VF1UF4-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]]
 ; VF1UF4:       middle.block:
 ; VF1UF4-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; VF1UF4:       scalar.ph:
@@ -190,7 +190,7 @@ define void @pr45679(i32* %A) optsize {
 ; VF1UF4-NEXT:    store i32 13, i32* [[ARRAYIDX]], align 1
 ; VF1UF4-NEXT:    [[RIVPLUS1]] = add nuw nsw i32 [[RIV]], 1
 ; VF1UF4-NEXT:    [[COND:%.*]] = icmp eq i32 [[RIVPLUS1]], 14
-; VF1UF4-NEXT:    br i1 [[COND]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP2:![0-9]+]]
+; VF1UF4-NEXT:    br i1 [[COND]], label [[EXIT]], label [[LOOP]]
 ; VF1UF4:       exit:
 ; VF1UF4-NEXT:    ret void
 ;
