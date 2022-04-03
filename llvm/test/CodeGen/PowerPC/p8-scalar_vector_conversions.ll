@@ -756,11 +756,6 @@ define zeroext i8 @getuc2(<16 x i8> %vuc) {
 entry:
   %vecext = extractelement <16 x i8> %vuc, i32 2
   ret i8 %vecext
-
-
-; CHECK-AIX mfvsrd 3, 34
-; CHECK-AIX rldicl 3, 3, 24, 56
-; CHECK-AIX clrldi 3, 3, 56
 }
 
 ; Function Attrs: norecurse nounwind readnone

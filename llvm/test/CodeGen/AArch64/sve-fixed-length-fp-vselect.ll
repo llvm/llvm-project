@@ -181,13 +181,13 @@ define void @select_v16f32(<16 x float>* %a, <16 x float>* %b) #0 {
 define void @select_v32f32(<32 x float>* %a, <32 x float>* %b) #0 {
 ; VBITS_GE_1024-LABEL: select_v32f32:
 ; VBITS_GE_1024:       // %bb.0:
-; VBITS_GE_1024-NEXT     ptrue   p0.s, vl32
-; VBITS_GE_1024-NEXT     ld1w    { z0.s }, p0/z, [x0]
-; VBITS_GE_1024-NEXT     ld1w    { z1.s }, p0/z, [x1]
-; VBITS_GE_1024-NEXT     fcmeq   p1.s, p0/z, z0.s, z1.s
-; VBITS_GE_1024-NEXT     sel     z0.s, p1, z0.s, z1.s
-; VBITS_GE_1024-NEXT     st1w    { z0.s }, p0, [x0]
-; VBITS_GE_1024-NEXT     ret
+; VBITS_GE_1024-NEXT:     ptrue   p0.s, vl32
+; VBITS_GE_1024-NEXT:     ld1w    { z0.s }, p0/z, [x0]
+; VBITS_GE_1024-NEXT:     ld1w    { z1.s }, p0/z, [x1]
+; VBITS_GE_1024-NEXT:     fcmeq   p1.s, p0/z, z0.s, z1.s
+; VBITS_GE_1024-NEXT:     sel     z0.s, p1, z0.s, z1.s
+; VBITS_GE_1024-NEXT:     st1w    { z0.s }, p0, [x0]
+; VBITS_GE_1024-NEXT:     ret
   %op1 = load <32 x float>, <32 x float>* %a
   %op2 = load <32 x float>, <32 x float>* %b
   %mask = fcmp oeq <32 x float> %op1, %op2

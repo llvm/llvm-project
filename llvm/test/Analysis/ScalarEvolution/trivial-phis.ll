@@ -1,6 +1,6 @@
 ; RUN: opt -passes='print<scalar-evolution>' -disable-output %s 2>&1 | FileCheck %s
 
-; CHECK-LABEL @test1
+; CHECK-LABEL: @test1
 ; CHECK:       %add.lcssa.wide = phi i64 [ %indvars.iv.next, %do.body ]
 ; CHECK-NEXT:  -->  %add.lcssa.wide U: [1,2147483648) S: [1,2147483648)
 
@@ -22,7 +22,7 @@ do.end:                                           ; preds = %do.body
   ret i64 %add.lcssa.wide
 }
 
-; CHECK-LABEL @test2
+; CHECK-LABEL: @test2
 ; CHECK:      %tmp24 = phi i64 [ %tmp14, %bb22 ], [ %tmp14, %bb13 ]
 ; CHECK-NEXT: -->  %tmp24 U: full-set S: full-set       Exits: <<Unknown>>      LoopDispositions: { %bb13: Variant, %bb8: Variant, %bb17: Invariant, %bb27: Invariant }
 
@@ -114,7 +114,7 @@ bb48:                                             ; preds = %bb47, %bb
   ret void
 }
 
-; CHECK-LABEL @test3
+; CHECK-LABEL: @test3
 
 ; CHECK:      %tmp14 = phi i64 [ %tmp40, %bb39 ], [ 1, %bb8 ]
 ; CHECK-NEXT: -->  {1,+,1}<%bb13> U: [1,9223372036854775807) S: [1,9223372036854775807)

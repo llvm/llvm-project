@@ -16,7 +16,7 @@ define void @simple(i8* swiftasync %context) "frame-pointer"="all" {
 ; CHECK64: btrq    $60, %rbp
 ; CHECK64: retq
 
-; CHECK32-LABEL simple:
+; CHECK32-LABEL: simple:
 ; CHECK32: movl    8(%ebp), [[TMP:%.*]]
 ; CHECK32: movl    [[TMP]], {{.*}}(%ebp)
 
