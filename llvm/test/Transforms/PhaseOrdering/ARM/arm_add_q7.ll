@@ -26,8 +26,8 @@ define dso_local void @arm_add_q7(i8* %pSrcA, i8* %pSrcB, i8* noalias %pDst, i32
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[NEXT_GEP]] to <16 x i8>*
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* [[TMP0]], i32 1, <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i8> poison)
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8* [[NEXT_GEP15]] to <16 x i8>*
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD18:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* [[TMP1]], i32 1, <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i8> poison)
-; CHECK-NEXT:    [[TMP2:%.*]] = call <16 x i8> @llvm.sadd.sat.v16i8(<16 x i8> [[WIDE_MASKED_LOAD]], <16 x i8> [[WIDE_MASKED_LOAD18]])
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD16:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* [[TMP1]], i32 1, <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i8> poison)
+; CHECK-NEXT:    [[TMP2:%.*]] = call <16 x i8> @llvm.sadd.sat.v16i8(<16 x i8> [[WIDE_MASKED_LOAD]], <16 x i8> [[WIDE_MASKED_LOAD16]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i8* [[NEXT_GEP14]] to <16 x i8>*
 ; CHECK-NEXT:    call void @llvm.masked.store.v16i8.p0v16i8(<16 x i8> [[TMP2]], <16 x i8>* [[TMP3]], i32 1, <16 x i1> [[ACTIVE_LANE_MASK]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 16
