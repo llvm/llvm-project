@@ -111,7 +111,7 @@ template <typename V>
 struct SparseTensorCOO {
 public:
   SparseTensorCOO(const std::vector<uint64_t> &szs, uint64_t capacity)
-      : sizes(szs), iteratorLocked(false), iteratorPos(0) {
+      : sizes(szs) {
     if (capacity)
       elements.reserve(capacity);
   }
@@ -173,8 +173,8 @@ public:
 private:
   const std::vector<uint64_t> sizes; // per-dimension sizes
   std::vector<Element<V>> elements;
-  bool iteratorLocked;
-  unsigned iteratorPos;
+  bool iteratorLocked = false;
+  unsigned iteratorPos = 0;
 };
 
 /// Abstract base class for `SparseTensorStorage<P,I,V>`.  This class
