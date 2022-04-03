@@ -503,6 +503,22 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
     Diags.Report(diag::warn_ignored_hip_only_option)
         << Args.getLastArg(OPT_gpu_max_threads_per_block_EQ)->getAsString(Args);
 
+  // When these options are used, the compiler is allowed to apply
+  // optimizations that may affect the final result. For example
+  // (x+y)+z is transformed to x+(y+z) but may not give the same
+  // final result; it's not value safe.
+  // Another example can be to simplify x/x to 1.0 but x could be 0.0, INF
+  // or NaN. Final result may then differ. An error is issued when the eval
+  // method is set with one of these options.
+  if (Args.hasArg(OPT_ffp_eval_method_EQ)) {
+    if (LangOpts.ApproxFunc)
+      Diags.Report(diag::err_incompatible_fp_eval_method_options) << 0;
+    if (LangOpts.AllowFPReassoc)
+      Diags.Report(diag::err_incompatible_fp_eval_method_options) << 1;
+    if (LangOpts.AllowRecip)
+      Diags.Report(diag::err_incompatible_fp_eval_method_options) << 2;
+  }
+
   // -cl-strict-aliasing needs to emit diagnostic in the case where CL > 1.0.
   // This option should be deprecated for CL > 1.0 because
   // this option was added for compatibility with OpenCL 1.0.
