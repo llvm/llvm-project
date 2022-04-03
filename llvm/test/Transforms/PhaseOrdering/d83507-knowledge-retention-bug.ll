@@ -7,14 +7,19 @@
 define %0* @f1(%0* %i0) local_unnamed_addr {
 ; CHECK-LABEL: @f1(
 ; CHECK-NEXT:  bb:
-; CHECK:         br label [[BB3:%.*]]
+; CHECK-NEXT:    [[I21:%.*]] = icmp eq %0* [[I0:%.*]], null
+; CHECK-NEXT:    br i1 [[I21]], label [[BB6:%.*]], label [[BB3_LR_PH:%.*]]
+; CHECK:       bb3.lr.ph:
+; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[I1:%.*]] = phi %0* [ %i0, [[BB:%.*]] ], [ [[I5:%.*]], [[BB3]] ]
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(%0* [[I1]]) ]
-; CHECK-NEXT:    [[I4:%.*]] = getelementptr inbounds [[TMP0:%.*]], %0* [[I1]], i64 0, i32 0
+; CHECK-NEXT:    [[I3:%.*]] = phi %0* [ [[I0]], [[BB3_LR_PH]] ], [ [[I5:%.*]], [[BB3]] ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(%0* [[I3]]) ]
+; CHECK-NEXT:    [[I4:%.*]] = getelementptr inbounds [[TMP0:%.*]], %0* [[I3]], i64 0, i32 0
 ; CHECK-NEXT:    [[I5]] = load %0*, %0** [[I4]], align 8
 ; CHECK-NEXT:    [[I2:%.*]] = icmp eq %0* [[I5]], null
-; CHECK-NEXT:    br i1 [[I2]], label [[BB6:%.*]], label [[BB3]]
+; CHECK-NEXT:    br i1 [[I2]], label [[BB1_BB6_CRIT_EDGE:%.*]], label [[BB3]]
+; CHECK:       bb1.bb6_crit_edge:
+; CHECK-NEXT:    br label [[BB6]]
 ; CHECK:       bb6:
 ; CHECK-NEXT:    ret %0* undef
 ;

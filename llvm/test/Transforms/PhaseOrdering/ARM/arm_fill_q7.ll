@@ -12,20 +12,20 @@ target triple = "thumbv6m-none-none-eabi"
 define dso_local void @arm_fill_q7(i8 signext %value, i8* %pDst, i32 %blockSize) #0 {
 ; OLDPM-LABEL: @arm_fill_q7(
 ; OLDPM-NEXT:  entry:
-; OLDPM-NEXT:    [[CMP_NOT20:%.*]] = icmp ult i32 [[BLOCKSIZE:%.*]], 4
-; OLDPM-NEXT:    br i1 [[CMP_NOT20]], label [[WHILE_END:%.*]], label [[WHILE_BODY_PREHEADER:%.*]]
+; OLDPM-NEXT:    [[CMP_NOT17:%.*]] = icmp ult i32 [[BLOCKSIZE:%.*]], 4
+; OLDPM-NEXT:    br i1 [[CMP_NOT17]], label [[WHILE_END:%.*]], label [[WHILE_BODY_PREHEADER:%.*]]
 ; OLDPM:       while.body.preheader:
-; OLDPM-NEXT:    [[TMP0:%.*]] = and i32 [[BLOCKSIZE]], -4
-; OLDPM-NEXT:    call void @llvm.memset.p0i8.i32(i8* align 1 [[PDST:%.*]], i8 [[VALUE:%.*]], i32 [[TMP0]], i1 false)
-; OLDPM-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, i8* [[PDST]], i32 [[TMP0]]
+; OLDPM-NEXT:    [[SHR:%.*]] = and i32 [[BLOCKSIZE]], -4
+; OLDPM-NEXT:    call void @llvm.memset.p0i8.i32(i8* align 1 [[PDST:%.*]], i8 [[VALUE:%.*]], i32 [[SHR]], i1 false), !tbaa [[TBAA3:![0-9]+]]
+; OLDPM-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, i8* [[PDST]], i32 [[SHR]]
 ; OLDPM-NEXT:    br label [[WHILE_END]]
 ; OLDPM:       while.end:
 ; OLDPM-NEXT:    [[PDST_ADDR_0_LCSSA:%.*]] = phi i8* [ [[PDST]], [[ENTRY:%.*]] ], [ [[SCEVGEP]], [[WHILE_BODY_PREHEADER]] ]
 ; OLDPM-NEXT:    [[REM:%.*]] = and i32 [[BLOCKSIZE]], 3
-; OLDPM-NEXT:    [[CMP14_NOT17:%.*]] = icmp eq i32 [[REM]], 0
-; OLDPM-NEXT:    br i1 [[CMP14_NOT17]], label [[WHILE_END18:%.*]], label [[WHILE_BODY16_PREHEADER:%.*]]
+; OLDPM-NEXT:    [[CMP14_NOT20:%.*]] = icmp eq i32 [[REM]], 0
+; OLDPM-NEXT:    br i1 [[CMP14_NOT20]], label [[WHILE_END18:%.*]], label [[WHILE_BODY16_PREHEADER:%.*]]
 ; OLDPM:       while.body16.preheader:
-; OLDPM-NEXT:    call void @llvm.memset.p0i8.i32(i8* align 1 [[PDST_ADDR_0_LCSSA]], i8 [[VALUE]], i32 [[REM]], i1 false)
+; OLDPM-NEXT:    call void @llvm.memset.p0i8.i32(i8* align 1 [[PDST_ADDR_0_LCSSA]], i8 [[VALUE]], i32 [[REM]], i1 false), !tbaa [[TBAA3]]
 ; OLDPM-NEXT:    br label [[WHILE_END18]]
 ; OLDPM:       while.end18:
 ; OLDPM-NEXT:    ret void
@@ -35,9 +35,9 @@ define dso_local void @arm_fill_q7(i8 signext %value, i8* %pDst, i32 %blockSize)
 ; NEWPM-NEXT:    [[CMP_NOT17:%.*]] = icmp ult i32 [[BLOCKSIZE:%.*]], 4
 ; NEWPM-NEXT:    br i1 [[CMP_NOT17]], label [[WHILE_END:%.*]], label [[WHILE_BODY_PREHEADER:%.*]]
 ; NEWPM:       while.body.preheader:
-; NEWPM-NEXT:    [[TMP0:%.*]] = and i32 [[BLOCKSIZE]], -4
-; NEWPM-NEXT:    call void @llvm.memset.p0i8.i32(i8* align 1 [[PDST:%.*]], i8 [[VALUE:%.*]], i32 [[TMP0]], i1 false)
-; NEWPM-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, i8* [[PDST]], i32 [[TMP0]]
+; NEWPM-NEXT:    [[SHR:%.*]] = and i32 [[BLOCKSIZE]], -4
+; NEWPM-NEXT:    call void @llvm.memset.p0i8.i32(i8* align 1 [[PDST:%.*]], i8 [[VALUE:%.*]], i32 [[SHR]], i1 false), !tbaa [[TBAA3:![0-9]+]]
+; NEWPM-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, i8* [[PDST]], i32 [[SHR]]
 ; NEWPM-NEXT:    br label [[WHILE_END]]
 ; NEWPM:       while.end:
 ; NEWPM-NEXT:    [[PDST_ADDR_0_LCSSA:%.*]] = phi i8* [ [[PDST]], [[ENTRY:%.*]] ], [ [[SCEVGEP]], [[WHILE_BODY_PREHEADER]] ]
@@ -45,7 +45,7 @@ define dso_local void @arm_fill_q7(i8 signext %value, i8* %pDst, i32 %blockSize)
 ; NEWPM-NEXT:    [[CMP14_NOT20:%.*]] = icmp eq i32 [[REM]], 0
 ; NEWPM-NEXT:    br i1 [[CMP14_NOT20]], label [[WHILE_END18:%.*]], label [[WHILE_BODY16_PREHEADER:%.*]]
 ; NEWPM:       while.body16.preheader:
-; NEWPM-NEXT:    call void @llvm.memset.p0i8.i32(i8* align 1 [[PDST_ADDR_0_LCSSA]], i8 [[VALUE]], i32 [[REM]], i1 false)
+; NEWPM-NEXT:    call void @llvm.memset.p0i8.i32(i8* align 1 [[PDST_ADDR_0_LCSSA]], i8 [[VALUE]], i32 [[REM]], i1 false), !tbaa [[TBAA3]]
 ; NEWPM-NEXT:    br label [[WHILE_END18]]
 ; NEWPM:       while.end18:
 ; NEWPM-NEXT:    ret void
