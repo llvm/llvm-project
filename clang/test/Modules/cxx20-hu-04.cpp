@@ -19,10 +19,10 @@
 // RUN: FileCheck --check-prefix=CHECK-HU2 %s -DTDIR=%t
 
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface importer-01.cpp \
-// RUN:  -fmodule-file=hu-02.pcm -o B.pcm -DTDIR=%t -verify
+// RUN:  -fmodule-file=hu-02.pcm -o B.pcm -verify
 
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface importer-02.cpp \
-// RUN:  -fmodule-file=hu-02.pcm -o C.pcm -DTDIR=%t -Rmodule-import 2>&1 | \
+// RUN:  -fmodule-file=hu-02.pcm -o C.pcm -Rmodule-import 2>&1 | \
 // RUN:  FileCheck --check-prefix=CHECK-IMP-HU2 %s -DTDIR=%t
 
 //--- hu-01.h

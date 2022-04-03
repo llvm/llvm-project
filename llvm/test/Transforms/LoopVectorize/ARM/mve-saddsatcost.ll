@@ -20,8 +20,8 @@ define void @arm_offset_q15(i16* nocapture readonly %pSrc, i16 signext %offset, 
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 [[BLOCKSIZE]], 7
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -8
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT8:%.*]] = insertelement <8 x i16> poison, i16 [[OFFSET:%.*]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT9:%.*]] = shufflevector <8 x i16> [[BROADCAST_SPLATINSERT8]], <8 x i16> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT6:%.*]] = insertelement <8 x i16> poison, i16 [[OFFSET:%.*]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT7:%.*]] = shufflevector <8 x i16> [[BROADCAST_SPLATINSERT6]], <8 x i16> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -30,7 +30,7 @@ define void @arm_offset_q15(i16* nocapture readonly %pSrc, i16 signext %offset, 
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32 [[INDEX]], i32 [[BLOCKSIZE]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i16* [[NEXT_GEP]] to <8 x i16>*
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>* [[TMP0]], i32 2, <8 x i1> [[ACTIVE_LANE_MASK]], <8 x i16> poison)
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i16> @llvm.sadd.sat.v8i16(<8 x i16> [[WIDE_MASKED_LOAD]], <8 x i16> [[BROADCAST_SPLAT9]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i16> @llvm.sadd.sat.v8i16(<8 x i16> [[WIDE_MASKED_LOAD]], <8 x i16> [[BROADCAST_SPLAT7]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16* [[NEXT_GEP5]] to <8 x i16>*
 ; CHECK-NEXT:    call void @llvm.masked.store.v8i16.p0v8i16(<8 x i16> [[TMP1]], <8 x i16>* [[TMP2]], i32 2, <8 x i1> [[ACTIVE_LANE_MASK]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 8
