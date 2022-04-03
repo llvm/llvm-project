@@ -17277,13 +17277,14 @@ static SDValue lowerShuffleAsRepeatedMaskAndLanePermute(
     return SDValue();
 
   // On AVX2 targets we can permute 256-bit vectors as 64-bit sub-lanes
-  // (with PERMQ/PERMPD). On AVX512BW targets, permuting 64-bit sub-lanes, even
+  // (with PERMQ/PERMPD). On AVX512BW targets, permuting 32-bit sub-lanes, even
   // with a variable shuffle, is worth it for 64xi8 vectors. Otherwise we can
   // only permute whole 128-bit lanes.
   int SubLaneScale = 1;
-  if ((Subtarget.hasAVX2() && VT.is256BitVector()) ||
-      (Subtarget.hasBWI() && VT == MVT::v64i8))
+  if (Subtarget.hasAVX2() && VT.is256BitVector())
     SubLaneScale = 2;
+  if (Subtarget.hasBWI() && VT == MVT::v64i8)
+    SubLaneScale = 4;
   int NumSubLanes = NumLanes * SubLaneScale;
   int NumSubLaneElts = NumLaneElts / SubLaneScale;
 
@@ -17292,9 +17293,9 @@ static SDValue lowerShuffleAsRepeatedMaskAndLanePermute(
   // determine the source sub-lane for each destination sub-lane.
   int TopSrcSubLane = -1;
   SmallVector<int, 8> Dst2SrcSubLanes((unsigned)NumSubLanes, -1);
-  SmallVector<int, 8> RepeatedSubLaneMasks[2] = {
-      SmallVector<int, 8>((unsigned)NumSubLaneElts, SM_SentinelUndef),
-      SmallVector<int, 8>((unsigned)NumSubLaneElts, SM_SentinelUndef)};
+  SmallVector<SmallVector<int, 8>> RepeatedSubLaneMasks(
+      SubLaneScale,
+      SmallVector<int, 8>((unsigned)NumSubLaneElts, SM_SentinelUndef));
 
   for (int DstSubLane = 0; DstSubLane != NumSubLanes; ++DstSubLane) {
     // Extract the sub-lane mask, check that it all comes from the same lane
