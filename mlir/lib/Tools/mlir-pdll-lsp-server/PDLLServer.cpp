@@ -1060,7 +1060,7 @@ private:
   int64_t version;
 
   /// The number of lines in the file.
-  int64_t totalNumLines;
+  int64_t totalNumLines = 0;
 
   /// The chunks of this file. The order of these chunks is the order in which
   /// they appear in the text file.
@@ -1072,7 +1072,7 @@ PDLTextFile::PDLTextFile(const lsp::URIForFile &uri, StringRef fileContents,
                          int64_t version,
                          const std::vector<std::string> &extraDirs,
                          std::vector<lsp::Diagnostic> &diagnostics)
-    : contents(fileContents.str()), version(version), totalNumLines(0) {
+    : contents(fileContents.str()), version(version) {
   // Split the file into separate PDL documents.
   // TODO: Find a way to share the split file marker with other tools. We don't
   // want to use `splitAndProcessBuffer` here, but we do want to make sure this
