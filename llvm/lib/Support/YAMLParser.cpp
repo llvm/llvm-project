@@ -1897,11 +1897,11 @@ bool Scanner::fetchMoreTokens() {
 
 Stream::Stream(StringRef Input, SourceMgr &SM, bool ShowColors,
                std::error_code *EC)
-    : scanner(new Scanner(Input, SM, ShowColors, EC)), CurrentDoc() {}
+    : scanner(new Scanner(Input, SM, ShowColors, EC)) {}
 
 Stream::Stream(MemoryBufferRef InputBuffer, SourceMgr &SM, bool ShowColors,
                std::error_code *EC)
-    : scanner(new Scanner(InputBuffer, SM, ShowColors, EC)), CurrentDoc() {}
+    : scanner(new Scanner(InputBuffer, SM, ShowColors, EC)) {}
 
 Stream::~Stream() = default;
 
