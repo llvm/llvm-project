@@ -1765,24 +1765,12 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
 
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
-
-  // If the instruction is a widening instruction (e.g., uaddl, saddw, etc.),
-  // add in the widening overhead specified by the sub-target. Since the
-  // extends feeding widening instructions are performed automatically, they
-  // aren't present in the generated code and have a zero cost. By adding a
-  // widening overhead here, we attach the total cost of the combined operation
-  // to the widening instruction.
-  InstructionCost Cost = 0;
-  if (isWideningInstruction(Ty, Opcode, Args))
-    Cost += ST->getWideningBaseCost();
-
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
 
   switch (ISD) {
   default:
-    return Cost + BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Opd1Info,
-                                                Opd2Info,
-                                                Opd1PropInfo, Opd2PropInfo);
+    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Opd1Info,
+                                         Opd2Info, Opd1PropInfo, Opd2PropInfo);
   case ISD::SDIV:
     if (Opd2Info == TargetTransformInfo::OK_UniformConstantValue &&
         Opd2PropInfo == TargetTransformInfo::OP_PowerOf2) {
@@ -1790,26 +1778,22 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
       // normally expanded to the sequence ADD + CMP + SELECT + SRA.
       // The OperandValue properties many not be same as that of previous
       // operation; conservatively assume OP_None.
-      Cost += getArithmeticInstrCost(Instruction::Add, Ty, CostKind,
-                                     Opd1Info, Opd2Info,
-                                     TargetTransformInfo::OP_None,
+      InstructionCost Cost = getArithmeticInstrCost(
+          Instruction::Add, Ty, CostKind, Opd1Info, Opd2Info,
+          TargetTransformInfo::OP_None, TargetTransformInfo::OP_None);
+      Cost += getArithmeticInstrCost(Instruction::Sub, Ty, CostKind, Opd1Info,
+                                     Opd2Info, TargetTransformInfo::OP_None,
                                      TargetTransformInfo::OP_None);
-      Cost += getArithmeticInstrCost(Instruction::Sub, Ty, CostKind,
-                                     Opd1Info, Opd2Info,
-                                     TargetTransformInfo::OP_None,
-                                     TargetTransformInfo::OP_None);
-      Cost += getArithmeticInstrCost(Instruction::Select, Ty, CostKind,
-                                     Opd1Info, Opd2Info,
-                                     TargetTransformInfo::OP_None,
-                                     TargetTransformInfo::OP_None);
-      Cost += getArithmeticInstrCost(Instruction::AShr, Ty, CostKind,
-                                     Opd1Info, Opd2Info,
-                                     TargetTransformInfo::OP_None,
+      Cost += getArithmeticInstrCost(
+          Instruction::Select, Ty, CostKind, Opd1Info, Opd2Info,
+          TargetTransformInfo::OP_None, TargetTransformInfo::OP_None);
+      Cost += getArithmeticInstrCost(Instruction::AShr, Ty, CostKind, Opd1Info,
+                                     Opd2Info, TargetTransformInfo::OP_None,
                                      TargetTransformInfo::OP_None);
       return Cost;
     }
     LLVM_FALLTHROUGH;
-  case ISD::UDIV:
+  case ISD::UDIV: {
     if (Opd2Info == TargetTransformInfo::OK_UniformConstantValue) {
       auto VT = TLI->getValueType(DL, Ty);
       if (TLI->isOperationLegalOrCustom(ISD::MULHU, VT)) {
@@ -1829,9 +1813,8 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
       }
     }
 
-    Cost += BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Opd1Info,
-                                          Opd2Info,
-                                          Opd1PropInfo, Opd2PropInfo);
+    InstructionCost Cost = BaseT::getArithmeticInstrCost(
+        Opcode, Ty, CostKind, Opd1Info, Opd2Info, Opd1PropInfo, Opd2PropInfo);
     if (Ty->isVectorTy()) {
       // On AArch64, vector divisions are not supported natively and are
       // expanded into scalar divisions of each pair of elements.
@@ -1846,10 +1829,10 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
       Cost += Cost;
     }
     return Cost;
-
+  }
   case ISD::MUL:
     if (LT.second != MVT::v2i64)
-      return (Cost + 1) * LT.first;
+      return LT.first;
     // Since we do not have a MUL.2d instruction, a mul <2 x i64> is expensive
     // as elements are extracted from the vectors and the muls scalarized.
     // As getScalarizationOverhead is a bit too pessimistic, we estimate the
@@ -1869,7 +1852,7 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
   case ISD::SHL:
     // These nodes are marked as 'custom' for combining purposes only.
     // We know that they are legal. See LowerAdd in ISelLowering.
-    return (Cost + 1) * LT.first;
+    return LT.first;
 
   case ISD::FADD:
   case ISD::FSUB:
@@ -1879,11 +1862,10 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     // These nodes are marked as 'custom' just to lower them to SVE.
     // We know said lowering will incur no additional cost.
     if (!Ty->getScalarType()->isFP128Ty())
-      return (Cost + 2) * LT.first;
+      return 2 * LT.first;
 
-    return Cost + BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Opd1Info,
-                                                Opd2Info,
-                                                Opd1PropInfo, Opd2PropInfo);
+    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Opd1Info,
+                                         Opd2Info, Opd1PropInfo, Opd2PropInfo);
   }
 }
 
