@@ -20,14 +20,14 @@ using namespace llvm;
 TraceCursorIntelPT::TraceCursorIntelPT(ThreadSP thread_sp,
                                        DecodedThreadSP decoded_thread_sp)
     : TraceCursor(thread_sp), m_decoded_thread_sp(decoded_thread_sp) {
-  assert(!m_decoded_thread_sp->GetInstructions().empty() &&
+  assert(m_decoded_thread_sp->GetInstructionsCount() > 0 &&
          "a trace should have at least one instruction or error");
-  m_pos = m_decoded_thread_sp->GetInstructions().size() - 1;
+  m_pos = m_decoded_thread_sp->GetInstructionsCount() - 1;
   m_tsc_range = m_decoded_thread_sp->CalculateTscRange(m_pos);
 }
 
 size_t TraceCursorIntelPT::GetInternalInstructionSize() {
-  return m_decoded_thread_sp->GetInstructions().size();
+  return m_decoded_thread_sp->GetInstructionsCount();
 }
 
 bool TraceCursorIntelPT::Next() {
@@ -78,8 +78,8 @@ size_t TraceCursorIntelPT::Seek(int64_t offset, SeekType origin) {
       return std::abs(dist);
     }
   };
-  
-	int64_t dist = FindDistanceAndSetPos();
+
+  int64_t dist = FindDistanceAndSetPos();
   m_tsc_range = m_decoded_thread_sp->CalculateTscRange(m_pos);
   return dist;
 }
@@ -93,7 +93,7 @@ const char *TraceCursorIntelPT::GetError() {
 }
 
 lldb::addr_t TraceCursorIntelPT::GetLoadAddress() {
-  return m_decoded_thread_sp->GetInstructions()[m_pos].GetLoadAddress();
+  return m_decoded_thread_sp->GetInstructionLoadAddress(m_pos);
 }
 
 Optional<uint64_t>
@@ -109,10 +109,5 @@ TraceCursorIntelPT::GetCounter(lldb::TraceCounter counter_type) {
 
 TraceInstructionControlFlowType
 TraceCursorIntelPT::GetInstructionControlFlowType() {
-  lldb::addr_t next_load_address =
-      m_pos + 1 < GetInternalInstructionSize()
-          ? m_decoded_thread_sp->GetInstructions()[m_pos + 1].GetLoadAddress()
-          : LLDB_INVALID_ADDRESS;
-  return m_decoded_thread_sp->GetInstructions()[m_pos].GetControlFlowType(
-      next_load_address);
+  return m_decoded_thread_sp->GetInstructionControlFlowType(m_pos);
 }
