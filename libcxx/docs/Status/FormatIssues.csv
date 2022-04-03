@@ -14,7 +14,7 @@ Number,Name,Standard,Assignee,Status,First released version
 "`P2675R1 <https://wg21.link/P2675R1>`__","``format``'s width estimation is too approximate and not forward compatible","C++23","Mark de Wever","|Complete|",17.0
 "`P2572R1 <https://wg21.link/P2572R1>`__","``std::format`` fill character allowances","C++23","Mark de Wever","|Complete|",17.0
 "`P2693R1 <https://wg21.link/P2693R1>`__","Formatting ``thread::id`` and ``stacktrace``","C++23","Mark de Wever","|In progress|"
-"`P2510R3 <https://wg21.link/P2510R3>`__","Formatting pointers","C++26","Mark de Wever","|In Progress|",
+"`P2510R3 <https://wg21.link/P2510R3>`__","Formatting pointers","C++26","Mark de Wever","|Complete|", 17.0
 "`P2757R3 <https://wg21.link/P2757R3>`__","Type-checking format args","C++26","","",
 "`P2637R3 <https://wg21.link/P2637R3>`__","Member ``visit``","C++26","","",
 `P1361 <https://wg21.link/P1361>`_,"Integration of chrono with text formatting","C++20",Mark de Wever,|In Progress|,
