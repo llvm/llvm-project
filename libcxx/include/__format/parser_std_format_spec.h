@@ -151,7 +151,7 @@ inline constexpr __fields __fields_floating_point{
     .__locale_specific_form_ = true,
     .__type_                 = true};
 inline constexpr __fields __fields_string{.__precision_ = true, .__type_ = true};
-inline constexpr __fields __fields_pointer{.__type_ = true};
+inline constexpr __fields __fields_pointer{.__zero_padding_ = true, .__type_ = true};
 
 #  if _LIBCPP_STD_VER >= 23
 inline constexpr __fields __fields_tuple{.__use_range_fill_ = true};
@@ -189,7 +189,8 @@ enum class _LIBCPP_ENUM_VIS __type : uint8_t {
   __decimal,
   __hexadecimal_lower_case,
   __hexadecimal_upper_case,
-  __pointer,
+  __pointer_lower_case,
+  __pointer_upper_case,
   __char,
   __hexfloat_lower_case,
   __hexfloat_upper_case,
@@ -675,7 +676,10 @@ private:
       __type_ = __type::__octal;
       break;
     case 'p':
-      __type_ = __type::__pointer;
+      __type_ = __type::__pointer_lower_case;
+      break;
+    case 'P':
+      __type_ = __type::__pointer_upper_case;
       break;
     case 's':
       __type_ = __type::__string;
@@ -840,7 +844,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr void __process_parsed_floating_point(__parser<_C
 _LIBCPP_HIDE_FROM_ABI constexpr void __process_display_type_pointer(__format_spec::__type __type) {
   switch (__type) {
   case __format_spec::__type::__default:
-  case __format_spec::__type::__pointer:
+  case __format_spec::__type::__pointer_lower_case:
+  case __format_spec::__type::__pointer_upper_case:
     break;
 
   default:
