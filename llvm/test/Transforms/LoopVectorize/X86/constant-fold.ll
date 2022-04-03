@@ -27,7 +27,7 @@ define void @f1() {
 ; CHECK-NEXT:    store <2 x i16*> <i16* getelementptr inbounds ([1 x %rec8], [1 x %rec8]* @a, i32 0, i32 0, i32 0), i16* getelementptr inbounds ([1 x %rec8], [1 x %rec8]* @a, i32 0, i32 0, i32 0)>, <2 x i16*>* [[TMP4]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], 2
-; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP0:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 2, 2
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[BB3:%.*]], label [[SCALAR_PH]]
@@ -44,7 +44,7 @@ define void @f1() {
 ; CHECK-NEXT:    store i16* [[_TMP4]], i16** [[_TMP7]], align 8
 ; CHECK-NEXT:    [[_TMP9]] = add nsw i16 [[C_1_0]], 1
 ; CHECK-NEXT:    [[_TMP11:%.*]] = icmp slt i16 [[_TMP9]], 2
-; CHECK-NEXT:    br i1 [[_TMP11]], label [[BB2]], label [[BB3]], [[LOOP2:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[_TMP11]], label [[BB2]], label [[BB3]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    ret void
 ;
