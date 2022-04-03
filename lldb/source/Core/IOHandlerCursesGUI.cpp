@@ -5016,8 +5016,7 @@ class FrameTreeDelegate : public TreeDelegate {
 public:
   FrameTreeDelegate() : TreeDelegate() {
     FormatEntity::Parse(
-        "frame #${frame.index}: {${function.name}${function.pc-offset}}}",
-        m_format);
+        "#${frame.index}: {${function.name}${function.pc-offset}}}", m_format);
   }
 
   ~FrameTreeDelegate() override = default;

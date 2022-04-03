@@ -33,7 +33,7 @@ class TestGuiExpandThreadsTree(PExpectTest):
         self.child.expect_exact("Threads")
 
         # The thread running thread_start_routine should be expanded.
-        self.child.expect_exact("frame #0: break_here")
+        self.child.expect_exact("#0: break_here")
 
         # Exit GUI.
         self.child.send(escape_key)
@@ -47,7 +47,7 @@ class TestGuiExpandThreadsTree(PExpectTest):
         self.child.expect_exact("Threads")
 
         # The main thread should be expanded.
-        self.child.expect("frame #\d+: main")
+        self.child.expect("#\d+: main")
 
         # Quit the GUI
         self.child.send(escape_key)
