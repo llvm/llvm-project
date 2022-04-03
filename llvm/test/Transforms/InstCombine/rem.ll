@@ -742,7 +742,7 @@ define i1 @test28(i32 %A) {
 
 define i1 @positive_and_odd_eq(i32 %A) {
 ; CHECK-LABEL: @positive_and_odd_eq(
-; CHECK-NEXT:    [[B:%.*]] = srem i32 [[A:%.*]], 2
+; CHECK-NEXT:    [[B:%.*]] = and i32 [[A:%.*]], -2147483647
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[B]], 1
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -764,7 +764,7 @@ define i1 @negative_and_odd_eq(i32 %A) {
 
 define i1 @positive_and_odd_ne(i32 %A) {
 ; CHECK-LABEL: @positive_and_odd_ne(
-; CHECK-NEXT:    [[B:%.*]] = srem i32 [[A:%.*]], 2
+; CHECK-NEXT:    [[B:%.*]] = and i32 [[A:%.*]], -2147483647
 ; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[B]], 1
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
