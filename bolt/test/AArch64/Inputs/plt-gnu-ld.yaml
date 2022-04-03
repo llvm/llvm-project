@@ -1,0 +1,459 @@
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_AARCH64
+  Entry:           0x400510
+ProgramHeaders:
+  - Type:            PT_PHDR
+    Flags:           [ PF_R ]
+    VAddr:           0x400040
+    Align:           0x8
+  - Type:            PT_INTERP
+    Flags:           [ PF_R ]
+    FirstSec:        .interp
+    LastSec:         .interp
+    VAddr:           0x400238
+  - Type:            PT_LOAD
+    Flags:           [ PF_X, PF_R ]
+    FirstSec:        .interp
+    LastSec:         .bss
+    VAddr:           0x400000
+    Align:           0x10000
+  - Type:            PT_DYNAMIC
+    Flags:           [ PF_W, PF_R ]
+    FirstSec:        .dynamic
+    LastSec:         .dynamic
+    VAddr:           0x410E08
+    Align:           0x8
+Sections:
+  - Name:            .interp
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x400238
+    AddressAlign:    0x1
+    Content:         2F6C69622F6C642D6C696E75782D616172636836342E736F2E3100
+  - Name:            .dynsym
+    Type:            SHT_DYNSYM
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x4002A0
+    Link:            .dynstr
+    AddressAlign:    0x8
+  - Name:            .dynstr
+    Type:            SHT_STRTAB
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x400348
+    AddressAlign:    0x1
+  - Name:            .rela.dyn
+    Type:            SHT_RELA
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x4003C8
+    Link:            .dynsym
+    AddressAlign:    0x8
+    Relocations:
+      - Offset:          0x410FE0
+        Symbol:          __gmon_start__
+        Type:            R_AARCH64_GLOB_DAT
+  - Name:            .rela.plt
+    Type:            SHT_RELA
+    Flags:           [ SHF_ALLOC, SHF_INFO_LINK ]
+    Address:         0x4003E0
+    Link:            .dynsym
+    AddressAlign:    0x8
+    Info:            .got.plt
+    Relocations:
+      - Offset:          0x411000
+        Symbol:          memcpy
+        Type:            R_AARCH64_JUMP_SLOT
+      - Offset:          0x411008
+        Symbol:          __libc_start_main
+        Type:            R_AARCH64_JUMP_SLOT
+      - Offset:          0x411010
+        Symbol:          memset
+        Type:            R_AARCH64_JUMP_SLOT
+      - Offset:          0x411018
+        Symbol:          __gmon_start__
+        Type:            R_AARCH64_JUMP_SLOT
+      - Offset:          0x411020
+        Symbol:          abort
+        Type:            R_AARCH64_JUMP_SLOT
+      - Offset:          0x411028
+        Symbol:          printf
+        Type:            R_AARCH64_JUMP_SLOT
+  - Name:            .plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x400490
+    AddressAlign:    0x10
+    EntSize:         0x10
+    Content:         F07BBFA99000009011FE47F910E23F9120021FD61F2003D51F2003D51F2003D5900000B0110240F91002009120021FD6900000B0110640F91022009120021FD6900000B0110A40F91042009120021FD6900000B0110E40F91062009120021FD6900000B0111240F91082009120021FD6900000B0111640F910A2009120021FD6
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x400510
+    AddressAlign:    0x8
+    Content:         1D0080D21E0080D2E50300AAE10340F9E2230091E603009100000090002015910300009063201B910400009084201D91E0FFFF97EBFFFF972F0000148000009000F047F9400000B4E2FFFF17C0035FD6800000B000000191810000B0210001913F0000EBC00000540100009021B443F9610000B4F00301AA00021FD6C0035FD6800000B000000191810000B021000191210000CB22FC7FD3410C818BFF0781EB21FC4193C00000540200009042B843F9620000B4F00302AA00021FD6C0035FD6FD7BBEA9FD030091F30B00F9930000B06002413980000035DEFFFF972000805260020139F30B40F9FD7BC2A8C0035FD6E4FFFF17FF8300D1FD7B01A9FD430091BFC31FB8E1230091E8DD9752A8D5BB72E80300B9E80B00B9E0130091FF0700B9880000B00900009029C11291092500F9082540F9820080D200013FD6E90340B9E80740B90801096BA00000540100001428008052A8C31FB814000014880000B00900009029411391092900F9082940F9E0230091E1031F2A820080D200013FD6E80B40B9A80000340100001428008052A8C31FB8050000140000009000E01D9194FFFF9701000014A0C35FB8FD7B41A9FF830091C0035FD6FD7BBCA9FD030091F35301A99400009094023891F55B02A995000090B5E23791940215CBF603002AF76303A9F70301AAF80302AA5DFFFF97FF0F94EB6001005494FE4393130080D2A37A73F8E20318AA73060091E10317AAE003162A60003FD69F0213EB21FFFF54F35341A9F55B42A9F76343A9FD7BC4A8C0035FD61F2003D5C0035FD6
+  - Name:            .rodata
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x400760
+    AddressAlign:    0x8
+    Content:         0100020000000000000000000000000000000000000000005465737420636F6D706C657465640A00
+  - Name:            .dynamic
+    Type:            SHT_DYNAMIC
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x410E08
+    Link:            .dynstr
+    AddressAlign:    0x8
+    Entries:
+      - Tag:             DT_NEEDED
+        Value:           0x1
+      - Tag:             DT_STRTAB
+        Value:           0x400348
+      - Tag:             DT_SYMTAB
+        Value:           0x4002A0
+      - Tag:             DT_STRSZ
+        Value:           0x52
+      - Tag:             DT_SYMENT
+        Value:           0x18
+      - Tag:             DT_DEBUG
+        Value:           0x0
+      - Tag:             DT_PLTGOT
+        Value:           0x410FE8
+      - Tag:             DT_PLTRELSZ
+        Value:           0x90
+      - Tag:             DT_PLTREL
+        Value:           0x7
+      - Tag:             DT_JMPREL
+        Value:           0x4003E0
+      - Tag:             DT_RELA
+        Value:           0x4003C8
+      - Tag:             DT_RELASZ
+        Value:           0x18
+      - Tag:             DT_RELAENT
+        Value:           0x18
+      - Tag:             DT_NULL
+        Value:           0x0
+  - Name:            .got
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x410FD8
+    AddressAlign:    0x8
+    EntSize:         0x8
+    Content:         '080E4100000000000000000000000000'
+  - Name:            .got.plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x410FE8
+    AddressAlign:    0x8
+    EntSize:         0x8
+    Content:         '000000000000000000000000000000000000000000000000900440000000000090044000000000009004400000000000900440000000000090044000000000009004400000000000'
+  - Name:            .tm_clone_table
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x411040
+    AddressAlign:    0x8
+  - Name:            .bss
+    Type:            SHT_NOBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x411040
+    AddressAlign:    0x8
+    Size:            0x18
+  - Name:            .rela.text
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .text
+    Relocations:
+      - Offset:          0x400528
+        Symbol:          .text
+        Type:            R_AARCH64_ADR_PREL_PG_HI21
+        Addend:          56
+      - Offset:          0x40052C
+        Symbol:          .text
+        Type:            R_AARCH64_ADD_ABS_LO12_NC
+        Addend:          56
+        Symbol:          '__libc_start_main@@GLIBC_2.17'
+        Type:            R_AARCH64_CALL26
+      - Offset:          0x400544
+        Symbol:          'abort@@GLIBC_2.17'
+        Type:            R_AARCH64_CALL26
+      - Offset:          0x400548
+        Symbol:          main
+        Type:            R_AARCH64_JUMP26
+      - Offset:          0x40054C
+        Symbol:          __gmon_start__
+        Type:            R_AARCH64_ADR_GOT_PAGE
+      - Offset:          0x400550
+        Symbol:          __gmon_start__
+        Type:            R_AARCH64_LD64_GOT_LO12_NC
+      - Offset:          0x400558
+        Symbol:          __gmon_start__
+        Type:            R_AARCH64_JUMP26
+      - Offset:          0x400560
+        Symbol:          .tm_clone_table
+        Type:            R_AARCH64_ADR_PREL_PG_HI21
+      - Offset:          0x400564
+        Symbol:          .tm_clone_table
+        Type:            R_AARCH64_ADD_ABS_LO12_NC
+      - Offset:          0x400578
+        Symbol:          .rodata
+        Type:            R_AARCH64_ADR_PREL_PG_HI21
+        Addend:          8
+      - Offset:          0x40057C
+        Symbol:          .rodata
+        Type:            R_AARCH64_LDST64_ABS_LO12_NC
+        Addend:          8
+      - Offset:          0x400590
+        Symbol:          .tm_clone_table
+        Type:            R_AARCH64_ADR_PREL_PG_HI21
+      - Offset:          0x400594
+        Symbol:          .tm_clone_table
+        Type:            R_AARCH64_ADD_ABS_LO12_NC
+      - Offset:          0x4005B8
+        Symbol:          .rodata
+        Type:            R_AARCH64_ADR_PREL_PG_HI21
+        Addend:          16
+      - Offset:          0x4005BC
+        Symbol:          .rodata
+        Type:            R_AARCH64_LDST64_ABS_LO12_NC
+        Addend:          16
+      - Offset:          0x4005DC
+        Symbol:          .bss
+        Type:            R_AARCH64_ADR_PREL_PG_HI21
+      - Offset:          0x4005E0
+        Symbol:          .bss
+        Type:            R_AARCH64_LDST8_ABS_LO12_NC
+      - Offset:          0x4005F0
+        Symbol:          .bss
+        Type:            R_AARCH64_LDST8_ABS_LO12_NC
+      - Offset:          0x400630
+        Symbol:          memcpy_p
+        Type:            R_AARCH64_ADR_PREL_PG_HI21
+      - Offset:          0x400634
+        Symbol:          'memcpy@@GLIBC_2.17'
+        Type:            R_AARCH64_ADR_PREL_PG_HI21
+      - Offset:          0x400638
+        Symbol:          'memcpy@@GLIBC_2.17'
+        Type:            R_AARCH64_ADD_ABS_LO12_NC
+      - Offset:          0x40063C
+        Symbol:          memcpy_p
+        Type:            R_AARCH64_LDST64_ABS_LO12_NC
+      - Offset:          0x400640
+        Symbol:          memcpy_p
+        Type:            R_AARCH64_LDST64_ABS_LO12_NC
+      - Offset:          0x40066C
+        Symbol:          memset_p
+        Type:            R_AARCH64_ADR_PREL_PG_HI21
+      - Offset:          0x400670
+        Symbol:          'memset@@GLIBC_2.17'
+        Type:            R_AARCH64_ADR_PREL_PG_HI21
+      - Offset:          0x400674
+        Symbol:          'memset@@GLIBC_2.17'
+        Type:            R_AARCH64_ADD_ABS_LO12_NC
+      - Offset:          0x400678
+        Symbol:          memset_p
+        Type:            R_AARCH64_LDST64_ABS_LO12_NC
+      - Offset:          0x40067C
+        Symbol:          memset_p
+        Type:            R_AARCH64_LDST64_ABS_LO12_NC
+      - Offset:          0x4006A8
+        Symbol:          .rodata
+        Type:            R_AARCH64_ADR_PREL_PG_HI21
+        Addend:          24
+      - Offset:          0x4006AC
+        Symbol:          .rodata
+        Type:            R_AARCH64_ADD_ABS_LO12_NC
+        Addend:          24
+      - Offset:          0x4006B0
+        Symbol:          'printf@@GLIBC_2.17'
+        Type:            R_AARCH64_CALL26
+  - Name:            .rela.rodata
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .rodata
+    Relocations:
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .interp
+      - Name:            .dynsym
+      - Name:            .dynstr
+      - Name:            .rela.dyn
+      - Name:            .rela.plt
+      - Name:            .plt
+      - Name:            .text
+      - Name:            .rela.text
+      - Name:            .rodata
+      - Name:            .rela.rodata
+      - Name:            .dynamic
+      - Name:            .got
+      - Name:            .got.plt
+      - Name:            .tm_clone_table
+      - Name:            .bss
+      - Name:            .symtab
+      - Name:            .strtab
+      - Name:            .shstrtab
+Symbols:
+  - Name:            .interp
+    Type:            STT_SECTION
+    Section:         .interp
+    Value:           0x400238
+  - Name:            .dynsym
+    Type:            STT_SECTION
+    Section:         .dynsym
+    Value:           0x4002A0
+  - Name:            .dynstr
+    Type:            STT_SECTION
+    Section:         .dynstr
+    Value:           0x400348
+  - Name:            .rela.dyn
+    Type:            STT_SECTION
+    Section:         .rela.dyn
+    Value:           0x4003C8
+  - Name:            .rela.plt
+    Type:            STT_SECTION
+    Section:         .rela.plt
+    Value:           0x4003E0
+  - Name:            .plt
+    Type:            STT_SECTION
+    Section:         .plt
+    Value:           0x400490
+  - Name:            .text
+    Type:            STT_SECTION
+    Section:         .text
+    Value:           0x400510
+  - Name:            .rodata
+    Type:            STT_SECTION
+    Section:         .rodata
+    Value:           0x400760
+  - Name:            .dynamic
+    Type:            STT_SECTION
+    Section:         .dynamic
+    Value:           0x410E08
+  - Name:            .got
+    Type:            STT_SECTION
+    Section:         .got
+    Value:           0x410FD8
+  - Name:            .got.plt
+    Type:            STT_SECTION
+    Section:         .got.plt
+    Value:           0x410FE8
+  - Name:            .tm_clone_table
+    Type:            STT_SECTION
+    Section:         .tm_clone_table
+    Value:           0x411040
+  - Name:            .bss
+    Type:            STT_SECTION
+    Section:         .bss
+    Value:           0x411040
+  - Name:            __wrap_main
+    Section:         .text
+    Value:           0x400548
+  - Name:            _DYNAMIC
+    Type:            STT_OBJECT
+    Section:         .dynamic
+    Value:           0x410E08
+  - Name:            _GLOBAL_OFFSET_TABLE_
+    Type:            STT_OBJECT
+    Section:         .got
+    Value:           0x410FD8
+  - Name:            'memcpy@@GLIBC_2.17'
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+    Value:           0x4004B0
+  - Name:            __bss_start__
+    Section:         .bss
+    Binding:         STB_GLOBAL
+    Value:           0x411040
+  - Name:            memcpy_p
+    Type:            STT_OBJECT
+    Section:         .bss
+    Binding:         STB_GLOBAL
+    Value:           0x411048
+    Size:            0x8
+  - Name:            _bss_end__
+    Section:         .bss
+    Binding:         STB_GLOBAL
+    Value:           0x411058
+  - Name:            _edata
+    Section:         .tm_clone_table
+    Binding:         STB_GLOBAL
+    Value:           0x411040
+  - Name:            __bss_end__
+    Section:         .bss
+    Binding:         STB_GLOBAL
+    Value:           0x411058
+  - Name:            '__libc_start_main@@GLIBC_2.17'
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            'memset@@GLIBC_2.17'
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+    Value:           0x4004D0
+  - Name:            memset_p
+    Type:            STT_OBJECT
+    Section:         .bss
+    Binding:         STB_GLOBAL
+    Value:           0x411050
+    Size:            0x8
+  - Name:            __gmon_start__
+    Binding:         STB_WEAK
+  - Name:            'abort@@GLIBC_2.17'
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            _IO_stdin_used
+    Type:            STT_OBJECT
+    Section:         .rodata
+    Binding:         STB_GLOBAL
+    Value:           0x400760
+    Size:            0x4
+  - Name:            _end
+    Section:         .bss
+    Binding:         STB_GLOBAL
+    Value:           0x411058
+  - Name:            _start
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x400510
+  - Name:            __end__
+    Section:         .bss
+    Binding:         STB_GLOBAL
+    Value:           0x411058
+  - Name:            __bss_start
+    Section:         .bss
+    Binding:         STB_GLOBAL
+    Value:           0x411040
+  - Name:            main
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x400604
+    Size:            0xC4
+  - Name:            'printf@@GLIBC_2.17'
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+DynamicSymbols:
+  - Name:            __libc_start_main
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            __gmon_start__
+    Binding:         STB_WEAK
+  - Name:            abort
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            printf
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            memcpy
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+    Value:           0x4004B0
+  - Name:            memset
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+    Value:           0x4004D0

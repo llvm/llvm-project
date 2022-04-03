@@ -1884,7 +1884,7 @@ bool RewriteInstance::analyzeRelocation(
     IsSectionRelocation = (cantFail(Symbol.getType()) == SymbolRef::ST_Debug);
     // Check for PLT entry registered with symbol name
     if (!SymbolAddress && IsAArch64) {
-      BinaryData *BD = BC->getBinaryDataByName(SymbolName + "@PLT");
+      const BinaryData *BD = BC->getPLTBinaryDataByName(SymbolName);
       SymbolAddress = BD ? BD->getAddress() : 0;
     }
   }
@@ -3035,7 +3035,7 @@ public:
         std::string SymName = Symbol.str();
         LLVM_DEBUG(dbgs() << "BOLT: looking for " << SymName << "\n");
         // Resolve to a PLT entry if possible
-        if (BinaryData *I = BC.getBinaryDataByName(SymName + "@PLT")) {
+        if (const BinaryData *I = BC.getPLTBinaryDataByName(SymName)) {
           AllResults[Symbol] =
               JITEvaluatedSymbol(I->getAddress(), JITSymbolFlags());
           continue;

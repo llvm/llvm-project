@@ -53,6 +53,9 @@ else:
 if config.bolt_enable_runtime:
     config.available_features.add("bolt-runtime")
 
+if config.gnu_ld:
+    config.available_features.add("gnu_ld")
+
 llvm_config.use_default_substitutions()
 
 llvm_config.config.environment['CLANG'] = config.bolt_clang

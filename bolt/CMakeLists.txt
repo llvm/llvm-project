@@ -73,6 +73,8 @@ if (git_executable)
   endif()
 endif()
 
+find_program(GNU_LD_EXECUTABLE NAMES ${LLVM_DEFAULT_TARGET_TRIPLE}-ld.bfd ld.bfd DOC "GNU ld")
+
 # If we can't find a revision, set it to "<unknown>".
 if (NOT BOLT_REVISION)
   set(BOLT_REVISION "<unknown>")
