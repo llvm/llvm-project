@@ -65,7 +65,7 @@ define i32 @test(float* nocapture readonly %x) {
 ; CHECK-NEXT:    [[TMP16]] = fsub fast <2 x double> [[VEC_PHI]], [[TMP15]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP0:!llvm.loop !.*]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP18:%.*]] = call fast double @llvm.vector.reduce.fadd.v2f64(double -0.000000e+00, <2 x double> [[TMP16]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[T]], [[N_VEC]]
@@ -91,7 +91,7 @@ define i32 @test(float* nocapture readonly %x) {
 ; CHECK-NEXT:    [[SUB127]] = fsub fast double [[DVAL1_4131]], [[MUL126]]
 ; CHECK-NEXT:    [[INC129]] = add nuw nsw i32 [[I_2132]], 1
 ; CHECK-NEXT:    [[EXITCOND143:%.*]] = icmp eq i32 [[INC129]], [[T]]
-; CHECK-NEXT:    br i1 [[EXITCOND143]], label [[OUTEREND]], label [[INNERLOOP]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND143]], label [[OUTEREND]], label [[INNERLOOP]], [[LOOP2:!llvm.loop !.*]]
 ; CHECK:       outerend:
 ; CHECK-NEXT:    [[SUB127_LCSSA:%.*]] = phi double [ [[SUB127]], [[INNERLOOP]] ], [ [[TMP18]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[CONV138:%.*]] = fptosi double [[SUB127_LCSSA]] to i32

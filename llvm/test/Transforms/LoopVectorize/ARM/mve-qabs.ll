@@ -40,7 +40,7 @@ define void @arm_abs_q7(i8* nocapture readonly %pSrc, i8* nocapture %pDst, i32 %
 ; CHECK-NEXT:    store <16 x i8> [[TMP5]], <16 x i8>* [[TMP6]], align 1, !alias.scope !3, !noalias !0
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP5:!llvm.loop !.*]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N_VEC]], [[BLOCKSIZE]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[WHILE_END]], label [[SCALAR_PH]]
@@ -64,7 +64,7 @@ define void @arm_abs_q7(i8* nocapture readonly %pSrc, i8* nocapture %pDst, i32 %
 ; CHECK-NEXT:    store i8 [[COND11]], i8* [[PDST_ADDR_020]], align 1
 ; CHECK-NEXT:    [[DEC]] = add i32 [[BLKCNT_021]], -1
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[DEC]], 0
-; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[WHILE_END]], label [[WHILE_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[WHILE_END]], label [[WHILE_BODY]], [[LOOP7:!llvm.loop !.*]]
 ; CHECK:       while.end:
 ; CHECK-NEXT:    ret void
 ;
@@ -135,7 +135,7 @@ define void @arm_abs_q15(i16* nocapture readonly %pSrc, i16* nocapture %pDst, i3
 ; CHECK-NEXT:    store <8 x i16> [[TMP5]], <8 x i16>* [[TMP6]], align 2, !alias.scope !11, !noalias !8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP13:!llvm.loop !.*]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N_VEC]], [[BLOCKSIZE]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[WHILE_END]], label [[SCALAR_PH]]
@@ -159,7 +159,7 @@ define void @arm_abs_q15(i16* nocapture readonly %pSrc, i16* nocapture %pDst, i3
 ; CHECK-NEXT:    store i16 [[COND11]], i16* [[PDST_ADDR_021]], align 2
 ; CHECK-NEXT:    [[DEC]] = add i32 [[BLKCNT_022]], -1
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[DEC]], 0
-; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[WHILE_END]], label [[WHILE_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[WHILE_END]], label [[WHILE_BODY]], [[LOOP14:!llvm.loop !.*]]
 ; CHECK:       while.end:
 ; CHECK-NEXT:    ret void
 ;
@@ -230,7 +230,7 @@ define void @arm_abs_q31(i32* nocapture readonly %pSrc, i32* nocapture %pDst, i3
 ; CHECK-NEXT:    store <4 x i32> [[TMP5]], <4 x i32>* [[TMP6]], align 4, !alias.scope !18, !noalias !15
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP20:!llvm.loop !.*]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N_VEC]], [[BLOCKSIZE]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[WHILE_END]], label [[SCALAR_PH]]
@@ -254,7 +254,7 @@ define void @arm_abs_q31(i32* nocapture readonly %pSrc, i32* nocapture %pDst, i3
 ; CHECK-NEXT:    store i32 [[COND6]], i32* [[PDST_ADDR_015]], align 4
 ; CHECK-NEXT:    [[DEC]] = add i32 [[BLKCNT_016]], -1
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[DEC]], 0
-; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[WHILE_END]], label [[WHILE_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[WHILE_END]], label [[WHILE_BODY]], [[LOOP21:!llvm.loop !.*]]
 ; CHECK:       while.end:
 ; CHECK-NEXT:    ret void
 ;

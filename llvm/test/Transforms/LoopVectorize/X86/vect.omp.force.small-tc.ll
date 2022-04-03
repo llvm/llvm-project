@@ -38,7 +38,7 @@ define void @vectorized(float* noalias nocapture %A, float* noalias nocapture re
 ; CHECK-NEXT:    store <8 x float> [[TMP7]], <8 x float>* [[TMP8]], align 4, !llvm.access.group !0
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
-; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP1:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP1:!llvm.loop !.*]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 20, 16
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
@@ -55,7 +55,7 @@ define void @vectorized(float* noalias nocapture %A, float* noalias nocapture re
 ; CHECK-NEXT:    store float [[ADD]], float* [[ARRAYIDX2]], align 4, !llvm.access.group !0
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 20
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END]], label [[FOR_BODY]], [[LOOP4:!llvm.loop !.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
 ;
@@ -97,8 +97,8 @@ define void @vectorized1(float* noalias nocapture %A, float* noalias nocapture r
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i64> poison, i64 [[INDEX]], i32 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i64> [[BROADCAST_SPLATINSERT]], <8 x i64> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[VEC_IV:%.*]] = add <8 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule <8 x i64> [[VEC_IV]], <i64 19, i64 19, i64 19, i64 19, i64 19, i64 19, i64 19, i64 19>
+; CHECK-NEXT:    [[INDUCTION:%.*]] = add <8 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule <8 x i64> [[INDUCTION]], <i64 19, i64 19, i64 19, i64 19, i64 19, i64 19, i64 19, i64 19>
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, float* [[B:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, float* [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast float* [[TMP3]] to <8 x float>*
@@ -112,7 +112,7 @@ define void @vectorized1(float* noalias nocapture %A, float* noalias nocapture r
 ; CHECK-NEXT:    call void @llvm.masked.store.v8f32.p0v8f32(<8 x float> [[TMP8]], <8 x float>* [[TMP9]], i32 4, <8 x i1> [[TMP1]]), !llvm.access.group !6
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 24
-; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP7:!llvm.loop !.*]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -128,7 +128,7 @@ define void @vectorized1(float* noalias nocapture %A, float* noalias nocapture r
 ; CHECK-NEXT:    store float [[ADD]], float* [[ARRAYIDX2]], align 4, !llvm.access.group !6
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 20
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END]], label [[FOR_BODY]], [[LOOP9:!llvm.loop !.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
 ;
@@ -180,7 +180,7 @@ define void @vectorized2(float* noalias nocapture %A, float* noalias nocapture r
 ; CHECK-NEXT:    store <8 x float> [[TMP7]], <8 x float>* [[TMP8]], align 4, !llvm.access.group !6
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
-; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP10:!llvm.loop !.*]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 16, 16
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
@@ -197,7 +197,7 @@ define void @vectorized2(float* noalias nocapture %A, float* noalias nocapture r
 ; CHECK-NEXT:    store float [[ADD]], float* [[ARRAYIDX2]], align 4, !llvm.access.group !6
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 16
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END]], label [[FOR_BODY]], [[LOOP11:!llvm.loop !.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
 ;

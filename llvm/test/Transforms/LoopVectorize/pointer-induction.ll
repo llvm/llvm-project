@@ -146,22 +146,22 @@ define void @pointer_induction_used_as_vector(i8** noalias %start.1, i8* noalias
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8*, i8** [[START_1]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, i8* [[POINTER_PHI]], <4 x i64> <i64 0, i64 1, i64 2, i64 3>
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, <4 x i8*> [[TMP1]], i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8*, i8** [[NEXT_GEP]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i8** [[TMP3]] to <4 x i8*>*
-; CHECK-NEXT:    store <4 x i8*> [[TMP2]], <4 x i8*>* [[TMP4]], align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i8*> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, i8* [[TMP5]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i8* [[TMP6]] to <4 x i8>*
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, <4 x i8>* [[TMP7]], align 1
-; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i8> [[WIDE_LOAD]], <i8 1, i8 1, i8 1, i8 1>
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i8* [[TMP6]] to <4 x i8>*
-; CHECK-NEXT:    store <4 x i8> [[TMP8]], <4 x i8>* [[TMP9]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, i8* [[POINTER_PHI]], <4 x i64> <i64 0, i64 1, i64 2, i64 3>
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, <4 x i8*> [[TMP2]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8*, i8** [[NEXT_GEP]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i8** [[TMP4]] to <4 x i8*>*
+; CHECK-NEXT:    store <4 x i8*> [[TMP3]], <4 x i8*>* [[TMP5]], align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i8*> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, i8* [[TMP6]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i8* [[TMP7]] to <4 x i8>*
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, <4 x i8>* [[TMP8]], align 1
+; CHECK-NEXT:    [[TMP9:%.*]] = add <4 x i8> [[WIDE_LOAD]], <i8 1, i8 1, i8 1, i8 1>
+; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i8* [[TMP7]] to <4 x i8>*
+; CHECK-NEXT:    store <4 x i8> [[TMP9]], <4 x i8>* [[TMP10]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, i8* [[POINTER_PHI]], i64 4
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]

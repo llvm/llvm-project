@@ -37,17 +37,17 @@ define void @test_muladd(i32* noalias nocapture %d1, i16* noalias nocapture read
 ; SSE2-NEXT:    [[STRIDED_VEC4:%.*]] = shufflevector <8 x i16> [[WIDE_VEC2]], <8 x i16> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
 ; SSE2-NEXT:    [[TMP9:%.*]] = sext <4 x i16> [[STRIDED_VEC3]] to <4 x i32>
 ; SSE2-NEXT:    [[TMP10:%.*]] = mul nsw <4 x i32> [[TMP9]], [[TMP5]]
-; SSE2-NEXT:    [[TMP11:%.*]] = sext <4 x i16> [[STRIDED_VEC1]] to <4 x i32>
-; SSE2-NEXT:    [[TMP12:%.*]] = sext <4 x i16> [[STRIDED_VEC4]] to <4 x i32>
-; SSE2-NEXT:    [[TMP13:%.*]] = mul nsw <4 x i32> [[TMP12]], [[TMP11]]
-; SSE2-NEXT:    [[TMP14:%.*]] = add nsw <4 x i32> [[TMP13]], [[TMP10]]
-; SSE2-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, i32* [[D1:%.*]], i64 [[TMP0]]
-; SSE2-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, i32* [[TMP15]], i32 0
-; SSE2-NEXT:    [[TMP17:%.*]] = bitcast i32* [[TMP16]] to <4 x i32>*
-; SSE2-NEXT:    store <4 x i32> [[TMP14]], <4 x i32>* [[TMP17]], align 4
+; SSE2-NEXT:    [[TMP13:%.*]] = sext <4 x i16> [[STRIDED_VEC1]] to <4 x i32>
+; SSE2-NEXT:    [[TMP15:%.*]] = sext <4 x i16> [[STRIDED_VEC4]] to <4 x i32>
+; SSE2-NEXT:    [[TMP16:%.*]] = mul nsw <4 x i32> [[TMP15]], [[TMP13]]
+; SSE2-NEXT:    [[TMP17:%.*]] = add nsw <4 x i32> [[TMP16]], [[TMP10]]
+; SSE2-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, i32* [[D1:%.*]], i64 [[TMP0]]
+; SSE2-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, i32* [[TMP18]], i32 0
+; SSE2-NEXT:    [[TMP20:%.*]] = bitcast i32* [[TMP19]] to <4 x i32>*
+; SSE2-NEXT:    store <4 x i32> [[TMP17]], <4 x i32>* [[TMP20]], align 4
 ; SSE2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; SSE2-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; SSE2-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; SSE2-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; SSE2-NEXT:    br i1 [[TMP21]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; SSE2:       middle.block:
 ; SSE2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; SSE2-NEXT:    br i1 [[CMP_N]], label [[FOR_END_LOOPEXIT:%.*]], label [[SCALAR_PH]]
@@ -56,21 +56,21 @@ define void @test_muladd(i32* noalias nocapture %d1, i16* noalias nocapture read
 ; SSE2-NEXT:    br label [[FOR_BODY:%.*]]
 ; SSE2:       for.body:
 ; SSE2-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; SSE2-NEXT:    [[TMP19:%.*]] = shl nuw nsw i64 [[INDVARS_IV]], 1
-; SSE2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, i16* [[S1]], i64 [[TMP19]]
-; SSE2-NEXT:    [[TMP20:%.*]] = load i16, i16* [[ARRAYIDX]], align 2
-; SSE2-NEXT:    [[CONV:%.*]] = sext i16 [[TMP20]] to i32
-; SSE2-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i16, i16* [[S2]], i64 [[TMP19]]
-; SSE2-NEXT:    [[TMP21:%.*]] = load i16, i16* [[ARRAYIDX4]], align 2
-; SSE2-NEXT:    [[CONV5:%.*]] = sext i16 [[TMP21]] to i32
+; SSE2-NEXT:    [[TMP22:%.*]] = shl nuw nsw i64 [[INDVARS_IV]], 1
+; SSE2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, i16* [[S1]], i64 [[TMP22]]
+; SSE2-NEXT:    [[TMP23:%.*]] = load i16, i16* [[ARRAYIDX]], align 2
+; SSE2-NEXT:    [[CONV:%.*]] = sext i16 [[TMP23]] to i32
+; SSE2-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i16, i16* [[S2]], i64 [[TMP22]]
+; SSE2-NEXT:    [[TMP24:%.*]] = load i16, i16* [[ARRAYIDX4]], align 2
+; SSE2-NEXT:    [[CONV5:%.*]] = sext i16 [[TMP24]] to i32
 ; SSE2-NEXT:    [[MUL6:%.*]] = mul nsw i32 [[CONV5]], [[CONV]]
-; SSE2-NEXT:    [[TMP22:%.*]] = or i64 [[TMP19]], 1
-; SSE2-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds i16, i16* [[S1]], i64 [[TMP22]]
-; SSE2-NEXT:    [[TMP23:%.*]] = load i16, i16* [[ARRAYIDX10]], align 2
-; SSE2-NEXT:    [[CONV11:%.*]] = sext i16 [[TMP23]] to i32
-; SSE2-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds i16, i16* [[S2]], i64 [[TMP22]]
-; SSE2-NEXT:    [[TMP24:%.*]] = load i16, i16* [[ARRAYIDX15]], align 2
-; SSE2-NEXT:    [[CONV16:%.*]] = sext i16 [[TMP24]] to i32
+; SSE2-NEXT:    [[TMP25:%.*]] = or i64 [[TMP22]], 1
+; SSE2-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds i16, i16* [[S1]], i64 [[TMP25]]
+; SSE2-NEXT:    [[TMP26:%.*]] = load i16, i16* [[ARRAYIDX10]], align 2
+; SSE2-NEXT:    [[CONV11:%.*]] = sext i16 [[TMP26]] to i32
+; SSE2-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds i16, i16* [[S2]], i64 [[TMP25]]
+; SSE2-NEXT:    [[TMP27:%.*]] = load i16, i16* [[ARRAYIDX15]], align 2
+; SSE2-NEXT:    [[CONV16:%.*]] = sext i16 [[TMP27]] to i32
 ; SSE2-NEXT:    [[MUL17:%.*]] = mul nsw i32 [[CONV16]], [[CONV11]]
 ; SSE2-NEXT:    [[ADD18:%.*]] = add nsw i32 [[MUL17]], [[MUL6]]
 ; SSE2-NEXT:    [[ARRAYIDX20:%.*]] = getelementptr inbounds i32, i32* [[D1]], i64 [[INDVARS_IV]]
@@ -131,25 +131,25 @@ define void @test_muladd(i32* noalias nocapture %d1, i16* noalias nocapture read
 ; SSE41-NEXT:    [[TMP19:%.*]] = sext <4 x i16> [[STRIDED_VEC8]] to <4 x i32>
 ; SSE41-NEXT:    [[TMP20:%.*]] = mul nsw <4 x i32> [[TMP18]], [[TMP10]]
 ; SSE41-NEXT:    [[TMP21:%.*]] = mul nsw <4 x i32> [[TMP19]], [[TMP11]]
-; SSE41-NEXT:    [[TMP22:%.*]] = sext <4 x i16> [[STRIDED_VEC3]] to <4 x i32>
-; SSE41-NEXT:    [[TMP23:%.*]] = sext <4 x i16> [[STRIDED_VEC4]] to <4 x i32>
-; SSE41-NEXT:    [[TMP24:%.*]] = sext <4 x i16> [[STRIDED_VEC9]] to <4 x i32>
-; SSE41-NEXT:    [[TMP25:%.*]] = sext <4 x i16> [[STRIDED_VEC10]] to <4 x i32>
-; SSE41-NEXT:    [[TMP26:%.*]] = mul nsw <4 x i32> [[TMP24]], [[TMP22]]
-; SSE41-NEXT:    [[TMP27:%.*]] = mul nsw <4 x i32> [[TMP25]], [[TMP23]]
-; SSE41-NEXT:    [[TMP28:%.*]] = add nsw <4 x i32> [[TMP26]], [[TMP20]]
-; SSE41-NEXT:    [[TMP29:%.*]] = add nsw <4 x i32> [[TMP27]], [[TMP21]]
-; SSE41-NEXT:    [[TMP30:%.*]] = getelementptr inbounds i32, i32* [[D1:%.*]], i64 [[TMP0]]
-; SSE41-NEXT:    [[TMP31:%.*]] = getelementptr inbounds i32, i32* [[D1]], i64 [[TMP1]]
-; SSE41-NEXT:    [[TMP32:%.*]] = getelementptr inbounds i32, i32* [[TMP30]], i32 0
-; SSE41-NEXT:    [[TMP33:%.*]] = bitcast i32* [[TMP32]] to <4 x i32>*
-; SSE41-NEXT:    store <4 x i32> [[TMP28]], <4 x i32>* [[TMP33]], align 4
-; SSE41-NEXT:    [[TMP34:%.*]] = getelementptr inbounds i32, i32* [[TMP30]], i32 4
-; SSE41-NEXT:    [[TMP35:%.*]] = bitcast i32* [[TMP34]] to <4 x i32>*
-; SSE41-NEXT:    store <4 x i32> [[TMP29]], <4 x i32>* [[TMP35]], align 4
+; SSE41-NEXT:    [[TMP26:%.*]] = sext <4 x i16> [[STRIDED_VEC3]] to <4 x i32>
+; SSE41-NEXT:    [[TMP27:%.*]] = sext <4 x i16> [[STRIDED_VEC4]] to <4 x i32>
+; SSE41-NEXT:    [[TMP30:%.*]] = sext <4 x i16> [[STRIDED_VEC9]] to <4 x i32>
+; SSE41-NEXT:    [[TMP31:%.*]] = sext <4 x i16> [[STRIDED_VEC10]] to <4 x i32>
+; SSE41-NEXT:    [[TMP32:%.*]] = mul nsw <4 x i32> [[TMP30]], [[TMP26]]
+; SSE41-NEXT:    [[TMP33:%.*]] = mul nsw <4 x i32> [[TMP31]], [[TMP27]]
+; SSE41-NEXT:    [[TMP34:%.*]] = add nsw <4 x i32> [[TMP32]], [[TMP20]]
+; SSE41-NEXT:    [[TMP35:%.*]] = add nsw <4 x i32> [[TMP33]], [[TMP21]]
+; SSE41-NEXT:    [[TMP36:%.*]] = getelementptr inbounds i32, i32* [[D1:%.*]], i64 [[TMP0]]
+; SSE41-NEXT:    [[TMP37:%.*]] = getelementptr inbounds i32, i32* [[D1]], i64 [[TMP1]]
+; SSE41-NEXT:    [[TMP38:%.*]] = getelementptr inbounds i32, i32* [[TMP36]], i32 0
+; SSE41-NEXT:    [[TMP39:%.*]] = bitcast i32* [[TMP38]] to <4 x i32>*
+; SSE41-NEXT:    store <4 x i32> [[TMP34]], <4 x i32>* [[TMP39]], align 4
+; SSE41-NEXT:    [[TMP40:%.*]] = getelementptr inbounds i32, i32* [[TMP36]], i32 4
+; SSE41-NEXT:    [[TMP41:%.*]] = bitcast i32* [[TMP40]] to <4 x i32>*
+; SSE41-NEXT:    store <4 x i32> [[TMP35]], <4 x i32>* [[TMP41]], align 4
 ; SSE41-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; SSE41-NEXT:    [[TMP36:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; SSE41-NEXT:    br i1 [[TMP36]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; SSE41-NEXT:    [[TMP42:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; SSE41-NEXT:    br i1 [[TMP42]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; SSE41:       middle.block:
 ; SSE41-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; SSE41-NEXT:    br i1 [[CMP_N]], label [[FOR_END_LOOPEXIT:%.*]], label [[SCALAR_PH]]
@@ -158,21 +158,21 @@ define void @test_muladd(i32* noalias nocapture %d1, i16* noalias nocapture read
 ; SSE41-NEXT:    br label [[FOR_BODY:%.*]]
 ; SSE41:       for.body:
 ; SSE41-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; SSE41-NEXT:    [[TMP37:%.*]] = shl nuw nsw i64 [[INDVARS_IV]], 1
-; SSE41-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, i16* [[S1]], i64 [[TMP37]]
-; SSE41-NEXT:    [[TMP38:%.*]] = load i16, i16* [[ARRAYIDX]], align 2
-; SSE41-NEXT:    [[CONV:%.*]] = sext i16 [[TMP38]] to i32
-; SSE41-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i16, i16* [[S2]], i64 [[TMP37]]
-; SSE41-NEXT:    [[TMP39:%.*]] = load i16, i16* [[ARRAYIDX4]], align 2
-; SSE41-NEXT:    [[CONV5:%.*]] = sext i16 [[TMP39]] to i32
+; SSE41-NEXT:    [[TMP43:%.*]] = shl nuw nsw i64 [[INDVARS_IV]], 1
+; SSE41-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, i16* [[S1]], i64 [[TMP43]]
+; SSE41-NEXT:    [[TMP44:%.*]] = load i16, i16* [[ARRAYIDX]], align 2
+; SSE41-NEXT:    [[CONV:%.*]] = sext i16 [[TMP44]] to i32
+; SSE41-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i16, i16* [[S2]], i64 [[TMP43]]
+; SSE41-NEXT:    [[TMP45:%.*]] = load i16, i16* [[ARRAYIDX4]], align 2
+; SSE41-NEXT:    [[CONV5:%.*]] = sext i16 [[TMP45]] to i32
 ; SSE41-NEXT:    [[MUL6:%.*]] = mul nsw i32 [[CONV5]], [[CONV]]
-; SSE41-NEXT:    [[TMP40:%.*]] = or i64 [[TMP37]], 1
-; SSE41-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds i16, i16* [[S1]], i64 [[TMP40]]
-; SSE41-NEXT:    [[TMP41:%.*]] = load i16, i16* [[ARRAYIDX10]], align 2
-; SSE41-NEXT:    [[CONV11:%.*]] = sext i16 [[TMP41]] to i32
-; SSE41-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds i16, i16* [[S2]], i64 [[TMP40]]
-; SSE41-NEXT:    [[TMP42:%.*]] = load i16, i16* [[ARRAYIDX15]], align 2
-; SSE41-NEXT:    [[CONV16:%.*]] = sext i16 [[TMP42]] to i32
+; SSE41-NEXT:    [[TMP46:%.*]] = or i64 [[TMP43]], 1
+; SSE41-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds i16, i16* [[S1]], i64 [[TMP46]]
+; SSE41-NEXT:    [[TMP47:%.*]] = load i16, i16* [[ARRAYIDX10]], align 2
+; SSE41-NEXT:    [[CONV11:%.*]] = sext i16 [[TMP47]] to i32
+; SSE41-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds i16, i16* [[S2]], i64 [[TMP46]]
+; SSE41-NEXT:    [[TMP48:%.*]] = load i16, i16* [[ARRAYIDX15]], align 2
+; SSE41-NEXT:    [[CONV16:%.*]] = sext i16 [[TMP48]] to i32
 ; SSE41-NEXT:    [[MUL17:%.*]] = mul nsw i32 [[CONV16]], [[CONV11]]
 ; SSE41-NEXT:    [[ADD18:%.*]] = add nsw i32 [[MUL17]], [[MUL6]]
 ; SSE41-NEXT:    [[ARRAYIDX20:%.*]] = getelementptr inbounds i32, i32* [[D1]], i64 [[INDVARS_IV]]
@@ -267,41 +267,41 @@ define void @test_muladd(i32* noalias nocapture %d1, i16* noalias nocapture read
 ; AVX1-NEXT:    [[TMP41:%.*]] = mul nsw <4 x i32> [[TMP37]], [[TMP21]]
 ; AVX1-NEXT:    [[TMP42:%.*]] = mul nsw <4 x i32> [[TMP38]], [[TMP22]]
 ; AVX1-NEXT:    [[TMP43:%.*]] = mul nsw <4 x i32> [[TMP39]], [[TMP23]]
-; AVX1-NEXT:    [[TMP44:%.*]] = sext <4 x i16> [[STRIDED_VEC7]] to <4 x i32>
-; AVX1-NEXT:    [[TMP45:%.*]] = sext <4 x i16> [[STRIDED_VEC8]] to <4 x i32>
-; AVX1-NEXT:    [[TMP46:%.*]] = sext <4 x i16> [[STRIDED_VEC9]] to <4 x i32>
-; AVX1-NEXT:    [[TMP47:%.*]] = sext <4 x i16> [[STRIDED_VEC10]] to <4 x i32>
-; AVX1-NEXT:    [[TMP48:%.*]] = sext <4 x i16> [[STRIDED_VEC19]] to <4 x i32>
-; AVX1-NEXT:    [[TMP49:%.*]] = sext <4 x i16> [[STRIDED_VEC20]] to <4 x i32>
-; AVX1-NEXT:    [[TMP50:%.*]] = sext <4 x i16> [[STRIDED_VEC21]] to <4 x i32>
-; AVX1-NEXT:    [[TMP51:%.*]] = sext <4 x i16> [[STRIDED_VEC22]] to <4 x i32>
-; AVX1-NEXT:    [[TMP52:%.*]] = mul nsw <4 x i32> [[TMP48]], [[TMP44]]
-; AVX1-NEXT:    [[TMP53:%.*]] = mul nsw <4 x i32> [[TMP49]], [[TMP45]]
-; AVX1-NEXT:    [[TMP54:%.*]] = mul nsw <4 x i32> [[TMP50]], [[TMP46]]
-; AVX1-NEXT:    [[TMP55:%.*]] = mul nsw <4 x i32> [[TMP51]], [[TMP47]]
-; AVX1-NEXT:    [[TMP56:%.*]] = add nsw <4 x i32> [[TMP52]], [[TMP40]]
-; AVX1-NEXT:    [[TMP57:%.*]] = add nsw <4 x i32> [[TMP53]], [[TMP41]]
-; AVX1-NEXT:    [[TMP58:%.*]] = add nsw <4 x i32> [[TMP54]], [[TMP42]]
-; AVX1-NEXT:    [[TMP59:%.*]] = add nsw <4 x i32> [[TMP55]], [[TMP43]]
-; AVX1-NEXT:    [[TMP60:%.*]] = getelementptr inbounds i32, i32* [[D1:%.*]], i64 [[TMP0]]
-; AVX1-NEXT:    [[TMP61:%.*]] = getelementptr inbounds i32, i32* [[D1]], i64 [[TMP1]]
-; AVX1-NEXT:    [[TMP62:%.*]] = getelementptr inbounds i32, i32* [[D1]], i64 [[TMP2]]
-; AVX1-NEXT:    [[TMP63:%.*]] = getelementptr inbounds i32, i32* [[D1]], i64 [[TMP3]]
-; AVX1-NEXT:    [[TMP64:%.*]] = getelementptr inbounds i32, i32* [[TMP60]], i32 0
-; AVX1-NEXT:    [[TMP65:%.*]] = bitcast i32* [[TMP64]] to <4 x i32>*
-; AVX1-NEXT:    store <4 x i32> [[TMP56]], <4 x i32>* [[TMP65]], align 4
-; AVX1-NEXT:    [[TMP66:%.*]] = getelementptr inbounds i32, i32* [[TMP60]], i32 4
-; AVX1-NEXT:    [[TMP67:%.*]] = bitcast i32* [[TMP66]] to <4 x i32>*
-; AVX1-NEXT:    store <4 x i32> [[TMP57]], <4 x i32>* [[TMP67]], align 4
-; AVX1-NEXT:    [[TMP68:%.*]] = getelementptr inbounds i32, i32* [[TMP60]], i32 8
-; AVX1-NEXT:    [[TMP69:%.*]] = bitcast i32* [[TMP68]] to <4 x i32>*
-; AVX1-NEXT:    store <4 x i32> [[TMP58]], <4 x i32>* [[TMP69]], align 4
-; AVX1-NEXT:    [[TMP70:%.*]] = getelementptr inbounds i32, i32* [[TMP60]], i32 12
-; AVX1-NEXT:    [[TMP71:%.*]] = bitcast i32* [[TMP70]] to <4 x i32>*
-; AVX1-NEXT:    store <4 x i32> [[TMP59]], <4 x i32>* [[TMP71]], align 4
+; AVX1-NEXT:    [[TMP52:%.*]] = sext <4 x i16> [[STRIDED_VEC7]] to <4 x i32>
+; AVX1-NEXT:    [[TMP53:%.*]] = sext <4 x i16> [[STRIDED_VEC8]] to <4 x i32>
+; AVX1-NEXT:    [[TMP54:%.*]] = sext <4 x i16> [[STRIDED_VEC9]] to <4 x i32>
+; AVX1-NEXT:    [[TMP55:%.*]] = sext <4 x i16> [[STRIDED_VEC10]] to <4 x i32>
+; AVX1-NEXT:    [[TMP60:%.*]] = sext <4 x i16> [[STRIDED_VEC19]] to <4 x i32>
+; AVX1-NEXT:    [[TMP61:%.*]] = sext <4 x i16> [[STRIDED_VEC20]] to <4 x i32>
+; AVX1-NEXT:    [[TMP62:%.*]] = sext <4 x i16> [[STRIDED_VEC21]] to <4 x i32>
+; AVX1-NEXT:    [[TMP63:%.*]] = sext <4 x i16> [[STRIDED_VEC22]] to <4 x i32>
+; AVX1-NEXT:    [[TMP64:%.*]] = mul nsw <4 x i32> [[TMP60]], [[TMP52]]
+; AVX1-NEXT:    [[TMP65:%.*]] = mul nsw <4 x i32> [[TMP61]], [[TMP53]]
+; AVX1-NEXT:    [[TMP66:%.*]] = mul nsw <4 x i32> [[TMP62]], [[TMP54]]
+; AVX1-NEXT:    [[TMP67:%.*]] = mul nsw <4 x i32> [[TMP63]], [[TMP55]]
+; AVX1-NEXT:    [[TMP68:%.*]] = add nsw <4 x i32> [[TMP64]], [[TMP40]]
+; AVX1-NEXT:    [[TMP69:%.*]] = add nsw <4 x i32> [[TMP65]], [[TMP41]]
+; AVX1-NEXT:    [[TMP70:%.*]] = add nsw <4 x i32> [[TMP66]], [[TMP42]]
+; AVX1-NEXT:    [[TMP71:%.*]] = add nsw <4 x i32> [[TMP67]], [[TMP43]]
+; AVX1-NEXT:    [[TMP72:%.*]] = getelementptr inbounds i32, i32* [[D1:%.*]], i64 [[TMP0]]
+; AVX1-NEXT:    [[TMP73:%.*]] = getelementptr inbounds i32, i32* [[D1]], i64 [[TMP1]]
+; AVX1-NEXT:    [[TMP74:%.*]] = getelementptr inbounds i32, i32* [[D1]], i64 [[TMP2]]
+; AVX1-NEXT:    [[TMP75:%.*]] = getelementptr inbounds i32, i32* [[D1]], i64 [[TMP3]]
+; AVX1-NEXT:    [[TMP76:%.*]] = getelementptr inbounds i32, i32* [[TMP72]], i32 0
+; AVX1-NEXT:    [[TMP77:%.*]] = bitcast i32* [[TMP76]] to <4 x i32>*
+; AVX1-NEXT:    store <4 x i32> [[TMP68]], <4 x i32>* [[TMP77]], align 4
+; AVX1-NEXT:    [[TMP78:%.*]] = getelementptr inbounds i32, i32* [[TMP72]], i32 4
+; AVX1-NEXT:    [[TMP79:%.*]] = bitcast i32* [[TMP78]] to <4 x i32>*
+; AVX1-NEXT:    store <4 x i32> [[TMP69]], <4 x i32>* [[TMP79]], align 4
+; AVX1-NEXT:    [[TMP80:%.*]] = getelementptr inbounds i32, i32* [[TMP72]], i32 8
+; AVX1-NEXT:    [[TMP81:%.*]] = bitcast i32* [[TMP80]] to <4 x i32>*
+; AVX1-NEXT:    store <4 x i32> [[TMP70]], <4 x i32>* [[TMP81]], align 4
+; AVX1-NEXT:    [[TMP82:%.*]] = getelementptr inbounds i32, i32* [[TMP72]], i32 12
+; AVX1-NEXT:    [[TMP83:%.*]] = bitcast i32* [[TMP82]] to <4 x i32>*
+; AVX1-NEXT:    store <4 x i32> [[TMP71]], <4 x i32>* [[TMP83]], align 4
 ; AVX1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
-; AVX1-NEXT:    [[TMP72:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; AVX1-NEXT:    br i1 [[TMP72]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; AVX1-NEXT:    [[TMP84:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; AVX1-NEXT:    br i1 [[TMP84]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; AVX1:       middle.block:
 ; AVX1-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; AVX1-NEXT:    br i1 [[CMP_N]], label [[FOR_END_LOOPEXIT:%.*]], label [[SCALAR_PH]]
@@ -310,21 +310,21 @@ define void @test_muladd(i32* noalias nocapture %d1, i16* noalias nocapture read
 ; AVX1-NEXT:    br label [[FOR_BODY:%.*]]
 ; AVX1:       for.body:
 ; AVX1-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; AVX1-NEXT:    [[TMP73:%.*]] = shl nuw nsw i64 [[INDVARS_IV]], 1
-; AVX1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, i16* [[S1]], i64 [[TMP73]]
-; AVX1-NEXT:    [[TMP74:%.*]] = load i16, i16* [[ARRAYIDX]], align 2
-; AVX1-NEXT:    [[CONV:%.*]] = sext i16 [[TMP74]] to i32
-; AVX1-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i16, i16* [[S2]], i64 [[TMP73]]
-; AVX1-NEXT:    [[TMP75:%.*]] = load i16, i16* [[ARRAYIDX4]], align 2
-; AVX1-NEXT:    [[CONV5:%.*]] = sext i16 [[TMP75]] to i32
+; AVX1-NEXT:    [[TMP85:%.*]] = shl nuw nsw i64 [[INDVARS_IV]], 1
+; AVX1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, i16* [[S1]], i64 [[TMP85]]
+; AVX1-NEXT:    [[TMP86:%.*]] = load i16, i16* [[ARRAYIDX]], align 2
+; AVX1-NEXT:    [[CONV:%.*]] = sext i16 [[TMP86]] to i32
+; AVX1-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i16, i16* [[S2]], i64 [[TMP85]]
+; AVX1-NEXT:    [[TMP87:%.*]] = load i16, i16* [[ARRAYIDX4]], align 2
+; AVX1-NEXT:    [[CONV5:%.*]] = sext i16 [[TMP87]] to i32
 ; AVX1-NEXT:    [[MUL6:%.*]] = mul nsw i32 [[CONV5]], [[CONV]]
-; AVX1-NEXT:    [[TMP76:%.*]] = or i64 [[TMP73]], 1
-; AVX1-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds i16, i16* [[S1]], i64 [[TMP76]]
-; AVX1-NEXT:    [[TMP77:%.*]] = load i16, i16* [[ARRAYIDX10]], align 2
-; AVX1-NEXT:    [[CONV11:%.*]] = sext i16 [[TMP77]] to i32
-; AVX1-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds i16, i16* [[S2]], i64 [[TMP76]]
-; AVX1-NEXT:    [[TMP78:%.*]] = load i16, i16* [[ARRAYIDX15]], align 2
-; AVX1-NEXT:    [[CONV16:%.*]] = sext i16 [[TMP78]] to i32
+; AVX1-NEXT:    [[TMP88:%.*]] = or i64 [[TMP85]], 1
+; AVX1-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds i16, i16* [[S1]], i64 [[TMP88]]
+; AVX1-NEXT:    [[TMP89:%.*]] = load i16, i16* [[ARRAYIDX10]], align 2
+; AVX1-NEXT:    [[CONV11:%.*]] = sext i16 [[TMP89]] to i32
+; AVX1-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds i16, i16* [[S2]], i64 [[TMP88]]
+; AVX1-NEXT:    [[TMP90:%.*]] = load i16, i16* [[ARRAYIDX15]], align 2
+; AVX1-NEXT:    [[CONV16:%.*]] = sext i16 [[TMP90]] to i32
 ; AVX1-NEXT:    [[MUL17:%.*]] = mul nsw i32 [[CONV16]], [[CONV11]]
 ; AVX1-NEXT:    [[ADD18:%.*]] = add nsw i32 [[MUL17]], [[MUL6]]
 ; AVX1-NEXT:    [[ARRAYIDX20:%.*]] = getelementptr inbounds i32, i32* [[D1]], i64 [[INDVARS_IV]]
@@ -368,17 +368,17 @@ define void @test_muladd(i32* noalias nocapture %d1, i16* noalias nocapture read
 ; AVX2-NEXT:    [[STRIDED_VEC4:%.*]] = shufflevector <16 x i16> [[WIDE_VEC2]], <16 x i16> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
 ; AVX2-NEXT:    [[TMP9:%.*]] = sext <8 x i16> [[STRIDED_VEC3]] to <8 x i32>
 ; AVX2-NEXT:    [[TMP10:%.*]] = mul nsw <8 x i32> [[TMP9]], [[TMP5]]
-; AVX2-NEXT:    [[TMP11:%.*]] = sext <8 x i16> [[STRIDED_VEC1]] to <8 x i32>
-; AVX2-NEXT:    [[TMP12:%.*]] = sext <8 x i16> [[STRIDED_VEC4]] to <8 x i32>
-; AVX2-NEXT:    [[TMP13:%.*]] = mul nsw <8 x i32> [[TMP12]], [[TMP11]]
-; AVX2-NEXT:    [[TMP14:%.*]] = add nsw <8 x i32> [[TMP13]], [[TMP10]]
-; AVX2-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, i32* [[D1:%.*]], i64 [[TMP0]]
-; AVX2-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, i32* [[TMP15]], i32 0
-; AVX2-NEXT:    [[TMP17:%.*]] = bitcast i32* [[TMP16]] to <8 x i32>*
-; AVX2-NEXT:    store <8 x i32> [[TMP14]], <8 x i32>* [[TMP17]], align 4
+; AVX2-NEXT:    [[TMP13:%.*]] = sext <8 x i16> [[STRIDED_VEC1]] to <8 x i32>
+; AVX2-NEXT:    [[TMP15:%.*]] = sext <8 x i16> [[STRIDED_VEC4]] to <8 x i32>
+; AVX2-NEXT:    [[TMP16:%.*]] = mul nsw <8 x i32> [[TMP15]], [[TMP13]]
+; AVX2-NEXT:    [[TMP17:%.*]] = add nsw <8 x i32> [[TMP16]], [[TMP10]]
+; AVX2-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, i32* [[D1:%.*]], i64 [[TMP0]]
+; AVX2-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, i32* [[TMP18]], i32 0
+; AVX2-NEXT:    [[TMP20:%.*]] = bitcast i32* [[TMP19]] to <8 x i32>*
+; AVX2-NEXT:    store <8 x i32> [[TMP17]], <8 x i32>* [[TMP20]], align 4
 ; AVX2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; AVX2-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; AVX2-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; AVX2-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; AVX2-NEXT:    br i1 [[TMP21]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; AVX2:       middle.block:
 ; AVX2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; AVX2-NEXT:    br i1 [[CMP_N]], label [[FOR_END_LOOPEXIT:%.*]], label [[SCALAR_PH]]
@@ -387,21 +387,21 @@ define void @test_muladd(i32* noalias nocapture %d1, i16* noalias nocapture read
 ; AVX2-NEXT:    br label [[FOR_BODY:%.*]]
 ; AVX2:       for.body:
 ; AVX2-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; AVX2-NEXT:    [[TMP19:%.*]] = shl nuw nsw i64 [[INDVARS_IV]], 1
-; AVX2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, i16* [[S1]], i64 [[TMP19]]
-; AVX2-NEXT:    [[TMP20:%.*]] = load i16, i16* [[ARRAYIDX]], align 2
-; AVX2-NEXT:    [[CONV:%.*]] = sext i16 [[TMP20]] to i32
-; AVX2-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i16, i16* [[S2]], i64 [[TMP19]]
-; AVX2-NEXT:    [[TMP21:%.*]] = load i16, i16* [[ARRAYIDX4]], align 2
-; AVX2-NEXT:    [[CONV5:%.*]] = sext i16 [[TMP21]] to i32
+; AVX2-NEXT:    [[TMP22:%.*]] = shl nuw nsw i64 [[INDVARS_IV]], 1
+; AVX2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, i16* [[S1]], i64 [[TMP22]]
+; AVX2-NEXT:    [[TMP23:%.*]] = load i16, i16* [[ARRAYIDX]], align 2
+; AVX2-NEXT:    [[CONV:%.*]] = sext i16 [[TMP23]] to i32
+; AVX2-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i16, i16* [[S2]], i64 [[TMP22]]
+; AVX2-NEXT:    [[TMP24:%.*]] = load i16, i16* [[ARRAYIDX4]], align 2
+; AVX2-NEXT:    [[CONV5:%.*]] = sext i16 [[TMP24]] to i32
 ; AVX2-NEXT:    [[MUL6:%.*]] = mul nsw i32 [[CONV5]], [[CONV]]
-; AVX2-NEXT:    [[TMP22:%.*]] = or i64 [[TMP19]], 1
-; AVX2-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds i16, i16* [[S1]], i64 [[TMP22]]
-; AVX2-NEXT:    [[TMP23:%.*]] = load i16, i16* [[ARRAYIDX10]], align 2
-; AVX2-NEXT:    [[CONV11:%.*]] = sext i16 [[TMP23]] to i32
-; AVX2-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds i16, i16* [[S2]], i64 [[TMP22]]
-; AVX2-NEXT:    [[TMP24:%.*]] = load i16, i16* [[ARRAYIDX15]], align 2
-; AVX2-NEXT:    [[CONV16:%.*]] = sext i16 [[TMP24]] to i32
+; AVX2-NEXT:    [[TMP25:%.*]] = or i64 [[TMP22]], 1
+; AVX2-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds i16, i16* [[S1]], i64 [[TMP25]]
+; AVX2-NEXT:    [[TMP26:%.*]] = load i16, i16* [[ARRAYIDX10]], align 2
+; AVX2-NEXT:    [[CONV11:%.*]] = sext i16 [[TMP26]] to i32
+; AVX2-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds i16, i16* [[S2]], i64 [[TMP25]]
+; AVX2-NEXT:    [[TMP27:%.*]] = load i16, i16* [[ARRAYIDX15]], align 2
+; AVX2-NEXT:    [[CONV16:%.*]] = sext i16 [[TMP27]] to i32
 ; AVX2-NEXT:    [[MUL17:%.*]] = mul nsw i32 [[CONV16]], [[CONV11]]
 ; AVX2-NEXT:    [[ADD18:%.*]] = add nsw i32 [[MUL17]], [[MUL6]]
 ; AVX2-NEXT:    [[ARRAYIDX20:%.*]] = getelementptr inbounds i32, i32* [[D1]], i64 [[INDVARS_IV]]
