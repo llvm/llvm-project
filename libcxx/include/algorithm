@@ -83,19 +83,33 @@ namespace ranges {
     constexpr borrowed_iterator_t<R>
       find_if_not(R&& r, Pred pred, Proj proj = {});                                // since C++20
 
- template<class T, class Proj = identity,
-          indirect_strict_weak_order<projected<const T*, Proj>> Comp = ranges::less>
-   constexpr const T& min(const T& a, const T& b, Comp comp = {}, Proj proj = {});  // since C++20
+  template<class T, class Proj = identity,
+           indirect_strict_weak_order<projected<const T*, Proj>> Comp = ranges::less>
+    constexpr const T& min(const T& a, const T& b, Comp comp = {}, Proj proj = {}); // since C++20
 
- template<copyable T, class Proj = identity,
-          indirect_strict_weak_order<projected<const T*, Proj>> Comp = ranges::less>
-   constexpr T min(initializer_list<T> r, Comp comp = {}, Proj proj = {});          // since C++20
+  template<copyable T, class Proj = identity,
+           indirect_strict_weak_order<projected<const T*, Proj>> Comp = ranges::less>
+    constexpr T min(initializer_list<T> r, Comp comp = {}, Proj proj = {});         // since C++20
 
  template<input_range R, class Proj = identity,
           indirect_strict_weak_order<projected<iterator_t<R>, Proj>> Comp = ranges::less>
    requires indirectly_copyable_storable<iterator_t<R>, range_value_t<R>*>
    constexpr range_value_t<R>
      min(R&& r, Comp comp = {}, Proj proj = {});                                    // since C++20
+
+  template<class T, class Proj = identity,
+           indirect_strict_weak_order<projected<const T*, Proj>> Comp = ranges::less>
+    constexpr const T& max(const T& a, const T& b, Comp comp = {}, Proj proj = {}); // since C++20
+
+  template<copyable T, class Proj = identity,
+           indirect_strict_weak_order<projected<const T*, Proj>> Comp = ranges::less>
+    constexpr T max(initializer_list<T> r, Comp comp = {}, Proj proj = {});         // since C++20
+
+  template<input_range R, class Proj = identity,
+           indirect_strict_weak_order<projected<iterator_t<R>, Proj>> Comp = ranges::less>
+    requires indirectly_copyable_storable<iterator_t<R>, range_value_t<R>*>
+    constexpr range_value_t<R>
+      max(R&& r, Comp comp = {}, Proj proj = {});                                   // since C++20
 }
 
     constexpr bool     // constexpr in C++20
@@ -816,6 +830,7 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/ranges_find.h>
 #include <__algorithm/ranges_find_if.h>
 #include <__algorithm/ranges_find_if_not.h>
+#include <__algorithm/ranges_max.h>
 #include <__algorithm/ranges_max_element.h>
 #include <__algorithm/ranges_min.h>
 #include <__algorithm/ranges_min_element.h>
