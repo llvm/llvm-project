@@ -45,8 +45,8 @@ define void @test([2000 x i32]* %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq <4 x i64> [[TMP8]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP0:!llvm.loop !.*]]
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
@@ -75,7 +75,7 @@ define void @test([2000 x i32]* %src, i64 %n) {
 ; CHECK:       loop.1.latch:
 ; CHECK-NEXT:    [[IV_1_NEXT]] = add nuw nsw i64 [[IV_1]], 1
 ; CHECK-NEXT:    [[EC_1:%.*]] = icmp eq i64 [[IV_1_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EC_1]], label [[EXIT]], label [[LOOP_1_HEADER]], [[LOOP2:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[EC_1]], label [[EXIT]], label [[LOOP_1_HEADER]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;

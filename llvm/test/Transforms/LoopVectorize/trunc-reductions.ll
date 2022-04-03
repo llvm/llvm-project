@@ -147,9 +147,24 @@ for.end:
 
 define i8 @reduction_smin_trunc(i8* noalias nocapture %ptr) {
 ; CHECK-LABEL: @reduction_smin_trunc(
-; CHECK-NOT: vector.body
-; CHECK-NOT: <8 x
-; CHECK: ret
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[SUM_02P:%.*]] = phi i32 [ [[TMP1:%.*]], [[FOR_BODY]] ], [ 256, [[ENTRY]] ]
+; CHECK-NEXT:    [[SUM_02:%.*]] = and i32 [[SUM_02P]], 255
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[IV]] to i64
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, i8* [[PTR:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i8, i8* [[GEP]], align 1
+; CHECK-NEXT:    [[EXT:%.*]] = sext i8 [[LOAD]] to i32
+; CHECK-NEXT:    [[TMP1]] = call i32 @llvm.smin.i32(i32 [[SUM_02]], i32 [[EXT]])
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[IV_NEXT]], 256
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
+; CHECK:       for.end:
+; CHECK-NEXT:    [[RET:%.*]] = trunc i32 [[TMP1]] to i8
+; CHECK-NEXT:    ret i8 [[RET]]
+;
 entry:
   br label %for.body
 
@@ -173,9 +188,24 @@ for.end:
 
 define i8 @reduction_umin_trunc(i8* noalias nocapture %ptr) {
 ; CHECK-LABEL: @reduction_umin_trunc(
-; CHECK-NOT: vector.body
-; CHECK-NOT: <8 x
-; CHECK: ret
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[SUM_02P:%.*]] = phi i32 [ [[TMP1:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY]] ]
+; CHECK-NEXT:    [[SUM_02:%.*]] = and i32 [[SUM_02P]], 255
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[IV]] to i64
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, i8* [[PTR:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i8, i8* [[GEP]], align 1
+; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[LOAD]] to i32
+; CHECK-NEXT:    [[TMP1]] = call i32 @llvm.umin.i32(i32 [[SUM_02]], i32 [[EXT]])
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[IV_NEXT]], 256
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
+; CHECK:       for.end:
+; CHECK-NEXT:    [[RET:%.*]] = trunc i32 [[TMP1]] to i8
+; CHECK-NEXT:    ret i8 [[RET]]
+;
 entry:
   br label %for.body
 
@@ -199,9 +229,24 @@ for.end:
 
 define i16 @reduction_smax_trunc(i16* noalias nocapture %ptr) {
 ; CHECK-LABEL: @reduction_smax_trunc(
-; CHECK-NOT: vector.body
-; CHECK-NOT: <8 x
-; CHECK: ret
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[SUM_02P:%.*]] = phi i32 [ [[TMP1:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY]] ]
+; CHECK-NEXT:    [[SUM_02:%.*]] = and i32 [[SUM_02P]], 65535
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[IV]] to i64
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i16, i16* [[PTR:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i16, i16* [[GEP]], align 2
+; CHECK-NEXT:    [[EXT:%.*]] = sext i16 [[LOAD]] to i32
+; CHECK-NEXT:    [[TMP1]] = call i32 @llvm.smax.i32(i32 [[SUM_02]], i32 [[EXT]])
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[IV_NEXT]], 256
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
+; CHECK:       for.end:
+; CHECK-NEXT:    [[RET:%.*]] = trunc i32 [[TMP1]] to i16
+; CHECK-NEXT:    ret i16 [[RET]]
+;
 entry:
   br label %for.body
 
@@ -225,9 +270,24 @@ for.end:
 
 define i16 @reduction_umax_trunc(i16* noalias nocapture %ptr) {
 ; CHECK-LABEL: @reduction_umax_trunc(
-; CHECK-NOT: vector.body
-; CHECK-NOT: <8 x
-; CHECK: ret
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[SUM_02P:%.*]] = phi i32 [ [[TMP1:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY]] ]
+; CHECK-NEXT:    [[SUM_02:%.*]] = and i32 [[SUM_02P]], 65535
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[IV]] to i64
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i16, i16* [[PTR:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i16, i16* [[GEP]], align 2
+; CHECK-NEXT:    [[EXT:%.*]] = zext i16 [[LOAD]] to i32
+; CHECK-NEXT:    [[TMP1]] = call i32 @llvm.umax.i32(i32 [[SUM_02]], i32 [[EXT]])
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[IV_NEXT]], 256
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
+; CHECK:       for.end:
+; CHECK-NEXT:    [[RET:%.*]] = trunc i32 [[TMP1]] to i16
+; CHECK-NEXT:    ret i16 [[RET]]
+;
 entry:
   br label %for.body
 

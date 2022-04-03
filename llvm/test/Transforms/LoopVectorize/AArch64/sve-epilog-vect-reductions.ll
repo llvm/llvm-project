@@ -64,15 +64,15 @@ define i64 @int_reduction_add(i64* %a, i64 %N) {
 ; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <2 x i64> zeroinitializer, i64 [[BC_MERGE_RDX]], i32 0
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; CHECK:       vec.epilog.vector.body:
-; CHECK-NEXT:    [[INDEX8:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT11:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT11:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI9:%.*]] = phi <2 x i64> [ [[TMP24]], [[VEC_EPILOG_PH]] ], [ [[TMP29:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP25:%.*]] = add i64 [[INDEX8]], 0
+; CHECK-NEXT:    [[TMP25:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i64, i64* [[A]], i64 [[TMP25]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i64, i64* [[TMP26]], i32 0
 ; CHECK-NEXT:    [[TMP28:%.*]] = bitcast i64* [[TMP27]] to <2 x i64>*
 ; CHECK-NEXT:    [[WIDE_LOAD10:%.*]] = load <2 x i64>, <2 x i64>* [[TMP28]], align 4
 ; CHECK-NEXT:    [[TMP29]] = add <2 x i64> [[WIDE_LOAD10]], [[VEC_PHI9]]
-; CHECK-NEXT:    [[INDEX_NEXT11]] = add nuw i64 [[INDEX8]], 2
+; CHECK-NEXT:    [[INDEX_NEXT11]] = add nuw i64 [[OFFSET_IDX]], 2
 ; CHECK-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[INDEX_NEXT11]], [[N_VEC6]]
 ; CHECK-NEXT:    br i1 [[TMP30]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
@@ -91,7 +91,7 @@ define i64 @int_reduction_add(i64* %a, i64 %N) {
 ; CHECK-NEXT:    [[ADD]] = add i64 [[TMP32]], [[SUM]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    [[ADD_LCSSA4:%.*]] = phi i64 [ [[ADD]], [[FOR_BODY]] ], [ [[TMP31]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    br label [[FOR_END]]
