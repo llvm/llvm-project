@@ -73,19 +73,19 @@ define i32 @main(i32* %ptr) {
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i32 [[DOTPROMOTED]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = add i32 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP21:%.*]] = add i32 [[OFFSET_IDX]], 4
-; CHECK-NEXT:    [[TMP22:%.*]] = add i32 [[TMP20]], 1
-; CHECK-NEXT:    [[TMP23:%.*]] = add i32 [[TMP21]], 1
-; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i32, i32* [[PTR:%.*]], i32 [[TMP22]]
-; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i32, i32* [[PTR]], i32 [[TMP23]]
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i32, i32* [[TMP24]], i32 0
-; CHECK-NEXT:    [[TMP27:%.*]] = bitcast i32* [[TMP26]] to <4 x i32>*
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, <4 x i32>* [[TMP27]], align 4
-; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr inbounds i32, i32* [[TMP24]], i32 4
-; CHECK-NEXT:    [[TMP29:%.*]] = bitcast i32* [[TMP28]] to <4 x i32>*
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, <4 x i32>* [[TMP29]], align 4
+; CHECK-NEXT:    [[TMP25:%.*]] = add i32 [[TMP20]], 1
+; CHECK-NEXT:    [[TMP26:%.*]] = add i32 [[TMP21]], 1
+; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr inbounds i32, i32* [[PTR:%.*]], i32 [[TMP25]]
+; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr inbounds i32, i32* [[PTR]], i32 [[TMP26]]
+; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr inbounds i32, i32* [[TMP29]], i32 0
+; CHECK-NEXT:    [[TMP32:%.*]] = bitcast i32* [[TMP31]] to <4 x i32>*
+; CHECK-NEXT:    store <4 x i32> zeroinitializer, <4 x i32>* [[TMP32]], align 4
+; CHECK-NEXT:    [[TMP33:%.*]] = getelementptr inbounds i32, i32* [[TMP29]], i32 4
+; CHECK-NEXT:    [[TMP34:%.*]] = bitcast i32* [[TMP33]] to <4 x i32>*
+; CHECK-NEXT:    store <4 x i32> zeroinitializer, <4 x i32>* [[TMP34]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
-; CHECK-NEXT:    [[TMP30:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP30]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    [[TMP37:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP37]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP6]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND4_FOR_INC9_CRIT_EDGE:%.*]], label [[SCALAR_PH]]
