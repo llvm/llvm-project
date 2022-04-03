@@ -85,11 +85,11 @@ declare void @g(...)
 ; CHECK-NEXT: label="MSSA";
 ; CHECK: {{Node0x.* [shape=record,label="{entry:.*}"]}}
 ; CHECK: {{[shape=record,style=filled, fillcolor=lightpink,label="{bb1:.*1 = MemoryDef(liveOnEntry).*2 = MemoryDef(1).*3 = MemoryDef(2).*4 = MemoryDef(3).*MemoryUse(3).*MemoryUse(liveOnEntry).*}"]}}
-; CHECK {{[shape=record,style=filled, fillcolor=lightpink,label="{if.then:.*5 = MemoryDef(4).*}"]}}
-; CHECK {{[shape=record,label="{bb2:.*}"]}}
-; CHECK {{[shape=record,style=filled, fillcolor=lightpink,label="{if.else:.*6 = MemoryDef(4).*}"]}}
-; CHECK {{[shape=record,style=filled, fillcolor=lightpink,label="{if.end:.*10 = MemoryPhi({bb2,5},{if.else,6})/*MemoryUse(2).*MemoryUse(10).*MemoryUse(1).*7 = MemoryDef(10).*MemoryUse(10).*}"]}}
-; CHECK {{[shape=record,style=filled, fillcolor=lightpink,label="{if.then2:.*MemoryUse(10).*}"]}}
-; CHECK {{[shape=record,style=filled, fillcolor=lightpink,label="{bb3:.*8 = MemoryDef(7).*}"]}}
-; CHECK {{[shape=record,style=filled, fillcolor=lightpink,label="{if.end3:.*9 = MemoryPhi({if.end,7},{bb3,8}).*}"]}}
-; CHECK {{[shape=record,style=filled, fillcolor=lightpink,label="{bb4:.*MemoryUse(2).*MemoryUse(7).*}"]}}
+; CHECK: {{[shape=record,style=filled, fillcolor=lightpink,label="{if.then:.*5 = MemoryDef(4).*}"]}}
+; CHECK: {{[shape=record,label="{bb2:.*}"]}}
+; CHECK: {{[shape=record,style=filled, fillcolor=lightpink,label="{if.else:.*6 = MemoryDef(4).*}"]}}
+; CHECK: {{[shape=record,style=filled, fillcolor=lightpink,label="{if.end:.*10 = MemoryPhi({bb2,5},{if.else,6})/*MemoryUse(2).*MemoryUse(10).*MemoryUse(1).*7 = MemoryDef(10).*MemoryUse(10).*}"]}}
+; CHECK: {{[shape=record,style=filled, fillcolor=lightpink,label="{if.then2:.*MemoryUse(10).*}"]}}
+; CHECK: {{[shape=record,style=filled, fillcolor=lightpink,label="{bb3:.*8 = MemoryDef(7).*}"]}}
+; CHECK: {{[shape=record,style=filled, fillcolor=lightpink,label="{if.end3:.*9 = MemoryPhi({if.end,7},{bb3,8}).*}"]}}
+; CHECK: {{[shape=record,style=filled, fillcolor=lightpink,label="{bb4:.*MemoryUse(2).*MemoryUse(7).*}"]}}
