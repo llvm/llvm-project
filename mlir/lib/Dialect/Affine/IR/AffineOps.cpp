@@ -1689,7 +1689,7 @@ struct AffineForEmptyLoopFolder : public OpRewritePattern<AffineForOp> {
     bool iterArgsNotInOrder = false;
     for (unsigned i = 0, e = yieldOp->getNumOperands(); i < e; ++i) {
       Value val = yieldOp.getOperand(i);
-      auto iterArgIt = llvm::find(iterArgs, val);
+      auto *iterArgIt = llvm::find(iterArgs, val);
       if (iterArgIt == iterArgs.end()) {
         // `val` is defined outside of the loop.
         assert(forOp.isDefinedOutsideOfLoop(val) &&
