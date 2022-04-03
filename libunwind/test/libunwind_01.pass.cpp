@@ -1,3 +1,12 @@
+// -*- C++ -*-
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 // TODO: Investigate these failures on x86_64 macOS back deployment
 // UNSUPPORTED: target=x86_64-apple-darwin{{.+}}
 
