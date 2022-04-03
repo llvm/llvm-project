@@ -25,7 +25,7 @@ define dso_local void @alignTC(i32* noalias nocapture %A, i32 %n) optsize {
 ; CHECK-NEXT:    store <4 x i32> <i32 13, i32 13, i32 13, i32 13>, <4 x i32>* [[TMP3]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP0:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[ALIGNEDTC]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
@@ -38,7 +38,7 @@ define dso_local void @alignTC(i32* noalias nocapture %A, i32 %n) optsize {
 ; CHECK-NEXT:    store i32 13, i32* [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[RIVPLUS1]] = add nuw nsw i32 [[RIV]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[RIVPLUS1]], [[ALIGNEDTC]]
-; CHECK-NEXT:    br i1 [[COND]], label [[EXIT]], label [[LOOP]], [[LOOP2:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[COND]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -91,7 +91,7 @@ define dso_local void @assumeAlignedTC(i32* noalias nocapture %A, i32 %p, i32 %q
 ; CHECK-NEXT:    store <4 x i32> <i32 13, i32 13, i32 13, i32 13>, <4 x i32>* [[TMP3]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP4:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT_LOOPEXIT:%.*]], label [[SCALAR_PH]]
@@ -104,7 +104,7 @@ define dso_local void @assumeAlignedTC(i32* noalias nocapture %A, i32 %p, i32 %q
 ; CHECK-NEXT:    store i32 13, i32* [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[RIVPLUS1]] = add nuw nsw i32 [[RIV]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[RIVPLUS1]], [[N]]
-; CHECK-NEXT:    br i1 [[COND]], label [[EXIT_LOOPEXIT]], label [[LOOP]], [[LOOP5:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[COND]], label [[EXIT_LOOPEXIT]], label [[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
@@ -202,7 +202,7 @@ define dso_local void @cannotProveAlignedTC(i32* noalias nocapture %A, i32 %p, i
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], <i32 4, i32 4, i32 4, i32 4>
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP6:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 true, label [[EXIT_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -214,7 +214,7 @@ define dso_local void @cannotProveAlignedTC(i32* noalias nocapture %A, i32 %p, i
 ; CHECK-NEXT:    store i32 13, i32* [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[RIVPLUS1]] = add nuw nsw i32 [[RIV]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[RIVPLUS1]], [[N]]
-; CHECK-NEXT:    br i1 [[COND]], label [[EXIT_LOOPEXIT]], label [[LOOP]], [[LOOP7:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[COND]], label [[EXIT_LOOPEXIT]], label [[LOOP]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
