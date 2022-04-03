@@ -1404,8 +1404,8 @@ using ControlSplitReductionFn =
 /// Patterns to apply `splitReduction` below.
 void populateSplitReductionPattern(
     RewritePatternSet &patterns,
-    ControlSplitReductionFn controlSplitReductionFn,
-    LinalgTransformationFilter f = LinalgTransformationFilter());
+    const ControlSplitReductionFn &controlSplitReductionFn,
+    const LinalgTransformationFilter &f = LinalgTransformationFilter());
 
 /// Apply transformation to split the single linalg op reduction into a parallel
 /// and reduction dimension. Then create a new linalg.generic op doing the rest
@@ -1448,8 +1448,8 @@ void populateSplitReductionPattern(
 /// ```
 FailureOr<LinalgOp>
 splitReduction(PatternRewriter &b, LinalgOp op,
-               ControlSplitReductionFn controlSplitReductionFn,
-               LinalgTransformationFilter f);
+               const ControlSplitReductionFn &controlSplitReductionFn,
+               const LinalgTransformationFilter &f);
 
 } // namespace linalg
 } // namespace mlir
