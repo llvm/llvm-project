@@ -12,9 +12,9 @@
 
 // bool failed() const throw();
 
+#include <cassert>
 #include <iterator>
 #include <sstream>
-#include <cassert>
 
 #include "test_macros.h"
 
@@ -25,7 +25,7 @@ struct my_streambuf : public std::basic_streambuf<Char,Traits> {
 
     my_streambuf() {}
     int_type sputc(char_type) { return Traits::eof(); }
-    };
+};
 
 int main(int, char**)
 {
