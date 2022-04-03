@@ -29,7 +29,7 @@ define void @calls_swift_async() {
 }
 
 ; CHECK-LABEL: calls_swift_async:
-; CHECK-NOT jmpq has_swift_async
+; CHECK-NOT: jmpq has_swift_async
 
 define swifttailcc void @no_preserve_swiftself() {
   call void asm "","~{r13}"()
