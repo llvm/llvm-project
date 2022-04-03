@@ -116,7 +116,8 @@ public:
 protected:
   /// Construct an empty PresburgerRelation with the specified number of
   /// dimension and symbols.
-  PresburgerRelation(const PresburgerSpace &space) : PresburgerSpace(space) {
+  explicit PresburgerRelation(const PresburgerSpace &space)
+      : PresburgerSpace(space) {
     assert(space.getNumLocalIds() == 0 &&
            "PresburgerRelation cannot have local ids.");
   }
@@ -151,7 +152,8 @@ public:
 protected:
   /// Construct an empty PresburgerRelation with the specified number of
   /// dimension and symbols.
-  PresburgerSet(const PresburgerSpace &space) : PresburgerRelation(space) {
+  explicit PresburgerSet(const PresburgerSpace &space)
+      : PresburgerRelation(space) {
     assert(space.getNumDomainIds() == 0 && "Set type cannot have domain ids.");
     assert(space.getNumLocalIds() == 0 &&
            "PresburgerRelation cannot have local ids.");
