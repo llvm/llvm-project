@@ -28,6 +28,7 @@
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/ValueObjectUpdater.h"
 #include "lldb/Host/File.h"
+#include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/Predicate.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
@@ -495,7 +496,7 @@ public:
     if (use_blue_background)
       ::wattron(m_window, COLOR_PAIR(WhiteOnBlue));
     while (!string.empty()) {
-      size_t esc_pos = string.find('\x1b');
+      size_t esc_pos = string.find(ANSI_ESC_START);
       if (esc_pos == StringRef::npos) {
         string = string.substr(skip_first_count);
         if (!string.empty()) {
@@ -517,26 +518,24 @@ public:
           string = string.drop_front(esc_pos);
         }
       }
-      bool consumed = string.consume_front("\x1b");
+      bool consumed = string.consume_front(ANSI_ESC_START);
       assert(consumed);
       UNUSED_IF_ASSERT_DISABLED(consumed);
       // This is written to match our Highlighter classes, which seem to
       // generate only foreground color escape sequences. If necessary, this
       // will need to be extended.
-      if (!string.consume_front("[")) {
-        llvm::errs() << "Missing '[' in color escape sequence.\n";
-        continue;
-      }
       // Only 8 basic foreground colors and reset, our Highlighter doesn't use
       // anything else.
       int value;
       if (!!string.consumeInteger(10, value) || // Returns false on success.
-          !(value == 0 || (value >= 30 && value <= 37))) {
+          !(value == 0 ||
+            (value >= ANSI_FG_COLOR_BLACK && value <= ANSI_FG_COLOR_WHITE))) {
         llvm::errs() << "No valid color code in color escape sequence.\n";
         continue;
       }
-      if (!string.consume_front("m")) {
-        llvm::errs() << "Missing 'm' in color escape sequence.\n";
+      if (!string.consume_front(ANSI_ESC_END)) {
+        llvm::errs() << "Missing '" << ANSI_ESC_END
+                     << "' in color escape sequence.\n";
         continue;
       }
       if (value == 0) { // Reset.
@@ -545,8 +544,8 @@ public:
           ::wattron(m_window, COLOR_PAIR(WhiteOnBlue));
       } else {
         // Mapped directly to first 16 color pairs (black/blue background).
-        ::wattron(m_window,
-                  COLOR_PAIR(value - 30 + 1 + (use_blue_background ? 8 : 0)));
+        ::wattron(m_window, COLOR_PAIR(value - ANSI_FG_COLOR_BLACK + 1 +
+                                       (use_blue_background ? 8 : 0)));
       }
     }
     wattr_set(m_window, saved_attr, saved_pair, nullptr);
