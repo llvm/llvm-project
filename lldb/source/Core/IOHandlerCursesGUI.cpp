@@ -6977,9 +6977,6 @@ public:
         }
       }
 
-      const attr_t selected_highlight_attr = A_REVERSE;
-      const attr_t pc_highlight_attr = COLOR_PAIR(BlackOnBlue);
-
       for (size_t i = 0; i < num_visible_lines; ++i) {
         const uint32_t curr_line = m_first_visible_line + i;
         if (curr_line < num_source_lines) {
@@ -6987,14 +6984,13 @@ public:
           window.MoveCursor(1, line_y);
           const bool is_pc_line = curr_line == m_pc_line;
           const bool line_is_selected = m_selected_line == curr_line;
-          // Highlight the line as the PC line first, then if the selected
-          // line isn't the same as the PC line, highlight it differently
+          // Highlight the line as the PC line first (done by passing
+          // argument to OutputColoredStringTruncated()), then if the selected
+          // line isn't the same as the PC line, highlight it differently.
           attr_t highlight_attr = 0;
           attr_t bp_attr = 0;
-          if (is_pc_line)
-            highlight_attr = pc_highlight_attr;
-          else if (line_is_selected)
-            highlight_attr = selected_highlight_attr;
+          if (line_is_selected && !is_pc_line)
+            highlight_attr = A_REVERSE;
 
           if (bp_lines.find(curr_line + 1) != bp_lines.end())
             bp_attr = COLOR_PAIR(BlackOnWhite);
@@ -7023,7 +7019,7 @@ public:
           if (line.endswith("\n"))
             line = line.drop_back();
           bool wasWritten = window.OutputColoredStringTruncated(
-              1, line, m_first_visible_column, line_is_selected);
+              1, line, m_first_visible_column, is_pc_line);
           if (!wasWritten && (line_is_selected || is_pc_line)) {
             // Draw an empty space to show the selected/PC line if empty,
             // or draw '<' if nothing is visible because of scrolling too much
