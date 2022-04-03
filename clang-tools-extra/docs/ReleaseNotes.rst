@@ -99,6 +99,12 @@ Improvements to clang-tidy
 - Added trace code to help narrow down any checks and the relevant source code
   that result in crashes.
 
+- Clang-tidy now consideres newlines as separators of single elements in the `Checks` section in
+  `.clang-tidy` configuration files. Where previously a comma had to be used to distinguish elements in
+  this list from each other, newline characters now also work as separators in the parsed YAML. That
+  means it is advised to use YAML's block style initiated by the pipe character `|` for the `Checks`
+  section in order to benefit from the easier syntax that works without commas.
+
 New checks
 ^^^^^^^^^^
 

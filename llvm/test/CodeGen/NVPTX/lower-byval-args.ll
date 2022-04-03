@@ -17,7 +17,7 @@
 ; CHECK32: cvta.to.global.u32 [[result_addr_g:%r[0-9]+]], [[result_addr]]
 ;
 ; CHECK: ld.param.u32    [[value:%r[0-9]+]], [%[[param_addr1]]+12];
-; CHECK  st.global.u32   [[[result_addr_g]]], [[value]];
+; CHECK: st.global.u32   [[[result_addr_g]]], [[value]];
 ; Function Attrs: nofree norecurse nounwind willreturn mustprogress
 define dso_local void @static_offset(i32* nocapture %arg, %struct.ham* nocapture readonly byval(%struct.ham) align 4 %arg1, i32 %arg2) local_unnamed_addr #0 {
 bb:
@@ -50,7 +50,7 @@ bb6:                                              ; preds = %bb3, %bb
 ; CHECK32: add.s32         %[[param_w_offset:r[0-9]+]], %[[param_addr1]],
 ;
 ; CHECK: ld.param.u32    [[value:%r[0-9]+]], [%[[param_w_offset]]];
-; CHECK  st.global.u32   [[[result_addr_g]]], [[value]];
+; CHECK: st.global.u32   [[[result_addr_g]]], [[value]];
 
 ; Function Attrs: nofree norecurse nounwind willreturn mustprogress
 define dso_local void @dynamic_offset(i32* nocapture %arg, %struct.ham* nocapture readonly byval(%struct.ham) align 4 %arg1, i32 %arg2) local_unnamed_addr #0 {
@@ -136,7 +136,7 @@ bb:
 ; CHECK32: cvta.to.global.u32 [[result_addr_g:%r[0-9]+]], [[result_addr]]
 ; CHECK32: add.s32         %[[copy_w_offset:r[0-9]+]], %[[copy_addr]],
 ; CHECK: ld.local.u32    [[value:%r[0-9]+]], [%[[copy_w_offset]]];
-; CHECK  st.global.u32   [[[result_addr_g]]], [[value]];
+; CHECK: st.global.u32   [[[result_addr_g]]], [[value]];
 
 ; Function Attrs: convergent norecurse nounwind mustprogress
 define dso_local void @pointer_escapes(i32* nocapture %arg, %struct.ham* byval(%struct.ham) align 4 %arg1, i32 %arg2) local_unnamed_addr #1 {
