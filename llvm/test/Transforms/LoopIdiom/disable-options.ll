@@ -112,6 +112,19 @@ define void @test-memset(i8* %Base, i64 %Size) nounwind ssp {
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
 ;
+; DIS-NONE-LABEL: @test-memset(
+; DIS-NONE-NEXT:  bb.nph:
+; DIS-NONE-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 1 [[BASE:%.*]], i8 0, i64 [[SIZE:%.*]], i1 false)
+; DIS-NONE-NEXT:    br label [[FOR_BODY:%.*]]
+; DIS-NONE:       for.body:
+; DIS-NONE-NEXT:    [[INDVAR:%.*]] = phi i64 [ 0, [[BB_NPH:%.*]] ], [ [[INDVAR_NEXT:%.*]], [[FOR_BODY]] ]
+; DIS-NONE-NEXT:    [[I_0_014:%.*]] = getelementptr i8, i8* [[BASE]], i64 [[INDVAR]]
+; DIS-NONE-NEXT:    [[INDVAR_NEXT]] = add i64 [[INDVAR]], 1
+; DIS-NONE-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVAR_NEXT]], [[SIZE]]
+; DIS-NONE-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
+; DIS-NONE:       for.end:
+; DIS-NONE-NEXT:    ret void
+;
 ; DIS-ALL-LABEL: @test-memset(
 ; DIS-ALL-NEXT:  bb.nph:
 ; DIS-ALL-NEXT:    br label [[FOR_BODY:%.*]]
