@@ -598,21 +598,30 @@ struct StringLitOpConversion : public FIROpConversion<fir::StringLitOp> {
       return success();
     }
 
-    auto arr = attr.cast<mlir::ArrayAttr>();
     auto charTy = constop.getType().cast<fir::CharacterType>();
     unsigned bits = lowerTy().characterBitsize(charTy);
     mlir::Type intTy = rewriter.getIntegerType(bits);
-    auto attrs = llvm::map_range(
-        arr.getValue(), [intTy, bits](mlir::Attribute attr) -> Attribute {
-          return mlir::IntegerAttr::get(
-              intTy,
-              attr.cast<mlir::IntegerAttr>().getValue().sextOrTrunc(bits));
-        });
-    mlir::Type vecType = mlir::VectorType::get(arr.size(), intTy);
-    auto denseAttr = mlir::DenseElementsAttr::get(
-        vecType.cast<mlir::ShapedType>(), llvm::to_vector<8>(attrs));
-    rewriter.replaceOpWithNewOp<mlir::arith::ConstantOp>(constop, ty,
-                                                         denseAttr);
+    mlir::Location loc = constop.getLoc();
+    mlir::Value cst = rewriter.create<mlir::LLVM::UndefOp>(loc, ty);
+    if (auto arr = attr.dyn_cast<mlir::DenseElementsAttr>()) {
+      cst = rewriter.create<mlir::LLVM::ConstantOp>(loc, ty, arr);
+    } else if (auto arr = attr.dyn_cast<mlir::ArrayAttr>()) {
+      for (auto a : llvm::enumerate(arr.getValue())) {
+        // convert each character to a precise bitsize
+        auto elemAttr = mlir::IntegerAttr::get(
+            intTy,
+            a.value().cast<mlir::IntegerAttr>().getValue().zextOrTrunc(bits));
+        auto elemCst =
+            rewriter.create<mlir::LLVM::ConstantOp>(loc, intTy, elemAttr);
+        auto index = mlir::ArrayAttr::get(
+            constop.getContext(), rewriter.getI32IntegerAttr(a.index()));
+        cst = rewriter.create<mlir::LLVM::InsertValueOp>(loc, ty, cst, elemCst,
+                                                         index);
+      }
+    } else {
+      return failure();
+    }
+    rewriter.replaceOp(constop, cst);
     return success();
   }
 };
