@@ -5,9 +5,20 @@ define void @looper(double* nocapture %out) {
 ; CHECK-LABEL: @looper(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[OUT1:%.*]] = bitcast double* [[OUT:%.*]] to i8*
-; CHECK-NEXT:    [[M:%.*]] = getelementptr double, double* %out, i32 16
+; CHECK-NEXT:    [[M:%.*]] = getelementptr double, double* [[OUT]], i32 16
 ; CHECK-NEXT:    [[M2:%.*]] = bitcast double* [[M]] to i8*
 ; CHECK-NEXT:    call void @llvm.memmove.p0i8.p0i8.i64(i8* align 8 [[OUT1]], i8* align 8 [[M2]], i64 256, i1 false), !tbaa [[TBAA0:![0-9]+]]
+; CHECK-NEXT:    br label [[FOR_BODY4:%.*]]
+; CHECK:       for.body4:
+; CHECK-NEXT:    [[J_020:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY4]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, double* [[M]], i64 [[J_020]]
+; CHECK-NEXT:    [[A0:%.*]] = load double, double* [[ARRAYIDX]], align 8, !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds double, double* [[OUT]], i64 [[J_020]]
+; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[J_020]], 1
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i64 [[J_020]], 31
+; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_BODY4]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret void
 ;
 entry:
   %M = getelementptr double, double* %out, i32 16
@@ -32,10 +43,20 @@ define void @looperBadMerge(double* nocapture %out) {
 ; CHECK-LABEL: @looperBadMerge(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[OUT1:%.*]] = bitcast double* [[OUT:%.*]] to i8*
-; CHECK-NEXT:    [[M:%.*]] = getelementptr double, double* %out, i32 16
+; CHECK-NEXT:    [[M:%.*]] = getelementptr double, double* [[OUT]], i32 16
 ; CHECK-NEXT:    [[M2:%.*]] = bitcast double* [[M]] to i8*
-; CHECK-NEXT:    call void @llvm.memmove.p0i8.p0i8.i64(i8* align 8 [[OUT1]], i8* align 8 [[M2]], i64 256, i1 false), !tbaa [[TBAAF:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.memmove.p0i8.p0i8.i64(i8* align 8 [[OUT1]], i8* align 8 [[M2]], i64 256, i1 false), !tbaa [[TBAA4:![0-9]+]]
 ; CHECK-NEXT:    br label [[FOR_BODY4:%.*]]
+; CHECK:       for.body4:
+; CHECK-NEXT:    [[J_020:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY4]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, double* [[M]], i64 [[J_020]]
+; CHECK-NEXT:    [[A0:%.*]] = load double, double* [[ARRAYIDX]], align 8, !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds double, double* [[OUT]], i64 [[J_020]]
+; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[J_020]], 1
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i64 [[J_020]], 31
+; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_BODY4]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret void
 ;
 entry:
   %M = getelementptr double, double* %out, i32 16
@@ -59,11 +80,20 @@ define void @looperGoodMerge(double* nocapture %out) {
 ; CHECK-LABEL: @looperGoodMerge(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[OUT1:%.*]] = bitcast double* [[OUT:%.*]] to i8*
-; CHECK-NEXT:    [[M:%.*]] = getelementptr double, double* %out, i32 16
+; CHECK-NEXT:    [[M:%.*]] = getelementptr double, double* [[OUT]], i32 16
 ; CHECK-NEXT:    [[M2:%.*]] = bitcast double* [[M]] to i8*
-; CHECK-NEXT:    call void @llvm.memmove.p0i8.p0i8.i64(i8* align 8 [[OUT1]], i8* align 8 [[M2]], i64 256, i1 false) 
-; CHECK-NOT:     !tbaa
+; CHECK-NEXT:    call void @llvm.memmove.p0i8.p0i8.i64(i8* align 8 [[OUT1]], i8* align 8 [[M2]], i64 256, i1 false)
 ; CHECK-NEXT:    br label [[FOR_BODY4:%.*]]
+; CHECK:       for.body4:
+; CHECK-NEXT:    [[J_020:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY4]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, double* [[M]], i64 [[J_020]]
+; CHECK-NEXT:    [[A0:%.*]] = load double, double* [[ARRAYIDX]], align 8, !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds double, double* [[OUT]], i64 [[J_020]]
+; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[J_020]], 1
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i64 [[J_020]], 31
+; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_BODY4]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret void
 ;
 entry:
   %M = getelementptr double, double* %out, i32 16
@@ -83,10 +113,6 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup3
   ret void
 }
 
-; CHECK: [[TBAA0]] = !{[[TBAA1:.+]], [[TBAA1]], i64 0}
-; CHECK: [[TBAA1]] = !{!"double", [[TBAA2:.+]], i64 0}
-; CHECK: [[TBAA2]] = !{!"omnipotent char", [[TBAA3:.+]], i64 0}
-; CHECK: [[TBAAF]] = !{[[TBAA2]], [[TBAA2]], i64 0}
 
 !3 = !{!4, !4, i64 0}
 !4 = !{!"float", !7, i64 0}

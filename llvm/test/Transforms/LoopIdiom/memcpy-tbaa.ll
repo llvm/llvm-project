@@ -42,8 +42,7 @@ define void @looperBadMerge(double* noalias nocapture readonly %M, double* noali
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[OUT1:%.*]] = bitcast double* [[OUT:%.*]] to i8*
 ; CHECK-NEXT:    [[M2:%.*]] = bitcast double* [[M:%.*]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[OUT1]], i8* align 8 [[M2]], i64 256, i1 false), !tbaa [[TBAAF:![0-9]+]]
-; CHECK-NOT: tbaa
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[OUT1]], i8* align 8 [[M2]], i64 256, i1 false), !tbaa [[TBAA4:![0-9]+]]
 ; CHECK-NEXT:    br label [[FOR_BODY4:%.*]]
 ; CHECK:       for.body4:
 ; CHECK-NEXT:    [[J_020:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY4]] ]
@@ -79,7 +78,6 @@ define void @looperGoodMerge(double* noalias nocapture readonly %M, double* noal
 ; CHECK-NEXT:    [[OUT1:%.*]] = bitcast double* [[OUT:%.*]] to i8*
 ; CHECK-NEXT:    [[M2:%.*]] = bitcast double* [[M:%.*]] to i8*
 ; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[OUT1]], i8* align 8 [[M2]], i64 256, i1 false)
-; CHECK-NOT:     !tbaa
 ; CHECK-NEXT:    br label [[FOR_BODY4:%.*]]
 ; CHECK:       for.body4:
 ; CHECK-NEXT:    [[J_020:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY4]] ]
@@ -113,8 +111,19 @@ define void @looperConstantTBAAStruct(double* nocapture noalias %out, double* no
 ; CHECK-LABEL: @looperConstantTBAAStruct(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[OUT1:%.*]] = bitcast double* [[OUT:%.*]] to i8*
-; CHECK-NEXT:    [[IN1:%.*]] = bitcast double* [[IN:%.*]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[OUT1]], i8* align 8 [[IN1]], i64 32, i1 false), !tbaa [[TBAA8:![0-9]+]]
+; CHECK-NEXT:    [[IN2:%.*]] = bitcast double* [[IN:%.*]] to i8*
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[OUT1]], i8* align 8 [[IN2]], i64 32, i1 false), !tbaa [[TBAA5:![0-9]+]]
+; CHECK-NEXT:    br label [[FOR_BODY4:%.*]]
+; CHECK:       for.body4:
+; CHECK-NEXT:    [[J_020:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY4]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, double* [[IN]], i64 [[J_020]]
+; CHECK-NEXT:    [[A0:%.*]] = load double, double* [[ARRAYIDX]], align 8, !tbaa [[TBAA9:![0-9]+]]
+; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds double, double* [[OUT]], i64 [[J_020]]
+; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[J_020]], 1
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i64 [[J_020]], 3
+; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_BODY4]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %for.body4
@@ -137,12 +146,21 @@ define void @looperVarTBAAStruct(double* nocapture noalias %out, double* nocaptu
 ; CHECK-LABEL: @looperVarTBAAStruct(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[OUT1:%.*]] = bitcast double* [[OUT:%.*]] to i8*
-; CHECK-NEXT:    [[IN1:%.*]] = bitcast double* [[IN:%.*]] to i8*
-; CHECK-NEXT:    [[umax:%.*]] = call i64 @llvm.umax.i64(i64 %len, i64 1)
-; CHECK-NEXT:    [[I0:%.*]] = shl nuw i64 [[umax]], 3
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[OUT1]], i8* align 8 [[IN1]], i64 [[I0]], i1 false)
-; CHECK-NOT: !tbaa
-; CHECK-NEXT:    br 
+; CHECK-NEXT:    [[IN2:%.*]] = bitcast double* [[IN:%.*]] to i8*
+; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[LEN:%.*]], i64 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[UMAX]], 3
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[OUT1]], i8* align 8 [[IN2]], i64 [[TMP0]], i1 false)
+; CHECK-NEXT:    br label [[FOR_BODY4:%.*]]
+; CHECK:       for.body4:
+; CHECK-NEXT:    [[J_020:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY4]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, double* [[IN]], i64 [[J_020]]
+; CHECK-NEXT:    [[A0:%.*]] = load double, double* [[ARRAYIDX]], align 8, !tbaa [[TBAA9]]
+; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds double, double* [[OUT]], i64 [[J_020]]
+; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[J_020]], 1
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i64 [[INC]], [[LEN]]
+; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_BODY4]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %for.body4
@@ -162,15 +180,7 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup3
 }
 
 
-; CHECK: [[TBAA0]] = !{[[TBAA1:.+]], [[TBAA1]], i64 0}
-; CHECK: [[TBAA1]] = !{!"double", [[TBAA2:.+]], i64 0}
-; CHECK: [[TBAA2]] = !{!"omnipotent char", [[TBAA3:.+]], i64 0}
-; CHECK: [[TBAAF]] = !{[[TBAA2]], [[TBAA2]], i64 0}
 
-; CHECK: [[TBAA8]] = !{[[TBAA5:.+]], [[TBAA6:.+]], i64 0, i64 32}
-; CHECK: [[TBAA5]] = !{[[TBAA7:.+]], i64 32, !"_ZTS1A", [[TBAA6]], i64 0, i64 8, [[TBAA6]], i64 8, i64 8, [[TBAA6]], i64 16, i64 8, [[TBAA6]], i64 24, i64 8}
-; CHECK: [[TBAA7]] = !{[[TBAA3]], i64 0, !"omnipotent char"}
-; CHECK: [[TBAA6]] = !{[[TBAA7]], i64 8, !"double"}
 
 !3 = !{!4, !4, i64 0}
 !4 = !{!"float", !7, i64 0}
