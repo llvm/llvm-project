@@ -3566,8 +3566,20 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
   Value *X, *Y;
   Constant *C1;
   if (match(Op1, m_Constant(C1))) {
-    // Use DeMorgan and reassociation to eliminate a 'not' op.
     Constant *C2;
+
+    if (match(Op0, m_OneUse(m_Or(m_Value(X), m_ImmConstant(C2)))) &&
+        match(C1, m_ImmConstant())) {
+      // (X | C2) ^ C1 --> (X & ~C2) ^ (C1^C2)
+      C2 = Constant::replaceUndefsWith(
+          C2, Constant::getAllOnesValue(C2->getType()->getScalarType()));
+      Value *And = Builder.CreateAnd(
+          X, Constant::mergeUndefsWith(ConstantExpr::getNot(C2), C1));
+      return BinaryOperator::CreateXor(
+          And, Constant::mergeUndefsWith(ConstantExpr::getXor(C1, C2), C1));
+    }
+
+    // Use DeMorgan and reassociation to eliminate a 'not' op.
     if (match(Op0, m_OneUse(m_Or(m_Not(m_Value(X)), m_Constant(C2))))) {
       // (~X | C2) ^ C1 --> ((X & ~C2) ^ -1) ^ C1 --> (X & ~C2) ^ ~C1
       Value *And = Builder.CreateAnd(X, ConstantExpr::getNot(C2));

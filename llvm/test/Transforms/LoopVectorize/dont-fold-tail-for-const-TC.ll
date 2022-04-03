@@ -31,7 +31,7 @@ define dso_local void @constTC(i32* noalias nocapture %A) optsize {
 ; CHECK-NEXT:    store <2 x i32> <i32 13, i32 13>, <2 x i32>* [[TMP11]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 6
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1800
-; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP0:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 1800, 1800
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
@@ -44,7 +44,7 @@ define dso_local void @constTC(i32* noalias nocapture %A) optsize {
 ; CHECK-NEXT:    store i32 13, i32* [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[RIVPLUS1]] = add nuw nsw i32 [[RIV]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[RIVPLUS1]], 1800
-; CHECK-NEXT:    br i1 [[COND]], label [[EXIT]], label [[LOOP]], [[LOOP2:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[COND]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;

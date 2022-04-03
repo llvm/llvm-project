@@ -19,7 +19,7 @@ define void @test() {
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR1_LATCH:%.*]], label [[FOR2_HEADER]]
 ; CHECK:       for1.latch:
 ; CHECK-NEXT:    [[C:%.*]] = call i1 @cond()
-; CHECK-NEXT:    br i1 [[C]], label [[EXIT:%.*]], label [[FOR1_HEADER]], !llvm.loop !0
+; CHECK-NEXT:    br i1 [[C]], label [[EXIT:%.*]], label [[FOR1_HEADER]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;

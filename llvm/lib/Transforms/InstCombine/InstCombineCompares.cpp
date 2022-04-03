@@ -2335,7 +2335,8 @@ Instruction *InstCombinerImpl::foldICmpSRemConstant(ICmpInst &Cmp,
   // constant power-of-2 value:
   // (X % pow2C) sgt/slt 0
   const ICmpInst::Predicate Pred = Cmp.getPredicate();
-  if (Pred != ICmpInst::ICMP_SGT && Pred != ICmpInst::ICMP_SLT)
+  if (Pred != ICmpInst::ICMP_SGT && Pred != ICmpInst::ICMP_SLT &&
+      Pred != ICmpInst::ICMP_EQ && Pred != ICmpInst::ICMP_NE)
     return nullptr;
 
   // TODO: The one-use check is standard because we do not typically want to
@@ -2345,7 +2346,15 @@ Instruction *InstCombinerImpl::foldICmpSRemConstant(ICmpInst &Cmp,
     return nullptr;
 
   const APInt *DivisorC;
-  if (!C.isZero() || !match(SRem->getOperand(1), m_Power2(DivisorC)))
+  if (!match(SRem->getOperand(1), m_Power2(DivisorC)))
+    return nullptr;
+
+  // For cmp_sgt/cmp_slt only zero valued C is handled.
+  // For cmp_eq/cmp_ne only positive valued C is handled.
+  if (((Pred == ICmpInst::ICMP_SGT || Pred == ICmpInst::ICMP_SLT) &&
+       !C.isZero()) ||
+      ((Pred == ICmpInst::ICMP_EQ || Pred == ICmpInst::ICMP_NE) &&
+       !C.isStrictlyPositive()))
     return nullptr;
 
   // Mask off the sign bit and the modulo bits (low-bits).
@@ -2353,6 +2362,9 @@ Instruction *InstCombinerImpl::foldICmpSRemConstant(ICmpInst &Cmp,
   APInt SignMask = APInt::getSignMask(Ty->getScalarSizeInBits());
   Constant *MaskC = ConstantInt::get(Ty, SignMask | (*DivisorC - 1));
   Value *And = Builder.CreateAnd(SRem->getOperand(0), MaskC);
+
+  if (Pred == ICmpInst::ICMP_EQ || Pred == ICmpInst::ICMP_NE)
+    return new ICmpInst(Pred, And, ConstantInt::get(Ty, C));
 
   // For 'is positive?' check that the sign-bit is clear and at least 1 masked
   // bit is set. Example:
@@ -2593,13 +2605,19 @@ Instruction *InstCombinerImpl::foldICmpSubConstant(ICmpInst &Cmp,
 
   // X - Y == 0 --> X == Y.
   // X - Y != 0 --> X != Y.
-  if (Cmp.isEquality() && C.isZero())
+  // TODO: We allow this with multiple uses as long as the other uses are not
+  //       in phis. The phi use check is guarding against a codegen regression
+  //       for a loop test. If the backend could undo this (and possibly
+  //       subsequent transforms), we would not need this hack.
+  if (Cmp.isEquality() && C.isZero() &&
+      none_of((Sub->users()), [](const User *U) { return isa<PHINode>(U); }))
     return new ICmpInst(Pred, X, Y);
 
   // The following transforms are only worth it if the only user of the subtract
   // is the icmp.
   // TODO: This is an artificial restriction for all of the transforms below
-  //       that only need a single replacement icmp.
+  //       that only need a single replacement icmp. Can these use the phi test
+  //       like the transform above here?
   if (!Sub->hasOneUse())
     return nullptr;
 
@@ -6683,7 +6701,6 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
     if (match(Op1, m_FPExt(m_Value(Y))) && X->getType() == Y->getType())
       return new FCmpInst(Pred, X, Y, "", &I);
 
-    // fcmp (fpext X), C -> fcmp X, (fptrunc C) if fptrunc is lossless
     const APFloat *C;
     if (match(Op1, m_APFloat(C))) {
       const fltSemantics &FPSem =
@@ -6692,6 +6709,31 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
       APFloat TruncC = *C;
       TruncC.convert(FPSem, APFloat::rmNearestTiesToEven, &Lossy);
 
+      if (Lossy) {
+        // X can't possibly equal the higher-precision constant, so reduce any
+        // equality comparison.
+        // TODO: Other predicates can be handled via getFCmpCode().
+        switch (Pred) {
+        case FCmpInst::FCMP_OEQ:
+          // X is ordered and equal to an impossible constant --> false
+          return replaceInstUsesWith(I, ConstantInt::getFalse(I.getType()));
+        case FCmpInst::FCMP_ONE:
+          // X is ordered and not equal to an impossible constant --> ordered
+          return new FCmpInst(FCmpInst::FCMP_ORD, X,
+                              ConstantFP::getNullValue(X->getType()));
+        case FCmpInst::FCMP_UEQ:
+          // X is unordered or equal to an impossible constant --> unordered
+          return new FCmpInst(FCmpInst::FCMP_UNO, X,
+                              ConstantFP::getNullValue(X->getType()));
+        case FCmpInst::FCMP_UNE:
+          // X is unordered or not equal to an impossible constant --> true
+          return replaceInstUsesWith(I, ConstantInt::getTrue(I.getType()));
+        default:
+          break;
+        }
+      }
+
+      // fcmp (fpext X), C -> fcmp X, (fptrunc C) if fptrunc is lossless
       // Avoid lossy conversions and denormals.
       // Zero is a special case that's OK to convert.
       APFloat Fabs = TruncC;

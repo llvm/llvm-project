@@ -433,8 +433,8 @@ define i8 @not_or(i8 %x) {
 
 define i8 @not_or_xor(i8 %x) {
 ; CHECK-LABEL: @not_or_xor(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -8
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[TMP1]], -13
+; CHECK-NEXT:    [[NOTX:%.*]] = and i8 [[X:%.*]], -8
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[NOTX]], -13
 ; CHECK-NEXT:    ret i8 [[XOR]]
 ;
   %notx = xor i8 %x, -1
@@ -445,8 +445,8 @@ define i8 @not_or_xor(i8 %x) {
 
 define i8 @xor_or(i8 %x) {
 ; CHECK-LABEL: @xor_or(
-; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[X:%.*]], 7
-; CHECK-NEXT:    [[OR:%.*]] = xor i8 [[TMP1]], 32
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -8
+; CHECK-NEXT:    [[OR:%.*]] = xor i8 [[TMP1]], 39
 ; CHECK-NEXT:    ret i8 [[OR]]
 ;
   %xor = xor i8 %x, 32
@@ -456,8 +456,8 @@ define i8 @xor_or(i8 %x) {
 
 define i8 @xor_or2(i8 %x) {
 ; CHECK-LABEL: @xor_or2(
-; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[X:%.*]], 7
-; CHECK-NEXT:    [[OR:%.*]] = xor i8 [[TMP1]], 32
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -8
+; CHECK-NEXT:    [[OR:%.*]] = xor i8 [[TMP1]], 39
 ; CHECK-NEXT:    ret i8 [[OR]]
 ;
   %xor = xor i8 %x, 33
@@ -467,8 +467,8 @@ define i8 @xor_or2(i8 %x) {
 
 define i8 @xor_or_xor(i8 %x) {
 ; CHECK-LABEL: @xor_or_xor(
-; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[X:%.*]], 7
-; CHECK-NEXT:    [[XOR2:%.*]] = xor i8 [[TMP1]], 44
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -8
+; CHECK-NEXT:    [[XOR2:%.*]] = xor i8 [[TMP1]], 43
 ; CHECK-NEXT:    ret i8 [[XOR2]]
 ;
   %xor1 = xor i8 %x, 33
@@ -479,8 +479,8 @@ define i8 @xor_or_xor(i8 %x) {
 
 define i8 @or_xor_or(i8 %x) {
 ; CHECK-LABEL: @or_xor_or(
-; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[X:%.*]], 39
-; CHECK-NEXT:    [[OR2:%.*]] = xor i8 [[TMP1]], 8
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -40
+; CHECK-NEXT:    [[OR2:%.*]] = xor i8 [[TMP1]], 47
 ; CHECK-NEXT:    ret i8 [[OR2]]
 ;
   %or1 = or i8 %x, 33
