@@ -6402,8 +6402,11 @@ public:
       if (exe_ctx.HasThreadScope()) {
         Process *process = exe_ctx.GetProcessPtr();
         if (process && process->IsAlive() &&
-            StateIsStoppedState(process->GetState(), true))
-          exe_ctx.GetThreadRef().StepOut();
+            StateIsStoppedState(process->GetState(), true)) {
+          Thread *thread = exe_ctx.GetThreadPtr();
+          uint32_t frame_idx = thread->GetSelectedFrameIndex();
+          exe_ctx.GetThreadRef().StepOut(frame_idx);
+        }
       }
     }
       return MenuActionResult::Handled;
@@ -7361,7 +7364,9 @@ public:
             m_debugger.GetCommandInterpreter().GetExecutionContext();
         if (exe_ctx.HasThreadScope() &&
             StateIsStoppedState(exe_ctx.GetProcessRef().GetState(), true)) {
-          exe_ctx.GetThreadRef().StepOut();
+          Thread *thread = exe_ctx.GetThreadPtr();
+          uint32_t frame_idx = thread->GetSelectedFrameIndex();
+          exe_ctx.GetThreadRef().StepOut(frame_idx);
         }
       }
       return eKeyHandled;
