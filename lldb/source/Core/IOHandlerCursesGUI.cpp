@@ -524,11 +524,11 @@ public:
       // This is written to match our Highlighter classes, which seem to
       // generate only foreground color escape sequences. If necessary, this
       // will need to be extended.
-      // Only 8 basic foreground colors and reset, our Highlighter doesn't use
-      // anything else.
+      // Only 8 basic foreground colors, underline and reset, our Highlighter
+      // doesn't use anything else.
       int value;
       if (!!string.consumeInteger(10, value) || // Returns false on success.
-          !(value == 0 ||
+          !(value == 0 || value == ANSI_CTRL_UNDERLINE ||
             (value >= ANSI_FG_COLOR_BLACK && value <= ANSI_FG_COLOR_WHITE))) {
         llvm::errs() << "No valid color code in color escape sequence.\n";
         continue;
@@ -542,6 +542,8 @@ public:
         wattr_set(m_window, saved_attr, saved_pair, nullptr);
         if (use_blue_background)
           ::wattron(m_window, COLOR_PAIR(WhiteOnBlue));
+      } else if (value == ANSI_CTRL_UNDERLINE) {
+        ::wattron(m_window, A_UNDERLINE);
       } else {
         // Mapped directly to first 16 color pairs (black/blue background).
         ::wattron(m_window, COLOR_PAIR(value - ANSI_FG_COLOR_BLACK + 1 +
@@ -7013,7 +7015,12 @@ public:
             window.AttributeOn(highlight_attr);
 
           StreamString lineStream;
-          m_file_sp->DisplaySourceLines(curr_line + 1, {}, 0, 0, &lineStream);
+
+          llvm::Optional<size_t> column;
+          if (is_pc_line && m_sc.line_entry.IsValid() && m_sc.line_entry.column)
+            column = m_sc.line_entry.column - 1;
+          m_file_sp->DisplaySourceLines(curr_line + 1, column, 0, 0,
+                                        &lineStream);
           StringRef line = lineStream.GetString();
           if (line.endswith("\n"))
             line = line.drop_back();
