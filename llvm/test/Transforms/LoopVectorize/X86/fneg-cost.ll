@@ -9,6 +9,53 @@ target triple = "x86_64-apple-macosx10.8.0"
 ; CHECK: Found an estimated cost of 1 for VF 2 For instruction:   %neg = fneg float %{{.*}}
 ; CHECK: Found an estimated cost of 1 for VF 4 For instruction:   %neg = fneg float %{{.*}}
 define void @fneg_cost(float* %a, i64 %n) {
+; CHECK-LABEL: @fneg_cost(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], 8
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 8
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, float* [[A:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, float* [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast float* [[TMP4]] to <4 x float>*
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, <4 x float>* [[TMP5]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, float* [[TMP2]], i32 4
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast float* [[TMP6]] to <4 x float>*
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x float>, <4 x float>* [[TMP7]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = fneg <4 x float> [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP9:%.*]] = fneg <4 x float> [[WIDE_LOAD1]]
+; CHECK-NEXT:    [[TMP10:%.*]] = bitcast float* [[TMP4]] to <4 x float>*
+; CHECK-NEXT:    store <4 x float> [[TMP8]], <4 x float>* [[TMP10]], align 4
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast float* [[TMP6]] to <4 x float>*
+; CHECK-NEXT:    store <4 x float> [[TMP9]], <4 x float>* [[TMP11]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP13:%.*]] = load float, float* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[TMP13]]
+; CHECK-NEXT:    store float [[NEG]], float* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
+;
 entry:
   br label %for.body
 for.body:                                         ; preds = %for.body.preheader, %for.body
