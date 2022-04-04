@@ -732,7 +732,8 @@ getElfIsaNameFromElfHeader(const ELFObjectFile<ELFT> *Obj,
     break;
   }
 
-  case ELF::ELFABIVERSION_AMDGPU_HSA_V4: {
+  case ELF::ELFABIVERSION_AMDGPU_HSA_V4:
+  case ELF::ELFABIVERSION_AMDGPU_HSA_V5: {
     switch (ElfHeader.e_flags & ELF::EF_AMDGPU_FEATURE_SRAMECC_V4) {
     case ELF::EF_AMDGPU_FEATURE_SRAMECC_OFF_V4:
       ElfIsaName += ":sramecc-";
