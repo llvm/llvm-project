@@ -677,7 +677,7 @@ PreamblePatch PreamblePatch::unmodified(const PreambleData &Preamble) {
 SourceLocation translatePreamblePatchLocation(SourceLocation Loc,
                                               const SourceManager &SM) {
   auto DefFile = SM.getFileID(Loc);
-  if (auto *FE = SM.getFileEntryForID(DefFile)) {
+  if (auto FE = SM.getFileEntryRefForID(DefFile)) {
     auto IncludeLoc = SM.getIncludeLoc(DefFile);
     // Preamble patch is included inside the builtin file.
     if (IncludeLoc.isValid() && SM.isWrittenInBuiltinFile(IncludeLoc) &&

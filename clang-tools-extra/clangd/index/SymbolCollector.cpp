@@ -561,7 +561,7 @@ bool SymbolCollector::handleDeclOccurrence(
   // it's main-file only.
   bool IsMainFileOnly =
       SM.isWrittenInMainFile(SM.getExpansionLoc(ND->getBeginLoc())) &&
-      !isHeaderFile(SM.getFileEntryForID(SM.getMainFileID())->getName(),
+      !isHeaderFile(SM.getFileEntryRefForID(SM.getMainFileID())->getName(),
                     ASTCtx->getLangOpts());
   // In C, printf is a redecl of an implicit builtin! So check OrigD instead.
   if (ASTNode.OrigD->isImplicit() ||
@@ -688,7 +688,7 @@ bool SymbolCollector::handleMacroOccurrence(const IdentifierInfo *Name,
   auto SpellingLoc = SM.getSpellingLoc(Loc);
   bool IsMainFileOnly =
       SM.isInMainFile(SM.getExpansionLoc(DefLoc)) &&
-      !isHeaderFile(SM.getFileEntryForID(SM.getMainFileID())->getName(),
+      !isHeaderFile(SM.getFileEntryRefForID(SM.getMainFileID())->getName(),
                     ASTCtx->getLangOpts());
   // Do not store references to main-file macros.
   if ((static_cast<unsigned>(Opts.RefFilter) & Roles) && !IsMainFileOnly &&

@@ -84,7 +84,7 @@ SlabTuple indexSymbols(ASTContext &AST, Preprocessor &PP,
     Collector.handleMacros(*MacroRefsToIndex);
 
   const auto &SM = AST.getSourceManager();
-  const auto *MainFileEntry = SM.getFileEntryForID(SM.getMainFileID());
+  const auto MainFileEntry = SM.getFileEntryRefForID(SM.getMainFileID());
   std::string FileName =
       std::string(MainFileEntry ? MainFileEntry->getName() : "");
 

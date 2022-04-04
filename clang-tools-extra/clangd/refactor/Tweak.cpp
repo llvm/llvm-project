@@ -108,7 +108,7 @@ Tweak::Effect::fileEdit(const SourceManager &SM, FileID FID,
   if (auto FilePath = getCanonicalPath(SM.getFileEntryForID(FID), SM))
     return std::make_pair(*FilePath, std::move(Ed));
   return error("Failed to get absolute path for edited file: {0}",
-               SM.getFileEntryForID(FID)->getName());
+               SM.getFileEntryRefForID(FID)->getName());
 }
 
 llvm::Expected<Tweak::Effect>

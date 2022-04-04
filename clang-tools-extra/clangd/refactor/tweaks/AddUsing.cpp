@@ -237,7 +237,7 @@ bool AddUsing::prepare(const Selection &Inputs) {
   const auto &TB = Inputs.AST->getTokens();
 
   // Do not suggest "using" in header files. That way madness lies.
-  if (isHeaderFile(SM.getFileEntryForID(SM.getMainFileID())->getName(),
+  if (isHeaderFile(SM.getFileEntryRefForID(SM.getMainFileID())->getName(),
                    Inputs.AST->getLangOpts()))
     return false;
 
