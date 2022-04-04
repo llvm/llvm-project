@@ -55,19 +55,8 @@ class Status {
   llvm::sys::fs::perms Perms;
 
 public:
-  /// Whether this entity has an external path different from the virtual path,
-  /// and the external path is exposed by leaking it through the abstraction.
-  /// For example, a RedirectingFileSystem will set this for paths where
-  /// UseExternalName is true.
-  ///
-  /// FIXME: Currently the external path is exposed by replacing the virtual
-  /// path in this Status object. Instead, we should leave the path in the
-  /// Status intact (matching the requested virtual path), and just use this
-  /// flag as hint that a new API, FileSystem::getExternalVFSPath(), will not
-  /// return `None`. Clients can then request the external path only where
-  /// needed (e.g. for diagnostics, or to report discovered dependencies to
-  /// external tools).
-  bool ExposesExternalVFSPath = false;
+  // FIXME: remove when files support multiple names
+  bool IsVFSMapped = false;
 
   Status() = default;
   Status(const llvm::sys::fs::file_status &Status);

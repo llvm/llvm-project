@@ -2163,16 +2163,10 @@ RedirectingFileSystem::lookupPathImpl(
 static Status getRedirectedFileStatus(const Twine &OriginalPath,
                                       bool UseExternalNames,
                                       Status ExternalStatus) {
-  // The path has been mapped by some nested VFS, don't override it with the
-  // original path.
-  if (ExternalStatus.ExposesExternalVFSPath)
-    return ExternalStatus;
-
   Status S = ExternalStatus;
   if (!UseExternalNames)
     S = Status::copyWithNewName(S, OriginalPath);
-  else
-    S.ExposesExternalVFSPath = true;
+  S.IsVFSMapped = true;
   return S;
 }
 
@@ -2274,9 +2268,7 @@ public:
 
 ErrorOr<std::unique_ptr<File>>
 File::getWithPath(ErrorOr<std::unique_ptr<File>> Result, const Twine &P) {
-  // See \c getRedirectedFileStatus - don't update path if it's already been
-  // mapped.
-  if (!Result || (*Result)->status()->ExposesExternalVFSPath)
+  if (!Result)
     return Result;
 
   ErrorOr<std::unique_ptr<File>> F = std::move(*Result);
