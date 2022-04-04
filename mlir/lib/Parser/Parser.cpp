@@ -257,6 +257,10 @@ public:
     unsigned number; // Number, specified with #12
     SMLoc loc;       // Location of first definition or use.
   };
+  struct DeferredLocInfo {
+    SMLoc loc;
+    StringRef identifier;
+  };
 
   /// Push a new SSA name scope to the parser.
   void pushSSANameScope(bool isIsolated);
@@ -481,10 +485,6 @@ private:
   /// Deffered locations: when parsing `loc(#loc42)` we add an entry to this
   /// map. After parsing the definition `#loc42 = ...` we'll patch back users
   /// of this location.
-  struct DeferredLocInfo {
-    SMLoc loc;
-    StringRef identifier;
-  };
   std::vector<DeferredLocInfo> deferredLocsReferences;
 
   /// The builder used when creating parsed operation instances.
@@ -494,6 +494,9 @@ private:
   Operation *topLevelOp;
 };
 } // namespace
+
+MLIR_DECLARE_EXPLICIT_TYPE_ID(OperationParser::DeferredLocInfo *)
+MLIR_DEFINE_EXPLICIT_TYPE_ID(OperationParser::DeferredLocInfo *)
 
 OperationParser::OperationParser(ParserState &state, ModuleOp topLevelOp)
     : Parser(state), opBuilder(topLevelOp.getRegion()), topLevelOp(topLevelOp) {

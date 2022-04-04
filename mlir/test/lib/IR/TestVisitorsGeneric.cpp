@@ -22,9 +22,10 @@ static std::string getStageDescription(const WalkStage &stage) {
 namespace {
 /// This pass exercises generic visitor with void callbacks and prints the order
 /// and stage in which operations are visited.
-class TestGenericIRVisitorPass
+struct TestGenericIRVisitorPass
     : public PassWrapper<TestGenericIRVisitorPass, OperationPass<>> {
-public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestGenericIRVisitorPass)
+
   StringRef getArgument() const final { return "test-generic-ir-visitors"; }
   StringRef getDescription() const final { return "Test generic IR visitors."; }
   void runOnOperation() override {
@@ -46,9 +47,11 @@ public:
 /// This pass exercises the generic visitor with non-void callbacks and prints
 /// the order and stage in which operations are visited. It will interrupt the
 /// walk based on attributes peesent in the IR.
-class TestGenericIRVisitorInterruptPass
+struct TestGenericIRVisitorInterruptPass
     : public PassWrapper<TestGenericIRVisitorInterruptPass, OperationPass<>> {
-public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
+      TestGenericIRVisitorInterruptPass)
+
   StringRef getArgument() const final {
     return "test-generic-ir-visitors-interrupt";
   }

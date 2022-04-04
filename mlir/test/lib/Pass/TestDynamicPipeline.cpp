@@ -20,6 +20,8 @@ namespace {
 class TestDynamicPipelinePass
     : public PassWrapper<TestDynamicPipelinePass, OperationPass<>> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestDynamicPipelinePass)
+
   StringRef getArgument() const final { return "test-dynamic-pipeline"; }
   StringRef getDescription() const final {
     return "Tests the dynamic pipeline feature by applying "

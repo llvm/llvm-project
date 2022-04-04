@@ -21,12 +21,16 @@ using namespace mlir::detail;
 namespace {
 /// Analysis that operates on any operation.
 struct GenericAnalysis {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(GenericAnalysis)
+
   GenericAnalysis(Operation *op) : isFunc(isa<FuncOp>(op)) {}
   const bool isFunc;
 };
 
 /// Analysis that operates on a specific operation.
 struct OpSpecificAnalysis {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(OpSpecificAnalysis)
+
   OpSpecificAnalysis(FuncOp op) : isSecret(op.getName() == "secret") {}
   const bool isSecret;
 };
@@ -34,6 +38,8 @@ struct OpSpecificAnalysis {
 /// Simple pass to annotate a FuncOp with the results of analysis.
 struct AnnotateFunctionPass
     : public PassWrapper<AnnotateFunctionPass, OperationPass<FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(AnnotateFunctionPass)
+
   void runOnOperation() override {
     FuncOp op = getOperation();
     Builder builder(op->getParentOfType<ModuleOp>());
@@ -80,6 +86,8 @@ TEST(PassManagerTest, OpSpecificAnalysis) {
 
 namespace {
 struct InvalidPass : Pass {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(InvalidPass)
+
   InvalidPass() : Pass(TypeID::get<InvalidPass>(), StringRef("invalid_op")) {}
   StringRef getName() const override { return "Invalid Pass"; }
   void runOnOperation() override {}
