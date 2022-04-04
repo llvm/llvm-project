@@ -433,7 +433,7 @@ define void @v1i8(<1 x i8>* %px, <1 x i8>* %py, <1 x i8>* %pz) nounwind {
 ; SSE-NEXT:    movb (%rsi), %cl
 ; SSE-NEXT:    leal (%rax,%rcx), %esi
 ; SSE-NEXT:    sarb $7, %sil
-; SSE-NEXT:    xorb $-128, %sil
+; SSE-NEXT:    addb $-128, %sil
 ; SSE-NEXT:    addb %cl, %al
 ; SSE-NEXT:    movzbl %al, %eax
 ; SSE-NEXT:    movzbl %sil, %ecx
@@ -447,7 +447,7 @@ define void @v1i8(<1 x i8>* %px, <1 x i8>* %py, <1 x i8>* %pz) nounwind {
 ; AVX-NEXT:    movb (%rsi), %cl
 ; AVX-NEXT:    leal (%rax,%rcx), %esi
 ; AVX-NEXT:    sarb $7, %sil
-; AVX-NEXT:    xorb $-128, %sil
+; AVX-NEXT:    addb $-128, %sil
 ; AVX-NEXT:    addb %cl, %al
 ; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    movzbl %sil, %ecx

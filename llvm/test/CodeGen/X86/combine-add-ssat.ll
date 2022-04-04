@@ -80,7 +80,7 @@ define i32 @combine_constant_i32(i32 %a0) {
 ; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    leal 1(%rdi), %eax
 ; CHECK-NEXT:    sarl $31, %eax
-; CHECK-NEXT:    xorl $-2147483648, %eax # imm = 0x80000000
+; CHECK-NEXT:    addl $-2147483648, %eax # imm = 0x80000000
 ; CHECK-NEXT:    incl %edi
 ; CHECK-NEXT:    cmovnol %edi, %eax
 ; CHECK-NEXT:    retq
@@ -130,7 +130,7 @@ define i32 @combine_no_overflow_i32(i32 %a0, i32 %a1) {
 ; CHECK-NEXT:    shrl $16, %esi
 ; CHECK-NEXT:    leal (%rdi,%rsi), %eax
 ; CHECK-NEXT:    sarl $31, %eax
-; CHECK-NEXT:    xorl $-2147483648, %eax # imm = 0x80000000
+; CHECK-NEXT:    addl $-2147483648, %eax # imm = 0x80000000
 ; CHECK-NEXT:    addl %edi, %esi
 ; CHECK-NEXT:    cmovnol %esi, %eax
 ; CHECK-NEXT:    retq

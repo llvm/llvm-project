@@ -1660,7 +1660,7 @@ define i8 @test_v16i8(<16 x i8> %a0) {
 ; SSE4-NEXT:    pminub %xmm0, %xmm1
 ; SSE4-NEXT:    phminposuw %xmm1, %xmm0
 ; SSE4-NEXT:    movd %xmm0, %eax
-; SSE4-NEXT:    xorb $-128, %al
+; SSE4-NEXT:    addb $-128, %al
 ; SSE4-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE4-NEXT:    retq
 ;
@@ -1671,7 +1671,7 @@ define i8 @test_v16i8(<16 x i8> %a0) {
 ; AVX-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vphminposuw %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
-; AVX-NEXT:    xorb $-128, %al
+; AVX-NEXT:    addb $-128, %al
 ; AVX-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX-NEXT:    retq
 ;
@@ -1682,7 +1682,7 @@ define i8 @test_v16i8(<16 x i8> %a0) {
 ; AVX512-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vphminposuw %xmm0, %xmm0
 ; AVX512-NEXT:    vmovd %xmm0, %eax
-; AVX512-NEXT:    xorb $-128, %al
+; AVX512-NEXT:    addb $-128, %al
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX512-NEXT:    retq
   %1 = call i8 @llvm.vector.reduce.smin.v16i8(<16 x i8> %a0)
@@ -1736,7 +1736,7 @@ define i8 @test_v32i8(<32 x i8> %a0) {
 ; SSE4-NEXT:    pminub %xmm0, %xmm1
 ; SSE4-NEXT:    phminposuw %xmm1, %xmm0
 ; SSE4-NEXT:    movd %xmm0, %eax
-; SSE4-NEXT:    xorb $-128, %al
+; SSE4-NEXT:    addb $-128, %al
 ; SSE4-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE4-NEXT:    retq
 ;
@@ -1749,7 +1749,7 @@ define i8 @test_v32i8(<32 x i8> %a0) {
 ; AVX1-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vphminposuw %xmm0, %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, %eax
-; AVX1-NEXT:    xorb $-128, %al
+; AVX1-NEXT:    addb $-128, %al
 ; AVX1-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -1763,7 +1763,7 @@ define i8 @test_v32i8(<32 x i8> %a0) {
 ; AVX2-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vphminposuw %xmm0, %xmm0
 ; AVX2-NEXT:    vmovd %xmm0, %eax
-; AVX2-NEXT:    xorb $-128, %al
+; AVX2-NEXT:    addb $-128, %al
 ; AVX2-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
@@ -1777,7 +1777,7 @@ define i8 @test_v32i8(<32 x i8> %a0) {
 ; AVX512-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vphminposuw %xmm0, %xmm0
 ; AVX512-NEXT:    vmovd %xmm0, %eax
-; AVX512-NEXT:    xorb $-128, %al
+; AVX512-NEXT:    addb $-128, %al
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -1844,7 +1844,7 @@ define i8 @test_v64i8(<64 x i8> %a0) {
 ; SSE4-NEXT:    pminub %xmm1, %xmm0
 ; SSE4-NEXT:    phminposuw %xmm0, %xmm0
 ; SSE4-NEXT:    movd %xmm0, %eax
-; SSE4-NEXT:    xorb $-128, %al
+; SSE4-NEXT:    addb $-128, %al
 ; SSE4-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE4-NEXT:    retq
 ;
@@ -1860,7 +1860,7 @@ define i8 @test_v64i8(<64 x i8> %a0) {
 ; AVX1-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vphminposuw %xmm0, %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, %eax
-; AVX1-NEXT:    xorb $-128, %al
+; AVX1-NEXT:    addb $-128, %al
 ; AVX1-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -1875,7 +1875,7 @@ define i8 @test_v64i8(<64 x i8> %a0) {
 ; AVX2-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vphminposuw %xmm0, %xmm0
 ; AVX2-NEXT:    vmovd %xmm0, %eax
-; AVX2-NEXT:    xorb $-128, %al
+; AVX2-NEXT:    addb $-128, %al
 ; AVX2-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
@@ -1891,7 +1891,7 @@ define i8 @test_v64i8(<64 x i8> %a0) {
 ; AVX512-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vphminposuw %xmm0, %xmm0
 ; AVX512-NEXT:    vmovd %xmm0, %eax
-; AVX512-NEXT:    xorb $-128, %al
+; AVX512-NEXT:    addb $-128, %al
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -1982,7 +1982,7 @@ define i8 @test_v128i8(<128 x i8> %a0) {
 ; SSE4-NEXT:    pminub %xmm2, %xmm0
 ; SSE4-NEXT:    phminposuw %xmm0, %xmm0
 ; SSE4-NEXT:    movd %xmm0, %eax
-; SSE4-NEXT:    xorb $-128, %al
+; SSE4-NEXT:    addb $-128, %al
 ; SSE4-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE4-NEXT:    retq
 ;
@@ -2004,7 +2004,7 @@ define i8 @test_v128i8(<128 x i8> %a0) {
 ; AVX1-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vphminposuw %xmm0, %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, %eax
-; AVX1-NEXT:    xorb $-128, %al
+; AVX1-NEXT:    addb $-128, %al
 ; AVX1-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -2021,7 +2021,7 @@ define i8 @test_v128i8(<128 x i8> %a0) {
 ; AVX2-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vphminposuw %xmm0, %xmm0
 ; AVX2-NEXT:    vmovd %xmm0, %eax
-; AVX2-NEXT:    xorb $-128, %al
+; AVX2-NEXT:    addb $-128, %al
 ; AVX2-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
@@ -2038,7 +2038,7 @@ define i8 @test_v128i8(<128 x i8> %a0) {
 ; AVX512-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vphminposuw %xmm0, %xmm0
 ; AVX512-NEXT:    vmovd %xmm0, %eax
-; AVX512-NEXT:    xorb $-128, %al
+; AVX512-NEXT:    addb $-128, %al
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
