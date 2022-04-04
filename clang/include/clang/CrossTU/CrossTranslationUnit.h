@@ -228,7 +228,7 @@ private:
               StringRef InvocationListFilePath);
 
     /// Load the ASTUnit by its identifier found in the index file. If the
-    /// indentifier is suffixed with '.ast' it is considered a dump. Otherwise
+    /// identifier is suffixed with '.ast' it is considered a dump. Otherwise
     /// it is treated as source-file, and on-demand parsed. Relative paths are
     /// prefixed with CTUDir.
     LoadResultTy load(StringRef Identifier);
