@@ -1841,15 +1841,15 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     // as elements are extracted from the vectors and the muls scalarized.
     // As getScalarizationOverhead is a bit too pessimistic, we estimate the
     // cost for a i64 vector directly here, which is:
-    // - four i64 extracts,
-    // - two i64 inserts, and
-    // - two muls.
-    // So, for a v2i64 with LT.First = 1 the cost is 8, and for a v4i64 with
-    // LT.first = 2 the cost is 16. If both operands are extensions it will not
+    // - four 2-cost i64 extracts,
+    // - two 2-cost i64 inserts, and
+    // - two 1-cost muls.
+    // So, for a v2i64 with LT.First = 1 the cost is 14, and for a v4i64 with
+    // LT.first = 2 the cost is 28. If both operands are extensions it will not
     // need to scalarize so the cost can be cheaper (smull or umull).
     if (LT.second != MVT::v2i64 || isWideningInstruction(Ty, Opcode, Args))
       return LT.first;
-    return LT.first * 8;
+    return LT.first * 14;
   case ISD::ADD:
   case ISD::XOR:
   case ISD::OR:
