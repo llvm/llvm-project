@@ -996,12 +996,6 @@ class GlobalStoreSaddrPat <FLAT_Pseudo inst, SDPatternOperator node,
   (inst $voffset, getVregSrcForVT<vt>.ret:$data, $saddr, $offset)
 >;
 
-class GlobalAtomicStoreSaddrPat <FLAT_Pseudo inst, SDPatternOperator node,
-                                 ValueType vt> : GCNPat <
-  (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset), vt:$data),
-  (inst $voffset, getVregSrcForVT<vt>.ret:$data, $saddr, $offset)
->;
-
 class GlobalAtomicSaddrPat <FLAT_Pseudo inst, SDPatternOperator node,
                             ValueType vt, ValueType data_vt = vt> : GCNPat <
   (vt (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset), data_vt:$data)),
@@ -1021,13 +1015,6 @@ class FlatStorePat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GC
 
 class FlatStoreSignedPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   (node vt:$data, (GlobalOffset i64:$vaddr, i32:$offset)),
-  (inst $vaddr, getVregSrcForVT<vt>.ret:$data, $offset)
->;
-
-class FlatStoreAtomicPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
-  // atomic store follows atomic binop convention so the address comes
-  // first.
-  (node (FlatOffset i64:$vaddr, i32:$offset), vt:$data),
   (inst $vaddr, getVregSrcForVT<vt>.ret:$data, $offset)
 >;
 
@@ -1174,12 +1161,12 @@ def : FlatLoadPat <FLAT_LOAD_DWORDX4, load_flat, vt>;
 def : FlatStorePat <FLAT_STORE_DWORDX4, store_flat, vt>;
 }
 
-def : FlatStoreAtomicPat <FLAT_STORE_DWORD, atomic_store_32_flat, i32>;
-def : FlatStoreAtomicPat <FLAT_STORE_DWORDX2, atomic_store_64_flat, i64>;
-def : FlatStoreAtomicPat <FLAT_STORE_BYTE, atomic_store_8_flat, i32>;
-def : FlatStoreAtomicPat <FLAT_STORE_BYTE, atomic_store_8_flat, i16>;
-def : FlatStoreAtomicPat <FLAT_STORE_SHORT, atomic_store_16_flat, i32>;
-def : FlatStoreAtomicPat <FLAT_STORE_SHORT, atomic_store_16_flat, i16>;
+def : FlatStorePat <FLAT_STORE_DWORD, atomic_store_32_flat, i32>;
+def : FlatStorePat <FLAT_STORE_DWORDX2, atomic_store_64_flat, i64>;
+def : FlatStorePat <FLAT_STORE_BYTE, atomic_store_8_flat, i32>;
+def : FlatStorePat <FLAT_STORE_BYTE, atomic_store_8_flat, i16>;
+def : FlatStorePat <FLAT_STORE_SHORT, atomic_store_16_flat, i32>;
+def : FlatStorePat <FLAT_STORE_SHORT, atomic_store_16_flat, i16>;
 
 foreach as = [ "flat", "global" ] in {
 defm : FlatAtomicPat <"FLAT_ATOMIC_ADD", "atomic_load_add_"#as, i32>;
@@ -1265,17 +1252,6 @@ multiclass GlobalFLATStorePats<FLAT_Pseudo inst, SDPatternOperator node,
   }
 
   def : GlobalStoreSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
-    let AddedComplexity = 11;
-  }
-}
-
-// Deal with swapped operands for atomic_store vs. regular store
-multiclass GlobalFLATAtomicStorePats<FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> {
-  def : FlatStoreSignedAtomicPat <inst, node, vt> {
-    let AddedComplexity = 10;
-  }
-
-  def : GlobalAtomicStoreSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
     let AddedComplexity = 11;
   }
 }
@@ -1444,12 +1420,12 @@ defm : GlobalFLATLoadPats_D16 <GLOBAL_LOAD_SHORT_D16, load_d16_lo_global, v2i16>
 defm : GlobalFLATLoadPats_D16 <GLOBAL_LOAD_SHORT_D16, load_d16_lo_global, v2f16>;
 }
 
-defm : GlobalFLATAtomicStorePats <GLOBAL_STORE_BYTE, atomic_store_8_global, i32>;
-defm : GlobalFLATAtomicStorePats <GLOBAL_STORE_BYTE, atomic_store_8_global, i16>;
-defm : GlobalFLATAtomicStorePats <GLOBAL_STORE_SHORT, atomic_store_16_global, i32>;
-defm : GlobalFLATAtomicStorePats <GLOBAL_STORE_SHORT, atomic_store_16_global, i16>;
-defm : GlobalFLATAtomicStorePats <GLOBAL_STORE_DWORD, atomic_store_32_global, i32>;
-defm : GlobalFLATAtomicStorePats <GLOBAL_STORE_DWORDX2, atomic_store_64_global, i64>;
+defm : GlobalFLATStorePats <GLOBAL_STORE_BYTE, atomic_store_8_global, i32>;
+defm : GlobalFLATStorePats <GLOBAL_STORE_BYTE, atomic_store_8_global, i16>;
+defm : GlobalFLATStorePats <GLOBAL_STORE_SHORT, atomic_store_16_global, i32>;
+defm : GlobalFLATStorePats <GLOBAL_STORE_SHORT, atomic_store_16_global, i16>;
+defm : GlobalFLATStorePats <GLOBAL_STORE_DWORD, atomic_store_32_global, i32>;
+defm : GlobalFLATStorePats <GLOBAL_STORE_DWORDX2, atomic_store_64_global, i64>;
 
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_ADD", "atomic_load_add_global", i32>;
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_SUB", "atomic_load_sub_global", i32>;

@@ -5727,7 +5727,8 @@ SDValue AArch64TargetLowering::LowerStore128(SDValue Op,
            StoreNode->getMergedOrdering() == AtomicOrdering::Unordered ||
            StoreNode->getMergedOrdering() == AtomicOrdering::Monotonic);
 
-  SDValue Value = StoreNode->getOpcode() == ISD::STORE
+  SDValue Value = (StoreNode->getOpcode() == ISD::STORE ||
+                   StoreNode->getOpcode() == ISD::ATOMIC_STORE)
                       ? StoreNode->getOperand(1)
                       : StoreNode->getOperand(2);
   SDLoc DL(Op);
