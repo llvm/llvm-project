@@ -4511,6 +4511,27 @@ bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
   if (hasIrregularType(ScalarTy, DL))
     return false;
 
+  // If the group involves a non-integral pointer, we may not be able to
+  // losslessly cast all values to a common type.
+  unsigned InterleaveFactor = Group->getFactor();
+  bool ScalarNI = DL.isNonIntegralPointerType(ScalarTy);
+  for (unsigned i = 0; i < InterleaveFactor; i++) {
+    Instruction *Member = Group->getMember(i);
+    if (!Member)
+      continue;
+    auto *MemberTy = getLoadStoreType(Member);
+    bool MemberNI = DL.isNonIntegralPointerType(MemberTy);
+    // Don't coerce non-integral pointers to integers or vice versa.
+    if (MemberNI != ScalarNI) {
+      // TODO: Consider adding special nullptr value case here
+      return false;
+    } else if (MemberNI && ScalarNI &&
+               ScalarTy->getPointerAddressSpace() !=
+               MemberTy->getPointerAddressSpace()) {
+      return false;
+    }
+  }
+
   // Check if masking is required.
   // A Group may need masking for one of two reasons: it resides in a block that
   // needs predication, or it was decided to use masking to deal with gaps
