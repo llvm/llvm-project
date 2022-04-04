@@ -72,6 +72,13 @@ namespace {
 
 static constexpr int kColWidth = 1025;
 
+/// A version of `operator*` on `uint64_t` which checks for overflows.
+static inline uint64_t checkedMul(uint64_t lhs, uint64_t rhs) {
+  assert((lhs == 0 || rhs <= std::numeric_limits<uint64_t>::max() / lhs) &&
+         "Integer overflow");
+  return lhs * rhs;
+}
+
 /// A sparse tensor element in coordinate scheme (value and indices).
 /// For example, a rank-1 vector element would look like
 ///   ({i}, a[i])
@@ -260,7 +267,7 @@ public:
     uint64_t sz = 1;
     for (uint64_t r = 0; r < rank; r++) {
       assert(sizes[r] > 0 && "Dimension size zero has trivial storage");
-      sz *= sizes[r];
+      sz = checkedMul(sz, sizes[r]);
       if (sparsity[r] == DimLevelType::kCompressed) {
         pointers[r].reserve(sz + 1);
         indices[r].reserve(sz);
@@ -358,7 +365,7 @@ public:
   /// Finalizes lexicographic insertions.
   void endInsert() override {
     if (values.empty())
-      endDim(0);
+      finalizeSegment(0);
     else
       endPath(0);
   }
@@ -412,23 +419,40 @@ public:
   }
 
 private:
-  /// Appends the next free position of `indices[d]` to `pointers[d]`.
-  /// Thus, when called after inserting the last element of a segment,
-  /// it will append the position where the next segment begins.
-  inline void appendPointer(uint64_t d) {
-    assert(isCompressedDim(d)); // Entails `d < getRank()`.
-    uint64_t p = indices[d].size();
-    assert(p <= std::numeric_limits<P>::max() &&
+  /// Appends an arbitrary new position to `pointers[d]`.  This method
+  /// checks that `pos` is representable in the `P` type; however, it
+  /// does not check that `pos` is semantically valid (i.e., larger than
+  /// the previous position and smaller than `indices[d].capacity()`).
+  inline void appendPointer(uint64_t d, uint64_t pos, uint64_t count = 1) {
+    assert(isCompressedDim(d));
+    assert(pos <= std::numeric_limits<P>::max() &&
            "Pointer value is too large for the P-type");
-    pointers[d].push_back(p); // Here is where we convert to `P`.
+    pointers[d].insert(pointers[d].end(), count, static_cast<P>(pos));
   }
 
-  /// Appends the given index to `indices[d]`.
-  inline void appendIndex(uint64_t d, uint64_t i) {
-    assert(isCompressedDim(d)); // Entails `d < getRank()`.
-    assert(i <= std::numeric_limits<I>::max() &&
-           "Index value is too large for the I-type");
-    indices[d].push_back(i); // Here is where we convert to `I`.
+  /// Appends index `i` to dimension `d`, in the semantically general
+  /// sense.  For non-dense dimensions, that means appending to the
+  /// `indices[d]` array, checking that `i` is representable in the `I`
+  /// type; however, we do not verify other semantic requirements (e.g.,
+  /// that `i` is in bounds for `sizes[d]`, and not previously occurring
+  /// in the same segment).  For dense dimensions, this method instead
+  /// appends the appropriate number of zeros to the `values` array,
+  /// where `full` is the number of "entries" already written to `values`
+  /// for this segment (aka one after the highest index previously appended).
+  void appendIndex(uint64_t d, uint64_t full, uint64_t i) {
+    if (isCompressedDim(d)) {
+      assert(i <= std::numeric_limits<I>::max() &&
+             "Index value is too large for the I-type");
+      indices[d].push_back(static_cast<I>(i));
+    } else { // Dense dimension.
+      assert(i >= full && "Index was already filled");
+      if (i == full)
+        return; // Short-circuit, since it'll be a nop.
+      if (d + 1 == getRank())
+        values.insert(values.end(), i - full, 0);
+      else
+        finalizeSegment(d + 1, 0, i - full);
+    }
   }
 
   /// Initializes sparse tensor storage scheme from a memory-resident sparse
@@ -457,29 +481,14 @@ private:
       while (seg < hi && elements[seg].indices[d] == i)
         seg++;
       // Handle segment in interval for sparse or dense dimension.
-      if (isCompressedDim(d)) {
-        appendIndex(d, i);
-      } else {
-        // For dense storage we must fill in all the zero values between
-        // the previous element (when last we ran this for-loop) and the
-        // current element.
-        for (; full < i; full++)
-          endDim(d + 1);
-        full++;
-      }
+      appendIndex(d, full, i);
+      full = i + 1;
       fromCOO(elements, lo, seg, d + 1);
       // And move on to next segment in interval.
       lo = seg;
     }
     // Finalize the sparse pointer structure at this dimension.
-    if (isCompressedDim(d)) {
-      appendPointer(d);
-    } else {
-      // For dense storage we must fill in all the zero values after
-      // the last element.
-      for (uint64_t sz = sizes[d]; full < sz; full++)
-        endDim(d + 1);
-    }
+    finalizeSegment(d, full);
   }
 
   /// Stores the sparse tensor storage scheme into a memory-resident sparse
@@ -505,16 +514,26 @@ private:
     }
   }
 
-  /// Ends a deeper, never seen before dimension.
-  void endDim(uint64_t d) {
-    assert(d <= getRank());
-    if (d == getRank()) {
-      values.push_back(0);
-    } else if (isCompressedDim(d)) {
-      appendPointer(d);
-    } else {
-      for (uint64_t full = 0, sz = sizes[d]; full < sz; full++)
-        endDim(d + 1);
+  /// Finalize the sparse pointer structure at this dimension.
+  void finalizeSegment(uint64_t d, uint64_t full = 0, uint64_t count = 1) {
+    if (count == 0)
+      return; // Short-circuit, since it'll be a nop.
+    if (isCompressedDim(d)) {
+      appendPointer(d, indices[d].size(), count);
+    } else { // Dense dimension.
+      const uint64_t sz = sizes[d];
+      assert(sz >= full && "Segment is overfull");
+      // Assuming we checked for overflows in the constructor, then this
+      // multiply will never overflow.
+      count *= (sz - full);
+      // For dense storage we must enumerate all the remaining coordinates
+      // in this dimension (i.e., coordinates after the last non-zero
+      // element), and either fill in their zero values or else recurse
+      // to finalize some deeper dimension.
+      if (d + 1 == getRank())
+        values.insert(values.end(), count, 0);
+      else
+        finalizeSegment(d + 1, 0, count);
     }
   }
 
@@ -523,13 +542,8 @@ private:
     uint64_t rank = getRank();
     assert(diff <= rank);
     for (uint64_t i = 0; i < rank - diff; i++) {
-      uint64_t d = rank - i - 1;
-      if (isCompressedDim(d)) {
-        appendPointer(d);
-      } else {
-        for (uint64_t full = idx[d] + 1, sz = sizes[d]; full < sz; full++)
-          endDim(d + 1);
-      }
+      const uint64_t d = rank - i - 1;
+      finalizeSegment(d, idx[d] + 1);
     }
   }
 
@@ -539,12 +553,7 @@ private:
     assert(diff < rank);
     for (uint64_t d = diff; d < rank; d++) {
       uint64_t i = cursor[d];
-      if (isCompressedDim(d)) {
-        appendIndex(d, i);
-      } else {
-        for (uint64_t full = top; full < i; full++)
-          endDim(d + 1);
-      }
+      appendIndex(d, top, i);
       top = 0;
       idx[d] = i;
     }
