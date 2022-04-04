@@ -55,7 +55,7 @@ enum Direction : unsigned char {
       "vendor": "apple"
     }
   },
-  "relationhips": [
+  "relationships": [
     {
       "kind": "memberOf",
       "source": "c:@E@Vehicle@Bicycle",
@@ -104,6 +104,7 @@ enum Direction : unsigned char {
   ],
   "symbols": [
     {
+      "accessLevel": "public",
       "declarationFragments": [
         {
           "kind": "keyword",
@@ -153,8 +154,10 @@ enum Direction : unsigned char {
         "identifier": "c.enum"
       },
       "location": {
-        "character": 6,
-        "line": 2,
+        "position": {
+          "character": 6,
+          "line": 2
+        },
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
@@ -165,9 +168,13 @@ enum Direction : unsigned char {
           }
         ],
         "title": "Vehicle"
-      }
+      },
+      "pathComponents": [
+        "Vehicle"
+      ]
     },
     {
+      "accessLevel": "public",
       "declarationFragments": [
         {
           "kind": "identifier",
@@ -183,8 +190,10 @@ enum Direction : unsigned char {
         "identifier": "c.enum.case"
       },
       "location": {
-        "character": 3,
-        "line": 3,
+        "position": {
+          "character": 3,
+          "line": 3
+        },
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
@@ -195,9 +204,14 @@ enum Direction : unsigned char {
           }
         ],
         "title": "Bicycle"
-      }
+      },
+      "pathComponents": [
+        "Vehicle",
+        "Bicycle"
+      ]
     },
     {
+      "accessLevel": "public",
       "declarationFragments": [
         {
           "kind": "identifier",
@@ -213,8 +227,10 @@ enum Direction : unsigned char {
         "identifier": "c.enum.case"
       },
       "location": {
-        "character": 3,
-        "line": 4,
+        "position": {
+          "character": 3,
+          "line": 4
+        },
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
@@ -225,9 +241,14 @@ enum Direction : unsigned char {
           }
         ],
         "title": "Car"
-      }
+      },
+      "pathComponents": [
+        "Vehicle",
+        "Car"
+      ]
     },
     {
+      "accessLevel": "public",
       "declarationFragments": [
         {
           "kind": "identifier",
@@ -260,8 +281,10 @@ enum Direction : unsigned char {
         "identifier": "c.enum.case"
       },
       "location": {
-        "character": 3,
-        "line": 5,
+        "position": {
+          "character": 3,
+          "line": 5
+        },
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
@@ -272,9 +295,14 @@ enum Direction : unsigned char {
           }
         ],
         "title": "Train"
-      }
+      },
+      "pathComponents": [
+        "Vehicle",
+        "Train"
+      ]
     },
     {
+      "accessLevel": "public",
       "declarationFragments": [
         {
           "kind": "identifier",
@@ -290,8 +318,10 @@ enum Direction : unsigned char {
         "identifier": "c.enum.case"
       },
       "location": {
-        "character": 3,
-        "line": 6,
+        "position": {
+          "character": 3,
+          "line": 6
+        },
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
@@ -302,9 +332,14 @@ enum Direction : unsigned char {
           }
         ],
         "title": "Ship"
-      }
+      },
+      "pathComponents": [
+        "Vehicle",
+        "Ship"
+      ]
     },
     {
+      "accessLevel": "public",
       "declarationFragments": [
         {
           "kind": "identifier",
@@ -320,8 +355,10 @@ enum Direction : unsigned char {
         "identifier": "c.enum.case"
       },
       "location": {
-        "character": 3,
-        "line": 7,
+        "position": {
+          "character": 3,
+          "line": 7
+        },
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
@@ -332,9 +369,14 @@ enum Direction : unsigned char {
           }
         ],
         "title": "Airplane"
-      }
+      },
+      "pathComponents": [
+        "Vehicle",
+        "Airplane"
+      ]
     },
     {
+      "accessLevel": "public",
       "declarationFragments": [
         {
           "kind": "keyword",
@@ -367,8 +409,10 @@ enum Direction : unsigned char {
         "identifier": "c.enum"
       },
       "location": {
-        "character": 6,
-        "line": 10,
+        "position": {
+          "character": 6,
+          "line": 10
+        },
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
@@ -379,9 +423,13 @@ enum Direction : unsigned char {
           }
         ],
         "title": "Direction"
-      }
+      },
+      "pathComponents": [
+        "Direction"
+      ]
     },
     {
+      "accessLevel": "public",
       "declarationFragments": [
         {
           "kind": "identifier",
@@ -397,8 +445,10 @@ enum Direction : unsigned char {
         "identifier": "c.enum.case"
       },
       "location": {
-        "character": 3,
-        "line": 11,
+        "position": {
+          "character": 3,
+          "line": 11
+        },
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
@@ -409,9 +459,14 @@ enum Direction : unsigned char {
           }
         ],
         "title": "North"
-      }
+      },
+      "pathComponents": [
+        "Direction",
+        "North"
+      ]
     },
     {
+      "accessLevel": "public",
       "declarationFragments": [
         {
           "kind": "identifier",
@@ -427,8 +482,10 @@ enum Direction : unsigned char {
         "identifier": "c.enum.case"
       },
       "location": {
-        "character": 3,
-        "line": 12,
+        "position": {
+          "character": 3,
+          "line": 12
+        },
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
@@ -439,9 +496,14 @@ enum Direction : unsigned char {
           }
         ],
         "title": "East"
-      }
+      },
+      "pathComponents": [
+        "Direction",
+        "East"
+      ]
     },
     {
+      "accessLevel": "public",
       "declarationFragments": [
         {
           "kind": "identifier",
@@ -457,8 +519,10 @@ enum Direction : unsigned char {
         "identifier": "c.enum.case"
       },
       "location": {
-        "character": 3,
-        "line": 13,
+        "position": {
+          "character": 3,
+          "line": 13
+        },
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
@@ -469,9 +533,14 @@ enum Direction : unsigned char {
           }
         ],
         "title": "South"
-      }
+      },
+      "pathComponents": [
+        "Direction",
+        "South"
+      ]
     },
     {
+      "accessLevel": "public",
       "declarationFragments": [
         {
           "kind": "identifier",
@@ -487,8 +556,10 @@ enum Direction : unsigned char {
         "identifier": "c.enum.case"
       },
       "location": {
-        "character": 3,
-        "line": 14,
+        "position": {
+          "character": 3,
+          "line": 14
+        },
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
@@ -499,7 +570,11 @@ enum Direction : unsigned char {
           }
         ],
         "title": "West"
-      }
+      },
+      "pathComponents": [
+        "Direction",
+        "West"
+      ]
     }
   ]
 }

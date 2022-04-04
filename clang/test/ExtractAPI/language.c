@@ -53,9 +53,10 @@ char objc;
       "vendor": "apple"
     }
   },
-  "relationhips": [],
+  "relationships": [],
   "symbols": [
     {
+      "accessLevel": "public",
       "declarationFragments": [
         {
           "kind": "typeIdentifier",
@@ -80,8 +81,10 @@ char objc;
         "identifier": "c.var"
       },
       "location": {
-        "character": 6,
-        "line": 1,
+        "position": {
+          "character": 6,
+          "line": 1
+        },
         "uri": "file://INPUT_DIR/c.h"
       },
       "names": {
@@ -92,7 +95,10 @@ char objc;
           }
         ],
         "title": "c"
-      }
+      },
+      "pathComponents": [
+        "c"
+      ]
     }
   ]
 }
@@ -121,9 +127,10 @@ char objc;
       "vendor": "apple"
     }
   },
-  "relationhips": [],
+  "relationships": [],
   "symbols": [
     {
+      "accessLevel": "public",
       "declarationFragments": [
         {
           "kind": "typeIdentifier",
@@ -148,8 +155,10 @@ char objc;
         "identifier": "objective-c.var"
       },
       "location": {
-        "character": 6,
-        "line": 1,
+        "position": {
+          "character": 6,
+          "line": 1
+        },
         "uri": "file://INPUT_DIR/objc.h"
       },
       "names": {
@@ -160,7 +169,10 @@ char objc;
           }
         ],
         "title": "objc"
-      }
+      },
+      "pathComponents": [
+        "objc"
+      ]
     }
   ]
 }
