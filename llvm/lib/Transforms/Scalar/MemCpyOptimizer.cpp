@@ -1427,7 +1427,8 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
       }
 
   MemoryUseOrDef *MA = MSSA->getMemoryAccess(M);
-  MemoryAccess *AnyClobber = MSSA->getWalker()->getClobberingMemoryAccess(MA);
+  // FIXME: Not using getClobberingMemoryAccess() here due to PR54682.
+  MemoryAccess *AnyClobber = MA->getDefiningAccess();
   MemoryLocation DestLoc = MemoryLocation::getForDest(M);
   const MemoryAccess *DestClobber =
       MSSA->getWalker()->getClobberingMemoryAccess(AnyClobber, DestLoc);
