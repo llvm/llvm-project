@@ -37,6 +37,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/NativeFormatting.h"
+#include "llvm/Support/Unicode.h"
 #include "llvm/Support/UnicodeCharRanges.h"
 #include <algorithm>
 #include <cassert>
@@ -3119,27 +3120,28 @@ bool Lexer::isCodeCompletionPoint(const char *CurPtr) const {
   return false;
 }
 
-uint32_t Lexer::tryReadUCN(const char *&StartPtr, const char *SlashLoc,
-                           Token *Result) {
+llvm::Optional<uint32_t> Lexer::tryReadNumericUCN(const char *&StartPtr,
+                                                  const char *SlashLoc,
+                                                  Token *Result) {
   unsigned CharSize;
   char Kind = getCharAndSize(StartPtr, CharSize);
-  bool Delimited = false;
-  bool FoundEndDelimiter = false;
-  unsigned Count = 0;
-  bool Diagnose = Result && !isLexingRawMode();
+  assert((Kind == 'u' || Kind == 'U') && "expected a UCN");
 
   unsigned NumHexDigits;
   if (Kind == 'u')
     NumHexDigits = 4;
   else if (Kind == 'U')
     NumHexDigits = 8;
-  else
-    return 0;
+
+  bool Delimited = false;
+  bool FoundEndDelimiter = false;
+  unsigned Count = 0;
+  bool Diagnose = Result && !isLexingRawMode();
 
   if (!LangOpts.CPlusPlus && !LangOpts.C99) {
     if (Diagnose)
       Diag(SlashLoc, diag::warn_ucn_not_valid_in_c89);
-    return 0;
+    return llvm::None;
   }
 
   const char *CurPtr = StartPtr + CharSize;
@@ -3166,14 +3168,14 @@ uint32_t Lexer::tryReadUCN(const char *&StartPtr, const char *SlashLoc,
         break;
       if (Diagnose)
         Diag(BufferPtr, diag::warn_delimited_ucn_incomplete)
-            << StringRef(&C, 1);
-      return 0;
+            << StringRef(KindLoc, 1);
+      return llvm::None;
     }
 
     if (CodePoint & 0xF000'0000) {
       if (Diagnose)
         Diag(KindLoc, diag::err_escape_too_large) << 0;
-      return 0;
+      return llvm::None;
     }
 
     CodePoint <<= 4;
@@ -3187,7 +3189,13 @@ uint32_t Lexer::tryReadUCN(const char *&StartPtr, const char *SlashLoc,
       Diag(StartPtr, FoundEndDelimiter ? diag::warn_delimited_ucn_empty
                                        : diag::warn_ucn_escape_no_digits)
           << StringRef(KindLoc, 1);
-    return 0;
+    return llvm::None;
+  }
+
+  if (Delimited && Kind == 'U') {
+    if (Diagnose)
+      Diag(StartPtr, diag::err_hex_escape_no_digits) << StringRef(KindLoc, 1);
+    return llvm::None;
   }
 
   if (!Delimited && Count != NumHexDigits) {
@@ -3200,11 +3208,11 @@ uint32_t Lexer::tryReadUCN(const char *&StartPtr, const char *SlashLoc,
             << FixItHint::CreateReplacement(URange, "u");
       }
     }
-    return 0;
+    return llvm::None;
   }
 
   if (Delimited && PP) {
-    Diag(BufferPtr, diag::ext_delimited_escape_sequence);
+    Diag(BufferPtr, diag::ext_delimited_escape_sequence) << /*delimited*/ 0;
   }
 
   if (Result) {
@@ -3217,6 +3225,110 @@ uint32_t Lexer::tryReadUCN(const char *&StartPtr, const char *SlashLoc,
   } else {
     StartPtr = CurPtr;
   }
+  return CodePoint;
+}
+
+llvm::Optional<uint32_t> Lexer::tryReadNamedUCN(const char *&StartPtr,
+                                                Token *Result) {
+  unsigned CharSize;
+  bool Diagnose = Result && !isLexingRawMode();
+
+  char C = getCharAndSize(StartPtr, CharSize);
+  assert(C == 'N' && "expected \\N{...}");
+
+  const char *CurPtr = StartPtr + CharSize;
+  const char *KindLoc = &CurPtr[-1];
+
+  C = getCharAndSize(CurPtr, CharSize);
+  if (C != '{') {
+    if (Diagnose)
+      Diag(StartPtr, diag::warn_ucn_escape_incomplete);
+    return llvm::None;
+  }
+  CurPtr += CharSize;
+  const char *StartName = CurPtr;
+  bool FoundEndDelimiter = false;
+  llvm::SmallVector<char, 30> Buffer;
+  while (C) {
+    C = getCharAndSize(CurPtr, CharSize);
+    CurPtr += CharSize;
+    if (C == '}') {
+      FoundEndDelimiter = true;
+      break;
+    }
+
+    if (!isAlphanumeric(C) && C != '_' && C != '-' && C != ' ')
+      break;
+    Buffer.push_back(C);
+  }
+
+  if (!FoundEndDelimiter || Buffer.empty()) {
+    if (Diagnose)
+      Diag(StartPtr, FoundEndDelimiter ? diag::warn_delimited_ucn_empty
+                                       : diag::warn_delimited_ucn_incomplete)
+          << StringRef(KindLoc, 1);
+    return llvm::None;
+  }
+
+  StringRef Name(Buffer.data(), Buffer.size());
+  llvm::Optional<char32_t> Res =
+      llvm::sys::unicode::nameToCodepointStrict(Name);
+  llvm::Optional<llvm::sys::unicode::LooseMatchingResult> LooseMatch;
+  if (!Res) {
+    if (!isLexingRawMode()) {
+      Diag(StartPtr, diag::err_invalid_ucn_name)
+          << StringRef(Buffer.data(), Buffer.size());
+      LooseMatch = llvm::sys::unicode::nameToCodepointLooseMatching(Name);
+      if (LooseMatch) {
+        Diag(StartName, diag::note_invalid_ucn_name_loose_matching)
+            << FixItHint::CreateReplacement(
+                   makeCharRange(*this, StartName, CurPtr - CharSize),
+                   LooseMatch->Name);
+      }
+    }
+    // When finding a match using Unicode loose matching rules
+    // recover after having emitted a diagnostic.
+    if (!LooseMatch)
+      return llvm::None;
+    // We do not offer missspelled character names suggestions here
+    // as the set of what would be a valid suggestion depends on context,
+    // and we should not make invalid suggestions.
+  }
+
+  if (Diagnose && PP && !LooseMatch)
+    Diag(BufferPtr, diag::ext_delimited_escape_sequence) << /*named*/ 1;
+
+  if (LooseMatch)
+    Res = LooseMatch->CodePoint;
+
+  if (Result) {
+    Result->setFlag(Token::HasUCN);
+    if (CurPtr - StartPtr == (ptrdiff_t)(Buffer.size() + 4))
+      StartPtr = CurPtr;
+    else
+      while (StartPtr != CurPtr)
+        (void)getAndAdvanceChar(StartPtr, *Result);
+  } else {
+    StartPtr = CurPtr;
+  }
+  return *Res;
+}
+
+uint32_t Lexer::tryReadUCN(const char *&StartPtr, const char *SlashLoc,
+                           Token *Result) {
+
+  unsigned CharSize;
+  llvm::Optional<uint32_t> CodePointOpt;
+  char Kind = getCharAndSize(StartPtr, CharSize);
+  if (Kind == 'u' || Kind == 'U')
+    CodePointOpt = tryReadNumericUCN(StartPtr, SlashLoc, Result);
+  else if (Kind == 'N')
+    CodePointOpt = tryReadNamedUCN(StartPtr, Result);
+
+  if (!CodePointOpt)
+    return 0;
+
+  uint32_t CodePoint = *CodePointOpt;
 
   // Don't apply C family restrictions to UCNs in assembly mode
   if (LangOpts.AsmPreprocessor)
