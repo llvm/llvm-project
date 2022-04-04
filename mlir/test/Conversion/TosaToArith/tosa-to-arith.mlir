@@ -1,4 +1,5 @@
-// RUN: mlir-opt --split-input-file --tosa-to-standard %s -verify-diagnostics -o -| FileCheck %s
+// RUN: mlir-opt --split-input-file --tosa-to-arith="include-apply-rescale=true" %s -verify-diagnostics -o -| FileCheck %s
+// RUN: mlir-opt --split-input-file --tosa-to-arith="include-apply-rescale=false" %s -verify-diagnostics -o -| FileCheck --check-prefix="SCALE" %s
 
 // CHECK-LABEL: func @const_test
 func @const_test() -> (tensor<i32>) {
@@ -7,14 +8,6 @@ func @const_test() -> (tensor<i32>) {
 
   // CHECK: return [[C3]]
   return %0 : tensor<i32>
-}
-
-// -----
-
-func @slice(%arg0: tensor<6xf32>) ->() {
-  // CHECK: [[SLICE:%.+]] = tensor.extract_slice %arg0[2] [1] [1]
-  %0 = "tosa.slice"(%arg0) {start = [2], size = [1]} : (tensor<6xf32>)  -> (tensor<1xf32>)
-  return
 }
 
 // -----
@@ -50,6 +43,7 @@ func @apply_scale_test_i32(%arg0 : i32, %arg1 : i32, %arg2 : i8) -> (i32) {
   // CHECK-DAG: [[DOWNSHIFTED:%.+]] = arith.shrsi [[BIASED]], [[SHIFT_64]]
   // CHECK: [[TRUNCATED:%.+]] = arith.trunci [[DOWNSHIFTED]]
 
+  // SCALE: "tosa.apply_scale"
   %0 = "tosa.apply_scale"(%arg0, %arg1, %arg2) {double_round = true} : (i32, i32, i8) -> i32
   return %0 : i32
 }

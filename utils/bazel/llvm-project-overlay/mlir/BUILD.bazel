@@ -2343,9 +2343,10 @@ cc_library(
         ":SPIRVToLLVM",
         ":ShapeToStandard",
         ":TensorToSPIRV",
+        ":TosaToArith",
         ":TosaToLinalg",
         ":TosaToSCF",
-        ":TosaToStandard",
+        ":TosaToTensor",
         ":VectorToGPU",
         ":VectorToLLVM",
         ":VectorToROCDL",
@@ -7438,6 +7439,30 @@ cc_library(
 )
 
 cc_library(
+    name = "TosaToArith",
+    srcs = glob([
+        "lib/Conversion/TosaToArith/*.cpp",
+        "lib/Conversion/TosaToArith/*.h",
+    ]) + [":ConversionPassDetail"],
+    hdrs = glob([
+        "include/mlir/Conversion/TosaToArith/*.h",
+    ]),
+    includes = [
+        "include",
+        "lib/Conversion/TosaToArith",
+    ],
+    deps = [
+        ":ArithmeticDialect",
+        ":ConversionPassIncGen",
+        ":FuncDialect",
+        ":IR",
+        ":Pass",
+        ":TosaDialect",
+        ":Transforms",
+    ],
+)
+
+cc_library(
     name = "TosaToLinalg",
     srcs = glob([
         "lib/Conversion/TosaToLinalg/*.cpp",
@@ -7492,20 +7517,19 @@ cc_library(
 )
 
 cc_library(
-    name = "TosaToStandard",
+    name = "TosaToTensor",
     srcs = glob([
-        "lib/Conversion/TosaToStandard/*.cpp",
-        "lib/Conversion/TosaToStandard/*.h",
+        "lib/Conversion/TosaToTensor/*.cpp",
+        "lib/Conversion/TosaToTensor/*.h",
     ]) + [":ConversionPassDetail"],
     hdrs = glob([
-        "include/mlir/Conversion/TosaToStandard/*.h",
+        "include/mlir/Conversion/TosaToTensor/*.h",
     ]),
     includes = [
         "include",
-        "lib/Conversion/TosaToStandard",
+        "lib/Conversion/TosaToTensor",
     ],
     deps = [
-        ":ArithmeticDialect",
         ":ConversionPassIncGen",
         ":FuncDialect",
         ":IR",
