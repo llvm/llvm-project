@@ -20,6 +20,11 @@ def POSIX : StandardSpec<"POSIX"> {
   NamedType ModeTType = NamedType<"mode_t">;
   NamedType OffTType = NamedType<"off_t">;
   NamedType SSizeTType = NamedType<"ssize_t">;
+  NamedType PThreadMutexAttrTType = NamedType<"pthread_mutexattr_t">;
+  PtrType PThreadMutexAttrTPtr = PtrType<PThreadMutexAttrTType>;
+  RestrictedPtrType RestrictedPThreadMutexAttrTPtr = RestrictedPtrType<PThreadMutexAttrTType>;
+  ConstType ConstPThreadMutexAttrTPtr = ConstType<PThreadMutexAttrTPtr>;
+  ConstType ConstRestrictedPThreadMutexAttrTPtr = ConstType<RestrictedPThreadMutexAttrTPtr>;
 
   HeaderSpec Errno = HeaderSpec<
       "errno.h",
@@ -371,10 +376,80 @@ def POSIX : StandardSpec<"POSIX"> {
     ]
   >;
 
+  HeaderSpec PThread = HeaderSpec<
+    "pthread.h",
+    [], // Macros
+    [PThreadMutexAttrTType], // Types
+    [], // Enumerations
+    [
+      FunctionSpec<
+          "pthread_mutexattr_init",
+          RetValSpec<IntType>,
+          [ArgSpec<PThreadMutexAttrTPtr>]
+      >,
+      FunctionSpec<
+          "pthread_mutexattr_destroy",
+          RetValSpec<IntType>,
+          [ArgSpec<PThreadMutexAttrTPtr>]
+      >,
+      FunctionSpec<
+          "pthread_mutexattr_gettype",
+          RetValSpec<IntType>,
+          [ArgSpec<ConstRestrictedPThreadMutexAttrTPtr>, ArgSpec<RestrictedIntPtr>]
+      >,
+      FunctionSpec<
+          "pthread_mutexattr_settype",
+          RetValSpec<IntType>,
+          [ArgSpec<RestrictedPThreadMutexAttrTPtr>, ArgSpec<IntType>]
+      >,
+      FunctionSpec<
+          "pthread_mutexattr_getrobust",
+          RetValSpec<IntType>,
+          [ArgSpec<ConstRestrictedPThreadMutexAttrTPtr>, ArgSpec<RestrictedIntPtr>]
+      >,
+      FunctionSpec<
+          "pthread_mutexattr_setrobust",
+          RetValSpec<IntType>,
+          [ArgSpec<RestrictedPThreadMutexAttrTPtr>, ArgSpec<IntType>]
+      >,
+      FunctionSpec<
+          "pthread_mutexattr_getpshared",
+          RetValSpec<IntType>,
+          [ArgSpec<ConstRestrictedPThreadMutexAttrTPtr>, ArgSpec<RestrictedIntPtr>]
+      >,
+      FunctionSpec<
+          "pthread_mutexattr_setpshared",
+          RetValSpec<IntType>,
+          [ArgSpec<RestrictedPThreadMutexAttrTPtr>, ArgSpec<IntType>]
+      >,
+      FunctionSpec<
+          "pthread_mutexattr_getprotocol",
+          RetValSpec<IntType>,
+          [ArgSpec<ConstRestrictedPThreadMutexAttrTPtr>, ArgSpec<RestrictedIntPtr>]
+      >,
+      FunctionSpec<
+          "pthread_mutexattr_setprotocol",
+          RetValSpec<IntType>,
+          [ArgSpec<RestrictedPThreadMutexAttrTPtr>, ArgSpec<IntType>]
+      >,
+      FunctionSpec<
+          "pthread_mutexattr_getprioceiling",
+          RetValSpec<IntType>,
+          [ArgSpec<ConstRestrictedPThreadMutexAttrTPtr>, ArgSpec<RestrictedIntPtr>]
+      >,
+      FunctionSpec<
+          "pthread_mutexattr_setprioceiling",
+          RetValSpec<IntType>,
+          [ArgSpec<RestrictedPThreadMutexAttrTPtr>, ArgSpec<IntType>]
+      >,
+    ]
+  >;
+
   let Headers = [
     CType,
     Errno,
     FCntl,
+    PThread,
     Signal,
     StdLib,
     SysMMan,
