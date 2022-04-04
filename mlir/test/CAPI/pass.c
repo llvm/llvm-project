@@ -512,6 +512,7 @@ void testExternalPass() {
   }
 
   mlirTypeIDAllocatorDestroy(typeIDAllocator);
+  mlirModuleDestroy(module);
   mlirContextDestroy(ctx);
 }
 
