@@ -245,9 +245,8 @@ entry:
 define <8 x i16> @missing_insert(<8 x i8> %b) {
 ; CHECK-LABEL: missing_insert:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #4
-; CHECK-NEXT:    mul v0.8h, v1.8h, v0.8h
+; CHECK-NEXT:    ext v1.8b, v0.8b, v0.8b, #2
+; CHECK-NEXT:    smull v0.8h, v1.8b, v0.8b
 ; CHECK-NEXT:    ret
 entry:
     %ext.b = sext <8 x i8> %b to <8 x i16>
@@ -259,11 +258,8 @@ entry:
 define <8 x i16> @shufsext_v8i8_v8i16(<8 x i8> %src, <8 x i8> %b) {
 ; CHECK-LABEL: shufsext_v8i8_v8i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-NEXT:    sshll v1.8h, v1.8b, #0
-; CHECK-NEXT:    rev64 v0.8h, v0.8h
-; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    mul v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    rev64 v0.8b, v0.8b
+; CHECK-NEXT:    smull v0.8h, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
 entry:
   %in = sext <8 x i8> %src to <8 x i16>
@@ -276,17 +272,8 @@ entry:
 define <2 x i64> @shufsext_v2i32_v2i64(<2 x i32> %src, <2 x i32> %b) {
 ; CHECK-LABEL: shufsext_v2i32_v2i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
-; CHECK-NEXT:    sshll v1.2d, v1.2s, #0
-; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    fmov x9, d1
-; CHECK-NEXT:    mov x8, v1.d[1]
-; CHECK-NEXT:    fmov x10, d0
-; CHECK-NEXT:    mov x11, v0.d[1]
-; CHECK-NEXT:    mul x9, x10, x9
-; CHECK-NEXT:    mul x8, x11, x8
-; CHECK-NEXT:    fmov d0, x9
-; CHECK-NEXT:    mov v0.d[1], x8
+; CHECK-NEXT:    rev64 v0.2s, v0.2s
+; CHECK-NEXT:    smull v0.2d, v0.2s, v1.2s
 ; CHECK-NEXT:    ret
 entry:
   %in = sext <2 x i32> %src to <2 x i64>
@@ -299,11 +286,8 @@ entry:
 define <8 x i16> @shufzext_v8i8_v8i16(<8 x i8> %src, <8 x i8> %b) {
 ; CHECK-LABEL: shufzext_v8i8_v8i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-NEXT:    rev64 v0.8h, v0.8h
-; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    mul v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    rev64 v0.8b, v0.8b
+; CHECK-NEXT:    umull v0.8h, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
 entry:
   %in = zext <8 x i8> %src to <8 x i16>
@@ -316,17 +300,8 @@ entry:
 define <2 x i64> @shufzext_v2i32_v2i64(<2 x i32> %src, <2 x i32> %b) {
 ; CHECK-LABEL: shufzext_v2i32_v2i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
-; CHECK-NEXT:    sshll v1.2d, v1.2s, #0
-; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    fmov x9, d1
-; CHECK-NEXT:    mov x8, v1.d[1]
-; CHECK-NEXT:    fmov x10, d0
-; CHECK-NEXT:    mov x11, v0.d[1]
-; CHECK-NEXT:    mul x9, x10, x9
-; CHECK-NEXT:    mul x8, x11, x8
-; CHECK-NEXT:    fmov d0, x9
-; CHECK-NEXT:    mov v0.d[1], x8
+; CHECK-NEXT:    rev64 v0.2s, v0.2s
+; CHECK-NEXT:    smull v0.2d, v0.2s, v1.2s
 ; CHECK-NEXT:    ret
 entry:
   %in = sext <2 x i32> %src to <2 x i64>
@@ -339,11 +314,8 @@ entry:
 define <8 x i16> @shufzext_v8i8_v8i16_twoin(<8 x i8> %src1, <8 x i8> %src2, <8 x i8> %b) {
 ; CHECK-LABEL: shufzext_v8i8_v8i16_twoin:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-NEXT:    trn1 v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    ushll v1.8h, v2.8b, #0
-; CHECK-NEXT:    mul v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    trn1 v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    umull v0.8h, v0.8b, v2.8b
 ; CHECK-NEXT:    ret
 entry:
   %in1 = zext <8 x i8> %src1 to <8 x i16>
