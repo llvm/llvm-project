@@ -222,5 +222,5 @@ defm add_symbol
       MetaVarName<"name=[section:]value[,flags]">;
 
 defm update_section
-    : Eq<"update-section", "Add section <name> with contents from a file <file>.">,
+    : Eq<"update-section", "Replace the contents of section <name> with contents from a file <file>.">,
       MetaVarName<"name=file">;

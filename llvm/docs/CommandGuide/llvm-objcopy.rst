@@ -217,6 +217,12 @@ multiple file formats.
  Remove from the output all local or undefined symbols that are not required by
  relocations. Also remove all debug sections.
 
+.. option:: --update-section <name>=<file>
+
+ Replace the contents of the section ``<name>`` with contents from the file
+ ``<file>``. If the section ``<name>`` is part of a segment, the new contents
+ cannot be larger than the existing section.
+
 .. option:: --version, -V
 
  Display the version of the :program:`llvm-objcopy` executable.
