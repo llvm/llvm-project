@@ -1718,7 +1718,7 @@ void SwingSchedulerDAG::checkNodeSets(NodeSetType &NodeSets) {
 }
 
 /// Add the nodes that do not belong to a recurrence set into groups
-/// based upon connected componenets.
+/// based upon connected components.
 void SwingSchedulerDAG::groupRemainingNodes(NodeSetType &NodeSets) {
   SetVector<SUnit *> NodesAdded;
   SmallPtrSet<SUnit *, 8> Visited;
