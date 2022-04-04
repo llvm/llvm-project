@@ -88,22 +88,22 @@ static llvm::hash_code test::hash_value(const FieldInfo &fi) { // NOLINT
 //===----------------------------------------------------------------------===//
 
 static LogicalResult parseCustomTypeA(AsmParser &parser,
-                                      FailureOr<int> &a_result) {
-  a_result.emplace();
-  return parser.parseInteger(*a_result);
+                                      FailureOr<int> &aResult) {
+  aResult.emplace();
+  return parser.parseInteger(*aResult);
 }
 
 static void printCustomTypeA(AsmPrinter &printer, int a) { printer << a; }
 
 static LogicalResult parseCustomTypeB(AsmParser &parser, int a,
-                                      FailureOr<Optional<int>> &b_result) {
+                                      FailureOr<Optional<int>> &bResult) {
   if (a < 0)
     return success();
   for (int i : llvm::seq(0, a))
     if (failed(parser.parseInteger(i)))
       return failure();
-  b_result.emplace(0);
-  return parser.parseInteger(**b_result);
+  bResult.emplace(0);
+  return parser.parseInteger(**bResult);
 }
 
 static void printCustomTypeB(AsmPrinter &printer, int a, Optional<int> b) {
