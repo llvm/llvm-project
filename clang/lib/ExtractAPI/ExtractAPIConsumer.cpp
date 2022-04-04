@@ -534,6 +534,11 @@ public:
   // macro definition for it.
   void MacroUndefined(const Token &MacroNameToken, const MacroDefinition &MD,
                       const MacroDirective *Undef) override {
+    // If this macro wasn't previously defined we don't need to do anything
+    // here.
+    if (!Undef)
+      return;
+
     llvm::erase_if(PendingMacros, [&MD](const PendingMacro &PM) {
       return MD.getMacroInfo()->getDefinitionLoc() ==
              PM.MD->getMacroInfo()->getDefinitionLoc();
