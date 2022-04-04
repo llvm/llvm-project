@@ -958,8 +958,8 @@ def SignlessIntegerOrFloatLike : TypeConstraint<Or<[
 // Base attribute definition
 
 // Base class for all attributes.
-class Attr<Pred condition, string descr = ""> :
-    AttrConstraint<condition, descr> {
+class Attr<Pred condition, string summary = ""> :
+    AttrConstraint<condition, summary> {
   code storageType = ?; // The backing mlir::Attribute type
   code returnType = ?;  // The underlying C++ value type
 
@@ -1007,11 +1007,14 @@ class Attr<Pred condition, string descr = ""> :
 
   // The fully-qualified C++ namespace where the generated class lives.
   string cppNamespace = "";
+
+  // The full description of this attribute.
+  string description = "";
 }
 
 // An attribute of a specific dialect.
-class DialectAttr<Dialect d, Pred condition, string descr = ""> :
-    Attr<condition, descr> {
+class DialectAttr<Dialect d, Pred condition, string summary = ""> :
+    Attr<condition, summary> {
   Dialect dialect = d;
   let cppNamespace = d.cppNamespace;
 }
