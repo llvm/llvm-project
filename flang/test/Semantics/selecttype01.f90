@@ -186,6 +186,24 @@ subroutine CheckC1162
   end select
 end
 
+module c1162a
+  type pdt(kind,len)
+    integer, kind :: kind
+    integer, len :: len
+  end type
+ contains
+  subroutine foo(x)
+    class(pdt(kind=1,len=:)), allocatable :: x
+    select type (x)
+    type is (pdt(kind=1, len=*))
+    !ERROR: Type specification 'pdt(kind=2_4,len=*)' must be an extension of TYPE 'pdt(kind=1_4,len=:)'
+    type is (pdt(kind=2, len=*))
+    !ERROR: Type specification 'pdt(kind=*,len=*)' must be an extension of TYPE 'pdt(kind=1_4,len=:)'
+    type is (pdt(kind=*, len=*))
+    end select
+  end subroutine
+end module
+
 subroutine CheckC1163
   use m1
   !assign dynamically

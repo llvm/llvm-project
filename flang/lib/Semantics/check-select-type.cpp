@@ -136,7 +136,7 @@ private:
       if (const semantics::Scope * guardScope{derived.typeSymbol().scope()}) {
         if (const auto *selDerivedTypeSpec{
                 evaluate::GetDerivedTypeSpec(selectorType_)}) {
-          if (!(derived == *selDerivedTypeSpec) &&
+          if (!derived.Match(*selDerivedTypeSpec) &&
               !guardScope->FindComponent(selDerivedTypeSpec->name())) {
             context_.Say(sourceLoc,
                 "Type specification '%s' must be an extension"

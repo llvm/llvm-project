@@ -201,6 +201,29 @@ ParamValue *DerivedTypeSpec::FindParameter(SourceName target) {
       const_cast<const DerivedTypeSpec *>(this)->FindParameter(target));
 }
 
+bool DerivedTypeSpec::Match(const DerivedTypeSpec &that) const {
+  if (&typeSymbol_ != &that.typeSymbol_) {
+    return false;
+  }
+  for (const auto &pair : parameters_) {
+    const Symbol *tpSym{scope_ ? scope_->FindSymbol(pair.first) : nullptr};
+    const auto *tpDetails{
+        tpSym ? tpSym->detailsIf<TypeParamDetails>() : nullptr};
+    if (!tpDetails) {
+      return false;
+    }
+    if (tpDetails->attr() != common::TypeParamAttr::Kind) {
+      continue;
+    }
+    const ParamValue &value{pair.second};
+    auto iter{that.parameters_.find(pair.first)};
+    if (iter == that.parameters_.end() || iter->second != value) {
+      return false;
+    }
+  }
+  return true;
+}
+
 class InstantiateHelper {
 public:
   InstantiateHelper(Scope &scope) : scope_{scope} {}
