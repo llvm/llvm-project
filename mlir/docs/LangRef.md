@@ -203,7 +203,7 @@ bare-id-list ::= bare-id (`,` bare-id)*
 value-id ::= `%` suffix-id
 suffix-id ::= (digit+ | ((letter|id-punct) (letter|id-punct|digit)*))
 
-symbol-ref-id ::= `@` (suffix-id | string-literal) (`::` symbol-ref-id)?
+symbol-ref-id ::= `@` (suffix-id | string-literal)
 value-id-list ::= value-id (`,` value-id)*
 
 // Uses of value, e.g. in an operand list to an operation.
