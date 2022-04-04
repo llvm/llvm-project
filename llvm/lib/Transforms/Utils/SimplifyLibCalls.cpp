@@ -903,29 +903,36 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
       Value *NullPtr = Constant::getNullValue(CI->getType());
       return B.CreateSelect(Cmp, SrcStr, NullPtr, "memchr.sel");
     }
-  } else {
-    // From now on we need at least constant length and string.
-    return nullptr;
   }
 
   StringRef Str;
   if (!getConstantStringInfo(SrcStr, Str, 0, /*TrimAtNul=*/false))
     return nullptr;
 
-  // Truncate the string to LenC. If Str is smaller than LenC we will still only
-  // scan the string, as reading past the end of it is undefined and we can just
-  // return null if we don't find the char.
-  Str = Str.substr(0, LenC->getZExtValue());
-
   if (CharC) {
-    // Compute the offset.
-    size_t I = Str.find(CharC->getSExtValue() & 0xFF);
-    if (I == StringRef::npos) // Didn't find the char.  memchr returns null.
+    size_t Pos = Str.find(CharC->getZExtValue());
+    if (Pos == StringRef::npos)
+      // When the character is not in the source array fold the result
+      // to null regardless of Size.
       return Constant::getNullValue(CI->getType());
 
-    // memchr(s+n,c,l) -> gep(s+n+i,c)
-    return B.CreateGEP(B.getInt8Ty(), SrcStr, B.getInt64(I), "memchr");
+    // Fold memchr(s, c, n) -> n <= Pos ? null : s + Pos
+    // When the constant Size is less than or equal to the character
+    // position also fold the result to null.
+    Value *Cmp = B.CreateICmpULE(Size, ConstantInt::get(Size->getType(), Pos),
+                                 "memchr.cmp");
+    Value *NullPtr = Constant::getNullValue(CI->getType());
+    Value *SrcPlus =
+        B.CreateGEP(B.getInt8Ty(), SrcStr, B.getInt64(Pos), "memchr.ptr");
+    return B.CreateSelect(Cmp, NullPtr, SrcPlus);
   }
+
+  if (!LenC)
+    // From now on we need a constant length and constant array.
+    return nullptr;
+
+  // Truncate the string to LenC.
+  Str = Str.substr(0, LenC->getZExtValue());
 
   // If the char is variable but the input str and length are not we can turn
   // this memchr call into a simple bit field test. Of course this only works
