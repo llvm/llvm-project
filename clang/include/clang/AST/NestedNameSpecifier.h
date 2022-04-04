@@ -162,7 +162,7 @@ public:
   /// Return the prefix of this nested name specifier.
   ///
   /// The prefix contains all of the parts of the nested name
-  /// specifier that preced this current specifier. For example, for a
+  /// specifier that precede this current specifier. For example, for a
   /// nested name specifier that represents "foo::bar::", the current
   /// specifier will contain "bar::" and the prefix will contain
   /// "foo::".

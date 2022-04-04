@@ -1,9 +1,5 @@
 // RUN: %clang_cc1 -std=c++20 -emit-llvm %s -o - -triple=x86_64-linux-gnu | FileCheck %s
-
-// FIXME: In the future we could possibly do this to get nicer looking output
-// for this, but it seems that some of the bots don't have a recent enough
-// version of llvm-cxxfilt to demangle these.
-// %clang_cc1 -std=c++20 -emit-llvm %s -o - -triple=x86_64-linux-gnu | llvm-cxxfilt | FileCheck %s --check-prefix DEMANGLED
+// RUN: %clang_cc1 -std=c++20 -emit-llvm %s -o - -triple=x86_64-linux-gnu | llvm-cxxfilt -n | FileCheck %s --check-prefix DEMANGLED
 
 template<typename T>
 struct wrapper1 {
