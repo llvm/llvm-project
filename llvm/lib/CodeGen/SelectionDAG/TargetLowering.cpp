@@ -9199,13 +9199,16 @@ SDValue TargetLowering::expandVectorSplice(SDNode *Node,
 
 bool TargetLowering::LegalizeSetCCCondCode(SelectionDAG &DAG, EVT VT,
                                            SDValue &LHS, SDValue &RHS,
-                                           SDValue &CC, bool &NeedInvert,
+                                           SDValue &CC, SDValue Mask,
+                                           SDValue EVL, bool &NeedInvert,
                                            const SDLoc &dl, SDValue &Chain,
                                            bool IsSignaling) const {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   MVT OpVT = LHS.getSimpleValueType();
   ISD::CondCode CCCode = cast<CondCodeSDNode>(CC)->get();
   NeedInvert = false;
+  assert(!EVL == !Mask && "VP Mask and EVL must either both be set or unset");
+  bool IsNonVP = !EVL;
   switch (TLI.getCondCodeAction(CCCode, OpVT)) {
   default:
     llvm_unreachable("Unknown condition code action!");
@@ -9312,17 +9315,34 @@ bool TargetLowering::LegalizeSetCCCondCode(SelectionDAG &DAG, EVT VT,
     if (CCCode != ISD::SETO && CCCode != ISD::SETUO) {
       // If we aren't the ordered or unorder operation,
       // then the pattern is (LHS CC1 RHS) Opc (LHS CC2 RHS).
-      SetCC1 = DAG.getSetCC(dl, VT, LHS, RHS, CC1, Chain, IsSignaling);
-      SetCC2 = DAG.getSetCC(dl, VT, LHS, RHS, CC2, Chain, IsSignaling);
+      if (IsNonVP) {
+        SetCC1 = DAG.getSetCC(dl, VT, LHS, RHS, CC1, Chain, IsSignaling);
+        SetCC2 = DAG.getSetCC(dl, VT, LHS, RHS, CC2, Chain, IsSignaling);
+      } else {
+        SetCC1 = DAG.getSetCCVP(dl, VT, LHS, RHS, CC1, Mask, EVL);
+        SetCC2 = DAG.getSetCCVP(dl, VT, LHS, RHS, CC2, Mask, EVL);
+      }
     } else {
       // Otherwise, the pattern is (LHS CC1 LHS) Opc (RHS CC2 RHS)
-      SetCC1 = DAG.getSetCC(dl, VT, LHS, LHS, CC1, Chain, IsSignaling);
-      SetCC2 = DAG.getSetCC(dl, VT, RHS, RHS, CC2, Chain, IsSignaling);
+      if (IsNonVP) {
+        SetCC1 = DAG.getSetCC(dl, VT, LHS, LHS, CC1, Chain, IsSignaling);
+        SetCC2 = DAG.getSetCC(dl, VT, RHS, RHS, CC2, Chain, IsSignaling);
+      } else {
+        SetCC1 = DAG.getSetCCVP(dl, VT, LHS, LHS, CC1, Mask, EVL);
+        SetCC2 = DAG.getSetCCVP(dl, VT, RHS, RHS, CC2, Mask, EVL);
+      }
     }
     if (Chain)
       Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, SetCC1.getValue(1),
                           SetCC2.getValue(1));
-    LHS = DAG.getNode(Opc, dl, VT, SetCC1, SetCC2);
+    if (IsNonVP)
+      LHS = DAG.getNode(Opc, dl, VT, SetCC1, SetCC2);
+    else {
+      // Transform the binary opcode to the VP equivalent.
+      assert((Opc == ISD::OR || Opc == ISD::AND) && "Unexpected opcode");
+      Opc = Opc == ISD::OR ? ISD::VP_OR : ISD::VP_AND;
+      LHS = DAG.getNode(Opc, dl, VT, SetCC1, SetCC2, Mask, EVL);
+    }
     RHS = SDValue();
     CC = SDValue();
     return true;

@@ -1425,6 +1425,12 @@ SDValue SelectionDAG::getLogicalNOT(const SDLoc &DL, SDValue Val, EVT VT) {
   return getNode(ISD::XOR, DL, VT, Val, TrueValue);
 }
 
+SDValue SelectionDAG::getVPLogicalNOT(const SDLoc &DL, SDValue Val,
+                                      SDValue Mask, SDValue EVL, EVT VT) {
+  SDValue TrueValue = getBoolConstant(true, DL, VT, VT);
+  return getNode(ISD::VP_XOR, DL, VT, Val, TrueValue, Mask, EVL);
+}
+
 SDValue SelectionDAG::getBoolConstant(bool V, const SDLoc &DL, EVT VT,
                                       EVT OpVT) {
   if (!V)
