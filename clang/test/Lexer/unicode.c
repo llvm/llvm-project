@@ -39,9 +39,14 @@ extern int 𐠈;
 extern int ꙮ;
 extern int  \u1B4C;     // BALINESE LETTER ARCHAIC JNYA - Added in Unicode 14
 extern int  \U00016AA2; // TANGSA LETTER GA - Added in Unicode 14
+extern int _\N{TANGSA LETTER GA};
+extern int _\N{TANGSALETTERGA}; // expected-error {{'TANGSALETTERGA' is not a valid Unicode character name}} \
+                                // expected-note {{characters names in Unicode escape sequences are sensitive to case and whitespace}}
+
+
+
 // This character doesn't have the XID_Start property
 extern int  \U00016AC0; // TANGSA DIGIT ZERO  // expected-error {{expected unqualified-id}}
-extern int _\U00016AC0; // TANGSA DIGIT ZERO
 
 extern int 🌹; // expected-error {{unexpected character <U+1F339>}} \
                   expected-warning {{declaration does not declare anything}}
