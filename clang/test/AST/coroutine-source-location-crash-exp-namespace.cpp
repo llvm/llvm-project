@@ -36,6 +36,7 @@ coro_t f(int n) {
   A a{};
   // CHECK: CoawaitExpr {{0x[0-9a-fA-F]+}} <col:3, col:12>
   // CHECK-NEXT: DeclRefExpr {{0x[0-9a-fA-F]+}} <col:12>
+  // CHECK-NEXT: DeclRefExpr {{0x[0-9a-fA-F]+}} <col:12>
   // CHECK-NEXT: CXXMemberCallExpr {{0x[0-9a-fA-F]+}} <col:12>
   // CHECK-NEXT: MemberExpr {{0x[0-9a-fA-F]+}} <col:12>
   co_await a;
