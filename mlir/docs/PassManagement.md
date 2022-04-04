@@ -431,9 +431,12 @@ components are integrated with the dynamic pipeline being executed.
 MLIR provides a builtin mechanism for passes to specify options that configure
 its behavior. These options are parsed at pass construction time independently
 for each instance of the pass. Options are defined using the `Option<>` and
-`ListOption<>` classes, and follow the
+`ListOption<>` classes, and generally follow the
 [LLVM command line](https://llvm.org/docs/CommandLine.html) flag definition
-rules. See below for a few examples:
+rules. One major distinction from the LLVM command line functionality is that
+all `ListOption`s are comma-separated, and delimited sub-ranges within individual
+elements of the list may contain commas that are not treated as separators for the
+top-level list.
 
 ```c++
 struct MyPass ... {
@@ -445,8 +448,7 @@ struct MyPass ... {
   /// Any parameters after the description are forwarded to llvm::cl::list and
   /// llvm::cl::opt respectively.
   Option<int> exampleOption{*this, "flag-name", llvm::cl::desc("...")};
-  ListOption<int> exampleListOption{*this, "list-flag-name",
-                                    llvm::cl::desc("...")};
+  ListOption<int> exampleListOption{*this, "list-flag-name", llvm::cl::desc("...")};
 };
 ```
 
@@ -705,8 +707,7 @@ struct MyPass : PassWrapper<MyPass, OperationPass<ModuleOp>> {
       llvm::cl::desc("An example option"), llvm::cl::init(true)};
   ListOption<int64_t> listOption{
       *this, "example-list",
-      llvm::cl::desc("An example list option"), llvm::cl::ZeroOrMore,
-      llvm::cl::MiscFlags::CommaSeparated};
+      llvm::cl::desc("An example list option"), llvm::cl::ZeroOrMore};
 
   // Specify any statistics.
   Statistic statistic{this, "example-statistic", "An example statistic"};
@@ -742,8 +743,7 @@ def MyPass : Pass<"my-pass", "ModuleOp"> {
     Option<"option", "example-option", "bool", /*default=*/"true",
            "An example option">,
     ListOption<"listOption", "example-list", "int64_t",
-               "An example list option",
-               "llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated">
+               "An example list option", "llvm::cl::ZeroOrMore">
   ];
 
   // Specify any statistics.
@@ -879,8 +879,7 @@ The `ListOption` class takes the following fields:
 def MyPass : Pass<"my-pass"> {
   let options = [
     ListOption<"listOption", "example-list", "int64_t",
-               "An example list option",
-               "llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated">
+               "An example list option", "llvm::cl::ZeroOrMore">
   ];
 }
 ```

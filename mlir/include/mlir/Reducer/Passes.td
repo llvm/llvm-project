@@ -20,8 +20,7 @@ def CommonReductionPassOptions {
     Option<"testerName", "test", "std::string", /* default */"",
            "The location of the tester which tests the file interestingness">,
     ListOption<"testerArgs", "test-arg", "std::string",
-               "arguments of the tester",
-               "llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated">,
+               "arguments of the tester", "llvm::cl::ZeroOrMore">,
   ];
 }
 

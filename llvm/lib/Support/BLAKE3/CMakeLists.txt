@@ -10,22 +10,6 @@ else()
   set(CAN_USE_ASSEMBLER TRUE)
 endif()
 
-# Some LLVM builders set "CC=ccache /path/to/clang" as environment variable,
-# which confuses CMake thinking the assembler to use is the 'ccache' binary.
-# These builders need to also set "ASM=/path/to/clang" in environment, or use
-# LLVM_CCACHE_BUILD CMake variable instead, but until this happens check for
-# this case and disable building the assembly files.
-get_filename_component(ASM_BINARY ${CMAKE_ASM_COMPILER} NAME)
-if (ASM_BINARY STREQUAL "ccache")
-  message(WARNING "CMake is set to use '${CMAKE_ASM_COMPILER}' as assembler "
-    "which is likely due to having 'CC=ccache /path/to/clang' in the environment. "
-    "Building the BLAKE3 SIMD-optimized assembly files is disabled, set "
-    "'ASM=/path/to/clang' as environment variable and do a clean re-configure, "
-    "or unset CC/CXX and configure with '-DLLVM_CCACHE_BUILD=YES' instead, "
-    "to correct this.")
-  set(CAN_USE_ASSEMBLER FALSE)
-endif()
-
 # The BLAKE3 team recommends using the assembly versions, from the README:
 #
 # "For each of the x86 SIMD instruction sets, four versions are available:
@@ -74,16 +58,30 @@ if (IS_X64 AND CAN_USE_ASSEMBLER)
       blake3_avx512_x86-64_unix.S
     )
   endif()
+else()
+  # In a macOS Universal build (setting CMAKE_OSX_ARCHITECTURES to multiple
+  # values), IS_X64 and IS_ARM64 won't be set, but compilation of the source
+  # files will consider targeting either of them (each source file is
+  # internally compiled once for each architecture). Thus, if we on the CMake
+  # level decide not to include the assembly files, tell the source to not
+  # expect it to be present either.
+  #
+  # Also, if targeting i386, then the blake3 source code automatically enables
+  # the SIMD implementations, but we don't provide those sources.
+  #
+  # FIXME: We could improve the CMAKE_OSX_ARCHITECTURES configuration by
+  # including all SIMD implementation files that might be relevant, and
+  # wrapping them in ifdefs like "#ifdef __x86_64__", to allow them to be
+  # included in a build for any architecture.
+  add_definitions(-DBLAKE3_NO_AVX512 -DBLAKE3_NO_AVX2 -DBLAKE3_NO_SSE41 -DBLAKE3_NO_SSE2)
 endif()
 
 if (IS_ARM64)
   list(APPEND LLVM_BLAKE3_FILES
     blake3_neon.c
   )
-endif()
-
-if (IS_X64 AND NOT CAN_USE_ASSEMBLER)
-  add_definitions(-DBLAKE3_NO_AVX512 -DBLAKE3_NO_AVX2 -DBLAKE3_NO_SSE41 -DBLAKE3_NO_SSE2)
+else()
+  add_definitions(-DBLAKE3_USE_NEON=0)
 endif()
 
 add_library(LLVMSupportBlake3 OBJECT EXCLUDE_FROM_ALL ${LLVM_BLAKE3_FILES})

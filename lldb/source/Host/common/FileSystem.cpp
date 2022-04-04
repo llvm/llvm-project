@@ -8,6 +8,7 @@
 
 #include "lldb/Host/FileSystem.h"
 
+#include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/TildeExpressionResolver.h"
 
@@ -272,7 +273,7 @@ void FileSystem::Resolve(FileSpec &file_spec) {
   file_spec.SetIsResolved(true);
 }
 
-std::shared_ptr<DataBufferLLVM>
+std::shared_ptr<DataBuffer>
 FileSystem::CreateDataBuffer(const llvm::Twine &path, uint64_t size,
                              uint64_t offset) {
   const bool is_volatile = !IsLocal(path);
@@ -293,7 +294,7 @@ FileSystem::CreateDataBuffer(const llvm::Twine &path, uint64_t size,
   return std::shared_ptr<DataBufferLLVM>(new DataBufferLLVM(std::move(buffer)));
 }
 
-std::shared_ptr<DataBufferLLVM>
+std::shared_ptr<DataBuffer>
 FileSystem::CreateDataBuffer(const FileSpec &file_spec, uint64_t size,
                              uint64_t offset) {
   return CreateDataBuffer(file_spec.GetPath(), size, offset);

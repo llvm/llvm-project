@@ -945,7 +945,7 @@ static void performWriteOperation(ArchiveOperation Operation,
       Kind = !NewMembers.empty() ? getKindFromMember(NewMembers.front())
                                  : getDefaultForHost();
     if (Kind == object::Archive::K_AIXBIG)
-      fail("unsupported big AIX write operation");
+      fail("big archive writer operation on AIX not yet supported");
     break;
   case GNU:
     Kind = object::Archive::K_GNU;

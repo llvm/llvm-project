@@ -445,6 +445,7 @@ for.end:
 ; INTER-NEXT:  LV: Found uniform instruction: %tmp0 = getelementptr inbounds i64, i64* %A, i64 %i
 ; INTER-NEXT:  LV: Found uniform instruction: %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
 ; INTER-NEXT:  LV: Found uniform instruction: %i.next = add nuw nsw i64 %i, 1
+; INTER:       define void @bitcast_pointer_operand(
 ; INTER:       vector.body:
 ; INTER-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
 ; INTER-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, i64* %A, i64 [[INDEX]]

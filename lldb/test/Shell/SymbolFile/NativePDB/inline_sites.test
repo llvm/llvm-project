@@ -1,5 +1,5 @@
 # clang-format off
-# REQUIRES: lld
+# REQUIRES: lld, x86
 
 # RUN: llvm-mc -triple=x86_64-windows-msvc --filetype=obj %p/Inputs/inline_sites.s > %t.obj
 # RUN: lld-link -debug:full -nodefaultlib -entry:main -base:0x140000000 %t.obj -out:%t.exe

@@ -67,10 +67,9 @@ struct TestLinalgCodegenStrategy
       llvm::cl::desc("Fuse the producers after tiling the root op."),
       llvm::cl::init(false)};
   ListOption<int64_t> tileSizes{*this, "tile-sizes",
-                                llvm::cl::MiscFlags::CommaSeparated,
                                 llvm::cl::desc("Specifies the tile sizes.")};
   ListOption<int64_t> tileInterchange{
-      *this, "tile-interchange", llvm::cl::MiscFlags::CommaSeparated,
+      *this, "tile-interchange",
       llvm::cl::desc("Specifies the tile interchange.")};
 
   Option<bool> promote{
@@ -82,7 +81,7 @@ struct TestLinalgCodegenStrategy
       llvm::cl::desc("Pad the small aligned memory buffer to the tile sizes."),
       llvm::cl::init(false)};
   ListOption<int64_t> registerTileSizes{
-      *this, "register-tile-sizes", llvm::cl::MiscFlags::CommaSeparated,
+      *this, "register-tile-sizes",
       llvm::cl::desc(
           "Specifies the size of the register tile that will be used "
           " to vectorize")};
@@ -100,33 +99,33 @@ struct TestLinalgCodegenStrategy
   ListOption<std::string> paddingValues{
       *this, "padding-values",
       llvm::cl::desc("Operand padding values parsed by the attribute parser."),
-      llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated};
+      llvm::cl::ZeroOrMore};
   ListOption<int64_t> paddingDimensions{
       *this, "padding-dimensions",
       llvm::cl::desc("Operation iterator dimensions to pad."),
-      llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated};
-  ListOption<int64_t> packPaddings{
-      *this, "pack-paddings", llvm::cl::desc("Operand packing flags."),
-      llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated};
-  ListOption<int64_t> hoistPaddings{
-      *this, "hoist-paddings", llvm::cl::desc("Operand hoisting depths."),
-      llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated};
-  ListOption<std::string> transposePaddings{
+      llvm::cl::ZeroOrMore};
+  ListOption<int64_t> packPaddings{*this, "pack-paddings",
+                                   llvm::cl::desc("Operand packing flags."),
+                                   llvm::cl::ZeroOrMore};
+  ListOption<int64_t> hoistPaddings{*this, "hoist-paddings",
+                                    llvm::cl::desc("Operand hoisting depths."),
+                                    llvm::cl::ZeroOrMore};
+  ListOption<SmallVector<int64_t>> transposePaddings{
       *this, "transpose-paddings",
       llvm::cl::desc(
           "Transpose paddings. Specify a operand dimension interchange "
           "using the following format:\n"
-          "-transpose-paddings=1:0:2,0:1,0:1\n"
+          "-transpose-paddings=[1,0,2],[0,1],[0,1]\n"
           "It defines the interchange [1, 0, 2] for operand one and "
           "the interchange [0, 1] (no transpose) for the remaining operands."
           "All interchange vectors have to be permuations matching the "
           "operand rank."),
-      llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated};
+      llvm::cl::ZeroOrMore};
   Option<bool> generalize{*this, "generalize",
                           llvm::cl::desc("Generalize named operations."),
                           llvm::cl::init(false)};
   ListOption<int64_t> iteratorInterchange{
-      *this, "iterator-interchange", llvm::cl::MiscFlags::CommaSeparated,
+      *this, "iterator-interchange",
       llvm::cl::desc("Specifies the iterator interchange.")};
   Option<bool> decompose{
       *this, "decompose",
@@ -259,16 +258,6 @@ void TestLinalgCodegenStrategy::runOnOperation() {
   }
 
   // Parse the transpose vectors.
-  SmallVector<SmallVector<int64_t>> transposePaddingVectors;
-  for (const std::string &transposePadding : transposePaddings) {
-    SmallVector<int64_t> transposeVector = {};
-    SmallVector<StringRef> tokens;
-    StringRef(transposePadding).split(tokens, ':');
-    for (StringRef token : tokens)
-      transposeVector.push_back(std::stoi(token.str()));
-    transposePaddingVectors.push_back(transposeVector);
-  }
-
   LinalgPaddingOptions paddingOptions;
   paddingOptions.setPaddingValues(paddingValueAttributes);
   paddingOptions.setPaddingDimensions(
@@ -277,7 +266,7 @@ void TestLinalgCodegenStrategy::runOnOperation() {
       SmallVector<bool>{packPaddings.begin(), packPaddings.end()});
   paddingOptions.setHoistPaddings(
       SmallVector<int64_t>{hoistPaddings.begin(), hoistPaddings.end()});
-  paddingOptions.setTransposePaddings(transposePaddingVectors);
+  paddingOptions.setTransposePaddings(transposePaddings);
 
   vector::VectorContractLowering vectorContractLowering =
       llvm::StringSwitch<vector::VectorContractLowering>(

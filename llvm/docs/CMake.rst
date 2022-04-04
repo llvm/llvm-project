@@ -738,9 +738,6 @@ enabled sub-projects. Nearly all of these variable names begin with
   search. For example to link LLVM with the Gold linker, cmake can be invoked
   with ``-DLLVM_USE_LINKER=gold``.
 
-**LLVM_USE_NEWPM**:BOOL
-  If enabled, use the experimental new pass manager.
-
 **LLVM_USE_OPROFILE**:BOOL
   Enable building OProfile JIT support. Defaults to OFF.
 

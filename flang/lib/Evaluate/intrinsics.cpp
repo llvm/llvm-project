@@ -2323,9 +2323,7 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
     const auto &arg{call.arguments[0]};
     if (arg) {
       if (const auto *expr{arg->UnwrapExpr()}) {
-        if (const Symbol * symbol{GetLastSymbol(*expr)}) {
-          ok = symbol->attrs().test(semantics::Attr::ALLOCATABLE);
-        }
+        ok = evaluate::IsAllocatableDesignator(*expr);
       }
     }
     if (!ok) {

@@ -17,12 +17,12 @@
 
   .text
   .align 4
-  .global main
-  .type main, %function
-main:
+  .global _start
+  .type _start, %function
+_start:
   nop
   ret
-  .size main, .-main
+  .size _start, .-_start
 
   .global foo
   .type foo, %function

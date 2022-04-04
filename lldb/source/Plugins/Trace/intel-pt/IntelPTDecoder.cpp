@@ -90,6 +90,59 @@ static int ProcessPTEvents(pt_insn_decoder &decoder, int errcode) {
   return 0;
 }
 
+// Simple struct used by the decoder to keep the state of the most
+// recent TSC and a flag indicating whether TSCs are enabled, not enabled
+// or we just don't yet.
+struct TscInfo {
+  uint64_t tsc = 0;
+  LazyBool has_tsc = eLazyBoolCalculate;
+
+  explicit operator bool() const { return has_tsc == eLazyBoolYes; }
+};
+
+/// Query the decoder for the most recent TSC timestamp and update
+/// tsc_info accordingly.
+void RefreshTscInfo(TscInfo &tsc_info, pt_insn_decoder &decoder,
+                    DecodedThread &decoded_thread) {
+  if (tsc_info.has_tsc == eLazyBoolNo)
+    return;
+
+  uint64_t new_tsc;
+  if (int tsc_error = pt_insn_time(&decoder, &new_tsc, nullptr, nullptr)) {
+    if (tsc_error == -pte_no_time) {
+      // We now know that the trace doesn't support TSC, so we won't try again.
+      // See
+      // https://github.com/intel/libipt/blob/master/doc/man/pt_qry_time.3.md
+      tsc_info.has_tsc = eLazyBoolNo;
+    } else {
+      // We don't add TSC decoding errors in the decoded trace itself to prevent
+      // creating unnecessary gaps, but we can count how many of these errors
+      // happened. In this case we reuse the previous correct TSC we saw, as
+      // it's better than no TSC at all.
+      decoded_thread.RecordTscError(tsc_error);
+    }
+  } else {
+    tsc_info.tsc = new_tsc;
+    tsc_info.has_tsc = eLazyBoolYes;
+  }
+}
+
+static void AppendError(DecodedThread &decoded_thread, Error &&error,
+                        TscInfo &tsc_info) {
+  if (tsc_info)
+    decoded_thread.AppendError(std::move(error), tsc_info.tsc);
+  else
+    decoded_thread.AppendError(std::move(error));
+}
+
+static void AppendInstruction(DecodedThread &decoded_thread,
+                              const pt_insn &insn, TscInfo &tsc_info) {
+  if (tsc_info)
+    decoded_thread.AppendInstruction(insn, tsc_info.tsc);
+  else
+    decoded_thread.AppendInstruction(insn);
+}
+
 /// Decode all the instructions from a configured decoder.
 /// The decoding flow is based on
 /// https://github.com/intel/libipt/blob/master/doc/howto_libipt.md#the-instruction-flow-decode-loop
@@ -98,60 +151,50 @@ static int ProcessPTEvents(pt_insn_decoder &decoder, int errcode) {
 /// Error codes returned by libipt while decoding are:
 /// - negative: actual errors
 /// - positive or zero: not an error, but a list of bits signaling the status of
-/// the decoder
+/// the decoder, e.g. whether there are events that need to be decoded or not
 ///
 /// \param[in] decoder
 ///   A configured libipt \a pt_insn_decoder.
 static void DecodeInstructions(pt_insn_decoder &decoder,
-                               DecodedThreadSP &decoded_thread_sp) {
-  while (true) {
-    int errcode = FindNextSynchronizationPoint(decoder);
-    if (errcode == -pte_eos)
-      break;
+                               DecodedThread &decoded_thread) {
 
-    if (errcode < 0) {
-      decoded_thread_sp->AppendError(make_error<IntelPTError>(errcode));
+  TscInfo tsc_info;
+  // We have this "global" errcode because if it's positive, we'll need
+  // its bits later to process events.
+  int errcode;
+
+  while (true) {
+    if ((errcode = FindNextSynchronizationPoint(decoder)) < 0) {
+      // We signal a gap only if it's not "end of stream"
+      if (errcode != -pte_eos)
+        AppendError(decoded_thread, make_error<IntelPTError>(errcode),
+                    tsc_info);
       break;
     }
 
     // We have synchronized, so we can start decoding
     // instructions and events.
     while (true) {
-      errcode = ProcessPTEvents(decoder, errcode);
-      if (errcode < 0) {
-        decoded_thread_sp->AppendError(make_error<IntelPTError>(errcode));
+      if ((errcode = ProcessPTEvents(decoder, errcode)) < 0) {
+        AppendError(decoded_thread, make_error<IntelPTError>(errcode),
+                    tsc_info);
         break;
       }
+
+      // We refresh the TSC that might have changed after processing the events.
+      // See
+      // https://github.com/intel/libipt/blob/master/doc/man/pt_evt_next.3.md
+      RefreshTscInfo(tsc_info, decoder, decoded_thread);
 
       pt_insn insn;
-      errcode = pt_insn_next(&decoder, &insn, sizeof(insn));
-      if (errcode == -pte_eos)
-        break;
-
-      if (errcode < 0) {
-        decoded_thread_sp->AppendError(
-            make_error<IntelPTError>(errcode, insn.ip));
+      if ((errcode = pt_insn_next(&decoder, &insn, sizeof(insn))) < 0) {
+        // We signal a gap only if it's not "end of stream"
+        if (errcode != -pte_eos)
+          AppendError(decoded_thread,
+                      make_error<IntelPTError>(errcode, insn.ip), tsc_info);
         break;
       }
-
-      uint64_t time;
-      int time_error = pt_insn_time(&decoder, &time, nullptr, nullptr);
-      if (time_error == -pte_invalid) {
-        // This happens if we invoke the pt_insn_time method incorrectly,
-        // but the instruction is good though.
-        decoded_thread_sp->AppendError(
-            make_error<IntelPTError>(time_error, insn.ip));
-        decoded_thread_sp->AppendInstruction(insn);
-        break;
-      }
-
-      if (time_error == -pte_no_time) {
-        // We simply don't have time information, i.e. None of TSC, MTC or CYC
-        // was enabled.
-        decoded_thread_sp->AppendInstruction(insn);
-      } else {
-        decoded_thread_sp->AppendInstruction(insn, time);
-      }
+      AppendInstruction(decoded_thread, insn, tsc_info);
     }
   }
 }
@@ -202,7 +245,7 @@ static void DecodeInMemoryTrace(DecodedThreadSP &decoded_thread_sp,
   assert(errcode == 0);
   (void)errcode;
 
-  DecodeInstructions(*decoder, decoded_thread_sp);
+  DecodeInstructions(*decoder, *decoded_thread_sp);
   pt_insn_free_decoder(decoder);
 }
 // ---------------------------

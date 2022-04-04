@@ -1094,6 +1094,15 @@ bool IsAllocatableOrPointerObject(
       evaluate::IsObjectPointer(expr, context);
 }
 
+bool IsAllocatableDesignator(const Expr<SomeType> &expr) {
+  // Allocatable sub-objects are not themselves allocatable (9.5.3.1 NOTE 2).
+  if (const semantics::Symbol *
+      sym{UnwrapWholeSymbolOrComponentOrCoarrayRef(expr)}) {
+    return semantics::IsAllocatable(*sym);
+  }
+  return false;
+}
+
 bool MayBePassedAsAbsentOptional(
     const Expr<SomeType> &expr, FoldingContext &context) {
   const semantics::Symbol *sym{UnwrapWholeSymbolOrComponentDataRef(expr)};
