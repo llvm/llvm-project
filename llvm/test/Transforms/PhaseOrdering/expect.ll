@@ -10,7 +10,7 @@ define void @PR49336(i32 %delta, i32 %tag_type, i8* %ip) {
 ; CHECK-LABEL: @PR49336(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[DELTA:%.*]], 0
-; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END3:%.*]], !prof [[PROF0:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END3:%.*]], !prof !0
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[CMP1_NOT:%.*]] = icmp eq i32 [[TAG_TYPE:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP1_NOT]], label [[IF_END3]], label [[IF_THEN2:%.*]]
