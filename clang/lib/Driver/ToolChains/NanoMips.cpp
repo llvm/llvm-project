@@ -259,6 +259,10 @@ void NanoMips::AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
     std::string Install = getDriver().getInstalledDir();
     addSystemInclude(DriverArgs, CC1Args, Install + "/../" + Triple.str() + "/include");
 
+    // GCC's 'fixed' includes directory
+    addSystemInclude(DriverArgs, CC1Args, (GCCInstallation.getInstallPath()
+                                           + "/include-fixed"));
+
     // GCC's includes dir for multilibs
     addSystemInclude(DriverArgs, CC1Args, GCCInstallation.getInstallPath() + "/include");
   }
