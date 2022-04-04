@@ -71,8 +71,8 @@ struct ASTFileSignature : std::array<uint8_t, 20> {
     return Value;
   }
 
-  static ASTFileSignature create(StringRef Bytes) {
-    return create(Bytes.bytes_begin(), Bytes.bytes_end());
+  static ASTFileSignature create(std::array<uint8_t, 20> Bytes) {
+    return ASTFileSignature(std::move(Bytes));
   }
 
   static ASTFileSignature createDISentinel() {

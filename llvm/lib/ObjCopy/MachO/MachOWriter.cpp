@@ -570,7 +570,7 @@ void MachOWriter::writeCodeSignatureData() {
                              static_cast<ssize_t>(CodeSignature.BlockSize)));
     SHA256 Hasher;
     Hasher.update(Block);
-    StringRef Hash = Hasher.final();
+    std::array<uint8_t, 32> Hash = Hasher.final();
     assert(Hash.size() == CodeSignature.HashSize);
     memcpy(CurrHashWritePosition, Hash.data(), CodeSignature.HashSize);
     CurrHashReadPosition += CodeSignature.BlockSize;

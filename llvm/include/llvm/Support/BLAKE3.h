@@ -34,7 +34,7 @@ namespace llvm {
 template <size_t NumBytes = LLVM_BLAKE3_OUT_LEN>
 using BLAKE3Result = std::array<uint8_t, NumBytes>;
 
-/// A class that wrap the BLAKE3 algorithm.
+/// A class that wraps the BLAKE3 algorithm.
 class BLAKE3 {
 public:
   BLAKE3() { init(); }
@@ -70,6 +70,17 @@ public:
     return Result;
   }
 
+  /// Return the current output for the digested data since the last call to
+  /// init().
+  ///
+  /// Other hash functions distinguish between \p result() and \p final(), with
+  /// \p result() allowing more calls into \p update(), but there's no
+  // difference for the BLAKE3 hash function.
+  template <size_t NumBytes = LLVM_BLAKE3_OUT_LEN>
+  BLAKE3Result<NumBytes> result() {
+    return final<NumBytes>();
+  }
+
   /// Returns a BLAKE3 hash for the given data.
   template <size_t NumBytes = LLVM_BLAKE3_OUT_LEN>
   static BLAKE3Result<NumBytes> hash(ArrayRef<uint8_t> Data) {
@@ -80,6 +91,32 @@ public:
 
 private:
   llvm_blake3_hasher Hasher;
+};
+
+/// Like \p BLAKE3 but using a class-level template parameter for specifying the
+/// hash size of the \p final() and \p result() functions.
+///
+/// This is useful for using BLAKE3 as the hasher type for \p HashBuilder with
+/// non-default hash sizes.
+template <size_t NumBytes> class TruncatedBLAKE3 : public BLAKE3 {
+public:
+  /// Finalize the hasher and put the result in \p Result.
+  /// This doesn't modify the hasher itself, and it's possible to finalize again
+  /// after adding more input.
+  void final(BLAKE3Result<NumBytes> &Result) { return BLAKE3::final(Result); }
+
+  /// Finalize the hasher and return an output of any length, given in bytes.
+  /// This doesn't modify the hasher itself, and it's possible to finalize again
+  /// after adding more input.
+  BLAKE3Result<NumBytes> final() { return BLAKE3::final<NumBytes>(); }
+
+  /// Return the current output for the digested data since the last call to
+  /// init().
+  ///
+  /// Other hash functions distinguish between \p result() and \p final(), with
+  /// \p result() allowing more calls into \p update(), but there's no
+  // difference for the BLAKE3 hash function.
+  BLAKE3Result<NumBytes> result() { return BLAKE3::result<NumBytes>(); }
 };
 
 } // namespace llvm

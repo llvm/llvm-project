@@ -152,7 +152,7 @@ template <size_t NumBytes = LLVM_BLAKE3_OUT_LEN>
 void BLAKE3::final(BLAKE3Result<NumBytes> &Result);
 
 template <size_t NumBytes = LLVM_BLAKE3_OUT_LEN>
-BLAKE3Result<NumBytes> final();
+BLAKE3Result<NumBytes> BLAKE3::final();
 ```
 ```c
 void llvm_blake3_hasher_finalize(

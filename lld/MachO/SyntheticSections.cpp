@@ -1202,7 +1202,7 @@ void CodeSignatureSection::writeHashes(uint8_t *buf) const {
                     std::min(codeEnd - code, static_cast<ssize_t>(blockSize)));
     SHA256 hasher;
     hasher.update(block);
-    StringRef hash = hasher.final();
+    std::array<uint8_t, 32> hash = hasher.final();
     assert(hash.size() == hashSize);
     memcpy(hashes, hash.data(), hashSize);
     code += blockSize;

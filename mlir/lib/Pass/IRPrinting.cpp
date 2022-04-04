@@ -66,7 +66,7 @@ private:
         ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(&data), sizeof(T)));
   }
 
-  SmallString<20> hash;
+  std::array<uint8_t, 20> hash;
 };
 
 //===----------------------------------------------------------------------===//
