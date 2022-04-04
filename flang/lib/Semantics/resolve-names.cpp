@@ -3919,7 +3919,9 @@ bool DeclarationVisitor::Pre(const parser::IntrinsicStmt &x) {
   HandleAttributeStmt(Attr::INTRINSIC, x.v);
   for (const auto &name : x.v) {
     auto &symbol{DEREF(FindSymbol(name))};
-    if (!ConvertToProcEntity(symbol)) {
+    if (symbol.has<GenericDetails>()) {
+      // Generic interface is extending intrinsic; ok
+    } else if (!ConvertToProcEntity(symbol)) {
       SayWithDecl(
           name, symbol, "INTRINSIC attribute not allowed on '%s'"_err_en_US);
     } else if (symbol.attrs().test(Attr::EXTERNAL)) { // C840
