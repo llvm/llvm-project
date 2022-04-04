@@ -2036,8 +2036,18 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
     // If inbounds, we can choose an out-of-bounds pointer as a base pointer.
     return InBounds ? PoisonValue::get(GEPTy) : UndefValue::get(GEPTy);
 
-  Constant *Idx0 = cast<Constant>(Idxs[0]);
-  if (Idxs.size() == 1 && (Idx0->isNullValue() || isa<UndefValue>(Idx0)))
+  auto IsNoOp = [&]() {
+    // For non-opaque pointers having multiple indices will change the result
+    // type of the GEP.
+    if (!C->getType()->getScalarType()->isOpaquePointerTy() && Idxs.size() != 1)
+      return false;
+
+    return all_of(Idxs, [](Value *Idx) {
+      Constant *IdxC = cast<Constant>(Idx);
+      return IdxC->isNullValue() || isa<UndefValue>(IdxC);
+    });
+  };
+  if (IsNoOp())
     return GEPTy->isVectorTy() && !C->getType()->isVectorTy()
                ? ConstantVector::getSplat(
                      cast<VectorType>(GEPTy)->getElementCount(), C)
@@ -2090,6 +2100,7 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
     //   i32* getelementptr ([3 x i32]* %X, i64 0, i64 0)
     //
     // Don't fold if the cast is changing address spaces.
+    Constant *Idx0 = cast<Constant>(Idxs[0]);
     if (CE->isCast() && Idxs.size() > 1 && Idx0->isNullValue()) {
       PointerType *SrcPtrTy =
         dyn_cast<PointerType>(CE->getOperand(0)->getType());
