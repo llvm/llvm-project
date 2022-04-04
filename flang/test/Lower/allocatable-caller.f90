@@ -36,25 +36,21 @@ subroutine test_char_scalar_deferred_call()
   end subroutine
   end interface
   character(:), allocatable :: x
-  character(10), allocatable :: x2
-  ! CHECK-DAG: %[[box:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>> {{{.*}}uniq_name = "_QFtest_char_scalar_deferred_callEx"}
-  ! CHECK-DAG: %[[box2:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,10>>> {{{.*}}uniq_name = "_QFtest_char_scalar_deferred_callEx2"}
+  ! CHECK: %[[box:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>> {{{.*}}uniq_name = "_QFtest_char_scalar_deferred_callEx"}
   call test_char_scalar_deferred(x)
   ! CHECK: fir.call @_QPtest_char_scalar_deferred(%[[box]]) : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>) -> ()
-  call test_char_scalar_deferred(x2)
-  ! CHECK: %[[box2cast:.*]] = fir.convert %[[box2]] : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,10>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
-  ! CHECK: fir.call @_QPtest_char_scalar_deferred(%[[box2cast]]) : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>) -> ()
 end subroutine
 
 ! CHECK-LABEL: func @_QPtest_char_scalar_explicit_call(
-subroutine test_char_scalar_explicit_call()
+subroutine test_char_scalar_explicit_call(n)
+  integer :: n
   interface
   subroutine test_char_scalar_explicit(x)
     character(10), allocatable :: x
   end subroutine
   end interface
   character(10), allocatable :: x
-  character(:), allocatable :: x2
+  character(n), allocatable :: x2
   ! CHECK-DAG: %[[box:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,10>>> {{{.*}}uniq_name = "_QFtest_char_scalar_explicit_callEx"}
   ! CHECK-DAG: %[[box2:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>> {{{.*}}uniq_name = "_QFtest_char_scalar_explicit_callEx2"}
   call test_char_scalar_explicit(x)
@@ -72,25 +68,21 @@ subroutine test_char_array_deferred_call()
   end subroutine
   end interface
   character(:), allocatable :: x(:)
-  character(10), allocatable :: x2(:)
-  ! CHECK-DAG: %[[box:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>> {{{.*}}uniq_name = "_QFtest_char_array_deferred_callEx"}
-  ! CHECK-DAG: %[[box2:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>> {{{.*}}uniq_name = "_QFtest_char_array_deferred_callEx2"}
+  ! CHECK: %[[box:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>> {{{.*}}uniq_name = "_QFtest_char_array_deferred_callEx"}
   call test_char_array_deferred(x)
   ! CHECK: fir.call @_QPtest_char_array_deferred(%[[box]]) : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>) -> ()
-  call test_char_array_deferred(x2)
-  ! CHECK: %[[box2cast:.*]] = fir.convert %[[box2]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
-  ! CHECK: fir.call @_QPtest_char_array_deferred(%[[box2cast]]) : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>) -> ()
 end subroutine
 
 ! CHECK-LABEL: func @_QPtest_char_array_explicit_call(
-subroutine test_char_array_explicit_call()
+subroutine test_char_array_explicit_call(n)
+  integer :: n
   interface
   subroutine test_char_array_explicit(x)
     character(10), allocatable :: x(:)
   end subroutine
   end interface
   character(10), allocatable :: x(:)
-  character(:), allocatable :: x2(:)
+  character(n), allocatable :: x2(:)
   ! CHECK-DAG: %[[box:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>> {{{.*}}uniq_name = "_QFtest_char_array_explicit_callEx"}
   ! CHECK-DAG: %[[box2:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>> {{{.*}}uniq_name = "_QFtest_char_array_explicit_callEx2"}
   call test_char_array_explicit(x)
