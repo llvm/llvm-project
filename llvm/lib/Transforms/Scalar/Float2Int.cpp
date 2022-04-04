@@ -235,14 +235,17 @@ void Float2IntPass::walkBackwards() {
   }
 }
 
-// Calculate result range from operand ranges
-ConstantRange Float2IntPass::calcRange(Instruction *I) {
+// Calculate result range from operand ranges.
+// Return None if the range cannot be calculated yet.
+Optional<ConstantRange> Float2IntPass::calcRange(Instruction *I) {
   SmallVector<ConstantRange, 4> OpRanges;
   for (Value *O : I->operands()) {
     if (Instruction *OI = dyn_cast<Instruction>(O)) {
-      assert(SeenInsts.find(OI) != SeenInsts.end() &&
-             "def not seen before use!");
-      OpRanges.push_back(SeenInsts.find(OI)->second);
+      auto OpIt = SeenInsts.find(OI);
+      assert(OpIt != SeenInsts.end() && "def not seen before use!");
+      if (OpIt->second == unknownRange())
+        return None; // Wait until operand range has been calculated.
+      OpRanges.push_back(OpIt->second);
     } else if (ConstantFP *CF = dyn_cast<ConstantFP>(O)) {
       // Work out if the floating point number can be losslessly represented
       // as an integer.
@@ -324,12 +327,19 @@ ConstantRange Float2IntPass::calcRange(Instruction *I) {
 // Walk forwards down the list of seen instructions, so we visit defs before
 // uses.
 void Float2IntPass::walkForwards() {
-  for (auto &It : reverse(SeenInsts)) {
-    if (It.second != unknownRange())
-      continue;
+  std::deque<Instruction *> Worklist;
+  for (const auto &Pair : SeenInsts)
+    if (Pair.second == unknownRange())
+      Worklist.push_back(Pair.first);
 
-    Instruction *I = It.first;
-    seen(I, calcRange(I));
+  while (!Worklist.empty()) {
+    Instruction *I = Worklist.back();
+    Worklist.pop_back();
+
+    if (Optional<ConstantRange> Range = calcRange(I))
+      seen(I, *Range);
+    else
+      Worklist.push_front(I); // Reprocess later.
   }
 }
 
