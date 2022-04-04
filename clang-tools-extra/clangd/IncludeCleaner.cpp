@@ -246,14 +246,14 @@ static bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST) {
   // Headers without include guards have side effects and are not
   // self-contained, skip them.
   assert(Inc.HeaderID);
-  auto FE = AST.getSourceManager().getFileManager().getFile(
+  auto FE = AST.getSourceManager().getFileManager().getFileRef(
       AST.getIncludeStructure().getRealPath(
           static_cast<IncludeStructure::HeaderID>(*Inc.HeaderID)));
   assert(FE);
   if (!AST.getPreprocessor().getHeaderSearchInfo().isFileMultipleIncludeGuarded(
-          *FE)) {
+          &FE->getFileEntry())) {
     dlog("{0} doesn't have header guard and will not be considered unused",
-         (*FE)->getName());
+         FE->getName());
     return false;
   }
   return true;
@@ -418,7 +418,7 @@ std::vector<Diag> issueUnusedIncludesDiagnostics(ParsedAST &AST,
   std::vector<Diag> Result;
   std::string FileName =
       AST.getSourceManager()
-          .getFileEntryForID(AST.getSourceManager().getMainFileID())
+          .getFileEntryRefForID(AST.getSourceManager().getMainFileID())
           ->getName()
           .str();
   for (const auto *Inc : computeUnusedIncludes(AST)) {
