@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_STDIO_PRINTF_FILES_WRITER_H
-#define LLVM_LIBC_SRC_STDIO_PRINTF_FILES_WRITER_H
+#ifndef LLVM_LIBC_SRC_STDIO_PRINTF_CORE_WRITER_H
+#define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_WRITER_H
 
 #include <stddef.h>
 
@@ -48,4 +48,4 @@ public:
 } // namespace printf_core
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_STDIO_PRINTF_FILES_WRITER_H
+#endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_WRITER_H

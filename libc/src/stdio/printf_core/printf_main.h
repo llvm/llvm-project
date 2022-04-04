@@ -6,22 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_STDIO_PRINTF_FILES_PRINTF_MAIN_H
-#define LLVM_LIBC_SRC_STDIO_PRINTF_FILES_PRINTF_MAIN_H
+#ifndef LLVM_LIBC_SRC_STDIO_PRINTF_CORE_PRINTF_MAIN_H
+#define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_PRINTF_MAIN_H
 
-#include "src/stdio/printf_files/converter.h"
-#include "src/stdio/printf_files/core_structs.h"
-#include "src/stdio/printf_files/parser.h"
-#include "src/stdio/printf_files/writer.h"
+#include "src/__support/arg_list.h"
+#include "src/stdio/printf_core/converter.h"
+#include "src/stdio/printf_core/core_structs.h"
+#include "src/stdio/printf_core/parser.h"
+#include "src/stdio/printf_core/writer.h"
 
-#include <stdarg.h>
 #include <stddef.h>
 
 namespace __llvm_libc {
 namespace printf_core {
 
-int printf_main(Writer *writer, const char *__restrict str, va_list vlist) {
-  Parser parser(str, &vlist);
+int printf_main(Writer *writer, const char *__restrict str,
+                internal::ArgList args) {
+  Parser parser(str, args);
   Converter converter(writer);
 
   for (FormatSection cur_section = parser.get_next_section();
@@ -38,4 +39,4 @@ int printf_main(Writer *writer, const char *__restrict str, va_list vlist) {
 } // namespace printf_core
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_STDIO_PRINTF_FILES_PRINTF_MAIN_H
+#endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_PRINTF_MAIN_H

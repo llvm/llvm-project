@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_STDIO_PRINTF_FILES_CORE_STRUCTS_H
-#define LLVM_LIBC_SRC_STDIO_PRINTF_FILES_CORE_STRUCTS_H
+#ifndef LLVM_LIBC_SRC_STDIO_PRINTF_CORE_CORE_STRUCTS_H
+#define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_CORE_STRUCTS_H
 
 #include <inttypes.h>
 #include <stddef.h>
@@ -15,33 +15,20 @@
 namespace __llvm_libc {
 namespace printf_core {
 
+// These length modifiers match the length modifiers in the format string, which
+// is why they are formatted differently from the rest of the file.
 enum class LengthModifier { hh, h, l, ll, j, z, t, L, none };
-enum VariableType : uint8_t {
-  // Types
 
-  Void = 0x00,
-  Char = 0x01,
-  // WChar = 0x02,
-  // WInt = 0x03,
-  Short = 0x04,
-  Int = 0x05,
-  Long = 0x06,
-  LLong = 0x07,
-  Intmax = 0x08,
-  Size = 0x09,
-  Ptrdiff = 0x0a,
-  Double = 0x0b,
-  LDouble = 0x0c,
+enum FormatFlags : uint8_t {
+  LEFT_JUSTIFIED = 0x01, // -
+  FORCE_SIGN = 0x02,     // +
+  SPACE_PREFIX = 0x04,   // space
+  ALTERNATE_FORM = 0x08, // #
+  LEADING_ZEROES = 0x10, // 0
 
-  // Modifiers
-
-  Signed = 0x40,
-  Pointer = 0x80,
-
-  // Masks
-
-  Type_Mask = 0x3f,
-  Modifier_Mask = 0xc,
+  // These flags come from the GNU extensions which aren't yet implemented.
+  //  group_decimals = 0x20, // '
+  //  locale_digits = 0x40,  // I
 };
 
 struct FormatSection {
@@ -51,14 +38,10 @@ struct FormatSection {
   size_t raw_len;
 
   // Format Specifier Values
-  bool left_justified;
-  bool force_sign;
-  bool space_prefix;
-  bool alt_form;
-  bool leading_zeroes;
-  LengthModifier length_modifier;
-  int min_width;
-  int precision;
+  FormatFlags flags = FormatFlags(0);
+  LengthModifier length_modifier = LengthModifier::none;
+  int min_width = 0;
+  int precision = -1;
 
   __uint128_t conv_val_raw; // Needs to be large enough to hold a long double.
   void *conv_val_ptr;
@@ -69,4 +52,4 @@ struct FormatSection {
 } // namespace printf_core
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_STDIO_PRINTF_FILES_CORE_STRUCTS_H
+#endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_CORE_STRUCTS_H

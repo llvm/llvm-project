@@ -1,3 +1,5 @@
+add_subdirectory(printf_core)
+
 add_entrypoint_object(
   fopen
   SRCS
