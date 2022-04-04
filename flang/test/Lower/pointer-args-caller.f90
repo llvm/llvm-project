@@ -46,9 +46,10 @@ subroutine test_ptr_to_char_array_ptr(p)
 end subroutine
 
 ! CHECK-LABEL: func @_QMcall_defsPtest_ptr_to_non_deferred_char_array_ptr(
-! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>> {fir.bindc_name = "p"}) {
-subroutine test_ptr_to_non_deferred_char_array_ptr(p)
-  character(:), pointer :: p(:)
+! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>> {fir.bindc_name = "p"}
+subroutine test_ptr_to_non_deferred_char_array_ptr(p, n)
+  integer :: n
+  character(n), pointer :: p(:)
 ! CHECK:  %[[VAL_1:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,10>>>>>
 ! CHECK:  fir.call @_QPnon_deferred_char_array_ptr(%[[VAL_1]]) : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,10>>>>>) -> ()
   call non_deferred_char_array_ptr(p)
