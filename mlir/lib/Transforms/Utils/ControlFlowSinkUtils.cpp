@@ -37,7 +37,7 @@ public:
          function_ref<void(Operation *, Region *)> moveIntoRegion,
          DominanceInfo &domInfo)
       : shouldMoveIntoRegion(shouldMoveIntoRegion),
-        moveIntoRegion(moveIntoRegion), domInfo(domInfo), numSunk(0) {}
+        moveIntoRegion(moveIntoRegion), domInfo(domInfo) {}
 
   /// Given a list of regions, find operations to sink and sink them. Return the
   /// number of operations sunk.
