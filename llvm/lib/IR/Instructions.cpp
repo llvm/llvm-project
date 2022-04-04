@@ -372,6 +372,27 @@ bool CallBase::hasFnAttrOnCalledFunction(StringRef Kind) const {
   return false;
 }
 
+template <typename AK>
+Attribute CallBase::getFnAttrOnCalledFunction(AK Kind) const {
+  // Operand bundles override attributes on the called function, but don't
+  // override attributes directly present on the call instruction.
+  if (isFnAttrDisallowedByOpBundle(Kind))
+    return Attribute();
+  Value *V = getCalledOperand();
+  if (auto *CE = dyn_cast<ConstantExpr>(V))
+    if (CE->getOpcode() == BitCast)
+      V = CE->getOperand(0);
+
+  if (auto *F = dyn_cast<Function>(V))
+    return F->getAttributes().getFnAttr(Kind);
+
+  return Attribute();
+}
+
+template Attribute
+CallBase::getFnAttrOnCalledFunction(Attribute::AttrKind Kind) const;
+template Attribute CallBase::getFnAttrOnCalledFunction(StringRef Kind) const;
+
 void CallBase::getOperandBundlesAsDefs(
     SmallVectorImpl<OperandBundleDef> &Defs) const {
   for (unsigned i = 0, e = getNumOperandBundles(); i != e; ++i)

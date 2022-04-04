@@ -52,3 +52,13 @@ subroutine s3
   !CHECK: d3 size=24 offset=40:
   type(t(4, 20)) :: x4
 end
+
+subroutine s4
+  type t(k)
+    integer, kind :: k
+    character(len=k) :: c
+  end type
+  type(t(7)) :: x4
+  !CHECK: DerivedType scope: size=7 alignment=1 instantiation of t(k=7_4)
+  !CHECK: c size=7 offset=0: ObjectEntity type: CHARACTER(7_4,1)
+end subroutine

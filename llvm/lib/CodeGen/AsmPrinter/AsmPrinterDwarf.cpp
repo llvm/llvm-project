@@ -273,6 +273,12 @@ void AsmPrinter::emitCFIInstruction(const MCCFIInstruction &Inst) const {
   case MCCFIInstruction::OpUndefined:
     OutStreamer->emitCFIUndefined(Inst.getRegister());
     break;
+  case MCCFIInstruction::OpRememberState:
+    OutStreamer->emitCFIRememberState();
+    break;
+  case MCCFIInstruction::OpRestoreState:
+    OutStreamer->emitCFIRestoreState();
+    break;
   }
 }
 

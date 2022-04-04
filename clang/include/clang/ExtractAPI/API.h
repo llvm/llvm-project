@@ -380,6 +380,7 @@ private:
   virtual void anchor();
 };
 
+/// This holds information associated with macro definitions.
 struct MacroDefinitionRecord : APIRecord {
   MacroDefinitionRecord(StringRef Name, StringRef USR, PresumedLoc Loc,
                         DeclarationFragments Declaration,

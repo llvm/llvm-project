@@ -84,12 +84,22 @@ syn match   mlirNumber /x\s*\zs-\?\d\+\ze\s*x/
 syn match   mlirFloat  /-\?\<\d\+\.\d*\(e[+-]\d\+\)\?\>/
 syn match   mlirFloat  /\<0x\x\+\>/
 syn keyword mlirBoolean true false
-syn match   mlirComment /\/\/.*$/
+" Spell checking is enabled only in comments by default.
+syn match   mlirComment /\/\/.*$/ contains=@Spell
 syn region  mlirString start=/"/ skip=/\\"/ end=/"/
 syn match   mlirLabel /[-a-zA-Z$._][-a-zA-Z$._0-9]*:/
+" Prefixed identifiers usually used for ssa values and symbols.
 syn match   mlirIdentifier /[%@][a-zA-Z$._-][a-zA-Z0-9$._-]*/
-syn match   mlirIdentifier /[%@!]\d\+\>/
-syn match mlirMapSetOutline "#.*$"
+syn match   mlirIdentifier /[%@]\d\+\>/
+" Prefixed identifiers usually used for blocks.
+syn match   mlirBlockIdentifier /\^[a-zA-Z$._-][a-zA-Z0-9$._-]*/
+syn match   mlirBlockIdentifier /\^\d\+\>/
+" Prefixed identifiers usually used for types.
+syn match   mlirTypeIdentifier /![a-zA-Z$._-][a-zA-Z0-9$._-]*/
+syn match   mlirTypeIdentifier /!\d\+\>/
+" Prefixed identifiers usually used for attribute aliases and result numbers.
+syn match   mlirAttrIdentifier /#[a-zA-Z$._-][a-zA-Z0-9$._-]*/
+syn match   mlirAttrIdentifier /#\d\+\>/
 
 " Syntax-highlight lit test commands and bug numbers.
 syn match  mlirSpecialComment /\/\/\s*RUN:.*$/
@@ -111,7 +121,6 @@ if version >= 508 || !exists("did_c_syn_inits")
 
   HiLink mlirType Type
   HiLink mlirOps Statement
-  HiLink mlirMapSetOutline PreProc
   HiLink mlirNumber Number
   HiLink mlirComment Comment
   HiLink mlirString String
@@ -122,6 +131,9 @@ if version >= 508 || !exists("did_c_syn_inits")
   HiLink mlirConstant Constant
   HiLink mlirSpecialComment SpecialComment
   HiLink mlirIdentifier Identifier
+  HiLink mlirBlockIdentifier Label
+  HiLink mlirTypeIdentifier Type
+  HiLink mlirAttrIdentifier PreProc
 
   delcommand HiLink
 endif

@@ -594,7 +594,7 @@ protected:
     unsigned : NumExprBits;
 
     /// The kind of source location builtin represented by the SourceLocExpr.
-    /// Ex. __builtin_LINE, __builtin_FUNCTION, ect.
+    /// Ex. __builtin_LINE, __builtin_FUNCTION, etc.
     unsigned Kind : 3;
   };
 
@@ -1244,7 +1244,7 @@ public:
   }
 
   /// Child Iterators: All subclasses must implement 'children'
-  /// to permit easy iteration over the substatements/subexpessions of an
+  /// to permit easy iteration over the substatements/subexpressions of an
   /// AST node.  This permits easy iteration over all nodes in the AST.
   using child_iterator = StmtIterator;
   using const_child_iterator = ConstStmtIterator;

@@ -192,6 +192,8 @@ template <typename A> bool IsActuallyConstant(const A &x) {
 }
 
 template bool IsActuallyConstant(const Expr<SomeType> &);
+template bool IsActuallyConstant(const Expr<SomeInteger> &);
+template bool IsActuallyConstant(const Expr<SubscriptInteger> &);
 
 // Object pointer initialization checking predicate IsInitialDataTarget().
 // This code determines whether an expression is allowable as the static

@@ -113,7 +113,7 @@ define <8 x i32> @t12(<8 x i32> %a, <8 x i32> %b)  {
 
 define <2 x i64> @t13(<2 x i64> %a, <2 x i64> %b)  {
 ; THROUGHPUT-LABEL: 't13'
-; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %1 = mul nsw <2 x i64> %a, %b
+; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %1 = mul nsw <2 x i64> %a, %b
 ; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i64> %1
 ;
   %1 = mul nsw <2 x i64> %a, %b
@@ -122,7 +122,7 @@ define <2 x i64> @t13(<2 x i64> %a, <2 x i64> %b)  {
 
 define <4 x i64> @t14(<4 x i64> %a, <4 x i64> %b)  {
 ; THROUGHPUT-LABEL: 't14'
-; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %1 = mul nsw <4 x i64> %a, %b
+; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %1 = mul nsw <4 x i64> %a, %b
 ; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i64> %1
 ;
   %1 = mul nsw <4 x i64> %a, %b
