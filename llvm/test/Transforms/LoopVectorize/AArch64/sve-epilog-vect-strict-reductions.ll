@@ -60,15 +60,15 @@ define float @fadd_strict(float* noalias nocapture readonly %a, i64 %n) {
 ; CHECK-NEXT:    [[N_VEC5:%.*]] = sub i64 [[N]], [[N_MOD_VF4]]
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; CHECK:       vec.epilog.vector.body:
-; CHECK-NEXT:    [[INDEX7:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT10:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT10:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI8:%.*]] = phi float [ [[BC_MERGE_RDX]], [[VEC_EPILOG_PH]] ], [ [[TMP27:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP23:%.*]] = add i64 [[INDEX7]], 0
+; CHECK-NEXT:    [[TMP23:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[TMP23]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds float, float* [[TMP24]], i32 0
 ; CHECK-NEXT:    [[TMP26:%.*]] = bitcast float* [[TMP25]] to <2 x float>*
 ; CHECK-NEXT:    [[WIDE_LOAD9:%.*]] = load <2 x float>, <2 x float>* [[TMP26]], align 4
 ; CHECK-NEXT:    [[TMP27]] = call float @llvm.vector.reduce.fadd.v2f32(float [[VEC_PHI8]], <2 x float> [[WIDE_LOAD9]])
-; CHECK-NEXT:    [[INDEX_NEXT10]] = add nuw i64 [[INDEX7]], 2
+; CHECK-NEXT:    [[INDEX_NEXT10]] = add nuw i64 [[OFFSET_IDX]], 2
 ; CHECK-NEXT:    [[TMP28:%.*]] = icmp eq i64 [[INDEX_NEXT10]], [[N_VEC5]]
 ; CHECK-NEXT:    br i1 [[TMP28]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
@@ -86,7 +86,7 @@ define float @fadd_strict(float* noalias nocapture readonly %a, i64 %n) {
 ; CHECK-NEXT:    [[ADD]] = fadd float [[TMP29]], [[SUM_07]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    [[ADD_LCSSA3:%.*]] = phi float [ [[ADD]], [[FOR_BODY]] ], [ [[TMP27]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    br label [[FOR_END]]

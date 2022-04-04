@@ -14,7 +14,7 @@ define void @test1(i32 %n) #0 {
 ; CHECK:       .lr.ph:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[DOTLR_PH]] ], [ 0, [[DOTLR_PH_PREHEADER]] ]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    br i1 true, label [[DOT_CRIT_EDGE_LOOPEXIT:%.*]], label [[DOTLR_PH]], !llvm.loop !0
+; CHECK-NEXT:    br i1 true, label [[DOT_CRIT_EDGE_LOOPEXIT:%.*]], label [[DOTLR_PH]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       ._crit_edge.loopexit:
 ; CHECK-NEXT:    br label [[DOT_CRIT_EDGE]]
 ; CHECK:       ._crit_edge:

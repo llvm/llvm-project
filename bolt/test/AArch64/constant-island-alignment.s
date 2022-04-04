@@ -5,7 +5,7 @@
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown \
 # RUN:   %s -o %t.o
 # RUN: %clang %cflags -fPIC -pie %t.o -o %t.exe -Wl,-q \
-# RUN:    -nostartfiles -nodefaultlibs -lc
+# RUN:    -nostartfiles -nodefaultlibs -Wl,-z,notext
 # RUN: llvm-bolt %t.exe -o %t.bolt -use-old-text=0 -lite=0 -trap-old-code
 # RUN: llvm-objdump -d --disassemble-symbols='$d' %t.bolt | FileCheck %s
 
@@ -21,7 +21,7 @@ dummy:
 .type exitOk, %function
 exitOk:
   mov x0, #0
-  bl exit
+  ret
 
 .global _start
 .type _start, %function
@@ -29,8 +29,8 @@ _start:
   adrp x0, .Lci
   ldr x0, [x0, #:lo12:.Lci]
   blr x0
-  mov x1, #1
-  bl exit
+  mov x0, #1
+  ret
   nop
 # CHECK: {{0|8}} <$d>:
 .Lci:
