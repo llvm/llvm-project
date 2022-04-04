@@ -1753,15 +1753,13 @@ int testTypeID(MlirContext ctx) {
     return 2;
   }
 
-  if (mlirTypeIDEqual(i32ID, f32ID) ||
-      mlirTypeIDHashValue(i32ID) == mlirTypeIDHashValue(f32ID)) {
+  if (mlirTypeIDEqual(i32ID, f32ID)) {
     fprintf(stderr,
             "ERROR: Expected integer type id to not equal float type id\n");
     return 3;
   }
 
-  if (mlirTypeIDEqual(i32ID, i32AttrID) ||
-      mlirTypeIDHashValue(i32ID) == mlirTypeIDHashValue(i32AttrID)) {
+  if (mlirTypeIDEqual(i32ID, i32AttrID)) {
     fprintf(stderr, "ERROR: Expected integer type id to not equal integer "
                     "attribute type id\n");
     return 4;

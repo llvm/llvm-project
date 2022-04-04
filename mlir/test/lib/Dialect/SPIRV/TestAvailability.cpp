@@ -23,6 +23,8 @@ namespace {
 /// A pass for testing SPIR-V op availability.
 struct PrintOpAvailability
     : public PassWrapper<PrintOpAvailability, OperationPass<FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(PrintOpAvailability)
+
   void runOnOperation() override;
   StringRef getArgument() const final { return "test-spirv-op-availability"; }
   StringRef getDescription() const final {
@@ -105,6 +107,8 @@ namespace {
 /// A pass for testing SPIR-V op availability.
 struct ConvertToTargetEnv
     : public PassWrapper<ConvertToTargetEnv, OperationPass<FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ConvertToTargetEnv)
+
   StringRef getArgument() const override { return "test-spirv-target-env"; }
   StringRef getDescription() const override {
     return "Test SPIR-V target environment";

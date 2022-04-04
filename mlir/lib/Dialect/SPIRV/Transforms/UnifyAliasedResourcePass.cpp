@@ -103,6 +103,8 @@ namespace {
 /// inside the struct.
 class ResourceAliasAnalysis {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ResourceAliasAnalysis)
+
   explicit ResourceAliasAnalysis(Operation *);
 
   /// Returns true if the given `op` can be rewritten to use a canonical

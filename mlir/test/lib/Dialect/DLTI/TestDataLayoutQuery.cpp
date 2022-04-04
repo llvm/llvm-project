@@ -21,6 +21,8 @@ namespace {
 /// result types.
 struct TestDataLayoutQuery
     : public PassWrapper<TestDataLayoutQuery, OperationPass<FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestDataLayoutQuery)
+
   StringRef getArgument() const final { return "test-data-layout-query"; }
   StringRef getDescription() const final { return "Test data layout queries"; }
   void runOnOperation() override {
