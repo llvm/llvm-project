@@ -48,6 +48,8 @@ extern template bool IsScopeInvariantExpr(const Expr<SubscriptInteger> &);
 // expressions, including BOZ literals.
 template <typename A> bool IsActuallyConstant(const A &);
 extern template bool IsActuallyConstant(const Expr<SomeType> &);
+extern template bool IsActuallyConstant(const Expr<SomeInteger> &);
+extern template bool IsActuallyConstant(const Expr<SubscriptInteger> &);
 
 // Checks whether an expression is an object designator with
 // constant addressing and no vector-valued subscript.
