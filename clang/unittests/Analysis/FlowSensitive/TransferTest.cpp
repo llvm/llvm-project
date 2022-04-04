@@ -2368,6 +2368,131 @@ TEST_F(TransferTest, AssignFromBoolNegation) {
               });
 }
 
+TEST_F(TransferTest, BuiltinExpect) {
+  std::string Code = R"(
+    void target(long Foo) {
+      long Bar = __builtin_expect(Foo, true);
+      /*[[p]]*/
+    }
+  )";
+  runDataflow(Code,
+              [](llvm::ArrayRef<
+                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                     Results,
+                 ASTContext &ASTCtx) {
+                ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+                const auto &Env = Results[0].second.Env;
+
+                const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+                ASSERT_THAT(FooDecl, NotNull());
+
+                const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
+                ASSERT_THAT(BarDecl, NotNull());
+
+                EXPECT_EQ(Env.getValue(*FooDecl, SkipPast::None),
+                          Env.getValue(*BarDecl, SkipPast::None));
+              });
+}
+
+TEST_F(TransferTest, BuiltinUnreachable) {
+  std::string Code = R"(
+    void target(bool Foo) {
+      bool Bar = false;
+      if (Foo)
+        Bar = Foo;
+      else
+        __builtin_unreachable();
+      (void)0;
+      /*[[p]]*/
+    }
+  )";
+  runDataflow(Code,
+              [](llvm::ArrayRef<
+                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                     Results,
+                 ASTContext &ASTCtx) {
+                ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+                const auto &Env = Results[0].second.Env;
+
+                const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+                ASSERT_THAT(FooDecl, NotNull());
+
+                const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
+                ASSERT_THAT(BarDecl, NotNull());
+
+                // `__builtin_unreachable` promises that the code is
+                // unreachable, so the compiler treats the "then" branch as the
+                // only possible predecessor of this statement.
+                EXPECT_EQ(Env.getValue(*FooDecl, SkipPast::None),
+                          Env.getValue(*BarDecl, SkipPast::None));
+              });
+}
+
+TEST_F(TransferTest, BuiltinTrap) {
+  std::string Code = R"(
+    void target(bool Foo) {
+      bool Bar = false;
+      if (Foo)
+        Bar = Foo;
+      else
+        __builtin_trap();
+      (void)0;
+      /*[[p]]*/
+    }
+  )";
+  runDataflow(Code,
+              [](llvm::ArrayRef<
+                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                     Results,
+                 ASTContext &ASTCtx) {
+                ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+                const auto &Env = Results[0].second.Env;
+
+                const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+                ASSERT_THAT(FooDecl, NotNull());
+
+                const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
+                ASSERT_THAT(BarDecl, NotNull());
+
+                // `__builtin_trap` ensures program termination, so only the
+                // "then" branch is a predecessor of this statement.
+                EXPECT_EQ(Env.getValue(*FooDecl, SkipPast::None),
+                          Env.getValue(*BarDecl, SkipPast::None));
+              });
+}
+
+TEST_F(TransferTest, BuiltinDebugTrap) {
+  std::string Code = R"(
+    void target(bool Foo) {
+      bool Bar = false;
+      if (Foo)
+        Bar = Foo;
+      else
+        __builtin_debugtrap();
+      (void)0;
+      /*[[p]]*/
+    }
+  )";
+  runDataflow(Code,
+              [](llvm::ArrayRef<
+                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                     Results,
+                 ASTContext &ASTCtx) {
+                ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+                const auto &Env = Results[0].second.Env;
+
+                const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+                ASSERT_THAT(FooDecl, NotNull());
+
+                const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
+                ASSERT_THAT(BarDecl, NotNull());
+
+                // `__builtin_debugtrap` doesn't ensure program termination.
+                EXPECT_NE(Env.getValue(*FooDecl, SkipPast::None),
+                          Env.getValue(*BarDecl, SkipPast::None));
+              });
+}
+
 TEST_F(TransferTest, StaticIntSingleVarDecl) {
   std::string Code = R"(
     void target() {

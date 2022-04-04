@@ -4,6 +4,12 @@ set(LLVM_BLAKE3_FILES
   blake3_portable.c
 )
 
+if (LLVM_DISABLE_ASSEMBLY_FILES)
+  set(CAN_USE_ASSEMBLER FALSE)
+else()
+  set(CAN_USE_ASSEMBLER TRUE)
+endif()
+
 # The BLAKE3 team recommends using the assembly versions, from the README:
 #
 # "For each of the x86 SIMD instruction sets, four versions are available:

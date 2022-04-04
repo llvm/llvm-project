@@ -1180,7 +1180,9 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
   // If any AArch64 variant, enable latest ISA with any optional
   // extensions like MTE.
   if (triple.isAArch64()) {
-    features_str += "+v9.3a,+mte";
+    features_str += "+v9.3a,+mte,+sm4,+sha2,+sha3,+aes,+fp16fml,+sve2-aes,+"
+                    "sve2-sm4,+sve2-sha3,+sve2-bitperm,+f32mm,+f64mm,+tme,+"
+                    "ls64,+sme,+sme-f64,+sme-i64,+spe,+rand,+brbe";
 
     if (triple.getVendor() == llvm::Triple::Apple)
       cpu = "apple-latest";
