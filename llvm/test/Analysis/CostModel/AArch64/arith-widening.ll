@@ -1585,14 +1585,14 @@ define void @extmulv2(<2 x i8> %i8, <2 x i16> %i16, <2 x i32> %i32, <2 x i64> %i
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %azl_16_64 = mul <2 x i64> %zl1_16_64, %zl2_16_64
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sw_32_64 = sext <2 x i32> %i32 to <2 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %asw_32_64 = mul <2 x i64> %i64, %sw_32_64
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sl1_32_64 = sext <2 x i32> %i32 to <2 x i64>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sl2_32_64 = sext <2 x i32> %i32 to <2 x i64>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %asl_32_64 = mul <2 x i64> %sl1_32_64, %sl2_32_64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %sl1_32_64 = sext <2 x i32> %i32 to <2 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %sl2_32_64 = sext <2 x i32> %i32 to <2 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %asl_32_64 = mul <2 x i64> %sl1_32_64, %sl2_32_64
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %zw_32_64 = zext <2 x i32> %i32 to <2 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %azw_32_64 = mul <2 x i64> %i64, %zw_32_64
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %zl1_32_64 = zext <2 x i32> %i32 to <2 x i64>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %zl2_32_64 = zext <2 x i32> %i32 to <2 x i64>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %azl_32_64 = mul <2 x i64> %zl1_32_64, %zl2_32_64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %zl1_32_64 = zext <2 x i32> %i32 to <2 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %zl2_32_64 = zext <2 x i32> %i32 to <2 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %azl_32_64 = mul <2 x i64> %zl1_32_64, %zl2_32_64
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %sw_8_16 = sext <2 x i8> %i8 to <2 x i16>
@@ -1704,13 +1704,13 @@ define void @extmulv4(<4 x i8> %i8, <4 x i16> %i16, <4 x i32> %i32, <4 x i64> %i
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %azl_8_64 = mul <4 x i64> %zl1_8_64, %zl2_8_64
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sw_16_32 = sext <4 x i16> %i16 to <4 x i32>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %asw_16_32 = mul <4 x i32> %i32, %sw_16_32
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sl1_16_32 = sext <4 x i16> %i16 to <4 x i32>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sl2_16_32 = sext <4 x i16> %i16 to <4 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %sl1_16_32 = sext <4 x i16> %i16 to <4 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %sl2_16_32 = sext <4 x i16> %i16 to <4 x i32>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %asl_16_32 = mul <4 x i32> %sl1_16_32, %sl2_16_32
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %zw_16_32 = zext <4 x i16> %i16 to <4 x i32>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %azw_16_32 = mul <4 x i32> %i32, %zw_16_32
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %zl1_16_32 = zext <4 x i16> %i16 to <4 x i32>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %zl2_16_32 = zext <4 x i16> %i16 to <4 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %zl1_16_32 = zext <4 x i16> %i16 to <4 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %zl2_16_32 = zext <4 x i16> %i16 to <4 x i32>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %azl_16_32 = mul <4 x i32> %zl1_16_32, %zl2_16_32
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %sw_16_64 = sext <4 x i16> %i16 to <4 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %asw_16_64 = mul <4 x i64> %i64, %sw_16_64
@@ -1724,14 +1724,14 @@ define void @extmulv4(<4 x i8> %i8, <4 x i16> %i16, <4 x i32> %i32, <4 x i64> %i
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %azl_16_64 = mul <4 x i64> %zl1_16_64, %zl2_16_64
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sw_32_64 = sext <4 x i32> %i32 to <4 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %asw_32_64 = mul <4 x i64> %i64, %sw_32_64
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sl1_32_64 = sext <4 x i32> %i32 to <4 x i64>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sl2_32_64 = sext <4 x i32> %i32 to <4 x i64>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %asl_32_64 = mul <4 x i64> %sl1_32_64, %sl2_32_64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %sl1_32_64 = sext <4 x i32> %i32 to <4 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %sl2_32_64 = sext <4 x i32> %i32 to <4 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %asl_32_64 = mul <4 x i64> %sl1_32_64, %sl2_32_64
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %zw_32_64 = zext <4 x i32> %i32 to <4 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %azw_32_64 = mul <4 x i64> %i64, %zw_32_64
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %zl1_32_64 = zext <4 x i32> %i32 to <4 x i64>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %zl2_32_64 = zext <4 x i32> %i32 to <4 x i64>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %azl_32_64 = mul <4 x i64> %zl1_32_64, %zl2_32_64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %zl1_32_64 = zext <4 x i32> %i32 to <4 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %zl2_32_64 = zext <4 x i32> %i32 to <4 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %azl_32_64 = mul <4 x i64> %zl1_32_64, %zl2_32_64
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %sw_8_16 = sext <4 x i8> %i8 to <4 x i16>
@@ -1813,13 +1813,13 @@ define void @extmulv8(<8 x i8> %i8, <8 x i16> %i16, <8 x i32> %i32, <8 x i64> %i
 ; CHECK-LABEL: 'extmulv8'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sw_8_16 = sext <8 x i8> %i8 to <8 x i16>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %asw_8_16 = mul <8 x i16> %i16, %sw_8_16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sl1_8_16 = sext <8 x i8> %i8 to <8 x i16>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sl2_8_16 = sext <8 x i8> %i8 to <8 x i16>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %sl1_8_16 = sext <8 x i8> %i8 to <8 x i16>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %sl2_8_16 = sext <8 x i8> %i8 to <8 x i16>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %asl_8_16 = mul <8 x i16> %sl1_8_16, %sl2_8_16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %zw_8_16 = zext <8 x i8> %i8 to <8 x i16>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %azw_8_16 = mul <8 x i16> %i16, %zw_8_16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %zl1_8_16 = zext <8 x i8> %i8 to <8 x i16>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %zl2_8_16 = zext <8 x i8> %i8 to <8 x i16>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %zl1_8_16 = zext <8 x i8> %i8 to <8 x i16>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %zl2_8_16 = zext <8 x i8> %i8 to <8 x i16>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %azl_8_16 = mul <8 x i16> %zl1_8_16, %zl2_8_16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %sw_8_32 = sext <8 x i8> %i8 to <8 x i32>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %asw_8_32 = mul <8 x i32> %i32, %sw_8_32
@@ -1843,13 +1843,13 @@ define void @extmulv8(<8 x i8> %i8, <8 x i16> %i16, <8 x i32> %i32, <8 x i64> %i
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %azl_8_64 = mul <8 x i64> %zl1_8_64, %zl2_8_64
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sw_16_32 = sext <8 x i16> %i16 to <8 x i32>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %asw_16_32 = mul <8 x i32> %i32, %sw_16_32
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sl1_16_32 = sext <8 x i16> %i16 to <8 x i32>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sl2_16_32 = sext <8 x i16> %i16 to <8 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %sl1_16_32 = sext <8 x i16> %i16 to <8 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %sl2_16_32 = sext <8 x i16> %i16 to <8 x i32>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %asl_16_32 = mul <8 x i32> %sl1_16_32, %sl2_16_32
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %zw_16_32 = zext <8 x i16> %i16 to <8 x i32>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %azw_16_32 = mul <8 x i32> %i32, %zw_16_32
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %zl1_16_32 = zext <8 x i16> %i16 to <8 x i32>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %zl2_16_32 = zext <8 x i16> %i16 to <8 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %zl1_16_32 = zext <8 x i16> %i16 to <8 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %zl2_16_32 = zext <8 x i16> %i16 to <8 x i32>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %azl_16_32 = mul <8 x i32> %zl1_16_32, %zl2_16_32
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %sw_16_64 = sext <8 x i16> %i16 to <8 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %asw_16_64 = mul <8 x i64> %i64, %sw_16_64
@@ -1863,14 +1863,14 @@ define void @extmulv8(<8 x i8> %i8, <8 x i16> %i16, <8 x i32> %i32, <8 x i64> %i
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %azl_16_64 = mul <8 x i64> %zl1_16_64, %zl2_16_64
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %sw_32_64 = sext <8 x i32> %i32 to <8 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %asw_32_64 = mul <8 x i64> %i64, %sw_32_64
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %sl1_32_64 = sext <8 x i32> %i32 to <8 x i64>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %sl2_32_64 = sext <8 x i32> %i32 to <8 x i64>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %asl_32_64 = mul <8 x i64> %sl1_32_64, %sl2_32_64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %sl1_32_64 = sext <8 x i32> %i32 to <8 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %sl2_32_64 = sext <8 x i32> %i32 to <8 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %asl_32_64 = mul <8 x i64> %sl1_32_64, %sl2_32_64
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %zw_32_64 = zext <8 x i32> %i32 to <8 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %azw_32_64 = mul <8 x i64> %i64, %zw_32_64
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %zl1_32_64 = zext <8 x i32> %i32 to <8 x i64>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %zl2_32_64 = zext <8 x i32> %i32 to <8 x i64>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %azl_32_64 = mul <8 x i64> %zl1_32_64, %zl2_32_64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %zl1_32_64 = zext <8 x i32> %i32 to <8 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %zl2_32_64 = zext <8 x i32> %i32 to <8 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %azl_32_64 = mul <8 x i64> %zl1_32_64, %zl2_32_64
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %sw_8_16 = sext <8 x i8> %i8 to <8 x i16>
@@ -1952,13 +1952,13 @@ define void @extmulv16(<16 x i8> %i8, <16 x i16> %i16, <16 x i32> %i32, <16 x i6
 ; CHECK-LABEL: 'extmulv16'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sw_8_16 = sext <16 x i8> %i8 to <16 x i16>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %asw_8_16 = mul <16 x i16> %i16, %sw_8_16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sl1_8_16 = sext <16 x i8> %i8 to <16 x i16>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sl2_8_16 = sext <16 x i8> %i8 to <16 x i16>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %sl1_8_16 = sext <16 x i8> %i8 to <16 x i16>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %sl2_8_16 = sext <16 x i8> %i8 to <16 x i16>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %asl_8_16 = mul <16 x i16> %sl1_8_16, %sl2_8_16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %zw_8_16 = zext <16 x i8> %i8 to <16 x i16>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %azw_8_16 = mul <16 x i16> %i16, %zw_8_16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %zl1_8_16 = zext <16 x i8> %i8 to <16 x i16>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %zl2_8_16 = zext <16 x i8> %i8 to <16 x i16>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %zl1_8_16 = zext <16 x i8> %i8 to <16 x i16>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %zl2_8_16 = zext <16 x i8> %i8 to <16 x i16>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %azl_8_16 = mul <16 x i16> %zl1_8_16, %zl2_8_16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %sw_8_32 = sext <16 x i8> %i8 to <16 x i32>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %asw_8_32 = mul <16 x i32> %i32, %sw_8_32
@@ -1982,13 +1982,13 @@ define void @extmulv16(<16 x i8> %i8, <16 x i16> %i16, <16 x i32> %i32, <16 x i6
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %azl_8_64 = mul <16 x i64> %zl1_8_64, %zl2_8_64
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %sw_16_32 = sext <16 x i16> %i16 to <16 x i32>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %asw_16_32 = mul <16 x i32> %i32, %sw_16_32
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %sl1_16_32 = sext <16 x i16> %i16 to <16 x i32>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %sl2_16_32 = sext <16 x i16> %i16 to <16 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %sl1_16_32 = sext <16 x i16> %i16 to <16 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %sl2_16_32 = sext <16 x i16> %i16 to <16 x i32>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %asl_16_32 = mul <16 x i32> %sl1_16_32, %sl2_16_32
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %zw_16_32 = zext <16 x i16> %i16 to <16 x i32>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %azw_16_32 = mul <16 x i32> %i32, %zw_16_32
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %zl1_16_32 = zext <16 x i16> %i16 to <16 x i32>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %zl2_16_32 = zext <16 x i16> %i16 to <16 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %zl1_16_32 = zext <16 x i16> %i16 to <16 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %zl2_16_32 = zext <16 x i16> %i16 to <16 x i32>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %azl_16_32 = mul <16 x i32> %zl1_16_32, %zl2_16_32
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %sw_16_64 = sext <16 x i16> %i16 to <16 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %asw_16_64 = mul <16 x i64> %i64, %sw_16_64
@@ -2002,14 +2002,14 @@ define void @extmulv16(<16 x i8> %i8, <16 x i16> %i16, <16 x i32> %i32, <16 x i6
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %azl_16_64 = mul <16 x i64> %zl1_16_64, %zl2_16_64
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %sw_32_64 = sext <16 x i32> %i32 to <16 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %asw_32_64 = mul <16 x i64> %i64, %sw_32_64
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %sl1_32_64 = sext <16 x i32> %i32 to <16 x i64>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %sl2_32_64 = sext <16 x i32> %i32 to <16 x i64>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %asl_32_64 = mul <16 x i64> %sl1_32_64, %sl2_32_64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %sl1_32_64 = sext <16 x i32> %i32 to <16 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %sl2_32_64 = sext <16 x i32> %i32 to <16 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %asl_32_64 = mul <16 x i64> %sl1_32_64, %sl2_32_64
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %zw_32_64 = zext <16 x i32> %i32 to <16 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %azw_32_64 = mul <16 x i64> %i64, %zw_32_64
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %zl1_32_64 = zext <16 x i32> %i32 to <16 x i64>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %zl2_32_64 = zext <16 x i32> %i32 to <16 x i64>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %azl_32_64 = mul <16 x i64> %zl1_32_64, %zl2_32_64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %zl1_32_64 = zext <16 x i32> %i32 to <16 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %zl2_32_64 = zext <16 x i32> %i32 to <16 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %azl_32_64 = mul <16 x i64> %zl1_32_64, %zl2_32_64
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %sw_8_16 = sext <16 x i8> %i8 to <16 x i16>
