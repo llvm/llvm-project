@@ -11045,14 +11045,14 @@ SDValue PPCTargetLowering::LowerATOMIC_LOAD_STORE(SDValue Op,
     SmallVector<SDValue, 4> Ops{
         N->getOperand(0),
         DAG.getConstant(Intrinsic::ppc_atomic_store_i128, dl, MVT::i32)};
-    SDValue Val = N->getOperand(2);
+    SDValue Val = N->getOperand(1);
     SDValue ValLo = DAG.getNode(ISD::TRUNCATE, dl, MVT::i64, Val);
     SDValue ValHi = DAG.getNode(ISD::SRL, dl, MVT::i128, Val,
                                 DAG.getConstant(64, dl, MVT::i32));
     ValHi = DAG.getNode(ISD::TRUNCATE, dl, MVT::i64, ValHi);
     Ops.push_back(ValLo);
     Ops.push_back(ValHi);
-    Ops.push_back(N->getOperand(1));
+    Ops.push_back(N->getOperand(2));
     return DAG.getMemIntrinsicNode(ISD::INTRINSIC_VOID, dl, Tys, Ops, MemVT,
                                    N->getMemOperand());
   }

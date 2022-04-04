@@ -806,23 +806,6 @@ multiclass DSWritePat_mc <DS_Pseudo inst, ValueType vt, string frag> {
   }
 }
 
-// Irritatingly, atomic_store reverses the order of operands from a
-// normal store.
-class DSAtomicWritePat <DS_Pseudo inst, ValueType vt, PatFrag frag> : GCNPat <
-  (frag (DS1Addr1Offset i32:$ptr, i32:$offset), vt:$value),
-  (inst $ptr, getVregSrcForVT<vt>.ret:$value, offset:$offset, (i1 0))
->;
-
-multiclass DSAtomicWritePat_mc <DS_Pseudo inst, ValueType vt, string frag> {
-  let OtherPredicates = [LDSRequiresM0Init] in {
-    def : DSAtomicWritePat<inst, vt, !cast<PatFrag>(frag#"_m0")>;
-  }
-
-  let OtherPredicates = [NotLDSRequiresM0Init] in {
-    def : DSAtomicWritePat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt, !cast<PatFrag>(frag)>;
-  }
-}
-
 defm : DSWritePat_mc <DS_WRITE_B8, i32, "truncstorei8_local">;
 defm : DSWritePat_mc <DS_WRITE_B16, i32, "truncstorei16_local">;
 defm : DSWritePat_mc <DS_WRITE_B8, i16, "truncstorei8_local">;
@@ -832,12 +815,12 @@ foreach vt = Reg32Types.types in {
 defm : DSWritePat_mc <DS_WRITE_B32, vt, "store_local">;
 }
 
-defm : DSAtomicWritePat_mc <DS_WRITE_B8, i16, "atomic_store_8_local">;
-defm : DSAtomicWritePat_mc <DS_WRITE_B8, i32, "atomic_store_8_local">;
-defm : DSAtomicWritePat_mc <DS_WRITE_B16, i16, "atomic_store_16_local">;
-defm : DSAtomicWritePat_mc <DS_WRITE_B16, i32, "atomic_store_16_local">;
-defm : DSAtomicWritePat_mc <DS_WRITE_B32, i32, "atomic_store_32_local">;
-defm : DSAtomicWritePat_mc <DS_WRITE_B64, i64, "atomic_store_64_local">;
+defm : DSWritePat_mc <DS_WRITE_B8, i16, "atomic_store_8_local">;
+defm : DSWritePat_mc <DS_WRITE_B8, i32, "atomic_store_8_local">;
+defm : DSWritePat_mc <DS_WRITE_B16, i16, "atomic_store_16_local">;
+defm : DSWritePat_mc <DS_WRITE_B16, i32, "atomic_store_16_local">;
+defm : DSWritePat_mc <DS_WRITE_B32, i32, "atomic_store_32_local">;
+defm : DSWritePat_mc <DS_WRITE_B64, i64, "atomic_store_64_local">;
 
 let OtherPredicates = [HasD16LoadStore] in {
 def : DSWritePat <DS_WRITE_B16_D16_HI, i32, store_hi16_local>;
