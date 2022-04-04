@@ -17,12 +17,12 @@ define dso_local void @_Z3fooPiii(i32* %A, i32 %N, i32 %M) #0 {
 ; CHECK-NEXT:    [[FLATTEN_TRIPCOUNT:%.*]] = mul nuw nsw i64 [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    br label [[FOR_COND1_PREHEADER_US:%.*]]
 ; CHECK:       for.cond1.preheader.us:
-; CHECK-NEXT:    [[INDVAR7:%.*]] = phi i64 [ [[INDVAR_NEXT8:%.*]], [[FOR_COND1_PREHEADER_US]] ], [ 0, [[FOR_COND1_PREHEADER_LR_PH_SPLIT_US]] ]
-; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[INDVAR7]]
+; CHECK-NEXT:    [[INDVAR6:%.*]] = phi i64 [ [[INDVAR_NEXT7:%.*]], [[FOR_COND1_PREHEADER_US]] ], [ 0, [[FOR_COND1_PREHEADER_LR_PH_SPLIT_US]] ]
+; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[INDVAR6]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARRAYIDX_US]], align 4
 ; CHECK-NEXT:    tail call void @_Z1fi(i32 [[TMP2]])
-; CHECK-NEXT:    [[INDVAR_NEXT8]] = add nuw nsw i64 [[INDVAR7]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVAR_NEXT8]], [[FLATTEN_TRIPCOUNT]]
+; CHECK-NEXT:    [[INDVAR_NEXT7]] = add nuw nsw i64 [[INDVAR6]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVAR_NEXT7]], [[FLATTEN_TRIPCOUNT]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_COND1_PREHEADER_US]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void

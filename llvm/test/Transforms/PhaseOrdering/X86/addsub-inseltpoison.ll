@@ -13,8 +13,8 @@ define <4 x float> @PR45015(<4 x float> %arg, <4 x float> %arg1) {
 ; CHECK-LABEL: @PR45015(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fsub <4 x float> [[ARG:%.*]], [[ARG1:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = fadd <4 x float> [[ARG]], [[ARG1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP2]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
-; CHECK-NEXT:    ret <4 x float> [[TMP3]]
+; CHECK-NEXT:    [[T16:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP2]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    ret <4 x float> [[T16]]
 ;
   %t = extractelement <4 x float> %arg, i32 0
   %t2 = extractelement <4 x float> %arg1, i32 0
