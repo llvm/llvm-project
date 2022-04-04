@@ -18,6 +18,7 @@ import lit.reports
 import lit.run
 import lit.Test
 import lit.util
+from lit.formats.googletest import GoogleTest
 from lit.TestTimes import record_test_times
 
 
@@ -107,6 +108,9 @@ def main(builtin_params={}):
     elapsed = time.time() - start
 
     record_test_times(selected_tests, lit_config)
+
+    selected_tests, discovered_tests = GoogleTest.post_process_shard_results(
+        selected_tests, discovered_tests)
 
     if opts.time_tests:
         print_histogram(discovered_tests)
