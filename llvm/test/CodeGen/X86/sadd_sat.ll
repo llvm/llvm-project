@@ -16,7 +16,7 @@ define i32 @func(i32 %x, i32 %y) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    leal (%eax,%ecx), %edx
 ; X86-NEXT:    sarl $31, %edx
-; X86-NEXT:    xorl $-2147483648, %edx # imm = 0x80000000
+; X86-NEXT:    addl $-2147483648, %edx # imm = 0x80000000
 ; X86-NEXT:    addl %ecx, %eax
 ; X86-NEXT:    cmovol %edx, %eax
 ; X86-NEXT:    retl
@@ -27,7 +27,7 @@ define i32 @func(i32 %x, i32 %y) nounwind {
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-NEXT:    leal (%rdi,%rsi), %eax
 ; X64-NEXT:    sarl $31, %eax
-; X64-NEXT:    xorl $-2147483648, %eax # imm = 0x80000000
+; X64-NEXT:    addl $-2147483648, %eax # imm = 0x80000000
 ; X64-NEXT:    addl %esi, %edi
 ; X64-NEXT:    cmovnol %edi, %eax
 ; X64-NEXT:    retq
@@ -48,7 +48,7 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
 ; X86-NEXT:    sarl $31, %edx
 ; X86-NEXT:    testb %bl, %bl
 ; X86-NEXT:    cmovnel %edx, %eax
-; X86-NEXT:    xorl $-2147483648, %edx # imm = 0x80000000
+; X86-NEXT:    addl $-2147483648, %edx # imm = 0x80000000
 ; X86-NEXT:    testb %bl, %bl
 ; X86-NEXT:    cmovel %ecx, %edx
 ; X86-NEXT:    popl %ebx
@@ -106,7 +106,7 @@ define signext i8 @func8(i8 signext %x, i8 signext %y) nounwind {
 ; X86-NEXT:    movl %eax, %edx
 ; X86-NEXT:    addb %cl, %dl
 ; X86-NEXT:    sarb $7, %dl
-; X86-NEXT:    xorb $-128, %dl
+; X86-NEXT:    addb $-128, %dl
 ; X86-NEXT:    addb %cl, %al
 ; X86-NEXT:    movzbl %al, %ecx
 ; X86-NEXT:    movzbl %dl, %eax
@@ -120,7 +120,7 @@ define signext i8 @func8(i8 signext %x, i8 signext %y) nounwind {
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-NEXT:    leal (%rdi,%rsi), %eax
 ; X64-NEXT:    sarb $7, %al
-; X64-NEXT:    xorb $-128, %al
+; X64-NEXT:    addb $-128, %al
 ; X64-NEXT:    addb %sil, %dil
 ; X64-NEXT:    movzbl %dil, %ecx
 ; X64-NEXT:    movzbl %al, %eax
@@ -172,28 +172,28 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    leal (%ecx,%eax), %esi
 ; X86-NEXT:    sarl $31, %esi
-; X86-NEXT:    xorl $-2147483648, %esi # imm = 0x80000000
+; X86-NEXT:    addl $-2147483648, %esi # imm = 0x80000000
 ; X86-NEXT:    addl %eax, %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    cmovol %esi, %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    leal (%edx,%eax), %edi
 ; X86-NEXT:    sarl $31, %edi
-; X86-NEXT:    xorl $-2147483648, %edi # imm = 0x80000000
+; X86-NEXT:    addl $-2147483648, %edi # imm = 0x80000000
 ; X86-NEXT:    addl %eax, %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    cmovol %edi, %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    leal (%esi,%eax), %ebx
 ; X86-NEXT:    sarl $31, %ebx
-; X86-NEXT:    xorl $-2147483648, %ebx # imm = 0x80000000
+; X86-NEXT:    addl $-2147483648, %ebx # imm = 0x80000000
 ; X86-NEXT:    addl %eax, %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    cmovol %ebx, %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    leal (%edi,%eax), %ebx
 ; X86-NEXT:    sarl $31, %ebx
-; X86-NEXT:    xorl $-2147483648, %ebx # imm = 0x80000000
+; X86-NEXT:    addl $-2147483648, %ebx # imm = 0x80000000
 ; X86-NEXT:    addl %eax, %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    cmovol %ebx, %edi
