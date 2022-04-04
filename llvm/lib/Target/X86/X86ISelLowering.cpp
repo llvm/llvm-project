@@ -47338,9 +47338,24 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
             Src.getOpcode() == ISD::TRUNCATE) &&
            Src.getOperand(0)->hasOneUse())
       Src = Src.getOperand(0);
-    if (Src.getOpcode() == ISD::SRL && !isa<ConstantSDNode>(Src.getOperand(1)))
-      if (SDValue BT = getBT(Src.getOperand(0), Src.getOperand(1), dl, DAG))
-        return DAG.getZExtOrTrunc(getSETCC(X86::COND_B, BT, dl, DAG), dl, VT);
+    X86::CondCode X86CC = X86::COND_B;
+    // Peek through AND(NOT(SRL(X,Y)),1).
+    if (isBitwiseNot(Src)) {
+      Src = Src.getOperand(0);
+      X86CC = X86::COND_AE;
+    }
+    if (Src.getOpcode() == ISD::SRL &&
+        !isa<ConstantSDNode>(Src.getOperand(1))) {
+      SDValue BitNo = Src.getOperand(1);
+      Src = Src.getOperand(0);
+      // Peek through AND(SRL(NOT(X),Y),1).
+      if (isBitwiseNot(Src)) {
+        Src = Src.getOperand(0);
+        X86CC = X86CC == X86::COND_AE ? X86::COND_B : X86::COND_AE;
+      }
+      if (SDValue BT = getBT(Src, BitNo, dl, DAG))
+        return DAG.getZExtOrTrunc(getSETCC(X86CC, BT, dl, DAG), dl, VT);
+    }
   }
 
   if (VT.isVector() && (VT.getScalarSizeInBits() % 8) == 0) {
