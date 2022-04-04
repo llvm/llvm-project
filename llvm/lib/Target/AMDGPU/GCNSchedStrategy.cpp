@@ -731,7 +731,7 @@ void GCNScheduleDAGMILive::collectRematerializableInstructions(
 
     // TODO: Handle AGPR and SGPR rematerialization
     if (!SRI->isVGPRClass(MRI.getRegClass(Reg)) || !MRI.hasOneDef(Reg) ||
-        !MRI.hasOneUse(Reg))
+        !MRI.hasOneNonDBGUse(Reg))
       continue;
 
     // We are only collecting defs that are live-through or defined in another
@@ -745,7 +745,7 @@ void GCNScheduleDAGMILive::collectRematerializableInstructions(
         !isTriviallyReMaterializable(*Def, AA))
       continue;
 
-    MachineInstr *UseI = &*MRI.use_instr_begin(Reg);
+    MachineInstr *UseI = &*MRI.use_instr_nodbg_begin(Reg);
     if (Def->getParent() == UseI->getParent())
       continue;
 
