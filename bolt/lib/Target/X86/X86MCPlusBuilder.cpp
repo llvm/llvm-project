@@ -87,15 +87,10 @@ public:
   }
 
   unsigned getCondCode(const MCInst &Inst) const override {
-    switch (Inst.getOpcode()) {
-    default:
-      return X86::COND_INVALID;
-    case X86::JCC_1:
-    case X86::JCC_2:
-    case X86::JCC_4:
-      return Inst.getOperand(Info->get(Inst.getOpcode()).NumOperands - 1)
-          .getImm();
-    }
+    unsigned Opcode = Inst.getOpcode();
+    if (X86::isJCC(Opcode))
+      return Inst.getOperand(Info->get(Opcode).NumOperands - 1).getImm();
+    return X86::COND_INVALID;
   }
 
   unsigned getInvertedCondCode(unsigned CC) const override {
@@ -183,13 +178,8 @@ public:
   }
 
   bool isPrefix(const MCInst &Inst) const override {
-    switch (Inst.getOpcode()) {
-    case X86::LOCK_PREFIX:
-    case X86::REPNE_PREFIX:
-    case X86::REP_PREFIX:
-      return true;
-    }
-    return false;
+    const MCInstrDesc &Desc = Info->get(Inst.getOpcode());
+    return X86II::isPrefix(Desc.TSFlags);
   }
 
   bool isRep(const MCInst &Inst) const override {
@@ -206,21 +196,9 @@ public:
 
   // FIXME: For compatibility with old LLVM only!
   bool isTerminator(const MCInst &Inst) const override {
-    if (Info->get(Inst.getOpcode()).isTerminator())
-      return true;
-    switch (Inst.getOpcode()) {
-    default:
-      return false;
-    case X86::TRAP:
-    // Opcodes previously known as X86::UD2B
-    case X86::UD1Wm:
-    case X86::UD1Lm:
-    case X86::UD1Qm:
-    case X86::UD1Wr:
-    case X86::UD1Lr:
-    case X86::UD1Qr:
-      return true;
-    }
+    unsigned Opcode = Inst.getOpcode();
+    return Info->get(Opcode).isTerminator() || X86::isUD1(Opcode) ||
+           X86::isUD2(Opcode);
   }
 
   bool isIndirectCall(const MCInst &Inst) const override {
