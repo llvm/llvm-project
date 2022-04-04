@@ -884,13 +884,25 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
   Value *SrcStr = CI->getArgOperand(0);
   Value *Size = CI->getArgOperand(2);
   annotateNonNullAndDereferenceable(CI, 0, Size, DL);
-  ConstantInt *CharC = dyn_cast<ConstantInt>(CI->getArgOperand(1));
+  Value *CharVal = CI->getArgOperand(1);
+  ConstantInt *CharC = dyn_cast<ConstantInt>(CharVal);
   ConstantInt *LenC = dyn_cast<ConstantInt>(Size);
 
   // memchr(x, y, 0) -> null
   if (LenC) {
     if (LenC->isZero())
       return Constant::getNullValue(CI->getType());
+
+    if (LenC->isOne()) {
+      // Fold memchr(x, y, 1) --> *x == y ? x : null for any x and y,
+      // constant or otherwise.
+      Value *Val = B.CreateLoad(B.getInt8Ty(), SrcStr, "memchr.char0");
+      // Slice off the character's high end bits.
+      CharVal = B.CreateTrunc(CharVal, B.getInt8Ty());
+      Value *Cmp = B.CreateICmpEQ(Val, CharVal, "memchr.char0cmp");
+      Value *NullPtr = Constant::getNullValue(CI->getType());
+      return B.CreateSelect(Cmp, SrcStr, NullPtr, "memchr.sel");
+    }
   } else {
     // From now on we need at least constant length and string.
     return nullptr;
@@ -939,7 +951,7 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
     Value *BitfieldC = B.getInt(Bitfield);
 
     // Adjust width of "C" to the bitfield width, then mask off the high bits.
-    Value *C = B.CreateZExtOrTrunc(CI->getArgOperand(1), BitfieldC->getType());
+    Value *C = B.CreateZExtOrTrunc(CharVal, BitfieldC->getType());
     C = B.CreateAnd(C, B.getIntN(Width, 0xFF));
 
     // First check that the bit field access is within bounds.
