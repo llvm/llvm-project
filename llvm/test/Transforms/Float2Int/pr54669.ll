@@ -3,11 +3,9 @@
 
 declare void @use(i32)
 
-; FIXME: Currently being miscompiled.
-
 define i1 @src() {
 ; CHECK-LABEL: @src(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 2147483647, -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 -1, -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %add = fadd double 2.000000e+00, -1.000000e+00
