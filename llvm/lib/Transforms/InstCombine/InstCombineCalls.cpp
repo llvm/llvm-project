@@ -2813,17 +2813,19 @@ void InstCombinerImpl::annotateAnyAllocSite(CallBase &Call, const TargetLibraryI
   // of some allocation functions) are expected to be handled via annotation
   // of the respective allocator declaration with generic attributes.
 
-  uint64_t Size;
-  ObjectSizeOpts Opts;
-  if (getObjectSize(&Call, Size, DL, TLI, Opts) && Size > 0) {
-    // TODO: We really should just emit deref_or_null here and then
-    // let the generic inference code combine that with nonnull.
-    if (Call.hasRetAttr(Attribute::NonNull))
-      Call.addRetAttr(Attribute::getWithDereferenceableBytes(
-          Call.getContext(), Size));
-    else
-      Call.addRetAttr(Attribute::getWithDereferenceableOrNullBytes(
-          Call.getContext(), Size));
+  if (isAllocationFn(&Call, TLI)) {
+    uint64_t Size;
+    ObjectSizeOpts Opts;
+    if (getObjectSize(&Call, Size, DL, TLI, Opts) && Size > 0) {
+      // TODO: We really should just emit deref_or_null here and then
+      // let the generic inference code combine that with nonnull.
+      if (Call.hasRetAttr(Attribute::NonNull))
+        Call.addRetAttr(
+            Attribute::getWithDereferenceableBytes(Call.getContext(), Size));
+      else
+        Call.addRetAttr(Attribute::getWithDereferenceableOrNullBytes(
+            Call.getContext(), Size));
+    }
   }
 
   // Add alignment attribute if alignment is a power of two constant.
@@ -2844,8 +2846,7 @@ void InstCombinerImpl::annotateAnyAllocSite(CallBase &Call, const TargetLibraryI
 
 /// Improvements for call, callbr and invoke instructions.
 Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
-  if (isAllocationFn(&Call, &TLI))
-    annotateAnyAllocSite(Call, &TLI);
+  annotateAnyAllocSite(Call, &TLI);
 
   bool Changed = false;
 
