@@ -140,6 +140,11 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::SCEI, T.getVendor());
   EXPECT_EQ(Triple::PS4, T.getOS());
 
+  T = Triple("x86_64-sie-ps5");
+  EXPECT_EQ(Triple::x86_64, T.getArch());
+  EXPECT_EQ(Triple::SCEI, T.getVendor());
+  EXPECT_EQ(Triple::PS5, T.getOS());
+
   T = Triple("powerpc-ibm-aix");
   EXPECT_EQ(Triple::ppc, T.getArch());
   EXPECT_EQ(Triple::IBM, T.getVendor());
