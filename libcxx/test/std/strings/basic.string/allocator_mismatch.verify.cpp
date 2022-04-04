@@ -11,9 +11,4 @@
 
 #include <string>
 
-int main(int, char**)
-{
-    std::basic_string<char, std::char_traits<char>, std::allocator<int> > s;
-
-  return 0;
-}
+std::basic_string<char, std::char_traits<char>, std::allocator<int> > s; // expected-error@*:* {{Allocator::value_type must be same type as value_type}}

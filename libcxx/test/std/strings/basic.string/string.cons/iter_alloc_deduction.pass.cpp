@@ -9,10 +9,6 @@
 // <string>
 // UNSUPPORTED: c++03, c++11, c++14
 
-// template<class InputIterator>
-//   basic_string(InputIterator begin, InputIterator end,
-//   const Allocator& a = Allocator());
-
 // template<class InputIterator,
 //      class Allocator = allocator<typename iterator_traits<InputIterator>::value_type>>
 //  basic_string(InputIterator, InputIterator, Allocator = Allocator())
@@ -24,14 +20,34 @@
 //  is a type that does not qualify as an input iterator, or if Allocator is a type
 //  that does not qualify as an allocator.
 
-#include <string>
-#include <iterator>
 #include <cassert>
 #include <cstddef>
+#include <iterator>
+#include <string>
+#include <type_traits>
 
 #include "test_macros.h"
 #include "test_allocator.h"
 #include "min_allocator.h"
+
+class NotAnIterator {};
+using NotAnInputIterator = std::back_insert_iterator<std::basic_string<char16_t>>;
+
+template <typename T>
+struct NotAnAllocator { typedef T value_type; };
+
+template <class Iter, class Alloc, class = void>
+struct CanDeduce : std::false_type { };
+
+template <class Iter, class Alloc>
+struct CanDeduce<Iter, Alloc, decltype((void)
+  std::basic_string{std::declval<Iter>(), std::declval<Iter>(), std::declval<Alloc>()}
+)> : std::true_type { };
+
+static_assert( CanDeduce<int*, std::allocator<int>>::value);
+static_assert(!CanDeduce<NotAnIterator, std::allocator<char>>::value);
+static_assert(!CanDeduce<NotAnInputIterator, std::allocator<char16_t>>::value);
+static_assert(!CanDeduce<wchar_t const*, NotAnAllocator<wchar_t>>::value);
 
 bool test() {
   {
@@ -90,6 +106,10 @@ bool test() {
 
 int main(int, char**)
 {
+  test();
+#if TEST_STD_VER > 17
+  // static_assert(test());
+#endif
 
   return 0;
 }
