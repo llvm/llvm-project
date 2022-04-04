@@ -209,7 +209,8 @@ ArchSpec HostInfoBase::GetAugmentedArchSpec(llvm::StringRef triple) {
     normalized_triple.setVendor(host_triple.getVendor());
   if (normalized_triple.getOSName().empty())
     normalized_triple.setOS(host_triple.getOS());
-  if (normalized_triple.getEnvironmentName().empty())
+  if (normalized_triple.getEnvironmentName().empty() &&
+      !host_triple.getEnvironmentName().empty())
     normalized_triple.setEnvironment(host_triple.getEnvironment());
   return ArchSpec(normalized_triple);
 }
