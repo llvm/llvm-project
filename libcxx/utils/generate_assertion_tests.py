@@ -129,6 +129,11 @@ def main():
     }
 
     produce(test.joinpath('libcxx/assertions/headers_declare_assertion_handler.sh.cpp'), variables)
+    produce(test.joinpath('libcxx/clang_tidy.sh.cpp'), variables)
+    produce(test.joinpath('libcxx/double_include.sh.cpp'), variables)
+    produce(test.joinpath('libcxx/min_max_macros.compile.pass.cpp'), variables)
+    produce(test.joinpath('libcxx/nasty_macros.compile.pass.cpp'), variables)
+    produce(test.joinpath('libcxx/no_assert_include.compile.pass.cpp'), variables)
 
 
 if __name__ == '__main__':
