@@ -27,7 +27,7 @@ foreach(target, symlinks) {
 
 # //:clang depends on this symlink target, see comment in //BUILD.gn.
 group("symlinks") {
-  deps = []
+  deps = [ ":clang" ]
   foreach(target, symlinks) {
     deps += [ ":${target[0]}" ]
   }
