@@ -582,9 +582,8 @@ RNBRemote::SendAsyncJSONPacket(const JSONGenerator::Dictionary &dictionary) {
   // of these coming out at the wrong time (i.e. when the remote side
   // is not waiting for a process control completion response).
   stream << "JSON-async:";
-  dictionary.Dump(stream);
-  const std::string payload = binary_encode_string(stream.str());
-  return SendPacket(payload);
+  dictionary.DumpBinaryEscaped(stream);
+  return SendPacket(stream.str());
 }
 
 // Given a std::string packet contents to send, possibly encode/compress it.
@@ -2793,6 +2792,7 @@ rnb_err_t RNBRemote::SendStopReplyPacketForThread(nub_thread_t tid) {
           ostrm << std::hex << "jstopinfo:";
           std::ostringstream json_strm;
           threads_info_sp->Dump(json_strm);
+          threads_info_sp->Clear();
           append_hexified_string(ostrm, json_strm.str());
           ostrm << ';';
         }
@@ -5556,11 +5556,10 @@ rnb_err_t RNBRemote::HandlePacket_jThreadsInfo(const char *p) {
 
     if (threads_info_sp) {
       std::ostringstream strm;
-      threads_info_sp->Dump(strm);
+      threads_info_sp->DumpBinaryEscaped(strm);
       threads_info_sp->Clear();
-      std::string binary_packet = binary_encode_string(strm.str());
-      if (!binary_packet.empty())
-        return SendPacket(binary_packet);
+      if (strm.str().size() > 0)
+        return SendPacket(strm.str());
     }
   }
   return SendPacket("E85");
@@ -5881,11 +5880,10 @@ RNBRemote::HandlePacket_jGetLoadedDynamicLibrariesInfos(const char *p) {
 
     if (json_sp.get()) {
       std::ostringstream json_str;
-      json_sp->Dump(json_str);
+      json_sp->DumpBinaryEscaped(json_str);
       json_sp->Clear();
       if (json_str.str().size() > 0) {
-        std::string json_str_quoted = binary_encode_string(json_str.str());
-        return SendPacket(json_str_quoted);
+        return SendPacket(json_str.str());
       } else {
         SendPacket("E84");
       }
@@ -5915,11 +5913,10 @@ rnb_err_t RNBRemote::HandlePacket_jGetSharedCacheInfo(const char *p) {
 
     if (json_sp.get()) {
       std::ostringstream json_str;
-      json_sp->Dump(json_str);
+      json_sp->DumpBinaryEscaped(json_str);
       json_sp->Clear();
       if (json_str.str().size() > 0) {
-        std::string json_str_quoted = binary_encode_string(json_str.str());
-        return SendPacket(json_str_quoted);
+        return SendPacket(json_str.str());
       } else {
         SendPacket("E86");
       }
