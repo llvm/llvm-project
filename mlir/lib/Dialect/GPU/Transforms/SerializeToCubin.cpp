@@ -45,6 +45,8 @@ namespace {
 class SerializeToCubinPass
     : public PassWrapper<SerializeToCubinPass, gpu::SerializeToBlobPass> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(SerializeToCubinPass)
+
   SerializeToCubinPass();
 
   StringRef getArgument() const override { return "gpu-to-cubin"; }
