@@ -7710,7 +7710,9 @@ IOHandlerCursesGUI::~IOHandlerCursesGUI() = default;
 
 void IOHandlerCursesGUI::Cancel() {}
 
-bool IOHandlerCursesGUI::Interrupt() { return false; }
+bool IOHandlerCursesGUI::Interrupt() {
+  return m_debugger.GetCommandInterpreter().IOHandlerInterrupt(*this);
+}
 
 void IOHandlerCursesGUI::GotEOF() {}
 
