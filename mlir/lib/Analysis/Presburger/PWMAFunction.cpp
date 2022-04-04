@@ -114,6 +114,18 @@ void MultiAffineFunction::eliminateRedundantLocalId(unsigned posA,
   IntegerPolyhedron::eliminateRedundantLocalId(posA, posB);
 }
 
+void MultiAffineFunction::truncateOutput(unsigned count) {
+  assert(count <= output.getNumRows());
+  output.resizeVertically(count);
+}
+
+void PWMAFunction::truncateOutput(unsigned count) {
+  assert(count <= numOutputs);
+  for (MultiAffineFunction &piece : pieces)
+    piece.truncateOutput(count);
+  numOutputs = count;
+}
+
 bool MultiAffineFunction::isEqualWhereDomainsOverlap(
     MultiAffineFunction other) const {
   if (!isSpaceCompatible(other))
