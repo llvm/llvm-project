@@ -1109,7 +1109,7 @@ public:
   bool isAbbreviated() const {
     // Since the invented template parameters generated from 'auto' parameters
     // are either appended to the end of the explicit template parameter list or
-    // form a new template paramter list, we can simply observe the last
+    // form a new template parameter list, we can simply observe the last
     // parameter to determine if such a thing happened.
     const TemplateParameterList *TPL = getTemplateParameters();
     return TPL->getParam(TPL->size() - 1)->isImplicit();
