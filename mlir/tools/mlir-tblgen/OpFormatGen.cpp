@@ -212,7 +212,7 @@ public:
   AttributeVariable *
   getUnitAttrParsingElement(ArrayRef<FormatElement *> pelement) {
     if (pelement.size() == 1) {
-      auto attrElem = dyn_cast<AttributeVariable>(pelement[0]);
+      auto *attrElem = dyn_cast<AttributeVariable>(pelement[0]);
       if (attrElem && attrElem->isUnitAttr())
         return attrElem;
     }
