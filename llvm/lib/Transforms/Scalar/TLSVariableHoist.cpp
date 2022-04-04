@@ -42,7 +42,7 @@ using namespace tlshoist;
 
 static cl::opt<bool> TLSLoadHoist(
     "tls-load-hoist", cl::init(false), cl::Hidden,
-    cl::desc("hoist the TLS loads in PIC model to eleminate redundant "
+    cl::desc("hoist the TLS loads in PIC model to eliminate redundant "
              "TLS address calculation."));
 
 namespace {
