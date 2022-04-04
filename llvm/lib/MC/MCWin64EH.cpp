@@ -514,7 +514,7 @@ static void ARM64EmitUnwindCode(MCStreamer &streamer, const MCSymbol *begin,
 }
 
 // Returns the epilog symbol of an epilog with the exact same unwind code
-// sequence, if it exists.  Otherwise, returns nulltpr.
+// sequence, if it exists.  Otherwise, returns nullptr.
 // EpilogInstrs - Unwind codes for the current epilog.
 // Epilogs - Epilogs that potentialy match the current epilog.
 static MCSymbol*
