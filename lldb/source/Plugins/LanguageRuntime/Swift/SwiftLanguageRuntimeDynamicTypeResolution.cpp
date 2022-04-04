@@ -274,12 +274,14 @@ public:
       LLDBTypeInfoProvider *tip, lldb::addr_t pointer,
       std::function<bool(SwiftLanguageRuntimeImpl::SuperClassType)> fn)
       override {
+    // Guard against faulty self-referential metadata.
+    unsigned limit = 256;
     auto md_ptr = m_reflection_ctx.readMetadataFromInstance(pointer);
     if (!md_ptr)
       return false;
 
     // Class object.
-    while (md_ptr && *md_ptr) {
+    while (md_ptr && *md_ptr && --limit) {
       // Reading metadata is potentially expensive since (in a remote
       // debugging scenario it may even incur network traffic) so we
       // just return closures that the caller can use to query details
