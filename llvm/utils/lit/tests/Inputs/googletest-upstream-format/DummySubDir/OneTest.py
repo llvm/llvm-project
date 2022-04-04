@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 
+import os
 import sys
 
 if len(sys.argv) != 2:
     raise ValueError("unexpected number of args")
 
 if sys.argv[1] == "--gtest_list_tests":
-    print("""\
+    print(f"""\
+Running main() from {os.getcwd()}/gtest_main.cc
 FirstTest.
   subTestA
   subTestB
@@ -21,6 +23,7 @@ elif not sys.argv[1].startswith("--gtest_filter="):
     raise ValueError("unexpected argument: %r" % (sys.argv[1]))
 
 test_name = sys.argv[1].split('=',1)[1]
+print('Running main() from gtest_main.cc')
 if test_name == 'FirstTest.subTestA':
     print('I am subTest A, I PASS')
     print('[  PASSED  ] 1 test.')
