@@ -219,11 +219,12 @@ class TestSuite:
 class Test:
     """Test - Information on a single test instance."""
 
-    def __init__(self, suite, path_in_suite, config, file_path = None):
+    def __init__(self, suite, path_in_suite, config, file_path = None, gtest_json_file = None):
         self.suite = suite
         self.path_in_suite = path_in_suite
         self.config = config
         self.file_path = file_path
+        self.gtest_json_file = gtest_json_file
 
         # A list of conditions under which this test is expected to fail.
         # Each condition is a boolean expression of features and target
@@ -258,7 +259,7 @@ class Test:
         # The previous test elapsed time, if applicable.
         self.previous_elapsed = 0.0
 
-        if '/'.join(path_in_suite) in suite.test_times:
+        if suite.test_times and '/'.join(path_in_suite) in suite.test_times:
             time = suite.test_times['/'.join(path_in_suite)]
             self.previous_elapsed = abs(time)
             self.previous_failure = time < 0
