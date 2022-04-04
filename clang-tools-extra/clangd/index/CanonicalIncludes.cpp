@@ -66,11 +66,12 @@ collectIWYUHeaderMaps(CanonicalIncludes *Includes) {
                                PP.getSourceManager(), PP.getLangOpts());
       if (!Text.consume_front(IWYUPragma))
         return false;
-      // FIXME(ioeric): resolve the header and store actual file path. For now,
-      // we simply assume the written header is suitable to be #included.
-      Includes->addMapping(PP.getSourceManager().getFilename(Range.getBegin()),
-                           isLiteralInclude(Text) ? Text.str()
-                                                  : ("\"" + Text + "\"").str());
+      // We always insert using the spelling from the pragma.
+      if (auto *FE = PP.getSourceManager().getFileEntryForID(
+              PP.getSourceManager().getFileID(Range.getBegin())))
+        Includes->addMapping(FE->getName(), isLiteralInclude(Text)
+                                                ? Text.str()
+                                                : ("\"" + Text + "\"").str());
       return false;
     }
 

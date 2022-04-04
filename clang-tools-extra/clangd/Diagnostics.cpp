@@ -196,16 +196,16 @@ bool tryMoveToMainFile(Diag &D, FullSourceLoc DiagLoc) {
     return false;
 
   // Add a note that will point to real diagnostic.
-  const auto *FE = SM.getFileEntryForID(SM.getFileID(DiagLoc));
+  auto FE = SM.getFileEntryRefForID(SM.getFileID(DiagLoc)).getValue();
   D.Notes.emplace(D.Notes.begin());
   Note &N = D.Notes.front();
-  N.AbsFile = std::string(FE->tryGetRealPathName());
-  N.File = std::string(FE->getName());
+  N.AbsFile = std::string(FE.getFileEntry().tryGetRealPathName());
+  N.File = std::string(FE.getName());
   N.Message = "error occurred here";
   N.Range = D.Range;
 
   // Update diag to point at include inside main file.
-  D.File = SM.getFileEntryForID(SM.getMainFileID())->getName().str();
+  D.File = SM.getFileEntryRefForID(SM.getMainFileID())->getName().str();
   D.Range = std::move(R);
   D.InsideMainFile = true;
   // Update message to mention original file.
