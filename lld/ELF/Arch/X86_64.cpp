@@ -279,7 +279,7 @@ bool X86_64::deleteFallThruJmpInsn(InputSection &is, InputFile *file,
 
   // Now, check if flip and delete is possible.
   const unsigned sizeOfJmpCCInsn = 6;
-  // To flip, there must be atleast one JmpCC and one direct jmp.
+  // To flip, there must be at least one JmpCC and one direct jmp.
   if (is.getSize() < sizeOfDirectJmpInsn + sizeOfJmpCCInsn)
     return false;
 
