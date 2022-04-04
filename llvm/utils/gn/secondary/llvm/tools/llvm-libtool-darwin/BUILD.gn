@@ -12,8 +12,9 @@ if (llvm_install_cctools_symlinks) {
 # //:llvm-libtool-darwin depends on this symlink target, see comment in
 # //BUILD.gn.
 group("symlinks") {
+  deps = [ ":llvm-libtool-darwin" ]
   if (llvm_install_cctools_symlinks) {
-    deps = [ ":libtool" ]
+    deps += [ ":libtool" ]
   }
 }
 

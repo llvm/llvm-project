@@ -50,7 +50,7 @@ define i64 @func64(i64 %x, i64 %y, i64 %z) nounwind {
 ; X86-NEXT:    sarl $31, %edx
 ; X86-NEXT:    testb %bl, %bl
 ; X86-NEXT:    cmovnel %edx, %eax
-; X86-NEXT:    xorl $-2147483648, %edx # imm = 0x80000000
+; X86-NEXT:    addl $-2147483648, %edx # imm = 0x80000000
 ; X86-NEXT:    testb %bl, %bl
 ; X86-NEXT:    cmovel %ecx, %edx
 ; X86-NEXT:    popl %ebx

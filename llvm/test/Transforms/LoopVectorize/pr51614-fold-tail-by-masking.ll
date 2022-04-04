@@ -15,13 +15,13 @@ define dso_local i16 @reverse_interleave_load_fold_mask() optsize {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_LOAD_CONTINUE2:%.*]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i16> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP25:%.*]], [[PRED_LOAD_CONTINUE2]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_LOAD_CONTINUE4:%.*]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i16> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP25:%.*]], [[PRED_LOAD_CONTINUE4]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[INDEX]] to i16
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i16 41, [[TMP0]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[INDEX]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[VEC_IV:%.*]] = add <2 x i32> [[BROADCAST_SPLAT]], <i32 0, i32 1>
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x i32> poison, i32 [[INDEX]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT1]], <2 x i32> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[VEC_IV:%.*]] = add <2 x i32> [[BROADCAST_SPLAT2]], <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule <2 x i32> [[VEC_IV]], <i32 40, i32 40>
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[TMP1]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
@@ -39,7 +39,7 @@ define dso_local i16 @reverse_interleave_load_fold_mask() optsize {
 ; CHECK-NEXT:    [[TMP11:%.*]] = phi <2 x i16> [ poison, [[VECTOR_BODY]] ], [ [[TMP7]], [[PRED_LOAD_IF]] ]
 ; CHECK-NEXT:    [[TMP12:%.*]] = phi <2 x i16> [ poison, [[VECTOR_BODY]] ], [ [[TMP10]], [[PRED_LOAD_IF]] ]
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i1> [[TMP1]], i32 1
-; CHECK-NEXT:    br i1 [[TMP13]], label [[PRED_LOAD_IF1:%.*]], label [[PRED_LOAD_CONTINUE2]]
+; CHECK-NEXT:    br i1 [[TMP13]], label [[PRED_LOAD_IF3:%.*]], label [[PRED_LOAD_CONTINUE4]]
 ; CHECK:       pred.load.if1:
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i16 [[OFFSET_IDX]], -1
 ; CHECK-NEXT:    [[TMP15:%.*]] = add nsw i16 [[TMP14]], -1
@@ -49,10 +49,10 @@ define dso_local i16 @reverse_interleave_load_fold_mask() optsize {
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [40 x [4 x i16]], [40 x [4 x i16]]* @A, i16 0, i16 [[TMP15]], i16 3
 ; CHECK-NEXT:    [[TMP20:%.*]] = load i16, i16* [[TMP19]], align 1
 ; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <2 x i16> [[TMP12]], i16 [[TMP20]], i32 1
-; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE2]]
+; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE4]]
 ; CHECK:       pred.load.continue2:
-; CHECK-NEXT:    [[TMP22:%.*]] = phi <2 x i16> [ [[TMP11]], [[PRED_LOAD_CONTINUE]] ], [ [[TMP18]], [[PRED_LOAD_IF1]] ]
-; CHECK-NEXT:    [[TMP23:%.*]] = phi <2 x i16> [ [[TMP12]], [[PRED_LOAD_CONTINUE]] ], [ [[TMP21]], [[PRED_LOAD_IF1]] ]
+; CHECK-NEXT:    [[TMP22:%.*]] = phi <2 x i16> [ [[TMP11]], [[PRED_LOAD_CONTINUE]] ], [ [[TMP18]], [[PRED_LOAD_IF3]] ]
+; CHECK-NEXT:    [[TMP23:%.*]] = phi <2 x i16> [ [[TMP12]], [[PRED_LOAD_CONTINUE]] ], [ [[TMP21]], [[PRED_LOAD_IF3]] ]
 ; CHECK-NEXT:    [[TMP24:%.*]] = add nsw <2 x i16> [[TMP22]], [[TMP23]]
 ; CHECK-NEXT:    [[TMP25]] = add <2 x i16> [[VEC_PHI]], [[TMP24]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = select <2 x i1> [[TMP1]], <2 x i16> [[TMP25]], <2 x i16> [[VEC_PHI]]

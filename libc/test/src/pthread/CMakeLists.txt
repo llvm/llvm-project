@@ -1,0 +1,20 @@
+add_libc_testsuite(libc_pthread_unittests)
+
+add_libc_unittest(
+  pthread_mutexattr_test
+  SUITE
+    libc_pthread_unittests
+  SRCS
+    pthread_mutexattr_test.cpp
+  DEPENDS
+    libc.include.errno
+    libc.include.pthread
+    libc.src.pthread.pthread_mutexattr_destroy
+    libc.src.pthread.pthread_mutexattr_init
+    libc.src.pthread.pthread_mutexattr_getpshared
+    libc.src.pthread.pthread_mutexattr_getrobust
+    libc.src.pthread.pthread_mutexattr_gettype
+    libc.src.pthread.pthread_mutexattr_setpshared
+    libc.src.pthread.pthread_mutexattr_setrobust
+    libc.src.pthread.pthread_mutexattr_settype
+)

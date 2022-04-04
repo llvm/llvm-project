@@ -851,13 +851,6 @@ convertOmpWsLoop(Operation &opInst, llvm::IRBuilderBase &builder,
           schedType = llvm::omp::OMPScheduleType::Runtime;
       }
       break;
-    default:
-      if (orderedVal == 0) {
-        schedType = llvm::omp::OMPScheduleType::OrderedStatic;
-        break;
-      }
-      llvm_unreachable("Unknown schedule value");
-      break;
     }
 
     if (Optional<omp::ScheduleModifier> modifier = loop.schedule_modifier()) {

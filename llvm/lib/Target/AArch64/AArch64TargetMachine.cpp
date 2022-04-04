@@ -21,6 +21,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/CodeGen/CFIFixup.h"
 #include "llvm/CodeGen/CSEConfigBase.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
@@ -355,6 +356,10 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
 
   // AArch64 supports the debug entry values.
   setSupportsDebugEntryValues(true);
+
+  // AArch64 supports fixing up the DWARF unwind information.
+  if (!getMCAsmInfo()->usesWindowsCFI())
+    setCFIFixup(true);
 }
 
 AArch64TargetMachine::~AArch64TargetMachine() = default;
