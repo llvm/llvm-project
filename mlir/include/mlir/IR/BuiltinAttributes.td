@@ -153,7 +153,7 @@ def Builtin_DenseIntOrFPElementsAttr : Builtin_Attr<
     Syntax:
 
     ```
-    tensor-literal ::= integer-literal | float-literal | [] | [tensor-literal (, tensor-literal)* ]
+    tensor-literal ::= integer-literal | float-literal | bool-literal | [] | [tensor-literal (, tensor-literal)* ]
     dense-intorfloat-elements-attribute ::= `dense` `<` tensor-literal `>` `:`
                                             ( tensor-type | vector-type )
     ```
