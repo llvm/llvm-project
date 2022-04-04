@@ -4,7 +4,7 @@ add_custom_target(libcxx-generate-public-header-transitive-inclusion-tests
     COMMENT "Generate tests checking for mandated transitive includes in public headers.")
 
 add_custom_target(libcxx-generate-public-header-tests
-    COMMAND "${Python3_EXECUTABLE}" "${LIBCXX_SOURCE_DIR}/utils/generate_assertion_tests.py"
+    COMMAND "${Python3_EXECUTABLE}" "${LIBCXX_SOURCE_DIR}/utils/generate_header_tests.py"
     COMMENT "Generate tests for including public headers.")
 
 add_custom_target(libcxx-generate-feature-test-macros
