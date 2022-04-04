@@ -41,8 +41,10 @@ define i8* @fold_memchr_a12345_2_1() {
 
 define i8* @fold_memchr_ax_257_1(i32 %chr, i64 %n) {
 ; CHECK-LABEL: @fold_memchr_ax_257_1(
-; CHECK-NEXT:    [[RES:%.*]] = call i8* @memchr(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([0 x i8], [0 x i8]* @ax, i64 0, i64 0), i32 257, i64 1)
-; CHECK-NEXT:    ret i8* [[RES]]
+; CHECK-NEXT:    [[MEMCHR_CHAR0:%.*]] = load i8, i8* getelementptr inbounds ([0 x i8], [0 x i8]* @ax, i64 0, i64 0), align 1
+; CHECK-NEXT:    [[MEMCHR_CHAR0CMP:%.*]] = icmp eq i8 [[MEMCHR_CHAR0]], 1
+; CHECK-NEXT:    [[MEMCHR_SEL:%.*]] = select i1 [[MEMCHR_CHAR0CMP]], i8* getelementptr inbounds ([0 x i8], [0 x i8]* @ax, i64 0, i64 0), i8* null
+; CHECK-NEXT:    ret i8* [[MEMCHR_SEL]]
 ;
 
   %ptr = getelementptr [0 x i8], [0 x i8]* @ax, i32 0, i32 0
@@ -55,8 +57,11 @@ define i8* @fold_memchr_ax_257_1(i32 %chr, i64 %n) {
 
 define i8* @fold_memchr_ax_c_1(i32 %chr, i64 %n) {
 ; CHECK-LABEL: @fold_memchr_ax_c_1(
-; CHECK-NEXT:    [[RES:%.*]] = call i8* @memchr(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([0 x i8], [0 x i8]* @ax, i64 0, i64 0), i32 [[CHR:%.*]], i64 1)
-; CHECK-NEXT:    ret i8* [[RES]]
+; CHECK-NEXT:    [[MEMCHR_CHAR0:%.*]] = load i8, i8* getelementptr inbounds ([0 x i8], [0 x i8]* @ax, i64 0, i64 0), align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[CHR:%.*]] to i8
+; CHECK-NEXT:    [[MEMCHR_CHAR0CMP:%.*]] = icmp eq i8 [[MEMCHR_CHAR0]], [[TMP1]]
+; CHECK-NEXT:    [[MEMCHR_SEL:%.*]] = select i1 [[MEMCHR_CHAR0CMP]], i8* getelementptr inbounds ([0 x i8], [0 x i8]* @ax, i64 0, i64 0), i8* null
+; CHECK-NEXT:    ret i8* [[MEMCHR_SEL]]
 ;
 
   %ptr = getelementptr [0 x i8], [0 x i8]* @ax, i32 0, i32 0
