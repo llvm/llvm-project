@@ -18,14 +18,23 @@ using Direction = Simplex::Direction;
 
 const int nullIndex = std::numeric_limits<int>::max();
 
-SimplexBase::SimplexBase(unsigned nVar, bool mustUseBigM)
+SimplexBase::SimplexBase(unsigned nVar, bool mustUseBigM, unsigned symbolOffset,
+                         unsigned nSymbol)
     : usingBigM(mustUseBigM), nRow(0), nCol(getNumFixedCols() + nVar),
-      nRedundant(0), tableau(0, nCol), empty(false) {
+      nRedundant(0), nSymbol(nSymbol), tableau(0, nCol), empty(false) {
+  assert(symbolOffset + nSymbol <= nVar);
+
   colUnknown.insert(colUnknown.begin(), getNumFixedCols(), nullIndex);
   for (unsigned i = 0; i < nVar; ++i) {
     var.emplace_back(Orientation::Column, /*restricted=*/false,
                      /*pos=*/getNumFixedCols() + i);
     colUnknown.push_back(i);
+  }
+
+  // Move the symbols to be in columns [3, 3 + nSymbol).
+  for (unsigned i = 0; i < nSymbol; ++i) {
+    var[symbolOffset + i].isSymbol = true;
+    swapColumns(var[symbolOffset + i].pos, getNumFixedCols() + i);
   }
 }
 
@@ -96,9 +105,13 @@ unsigned SimplexBase::addRow(ArrayRef<int64_t> coeffs, bool makeRestricted) {
     // where M is the big M parameter. As such, when the user tries to add
     // a row ax + by + cz + d, we express it in terms of our internal variables
     // as -(a + b + c)M + a(M + x) + b(M + y) + c(M + z) + d.
+    //
+    // Symbols don't use the big M parameter since they do not get lex
+    // optimized.
     int64_t bigMCoeff = 0;
     for (unsigned i = 0; i < coeffs.size() - 1; ++i)
-      bigMCoeff -= coeffs[i];
+      if (!var[i].isSymbol)
+        bigMCoeff -= coeffs[i];
     // The coefficient to the big M parameter is stored in column 2.
     tableau(nRow - 1, 2) = bigMCoeff;
   }
@@ -164,19 +177,97 @@ Direction flippedDirection(Direction direction) {
 }
 } // namespace
 
+/// We simply make the tableau consistent while maintaining a lexicopositive
+/// basis transform, and then return the sample value. If the tableau becomes
+/// empty, we return empty.
+///
+/// Let the variables be x = (x_1, ... x_n).
+/// Let the basis unknowns be y = (y_1, ... y_n).
+/// We have that x = A*y + b for some n x n matrix A and n x 1 column vector b.
+///
+/// As we will show below, A*y is either zero or lexicopositive.
+/// Adding a lexicopositive vector to b will make it lexicographically
+/// greater, so A*y + b is always equal to or lexicographically greater than b.
+/// Thus, since we can attain x = b, that is the lexicographic minimum.
+///
+/// We have that that every column in A is lexicopositive, i.e., has at least
+/// one non-zero element, with the first such element being positive. Since for
+/// the tableau to be consistent we must have non-negative sample values not
+/// only for the constraints but also for the variables, we also have x >= 0 and
+/// y >= 0, by which we mean every element in these vectors is non-negative.
+///
+/// Proof that if every column in A is lexicopositive, and y >= 0, then
+/// A*y is zero or lexicopositive. Begin by considering A_1, the first row of A.
+/// If this row is all zeros, then (A*y)_1 = (A_1)*y = 0; proceed to the next
+/// row. If we run out of rows, A*y is zero and we are done; otherwise, we
+/// encounter some row A_i that has a non-zero element. Every column is
+/// lexicopositive and so has some positive element before any negative elements
+/// occur, so the element in this row for any column, if non-zero, must be
+/// positive. Consider (A*y)_i = (A_i)*y. All the elements in both vectors are
+/// non-negative, so if this is non-zero then it must be positive. Then the
+/// first non-zero element of A*y is positive so A*y is lexicopositive.
+///
+/// Otherwise, if (A_i)*y is zero, then for every column j that had a non-zero
+/// element in A_i, y_j is zero. Thus these columns have no contribution to A*y
+/// and we can completely ignore these columns of A. We now continue downwards,
+/// looking for rows of A that have a non-zero element other than in the ignored
+/// columns. If we find one, say A_k, once again these elements must be positive
+/// since they are the first non-zero element in each of these columns, so if
+/// (A_k)*y is not zero then we have that A*y is lexicopositive and if not we
+/// add these to the set of ignored columns and continue to the next row. If we
+/// run out of rows, then A*y is zero and we are done.
 MaybeOptimum<SmallVector<Fraction, 8>> LexSimplex::findRationalLexMin() {
-  restoreRationalConsistency();
+  if (restoreRationalConsistency().failed())
+    return OptimumKind::Empty;
   return getRationalSample();
 }
 
+/// Given a row that has a non-integer sample value, add an inequality such
+/// that this fractional sample value is cut away from the polytope. The added
+/// inequality will be such that no integer points are removed. i.e., the
+/// integer lexmin, if it exists, is the same with and without this constraint.
+///
+/// Let the row be
+/// (c + coeffM*M + a_1*s_1 + ... + a_m*s_m + b_1*y_1 + ... + b_n*y_n)/d,
+/// where s_1, ... s_m are the symbols and
+///       y_1, ... y_n are the other basis unknowns.
+///
+/// For this to be an integer, we want
+/// coeffM*M + a_1*s_1 + ... + a_m*s_m + b_1*y_1 + ... + b_n*y_n = -c (mod d)
+/// Note that this constraint must always hold, independent of the basis,
+/// becuse the row unknown's value always equals this expression, even if *we*
+/// later compute the sample value from a different expression based on a
+/// different basis.
+///
+/// Let us assume that M has a factor of d in it. Imposing this constraint on M
+/// does not in any way hinder us from finding a value of M that is big enough.
+/// Moreover, this function is only called when the symbolic part of the sample,
+/// a_1*s_1 + ... + a_m*s_m, is known to be an integer.
+///
+/// Also, we can safely reduce the coefficients modulo d, so we have:
+///
+/// (b_1%d)y_1 + ... + (b_n%d)y_n = (-c%d) + k*d for some integer `k`
+///
+/// Note that all coefficient modulos here are non-negative. Also, all the
+/// unknowns are non-negative here as both constraints and variables are
+/// non-negative in LexSimplexBase. (We used the big M trick to make the
+/// variables non-negative). Therefore, the LHS here is non-negative.
+/// Since 0 <= (-c%d) < d, k is the quotient of dividing the LHS by d and
+/// is therefore non-negative as well.
+///
+/// So we have
+/// ((b_1%d)y_1 + ... + (b_n%d)y_n - (-c%d))/d >= 0.
+///
+/// The constraint is violated when added (it would be useless otherwise)
+/// so we immediately try to move it to a column.
 LogicalResult LexSimplexBase::addCut(unsigned row) {
-  int64_t denom = tableau(row, 0);
+  int64_t d = tableau(row, 0);
   addZeroRow(/*makeRestricted=*/true);
-  tableau(nRow - 1, 0) = denom;
-  tableau(nRow - 1, 1) = -mod(-tableau(row, 1), denom);
-  tableau(nRow - 1, 2) = 0; // M has all factors in it.
-  for (unsigned col = 3; col < nCol; ++col)
-    tableau(nRow - 1, col) = mod(tableau(row, col), denom);
+  tableau(nRow - 1, 0) = d;
+  tableau(nRow - 1, 1) = -mod(-tableau(row, 1), d); // -c%d.
+  tableau(nRow - 1, 2) = 0;
+  for (unsigned col = 3 + nSymbol; col < nCol; ++col)
+    tableau(nRow - 1, col) = mod(tableau(row, col), d); // b_i%d.
   return moveRowUnknownToColumn(nRow - 1);
 }
 
@@ -185,7 +276,7 @@ Optional<unsigned> LexSimplex::maybeGetNonIntegralVarRow() const {
     if (u.orientation == Orientation::Column)
       continue;
     // If the sample value is of the form (a/d)M + b/d, we need b to be
-    // divisible by d. We assume M is very large and contains all possible
+    // divisible by d. We assume M contains all possible
     // factors and is divisible by everything.
     unsigned row = u.pos;
     if (tableau(row, 1) % tableau(row, 0) != 0)
@@ -195,28 +286,34 @@ Optional<unsigned> LexSimplex::maybeGetNonIntegralVarRow() const {
 }
 
 MaybeOptimum<SmallVector<int64_t, 8>> LexSimplex::findIntegerLexMin() {
-  while (!empty) {
-    restoreRationalConsistency();
-    if (empty)
+  // We first try to make the tableau consistent.
+  if (restoreRationalConsistency().failed())
+    return OptimumKind::Empty;
+
+  // Then, if the sample value is integral, we are done.
+  while (Optional<unsigned> maybeRow = maybeGetNonIntegralVarRow()) {
+    // Otherwise, for the variable whose row has a non-integral sample value,
+    // we add a cut, a constraint that remove this rational point
+    // while preserving all integer points, thus keeping the lexmin the same.
+    // We then again try to make the tableau with the new constraint
+    // consistent. This continues until the tableau becomes empty, in which
+    // case there is no integer point, or until there are no variables with
+    // non-integral sample values.
+    //
+    // Failure indicates that the tableau became empty, which occurs when the
+    // polytope is integer empty.
+    if (addCut(*maybeRow).failed())
       return OptimumKind::Empty;
-
-    if (Optional<unsigned> maybeRow = maybeGetNonIntegralVarRow()) {
-      // Failure occurs when the polytope is integer empty.
-      if (failed(addCut(*maybeRow)))
-        return OptimumKind::Empty;
-      continue;
-    }
-
-    MaybeOptimum<SmallVector<Fraction, 8>> sample = getRationalSample();
-    assert(!sample.isEmpty() && "If we reached here the sample should exist!");
-    if (sample.isUnbounded())
-      return OptimumKind::Unbounded;
-    return llvm::to_vector<8>(
-        llvm::map_range(*sample, std::mem_fn(&Fraction::getAsInteger)));
+    if (restoreRationalConsistency().failed())
+      return OptimumKind::Empty;
   }
 
-  // Polytope is integer empty.
-  return OptimumKind::Empty;
+  MaybeOptimum<SmallVector<Fraction, 8>> sample = getRationalSample();
+  assert(!sample.isEmpty() && "If we reached here the sample should exist!");
+  if (sample.isUnbounded())
+    return OptimumKind::Unbounded;
+  return llvm::to_vector<8>(
+      llvm::map_range(*sample, std::mem_fn(&Fraction::getAsInteger)));
 }
 
 bool LexSimplex::isSeparateInequality(ArrayRef<int64_t> coeffs) {
@@ -228,6 +325,319 @@ bool LexSimplex::isSeparateInequality(ArrayRef<int64_t> coeffs) {
 bool LexSimplex::isRedundantInequality(ArrayRef<int64_t> coeffs) {
   return isSeparateInequality(getComplementIneq(coeffs));
 }
+
+SmallVector<int64_t, 8>
+SymbolicLexSimplex::getSymbolicSampleNumerator(unsigned row) const {
+  SmallVector<int64_t, 8> sample;
+  sample.reserve(nSymbol + 1);
+  for (unsigned col = 3; col < 3 + nSymbol; ++col)
+    sample.push_back(tableau(row, col));
+  sample.push_back(tableau(row, 1));
+  return sample;
+}
+
+void LexSimplexBase::appendSymbol() {
+  appendVariable();
+  swapColumns(3 + nSymbol, nCol - 1);
+  var.back().isSymbol = true;
+  nSymbol++;
+}
+
+static bool isRangeDivisibleBy(ArrayRef<int64_t> range, int64_t divisor) {
+  assert(divisor > 0 && "divisor must be positive!");
+  return llvm::all_of(range, [divisor](int64_t x) { return x % divisor == 0; });
+}
+
+bool SymbolicLexSimplex::isSymbolicSampleIntegral(unsigned row) const {
+  int64_t denom = tableau(row, 0);
+  return tableau(row, 1) % denom == 0 &&
+         isRangeDivisibleBy(tableau.getRow(row).slice(3, nSymbol), denom);
+}
+
+/// This proceeds similarly to LexSimplex::addCut(). We are given a row that has
+/// a symbolic sample value with fractional coefficients.
+///
+/// Let the row be
+/// (c + coeffM*M + sum_i a_i*s_i + sum_j b_j*y_j)/d,
+/// where s_1, ... s_m are the symbols and
+///       y_1, ... y_n are the other basis unknowns.
+///
+/// As in LexSimplex::addCut, for this to be an integer, we want
+///
+/// coeffM*M + sum_j b_j*y_j = -c + sum_i (-a_i*s_i) (mod d)
+///
+/// This time, a_1*s_1 + ... + a_m*s_m may not be an integer. We find that
+///
+/// sum_i (b_i%d)y_i = ((-c%d) + sum_i (-a_i%d)s_i)%d + k*d for some integer k
+///
+/// where we take a modulo of the whole symbolic expression on the right to
+/// bring it into the range [0, d - 1]. Therefore, as in LexSimplex::addCut,
+/// k is the quotient on dividing the LHS by d, and since LHS >= 0, we have
+/// k >= 0 as well. We realize the modulo of the symbolic expression by adding a
+/// division variable
+///
+/// q = ((-c%d) + sum_i (-a_i%d)s_i)/d
+///
+/// to the symbol domain, so the equality becomes
+///
+/// sum_i (b_i%d)y_i = (-c%d) + sum_i (-a_i%d)s_i - q*d + k*d for some integer k
+///
+/// So the cut is
+/// (sum_i (b_i%d)y_i - (-c%d) - sum_i (-a_i%d)s_i + q*d)/d >= 0
+/// This constraint is violated when added so we immediately try to move it to a
+/// column.
+LogicalResult SymbolicLexSimplex::addSymbolicCut(unsigned row) {
+  int64_t d = tableau(row, 0);
+
+  // Add the division variable `q` described above to the symbol domain.
+  // q = ((-c%d) + sum_i (-a_i%d)s_i)/d.
+  SmallVector<int64_t, 8> domainDivCoeffs;
+  domainDivCoeffs.reserve(nSymbol + 1);
+  for (unsigned col = 3; col < 3 + nSymbol; ++col)
+    domainDivCoeffs.push_back(mod(-tableau(row, col), d)); // (-a_i%d)s_i
+  domainDivCoeffs.push_back(mod(-tableau(row, 1), d));     // -c%d.
+
+  domainSimplex.addDivisionVariable(domainDivCoeffs, d);
+  domainPoly.addLocalFloorDiv(domainDivCoeffs, d);
+
+  // Update `this` to account for the additional symbol we just added.
+  appendSymbol();
+
+  // Add the cut (sum_i (b_i%d)y_i - (-c%d) + sum_i -(-a_i%d)s_i + q*d)/d >= 0.
+  addZeroRow(/*makeRestricted=*/true);
+  tableau(nRow - 1, 0) = d;
+  tableau(nRow - 1, 2) = 0;
+
+  tableau(nRow - 1, 1) = -mod(-tableau(row, 1), d); // -(-c%d).
+  for (unsigned col = 3; col < 3 + nSymbol - 1; ++col)
+    tableau(nRow - 1, col) = -mod(-tableau(row, col), d); // -(-a_i%d)s_i.
+  tableau(nRow - 1, 3 + nSymbol - 1) = d;                 // q*d.
+
+  for (unsigned col = 3 + nSymbol; col < nCol; ++col)
+    tableau(nRow - 1, col) = mod(tableau(row, col), d); // (b_i%d)y_i.
+  return moveRowUnknownToColumn(nRow - 1);
+}
+
+void SymbolicLexSimplex::recordOutput(SymbolicLexMin &result) const {
+  Matrix output(0, domainPoly.getNumIds() + 1);
+  output.reserveRows(result.lexmin.getNumOutputs());
+  for (const Unknown &u : var) {
+    if (u.isSymbol)
+      continue;
+
+    if (u.orientation == Orientation::Column) {
+      // M + u has a sample value of zero so u has a sample value of -M, i.e,
+      // unbounded.
+      result.unboundedDomain.unionInPlace(domainPoly);
+      return;
+    }
+
+    int64_t denom = tableau(u.pos, 0);
+    if (tableau(u.pos, 2) < denom) {
+      // M + u has a sample value of fM + something, where f < 1, so
+      // u = (f - 1)M + something, which has a negative coefficient for M,
+      // and so is unbounded.
+      result.unboundedDomain.unionInPlace(domainPoly);
+      return;
+    }
+    assert(tableau(u.pos, 2) == denom &&
+           "Coefficient of M should not be greater than 1!");
+
+    SmallVector<int64_t, 8> sample = getSymbolicSampleNumerator(u.pos);
+    for (int64_t &elem : sample) {
+      assert(elem % denom == 0 && "coefficients must be integral!");
+      elem /= denom;
+    }
+    output.appendExtraRow(sample);
+  }
+  result.lexmin.addPiece(domainPoly, output);
+}
+
+Optional<unsigned> SymbolicLexSimplex::maybeGetAlwaysViolatedRow() {
+  // First look for rows that are clearly violated just from the big M
+  // coefficient, without needing to perform any simplex queries on the domain.
+  for (unsigned row = 0; row < nRow; ++row)
+    if (tableau(row, 2) < 0)
+      return row;
+
+  for (unsigned row = 0; row < nRow; ++row) {
+    if (tableau(row, 2) > 0)
+      continue;
+    if (domainSimplex.isSeparateInequality(getSymbolicSampleNumerator(row))) {
+      // Sample numerator always takes negative values in the symbol domain.
+      return row;
+    }
+  }
+  return {};
+}
+
+Optional<unsigned> SymbolicLexSimplex::maybeGetNonIntegralVarRow() {
+  for (const Unknown &u : var) {
+    if (u.orientation == Orientation::Column)
+      continue;
+    assert(!u.isSymbol && "Symbol should not be in row orientation!");
+    if (!isSymbolicSampleIntegral(u.pos))
+      return u.pos;
+  }
+  return {};
+}
+
+/// The non-branching pivots are just the ones moving the rows
+/// that are always violated in the symbol domain.
+LogicalResult SymbolicLexSimplex::doNonBranchingPivots() {
+  while (Optional<unsigned> row = maybeGetAlwaysViolatedRow())
+    if (moveRowUnknownToColumn(*row).failed())
+      return failure();
+  return success();
+}
+
+SymbolicLexMin SymbolicLexSimplex::computeSymbolicIntegerLexMin() {
+  SymbolicLexMin result(nSymbol, var.size() - nSymbol);
+
+  /// The algorithm is more naturally expressed recursively, but we implement
+  /// it iteratively here to avoid potential issues with stack overflows in the
+  /// compiler. We explicitly maintain the stack frames in a vector.
+  ///
+  /// To "recurse", we store the current "stack frame", i.e., state variables
+  /// that we will need when we "return", into `stack`, increment `level`, and
+  /// `continue`. To "tail recurse", we just `continue`.
+  /// To "return", we decrement `level` and `continue`.
+  ///
+  /// When there is no stack frame for the current `level`, this indicates that
+  /// we have just "recursed" or "tail recursed". When there does exist one,
+  /// this indicates that we have just "returned" from recursing. There is only
+  /// one point at which non-tail calls occur so we always "return" there.
+  unsigned level = 1;
+  struct StackFrame {
+    int splitIndex;
+    unsigned snapshot;
+    unsigned domainSnapshot;
+    IntegerRelation::CountsSnapshot domainPolyCounts;
+  };
+  SmallVector<StackFrame, 8> stack;
+
+  while (level > 0) {
+    assert(level >= stack.size());
+    if (level > stack.size()) {
+      if (empty || domainSimplex.findIntegerLexMin().isEmpty()) {
+        // No integer points; return.
+        --level;
+        continue;
+      }
+
+      if (doNonBranchingPivots().failed()) {
+        // Could not find pivots for violated constraints; return.
+        --level;
+        continue;
+      }
+
+      unsigned splitRow;
+      SmallVector<int64_t, 8> symbolicSample;
+      for (splitRow = 0; splitRow < nRow; ++splitRow) {
+        if (tableau(splitRow, 2) > 0)
+          continue;
+        assert(tableau(splitRow, 2) == 0 &&
+               "Non-branching pivots should have been handled already!");
+
+        symbolicSample = getSymbolicSampleNumerator(splitRow);
+        if (domainSimplex.isRedundantInequality(symbolicSample))
+          continue;
+
+        // It's neither redundant nor separate, so it takes both positive and
+        // negative values, and hence constitutes a row for which we need to
+        // split the domain and separately run each case.
+        assert(!domainSimplex.isSeparateInequality(symbolicSample) &&
+               "Non-branching pivots should have been handled already!");
+        break;
+      }
+
+      if (splitRow < nRow) {
+        unsigned domainSnapshot = domainSimplex.getSnapshot();
+        IntegerRelation::CountsSnapshot domainPolyCounts =
+            domainPoly.getCounts();
+
+        // First, we consider the part of the domain where the row is not
+        // violated. We don't have to do any pivots for the row in this case,
+        // but we record the additional constraint that defines this part of
+        // the domain.
+        domainSimplex.addInequality(symbolicSample);
+        domainPoly.addInequality(symbolicSample);
+
+        // Recurse.
+        //
+        // On return, the basis as a set is preserved but not the internal
+        // ordering within rows or columns. Thus, we take note of the index of
+        // the Unknown that caused the split, which may be in a different
+        // row when we come back from recursing. We will need this to recurse
+        // on the other part of the split domain, where the row is violated.
+        //
+        // Note that we have to capture the index above and not a reference to
+        // the Unknown itself, since the array it lives in might get
+        // reallocated.
+        int splitIndex = rowUnknown[splitRow];
+        unsigned snapshot = getSnapshot();
+        stack.push_back(
+            {splitIndex, snapshot, domainSnapshot, domainPolyCounts});
+        ++level;
+        continue;
+      }
+
+      // The tableau is rationally consistent for the current domain.
+      // Now we look for non-integral sample values and add cuts for them.
+      if (Optional<unsigned> row = maybeGetNonIntegralVarRow()) {
+        if (addSymbolicCut(*row).failed()) {
+          // No integral points; return.
+          --level;
+          continue;
+        }
+
+        // Rerun this level with the added cut constraint (tail recurse).
+        continue;
+      }
+
+      // Record output and return.
+      recordOutput(result);
+      --level;
+      continue;
+    }
+
+    if (level == stack.size()) {
+      // We have "returned" from "recursing".
+      const StackFrame &frame = stack.back();
+      domainPoly.truncate(frame.domainPolyCounts);
+      domainSimplex.rollback(frame.domainSnapshot);
+      rollback(frame.snapshot);
+      const Unknown &u = unknownFromIndex(frame.splitIndex);
+
+      // Drop the frame. We don't need it anymore.
+      stack.pop_back();
+
+      // Now we consider the part of the domain where the unknown `splitIndex`
+      // was negative.
+      assert(u.orientation == Orientation::Row &&
+             "The split row should have been returned to row orientation!");
+      SmallVector<int64_t, 8> splitIneq =
+          getComplementIneq(getSymbolicSampleNumerator(u.pos));
+      if (moveRowUnknownToColumn(u.pos).failed()) {
+        // The unknown can't be made non-negative; return.
+        --level;
+        continue;
+      }
+
+      // The unknown can be made negative; recurse with the corresponding domain
+      // constraints.
+      domainSimplex.addInequality(splitIneq);
+      domainPoly.addInequality(splitIneq);
+
+      // We are now taking care of the second half of the domain and we don't
+      // need to do anything else here after returning, so it's a tail recurse.
+      continue;
+    }
+  }
+
+  return result;
+}
+
 bool LexSimplex::rowIsViolated(unsigned row) const {
   if (tableau(row, 2) < 0)
     return true;
@@ -243,19 +653,20 @@ Optional<unsigned> LexSimplex::maybeGetViolatedRow() const {
   return {};
 }
 
-// We simply look for violated rows and keep trying to move them to column
-// orientation, which always succeeds unless the constraints have no solution
-// in which case we just give up and return.
-void LexSimplex::restoreRationalConsistency() {
-  while (Optional<unsigned> maybeViolatedRow = maybeGetViolatedRow()) {
-    LogicalResult status = moveRowUnknownToColumn(*maybeViolatedRow);
-    if (failed(status))
-      return;
-  }
+/// We simply look for violated rows and keep trying to move them to column
+/// orientation, which always succeeds unless the constraints have no solution
+/// in which case we just give up and return.
+LogicalResult LexSimplex::restoreRationalConsistency() {
+  if (empty)
+    return failure();
+  while (Optional<unsigned> maybeViolatedRow = maybeGetViolatedRow())
+    if (moveRowUnknownToColumn(*maybeViolatedRow).failed())
+      return failure();
+  return success();
 }
 
 // Move the row unknown to column orientation while preserving lexicopositivity
-// of the basis transform.
+// of the basis transform. The sample value of the row must be negative.
 //
 // We only consider pivots where the pivot element is positive. Suppose no such
 // pivot exists, i.e., some violated row has no positive coefficient for any
@@ -318,7 +729,7 @@ void LexSimplex::restoreRationalConsistency() {
 // minimizes the change in sample value.
 LogicalResult LexSimplexBase::moveRowUnknownToColumn(unsigned row) {
   Optional<unsigned> maybeColumn;
-  for (unsigned col = 3; col < nCol; ++col) {
+  for (unsigned col = 3 + nSymbol; col < nCol; ++col) {
     if (tableau(row, col) <= 0)
       continue;
     maybeColumn =
@@ -336,6 +747,7 @@ LogicalResult LexSimplexBase::moveRowUnknownToColumn(unsigned row) {
 
 unsigned LexSimplexBase::getLexMinPivotColumn(unsigned row, unsigned colA,
                                               unsigned colB) const {
+  // First, let's consider the non-symbolic case.
   // A pivot causes the following change. (in the diagram the matrix elements
   // are shown as rationals and there is no common denominator used)
   //
@@ -359,7 +771,7 @@ unsigned LexSimplexBase::getLexMinPivotColumn(unsigned row, unsigned colA,
   // (-p/a)M + (-b/a), i.e. 0 to -(pM + b)/a. Thus the change in the sample
   // value is -s/a.
   //
-  // If the variable is the pivot row, it sampel value goes from s to 0, for a
+  // If the variable is the pivot row, its sample value goes from s to 0, for a
   // change of -s.
   //
   // If the variable is a non-pivot row, its sample value changes from
@@ -373,8 +785,12 @@ unsigned LexSimplexBase::getLexMinPivotColumn(unsigned row, unsigned colA,
   // comparisons involved and can be ignored, since -s is strictly positive.
   //
   // Thus we take away this common factor and just return 0, 1/a, 1, or c/a as
-  // appropriate. This allows us to run the entire algorithm without ever having
-  // to fix a value of M.
+  // appropriate. This allows us to run the entire algorithm treating M
+  // symbolically, as the pivot to be performed does not depend on the value
+  // of M, so long as the sample value s is negative. Note that this is not
+  // because of any special feature of M; by the same argument, we ignore the
+  // symbols too. The caller ensure that the sample value s is negative for
+  // all possible values of the symbols.
   auto getSampleChangeCoeffForVar = [this, row](unsigned col,
                                                 const Unknown &u) -> Fraction {
     int64_t a = tableau(row, col);
@@ -489,6 +905,7 @@ void SimplexBase::pivot(Pivot pair) { pivot(pair.row, pair.column); }
 /// element.
 void SimplexBase::pivot(unsigned pivotRow, unsigned pivotCol) {
   assert(pivotCol >= getNumFixedCols() && "Refusing to pivot invalid column");
+  assert(!unknownFromColumn(pivotCol).isSymbol);
 
   swapRowWithCol(pivotRow, pivotCol);
   std::swap(tableau(pivotRow, 0), tableau(pivotRow, pivotCol));
@@ -777,6 +1194,9 @@ void SimplexBase::undo(UndoLogEntry entry) {
     // be part of the basis.
     assert(var.back().orientation == Orientation::Column &&
            "Variable to be removed must be in column orientation!");
+
+    if (var.back().isSymbol)
+      nSymbol--;
 
     // Move this variable to the last column and remove the column from the
     // tableau.

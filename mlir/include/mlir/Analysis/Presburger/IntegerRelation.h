@@ -536,6 +536,7 @@ protected:
   Matrix inequalities;
 };
 
+struct SymbolicLexMin;
 /// An IntegerPolyhedron is a PresburgerSpace subject to affine
 /// constraints. Affine constraints can be inequalities or equalities in the
 /// form:
@@ -593,6 +594,28 @@ public:
   /// column position (i.e., not relative to the kind of identifier) of the
   /// first added identifier.
   unsigned insertId(IdKind kind, unsigned pos, unsigned num = 1) override;
+
+  /// Compute the symbolic integer lexmin of the polyhedron.
+  /// This finds, for every assignment to the symbols, the lexicographically
+  /// minimum value attained by the dimensions. For example, the symbolic lexmin
+  /// of the set
+  ///
+  /// (x, y)[a, b, c] : (a <= x, b <= x, x <= c)
+  ///
+  /// can be written as
+  ///
+  /// x = a if b <= a, a <= c
+  /// x = b if a <  b, b <= c
+  ///
+  /// This function is stored in the `lexmin` function in the result.
+  /// Some assignments to the symbols might make the set empty.
+  /// Such points are not part of the function's domain.
+  /// In the above example, this happens when max(a, b) > c.
+  ///
+  /// For some values of the symbols, the lexmin may be unbounded.
+  /// `SymbolicLexMin` stores these parts of the symbolic domain in a separate
+  /// `PresburgerSet`, `unboundedDomain`.
+  SymbolicLexMin findSymbolicIntegerLexMin() const;
 };
 
 } // namespace presburger

@@ -106,6 +106,11 @@ public:
   /// outside the domain, an empty optional is returned.
   Optional<SmallVector<int64_t, 8>> valueAt(ArrayRef<int64_t> point) const;
 
+  /// Truncate the output dimensions to the first `count` dimensions.
+  ///
+  /// TODO: refactor so that this can be accomplished through removeIdRange.
+  void truncateOutput(unsigned count);
+
   void print(raw_ostream &os) const;
   void dump() const;
 
@@ -164,6 +169,11 @@ public:
   /// they have the same dimensions, the same domain and they take the same
   /// value at every point in the domain.
   bool isEqual(const PWMAFunction &other) const;
+
+  /// Truncate the output dimensions to the first `count` dimensions.
+  ///
+  /// TODO: refactor so that this can be accomplished through removeIdRange.
+  void truncateOutput(unsigned count);
 
   void print(raw_ostream &os) const;
   void dump() const;
