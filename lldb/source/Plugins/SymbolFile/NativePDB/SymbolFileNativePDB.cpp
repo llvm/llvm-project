@@ -1678,7 +1678,7 @@ VariableSP SymbolFileNativePDB::CreateLocalVariable(PdbCompilandSymId scope_id,
   bool is_constant = false;
   VariableSP var_sp = std::make_shared<Variable>(
       toOpaqueUid(var_id), name.c_str(), name.c_str(), sftype, var_scope,
-      &bloc), *var_info.ranges, &decl, *var_info.location, external,
+      &block, *var_info.ranges, &decl, *var_info.location, external,
       artificial, location_is_constant_data, static_member, is_constant);
 
   if (!is_param)
