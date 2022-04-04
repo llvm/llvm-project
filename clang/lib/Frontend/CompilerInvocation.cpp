@@ -3328,6 +3328,10 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
     // whereas respecting contract flag in backend.
     Opts.setDefaultFPContractMode(LangOptions::FPM_FastHonorPragmas);
   } else if (Opts.CUDA) {
+    if (T.isSPIRV()) {
+      // Emit OpenCL version metadata in LLVM IR when targeting SPIR-V.
+      Opts.OpenCLVersion = 200;
+    }
     // Allow fuse across statements disregarding pragmas.
     Opts.setDefaultFPContractMode(LangOptions::FPM_Fast);
   }

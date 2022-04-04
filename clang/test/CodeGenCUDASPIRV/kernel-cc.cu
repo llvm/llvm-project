@@ -7,3 +7,6 @@
 // CHECK: define spir_kernel void @_Z6kernelv()
 
 __attribute__((global)) void kernel() { return; }
+
+// CHECK: !opencl.ocl.version = !{[[OCL:![0-9]+]]}
+// CHECK: [[OCL]] = !{i32 2, i32 0}
