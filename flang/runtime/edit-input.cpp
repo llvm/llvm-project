@@ -12,6 +12,7 @@
 #include "flang/Common/real.h"
 #include "flang/Common/uint128.h"
 #include <algorithm>
+#include <cfenv>
 
 namespace Fortran::runtime::io {
 
@@ -276,6 +277,25 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
   return got;
 }
 
+static void RaiseFPExceptions(decimal::ConversionResultFlags flags) {
+#undef RAISE
+#ifdef feraisexcept // a macro in some environments; omit std::
+#define RAISE feraiseexcept
+#else
+#define RAISE std::feraiseexcept
+#endif
+  if (flags & decimal::ConversionResultFlags::Overflow) {
+    RAISE(FE_OVERFLOW);
+  }
+  if (flags & decimal::ConversionResultFlags::Inexact) {
+    RAISE(FE_INEXACT);
+  }
+  if (flags & decimal::ConversionResultFlags::Invalid) {
+    RAISE(FE_INVALID);
+  }
+#undef RAISE
+}
+
 // If no special modes are in effect and the form of the input value
 // that's present in the input stream is acceptable to the decimal->binary
 // converter without modification, this fast path for real input
@@ -324,10 +344,13 @@ static bool TryFastPathRealInput(
     return false; // unconverted characters remain in fixed width field
   }
   // Success on the fast path!
-  // TODO: raise converted.flags as exceptions?
   *reinterpret_cast<decimal::BinaryFloatingPointNumber<PRECISION> *>(n) =
       converted.binary;
   io.HandleRelativePosition(p - str);
+  // Set FP exception flags
+  if (converted.flags != decimal::ConversionResultFlags::Exact) {
+    RaiseFPExceptions(converted.flags);
+  }
   return true;
 }
 
@@ -395,9 +418,12 @@ bool EditCommonRealInput(IoStatementState &io, const DataEdit &edit, void *n) {
     converted.flags = static_cast<enum decimal::ConversionResultFlags>(
         converted.flags | decimal::Inexact);
   }
-  // TODO: raise converted.flags as exceptions?
   *reinterpret_cast<decimal::BinaryFloatingPointNumber<binaryPrecision> *>(n) =
       converted.binary;
+  // Set FP exception flags
+  if (converted.flags != decimal::ConversionResultFlags::Exact) {
+    RaiseFPExceptions(converted.flags);
+  }
   return true;
 }
 
