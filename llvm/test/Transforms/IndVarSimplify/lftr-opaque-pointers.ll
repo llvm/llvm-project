@@ -11,7 +11,7 @@ define void @test_zext(ptr %a) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[P_0:%.*]] = phi ptr [ getelementptr inbounds ([240 x i8], ptr @data, i64 0, i64 0), [[ENTRY:%.*]] ], [ [[T3:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[P_0:%.*]] = phi ptr [ @data, [[ENTRY:%.*]] ], [ [[T3:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[DOT0:%.*]] = phi ptr [ [[A:%.*]], [[ENTRY]] ], [ [[T:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[T]] = getelementptr inbounds i8, ptr [[DOT0]], i64 1
 ; CHECK-NEXT:    [[T2:%.*]] = load i8, ptr [[DOT0]], align 1

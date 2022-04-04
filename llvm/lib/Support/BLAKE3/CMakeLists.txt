@@ -10,22 +10,6 @@ else()
   set(CAN_USE_ASSEMBLER TRUE)
 endif()
 
-# Some LLVM builders set "CC=ccache /path/to/clang" as environment variable,
-# which confuses CMake thinking the assembler to use is the 'ccache' binary.
-# These builders need to also set "ASM=/path/to/clang" in environment, or use
-# LLVM_CCACHE_BUILD CMake variable instead, but until this happens check for
-# this case and disable building the assembly files.
-get_filename_component(ASM_BINARY ${CMAKE_ASM_COMPILER} NAME)
-if (ASM_BINARY STREQUAL "ccache")
-  message(WARNING "CMake is set to use '${CMAKE_ASM_COMPILER}' as assembler "
-    "which is likely due to having 'CC=ccache /path/to/clang' in the environment. "
-    "Building the BLAKE3 SIMD-optimized assembly files is disabled, set "
-    "'ASM=/path/to/clang' as environment variable and do a clean re-configure, "
-    "or unset CC/CXX and configure with '-DLLVM_CCACHE_BUILD=YES' instead, "
-    "to correct this.")
-  set(CAN_USE_ASSEMBLER FALSE)
-endif()
-
 # The BLAKE3 team recommends using the assembly versions, from the README:
 #
 # "For each of the x86 SIMD instruction sets, four versions are available:

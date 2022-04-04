@@ -1,0 +1,98 @@
+add_header_library(
+  pthread_mutexattr
+  HDRS
+    pthread_mutexattr.h
+  DEPENDS
+    libc.include.pthread
+)
+
+add_entrypoint_object(
+  pthread_mutexattr_init
+  SRCS
+    pthread_mutexattr_init.cpp
+  HDRS
+    pthread_mutexattr_init.h
+  DEPENDS
+    .pthread_mutexattr
+    libc.include.pthread
+)
+
+add_entrypoint_object(
+  pthread_mutexattr_gettype
+  SRCS
+    pthread_mutexattr_gettype.cpp
+  HDRS
+    pthread_mutexattr_gettype.h
+  DEPENDS
+    .pthread_mutexattr
+    libc.include.pthread
+)
+
+add_entrypoint_object(
+  pthread_mutexattr_settype
+  SRCS
+    pthread_mutexattr_settype.cpp
+  HDRS
+    pthread_mutexattr_settype.h
+  DEPENDS
+    .pthread_mutexattr
+    libc.include.pthread
+)
+
+add_entrypoint_object(
+  pthread_mutexattr_destroy
+  SRCS
+    pthread_mutexattr_destroy.cpp
+  HDRS
+    pthread_mutexattr_destroy.h
+  DEPENDS
+    .pthread_mutexattr
+    libc.include.errno
+    libc.include.pthread
+)
+
+add_entrypoint_object(
+  pthread_mutexattr_getrobust
+  SRCS
+    pthread_mutexattr_getrobust.cpp
+  HDRS
+    pthread_mutexattr_getrobust.h
+  DEPENDS
+    .pthread_mutexattr
+    libc.include.pthread
+)
+
+add_entrypoint_object(
+  pthread_mutexattr_setrobust
+  SRCS
+    pthread_mutexattr_setrobust.cpp
+  HDRS
+    pthread_mutexattr_setrobust.h
+  DEPENDS
+    .pthread_mutexattr
+    libc.include.errno
+    libc.include.pthread
+)
+
+add_entrypoint_object(
+  pthread_mutexattr_getpshared
+  SRCS
+    pthread_mutexattr_getpshared.cpp
+  HDRS
+    pthread_mutexattr_getpshared.h
+  DEPENDS
+    .pthread_mutexattr
+    libc.include.pthread
+)
+
+add_entrypoint_object(
+  pthread_mutexattr_setpshared
+  SRCS
+    pthread_mutexattr_setpshared.cpp
+  HDRS
+    pthread_mutexattr_setpshared.h
+  DEPENDS
+    .pthread_mutexattr
+    libc.include.errno
+    libc.include.pthread
+)

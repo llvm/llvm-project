@@ -705,6 +705,28 @@ static StringRef getDynamicLinker(opt::InputArgList &args) {
   return arg->getValue();
 }
 
+static int getMemtagMode(opt::InputArgList &args) {
+  StringRef memtagModeArg = args.getLastArgValue(OPT_android_memtag_mode);
+  if (!config->androidMemtagHeap && !config->androidMemtagStack) {
+    if (!memtagModeArg.empty())
+      error("when using --android-memtag-mode, at least one of "
+            "--android-memtag-heap or "
+            "--android-memtag-stack is required");
+    return ELF::NT_MEMTAG_LEVEL_NONE;
+  }
+
+  if (memtagModeArg == "sync" || memtagModeArg.empty())
+    return ELF::NT_MEMTAG_LEVEL_SYNC;
+  if (memtagModeArg == "async")
+    return ELF::NT_MEMTAG_LEVEL_ASYNC;
+  if (memtagModeArg == "none")
+    return ELF::NT_MEMTAG_LEVEL_NONE;
+
+  error("unknown --android-memtag-mode value: \"" + memtagModeArg +
+        "\", should be one of {async, sync, none}");
+  return ELF::NT_MEMTAG_LEVEL_NONE;
+}
+
 static ICFLevel getICF(opt::InputArgList &args) {
   auto *arg = args.getLastArg(OPT_icf_none, OPT_icf_safe, OPT_icf_all);
   if (!arg || arg->getOption().getID() == OPT_icf_none)
@@ -1008,6 +1030,11 @@ static void readConfigs(opt::InputArgList &args) {
       args.hasFlag(OPT_allow_multiple_definition,
                    OPT_no_allow_multiple_definition, false) ||
       hasZOption(args, "muldefs");
+  config->androidMemtagHeap =
+      args.hasFlag(OPT_android_memtag_heap, OPT_no_android_memtag_heap, false);
+  config->androidMemtagStack = args.hasFlag(OPT_android_memtag_stack,
+                                            OPT_no_android_memtag_stack, false);
+  config->androidMemtagMode = getMemtagMode(args);
   config->auxiliaryList = args::getStrings(args, OPT_auxiliary);
   if (opt::Arg *arg =
           args.getLastArg(OPT_Bno_symbolic, OPT_Bsymbolic_non_weak_functions,

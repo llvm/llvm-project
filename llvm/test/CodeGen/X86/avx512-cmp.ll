@@ -116,7 +116,7 @@ define i32 @test8(i32 %a1, i32 %a2, i32 %a3) {
 ; ALL-LABEL: test8:
 ; ALL:       ## %bb.0:
 ; ALL-NEXT:    notl %edi
-; ALL-NEXT:    xorl $-2147483648, %esi ## imm = 0x80000000
+; ALL-NEXT:    addl $-2147483648, %esi ## imm = 0x80000000
 ; ALL-NEXT:    testl %edx, %edx
 ; ALL-NEXT:    movl $1, %eax
 ; ALL-NEXT:    cmovel %eax, %edx

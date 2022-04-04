@@ -1,4 +1,4 @@
-//===- TosaToStandard.cpp - Lowering Tosa to Standard Dialect -------------===//
+//===- TosaToArith.cpp - Lowering Tosa to Arith Dialect -------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// These rewriters lower from the Tosa to the Standard dialect.
+// These rewriters lower from the Tosa to the Arith dialect.
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Conversion/TosaToStandard/TosaToStandard.h"
+#include "mlir/Conversion/TosaToArith/TosaToArith.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
-#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -29,24 +28,6 @@ public:
   LogicalResult matchAndRewrite(tosa::ConstOp op,
                                 PatternRewriter &rewriter) const final {
     rewriter.replaceOpWithNewOp<arith::ConstantOp>(op, op.value());
-    return success();
-  }
-};
-
-class SliceOpConverter : public OpRewritePattern<tosa::SliceOp> {
-public:
-  using OpRewritePattern<tosa::SliceOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(tosa::SliceOp sliceOp,
-                                PatternRewriter &rewriter) const final {
-    Value input = sliceOp.input();
-    SmallVector<int64_t> strides;
-    strides.resize(sliceOp.getType().template cast<ShapedType>().getRank(), 1);
-
-    rewriter.replaceOpWithNewOp<tensor::ExtractSliceOp>(
-        sliceOp, sliceOp.getType(), input, ValueRange({}), ValueRange({}),
-        ValueRange({}), sliceOp.start(), sliceOp.size(),
-        rewriter.getI64ArrayAttr(strides));
     return success();
   }
 };
@@ -171,13 +152,12 @@ public:
 
 } // namespace
 
-void mlir::tosa::populateTosaToStandardConversionPatterns(
+void mlir::tosa::populateTosaToArithConversionPatterns(
     RewritePatternSet *patterns) {
-  patterns->add<ApplyScaleOpConverter, ConstOpConverter, SliceOpConverter>(
-      patterns->getContext());
+  patterns->add<ConstOpConverter>(patterns->getContext());
 }
 
-void mlir::tosa::populateTosaRescaleToStandardConversionPatterns(
+void mlir::tosa::populateTosaRescaleToArithConversionPatterns(
     RewritePatternSet *patterns) {
   patterns->add<ApplyScaleOpConverter>(patterns->getContext());
 }
