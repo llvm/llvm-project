@@ -1,4 +1,4 @@
-//===- TosaToStandardPass.cpp - Lowering Tosa to Linalg Dialect -----------===//
+//===- TosaToArithPass.cpp - Lowering Tosa to Linalg Dialect -----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This transformation pass legalizes Tosa operations to the Standard dialect.
+// This transformation pass legalizes Tosa operations to the Arith dialect.
 //
 //===----------------------------------------------------------------------===//
 
 #include "../PassDetail.h"
-#include "mlir/Conversion/TosaToStandard/TosaToStandard.h"
+#include "mlir/Conversion/TosaToArith/TosaToArith.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
-#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Transforms/PassDetail.h"
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
@@ -26,18 +25,21 @@ using namespace mlir;
 using namespace tosa;
 
 namespace {
-struct TosaToStandard : public TosaToStandardBase<TosaToStandard> {
+struct TosaToArith : public TosaToArithBase<TosaToArith> {
 public:
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     ConversionTarget target(getContext());
     target.addIllegalOp<tosa::ConstOp>();
-    target.addIllegalOp<tosa::SliceOp>();
-    target.addIllegalOp<tosa::ApplyScaleOp>();
     target.addLegalDialect<arith::ArithmeticDialect>();
-    target.addLegalDialect<tensor::TensorDialect>();
 
-    mlir::tosa::populateTosaToStandardConversionPatterns(&patterns);
+    mlir::tosa::populateTosaToArithConversionPatterns(&patterns);
+
+    if (this->includeApplyRescale) {
+      mlir::tosa::populateTosaRescaleToArithConversionPatterns(&patterns);
+      target.addIllegalOp<tosa::ApplyScaleOp>();
+    }
+
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
       signalPassFailure();
@@ -45,10 +47,6 @@ public:
 };
 } // namespace
 
-std::unique_ptr<Pass> mlir::tosa::createTosaToStandard() {
-  return std::make_unique<TosaToStandard>();
-}
-
-void mlir::tosa::addTosaToStandardPasses(OpPassManager &pm) {
-  pm.addNestedPass<FuncOp>(createTosaToStandard());
+std::unique_ptr<Pass> mlir::tosa::createTosaToArith() {
+  return std::make_unique<TosaToArith>();
 }

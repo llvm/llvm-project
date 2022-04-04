@@ -37,6 +37,8 @@ void printReductionResult(Operation *redRegionOp, unsigned numOutput,
 struct TestMatchReductionPass
     : public PassWrapper<TestMatchReductionPass,
                          InterfacePass<FunctionOpInterface>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestMatchReductionPass)
+
   StringRef getArgument() const final { return "test-match-reduction"; }
   StringRef getDescription() const final {
     return "Test the match reduction utility.";

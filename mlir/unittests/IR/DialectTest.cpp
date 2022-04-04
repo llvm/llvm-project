@@ -15,11 +15,15 @@ using namespace mlir::detail;
 
 namespace {
 struct TestDialect : public Dialect {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestDialect)
+
   static StringRef getDialectNamespace() { return "test"; };
   TestDialect(MLIRContext *context)
       : Dialect(getDialectNamespace(), context, TypeID::get<TestDialect>()) {}
 };
 struct AnotherTestDialect : public Dialect {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(AnotherTestDialect)
+
   static StringRef getDialectNamespace() { return "test"; };
   AnotherTestDialect(MLIRContext *context)
       : Dialect(getDialectNamespace(), context,
@@ -36,6 +40,8 @@ TEST(DialectDeathTest, MultipleDialectsWithSameNamespace) {
 }
 
 struct SecondTestDialect : public Dialect {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(SecondTestDialect)
+
   static StringRef getDialectNamespace() { return "test2"; }
   SecondTestDialect(MLIRContext *context)
       : Dialect(getDialectNamespace(), context,
@@ -44,16 +50,22 @@ struct SecondTestDialect : public Dialect {
 
 struct TestDialectInterfaceBase
     : public DialectInterface::Base<TestDialectInterfaceBase> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestDialectInterfaceBase)
+
   TestDialectInterfaceBase(Dialect *dialect) : Base(dialect) {}
   virtual int function() const { return 42; }
 };
 
 struct TestDialectInterface : public TestDialectInterfaceBase {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestDialectInterface)
+
   using TestDialectInterfaceBase::TestDialectInterfaceBase;
   int function() const final { return 56; }
 };
 
 struct SecondTestDialectInterface : public TestDialectInterfaceBase {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(SecondTestDialectInterface)
+
   using TestDialectInterfaceBase::TestDialectInterfaceBase;
   int function() const final { return 78; }
 };

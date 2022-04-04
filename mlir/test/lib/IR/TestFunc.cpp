@@ -17,6 +17,8 @@ namespace {
 /// method.
 struct TestFuncInsertArg
     : public PassWrapper<TestFuncInsertArg, OperationPass<ModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestFuncInsertArg)
+
   StringRef getArgument() const final { return "test-func-insert-arg"; }
   StringRef getDescription() const final { return "Test inserting func args."; }
   void runOnOperation() override {
@@ -52,6 +54,8 @@ struct TestFuncInsertArg
 /// This is a test pass for verifying FunctionOpInterface's insertResult method.
 struct TestFuncInsertResult
     : public PassWrapper<TestFuncInsertResult, OperationPass<ModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestFuncInsertResult)
+
   StringRef getArgument() const final { return "test-func-insert-result"; }
   StringRef getDescription() const final {
     return "Test inserting func results.";
@@ -84,6 +88,8 @@ struct TestFuncInsertResult
 /// method.
 struct TestFuncEraseArg
     : public PassWrapper<TestFuncEraseArg, OperationPass<ModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestFuncEraseArg)
+
   StringRef getArgument() const final { return "test-func-erase-arg"; }
   StringRef getDescription() const final { return "Test erasing func args."; }
   void runOnOperation() override {
@@ -102,6 +108,8 @@ struct TestFuncEraseArg
 /// This is a test pass for verifying FunctionOpInterface's eraseResult method.
 struct TestFuncEraseResult
     : public PassWrapper<TestFuncEraseResult, OperationPass<ModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestFuncEraseResult)
+
   StringRef getArgument() const final { return "test-func-erase-result"; }
   StringRef getDescription() const final {
     return "Test erasing func results.";
@@ -122,6 +130,8 @@ struct TestFuncEraseResult
 /// This is a test pass for verifying FunctionOpInterface's setType method.
 struct TestFuncSetType
     : public PassWrapper<TestFuncSetType, OperationPass<ModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestFuncSetType)
+
   StringRef getArgument() const final { return "test-func-set-type"; }
   StringRef getDescription() const final {
     return "Test FunctionOpInterface::setType.";

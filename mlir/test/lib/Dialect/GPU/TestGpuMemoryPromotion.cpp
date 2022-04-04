@@ -27,9 +27,11 @@ namespace {
 /// Promotes all arguments with "gpu.test_promote_workgroup" attribute. This
 /// does not check whether the promotion is legal (e.g., amount of memory used)
 /// or beneficial (e.g., makes previously uncoalesced loads coalesced).
-class TestGpuMemoryPromotionPass
+struct TestGpuMemoryPromotionPass
     : public PassWrapper<TestGpuMemoryPromotionPass,
                          OperationPass<gpu::GPUFuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestGpuMemoryPromotionPass)
+
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<AffineDialect, memref::MemRefDialect, scf::SCFDialect>();
   }

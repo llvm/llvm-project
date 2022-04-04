@@ -18,7 +18,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/TypeSwitch.h"
 
-namespace mlir {
+using namespace mlir;
 
 static void addOperands(Operation *op, SetVector<Value> &operandSet) {
   if (!op)
@@ -48,6 +48,8 @@ static bool setFusedOpOperandLimit(const OpResult &producer,
 namespace {
 struct TestLinalgElementwiseFusion
     : public PassWrapper<TestLinalgElementwiseFusion, OperationPass<FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestLinalgElementwiseFusion)
+
   TestLinalgElementwiseFusion() = default;
   TestLinalgElementwiseFusion(const TestLinalgElementwiseFusion &pass)
       : PassWrapper(pass) {}
@@ -168,10 +170,10 @@ struct TestLinalgElementwiseFusion
 
 } // namespace
 
+namespace mlir {
 namespace test {
 void registerTestLinalgElementwiseFusion() {
   PassRegistration<TestLinalgElementwiseFusion>();
 }
 } // namespace test
-
 } // namespace mlir

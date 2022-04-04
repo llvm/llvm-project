@@ -49,6 +49,8 @@ struct CustomDataLayoutSpec
     : public Attribute::AttrBase<CustomDataLayoutSpec, Attribute,
                                  DataLayoutSpecStorage,
                                  DataLayoutSpecInterface::Trait> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(CustomDataLayoutSpec)
+
   using Base::Base;
   static CustomDataLayoutSpec get(MLIRContext *ctx,
                                   ArrayRef<DataLayoutEntryInterface> entries) {
@@ -67,6 +69,8 @@ struct CustomDataLayoutSpec
 struct SingleQueryType
     : public Type::TypeBase<SingleQueryType, Type, TypeStorage,
                             DataLayoutTypeInterface::Trait> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(SingleQueryType)
+
   using Base::Base;
 
   static SingleQueryType get(MLIRContext *ctx) { return Base::get(ctx); }
@@ -104,6 +108,8 @@ struct SingleQueryType
 
 /// A types that is not subject to data layout.
 struct TypeNoLayout : public Type::TypeBase<TypeNoLayout, Type, TypeStorage> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TypeNoLayout)
+
   using Base::Base;
 
   static TypeNoLayout get(MLIRContext *ctx) { return Base::get(ctx); }
@@ -113,6 +119,8 @@ struct TypeNoLayout : public Type::TypeBase<TypeNoLayout, Type, TypeStorage> {
 /// attribute attached. This can handle data layout requests for the built-in
 /// types itself.
 struct OpWithLayout : public Op<OpWithLayout, DataLayoutOpInterface::Trait> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(OpWithLayout)
+
   using Op::Op;
   static ArrayRef<StringRef> getAttributeNames() { return {}; }
 
@@ -156,6 +164,8 @@ struct OpWithLayout : public Op<OpWithLayout, DataLayoutOpInterface::Trait> {
 
 struct OpWith7BitByte
     : public Op<OpWith7BitByte, DataLayoutOpInterface::Trait> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(OpWith7BitByte)
+
   using Op::Op;
   static ArrayRef<StringRef> getAttributeNames() { return {}; }
 
@@ -174,6 +184,8 @@ struct OpWith7BitByte
 
 /// A dialect putting all the above together.
 struct DLTestDialect : Dialect {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(DLTestDialect)
+
   explicit DLTestDialect(MLIRContext *ctx)
       : Dialect(getDialectNamespace(), ctx, TypeID::get<DLTestDialect>()) {
     ctx->getOrLoadDialect<DLTIDialect>();
