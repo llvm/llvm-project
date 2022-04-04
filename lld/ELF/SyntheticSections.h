@@ -955,7 +955,7 @@ private:
   // The reason why we don't want to use the least significant bits is
   // because DenseMap also uses lower bits to determine a bucket ID.
   // If we use lower bits, it significantly increases the probability of
-  // hash collisons.
+  // hash collisions.
   size_t getShardId(uint32_t hash) {
     assert((hash >> 31) == 0);
     return hash >> (31 - llvm::countTrailingZeros(numShards));
