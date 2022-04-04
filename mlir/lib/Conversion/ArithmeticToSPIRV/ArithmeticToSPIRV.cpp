@@ -294,9 +294,10 @@ LogicalResult ConstantCompositeOpPattern::matchAndRewrite(
     return failure();
 
   auto dstElementsAttr = constOp.getValue().dyn_cast<DenseElementsAttr>();
-  ShapedType dstAttrType = dstElementsAttr.getType();
   if (!dstElementsAttr)
     return failure();
+
+  ShapedType dstAttrType = dstElementsAttr.getType();
 
   // If the composite type has more than one dimensions, perform linearization.
   if (srcType.getRank() > 1) {
