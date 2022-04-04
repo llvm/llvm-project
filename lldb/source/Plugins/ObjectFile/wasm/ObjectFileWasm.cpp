@@ -88,7 +88,7 @@ void ObjectFileWasm::Terminate() {
 }
 
 ObjectFile *
-ObjectFileWasm::CreateInstance(const ModuleSP &module_sp, DataBufferSP &data_sp,
+ObjectFileWasm::CreateInstance(const ModuleSP &module_sp, DataBufferSP data_sp,
                                offset_t data_offset, const FileSpec *file,
                                offset_t file_offset, offset_t length) {
   Log *log = GetLog(LLDBLog::Object);
@@ -141,7 +141,7 @@ ObjectFileWasm::CreateInstance(const ModuleSP &module_sp, DataBufferSP &data_sp,
 }
 
 ObjectFile *ObjectFileWasm::CreateMemoryInstance(const ModuleSP &module_sp,
-                                                 DataBufferSP &data_sp,
+                                                 DataBufferSP data_sp,
                                                  const ProcessSP &process_sp,
                                                  addr_t header_addr) {
   if (!ValidateModuleHeader(data_sp))
