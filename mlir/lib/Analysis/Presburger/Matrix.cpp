@@ -66,6 +66,14 @@ unsigned Matrix::appendExtraRow() {
   return nRows - 1;
 }
 
+unsigned Matrix::appendExtraRow(ArrayRef<int64_t> elems) {
+  assert(elems.size() == nColumns && "elems must match row length!");
+  unsigned row = appendExtraRow();
+  for (unsigned col = 0; col < nColumns; ++col)
+    at(row, col) = elems[col];
+  return row;
+}
+
 void Matrix::resizeHorizontally(unsigned newNColumns) {
   if (newNColumns < nColumns)
     removeColumns(newNColumns, nColumns - newNColumns);

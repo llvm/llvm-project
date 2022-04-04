@@ -14,6 +14,7 @@
 
 #include "mlir/Analysis/Presburger/IntegerRelation.h"
 #include "mlir/Analysis/Presburger/LinearTransform.h"
+#include "mlir/Analysis/Presburger/PWMAFunction.h"
 #include "mlir/Analysis/Presburger/PresburgerRelation.h"
 #include "mlir/Analysis/Presburger/Simplex.h"
 #include "mlir/Analysis/Presburger/Utils.h"
@@ -143,6 +144,21 @@ void IntegerRelation::truncate(const CountsSnapshot &counts) {
   truncateIdKind(IdKind::Local, counts);
   removeInequalityRange(counts.getNumIneqs(), getNumInequalities());
   removeEqualityRange(counts.getNumEqs(), getNumEqualities());
+}
+
+SymbolicLexMin IntegerPolyhedron::findSymbolicIntegerLexMin() const {
+  // Compute the symbolic lexmin of the dims and locals, with the symbols being
+  // the actual symbols of this set.
+  SymbolicLexMin result =
+      SymbolicLexSimplex(*this, IntegerPolyhedron(PresburgerSpace::getSetSpace(
+                                    /*numDims=*/getNumSymbolIds())))
+          .computeSymbolicIntegerLexMin();
+
+  // We want to return only the lexmin over the dims, so strip the locals from
+  // the computed lexmin.
+  result.lexmin.truncateOutput(result.lexmin.getNumOutputs() -
+                               getNumLocalIds());
+  return result;
 }
 
 unsigned IntegerRelation::insertId(IdKind kind, unsigned pos, unsigned num) {
