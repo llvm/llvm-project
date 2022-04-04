@@ -15,8 +15,7 @@ declare i8* @memchr(i8*, i32, i64)
 
 define i8* @fold_memchr_a12345_6_n(i64 %n) {
 ; CHECK-LABEL: @fold_memchr_a12345_6_n(
-; CHECK-NEXT:    [[RES:%.*]] = call i8* @memchr(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @a12345, i64 0, i64 0), i32 6, i64 [[N:%.*]])
-; CHECK-NEXT:    ret i8* [[RES]]
+; CHECK-NEXT:    ret i8* null
 ;
 
   %ptr = getelementptr [5 x i8], [5 x i8]* @a12345, i32 0, i32 0
@@ -95,8 +94,9 @@ define i8* @fold_memchr_a123f45_500_9() {
 
 define i8* @fold_a12345_3_n(i64 %n) {
 ; CHECK-LABEL: @fold_a12345_3_n(
-; CHECK-NEXT:    [[RES:%.*]] = call i8* @memchr(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @a12345, i64 0, i64 0), i32 3, i64 [[N:%.*]])
-; CHECK-NEXT:    ret i8* [[RES]]
+; CHECK-NEXT:    [[MEMCHR_CMP:%.*]] = icmp ult i64 [[N:%.*]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[MEMCHR_CMP]], i8* null, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @a12345, i64 0, i64 2)
+; CHECK-NEXT:    ret i8* [[TMP1]]
 ;
 
   %ptr = getelementptr [5 x i8], [5 x i8]* @a12345, i32 0, i32 0
@@ -110,8 +110,9 @@ define i8* @fold_a12345_3_n(i64 %n) {
 
 define i8* @fold_a12345_259_n(i64 %n) {
 ; CHECK-LABEL: @fold_a12345_259_n(
-; CHECK-NEXT:    [[RES:%.*]] = call i8* @memchr(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @a12345, i64 0, i64 0), i32 259, i64 [[N:%.*]])
-; CHECK-NEXT:    ret i8* [[RES]]
+; CHECK-NEXT:    [[MEMCHR_CMP:%.*]] = icmp ult i64 [[N:%.*]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[MEMCHR_CMP]], i8* null, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @a12345, i64 0, i64 2)
+; CHECK-NEXT:    ret i8* [[TMP1]]
 ;
 
   %ptr = getelementptr [5 x i8], [5 x i8]* @a12345, i32 0, i32 0
