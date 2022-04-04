@@ -255,3 +255,120 @@ entry:
     %out = mul nsw <8 x i16> %broadcast.splat, %ext.b
     ret <8 x i16> %out
 }
+
+define <8 x i16> @shufsext_v8i8_v8i16(<8 x i8> %src, <8 x i8> %b) {
+; CHECK-LABEL: shufsext_v8i8_v8i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
+; CHECK-NEXT:    sshll v1.8h, v1.8b, #0
+; CHECK-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mul v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ret
+entry:
+  %in = sext <8 x i8> %src to <8 x i16>
+  %ext.b = sext <8 x i8> %b to <8 x i16>
+  %shuf = shufflevector <8 x i16> %in, <8 x i16> undef, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+  %out = mul nsw <8 x i16> %shuf, %ext.b
+  ret <8 x i16> %out
+}
+
+define <2 x i64> @shufsext_v2i32_v2i64(<2 x i32> %src, <2 x i32> %b) {
+; CHECK-LABEL: shufsext_v2i32_v2i64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
+; CHECK-NEXT:    sshll v1.2d, v1.2s, #0
+; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    fmov x9, d1
+; CHECK-NEXT:    mov x8, v1.d[1]
+; CHECK-NEXT:    fmov x10, d0
+; CHECK-NEXT:    mov x11, v0.d[1]
+; CHECK-NEXT:    mul x9, x10, x9
+; CHECK-NEXT:    mul x8, x11, x8
+; CHECK-NEXT:    fmov d0, x9
+; CHECK-NEXT:    mov v0.d[1], x8
+; CHECK-NEXT:    ret
+entry:
+  %in = sext <2 x i32> %src to <2 x i64>
+  %ext.b = sext <2 x i32> %b to <2 x i64>
+  %shuf = shufflevector <2 x i64> %in, <2 x i64> undef, <2 x i32> <i32 1, i32 0>
+  %out = mul nsw <2 x i64> %shuf, %ext.b
+  ret <2 x i64> %out
+}
+
+define <8 x i16> @shufzext_v8i8_v8i16(<8 x i8> %src, <8 x i8> %b) {
+; CHECK-LABEL: shufzext_v8i8_v8i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mul v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ret
+entry:
+  %in = zext <8 x i8> %src to <8 x i16>
+  %ext.b = zext <8 x i8> %b to <8 x i16>
+  %shuf = shufflevector <8 x i16> %in, <8 x i16> undef, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+  %out = mul nsw <8 x i16> %shuf, %ext.b
+  ret <8 x i16> %out
+}
+
+define <2 x i64> @shufzext_v2i32_v2i64(<2 x i32> %src, <2 x i32> %b) {
+; CHECK-LABEL: shufzext_v2i32_v2i64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
+; CHECK-NEXT:    sshll v1.2d, v1.2s, #0
+; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    fmov x9, d1
+; CHECK-NEXT:    mov x8, v1.d[1]
+; CHECK-NEXT:    fmov x10, d0
+; CHECK-NEXT:    mov x11, v0.d[1]
+; CHECK-NEXT:    mul x9, x10, x9
+; CHECK-NEXT:    mul x8, x11, x8
+; CHECK-NEXT:    fmov d0, x9
+; CHECK-NEXT:    mov v0.d[1], x8
+; CHECK-NEXT:    ret
+entry:
+  %in = sext <2 x i32> %src to <2 x i64>
+  %ext.b = sext <2 x i32> %b to <2 x i64>
+  %shuf = shufflevector <2 x i64> %in, <2 x i64> undef, <2 x i32> <i32 1, i32 0>
+  %out = mul nsw <2 x i64> %shuf, %ext.b
+  ret <2 x i64> %out
+}
+
+define <8 x i16> @shufzext_v8i8_v8i16_twoin(<8 x i8> %src1, <8 x i8> %src2, <8 x i8> %b) {
+; CHECK-LABEL: shufzext_v8i8_v8i16_twoin:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-NEXT:    trn1 v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ushll v1.8h, v2.8b, #0
+; CHECK-NEXT:    mul v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ret
+entry:
+  %in1 = zext <8 x i8> %src1 to <8 x i16>
+  %in2 = zext <8 x i8> %src2 to <8 x i16>
+  %ext.b = zext <8 x i8> %b to <8 x i16>
+  %shuf = shufflevector <8 x i16> %in1, <8 x i16> %in2, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
+  %out = mul nsw <8 x i16> %shuf, %ext.b
+  ret <8 x i16> %out
+}
+
+define <8 x i16> @shufszext_v8i8_v8i16_twoin(<8 x i8> %src1, <8 x i8> %src2, <8 x i8> %b) {
+; CHECK-LABEL: shufszext_v8i8_v8i16_twoin:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEXT:    sshll v1.8h, v1.8b, #0
+; CHECK-NEXT:    trn1 v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ushll v1.8h, v2.8b, #0
+; CHECK-NEXT:    mul v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ret
+entry:
+  %in1 = zext <8 x i8> %src1 to <8 x i16>
+  %in2 = sext <8 x i8> %src2 to <8 x i16>
+  %ext.b = zext <8 x i8> %b to <8 x i16>
+  %shuf = shufflevector <8 x i16> %in1, <8 x i16> %in2, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
+  %out = mul nsw <8 x i16> %shuf, %ext.b
+  ret <8 x i16> %out
+}
+
