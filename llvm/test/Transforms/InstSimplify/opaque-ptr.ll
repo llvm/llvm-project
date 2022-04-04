@@ -51,3 +51,61 @@ define <2 x ptr> @vector_base_scalar_index(<2 x ptr> %p) {
   %g = getelementptr { i64, i64 }, <2 x ptr> %p, i64 0, i32 0
   ret <2 x ptr> %g
 }
+
+@g = external global [2 x i32]
+
+define ptr @constexpr_zero_gep_scalar_base_scalar_index() {
+; CHECK-LABEL: @constexpr_zero_gep_scalar_base_scalar_index(
+; CHECK-NEXT:    ret ptr getelementptr inbounds ([2 x i32], ptr @g, i64 0, i64 0)
+;
+  ret ptr getelementptr ([2 x i32], ptr @g, i64 0, i64 0)
+}
+
+define <2 x ptr> @constexpr_zero_gep_vector_base_scalar_index() {
+; CHECK-LABEL: @constexpr_zero_gep_vector_base_scalar_index(
+; CHECK-NEXT:    ret <2 x ptr> getelementptr ([2 x i32], <2 x ptr> <ptr @g, ptr @g>, <2 x i64> zeroinitializer, <2 x i64> zeroinitializer)
+;
+  ret <2 x ptr> getelementptr ([2 x i32], <2 x ptr> <ptr @g, ptr @g>, i64 0, i64 0)
+}
+
+define <2 x ptr> @constexpr_zero_gep_scalar_base_vector_index() {
+; CHECK-LABEL: @constexpr_zero_gep_scalar_base_vector_index(
+; CHECK-NEXT:    ret <2 x ptr> getelementptr ([2 x i32], ptr @g, <2 x i64> zeroinitializer, <2 x i64> zeroinitializer)
+;
+  ret <2 x ptr> getelementptr ([2 x i32], ptr @g, <2 x i64> zeroinitializer, i64 0)
+}
+
+define <2 x ptr> @constexpr_zero_gep_vector_base_vector_index() {
+; CHECK-LABEL: @constexpr_zero_gep_vector_base_vector_index(
+; CHECK-NEXT:    ret <2 x ptr> getelementptr ([2 x i32], <2 x ptr> <ptr @g, ptr @g>, <2 x i64> zeroinitializer, <2 x i64> zeroinitializer)
+;
+  ret <2 x ptr> getelementptr ([2 x i32], <2 x ptr> <ptr @g, ptr @g>, <2 x i64> zeroinitializer, i64 0)
+}
+
+define ptr @constexpr_undef_gep_scalar_base_scalar_index() {
+; CHECK-LABEL: @constexpr_undef_gep_scalar_base_scalar_index(
+; CHECK-NEXT:    ret ptr getelementptr ([2 x i32], ptr @g, i64 0, i64 undef)
+;
+  ret ptr getelementptr ([2 x i32], ptr @g, i64 0, i64 undef)
+}
+
+define <2 x ptr> @constexpr_undef_gep_vector_base_scalar_index() {
+; CHECK-LABEL: @constexpr_undef_gep_vector_base_scalar_index(
+; CHECK-NEXT:    ret <2 x ptr> getelementptr ([2 x i32], <2 x ptr> <ptr @g, ptr @g>, <2 x i64> undef, <2 x i64> undef)
+;
+  ret <2 x ptr> getelementptr ([2 x i32], <2 x ptr> <ptr @g, ptr @g>, i64 undef, i64 undef)
+}
+
+define <2 x ptr> @constexpr_undef_gep_scalar_base_vector_index() {
+; CHECK-LABEL: @constexpr_undef_gep_scalar_base_vector_index(
+; CHECK-NEXT:    ret <2 x ptr> getelementptr ([2 x i32], ptr @g, <2 x i64> undef, <2 x i64> zeroinitializer)
+;
+  ret <2 x ptr> getelementptr ([2 x i32], ptr @g, <2 x i64> undef, i64 0)
+}
+
+define <2 x ptr> @constexpr_undef_gep_vector_base_vector_index() {
+; CHECK-LABEL: @constexpr_undef_gep_vector_base_vector_index(
+; CHECK-NEXT:    ret <2 x ptr> getelementptr ([2 x i32], <2 x ptr> <ptr @g, ptr @g>, <2 x i64> undef, <2 x i64> zeroinitializer)
+;
+  ret <2 x ptr> getelementptr ([2 x i32], <2 x ptr> <ptr @g, ptr @g>, <2 x i64> undef, i64 0)
+}
