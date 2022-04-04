@@ -144,6 +144,7 @@ namespace llvm {
           ValueTrackingVariableLocations(false), ForceDwarfFrameSection(false),
           XRayOmitFunctionIndex(false), DebugStrictDwarf(false),
           Hotpatch(false), PPCGenScalarMASSEntries(false), JMCInstrument(false),
+          EnableCFIFixup(false),
           FPDenormalMode(DenormalMode::IEEE, DenormalMode::IEEE) {}
 
     /// DisableFramePointerElim - This returns true if frame pointer elimination
@@ -355,6 +356,9 @@ namespace llvm {
 
     /// Enable JustMyCode instrumentation.
     unsigned JMCInstrument : 1;
+
+    /// Enable the CFIFixup pass.
+    unsigned EnableCFIFixup : 1;
 
     /// Name of the stack usage file (i.e., .su file) if user passes
     /// -fstack-usage. If empty, it can be implied that -fstack-usage is not

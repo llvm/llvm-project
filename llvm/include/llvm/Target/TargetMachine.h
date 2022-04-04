@@ -257,6 +257,8 @@ public:
     Options.SupportsDebugEntryValues = Enable;
   }
 
+  void setCFIFixup(bool Enable) { Options.EnableCFIFixup = Enable; }
+
   bool getAIXExtendedAltivecABI() const {
     return Options.EnableAIXExtendedAltivecABI;
   }

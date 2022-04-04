@@ -383,8 +383,9 @@ void TailDuplicator::duplicateInstruction(
   // Allow duplication of CFI instructions.
   if (MI->isCFIInstruction()) {
     BuildMI(*PredBB, PredBB->end(), PredBB->findDebugLoc(PredBB->begin()),
-      TII->get(TargetOpcode::CFI_INSTRUCTION)).addCFIIndex(
-      MI->getOperand(0).getCFIIndex());
+            TII->get(TargetOpcode::CFI_INSTRUCTION))
+        .addCFIIndex(MI->getOperand(0).getCFIIndex())
+        .setMIFlags(MI->getFlags());
     return;
   }
   MachineInstr &NewMI = TII->duplicate(*PredBB, PredBB->end(), *MI);

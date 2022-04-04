@@ -223,6 +223,14 @@ public:
   emitCalleeSavedFrameMovesFullCFA(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator MBBI) const {}
 
+  /// Returns true if we may need to fix the unwind infportmation for the
+  /// function.
+  virtual bool enableCFIFixup(MachineFunction &MF) const;
+
+  /// Emit CFI instructions that recreate the state of the unwind information
+  /// upon fucntion entry.
+  virtual void resetCFIToInitialState(MachineBasicBlock &MBB) const {}
+
   /// Replace a StackProbe stub (if any) with the actual probe code inline
   virtual void inlineStackProbe(MachineFunction &MF,
                                 MachineBasicBlock &PrologueMBB) const {}
