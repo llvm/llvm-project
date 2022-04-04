@@ -1702,7 +1702,7 @@ void VPInterleavedAccessInfo::visitBlock(VPBlockBase *Block, Old2NewTy &Old2New,
 VPInterleavedAccessInfo::VPInterleavedAccessInfo(VPlan &Plan,
                                                  InterleavedAccessInfo &IAI) {
   Old2NewTy Old2New;
-  visitRegion(cast<VPRegionBlock>(Plan.getEntry()), Old2New, IAI);
+  visitRegion(Plan.getVectorLoopRegion(), Old2New, IAI);
 }
 
 void VPSlotTracker::assignSlot(const VPValue *V) {
