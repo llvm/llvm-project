@@ -494,6 +494,9 @@ namespace llvm {
   // This pass expands indirectbr instructions.
   FunctionPass *createIndirectBrExpandPass();
 
+  /// Creates CFI Fixup pass. \see CFIFixup.cpp
+  FunctionPass *createCFIFixup();
+
   /// Creates CFI Instruction Inserter pass. \see CFIInstrInserter.cpp
   FunctionPass *createCFIInstrInserter();
 

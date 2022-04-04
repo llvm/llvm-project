@@ -153,7 +153,13 @@ module m2
 
   subroutine test()
 
+    !ERROR: Dummy and actual arguments must defer the same type parameters when POINTER or ALLOCATABLE
+    call sma(t1)
+
     call sma2(t1) ! ok
+
+    !ERROR: Dummy and actual arguments must defer the same type parameters when POINTER or ALLOCATABLE
+    call smp(p1)
 
     call smp2(p1) ! ok
 
@@ -168,7 +174,13 @@ module m2
 
     call sma(t5) ! ok
 
+    !ERROR: Dummy and actual arguments must defer the same type parameters when POINTER or ALLOCATABLE
+    call sma2(t5)
+
     call smp(p2) ! ok
+
+    !ERROR: Dummy and actual arguments must defer the same type parameters when POINTER or ALLOCATABLE
+    call smp2(p2)
 
     !ERROR: ALLOCATABLE dummy argument 'a=' must be associated with an ALLOCATABLE actual argument
     call sma(t5(:))
@@ -190,6 +202,28 @@ module m2
 
     !ERROR: ALLOCATABLE dummy argument 'b=' must be associated with an ALLOCATABLE actual argument
     call smb(x(1:2))
+
+  end subroutine
+
+end module
+
+module test
+  type t(l)
+    integer, len :: l
+    character(l) :: c
+  end type
+
+ contains
+
+  subroutine bar(p)
+    type(t(:)), allocatable :: p(:)
+  end subroutine
+
+  subroutine foo
+    type(t(10)), allocatable :: p(:)
+
+    !ERROR: Dummy and actual arguments must defer the same type parameters when POINTER or ALLOCATABLE
+    call bar(p)
 
   end subroutine
 

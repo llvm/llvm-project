@@ -43,6 +43,9 @@ TEST_F(HostInfoTest, GetAugmentedArchSpec) {
   // Test LLDB_ARCH_DEFAULT
   EXPECT_EQ(HostInfo::GetAugmentedArchSpec(LLDB_ARCH_DEFAULT).GetTriple(),
             HostInfo::GetArchitecture(HostInfo::eArchKindDefault).GetTriple());
+  EXPECT_NE(
+      HostInfo::GetAugmentedArchSpec("armv7k").GetTriple().getEnvironmentName(),
+      "unknown");
 }
 
 TEST_F(HostInfoTest, GetHostname) {

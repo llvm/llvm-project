@@ -228,6 +228,16 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.threads.mtx_unlock
     libc.src.threads.thrd_create
     libc.src.threads.thrd_join
+
+    # pthread.h entrypoints
+    libc.src.pthread.pthread_mutexattr_destroy
+    libc.src.pthread.pthread_mutexattr_init
+    libc.src.pthread.pthread_mutexattr_getpshared
+    libc.src.pthread.pthread_mutexattr_getrobust
+    libc.src.pthread.pthread_mutexattr_gettype
+    libc.src.pthread.pthread_mutexattr_setpshared
+    libc.src.pthread.pthread_mutexattr_setrobust
+    libc.src.pthread.pthread_mutexattr_settype
   )
 endif()
 

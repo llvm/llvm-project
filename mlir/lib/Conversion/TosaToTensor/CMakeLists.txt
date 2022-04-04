@@ -1,6 +1,6 @@
-add_mlir_conversion_library(MLIRTosaToStandard
-  TosaToStandard.cpp
-  TosaToStandardPass.cpp
+add_mlir_conversion_library(MLIRTosaToTensor
+  TosaToTensor.cpp
+  TosaToTensorPass.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Tosa
@@ -10,7 +10,7 @@ add_mlir_conversion_library(MLIRTosaToStandard
   MLIRConversionPassIncGen
 
   LINK_LIBS PUBLIC
-  MLIRArithmetic
+  MLIRTensor
   MLIRIR
   MLIRPass
   MLIRTosa

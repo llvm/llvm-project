@@ -788,18 +788,6 @@ MlirStringRef mlirIdentifierStr(MlirIdentifier ident) {
 }
 
 //===----------------------------------------------------------------------===//
-// TypeID API.
-//===----------------------------------------------------------------------===//
-
-bool mlirTypeIDEqual(MlirTypeID typeID1, MlirTypeID typeID2) {
-  return unwrap(typeID1) == unwrap(typeID2);
-}
-
-size_t mlirTypeIDHashValue(MlirTypeID typeID) {
-  return hash_value(unwrap(typeID));
-}
-
-//===----------------------------------------------------------------------===//
 // Symbol and SymbolTable API.
 //===----------------------------------------------------------------------===//
 

@@ -1515,6 +1515,21 @@ def ADD64ri32_DB : I<0, Pseudo,
 } // AddedComplexity, SchedRW
 
 //===----------------------------------------------------------------------===//
+// Pattern match XOR as ADD
+//===----------------------------------------------------------------------===//
+
+// Prefer to pattern match XOR with min_signed_value as ADD at isel time.
+// ADD can be 3-addressified into an LEA instruction to avoid copies.
+let AddedComplexity = 5 in {
+def : Pat<(xor GR8:$src1, -128),
+          (ADD8ri GR8:$src1, -128)>;
+def : Pat<(xor GR16:$src1, -32768),
+          (ADD16ri GR16:$src1, -32768)>;
+def : Pat<(xor GR32:$src1, -2147483648),
+          (ADD32ri GR32:$src1, -2147483648)>;
+}
+
+//===----------------------------------------------------------------------===//
 // Pattern match SUB as XOR
 //===----------------------------------------------------------------------===//
 
