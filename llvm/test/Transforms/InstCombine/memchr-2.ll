@@ -8,6 +8,7 @@ declare i8* @memchr(i8*, i32, i64)
 
 @ax = external global [0 x i8]
 @a12345 = constant [5 x i8] c"\01\02\03\04\05"
+@a123f45 = constant [5 x i8] c"\01\02\03\f4\05"
 
 
 ; Fold memchr(a12345, '\06', n) to null.
@@ -76,10 +77,24 @@ define i8* @fold_memchr_a12345_3_9() {
 }
 
 
-; Fold memchr(a12345, '\03', n) to n < 3 ? null : a12345 + 3.
+; Fold memchr(a123f45, 500, 9) to a123f45 + 3 (verify that 500 is
+; truncated to (unsigned char)500 == '\xf4')
 
-define i8* @call_a12345_3_n(i64 %n) {
-; CHECK-LABEL: @call_a12345_3_n(
+define i8* @fold_memchr_a123f45_500_9() {
+; CHECK-LABEL: @fold_memchr_a123f45_500_9(
+; CHECK-NEXT:    ret i8* getelementptr inbounds ([5 x i8], [5 x i8]* @a123f45, i64 0, i64 3)
+;
+
+  %ptr = getelementptr [5 x i8], [5 x i8]* @a123f45, i32 0, i32 0
+  %res = call i8* @memchr(i8* %ptr, i32 500, i64 9)
+  ret i8* %res
+}
+
+
+; Fold memchr(a12345, '\03', n) to n < 3 ? null : a12345 + 2.
+
+define i8* @fold_a12345_3_n(i64 %n) {
+; CHECK-LABEL: @fold_a12345_3_n(
 ; CHECK-NEXT:    [[RES:%.*]] = call i8* @memchr(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @a12345, i64 0, i64 0), i32 3, i64 [[N:%.*]])
 ; CHECK-NEXT:    ret i8* [[RES]]
 ;
@@ -90,11 +105,11 @@ define i8* @call_a12345_3_n(i64 %n) {
 }
 
 
-; Fold memchr(a12345, 259, n) to n < 4 ? null : a12345 + 3
+; Fold memchr(a12345, 259, n) to n < 3 ? null : a12345 + 2
 ; to verify the constant 259 is converted to unsigned char (yielding 3).
 
-define i8* @call_a12345_259_n(i64 %n) {
-; CHECK-LABEL: @call_a12345_259_n(
+define i8* @fold_a12345_259_n(i64 %n) {
+; CHECK-LABEL: @fold_a12345_259_n(
 ; CHECK-NEXT:    [[RES:%.*]] = call i8* @memchr(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @a12345, i64 0, i64 0), i32 259, i64 [[N:%.*]])
 ; CHECK-NEXT:    ret i8* [[RES]]
 ;
