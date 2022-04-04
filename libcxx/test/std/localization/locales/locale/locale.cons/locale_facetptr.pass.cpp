@@ -8,10 +8,9 @@
 
 // REQUIRES: locale.ru_RU.UTF-8
 
-// This test relies on P0482 being fixed, which isn't in
+// This test relies on https://wg21.link/P0482 being implemented, which isn't in
 // older Apple dylibs
-//
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
+// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx{{10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0}}
 
 // This test runs in C++20, but we have deprecated codecvt<char(16|32), char, mbstate_t> in C++20.
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS

@@ -684,6 +684,21 @@ steps:
             limit: 2
       timeout_in_minutes: 120
 
+    - label: "Apple back-deployment macosx11.0 arm64"
+      command: "libcxx/utils/ci/run-buildbot apple-system-backdeployment-11.0"
+      artifact_paths:
+        - "**/test-results.xml"
+        - "**/*.abilist"
+      agents:
+        queue: "libcxx-builders"
+        os: "macos"
+        arch: "arm64"
+      retry:
+        automatic:
+          - exit_status: -1  # Agent was lost
+            limit: 2
+      timeout_in_minutes: 120
+
   - group: "ARM"
     steps:
     - label: "AArch64"
