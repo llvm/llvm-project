@@ -453,6 +453,7 @@ void VPRegionBlock::execute(VPTransformState *State) {
 
   if (!isReplicator()) {
     // Create and register the new vector loop.
+    Loop *PrevLoop = State->CurrentVectorLoop;
     State->CurrentVectorLoop = State->LI->AllocateLoop();
     Loop *ParentLoop = State->LI->getLoopFor(State->CFG.VectorPreHeader);
 
@@ -482,6 +483,8 @@ void VPRegionBlock::execute(VPTransformState *State) {
       LLVM_DEBUG(dbgs() << "LV: VPBlock in RPO " << Block->getName() << '\n');
       Block->execute(State);
     }
+
+    State->CurrentVectorLoop = PrevLoop;
     return;
   }
 
