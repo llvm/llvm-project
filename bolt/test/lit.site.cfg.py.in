@@ -21,6 +21,7 @@ config.enable_abi_breaking_checks = "@LLVM_ENABLE_ABI_BREAKING_CHECKS@"
 config.python_executable = "@PYTHON_EXECUTABLE@"
 config.bolt_clang = "@BOLT_CLANG_EXE@"
 config.bolt_lld = "@BOLT_LLD_EXE@"
+config.targets_to_build = "@TARGETS_TO_BUILD@"
 
 import lit.llvm
 lit.llvm.initialize(lit_config, config)
