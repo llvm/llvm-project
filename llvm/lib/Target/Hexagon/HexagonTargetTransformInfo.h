@@ -86,12 +86,11 @@ public:
   unsigned getMinVectorRegisterBitWidth() const;
   ElementCount getMinimumVF(unsigned ElemWidth, bool IsScalable) const;
 
-  bool shouldMaximizeVectorBandwidth() const {
+  bool
+  shouldMaximizeVectorBandwidth(TargetTransformInfo::RegisterKind K) const {
     return true;
   }
-  bool supportsEfficientVectorElementLoadStore() {
-    return false;
-  }
+  bool supportsEfficientVectorElementLoadStore() { return false; }
   bool hasBranchDivergence() {
     return false;
   }
