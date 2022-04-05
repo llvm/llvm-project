@@ -14,9 +14,28 @@ def Test_Dialect : Dialect {
 }
 def AOp : Op<Test_Dialect, "a", [NoSideEffect, SingleBlockImplicitTerminator<"YieldOp">]>;
 
+def TestAttr : DialectAttr<Test_Dialect, CPred<"true">> {
+  let summary = "attribute summary";
+  let description = "attribute description";
+}
+
+def TestType : DialectType<Test_Dialect, CPred<"true">> {
+  let summary = "type summary";
+  let description = "type description";
+}
+
 // CHECK: Dialect without a [TOC] here.
 // CHECK: TOC added by tool.
 // CHECK: [TOC]
+
+// CHECK: ## Attribute constraint definition
+// CHECK: ### attribute summary
+// CHECK: attribute description
+
+// CHECK: ## Type constraint definition
+// CHECK: ### type summary
+// CHECK: type description
+
 // CHECK-NOT: [TOC]
 // CHECK: Traits: SingleBlockImplicitTerminator<YieldOp>
 // CHECK: Interfaces: NoSideEffect (MemoryEffectOpInterface)

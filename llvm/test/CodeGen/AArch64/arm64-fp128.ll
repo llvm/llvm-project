@@ -276,7 +276,7 @@ define dso_local i1 @test_setcc3() {
 }
 
 
-define dso_local i32 @test_br_cc() uwtable {
+define dso_local i32 @test_br_cc() {
 ; CHECK-LABEL: test_br_cc:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
