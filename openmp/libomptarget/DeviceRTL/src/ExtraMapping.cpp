@@ -3,6 +3,8 @@
 
 #pragma omp declare target
 
+#include "llvm/Frontend/OpenMP/OMPGridValues.h"
+
 using namespace _OMP;
 
 namespace _OMP {
@@ -65,6 +67,13 @@ static uint32_t __kmpc_impl_smid() {
   return (se_id << HW_ID_CU_ID_SIZE) + cu_id;
 }
 
+static uint32_t getGenericModeMainThreadId() {
+  unsigned Mask =
+      llvm::omp::getAMDGPUGridValues<__AMDGCN_WAVEFRONT_SIZE>().GV_Warp_Size -
+      1;
+  return (__kmpc_get_hardware_num_threads_in_block() - 1) & (~Mask);
+}
+
 #pragma omp end declare variant
 ///}
 
@@ -76,6 +85,11 @@ static uint32_t __kmpc_impl_smid() {
     device = {arch(nvptx, nvptx64)}, implementation = {extension(match_any)})
 
 static uint32_t __kmpc_impl_smid() { return 0; }
+
+static uint32_t getGenericModeMainThreadId() {
+  unsigned Mask = mapping::getWarpSize() - 1;
+  return (__kmpc_get_hardware_num_threads_in_block() - 1) & (~Mask);
+}
 
 #pragma omp end declare variant
 ///}
@@ -109,8 +123,11 @@ int omp_ext_is_spmd_mode() {
 
 // The following extra call only works for generic mode
 int omp_ext_get_master_thread_id() {
-  int rc = mapping::isMainThreadInGenericMode();
-  return rc;
+  // thread 0 is main thread in SPMD mode
+  if (mapping::isSPMDMode())
+    return 0;
+
+  return impl::getGenericModeMainThreadId();
 }
 
 unsigned long long omp_ext_get_active_threads_mask() {
