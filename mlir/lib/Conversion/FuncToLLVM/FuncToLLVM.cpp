@@ -113,7 +113,6 @@ prependResAttrsToArgAttrs(OpBuilder &builder,
     return;
   }
   *argAttrs = newArgAttrs;
-  return;
 }
 
 /// Creates an auxiliary function with pointer-to-memref-descriptor-struct
