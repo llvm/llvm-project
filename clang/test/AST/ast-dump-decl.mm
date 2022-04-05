@@ -30,6 +30,23 @@
 // CHECK-NEXT:   ObjCInterface{{.*}} 'TestObjCImplementation'
 // CHECK-NEXT:   CXXCtorInitializer{{.*}} 'X'
 // CHECK-NEXT:     CXXConstructExpr
+// CHECK-NEXT:   CXXRecordDecl{{.*}} struct X definition
+// CHECK-NEXT:     DefinitionData
+// CHECK-NEXT:       DefaultConstructor
+// CHECK-NEXT:       CopyConstructor
+// CHECK-NEXT:       MoveConstructor
+// CHECK-NEXT:       CopyAssignment
+// CHECK-NEXT:       MoveAssignment
+// CHECK-NEXT:       Destructor
+// CHECK-NEXT:     CXXRecordDecl{{.*}} struct X
+// CHECK-NEXT:     FieldDecl{{.*}} i 'int'
+// CHECK-NEXT:     CXXConstructorDecl{{.*}} 'void ()
+// CHECK-NEXT:       CompoundStmt
+// CHECK-NEXT:     CXXConstructorDecl{{.*}} 'void (const X &)
+// CHECK-NEXT:       ParmVarDecl{{.*}} 'const X &'
+// CHECK-NEXT:     CXXConstructorDecl{{.*}} 'void (X &&)
+// CHECK-NEXT:       ParmVarDecl{{.*}} 'X &&'
+// CHECK-NEXT:     CXXDestructorDecl
 // CHECK-NEXT:   ObjCIvarDecl{{.*}} X
 // CHECK-NEXT:   ObjCMethodDecl{{.*}} foo
 
