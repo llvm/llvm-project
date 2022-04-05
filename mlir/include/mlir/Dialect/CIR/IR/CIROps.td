@@ -572,9 +572,15 @@ def SwitchOp : CIR_Op<"switch",
        RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments]> {
   let summary = "a switch operation";
   let description = [{
-    The `cir.switch` operation represents a C/C++ switch stmt for conditionally
-    executing multiple regions of code. The operand to an switch is an integral
-    value.
+    The `cir.switch` operation represents C/C++ switch functionality for
+    conditionally executing multiple regions of code. The operand to an switch
+    is an integral condition value.
+
+    A variadic list of "case" attribute operands and regions track the possible
+    control flow within `cir.switch`. Each "case" first operand is either
+    "equal" (meaning equality comparision against the condition) and "default"
+    for any other value. An optional second operand denotes the actual value,
+    its type should match the condition and can be optionally present.
 
     Each region contains only one block and must be explicitly terminated with
     a cir.yield operation.
@@ -583,11 +589,11 @@ def SwitchOp : CIR_Op<"switch",
 
     ```mlir
     cir.switch (%b : i32) [
-      case (#equal, 20) {
+      case (equal, 20) {
         ...
         cir.yield // break semantics
       },
-      case (#default) {
+      case (default) {
         ...
         cir.yield #fallthrough
       }

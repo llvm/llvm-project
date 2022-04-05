@@ -591,6 +591,14 @@ parseSwitchOp(OpAsmParser &parser,
                            parser.getBuilder().getArrayAttr(
                                {mlir::IntegerAttr::get(intCondType, val)}),
                            kindAttr));
+    if (succeeded(parser.parseOptionalColon())) {
+      Type caseIntTy;
+      if (parser.parseType(caseIntTy).failed())
+        return parser.emitError(parser.getCurrentLocation(), "expected type");
+      if (intCondType != caseIntTy)
+        return parser.emitError(parser.getCurrentLocation(),
+                                "expected a match with the condition type");
+    }
     if (parser.parseRParen().failed())
       return parser.emitError(parser.getCurrentLocation(), "expected ')'");
     return parseAndCheckRegion();

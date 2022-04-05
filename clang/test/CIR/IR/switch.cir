@@ -10,7 +10,7 @@ func.func @s0() {
     case (equal, 3) {
       cir.yield fallthrough
     },
-    case (equal, 5) {
+    case (equal, 5 : i32) {
       cir.yield
     }
   ]
