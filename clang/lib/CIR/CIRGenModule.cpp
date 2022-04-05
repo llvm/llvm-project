@@ -128,9 +128,10 @@ static void updateAllocaInEntryBlock(AllocaOp localVarAddr) {
     localVarAddr->moveBefore(&parentBlock->front());
 }
 
-void CIRGenModule::buildAndUpdateRetAlloca(QualType T, mlir::Location loc,
-                                           CharUnits alignment) {
-  auto localVarTy = getCIRType(T);
+mlir::Value CIRGenModule::buildAlloca(StringRef name, InitStyle initStyle,
+                                      QualType ty, mlir::Location loc,
+                                      CharUnits alignment) {
+  auto localVarTy = getCIRType(ty);
   auto localVarPtrTy =
       mlir::cir::PointerType::get(builder.getContext(), localVarTy);
 
@@ -139,41 +140,35 @@ void CIRGenModule::buildAndUpdateRetAlloca(QualType T, mlir::Location loc,
                              alignment.getQuantity());
   auto addr = builder.create<mlir::cir::AllocaOp>(
       loc, /*addr type*/ localVarPtrTy,
-      /*var type*/ localVarTy, "__retval", InitStyle::uninitialized,
-      alignIntAttr);
+      /*var type*/ localVarTy, name, initStyle, alignIntAttr);
   updateAllocaInEntryBlock(addr);
+  return addr;
+}
+
+void CIRGenModule::buildAndUpdateRetAlloca(QualType ty, mlir::Location loc,
+                                           CharUnits alignment) {
+  auto addr =
+      buildAlloca("__retval", InitStyle::uninitialized, ty, loc, alignment);
   CurCGF->FnRetAlloca = addr;
 }
 
-mlir::LogicalResult CIRGenModule::declare(const Decl *var, QualType T,
+mlir::LogicalResult CIRGenModule::declare(const Decl *var, QualType ty,
                                           mlir::Location loc,
                                           CharUnits alignment,
-                                          mlir::Value &addr, bool IsParam) {
+                                          mlir::Value &addr, bool isParam) {
   const auto *namedVar = dyn_cast_or_null<NamedDecl>(var);
   assert(namedVar && "Needs a named decl");
 
   if (symbolTable.count(var))
     return mlir::failure();
 
-  auto localVarTy = getCIRType(T);
-  auto localVarPtrTy =
-      mlir::cir::PointerType::get(builder.getContext(), localVarTy);
-
-  auto alignIntAttr =
-      mlir::IntegerAttr::get(mlir::IntegerType::get(builder.getContext(), 64),
-                             alignment.getQuantity());
-
-  auto localVarAddr = builder.create<mlir::cir::AllocaOp>(
-      loc, /*addr type*/ localVarPtrTy, /*var type*/ localVarTy,
-      namedVar->getName(),
-      IsParam ? InitStyle::paraminit : InitStyle::uninitialized, alignIntAttr);
-  updateAllocaInEntryBlock(localVarAddr);
+  addr = buildAlloca(namedVar->getName(),
+                     isParam ? InitStyle::paraminit : InitStyle::uninitialized,
+                     ty, loc, alignment);
 
   // Insert into the symbol table, allocate some stack space in the
   // function entry block.
-  symbolTable.insert(var, localVarAddr);
-  addr = localVarAddr;
-
+  symbolTable.insert(var, addr);
   return mlir::success();
 }
 

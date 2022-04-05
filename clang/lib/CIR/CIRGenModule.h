@@ -248,10 +248,13 @@ private:
 
   /// Declare a variable in the current scope, return success if the variable
   /// wasn't declared yet.
-  mlir::LogicalResult declare(const clang::Decl *var, clang::QualType T,
+  mlir::LogicalResult declare(const clang::Decl *var, clang::QualType ty,
                               mlir::Location loc, clang::CharUnits alignment,
-                              mlir::Value &addr, bool IsParam = false);
-  void buildAndUpdateRetAlloca(clang::QualType T, mlir::Location loc,
+                              mlir::Value &addr, bool isParam = false);
+  mlir::Value buildAlloca(llvm::StringRef name, mlir::cir::InitStyle initStyle,
+                          clang::QualType ty, mlir::Location loc,
+                          clang::CharUnits alignment);
+  void buildAndUpdateRetAlloca(clang::QualType ty, mlir::Location loc,
                                clang::CharUnits alignment);
 
 public:
