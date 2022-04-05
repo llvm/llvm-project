@@ -391,9 +391,6 @@
 
 #if defined(_LIBCPP_COMPILER_CLANG_BASED)
 
-#if defined(_LIBCPP_ALTERNATE_STRING_LAYOUT)
-#  error _LIBCPP_ALTERNATE_STRING_LAYOUT is deprecated, please use _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT instead
-#endif
 #if defined(__APPLE__) && !defined(__i386__) && !defined(__x86_64__) &&       \
     (!defined(__arm__) || __ARM_ARCH_7K__ >= 2)
 #  define _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
