@@ -1064,6 +1064,8 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createSections(
     const LocationDescription &Loc, InsertPointTy AllocaIP,
     ArrayRef<StorableBodyGenCallbackTy> SectionCBs, PrivatizeCallbackTy PrivCB,
     FinalizeCallbackTy FiniCB, bool IsCancellable, bool IsNowait) {
+  assert(!isConflictIP(AllocaIP, Loc.IP) && "Dedicated IP allocas required");
+
   if (!updateToLocation(Loc))
     return Loc.IP;
 

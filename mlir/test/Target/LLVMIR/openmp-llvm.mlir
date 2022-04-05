@@ -1854,6 +1854,9 @@ llvm.func @omp_sections_empty() -> () {
 
 // CHECK-LABEL: @omp_sections_trivial
 llvm.func @omp_sections_trivial() -> () {
+  // CHECK:   br label %[[ENTRY:[a-zA-Z_.]+]]
+
+  // CHECK: [[ENTRY]]:
   // CHECK:   br label %[[PREHEADER:.*]]
 
   // CHECK: [[PREHEADER]]:

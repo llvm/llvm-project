@@ -4077,7 +4077,12 @@ TEST_F(OpenMPIRBuilderTest, CreateSectionsSimple) {
   OMPBuilder.initialize();
   F->setName("func");
   IRBuilder<> Builder(BB);
+
+  BasicBlock *EnterBB = BasicBlock::Create(Ctx, "sections.enter", F);
+  Builder.CreateBr(EnterBB);
+  Builder.SetInsertPoint(EnterBB);
   OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+
   llvm::SmallVector<BodyGenCallbackTy, 4> SectionCBVector;
   llvm::SmallVector<BasicBlock *, 4> CaseBBs;
 
@@ -4232,7 +4237,11 @@ TEST_F(OpenMPIRBuilderTest, CreateSectionsNoWait) {
   F->setName("func");
   IRBuilder<> Builder(BB);
 
+  BasicBlock *EnterBB = BasicBlock::Create(Ctx, "sections.enter", F);
+  Builder.CreateBr(EnterBB);
+  Builder.SetInsertPoint(EnterBB);
   OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+
   IRBuilder<>::InsertPoint AllocaIP(&F->getEntryBlock(),
                                     F->getEntryBlock().getFirstInsertionPt());
   llvm::SmallVector<BodyGenCallbackTy, 4> SectionCBVector;
