@@ -36,6 +36,13 @@ namespace ranges {
 
   template<class _Tp>
   inline constexpr bool enable_borrowed_range<empty_view<_Tp>> = true;
+
+  namespace views {
+
+  template <class _Tp>
+  inline constexpr empty_view<_Tp> empty{};
+
+  } // namespace views
 } // namespace ranges
 
 #endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
