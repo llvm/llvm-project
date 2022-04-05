@@ -58,6 +58,11 @@ Register llvm::constrainOperandRegClass(
   // Assume physical registers are properly constrained.
   assert(Register::isVirtualRegister(Reg) && "PhysReg not implemented");
 
+  // Save the old register class to check whether
+  // the change notifications will be required.
+  // TODO: A better approach would be to pass
+  // the observers to constrainRegToClass().
+  auto *OldRegClass = MRI.getRegClassOrNull(Reg);
   Register ConstrainedReg = constrainRegToClass(MRI, TII, RBI, Reg, RegClass);
   // If we created a new virtual register because the class is not compatible
   // then create a copy between the new and the old register.
@@ -83,7 +88,7 @@ Register llvm::constrainOperandRegClass(
     if (GISelChangeObserver *Observer = MF.getObserver()) {
       Observer->changedInstr(*RegMO.getParent());
     }
-  } else {
+  } else if (OldRegClass != MRI.getRegClassOrNull(Reg)) {
     if (GISelChangeObserver *Observer = MF.getObserver()) {
       if (!RegMO.isDef()) {
         MachineInstr *RegDef = MRI.getVRegDef(Reg);
