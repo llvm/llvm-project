@@ -39,6 +39,9 @@ private:
   /// files.
   std::unique_ptr<llvm::MemoryBuffer> Buffer;
 
+  /// The input file originally provided on the command line.
+  std::vector<std::string> KnownInputFiles;
+
   /// Prepare to execute the action on the given CompilerInstance.
   ///
   /// This is called before executing the action on any inputs. This generates a
