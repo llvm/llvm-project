@@ -391,7 +391,8 @@ TEST(CommandLineTest, HideUnrelatedOptions) {
 
   StringMap<cl::Option *> &Map =
       cl::getRegisteredOptions(*cl::TopLevelSubCommand);
-  ASSERT_EQ(cl::NotHidden, Map["help"]->getOptionHiddenFlag())
+  ASSERT_TRUE(Map.count("help") == (size_t)0 ||
+              cl::NotHidden == Map["help"]->getOptionHiddenFlag())
       << "Hid default option that should be visable.";
 }
 
@@ -416,7 +417,8 @@ TEST(CommandLineTest, HideUnrelatedOptionsMulti) {
 
   StringMap<cl::Option *> &Map =
       cl::getRegisteredOptions(*cl::TopLevelSubCommand);
-  ASSERT_EQ(cl::NotHidden, Map["help"]->getOptionHiddenFlag())
+  ASSERT_TRUE(Map.count("help") == (size_t)0 ||
+              cl::NotHidden == Map["help"]->getOptionHiddenFlag())
       << "Hid default option that should be visable.";
 }
 

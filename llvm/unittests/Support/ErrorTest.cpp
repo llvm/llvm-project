@@ -474,7 +474,7 @@ TEST(Error, createStringError) {
 }
 
 // Test that the ExitOnError utility works as expected.
-TEST(Error, ExitOnError) {
+TEST(ErrorDeathTest, ExitOnError) {
   ExitOnError ExitOnErr;
   ExitOnErr.setBanner("Error in tool:");
   ExitOnErr.setExitCodeMapper([](const Error &E) {
