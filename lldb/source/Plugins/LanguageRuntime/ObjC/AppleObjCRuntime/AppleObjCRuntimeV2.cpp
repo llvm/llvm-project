@@ -2762,11 +2762,10 @@ AppleObjCRuntimeV2::TaggedPointerVendorRuntimeAssisted::GetClassDescriptor(
   }
 
   uint64_t data_payload =
-      (((uint64_t)unobfuscated << m_objc_debug_taggedpointer_payload_lshift) >>
+      ((unobfuscated << m_objc_debug_taggedpointer_payload_lshift) >>
        m_objc_debug_taggedpointer_payload_rshift);
   int64_t data_payload_signed =
-      ((int64_t)((int64_t)unobfuscated
-                 << m_objc_debug_taggedpointer_payload_lshift) >>
+      ((int64_t)(unobfuscated << m_objc_debug_taggedpointer_payload_lshift) >>
        m_objc_debug_taggedpointer_payload_rshift);
   return ClassDescriptorSP(new ClassDescriptorV2Tagged(
       actual_class_descriptor_sp, data_payload, data_payload_signed));
