@@ -5407,7 +5407,7 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
   auto Fields = Builder.beginStruct(STy);
 
   // Class pointer.
-  Fields.add(cast<llvm::ConstantExpr>(CFConstantStringClassRef));
+  Fields.add(cast<llvm::Constant>(CFConstantStringClassRef));
 
   // Flags.
   if (IsSwiftABI) {
