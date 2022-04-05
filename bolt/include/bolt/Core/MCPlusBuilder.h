@@ -353,7 +353,7 @@ public:
   }
 
   virtual bool isUnconditionalBranch(const MCInst &Inst) const {
-    return Analysis->isUnconditionalBranch(Inst);
+    return Analysis->isUnconditionalBranch(Inst) && !isTailCall(Inst);
   }
 
   virtual bool isIndirectBranch(const MCInst &Inst) const {
