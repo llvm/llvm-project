@@ -515,7 +515,7 @@ function(add_entrypoint_object target_name)
   list(SORT flags)
 
   if(SHOW_INTERMEDIATE_OBJECTS AND flags)
-    message(STATUS "Object library ${fq_target_name} has FLAGS: ${flags}")
+    message(STATUS "Entrypoint object ${fq_target_name} has FLAGS: ${flags}")
   endif()
 
   if(NOT ADD_TO_EXPAND_NAME)
