@@ -12439,6 +12439,9 @@ static bool fpModeMatchesGlobalFPAtomicMode(const AtomicRMWInst *RMW) {
 
 TargetLowering::AtomicExpansionKind
 SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
+  unsigned AS = RMW->getPointerAddressSpace();
+  if (AS == AMDGPUAS::PRIVATE_ADDRESS)
+    return AtomicExpansionKind::NotAtomic;
 
   auto ReportUnsafeHWInst = [&](TargetLowering::AtomicExpansionKind Kind) {
     OptimizationRemarkEmitter ORE(RMW->getFunction());
@@ -12469,8 +12472,6 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
 
     if (!Ty->isFloatTy() && (!Subtarget->hasGFX90AInsts() || !Ty->isDoubleTy()))
       return AtomicExpansionKind::CmpXChg;
-
-    unsigned AS = RMW->getPointerAddressSpace();
 
     if ((AS == AMDGPUAS::GLOBAL_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS) &&
          Subtarget->hasAtomicFaddInsts()) {
@@ -12529,6 +12530,27 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   }
 
   return AMDGPUTargetLowering::shouldExpandAtomicRMWInIR(RMW);
+}
+
+TargetLowering::AtomicExpansionKind
+SITargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
+  return LI->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS
+             ? AtomicExpansionKind::NotAtomic
+             : AtomicExpansionKind::None;
+}
+
+TargetLowering::AtomicExpansionKind
+SITargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
+  return SI->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS
+             ? AtomicExpansionKind::NotAtomic
+             : AtomicExpansionKind::None;
+}
+
+TargetLowering::AtomicExpansionKind
+SITargetLowering::shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *CmpX) const {
+  return CmpX->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS
+             ? AtomicExpansionKind::NotAtomic
+             : AtomicExpansionKind::None;
 }
 
 const TargetRegisterClass *
