@@ -27,7 +27,6 @@ static_library("CodeGen") {
     "BranchRelaxation.cpp",
     "BreakFalseDeps.cpp",
     "CFGuardLongjmp.cpp",
-    "CFIFixup.cpp",
     "CFIInstrInserter.cpp",
     "CalcSpillWeights.cpp",
     "CallingConvLower.cpp",
