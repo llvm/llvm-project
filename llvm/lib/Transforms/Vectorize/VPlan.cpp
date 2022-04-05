@@ -317,15 +317,23 @@ void VPBasicBlock::execute(VPTransformState *State) {
     State->Builder.SetInsertPoint(NewBB);
     // Temporarily terminate with unreachable until CFG is rewired.
     UnreachableInst *Terminator = State->Builder.CreateUnreachable();
+    // Register NewBB in its loop. In innermost loops its the same for all BB's.
+    State->CurrentVectorLoop->addBasicBlockToLoop(NewBB, *State->LI);
     State->Builder.SetInsertPoint(Terminator);
     State->CFG.PrevBB = NewBB;
-  }
-
-  if (State->CurrentVectorLoop &&
-      !State->CurrentVectorLoop->contains(State->CFG.PrevBB)) {
-    // Register NewBB in its loop. In innermost loops its the same for all BB's.
-    State->CurrentVectorLoop->addBasicBlockToLoop(State->CFG.PrevBB,
-                                                  *State->LI);
+  } else {
+    // If the current VPBB is re-using the header block from skeleton creation,
+    // move it to the new vector loop.
+    VPBasicBlock *HeaderVPBB =
+        getPlan()->getVectorLoopRegion()->getEntryBasicBlock();
+    if (EnableVPlanNativePath)
+      HeaderVPBB = cast<VPBasicBlock>(HeaderVPBB->getSingleSuccessor());
+    if (this == HeaderVPBB) {
+      assert(State->CurrentVectorLoop);
+      State->LI->removeBlock(State->CFG.PrevBB);
+      State->CurrentVectorLoop->addBasicBlockToLoop(State->CFG.PrevBB,
+                                                    *State->LI);
+    }
   }
 
   // 2. Fill the IR basic block with IR instructions.
