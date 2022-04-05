@@ -298,7 +298,6 @@ static int64_t getArgumentStackToRestore(MachineFunction &MF,
 static bool produceCompactUnwindFrame(MachineFunction &MF);
 static bool needsWinCFI(const MachineFunction &MF);
 static StackOffset getSVEStackSize(const MachineFunction &MF);
-static bool needsShadowCallStackPrologueEpilogue(MachineFunction &MF);
 
 /// Returns true if a homogeneous prolog or epilog code can be emitted
 /// for the size optimization. If possible, a frame helper call is injected.
@@ -579,57 +578,6 @@ void AArch64FrameLowering::emitCalleeSavedFrameMoves(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) const {
   emitCalleeSavedGPRLocations(MBB, MBBI);
   emitCalleeSavedSVELocations(MBB, MBBI);
-}
-
-static void insertCFISameValue(const MCInstrDesc &Desc, MachineFunction &MF,
-                               MachineBasicBlock &MBB,
-                               MachineBasicBlock::iterator InsertPt,
-                               unsigned DwarfReg) {
-  unsigned CFIIndex =
-      MF.addFrameInst(MCCFIInstruction::createSameValue(nullptr, DwarfReg));
-  BuildMI(MBB, InsertPt, DebugLoc(), Desc).addCFIIndex(CFIIndex);
-}
-
-void AArch64FrameLowering::resetCFIToInitialState(
-    MachineBasicBlock &MBB) const {
-
-  MachineFunction &MF = *MBB.getParent();
-  const auto &Subtarget = MF.getSubtarget<AArch64Subtarget>();
-  const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
-  const auto &TRI =
-      static_cast<const AArch64RegisterInfo &>(*Subtarget.getRegisterInfo());
-  const auto &MFI = *MF.getInfo<AArch64FunctionInfo>();
-
-  const MCInstrDesc &CFIDesc = TII.get(TargetOpcode::CFI_INSTRUCTION);
-  DebugLoc DL;
-
-  // Reset the CFA to `SP + 0`.
-  MachineBasicBlock::iterator InsertPt = MBB.begin();
-  unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::cfiDefCfa(
-      nullptr, TRI.getDwarfRegNum(AArch64::SP, true), 0));
-  BuildMI(MBB, InsertPt, DL, CFIDesc).addCFIIndex(CFIIndex);
-
-  // Flip the RA sign state.
-  if (MFI.shouldSignReturnAddress()) {
-    CFIIndex = MF.addFrameInst(MCCFIInstruction::createNegateRAState(nullptr));
-    BuildMI(MBB, InsertPt, DL, CFIDesc).addCFIIndex(CFIIndex);
-  }
-
-  // Shadow call stack uses X18, reset it.
-  if (needsShadowCallStackPrologueEpilogue(MF))
-    insertCFISameValue(CFIDesc, MF, MBB, InsertPt,
-                       TRI.getDwarfRegNum(AArch64::X18, true));
-
-  // Emit .cfi_same_value for callee-saved registers.
-  const std::vector<CalleeSavedInfo> &CSI =
-      MF.getFrameInfo().getCalleeSavedInfo();
-  for (const auto &Info : CSI) {
-    unsigned Reg = Info.getReg();
-    if (!TRI.regNeedsCFI(Reg, Reg))
-      continue;
-    insertCFISameValue(CFIDesc, MF, MBB, InsertPt,
-                       TRI.getDwarfRegNum(Reg, true));
-  }
 }
 
 // Find a scratch register that we can use at the start of the prologue to

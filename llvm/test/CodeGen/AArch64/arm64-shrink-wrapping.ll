@@ -26,9 +26,6 @@ define i32 @foo(i32 %a, i32 %b) {
 ; ENABLE-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
 ; ENABLE-NEXT:    add sp, sp, #32
 ; ENABLE-NEXT:  LBB0_2: ; %false
-; ENABLE-NEXT:    .cfi_def_cfa wsp, 0
-; ENABLE-NEXT:    .cfi_same_value w30
-; ENABLE-NEXT:    .cfi_same_value w29
 ; ENABLE-NEXT:    ret
 ;
 ; DISABLE-LABEL: foo:
@@ -99,11 +96,6 @@ define i32 @freqSaveAndRestoreOutsideLoop(i32 %cond, i32 %N) {
 ; ENABLE-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
 ; ENABLE-NEXT:    ret
 ; ENABLE-NEXT:  LBB1_4: ; %if.else
-; ENABLE-NEXT:    .cfi_def_cfa wsp, 0
-; ENABLE-NEXT:    .cfi_same_value w30
-; ENABLE-NEXT:    .cfi_same_value w29
-; ENABLE-NEXT:    .cfi_same_value w19
-; ENABLE-NEXT:    .cfi_same_value w20
 ; ENABLE-NEXT:    lsl w0, w1, #1
 ; ENABLE-NEXT:    ret
 ;
@@ -264,11 +256,6 @@ define i32 @loopInfoSaveOutsideLoop(i32 %cond, i32 %N) {
 ; ENABLE-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
 ; ENABLE-NEXT:    ret
 ; ENABLE-NEXT:  LBB3_4: ; %if.else
-; ENABLE-NEXT:    .cfi_def_cfa wsp, 0
-; ENABLE-NEXT:    .cfi_same_value w30
-; ENABLE-NEXT:    .cfi_same_value w29
-; ENABLE-NEXT:    .cfi_same_value w19
-; ENABLE-NEXT:    .cfi_same_value w20
 ; ENABLE-NEXT:    lsl w0, w1, #1
 ; ENABLE-NEXT:    ret
 ;
@@ -363,11 +350,6 @@ define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) nounwind uwtable {
 ; ENABLE-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
 ; ENABLE-NEXT:    ret
 ; ENABLE-NEXT:  LBB4_4: ; %if.else
-; ENABLE-NEXT:    .cfi_def_cfa wsp, 0
-; ENABLE-NEXT:    .cfi_same_value w30
-; ENABLE-NEXT:    .cfi_same_value w29
-; ENABLE-NEXT:    .cfi_same_value w19
-; ENABLE-NEXT:    .cfi_same_value w20
 ; ENABLE-NEXT:    lsl w0, w1, #1
 ; ENABLE-NEXT:    ret
 ;
@@ -473,7 +455,6 @@ define i32 @variadicFunc(i32 %cond, i32 %count, ...) nounwind uwtable {
 ; ENABLE-NEXT:    add sp, sp, #16
 ; ENABLE-NEXT:    ret
 ; ENABLE-NEXT:  LBB6_4: ; %if.else
-; ENABLE-NEXT:    .cfi_def_cfa wsp, 0
 ; ENABLE-NEXT:    lsl w0, w1, #1
 ; ENABLE-NEXT:    ret
 ;
@@ -565,9 +546,6 @@ define i32 @inlineAsm(i32 %cond, i32 %N) {
 ; ENABLE-NEXT:    ldp x20, x19, [sp], #16 ; 16-byte Folded Reload
 ; ENABLE-NEXT:    ret
 ; ENABLE-NEXT:  LBB7_4: ; %if.else
-; ENABLE-NEXT:    .cfi_def_cfa wsp, 0
-; ENABLE-NEXT:    .cfi_same_value w19
-; ENABLE-NEXT:    .cfi_same_value w20
 ; ENABLE-NEXT:    lsl w0, w1, #1
 ; ENABLE-NEXT:    ret
 ;
@@ -639,9 +617,6 @@ define i32 @callVariadicFunc(i32 %cond, i32 %N) {
 ; ENABLE-NEXT:    add sp, sp, #64
 ; ENABLE-NEXT:    ret
 ; ENABLE-NEXT:  LBB8_2: ; %if.else
-; ENABLE-NEXT:    .cfi_def_cfa wsp, 0
-; ENABLE-NEXT:    .cfi_same_value w30
-; ENABLE-NEXT:    .cfi_same_value w29
 ; ENABLE-NEXT:    lsl w0, w1, #1
 ; ENABLE-NEXT:    ret
 ;
