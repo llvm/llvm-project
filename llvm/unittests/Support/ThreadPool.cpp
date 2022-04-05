@@ -18,6 +18,9 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Threading.h"
 
+#include <chrono>
+#include <thread>
+
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -29,6 +32,7 @@ class ThreadPoolTest : public testing::Test {
   SmallVector<Triple::ArchType, 4> UnsupportedArchs;
   SmallVector<Triple::OSType, 4> UnsupportedOSs;
   SmallVector<Triple::EnvironmentType, 1> UnsupportedEnvironments;
+
 protected:
   // This is intended for platform as a temporary "XFAIL"
   bool isUnsupportedOSOrEnvironment() {
@@ -57,27 +61,45 @@ protected:
   }
 
   /// Make sure this thread not progress faster than the main thread.
-  void waitForMainThread() {
-    std::unique_lock<std::mutex> LockGuard(WaitMainThreadMutex);
-    WaitMainThread.wait(LockGuard, [&] { return MainThreadReady; });
-  }
+  void waitForMainThread() { waitForPhase(1); }
 
   /// Set the readiness of the main thread.
-  void setMainThreadReady() {
+  void setMainThreadReady() { setPhase(1); }
+
+  /// Wait until given phase is set using setPhase(); first "main" phase is 1.
+  /// See also PhaseResetHelper below.
+  void waitForPhase(int Phase) {
+    std::unique_lock<std::mutex> LockGuard(CurrentPhaseMutex);
+    CurrentPhaseCondition.wait(
+        LockGuard, [&] { return CurrentPhase == Phase || CurrentPhase < 0; });
+  }
+  /// If a thread waits on another phase, the test could bail out on a failed
+  /// assertion and ThreadPool destructor would wait() on all threads, which
+  /// would deadlock on the task waiting. Create this helper to automatically
+  /// reset the phase and unblock such threads.
+  struct PhaseResetHelper {
+    PhaseResetHelper(ThreadPoolTest *test) : test(test) {}
+    ~PhaseResetHelper() { test->setPhase(-1); }
+    ThreadPoolTest *test;
+  };
+
+  /// Advance to the given phase.
+  void setPhase(int Phase) {
     {
-      std::unique_lock<std::mutex> LockGuard(WaitMainThreadMutex);
-      MainThreadReady = true;
+      std::unique_lock<std::mutex> LockGuard(CurrentPhaseMutex);
+      assert(Phase == CurrentPhase + 1 || Phase < 0);
+      CurrentPhase = Phase;
     }
-    WaitMainThread.notify_all();
+    CurrentPhaseCondition.notify_all();
   }
 
-  void SetUp() override { MainThreadReady = false; }
+  void SetUp() override { CurrentPhase = 0; }
 
   std::vector<llvm::BitVector> RunOnAllSockets(ThreadPoolStrategy S);
 
-  std::condition_variable WaitMainThread;
-  std::mutex WaitMainThreadMutex;
-  bool MainThreadReady = false;
+  std::condition_variable CurrentPhaseCondition;
+  std::mutex CurrentPhaseMutex;
+  int CurrentPhase; // -1 = error, 0 = setup, 1 = ready, 2+ = custom
 };
 
 #define CHECK_UNSUPPORTED()                                                    \
@@ -192,6 +214,125 @@ TEST_F(ThreadPoolTest, PoolDestruction) {
     setMainThreadReady();
   }
   ASSERT_EQ(5, checked_in);
+}
+
+// Check running tasks in different groups.
+TEST_F(ThreadPoolTest, Groups) {
+  CHECK_UNSUPPORTED();
+  // Need at least two threads, as the task in group2
+  // might block a thread until all tasks in group1 finish.
+  ThreadPoolStrategy S = hardware_concurrency(2);
+  if (S.compute_thread_count() < 2)
+    return;
+  ThreadPool Pool(S);
+  PhaseResetHelper Helper(this);
+  ThreadPoolTaskGroup Group1(Pool);
+  ThreadPoolTaskGroup Group2(Pool);
+
+  // Check that waiting for an empty group is a no-op.
+  Group1.wait();
+
+  std::atomic_int checked_in1{0};
+  std::atomic_int checked_in2{0};
+
+  for (size_t i = 0; i < 5; ++i) {
+    Group1.async([this, &checked_in1] {
+      waitForMainThread();
+      ++checked_in1;
+    });
+  }
+  Group2.async([this, &checked_in2] {
+    waitForPhase(2);
+    ++checked_in2;
+  });
+  ASSERT_EQ(0, checked_in1);
+  ASSERT_EQ(0, checked_in2);
+  // Start first group and wait for it.
+  setMainThreadReady();
+  Group1.wait();
+  ASSERT_EQ(5, checked_in1);
+  // Second group has not yet finished, start it and wait for it.
+  ASSERT_EQ(0, checked_in2);
+  setPhase(2);
+  Group2.wait();
+  ASSERT_EQ(5, checked_in1);
+  ASSERT_EQ(1, checked_in2);
+}
+
+// Check recursive tasks.
+TEST_F(ThreadPoolTest, RecursiveGroups) {
+  CHECK_UNSUPPORTED();
+  ThreadPool Pool;
+  ThreadPoolTaskGroup Group(Pool);
+
+  std::atomic_int checked_in1{0};
+
+  for (size_t i = 0; i < 5; ++i) {
+    Group.async([this, &Pool, &checked_in1] {
+      waitForMainThread();
+
+      ThreadPoolTaskGroup LocalGroup(Pool);
+
+      // Check that waiting for an empty group is a no-op.
+      LocalGroup.wait();
+
+      std::atomic_int checked_in2{0};
+      for (size_t i = 0; i < 5; ++i) {
+        LocalGroup.async([&checked_in2] { ++checked_in2; });
+      }
+      LocalGroup.wait();
+      ASSERT_EQ(5, checked_in2);
+
+      ++checked_in1;
+    });
+  }
+  ASSERT_EQ(0, checked_in1);
+  setMainThreadReady();
+  Group.wait();
+  ASSERT_EQ(5, checked_in1);
+}
+
+TEST_F(ThreadPoolTest, RecursiveWaitDeadlock) {
+  CHECK_UNSUPPORTED();
+  ThreadPoolStrategy S = hardware_concurrency(2);
+  if (S.compute_thread_count() < 2)
+    return;
+  ThreadPool Pool(S);
+  PhaseResetHelper Helper(this);
+  ThreadPoolTaskGroup Group(Pool);
+
+  // Test that a thread calling wait() for a group and is waiting for more tasks
+  // returns when the last task finishes in a different thread while the waiting
+  // thread was waiting for more tasks to process while waiting.
+
+  // Task A runs in the first thread. It finishes and leaves
+  // the background thread waiting for more tasks.
+  Group.async([this] {
+    waitForMainThread();
+    setPhase(2);
+  });
+  // Task B is run in a second thread, it launches yet another
+  // task C in a different group, which will be handled by the waiting
+  // thread started above.
+  Group.async([this, &Pool] {
+    waitForPhase(2);
+    ThreadPoolTaskGroup LocalGroup(Pool);
+    LocalGroup.async([this] {
+      waitForPhase(3);
+      // Give the other thread enough time to check that there's no task
+      // to process and suspend waiting for a notification. This is indeed racy,
+      // but probably the best that can be done.
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    });
+    // And task B only now will wait for the tasks in the group (=task C)
+    // to finish. This test checks that it does not deadlock. If the
+    // `NotifyGroup` handling in ThreadPool::processTasks() didn't take place,
+    // this task B would be stuck waiting for tasks to arrive.
+    setPhase(3);
+    LocalGroup.wait();
+  });
+  setMainThreadReady();
+  Group.wait();
 }
 
 #if LLVM_ENABLE_THREADS == 1
