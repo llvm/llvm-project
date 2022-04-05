@@ -37,7 +37,7 @@ void RegisterContextWindows::InvalidateAllRegisters() {
 }
 
 bool RegisterContextWindows::ReadAllRegisterValues(
-    lldb::DataBufferSP &data_sp) {
+    lldb::WritableDataBufferSP &data_sp) {
 
   if (!CacheAllRegisterValues())
     return false;
