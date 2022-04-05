@@ -671,7 +671,8 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
   if (V->getType()->isPointerTy()) {
     if (RetainedKnowledge RK = getKnowledgeValidInContext(
             V, {Attribute::Alignment}, Q.CxtI, Q.DT, Q.AC)) {
-      Known.Zero.setLowBits(Log2_64(RK.ArgValue));
+      if (isPowerOf2_64(RK.ArgValue))
+        Known.Zero.setLowBits(Log2_64(RK.ArgValue));
     }
   }
 
