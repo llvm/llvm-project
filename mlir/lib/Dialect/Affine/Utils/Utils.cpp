@@ -28,6 +28,7 @@
 #define DEBUG_TYPE "affine-utils"
 
 using namespace mlir;
+using namespace presburger;
 
 namespace {
 /// Visit affine expressions recursively and build the sequence of operations
@@ -1757,14 +1758,14 @@ MemRefType mlir::normalizeMemRefType(MemRefType memrefType, OpBuilder b,
   // We have a single map that is not an identity map. Create a new memref
   // with the right shape and an identity layout map.
   ArrayRef<int64_t> shape = memrefType.getShape();
-  // FlatAffineConstraint may later on use symbolicOperands.
-  FlatAffineConstraints fac(rank, numSymbolicOperands);
+  // FlatAffineValueConstraint may later on use symbolicOperands.
+  FlatAffineValueConstraints fac(rank, numSymbolicOperands);
   SmallVector<unsigned, 4> memrefTypeDynDims;
   for (unsigned d = 0; d < rank; ++d) {
     // Use constraint system only in static dimensions.
     if (shape[d] > 0) {
-      fac.addBound(FlatAffineConstraints::LB, d, 0);
-      fac.addBound(FlatAffineConstraints::UB, d, shape[d] - 1);
+      fac.addBound(IntegerPolyhedron::LB, d, 0);
+      fac.addBound(IntegerPolyhedron::UB, d, shape[d] - 1);
     } else {
       memrefTypeDynDims.emplace_back(d);
     }
@@ -1786,7 +1787,7 @@ MemRefType mlir::normalizeMemRefType(MemRefType memrefType, OpBuilder b,
       newShape[d] = -1;
     } else {
       // The lower bound for the shape is always zero.
-      auto ubConst = fac.getConstantBound(FlatAffineConstraints::UB, d);
+      auto ubConst = fac.getConstantBound(IntegerPolyhedron::UB, d);
       // For a static memref and an affine map with no symbols, this is
       // always bounded.
       assert(ubConst.hasValue() && "should always have an upper bound");

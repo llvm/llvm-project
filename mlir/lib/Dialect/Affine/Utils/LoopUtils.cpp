@@ -34,6 +34,7 @@
 #define DEBUG_TYPE "LoopUtils"
 
 using namespace mlir;
+using namespace presburger;
 using llvm::SmallMapVector;
 
 namespace {
@@ -2364,8 +2365,8 @@ static bool getFullMemRefAsRegion(Operation *op, unsigned numParamLoopIVs,
   for (unsigned d = 0; d < rank; d++) {
     auto dimSize = memRefType.getDimSize(d);
     assert(dimSize > 0 && "filtered dynamic shapes above");
-    regionCst->addBound(FlatAffineConstraints::LB, d, 0);
-    regionCst->addBound(FlatAffineConstraints::UB, d, dimSize - 1);
+    regionCst->addBound(IntegerPolyhedron::LB, d, 0);
+    regionCst->addBound(IntegerPolyhedron::UB, d, dimSize - 1);
   }
   return true;
 }

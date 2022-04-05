@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains tests for parsing IntegerSets to FlatAffineConstraints.
+// This file contains tests for parsing IntegerSets to IntegerPolyhedron.
 // The tests with invalid input check that the parser only accepts well-formed
 // IntegerSets. The tests with well-formed input compare the returned FACs to
 // manually constructed FACs with a PresburgerSet equality check.
@@ -21,14 +21,14 @@
 using namespace mlir;
 using namespace presburger;
 
-/// Construct a FlatAffineConstraints from a set of inequality, equality, and
+/// Construct a IntegerPolyhedron from a set of inequality, equality, and
 /// division onstraints.
-static FlatAffineConstraints makeFACFromConstraints(
+static IntegerPolyhedron makeFACFromConstraints(
     unsigned dims, unsigned syms, ArrayRef<SmallVector<int64_t, 4>> ineqs,
     ArrayRef<SmallVector<int64_t, 4>> eqs = {},
     ArrayRef<std::pair<SmallVector<int64_t, 4>, int64_t>> divs = {}) {
-  FlatAffineConstraints fac(ineqs.size(), eqs.size(), dims + syms + 1, dims,
-                            syms, 0);
+  IntegerPolyhedron fac(ineqs.size(), eqs.size(), dims + syms + 1,
+                        PresburgerSpace::getSetSpace(dims, syms, 0));
   for (const auto &div : divs)
     fac.addLocalFloorDiv(div.first, div.second);
   for (const auto &eq : eqs)
@@ -40,7 +40,7 @@ static FlatAffineConstraints makeFACFromConstraints(
 
 TEST(ParseFACTest, InvalidInputTest) {
   MLIRContext context;
-  FailureOr<FlatAffineConstraints> fac;
+  FailureOr<IntegerPolyhedron> fac;
 
   fac = parseIntegerSetToFAC("(x)", &context, false);
   EXPECT_TRUE(failed(fac))
@@ -74,9 +74,9 @@ TEST(ParseFACTest, InvalidInputTest) {
 
 /// Parses and compares the `str` to the `ex`. The equality check is performed
 /// by using PresburgerSet::isEqual
-static bool parseAndCompare(StringRef str, const FlatAffineConstraints &ex,
+static bool parseAndCompare(StringRef str, const IntegerPolyhedron &ex,
                             MLIRContext *context) {
-  FailureOr<FlatAffineConstraints> fac = parseIntegerSetToFAC(str, context);
+  FailureOr<IntegerPolyhedron> fac = parseIntegerSetToFAC(str, context);
 
   EXPECT_TRUE(succeeded(fac));
 
