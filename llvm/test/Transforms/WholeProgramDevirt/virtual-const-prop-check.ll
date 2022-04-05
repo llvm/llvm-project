@@ -1,4 +1,7 @@
-; RUN: opt -S -passes=wholeprogramdevirt -whole-program-visibility -pass-remarks=wholeprogramdevirt %s 2>&1 | FileCheck %s
+; -stats requires asserts
+; REQUIRES: asserts
+
+; RUN: opt -S -passes=wholeprogramdevirt -whole-program-visibility -pass-remarks=wholeprogramdevirt -stats %s 2>&1 | FileCheck %s
 ; Skipping vf0i1 is identical to setting public LTO visibility. We don't devirtualize vf0i1 and all other
 ; virtual call targets.
 ; RUN: opt -S -passes=wholeprogramdevirt -whole-program-visibility -pass-remarks=wholeprogramdevirt -wholeprogramdevirt-skip=vf0i1 %s 2>&1 | FileCheck %s --check-prefix=SKIP
@@ -162,3 +165,7 @@ declare void @__cxa_pure_virtual()
 ; CHECK: [[T0]] = !{i32 0, !"typeid"}
 
 !0 = !{i32 0, !"typeid"}
+
+; CHECK: 6 wholeprogramdevirt - Number of whole program devirtualization targets
+; CHECK: 1 wholeprogramdevirt - Number of virtual constant propagations
+; CHECK: 2 wholeprogramdevirt - Number of 1 bit virtual constant propagations

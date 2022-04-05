@@ -1,4 +1,7 @@
-; RUN: opt -S -passes=wholeprogramdevirt -whole-program-visibility -pass-remarks=wholeprogramdevirt %s 2>&1 | FileCheck %s
+; -stats requires asserts
+; REQUIRES: asserts
+
+; RUN: opt -S -passes=wholeprogramdevirt -whole-program-visibility -pass-remarks=wholeprogramdevirt -stats %s 2>&1 | FileCheck %s
 
 target datalayout = "e-p:64:64"
 target triple = "x86_64-unknown-linux-gnu"
@@ -45,3 +48,6 @@ declare void @llvm.assume(i1)
 !6 = !DILocation(line: 30, column: 32, scope: !5)
 !7 = distinct !DISubprogram(name: "vf", linkageName: "_ZN3vt12vfEv", scope: !1, file: !1, line: 13, isLocal: false, isDefinition: true, scopeLine: 13, flags: DIFlagPrototyped, isOptimized: false, unit: !0)
 !8 = !{i32 0, !"typeid"}
+
+; CHECK: 1 wholeprogramdevirt - Number of whole program devirtualization targets
+; CHECK: 1 wholeprogramdevirt - Number of single implementation devirtualizations
