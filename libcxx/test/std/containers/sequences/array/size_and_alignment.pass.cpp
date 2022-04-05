@@ -8,7 +8,7 @@
 
 // <array>
 
-// template <class T, size_t N >
+// template <class T, size_t N>
 // struct array
 
 // Test the size and alignment matches that of an array of a given type.
