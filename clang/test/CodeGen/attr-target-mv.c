@@ -76,8 +76,44 @@ inline __attribute__((target("default"))) void pr50025b(void) { must_be_emitted(
 inline __attribute__((target("default"))) void pr50025c(void) { pr50025b(); }
 void calls_pr50025c(void) { pr50025c(); }
 
+// LINUX: $foo.resolver = comdat any
+// LINUX: $foo_inline.resolver = comdat any
+// LINUX: $foo_decls.resolver = comdat any
+// LINUX: $foo_multi.resolver = comdat any
+// LINUX: $fwd_decl_default.resolver = comdat any
+// LINUX: $fwd_decl_avx.resolver = comdat any
+// LINUX: $pr50025.resolver = comdat any
+// LINUX: $pr50025c.resolver = comdat any
+// LINUX: $pr50025b.resolver = comdat any
+
+// WINDOWS: $foo.resolver = comdat any
+// WINDOWS: $foo_inline.resolver = comdat any
+// WINDOWS: $foo_decls.resolver = comdat any
+// WINDOWS: $foo_multi.resolver = comdat any
+// WINDOWS: $fwd_decl_default.resolver = comdat any
+// WINDOWS: $fwd_decl_avx.resolver = comdat any
+// WINDOWS: $foo_used = comdat any
+// WINDOWS: $foo_used2.avx_sse4.2 = comdat any
+// WINDOWS: $pr50025.resolver = comdat any
+// WINDOWS: $pr50025c.resolver = comdat any
+// WINDOWS: $foo_inline.sse4.2 = comdat any
+// WINDOWS: $foo_inline.arch_ivybridge = comdat any
+// WINDOWS: $foo_inline = comdat any
+// WINDOWS: $foo_decls = comdat any
+// WINDOWS: $foo_decls.sse4.2 = comdat any
+// WINDOWS: $foo_multi = comdat any
+// WINDOWS: $foo_multi.avx_sse4.2 = comdat any
+// WINDOWS: $foo_multi.fma4_sse4.2 = comdat any
+// WINDOWS: $foo_multi.arch_ivybridge_fma4_sse4.2 = comdat any
+// WINDOWS: $pr50025 = comdat any
+// WINDOWS: $pr50025c = comdat any
+// WINDOWS: $pr50025b.resolver = comdat any
+// WINDOWS: $pr50025b = comdat any
+
+
 // LINUX: @llvm.compiler.used = appending global [2 x i8*] [i8* bitcast (void (i32, double)* @foo_used to i8*), i8* bitcast (void (i32, double)* @foo_used2.avx_sse4.2 to i8*)], section "llvm.metadata"
 // WINDOWS: @llvm.used = appending global [2 x i8*] [i8* bitcast (void (i32, double)* @foo_used to i8*), i8* bitcast (void (i32, double)* @foo_used2.avx_sse4.2 to i8*)], section "llvm.metadata"
+
 
 // LINUX: @foo.ifunc = weak_odr ifunc i32 (), i32 ()* ()* @foo.resolver
 // LINUX: @foo_inline.ifunc = weak_odr ifunc i32 (), i32 ()* ()* @foo_inline.resolver
@@ -325,11 +361,20 @@ void calls_pr50025c(void) { pr50025c(); }
 // LINUX: define linkonce void @pr50025()
 // LINUX: call void @must_be_emitted
 // LINUX: define internal void @must_be_emitted()
-// WINDOWS: define linkonce_odr dso_local void @pr50025()
+// WINDOWS: define linkonce_odr dso_local void @pr50025() #{{[0-9]*}} comdat
 // WINDOWS: call void @must_be_emitted
 // WINDOWS: define internal void @must_be_emitted()
 
 // LINUX: define linkonce void @pr50025c()
+// LINUX: call void @pr50025b.ifunc()
+// WINDOWS: define linkonce_odr dso_local void @pr50025c() #{{[0-9]*}} comdat
+// WINDOWS: call void @pr50025b.resolver()
+
+// LINUX: define weak_odr void ()* @pr50025b.resolver() comdat
+// LINUX: ret void ()* @pr50025b
 // LINUX: define linkonce void @pr50025b()
-// WINDOWS: define linkonce_odr dso_local void @pr50025c()
-// WINDOWS: define linkonce_odr dso_local void @pr50025b()
+// LINUX: call void @must_be_emitted()
+// WINDOWS: define weak_odr dso_local void @pr50025b.resolver() comdat
+// WINDOWS: musttail call void @pr50025b()
+// WINDOWS: define linkonce_odr dso_local void @pr50025b() #{{[0-9]*}} comdat
+// WINDOWS: call void @must_be_emitted()

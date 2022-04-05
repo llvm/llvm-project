@@ -30,6 +30,16 @@ add_libc_unittest(
     libc.src.__support.str_to_float
 )
 
+add_libc_unittest(
+  arg_list_test
+  SUITE
+    libc_support_unittests
+  SRCS
+    arg_list_test.cpp
+  DEPENDS
+    libc.src.__support.arg_list
+)
+
 add_executable(
   libc_str_to_float_comparison_test
   str_to_float_comparison_test.cpp

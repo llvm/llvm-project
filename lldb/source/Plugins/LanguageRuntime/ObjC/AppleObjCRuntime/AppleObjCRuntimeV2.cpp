@@ -2010,7 +2010,8 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::UpdateISAToDescriptorMap() {
     return DescriptorMapUpdateResult::Fail();
 
   // The number of entries to pre-allocate room for.
-  const uint32_t max_num_classes = 256 * 1024;
+  // Each entry is (addrsize + 4) bytes
+  const uint32_t max_num_classes = 163840;
 
   UtilityFunction *get_class_info_code = GetClassInfoUtilityFunction(exe_ctx);
   if (!get_class_info_code) {
