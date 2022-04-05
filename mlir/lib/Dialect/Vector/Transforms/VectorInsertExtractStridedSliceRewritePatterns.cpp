@@ -213,9 +213,7 @@ public:
     int64_t stride =
         op.getStrides().getValue().front().cast<IntegerAttr>().getInt();
 
-    auto loc = op.getLoc();
-    auto elemType = dstType.getElementType();
-    assert(elemType.isSignlessIntOrIndexOrFloat());
+    assert(dstType.getElementType().isSignlessIntOrIndexOrFloat());
 
     // Single offset can be more efficiently shuffled.
     if (op.getOffsets().getValue().size() != 1)
