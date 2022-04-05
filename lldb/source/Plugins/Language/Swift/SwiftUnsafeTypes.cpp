@@ -448,7 +448,7 @@ private:
 
   std::unique_ptr<SwiftUnsafeType> m_unsafe_ptr;
   size_t m_element_stride;
-  DataBufferSP m_buffer_sp;
+  WritableDataBufferSP m_buffer_sp;
   std::vector<ValueObjectSP> m_children;
 };
 } // namespace swift

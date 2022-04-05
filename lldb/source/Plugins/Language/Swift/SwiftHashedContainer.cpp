@@ -597,8 +597,8 @@ NativeHashedStorageHandler::GetElementAtIndex(size_t idx) {
   if (idx >= m_occupiedBuckets.size())
     return nullptr;
   Bucket bucket = m_occupiedBuckets[idx];
-  DataBufferSP full_buffer_sp(
-    new DataBufferHeap(m_key_stride_padded + m_value_stride, 0));
+  WritableDataBufferSP full_buffer_sp(
+      new DataBufferHeap(m_key_stride_padded + m_value_stride, 0));
   uint8_t *key_buffer_ptr = full_buffer_sp->GetBytes();
   uint8_t *value_buffer_ptr =
     m_value_stride ? (key_buffer_ptr + m_key_stride_padded) : nullptr;

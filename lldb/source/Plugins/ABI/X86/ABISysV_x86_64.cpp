@@ -570,11 +570,10 @@ static bool ExtractBytesFromRegisters(
     ExecutionContext &exe_ctx, CompilerType &clang_type,
     const DataExtractor &rax_data, const DataExtractor &rdx_data,
     const DataExtractor &rcx_data, const DataExtractor &r8_data,
-    const DataExtractor &xmm0_data,
-    const DataExtractor &xmm1_data, const DataExtractor &xmm2_data,
-    const ByteOrder byte_order, WritableDataBufferSP &data_sp,
-    uint32_t data_byte_offset, uint32_t &integer_bytes, uint32_t &fp_bytes,
-    bool &is_memory) {
+    const DataExtractor &xmm0_data, const DataExtractor &xmm1_data,
+    const DataExtractor &xmm2_data, const ByteOrder byte_order,
+    WritableDataBufferSP &data_sp, uint32_t data_byte_offset,
+    uint32_t &integer_bytes, uint32_t &fp_bytes, bool &is_memory) {
   const bool is_swift_type = (clang_type.GetTypeInfo() & eTypeIsSwift);
   const uint32_t num_children = clang_type.GetNumFields();
   for (uint32_t idx = 0; idx < num_children; ++idx) {

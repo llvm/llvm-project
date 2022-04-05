@@ -840,7 +840,7 @@ bool lldb_private::formatters::swift::TypePreservingNSNumber_SummaryProvider(
   if (read_error.Fail())
     return false;
 
-  DataBufferSP buffer_sp(new DataBufferHeap(size_of_payload, 0));
+  WritableDataBufferSP buffer_sp(new DataBufferHeap(size_of_payload, 0));
   process_sp->ReadMemoryFromInferior(addr_of_payload, buffer_sp->GetBytes(),
                                      size_of_payload, read_error);
   if (read_error.Fail())
