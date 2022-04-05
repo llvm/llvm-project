@@ -1580,7 +1580,9 @@ static bool computePath(SUnit *Cur, SetVector<SUnit *> &Path,
     return Path.contains(Cur);
   bool FoundPath = false;
   for (auto &SI : Cur->Succs)
-    FoundPath |= computePath(SI.getSUnit(), Path, DestNodes, Exclude, Visited);
+    if (!ignoreDependence(SI, false))
+      FoundPath |=
+          computePath(SI.getSUnit(), Path, DestNodes, Exclude, Visited);
   for (auto &PI : Cur->Preds)
     if (PI.getKind() == SDep::Anti)
       FoundPath |=
