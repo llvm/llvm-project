@@ -28,6 +28,9 @@ subroutine s1
   integer :: a4(3)
   !ERROR: DATA statement designator 'a4(5_8)' is out of range
   data (a4(j),j=1,5,2) /3*222/
+  integer :: a5(3)
+  !ERROR: DATA statement designator 'a5(-2_8)' is out of range
+  data       a5(-2) / 1 /
   interface
     real function rfunc(x)
       real, intent(in) :: x
