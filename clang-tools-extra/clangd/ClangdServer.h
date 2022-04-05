@@ -84,6 +84,11 @@ public:
     /// build finishes, we can provide more accurate semantic tokens, so we
     /// should tell the client to refresh.
     virtual void onSemanticsMaybeChanged(PathRef File) {}
+
+    /// Called by ClangdServer when some \p InactiveRegions for \p File are
+    /// ready.
+    virtual void onInactiveRegionsReady(PathRef File,
+                                        std::vector<Range> InactiveRegions) {}
   };
   /// Creates a context provider that loads and installs config.
   /// Errors in loading config are reported as diagnostics via Callbacks.
@@ -174,6 +179,10 @@ public:
     /// Whether include fixer insertions for Objective-C code should use #import
     /// instead of #include.
     bool ImportInsertions = false;
+
+    /// Whether to collect and publish information about inactive preprocessor
+    /// regions in the document.
+    bool PublishInactiveRegions = false;
 
     explicit operator TUScheduler::Options() const;
   };
@@ -439,6 +448,8 @@ private:
   bool PreambleParseForwardingFunctions = false;
 
   bool ImportInsertions = false;
+
+  bool PublishInactiveRegions = false;
 
   // GUARDED_BY(CachedCompletionFuzzyFindRequestMutex)
   llvm::StringMap<std::optional<FuzzyFindRequest>>

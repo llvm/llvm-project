@@ -83,6 +83,8 @@ private:
   void onFileUpdated(PathRef File, const TUStatus &Status) override;
   void onBackgroundIndexProgress(const BackgroundQueue::Stats &Stats) override;
   void onSemanticsMaybeChanged(PathRef File) override;
+  void onInactiveRegionsReady(PathRef File,
+                              std::vector<Range> InactiveRegions) override;
 
   // LSP methods. Notifications have signature void(const Params&).
   // Calls have signature void(const Params&, Callback<Response>).
@@ -180,6 +182,7 @@ private:
   LSPBinder::OutgoingNotification<ShowMessageParams> ShowMessage;
   LSPBinder::OutgoingNotification<PublishDiagnosticsParams> PublishDiagnostics;
   LSPBinder::OutgoingNotification<FileStatus> NotifyFileStatus;
+  LSPBinder::OutgoingNotification<InactiveRegionsParams> PublishInactiveRegions;
   LSPBinder::OutgoingMethod<WorkDoneProgressCreateParams, std::nullptr_t>
       CreateWorkDoneProgress;
   LSPBinder::OutgoingNotification<ProgressParams<WorkDoneProgressBegin>>
