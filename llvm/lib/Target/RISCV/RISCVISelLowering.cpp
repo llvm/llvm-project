@@ -572,6 +572,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setLoadExtAction(ISD::SEXTLOAD, OtherVT, VT, Expand);
         setLoadExtAction(ISD::ZEXTLOAD, OtherVT, VT, Expand);
       }
+
+      setOperationAction(ISD::VP_FPTOSI, VT, Custom);
+      setOperationAction(ISD::VP_FPTOUI, VT, Custom);
     }
 
     for (MVT VT : IntVecVTs) {
@@ -6177,10 +6180,10 @@ SDValue RISCVTargetLowering::lowerVPFPIntConvOp(SDValue Op, SelectionDAG &DAG,
         // Widen before converting.
         MVT IntVT = MVT::getVectorVT(MVT::getIntegerVT(DstEltSize / 2),
                                      DstVT.getVectorElementCount());
-        Src = DAG.getNode(RISCVISDExtOpc, DL, IntVT, {Src, Mask, VL});
+        Src = DAG.getNode(RISCVISDExtOpc, DL, IntVT, Src, Mask, VL);
       }
 
-      Result = DAG.getNode(RISCVISDOpc, DL, DstVT, {Src, Mask, VL});
+      Result = DAG.getNode(RISCVISDOpc, DL, DstVT, Src, Mask, VL);
     } else {
       assert(SrcVT.isFloatingPoint() && DstVT.isInteger() &&
              "Wrong input/output vector types");
@@ -6190,11 +6193,11 @@ SDValue RISCVTargetLowering::lowerVPFPIntConvOp(SDValue Op, SelectionDAG &DAG,
         assert(SrcVT.getVectorElementType() == MVT::f16 && "Unexpected type!");
         MVT InterimFVT =
             MVT::getVectorVT(MVT::f32, DstVT.getVectorElementCount());
-        Src = DAG.getNode(RISCVISD::FP_EXTEND_VL, DL, InterimFVT,
-                          {Src, Mask, VL});
+        Src =
+            DAG.getNode(RISCVISD::FP_EXTEND_VL, DL, InterimFVT, Src, Mask, VL);
       }
 
-      Result = DAG.getNode(RISCVISDOpc, DL, DstVT, {Src, Mask, VL});
+      Result = DAG.getNode(RISCVISDOpc, DL, DstVT, Src, Mask, VL);
     }
   } else { // Narrowing + Conversion
     if (SrcVT.isInteger()) {
@@ -6209,11 +6212,11 @@ SDValue RISCVTargetLowering::lowerVPFPIntConvOp(SDValue Op, SelectionDAG &DAG,
         InterimFVT = MVT::getVectorVT(MVT::f32, DstVT.getVectorElementCount());
       }
 
-      Result = DAG.getNode(RISCVISDOpc, DL, InterimFVT, {Src, Mask, VL});
+      Result = DAG.getNode(RISCVISDOpc, DL, InterimFVT, Src, Mask, VL);
 
       if (InterimFVT != DstVT) {
         Src = Result;
-        Result = DAG.getNode(RISCVISD::FP_ROUND_VL, DL, DstVT, {Src, Mask, VL});
+        Result = DAG.getNode(RISCVISD::FP_ROUND_VL, DL, DstVT, Src, Mask, VL);
       }
     } else {
       assert(SrcVT.isFloatingPoint() && DstVT.isInteger() &&
@@ -6221,21 +6224,36 @@ SDValue RISCVTargetLowering::lowerVPFPIntConvOp(SDValue Op, SelectionDAG &DAG,
       // First do a narrowing conversion to an integer half the size, then
       // truncate if needed.
 
-      // TODO: Handle mask vectors
-      assert(DstVT.getVectorElementType() != MVT::i1 &&
-             "Don't know how to handle masks yet!");
-      MVT InterimIVT = MVT::getVectorVT(MVT::getIntegerVT(SrcEltSize / 2),
+      if (DstEltSize == 1) {
+        // First convert to the same size integer, then convert to mask using
+        // setcc.
+        assert(SrcEltSize >= 16 && "Unexpected FP type!");
+        MVT InterimIVT = MVT::getVectorVT(MVT::getIntegerVT(SrcEltSize),
+                                          DstVT.getVectorElementCount());
+        Result = DAG.getNode(RISCVISDOpc, DL, InterimIVT, Src, Mask, VL);
+
+        // Compare the integer result to 0. The integer should be 0 or 1/-1,
+        // otherwise the conversion was undefined.
+        MVT XLenVT = Subtarget.getXLenVT();
+        SDValue SplatZero = DAG.getConstant(0, DL, XLenVT);
+        SplatZero = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, InterimIVT,
+                                DAG.getUNDEF(InterimIVT), SplatZero);
+        Result = DAG.getNode(RISCVISD::SETCC_VL, DL, DstVT, Result, SplatZero,
+                             DAG.getCondCode(ISD::SETNE), Mask, VL);
+      } else {
+        MVT InterimIVT = MVT::getVectorVT(MVT::getIntegerVT(SrcEltSize / 2),
+                                          DstVT.getVectorElementCount());
+
+        Result = DAG.getNode(RISCVISDOpc, DL, InterimIVT, Src, Mask, VL);
+
+        while (InterimIVT != DstVT) {
+          SrcEltSize /= 2;
+          Src = Result;
+          InterimIVT = MVT::getVectorVT(MVT::getIntegerVT(SrcEltSize / 2),
                                         DstVT.getVectorElementCount());
-
-      Result = DAG.getNode(RISCVISDOpc, DL, InterimIVT, {Src, Mask, VL});
-
-      while (InterimIVT != DstVT) {
-        SrcEltSize /= 2;
-        Src = Result;
-        InterimIVT = MVT::getVectorVT(MVT::getIntegerVT(SrcEltSize / 2),
-                                      DstVT.getVectorElementCount());
-        Result = DAG.getNode(RISCVISD::TRUNCATE_VECTOR_VL, DL, InterimIVT,
-                             {Src, Mask, VL});
+          Result = DAG.getNode(RISCVISD::TRUNCATE_VECTOR_VL, DL, InterimIVT,
+                               Src, Mask, VL);
+        }
       }
     }
   }

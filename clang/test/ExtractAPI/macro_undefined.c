@@ -19,6 +19,8 @@
 FUNC_GEN(foo)
 FUNC_GEN(bar, const int *, unsigned);
 #undef FUNC_GEN
+// Undefining a not previously defined macro should not result in a crash.
+#undef FOO
 
 //--- reference.output.json.in
 {

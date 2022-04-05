@@ -10,15 +10,19 @@
 
 // explicit basic_string(basic_string_view<CharT, traits> sv, const Allocator& a = Allocator());
 
-#include <string>
-#include <string_view>
-#include <stdexcept>
 #include <algorithm>
 #include <cassert>
+#include <stdexcept>
+#include <string_view>
+#include <string>
+#include <type_traits>
 
-#include "test_macros.h"
-#include "test_allocator.h"
 #include "min_allocator.h"
+#include "test_allocator.h"
+#include "test_macros.h"
+
+static_assert(!std::is_convertible<std::string_view, std::string const&>::value, "");
+static_assert(!std::is_convertible<std::string_view, std::string>::value, "");
 
 template <class charT>
 TEST_CONSTEXPR_CXX20 void

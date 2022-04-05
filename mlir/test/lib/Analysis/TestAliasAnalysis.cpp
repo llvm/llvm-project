@@ -46,6 +46,8 @@ static void printAliasOperand(Value value) {
 namespace {
 struct TestAliasAnalysisPass
     : public PassWrapper<TestAliasAnalysisPass, OperationPass<>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestAliasAnalysisPass)
+
   StringRef getArgument() const final { return "test-alias-analysis"; }
   StringRef getDescription() const final {
     return "Test alias analysis results.";
@@ -88,6 +90,8 @@ struct TestAliasAnalysisPass
 namespace {
 struct TestAliasAnalysisModRefPass
     : public PassWrapper<TestAliasAnalysisModRefPass, OperationPass<>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestAliasAnalysisModRefPass)
+
   StringRef getArgument() const final { return "test-alias-analysis-modref"; }
   StringRef getDescription() const final {
     return "Test alias analysis ModRef results.";

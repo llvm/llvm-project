@@ -199,6 +199,22 @@ public:
     assert(SubExpr != nullptr);
 
     switch (S->getCastKind()) {
+    case CK_IntegralToBoolean: {
+      // This cast creates a new, boolean value from the integral value. We
+      // model that with a fresh value in the environment, unless it's already a
+      // boolean.
+      auto &Loc = Env.createStorageLocation(*S);
+      Env.setStorageLocation(*S, Loc);
+      if (auto *SubExprVal = dyn_cast_or_null<BoolValue>(
+              Env.getValue(*SubExpr, SkipPast::Reference)))
+        Env.setValue(Loc, *SubExprVal);
+      else
+        // FIXME: If integer modeling is added, then update this code to create
+        // the boolean based on the integer model.
+        Env.setValue(Loc, Env.makeAtomicBoolValue());
+      break;
+    }
+
     case CK_LValueToRValue: {
       auto *SubExprVal = Env.getValue(*SubExpr, SkipPast::Reference);
       if (SubExprVal == nullptr)
@@ -209,6 +225,13 @@ public:
       Env.setValue(ExprLoc, *SubExprVal);
       break;
     }
+
+    case CK_IntegralCast:
+      // FIXME: This cast creates a new integral value from the
+      // subexpression. But, because we don't model integers, we don't
+      // distinguish between this new value and the underlying one. If integer
+      // modeling is added, then update this code to create a fresh location and
+      // value.
     case CK_UncheckedDerivedToBase:
     case CK_ConstructorConversion:
     case CK_UserDefinedConversion:

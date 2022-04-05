@@ -8,13 +8,13 @@
 
 // CHECK: {{.*}} <arr>:
 
-#include <stdlib.h>
+extern void exit(int);
 
 typedef void (*FooPtr)();
 
 void exitOk() { exit(0); }
 
-__attribute__((section(".text"))) const FooPtr arr[] = {exitOk, NULL};
+__attribute__((section(".text"))) const FooPtr arr[] = {exitOk, 0};
 
 int main() {
   arr[0]();

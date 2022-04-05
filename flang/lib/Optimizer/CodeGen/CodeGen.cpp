@@ -1491,6 +1491,9 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
       }
 
     bool hasSubcomp = !xbox.subcomponent().empty();
+    if (!xbox.substr().empty())
+      TODO(loc, "codegen of fir.embox with substring");
+
     mlir::Value stepExpr;
     if (hasSubcomp) {
       // We have a subcomponent. The step value needs to be the number of
@@ -1522,7 +1525,6 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
         auto ao = rewriter.create<mlir::LLVM::SubOp>(loc, i64Ty, off, adj);
         if (constRows > 0) {
           gepArgs.push_back(ao);
-          --constRows;
         } else {
           auto dimOff =
               rewriter.create<mlir::LLVM::MulOp>(loc, i64Ty, ao, prevPtrOff);
@@ -1550,9 +1552,10 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
         // denormalized descriptors.
         if (isaPointerOrAllocatable || !normalizedLowerBound(xbox)) {
           lb = one;
-          // If there is a shifted origin and this is not a normalized
-          // descriptor then use the value from the shift op as the lower bound.
-          if (hasShift) {
+          // If there is a shifted origin, and no fir.slice, and this is not
+          // a normalized descriptor then use the value from the shift op as
+          // the lower bound.
+          if (hasShift && !(hasSlice || hasSubcomp)) {
             lb = operands[shiftOffset];
             auto extentIsEmpty = rewriter.create<mlir::LLVM::ICmpOp>(
                 loc, mlir::LLVM::ICmpPredicate::eq, extent, zero);
@@ -1580,6 +1583,8 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
       if (constRows == 0)
         prevPtrOff = rewriter.create<mlir::LLVM::MulOp>(loc, i64Ty, prevPtrOff,
                                                         outerExtent);
+      else
+        --constRows;
 
       // increment iterators
       ++shapeOffset;
@@ -3391,6 +3396,8 @@ private:
 struct LLVMIRLoweringPass
     : public mlir::PassWrapper<LLVMIRLoweringPass,
                                mlir::OperationPass<mlir::ModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(LLVMIRLoweringPass)
+
   using Printer = fir::LLVMIRLoweringPrinter;
   LLVMIRLoweringPass(raw_ostream &output, Printer p)
       : output{output}, printer{p} {}

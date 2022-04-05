@@ -25,7 +25,7 @@ using namespace llvm;
 namespace {
 os_log_t *LogCreator() {
   os_log_t *X = new os_log_t;
-  *X = os_log_create("org.llvm.signposts", OS_LOG_CATEGORY_POINTS_OF_INTEREST);
+  *X = os_log_create("org.llvm.signposts", "toolchain");
   return X;
 }
 struct LogDeleter {

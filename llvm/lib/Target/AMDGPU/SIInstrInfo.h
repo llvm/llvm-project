@@ -1294,11 +1294,6 @@ namespace AMDGPU {
   LLVM_READONLY
   int getFlatScratchInstSVfromSS(uint16_t Opcode);
 
-  /// \returns SV (VADDR) form of a FLAT Scratch instruction given an \p Opcode
-  /// of an SVS (VADDR+SADDR) form.
-  LLVM_READONLY
-  int getFlatScratchInstSVfromSVS(uint16_t Opcode);
-
   /// \returns earlyclobber version of a MAC MFMA is exists.
   LLVM_READONLY
   int getMFMAEarlyClobberOp(uint16_t Opcode);

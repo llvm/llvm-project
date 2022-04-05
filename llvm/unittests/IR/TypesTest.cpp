@@ -36,7 +36,7 @@ TEST(TypesTest, LayoutIdenticalEmptyStructs) {
 
 TEST(TypesTest, CopyPointerType) {
   LLVMContext COpaquePointers;
-  COpaquePointers.enableOpaquePointers();
+  COpaquePointers.setOpaquePointers(true);
 
   PointerType *P1 = PointerType::get(COpaquePointers, 1);
   EXPECT_TRUE(P1->isOpaque());

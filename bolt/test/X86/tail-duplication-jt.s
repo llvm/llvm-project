@@ -11,7 +11,7 @@
 # RUN: llvm-bolt %t.exe -o %t.out -data %t.fdata -relocs \
 # RUN:   -tail-duplication=1 -tail-duplication-aggressive=1 \
 # RUN:   -print-cfg | FileCheck %s
-# CHECK: Jump table JUMP_TABLE/a.0 for function a at {{.*}} with a total count of 3
+# CHECK: Jump table {{.*}} for function a at {{.*}} with a total count of 3
   .globl main
 main:
   .globl a
