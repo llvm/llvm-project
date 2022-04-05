@@ -32,7 +32,7 @@ class TestGuiBasicDebugCommandTest(PExpectTest):
         self.child.send("s") # step
         self.child.expect("return 1; // In function[^\r\n]+<<< Thread 1: step in")
         self.child.send("u") # up
-        self.child.expect_exact("func(); // Break here")
+        self.child.expect_exact("func();    // Break here")
         self.child.send("d") # down
         self.child.expect_exact("return 1; // In function")
         self.child.send("f") # finish
@@ -40,7 +40,19 @@ class TestGuiBasicDebugCommandTest(PExpectTest):
         self.child.send("s") # move onto the second one
         self.child.expect("<<< Thread 1: step in")
         self.child.send("n") # step over
-        self.child.expect("<<< Thread 1: step over")
+        self.child.expect("// Dummy command 1[^\r\n]+<<< Thread 1: step over")
+        self.child.send("n")
+
+        # Test that 'up' + 'step out' steps out of the selected function.
+        self.child.send("s") # move into func_up()
+        self.child.expect("// In func_up")
+        self.child.send("s") # move into func_down()
+        self.child.expect("// In func_down")
+        self.child.send("u") # up
+        self.child.expect("// In func_up")
+        self.child.send("f") # finish
+        self.child.expect("// Dummy command 2[^\r\n]+<<< Thread 1: step out")
+        self.child.send("n")
 
         # Press escape to quit the gui
         self.child.send(escape_key)
