@@ -38,10 +38,11 @@ async function promptRestart(settingName: string, promptMessage: string) {
 }
 
 /**
- *  Activate the watchers that track configuration changes which decide when to
- *  restart the server.
+ *  Activate watchers that track configuration changes for the given workspace
+ *  folder, or null if the workspace is top-level.
  */
 export async function activate(mlirContext: MLIRContext,
+                               workspaceFolder: vscode.WorkspaceFolder,
                                serverPathsToWatch: string[]) {
   // When a configuration change happens, check to see if we should restart the
   // server.
@@ -49,7 +50,7 @@ export async function activate(mlirContext: MLIRContext,
     const settings: string[] = [ 'server_path', 'pdll_server_path' ];
     for (const setting of settings) {
       const expandedSetting = `mlir.${setting}`;
-      if (event.affectsConfiguration(expandedSetting)) {
+      if (event.affectsConfiguration(expandedSetting, workspaceFolder)) {
         promptRestart(
             'onSettingsChanged',
             `setting '${
