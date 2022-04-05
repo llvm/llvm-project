@@ -328,7 +328,7 @@ Status NativeRegisterContextLinux_s390x::WriteRegister(
 }
 
 Status NativeRegisterContextLinux_s390x::ReadAllRegisterValues(
-    lldb::DataBufferSP &data_sp) {
+    lldb::WritableDataBufferSP &data_sp) {
   Status error;
 
   data_sp.reset(new DataBufferHeap(REG_CONTEXT_SIZE, 0));

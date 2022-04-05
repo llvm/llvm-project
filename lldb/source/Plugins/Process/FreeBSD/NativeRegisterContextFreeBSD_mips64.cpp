@@ -176,7 +176,7 @@ Status NativeRegisterContextFreeBSD_mips64::WriteRegister(
 }
 
 Status NativeRegisterContextFreeBSD_mips64::ReadAllRegisterValues(
-    lldb::DataBufferSP &data_sp) {
+    lldb::WritableDataBufferSP &data_sp) {
   Status error;
 
   error = ReadRegisterSet(GPRegSet);

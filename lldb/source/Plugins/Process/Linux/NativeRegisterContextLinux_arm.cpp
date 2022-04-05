@@ -192,7 +192,7 @@ NativeRegisterContextLinux_arm::WriteRegister(const RegisterInfo *reg_info,
 }
 
 Status NativeRegisterContextLinux_arm::ReadAllRegisterValues(
-    lldb::DataBufferSP &data_sp) {
+    lldb::WritableDataBufferSP &data_sp) {
   Status error;
 
   data_sp.reset(new DataBufferHeap(REG_CONTEXT_SIZE, 0));

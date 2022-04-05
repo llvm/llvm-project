@@ -227,7 +227,7 @@ Status NativeRegisterContextFreeBSD_powerpc::WriteRegister(
 }
 
 Status NativeRegisterContextFreeBSD_powerpc::ReadAllRegisterValues(
-    lldb::DataBufferSP &data_sp) {
+    lldb::WritableDataBufferSP &data_sp) {
   Status error;
 
   error = ReadRegisterSet(GPRegSet);
