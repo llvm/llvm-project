@@ -98,7 +98,7 @@ ObjectFilePDB::CreateInstance(const ModuleSP &module_sp, DataBufferSP data_sp,
 }
 
 ObjectFile *ObjectFilePDB::CreateMemoryInstance(const ModuleSP &module_sp,
-                                                DataBufferSP data_sp,
+                                                WritableDataBufferSP data_sp,
                                                 const ProcessSP &process_sp,
                                                 addr_t header_addr) {
   return nullptr;

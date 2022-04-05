@@ -40,7 +40,7 @@ ObjectFile *ObjectFileMinidump::CreateInstance(
 }
 
 ObjectFile *ObjectFileMinidump::CreateMemoryInstance(
-    const lldb::ModuleSP &module_sp, DataBufferSP data_sp,
+    const lldb::ModuleSP &module_sp, WritableDataBufferSP data_sp,
     const ProcessSP &process_sp, lldb::addr_t header_addr) {
   return nullptr;
 }

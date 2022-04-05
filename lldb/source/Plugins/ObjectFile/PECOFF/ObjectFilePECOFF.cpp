@@ -111,7 +111,7 @@ ObjectFile *ObjectFilePECOFF::CreateInstance(
 }
 
 ObjectFile *ObjectFilePECOFF::CreateMemoryInstance(
-    const lldb::ModuleSP &module_sp, lldb::DataBufferSP data_sp,
+    const lldb::ModuleSP &module_sp, lldb::WritableDataBufferSP data_sp,
     const lldb::ProcessSP &process_sp, lldb::addr_t header_addr) {
   if (!data_sp || !ObjectFilePECOFF::MagicBytesMatch(data_sp))
     return nullptr;
@@ -189,7 +189,7 @@ bool ObjectFilePECOFF::SaveCore(const lldb::ProcessSP &process_sp,
   return SaveMiniDump(process_sp, outfile, error);
 }
 
-bool ObjectFilePECOFF::MagicBytesMatch(DataBufferSP &data_sp) {
+bool ObjectFilePECOFF::MagicBytesMatch(DataBufferSP data_sp) {
   DataExtractor data(data_sp, eByteOrderLittle, 4);
   lldb::offset_t offset = 0;
   uint16_t magic = data.GetU16(&offset);
@@ -234,7 +234,7 @@ bool ObjectFilePECOFF::CreateBinary() {
 }
 
 ObjectFilePECOFF::ObjectFilePECOFF(const lldb::ModuleSP &module_sp,
-                                   DataBufferSP &data_sp,
+                                   DataBufferSP data_sp,
                                    lldb::offset_t data_offset,
                                    const FileSpec *file,
                                    lldb::offset_t file_offset,
@@ -247,7 +247,7 @@ ObjectFilePECOFF::ObjectFilePECOFF(const lldb::ModuleSP &module_sp,
 }
 
 ObjectFilePECOFF::ObjectFilePECOFF(const lldb::ModuleSP &module_sp,
-                                   DataBufferSP &header_data_sp,
+                                   WritableDataBufferSP header_data_sp,
                                    const lldb::ProcessSP &process_sp,
                                    addr_t header_addr)
     : ObjectFile(module_sp, process_sp, header_addr, header_data_sp),

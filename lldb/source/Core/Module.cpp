@@ -304,15 +304,15 @@ ObjectFile *Module::GetMemoryObjectFile(const lldb::ProcessSP &process_sp,
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
     if (process_sp) {
       m_did_load_objfile = true;
-      auto data_up = std::make_unique<DataBufferHeap>(size_to_read, 0);
+      std::shared_ptr<DataBufferHeap> data_sp =
+          std::make_shared<DataBufferHeap>(size_to_read, 0);
       Status readmem_error;
       const size_t bytes_read =
-          process_sp->ReadMemory(header_addr, data_up->GetBytes(),
-                                 data_up->GetByteSize(), readmem_error);
+          process_sp->ReadMemory(header_addr, data_sp->GetBytes(),
+                                 data_sp->GetByteSize(), readmem_error);
       if (bytes_read < size_to_read)
-        data_up->SetByteSize(bytes_read);
-      if (data_up->GetByteSize() > 0) {
-        DataBufferSP data_sp(data_up.release());
+        data_sp->SetByteSize(bytes_read);
+      if (data_sp->GetByteSize() > 0) {
         m_objfile_sp = ObjectFile::FindPlugin(shared_from_this(), process_sp,
                                               header_addr, data_sp);
         if (m_objfile_sp) {
