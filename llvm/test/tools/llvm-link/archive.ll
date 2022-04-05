@@ -1,9 +1,7 @@
-# XFAIL: system-aix
-
 # RUN: llvm-as %S/Inputs/f.ll -o %t.f.bc
 # RUN: llvm-as %S/Inputs/g.ll -o %t.g.bc
-# RUN: llvm-ar cr %t.fg.a %t.f.bc %t.g.bc
-# RUN: llvm-ar cr %t.empty.lib
+# RUN: llvm-ar cr --format=gnu %t.fg.a %t.f.bc %t.g.bc
+# RUN: llvm-ar cr --format=gnu  %t.empty.lib
 # RUN: llvm-link %S/Inputs/h.ll %t.fg.a %t.empty.lib -o %t.linked.bc
 
 # RUN: llvm-nm %t.linked.bc | FileCheck %s
