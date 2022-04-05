@@ -36,8 +36,8 @@
 // RUN:   --offload-arch=gfx906  %T/obj1.o %T/obj2.o 2>&1 | \
 // RUN:   FileCheck -check-prefixes=CHECK,SLNO %s
 
-// CHECK: "{{.*clang-offload-bundler.*}}" {{.*}} "-outputs=obj1-host-x86_64-unknown-linux-gnu.o,obj1-hip-amdgcn-amd-amdhsa-gfx900.o,obj1-hip-amdgcn-amd-amdhsa-gfx906.o" "-unbundle"
-// CHECK: "{{.*clang-offload-bundler.*}}" {{.*}} "-outputs=obj2-host-x86_64-unknown-linux-gnu.o,obj2-hip-amdgcn-amd-amdhsa-gfx900.o,obj2-hip-amdgcn-amd-amdhsa-gfx906.o" "-unbundle"
+// CHECK: "{{.*clang-offload-bundler.*}}" {{.*}} "-output=obj1-host-x86_64-unknown-linux-gnu.o" "-output=obj1-hip-amdgcn-amd-amdhsa-gfx900.o" "-output=obj1-hip-amdgcn-amd-amdhsa-gfx906.o" "-unbundle"
+// CHECK: "{{.*clang-offload-bundler.*}}" {{.*}} "-output=obj2-host-x86_64-unknown-linux-gnu.o" "-output=obj2-hip-amdgcn-amd-amdhsa-gfx900.o" "-output=obj2-hip-amdgcn-amd-amdhsa-gfx906.o" "-unbundle"
 // CHECK-NOT: {{".*/llvm-link"}}
 // CHECK-NOT: {{".*/opt"}}
 // CHECK-NOT: {{".*/llc"}}

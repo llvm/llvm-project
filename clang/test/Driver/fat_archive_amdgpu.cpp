@@ -9,7 +9,7 @@
 // device specific archive, which should be passed to llvm-link.
 // RUN: %clang -O2 -### -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906 %s -L%S/Inputs/openmp_static_device_link -lFatArchive 2>&1 | FileCheck %s
 // CHECK: clang{{.*}}"-cc1"{{.*}}"-triple" "amdgcn-amd-amdhsa"{{.*}}"-emit-llvm-bc"{{.*}}"-target-cpu" "[[GPU:gfx[0-9]+]]"{{.*}}"-o" "[[HOSTBC:.*.bc]]" "-x" "c++"{{.*}}.cpp
-// CHECK: clang-offload-bundler" "-unbundle" "-type=a" "-inputs={{.*}}/Inputs/openmp_static_device_link/libFatArchive.a" "-targets=openmp-amdgcn-amd-amdhsa-[[GPU]]" "-outputs=[[DEVICESPECIFICARCHIVE:.*.a]]" "-allow-missing-bundles"
+// CHECK: clang-offload-bundler" "-unbundle" "-type=a" "-input={{.*}}/Inputs/openmp_static_device_link/libFatArchive.a" "-targets=openmp-amdgcn-amd-amdhsa-[[GPU]]" "-output=[[DEVICESPECIFICARCHIVE:.*.a]]" "-allow-missing-bundles"
 // CHECK: llvm-link{{.*}}"[[HOSTBC]]" "[[DEVICESPECIFICARCHIVE]]" "-o" "{{.*}}-[[GPU]]-linked-{{.*}}.bc"
 // expected-no-diagnostics
 

@@ -1777,9 +1777,9 @@ bool tools::GetSDLFromOffloadArchive(
 
     std::string UnbundleArg("-unbundle");
     std::string TypeArg("-type=a");
-    std::string InputArg("-inputs=" + ArchiveOfBundles);
+    std::string InputArg("-input=" + ArchiveOfBundles);
     std::string OffloadArg("-targets=" + std::string(DeviceTriple));
-    std::string OutputArg("-outputs=" + OutputLib);
+    std::string OutputArg("-output=" + OutputLib);
 
     const char *UBProgram = DriverArgs.MakeArgString(
         T.getToolChain().GetProgramPath("clang-offload-bundler"));

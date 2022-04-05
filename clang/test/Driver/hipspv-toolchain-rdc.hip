@@ -53,8 +53,8 @@
 // Construct fat binary object.
 // CHECK: [[BUNDLER:".*clang-offload-bundler"]] "-type=o" "-bundle-align=4096"
 // CHECK-SAME: "-targets={{.*}},hip-spirv64----generic"
-// CHECK-SAME: "-inputs=/dev/null,[[AB_SPIRV]]"
-// CHECK-SAME: "-outputs=[[AB_FATBIN:.*hipfb]]"
+// CHECK-SAME: "-input=/dev/null" "-input=[[AB_SPIRV]]"
+// CHECK-SAME: "-output=[[AB_FATBIN:.*hipfb]]"
 // CHECK: {{".*llvm-mc.*"}} "-o" [[OBJBUNDLE:".*o"]] "{{.*}}.mcin"
 // CHECK-SAME: "--filetype=obj"
 
