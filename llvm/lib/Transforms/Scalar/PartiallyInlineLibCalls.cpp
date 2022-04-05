@@ -125,6 +125,9 @@ static bool runPartiallyInlineLibCalls(Function &F, TargetLibraryInfo *TLI,
       if (Call->isNoBuiltin() || Call->isStrictFP())
         continue;
 
+      if (Call->isMustTailCall())
+        continue;
+
       // Skip if function either has local linkage or is not a known library
       // function.
       LibFunc LF;
