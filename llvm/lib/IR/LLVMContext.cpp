@@ -355,10 +355,8 @@ bool LLVMContext::hasSetOpaquePointersValue() const {
   return pImpl->hasOpaquePointersValue();
 }
 
-void LLVMContext::enableOpaquePointers() const {
-  assert(pImpl->PointerTypes.empty() && pImpl->ASPointerTypes.empty() &&
-         "Must be called before creating any pointer types");
-  pImpl->setOpaquePointers(true);
+void LLVMContext::setOpaquePointers(bool Enable) const {
+  pImpl->setOpaquePointers(Enable);
 }
 
 bool LLVMContext::supportsTypedPointers() const {

@@ -860,9 +860,9 @@ lltok::Kind LLLexer::LexIdentifier() {
   TYPEKEYWORD("token",     Type::getTokenTy(Context));
 
   if (Keyword == "ptr") {
-    // enableOpaquePointers() must be called before creating any pointer types.
+    // setOpaquePointers() must be called before creating any pointer types.
     if (!Context.hasSetOpaquePointersValue()) {
-      Context.enableOpaquePointers();
+      Context.setOpaquePointers(true);
     } else if (Context.supportsTypedPointers()) {
       Warning("ptr type is only supported in -opaque-pointers mode");
       return lltok::Error;
