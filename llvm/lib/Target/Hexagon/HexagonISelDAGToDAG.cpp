@@ -1540,7 +1540,7 @@ bool HexagonDAGToDAGISel::keepsLowBits(const SDValue &Val, unsigned NumBits,
     break;
   case ISD::AND: {
     // Check if this is an AND with NumBits of lower bits set to 1.
-    uint64_t Mask = (1 << NumBits) - 1;
+    uint64_t Mask = (1ULL << NumBits) - 1;
     if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Val.getOperand(0))) {
       if (C->getZExtValue() == Mask) {
         Src = Val.getOperand(1);
@@ -1558,7 +1558,7 @@ bool HexagonDAGToDAGISel::keepsLowBits(const SDValue &Val, unsigned NumBits,
   case ISD::OR:
   case ISD::XOR: {
     // OR/XOR with the lower NumBits bits set to 0.
-    uint64_t Mask = (1 << NumBits) - 1;
+    uint64_t Mask = (1ULL << NumBits) - 1;
     if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Val.getOperand(0))) {
       if ((C->getZExtValue() & Mask) == 0) {
         Src = Val.getOperand(1);
