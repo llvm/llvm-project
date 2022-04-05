@@ -75,6 +75,7 @@ set(files
   __algorithm/ranges_min_element.h
   __algorithm/ranges_mismatch.h
   __algorithm/ranges_swap_ranges.h
+  __algorithm/ranges_transform.h
   __algorithm/remove.h
   __algorithm/remove_copy.h
   __algorithm/remove_copy_if.h

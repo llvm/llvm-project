@@ -44,7 +44,7 @@ Write,move,Not assigned,n/a,Not started
 Write,move_backward,Not assigned,n/a,Not started
 Write,fill,Not assigned,n/a,Not started
 Write,fill_n,Not assigned,n/a,Not started
-Write,transform,Not assigned,n/a,Not started
+Write,transform,Nikolas Klauser,`D122173 <https://llvm.org/D122173>`_,✅
 Write,generate,Not assigned,n/a,Not started
 Write,generate_n,Not assigned,n/a,Not started
 Write,remove_copy,Not assigned,n/a,Not started

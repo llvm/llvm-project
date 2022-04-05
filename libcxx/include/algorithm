@@ -110,6 +110,41 @@ namespace ranges {
     requires indirectly_copyable_storable<iterator_t<R>, range_value_t<R>*>
     constexpr range_value_t<R>
       max(R&& r, Comp comp = {}, Proj proj = {});                                   // since C++20
+
+  template<class I, class O>
+    using unary_transform_result = in_out_result<I, O>;                             // since C++20
+
+  template<class I1, class I2, class O>
+    using binary_transform_result = in_in_out_result<I1, I2, O>;                    // since C++20
+
+  template<input_iterator I, sentinel_for<I> S, weakly_incrementable O,
+           copy_constructible F, class Proj = identity>
+    requires indirectly_writable<O, indirect_result_t<F&, projected<I, Proj>>>
+    constexpr ranges::unary_transform_result<I, O>
+      transform(I first1, S last1, O result, F op, Proj proj = {});                 // since C++20
+
+  template<input_range R, weakly_incrementable O, copy_constructible F,
+           class Proj = identity>
+    requires indirectly_writable<O, indirect_result_t<F&, projected<iterator_t<R>, Proj>>>
+    constexpr ranges::unary_transform_result<borrowed_iterator_t<R>, O>
+      transform(R&& r, O result, F op, Proj proj = {});                             // since C++20
+
+  template<input_iterator I1, sentinel_for<I1> S1, input_iterator I2, sentinel_for<I2> S2,
+           weakly_incrementable O, copy_constructible F, class Proj1 = identity,
+           class Proj2 = identity>
+    requires indirectly_writable<O, indirect_result_t<F&, projected<I1, Proj1>,
+                                           projected<I2, Proj2>>>
+    constexpr ranges::binary_transform_result<I1, I2, O>
+      transform(I1 first1, S1 last1, I2 first2, S2 last2, O result,
+                        F binary_op, Proj1 proj1 = {}, Proj2 proj2 = {});           // since C++20
+
+  template<input_range R1, input_range R2, weakly_incrementable O,
+           copy_constructible F, class Proj1 = identity, class Proj2 = identity>
+    requires indirectly_writable<O, indirect_result_t<F&, projected<iterator_t<R1>, Proj1>,
+                                           projected<iterator_t<R2>, Proj2>>>
+    constexpr ranges::binary_transform_result<borrowed_iterator_t<R1>, borrowed_iterator_t<R2>, O>
+      transform(R1&& r1, R2&& r2, O result,
+                        F binary_op, Proj1 proj1 = {}, Proj2 proj2 = {});           // since C++20
 }
 
     constexpr bool     // constexpr in C++20
@@ -836,6 +871,7 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/ranges_min_element.h>
 #include <__algorithm/ranges_mismatch.h>
 #include <__algorithm/ranges_swap_ranges.h>
+#include <__algorithm/ranges_transform.h>
 #include <__algorithm/remove.h>
 #include <__algorithm/remove_copy.h>
 #include <__algorithm/remove_copy_if.h>
