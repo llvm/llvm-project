@@ -65,11 +65,6 @@
 #define PATH_MAX MAX_PATH
 #endif
 typedef int socklen_t;
-constexpr const char *dev_null_path = "nul";
-
-#else
-constexpr const char *dev_null_path = "/dev/null";
-
 #endif
 
 using namespace lldb_vscode;
@@ -1446,22 +1441,12 @@ void request_modules(const llvm::json::Object &request) {
 //   }]
 // }
 void request_initialize(const llvm::json::Object &request) {
-  g_vsc.debugger = lldb::SBDebugger::Create(true /*source_init_files*/);
+  auto log_cb = [](const char *buf, void *baton) -> void {
+    g_vsc.SendOutput(OutputType::Console, llvm::StringRef{buf});
+  };
+  g_vsc.debugger =
+      lldb::SBDebugger::Create(true /*source_init_files*/, log_cb, nullptr);
   g_vsc.progress_event_thread = std::thread(ProgressEventThreadFunction);
-
-  // Create an empty target right away since we might get breakpoint requests
-  // before we are given an executable to launch in a "launch" request, or a
-  // executable when attaching to a process by process ID in a "attach"
-  // request.
-  FILE *out = llvm::sys::RetryAfterSignal(nullptr, fopen, dev_null_path, "w");
-  if (out) {
-    // Set the output and error file handles to redirect into nothing otherwise
-    // if any code in LLDB prints to the debugger file handles, the output and
-    // error file handles are initialized to STDOUT and STDERR and any output
-    // will kill our debug session.
-    g_vsc.debugger.SetOutputFileHandle(out, true);
-    g_vsc.debugger.SetErrorFileHandle(out, false);
-  }
 
   // Start our event thread so we can receive events from the debugger, target,
   // process and more.
@@ -3147,18 +3132,25 @@ void redirection_test() {
 /// \return
 ///     A fd pointing to the original stdout.
 int SetupStdoutStderrRedirection() {
-  int new_stdout_fd = dup(fileno(stdout));
-  auto stdout_err_redirector_callback = [&](llvm::StringRef data) {
-    g_vsc.SendOutput(OutputType::Console, data);
+  int stdoutfd = fileno(stdout);
+  int new_stdout_fd = dup(stdoutfd);
+  auto output_callback_stderr = [](llvm::StringRef data) {
+    g_vsc.SendOutput(OutputType::Stderr, data);
   };
-
-  for (int fd : {fileno(stdout), fileno(stderr)}) {
-    if (llvm::Error err = RedirectFd(fd, stdout_err_redirector_callback)) {
-      std::string error_message = llvm::toString(std::move(err));
-      if (g_vsc.log)
-        *g_vsc.log << error_message << std::endl;
-      stdout_err_redirector_callback(error_message);
-    }
+  auto output_callback_stdout = [](llvm::StringRef data) {
+    g_vsc.SendOutput(OutputType::Stdout, data);
+  };
+  if (llvm::Error err = RedirectFd(stdoutfd, output_callback_stdout)) {
+    std::string error_message = llvm::toString(std::move(err));
+    if (g_vsc.log)
+      *g_vsc.log << error_message << std::endl;
+    output_callback_stderr(error_message);
+  }
+  if (llvm::Error err = RedirectFd(fileno(stderr), output_callback_stderr)) {
+    std::string error_message = llvm::toString(std::move(err));
+    if (g_vsc.log)
+      *g_vsc.log << error_message << std::endl;
+    output_callback_stderr(error_message);
   }
 
   /// used only by TestVSCode_redirection_to_console.py
