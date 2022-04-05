@@ -256,9 +256,10 @@ static cl::opt<bool> PrintMachOCPUOnly(
     cl::desc("Instead of running LTO, print the mach-o cpu in each IR file"),
     cl::cat(LTOCategory));
 
-static cl::opt<bool> UseNewPM(
-    "use-new-pm", cl::desc("Run LTO passes using the new pass manager"),
-    cl::init(LLVM_ENABLE_NEW_PASS_MANAGER), cl::Hidden, cl::cat(LTOCategory));
+static cl::opt<bool>
+    UseNewPM("use-new-pm",
+             cl::desc("Run LTO passes using the new pass manager"),
+             cl::init(true), cl::Hidden, cl::cat(LTOCategory));
 
 static cl::opt<bool>
     DebugPassManager("debug-pass-manager", cl::init(false), cl::Hidden,

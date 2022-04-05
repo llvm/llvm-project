@@ -140,10 +140,6 @@ if config.clang_default_cxx_stdlib != '':
 if platform.system() not in ['FreeBSD']:
     config.available_features.add('crash-recovery')
 
-# Support for new pass manager.
-if config.enable_experimental_new_pass_manager:
-    config.available_features.add('experimental-new-pass-manager')
-
 # ANSI escape sequences in non-dumb terminal
 if platform.system() not in ['Windows']:
     config.available_features.add('ansi-escape-sequences')
