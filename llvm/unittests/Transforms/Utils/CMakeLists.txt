@@ -5,6 +5,8 @@ set(LLVM_LINK_COMPONENTS
   Core
   Support
   TransformUtils
+  Passes
+  Vectorize
   )
 
 add_llvm_unittest(UtilsTests
