@@ -21,9 +21,6 @@
 #include <map>
 #include <vector>
 
-using namespace llvm;
-using namespace sampleprof;
-
 namespace llvm {
 class CallBase;
 class DILocation;
