@@ -45,7 +45,7 @@ inc_dup:
 # CHECK: leaq    "JUMP_TABLE{{.*}}"(%rip), %rdx
 	leaq	.L4(%rip), %rdx
   jmp .LJT
-# CHECK: leaq    DATAat{{.*}}(%rip), %rdx
+# CHECK: leaq    {{.*}}(%rip), %rdx
 	leaq	.LC0(%rip), %rdx
   jmp .L10
 .LJT:

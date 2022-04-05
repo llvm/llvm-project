@@ -1021,6 +1021,8 @@ LogicalResult OpWithResultShapePerDimInterfaceOp::reifyResultShapes(
 namespace {
 /// A test resource for side effects.
 struct TestResource : public SideEffects::Resource::Base<TestResource> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestResource)
+
   StringRef getName() final { return "<Test>"; }
 };
 } // namespace

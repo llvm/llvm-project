@@ -28,6 +28,8 @@ namespace {
 /// Checks dependences between all pairs of memref accesses in a Function.
 struct TestMemRefDependenceCheck
     : public PassWrapper<TestMemRefDependenceCheck, OperationPass<>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestMemRefDependenceCheck)
+
   StringRef getArgument() const final { return "test-memref-dependence-check"; }
   StringRef getDescription() const final {
     return "Checks dependences between all pairs of memref accesses.";

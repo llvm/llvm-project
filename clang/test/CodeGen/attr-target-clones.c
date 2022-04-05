@@ -1,6 +1,18 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefixes=LINUX,CHECK
 // RUN: %clang_cc1 -triple x86_64-windows-pc -emit-llvm %s -o - | FileCheck %s --check-prefixes=WINDOWS,CHECK
 
+// LINUX: $foo.resolver = comdat any
+// LINUX: $foo_dupes.resolver = comdat any
+// LINUX: $unused.resolver = comdat any
+// LINUX: $foo_inline.resolver = comdat any
+// LINUX: $foo_inline2.resolver = comdat any
+
+// WINDOWS: $foo = comdat any
+// WINDOWS: $foo_dupes = comdat any
+// WINDOWS: $unused = comdat any
+// WINDOWS: $foo_inline = comdat any
+// WINDOWS: $foo_inline2 = comdat any
+
 // LINUX: @foo.ifunc = weak_odr ifunc i32 (), i32 ()* ()* @foo.resolver
 // LINUX: @foo_dupes.ifunc = weak_odr ifunc void (), void ()* ()* @foo_dupes.resolver
 // LINUX: @unused.ifunc = weak_odr ifunc void (), void ()* ()* @unused.resolver
@@ -10,26 +22,26 @@
 int __attribute__((target_clones("sse4.2, default"))) foo(void) { return 0; }
 // LINUX: define {{.*}}i32 @foo.sse4.2.0()
 // LINUX: define {{.*}}i32 @foo.default.1()
-// LINUX: define i32 ()* @foo.resolver()
+// LINUX: define i32 ()* @foo.resolver() comdat
 // LINUX: ret i32 ()* @foo.sse4.2.0
 // LINUX: ret i32 ()* @foo.default.1
 
 // WINDOWS: define dso_local i32 @foo.sse4.2.0()
 // WINDOWS: define dso_local i32 @foo.default.1()
-// WINDOWS: define dso_local i32 @foo()
+// WINDOWS: define dso_local i32 @foo() comdat
 // WINDOWS: musttail call i32 @foo.sse4.2.0
 // WINDOWS: musttail call i32 @foo.default.1
 
 __attribute__((target_clones("default,default ,sse4.2"))) void foo_dupes(void) {}
 // LINUX: define {{.*}}void @foo_dupes.default.1()
 // LINUX: define {{.*}}void @foo_dupes.sse4.2.0()
-// LINUX: define void ()* @foo_dupes.resolver()
+// LINUX: define void ()* @foo_dupes.resolver() comdat
 // LINUX: ret void ()* @foo_dupes.sse4.2.0
 // LINUX: ret void ()* @foo_dupes.default.1
 
 // WINDOWS: define dso_local void @foo_dupes.default.1()
 // WINDOWS: define dso_local void @foo_dupes.sse4.2.0()
-// WINDOWS: define dso_local void @foo_dupes()
+// WINDOWS: define dso_local void @foo_dupes() comdat
 // WINDOWS: musttail call void @foo_dupes.sse4.2.0
 // WINDOWS: musttail call void @foo_dupes.default.1
 
@@ -52,13 +64,13 @@ int bar(void) {
 void __attribute__((target_clones("default, arch=ivybridge"))) unused(void) {}
 // LINUX: define {{.*}}void @unused.default.1()
 // LINUX: define {{.*}}void @unused.arch_ivybridge.0()
-// LINUX: define void ()* @unused.resolver()
+// LINUX: define void ()* @unused.resolver() comdat
 // LINUX: ret void ()* @unused.arch_ivybridge.0
 // LINUX: ret void ()* @unused.default.1
 
 // WINDOWS: define dso_local void @unused.default.1()
 // WINDOWS: define dso_local void @unused.arch_ivybridge.0()
-// WINDOWS: define dso_local void @unused()
+// WINDOWS: define dso_local void @unused() comdat
 // WINDOWS: musttail call void @unused.arch_ivybridge.0
 // WINDOWS: musttail call void @unused.default.1
 
@@ -79,12 +91,12 @@ int bar3(void) {
 }
 
 // Deferred emission of foo_inline, which got delayed because it is inline.
-// LINUX: define i32 ()* @foo_inline.resolver()
+// LINUX: define i32 ()* @foo_inline.resolver() comdat
 // LINUX: ret i32 ()* @foo_inline.arch_sandybridge.0
 // LINUX: ret i32 ()* @foo_inline.sse4.2.1
 // LINUX: ret i32 ()* @foo_inline.default.2
 
-// WINDOWS: define dso_local i32 @foo_inline()
+// WINDOWS: define dso_local i32 @foo_inline() comdat
 // WINDOWS: musttail call i32 @foo_inline.arch_sandybridge.0
 // WINDOWS: musttail call i32 @foo_inline.sse4.2.1
 // WINDOWS: musttail call i32 @foo_inline.default.2
@@ -92,13 +104,13 @@ int bar3(void) {
 inline int __attribute__((target_clones("arch=sandybridge,default,sse4.2")))
 foo_inline2(void){ return 0; }
 // LINUX: define linkonce i32 @foo_inline2.arch_sandybridge.0() #[[SB:[0-9]+]]
-// LINUX: define i32 ()* @foo_inline2.resolver()
+// LINUX: define i32 ()* @foo_inline2.resolver() comdat
 // LINUX: ret i32 ()* @foo_inline2.arch_sandybridge.0
 // LINUX: ret i32 ()* @foo_inline2.sse4.2.1
 // LINUX: ret i32 ()* @foo_inline2.default.2
 
 // WINDOWS: define linkonce_odr dso_local i32 @foo_inline2.arch_sandybridge.0() #[[SB:[0-9]+]]
-// WINDOWS: define dso_local i32 @foo_inline2()
+// WINDOWS: define dso_local i32 @foo_inline2() comdat
 // WINDOWS: musttail call i32 @foo_inline2.arch_sandybridge.0
 // WINDOWS: musttail call i32 @foo_inline2.sse4.2.1
 // WINDOWS: musttail call i32 @foo_inline2.default.2

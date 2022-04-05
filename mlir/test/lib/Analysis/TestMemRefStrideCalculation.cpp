@@ -16,6 +16,8 @@ namespace {
 struct TestMemRefStrideCalculation
     : public PassWrapper<TestMemRefStrideCalculation,
                          InterfacePass<SymbolOpInterface>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestMemRefStrideCalculation)
+
   StringRef getArgument() const final {
     return "test-memref-stride-calculation";
   }

@@ -145,72 +145,31 @@ DynamicLoader::GetSectionListFromModule(const ModuleSP module) const {
   return sections;
 }
 
+ModuleSP DynamicLoader::FindModuleViaTarget(const FileSpec &file) {
+  Target &target = m_process->GetTarget();
+  ModuleSpec module_spec(file, target.GetArchitecture());
+
+  if (ModuleSP module_sp = target.GetImages().FindFirstModule(module_spec))
+    return module_sp;
+
+  if (ModuleSP module_sp = target.GetOrCreateModule(module_spec,
+                                                    /*notify=*/true))
+    return module_sp;
+
+  return nullptr;
+}
+
 ModuleSP DynamicLoader::LoadModuleAtAddress(const FileSpec &file,
                                             addr_t link_map_addr,
                                             addr_t base_addr,
                                             bool base_addr_is_offset) {
-  Target &target = m_process->GetTarget();
-  ModuleList &modules = target.GetImages();
-  ModuleSpec module_spec(file, target.GetArchitecture());
-  ModuleSP module_sp;
-
-  if ((module_sp = modules.FindFirstModule(module_spec))) {
+  if (ModuleSP module_sp = FindModuleViaTarget(file)) {
     UpdateLoadedSections(module_sp, link_map_addr, base_addr,
                          base_addr_is_offset);
     return module_sp;
   }
 
-  if ((module_sp = target.GetOrCreateModule(module_spec, 
-                                            true /* notify */))) {
-    UpdateLoadedSections(module_sp, link_map_addr, base_addr,
-                         base_addr_is_offset);
-    return module_sp;
-  }
-
-  bool check_alternative_file_name = true;
-  if (base_addr_is_offset) {
-    // Try to fetch the load address of the file from the process as we need
-    // absolute load address to read the file out of the memory instead of a
-    // load bias.
-    bool is_loaded = false;
-    lldb::addr_t load_addr;
-    Status error = m_process->GetFileLoadAddress(file, is_loaded, load_addr);
-    if (error.Success() && is_loaded) {
-      check_alternative_file_name = false;
-      base_addr = load_addr;
-    }
-  }
-
-  // We failed to find the module based on its name. Lets try to check if we
-  // can find a different name based on the memory region info.
-  if (check_alternative_file_name) {
-    MemoryRegionInfo memory_info;
-    Status error = m_process->GetMemoryRegionInfo(base_addr, memory_info);
-    if (error.Success() && memory_info.GetMapped() &&
-        memory_info.GetRange().GetRangeBase() == base_addr && 
-        !(memory_info.GetName().IsEmpty())) {
-      ModuleSpec new_module_spec(FileSpec(memory_info.GetName().GetStringRef()),
-                                 target.GetArchitecture());
-
-      if ((module_sp = modules.FindFirstModule(new_module_spec))) {
-        UpdateLoadedSections(module_sp, link_map_addr, base_addr, false);
-        return module_sp;
-      }
-
-      if ((module_sp = target.GetOrCreateModule(new_module_spec, 
-                                                true /* notify */))) {
-        UpdateLoadedSections(module_sp, link_map_addr, base_addr, false);
-        return module_sp;
-      }
-    }
-  }
-
-  if ((module_sp = m_process->ReadModuleFromMemory(file, base_addr))) {
-    UpdateLoadedSections(module_sp, link_map_addr, base_addr, false);
-    target.GetImages().AppendIfNeeded(module_sp);
-  }
-
-  return module_sp;
+  return nullptr;
 }
 
 int64_t DynamicLoader::ReadUnsignedIntWithSizeInBytes(addr_t addr,

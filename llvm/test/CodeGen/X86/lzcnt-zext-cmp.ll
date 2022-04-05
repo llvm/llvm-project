@@ -154,11 +154,11 @@ entry:
 define i32 @test_zext_cmp6(i32 %a, i32 %b, i32 %c) {
 ; FASTLZCNT-LABEL: test_zext_cmp6:
 ; FASTLZCNT:       # %bb.0: # %entry
-; FASTLZCNT-NEXT:    lzcntl %edi, %eax
-; FASTLZCNT-NEXT:    lzcntl %esi, %ecx
-; FASTLZCNT-NEXT:    orl %eax, %ecx
+; FASTLZCNT-NEXT:    lzcntl %edi, %ecx
 ; FASTLZCNT-NEXT:    lzcntl %edx, %eax
+; FASTLZCNT-NEXT:    lzcntl %esi, %esi
 ; FASTLZCNT-NEXT:    orl %ecx, %eax
+; FASTLZCNT-NEXT:    orl %esi, %eax
 ; FASTLZCNT-NEXT:    shrl $5, %eax
 ; FASTLZCNT-NEXT:    retq
 ;
@@ -189,11 +189,11 @@ entry:
 define i32 @test_zext_cmp7(i32 %a, i32 %b, i32 %c) {
 ; FASTLZCNT-LABEL: test_zext_cmp7:
 ; FASTLZCNT:       # %bb.0: # %entry
-; FASTLZCNT-NEXT:    lzcntl %edi, %eax
-; FASTLZCNT-NEXT:    lzcntl %esi, %ecx
-; FASTLZCNT-NEXT:    orl %eax, %ecx
+; FASTLZCNT-NEXT:    lzcntl %edi, %ecx
 ; FASTLZCNT-NEXT:    lzcntl %edx, %eax
+; FASTLZCNT-NEXT:    lzcntl %esi, %esi
 ; FASTLZCNT-NEXT:    orl %ecx, %eax
+; FASTLZCNT-NEXT:    orl %esi, %eax
 ; FASTLZCNT-NEXT:    shrl $5, %eax
 ; FASTLZCNT-NEXT:    retq
 ;
@@ -334,4 +334,38 @@ entry:
   %0 = or i1 %cmp, %cmp1
   %conv = zext i1 %0 to i32
   ret i32 %conv
+}
+
+; PR54694 Fix an infinite loop in DAG combiner.
+define i32 @test_zext_cmp12(i32 %0, i32 %1) {
+; FASTLZCNT-LABEL: test_zext_cmp12:
+; FASTLZCNT:       # %bb.0:
+; FASTLZCNT-NEXT:    andl $131072, %edi # imm = 0x20000
+; FASTLZCNT-NEXT:    andl $131072, %esi # imm = 0x20000
+; FASTLZCNT-NEXT:    lzcntl %edi, %eax
+; FASTLZCNT-NEXT:    lzcntl %esi, %ecx
+; FASTLZCNT-NEXT:    orl %eax, %ecx
+; FASTLZCNT-NEXT:    movl $2, %eax
+; FASTLZCNT-NEXT:    shrl $5, %ecx
+; FASTLZCNT-NEXT:    subl %ecx, %eax
+; FASTLZCNT-NEXT:    retq
+;
+; NOFASTLZCNT-LABEL: test_zext_cmp12:
+; NOFASTLZCNT:       # %bb.0:
+; NOFASTLZCNT-NEXT:    testl $131072, %edi # imm = 0x20000
+; NOFASTLZCNT-NEXT:    sete %al
+; NOFASTLZCNT-NEXT:    testl $131072, %esi # imm = 0x20000
+; NOFASTLZCNT-NEXT:    sete %cl
+; NOFASTLZCNT-NEXT:    orb %al, %cl
+; NOFASTLZCNT-NEXT:    movl $2, %eax
+; NOFASTLZCNT-NEXT:    movzbl %cl, %ecx
+; NOFASTLZCNT-NEXT:    subl %ecx, %eax
+; NOFASTLZCNT-NEXT:    retq
+  %3 = and i32 %0, 131072
+  %4 = icmp eq i32 %3, 0
+  %5 = and i32 %1, 131072
+  %6 = icmp eq i32 %5, 0
+  %7 = select i1 %4, i1 true, i1 %6
+  %8 = select i1 %7, i32 1, i32 2
+  ret i32 %8
 }

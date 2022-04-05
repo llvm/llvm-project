@@ -6,6 +6,7 @@ set(LLVM_OPTIONAL_SOURCES
   StorageUniquer.cpp
   Timing.cpp
   ToolUtilities.cpp
+  TypeID.cpp
 )
 
 add_mlir_library(MLIRSupport
@@ -16,6 +17,7 @@ add_mlir_library(MLIRSupport
   StorageUniquer.cpp
   Timing.cpp
   ToolUtilities.cpp
+  TypeID.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Support

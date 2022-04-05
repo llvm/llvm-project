@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock-matchers.h"
 #include "gmock/gmock-more-matchers.h"
 #include "gmock/gmock.h"
@@ -1578,15 +1579,22 @@ TEST_F(SymbolCollectorTest, IWYUPragmaWithDoubleQuotes) {
 }
 
 TEST_F(SymbolCollectorTest, SkipIncFileWhenCanonicalizeHeaders) {
-  CollectorOpts.CollectIncludePath = true;
-  CanonicalIncludes Includes;
-  Includes.addMapping(TestHeaderName, "<canonical>");
-  CollectorOpts.Includes = &Includes;
   auto IncFile = testPath("test.inc");
   auto IncURI = URI::create(IncFile).toString();
   InMemoryFileSystem->addFile(IncFile, 0,
                               llvm::MemoryBuffer::getMemBuffer("class X {};"));
-  runSymbolCollector("#include \"test.inc\"\nclass Y {};", /*Main=*/"",
+  llvm::IntrusiveRefCntPtr<FileManager> Files(
+      new FileManager(FileSystemOptions(), InMemoryFileSystem));
+  std::string HeaderCode = "#include \"test.inc\"\nclass Y {};";
+  InMemoryFileSystem->addFile(TestHeaderName, 0,
+                              llvm::MemoryBuffer::getMemBuffer(HeaderCode));
+  auto File = Files->getFileRef(TestHeaderName);
+  ASSERT_THAT_EXPECTED(File, llvm::Succeeded());
+  CanonicalIncludes Includes;
+  Includes.addMapping(*File, "<canonical>");
+  CollectorOpts.CollectIncludePath = true;
+  CollectorOpts.Includes = &Includes;
+  runSymbolCollector(HeaderCode, /*Main=*/"",
                      /*ExtraArgs=*/{"-I", testRoot()});
   EXPECT_THAT(Symbols,
               UnorderedElementsAre(AllOf(qName("X"), declURI(IncURI),

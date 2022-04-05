@@ -15,6 +15,8 @@ namespace {
 /// Simple constant folding pass.
 struct TestConstantFold
     : public PassWrapper<TestConstantFold, OperationPass<>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestConstantFold)
+
   StringRef getArgument() const final { return "test-constant-fold"; }
   StringRef getDescription() const final {
     return "Test operation constant folding";

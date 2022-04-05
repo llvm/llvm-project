@@ -9,10 +9,6 @@
 // <string>
 // UNSUPPORTED: c++03, c++11, c++14
 
-// template<class InputIterator>
-//   basic_string(InputIterator begin, InputIterator end,
-//   const Allocator& a = Allocator());
-
 // template<class charT,
 //          class traits,
 //          class Allocator = allocator<charT>
@@ -38,6 +34,18 @@
 #include "test_macros.h"
 #include "test_allocator.h"
 #include "min_allocator.h"
+
+template <class StringView, class Size, class Allocator, class = void>
+struct CanDeduce : std::false_type { };
+
+template <class StringView, class Size, class Allocator>
+struct CanDeduce<StringView, Size, Allocator, decltype((void)
+  std::basic_string{std::declval<StringView>(), std::declval<Size>(), std::declval<Size>(), std::declval<Allocator>()}
+)> : std::true_type { };
+
+struct NotAnAllocator { };
+static_assert( CanDeduce<std::string_view, std::size_t, std::allocator<char>>::value);
+static_assert(!CanDeduce<std::string_view, std::size_t, NotAnAllocator>::value);
 
 bool test() {
   {

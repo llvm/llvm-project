@@ -20,10 +20,11 @@ using namespace mlir;
 
 namespace {
 /// Pass to set the spv.entry_point_abi
-class TestSpirvEntryPointABIPass
+struct TestSpirvEntryPointABIPass
     : public PassWrapper<TestSpirvEntryPointABIPass,
                          OperationPass<gpu::GPUModuleOp>> {
-public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestSpirvEntryPointABIPass)
+
   StringRef getArgument() const final { return "test-spirv-entry-point-abi"; }
   StringRef getDescription() const final {
     return "Set the spv.entry_point_abi attribute on GPU kernel function "

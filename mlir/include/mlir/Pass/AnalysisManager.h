@@ -28,7 +28,7 @@ namespace detail {
 /// A utility class to represent the analyses that are known to be preserved.
 class PreservedAnalyses {
   /// A type used to represent all potential analyses.
-  struct AllAnalysesType;
+  struct AllAnalysesType {};
 
 public:
   /// Mark all analyses as preserved.
