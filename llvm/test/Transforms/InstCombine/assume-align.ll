@@ -105,3 +105,24 @@ define void @f3(i64 %a, i8* %b) {
 
 declare void @g(i64)
 
+define i8 @assume_align_zero(i8* %p) {
+; CHECK-LABEL: @assume_align_zero(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8* [[P:%.*]], i64 0) ]
+; CHECK-NEXT:    [[V:%.*]] = load i8, i8* [[P]], align 1
+; CHECK-NEXT:    ret i8 [[V]]
+;
+  call void @llvm.assume(i1 true) [ "align"(i8* %p, i64 0) ]
+  %v = load i8, i8* %p
+  ret i8 %v
+}
+
+define i8 @assume_align_non_pow2(i8* %p) {
+; CHECK-LABEL: @assume_align_non_pow2(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8* [[P:%.*]], i64 123) ]
+; CHECK-NEXT:    [[V:%.*]] = load i8, i8* [[P]], align 1
+; CHECK-NEXT:    ret i8 [[V]]
+;
+  call void @llvm.assume(i1 true) [ "align"(i8* %p, i64 123) ]
+  %v = load i8, i8* %p
+  ret i8 %v
+}
