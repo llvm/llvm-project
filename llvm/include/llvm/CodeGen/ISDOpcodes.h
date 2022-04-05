@@ -1358,6 +1358,26 @@ enum MemIndexType {
 
 static const int LAST_MEM_INDEX_TYPE = UNSIGNED_UNSCALED + 1;
 
+inline bool isIndexTypeScaled(MemIndexType IndexType) {
+  return IndexType == SIGNED_SCALED || IndexType == UNSIGNED_SCALED;
+}
+
+inline bool isIndexTypeSigned(MemIndexType IndexType) {
+  return IndexType == SIGNED_SCALED || IndexType == SIGNED_UNSCALED;
+}
+
+inline MemIndexType getSignedIndexType(MemIndexType IndexType) {
+  return isIndexTypeScaled(IndexType) ? SIGNED_SCALED : SIGNED_UNSCALED;
+}
+
+inline MemIndexType getUnsignedIndexType(MemIndexType IndexType) {
+  return isIndexTypeScaled(IndexType) ? UNSIGNED_SCALED : UNSIGNED_UNSCALED;
+}
+
+inline MemIndexType getUnscaledIndexType(MemIndexType IndexType) {
+  return isIndexTypeSigned(IndexType) ? SIGNED_UNSCALED : UNSIGNED_UNSCALED;
+}
+
 //===--------------------------------------------------------------------===//
 /// LoadExtType enum - This enum defines the three variants of LOADEXT
 /// (load with extension).
