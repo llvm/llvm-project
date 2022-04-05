@@ -19,8 +19,8 @@ void sw1(int a) {
 // CHECK-NEXT:   %5 = cir.cst(1 : i32) : i32
 // CHECK-NEXT:   %6 = cir.binop(add, %4, %5) : i32
 // CHECK-NEXT:   cir.store %6, %1 : i32, cir.ptr <i32>
-// CHECK-NEXT:   cir.yield
+// CHECK-NEXT:   cir.yield break
 // CHECK-NEXT: },
 // CHECK-NEXT: case (equal, 1 : i32)  {
-// CHECK-NEXT:   cir.yield
+// CHECK-NEXT:   cir.yield break
 // CHECK-NEXT: }

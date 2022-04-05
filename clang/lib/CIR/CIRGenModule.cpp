@@ -1312,8 +1312,11 @@ static mlir::Location getIfLocs(CIRGenModule &CGM, const clang::Stmt *thenS,
 }
 
 mlir::LogicalResult CIRGenModule::buildBreakStmt(const clang::BreakStmt &S) {
-  // FIXME: add proper tracking for "break" in yield.
-  builder.create<YieldOp>(getLoc(S.getBreakLoc()));
+  builder.create<YieldOp>(
+      getLoc(S.getBreakLoc()),
+      mlir::cir::YieldOpKindAttr::get(builder.getContext(),
+                                      mlir::cir::YieldOpKind::Break),
+      mlir::ValueRange({}));
   return mlir::success();
 }
 
