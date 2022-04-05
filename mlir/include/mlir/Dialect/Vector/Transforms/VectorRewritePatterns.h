@@ -241,8 +241,8 @@ void populateVectorTransferCollapseInnerMostContiguousDimsPatterns(
 
 /// Populate `patterns` with the following patterns.
 ///
-/// [VectorInsertStridedSliceOpDifferentRankRewritePattern]
-/// =======================================================
+/// [DecomposeDifferentRankInsertStridedSlice]
+/// ==========================================
 /// RewritePattern for InsertStridedSliceOp where source and destination vectors
 /// have different ranks.
 ///
@@ -257,8 +257,19 @@ void populateVectorTransferCollapseInnerMostContiguousDimsPatterns(
 ///   2. k-D -> (n-1)-D InsertStridedSlice op
 ///   3. InsertOp that is the reverse of 1.
 ///
-/// [VectorInsertStridedSliceOpSameRankRewritePattern]
-/// ==================================================
+/// [DecomposeNDExtractStridedSlice]
+/// ================================
+/// For such cases, we can rewrite it to ExtractOp/ExtractElementOp + lower
+/// rank ExtractStridedSliceOp + InsertOp/InsertElementOp for the n-D case.
+void populateVectorInsertExtractStridedSliceDecompositionPatterns(
+    RewritePatternSet &patterns);
+
+/// Populate `patterns` with the following patterns.
+///
+/// Patterns in populateVectorInsertExtractStridedSliceDecompositionPatterns();
+///
+/// [ConvertSameRankInsertStridedSliceIntoShuffle]
+/// ==============================================
 /// RewritePattern for InsertStridedSliceOp where source and destination vectors
 /// have the same rank. For each outermost index in the slice:
 ///   begin    end             stride
@@ -268,12 +279,9 @@ void populateVectorTransferCollapseInnerMostContiguousDimsPatterns(
 ///   3. the destination subvector is inserted back in the proper place
 ///   3. InsertOp that is the reverse of 1.
 ///
-/// [VectorExtractStridedSliceOpRewritePattern]
-/// ===========================================
-/// Progressive lowering of ExtractStridedSliceOp to either:
-///   1. single offset extract as a direct vector::ShuffleOp.
-///   2. ExtractOp/ExtractElementOp + lower rank ExtractStridedSliceOp +
-///      InsertOp/InsertElementOp for the n-D case.
+/// [Convert1DExtractStridedSliceIntoShuffle]
+/// =========================================
+/// For such cases, we can lower it to a ShuffleOp.
 void populateVectorInsertExtractStridedSliceTransforms(
     RewritePatternSet &patterns);
 
