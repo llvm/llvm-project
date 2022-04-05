@@ -1,5 +1,5 @@
 // REQUIRES: bpf-registered-target
-// RUN: %clang -target bpf -emit-llvm -S -g -Xclang -disable-llvm-passes %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple bpf -emit-llvm -debug-info-kind=limited -disable-llvm-passes %s -o - | FileCheck %s
 
 #pragma clang attribute push (__attribute__((preserve_access_index)), apply_to = record)
 typedef struct {

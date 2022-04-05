@@ -1,4 +1,4 @@
-// RUN: %clang -target mips64el-unknown-linux -O3 -S -mabi=n64 -o - -emit-llvm %s | FileCheck %s
+// RUN: %clang_cc1 -triple mips64el-unknown-linux -O3 -target-abi n64 -o - -emit-llvm %s | FileCheck %s
 
 class B {
 public:

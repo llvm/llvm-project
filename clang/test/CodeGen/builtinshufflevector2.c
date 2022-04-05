@@ -1,4 +1,4 @@
-// RUN: %clang -emit-llvm -S -o - %s | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -o - %s | FileCheck %s
 
 typedef float float4 __attribute__((ext_vector_type(4)));
 typedef unsigned int uint4 __attribute__((ext_vector_type(4)));

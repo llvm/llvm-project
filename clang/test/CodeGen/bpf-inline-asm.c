@@ -1,6 +1,6 @@
 // REQUIRES: bpf-registered-target
-// RUN: %clang -target bpf -emit-llvm -S -Xclang -target-feature -Xclang +alu32 %s -o - | FileCheck %s
-// RUN: %clang -target bpf -emit-llvm -S -mcpu=v3 %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple bpf -emit-llvm -target-feature +alu32 %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple bpf -emit-llvm -target-cpu v3 %s -o - | FileCheck %s
 
 void test_generic_constraints(int var32, long var64) {
   asm("%0 = %1"
