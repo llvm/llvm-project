@@ -12,6 +12,7 @@
 #include "ParsedAST.h"
 #include "Protocol.h"
 #include "SourceCode.h"
+#include "index/CanonicalIncludes.h"
 #include "support/Logger.h"
 #include "support/Trace.h"
 #include "clang/AST/ASTContext.h"
@@ -23,6 +24,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 
@@ -303,9 +305,10 @@ ReferencedLocations findReferencedLocations(ParsedAST &AST) {
                                  &AST.getTokens());
 }
 
-ReferencedFiles
-findReferencedFiles(const ReferencedLocations &Locs, const SourceManager &SM,
-                    llvm::function_ref<FileID(FileID)> HeaderResponsible) {
+ReferencedFiles findReferencedFiles(
+    const ReferencedLocations &Locs, const SourceManager &SM,
+    llvm::function_ref<FileID(FileID)> HeaderResponsible,
+    llvm::function_ref<Optional<StringRef>(FileID)> UmbrellaHeader) {
   std::vector<SourceLocation> Sorted{Locs.User.begin(), Locs.User.end()};
   llvm::sort(Sorted); // Group by FileID.
   ReferencedFilesBuilder Builder(SM);
@@ -324,32 +327,53 @@ findReferencedFiles(const ReferencedLocations &Locs, const SourceManager &SM,
   // non-self-contained FileIDs as used. Perform this on FileIDs rather than
   // HeaderIDs, as each inclusion of a non-self-contained file is distinct.
   llvm::DenseSet<FileID> UserFiles;
-  for (FileID ID : Builder.Files)
+  llvm::StringSet<> PublicHeaders;
+  for (FileID ID : Builder.Files) {
     UserFiles.insert(HeaderResponsible(ID));
+    if (auto PublicHeader = UmbrellaHeader(ID)) {
+      PublicHeaders.insert(*PublicHeader);
+    }
+  }
 
   llvm::DenseSet<tooling::stdlib::Header> StdlibFiles;
   for (const auto &Symbol : Locs.Stdlib)
     for (const auto &Header : Symbol.headers())
       StdlibFiles.insert(Header);
 
-  return {std::move(UserFiles), std::move(StdlibFiles)};
+  return {std::move(UserFiles), std::move(StdlibFiles),
+          std::move(PublicHeaders)};
 }
 
 ReferencedFiles findReferencedFiles(const ReferencedLocations &Locs,
                                     const IncludeStructure &Includes,
+                                    const CanonicalIncludes &CanonIncludes,
                                     const SourceManager &SM) {
-  return findReferencedFiles(Locs, SM, [&SM, &Includes](FileID ID) {
-    return headerResponsible(ID, SM, Includes);
-  });
+  return findReferencedFiles(
+      Locs, SM,
+      [&SM, &Includes](FileID ID) {
+        return headerResponsible(ID, SM, Includes);
+      },
+      [&SM, &CanonIncludes](FileID ID) -> Optional<StringRef> {
+        auto Entry = SM.getFileEntryRefForID(ID);
+        if (!Entry)
+          return llvm::None;
+        auto PublicHeader = CanonIncludes.mapHeader(*Entry);
+        if (PublicHeader.empty())
+          return llvm::None;
+        return PublicHeader;
+      });
 }
 
 std::vector<const Inclusion *>
 getUnused(ParsedAST &AST,
-          const llvm::DenseSet<IncludeStructure::HeaderID> &ReferencedFiles) {
+          const llvm::DenseSet<IncludeStructure::HeaderID> &ReferencedFiles,
+          const llvm::StringSet<> &ReferencedPublicHeaders) {
   trace::Span Tracer("IncludeCleaner::getUnused");
   std::vector<const Inclusion *> Unused;
   for (const Inclusion &MFI : AST.getIncludeStructure().MainFileIncludes) {
     if (!MFI.HeaderID)
+      continue;
+    if (ReferencedPublicHeaders.contains(MFI.Written))
       continue;
     auto IncludeID = static_cast<IncludeStructure::HeaderID>(*MFI.HeaderID);
     bool Used = ReferencedFiles.contains(IncludeID);
@@ -400,11 +424,12 @@ std::vector<const Inclusion *> computeUnusedIncludes(ParsedAST &AST) {
   const auto &SM = AST.getSourceManager();
 
   auto Refs = findReferencedLocations(AST);
-  auto ReferencedFileIDs = findReferencedFiles(Refs, AST.getIncludeStructure(),
-                                               AST.getSourceManager());
+  auto ReferencedFiles =
+      findReferencedFiles(Refs, AST.getIncludeStructure(),
+                          AST.getCanonicalIncludes(), AST.getSourceManager());
   auto ReferencedHeaders =
-      translateToHeaderIDs(ReferencedFileIDs, AST.getIncludeStructure(), SM);
-  return getUnused(AST, ReferencedHeaders);
+      translateToHeaderIDs(ReferencedFiles, AST.getIncludeStructure(), SM);
+  return getUnused(AST, ReferencedHeaders, ReferencedFiles.SpelledUmbrellas);
 }
 
 std::vector<Diag> issueUnusedIncludesDiagnostics(ParsedAST &AST,
