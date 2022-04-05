@@ -108,6 +108,14 @@ class FPCmpS_rr<bits<3> funct3, string opcodestr>
               (ins FPR32:$rs1, FPR32:$rs2), opcodestr, "$rd, $rs1, $rs2">,
       Sched<[WriteFCmp32, ReadFCmp32, ReadFCmp32]>;
 
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class FPCmvS_rrr<bits<3> funct3, string opcodestr>
+    : RVInstR4<0b00, funct3, OPC_CMV_FP, (outs GPR:$rd),
+               (ins GPR:$rs1, FPR32:$rs2, FPR32:$rs3),
+               opcodestr, "$rd, $rs1, $rs2, $rs3">,
+      Sched<[WriteFCmp32, ReadFCmp32, ReadFCmp32, ReadFCmp32]>;
+
 //===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
@@ -140,13 +148,6 @@ def          : FPFMASDynFrmAlias<FNMSUB_S, "fnmsub.s">;
 def FNMADD_S : FPFMAS_rrr_frm<OPC_NMADD, "fnmadd.s">,
                Sched<[WriteFMA32, ReadFMA32, ReadFMA32, ReadFMA32]>;
 def          : FPFMASDynFrmAlias<FNMADD_S, "fnmadd.s">;
-
-def FCMV_LE_S : FPALUS_rrr<OPC_CMV_FP, 0b000, "fcmv.le.s">,
-                Sched<[WriteFALU32, ReadFALU32, ReadFALU32, ReadFALU32]>;
-def FCMV_LT_S : FPALUS_rrr<OPC_CMV_FP, 0b001, "fcmv.lt.s">,
-                Sched<[WriteFALU32, ReadFALU32, ReadFALU32, ReadFALU32]>;
-def FCMV_EQ_S : FPALUS_rrr<OPC_CMV_FP, 0b010, "fcmv.eq.s">,
-                Sched<[WriteFALU32, ReadFALU32, ReadFALU32, ReadFALU32]>;
 
 def FADD_S : FPALUS_rr_frm<0b0000000, "fadd.s">,
              Sched<[WriteFALU32, ReadFALU32, ReadFALU32]>;
@@ -208,6 +209,10 @@ def FMV_X_W : FPUnaryOp_r<0b1110000, 0b000, GPR, FPR32, "fmv.x.w">,
 def FEQ_S : FPCmpS_rr<0b010, "feq.s">;
 def FLT_S : FPCmpS_rr<0b001, "flt.s">;
 def FLE_S : FPCmpS_rr<0b000, "fle.s">;
+
+def FCMV_EQ_S : FPCmvS_rrr<0b010, "fcmv.eq.s">;
+def FCMV_LT_S : FPCmvS_rrr<0b001, "fcmv.lt.s">;
+def FCMV_LE_S : FPCmvS_rrr<0b000, "fcmv.le.s">;
 
 def FCLASS_S : FPUnaryOp_r<0b1110000, 0b001, GPR, FPR32, "fclass.s">,
                Sched<[WriteFClass32, ReadFClass32]> {
