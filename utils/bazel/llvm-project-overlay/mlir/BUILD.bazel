@@ -5022,6 +5022,7 @@ cc_library(
         ":ConversionPassIncGen",
         ":FuncDialect",
         ":GPUDialect",
+        ":IR",
         ":Pass",
         ":SCFDialect",
         ":SCFToGPU",
