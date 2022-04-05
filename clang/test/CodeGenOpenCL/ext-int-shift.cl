@@ -1,4 +1,4 @@
-// RUN: %clang -cc1 -triple x86_64-linux-pc -O3 -disable-llvm-passes %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux-pc -O3 -disable-llvm-passes %s -emit-llvm -o - | FileCheck %s
 
 void Shifts(_BitInt(12) E, int i) {
   E << 99;
