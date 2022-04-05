@@ -1,0 +1,9 @@
+// This test checks that the pointers to PLT are properly updated.
+// The test is using lld linker.
+
+// RUN: %clang %cflags %p/../Inputs/plt.c -fuse-ld=lld \
+// RUN:    -o %t.lld.exe -Wl,-q
+// RUN: llvm-bolt %t.lld.exe -o %t.lld.bolt.exe -use-old-text=0 -lite=0
+// RUN: %t.lld.bolt.exe | FileCheck %s
+
+// CHECK: Test completed

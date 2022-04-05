@@ -6491,6 +6491,10 @@ def warn_floatingpoint_eq : Warning<
   "comparing floating point with == or != is unsafe">,
   InGroup<DiagGroup<"float-equal">>, DefaultIgnore;
 
+def err_setting_eval_method_used_in_unsafe_context : Error <
+  "%select{'#pragma clang fp eval_method'|option 'ffp-eval-method'}0 cannot be used with "
+  "%select{option 'fapprox-func'|option 'mreassociate'|option 'freciprocal'|option 'ffp-eval-method'|'#pragma clang fp reassociate'}1">;
+
 def warn_remainder_division_by_zero : Warning<
   "%select{remainder|division}0 by zero is undefined">,
   InGroup<DivZero>;
