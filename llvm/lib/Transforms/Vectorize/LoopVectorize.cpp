@@ -3103,8 +3103,8 @@ void InnerLoopVectorizer::createVectorLoopSkeleton(StringRef Prefix) {
   BrInst->setDebugLoc(ScalarLatchTerm->getDebugLoc());
   ReplaceInstWithInst(LoopMiddleBlock->getTerminator(), BrInst);
 
-  SplitBlock(LoopVectorPreHeader, LoopVectorPreHeader->getTerminator(), DT,
-             nullptr, nullptr, Twine(Prefix) + "vector.body");
+  SplitBlock(LoopVectorPreHeader, LoopVectorPreHeader->getTerminator(), DT, LI,
+             nullptr, Twine(Prefix) + "vector.body");
 
   // Update dominator for loop exit.
   if (!Cost->requiresScalarEpilogue(VF))
