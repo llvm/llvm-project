@@ -44,4 +44,9 @@ module m
   logical, parameter :: test_before_1 = sqrt_before_1 == before_1
   real(4), parameter :: sq_sqrt_before_1 = sqrt_before_1 * sqrt_before_1
   logical, parameter :: test_sq_before_1 = sq_sqrt_before_1 < before_1
+  ! ICE at 0.0
+  real(4), parameter :: sqrt_zero_4 = sqrt(0.0)
+  logical, parameter :: test_sqrt_zero_4 = sqrt_zero_4 == 0.0
+  real(8), parameter :: sqrt_zero_8 = sqrt(0.0)
+  logical, parameter :: test_sqrt_zero_8 = sqrt_zero_8 == 0.0
 end module

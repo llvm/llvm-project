@@ -98,7 +98,7 @@ ValueWithRealFlags<Real<W, P>> Real<W, P>::Add(
     if (order == Ordering::Equal) {
       // x + (-x) -> +0.0 unless rounding is directed downwards
       if (rounding.mode == common::RoundingMode::Down) {
-        result.value.word_ = result.value.word_.IBSET(bits - 1); // -0.0
+        result.value = NegativeZero();
       }
       return result;
     }
@@ -221,7 +221,7 @@ ValueWithRealFlags<Real<W, P>> Real<W, P>::Divide(
       }
     } else if (IsZero() || y.IsInfinite()) { // 0/x, x/Inf -> 0
       if (isNegative) {
-        result.value.word_ = result.value.word_.IBSET(bits - 1);
+        result.value = NegativeZero();
       }
     } else {
       // dividend and divisor are both finite and nonzero numbers
@@ -272,13 +272,15 @@ ValueWithRealFlags<Real<W, P>> Real<W, P>::SQRT(Rounding rounding) const {
   } else if (IsNegative()) {
     if (IsZero()) {
       // SQRT(-0) == -0 in IEEE-754.
-      result.value.word_ = result.value.word_.IBSET(bits - 1);
+      result.value = NegativeZero();
     } else {
       result.value = NotANumber();
     }
   } else if (IsInfinite()) {
     // SQRT(+Inf) == +Inf
     result.value = Infinity(false);
+  } else if (IsZero()) {
+    result.value = PositiveZero();
   } else {
     int expo{UnbiasedExponent()};
     if (expo < -1 || expo > 1) {
