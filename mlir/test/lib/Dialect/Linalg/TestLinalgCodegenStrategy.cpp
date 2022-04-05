@@ -31,6 +31,8 @@ using namespace mlir::linalg;
 namespace {
 struct TestLinalgCodegenStrategy
     : public PassWrapper<TestLinalgCodegenStrategy, OperationPass<FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestLinalgCodegenStrategy)
+
   StringRef getArgument() const final { return "test-linalg-codegen-strategy"; }
   StringRef getDescription() const final {
     return "Test Linalg Codegen Strategy.";

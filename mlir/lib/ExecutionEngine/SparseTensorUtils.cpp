@@ -336,9 +336,9 @@ public:
     // Sort.
     std::sort(added, added + count);
     // Restore insertion path for first insert.
-    uint64_t rank = getRank();
+    const uint64_t lastDim = getRank() - 1;
     uint64_t index = added[0];
-    cursor[rank - 1] = index;
+    cursor[lastDim] = index;
     lexInsert(cursor, values[index]);
     assert(filled[index]);
     values[index] = 0;
@@ -347,10 +347,10 @@ public:
     for (uint64_t i = 1; i < count; i++) {
       assert(index < added[i] && "non-lexicographic insertion");
       index = added[i];
-      cursor[rank - 1] = index;
-      insPath(cursor, rank - 1, added[i - 1] + 1, values[index]);
+      cursor[lastDim] = index;
+      insPath(cursor, lastDim, added[i - 1] + 1, values[index]);
       assert(filled[index]);
-      values[index] = 0.0;
+      values[index] = 0;
       filled[index] = false;
     }
   }

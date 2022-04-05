@@ -362,6 +362,13 @@ template <class ELFT> void elf::createSyntheticSections() {
     part.dynSymTab =
         std::make_unique<SymbolTableSection<ELFT>>(*part.dynStrTab);
     part.dynamic = std::make_unique<DynamicSection<ELFT>>();
+
+    if (config->emachine == EM_AARCH64 &&
+        config->androidMemtagMode != ELF::NT_MEMTAG_LEVEL_NONE) {
+      part.memtagAndroidNote = std::make_unique<MemtagAndroidNote>();
+      add(*part.memtagAndroidNote);
+    }
+
     if (config->androidPackDynRelocs)
       part.relaDyn =
           std::make_unique<AndroidPackedRelocationSection<ELFT>>(relaDynName);

@@ -77,12 +77,10 @@ llvm::StringRef ObjectFilePECOFF::GetPluginDescriptionStatic() {
          "(32 and 64 bit)";
 }
 
-ObjectFile *ObjectFilePECOFF::CreateInstance(const lldb::ModuleSP &module_sp,
-                                             DataBufferSP &data_sp,
-                                             lldb::offset_t data_offset,
-                                             const lldb_private::FileSpec *file_p,
-                                             lldb::offset_t file_offset,
-                                             lldb::offset_t length) {
+ObjectFile *ObjectFilePECOFF::CreateInstance(
+    const lldb::ModuleSP &module_sp, DataBufferSP data_sp,
+    lldb::offset_t data_offset, const lldb_private::FileSpec *file_p,
+    lldb::offset_t file_offset, lldb::offset_t length) {
   FileSpec file = file_p ? *file_p : FileSpec();
   if (!data_sp) {
     data_sp = MapFileData(file, length, file_offset);
@@ -113,7 +111,7 @@ ObjectFile *ObjectFilePECOFF::CreateInstance(const lldb::ModuleSP &module_sp,
 }
 
 ObjectFile *ObjectFilePECOFF::CreateMemoryInstance(
-    const lldb::ModuleSP &module_sp, lldb::DataBufferSP &data_sp,
+    const lldb::ModuleSP &module_sp, lldb::DataBufferSP data_sp,
     const lldb::ProcessSP &process_sp, lldb::addr_t header_addr) {
   if (!data_sp || !ObjectFilePECOFF::MagicBytesMatch(data_sp))
     return nullptr;

@@ -20,6 +20,8 @@ using namespace mlir;
 namespace {
 struct TestPrintInvalidPass
     : public PassWrapper<TestPrintInvalidPass, OperationPass<ModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestPrintInvalidPass)
+
   StringRef getArgument() const final { return "test-print-invalid"; }
   StringRef getDescription() const final {
     return "Test printing invalid ops.";

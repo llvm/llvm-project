@@ -12,26 +12,33 @@
 using namespace mlir;
 
 namespace {
+/// A simple structure which is used for testing as an underlying location in
+/// OpaqueLoc.
+struct MyLocation {
+  MyLocation() = default;
+  MyLocation(int id) : id(id) {}
+  int getId() { return id; }
+
+  int id{42};
+};
+} // namespace
+
+MLIR_DECLARE_EXPLICIT_TYPE_ID(MyLocation *)
+MLIR_DEFINE_EXPLICIT_TYPE_ID(MyLocation *)
+
+namespace {
 /// Pass that changes locations to opaque locations for each operation.
 /// It also takes all operations that are not function operations or
 /// terminators and clones them with opaque locations which store the initial
 /// locations.
 struct TestOpaqueLoc
     : public PassWrapper<TestOpaqueLoc, OperationPass<ModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestOpaqueLoc)
+
   StringRef getArgument() const final { return "test-opaque-loc"; }
   StringRef getDescription() const final {
     return "Changes all leaf locations to opaque locations";
   }
-
-  /// A simple structure which is used for testing as an underlying location in
-  /// OpaqueLoc.
-  struct MyLocation {
-    MyLocation() = default;
-    MyLocation(int id) : id(id) {}
-    int getId() { return id; }
-
-    int id{42};
-  };
 
   void runOnOperation() override {
     std::vector<std::unique_ptr<MyLocation>> myLocs;

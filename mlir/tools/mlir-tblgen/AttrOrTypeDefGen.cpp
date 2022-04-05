@@ -663,8 +663,9 @@ bool DefGenerator::emitDecls(StringRef selectedDialect) {
   // each of these.
   for (const AttrOrTypeDef &def : defs)
     if (!def.getDialect().getCppNamespace().empty())
-      os << "DECLARE_EXPLICIT_TYPE_ID(" << def.getDialect().getCppNamespace()
-         << "::" << def.getCppClassName() << ")\n";
+      os << "MLIR_DECLARE_EXPLICIT_TYPE_ID("
+         << def.getDialect().getCppNamespace() << "::" << def.getCppClassName()
+         << ")\n";
 
   return false;
 }
@@ -827,8 +828,9 @@ bool DefGenerator::emitDefs(StringRef selectedDialect) {
     }
     // Emit the TypeID explicit specializations to have a single symbol def.
     if (!def.getDialect().getCppNamespace().empty())
-      os << "DEFINE_EXPLICIT_TYPE_ID(" << def.getDialect().getCppNamespace()
-         << "::" << def.getCppClassName() << ")\n";
+      os << "MLIR_DEFINE_EXPLICIT_TYPE_ID("
+         << def.getDialect().getCppNamespace() << "::" << def.getCppClassName()
+         << ")\n";
   }
 
   Dialect firstDialect = defs.front().getDialect();

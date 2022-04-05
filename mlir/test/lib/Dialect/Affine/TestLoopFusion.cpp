@@ -42,6 +42,8 @@ namespace {
 
 struct TestLoopFusion
     : public PassWrapper<TestLoopFusion, OperationPass<FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestLoopFusion)
+
   StringRef getArgument() const final { return "test-loop-fusion"; }
   StringRef getDescription() const final {
     return "Tests loop fusion utility functions.";
