@@ -350,6 +350,16 @@ def IfOp : CIR_Op<"if",
 // YieldOp
 //===----------------------------------------------------------------------===//
 
+def YieldOpKind_BK : I32EnumAttrCase<"Break", 1, "break">;
+def YieldOpKind_FT : I32EnumAttrCase<"Fallthrough", 2, "fallthrough">;
+
+def YieldOpKind : I32EnumAttr<
+    "YieldOpKind",
+    "yield kind",
+    [YieldOpKind_BK, YieldOpKind_FT]> {
+  let cppNamespace = "::mlir::cir";
+}
+
 def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
                                ParentOneOf<["IfOp", "ScopeOp", "SwitchOp"]>]> {
   let summary = "termination operation for regions inside if, for, scope, etc";
@@ -362,7 +372,7 @@ def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
     but it will be useful to represent lifetime extension in the future.
 
     When used to leave `cir.switch` regions there are two possible meanings:
-    1. Plain `cir.yield` has "breaking out of a switch" semantics.
+    1. `cir.yield break` has "breaking out of the outermost" switch semantics.
     2. `cir.yield fallthrough` means the next region in the case list should
     be executed.
 
@@ -385,12 +395,25 @@ def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
     ```
   }];
 
-  let arguments = (ins UnitAttr:$fallthrough, Variadic<AnyType>:$results);
+  let arguments = (ins OptionalAttr<YieldOpKind>:$kind,
+                       Variadic<AnyType>:$results);
   let builders = [OpBuilder<(ins), [{ /* nothing to do */ }]>];
 
   let assemblyFormat = [{
-    (`fallthrough` $fallthrough^)? ($results^ `:` type($results))?
-    attr-dict
+    ($kind^)? ($results^ `:` type($results))? attr-dict
+  }];
+
+  let extraClassDeclaration = [{
+    // None of the below
+    bool isPlain() {
+      return !getKind();
+    }
+    bool isFallthrough() {
+      return !isPlain() && *getKind() == YieldOpKind::Fallthrough;
+    }
+    bool isBreak() {
+      return !isPlain() && *getKind() == YieldOpKind::Break;
+    }
   }];
 
   let hasVerifier = 1;
@@ -591,11 +614,11 @@ def SwitchOp : CIR_Op<"switch",
     cir.switch (%b : i32) [
       case (equal, 20) {
         ...
-        cir.yield // break semantics
+        cir.yield break
       },
       case (default) {
         ...
-        cir.yield #fallthrough
+        cir.yield fallthrough
       }
     ]
     ```
