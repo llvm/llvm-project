@@ -152,7 +152,7 @@ writing, the following sync-ups are organized:
      - Minutes/docs link
    * - Loop Optimization Working Group
      - Every 2 weeks on Wednesday
-     - 
+     - `ics <./_static/LoopOptWG_invite.ics>`__
      - `Minutes/docs <https://docs.google.com/document/d/1sdzoyB11s0ccTZ3fobqctDpgJmRoFcz0sviKxqczs4g/edit>`__
    * - RISC-V
      - Every 2 weeks on Thursday
