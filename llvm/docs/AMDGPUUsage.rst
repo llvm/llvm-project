@@ -2823,12 +2823,16 @@ non-AMD key names should be prefixed by "*vendor-name*.".
                                                 "HiddenPrintfBuffer"
                                                   A global address space pointer
                                                   to the runtime printf buffer
-                                                  is passed in kernarg.
+                                                  is passed in kernarg. Mutually
+                                                  exclusive with
+                                                  "HiddenHostcallBuffer".
 
                                                 "HiddenHostcallBuffer"
                                                   A global address space pointer
                                                   to the runtime hostcall buffer
-                                                  is passed in kernarg.
+                                                  is passed in kernarg. Mutually
+                                                  exclusive with
+                                                  "HiddenPrintfBuffer".
 
                                                 "HiddenDefaultQueue"
                                                   A global address space pointer
@@ -3348,12 +3352,18 @@ same *vendor-name*.
                                                      "hidden_printf_buffer"
                                                        A global address space pointer
                                                        to the runtime printf buffer
-                                                       is passed in kernarg.
+                                                       is passed in kernarg. Mutually
+                                                       exclusive with
+                                                       "hidden_hostcall_buffer"
+                                                       before Code Object V5.
 
                                                      "hidden_hostcall_buffer"
                                                        A global address space pointer
                                                        to the runtime hostcall buffer
-                                                       is passed in kernarg.
+                                                       is passed in kernarg. Mutually
+                                                       exclusive with
+                                                       "hidden_printf_buffer"
+                                                       before Code Object V5.
 
                                                      "hidden_default_queue"
                                                        A global address space pointer

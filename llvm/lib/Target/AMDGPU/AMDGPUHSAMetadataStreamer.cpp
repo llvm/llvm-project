@@ -400,17 +400,15 @@ void MetadataStreamerV2::emitHiddenKernelArgs(const Function &Func,
   auto Int8PtrTy = Type::getInt8PtrTy(Func.getContext(),
                                       AMDGPUAS::GLOBAL_ADDRESS);
 
-  // Emit "printf buffer" argument if printf is used, otherwise emit dummy
-  // "none" argument.
   if (HiddenArgNumBytes >= 32) {
+    // We forbid the use of features requiring hostcall when compiling OpenCL
+    // before code object V5, which makes the mutual exclusion between the
+    // "printf buffer" and "hostcall buffer" here sound.
     if (Func.getParent()->getNamedMetadata("llvm.printf.fmts"))
       emitKernelArg(DL, Int8PtrTy, Align(8), ValueKind::HiddenPrintfBuffer);
-    else if (!Func.hasFnAttribute("amdgpu-no-hostcall-ptr")) {
-      // The printf runtime binding pass should have ensured that hostcall and
-      // printf are not used in the same module.
-      assert(!Func.getParent()->getNamedMetadata("llvm.printf.fmts"));
+    else if (!Func.hasFnAttribute("amdgpu-no-hostcall-ptr"))
       emitKernelArg(DL, Int8PtrTy, Align(8), ValueKind::HiddenHostcallBuffer);
-    } else
+    else
       emitKernelArg(DL, Int8PtrTy, Align(8), ValueKind::HiddenNone);
   }
 
@@ -816,19 +814,17 @@ void MetadataStreamerV3::emitHiddenKernelArgs(const MachineFunction &MF,
   auto Int8PtrTy =
       Type::getInt8PtrTy(Func.getContext(), AMDGPUAS::GLOBAL_ADDRESS);
 
-  // Emit "printf buffer" argument if printf is used, emit "hostcall buffer"
-  // if "hostcall" module flag is set, otherwise emit dummy "none" argument.
   if (HiddenArgNumBytes >= 32) {
+    // We forbid the use of features requiring hostcall when compiling OpenCL
+    // before code object V5, which makes the mutual exclusion between the
+    // "printf buffer" and "hostcall buffer" here sound.
     if (M->getNamedMetadata("llvm.printf.fmts"))
       emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_printf_buffer", Offset,
                     Args);
-    else if (!Func.hasFnAttribute("amdgpu-no-hostcall-ptr")) {
-      // The printf runtime binding pass should have ensured that hostcall and
-      // printf are not used in the same module.
-      assert(!M->getNamedMetadata("llvm.printf.fmts"));
+    else if (!Func.hasFnAttribute("amdgpu-no-hostcall-ptr"))
       emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_hostcall_buffer", Offset,
                     Args);
-    } else
+    else
       emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_none", Offset, Args);
   }
 
