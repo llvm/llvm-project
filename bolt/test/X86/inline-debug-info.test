@@ -10,7 +10,7 @@
 # RUN:   | FileCheck %s
 
 ## The call to puts() should come from inline-foo.c:
-# CHECK: callq   puts@PLT # debug line {{.*}}inline-foo.c:4:3
+# CHECK: callq   {{.*}} # debug line {{.*}}inline-foo.c:4:3
 
 # RUN: llvm-objdump --disassemble-symbols=main -d --line-numbers %t.bolt \
 # RUN:   | FileCheck %s -check-prefix=CHECK-OBJDUMP
