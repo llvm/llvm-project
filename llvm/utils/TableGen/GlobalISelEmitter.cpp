@@ -5534,6 +5534,7 @@ std::vector<Matcher *> GlobalISelEmitter::optimizeRules(
   ProcessCurrentGroup();
 
   LLVM_DEBUG(dbgs() << "NumGroups: " << NumGroups << "\n");
+  (void) NumGroups;
   assert(CurrentGroup->empty() && "The last group wasn't properly processed");
   return OptRules;
 }

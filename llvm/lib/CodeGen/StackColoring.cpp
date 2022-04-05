@@ -1143,6 +1143,9 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
   LLVM_DEBUG(dbgs() << "Fixed " << FixedMemOp << " machine memory operands.\n");
   LLVM_DEBUG(dbgs() << "Fixed " << FixedDbg << " debug locations.\n");
   LLVM_DEBUG(dbgs() << "Fixed " << FixedInstr << " machine instructions.\n");
+  (void) FixedMemOp;
+  (void) FixedDbg;
+  (void) FixedInstr;
 }
 
 void StackColoring::removeInvalidSlotRanges() {

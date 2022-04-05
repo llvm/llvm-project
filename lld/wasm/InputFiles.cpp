@@ -689,6 +689,7 @@ void ArchiveFile::parse() {
     ++count;
   }
   LLVM_DEBUG(dbgs() << "Read " << count << " symbols\n");
+  (void) count;
 }
 
 void ArchiveFile::addMember(const Archive::Symbol *sym) {
