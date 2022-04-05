@@ -53,4 +53,7 @@ FUNC:
 main:
   xorq %rax, %rax
   retq
+
+# For relocations against .text
+  call exit
 .Lend2:

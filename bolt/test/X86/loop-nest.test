@@ -9,8 +9,8 @@ RUN: %clang %cflags %t.o -o %t.exe -Wl,-q
 RUN: llvm-bolt %t.exe -o %t -data=%t.fdata \
 RUN: -print-cfg -print-loops -sequential-disassembly -lite=0 2>&1 | FileCheck %s
 
-CHECK:      Binary Function "main" after building cfg
-CHECK:      Loop Info for Function "main"
+CHECK:      Binary Function "main{{.*}}" after building cfg
+CHECK:      Loop Info for Function "main{{.*}}"
 CHECK:      Outer loop header: .Ltmp[[#MAIN_OUTER_HDR:]]
 CHECK-NEXT: Loop basic blocks: .Ltmp[[#MAIN_OUTER_HDR]], .Ltmp[[#]]
 

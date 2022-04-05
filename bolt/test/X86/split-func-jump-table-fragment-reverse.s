@@ -12,6 +12,13 @@
 # CHECK-NOT: unclaimed PC-relative relocations left in data
 # CHECK: BOLT-INFO: marking main.cold as a fragment of main
   .text
+  .globl _start
+  .type _start, %function
+_start:
+  callq main.cold
+  call exit
+.size _start, .-_start
+
   .globl main.cold
   .type main.cold, %function
   .p2align 2

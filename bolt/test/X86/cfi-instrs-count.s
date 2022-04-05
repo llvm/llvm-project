@@ -109,8 +109,3 @@ _Z7catchitv:
 
 	.cfi_endproc
 .size _Z7catchitv, .-_Z7catchitv
-.set "_Z5raisev", 0
-.set _ZStlsISt11char_traitsIcEERSt13basic_ostreamIcT_ES5_PKc, 0
-.set _ZNSolsEPFRSoS_E, 0
-.set __cxa_begin_catch, 0
-.set __cxa_end_catch, 0
