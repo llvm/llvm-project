@@ -248,6 +248,9 @@ bool shouldPrintTerm(mlir::Region &r) {
     return false;
   if (isa<ReturnOp>(entryBlock->back()))
     return true;
+  YieldOp y = dyn_cast<YieldOp>(entryBlock->back());
+  if (y && !y.isPlain())
+    return true;
   return false;
 }
 

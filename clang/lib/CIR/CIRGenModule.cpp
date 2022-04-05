@@ -1362,8 +1362,27 @@ mlir::LogicalResult CIRGenModule::buildSwitchStmt(const SwitchStmt &S) {
     // TODO: PGO and likelihood (e.g. PGO.haveRegionCounts())
     // TODO: if the switch has a condition wrapped by __builtin_unpredictable?
 
+    auto terminateCaseRegion = [&](mlir::Region &r, mlir::Location loc) {
+      assert(r.getBlocks().size() <= 1 && "not implemented");
+      if (r.empty())
+        return;
+
+      auto &block = r.back();
+
+      if (block.empty() ||
+          !block.back().hasTrait<mlir::OpTrait::IsTerminator>()) {
+        mlir::OpBuilder::InsertionGuard guardCase(builder);
+        builder.setInsertionPointToEnd(&block);
+        builder.create<YieldOp>(
+            loc,
+            mlir::cir::YieldOpKindAttr::get(
+                builder.getContext(), mlir::cir::YieldOpKind::Fallthrough),
+            mlir::ValueRange({}));
+      }
+    };
+
     // FIXME: track switch to handle nested stmts.
-    builder.create<SwitchOp>(
+    auto swop = builder.create<SwitchOp>(
         getLoc(S.getBeginLoc()), condV,
         /*switchBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc, mlir::OperationState &os) {
@@ -1402,6 +1421,12 @@ mlir::LogicalResult CIRGenModule::buildSwitchStmt(const SwitchStmt &S) {
 
           os.addAttribute("cases", builder.getArrayAttr(caseAttrs));
         });
+
+    // Make sure all case regions are terminated by inserting
+    // fallthroughs when necessary.
+    // FIXME: find a better way to get accurante with location here.
+    for (auto &r : swop.getRegions())
+      terminateCaseRegion(r, swop.getLoc());
     return res;
   };
 
