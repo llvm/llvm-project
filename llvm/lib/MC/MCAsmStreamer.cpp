@@ -762,6 +762,8 @@ bool MCAsmStreamer::emitSymbolAttribute(MCSymbol *Symbol,
   case MCSA_WeakDefAutoPrivate: OS << "\t.weak_def_can_be_hidden\t"; break;
   case MCSA_Cold:
     // Assemblers currently do not support a .cold directive.
+  case MCSA_Exported:
+    // Non-AIX assemblers currently do not support exported visibility.
     return false;
   }
 
@@ -903,6 +905,9 @@ void MCAsmStreamer::emitXCOFFSymbolLinkageWithVisibility(
     break;
   case MCSA_Protected:
     OS << ",protected";
+    break;
+  case MCSA_Exported:
+    OS << ",exported";
     break;
   default:
     report_fatal_error("unexpected value for Visibility type");
