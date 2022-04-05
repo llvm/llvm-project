@@ -377,10 +377,10 @@ int main(int Argc, const char **Argv) {
   // [MSVC Compatibility]
   bool HasPrintArgs = false;
   for (auto Arg : Args) {
-    if (std::string(Arg).find("-fprint-arguments") != std::string::npos) {
+    if (StringRef(Arg).compare("-fprint-arguments") == 0) {
       HasPrintArgs = true;
-    } else if (std::string(Arg).find("--target=x86_64-pc-windows") !=
-               std::string::npos) {
+    } else if (StringRef(Arg).find("--target=x86_64-pc-windows") !=
+               StringRef::npos) {
       // details in function 'handleTargetFeatures'
       Args.push_back("-mssse3");
       Args.push_back("-msse4.1");
