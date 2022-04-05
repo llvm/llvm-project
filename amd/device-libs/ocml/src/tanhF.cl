@@ -37,7 +37,7 @@ MATH_MANGLE(tanh)(float x)
         z = MATH_MAD(y2, y*p, y);
     } else {
         float t = MATH_MANGLE(exp)(2.0f * y);
-        z = 1.0f - MATH_FAST_DIV(2.0f, t + 1.0f);
+        z = MATH_MAD(-2.0f, MATH_FAST_RCP(t + 1.0f), 1.0f);
     }
 #endif
 
