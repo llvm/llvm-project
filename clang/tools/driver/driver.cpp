@@ -375,23 +375,27 @@ int main(int Argc, const char **Argv) {
     MarkEOLs = false;
   llvm::cl::ExpandResponseFiles(Saver, Tokenizer, Args, MarkEOLs);
   // [MSVC Compatibility]
+  bool HasPrintArgs = false;
   for (auto Arg : Args) {
-    if (std::string(Arg).find("--target=x86_64-pc-windows") !=
-        std::string::npos) {
+    if (std::string(Arg).find("-fprint-arguments") != std::string::npos) {
+      HasPrintArgs = true;
+    } else if (std::string(Arg).find("--target=x86_64-pc-windows") !=
+               std::string::npos) {
       // details in function 'handleTargetFeatures'
       Args.push_back("-mssse3");
       Args.push_back("-msse4.1");
       Args.push_back("-maes");
-      break;
     }
   }
 
   // [clang] Add print arguments
-  llvm::outs() << "Program arguments:";
-  for (auto Arg : Args) {
-    llvm::outs() << Arg << " ";
+  if (HasPrintArgs) {
+    llvm::outs() << "Program arguments:";
+    for (auto Arg : Args) {
+      llvm::outs() << Arg << " ";
+    }
+    llvm::outs() << "\n";
   }
-  llvm::outs() << "\n";
 
   // Handle -cc1 integrated tools, even if -cc1 was expanded from a response
   // file.
