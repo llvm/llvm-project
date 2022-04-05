@@ -19,9 +19,11 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_CANONICALINCLUDES_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_CANONICALINCLUDES_H
 
+#include "clang/Basic/FileEntry.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/FileSystem/UniqueID.h"
 #include <mutex>
 #include <string>
 #include <vector>
@@ -34,14 +36,14 @@ namespace clangd {
 /// Only const methods (i.e. mapHeader) in this class are thread safe.
 class CanonicalIncludes {
 public:
-  /// Adds a string-to-string mapping from \p Path to \p CanonicalPath.
-  void addMapping(llvm::StringRef Path, llvm::StringRef CanonicalPath);
+  /// Adds a file-to-string mapping from \p ID to \p CanonicalPath.
+  void addMapping(FileEntryRef Header, llvm::StringRef CanonicalPath);
 
   /// Returns the overridden include for symbol with \p QualifiedName, or "".
   llvm::StringRef mapSymbol(llvm::StringRef QualifiedName) const;
 
   /// Returns the overridden include for for files in \p Header, or "".
-  llvm::StringRef mapHeader(llvm::StringRef Header) const;
+  llvm::StringRef mapHeader(FileEntryRef Header) const;
 
   /// Adds mapping for system headers and some special symbols (e.g. STL symbols
   /// in <iosfwd> need to be mapped individually). Approximately, the following
@@ -54,8 +56,8 @@ public:
   void addSystemHeadersMapping(const LangOptions &Language);
 
 private:
-  /// A map from full include path to a canonical path.
-  llvm::StringMap<std::string> FullPathMapping;
+  /// A map from the private header to a canonical include path.
+  llvm::DenseMap<llvm::sys::fs::UniqueID, std::string> FullPathMapping;
   /// A map from a suffix (one or components of a path) to a canonical path.
   /// Used only for mapping standard headers.
   const llvm::StringMap<llvm::StringRef> *StdSuffixHeaderMapping = nullptr;
