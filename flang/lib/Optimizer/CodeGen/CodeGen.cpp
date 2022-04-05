@@ -1491,6 +1491,9 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
       }
 
     bool hasSubcomp = !xbox.subcomponent().empty();
+    if (!xbox.substr().empty())
+      TODO(loc, "codegen of fir.embox with substring");
+
     mlir::Value stepExpr;
     if (hasSubcomp) {
       // We have a subcomponent. The step value needs to be the number of
@@ -1550,9 +1553,10 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
         // denormalized descriptors.
         if (isaPointerOrAllocatable || !normalizedLowerBound(xbox)) {
           lb = one;
-          // If there is a shifted origin and this is not a normalized
-          // descriptor then use the value from the shift op as the lower bound.
-          if (hasShift) {
+          // If there is a shifted origin, and no fir.slice, and this is not
+          // a normalized descriptor then use the value from the shift op as
+          // the lower bound.
+          if (hasShift && !(hasSlice || hasSubcomp)) {
             lb = operands[shiftOffset];
             auto extentIsEmpty = rewriter.create<mlir::LLVM::ICmpOp>(
                 loc, mlir::LLVM::ICmpPredicate::eq, extent, zero);
