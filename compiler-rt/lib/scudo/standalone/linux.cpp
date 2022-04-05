@@ -28,11 +28,11 @@
 #include <time.h>
 #include <unistd.h>
 
+#if SCUDO_ANDROID
 #include <sys/prctl.h>
-// Definitions of prctl arguments to set a vma name in kernels (Linux from 5.17).
-#ifndef PR_SET_VMA
-#define PR_SET_VMA 0x53564d41
-#define PR_SET_VMA_ANON_NAME 0
+// Definitions of prctl arguments to set a vma name in Android kernels.
+#define ANDROID_PR_SET_VMA 0x53564d41
+#define ANDROID_PR_SET_VMA_ANON_NAME 0
 #endif
 
 namespace scudo {
@@ -66,8 +66,10 @@ void *map(void *Addr, uptr Size, UNUSED const char *Name, uptr Flags,
       dieOnMapUnmapError(errno == ENOMEM ? Size : 0);
     return nullptr;
   }
+#if SCUDO_ANDROID
   if (Name)
-    prctl(PR_SET_VMA, PR_SET_VMA_ANON_NAME, P, Size, Name);
+    prctl(ANDROID_PR_SET_VMA, ANDROID_PR_SET_VMA_ANON_NAME, P, Size, Name);
+#endif
   return P;
 }
 
