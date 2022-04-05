@@ -94,6 +94,24 @@ public:
   /// attaching to processes unless another platform is specified.
   static lldb::PlatformSP GetHostPlatform();
 
+  /// Get the platform for the given architecture. See Platform::Create for how
+  /// a platform is chosen for a given architecture.
+  ///
+  /// \param[in] arch
+  ///     The architecture for which we are getting a platform.
+  ///
+  /// \param[in] process_host_arch
+  ///     The process host architecture if it's known. An invalid ArchSpec
+  ///     represents that the process host architecture is unknown.
+  ///
+  /// \param[out] platform_arch_ptr
+  ///     The architecture which was used to pick the returned platform. This
+  ///     can be different from the input architecture if we're looking for a
+  ///     compatible match instead of an exact match.
+  ///
+  /// \return
+  ///     Return the platform that matches the input architecture or the
+  ///     default (invalid) platform if none could be found.
   static lldb::PlatformSP
   GetPlatformForArchitecture(const ArchSpec &arch,
                              const ArchSpec &process_host_arch = {},
@@ -111,6 +129,26 @@ public:
   /// candidates output argument differentiates between either no platforms
   /// supporting the given architecture or multiple platforms supporting the
   /// given architecture.
+  ///
+  /// \param[in] arch
+  ///     The architecture for which we are getting a platform.
+  ///
+  /// \param[in] process_host_arch
+  ///     The process host architecture if it's known. An invalid ArchSpec
+  ///     represents that the process host architecture is unknown.
+  ///
+  /// \param[in] selected_platform_sp
+  ///     The currently selected platform.
+  ///
+  /// \param[out] candidates
+  ///     A list of candidate platforms in case multiple platforms could
+  ///     support the given list of architectures. If no platforms match the
+  ///     given architecture the list will be empty.
+  ///
+  /// \return
+  ///     Return the platform that matches the input architectures or the
+  ///     default (invalid) platform if no platforms support the given
+  ///     architectures or multiple platforms support the given architecture.
   static lldb::PlatformSP
   GetPlatformForArchitectures(std::vector<ArchSpec> archs,
                               const ArchSpec &process_host_arch,
@@ -331,6 +369,10 @@ public:
 
   /// Get the platform's supported architectures in the order in which they
   /// should be searched.
+  ///
+  /// \param[in] process_host_arch
+  ///     The process host architecture if it's known. An invalid ArchSpec
+  ///     represents that the process host architecture is unknown.
   virtual std::vector<ArchSpec>
   GetSupportedArchitectures(const ArchSpec &process_host_arch) = 0;
 
