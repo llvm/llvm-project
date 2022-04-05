@@ -49,7 +49,7 @@ ValueObjectSP SwiftArrayNativeBufferHandler::GetElementAtIndex(size_t idx) {
   if (!process_sp)
     return ValueObjectSP();
 
-  DataBufferSP buffer(new DataBufferHeap(m_element_size, 0));
+  WritableDataBufferSP buffer(new DataBufferHeap(m_element_size, 0));
   Status error;
   if (process_sp->ReadMemory(child_location, buffer->GetBytes(), m_element_size,
                              error) != m_element_size ||
@@ -182,7 +182,7 @@ SwiftArraySliceBufferHandler::GetElementAtIndex(size_t idx) {
   if (!process_sp)
     return ValueObjectSP();
 
-  DataBufferSP buffer(new DataBufferHeap(m_element_size, 0));
+  WritableDataBufferSP buffer(new DataBufferHeap(m_element_size, 0));
   Status error;
   if (process_sp->ReadMemory(child_location, buffer->GetBytes(), m_element_size,
                              error) != m_element_size ||
