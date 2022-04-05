@@ -110,6 +110,9 @@ Improvements to Clang's diagnostics
   <https://github.com/llvm/llvm-project/issues/50794>`_.
 - ``-Wunused-but-set-variable`` now also warns if the variable is only used
   by unary operators.
+- ``-Wunused-variable`` no longer warn for references extending the lifetime
+  of temporaries with side effects. This fixes `Issue 54489
+  <https://github.com/llvm/llvm-project/issues/54489>`_.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
