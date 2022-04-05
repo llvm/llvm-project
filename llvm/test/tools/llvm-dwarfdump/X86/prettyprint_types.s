@@ -140,9 +140,9 @@
 # CHECK:   DW_AT_type{{.*}}"t2<t2<int> >"
 
 # enum literals
-# CHECK:   DW_AT_type{{.*}}"tv<e1, E1>")
+# CHECK:   DW_AT_type{{.*}}"tv<e1, (e1)0>")
 # CHECK:   DW_AT_type{{.*}}"tv<e1, (e1)1>")
-# CHECK:   DW_AT_type{{.*}}"tv<e2, e2::E2>")
+# CHECK:   DW_AT_type{{.*}}"tv<e2, (e2)0>")
 
 # char literals
 # CHECK:   DW_AT_type{{.*}}"tv<unsigned char, (unsigned char)'x'>")

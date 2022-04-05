@@ -31,7 +31,7 @@ struct t4 {
 };
   
 t4 v1;
-// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "t3<(anonymous namespace)::LocalEnum, (anonymous namespace)::LocalEnum1>"
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "t3<(anonymous namespace)::LocalEnum, ((anonymous namespace)::LocalEnum)0>"
 void f() {
   // Basic examples of simplifiable/rebuildable names
   f1<>();
