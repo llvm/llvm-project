@@ -72,7 +72,7 @@ private:
     LinkGraph &G;
     CIEInfosMap CIEInfos;
     BlockAddressMap AddrToBlock;
-    SymbolAddressMap AddrToSyms;
+    DenseMap<orc::ExecutorAddr, Symbol *> AddrToSym;
   };
 
   Error processBlock(ParseContext &PC, Block &B);
