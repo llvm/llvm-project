@@ -511,11 +511,6 @@ public:
     return 0;
   }
 
-  virtual bool isADD64rr(const MCInst &Inst) const {
-    llvm_unreachable("not implemented");
-    return false;
-  }
-
   virtual bool isSUB(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
