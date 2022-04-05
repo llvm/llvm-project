@@ -9,6 +9,11 @@ void sw1(int a) {
     break;
   case 1:
     break;
+  case 2: {
+    b = b + 1;
+    int yolo = 100;
+    break;
+  }
   }
 }
 
@@ -23,4 +28,17 @@ void sw1(int a) {
 // CHECK-NEXT: },
 // CHECK-NEXT: case (equal, 1 : i32)  {
 // CHECK-NEXT:   cir.yield break
-// CHECK-NEXT: }
+// CHECK-NEXT: },
+// CHECK-NEXT: case (equal, 2 : i32)  {
+// CHECK-NEXT:   cir.scope {
+// CHECK-NEXT:       %4 = cir.alloca i32, cir.ptr <i32>, ["yolo", cinit]
+// CHECK-NEXT:       %5 = cir.load %1 : cir.ptr <i32>, i32
+// CHECK-NEXT:       %6 = cir.cst(1 : i32) : i32
+// CHECK-NEXT:       %7 = cir.binop(add, %5, %6) : i32
+// CHECK-NEXT:       cir.store %7, %1 : i32, cir.ptr <i32>
+// CHECK-NEXT:       %8 = cir.cst(100 : i32) : i32
+// CHECK-NEXT:       cir.store %8, %4 : i32, cir.ptr <i32>
+// CHECK-NEXT:       cir.yield break
+// CHECK-NEXT:     }
+// CHECK-NEXT:     cir.yield fallthrough
+// CHECK-NEXT:   }
