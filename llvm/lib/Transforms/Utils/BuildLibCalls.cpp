@@ -39,7 +39,7 @@ STATISTIC(NumInaccessibleMemOrArgMemOnly,
 STATISTIC(NumNoUnwind, "Number of functions inferred as nounwind");
 STATISTIC(NumNoCapture, "Number of arguments inferred as nocapture");
 STATISTIC(NumWriteOnlyArg, "Number of arguments inferred as writeonly");
-STATISTIC(NumSExtArg, "Number of arguments inferred as signext");
+STATISTIC(NumExtArg, "Number of arguments inferred as signext/zeroext.");
 STATISTIC(NumReadOnlyArg, "Number of arguments inferred as readonly");
 STATISTIC(NumNoAlias, "Number of function returns inferred as noalias");
 STATISTIC(NumNoUndef, "Number of function returns inferred as noundef returns");
@@ -147,11 +147,13 @@ static bool setOnlyWritesMemory(Function &F, unsigned ArgNo) {
   return true;
 }
 
-static bool setSignExtendedArg(Function &F, unsigned ArgNo) {
- if (F.hasParamAttribute(ArgNo, Attribute::SExt))
+static bool setArgExtAttr(Function &F, unsigned ArgNo,
+                          const TargetLibraryInfo &TLI, bool Signed = true) {
+  Attribute::AttrKind ExtAttr = TLI.getExtAttrForI32Param(Signed);
+  if (ExtAttr == Attribute::None || F.hasParamAttribute(ArgNo, ExtAttr))
     return false;
-  F.addParamAttr(ArgNo, Attribute::SExt);
-  ++NumSExtArg;
+  F.addParamAttr(ArgNo, ExtAttr);
+  ++NumExtArg;
   return true;
 }
 
@@ -829,6 +831,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
   case LibFunc_putchar:
   case LibFunc_putchar_unlocked:
     Changed |= setRetAndArgsNoUndef(F);
+    Changed |= setArgExtAttr(F, 0, TLI);
     Changed |= setDoesNotThrow(F);
     return Changed;
   case LibFunc_popen:
@@ -1049,7 +1052,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
   case LibFunc_ldexp:
   case LibFunc_ldexpf:
   case LibFunc_ldexpl:
-    Changed |= setSignExtendedArg(F, 1);
+    Changed |= setArgExtAttr(F, 1, TLI);
     Changed |= setWillReturn(F);
     return Changed;
   case LibFunc_abs:
