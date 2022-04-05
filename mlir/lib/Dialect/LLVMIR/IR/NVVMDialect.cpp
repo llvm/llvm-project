@@ -291,7 +291,7 @@ ParseResult MmaOp::parse(OpAsmParser &parser, OperationState &result) {
           parser.getNameLoc(),
           "expected one type for each operand segment but got " +
               Twine(operandTypes.size()) + " types");
-  for (auto iter : llvm::enumerate(operandTypes)) {
+  for (const auto& iter : llvm::enumerate(operandTypes)) {
     auto &frag = frags[iter.index()];
     frag.regTypes.resize(frag.regs.size(), iter.value());
     if (failed(parser.resolveOperands(frag.regs, frag.regTypes,
