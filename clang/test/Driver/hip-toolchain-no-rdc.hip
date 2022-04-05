@@ -83,7 +83,7 @@
 // CHECK: [[BUNDLER:".*clang-offload-bundler"]] "-type=o"
 // CHECK-SAME: "-bundle-align=4096"
 // CHECK-SAME: "-targets={{.*}},hipv4-amdgcn-amd-amdhsa--gfx803,hipv4-amdgcn-amd-amdhsa--gfx900"
-// CHECK-SAME: "-inputs={{.*}},[[IMG_DEV_A_803]],[[IMG_DEV_A_900]]" "-outputs=[[BUNDLE_A:.*hipfb]]"
+// CHECK-SAME: "-input={{.*}}" "-input=[[IMG_DEV_A_803]]" "-input=[[IMG_DEV_A_900]]" "-output=[[BUNDLE_A:.*hipfb]]"
 
 // CHECK: [[CLANG]] "-cc1" "-triple" "x86_64-unknown-linux-gnu"
 // CHECK-SAME: "-aux-triple" "amdgcn-amd-amdhsa"
@@ -146,7 +146,7 @@
 // CHECK: [[BUNDLER:".*clang-offload-bundler"]] "-type=o"
 // CHECK-SAME: "-bundle-align=4096"
 // CHECK-SAME: "-targets={{.*}},hipv4-amdgcn-amd-amdhsa--gfx803,hipv4-amdgcn-amd-amdhsa--gfx900"
-// CHECK-SAME: "-inputs={{.*}},[[IMG_DEV_B_803]],[[IMG_DEV_B_900]]" "-outputs=[[BUNDLE_A:.*hipfb]]"
+// CHECK-SAME: "-input={{.*}}" "-input=[[IMG_DEV_B_803]]" "-input=[[IMG_DEV_B_900]]" "-output=[[BUNDLE_A:.*hipfb]]"
 
 // CHECK: [[CLANG]] "-cc1" "-triple" "x86_64-unknown-linux-gnu"
 // CHECK-SAME: "-aux-triple" "amdgcn-amd-amdhsa"

@@ -76,9 +76,9 @@
 // CHECK-NOT: {{".*llc"}}
 // CHECK-NOT: {{".*lld.*"}}
 // NBUN-NOT: {{".*clang-offload-bundler"}}
-// BCBUN: {{".*clang-offload-bundler"}}{{.*}}"-outputs=a.bc"
-// LLBUN: {{".*clang-offload-bundler"}}{{.*}}"-outputs=a.ll"
-// ASMBUN: {{".*clang-offload-bundler"}}{{.*}}"-outputs=a.s"
+// BCBUN: {{".*clang-offload-bundler"}}{{.*}}"-output=a.bc"
+// LLBUN: {{".*clang-offload-bundler"}}{{.*}}"-output=a.ll"
+// ASMBUN: {{".*clang-offload-bundler"}}{{.*}}"-output=a.s"
 // CHECK-NOT: {{".*ld.*"}}{{.*}}"-o"
 
 // If neither -emit-llvm nor -S is used in device only compilation,
@@ -123,5 +123,5 @@
 // OBJ-NOT: {{".*llc"}}
 // OBJ-BUN: {{".*lld.*"}}{{.*}}"-o" "{{.*}}.o"
 // OBJ-UBUN: {{".*lld.*"}}{{.*}}"-o" "a.o"
-// OBJ-BUN: {{".*clang-offload-bundler"}}{{.*}}"-outputs=a.o"
+// OBJ-BUN: {{".*clang-offload-bundler"}}{{.*}}"-output=a.o"
 // OBJ-UBUN-NOT: {{".*clang-offload-bundler"}}

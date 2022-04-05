@@ -120,6 +120,14 @@ namespace std::ranges {
     requires is_object_v<T>
   class empty_view;
 
+  template<class T>
+    inline constexpr bool enable_borrowed_range<empty_view<T>> = true;
+
+  namespace views {
+    template<class T>
+      inline constexpr empty_view<T> empty{};
+  }
+
   // [range.all], all view
   namespace views {
     inline constexpr unspecified all = unspecified;
