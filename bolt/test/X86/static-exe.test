@@ -1,6 +1,6 @@
 # Check that llvm-bolt can rewrite static executable
 
-RUN: %clang %S/Inputs/static_exe.s -static -o %t.exe -nostdlib
+RUN: %clang %cflags %S/Inputs/static_exe.s -static -o %t.exe -nostdlib
 RUN: llvm-bolt %t.exe -o %t |& FileCheck %s
 
 CHECK: 1 out of 1 functions were overwritten

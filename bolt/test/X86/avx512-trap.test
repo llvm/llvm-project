@@ -1,7 +1,7 @@
 # Check that BOLT inserts trap instruction at entry to functions that use AVX-512.
 # Check that AVX-512 instruction is updated correctly when -trap-avx512=0 is passed.
 
-RUN: %clang %S/Inputs/avx512.c -o %t -Wl,-q,-znow
+RUN: %clang %cflags %S/Inputs/avx512.c -o %t -Wl,-q,-znow
 RUN: llvm-bolt %t -trap-avx512=1 -o %t.bolt 2>&1 | FileCheck %s && \
 RUN:    llvm-objdump -d --disassemble-symbols=use_avx512 %t.bolt | FileCheck %s --check-prefix=CHECK-DIS
 RUN: llvm-bolt %t -trap-avx512=0 -o %t.bolt && \

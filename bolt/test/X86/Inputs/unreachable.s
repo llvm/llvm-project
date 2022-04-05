@@ -78,8 +78,10 @@ foo:
 	.uleb128 0x1
 	.LLSDACSE1:
 	.LLSDATT1:
+
 	.text
-	.globl	main, function
-main:
+	.globl	_start, function
+_start:
 	.cfi_startproc
+	ud2
 	.cfi_endproc
