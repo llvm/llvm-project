@@ -151,6 +151,9 @@ public:
 
   /// Add an extra row at the bottom of the matrix and return its position.
   unsigned appendExtraRow();
+  /// Same as above, but copy the given elements into the row. The length of
+  /// `elems` must be equal to the number of columns.
+  unsigned appendExtraRow(ArrayRef<int64_t> elems);
 
   /// Print the matrix.
   void print(raw_ostream &os) const;
