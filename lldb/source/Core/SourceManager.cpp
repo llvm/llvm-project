@@ -644,7 +644,7 @@ bool SourceManager::File::CalculateLineOffsets(uint32_t line) {
       if (m_data_sp.get() == nullptr)
         return false;
 
-      const char *start = (char *)m_data_sp->GetBytes();
+      const char *start = (const char *)m_data_sp->GetBytes();
       if (start) {
         const char *end = start + m_data_sp->GetByteSize();
 
@@ -694,7 +694,7 @@ bool SourceManager::File::GetLine(uint32_t line_no, std::string &buffer) {
   if (end_offset == UINT32_MAX) {
     end_offset = m_data_sp->GetByteSize();
   }
-  buffer.assign((char *)m_data_sp->GetBytes() + start_offset,
+  buffer.assign((const char *)m_data_sp->GetBytes() + start_offset,
                 end_offset - start_offset);
 
   return true;

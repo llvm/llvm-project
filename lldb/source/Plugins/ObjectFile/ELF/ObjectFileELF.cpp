@@ -341,11 +341,13 @@ ObjectFile *ObjectFileELF::CreateInstance(const lldb::ModuleSP &module_sp,
                                           const lldb_private::FileSpec *file,
                                           lldb::offset_t file_offset,
                                           lldb::offset_t length) {
+  bool mapped_writable = false;
   if (!data_sp) {
-    data_sp = MapFileData(*file, length, file_offset);
+    data_sp = MapFileDataWritable(*file, length, file_offset);
     if (!data_sp)
       return nullptr;
     data_offset = 0;
+    mapped_writable = true;
   }
 
   assert(data_sp);
@@ -359,9 +361,18 @@ ObjectFile *ObjectFileELF::CreateInstance(const lldb::ModuleSP &module_sp,
 
   // Update the data to contain the entire file if it doesn't already
   if (data_sp->GetByteSize() < length) {
-    data_sp = MapFileData(*file, length, file_offset);
+    data_sp = MapFileDataWritable(*file, length, file_offset);
     if (!data_sp)
       return nullptr;
+    data_offset = 0;
+    mapped_writable = true;
+    magic = data_sp->GetBytes();
+  }
+
+  // If we didn't map the data as writable take ownership of the buffer.
+  if (!mapped_writable) {
+    data_sp = std::make_shared<DataBufferHeap>(data_sp->GetBytes(),
+                                               data_sp->GetByteSize());
     data_offset = 0;
     magic = data_sp->GetBytes();
   }
@@ -379,7 +390,7 @@ ObjectFile *ObjectFileELF::CreateInstance(const lldb::ModuleSP &module_sp,
 }
 
 ObjectFile *ObjectFileELF::CreateMemoryInstance(
-    const lldb::ModuleSP &module_sp, DataBufferSP data_sp,
+    const lldb::ModuleSP &module_sp, WritableDataBufferSP data_sp,
     const lldb::ProcessSP &process_sp, lldb::addr_t header_addr) {
   if (data_sp && data_sp->GetByteSize() > (llvm::ELF::EI_NIDENT)) {
     const uint8_t *magic = data_sp->GetBytes();
@@ -628,7 +639,7 @@ size_t ObjectFileELF::GetModuleSpecifications(
 // ObjectFile protocol
 
 ObjectFileELF::ObjectFileELF(const lldb::ModuleSP &module_sp,
-                             DataBufferSP &data_sp, lldb::offset_t data_offset,
+                             DataBufferSP data_sp, lldb::offset_t data_offset,
                              const FileSpec *file, lldb::offset_t file_offset,
                              lldb::offset_t length)
     : ObjectFile(module_sp, file, file_offset, length, data_sp, data_offset) {
@@ -637,7 +648,7 @@ ObjectFileELF::ObjectFileELF(const lldb::ModuleSP &module_sp,
 }
 
 ObjectFileELF::ObjectFileELF(const lldb::ModuleSP &module_sp,
-                             DataBufferSP &header_data_sp,
+                             DataBufferSP header_data_sp,
                              const lldb::ProcessSP &process_sp,
                              addr_t header_addr)
     : ObjectFile(module_sp, process_sp, header_addr, header_data_sp) {}
@@ -2621,8 +2632,11 @@ unsigned ObjectFileELF::ApplyRelocations(
         if (symbol) {
           addr_t value = symbol->GetAddressRef().GetFileAddress();
           DataBufferSP &data_buffer_sp = debug_data.GetSharedDataBuffer();
+          // ObjectFileELF creates a WritableDataBuffer in CreateInstance.
+          WritableDataBuffer *data_buffer =
+              llvm::cast<WritableDataBuffer>(data_buffer_sp.get());
           uint64_t *dst = reinterpret_cast<uint64_t *>(
-              data_buffer_sp->GetBytes() + rel_section->GetFileOffset() +
+              data_buffer->GetBytes() + rel_section->GetFileOffset() +
               ELFRelocation::RelocOffset64(rel));
           uint64_t val_offset = value + ELFRelocation::RelocAddend64(rel);
           memcpy(dst, &val_offset, sizeof(uint64_t));
@@ -2647,8 +2661,11 @@ unsigned ObjectFileELF::ApplyRelocations(
           }
           uint32_t truncated_addr = (value & 0xFFFFFFFF);
           DataBufferSP &data_buffer_sp = debug_data.GetSharedDataBuffer();
+          // ObjectFileELF creates a WritableDataBuffer in CreateInstance.
+          WritableDataBuffer *data_buffer =
+              llvm::cast<WritableDataBuffer>(data_buffer_sp.get());
           uint32_t *dst = reinterpret_cast<uint32_t *>(
-              data_buffer_sp->GetBytes() + rel_section->GetFileOffset() +
+              data_buffer->GetBytes() + rel_section->GetFileOffset() +
               ELFRelocation::RelocOffset32(rel));
           memcpy(dst, &truncated_addr, sizeof(uint32_t));
         }
@@ -3411,4 +3428,11 @@ ObjectFileELF::GetLoadableData(Target &target) {
     loadables.push_back(loadable);
   }
   return loadables;
+}
+
+lldb::WritableDataBufferSP
+ObjectFileELF::MapFileDataWritable(const FileSpec &file, uint64_t Size,
+                                   uint64_t Offset) {
+  return FileSystem::Instance().CreateWritableDataBuffer(file.GetPath(), Size,
+                                                         Offset);
 }

@@ -873,7 +873,7 @@ ValueObjectSP ABISysV_mips::GetReturnValueObjectImpl(
           DataExtractor f1_data;
           reg_ctx->ReadRegister(f1_info, f1_value);
           DataExtractor *copy_from_extractor = nullptr;
-          DataBufferSP data_sp(new DataBufferHeap(8, 0));
+          WritableDataBufferSP data_sp(new DataBufferHeap(8, 0));
           DataExtractor return_ext(
               data_sp, target_byte_order,
               target->GetArchitecture().GetAddressByteSize());

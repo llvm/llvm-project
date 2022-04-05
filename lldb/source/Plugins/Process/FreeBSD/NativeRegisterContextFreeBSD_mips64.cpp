@@ -176,7 +176,7 @@ Status NativeRegisterContextFreeBSD_mips64::WriteRegister(
 }
 
 Status NativeRegisterContextFreeBSD_mips64::ReadAllRegisterValues(
-    lldb::DataBufferSP &data_sp) {
+    lldb::WritableDataBufferSP &data_sp) {
   Status error;
 
   error = ReadRegisterSet(GPRegSet);
@@ -213,7 +213,7 @@ Status NativeRegisterContextFreeBSD_mips64::WriteAllRegisterValues(
     return error;
   }
 
-  uint8_t *src = data_sp->GetBytes();
+  const uint8_t *src = data_sp->GetBytes();
   if (src == nullptr) {
     error.SetErrorStringWithFormat("NativeRegisterContextFreeBSD_mips64::%s "
                                    "DataBuffer::GetBytes() returned a null "
