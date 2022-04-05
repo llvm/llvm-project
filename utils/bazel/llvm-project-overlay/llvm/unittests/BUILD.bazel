@@ -658,6 +658,7 @@ cc_test(
         "//llvm:AsmParser",
         "//llvm:Core",
         "//llvm:IPO",
+        "//llvm:Passes",
         "//llvm:Support",
         "//llvm:TestingSupport",
         "//llvm:TransformUtils",

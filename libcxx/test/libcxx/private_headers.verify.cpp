@@ -112,6 +112,7 @@ END-SCRIPT
 #include <__algorithm/ranges_min_element.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_min_element.h'}}
 #include <__algorithm/ranges_mismatch.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_mismatch.h'}}
 #include <__algorithm/ranges_swap_ranges.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_swap_ranges.h'}}
+#include <__algorithm/ranges_transform.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_transform.h'}}
 #include <__algorithm/remove.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/remove.h'}}
 #include <__algorithm/remove_copy.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/remove_copy.h'}}
 #include <__algorithm/remove_copy_if.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/remove_copy_if.h'}}

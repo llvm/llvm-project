@@ -639,6 +639,74 @@ class MxType<ValueType vt, string prefix, string postfix,
   PatFrag Load = load;
 }
 
+// Provides an alternative way to access the MxOperand and
+// patterns w.r.t a specific addressing mode.
+class MxOpBundle<int size, MxOperand op, ComplexPattern pat> {
+  int Size = size;
+  MxOperand Op = op;
+  ComplexPattern Pat = pat;
+}
+
+class MxImmOpBundle<int size, MxOperand op, PatFrag pat>
+  : MxOpBundle<size, op, ?> {
+  PatFrag ImmPat = pat;
+}
+
+// TODO: We can use MxOp<S>AddrMode_<AM> in more places to
+// replace MxType-based operand factoring.
+foreach size = [8, 16, 32] in {
+  // Dn
+  def MxOp#size#AddrMode_d
+    : MxOpBundle<size, !cast<MxOperand>("MxDRD"#size), ?>;
+
+  // (An)
+  def MxOp#size#AddrMode_j
+    : MxOpBundle<size, !cast<MxOperand>("MxARI"#size), MxCP_ARI>;
+
+  // (An)+
+  def MxOp#size#AddrMode_o
+    : MxOpBundle<size, !cast<MxOperand>("MxARIPI"#size), MxCP_ARIPI>;
+
+  // -(An)
+  def MxOp#size#AddrMode_e
+    : MxOpBundle<size, !cast<MxOperand>("MxARIPD"#size), MxCP_ARIPD>;
+
+  // (i,An)
+  def MxOp#size#AddrMode_p
+    : MxOpBundle<size, !cast<MxOperand>("MxARID"#size), MxCP_ARID>;
+
+  // (i,An,Xn)
+  def MxOp#size#AddrMode_f
+    : MxOpBundle<size, !cast<MxOperand>("MxARII"#size), MxCP_ARII>;
+
+  // (ABS).L
+  def MxOp#size#AddrMode_b
+    : MxOpBundle<size, !cast<MxOperand>("MxAL"#size), MxCP_AL>;
+
+  // (i,PC)
+  def MxOp#size#AddrMode_q
+    : MxOpBundle<size, !cast<MxOperand>("MxPCD"#size), MxCP_PCD>;
+
+  // (i,PC,Xn)
+  def MxOp#size#AddrMode_k
+    : MxOpBundle<size, !cast<MxOperand>("MxPCI"#size), MxCP_PCI>;
+
+  // #imm
+  def MxOp#size#AddrMode_i
+    : MxImmOpBundle<size, !cast<MxOperand>("Mxi"#size#"imm"),
+                    !cast<PatFrag>("MximmSExt"#size)>;
+} // foreach size = [8, 16, 32]
+
+foreach size = [16, 32] in {
+  // An
+  def MxOp#size#AddrMode_a
+    : MxOpBundle<size, !cast<MxOperand>("MxARD"#size), ?>;
+
+  // Xn
+  def MxOp#size#AddrMode_r
+    : MxOpBundle<size, !cast<MxOperand>("MxXRD"#size), ?>;
+} // foreach size = [16, 32]
+
 class MxType8Class<string rLet, MxOperand reg>
     : MxType<i8, "b", "", rLet, reg,
              MxARI8,   MxCP_ARI,
