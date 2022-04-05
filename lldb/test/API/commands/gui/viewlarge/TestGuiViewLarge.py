@@ -31,9 +31,8 @@ class GuiViewLargeCommandTest(PExpectTest):
         right_key = chr(27)+'OC'
         ctrl_l = chr(12)
 
-        # Start the GUI and close the welcome window.
+        # Start the GUI.
         self.child.sendline("gui")
-        self.child.send(escape_key)
 
         # Check the sources window.
         self.child.expect_exact("Sources")
