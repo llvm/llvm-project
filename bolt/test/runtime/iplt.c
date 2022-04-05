@@ -23,7 +23,9 @@ imemcpy(void *dest, const void *src, size_t n);
 
 int main() {
   int a = 0xdeadbeef, b = 0;
-  ifoo();
   imemcpy(&b, &a, sizeof(b));
-  return a != b;
+  if (a != b)
+    return -1;
+
+  ifoo();
 }
