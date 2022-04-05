@@ -1901,10 +1901,12 @@ void OmpStructureChecker::CheckIntentInPointerAndDefinable(
         }
         if (auto msg{
                 WhyNotModifiable(*symbol, context_.FindScope(name->source))}) {
-          context_.Say(GetContext().clauseSource,
-              "Variable '%s' on the %s clause is not definable"_err_en_US,
-              symbol->name(),
-              parser::ToUpperCaseLetters(getClauseName(clause).str()));
+          context_
+              .Say(GetContext().clauseSource,
+                  "Variable '%s' on the %s clause is not definable"_err_en_US,
+                  symbol->name(),
+                  parser::ToUpperCaseLetters(getClauseName(clause).str()))
+              .Attach(std::move(*msg));
         }
       }
     }
@@ -2473,7 +2475,7 @@ void OmpStructureChecker::CheckDefinableObjects(
               "Variable '%s' on the %s clause is not definable"_err_en_US,
               symbol->name(),
               parser::ToUpperCaseLetters(getClauseName(clause).str()))
-          .Attach(source, std::move(*msg), symbol->name());
+          .Attach(std::move(*msg));
     }
   }
 }

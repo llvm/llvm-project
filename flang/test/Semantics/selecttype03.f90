@@ -30,6 +30,13 @@ end select
 
 select type ( y => fun(1) )
   type is (t1)
+    y%i = 1 !VDC
+  type is (t2)
+    call sub_with_in_and_inout_param(y,y) !VDC
+end select
+
+select type ( y => (fun(1)) )
+  type is (t1)
     !ERROR: Left-hand side of assignment is not modifiable
     y%i = 1 !VDC
   type is (t2)

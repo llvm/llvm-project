@@ -39,7 +39,7 @@ module m
     end associate
     associate (a => arr([1])) ! vector subscript
       !CHECK: error: Input variable 'a' must be definable
-      !CHECK: 'a' is construct associated with an expression
+      !CHECK: Construct association has a vector subscript
       read(internal,*) a
     end associate
     associate (a => arr(2:1:-1))

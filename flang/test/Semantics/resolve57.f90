@@ -86,6 +86,13 @@ subroutine s6()
 
   select type ( a => func() )
   type is ( point )
+    ! C1158 This is OK because 'a' is associated with a variable
+    do concurrent (i=1:5) local(a)
+    end do
+  end select
+
+  select type ( a => (func()) )
+  type is ( point )
     ! C1158 This is not OK because 'a' is not associated with a variable
 !ERROR: 'a' may not appear in a locality-spec because it is not definable
     do concurrent (i=1:5) local(a)
