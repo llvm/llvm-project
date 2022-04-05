@@ -104,29 +104,78 @@ void NativeInlineSiteSymbol::getLineOffset(uint32_t OffsetInFunc,
   LineOffset = 0;
   FileOffset = 0;
   uint32_t CodeOffset = 0;
+  Optional<uint32_t> CodeOffsetBase;
+  Optional<uint32_t> CodeOffsetEnd;
+  Optional<uint32_t> CurLineOffset;
+  Optional<uint32_t> NextLineOffset;
+  Optional<uint32_t> NextFileOffset;
+  auto UpdateCodeOffset = [&](uint32_t Delta) {
+    if (!CodeOffsetBase)
+      CodeOffsetBase = CodeOffset;
+    else if (!CodeOffsetEnd)
+      CodeOffsetEnd = *CodeOffsetBase + Delta;
+  };
+  auto UpdateLineOffset = [&](int32_t Delta) {
+    LineOffset += Delta;
+    if (!CodeOffsetBase || !CurLineOffset)
+      CurLineOffset = LineOffset;
+    else
+      NextLineOffset = LineOffset;
+  };
+  auto UpdateFileOffset = [&](uint32_t Offset) {
+    if (!CodeOffsetBase)
+      FileOffset = Offset;
+    else
+      NextFileOffset = Offset;
+  };
+  auto ValidateAndReset = [&]() {
+    // Current range is finished. Check if OffsetInFunc is in the range.
+    if (CodeOffsetBase && CodeOffsetEnd && CurLineOffset) {
+      if (CodeOffsetBase <= OffsetInFunc && OffsetInFunc < CodeOffsetEnd) {
+        LineOffset = *CurLineOffset;
+        return true;
+      }
+      // Set base, end, file offset and line offset for next range.
+      if (NextFileOffset)
+        FileOffset = *NextFileOffset;
+      CurLineOffset = NextLineOffset ? NextLineOffset : None;
+      CodeOffsetBase = CodeOffsetEnd;
+      CodeOffsetEnd = NextLineOffset = NextFileOffset = None;
+    }
+    return false;
+  };
   for (const auto &Annot : Sym.annotations()) {
     switch (Annot.OpCode) {
     case BinaryAnnotationsOpCode::CodeOffset:
     case BinaryAnnotationsOpCode::ChangeCodeOffset:
-    case BinaryAnnotationsOpCode::ChangeCodeLength:
+    case BinaryAnnotationsOpCode::ChangeCodeOffsetBase:
       CodeOffset += Annot.U1;
+      UpdateCodeOffset(Annot.U1);
+      break;
+    case BinaryAnnotationsOpCode::ChangeCodeLength:
+      UpdateCodeOffset(Annot.U1);
       break;
     case BinaryAnnotationsOpCode::ChangeCodeLengthAndCodeOffset:
       CodeOffset += Annot.U2;
+      UpdateCodeOffset(Annot.U2);
+      UpdateCodeOffset(Annot.U1);
       break;
     case BinaryAnnotationsOpCode::ChangeLineOffset:
+      UpdateLineOffset(Annot.S1);
+      break;
     case BinaryAnnotationsOpCode::ChangeCodeOffsetAndLineOffset:
       CodeOffset += Annot.U1;
-      LineOffset += Annot.S1;
+      UpdateCodeOffset(Annot.U1);
+      UpdateLineOffset(Annot.S1);
       break;
     case BinaryAnnotationsOpCode::ChangeFile:
-      FileOffset = Annot.U1;
+      UpdateFileOffset(Annot.U1);
       break;
     default:
       break;
     }
 
-    if (CodeOffset >= OffsetInFunc)
+    if (ValidateAndReset())
       return;
   }
 }
