@@ -115,22 +115,26 @@ mlir::Location CIRGenModule::getLoc(mlir::Location lhs, mlir::Location rhs) {
   return mlir::FusedLoc::get(locs, metadata, builder.getContext());
 }
 
-// Allocas are expected to be in the beginning of the entry block
-// in whatever region they show up.
-static void updateAllocaInEntryBlock(AllocaOp localVarAddr) {
-  auto *parentBlock = localVarAddr->getBlock();
-  auto lastAlloca = std::find_if_not(
-      parentBlock->begin(), parentBlock->end(),
-      [](mlir::Operation &op) { return isa<mlir::cir::AllocaOp>(&op); });
-  if (lastAlloca != std::end(*parentBlock))
-    localVarAddr->moveBefore(&*lastAlloca);
-  else
-    localVarAddr->moveBefore(&parentBlock->front());
-}
-
 mlir::Value CIRGenModule::buildAlloca(StringRef name, InitStyle initStyle,
                                       QualType ty, mlir::Location loc,
                                       CharUnits alignment) {
+  // Allocas are expected to be in the beginning of the entry block
+  // for most of the regions.
+  // FIXME: for non-scoped C/C++ switch case regions, alloca's should
+  // go to the entry block of the switch scope, not of the case region.
+  auto getAllocaInsertPositionOp =
+      [&](mlir::Block **insertBlock) -> mlir::Operation * {
+    auto *parentBlock = builder.getInsertionBlock();
+    auto lastAlloca = std::find_if(
+        parentBlock->rbegin(), parentBlock->rend(),
+        [](mlir::Operation &op) { return isa<mlir::cir::AllocaOp>(&op); });
+
+    *insertBlock = parentBlock;
+    if (lastAlloca == parentBlock->rend())
+      return nullptr;
+    return &*lastAlloca;
+  };
+
   auto localVarTy = getCIRType(ty);
   auto localVarPtrTy =
       mlir::cir::PointerType::get(builder.getContext(), localVarTy);
@@ -138,10 +142,26 @@ mlir::Value CIRGenModule::buildAlloca(StringRef name, InitStyle initStyle,
   auto alignIntAttr =
       mlir::IntegerAttr::get(mlir::IntegerType::get(builder.getContext(), 64),
                              alignment.getQuantity());
-  auto addr = builder.create<mlir::cir::AllocaOp>(
-      loc, /*addr type*/ localVarPtrTy,
-      /*var type*/ localVarTy, name, initStyle, alignIntAttr);
-  updateAllocaInEntryBlock(addr);
+
+  mlir::Value addr;
+  {
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    mlir::Block *insertBlock = nullptr;
+    mlir::Operation *insertOp = getAllocaInsertPositionOp(&insertBlock);
+
+    if (insertOp)
+      builder.setInsertionPointAfter(insertOp);
+    else {
+      assert(insertBlock && "expected valid insertion block");
+      // No previous alloca found, place this one in the beginning
+      // of the block.
+      builder.setInsertionPointToStart(insertBlock);
+    }
+
+    addr = builder.create<mlir::cir::AllocaOp>(loc, /*addr type*/ localVarPtrTy,
+                                               /*var type*/ localVarTy, name,
+                                               initStyle, alignIntAttr);
+  }
   return addr;
 }
 
@@ -158,16 +178,12 @@ mlir::LogicalResult CIRGenModule::declare(const Decl *var, QualType ty,
                                           mlir::Value &addr, bool isParam) {
   const auto *namedVar = dyn_cast_or_null<NamedDecl>(var);
   assert(namedVar && "Needs a named decl");
-
-  if (symbolTable.count(var))
-    return mlir::failure();
+  assert(!symbolTable.count(var) && "not supposed to be available just yet");
 
   addr = buildAlloca(namedVar->getName(),
                      isParam ? InitStyle::paraminit : InitStyle::uninitialized,
                      ty, loc, alignment);
 
-  // Insert into the symbol table, allocate some stack space in the
-  // function entry block.
   symbolTable.insert(var, addr);
   return mlir::success();
 }

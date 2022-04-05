@@ -8,8 +8,9 @@ int *p0() {
 }
 
 // CHECK: func @p0() -> !cir.ptr<i32> {
+// CHECK: %1 = cir.alloca !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>, ["p", cinit]
 // CHECK: %2 = cir.cst(#cir.null : !cir.ptr<i32>) : !cir.ptr<i32>
-// CHECK: cir.store %2, %0 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>
+// CHECK: cir.store %2, %1 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>
 
 int *p1() {
   int *p;
@@ -18,9 +19,9 @@ int *p1() {
 }
 
 // CHECK: func @p1() -> !cir.ptr<i32> {
-// CHECK: %0 = cir.alloca !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>, ["p", uninitialized]
+// CHECK: %1 = cir.alloca !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>, ["p", uninitialized]
 // CHECK: %2 = cir.cst(#cir.null : !cir.ptr<i32>) : !cir.ptr<i32>
-// CHECK: cir.store %2, %0 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>
+// CHECK: cir.store %2, %1 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>
 
 int *p2() {
   int *p = nullptr;
@@ -34,26 +35,26 @@ int *p2() {
 }
 
 // CHECK: func @p2() -> !cir.ptr<i32> {
-// CHECK-NEXT:  %0 = cir.alloca !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>, ["p", cinit] {alignment = 8 : i64} loc(#loc15)
-// CHECK-NEXT:  %1 = cir.alloca !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>, ["__retval", uninitialized] {alignment = 8 : i64} loc(#loc16)
-// CHECK-NEXT:  %2 = cir.cst(#cir.null : !cir.ptr<i32>) : !cir.ptr<i32> loc(#loc17)
-// CHECK-NEXT:  cir.store %2, %0 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>> loc(#loc15)
+// CHECK-NEXT:  %0 = cir.alloca !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>, ["__retval", uninitialized] {alignment = 8 : i64}
+// CHECK-NEXT:  %1 = cir.alloca !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>, ["p", cinit] {alignment = 8 : i64}
+// CHECK-NEXT:  %2 = cir.cst(#cir.null : !cir.ptr<i32>) : !cir.ptr<i32>
+// CHECK-NEXT:  cir.store %2, %1 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>
 // CHECK-NEXT:  cir.scope {
-// CHECK-NEXT:    %7 = cir.alloca i32, cir.ptr <i32>, ["x", cinit] {alignment = 4 : i64} loc(#loc19)
-// CHECK-NEXT:    %8 = cir.cst(0 : i32) : i32 loc(#loc20)
-// CHECK-NEXT:    cir.store %8, %7 : i32, cir.ptr <i32> loc(#loc19)
-// CHECK-NEXT:    cir.store %7, %0 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>> loc(#loc21)
-// CHECK-NEXT:    %9 = cir.cst(42 : i32) : i32 loc(#loc22)
-// CHECK-NEXT:    %10 = cir.load deref %0 : cir.ptr <!cir.ptr<i32>>, !cir.ptr<i32> loc(#loc23)
-// CHECK-NEXT:    cir.store %9, %10 : i32, cir.ptr <i32> loc(#loc24)
+// CHECK-NEXT:    %7 = cir.alloca i32, cir.ptr <i32>, ["x", cinit] {alignment = 4 : i64}
+// CHECK-NEXT:    %8 = cir.cst(0 : i32) : i32
+// CHECK-NEXT:    cir.store %8, %7 : i32, cir.ptr <i32>
+// CHECK-NEXT:    cir.store %7, %1 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>
+// CHECK-NEXT:    %9 = cir.cst(42 : i32) : i32
+// CHECK-NEXT:    %10 = cir.load deref %1 : cir.ptr <!cir.ptr<i32>>, !cir.ptr<i32>
+// CHECK-NEXT:    cir.store %9, %10 : i32, cir.ptr <i32>
 // CHECK-NEXT:  } loc(#[[locScope:loc[0-9]+]])
-// CHECK-NEXT:  %3 = cir.cst(42 : i32) : i32 loc(#loc25)
-// CHECK-NEXT:  %4 = cir.load deref %0 : cir.ptr <!cir.ptr<i32>>, !cir.ptr<i32> loc(#loc26)
-// CHECK-NEXT:  cir.store %3, %4 : i32, cir.ptr <i32> loc(#loc27)
-// CHECK-NEXT:  %5 = cir.load %0 : cir.ptr <!cir.ptr<i32>>, !cir.ptr<i32> loc(#loc28)
-// CHECK-NEXT:  cir.store %5, %1 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>> loc(#loc29)
-// CHECK-NEXT:  %6 = cir.load %1 : cir.ptr <!cir.ptr<i32>>, !cir.ptr<i32> loc(#loc29)
-// CHECK-NEXT:  cir.return %6 : !cir.ptr<i32> loc(#loc29)
+// CHECK-NEXT:  %3 = cir.cst(42 : i32) : i32
+// CHECK-NEXT:  %4 = cir.load deref %1 : cir.ptr <!cir.ptr<i32>>, !cir.ptr<i32>
+// CHECK-NEXT:  cir.store %3, %4 : i32, cir.ptr <i32>
+// CHECK-NEXT:  %5 = cir.load %1 : cir.ptr <!cir.ptr<i32>>, !cir.ptr<i32>
+// CHECK-NEXT:  cir.store %5, %0 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>
+// CHECK-NEXT:  %6 = cir.load %0 : cir.ptr <!cir.ptr<i32>>, !cir.ptr<i32>
+// CHECK-NEXT:  cir.return %6 : !cir.ptr<i32>
 
 void b0() { bool x = true, y = false; }
 
@@ -132,4 +133,4 @@ void if1(int a, bool b, bool c) {
 // CHECK:   }
 // CHECK: }
 
-// CHECK: #[[locScope]] = loc(fused["{{.*}}basic.cpp":26:3, "{{.*}}basic.cpp":30:3])
+// CHECK: #[[locScope]] = loc(fused["{{.*}}basic.cpp":27:3, "{{.*}}basic.cpp":31:3])
