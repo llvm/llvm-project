@@ -65,7 +65,7 @@ During the transition phase, LLVM can be used in two modes: In typed pointer
 mode (currently still the default) all pointer types have a pointee type and
 opaque pointers cannot be used. In opaque pointers mode, all pointers are
 opaque. The opaque pointer mode can be enabled using ``-opaque-pointers`` in
-LLVM tools like ``opt``, or ``-mllvm -opaque-pointers`` in clang. Additionally,
+LLVM tools like ``opt``, or ``-Xclang -opaque-pointers`` in clang. Additionally,
 opaque pointer mode is automatically enabled for IR and bitcode files that use
 the ``ptr`` type.
 
@@ -194,16 +194,9 @@ on a pointer type.
 Transition State
 ================
 
-As of March 2022 most parts of LLVM support opaque pointers. It is possible
-to build most C and C++ code in opaque pointer mode, both with and without
-optimization, and produce working binaries. However, thes are still some
-open problems:
+As of April 2022 both LLVM and Clang have complete support for opaque pointers,
+but typed pointers are still the default. Opaque pointers will be enabled by
+default in Clang soon.
 
-* We do not yet have a firm strategy for enabling opaque pointers. A large
-  number of tests will have to be migrated to use opaque pointers.
-
-* Some pointer element type uses remain in LLVM.
-
-* Some pointer element type uses remain in MLIR.
-
-* Some pointer element type uses remain in Polly.
+The MLIR and Polly monorepo projects are not fully compatible with opaque
+pointers yet.
