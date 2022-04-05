@@ -27,7 +27,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
 #include <deque>
-#include <functional> // For std::function
 
 #define DEBUG_TYPE "float2int"
 
