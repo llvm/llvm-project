@@ -984,7 +984,7 @@ CodeGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
     return nullptr;
 
   if (CI.getCodeGenOpts().OpaquePointers)
-    VMContext->enableOpaquePointers();
+    VMContext->setOpaquePointers(true);
 
   // Load bitcode modules to link with, if we need to.
   if (LinkModules.empty())

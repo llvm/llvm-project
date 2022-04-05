@@ -471,9 +471,8 @@ TEST(ConstantsTest, BuildConstantDataVectors) {
 
 void bitcastToGEPHelper(bool useOpaquePointers) {
   LLVMContext Context;
+  Context.setOpaquePointers(useOpaquePointers);
   std::unique_ptr<Module> M(new Module("MyModule", Context));
-  if (useOpaquePointers)
-    Context.enableOpaquePointers();
 
   auto *i32 = Type::getInt32Ty(Context);
   auto *U = StructType::create(Context, "Unsized");

@@ -3834,7 +3834,6 @@ _func:
 	msr PMINTENSET_EL1, x12
 	msr PMINTENCLR_EL1, x12
 	msr PMOVSSET_EL0, x12
-	msr PMMIR_EL1, x12
 	msr MAIR_EL1, x12
 	msr MAIR_EL2, x12
 	msr MAIR_EL3, x12
@@ -4086,7 +4085,6 @@ _func:
 // CHECK: msr      {{pmintenset_el1|PMINTENSET_EL1}}, x12        // encoding: [0x2c,0x9e,0x18,0xd5]
 // CHECK: msr      {{pmintenclr_el1|PMINTENCLR_EL1}}, x12        // encoding: [0x4c,0x9e,0x18,0xd5]
 // CHECK: msr      {{pmovsset_el0|PMOVSSET_EL0}}, x12          // encoding: [0x6c,0x9e,0x1b,0xd5]
-// CHECK: msr      {{pmmir_el1|PMMIR_EL1}}, x12        // encoding: [0xcc,0x9e,0x18,0xd5]
 // CHECK: msr      {{mair_el1|MAIR_EL1}}, x12              // encoding: [0x0c,0xa2,0x18,0xd5]
 // CHECK: msr      {{mair_el2|MAIR_EL2}}, x12              // encoding: [0x0c,0xa2,0x1c,0xd5]
 // CHECK: msr      {{mair_el3|MAIR_EL3}}, x12              // encoding: [0x0c,0xa2,0x1e,0xd5]

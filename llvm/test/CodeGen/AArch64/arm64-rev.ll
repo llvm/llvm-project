@@ -679,3 +679,26 @@ define void @test_bswap32_narrow(i32* %p0, i16* %p1) nounwind {
   ret void
 }
 declare i32 @gid_tbl_len(...)
+
+; 64-bit REV16 is *not* a swap then a 16-bit rotation:
+;   01234567 ->(bswap) 76543210 ->(rotr) 10765432
+;   01234567 ->(rev16) 10325476
+; Optimize patterns where rev16 can be generated for a 64-bit input.
+define i64 @test_rev16_x_hwbyteswaps(i64 %a) nounwind {
+; CHECK-LABEL: test_rev16_x_hwbyteswaps:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    rev16 x0, x0
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: test_rev16_x_hwbyteswaps:
+; GISEL:       // %bb.0: // %entry
+; GISEL-NEXT:    rev16 x0, x0
+; GISEL-NEXT:    ret
+entry:
+  %0 = lshr i64 %a, 8
+  %1 = and i64 %0, 71777214294589695
+  %2 = shl i64 %a, 8
+  %3 = and i64 %2, -71777214294589696
+  %4 = or i64 %1, %3
+  ret i64 %4
+}
