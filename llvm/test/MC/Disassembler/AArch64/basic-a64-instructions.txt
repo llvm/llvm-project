@@ -3308,7 +3308,6 @@
 # CHECK: msr      {{pmintenset_el1|PMINTENSET_EL1}}, x12
 # CHECK: msr      {{pmintenclr_el1|PMINTENCLR_EL1}}, x12
 # CHECK: msr      {{pmovsset_el0|PMOVSSET_EL0}}, x12
-# CHECK: msr      {{pmmir_el1|PMMIR_EL1}}, x12
 # CHECK: msr      {{mair_el1|MAIR_EL1}}, x12
 # CHECK: msr      {{mair_el2|MAIR_EL2}}, x12
 # CHECK: msr      {{mair_el3|MAIR_EL3}}, x12
@@ -3604,7 +3603,6 @@
 # CHECK: mrs      x9, {{pmintenset_el1|PMINTENSET_EL1}}
 # CHECK: mrs      x9, {{pmintenclr_el1|PMINTENCLR_EL1}}
 # CHECK: mrs      x9, {{pmovsset_el0|PMOVSSET_EL0}}
-# CHECK: mrs      x9, {{pmmir_el1|PMMIR_EL1}}
 # CHECK: mrs      x9, {{mair_el1|MAIR_EL1}}
 # CHECK: mrs      x9, {{mair_el2|MAIR_EL2}}
 # CHECK: mrs      x9, {{mair_el3|MAIR_EL3}}
