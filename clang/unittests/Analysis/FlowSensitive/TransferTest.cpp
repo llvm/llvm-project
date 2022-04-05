@@ -2944,4 +2944,71 @@ TEST_F(TransferTest, CorrelatedBranches) {
       });
 }
 
+TEST_F(TransferTest, LoopWithAssignmentConverges) {
+  std::string Code = R"(
+
+    bool &foo();
+
+    void target() {
+       do {
+        bool Bar = foo();
+        if (Bar) break;
+        (void)Bar;
+        /*[[p]]*/
+      } while (true);
+    }
+  )";
+  // The key property that we are verifying is implicit in `runDataflow` --
+  // namely, that the analysis succeeds, rather than hitting the maximum number
+  // of iterations.
+  runDataflow(
+      Code, [](llvm::ArrayRef<
+                   std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                   Results,
+               ASTContext &ASTCtx) {
+        ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+        const Environment &Env = Results[0].second.Env;
+
+        const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
+        ASSERT_THAT(BarDecl, NotNull());
+
+        auto &BarVal = *cast<BoolValue>(Env.getValue(*BarDecl, SkipPast::None));
+        EXPECT_TRUE(Env.flowConditionImplies(Env.makeNot(BarVal)));
+      });
+}
+
+TEST_F(TransferTest, LoopWithReferenceAssignmentConverges) {
+  std::string Code = R"(
+
+    bool &foo();
+
+    void target() {
+       do {
+        bool& Bar = foo();
+        if (Bar) break;
+        (void)Bar;
+        /*[[p]]*/
+      } while (true);
+    }
+  )";
+  // The key property that we are verifying is implicit in `runDataflow` --
+  // namely, that the analysis succeeds, rather than hitting the maximum number
+  // of iterations.
+  runDataflow(
+      Code, [](llvm::ArrayRef<
+                   std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                   Results,
+               ASTContext &ASTCtx) {
+        ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+        const Environment &Env = Results[0].second.Env;
+
+        const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
+        ASSERT_THAT(BarDecl, NotNull());
+
+        auto &BarVal =
+            *cast<BoolValue>(Env.getValue(*BarDecl, SkipPast::Reference));
+        EXPECT_TRUE(Env.flowConditionImplies(Env.makeNot(BarVal)));
+      });
+}
+
 } // namespace

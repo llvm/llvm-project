@@ -77,7 +77,11 @@ public:
                                    const Environment &Env2) {
       // FIXME: Consider adding QualType to StructValue and removing the Type
       // argument here.
-      return false;
+      //
+      // FIXME: default to a sound comparison and/or expand the comparison logic
+      // built into the framework to support broader forms of equivalence than
+      // strict pointer equality.
+      return true;
     }
 
     /// Modifies `MergedVal` to approximate both `Val1` and `Val2`. This could
@@ -101,7 +105,7 @@ public:
                        const Environment &Env1, const Value &Val2,
                        const Environment &Env2, Value &MergedVal,
                        Environment &MergedEnv) {
-      return false;
+      return true;
     }
   };
 

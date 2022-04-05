@@ -365,8 +365,10 @@ public:
     if (HasValue2 == nullptr)
       return false;
 
-    assert(HasValue1 != HasValue2);
-    cast<StructValue>(&MergedVal)->setProperty("has_value", HasValueTop);
+    if (HasValue1 == HasValue2)
+      cast<StructValue>(&MergedVal)->setProperty("has_value", *HasValue1);
+    else
+      cast<StructValue>(&MergedVal)->setProperty("has_value", HasValueTop);
     return true;
   }
 
