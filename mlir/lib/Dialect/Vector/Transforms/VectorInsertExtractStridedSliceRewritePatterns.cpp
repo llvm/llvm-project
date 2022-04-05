@@ -258,7 +258,6 @@ public:
     int64_t stride =
         op.getStrides().getValue().front().cast<IntegerAttr>().getInt();
 
-    auto loc = op.getLoc();
     auto elemType = dstType.getElementType();
     assert(elemType.isSignlessIntOrIndexOrFloat());
 
