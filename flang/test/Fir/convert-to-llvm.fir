@@ -1743,9 +1743,7 @@ func @xembox0(%arg0: !fir.ref<!fir.array<?xi32>>) {
 // CHECK:         %[[EXTENT2:.*]] = llvm.sdiv %[[EXTENT1]], %[[C0]]  : i64
 // CHECK:         %[[EXTENT_CMP:.*]] = llvm.icmp "sgt" %[[EXTENT2]], %[[ZERO]] : i64
 // CHECK:         %[[EXTENT:.*]] = llvm.select %[[EXTENT_CMP]], %[[EXTENT2]], %[[ZERO]] : i1, i64
-// CHECK:         %[[EXTENT_CMP_2:.*]] = llvm.icmp "eq" %[[EXTENT]], %[[ZERO]] : i64
-// CHECK:         %[[LOWER:.*]] = llvm.select %[[EXTENT_CMP_2]], %[[ONE]], %[[C0]] : i1, i64
-// CHECK:         %[[BOX7:.*]] = llvm.insertvalue %[[LOWER]], %[[BOX6]][7 : i32, 0 : i32, 0 : i32] : !llvm.struct<(ptr<i32>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i64>>)>
+// CHECK:         %[[BOX7:.*]] = llvm.insertvalue %[[ONE]], %[[BOX6]][7 : i32, 0 : i32, 0 : i32] : !llvm.struct<(ptr<i32>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i64>>)>
 // CHECK:         %[[BOX8:.*]] = llvm.insertvalue %[[EXTENT]], %[[BOX7]][7 : i32, 0 : i32, 1 : i32] : !llvm.struct<(ptr<i32>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i64>>)>
 // CHECK:         %[[STRIDE:.*]] = llvm.mul %[[ELEM_LEN_I64]], %[[C0]]  : i64
 // CHECK:         %[[BOX9:.*]] = llvm.insertvalue %[[STRIDE]], %[[BOX8]][7 : i32, 0 : i32, 2 : i32] : !llvm.struct<(ptr<i32>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i64>>)>
@@ -1844,9 +1842,7 @@ func private @_QPxb(!fir.box<!fir.array<?x?xf64>>)
 // CHECK:         %[[EXTENT2:.*]] = llvm.sdiv %[[EXTENT1]], %[[C1]]  : i64
 // CHECK:         %[[EXTENT_CMP:.*]] = llvm.icmp "sgt" %[[EXTENT2]], %[[ZERO]] : i64
 // CHECK:         %[[EXTENT:.*]] = llvm.select %[[EXTENT_CMP]], %[[EXTENT2]], %[[ZERO]] : i1, i64
-// CHECK:         %[[EXTENT_CMP_2:.*]] = llvm.icmp "eq" %[[EXTENT]], %[[ZERO]] : i64
-// CHECK:         %[[SH1B:.*]] = llvm.select %[[EXTENT_CMP_2]], %[[ONE]], %[[SH1]] : i1, i64
-// CHECK:         %[[BOX7:.*]] = llvm.insertvalue %[[SH1B]], %[[BOX6]][7 : i32, 0 : i32, 0 : i32] : !llvm.struct<(ptr<f64>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<2 x array<3 x i64>>)>
+// CHECK:         %[[BOX7:.*]] = llvm.insertvalue %[[ONE]], %[[BOX6]][7 : i32, 0 : i32, 0 : i32] : !llvm.struct<(ptr<f64>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<2 x array<3 x i64>>)>
 // CHECK:         %[[BOX8:.*]] = llvm.insertvalue %[[EXTENT]], %[[BOX7]][7 : i32, 0 : i32, 1 : i32] : !llvm.struct<(ptr<f64>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<2 x array<3 x i64>>)>
 // CHECK:         %[[STRIDE:.*]] = llvm.mul %[[ELEM_LEN_I64]], %[[C1]]  : i64
 // CHECK:         %[[BOX9:.*]] = llvm.insertvalue %[[STRIDE]], %[[BOX8]][7 : i32, 0 : i32, 2 : i32] : !llvm.struct<(ptr<f64>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<2 x array<3 x i64>>)>
@@ -1860,9 +1856,7 @@ func private @_QPxb(!fir.box<!fir.array<?x?xf64>>)
 // CHECK:         %[[EXT_SDIV:.*]] = llvm.sdiv %[[EXT_ADD]], %[[C1]]  : i64
 // CHECK:         %[[EXT_ICMP:.*]] = llvm.icmp "sgt" %[[EXT_SDIV]], %[[ZERO]] : i64
 // CHECK:         %[[EXT_SELECT:.*]] = llvm.select %[[EXT_ICMP]], %[[EXT_SDIV]], %[[ZERO]] : i1, i64
-// CHECK:         %[[EXT_ICMP_2:.*]] = llvm.icmp "eq" %[[EXT_SELECT]], %[[ZERO]] : i64
-// CHECK:         %[[SH2B:.*]] = llvm.select %[[EXT_ICMP_2]], %[[ONE]], %[[SH2]] : i1, i64
-// CHECK:         %[[BOX10:.*]] = llvm.insertvalue %[[SH2B]], %[[BOX9]][7 : i32, 1 : i32, 0 : i32] : !llvm.struct<(ptr<f64>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<2 x array<3 x i64>>)>
+// CHECK:         %[[BOX10:.*]] = llvm.insertvalue %[[ONE]], %[[BOX9]][7 : i32, 1 : i32, 0 : i32] : !llvm.struct<(ptr<f64>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<2 x array<3 x i64>>)>
 // CHECK:         %[[BOX11:.*]] = llvm.insertvalue %[[EXT_SELECT]], %[[BOX10]][7 : i32, 1 : i32, 1 : i32] : !llvm.struct<(ptr<f64>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<2 x array<3 x i64>>)>
 // CHECK:         %[[STRIDE_MUL:.*]] = llvm.mul %[[PREV_DIM]], %[[C1]]  : i64
 // CHECK:         %[[BOX12:.*]] = llvm.insertvalue %[[STRIDE_MUL]], %[[BOX11]][7 : i32, 1 : i32, 2 : i32] : !llvm.struct<(ptr<f64>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<2 x array<3 x i64>>)>
