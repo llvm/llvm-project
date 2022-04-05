@@ -17,6 +17,8 @@ namespace {
 /// provided by the symbol table along with erasing from the symbol table.
 struct SymbolUsesPass
     : public PassWrapper<SymbolUsesPass, OperationPass<ModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(SymbolUsesPass)
+
   StringRef getArgument() const final { return "test-symbol-uses"; }
   StringRef getDescription() const final {
     return "Test detection of symbol uses";
@@ -93,6 +95,8 @@ struct SymbolUsesPass
 /// functionality provided by the symbol table.
 struct SymbolReplacementPass
     : public PassWrapper<SymbolReplacementPass, OperationPass<ModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(SymbolReplacementPass)
+
   StringRef getArgument() const final { return "test-symbol-rauw"; }
   StringRef getDescription() const final {
     return "Test replacement of symbol uses";

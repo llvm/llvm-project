@@ -1900,10 +1900,97 @@ TEST_F(TransferTest, StaticCast) {
                 const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
                 ASSERT_THAT(BarDecl, NotNull());
 
-                const auto *FooVal =
-                    cast<IntegerValue>(Env.getValue(*FooDecl, SkipPast::None));
-                const auto *BarVal =
-                    cast<IntegerValue>(Env.getValue(*BarDecl, SkipPast::None));
+                const auto *FooVal = Env.getValue(*FooDecl, SkipPast::None);
+                const auto *BarVal = Env.getValue(*BarDecl, SkipPast::None);
+                EXPECT_TRUE(isa<IntegerValue>(FooVal));
+                EXPECT_TRUE(isa<IntegerValue>(BarVal));
+                EXPECT_EQ(FooVal, BarVal);
+              });
+}
+
+TEST_F(TransferTest, IntegralCast) {
+  std::string Code = R"(
+    void target(int Foo) {
+      long Bar = Foo;
+      // [[p]]
+    }
+  )";
+  runDataflow(Code,
+              [](llvm::ArrayRef<
+                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                     Results,
+                 ASTContext &ASTCtx) {
+                ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+                const Environment &Env = Results[0].second.Env;
+
+                const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+                ASSERT_THAT(FooDecl, NotNull());
+
+                const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
+                ASSERT_THAT(BarDecl, NotNull());
+
+                const auto *FooVal = Env.getValue(*FooDecl, SkipPast::None);
+                const auto *BarVal = Env.getValue(*BarDecl, SkipPast::None);
+                EXPECT_TRUE(isa<IntegerValue>(FooVal));
+                EXPECT_TRUE(isa<IntegerValue>(BarVal));
+                EXPECT_EQ(FooVal, BarVal);
+              });
+}
+
+TEST_F(TransferTest, IntegraltoBooleanCast) {
+  std::string Code = R"(
+    void target(int Foo) {
+      bool Bar = Foo;
+      // [[p]]
+    }
+  )";
+  runDataflow(Code,
+              [](llvm::ArrayRef<
+                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                     Results,
+                 ASTContext &ASTCtx) {
+                ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+                const Environment &Env = Results[0].second.Env;
+
+                const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+                ASSERT_THAT(FooDecl, NotNull());
+
+                const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
+                ASSERT_THAT(BarDecl, NotNull());
+
+                const auto *FooVal = Env.getValue(*FooDecl, SkipPast::None);
+                const auto *BarVal = Env.getValue(*BarDecl, SkipPast::None);
+                EXPECT_TRUE(isa<IntegerValue>(FooVal));
+                EXPECT_TRUE(isa<BoolValue>(BarVal));
+              });
+}
+
+TEST_F(TransferTest, IntegralToBooleanCastFromBool) {
+  std::string Code = R"(
+    void target(bool Foo) {
+      int Zab = Foo;
+      bool Bar = Zab;
+      // [[p]]
+    }
+  )";
+  runDataflow(Code,
+              [](llvm::ArrayRef<
+                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                     Results,
+                 ASTContext &ASTCtx) {
+                ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+                const Environment &Env = Results[0].second.Env;
+
+                const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+                ASSERT_THAT(FooDecl, NotNull());
+
+                const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
+                ASSERT_THAT(BarDecl, NotNull());
+
+                const auto *FooVal = Env.getValue(*FooDecl, SkipPast::None);
+                const auto *BarVal = Env.getValue(*BarDecl, SkipPast::None);
+                EXPECT_TRUE(isa<BoolValue>(FooVal));
+                EXPECT_TRUE(isa<BoolValue>(BarVal));
                 EXPECT_EQ(FooVal, BarVal);
               });
 }
@@ -2372,6 +2459,35 @@ TEST_F(TransferTest, BuiltinExpect) {
   std::string Code = R"(
     void target(long Foo) {
       long Bar = __builtin_expect(Foo, true);
+      /*[[p]]*/
+    }
+  )";
+  runDataflow(Code,
+              [](llvm::ArrayRef<
+                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                     Results,
+                 ASTContext &ASTCtx) {
+                ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+                const auto &Env = Results[0].second.Env;
+
+                const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+                ASSERT_THAT(FooDecl, NotNull());
+
+                const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
+                ASSERT_THAT(BarDecl, NotNull());
+
+                EXPECT_EQ(Env.getValue(*FooDecl, SkipPast::None),
+                          Env.getValue(*BarDecl, SkipPast::None));
+              });
+}
+
+// `__builtin_expect` takes and returns a `long` argument, so other types
+// involve casts. This verifies that we identify the input and output in that
+// case.
+TEST_F(TransferTest, BuiltinExpectBoolArg) {
+  std::string Code = R"(
+    void target(bool Foo) {
+      bool Bar = __builtin_expect(Foo, true);
       /*[[p]]*/
     }
   )";

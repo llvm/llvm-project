@@ -44,4 +44,7 @@ main:
     cmp $16, %rax
     jl .Jloop
     retq
+
+# For relocations against .text
+    call exit
 .Lend:

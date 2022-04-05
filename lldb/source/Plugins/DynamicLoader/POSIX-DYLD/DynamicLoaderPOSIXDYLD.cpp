@@ -575,6 +575,38 @@ ModuleSP DynamicLoaderPOSIXDYLD::LoadInterpreterModule() {
   return nullptr;
 }
 
+ModuleSP DynamicLoaderPOSIXDYLD::LoadModuleAtAddress(const FileSpec &file,
+                                                     addr_t link_map_addr,
+                                                     addr_t base_addr,
+                                                     bool base_addr_is_offset) {
+  if (ModuleSP module_sp = DynamicLoader::LoadModuleAtAddress(
+          file, link_map_addr, base_addr, base_addr_is_offset))
+    return module_sp;
+
+  // This works around an dynamic linker "bug" on android <= 23, where the
+  // dynamic linker would report the application name
+  // (e.g. com.example.myapplication) instead of the main process binary
+  // (/system/bin/app_process(32)). The logic is not sound in general (it
+  // assumes base_addr is the real address, even though it actually is a load
+  // bias), but it happens to work on adroid because app_process has a file
+  // address of zero.
+  // This should be removed after we drop support for android-23.
+  if (m_process->GetTarget().GetArchitecture().GetTriple().isAndroid()) {
+    MemoryRegionInfo memory_info;
+    Status error = m_process->GetMemoryRegionInfo(base_addr, memory_info);
+    if (error.Success() && memory_info.GetMapped() &&
+        memory_info.GetRange().GetRangeBase() == base_addr &&
+        !(memory_info.GetName().IsEmpty())) {
+      if (ModuleSP module_sp = DynamicLoader::LoadModuleAtAddress(
+              FileSpec(memory_info.GetName().GetStringRef()), link_map_addr,
+              base_addr, base_addr_is_offset))
+        return module_sp;
+    }
+  }
+
+  return nullptr;
+}
+
 void DynamicLoaderPOSIXDYLD::LoadAllCurrentModules() {
   DYLDRendezvous::iterator I;
   DYLDRendezvous::iterator E;

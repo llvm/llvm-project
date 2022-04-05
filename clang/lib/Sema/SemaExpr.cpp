@@ -50,8 +50,10 @@
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/SaveAndRestore.h"
+#include "llvm/Support/TypeSize.h"
 
 using namespace clang;
 using namespace sema;
@@ -12153,6 +12155,10 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
       RHS.get()->getType()->isVectorType())
     return CheckVectorCompareOperands(LHS, RHS, Loc, Opc);
 
+  if (LHS.get()->getType()->isVLSTBuiltinType() ||
+      RHS.get()->getType()->isVLSTBuiltinType())
+    return CheckSizelessVectorCompareOperands(LHS, RHS, Loc, Opc);
+
   diagnoseLogicalNotOnLHSofCheck(*this, LHS, RHS, Loc, Opc);
   diagnoseTautologicalComparison(*this, Loc, LHS.get(), RHS.get(), Opc);
 
@@ -12614,6 +12620,18 @@ QualType Sema::GetSignedVectorType(QualType V) {
                                VectorType::GenericVector);
 }
 
+QualType Sema::GetSignedSizelessVectorType(QualType V) {
+  const BuiltinType *VTy = V->castAs<BuiltinType>();
+  assert(VTy->isSizelessBuiltinType() && "expected sizeless type");
+
+  const QualType ETy = V->getSveEltType(Context);
+  const auto TypeSize = Context.getTypeSize(ETy);
+
+  const QualType IntTy = Context.getIntTypeForBitwidth(TypeSize, true);
+  const llvm::ElementCount VecSize = Context.getBuiltinVectorTypeInfo(VTy).EC;
+  return Context.getScalableVectorType(IntTy, VecSize.getKnownMinValue());
+}
+
 /// CheckVectorCompareOperands - vector comparisons are a clang extension that
 /// operates on extended vector types.  Instead of producing an IntTy result,
 /// like a scalar comparison, a vector comparison produces a vector of integer
@@ -12678,6 +12696,48 @@ QualType Sema::CheckVectorCompareOperands(ExprResult &LHS, ExprResult &RHS,
 
   // Return a signed type for the vector.
   return GetSignedVectorType(vType);
+}
+
+QualType Sema::CheckSizelessVectorCompareOperands(ExprResult &LHS,
+                                                  ExprResult &RHS,
+                                                  SourceLocation Loc,
+                                                  BinaryOperatorKind Opc) {
+  if (Opc == BO_Cmp) {
+    Diag(Loc, diag::err_three_way_vector_comparison);
+    return QualType();
+  }
+
+  // Check to make sure we're operating on vectors of the same type and width,
+  // Allowing one side to be a scalar of element type.
+  QualType vType = CheckSizelessVectorOperands(
+      LHS, RHS, Loc, /*isCompAssign*/ false, ACK_Comparison);
+
+  if (vType.isNull())
+    return vType;
+
+  QualType LHSType = LHS.get()->getType();
+
+  // For non-floating point types, check for self-comparisons of the form
+  // x == x, x != x, x < x, etc.  These always evaluate to a constant, and
+  // often indicate logic errors in the program.
+  diagnoseTautologicalComparison(*this, Loc, LHS.get(), RHS.get(), Opc);
+
+  // Check for comparisons of floating point operands using != and ==.
+  if (BinaryOperator::isEqualityOp(Opc) &&
+      LHSType->hasFloatingRepresentation()) {
+    assert(RHS.get()->getType()->hasFloatingRepresentation());
+    CheckFloatComparison(Loc, LHS.get(), RHS.get(), Opc);
+  }
+
+  const BuiltinType *LHSBuiltinTy = LHSType->getAs<BuiltinType>();
+  const BuiltinType *RHSBuiltinTy = RHS.get()->getType()->getAs<BuiltinType>();
+
+  if (LHSBuiltinTy && RHSBuiltinTy && LHSBuiltinTy->isSVEBool() &&
+      RHSBuiltinTy->isSVEBool())
+    return LHSType;
+
+  // Return a signed type for the vector.
+  return GetSignedSizelessVectorType(vType);
 }
 
 static void diagnoseXorMisusedAsPow(Sema &S, const ExprResult &XorLHS,
@@ -12986,7 +13046,8 @@ inline QualType Sema::CheckLogicalOperands(ExprResult &LHS, ExprResult &RHS,
                                            SourceLocation Loc,
                                            BinaryOperatorKind Opc) {
   // Check vector operands differently.
-  if (LHS.get()->getType()->isVectorType() || RHS.get()->getType()->isVectorType())
+  if (LHS.get()->getType()->isVectorType() ||
+      RHS.get()->getType()->isVectorType())
     return CheckVectorLogicalOperands(LHS, RHS, Loc);
 
   bool EnumConstantInBoolContext = false;
@@ -13020,14 +13081,13 @@ inline QualType Sema::CheckLogicalOperands(ExprResult &LHS, ExprResult &RHS,
            !RHS.get()->getExprLoc().isMacroID()) ||
           (Result != 0 && Result != 1)) {
         Diag(Loc, diag::warn_logical_instead_of_bitwise)
-          << RHS.get()->getSourceRange()
-          << (Opc == BO_LAnd ? "&&" : "||");
+            << RHS.get()->getSourceRange() << (Opc == BO_LAnd ? "&&" : "||");
         // Suggest replacing the logical operator with the bitwise version
         Diag(Loc, diag::note_logical_instead_of_bitwise_change_operator)
             << (Opc == BO_LAnd ? "&" : "|")
-            << FixItHint::CreateReplacement(SourceRange(
-                                                 Loc, getLocForEndOfToken(Loc)),
-                                            Opc == BO_LAnd ? "&" : "|");
+            << FixItHint::CreateReplacement(
+                   SourceRange(Loc, getLocForEndOfToken(Loc)),
+                   Opc == BO_LAnd ? "&" : "|");
         if (Opc == BO_LAnd)
           // Suggest replacing "Foo() && kNonZero" with "Foo()"
           Diag(Loc, diag::note_logical_instead_of_bitwise_remove_constant)

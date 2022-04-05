@@ -112,7 +112,7 @@ void TraceIntelPT::DumpTraceInfo(Thread &thread, Stream &s, bool verbose) {
   }
   s << "\n";
   DecodedThreadSP decoded_trace_sp = Decode(thread);
-  size_t insn_len = decoded_trace_sp->GetInstructions().size();
+  size_t insn_len = decoded_trace_sp->GetInstructionsCount();
   size_t mem_used = decoded_trace_sp->CalculateApproximateMemoryUsage();
 
   s.Format("  Raw trace size: {0} KiB\n", *raw_size / 1024);

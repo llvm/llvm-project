@@ -18,9 +18,6 @@
 #include <queue>
 #include <set>
 
-using namespace llvm;
-using namespace sampleprof;
-
 namespace llvm {
 namespace sampleprof {
 

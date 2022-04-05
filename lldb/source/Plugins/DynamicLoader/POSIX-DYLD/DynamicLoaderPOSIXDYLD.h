@@ -55,6 +55,11 @@ public:
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
+  lldb::ModuleSP LoadModuleAtAddress(const lldb_private::FileSpec &file,
+                                     lldb::addr_t link_map_addr,
+                                     lldb::addr_t base_addr,
+                                     bool base_addr_is_offset) override;
+
 protected:
   /// Runtime linker rendezvous structure.
   DYLDRendezvous m_rendezvous;

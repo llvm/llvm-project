@@ -53,24 +53,26 @@ class FileSystemStatCache;
 class FileManager : public RefCountedBase<FileManager> {
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS;
   FileSystemOptions FileSystemOpts;
+  llvm::SpecificBumpPtrAllocator<FileEntry> FilesAlloc;
+  llvm::SpecificBumpPtrAllocator<DirectoryEntry> DirsAlloc;
 
   /// Cache for existing real directories.
-  std::map<llvm::sys::fs::UniqueID, DirectoryEntry> UniqueRealDirs;
+  llvm::DenseMap<llvm::sys::fs::UniqueID, DirectoryEntry *> UniqueRealDirs;
 
   /// Cache for existing real files.
-  std::map<llvm::sys::fs::UniqueID, FileEntry> UniqueRealFiles;
+  llvm::DenseMap<llvm::sys::fs::UniqueID, FileEntry *> UniqueRealFiles;
 
   /// The virtual directories that we have allocated.
   ///
   /// For each virtual file (e.g. foo/bar/baz.cpp), we add all of its parent
   /// directories (foo/ and foo/bar/) here.
-  SmallVector<std::unique_ptr<DirectoryEntry>, 4> VirtualDirectoryEntries;
+  SmallVector<DirectoryEntry *, 4> VirtualDirectoryEntries;
   /// The virtual files that we have allocated.
-  SmallVector<std::unique_ptr<FileEntry>, 4> VirtualFileEntries;
+  SmallVector<FileEntry *, 4> VirtualFileEntries;
 
   /// A set of files that bypass the maps and uniquing.  They can have
   /// conflicting filenames.
-  SmallVector<std::unique_ptr<FileEntry>, 0> BypassFileEntries;
+  SmallVector<FileEntry *, 0> BypassFileEntries;
 
   /// A cache that maps paths to directory entries (either real or
   /// virtual) we have looked up, or an error that occurred when we looked up

@@ -3103,8 +3103,8 @@ void InnerLoopVectorizer::createVectorLoopSkeleton(StringRef Prefix) {
   BrInst->setDebugLoc(ScalarLatchTerm->getDebugLoc());
   ReplaceInstWithInst(LoopMiddleBlock->getTerminator(), BrInst);
 
-  SplitBlock(LoopVectorPreHeader, LoopVectorPreHeader->getTerminator(), DT,
-             nullptr, nullptr, Twine(Prefix) + "vector.body");
+  SplitBlock(LoopVectorPreHeader, LoopVectorPreHeader->getTerminator(), DT, LI,
+             nullptr, Twine(Prefix) + "vector.body");
 
   // Update dominator for loop exit.
   if (!Cost->requiresScalarEpilogue(VF))
@@ -5200,9 +5200,12 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
     return ElementCount::getFixed(ClampedConstTripCount);
   }
 
+  TargetTransformInfo::RegisterKind RegKind =
+      ComputeScalableMaxVF ? TargetTransformInfo::RGK_ScalableVector
+                           : TargetTransformInfo::RGK_FixedWidthVector;
   ElementCount MaxVF = MaxVectorElementCount;
   if (MaximizeBandwidth || (MaximizeBandwidth.getNumOccurrences() == 0 &&
-                            TTI.shouldMaximizeVectorBandwidth())) {
+                            TTI.shouldMaximizeVectorBandwidth(RegKind))) {
     auto MaxVectorElementCountMaxBW = ElementCount::get(
         PowerOf2Floor(WidestRegister.getKnownMinSize() / SmallestType),
         ComputeScalableMaxVF);

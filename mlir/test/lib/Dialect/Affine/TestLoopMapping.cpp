@@ -22,9 +22,10 @@
 using namespace mlir;
 
 namespace {
-class TestLoopMappingPass
+struct TestLoopMappingPass
     : public PassWrapper<TestLoopMappingPass, OperationPass<>> {
-public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestLoopMappingPass)
+
   StringRef getArgument() const final {
     return "test-mapping-to-processing-elements";
   }

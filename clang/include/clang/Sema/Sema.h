@@ -11976,9 +11976,13 @@ public:
                                bool AllowBothBool, bool AllowBoolConversion,
                                bool AllowBoolOperation, bool ReportInvalid);
   QualType GetSignedVectorType(QualType V);
+  QualType GetSignedSizelessVectorType(QualType V);
   QualType CheckVectorCompareOperands(ExprResult &LHS, ExprResult &RHS,
                                       SourceLocation Loc,
                                       BinaryOperatorKind Opc);
+  QualType CheckSizelessVectorCompareOperands(ExprResult &LHS, ExprResult &RHS,
+                                              SourceLocation Loc,
+                                              BinaryOperatorKind Opc);
   QualType CheckVectorLogicalOperands(ExprResult &LHS, ExprResult &RHS,
                                       SourceLocation Loc);
 

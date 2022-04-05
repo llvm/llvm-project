@@ -8,7 +8,9 @@
 
 #include "CanonicalIncludes.h"
 #include "Headers.h"
+#include "clang/Basic/FileEntry.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/FileSystem/UniqueID.h"
 #include "llvm/Support/Path.h"
 #include <algorithm>
 
@@ -18,18 +20,17 @@ namespace {
 const char IWYUPragma[] = "// IWYU pragma: private, include ";
 } // namespace
 
-void CanonicalIncludes::addMapping(llvm::StringRef Path,
+void CanonicalIncludes::addMapping(FileEntryRef Header,
                                    llvm::StringRef CanonicalPath) {
-  FullPathMapping[Path] = std::string(CanonicalPath);
+  FullPathMapping[Header.getUniqueID()] = std::string(CanonicalPath);
 }
 
 /// The maximum number of path components in a key from StdSuffixHeaderMapping.
 /// Used to minimize the number of lookups in suffix path mappings.
 constexpr int MaxSuffixComponents = 3;
 
-llvm::StringRef CanonicalIncludes::mapHeader(llvm::StringRef Header) const {
-  assert(!Header.empty());
-  auto MapIt = FullPathMapping.find(Header);
+llvm::StringRef CanonicalIncludes::mapHeader(FileEntryRef Header) const {
+  auto MapIt = FullPathMapping.find(Header.getUniqueID());
   if (MapIt != FullPathMapping.end())
     return MapIt->second;
 
@@ -39,10 +40,11 @@ llvm::StringRef CanonicalIncludes::mapHeader(llvm::StringRef Header) const {
   int Components = 1;
 
   // FIXME: check that this works on Windows and add tests.
-  for (auto It = llvm::sys::path::rbegin(Header),
-            End = llvm::sys::path::rend(Header);
+  auto Filename = Header.getName();
+  for (auto It = llvm::sys::path::rbegin(Filename),
+            End = llvm::sys::path::rend(Filename);
        It != End && Components <= MaxSuffixComponents; ++It, ++Components) {
-    auto SubPath = Header.substr(It->data() - Header.begin());
+    auto SubPath = Filename.substr(It->data() - Filename.begin());
     auto MappingIt = StdSuffixHeaderMapping->find(SubPath);
     if (MappingIt != StdSuffixHeaderMapping->end())
       return MappingIt->second;
@@ -66,12 +68,12 @@ collectIWYUHeaderMaps(CanonicalIncludes *Includes) {
                                PP.getSourceManager(), PP.getLangOpts());
       if (!Text.consume_front(IWYUPragma))
         return false;
+      auto &SM = PP.getSourceManager();
       // We always insert using the spelling from the pragma.
-      if (auto *FE = PP.getSourceManager().getFileEntryForID(
-              PP.getSourceManager().getFileID(Range.getBegin())))
-        Includes->addMapping(FE->getName(), isLiteralInclude(Text)
-                                                ? Text.str()
-                                                : ("\"" + Text + "\"").str());
+      if (auto *FE = SM.getFileEntryForID(SM.getFileID(Range.getBegin())))
+        Includes->addMapping(
+            FE->getLastRef(),
+            isLiteralInclude(Text) ? Text.str() : ("\"" + Text + "\"").str());
       return false;
     }
 

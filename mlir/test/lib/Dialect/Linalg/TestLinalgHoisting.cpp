@@ -22,6 +22,8 @@ using namespace mlir::linalg;
 namespace {
 struct TestLinalgHoisting
     : public PassWrapper<TestLinalgHoisting, OperationPass<FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestLinalgHoisting)
+
   TestLinalgHoisting() = default;
   TestLinalgHoisting(const TestLinalgHoisting &pass) : PassWrapper(pass) {}
   void getDependentDialects(DialectRegistry &registry) const override {
