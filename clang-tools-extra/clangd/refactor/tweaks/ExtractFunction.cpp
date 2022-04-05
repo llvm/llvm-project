@@ -56,6 +56,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
 #include "clang/Basic/LangOptions.h"
@@ -71,6 +72,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/raw_os_ostream.h"
 
 namespace clang {
 namespace clangd {
@@ -86,6 +88,12 @@ enum class ZoneRelative {
   Inside,     // Inside Zone.
   After,      // After Zone and inside EnclosingFunction.
   OutsideFunc // Outside EnclosingFunction.
+};
+
+enum FunctionDeclKind {
+  InlineDefinition,
+  ForwardDeclaration,
+  OutOfLineDefinition
 };
 
 // A RootStmt is a statement that's fully selected including all it's children
@@ -237,9 +245,6 @@ const FunctionDecl *findEnclosingFunction(const Node *CommonAnc) {
     if (CurNode->ASTNode.get<LambdaExpr>())
       return nullptr;
     if (const FunctionDecl *Func = CurNode->ASTNode.get<FunctionDecl>()) {
-      // FIXME: Support extraction from methods.
-      if (isa<CXXMethodDecl>(Func))
-        return nullptr;
       // FIXME: Support extraction from templated functions.
       if (Func->isTemplated())
         return nullptr;
@@ -343,34 +348,53 @@ struct NewFunction {
   QualType ReturnType;
   std::vector<Parameter> Parameters;
   SourceRange BodyRange;
-  SourceLocation InsertionPoint;
-  const DeclContext *EnclosingFuncContext;
+  SourceLocation DefinitionPoint;
+  llvm::Optional<SourceLocation> ForwardDeclarationPoint;
+  const CXXRecordDecl *EnclosingClass = nullptr;
+  const NestedNameSpecifier *DefinitionQualifier = nullptr;
+  const DeclContext *SemanticDC = nullptr;
+  const DeclContext *SyntacticDC = nullptr;
+  const DeclContext *ForwardDeclarationSyntacticDC = nullptr;
   bool CallerReturnsValue = false;
+  bool Static = false;
+  ConstexprSpecKind Constexpr = ConstexprSpecKind::Unspecified;
+  bool Const = false;
+
   // Decides whether the extracted function body and the function call need a
   // semicolon after extraction.
   tooling::ExtractionSemicolonPolicy SemicolonPolicy;
-  NewFunction(tooling::ExtractionSemicolonPolicy SemicolonPolicy)
-      : SemicolonPolicy(SemicolonPolicy) {}
+  const LangOptions *LangOpts;
+  NewFunction(tooling::ExtractionSemicolonPolicy SemicolonPolicy,
+              const LangOptions *LangOpts)
+      : SemicolonPolicy(SemicolonPolicy), LangOpts(LangOpts) {}
   // Render the call for this function.
   std::string renderCall() const;
   // Render the definition for this function.
-  std::string renderDefinition(const SourceManager &SM) const;
+  std::string renderDeclaration(FunctionDeclKind K,
+                                const DeclContext &SemanticDC,
+                                const DeclContext &SyntacticDC,
+                                const SourceManager &SM) const;
 
 private:
-  std::string renderParametersForDefinition() const;
+  std::string
+  renderParametersForDeclaration(const DeclContext &Enclosing) const;
   std::string renderParametersForCall() const;
+  std::string renderSpecifiers(FunctionDeclKind K) const;
+  std::string renderQualifiers() const;
+  std::string renderDeclarationName(FunctionDeclKind K) const;
   // Generate the function body.
   std::string getFuncBody(const SourceManager &SM) const;
 };
 
-std::string NewFunction::renderParametersForDefinition() const {
+std::string NewFunction::renderParametersForDeclaration(
+    const DeclContext &Enclosing) const {
   std::string Result;
   bool NeedCommaBefore = false;
   for (const Parameter &P : Parameters) {
     if (NeedCommaBefore)
       Result += ", ";
     NeedCommaBefore = true;
-    Result += P.render(EnclosingFuncContext);
+    Result += P.render(&Enclosing);
   }
   return Result;
 }
@@ -387,6 +411,49 @@ std::string NewFunction::renderParametersForCall() const {
   return Result;
 }
 
+std::string NewFunction::renderSpecifiers(FunctionDeclKind K) const {
+  std::string Attributes;
+
+  if (Static && K != FunctionDeclKind::OutOfLineDefinition) {
+    Attributes += "static ";
+  }
+
+  switch (Constexpr) {
+  case ConstexprSpecKind::Unspecified:
+  case ConstexprSpecKind::Constinit:
+    break;
+  case ConstexprSpecKind::Constexpr:
+    Attributes += "constexpr ";
+    break;
+  case ConstexprSpecKind::Consteval:
+    Attributes += "consteval ";
+    break;
+  }
+
+  return Attributes;
+}
+
+std::string NewFunction::renderQualifiers() const {
+  std::string Attributes;
+
+  if (Const) {
+    Attributes += " const";
+  }
+
+  return Attributes;
+}
+
+std::string NewFunction::renderDeclarationName(FunctionDeclKind K) const {
+  if (DefinitionQualifier == nullptr || K != OutOfLineDefinition) {
+    return Name;
+  }
+
+  std::string QualifierName;
+  llvm::raw_string_ostream Oss(QualifierName);
+  DefinitionQualifier->print(Oss, *LangOpts);
+  return llvm::formatv("{0}{1}", QualifierName, Name);
+}
+
 std::string NewFunction::renderCall() const {
   return std::string(
       llvm::formatv("{0}{1}({2}){3}", CallerReturnsValue ? "return " : "", Name,
@@ -394,10 +461,24 @@ std::string NewFunction::renderCall() const {
                     (SemicolonPolicy.isNeededInOriginalFunction() ? ";" : "")));
 }
 
-std::string NewFunction::renderDefinition(const SourceManager &SM) const {
-  return std::string(llvm::formatv(
-      "{0} {1}({2}) {\n{3}\n}\n", printType(ReturnType, *EnclosingFuncContext),
-      Name, renderParametersForDefinition(), getFuncBody(SM)));
+std::string NewFunction::renderDeclaration(FunctionDeclKind K,
+                                           const DeclContext &SemanticDC,
+                                           const DeclContext &SyntacticDC,
+                                           const SourceManager &SM) const {
+  std::string Declaration = std::string(llvm::formatv(
+      "{0}{1} {2}({3}){4}", renderSpecifiers(K),
+      printType(ReturnType, SyntacticDC), renderDeclarationName(K),
+      renderParametersForDeclaration(SemanticDC), renderQualifiers()));
+
+  switch (K) {
+  case ForwardDeclaration:
+    return std::string(llvm::formatv("{0};\n", Declaration));
+  case OutOfLineDefinition:
+  case InlineDefinition:
+    return std::string(
+        llvm::formatv("{0} {\n{1}\n}\n", Declaration, getFuncBody(SM)));
+    break;
+  }
 }
 
 std::string NewFunction::getFuncBody(const SourceManager &SM) const {
@@ -658,6 +739,13 @@ bool generateReturnProperties(NewFunction &ExtractedFunc,
   return true;
 }
 
+void captureMethodInfo(NewFunction &ExtractedFunc,
+                       const CXXMethodDecl *Method) {
+  ExtractedFunc.Static = Method->isStatic();
+  ExtractedFunc.Const = Method->isConst();
+  ExtractedFunc.EnclosingClass = Method->getParent();
+}
+
 // FIXME: add support for adding other function return types besides void.
 // FIXME: assign the value returned by non void extracted function.
 llvm::Expected<NewFunction> getExtractedFunction(ExtractionZone &ExtZone,
@@ -668,11 +756,35 @@ llvm::Expected<NewFunction> getExtractedFunction(ExtractionZone &ExtZone,
   if (CapturedInfo.BrokenControlFlow)
     return error("Cannot extract break/continue without corresponding "
                  "loop/switch statement.");
-  NewFunction ExtractedFunc(getSemicolonPolicy(ExtZone, SM, LangOpts));
+  NewFunction ExtractedFunc(getSemicolonPolicy(ExtZone, SM, LangOpts),
+                            &LangOpts);
+
+  ExtractedFunc.SyntacticDC =
+      ExtZone.EnclosingFunction->getLexicalDeclContext();
+  ExtractedFunc.SemanticDC = ExtZone.EnclosingFunction->getDeclContext();
+  ExtractedFunc.DefinitionQualifier = ExtZone.EnclosingFunction->getQualifier();
+  ExtractedFunc.Constexpr = ExtZone.EnclosingFunction->getConstexprKind();
+
+  if (const auto *Method =
+          llvm::dyn_cast<CXXMethodDecl>(ExtZone.EnclosingFunction))
+    captureMethodInfo(ExtractedFunc, Method);
+
+  if (ExtZone.EnclosingFunction->isOutOfLine()) {
+    // FIXME: Put the extracted method in a private section if it's a class or
+    // maybe in an anonymous namespace
+    const auto *FirstOriginalDecl =
+        ExtZone.EnclosingFunction->getCanonicalDecl();
+    auto DeclPos =
+        toHalfOpenFileRange(SM, LangOpts, FirstOriginalDecl->getSourceRange());
+    if (!DeclPos)
+      return error("Declaration is inside a macro");
+    ExtractedFunc.ForwardDeclarationPoint = DeclPos.getValue().getBegin();
+    ExtractedFunc.ForwardDeclarationSyntacticDC = ExtractedFunc.SemanticDC;
+  }
+
   ExtractedFunc.BodyRange = ExtZone.ZoneRange;
-  ExtractedFunc.InsertionPoint = ExtZone.getInsertionPoint();
-  ExtractedFunc.EnclosingFuncContext =
-      ExtZone.EnclosingFunction->getDeclContext();
+  ExtractedFunc.DefinitionPoint = ExtZone.getInsertionPoint();
+
   ExtractedFunc.CallerReturnsValue = CapturedInfo.AlwaysReturns;
   if (!createParameters(ExtractedFunc, CapturedInfo) ||
       !generateReturnProperties(ExtractedFunc, *ExtZone.EnclosingFunction,
@@ -706,8 +818,24 @@ tooling::Replacement replaceWithFuncCall(const NewFunction &ExtractedFunc,
 
 tooling::Replacement createFunctionDefinition(const NewFunction &ExtractedFunc,
                                               const SourceManager &SM) {
-  std::string FunctionDef = ExtractedFunc.renderDefinition(SM);
-  return tooling::Replacement(SM, ExtractedFunc.InsertionPoint, 0, FunctionDef);
+  FunctionDeclKind DeclKind = InlineDefinition;
+  if (ExtractedFunc.ForwardDeclarationPoint.hasValue())
+    DeclKind = OutOfLineDefinition;
+  std::string FunctionDef = ExtractedFunc.renderDeclaration(
+      DeclKind, *ExtractedFunc.SemanticDC, *ExtractedFunc.SyntacticDC, SM);
+
+  return tooling::Replacement(SM, ExtractedFunc.DefinitionPoint, 0,
+                              FunctionDef);
+}
+
+tooling::Replacement createForwardDeclaration(const NewFunction &ExtractedFunc,
+                                              const SourceManager &SM) {
+  std::string FunctionDecl = ExtractedFunc.renderDeclaration(
+      ForwardDeclaration, *ExtractedFunc.SemanticDC,
+      *ExtractedFunc.ForwardDeclarationSyntacticDC, SM);
+  SourceLocation DeclPoint = ExtractedFunc.ForwardDeclarationPoint.getValue();
+
+  return tooling::Replacement(SM, DeclPoint, 0, FunctionDecl);
 }
 
 // Returns true if ExtZone contains any ReturnStmts.
@@ -757,12 +885,35 @@ Expected<Tweak::Effect> ExtractFunction::apply(const Selection &Inputs) {
   // FIXME: Add more types of errors.
   if (!ExtractedFunc)
     return ExtractedFunc.takeError();
-  tooling::Replacements Result;
-  if (auto Err = Result.add(createFunctionDefinition(*ExtractedFunc, SM)))
+  tooling::Replacements Edit;
+  if (auto Err = Edit.add(createFunctionDefinition(*ExtractedFunc, SM)))
     return std::move(Err);
-  if (auto Err = Result.add(replaceWithFuncCall(*ExtractedFunc, SM, LangOpts)))
+  if (auto Err = Edit.add(replaceWithFuncCall(*ExtractedFunc, SM, LangOpts)))
     return std::move(Err);
-  return Effect::mainFileEdit(SM, std::move(Result));
+
+  if (auto FwdLoc = ExtractedFunc->ForwardDeclarationPoint) {
+    // If the fwd-declaration goes in the same file, merge into Replacements.
+    // Otherwise it needs to be a separate file edit.
+    if (SM.isWrittenInSameFile(ExtractedFunc->DefinitionPoint, *FwdLoc)) {
+      if (auto Err = Edit.add(createForwardDeclaration(*ExtractedFunc, SM)))
+        return std::move(Err);
+    } else {
+      auto MultiFileEffect = Effect::mainFileEdit(SM, std::move(Edit));
+      if (!MultiFileEffect)
+        return MultiFileEffect.takeError();
+
+      tooling::Replacements OtherEdit(
+          createForwardDeclaration(*ExtractedFunc, SM));
+      if (auto PathAndEdit = Tweak::Effect::fileEdit(SM, SM.getFileID(*FwdLoc),
+                                                 OtherEdit))
+        MultiFileEffect->ApplyEdits.try_emplace(PathAndEdit->first,
+                                                PathAndEdit->second);
+      else
+        return PathAndEdit.takeError();
+      return MultiFileEffect;
+    }
+  }
+  return Effect::mainFileEdit(SM, std::move(Edit));
 }
 
 } // namespace
