@@ -218,3 +218,64 @@ body:             |
     successors:
   bb.3:
     RET_ReallyLR
+...
+---
+name:            test_s318_eq
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: test_s318_eq
+  ; CHECK: bb.0:
+  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK:   [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
+  ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+  ; CHECK:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4611686018427387903
+  ; CHECK:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; CHECK:   [[AND:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C]]
+  ; CHECK:   [[AND1:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C]]
+  ; CHECK:   [[AND2:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C]]
+  ; CHECK:   [[AND3:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C]]
+  ; CHECK:   [[AND4:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C1]]
+  ; CHECK:   [[AND5:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C2]]
+  ; CHECK:   [[AND6:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C2]]
+  ; CHECK:   [[AND7:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C2]]
+  ; CHECK:   [[AND8:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C]]
+  ; CHECK:   [[AND9:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C]]
+  ; CHECK:   [[AND10:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C]]
+  ; CHECK:   [[AND11:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C]]
+  ; CHECK:   [[AND12:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C1]]
+  ; CHECK:   [[AND13:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C2]]
+  ; CHECK:   [[AND14:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C2]]
+  ; CHECK:   [[AND15:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C2]]
+  ; CHECK:   [[XOR:%[0-9]+]]:_(s64) = G_XOR [[AND]], [[AND8]]
+  ; CHECK:   [[XOR1:%[0-9]+]]:_(s64) = G_XOR [[AND1]], [[AND9]]
+  ; CHECK:   [[XOR2:%[0-9]+]]:_(s64) = G_XOR [[AND2]], [[AND10]]
+  ; CHECK:   [[XOR3:%[0-9]+]]:_(s64) = G_XOR [[AND3]], [[AND11]]
+  ; CHECK:   [[XOR4:%[0-9]+]]:_(s64) = G_XOR [[AND4]], [[AND12]]
+  ; CHECK:   [[XOR5:%[0-9]+]]:_(s64) = G_XOR [[AND5]], [[AND13]]
+  ; CHECK:   [[XOR6:%[0-9]+]]:_(s64) = G_XOR [[AND6]], [[AND14]]
+  ; CHECK:   [[XOR7:%[0-9]+]]:_(s64) = G_XOR [[AND7]], [[AND15]]
+  ; CHECK:   [[OR:%[0-9]+]]:_(s64) = G_OR [[XOR]], [[XOR1]]
+  ; CHECK:   [[OR1:%[0-9]+]]:_(s64) = G_OR [[OR]], [[XOR2]]
+  ; CHECK:   [[OR2:%[0-9]+]]:_(s64) = G_OR [[OR1]], [[XOR3]]
+  ; CHECK:   [[OR3:%[0-9]+]]:_(s64) = G_OR [[OR2]], [[XOR4]]
+  ; CHECK:   [[OR4:%[0-9]+]]:_(s64) = G_OR [[OR3]], [[XOR5]]
+  ; CHECK:   [[OR5:%[0-9]+]]:_(s64) = G_OR [[OR4]], [[XOR6]]
+  ; CHECK:   [[OR6:%[0-9]+]]:_(s64) = G_OR [[OR5]], [[XOR7]]
+  ; CHECK:   [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[OR6]](s64), [[C2]]
+  ; CHECK:   %cmp:_(s1) = G_TRUNC [[ICMP]](s32)
+  ; CHECK:   G_BRCOND %cmp(s1), %bb.1
+  ; CHECK:   G_BR %bb.2
+  ; CHECK: bb.1:
+  ; CHECK:   successors:
+  ; CHECK: bb.2:
+  ; CHECK:   RET_ReallyLR
+  bb.1:
+    %lhs:_(s318) = G_IMPLICIT_DEF
+    %rhs:_(s318) = G_IMPLICIT_DEF
+    %cmp:_(s1) = G_ICMP intpred(eq), %lhs(s318), %rhs
+    G_BRCOND %cmp(s1), %bb.2
+    G_BR %bb.3
+  bb.2:
+    successors:
+  bb.3:
+    RET_ReallyLR
