@@ -24,6 +24,8 @@ namespace {
 /// This pass applies the permutation on the first maximal perfect nest.
 struct TestLoopPermutation
     : public PassWrapper<TestLoopPermutation, OperationPass<>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestLoopPermutation)
+
   StringRef getArgument() const final { return PASS_NAME; }
   StringRef getDescription() const final {
     return "Tests affine loop permutation utility";

@@ -212,12 +212,6 @@ void func(int sel) {
 
   local_int8 << init_int8; // expected-error {{invalid operands to binary expression}}
   local_int8 >> init_int8; // expected-error {{invalid operands to binary expression}}
-  local_int8 < init_int8;  // expected-error {{invalid operands to binary expression}}
-  local_int8 <= init_int8; // expected-error {{invalid operands to binary expression}}
-  local_int8 == init_int8; // expected-error {{invalid operands to binary expression}}
-  local_int8 != init_int8; // expected-error {{invalid operands to binary expression}}
-  local_int8 >= init_int8; // expected-error {{invalid operands to binary expression}}
-  local_int8 > init_int8;  // expected-error {{invalid operands to binary expression}}
   local_int8 &&init_int8;  // expected-error {{invalid operands to binary expression}} expected-error {{not contextually convertible}}
   local_int8 || init_int8; // expected-error {{invalid operands to binary expression}} expected-error {{not contextually convertible}}
 

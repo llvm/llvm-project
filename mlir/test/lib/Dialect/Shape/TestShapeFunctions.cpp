@@ -19,6 +19,8 @@ namespace {
 /// This is a pass that reports shape functions associated with ops.
 struct ReportShapeFnPass
     : public PassWrapper<ReportShapeFnPass, OperationPass<ModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ReportShapeFnPass)
+
   void runOnOperation() override;
   StringRef getArgument() const final { return "test-shape-function-report"; }
   StringRef getDescription() const final {

@@ -125,6 +125,9 @@ public:
   unsigned getUnrankedMemRefDescriptorSize(UnrankedMemRefType type,
                                            const DataLayout &layout);
 
+  /// Check if a memref type can be converted to a bare pointer.
+  bool canConvertToBarePtr(BaseMemRefType type);
+
 protected:
   /// Pointer to the LLVM dialect.
   LLVM::LLVMDialect *llvmDialect;
@@ -191,8 +194,8 @@ private:
   /// These types can be recomposed to a unranked memref descriptor struct.
   SmallVector<Type, 2> getUnrankedMemRefDescriptorFields();
 
-  // Convert an unranked memref type to an LLVM type that captures the
-  // runtime rank and a pointer to the static ranked memref desc
+  /// Convert an unranked memref type to an LLVM type that captures the
+  /// runtime rank and a pointer to the static ranked memref desc
   Type convertUnrankedMemRefType(UnrankedMemRefType type);
 
   /// Convert a memref type to a bare pointer to the memref element type.

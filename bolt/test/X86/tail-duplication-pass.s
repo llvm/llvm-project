@@ -23,4 +23,6 @@ main:
     inc %rax
 .BB2:
     retq
+# For relocations against .text
+    call exit
 .Lend:

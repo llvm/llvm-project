@@ -99,19 +99,6 @@ define void @foo(<vscale x 4 x i64> %dst, i1 %cond) {
 ; CHECK-NEXT:    ldp x28, x19, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
 ; CHECK-NEXT:  .LBB0_2: // %if.end
-; CHECK-NEXT:    .cfi_def_cfa wsp, 0
-; CHECK-NEXT:    .cfi_same_value b8
-; CHECK-NEXT:    .cfi_same_value b9
-; CHECK-NEXT:    .cfi_same_value b10
-; CHECK-NEXT:    .cfi_same_value b11
-; CHECK-NEXT:    .cfi_same_value b12
-; CHECK-NEXT:    .cfi_same_value b13
-; CHECK-NEXT:    .cfi_same_value b14
-; CHECK-NEXT:    .cfi_same_value b15
-; CHECK-NEXT:    .cfi_same_value w19
-; CHECK-NEXT:    .cfi_same_value w28
-; CHECK-NEXT:    .cfi_same_value w30
-; CHECK-NEXT:    .cfi_same_value w29
 ; CHECK-NEXT:    ret
 entry:
   br i1 %cond, label %if.then, label %if.end

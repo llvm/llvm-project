@@ -3031,18 +3031,22 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   // select(mask, mload(,,mask,0), 0) -> mload(,,mask,0)
   // Load inst is intentionally not checked for hasOneUse()
   if (match(FalseVal, m_Zero()) &&
-      match(TrueVal, m_MaskedLoad(m_Value(), m_Value(), m_Specific(CondVal),
-                                  m_CombineOr(m_Undef(), m_Zero())))) {
-    auto *MaskedLoad = cast<IntrinsicInst>(TrueVal);
-    if (isa<UndefValue>(MaskedLoad->getArgOperand(3)))
-      MaskedLoad->setArgOperand(3, FalseVal /* Zero */);
-    return replaceInstUsesWith(SI, MaskedLoad);
+      (match(TrueVal, m_MaskedLoad(m_Value(), m_Value(), m_Specific(CondVal),
+                                   m_CombineOr(m_Undef(), m_Zero()))) ||
+       match(TrueVal, m_MaskedGather(m_Value(), m_Value(), m_Specific(CondVal),
+                                     m_CombineOr(m_Undef(), m_Zero()))))) {
+    auto *MaskedInst = cast<IntrinsicInst>(TrueVal);
+    if (isa<UndefValue>(MaskedInst->getArgOperand(3)))
+      MaskedInst->setArgOperand(3, FalseVal /* Zero */);
+    return replaceInstUsesWith(SI, MaskedInst);
   }
 
   Value *Mask;
   if (match(TrueVal, m_Zero()) &&
-      match(FalseVal, m_MaskedLoad(m_Value(), m_Value(), m_Value(Mask),
-                                   m_CombineOr(m_Undef(), m_Zero()))) &&
+      (match(FalseVal, m_MaskedLoad(m_Value(), m_Value(), m_Value(Mask),
+                                    m_CombineOr(m_Undef(), m_Zero()))) ||
+       match(FalseVal, m_MaskedGather(m_Value(), m_Value(), m_Value(Mask),
+                                      m_CombineOr(m_Undef(), m_Zero())))) &&
       (CondVal->getType() == Mask->getType())) {
     // We can remove the select by ensuring the load zeros all lanes the
     // select would have.  We determine this by proving there is no overlap
@@ -3053,10 +3057,10 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       CanMergeSelectIntoLoad = match(V, m_Zero());
 
     if (CanMergeSelectIntoLoad) {
-      auto *MaskedLoad = cast<IntrinsicInst>(FalseVal);
-      if (isa<UndefValue>(MaskedLoad->getArgOperand(3)))
-        MaskedLoad->setArgOperand(3, TrueVal /* Zero */);
-      return replaceInstUsesWith(SI, MaskedLoad);
+      auto *MaskedInst = cast<IntrinsicInst>(FalseVal);
+      if (isa<UndefValue>(MaskedInst->getArgOperand(3)))
+        MaskedInst->setArgOperand(3, TrueVal /* Zero */);
+      return replaceInstUsesWith(SI, MaskedInst);
     }
   }
 

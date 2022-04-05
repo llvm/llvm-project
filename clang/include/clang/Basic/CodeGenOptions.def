@@ -469,6 +469,9 @@ CODEGENOPT(SkipRaxSetup, 1, 0)
 ENUM_CODEGENOPT(ZeroCallUsedRegs, llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind,
                 5, llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::Skip)
 
+/// Whether to use opaque pointers.
+CODEGENOPT(OpaquePointers, 1, 0)
+
 #undef CODEGENOPT
 #undef ENUM_CODEGENOPT
 #undef VALUE_CODEGENOPT

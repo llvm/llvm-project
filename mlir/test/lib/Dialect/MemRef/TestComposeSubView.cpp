@@ -20,6 +20,8 @@ using namespace mlir;
 namespace {
 struct TestComposeSubViewPass
     : public PassWrapper<TestComposeSubViewPass, OperationPass<>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestComposeSubViewPass)
+
   StringRef getArgument() const final { return "test-compose-subview"; }
   StringRef getDescription() const final {
     return "Test combining composed subviews";
