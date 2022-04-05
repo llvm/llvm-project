@@ -105,10 +105,10 @@ void FileManager::addAncestorsAsVirtualDirs(StringRef Path) {
     return;
 
   // Add the virtual directory to the cache.
-  auto UDE = std::make_unique<DirectoryEntry>();
+  auto *UDE = new (DirsAlloc.Allocate()) DirectoryEntry();
   UDE->Name = NamedDirEnt.first();
-  NamedDirEnt.second = *UDE.get();
-  VirtualDirectoryEntries.push_back(std::move(UDE));
+  NamedDirEnt.second = *UDE;
+  VirtualDirectoryEntries.push_back(UDE);
 
   // Recursively add the other ancestors.
   addAncestorsAsVirtualDirs(DirName);
@@ -172,14 +172,15 @@ FileManager::getDirectoryRef(StringRef DirName, bool CacheFailure) {
   // same inode (this occurs on Unix-like systems when one dir is
   // symlinked to another, for example) or the same path (on
   // Windows).
-  DirectoryEntry &UDE = UniqueRealDirs[Status.getUniqueID()];
+  DirectoryEntry *&UDE = UniqueRealDirs[Status.getUniqueID()];
 
-  NamedDirEnt.second = UDE;
-  if (UDE.getName().empty()) {
+  if (!UDE) {
     // We don't have this directory yet, add it.  We use the string
     // key from the SeenDirEntries map as the string.
-    UDE.Name  = InterndDirName;
+    UDE = new (DirsAlloc.Allocate()) DirectoryEntry();
+    UDE->Name = InterndDirName;
   }
+  NamedDirEnt.second = *UDE;
 
   return DirectoryEntryRef(NamedDirEnt);
 }
@@ -268,7 +269,10 @@ FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
 
   // It exists.  See if we have already opened a file with the same inode.
   // This occurs when one dir is symlinked to another, for example.
-  FileEntry &UFE = UniqueRealFiles[Status.getUniqueID()];
+  FileEntry *&UFE = UniqueRealFiles[Status.getUniqueID()];
+  bool ReusingEntry = UFE != nullptr;
+  if (!UFE)
+    UFE = new (FilesAlloc.Allocate()) FileEntry();
 
   // FIXME: This should just check `!Status.ExposesExternalVFSPath`, but the
   // else branch also ends up fixing up relative paths to be the actually
@@ -276,7 +280,7 @@ FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
   // be relied on in some clients.
   if (Status.getName() == Filename) {
     // The name matches. Set the FileEntry.
-    NamedFileEnt->second = FileEntryRef::MapValue(UFE, DirInfo);
+    NamedFileEnt->second = FileEntryRef::MapValue(*UFE, DirInfo);
   } else {
     // We need a redirect. First grab the actual entry we want to return.
     //
@@ -295,11 +299,11 @@ FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
     // API.
     auto &Redirection =
         *SeenFileEntries
-             .insert({Status.getName(), FileEntryRef::MapValue(UFE, DirInfo)})
+             .insert({Status.getName(), FileEntryRef::MapValue(*UFE, DirInfo)})
              .first;
     assert(Redirection.second->V.is<FileEntry *>() &&
            "filename redirected to a non-canonical filename?");
-    assert(Redirection.second->V.get<FileEntry *>() == &UFE &&
+    assert(Redirection.second->V.get<FileEntry *>() == UFE &&
            "filename from getStatValue() refers to wrong file");
 
     // Cache the redirection in the previously-inserted entry, still available
@@ -311,7 +315,7 @@ FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
   }
 
   FileEntryRef ReturnedRef(*NamedFileEnt);
-  if (UFE.isValid()) { // Already have an entry with this inode, return it.
+  if (ReusingEntry) { // Already have an entry with this inode, return it.
 
     // FIXME: This hack ensures that `getDir()` will use the path that was
     // used to lookup this file, even if we found a file by different path
@@ -322,8 +326,8 @@ FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
     // *and* the redirection hack above is removed. The removal of the latter
     // is required since otherwise the ref will have the exposed external VFS
     // path still.
-    if (&DirInfo.getDirEntry() != UFE.Dir && Status.ExposesExternalVFSPath)
-      UFE.Dir = &DirInfo.getDirEntry();
+    if (&DirInfo.getDirEntry() != UFE->Dir && Status.ExposesExternalVFSPath)
+      UFE->Dir = &DirInfo.getDirEntry();
 
     // Always update LastRef to the last name by which a file was accessed.
     // FIXME: Neither this nor always using the first reference is correct; we
@@ -332,28 +336,28 @@ FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
     // corresponding FileEntry.
     // FIXME: LastRef should be removed from FileEntry once all clients adopt
     // FileEntryRef.
-    UFE.LastRef = ReturnedRef;
+    UFE->LastRef = ReturnedRef;
 
     return ReturnedRef;
   }
 
   // Otherwise, we don't have this file yet, add it.
-  UFE.LastRef = ReturnedRef;
-  UFE.Size    = Status.getSize();
-  UFE.ModTime = llvm::sys::toTimeT(Status.getLastModificationTime());
-  UFE.Dir     = &DirInfo.getDirEntry();
-  UFE.UID     = NextFileUID++;
-  UFE.UniqueID = Status.getUniqueID();
-  UFE.IsNamedPipe = Status.getType() == llvm::sys::fs::file_type::fifo_file;
-  UFE.File = std::move(F);
-  UFE.IsValid = true;
+  UFE->LastRef = ReturnedRef;
+  UFE->Size = Status.getSize();
+  UFE->ModTime = llvm::sys::toTimeT(Status.getLastModificationTime());
+  UFE->Dir = &DirInfo.getDirEntry();
+  UFE->UID = NextFileUID++;
+  UFE->UniqueID = Status.getUniqueID();
+  UFE->IsNamedPipe = Status.getType() == llvm::sys::fs::file_type::fifo_file;
+  UFE->File = std::move(F);
+  UFE->IsValid = true;
 
-  if (UFE.File) {
-    if (auto PathName = UFE.File->getName())
-      fillRealPathName(&UFE, *PathName);
+  if (UFE->File) {
+    if (auto PathName = UFE->File->getName())
+      fillRealPathName(UFE, *PathName);
   } else if (!openFile) {
     // We should still fill the path even if we aren't opening the file.
-    fillRealPathName(&UFE, InterndFileName);
+    fillRealPathName(UFE, InterndFileName);
   }
   return ReturnedRef;
 }
@@ -417,37 +421,41 @@ FileEntryRef FileManager::getVirtualFileRef(StringRef Filename, off_t Size,
   llvm::vfs::Status Status;
   const char *InterndFileName = NamedFileEnt.first().data();
   if (!getStatValue(InterndFileName, Status, true, nullptr)) {
-    UFE = &UniqueRealFiles[Status.getUniqueID()];
     Status = llvm::vfs::Status(
       Status.getName(), Status.getUniqueID(),
       llvm::sys::toTimePoint(ModificationTime),
       Status.getUser(), Status.getGroup(), Size,
       Status.getType(), Status.getPermissions());
 
-    NamedFileEnt.second = FileEntryRef::MapValue(*UFE, *DirInfo);
-
-    // If we had already opened this file, close it now so we don't
-    // leak the descriptor. We're not going to use the file
-    // descriptor anyway, since this is a virtual file.
-    if (UFE->File)
-      UFE->closeFile();
-
-    // If we already have an entry with this inode, return it.
-    //
-    // FIXME: Surely this should add a reference by the new name, and return
-    // it instead...
-    if (UFE->isValid())
+    auto &RealFE = UniqueRealFiles[Status.getUniqueID()];
+    if (RealFE) {
+      // If we had already opened this file, close it now so we don't
+      // leak the descriptor. We're not going to use the file
+      // descriptor anyway, since this is a virtual file.
+      if (RealFE->File)
+        RealFE->closeFile();
+      // If we already have an entry with this inode, return it.
+      //
+      // FIXME: Surely this should add a reference by the new name, and return
+      // it instead...
+      NamedFileEnt.second = FileEntryRef::MapValue(*RealFE, *DirInfo);
       return FileEntryRef(NamedFileEnt);
+    }
+    // File exists, but no entry - create it.
+    RealFE = new (FilesAlloc.Allocate()) FileEntry();
+    RealFE->UniqueID = Status.getUniqueID();
+    RealFE->IsNamedPipe =
+        Status.getType() == llvm::sys::fs::file_type::fifo_file;
+    fillRealPathName(RealFE, Status.getName());
 
-    UFE->UniqueID = Status.getUniqueID();
-    UFE->IsNamedPipe = Status.getType() == llvm::sys::fs::file_type::fifo_file;
-    fillRealPathName(UFE, Status.getName());
+    UFE = RealFE;
   } else {
-    VirtualFileEntries.push_back(std::make_unique<FileEntry>());
-    UFE = VirtualFileEntries.back().get();
-    NamedFileEnt.second = FileEntryRef::MapValue(*UFE, *DirInfo);
+    // File does not exist, create a virtual entry.
+    UFE = new (FilesAlloc.Allocate()) FileEntry();
+    VirtualFileEntries.push_back(UFE);
   }
 
+  NamedFileEnt.second = FileEntryRef::MapValue(*UFE, *DirInfo);
   UFE->LastRef = FileEntryRef(NamedFileEnt);
   UFE->Size    = Size;
   UFE->ModTime = ModificationTime;
@@ -475,16 +483,15 @@ llvm::Optional<FileEntryRef> FileManager::getBypassFile(FileEntryRef VF) {
     return FileEntryRef(*Insertion.first);
 
   // Fill in the new entry from the stat.
-  BypassFileEntries.push_back(std::make_unique<FileEntry>());
-  const FileEntry &VFE = VF.getFileEntry();
-  FileEntry &BFE = *BypassFileEntries.back();
-  Insertion.first->second = FileEntryRef::MapValue(BFE, VF.getDir());
-  BFE.LastRef = FileEntryRef(*Insertion.first);
-  BFE.Size = Status.getSize();
-  BFE.Dir = VFE.Dir;
-  BFE.ModTime = llvm::sys::toTimeT(Status.getLastModificationTime());
-  BFE.UID = NextFileUID++;
-  BFE.IsValid = true;
+  FileEntry *BFE = new (FilesAlloc.Allocate()) FileEntry();
+  BypassFileEntries.push_back(BFE);
+  Insertion.first->second = FileEntryRef::MapValue(*BFE, VF.getDir());
+  BFE->LastRef = FileEntryRef(*Insertion.first);
+  BFE->Size = Status.getSize();
+  BFE->Dir = VF.getFileEntry().Dir;
+  BFE->ModTime = llvm::sys::toTimeT(Status.getLastModificationTime());
+  BFE->UID = NextFileUID++;
+  BFE->IsValid = true;
 
   // Save the entry in the bypass table and return.
   return FileEntryRef(*Insertion.first);
@@ -601,7 +608,7 @@ FileManager::getNoncachedStatValue(StringRef Path,
 }
 
 void FileManager::GetUniqueIDMapping(
-                   SmallVectorImpl<const FileEntry *> &UIDToFiles) const {
+    SmallVectorImpl<const FileEntry *> &UIDToFiles) const {
   UIDToFiles.clear();
   UIDToFiles.resize(NextFileUID);
 
@@ -618,7 +625,7 @@ void FileManager::GetUniqueIDMapping(
 
   // Map virtual file entries
   for (const auto &VFE : VirtualFileEntries)
-    UIDToFiles[VFE->getUID()] = VFE.get();
+    UIDToFiles[VFE->getUID()] = VFE;
 }
 
 StringRef FileManager::getCanonicalName(const DirectoryEntry *Dir) {
