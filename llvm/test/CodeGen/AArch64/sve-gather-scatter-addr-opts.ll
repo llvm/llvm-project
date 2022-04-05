@@ -343,12 +343,13 @@ define <vscale x 2 x i64> @masked_gather_nxv2i64_const_with_vec_offsets(<vscale 
   ret <vscale x 2 x i64> %data
 }
 
-; TODO: The generated code is wrong because we've lost the scaling applied to
-; %scalar_offset when it's used to calculate %ptrs.
 define <vscale x 2 x i64> @masked_gather_nxv2i64_null_with_vec_plus_scalar_offsets(<vscale x 2 x i64> %vector_offsets, i64 %scalar_offset, <vscale x 2 x i1> %pg) #0 {
 ; CHECK-LABEL: masked_gather_nxv2i64_null_with_vec_plus_scalar_offsets:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0, z0.d, lsl #3]
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov z1.d, x0
+; CHECK-NEXT:    add z0.d, z0.d, z1.d
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8, z0.d, lsl #3]
 ; CHECK-NEXT:    ret
   %scalar_offset.ins = insertelement <vscale x 2 x i64> undef, i64 %scalar_offset, i64 0
   %scalar_offset.splat = shufflevector <vscale x 2 x i64> %scalar_offset.ins, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
@@ -358,12 +359,11 @@ define <vscale x 2 x i64> @masked_gather_nxv2i64_null_with_vec_plus_scalar_offse
   ret <vscale x 2 x i64> %data
 }
 
-; TODO: The generated code is wrong because we've lost the scaling applied to
-; constant scalar offset (i.e. i64 1)  when it's used to calculate %ptrs.
 define <vscale x 2 x i64> @masked_gather_nxv2i64_null_with__vec_plus_imm_offsets(<vscale x 2 x i64> %vector_offsets, <vscale x 2 x i1> %pg) #0 {
 ; CHECK-LABEL: masked_gather_nxv2i64_null_with__vec_plus_imm_offsets:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #1
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    add z0.d, z0.d, #1 // =0x1
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8, z0.d, lsl #3]
 ; CHECK-NEXT:    ret
   %scalar_offset.ins = insertelement <vscale x 2 x i64> undef, i64 1, i64 0
@@ -425,12 +425,13 @@ define void @masked_scatter_nxv2i64_const_with_vec_offsets(<vscale x 2 x i64> %v
   ret void
 }
 
-; TODO: The generated code is wrong because we've lost the scaling applied to
-; %scalar_offset when it's used to calculate %ptrs.
 define void @masked_scatter_nxv2i64_null_with_vec_plus_scalar_offsets(<vscale x 2 x i64> %vector_offsets, i64 %scalar_offset, <vscale x 2 x i1> %pg, <vscale x 2 x i64> %data) #0 {
 ; CHECK-LABEL: masked_scatter_nxv2i64_null_with_vec_plus_scalar_offsets:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    st1d { z1.d }, p0, [x0, z0.d, lsl #3]
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov z2.d, x0
+; CHECK-NEXT:    add z0.d, z0.d, z2.d
+; CHECK-NEXT:    st1d { z1.d }, p0, [x8, z0.d, lsl #3]
 ; CHECK-NEXT:    ret
   %scalar_offset.ins = insertelement <vscale x 2 x i64> undef, i64 %scalar_offset, i64 0
   %scalar_offset.splat = shufflevector <vscale x 2 x i64> %scalar_offset.ins, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
@@ -440,12 +441,11 @@ define void @masked_scatter_nxv2i64_null_with_vec_plus_scalar_offsets(<vscale x 
   ret void
 }
 
-; TODO: The generated code is wrong because we've lost the scaling applied to
-; constant scalar offset (i.e. i64 1)  when it's used to calculate %ptrs.
 define void @masked_scatter_nxv2i64_null_with__vec_plus_imm_offsets(<vscale x 2 x i64> %vector_offsets, <vscale x 2 x i1> %pg, <vscale x 2 x i64> %data) #0 {
 ; CHECK-LABEL: masked_scatter_nxv2i64_null_with__vec_plus_imm_offsets:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #1
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    add z0.d, z0.d, #1 // =0x1
 ; CHECK-NEXT:    st1d { z1.d }, p0, [x8, z0.d, lsl #3]
 ; CHECK-NEXT:    ret
   %scalar_offset.ins = insertelement <vscale x 2 x i64> undef, i64 1, i64 0
