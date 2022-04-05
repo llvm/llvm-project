@@ -18,23 +18,18 @@ using namespace mlir;
 Optional<SmallVector<ReassociationIndices>>
 mlir::getReassociationIndicesForReshape(ShapedType sourceType,
                                         ShapedType targetType) {
-  if (sourceType.getRank() > targetType.getRank())
-    return getReassociationIndicesForCollapse(sourceType.getShape(),
-                                              targetType.getShape());
-  if (sourceType.getRank() < targetType.getRank())
-    return getReassociationIndicesForCollapse(targetType.getShape(),
-                                              sourceType.getShape());
-  return llvm::None;
-}
-
-Optional<SmallVector<ReassociationIndices>>
-mlir::getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
-                                         ArrayRef<int64_t> targetShape) {
-  if (sourceShape.size() <= targetShape.size())
+  // Make the sourceType greater rank than the targetType. If they are same
+  // rank, then its an unsupported reshape op.
+  if (sourceType.getRank() == targetType.getRank())
     return llvm::None;
+  if (sourceType.getRank() < targetType.getRank())
+    std::swap(sourceType, targetType);
+
+  ArrayRef<int64_t> sourceShape = sourceType.getShape();
+  ArrayRef<int64_t> targetShape = targetType.getShape();
   unsigned sourceDim = 0;
   SmallVector<ReassociationIndices> reassociationMap;
-  reassociationMap.reserve(targetShape.size());
+  reassociationMap.reserve(targetType.getRank());
 
   ReassociationIndices currIndices;
   int64_t prodOfCollapsedDims = 1;
@@ -42,7 +37,7 @@ mlir::getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
     unsigned targetDim = reassociationMap.size();
     // If we have mapped all the target dimensions stop and handle the remaining
     // tail of size-1 dimensions explictly.
-    if (targetDim == targetShape.size())
+    if (targetDim == targetType.getRank())
       break;
 
     int64_t currTargetShape = targetShape[targetDim];
@@ -192,7 +187,6 @@ mlir::getSymbolLessAffineMaps(ArrayRef<ReassociationExprs> reassociation) {
   }
   return maps;
 }
-
 bool mlir::isReassociationValid(ArrayRef<AffineMap> reassociation,
                                 int *invalidIndex) {
   if (reassociation.empty())
@@ -263,10 +257,4 @@ LogicalResult mlir::reshapeLikeShapesAreCompatible(
     expandedDimStart += map.value().size();
   }
   return success();
-}
-
-bool mlir::hasNonIdentityLayout(Type type) {
-  if (auto memrefType = type.dyn_cast<MemRefType>())
-    return !memrefType.getLayout().isIdentity();
-  return false;
 }
