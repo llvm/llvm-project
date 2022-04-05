@@ -466,50 +466,36 @@ def load_local_m0 : PatFrag<(ops node:$ptr), (load_glue node:$ptr)> {
   let IsNonExtLoad = 1;
 }
 
-let MemoryVT = i8 in {
 def extloadi8_local_m0 : PatFrag<(ops node:$ptr), (extloadi8_glue node:$ptr)>;
 def sextloadi8_local_m0 : PatFrag<(ops node:$ptr), (sextloadi8_glue node:$ptr)>;
 def zextloadi8_local_m0 : PatFrag<(ops node:$ptr), (zextloadi8_glue node:$ptr)>;
-}
 
-let MemoryVT = i16 in {
 def extloadi16_local_m0 : PatFrag<(ops node:$ptr), (extloadi16_glue node:$ptr)>;
 def sextloadi16_local_m0 : PatFrag<(ops node:$ptr), (sextloadi16_glue node:$ptr)>;
 def zextloadi16_local_m0 : PatFrag<(ops node:$ptr), (zextloadi16_glue node:$ptr)>;
-}
+} // End IsLoad = 1, , AddressSpaces = LoadAddress_local.AddrSpaces
 
 def load_align8_local_m0 : PatFrag<(ops node:$ptr),
-                                   (load_local_m0 node:$ptr)>, Aligned<8> {
+                                   (load_local_m0 node:$ptr)> {
   let IsLoad = 1;
-  let IsNonExtLoad = 1;
+  int MinAlignment = 8;
 }
 
 def load_align16_local_m0 : PatFrag<(ops node:$ptr),
-                                   (load_local_m0 node:$ptr)>, Aligned<16> {
+                                   (load_local_m0 node:$ptr)> {
   let IsLoad = 1;
-  let IsNonExtLoad = 1;
+  int MinAlignment = 16;
 }
-
-} // End IsLoad = 1
 
 let IsAtomic = 1, AddressSpaces = LoadAddress_local.AddrSpaces in {
 def atomic_load_8_local_m0 : PatFrag<(ops node:$ptr),
-                                      (atomic_load_8_glue node:$ptr)> {
-  let MemoryVT = i8;
-}
+                                      (atomic_load_8_glue node:$ptr)>;
 def atomic_load_16_local_m0 : PatFrag<(ops node:$ptr),
-                                      (atomic_load_16_glue node:$ptr)> {
-  let MemoryVT = i16;
-}
+                                      (atomic_load_16_glue node:$ptr)>;
 def atomic_load_32_local_m0 : PatFrag<(ops node:$ptr),
-                                      (atomic_load_32_glue node:$ptr)> {
-  let MemoryVT = i32;
-}
+                                      (atomic_load_32_glue node:$ptr)>;
 def atomic_load_64_local_m0 : PatFrag<(ops node:$ptr),
-                                       (atomic_load_64_glue node:$ptr)> {
-  let MemoryVT = i64;
-}
-
+                                       (atomic_load_64_glue node:$ptr)>;
 } // End let AddressSpaces = LoadAddress_local.AddrSpaces
 
 
@@ -543,46 +529,35 @@ def truncstorei8_glue : PatFrag<(ops node:$val, node:$ptr),
                            (truncstore_glue node:$val, node:$ptr)> {
   let IsStore = 1;
   let MemoryVT = i8;
+  let IsTruncStore = 1;
 }
 
 def truncstorei16_glue : PatFrag<(ops node:$val, node:$ptr),
                            (truncstore_glue node:$val, node:$ptr)> {
   let IsStore = 1;
   let MemoryVT = i16;
+  let IsTruncStore = 1;
 }
 
 let IsStore = 1, AddressSpaces = StoreAddress_local.AddrSpaces in {
 def store_local_m0 : PatFrag<(ops node:$val, node:$ptr),
-                             (store_glue node:$val, node:$ptr)> {
-  let IsStore = 1;
-  let IsTruncStore = 0;
-}
-
+                             (store_glue node:$val, node:$ptr)>;
 def truncstorei8_local_m0 : PatFrag<(ops node:$val, node:$ptr),
-                                    (unindexedstore_glue node:$val, node:$ptr)> {
-  let IsStore = 1;
-  let MemoryVT = i8;
-}
-
+                                    (truncstorei8_glue node:$val, node:$ptr)>;
 def truncstorei16_local_m0 : PatFrag<(ops node:$val, node:$ptr),
-                                    (unindexedstore_glue node:$val, node:$ptr)> {
-  let IsStore = 1;
-  let MemoryVT = i16;
-}
+                                    (truncstorei16_glue node:$val, node:$ptr)>;
 }
 
 def store_align8_local_m0 : PatFrag <(ops node:$value, node:$ptr),
                                      (store_local_m0 node:$value, node:$ptr)>,
                             Aligned<8> {
   let IsStore = 1;
-  let IsTruncStore = 0;
 }
 
 def store_align16_local_m0 : PatFrag <(ops node:$value, node:$ptr),
                                      (store_local_m0 node:$value, node:$ptr)>,
                             Aligned<16> {
   let IsStore = 1;
-  let IsTruncStore = 0;
 }
 
 let PredicateCode = [{return cast<MemSDNode>(N)->getAlignment() < 4;}],
@@ -613,33 +588,44 @@ def store_align_less_than_4_local_m0 : PatFrag <(ops node:$value, node:$ptr),
 }
 }
 
-let AddressSpaces = StoreAddress_local.AddrSpaces in {
-
-def atomic_store_local_8_m0 : PatFrag <
-  (ops node:$value, node:$ptr),
-  (AMDGPUatomic_st_glue node:$value, node:$ptr)> {
+def atomic_store_8_glue : PatFrag <
+  (ops node:$ptr, node:$value),
+  (AMDGPUatomic_st_glue node:$ptr, node:$value)> {
   let IsAtomic = 1;
   let MemoryVT = i8;
 }
-def atomic_store_local_16_m0 : PatFrag <
-  (ops node:$value, node:$ptr),
-  (AMDGPUatomic_st_glue node:$value, node:$ptr)> {
+
+def atomic_store_16_glue : PatFrag <
+  (ops node:$ptr, node:$value),
+  (AMDGPUatomic_st_glue node:$ptr, node:$value)> {
   let IsAtomic = 1;
   let MemoryVT = i16;
 }
-def atomic_store_local_32_m0 : PatFrag <
-  (ops node:$value, node:$ptr),
-  (AMDGPUatomic_st_glue node:$value, node:$ptr)> {
+
+def atomic_store_32_glue : PatFrag <
+  (ops node:$ptr, node:$value),
+  (AMDGPUatomic_st_glue node:$ptr, node:$value)> {
   let IsAtomic = 1;
   let MemoryVT = i32;
 }
-def atomic_store_local_64_m0 : PatFrag <
-  (ops node:$value, node:$ptr),
-  (AMDGPUatomic_st_glue node:$value, node:$ptr)> {
+
+def atomic_store_64_glue : PatFrag <
+  (ops node:$ptr, node:$value),
+  (AMDGPUatomic_st_glue node:$ptr, node:$value)> {
   let IsAtomic = 1;
   let MemoryVT = i64;
 }
-} // End let AddressSpaces = StoreAddress_local.AddrSpaces
+
+let IsAtomic = 1, AddressSpaces = StoreAddress_local.AddrSpaces in {
+def atomic_store_8_local_m0 : PatFrag<(ops node:$ptr, node:$val),
+                                       (atomic_store_8_glue node:$ptr, node:$val)>;
+def atomic_store_16_local_m0 : PatFrag<(ops node:$ptr, node:$val),
+                                       (atomic_store_16_glue node:$ptr, node:$val)>;
+def atomic_store_32_local_m0 : PatFrag<(ops node:$ptr, node:$val),
+                                       (atomic_store_32_glue node:$ptr, node:$val)>;
+def atomic_store_64_local_m0 : PatFrag<(ops node:$ptr, node:$val),
+                                       (atomic_store_64_glue node:$ptr, node:$val)>;
+} // End let IsAtomic = 1, AddressSpaces = StoreAddress_local.AddrSpaces
 
 
 def si_setcc_uniform : PatFrag <
