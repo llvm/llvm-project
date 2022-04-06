@@ -1026,6 +1026,7 @@ const char *Breakpoint::BreakpointEventTypeAsCString(BreakpointEventType type) {
     case eBreakpointEventTypeThreadChanged: return "thread changed";
     case eBreakpointEventTypeAutoContinueChanged: return "autocontinue changed";
   };
+  llvm_unreachable("Fully covered switch above!");
 }
 
 Log *Breakpoint::BreakpointEventData::GetLogChannel() {

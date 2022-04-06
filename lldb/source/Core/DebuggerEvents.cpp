@@ -52,6 +52,7 @@ llvm::StringRef DiagnosticEventData::GetPrefix() const {
   case Type::Error:
     return "error";
   }
+  llvm_unreachable("Fully covered switch above!");
 }
 
 void DiagnosticEventData::Dump(Stream *s) const {
