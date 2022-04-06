@@ -667,9 +667,26 @@ protected:
     } saveInfo;
   } specPartState_;
 
+  // Some declaration processing can and should be deferred to
+  // ResolveExecutionParts() to avoid prematurely creating implicitly-typed
+  // local symbols that should be host associations.
+  struct DeferredDeclarationState {
+    // The content of each namelist group
+    std::list<const parser::NamelistStmt::Group *> namelistGroups;
+  };
+  DeferredDeclarationState *GetDeferredDeclarationState(bool add = false) {
+    if (!add && deferred_.find(&currScope()) == deferred_.end()) {
+      return nullptr;
+    } else {
+      return &deferred_.emplace(&currScope(), DeferredDeclarationState{})
+                  .first->second;
+    }
+  }
+
 private:
   Scope *currScope_{nullptr};
   FuncResultStack funcResultStack_{*this};
+  std::map<Scope *, DeferredDeclarationState> deferred_;
 };
 
 class ModuleVisitor : public virtual ScopeHandler {
@@ -960,6 +977,7 @@ protected:
   void CheckEquivalenceSets();
   bool CheckNotInBlock(const char *);
   bool NameIsKnownOrIntrinsic(const parser::Name &);
+  void FinishNamelists();
 
   // Each of these returns a pointer to a resolved Name (i.e. with symbol)
   // or nullptr in case of error.
@@ -4986,28 +5004,39 @@ bool DeclarationVisitor::Pre(const parser::NamelistStmt::Group &x) {
   if (!CheckNotInBlock("NAMELIST")) { // C1107
     return false;
   }
-
-  NamelistDetails details;
-  for (const auto &name : std::get<std::list<parser::Name>>(x.t)) {
-    auto *symbol{FindSymbol(name)};
-    if (!symbol) {
-      symbol = &MakeSymbol(name, ObjectEntityDetails{});
-      ApplyImplicitRules(*symbol);
-    } else if (!ConvertToObjectEntity(*symbol)) {
-      SayWithDecl(name, *symbol, "'%s' is not a variable"_err_en_US);
-    }
-    symbol->GetUltimate().set(Symbol::Flag::InNamelist);
-    details.add_object(*symbol);
-  }
-
   const auto &groupName{std::get<parser::Name>(x.t)};
   auto *groupSymbol{FindInScope(groupName)};
   if (!groupSymbol || !groupSymbol->has<NamelistDetails>()) {
-    groupSymbol = &MakeSymbol(groupName, std::move(details));
+    groupSymbol = &MakeSymbol(groupName, NamelistDetails{});
     groupSymbol->ReplaceName(groupName.source);
   }
-  groupSymbol->get<NamelistDetails>().add_objects(details.objects());
+  // Name resolution of group items is deferred to FinishNamelists()
+  // so that host association is handled correctly.
+  GetDeferredDeclarationState(true)->namelistGroups.emplace_back(&x);
   return false;
+}
+
+void DeclarationVisitor::FinishNamelists() {
+  if (auto *deferred{GetDeferredDeclarationState()}) {
+    for (const parser::NamelistStmt::Group *group : deferred->namelistGroups) {
+      if (auto *groupSymbol{FindInScope(std::get<parser::Name>(group->t))}) {
+        if (auto *details{groupSymbol->detailsIf<NamelistDetails>()}) {
+          for (const auto &name : std::get<std::list<parser::Name>>(group->t)) {
+            auto *symbol{FindSymbol(name)};
+            if (!symbol) {
+              symbol = &MakeSymbol(name, ObjectEntityDetails{});
+              ApplyImplicitRules(*symbol);
+            } else if (!ConvertToObjectEntity(*symbol)) {
+              SayWithDecl(name, *symbol, "'%s' is not a variable"_err_en_US);
+            }
+            symbol->GetUltimate().set(Symbol::Flag::InNamelist);
+            details->add_object(*symbol);
+          }
+        }
+      }
+    }
+    deferred->namelistGroups.clear();
+  }
 }
 
 bool DeclarationVisitor::Pre(const parser::IoControlSpec &x) {
@@ -7447,6 +7476,7 @@ void ResolveNamesVisitor::ResolveExecutionParts(const ProgramTree &node) {
   if (const auto *exec{node.exec()}) {
     Walk(*exec);
   }
+  FinishNamelists();
   PopScope(); // converts unclassified entities into objects
   for (const auto &child : node.children()) {
     ResolveExecutionParts(child);
