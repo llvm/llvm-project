@@ -367,7 +367,7 @@ Status NativeRegisterContextWindows_WoW64::WriteRegister(
 }
 
 Status NativeRegisterContextWindows_WoW64::ReadAllRegisterValues(
-    lldb::DataBufferSP &data_sp) {
+    lldb::WritableDataBufferSP &data_sp) {
   const size_t data_size = REG_CONTEXT_SIZE;
   data_sp = std::make_shared<DataBufferHeap>(data_size, 0);
   ::WOW64_CONTEXT tls_context;

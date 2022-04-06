@@ -100,7 +100,7 @@ ComputationSliceState::getAsConstraints(FlatAffineValueConstraints *cst) {
     if (isValidSymbol(value)) {
       // Check if the symbol is a constant.
       if (auto cOp = value.getDefiningOp<arith::ConstantIndexOp>())
-        cst->addBound(FlatAffineConstraints::EQ, value, cOp.value());
+        cst->addBound(FlatAffineValueConstraints::EQ, value, cOp.value());
     } else if (auto loop = getForInductionVarOwner(value)) {
       if (failed(cst->addAffineForOpDomain(loop)))
         return failure();
@@ -357,13 +357,13 @@ Optional<int64_t> MemRefRegion::getConstantBoundingSizeAndShape(
   // over-approximation from projection or union bounding box. We may not add
   // this on the region itself since they might just be redundant constraints
   // that will need non-trivials means to eliminate.
-  FlatAffineConstraints cstWithShapeBounds(cst);
+  FlatAffineValueConstraints cstWithShapeBounds(cst);
   for (unsigned r = 0; r < rank; r++) {
-    cstWithShapeBounds.addBound(FlatAffineConstraints::LB, r, 0);
+    cstWithShapeBounds.addBound(FlatAffineValueConstraints::LB, r, 0);
     int64_t dimSize = memRefType.getDimSize(r);
     if (ShapedType::isDynamic(dimSize))
       continue;
-    cstWithShapeBounds.addBound(FlatAffineConstraints::UB, r, dimSize - 1);
+    cstWithShapeBounds.addBound(FlatAffineValueConstraints::UB, r, dimSize - 1);
   }
 
   // Find a constant upper bound on the extent of this memref region along each
@@ -440,7 +440,7 @@ LogicalResult MemRefRegion::unionBoundingBox(const MemRefRegion &other) {
 //    }
 //
 // region:  {memref = %A, write = false, {%i <= m0 <= %i + 7} }
-// The last field is a 2-d FlatAffineConstraints symbolic in %i.
+// The last field is a 2-d FlatAffineValueConstraints symbolic in %i.
 //
 // TODO: extend this to any other memref dereferencing ops
 // (dma_start, dma_wait).
@@ -520,7 +520,7 @@ LogicalResult MemRefRegion::compute(Operation *op, unsigned loopDepth,
       // Check if the symbol is a constant.
       if (auto *op = symbol.getDefiningOp()) {
         if (auto constOp = dyn_cast<arith::ConstantIndexOp>(op)) {
-          cst.addBound(FlatAffineConstraints::EQ, symbol, constOp.value());
+          cst.addBound(FlatAffineValueConstraints::EQ, symbol, constOp.value());
         }
       }
     }
@@ -585,10 +585,10 @@ LogicalResult MemRefRegion::compute(Operation *op, unsigned loopDepth,
   if (addMemRefDimBounds) {
     auto memRefType = memref.getType().cast<MemRefType>();
     for (unsigned r = 0; r < rank; r++) {
-      cst.addBound(FlatAffineConstraints::LB, /*pos=*/r, /*value=*/0);
+      cst.addBound(FlatAffineValueConstraints::LB, /*pos=*/r, /*value=*/0);
       if (memRefType.isDynamicDim(r))
         continue;
-      cst.addBound(FlatAffineConstraints::UB, /*pos=*/r,
+      cst.addBound(FlatAffineValueConstraints::UB, /*pos=*/r,
                    memRefType.getDimSize(r) - 1);
     }
   }
@@ -677,7 +677,7 @@ LogicalResult mlir::boundCheckLoadOrStoreOp(LoadOrStoreOp loadOrStoreOp,
 
   // For each dimension, check for out of bounds.
   for (unsigned r = 0; r < rank; r++) {
-    FlatAffineConstraints ucst(*region.getConstraints());
+    FlatAffineValueConstraints ucst(*region.getConstraints());
 
     // Intersect memory region with constraint capturing out of bounds (both out
     // of upper and out of lower), and check if the constraint system is
@@ -689,7 +689,7 @@ LogicalResult mlir::boundCheckLoadOrStoreOp(LoadOrStoreOp loadOrStoreOp,
       continue;
 
     // Check for overflow: d_i >= memref dim size.
-    ucst.addBound(FlatAffineConstraints::LB, r, dimSize);
+    ucst.addBound(FlatAffineValueConstraints::LB, r, dimSize);
     outOfBounds = !ucst.isEmpty();
     if (outOfBounds && emitError) {
       loadOrStoreOp.emitOpError()
@@ -697,10 +697,10 @@ LogicalResult mlir::boundCheckLoadOrStoreOp(LoadOrStoreOp loadOrStoreOp,
     }
 
     // Check for a negative index.
-    FlatAffineConstraints lcst(*region.getConstraints());
+    FlatAffineValueConstraints lcst(*region.getConstraints());
     std::fill(ineq.begin(), ineq.end(), 0);
     // d_i <= -1;
-    lcst.addBound(FlatAffineConstraints::UB, r, -1);
+    lcst.addBound(FlatAffineValueConstraints::UB, r, -1);
     outOfBounds = !lcst.isEmpty();
     if (outOfBounds && emitError) {
       loadOrStoreOp.emitOpError()
@@ -1356,7 +1356,7 @@ void mlir::getSequentialLoops(AffineForOp forOp,
 }
 
 IntegerSet mlir::simplifyIntegerSet(IntegerSet set) {
-  FlatAffineConstraints fac(set);
+  FlatAffineValueConstraints fac(set);
   if (fac.isEmpty())
     return IntegerSet::getEmptySet(set.getNumDims(), set.getNumSymbols(),
                                    set.getContext());

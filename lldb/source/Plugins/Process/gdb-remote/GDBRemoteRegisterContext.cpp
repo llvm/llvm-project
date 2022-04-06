@@ -517,7 +517,7 @@ bool GDBRemoteRegisterContext::WriteAllRegisterValues(
 }
 
 bool GDBRemoteRegisterContext::ReadAllRegisterValues(
-    lldb::DataBufferSP &data_sp) {
+    lldb::WritableDataBufferSP &data_sp) {
   ExecutionContext exe_ctx(CalculateThread());
 
   Process *process = exe_ctx.GetProcessPtr();
@@ -536,9 +536,13 @@ bool GDBRemoteRegisterContext::ReadAllRegisterValues(
     if (gdb_comm.SyncThreadState(m_thread.GetProtocolID()))
       InvalidateAllRegisters();
 
-    if (use_g_packet &&
-        (data_sp = gdb_comm.ReadAllRegisters(m_thread.GetProtocolID())))
-      return true;
+    if (use_g_packet) {
+      if (DataBufferSP data_buffer =
+              gdb_comm.ReadAllRegisters(m_thread.GetProtocolID())) {
+        data_sp = std::make_shared<DataBufferHeap>(*data_buffer);
+        return true;
+      }
+    }
 
     // We're going to read each register
     // individually and store them as binary data in a buffer.

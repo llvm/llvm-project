@@ -60,7 +60,6 @@ write_lit_config("lit_site_cfg") {
     "CMAKE_CXX_COMPILER=c++",
     "CMAKE_C_COMPILER=cc",
     "ENABLE_BACKTRACES=1",
-    "LLVM_ENABLE_NEW_PASS_MANAGER=1",
     "LLVM_EXTERNAL_LIT=",
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
     "LLVM_LIT_TOOLS_DIR=",  # Intentionally empty, matches cmake build.

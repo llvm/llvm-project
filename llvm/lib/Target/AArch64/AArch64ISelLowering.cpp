@@ -14551,15 +14551,15 @@ performLastTrueTestVectorCombine(SDNode *N,
   if (!Subtarget->hasSVE() || DCI.isBeforeLegalize())
     return SDValue();
 
-  SDValue SetCC = N->getOperand(0);
-  EVT OpVT = SetCC.getValueType();
+  SDValue N0 = N->getOperand(0);
+  EVT OpVT = N0.getValueType();
 
   if (!OpVT.isScalableVector() || OpVT.getVectorElementType() != MVT::i1)
     return SDValue();
 
   // Idx == (add (mul vscale, NumEls), -1)
   SDValue Idx = N->getOperand(1);
-  if (Idx.getOpcode() != ISD::ADD)
+  if (Idx.getOpcode() != ISD::ADD || !isAllOnesConstant(Idx.getOperand(1)))
     return SDValue();
 
   SDValue VS = Idx.getOperand(0);
@@ -14570,16 +14570,10 @@ performLastTrueTestVectorCombine(SDNode *N,
   if (VS.getConstantOperandVal(0) != NumEls)
     return SDValue();
 
-  // Restricted the DAG combine to only cases where we're extracting from a
-  // flag-setting operation
-  auto *CI = dyn_cast<ConstantSDNode>(Idx.getOperand(1));
-  if (!CI || !CI->isAllOnes() || SetCC.getOpcode() != ISD::SETCC)
-    return SDValue();
-
   // Extracts of lane EC-1 for SVE can be expressed as PTEST(Op, LAST) ? 1 : 0
   SelectionDAG &DAG = DCI.DAG;
   SDValue Pg = getPTrue(DAG, SDLoc(N), OpVT, AArch64SVEPredPattern::all);
-  return getPTest(DAG, N->getValueType(0), Pg, SetCC, AArch64CC::LAST_ACTIVE);
+  return getPTest(DAG, N->getValueType(0), Pg, N0, AArch64CC::LAST_ACTIVE);
 }
 
 static SDValue
