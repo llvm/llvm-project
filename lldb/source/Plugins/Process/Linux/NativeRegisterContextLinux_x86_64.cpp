@@ -780,7 +780,7 @@ Status NativeRegisterContextLinux_x86_64::WriteAllRegisterValues(
     return error;
   }
 
-  uint8_t *src = data_sp->GetBytes();
+  const uint8_t *src = data_sp->GetBytes();
   if (src == nullptr) {
     error.SetErrorStringWithFormat("NativeRegisterContextLinux_x86_64::%s "
                                    "DataBuffer::GetBytes() returned a null "
