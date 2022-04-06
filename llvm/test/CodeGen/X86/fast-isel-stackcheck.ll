@@ -8,7 +8,6 @@ target triple = "x86_64-apple-macosx"
 
 ; CHECK-LABEL: foo:
 ; CHECK: movq ___stack_chk_guard@GOTPCREL(%rip), %rax
-; CHECK: movq ___stack_chk_guard@GOTPCREL(%rip), %rax
 define void @foo() #0 {
 entry:
   %_tags = alloca [3 x i32], align 4
