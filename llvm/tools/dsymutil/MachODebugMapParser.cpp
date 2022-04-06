@@ -518,8 +518,9 @@ void MachODebugMapParser::loadCurrentObjectFileSymbols(
     uint64_t Addr = cantFail(Sym.getValue());
     Expected<StringRef> Name = Sym.getName();
     if (!Name) {
-      // TODO: Actually report errors helpfully.
-      consumeError(Name.takeError());
+      auto Err = Name.takeError();
+      Warning("failed to get symbol name: " + toString(std::move(Err)),
+              Obj.getFileName());
       continue;
     }
     // The value of some categories of symbols isn't meaningful. For
@@ -572,8 +573,9 @@ void MachODebugMapParser::loadMainBinarySymbols(
   for (const auto &Sym : MainBinary.symbols()) {
     Expected<SymbolRef::Type> TypeOrErr = Sym.getType();
     if (!TypeOrErr) {
-      // TODO: Actually report errors helpfully.
-      consumeError(TypeOrErr.takeError());
+      auto Err = TypeOrErr.takeError();
+      Warning("failed to get symbol type: " + toString(std::move(Err)),
+              MainBinary.getFileName());
       continue;
     }
     SymbolRef::Type Type = *TypeOrErr;
@@ -592,8 +594,9 @@ void MachODebugMapParser::loadMainBinarySymbols(
     bool Extern = SymType & (MachO::N_EXT | MachO::N_PEXT);
     Expected<section_iterator> SectionOrErr = Sym.getSection();
     if (!SectionOrErr) {
-      // TODO: Actually report errors helpfully.
-      consumeError(SectionOrErr.takeError());
+      auto Err = TypeOrErr.takeError();
+      Warning("failed to get symbol section: " + toString(std::move(Err)),
+              MainBinary.getFileName());
       continue;
     }
     Section = *SectionOrErr;
@@ -602,8 +605,9 @@ void MachODebugMapParser::loadMainBinarySymbols(
     uint64_t Addr = cantFail(Sym.getValue());
     Expected<StringRef> NameOrErr = Sym.getName();
     if (!NameOrErr) {
-      // TODO: Actually report errors helpfully.
-      consumeError(NameOrErr.takeError());
+      auto Err = NameOrErr.takeError();
+      Warning("failed to get symbol name: " + toString(std::move(Err)),
+              MainBinary.getFileName());
       continue;
     }
     StringRef Name = *NameOrErr;
