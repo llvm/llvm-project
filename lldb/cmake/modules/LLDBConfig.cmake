@@ -168,22 +168,27 @@ else ()
 endif ()
 include_directories("${CMAKE_CURRENT_BINARY_DIR}/../clang/include")
 
+# GCC silently accepts any -Wno-<foo> option, but warns about those options
+# being unrecognized only if the compilation triggers other warnings to be
+# printed. Therefore, check for whether the compiler supports options in the
+# form -W<foo>, and if supported, add the corresponding -Wno-<foo> option.
+
 # Disable GCC warnings
-check_cxx_compiler_flag("-Wno-deprecated-declarations" CXX_SUPPORTS_NO_DEPRECATED_DECLARATIONS)
-append_if(CXX_SUPPORTS_NO_DEPRECATED_DECLARATIONS "-Wno-deprecated-declarations" CMAKE_CXX_FLAGS)
+check_cxx_compiler_flag("-Wdeprecated-declarations" CXX_SUPPORTS_DEPRECATED_DECLARATIONS)
+append_if(CXX_SUPPORTS_DEPRECATED_DECLARATIONS "-Wno-deprecated-declarations" CMAKE_CXX_FLAGS)
 
-check_cxx_compiler_flag("-Wno-unknown-pragmas" CXX_SUPPORTS_NO_UNKNOWN_PRAGMAS)
-append_if(CXX_SUPPORTS_NO_UNKNOWN_PRAGMAS "-Wno-unknown-pragmas" CMAKE_CXX_FLAGS)
+check_cxx_compiler_flag("-Wunknown-pragmas" CXX_SUPPORTS_UNKNOWN_PRAGMAS)
+append_if(CXX_SUPPORTS_UNKNOWN_PRAGMAS "-Wno-unknown-pragmas" CMAKE_CXX_FLAGS)
 
-check_cxx_compiler_flag("-Wno-strict-aliasing" CXX_SUPPORTS_NO_STRICT_ALIASING)
-append_if(CXX_SUPPORTS_NO_STRICT_ALIASING "-Wno-strict-aliasing" CMAKE_CXX_FLAGS)
+check_cxx_compiler_flag("-Wstrict-aliasing" CXX_SUPPORTS_STRICT_ALIASING)
+append_if(CXX_SUPPORTS_STRICT_ALIASING "-Wno-strict-aliasing" CMAKE_CXX_FLAGS)
 
 # Disable Clang warnings
-check_cxx_compiler_flag("-Wno-deprecated-register" CXX_SUPPORTS_NO_DEPRECATED_REGISTER)
-append_if(CXX_SUPPORTS_NO_DEPRECATED_REGISTER "-Wno-deprecated-register" CMAKE_CXX_FLAGS)
+check_cxx_compiler_flag("-Wdeprecated-register" CXX_SUPPORTS_DEPRECATED_REGISTER)
+append_if(CXX_SUPPORTS_DEPRECATED_REGISTER "-Wno-deprecated-register" CMAKE_CXX_FLAGS)
 
-check_cxx_compiler_flag("-Wno-vla-extension" CXX_SUPPORTS_NO_VLA_EXTENSION)
-append_if(CXX_SUPPORTS_NO_VLA_EXTENSION "-Wno-vla-extension" CMAKE_CXX_FLAGS)
+check_cxx_compiler_flag("-Wvla-extension" CXX_SUPPORTS_VLA_EXTENSION)
+append_if(CXX_SUPPORTS_VLA_EXTENSION "-Wno-vla-extension" CMAKE_CXX_FLAGS)
 
 # Disable MSVC warnings
 if( MSVC )
