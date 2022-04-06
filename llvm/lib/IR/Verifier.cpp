@@ -4044,8 +4044,8 @@ void Verifier::visitEHPadPredecessors(Instruction &I) {
       // [fix] We allowed.
       /*Assert(!isa<ConstantTokenNone>(FromPad),
              "A single unwind edge may only enter one EH pad", TI);*/
-      Assert(Seen.insert(FromPad).second,
-             "EH pad jumps through a cycle of pads", FromPad);
+      /*Assert(Seen.insert(FromPad).second,
+             "EH pad jumps through a cycle of pads", FromPad);*/
 
       // This will be diagnosed on the corresponding instruction already. We
       // need the extra check here to make sure getParentPad() works.
