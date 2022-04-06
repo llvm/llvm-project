@@ -82,13 +82,14 @@ end
 * `$` and `@` as legal characters in names
 * Initialization in type declaration statements using `/values/`
 * Kind specification with `*`, e.g. `REAL*4`
-* `DOUBLE COMPLEX`
+* `DOUBLE COMPLEX` as a synonym for `COMPLEX(KIND(0.D0))` --
+  but not when spelled `TYPE(DOUBLECOMPLEX)`.
 * Signed complex literal constants
 * DEC `STRUCTURE`, `RECORD`, with '%FILL'; but `UNION`, and `MAP`
   are not yet supported throughout compilation, and elicit a
   "not yet implemented" message.
 * Structure field access with `.field`
-* `BYTE` as synonym for `INTEGER(KIND=1)`
+* `BYTE` as synonym for `INTEGER(KIND=1)`; but not when spelled `TYPE(BYTE)`.
 * Quad precision REAL literals with `Q`
 * `X` prefix/suffix as synonym for `Z` on hexadecimal literals
 * `B`, `O`, `Z`, and `X` accepted as suffixes as well as prefixes

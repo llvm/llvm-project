@@ -168,10 +168,13 @@ TYPE_CONTEXT_PARSER("type spec"_en_US,
 // for TYPE (...), rather than putting the alternatives within it, which
 // would fail on "TYPE(real_derived)" with a misrecognition of "real" as an
 // intrinsic-type-spec.
+// N.B. TYPE(x) is a derived type if x is a one-word extension intrinsic
+// type (BYTE or DOUBLECOMPLEX), not the extension intrinsic type.
 TYPE_CONTEXT_PARSER("declaration type spec"_en_US,
     construct<DeclarationTypeSpec>(intrinsicTypeSpec) ||
         "TYPE" >>
-            (parenthesized(construct<DeclarationTypeSpec>(intrinsicTypeSpec)) ||
+            (parenthesized(construct<DeclarationTypeSpec>(
+                 !"DOUBLECOMPLEX"_tok >> !"BYTE"_tok >> intrinsicTypeSpec)) ||
                 parenthesized(construct<DeclarationTypeSpec>(
                     construct<DeclarationTypeSpec::Type>(derivedTypeSpec))) ||
                 construct<DeclarationTypeSpec>(
@@ -209,7 +212,7 @@ TYPE_CONTEXT_PARSER("intrinsic type spec"_en_US,
             "LOGICAL" >> maybe(kindSelector))),
         extension<LanguageFeature::DoubleComplex>(
             "nonstandard usage: DOUBLE COMPLEX"_port_en_US,
-            construct<IntrinsicTypeSpec>("DOUBLE COMPLEX" >>
+            construct<IntrinsicTypeSpec>("DOUBLE COMPLEX"_sptok >>
                 construct<IntrinsicTypeSpec::DoubleComplex>())),
         extension<LanguageFeature::Byte>("nonstandard usage: BYTE"_port_en_US,
             construct<IntrinsicTypeSpec>(construct<IntegerTypeSpec>(
