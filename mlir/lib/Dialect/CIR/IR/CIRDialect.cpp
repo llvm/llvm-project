@@ -658,10 +658,13 @@ void printSwitchOp(OpAsmPrinter &p, SwitchOp op,
     std::string attrString = caseValueStr.str();
     attrString[0] = attrString[0] + 'a' - 'A';
     caseValueStr = attrString;
-    p << caseValueStr << ", ";
+    p << caseValueStr;
 
     // Case value
-    p.printStrippedAttrOrType(attr.getValue());
+    if (kind != cir::CaseOpKind::Default) {
+      p << ", ";
+      p.printStrippedAttrOrType(attr.getValue());
+    }
 
     p << ") ";
     p.printRegion(r, /*printEntryBLockArgs=*/false,
