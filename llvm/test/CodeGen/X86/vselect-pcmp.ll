@@ -653,7 +653,7 @@ define <2 x i64> @blend_splatmax_mask_cond_v2i64(<2 x i64> %x, <2 x i64> %y, <2 
 ;
 ; AVX512VL-LABEL: blend_splatmax_mask_cond_v2i64:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vptestnmq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k1
+; AVX512VL-NEXT:    vptestnmq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
 ; AVX512VL-NEXT:    vpblendmq %xmm1, %xmm2, %xmm0 {%k1}
 ; AVX512VL-NEXT:    retq
 ;
