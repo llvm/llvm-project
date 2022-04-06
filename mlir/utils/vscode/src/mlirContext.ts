@@ -9,14 +9,13 @@ import * as configWatcher from './configWatcher';
 /**
  *  This class represents the context of a specific workspace folder.
  */
-class WorkspaceFolderContext {
-  constructor(mlirServer: vscodelc.LanguageClient,
-              pdllServer: vscodelc.LanguageClient) {
-    this.mlirServer = mlirServer;
-    this.pdllServer = pdllServer;
+class WorkspaceFolderContext implements vscode.Disposable {
+  dispose() {
+    this.clients.forEach(client => client.stop());
+    this.clients.clear();
   }
-  mlirServer!: vscodelc.LanguageClient;
-  pdllServer!: vscodelc.LanguageClient;
+
+  clients: Map<string, vscodelc.LanguageClient> = new Map();
 }
 
 /**
@@ -25,46 +24,85 @@ class WorkspaceFolderContext {
  */
 export class MLIRContext implements vscode.Disposable {
   subscriptions: vscode.Disposable[] = [];
-  workspaceFolders: WorkspaceFolderContext[] = [];
+  workspaceFolders: Map<string, WorkspaceFolderContext> = new Map();
 
   /**
    *  Activate the MLIR context, and start the language clients.
    */
   async activate(outputChannel: vscode.OutputChannel,
                  warnOnEmptyServerPath: boolean) {
-    // Start clients for each workspace folder.
-    if (vscode.workspace.workspaceFolders &&
-        vscode.workspace.workspaceFolders.length > 0) {
-      for (const workspaceFolder of vscode.workspace.workspaceFolders) {
-        this.workspaceFolders.push(await this.activateWorkspaceFolder(
-            workspaceFolder, outputChannel, warnOnEmptyServerPath));
+    // This lambda is used to lazily start language clients for the given
+    // document. It removes the need to pro-actively start language clients for
+    // every folder within the workspace and every language type we provide.
+    const startClientOnOpenDocument = async (document: vscode.TextDocument) => {
+      if (document.uri.scheme !== 'file') {
+        return;
       }
-    }
-    this.workspaceFolders.push(await this.activateWorkspaceFolder(
-        null, outputChannel, warnOnEmptyServerPath));
+      let serverSettingName: string;
+      if (document.languageId === 'mlir') {
+        serverSettingName = 'server_path';
+      } else if (document.languageId === 'pdll') {
+        serverSettingName = 'pdll_server_path';
+      } else {
+        return;
+      }
+
+      // Resolve the workspace folder if this document is in one. We use the
+      // workspace folder when determining if a server needs to be started.
+      const uri = document.uri;
+      let workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
+      let workspaceFolderStr =
+          workspaceFolder ? workspaceFolder.uri.toString() : "";
+
+      // Get or create a client context for this folder.
+      let folderContext = this.workspaceFolders.get(workspaceFolderStr);
+      if (!folderContext) {
+        folderContext = new WorkspaceFolderContext();
+        this.workspaceFolders.set(workspaceFolderStr, folderContext);
+      }
+      // Start the client for this language if necessary.
+      if (!folderContext.clients.has(document.languageId)) {
+        let client = await this.activateWorkspaceFolder(
+            workspaceFolder, serverSettingName, document.languageId,
+            outputChannel, warnOnEmptyServerPath);
+        folderContext.clients.set(document.languageId, client);
+      }
+    };
+    // Process any existing documents.
+    vscode.workspace.textDocuments.forEach(startClientOnOpenDocument);
+
+    // Watch any new documents to spawn servers when necessary.
+    this.subscriptions.push(
+        vscode.workspace.onDidOpenTextDocument(startClientOnOpenDocument));
+    this.subscriptions.push(
+        vscode.workspace.onDidChangeWorkspaceFolders((event) => {
+          for (const folder of event.removed) {
+            const client = this.workspaceFolders.get(folder.uri.toString());
+            if (client) {
+              client.dispose();
+              this.workspaceFolders.delete(folder.uri.toString());
+            }
+          }
+        }));
   }
 
   /**
-   *  Activate the context for the given workspace folder, and start the
-   *  language clients.
+   *  Activate the language client for the given language in the given workspace
+   *  folder.
    */
   async activateWorkspaceFolder(workspaceFolder: vscode.WorkspaceFolder,
+                                serverSettingName: string, languageName: string,
                                 outputChannel: vscode.OutputChannel,
                                 warnOnEmptyServerPath: boolean):
-      Promise<WorkspaceFolderContext> {
-    // Create the language clients for mlir and pdll.
-    const [mlirServer, mlirServerPath] = await this.startLanguageClient(
-        workspaceFolder, outputChannel, warnOnEmptyServerPath, 'server_path',
-        'mlir');
-    const [pdllServer, pdllServerPath] = await this.startLanguageClient(
+      Promise<vscodelc.LanguageClient> {
+    const [server, serverPath] = await this.startLanguageClient(
         workspaceFolder, outputChannel, warnOnEmptyServerPath,
-        'pdll_server_path', 'pdll');
+        serverSettingName, languageName);
 
     // Watch for configuration changes on this folder.
-    const serverPathsToWatch = [ mlirServerPath, pdllServerPath ];
-    await configWatcher.activate(this, workspaceFolder, serverPathsToWatch);
-
-    return new WorkspaceFolderContext(mlirServer, pdllServer);
+    await configWatcher.activate(this, workspaceFolder, serverSettingName,
+                                 serverPath);
+    return server;
   }
 
   /**
@@ -165,7 +203,7 @@ export class MLIRContext implements vscode.Disposable {
     // Create the language client and start the client.
     let languageClient = new vscodelc.LanguageClient(
         languageName + '-lsp', clientTitle, serverOptions, clientOptions);
-    this.subscriptions.push(languageClient.start());
+    languageClient.start();
     return [ languageClient, serverPath ];
   }
 
@@ -225,6 +263,7 @@ export class MLIRContext implements vscode.Disposable {
   dispose() {
     this.subscriptions.forEach((d) => { d.dispose(); });
     this.subscriptions = [];
-    this.workspaceFolders = [];
+    this.workspaceFolders.forEach((d) => { d.dispose(); });
+    this.workspaceFolders.clear();
   }
 }
