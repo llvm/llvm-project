@@ -209,23 +209,13 @@ bool AA::isNoSyncInst(Attributor &A, const Instruction &I,
 }
 
 bool AA::isDynamicallyUnique(Attributor &A, const AbstractAttribute &QueryingAA,
-                             const Value &V) {
-  if (auto *C = dyn_cast<Constant>(&V))
-    return !C->isThreadDependent();
-  // TODO: Inspect and cache more complex instructions.
-  if (auto *CB = dyn_cast<CallBase>(&V))
-    return CB->arg_size() == 0 && !CB->mayHaveSideEffects() &&
-           !CB->mayReadFromMemory();
-  const Function *Scope = nullptr;
-  if (auto *I = dyn_cast<Instruction>(&V))
-    Scope = I->getFunction();
-  if (auto *A = dyn_cast<Argument>(&V))
-    Scope = A->getParent();
-  if (!Scope)
+                             const Value &V, bool ForAnalysisOnly) {
+  // TODO: See the AAInstanceInfo class comment.
+  if (!ForAnalysisOnly)
     return false;
-  auto &NoRecurseAA = A.getAAFor<AANoRecurse>(
-      QueryingAA, IRPosition::function(*Scope), DepClassTy::OPTIONAL);
-  return NoRecurseAA.isAssumedNoRecurse();
+  auto &InstanceInfoAA = A.getAAFor<AAInstanceInfo>(
+      QueryingAA, IRPosition::value(V), DepClassTy::OPTIONAL);
+  return InstanceInfoAA.isAssumedUniqueForAnalysis();
 }
 
 Constant *AA::getInitialValueForObj(Value &Obj, Type &Ty,

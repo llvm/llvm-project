@@ -3265,13 +3265,12 @@ define dso_local i32 @round_trip_malloc(i32 %x) {
 ; IS________OPM-NEXT:    ret i32 [[TMP1]]
 ;
 ; IS________NPM-LABEL: define {{[^@]+}}@round_trip_malloc
-; IS________NPM-SAME: (i32 [[X:%.*]]) {
+; IS________NPM-SAME: (i32 returned [[X:%.*]]) {
 ; IS________NPM-NEXT:  entry:
 ; IS________NPM-NEXT:    [[TMP0:%.*]] = alloca i8, i64 4, align 1
 ; IS________NPM-NEXT:    [[TMP1:%.*]] = bitcast i8* [[TMP0]] to i32*
 ; IS________NPM-NEXT:    store i32 [[X]], i32* [[TMP1]], align 4
-; IS________NPM-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP1]], align 4
-; IS________NPM-NEXT:    ret i32 [[TMP2]]
+; IS________NPM-NEXT:    ret i32 [[X]]
 ;
 entry:
   %call = call noalias i8* @malloc(i64 4) norecurse
@@ -3327,7 +3326,7 @@ define dso_local i32 @conditional_malloc(i32 %x) {
 ; IS________OPM-NEXT:    ret i32 [[TMP1]]
 ;
 ; IS________NPM-LABEL: define {{[^@]+}}@conditional_malloc
-; IS________NPM-SAME: (i32 [[X:%.*]]) {
+; IS________NPM-SAME: (i32 returned [[X:%.*]]) {
 ; IS________NPM-NEXT:  entry:
 ; IS________NPM-NEXT:    [[TMP0:%.*]] = alloca i8, i64 4, align 1
 ; IS________NPM-NEXT:    [[TMP1:%.*]] = bitcast i8* [[TMP0]] to i32*
@@ -3337,8 +3336,7 @@ define dso_local i32 @conditional_malloc(i32 %x) {
 ; IS________NPM-NEXT:    store i32 [[X]], i32* [[TMP1]], align 4
 ; IS________NPM-NEXT:    br label [[IF_END]]
 ; IS________NPM:       if.end:
-; IS________NPM-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP1]], align 4
-; IS________NPM-NEXT:    ret i32 [[TMP2]]
+; IS________NPM-NEXT:    ret i32 [[X]]
 ;
 entry:
   %call = call noalias i8* @malloc(i64 4) norecurse

@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/SetVector.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/Transforms/IPO/Attributor.h"
 
 #include "llvm/ADT/APInt.h"
@@ -147,6 +148,7 @@ PIPE_OPERATOR(AANonNull)
 PIPE_OPERATOR(AANoAlias)
 PIPE_OPERATOR(AADereferenceable)
 PIPE_OPERATOR(AAAlign)
+PIPE_OPERATOR(AAInstanceInfo)
 PIPE_OPERATOR(AANoCapture)
 PIPE_OPERATOR(AAValueSimplify)
 PIPE_OPERATOR(AANoFree)
@@ -411,9 +413,9 @@ static bool genericValueTraversal(
         SmallSetVector<Value *, 4> PotentialCopies;
         SmallSetVector<Instruction *, 4> PotentialValueOrigins;
         if (AA::getPotentiallyLoadedValues(A, *LI, PotentialCopies,
-                                          PotentialValueOrigins, QueryingAA,
-                                          UsedAssumedInformation,
-                                          /* OnlyExact */ true)) {
+                                           PotentialValueOrigins, QueryingAA,
+                                           UsedAssumedInformation,
+                                           /* OnlyExact */ true)) {
           // Values have to be dynamically unique or we loose the fact that a
           // single llvm::Value might represent two runtime values (e.g., stack
           // locations in different recursive calls).
@@ -423,9 +425,9 @@ static bool genericValueTraversal(
               });
           if (DynamicallyUnique &&
               (!Intraprocedural || !CtxI ||
-              llvm::all_of(PotentialCopies, [CtxI](Value *PC) {
-                return AA::isValidInScope(*PC, CtxI->getFunction());
-              }))) {
+               llvm::all_of(PotentialCopies, [CtxI](Value *PC) {
+                 return AA::isValidInScope(*PC, CtxI->getFunction());
+               }))) {
             for (auto *PotentialCopy : PotentialCopies)
               Worklist.push_back({PotentialCopy, CtxI});
             continue;
@@ -4809,6 +4811,169 @@ struct AANoReturnCallSite final : AANoReturnImpl {
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_CS_ATTR(noreturn); }
+};
+} // namespace
+
+/// ----------------------- Instance Info ---------------------------------
+
+namespace {
+/// A class to hold the state of for no-capture attributes.
+struct AAInstanceInfoImpl : public AAInstanceInfo {
+  AAInstanceInfoImpl(const IRPosition &IRP, Attributor &A)
+      : AAInstanceInfo(IRP, A) {}
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    Value &V = getAssociatedValue();
+    if (auto *C = dyn_cast<Constant>(&V)) {
+      if (C->isThreadDependent())
+        indicatePessimisticFixpoint();
+      else
+        indicateOptimisticFixpoint();
+      return;
+    }
+    if (auto *CB = dyn_cast<CallBase>(&V))
+      if (CB->arg_size() == 0 && !CB->mayHaveSideEffects() &&
+          !CB->mayReadFromMemory()) {
+        indicateOptimisticFixpoint();
+        return;
+      }
+  }
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    ChangeStatus Changed = ChangeStatus::UNCHANGED;
+
+    Value &V = getAssociatedValue();
+    const Function *Scope = nullptr;
+    if (auto *I = dyn_cast<Instruction>(&V))
+      Scope = I->getFunction();
+    if (auto *A = dyn_cast<Argument>(&V)) {
+      Scope = A->getParent();
+      if (!Scope->hasLocalLinkage())
+        return Changed;
+    }
+    if (!Scope)
+      return indicateOptimisticFixpoint();
+
+    auto &NoRecurseAA = A.getAAFor<AANoRecurse>(
+        *this, IRPosition::function(*Scope), DepClassTy::OPTIONAL);
+    if (NoRecurseAA.isAssumedNoRecurse())
+      return Changed;
+
+    auto UsePred = [&](const Use &U, bool &Follow) {
+      const Instruction *UserI = dyn_cast<Instruction>(U.getUser());
+      if (!UserI || isa<GetElementPtrInst>(UserI) || isa<CastInst>(UserI) ||
+          isa<PHINode>(UserI) || isa<SelectInst>(UserI)) {
+        Follow = true;
+        return true;
+      }
+      if (isa<LoadInst>(UserI) || isa<CmpInst>(UserI) ||
+          (isa<StoreInst>(UserI) &&
+           cast<StoreInst>(UserI)->getValueOperand() != U.get()))
+        return true;
+      if (auto *CB = dyn_cast<CallBase>(UserI)) {
+        // This check is not guaranteeing uniqueness but for now that we cannot
+        // end up with two versions of \p U thinking it was one.
+        if (!CB->getCalledFunction() ||
+            !CB->getCalledFunction()->hasLocalLinkage())
+          return true;
+        if (!CB->isArgOperand(&U))
+          return false;
+        const auto &ArgInstanceInfoAA = A.getAAFor<AAInstanceInfo>(
+            *this, IRPosition::callsite_argument(*CB, CB->getArgOperandNo(&U)),
+            DepClassTy::OPTIONAL);
+        if (ArgInstanceInfoAA.isAssumedUniqueForAnalysis())
+          return true;
+      }
+      return false;
+    };
+
+    auto EquivalentUseCB = [&](const Use &OldU, const Use &NewU) {
+      if (auto *SI = dyn_cast<StoreInst>(OldU.getUser())) {
+        auto *Ptr = SI->getPointerOperand()->stripPointerCasts();
+        if (isa<AllocaInst>(Ptr) && AA::isDynamicallyUnique(A, *this, *Ptr))
+          return true;
+        auto *TLI = A.getInfoCache().getTargetLibraryInfoForFunction(
+            *SI->getFunction());
+        if (isAllocationFn(Ptr, TLI) && AA::isDynamicallyUnique(A, *this, *Ptr))
+          return true;
+      }
+      return false;
+    };
+
+    if (!A.checkForAllUses(UsePred, *this, V, /* CheckBBLivenessOnly */ true,
+                           DepClassTy::OPTIONAL,
+                           /* IgnoreDroppableUses */ true, EquivalentUseCB))
+      return indicatePessimisticFixpoint();
+
+    return Changed;
+  }
+
+  /// See AbstractState::getAsStr().
+  const std::string getAsStr() const override {
+    return isAssumedUniqueForAnalysis() ? "<unique [fAa]>" : "<unknown>";
+  }
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {}
+};
+
+/// InstanceInfo attribute for floating values.
+struct AAInstanceInfoFloating : AAInstanceInfoImpl {
+  AAInstanceInfoFloating(const IRPosition &IRP, Attributor &A)
+      : AAInstanceInfoImpl(IRP, A) {}
+};
+
+/// NoCapture attribute for function arguments.
+struct AAInstanceInfoArgument final : AAInstanceInfoFloating {
+  AAInstanceInfoArgument(const IRPosition &IRP, Attributor &A)
+      : AAInstanceInfoFloating(IRP, A) {}
+};
+
+/// InstanceInfo attribute for call site arguments.
+struct AAInstanceInfoCallSiteArgument final : AAInstanceInfoImpl {
+  AAInstanceInfoCallSiteArgument(const IRPosition &IRP, Attributor &A)
+      : AAInstanceInfoImpl(IRP, A) {}
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    // TODO: Once we have call site specific value information we can provide
+    //       call site specific liveness information and then it makes
+    //       sense to specialize attributes for call sites arguments instead of
+    //       redirecting requests to the callee argument.
+    Argument *Arg = getAssociatedArgument();
+    if (!Arg)
+      return indicatePessimisticFixpoint();
+    const IRPosition &ArgPos = IRPosition::argument(*Arg);
+    auto &ArgAA =
+        A.getAAFor<AAInstanceInfo>(*this, ArgPos, DepClassTy::REQUIRED);
+    return clampStateAndIndicateChange(getState(), ArgAA.getState());
+  }
+};
+
+/// InstanceInfo attribute for function return value.
+struct AAInstanceInfoReturned final : AAInstanceInfoImpl {
+  AAInstanceInfoReturned(const IRPosition &IRP, Attributor &A)
+      : AAInstanceInfoImpl(IRP, A) {
+    llvm_unreachable("InstanceInfo is not applicable to function returns!");
+  }
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    llvm_unreachable("InstanceInfo is not applicable to function returns!");
+  }
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    llvm_unreachable("InstanceInfo is not applicable to function returns!");
+  }
+};
+
+/// InstanceInfo attribute deduction for a call site return value.
+struct AAInstanceInfoCallSiteReturned final : AAInstanceInfoFloating {
+  AAInstanceInfoCallSiteReturned(const IRPosition &IRP, Attributor &A)
+      : AAInstanceInfoFloating(IRP, A) {}
 };
 } // namespace
 
@@ -10047,6 +10212,7 @@ const char AANoReturn::ID = 0;
 const char AAIsDead::ID = 0;
 const char AADereferenceable::ID = 0;
 const char AAAlign::ID = 0;
+const char AAInstanceInfo::ID = 0;
 const char AANoCapture::ID = 0;
 const char AAValueSimplify::ID = 0;
 const char AAHeapToStack::ID = 0;
@@ -10169,6 +10335,7 @@ CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoAlias)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAPrivatizablePtr)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AADereferenceable)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAAlign)
+CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAInstanceInfo)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoCapture)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAValueConstantRange)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAPotentialValues)
