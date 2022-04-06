@@ -4649,11 +4649,8 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
                                 dl, N0.getValueType()),
                 Cond);
 
-          // Turn (X^C1) == C2 into X == C1^C2 iff X&~C1 = 0.
-          // If we know that all of the inverted bits are zero, don't bother
-          // performing the inversion.
-          if (N0.getOpcode() == ISD::XOR &&
-              DAG.MaskedValueIsZero(N0.getOperand(0), ~LHSR->getAPIntValue()))
+          // Turn (X^C1) == C2 --> X == C1^C2
+          if (N0.getOpcode() == ISD::XOR && N0.getNode()->hasOneUse())
             return DAG.getSetCC(
                 dl, VT, N0.getOperand(0),
                 DAG.getConstant(LHSR->getAPIntValue() ^ RHSC->getAPIntValue(),
