@@ -42,3 +42,22 @@ void sw1(int a) {
 // CHECK-NEXT:     }
 // CHECK-NEXT:     cir.yield fallthrough
 // CHECK-NEXT:   }
+
+void sw2(int a) {
+  switch (int yolo = 2; a) {
+  case 3:
+    // "fomo" has the same lifetime as "yolo"
+    int fomo = 0;
+    yolo = yolo + fomo;
+    break;
+  }
+}
+
+// CHECK: func @sw2
+// CHECK: cir.scope {
+// CHECK-NEXT:   %1 = cir.alloca i32, cir.ptr <i32>, ["yolo", cinit]
+// CHECK-NEXT:   %2 = cir.alloca i32, cir.ptr <i32>, ["fomo", cinit]
+// CHECK:        cir.switch (%4 : i32) [
+// CHECK-NEXT:   case (equal, 3 : i32)  {
+// CHECK-NEXT:     %5 = cir.cst(0 : i32) : i32
+// CHECK-NEXT:     cir.store %5, %2 : i32, cir.ptr <i32>
