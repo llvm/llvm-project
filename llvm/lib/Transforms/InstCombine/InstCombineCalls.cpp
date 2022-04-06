@@ -2807,11 +2807,13 @@ static IntrinsicInst *findInitTrampoline(Value *Callee) {
   return nullptr;
 }
 
-void InstCombinerImpl::annotateAnyAllocSite(CallBase &Call, const TargetLibraryInfo *TLI) {
+bool InstCombinerImpl::annotateAnyAllocSite(CallBase &Call,
+                                            const TargetLibraryInfo *TLI) {
   // Note: We only handle cases which can't be driven from generic attributes
   // here.  So, for example, nonnull and noalias (which are common properties
   // of some allocation functions) are expected to be handled via annotation
   // of the respective allocator declaration with generic attributes.
+  bool Changed = false;
 
   if (isAllocationFn(&Call, TLI)) {
     uint64_t Size;
@@ -2819,19 +2821,22 @@ void InstCombinerImpl::annotateAnyAllocSite(CallBase &Call, const TargetLibraryI
     if (getObjectSize(&Call, Size, DL, TLI, Opts) && Size > 0) {
       // TODO: We really should just emit deref_or_null here and then
       // let the generic inference code combine that with nonnull.
-      if (Call.hasRetAttr(Attribute::NonNull))
+      if (Call.hasRetAttr(Attribute::NonNull)) {
+        Changed = !Call.hasRetAttr(Attribute::Dereferenceable);
         Call.addRetAttr(
             Attribute::getWithDereferenceableBytes(Call.getContext(), Size));
-      else
+      } else {
+        Changed = !Call.hasRetAttr(Attribute::DereferenceableOrNull);
         Call.addRetAttr(Attribute::getWithDereferenceableOrNullBytes(
             Call.getContext(), Size));
+      }
     }
   }
 
   // Add alignment attribute if alignment is a power of two constant.
   Value *Alignment = getAllocAlignment(&Call, TLI);
   if (!Alignment)
-    return;
+    return Changed;
 
   ConstantInt *AlignOpC = dyn_cast<ConstantInt>(Alignment);
   if (AlignOpC && AlignOpC->getValue().ult(llvm::Value::MaximumAlignment)) {
@@ -2842,16 +2847,16 @@ void InstCombinerImpl::annotateAnyAllocSite(CallBase &Call, const TargetLibraryI
       if (NewAlign > ExistingAlign) {
         Call.addRetAttr(
             Attribute::getWithAlignment(Call.getContext(), NewAlign));
+        Changed = true;
       }
     }
   }
+  return Changed;
 }
 
 /// Improvements for call, callbr and invoke instructions.
 Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
-  annotateAnyAllocSite(Call, &TLI);
-
-  bool Changed = false;
+  bool Changed = annotateAnyAllocSite(Call, &TLI);
 
   // Mark any parameters that are known to be non-null with the nonnull
   // attribute.  This is helpful for inlining calls to functions with null
