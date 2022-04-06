@@ -12254,7 +12254,7 @@ i:
 .Linfo_string22:
 	.asciz	"b"                             # string offset=413
 .Linfo_string23:
-	.asciz	"_STNt3|<int, false>"           # string offset=415
+	.asciz	"_STN|t3|<int, false>"           # string offset=415
 .Linfo_string24:
 	.asciz	"t10"                           # string offset=435
 .Linfo_string25:
@@ -12384,7 +12384,7 @@ i:
 .Linfo_string87:
 	.asciz	"float"                         # string offset=1201
 .Linfo_string88:
-	.asciz	"_STNt1|<float>"                # string offset=1207
+	.asciz	"_STN|t1|<float>"                # string offset=1207
 .Linfo_string89:
 	.asciz	"_ZN2t6miIiEEvi"                # string offset=1222
 .Linfo_string90:
@@ -12468,7 +12468,7 @@ i:
 .Linfo_string129:
 	.asciz	"operator co_await<int>"        # string offset=1852
 .Linfo_string130:
-	.asciz	"_STNt10|<void>"                # string offset=1875
+	.asciz	"_STN|t10|<void>"                # string offset=1875
 .Linfo_string131:
 	.asciz	"_ZN2t83memEv"                  # string offset=1890
 .Linfo_string132:
@@ -12484,101 +12484,101 @@ i:
 .Linfo_string137:
 	.asciz	"_Z2f1IJiEEvv"                  # string offset=1943
 .Linfo_string138:
-	.asciz	"_STNf1|<int>"                  # string offset=1956
+	.asciz	"_STN|f1|<int>"                  # string offset=1956
 .Linfo_string139:
 	.asciz	"_Z2f1IJfEEvv"                  # string offset=1969
 .Linfo_string140:
-	.asciz	"_STNf1|<float>"                # string offset=1982
+	.asciz	"_STN|f1|<float>"                # string offset=1982
 .Linfo_string141:
 	.asciz	"_Z2f1IJbEEvv"                  # string offset=1997
 .Linfo_string142:
-	.asciz	"_STNf1|<bool>"                 # string offset=2010
+	.asciz	"_STN|f1|<bool>"                 # string offset=2010
 .Linfo_string143:
 	.asciz	"double"                        # string offset=2024
 .Linfo_string144:
 	.asciz	"_Z2f1IJdEEvv"                  # string offset=2031
 .Linfo_string145:
-	.asciz	"_STNf1|<double>"               # string offset=2044
+	.asciz	"_STN|f1|<double>"               # string offset=2044
 .Linfo_string146:
 	.asciz	"_Z2f1IJlEEvv"                  # string offset=2060
 .Linfo_string147:
-	.asciz	"_STNf1|<long>"                 # string offset=2073
+	.asciz	"_STN|f1|<long>"                 # string offset=2073
 .Linfo_string148:
 	.asciz	"_Z2f1IJsEEvv"                  # string offset=2087
 .Linfo_string149:
-	.asciz	"_STNf1|<short>"                # string offset=2100
+	.asciz	"_STN|f1|<short>"                # string offset=2100
 .Linfo_string150:
 	.asciz	"_Z2f1IJjEEvv"                  # string offset=2115
 .Linfo_string151:
-	.asciz	"_STNf1|<unsigned int>"         # string offset=2128
+	.asciz	"_STN|f1|<unsigned int>"         # string offset=2128
 .Linfo_string152:
 	.asciz	"unsigned long long"            # string offset=2150
 .Linfo_string153:
 	.asciz	"_Z2f1IJyEEvv"                  # string offset=2169
 .Linfo_string154:
-	.asciz	"_STNf1|<unsigned long long>"   # string offset=2182
+	.asciz	"_STN|f1|<unsigned long long>"   # string offset=2182
 .Linfo_string155:
 	.asciz	"long long"                     # string offset=2210
 .Linfo_string156:
 	.asciz	"_Z2f1IJxEEvv"                  # string offset=2220
 .Linfo_string157:
-	.asciz	"_STNf1|<long long>"            # string offset=2233
+	.asciz	"_STN|f1|<long long>"            # string offset=2233
 .Linfo_string158:
 	.asciz	"udt"                           # string offset=2252
 .Linfo_string159:
 	.asciz	"_Z2f1IJ3udtEEvv"               # string offset=2256
 .Linfo_string160:
-	.asciz	"_STNf1|<udt>"                  # string offset=2272
+	.asciz	"_STN|f1|<udt>"                  # string offset=2272
 .Linfo_string161:
 	.asciz	"_Z2f1IJN2ns3udtEEEvv"          # string offset=2285
 .Linfo_string162:
-	.asciz	"_STNf1|<ns::udt>"              # string offset=2306
+	.asciz	"_STN|f1|<ns::udt>"              # string offset=2306
 .Linfo_string163:
 	.asciz	"_Z2f1IJPN2ns3udtEEEvv"         # string offset=2323
 .Linfo_string164:
-	.asciz	"_STNf1|<ns::udt *>"            # string offset=2345
+	.asciz	"_STN|f1|<ns::udt *>"            # string offset=2345
 .Linfo_string165:
 	.asciz	"inner"                         # string offset=2364
 .Linfo_string166:
 	.asciz	"_Z2f1IJN2ns5inner3udtEEEvv"    # string offset=2370
 .Linfo_string167:
-	.asciz	"_STNf1|<ns::inner::udt>"       # string offset=2397
+	.asciz	"_STN|f1|<ns::inner::udt>"       # string offset=2397
 .Linfo_string168:
-	.asciz	"_STNt1|<int>"                  # string offset=2421
+	.asciz	"_STN|t1|<int>"                  # string offset=2421
 .Linfo_string169:
 	.asciz	"_Z2f1IJ2t1IJiEEEEvv"           # string offset=2434
 .Linfo_string170:
-	.asciz	"_STNf1|<t1<int> >"             # string offset=2454
+	.asciz	"_STN|f1|<t1<int> >"             # string offset=2454
 .Linfo_string171:
 	.asciz	"_Z2f1IJifEEvv"                 # string offset=2472
 .Linfo_string172:
-	.asciz	"_STNf1|<int, float>"           # string offset=2486
+	.asciz	"_STN|f1|<int, float>"           # string offset=2486
 .Linfo_string173:
 	.asciz	"_Z2f1IJPiEEvv"                 # string offset=2506
 .Linfo_string174:
-	.asciz	"_STNf1|<int *>"                # string offset=2520
+	.asciz	"_STN|f1|<int *>"                # string offset=2520
 .Linfo_string175:
 	.asciz	"_Z2f1IJRiEEvv"                 # string offset=2535
 .Linfo_string176:
-	.asciz	"_STNf1|<int &>"                # string offset=2549
+	.asciz	"_STN|f1|<int &>"                # string offset=2549
 .Linfo_string177:
 	.asciz	"_Z2f1IJOiEEvv"                 # string offset=2564
 .Linfo_string178:
-	.asciz	"_STNf1|<int &&>"               # string offset=2578
+	.asciz	"_STN|f1|<int &&>"               # string offset=2578
 .Linfo_string179:
 	.asciz	"_Z2f1IJKiEEvv"                 # string offset=2594
 .Linfo_string180:
-	.asciz	"_STNf1|<const int>"            # string offset=2608
+	.asciz	"_STN|f1|<const int>"            # string offset=2608
 .Linfo_string181:
 	.asciz	"__ARRAY_SIZE_TYPE__"           # string offset=2627
 .Linfo_string182:
 	.asciz	"_Z2f1IJA3_iEEvv"               # string offset=2647
 .Linfo_string183:
-	.asciz	"_STNf1|<int[3]>"               # string offset=2663
+	.asciz	"_STN|f1|<int[3]>"               # string offset=2663
 .Linfo_string184:
 	.asciz	"_Z2f1IJvEEvv"                  # string offset=2679
 .Linfo_string185:
-	.asciz	"_STNf1|<void>"                 # string offset=2692
+	.asciz	"_STN|f1|<void>"                 # string offset=2692
 .Linfo_string186:
 	.asciz	"outer_class"                   # string offset=2706
 .Linfo_string187:
@@ -12586,29 +12586,29 @@ i:
 .Linfo_string188:
 	.asciz	"_Z2f1IJN11outer_class11inner_classEEEvv" # string offset=2730
 .Linfo_string189:
-	.asciz	"_STNf1|<outer_class::inner_class>" # string offset=2770
+	.asciz	"_STN|f1|<outer_class::inner_class>" # string offset=2770
 .Linfo_string190:
 	.asciz	"_Z2f1IJmEEvv"                  # string offset=2804
 .Linfo_string191:
-	.asciz	"_STNf1|<unsigned long>"        # string offset=2817
+	.asciz	"_STN|f1|<unsigned long>"        # string offset=2817
 .Linfo_string192:
 	.asciz	"_Z2f2ILb1ELi3EEvv"             # string offset=2840
 .Linfo_string193:
-	.asciz	"_STNf2|<true, 3>"              # string offset=2858
+	.asciz	"_STN|f2|<true, 3>"              # string offset=2858
 .Linfo_string194:
 	.asciz	"A"                             # string offset=2875
 .Linfo_string195:
 	.asciz	"_Z2f3IN2ns11EnumerationEJLS1_1ELS1_2EEEvv" # string offset=2877
 .Linfo_string196:
-	.asciz	"_STNf3|<ns::Enumeration, (ns::Enumeration)1, (ns::Enumeration)2>" # string offset=2919
+	.asciz	"_STN|f3|<ns::Enumeration, (ns::Enumeration)1, (ns::Enumeration)2>" # string offset=2919
 .Linfo_string197:
 	.asciz	"_Z2f3IN2ns16EnumerationClassEJLS1_1ELS1_2EEEvv" # string offset=2981
 .Linfo_string198:
-	.asciz	"_STNf3|<ns::EnumerationClass, (ns::EnumerationClass)1, (ns::EnumerationClass)2>" # string offset=3028
+	.asciz	"_STN|f3|<ns::EnumerationClass, (ns::EnumerationClass)1, (ns::EnumerationClass)2>" # string offset=3028
 .Linfo_string199:
 	.asciz	"_Z2f3IN2ns16EnumerationSmallEJLS1_255EEEvv" # string offset=3118
 .Linfo_string200:
-	.asciz	"_STNf3|<ns::EnumerationSmall, (ns::EnumerationSmall)255>" # string offset=3161
+	.asciz	"_STN|f3|<ns::EnumerationSmall, (ns::EnumerationSmall)255>" # string offset=3161
 .Linfo_string201:
 	.asciz	"_Z2f3IN2ns3$_0EJLS1_1ELS1_2EEEvv" # string offset=3201
 .Linfo_string202:
@@ -12628,41 +12628,41 @@ i:
 .Linfo_string209:
 	.asciz	"_Z2f3ImJLm1EEEvv"              # string offset=3678
 .Linfo_string210:
-	.asciz	"_STNf3|<unsigned long, 1UL>"   # string offset=3695
+	.asciz	"_STN|f3|<unsigned long, 1UL>"   # string offset=3695
 .Linfo_string211:
 	.asciz	"_Z2f3IyJLy1EEEvv"              # string offset=3723
 .Linfo_string212:
-	.asciz	"_STNf3|<unsigned long long, 1ULL>" # string offset=3740
+	.asciz	"_STN|f3|<unsigned long long, 1ULL>" # string offset=3740
 .Linfo_string213:
 	.asciz	"_Z2f3IlJLl1EEEvv"              # string offset=3774
 .Linfo_string214:
-	.asciz	"_STNf3|<long, 1L>"             # string offset=3791
+	.asciz	"_STN|f3|<long, 1L>"             # string offset=3791
 .Linfo_string215:
 	.asciz	"_Z2f3IjJLj1EEEvv"              # string offset=3809
 .Linfo_string216:
-	.asciz	"_STNf3|<unsigned int, 1U>"     # string offset=3826
+	.asciz	"_STN|f3|<unsigned int, 1U>"     # string offset=3826
 .Linfo_string217:
 	.asciz	"_Z2f3IsJLs1EEEvv"              # string offset=3852
 .Linfo_string218:
-	.asciz	"_STNf3|<short, (short)1>"      # string offset=3869
+	.asciz	"_STN|f3|<short, (short)1>"      # string offset=3869
 .Linfo_string219:
 	.asciz	"_Z2f3IhJLh0EEEvv"              # string offset=3894
 .Linfo_string220:
-	.asciz	"_STNf3|<unsigned char, (unsigned char)'\\x00'>" # string offset=3911
+	.asciz	"_STN|f3|<unsigned char, (unsigned char)'\\x00'>" # string offset=3911
 .Linfo_string221:
 	.asciz	"_Z2f3IaJLa0EEEvv"              # string offset=3957
 .Linfo_string222:
-	.asciz	"_STNf3|<signed char, (signed char)'\\x00'>" # string offset=3974
+	.asciz	"_STN|f3|<signed char, (signed char)'\\x00'>" # string offset=3974
 .Linfo_string223:
 	.asciz	"_Z2f3ItJLt1ELt2EEEvv"          # string offset=4016
 .Linfo_string224:
-	.asciz	"_STNf3|<unsigned short, (unsigned short)1, (unsigned short)2>" # string offset=4037
+	.asciz	"_STN|f3|<unsigned short, (unsigned short)1, (unsigned short)2>" # string offset=4037
 .Linfo_string225:
 	.asciz	"char"                          # string offset=4099
 .Linfo_string226:
 	.asciz	"_Z2f3IcJLc0ELc1ELc6ELc7ELc13ELc14ELc31ELc32ELc33ELc127ELcn128EEEvv" # string offset=4104
 .Linfo_string227:
-	.asciz	"_STNf3|<char, '\\x00', '\\x01', '\\x06', '\\a', '\\r', '\\x0e', '\\x1f', ' ', '!', '\\x7f', '\\x80'>" # string offset=4171
+	.asciz	"_STN|f3|<char, '\\x00', '\\x01', '\\x06', '\\a', '\\r', '\\x0e', '\\x1f', ' ', '!', '\\x7f', '\\x80'>" # string offset=4171
 .Linfo_string228:
 	.asciz	"__int128"                      # string offset=4263
 .Linfo_string229:
@@ -12672,17 +12672,17 @@ i:
 .Linfo_string231:
 	.asciz	"_Z2f4IjLj3EEvv"                # string offset=4353
 .Linfo_string232:
-	.asciz	"_STNf4|<unsigned int, 3U>"     # string offset=4368
+	.asciz	"_STN|f4|<unsigned int, 3U>"     # string offset=4368
 .Linfo_string233:
 	.asciz	"_Z2f1IJ2t3IiLb0EEEEvv"         # string offset=4394
 .Linfo_string234:
-	.asciz	"_STNf1|<t3<int, false> >"      # string offset=4416
+	.asciz	"_STN|f1|<t3<int, false> >"      # string offset=4416
 .Linfo_string235:
-	.asciz	"_STNt3|<t3<int, false>, false>" # string offset=4441
+	.asciz	"_STN|t3|<t3<int, false>, false>" # string offset=4441
 .Linfo_string236:
 	.asciz	"_Z2f1IJ2t3IS0_IiLb0EELb0EEEEvv" # string offset=4472
 .Linfo_string237:
-	.asciz	"_STNf1|<t3<t3<int, false>, false> >" # string offset=4503
+	.asciz	"_STN|f1|<t3<t3<int, false>, false> >" # string offset=4503
 .Linfo_string238:
 	.asciz	"_Z2f1IJZ4mainE3$_1EEvv"        # string offset=4539
 .Linfo_string239:
@@ -12698,59 +12698,59 @@ i:
 .Linfo_string244:
 	.asciz	"_Z2f1IJFifEEEvv"               # string offset=5091
 .Linfo_string245:
-	.asciz	"_STNf1|<int (float)>"          # string offset=5107
+	.asciz	"_STN|f1|<int (float)>"          # string offset=5107
 .Linfo_string246:
 	.asciz	"_Z2f1IJFvzEEEvv"               # string offset=5128
 .Linfo_string247:
-	.asciz	"_STNf1|<void (...)>"           # string offset=5144
+	.asciz	"_STN|f1|<void (...)>"           # string offset=5144
 .Linfo_string248:
 	.asciz	"_Z2f1IJFvizEEEvv"              # string offset=5164
 .Linfo_string249:
-	.asciz	"_STNf1|<void (int, ...)>"      # string offset=5181
+	.asciz	"_STN|f1|<void (int, ...)>"      # string offset=5181
 .Linfo_string250:
 	.asciz	"_Z2f1IJRKiEEvv"                # string offset=5206
 .Linfo_string251:
-	.asciz	"_STNf1|<const int &>"          # string offset=5221
+	.asciz	"_STN|f1|<const int &>"          # string offset=5221
 .Linfo_string252:
 	.asciz	"_Z2f1IJRPKiEEvv"               # string offset=5242
 .Linfo_string253:
-	.asciz	"_STNf1|<const int *&>"         # string offset=5258
+	.asciz	"_STN|f1|<const int *&>"         # string offset=5258
 .Linfo_string254:
 	.asciz	"t5"                            # string offset=5280
 .Linfo_string255:
 	.asciz	"_Z2f1IJN12_GLOBAL__N_12t5EEEvv" # string offset=5283
 .Linfo_string256:
-	.asciz	"_STNf1|<(anonymous namespace)::t5>" # string offset=5314
+	.asciz	"_STN|f1|<(anonymous namespace)::t5>" # string offset=5314
 .Linfo_string257:
 	.asciz	"decltype(nullptr)"             # string offset=5349
 .Linfo_string258:
 	.asciz	"_Z2f1IJDnEEvv"                 # string offset=5367
 .Linfo_string259:
-	.asciz	"_STNf1|<std::nullptr_t>"       # string offset=5381
+	.asciz	"_STN|f1|<std::nullptr_t>"       # string offset=5381
 .Linfo_string260:
 	.asciz	"_Z2f1IJPlS0_EEvv"              # string offset=5405
 .Linfo_string261:
-	.asciz	"_STNf1|<long *, long *>"       # string offset=5422
+	.asciz	"_STN|f1|<long *, long *>"       # string offset=5422
 .Linfo_string262:
 	.asciz	"_Z2f1IJPlP3udtEEvv"            # string offset=5446
 .Linfo_string263:
-	.asciz	"_STNf1|<long *, udt *>"        # string offset=5465
+	.asciz	"_STN|f1|<long *, udt *>"        # string offset=5465
 .Linfo_string264:
 	.asciz	"_Z2f1IJKPvEEvv"                # string offset=5488
 .Linfo_string265:
-	.asciz	"_STNf1|<void *const>"          # string offset=5503
+	.asciz	"_STN|f1|<void *const>"          # string offset=5503
 .Linfo_string266:
 	.asciz	"_Z2f1IJPKPKvEEvv"              # string offset=5524
 .Linfo_string267:
-	.asciz	"_STNf1|<const void *const *>"  # string offset=5541
+	.asciz	"_STN|f1|<const void *const *>"  # string offset=5541
 .Linfo_string268:
 	.asciz	"_Z2f1IJFvvEEEvv"               # string offset=5570
 .Linfo_string269:
-	.asciz	"_STNf1|<void ()>"              # string offset=5586
+	.asciz	"_STN|f1|<void ()>"              # string offset=5586
 .Linfo_string270:
 	.asciz	"_Z2f1IJPFvvEEEvv"              # string offset=5603
 .Linfo_string271:
-	.asciz	"_STNf1|<void (*)()>"           # string offset=5620
+	.asciz	"_STN|f1|<void (*)()>"           # string offset=5620
 .Linfo_string272:
 	.asciz	"_Z2f1IJPZ4mainE3$_1EEvv"       # string offset=5640
 .Linfo_string273:
@@ -12770,79 +12770,79 @@ i:
 .Linfo_string280:
 	.asciz	"_Z2f5IJ2t1IJiEEEiEvv"          # string offset=6065
 .Linfo_string281:
-	.asciz	"_STNf5|<t1<int>, int>"         # string offset=6086
+	.asciz	"_STN|f5|<t1<int>, int>"         # string offset=6086
 .Linfo_string282:
 	.asciz	"_Z2f5IJEiEvv"                  # string offset=6108
 .Linfo_string283:
-	.asciz	"_STNf5|<int>"                  # string offset=6121
+	.asciz	"_STN|f5|<int>"                  # string offset=6121
 .Linfo_string284:
 	.asciz	"_Z2f6I2t1IJiEEJEEvv"           # string offset=6134
 .Linfo_string285:
-	.asciz	"_STNf6|<t1<int> >"             # string offset=6154
+	.asciz	"_STN|f6|<t1<int> >"             # string offset=6154
 .Linfo_string286:
 	.asciz	"_Z2f1IJEEvv"                   # string offset=6172
 .Linfo_string287:
-	.asciz	"_STNf1|<>"                     # string offset=6184
+	.asciz	"_STN|f1|<>"                     # string offset=6184
 .Linfo_string288:
 	.asciz	"_Z2f1IJPKvS1_EEvv"             # string offset=6194
 .Linfo_string289:
-	.asciz	"_STNf1|<const void *, const void *>" # string offset=6212
+	.asciz	"_STN|f1|<const void *, const void *>" # string offset=6212
 .Linfo_string290:
-	.asciz	"_STNt1|<int *>"                # string offset=6248
+	.asciz	"_STN|t1|<int *>"                # string offset=6248
 .Linfo_string291:
 	.asciz	"_Z2f1IJP2t1IJPiEEEEvv"         # string offset=6263
 .Linfo_string292:
-	.asciz	"_STNf1|<t1<int *> *>"          # string offset=6285
+	.asciz	"_STN|f1|<t1<int *> *>"          # string offset=6285
 .Linfo_string293:
 	.asciz	"_Z2f1IJA_PiEEvv"               # string offset=6306
 .Linfo_string294:
-	.asciz	"_STNf1|<int *[]>"              # string offset=6322
+	.asciz	"_STN|f1|<int *[]>"              # string offset=6322
 .Linfo_string295:
 	.asciz	"t7"                            # string offset=6339
 .Linfo_string296:
 	.asciz	"_Z2f1IJZ4mainE2t7EEvv"         # string offset=6342
 .Linfo_string297:
-	.asciz	"_STNf1|<t7>"                   # string offset=6364
+	.asciz	"_STN|f1|<t7>"                   # string offset=6364
 .Linfo_string298:
 	.asciz	"_Z2f1IJRA3_iEEvv"              # string offset=6376
 .Linfo_string299:
-	.asciz	"_STNf1|<int (&)[3]>"           # string offset=6393
+	.asciz	"_STN|f1|<int (&)[3]>"           # string offset=6393
 .Linfo_string300:
 	.asciz	"_Z2f1IJPA3_iEEvv"              # string offset=6413
 .Linfo_string301:
-	.asciz	"_STNf1|<int (*)[3]>"           # string offset=6430
+	.asciz	"_STN|f1|<int (*)[3]>"           # string offset=6430
 .Linfo_string302:
 	.asciz	"t1"                            # string offset=6450
 .Linfo_string303:
 	.asciz	"_Z2f7I2t1Evv"                  # string offset=6453
 .Linfo_string304:
-	.asciz	"_STNf7|<t1>"                   # string offset=6466
+	.asciz	"_STN|f7|<t1>"                   # string offset=6466
 .Linfo_string305:
 	.asciz	"_Z2f8I2t1iEvv"                 # string offset=6478
 .Linfo_string306:
-	.asciz	"_STNf8|<t1, int>"              # string offset=6492
+	.asciz	"_STN|f8|<t1, int>"              # string offset=6492
 .Linfo_string307:
 	.asciz	"ns::inner::ttp"                # string offset=6509
 .Linfo_string308:
 	.asciz	"_ZN2ns8ttp_userINS_5inner3ttpEEEvv" # string offset=6524
 .Linfo_string309:
-	.asciz	"_STNttp_user|<ns::inner::ttp>" # string offset=6559
+	.asciz	"_STN|ttp_user|<ns::inner::ttp>" # string offset=6559
 .Linfo_string310:
 	.asciz	"_Z2f1IJPiPDnEEvv"              # string offset=6589
 .Linfo_string311:
-	.asciz	"_STNf1|<int *, std::nullptr_t *>" # string offset=6606
+	.asciz	"_STN|f1|<int *, std::nullptr_t *>" # string offset=6606
 .Linfo_string312:
-	.asciz	"_STNt7|<int>"                  # string offset=6639
+	.asciz	"_STN|t7|<int>"                  # string offset=6639
 .Linfo_string313:
 	.asciz	"_Z2f1IJ2t7IiEEEvv"             # string offset=6652
 .Linfo_string314:
-	.asciz	"_STNf1|<t7<int> >"             # string offset=6670
+	.asciz	"_STN|f1|<t7<int> >"             # string offset=6670
 .Linfo_string315:
 	.asciz	"ns::inl::t9"                   # string offset=6688
 .Linfo_string316:
 	.asciz	"_Z2f7IN2ns3inl2t9EEvv"         # string offset=6700
 .Linfo_string317:
-	.asciz	"_STNf7|<ns::inl::t9>"          # string offset=6722
+	.asciz	"_STN|f7|<ns::inl::t9>"          # string offset=6722
 .Linfo_string318:
 	.asciz	"_Z2f1IJU7_AtomiciEEvv"         # string offset=6743
 .Linfo_string319:
@@ -12850,7 +12850,7 @@ i:
 .Linfo_string320:
 	.asciz	"_Z2f1IJilVcEEvv"               # string offset=6782
 .Linfo_string321:
-	.asciz	"_STNf1|<int, long, volatile char>" # string offset=6798
+	.asciz	"_STN|f1|<int, long, volatile char>" # string offset=6798
 .Linfo_string322:
 	.asciz	"_Z2f1IJDv2_iEEvv"              # string offset=6832
 .Linfo_string323:
@@ -12858,11 +12858,11 @@ i:
 .Linfo_string324:
 	.asciz	"_Z2f1IJVKPiEEvv"               # string offset=6907
 .Linfo_string325:
-	.asciz	"_STNf1|<int *const volatile>"  # string offset=6923
+	.asciz	"_STN|f1|<int *const volatile>"  # string offset=6923
 .Linfo_string326:
 	.asciz	"_Z2f1IJVKvEEvv"                # string offset=6952
 .Linfo_string327:
-	.asciz	"_STNf1|<const volatile void>"  # string offset=6967
+	.asciz	"_STN|f1|<const volatile void>"  # string offset=6967
 .Linfo_string328:
 	.asciz	"t1<(lambda at cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:184:12)>" # string offset=6996
 .Linfo_string329:
@@ -12874,59 +12874,59 @@ i:
 .Linfo_string332:
 	.asciz	"_Z2f1IJM3udtKFvvEEEvv"         # string offset=7266
 .Linfo_string333:
-	.asciz	"_STNf1|<void (udt::*)() const>" # string offset=7288
+	.asciz	"_STN|f1|<void (udt::*)() const>" # string offset=7288
 .Linfo_string334:
 	.asciz	"_Z2f1IJM3udtVFvvREEEvv"        # string offset=7319
 .Linfo_string335:
-	.asciz	"_STNf1|<void (udt::*)() volatile &>" # string offset=7342
+	.asciz	"_STN|f1|<void (udt::*)() volatile &>" # string offset=7342
 .Linfo_string336:
 	.asciz	"_Z2f1IJM3udtVKFvvOEEEvv"       # string offset=7378
 .Linfo_string337:
-	.asciz	"_STNf1|<void (udt::*)() const volatile &&>" # string offset=7402
+	.asciz	"_STN|f1|<void (udt::*)() const volatile &&>" # string offset=7402
 .Linfo_string338:
 	.asciz	"_Z2f9IiEPFvvEv"                # string offset=7445
 .Linfo_string339:
-	.asciz	"_STNf9|<int>"                  # string offset=7460
+	.asciz	"_STN|f9|<int>"                  # string offset=7460
 .Linfo_string340:
 	.asciz	"_Z2f1IJKPFvvEEEvv"             # string offset=7473
 .Linfo_string341:
-	.asciz	"_STNf1|<void (*const)()>"      # string offset=7491
+	.asciz	"_STN|f1|<void (*const)()>"      # string offset=7491
 .Linfo_string342:
 	.asciz	"_Z2f1IJRA1_KcEEvv"             # string offset=7516
 .Linfo_string343:
-	.asciz	"_STNf1|<const char (&)[1]>"    # string offset=7534
+	.asciz	"_STN|f1|<const char (&)[1]>"    # string offset=7534
 .Linfo_string344:
 	.asciz	"_Z2f1IJKFvvREEEvv"             # string offset=7561
 .Linfo_string345:
-	.asciz	"_STNf1|<void () const &>"      # string offset=7579
+	.asciz	"_STN|f1|<void () const &>"      # string offset=7579
 .Linfo_string346:
 	.asciz	"_Z2f1IJVFvvOEEEvv"             # string offset=7604
 .Linfo_string347:
-	.asciz	"_STNf1|<void () volatile &&>"  # string offset=7622
+	.asciz	"_STN|f1|<void () volatile &&>"  # string offset=7622
 .Linfo_string348:
 	.asciz	"_Z2f1IJVKFvvEEEvv"             # string offset=7651
 .Linfo_string349:
-	.asciz	"_STNf1|<void () const volatile>" # string offset=7669
+	.asciz	"_STN|f1|<void () const volatile>" # string offset=7669
 .Linfo_string350:
 	.asciz	"_Z2f1IJA1_KPiEEvv"             # string offset=7701
 .Linfo_string351:
-	.asciz	"_STNf1|<int *const[1]>"        # string offset=7719
+	.asciz	"_STN|f1|<int *const[1]>"        # string offset=7719
 .Linfo_string352:
 	.asciz	"_Z2f1IJRA1_KPiEEvv"            # string offset=7742
 .Linfo_string353:
-	.asciz	"_STNf1|<int *const (&)[1]>"    # string offset=7761
+	.asciz	"_STN|f1|<int *const (&)[1]>"    # string offset=7761
 .Linfo_string354:
 	.asciz	"_Z2f1IJRKM3udtFvvEEEvv"        # string offset=7788
 .Linfo_string355:
-	.asciz	"_STNf1|<void (udt::*const &)()>" # string offset=7811
+	.asciz	"_STN|f1|<void (udt::*const &)()>" # string offset=7811
 .Linfo_string356:
 	.asciz	"_Z2f1IJFPFvfEiEEEvv"           # string offset=7843
 .Linfo_string357:
-	.asciz	"_STNf1|<void (*(int))(float)>" # string offset=7863
+	.asciz	"_STN|f1|<void (*(int))(float)>" # string offset=7863
 .Linfo_string358:
 	.asciz	"_Z2f1IJA1_2t1IJiEEEEvv"        # string offset=7893
 .Linfo_string359:
-	.asciz	"_STNf1|<t1<int>[1]>"           # string offset=7916
+	.asciz	"_STN|f1|<t1<int>[1]>"           # string offset=7916
 .Linfo_string360:
 	.asciz	"_Z2f1IJPDoFvvEEEvv"            # string offset=7936
 .Linfo_string361:
@@ -12942,11 +12942,11 @@ i:
 .Linfo_string366:
 	.asciz	"_Z2f1IJFvZ4mainE2t8EEEvv"      # string offset=8293
 .Linfo_string367:
-	.asciz	"_STNf1|<void (t8)>"            # string offset=8318
+	.asciz	"_STN|f1|<void (t8)>"            # string offset=8318
 .Linfo_string368:
 	.asciz	"_Z19operator_not_reallyIiEvv"  # string offset=8337
 .Linfo_string369:
-	.asciz	"_STNoperator_not_really|<int>" # string offset=8366
+	.asciz	"_STN|operator_not_really|<int>" # string offset=8366
 .Linfo_string370:
 	.asciz	"_BitInt"                       # string offset=8396
 .Linfo_string371:
@@ -12960,25 +12960,25 @@ i:
 .Linfo_string375:
 	.asciz	"f1<const unsigned _BitInt(5)>" # string offset=8469
 .Linfo_string376:
-	.asciz	"_STNt1|<>"                     # string offset=8499
+	.asciz	"_STN|t1|<>"                     # string offset=8499
 .Linfo_string377:
 	.asciz	"_Z2f1IJFv2t1IJEES1_EEEvv"      # string offset=8509
 .Linfo_string378:
-	.asciz	"_STNf1|<void (t1<>, t1<>)>"    # string offset=8534
+	.asciz	"_STN|f1|<void (t1<>, t1<>)>"    # string offset=8534
 .Linfo_string379:
 	.asciz	"_Z2f1IJM2t1IJEEiEEvv"          # string offset=8561
 .Linfo_string380:
-	.asciz	"_STNf1|<int t1<>::*>"          # string offset=8582
+	.asciz	"_STN|f1|<int t1<>::*>"          # string offset=8582
 .Linfo_string381:
 	.asciz	"_Z2f1IJU9swiftcallFvvEEEvv"    # string offset=8603
 .Linfo_string382:
-	.asciz	"_STNf1|<void () __attribute__((swiftcall))>" # string offset=8630
+	.asciz	"_STN|f1|<void () __attribute__((swiftcall))>" # string offset=8630
 .Linfo_string383:
 	.asciz	"_Z2f1IJZN2t83memEvE2t7EEvv"    # string offset=8674
 .Linfo_string384:
 	.asciz	"_Z2f1IJM2t8FvvEEEvv"           # string offset=8701
 .Linfo_string385:
-	.asciz	"_STNf1|<void (t8::*)()>"       # string offset=8721
+	.asciz	"_STN|f1|<void (t8::*)()>"       # string offset=8721
 .Linfo_string386:
 	.asciz	"L"                             # string offset=8745
 .Linfo_string387:
@@ -12986,7 +12986,7 @@ i:
 .Linfo_string388:
 	.asciz	"N"                             # string offset=8750
 .Linfo_string389:
-	.asciz	"_STNt4|<3U>"                   # string offset=8752
+	.asciz	"_STN|t4|<3U>"                   # string offset=8752
 .Linfo_string390:
 	.asciz	"v1"                            # string offset=8764
 .Linfo_string391:
@@ -13004,99 +13004,99 @@ i:
 .Linfo_string397:
 	.asciz	"t12"                           # string offset=8855
 .Linfo_string398:
-	.asciz	"_STNt2|<int>"                  # string offset=8859
+	.asciz	"_STN|t2|<int>"                  # string offset=8859
 .Linfo_string399:
-	.asciz	"_STNt2|<float>"                # string offset=8872
+	.asciz	"_STN|t2|<float>"                # string offset=8872
 .Linfo_string400:
-	.asciz	"_STNt1|<bool>"                 # string offset=8887
+	.asciz	"_STN|t1|<bool>"                 # string offset=8887
 .Linfo_string401:
-	.asciz	"_STNt2|<bool>"                 # string offset=8901
+	.asciz	"_STN|t2|<bool>"                 # string offset=8901
 .Linfo_string402:
-	.asciz	"_STNt1|<double>"               # string offset=8915
+	.asciz	"_STN|t1|<double>"               # string offset=8915
 .Linfo_string403:
-	.asciz	"_STNt2|<double>"               # string offset=8931
+	.asciz	"_STN|t2|<double>"               # string offset=8931
 .Linfo_string404:
-	.asciz	"_STNt1|<long>"                 # string offset=8947
+	.asciz	"_STN|t1|<long>"                 # string offset=8947
 .Linfo_string405:
-	.asciz	"_STNt2|<long>"                 # string offset=8961
+	.asciz	"_STN|t2|<long>"                 # string offset=8961
 .Linfo_string406:
-	.asciz	"_STNt1|<short>"                # string offset=8975
+	.asciz	"_STN|t1|<short>"                # string offset=8975
 .Linfo_string407:
-	.asciz	"_STNt2|<short>"                # string offset=8990
+	.asciz	"_STN|t2|<short>"                # string offset=8990
 .Linfo_string408:
-	.asciz	"_STNt1|<unsigned int>"         # string offset=9005
+	.asciz	"_STN|t1|<unsigned int>"         # string offset=9005
 .Linfo_string409:
-	.asciz	"_STNt2|<unsigned int>"         # string offset=9027
+	.asciz	"_STN|t2|<unsigned int>"         # string offset=9027
 .Linfo_string410:
-	.asciz	"_STNt1|<unsigned long long>"   # string offset=9049
+	.asciz	"_STN|t1|<unsigned long long>"   # string offset=9049
 .Linfo_string411:
-	.asciz	"_STNt2|<unsigned long long>"   # string offset=9077
+	.asciz	"_STN|t2|<unsigned long long>"   # string offset=9077
 .Linfo_string412:
-	.asciz	"_STNt1|<long long>"            # string offset=9105
+	.asciz	"_STN|t1|<long long>"            # string offset=9105
 .Linfo_string413:
-	.asciz	"_STNt2|<long long>"            # string offset=9124
+	.asciz	"_STN|t2|<long long>"            # string offset=9124
 .Linfo_string414:
-	.asciz	"_STNt1|<udt>"                  # string offset=9143
+	.asciz	"_STN|t1|<udt>"                  # string offset=9143
 .Linfo_string415:
-	.asciz	"_STNt2|<udt>"                  # string offset=9156
+	.asciz	"_STN|t2|<udt>"                  # string offset=9156
 .Linfo_string416:
-	.asciz	"_STNt1|<ns::udt>"              # string offset=9169
+	.asciz	"_STN|t1|<ns::udt>"              # string offset=9169
 .Linfo_string417:
-	.asciz	"_STNt2|<ns::udt>"              # string offset=9186
+	.asciz	"_STN|t2|<ns::udt>"              # string offset=9186
 .Linfo_string418:
-	.asciz	"_STNt1|<ns::udt *>"            # string offset=9203
+	.asciz	"_STN|t1|<ns::udt *>"            # string offset=9203
 .Linfo_string419:
-	.asciz	"_STNt2|<ns::udt *>"            # string offset=9222
+	.asciz	"_STN|t2|<ns::udt *>"            # string offset=9222
 .Linfo_string420:
-	.asciz	"_STNt1|<ns::inner::udt>"       # string offset=9241
+	.asciz	"_STN|t1|<ns::inner::udt>"       # string offset=9241
 .Linfo_string421:
-	.asciz	"_STNt2|<ns::inner::udt>"       # string offset=9265
+	.asciz	"_STN|t2|<ns::inner::udt>"       # string offset=9265
 .Linfo_string422:
-	.asciz	"_STNt1|<t1<int> >"             # string offset=9289
+	.asciz	"_STN|t1|<t1<int> >"             # string offset=9289
 .Linfo_string423:
-	.asciz	"_STNt2|<t1<int> >"             # string offset=9307
+	.asciz	"_STN|t2|<t1<int> >"             # string offset=9307
 .Linfo_string424:
-	.asciz	"_STNt1|<int, float>"           # string offset=9325
+	.asciz	"_STN|t1|<int, float>"           # string offset=9325
 .Linfo_string425:
-	.asciz	"_STNt2|<int, float>"           # string offset=9345
+	.asciz	"_STN|t2|<int, float>"           # string offset=9345
 .Linfo_string426:
-	.asciz	"_STNt2|<int *>"                # string offset=9365
+	.asciz	"_STN|t2|<int *>"                # string offset=9365
 .Linfo_string427:
-	.asciz	"_STNt1|<int &>"                # string offset=9380
+	.asciz	"_STN|t1|<int &>"                # string offset=9380
 .Linfo_string428:
-	.asciz	"_STNt2|<int &>"                # string offset=9395
+	.asciz	"_STN|t2|<int &>"                # string offset=9395
 .Linfo_string429:
-	.asciz	"_STNt1|<int &&>"               # string offset=9410
+	.asciz	"_STN|t1|<int &&>"               # string offset=9410
 .Linfo_string430:
-	.asciz	"_STNt2|<int &&>"               # string offset=9426
+	.asciz	"_STN|t2|<int &&>"               # string offset=9426
 .Linfo_string431:
-	.asciz	"_STNt1|<const int>"            # string offset=9442
+	.asciz	"_STN|t1|<const int>"            # string offset=9442
 .Linfo_string432:
-	.asciz	"_STNt2|<const int>"            # string offset=9461
+	.asciz	"_STN|t2|<const int>"            # string offset=9461
 .Linfo_string433:
-	.asciz	"_STNt1|<int[3]>"               # string offset=9480
+	.asciz	"_STN|t1|<int[3]>"               # string offset=9480
 .Linfo_string434:
-	.asciz	"_STNt2|<int[3]>"               # string offset=9496
+	.asciz	"_STN|t2|<int[3]>"               # string offset=9496
 .Linfo_string435:
-	.asciz	"_STNt1|<void>"                 # string offset=9512
+	.asciz	"_STN|t1|<void>"                 # string offset=9512
 .Linfo_string436:
-	.asciz	"_STNt2|<void>"                 # string offset=9526
+	.asciz	"_STN|t2|<void>"                 # string offset=9526
 .Linfo_string437:
-	.asciz	"_STNt1|<outer_class::inner_class>" # string offset=9540
+	.asciz	"_STN|t1|<outer_class::inner_class>" # string offset=9540
 .Linfo_string438:
-	.asciz	"_STNt2|<outer_class::inner_class>" # string offset=9574
+	.asciz	"_STN|t2|<outer_class::inner_class>" # string offset=9574
 .Linfo_string439:
-	.asciz	"_STNt1|<unsigned long>"        # string offset=9608
+	.asciz	"_STN|t1|<unsigned long>"        # string offset=9608
 .Linfo_string440:
-	.asciz	"_STNt2|<unsigned long>"        # string offset=9631
+	.asciz	"_STN|t2|<unsigned long>"        # string offset=9631
 .Linfo_string441:
-	.asciz	"_STNt1|<t3<int, false> >"      # string offset=9654
+	.asciz	"_STN|t1|<t3<int, false> >"      # string offset=9654
 .Linfo_string442:
-	.asciz	"_STNt2|<t3<int, false> >"      # string offset=9679
+	.asciz	"_STN|t2|<t3<int, false> >"      # string offset=9679
 .Linfo_string443:
-	.asciz	"_STNt1|<t3<t3<int, false>, false> >" # string offset=9704
+	.asciz	"_STN|t1|<t3<t3<int, false>, false> >" # string offset=9704
 .Linfo_string444:
-	.asciz	"_STNt2|<t3<t3<int, false>, false> >" # string offset=9740
+	.asciz	"_STN|t2|<t3<t3<int, false>, false> >" # string offset=9740
 .Linfo_string445:
 	.asciz	"t2<(lambda at cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:184:12)>" # string offset=9776
 .Linfo_string446:
@@ -13104,57 +13104,57 @@ i:
 .Linfo_string447:
 	.asciz	"t2<t3<t3<(lambda at cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:184:12), false>, false> >" # string offset=10019
 .Linfo_string448:
-	.asciz	"_STNt1|<int (float)>"          # string offset=10152
+	.asciz	"_STN|t1|<int (float)>"          # string offset=10152
 .Linfo_string449:
-	.asciz	"_STNt2|<int (float)>"          # string offset=10173
+	.asciz	"_STN|t2|<int (float)>"          # string offset=10173
 .Linfo_string450:
-	.asciz	"_STNt1|<void (...)>"           # string offset=10194
+	.asciz	"_STN|t1|<void (...)>"           # string offset=10194
 .Linfo_string451:
-	.asciz	"_STNt2|<void (...)>"           # string offset=10214
+	.asciz	"_STN|t2|<void (...)>"           # string offset=10214
 .Linfo_string452:
-	.asciz	"_STNt1|<void (int, ...)>"      # string offset=10234
+	.asciz	"_STN|t1|<void (int, ...)>"      # string offset=10234
 .Linfo_string453:
-	.asciz	"_STNt2|<void (int, ...)>"      # string offset=10259
+	.asciz	"_STN|t2|<void (int, ...)>"      # string offset=10259
 .Linfo_string454:
-	.asciz	"_STNt1|<const int &>"          # string offset=10284
+	.asciz	"_STN|t1|<const int &>"          # string offset=10284
 .Linfo_string455:
-	.asciz	"_STNt2|<const int &>"          # string offset=10305
+	.asciz	"_STN|t2|<const int &>"          # string offset=10305
 .Linfo_string456:
-	.asciz	"_STNt1|<const int *&>"         # string offset=10326
+	.asciz	"_STN|t1|<const int *&>"         # string offset=10326
 .Linfo_string457:
-	.asciz	"_STNt2|<const int *&>"         # string offset=10348
+	.asciz	"_STN|t2|<const int *&>"         # string offset=10348
 .Linfo_string458:
-	.asciz	"_STNt1|<(anonymous namespace)::t5>" # string offset=10370
+	.asciz	"_STN|t1|<(anonymous namespace)::t5>" # string offset=10370
 .Linfo_string459:
-	.asciz	"_STNt2|<(anonymous namespace)::t5>" # string offset=10405
+	.asciz	"_STN|t2|<(anonymous namespace)::t5>" # string offset=10405
 .Linfo_string460:
-	.asciz	"_STNt1|<std::nullptr_t>"       # string offset=10440
+	.asciz	"_STN|t1|<std::nullptr_t>"       # string offset=10440
 .Linfo_string461:
-	.asciz	"_STNt2|<std::nullptr_t>"       # string offset=10464
+	.asciz	"_STN|t2|<std::nullptr_t>"       # string offset=10464
 .Linfo_string462:
-	.asciz	"_STNt1|<long *, long *>"       # string offset=10488
+	.asciz	"_STN|t1|<long *, long *>"       # string offset=10488
 .Linfo_string463:
-	.asciz	"_STNt2|<long *, long *>"       # string offset=10512
+	.asciz	"_STN|t2|<long *, long *>"       # string offset=10512
 .Linfo_string464:
-	.asciz	"_STNt1|<long *, udt *>"        # string offset=10536
+	.asciz	"_STN|t1|<long *, udt *>"        # string offset=10536
 .Linfo_string465:
-	.asciz	"_STNt2|<long *, udt *>"        # string offset=10559
+	.asciz	"_STN|t2|<long *, udt *>"        # string offset=10559
 .Linfo_string466:
-	.asciz	"_STNt1|<void *const>"          # string offset=10582
+	.asciz	"_STN|t1|<void *const>"          # string offset=10582
 .Linfo_string467:
-	.asciz	"_STNt2|<void *const>"          # string offset=10603
+	.asciz	"_STN|t2|<void *const>"          # string offset=10603
 .Linfo_string468:
-	.asciz	"_STNt1|<const void *const *>"  # string offset=10624
+	.asciz	"_STN|t1|<const void *const *>"  # string offset=10624
 .Linfo_string469:
-	.asciz	"_STNt2|<const void *const *>"  # string offset=10653
+	.asciz	"_STN|t2|<const void *const *>"  # string offset=10653
 .Linfo_string470:
-	.asciz	"_STNt1|<void ()>"              # string offset=10682
+	.asciz	"_STN|t1|<void ()>"              # string offset=10682
 .Linfo_string471:
-	.asciz	"_STNt2|<void ()>"              # string offset=10699
+	.asciz	"_STN|t2|<void ()>"              # string offset=10699
 .Linfo_string472:
-	.asciz	"_STNt1|<void (*)()>"           # string offset=10716
+	.asciz	"_STN|t1|<void (*)()>"           # string offset=10716
 .Linfo_string473:
-	.asciz	"_STNt2|<void (*)()>"           # string offset=10736
+	.asciz	"_STN|t2|<void (*)()>"           # string offset=10736
 .Linfo_string474:
 	.asciz	"t1<(lambda at cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:184:12) *>" # string offset=10756
 .Linfo_string475:
@@ -13168,117 +13168,117 @@ i:
 .Linfo_string479:
 	.asciz	"t2<(unnamed struct at cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:183:3) *>" # string offset=11333
 .Linfo_string480:
-	.asciz	"_STNt2|<>"                     # string offset=11452
+	.asciz	"_STN|t2|<>"                     # string offset=11452
 .Linfo_string481:
-	.asciz	"_STNt1|<const void *, const void *>" # string offset=11462
+	.asciz	"_STN|t1|<const void *, const void *>" # string offset=11462
 .Linfo_string482:
-	.asciz	"_STNt2|<const void *, const void *>" # string offset=11498
+	.asciz	"_STN|t2|<const void *, const void *>" # string offset=11498
 .Linfo_string483:
-	.asciz	"_STNt1|<t1<int *> *>"          # string offset=11534
+	.asciz	"_STN|t1|<t1<int *> *>"          # string offset=11534
 .Linfo_string484:
-	.asciz	"_STNt2|<t1<int *> *>"          # string offset=11555
+	.asciz	"_STN|t2|<t1<int *> *>"          # string offset=11555
 .Linfo_string485:
-	.asciz	"_STNt1|<int *[]>"              # string offset=11576
+	.asciz	"_STN|t1|<int *[]>"              # string offset=11576
 .Linfo_string486:
-	.asciz	"_STNt2|<int *[]>"              # string offset=11593
+	.asciz	"_STN|t2|<int *[]>"              # string offset=11593
 .Linfo_string487:
 	.asciz	"this"                          # string offset=11610
 .Linfo_string488:
-	.asciz	"_STNt1|<t7>"                   # string offset=11615
+	.asciz	"_STN|t1|<t7>"                   # string offset=11615
 .Linfo_string489:
-	.asciz	"_STNt2|<t7>"                   # string offset=11627
+	.asciz	"_STN|t2|<t7>"                   # string offset=11627
 .Linfo_string490:
-	.asciz	"_STNt1|<int (&)[3]>"           # string offset=11639
+	.asciz	"_STN|t1|<int (&)[3]>"           # string offset=11639
 .Linfo_string491:
-	.asciz	"_STNt2|<int (&)[3]>"           # string offset=11659
+	.asciz	"_STN|t2|<int (&)[3]>"           # string offset=11659
 .Linfo_string492:
-	.asciz	"_STNt1|<int (*)[3]>"           # string offset=11679
+	.asciz	"_STN|t1|<int (*)[3]>"           # string offset=11679
 .Linfo_string493:
-	.asciz	"_STNt2|<int (*)[3]>"           # string offset=11699
+	.asciz	"_STN|t2|<int (*)[3]>"           # string offset=11699
 .Linfo_string494:
-	.asciz	"_STNt1|<int *, std::nullptr_t *>" # string offset=11719
+	.asciz	"_STN|t1|<int *, std::nullptr_t *>" # string offset=11719
 .Linfo_string495:
-	.asciz	"_STNt2|<int *, std::nullptr_t *>" # string offset=11752
+	.asciz	"_STN|t2|<int *, std::nullptr_t *>" # string offset=11752
 .Linfo_string496:
-	.asciz	"_STNt1|<t7<int> >"             # string offset=11785
+	.asciz	"_STN|t1|<t7<int> >"             # string offset=11785
 .Linfo_string497:
-	.asciz	"_STNt2|<t7<int> >"             # string offset=11803
+	.asciz	"_STN|t2|<t7<int> >"             # string offset=11803
 .Linfo_string498:
 	.asciz	"t1<_Atomic(int)>"              # string offset=11821
 .Linfo_string499:
 	.asciz	"t2<_Atomic(int)>"              # string offset=11838
 .Linfo_string500:
-	.asciz	"_STNt1|<int, long, volatile char>" # string offset=11855
+	.asciz	"_STN|t1|<int, long, volatile char>" # string offset=11855
 .Linfo_string501:
-	.asciz	"_STNt2|<int, long, volatile char>" # string offset=11889
+	.asciz	"_STN|t2|<int, long, volatile char>" # string offset=11889
 .Linfo_string502:
 	.asciz	"t1<__attribute__((__vector_size__(2 * sizeof(int)))) int>" # string offset=11923
 .Linfo_string503:
 	.asciz	"t2<__attribute__((__vector_size__(2 * sizeof(int)))) int>" # string offset=11981
 .Linfo_string504:
-	.asciz	"_STNt1|<int *const volatile>"  # string offset=12039
+	.asciz	"_STN|t1|<int *const volatile>"  # string offset=12039
 .Linfo_string505:
-	.asciz	"_STNt2|<int *const volatile>"  # string offset=12068
+	.asciz	"_STN|t2|<int *const volatile>"  # string offset=12068
 .Linfo_string506:
-	.asciz	"_STNt1|<const volatile void>"  # string offset=12097
+	.asciz	"_STN|t1|<const volatile void>"  # string offset=12097
 .Linfo_string507:
-	.asciz	"_STNt2|<const volatile void>"  # string offset=12126
+	.asciz	"_STN|t2|<const volatile void>"  # string offset=12126
 .Linfo_string508:
 	.asciz	"t1<t1<(lambda at cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:184:12)> >" # string offset=12155
 .Linfo_string509:
 	.asciz	"t2<t1<(lambda at cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:184:12)> >" # string offset=12270
 .Linfo_string510:
-	.asciz	"_STNt1|<void (udt::*)() const>" # string offset=12385
+	.asciz	"_STN|t1|<void (udt::*)() const>" # string offset=12385
 .Linfo_string511:
-	.asciz	"_STNt2|<void (udt::*)() const>" # string offset=12416
+	.asciz	"_STN|t2|<void (udt::*)() const>" # string offset=12416
 .Linfo_string512:
-	.asciz	"_STNt1|<void (udt::*)() volatile &>" # string offset=12447
+	.asciz	"_STN|t1|<void (udt::*)() volatile &>" # string offset=12447
 .Linfo_string513:
-	.asciz	"_STNt2|<void (udt::*)() volatile &>" # string offset=12483
+	.asciz	"_STN|t2|<void (udt::*)() volatile &>" # string offset=12483
 .Linfo_string514:
-	.asciz	"_STNt1|<void (udt::*)() const volatile &&>" # string offset=12519
+	.asciz	"_STN|t1|<void (udt::*)() const volatile &&>" # string offset=12519
 .Linfo_string515:
-	.asciz	"_STNt2|<void (udt::*)() const volatile &&>" # string offset=12562
+	.asciz	"_STN|t2|<void (udt::*)() const volatile &&>" # string offset=12562
 .Linfo_string516:
-	.asciz	"_STNt1|<void (*const)()>"      # string offset=12605
+	.asciz	"_STN|t1|<void (*const)()>"      # string offset=12605
 .Linfo_string517:
-	.asciz	"_STNt2|<void (*const)()>"      # string offset=12630
+	.asciz	"_STN|t2|<void (*const)()>"      # string offset=12630
 .Linfo_string518:
-	.asciz	"_STNt1|<const char (&)[1]>"    # string offset=12655
+	.asciz	"_STN|t1|<const char (&)[1]>"    # string offset=12655
 .Linfo_string519:
-	.asciz	"_STNt2|<const char (&)[1]>"    # string offset=12682
+	.asciz	"_STN|t2|<const char (&)[1]>"    # string offset=12682
 .Linfo_string520:
-	.asciz	"_STNt1|<void () const &>"      # string offset=12709
+	.asciz	"_STN|t1|<void () const &>"      # string offset=12709
 .Linfo_string521:
-	.asciz	"_STNt2|<void () const &>"      # string offset=12734
+	.asciz	"_STN|t2|<void () const &>"      # string offset=12734
 .Linfo_string522:
-	.asciz	"_STNt1|<void () volatile &&>"  # string offset=12759
+	.asciz	"_STN|t1|<void () volatile &&>"  # string offset=12759
 .Linfo_string523:
-	.asciz	"_STNt2|<void () volatile &&>"  # string offset=12788
+	.asciz	"_STN|t2|<void () volatile &&>"  # string offset=12788
 .Linfo_string524:
-	.asciz	"_STNt1|<void () const volatile>" # string offset=12817
+	.asciz	"_STN|t1|<void () const volatile>" # string offset=12817
 .Linfo_string525:
-	.asciz	"_STNt2|<void () const volatile>" # string offset=12849
+	.asciz	"_STN|t2|<void () const volatile>" # string offset=12849
 .Linfo_string526:
-	.asciz	"_STNt1|<int *const[1]>"        # string offset=12881
+	.asciz	"_STN|t1|<int *const[1]>"        # string offset=12881
 .Linfo_string527:
-	.asciz	"_STNt2|<int *const[1]>"        # string offset=12904
+	.asciz	"_STN|t2|<int *const[1]>"        # string offset=12904
 .Linfo_string528:
-	.asciz	"_STNt1|<int *const (&)[1]>"    # string offset=12927
+	.asciz	"_STN|t1|<int *const (&)[1]>"    # string offset=12927
 .Linfo_string529:
-	.asciz	"_STNt2|<int *const (&)[1]>"    # string offset=12954
+	.asciz	"_STN|t2|<int *const (&)[1]>"    # string offset=12954
 .Linfo_string530:
-	.asciz	"_STNt1|<void (udt::*const &)()>" # string offset=12981
+	.asciz	"_STN|t1|<void (udt::*const &)()>" # string offset=12981
 .Linfo_string531:
-	.asciz	"_STNt2|<void (udt::*const &)()>" # string offset=13013
+	.asciz	"_STN|t2|<void (udt::*const &)()>" # string offset=13013
 .Linfo_string532:
-	.asciz	"_STNt1|<void (*(int))(float)>" # string offset=13045
+	.asciz	"_STN|t1|<void (*(int))(float)>" # string offset=13045
 .Linfo_string533:
-	.asciz	"_STNt2|<void (*(int))(float)>" # string offset=13075
+	.asciz	"_STN|t2|<void (*(int))(float)>" # string offset=13075
 .Linfo_string534:
-	.asciz	"_STNt1|<t1<int>[1]>"           # string offset=13105
+	.asciz	"_STN|t1|<t1<int>[1]>"           # string offset=13105
 .Linfo_string535:
-	.asciz	"_STNt2|<t1<int>[1]>"           # string offset=13125
+	.asciz	"_STN|t2|<t1<int>[1]>"           # string offset=13125
 .Linfo_string536:
 	.asciz	"t1<void (*)() noexcept>"       # string offset=13145
 .Linfo_string537:
@@ -13292,9 +13292,9 @@ i:
 .Linfo_string541:
 	.asciz	"t2<void (t8, (unnamed struct at cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:183:3))>" # string offset=13569
 .Linfo_string542:
-	.asciz	"_STNt1|<void (t8)>"            # string offset=13697
+	.asciz	"_STN|t1|<void (t8)>"            # string offset=13697
 .Linfo_string543:
-	.asciz	"_STNt2|<void (t8)>"            # string offset=13716
+	.asciz	"_STN|t2|<void (t8)>"            # string offset=13716
 .Linfo_string544:
 	.asciz	"t1<_BitInt(3)>"                # string offset=13735
 .Linfo_string545:
@@ -13304,21 +13304,21 @@ i:
 .Linfo_string547:
 	.asciz	"t2<const unsigned _BitInt(5)>" # string offset=13795
 .Linfo_string548:
-	.asciz	"_STNt1|<void (t1<>, t1<>)>"    # string offset=13825
+	.asciz	"_STN|t1|<void (t1<>, t1<>)>"    # string offset=13825
 .Linfo_string549:
-	.asciz	"_STNt2|<void (t1<>, t1<>)>"    # string offset=13852
+	.asciz	"_STN|t2|<void (t1<>, t1<>)>"    # string offset=13852
 .Linfo_string550:
-	.asciz	"_STNt1|<int t1<>::*>"          # string offset=13879
+	.asciz	"_STN|t1|<int t1<>::*>"          # string offset=13879
 .Linfo_string551:
-	.asciz	"_STNt2|<int t1<>::*>"          # string offset=13900
+	.asciz	"_STN|t2|<int t1<>::*>"          # string offset=13900
 .Linfo_string552:
-	.asciz	"_STNt1|<void () __attribute__((swiftcall))>" # string offset=13921
+	.asciz	"_STN|t1|<void () __attribute__((swiftcall))>" # string offset=13921
 .Linfo_string553:
-	.asciz	"_STNt2|<void () __attribute__((swiftcall))>" # string offset=13965
+	.asciz	"_STN|t2|<void () __attribute__((swiftcall))>" # string offset=13965
 .Linfo_string554:
-	.asciz	"_STNt1|<void (t8::*)()>"       # string offset=14009
+	.asciz	"_STN|t1|<void (t8::*)()>"       # string offset=14009
 .Linfo_string555:
-	.asciz	"_STNt2|<void (t8::*)()>"       # string offset=14033
+	.asciz	"_STN|t2|<void (t8::*)()>"       # string offset=14033
 	.section	.debug_str_offsets,"",@progbits
 	.long	.Linfo_string0
 	.long	.Linfo_string1

@@ -35,20 +35,20 @@ t4 v1;
 void f() {
   // Basic examples of simplifiable/rebuildable names
   f1<>();
-  // CHECK: !DISubprogram(name: "_STNf1|<>",
+  // CHECK: !DISubprogram(name: "_STN|f1|<>",
   // SIMPLE: !DISubprogram(name: "f1",
   // FULL: !DISubprogram(name: "f1<>",
   f1<int>();
-  // CHECK: !DISubprogram(name: "_STNf1|<int>",
+  // CHECK: !DISubprogram(name: "_STN|f1|<int>",
   f1<void()>();
-  // CHECK: !DISubprogram(name: "_STNf1|<void ()>",
+  // CHECK: !DISubprogram(name: "_STN|f1|<void ()>",
   f2<int, 42>();
-  // CHECK: !DISubprogram(name: "_STNf2|<int, 42>",
+  // CHECK: !DISubprogram(name: "_STN|f2|<int, 42>",
 
   // Check that even though the nested name can't be rebuilt, it'll carry its
   // full name and the outer name can be rebuilt from that.
   f1<t1<void() noexcept>>();
-  // CHECK: !DISubprogram(name: "_STNf1|<t1<void () noexcept> >",
+  // CHECK: !DISubprogram(name: "_STN|f1|<t1<void () noexcept> >",
 
   // Vector array types are encoded in DWARF but the decoding in llvm-dwarfdump
   // isn't implemented yet.
@@ -109,7 +109,7 @@ void f() {
   // worry about seeing conversion operators as parameters to other templates.
 
   f3<t1>();
-  // CHECK: !DISubprogram(name: "_STNf3|<t1>",
+  // CHECK: !DISubprogram(name: "_STN|f3|<t1>",
   
   f1<_BitInt(3)>();
   // CHECK: !DISubprogram(name: "f1<_BitInt(3)>",

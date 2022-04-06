@@ -18,7 +18,7 @@
 ; CHECK: distinct !DICompositeType(tag: DW_TAG_structure_type, name: "struct", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: 309, size: 128, flags: DIFlagFwdDecl, templateParams: !{{[0-9]+}}, identifier: "struct_templ_simplified")
 ; CHECK: distinct !DICompositeType(tag: DW_TAG_union_type, file: !{{[0-9]+}}, line: 115, size: 384, flags: DIFlagFwdDecl, identifier: "union")
 ; CHECK: distinct !DICompositeType(tag: DW_TAG_structure_type, name: "struct<>", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: 309, size: 128, flags: DIFlagFwdDecl, identifier: "struct_templ")
-; CHECK: distinct !DICompositeType(tag: DW_TAG_structure_type, name: "_STNstruct|<>", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: 309, size: 128, flags: DIFlagFwdDecl, templateParams: !{{[0-9]+}}, identifier: "struct_templ_simplified_mangled")
+; CHECK: distinct !DICompositeType(tag: DW_TAG_structure_type, name: "_STN|struct|<>", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: 309, size: 128, flags: DIFlagFwdDecl, templateParams: !{{[0-9]+}}, identifier: "struct_templ_simplified_mangled")
 
 ; Ensure that full type definitions of composite types are imported if requested
 ; RUN: llvm-lto -import-full-type-definitions -thinlto-action=import %t2.bc -thinlto-index=%t.index.bc -o - | llvm-dis -o - | FileCheck %s --check-prefix=FULL
@@ -34,7 +34,7 @@
 ; FULL: distinct !DICompositeType(tag: DW_TAG_structure_type, name: "struct", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: 309, baseType: !{{[0-9]+}}, size: 128, offset: 64, elements: !{{[0-9]+}}, vtableHolder: !{{[0-9]+}}, templateParams: !{{[0-9]+}}, identifier: "struct_templ_simplified")
 ; FULL: distinct !DICompositeType(tag: DW_TAG_union_type, file: !{{[0-9]+}}, line: 115, size: 384, elements: !{{[0-9]+}}, identifier: "union")
 ; FULL: distinct !DICompositeType(tag: DW_TAG_structure_type, name: "struct<>", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: 309, baseType: !{{[0-9]+}}, size: 128, offset: 64, elements: !{{[0-9]+}}, vtableHolder: !{{[0-9]+}}, templateParams: !{{[0-9]+}}, identifier: "struct_templ")
-; FULL: distinct !DICompositeType(tag: DW_TAG_structure_type, name: "_STNstruct|<>", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: 309, baseType: !{{[0-9]+}}, size: 128, offset: 64, elements: !{{[0-9]+}}, vtableHolder: !{{[0-9]+}}, templateParams: !{{[0-9]+}}, identifier: "struct_templ_simplified_mangled")
+; FULL: distinct !DICompositeType(tag: DW_TAG_structure_type, name: "_STN|struct|<>", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: 309, baseType: !{{[0-9]+}}, size: 128, offset: 64, elements: !{{[0-9]+}}, vtableHolder: !{{[0-9]+}}, templateParams: !{{[0-9]+}}, identifier: "struct_templ_simplified_mangled")
 
 ; ModuleID = 'debuginfo-compositetype-import.c'
 source_filename = "debuginfo-compositetype-import.c"
@@ -65,4 +65,4 @@ entry:
 !11 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "struct", scope: !1, file: !1, line: 309, baseType: !10, size: 128, offset: 64, elements: !5, vtableHolder: !10, templateParams: !5, identifier: "struct_templ_simplified")
 !12 = distinct !DICompositeType(tag: DW_TAG_union_type, file: !1, line: 115, size: 384, elements: !5, identifier: "union")
 !13 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "struct<>", scope: !1, file: !1, line: 309, baseType: !10, size: 128, offset: 64, elements: !5, vtableHolder: !10, templateParams: !5, identifier: "struct_templ")
-!14 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "_STNstruct|<>", scope: !1, file: !1, line: 309, baseType: !10, size: 128, offset: 64, elements: !5, vtableHolder: !10, templateParams: !5, identifier: "struct_templ_simplified_mangled")
+!14 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "_STN|struct|<>", scope: !1, file: !1, line: 309, baseType: !10, size: 128, offset: 64, elements: !5, vtableHolder: !10, templateParams: !5, identifier: "struct_templ_simplified_mangled")
