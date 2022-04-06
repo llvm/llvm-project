@@ -9,7 +9,7 @@ define i32 @f2(i32 %a) {
 ; CHECK-LABEL: f2:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    movs r1, #24
-; CHECK-NEXT:    teq.w r0, #187
+; CHECK-NEXT:    cmp r0, #187
 ; CHECK-NEXT:    it eq
 ; CHECK-NEXT:    moveq r1, #42
 ; CHECK-NEXT:    mov r0, r1
@@ -25,7 +25,7 @@ define i32 @f3(i32 %a) {
 ; CHECK-LABEL: f3:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    movs r1, #24
-; CHECK-NEXT:    teq.w r0, #11141290
+; CHECK-NEXT:    cmp.w r0, #11141290
 ; CHECK-NEXT:    it eq
 ; CHECK-NEXT:    moveq r1, #42
 ; CHECK-NEXT:    mov r0, r1
@@ -41,7 +41,7 @@ define i32 @f6(i32 %a) {
 ; CHECK-LABEL: f6:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    movs r1, #24
-; CHECK-NEXT:    teq.w r0, #-872363008
+; CHECK-NEXT:    cmp.w r0, #-872363008
 ; CHECK-NEXT:    it eq
 ; CHECK-NEXT:    moveq r1, #42
 ; CHECK-NEXT:    mov r0, r1
@@ -57,7 +57,7 @@ define i32 @f7(i32 %a) {
 ; CHECK-LABEL: f7:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    movs r1, #24
-; CHECK-NEXT:    teq.w r0, #-572662307
+; CHECK-NEXT:    cmp.w r0, #-572662307
 ; CHECK-NEXT:    it eq
 ; CHECK-NEXT:    moveq r1, #42
 ; CHECK-NEXT:    mov r0, r1
@@ -73,7 +73,7 @@ define i32 @f10(i32 %a) {
 ; CHECK-LABEL: f10:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    movs r1, #24
-; CHECK-NEXT:    teq.w r0, #1114112
+; CHECK-NEXT:    cmp.w r0, #1114112
 ; CHECK-NEXT:    it eq
 ; CHECK-NEXT:    moveq r1, #42
 ; CHECK-NEXT:    mov r0, r1
@@ -88,7 +88,7 @@ define i32 @f10(i32 %a) {
 define i1 @f12(i32 %a) {
 ; CHECK-LABEL: f12:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    eor r0, r0, #187
+; CHECK-NEXT:    subs r0, #187
 ; CHECK-NEXT:    clz r0, r0
 ; CHECK-NEXT:    lsrs r0, r0, #5
 ; CHECK-NEXT:    bx lr
@@ -101,7 +101,7 @@ define i1 @f12(i32 %a) {
 define i1 @f13(i32 %a) {
 ; CHECK-LABEL: f13:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    eor r0, r0, #11141290
+; CHECK-NEXT:    sub.w r0, r0, #11141290
 ; CHECK-NEXT:    clz r0, r0
 ; CHECK-NEXT:    lsrs r0, r0, #5
 ; CHECK-NEXT:    bx lr
@@ -114,7 +114,7 @@ define i1 @f13(i32 %a) {
 define i1 @f16(i32 %a) {
 ; CHECK-LABEL: f16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    eor r0, r0, #-872363008
+; CHECK-NEXT:    sub.w r0, r0, #-872363008
 ; CHECK-NEXT:    clz r0, r0
 ; CHECK-NEXT:    lsrs r0, r0, #5
 ; CHECK-NEXT:    bx lr
@@ -127,7 +127,7 @@ define i1 @f16(i32 %a) {
 define i1 @f17(i32 %a) {
 ; CHECK-LABEL: f17:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    eor r0, r0, #-572662307
+; CHECK-NEXT:    sub.w r0, r0, #-572662307
 ; CHECK-NEXT:    clz r0, r0
 ; CHECK-NEXT:    lsrs r0, r0, #5
 ; CHECK-NEXT:    bx lr
@@ -140,7 +140,7 @@ define i1 @f17(i32 %a) {
 define i1 @f18(i32 %a) {
 ; CHECK-LABEL: f18:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    eor r0, r0, #1114112
+; CHECK-NEXT:    sub.w r0, r0, #1114112
 ; CHECK-NEXT:    clz r0, r0
 ; CHECK-NEXT:    lsrs r0, r0, #5
 ; CHECK-NEXT:    bx lr

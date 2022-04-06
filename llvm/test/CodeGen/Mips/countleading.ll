@@ -198,8 +198,7 @@ declare i64 @llvm.ctlz.i64(i64, i1) nounwind readnone
 define i64 @ctlo_i64(i64 %X) nounwind readnone {
 ; MIPS32-R1-R2-LABEL: ctlo_i64:
 ; MIPS32-R1-R2:       # %bb.0: # %entry
-; MIPS32-R1-R2-NEXT:    addiu $1, $zero, -1
-; MIPS32-R1-R2-NEXT:    xor $1, $5, $1
+; MIPS32-R1-R2-NEXT:    not $1, $5
 ; MIPS32-R1-R2-NEXT:    clo $3, $5
 ; MIPS32-R1-R2-NEXT:    clo $2, $4
 ; MIPS32-R1-R2-NEXT:    addiu $2, $2, 32
@@ -209,15 +208,13 @@ define i64 @ctlo_i64(i64 %X) nounwind readnone {
 ;
 ; MIPS32-R6-LABEL: ctlo_i64:
 ; MIPS32-R6:       # %bb.0: # %entry
-; MIPS32-R6-NEXT:    addiu $1, $zero, -1
-; MIPS32-R6-NEXT:    xor $1, $5, $1
-; MIPS32-R6-NEXT:    sltu $1, $zero, $1
-; MIPS32-R6-NEXT:    clo $2, $4
-; MIPS32-R6-NEXT:    addiu $2, $2, 32
-; MIPS32-R6-NEXT:    seleqz $2, $2, $1
-; MIPS32-R6-NEXT:    clo $3, $5
-; MIPS32-R6-NEXT:    selnez $1, $3, $1
-; MIPS32-R6-NEXT:    or $2, $1, $2
+; MIPS32-R6-NEXT:    not $1, $5
+; MIPS32-R6-NEXT:    clo $2, $5
+; MIPS32-R6-NEXT:    selnez $2, $2, $1
+; MIPS32-R6-NEXT:    clo $3, $4
+; MIPS32-R6-NEXT:    addiu $3, $3, 32
+; MIPS32-R6-NEXT:    seleqz $1, $3, $1
+; MIPS32-R6-NEXT:    or $2, $2, $1
 ; MIPS32-R6-NEXT:    jr $ra
 ; MIPS32-R6-NEXT:    addiu $3, $zero, 0
 ;

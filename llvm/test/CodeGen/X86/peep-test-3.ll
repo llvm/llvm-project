@@ -41,7 +41,7 @@ define void @xor(float* %A, i32 %IA, i32 %N) nounwind {
 ; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    andl $3, %ecx
 ; CHECK-NEXT:    xorl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    xorl $1, %ecx
+; CHECK-NEXT:    cmpl $1, %ecx
 ; CHECK-NEXT:    je .LBB1_2
 ; CHECK-NEXT:  # %bb.1: # %bb
 ; CHECK-NEXT:    movl $0, (%eax)
