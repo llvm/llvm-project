@@ -1033,13 +1033,12 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runModuleBufferize(
     // Now analyzing function.
     moduleState.startFunctionAnalysis(funcOp);
 
+    // Gather equivalence info for CallOps.
+    equivalenceAnalysis(funcOp, aliasInfo, moduleState);
+
     // Analyze funcOp.
     if (failed(analyzeOp(funcOp, analysisState)))
       return failure();
-
-    // Gather equivalence info for CallOps.
-    // TODO: Make this a post-analysis step.
-    equivalenceAnalysis(funcOp, aliasInfo, moduleState);
 
     // Mark op as fully analyzed.
     moduleState.analyzedFuncOps[funcOp] = FuncOpAnalysisState::Analyzed;
@@ -1052,23 +1051,21 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runModuleBufferize(
   if (options.testAnalysisOnly)
     return success();
 
-  // Bufferize function bodies.
+  // Bufferize functions.
   for (FuncOp funcOp : moduleState.orderedFuncOps) {
     // No body => no analysis.
-    if (funcOp.getBody().empty())
-      continue;
+    if (!funcOp.getBody().empty())
+      if (failed(bufferizeOp(funcOp, bufferizationState)))
+        return failure();
 
-    if (failed(bufferizeOp(funcOp, bufferizationState)))
-      return failure();
-  }
-
-  // Bufferize function boundaries.
-  for (FuncOp funcOp : moduleState.orderedFuncOps) {
     // Note: It would be good to apply cleanups here but we cannot as aliasInfo
     // would be invalidated.
     if (failed(bufferizeFuncOpBoundary(funcOp, rewriter, bufferizationState)))
       return failure();
+  }
 
+  // Check result.
+  for (FuncOp funcOp : moduleState.orderedFuncOps) {
     if (!options.allowReturnAllocs &&
         llvm::any_of(funcOp.getFunctionType().getResults(), [](Type t) {
           return t.isa<MemRefType, UnrankedMemRefType>();
