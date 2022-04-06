@@ -437,8 +437,8 @@ static LogicalResult bufferizeFuncOpBoundary(FuncOp funcOp,
       return funcOp->emitError() << "cannot bufferize bodiless function that "
                                  << "returns a tensor";
     FunctionType bufferizedFuncType = getBufferizedFunctionType(
-        funcOp.getContext(), funcOp.getFunctionType().getInputs(), TypeRange{},
-        state.getOptions());
+        funcOp.getContext(), funcOp.getFunctionType().getInputs(),
+        funcOp.getFunctionType().getResults(), state.getOptions());
     funcOp.setType(bufferizedFuncType);
     return success();
   }
