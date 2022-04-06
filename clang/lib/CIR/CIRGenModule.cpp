@@ -125,6 +125,13 @@ mlir::Value CIRGenModule::buildAlloca(StringRef name, InitStyle initStyle,
   auto getAllocaInsertPositionOp =
       [&](mlir::Block **insertBlock) -> mlir::Operation * {
     auto *parentBlock = builder.getInsertionBlock();
+    mlir::Region *r = parentBlock->getParent();
+    assert(r->getBlocks().size() > 0 && "assume at least one block exists");
+    mlir::Block &entryBlock = *r->begin();
+
+    if (parentBlock != &entryBlock)
+      parentBlock = &entryBlock;
+
     auto lastAlloca = std::find_if(
         parentBlock->rbegin(), parentBlock->rend(),
         [](mlir::Operation &op) { return isa<mlir::cir::AllocaOp>(&op); });
