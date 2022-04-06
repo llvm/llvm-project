@@ -3026,10 +3026,9 @@ bool AMDGPULegalizerInfo::legalizeKernargMemParameter(MachineInstr &MI,
                                                       MachineIRBuilder &B,
                                                       uint64_t Offset,
                                                       Align Alignment) const {
-  const LLT S32 = LLT::scalar(32);
   Register DstReg = MI.getOperand(0).getReg();
 
-  assert(B.getMRI()->getType(DstReg) == S32 &&
+  assert(B.getMRI()->getType(DstReg) == LLT::scalar(32) &&
          "unexpected kernarg parameter type");
 
   Register Ptr = getKernargParameterPtr(B, Offset);

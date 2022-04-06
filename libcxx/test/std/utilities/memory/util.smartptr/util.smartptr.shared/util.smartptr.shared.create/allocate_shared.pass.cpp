@@ -11,15 +11,17 @@
 // shared_ptr
 
 // template<class T, class A, class... Args>
-//    shared_ptr<T> allocate_shared(const A& a, Args&&... args);
+// shared_ptr<T> allocate_shared(const A& a, Args&&... args); // T is not an array
 
 #include <memory>
 #include <new>
 #include <cstdlib>
 #include <cassert>
-#include "test_macros.h"
-#include "test_allocator.h"
+
 #include "min_allocator.h"
+#include "operator_hijacker.h"
+#include "test_allocator.h"
+#include "test_macros.h"
 
 int new_count = 0;
 
@@ -171,6 +173,14 @@ int main(int, char**)
     assert(p->get_char() == 'f');
     }
     assert(A::count == 0);
+
+    // Make sure std::allocate_shared handles badly-behaved types properly
+    {
+        std::shared_ptr<operator_hijacker> p1 = std::allocate_shared<operator_hijacker>(min_allocator<operator_hijacker>());
+        std::shared_ptr<operator_hijacker> p2 = std::allocate_shared<operator_hijacker>(min_allocator<operator_hijacker>(), operator_hijacker());
+        assert(p1 != nullptr);
+        assert(p2 != nullptr);
+    }
 
     // Test that we don't call construct before C++20.
 #if TEST_STD_VER < 20

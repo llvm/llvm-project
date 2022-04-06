@@ -57,6 +57,7 @@ typedef struct {
   ompt_data_t task_data;
   struct kmp_taskdata *scheduling_parent;
   int thread_num;
+  ompt_dispatch_chunk_t dispatch_chunk = {0, 0};
 } ompt_task_info_t;
 
 typedef struct {

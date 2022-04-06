@@ -141,6 +141,7 @@
     __cpp_lib_semaphore                            201907L [C++20]
     __cpp_lib_shared_mutex                         201505L [C++17]
     __cpp_lib_shared_ptr_arrays                    201611L [C++17]
+                                                   201707L [C++20]
     __cpp_lib_shared_ptr_weak_type                 201606L [C++17]
     __cpp_lib_shared_timed_mutex                   201402L [C++14]
     __cpp_lib_shift                                201806L [C++20]
@@ -3347,8 +3348,8 @@
 # ifndef __cpp_lib_shared_ptr_arrays
 #   error "__cpp_lib_shared_ptr_arrays should be defined in c++20"
 # endif
-# if __cpp_lib_shared_ptr_arrays != 201611L
-#   error "__cpp_lib_shared_ptr_arrays should have the value 201611L in c++20"
+# if __cpp_lib_shared_ptr_arrays != 201707L
+#   error "__cpp_lib_shared_ptr_arrays should have the value 201707L in c++20"
 # endif
 
 # ifndef __cpp_lib_shared_ptr_weak_type
@@ -4720,8 +4721,8 @@
 # ifndef __cpp_lib_shared_ptr_arrays
 #   error "__cpp_lib_shared_ptr_arrays should be defined in c++2b"
 # endif
-# if __cpp_lib_shared_ptr_arrays != 201611L
-#   error "__cpp_lib_shared_ptr_arrays should have the value 201611L in c++2b"
+# if __cpp_lib_shared_ptr_arrays != 201707L
+#   error "__cpp_lib_shared_ptr_arrays should have the value 201707L in c++2b"
 # endif
 
 # ifndef __cpp_lib_shared_ptr_weak_type
