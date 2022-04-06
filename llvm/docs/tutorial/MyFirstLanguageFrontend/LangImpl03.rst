@@ -34,7 +34,7 @@ class:
     /// ExprAST - Base class for all expression nodes.
     class ExprAST {
     public:
-      virtual ~ExprAST() {}
+      virtual ~ExprAST() = default;
       virtual Value *codegen() = 0;
     };
 
@@ -44,7 +44,7 @@ class:
 
     public:
       NumberExprAST(double Val) : Val(Val) {}
-      virtual Value *codegen();
+      Value *codegen() override;
     };
     ...
 
