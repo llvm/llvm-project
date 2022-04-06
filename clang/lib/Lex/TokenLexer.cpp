@@ -816,7 +816,8 @@ bool TokenLexer::pasteTokens(Token &LHSTok, ArrayRef<Token> TokenStream,
     // Lex the resultant pasted token into Result.
     Token Result;
     // [MSVC Compatibility]
-    if (LHSTok.is(tok::period) && RHS.isAnyIdentifier()) {
+    if ((LHSTok.is(tok::period) || LHSTok.is(tok::arrow)) &&
+        RHS.isAnyIdentifier()) {
       // Handle '.##identifier' or '->##identifier'
       PP.IncrementPasteCounter(true);
       Result.startToken();
