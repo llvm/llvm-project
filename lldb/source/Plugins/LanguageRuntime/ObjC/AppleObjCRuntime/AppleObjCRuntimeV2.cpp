@@ -2341,14 +2341,14 @@ void AppleObjCRuntimeV2::WarnIfNoClassesCached(
   Debugger &debugger(GetProcess()->GetTarget().GetDebugger());
   switch (reason) {
   case SharedCacheWarningReason::eNotEnoughClassesRead:
-    Debugger::ReportWarning("warning: could not find Objective-C class data in "
+    Debugger::ReportWarning("could not find Objective-C class data in "
                             "the process. This may reduce the quality of type "
                             "information available.\n",
                             debugger.GetID(), &m_no_classes_cached_warning);
     break;
   case SharedCacheWarningReason::eExpressionExecutionFailure:
     Debugger::ReportWarning(
-        "warning: could not execute support code to read "
+        "could not execute support code to read "
         "Objective-C class data in the process. This may "
         "reduce the quality of type information available.\n",
         debugger.GetID(), &m_no_classes_cached_warning);
@@ -2373,7 +2373,7 @@ void AppleObjCRuntimeV2::WarnIfNoExpandedSharedCache() {
   std::string buffer;
   llvm::raw_string_ostream os(buffer);
 
-  os << "warning: libobjc.A.dylib is being read from process memory. This "
+  os << "libobjc.A.dylib is being read from process memory. This "
         "indicates that LLDB could not ";
   if (PlatformSP platform_sp = target.GetPlatform()) {
     if (platform_sp->IsHost()) {
