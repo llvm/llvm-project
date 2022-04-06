@@ -1,7 +1,7 @@
 ; RUN: llc -march=mips < %s -debug 2>&1 | FileCheck %s --check-prefix=MIPS
 ; RUN: llc -march=mips -mattr=+micromips < %s -debug 2>&1 | FileCheck %s --check-prefix=MM
 
-; REQUIRES: asserts, abi_breaking_checks
+; REQUIRES: asserts
 
 ; Test that the correct ISA is selected for the materialization of constants.
 

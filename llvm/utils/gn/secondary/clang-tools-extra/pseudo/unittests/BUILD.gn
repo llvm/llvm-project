@@ -11,7 +11,7 @@ unittest("ClangPseudoTests") {
   ]
   include_dirs = [ "../include" ]
   sources = [
-    "DirectiveMapTest.cpp",
+    "DirectiveTreeTest.cpp",
     "ForestTest.cpp",
     "GrammarTest.cpp",
     "LRTableTest.cpp",

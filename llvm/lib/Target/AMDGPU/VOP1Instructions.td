@@ -20,6 +20,16 @@ class VOP1e <bits<8> op, VOPProfile P> : Enc32 {
   let Inst{31-25} = 0x3f; //encoding
 }
 
+class VOP1e_T16 <bits<8> op, VOPProfile P> : Enc32 {
+  bits<9> vdst;
+  bits<10> src0;
+
+  let Inst{8-0}   = !if(P.HasSrc0, src0{9-1}, ?);
+  let Inst{16-9}  = op;
+  let Inst{24-17} = !if(P.EmitDst, vdst{8-1}, 0);
+  let Inst{31-25} = 0x3f; //encoding
+}
+
 class VOP1_SDWAe <bits<8> op, VOPProfile P> : VOP_SDWAe <P> {
   bits<8> vdst;
 
@@ -623,6 +633,12 @@ let AssemblerPredicate = isGFX11Only, DecoderNamespace = "GFX11" in {
       VOP1_Real<ps, SIEncodingFamily.GFX11>,
       VOP1e<op{7-0}, ps.Pfl>;
   }
+  multiclass VOP1_Real_e32_T16_gfx11<bits<9> op, string opName = NAME> {
+    defvar ps = !cast<VOP1_Pseudo>(opName#"_e32");
+    def _e32_gfx11 :
+      VOP1_Real<ps, SIEncodingFamily.GFX11>,
+      VOP1e_T16<op{7-0}, ps.Pfl>;
+  }
   multiclass VOP1_Real_e32_with_name_gfx11<bits<9> op, string opName,
                                        string asmName> {
     defvar ps = !cast<VOP1_Pseudo>(opName#"_e32");
@@ -669,6 +685,11 @@ let AssemblerPredicate = isGFX11Only, DecoderNamespace = "GFX11" in {
 multiclass VOP1_Realtriple_e64_gfx11<bits<9> op> {
   defm NAME : VOP3_Realtriple_gfx11<{0, 1, 1, op{6-0}}, /*isSingle=*/ 0, NAME>;
 }
+multiclass VOP1_Realtriple_T16_e64_gfx11<bits<9> op> {
+  defm NAME
+      : VOP3_Realtriple_T16_gfx11<{0, 1, 1, op{6 - 0}},
+                                  !cast<VOP_Pseudo>(NAME #"_e64").Mnemonic>;
+}
 multiclass VOP1_Realtriple_e64_with_name_gfx11<bits<9> op, string opName,
   string asmName> {
   defm NAME : VOP3_Realtriple_with_name_gfx11<{0, 1, 1, op{6-0}}, opName,
@@ -677,6 +698,11 @@ multiclass VOP1_Realtriple_e64_with_name_gfx11<bits<9> op, string opName,
 
 multiclass VOP1_Real_FULL_gfx11<bits<9> op> :
   VOP1_Real_e32_gfx11<op>, VOP1_Realtriple_e64_gfx11<op>,
+  VOP1_Real_dpp_gfx11<op>, VOP1_Real_dpp8_gfx11<op>;
+
+multiclass VOP1_Real_T16_FULL_gfx11<bits<9> op> :
+  VOP1_Real_e32_T16_gfx11<op>, VOP1_Realtriple_T16_e64_gfx11<op>,
+  // TODO-GFX11_16BIT Using non true16 DPP
   VOP1_Real_dpp_gfx11<op>, VOP1_Real_dpp8_gfx11<op>;
 
 multiclass VOP1_Real_NO_VOP3_with_name_gfx11<bits<9> op, string opName,
@@ -697,7 +723,7 @@ defm V_CVT_NEAREST_I32_F32 : VOP1_Real_FULL_with_name_gfx11<0x00c,
   "V_CVT_RPI_I32_F32", "v_cvt_nearest_i32_f32">;
 defm V_CVT_FLOOR_I32_F32   : VOP1_Real_FULL_with_name_gfx11<0x00d,
   "V_CVT_FLR_I32_F32", "v_cvt_floor_i32_f32">;
-defm V_MOV_B16             : VOP1_Real_FULL_gfx11<0x01c>;
+defm V_MOV_B16             : VOP1_Real_T16_FULL_gfx11<0x01c>;
 defm V_CLZ_I32_U32         : VOP1_Real_FULL_with_name_gfx11<0x039,
   "V_FFBH_U32", "v_clz_i32_u32">;
 defm V_CTZ_I32_B32         : VOP1_Real_FULL_with_name_gfx11<0x03a,

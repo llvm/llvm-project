@@ -4,9 +4,6 @@ import("//llvm/utils/gn/build/buildflags.gni")
 declare_args() {
   # Skip the atomic builtin (should normally be provided by a shared library).
   compiler_rt_exclude_atomic_builtin = true
-
-  # Compile builtins for baremetal.
-  compiler_rt_baremetal_build = false
 }
 
 static_library("builtins") {
@@ -170,15 +167,15 @@ static_library("builtins") {
   ]
 
   if (current_os != "fuchsia") {
+    sources += [ "clear_cache.c" ]
+  }
+
+  if (current_os != "fuchsia" && current_os != "baremetal") {
     sources += [
       "emutls.c",
       "enable_execute_stack.c",
       "eprintf.c",
     ]
-  }
-
-  if (current_os != "fuchsia" && !compiler_rt_baremetal_build) {
-    sources += [ "clear_cache.c" ]
   }
 
   if (current_os == "mac" || current_os == "ios") {

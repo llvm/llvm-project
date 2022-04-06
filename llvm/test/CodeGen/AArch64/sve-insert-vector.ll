@@ -573,6 +573,42 @@ define <vscale x 16 x i1> @insert_nxv16i1_nxv4i1_into_poison(<vscale x 4 x i1> %
   ret <vscale x 16 x i1> %v0
 }
 
+; Test constant predicate insert into undef
+define <vscale x 2 x i1> @insert_nxv2i1_v8i1_const_true_into_undef() vscale_range(4,8) {
+; CHECK-LABEL: insert_nxv2i1_v8i1_const_true_into_undef:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ret
+  %v0 = call <vscale x 2 x i1> @llvm.experimental.vector.insert.nxv2i1.v8i1 (<vscale x 2 x i1> undef, <8 x i1> <i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1>, i64 0)
+  ret <vscale x 2 x i1> %v0
+}
+
+define <vscale x 4 x i1> @insert_nxv4i1_v16i1_const_true_into_undef() vscale_range(4,8) {
+; CHECK-LABEL: insert_nxv4i1_v16i1_const_true_into_undef:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ret
+  %v0 = call <vscale x 4 x i1> @llvm.experimental.vector.insert.nxv4i1.v16i1 (<vscale x 4 x i1> undef, <16 x i1> <i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1>, i64 0)
+  ret <vscale x 4 x i1> %v0
+}
+
+define <vscale x 8 x i1> @insert_nxv8i1_v32i1_const_true_into_undef() vscale_range(4,8) {
+; CHECK-LABEL: insert_nxv8i1_v32i1_const_true_into_undef:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ret
+  %v0 = call <vscale x 8 x i1> @llvm.experimental.vector.insert.nxv8i1.v32i1 (<vscale x 8 x i1> undef, <32 x i1> <i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1>, i64 0)
+  ret <vscale x 8 x i1> %v0
+}
+
+define <vscale x 16 x i1> @insert_nxv16i1_v64i1_const_true_into_undef() vscale_range(4,8) {
+; CHECK-LABEL: insert_nxv16i1_v64i1_const_true_into_undef:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    ret
+  %v0 = call <vscale x 16 x i1> @llvm.experimental.vector.insert.nxv16i1.v64i1 (<vscale x 16 x i1> undef, <64 x i1> <i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1>, i64 0)
+  ret <vscale x 16 x i1> %v0
+}
 
 declare <vscale x 3 x i32> @llvm.experimental.vector.insert.nxv3i32.nxv2i32(<vscale x 3 x i32>, <vscale x 2 x i32>, i64)
 declare <vscale x 3 x float> @llvm.experimental.vector.insert.nxv3f32.nxv2f32(<vscale x 3 x float>, <vscale x 2 x float>, i64)
@@ -585,5 +621,9 @@ declare <vscale x 4 x bfloat> @llvm.experimental.vector.insert.nxv4bf16.nxv4bf16
 declare <vscale x 4 x bfloat> @llvm.experimental.vector.insert.nxv4bf16.v4bf16(<vscale x 4 x bfloat>, <4 x bfloat>, i64)
 declare <vscale x 2 x bfloat> @llvm.experimental.vector.insert.nxv2bf16.nxv2bf16(<vscale x 2 x bfloat>, <vscale x 2 x bfloat>, i64)
 
+declare <vscale x 2 x i1> @llvm.experimental.vector.insert.nxv2i1.v8i1(<vscale x 2 x i1>, <8 x i1>, i64)
+declare <vscale x 4 x i1> @llvm.experimental.vector.insert.nxv4i1.v16i1(<vscale x 4 x i1>, <16 x i1>, i64)
+declare <vscale x 8 x i1> @llvm.experimental.vector.insert.nxv8i1.v32i1(<vscale x 8 x i1>, <32 x i1>, i64)
 declare <vscale x 16 x i1> @llvm.experimental.vector.insert.nx16i1.nxv4i1(<vscale x 16 x i1>, <vscale x 4 x i1>, i64)
 declare <vscale x 16 x i1> @llvm.experimental.vector.insert.nx16i1.nxv8i1(<vscale x 16 x i1>, <vscale x 8 x i1>, i64)
+declare <vscale x 16 x i1> @llvm.experimental.vector.insert.nxv16i1.v64i1(<vscale x 16 x i1>, <64 x i1>, i64)

@@ -1,6 +1,6 @@
 # Tests the optimization of functions that just do a tail call in the beginning.
 
-RUN: %clang -O2 %S/Inputs/jmp_opt{,2,3}.cpp -o %t
+RUN: %clang %cflags -O2 %S/Inputs/jmp_opt{,2,3}.cpp -o %t
 RUN: llvm-bolt -inline-small-functions %t -o %t.bolt
 RUN: llvm-objdump -d %t.bolt --print-imm-hex | FileCheck %s
 

@@ -122,12 +122,23 @@ set(files
   __charconv/to_chars_result.h
   __chrono/calendar.h
   __chrono/convert_to_timespec.h
+  __chrono/day.h
   __chrono/duration.h
   __chrono/file_clock.h
+  __chrono/hh_mm_ss.h
   __chrono/high_resolution_clock.h
+  __chrono/literals.h
+  __chrono/month.h
+  __chrono/month_weekday.h
+  __chrono/monthday.h
   __chrono/steady_clock.h
   __chrono/system_clock.h
   __chrono/time_point.h
+  __chrono/weekday.h
+  __chrono/year.h
+  __chrono/year_month.h
+  __chrono/year_month_day.h
+  __chrono/year_month_weekday.h
   __compare/common_comparison_category.h
   __compare/compare_partial_order_fallback.h
   __compare/compare_strong_order_fallback.h
