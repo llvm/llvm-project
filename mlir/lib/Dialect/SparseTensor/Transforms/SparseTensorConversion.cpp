@@ -160,6 +160,16 @@ static Value genAlloca(ConversionPatternRewriter &rewriter, Location loc,
   return rewriter.create<memref::AllocaOp>(loc, memTp, ValueRange{sz});
 }
 
+/// Generates an uninitialized buffer of the given size and type,
+/// but returns it as type `memref<? x $tp>` (rather than as type
+/// `memref<$sz x $tp>`). Unlike temporary buffers on the stack,
+/// this buffer must be explicitly deallocated by client.
+static Value genAlloc(ConversionPatternRewriter &rewriter, Location loc,
+                      Value sz, Type tp) {
+  auto memTp = MemRefType::get({ShapedType::kDynamicSize}, tp);
+  return rewriter.create<memref::AllocOp>(loc, memTp, ValueRange{sz});
+}
+
 /// Generates an uninitialized temporary buffer of the given size and
 /// type, but returns it as type `memref<? x $tp>` (rather than as type
 /// `memref<$sz x $tp>`).
@@ -761,15 +771,18 @@ public:
     auto enc = getSparseTensorEncoding(srcType);
     Value src = adaptor.getOperands()[0];
     Value sz = genDimSizeCall(rewriter, op, enc, src, srcType.getRank() - 1);
-    // Allocate temporary stack buffers for values, filled-switch, and indices.
-    Value values = genAlloca(rewriter, loc, sz, eltType);
-    Value filled = genAlloca(rewriter, loc, sz, boolType);
-    Value indices = genAlloca(rewriter, loc, sz, idxType);
+    // Allocate temporary buffers for values, filled-switch, and indices.
+    // We do not use stack buffers for this, since the expanded size may
+    // be rather large (as it envelops a single expanded dense dimension).
+    Value values = genAlloc(rewriter, loc, sz, eltType);
+    Value filled = genAlloc(rewriter, loc, sz, boolType);
+    Value indices = genAlloc(rewriter, loc, sz, idxType);
     Value zero = constantZero(rewriter, loc, idxType);
     // Reset the values/filled-switch to all-zero/false. Note that this
     // introduces an O(N) operation into the computation, but this reset
     // operation is amortized over the innermost loops for the access
-    // pattern expansion.
+    // pattern expansion. As noted in the operation doc, we would like
+    // to amortize this setup cost even between kernels.
     rewriter.create<linalg::FillOp>(
         loc, ValueRange{constantZero(rewriter, loc, eltType)},
         ValueRange{values});
@@ -789,6 +802,7 @@ public:
   LogicalResult
   matchAndRewrite(CompressOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    Location loc = op->getLoc();
     // Note that this method call resets the values/filled-switch back to
     // all-zero/false by only iterating over the set elements, so the
     // complexity remains proportional to the sparsity of the expanded
@@ -798,6 +812,18 @@ public:
     TypeRange noTp;
     replaceOpWithFuncCall(rewriter, op, name, noTp, adaptor.getOperands(),
                           EmitCInterface::On);
+    // Deallocate the buffers on exit of the loop nest.
+    Operation *parent = op;
+    for (; isa<scf::ForOp>(parent->getParentOp()) ||
+           isa<scf::WhileOp>(parent->getParentOp()) ||
+           isa<scf::ParallelOp>(parent->getParentOp()) ||
+           isa<scf::IfOp>(parent->getParentOp());
+         parent = parent->getParentOp())
+      ;
+    rewriter.setInsertionPointAfter(parent);
+    rewriter.create<memref::DeallocOp>(loc, adaptor.getOperands()[2]);
+    rewriter.create<memref::DeallocOp>(loc, adaptor.getOperands()[3]);
+    rewriter.create<memref::DeallocOp>(loc, adaptor.getOperands()[4]);
     return success();
   }
 };
