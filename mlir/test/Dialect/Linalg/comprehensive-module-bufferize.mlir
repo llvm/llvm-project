@@ -455,6 +455,11 @@ func @main() {
 
 // -----
 
+// CHECK: func private @external_func_with_return_val(memref<4xi32, #{{.*}}>) -> f32
+func private @external_func_with_return_val(tensor<4xi32>) -> f32
+
+// -----
+
 // CHECK-LABEL: func @execute_region_test(
 //  CHECK-SAME:     %[[m1:.*]]: memref<?xf32
 func @execute_region_test(%t1 : tensor<?xf32> {linalg.inplaceable = "true"})
