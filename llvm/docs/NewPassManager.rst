@@ -481,9 +481,8 @@ the new PM, whereas the backend target-dependent code generation only works
 with the legacy PM.
 
 For the optimization pipeline, the new PM is the default PM. The legacy PM is
-available for the optimization pipeline either by setting the CMake flag
-``-DLLVM_ENABLE_NEW_PASS_MANAGER=OFF`` when building LLVM, or by
-various compiler/linker flags, e.g. ``-flegacy-pass-manager`` for ``clang``.
+available for the optimization pipeline by setting various compiler/linker
+flags, e.g. ``-flegacy-pass-manager`` for ``clang``.
 
 There will be efforts to deprecate and remove the legacy PM for the
 optimization pipeline in the future.
