@@ -318,14 +318,16 @@ define i8* @test10(i8* %a, i64 %n) {
 ; NOT_CGSCC_NPM: Function Attrs: inaccessiblememonly nofree norecurse nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@test10
 ; NOT_CGSCC_NPM-SAME: (i8* nofree readnone "no-capture-maybe-returned" [[A:%.*]], i64 [[N:%.*]]) #[[ATTR2]] {
-; NOT_CGSCC_NPM-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR13]]
+; NOT_CGSCC_NPM-NEXT:    [[CMP:%.*]] = icmp ne i64 [[N]], 0
+; NOT_CGSCC_NPM-NEXT:    call void @llvm.assume(i1 noundef [[CMP]]) #[[ATTR13]]
 ; NOT_CGSCC_NPM-NEXT:    [[B:%.*]] = getelementptr inbounds i8, i8* [[A]], i64 [[N]]
 ; NOT_CGSCC_NPM-NEXT:    ret i8* [[B]]
 ;
 ; IS__CGSCC_NPM: Function Attrs: inaccessiblememonly nofree norecurse nosync nounwind willreturn
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@test10
 ; IS__CGSCC_NPM-SAME: (i8* nofree readnone "no-capture-maybe-returned" [[A:%.*]], i64 [[N:%.*]]) #[[ATTR2]] {
-; IS__CGSCC_NPM-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR12]]
+; IS__CGSCC_NPM-NEXT:    [[CMP:%.*]] = icmp ne i64 [[N]], 0
+; IS__CGSCC_NPM-NEXT:    call void @llvm.assume(i1 noundef [[CMP]]) #[[ATTR12]]
 ; IS__CGSCC_NPM-NEXT:    [[B:%.*]] = getelementptr inbounds i8, i8* [[A]], i64 [[N]]
 ; IS__CGSCC_NPM-NEXT:    ret i8* [[B]]
 ;

@@ -1,4 +1,4 @@
-; REQUIRES: asserts
+; REQUIRES: asserts, abi_breaking_checks
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu < %s | FileCheck -check-prefix=X86 %s
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -debug-only=isel < %s -o /dev/null 2>&1 | FileCheck -check-prefix=DBGDAG %s
 

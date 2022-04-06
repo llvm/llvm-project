@@ -199,7 +199,7 @@ enum SignatureEncoding {
   eSignatureEnd = 255u,
 };
 
-bool CacheSignature::Encode(DataEncoder &encoder) {
+bool CacheSignature::Encode(DataEncoder &encoder) const {
   if (!IsValid())
     return false; // Invalid signature, return false!
 
@@ -240,10 +240,14 @@ bool CacheSignature::Decode(const lldb_private::DataExtractor &data,
     case eSignatureObjectModTime: {
       uint32_t mod_time = data.GetU32(offset_ptr);
       if (mod_time > 0)
-        m_mod_time = mod_time;
+        m_obj_mod_time = mod_time;
     } break;
     case eSignatureEnd:
-      return true;
+      // The definition of is valid changed to only be valid if the UUID is
+      // valid so make sure that if we attempt to decode an old cache file
+      // that we will fail to decode the cache file if the signature isn't
+      // considered valid.
+      return IsValid();
     default:
       break;
     }

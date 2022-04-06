@@ -91,6 +91,7 @@ static_library("Basic") {
     "Targets/ARM.cpp",
     "Targets/AVR.cpp",
     "Targets/BPF.cpp",
+    "Targets/CSKY.cpp",
     "Targets/DirectX.cpp",
     "Targets/Hexagon.cpp",
     "Targets/Lanai.cpp",

@@ -1503,6 +1503,15 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
          Tag == dwarf::DW_TAG_structure_type ||
          Tag == dwarf::DW_TAG_union_type)) {
       Flags = Flags | DINode::FlagFwdDecl;
+      if (Name) {
+        // This is a hack around preserving template parameters for simplified
+        // template names - it should probably be replaced with a
+        // DICompositeType flag specifying whether template parameters are
+        // required on declarations of this type.
+        StringRef NameStr = Name->getString();
+        if (!NameStr.contains('<') || NameStr.startswith("_STN"))
+          TemplateParams = getMDOrNull(Record[14]);
+      }
     } else {
       BaseType = getDITypeRefOrNull(Record[6]);
       OffsetInBits = Record[9];

@@ -21,6 +21,7 @@ class Instruction;
 class MemCpyInst;
 class MemMoveInst;
 class MemSetInst;
+class ScalarEvolution;
 class TargetTransformInfo;
 class Value;
 struct Align;
@@ -28,9 +29,9 @@ struct Align;
 /// Emit a loop implementing the semantics of llvm.memcpy where the size is not
 /// a compile-time constant. Loop will be insterted at \p InsertBefore.
 void createMemCpyLoopUnknownSize(Instruction *InsertBefore, Value *SrcAddr,
-                                 Value *DstAddr, Value *CopyLen,
-                                 Align SrcAlign, Align DestAlign,
-                                 bool SrcIsVolatile, bool DstIsVolatile,
+                                 Value *DstAddr, Value *CopyLen, Align SrcAlign,
+                                 Align DestAlign, bool SrcIsVolatile,
+                                 bool DstIsVolatile, bool CanOverlap,
                                  const TargetTransformInfo &TTI);
 
 /// Emit a loop implementing the semantics of an llvm.memcpy whose size is a
@@ -39,10 +40,11 @@ void createMemCpyLoopKnownSize(Instruction *InsertBefore, Value *SrcAddr,
                                Value *DstAddr, ConstantInt *CopyLen,
                                Align SrcAlign, Align DestAlign,
                                bool SrcIsVolatile, bool DstIsVolatile,
-                               const TargetTransformInfo &TTI);
+                               bool CanOverlap, const TargetTransformInfo &TTI);
 
 /// Expand \p MemCpy as a loop. \p MemCpy is not deleted.
-void expandMemCpyAsLoop(MemCpyInst *MemCpy, const TargetTransformInfo &TTI);
+void expandMemCpyAsLoop(MemCpyInst *MemCpy, const TargetTransformInfo &TTI,
+                        ScalarEvolution *SE = nullptr);
 
 /// Expand \p MemMove as a loop. \p MemMove is not deleted.
 void expandMemMoveAsLoop(MemMoveInst *MemMove);

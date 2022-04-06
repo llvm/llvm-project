@@ -19,6 +19,7 @@
 #include "Targets/ARM.h"
 #include "Targets/AVR.h"
 #include "Targets/BPF.h"
+#include "Targets/CSKY.h"
 #include "Targets/DirectX.h"
 #include "Targets/Hexagon.h"
 #include "Targets/Lanai.h"
@@ -659,6 +660,14 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
 
   case llvm::Triple::ve:
     return new LinuxTargetInfo<VETargetInfo>(Triple, Opts);
+
+  case llvm::Triple::csky:
+    switch (os) {
+    case llvm::Triple::Linux:
+      return new LinuxTargetInfo<CSKYTargetInfo>(Triple, Opts);
+    default:
+      return new CSKYTargetInfo(Triple, Opts);
+    }
   }
 }
 } // namespace targets

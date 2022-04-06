@@ -16302,6 +16302,18 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(CGM.getIntrinsic(IntrinsicID), Ops,
                               "test_data_class");
   }
+  case PPC::BI__builtin_ppc_maxfe:
+    return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::ppc_maxfe), Ops);
+  case PPC::BI__builtin_ppc_maxfl:
+    return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::ppc_maxfl), Ops);
+  case PPC::BI__builtin_ppc_maxfs:
+    return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::ppc_maxfs), Ops);
+  case PPC::BI__builtin_ppc_minfe:
+    return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::ppc_minfe), Ops);
+  case PPC::BI__builtin_ppc_minfl:
+    return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::ppc_minfl), Ops);
+  case PPC::BI__builtin_ppc_minfs:
+    return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::ppc_minfs), Ops);
   case PPC::BI__builtin_ppc_swdiv:
   case PPC::BI__builtin_ppc_swdivs:
     return Builder.CreateFDiv(Ops[0], Ops[1], "swdiv");

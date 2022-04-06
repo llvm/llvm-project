@@ -20,12 +20,12 @@
 namespace mlir {
 
 /// This parses a single IntegerSet to an MLIR context and transforms it to
-/// FlatAffineConstraints if it was valid. If not, a failure is returned. If the
+/// IntegerPolyhedron if it was valid. If not, a failure is returned. If the
 /// passed `str` has additional tokens that were not part of the IntegerSet, a
 /// failure is returned. Diagnostics are printed on failure if
 /// `printDiagnosticInfo` is true.
 
-FailureOr<FlatAffineConstraints>
+FailureOr<presburger::IntegerPolyhedron>
 parseIntegerSetToFAC(llvm::StringRef, MLIRContext *context,
                      bool printDiagnosticInfo = true);
 

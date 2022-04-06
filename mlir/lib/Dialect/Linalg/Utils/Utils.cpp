@@ -37,6 +37,7 @@
 #define DEBUG_TYPE "linalg-utils"
 
 using namespace mlir;
+using namespace presburger;
 using namespace mlir::linalg;
 using namespace mlir::scf;
 
@@ -237,7 +238,7 @@ void getUpperBoundForIndex(Value value, AffineMap &boundMap,
     auto minOp = cast<AffineMinOp>(op);
     AffineMap map = constraints.computeAlignedMap(minOp.getAffineMap(),
                                                   minOp.getOperands());
-    if (failed(constraints.addBound(FlatAffineConstraints::UB,
+    if (failed(constraints.addBound(IntegerPolyhedron::UB,
                                     getPosition(minOp.getResult()), map)))
       return;
   }

@@ -847,6 +847,7 @@ bool RegAllocPBQP::runOnMachineFunction(MachineFunction &MF) {
 
     while (!PBQPAllocComplete) {
       LLVM_DEBUG(dbgs() << "  PBQP Regalloc round " << Round << ":\n");
+      (void) Round;
 
       PBQPRAGraph G(PBQPRAGraph::GraphMetadata(MF, LIS, MBFI));
       initializeGraph(G, VRM, *VRegSpiller);

@@ -1240,7 +1240,7 @@ NativeProcessLinux::Syscall(llvm::ArrayRef<uint64_t> args) {
   NativeRegisterContextLinux::SyscallData syscall_data =
       *reg_ctx.GetSyscallData();
 
-  DataBufferSP registers_sp;
+  WritableDataBufferSP registers_sp;
   if (llvm::Error Err = reg_ctx.ReadAllRegisterValues(registers_sp).ToError())
     return std::move(Err);
   auto restore_regs = llvm::make_scope_exit(

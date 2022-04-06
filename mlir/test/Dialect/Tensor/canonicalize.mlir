@@ -760,6 +760,38 @@ func @compose_collapse_of_expand_1D(%arg0 : tensor<2048xf32>)
 
 // -----
 
+func @compose_expand_of_collapse_0_rank_to_expand(%arg0 : tensor<1x1x1xf32>)
+    -> tensor<1x1x1x1xf32> {
+  %0 = tensor.collapse_shape %arg0 []
+      : tensor<1x1x1xf32> into tensor<f32>
+  %1 = tensor.expand_shape %0 []
+      : tensor<f32> into tensor<1x1x1x1xf32>
+  return %1 : tensor<1x1x1x1xf32>
+}
+//      CHECK: func @compose_expand_of_collapse_0_rank_to_expand
+// CHECK-SAME:   %[[ARG0:.+]]: tensor<1x1x1xf32>
+//      CHECK:   %[[RESULT:.+]] = tensor.expand_shape %[[ARG0]]
+// CHECK-SAME:     [0], [1], [2, 3]
+//      CHECK:   return %[[RESULT]]
+
+// -----
+
+func @compose_expand_of_collapse_0_rank_to_collapse(%arg0 : tensor<1x1x1x1xf32>)
+    -> tensor<1x1x1xf32> {
+  %0 = tensor.collapse_shape %arg0 []
+      : tensor<1x1x1x1xf32> into tensor<f32>
+  %1 = tensor.expand_shape %0 []
+      : tensor<f32> into tensor<1x1x1xf32>
+  return %1 : tensor<1x1x1xf32>
+}
+//      CHECK: func @compose_expand_of_collapse_0_rank_to_collapse
+// CHECK-SAME:   %[[ARG0:.+]]: tensor<1x1x1x1xf32>
+//      CHECK:   %[[RESULT:.+]] = tensor.collapse_shape %[[ARG0]]
+// CHECK-SAME:     [0], [1], [2, 3]
+//      CHECK:   return %[[RESULT]]
+
+// -----
+
 // CHECK-LABEL: func @zero_rank_reshape_multi
 func @zero_rank_reshape_multi(%arg0: tensor<f32>) -> tensor<f32> {
   // CHECK: return %arg0

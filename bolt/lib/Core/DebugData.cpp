@@ -820,7 +820,8 @@ void DebugAbbrevWriter::addUnitAbbreviations(DWARFUnit &Unit) {
   auto hashAndAddAbbrev = [&](StringRef AbbrevData) -> bool {
     llvm::SHA1 Hasher;
     Hasher.update(AbbrevData);
-    StringRef Key = Hasher.final();
+    std::array<uint8_t, 20> Hash = Hasher.final();
+    StringRef Key((const char *)Hash.data(), Hash.size());
     auto Iter = AbbrevDataCache.find(Key);
     if (Iter != AbbrevDataCache.end()) {
       UnitsAbbrevData[&Unit] = Iter->second.get();

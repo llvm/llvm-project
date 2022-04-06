@@ -1,7 +1,7 @@
 ; RUN: llc --mtriple=mips-mti-linux-gnu < %s -debug 2>&1 | FileCheck %s --check-prefixes=CHECK,MIPS
 ; RUN: llc --mtriple=mips-mti-linux-gnu < %s -mattr=+micromips -debug 2>&1 | FileCheck %s --check-prefixes=CHECK,MM
 
-; REQUIRES: asserts
+; REQUIRES: asserts, abi_breaking_checks
 
 ; Test that the correct mul instruction is selected upfront.
 
