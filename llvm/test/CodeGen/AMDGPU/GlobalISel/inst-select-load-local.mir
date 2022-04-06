@@ -16,13 +16,6 @@ body: |
   bb.0:
     liveins:  $vgpr0
 
-    ; GFX6-LABEL: name: load_local_s32_from_4
-    ; GFX6: liveins: $vgpr0
-    ; GFX6-NEXT: {{  $}}
-    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX6-NEXT: $m0 = S_MOV_B32 -1
-    ; GFX6-NEXT: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s32), addrspace 3)
-    ; GFX6-NEXT: $vgpr0 = COPY [[DS_READ_B32_]]
     ; GFX7-LABEL: name: load_local_s32_from_4
     ; GFX7: liveins: $vgpr0
     ; GFX7-NEXT: {{  $}}
@@ -36,6 +29,13 @@ body: |
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX9-NEXT: [[DS_READ_B32_gfx9_:%[0-9]+]]:vgpr_32 = DS_READ_B32_gfx9 [[COPY]], 0, 0, implicit $exec :: (load (s32), addrspace 3)
     ; GFX9-NEXT: $vgpr0 = COPY [[DS_READ_B32_gfx9_]]
+    ; GFX6-LABEL: name: load_local_s32_from_4
+    ; GFX6: liveins: $vgpr0
+    ; GFX6-NEXT: {{  $}}
+    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX6-NEXT: $m0 = S_MOV_B32 -1
+    ; GFX6-NEXT: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s32), addrspace 3)
+    ; GFX6-NEXT: $vgpr0 = COPY [[DS_READ_B32_]]
     %0:vgpr(p3) = COPY $vgpr0
     %1:vgpr(s32) = G_LOAD %0 :: (load (s32), align 4, addrspace 3)
     $vgpr0 = COPY %1
@@ -53,13 +53,6 @@ body: |
   bb.0:
     liveins:  $vgpr0
 
-    ; GFX6-LABEL: name: load_local_s32_from_2
-    ; GFX6: liveins: $vgpr0
-    ; GFX6-NEXT: {{  $}}
-    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX6-NEXT: $m0 = S_MOV_B32 -1
-    ; GFX6-NEXT: [[DS_READ_U16_:%[0-9]+]]:vgpr_32 = DS_READ_U16 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s16), addrspace 3)
-    ; GFX6-NEXT: $vgpr0 = COPY [[DS_READ_U16_]]
     ; GFX7-LABEL: name: load_local_s32_from_2
     ; GFX7: liveins: $vgpr0
     ; GFX7-NEXT: {{  $}}
@@ -73,6 +66,13 @@ body: |
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX9-NEXT: [[DS_READ_U16_gfx9_:%[0-9]+]]:vgpr_32 = DS_READ_U16_gfx9 [[COPY]], 0, 0, implicit $exec :: (load (s16), addrspace 3)
     ; GFX9-NEXT: $vgpr0 = COPY [[DS_READ_U16_gfx9_]]
+    ; GFX6-LABEL: name: load_local_s32_from_2
+    ; GFX6: liveins: $vgpr0
+    ; GFX6-NEXT: {{  $}}
+    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX6-NEXT: $m0 = S_MOV_B32 -1
+    ; GFX6-NEXT: [[DS_READ_U16_:%[0-9]+]]:vgpr_32 = DS_READ_U16 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s16), addrspace 3)
+    ; GFX6-NEXT: $vgpr0 = COPY [[DS_READ_U16_]]
     %0:vgpr(p3) = COPY $vgpr0
     %1:vgpr(s32) = G_LOAD %0 :: (load (s16), align 2, addrspace 3)
     $vgpr0 = COPY %1
@@ -93,13 +93,6 @@ body: |
   bb.0:
     liveins:  $vgpr0
 
-    ; GFX6-LABEL: name: load_local_s32_from_1
-    ; GFX6: liveins: $vgpr0
-    ; GFX6-NEXT: {{  $}}
-    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX6-NEXT: $m0 = S_MOV_B32 -1
-    ; GFX6-NEXT: [[DS_READ_U8_:%[0-9]+]]:vgpr_32 = DS_READ_U8 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s8), addrspace 3)
-    ; GFX6-NEXT: $vgpr0 = COPY [[DS_READ_U8_]]
     ; GFX7-LABEL: name: load_local_s32_from_1
     ; GFX7: liveins: $vgpr0
     ; GFX7-NEXT: {{  $}}
@@ -113,6 +106,13 @@ body: |
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX9-NEXT: [[DS_READ_U8_gfx9_:%[0-9]+]]:vgpr_32 = DS_READ_U8_gfx9 [[COPY]], 0, 0, implicit $exec :: (load (s8), addrspace 3)
     ; GFX9-NEXT: $vgpr0 = COPY [[DS_READ_U8_gfx9_]]
+    ; GFX6-LABEL: name: load_local_s32_from_1
+    ; GFX6: liveins: $vgpr0
+    ; GFX6-NEXT: {{  $}}
+    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX6-NEXT: $m0 = S_MOV_B32 -1
+    ; GFX6-NEXT: [[DS_READ_U8_:%[0-9]+]]:vgpr_32 = DS_READ_U8 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s8), addrspace 3)
+    ; GFX6-NEXT: $vgpr0 = COPY [[DS_READ_U8_]]
     %0:vgpr(p3) = COPY $vgpr0
     %1:vgpr(s32) = G_LOAD %0 :: (load (s8), align 1, addrspace 3)
     $vgpr0 = COPY %1
@@ -130,13 +130,6 @@ body: |
   bb.0:
     liveins:  $vgpr0
 
-    ; GFX6-LABEL: name: load_local_v2s32
-    ; GFX6: liveins: $vgpr0
-    ; GFX6-NEXT: {{  $}}
-    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX6-NEXT: $m0 = S_MOV_B32 -1
-    ; GFX6-NEXT: [[DS_READ_B64_:%[0-9]+]]:vreg_64 = DS_READ_B64 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (<2 x s32>), addrspace 3)
-    ; GFX6-NEXT: $vgpr0_vgpr1 = COPY [[DS_READ_B64_]]
     ; GFX7-LABEL: name: load_local_v2s32
     ; GFX7: liveins: $vgpr0
     ; GFX7-NEXT: {{  $}}
@@ -150,6 +143,13 @@ body: |
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX9-NEXT: [[DS_READ_B64_gfx9_:%[0-9]+]]:vreg_64 = DS_READ_B64_gfx9 [[COPY]], 0, 0, implicit $exec :: (load (<2 x s32>), addrspace 3)
     ; GFX9-NEXT: $vgpr0_vgpr1 = COPY [[DS_READ_B64_gfx9_]]
+    ; GFX6-LABEL: name: load_local_v2s32
+    ; GFX6: liveins: $vgpr0
+    ; GFX6-NEXT: {{  $}}
+    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX6-NEXT: $m0 = S_MOV_B32 -1
+    ; GFX6-NEXT: [[DS_READ_B64_:%[0-9]+]]:vreg_64 = DS_READ_B64 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (<2 x s32>), addrspace 3)
+    ; GFX6-NEXT: $vgpr0_vgpr1 = COPY [[DS_READ_B64_]]
     %0:vgpr(p3) = COPY $vgpr0
     %1:vgpr(<2 x s32>) = G_LOAD %0 :: (load (<2 x s32>), align 8, addrspace 3)
     $vgpr0_vgpr1 = COPY %1
@@ -167,13 +167,6 @@ body: |
   bb.0:
     liveins:  $vgpr0
 
-    ; GFX6-LABEL: name: load_local_v2s32_align4
-    ; GFX6: liveins: $vgpr0
-    ; GFX6-NEXT: {{  $}}
-    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr(p3) = COPY $vgpr0
-    ; GFX6-NEXT: $m0 = S_MOV_B32 -1
-    ; GFX6-NEXT: [[LOAD:%[0-9]+]]:vreg_64(<2 x s32>) = G_LOAD [[COPY]](p3) :: (load (<2 x s32>), align 4, addrspace 3)
-    ; GFX6-NEXT: $vgpr0_vgpr1 = COPY [[LOAD]](<2 x s32>)
     ; GFX7-LABEL: name: load_local_v2s32_align4
     ; GFX7: liveins: $vgpr0
     ; GFX7-NEXT: {{  $}}
@@ -187,6 +180,13 @@ body: |
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX9-NEXT: [[DS_READ2_B32_gfx9_:%[0-9]+]]:vreg_64 = DS_READ2_B32_gfx9 [[COPY]], 0, 1, 0, implicit $exec :: (load (<2 x s32>), align 4, addrspace 3)
     ; GFX9-NEXT: $vgpr0_vgpr1 = COPY [[DS_READ2_B32_gfx9_]]
+    ; GFX6-LABEL: name: load_local_v2s32_align4
+    ; GFX6: liveins: $vgpr0
+    ; GFX6-NEXT: {{  $}}
+    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr(p3) = COPY $vgpr0
+    ; GFX6-NEXT: $m0 = S_MOV_B32 -1
+    ; GFX6-NEXT: [[LOAD:%[0-9]+]]:vreg_64(<2 x s32>) = G_LOAD [[COPY]](p3) :: (load (<2 x s32>), align 4, addrspace 3)
+    ; GFX6-NEXT: $vgpr0_vgpr1 = COPY [[LOAD]](<2 x s32>)
     %0:vgpr(p3) = COPY $vgpr0
     %1:vgpr(<2 x s32>) = G_LOAD %0 :: (load (<2 x s32>), align 4, addrspace 3)
     $vgpr0_vgpr1 = COPY %1
@@ -204,13 +204,6 @@ body: |
   bb.0:
     liveins:  $vgpr0
 
-    ; GFX6-LABEL: name: load_local_s64
-    ; GFX6: liveins: $vgpr0
-    ; GFX6-NEXT: {{  $}}
-    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX6-NEXT: $m0 = S_MOV_B32 -1
-    ; GFX6-NEXT: [[DS_READ_B64_:%[0-9]+]]:vreg_64 = DS_READ_B64 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s64), addrspace 3)
-    ; GFX6-NEXT: $vgpr0_vgpr1 = COPY [[DS_READ_B64_]]
     ; GFX7-LABEL: name: load_local_s64
     ; GFX7: liveins: $vgpr0
     ; GFX7-NEXT: {{  $}}
@@ -224,6 +217,13 @@ body: |
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX9-NEXT: [[DS_READ_B64_gfx9_:%[0-9]+]]:vreg_64 = DS_READ_B64_gfx9 [[COPY]], 0, 0, implicit $exec :: (load (s64), addrspace 3)
     ; GFX9-NEXT: $vgpr0_vgpr1 = COPY [[DS_READ_B64_gfx9_]]
+    ; GFX6-LABEL: name: load_local_s64
+    ; GFX6: liveins: $vgpr0
+    ; GFX6-NEXT: {{  $}}
+    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX6-NEXT: $m0 = S_MOV_B32 -1
+    ; GFX6-NEXT: [[DS_READ_B64_:%[0-9]+]]:vreg_64 = DS_READ_B64 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s64), addrspace 3)
+    ; GFX6-NEXT: $vgpr0_vgpr1 = COPY [[DS_READ_B64_]]
     %0:vgpr(p3) = COPY $vgpr0
     %1:vgpr(s64) = G_LOAD %0 :: (load (s64), align 8, addrspace 3)
     $vgpr0_vgpr1 = COPY %1
@@ -241,13 +241,6 @@ body: |
   bb.0:
     liveins:  $vgpr0
 
-    ; GFX6-LABEL: name: load_local_s64_align4
-    ; GFX6: liveins: $vgpr0
-    ; GFX6-NEXT: {{  $}}
-    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr(p3) = COPY $vgpr0
-    ; GFX6-NEXT: $m0 = S_MOV_B32 -1
-    ; GFX6-NEXT: [[LOAD:%[0-9]+]]:vreg_64(s64) = G_LOAD [[COPY]](p3) :: (load (s64), align 4, addrspace 3)
-    ; GFX6-NEXT: $vgpr0_vgpr1 = COPY [[LOAD]](s64)
     ; GFX7-LABEL: name: load_local_s64_align4
     ; GFX7: liveins: $vgpr0
     ; GFX7-NEXT: {{  $}}
@@ -261,6 +254,13 @@ body: |
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX9-NEXT: [[DS_READ2_B32_gfx9_:%[0-9]+]]:vreg_64 = DS_READ2_B32_gfx9 [[COPY]], 0, 1, 0, implicit $exec :: (load (s64), align 4, addrspace 3)
     ; GFX9-NEXT: $vgpr0_vgpr1 = COPY [[DS_READ2_B32_gfx9_]]
+    ; GFX6-LABEL: name: load_local_s64_align4
+    ; GFX6: liveins: $vgpr0
+    ; GFX6-NEXT: {{  $}}
+    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr(p3) = COPY $vgpr0
+    ; GFX6-NEXT: $m0 = S_MOV_B32 -1
+    ; GFX6-NEXT: [[LOAD:%[0-9]+]]:vreg_64(s64) = G_LOAD [[COPY]](p3) :: (load (s64), align 4, addrspace 3)
+    ; GFX6-NEXT: $vgpr0_vgpr1 = COPY [[LOAD]](s64)
     %0:vgpr(p3) = COPY $vgpr0
     %1:vgpr(s64) = G_LOAD %0 :: (load (s64), align 4, addrspace 3)
     $vgpr0_vgpr1 = COPY %1
@@ -278,13 +278,6 @@ body: |
   bb.0:
     liveins:  $vgpr0
 
-    ; GFX6-LABEL: name: load_local_p3_from_4
-    ; GFX6: liveins: $vgpr0
-    ; GFX6-NEXT: {{  $}}
-    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX6-NEXT: $m0 = S_MOV_B32 -1
-    ; GFX6-NEXT: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (p3), addrspace 3)
-    ; GFX6-NEXT: $vgpr0 = COPY [[DS_READ_B32_]]
     ; GFX7-LABEL: name: load_local_p3_from_4
     ; GFX7: liveins: $vgpr0
     ; GFX7-NEXT: {{  $}}
@@ -298,6 +291,13 @@ body: |
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX9-NEXT: [[DS_READ_B32_gfx9_:%[0-9]+]]:vgpr_32 = DS_READ_B32_gfx9 [[COPY]], 0, 0, implicit $exec :: (load (p3), addrspace 3)
     ; GFX9-NEXT: $vgpr0 = COPY [[DS_READ_B32_gfx9_]]
+    ; GFX6-LABEL: name: load_local_p3_from_4
+    ; GFX6: liveins: $vgpr0
+    ; GFX6-NEXT: {{  $}}
+    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX6-NEXT: $m0 = S_MOV_B32 -1
+    ; GFX6-NEXT: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (p3), addrspace 3)
+    ; GFX6-NEXT: $vgpr0 = COPY [[DS_READ_B32_]]
     %0:vgpr(p3) = COPY $vgpr0
     %1:vgpr(p3) = G_LOAD %0 :: (load (p3), align 4, addrspace 3)
     $vgpr0 = COPY %1
@@ -315,13 +315,6 @@ body: |
   bb.0:
     liveins:  $vgpr0
 
-    ; GFX6-LABEL: name: load_local_p5_from_4
-    ; GFX6: liveins: $vgpr0
-    ; GFX6-NEXT: {{  $}}
-    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX6-NEXT: $m0 = S_MOV_B32 -1
-    ; GFX6-NEXT: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (p5), addrspace 3)
-    ; GFX6-NEXT: $vgpr0 = COPY [[DS_READ_B32_]]
     ; GFX7-LABEL: name: load_local_p5_from_4
     ; GFX7: liveins: $vgpr0
     ; GFX7-NEXT: {{  $}}
@@ -335,6 +328,13 @@ body: |
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX9-NEXT: [[DS_READ_B32_gfx9_:%[0-9]+]]:vgpr_32 = DS_READ_B32_gfx9 [[COPY]], 0, 0, implicit $exec :: (load (p5), addrspace 3)
     ; GFX9-NEXT: $vgpr0 = COPY [[DS_READ_B32_gfx9_]]
+    ; GFX6-LABEL: name: load_local_p5_from_4
+    ; GFX6: liveins: $vgpr0
+    ; GFX6-NEXT: {{  $}}
+    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX6-NEXT: $m0 = S_MOV_B32 -1
+    ; GFX6-NEXT: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (p5), addrspace 3)
+    ; GFX6-NEXT: $vgpr0 = COPY [[DS_READ_B32_]]
     %0:vgpr(p3) = COPY $vgpr0
     %1:vgpr(p5) = G_LOAD %0 :: (load (p5), align 4, addrspace 3)
     $vgpr0 = COPY %1
@@ -352,13 +352,6 @@ body: |
   bb.0:
     liveins:  $vgpr0
 
-    ; GFX6-LABEL: name: load_local_p1_align8
-    ; GFX6: liveins: $vgpr0
-    ; GFX6-NEXT: {{  $}}
-    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX6-NEXT: $m0 = S_MOV_B32 -1
-    ; GFX6-NEXT: [[DS_READ_B64_:%[0-9]+]]:vreg_64 = DS_READ_B64 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (p1), addrspace 3)
-    ; GFX6-NEXT: $vgpr0_vgpr1 = COPY [[DS_READ_B64_]]
     ; GFX7-LABEL: name: load_local_p1_align8
     ; GFX7: liveins: $vgpr0
     ; GFX7-NEXT: {{  $}}
@@ -372,6 +365,13 @@ body: |
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX9-NEXT: [[DS_READ_B64_gfx9_:%[0-9]+]]:vreg_64 = DS_READ_B64_gfx9 [[COPY]], 0, 0, implicit $exec :: (load (p1), addrspace 3)
     ; GFX9-NEXT: $vgpr0_vgpr1 = COPY [[DS_READ_B64_gfx9_]]
+    ; GFX6-LABEL: name: load_local_p1_align8
+    ; GFX6: liveins: $vgpr0
+    ; GFX6-NEXT: {{  $}}
+    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX6-NEXT: $m0 = S_MOV_B32 -1
+    ; GFX6-NEXT: [[DS_READ_B64_:%[0-9]+]]:vreg_64 = DS_READ_B64 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (p1), addrspace 3)
+    ; GFX6-NEXT: $vgpr0_vgpr1 = COPY [[DS_READ_B64_]]
     %0:vgpr(p3) = COPY $vgpr0
     %1:vgpr(p1) = G_LOAD %0 :: (load (p1), align 8, addrspace 3)
     $vgpr0_vgpr1 = COPY %1
@@ -389,13 +389,6 @@ body: |
   bb.0:
     liveins:  $vgpr0
 
-    ; GFX6-LABEL: name: load_local_p1_align4
-    ; GFX6: liveins: $vgpr0
-    ; GFX6-NEXT: {{  $}}
-    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr(p3) = COPY $vgpr0
-    ; GFX6-NEXT: $m0 = S_MOV_B32 -1
-    ; GFX6-NEXT: [[LOAD:%[0-9]+]]:vreg_64(p1) = G_LOAD [[COPY]](p3) :: (load (p1), align 4, addrspace 3)
-    ; GFX6-NEXT: $vgpr0_vgpr1 = COPY [[LOAD]](p1)
     ; GFX7-LABEL: name: load_local_p1_align4
     ; GFX7: liveins: $vgpr0
     ; GFX7-NEXT: {{  $}}
@@ -409,6 +402,13 @@ body: |
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX9-NEXT: [[DS_READ2_B32_gfx9_:%[0-9]+]]:vreg_64 = DS_READ2_B32_gfx9 [[COPY]], 0, 1, 0, implicit $exec :: (load (p1), align 4, addrspace 3)
     ; GFX9-NEXT: $vgpr0_vgpr1 = COPY [[DS_READ2_B32_gfx9_]]
+    ; GFX6-LABEL: name: load_local_p1_align4
+    ; GFX6: liveins: $vgpr0
+    ; GFX6-NEXT: {{  $}}
+    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr(p3) = COPY $vgpr0
+    ; GFX6-NEXT: $m0 = S_MOV_B32 -1
+    ; GFX6-NEXT: [[LOAD:%[0-9]+]]:vreg_64(p1) = G_LOAD [[COPY]](p3) :: (load (p1), align 4, addrspace 3)
+    ; GFX6-NEXT: $vgpr0_vgpr1 = COPY [[LOAD]](p1)
     %0:vgpr(p3) = COPY $vgpr0
     %1:vgpr(p1) = G_LOAD %0 :: (load (p1), align 4, addrspace 3)
     $vgpr0_vgpr1 = COPY %1
@@ -426,13 +426,6 @@ body: |
   bb.0:
     liveins:  $vgpr0
 
-    ; GFX6-LABEL: name: load_local_p999_from_8
-    ; GFX6: liveins: $vgpr0
-    ; GFX6-NEXT: {{  $}}
-    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr(p3) = COPY $vgpr0
-    ; GFX6-NEXT: $m0 = S_MOV_B32 -1
-    ; GFX6-NEXT: [[LOAD:%[0-9]+]]:vreg_64(p999) = G_LOAD [[COPY]](p3) :: (load (p999), addrspace 3)
-    ; GFX6-NEXT: $vgpr0_vgpr1 = COPY [[LOAD]](p999)
     ; GFX7-LABEL: name: load_local_p999_from_8
     ; GFX7: liveins: $vgpr0
     ; GFX7-NEXT: {{  $}}
@@ -446,6 +439,13 @@ body: |
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr(p3) = COPY $vgpr0
     ; GFX9-NEXT: [[LOAD:%[0-9]+]]:vreg_64(p999) = G_LOAD [[COPY]](p3) :: (load (p999), addrspace 3)
     ; GFX9-NEXT: $vgpr0_vgpr1 = COPY [[LOAD]](p999)
+    ; GFX6-LABEL: name: load_local_p999_from_8
+    ; GFX6: liveins: $vgpr0
+    ; GFX6-NEXT: {{  $}}
+    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr(p3) = COPY $vgpr0
+    ; GFX6-NEXT: $m0 = S_MOV_B32 -1
+    ; GFX6-NEXT: [[LOAD:%[0-9]+]]:vreg_64(p999) = G_LOAD [[COPY]](p3) :: (load (p999), addrspace 3)
+    ; GFX6-NEXT: $vgpr0_vgpr1 = COPY [[LOAD]](p999)
     %0:vgpr(p3) = COPY $vgpr0
     %1:vgpr(p999) = G_LOAD %0 :: (load (p999), align 8, addrspace 3)
     $vgpr0_vgpr1 = COPY %1
@@ -463,13 +463,6 @@ body: |
   bb.0:
     liveins:  $vgpr0
 
-    ; GFX6-LABEL: name: load_local_v2p3
-    ; GFX6: liveins: $vgpr0
-    ; GFX6-NEXT: {{  $}}
-    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr(p3) = COPY $vgpr0
-    ; GFX6-NEXT: $m0 = S_MOV_B32 -1
-    ; GFX6-NEXT: [[LOAD:%[0-9]+]]:vreg_64(<2 x p3>) = G_LOAD [[COPY]](p3) :: (load (<2 x p3>), addrspace 3)
-    ; GFX6-NEXT: $vgpr0_vgpr1 = COPY [[LOAD]](<2 x p3>)
     ; GFX7-LABEL: name: load_local_v2p3
     ; GFX7: liveins: $vgpr0
     ; GFX7-NEXT: {{  $}}
@@ -483,6 +476,13 @@ body: |
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr(p3) = COPY $vgpr0
     ; GFX9-NEXT: [[LOAD:%[0-9]+]]:vreg_64(<2 x p3>) = G_LOAD [[COPY]](p3) :: (load (<2 x p3>), addrspace 3)
     ; GFX9-NEXT: $vgpr0_vgpr1 = COPY [[LOAD]](<2 x p3>)
+    ; GFX6-LABEL: name: load_local_v2p3
+    ; GFX6: liveins: $vgpr0
+    ; GFX6-NEXT: {{  $}}
+    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr(p3) = COPY $vgpr0
+    ; GFX6-NEXT: $m0 = S_MOV_B32 -1
+    ; GFX6-NEXT: [[LOAD:%[0-9]+]]:vreg_64(<2 x p3>) = G_LOAD [[COPY]](p3) :: (load (<2 x p3>), addrspace 3)
+    ; GFX6-NEXT: $vgpr0_vgpr1 = COPY [[LOAD]](<2 x p3>)
     %0:vgpr(p3) = COPY $vgpr0
     %1:vgpr(<2 x p3>) = G_LOAD %0 :: (load (<2 x p3>), align 8, addrspace 3)
     $vgpr0_vgpr1 = COPY %1
@@ -500,13 +500,6 @@ body: |
   bb.0:
     liveins:  $vgpr0
 
-    ; GFX6-LABEL: name: load_local_v2s16
-    ; GFX6: liveins: $vgpr0
-    ; GFX6-NEXT: {{  $}}
-    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX6-NEXT: $m0 = S_MOV_B32 -1
-    ; GFX6-NEXT: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (<2 x s16>), addrspace 3)
-    ; GFX6-NEXT: $vgpr0 = COPY [[DS_READ_B32_]]
     ; GFX7-LABEL: name: load_local_v2s16
     ; GFX7: liveins: $vgpr0
     ; GFX7-NEXT: {{  $}}
@@ -520,6 +513,13 @@ body: |
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX9-NEXT: [[DS_READ_B32_gfx9_:%[0-9]+]]:vgpr_32 = DS_READ_B32_gfx9 [[COPY]], 0, 0, implicit $exec :: (load (<2 x s16>), addrspace 3)
     ; GFX9-NEXT: $vgpr0 = COPY [[DS_READ_B32_gfx9_]]
+    ; GFX6-LABEL: name: load_local_v2s16
+    ; GFX6: liveins: $vgpr0
+    ; GFX6-NEXT: {{  $}}
+    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX6-NEXT: $m0 = S_MOV_B32 -1
+    ; GFX6-NEXT: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (<2 x s16>), addrspace 3)
+    ; GFX6-NEXT: $vgpr0 = COPY [[DS_READ_B32_]]
     %0:vgpr(p3) = COPY $vgpr0
     %1:vgpr(<2 x s16>) = G_LOAD %0 :: (load (<2 x s16>), align 4, addrspace 3)
     $vgpr0 = COPY %1
@@ -537,13 +537,6 @@ body: |
   bb.0:
     liveins:  $vgpr0
 
-    ; GFX6-LABEL: name: load_local_v4s16
-    ; GFX6: liveins: $vgpr0
-    ; GFX6-NEXT: {{  $}}
-    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX6-NEXT: $m0 = S_MOV_B32 -1
-    ; GFX6-NEXT: [[DS_READ_B64_:%[0-9]+]]:vreg_64 = DS_READ_B64 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (<4 x s16>), addrspace 3)
-    ; GFX6-NEXT: $vgpr0_vgpr1 = COPY [[DS_READ_B64_]]
     ; GFX7-LABEL: name: load_local_v4s16
     ; GFX7: liveins: $vgpr0
     ; GFX7-NEXT: {{  $}}
@@ -557,6 +550,13 @@ body: |
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX9-NEXT: [[DS_READ_B64_gfx9_:%[0-9]+]]:vreg_64 = DS_READ_B64_gfx9 [[COPY]], 0, 0, implicit $exec :: (load (<4 x s16>), addrspace 3)
     ; GFX9-NEXT: $vgpr0_vgpr1 = COPY [[DS_READ_B64_gfx9_]]
+    ; GFX6-LABEL: name: load_local_v4s16
+    ; GFX6: liveins: $vgpr0
+    ; GFX6-NEXT: {{  $}}
+    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX6-NEXT: $m0 = S_MOV_B32 -1
+    ; GFX6-NEXT: [[DS_READ_B64_:%[0-9]+]]:vreg_64 = DS_READ_B64 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (<4 x s16>), addrspace 3)
+    ; GFX6-NEXT: $vgpr0_vgpr1 = COPY [[DS_READ_B64_]]
     %0:vgpr(p3) = COPY $vgpr0
     %1:vgpr(<4 x s16>) = G_LOAD %0 :: (load (<4 x s16>), align 8, addrspace 3)
     $vgpr0_vgpr1 = COPY %1
@@ -598,15 +598,6 @@ body: |
   bb.0:
     liveins:  $vgpr0
 
-    ; GFX6-LABEL: name: load_local_s32_from_1_gep_65535
-    ; GFX6: liveins: $vgpr0
-    ; GFX6-NEXT: {{  $}}
-    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX6-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 65535, implicit $exec
-    ; GFX6-NEXT: %2:vgpr_32, dead %4:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY]], [[V_MOV_B32_e32_]], 0, implicit $exec
-    ; GFX6-NEXT: $m0 = S_MOV_B32 -1
-    ; GFX6-NEXT: [[DS_READ_U8_:%[0-9]+]]:vgpr_32 = DS_READ_U8 %2, 0, 0, implicit $m0, implicit $exec :: (load (s8), addrspace 3)
-    ; GFX6-NEXT: $vgpr0 = COPY [[DS_READ_U8_]]
     ; GFX7-LABEL: name: load_local_s32_from_1_gep_65535
     ; GFX7: liveins: $vgpr0
     ; GFX7-NEXT: {{  $}}
@@ -620,6 +611,15 @@ body: |
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX9-NEXT: [[DS_READ_U8_gfx9_:%[0-9]+]]:vgpr_32 = DS_READ_U8_gfx9 [[COPY]], 65535, 0, implicit $exec :: (load (s8), addrspace 3)
     ; GFX9-NEXT: $vgpr0 = COPY [[DS_READ_U8_gfx9_]]
+    ; GFX6-LABEL: name: load_local_s32_from_1_gep_65535
+    ; GFX6: liveins: $vgpr0
+    ; GFX6-NEXT: {{  $}}
+    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX6-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 65535, implicit $exec
+    ; GFX6-NEXT: %2:vgpr_32, dead %4:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY]], [[V_MOV_B32_e32_]], 0, implicit $exec
+    ; GFX6-NEXT: $m0 = S_MOV_B32 -1
+    ; GFX6-NEXT: [[DS_READ_U8_:%[0-9]+]]:vgpr_32 = DS_READ_U8 %2, 0, 0, implicit $m0, implicit $exec :: (load (s8), addrspace 3)
+    ; GFX6-NEXT: $vgpr0 = COPY [[DS_READ_U8_]]
     %0:vgpr(p3) = COPY $vgpr0
     %1:vgpr(s32) = G_CONSTANT i32 65535
     %2:vgpr(p3) = G_PTR_ADD %0, %1
@@ -639,15 +639,6 @@ body: |
   bb.0:
     liveins:  $vgpr0
 
-    ; GFX6-LABEL: name: load_local_s32_from_1_gep_65535_known_bits_base_address
-    ; GFX6: liveins: $vgpr0
-    ; GFX6-NEXT: {{  $}}
-    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX6-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 2147483647, implicit $exec
-    ; GFX6-NEXT: [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY]], [[V_MOV_B32_e32_]], implicit $exec
-    ; GFX6-NEXT: $m0 = S_MOV_B32 -1
-    ; GFX6-NEXT: [[DS_READ_U8_:%[0-9]+]]:vgpr_32 = DS_READ_U8 [[V_AND_B32_e64_]], 65535, 0, implicit $m0, implicit $exec :: (load (s8), addrspace 3)
-    ; GFX6-NEXT: $vgpr0 = COPY [[DS_READ_U8_]]
     ; GFX7-LABEL: name: load_local_s32_from_1_gep_65535_known_bits_base_address
     ; GFX7: liveins: $vgpr0
     ; GFX7-NEXT: {{  $}}
@@ -665,6 +656,15 @@ body: |
     ; GFX9-NEXT: [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY]], [[V_MOV_B32_e32_]], implicit $exec
     ; GFX9-NEXT: [[DS_READ_U8_gfx9_:%[0-9]+]]:vgpr_32 = DS_READ_U8_gfx9 [[V_AND_B32_e64_]], 65535, 0, implicit $exec :: (load (s8), addrspace 3)
     ; GFX9-NEXT: $vgpr0 = COPY [[DS_READ_U8_gfx9_]]
+    ; GFX6-LABEL: name: load_local_s32_from_1_gep_65535_known_bits_base_address
+    ; GFX6: liveins: $vgpr0
+    ; GFX6-NEXT: {{  $}}
+    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX6-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 2147483647, implicit $exec
+    ; GFX6-NEXT: [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY]], [[V_MOV_B32_e32_]], implicit $exec
+    ; GFX6-NEXT: $m0 = S_MOV_B32 -1
+    ; GFX6-NEXT: [[DS_READ_U8_:%[0-9]+]]:vgpr_32 = DS_READ_U8 [[V_AND_B32_e64_]], 65535, 0, implicit $m0, implicit $exec :: (load (s8), addrspace 3)
+    ; GFX6-NEXT: $vgpr0 = COPY [[DS_READ_U8_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = G_CONSTANT i32 2147483647
     %2:vgpr(s32) = G_AND %0, %1
@@ -687,15 +687,6 @@ body: |
   bb.0:
     liveins:  $vgpr0
 
-    ; GFX6-LABEL: name: load_local_s32_from_1_gep_65536
-    ; GFX6: liveins: $vgpr0
-    ; GFX6-NEXT: {{  $}}
-    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX6-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 65536, implicit $exec
-    ; GFX6-NEXT: %2:vgpr_32, dead %4:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY]], [[V_MOV_B32_e32_]], 0, implicit $exec
-    ; GFX6-NEXT: $m0 = S_MOV_B32 -1
-    ; GFX6-NEXT: [[DS_READ_U8_:%[0-9]+]]:vgpr_32 = DS_READ_U8 %2, 0, 0, implicit $m0, implicit $exec :: (load (s8), addrspace 3)
-    ; GFX6-NEXT: $vgpr0 = COPY [[DS_READ_U8_]]
     ; GFX7-LABEL: name: load_local_s32_from_1_gep_65536
     ; GFX7: liveins: $vgpr0
     ; GFX7-NEXT: {{  $}}
@@ -713,6 +704,15 @@ body: |
     ; GFX9-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY]], [[V_MOV_B32_e32_]], 0, implicit $exec
     ; GFX9-NEXT: [[DS_READ_U8_gfx9_:%[0-9]+]]:vgpr_32 = DS_READ_U8_gfx9 [[V_ADD_U32_e64_]], 0, 0, implicit $exec :: (load (s8), addrspace 3)
     ; GFX9-NEXT: $vgpr0 = COPY [[DS_READ_U8_gfx9_]]
+    ; GFX6-LABEL: name: load_local_s32_from_1_gep_65536
+    ; GFX6: liveins: $vgpr0
+    ; GFX6-NEXT: {{  $}}
+    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX6-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 65536, implicit $exec
+    ; GFX6-NEXT: %2:vgpr_32, dead %4:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY]], [[V_MOV_B32_e32_]], 0, implicit $exec
+    ; GFX6-NEXT: $m0 = S_MOV_B32 -1
+    ; GFX6-NEXT: [[DS_READ_U8_:%[0-9]+]]:vgpr_32 = DS_READ_U8 %2, 0, 0, implicit $m0, implicit $exec :: (load (s8), addrspace 3)
+    ; GFX6-NEXT: $vgpr0 = COPY [[DS_READ_U8_]]
     %0:vgpr(p3) = COPY $vgpr0
     %1:vgpr(s32) = G_CONSTANT i32 65536
     %2:vgpr(p3) = G_PTR_ADD %0, %1
@@ -732,15 +732,6 @@ body: |
   bb.0:
     liveins:  $vgpr0
 
-    ; GFX6-LABEL: name: load_local_s32_from_1_gep_m1
-    ; GFX6: liveins: $vgpr0
-    ; GFX6-NEXT: {{  $}}
-    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX6-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
-    ; GFX6-NEXT: %2:vgpr_32, dead %4:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY]], [[V_MOV_B32_e32_]], 0, implicit $exec
-    ; GFX6-NEXT: $m0 = S_MOV_B32 -1
-    ; GFX6-NEXT: [[DS_READ_U8_:%[0-9]+]]:vgpr_32 = DS_READ_U8 %2, 0, 0, implicit $m0, implicit $exec :: (load (s8), addrspace 3)
-    ; GFX6-NEXT: $vgpr0 = COPY [[DS_READ_U8_]]
     ; GFX7-LABEL: name: load_local_s32_from_1_gep_m1
     ; GFX7: liveins: $vgpr0
     ; GFX7-NEXT: {{  $}}
@@ -758,6 +749,15 @@ body: |
     ; GFX9-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY]], [[V_MOV_B32_e32_]], 0, implicit $exec
     ; GFX9-NEXT: [[DS_READ_U8_gfx9_:%[0-9]+]]:vgpr_32 = DS_READ_U8_gfx9 [[V_ADD_U32_e64_]], 0, 0, implicit $exec :: (load (s8), addrspace 3)
     ; GFX9-NEXT: $vgpr0 = COPY [[DS_READ_U8_gfx9_]]
+    ; GFX6-LABEL: name: load_local_s32_from_1_gep_m1
+    ; GFX6: liveins: $vgpr0
+    ; GFX6-NEXT: {{  $}}
+    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX6-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
+    ; GFX6-NEXT: %2:vgpr_32, dead %4:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY]], [[V_MOV_B32_e32_]], 0, implicit $exec
+    ; GFX6-NEXT: $m0 = S_MOV_B32 -1
+    ; GFX6-NEXT: [[DS_READ_U8_:%[0-9]+]]:vgpr_32 = DS_READ_U8 %2, 0, 0, implicit $m0, implicit $exec :: (load (s8), addrspace 3)
+    ; GFX6-NEXT: $vgpr0 = COPY [[DS_READ_U8_]]
     %0:vgpr(p3) = COPY $vgpr0
     %1:vgpr(s32) = G_CONSTANT i32 -1
     %2:vgpr(p3) = G_PTR_ADD %0, %1
@@ -777,15 +777,6 @@ body: |
   bb.0:
     liveins:  $vgpr0_vgpr1
 
-    ; GFX6-LABEL: name: load_local_s64_align4_from_1_gep_1016
-    ; GFX6: liveins: $vgpr0_vgpr1
-    ; GFX6-NEXT: {{  $}}
-    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr(p3) = COPY $vgpr0
-    ; GFX6-NEXT: [[C:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 1016
-    ; GFX6-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p3) = G_PTR_ADD [[COPY]], [[C]](s32)
-    ; GFX6-NEXT: $m0 = S_MOV_B32 -1
-    ; GFX6-NEXT: [[LOAD:%[0-9]+]]:vreg_64(s64) = G_LOAD [[PTR_ADD]](p3) :: (load (s64), align 4, addrspace 3)
-    ; GFX6-NEXT: $vgpr0_vgpr1 = COPY [[LOAD]](s64)
     ; GFX7-LABEL: name: load_local_s64_align4_from_1_gep_1016
     ; GFX7: liveins: $vgpr0_vgpr1
     ; GFX7-NEXT: {{  $}}
@@ -799,6 +790,15 @@ body: |
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX9-NEXT: [[DS_READ2_B32_gfx9_:%[0-9]+]]:vreg_64 = DS_READ2_B32_gfx9 [[COPY]], 254, 255, 0, implicit $exec :: (load (s64), align 4, addrspace 3)
     ; GFX9-NEXT: $vgpr0_vgpr1 = COPY [[DS_READ2_B32_gfx9_]]
+    ; GFX6-LABEL: name: load_local_s64_align4_from_1_gep_1016
+    ; GFX6: liveins: $vgpr0_vgpr1
+    ; GFX6-NEXT: {{  $}}
+    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr(p3) = COPY $vgpr0
+    ; GFX6-NEXT: [[C:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 1016
+    ; GFX6-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p3) = G_PTR_ADD [[COPY]], [[C]](s32)
+    ; GFX6-NEXT: $m0 = S_MOV_B32 -1
+    ; GFX6-NEXT: [[LOAD:%[0-9]+]]:vreg_64(s64) = G_LOAD [[PTR_ADD]](p3) :: (load (s64), align 4, addrspace 3)
+    ; GFX6-NEXT: $vgpr0_vgpr1 = COPY [[LOAD]](s64)
     %0:vgpr(p3) = COPY $vgpr0
     %1:vgpr(s32) = G_CONSTANT i32 1016
     %2:vgpr(p3) = G_PTR_ADD %0, %1
@@ -818,15 +818,6 @@ body: |
   bb.0:
     liveins:  $vgpr0_vgpr1
 
-    ; GFX6-LABEL: name: load_local_s64_align4_from_1_gep_1020
-    ; GFX6: liveins: $vgpr0_vgpr1
-    ; GFX6-NEXT: {{  $}}
-    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr(p3) = COPY $vgpr0
-    ; GFX6-NEXT: [[C:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 1020
-    ; GFX6-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p3) = G_PTR_ADD [[COPY]], [[C]](s32)
-    ; GFX6-NEXT: $m0 = S_MOV_B32 -1
-    ; GFX6-NEXT: [[LOAD:%[0-9]+]]:vreg_64(s64) = G_LOAD [[PTR_ADD]](p3) :: (load (s64), align 4, addrspace 3)
-    ; GFX6-NEXT: $vgpr0_vgpr1 = COPY [[LOAD]](s64)
     ; GFX7-LABEL: name: load_local_s64_align4_from_1_gep_1020
     ; GFX7: liveins: $vgpr0_vgpr1
     ; GFX7-NEXT: {{  $}}
@@ -844,6 +835,15 @@ body: |
     ; GFX9-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY]], [[V_MOV_B32_e32_]], 0, implicit $exec
     ; GFX9-NEXT: [[DS_READ2_B32_gfx9_:%[0-9]+]]:vreg_64 = DS_READ2_B32_gfx9 [[V_ADD_U32_e64_]], 0, 1, 0, implicit $exec :: (load (s64), align 4, addrspace 3)
     ; GFX9-NEXT: $vgpr0_vgpr1 = COPY [[DS_READ2_B32_gfx9_]]
+    ; GFX6-LABEL: name: load_local_s64_align4_from_1_gep_1020
+    ; GFX6: liveins: $vgpr0_vgpr1
+    ; GFX6-NEXT: {{  $}}
+    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr(p3) = COPY $vgpr0
+    ; GFX6-NEXT: [[C:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 1020
+    ; GFX6-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p3) = G_PTR_ADD [[COPY]], [[C]](s32)
+    ; GFX6-NEXT: $m0 = S_MOV_B32 -1
+    ; GFX6-NEXT: [[LOAD:%[0-9]+]]:vreg_64(s64) = G_LOAD [[PTR_ADD]](p3) :: (load (s64), align 4, addrspace 3)
+    ; GFX6-NEXT: $vgpr0_vgpr1 = COPY [[LOAD]](s64)
     %0:vgpr(p3) = COPY $vgpr0
     %1:vgpr(s32) = G_CONSTANT i32 1020
     %2:vgpr(p3) = G_PTR_ADD %0, %1
