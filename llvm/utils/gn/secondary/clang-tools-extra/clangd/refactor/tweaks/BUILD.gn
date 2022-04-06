@@ -27,6 +27,7 @@ source_set("tweaks") {
     "PopulateSwitch.cpp",
     "RawStringLiteral.cpp",
     "RemoveUsingNamespace.cpp",
+    "SpecialMembers.cpp",
     "SwapIfBranches.cpp",
   ]
 }
