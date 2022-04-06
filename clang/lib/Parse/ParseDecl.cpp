@@ -7066,8 +7066,16 @@ void Parser::ParseParameterDeclarationClause(
           if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace)) {
             Diag(Tok, diag::warn_cxx98_compat_generalized_initializer_lists);
             DefArgResult = ParseBraceInitializer();
-          } else
+          } else {
+            if (Tok.is(tok::l_paren) && NextToken().is(tok::l_brace)) {
+              Diag(Tok, diag::err_stmt_expr_in_default_arg) << 0;
+              Actions.ActOnParamDefaultArgumentError(Param, EqualLoc);
+              // Skip the statement expression and continue parsing
+              SkipUntil(tok::comma, StopBeforeMatch);
+              continue;
+            }
             DefArgResult = ParseAssignmentExpression();
+          }
           DefArgResult = Actions.CorrectDelayedTyposInExpr(DefArgResult);
           if (DefArgResult.isInvalid()) {
             Actions.ActOnParamDefaultArgumentError(Param, EqualLoc);

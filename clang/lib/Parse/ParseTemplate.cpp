@@ -19,6 +19,7 @@
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
+#include "clang/Sema/SemaDiagnostic.h"
 #include "llvm/Support/TimeProfiler.h"
 using namespace clang;
 
@@ -1007,18 +1008,23 @@ Parser::ParseNonTypeTemplateParameter(unsigned Depth, unsigned Position) {
   SourceLocation EqualLoc;
   ExprResult DefaultArg;
   if (TryConsumeToken(tok::equal, EqualLoc)) {
-    // C++ [temp.param]p15:
-    //   When parsing a default template-argument for a non-type
-    //   template-parameter, the first non-nested > is taken as the
-    //   end of the template-parameter-list rather than a greater-than
-    //   operator.
-    GreaterThanIsOperatorScope G(GreaterThanIsOperator, false);
-    EnterExpressionEvaluationContext ConstantEvaluated(
-        Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
-
-    DefaultArg = Actions.CorrectDelayedTyposInExpr(ParseAssignmentExpression());
-    if (DefaultArg.isInvalid())
+    if (Tok.is(tok::l_paren) && NextToken().is(tok::l_brace)) {
+      Diag(Tok.getLocation(), diag::err_stmt_expr_in_default_arg) << 1;
       SkipUntil(tok::comma, tok::greater, StopAtSemi | StopBeforeMatch);
+    } else {
+      // C++ [temp.param]p15:
+      //   When parsing a default template-argument for a non-type
+      //   template-parameter, the first non-nested > is taken as the
+      //   end of the template-parameter-list rather than a greater-than
+      //   operator.
+      GreaterThanIsOperatorScope G(GreaterThanIsOperator, false);
+      EnterExpressionEvaluationContext ConstantEvaluated(
+          Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
+      DefaultArg =
+          Actions.CorrectDelayedTyposInExpr(ParseAssignmentExpression());
+      if (DefaultArg.isInvalid())
+        SkipUntil(tok::comma, tok::greater, StopAtSemi | StopBeforeMatch);
+    }
   }
 
   // Create the parameter.
