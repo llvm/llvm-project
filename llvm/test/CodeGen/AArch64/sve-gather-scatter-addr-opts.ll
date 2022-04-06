@@ -331,12 +331,100 @@ define void @scatter_f16_index_add_add_mul([8 x half]* %base, i64 %offset, i64 %
   call void @llvm.masked.scatter.nxv4f16(<vscale x 4 x half> %data, <vscale x 4 x half*> %gep.bc, i32 2, <vscale x 4 x i1> %pg)
   ret void
 }
+
+define <vscale x 2 x i64> @masked_gather_nxv2i64_const_with_vec_offsets(<vscale x 2 x i64> %vector_offsets, <vscale x 2 x i1> %pg) #0 {
+; CHECK-LABEL: masked_gather_nxv2i64_const_with_vec_offsets:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #8
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8, z0.d, lsl #3]
+; CHECK-NEXT:    ret
+  %ptrs = getelementptr i64, i64* inttoptr (i64 8 to i64*), <vscale x 2 x i64> %vector_offsets
+  %data = call <vscale x 2 x i64> @llvm.masked.gather.nxv2i64(<vscale x 2 x i64*> %ptrs, i32 8, <vscale x 2 x i1> %pg, <vscale x 2 x i64> undef)
+  ret <vscale x 2 x i64> %data
+}
+
+; TODO: The generated code is wrong because we've lost the scaling applied to
+; %scalar_offset when it's used to calculate %ptrs.
+define <vscale x 2 x i64> @masked_gather_nxv2i64_null_with_vec_plus_scalar_offsets(<vscale x 2 x i64> %vector_offsets, i64 %scalar_offset, <vscale x 2 x i1> %pg) #0 {
+; CHECK-LABEL: masked_gather_nxv2i64_null_with_vec_plus_scalar_offsets:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0, z0.d, lsl #3]
+; CHECK-NEXT:    ret
+  %scalar_offset.ins = insertelement <vscale x 2 x i64> undef, i64 %scalar_offset, i64 0
+  %scalar_offset.splat = shufflevector <vscale x 2 x i64> %scalar_offset.ins, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
+  %offsets = add <vscale x 2 x i64> %vector_offsets, %scalar_offset.splat
+  %ptrs = getelementptr i64, i64* null, <vscale x 2 x i64> %offsets
+  %data = call <vscale x 2 x i64> @llvm.masked.gather.nxv2i64(<vscale x 2 x i64*> %ptrs, i32 8, <vscale x 2 x i1> %pg, <vscale x 2 x i64> undef)
+  ret <vscale x 2 x i64> %data
+}
+
+; TODO: The generated code is wrong because we've lost the scaling applied to
+; constant scalar offset (i.e. i64 1)  when it's used to calculate %ptrs.
+define <vscale x 2 x i64> @masked_gather_nxv2i64_null_with__vec_plus_imm_offsets(<vscale x 2 x i64> %vector_offsets, <vscale x 2 x i1> %pg) #0 {
+; CHECK-LABEL: masked_gather_nxv2i64_null_with__vec_plus_imm_offsets:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #1
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8, z0.d, lsl #3]
+; CHECK-NEXT:    ret
+  %scalar_offset.ins = insertelement <vscale x 2 x i64> undef, i64 1, i64 0
+  %scalar_offset.splat = shufflevector <vscale x 2 x i64> %scalar_offset.ins, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
+  %offsets = add <vscale x 2 x i64> %vector_offsets, %scalar_offset.splat
+  %ptrs = getelementptr i64, i64* null, <vscale x 2 x i64> %offsets
+  %data = call <vscale x 2 x i64> @llvm.masked.gather.nxv2i64(<vscale x 2 x i64*> %ptrs, i32 8, <vscale x 2 x i1> %pg, <vscale x 2 x i64> undef)
+  ret <vscale x 2 x i64> %data
+}
+
+define void @masked_scatter_nxv2i64_const_with_vec_offsets(<vscale x 2 x i64> %vector_offsets, <vscale x 2 x i1> %pg, <vscale x 2 x i64> %data) #0 {
+; CHECK-LABEL: masked_scatter_nxv2i64_const_with_vec_offsets:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #8
+; CHECK-NEXT:    st1d { z1.d }, p0, [x8, z0.d, lsl #3]
+; CHECK-NEXT:    ret
+  %ptrs = getelementptr i64, i64* inttoptr (i64 8 to i64*), <vscale x 2 x i64> %vector_offsets
+  call void @llvm.masked.scatter.nxv2i64(<vscale x 2 x i64> %data, <vscale x 2 x i64*> %ptrs, i32 8, <vscale x 2 x i1> %pg)
+  ret void
+}
+
+; TODO: The generated code is wrong because we've lost the scaling applied to
+; %scalar_offset when it's used to calculate %ptrs.
+define void @masked_scatter_nxv2i64_null_with_vec_plus_scalar_offsets(<vscale x 2 x i64> %vector_offsets, i64 %scalar_offset, <vscale x 2 x i1> %pg, <vscale x 2 x i64> %data) #0 {
+; CHECK-LABEL: masked_scatter_nxv2i64_null_with_vec_plus_scalar_offsets:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    st1d { z1.d }, p0, [x0, z0.d, lsl #3]
+; CHECK-NEXT:    ret
+  %scalar_offset.ins = insertelement <vscale x 2 x i64> undef, i64 %scalar_offset, i64 0
+  %scalar_offset.splat = shufflevector <vscale x 2 x i64> %scalar_offset.ins, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
+  %offsets = add <vscale x 2 x i64> %vector_offsets, %scalar_offset.splat
+  %ptrs = getelementptr i64, i64* null, <vscale x 2 x i64> %offsets
+  call void @llvm.masked.scatter.nxv2i64(<vscale x 2 x i64> %data, <vscale x 2 x i64*> %ptrs, i32 8, <vscale x 2 x i1> %pg)
+  ret void
+}
+
+; TODO: The generated code is wrong because we've lost the scaling applied to
+; constant scalar offset (i.e. i64 1)  when it's used to calculate %ptrs.
+define void @masked_scatter_nxv2i64_null_with__vec_plus_imm_offsets(<vscale x 2 x i64> %vector_offsets, <vscale x 2 x i1> %pg, <vscale x 2 x i64> %data) #0 {
+; CHECK-LABEL: masked_scatter_nxv2i64_null_with__vec_plus_imm_offsets:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #1
+; CHECK-NEXT:    st1d { z1.d }, p0, [x8, z0.d, lsl #3]
+; CHECK-NEXT:    ret
+  %scalar_offset.ins = insertelement <vscale x 2 x i64> undef, i64 1, i64 0
+  %scalar_offset.splat = shufflevector <vscale x 2 x i64> %scalar_offset.ins, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
+  %offsets = add <vscale x 2 x i64> %vector_offsets, %scalar_offset.splat
+  %ptrs = getelementptr i64, i64* null, <vscale x 2 x i64> %offsets
+  call void @llvm.masked.scatter.nxv2i64(<vscale x 2 x i64> %data, <vscale x 2 x i64*> %ptrs, i32 8, <vscale x 2 x i1> %pg)
+  ret void
+}
+
 attributes #0 = { "target-features"="+sve" vscale_range(1, 16) }
 
+declare <vscale x 4 x i8> @llvm.masked.gather.nxv4i8(<vscale x 4 x i8*>, i32, <vscale x 4 x i1>, <vscale x 4 x i8>)
+declare <vscale x 2 x i64> @llvm.masked.gather.nxv2i64(<vscale x 2 x i64*>, i32, <vscale x 2 x i1>, <vscale x 2 x i64>)
 declare <vscale x 4 x float> @llvm.masked.gather.nxv4f32(<vscale x 4 x float*>, i32, <vscale x 4 x i1>, <vscale x 4 x float>)
 
-declare <vscale x 4 x i8> @llvm.masked.gather.nxv4i8(<vscale x 4 x i8*>, i32, <vscale x 4 x i1>, <vscale x 4 x i8>)
 declare void @llvm.masked.scatter.nxv4i8(<vscale x 4 x i8>, <vscale x 4 x i8*>, i32, <vscale x 4 x i1>)
 declare void @llvm.masked.scatter.nxv4i16(<vscale x 4 x i16>, <vscale x 4 x i16*>, i32, <vscale x 4 x i1>)
+declare void @llvm.masked.scatter.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i64*>, i32, <vscale x 2 x i1>)
 declare void @llvm.masked.scatter.nxv4f16(<vscale x 4 x half>, <vscale x 4 x half*>, i32, <vscale x 4 x i1>)
+
 declare <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()

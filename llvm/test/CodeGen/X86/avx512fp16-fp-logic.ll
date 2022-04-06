@@ -357,7 +357,7 @@ define <8 x half> @fsub_bitcast_fneg_vec_undef_elts(<8 x half> %x, <8 x half> %y
 define <8 x half> @fadd_bitcast_fneg_vec_width(<8 x half> %x, <8 x half> %y) {
 ; CHECK-LABEL: fadd_bitcast_fneg_vec_width:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; CHECK-NEXT:    vxorpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm1, %xmm1
 ; CHECK-NEXT:    vaddph %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %bc1 = bitcast <8 x half> %y to <2 x i64>
@@ -370,7 +370,7 @@ define <8 x half> @fadd_bitcast_fneg_vec_width(<8 x half> %x, <8 x half> %y) {
 define <8 x half> @fsub_bitcast_fneg_vec_width(<8 x half> %x, <8 x half> %y) {
 ; CHECK-LABEL: fsub_bitcast_fneg_vec_width:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; CHECK-NEXT:    vxorpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm1, %xmm1
 ; CHECK-NEXT:    vsubph %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %bc1 = bitcast <8 x half> %y to <2 x i64>

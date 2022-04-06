@@ -19,6 +19,7 @@
 
 #include "clang/ExtractAPI/API.h"
 #include "clang/ExtractAPI/Serialization/SerializerBase.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/raw_ostream.h"
@@ -44,6 +45,25 @@ class SymbolGraphSerializer : public APISerializer {
 
   /// The Symbol Graph format version used by this serializer.
   static const VersionTuple FormatVersion;
+
+  using PathComponentStack = llvm::SmallVector<llvm::StringRef, 4>;
+  /// The current path component stack.
+  ///
+  /// Note: this is used to serialize the ``pathComponents`` field of symbols in
+  /// the Symbol Graph.
+  PathComponentStack PathComponents;
+
+  /// A helper type to manage PathComponents correctly using RAII.
+  struct PathComponentGuard {
+    PathComponentGuard(PathComponentStack &PC, StringRef Component) : PC(PC) {
+      PC.emplace_back(Component);
+    }
+
+    ~PathComponentGuard() { PC.pop_back(); }
+
+  private:
+    PathComponentStack &PC;
+  };
 
 public:
   /// Serialize the APIs in \c APISet in the Symbol Graph format.
@@ -104,6 +124,12 @@ private:
   /// containing common symbol information of \p Record.
   Optional<Object> serializeAPIRecord(const APIRecord &Record) const;
 
+  /// Helper method to serialize second-level member records of \p Record and
+  /// the member-of relationships.
+  template <typename MemberTy>
+  void serializeMembers(const APIRecord &Record,
+                        const SmallVector<std::unique_ptr<MemberTy>> &Members);
+
   /// Serialize the \p Kind relationship between \p Source and \p Target.
   ///
   /// Record the relationship between the two symbols in
@@ -125,6 +151,16 @@ private:
 
   /// Serialize a macro defintion record.
   void serializeMacroDefinitionRecord(const MacroDefinitionRecord &Record);
+
+  /// Serialize a typedef record.
+  void serializeTypedefRecord(const TypedefRecord &Record);
+
+  /// Push a component to the current path components stack.
+  ///
+  /// \param Component The component to push onto the path components stack.
+  /// \return A PathComponentGuard responsible for removing the latest
+  /// component from the stack on scope exit.
+  LLVM_NODISCARD PathComponentGuard makePathComponentGuard(StringRef Component);
 
 public:
   SymbolGraphSerializer(const APISet &API, StringRef ProductName,

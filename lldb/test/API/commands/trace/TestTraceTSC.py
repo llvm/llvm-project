@@ -19,7 +19,35 @@ class TestTraceTimestampCounters(TraceIntelPTTestCaseBase):
 
         self.expect("n")
         self.expect("thread trace dump instructions --tsc -c 1",
-            patterns=["\[0\] \[tsc=0x[0-9a-fA-F]+\] 0x0000000000400511    movl"])
+            patterns=["0: \[tsc=0x[0-9a-fA-F]+\] 0x0000000000400511    movl"])
+
+    @testSBAPIAndCommands
+    @skipIf(oslist=no_match(['linux']), archs=no_match(['i386', 'x86_64']))
+    def testMultipleTscsPerThread(self):
+        self.expect("file " + os.path.join(self.getSourceDir(), "intelpt-trace", "a.out"))
+        self.expect("b main")
+        self.expect("r")
+
+        self.traceStartThread(enableTsc=True)
+
+        # After each stop there'll be a new TSC
+        self.expect("n")
+        self.expect("n")
+        self.expect("n")
+
+        # We'll get the most recent instructions, with at least 3 different TSCs
+        self.runCmd("thread trace dump instructions --tsc --raw")
+        id_to_tsc = {}
+        for line in self.res.GetOutput().splitlines():
+            m = re.search("    (.+): \[tsc=(.+)\].*", line)
+            if m:
+                id_to_tsc[int(m.group(1))] = m.group(2)
+        self.assertEqual(len(id_to_tsc), 6)
+
+        # We check that the values are right when dumping a specific id
+        for id in range(0, 6):
+            self.expect(f"thread trace dump instructions --tsc --id {id} -c 1",
+                substrs=[f"{id}: [tsc={id_to_tsc[id]}]"])
 
     @testSBAPIAndCommands
     @skipIf(oslist=no_match(['linux']), archs=no_match(['i386', 'x86_64']))
@@ -32,7 +60,7 @@ class TestTraceTimestampCounters(TraceIntelPTTestCaseBase):
 
         self.expect("n")
         self.expect("thread trace dump instructions --tsc -c 1",
-            patterns=["\[0\] \[tsc=0x[0-9a-fA-F]+\] 0x0000000000400511    movl"])
+            patterns=["0: \[tsc=0x[0-9a-fA-F]+\] 0x0000000000400511    movl"])
 
     @testSBAPIAndCommands
     @skipIf(oslist=no_match(['linux']), archs=no_match(['i386', 'x86_64']))
@@ -45,7 +73,7 @@ class TestTraceTimestampCounters(TraceIntelPTTestCaseBase):
 
         self.expect("n")
         self.expect("thread trace dump instructions --tsc -c 1",
-            patterns=["\[0\] \[tsc=unavailable\] 0x0000000000400511    movl"])
+            patterns=["0: \[tsc=unavailable\] 0x0000000000400511    movl"])
 
     @testSBAPIAndCommands
     @skipIf(oslist=no_match(['linux']), archs=no_match(['i386', 'x86_64']))

@@ -10,13 +10,15 @@
 
 // shared_ptr
 
-// template<class T, class... Args> shared_ptr<T> make_shared(Args&&... args);
+// template<class T, class... Args>
+// shared_ptr<T> make_shared(Args&&... args); // T is not an array
 
 #include <memory>
 #include <cassert>
 
-#include "test_macros.h"
 #include "count_new.h"
+#include "operator_hijacker.h"
+#include "test_macros.h"
 
 struct A
 {
@@ -121,6 +123,14 @@ int main(int, char**)
     }
 #endif
     assert(A::count == 0);
+
+    // Make sure std::make_shared handles badly-behaved types properly
+    {
+      std::shared_ptr<operator_hijacker> p1 = std::make_shared<operator_hijacker>();
+      std::shared_ptr<operator_hijacker> p2 = std::make_shared<operator_hijacker>(operator_hijacker());
+      assert(p1 != nullptr);
+      assert(p2 != nullptr);
+    }
 
     test<bool>(true);
     test<int>(3);

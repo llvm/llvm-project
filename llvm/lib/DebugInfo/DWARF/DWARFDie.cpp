@@ -291,7 +291,7 @@ struct DWARFTypePrinter {
       }
       Word = true;
       StringRef Name = NamePtr;
-      static constexpr StringRef MangledPrefix = "_STN";
+      static constexpr StringRef MangledPrefix = "_STN|";
       if (Name.startswith(MangledPrefix)) {
         Name = Name.drop_front(MangledPrefix.size());
         auto Separator = Name.find('|');

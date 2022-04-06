@@ -266,7 +266,10 @@ typedef enum ompt_scope_endpoint_t {
 
 typedef enum ompt_dispatch_t {
   ompt_dispatch_iteration             = 1,
-  ompt_dispatch_section               = 2
+  ompt_dispatch_section               = 2,
+  ompt_dispatch_ws_loop_chunk         = 3,
+  ompt_dispatch_taskloop_chunk        = 4,
+  ompt_dispatch_distribute_chunk      = 5
 } ompt_dispatch_t;
 
 typedef enum ompt_sync_region_t {
@@ -303,7 +306,11 @@ typedef enum ompt_work_t {
   ompt_work_workshare          = 5,
   ompt_work_distribute         = 6,
   ompt_work_taskloop           = 7,
-  ompt_work_scope              = 8
+  ompt_work_scope              = 8,
+  ompt_work_loop_static        = 10,
+  ompt_work_loop_dynamic       = 11,
+  ompt_work_loop_guided        = 12,
+  ompt_work_loop_other         = 13
 } ompt_work_t;
 
 typedef enum ompt_mutex_t {
@@ -554,6 +561,11 @@ typedef struct ompt_dependence_t {
   ompt_dependence_type_t dependence_type;
 } ompt_dependence_t;
 
+typedef struct ompt_dispatch_chunk_t {
+  uint64_t start;
+  uint64_t iterations;
+} ompt_dispatch_chunk_t;
+
 typedef int (*ompt_enumerate_states_t) (
   int current_state,
   int *next_state,
@@ -745,7 +757,7 @@ typedef struct ompt_record_parallel_end_t {
 } ompt_record_parallel_end_t;
 
 typedef void (*ompt_callback_work_t) (
-  ompt_work_t wstype,
+  ompt_work_t work_type,
   ompt_scope_endpoint_t endpoint,
   ompt_data_t *parallel_data,
   ompt_data_t *task_data,
@@ -754,7 +766,7 @@ typedef void (*ompt_callback_work_t) (
 );
 
 typedef struct ompt_record_work_t {
-  ompt_work_t wstype;
+  ompt_work_t work_type;
   ompt_scope_endpoint_t endpoint;
   ompt_id_t parallel_id;
   ompt_id_t task_id;

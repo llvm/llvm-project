@@ -102,6 +102,7 @@ static Expected<uint32_t> ReadIntelPTConfigFile(const char *file,
     case BitOffset:
       return 10;
     }
+    llvm_unreachable("Fully covered switch above!");
   };
 
   auto createError = [&](const char *expected_value_message) {

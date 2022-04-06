@@ -266,26 +266,28 @@ static bool isLegalToInterChangeLoops(CharMatrix &DepMatrix,
   return true;
 }
 
-static LoopVector populateWorklist(Loop &L) {
+static void populateWorklist(Loop &L, LoopVector &LoopList) {
   LLVM_DEBUG(dbgs() << "Calling populateWorklist on Func: "
                     << L.getHeader()->getParent()->getName() << " Loop: %"
                     << L.getHeader()->getName() << '\n');
-  LoopVector LoopList;
+  assert(LoopList.empty() && "LoopList should initially be empty!");
   Loop *CurrentLoop = &L;
   const std::vector<Loop *> *Vec = &CurrentLoop->getSubLoops();
   while (!Vec->empty()) {
     // The current loop has multiple subloops in it hence it is not tightly
     // nested.
     // Discard all loops above it added into Worklist.
-    if (Vec->size() != 1)
-      return {};
+    if (Vec->size() != 1) {
+      LoopList = {};
+      return;
+    }
 
     LoopList.push_back(CurrentLoop);
     CurrentLoop = Vec->front();
     Vec = &CurrentLoop->getSubLoops();
   }
   LoopList.push_back(CurrentLoop);
-  return LoopList;
+  return;
 }
 
 namespace {
@@ -419,12 +421,13 @@ struct LoopInterchange {
   bool run(Loop *L) {
     if (L->getParentLoop())
       return false;
-
-    return processLoopList(populateWorklist(*L));
+    SmallVector<Loop *, 8> LoopList;
+    populateWorklist(*L, LoopList);
+    return processLoopList(LoopList);
   }
 
   bool run(LoopNest &LN) {
-    const auto &LoopList = LN.getLoops();
+    SmallVector<Loop *, 8> LoopList(LN.getLoops().begin(), LN.getLoops().end());
     for (unsigned I = 1; I < LoopList.size(); ++I)
       if (LoopList[I]->getParentLoop() != LoopList[I - 1])
         return false;
@@ -456,7 +459,7 @@ struct LoopInterchange {
     return LoopList.size() - 1;
   }
 
-  bool processLoopList(ArrayRef<Loop *> LoopList) {
+  bool processLoopList(SmallVectorImpl<Loop *> &LoopList) {
     bool Changed = false;
     unsigned LoopNestDepth = LoopList.size();
     if (LoopNestDepth < 2) {
@@ -496,20 +499,32 @@ struct LoopInterchange {
     }
 
     unsigned SelecLoopId = selectLoopForInterchange(LoopList);
-    // Move the selected loop outwards to the best possible position.
-    Loop *LoopToBeInterchanged = LoopList[SelecLoopId];
-    for (unsigned i = SelecLoopId; i > 0; i--) {
-      bool Interchanged = processLoop(LoopToBeInterchanged, LoopList[i - 1], i,
-                                      i - 1, DependencyMatrix);
-      if (!Interchanged)
-        return Changed;
-      // Update the DependencyMatrix
-      interChangeDependencies(DependencyMatrix, i, i - 1);
+    // We try to achieve the globally optimal memory access for the loopnest,
+    // and do interchange based on a bubble-sort fasion. We start from
+    // the innermost loop, move it outwards to the best possible position
+    // and repeat this process.
+    for (unsigned j = SelecLoopId; j > 0; j--) {
+      bool ChangedPerIter = false;
+      for (unsigned i = SelecLoopId; i > SelecLoopId - j; i--) {
+        bool Interchanged = processLoop(LoopList[i], LoopList[i - 1], i, i - 1,
+                                        DependencyMatrix);
+        if (!Interchanged)
+          continue;
+        // Loops interchanged, update LoopList accordingly.
+        std::swap(LoopList[i - 1], LoopList[i]);
+        // Update the DependencyMatrix
+        interChangeDependencies(DependencyMatrix, i, i - 1);
 #ifdef DUMP_DEP_MATRICIES
-      LLVM_DEBUG(dbgs() << "Dependence after interchange\n");
-      printDepMatrix(DependencyMatrix);
+        LLVM_DEBUG(dbgs() << "Dependence after interchange\n");
+        printDepMatrix(DependencyMatrix);
 #endif
-      Changed |= Interchanged;
+        ChangedPerIter |= Interchanged;
+        Changed |= Interchanged;
+      }
+      // Early abort if there was no interchange during an entire round of
+      // moving loops outwards.
+      if (!ChangedPerIter)
+        break;
     }
     return Changed;
   }
@@ -1419,9 +1434,13 @@ static void moveLCSSAPhis(BasicBlock *InnerExit, BasicBlock *InnerHeader,
 
     // Incoming values are guaranteed be instructions currently.
     auto IncI = cast<Instruction>(P.getIncomingValueForBlock(InnerLatch));
+    // In case of multi-level nested loops, follow LCSSA to find the incoming
+    // value defined from the innermost loop.
+    auto IncIInnerMost = cast<Instruction>(followLCSSA(IncI));
     // Skip phis with incoming values from the inner loop body, excluding the
     // header and latch.
-    if (IncI->getParent() != InnerLatch && IncI->getParent() != InnerHeader)
+    if (IncIInnerMost->getParent() != InnerLatch &&
+        IncIInnerMost->getParent() != InnerHeader)
       continue;
 
     assert(all_of(P.users(),
