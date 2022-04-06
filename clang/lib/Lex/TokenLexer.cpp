@@ -815,7 +815,19 @@ bool TokenLexer::pasteTokens(Token &LHSTok, ArrayRef<Token> TokenStream,
 
     // Lex the resultant pasted token into Result.
     Token Result;
-
+    // [MSVC Compatibility]
+    if (LHSTok.is(tok::period) && RHS.isAnyIdentifier()) {
+      // Handle '.##identifier' or '->##identifier'
+      PP.IncrementPasteCounter(true);
+      Result.startToken();
+      Result.setKind(tok::raw_identifier);
+      Result.setRawIdentifierData(ResultTokStrPtr);
+      Result.setLocation(ResultTokLoc);
+      Result.setLength(LHSLen + RHSLen);
+      PP.LookUpIdentifierInfo(Result);
+      // Returns true the caller should immediately return the token.
+      return true;
+    }
     if (LHSTok.isAnyIdentifier() && RHS.isAnyIdentifier()) {
       // Common paste case: identifier+identifier = identifier.  Avoid creating
       // a lexer and other overhead.
