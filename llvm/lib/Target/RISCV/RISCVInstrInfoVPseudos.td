@@ -1769,7 +1769,8 @@ multiclass VPseudoBinaryM<VReg RetClass,
                                              Constraint>;
     let ForceTailAgnostic = true in
     def "_" # MInfo.MX # "_MASK" : VPseudoBinaryMOutMask<RetClass, Op1Class,
-                                                         Op2Class, Constraint>;
+                                                         Op2Class, Constraint>,
+                                   RISCVMaskedPseudo</*MaskOpIdx*/ 3>;
   }
 }
 
