@@ -406,8 +406,7 @@ body: |
     ; GFX6: liveins: $vgpr0
     ; GFX6-NEXT: {{  $}}
     ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr(p3) = COPY $vgpr0
-    ; GFX6-NEXT: $m0 = S_MOV_B32 -1
-    ; GFX6-NEXT: [[LOAD:%[0-9]+]]:vreg_64(p1) = G_LOAD [[COPY]](p3) :: (load (p1), align 4, addrspace 3)
+    ; GFX6-NEXT: [[LOAD:%[0-9]+]]:vgpr(p1) = G_LOAD [[COPY]](p3) :: (load (p1), align 4, addrspace 3)
     ; GFX6-NEXT: $vgpr0_vgpr1 = COPY [[LOAD]](p1)
     %0:vgpr(p3) = COPY $vgpr0
     %1:vgpr(p1) = G_LOAD %0 :: (load (p1), align 4, addrspace 3)

@@ -1531,6 +1531,14 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
     // requirements.
     //
     if (Size == 64) {
+      // SI has a hardware bug in the LDS / GDS bounds checking: if the base
+      // address is negative, then the instruction is incorrectly treated as
+      // out-of-bounds even if base + offsets is in bounds. Split vectorized
+      // loads here to avoid emitting ds_read2_b32. We may re-combine the
+      // load later in the SILoadStoreOptimizer.
+      if (!Subtarget->hasUsableDSOffset() && Alignment < Align(8))
+        return false;
+
       // 8 byte accessing via ds_read/write_b64 require 8-byte alignment, but we
       // can do a 4 byte aligned, 8 byte access in a single operation using
       // ds_read2/write2_b32 with adjacent offsets.
