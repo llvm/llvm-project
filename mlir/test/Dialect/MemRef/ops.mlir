@@ -281,6 +281,29 @@ func @collapse_shape_to_dynamic
 
 // -----
 
+// CHECK-LABEL: func @expand_collapse_shape_transposed_layout
+func @expand_collapse_shape_transposed_layout(
+    %m0: memref<?x?xf32, offset : 0, strides : [1, 10]>,
+    %m1: memref<4x5x6xf32, offset : 0, strides : [1, ?, 1000]>) {
+
+  %r0 = memref.expand_shape %m0 [[0], [1, 2]] :
+    memref<?x?xf32, offset : 0, strides : [1, 10]> into
+    memref<?x?x5xf32, offset : 0, strides : [1, 50, 10]>
+  %rr0 = memref.collapse_shape %r0 [[0], [1, 2]] :
+    memref<?x?x5xf32, offset : 0, strides : [1, 50, 10]> into
+    memref<?x?xf32, offset : 0, strides : [1, 10]>
+
+  %r1 = memref.expand_shape %m1 [[0, 1], [2], [3, 4]] :
+    memref<4x5x6xf32, offset : 0, strides : [1, ?, 1000]> into 
+    memref<2x2x5x2x3xf32, offset : 0, strides : [2, 1, ?, 3000, 1000]>
+  %rr1 = memref.collapse_shape %r1 [[0, 1], [2], [3, 4]] :
+    memref<2x2x5x2x3xf32, offset : 0, strides : [2, 1, ?, 3000, 1000]> into
+    memref<4x5x6xf32, offset : 0, strides : [1, ?, 1000]>
+  return
+}
+
+// -----
+
 func @rank(%t : memref<4x4x?xf32>) {
   // CHECK: %{{.*}} = memref.rank %{{.*}} : memref<4x4x?xf32>
   %0 = "memref.rank"(%t) : (memref<4x4x?xf32>) -> index
