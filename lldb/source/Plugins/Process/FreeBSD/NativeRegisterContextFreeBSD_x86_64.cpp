@@ -537,7 +537,7 @@ Status NativeRegisterContextFreeBSD_x86_64::WriteRegister(
 }
 
 Status NativeRegisterContextFreeBSD_x86_64::ReadAllRegisterValues(
-    lldb::DataBufferSP &data_sp) {
+    lldb::WritableDataBufferSP &data_sp) {
   Status error;
 
   data_sp.reset(new DataBufferHeap(REG_CONTEXT_SIZE, 0));

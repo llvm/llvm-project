@@ -149,7 +149,7 @@ Status NativeRegisterContextFreeBSD_arm64::WriteRegister(
 }
 
 Status NativeRegisterContextFreeBSD_arm64::ReadAllRegisterValues(
-    lldb::DataBufferSP &data_sp) {
+    lldb::WritableDataBufferSP &data_sp) {
   Status error;
 
   error = ReadRegisterSet(RegisterInfoPOSIX_arm64::GPRegSet);

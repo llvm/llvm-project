@@ -349,7 +349,7 @@ Status NativeRegisterContextLinux_ppc64le::WriteRegister(
 }
 
 Status NativeRegisterContextLinux_ppc64le::ReadAllRegisterValues(
-    lldb::DataBufferSP &data_sp) {
+    lldb::WritableDataBufferSP &data_sp) {
   Status error;
 
   data_sp.reset(new DataBufferHeap(REG_CONTEXT_SIZE, 0));
