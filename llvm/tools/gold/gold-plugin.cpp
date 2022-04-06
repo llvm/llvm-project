@@ -201,7 +201,7 @@ namespace options {
   // Sample profile file path
   static std::string sample_profile;
   // New pass manager
-  static bool new_pass_manager = LLVM_ENABLE_NEW_PASS_MANAGER;
+  static bool new_pass_manager = true;
   // Debug new pass manager
   static bool debug_pass_manager = false;
   // Directory to store the .dwo files.

@@ -1,3 +1,4 @@
+// UNSUPPORTED: system-windows
 // A basic clang -cc1 command-line, and simple environment check.
 
 // RUN: %clang %s -### -no-canonical-prefixes -target csky 2>&1 | FileCheck -check-prefix=CC1 %s

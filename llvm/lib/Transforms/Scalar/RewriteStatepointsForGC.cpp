@@ -2087,6 +2087,7 @@ static void relocationViaAlloca(
 
   assert(PromotableAllocas.size() == Live.size() + NumRematerializedValues &&
          "we must have the same allocas with lives");
+  (void) NumRematerializedValues;
   if (!PromotableAllocas.empty()) {
     // Apply mem2reg to promote alloca to SSA
     PromoteMemToReg(PromotableAllocas, DT);

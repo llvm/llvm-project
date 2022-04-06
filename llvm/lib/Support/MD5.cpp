@@ -261,13 +261,13 @@ void MD5::final(MD5Result &Result) {
   support::endian::write32le(&Result[12], InternalState.d);
 }
 
-StringRef MD5::final() {
+MD5::MD5Result MD5::final() {
+  MD5Result Result;
   final(Result);
-  return StringRef(reinterpret_cast<char *>(Result.Bytes.data()),
-                   Result.Bytes.size());
+  return Result;
 }
 
-StringRef MD5::result() {
+MD5::MD5Result MD5::result() {
   auto StateToRestore = InternalState;
 
   auto Hash = final();
@@ -280,15 +280,15 @@ StringRef MD5::result() {
 
 SmallString<32> MD5::MD5Result::digest() const {
   SmallString<32> Str;
-  toHex(Bytes, /*LowerCase*/ true, Str);
+  toHex(*this, /*LowerCase*/ true, Str);
   return Str;
 }
 
 void MD5::stringifyResult(MD5Result &Result, SmallVectorImpl<char> &Str) {
-  toHex(Result.Bytes, /*LowerCase*/ true, Str);
+  toHex(Result, /*LowerCase*/ true, Str);
 }
 
-std::array<uint8_t, 16> MD5::hash(ArrayRef<uint8_t> Data) {
+MD5::MD5Result MD5::hash(ArrayRef<uint8_t> Data) {
   MD5 Hash;
   Hash.update(Data);
   MD5::MD5Result Res;
