@@ -46,9 +46,10 @@
       "vendor": "apple"
     }
   },
-  "relationhips": [],
+  "relationships": [],
   "symbols": [
     {
+      "accessLevel": "public",
       "declarationFragments": [
         {
           "kind": "keyword",
@@ -72,8 +73,10 @@
         "identifier": "objective-c.macro"
       },
       "location": {
-        "character": 9,
-        "line": 1,
+        "position": {
+          "character": 9,
+          "line": 1
+        },
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
@@ -84,9 +87,13 @@
           }
         ],
         "title": "HELLO"
-      }
+      },
+      "pathComponents": [
+        "HELLO"
+      ]
     },
     {
+      "accessLevel": "public",
       "declarationFragments": [
         {
           "kind": "keyword",
@@ -110,8 +117,10 @@
         "identifier": "objective-c.macro"
       },
       "location": {
-        "character": 9,
-        "line": 2,
+        "position": {
+          "character": 9,
+          "line": 2
+        },
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
@@ -122,9 +131,13 @@
           }
         ],
         "title": "WORLD"
-      }
+      },
+      "pathComponents": [
+        "WORLD"
+      ]
     },
     {
+      "accessLevel": "public",
       "declarationFragments": [
         {
           "kind": "keyword",
@@ -160,8 +173,10 @@
         "identifier": "objective-c.macro"
       },
       "location": {
-        "character": 9,
-        "line": 3,
+        "position": {
+          "character": 9,
+          "line": 3
+        },
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
@@ -172,9 +187,13 @@
           }
         ],
         "title": "MACRO_FUN"
-      }
+      },
+      "pathComponents": [
+        "MACRO_FUN"
+      ]
     },
     {
+      "accessLevel": "public",
       "declarationFragments": [
         {
           "kind": "keyword",
@@ -226,8 +245,10 @@
         "identifier": "objective-c.macro"
       },
       "location": {
-        "character": 9,
-        "line": 4,
+        "position": {
+          "character": 9,
+          "line": 4
+        },
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
@@ -238,9 +259,13 @@
           }
         ],
         "title": "FUN"
-      }
+      },
+      "pathComponents": [
+        "FUN"
+      ]
     },
     {
+      "accessLevel": "public",
       "declarationFragments": [
         {
           "kind": "keyword",
@@ -276,8 +301,10 @@
         "identifier": "objective-c.macro"
       },
       "location": {
-        "character": 9,
-        "line": 5,
+        "position": {
+          "character": 9,
+          "line": 5
+        },
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
@@ -288,9 +315,13 @@
           }
         ],
         "title": "FUNC99"
-      }
+      },
+      "pathComponents": [
+        "FUNC99"
+      ]
     },
     {
+      "accessLevel": "public",
       "declarationFragments": [
         {
           "kind": "keyword",
@@ -326,8 +357,10 @@
         "identifier": "objective-c.macro"
       },
       "location": {
-        "character": 9,
-        "line": 6,
+        "position": {
+          "character": 9,
+          "line": 6
+        },
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
@@ -338,7 +371,10 @@
           }
         ],
         "title": "FUNGNU"
-      }
+      },
+      "pathComponents": [
+        "FUNGNU"
+      ]
     }
   ]
 }

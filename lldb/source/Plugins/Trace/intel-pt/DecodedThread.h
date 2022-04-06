@@ -71,13 +71,13 @@ public:
   class TscRange {
   public:
     /// Check if this TSC range includes the given instruction index.
-    bool InRange(size_t insn_index);
+    bool InRange(size_t insn_index) const;
 
     /// Get the next range chronologically.
-    llvm::Optional<TscRange> Next();
+    llvm::Optional<TscRange> Next() const;
 
     /// Get the previous range chronologically.
-    llvm::Optional<TscRange> Prev();
+    llvm::Optional<TscRange> Prev() const;
 
     /// Get the TSC value.
     size_t GetTsc() const;
@@ -150,7 +150,17 @@ public:
   /// If the trace was collected with TSC support, all the instructions of
   /// the trace will have associated TSCs. This means that this method will
   /// only return \b llvm::None if there are no TSCs whatsoever in the trace.
-  llvm::Optional<TscRange> CalculateTscRange(size_t insn_index) const;
+  ///
+  /// \param[in] insn_index
+  ///   The instruction index in question.
+  ///
+  /// \param[in] hint_range
+  ///   An optional range that might include the given index or might be a
+  ///   neighbor of it. It might help speed it traversals of the trace with
+  ///   short jumps.
+  llvm::Optional<TscRange> CalculateTscRange(
+      size_t insn_index,
+      const llvm::Optional<DecodedThread::TscRange> &hint_range) const;
 
   /// Check if an instruction given by its index is an error.
   bool IsInstructionAnError(size_t insn_idx) const;

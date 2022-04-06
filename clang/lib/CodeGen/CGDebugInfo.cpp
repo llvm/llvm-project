@@ -5199,7 +5199,7 @@ std::string CGDebugInfo::GetName(const Decl *D, bool Qualified) const {
         TemplateNamesKind == codegenoptions::DebugTemplateNamesKind::Mangled;
     // check if it's a template
     if (Mangled)
-      OS << "_STN";
+      OS << "_STN|";
 
     OS << ND->getDeclName();
     std::string EncodedOriginalName;

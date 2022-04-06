@@ -51,9 +51,10 @@ char unavailable __attribute__((unavailable));
       "vendor": "apple"
     }
   },
-  "relationhips": [],
+  "relationships": [],
   "symbols": [
     {
+      "accessLevel": "public",
       "declarationFragments": [
         {
           "kind": "typeIdentifier",
@@ -78,8 +79,10 @@ char unavailable __attribute__((unavailable));
         "identifier": "c.var"
       },
       "location": {
-        "character": 5,
-        "line": 1,
+        "position": {
+          "character": 5,
+          "line": 1
+        },
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
@@ -90,9 +93,13 @@ char unavailable __attribute__((unavailable));
           }
         ],
         "title": "num"
-      }
+      },
+      "pathComponents": [
+        "num"
+      ]
     },
     {
+      "accessLevel": "public",
       "declarationFragments": [
         {
           "kind": "typeIdentifier",
@@ -261,29 +268,7 @@ char unavailable __attribute__((unavailable));
           }
         ]
       },
-      "identifier": {
-        "interfaceLanguage": "c",
-        "precise": "c:@F@add"
-      },
-      "kind": {
-        "displayName": "Function",
-        "identifier": "c.func"
-      },
-      "location": {
-        "character": 6,
-        "line": 9,
-        "uri": "file://INPUT_DIR/input.h"
-      },
-      "names": {
-        "subHeading": [
-          {
-            "kind": "identifier",
-            "spelling": "add"
-          }
-        ],
-        "title": "add"
-      },
-      "parameters": {
+      "functionSignature": {
         "parameters": [
           {
             "declarationFragments": [
@@ -363,7 +348,34 @@ char unavailable __attribute__((unavailable));
             "spelling": "void"
           }
         ]
-      }
+      },
+      "identifier": {
+        "interfaceLanguage": "c",
+        "precise": "c:@F@add"
+      },
+      "kind": {
+        "displayName": "Function",
+        "identifier": "c.func"
+      },
+      "location": {
+        "position": {
+          "character": 6,
+          "line": 9
+        },
+        "uri": "file://INPUT_DIR/input.h"
+      },
+      "names": {
+        "subHeading": [
+          {
+            "kind": "identifier",
+            "spelling": "add"
+          }
+        ],
+        "title": "add"
+      },
+      "pathComponents": [
+        "add"
+      ]
     }
   ]
 }

@@ -1451,8 +1451,10 @@ let AssemblerPredicate = isGFX11Only,
 
   multiclass VOP3_Realtriple_T16_gfx11<bits<10> op, string asmName, string opName = NAME,
                                    bit isSingle = 0> :
-    VOP3_Real_Base_T16_gfx11<op, asmName, opName, isSingle>;
-    // TODO-GFX11_16BIT DPP
+    VOP3_Real_Base_T16_gfx11<op, asmName, opName, isSingle>,
+    // TODO-GFX11_16BIT Using non true16 DPP
+    VOP3_Real_dpp_Base_gfx11<op, opName>,
+    VOP3_Real_dpp8_Base_gfx11<op, opName>;
 
   multiclass VOP3Only_Realtriple_gfx11<bits<10> op> :
     VOP3_Realtriple_gfx11<op, 1>;

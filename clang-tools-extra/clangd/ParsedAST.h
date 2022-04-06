@@ -37,6 +37,7 @@
 #include <vector>
 
 namespace clang {
+class Sema;
 namespace clangd {
 class HeuristicResolver;
 
@@ -62,6 +63,8 @@ public:
   /// from the main file to be in the AST.
   ASTContext &getASTContext();
   const ASTContext &getASTContext() const;
+
+  Sema &getSema();
 
   Preprocessor &getPreprocessor();
   std::shared_ptr<Preprocessor> getPreprocessorPtr();
