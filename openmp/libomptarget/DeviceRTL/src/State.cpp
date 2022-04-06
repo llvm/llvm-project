@@ -530,6 +530,10 @@ __attribute__((noinline)) void __kmpc_free_shared(void *Ptr, uint64_t Bytes) {
 
 void *__kmpc_get_dynamic_shared() { return memory::getDynamicBuffer(); }
 
+void *llvm_omp_target_dynamic_shared_alloc() {
+  return __kmpc_get_dynamic_shared();
+}
+
 void *llvm_omp_get_dynamic_shared() { return __kmpc_get_dynamic_shared(); }
 
 /// Allocate storage in shared memory to communicate arguments from the main
