@@ -196,3 +196,75 @@ TEST(DWARFIndexCachingTest, ManualDWARFIndexIndexSetEncodeDecode) {
       DIERef(llvm::None, DIERef::Section::DebugInfo, ++die_offset));
   EncodeDecode(set);
 }
+
+static void EncodeDecode(const CacheSignature &object, ByteOrder byte_order,
+                         bool encode_result) {
+  const uint8_t addr_size = 8;
+  DataEncoder encoder(byte_order, addr_size);
+  EXPECT_EQ(encode_result, object.Encode(encoder));
+  if (!encode_result)
+    return;
+  llvm::ArrayRef<uint8_t> bytes = encoder.GetData();
+  DataExtractor data(bytes.data(), bytes.size(), byte_order, addr_size);
+  offset_t data_offset = 0;
+  CacheSignature decoded_object;
+  EXPECT_TRUE(decoded_object.Decode(data, &data_offset));
+  EXPECT_EQ(object, decoded_object);
+}
+
+static void EncodeDecode(const CacheSignature &object, bool encode_result) {
+  EncodeDecode(object, eByteOrderLittle, encode_result);
+  EncodeDecode(object, eByteOrderBig, encode_result);
+}
+
+TEST(DWARFIndexCachingTest, CacheSignatureTests) {
+  CacheSignature sig;
+  // A cache signature is only considered valid if it has a UUID.
+  sig.m_mod_time = 0x12345678;
+  EXPECT_FALSE(sig.IsValid());
+  EncodeDecode(sig, /*encode_result=*/false);
+  sig.Clear();
+
+  sig.m_obj_mod_time = 0x12345678;
+  EXPECT_FALSE(sig.IsValid());
+  EncodeDecode(sig, /*encode_result=*/false);
+  sig.Clear();
+
+  sig.m_uuid = UUID::fromData("@\x00\x11\x22\x33\x44\x55\x66\x77", 8);
+  EXPECT_TRUE(sig.IsValid());
+  EncodeDecode(sig, /*encode_result=*/true);
+  sig.m_mod_time = 0x12345678;
+  EXPECT_TRUE(sig.IsValid());
+  EncodeDecode(sig, /*encode_result=*/true);
+  sig.m_obj_mod_time = 0x456789ab;
+  EXPECT_TRUE(sig.IsValid());
+  EncodeDecode(sig, /*encode_result=*/true);
+  sig.m_mod_time = llvm::None;
+  EXPECT_TRUE(sig.IsValid());
+  EncodeDecode(sig, /*encode_result=*/true);
+
+  // Recent changes do not allow cache signatures with only a modification time
+  // or object modification time, so make sure if we try to decode such a cache
+  // file that we fail. This verifies that if we try to load an previously
+  // valid cache file where the signature is insufficient, that we will fail to
+  // decode and load these cache files.
+  DataEncoder encoder(eByteOrderLittle, /*addr_size=*/8);
+  encoder.AppendU8(2); // eSignatureModTime
+  encoder.AppendU32(0x12345678);
+  encoder.AppendU8(255); // eSignatureEnd
+
+  llvm::ArrayRef<uint8_t> bytes = encoder.GetData();
+  DataExtractor data(bytes.data(), bytes.size(), eByteOrderLittle,
+                     /*addr_size=*/8);
+  offset_t data_offset = 0;
+
+  // Make sure we fail to decode a CacheSignature with only a mod time
+  EXPECT_FALSE(sig.Decode(data, &data_offset));
+
+  // Change the signature data to contain only a eSignatureObjectModTime and
+  // make sure decoding fails as well.
+  encoder.PutU8(/*offset=*/0, 3); // eSignatureObjectModTime
+  data_offset = 0;
+  EXPECT_FALSE(sig.Decode(data, &data_offset));
+
+}
