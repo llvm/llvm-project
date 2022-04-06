@@ -162,15 +162,28 @@ mlir::LogicalResult ReturnOp::verify() {
 // IfOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult checkBlockTerminator(mlir::Builder &builder, Location l,
-                                          Region *r) {
+static LogicalResult checkBlockTerminator(OpAsmParser &parser,
+                                          llvm::SMLoc parserLoc,
+                                          std::optional<Location> l, Region *r,
+                                          bool ensureTerm = true) {
+  mlir::Builder &builder = parser.getBuilder();
   if (r->hasOneBlock()) {
-    ::mlir::impl::ensureRegionTerminator(
-        *r, builder, l, [](OpBuilder &builder, Location loc) {
-          OperationState state(loc, YieldOp::getOperationName());
-          YieldOp::build(builder, state);
-          return Operation::create(state);
-        });
+    if (ensureTerm) {
+      ::mlir::impl::ensureRegionTerminator(
+          *r, builder, *l, [](OpBuilder &builder, Location loc) {
+            OperationState state(loc, YieldOp::getOperationName());
+            YieldOp::build(builder, state);
+            return Operation::create(state);
+          });
+    } else {
+      assert(r && "region must not be empty");
+      Block &block = r->back();
+      if (block.empty() || !block.back().hasTrait<OpTrait::IsTerminator>()) {
+        return parser.emitError(
+            parser.getCurrentLocation(),
+            "blocks are expected to be explicitly terminated");
+      }
+    }
     return success();
   }
 
@@ -191,6 +204,8 @@ static LogicalResult checkBlockTerminator(mlir::Builder &builder, Location l,
     }
   }
 
+  parser.emitError(parserLoc,
+                   "expected at least one block with cir.yield or cir.return");
   return failure();
 }
 
@@ -199,7 +214,6 @@ ParseResult IfOp::parse(OpAsmParser &parser, OperationState &result) {
   result.regions.reserve(2);
   Region *thenRegion = result.addRegion();
   Region *elseRegion = result.addRegion();
-  auto loc = parser.getCurrentLocation();
 
   auto &builder = parser.getBuilder();
   OpAsmParser::UnresolvedOperand cond;
@@ -210,28 +224,22 @@ ParseResult IfOp::parse(OpAsmParser &parser, OperationState &result) {
     return failure();
 
   // Parse the 'then' region.
+  auto parseThenLoc = parser.getCurrentLocation();
   if (parser.parseRegion(*thenRegion, /*arguments=*/{},
                          /*argTypes=*/{}))
     return failure();
-  if (checkBlockTerminator(parser.getBuilder(), result.location, thenRegion)
-          .failed()) {
-    parser.emitError(
-        loc,
-        "if.then expected at least one block with cir.yield or cir.return");
+  if (checkBlockTerminator(parser, parseThenLoc, result.location, thenRegion)
+          .failed())
     return failure();
-  }
 
   // If we find an 'else' keyword, parse the 'else' region.
   if (!parser.parseOptionalKeyword("else")) {
+    auto parseElseLoc = parser.getCurrentLocation();
     if (parser.parseRegion(*elseRegion, /*arguments=*/{}, /*argTypes=*/{}))
       return failure();
-    if (checkBlockTerminator(parser.getBuilder(), result.location, elseRegion)
-            .failed()) {
-      parser.emitError(
-          loc,
-          "if.else expected at least one block with cir.yield or cir.return");
+    if (checkBlockTerminator(parser, parseElseLoc, result.location, elseRegion)
+            .failed())
       return failure();
-    }
   }
 
   // Parse the optional attribute list.
@@ -350,12 +358,8 @@ ParseResult ScopeOp::parse(OpAsmParser &parser, OperationState &result) {
   if (parser.parseRegion(*scopeRegion, /*arguments=*/{}, /*argTypes=*/{}))
     return failure();
 
-  if (checkBlockTerminator(parser.getBuilder(), result.location, scopeRegion)
-          .failed()) {
-    parser.emitError(
-        loc, "expected at least one block with cir.yield or cir.return");
+  if (checkBlockTerminator(parser, loc, result.location, scopeRegion).failed())
     return failure();
-  }
 
   // Parse the optional attribute list.
   if (parser.parseOptionalAttrDict(result.attributes))
@@ -482,7 +486,7 @@ mlir::SuccessorOperands BrOp::getSuccessorOperands(unsigned index) {
   assert(index == 0 && "invalid successor index");
   // Current block targets do not have operands.
   // TODO(CIR): This is a hacky avoidance of actually implementing this since
-  // MLIR moved it "because nobody used the llvm::Optional::None case.........."
+  // MLIR moved it "because nobody used the std::optional::None case.........."
   return mlir::SuccessorOperands(MutableOperandRange(getOperation(), 0, 0));
 }
 
@@ -505,19 +509,22 @@ parseSwitchOp(OpAsmParser &parser,
     // Parse region attached to case
     regions.emplace_back(new Region);
     Region &currRegion = *regions.back().get();
+    auto parserLoc = parser.getCurrentLocation();
     if (parser.parseRegion(currRegion, /*arguments=*/{}, /*argTypes=*/{})) {
       regions.clear();
       return failure();
     }
 
     if (currRegion.empty()) {
-      return parser.emitError(
-          parser.getCurrentLocation(),
-          "case regions expected to have one terminated block");
+      return parser.emitError(parser.getCurrentLocation(),
+                              "case region shall not be empty");
     }
 
-    // Region trait in CIROps.td already verifies that, but make sure not
-    // mistakes happen.
+    if (checkBlockTerminator(parser, parserLoc, std::nullopt, &currRegion,
+                             /*ensureTerm=*/false)
+            .failed())
+      return failure();
+
     assert(currRegion.hasOneBlock() && "expected only one block");
     Block &block = currRegion.back();
     if (block.empty() || !block.back().hasTrait<OpTrait::IsTerminator>()) {

@@ -31,7 +31,7 @@ func.func @if0() {
 
 func.func @yield0() {
   %0 = cir.cst(true) : !cir.bool
-  cir.if %0 { // expected-error {{custom op 'cir.if' if.then expected at least one block with cir.yield or cir.return}}
+  cir.if %0 { // expected-error {{custom op 'cir.if' expected at least one block with cir.yield or cir.return}}
     cir.br ^a
   ^a:
   }
@@ -67,6 +67,6 @@ func.func @s1() {
   cir.switch (%1 : i32) [
     case (equal, 5) {
     }
-  ] // expected-error {{case regions expected to have one terminated block}}
+  ] // expected-error {{case region shall not be empty}}
   cir.return
 }
