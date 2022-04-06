@@ -1,3 +1,4 @@
-# RUN: not llvm-ml %t.blah.asm /Fo /dev/null 2>&1 | FileCheck -DMSG=%errc_ENOENT --check-prefix=ENOENT %s
+# RUN: not llvm-ml %t.blah.asm /nologo /Fo /dev/null 2>&1 | FileCheck -DMSG=%errc_ENOENT --check-prefix=ENOENT %s
 
+# ENOENT-NOT: nologo
 # ENOENT: {{.*}}.blah.asm: [[MSG]]
