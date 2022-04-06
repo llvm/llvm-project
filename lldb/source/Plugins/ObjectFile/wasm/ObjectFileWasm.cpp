@@ -43,7 +43,7 @@ static bool ValidateModuleHeader(const DataBufferSP &data_sp) {
       llvm::file_magic::wasm_object)
     return false;
 
-  uint8_t *Ptr = data_sp->GetBytes() + sizeof(llvm::wasm::WasmMagic);
+  const uint8_t *Ptr = data_sp->GetBytes() + sizeof(llvm::wasm::WasmMagic);
 
   uint32_t version = llvm::support::endian::read32le(Ptr);
   return version == llvm::wasm::WasmVersion;

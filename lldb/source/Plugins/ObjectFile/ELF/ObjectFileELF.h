@@ -159,6 +159,10 @@ protected:
   std::vector<LoadableData>
   GetLoadableData(lldb_private::Target &target) override;
 
+  static lldb::WritableDataBufferSP
+  MapFileDataWritable(const lldb_private::FileSpec &file, uint64_t Size,
+                      uint64_t Offset);
+
 private:
   ObjectFileELF(const lldb::ModuleSP &module_sp, lldb::DataBufferSP &data_sp,
                 lldb::offset_t data_offset, const lldb_private::FileSpec *file,
