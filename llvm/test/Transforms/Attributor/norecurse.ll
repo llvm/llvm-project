@@ -159,7 +159,8 @@ define void @f(i32 %x)  {
 ; NOT_CGSCC_NPM-NEXT:  entry:
 ; NOT_CGSCC_NPM-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4
 ; NOT_CGSCC_NPM-NEXT:    store i32 [[X]], i32* [[X_ADDR]], align 4
-; NOT_CGSCC_NPM-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[X]], 0
+; NOT_CGSCC_NPM-NEXT:    [[TMP0:%.*]] = load i32, i32* [[X_ADDR]], align 4
+; NOT_CGSCC_NPM-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP0]], 0
 ; NOT_CGSCC_NPM-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; NOT_CGSCC_NPM:       if.then:
 ; NOT_CGSCC_NPM-NEXT:    br label [[IF_END]]
@@ -171,6 +172,7 @@ define void @f(i32 %x)  {
 ; IS__CGSCC_NPM-SAME: (i32 [[X:%.*]]) #[[ATTR0]] {
 ; IS__CGSCC_NPM-NEXT:  entry:
 ; IS__CGSCC_NPM-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4
+; IS__CGSCC_NPM-NEXT:    store i32 [[X]], i32* [[X_ADDR]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[X]], 0
 ; IS__CGSCC_NPM-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; IS__CGSCC_NPM:       if.then:
