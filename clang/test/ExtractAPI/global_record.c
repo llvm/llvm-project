@@ -175,7 +175,7 @@ char unavailable __attribute__((unavailable));
         },
         {
           "kind": "text",
-          "spelling": " *"
+          "spelling": " * "
         },
         {
           "kind": "internalParam",
@@ -331,7 +331,7 @@ char unavailable __attribute__((unavailable));
               },
               {
                 "kind": "text",
-                "spelling": " *"
+                "spelling": " * "
               },
               {
                 "kind": "internalParam",
