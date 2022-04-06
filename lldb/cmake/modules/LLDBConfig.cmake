@@ -183,6 +183,9 @@ append_if(CXX_SUPPORTS_UNKNOWN_PRAGMAS "-Wno-unknown-pragmas" CMAKE_CXX_FLAGS)
 check_cxx_compiler_flag("-Wstrict-aliasing" CXX_SUPPORTS_STRICT_ALIASING)
 append_if(CXX_SUPPORTS_STRICT_ALIASING "-Wno-strict-aliasing" CMAKE_CXX_FLAGS)
 
+check_cxx_compiler_flag("-Wstringop-truncation" CXX_SUPPORTS_STRINGOP_TRUNCATION)
+append_if(CXX_SUPPORTS_STRINGOP_TRUNCATION "-Wno-stringop-truncation" CMAKE_CXX_FLAGS)
+
 # Disable Clang warnings
 check_cxx_compiler_flag("-Wdeprecated-register" CXX_SUPPORTS_DEPRECATED_REGISTER)
 append_if(CXX_SUPPORTS_DEPRECATED_REGISTER "-Wno-deprecated-register" CMAKE_CXX_FLAGS)
