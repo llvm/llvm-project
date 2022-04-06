@@ -92,7 +92,7 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS)
   if(COMPILER_RT_BUILD_ORC)
     compiler_rt_Test_runtime(orc)
   endif()
-  if(COMPILER_RT_BUILD_CRT)
+  if(COMPILER_RT_BUILD_CRT AND COMPILER_RT_HAS_CRT)
     add_subdirectory(crt)
   endif()
   # ShadowCallStack does not yet provide a runtime with compiler-rt, the tests

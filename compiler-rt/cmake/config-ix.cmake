@@ -612,6 +612,7 @@ if(APPLE)
     SANITIZER_COMMON_SUPPORTED_ARCH)
 
 else()
+  filter_available_targets(CRT_SUPPORTED_ARCH ${ALL_CRT_SUPPORTED_ARCH})
   # Architectures supported by compiler-rt libraries.
   filter_available_targets(SANITIZER_COMMON_SUPPORTED_ARCH
     ${ALL_SANITIZER_COMMON_SUPPORTED_ARCH})
@@ -707,6 +708,12 @@ else()
 endif()
 
 # TODO: Add builtins support.
+
+if (CRT_SUPPORTED_ARCH AND OS_NAME MATCHES "Linux" AND NOT LLVM_USE_SANITIZER)
+  set(COMPILER_RT_HAS_CRT TRUE)
+else()
+  set(COMPILER_RT_HAS_CRT FALSE)
+endif()
 
 if (COMPILER_RT_HAS_SANITIZER_COMMON AND DFSAN_SUPPORTED_ARCH AND
     OS_NAME MATCHES "Linux")
