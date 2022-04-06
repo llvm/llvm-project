@@ -61,3 +61,19 @@ void sw2(int a) {
 // CHECK-NEXT:   case (equal, 3 : i32)  {
 // CHECK-NEXT:     %5 = cir.cst(0 : i32) : i32
 // CHECK-NEXT:     cir.store %5, %2 : i32, cir.ptr <i32>
+
+void sw3(int a) {
+  switch (a) {
+  default:
+    break;
+  }
+}
+
+// CHECK: func @sw3
+// CHECK: cir.scope {
+// CHECK-NEXT:   %1 = cir.load %0 : cir.ptr <i32>, i32
+// CHECK-NEXT:   cir.switch (%1 : i32) [
+// CHECK-NEXT:   case (default)  {
+// CHECK-NEXT:     cir.yield break
+// CHECK-NEXT:   }
+// CHECK-NEXT:   ]

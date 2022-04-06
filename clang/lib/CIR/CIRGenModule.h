@@ -481,6 +481,9 @@ public:
   mlir::LogicalResult buildCaseStmt(const clang::CaseStmt &S,
                                     mlir::Type condType,
                                     mlir::cir::CaseAttr &caseEntry);
+  mlir::LogicalResult buildDefaultStmt(const clang::DefaultStmt &S,
+                                       mlir::Type condType,
+                                       mlir::cir::CaseAttr &caseEntry);
 
   mlir::LogicalResult buildBreakStmt(const clang::BreakStmt &S);
   mlir::LogicalResult buildSwitchStmt(const clang::SwitchStmt &S);

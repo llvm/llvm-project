@@ -879,6 +879,7 @@ mlir::LogicalResult CIRGenModule::buildSimpleStmt(const Stmt *S,
     return buildLabelStmt(cast<LabelStmt>(*S));
 
   case Stmt::CaseStmtClass:
+  case Stmt::DefaultStmtClass:
     assert(0 &&
            "Should not get here, currently handled directly from SwitchStmt");
     break;
@@ -888,7 +889,6 @@ mlir::LogicalResult CIRGenModule::buildSimpleStmt(const Stmt *S,
 
   case Stmt::AttributedStmtClass:
   case Stmt::ContinueStmtClass:
-  case Stmt::DefaultStmtClass:
   case Stmt::SEHLeaveStmtClass:
     llvm::errs() << "CIR codegen for '" << S->getStmtClassName()
                  << "' not implemented\n";
@@ -1330,6 +1330,24 @@ mlir::LogicalResult CIRGenModule::buildBreakStmt(const clang::BreakStmt &S) {
   return mlir::success();
 }
 
+mlir::LogicalResult CIRGenModule::buildDefaultStmt(const DefaultStmt &S,
+                                                   mlir::Type condType,
+                                                   CaseAttr &caseEntry) {
+  auto res = mlir::success();
+  auto *ctx = builder.getContext();
+  caseEntry = mlir::cir::CaseAttr::get(
+      ctx, builder.getArrayAttr({}),
+      CaseOpKindAttr::get(ctx, mlir::cir::CaseOpKind::Default));
+  {
+    mlir::OpBuilder::InsertionGuard guardCase(builder);
+    res = buildStmt(S.getSubStmt(),
+                    /*useCurrentScope=*/!isa<CompoundStmt>(S.getSubStmt()));
+  }
+
+  // TODO: likelihood
+  return res;
+}
+
 mlir::LogicalResult CIRGenModule::buildCaseStmt(const CaseStmt &S,
                                                 mlir::Type condType,
                                                 CaseAttr &caseEntry) {
@@ -1402,8 +1420,8 @@ mlir::LogicalResult CIRGenModule::buildSwitchStmt(const SwitchStmt &S) {
 
           mlir::Block *lastCaseBlock = nullptr;
           for (auto *c : cs->body()) {
-            auto *newCase = dyn_cast<CaseStmt>(c);
-            if (!newCase) {
+            bool caseLike = isa<CaseStmt, DefaultStmt>(c);
+            if (!caseLike) {
               // This means it's a random stmt following up a case, just
               // emit it as part of previous known case.
               assert(lastCaseBlock && "expects pre-existing case block");
@@ -1414,17 +1432,29 @@ mlir::LogicalResult CIRGenModule::buildSwitchStmt(const SwitchStmt &S) {
                 break;
               continue;
             }
-            assert(newCase && "expected case stmt");
-            const CaseStmt *nestedCase =
-                dyn_cast<CaseStmt>(newCase->getSubStmt());
-            assert(!nestedCase && "empty case fallthrough NYI");
+
+            // FIXME: add support for empty case fallthrough
+            auto *caseStmt = dyn_cast<CaseStmt>(c);
+            if (caseStmt) {
+              const CaseStmt *nestedCase =
+                  dyn_cast<CaseStmt>(caseStmt->getSubStmt());
+              assert(!nestedCase && "empty case fallthrough NYI");
+            }
 
             CaseAttr caseAttr;
             {
               mlir::OpBuilder::InsertionGuard guardCase(builder);
               mlir::Region *caseRegion = os.addRegion();
               lastCaseBlock = builder.createBlock(caseRegion);
-              res = buildCaseStmt(*newCase, condV.getType(), caseAttr);
+
+              if (caseStmt)
+                res = buildCaseStmt(*caseStmt, condV.getType(), caseAttr);
+              else {
+                auto *defaultStmt = dyn_cast<DefaultStmt>(c);
+                assert(defaultStmt && "expected default stmt");
+                res = buildDefaultStmt(*defaultStmt, condV.getType(), caseAttr);
+              }
+
               if (res.failed())
                 break;
             }
