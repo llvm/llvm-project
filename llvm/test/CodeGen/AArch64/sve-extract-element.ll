@@ -504,12 +504,9 @@ define i1 @test_lane9_8xi1(<vscale x 8 x i1> %a) #0 {
 define i1 @test_last_8xi1(<vscale x 8 x i1> %a) #0 {
 ; CHECK-LABEL: test_last_8xi1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cnth x8
-; CHECK-NEXT:    mov z0.h, p0/z, #1 // =0x1
-; CHECK-NEXT:    sub x8, x8, #1
-; CHECK-NEXT:    whilels p0.h, xzr, x8
-; CHECK-NEXT:    lastb w8, p0, z0.h
-; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    ptrue p1.h
+; CHECK-NEXT:    ptest p1, p0.b
+; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
   %vscale = call i64 @llvm.vscale.i64()
   %shl = shl nuw nsw i64 %vscale, 3
