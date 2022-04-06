@@ -86,6 +86,9 @@ using namespace tensor;
 using namespace comprehensive_bufferize;
 using namespace mlir::bufferization;
 
+/// A mapping of FuncOps to their callers.
+using FuncCallerMap = DenseMap<FuncOp, DenseSet<Operation *>>;
+
 namespace {
 /// The state of analysis of a FuncOp.
 enum class FuncOpAnalysisState { NotAnalyzed, InProgress, Analyzed };
@@ -127,12 +130,6 @@ struct FuncAnalysisState : public DialectAnalysisState {
   /// Keep track of which FuncOps are fully analyzed or currently being
   /// analyzed.
   DenseMap<FuncOp, FuncOpAnalysisState> analyzedFuncOps;
-
-  /// A list of functions in the order in which they are analyzed + bufferized.
-  SmallVector<FuncOp> orderedFuncOps;
-
-  /// A mapping of FuncOps to their callers.
-  DenseMap<FuncOp, DenseSet<Operation *>> callerMap;
 
   /// This function is called right before analyzing the given FuncOp. It
   /// initializes the data structures for the FuncOp in this state object.
@@ -570,7 +567,7 @@ static LogicalResult bufferizeFuncOpBoundary(FuncOp funcOp,
 static LogicalResult
 getFuncOpsOrderedByCalls(ModuleOp moduleOp,
                          SmallVectorImpl<FuncOp> &orderedFuncOps,
-                         DenseMap<FuncOp, DenseSet<Operation *>> &callerMap) {
+                         FuncCallerMap &callerMap) {
   // For each FuncOp, the set of functions called by it (i.e. the union of
   // symbols of all nested CallOpInterfaceOp).
   DenseMap<FuncOp, DenseSet<FuncOp>> calledBy;
@@ -619,9 +616,8 @@ getFuncOpsOrderedByCalls(ModuleOp moduleOp,
   return success();
 }
 
-static void
-foreachCaller(const DenseMap<FuncOp, DenseSet<Operation *>> &callerMap,
-              FuncOp callee, llvm::function_ref<void(Operation *)> doit) {
+static void foreachCaller(const FuncCallerMap &callerMap, FuncOp callee,
+                          llvm::function_ref<void(Operation *)> doit) {
   auto itCallers = callerMap.find(callee);
   if (itCallers == callerMap.end())
     return;
@@ -1069,8 +1065,13 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runModuleBufferize(
   FuncAnalysisState &funcState = getFuncAnalysisState(analysisState);
   BufferizationAliasInfo &aliasInfo = analysisState.getAliasInfo();
 
-  if (failed(getFuncOpsOrderedByCalls(moduleOp, funcState.orderedFuncOps,
-                                      funcState.callerMap)))
+  // A list of functions in the order in which they are analyzed + bufferized.
+  SmallVector<FuncOp> orderedFuncOps;
+
+  // A mapping of FuncOps to their callers.
+  FuncCallerMap callerMap;
+
+  if (failed(getFuncOpsOrderedByCalls(moduleOp, orderedFuncOps, callerMap)))
     return failure();
 
   // Collect bbArg/return value information after the analysis.
@@ -1078,7 +1079,7 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runModuleBufferize(
   options.addPostAnalysisStep(funcOpBbArgReadWriteAnalysis);
 
   // Analyze ops.
-  for (FuncOp funcOp : funcState.orderedFuncOps) {
+  for (FuncOp funcOp : orderedFuncOps) {
     // No body => no analysis.
     if (funcOp.getBody().empty())
       continue;
@@ -1105,7 +1106,7 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runModuleBufferize(
     return success();
 
   // Bufferize functions.
-  for (FuncOp funcOp : funcState.orderedFuncOps) {
+  for (FuncOp funcOp : orderedFuncOps) {
     // No body => no analysis.
     if (!funcOp.getBody().empty())
       if (failed(bufferizeOp(funcOp, bufferizationState)))
@@ -1118,7 +1119,7 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runModuleBufferize(
   }
 
   // Check result.
-  for (FuncOp funcOp : funcState.orderedFuncOps) {
+  for (FuncOp funcOp : orderedFuncOps) {
     if (!options.allowReturnAllocs &&
         llvm::any_of(funcOp.getFunctionType().getResults(), [](Type t) {
           return t.isa<MemRefType, UnrankedMemRefType>();
