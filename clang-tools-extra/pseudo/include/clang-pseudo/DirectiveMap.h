@@ -78,6 +78,11 @@ struct DirectiveMap {
     std::vector<std::pair<Directive, DirectiveMap>> Branches;
     /// The directive terminating the conditional, should be #endif.
     Directive End;
+    /// The index of the conditional branch we chose as active.
+    /// None indicates no branch was taken (e.g. #if 0 ... #endif).
+    /// The initial map from of `parse()` has no branches marked as taken.
+    /// See `chooseConditionalBranches()`.
+    llvm::Optional<unsigned> Taken;
   };
 
   /// Some piece of the file. {One of Code, Directive, Conditional}.
@@ -87,7 +92,6 @@ struct DirectiveMap {
   /// Extract preprocessor structure by examining the raw tokens.
   static DirectiveMap parse(const TokenStream &);
 
-  // FIXME: add heuristically selection of conditional branches.
   // FIXME: allow deriving a preprocessed stream
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const DirectiveMap &);
@@ -97,6 +101,24 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &,
                               const DirectiveMap::Directive &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &,
                               const DirectiveMap::Conditional &);
+
+/// Selects a "taken" branch for each conditional directive in the file.
+///
+/// The choice is somewhat arbitrary, but aims to produce a useful parse:
+///  - idioms like `#if 0` are respected
+///  - we avoid paths that reach `#error`
+///  - we try to maximize the amount of code seen
+/// The choice may also be "no branch taken".
+///
+/// Choices are also made for conditionals themselves inside not-taken branches:
+///   #if 1 // taken!
+///   #else // not taken
+///      #if 1 // taken!
+///      #endif
+///   #endif
+///
+/// The choices are stored in Conditional::Taken nodes.
+void chooseConditionalBranches(DirectiveMap &, const TokenStream &Code);
 
 // FIXME: This approximates std::variant<Code, Directive, Conditional>.
 //         Switch once we can use C++17.
