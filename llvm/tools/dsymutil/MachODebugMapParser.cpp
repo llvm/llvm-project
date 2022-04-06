@@ -10,6 +10,7 @@
 #include "DebugMap.h"
 #include "MachOUtils.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/WithColor.h"
@@ -59,6 +60,13 @@ private:
 
   /// Map of the currently processed object file symbol addresses.
   StringMap<Optional<uint64_t>> CurrentObjectAddresses;
+
+  /// Lazily computed map of symbols aliased to the processed object file.
+  StringMap<Optional<uint64_t>> CurrentObjectAliasMap;
+
+  /// If CurrentObjectAliasMap has been computed for a given address.
+  SmallSet<uint64_t, 4> SeenAliasValues;
+
   /// Element of the debug map corresponding to the current object file.
   DebugMapObject *CurrentDebugMapObject;
 
@@ -127,6 +135,8 @@ private:
 void MachODebugMapParser::resetParserState() {
   CommonSymbols.clear();
   CurrentObjectAddresses.clear();
+  CurrentObjectAliasMap.clear();
+  SeenAliasValues.clear();
   CurrentDebugMapObject = nullptr;
 }
 
@@ -455,11 +465,23 @@ void MachODebugMapParser::handleStabSymbolTableEntry(uint32_t StringIndex,
   // If the name of a (non-static) symbol is not in the current object, we
   // check all its aliases from the main binary.
   if (ObjectSymIt == CurrentObjectAddresses.end() && Type != MachO::N_STSYM) {
-    for (const auto &Alias : getMainBinarySymbolNames(Value)) {
-      ObjectSymIt = CurrentObjectAddresses.find(Alias);
-      if (ObjectSymIt != CurrentObjectAddresses.end())
-        break;
+    if (SeenAliasValues.count(Value) == 0) {
+      auto Aliases = getMainBinarySymbolNames(Value);
+      for (const auto &Alias : Aliases) {
+        auto It = CurrentObjectAddresses.find(Alias);
+        if (It != CurrentObjectAddresses.end()) {
+          auto AliasValue = It->getValue();
+          for (const auto &Alias : Aliases)
+            CurrentObjectAliasMap[Alias] = AliasValue;
+          break;
+        }
+      }
+      SeenAliasValues.insert(Value);
     }
+
+    auto AliasIt = CurrentObjectAliasMap.find(Name);
+    if (AliasIt != CurrentObjectAliasMap.end())
+      ObjectSymIt = AliasIt;
   }
 
   // ThinLTO adds a unique suffix to exported private symbols.
