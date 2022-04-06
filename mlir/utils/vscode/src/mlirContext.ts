@@ -39,10 +39,9 @@ export class MLIRContext implements vscode.Disposable {
         this.workspaceFolders.push(await this.activateWorkspaceFolder(
             workspaceFolder, outputChannel, warnOnEmptyServerPath));
       }
-    } else {
-      this.workspaceFolders.push(await this.activateWorkspaceFolder(
-          null, outputChannel, warnOnEmptyServerPath));
     }
+    this.workspaceFolders.push(await this.activateWorkspaceFolder(
+        null, outputChannel, warnOnEmptyServerPath));
   }
 
   /**
@@ -130,6 +129,24 @@ export class MLIRContext implements vscode.Disposable {
       selectorPattern = `${workspaceFolder.uri.fsPath}/**/*`;
     }
 
+    // Configure the middleware of the client. This is sort of abused to allow
+    // for defining a "fallback" language server that operates on non-workspace
+    // folders. Workspace folder language servers can properly filter out
+    // documents not within the folder, but we can't effectively filter for
+    // documents outside of the workspace. To support this, and avoid having two
+    // servers targeting the same set of files, we use middleware to inject the
+    // dynamic logic for checking if a document is in the workspace.
+    let middleware = {};
+    if (!workspaceFolder) {
+      middleware = {
+        didOpen : (document, next) => {
+          if (!vscode.workspace.getWorkspaceFolder(document.uri)) {
+            next(document);
+          }
+        }
+      };
+    }
+
     // Configure the client options.
     const clientOptions: vscodelc.LanguageClientOptions = {
       documentSelector : [
@@ -141,7 +158,8 @@ export class MLIRContext implements vscode.Disposable {
         fileEvents : vscode.workspace.createFileSystemWatcher(filePattern)
       },
       outputChannel : outputChannel,
-      workspaceFolder : workspaceFolder
+      workspaceFolder : workspaceFolder,
+      middleware : middleware
     };
 
     // Create the language client and start the client.
