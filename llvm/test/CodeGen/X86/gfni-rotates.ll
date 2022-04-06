@@ -32,7 +32,7 @@ define <16 x i8> @splatconstant_rotl_v16i8(<16 x i8> %a) nounwind {
 ; GFNIAVX512:       # %bb.0:
 ; GFNIAVX512-NEXT:    vpsllw $3, %xmm0, %xmm1
 ; GFNIAVX512-NEXT:    vpsrlw $5, %xmm0, %xmm0
-; GFNIAVX512-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
+; GFNIAVX512-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm1, %xmm0
 ; GFNIAVX512-NEXT:    retq
   %res = call <16 x i8> @llvm.fshl.v16i8(<16 x i8> %a, <16 x i8> %a, <16 x i8> <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>)
   ret <16 x i8> %res

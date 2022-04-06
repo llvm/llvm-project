@@ -1,4 +1,4 @@
-//===--- DirectiveMap.h - Find and strip preprocessor directives -*- C++-*-===//
+//===--- DirectiveTree.h - Find and strip preprocessor directives *- C++-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -25,8 +25,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef CLANG_PSEUDO_DIRECTIVEMAP_H
-#define CLANG_PSEUDO_DIRECTIVEMAP_H
+#ifndef CLANG_PSEUDO_DIRECTIVETREE_H
+#define CLANG_PSEUDO_DIRECTIVETREE_H
 
 #include "clang-pseudo/Token.h"
 #include "clang/Basic/TokenKinds.h"
@@ -55,7 +55,7 @@ namespace pseudo {
 ///
 /// Unlike the clang preprocessor, we model the full tree explicitly.
 /// This class does not recognize macro usage, only directives.
-struct DirectiveMap {
+struct DirectiveTree {
   /// A range of code (and possibly comments) containing no directives.
   struct Code {
     Token::Range Tokens;
@@ -75,9 +75,14 @@ struct DirectiveMap {
     ///
     /// The first branch will have an #if type directive.
     /// Subsequent branches will have #else type directives.
-    std::vector<std::pair<Directive, DirectiveMap>> Branches;
+    std::vector<std::pair<Directive, DirectiveTree>> Branches;
     /// The directive terminating the conditional, should be #endif.
     Directive End;
+    /// The index of the conditional branch we chose as active.
+    /// None indicates no branch was taken (e.g. #if 0 ... #endif).
+    /// The initial tree from `parse()` has no branches marked as taken.
+    /// See `chooseConditionalBranches()`.
+    llvm::Optional<unsigned> Taken;
   };
 
   /// Some piece of the file. {One of Code, Directive, Conditional}.
@@ -85,22 +90,39 @@ struct DirectiveMap {
   std::vector<Chunk> Chunks;
 
   /// Extract preprocessor structure by examining the raw tokens.
-  static DirectiveMap parse(const TokenStream &);
+  static DirectiveTree parse(const TokenStream &);
 
-  // FIXME: add heuristically selection of conditional branches.
   // FIXME: allow deriving a preprocessed stream
 };
-llvm::raw_ostream &operator<<(llvm::raw_ostream &, const DirectiveMap &);
-llvm::raw_ostream &operator<<(llvm::raw_ostream &, const DirectiveMap::Chunk &);
-llvm::raw_ostream &operator<<(llvm::raw_ostream &, const DirectiveMap::Code &);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &, const DirectiveTree &);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &, const DirectiveTree::Chunk &);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &, const DirectiveTree::Code &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &,
-                              const DirectiveMap::Directive &);
+                              const DirectiveTree::Directive &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &,
-                              const DirectiveMap::Conditional &);
+                              const DirectiveTree::Conditional &);
+
+/// Selects a "taken" branch for each conditional directive in the file.
+///
+/// The choice is somewhat arbitrary, but aims to produce a useful parse:
+///  - idioms like `#if 0` are respected
+///  - we avoid paths that reach `#error`
+///  - we try to maximize the amount of code seen
+/// The choice may also be "no branch taken".
+///
+/// Choices are also made for conditionals themselves inside not-taken branches:
+///   #if 1 // taken!
+///   #else // not taken
+///      #if 1 // taken!
+///      #endif
+///   #endif
+///
+/// The choices are stored in Conditional::Taken nodes.
+void chooseConditionalBranches(DirectiveTree &, const TokenStream &Code);
 
 // FIXME: This approximates std::variant<Code, Directive, Conditional>.
 //         Switch once we can use C++17.
-class DirectiveMap::Chunk {
+class DirectiveTree::Chunk {
 public:
   enum Kind { K_Empty, K_Code, K_Directive, K_Conditional };
   Kind kind() const {
@@ -143,4 +165,4 @@ private:
 } // namespace pseudo
 } // namespace clang
 
-#endif // CLANG_PSEUDO_DIRECTIVEMAP_H
+#endif // CLANG_PSEUDO_DIRECTIVETREE_H

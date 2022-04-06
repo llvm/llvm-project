@@ -77,6 +77,11 @@ public:
   /// Set the inPlace bufferization spec to false.
   void bufferizeOutOfPlace(OpOperand &operand);
 
+  /// Return true if `v1` and `v2` may bufferize to aliasing buffers.
+  bool areAliasingBufferizedValues(Value v1, Value v2) const {
+    return aliasInfo.isEquivalent(v1, v2);
+  }
+
   /// Return true if `v1` and `v2` bufferize to equivalent buffers.
   bool areEquivalentBufferizedValues(Value v1, Value v2) const {
     return equivalentInfo.isEquivalent(v1, v2);

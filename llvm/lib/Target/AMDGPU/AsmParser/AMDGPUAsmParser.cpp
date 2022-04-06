@@ -595,7 +595,7 @@ public:
     return isVCSrcF64() || isLiteralImm(MVT::f64);
   }
 
-  bool isVSrcTF16() const { return isVCSrcF16() || isLiteralImm(MVT::f16); }
+  bool isVSrcTF16() const { return isVCSrcTF16() || isLiteralImm(MVT::f16); }
 
   bool isVSrcTF16_F128() const {
     return isVCSrcTF16_F128() || isLiteralImm(MVT::f16);
