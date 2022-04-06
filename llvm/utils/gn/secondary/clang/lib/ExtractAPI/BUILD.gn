@@ -10,9 +10,10 @@ static_library("ExtractAPI") {
   ]
   sources = [
     "API.cpp",
-    "ExtractAPIConsumer.cpp",
     "DeclarationFragments.cpp",
+    "ExtractAPIConsumer.cpp",
     "Serialization/SerializerBase.cpp",
     "Serialization/SymbolGraphSerializer.cpp",
+    "TypedefUnderlyingTypeResolver.cpp",
   ]
 }
