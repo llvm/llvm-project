@@ -146,11 +146,7 @@
         },
         {
           "kind": "identifier",
-          "spelling": "getWithProperty"
-        },
-        {
-          "kind": "text",
-          "spelling": ":"
+          "spelling": "getWithProperty:"
         },
         {
           "kind": "text",
@@ -168,6 +164,10 @@
         {
           "kind": "internalParam",
           "spelling": "Property"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {
@@ -403,6 +403,10 @@
         {
           "kind": "identifier",
           "spelling": "getIvar"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {
