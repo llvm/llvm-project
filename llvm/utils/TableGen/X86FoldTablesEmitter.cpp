@@ -252,10 +252,11 @@ getAltRegInst(const CodeGenInstruction *I, const RecordKeeper &Records,
 // matches the EVEX instruction of this object.
 class IsMatch {
   const CodeGenInstruction *MemInst;
+  unsigned Variant;
 
 public:
-  IsMatch(const CodeGenInstruction *Inst, const RecordKeeper &Records)
-      : MemInst(Inst) {}
+  IsMatch(const CodeGenInstruction *Inst, unsigned V)
+      : MemInst(Inst), Variant(V) {}
 
   bool operator()(const CodeGenInstruction *RegInst) {
     X86Disassembler::RecognizableInstrBase RegRI(*RegInst);
@@ -270,6 +271,16 @@ public:
     // Instruction's format - The register form's "Form" field should be
     // the opposite of the memory form's "Form" field.
     if (!areOppositeForms(RegRI.Form, MemRI.Form))
+      return false;
+
+    // X86 encoding is crazy, e.g
+    //
+    // f3 0f c7 30       vmxon   (%rax)
+    // f3 0f c7 f0       senduipi        %rax
+    //
+    // This two instruction have similiar encoding fields but are unrelated
+    if (X86Disassembler::getMnemonic(MemInst, Variant) !=
+        X86Disassembler::getMnemonic(RegInst, Variant))
       return false;
 
     // Return false if one (at least) of the encoding fields of both
@@ -533,6 +544,8 @@ void X86FoldTablesEmitter::run(formatted_raw_ostream &OS) {
     }
   }
 
+  Record *AsmWriter = Target.getAsmWriter();
+  unsigned Variant = AsmWriter->getValueAsInt("Variant");
   // For each memory form instruction, try to find its register form
   // instruction.
   for (const CodeGenInstruction *MemInst : MemInsts) {
@@ -548,7 +561,7 @@ void X86FoldTablesEmitter::run(formatted_raw_ostream &OS) {
     // opcode.
     std::vector<const CodeGenInstruction *> &OpcRegInsts = RegInstsIt->second;
 
-    auto Match = find_if(OpcRegInsts, IsMatch(MemInst, Records));
+    auto Match = find_if(OpcRegInsts, IsMatch(MemInst, Variant));
     if (Match != OpcRegInsts.end()) {
       const CodeGenInstruction *RegInst = *Match;
       // If the matched instruction has it's "FoldGenRegForm" set, map the
