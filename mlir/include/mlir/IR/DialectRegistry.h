@@ -176,7 +176,7 @@ public:
   template <typename... ExtensionsT>
   void addExtensions() {
     (void)std::initializer_list<int>{
-        addExtension(std::make_unique<ExtensionsT>())...};
+        (addExtension(std::make_unique<ExtensionsT>()), 0)...};
   }
 
   /// Add an extension function that requires the given dialects.
