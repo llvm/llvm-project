@@ -79,9 +79,22 @@ TEST(IncludeCleaner, ReferencedLocations) {
           "using namespace ns;",
       },
       {
+          // Refs from UsingTypeLoc and implicit constructor!
           "struct ^A {}; using B = A; using ^C = B;",
           "C a;",
       },
+      {"namespace ns { template<typename T> class A {}; } using ns::^A;",
+       "A<int>* a;"},
+      {"namespace ns { template<typename T> class A {}; } using ns::^A;",
+       R"cpp(
+          template <template <typename> class T> class X {};
+          X<A> x;
+        )cpp"},
+      {R"cpp(
+          namespace ns { template<typename T> struct ^A { ^A(T); }; }
+          using ns::^A;
+       )cpp",
+       "A CATD(123);"},
       {
           "typedef bool ^Y; template <typename T> struct ^X {};",
           "X<Y> x;",
@@ -227,6 +240,7 @@ TEST(IncludeCleaner, ReferencedLocations) {
     TU.Code = T.MainCode;
     Annotations Header(T.HeaderCode);
     TU.HeaderCode = Header.code().str();
+    TU.ExtraArgs.push_back("-std=c++17");
     auto AST = TU.build();
 
     std::vector<Position> Points;

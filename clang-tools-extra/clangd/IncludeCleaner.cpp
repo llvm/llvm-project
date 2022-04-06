@@ -79,8 +79,26 @@ public:
   }
 
   bool VisitTemplateSpecializationType(TemplateSpecializationType *TST) {
-    add(TST->getTemplateName().getAsTemplateDecl()); // Primary template.
+    // Using templateName case is handled by the override TraverseTemplateName.
+    if (TST->getTemplateName().getKind() == TemplateName::UsingTemplate)
+      return true;
     add(TST->getAsCXXRecordDecl());                  // Specialization
+    return true;
+  }
+
+  // There is no VisitTemplateName in RAV, thus we override the Traverse version
+  // to handle the Using TemplateName case.
+  bool TraverseTemplateName(TemplateName TN) {
+    VisitTemplateName(TN);
+    return Base::TraverseTemplateName(TN);
+  }
+  // A pseudo VisitTemplateName, dispatched by the above TraverseTemplateName!
+  bool VisitTemplateName(TemplateName TN) {
+    if (const auto *USD = TN.getAsUsingShadowDecl()) {
+      add(USD);
+      return true;
+    }
+    add(TN.getAsTemplateDecl()); // Primary template.
     return true;
   }
 

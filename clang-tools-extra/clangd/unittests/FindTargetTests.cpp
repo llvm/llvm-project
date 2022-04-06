@@ -229,6 +229,45 @@ TEST_F(TargetDeclTest, UsingDecl) {
     )cpp";
   EXPECT_DECLS("UnresolvedUsingValueDecl", {"using Base<T>::waldo", Rel::Alias},
                {"void waldo()"});
+
+  Code = R"cpp(
+    namespace ns {
+    template<typename T> class S {};
+    }
+
+    using ns::S;
+
+    template<typename T>
+    using A = [[S]]<T>;
+  )cpp";
+  EXPECT_DECLS("TemplateSpecializationTypeLoc", {"using ns::S", Rel::Alias},
+               {"template <typename T> class S"},
+               {"class S", Rel::TemplatePattern});
+
+  Code = R"cpp(
+    namespace ns {
+    template<typename T> class S {};
+    }
+
+    using ns::S;
+    template <template <typename> class T> class X {};
+    using B = X<[[S]]>;
+  )cpp";
+  EXPECT_DECLS("TemplateArgumentLoc", {"using ns::S", Rel::Alias},
+               {"template <typename T> class S"});
+
+  Code = R"cpp(
+    namespace ns {
+    template<typename T> class S { public: S(T); };
+    }
+
+    using ns::S;
+    [[S]] s(123);
+  )cpp";
+  Flags.push_back("-std=c++17"); // For CTAD feature.
+  EXPECT_DECLS("DeducedTemplateSpecializationTypeLoc",
+               {"using ns::S", Rel::Alias}, {"template <typename T> class S"},
+               {"class S", Rel::TemplatePattern});
 }
 
 TEST_F(TargetDeclTest, BaseSpecifier) {
