@@ -244,30 +244,55 @@ struct TestCase : public TestCaseImp<MemFun03, Sig, Arity, CV> {};
 #if TEST_STD_VER >= 11
 template <class Sig, int Arity, class CV, bool RValue = false>
 struct TestCase11 : public TestCaseImp<MemFun11, Sig, Arity, CV, RValue, true> {};
-#endif
 
-template <class Tp>
-struct DerivedFromRefWrap : public std::reference_wrapper<Tp> {
-  DerivedFromRefWrap(Tp& tp) : std::reference_wrapper<Tp>(tp) {}
+template <class Type>
+struct ReferenceWrapper {
+    using type = Type;
+    Type* ptr;
+
+    static void fun(Type&) noexcept;
+    static void fun(Type&&) = delete;
+
+    template <class Type2,
+              class = typename std::enable_if<!std::__is_same_uncvref<Type2, ReferenceWrapper>::value>::type>
+    constexpr ReferenceWrapper(Type2&& t) noexcept : ptr(&t) {}
+
+    constexpr Type& get() const noexcept { return *ptr; }
+    constexpr operator Type&() const noexcept { return *ptr; }
+
+    template <class... _ArgTypes>
+    constexpr typename std::__invoke_of<Type&, _ArgTypes...>::type operator() (_ArgTypes&&... __args) const {
+        return std::__invoke(get(), std::forward<_ArgTypes>(__args)...);
+    }
 };
 
-#if TEST_STD_VER >= 11
-void test_derived_from_ref_wrap() {
+template <class Tp>
+struct DerivedFromRefWrap : public ReferenceWrapper<Tp> {
+  constexpr DerivedFromRefWrap(Tp& tp) : ReferenceWrapper<Tp>(tp) {}
+};
+
+TEST_CONSTEXPR_CXX14 bool test_derived_from_ref_wrap() {
     int x = 42;
+    ReferenceWrapper<int> r(x);
+    DerivedFromRefWrap<int> d(x);
+    auto get_fn = &ReferenceWrapper<int>::get;
+    auto& ret = std::__invoke(get_fn, r);
+    assert(&ret == &x);
+    auto& ret2 = std::__invoke(get_fn, d);
+    assert(&ret2 == &x);
+
+    return true;
+}
+
+TEST_CONSTEXPR_CXX20 bool test_reference_wrapper_reference_wrapper() {
+    int x = 42;
+    auto get_fn = &std::reference_wrapper<int>::get;
     std::reference_wrapper<int> r(x);
     std::reference_wrapper<std::reference_wrapper<int>> r2(r);
-    DerivedFromRefWrap<int> d(x);
-    auto get_fn = &std::reference_wrapper<int>::get;
-    auto& ret = std::__invoke(get_fn, r);
-    auto& cret = std::__invoke_constexpr(get_fn, r);
-    assert(&ret == &x);
-    assert(&cret == &x);
-    auto& ret2 = std::__invoke(get_fn, d);
-    auto& cret2 = std::__invoke_constexpr(get_fn, d);
-    assert(&ret2 == &x);
-    assert(&cret2 == &x);
     auto& ret3 = std::__invoke(get_fn, r2);
     assert(&ret3 == &x);
+
+    return true;
 }
 #endif
 
@@ -366,7 +391,14 @@ int main(int, char**) {
     TestCase11<R(A&&, A&&, A&&, ...)  const volatile &&,  3, Q_CV, /* RValue */ true>::run();
 
     test_derived_from_ref_wrap();
+    test_reference_wrapper_reference_wrapper();
+#if TEST_STD_VER > 11
+    static_assert(test_derived_from_ref_wrap(), "");
 #endif
+#if TEST_STD_VER > 17
+    static_assert(test_reference_wrapper_reference_wrapper(), "");
+#endif
+#endif // TEST_STD_VER >= 11
 
   return 0;
 }
