@@ -1230,7 +1230,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setLoadExtAction(Op, MVT::nxv2i64, MVT::nxv2i16, Legal);
       setLoadExtAction(Op, MVT::nxv2i64, MVT::nxv2i32, Legal);
       setLoadExtAction(Op, MVT::nxv4i32, MVT::nxv4i8, Legal);
-      setLoadExtAction(Op, MVT::nxv2i32, MVT::nxv2i16, Legal);
       setLoadExtAction(Op, MVT::nxv4i32, MVT::nxv4i16, Legal);
       setLoadExtAction(Op, MVT::nxv8i16, MVT::nxv8i8, Legal);
     }
