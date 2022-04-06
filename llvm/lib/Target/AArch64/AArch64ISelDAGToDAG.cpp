@@ -2714,8 +2714,16 @@ static bool tryBitfieldInsertOpFromOr(SDNode *N, const APInt &UsefulBits,
     // shift the needed bits into place.
     SDLoc DL(N);
     unsigned ShiftOpc = (VT == MVT::i32) ? AArch64::UBFMWri : AArch64::UBFMXri;
+    uint64_t LsrImm = LSB;
+    if (Src->hasOneUse() &&
+        isOpcWithIntImmediate(Src.getNode(), ISD::SRL, LsrImm) &&
+        (LsrImm + LSB) < BitWidth) {
+      Src = Src->getOperand(0);
+      LsrImm += LSB;
+    }
+
     SDNode *LSR = CurDAG->getMachineNode(
-        ShiftOpc, DL, VT, Src, CurDAG->getTargetConstant(LSB, DL, VT),
+        ShiftOpc, DL, VT, Src, CurDAG->getTargetConstant(LsrImm, DL, VT),
         CurDAG->getTargetConstant(BitWidth - 1, DL, VT));
 
     // BFXIL is an alias of BFM, so translate to BFM operands.
