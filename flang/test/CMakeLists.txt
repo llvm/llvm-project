@@ -55,6 +55,7 @@ set(FLANG_TEST_DEPENDS
   fir-opt
   tco
   bbc
+  llvm-dis
   llvm-objdump
   split-file
 )

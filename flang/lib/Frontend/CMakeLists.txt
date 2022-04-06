@@ -32,6 +32,7 @@ add_flang_library(flangFrontend
   FIRBuilder
   FIRCodeGen
   FIRTransforms
+  LLVMPasses
   MLIRTransforms
   MLIRLLVMToLLVMIRTranslation
   MLIRSCFToControlFlow

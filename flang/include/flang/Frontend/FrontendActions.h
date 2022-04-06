@@ -192,6 +192,10 @@ class EmitLLVMAction : public CodeGenAction {
   void ExecuteAction() override;
 };
 
+class EmitLLVMBitcodeAction : public CodeGenAction {
+  void ExecuteAction() override;
+};
+
 class BackendAction : public CodeGenAction {
 public:
   enum class BackendActionTy {

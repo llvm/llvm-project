@@ -37,6 +37,8 @@ static std::unique_ptr<FrontendAction> CreateFrontendBaseAction(
     return std::make_unique<EmitMLIRAction>();
   case EmitLLVM:
     return std::make_unique<EmitLLVMAction>();
+  case EmitLLVMBitcode:
+    return std::make_unique<EmitLLVMBitcodeAction>();
   case EmitObj:
     return std::make_unique<BackendAction>(
         BackendAction::BackendActionTy::Backend_EmitObj);
