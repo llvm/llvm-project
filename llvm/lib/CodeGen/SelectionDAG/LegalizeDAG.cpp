@@ -3635,20 +3635,10 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     // Otherwise, SETCC for the given comparison type must be completely
     // illegal; expand it into a SELECT_CC.
     EVT VT = Node->getValueType(0);
-    int TrueValue;
-    switch (TLI.getBooleanContents(Tmp1.getValueType())) {
-    case TargetLowering::ZeroOrOneBooleanContent:
-    case TargetLowering::UndefinedBooleanContent:
-      TrueValue = 1;
-      break;
-    case TargetLowering::ZeroOrNegativeOneBooleanContent:
-      TrueValue = -1;
-      break;
-    }
+    EVT Tmp1VT = Tmp1.getValueType();
     Tmp1 = DAG.getNode(ISD::SELECT_CC, dl, VT, Tmp1, Tmp2,
-                       DAG.getConstant(TrueValue, dl, VT),
-                       DAG.getConstant(0, dl, VT),
-                       Tmp3);
+                       DAG.getBoolConstant(true, dl, VT, Tmp1VT),
+                       DAG.getBoolConstant(false, dl, VT, Tmp1VT), Tmp3);
     Tmp1->setFlags(Node->getFlags());
     Results.push_back(Tmp1);
     break;
