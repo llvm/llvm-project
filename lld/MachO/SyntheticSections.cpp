@@ -898,6 +898,12 @@ void SymtabSection::emitStabs() {
     if (auto *defined = dyn_cast<Defined>(sym)) {
       if (defined->isAbsolute())
         continue;
+
+      // Constant-folded symbols go in the executable's symbol table, but don't
+      // get a stabs entry.
+      if (defined->wasIdenticalCodeFolded)
+        continue;
+
       InputSection *isec = defined->isec;
       ObjFile *file = dyn_cast_or_null<ObjFile>(isec->getFile());
       if (!file || !file->compileUnit)

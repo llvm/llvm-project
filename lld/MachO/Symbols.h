@@ -145,6 +145,8 @@ public:
   bool privateExtern : 1;
   // Whether this symbol should appear in the output symbol table.
   bool includeInSymtab : 1;
+  // Whether this symbol was folded into a different symbol during ICF.
+  bool wasIdenticalCodeFolded : 1;
   // Only relevant when compiling for Thumb-supporting arm32 archs.
   bool thumb : 1;
   // Symbols marked referencedDynamically won't be removed from the output's
