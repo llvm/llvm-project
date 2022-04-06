@@ -68,6 +68,13 @@ bool isMOVSX64rm32(const MCInst &Inst) {
   return Inst.getOpcode() == X86::MOVSX64rm32;
 }
 
+bool isADD64rr(const MCInst &Inst) { return Inst.getOpcode() == X86::ADD64rr; }
+
+bool isADDri(const MCInst &Inst) {
+  return Inst.getOpcode() == X86::ADD64ri32 ||
+         Inst.getOpcode() == X86::ADD64ri8;
+}
+
 class X86MCPlusBuilder : public MCPlusBuilder {
 public:
   X86MCPlusBuilder(const MCInstrAnalysis *Analysis, const MCInstrInfo *Info,
@@ -292,17 +299,8 @@ public:
     return 0;
   }
 
-  bool isADD64rr(const MCInst &Inst) const override {
-    return Inst.getOpcode() == X86::ADD64rr;
-  }
-
   bool isSUB(const MCInst &Inst) const override {
     return X86::isSUB(Inst.getOpcode());
-  }
-
-  bool isADDri(const MCInst &Inst) const {
-    return Inst.getOpcode() == X86::ADD64ri32 ||
-           Inst.getOpcode() == X86::ADD64ri8;
   }
 
   bool isLEA64r(const MCInst &Inst) const override {
