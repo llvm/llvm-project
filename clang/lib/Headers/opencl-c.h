@@ -6362,7 +6362,7 @@ uint __ovld __cnfn get_work_dim(void);
  * dimindx, get_global_size() returns 1.
  * For clEnqueueTask, this always returns 1.
  */
-size_t __ovld __cnfn get_global_size(uint dimindx);
+size_t __ovld __cnfn get_global_size(uint);
 
 /**
  * Returns the unique global work-item ID value for
@@ -6373,7 +6373,7 @@ size_t __ovld __cnfn get_global_size(uint dimindx);
  * other values of dimindx, get_global_id() returns 0.
  * For clEnqueueTask, this returns 0.
  */
-size_t __ovld __cnfn get_global_id(uint dimindx);
+size_t __ovld __cnfn get_global_id(uint);
 
 /**
  * Returns the number of local work-items specified in
@@ -6387,7 +6387,7 @@ size_t __ovld __cnfn get_global_id(uint dimindx);
  * get_local_size() returns 1.
  * For clEnqueueTask, this always returns 1.
  */
-size_t __ovld __cnfn get_local_size(uint dimindx);
+size_t __ovld __cnfn get_local_size(uint);
 
 /**
  * Returns the unique local work-item ID i.e. a work-item
@@ -6397,7 +6397,7 @@ size_t __ovld __cnfn get_local_size(uint dimindx);
  * get_local_id() returns 0.
  * For clEnqueueTask, this returns 0.
  */
-size_t __ovld __cnfn get_local_id(uint dimindx);
+size_t __ovld __cnfn get_local_id(uint);
 
 /**
  * Returns the number of work-groups that will execute a
@@ -6406,7 +6406,7 @@ size_t __ovld __cnfn get_local_id(uint dimindx);
  * For other values of dimindx, get_num_groups() returns 1.
  * For clEnqueueTask, this always returns 1.
  */
-size_t __ovld __cnfn get_num_groups(uint dimindx);
+size_t __ovld __cnfn get_num_groups(uint);
 
 /**
  * get_group_id returns the work-group ID which is a
@@ -6415,7 +6415,7 @@ size_t __ovld __cnfn get_num_groups(uint dimindx);
  * For other values, get_group_id() returns 0.
  * For clEnqueueTask, this returns 0.
  */
-size_t __ovld __cnfn get_group_id(uint dimindx);
+size_t __ovld __cnfn get_group_id(uint);
 
 /**
  * get_global_offset returns the offset values specified in
@@ -6425,10 +6425,10 @@ size_t __ovld __cnfn get_group_id(uint dimindx);
  * For other values, get_global_offset() returns 0.
  * For clEnqueueTask, this returns 0.
  */
-size_t __ovld __cnfn get_global_offset(uint dimindx);
+size_t __ovld __cnfn get_global_offset(uint);
 
 #if defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_2_0)
-size_t __ovld get_enqueued_local_size(uint dimindx);
+size_t __ovld get_enqueued_local_size(uint);
 size_t __ovld get_global_linear_id(void);
 size_t __ovld get_local_linear_id(void);
 #endif //defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_2_0)
@@ -6594,27 +6594,27 @@ half16 __ovld __cnfn asinpi(half16);
 /**
  * Arc tangent function.
  */
-float __ovld __cnfn atan(float y_over_x);
-float2 __ovld __cnfn atan(float2 y_over_x);
-float3 __ovld __cnfn atan(float3 y_over_x);
-float4 __ovld __cnfn atan(float4 y_over_x);
-float8 __ovld __cnfn atan(float8 y_over_x);
-float16 __ovld __cnfn atan(float16 y_over_x);
+float __ovld __cnfn atan(float);
+float2 __ovld __cnfn atan(float2);
+float3 __ovld __cnfn atan(float3);
+float4 __ovld __cnfn atan(float4);
+float8 __ovld __cnfn atan(float8);
+float16 __ovld __cnfn atan(float16);
 #ifdef cl_khr_fp64
-double __ovld __cnfn atan(double y_over_x);
-double2 __ovld __cnfn atan(double2 y_over_x);
-double3 __ovld __cnfn atan(double3 y_over_x);
-double4 __ovld __cnfn atan(double4 y_over_x);
-double8 __ovld __cnfn atan(double8 y_over_x);
-double16 __ovld __cnfn atan(double16 y_over_x);
+double __ovld __cnfn atan(double);
+double2 __ovld __cnfn atan(double2);
+double3 __ovld __cnfn atan(double3);
+double4 __ovld __cnfn atan(double4);
+double8 __ovld __cnfn atan(double8);
+double16 __ovld __cnfn atan(double16);
 #endif //cl_khr_fp64
 #ifdef cl_khr_fp16
-half __ovld __cnfn atan(half y_over_x);
-half2 __ovld __cnfn atan(half2 y_over_x);
-half3 __ovld __cnfn atan(half3 y_over_x);
-half4 __ovld __cnfn atan(half4 y_over_x);
-half8 __ovld __cnfn atan(half8 y_over_x);
-half16 __ovld __cnfn atan(half16 y_over_x);
+half __ovld __cnfn atan(half);
+half2 __ovld __cnfn atan(half2);
+half3 __ovld __cnfn atan(half3);
+half4 __ovld __cnfn atan(half4);
+half8 __ovld __cnfn atan(half8);
+half16 __ovld __cnfn atan(half16);
 #endif //cl_khr_fp16
 
 /**
@@ -7355,88 +7355,88 @@ half16 __ovld fract(half16, __private half16 *);
  * component of x equals mantissa returned * 2^exp.
  */
 #if defined(__opencl_c_generic_address_space)
-float __ovld frexp(float, int *exp);
-float2 __ovld frexp(float2, int2 *exp);
-float3 __ovld frexp(float3, int3 *exp);
-float4 __ovld frexp(float4, int4 *exp);
-float8 __ovld frexp(float8, int8 *exp);
-float16 __ovld frexp(float16, int16 *exp);
+float __ovld frexp(float, int *);
+float2 __ovld frexp(float2, int2 *);
+float3 __ovld frexp(float3, int3 *);
+float4 __ovld frexp(float4, int4 *);
+float8 __ovld frexp(float8, int8 *);
+float16 __ovld frexp(float16, int16 *);
 #ifdef cl_khr_fp64
-double __ovld frexp(double, int *exp);
-double2 __ovld frexp(double2, int2 *exp);
-double3 __ovld frexp(double3, int3 *exp);
-double4 __ovld frexp(double4, int4 *exp);
-double8 __ovld frexp(double8, int8 *exp);
-double16 __ovld frexp(double16, int16 *exp);
+double __ovld frexp(double, int *);
+double2 __ovld frexp(double2, int2 *);
+double3 __ovld frexp(double3, int3 *);
+double4 __ovld frexp(double4, int4 *);
+double8 __ovld frexp(double8, int8 *);
+double16 __ovld frexp(double16, int16 *);
 #endif //cl_khr_fp64
 #ifdef cl_khr_fp16
-half __ovld frexp(half, int *exp);
-half2 __ovld frexp(half2, int2 *exp);
-half3 __ovld frexp(half3, int3 *exp);
-half4 __ovld frexp(half4, int4 *exp);
-half8 __ovld frexp(half8, int8 *exp);
-half16 __ovld frexp(half16, int16 *exp);
+half __ovld frexp(half, int *);
+half2 __ovld frexp(half2, int2 *);
+half3 __ovld frexp(half3, int3 *);
+half4 __ovld frexp(half4, int4 *);
+half8 __ovld frexp(half8, int8 *);
+half16 __ovld frexp(half16, int16 *);
 #endif //cl_khr_fp16
 #endif //defined(__opencl_c_generic_address_space)
 
 #if defined(__opencl_c_named_address_space_builtins)
-float __ovld frexp(float, __global int *exp);
-float2 __ovld frexp(float2, __global int2 *exp);
-float3 __ovld frexp(float3, __global int3 *exp);
-float4 __ovld frexp(float4, __global int4 *exp);
-float8 __ovld frexp(float8, __global int8 *exp);
-float16 __ovld frexp(float16, __global int16 *exp);
-float __ovld frexp(float, __local int *exp);
-float2 __ovld frexp(float2, __local int2 *exp);
-float3 __ovld frexp(float3, __local int3 *exp);
-float4 __ovld frexp(float4, __local int4 *exp);
-float8 __ovld frexp(float8, __local int8 *exp);
-float16 __ovld frexp(float16, __local int16 *exp);
-float __ovld frexp(float, __private int *exp);
-float2 __ovld frexp(float2, __private int2 *exp);
-float3 __ovld frexp(float3, __private int3 *exp);
-float4 __ovld frexp(float4, __private int4 *exp);
-float8 __ovld frexp(float8, __private int8 *exp);
-float16 __ovld frexp(float16, __private int16 *exp);
+float __ovld frexp(float, __global int *);
+float2 __ovld frexp(float2, __global int2 *);
+float3 __ovld frexp(float3, __global int3 *);
+float4 __ovld frexp(float4, __global int4 *);
+float8 __ovld frexp(float8, __global int8 *);
+float16 __ovld frexp(float16, __global int16 *);
+float __ovld frexp(float, __local int *);
+float2 __ovld frexp(float2, __local int2 *);
+float3 __ovld frexp(float3, __local int3 *);
+float4 __ovld frexp(float4, __local int4 *);
+float8 __ovld frexp(float8, __local int8 *);
+float16 __ovld frexp(float16, __local int16 *);
+float __ovld frexp(float, __private int *);
+float2 __ovld frexp(float2, __private int2 *);
+float3 __ovld frexp(float3, __private int3 *);
+float4 __ovld frexp(float4, __private int4 *);
+float8 __ovld frexp(float8, __private int8 *);
+float16 __ovld frexp(float16, __private int16 *);
 #ifdef cl_khr_fp64
-double __ovld frexp(double, __global int *exp);
-double2 __ovld frexp(double2, __global int2 *exp);
-double3 __ovld frexp(double3, __global int3 *exp);
-double4 __ovld frexp(double4, __global int4 *exp);
-double8 __ovld frexp(double8, __global int8 *exp);
-double16 __ovld frexp(double16, __global int16 *exp);
-double __ovld frexp(double, __local int *exp);
-double2 __ovld frexp(double2, __local int2 *exp);
-double3 __ovld frexp(double3, __local int3 *exp);
-double4 __ovld frexp(double4, __local int4 *exp);
-double8 __ovld frexp(double8, __local int8 *exp);
-double16 __ovld frexp(double16, __local int16 *exp);
-double __ovld frexp(double, __private int *exp);
-double2 __ovld frexp(double2, __private int2 *exp);
-double3 __ovld frexp(double3, __private int3 *exp);
-double4 __ovld frexp(double4, __private int4 *exp);
-double8 __ovld frexp(double8, __private int8 *exp);
-double16 __ovld frexp(double16, __private int16 *exp);
+double __ovld frexp(double, __global int *);
+double2 __ovld frexp(double2, __global int2 *);
+double3 __ovld frexp(double3, __global int3 *);
+double4 __ovld frexp(double4, __global int4 *);
+double8 __ovld frexp(double8, __global int8 *);
+double16 __ovld frexp(double16, __global int16 *);
+double __ovld frexp(double, __local int *);
+double2 __ovld frexp(double2, __local int2 *);
+double3 __ovld frexp(double3, __local int3 *);
+double4 __ovld frexp(double4, __local int4 *);
+double8 __ovld frexp(double8, __local int8 *);
+double16 __ovld frexp(double16, __local int16 *);
+double __ovld frexp(double, __private int *);
+double2 __ovld frexp(double2, __private int2 *);
+double3 __ovld frexp(double3, __private int3 *);
+double4 __ovld frexp(double4, __private int4 *);
+double8 __ovld frexp(double8, __private int8 *);
+double16 __ovld frexp(double16, __private int16 *);
 #endif //cl_khr_fp64
 #ifdef cl_khr_fp16
-half __ovld frexp(half, __global int *exp);
-half2 __ovld frexp(half2, __global int2 *exp);
-half3 __ovld frexp(half3, __global int3 *exp);
-half4 __ovld frexp(half4, __global int4 *exp);
-half8 __ovld frexp(half8, __global int8 *exp);
-half16 __ovld frexp(half16, __global int16 *exp);
-half __ovld frexp(half, __local int *exp);
-half2 __ovld frexp(half2, __local int2 *exp);
-half3 __ovld frexp(half3, __local int3 *exp);
-half4 __ovld frexp(half4, __local int4 *exp);
-half8 __ovld frexp(half8, __local int8 *exp);
-half16 __ovld frexp(half16, __local int16 *exp);
-half __ovld frexp(half, __private int *exp);
-half2 __ovld frexp(half2, __private int2 *exp);
-half3 __ovld frexp(half3, __private int3 *exp);
-half4 __ovld frexp(half4, __private int4 *exp);
-half8 __ovld frexp(half8, __private int8 *exp);
-half16 __ovld frexp(half16, __private int16 *exp);
+half __ovld frexp(half, __global int *);
+half2 __ovld frexp(half2, __global int2 *);
+half3 __ovld frexp(half3, __global int3 *);
+half4 __ovld frexp(half4, __global int4 *);
+half8 __ovld frexp(half8, __global int8 *);
+half16 __ovld frexp(half16, __global int16 *);
+half __ovld frexp(half, __local int *);
+half2 __ovld frexp(half2, __local int2 *);
+half3 __ovld frexp(half3, __local int3 *);
+half4 __ovld frexp(half4, __local int4 *);
+half8 __ovld frexp(half8, __local int8 *);
+half16 __ovld frexp(half16, __local int16 *);
+half __ovld frexp(half, __private int *);
+half2 __ovld frexp(half2, __private int2 *);
+half3 __ovld frexp(half3, __private int3 *);
+half4 __ovld frexp(half4, __private int4 *);
+half8 __ovld frexp(half8, __private int8 *);
+half16 __ovld frexp(half16, __private int16 *);
 #endif //cl_khr_fp16
 #endif //defined(__opencl_c_named_address_space_builtins)
 
@@ -7961,27 +7961,27 @@ half16 __ovld modf(half16, __private half16 *);
  * Returns a quiet NaN. The nancode may be placed
  * in the significand of the resulting NaN.
  */
-float __ovld __cnfn nan(uint nancode);
-float2 __ovld __cnfn nan(uint2 nancode);
-float3 __ovld __cnfn nan(uint3 nancode);
-float4 __ovld __cnfn nan(uint4 nancode);
-float8 __ovld __cnfn nan(uint8 nancode);
-float16 __ovld __cnfn nan(uint16 nancode);
+float __ovld __cnfn nan(uint);
+float2 __ovld __cnfn nan(uint2);
+float3 __ovld __cnfn nan(uint3);
+float4 __ovld __cnfn nan(uint4);
+float8 __ovld __cnfn nan(uint8);
+float16 __ovld __cnfn nan(uint16);
 #ifdef cl_khr_fp64
-double __ovld __cnfn nan(ulong nancode);
-double2 __ovld __cnfn nan(ulong2 nancode);
-double3 __ovld __cnfn nan(ulong3 nancode);
-double4 __ovld __cnfn nan(ulong4 nancode);
-double8 __ovld __cnfn nan(ulong8 nancode);
-double16 __ovld __cnfn nan(ulong16 nancode);
+double __ovld __cnfn nan(ulong);
+double2 __ovld __cnfn nan(ulong2);
+double3 __ovld __cnfn nan(ulong3);
+double4 __ovld __cnfn nan(ulong4);
+double8 __ovld __cnfn nan(ulong8);
+double16 __ovld __cnfn nan(ulong16);
 #endif //cl_khr_fp64
 #ifdef cl_khr_fp16
-half __ovld __cnfn nan(ushort nancode);
-half2 __ovld __cnfn nan(ushort2 nancode);
-half3 __ovld __cnfn nan(ushort3 nancode);
-half4 __ovld __cnfn nan(ushort4 nancode);
-half8 __ovld __cnfn nan(ushort8 nancode);
-half16 __ovld __cnfn nan(ushort16 nancode);
+half __ovld __cnfn nan(ushort);
+half2 __ovld __cnfn nan(ushort2);
+half3 __ovld __cnfn nan(ushort3);
+half4 __ovld __cnfn nan(ushort4);
+half8 __ovld __cnfn nan(ushort8);
+half16 __ovld __cnfn nan(ushort16);
 #endif //cl_khr_fp16
 
 /**
@@ -8134,88 +8134,88 @@ half16 __ovld __cnfn remainder(half16, half16);
  * pointed to by quo.
  */
 #if defined(__opencl_c_generic_address_space)
-float __ovld remquo(float, float, int *quo);
-float2 __ovld remquo(float2, float2, int2 *quo);
-float3 __ovld remquo(float3, float3, int3 *quo);
-float4 __ovld remquo(float4, float4, int4 *quo);
-float8 __ovld remquo(float8, float8, int8 *quo);
-float16 __ovld remquo(float16, float16, int16 *quo);
+float __ovld remquo(float, float, int *);
+float2 __ovld remquo(float2, float2, int2 *);
+float3 __ovld remquo(float3, float3, int3 *);
+float4 __ovld remquo(float4, float4, int4 *);
+float8 __ovld remquo(float8, float8, int8 *);
+float16 __ovld remquo(float16, float16, int16 *);
 #ifdef cl_khr_fp64
-double __ovld remquo(double, double, int *quo);
-double2 __ovld remquo(double2, double2, int2 *quo);
-double3 __ovld remquo(double3, double3, int3 *quo);
-double4 __ovld remquo(double4, double4, int4 *quo);
-double8 __ovld remquo(double8, double8, int8 *quo);
-double16 __ovld remquo(double16, double16, int16 *quo);
+double __ovld remquo(double, double, int *);
+double2 __ovld remquo(double2, double2, int2 *);
+double3 __ovld remquo(double3, double3, int3 *);
+double4 __ovld remquo(double4, double4, int4 *);
+double8 __ovld remquo(double8, double8, int8 *);
+double16 __ovld remquo(double16, double16, int16 *);
 #endif //cl_khr_fp64
 #ifdef cl_khr_fp16
-half __ovld remquo(half, half, int *quo);
-half2 __ovld remquo(half2, half2, int2 *quo);
-half3 __ovld remquo(half3, half3, int3 *quo);
-half4 __ovld remquo(half4, half4, int4 *quo);
-half8 __ovld remquo(half8, half8, int8 *quo);
-half16 __ovld remquo(half16, half16, int16 *quo);
+half __ovld remquo(half, half, int *);
+half2 __ovld remquo(half2, half2, int2 *);
+half3 __ovld remquo(half3, half3, int3 *);
+half4 __ovld remquo(half4, half4, int4 *);
+half8 __ovld remquo(half8, half8, int8 *);
+half16 __ovld remquo(half16, half16, int16 *);
 #endif //cl_khr_fp16
 #endif //defined(__opencl_c_generic_address_space)
 
 #if defined(__opencl_c_named_address_space_builtins)
-float __ovld remquo(float, float, __global int *quo);
-float2 __ovld remquo(float2, float2, __global int2 *quo);
-float3 __ovld remquo(float3, float3, __global int3 *quo);
-float4 __ovld remquo(float4, float4, __global int4 *quo);
-float8 __ovld remquo(float8, float8, __global int8 *quo);
-float16 __ovld remquo(float16, float16, __global int16 *quo);
-float __ovld remquo(float, float, __local int *quo);
-float2 __ovld remquo(float2, float2, __local int2 *quo);
-float3 __ovld remquo(float3, float3, __local int3 *quo);
-float4 __ovld remquo(float4, float4, __local int4 *quo);
-float8 __ovld remquo(float8, float8, __local int8 *quo);
-float16 __ovld remquo(float16, float16, __local int16 *quo);
-float __ovld remquo(float, float, __private int *quo);
-float2 __ovld remquo(float2, float2, __private int2 *quo);
-float3 __ovld remquo(float3, float3, __private int3 *quo);
-float4 __ovld remquo(float4, float4, __private int4 *quo);
-float8 __ovld remquo(float8, float8, __private int8 *quo);
-float16 __ovld remquo(float16, float16, __private int16 *quo);
+float __ovld remquo(float, float, __global int *);
+float2 __ovld remquo(float2, float2, __global int2 *);
+float3 __ovld remquo(float3, float3, __global int3 *);
+float4 __ovld remquo(float4, float4, __global int4 *);
+float8 __ovld remquo(float8, float8, __global int8 *);
+float16 __ovld remquo(float16, float16, __global int16 *);
+float __ovld remquo(float, float, __local int *);
+float2 __ovld remquo(float2, float2, __local int2 *);
+float3 __ovld remquo(float3, float3, __local int3 *);
+float4 __ovld remquo(float4, float4, __local int4 *);
+float8 __ovld remquo(float8, float8, __local int8 *);
+float16 __ovld remquo(float16, float16, __local int16 *);
+float __ovld remquo(float, float, __private int *);
+float2 __ovld remquo(float2, float2, __private int2 *);
+float3 __ovld remquo(float3, float3, __private int3 *);
+float4 __ovld remquo(float4, float4, __private int4 *);
+float8 __ovld remquo(float8, float8, __private int8 *);
+float16 __ovld remquo(float16, float16, __private int16 *);
 #ifdef cl_khr_fp64
-double __ovld remquo(double, double, __global int *quo);
-double2 __ovld remquo(double2, double2, __global int2 *quo);
-double3 __ovld remquo(double3, double3, __global int3 *quo);
-double4 __ovld remquo(double4, double4, __global int4 *quo);
-double8 __ovld remquo(double8, double8, __global int8 *quo);
-double16 __ovld remquo(double16, double16, __global int16 *quo);
-double __ovld remquo(double, double, __local int *quo);
-double2 __ovld remquo(double2, double2, __local int2 *quo);
-double3 __ovld remquo(double3, double3, __local int3 *quo);
-double4 __ovld remquo(double4, double4, __local int4 *quo);
-double8 __ovld remquo(double8, double8, __local int8 *quo);
-double16 __ovld remquo(double16, double16, __local int16 *quo);
-double __ovld remquo(double, double, __private int *quo);
-double2 __ovld remquo(double2, double2, __private int2 *quo);
-double3 __ovld remquo(double3, double3, __private int3 *quo);
-double4 __ovld remquo(double4, double4, __private int4 *quo);
-double8 __ovld remquo(double8, double8, __private int8 *quo);
-double16 __ovld remquo(double16, double16, __private int16 *quo);
+double __ovld remquo(double, double, __global int *);
+double2 __ovld remquo(double2, double2, __global int2 *);
+double3 __ovld remquo(double3, double3, __global int3 *);
+double4 __ovld remquo(double4, double4, __global int4 *);
+double8 __ovld remquo(double8, double8, __global int8 *);
+double16 __ovld remquo(double16, double16, __global int16 *);
+double __ovld remquo(double, double, __local int *);
+double2 __ovld remquo(double2, double2, __local int2 *);
+double3 __ovld remquo(double3, double3, __local int3 *);
+double4 __ovld remquo(double4, double4, __local int4 *);
+double8 __ovld remquo(double8, double8, __local int8 *);
+double16 __ovld remquo(double16, double16, __local int16 *);
+double __ovld remquo(double, double, __private int *);
+double2 __ovld remquo(double2, double2, __private int2 *);
+double3 __ovld remquo(double3, double3, __private int3 *);
+double4 __ovld remquo(double4, double4, __private int4 *);
+double8 __ovld remquo(double8, double8, __private int8 *);
+double16 __ovld remquo(double16, double16, __private int16 *);
 #endif //cl_khr_fp64
 #ifdef cl_khr_fp16
-half __ovld remquo(half, half, __global int *quo);
-half2 __ovld remquo(half2, half2, __global int2 *quo);
-half3 __ovld remquo(half3, half3, __global int3 *quo);
-half4 __ovld remquo(half4, half4, __global int4 *quo);
-half8 __ovld remquo(half8, half8, __global int8 *quo);
-half16 __ovld remquo(half16, half16, __global int16 *quo);
-half __ovld remquo(half, half, __local int *quo);
-half2 __ovld remquo(half2, half2, __local int2 *quo);
-half3 __ovld remquo(half3, half3, __local int3 *quo);
-half4 __ovld remquo(half4, half4, __local int4 *quo);
-half8 __ovld remquo(half8, half8, __local int8 *quo);
-half16 __ovld remquo(half16, half16, __local int16 *quo);
-half __ovld remquo(half, half, __private int *quo);
-half2 __ovld remquo(half2, half2, __private int2 *quo);
-half3 __ovld remquo(half3, half3, __private int3 *quo);
-half4 __ovld remquo(half4, half4, __private int4 *quo);
-half8 __ovld remquo(half8, half8, __private int8 *quo);
-half16 __ovld remquo(half16, half16, __private int16 *quo);
+half __ovld remquo(half, half, __global int *);
+half2 __ovld remquo(half2, half2, __global int2 *);
+half3 __ovld remquo(half3, half3, __global int3 *);
+half4 __ovld remquo(half4, half4, __global int4 *);
+half8 __ovld remquo(half8, half8, __global int8 *);
+half16 __ovld remquo(half16, half16, __global int16 *);
+half __ovld remquo(half, half, __local int *);
+half2 __ovld remquo(half2, half2, __local int2 *);
+half3 __ovld remquo(half3, half3, __local int3 *);
+half4 __ovld remquo(half4, half4, __local int4 *);
+half8 __ovld remquo(half8, half8, __local int8 *);
+half16 __ovld remquo(half16, half16, __local int16 *);
+half __ovld remquo(half, half, __private int *);
+half2 __ovld remquo(half2, half2, __private int2 *);
+half3 __ovld remquo(half3, half3, __private int3 *);
+half4 __ovld remquo(half4, half4, __private int4 *);
+half8 __ovld remquo(half8, half8, __private int8 *);
+half16 __ovld remquo(half16, half16, __private int16 *);
 #endif //cl_khr_fp16
 #endif //defined(__opencl_c_named_address_space_builtins)
 /**
@@ -9220,94 +9220,94 @@ ulong16 __ovld __cnfn rhadd(ulong16, ulong16);
  * Returns min(max(x, minval), maxval).
  * Results are undefined if minval > maxval.
  */
-char __ovld __cnfn clamp(char, char minval, char maxval);
-uchar __ovld __cnfn clamp(uchar, uchar minval, uchar maxval);
-char2 __ovld __cnfn clamp(char2, char2 minval, char2 maxval);
-uchar2 __ovld __cnfn clamp(uchar2, uchar2 minval, uchar2 maxval);
-char3 __ovld __cnfn clamp(char3, char3 minval, char3 maxval);
-uchar3 __ovld __cnfn clamp(uchar3, uchar3 minval, uchar3 maxval);
-char4 __ovld __cnfn clamp(char4, char4 minval, char4 maxval);
-uchar4 __ovld __cnfn clamp(uchar4, uchar4 minval, uchar4 maxval);
-char8 __ovld __cnfn clamp(char8, char8 minval, char8 maxval);
-uchar8 __ovld __cnfn clamp(uchar8, uchar8 minval, uchar8 maxval);
-char16 __ovld __cnfn clamp(char16, char16 minval, char16 maxval);
-uchar16 __ovld __cnfn clamp(uchar16, uchar16 minval, uchar16 maxval);
-short __ovld __cnfn clamp(short, short minval, short maxval);
-ushort __ovld __cnfn clamp(ushort, ushort minval, ushort maxval);
-short2 __ovld __cnfn clamp(short2, short2 minval, short2 maxval);
-ushort2 __ovld __cnfn clamp(ushort2, ushort2 minval, ushort2 maxval);
-short3 __ovld __cnfn clamp(short3, short3 minval, short3 maxval);
-ushort3 __ovld __cnfn clamp(ushort3, ushort3 minval, ushort3 maxval);
-short4 __ovld __cnfn clamp(short4, short4 minval, short4 maxval);
-ushort4 __ovld __cnfn clamp(ushort4, ushort4 minval, ushort4 maxval);
-short8 __ovld __cnfn clamp(short8, short8 minval, short8 maxval);
-ushort8 __ovld __cnfn clamp(ushort8, ushort8 minval, ushort8 maxval);
-short16 __ovld __cnfn clamp(short16, short16 minval, short16 maxval);
-ushort16 __ovld __cnfn clamp(ushort16, ushort16 minval, ushort16 maxval);
-int __ovld __cnfn clamp(int, int minval, int maxval);
-uint __ovld __cnfn clamp(uint, uint minval, uint maxval);
-int2 __ovld __cnfn clamp(int2, int2 minval, int2 maxval);
-uint2 __ovld __cnfn clamp(uint2, uint2 minval, uint2 maxval);
-int3 __ovld __cnfn clamp(int3, int3 minval, int3 maxval);
-uint3 __ovld __cnfn clamp(uint3, uint3 minval, uint3 maxval);
-int4 __ovld __cnfn clamp(int4, int4 minval, int4 maxval);
-uint4 __ovld __cnfn clamp(uint4, uint4 minval, uint4 maxval);
-int8 __ovld __cnfn clamp(int8, int8 minval, int8 maxval);
-uint8 __ovld __cnfn clamp(uint8, uint8 minval, uint8 maxval);
-int16 __ovld __cnfn clamp(int16, int16 minval, int16 maxval);
-uint16 __ovld __cnfn clamp(uint16, uint16 minval, uint16 maxval);
-long __ovld __cnfn clamp(long, long minval, long maxval);
-ulong __ovld __cnfn clamp(ulong, ulong minval, ulong maxval);
-long2 __ovld __cnfn clamp(long2, long2 minval, long2 maxval);
-ulong2 __ovld __cnfn clamp(ulong2, ulong2 minval, ulong2 maxval);
-long3 __ovld __cnfn clamp(long3, long3 minval, long3 maxval);
-ulong3 __ovld __cnfn clamp(ulong3, ulong3 minval, ulong3 maxval);
-long4 __ovld __cnfn clamp(long4, long4 minval, long4 maxval);
-ulong4 __ovld __cnfn clamp(ulong4, ulong4 minval, ulong4 maxval);
-long8 __ovld __cnfn clamp(long8, long8 minval, long8 maxval);
-ulong8 __ovld __cnfn clamp(ulong8, ulong8 minval, ulong8 maxval);
-long16 __ovld __cnfn clamp(long16, long16 minval, long16 maxval);
-ulong16 __ovld __cnfn clamp(ulong16, ulong16 minval, ulong16 maxval);
-char2 __ovld __cnfn clamp(char2, char minval, char maxval);
-uchar2 __ovld __cnfn clamp(uchar2, uchar minval, uchar maxval);
-char3 __ovld __cnfn clamp(char3, char minval, char maxval);
-uchar3 __ovld __cnfn clamp(uchar3, uchar minval, uchar maxval);
-char4 __ovld __cnfn clamp(char4, char minval, char maxval);
-uchar4 __ovld __cnfn clamp(uchar4, uchar minval, uchar maxval);
-char8 __ovld __cnfn clamp(char8, char minval, char maxval);
-uchar8 __ovld __cnfn clamp(uchar8, uchar minval, uchar maxval);
-char16 __ovld __cnfn clamp(char16, char minval, char maxval);
-uchar16 __ovld __cnfn clamp(uchar16, uchar minval, uchar maxval);
-short2 __ovld __cnfn clamp(short2, short minval, short maxval);
-ushort2 __ovld __cnfn clamp(ushort2, ushort minval, ushort maxval);
-short3 __ovld __cnfn clamp(short3, short minval, short maxval);
-ushort3 __ovld __cnfn clamp(ushort3, ushort minval, ushort maxval);
-short4 __ovld __cnfn clamp(short4, short minval, short maxval);
-ushort4 __ovld __cnfn clamp(ushort4, ushort minval, ushort maxval);
-short8 __ovld __cnfn clamp(short8, short minval, short maxval);
-ushort8 __ovld __cnfn clamp(ushort8, ushort minval, ushort maxval);
-short16 __ovld __cnfn clamp(short16, short minval, short maxval);
-ushort16 __ovld __cnfn clamp(ushort16, ushort minval, ushort maxval);
-int2 __ovld __cnfn clamp(int2, int minval, int maxval);
-uint2 __ovld __cnfn clamp(uint2, uint minval, uint maxval);
-int3 __ovld __cnfn clamp(int3, int minval, int maxval);
-uint3 __ovld __cnfn clamp(uint3, uint minval, uint maxval);
-int4 __ovld __cnfn clamp(int4, int minval, int maxval);
-uint4 __ovld __cnfn clamp(uint4, uint minval, uint maxval);
-int8 __ovld __cnfn clamp(int8, int minval, int maxval);
-uint8 __ovld __cnfn clamp(uint8, uint minval, uint maxval);
-int16 __ovld __cnfn clamp(int16, int minval, int maxval);
-uint16 __ovld __cnfn clamp(uint16, uint minval, uint maxval);
-long2 __ovld __cnfn clamp(long2, long minval, long maxval);
-ulong2 __ovld __cnfn clamp(ulong2, ulong minval, ulong maxval);
-long3 __ovld __cnfn clamp(long3, long minval, long maxval);
-ulong3 __ovld __cnfn clamp(ulong3, ulong minval, ulong maxval);
-long4 __ovld __cnfn clamp(long4, long minval, long maxval);
-ulong4 __ovld __cnfn clamp(ulong4, ulong minval, ulong maxval);
-long8 __ovld __cnfn clamp(long8, long minval, long maxval);
-ulong8 __ovld __cnfn clamp(ulong8, ulong minval, ulong maxval);
-long16 __ovld __cnfn clamp(long16, long minval, long maxval);
-ulong16 __ovld __cnfn clamp(ulong16, ulong minval, ulong maxval);
+char __ovld __cnfn clamp(char, char, char);
+uchar __ovld __cnfn clamp(uchar, uchar, uchar);
+char2 __ovld __cnfn clamp(char2, char2, char2);
+uchar2 __ovld __cnfn clamp(uchar2, uchar2, uchar2);
+char3 __ovld __cnfn clamp(char3, char3, char3);
+uchar3 __ovld __cnfn clamp(uchar3, uchar3, uchar3);
+char4 __ovld __cnfn clamp(char4, char4, char4);
+uchar4 __ovld __cnfn clamp(uchar4, uchar4, uchar4);
+char8 __ovld __cnfn clamp(char8, char8, char8);
+uchar8 __ovld __cnfn clamp(uchar8, uchar8, uchar8);
+char16 __ovld __cnfn clamp(char16, char16, char16);
+uchar16 __ovld __cnfn clamp(uchar16, uchar16, uchar16);
+short __ovld __cnfn clamp(short, short, short);
+ushort __ovld __cnfn clamp(ushort, ushort, ushort);
+short2 __ovld __cnfn clamp(short2, short2, short2);
+ushort2 __ovld __cnfn clamp(ushort2, ushort2, ushort2);
+short3 __ovld __cnfn clamp(short3, short3, short3);
+ushort3 __ovld __cnfn clamp(ushort3, ushort3, ushort3);
+short4 __ovld __cnfn clamp(short4, short4, short4);
+ushort4 __ovld __cnfn clamp(ushort4, ushort4, ushort4);
+short8 __ovld __cnfn clamp(short8, short8, short8);
+ushort8 __ovld __cnfn clamp(ushort8, ushort8, ushort8);
+short16 __ovld __cnfn clamp(short16, short16, short16);
+ushort16 __ovld __cnfn clamp(ushort16, ushort16, ushort16);
+int __ovld __cnfn clamp(int, int, int);
+uint __ovld __cnfn clamp(uint, uint, uint);
+int2 __ovld __cnfn clamp(int2, int2, int2);
+uint2 __ovld __cnfn clamp(uint2, uint2, uint2);
+int3 __ovld __cnfn clamp(int3, int3, int3);
+uint3 __ovld __cnfn clamp(uint3, uint3, uint3);
+int4 __ovld __cnfn clamp(int4, int4, int4);
+uint4 __ovld __cnfn clamp(uint4, uint4, uint4);
+int8 __ovld __cnfn clamp(int8, int8, int8);
+uint8 __ovld __cnfn clamp(uint8, uint8, uint8);
+int16 __ovld __cnfn clamp(int16, int16, int16);
+uint16 __ovld __cnfn clamp(uint16, uint16, uint16);
+long __ovld __cnfn clamp(long, long, long);
+ulong __ovld __cnfn clamp(ulong, ulong, ulong);
+long2 __ovld __cnfn clamp(long2, long2, long2);
+ulong2 __ovld __cnfn clamp(ulong2, ulong2, ulong2);
+long3 __ovld __cnfn clamp(long3, long3, long3);
+ulong3 __ovld __cnfn clamp(ulong3, ulong3, ulong3);
+long4 __ovld __cnfn clamp(long4, long4, long4);
+ulong4 __ovld __cnfn clamp(ulong4, ulong4, ulong4);
+long8 __ovld __cnfn clamp(long8, long8, long8);
+ulong8 __ovld __cnfn clamp(ulong8, ulong8, ulong8);
+long16 __ovld __cnfn clamp(long16, long16, long16);
+ulong16 __ovld __cnfn clamp(ulong16, ulong16, ulong16);
+char2 __ovld __cnfn clamp(char2, char, char);
+uchar2 __ovld __cnfn clamp(uchar2, uchar, uchar);
+char3 __ovld __cnfn clamp(char3, char, char);
+uchar3 __ovld __cnfn clamp(uchar3, uchar, uchar);
+char4 __ovld __cnfn clamp(char4, char, char);
+uchar4 __ovld __cnfn clamp(uchar4, uchar, uchar);
+char8 __ovld __cnfn clamp(char8, char, char);
+uchar8 __ovld __cnfn clamp(uchar8, uchar, uchar);
+char16 __ovld __cnfn clamp(char16, char, char);
+uchar16 __ovld __cnfn clamp(uchar16, uchar, uchar);
+short2 __ovld __cnfn clamp(short2, short, short);
+ushort2 __ovld __cnfn clamp(ushort2, ushort, ushort);
+short3 __ovld __cnfn clamp(short3, short, short);
+ushort3 __ovld __cnfn clamp(ushort3, ushort, ushort);
+short4 __ovld __cnfn clamp(short4, short, short);
+ushort4 __ovld __cnfn clamp(ushort4, ushort, ushort);
+short8 __ovld __cnfn clamp(short8, short, short);
+ushort8 __ovld __cnfn clamp(ushort8, ushort, ushort);
+short16 __ovld __cnfn clamp(short16, short, short);
+ushort16 __ovld __cnfn clamp(ushort16, ushort, ushort);
+int2 __ovld __cnfn clamp(int2, int, int);
+uint2 __ovld __cnfn clamp(uint2, uint, uint);
+int3 __ovld __cnfn clamp(int3, int, int);
+uint3 __ovld __cnfn clamp(uint3, uint, uint);
+int4 __ovld __cnfn clamp(int4, int, int);
+uint4 __ovld __cnfn clamp(uint4, uint, uint);
+int8 __ovld __cnfn clamp(int8, int, int);
+uint8 __ovld __cnfn clamp(uint8, uint, uint);
+int16 __ovld __cnfn clamp(int16, int, int);
+uint16 __ovld __cnfn clamp(uint16, uint, uint);
+long2 __ovld __cnfn clamp(long2, long, long);
+ulong2 __ovld __cnfn clamp(ulong2, ulong, ulong);
+long3 __ovld __cnfn clamp(long3, long, long);
+ulong3 __ovld __cnfn clamp(ulong3, ulong, ulong);
+long4 __ovld __cnfn clamp(long4, long, long);
+ulong4 __ovld __cnfn clamp(ulong4, ulong, ulong);
+long8 __ovld __cnfn clamp(long8, long, long);
+ulong8 __ovld __cnfn clamp(ulong8, ulong, ulong);
+long16 __ovld __cnfn clamp(long16, long, long);
+ulong16 __ovld __cnfn clamp(ulong16, ulong, ulong);
 
 /**
  * Returns the number of leading 0-bits in x, starting
@@ -9872,51 +9872,51 @@ ulong16 __ovld __cnfn sub_sat(ulong16, ulong16);
  * result[i] = ((short)hi[i] << 8) | lo[i]
  * result[i] = ((ushort)hi[i] << 8) | lo[i]
  */
-short __ovld __cnfn upsample(char hi, uchar lo);
-ushort __ovld __cnfn upsample(uchar hi, uchar lo);
-short2 __ovld __cnfn upsample(char2 hi, uchar2 lo);
-short3 __ovld __cnfn upsample(char3 hi, uchar3 lo);
-short4 __ovld __cnfn upsample(char4 hi, uchar4 lo);
-short8 __ovld __cnfn upsample(char8 hi, uchar8 lo);
-short16 __ovld __cnfn upsample(char16 hi, uchar16 lo);
-ushort2 __ovld __cnfn upsample(uchar2 hi, uchar2 lo);
-ushort3 __ovld __cnfn upsample(uchar3 hi, uchar3 lo);
-ushort4 __ovld __cnfn upsample(uchar4 hi, uchar4 lo);
-ushort8 __ovld __cnfn upsample(uchar8 hi, uchar8 lo);
-ushort16 __ovld __cnfn upsample(uchar16 hi, uchar16 lo);
+short __ovld __cnfn upsample(char, uchar);
+ushort __ovld __cnfn upsample(uchar, uchar);
+short2 __ovld __cnfn upsample(char2, uchar2);
+short3 __ovld __cnfn upsample(char3, uchar3);
+short4 __ovld __cnfn upsample(char4, uchar4);
+short8 __ovld __cnfn upsample(char8, uchar8);
+short16 __ovld __cnfn upsample(char16, uchar16);
+ushort2 __ovld __cnfn upsample(uchar2, uchar2);
+ushort3 __ovld __cnfn upsample(uchar3, uchar3);
+ushort4 __ovld __cnfn upsample(uchar4, uchar4);
+ushort8 __ovld __cnfn upsample(uchar8, uchar8);
+ushort16 __ovld __cnfn upsample(uchar16, uchar16);
 
 /**
  * result[i] = ((int)hi[i] << 16) | lo[i]
  * result[i] = ((uint)hi[i] << 16) | lo[i]
  */
-int __ovld __cnfn upsample(short hi, ushort lo);
-uint __ovld __cnfn upsample(ushort hi, ushort lo);
-int2 __ovld __cnfn upsample(short2 hi, ushort2 lo);
-int3 __ovld __cnfn upsample(short3 hi, ushort3 lo);
-int4 __ovld __cnfn upsample(short4 hi, ushort4 lo);
-int8 __ovld __cnfn upsample(short8 hi, ushort8 lo);
-int16 __ovld __cnfn upsample(short16 hi, ushort16 lo);
-uint2 __ovld __cnfn upsample(ushort2 hi, ushort2 lo);
-uint3 __ovld __cnfn upsample(ushort3 hi, ushort3 lo);
-uint4 __ovld __cnfn upsample(ushort4 hi, ushort4 lo);
-uint8 __ovld __cnfn upsample(ushort8 hi, ushort8 lo);
-uint16 __ovld __cnfn upsample(ushort16 hi, ushort16 lo);
+int __ovld __cnfn upsample(short, ushort);
+uint __ovld __cnfn upsample(ushort, ushort);
+int2 __ovld __cnfn upsample(short2, ushort2);
+int3 __ovld __cnfn upsample(short3, ushort3);
+int4 __ovld __cnfn upsample(short4, ushort4);
+int8 __ovld __cnfn upsample(short8, ushort8);
+int16 __ovld __cnfn upsample(short16, ushort16);
+uint2 __ovld __cnfn upsample(ushort2, ushort2);
+uint3 __ovld __cnfn upsample(ushort3, ushort3);
+uint4 __ovld __cnfn upsample(ushort4, ushort4);
+uint8 __ovld __cnfn upsample(ushort8, ushort8);
+uint16 __ovld __cnfn upsample(ushort16, ushort16);
 /**
  * result[i] = ((long)hi[i] << 32) | lo[i]
  * result[i] = ((ulong)hi[i] << 32) | lo[i]
  */
-long __ovld __cnfn upsample(int hi, uint lo);
-ulong __ovld __cnfn upsample(uint hi, uint lo);
-long2 __ovld __cnfn upsample(int2 hi, uint2 lo);
-long3 __ovld __cnfn upsample(int3 hi, uint3 lo);
-long4 __ovld __cnfn upsample(int4 hi, uint4 lo);
-long8 __ovld __cnfn upsample(int8 hi, uint8 lo);
-long16 __ovld __cnfn upsample(int16 hi, uint16 lo);
-ulong2 __ovld __cnfn upsample(uint2 hi, uint2 lo);
-ulong3 __ovld __cnfn upsample(uint3 hi, uint3 lo);
-ulong4 __ovld __cnfn upsample(uint4 hi, uint4 lo);
-ulong8 __ovld __cnfn upsample(uint8 hi, uint8 lo);
-ulong16 __ovld __cnfn upsample(uint16 hi, uint16 lo);
+long __ovld __cnfn upsample(int, uint);
+ulong __ovld __cnfn upsample(uint, uint);
+long2 __ovld __cnfn upsample(int2, uint2);
+long3 __ovld __cnfn upsample(int3, uint3);
+long4 __ovld __cnfn upsample(int4, uint4);
+long8 __ovld __cnfn upsample(int8, uint8);
+long16 __ovld __cnfn upsample(int16, uint16);
+ulong2 __ovld __cnfn upsample(uint2, uint2);
+ulong3 __ovld __cnfn upsample(uint3, uint3);
+ulong4 __ovld __cnfn upsample(uint4, uint4);
+ulong8 __ovld __cnfn upsample(uint8, uint8);
+ulong16 __ovld __cnfn upsample(uint16, uint16);
 
 /*
  * popcount(x): returns the number of set bit in x
@@ -10020,69 +10020,69 @@ uint16 __ovld __cnfn mul24(uint16, uint16);
  * Returns fmin(fmax(x, minval), maxval).
  * Results are undefined if minval > maxval.
  */
-float __ovld __cnfn clamp(float, float minval, float maxval);
-float2 __ovld __cnfn clamp(float2, float2 minval, float2 maxval);
-float3 __ovld __cnfn clamp(float3, float3 minval, float3 maxval);
-float4 __ovld __cnfn clamp(float4, float4 minval, float4 maxval);
-float8 __ovld __cnfn clamp(float8, float8 minval, float8 maxval);
-float16 __ovld __cnfn clamp(float16, float16 minval, float16 maxval);
-float2 __ovld __cnfn clamp(float2, float minval, float maxval);
-float3 __ovld __cnfn clamp(float3, float minval, float maxval);
-float4 __ovld __cnfn clamp(float4, float minval, float maxval);
-float8 __ovld __cnfn clamp(float8, float minval, float maxval);
-float16 __ovld __cnfn clamp(float16, float minval, float maxval);
+float __ovld __cnfn clamp(float, float, float);
+float2 __ovld __cnfn clamp(float2, float2, float2);
+float3 __ovld __cnfn clamp(float3, float3, float3);
+float4 __ovld __cnfn clamp(float4, float4, float4);
+float8 __ovld __cnfn clamp(float8, float8, float8);
+float16 __ovld __cnfn clamp(float16, float16, float16);
+float2 __ovld __cnfn clamp(float2, float, float);
+float3 __ovld __cnfn clamp(float3, float, float);
+float4 __ovld __cnfn clamp(float4, float, float);
+float8 __ovld __cnfn clamp(float8, float, float);
+float16 __ovld __cnfn clamp(float16, float, float);
 #ifdef cl_khr_fp64
-double __ovld __cnfn clamp(double, double minval, double maxval);
-double2 __ovld __cnfn clamp(double2, double2 minval, double2 maxval);
-double3 __ovld __cnfn clamp(double3, double3 minval, double3 maxval);
-double4 __ovld __cnfn clamp(double4, double4 minval, double4 maxval);
-double8 __ovld __cnfn clamp(double8, double8 minval, double8 maxval);
-double16 __ovld __cnfn clamp(double16, double16 minval, double16 maxval);
-double2 __ovld __cnfn clamp(double2, double minval, double maxval);
-double3 __ovld __cnfn clamp(double3, double minval, double maxval);
-double4 __ovld __cnfn clamp(double4, double minval, double maxval);
-double8 __ovld __cnfn clamp(double8, double minval, double maxval);
-double16 __ovld __cnfn clamp(double16, double minval, double maxval);
+double __ovld __cnfn clamp(double, double, double);
+double2 __ovld __cnfn clamp(double2, double2, double2);
+double3 __ovld __cnfn clamp(double3, double3, double3);
+double4 __ovld __cnfn clamp(double4, double4, double4);
+double8 __ovld __cnfn clamp(double8, double8, double8);
+double16 __ovld __cnfn clamp(double16, double16, double16);
+double2 __ovld __cnfn clamp(double2, double, double);
+double3 __ovld __cnfn clamp(double3, double, double);
+double4 __ovld __cnfn clamp(double4, double, double);
+double8 __ovld __cnfn clamp(double8, double, double);
+double16 __ovld __cnfn clamp(double16, double, double);
 #endif //cl_khr_fp64
 #ifdef cl_khr_fp16
-half __ovld __cnfn clamp(half, half minval, half maxval);
-half2 __ovld __cnfn clamp(half2, half2 minval, half2 maxval);
-half3 __ovld __cnfn clamp(half3, half3 minval, half3 maxval);
-half4 __ovld __cnfn clamp(half4, half4 minval, half4 maxval);
-half8 __ovld __cnfn clamp(half8, half8 minval, half8 maxval);
-half16 __ovld __cnfn clamp(half16, half16 minval, half16 maxval);
-half2 __ovld __cnfn clamp(half2, half minval, half maxval);
-half3 __ovld __cnfn clamp(half3, half minval, half maxval);
-half4 __ovld __cnfn clamp(half4, half minval, half maxval);
-half8 __ovld __cnfn clamp(half8, half minval, half maxval);
-half16 __ovld __cnfn clamp(half16, half minval, half maxval);
+half __ovld __cnfn clamp(half, half, half);
+half2 __ovld __cnfn clamp(half2, half2, half2);
+half3 __ovld __cnfn clamp(half3, half3, half3);
+half4 __ovld __cnfn clamp(half4, half4, half4);
+half8 __ovld __cnfn clamp(half8, half8, half8);
+half16 __ovld __cnfn clamp(half16, half16, half16);
+half2 __ovld __cnfn clamp(half2, half, half);
+half3 __ovld __cnfn clamp(half3, half, half);
+half4 __ovld __cnfn clamp(half4, half, half);
+half8 __ovld __cnfn clamp(half8, half, half);
+half16 __ovld __cnfn clamp(half16, half, half);
 #endif //cl_khr_fp16
 
 /**
  * Converts radians to degrees, i.e. (180 / PI) *
  * radians.
  */
-float __ovld __cnfn degrees(float radians);
-float2 __ovld __cnfn degrees(float2 radians);
-float3 __ovld __cnfn degrees(float3 radians);
-float4 __ovld __cnfn degrees(float4 radians);
-float8 __ovld __cnfn degrees(float8 radians);
-float16 __ovld __cnfn degrees(float16 radians);
+float __ovld __cnfn degrees(float);
+float2 __ovld __cnfn degrees(float2);
+float3 __ovld __cnfn degrees(float3);
+float4 __ovld __cnfn degrees(float4);
+float8 __ovld __cnfn degrees(float8);
+float16 __ovld __cnfn degrees(float16);
 #ifdef cl_khr_fp64
-double __ovld __cnfn degrees(double radians);
-double2 __ovld __cnfn degrees(double2 radians);
-double3 __ovld __cnfn degrees(double3 radians);
-double4 __ovld __cnfn degrees(double4 radians);
-double8 __ovld __cnfn degrees(double8 radians);
-double16 __ovld __cnfn degrees(double16 radians);
+double __ovld __cnfn degrees(double);
+double2 __ovld __cnfn degrees(double2);
+double3 __ovld __cnfn degrees(double3);
+double4 __ovld __cnfn degrees(double4);
+double8 __ovld __cnfn degrees(double8);
+double16 __ovld __cnfn degrees(double16);
 #endif //cl_khr_fp64
 #ifdef cl_khr_fp16
-half __ovld __cnfn degrees(half radians);
-half2 __ovld __cnfn degrees(half2 radians);
-half3 __ovld __cnfn degrees(half3 radians);
-half4 __ovld __cnfn degrees(half4 radians);
-half8 __ovld __cnfn degrees(half8 radians);
-half16 __ovld __cnfn degrees(half16 radians);
+half __ovld __cnfn degrees(half);
+half2 __ovld __cnfn degrees(half2);
+half3 __ovld __cnfn degrees(half3);
+half4 __ovld __cnfn degrees(half4);
+half8 __ovld __cnfn degrees(half8);
+half16 __ovld __cnfn degrees(half16);
 #endif //cl_khr_fp16
 
 /**
@@ -10218,68 +10218,68 @@ half16 __ovld __cnfn mix(half16, half16, half);
  * Converts degrees to radians, i.e. (PI / 180) *
  * degrees.
  */
-float __ovld __cnfn radians(float degrees);
-float2 __ovld __cnfn radians(float2 degrees);
-float3 __ovld __cnfn radians(float3 degrees);
-float4 __ovld __cnfn radians(float4 degrees);
-float8 __ovld __cnfn radians(float8 degrees);
-float16 __ovld __cnfn radians(float16 degrees);
+float __ovld __cnfn radians(float);
+float2 __ovld __cnfn radians(float2);
+float3 __ovld __cnfn radians(float3);
+float4 __ovld __cnfn radians(float4);
+float8 __ovld __cnfn radians(float8);
+float16 __ovld __cnfn radians(float16);
 #ifdef cl_khr_fp64
-double __ovld __cnfn radians(double degrees);
-double2 __ovld __cnfn radians(double2 degrees);
-double3 __ovld __cnfn radians(double3 degrees);
-double4 __ovld __cnfn radians(double4 degrees);
-double8 __ovld __cnfn radians(double8 degrees);
-double16 __ovld __cnfn radians(double16 degrees);
+double __ovld __cnfn radians(double);
+double2 __ovld __cnfn radians(double2);
+double3 __ovld __cnfn radians(double3);
+double4 __ovld __cnfn radians(double4);
+double8 __ovld __cnfn radians(double8);
+double16 __ovld __cnfn radians(double16);
 #endif //cl_khr_fp64
 #ifdef cl_khr_fp16
-half __ovld __cnfn radians(half degrees);
-half2 __ovld __cnfn radians(half2 degrees);
-half3 __ovld __cnfn radians(half3 degrees);
-half4 __ovld __cnfn radians(half4 degrees);
-half8 __ovld __cnfn radians(half8 degrees);
-half16 __ovld __cnfn radians(half16 degrees);
+half __ovld __cnfn radians(half);
+half2 __ovld __cnfn radians(half2);
+half3 __ovld __cnfn radians(half3);
+half4 __ovld __cnfn radians(half4);
+half8 __ovld __cnfn radians(half8);
+half16 __ovld __cnfn radians(half16);
 #endif //cl_khr_fp16
 
 /**
  * Returns 0.0 if x < edge, otherwise it returns 1.0.
  */
-float __ovld __cnfn step(float edge, float);
-float2 __ovld __cnfn step(float2 edge, float2);
-float3 __ovld __cnfn step(float3 edge, float3);
-float4 __ovld __cnfn step(float4 edge, float4);
-float8 __ovld __cnfn step(float8 edge, float8);
-float16 __ovld __cnfn step(float16 edge, float16);
-float2 __ovld __cnfn step(float edge, float2);
-float3 __ovld __cnfn step(float edge, float3);
-float4 __ovld __cnfn step(float edge, float4);
-float8 __ovld __cnfn step(float edge, float8);
-float16 __ovld __cnfn step(float edge, float16);
+float __ovld __cnfn step(float, float);
+float2 __ovld __cnfn step(float2, float2);
+float3 __ovld __cnfn step(float3, float3);
+float4 __ovld __cnfn step(float4, float4);
+float8 __ovld __cnfn step(float8, float8);
+float16 __ovld __cnfn step(float16, float16);
+float2 __ovld __cnfn step(float, float2);
+float3 __ovld __cnfn step(float, float3);
+float4 __ovld __cnfn step(float, float4);
+float8 __ovld __cnfn step(float, float8);
+float16 __ovld __cnfn step(float, float16);
 #ifdef cl_khr_fp64
-double __ovld __cnfn step(double edge, double);
-double2 __ovld __cnfn step(double2 edge, double2);
-double3 __ovld __cnfn step(double3 edge, double3);
-double4 __ovld __cnfn step(double4 edge, double4);
-double8 __ovld __cnfn step(double8 edge, double8);
-double16 __ovld __cnfn step(double16 edge, double16);
-double2 __ovld __cnfn step(double edge, double2);
-double3 __ovld __cnfn step(double edge, double3);
-double4 __ovld __cnfn step(double edge, double4);
-double8 __ovld __cnfn step(double edge, double8);
-double16 __ovld __cnfn step(double edge, double16);
+double __ovld __cnfn step(double, double);
+double2 __ovld __cnfn step(double2, double2);
+double3 __ovld __cnfn step(double3, double3);
+double4 __ovld __cnfn step(double4, double4);
+double8 __ovld __cnfn step(double8, double8);
+double16 __ovld __cnfn step(double16, double16);
+double2 __ovld __cnfn step(double, double2);
+double3 __ovld __cnfn step(double, double3);
+double4 __ovld __cnfn step(double, double4);
+double8 __ovld __cnfn step(double, double8);
+double16 __ovld __cnfn step(double, double16);
 #endif //cl_khr_fp64
 #ifdef cl_khr_fp16
-half __ovld __cnfn step(half edge, half);
-half2 __ovld __cnfn step(half2 edge, half2);
-half3 __ovld __cnfn step(half3 edge, half3);
-half4 __ovld __cnfn step(half4 edge, half4);
-half8 __ovld __cnfn step(half8 edge, half8);
-half16 __ovld __cnfn step(half16 edge, half16);
-half2 __ovld __cnfn step(half edge, half2);
-half3 __ovld __cnfn step(half edge, half3);
-half4 __ovld __cnfn step(half edge, half4);
-half8 __ovld __cnfn step(half edge, half8);
-half16 __ovld __cnfn step(half edge, half16);
+half __ovld __cnfn step(half, half);
+half2 __ovld __cnfn step(half2, half2);
+half3 __ovld __cnfn step(half3, half3);
+half4 __ovld __cnfn step(half4, half4);
+half8 __ovld __cnfn step(half8, half8);
+half16 __ovld __cnfn step(half16, half16);
+half2 __ovld __cnfn step(half, half2);
+half3 __ovld __cnfn step(half, half3);
+half4 __ovld __cnfn step(half, half4);
+half8 __ovld __cnfn step(half, half8);
+half16 __ovld __cnfn step(half, half16);
 #endif //cl_khr_fp16
 
 /**
@@ -10295,42 +10295,42 @@ half16 __ovld __cnfn step(half edge, half16);
  * Results are undefined if edge0 >= edge1 or if x,
  * edge0 or edge1 is a NaN.
  */
-float __ovld __cnfn smoothstep(float edge0, float edge1, float);
-float2 __ovld __cnfn smoothstep(float2 edge0, float2 edge1, float2);
-float3 __ovld __cnfn smoothstep(float3 edge0, float3 edge1, float3);
-float4 __ovld __cnfn smoothstep(float4 edge0, float4 edge1, float4);
-float8 __ovld __cnfn smoothstep(float8 edge0, float8 edge1, float8);
-float16 __ovld __cnfn smoothstep(float16 edge0, float16 edge1, float16);
-float2 __ovld __cnfn smoothstep(float edge0, float edge1, float2);
-float3 __ovld __cnfn smoothstep(float edge0, float edge1, float3);
-float4 __ovld __cnfn smoothstep(float edge0, float edge1, float4);
-float8 __ovld __cnfn smoothstep(float edge0, float edge1, float8);
-float16 __ovld __cnfn smoothstep(float edge0, float edge1, float16);
+float __ovld __cnfn smoothstep(float, float, float);
+float2 __ovld __cnfn smoothstep(float2, float2, float2);
+float3 __ovld __cnfn smoothstep(float3, float3, float3);
+float4 __ovld __cnfn smoothstep(float4, float4, float4);
+float8 __ovld __cnfn smoothstep(float8, float8, float8);
+float16 __ovld __cnfn smoothstep(float16, float16, float16);
+float2 __ovld __cnfn smoothstep(float, float, float2);
+float3 __ovld __cnfn smoothstep(float, float, float3);
+float4 __ovld __cnfn smoothstep(float, float, float4);
+float8 __ovld __cnfn smoothstep(float, float, float8);
+float16 __ovld __cnfn smoothstep(float, float, float16);
 #ifdef cl_khr_fp64
-double __ovld __cnfn smoothstep(double edge0, double edge1, double);
-double2 __ovld __cnfn smoothstep(double2 edge0, double2 edge1, double2);
-double3 __ovld __cnfn smoothstep(double3 edge0, double3 edge1, double3);
-double4 __ovld __cnfn smoothstep(double4 edge0, double4 edge1, double4);
-double8 __ovld __cnfn smoothstep(double8 edge0, double8 edge1, double8);
-double16 __ovld __cnfn smoothstep(double16 edge0, double16 edge1, double16);
-double2 __ovld __cnfn smoothstep(double edge0, double edge1, double2);
-double3 __ovld __cnfn smoothstep(double edge0, double edge1, double3);
-double4 __ovld __cnfn smoothstep(double edge0, double edge1, double4);
-double8 __ovld __cnfn smoothstep(double edge0, double edge1, double8);
-double16 __ovld __cnfn smoothstep(double edge0, double edge1, double16);
+double __ovld __cnfn smoothstep(double, double, double);
+double2 __ovld __cnfn smoothstep(double2, double2, double2);
+double3 __ovld __cnfn smoothstep(double3, double3, double3);
+double4 __ovld __cnfn smoothstep(double4, double4, double4);
+double8 __ovld __cnfn smoothstep(double8, double8, double8);
+double16 __ovld __cnfn smoothstep(double16, double16, double16);
+double2 __ovld __cnfn smoothstep(double, double, double2);
+double3 __ovld __cnfn smoothstep(double, double, double3);
+double4 __ovld __cnfn smoothstep(double, double, double4);
+double8 __ovld __cnfn smoothstep(double, double, double8);
+double16 __ovld __cnfn smoothstep(double, double, double16);
 #endif //cl_khr_fp64
 #ifdef cl_khr_fp16
-half __ovld __cnfn smoothstep(half edge0, half edge1, half);
-half2 __ovld __cnfn smoothstep(half2 edge0, half2 edge1, half2);
-half3 __ovld __cnfn smoothstep(half3 edge0, half3 edge1, half3);
-half4 __ovld __cnfn smoothstep(half4 edge0, half4 edge1, half4);
-half8 __ovld __cnfn smoothstep(half8 edge0, half8 edge1, half8);
-half16 __ovld __cnfn smoothstep(half16 edge0, half16 edge1, half16);
-half2 __ovld __cnfn smoothstep(half edge0, half edge1, half2);
-half3 __ovld __cnfn smoothstep(half edge0, half edge1, half3);
-half4 __ovld __cnfn smoothstep(half edge0, half edge1, half4);
-half8 __ovld __cnfn smoothstep(half edge0, half edge1, half8);
-half16 __ovld __cnfn smoothstep(half edge0, half edge1, half16);
+half __ovld __cnfn smoothstep(half, half, half);
+half2 __ovld __cnfn smoothstep(half2, half2, half2);
+half3 __ovld __cnfn smoothstep(half3, half3, half3);
+half4 __ovld __cnfn smoothstep(half4, half4, half4);
+half8 __ovld __cnfn smoothstep(half8, half8, half8);
+half16 __ovld __cnfn smoothstep(half16, half16, half16);
+half2 __ovld __cnfn smoothstep(half, half, half2);
+half3 __ovld __cnfn smoothstep(half, half, half3);
+half4 __ovld __cnfn smoothstep(half, half, half4);
+half8 __ovld __cnfn smoothstep(half, half, half8);
+half16 __ovld __cnfn smoothstep(half, half, half16);
 #endif //cl_khr_fp16
 
 /**
@@ -10366,56 +10366,56 @@ half16 __ovld __cnfn sign(half16);
  * Returns the cross product of p0.xyz and p1.xyz. The
  * w component of float4 result returned will be 0.0.
  */
-float4 __ovld __cnfn cross(float4 p0, float4 p1);
-float3 __ovld __cnfn cross(float3 p0, float3 p1);
+float4 __ovld __cnfn cross(float4, float4);
+float3 __ovld __cnfn cross(float3, float3);
 #ifdef cl_khr_fp64
-double4 __ovld __cnfn cross(double4 p0, double4 p1);
-double3 __ovld __cnfn cross(double3 p0, double3 p1);
+double4 __ovld __cnfn cross(double4, double4);
+double3 __ovld __cnfn cross(double3, double3);
 #endif //cl_khr_fp64
 #ifdef cl_khr_fp16
-half4 __ovld __cnfn cross(half4 p0, half4 p1);
-half3 __ovld __cnfn cross(half3 p0, half3 p1);
+half4 __ovld __cnfn cross(half4, half4);
+half3 __ovld __cnfn cross(half3, half3);
 #endif //cl_khr_fp16
 
 /**
  * Compute dot product.
  */
-float __ovld __cnfn dot(float p0, float p1);
-float __ovld __cnfn dot(float2 p0, float2 p1);
-float __ovld __cnfn dot(float3 p0, float3 p1);
-float __ovld __cnfn dot(float4 p0, float4 p1);
+float __ovld __cnfn dot(float, float);
+float __ovld __cnfn dot(float2, float2);
+float __ovld __cnfn dot(float3, float3);
+float __ovld __cnfn dot(float4, float4);
 #ifdef cl_khr_fp64
-double __ovld __cnfn dot(double p0, double p1);
-double __ovld __cnfn dot(double2 p0, double2 p1);
-double __ovld __cnfn dot(double3 p0, double3 p1);
-double __ovld __cnfn dot(double4 p0, double4 p1);
+double __ovld __cnfn dot(double, double);
+double __ovld __cnfn dot(double2, double2);
+double __ovld __cnfn dot(double3, double3);
+double __ovld __cnfn dot(double4, double4);
 #endif //cl_khr_fp64
 #ifdef cl_khr_fp16
-half __ovld __cnfn dot(half p0, half p1);
-half __ovld __cnfn dot(half2 p0, half2 p1);
-half __ovld __cnfn dot(half3 p0, half3 p1);
-half __ovld __cnfn dot(half4 p0, half4 p1);
+half __ovld __cnfn dot(half, half);
+half __ovld __cnfn dot(half2, half2);
+half __ovld __cnfn dot(half3, half3);
+half __ovld __cnfn dot(half4, half4);
 #endif //cl_khr_fp16
 
 /**
  * Returns the distance between p0 and p1. This is
  * calculated as length(p0 - p1).
  */
-float __ovld __cnfn distance(float p0, float p1);
-float __ovld __cnfn distance(float2 p0, float2 p1);
-float __ovld __cnfn distance(float3 p0, float3 p1);
-float __ovld __cnfn distance(float4 p0, float4 p1);
+float __ovld __cnfn distance(float, float);
+float __ovld __cnfn distance(float2, float2);
+float __ovld __cnfn distance(float3, float3);
+float __ovld __cnfn distance(float4, float4);
 #ifdef cl_khr_fp64
-double __ovld __cnfn distance(double p0, double p1);
-double __ovld __cnfn distance(double2 p0, double2 p1);
-double __ovld __cnfn distance(double3 p0, double3 p1);
-double __ovld __cnfn distance(double4 p0, double4 p1);
+double __ovld __cnfn distance(double, double);
+double __ovld __cnfn distance(double2, double2);
+double __ovld __cnfn distance(double3, double3);
+double __ovld __cnfn distance(double4, double4);
 #endif //cl_khr_fp64
 #ifdef cl_khr_fp16
-half __ovld __cnfn distance(half p0, half p1);
-half __ovld __cnfn distance(half2 p0, half2 p1);
-half __ovld __cnfn distance(half3 p0, half3 p1);
-half __ovld __cnfn distance(half4 p0, half4 p1);
+half __ovld __cnfn distance(half, half);
+half __ovld __cnfn distance(half2, half2);
+half __ovld __cnfn distance(half3, half3);
+half __ovld __cnfn distance(half4, half4);
 #endif //cl_khr_fp16
 
 /**
@@ -10463,15 +10463,15 @@ half4 __ovld __cnfn normalize(half4);
 /**
  * Returns fast_length(p0 - p1).
  */
-float __ovld __cnfn fast_distance(float p0, float p1);
-float __ovld __cnfn fast_distance(float2 p0, float2 p1);
-float __ovld __cnfn fast_distance(float3 p0, float3 p1);
-float __ovld __cnfn fast_distance(float4 p0, float4 p1);
+float __ovld __cnfn fast_distance(float, float);
+float __ovld __cnfn fast_distance(float2, float2);
+float __ovld __cnfn fast_distance(float3, float3);
+float __ovld __cnfn fast_distance(float4, float4);
 #ifdef cl_khr_fp16
-half __ovld __cnfn fast_distance(half p0, half p1);
-half __ovld __cnfn fast_distance(half2 p0, half2 p1);
-half __ovld __cnfn fast_distance(half3 p0, half3 p1);
-half __ovld __cnfn fast_distance(half4 p0, half4 p1);
+half __ovld __cnfn fast_distance(half, half);
+half __ovld __cnfn fast_distance(half2, half2);
+half __ovld __cnfn fast_distance(half3, half3);
+half __ovld __cnfn fast_distance(half4, half4);
 #endif //cl_khr_fp16
 
 /**
@@ -14653,452 +14653,452 @@ void __ovld atomic_flag_clear_explicit(volatile __local atomic_flag *, memory_or
  * short8 b;
  * b = shuffle(a, mask); <- not valid
  */
-char2 __ovld __cnfn shuffle(char2, uchar2 mask);
-char2 __ovld __cnfn shuffle(char4, uchar2 mask);
-char2 __ovld __cnfn shuffle(char8, uchar2 mask);
-char2 __ovld __cnfn shuffle(char16, uchar2 mask);
+char2 __ovld __cnfn shuffle(char2, uchar2);
+char2 __ovld __cnfn shuffle(char4, uchar2);
+char2 __ovld __cnfn shuffle(char8, uchar2);
+char2 __ovld __cnfn shuffle(char16, uchar2);
 
-uchar2 __ovld __cnfn shuffle(uchar2, uchar2 mask);
-uchar2 __ovld __cnfn shuffle(uchar4, uchar2 mask);
-uchar2 __ovld __cnfn shuffle(uchar8, uchar2 mask);
-uchar2 __ovld __cnfn shuffle(uchar16, uchar2 mask);
+uchar2 __ovld __cnfn shuffle(uchar2, uchar2);
+uchar2 __ovld __cnfn shuffle(uchar4, uchar2);
+uchar2 __ovld __cnfn shuffle(uchar8, uchar2);
+uchar2 __ovld __cnfn shuffle(uchar16, uchar2);
 
-short2 __ovld __cnfn shuffle(short2, ushort2 mask);
-short2 __ovld __cnfn shuffle(short4, ushort2 mask);
-short2 __ovld __cnfn shuffle(short8, ushort2 mask);
-short2 __ovld __cnfn shuffle(short16, ushort2 mask);
+short2 __ovld __cnfn shuffle(short2, ushort2);
+short2 __ovld __cnfn shuffle(short4, ushort2);
+short2 __ovld __cnfn shuffle(short8, ushort2);
+short2 __ovld __cnfn shuffle(short16, ushort2);
 
-ushort2 __ovld __cnfn shuffle(ushort2, ushort2 mask);
-ushort2 __ovld __cnfn shuffle(ushort4, ushort2 mask);
-ushort2 __ovld __cnfn shuffle(ushort8, ushort2 mask);
-ushort2 __ovld __cnfn shuffle(ushort16, ushort2 mask);
+ushort2 __ovld __cnfn shuffle(ushort2, ushort2);
+ushort2 __ovld __cnfn shuffle(ushort4, ushort2);
+ushort2 __ovld __cnfn shuffle(ushort8, ushort2);
+ushort2 __ovld __cnfn shuffle(ushort16, ushort2);
 
-int2 __ovld __cnfn shuffle(int2, uint2 mask);
-int2 __ovld __cnfn shuffle(int4, uint2 mask);
-int2 __ovld __cnfn shuffle(int8, uint2 mask);
-int2 __ovld __cnfn shuffle(int16, uint2 mask);
+int2 __ovld __cnfn shuffle(int2, uint2);
+int2 __ovld __cnfn shuffle(int4, uint2);
+int2 __ovld __cnfn shuffle(int8, uint2);
+int2 __ovld __cnfn shuffle(int16, uint2);
 
-uint2 __ovld __cnfn shuffle(uint2, uint2 mask);
-uint2 __ovld __cnfn shuffle(uint4, uint2 mask);
-uint2 __ovld __cnfn shuffle(uint8, uint2 mask);
-uint2 __ovld __cnfn shuffle(uint16, uint2 mask);
+uint2 __ovld __cnfn shuffle(uint2, uint2);
+uint2 __ovld __cnfn shuffle(uint4, uint2);
+uint2 __ovld __cnfn shuffle(uint8, uint2);
+uint2 __ovld __cnfn shuffle(uint16, uint2);
 
-long2 __ovld __cnfn shuffle(long2, ulong2 mask);
-long2 __ovld __cnfn shuffle(long4, ulong2 mask);
-long2 __ovld __cnfn shuffle(long8, ulong2 mask);
-long2 __ovld __cnfn shuffle(long16, ulong2 mask);
+long2 __ovld __cnfn shuffle(long2, ulong2);
+long2 __ovld __cnfn shuffle(long4, ulong2);
+long2 __ovld __cnfn shuffle(long8, ulong2);
+long2 __ovld __cnfn shuffle(long16, ulong2);
 
-ulong2 __ovld __cnfn shuffle(ulong2, ulong2 mask);
-ulong2 __ovld __cnfn shuffle(ulong4, ulong2 mask);
-ulong2 __ovld __cnfn shuffle(ulong8, ulong2 mask);
-ulong2 __ovld __cnfn shuffle(ulong16, ulong2 mask);
+ulong2 __ovld __cnfn shuffle(ulong2, ulong2);
+ulong2 __ovld __cnfn shuffle(ulong4, ulong2);
+ulong2 __ovld __cnfn shuffle(ulong8, ulong2);
+ulong2 __ovld __cnfn shuffle(ulong16, ulong2);
 
-float2 __ovld __cnfn shuffle(float2, uint2 mask);
-float2 __ovld __cnfn shuffle(float4, uint2 mask);
-float2 __ovld __cnfn shuffle(float8, uint2 mask);
-float2 __ovld __cnfn shuffle(float16, uint2 mask);
+float2 __ovld __cnfn shuffle(float2, uint2);
+float2 __ovld __cnfn shuffle(float4, uint2);
+float2 __ovld __cnfn shuffle(float8, uint2);
+float2 __ovld __cnfn shuffle(float16, uint2);
 
-char4 __ovld __cnfn shuffle(char2, uchar4 mask);
-char4 __ovld __cnfn shuffle(char4, uchar4 mask);
-char4 __ovld __cnfn shuffle(char8, uchar4 mask);
-char4 __ovld __cnfn shuffle(char16, uchar4 mask);
+char4 __ovld __cnfn shuffle(char2, uchar4);
+char4 __ovld __cnfn shuffle(char4, uchar4);
+char4 __ovld __cnfn shuffle(char8, uchar4);
+char4 __ovld __cnfn shuffle(char16, uchar4);
 
-uchar4 __ovld __cnfn shuffle(uchar2, uchar4 mask);
-uchar4 __ovld __cnfn shuffle(uchar4, uchar4 mask);
-uchar4 __ovld __cnfn shuffle(uchar8, uchar4 mask);
-uchar4 __ovld __cnfn shuffle(uchar16, uchar4 mask);
+uchar4 __ovld __cnfn shuffle(uchar2, uchar4);
+uchar4 __ovld __cnfn shuffle(uchar4, uchar4);
+uchar4 __ovld __cnfn shuffle(uchar8, uchar4);
+uchar4 __ovld __cnfn shuffle(uchar16, uchar4);
 
-short4 __ovld __cnfn shuffle(short2, ushort4 mask);
-short4 __ovld __cnfn shuffle(short4, ushort4 mask);
-short4 __ovld __cnfn shuffle(short8, ushort4 mask);
-short4 __ovld __cnfn shuffle(short16, ushort4 mask);
+short4 __ovld __cnfn shuffle(short2, ushort4);
+short4 __ovld __cnfn shuffle(short4, ushort4);
+short4 __ovld __cnfn shuffle(short8, ushort4);
+short4 __ovld __cnfn shuffle(short16, ushort4);
 
-ushort4 __ovld __cnfn shuffle(ushort2, ushort4 mask);
-ushort4 __ovld __cnfn shuffle(ushort4, ushort4 mask);
-ushort4 __ovld __cnfn shuffle(ushort8, ushort4 mask);
-ushort4 __ovld __cnfn shuffle(ushort16, ushort4 mask);
+ushort4 __ovld __cnfn shuffle(ushort2, ushort4);
+ushort4 __ovld __cnfn shuffle(ushort4, ushort4);
+ushort4 __ovld __cnfn shuffle(ushort8, ushort4);
+ushort4 __ovld __cnfn shuffle(ushort16, ushort4);
 
-int4 __ovld __cnfn shuffle(int2, uint4 mask);
-int4 __ovld __cnfn shuffle(int4, uint4 mask);
-int4 __ovld __cnfn shuffle(int8, uint4 mask);
-int4 __ovld __cnfn shuffle(int16, uint4 mask);
+int4 __ovld __cnfn shuffle(int2, uint4);
+int4 __ovld __cnfn shuffle(int4, uint4);
+int4 __ovld __cnfn shuffle(int8, uint4);
+int4 __ovld __cnfn shuffle(int16, uint4);
 
-uint4 __ovld __cnfn shuffle(uint2, uint4 mask);
-uint4 __ovld __cnfn shuffle(uint4, uint4 mask);
-uint4 __ovld __cnfn shuffle(uint8, uint4 mask);
-uint4 __ovld __cnfn shuffle(uint16, uint4 mask);
+uint4 __ovld __cnfn shuffle(uint2, uint4);
+uint4 __ovld __cnfn shuffle(uint4, uint4);
+uint4 __ovld __cnfn shuffle(uint8, uint4);
+uint4 __ovld __cnfn shuffle(uint16, uint4);
 
-long4 __ovld __cnfn shuffle(long2, ulong4 mask);
-long4 __ovld __cnfn shuffle(long4, ulong4 mask);
-long4 __ovld __cnfn shuffle(long8, ulong4 mask);
-long4 __ovld __cnfn shuffle(long16, ulong4 mask);
+long4 __ovld __cnfn shuffle(long2, ulong4);
+long4 __ovld __cnfn shuffle(long4, ulong4);
+long4 __ovld __cnfn shuffle(long8, ulong4);
+long4 __ovld __cnfn shuffle(long16, ulong4);
 
-ulong4 __ovld __cnfn shuffle(ulong2, ulong4 mask);
-ulong4 __ovld __cnfn shuffle(ulong4, ulong4 mask);
-ulong4 __ovld __cnfn shuffle(ulong8, ulong4 mask);
-ulong4 __ovld __cnfn shuffle(ulong16, ulong4 mask);
+ulong4 __ovld __cnfn shuffle(ulong2, ulong4);
+ulong4 __ovld __cnfn shuffle(ulong4, ulong4);
+ulong4 __ovld __cnfn shuffle(ulong8, ulong4);
+ulong4 __ovld __cnfn shuffle(ulong16, ulong4);
 
-float4 __ovld __cnfn shuffle(float2, uint4 mask);
-float4 __ovld __cnfn shuffle(float4, uint4 mask);
-float4 __ovld __cnfn shuffle(float8, uint4 mask);
-float4 __ovld __cnfn shuffle(float16, uint4 mask);
+float4 __ovld __cnfn shuffle(float2, uint4);
+float4 __ovld __cnfn shuffle(float4, uint4);
+float4 __ovld __cnfn shuffle(float8, uint4);
+float4 __ovld __cnfn shuffle(float16, uint4);
 
-char8 __ovld __cnfn shuffle(char2, uchar8 mask);
-char8 __ovld __cnfn shuffle(char4, uchar8 mask);
-char8 __ovld __cnfn shuffle(char8, uchar8 mask);
-char8 __ovld __cnfn shuffle(char16, uchar8 mask);
+char8 __ovld __cnfn shuffle(char2, uchar8);
+char8 __ovld __cnfn shuffle(char4, uchar8);
+char8 __ovld __cnfn shuffle(char8, uchar8);
+char8 __ovld __cnfn shuffle(char16, uchar8);
 
-uchar8 __ovld __cnfn shuffle(uchar2, uchar8 mask);
-uchar8 __ovld __cnfn shuffle(uchar4, uchar8 mask);
-uchar8 __ovld __cnfn shuffle(uchar8, uchar8 mask);
-uchar8 __ovld __cnfn shuffle(uchar16, uchar8 mask);
+uchar8 __ovld __cnfn shuffle(uchar2, uchar8);
+uchar8 __ovld __cnfn shuffle(uchar4, uchar8);
+uchar8 __ovld __cnfn shuffle(uchar8, uchar8);
+uchar8 __ovld __cnfn shuffle(uchar16, uchar8);
 
-short8 __ovld __cnfn shuffle(short2, ushort8 mask);
-short8 __ovld __cnfn shuffle(short4, ushort8 mask);
-short8 __ovld __cnfn shuffle(short8, ushort8 mask);
-short8 __ovld __cnfn shuffle(short16, ushort8 mask);
+short8 __ovld __cnfn shuffle(short2, ushort8);
+short8 __ovld __cnfn shuffle(short4, ushort8);
+short8 __ovld __cnfn shuffle(short8, ushort8);
+short8 __ovld __cnfn shuffle(short16, ushort8);
 
-ushort8 __ovld __cnfn shuffle(ushort2, ushort8 mask);
-ushort8 __ovld __cnfn shuffle(ushort4, ushort8 mask);
-ushort8 __ovld __cnfn shuffle(ushort8, ushort8 mask);
-ushort8 __ovld __cnfn shuffle(ushort16, ushort8 mask);
+ushort8 __ovld __cnfn shuffle(ushort2, ushort8);
+ushort8 __ovld __cnfn shuffle(ushort4, ushort8);
+ushort8 __ovld __cnfn shuffle(ushort8, ushort8);
+ushort8 __ovld __cnfn shuffle(ushort16, ushort8);
 
-int8 __ovld __cnfn shuffle(int2, uint8 mask);
-int8 __ovld __cnfn shuffle(int4, uint8 mask);
-int8 __ovld __cnfn shuffle(int8, uint8 mask);
-int8 __ovld __cnfn shuffle(int16, uint8 mask);
+int8 __ovld __cnfn shuffle(int2, uint8);
+int8 __ovld __cnfn shuffle(int4, uint8);
+int8 __ovld __cnfn shuffle(int8, uint8);
+int8 __ovld __cnfn shuffle(int16, uint8);
 
-uint8 __ovld __cnfn shuffle(uint2, uint8 mask);
-uint8 __ovld __cnfn shuffle(uint4, uint8 mask);
-uint8 __ovld __cnfn shuffle(uint8, uint8 mask);
-uint8 __ovld __cnfn shuffle(uint16, uint8 mask);
+uint8 __ovld __cnfn shuffle(uint2, uint8);
+uint8 __ovld __cnfn shuffle(uint4, uint8);
+uint8 __ovld __cnfn shuffle(uint8, uint8);
+uint8 __ovld __cnfn shuffle(uint16, uint8);
 
-long8 __ovld __cnfn shuffle(long2, ulong8 mask);
-long8 __ovld __cnfn shuffle(long4, ulong8 mask);
-long8 __ovld __cnfn shuffle(long8, ulong8 mask);
-long8 __ovld __cnfn shuffle(long16, ulong8 mask);
+long8 __ovld __cnfn shuffle(long2, ulong8);
+long8 __ovld __cnfn shuffle(long4, ulong8);
+long8 __ovld __cnfn shuffle(long8, ulong8);
+long8 __ovld __cnfn shuffle(long16, ulong8);
 
-ulong8 __ovld __cnfn shuffle(ulong2, ulong8 mask);
-ulong8 __ovld __cnfn shuffle(ulong4, ulong8 mask);
-ulong8 __ovld __cnfn shuffle(ulong8, ulong8 mask);
-ulong8 __ovld __cnfn shuffle(ulong16, ulong8 mask);
+ulong8 __ovld __cnfn shuffle(ulong2, ulong8);
+ulong8 __ovld __cnfn shuffle(ulong4, ulong8);
+ulong8 __ovld __cnfn shuffle(ulong8, ulong8);
+ulong8 __ovld __cnfn shuffle(ulong16, ulong8);
 
-float8 __ovld __cnfn shuffle(float2, uint8 mask);
-float8 __ovld __cnfn shuffle(float4, uint8 mask);
-float8 __ovld __cnfn shuffle(float8, uint8 mask);
-float8 __ovld __cnfn shuffle(float16, uint8 mask);
+float8 __ovld __cnfn shuffle(float2, uint8);
+float8 __ovld __cnfn shuffle(float4, uint8);
+float8 __ovld __cnfn shuffle(float8, uint8);
+float8 __ovld __cnfn shuffle(float16, uint8);
 
-char16 __ovld __cnfn shuffle(char2, uchar16 mask);
-char16 __ovld __cnfn shuffle(char4, uchar16 mask);
-char16 __ovld __cnfn shuffle(char8, uchar16 mask);
-char16 __ovld __cnfn shuffle(char16, uchar16 mask);
+char16 __ovld __cnfn shuffle(char2, uchar16);
+char16 __ovld __cnfn shuffle(char4, uchar16);
+char16 __ovld __cnfn shuffle(char8, uchar16);
+char16 __ovld __cnfn shuffle(char16, uchar16);
 
-uchar16 __ovld __cnfn shuffle(uchar2, uchar16 mask);
-uchar16 __ovld __cnfn shuffle(uchar4, uchar16 mask);
-uchar16 __ovld __cnfn shuffle(uchar8, uchar16 mask);
-uchar16 __ovld __cnfn shuffle(uchar16, uchar16 mask);
+uchar16 __ovld __cnfn shuffle(uchar2, uchar16);
+uchar16 __ovld __cnfn shuffle(uchar4, uchar16);
+uchar16 __ovld __cnfn shuffle(uchar8, uchar16);
+uchar16 __ovld __cnfn shuffle(uchar16, uchar16);
 
-short16 __ovld __cnfn shuffle(short2, ushort16 mask);
-short16 __ovld __cnfn shuffle(short4, ushort16 mask);
-short16 __ovld __cnfn shuffle(short8, ushort16 mask);
-short16 __ovld __cnfn shuffle(short16, ushort16 mask);
+short16 __ovld __cnfn shuffle(short2, ushort16);
+short16 __ovld __cnfn shuffle(short4, ushort16);
+short16 __ovld __cnfn shuffle(short8, ushort16);
+short16 __ovld __cnfn shuffle(short16, ushort16);
 
-ushort16 __ovld __cnfn shuffle(ushort2, ushort16 mask);
-ushort16 __ovld __cnfn shuffle(ushort4, ushort16 mask);
-ushort16 __ovld __cnfn shuffle(ushort8, ushort16 mask);
-ushort16 __ovld __cnfn shuffle(ushort16, ushort16 mask);
+ushort16 __ovld __cnfn shuffle(ushort2, ushort16);
+ushort16 __ovld __cnfn shuffle(ushort4, ushort16);
+ushort16 __ovld __cnfn shuffle(ushort8, ushort16);
+ushort16 __ovld __cnfn shuffle(ushort16, ushort16);
 
-int16 __ovld __cnfn shuffle(int2, uint16 mask);
-int16 __ovld __cnfn shuffle(int4, uint16 mask);
-int16 __ovld __cnfn shuffle(int8, uint16 mask);
-int16 __ovld __cnfn shuffle(int16, uint16 mask);
+int16 __ovld __cnfn shuffle(int2, uint16);
+int16 __ovld __cnfn shuffle(int4, uint16);
+int16 __ovld __cnfn shuffle(int8, uint16);
+int16 __ovld __cnfn shuffle(int16, uint16);
 
-uint16 __ovld __cnfn shuffle(uint2, uint16 mask);
-uint16 __ovld __cnfn shuffle(uint4, uint16 mask);
-uint16 __ovld __cnfn shuffle(uint8, uint16 mask);
-uint16 __ovld __cnfn shuffle(uint16, uint16 mask);
+uint16 __ovld __cnfn shuffle(uint2, uint16);
+uint16 __ovld __cnfn shuffle(uint4, uint16);
+uint16 __ovld __cnfn shuffle(uint8, uint16);
+uint16 __ovld __cnfn shuffle(uint16, uint16);
 
-long16 __ovld __cnfn shuffle(long2, ulong16 mask);
-long16 __ovld __cnfn shuffle(long4, ulong16 mask);
-long16 __ovld __cnfn shuffle(long8, ulong16 mask);
-long16 __ovld __cnfn shuffle(long16, ulong16 mask);
+long16 __ovld __cnfn shuffle(long2, ulong16);
+long16 __ovld __cnfn shuffle(long4, ulong16);
+long16 __ovld __cnfn shuffle(long8, ulong16);
+long16 __ovld __cnfn shuffle(long16, ulong16);
 
-ulong16 __ovld __cnfn shuffle(ulong2, ulong16 mask);
-ulong16 __ovld __cnfn shuffle(ulong4, ulong16 mask);
-ulong16 __ovld __cnfn shuffle(ulong8, ulong16 mask);
-ulong16 __ovld __cnfn shuffle(ulong16, ulong16 mask);
+ulong16 __ovld __cnfn shuffle(ulong2, ulong16);
+ulong16 __ovld __cnfn shuffle(ulong4, ulong16);
+ulong16 __ovld __cnfn shuffle(ulong8, ulong16);
+ulong16 __ovld __cnfn shuffle(ulong16, ulong16);
 
-float16 __ovld __cnfn shuffle(float2, uint16 mask);
-float16 __ovld __cnfn shuffle(float4, uint16 mask);
-float16 __ovld __cnfn shuffle(float8, uint16 mask);
-float16 __ovld __cnfn shuffle(float16, uint16 mask);
+float16 __ovld __cnfn shuffle(float2, uint16);
+float16 __ovld __cnfn shuffle(float4, uint16);
+float16 __ovld __cnfn shuffle(float8, uint16);
+float16 __ovld __cnfn shuffle(float16, uint16);
 
 #ifdef cl_khr_fp64
-double2 __ovld __cnfn shuffle(double2, ulong2 mask);
-double2 __ovld __cnfn shuffle(double4, ulong2 mask);
-double2 __ovld __cnfn shuffle(double8, ulong2 mask);
-double2 __ovld __cnfn shuffle(double16, ulong2 mask);
+double2 __ovld __cnfn shuffle(double2, ulong2);
+double2 __ovld __cnfn shuffle(double4, ulong2);
+double2 __ovld __cnfn shuffle(double8, ulong2);
+double2 __ovld __cnfn shuffle(double16, ulong2);
 
-double4 __ovld __cnfn shuffle(double2, ulong4 mask);
-double4 __ovld __cnfn shuffle(double4, ulong4 mask);
-double4 __ovld __cnfn shuffle(double8, ulong4 mask);
-double4 __ovld __cnfn shuffle(double16, ulong4 mask);
+double4 __ovld __cnfn shuffle(double2, ulong4);
+double4 __ovld __cnfn shuffle(double4, ulong4);
+double4 __ovld __cnfn shuffle(double8, ulong4);
+double4 __ovld __cnfn shuffle(double16, ulong4);
 
-double8 __ovld __cnfn shuffle(double2, ulong8 mask);
-double8 __ovld __cnfn shuffle(double4, ulong8 mask);
-double8 __ovld __cnfn shuffle(double8, ulong8 mask);
-double8 __ovld __cnfn shuffle(double16, ulong8 mask);
+double8 __ovld __cnfn shuffle(double2, ulong8);
+double8 __ovld __cnfn shuffle(double4, ulong8);
+double8 __ovld __cnfn shuffle(double8, ulong8);
+double8 __ovld __cnfn shuffle(double16, ulong8);
 
-double16 __ovld __cnfn shuffle(double2, ulong16 mask);
-double16 __ovld __cnfn shuffle(double4, ulong16 mask);
-double16 __ovld __cnfn shuffle(double8, ulong16 mask);
-double16 __ovld __cnfn shuffle(double16, ulong16 mask);
+double16 __ovld __cnfn shuffle(double2, ulong16);
+double16 __ovld __cnfn shuffle(double4, ulong16);
+double16 __ovld __cnfn shuffle(double8, ulong16);
+double16 __ovld __cnfn shuffle(double16, ulong16);
 #endif //cl_khr_fp64
 
 #ifdef cl_khr_fp16
-half2 __ovld __cnfn shuffle(half2, ushort2 mask);
-half2 __ovld __cnfn shuffle(half4, ushort2 mask);
-half2 __ovld __cnfn shuffle(half8, ushort2 mask);
-half2 __ovld __cnfn shuffle(half16, ushort2 mask);
+half2 __ovld __cnfn shuffle(half2, ushort2);
+half2 __ovld __cnfn shuffle(half4, ushort2);
+half2 __ovld __cnfn shuffle(half8, ushort2);
+half2 __ovld __cnfn shuffle(half16, ushort2);
 
-half4 __ovld __cnfn shuffle(half2, ushort4 mask);
-half4 __ovld __cnfn shuffle(half4, ushort4 mask);
-half4 __ovld __cnfn shuffle(half8, ushort4 mask);
-half4 __ovld __cnfn shuffle(half16, ushort4 mask);
+half4 __ovld __cnfn shuffle(half2, ushort4);
+half4 __ovld __cnfn shuffle(half4, ushort4);
+half4 __ovld __cnfn shuffle(half8, ushort4);
+half4 __ovld __cnfn shuffle(half16, ushort4);
 
-half8 __ovld __cnfn shuffle(half2, ushort8 mask);
-half8 __ovld __cnfn shuffle(half4, ushort8 mask);
-half8 __ovld __cnfn shuffle(half8, ushort8 mask);
-half8 __ovld __cnfn shuffle(half16, ushort8 mask);
+half8 __ovld __cnfn shuffle(half2, ushort8);
+half8 __ovld __cnfn shuffle(half4, ushort8);
+half8 __ovld __cnfn shuffle(half8, ushort8);
+half8 __ovld __cnfn shuffle(half16, ushort8);
 
-half16 __ovld __cnfn shuffle(half2, ushort16 mask);
-half16 __ovld __cnfn shuffle(half4, ushort16 mask);
-half16 __ovld __cnfn shuffle(half8, ushort16 mask);
-half16 __ovld __cnfn shuffle(half16, ushort16 mask);
+half16 __ovld __cnfn shuffle(half2, ushort16);
+half16 __ovld __cnfn shuffle(half4, ushort16);
+half16 __ovld __cnfn shuffle(half8, ushort16);
+half16 __ovld __cnfn shuffle(half16, ushort16);
 #endif //cl_khr_fp16
 
-char2 __ovld __cnfn shuffle2(char2, char2, uchar2 mask);
-char2 __ovld __cnfn shuffle2(char4, char4, uchar2 mask);
-char2 __ovld __cnfn shuffle2(char8, char8, uchar2 mask);
-char2 __ovld __cnfn shuffle2(char16, char16, uchar2 mask);
+char2 __ovld __cnfn shuffle2(char2, char2, uchar2);
+char2 __ovld __cnfn shuffle2(char4, char4, uchar2);
+char2 __ovld __cnfn shuffle2(char8, char8, uchar2);
+char2 __ovld __cnfn shuffle2(char16, char16, uchar2);
 
-uchar2 __ovld __cnfn shuffle2(uchar2, uchar2, uchar2 mask);
-uchar2 __ovld __cnfn shuffle2(uchar4, uchar4, uchar2 mask);
-uchar2 __ovld __cnfn shuffle2(uchar8, uchar8, uchar2 mask);
-uchar2 __ovld __cnfn shuffle2(uchar16, uchar16, uchar2 mask);
+uchar2 __ovld __cnfn shuffle2(uchar2, uchar2, uchar2);
+uchar2 __ovld __cnfn shuffle2(uchar4, uchar4, uchar2);
+uchar2 __ovld __cnfn shuffle2(uchar8, uchar8, uchar2);
+uchar2 __ovld __cnfn shuffle2(uchar16, uchar16, uchar2);
 
-short2 __ovld __cnfn shuffle2(short2, short2, ushort2 mask);
-short2 __ovld __cnfn shuffle2(short4, short4, ushort2 mask);
-short2 __ovld __cnfn shuffle2(short8, short8, ushort2 mask);
-short2 __ovld __cnfn shuffle2(short16, short16, ushort2 mask);
+short2 __ovld __cnfn shuffle2(short2, short2, ushort2);
+short2 __ovld __cnfn shuffle2(short4, short4, ushort2);
+short2 __ovld __cnfn shuffle2(short8, short8, ushort2);
+short2 __ovld __cnfn shuffle2(short16, short16, ushort2);
 
-ushort2 __ovld __cnfn shuffle2(ushort2, ushort2, ushort2 mask);
-ushort2 __ovld __cnfn shuffle2(ushort4, ushort4, ushort2 mask);
-ushort2 __ovld __cnfn shuffle2(ushort8, ushort8, ushort2 mask);
-ushort2 __ovld __cnfn shuffle2(ushort16, ushort16, ushort2 mask);
+ushort2 __ovld __cnfn shuffle2(ushort2, ushort2, ushort2);
+ushort2 __ovld __cnfn shuffle2(ushort4, ushort4, ushort2);
+ushort2 __ovld __cnfn shuffle2(ushort8, ushort8, ushort2);
+ushort2 __ovld __cnfn shuffle2(ushort16, ushort16, ushort2);
 
-int2 __ovld __cnfn shuffle2(int2, int2, uint2 mask);
-int2 __ovld __cnfn shuffle2(int4, int4, uint2 mask);
-int2 __ovld __cnfn shuffle2(int8, int8, uint2 mask);
-int2 __ovld __cnfn shuffle2(int16, int16, uint2 mask);
+int2 __ovld __cnfn shuffle2(int2, int2, uint2);
+int2 __ovld __cnfn shuffle2(int4, int4, uint2);
+int2 __ovld __cnfn shuffle2(int8, int8, uint2);
+int2 __ovld __cnfn shuffle2(int16, int16, uint2);
 
-uint2 __ovld __cnfn shuffle2(uint2, uint2, uint2 mask);
-uint2 __ovld __cnfn shuffle2(uint4, uint4, uint2 mask);
-uint2 __ovld __cnfn shuffle2(uint8, uint8, uint2 mask);
-uint2 __ovld __cnfn shuffle2(uint16, uint16, uint2 mask);
+uint2 __ovld __cnfn shuffle2(uint2, uint2, uint2);
+uint2 __ovld __cnfn shuffle2(uint4, uint4, uint2);
+uint2 __ovld __cnfn shuffle2(uint8, uint8, uint2);
+uint2 __ovld __cnfn shuffle2(uint16, uint16, uint2);
 
-long2 __ovld __cnfn shuffle2(long2, long2, ulong2 mask);
-long2 __ovld __cnfn shuffle2(long4, long4, ulong2 mask);
-long2 __ovld __cnfn shuffle2(long8, long8, ulong2 mask);
-long2 __ovld __cnfn shuffle2(long16, long16, ulong2 mask);
+long2 __ovld __cnfn shuffle2(long2, long2, ulong2);
+long2 __ovld __cnfn shuffle2(long4, long4, ulong2);
+long2 __ovld __cnfn shuffle2(long8, long8, ulong2);
+long2 __ovld __cnfn shuffle2(long16, long16, ulong2);
 
-ulong2 __ovld __cnfn shuffle2(ulong2, ulong2, ulong2 mask);
-ulong2 __ovld __cnfn shuffle2(ulong4, ulong4, ulong2 mask);
-ulong2 __ovld __cnfn shuffle2(ulong8, ulong8, ulong2 mask);
-ulong2 __ovld __cnfn shuffle2(ulong16, ulong16, ulong2 mask);
+ulong2 __ovld __cnfn shuffle2(ulong2, ulong2, ulong2);
+ulong2 __ovld __cnfn shuffle2(ulong4, ulong4, ulong2);
+ulong2 __ovld __cnfn shuffle2(ulong8, ulong8, ulong2);
+ulong2 __ovld __cnfn shuffle2(ulong16, ulong16, ulong2);
 
-float2 __ovld __cnfn shuffle2(float2, float2, uint2 mask);
-float2 __ovld __cnfn shuffle2(float4, float4, uint2 mask);
-float2 __ovld __cnfn shuffle2(float8, float8, uint2 mask);
-float2 __ovld __cnfn shuffle2(float16, float16, uint2 mask);
+float2 __ovld __cnfn shuffle2(float2, float2, uint2);
+float2 __ovld __cnfn shuffle2(float4, float4, uint2);
+float2 __ovld __cnfn shuffle2(float8, float8, uint2);
+float2 __ovld __cnfn shuffle2(float16, float16, uint2);
 
-char4 __ovld __cnfn shuffle2(char2, char2, uchar4 mask);
-char4 __ovld __cnfn shuffle2(char4, char4, uchar4 mask);
-char4 __ovld __cnfn shuffle2(char8, char8, uchar4 mask);
-char4 __ovld __cnfn shuffle2(char16, char16, uchar4 mask);
+char4 __ovld __cnfn shuffle2(char2, char2, uchar4);
+char4 __ovld __cnfn shuffle2(char4, char4, uchar4);
+char4 __ovld __cnfn shuffle2(char8, char8, uchar4);
+char4 __ovld __cnfn shuffle2(char16, char16, uchar4);
 
-uchar4 __ovld __cnfn shuffle2(uchar2, uchar2, uchar4 mask);
-uchar4 __ovld __cnfn shuffle2(uchar4, uchar4, uchar4 mask);
-uchar4 __ovld __cnfn shuffle2(uchar8, uchar8, uchar4 mask);
-uchar4 __ovld __cnfn shuffle2(uchar16, uchar16, uchar4 mask);
+uchar4 __ovld __cnfn shuffle2(uchar2, uchar2, uchar4);
+uchar4 __ovld __cnfn shuffle2(uchar4, uchar4, uchar4);
+uchar4 __ovld __cnfn shuffle2(uchar8, uchar8, uchar4);
+uchar4 __ovld __cnfn shuffle2(uchar16, uchar16, uchar4);
 
-short4 __ovld __cnfn shuffle2(short2, short2, ushort4 mask);
-short4 __ovld __cnfn shuffle2(short4, short4, ushort4 mask);
-short4 __ovld __cnfn shuffle2(short8, short8, ushort4 mask);
-short4 __ovld __cnfn shuffle2(short16, short16, ushort4 mask);
+short4 __ovld __cnfn shuffle2(short2, short2, ushort4);
+short4 __ovld __cnfn shuffle2(short4, short4, ushort4);
+short4 __ovld __cnfn shuffle2(short8, short8, ushort4);
+short4 __ovld __cnfn shuffle2(short16, short16, ushort4);
 
-ushort4 __ovld __cnfn shuffle2(ushort2, ushort2, ushort4 mask);
-ushort4 __ovld __cnfn shuffle2(ushort4, ushort4, ushort4 mask);
-ushort4 __ovld __cnfn shuffle2(ushort8, ushort8, ushort4 mask);
-ushort4 __ovld __cnfn shuffle2(ushort16, ushort16, ushort4 mask);
+ushort4 __ovld __cnfn shuffle2(ushort2, ushort2, ushort4);
+ushort4 __ovld __cnfn shuffle2(ushort4, ushort4, ushort4);
+ushort4 __ovld __cnfn shuffle2(ushort8, ushort8, ushort4);
+ushort4 __ovld __cnfn shuffle2(ushort16, ushort16, ushort4);
 
-int4 __ovld __cnfn shuffle2(int2, int2, uint4 mask);
-int4 __ovld __cnfn shuffle2(int4, int4, uint4 mask);
-int4 __ovld __cnfn shuffle2(int8, int8, uint4 mask);
-int4 __ovld __cnfn shuffle2(int16, int16, uint4 mask);
+int4 __ovld __cnfn shuffle2(int2, int2, uint4);
+int4 __ovld __cnfn shuffle2(int4, int4, uint4);
+int4 __ovld __cnfn shuffle2(int8, int8, uint4);
+int4 __ovld __cnfn shuffle2(int16, int16, uint4);
 
-uint4 __ovld __cnfn shuffle2(uint2, uint2, uint4 mask);
-uint4 __ovld __cnfn shuffle2(uint4, uint4, uint4 mask);
-uint4 __ovld __cnfn shuffle2(uint8, uint8, uint4 mask);
-uint4 __ovld __cnfn shuffle2(uint16, uint16, uint4 mask);
+uint4 __ovld __cnfn shuffle2(uint2, uint2, uint4);
+uint4 __ovld __cnfn shuffle2(uint4, uint4, uint4);
+uint4 __ovld __cnfn shuffle2(uint8, uint8, uint4);
+uint4 __ovld __cnfn shuffle2(uint16, uint16, uint4);
 
-long4 __ovld __cnfn shuffle2(long2, long2, ulong4 mask);
-long4 __ovld __cnfn shuffle2(long4, long4, ulong4 mask);
-long4 __ovld __cnfn shuffle2(long8, long8, ulong4 mask);
-long4 __ovld __cnfn shuffle2(long16, long16, ulong4 mask);
+long4 __ovld __cnfn shuffle2(long2, long2, ulong4);
+long4 __ovld __cnfn shuffle2(long4, long4, ulong4);
+long4 __ovld __cnfn shuffle2(long8, long8, ulong4);
+long4 __ovld __cnfn shuffle2(long16, long16, ulong4);
 
-ulong4 __ovld __cnfn shuffle2(ulong2, ulong2, ulong4 mask);
-ulong4 __ovld __cnfn shuffle2(ulong4, ulong4, ulong4 mask);
-ulong4 __ovld __cnfn shuffle2(ulong8, ulong8, ulong4 mask);
-ulong4 __ovld __cnfn shuffle2(ulong16, ulong16, ulong4 mask);
+ulong4 __ovld __cnfn shuffle2(ulong2, ulong2, ulong4);
+ulong4 __ovld __cnfn shuffle2(ulong4, ulong4, ulong4);
+ulong4 __ovld __cnfn shuffle2(ulong8, ulong8, ulong4);
+ulong4 __ovld __cnfn shuffle2(ulong16, ulong16, ulong4);
 
-float4 __ovld __cnfn shuffle2(float2, float2, uint4 mask);
-float4 __ovld __cnfn shuffle2(float4, float4, uint4 mask);
-float4 __ovld __cnfn shuffle2(float8, float8, uint4 mask);
-float4 __ovld __cnfn shuffle2(float16, float16, uint4 mask);
+float4 __ovld __cnfn shuffle2(float2, float2, uint4);
+float4 __ovld __cnfn shuffle2(float4, float4, uint4);
+float4 __ovld __cnfn shuffle2(float8, float8, uint4);
+float4 __ovld __cnfn shuffle2(float16, float16, uint4);
 
-char8 __ovld __cnfn shuffle2(char2, char2, uchar8 mask);
-char8 __ovld __cnfn shuffle2(char4, char4, uchar8 mask);
-char8 __ovld __cnfn shuffle2(char8, char8, uchar8 mask);
-char8 __ovld __cnfn shuffle2(char16, char16, uchar8 mask);
+char8 __ovld __cnfn shuffle2(char2, char2, uchar8);
+char8 __ovld __cnfn shuffle2(char4, char4, uchar8);
+char8 __ovld __cnfn shuffle2(char8, char8, uchar8);
+char8 __ovld __cnfn shuffle2(char16, char16, uchar8);
 
-uchar8 __ovld __cnfn shuffle2(uchar2, uchar2, uchar8 mask);
-uchar8 __ovld __cnfn shuffle2(uchar4, uchar4, uchar8 mask);
-uchar8 __ovld __cnfn shuffle2(uchar8, uchar8, uchar8 mask);
-uchar8 __ovld __cnfn shuffle2(uchar16, uchar16, uchar8 mask);
+uchar8 __ovld __cnfn shuffle2(uchar2, uchar2, uchar8);
+uchar8 __ovld __cnfn shuffle2(uchar4, uchar4, uchar8);
+uchar8 __ovld __cnfn shuffle2(uchar8, uchar8, uchar8);
+uchar8 __ovld __cnfn shuffle2(uchar16, uchar16, uchar8);
 
-short8 __ovld __cnfn shuffle2(short2, short2, ushort8 mask);
-short8 __ovld __cnfn shuffle2(short4, short4, ushort8 mask);
-short8 __ovld __cnfn shuffle2(short8, short8, ushort8 mask);
-short8 __ovld __cnfn shuffle2(short16, short16, ushort8 mask);
+short8 __ovld __cnfn shuffle2(short2, short2, ushort8);
+short8 __ovld __cnfn shuffle2(short4, short4, ushort8);
+short8 __ovld __cnfn shuffle2(short8, short8, ushort8);
+short8 __ovld __cnfn shuffle2(short16, short16, ushort8);
 
-ushort8 __ovld __cnfn shuffle2(ushort2, ushort2, ushort8 mask);
-ushort8 __ovld __cnfn shuffle2(ushort4, ushort4, ushort8 mask);
-ushort8 __ovld __cnfn shuffle2(ushort8, ushort8, ushort8 mask);
-ushort8 __ovld __cnfn shuffle2(ushort16, ushort16, ushort8 mask);
+ushort8 __ovld __cnfn shuffle2(ushort2, ushort2, ushort8);
+ushort8 __ovld __cnfn shuffle2(ushort4, ushort4, ushort8);
+ushort8 __ovld __cnfn shuffle2(ushort8, ushort8, ushort8);
+ushort8 __ovld __cnfn shuffle2(ushort16, ushort16, ushort8);
 
-int8 __ovld __cnfn shuffle2(int2, int2, uint8 mask);
-int8 __ovld __cnfn shuffle2(int4, int4, uint8 mask);
-int8 __ovld __cnfn shuffle2(int8, int8, uint8 mask);
-int8 __ovld __cnfn shuffle2(int16, int16, uint8 mask);
+int8 __ovld __cnfn shuffle2(int2, int2, uint8);
+int8 __ovld __cnfn shuffle2(int4, int4, uint8);
+int8 __ovld __cnfn shuffle2(int8, int8, uint8);
+int8 __ovld __cnfn shuffle2(int16, int16, uint8);
 
-uint8 __ovld __cnfn shuffle2(uint2, uint2, uint8 mask);
-uint8 __ovld __cnfn shuffle2(uint4, uint4, uint8 mask);
-uint8 __ovld __cnfn shuffle2(uint8, uint8, uint8 mask);
-uint8 __ovld __cnfn shuffle2(uint16, uint16, uint8 mask);
+uint8 __ovld __cnfn shuffle2(uint2, uint2, uint8);
+uint8 __ovld __cnfn shuffle2(uint4, uint4, uint8);
+uint8 __ovld __cnfn shuffle2(uint8, uint8, uint8);
+uint8 __ovld __cnfn shuffle2(uint16, uint16, uint8);
 
-long8 __ovld __cnfn shuffle2(long2, long2, ulong8 mask);
-long8 __ovld __cnfn shuffle2(long4, long4, ulong8 mask);
-long8 __ovld __cnfn shuffle2(long8, long8, ulong8 mask);
-long8 __ovld __cnfn shuffle2(long16, long16, ulong8 mask);
+long8 __ovld __cnfn shuffle2(long2, long2, ulong8);
+long8 __ovld __cnfn shuffle2(long4, long4, ulong8);
+long8 __ovld __cnfn shuffle2(long8, long8, ulong8);
+long8 __ovld __cnfn shuffle2(long16, long16, ulong8);
 
-ulong8 __ovld __cnfn shuffle2(ulong2, ulong2, ulong8 mask);
-ulong8 __ovld __cnfn shuffle2(ulong4, ulong4, ulong8 mask);
-ulong8 __ovld __cnfn shuffle2(ulong8, ulong8, ulong8 mask);
-ulong8 __ovld __cnfn shuffle2(ulong16, ulong16, ulong8 mask);
+ulong8 __ovld __cnfn shuffle2(ulong2, ulong2, ulong8);
+ulong8 __ovld __cnfn shuffle2(ulong4, ulong4, ulong8);
+ulong8 __ovld __cnfn shuffle2(ulong8, ulong8, ulong8);
+ulong8 __ovld __cnfn shuffle2(ulong16, ulong16, ulong8);
 
-float8 __ovld __cnfn shuffle2(float2, float2, uint8 mask);
-float8 __ovld __cnfn shuffle2(float4, float4, uint8 mask);
-float8 __ovld __cnfn shuffle2(float8, float8, uint8 mask);
-float8 __ovld __cnfn shuffle2(float16, float16, uint8 mask);
+float8 __ovld __cnfn shuffle2(float2, float2, uint8);
+float8 __ovld __cnfn shuffle2(float4, float4, uint8);
+float8 __ovld __cnfn shuffle2(float8, float8, uint8);
+float8 __ovld __cnfn shuffle2(float16, float16, uint8);
 
-char16 __ovld __cnfn shuffle2(char2, char2, uchar16 mask);
-char16 __ovld __cnfn shuffle2(char4, char4, uchar16 mask);
-char16 __ovld __cnfn shuffle2(char8, char8, uchar16 mask);
-char16 __ovld __cnfn shuffle2(char16, char16, uchar16 mask);
+char16 __ovld __cnfn shuffle2(char2, char2, uchar16);
+char16 __ovld __cnfn shuffle2(char4, char4, uchar16);
+char16 __ovld __cnfn shuffle2(char8, char8, uchar16);
+char16 __ovld __cnfn shuffle2(char16, char16, uchar16);
 
-uchar16 __ovld __cnfn shuffle2(uchar2, uchar2, uchar16 mask);
-uchar16 __ovld __cnfn shuffle2(uchar4, uchar4, uchar16 mask);
-uchar16 __ovld __cnfn shuffle2(uchar8, uchar8, uchar16 mask);
-uchar16 __ovld __cnfn shuffle2(uchar16, uchar16, uchar16 mask);
+uchar16 __ovld __cnfn shuffle2(uchar2, uchar2, uchar16);
+uchar16 __ovld __cnfn shuffle2(uchar4, uchar4, uchar16);
+uchar16 __ovld __cnfn shuffle2(uchar8, uchar8, uchar16);
+uchar16 __ovld __cnfn shuffle2(uchar16, uchar16, uchar16);
 
-short16 __ovld __cnfn shuffle2(short2, short2, ushort16 mask);
-short16 __ovld __cnfn shuffle2(short4, short4, ushort16 mask);
-short16 __ovld __cnfn shuffle2(short8, short8, ushort16 mask);
-short16 __ovld __cnfn shuffle2(short16, short16, ushort16 mask);
+short16 __ovld __cnfn shuffle2(short2, short2, ushort16);
+short16 __ovld __cnfn shuffle2(short4, short4, ushort16);
+short16 __ovld __cnfn shuffle2(short8, short8, ushort16);
+short16 __ovld __cnfn shuffle2(short16, short16, ushort16);
 
-ushort16 __ovld __cnfn shuffle2(ushort2, ushort2, ushort16 mask);
-ushort16 __ovld __cnfn shuffle2(ushort4, ushort4, ushort16 mask);
-ushort16 __ovld __cnfn shuffle2(ushort8, ushort8, ushort16 mask);
-ushort16 __ovld __cnfn shuffle2(ushort16, ushort16, ushort16 mask);
+ushort16 __ovld __cnfn shuffle2(ushort2, ushort2, ushort16);
+ushort16 __ovld __cnfn shuffle2(ushort4, ushort4, ushort16);
+ushort16 __ovld __cnfn shuffle2(ushort8, ushort8, ushort16);
+ushort16 __ovld __cnfn shuffle2(ushort16, ushort16, ushort16);
 
-int16 __ovld __cnfn shuffle2(int2, int2, uint16 mask);
-int16 __ovld __cnfn shuffle2(int4, int4, uint16 mask);
-int16 __ovld __cnfn shuffle2(int8, int8, uint16 mask);
-int16 __ovld __cnfn shuffle2(int16, int16, uint16 mask);
+int16 __ovld __cnfn shuffle2(int2, int2, uint16);
+int16 __ovld __cnfn shuffle2(int4, int4, uint16);
+int16 __ovld __cnfn shuffle2(int8, int8, uint16);
+int16 __ovld __cnfn shuffle2(int16, int16, uint16);
 
-uint16 __ovld __cnfn shuffle2(uint2, uint2, uint16 mask);
-uint16 __ovld __cnfn shuffle2(uint4, uint4, uint16 mask);
-uint16 __ovld __cnfn shuffle2(uint8, uint8, uint16 mask);
-uint16 __ovld __cnfn shuffle2(uint16, uint16, uint16 mask);
+uint16 __ovld __cnfn shuffle2(uint2, uint2, uint16);
+uint16 __ovld __cnfn shuffle2(uint4, uint4, uint16);
+uint16 __ovld __cnfn shuffle2(uint8, uint8, uint16);
+uint16 __ovld __cnfn shuffle2(uint16, uint16, uint16);
 
-long16 __ovld __cnfn shuffle2(long2, long2, ulong16 mask);
-long16 __ovld __cnfn shuffle2(long4, long4, ulong16 mask);
-long16 __ovld __cnfn shuffle2(long8, long8, ulong16 mask);
-long16 __ovld __cnfn shuffle2(long16, long16, ulong16 mask);
+long16 __ovld __cnfn shuffle2(long2, long2, ulong16);
+long16 __ovld __cnfn shuffle2(long4, long4, ulong16);
+long16 __ovld __cnfn shuffle2(long8, long8, ulong16);
+long16 __ovld __cnfn shuffle2(long16, long16, ulong16);
 
-ulong16 __ovld __cnfn shuffle2(ulong2, ulong2, ulong16 mask);
-ulong16 __ovld __cnfn shuffle2(ulong4, ulong4, ulong16 mask);
-ulong16 __ovld __cnfn shuffle2(ulong8, ulong8, ulong16 mask);
-ulong16 __ovld __cnfn shuffle2(ulong16, ulong16, ulong16 mask);
+ulong16 __ovld __cnfn shuffle2(ulong2, ulong2, ulong16);
+ulong16 __ovld __cnfn shuffle2(ulong4, ulong4, ulong16);
+ulong16 __ovld __cnfn shuffle2(ulong8, ulong8, ulong16);
+ulong16 __ovld __cnfn shuffle2(ulong16, ulong16, ulong16);
 
-float16 __ovld __cnfn shuffle2(float2, float2, uint16 mask);
-float16 __ovld __cnfn shuffle2(float4, float4, uint16 mask);
-float16 __ovld __cnfn shuffle2(float8, float8, uint16 mask);
-float16 __ovld __cnfn shuffle2(float16, float16, uint16 mask);
+float16 __ovld __cnfn shuffle2(float2, float2, uint16);
+float16 __ovld __cnfn shuffle2(float4, float4, uint16);
+float16 __ovld __cnfn shuffle2(float8, float8, uint16);
+float16 __ovld __cnfn shuffle2(float16, float16, uint16);
 
 #ifdef cl_khr_fp64
-double2 __ovld __cnfn shuffle2(double2, double2, ulong2 mask);
-double2 __ovld __cnfn shuffle2(double4, double4, ulong2 mask);
-double2 __ovld __cnfn shuffle2(double8, double8, ulong2 mask);
-double2 __ovld __cnfn shuffle2(double16, double16, ulong2 mask);
+double2 __ovld __cnfn shuffle2(double2, double2, ulong2);
+double2 __ovld __cnfn shuffle2(double4, double4, ulong2);
+double2 __ovld __cnfn shuffle2(double8, double8, ulong2);
+double2 __ovld __cnfn shuffle2(double16, double16, ulong2);
 
-double4 __ovld __cnfn shuffle2(double2, double2, ulong4 mask);
-double4 __ovld __cnfn shuffle2(double4, double4, ulong4 mask);
-double4 __ovld __cnfn shuffle2(double8, double8, ulong4 mask);
-double4 __ovld __cnfn shuffle2(double16, double16, ulong4 mask);
+double4 __ovld __cnfn shuffle2(double2, double2, ulong4);
+double4 __ovld __cnfn shuffle2(double4, double4, ulong4);
+double4 __ovld __cnfn shuffle2(double8, double8, ulong4);
+double4 __ovld __cnfn shuffle2(double16, double16, ulong4);
 
-double8 __ovld __cnfn shuffle2(double2, double2, ulong8 mask);
-double8 __ovld __cnfn shuffle2(double4, double4, ulong8 mask);
-double8 __ovld __cnfn shuffle2(double8, double8, ulong8 mask);
-double8 __ovld __cnfn shuffle2(double16, double16, ulong8 mask);
+double8 __ovld __cnfn shuffle2(double2, double2, ulong8);
+double8 __ovld __cnfn shuffle2(double4, double4, ulong8);
+double8 __ovld __cnfn shuffle2(double8, double8, ulong8);
+double8 __ovld __cnfn shuffle2(double16, double16, ulong8);
 
-double16 __ovld __cnfn shuffle2(double2, double2, ulong16 mask);
-double16 __ovld __cnfn shuffle2(double4, double4, ulong16 mask);
-double16 __ovld __cnfn shuffle2(double8, double8, ulong16 mask);
-double16 __ovld __cnfn shuffle2(double16, double16, ulong16 mask);
+double16 __ovld __cnfn shuffle2(double2, double2, ulong16);
+double16 __ovld __cnfn shuffle2(double4, double4, ulong16);
+double16 __ovld __cnfn shuffle2(double8, double8, ulong16);
+double16 __ovld __cnfn shuffle2(double16, double16, ulong16);
 #endif //cl_khr_fp64
 
 #ifdef cl_khr_fp16
-half2 __ovld __cnfn shuffle2(half2, half2, ushort2 mask);
-half2 __ovld __cnfn shuffle2(half4, half4, ushort2 mask);
-half2 __ovld __cnfn shuffle2(half8, half8, ushort2 mask);
-half2 __ovld __cnfn shuffle2(half16, half16, ushort2 mask);
+half2 __ovld __cnfn shuffle2(half2, half2, ushort2);
+half2 __ovld __cnfn shuffle2(half4, half4, ushort2);
+half2 __ovld __cnfn shuffle2(half8, half8, ushort2);
+half2 __ovld __cnfn shuffle2(half16, half16, ushort2);
 
-half4 __ovld __cnfn shuffle2(half2, half2, ushort4 mask);
-half4 __ovld __cnfn shuffle2(half4, half4, ushort4 mask);
-half4 __ovld __cnfn shuffle2(half8, half8, ushort4 mask);
-half4 __ovld __cnfn shuffle2(half16, half16, ushort4 mask);
+half4 __ovld __cnfn shuffle2(half2, half2, ushort4);
+half4 __ovld __cnfn shuffle2(half4, half4, ushort4);
+half4 __ovld __cnfn shuffle2(half8, half8, ushort4);
+half4 __ovld __cnfn shuffle2(half16, half16, ushort4);
 
-half8 __ovld __cnfn shuffle2(half2, half2, ushort8 mask);
-half8 __ovld __cnfn shuffle2(half4, half4, ushort8 mask);
-half8 __ovld __cnfn shuffle2(half8, half8, ushort8 mask);
-half8 __ovld __cnfn shuffle2(half16, half16, ushort8 mask);
+half8 __ovld __cnfn shuffle2(half2, half2, ushort8);
+half8 __ovld __cnfn shuffle2(half4, half4, ushort8);
+half8 __ovld __cnfn shuffle2(half8, half8, ushort8);
+half8 __ovld __cnfn shuffle2(half16, half16, ushort8);
 
-half16 __ovld __cnfn shuffle2(half2, half2, ushort16 mask);
-half16 __ovld __cnfn shuffle2(half4, half4, ushort16 mask);
-half16 __ovld __cnfn shuffle2(half8, half8, ushort16 mask);
-half16 __ovld __cnfn shuffle2(half16, half16, ushort16 mask);
+half16 __ovld __cnfn shuffle2(half2, half2, ushort16);
+half16 __ovld __cnfn shuffle2(half4, half4, ushort16);
+half16 __ovld __cnfn shuffle2(half8, half8, ushort16);
+half16 __ovld __cnfn shuffle2(half16, half16, ushort16);
 #endif //cl_khr_fp16
 
 // OpenCL v1.1 s6.11.3, v1.2 s6.12.14, v2.0 s6.13.14 - Image Read and Write Functions
