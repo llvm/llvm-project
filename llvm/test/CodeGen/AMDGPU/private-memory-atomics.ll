@@ -196,8 +196,8 @@ define i32 @atomicrmw_xchg_private_i32(i32 addrspace(5)* %ptr) {
 define i32 @atomicrmw_add_private_i32(i32 addrspace(5)* %ptr) {
 ; IR-LABEL: @atomicrmw_add_private_i32(
 ; IR-NEXT:    [[TMP1:%.*]] = load i32, i32 addrspace(5)* [[PTR:%.*]], align 4
-; IR-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], 4
-; IR-NEXT:    store i32 [[TMP2]], i32 addrspace(5)* [[PTR]], align 4
+; IR-NEXT:    [[NEW:%.*]] = add i32 [[TMP1]], 4
+; IR-NEXT:    store i32 [[NEW]], i32 addrspace(5)* [[PTR]], align 4
 ; IR-NEXT:    ret i32 [[TMP1]]
 ;
 ; GCN-LABEL: atomicrmw_add_private_i32:
@@ -217,8 +217,8 @@ define i32 @atomicrmw_add_private_i32(i32 addrspace(5)* %ptr) {
 define i32 @atomicrmw_sub_private_i32(i32 addrspace(5)* %ptr) {
 ; IR-LABEL: @atomicrmw_sub_private_i32(
 ; IR-NEXT:    [[TMP1:%.*]] = load i32, i32 addrspace(5)* [[PTR:%.*]], align 4
-; IR-NEXT:    [[TMP2:%.*]] = sub i32 [[TMP1]], 4
-; IR-NEXT:    store i32 [[TMP2]], i32 addrspace(5)* [[PTR]], align 4
+; IR-NEXT:    [[NEW:%.*]] = sub i32 [[TMP1]], 4
+; IR-NEXT:    store i32 [[NEW]], i32 addrspace(5)* [[PTR]], align 4
 ; IR-NEXT:    ret i32 [[TMP1]]
 ;
 ; GCN-LABEL: atomicrmw_sub_private_i32:
@@ -238,8 +238,8 @@ define i32 @atomicrmw_sub_private_i32(i32 addrspace(5)* %ptr) {
 define i32 @atomicrmw_and_private_i32(i32 addrspace(5)* %ptr) {
 ; IR-LABEL: @atomicrmw_and_private_i32(
 ; IR-NEXT:    [[TMP1:%.*]] = load i32, i32 addrspace(5)* [[PTR:%.*]], align 4
-; IR-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 4
-; IR-NEXT:    store i32 [[TMP2]], i32 addrspace(5)* [[PTR]], align 4
+; IR-NEXT:    [[NEW:%.*]] = and i32 [[TMP1]], 4
+; IR-NEXT:    store i32 [[NEW]], i32 addrspace(5)* [[PTR]], align 4
 ; IR-NEXT:    ret i32 [[TMP1]]
 ;
 ; GCN-LABEL: atomicrmw_and_private_i32:
@@ -260,8 +260,8 @@ define i32 @atomicrmw_nand_private_i32(i32 addrspace(5)* %ptr) {
 ; IR-LABEL: @atomicrmw_nand_private_i32(
 ; IR-NEXT:    [[TMP1:%.*]] = load i32, i32 addrspace(5)* [[PTR:%.*]], align 4
 ; IR-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 4
-; IR-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP2]], -1
-; IR-NEXT:    store i32 [[TMP3]], i32 addrspace(5)* [[PTR]], align 4
+; IR-NEXT:    [[NEW:%.*]] = xor i32 [[TMP2]], -1
+; IR-NEXT:    store i32 [[NEW]], i32 addrspace(5)* [[PTR]], align 4
 ; IR-NEXT:    ret i32 [[TMP1]]
 ;
 ; GCN-LABEL: atomicrmw_nand_private_i32:
@@ -282,8 +282,8 @@ define i32 @atomicrmw_nand_private_i32(i32 addrspace(5)* %ptr) {
 define i32 @atomicrmw_or_private_i32(i32 addrspace(5)* %ptr) {
 ; IR-LABEL: @atomicrmw_or_private_i32(
 ; IR-NEXT:    [[TMP1:%.*]] = load i32, i32 addrspace(5)* [[PTR:%.*]], align 4
-; IR-NEXT:    [[TMP2:%.*]] = or i32 [[TMP1]], 4
-; IR-NEXT:    store i32 [[TMP2]], i32 addrspace(5)* [[PTR]], align 4
+; IR-NEXT:    [[NEW:%.*]] = or i32 [[TMP1]], 4
+; IR-NEXT:    store i32 [[NEW]], i32 addrspace(5)* [[PTR]], align 4
 ; IR-NEXT:    ret i32 [[TMP1]]
 ;
 ; GCN-LABEL: atomicrmw_or_private_i32:
@@ -303,8 +303,8 @@ define i32 @atomicrmw_or_private_i32(i32 addrspace(5)* %ptr) {
 define i32 @atomicrmw_xor_private_i32(i32 addrspace(5)* %ptr) {
 ; IR-LABEL: @atomicrmw_xor_private_i32(
 ; IR-NEXT:    [[TMP1:%.*]] = load i32, i32 addrspace(5)* [[PTR:%.*]], align 4
-; IR-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], 4
-; IR-NEXT:    store i32 [[TMP2]], i32 addrspace(5)* [[PTR]], align 4
+; IR-NEXT:    [[NEW:%.*]] = xor i32 [[TMP1]], 4
+; IR-NEXT:    store i32 [[NEW]], i32 addrspace(5)* [[PTR]], align 4
 ; IR-NEXT:    ret i32 [[TMP1]]
 ;
 ; GCN-LABEL: atomicrmw_xor_private_i32:
@@ -324,9 +324,9 @@ define i32 @atomicrmw_xor_private_i32(i32 addrspace(5)* %ptr) {
 define i32 @atomicrmw_max_private_i32(i32 addrspace(5)* %ptr) {
 ; IR-LABEL: @atomicrmw_max_private_i32(
 ; IR-NEXT:    [[TMP1:%.*]] = load i32, i32 addrspace(5)* [[PTR:%.*]], align 4
-; IR-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[TMP1]], 4
-; IR-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 4, i32 [[TMP1]]
-; IR-NEXT:    store i32 [[TMP3]], i32 addrspace(5)* [[PTR]], align 4
+; IR-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[TMP1]], 4
+; IR-NEXT:    [[NEW:%.*]] = select i1 [[TMP2]], i32 [[TMP1]], i32 4
+; IR-NEXT:    store i32 [[NEW]], i32 addrspace(5)* [[PTR]], align 4
 ; IR-NEXT:    ret i32 [[TMP1]]
 ;
 ; GCN-LABEL: atomicrmw_max_private_i32:
@@ -346,9 +346,9 @@ define i32 @atomicrmw_max_private_i32(i32 addrspace(5)* %ptr) {
 define i32 @atomicrmw_min_private_i32(i32 addrspace(5)* %ptr) {
 ; IR-LABEL: @atomicrmw_min_private_i32(
 ; IR-NEXT:    [[TMP1:%.*]] = load i32, i32 addrspace(5)* [[PTR:%.*]], align 4
-; IR-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[TMP1]], 4
-; IR-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 [[TMP1]], i32 4
-; IR-NEXT:    store i32 [[TMP3]], i32 addrspace(5)* [[PTR]], align 4
+; IR-NEXT:    [[TMP2:%.*]] = icmp sle i32 [[TMP1]], 4
+; IR-NEXT:    [[NEW:%.*]] = select i1 [[TMP2]], i32 [[TMP1]], i32 4
+; IR-NEXT:    store i32 [[NEW]], i32 addrspace(5)* [[PTR]], align 4
 ; IR-NEXT:    ret i32 [[TMP1]]
 ;
 ; GCN-LABEL: atomicrmw_min_private_i32:
@@ -368,9 +368,9 @@ define i32 @atomicrmw_min_private_i32(i32 addrspace(5)* %ptr) {
 define i32 @atomicrmw_umax_private_i32(i32 addrspace(5)* %ptr) {
 ; IR-LABEL: @atomicrmw_umax_private_i32(
 ; IR-NEXT:    [[TMP1:%.*]] = load i32, i32 addrspace(5)* [[PTR:%.*]], align 4
-; IR-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], 4
-; IR-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 4, i32 [[TMP1]]
-; IR-NEXT:    store i32 [[TMP3]], i32 addrspace(5)* [[PTR]], align 4
+; IR-NEXT:    [[TMP2:%.*]] = icmp ugt i32 [[TMP1]], 4
+; IR-NEXT:    [[NEW:%.*]] = select i1 [[TMP2]], i32 [[TMP1]], i32 4
+; IR-NEXT:    store i32 [[NEW]], i32 addrspace(5)* [[PTR]], align 4
 ; IR-NEXT:    ret i32 [[TMP1]]
 ;
 ; GCN-LABEL: atomicrmw_umax_private_i32:
@@ -390,9 +390,9 @@ define i32 @atomicrmw_umax_private_i32(i32 addrspace(5)* %ptr) {
 define i32 @atomicrmw_umin_private_i32(i32 addrspace(5)* %ptr) {
 ; IR-LABEL: @atomicrmw_umin_private_i32(
 ; IR-NEXT:    [[TMP1:%.*]] = load i32, i32 addrspace(5)* [[PTR:%.*]], align 4
-; IR-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], 4
-; IR-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 [[TMP1]], i32 4
-; IR-NEXT:    store i32 [[TMP3]], i32 addrspace(5)* [[PTR]], align 4
+; IR-NEXT:    [[TMP2:%.*]] = icmp ule i32 [[TMP1]], 4
+; IR-NEXT:    [[NEW:%.*]] = select i1 [[TMP2]], i32 [[TMP1]], i32 4
+; IR-NEXT:    store i32 [[NEW]], i32 addrspace(5)* [[PTR]], align 4
 ; IR-NEXT:    ret i32 [[TMP1]]
 ;
 ; GCN-LABEL: atomicrmw_umin_private_i32:
@@ -412,8 +412,8 @@ define i32 @atomicrmw_umin_private_i32(i32 addrspace(5)* %ptr) {
 define float @atomicrmw_fadd_private_i32(float addrspace(5)* %ptr) {
 ; IR-LABEL: @atomicrmw_fadd_private_i32(
 ; IR-NEXT:    [[TMP1:%.*]] = load float, float addrspace(5)* [[PTR:%.*]], align 4
-; IR-NEXT:    [[TMP2:%.*]] = fadd float [[TMP1]], 2.000000e+00
-; IR-NEXT:    store float [[TMP2]], float addrspace(5)* [[PTR]], align 4
+; IR-NEXT:    [[NEW:%.*]] = fadd float [[TMP1]], 2.000000e+00
+; IR-NEXT:    store float [[NEW]], float addrspace(5)* [[PTR]], align 4
 ; IR-NEXT:    ret float [[TMP1]]
 ;
 ; GCN-LABEL: atomicrmw_fadd_private_i32:
@@ -433,8 +433,8 @@ define float @atomicrmw_fadd_private_i32(float addrspace(5)* %ptr) {
 define float @atomicrmw_fsub_private_i32(float addrspace(5)* %ptr, float %val) {
 ; IR-LABEL: @atomicrmw_fsub_private_i32(
 ; IR-NEXT:    [[TMP1:%.*]] = load float, float addrspace(5)* [[PTR:%.*]], align 4
-; IR-NEXT:    [[TMP2:%.*]] = fsub float [[TMP1]], [[VAL:%.*]]
-; IR-NEXT:    store float [[TMP2]], float addrspace(5)* [[PTR]], align 4
+; IR-NEXT:    [[NEW:%.*]] = fsub float [[TMP1]], [[VAL:%.*]]
+; IR-NEXT:    store float [[NEW]], float addrspace(5)* [[PTR]], align 4
 ; IR-NEXT:    ret float [[TMP1]]
 ;
 ; GCN-LABEL: atomicrmw_fsub_private_i32:
@@ -461,8 +461,8 @@ define amdgpu_kernel void @alloca_promote_atomicrmw_private_lds_promote(i32 addr
 ; IR-NEXT:    store i32 1, i32 addrspace(5)* [[GEP2]], align 4
 ; IR-NEXT:    [[GEP3:%.*]] = getelementptr inbounds [2 x i32], [2 x i32] addrspace(5)* [[TMP]], i32 0, i32 [[IN:%.*]]
 ; IR-NEXT:    [[TMP0:%.*]] = load i32, i32 addrspace(5)* [[GEP3]], align 4
-; IR-NEXT:    [[TMP1:%.*]] = add i32 [[TMP0]], 7
-; IR-NEXT:    store i32 [[TMP1]], i32 addrspace(5)* [[GEP3]], align 4
+; IR-NEXT:    [[NEW:%.*]] = add i32 [[TMP0]], 7
+; IR-NEXT:    store i32 [[NEW]], i32 addrspace(5)* [[GEP3]], align 4
 ; IR-NEXT:    store i32 [[TMP0]], i32 addrspace(1)* [[OUT:%.*]], align 4
 ; IR-NEXT:    ret void
 ;
