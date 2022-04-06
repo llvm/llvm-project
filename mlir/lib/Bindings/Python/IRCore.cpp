@@ -2756,6 +2756,15 @@ void mlir::python::populateIRCore(py::module &m) {
           "Creates and returns a new Block at the beginning of the given "
           "region (with given argument types).")
       .def(
+          "append_to",
+          [](PyBlock &self, PyRegion &region) {
+            MlirBlock b = self.get();
+            if (!mlirRegionIsNull(mlirBlockGetParentRegion(b)))
+              mlirBlockDetach(b);
+            mlirRegionAppendOwnedBlock(region.get(), b);
+          },
+          "Append this block to a region, transferring ownership if necessary")
+      .def(
           "create_before",
           [](PyBlock &self, py::args pyArgTypes) {
             self.checkValid();

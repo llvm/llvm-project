@@ -510,15 +510,18 @@ static void buildWithInsertionsAndPrint(MlirContext ctx) {
   MlirType i2 = mlirIntegerTypeGet(ctx, 2);
   MlirType i3 = mlirIntegerTypeGet(ctx, 3);
   MlirType i4 = mlirIntegerTypeGet(ctx, 4);
+  MlirType i5 = mlirIntegerTypeGet(ctx, 5);
   MlirBlock block1 = mlirBlockCreate(1, &i1, &loc);
   MlirBlock block2 = mlirBlockCreate(1, &i2, &loc);
   MlirBlock block3 = mlirBlockCreate(1, &i3, &loc);
   MlirBlock block4 = mlirBlockCreate(1, &i4, &loc);
+  MlirBlock block5 = mlirBlockCreate(1, &i5, &loc);
   // Insert blocks so as to obtain the 1-2-3-4 order,
   mlirRegionInsertOwnedBlockBefore(region, nullBlock, block3);
   mlirRegionInsertOwnedBlockBefore(region, block3, block2);
   mlirRegionInsertOwnedBlockAfter(region, nullBlock, block1);
   mlirRegionInsertOwnedBlockAfter(region, block3, block4);
+  mlirRegionInsertOwnedBlockBefore(region, block3, block5);
 
   MlirOperationState op1State =
       mlirOperationStateGet(mlirStringRefCreateFromCString("dummy.op1"), loc);
@@ -534,6 +537,8 @@ static void buildWithInsertionsAndPrint(MlirContext ctx) {
       mlirOperationStateGet(mlirStringRefCreateFromCString("dummy.op6"), loc);
   MlirOperationState op7State =
       mlirOperationStateGet(mlirStringRefCreateFromCString("dummy.op7"), loc);
+  MlirOperationState op8State =
+      mlirOperationStateGet(mlirStringRefCreateFromCString("dummy.op8"), loc);
   MlirOperation op1 = mlirOperationCreate(&op1State);
   MlirOperation op2 = mlirOperationCreate(&op2State);
   MlirOperation op3 = mlirOperationCreate(&op3State);
@@ -541,6 +546,7 @@ static void buildWithInsertionsAndPrint(MlirContext ctx) {
   MlirOperation op5 = mlirOperationCreate(&op5State);
   MlirOperation op6 = mlirOperationCreate(&op6State);
   MlirOperation op7 = mlirOperationCreate(&op7State);
+  MlirOperation op8 = mlirOperationCreate(&op8State);
 
   // Insert operations in the first block so as to obtain the 1-2-3-4 order.
   MlirOperation nullOperation = mlirBlockGetFirstOperation(block1);
@@ -555,6 +561,11 @@ static void buildWithInsertionsAndPrint(MlirContext ctx) {
   mlirBlockAppendOwnedOperation(block2, op5);
   mlirBlockAppendOwnedOperation(block3, op6);
   mlirBlockAppendOwnedOperation(block4, op7);
+  mlirBlockAppendOwnedOperation(block5, op8);
+
+  // Remove block5.
+  mlirBlockDetach(block5);
+  mlirBlockDestroy(block5);
 
   mlirOperationDump(op);
   mlirOperationDestroy(op);
@@ -568,6 +579,8 @@ static void buildWithInsertionsAndPrint(MlirContext ctx) {
   // CHECK-NEXT:   "dummy.op4"
   // CHECK:      ^{{.*}}(%{{.*}}: i2
   // CHECK:        "dummy.op5"
+  // CHECK-NOT:  ^{{.*}}(%{{.*}}: i5
+  // CHECK-NOT:    "dummy.op8"
   // CHECK:      ^{{.*}}(%{{.*}}: i3
   // CHECK:        "dummy.op6"
   // CHECK:      ^{{.*}}(%{{.*}}: i4
