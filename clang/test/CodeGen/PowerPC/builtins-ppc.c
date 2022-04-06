@@ -46,3 +46,31 @@ long double test_builtin_pack_ldbl(double x, double y) {
   // CHECK: call ppc_fp128 @llvm.ppc.pack.longdouble(double %0, double %1)
   return __builtin_pack_longdouble(x, y);
 }
+
+void test_builtin_ppc_maxminfe(long double a, long double b, long double c,
+                               long double d) {
+  volatile long double res;
+  // CHECK: call ppc_fp128 (ppc_fp128, ppc_fp128, ppc_fp128, ...) @llvm.ppc.maxfe(ppc_fp128 %0, ppc_fp128 %1, ppc_fp128 %2, ppc_fp128 %3)
+  res = __builtin_ppc_maxfe(a, b, c, d);
+
+  // CHECK: call ppc_fp128 (ppc_fp128, ppc_fp128, ppc_fp128, ...) @llvm.ppc.minfe(ppc_fp128 %5, ppc_fp128 %6, ppc_fp128 %7, ppc_fp128 %8)
+  res = __builtin_ppc_minfe(a, b, c, d);
+}
+
+void test_builtin_ppc_maxminfl(double a, double b, double c, double d) {
+  volatile double res;
+  // CHECK: call double (double, double, double, ...) @llvm.ppc.maxfl(double %0, double %1, double %2, double %3)
+  res = __builtin_ppc_maxfl(a, b, c, d);
+
+  // CHECK: call double (double, double, double, ...) @llvm.ppc.minfl(double %5, double %6, double %7, double %8)
+  res = __builtin_ppc_minfl(a, b, c, d);
+}
+
+void test_builtin_ppc_maxminfs(float a, float b, float c, float d) {
+  volatile float res;
+  // CHECK: call float (float, float, float, ...) @llvm.ppc.maxfs(float %0, float %1, float %2, float %3)
+  res = __builtin_ppc_maxfs(a, b, c, d);
+
+  // CHECK: call float (float, float, float, ...) @llvm.ppc.minfs(float %5, float %6, float %7, float %8)
+  res = __builtin_ppc_minfs(a, b, c, d);
+}

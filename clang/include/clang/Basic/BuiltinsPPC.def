@@ -152,6 +152,13 @@ BUILTIN(__builtin_ppc_mtmsr, "vUi", "")
 BUILTIN(__builtin_ppc_mtspr, "vIiULi", "")
 BUILTIN(__builtin_ppc_stfiw, "viC*d", "")
 BUILTIN(__builtin_ppc_addex, "LLiLLiLLiCIi", "")
+// select
+BUILTIN(__builtin_ppc_maxfe, "LdLdLdLd.", "t")
+BUILTIN(__builtin_ppc_maxfl, "dddd.", "t")
+BUILTIN(__builtin_ppc_maxfs, "ffff.", "t")
+BUILTIN(__builtin_ppc_minfe, "LdLdLdLd.", "t")
+BUILTIN(__builtin_ppc_minfl, "dddd.", "t")
+BUILTIN(__builtin_ppc_minfs, "ffff.", "t")
 
 BUILTIN(__builtin_ppc_get_timebase, "ULLi", "n")
 

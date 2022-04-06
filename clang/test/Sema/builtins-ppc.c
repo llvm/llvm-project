@@ -10,6 +10,12 @@
 // RUN: -triple powerpc64le-unknown-unknown -DTEST_CRYPTO -fsyntax-only \
 // RUN: -target-feature +vsx -verify %s
 
+// RUN: %clang_cc1 -triple powerpc64le-unknown-unknown -DTEST_MAXMIN -fsyntax-only \
+// RUN: -verify %s
+
+// RUN: %clang_cc1 -triple powerpc64-ibm-aix-xcoff -DTEST_MAXMIN -fsyntax-only \
+// RUN: -verify %s
+
 #ifdef TEST_HTM
 void test_htm() {
   __builtin_tbegin(4); // expected-error-re {{argument value {{.*}} is outside the valid range}}
@@ -54,3 +60,25 @@ vector unsigned long long test_vshasigmad_or(void)
 
 #endif
 
+#ifdef TEST_MAXMIN
+void test_maxmin() {
+  long double fe;
+  double fl;
+  float fs;
+#ifdef _AIX
+  __builtin_ppc_maxfe(fe, fe, fe, fe); // expected-error-re {{builtin requires 128 bit size 'long double' type support, but target {{.*}} does not support it}}
+  __builtin_ppc_minfe(fe, fe, fe, fe); // expected-error-re {{builtin requires 128 bit size 'long double' type support, but target {{.*}} does not support it}}
+  __builtin_ppc_maxfl(fs, fs, fs, fs); // expected-error-re {{passing {{.*}} to parameter of incompatible type {{.*}}}}
+  __builtin_ppc_minfl(fs, fs, fs, fs); // expected-error-re {{passing {{.*}} to parameter of incompatible type {{.*}}}}
+  __builtin_ppc_maxfs(fe, fe, fe, fe); // expected-error-re {{passing {{.*}} to parameter of incompatible type {{.*}}}}
+  __builtin_ppc_minfs(fe, fe, fe, fe); // expected-error-re {{passing {{.*}} to parameter of incompatible type {{.*}}}}
+#else
+  __builtin_ppc_maxfe(fl, fl, fl, fl); // expected-error-re {{passing {{.*}} to parameter of incompatible type {{.*}}}}
+  __builtin_ppc_minfe(fl, fl, fl, fl); // expected-error-re {{passing {{.*}} to parameter of incompatible type {{.*}}}}
+  __builtin_ppc_maxfl(fs, fs, fs, fs); // expected-error-re {{passing {{.*}} to parameter of incompatible type {{.*}}}}
+  __builtin_ppc_minfl(fs, fs, fs, fs); // expected-error-re {{passing {{.*}} to parameter of incompatible type {{.*}}}}
+  __builtin_ppc_maxfs(fe, fe, fe, fe); // expected-error-re {{passing {{.*}} to parameter of incompatible type {{.*}}}}
+  __builtin_ppc_minfs(fe, fe, fe, fe); // expected-error-re {{passing {{.*}} to parameter of incompatible type {{.*}}}}
+#endif
+}
+#endif
