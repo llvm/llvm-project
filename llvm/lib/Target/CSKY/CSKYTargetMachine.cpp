@@ -96,6 +96,7 @@ public:
     return getTM<CSKYTargetMachine>();
   }
 
+  void addIRPasses() override;
   bool addInstSelector() override;
   void addPreEmitPass() override;
 };
@@ -104,6 +105,11 @@ public:
 
 TargetPassConfig *CSKYTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new CSKYPassConfig(*this, PM);
+}
+
+void CSKYPassConfig::addIRPasses() {
+  addPass(createAtomicExpandPass());
+  TargetPassConfig::addIRPasses();
 }
 
 bool CSKYPassConfig::addInstSelector() {
