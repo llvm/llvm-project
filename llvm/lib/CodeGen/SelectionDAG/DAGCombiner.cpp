@@ -19474,8 +19474,9 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
     // EXTRACT_VECTOR_ELT may widen the extracted vector.
     SDValue InOp = VecOp.getOperand(0);
     if (InOp.getValueType() != ScalarVT) {
-      assert(InOp.getValueType().isInteger() && ScalarVT.isInteger());
-      return DAG.getSExtOrTrunc(InOp, DL, ScalarVT);
+      assert(InOp.getValueType().isInteger() && ScalarVT.isInteger() &&
+             InOp.getValueType().bitsGT(ScalarVT));
+      return DAG.getNode(ISD::TRUNCATE, DL, ScalarVT, InOp);
     }
     return InOp;
   }
