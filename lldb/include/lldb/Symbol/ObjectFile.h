@@ -116,10 +116,10 @@ public:
   /// more than one architecture or object.
   ObjectFile(const lldb::ModuleSP &module_sp, const FileSpec *file_spec_ptr,
              lldb::offset_t file_offset, lldb::offset_t length,
-             const lldb::DataBufferSP &data_sp, lldb::offset_t data_offset);
+             lldb::DataBufferSP data_sp, lldb::offset_t data_offset);
 
   ObjectFile(const lldb::ModuleSP &module_sp, const lldb::ProcessSP &process_sp,
-             lldb::addr_t header_addr, lldb::DataBufferSP &data_sp);
+             lldb::addr_t header_addr, lldb::DataBufferSP data_sp);
 
   /// Destructor.
   ///
@@ -183,7 +183,7 @@ public:
   static lldb::ObjectFileSP FindPlugin(const lldb::ModuleSP &module_sp,
                                        const lldb::ProcessSP &process_sp,
                                        lldb::addr_t header_addr,
-                                       lldb::DataBufferSP &file_data_sp);
+                                       lldb::WritableDataBufferSP file_data_sp);
 
   static size_t
   GetModuleSpecifications(const FileSpec &file, lldb::offset_t file_offset,
@@ -758,6 +758,9 @@ protected:
   ///     Returns \b true if the architecture was changed, \b
   ///     false otherwise.
   bool SetModulesArchitecture(const ArchSpec &new_arch);
+
+  /// The number of bytes to read when going through the plugins.
+  static size_t g_initial_bytes_to_read;
 
   static lldb::DataBufferSP MapFileData(const FileSpec &file, uint64_t Size,
                                         uint64_t Offset);

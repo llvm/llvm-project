@@ -1788,8 +1788,8 @@ ShuffleOp::inferReturnTypes(MLIRContext *, Optional<Location>,
   return success();
 }
 
-static bool isStepIndexArray(ArrayAttr idxArr, int64_t begin, int64_t width) {
-  int64_t expected = begin;
+static bool isStepIndexArray(ArrayAttr idxArr, uint64_t begin, size_t width) {
+  uint64_t expected = begin;
   return idxArr.size() == width &&
          llvm::all_of(idxArr.getAsValueRange<IntegerAttr>(),
                       [&expected](auto attr) {

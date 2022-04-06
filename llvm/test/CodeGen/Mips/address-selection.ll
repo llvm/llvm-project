@@ -6,7 +6,7 @@
 ; RUN: llc -march=mips -relocation-model=pic -mattr=+xgot,+micromips < %s \
 ; RUN:     -debug 2>&1 | FileCheck %s --check-prefix=MM-XGOT
 
-; REQUIRES: asserts
+; REQUIRES: asserts, abi_breaking_checks
 
 ; Tests that the correct ISA is selected for computing a global address.
 

@@ -1,4 +1,5 @@
 # REQUIRES: asserts
+# REQUIRES: abi_breaking_checks
 # REQUIRES: x86-registered-target
 ## Basic test checking that update_llc_test_checks.py can update a file with isel debug output
 

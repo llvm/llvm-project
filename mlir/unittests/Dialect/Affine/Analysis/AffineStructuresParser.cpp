@@ -11,8 +11,9 @@
 #include "mlir/Parser/Parser.h"
 
 using namespace mlir;
+using namespace presburger;
 
-FailureOr<FlatAffineConstraints>
+FailureOr<IntegerPolyhedron>
 mlir::parseIntegerSetToFAC(llvm::StringRef str, MLIRContext *context,
                            bool printDiagnosticInfo) {
   IntegerSet set = parseIntegerSet(str, context, printDiagnosticInfo);
@@ -20,5 +21,5 @@ mlir::parseIntegerSetToFAC(llvm::StringRef str, MLIRContext *context,
   if (!set)
     return failure();
 
-  return FlatAffineConstraints(set);
+  return FlatAffineValueConstraints(set);
 }

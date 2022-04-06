@@ -154,8 +154,11 @@ bool isNoSyncInst(Attributor &A, const Instruction &I,
 
 /// Return true if \p V is dynamically unique, that is, there are no two
 /// "instances" of \p V at runtime with different values.
+/// Note: If \p ForAnalysisOnly is set we only check that the Attributor will
+/// never use \p V to represent two "instances" not that \p V could not
+/// technically represent them.
 bool isDynamicallyUnique(Attributor &A, const AbstractAttribute &QueryingAA,
-                         const Value &V);
+                         const Value &V, bool ForAnalysisOnly = true);
 
 /// Return true if \p V is a valid value in \p Scope, that is a constant or an
 /// instruction/argument of \p Scope.
@@ -204,18 +207,20 @@ bool getAssumedUnderlyingObjects(Attributor &A, const Value &Ptr,
 
 /// Collect all potential values \p LI could read into \p PotentialValues. That
 /// is, the only values read by \p LI are assumed to be known and all are in
-/// \p PotentialValues. Dependences onto \p QueryingAA are properly tracked,
-/// \p UsedAssumedInformation will inform the caller if assumed information was
+/// \p PotentialValues. \p PotentialValueOrigins will contain all the
+/// instructions that might have put a potential value into \p PotentialValues.
+/// Dependences onto \p QueryingAA are properly tracked, \p
+/// UsedAssumedInformation will inform the caller if assumed information was
 /// used.
 ///
 /// \returns True if the assumed potential copies are all in \p PotentialValues,
 ///          false if something went wrong and the copies could not be
 ///          determined.
-bool getPotentiallyLoadedValues(Attributor &A, LoadInst &LI,
-                                SmallSetVector<Value *, 4> &PotentialValues,
-                                const AbstractAttribute &QueryingAA,
-                                bool &UsedAssumedInformation,
-                                bool OnlyExact = false);
+bool getPotentiallyLoadedValues(
+    Attributor &A, LoadInst &LI, SmallSetVector<Value *, 4> &PotentialValues,
+    SmallSetVector<Instruction *, 4> &PotentialValueOrigins,
+    const AbstractAttribute &QueryingAA, bool &UsedAssumedInformation,
+    bool OnlyExact = false);
 
 /// Collect all potential values of the one stored by \p SI into
 /// \p PotentialCopies. That is, the only copies that were made via the
@@ -1057,6 +1062,10 @@ struct InformationCache {
     return FI.CalledViaMustTail || FI.ContainsMustTailCall;
   }
 
+  bool isOnlyUsedByAssume(const Instruction &I) const {
+    return AssumeOnlyValues.contains(&I);
+  }
+
   /// Return the analysis result from a pass \p AP for function \p F.
   template <typename AP>
   typename AP::Result *getAnalysisResultForFunction(const Function &F) {
@@ -1148,6 +1157,9 @@ private:
 
   /// A map with knowledge retained in `llvm.assume` instructions.
   RetainedKnowledgeMap KnowledgeMap;
+
+  /// A container for all instructions that are only used by `llvm.assume`.
+  SetVector<const Instruction *> AssumeOnlyValues;
 
   /// Getters for analysis.
   AnalysisGetter &AG;
@@ -1695,6 +1707,7 @@ public:
                        const AbstractAttribute &QueryingAA, const Value &V,
                        bool CheckBBLivenessOnly = false,
                        DepClassTy LivenessDepClass = DepClassTy::OPTIONAL,
+                       bool IgnoreDroppableUses = true,
                        function_ref<bool(const Use &OldU, const Use &NewU)>
                            EquivalentUseCB = nullptr);
 
@@ -3411,6 +3424,12 @@ protected:
   /// Returns true if \p I is known dead.
   virtual bool isKnownDead(const Instruction *I) const = 0;
 
+  /// Return true if the underlying value is a store that is known to be
+  /// removable. This is different from dead stores as the removable store
+  /// can have an effect on live values, especially loads, but that effect
+  /// is propagated which allows us to remove the store in turn.
+  virtual bool isRemovableStore() const { return false; }
+
   /// This method is used to check if at least one instruction in a collection
   /// of instructions is live.
   template <typename T> bool isLiveInstSet(T begin, T end) const {
@@ -3684,6 +3703,46 @@ struct AAAlign : public IRAttribute<
 
   /// Create an abstract attribute view for the position \p IRP.
   static AAAlign &createForPosition(const IRPosition &IRP, Attributor &A);
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
+};
+
+/// An abstract interface to track if a value leaves it's defining function
+/// instance.
+/// TODO: We should make it a ternary AA tracking uniqueness, and uniqueness
+/// wrt. the Attributor analysis separately.
+struct AAInstanceInfo : public StateWrapper<BooleanState, AbstractAttribute> {
+  AAInstanceInfo(const IRPosition &IRP, Attributor &A)
+      : StateWrapper<BooleanState, AbstractAttribute>(IRP) {}
+
+  /// Return true if we know that the underlying value is unique in its scope
+  /// wrt. the Attributor analysis. That means it might not be unique but we can
+  /// still use pointer equality without risking to represent two instances with
+  /// one `llvm::Value`.
+  bool isKnownUniqueForAnalysis() const { return isKnown(); }
+
+  /// Return true if we assume that the underlying value is unique in its scope
+  /// wrt. the Attributor analysis. That means it might not be unique but we can
+  /// still use pointer equality without risking to represent two instances with
+  /// one `llvm::Value`.
+  bool isAssumedUniqueForAnalysis() const { return isAssumed(); }
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AAInstanceInfo &createForPosition(const IRPosition &IRP,
+                                           Attributor &A);
+
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AAInstanceInfo"; }
+
+  /// See AbstractAttribute::getIdAddr()
+  const char *getIdAddr() const override { return &ID; }
+
+  /// This function should return true if the type of the \p AA is
+  /// AAInstanceInfo
+  static bool classof(const AbstractAttribute *AA) {
+    return (AA->getIdAddr() == &ID);
+  }
 
   /// Unique ID (due to the unique address)
   static const char ID;

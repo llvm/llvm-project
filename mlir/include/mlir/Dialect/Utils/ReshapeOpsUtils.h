@@ -337,6 +337,9 @@ private:
       ArrayRef<int64_t> srcShape, ArrayRef<int64_t> resultShape) const {
     SmallVector<ReassociationIndices, 4> composedReassociation;
 
+    if (srcReassociation.empty())
+      return {getReassociationIndicesForCollapse(srcShape, resultShape)};
+
     for (auto item : llvm::zip(srcReassociation, resultReassociation)) {
       auto &srcIndices = std::get<0>(item);
       auto &resultIndices = std::get<1>(item);
