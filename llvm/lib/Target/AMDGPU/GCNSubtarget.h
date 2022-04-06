@@ -1044,6 +1044,8 @@ public:
 
   bool hasVOPDInsts() const { return HasVOPDInsts; }
 
+  bool hasFlatScratchSVSSwizzleBug() const { return getGeneration() == GFX11; }
+
   /// Return true if the target has the S_DELAY_ALU instruction.
   bool hasDelayAlu() const { return GFX11Insts; }
 
