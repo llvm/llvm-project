@@ -1,7 +1,7 @@
 /**
  * Test for asm-dump functionality.
  *
- * REQUIRES: system-linux
+ * REQUIRES: system-linux,bolt-runtime
  *
  * Compile the source
  * RUN: %clang -fPIC %s -o %t.exe -Wl,-q
@@ -59,7 +59,8 @@
  * CHECK-FILE-NEXT: .size main, .-main
  * CHECK-FILE:      .section .rodata
  *
- * CHECK-REOPT: BOLT-INFO: 1 out of {{.*}} functions in the binary {{.*}} have non-empty execution profile
+ * CHECK-REOPT: BOLT-INFO: 1 out of {{.*}} functions in the binary {{.*}} have
+ * CHECK-REOPT: non-empty execution profile
  */
 #include <stdio.h>
 #include <string.h>
