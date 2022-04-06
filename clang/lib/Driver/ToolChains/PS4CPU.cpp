@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "PS4CPU.h"
-#include "FreeBSD.h"
 #include "CommonArgs.h"
+#include "FreeBSD.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
@@ -125,7 +125,7 @@ void tools::PS4cpu::Link::ConstructJob(Compilation &C, const JobAction &JA,
     assert(Output.isNothing() && "Invalid output.");
   }
 
-  if(!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs))
+  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs))
     AddPS4SanitizerArgs(ToolChain, Args, CmdArgs);
 
   Args.AddAllArgs(CmdArgs, options::OPT_L);
@@ -149,8 +149,7 @@ void tools::PS4cpu::Link::ConstructJob(Compilation &C, const JobAction &JA,
         << "-fuse-ld" << getToolChain().getTriple().str();
   }
 
-  const char *Exec =
-      Args.MakeArgString(ToolChain.GetProgramPath("orbis-ld"));
+  const char *Exec = Args.MakeArgString(ToolChain.GetProgramPath("orbis-ld"));
 
   C.addCommand(std::make_unique<Command>(JA, *this,
                                          ResponseFileSupport::AtFileUTF8(),
