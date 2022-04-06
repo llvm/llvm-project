@@ -126,11 +126,16 @@ private:
     // lexical context (scope).
     mlir::Block *CleanupBlock = nullptr;
 
+    // Points to scope entry block. This is useful, for instance, for
+    // helping to insert allocas before finalizing any recursive codegen
+    // from switches.
+    mlir::Block *EntryBlock;
+
   public:
     unsigned Depth = 0;
     bool HasReturn = false;
-    LexicalScopeContext(mlir::Location b, mlir::Location e)
-        : BeginLoc(b), EndLoc(e) {}
+    LexicalScopeContext(mlir::Location b, mlir::Location e, mlir::Block *eb)
+        : EntryBlock(eb), BeginLoc(b), EndLoc(e) {}
     ~LexicalScopeContext() = default;
 
     // ---
@@ -187,6 +192,11 @@ private:
       assert(CGM.builder.getInsertionBlock() && "Should be valid");
       return RetBlock;
     }
+
+    // ---
+    // Scope entry block tracking
+    // ---
+    mlir::Block *getEntryBlock() { return EntryBlock; }
 
     mlir::Location BeginLoc, EndLoc;
   };
