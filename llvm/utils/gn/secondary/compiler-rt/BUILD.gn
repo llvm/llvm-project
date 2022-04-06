@@ -12,9 +12,6 @@ if (current_os == "win") {
   supported_toolchains = [ "//llvm/utils/gn/build/toolchain:stage2_unix" ]
 }
 supported_toolchains += supported_android_toolchains
-if (llvm_build_AArch64) {
-  supported_toolchains += [ "//llvm/utils/gn/build/toolchain:stage2_baremetal_aarch64" ]
-}
 group("compiler-rt") {
   deps = [ "//compiler-rt/include($host_toolchain)" ]
   foreach(toolchain, supported_toolchains) {
