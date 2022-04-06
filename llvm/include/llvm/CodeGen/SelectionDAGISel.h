@@ -54,6 +54,7 @@ public:
   const TargetLowering *TLI;
   bool FastISelFailed;
   SmallPtrSet<const Instruction *, 4> ElidedArgCopyInstrs;
+  bool UseInstrRefDebugInfo = false;
 
   /// Current optimization remark emitter.
   /// Used to report things like combines and FastISel failures.

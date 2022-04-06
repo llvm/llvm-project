@@ -282,6 +282,9 @@ class SelectionDAG {
 
   uint16_t NextPersistentId = 0;
 
+  /// Are instruction referencing variable locations desired for this function?
+  bool UseInstrRefDebugInfo = false;
+
 public:
   /// Clients of various APIs that cause global effects on
   /// the DAG can optionally implement this interface.  This allows the clients
@@ -1781,6 +1784,16 @@ public:
   /// To be invoked on an SDNode that is slated to be erased. This
   /// function mirrors \c llvm::salvageDebugInfo.
   void salvageDebugInfo(SDNode &N);
+
+  /// Signal whether instruction referencing variable locations are desired for
+  /// this function's debug-info.
+  void useInstrRefDebugInfo(bool Flag) {
+    UseInstrRefDebugInfo = Flag;
+  }
+
+  bool getUseInstrRefDebugInfo() const {
+    return UseInstrRefDebugInfo;
+  }
 
   void dump() const;
 
