@@ -83,7 +83,6 @@ static lto::Config createConfig() {
   c.MAttrs = getMAttrs();
   c.CGOptLevel = args::getCGOptLevel(config->ltoo);
   c.AlwaysEmitRegularLTOObj = !config->ltoObjPath.empty();
-  c.UseNewPM = config->ltoNewPassManager;
   c.DebugPassManager = config->ltoDebugPassManager;
   c.CSIRProfile = std::string(config->ltoCSProfileFile);
   c.RunCSIRInstr = config->ltoCSProfileGenerate;

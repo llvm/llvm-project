@@ -1,11 +1,5 @@
 ; REQUIRES: x86
 ; RUN: llvm-as %s -o %t.o
-; RUN: ld.lld %t.o -o %t2 -mllvm -debug-pass=Arguments --lto-legacy-pass-manager \
-; RUN:   2>&1 | FileCheck -check-prefix=DEFAULT-LPM %s
-; RUN: ld.lld %t.o -o %t2 -mllvm -debug-pass=Arguments --lto-legacy-pass-manager \
-; RUN:   -disable-verify 2>&1 | FileCheck -check-prefix=DISABLE-LPM %s
-; RUN: ld.lld %t.o -o %t2 -mllvm -debug-pass=Arguments --lto-legacy-pass-manager \
-; RUN:   --plugin-opt=disable-verify 2>&1 | FileCheck -check-prefix=DISABLE-LPM %s
 ; RUN: ld.lld %t.o -o %t2 --no-lto-legacy-pass-manager --lto-debug-pass-manager \
 ; RUN:   2>&1 | FileCheck -check-prefix=DEFAULT-NPM %s
 ; RUN: ld.lld %t.o -o %t2 --no-lto-legacy-pass-manager --lto-debug-pass-manager \
@@ -21,8 +15,6 @@ define void @_start() {
 }
 
 ; -disable-verify should disable the verification of bitcode.
-; DEFAULT-LPM:     Pass Arguments: {{.*}} -verify {{.*}} -verify
-; DISABLE-LPM-NOT: Pass Arguments: {{.*}} -verify {{.*}} -verify
 ; DEFAULT-NPM: Running pass: VerifierPass
 ; DEFAULT-NPM: Running pass: VerifierPass
 ; DEFAULT-NPM-NOT: Running pass: VerifierPass

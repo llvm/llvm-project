@@ -365,8 +365,6 @@ static void readConfigs(opt::InputArgList &args) {
   config->importUndefined = args.hasArg(OPT_import_undefined);
   config->ltoo = args::getInteger(args, OPT_lto_O, 2);
   config->ltoPartitions = args::getInteger(args, OPT_lto_partitions, 1);
-  config->ltoNewPassManager = args.hasFlag(OPT_no_lto_legacy_pass_manager,
-                                           OPT_lto_legacy_pass_manager, true);
   config->ltoDebugPassManager = args.hasArg(OPT_lto_debug_pass_manager);
   config->mapFile = args.getLastArgValue(OPT_Map);
   config->optimize = args::getInteger(args, OPT_O, 1);
