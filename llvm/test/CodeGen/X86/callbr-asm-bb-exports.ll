@@ -1,4 +1,4 @@
-; REQUIRES: asserts, abi_breaking_checks
+; REQUIRES: asserts
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -o /dev/null -debug-only=isel 2>&1 | FileCheck %s
 
 ; Make sure we emit the basic block exports and the TokenFactor before the

@@ -1066,10 +1066,8 @@ static void VerifySDNode(SDNode *N) {
 /// verification and other common operations when a new node is allocated.
 void SelectionDAG::InsertNode(SDNode *N) {
   AllNodes.push_back(N);
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
-  N->PersistentId = NextPersistentId++;
-#endif
 #ifndef NDEBUG
+  N->PersistentId = NextPersistentId++;
   VerifySDNode(N);
 #endif
   for (DAGUpdateListener *DUL = UpdateListeners; DUL; DUL = DUL->Next)
@@ -1273,7 +1271,7 @@ void SelectionDAG::allnodes_clear() {
   AllNodes.remove(AllNodes.begin());
   while (!AllNodes.empty())
     DeallocateNode(&AllNodes.front());
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+#ifndef NDEBUG
   NextPersistentId = 0;
 #endif
 }

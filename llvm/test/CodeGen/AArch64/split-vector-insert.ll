@@ -1,6 +1,6 @@
 ; RUN: llc < %s -debug-only=legalize-types 2>&1 | FileCheck %s --check-prefix=CHECK-LEGALIZATION
 ; RUN: llc < %s | FileCheck %s
-; REQUIRES: asserts, abi_breaking_checks
+; REQUIRES: asserts
 
 target triple = "aarch64-unknown-linux-gnu"
 attributes #0 = {"target-features"="+sve"}

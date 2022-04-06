@@ -15,7 +15,7 @@
 ; RUN: llc < %s -mtriple=mips64-linux-gnu -target-abi n64 -verify-machineinstrs \
 ; RUN:   -debug 2>&1 | FileCheck %s --check-prefix=N64-SDAG
 
-; REQUIRES: asserts, abi_breaking_checks
+; REQUIRES: asserts
 
 ; Test that reserved argument area is shared between the memcpy call and the
 ; call to f2. This eliminates the nested call sequence nodes.

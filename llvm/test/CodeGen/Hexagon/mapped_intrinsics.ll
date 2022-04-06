@@ -1,5 +1,5 @@
 ; RUN: llc -march=hexagon -debug-only=isel < %s 2>&1 | FileCheck %s
-; REQUIRES: asserts, abi_breaking_checks
+; REQUIRES: asserts
 
 ; This test validates that ISel picks the correct equivalent of below mentioned intrinsics
 ; For S2_asr_i_r_rnd_goodsyntax:

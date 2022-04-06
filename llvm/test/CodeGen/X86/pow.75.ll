@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple=x86_64-- -debug 2>&1 | FileCheck %s
-; REQUIRES: asserts, abi_breaking_checks
+; REQUIRES: asserts
 
 declare float @llvm.pow.f32(float, float)
 declare <4 x float> @llvm.pow.v4f32(<4 x float>, <4 x float>)

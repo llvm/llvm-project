@@ -1,10 +1,10 @@
-; REQUIRES: asserts, abi_breaking_checks
+; REQUIRES: asserts
 ; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-unknown-linux-gnu < %s \
 ; RUN:   -verify-machineinstrs -debug 2>&1 | FileCheck %s
 
 define zeroext i1 @addiCmpiUnsigned(i32 zeroext %x) {
 entry:
-  %add = add nuw i32 10, %x
+  %add = add nuw i32 10, %x 
   %cmp = icmp ugt i32 %add, 100
   ret i1 %cmp
 
@@ -17,7 +17,7 @@ entry:
 
 define zeroext i1 @addiCmpiSigned(i32 signext %x) {
 entry:
-  %add = add nsw i32 16, %x
+  %add = add nsw i32 16, %x 
   %cmp = icmp sgt i32 %add, 30
   ret i1 %cmp
 
@@ -30,7 +30,7 @@ entry:
 
 define zeroext i1 @addiCmpiUnsignedOverflow(i32 zeroext %x) {
 entry:
-  %add = add nuw i32 110, %x
+  %add = add nuw i32 110, %x 
   %cmp = icmp ugt i32 %add, 100
   ret i1 %cmp
 
@@ -43,7 +43,7 @@ entry:
 
 define zeroext i1 @addiCmpiSignedOverflow(i16 signext %x) {
 entry:
-  %add = add nsw i16 16, %x
+  %add = add nsw i16 16, %x 
   %cmp = icmp sgt i16 %add, -32767
   ret i1 %cmp
 
