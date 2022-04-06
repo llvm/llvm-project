@@ -60,10 +60,7 @@ public:
       // If we hit here we have collision on Guid's in two PDB files.
       // This can happen if the PDB Guid is invalid or if we are really
       // unlucky. This should fall back on stright file-system lookup.
-      TypeServerSource *tSrc = (TypeServerSource *)it.first->second;
-      log("GUID collision between " + file.getFilePath() + " and " +
-          tSrc->pdbInputFile->session->getPDBFile().getFilePath());
-      ctx.typeServerSourceMappings.erase(Guid);
+      it.first->second = nullptr;
     }
   }
 
@@ -405,11 +402,12 @@ Expected<TypeServerSource *> UseTypeServerSource::getTypeServerSource() {
   const codeview::GUID &tsId = typeServerDependency.getGuid();
   StringRef tsPath = typeServerDependency.getName();
 
-  TypeServerSource *tsSrc;
+  TypeServerSource *tsSrc = nullptr;
   auto it = ctx.typeServerSourceMappings.find(tsId);
   if (it != ctx.typeServerSourceMappings.end()) {
     tsSrc = (TypeServerSource *)it->second;
-  } else {
+  }
+  if (tsSrc == nullptr) {
     // The file failed to load, lookup by name
     PDBInputFile *pdb = PDBInputFile::findFromRecordPath(ctx, tsPath, file);
     if (!pdb)
