@@ -92,7 +92,11 @@ struct DirectiveTree {
   /// Extract preprocessor structure by examining the raw tokens.
   static DirectiveTree parse(const TokenStream &);
 
-  // FIXME: allow deriving a preprocessed stream
+  /// Produce a parseable token stream by stripping all directive tokens.
+  ///
+  /// Conditional sections are replaced by the taken branch, if any.
+  /// This tree must describe the provided token stream.
+  TokenStream stripDirectives(const TokenStream &) const;
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const DirectiveTree &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const DirectiveTree::Chunk &);

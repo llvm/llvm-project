@@ -27,12 +27,21 @@ using testing::Pair;
 using testing::StrEq;
 using Chunk = DirectiveTree::Chunk;
 
-MATCHER_P2(tokensAre, TS, Tokens, "tokens are " + std::string(Tokens)) {
+// Matches text of a list of tokens against a string (joined with spaces).
+// e.g. EXPECT_THAT(Stream.tokens(), tokens("int main ( ) { }"));
+MATCHER_P(tokens, Tokens, "") {
   std::vector<llvm::StringRef> Texts;
-  for (const Token &Tok : TS.tokens(arg.Tokens))
+  for (const Token &Tok : arg)
     Texts.push_back(Tok.text());
   return Matcher<std::string>(StrEq(Tokens))
       .MatchAndExplain(llvm::join(Texts, " "), result_listener);
+}
+
+// Matches tokens covered a directive chunk (with a Tokens property) against a
+// string, similar to tokens() above.
+// e.g. EXPECT_THAT(SomeDirective, tokensAre(Stream, "# include < vector >"));
+MATCHER_P2(tokensAre, TS, Tokens, "tokens are " + std::string(Tokens)) {
+  return testing::Matches(tokens(Tokens))(TS.tokens(arg.Tokens));
 }
 
 MATCHER_P(chunkKind, K, "") { return arg.kind() == K; }
@@ -299,6 +308,45 @@ TEST(DirectiveTree, ChooseBranches) {
     chooseConditionalBranches(Tree, S);
     Verify(Tree);
   }
+}
+
+TEST(DirectiveTree, StripDirectives) {
+  LangOptions Opts;
+  std::string Code = R"cpp(
+    #include <stddef.h>
+    a a a
+    #warning AAA
+    b b b
+    #if 1
+      c c c
+      #warning BBB
+      #if 0
+        d d d
+        #warning CC
+      #else
+        e e e
+      #endif
+      f f f
+      #if 0
+        g g g
+      #endif
+      h h h
+    #else
+      i i i
+    #endif
+    j j j
+  )cpp";
+  TokenStream S = lex(Code, Opts);
+
+  DirectiveTree Tree = DirectiveTree::parse(S);
+  chooseConditionalBranches(Tree, S);
+  EXPECT_THAT(Tree.stripDirectives(S).tokens(),
+              tokens("a a a b b b c c c e e e f f f h h h j j j"));
+
+  const DirectiveTree &Part =
+      ((const DirectiveTree::Conditional &)Tree.Chunks[4]).Branches[0].second;
+  EXPECT_THAT(Part.stripDirectives(S).tokens(),
+              tokens("c c c e e e f f f h h h"));
 }
 
 } // namespace
