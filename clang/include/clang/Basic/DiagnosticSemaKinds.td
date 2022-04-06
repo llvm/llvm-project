@@ -4380,6 +4380,9 @@ def err_uninitialized_member_in_ctor : Error<
 def err_default_arg_makes_ctor_special : Error<
   "addition of default argument on redeclaration makes this constructor a "
   "%select{default|copy|move}0 constructor">;
+def err_stmt_expr_in_default_arg : Error<
+  "default %select{argument|non-type template argument}0 may not use a GNU "
+  "statement expression">;
 
 def err_use_of_default_argument_to_function_declared_later : Error<
   "use of default argument to function %0 that is declared later in class %1">;
@@ -6490,6 +6493,10 @@ def warn_pointer_sub_null_ptr : Warning<
 def warn_floatingpoint_eq : Warning<
   "comparing floating point with == or != is unsafe">,
   InGroup<DiagGroup<"float-equal">>, DefaultIgnore;
+
+def err_setting_eval_method_used_in_unsafe_context : Error <
+  "%select{'#pragma clang fp eval_method'|option 'ffp-eval-method'}0 cannot be used with "
+  "%select{option 'fapprox-func'|option 'mreassociate'|option 'freciprocal'|option 'ffp-eval-method'|'#pragma clang fp reassociate'}1">;
 
 def warn_remainder_division_by_zero : Warning<
   "%select{remainder|division}0 by zero is undefined">,

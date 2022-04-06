@@ -381,7 +381,8 @@ private:
     // If a file is mapped by canonical headers, use that mapping, regardless
     // of whether it's an otherwise-good header (header guards etc).
     if (Includes) {
-      llvm::StringRef Canonical = Includes->mapHeader(Filename);
+      llvm::StringRef Canonical =
+          Includes->mapHeader(*SM.getFileEntryRefForID(FID));
       if (!Canonical.empty()) {
         // If we had a mapping, always use it.
         if (Canonical.startswith("<") || Canonical.startswith("\""))

@@ -134,14 +134,22 @@ int main(int, char**)
     static_assert((std::is_same<decltype(printf("\n")), int>::value), "");
     static_assert((std::is_same<decltype(scanf("\n")), int>::value), "");
     static_assert((std::is_same<decltype(snprintf(cp,0,"p")), int>::value), "");
+    TEST_DIAGNOSTIC_PUSH
+    TEST_CLANG_DIAGNOSTIC_IGNORED("-Wdeprecated-declarations")
+    TEST_GCC_DIAGNOSTIC_IGNORED("-Wdeprecated-declarations")
     static_assert((std::is_same<decltype(sprintf(cp," ")), int>::value), "");
+    TEST_DIAGNOSTIC_POP
     static_assert((std::is_same<decltype(sscanf("","")), int>::value), "");
     static_assert((std::is_same<decltype(vfprintf(fp,"",va)), int>::value), "");
     static_assert((std::is_same<decltype(vfscanf(fp,"",va)), int>::value), "");
     static_assert((std::is_same<decltype(vprintf(" ",va)), int>::value), "");
     static_assert((std::is_same<decltype(vscanf("",va)), int>::value), "");
     static_assert((std::is_same<decltype(vsnprintf(cp,0," ",va)), int>::value), "");
+    TEST_DIAGNOSTIC_PUSH
+    TEST_CLANG_DIAGNOSTIC_IGNORED("-Wdeprecated-declarations")
+    TEST_GCC_DIAGNOSTIC_IGNORED("-Wdeprecated-declarations")
     static_assert((std::is_same<decltype(vsprintf(cp," ",va)), int>::value), "");
+    TEST_DIAGNOSTIC_POP
     static_assert((std::is_same<decltype(vsscanf("","",va)), int>::value), "");
     static_assert((std::is_same<decltype(fgetc(fp)), int>::value), "");
     static_assert((std::is_same<decltype(fgets(cp,0,fp)), char*>::value), "");

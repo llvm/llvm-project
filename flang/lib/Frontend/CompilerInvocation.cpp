@@ -381,6 +381,15 @@ static std::string getIntrinsicDir() {
   return std::string(driverPath);
 }
 
+// Generate the path to look for OpenMP headers
+static std::string getOpenMPHeadersDir() {
+  llvm::SmallString<128> includePath;
+  includePath.assign(llvm::sys::fs::getMainExecutable(nullptr, nullptr));
+  llvm::sys::path::remove_filename(includePath);
+  includePath.append("/../include/flang/OpenMP/");
+  return std::string(includePath);
+}
+
 /// Parses all preprocessor input arguments and populates the preprocessor
 /// options accordingly.
 ///
@@ -626,6 +635,11 @@ void CompilerInvocation::SetDefaultFortranOpts() {
 
   std::vector<std::string> searchDirectories{"."s};
   fortranOptions.searchDirectories = searchDirectories;
+
+  // Add the location of omp_lib.h to the search directories. Currently this is
+  // identical to the modules' directory.
+  fortranOptions.searchDirectories.emplace_back(getOpenMPHeadersDir());
+
   fortranOptions.isFixedForm = false;
 }
 

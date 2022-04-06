@@ -1117,8 +1117,7 @@ std::pair<ASTFileSignature, ASTFileSignature>
 ASTWriter::createSignature(StringRef AllBytes, StringRef ASTBlockBytes) {
   llvm::SHA1 Hasher;
   Hasher.update(ASTBlockBytes);
-  auto Hash = Hasher.result();
-  ASTFileSignature ASTBlockHash = ASTFileSignature::create(Hash);
+  ASTFileSignature ASTBlockHash = ASTFileSignature::create(Hasher.result());
 
   // Add the remaining bytes (i.e. bytes before the unhashed control block that
   // are not part of the AST block).
@@ -1126,8 +1125,7 @@ ASTWriter::createSignature(StringRef AllBytes, StringRef ASTBlockBytes) {
       AllBytes.take_front(ASTBlockBytes.bytes_end() - AllBytes.bytes_begin()));
   Hasher.update(
       AllBytes.take_back(AllBytes.bytes_end() - ASTBlockBytes.bytes_end()));
-  Hash = Hasher.result();
-  ASTFileSignature Signature = ASTFileSignature::create(Hash);
+  ASTFileSignature Signature = ASTFileSignature::create(Hasher.result());
 
   return std::make_pair(ASTBlockHash, Signature);
 }

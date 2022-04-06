@@ -166,7 +166,8 @@ define void @pos_priv_mem() {
 ; CHECK-NEXT:    call void @aligned_barrier()
 ; CHECK-NEXT:    [[ARGC:%.*]] = addrspacecast i32 addrspace(5)* [[ARG]] to i32*
 ; CHECK-NEXT:    store i32 [[B]], i32* [[ARGC]], align 4
-; CHECK-NEXT:    store i32 [[A]], i32* @PG1, align 4
+; CHECK-NEXT:    [[V:%.*]] = load i32, i32* [[LOC]], align 4
+; CHECK-NEXT:    store i32 [[V]], i32* @PG1, align 4
 ; CHECK-NEXT:    ret void
 ;
   %arg = load i32 addrspace(5)*, i32 addrspace(5)** @GPtr5

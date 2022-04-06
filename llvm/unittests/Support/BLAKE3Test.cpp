@@ -12,6 +12,7 @@
 
 #include "llvm/Support/BLAKE3.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/HashBuilder.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -59,6 +60,14 @@ TEST(BLAKE3Test, BLAKE3) {
   auto hashStr = toHex(hash);
   EXPECT_EQ(hashStr,
             "616F575A1B58D4C9797D4217B9730AE5E6EB319D76EDEF6549B46F4EFE31FF8B");
+
+  // Using generic HashBuilder.
+  HashBuilder<BLAKE3, support::endianness::native> HashBuilder;
+  HashBuilder.update(std::get<0>(testvectors[2]));
+  BLAKE3Result<> HBHash1 = HashBuilder.final();
+  BLAKE3Result<> HBHash2 = HashBuilder.result();
+  EXPECT_EQ(std::get<1>(testvectors[2]), toHex(HBHash1));
+  EXPECT_EQ(std::get<1>(testvectors[2]), toHex(HBHash2));
 }
 
 TEST(BLAKE3Test, SmallerHashSize) {
@@ -73,6 +82,14 @@ TEST(BLAKE3Test, SmallerHashSize) {
   auto hashStr2 = toHex(hash2);
   EXPECT_EQ(hashStr1, hashStr2);
   EXPECT_EQ(hashStr1, "6437B3AC38465133FFB63B75273A8DB5");
+
+  // Using generic HashBuilder.
+  HashBuilder<TruncatedBLAKE3<16>, support::endianness::native> HashBuilder;
+  HashBuilder.update(Input);
+  BLAKE3Result<16> hash3 = HashBuilder.final();
+  BLAKE3Result<16> hash4 = HashBuilder.result();
+  EXPECT_EQ(hashStr1, toHex(hash3));
+  EXPECT_EQ(hashStr1, toHex(hash4));
 }
 
 } // namespace

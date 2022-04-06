@@ -486,6 +486,12 @@ void Sema::ActOnPragmaFPEvalMethod(SourceLocation Loc,
     NewFPFeatures.setFPEvalMethodOverride(LangOptions::FEM_Extended);
     break;
   }
+  if (getLangOpts().ApproxFunc)
+    Diag(Loc, diag::err_setting_eval_method_used_in_unsafe_context) << 0 << 0;
+  if (getLangOpts().AllowFPReassoc)
+    Diag(Loc, diag::err_setting_eval_method_used_in_unsafe_context) << 0 << 1;
+  if (getLangOpts().AllowRecip)
+    Diag(Loc, diag::err_setting_eval_method_used_in_unsafe_context) << 0 << 2;
   FpPragmaStack.Act(Loc, PSK_Set, StringRef(), NewFPFeatures);
   CurFPFeatures = NewFPFeatures.applyOverrides(getLangOpts());
   PP.setCurrentFPEvalMethod(Loc, Value);
@@ -1153,6 +1159,23 @@ void Sema::ActOnPragmaFPContract(SourceLocation Loc,
 }
 
 void Sema::ActOnPragmaFPReassociate(SourceLocation Loc, bool IsEnabled) {
+  if (IsEnabled) {
+    // For value unsafe context, combining this pragma with eval method
+    // setting is not recommended. See comment in function FixupInvocation#506.
+    int Reason = -1;
+    if (getLangOpts().getFPEvalMethod() != LangOptions::FEM_UnsetOnCommandLine)
+      // Eval method set using the option 'ffp-eval-method'.
+      Reason = 1;
+    if (PP.getLastFPEvalPragmaLocation().isValid())
+      // Eval method set using the '#pragma clang fp eval_method'.
+      // We could have both an option and a pragma used to the set the eval
+      // method. The pragma overrides the option in the command line. The Reason
+      // of the diagnostic is overriden too.
+      Reason = 0;
+    if (Reason != -1)
+      Diag(Loc, diag::err_setting_eval_method_used_in_unsafe_context)
+          << Reason << 4;
+  }
   FPOptionsOverride NewFPFeatures = CurFPFeatureOverrides();
   NewFPFeatures.setAllowFPReassociateOverride(IsEnabled);
   FpPragmaStack.Act(Loc, PSK_Set, StringRef(), NewFPFeatures);

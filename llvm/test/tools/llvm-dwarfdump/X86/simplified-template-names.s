@@ -12600,15 +12600,15 @@ i:
 .Linfo_string195:
 	.asciz	"_Z2f3IN2ns11EnumerationEJLS1_1ELS1_2EEEvv" # string offset=2877
 .Linfo_string196:
-	.asciz	"_STNf3|<ns::Enumeration, ns::Enumerator2, (ns::Enumeration)2>" # string offset=2919
+	.asciz	"_STNf3|<ns::Enumeration, (ns::Enumeration)1, (ns::Enumeration)2>" # string offset=2919
 .Linfo_string197:
 	.asciz	"_Z2f3IN2ns16EnumerationClassEJLS1_1ELS1_2EEEvv" # string offset=2981
 .Linfo_string198:
-	.asciz	"_STNf3|<ns::EnumerationClass, ns::EnumerationClass::Enumerator2, (ns::EnumerationClass)2>" # string offset=3028
+	.asciz	"_STNf3|<ns::EnumerationClass, (ns::EnumerationClass)1, (ns::EnumerationClass)2>" # string offset=3028
 .Linfo_string199:
 	.asciz	"_Z2f3IN2ns16EnumerationSmallEJLS1_255EEEvv" # string offset=3118
 .Linfo_string200:
-	.asciz	"_STNf3|<ns::EnumerationSmall, ns::kNeg>" # string offset=3161
+	.asciz	"_STNf3|<ns::EnumerationSmall, (ns::EnumerationSmall)255>" # string offset=3161
 .Linfo_string201:
 	.asciz	"_Z2f3IN2ns3$_0EJLS1_1ELS1_2EEEvv" # string offset=3201
 .Linfo_string202:

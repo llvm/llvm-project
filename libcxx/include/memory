@@ -661,9 +661,29 @@ template<class E, class T, class Y>
 template<class D, class T> D* get_deleter(shared_ptr<T> const& p) noexcept;
 
 template<class T, class... Args>
-    shared_ptr<T> make_shared(Args&&... args);
+    shared_ptr<T> make_shared(Args&&... args); // T is not an array
 template<class T, class A, class... Args>
-    shared_ptr<T> allocate_shared(const A& a, Args&&... args);
+    shared_ptr<T> allocate_shared(const A& a, Args&&... args); // T is not an array
+
+template<class T>
+    shared_ptr<T> make_shared(size_t N); // T is U[] (since C++20)
+template<class T, class A>
+    shared_ptr<T> allocate_shared(const A& a, size_t N); // T is U[] (since C++20)
+
+template<class T>
+    shared_ptr<T> make_shared(); // T is U[N] (since C++20)
+template<class T, class A>
+    shared_ptr<T> allocate_shared(const A& a); // T is U[N] (since C++20)
+
+template<class T>
+    shared_ptr<T> make_shared(size_t N, const remove_extent_t<T>& u); // T is U[] (since C++20)
+template<class T, class A>
+    shared_ptr<T> allocate_shared(const A& a, size_t N, const remove_extent_t<T>& u); // T is U[] (since C++20)
+
+template<class T> shared_ptr<T>
+    make_shared(const remove_extent_t<T>& u); // T is U[N] (since C++20)
+template<class T, class A>
+    shared_ptr<T> allocate_shared(const A& a, const remove_extent_t<T>& u); // T is U[N] (since C++20)
 
 template<class T>
 class weak_ptr

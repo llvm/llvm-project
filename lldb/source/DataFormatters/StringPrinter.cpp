@@ -293,7 +293,7 @@ static bool DumpEncodedBufferToStream(
       data_ptr = (const SourceDataType *)data.GetDataStart();
     }
 
-    lldb::DataBufferSP utf8_data_buffer_sp;
+    lldb::WritableDataBufferSP utf8_data_buffer_sp;
     llvm::UTF8 *utf8_data_ptr = nullptr;
     llvm::UTF8 *utf8_data_end_ptr = nullptr;
 
@@ -450,7 +450,7 @@ static bool ReadEncodedBufferAndDumpToStream(
   }
 
   const int bufferSPSize = sourceSize * type_width;
-  lldb::DataBufferSP buffer_sp(new DataBufferHeap(bufferSPSize, 0));
+  lldb::WritableDataBufferSP buffer_sp(new DataBufferHeap(bufferSPSize, 0));
 
   // Check if we got bytes. We never get any bytes if we have an empty
   // string, but we still continue so that we end up actually printing
