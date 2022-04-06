@@ -267,9 +267,9 @@ define void @test_i1_uge(i1 *%A2) {
 define i64 @PR40657(i8 %var2, i8 %var9) {
 ; CHECK-LABEL: PR40657:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    notb %sil
-; CHECK-NEXT:    addb %dil, %sil
-; CHECK-NEXT:    movzbl %sil, %eax
+; CHECK-NEXT:    addb %sil, %dil
+; CHECK-NEXT:    incb %dil
+; CHECK-NEXT:    movzbl %dil, %eax
 ; CHECK-NEXT:    andl $1, %eax
 ; CHECK-NEXT:    retq
   %var6 = trunc i8 %var9 to i1

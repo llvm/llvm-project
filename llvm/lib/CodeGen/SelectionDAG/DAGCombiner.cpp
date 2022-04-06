@@ -2348,6 +2348,15 @@ static SDValue foldAddSubOfSignBit(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
+static bool isADDLike(SDValue V, const SelectionDAG &DAG) {
+  unsigned Opcode = V.getOpcode();
+  if (Opcode == ISD::OR)
+    return DAG.haveNoCommonBitsSet(V.getOperand(0), V.getOperand(1));
+  if (Opcode == ISD::XOR)
+    return isMinSignedConstant(V.getOperand(1));
+  return false;
+}
+
 /// Try to fold a node that behaves like an ADD (note that N isn't necessarily
 /// an ISD::ADD here, it could for example be an ISD::OR if we know that there
 /// are no common bits set in the operands).
@@ -2423,9 +2432,10 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
 
     // Fold (add (or x, c0), c1) -> (add x, (c0 + c1)) if (or x, c0) is
     // equivalent to (add x, c0).
-    if (N0.getOpcode() == ISD::OR &&
-        isConstantOrConstantVector(N0.getOperand(1), /* NoOpaque */ true) &&
-        DAG.haveNoCommonBitsSet(N0.getOperand(0), N0.getOperand(1))) {
+    // Fold (add (xor x, c0), c1) -> (add x, (c0 + c1)) if (xor x, c0) is
+    // equivalent to (add x, c0).
+    if (isADDLike(N0, DAG) && 
+        isConstantOrConstantVector(N0.getOperand(1), /* NoOpaque */ true)) {
       if (SDValue Add0 = DAG.FoldConstantArithmetic(ISD::ADD, DL, VT,
                                                     {N1, N0.getOperand(1)}))
         return DAG.getNode(ISD::ADD, DL, VT, N0.getOperand(0), Add0);
@@ -2442,10 +2452,11 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
 
     // Reassociate (add (or x, c), y) -> (add add(x, y), c)) if (or x, c) is
     // equivalent to (add x, c).
+    // Reassociate (add (xor x, c), y) -> (add add(x, y), c)) if (xor x, c) is
+    // equivalent to (add x, c).
     auto ReassociateAddOr = [&](SDValue N0, SDValue N1) {
-      if (N0.getOpcode() == ISD::OR && N0.hasOneUse() &&
-          isConstantOrConstantVector(N0.getOperand(1), /* NoOpaque */ true) &&
-          DAG.haveNoCommonBitsSet(N0.getOperand(0), N0.getOperand(1))) {
+      if (isADDLike(N0, DAG) && N0.hasOneUse() &&
+          isConstantOrConstantVector(N0.getOperand(1), /* NoOpaque */ true)) {
         return DAG.getNode(ISD::ADD, DL, VT,
                            DAG.getNode(ISD::ADD, DL, VT, N1, N0.getOperand(0)),
                            N0.getOperand(1));
@@ -8296,6 +8307,13 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
   // reassociate xor
   if (SDValue RXOR = reassociateOps(ISD::XOR, DL, N0, N1, N->getFlags()))
     return RXOR;
+
+  // look for 'add-like' folds:
+  // XOR(N0,MIN_SIGNED_VALUE) == ADD(N0,MIN_SIGNED_VALUE)
+  if ((!LegalOperations || TLI.isOperationLegal(ISD::ADD, VT)) &&
+      isMinSignedConstant(N1))
+    if (SDValue Combined = visitADDLike(N))
+      return Combined;
 
   // fold !(x cc y) -> (x !cc y)
   unsigned N0Opcode = N0.getOpcode();
