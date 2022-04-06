@@ -374,8 +374,6 @@ public:
   /// Return the directory the file lives in.
   const DirectoryEntry *getDir() const { return Dir; }
 
-  bool operator<(const FileEntry &RHS) const { return UniqueID < RHS.UniqueID; }
-
   /// Check whether the file is a named pipe (and thus can't be opened by
   /// the native FileManager methods).
   bool isNamedPipe() const { return IsNamedPipe; }
