@@ -204,6 +204,11 @@ public:
   /// Build DeclarationFragments for a struct record declaration RecordDecl.
   static DeclarationFragments getFragmentsForStruct(const RecordDecl *);
 
+  /// Build DeclarationFragments for an Objective-C category declaration
+  /// ObjCCategoryDecl.
+  static DeclarationFragments
+  getFragmentsForObjCCategory(const ObjCCategoryDecl *);
+
   /// Build DeclarationFragments for an Objective-C interface declaration
   /// ObjCInterfaceDecl.
   static DeclarationFragments

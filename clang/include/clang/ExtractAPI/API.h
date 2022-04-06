@@ -86,6 +86,7 @@ struct APIRecord {
     RK_ObjCIvar,
     RK_ObjCMethod,
     RK_ObjCInterface,
+    RK_ObjCCategory,
     RK_ObjCProtocol,
     RK_MacroDefinition,
     RK_Typedef,
@@ -340,9 +341,33 @@ struct ObjCContainerRecord : APIRecord {
   virtual ~ObjCContainerRecord() = 0;
 };
 
+/// This holds information associated with Objective-C categories.
+struct ObjCCategoryRecord : ObjCContainerRecord {
+  SymbolReference Interface;
+
+  ObjCCategoryRecord(StringRef Name, StringRef USR, PresumedLoc Loc,
+                     const AvailabilityInfo &Availability,
+                     const DocComment &Comment,
+                     DeclarationFragments Declaration,
+                     DeclarationFragments SubHeading, SymbolReference Interface)
+      : ObjCContainerRecord(RK_ObjCCategory, Name, USR, Loc, Availability,
+                            LinkageInfo::none(), Comment, Declaration,
+                            SubHeading),
+        Interface(Interface) {}
+
+  static bool classof(const APIRecord *Record) {
+    return Record->getKind() == RK_ObjCCategory;
+  }
+
+private:
+  virtual void anchor();
+};
+
 /// This holds information associated with Objective-C interfaces/classes.
 struct ObjCInterfaceRecord : ObjCContainerRecord {
   SymbolReference SuperClass;
+  // ObjCCategoryRecord%s are stored in and owned by APISet.
+  SmallVector<ObjCCategoryRecord *> Categories;
 
   ObjCInterfaceRecord(StringRef Name, StringRef USR, PresumedLoc Loc,
                       const AvailabilityInfo &Availability, LinkageInfo Linkage,
@@ -512,6 +537,18 @@ public:
                           DeclarationFragments Declaration,
                           DeclarationFragments SubHeading);
 
+  /// Create and add an Objective-C category record into the API set.
+  ///
+  /// Note: the caller is responsible for keeping the StringRef \p Name and
+  /// \p USR alive. APISet::copyString provides a way to copy strings into
+  /// APISet itself, and APISet::recordUSR(const Decl *D) is a helper method
+  /// to generate the USR for \c D and keep it alive in APISet.
+  ObjCCategoryRecord *
+  addObjCCategory(StringRef Name, StringRef USR, PresumedLoc Loc,
+                  const AvailabilityInfo &Availability,
+                  const DocComment &Comment, DeclarationFragments Declaration,
+                  DeclarationFragments SubHeading, SymbolReference Interface);
+
   /// Create and add an Objective-C interface record into the API set.
   ///
   /// Note: the caller is responsible for keeping the StringRef \p Name and
@@ -618,6 +655,9 @@ public:
   const RecordMap<GlobalRecord> &getGlobals() const { return Globals; }
   const RecordMap<EnumRecord> &getEnums() const { return Enums; }
   const RecordMap<StructRecord> &getStructs() const { return Structs; }
+  const RecordMap<ObjCCategoryRecord> &getObjCCategories() const {
+    return ObjCCategories;
+  }
   const RecordMap<ObjCInterfaceRecord> &getObjCInterfaces() const {
     return ObjCInterfaces;
   }
@@ -662,6 +702,7 @@ private:
   RecordMap<GlobalRecord> Globals;
   RecordMap<EnumRecord> Enums;
   RecordMap<StructRecord> Structs;
+  RecordMap<ObjCCategoryRecord> ObjCCategories;
   RecordMap<ObjCInterfaceRecord> ObjCInterfaces;
   RecordMap<ObjCProtocolRecord> ObjCProtocols;
   RecordMap<MacroDefinitionRecord> Macros;

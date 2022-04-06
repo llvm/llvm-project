@@ -401,6 +401,11 @@ Object serializeSymbolKind(const APIRecord &Record, Language Lang) {
     Kind["identifier"] = AddLangPrefix("class");
     Kind["displayName"] = "Class";
     break;
+  case APIRecord::RK_ObjCCategory:
+    // We don't serialize out standalone Objective-C category symbols yet.
+    llvm_unreachable("Serializing standalone Objective-C category symbols is "
+                     "not supported.");
+    break;
   case APIRecord::RK_ObjCProtocol:
     Kind["identifier"] = AddLangPrefix("protocol");
     Kind["displayName"] = "Protocol";
@@ -476,6 +481,21 @@ SymbolGraphSerializer::serializeAPIRecord(const APIRecord &Record) const {
   return Obj;
 }
 
+template <typename MemberTy>
+void SymbolGraphSerializer::serializeMembers(
+    const APIRecord &Record,
+    const SmallVector<std::unique_ptr<MemberTy>> &Members) {
+  for (const auto &Member : Members) {
+    auto MemberPathComponentGuard = makePathComponentGuard(Member->Name);
+    auto MemberRecord = serializeAPIRecord(*Member);
+    if (!MemberRecord)
+      continue;
+
+    Symbols.emplace_back(std::move(*MemberRecord));
+    serializeRelationship(RelationshipKind::MemberOf, *Member, Record);
+  }
+}
+
 StringRef SymbolGraphSerializer::getRelationshipString(RelationshipKind Kind) {
   switch (Kind) {
   case RelationshipKind::MemberOf:
@@ -520,18 +540,7 @@ void SymbolGraphSerializer::serializeEnumRecord(const EnumRecord &Record) {
     return;
 
   Symbols.emplace_back(std::move(*Enum));
-
-  for (const auto &Constant : Record.Constants) {
-    auto EnumConstantPathComponentGuard =
-        makePathComponentGuard(Constant->Name);
-    auto EnumConstant = serializeAPIRecord(*Constant);
-
-    if (!EnumConstant)
-      continue;
-
-    Symbols.emplace_back(std::move(*EnumConstant));
-    serializeRelationship(RelationshipKind::MemberOf, *Constant, Record);
-  }
+  serializeMembers(Record, Record.Constants);
 }
 
 void SymbolGraphSerializer::serializeStructRecord(const StructRecord &Record) {
@@ -541,17 +550,7 @@ void SymbolGraphSerializer::serializeStructRecord(const StructRecord &Record) {
     return;
 
   Symbols.emplace_back(std::move(*Struct));
-
-  for (const auto &Field : Record.Fields) {
-    auto StructFieldPathComponentGuard = makePathComponentGuard(Field->Name);
-    auto StructField = serializeAPIRecord(*Field);
-
-    if (!StructField)
-      continue;
-
-    Symbols.emplace_back(std::move(*StructField));
-    serializeRelationship(RelationshipKind::MemberOf, *Field, Record);
-  }
+  serializeMembers(Record, Record.Fields);
 }
 
 void SymbolGraphSerializer::serializeObjCContainerRecord(
@@ -563,53 +562,33 @@ void SymbolGraphSerializer::serializeObjCContainerRecord(
 
   Symbols.emplace_back(std::move(*ObjCContainer));
 
-  // Record instance variables and that the instance variables are members of
-  // the container.
-  for (const auto &Ivar : Record.Ivars) {
-    auto IvarPathComponentGuard = makePathComponentGuard(Ivar->Name);
-    auto ObjCIvar = serializeAPIRecord(*Ivar);
-
-    if (!ObjCIvar)
-      continue;
-
-    Symbols.emplace_back(std::move(*ObjCIvar));
-    serializeRelationship(RelationshipKind::MemberOf, *Ivar, Record);
-  }
-
-  // Record methods and that the methods are members of the container.
-  for (const auto &Method : Record.Methods) {
-    auto MethodPathComponentGuard = makePathComponentGuard(Method->Name);
-    auto ObjCMethod = serializeAPIRecord(*Method);
-
-    if (!ObjCMethod)
-      continue;
-
-    Symbols.emplace_back(std::move(*ObjCMethod));
-    serializeRelationship(RelationshipKind::MemberOf, *Method, Record);
-  }
-
-  // Record properties and that the properties are members of the container.
-  for (const auto &Property : Record.Properties) {
-    auto PropertyPathComponentGuard = makePathComponentGuard(Property->Name);
-    auto ObjCProperty = serializeAPIRecord(*Property);
-
-    if (!ObjCProperty)
-      continue;
-
-    Symbols.emplace_back(std::move(*ObjCProperty));
-    serializeRelationship(RelationshipKind::MemberOf, *Property, Record);
-  }
+  serializeMembers(Record, Record.Ivars);
+  serializeMembers(Record, Record.Methods);
+  serializeMembers(Record, Record.Properties);
 
   for (const auto &Protocol : Record.Protocols)
     // Record that Record conforms to Protocol.
     serializeRelationship(RelationshipKind::ConformsTo, Record, Protocol);
 
-  if (auto *ObjCInterface = dyn_cast<ObjCInterfaceRecord>(&Record))
+  if (auto *ObjCInterface = dyn_cast<ObjCInterfaceRecord>(&Record)) {
     if (!ObjCInterface->SuperClass.empty())
       // If Record is an Objective-C interface record and it has a super class,
       // record that Record is inherited from SuperClass.
       serializeRelationship(RelationshipKind::InheritsFrom, Record,
                             ObjCInterface->SuperClass);
+
+    // Members of categories extending an interface are serialized as members of
+    // the interface.
+    for (const auto *Category : ObjCInterface->Categories) {
+      serializeMembers(Record, Category->Ivars);
+      serializeMembers(Record, Category->Methods);
+      serializeMembers(Record, Category->Properties);
+
+      // Surface the protocols of the the category to the interface.
+      for (const auto &Protocol : Category->Protocols)
+        serializeRelationship(RelationshipKind::ConformsTo, Record, Protocol);
+    }
+  }
 }
 
 void SymbolGraphSerializer::serializeMacroDefinitionRecord(
