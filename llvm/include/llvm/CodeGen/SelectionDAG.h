@@ -280,9 +280,7 @@ class SelectionDAG {
 
   DenseMap<const SDNode *, CallSiteDbgInfo> SDCallSiteDbgInfo;
 
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   uint16_t NextPersistentId = 0;
-#endif
 
   /// Are instruction referencing variable locations desired for this function?
   bool UseInstrRefDebugInfo = false;
