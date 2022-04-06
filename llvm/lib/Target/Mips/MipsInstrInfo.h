@@ -96,11 +96,18 @@ public:
   bool SafeInFPUDelaySlot(const MachineInstr &MIInSlot,
                           const MachineInstr &FPUMI) const;
 
+  /// Predicate to determine if an instruction can go in a load delay slot.
+  bool SafeInLoadDelaySlot(const MachineInstr &MIInSlot,
+                           const MachineInstr &LoadMI) const;
+
   /// Predicate to determine if an instruction has a forbidden slot.
   bool HasForbiddenSlot(const MachineInstr &MI) const;
 
   /// Predicate to determine if an instruction has an FPU delay slot.
   bool HasFPUDelaySlot(const MachineInstr &MI) const;
+
+  /// Predicate to determine if an instruction has a load delay slot.
+  bool HasLoadDelaySlot(const MachineInstr &MI) const;
 
   /// Insert nop instruction when hazard condition is found
   void insertNoop(MachineBasicBlock &MBB,
