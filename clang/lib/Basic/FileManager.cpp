@@ -274,15 +274,12 @@ FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
   if (!UFE)
     UFE = new (FilesAlloc.Allocate()) FileEntry();
 
-  // FIXME: This should just check `!Status.ExposesExternalVFSPath`, but the
-  // else branch also ends up fixing up relative paths to be the actually
-  // looked up absolute path. This isn't necessarily desired, but does seem to
-  // be relied on in some clients.
   if (Status.getName() == Filename) {
     // The name matches. Set the FileEntry.
     NamedFileEnt->second = FileEntryRef::MapValue(*UFE, DirInfo);
   } else {
-    // We need a redirect. First grab the actual entry we want to return.
+    // Name mismatch. We need a redirect. First grab the actual entry we want
+    // to return.
     //
     // This redirection logic intentionally leaks the external name of a
     // redirected file that uses 'use-external-name' in \a
@@ -292,11 +289,9 @@ FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
     //
     // FIXME: This is pretty complicated. It's also inconsistent with how
     // "real" filesystems behave and confuses parts of clang expect to see the
-    // name-as-accessed on the \a FileEntryRef. To remove this we should
-    // implement the FIXME on `ExposesExternalVFSPath`, ie. update the
-    // `FileEntryRef::getName()` path to *always* be the virtual path and have
-    // clients request the external path only when required through a separate
-    // API.
+    // name-as-accessed on the \a FileEntryRef. Maybe the returned \a
+    // FileEntryRef::getName() could return the accessed name unmodified, but
+    // make the external name available via a separate API.
     auto &Redirection =
         *SeenFileEntries
              .insert({Status.getName(), FileEntryRef::MapValue(*UFE, DirInfo)})
@@ -317,16 +312,13 @@ FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
   FileEntryRef ReturnedRef(*NamedFileEnt);
   if (ReusingEntry) { // Already have an entry with this inode, return it.
 
-    // FIXME: This hack ensures that `getDir()` will use the path that was
-    // used to lookup this file, even if we found a file by different path
-    // first. This is required in order to find a module's structure when its
-    // headers/module map are mapped in the VFS.
-    //
-    // This should be removed once `HeaderSearch` is updated to use `*Ref`s
-    // *and* the redirection hack above is removed. The removal of the latter
-    // is required since otherwise the ref will have the exposed external VFS
-    // path still.
-    if (&DirInfo.getDirEntry() != UFE->Dir && Status.ExposesExternalVFSPath)
+    // FIXME: this hack ensures that if we look up a file by a virtual path in
+    // the VFS that the getDir() will have the virtual path, even if we found
+    // the file by a 'real' path first. This is required in order to find a
+    // module's structure when its headers/module map are mapped in the VFS.
+    // We should remove this as soon as we can properly support a file having
+    // multiple names.
+    if (&DirInfo.getDirEntry() != UFE->Dir && Status.IsVFSMapped)
       UFE->Dir = &DirInfo.getDirEntry();
 
     // Always update LastRef to the last name by which a file was accessed.
