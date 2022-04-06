@@ -786,7 +786,7 @@ void CodeGenModule::Release() {
                               LangOpts.OpenMP);
 
   // Emit OpenCL specific module metadata: OpenCL/SPIR version.
-  if (LangOpts.OpenCL) {
+  if (LangOpts.OpenCL || (LangOpts.CUDAIsDevice && getTriple().isSPIRV())) {
     EmitOpenCLMetadata();
     // Emit SPIR version.
     if (getTriple().isSPIR()) {
