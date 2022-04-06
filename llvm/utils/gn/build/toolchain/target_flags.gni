@@ -42,8 +42,6 @@ if (current_os == "android") {
       "x86_64",
     ]
   }
-} else if (current_os == "baremetal") {
-  target_flags += [ "--target=$llvm_current_triple" ]
 }
 
 if (current_cpu == "x86") {

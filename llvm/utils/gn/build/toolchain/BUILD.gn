@@ -244,13 +244,6 @@ if (host_os == "mac") {
   }
 }
 
-stage2_unix_toolchain("stage2_baremetal_aarch64") {
-  toolchain_args = {
-    current_os = "baremetal"
-    current_cpu = "arm64"
-  }
-}
-
 template("win_toolchain") {
   toolchain(target_name) {
     # https://groups.google.com/a/chromium.org/d/msg/gn-dev/F_lv5T-tNDM
