@@ -846,14 +846,15 @@ DISubprogram *DIBuilder::createFunction(
     unsigned LineNo, DISubroutineType *Ty, unsigned ScopeLine,
     DINode::DIFlags Flags, DISubprogram::DISPFlags SPFlags,
     DITemplateParameterArray TParams, DISubprogram *Decl,
-    DITypeArray ThrownTypes, DINodeArray Annotations) {
+    DITypeArray ThrownTypes, DINodeArray Annotations,
+    StringRef TargetFuncName) {
   bool IsDefinition = SPFlags & DISubprogram::SPFlagDefinition;
   auto *Node = getSubprogram(
       /*IsDistinct=*/IsDefinition, VMContext, getNonCompileUnitScope(Context),
       Name, LinkageName, File, LineNo, Ty, ScopeLine, nullptr, 0, 0, Flags,
       SPFlags, IsDefinition ? CUNode : nullptr, TParams, Decl,
       MDTuple::getTemporary(VMContext, None).release(), ThrownTypes,
-      Annotations);
+      Annotations, TargetFuncName);
 
   if (IsDefinition)
     AllSubprograms.push_back(Node);
