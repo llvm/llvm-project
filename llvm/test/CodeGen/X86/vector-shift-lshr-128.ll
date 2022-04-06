@@ -795,7 +795,7 @@ define <2 x i64> @splatvar_modulo_shift_v2i64(<2 x i64> %a, <2 x i64> %b) nounwi
 ;
 ; AVX512VL-LABEL: splatvar_modulo_shift_v2i64:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX512VL-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm1, %xmm1
 ; AVX512VL-NEXT:    vpsrlq %xmm1, %xmm0, %xmm0
 ; AVX512VL-NEXT:    retq
 ;

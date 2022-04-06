@@ -32,7 +32,7 @@ define <16 x float> @v16f32(<16 x float> %a, <16 x float> %b) nounwind {
 define <2 x double> @v2f64(<2 x double> %a, <2 x double> %b) nounwind {
 ; CHECK-LABEL: v2f64:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogq $228, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
+; CHECK-NEXT:    vpternlogq $228, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %tmp = tail call <2 x double> @llvm.copysign.v2f64( <2 x double> %a, <2 x double> %b )
   ret <2 x double> %tmp

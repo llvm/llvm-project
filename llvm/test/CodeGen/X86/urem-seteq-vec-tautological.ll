@@ -257,11 +257,11 @@ define <2 x i1> @t3_wide(<2 x i64> %X) nounwind {
 ;
 ; CHECK-AVX512VL-LABEL: t3_wide:
 ; CHECK-AVX512VL:       # %bb.0:
-; CHECK-AVX512VL-NEXT:    vmovdqa {{.*#+}} xmm1 = [12297829382473034411,12297829382473034411]
+; CHECK-AVX512VL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [12297829382473034411,12297829382473034411]
 ; CHECK-AVX512VL-NEXT:    vpmuludq %xmm1, %xmm0, %xmm2
 ; CHECK-AVX512VL-NEXT:    vpsrlq $32, %xmm0, %xmm3
 ; CHECK-AVX512VL-NEXT:    vpmuludq %xmm1, %xmm3, %xmm1
-; CHECK-AVX512VL-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-AVX512VL-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
 ; CHECK-AVX512VL-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; CHECK-AVX512VL-NEXT:    vpsllq $32, %xmm0, %xmm0
 ; CHECK-AVX512VL-NEXT:    vpaddq %xmm0, %xmm2, %xmm0

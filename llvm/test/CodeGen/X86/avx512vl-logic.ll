@@ -168,7 +168,7 @@ entry:
 define <2 x i64> @vpandq128(<2 x i64> %a, <2 x i64> %b) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: vpandq128:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
 ; CHECK-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
 entry:
@@ -181,7 +181,7 @@ entry:
 define <2 x i64> @vpandnq128(<2 x i64> %a, <2 x i64> %b) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: vpandnq128:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
 ; CHECK-NEXT:    vpandn %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
 entry:
@@ -195,7 +195,7 @@ entry:
 define <2 x i64> @vporq128(<2 x i64> %a, <2 x i64> %b) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: vporq128:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
 ; CHECK-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
 entry:
@@ -208,7 +208,7 @@ entry:
 define <2 x i64> @vpxorq128(<2 x i64> %a, <2 x i64> %b) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: vpxorq128:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
 ; CHECK-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
 entry:

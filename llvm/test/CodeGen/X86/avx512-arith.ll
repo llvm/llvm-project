@@ -303,7 +303,7 @@ define <2 x i64> @imulq128_bcast(<2 x i64> %x) {
 ;
 ; AVX512VL-LABEL: imulq128_bcast:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vmovdqa {{.*#+}} xmm1 = [8086,8086]
+; AVX512VL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [8086,8086]
 ; AVX512VL-NEXT:    vpmuludq %xmm1, %xmm0, %xmm2
 ; AVX512VL-NEXT:    vpsrlq $32, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0
@@ -332,7 +332,7 @@ define <2 x i64> @imulq128_bcast(<2 x i64> %x) {
 ;
 ; SKX-LABEL: imulq128_bcast:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vpmullq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; SKX-NEXT:    vpmullq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
 ; SKX-NEXT:    retq
   %z = mul <2 x i64> %x, <i64 8086, i64 8086>
   ret <2 x i64>%z

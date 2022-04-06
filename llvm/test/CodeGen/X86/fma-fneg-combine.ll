@@ -226,11 +226,17 @@ define <8 x double> @test9_nsz(<8 x double> %a, <8 x double> %b, <8 x double> %c
 }
 
 define <2 x double> @test10(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
-; CHECK-LABEL: test10:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2
-; CHECK-NEXT:    vxorpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; CHECK-NEXT:    retq
+; SKX-LABEL: test10:
+; SKX:       # %bb.0: # %entry
+; SKX-NEXT:    vfmadd213sd {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2
+; SKX-NEXT:    vxorpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; SKX-NEXT:    retq
+;
+; KNL-LABEL: test10:
+; KNL:       # %bb.0: # %entry
+; KNL-NEXT:    vfmadd213sd {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2
+; KNL-NEXT:    vxorpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; KNL-NEXT:    retq
 entry:
   %0 = tail call <2 x double> @llvm.x86.avx512.mask.vfmadd.sd(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 -1, i32 4) #2
   %sub.i = fsub <2 x double> <double -0.0, double -0.0>, %0
@@ -305,7 +311,7 @@ entry:
 define <2 x double> @test13(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 %mask) {
 ; SKX-LABEL: test13:
 ; SKX:       # %bb.0: # %entry
-; SKX-NEXT:    vxorpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm3
+; SKX-NEXT:    vxorpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm3
 ; SKX-NEXT:    vfnmadd213sd {{.*#+}} xmm1 = -(xmm0 * xmm1) + xmm2
 ; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vmovsd %xmm1, %xmm3, %xmm3 {%k1}

@@ -370,7 +370,7 @@ declare <8 x half> @llvm.fabs.v8f16(<8 x half>)
 define <8 x half> @fcopysignv8f16(<8 x half> %x, <8 x half> %y) {
 ; CHECK-LABEL: fcopysignv8f16:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogq $228, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
+; CHECK-NEXT:    vpternlogq $228, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %a = call <8 x half> @llvm.copysign.v8f16(<8 x half> %x, <8 x half> %y)
   ret <8 x half> %a

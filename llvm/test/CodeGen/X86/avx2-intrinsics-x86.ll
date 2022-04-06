@@ -1516,9 +1516,9 @@ define <2 x i64> @test_x86_avx2_psrlv_q_const() {
 ;
 ; X64-AVX512VL-LABEL: test_x86_avx2_psrlv_q_const:
 ; X64-AVX512VL:       # %bb.0:
-; X64-AVX512VL-NEXT:    vmovdqa {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # EVEX TO VEX Compression xmm0 = [4,4]
-; X64-AVX512VL-NEXT:    # encoding: [0xc5,0xf9,0x6f,0x05,A,A,A,A]
-; X64-AVX512VL-NEXT:    # fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; X64-AVX512VL-NEXT:    vpbroadcastq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # EVEX TO VEX Compression xmm0 = [4,4]
+; X64-AVX512VL-NEXT:    # encoding: [0xc4,0xe2,0x79,0x59,0x05,A,A,A,A]
+; X64-AVX512VL-NEXT:    # fixup A - offset: 5, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; X64-AVX512VL-NEXT:    vpsrlvq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xf9,0x45,0x05,A,A,A,A]
 ; X64-AVX512VL-NEXT:    # fixup A - offset: 5, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; X64-AVX512VL-NEXT:    retq # encoding: [0xc3]

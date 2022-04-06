@@ -138,7 +138,7 @@ define double @round_f64(double %x) {
 ; AVX512-LABEL: round_f64:
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [4.9999999999999994E-1,4.9999999999999994E-1]
-; AVX512-NEXT:    vpternlogq $248, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX512-NEXT:    vpternlogq $248, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm1
 ; AVX512-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vroundsd $11, %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
@@ -239,8 +239,8 @@ define <2 x double> @round_v2f64(<2 x double> %x) {
 ;
 ; AVX512-LABEL: round_v2f64:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vmovdqa {{.*#+}} xmm1 = [4.9999999999999994E-1,4.9999999999999994E-1]
-; AVX512-NEXT:    vpternlogq $248, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX512-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [4.9999999999999994E-1,4.9999999999999994E-1]
+; AVX512-NEXT:    vpternlogq $248, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm1
 ; AVX512-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vroundpd $11, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
