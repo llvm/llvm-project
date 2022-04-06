@@ -567,6 +567,13 @@ set(armv7em_SOURCES ${arm_SOURCES})
 set(armv8m.main_SOURCES ${arm_SOURCES})
 set(armv8.1m.main_SOURCES ${arm_SOURCES})
 
+# 8-bit AVR MCU
+set(avr_SOURCES
+  avr/mulqi3.S
+  avr/mulhi3.S
+  avr/exit.S
+)
+
 # hexagon arch
 set(hexagon_SOURCES
   hexagon/common_entry_exit_abi1.S
