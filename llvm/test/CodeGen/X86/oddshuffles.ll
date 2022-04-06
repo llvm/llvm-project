@@ -2231,7 +2231,6 @@ define <16 x i32> @splat_v3i32(ptr %ptr) {
 ; SSE42-NEXT:    pblendw {{.*#+}} xmm2 = xmm0[0,1],xmm2[2,3,4,5,6,7]
 ; SSE42-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3],xmm1[4,5,6,7]
 ; SSE42-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,0,1]
-; SSE42-NEXT:    pxor %xmm1, %xmm1
 ; SSE42-NEXT:    xorps %xmm3, %xmm3
 ; SSE42-NEXT:    retq
 ;
