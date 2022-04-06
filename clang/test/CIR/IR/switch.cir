@@ -18,7 +18,7 @@ func.func @s0() {
 }
 
 // CHECK: cir.switch (%0 : i32) [
-// CHECK-NEXT: case (default, 0 : i32)  {
+// CHECK-NEXT: case (default)  {
 // CHECK-NEXT:   cir.return
 // CHECK-NEXT: },
 // CHECK-NEXT: case (equal, 3 : i32)  {
