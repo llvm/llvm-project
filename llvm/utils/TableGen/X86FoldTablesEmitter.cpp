@@ -68,6 +68,7 @@ const ManualMapEntry ManualMapSet[] = {
     { "ADD64rr_DB",         "ADD64rm",         NO_UNFOLD  },
     { "ADD8rr_DB",          "ADD8rm",          NO_UNFOLD  },
     { "MMX_MOVD64from64rr", "MMX_MOVQ64mr",    UNFOLD },
+    { "MMX_MOVD64grr",      "MMX_MOVD64mr",    UNFOLD },
     { "MOVLHPSrr",          "MOVHPSrm",        NO_UNFOLD  },
     { "PUSH16r",            "PUSH16rmm",       UNFOLD },
     { "PUSH32r",            "PUSH32rmm",       UNFOLD },

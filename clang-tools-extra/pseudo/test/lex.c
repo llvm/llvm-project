@@ -41,7 +41,7 @@ TOKEN-NEXT: r_brace          6:0 "}" flags=1
 
 RUN: clang-pseudo -source %s -print-directive-map | FileCheck %s -check-prefix=PPS --strict-whitespace
      PPS: code (5 tokens)
-PPS-NEXT: #ifndef (3 tokens)
+PPS-NEXT: #ifndef (3 tokens) TAKEN
 PPS-NEXT:   code (4 tokens)
 PPS-NEXT: #else (2 tokens)
 PPS-NEXT:   code (3 tokens)

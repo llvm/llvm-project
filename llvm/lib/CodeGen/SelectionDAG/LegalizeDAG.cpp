@@ -1033,14 +1033,18 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
   case ISD::STRICT_FSETCC:
   case ISD::STRICT_FSETCCS:
   case ISD::SETCC:
+  case ISD::VP_SETCC:
   case ISD::BR_CC: {
-    unsigned CCOperand = Node->getOpcode() == ISD::SELECT_CC ? 4 :
-                         Node->getOpcode() == ISD::STRICT_FSETCC ? 3 :
-                         Node->getOpcode() == ISD::STRICT_FSETCCS ? 3 :
-                         Node->getOpcode() == ISD::SETCC ? 2 : 1;
-    unsigned CompareOperand = Node->getOpcode() == ISD::BR_CC ? 2 :
-                              Node->getOpcode() == ISD::STRICT_FSETCC ? 1 :
-                              Node->getOpcode() == ISD::STRICT_FSETCCS ? 1 : 0;
+    unsigned Opc = Node->getOpcode();
+    unsigned CCOperand = Opc == ISD::SELECT_CC                         ? 4
+                         : Opc == ISD::STRICT_FSETCC                   ? 3
+                         : Opc == ISD::STRICT_FSETCCS                  ? 3
+                         : (Opc == ISD::SETCC || Opc == ISD::VP_SETCC) ? 2
+                                                                       : 1;
+    unsigned CompareOperand = Opc == ISD::BR_CC            ? 2
+                              : Opc == ISD::STRICT_FSETCC  ? 1
+                              : Opc == ISD::STRICT_FSETCCS ? 1
+                                                           : 0;
     MVT OpVT = Node->getOperand(CompareOperand).getSimpleValueType();
     ISD::CondCode CCCode =
         cast<CondCodeSDNode>(Node->getOperand(CCOperand))->get();
