@@ -2110,10 +2110,8 @@ void DAGTypeLegalizer::SplitVecRes_UnaryOp(SDNode *N, SDValue &Lo,
   std::tie(EVLLo, EVLHi) =
       DAG.SplitEVL(N->getOperand(2), N->getValueType(0), dl);
 
-  Lo = DAG.getNode(Opcode, dl, Lo.getValueType(),
-                   {Lo, MaskLo, EVLLo}, Flags);
-  Hi = DAG.getNode(Opcode, dl, Hi.getValueType(),
-                   {Hi, MaskHi, EVLHi}, Flags);
+  Lo = DAG.getNode(Opcode, dl, LoVT, {Lo, MaskLo, EVLLo}, Flags);
+  Hi = DAG.getNode(Opcode, dl, HiVT, {Hi, MaskHi, EVLHi}, Flags);
 }
 
 void DAGTypeLegalizer::SplitVecRes_ExtendOp(SDNode *N, SDValue &Lo,

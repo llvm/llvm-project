@@ -124,6 +124,12 @@ private:
   /// containing common symbol information of \p Record.
   Optional<Object> serializeAPIRecord(const APIRecord &Record) const;
 
+  /// Helper method to serialize second-level member records of \p Record and
+  /// the member-of relationships.
+  template <typename MemberTy>
+  void serializeMembers(const APIRecord &Record,
+                        const SmallVector<std::unique_ptr<MemberTy>> &Members);
+
   /// Serialize the \p Kind relationship between \p Source and \p Target.
   ///
   /// Record the relationship between the two symbols in
@@ -145,6 +151,9 @@ private:
 
   /// Serialize a macro defintion record.
   void serializeMacroDefinitionRecord(const MacroDefinitionRecord &Record);
+
+  /// Serialize a typedef record.
+  void serializeTypedefRecord(const TypedefRecord &Record);
 
   /// Push a component to the current path components stack.
   ///

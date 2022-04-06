@@ -1097,7 +1097,8 @@ let Command = "thread plan list" in {
 }
 
 let Command = "thread trace dump instructions" in {
-  def thread_trace_dump_instructions_forwards: Option<"forwards", "f">, Group<1>,
+  def thread_trace_dump_instructions_forwards: Option<"forwards", "f">,
+    Group<1>,
     Desc<"If specified, the trace is traversed forwards chronologically "
     "starting at the oldest instruction. Otherwise, it starts at the most "
     "recent one and the traversal is backwards.">;
@@ -1105,17 +1106,21 @@ let Command = "thread trace dump instructions" in {
     Arg<"Count">,
     Desc<"The number of instructions to display starting at the most recent "
     "instruction, or the oldest if --forwards is provided.">;
-  def thread_trace_dump_instructions_skip: Option<"skip", "s">,
-    Group<1>,
+  def thread_trace_dump_instructions_id: Option<"id", "i">, Group<1>,
     Arg<"Index">,
-    Desc<"How many instruction to skip from the end of the trace to start "
-    "dumping instructions, or from the beginning if --forwards is provided">;
+    Desc<"Custom starting instruction id from where to start traversing. This "
+    "id can be provided in decimal or hexadecimal representation.">;
+  def thread_trace_dump_instructions_skip: Option<"skip", "s">, Group<1>,
+    Arg<"Index">,
+    Desc<"How many instruction to skip from the starting position of the trace "
+    "before starting the traversal.">;
   def thread_trace_dump_instructions_raw : Option<"raw", "r">,
     Group<1>,
-    Desc<"Dump only instruction address without disassembly nor symbol information.">;
-  def thread_trace_dump_instructions_show_tsc : Option<"tsc", "t">,
-    Group<1>,
-    Desc<"For each instruction, print the corresponding timestamp counter if available.">;
+    Desc<"Dump only instruction address without disassembly nor symbol "
+    "information.">;
+  def thread_trace_dump_instructions_show_tsc : Option<"tsc", "t">, Group<1>,
+    Desc<"For each instruction, print the corresponding timestamp counter if "
+    "available.">;
   def thread_trace_dump_instructions_continue: Option<"continue", "C">,
     Group<1>,
     Desc<"Continue dumping instructions right where the previous invocation of this "

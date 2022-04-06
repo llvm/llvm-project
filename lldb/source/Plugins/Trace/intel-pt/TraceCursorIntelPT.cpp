@@ -23,7 +23,8 @@ TraceCursorIntelPT::TraceCursorIntelPT(ThreadSP thread_sp,
   assert(m_decoded_thread_sp->GetInstructionsCount() > 0 &&
          "a trace should have at least one instruction or error");
   m_pos = m_decoded_thread_sp->GetInstructionsCount() - 1;
-  m_tsc_range = m_decoded_thread_sp->CalculateTscRange(m_pos);
+  m_tsc_range =
+      m_decoded_thread_sp->CalculateTscRange(m_pos, /*hint_range*/ None);
 }
 
 size_t TraceCursorIntelPT::GetInternalInstructionSize() {
@@ -56,7 +57,7 @@ bool TraceCursorIntelPT::Next() {
   return false;
 }
 
-size_t TraceCursorIntelPT::Seek(int64_t offset, SeekType origin) {
+uint64_t TraceCursorIntelPT::Seek(int64_t offset, SeekType origin) {
   int64_t last_index = GetInternalInstructionSize() - 1;
 
   auto fitPosToBounds = [&](int64_t raw_pos) -> int64_t {
@@ -65,7 +66,7 @@ size_t TraceCursorIntelPT::Seek(int64_t offset, SeekType origin) {
 
   auto FindDistanceAndSetPos = [&]() -> int64_t {
     switch (origin) {
-    case TraceCursor::SeekType::Set:
+    case TraceCursor::SeekType::Beginning:
       m_pos = fitPosToBounds(offset);
       return m_pos;
     case TraceCursor::SeekType::End:
@@ -80,7 +81,7 @@ size_t TraceCursorIntelPT::Seek(int64_t offset, SeekType origin) {
   };
 
   int64_t dist = FindDistanceAndSetPos();
-  m_tsc_range = m_decoded_thread_sp->CalculateTscRange(m_pos);
+  m_tsc_range = m_decoded_thread_sp->CalculateTscRange(m_pos, m_tsc_range);
   return dist;
 }
 
@@ -111,3 +112,14 @@ TraceInstructionControlFlowType
 TraceCursorIntelPT::GetInstructionControlFlowType() {
   return m_decoded_thread_sp->GetInstructionControlFlowType(m_pos);
 }
+
+bool TraceCursorIntelPT::GoToId(user_id_t id) {
+  if (m_decoded_thread_sp->GetInstructionsCount() <= id)
+    return false;
+  m_pos = id;
+  m_tsc_range = m_decoded_thread_sp->CalculateTscRange(m_pos, m_tsc_range);
+
+  return true;
+}
+
+user_id_t TraceCursorIntelPT::GetId() const { return m_pos; }

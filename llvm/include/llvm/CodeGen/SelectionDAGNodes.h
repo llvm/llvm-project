@@ -615,8 +615,10 @@ private:
   SDNodeFlags Flags;
 
 public:
-  /// Unique and persistent id per SDNode in the DAG.
-  /// Used for debug printing.
+  /// Unique and persistent id per SDNode in the DAG. Used for debug printing.
+  /// We do not place that under `#if LLVM_ENABLE_ABI_BREAKING_CHECKS`
+  /// intentionally because it adds unneeded complexity without noticeable
+  /// benefits (see discussion with @thakis in D120714).
   uint16_t PersistentId;
 
   //===--------------------------------------------------------------------===//

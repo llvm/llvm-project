@@ -135,7 +135,7 @@ v1:
 .Linfo_string5:
 	.asciz	"T"                             # string offset=162
 .Linfo_string6:
-	.asciz	"_STNt1|<it>"                   # string offset=164
+	.asciz	"_STN|t1|<it>"                   # string offset=164
 	.ident	"clang version 14.0.0 (git@github.com:llvm/llvm-project.git 9daec0955132e6e33b086edc63c6f3e0f5712323)"
 	.section	".note.GNU-stack","",@progbits
 	.addrsig
