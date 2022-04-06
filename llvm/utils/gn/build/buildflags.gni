@@ -29,6 +29,9 @@ declare_args() {
   # Whether to build with optimizations.
   is_optimized = !is_debug
 
+  # Enable additional checks that alter the LLVM C++ ABI.
+  llvm_enable_abi_breaking_checks = llvm_enable_assertions
+
   # Debug info symbol level.
   if (is_debug) {
     symbol_level = 2
