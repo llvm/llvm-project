@@ -123,7 +123,7 @@ CSRFirstTimeCost("regalloc-csr-first-time-cost",
               cl::desc("Cost for first time use of callee-saved register."),
               cl::init(0), cl::Hidden);
 
-static cl::opt<long> GrowRegionComplexityBudget(
+static cl::opt<unsigned long> GrowRegionComplexityBudget(
     "grow-region-complexity-budget",
     cl::desc("growRegion() does not scale with the number of BB edges, so "
              "limit its budget and bail out once we reach the limit."),
@@ -780,17 +780,18 @@ bool RAGreedy::growRegion(GlobalSplitCandidate &Cand) {
   unsigned Visited = 0;
 #endif
 
-  long Budget = GrowRegionComplexityBudget;
+  unsigned long Budget = GrowRegionComplexityBudget;
   while (true) {
     ArrayRef<unsigned> NewBundles = SpillPlacer->getRecentPositive();
     // Find new through blocks in the periphery of PrefRegBundles.
     for (unsigned Bundle : NewBundles) {
       // Look at all blocks connected to Bundle in the full graph.
       ArrayRef<unsigned> Blocks = Bundles->getBlocks(Bundle);
+      // Limit compilation time by bailing out after we use all our budget.
+      if (Blocks.size() >= Budget)
+        return false;
+      Budget -= Blocks.size();
       for (unsigned Block : Blocks) {
-        // Limit compilation time by bailing out after we use all our budget.
-        if (Budget-- == 0)
-          return false;
         if (!Todo.test(Block))
           continue;
         Todo.reset(Block);

@@ -128,4 +128,15 @@ static_assert(std::input_or_output_iterator<SentinelForNotWeaklyEqualityComparab
 static_assert(std::semiregular<SentinelForNotWeaklyEqualityComparableWith>);
 static_assert(!std::sentinel_for<SentinelForNotWeaklyEqualityComparableWith, cpp20_input_iterator<int*>>);
 
+class WeaklyIncrementableNotMovable {
+public:
+  using difference_type = long;
+  WeaklyIncrementableNotMovable& operator++();
+  void operator++(int);
+  WeaklyIncrementableNotMovable(const WeaklyIncrementableNotMovable&) = delete;
+};
+
+static_assert(!std::movable<WeaklyIncrementableNotMovable>);
+static_assert(!std::weakly_incrementable<WeaklyIncrementableNotMovable>);
+
 #endif // ALMOST_SATISFIES_TYPES_H

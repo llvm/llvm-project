@@ -262,12 +262,14 @@ public:
     for (uint64_t r = 0; r < rank; r++)
       rev[perm[r]] = r;
     // Provide hints on capacity of pointers and indices.
-    // TODO: needs fine-tuning based on sparsity
+    // TODO: needs much fine-tuning based on actual sparsity; currently
+    //       we reserve pointer/index space based on all previous dense
+    //       dimensions, which works well up to first sparse dim; but
+    //       we should really use nnz and dense/sparse distribution.
     bool allDense = true;
     uint64_t sz = 1;
     for (uint64_t r = 0; r < rank; r++) {
       assert(sizes[r] > 0 && "Dimension size zero has trivial storage");
-      sz = checkedMul(sz, sizes[r]);
       if (sparsity[r] == DimLevelType::kCompressed) {
         pointers[r].reserve(sz + 1);
         indices[r].reserve(sz);
@@ -280,6 +282,7 @@ public:
       } else {
         assert(sparsity[r] == DimLevelType::kDense &&
                "singleton not yet supported");
+        sz = checkedMul(sz, sizes[r]);
       }
     }
     // Then assign contents from coordinate scheme tensor if provided.

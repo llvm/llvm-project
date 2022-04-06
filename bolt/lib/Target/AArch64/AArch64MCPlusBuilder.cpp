@@ -1103,8 +1103,6 @@ public:
 
   bool isMoveMem2Reg(const MCInst &Inst) const override { return false; }
 
-  bool isADD64rr(const MCInst &Inst) const override { return false; }
-
   bool isLeave(const MCInst &Inst) const override { return false; }
 
   bool isPop(const MCInst &Inst) const override { return false; }

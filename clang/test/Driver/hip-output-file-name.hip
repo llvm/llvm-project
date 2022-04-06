@@ -7,7 +7,7 @@
 // RUN:   --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s \
 // RUN: 2>&1 | FileCheck %s
 
-// CHECK: {{.*}}clang-offload-bundler{{.*}}"-outputs=hip-output-file-name.o"
+// CHECK: {{.*}}clang-offload-bundler{{.*}}"-output=hip-output-file-name.o"
 
 // Check -E default output is "-" (stdout).
 // If there are multiple preprocessor expansion outputs clang-offload-bundler
@@ -54,9 +54,9 @@
 // RUN: 2>&1 | FileCheck -check-prefixes=CLANG-DASH %s
 
 // DASH-NOT: {{.*}}clang{{.*}}"-o" "-"
-// DASH: {{.*}}clang-offload-bundler{{.*}}"-outputs=-"
+// DASH: {{.*}}clang-offload-bundler{{.*}}"-output=-"
 // CLANG-DASH: {{.*}}clang{{.*}}"-o" "-"
-// CLANG-DASH-NOT: {{.*}}clang-offload-bundler{{.*}}"-outputs=-"
+// CLANG-DASH-NOT: {{.*}}clang-offload-bundler{{.*}}"-output=-"
 
 // Check -E with -o.
 
@@ -81,6 +81,6 @@
 // RUN: 2>&1 | FileCheck -check-prefixes=CLANG-OUT %s
 
 // OUT-NOT: {{.*}}clang{{.*}}"-o" "test.cui"
-// OUT: {{.*}}clang-offload-bundler{{.*}}"-outputs=test.cui"
+// OUT: {{.*}}clang-offload-bundler{{.*}}"-output=test.cui"
 // CLANG-OUT: {{.*}}clang{{.*}}"-o" "test.cui"
-// CLANG-OUT-NOT: {{.*}}clang-offload-bundler{{.*}}"-outputs=test.cui"
+// CLANG-OUT-NOT: {{.*}}clang-offload-bundler{{.*}}"-output=test.cui"

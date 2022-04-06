@@ -125,11 +125,16 @@ struct type_caster<MlirContext> {
 };
 
 /// Casts object <-> MlirLocation.
-// TODO: Coerce None to default MlirLocation.
 template <>
 struct type_caster<MlirLocation> {
   PYBIND11_TYPE_CASTER(MlirLocation, _("MlirLocation"));
   bool load(handle src, bool) {
+    if (src.is_none()) {
+      // Gets the current thread-bound context.
+      src = py::module::import(MAKE_MLIR_PYTHON_QUALNAME("ir"))
+                .attr("Location")
+                .attr("current");
+    }
     py::object capsule = mlirApiObjectToCapsule(src);
     value = mlirPythonCapsuleToLocation(capsule.ptr());
     return !mlirLocationIsNull(value);

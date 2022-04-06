@@ -628,4 +628,4 @@ def convert_string(bytes_input):
         return str(bytes_input)
 
 if __name__ == '__main__':
-  main()
+  sys.exit(main())

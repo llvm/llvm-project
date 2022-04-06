@@ -53,6 +53,9 @@ else:
 if config.bolt_enable_runtime:
     config.available_features.add("bolt-runtime")
 
+if config.gnu_ld:
+    config.available_features.add("gnu_ld")
+
 llvm_config.use_default_substitutions()
 
 llvm_config.config.environment['CLANG'] = config.bolt_clang
@@ -102,3 +105,5 @@ llvm_config.feature_config(
      ('--cxxflags', {r'-D_GLIBCXX_DEBUG\b': 'libstdcxx-safe-mode'}),
         ('--targets-built', calculate_arch_features)
      ])
+
+config.targets = frozenset(config.targets_to_build.split())

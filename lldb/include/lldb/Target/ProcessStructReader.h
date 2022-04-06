@@ -69,7 +69,7 @@ public:
     auto total_size = struct_type.GetByteSize(nullptr);
     if (!total_size)
       return;
-    lldb::DataBufferSP buffer_sp(new DataBufferHeap(*total_size, 0));
+    lldb::WritableDataBufferSP buffer_sp(new DataBufferHeap(*total_size, 0));
     Status error;
     process->ReadMemoryFromInferior(base_addr, buffer_sp->GetBytes(),
                                     *total_size, error);

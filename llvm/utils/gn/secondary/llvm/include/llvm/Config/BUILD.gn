@@ -42,9 +42,6 @@ import("//llvm/version.gni")
 # become declare_args if anyone wants to set them.
 
 declare_args() {
-  # Enable additional checks that alter the LLVM C++ ABI.
-  llvm_enable_abi_breaking_checks = llvm_enable_assertions
-
   # Iterate unordered llvm containers in reverse.
   llvm_enable_reverse_iteration = false
 
@@ -335,7 +332,6 @@ write_cmake_config("llvm-config") {
     "LLVM_BUILD_SHARED_LIBS=",
     "LLVM_DEFAULT_TARGET_TRIPLE=$llvm_target_triple",
     "LLVM_ENABLE_DUMP=",
-    "LLVM_ENABLE_NEW_PASS_MANAGER=1",
     "LLVM_FORCE_ENABLE_STATS=",
     "LLVM_FORCE_USE_OLD_TOOLCHAIN=",
     "LLVM_HAS_ATOMICS=1",

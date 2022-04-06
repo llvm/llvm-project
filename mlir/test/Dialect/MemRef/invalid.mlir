@@ -517,18 +517,6 @@ func @expand_shape_illegal_mixed_memref_2(%arg0 : memref<?x?xf32>)
 
 // -----
 
-func @expand_shape_unsupported_src_layout(
-    %arg0 : memref<20x2x10x5xf32, offset: 0, strides: [100, 10, 50, 1]>)
-    -> memref<20x2x2x5x5xf32, offset : 0, strides : [100, 10, 250, 50, 1]> {
-  // expected-error @+1 {{invalid source layout map}}
-  %0 = memref.expand_shape %arg0 [[0], [1], [2, 3], [4]] :
-      memref<20x2x10x5xf32, offset: 0, strides: [100, 10, 50, 1]>
-      into memref<20x2x2x5x5xf32, offset : 0, strides : [100, 10, 250, 50, 1]>
-  return %0 : memref<20x2x2x5x5xf32, offset : 0, strides : [100, 10, 250, 50, 1]>
-}
-
-// -----
-
 func @expand_shape_invalid_static_dim_size(%arg0 : memref<?x21xf32>)
     -> memref<?x4x5xf32> {
   // expected-error @+1 {{collapsed dim size (21) must equal reassociation group size (20)}}

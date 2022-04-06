@@ -115,7 +115,8 @@ bool NVPTXLowerAggrCopies::runOnFunction(Function &F) {
                               /* SrcAlign */ LI->getAlign(),
                               /* DestAlign */ SI->getAlign(),
                               /* SrcIsVolatile */ LI->isVolatile(),
-                              /* DstIsVolatile */ SI->isVolatile(), TTI);
+                              /* DstIsVolatile */ SI->isVolatile(),
+                              /* CanOverlap */ true, TTI);
 
     SI->eraseFromParent();
     LI->eraseFromParent();

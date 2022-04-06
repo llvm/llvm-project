@@ -263,6 +263,16 @@ class MxEncBriefExt<string reg_opnd, string disp_opnd,
   );
 }
 
+class MxEncAddrMode_d<string reg_opnd> : MxEncMemOp {
+  let EA = (descend /*MODE*/0b000,
+                    /*REGISTER*/(operand "$"#reg_opnd, 3));
+}
+
+class MxEncAddrMode_a<string reg_opnd> : MxEncMemOp {
+  let EA = (descend /*MODE*/0b001,
+                    /*REGISTER*/(operand "$"#reg_opnd, 3));
+}
+
 class MxEncAddrMode_r<string reg_opnd> : MxEncMemOp {
   let EA = (descend /*MODE without the last bit*/0b00,
                     /*REGISTER with D/A bit*/(operand "$"#reg_opnd, 4));
@@ -327,7 +337,11 @@ class MxEncAddrMode_i<string opnd_name, int size> : MxEncMemOp {
 // abs.L -> size_w_l = true
 class MxEncAddrMode_abs<string opnd_name, bit size_w_l = false> : MxEncMemOp {
   let EA = (descend /*MODE*/0b111,
-                     /*REGISTER*/0b00, size_w_l);
+                    // Wrap the REGISTER part in another dag to make sure
+                    // the dag assigned to EA only has two arguments. Such
+                    // that it's easier for MOV instructions to reverse
+                    // on its destination part.
+                    /*REGISTER*/(descend 0b00, size_w_l));
 
   // Absolute address
   let Supplement = !if(size_w_l,
