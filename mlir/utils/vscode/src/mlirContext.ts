@@ -29,8 +29,7 @@ export class MLIRContext implements vscode.Disposable {
   /**
    *  Activate the MLIR context, and start the language clients.
    */
-  async activate(outputChannel: vscode.OutputChannel,
-                 warnOnEmptyServerPath: boolean) {
+  async activate(outputChannel: vscode.OutputChannel) {
     // This lambda is used to lazily start language clients for the given
     // document. It removes the need to pro-actively start language clients for
     // every folder within the workspace and every language type we provide.
@@ -64,7 +63,7 @@ export class MLIRContext implements vscode.Disposable {
       if (!folderContext.clients.has(document.languageId)) {
         let client = await this.activateWorkspaceFolder(
             workspaceFolder, serverSettingName, document.languageId,
-            outputChannel, warnOnEmptyServerPath);
+            outputChannel);
         folderContext.clients.set(document.languageId, client);
       }
     };
@@ -92,12 +91,10 @@ export class MLIRContext implements vscode.Disposable {
    */
   async activateWorkspaceFolder(workspaceFolder: vscode.WorkspaceFolder,
                                 serverSettingName: string, languageName: string,
-                                outputChannel: vscode.OutputChannel,
-                                warnOnEmptyServerPath: boolean):
+                                outputChannel: vscode.OutputChannel):
       Promise<vscodelc.LanguageClient> {
     const [server, serverPath] = await this.startLanguageClient(
-        workspaceFolder, outputChannel, warnOnEmptyServerPath,
-        serverSettingName, languageName);
+        workspaceFolder, outputChannel, serverSettingName, languageName);
 
     // Watch for configuration changes on this folder.
     await configWatcher.activate(this, workspaceFolder, serverSettingName,
@@ -112,7 +109,6 @@ export class MLIRContext implements vscode.Disposable {
    */
   async startLanguageClient(workspaceFolder: vscode.WorkspaceFolder,
                             outputChannel: vscode.OutputChannel,
-                            warnOnEmptyServerPath: boolean,
                             serverSettingName: string, languageName: string):
       Promise<[ vscodelc.LanguageClient, string ]> {
     const clientTitle = languageName.toUpperCase() + ' Language Client';
@@ -122,14 +118,14 @@ export class MLIRContext implements vscode.Disposable {
     var serverPath =
         await this.resolveServerPath(serverSettingName, workspaceFolder);
 
-    // If we aren't emitting warnings on an empty server path, and the server
-    // path is empty, bail.
-    if (!warnOnEmptyServerPath && serverPath === '') {
+    // If the server path is empty, bail. We don't emit errors if the user
+    // hasn't explicitly configured the server.
+    if (serverPath === '') {
       return [ null, serverPath ];
     }
 
     // Check that the file actually exists.
-    if (serverPath === '' || !fs.existsSync(serverPath)) {
+    if (!fs.existsSync(serverPath)) {
       vscode.window
           .showErrorMessage(
               `${clientTitle}: Unable to resolve path for '${
