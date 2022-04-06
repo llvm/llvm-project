@@ -711,6 +711,8 @@ static inline void __ompt_task_init(kmp_taskdata_t *task, int tid) {
       ompt_frame_runtime | ompt_frame_framepointer;
   task->ompt_task_info.frame.enter_frame_flags =
       ompt_frame_runtime | ompt_frame_framepointer;
+  task->ompt_task_info.dispatch_chunk.start = 0;
+  task->ompt_task_info.dispatch_chunk.iterations = 0;
 }
 
 // __ompt_task_start:
