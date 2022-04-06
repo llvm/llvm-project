@@ -28,3 +28,17 @@ end:
 // CHECK-NEXT   %8 = cir.binop(add, %6, %7) : i32
 // CHECK-NEXT   cir.store %8, %1 : i32, cir.ptr <i32>
 // CHECK-NEXT   cir.return
+
+void g1(int a) {
+  int x = 0;
+  goto end;
+end:
+  int y = a + 2;
+}
+
+// Make sure alloca for "y" shows up in the entry block
+// CHECK: func @g1(%arg0: i32
+// CHECK-NEXT: %0 = cir.alloca i32, cir.ptr <i32>, ["a", paraminit] {alignment = 4 : i64}
+// CHECK-NEXT: %1 = cir.alloca i32, cir.ptr <i32>, ["x", cinit] {alignment = 4 : i64}
+// CHECK-NEXT: %2 = cir.alloca i32, cir.ptr <i32>, ["y", cinit] {alignment = 4 : i64}
+// CHECK-NEXT: cir.store %arg0, %0 : i32, cir.ptr <i32>
