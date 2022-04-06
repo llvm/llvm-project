@@ -1181,9 +1181,6 @@ void MachineFunction::finalizeDebugInstrRefs() {
     MI.getOperand(1).ChangeToRegister(0, false);
   };
 
-  if (!useDebugInstrRef())
-    return;
-
   for (auto &MBB : *this) {
     for (auto &MI : MBB) {
       if (!MI.isDebugRef() || !MI.getOperand(0).isReg())
