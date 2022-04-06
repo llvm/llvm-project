@@ -39,11 +39,8 @@ public:
   /// \param[in] live_process
   ///     The process being traced.
   ///
-  /// \param[in] raw_trace_fetcher
-  ///     Callback function that receives a thread ID and returns its raw trace.
-  ///     This callback should return \a None if the thread is not being traced.
-  ///     Otherwise, it should return the raw trace in bytes or an
-  ///     \a llvm::Error in case of failures.
+  /// \param[in] raw_thread_trace_data_kind
+  ///     Identifier for the data kind of the raw trace for each thread.
   ///
   /// \param[in] directory
   ///     The directory where files will be saved when building the processes
@@ -51,12 +48,10 @@ public:
   ///
   /// \return
   ///     The processes section or \a llvm::Error in case of failures.
-  static llvm::Expected<JSONTraceSessionBase> BuildProcessesSection(
-      Process &live_process,
-      std::function<
-          llvm::Expected<llvm::Optional<std::vector<uint8_t>>>(lldb::tid_t tid)>
-          raw_trace_fetcher,
-      FileSpec directory);
+  static llvm::Expected<JSONTraceSessionBase>
+  BuildProcessesSection(Process &live_process,
+                        llvm::StringRef raw_thread_trace_data_kind,
+                        FileSpec directory);
 
   /// Build the threads sub-section of the trace session description file.
   /// For each traced thread, its raw trace is also written to the file
@@ -65,11 +60,8 @@ public:
   /// \param[in] live_process
   ///     The process being traced.
   ///
-  /// \param[in] raw_trace_fetcher
-  ///     Callback function that receives a thread ID and returns its raw trace.
-  ///     This callback should return \a None if the thread is not being traced.
-  ///     Otherwise, it should return the raw trace in bytes or an
-  ///     \a llvm::Error in case of failures.
+  /// \param[in] raw_thread_trace_data_kind
+  ///     Identifier for the data kind of the raw trace for each thread.
   ///
   /// \param[in] directory
   ///     The directory where files will be saved when building the threads
@@ -77,12 +69,10 @@ public:
   ///
   /// \return
   ///     The threads section or \a llvm::Error in case of failures.
-  static llvm::Expected<std::vector<JSONThread>> BuildThreadsSection(
-      Process &live_process,
-      std::function<
-          llvm::Expected<llvm::Optional<std::vector<uint8_t>>>(lldb::tid_t tid)>
-          raw_trace_fetcher,
-      FileSpec directory);
+  static llvm::Expected<std::vector<JSONThread>>
+  BuildThreadsSection(Process &live_process,
+                      llvm::StringRef raw_thread_trace_data_kind,
+                      FileSpec directory);
 
   /// Build modules sub-section of the trace's session. The original modules
   /// will be copied over to the \a <directory/modules> folder. Invalid modules

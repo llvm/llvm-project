@@ -20,7 +20,8 @@ using namespace lldb_private;
 using namespace lldb_private::trace_intel_pt;
 using namespace llvm;
 
-// ThreadDecoder ====================
+ThreadDecoder::ThreadDecoder(const ThreadSP &thread_sp, TraceIntelPT &trace)
+    : m_thread_sp(thread_sp), m_trace(trace) {}
 
 DecodedThreadSP ThreadDecoder::Decode() {
   if (!m_decoded_thread.hasValue())
@@ -28,52 +29,16 @@ DecodedThreadSP ThreadDecoder::Decode() {
   return *m_decoded_thread;
 }
 
-// LiveThreadDecoder ====================
-
-LiveThreadDecoder::LiveThreadDecoder(Thread &thread, TraceIntelPT &trace)
-    : m_thread_sp(thread.shared_from_this()), m_trace(trace) {}
-
-DecodedThreadSP LiveThreadDecoder::DoDecode() {
+DecodedThreadSP ThreadDecoder::DoDecode() {
   DecodedThreadSP decoded_thread_sp =
       std::make_shared<DecodedThread>(m_thread_sp);
 
-  Expected<std::vector<uint8_t>> buffer =
-      m_trace.GetLiveThreadBuffer(m_thread_sp->GetID());
-  if (!buffer) {
-    decoded_thread_sp->AppendError(buffer.takeError());
-    return decoded_thread_sp;
-  }
-
-  decoded_thread_sp->SetRawTraceSize(buffer->size());
-  DecodeTrace(*decoded_thread_sp, m_trace, MutableArrayRef<uint8_t>(*buffer));
-  return decoded_thread_sp;
-}
-
-// PostMortemThreadDecoder =======================
-
-PostMortemThreadDecoder::PostMortemThreadDecoder(
-    const lldb::ThreadPostMortemTraceSP &trace_thread, TraceIntelPT &trace)
-    : m_trace_thread(trace_thread), m_trace(trace) {}
-
-DecodedThreadSP PostMortemThreadDecoder::DoDecode() {
-  DecodedThreadSP decoded_thread_sp =
-      std::make_shared<DecodedThread>(m_trace_thread);
-
-  ErrorOr<std::unique_ptr<MemoryBuffer>> trace_or_error =
-      MemoryBuffer::getFile(m_trace_thread->GetTraceFile().GetPath());
-  if (std::error_code err = trace_or_error.getError()) {
-    decoded_thread_sp->AppendError(errorCodeToError(err));
-    return decoded_thread_sp;
-  }
-
-  MemoryBuffer &trace = **trace_or_error;
-  MutableArrayRef<uint8_t> trace_data(
-      // The libipt library does not modify the trace buffer, hence the
-      // following cast is safe.
-      reinterpret_cast<uint8_t *>(const_cast<char *>(trace.getBufferStart())),
-      trace.getBufferSize());
-  decoded_thread_sp->SetRawTraceSize(trace_data.size());
-
-  DecodeTrace(*decoded_thread_sp, m_trace, trace_data);
+  Error err = m_trace.OnThreadBufferRead(
+      m_thread_sp->GetID(), [&](llvm::ArrayRef<uint8_t> data) {
+        DecodeTrace(*decoded_thread_sp, m_trace, data);
+        return Error::success();
+      });
+  if (err)
+    decoded_thread_sp->AppendError(std::move(err));
   return decoded_thread_sp;
 }

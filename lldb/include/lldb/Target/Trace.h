@@ -233,15 +233,76 @@ public:
   ///     \a llvm::Error otherwise.
   llvm::Error Stop();
 
-  /// Get the trace file of the given post mortem thread.
-  llvm::Expected<const FileSpec &> GetPostMortemTraceFile(lldb::tid_t tid);
-
   /// \return
   ///     The stop ID of the live process being traced, or an invalid stop ID
   ///     if the trace is in an error or invalid state.
   uint32_t GetStopID();
 
+  using OnBinaryDataReadCallback =
+      std::function<llvm::Error(llvm::ArrayRef<uint8_t> data)>;
+  /// Fetch binary data associated with a thread, either live or postmortem, and
+  /// pass it to the given callback. The reason of having a callback is to free
+  /// the caller from having to manage the life cycle of the data and to hide
+  /// the different data fetching procedures that exist for live and post mortem
+  /// threads.
+  ///
+  /// The fetched data is not persisted after the callback is invoked.
+  ///
+  /// \param[in] tid
+  ///     The tid who owns the data.
+  ///
+  /// \param[in] kind
+  ///     The kind of data to read.
+  ///
+  /// \param[in] callback
+  ///     The callback to be invoked once the data was successfully read. Its
+  ///     return value, which is an \a llvm::Error, is returned by this
+  ///     function.
+  ///
+  /// \return
+  ///     An \a llvm::Error if the data couldn't be fetched, or the return value
+  ///     of the callback, otherwise.
+  llvm::Error OnThreadBinaryDataRead(lldb::tid_t tid, llvm::StringRef kind,
+                                     OnBinaryDataReadCallback callback);
+
 protected:
+  /// Implementation of \a OnThreadBinaryDataRead() for live threads.
+  llvm::Error OnLiveThreadBinaryDataRead(lldb::tid_t tid, llvm::StringRef kind,
+                                         OnBinaryDataReadCallback callback);
+
+  /// Implementation of \a OnThreadBinaryDataRead() for post mortem threads.
+  llvm::Error
+  OnPostMortemThreadBinaryDataRead(lldb::tid_t tid, llvm::StringRef kind,
+                                   OnBinaryDataReadCallback callback);
+
+  /// Get the file path containing data of a postmortem thread given a data
+  /// identifier.
+  ///
+  /// \param[in] tid
+  ///     The thread whose data is requested.
+  ///
+  /// \param[in] kind
+  ///     The kind of data requested.
+  ///
+  /// \return
+  ///     The file spec containing the requested data, or an \a llvm::Error in
+  ///     case of failures.
+  llvm::Expected<FileSpec> GetPostMortemThreadDataFile(lldb::tid_t tid,
+                                                       llvm::StringRef kind);
+
+  /// Associate a given thread with a data file using a data identifier.
+  ///
+  /// \param[in] tid
+  ///     The thread associated with the data file.
+  ///
+  /// \param[in] kind
+  ///     The kind of data being registered.
+  ///
+  /// \param[in] file_spec
+  ///     The path of the data file.
+  void SetPostMortemThreadDataFile(lldb::tid_t tid, llvm::StringRef kind,
+                                   FileSpec file_spec);
+
   /// Get binary data of a live thread given a data identifier.
   ///
   /// \param[in] tid
@@ -315,11 +376,25 @@ protected:
   uint32_t m_stop_id = LLDB_INVALID_STOP_ID;
   /// Process traced by this object if doing live tracing. Otherwise it's null.
   Process *m_live_process = nullptr;
+
+  /// These data kinds are returned by lldb-server when fetching the state of
+  /// the tracing session. The size in bytes can be used later for fetching the
+  /// data in batches.
+  /// \{
+
   /// tid -> data kind -> size
-  std::map<lldb::tid_t, std::unordered_map<std::string, size_t>>
+  llvm::DenseMap<lldb::tid_t, std::unordered_map<std::string, size_t>>
       m_live_thread_data;
+
   /// data kind -> size
   std::unordered_map<std::string, size_t> m_live_process_data;
+  /// \}
+
+  /// Postmortem traces can specific additional data files, which are
+  /// represented in this variable using a data kind identifier for each file.
+  /// tid -> data kind -> file
+  llvm::DenseMap<lldb::tid_t, std::unordered_map<std::string, FileSpec>>
+      m_postmortem_thread_data;
 };
 
 } // namespace lldb_private

@@ -78,10 +78,12 @@ TraceIntelPT::TraceIntelPT(
     const pt_cpu &cpu_info,
     const std::vector<ThreadPostMortemTraceSP> &traced_threads)
     : m_cpu_info(cpu_info) {
-  for (const ThreadPostMortemTraceSP &thread : traced_threads)
-    m_thread_decoders.emplace(
-        thread->GetID(),
-        std::make_unique<PostMortemThreadDecoder>(thread, *this));
+  for (const ThreadPostMortemTraceSP &thread : traced_threads) {
+    m_thread_decoders.emplace(thread->GetID(),
+                              std::make_unique<ThreadDecoder>(thread, *this));
+    SetPostMortemThreadDataFile(thread->GetID(), "threadTraceBuffer",
+                                thread->GetTraceFile());
+  }
 }
 
 DecodedThreadSP TraceIntelPT::Decode(Thread &thread) {
@@ -213,10 +215,10 @@ void TraceIntelPT::DoRefreshLiveProcessState(
   }
 
   for (const TraceThreadState &thread_state : state->tracedThreads) {
-    Thread &thread =
-        *m_live_process->GetThreadList().FindThreadByID(thread_state.tid);
+    ThreadSP thread_sp =
+        m_live_process->GetThreadList().FindThreadByID(thread_state.tid);
     m_thread_decoders.emplace(
-        thread_state.tid, std::make_unique<LiveThreadDecoder>(thread, *this));
+        thread_state.tid, std::make_unique<ThreadDecoder>(thread_sp, *this));
   }
 }
 
@@ -352,7 +354,7 @@ Error TraceIntelPT::Start(llvm::ArrayRef<lldb::tid_t> tids,
   return Start(tids, thread_buffer_size, enable_tsc, psb_period);
 }
 
-Expected<std::vector<uint8_t>>
-TraceIntelPT::GetLiveThreadBuffer(lldb::tid_t tid) {
-  return Trace::GetLiveThreadBinaryData(tid, "threadTraceBuffer");
+Error TraceIntelPT::OnThreadBufferRead(lldb::tid_t tid,
+                                       OnBinaryDataReadCallback callback) {
+  return OnThreadBinaryDataRead(tid, "threadTraceBuffer", callback);
 }

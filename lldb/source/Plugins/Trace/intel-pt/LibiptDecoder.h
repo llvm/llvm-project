@@ -21,7 +21,7 @@ namespace trace_intel_pt {
 /// instructions and errors in \p decoded_thread. It uses the low level libipt
 /// library underneath.
 void DecodeTrace(DecodedThread &decoded_thread, TraceIntelPT &trace_intel_pt,
-                 llvm::MutableArrayRef<uint8_t> buffer);
+                 llvm::ArrayRef<uint8_t> buffer);
 
 } // namespace trace_intel_pt
 } // namespace lldb_private

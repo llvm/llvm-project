@@ -39,15 +39,12 @@ llvm::Error TraceSessionSaver::WriteSessionToFile(
 }
 
 llvm::Expected<JSONTraceSessionBase> TraceSessionSaver::BuildProcessesSection(
-    Process &live_process,
-    std::function<
-        llvm::Expected<llvm::Optional<std::vector<uint8_t>>>(lldb::tid_t tid)>
-        raw_trace_fetcher,
+    Process &live_process, llvm::StringRef raw_thread_trace_data_kind,
     FileSpec directory) {
 
   JSONTraceSessionBase json_session_description;
   Expected<std::vector<JSONThread>> json_threads =
-      BuildThreadsSection(live_process, raw_trace_fetcher, directory);
+      BuildThreadsSection(live_process, raw_thread_trace_data_kind, directory);
   if (!json_threads)
     return json_threads.takeError();
 
@@ -64,39 +61,41 @@ llvm::Expected<JSONTraceSessionBase> TraceSessionSaver::BuildProcessesSection(
 }
 
 llvm::Expected<std::vector<JSONThread>> TraceSessionSaver::BuildThreadsSection(
-    Process &live_process,
-    std::function<
-        llvm::Expected<llvm::Optional<std::vector<uint8_t>>>(lldb::tid_t tid)>
-        raw_trace_fetcher,
+    Process &live_process, llvm::StringRef raw_thread_trace_data_kind,
     FileSpec directory) {
   std::vector<JSONThread> json_threads;
   for (ThreadSP thread_sp : live_process.Threads()) {
+    TraceSP trace_sp = live_process.GetTarget().GetTrace();
+    lldb::tid_t tid = thread_sp->GetID();
+    if (!trace_sp->IsTraced(tid))
+      continue;
+
     // resolve the directory just in case
     FileSystem::Instance().Resolve(directory);
     FileSpec raw_trace_path = directory;
-    raw_trace_path.AppendPathComponent(std::to_string(thread_sp->GetID()) +
-                                       ".trace");
-    json_threads.push_back(JSONThread{static_cast<int64_t>(thread_sp->GetID()),
+    raw_trace_path.AppendPathComponent(std::to_string(tid) + ".trace");
+    json_threads.push_back(JSONThread{static_cast<int64_t>(tid),
                                       raw_trace_path.GetPath().c_str()});
 
-    llvm::Expected<llvm::Optional<std::vector<uint8_t>>> raw_trace =
-        raw_trace_fetcher(thread_sp->GetID());
-
-    if (!raw_trace)
-      return raw_trace.takeError();
-    if (!raw_trace.get())
-      continue;
-
-    std::basic_fstream<char> raw_trace_fs = std::fstream(
-        raw_trace_path.GetPath().c_str(), std::ios::out | std::ios::binary);
-    raw_trace_fs.write(reinterpret_cast<const char *>(&raw_trace.get()->at(0)),
-                       raw_trace.get()->size() * sizeof(uint8_t));
-    raw_trace_fs.close();
-    if (!raw_trace_fs) {
-      return createStringError(inconvertibleErrorCode(),
-                               formatv("couldn't write to the file {0}",
-                                       raw_trace_path.GetPath().c_str()));
-    }
+    llvm::Error err =
+        live_process.GetTarget().GetTrace()->OnThreadBinaryDataRead(
+            tid, raw_thread_trace_data_kind,
+            [&](llvm::ArrayRef<uint8_t> data) -> llvm::Error {
+              std::basic_fstream<char> raw_trace_fs =
+                  std::fstream(raw_trace_path.GetPath().c_str(),
+                               std::ios::out | std::ios::binary);
+              raw_trace_fs.write(reinterpret_cast<const char *>(&data[0]),
+                                 data.size() * sizeof(uint8_t));
+              raw_trace_fs.close();
+              if (!raw_trace_fs)
+                return createStringError(
+                    inconvertibleErrorCode(),
+                    formatv("couldn't write to the file {0}",
+                            raw_trace_path.GetPath().c_str()));
+              return Error::success();
+            });
+    if (err)
+      return std::move(err);
   }
   return json_threads;
 }
