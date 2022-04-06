@@ -204,18 +204,20 @@ bool getAssumedUnderlyingObjects(Attributor &A, const Value &Ptr,
 
 /// Collect all potential values \p LI could read into \p PotentialValues. That
 /// is, the only values read by \p LI are assumed to be known and all are in
-/// \p PotentialValues. Dependences onto \p QueryingAA are properly tracked,
-/// \p UsedAssumedInformation will inform the caller if assumed information was
+/// \p PotentialValues. \p PotentialValueOrigins will contain all the
+/// instructions that might have put a potential value into \p PotentialValues.
+/// Dependences onto \p QueryingAA are properly tracked, \p
+/// UsedAssumedInformation will inform the caller if assumed information was
 /// used.
 ///
 /// \returns True if the assumed potential copies are all in \p PotentialValues,
 ///          false if something went wrong and the copies could not be
 ///          determined.
-bool getPotentiallyLoadedValues(Attributor &A, LoadInst &LI,
-                                SmallSetVector<Value *, 4> &PotentialValues,
-                                const AbstractAttribute &QueryingAA,
-                                bool &UsedAssumedInformation,
-                                bool OnlyExact = false);
+bool getPotentiallyLoadedValues(
+    Attributor &A, LoadInst &LI, SmallSetVector<Value *, 4> &PotentialValues,
+    SmallSetVector<Instruction *, 4> &PotentialValueOrigins,
+    const AbstractAttribute &QueryingAA, bool &UsedAssumedInformation,
+    bool OnlyExact = false);
 
 /// Collect all potential values of the one stored by \p SI into
 /// \p PotentialCopies. That is, the only copies that were made via the
@@ -1057,6 +1059,10 @@ struct InformationCache {
     return FI.CalledViaMustTail || FI.ContainsMustTailCall;
   }
 
+  bool isOnlyUsedByAssume(const Instruction &I) const {
+    return AssumeOnlyValues.contains(&I);
+  }
+
   /// Return the analysis result from a pass \p AP for function \p F.
   template <typename AP>
   typename AP::Result *getAnalysisResultForFunction(const Function &F) {
@@ -1148,6 +1154,9 @@ private:
 
   /// A map with knowledge retained in `llvm.assume` instructions.
   RetainedKnowledgeMap KnowledgeMap;
+
+  /// A container for all instructions that are only used by `llvm.assume`.
+  SetVector<const Instruction *> AssumeOnlyValues;
 
   /// Getters for analysis.
   AnalysisGetter &AG;
@@ -3411,6 +3420,12 @@ protected:
 
   /// Returns true if \p I is known dead.
   virtual bool isKnownDead(const Instruction *I) const = 0;
+
+  /// Return true if the underlying value is a store that is known to be
+  /// removable. This is different from dead stores as the removable store
+  /// can have an effect on live values, especially loads, but that effect
+  /// is propagated which allows us to remove the store in turn.
+  virtual bool isRemovableStore() const { return false; }
 
   /// This method is used to check if at least one instruction in a collection
   /// of instructions is live.
