@@ -1,4 +1,4 @@
-//===--- DirectiveMap.cpp - Find and strip preprocessor directives --------===//
+//===--- DirectiveTree.cpp - Find and strip preprocessor directives -------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang-pseudo/DirectiveMap.h"
+#include "clang-pseudo/DirectiveTree.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -19,7 +19,7 @@ class DirectiveParser {
 public:
   explicit DirectiveParser(const TokenStream &Code)
       : Code(Code), Tok(&Code.front()) {}
-  void parse(DirectiveMap *Result) { parse(Result, /*TopLevel=*/true); }
+  void parse(DirectiveTree *Result) { parse(Result, /*TopLevel=*/true); }
 
 private:
   // Roles that a directive might take within a conditional block.
@@ -42,10 +42,10 @@ private:
     }
   }
 
-  // Parses tokens starting at Tok into Map.
-  // If we reach an End or Else directive that ends Map, returns it.
+  // Parses tokens starting at Tok into Tree.
+  // If we reach an End or Else directive that ends Tree, returns it.
   // If TopLevel is true, then we do not expect End and always return None.
-  llvm::Optional<DirectiveMap::Directive> parse(DirectiveMap *Map,
+  llvm::Optional<DirectiveTree::Directive> parse(DirectiveTree *Tree,
                                                 bool TopLevel) {
     auto StartsDirective =
         [&, AllowDirectiveAt((const Token *)nullptr)]() mutable {
@@ -66,29 +66,29 @@ private:
         do
           ++Tok;
         while (Tok->Kind != tok::eof && !StartsDirective());
-        Map->Chunks.push_back(DirectiveMap::Code{
+        Tree->Chunks.push_back(DirectiveTree::Code{
             Token::Range{Code.index(*Start), Code.index(*Tok)}});
         continue;
       }
 
       // We have some kind of directive.
-      DirectiveMap::Directive Directive;
+      DirectiveTree::Directive Directive;
       parseDirective(&Directive);
       Cond Kind = classifyDirective(Directive.Kind);
       if (Kind == Cond::If) {
         // #if or similar, starting a nested conditional block.
-        DirectiveMap::Conditional Conditional;
+        DirectiveTree::Conditional Conditional;
         Conditional.Branches.emplace_back();
         Conditional.Branches.back().first = std::move(Directive);
         parseConditional(&Conditional);
-        Map->Chunks.push_back(std::move(Conditional));
+        Tree->Chunks.push_back(std::move(Conditional));
       } else if ((Kind == Cond::Else || Kind == Cond::End) && !TopLevel) {
         // #endif or similar, ending this PStructure scope.
         // (#endif is unexpected at the top level, treat as simple directive).
         return std::move(Directive);
       } else {
         // #define or similar, a simple directive at the current scope.
-        Map->Chunks.push_back(std::move(Directive));
+        Tree->Chunks.push_back(std::move(Directive));
       }
     }
     return None;
@@ -96,7 +96,7 @@ private:
 
   // Parse the rest of a conditional section, after seeing the If directive.
   // Returns after consuming the End directive.
-  void parseConditional(DirectiveMap::Conditional *C) {
+  void parseConditional(DirectiveTree::Conditional *C) {
     assert(C->Branches.size() == 1 &&
            C->Branches.front().second.Chunks.empty() &&
            "Should be ready to parse first branch body");
@@ -119,7 +119,7 @@ private:
   }
 
   // Parse a directive. Tok is the hash.
-  void parseDirective(DirectiveMap::Directive *D) {
+  void parseDirective(DirectiveTree::Directive *D) {
     assert(Tok->Kind == tok::hash);
 
     // Directive spans from the hash until the end of line or file.
@@ -143,26 +143,26 @@ private:
 
 } // namespace
 
-DirectiveMap DirectiveMap::parse(const TokenStream &Code) {
-  DirectiveMap Result;
+DirectiveTree DirectiveTree::parse(const TokenStream &Code) {
+  DirectiveTree Result;
   DirectiveParser(Code).parse(&Result);
   return Result;
 }
 
-static void dump(llvm::raw_ostream &OS, const DirectiveMap &, unsigned Indent);
+static void dump(llvm::raw_ostream &OS, const DirectiveTree &, unsigned Indent);
 static void dump(llvm::raw_ostream &OS,
-                 const DirectiveMap::Directive &Directive, unsigned Indent,
+                 const DirectiveTree::Directive &Directive, unsigned Indent,
                  bool Taken = false) {
   OS.indent(Indent) << llvm::formatv(
       "#{0} ({1} tokens){2}\n", tok::getPPKeywordSpelling(Directive.Kind),
       Directive.Tokens.size(), Taken ? " TAKEN" : "");
 }
-static void dump(llvm::raw_ostream &OS, const DirectiveMap::Code &Code,
+static void dump(llvm::raw_ostream &OS, const DirectiveTree::Code &Code,
                  unsigned Indent) {
   OS.indent(Indent) << llvm::formatv("code ({0} tokens)\n", Code.Tokens.size());
 }
 static void dump(llvm::raw_ostream &OS,
-                 const DirectiveMap::Conditional &Conditional,
+                 const DirectiveTree::Conditional &Conditional,
                  unsigned Indent) {
   for (unsigned I = 0; I < Conditional.Branches.size(); ++I) {
     const auto &Branch = Conditional.Branches[I];
@@ -172,23 +172,23 @@ static void dump(llvm::raw_ostream &OS,
   dump(OS, Conditional.End, Indent);
 }
 
-static void dump(llvm::raw_ostream &OS, const DirectiveMap::Chunk &Chunk,
+static void dump(llvm::raw_ostream &OS, const DirectiveTree::Chunk &Chunk,
                  unsigned Indent) {
   switch (Chunk.kind()) {
-  case DirectiveMap::Chunk::K_Empty:
+  case DirectiveTree::Chunk::K_Empty:
     llvm_unreachable("invalid chunk");
-  case DirectiveMap::Chunk::K_Code:
-    return dump(OS, (const DirectiveMap::Code &)Chunk, Indent);
-  case DirectiveMap::Chunk::K_Directive:
-    return dump(OS, (const DirectiveMap::Directive &)Chunk, Indent);
-  case DirectiveMap::Chunk::K_Conditional:
-    return dump(OS, (const DirectiveMap::Conditional &)Chunk, Indent);
+  case DirectiveTree::Chunk::K_Code:
+    return dump(OS, (const DirectiveTree::Code &)Chunk, Indent);
+  case DirectiveTree::Chunk::K_Directive:
+    return dump(OS, (const DirectiveTree::Directive &)Chunk, Indent);
+  case DirectiveTree::Chunk::K_Conditional:
+    return dump(OS, (const DirectiveTree::Conditional &)Chunk, Indent);
   }
 }
 
-static void dump(llvm::raw_ostream &OS, const DirectiveMap &Map,
+static void dump(llvm::raw_ostream &OS, const DirectiveTree &Tree,
                  unsigned Indent) {
-  for (const auto &Chunk : Map.Chunks)
+  for (const auto &Chunk : Tree.Chunks)
     dump(OS, Chunk, Indent);
 }
 
@@ -198,11 +198,11 @@ static void dump(llvm::raw_ostream &OS, const DirectiveMap &Map,
     dump(OS, T, 0);                                                            \
     return OS;                                                                 \
   }
-OSTREAM_DUMP(DirectiveMap)
-OSTREAM_DUMP(DirectiveMap::Chunk)
-OSTREAM_DUMP(DirectiveMap::Directive)
-OSTREAM_DUMP(DirectiveMap::Conditional)
-OSTREAM_DUMP(DirectiveMap::Code)
+OSTREAM_DUMP(DirectiveTree)
+OSTREAM_DUMP(DirectiveTree::Chunk)
+OSTREAM_DUMP(DirectiveTree::Directive)
+OSTREAM_DUMP(DirectiveTree::Conditional)
+OSTREAM_DUMP(DirectiveTree::Code)
 #undef OSTREAM_DUMP
 
 namespace {
@@ -223,7 +223,7 @@ class BranchChooser {
 public:
   BranchChooser(const TokenStream &Code) : Code(Code) {}
 
-  void choose(DirectiveMap &M) { walk(M); }
+  void choose(DirectiveTree &M) { walk(M); }
 
 private:
   // Describes code seen by making particular branch choices. Higher is better.
@@ -246,7 +246,7 @@ private:
     }
   };
 
-  Score walk(DirectiveMap::Code &C) {
+  Score walk(DirectiveTree::Code &C) {
     Score S;
     for (const Token &T : Code.tokens(C.Tokens))
       if (T.Kind != tok::comment)
@@ -254,35 +254,35 @@ private:
     return S;
   }
 
-  Score walk(DirectiveMap::Directive &D) {
+  Score walk(DirectiveTree::Directive &D) {
     Score S;
     S.Directives = 1;
     S.Errors = D.Kind == tok::pp_error;
     return S;
   }
 
-  Score walk(DirectiveMap::Chunk &C) {
+  Score walk(DirectiveTree::Chunk &C) {
     switch (C.kind()) {
-    case DirectiveMap::Chunk::K_Code:
-      return walk((DirectiveMap::Code &)C);
-    case DirectiveMap::Chunk::K_Directive:
-      return walk((DirectiveMap::Directive &)C);
-    case DirectiveMap::Chunk::K_Conditional:
-      return walk((DirectiveMap::Conditional &)C);
-    case DirectiveMap::Chunk::K_Empty:
+    case DirectiveTree::Chunk::K_Code:
+      return walk((DirectiveTree::Code &)C);
+    case DirectiveTree::Chunk::K_Directive:
+      return walk((DirectiveTree::Directive &)C);
+    case DirectiveTree::Chunk::K_Conditional:
+      return walk((DirectiveTree::Conditional &)C);
+    case DirectiveTree::Chunk::K_Empty:
       break;
     }
     llvm_unreachable("bad chunk kind");
   }
 
-  Score walk(DirectiveMap &M) {
+  Score walk(DirectiveTree &M) {
     Score S;
-    for (DirectiveMap::Chunk &C : M.Chunks)
+    for (DirectiveTree::Chunk &C : M.Chunks)
       S += walk(C);
     return S;
   }
 
-  Score walk(DirectiveMap::Conditional &C) {
+  Score walk(DirectiveTree::Conditional &C) {
     Score Best;
     bool MayTakeTrivial = true;
     bool TookTrivial = false;
@@ -314,7 +314,7 @@ private:
 
   // Return true if the directive starts an always-taken conditional branch,
   // false if the branch is never taken, and None otherwise.
-  llvm::Optional<bool> isTakenWhenReached(const DirectiveMap::Directive &Dir) {
+  llvm::Optional<bool> isTakenWhenReached(const DirectiveTree::Directive &Dir) {
     switch (Dir.Kind) {
     case clang::tok::pp_if:
     case clang::tok::pp_elif:
@@ -343,8 +343,8 @@ private:
 
 } // namespace
 
-void chooseConditionalBranches(DirectiveMap &Map, const TokenStream &Code) {
-  BranchChooser{Code}.choose(Map);
+void chooseConditionalBranches(DirectiveTree &Tree, const TokenStream &Code) {
+  BranchChooser{Code}.choose(Tree);
 }
 
 } // namespace pseudo

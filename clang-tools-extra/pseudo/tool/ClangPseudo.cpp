@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang-pseudo/DirectiveMap.h"
+#include "clang-pseudo/DirectiveTree.h"
 #include "clang-pseudo/Grammar.h"
 #include "clang-pseudo/LRGraph.h"
 #include "clang-pseudo/LRTable.h"
@@ -33,7 +33,7 @@ static opt<std::string> Source("source", desc("Source file"));
 static opt<bool> PrintSource("print-source", desc("Print token stream"));
 static opt<bool> PrintTokens("print-tokens", desc("Print detailed token info"));
 static opt<bool>
-    PrintDirectiveMap("print-directive-map",
+    PrintDirectiveTree("print-directive-tree",
                       desc("Print directive structure of source code"));
 
 static std::string readOrDie(llvm::StringRef Path) {
@@ -74,10 +74,10 @@ int main(int argc, char *argv[]) {
     std::string Text = readOrDie(Source);
     clang::LangOptions LangOpts; // FIXME: use real options.
     auto Stream = clang::pseudo::lex(Text, LangOpts);
-    auto Structure = clang::pseudo::DirectiveMap::parse(Stream);
+    auto Structure = clang::pseudo::DirectiveTree::parse(Stream);
     clang::pseudo::chooseConditionalBranches(Structure, Stream);
 
-    if (PrintDirectiveMap)
+    if (PrintDirectiveTree)
       llvm::outs() << Structure;
     if (PrintSource)
       Stream.print(llvm::outs());

@@ -1,4 +1,4 @@
-//===--- DirectiveMapTest.cpp ---------------------------------------------===//
+//===--- DirectiveTreeTest.cpp --------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang-pseudo/DirectiveMap.h"
+#include "clang-pseudo/DirectiveTree.h"
 
 #include "clang-pseudo/Token.h"
 #include "clang/Basic/LangOptions.h"
@@ -25,7 +25,7 @@ using testing::ElementsAre;
 using testing::Matcher;
 using testing::Pair;
 using testing::StrEq;
-using Chunk = DirectiveMap::Chunk;
+using Chunk = DirectiveTree::Chunk;
 
 MATCHER_P2(tokensAre, TS, Tokens, "tokens are " + std::string(Tokens)) {
   std::vector<llvm::StringRef> Texts;
@@ -37,7 +37,7 @@ MATCHER_P2(tokensAre, TS, Tokens, "tokens are " + std::string(Tokens)) {
 
 MATCHER_P(chunkKind, K, "") { return arg.kind() == K; }
 
-TEST(DirectiveMap, Parse) {
+TEST(DirectiveTree, Parse) {
   LangOptions Opts;
   std::string Code = R"cpp(
   #include <foo.h>
@@ -56,30 +56,30 @@ TEST(DirectiveMap, Parse) {
   )cpp";
 
   TokenStream S = cook(lex(Code, Opts), Opts);
-  DirectiveMap PP = DirectiveMap::parse(S);
+  DirectiveTree PP = DirectiveTree::parse(S);
 
   ASSERT_THAT(PP.Chunks, ElementsAre(chunkKind(Chunk::K_Directive),
                                      chunkKind(Chunk::K_Code),
                                      chunkKind(Chunk::K_Conditional),
                                      chunkKind(Chunk::K_Code)));
 
-  EXPECT_THAT((const DirectiveMap::Directive &)PP.Chunks[0],
+  EXPECT_THAT((const DirectiveTree::Directive &)PP.Chunks[0],
               tokensAre(S, "# include < foo . h >"));
-  EXPECT_THAT((const DirectiveMap::Code &)PP.Chunks[1],
+  EXPECT_THAT((const DirectiveTree::Code &)PP.Chunks[1],
               tokensAre(S, "int main ( ) {"));
-  EXPECT_THAT((const DirectiveMap::Code &)PP.Chunks[3], tokensAre(S, "}"));
+  EXPECT_THAT((const DirectiveTree::Code &)PP.Chunks[3], tokensAre(S, "}"));
 
-  const DirectiveMap::Conditional &Ifdef(PP.Chunks[2]);
+  const DirectiveTree::Conditional &Ifdef(PP.Chunks[2]);
   EXPECT_THAT(Ifdef.Branches,
               ElementsAre(Pair(tokensAre(S, "# ifdef HAS_FOO"), _),
                           Pair(tokensAre(S, "# elif NEEDS_FOO"), _)));
   EXPECT_THAT(Ifdef.End, tokensAre(S, "# endif"));
 
-  const DirectiveMap &HasFoo(Ifdef.Branches[0].second);
-  const DirectiveMap &NeedsFoo(Ifdef.Branches[1].second);
+  const DirectiveTree &HasFoo(Ifdef.Branches[0].second);
+  const DirectiveTree &NeedsFoo(Ifdef.Branches[1].second);
 
   EXPECT_THAT(HasFoo.Chunks, ElementsAre(chunkKind(Chunk::K_Conditional)));
-  const DirectiveMap::Conditional &If(HasFoo.Chunks[0]);
+  const DirectiveTree::Conditional &If(HasFoo.Chunks[0]);
   EXPECT_THAT(If.Branches, ElementsAre(Pair(tokensAre(S, "# if HAS_BAR"), _),
                                        Pair(tokensAre(S, "# else"), _)));
   EXPECT_THAT(If.Branches[0].second.Chunks,
@@ -88,12 +88,12 @@ TEST(DirectiveMap, Parse) {
               ElementsAre(chunkKind(Chunk::K_Code)));
 
   EXPECT_THAT(NeedsFoo.Chunks, ElementsAre(chunkKind(Chunk::K_Directive)));
-  const DirectiveMap::Directive &Error(NeedsFoo.Chunks[0]);
+  const DirectiveTree::Directive &Error(NeedsFoo.Chunks[0]);
   EXPECT_THAT(Error, tokensAre(S, "# error missing_foo"));
   EXPECT_EQ(Error.Kind, tok::pp_error);
 }
 
-TEST(DirectiveMap, ParseUgly) {
+TEST(DirectiveTree, ParseUgly) {
   LangOptions Opts;
   std::string Code = R"cpp(
   /*A*/ # /*B*/ \
@@ -103,19 +103,19 @@ BAR /*D*/
 /*E*/
 )cpp";
   TokenStream S = cook(lex(Code, Opts), Opts);
-  DirectiveMap PP = DirectiveMap::parse(S);
+  DirectiveTree PP = DirectiveTree::parse(S);
 
   ASSERT_THAT(PP.Chunks, ElementsAre(chunkKind(Chunk::K_Code),
                                      chunkKind(Chunk::K_Directive),
                                      chunkKind(Chunk::K_Code)));
-  EXPECT_THAT((const DirectiveMap::Code &)PP.Chunks[0], tokensAre(S, "/*A*/"));
-  const DirectiveMap::Directive &Define(PP.Chunks[1]);
+  EXPECT_THAT((const DirectiveTree::Code &)PP.Chunks[0], tokensAre(S, "/*A*/"));
+  const DirectiveTree::Directive &Define(PP.Chunks[1]);
   EXPECT_EQ(Define.Kind, tok::pp_define);
   EXPECT_THAT(Define, tokensAre(S, "# /*B*/ /*C*/ define BAR /*D*/"));
-  EXPECT_THAT((const DirectiveMap::Code &)PP.Chunks[2], tokensAre(S, "/*E*/"));
+  EXPECT_THAT((const DirectiveTree::Code &)PP.Chunks[2], tokensAre(S, "/*E*/"));
 }
 
-TEST(DirectiveMap, ParseBroken) {
+TEST(DirectiveTree, ParseBroken) {
   LangOptions Opts;
   std::string Code = R"cpp(
   a
@@ -124,17 +124,17 @@ TEST(DirectiveMap, ParseBroken) {
   b
 )cpp";
   TokenStream S = cook(lex(Code, Opts), Opts);
-  DirectiveMap PP = DirectiveMap::parse(S);
+  DirectiveTree PP = DirectiveTree::parse(S);
 
   ASSERT_THAT(PP.Chunks, ElementsAre(chunkKind(Chunk::K_Code),
                                      chunkKind(Chunk::K_Directive),
                                      chunkKind(Chunk::K_Conditional)));
-  EXPECT_THAT((const DirectiveMap::Code &)PP.Chunks[0], tokensAre(S, "a"));
-  const DirectiveMap::Directive &Endif(PP.Chunks[1]);
+  EXPECT_THAT((const DirectiveTree::Code &)PP.Chunks[0], tokensAre(S, "a"));
+  const DirectiveTree::Directive &Endif(PP.Chunks[1]);
   EXPECT_EQ(Endif.Kind, tok::pp_endif);
   EXPECT_THAT(Endif, tokensAre(S, "# endif // mismatched"));
 
-  const DirectiveMap::Conditional &X(PP.Chunks[2]);
+  const DirectiveTree::Conditional &X(PP.Chunks[2]);
   EXPECT_EQ(1u, X.Branches.size());
   // The (only) branch of the broken conditional section runs until eof.
   EXPECT_EQ(tok::pp_if, X.Branches.front().first.Kind);
@@ -145,7 +145,7 @@ TEST(DirectiveMap, ParseBroken) {
   EXPECT_EQ(0u, X.End.Tokens.size());
 }
 
-TEST(DirectiveMap, ChooseBranches) {
+TEST(DirectiveTree, ChooseBranches) {
   LangOptions Opts;
   const std::string Cases[] = {
       R"cpp(
@@ -280,12 +280,12 @@ TEST(DirectiveMap, ChooseBranches) {
   for (const auto &Code : Cases) {
     TokenStream S = cook(lex(Code, Opts), Opts);
 
-    std::function<void(const DirectiveMap &)> Verify =
-        [&](const DirectiveMap &M) {
+    std::function<void(const DirectiveTree &)> Verify =
+        [&](const DirectiveTree &M) {
           for (const auto &C : M.Chunks) {
-            if (C.kind() != DirectiveMap::Chunk::K_Conditional)
+            if (C.kind() != DirectiveTree::Chunk::K_Conditional)
               continue;
-            const DirectiveMap::Conditional &Cond(C);
+            const DirectiveTree::Conditional &Cond(C);
             for (unsigned I = 0; I < Cond.Branches.size(); ++I) {
               auto Directive = S.tokens(Cond.Branches[I].first.Tokens);
               EXPECT_EQ(I == Cond.Taken, Directive.back().text() == "// TAKEN")
@@ -295,9 +295,9 @@ TEST(DirectiveMap, ChooseBranches) {
           }
         };
 
-    DirectiveMap Map = DirectiveMap::parse(S);
-    chooseConditionalBranches(Map, S);
-    Verify(Map);
+    DirectiveTree Tree = DirectiveTree::parse(S);
+    chooseConditionalBranches(Tree, S);
+    Verify(Tree);
   }
 }
 
