@@ -110,3 +110,34 @@ body: |
     G_STORE %cst(s318), %ptr(p0) :: (store (s318))
     RET_ReallyLR implicit $w0
 ...
+---
+name:           s158
+registers:
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: name: s158
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1234
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %ptr:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 1073741823
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[C]], [[C2]]
+    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[C1]], [[C2]]
+    ; CHECK-NEXT: [[AND2:%[0-9]+]]:_(s64) = G_AND [[C1]], [[C3]]
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY [[AND]](s64)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY [[AND1]](s64)
+    ; CHECK-NEXT: [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[AND2]](s64), 0
+    ; CHECK-NEXT: G_STORE [[COPY]](s64), %ptr(p0) :: (store (s64), align 32)
+    ; CHECK-NEXT: [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD %ptr, [[C4]](s64)
+    ; CHECK-NEXT: G_STORE [[COPY1]](s64), [[PTR_ADD]](p0) :: (store (s64) into unknown-address + 8)
+    ; CHECK-NEXT: [[C5:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+    ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD %ptr, [[C5]](s64)
+    ; CHECK-NEXT: G_STORE [[EXTRACT]](s32), [[PTR_ADD1]](p0) :: (store (s32) into unknown-address + 16, align 16)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %cst:_(s158) = G_CONSTANT i158 1234
+    %ptr:_(p0) = COPY $x0
+    G_STORE %cst(s158), %ptr(p0) :: (store (s158))
+    RET_ReallyLR implicit $w0
+...
