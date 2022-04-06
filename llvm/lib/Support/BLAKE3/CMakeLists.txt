@@ -43,7 +43,7 @@ if (IS_X64 AND CAN_USE_ASSEMBLER)
       blake3_avx2_x86-64_windows_msvc.asm
       blake3_avx512_x86-64_windows_msvc.asm
     )
-  elseif(WIN32)
+  elseif(WIN32 OR CYGWIN)
     list(APPEND LLVM_BLAKE3_FILES
       blake3_sse2_x86-64_windows_gnu.S
       blake3_sse41_x86-64_windows_gnu.S
