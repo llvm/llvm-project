@@ -12,6 +12,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "TypedefUnderlyingTypeResolver.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
@@ -40,6 +41,13 @@ using namespace clang;
 using namespace extractapi;
 
 namespace {
+
+StringRef getTypedefName(const TagDecl *Decl) {
+  if (const auto *TypedefDecl = Decl->getTypedefNameForAnonDecl())
+    return TypedefDecl->getName();
+
+  return {};
+}
 
 /// The RecursiveASTVisitor to traverse symbol declarations and collect API
 /// information.
@@ -161,6 +169,8 @@ public:
 
     // Collect symbol information.
     StringRef Name = Decl->getName();
+    if (Name.empty())
+      Name = getTypedefName(Decl);
     StringRef USR = API.recordUSR(Decl);
     PresumedLoc Loc =
         Context.getSourceManager().getPresumedLoc(Decl->getLocation());
@@ -196,6 +206,8 @@ public:
 
     // Collect symbol information.
     StringRef Name = Decl->getName();
+    if (Name.empty())
+      Name = getTypedefName(Decl);
     StringRef USR = API.recordUSR(Decl);
     PresumedLoc Loc =
         Context.getSourceManager().getPresumedLoc(Decl->getLocation());
@@ -292,6 +304,36 @@ public:
     recordObjCMethods(ObjCProtocolRecord, Decl->methods());
     recordObjCProperties(ObjCProtocolRecord, Decl->properties());
     recordObjCProtocols(ObjCProtocolRecord, Decl->protocols());
+
+    return true;
+  }
+
+  bool VisitTypedefNameDecl(const TypedefNameDecl *Decl) {
+    // Skip ObjC Type Parameter for now.
+    if (isa<ObjCTypeParamDecl>(Decl))
+      return true;
+
+    if (!Decl->isDefinedOutsideFunctionOrMethod())
+      return true;
+
+    PresumedLoc Loc =
+        Context.getSourceManager().getPresumedLoc(Decl->getLocation());
+    StringRef Name = Decl->getName();
+    AvailabilityInfo Availability = getAvailability(Decl);
+    StringRef USR = API.recordUSR(Decl);
+    DocComment Comment;
+    if (auto *RawComment = Context.getRawCommentForDeclNoCache(Decl))
+      Comment = RawComment->getFormattedLines(Context.getSourceManager(),
+                                              Context.getDiagnostics());
+
+    QualType Type = Decl->getUnderlyingType();
+    SymbolReference SymRef =
+        TypedefUnderlyingTypeResolver(Context).getSymbolReferenceForType(Type,
+                                                                         API);
+
+    API.addTypedef(Name, USR, Loc, Availability, Comment,
+                   DeclarationFragmentsBuilder::getFragmentsForTypedef(Decl),
+                   DeclarationFragmentsBuilder::getSubHeading(Decl), SymRef);
 
     return true;
   }

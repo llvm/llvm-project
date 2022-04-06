@@ -146,6 +146,9 @@ private:
   /// Serialize a macro defintion record.
   void serializeMacroDefinitionRecord(const MacroDefinitionRecord &Record);
 
+  /// Serialize a typedef record.
+  void serializeTypedefRecord(const TypedefRecord &Record);
+
   /// Push a component to the current path components stack.
   ///
   /// \param Component The component to push onto the path components stack.
