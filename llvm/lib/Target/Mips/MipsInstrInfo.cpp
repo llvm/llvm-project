@@ -54,7 +54,6 @@ bool MipsInstrInfo::isZeroImm(const MachineOperand &op) const {
 
 /// insertNoop - If data hazard condition is found insert the target nop
 /// instruction.
-// FIXME: This appears to be dead code.
 void MipsInstrInfo::
 insertNoop(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI) const
 {
