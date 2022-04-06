@@ -1,5 +1,6 @@
 ; REQUIRES: arm-registered-target
 ; REQUIRES: asserts
+; REQUIRES: abi_breaking_checks
 ; RUN: llc -o /dev/null %s -debug-only=legalize-types 2>&1 | FileCheck %s
 
 ; This test check that when v4f64 gets broken down to two v2f64 it maintains

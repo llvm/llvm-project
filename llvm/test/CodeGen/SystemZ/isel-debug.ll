@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -debug-only=systemz-isel -o - 2>&1 | \
 ; RUN:   FileCheck %s
 
-; REQUIRES: asserts
+; REQUIRES: asserts, abi_breaking_checks
 ;
 ; Check that some debug output is printed without problems.
 ; CHECK: SystemZAddressingMode

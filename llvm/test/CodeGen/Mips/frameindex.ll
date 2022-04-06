@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=mips-mti-linux-gnu -mattr=+micromips < %s -debug 2>&1 | FileCheck %s --check-prefixes=CHECK,MM
 ; RUN: llc -mtriple=mips64-mti-linux-gnu < %s -debug 2>&1 | FileCheck %s --check-prefixes=CHECK,MIPS64
 
-; REQUIRES: asserts
+; REQUIRES: asserts, abi_breaking_checks
 
 ; CHECK-LABEL: Instruction selection ends:
 

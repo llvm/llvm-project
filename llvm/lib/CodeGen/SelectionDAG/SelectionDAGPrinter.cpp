@@ -77,7 +77,7 @@ namespace llvm {
                                               const SelectionDAG *Graph) {
       std::string R;
       raw_string_ostream OS(R);
-#ifndef NDEBUG
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
       OS << 't' << Node->PersistentId;
 #else
       OS << static_cast<const void *>(Node);
