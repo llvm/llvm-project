@@ -3561,7 +3561,11 @@ llvm::DICompositeType *CGDebugInfo::CreateLimitedType(const RecordType *Ty) {
     return getOrCreateRecordFwdDecl(Ty, RDContext);
 
   uint64_t Size = CGM.getContext().getTypeSize(Ty);
-  auto Align = getDeclAlignIfRequired(D, CGM.getContext());
+  // __attribute__((aligned)) can increase or decrease alignment *except* on a
+  // struct or struct member, where it only increases  alignment unless 'packed'
+  // is also specified. To handle this case, the `getTypeAlignIfRequired` needs
+  // to be used.
+  auto Align = getTypeAlignIfRequired(Ty, CGM.getContext());
 
   SmallString<256> Identifier = getTypeIdentifier(Ty, CGM, TheCU);
 
