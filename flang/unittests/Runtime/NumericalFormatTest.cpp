@@ -688,6 +688,8 @@ TEST(IOApiTests, FormatDoubleInputValues) {
       {"(1P,F18.0)", "               125", 0x4029000000000000}, // 12.5
       {"(BZ,F18.0)", "              125 ", 0x4093880000000000}, // 1250
       {"(BZ,F18.0)", "       125 . e +1 ", 0x42a6bcc41e900000}, // 1.25e13
+      {"(BZ,F18.0)", "           .      ", 0x0},
+      {"(BZ,F18.0)", "           . e +1 ", 0x0},
       {"(DC,F18.0)", "              12,5", 0x4029000000000000},
   };
   for (auto const &[format, data, want] : testCases) {
