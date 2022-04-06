@@ -504,10 +504,10 @@ const char *SDNode::getIndexedModeName(ISD::MemIndexedMode AM) {
 
 static Printable PrintNodeId(const SDNode &Node) {
   return Printable([&Node](raw_ostream &OS) {
-#ifndef NDEBUG
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
     OS << 't' << Node.PersistentId;
 #else
-    OS << (const void*)&Node;
+    OS << (const void *)&Node;
 #endif
   });
 }

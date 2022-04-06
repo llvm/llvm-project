@@ -229,7 +229,7 @@ lldb_private::Status PlatformPOSIX::GetFile(
     }
 
     if (error.Success()) {
-      lldb::DataBufferSP buffer_sp(new DataBufferHeap(1024, 0));
+      lldb::WritableDataBufferSP buffer_sp(new DataBufferHeap(1024, 0));
       uint64_t offset = 0;
       error.Clear();
       while (error.Success()) {

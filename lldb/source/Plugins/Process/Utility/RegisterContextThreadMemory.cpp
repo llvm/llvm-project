@@ -107,7 +107,7 @@ bool RegisterContextThreadMemory::WriteRegister(
 }
 
 bool RegisterContextThreadMemory::ReadAllRegisterValues(
-    lldb::DataBufferSP &data_sp) {
+    lldb::WritableDataBufferSP &data_sp) {
   UpdateRegisterContext();
   if (m_reg_ctx_sp)
     return m_reg_ctx_sp->ReadAllRegisterValues(data_sp);

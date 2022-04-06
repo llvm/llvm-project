@@ -223,6 +223,7 @@ AArch64A53Fix835769::runOnBasicBlock(MachineBasicBlock &MBB) {
       if (isFirstInstructionInSequence(PrevInstr) &&
           isSecondInstructionInSequence(CurrInstr)) {
         LLVM_DEBUG(dbgs() << "   ** pattern found at Idx " << Idx << "!\n");
+        (void) Idx;
         Sequences.push_back(CurrInstr);
       }
     }

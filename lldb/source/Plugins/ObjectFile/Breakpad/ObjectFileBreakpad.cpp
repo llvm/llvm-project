@@ -84,7 +84,7 @@ ObjectFile *ObjectFileBreakpad::CreateInstance(
 }
 
 ObjectFile *ObjectFileBreakpad::CreateMemoryInstance(
-    const ModuleSP &module_sp, DataBufferSP data_sp,
+    const ModuleSP &module_sp, WritableDataBufferSP data_sp,
     const ProcessSP &process_sp, addr_t header_addr) {
   return nullptr;
 }

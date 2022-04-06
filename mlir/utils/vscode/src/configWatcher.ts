@@ -1,5 +1,4 @@
 import * as chokidar from 'chokidar';
-import * as path from 'path';
 import * as vscode from 'vscode';
 
 import * as config from './config';
@@ -39,17 +38,19 @@ async function promptRestart(settingName: string, promptMessage: string) {
 }
 
 /**
- *  Activate the watchers that track configuration changes which decide when to
- *  restart the server.
+ *  Activate watchers that track configuration changes for the given workspace
+ *  folder, or null if the workspace is top-level.
  */
-export function activate(mlirContext: MLIRContext) {
+export async function activate(mlirContext: MLIRContext,
+                               workspaceFolder: vscode.WorkspaceFolder,
+                               serverPathsToWatch: string[]) {
   // When a configuration change happens, check to see if we should restart the
   // server.
   mlirContext.subscriptions.push(vscode.workspace.onDidChangeConfiguration(event => {
     const settings: string[] = [ 'server_path', 'pdll_server_path' ];
     for (const setting of settings) {
       const expandedSetting = `mlir.${setting}`;
-      if (event.affectsConfiguration(expandedSetting)) {
+      if (event.affectsConfiguration(expandedSetting, workspaceFolder)) {
         promptRestart(
             'onSettingsChanged',
             `setting '${
@@ -61,10 +62,7 @@ export function activate(mlirContext: MLIRContext) {
 
   // Track the server file in case it changes. We use `fs` here because the
   // server may not be in a workspace directory.
-  const settings: string[] = [ 'server_path', 'pdll_server_path' ];
-  for (const setting of settings) {
-    const serverPath = config.get<string>(setting);
-
+  for (const serverPath of serverPathsToWatch) {
     // Check that the path actually exists.
     if (serverPath === '') {
       continue;

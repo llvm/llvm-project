@@ -18,30 +18,31 @@
 // LINUX: @unused.ifunc = weak_odr ifunc void (), void ()* ()* @unused.resolver
 // LINUX: @foo_inline.ifunc = weak_odr ifunc i32 (), i32 ()* ()* @foo_inline.resolver
 // LINUX: @foo_inline2.ifunc = weak_odr ifunc i32 (), i32 ()* ()* @foo_inline2.resolver
+// LINUX: @foo_used_no_defn.ifunc = weak_odr ifunc i32 (), i32 ()* ()* @foo_used_no_defn.resolver
 
 int __attribute__((target_clones("sse4.2, default"))) foo(void) { return 0; }
 // LINUX: define {{.*}}i32 @foo.sse4.2.0()
 // LINUX: define {{.*}}i32 @foo.default.1()
-// LINUX: define i32 ()* @foo.resolver() comdat
+// LINUX: define weak_odr i32 ()* @foo.resolver() comdat
 // LINUX: ret i32 ()* @foo.sse4.2.0
 // LINUX: ret i32 ()* @foo.default.1
 
 // WINDOWS: define dso_local i32 @foo.sse4.2.0()
 // WINDOWS: define dso_local i32 @foo.default.1()
-// WINDOWS: define dso_local i32 @foo() comdat
+// WINDOWS: define weak_odr dso_local i32 @foo() comdat
 // WINDOWS: musttail call i32 @foo.sse4.2.0
 // WINDOWS: musttail call i32 @foo.default.1
 
 __attribute__((target_clones("default,default ,sse4.2"))) void foo_dupes(void) {}
 // LINUX: define {{.*}}void @foo_dupes.default.1()
 // LINUX: define {{.*}}void @foo_dupes.sse4.2.0()
-// LINUX: define void ()* @foo_dupes.resolver() comdat
+// LINUX: define weak_odr void ()* @foo_dupes.resolver() comdat
 // LINUX: ret void ()* @foo_dupes.sse4.2.0
 // LINUX: ret void ()* @foo_dupes.default.1
 
 // WINDOWS: define dso_local void @foo_dupes.default.1()
 // WINDOWS: define dso_local void @foo_dupes.sse4.2.0()
-// WINDOWS: define dso_local void @foo_dupes() comdat
+// WINDOWS: define weak_odr dso_local void @foo_dupes() comdat
 // WINDOWS: musttail call void @foo_dupes.sse4.2.0
 // WINDOWS: musttail call void @foo_dupes.default.1
 
@@ -64,13 +65,13 @@ int bar(void) {
 void __attribute__((target_clones("default, arch=ivybridge"))) unused(void) {}
 // LINUX: define {{.*}}void @unused.default.1()
 // LINUX: define {{.*}}void @unused.arch_ivybridge.0()
-// LINUX: define void ()* @unused.resolver() comdat
+// LINUX: define weak_odr void ()* @unused.resolver() comdat
 // LINUX: ret void ()* @unused.arch_ivybridge.0
 // LINUX: ret void ()* @unused.default.1
 
 // WINDOWS: define dso_local void @unused.default.1()
 // WINDOWS: define dso_local void @unused.arch_ivybridge.0()
-// WINDOWS: define dso_local void @unused() comdat
+// WINDOWS: define weak_odr dso_local void @unused() comdat
 // WINDOWS: musttail call void @unused.arch_ivybridge.0
 // WINDOWS: musttail call void @unused.default.1
 
@@ -90,45 +91,79 @@ int bar3(void) {
   // WINDOWS: call i32 @foo_inline2()
 }
 
-// Deferred emission of foo_inline, which got delayed because it is inline.
-// LINUX: define i32 ()* @foo_inline.resolver() comdat
+// LINUX: define weak_odr i32 ()* @foo_inline.resolver() comdat
 // LINUX: ret i32 ()* @foo_inline.arch_sandybridge.0
 // LINUX: ret i32 ()* @foo_inline.sse4.2.1
 // LINUX: ret i32 ()* @foo_inline.default.2
 
-// WINDOWS: define dso_local i32 @foo_inline() comdat
+// WINDOWS: define weak_odr dso_local i32 @foo_inline() comdat
 // WINDOWS: musttail call i32 @foo_inline.arch_sandybridge.0
 // WINDOWS: musttail call i32 @foo_inline.sse4.2.1
 // WINDOWS: musttail call i32 @foo_inline.default.2
 
 inline int __attribute__((target_clones("arch=sandybridge,default,sse4.2")))
 foo_inline2(void){ return 0; }
-// LINUX: define linkonce i32 @foo_inline2.arch_sandybridge.0() #[[SB:[0-9]+]]
-// LINUX: define i32 ()* @foo_inline2.resolver() comdat
+// LINUX: define weak_odr i32 ()* @foo_inline2.resolver() comdat
 // LINUX: ret i32 ()* @foo_inline2.arch_sandybridge.0
 // LINUX: ret i32 ()* @foo_inline2.sse4.2.1
 // LINUX: ret i32 ()* @foo_inline2.default.2
 
-// WINDOWS: define linkonce_odr dso_local i32 @foo_inline2.arch_sandybridge.0() #[[SB:[0-9]+]]
-// WINDOWS: define dso_local i32 @foo_inline2() comdat
+// WINDOWS: define weak_odr dso_local i32 @foo_inline2() comdat
 // WINDOWS: musttail call i32 @foo_inline2.arch_sandybridge.0
 // WINDOWS: musttail call i32 @foo_inline2.sse4.2.1
 // WINDOWS: musttail call i32 @foo_inline2.default.2
 
-// LINUX: define linkonce i32 @foo_inline.arch_sandybridge.0() #[[SB]]
-// LINUX: define linkonce i32 @foo_inline.default.2() #[[DEF]]
+
+int __attribute__((target_clones("default", "sse4.2")))
+foo_unused_no_defn(void);
+
+int __attribute__((target_clones("default", "sse4.2")))
+foo_used_no_defn(void);
+
+int test_foo_used_no_defn(void) {
+  // LINUX: define {{.*}}i32 @test_foo_used_no_defn()
+  // WINDOWS: define dso_local i32 @test_foo_used_no_defn()
+  return foo_used_no_defn();
+  // LINUX: call i32 @foo_used_no_defn.ifunc()
+  // WINDOWS: call i32 @foo_used_no_defn()
+}
+
+
+// LINUX: define weak_odr i32 ()* @foo_used_no_defn.resolver() comdat
+// LINUX: ret i32 ()* @foo_used_no_defn.sse4.2.0
+// LINUX: ret i32 ()* @foo_used_no_defn.default.1
+
+// WINDOWS: define weak_odr dso_local i32 @foo_used_no_defn() comdat
+// WINDOWS: musttail call i32 @foo_used_no_defn.sse4.2.0
+// WINDOWS: musttail call i32 @foo_used_no_defn.default.1
+
+
+// Deferred emission of inline definitions.
+
+// LINUX: define linkonce i32 @foo_inline.arch_sandybridge.0() #[[SB:[0-9]+]]
+// LINUX: define linkonce i32 @foo_inline.default.2() #[[DEF:[0-9]+]]
 // LINUX: define linkonce i32 @foo_inline.sse4.2.1() #[[SSE42:[0-9]+]]
 
-// WINDOWS: define linkonce_odr dso_local i32 @foo_inline.arch_sandybridge.0() #[[SB]]
+// WINDOWS: define linkonce_odr dso_local i32 @foo_inline.arch_sandybridge.0() #[[SB:[0-9]+]]
 // WINDOWS: define linkonce_odr dso_local i32 @foo_inline.default.2() #[[DEF]]
 // WINDOWS: define linkonce_odr dso_local i32 @foo_inline.sse4.2.1() #[[SSE42:[0-9]+]]
 
 
+// LINUX: define linkonce i32 @foo_inline2.arch_sandybridge.0() #[[SB]]
 // LINUX: define linkonce i32 @foo_inline2.default.2() #[[DEF]]
 // LINUX: define linkonce i32 @foo_inline2.sse4.2.1() #[[SSE42]]
 
+// WINDOWS: define linkonce_odr dso_local i32 @foo_inline2.arch_sandybridge.0() #[[SB]]
 // WINDOWS: define linkonce_odr dso_local i32 @foo_inline2.default.2() #[[DEF]]
 // WINDOWS: define linkonce_odr dso_local i32 @foo_inline2.sse4.2.1() #[[SSE42]]
+
+
+// LINUX: declare i32 @foo_used_no_defn.default.1()
+// LINUX: declare i32 @foo_used_no_defn.sse4.2.0()
+
+// WINDOWS: declare dso_local i32 @foo_used_no_defn.default.1()
+// WINDOWS: declare dso_local i32 @foo_used_no_defn.sse4.2.0()
+
 
 // CHECK: attributes #[[SSE42]] =
 // CHECK-SAME: "target-features"="+crc32,+cx8,+mmx,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87"

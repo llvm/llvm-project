@@ -62,7 +62,7 @@ TEST(MD5HashTest, MD5) {
   std::array<uint8_t, 16> Vec = MD5::hash(Input);
   MD5::MD5Result MD5Res;
   SmallString<32> Res;
-  memcpy(MD5Res.Bytes.data(), Vec.data(), Vec.size());
+  memcpy(MD5Res.data(), Vec.data(), Vec.size());
   MD5::stringifyResult(MD5Res, Res);
   EXPECT_EQ(Res, "c3fcd3d76192e4007dfb496cca67e13b");
   EXPECT_EQ(0x3be167ca6c49fb7dULL, MD5Res.high());
@@ -79,10 +79,7 @@ TEST(MD5Test, FinalAndResultHelpers) {
     ReferenceHash.update("abcd");
     MD5::MD5Result ReferenceResult;
     ReferenceHash.final(ReferenceResult);
-    StringRef ExpectedResult =
-        StringRef(reinterpret_cast<char *>(ReferenceResult.Bytes.data()),
-                  ReferenceResult.Bytes.size());
-    EXPECT_EQ(Hash.result(), ExpectedResult);
+    EXPECT_EQ(Hash.result(), ReferenceResult);
   }
 
   Hash.update("xyz");
@@ -93,10 +90,7 @@ TEST(MD5Test, FinalAndResultHelpers) {
     ReferenceHash.update("xyz");
     MD5::MD5Result ReferenceResult;
     ReferenceHash.final(ReferenceResult);
-    StringRef ExpectedResult =
-        StringRef(reinterpret_cast<char *>(ReferenceResult.Bytes.data()),
-                  ReferenceResult.Bytes.size());
-    EXPECT_EQ(Hash.final(), ExpectedResult);
+    EXPECT_EQ(Hash.final(), ReferenceResult);
   }
 }
 } // namespace

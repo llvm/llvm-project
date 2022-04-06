@@ -406,6 +406,9 @@ if config.have_opt_viewer_modules:
 if config.expensive_checks:
     config.available_features.add('expensive_checks')
 
+if config.abi_breaking_checks:
+    config.available_features.add('abi_breaking_checks')
+
 if "MemoryWithOrigins" in config.llvm_use_sanitizer:
     config.available_features.add('use_msan_with_origins')
 

@@ -8838,10 +8838,11 @@ bool PointerExprEvaluator::VisitCastExpr(const CastExpr *E) {
                                           E->getType()->getPointeeType());
       // 1. We'll allow it in std::allocator::allocate, and anything which that
       //    calls.
-      // 2. We'll allow it in the body of std::source_location:current.  This is
-      //    necessary for libstdc++'s <source_location>, which gave its
-      //    parameter the type void*, and cast from that back to `const __impl*`
-      //    in the body. (Fixed for new versions in gcc.gnu.org/PR104602).
+      // 2. HACK 2022-03-28: Work around an issue with libstdc++'s
+      //    <source_location> header. Fixed in GCC 12 and later (2022-04-??).
+      //    We'll allow it in the body of std::source_location::current.  GCC's
+      //    implementation had a parameter of type `void*`, and casts from
+      //    that back to `const __impl*` in its body.
       if (VoidPtrCastMaybeOK &&
           (Info.getStdAllocatorCaller("allocate") ||
            IsDeclSourceLocationCurrent(Info.CurrentCall->Callee))) {
