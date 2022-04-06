@@ -809,8 +809,7 @@ AArch64TargetMachine::convertFuncInfoToYAML(const MachineFunction &MF) const {
 bool AArch64TargetMachine::parseMachineFunctionInfo(
     const yaml::MachineFunctionInfo &MFI, PerFunctionMIParsingState &PFS,
     SMDiagnostic &Error, SMRange &SourceRange) const {
-  const auto &YamlMFI =
-      reinterpret_cast<const yaml::AArch64FunctionInfo &>(MFI);
+  const auto &YamlMFI = static_cast<const yaml::AArch64FunctionInfo &>(MFI);
   MachineFunction &MF = PFS.MF;
   MF.getInfo<AArch64FunctionInfo>()->initializeBaseYamlFields(YamlMFI);
   return false;

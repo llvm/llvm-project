@@ -594,8 +594,7 @@ yaml::MachineFunctionInfo *WebAssemblyTargetMachine::convertFuncInfoToYAML(
 bool WebAssemblyTargetMachine::parseMachineFunctionInfo(
     const yaml::MachineFunctionInfo &MFI, PerFunctionMIParsingState &PFS,
     SMDiagnostic &Error, SMRange &SourceRange) const {
-  const auto &YamlMFI =
-      reinterpret_cast<const yaml::WebAssemblyFunctionInfo &>(MFI);
+  const auto &YamlMFI = static_cast<const yaml::WebAssemblyFunctionInfo &>(MFI);
   MachineFunction &MF = PFS.MF;
   MF.getInfo<WebAssemblyFunctionInfo>()->initializeBaseYamlFields(YamlMFI);
   return false;
