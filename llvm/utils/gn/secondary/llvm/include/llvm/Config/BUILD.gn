@@ -42,6 +42,9 @@ import("//llvm/version.gni")
 # become declare_args if anyone wants to set them.
 
 declare_args() {
+  # Enable additional checks that alter the LLVM C++ ABI.
+  llvm_enable_abi_breaking_checks = llvm_enable_assertions
+
   # Iterate unordered llvm containers in reverse.
   llvm_enable_reverse_iteration = false
 
