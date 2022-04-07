@@ -336,8 +336,7 @@ define i32 @cmov_sgt_i32_constant_2046(i32 %a, i32 %b, i32 %c) nounwind {
 ; RV32ZBT-LABEL: cmov_sgt_i32_constant_2046:
 ; RV32ZBT:       # %bb.0:
 ; RV32ZBT-NEXT:    slti a1, a1, 2047
-; RV32ZBT-NEXT:    xori a1, a1, 1
-; RV32ZBT-NEXT:    cmov a0, a1, a0, a2
+; RV32ZBT-NEXT:    cmov a0, a1, a2, a0
 ; RV32ZBT-NEXT:    ret
   %tobool = icmp sgt i32 %b, 2046
   %cond = select i1 %tobool, i32 %a, i32 %c
@@ -358,8 +357,7 @@ define i32 @cmov_sgt_i32_constant_neg_2049(i32 %a, i32 %b, i32 %c) nounwind {
 ; RV32ZBT-LABEL: cmov_sgt_i32_constant_neg_2049:
 ; RV32ZBT:       # %bb.0:
 ; RV32ZBT-NEXT:    slti a1, a1, -2048
-; RV32ZBT-NEXT:    xori a1, a1, 1
-; RV32ZBT-NEXT:    cmov a0, a1, a0, a2
+; RV32ZBT-NEXT:    cmov a0, a1, a2, a0
 ; RV32ZBT-NEXT:    ret
   %tobool = icmp sgt i32 %b, -2049
   %cond = select i1 %tobool, i32 %a, i32 %c
@@ -398,8 +396,7 @@ define i32 @cmov_sge_i32_constant_2047(i32 %a, i32 %b, i32 %c) nounwind {
 ; RV32ZBT-LABEL: cmov_sge_i32_constant_2047:
 ; RV32ZBT:       # %bb.0:
 ; RV32ZBT-NEXT:    slti a1, a1, 2047
-; RV32ZBT-NEXT:    xori a1, a1, 1
-; RV32ZBT-NEXT:    cmov a0, a1, a0, a2
+; RV32ZBT-NEXT:    cmov a0, a1, a2, a0
 ; RV32ZBT-NEXT:    ret
   %tobool = icmp sge i32 %b, 2047
   %cond = select i1 %tobool, i32 %a, i32 %c
@@ -420,8 +417,7 @@ define i32 @cmov_sge_i32_constant_neg_2048(i32 %a, i32 %b, i32 %c) nounwind {
 ; RV32ZBT-LABEL: cmov_sge_i32_constant_neg_2048:
 ; RV32ZBT:       # %bb.0:
 ; RV32ZBT-NEXT:    slti a1, a1, -2048
-; RV32ZBT-NEXT:    xori a1, a1, 1
-; RV32ZBT-NEXT:    cmov a0, a1, a0, a2
+; RV32ZBT-NEXT:    cmov a0, a1, a2, a0
 ; RV32ZBT-NEXT:    ret
   %tobool = icmp sge i32 %b, -2048
   %cond = select i1 %tobool, i32 %a, i32 %c
@@ -519,8 +515,7 @@ define i32 @cmov_ugt_i32_constant_2046(i32 %a, i32 %b, i32 %c) nounwind {
 ; RV32ZBT-LABEL: cmov_ugt_i32_constant_2046:
 ; RV32ZBT:       # %bb.0:
 ; RV32ZBT-NEXT:    sltiu a1, a1, 2047
-; RV32ZBT-NEXT:    xori a1, a1, 1
-; RV32ZBT-NEXT:    cmov a0, a1, a0, a2
+; RV32ZBT-NEXT:    cmov a0, a1, a2, a0
 ; RV32ZBT-NEXT:    ret
   %tobool = icmp ugt i32 %b, 2046
   %cond = select i1 %tobool, i32 %a, i32 %c
@@ -541,8 +536,7 @@ define i32 @cmov_ugt_i32_constant_neg_2049(i32 %a, i32 %b, i32 %c) nounwind {
 ; RV32ZBT-LABEL: cmov_ugt_i32_constant_neg_2049:
 ; RV32ZBT:       # %bb.0:
 ; RV32ZBT-NEXT:    sltiu a1, a1, -2048
-; RV32ZBT-NEXT:    xori a1, a1, 1
-; RV32ZBT-NEXT:    cmov a0, a1, a0, a2
+; RV32ZBT-NEXT:    cmov a0, a1, a2, a0
 ; RV32ZBT-NEXT:    ret
   %tobool = icmp ugt i32 %b, 4294965247
   %cond = select i1 %tobool, i32 %a, i32 %c
@@ -581,8 +575,7 @@ define i32 @cmov_uge_i32_constant_2047(i32 %a, i32 %b, i32 %c) nounwind {
 ; RV32ZBT-LABEL: cmov_uge_i32_constant_2047:
 ; RV32ZBT:       # %bb.0:
 ; RV32ZBT-NEXT:    sltiu a1, a1, 2047
-; RV32ZBT-NEXT:    xori a1, a1, 1
-; RV32ZBT-NEXT:    cmov a0, a1, a0, a2
+; RV32ZBT-NEXT:    cmov a0, a1, a2, a0
 ; RV32ZBT-NEXT:    ret
   %tobool = icmp uge i32 %b, 2047
   %cond = select i1 %tobool, i32 %a, i32 %c
@@ -603,8 +596,7 @@ define i32 @cmov_uge_i32_constant_neg_2048(i32 %a, i32 %b, i32 %c) nounwind {
 ; RV32ZBT-LABEL: cmov_uge_i32_constant_neg_2048:
 ; RV32ZBT:       # %bb.0:
 ; RV32ZBT-NEXT:    sltiu a1, a1, -2048
-; RV32ZBT-NEXT:    xori a1, a1, 1
-; RV32ZBT-NEXT:    cmov a0, a1, a0, a2
+; RV32ZBT-NEXT:    cmov a0, a1, a2, a0
 ; RV32ZBT-NEXT:    ret
   %tobool = icmp uge i32 %b, 4294965248
   %cond = select i1 %tobool, i32 %a, i32 %c

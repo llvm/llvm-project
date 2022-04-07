@@ -462,7 +462,7 @@ struct FormatStyle {
 
   /// Dependent on the value, ``while (true) { continue; }`` can be put on a
   /// single line.
-  /// \version 11
+  /// \version 3.5
   ShortBlockStyle AllowShortBlocksOnASingleLine;
 
   /// If ``true``, short case labels will be contracted to a single line.
@@ -1929,7 +1929,7 @@ struct FormatStyle {
 
   /// \brief Analyze the formatted file for the most used line ending (``\r\n``
   /// or ``\n``). ``UseCRLF`` is only used as a fallback if none can be derived.
-  /// \version 11
+  /// \version 10
   bool DeriveLineEnding;
 
   /// If ``true``, analyze the formatted file for the most common
@@ -3577,7 +3577,7 @@ struct FormatStyle {
   ///    void f() { }                   vs.   void f() {}
   ///    while (true) { }                     while (true) {}
   /// \endcode
-  /// \version 11
+  /// \version 10
   bool SpaceInEmptyBlock;
 
   /// If ``true``, spaces may be inserted into ``()``.
@@ -3640,7 +3640,7 @@ struct FormatStyle {
   ///    if ( a )  { ... }              vs.     if (a) { ... }
   ///    while ( i < 5 )  { ... }               while (i < 5) { ... }
   /// \endcode
-  /// \version 11
+  /// \version 10
   bool SpacesInConditionalStatement;
 
   /// If ``true``, spaces are inserted inside container literals (e.g.
@@ -3727,7 +3727,7 @@ struct FormatStyle {
   ///    int a [5];                    vs.      int a[5];
   ///    int a [5][5];                 vs.      int a[5][5];
   /// \endcode
-  /// \version 11
+  /// \version 10
   bool SpaceBeforeSquareBrackets;
 
   /// Styles for adding spacing around ``:`` in bitfield definitions.
@@ -3834,7 +3834,7 @@ struct FormatStyle {
 
   /// \brief Use ``\r\n`` instead of ``\n`` for line breaks.
   /// Also used as fallback if ``DeriveLineEnding`` is true.
-  /// \version 11
+  /// \version 10
   bool UseCRLF;
 
   /// The way to use tab characters in the resulting file.
