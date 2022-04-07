@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fms-extensions -w -triple i386-pc-win32 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -fms-extensions -w -triple i386-pc-win32 -emit-llvm -o - %s | FileCheck %s
 
 // PR44395
 // MSVC passes overaligned types indirectly since MSVC 2015. Make sure that

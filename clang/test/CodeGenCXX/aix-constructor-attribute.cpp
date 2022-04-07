@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple powerpc-ibm-aix-xcoff -x c++ -emit-llvm \
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc-ibm-aix-xcoff -x c++ -emit-llvm \
 // RUN:     -fno-use-cxa-atexit < %s |\
 // RUN:   FileCheck %s
-// RUN: %clang_cc1 -triple powerpc64-ibm-aix-xcoff -x c++ -emit-llvm \
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc64-ibm-aix-xcoff -x c++ -emit-llvm \
 // RUN:     -fno-use-cxa-atexit < %s | \
 // RUN:   FileCheck %s
 

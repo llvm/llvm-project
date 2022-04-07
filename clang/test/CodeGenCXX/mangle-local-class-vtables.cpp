@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -emit-llvm -triple %itanium_abi_triple -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -triple %itanium_abi_triple -o - | FileCheck %s
 
 // CHECK: @_ZTVZ1GvE1C = {{.*}} @_ZTIZ1GvE1C {{.*}} @_ZZ1GvENK1C1FEv
 // CHECK: @_ZTIZ1GvE1C = {{.*}} @_ZTSZ1GvE1C

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple armv7-apple-unknown -Wno-strict-prototypes -ffp-exception-behavior=strict -fexperimental-strict-floating-point -emit-llvm -o - %s -fexceptions -exception-model=sjlj -fblocks | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple armv7-apple-unknown -Wno-strict-prototypes -ffp-exception-behavior=strict -fexperimental-strict-floating-point -emit-llvm -o - %s -fexceptions -exception-model=sjlj -fblocks | FileCheck %s
 
 // Verify strictfp attributes on invoke calls (and therefore also on
 // function definitions).

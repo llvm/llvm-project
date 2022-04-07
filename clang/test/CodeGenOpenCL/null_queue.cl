@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -O0 -cl-std=CL2.0  -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -O0 -cl-std=CL2.0  -emit-llvm %s -o - | FileCheck %s
 extern queue_t get_default_queue(void);
 
 bool compare(void) {

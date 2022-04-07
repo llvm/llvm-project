@@ -1,4 +1,3 @@
-# XFAIL: target-arm && linux-gnu
 # REQUIRES: system-linux, lzma, xz
 
 # We want to keep the symbol "multiplyByThree" in the .dynamic section and not

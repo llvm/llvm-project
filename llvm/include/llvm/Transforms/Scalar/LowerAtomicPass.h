@@ -1,4 +1,4 @@
-//===- LowerAtomic.cpp - Lower atomic intrinsics ----------------*- C++ -*-===//
+//===- LowerAtomicPass.h - Lower atomic intrinsics --------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,8 +11,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_SCALAR_LOWERATOMIC_H
-#define LLVM_TRANSFORMS_SCALAR_LOWERATOMIC_H
+#ifndef LLVM_TRANSFORMS_SCALAR_LOWERATOMICPASS_H
+#define LLVM_TRANSFORMS_SCALAR_LOWERATOMICPASS_H
 
 #include "llvm/IR/PassManager.h"
 
@@ -25,11 +25,6 @@ public:
   static bool isRequired() { return true; }
 };
 
-class AtomicRMWInst;
-/// Convert the given RMWI into primitive load and stores,
-/// assuming that doing so is legal. Return true if the lowering
-/// succeeds.
-bool lowerAtomicRMWInst(AtomicRMWInst *RMWI);
 }
 
-#endif // LLVM_TRANSFORMS_SCALAR_LOWERATOMIC_H
+#endif // LLVM_TRANSFORMS_SCALAR_LOWERATOMICPASS_H

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux -fsanitize=cfi-icall -fsanitize-trap=cfi-icall -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=UNGENERALIZED %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux -fsanitize=cfi-icall -fsanitize-trap=cfi-icall -fsanitize-cfi-icall-generalize-pointers -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=GENERALIZED %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux -fsanitize=cfi-icall -fsanitize-trap=cfi-icall -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=UNGENERALIZED %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux -fsanitize=cfi-icall -fsanitize-trap=cfi-icall -fsanitize-cfi-icall-generalize-pointers -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=GENERALIZED %s
 
 // Test that const char* is generalized to const void* and that const char** is
 // generalized to void*

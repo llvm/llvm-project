@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -fblocks -emit-llvm -o - -triple x86_64-apple-darwin11.3 %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -fblocks -emit-llvm -o - -triple x86_64-apple-darwin11.3 %s | FileCheck %s
 
 namespace PR12746 {
   // CHECK: define{{.*}} zeroext i1 @_ZN7PR127462f1EPi

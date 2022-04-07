@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -S -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-X86-64
-// RUN: %clang_cc1 -triple arm64-linux-gnu -S -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-ARM
-// RUN: %clang_cc1 -triple armv7-linux-gnu -target-abi apcs-gnu -S -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-ARM
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -S -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-X86-64
+// RUN: %clang_cc1 -no-opaque-pointers -triple arm64-linux-gnu -S -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-ARM
+// RUN: %clang_cc1 -no-opaque-pointers -triple armv7-linux-gnu -target-abi apcs-gnu -S -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-ARM
 
 // CHECK-NOT: @sp = common global
 

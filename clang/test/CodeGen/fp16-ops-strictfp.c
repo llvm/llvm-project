@@ -1,12 +1,12 @@
 // REQUIRES: arm-registered-target
-// RUN: %clang_cc1 -ffp-exception-behavior=maytrap -fexperimental-strict-floating-point -emit-llvm -o - -triple arm-none-linux-gnueabi %s | FileCheck %s --check-prefix=NOTNATIVE --check-prefix=CHECK -vv -dump-input=fail
-// RUN: %clang_cc1 -ffp-exception-behavior=maytrap -fexperimental-strict-floating-point -emit-llvm -o - -triple aarch64-none-linux-gnueabi %s | FileCheck %s --check-prefix=NOTNATIVE --check-prefix=CHECK
-// RUN: %clang_cc1 -ffp-exception-behavior=maytrap -fexperimental-strict-floating-point -emit-llvm -o - -triple x86_64-linux-gnu %s | FileCheck %s --check-prefix=NOTNATIVE --check-prefix=CHECK
-// RUN: %clang_cc1 -ffp-exception-behavior=maytrap -fexperimental-strict-floating-point -emit-llvm -o - -triple arm-none-linux-gnueabi -fallow-half-arguments-and-returns %s | FileCheck %s --check-prefix=NOTNATIVE --check-prefix=CHECK
-// RUN: %clang_cc1 -ffp-exception-behavior=maytrap -fexperimental-strict-floating-point -emit-llvm -o - -triple aarch64-none-linux-gnueabi -fallow-half-arguments-and-returns %s | FileCheck %s --check-prefix=NOTNATIVE --check-prefix=CHECK
-// RUN: %clang_cc1 -ffp-exception-behavior=maytrap -fexperimental-strict-floating-point -emit-llvm -o - -triple arm-none-linux-gnueabi -fnative-half-type %s \
+// RUN: %clang_cc1 -no-opaque-pointers -ffp-exception-behavior=maytrap -fexperimental-strict-floating-point -emit-llvm -o - -triple arm-none-linux-gnueabi %s | FileCheck %s --check-prefix=NOTNATIVE --check-prefix=CHECK -vv -dump-input=fail
+// RUN: %clang_cc1 -no-opaque-pointers -ffp-exception-behavior=maytrap -fexperimental-strict-floating-point -emit-llvm -o - -triple aarch64-none-linux-gnueabi %s | FileCheck %s --check-prefix=NOTNATIVE --check-prefix=CHECK
+// RUN: %clang_cc1 -no-opaque-pointers -ffp-exception-behavior=maytrap -fexperimental-strict-floating-point -emit-llvm -o - -triple x86_64-linux-gnu %s | FileCheck %s --check-prefix=NOTNATIVE --check-prefix=CHECK
+// RUN: %clang_cc1 -no-opaque-pointers -ffp-exception-behavior=maytrap -fexperimental-strict-floating-point -emit-llvm -o - -triple arm-none-linux-gnueabi -fallow-half-arguments-and-returns %s | FileCheck %s --check-prefix=NOTNATIVE --check-prefix=CHECK
+// RUN: %clang_cc1 -no-opaque-pointers -ffp-exception-behavior=maytrap -fexperimental-strict-floating-point -emit-llvm -o - -triple aarch64-none-linux-gnueabi -fallow-half-arguments-and-returns %s | FileCheck %s --check-prefix=NOTNATIVE --check-prefix=CHECK
+// RUN: %clang_cc1 -no-opaque-pointers -ffp-exception-behavior=maytrap -fexperimental-strict-floating-point -emit-llvm -o - -triple arm-none-linux-gnueabi -fnative-half-type %s \
 // RUN:   | FileCheck %s --check-prefix=NATIVE-HALF --check-prefix=CHECK
-// RUN: %clang_cc1 -ffp-exception-behavior=maytrap -fexperimental-strict-floating-point -emit-llvm -o - -triple aarch64-none-linux-gnueabi -fnative-half-type %s \
+// RUN: %clang_cc1 -no-opaque-pointers -ffp-exception-behavior=maytrap -fexperimental-strict-floating-point -emit-llvm -o - -triple aarch64-none-linux-gnueabi -fnative-half-type %s \
 // RUN:   | FileCheck %s --check-prefix=NATIVE-HALF --check-prefix=CHECK
 //
 // Test that the constrained intrinsics are picking up the exception

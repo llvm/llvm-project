@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s
 
 // An extra byte should be allocated for an empty class.
 namespace Test1 {

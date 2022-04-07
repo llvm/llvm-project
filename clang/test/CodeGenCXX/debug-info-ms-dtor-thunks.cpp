@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple i686--windows -emit-llvm -debug-info-kind=line-tables-only -x c++ %s -fms-extensions -o - | FileCheck %s
-// RUN: %clang_cc1 -triple i686--windows -emit-llvm -debug-info-kind=line-directives-only -x c++ %s -fms-extensions -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686--windows -emit-llvm -debug-info-kind=line-tables-only -x c++ %s -fms-extensions -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686--windows -emit-llvm -debug-info-kind=line-directives-only -x c++ %s -fms-extensions -o - | FileCheck %s
 
 struct __declspec(dllexport) S { virtual ~S(); };
 struct __declspec(dllexport) T { virtual ~T(); };

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm %s -std=c++2a -o %t.ll
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown -emit-llvm %s -std=c++2a -o %t.ll
 // RUN: FileCheck -check-prefix=CHECK-FN-CG -input-file=%t.ll %s
 // RUN: FileCheck -check-prefix=CHECK-STATIC -input-file=%t.ll %s
 // RUN: FileCheck -check-prefix=CHECK-DYN -input-file=%t.ll %s

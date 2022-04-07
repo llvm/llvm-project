@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -O1 -o - -triple=i386-pc-win32 %s -fexceptions -fcxx-exceptions -fno-split-cold-code | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -O1 -o - -triple=i386-pc-win32 %s -fexceptions -fcxx-exceptions -fno-split-cold-code | FileCheck %s
 
 struct type_info;
 namespace std { using ::type_info; }

@@ -22,7 +22,8 @@ def loongarch_ret : SDNode<"LoongArchISD::RET", SDTNone,
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
-class ImmAsmOperand<string prefix, int width, string suffix> : AsmOperandClass {
+class ImmAsmOperand<string prefix, int width, string suffix>
+    : AsmOperandClass {
   let Name = prefix # "Imm" # width # suffix;
   let DiagnosticType = !strconcat("Invalid", Name);
   let RenderMethod = "addImmOperands";

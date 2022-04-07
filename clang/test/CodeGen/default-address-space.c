@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple amdgcn---amdgiz -emit-llvm < %s | FileCheck -check-prefixes=CHECK %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple amdgcn---amdgiz -emit-llvm < %s | FileCheck -check-prefixes=CHECK %s
 
 // CHECK-DAG: @foo ={{.*}} addrspace(1) global i32 0
 int foo;

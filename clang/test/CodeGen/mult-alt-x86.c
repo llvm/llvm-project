@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple i686 -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64 -emit-llvm %s -o - | FileCheck %s
 
 int mout0;
 int min1;

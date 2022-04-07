@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++1z %s -triple x86_64-linux-gnu -fexceptions -fcxx-exceptions -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++1z %s -triple x86_64-linux-gnu -fexceptions -fcxx-exceptions -emit-llvm -o - | FileCheck %s
 
 namespace Constant {
   struct A {

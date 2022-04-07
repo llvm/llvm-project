@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fno-rtti-data -triple x86_64-windows-msvc -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -fno-rtti-data -triple x86_64-windows-msvc -emit-llvm %s -o - | FileCheck %s
 
 // In this example, C does not override B::foo, but it needs to emit a thunk to
 // adjust for the relative difference of position between A-in-B and A-in-C.

@@ -1,23 +1,23 @@
-// RUN: %clang_cc1 -fexperimental-strict-floating-point -DEXCEPT=1 \
+// RUN: %clang_cc1 -no-opaque-pointers -fexperimental-strict-floating-point -DEXCEPT=1 \
 // RUN: -fcxx-exceptions -triple x86_64-linux-gnu -emit-llvm -o - %s \
 // RUN: | FileCheck -check-prefix=CHECK-SRC %s
 
-// RUN: %clang_cc1 -fexperimental-strict-floating-point \
+// RUN: %clang_cc1 -no-opaque-pointers -fexperimental-strict-floating-point \
 // RUN: -triple x86_64-linux-gnu -emit-llvm -o - %s -ffp-eval-method=source \
 // RUN: | FileCheck -check-prefix=CHECK-SRC %s
 
-// RUN: %clang_cc1 -fexperimental-strict-floating-point \
+// RUN: %clang_cc1 -no-opaque-pointers -fexperimental-strict-floating-point \
 // RUN: -triple x86_64-linux-gnu -emit-llvm -o - %s -ffp-eval-method=double \
 // RUN: | FileCheck -check-prefixes=CHECK-DBL %s
 
-// RUN: %clang_cc1 -fexperimental-strict-floating-point \
+// RUN: %clang_cc1 -no-opaque-pointers -fexperimental-strict-floating-point \
 // RUN: -triple x86_64-linux-gnu -emit-llvm -o - %s -ffp-eval-method=extended \
 // RUN: | FileCheck -check-prefixes=CHECK-EXT-FLT %s
 
-// RUN: %clang_cc1 -triple powerpc-unknown-aix -emit-llvm -o - %s \
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc-unknown-aix -emit-llvm -o - %s \
 // RUN: | FileCheck %s -check-prefix=CHECK-DBL-PPC
 
-// RUN: %clang_cc1 -fexperimental-strict-floating-point -triple i386-linux-gnu \
+// RUN: %clang_cc1 -no-opaque-pointers -fexperimental-strict-floating-point -triple i386-linux-gnu \
 // RUN: -emit-llvm -o - %s -ffp-eval-method=extended -mlong-double-80 \
 // RUN: | FileCheck %s -check-prefix=CHECK-EXT-FLT
 

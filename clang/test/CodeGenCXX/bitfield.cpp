@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -o - %s \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown -emit-llvm -o - %s \
 // RUN:   | FileCheck -check-prefix=CHECK-X86-64 %s
-// RUN: %clang_cc1 -triple powerpc64-unknown-unknown -emit-llvm -o - %s \
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc64-unknown-unknown -emit-llvm -o - %s \
 // RUN:   | FileCheck -check-prefix=CHECK-PPC64 %s
 //
 // Tests for bitfield access patterns in C++ with special attention to

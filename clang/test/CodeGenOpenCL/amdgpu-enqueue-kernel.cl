@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -cl-std=CL2.0 -O0 -emit-llvm -o - -triple amdgcn | FileCheck %s --check-prefix=CHECK
+// RUN: %clang_cc1 -no-opaque-pointers %s -cl-std=CL2.0 -O0 -emit-llvm -o - -triple amdgcn | FileCheck %s --check-prefix=CHECK
 
 typedef struct {int a;} ndrange_t;
 

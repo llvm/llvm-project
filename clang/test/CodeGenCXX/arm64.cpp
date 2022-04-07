@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -triple=arm64-apple-ios -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 %s -triple=arm64-apple-ios -emit-llvm -o - | FileCheck -check-prefix=CHECK-GLOBALS %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=arm64-apple-ios -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=arm64-apple-ios -emit-llvm -o - | FileCheck -check-prefix=CHECK-GLOBALS %s
 
 // __cxa_guard_acquire argument is 64-bit
 // rdar://11540122

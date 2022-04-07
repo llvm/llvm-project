@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i386-unknown-unknown -Wno-strict-prototypes -emit-llvm < %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i386-unknown-unknown -Wno-strict-prototypes -emit-llvm < %s | FileCheck %s
 
 void __attribute__((fastcall)) f1(void);
 void __attribute__((stdcall)) f2(void);

@@ -296,9 +296,6 @@ void ObjFile::parseSections(ArrayRef<SectionHeader> sectionHeaders) {
         StringRef(sec.sectname, strnlen(sec.sectname, sizeof(sec.sectname)));
     StringRef segname =
         StringRef(sec.segname, strnlen(sec.segname, sizeof(sec.segname)));
-    ArrayRef<uint8_t> data = {isZeroFill(sec.flags) ? nullptr
-                                                    : buf + sec.offset,
-                              static_cast<size_t>(sec.size)};
     sections.push_back(make<Section>(this, segname, name, sec.flags, sec.addr));
     if (sec.align >= 32) {
       error("alignment " + std::to_string(sec.align) + " of section " + name +
@@ -307,6 +304,9 @@ void ObjFile::parseSections(ArrayRef<SectionHeader> sectionHeaders) {
     }
     const Section &section = *sections.back();
     uint32_t align = 1 << sec.align;
+    ArrayRef<uint8_t> data = {isZeroFill(sec.flags) ? nullptr
+                                                    : buf + sec.offset,
+                              static_cast<size_t>(sec.size)};
 
     auto splitRecords = [&](int recordSize) -> void {
       if (data.empty())

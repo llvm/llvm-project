@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-linux-gnu | FileCheck %s --check-prefixes=CHECK,LIN64
-// RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-linux-gnu -DCC="__attribute__((vectorcall))" | FileCheck %s --check-prefixes=CHECK,VECCALL
-// RUN: %clang_cc1 -emit-llvm %s -o - -fms-compatibility -triple=i386-windows-pc -DWIN32 | FileCheck %s --check-prefixes=WIN32
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm %s -o - -triple=x86_64-linux-gnu | FileCheck %s --check-prefixes=CHECK,LIN64
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm %s -o - -triple=x86_64-linux-gnu -DCC="__attribute__((vectorcall))" | FileCheck %s --check-prefixes=CHECK,VECCALL
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm %s -o - -fms-compatibility -triple=i386-windows-pc -DWIN32 | FileCheck %s --check-prefixes=WIN32
 
 #ifndef CC
 #define CC

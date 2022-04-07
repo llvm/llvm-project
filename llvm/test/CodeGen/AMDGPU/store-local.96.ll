@@ -341,9 +341,9 @@ define amdgpu_kernel void @store_lds_v3i32_align4(<3 x i32> addrspace(3)* %out, 
 ; GFX6-NEXT:    s_mov_b32 m0, -1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s4
-; GFX6-NEXT:    v_mov_b32_e32 v1, s1
-; GFX6-NEXT:    v_mov_b32_e32 v2, s0
-; GFX6-NEXT:    ds_write2_b32 v0, v2, v1 offset1:1
+; GFX6-NEXT:    v_mov_b32_e32 v1, s0
+; GFX6-NEXT:    v_mov_b32_e32 v2, s1
+; GFX6-NEXT:    ds_write2_b32 v0, v1, v2 offset1:1
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX6-NEXT:    ds_write_b32 v0, v1 offset:8
 ; GFX6-NEXT:    s_endpgm

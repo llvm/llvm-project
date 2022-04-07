@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-linux -fblocks -emit-llvm -o - %s -std=c++1y | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux -fblocks -emit-llvm -o - %s -std=c++1y | FileCheck %s
 
 // CHECK: @"_ZZZNK17pr18020_constexpr3$_1clEvENKUlvE_clEvE2l2" =
 // CHECK: internal global i32* @"_ZZNK17pr18020_constexpr3$_1clEvE2l1"

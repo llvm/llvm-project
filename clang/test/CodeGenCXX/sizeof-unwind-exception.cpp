@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fcxx-exceptions -fexceptions %s -O2 -o - | FileCheck %s --check-prefix=X86-64
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fcxx-exceptions -fexceptions %s -O2 -o - | FileCheck %s --check-prefix=X86-32
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fcxx-exceptions -fexceptions %s -O2 -o - | FileCheck %s --check-prefix=ARM-DARWIN
-// RUN: %clang_cc1 -triple arm-unknown-gnueabi -emit-llvm -fcxx-exceptions -fexceptions %s -O2 -o - | FileCheck %s --check-prefix=ARM-EABI
-// RUN: %clang_cc1 -triple mipsel-unknown-unknown -emit-llvm -fcxx-exceptions -fexceptions %s -O2 -o - | FileCheck %s --check-prefix=MIPS
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -emit-llvm -fcxx-exceptions -fexceptions %s -O2 -o - | FileCheck %s --check-prefix=X86-64
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -emit-llvm -fcxx-exceptions -fexceptions %s -O2 -o - | FileCheck %s --check-prefix=X86-32
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -emit-llvm -fcxx-exceptions -fexceptions %s -O2 -o - | FileCheck %s --check-prefix=ARM-DARWIN
+// RUN: %clang_cc1 -no-opaque-pointers -triple arm-unknown-gnueabi -emit-llvm -fcxx-exceptions -fexceptions %s -O2 -o - | FileCheck %s --check-prefix=ARM-EABI
+// RUN: %clang_cc1 -no-opaque-pointers -triple mipsel-unknown-unknown -emit-llvm -fcxx-exceptions -fexceptions %s -O2 -o - | FileCheck %s --check-prefix=MIPS
 
 void foo();
 void test() {

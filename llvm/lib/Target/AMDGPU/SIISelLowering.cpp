@@ -1531,6 +1531,14 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
     // requirements.
     //
     if (Size == 64) {
+      // SI has a hardware bug in the LDS / GDS bounds checking: if the base
+      // address is negative, then the instruction is incorrectly treated as
+      // out-of-bounds even if base + offsets is in bounds. Split vectorized
+      // loads here to avoid emitting ds_read2_b32. We may re-combine the
+      // load later in the SILoadStoreOptimizer.
+      if (!Subtarget->hasUsableDSOffset() && Alignment < Align(8))
+        return false;
+
       // 8 byte accessing via ds_read/write_b64 require 8-byte alignment, but we
       // can do a 4 byte aligned, 8 byte access in a single operation using
       // ds_read2/write2_b32 with adjacent offsets.
@@ -12431,6 +12439,9 @@ static bool fpModeMatchesGlobalFPAtomicMode(const AtomicRMWInst *RMW) {
 
 TargetLowering::AtomicExpansionKind
 SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
+  unsigned AS = RMW->getPointerAddressSpace();
+  if (AS == AMDGPUAS::PRIVATE_ADDRESS)
+    return AtomicExpansionKind::NotAtomic;
 
   auto ReportUnsafeHWInst = [&](TargetLowering::AtomicExpansionKind Kind) {
     OptimizationRemarkEmitter ORE(RMW->getFunction());
@@ -12461,8 +12472,6 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
 
     if (!Ty->isFloatTy() && (!Subtarget->hasGFX90AInsts() || !Ty->isDoubleTy()))
       return AtomicExpansionKind::CmpXChg;
-
-    unsigned AS = RMW->getPointerAddressSpace();
 
     if ((AS == AMDGPUAS::GLOBAL_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS) &&
          Subtarget->hasAtomicFaddInsts()) {
@@ -12521,6 +12530,27 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   }
 
   return AMDGPUTargetLowering::shouldExpandAtomicRMWInIR(RMW);
+}
+
+TargetLowering::AtomicExpansionKind
+SITargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
+  return LI->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS
+             ? AtomicExpansionKind::NotAtomic
+             : AtomicExpansionKind::None;
+}
+
+TargetLowering::AtomicExpansionKind
+SITargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
+  return SI->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS
+             ? AtomicExpansionKind::NotAtomic
+             : AtomicExpansionKind::None;
+}
+
+TargetLowering::AtomicExpansionKind
+SITargetLowering::shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *CmpX) const {
+  return CmpX->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS
+             ? AtomicExpansionKind::NotAtomic
+             : AtomicExpansionKind::None;
 }
 
 const TargetRegisterClass *

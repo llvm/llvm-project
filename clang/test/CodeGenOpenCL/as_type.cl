@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -emit-llvm -triple spir-unknown-unknown -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -triple spir-unknown-unknown -o - | FileCheck %s
 
 typedef __attribute__(( ext_vector_type(3) )) char char3;
 typedef __attribute__(( ext_vector_type(4) )) char char4;

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fobjc-arc -fobjc-runtime-has-weak -triple %itanium_abi_triple -emit-llvm -fblocks -o - %s | FileCheck %s
-// RUN: %clang_cc1 -DTEST_UNALIGNED -fms-extensions -fobjc-arc -fobjc-runtime-has-weak -triple %itanium_abi_triple -emit-llvm -fblocks -o - %s | FileCheck %s --check-prefix=UNALIGNED
+// RUN: %clang_cc1 -no-opaque-pointers -fobjc-arc -fobjc-runtime-has-weak -triple %itanium_abi_triple -emit-llvm -fblocks -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -DTEST_UNALIGNED -fms-extensions -fobjc-arc -fobjc-runtime-has-weak -triple %itanium_abi_triple -emit-llvm -fblocks -o - %s | FileCheck %s --check-prefix=UNALIGNED
 
 // CHECK-LABEL: define {{.*}}void @_Z1fPU8__strongP11objc_object(i8** noundef %0)
 void f(__strong id *) {}

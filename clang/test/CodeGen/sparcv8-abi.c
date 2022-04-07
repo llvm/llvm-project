@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple sparc-unknown-unknown -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple sparc-unknown-unknown -emit-llvm %s -o - | FileCheck %s
 
 // CHECK-LABEL: define{{.*}} { float, float } @p({ float, float }* noundef byval({ float, float }) align 4 %a, { float, float }* noundef byval({ float, float }) align 4 %b) #0 {
 float __complex__
