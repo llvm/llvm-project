@@ -206,6 +206,17 @@ struct FirstIndexOfType<T, T, Us...> : std::integral_constant<size_t, 0> {};
 template <size_t I, typename... Ts>
 using TypeAtIndex = std::tuple_element_t<I, std::tuple<Ts...>>;
 
+/// Helper which adds two underlying types of enumeration type.
+/// Implicit conversion to a common type is accepted.
+template <typename EnumTy1, typename EnumTy2,
+          typename UT1 = std::enable_if_t<std::is_enum<EnumTy1>::value,
+                                          std::underlying_type_t<EnumTy1>>,
+          typename UT2 = std::enable_if_t<std::is_enum<EnumTy2>::value,
+                                          std::underlying_type_t<EnumTy2>>>
+constexpr auto addEnumValues(EnumTy1 LHS, EnumTy2 RHS) {
+  return static_cast<UT1>(LHS) + static_cast<UT2>(RHS);
+}
+
 //===----------------------------------------------------------------------===//
 //     Extra additions to <iterator>
 //===----------------------------------------------------------------------===//

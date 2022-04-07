@@ -21,6 +21,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/type_traits.h"
 #include <cassert>
@@ -192,6 +193,13 @@ class DeclarationName {
                 "The various classes that DeclarationName::Ptr can point to"
                 " must be at least aligned to 8 bytes!");
 
+  static_assert(
+      std::is_same<std::underlying_type_t<StoredNameKind>,
+                   std::underlying_type_t<
+                       detail::DeclarationNameExtra::ExtraKind>>::value,
+      "The various enums used to compute values for NameKind should "
+      "all have the same underlying type");
+
 public:
   /// The kind of the name stored in this DeclarationName.
   /// The first 7 enumeration values are stored inline and correspond
@@ -205,15 +213,18 @@ public:
     CXXDestructorName = StoredCXXDestructorName,
     CXXConversionFunctionName = StoredCXXConversionFunctionName,
     CXXOperatorName = StoredCXXOperatorName,
-    CXXDeductionGuideName = UncommonNameKindOffset +
-                            detail::DeclarationNameExtra::CXXDeductionGuideName,
-    CXXLiteralOperatorName =
-        UncommonNameKindOffset +
-        detail::DeclarationNameExtra::CXXLiteralOperatorName,
-    CXXUsingDirective = UncommonNameKindOffset +
-                        detail::DeclarationNameExtra::CXXUsingDirective,
-    ObjCMultiArgSelector = UncommonNameKindOffset +
-                           detail::DeclarationNameExtra::ObjCMultiArgSelector
+    CXXDeductionGuideName = llvm::addEnumValues(
+        UncommonNameKindOffset,
+        detail::DeclarationNameExtra::CXXDeductionGuideName),
+    CXXLiteralOperatorName = llvm::addEnumValues(
+        UncommonNameKindOffset,
+        detail::DeclarationNameExtra::CXXLiteralOperatorName),
+    CXXUsingDirective =
+        llvm::addEnumValues(UncommonNameKindOffset,
+                            detail::DeclarationNameExtra::CXXUsingDirective),
+    ObjCMultiArgSelector =
+        llvm::addEnumValues(UncommonNameKindOffset,
+                            detail::DeclarationNameExtra::ObjCMultiArgSelector),
   };
 
 private:
