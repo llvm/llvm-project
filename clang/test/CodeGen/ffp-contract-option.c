@@ -31,29 +31,29 @@
 // RUN: -fno-rounding-math %s -emit-llvm -o - \
 // RUN:  -o - | FileCheck --check-prefixes CHECK,CHECK-NOFAST %s
 
-// RUN: %clang -S -emit-llvm -fno-fast-math %s -o - \
+// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -fno-fast-math %s -o - \
 // RUN: | FileCheck %s --check-prefixes=CHECK,CHECK-FPC-ON
 
-// RUN: %clang -S -emit-llvm -ffp-contract=fast -fno-fast-math \
+// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -ffp-contract=fast -fno-fast-math \
 // RUN: %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-FPC-ON
 
-// RUN: %clang -S -emit-llvm -ffp-contract=on -fno-fast-math \
+// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -ffp-contract=on -fno-fast-math \
 // RUN: %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-FPC-ON
 
-// RUN: %clang -S -emit-llvm -ffp-contract=off -fno-fast-math \
+// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -ffp-contract=off -fno-fast-math \
 // RUN: %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-FPC-OFF
 
-// RUN: %clang -S -emit-llvm -ffp-model=fast -fno-fast-math \
+// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -ffp-model=fast -fno-fast-math \
 // RUN: %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-FPC-ON
 
-// RUN: %clang -S -emit-llvm -ffp-model=precise -fno-fast-math \
+// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -ffp-model=precise -fno-fast-math \
 // RUN: %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-FPC-ON
 
-// RUN: %clang -S -emit-llvm -ffp-model=strict -fno-fast-math \
+// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -ffp-model=strict -fno-fast-math \
 // RUN: -target x86_64 %s -o - | FileCheck %s \
 // RUN: --check-prefixes=CHECK,CHECK-FPSC-OFF
 
-// RUN: %clang -S -emit-llvm -ffast-math -fno-fast-math \
+// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -ffast-math -fno-fast-math \
 // RUN: %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-FPC-ON
 
 float mymuladd(float x, float y, float z) {

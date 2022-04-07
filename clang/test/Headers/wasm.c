@@ -3,7 +3,7 @@
 
 // FIXME: This should not be using -O2 and implicitly testing the entire IR opt pipeline.
 
-// RUN: %clang %s -O2 -emit-llvm -S -o - -target wasm32-unknown-unknown -msimd128 -Wall -Weverything -Wno-missing-prototypes -fno-lax-vector-conversions -Werror | FileCheck %s
+// RUN: %clang -Xclang -no-opaque-pointers %s -O2 -emit-llvm -S -o - -target wasm32-unknown-unknown -msimd128 -Wall -Weverything -Wno-missing-prototypes -fno-lax-vector-conversions -Werror | FileCheck %s
 
 #include <wasm_simd128.h>
 

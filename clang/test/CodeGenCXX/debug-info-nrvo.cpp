@@ -1,7 +1,7 @@
-// RUN: %clangxx -target x86_64-unknown-unknown -g \
+// RUN: %clangxx -Xclang -no-opaque-pointers -target x86_64-unknown-unknown -g \
 // RUN:   %s -emit-llvm -S -o - | FileCheck %s
 
-// RUN: %clangxx -target x86_64-unknown-unknown -g \
+// RUN: %clangxx -Xclang -no-opaque-pointers -target x86_64-unknown-unknown -g \
 // RUN:   -fno-elide-constructors %s -emit-llvm -S -o - | \
 // RUN:   FileCheck %s -check-prefix=NOELIDE
 

@@ -1,4 +1,4 @@
-// RUN: %clang -ffixed-point -S -emit-llvm -o - %s | FileCheck %s -check-prefix=DEFAULT
+// RUN: %clang -Xclang -no-opaque-pointers -ffixed-point -S -emit-llvm -o - %s | FileCheck %s -check-prefix=DEFAULT
 // RUN: %clang_cc1 -no-opaque-pointers -ffixed-point -fpadding-on-unsigned-fixed-point -S -emit-llvm -o - %s | FileCheck %s -check-prefix=SAME
 
 /* The scale for unsigned fixed point types should be the same as that of signed

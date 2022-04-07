@@ -1,5 +1,5 @@
-// RUN: %clang -target i386-unknown-unknown -S -emit-llvm -std=gnu89 -o - %s | FileCheck %s
-// RUN: %clang -target i386-unknown-unknown -S -emit-llvm -fgnu89-inline -o - %s | FileCheck %s
+// RUN: %clang -Xclang -no-opaque-pointers -target i386-unknown-unknown -S -emit-llvm -std=gnu89 -o - %s | FileCheck %s
+// RUN: %clang -Xclang -no-opaque-pointers -target i386-unknown-unknown -S -emit-llvm -fgnu89-inline -o - %s | FileCheck %s
 // PR5253
 
 // If an extern inline function is redefined, functions should call the

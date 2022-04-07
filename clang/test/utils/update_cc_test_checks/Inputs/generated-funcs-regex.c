@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fopenmp %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux-gnu -fopenmp %s -emit-llvm -o - | FileCheck %s
 
 void __test_offloading_42_abcdef_bar_l123(void);
 void use(int);

@@ -1,12 +1,12 @@
-// RUN: %clang -target x86_64-linux-gnu -S -emit-llvm -o - -O0 \
+// RUN: %clang -Xclang -no-opaque-pointers -target x86_64-linux-gnu -S -emit-llvm -o - -O0 \
 // RUN:     -Xclang -disable-llvm-passes %s | FileCheck %s -check-prefix=CHECK-O0
-// RUN: %clang -target x86_64-linux-gnu -S -emit-llvm -o - -O0 \
+// RUN: %clang -Xclang -no-opaque-pointers -target x86_64-linux-gnu -S -emit-llvm -o - -O0 \
 // RUN:     -fsanitize=address -fsanitize-address-use-after-scope \
 // RUN:     -Xclang -disable-llvm-passes %s | FileCheck %s -check-prefix=LIFETIME
-// RUN: %clang -target x86_64-linux-gnu -S -emit-llvm -o - -O0 \
+// RUN: %clang -Xclang -no-opaque-pointers -target x86_64-linux-gnu -S -emit-llvm -o - -O0 \
 // RUN:     -fsanitize=memory -Xclang -disable-llvm-passes %s | \
 // RUN:     FileCheck %s -check-prefix=LIFETIME
-// RUN: %clang -target aarch64-linux-gnu -S -emit-llvm -o - -O0 \
+// RUN: %clang -Xclang -no-opaque-pointers -target aarch64-linux-gnu -S -emit-llvm -o - -O0 \
 // RUN:     -fsanitize=hwaddress -Xclang -disable-llvm-passes %s | \
 // RUN:     FileCheck %s -check-prefix=LIFETIME
 
