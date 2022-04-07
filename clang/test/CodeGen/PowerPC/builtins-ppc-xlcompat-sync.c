@@ -14,11 +14,13 @@ extern void *c;
 
 // CHECK-LABEL: @test_popcntb(
 // CHECK:    [[TMP0:%.*]] = load i64, i64* @a, align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load i64, i64* @a, align 8
 // CHECK-NEXT:    [[POPCNTB:%.*]] = call i64 @llvm.ppc.popcntb.i64.i64(i64 [[TMP0]])
 // CHECK-NEXT:    ret i64 [[POPCNTB]]
 //
 // CHECK-32-LABEL: @test_popcntb(
 // CHECK-32:    [[TMP0:%.*]] = load i32, i32* @a, align 4
+// CHECK-32-NEXT:    [[TMP1:%.*]] = load i32, i32* @a, align 4
 // CHECK-32-NEXT:    [[POPCNTB:%.*]] = call i32 @llvm.ppc.popcntb.i32.i32(i32 [[TMP0]])
 // CHECK-32-NEXT:    ret i32 [[POPCNTB]]
 //
@@ -196,11 +198,13 @@ void test_dcbz() {
 
 // CHECK-LABEL: @test_builtin_ppc_popcntb(
 // CHECK:    [[TMP0:%.*]] = load i64, i64* @a, align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load i64, i64* @a, align 8
 // CHECK-NEXT:    [[POPCNTB:%.*]] = call i64 @llvm.ppc.popcntb.i64.i64(i64 [[TMP0]])
 // CHECK-NEXT:    ret i64 [[POPCNTB]]
 //
 // CHECK-32-LABEL: @test_builtin_ppc_popcntb(
 // CHECK-32:    [[TMP0:%.*]] = load i32, i32* @a, align 4
+// CHECK-32-NEXT:    [[TMP1:%.*]] = load i32, i32* @a, align 4
 // CHECK-32-NEXT:    [[POPCNTB:%.*]] = call i32 @llvm.ppc.popcntb.i32.i32(i32 [[TMP0]])
 // CHECK-32-NEXT:    ret i32 [[POPCNTB]]
 //

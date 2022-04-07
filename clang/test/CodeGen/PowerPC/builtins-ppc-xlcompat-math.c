@@ -95,6 +95,7 @@ float fnmadds (float f) {
 // CHECK-LABEL: @fnmsub(
 // CHECK:         [[D_ADDR:%.*]] = alloca double, align 8
 // CHECK-NEXT:    store double [[D:%.*]], double* [[D_ADDR]], align 8
+// CHECK-COUNT-3:    load double, double* [[D_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load double, double* [[D_ADDR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load double, double* [[D_ADDR]], align 8
 // CHECK-NEXT:    [[TMP2:%.*]] = load double, double* [[D_ADDR]], align 8
@@ -108,6 +109,7 @@ double fnmsub (double d) {
 // CHECK-LABEL: @fnmsubs(
 // CHECK:         [[F_ADDR:%.*]] = alloca float, align 4
 // CHECK-NEXT:    store float [[F:%.*]], float* [[F_ADDR]], align 4
+// CHECK-COUNT-3:    load float, float* [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, float* [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load float, float* [[F_ADDR]], align 4

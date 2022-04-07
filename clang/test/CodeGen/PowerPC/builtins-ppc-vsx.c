@@ -2213,6 +2213,8 @@ vector double xxsldwi_should_not_assert(vector double a, vector double b) {
 
 void test_vector_cpsgn_float(vector float a, vector float b) {
 // CHECK-LABEL: test_vector_cpsgn_float
+// CHECK-DAG: load{{.*}}%__a
+// CHECK-DAG: load{{.*}}%__b
 // CHECK-NOT: SEPARATOR
 // CHECK-DAG: [[RA:%[0-9]+]] = load <4 x float>, <4 x float>* %__a.addr
 // CHECK-DAG: [[RB:%[0-9]+]] = load <4 x float>, <4 x float>* %__b.addr
@@ -2222,6 +2224,8 @@ void test_vector_cpsgn_float(vector float a, vector float b) {
 
 void test_vector_cpsgn_double(vector double a, vector double b) {
 // CHECK-LABEL: test_vector_cpsgn_double
+// CHECK-DAG: load{{.*}}%__a
+// CHECK-DAG: load{{.*}}%__b
 // CHECK-NOT: SEPARATOR
 // CHECK-DAG: [[RA:%[0-9]+]] = load <2 x double>, <2 x double>* %__a.addr
 // CHECK-DAG: [[RB:%[0-9]+]] = load <2 x double>, <2 x double>* %__b.addr
@@ -2231,6 +2235,8 @@ void test_vector_cpsgn_double(vector double a, vector double b) {
 
 void test_builtin_xvcpsgnsp(vector float a, vector float b) {
 // CHECK-LABEL: test_builtin_xvcpsgnsp
+// CHECK-DAG: load{{.*}}%a
+// CHECK-DAG: load{{.*}}%b
 // CHECK-NOT: SEPARATOR
 // CHECK-DAG: [[RA:%[0-9]+]] = load <4 x float>, <4 x float>* %a.addr
 // CHECK-DAG: [[RB:%[0-9]+]] = load <4 x float>, <4 x float>* %b.addr
@@ -2240,6 +2246,8 @@ void test_builtin_xvcpsgnsp(vector float a, vector float b) {
 
 void test_builtin_xvcpsgndp(vector double a, vector double b) {
 // CHECK-LABEL: test_builtin_xvcpsgndp
+// CHECK-DAG: load{{.*}}%a
+// CHECK-DAG: load{{.*}}%b
 // CHECK-NOT: SEPARATOR
 // CHECK-DAG: [[RA:%[0-9]+]] = load <2 x double>, <2 x double>* %a.addr
 // CHECK-DAG: [[RB:%[0-9]+]] = load <2 x double>, <2 x double>* %b.addr

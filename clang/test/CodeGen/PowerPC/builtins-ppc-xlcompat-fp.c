@@ -15,8 +15,9 @@ extern float f;
 
 // CHECK-LABEL: @test_fric(
 // CHECK:    [[TMP0:%.*]] = load double, double* @a, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.rint.f64(double [[TMP0]])
-// CHECK-NEXT:    ret double [[TMP1]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load double, double* @a, align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.rint.f64(double [[TMP1]])
+// CHECK-NEXT:    ret double [[TMP2]]
 //
 double test_fric() {
   return __fric(a);
@@ -24,8 +25,9 @@ double test_fric() {
 
 // CHECK-LABEL: @test_frim(
 // CHECK:    [[TMP0:%.*]] = load double, double* @a, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.floor.f64(double [[TMP0]])
-// CHECK-NEXT:    ret double [[TMP1]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load double, double* @a, align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.floor.f64(double [[TMP1]])
+// CHECK-NEXT:    ret double [[TMP2]]
 //
 double test_frim() {
   return __frim(a);
@@ -33,8 +35,9 @@ double test_frim() {
 
 // CHECK-LABEL: @test_frims(
 // CHECK:    [[TMP0:%.*]] = load float, float* @d, align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.floor.f32(float [[TMP0]])
-// CHECK-NEXT:    ret float [[TMP1]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, float* @d, align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = call float @llvm.floor.f32(float [[TMP1]])
+// CHECK-NEXT:    ret float [[TMP2]]
 //
 float test_frims() {
   return __frims(d);
@@ -42,8 +45,9 @@ float test_frims() {
 
 // CHECK-LABEL: @test_frin(
 // CHECK:    [[TMP0:%.*]] = load double, double* @a, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.round.f64(double [[TMP0]])
-// CHECK-NEXT:    ret double [[TMP1]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load double, double* @a, align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.round.f64(double [[TMP1]])
+// CHECK-NEXT:    ret double [[TMP2]]
 //
 double test_frin() {
   return __frin(a);
@@ -51,8 +55,9 @@ double test_frin() {
 
 // CHECK-LABEL: @test_frins(
 // CHECK:    [[TMP0:%.*]] = load float, float* @d, align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.round.f32(float [[TMP0]])
-// CHECK-NEXT:    ret float [[TMP1]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, float* @d, align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = call float @llvm.round.f32(float [[TMP1]])
+// CHECK-NEXT:    ret float [[TMP2]]
 //
 float test_frins() {
   return __frins(d);
@@ -60,8 +65,9 @@ float test_frins() {
 
 // CHECK-LABEL: @test_frip(
 // CHECK:    [[TMP0:%.*]] = load double, double* @a, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.ceil.f64(double [[TMP0]])
-// CHECK-NEXT:    ret double [[TMP1]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load double, double* @a, align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.ceil.f64(double [[TMP1]])
+// CHECK-NEXT:    ret double [[TMP2]]
 //
 double test_frip() {
   return __frip(a);
@@ -69,8 +75,9 @@ double test_frip() {
 
 // CHECK-LABEL: @test_frips(
 // CHECK:    [[TMP0:%.*]] = load float, float* @d, align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.ceil.f32(float [[TMP0]])
-// CHECK-NEXT:    ret float [[TMP1]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, float* @d, align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = call float @llvm.ceil.f32(float [[TMP1]])
+// CHECK-NEXT:    ret float [[TMP2]]
 //
 float test_frips() {
   return __frips(d);
@@ -78,8 +85,9 @@ float test_frips() {
 
 // CHECK-LABEL: @test_friz(
 // CHECK:    [[TMP0:%.*]] = load double, double* @a, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.trunc.f64(double [[TMP0]])
-// CHECK-NEXT:    ret double [[TMP1]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load double, double* @a, align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.trunc.f64(double [[TMP1]])
+// CHECK-NEXT:    ret double [[TMP2]]
 //
 double test_friz() {
   return __friz(a);
@@ -87,8 +95,9 @@ double test_friz() {
 
 // CHECK-LABEL: @test_frizs(
 // CHECK:    [[TMP0:%.*]] = load float, float* @d, align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.trunc.f32(float [[TMP0]])
-// CHECK-NEXT:    ret float [[TMP1]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, float* @d, align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = call float @llvm.trunc.f32(float [[TMP1]])
+// CHECK-NEXT:    ret float [[TMP2]]
 //
 float test_frizs() {
   return __frizs(d);
@@ -136,8 +145,9 @@ float test_frsqrtes() {
 
 // CHECK-LABEL: @test_fsqrt(
 // CHECK:    [[TMP0:%.*]] = load double, double* @a, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.sqrt.f64(double [[TMP0]])
-// CHECK-NEXT:    ret double [[TMP1]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load double, double* @a, align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.sqrt.f64(double [[TMP1]])
+// CHECK-NEXT:    ret double [[TMP2]]
 //
 double test_fsqrt() {
   return __fsqrt(a);
@@ -145,8 +155,9 @@ double test_fsqrt() {
 
 // CHECK-LABEL: @test_fsqrts(
 // CHECK:    [[TMP0:%.*]] = load float, float* @d, align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.sqrt.f32(float [[TMP0]])
-// CHECK-NEXT:    ret float [[TMP1]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, float* @d, align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = call float @llvm.sqrt.f32(float [[TMP1]])
+// CHECK-NEXT:    ret float [[TMP2]]
 //
 float test_fsqrts() {
   return __fsqrts(d);
@@ -154,8 +165,9 @@ float test_fsqrts() {
 
 // CHECK-LABEL: @test_builtin_ppc_fric(
 // CHECK:    [[TMP0:%.*]] = load double, double* @a, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.rint.f64(double [[TMP0]])
-// CHECK-NEXT:    ret double [[TMP1]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load double, double* @a, align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.rint.f64(double [[TMP1]])
+// CHECK-NEXT:    ret double [[TMP2]]
 //
 double test_builtin_ppc_fric() {
   return __builtin_ppc_fric(a);
@@ -163,8 +175,9 @@ double test_builtin_ppc_fric() {
 
 // CHECK-LABEL: @test_builtin_ppc_frim(
 // CHECK:    [[TMP0:%.*]] = load double, double* @a, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.floor.f64(double [[TMP0]])
-// CHECK-NEXT:    ret double [[TMP1]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load double, double* @a, align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.floor.f64(double [[TMP1]])
+// CHECK-NEXT:    ret double [[TMP2]]
 //
 double test_builtin_ppc_frim() {
   return __builtin_ppc_frim(a);
@@ -172,8 +185,9 @@ double test_builtin_ppc_frim() {
 
 // CHECK-LABEL: @test_builtin_ppc_frims(
 // CHECK:    [[TMP0:%.*]] = load float, float* @d, align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.floor.f32(float [[TMP0]])
-// CHECK-NEXT:    ret float [[TMP1]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, float* @d, align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = call float @llvm.floor.f32(float [[TMP1]])
+// CHECK-NEXT:    ret float [[TMP2]]
 //
 float test_builtin_ppc_frims() {
   return __builtin_ppc_frims(d);
@@ -181,8 +195,9 @@ float test_builtin_ppc_frims() {
 
 // CHECK-LABEL: @test_builtin_ppc_frin(
 // CHECK:    [[TMP0:%.*]] = load double, double* @a, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.round.f64(double [[TMP0]])
-// CHECK-NEXT:    ret double [[TMP1]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load double, double* @a, align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.round.f64(double [[TMP1]])
+// CHECK-NEXT:    ret double [[TMP2]]
 //
 double test_builtin_ppc_frin() {
   return __builtin_ppc_frin(a);
@@ -190,8 +205,9 @@ double test_builtin_ppc_frin() {
 
 // CHECK-LABEL: @test_builtin_ppc_frins(
 // CHECK:    [[TMP0:%.*]] = load float, float* @d, align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.round.f32(float [[TMP0]])
-// CHECK-NEXT:    ret float [[TMP1]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, float* @d, align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = call float @llvm.round.f32(float [[TMP1]])
+// CHECK-NEXT:    ret float [[TMP2]]
 //
 float test_builtin_ppc_frins() {
   return __builtin_ppc_frins(d);
@@ -199,8 +215,9 @@ float test_builtin_ppc_frins() {
 
 // CHECK-LABEL: @test_builtin_ppc_frip(
 // CHECK:    [[TMP0:%.*]] = load double, double* @a, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.ceil.f64(double [[TMP0]])
-// CHECK-NEXT:    ret double [[TMP1]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load double, double* @a, align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.ceil.f64(double [[TMP1]])
+// CHECK-NEXT:    ret double [[TMP2]]
 //
 double test_builtin_ppc_frip() {
   return __builtin_ppc_frip(a);
@@ -208,8 +225,9 @@ double test_builtin_ppc_frip() {
 
 // CHECK-LABEL: @test_builtin_ppc_frips(
 // CHECK:    [[TMP0:%.*]] = load float, float* @d, align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.ceil.f32(float [[TMP0]])
-// CHECK-NEXT:    ret float [[TMP1]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, float* @d, align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = call float @llvm.ceil.f32(float [[TMP1]])
+// CHECK-NEXT:    ret float [[TMP2]]
 //
 float test_builtin_ppc_frips() {
   return __builtin_ppc_frips(d);
@@ -217,8 +235,9 @@ float test_builtin_ppc_frips() {
 
 // CHECK-LABEL: @test_builtin_ppc_friz(
 // CHECK:    [[TMP0:%.*]] = load double, double* @a, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.trunc.f64(double [[TMP0]])
-// CHECK-NEXT:    ret double [[TMP1]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load double, double* @a, align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.trunc.f64(double [[TMP1]])
+// CHECK-NEXT:    ret double [[TMP2]]
 //
 double test_builtin_ppc_friz() {
   return __builtin_ppc_friz(a);
@@ -226,8 +245,9 @@ double test_builtin_ppc_friz() {
 
 // CHECK-LABEL: @test_builtin_ppc_frizs(
 // CHECK:    [[TMP0:%.*]] = load float, float* @d, align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.trunc.f32(float [[TMP0]])
-// CHECK-NEXT:    ret float [[TMP1]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, float* @d, align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = call float @llvm.trunc.f32(float [[TMP1]])
+// CHECK-NEXT:    ret float [[TMP2]]
 //
 float test_builtin_ppc_frizs() {
   return __builtin_ppc_frizs(d);
@@ -275,8 +295,9 @@ float test_builtin_ppc_frsqrtes() {
 
 // CHECK-LABEL: @test_builtin_ppc_fsqrt(
 // CHECK:    [[TMP0:%.*]] = load double, double* @a, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.sqrt.f64(double [[TMP0]])
-// CHECK-NEXT:    ret double [[TMP1]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load double, double* @a, align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.sqrt.f64(double [[TMP1]])
+// CHECK-NEXT:    ret double [[TMP2]]
 //
 double test_builtin_ppc_fsqrt() {
   return __builtin_ppc_fsqrt(a);
@@ -284,8 +305,9 @@ double test_builtin_ppc_fsqrt() {
 
 // CHECK-LABEL: @test_builtin_ppc_fsqrts(
 // CHECK:    [[TMP0:%.*]] = load float, float* @d, align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.sqrt.f32(float [[TMP0]])
-// CHECK-NEXT:    ret float [[TMP1]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, float* @d, align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = call float @llvm.sqrt.f32(float [[TMP1]])
+// CHECK-NEXT:    ret float [[TMP2]]
 //
 float test_builtin_ppc_fsqrts() {
   return __builtin_ppc_fsqrts(d);

@@ -12,7 +12,8 @@
 // CHECK-NEXT:    store i32 [[A:%.*]], i32* [[A_ADDR]], align 4
 // CHECK-NEXT:    store i32 [[B:%.*]], i32* [[B_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[B_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw add i32* [[A_ADDR]], i32 [[TMP0]] monotonic, align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[B_ADDR]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw add i32* [[A_ADDR]], i32 [[TMP1]] monotonic, align 4
 // CHECK-NEXT:    ret void
 //
 void test_builtin_ppc_fetch_and_add(int a, int b) {
@@ -26,7 +27,8 @@ void test_builtin_ppc_fetch_and_add(int a, int b) {
 // CHECK-NEXT:    store i64 [[A:%.*]], i64* [[A_ADDR]], align 8
 // CHECK-NEXT:    store i64 [[B:%.*]], i64* [[B_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, i64* [[B_ADDR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw add i64* [[A_ADDR]], i64 [[TMP0]] monotonic, align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load i64, i64* [[B_ADDR]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw add i64* [[A_ADDR]], i64 [[TMP1]] monotonic, align 8
 // CHECK-NEXT:    ret void
 //
 void test_builtin_ppc_fetch_and_addlp(long a, long b) {
@@ -39,7 +41,8 @@ void test_builtin_ppc_fetch_and_addlp(long a, long b) {
 // CHECK-NEXT:    store i32 [[A:%.*]], i32* [[A_ADDR]], align 4
 // CHECK-NEXT:    store i32 [[B:%.*]], i32* [[B_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[B_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw and i32* [[A_ADDR]], i32 [[TMP0]] monotonic, align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[B_ADDR]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw and i32* [[A_ADDR]], i32 [[TMP1]] monotonic, align 4
 // CHECK-NEXT:    ret void
 //
 void test_builtin_ppc_fetch_and_and(unsigned int a, unsigned int b) {
@@ -52,7 +55,8 @@ void test_builtin_ppc_fetch_and_and(unsigned int a, unsigned int b) {
 // CHECK-NEXT:    store i64 [[A:%.*]], i64* [[A_ADDR]], align 8
 // CHECK-NEXT:    store i64 [[B:%.*]], i64* [[B_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, i64* [[B_ADDR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw and i64* [[A_ADDR]], i64 [[TMP0]] monotonic, align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load i64, i64* [[B_ADDR]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw and i64* [[A_ADDR]], i64 [[TMP1]] monotonic, align 8
 // CHECK-NEXT:    ret void
 //
 void test_builtin_ppc_fetch_and_andlp(unsigned long a, unsigned long b) {
@@ -65,7 +69,8 @@ void test_builtin_ppc_fetch_and_andlp(unsigned long a, unsigned long b) {
 // CHECK-NEXT:    store i32 [[A:%.*]], i32* [[A_ADDR]], align 4
 // CHECK-NEXT:    store i32 [[B:%.*]], i32* [[B_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[B_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw or i32* [[A_ADDR]], i32 [[TMP0]] monotonic, align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[B_ADDR]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw or i32* [[A_ADDR]], i32 [[TMP1]] monotonic, align 4
 // CHECK-NEXT:    ret void
 //
 void test_builtin_ppc_fetch_and_or(unsigned int a, unsigned int b) {
@@ -78,7 +83,8 @@ void test_builtin_ppc_fetch_and_or(unsigned int a, unsigned int b) {
 // CHECK-NEXT:    store i64 [[A:%.*]], i64* [[A_ADDR]], align 8
 // CHECK-NEXT:    store i64 [[B:%.*]], i64* [[B_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, i64* [[B_ADDR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw or i64* [[A_ADDR]], i64 [[TMP0]] monotonic, align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load i64, i64* [[B_ADDR]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw or i64* [[A_ADDR]], i64 [[TMP1]] monotonic, align 8
 // CHECK-NEXT:    ret void
 //
 void test_builtin_ppc_fetch_and_orlp(unsigned long a, unsigned long b) {
@@ -91,7 +97,8 @@ void test_builtin_ppc_fetch_and_orlp(unsigned long a, unsigned long b) {
 // CHECK-NEXT:    store i32 [[A:%.*]], i32* [[A_ADDR]], align 4
 // CHECK-NEXT:    store i32 [[B:%.*]], i32* [[B_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[B_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw xchg i32* [[A_ADDR]], i32 [[TMP0]] monotonic, align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[B_ADDR]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw xchg i32* [[A_ADDR]], i32 [[TMP1]] monotonic, align 4
 // CHECK-NEXT:    ret void
 //
 void test_builtin_ppc_fetch_and_swap(unsigned int a, unsigned int b) {
@@ -104,7 +111,8 @@ void test_builtin_ppc_fetch_and_swap(unsigned int a, unsigned int b) {
 // CHECK-NEXT:    store i64 [[A:%.*]], i64* [[A_ADDR]], align 8
 // CHECK-NEXT:    store i64 [[B:%.*]], i64* [[B_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, i64* [[B_ADDR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw xchg i64* [[A_ADDR]], i64 [[TMP0]] monotonic, align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load i64, i64* [[B_ADDR]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw xchg i64* [[A_ADDR]], i64 [[TMP1]] monotonic, align 8
 // CHECK-NEXT:    ret void
 //
 void test_builtin_ppc_fetch_and_swaplp(unsigned long a, unsigned long b) {

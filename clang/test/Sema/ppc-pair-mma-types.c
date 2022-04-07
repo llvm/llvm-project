@@ -12,6 +12,11 @@
 
 // typedef
 typedef __vector_quad vq_t;
+void testVQTypedef(int *inp, int *outp) {
+  vq_t *vqin = (vq_t *)inp;
+  vq_t *vqout = (vq_t *)outp;
+  *vqout = *vqin;
+}
 
 // function argument
 void testVQArg1(__vector_quad vq, int *ptr) { // expected-error {{invalid use of PPC MMA type}}
@@ -24,9 +29,29 @@ void testVQArg2(const __vector_quad vq, int *ptr) { // expected-error {{invalid 
   *vqp = vq;
 }
 
+void testVQArg3(__vector_quad *vq, int *ptr) {
+  __vector_quad *vqp = (__vector_quad *)ptr;
+  *vqp = *vq;
+}
+
+void testVQArg4(const __vector_quad *const vq, int *ptr) {
+  __vector_quad *vqp = (__vector_quad *)ptr;
+  *vqp = *vq;
+}
+
+void testVQArg5(__vector_quad vqa[], int *ptr) {
+  __vector_quad *vqp = (__vector_quad *)ptr;
+  *vqp = vqa[0];
+}
+
 void testVQArg6(const vq_t vq, int *ptr) { // expected-error {{invalid use of PPC MMA type}}
   __vector_quad *vqp = (__vector_quad *)ptr;
   *vqp = vq;
+}
+
+void testVQArg7(const vq_t *vq, int *ptr) {
+  __vector_quad *vqp = (__vector_quad *)ptr;
+  *vqp = *vq;
 }
 
 // function return
@@ -35,9 +60,24 @@ __vector_quad testVQRet1(int *ptr) { // expected-error {{invalid use of PPC MMA 
   return *vqp; // expected-error {{invalid use of PPC MMA type}}
 }
 
+__vector_quad *testVQRet2(int *ptr) {
+  __vector_quad *vqp = (__vector_quad *)ptr;
+  return vqp + 2;
+}
+
+const __vector_quad *testVQRet3(int *ptr) {
+  __vector_quad *vqp = (__vector_quad *)ptr;
+  return vqp + 2;
+}
+
 const vq_t testVQRet4(int *ptr) { // expected-error {{invalid use of PPC MMA type}}
   __vector_quad *vqp = (__vector_quad *)ptr;
   return *vqp; // expected-error {{invalid use of PPC MMA type}}
+}
+
+const vq_t *testVQRet5(int *ptr) {
+  __vector_quad *vqp = (__vector_quad *)ptr;
+  return vqp + 2;
 }
 
 // global
@@ -47,6 +87,16 @@ __vector_quad *globalvqp;
 const __vector_quad *const globalvqp2;
 vq_t globalvq_t; // expected-error {{invalid use of PPC MMA type}}
 
+// local
+void testVQLocal(int *ptr, vector unsigned char vc) {
+  __vector_quad *vqp = (__vector_quad *)ptr;
+  __vector_quad vq1 = *vqp;
+  __vector_quad vq2;
+  __builtin_mma_xxsetaccz(&vq2);
+  __vector_quad vq3;
+  __builtin_mma_xvi4ger8(&vq3, vc, vc);
+  *vqp = vq3;
+}
 
 // struct field
 struct TestVQStruct {
@@ -55,6 +105,17 @@ struct TestVQStruct {
   __vector_quad c; // expected-error {{invalid use of PPC MMA type}}
   __vector_quad *vq;
 };
+
+// sizeof / alignof
+int testVQSizeofAlignof(int *ptr) {
+  __vector_quad *vqp = (__vector_quad *)ptr;
+  __vector_quad vq = *vqp;
+  unsigned sizet = sizeof(__vector_quad);
+  unsigned alignt = __alignof__(__vector_quad);
+  unsigned sizev = sizeof(vq);
+  unsigned alignv = __alignof__(vq);
+  return sizet + alignt + sizev + alignv;
+}
 
 // operators
 int testVQOperators1(int *ptr) {
@@ -107,6 +168,11 @@ void testVQOperators4(int v, void *ptr) {
 
 // typedef
 typedef __vector_pair vp_t;
+void testVPTypedef(int *inp, int *outp) {
+  vp_t *vpin = (vp_t *)inp;
+  vp_t *vpout = (vp_t *)outp;
+  *vpout = *vpin;
+}
 
 // function argument
 void testVPArg1(__vector_pair vp, int *ptr) { // expected-error {{invalid use of PPC MMA type}}
@@ -119,9 +185,29 @@ void testVPArg2(const __vector_pair vp, int *ptr) { // expected-error {{invalid 
   *vpp = vp;
 }
 
+void testVPArg3(__vector_pair *vp, int *ptr) {
+  __vector_pair *vpp = (__vector_pair *)ptr;
+  *vpp = *vp;
+}
+
+void testVPArg4(const __vector_pair *const vp, int *ptr) {
+  __vector_pair *vpp = (__vector_pair *)ptr;
+  *vpp = *vp;
+}
+
+void testVPArg5(__vector_pair vpa[], int *ptr) {
+  __vector_pair *vpp = (__vector_pair *)ptr;
+  *vpp = vpa[0];
+}
+
 void testVPArg6(const vp_t vp, int *ptr) { // expected-error {{invalid use of PPC MMA type}}
   __vector_pair *vpp = (__vector_pair *)ptr;
   *vpp = vp;
+}
+
+void testVPArg7(const vp_t *vp, int *ptr) {
+  __vector_pair *vpp = (__vector_pair *)ptr;
+  *vpp = *vp;
 }
 
 // function return
@@ -130,9 +216,24 @@ __vector_pair testVPRet1(int *ptr) { // expected-error {{invalid use of PPC MMA 
   return *vpp; // expected-error {{invalid use of PPC MMA type}}
 }
 
+__vector_pair *testVPRet2(int *ptr) {
+  __vector_pair *vpp = (__vector_pair *)ptr;
+  return vpp + 2;
+}
+
+const __vector_pair *testVPRet3(int *ptr) {
+  __vector_pair *vpp = (__vector_pair *)ptr;
+  return vpp + 2;
+}
+
 const vp_t testVPRet4(int *ptr) { // expected-error {{invalid use of PPC MMA type}}
   __vector_pair *vpp = (__vector_pair *)ptr;
   return *vpp; // expected-error {{invalid use of PPC MMA type}}
+}
+
+const vp_t *testVPRet5(int *ptr) {
+  __vector_pair *vpp = (__vector_pair *)ptr;
+  return vpp + 2;
 }
 
 // global
@@ -142,6 +243,19 @@ __vector_pair *globalvpp;
 const __vector_pair *const globalvpp2;
 vp_t globalvp_t; // expected-error {{invalid use of PPC MMA type}}
 
+// local
+void testVPLocal(int *ptr, vector unsigned char vc) {
+  __vector_pair *vpp = (__vector_pair *)ptr;
+  __vector_pair vp1 = *vpp;
+  __vector_pair vp2;
+  __builtin_vsx_assemble_pair(&vp2, vc, vc);
+  __builtin_vsx_build_pair(&vp2, vc, vc);
+  __vector_pair vp3;
+  __vector_quad vq;
+  __builtin_mma_xvf64ger(&vq, vp3, vc);
+  *vpp = vp3;
+}
+
 // struct field
 struct TestVPStruct {
   int a;
@@ -149,6 +263,17 @@ struct TestVPStruct {
   __vector_pair c; // expected-error {{invalid use of PPC MMA type}}
   __vector_pair *vp;
 };
+
+// sizeof / alignof
+int testVPSizeofAlignof(int *ptr) {
+  __vector_pair *vpp = (__vector_pair *)ptr;
+  __vector_pair vp = *vpp;
+  unsigned sizet = sizeof(__vector_pair);
+  unsigned alignt = __alignof__(__vector_pair);
+  unsigned sizev = sizeof(vp);
+  unsigned alignv = __alignof__(vp);
+  return sizet + alignt + sizev + alignv;
+}
 
 // operators
 int testVPOperators1(int *ptr) {
@@ -217,7 +342,17 @@ void testRestrictQualifiedPointer1(int *__restrict acc) {
   __builtin_mma_disassemble_acc(arr, acc); // expected-error {{passing 'int *restrict' to parameter of incompatible type '__vector_quad *'}}
 }
 
+void testRestrictQualifiedPointer2(__vector_quad *__restrict acc) {
+  vector float arr[4];
+  __builtin_mma_disassemble_acc(arr, acc);
+}
+
 void testVolatileQualifiedPointer1(int *__volatile acc) {
   vector float arr[4];
   __builtin_mma_disassemble_acc(arr, acc); // expected-error {{passing 'int *volatile' to parameter of incompatible type '__vector_quad *'}}
+}
+
+void testVolatileQualifiedPointer2(__vector_quad *__volatile acc) {
+  vector float arr[4];
+  __builtin_mma_disassemble_acc(arr, acc);
 }
