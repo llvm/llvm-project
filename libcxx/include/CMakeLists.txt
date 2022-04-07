@@ -411,6 +411,8 @@ set(files
   __threading_support
   __tree
   __tuple
+  __type_traits/integral_constant.h
+  __type_traits/is_callable.h
   __undef_macros
   __utility/as_const.h
   __utility/auto_cast.h
