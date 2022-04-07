@@ -279,12 +279,6 @@ Internal API Changes
 Build System Changes
 --------------------
 
-* CMake ``-DCLANG_DEFAULT_PIE_ON_LINUX=ON`` is now the default. This is used by
-  linux-gnu systems to decide whether ``-fPIE -pie`` is the default (instead of
-  ``-fno-pic -no-pie``). This matches GCC installations on many Linux distros.
-  Note: linux-android and linux-musl always default to ``-fPIE -pie``, ignoring
-  this variable. ``-DCLANG_DEFAULT_PIE_ON_LINUX`` may be removed in the future.
-
 AST Matchers
 ------------
 

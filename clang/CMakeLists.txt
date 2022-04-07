@@ -245,7 +245,7 @@ set(PPC_LINUX_DEFAULT_IEEELONGDOUBLE OFF CACHE BOOL
 set(CLANG_SPAWN_CC1 OFF CACHE BOOL
     "Whether clang should use a new process for the CC1 invocation")
 
-option(CLANG_DEFAULT_PIE_ON_LINUX "Default to -fPIE and -pie on linux-gnu" ON)
+option(CLANG_DEFAULT_PIE_ON_LINUX "Default to -fPIE and -pie on Linux" OFF)
 
 # Manually handle default so we can change the meaning of a cached default.
 set(CLANG_ENABLE_OPAQUE_POINTERS "DEFAULT" CACHE STRING
