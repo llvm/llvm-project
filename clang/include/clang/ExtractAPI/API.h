@@ -77,7 +77,8 @@ struct APIRecord {
 
   /// Discriminator for LLVM-style RTTI (dyn_cast<> et al.)
   enum RecordKind {
-    RK_Global,
+    RK_GlobalFunction,
+    RK_GlobalVariable,
     RK_EnumConstant,
     RK_Enum,
     RK_StructField,
@@ -112,31 +113,40 @@ public:
   virtual ~APIRecord() = 0;
 };
 
-/// The kind of a global record.
-enum class GVKind : uint8_t {
-  Unknown = 0,
-  Variable = 1,
-  Function = 2,
-};
-
-/// This holds information associated with global variables or functions.
-struct GlobalRecord : APIRecord {
-  GVKind GlobalKind;
-
-  /// The function signature of the record if it is a function.
+/// This holds information associated with global functions.
+struct GlobalFunctionRecord : APIRecord {
   FunctionSignature Signature;
 
-  GlobalRecord(StringRef Name, StringRef USR, PresumedLoc Loc,
-               const AvailabilityInfo &Availability, LinkageInfo Linkage,
-               const DocComment &Comment, DeclarationFragments Declaration,
-               DeclarationFragments SubHeading, GVKind Kind,
-               FunctionSignature Signature)
-      : APIRecord(RK_Global, Name, USR, Loc, Availability, Linkage, Comment,
-                  Declaration, SubHeading),
-        GlobalKind(Kind), Signature(Signature) {}
+  GlobalFunctionRecord(StringRef Name, StringRef USR, PresumedLoc Loc,
+                       const AvailabilityInfo &Availability,
+                       LinkageInfo Linkage, const DocComment &Comment,
+                       DeclarationFragments Declaration,
+                       DeclarationFragments SubHeading,
+                       FunctionSignature Signature)
+      : APIRecord(RK_GlobalFunction, Name, USR, Loc, Availability, Linkage,
+                  Comment, Declaration, SubHeading),
+        Signature(Signature) {}
 
   static bool classof(const APIRecord *Record) {
-    return Record->getKind() == RK_Global;
+    return Record->getKind() == RK_GlobalFunction;
+  }
+
+private:
+  virtual void anchor();
+};
+
+/// This holds information associated with global functions.
+struct GlobalVariableRecord : APIRecord {
+  GlobalVariableRecord(StringRef Name, StringRef USR, PresumedLoc Loc,
+                       const AvailabilityInfo &Availability,
+                       LinkageInfo Linkage, const DocComment &Comment,
+                       DeclarationFragments Declaration,
+                       DeclarationFragments SubHeading)
+      : APIRecord(RK_GlobalVariable, Name, USR, Loc, Availability, Linkage,
+                  Comment, Declaration, SubHeading) {}
+
+  static bool classof(const APIRecord *Record) {
+    return Record->getKind() == RK_GlobalVariable;
   }
 
 private:
@@ -446,33 +456,31 @@ private:
   virtual void anchor();
 };
 
+/// Check if a record type has a function signature mixin.
+///
+/// This is denoted by the record type having a ``Signature`` field of type
+/// FunctionSignature.
+template <typename RecordTy>
+struct has_function_signature : public std::false_type {};
+template <>
+struct has_function_signature<GlobalFunctionRecord> : public std::true_type {};
+template <>
+struct has_function_signature<ObjCMethodRecord> : public std::true_type {};
+
 /// APISet holds the set of API records collected from given inputs.
 class APISet {
 public:
-  /// Create and add a GlobalRecord of kind \p Kind into the API set.
-  ///
-  /// Note: the caller is responsible for keeping the StringRef \p Name and
-  /// \p USR alive. APISet::copyString provides a way to copy strings into
-  /// APISet itself, and APISet::recordUSR(const Decl *D) is a helper method
-  /// to generate the USR for \c D and keep it alive in APISet.
-  GlobalRecord *addGlobal(GVKind Kind, StringRef Name, StringRef USR,
-                          PresumedLoc Loc, const AvailabilityInfo &Availability,
-                          LinkageInfo Linkage, const DocComment &Comment,
-                          DeclarationFragments Declaration,
-                          DeclarationFragments SubHeading,
-                          FunctionSignature Signature);
-
   /// Create and add a global variable record into the API set.
   ///
   /// Note: the caller is responsible for keeping the StringRef \p Name and
   /// \p USR alive. APISet::copyString provides a way to copy strings into
   /// APISet itself, and APISet::recordUSR(const Decl *D) is a helper method
   /// to generate the USR for \c D and keep it alive in APISet.
-  GlobalRecord *addGlobalVar(StringRef Name, StringRef USR, PresumedLoc Loc,
-                             const AvailabilityInfo &Availability,
-                             LinkageInfo Linkage, const DocComment &Comment,
-                             DeclarationFragments Declaration,
-                             DeclarationFragments SubHeading);
+  GlobalVariableRecord *
+  addGlobalVar(StringRef Name, StringRef USR, PresumedLoc Loc,
+               const AvailabilityInfo &Availability, LinkageInfo Linkage,
+               const DocComment &Comment, DeclarationFragments Declaration,
+               DeclarationFragments SubHeading);
 
   /// Create and add a function record into the API set.
   ///
@@ -480,12 +488,12 @@ public:
   /// \p USR alive. APISet::copyString provides a way to copy strings into
   /// APISet itself, and APISet::recordUSR(const Decl *D) is a helper method
   /// to generate the USR for \c D and keep it alive in APISet.
-  GlobalRecord *addFunction(StringRef Name, StringRef USR, PresumedLoc Loc,
-                            const AvailabilityInfo &Availability,
-                            LinkageInfo Linkage, const DocComment &Comment,
-                            DeclarationFragments Declaration,
-                            DeclarationFragments SubHeading,
-                            FunctionSignature Signature);
+  GlobalFunctionRecord *
+  addGlobalFunction(StringRef Name, StringRef USR, PresumedLoc Loc,
+                    const AvailabilityInfo &Availability, LinkageInfo Linkage,
+                    const DocComment &Comment, DeclarationFragments Declaration,
+                    DeclarationFragments SubHeading,
+                    FunctionSignature Signature);
 
   /// Create and add an enum constant record into the API set.
   ///
@@ -652,7 +660,12 @@ public:
   /// Get the language used by the APIs.
   Language getLanguage() const { return Lang; }
 
-  const RecordMap<GlobalRecord> &getGlobals() const { return Globals; }
+  const RecordMap<GlobalFunctionRecord> &getGlobalFunctions() const {
+    return GlobalFunctions;
+  }
+  const RecordMap<GlobalVariableRecord> &getGlobalVariables() const {
+    return GlobalVariables;
+  }
   const RecordMap<EnumRecord> &getEnums() const { return Enums; }
   const RecordMap<StructRecord> &getStructs() const { return Structs; }
   const RecordMap<ObjCCategoryRecord> &getObjCCategories() const {
@@ -699,7 +712,8 @@ private:
   const llvm::Triple Target;
   const Language Lang;
 
-  RecordMap<GlobalRecord> Globals;
+  RecordMap<GlobalFunctionRecord> GlobalFunctions;
+  RecordMap<GlobalVariableRecord> GlobalVariables;
   RecordMap<EnumRecord> Enums;
   RecordMap<StructRecord> Structs;
   RecordMap<ObjCCategoryRecord> ObjCCategories;

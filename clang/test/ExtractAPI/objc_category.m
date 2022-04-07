@@ -148,6 +148,15 @@
           "spelling": ";"
         }
       ],
+      "functionSignature": {
+        "returns": [
+          {
+            "kind": "typeIdentifier",
+            "preciseIdentifier": "c:v",
+            "spelling": "void"
+          }
+        ]
+      },
       "identifier": {
         "interfaceLanguage": "objective-c",
         "precise": "c:objc(cs)Interface(im)InstanceMethod"
@@ -212,6 +221,15 @@
           "spelling": ";"
         }
       ],
+      "functionSignature": {
+        "returns": [
+          {
+            "kind": "typeIdentifier",
+            "preciseIdentifier": "c:v",
+            "spelling": "void"
+          }
+        ]
+      },
       "identifier": {
         "interfaceLanguage": "objective-c",
         "precise": "c:objc(cs)Interface(cm)ClassMethod"

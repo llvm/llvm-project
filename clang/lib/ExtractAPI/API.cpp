@@ -41,34 +41,22 @@ RecordTy *addTopLevelRecord(APISet::RecordMap<RecordTy> &RecordMap,
 
 } // namespace
 
-GlobalRecord *APISet::addGlobal(GVKind Kind, StringRef Name, StringRef USR,
-                                PresumedLoc Loc,
-                                const AvailabilityInfo &Availability,
-                                LinkageInfo Linkage, const DocComment &Comment,
-                                DeclarationFragments Fragments,
-                                DeclarationFragments SubHeading,
-                                FunctionSignature Signature) {
-  return addTopLevelRecord(Globals, Name, USR, Loc, Availability, Linkage,
-                           Comment, Fragments, SubHeading, Kind, Signature);
-}
-
-GlobalRecord *
+GlobalVariableRecord *
 APISet::addGlobalVar(StringRef Name, StringRef USR, PresumedLoc Loc,
                      const AvailabilityInfo &Availability, LinkageInfo Linkage,
                      const DocComment &Comment, DeclarationFragments Fragments,
                      DeclarationFragments SubHeading) {
-  return addGlobal(GVKind::Variable, Name, USR, Loc, Availability, Linkage,
-                   Comment, Fragments, SubHeading, {});
+  return addTopLevelRecord(GlobalVariables, Name, USR, Loc, Availability,
+                           Linkage, Comment, Fragments, SubHeading);
 }
 
-GlobalRecord *
-APISet::addFunction(StringRef Name, StringRef USR, PresumedLoc Loc,
-                    const AvailabilityInfo &Availability, LinkageInfo Linkage,
-                    const DocComment &Comment, DeclarationFragments Fragments,
-                    DeclarationFragments SubHeading,
-                    FunctionSignature Signature) {
-  return addGlobal(GVKind::Function, Name, USR, Loc, Availability, Linkage,
-                   Comment, Fragments, SubHeading, Signature);
+GlobalFunctionRecord *APISet::addGlobalFunction(
+    StringRef Name, StringRef USR, PresumedLoc Loc,
+    const AvailabilityInfo &Availability, LinkageInfo Linkage,
+    const DocComment &Comment, DeclarationFragments Fragments,
+    DeclarationFragments SubHeading, FunctionSignature Signature) {
+  return addTopLevelRecord(GlobalFunctions, Name, USR, Loc, Availability,
+                           Linkage, Comment, Fragments, SubHeading, Signature);
 }
 
 EnumConstantRecord *APISet::addEnumConstant(
@@ -229,7 +217,8 @@ APIRecord::~APIRecord() {}
 
 ObjCContainerRecord::~ObjCContainerRecord() {}
 
-void GlobalRecord::anchor() {}
+void GlobalFunctionRecord::anchor() {}
+void GlobalVariableRecord::anchor() {}
 void EnumConstantRecord::anchor() {}
 void EnumRecord::anchor() {}
 void StructFieldRecord::anchor() {}

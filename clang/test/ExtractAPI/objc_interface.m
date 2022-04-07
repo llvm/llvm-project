@@ -182,6 +182,38 @@
           "spelling": ";"
         }
       ],
+      "functionSignature": {
+        "parameters": [
+          {
+            "declarationFragments": [
+              {
+                "kind": "text",
+                "spelling": "("
+              },
+              {
+                "kind": "typeIdentifier",
+                "preciseIdentifier": "c:i",
+                "spelling": "unsigned int"
+              },
+              {
+                "kind": "text",
+                "spelling": ") "
+              },
+              {
+                "kind": "internalParam",
+                "spelling": "Property"
+              }
+            ],
+            "name": "Property"
+          }
+        ],
+        "returns": [
+          {
+            "kind": "keyword",
+            "spelling": "id"
+          }
+        ]
+      },
       "identifier": {
         "interfaceLanguage": "objective-c",
         "precise": "c:objc(cs)Super(cm)getWithProperty:"
@@ -288,6 +320,61 @@
           "spelling": ";"
         }
       ],
+      "functionSignature": {
+        "parameters": [
+          {
+            "declarationFragments": [
+              {
+                "kind": "text",
+                "spelling": "("
+              },
+              {
+                "kind": "typeIdentifier",
+                "preciseIdentifier": "c:i",
+                "spelling": "unsigned int"
+              },
+              {
+                "kind": "text",
+                "spelling": ") "
+              },
+              {
+                "kind": "internalParam",
+                "spelling": "Property"
+              }
+            ],
+            "name": "Property"
+          },
+          {
+            "declarationFragments": [
+              {
+                "kind": "text",
+                "spelling": "("
+              },
+              {
+                "kind": "typeIdentifier",
+                "preciseIdentifier": "c:i",
+                "spelling": "unsigned int"
+              },
+              {
+                "kind": "text",
+                "spelling": ") "
+              },
+              {
+                "kind": "internalParam",
+                "spelling": "Thing"
+              }
+            ],
+            "name": "Thing"
+          }
+        ],
+        "returns": [
+          {
+            "kind": "typeIdentifier",
+            "preciseIdentifier": "c:v",
+            "spelling": "void"
+          }
+        ]
+      },
       "identifier": {
         "interfaceLanguage": "objective-c",
         "precise": "c:objc(cs)Super(im)setProperty:andOtherThing:"
@@ -551,6 +638,15 @@
           "spelling": ";"
         }
       ],
+      "functionSignature": {
+        "returns": [
+          {
+            "kind": "typeIdentifier",
+            "preciseIdentifier": "c:C",
+            "spelling": "char"
+          }
+        ]
+      },
       "identifier": {
         "interfaceLanguage": "objective-c",
         "precise": "c:objc(cs)Derived(im)getIvar"
