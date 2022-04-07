@@ -355,11 +355,11 @@ define amdgpu_kernel void @store_lds_v3i32_align4(<3 x i32> addrspace(3)* %out, 
 ; GFX10-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x10
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s2
-; GFX10-NEXT:    v_mov_b32_e32 v1, s4
-; GFX10-NEXT:    v_mov_b32_e32 v2, s5
-; GFX10-NEXT:    v_mov_b32_e32 v3, s6
-; GFX10-NEXT:    ds_write2_b32 v0, v1, v2 offset1:1
-; GFX10-NEXT:    ds_write_b32 v0, v3 offset:8
+; GFX10-NEXT:    v_mov_b32_e32 v1, s6
+; GFX10-NEXT:    v_mov_b32_e32 v2, s4
+; GFX10-NEXT:    v_mov_b32_e32 v3, s5
+; GFX10-NEXT:    ds_write_b32 v0, v1 offset:8
+; GFX10-NEXT:    ds_write2_b32 v0, v2, v3 offset1:1
 ; GFX10-NEXT:    s_endpgm
   store <3 x i32> %x, <3 x i32> addrspace(3)* %out, align 4
   ret void

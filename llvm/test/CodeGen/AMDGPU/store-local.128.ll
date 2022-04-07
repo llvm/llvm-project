@@ -417,12 +417,12 @@ define amdgpu_kernel void @store_lds_v4i32_align4(<4 x i32> addrspace(3)* %out, 
 ; GFX10-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x10
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s2
-; GFX10-NEXT:    v_mov_b32_e32 v1, s4
-; GFX10-NEXT:    v_mov_b32_e32 v2, s5
-; GFX10-NEXT:    v_mov_b32_e32 v3, s6
-; GFX10-NEXT:    v_mov_b32_e32 v4, s7
-; GFX10-NEXT:    ds_write2_b32 v0, v1, v2 offset1:1
-; GFX10-NEXT:    ds_write2_b32 v0, v3, v4 offset0:2 offset1:3
+; GFX10-NEXT:    v_mov_b32_e32 v1, s6
+; GFX10-NEXT:    v_mov_b32_e32 v2, s7
+; GFX10-NEXT:    v_mov_b32_e32 v3, s4
+; GFX10-NEXT:    v_mov_b32_e32 v4, s5
+; GFX10-NEXT:    ds_write2_b32 v0, v1, v2 offset0:2 offset1:3
+; GFX10-NEXT:    ds_write2_b32 v0, v3, v4 offset1:1
 ; GFX10-NEXT:    s_endpgm
   store <4 x i32> %x, <4 x i32> addrspace(3)* %out, align 4
   ret void
@@ -473,13 +473,13 @@ define amdgpu_kernel void @store_lds_v4i32_align8(<4 x i32> addrspace(3)* %out, 
 ; GFX10-LABEL: store_lds_v4i32_align8:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_clause 0x1
-; GFX10-NEXT:    s_load_dword s2, s[0:1], 0x0
 ; GFX10-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x10
+; GFX10-NEXT:    s_load_dword s2, s[0:1], 0x0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_mov_b32_e32 v4, s2
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s4
-; GFX10-NEXT:    v_mov_b32_e32 v2, s6
 ; GFX10-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-NEXT:    v_mov_b32_e32 v4, s2
+; GFX10-NEXT:    v_mov_b32_e32 v2, s6
 ; GFX10-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-NEXT:    ds_write2_b64 v4, v[0:1], v[2:3] offset1:1
 ; GFX10-NEXT:    s_endpgm
