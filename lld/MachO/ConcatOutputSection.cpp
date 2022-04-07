@@ -343,7 +343,7 @@ void TextOutputSection::finalize() {
       thunkInfo.sym->used = true;
       target->populateThunk(thunkInfo.isec, funcSym);
       finalizeOne(thunkInfo.isec);
-      fprintf(stderr, "%llx\n", thunkInfo.isec->outSecOff);
+      fprintf(stderr, "%" PRIx64 "\n", thunkInfo.isec->outSecOff);
       thunks.push_back(thunkInfo.isec);
       ++thunkCount;
     }
