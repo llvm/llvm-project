@@ -320,6 +320,10 @@ inline bool isFortran(SourceLanguage S) {
   return result;
 }
 
+inline TypeKind getArrayIndexTypeEncoding(SourceLanguage S) {
+  return isFortran(S) ? DW_ATE_signed : DW_ATE_unsigned;
+}
+
 enum CaseSensitivity {
   // Identifier case codes
   DW_ID_case_sensitive = 0x00,

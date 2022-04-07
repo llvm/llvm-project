@@ -1,13 +1,13 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -ftrivial-auto-var-init=pattern -ftrivial-auto-var-init-stop-after=1 %s -emit-llvm -o - | FileCheck %s -check-prefix=PATTERN-STOP-AFTER-1-SCALAR
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -ftrivial-auto-var-init=pattern -ftrivial-auto-var-init-stop-after=2 %s -emit-llvm -o - | FileCheck %s -check-prefix=PATTERN-STOP-AFTER-2-ARRAY
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -ftrivial-auto-var-init=pattern -ftrivial-auto-var-init-stop-after=3 %s -emit-llvm -o - | FileCheck %s -check-prefix=PATTERN-STOP-AFTER-3-VLA
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -ftrivial-auto-var-init=pattern -ftrivial-auto-var-init-stop-after=4 %s -emit-llvm -o - | FileCheck %s -check-prefix=PATTERN-STOP-AFTER-4-POINTER
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -ftrivial-auto-var-init=pattern -ftrivial-auto-var-init-stop-after=5 %s -emit-llvm -o - | FileCheck %s -check-prefix=PATTERN-STOP-AFTER-5-BUILTIN
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -ftrivial-auto-var-init=zero -ftrivial-auto-var-init-stop-after=1 %s -emit-llvm -o - | FileCheck %s -check-prefix=ZERO-STOP-AFTER-1-SCALAR
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -ftrivial-auto-var-init=zero -ftrivial-auto-var-init-stop-after=2 %s -emit-llvm -o - | FileCheck %s -check-prefix=ZERO-STOP-AFTER-2-ARRAY
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -ftrivial-auto-var-init=zero -ftrivial-auto-var-init-stop-after=3 %s -emit-llvm -o - | FileCheck %s -check-prefix=ZERO-STOP-AFTER-3-VLA
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -ftrivial-auto-var-init=zero -ftrivial-auto-var-init-stop-after=4 %s -emit-llvm -o - | FileCheck %s -check-prefix=ZERO-STOP-AFTER-4-POINTER
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -ftrivial-auto-var-init=zero -ftrivial-auto-var-init-stop-after=5 %s -emit-llvm -o - | FileCheck %s -check-prefix=ZERO-STOP-AFTER-5-BUILTIN
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown -ftrivial-auto-var-init=pattern -ftrivial-auto-var-init-stop-after=1 %s -emit-llvm -o - | FileCheck %s -check-prefix=PATTERN-STOP-AFTER-1-SCALAR
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown -ftrivial-auto-var-init=pattern -ftrivial-auto-var-init-stop-after=2 %s -emit-llvm -o - | FileCheck %s -check-prefix=PATTERN-STOP-AFTER-2-ARRAY
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown -ftrivial-auto-var-init=pattern -ftrivial-auto-var-init-stop-after=3 %s -emit-llvm -o - | FileCheck %s -check-prefix=PATTERN-STOP-AFTER-3-VLA
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown -ftrivial-auto-var-init=pattern -ftrivial-auto-var-init-stop-after=4 %s -emit-llvm -o - | FileCheck %s -check-prefix=PATTERN-STOP-AFTER-4-POINTER
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown -ftrivial-auto-var-init=pattern -ftrivial-auto-var-init-stop-after=5 %s -emit-llvm -o - | FileCheck %s -check-prefix=PATTERN-STOP-AFTER-5-BUILTIN
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown -ftrivial-auto-var-init=zero -ftrivial-auto-var-init-stop-after=1 %s -emit-llvm -o - | FileCheck %s -check-prefix=ZERO-STOP-AFTER-1-SCALAR
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown -ftrivial-auto-var-init=zero -ftrivial-auto-var-init-stop-after=2 %s -emit-llvm -o - | FileCheck %s -check-prefix=ZERO-STOP-AFTER-2-ARRAY
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown -ftrivial-auto-var-init=zero -ftrivial-auto-var-init-stop-after=3 %s -emit-llvm -o - | FileCheck %s -check-prefix=ZERO-STOP-AFTER-3-VLA
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown -ftrivial-auto-var-init=zero -ftrivial-auto-var-init-stop-after=4 %s -emit-llvm -o - | FileCheck %s -check-prefix=ZERO-STOP-AFTER-4-POINTER
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown -ftrivial-auto-var-init=zero -ftrivial-auto-var-init-stop-after=5 %s -emit-llvm -o - | FileCheck %s -check-prefix=ZERO-STOP-AFTER-5-BUILTIN
 
 #define ARRLEN 10
 

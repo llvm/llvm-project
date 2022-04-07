@@ -1,7 +1,7 @@
 // REQUIRES: x86-registered-target
 // REQUIRES: nvptx-registered-target
 
-// RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -fcuda-is-device -emit-llvm \
+// RUN: %clang_cc1 -no-opaque-pointers -triple nvptx64-nvidia-cuda -fcuda-is-device -emit-llvm \
 // RUN:   -o - %s | FileCheck %s
 
 #include "Inputs/cuda.h"

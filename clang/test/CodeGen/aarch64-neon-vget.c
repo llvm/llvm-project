@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64-apple-darwin -target-feature +neon \
+// RUN: %clang_cc1 -no-opaque-pointers -triple arm64-apple-darwin -target-feature +neon \
 // RUN:   -fallow-half-arguments-and-returns -disable-O0-optnone -emit-llvm -o - %s \
 // RUN: | opt -S -mem2reg | FileCheck %s
 

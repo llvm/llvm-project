@@ -4,7 +4,7 @@
 // Check that destructor's argument (address of member to be destroyed) is
 // obtained by taking offset from struct, not by bitcasting pointers.
 //
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -O0 -fno-elide-constructors -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -O0 -fno-elide-constructors -emit-llvm %s -o - | FileCheck %s
 
 struct ImplicitCopy {
   int id;

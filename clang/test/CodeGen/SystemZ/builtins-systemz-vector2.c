@@ -1,5 +1,5 @@
 // REQUIRES: systemz-registered-target
-// RUN: %clang_cc1 -target-cpu z14 -triple s390x-ibm-linux -flax-vector-conversions=none \
+// RUN: %clang_cc1 -no-opaque-pointers -target-cpu z14 -triple s390x-ibm-linux -flax-vector-conversions=none \
 // RUN: -Wall -Wno-unused -Werror -emit-llvm %s -o - | FileCheck %s
 
 typedef __attribute__((vector_size(16))) signed char vec_schar;

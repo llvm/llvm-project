@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++14 -Wno-unused-value %s -disable-llvm-passes -triple x86_64-linux-gnu -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++14 -Wno-unused-value %s -disable-llvm-passes -triple x86_64-linux-gnu -emit-llvm -o - | FileCheck %s
 
 // FIXME: Unfortunately there is no good way to validate that our values are
 // correct since Vector types don't have operator [] implemented for constexpr.

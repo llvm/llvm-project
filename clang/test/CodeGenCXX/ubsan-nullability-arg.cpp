@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -x c++ -triple x86_64-apple-darwin10 -emit-llvm -o - %s -fsanitize=nullability-arg | FileCheck %s -check-prefixes=ITANIUM,ALL
-// RUN: %clang_cc1 -x c++ -triple x86_64-pc-windows-msvc -emit-llvm -o - %s -fsanitize=nullability-arg | FileCheck %s -check-prefixes=MSVC,ALL
+// RUN: %clang_cc1 -no-opaque-pointers -x c++ -triple x86_64-apple-darwin10 -emit-llvm -o - %s -fsanitize=nullability-arg | FileCheck %s -check-prefixes=ITANIUM,ALL
+// RUN: %clang_cc1 -no-opaque-pointers -x c++ -triple x86_64-pc-windows-msvc -emit-llvm -o - %s -fsanitize=nullability-arg | FileCheck %s -check-prefixes=MSVC,ALL
 
 namespace method_ptr {
 

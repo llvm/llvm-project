@@ -1,14 +1,14 @@
-// RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -emit-llvm -fsanitize=unreachable -o - | FileCheck %s -check-prefix=REGULAR -check-prefix=CHECK
-// RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -emit-llvm -fsanitize=unreachable -o - -fsanitize-undefined-strip-path-components=0 | FileCheck %s -check-prefix=REGULAR -check-prefix=CHECK
-// RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -emit-llvm -fsanitize=unreachable -o - -fsanitize-undefined-strip-path-components=2 | FileCheck %s -check-prefix=REMOVE-FIRST-TWO -check-prefix=CHECK
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=x86_64-linux-gnu -emit-llvm -fsanitize=unreachable -o - | FileCheck %s -check-prefix=REGULAR -check-prefix=CHECK
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=x86_64-linux-gnu -emit-llvm -fsanitize=unreachable -o - -fsanitize-undefined-strip-path-components=0 | FileCheck %s -check-prefix=REGULAR -check-prefix=CHECK
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=x86_64-linux-gnu -emit-llvm -fsanitize=unreachable -o - -fsanitize-undefined-strip-path-components=2 | FileCheck %s -check-prefix=REMOVE-FIRST-TWO -check-prefix=CHECK
 
 // Try to strip too much:
-// RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -emit-llvm -fsanitize=unreachable -o - -fsanitize-undefined-strip-path-components=-99999 | FileCheck %s -check-prefix=REGULAR
-// RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -emit-llvm -fsanitize=unreachable -o - -fsanitize-undefined-strip-path-components=99999 | FileCheck %s -check-prefix=LAST-ONLY
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=x86_64-linux-gnu -emit-llvm -fsanitize=unreachable -o - -fsanitize-undefined-strip-path-components=-99999 | FileCheck %s -check-prefix=REGULAR
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=x86_64-linux-gnu -emit-llvm -fsanitize=unreachable -o - -fsanitize-undefined-strip-path-components=99999 | FileCheck %s -check-prefix=LAST-ONLY
 
 // Check stripping from the file name
-// RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -emit-llvm -fsanitize=unreachable -o - -fsanitize-undefined-strip-path-components=-2 | FileCheck %s -check-prefix=LAST-TWO
-// RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -emit-llvm -fsanitize=unreachable -o - -fsanitize-undefined-strip-path-components=-1 | FileCheck %s -check-prefix=LAST-ONLY
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=x86_64-linux-gnu -emit-llvm -fsanitize=unreachable -o - -fsanitize-undefined-strip-path-components=-2 | FileCheck %s -check-prefix=LAST-TWO
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=x86_64-linux-gnu -emit-llvm -fsanitize=unreachable -o - -fsanitize-undefined-strip-path-components=-1 | FileCheck %s -check-prefix=LAST-ONLY
 
 // REGULAR: @[[SRC:[0-9.a-zA-Z_]+]] =      private unnamed_addr constant [{{.*}} x i8] c"{{.*test(.|\\\\)CodeGen(.|\\\\)ubsan-strip-path-components\.cpp}}\00", align 1
 

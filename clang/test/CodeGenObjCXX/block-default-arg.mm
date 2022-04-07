@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10.0.0 -emit-llvm -o - %s -std=c++11 -fblocks -fobjc-arc | FileCheck  %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10.0.0 -emit-llvm -o - %s -std=c++11 -fblocks -fobjc-arc | FileCheck  %s
 
 // CHECK: define internal void @___Z16test_default_argi_block_invoke(i8* noundef %[[BLOCK_DESCRIPTOR:.*]])
 // CHECK: %[[BLOCK:.*]] = bitcast i8* %[[BLOCK_DESCRIPTOR]] to <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, i32 }>*

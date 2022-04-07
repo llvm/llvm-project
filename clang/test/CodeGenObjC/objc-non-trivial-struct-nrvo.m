@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fobjc-arc -fobjc-runtime-has-weak -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -emit-llvm -fobjc-arc -fobjc-runtime-has-weak -o - %s | FileCheck %s
 
 // CHECK: %[[STRUCT_TRIVIAL:.*]] = type { i32 }
 // CHECK: %[[STRUCT_TRIVIALBIG:.*]] = type { [64 x i32] }

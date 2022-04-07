@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fobjc-arc -fblocks -emit-llvm %s -o - | FileCheck -check-prefix=CHECK -check-prefix=CHECK-HEAP %s
-// RUN: %clang_cc1 -fobjc-arc -fblocks -fobjc-avoid-heapify-local-blocks -emit-llvm %s -o - | FileCheck -check-prefix=CHECK -check-prefix=CHECK-NOHEAP %s
+// RUN: %clang_cc1 -no-opaque-pointers -fobjc-arc -fblocks -emit-llvm %s -o - | FileCheck -check-prefix=CHECK -check-prefix=CHECK-HEAP %s
+// RUN: %clang_cc1 -no-opaque-pointers -fobjc-arc -fblocks -fobjc-avoid-heapify-local-blocks -emit-llvm %s -o - | FileCheck -check-prefix=CHECK -check-prefix=CHECK-NOHEAP %s
 
 
 typedef void (^block_t)(void);

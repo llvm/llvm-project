@@ -1430,7 +1430,7 @@ void DeduplicatedCStringSection::finalizeContents() {
       assert(it != stringOffsetMap.end());
       StringOffset &offsetInfo = it->second;
       if (offsetInfo.outSecOff == UINT64_MAX) {
-        offsetInfo.outSecOff = alignTo(size, 1 << offsetInfo.trailingZeros);
+        offsetInfo.outSecOff = alignTo(size, 1ULL << offsetInfo.trailingZeros);
         size = offsetInfo.outSecOff + s.size();
       }
       isec->pieces[i].outSecOff = offsetInfo.outSecOff;

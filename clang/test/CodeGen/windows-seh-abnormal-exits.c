@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-windows -fms-extensions -Wno-implicit-function-declaration -S -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-windows -fms-extensions -Wno-implicit-function-declaration -S -emit-llvm %s -o - | FileCheck %s
 
 // CHECK: %[[src:[0-9-]+]] = call i8* @llvm.localaddress()
 // CHECK-NEXT: %cleanup.dest = load i32, i32* %cleanup.dest.slot, align 4

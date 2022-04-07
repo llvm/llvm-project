@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple s390x-linux-gnu -target-cpu z13 -fzvector -emit-llvm -o - -W -Wall -Werror %s | opt -S -mem2reg | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple s390x-linux-gnu -target-cpu z13 -fzvector -emit-llvm -o - -W -Wall -Werror %s | opt -S -mem2reg | FileCheck %s
 
 volatile vector signed char sc, sc2;
 volatile vector unsigned char uc, uc2;

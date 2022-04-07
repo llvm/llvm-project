@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -Wall -Wno-unused-but-set-variable -Werror -triple thumbv7-eabi -target-cpu cortex-a8 -disable-O0-optnone -emit-llvm -o - %s | opt -S -mem2reg | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -Wall -Wno-unused-but-set-variable -Werror -triple thumbv7-eabi -target-cpu cortex-a8 -disable-O0-optnone -emit-llvm -o - %s | opt -S -mem2reg | FileCheck %s
 
 #include <stdint.h>
 

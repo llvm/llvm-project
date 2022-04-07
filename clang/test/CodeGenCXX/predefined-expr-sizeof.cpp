@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - | FileCheck %s
 
 // CHECK: store i32 59, i32* %size
 // CHECK: store i32 65, i32* %size

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify -triple x86_64-apple-darwin -emit-llvm -o - %s -std=c++1y | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -verify -triple x86_64-apple-darwin -emit-llvm -o - %s -std=c++1y | FileCheck %s
 // expected-no-diagnostics
 
 struct A {

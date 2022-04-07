@@ -1102,8 +1102,6 @@ static void readConfigs(opt::InputArgList &args) {
                                             OPT_no_lto_pgo_warn_mismatch, true);
   config->ltoDebugPassManager = args.hasArg(OPT_lto_debug_pass_manager);
   config->ltoEmitAsm = args.hasArg(OPT_lto_emit_asm);
-  config->ltoNewPassManager = args.hasFlag(OPT_no_lto_legacy_pass_manager,
-                                           OPT_lto_legacy_pass_manager, true);
   config->ltoNewPmPasses = args.getLastArgValue(OPT_lto_newpm_passes);
   config->ltoWholeProgramVisibility =
       args.hasFlag(OPT_lto_whole_program_visibility,

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -O0 -emit-llvm %s -o - -disable-llvm-passes | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux-gnu -std=c++20 -O0 -emit-llvm %s -o - -disable-llvm-passes | FileCheck %s
 // RUN: %clang -std=c++20 -O0 -emit-llvm -c  %s -o %t -Xclang -disable-llvm-passes && %clang -c %t
 
 #include "Inputs/coroutine.h"

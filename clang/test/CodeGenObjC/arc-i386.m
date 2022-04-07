@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple i386-apple-darwin10 -emit-llvm -fblocks -fobjc-arc -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple i386-apple-iossimulator6.0 -emit-llvm -fblocks -fobjc-arc -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i386-apple-darwin10 -emit-llvm -fblocks -fobjc-arc -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i386-apple-iossimulator6.0 -emit-llvm -fblocks -fobjc-arc -o - %s | FileCheck %s
 
 // <rdar://24531556>: implement objc_retainAutoreleasedReturnValue on i386
 

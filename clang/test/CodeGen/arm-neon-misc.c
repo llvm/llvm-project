@@ -1,5 +1,5 @@
 // REQUIRES: arm-registered-target
-// RUN: %clang_cc1 -triple thumbv7-apple-darwin \
+// RUN: %clang_cc1 -no-opaque-pointers -triple thumbv7-apple-darwin \
 // RUN:   -target-abi apcs-gnu \
 // RUN:   -target-cpu cortex-a8 \
 // RUN:   -mfloat-abi soft \

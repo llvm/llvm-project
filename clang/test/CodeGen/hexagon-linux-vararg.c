@@ -1,5 +1,5 @@
 // REQUIRES: hexagon-registered-target
-// RUN: %clang_cc1 -emit-llvm -triple hexagon-unknown-linux-musl %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple hexagon-unknown-linux-musl %s -o - | FileCheck %s
 #include <stdarg.h>
 
 struct AAA {

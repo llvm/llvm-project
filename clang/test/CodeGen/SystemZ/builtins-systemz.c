@@ -1,6 +1,6 @@
 // REQUIRES: systemz-registered-target
-// RUN: %clang_cc1 -target-cpu zEC12 -triple s390x-ibm-linux -Wall -Wno-unused -Werror -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -target-cpu zEC12 -triple s390x-ibm-linux -Wall -Wno-unused -Werror -emit-llvm -x c++ %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -target-cpu zEC12 -triple s390x-ibm-linux -Wall -Wno-unused -Werror -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -target-cpu zEC12 -triple s390x-ibm-linux -Wall -Wno-unused -Werror -emit-llvm -x c++ %s -o - | FileCheck %s
 
 #include <stdint.h>
 #include <htmintrin.h>

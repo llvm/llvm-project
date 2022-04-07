@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple s390x-linux-gnu -target-cpu z13 -emit-llvm -o - %s \
+// RUN: %clang_cc1 -no-opaque-pointers -triple s390x-linux-gnu -target-cpu z13 -emit-llvm -o - %s \
 // RUN:     | FileCheck %s
 
 struct S0 {

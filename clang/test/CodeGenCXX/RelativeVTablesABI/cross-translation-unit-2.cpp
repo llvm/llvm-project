@@ -1,7 +1,7 @@
 // Check the vtable layout for classes with key functions defined in different
 // translation units. This TU manifests the vtable for B.
 
-// RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -O1 -S -o - -emit-llvm -fhalf-no-semantic-interposition | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=aarch64-unknown-fuchsia -O1 -S -o - -emit-llvm -fhalf-no-semantic-interposition | FileCheck %s
 
 #include "cross-tu-header.h"
 

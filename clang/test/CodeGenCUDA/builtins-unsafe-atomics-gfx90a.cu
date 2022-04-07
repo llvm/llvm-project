@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx90a -x hip \
+// RUN: %clang_cc1 -no-opaque-pointers -triple amdgcn-amd-amdhsa -target-cpu gfx90a -x hip \
 // RUN:  -aux-triple x86_64-unknown-linux-gnu -fcuda-is-device -emit-llvm %s \
 // RUN:  -o - | FileCheck %s
 

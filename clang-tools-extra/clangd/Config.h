@@ -17,7 +17,7 @@
 //
 // Because this structure is shared throughout clangd, it's a potential source
 // of layering problems. Config should be expressed in terms of simple
-// vocubulary types where possible.
+// vocabulary types where possible.
 //
 //===----------------------------------------------------------------------===//
 

@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple i386-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5 -emit-llvm -o %t1 %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i386-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5 -emit-llvm -o %t1 %s
 // RUN: FileCheck -check-prefix=CHECK-I386 < %t1 %s
 
-// RUN: %clang_cc1 -triple armv6-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5 -target-abi apcs-gnu -emit-llvm -o %t2 %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple armv6-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5 -target-abi apcs-gnu -emit-llvm -o %t2 %s
 // RUN: FileCheck -check-prefix=CHECK-ARM < %t2 %s
 
 @interface I0 { 

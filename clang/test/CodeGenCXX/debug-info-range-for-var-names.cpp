@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -debug-info-kind=limited %s -o - | FileCheck %s
 
 struct vec {
   using itr = int*;

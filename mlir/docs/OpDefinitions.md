@@ -23,7 +23,7 @@ operations. This open and extensible ecosystem leads to the "stringly" type IR
 problem, e.g., repetitive string comparisons during optimization and analysis
 passes, unintuitive accessor methods (e.g., generic/error prone `getOperand(3)`
 vs self-documenting `getStride()`) with more generic return types, verbose and
-generic constructors without default arguments, verbose textual IR dump, and so
+generic constructors without default arguments, verbose textual IR dumps, and so
 on. Furthermore, operation verification is:
 
 1.  best case: a central string-to-verification-function map,
@@ -57,7 +57,7 @@ including but not limited to:
 
 We use TableGen as the language for specifying operation information. TableGen
 itself just provides syntax for writing records; the syntax and constructs
-allowed in a TableGen file (typically with filename suffix `.td`) can be found
+allowed in a TableGen file (typically with the filename suffix `.td`) can be found
 [here][TableGenProgRef].
 
 *   TableGen `class` is similar to C++ class; it can be templated and
@@ -80,7 +80,7 @@ types and expressions supported by TableGen.
 MLIR defines several common constructs to help operation definition and provide
 their semantics via a special [TableGen backend][TableGenBackend]:
 [`OpDefinitionsGen`][OpDefinitionsGen]. These constructs are defined in
-[`OpBase.td`][OpBase]. The main ones are
+[`OpBase.td`][OpBase]. The main ones are:
 
 *   The `Op` class: It is the main construct for defining operations. All facts
     regarding the operation are specified when specializing this class, with the
@@ -91,7 +91,7 @@ their semantics via a special [TableGen backend][TableGenBackend]:
     and constraints of the operation, including whether the operation has side
     effect or whether its output has the same shape as the input.
 *   The `ins`/`outs` marker: These are two special markers builtin to the
-    `OpDefinitionsGen` backend. They lead the definitions of operands/attributes
+    `OpDefinitionsGen` backend. They lead to the definitions of operands/attributes
     and results respectively.
 *   The `TypeConstraint` class hierarchy: They are used to specify the
     constraints over operands or results. A notable subclass hierarchy is
@@ -134,7 +134,7 @@ the `Op` class for the complete list of fields supported.
 
 ### Operation name
 
-The operation name is a unique identifier of the operation within MLIR, e.g.,
+The operation name is a unique identifier for the operation within MLIR, e.g.,
 `tf.Add` for addition operation in the TensorFlow dialect. This is the
 equivalent of the mnemonic in assembly language. It is used for parsing and
 printing in the textual format. It is also used for pattern matching in graph
@@ -207,12 +207,13 @@ named argument a named getter will be generated that returns the argument with
 the return type (in the case of attributes the return type will be constructed
 from the storage type, while for operands it will be `Value`). Each attribute's
 raw value (e.g., as stored) can also be accessed via generated `<name>Attr`
-getters for use in transformation passes where the more user friendly return
+getters for use in transformation passes where the more user-friendly return
 type is less suitable.
 
-All the arguments should be named to 1) provide documentation, 2) drive
-auto-generation of getter methods, 3) provide a handle to reference for other
-places like constraints.
+All the arguments should be named to:
+- provide documentation,
+- drive auto-generation of getter methods, and
+- provide a handle to reference for other places like constraints.
 
 #### Variadic operands
 
@@ -221,7 +222,7 @@ To declare a variadic operand, wrap the `TypeConstraint` for the operand with
 
 Normally operations have no variadic operands or just one variadic operand. For
 the latter case, it is easy to deduce which dynamic operands are for the static
-variadic operand definition. Though, if an operation has more than one variable
+variadic operand definition. However, if an operation has more than one variable
 length operands (either optional or variadic), it would be impossible to
 attribute dynamic operands to the corresponding static variadic operand
 definitions without further information from the operation. Therefore, either
@@ -247,7 +248,7 @@ To declare an optional operand, wrap the `TypeConstraint` for the operand with
 
 Normally operations have no optional operands or just one optional operand. For
 the latter case, it is easy to deduce which dynamic operands are for the static
-operand definition. Though, if an operation has more than one variable length
+operand definition. However, if an operation has more than one variable length
 operands (either optional or variadic), it would be impossible to attribute
 dynamic operands to the corresponding static variadic operand definitions
 without further information from the operation. Therefore, either the
@@ -425,7 +426,7 @@ The first form provides basic uniformity so that we can create ops using the
 same form regardless of the exact op. This is particularly useful for
 implementing declarative pattern rewrites.
 
-The second and third forms are good for use in manually written code given that
+The second and third forms are good for use in manually written code, given that
 they provide better guarantee via signatures.
 
 The third form will be generated if any of the op's attribute has different
@@ -434,14 +435,14 @@ from an unwrapped value (i.e., `Attr.constBuilderCall` is defined.)
 Additionally, for the third form, if an attribute appearing later in the
 `arguments` list has a default value, the default value will be supplied in the
 declaration. This works for `BoolAttr`, `StrAttr`, `EnumAttr` for now and the
-list can grow in the future. So if possible, default valued attribute should be
+list can grow in the future. So if possible, the default-valued attribute should be
 placed at the end of the `arguments` list to leverage this feature. (This
 behavior is essentially due to C++ function parameter default value placement
 restrictions.) Otherwise, the builder of the third form will still be generated
 but default values for the attributes not at the end of the `arguments` list
 will not be supplied in the builder's signature.
 
-ODS will generate a builder that doesn't require return type specified if
+ODS will generate a builder that doesn't require the return type specified if
 
 *   Op implements InferTypeOpInterface interface;
 *   All return types are either buildable types or are the same as a given
@@ -581,18 +582,18 @@ of these verification methods.
 The verification of an operation involves several steps,
 
 1. StructuralOpTrait will be verified first, they can be run independently.
-1. `verifyInvariants` which is constructed by ODS, it verifies the type,
+2. `verifyInvariants` which is constructed by ODS, it verifies the type,
    attributes, .etc.
-1. Other Traits/Interfaces that have marked their verifier as `verifyTrait` or
+3. Other Traits/Interfaces that have marked their verifier as `verifyTrait` or
    `verifyWithRegions=0`.
-1. Custom verifier which is defined in the op and has marked `hasVerifier=1`
+4. Custom verifier which is defined in the op and has been marked `hasVerifier=1`
 
 If an operation has regions, then it may have the second phase,
 
 1. Traits/Interfaces that have marked their verifier as `verifyRegionTrait` or
    `verifyWithRegions=1`. This implies the verifier needs to access the
    operations in its regions.
-1. Custom verifier which is defined in the op and has marked
+2. Custom verifier which is defined in the op and has been marked
    `hasRegionVerifier=1`
 
 Note that the second phase will be run after the operations in the region are
