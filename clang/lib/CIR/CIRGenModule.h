@@ -131,12 +131,25 @@ private:
     // from switches.
     mlir::Block *EntryBlock;
 
+    // FIXME: perhaps we can use some info encoded in operations.
+    enum Kind {
+      Regular, // cir.if, cir.scope, if_regions
+      Switch   // cir.switch
+    } ScopeKind = Regular;
+
   public:
     unsigned Depth = 0;
     bool HasReturn = false;
     LexicalScopeContext(mlir::Location b, mlir::Location e, mlir::Block *eb)
         : EntryBlock(eb), BeginLoc(b), EndLoc(e) {}
     ~LexicalScopeContext() = default;
+
+    // ---
+    // Kind
+    // ---
+    bool isRegular() { return ScopeKind == Kind::Regular; }
+    bool isSwitch() { return ScopeKind == Kind::Switch; }
+    void setAsSwitch() { ScopeKind = Kind::Switch; }
 
     // ---
     // Goto handling
@@ -173,24 +186,42 @@ private:
     // Return handling
     // ---
 
-    // Return block info for this scope.
-    mlir::Block *RetBlock = nullptr;
-    std::optional<mlir::Location> RetLoc;
+  private:
+    // On switches we need one return block per region, since cases don't
+    // have their own scopes but are distinct regions nonetheless.
+    llvm::SmallVector<mlir::Block *> RetBlocks;
+    llvm::SmallVector<std::optional<mlir::Location>> RetLocs;
+    unsigned int CurrentSwitchRegionIdx = -1;
 
     // There's usually only one ret block per scope, but this needs to be
     // get or create because of potential unreachable return statements, note
     // that for those, all source location maps to the first one found.
+    mlir::Block *createRetBlock(CIRGenModule &CGM, mlir::Location loc) {
+      assert((isSwitch() || RetBlocks.size() == 0) &&
+             "only switches can hold more than one ret block");
+
+      // Create the cleanup block but dont hook it up around just yet.
+      mlir::OpBuilder::InsertionGuard guard(CGM.builder);
+      auto *b = CGM.builder.createBlock(CGM.builder.getBlock()->getParent());
+      RetBlocks.push_back(b);
+      RetLocs.push_back(loc);
+      return b;
+    }
+
+  public:
+    void updateCurrentSwitchCaseRegion() { CurrentSwitchRegionIdx++; }
+    llvm::ArrayRef<mlir::Block *> getRetBlocks() { return RetBlocks; }
+    llvm::ArrayRef<std::optional<mlir::Location>> getRetLocs() {
+      return RetLocs;
+    }
+
     mlir::Block *getOrCreateRetBlock(CIRGenModule &CGM, mlir::Location loc) {
-      if (RetBlock)
-        return RetBlock;
-      RetLoc = loc;
-      {
-        // Create the cleanup block but dont hook it up around just yet.
-        mlir::OpBuilder::InsertionGuard guard(CGM.builder);
-        RetBlock = CGM.builder.createBlock(CGM.builder.getBlock()->getParent());
-      }
-      assert(CGM.builder.getInsertionBlock() && "Should be valid");
-      return RetBlock;
+      unsigned int regionIdx = 0;
+      if (isSwitch())
+        regionIdx = CurrentSwitchRegionIdx;
+      if (regionIdx >= RetBlocks.size())
+        return createRetBlock(CGM, loc);
+      return &*RetBlocks.back();
     }
 
     // ---
