@@ -9,6 +9,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "gtest/gtest.h"
 
+#include <climits>
 #include <list>
 #include <vector>
 
@@ -987,6 +988,34 @@ TEST(STLExtrasTest, IsContainedInitializerList) {
 
   static_assert(is_contained({1, 2, 3, 4}, 3), "It's there!");
   static_assert(!is_contained({1, 2, 3, 4}, 5), "It's not there :(");
+}
+
+TEST(STLExtrasTest, addEnumValues) {
+  enum A { Zero = 0, One = 1 };
+  enum B { IntMax = INT_MAX, ULongLongMax = ULLONG_MAX };
+  enum class C : unsigned { Two = 2 };
+
+  // Non-fixed underlying types, with same underlying types
+  static_assert(addEnumValues(Zero, One) == 1,
+                "addEnumValues(Zero, One) failed.");
+  static_assert(addEnumValues(IntMax, ULongLongMax) ==
+                    INT_MAX + static_cast<unsigned long long>(ULLONG_MAX),
+                "addEnumValues(IntMax, ULongLongMax) failed.");
+  // Non-fixed underlying types, with different underlying types
+  static_assert(addEnumValues(Zero, IntMax) == INT_MAX,
+                "addEnumValues(Zero, IntMax) failed.");
+  static_assert(addEnumValues(One, ULongLongMax) ==
+                    1 + static_cast<unsigned long long>(ULLONG_MAX),
+                "addEnumValues(One, ULongLongMax) failed.");
+  // Non-fixed underlying type enum and fixed underlying type enum, with same
+  // underlying types
+  static_assert(addEnumValues(One, C::Two) == 3,
+                "addEnumValues(One, C::Two) failed.");
+  // Non-fixed underlying type enum and fixed underlying type enum, with
+  // different underlying types
+  static_assert(addEnumValues(ULongLongMax, C::Two) ==
+                    static_cast<unsigned long long>(ULLONG_MAX) + 2,
+                "addEnumValues(ULongLongMax, C::Two) failed.");
 }
 
 } // namespace
