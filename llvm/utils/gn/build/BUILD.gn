@@ -59,7 +59,7 @@ config("compiler_defaults") {
 
   assert(symbol_level == 0 || symbol_level == 1 || symbol_level == 2,
          "Unexpected symbol_level")
-  if (host_os != "win") {
+  if (current_os != "win") {
     if (symbol_level == 2) {
       cflags += [ "-g" ]
 
@@ -69,7 +69,7 @@ config("compiler_defaults") {
       # people doing symbol_level=2 want to run a debugger (since
       # symbol_level=2 isn't the default). So this seems like the right
       # tradeoff.
-      if (host_os != "mac" && use_lld) {
+      if (current_os != "mac" && use_lld) {
         cflags += [ "-ggnu-pubnames" ]  # PR34820
         ldflags += [ "-Wl,--gdb-index" ]
 
@@ -168,7 +168,7 @@ config("compiler_defaults") {
   }
 
   # Warning setup.
-  if (host_os == "win" && !is_clang) {
+  if (current_os == "win" && !is_clang) {
     cflags += [
       # Suppress ''modifier' : used more than once' (__forceinline and inline).
       "-wd4141",
@@ -192,7 +192,7 @@ config("compiler_defaults") {
       "-wd4805",
     ]
   } else {
-    if (host_os == "win") {
+    if (current_os == "win") {
       cflags += [ "/W4" ]
     } else {
       cflags += [
@@ -247,7 +247,7 @@ config("compiler_defaults") {
   }
 
   # On Windows, the linker is not invoked through the compiler driver.
-  if (use_lld && host_os != "win") {
+  if (use_lld && current_os != "win") {
     ldflags += [ "-fuse-ld=lld" ]
   }
 
@@ -267,7 +267,7 @@ config("compiler_defaults") {
       "-fprofile-instr-generate=" +
           rebase_path("$root_build_dir/profiles/%4m.profraw"),
     ]
-    if (host_os != "win") {
+    if (current_os != "win") {
       ldflags += [ "-fprofile-instr-generate" ]
     }
   }
@@ -365,7 +365,7 @@ config("compiler_defaults") {
 
     cflags += [ "-flto=thin" ]
 
-    if (host_os == "win") {
+    if (current_os == "win") {
       ldflags += [
         "/opt:lldlto=" + lto_opt_level,
         "/opt:lldltojobs=" + max_jobs_per_lto_link,
@@ -384,7 +384,7 @@ config("compiler_defaults") {
 
 config("no_exceptions") {
   cflags_cc = []
-  if (host_os != "win") {
+  if (current_os != "win") {
     cflags_cc += [ "-fno-exceptions" ]
   }
   cflags_objcc = cflags_cc
@@ -434,7 +434,7 @@ config("lld_code") {
 }
 
 config("clang_code") {
-  if (host_os != "win") {
+  if (current_os != "win") {
     cflags = [ "-fno-strict-aliasing" ]
   }
   include_dirs = [
@@ -472,7 +472,7 @@ config("crt_code") {
 }
 
 config("lldb_code") {
-  if (host_os != "win") {
+  if (current_os != "win") {
     cflags = [ "-fno-strict-aliasing" ]
   }
   include_dirs = [
