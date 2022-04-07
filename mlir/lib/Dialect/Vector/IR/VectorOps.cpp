@@ -1496,6 +1496,7 @@ public:
     Operation *defOp = extractOp.getVector().getDefiningOp();
     if (!defOp || !isa<vector::BroadcastOp, SplatOp>(defOp))
       return failure();
+
     Value source = defOp->getOperand(0);
     if (extractOp.getType() == source.getType())
       return failure();
@@ -1504,10 +1505,10 @@ public:
     };
     unsigned broadcastSrcRank = getRank(source.getType());
     unsigned extractResultRank = getRank(extractOp.getType());
-    // We only consider the case where the rank of the source is smaller than
-    // the rank of the extract dst. The other cases are handled in the folding
-    // patterns.
-    if (extractResultRank <= broadcastSrcRank)
+    // We only consider the case where the rank of the source is less than or
+    // equal to the rank of the extract dst. The other cases are handled in the
+    // folding patterns.
+    if (extractResultRank < broadcastSrcRank)
       return failure();
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
         extractOp, extractOp.getType(), source);
