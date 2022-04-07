@@ -526,11 +526,29 @@ struct InitFromVarDecl {
   }
 };
 
-struct AlreadyHasInit {
+struct HasInClassInit {
   int m = 4;
-  AlreadyHasInit() {
+  HasInClassInit() {
     m = 3;
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: 'm' should be initialized in a member initializer of the constructor
+  }
+};
+
+struct HasInitListInit {
+  int M;
+  // CHECK-MESSAGES: :[[@LINE+5]]:5: warning: 'M' should be initialized in a member initializer of the constructor
+  // CHECK-FIXES: HasInitListInit(const HasInitListInit &Other) : M(Other.M) {
+  // CHECK-FIXES-NEXT: {{^    $}}
+  // CHECK-FIXES-NEXT: }
+  HasInitListInit(const HasInitListInit &Other) : M(4) {
+    M = Other.M;
+  }
+  // CHECK-MESSAGES: :[[@LINE+5]]:5: warning: 'M' should be initialized in a member initializer of the constructor
+  // CHECK-FIXES: HasInitListInit(HasInitListInit &&Other) : M(Other.M) {
+  // CHECK-FIXES-NEXT: {{^    $}}
+  // CHECK-FIXES-NEXT: }
+  HasInitListInit(HasInitListInit &&Other) : M() {
+    M = Other.M;
   }
 };
 
