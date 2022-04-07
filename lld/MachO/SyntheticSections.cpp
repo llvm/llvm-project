@@ -908,6 +908,11 @@ void SymtabSection::emitStabs() {
       ObjFile *file = dyn_cast_or_null<ObjFile>(isec->getFile());
       if (!file || !file->compileUnit)
         continue;
+
+      // All symbols that set includeInSymtab to false are synthetic symbols.
+      // Those have `file` set to nullptr and were already skipped due to that.
+      assert(defined->includeInSymtab);
+
       symbolsNeedingStabs.push_back(defined);
     }
   }

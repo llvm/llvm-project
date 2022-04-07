@@ -230,8 +230,9 @@ Defined *SymbolTable::addSynthetic(StringRef name, InputSection *isec,
                                    uint64_t value, bool isPrivateExtern,
                                    bool includeInSymtab,
                                    bool referencedDynamically) {
+  assert(!isec || !isec->getFile()); // See makeSyntheticInputSection().
   Defined *s =
-      addDefined(name, nullptr, isec, value, /*size=*/0,
+      addDefined(name, /*file=*/nullptr, isec, value, /*size=*/0,
                  /*isWeakDef=*/false, isPrivateExtern,
                  /*isThumb=*/false, referencedDynamically,
                  /*noDeadStrip=*/false, /*isWeakDefCanBeHidden=*/false);
