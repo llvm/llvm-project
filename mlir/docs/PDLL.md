@@ -1006,17 +1006,11 @@ External constraints are those registered explicitly with the `RewritePatternSet
 the C++ PDL API. For example, the constraints above may be registered as:
 
 ```c++
-// TODO: Cleanup when we allow more accessible wrappers around PDL functions.
-static LogicalResult hasOneUseImpl(PDLValue pdlValue, PatternRewriter &rewriter) {
-  Value value = pdlValue.cast<Value>();
-  
+static LogicalResult hasOneUseImpl(PatternRewriter &rewriter, Value value) {
   return success(value.hasOneUse());
 }
-static LogicalResult hasSameElementTypeImpl(ArrayRef<PDLValue> pdlValues,
-                                            PatternRewriter &rewriter) {
-  Value value1 = pdlValues[0].cast<Value>();
-  Value value2 = pdlValues[1].cast<Value>();
-      
+static LogicalResult hasSameElementTypeImpl(PatternRewriter &rewriter,
+                                            Value value1, Value Value2) {
   return success(value1.getType().cast<ShapedType>().getElementType() ==
                  value2.getType().cast<ShapedType>().getElementType());
 }
@@ -1307,14 +1301,10 @@ External rewrites are those registered explicitly with the `RewritePatternSet` v
 the C++ PDL API. For example, the rewrite above may be registered as:
 
 ```c++
-// TODO: Cleanup when we allow more accessible wrappers around PDL functions.
-static void buildOpImpl(ArrayRef<PDLValue> args, PatternRewriter &rewriter,
-                        PDLResultList &results) {
-  Value value = args[0].cast<Value>();
-
+static Operation *buildOpImpl(PDLResultList &results, Value value) {
   // insert special rewrite logic here.
   Operation *resultOp = ...; 
-  results.push_back(resultOp);
+  return resultOp;
 }
 
 void registerNativeRewrite(RewritePatternSet &patterns) {

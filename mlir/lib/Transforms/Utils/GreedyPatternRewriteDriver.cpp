@@ -76,7 +76,7 @@ protected:
 
   /// PatternRewriter hook for notifying match failure reasons.
   LogicalResult
-  notifyMatchFailure(Operation *op,
+  notifyMatchFailure(Location loc,
                      function_ref<void(Diagnostic &)> reasonCallback) override;
 
   /// The low-level pattern applicator.
@@ -348,9 +348,9 @@ void GreedyPatternRewriteDriver::eraseOp(Operation *op) {
 }
 
 LogicalResult GreedyPatternRewriteDriver::notifyMatchFailure(
-    Operation *op, function_ref<void(Diagnostic &)> reasonCallback) {
+    Location loc, function_ref<void(Diagnostic &)> reasonCallback) {
   LLVM_DEBUG({
-    Diagnostic diag(op->getLoc(), DiagnosticSeverity::Remark);
+    Diagnostic diag(loc, DiagnosticSeverity::Remark);
     reasonCallback(diag);
     logger.startLine() << "** Failure : " << diag.str() << "\n";
   });
