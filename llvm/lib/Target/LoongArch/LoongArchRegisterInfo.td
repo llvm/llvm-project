@@ -24,7 +24,8 @@ class LoongArchReg32<bits<16> Enc, string n, list<string> alt = []>
 }
 
 def sub_32 : SubRegIndex<32>;
-class LoongArchReg64<LoongArchReg32 subreg> : Register<""> {
+class LoongArchReg64<LoongArchReg32 subreg>
+    : Register<""> {
   let HWEncoding = subreg.HWEncoding;
   let SubRegs = [subreg];
   let SubRegIndices = [sub_32];
