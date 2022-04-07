@@ -42,9 +42,6 @@ llvm_config.use_default_substitutions()
 # directories.
 config.excludes = ['Inputs', 'Examples', 'CMakeLists.txt', 'README.txt', 'LICENSE.txt']
 
-# test_source_root: The root path where tests are located.
-config.test_source_root = os.path.dirname(__file__)
-
 # test_exec_root: The root path where tests should be run.
 config.test_exec_root = os.path.join(config.standalone_obj_root, 'test')
 config.standalone_tools_dir = os.path.join(config.standalone_obj_root, 'bin')
