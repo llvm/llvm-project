@@ -198,7 +198,8 @@ template("stage2_unix_toolchain") {
       "//:clang($host_toolchain)",
       "//:lld($host_toolchain)",
     ]
-    if (current_os != "ios" && current_os != "mac") {
+    if (toolchain_args.current_os != "ios" &&
+        toolchain_args.current_os != "mac") {
       ar = "bin/llvm-ar"
       deps += [ "//:llvm-ar($host_toolchain)" ]
     }
