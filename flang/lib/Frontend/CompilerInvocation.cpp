@@ -597,6 +597,9 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &res,
   res.frontendOpts_.llvmArgs =
       args.getAllArgValues(clang::driver::options::OPT_mllvm);
 
+  res.frontendOpts_.mlirArgs =
+      args.getAllArgValues(clang::driver::options::OPT_mmlir);
+
   return success;
 }
 

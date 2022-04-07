@@ -273,6 +273,10 @@ struct FrontendOptions {
   /// should only be used for debugging and experimental features.
   std::vector<std::string> llvmArgs;
 
+  /// A list of arguments to forward to MLIR's option processing; this
+  /// should only be used for debugging and experimental features.
+  std::vector<std::string> mlirArgs;
+
   // Return the appropriate input kind for a file extension. For example,
   /// "*.f" would return Language::Fortran.
   ///

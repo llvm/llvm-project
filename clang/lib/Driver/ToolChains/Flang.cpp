@@ -113,6 +113,11 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     A->render(Args, CmdArgs);
   }
 
+  for (const Arg *A : Args.filtered(options::OPT_mmlir)) {
+    A->claim();
+    A->render(Args, CmdArgs);
+  }
+
   if (Output.isFilename()) {
     CmdArgs.push_back("-o");
     CmdArgs.push_back(Output.getFilename());
