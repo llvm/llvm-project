@@ -4528,9 +4528,7 @@ bool ARMAsmParser::parseRegisterList(OperandVector &Operands, bool EnforceOrder,
       if (Reg == EndReg)
         continue;
       // The register must be in the same register class as the first.
-      if ((Reg == ARM::RA_AUTH_CODE &&
-           RC != &ARMMCRegisterClasses[ARM::GPRRegClassID]) ||
-          (Reg != ARM::RA_AUTH_CODE && !RC->contains(Reg)))
+      if (!RC->contains(Reg))
         return Error(AfterMinusLoc, "invalid register in register list");
       // Ranges must go from low to high.
       if (MRI->getEncodingValue(Reg) > MRI->getEncodingValue(EndReg))
