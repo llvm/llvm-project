@@ -350,7 +350,6 @@ body: |
     ; GFX6-NEXT: {{  $}}
     ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_vgpr1
     ; GFX6-NEXT: [[COPY1:%[0-9]+]]:vgpr(p3) = COPY $vgpr2
-    ; GFX6-NEXT: $m0 = S_MOV_B32 -1
     ; GFX6-NEXT: G_STORE [[COPY]](p1), [[COPY1]](p3) :: (store (p1), align 4, addrspace 3)
     %0:vgpr(p1) = COPY $vgpr0_vgpr1
     %1:vgpr(p3) = COPY $vgpr2
@@ -438,7 +437,6 @@ body: |
     ; GFX6-NEXT: {{  $}}
     ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr(<4 x s16>) = COPY $vgpr0_vgpr1
     ; GFX6-NEXT: [[COPY1:%[0-9]+]]:vgpr(p3) = COPY $vgpr2
-    ; GFX6-NEXT: $m0 = S_MOV_B32 -1
     ; GFX6-NEXT: G_STORE [[COPY]](<4 x s16>), [[COPY1]](p3) :: (store (<4 x s16>), align 4, addrspace 3)
     %0:vgpr(<4 x s16>) = COPY $vgpr0_vgpr1
     %1:vgpr(p3) = COPY $vgpr2
