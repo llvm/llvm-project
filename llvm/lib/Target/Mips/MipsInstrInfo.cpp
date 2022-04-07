@@ -597,6 +597,18 @@ bool MipsInstrInfo::SafeInFPUDelaySlot(const MachineInstr &MIInSlot,
   return true;
 }
 
+/// Predicate for distinguishing instructions that are hazardous in a load delay
+/// slot. Consider inline assembly as unsafe as well.
+bool MipsInstrInfo::SafeInLoadDelaySlot(const MachineInstr &MIInSlot,
+                                        const MachineInstr &LoadMI) const {
+  if (MIInSlot.isInlineAsm())
+    return false;
+
+  return !llvm::any_of(LoadMI.defs(), [&](const MachineOperand &Op) {
+    return Op.isReg() && MIInSlot.readsRegister(Op.getReg());
+  });
+}
+
 /// Predicate for distingushing instructions that have forbidden slots.
 bool MipsInstrInfo::HasForbiddenSlot(const MachineInstr &MI) const {
   return (MI.getDesc().TSFlags & MipsII::HasForbiddenSlot) != 0;
@@ -616,6 +628,22 @@ bool MipsInstrInfo::HasFPUDelaySlot(const MachineInstr &MI) const {
   case Mips::FCMP_D64:
     return true;
 
+  default:
+    return false;
+  }
+}
+
+/// Predicate for distingushing instructions that have load delay slots.
+bool MipsInstrInfo::HasLoadDelaySlot(const MachineInstr &MI) const {
+  switch (MI.getOpcode()) {
+  case Mips::LB:
+  case Mips::LBu:
+  case Mips::LH:
+  case Mips::LHu:
+  case Mips::LW:
+  case Mips::LWR:
+  case Mips::LWL:
+    return true;
   default:
     return false;
   }
