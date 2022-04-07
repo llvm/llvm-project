@@ -190,12 +190,33 @@ __enqueue_kernel_basic(queue_t q, kernel_enqueue_flags_t f, const ndrange_t r, v
     // Set up kernarg
     copy_captured_context(aw->aql.kernarg_address, capture, csize, calign);
     __global size_t *implicit = (__global size_t *)((__global char *)aw->aql.kernarg_address + align_up(csize, sizeof(size_t)));
-    implicit[0] = r.globalWorkOffset[0];
-    implicit[1] = r.globalWorkOffset[1];
-    implicit[2] = r.globalWorkOffset[2];
-    implicit[3] = (size_t)get_printf_ptr();
-    implicit[4] = (size_t)get_vqueue();
-    implicit[5] = (size_t)aw;
+    if (__oclc_ABI_version < 500) {
+        implicit[0] = r.globalWorkOffset[0];
+        implicit[1] = r.globalWorkOffset[1];
+        implicit[2] = r.globalWorkOffset[2];
+        implicit[3] = (size_t)get_printf_ptr();
+        implicit[4] = (size_t)get_vqueue();
+        implicit[5] = (size_t)aw;
+    } else {
+        implicit[0] = ((size_t)((uint)r.globalWorkSize[0] / (ushort)r.localWorkSize[0])) |
+                      ((size_t)((uint)r.globalWorkSize[1] / (ushort)r.localWorkSize[1]) << 32);
+        implicit[1] = ((size_t)((uint)r.globalWorkSize[2] / (ushort)r.localWorkSize[2])) |
+                      ((size_t)(ushort)r.localWorkSize[0] << 32) |
+                      ((size_t)(ushort)r.localWorkSize[1] << 48);
+        implicit[2] = ((size_t)(ushort)r.localWorkSize[2]) |
+                      ((size_t)((uint)r.globalWorkSize[0] % (ushort)r.localWorkSize[0]) << 16) |
+                      ((size_t)((uint)r.globalWorkSize[1] % (ushort)r.localWorkSize[1]) << 32) |
+                      ((size_t)((uint)r.globalWorkSize[2] % (ushort)r.localWorkSize[2]) << 48);
+        implicit[5] = r.globalWorkOffset[0];
+        implicit[6] = r.globalWorkOffset[1];
+        implicit[7] = r.globalWorkOffset[2];
+        implicit[8] = (size_t)(ushort)r.workDimension;
+        implicit[9] = (size_t)get_printf_ptr();
+        implicit[13] = (size_t)get_vqueue();
+        implicit[14] = (size_t)aw;
+        implicit[24] = get_bases();
+        implicit[25] = get_hsa_queue();
+    }
 
     const __global struct rtinfo *rti = (const __global struct rtinfo *)block;
 
@@ -264,12 +285,33 @@ __enqueue_kernel_basic_events(queue_t q, kernel_enqueue_flags_t f, const ndrange
     // Set up kernarg
     copy_captured_context(aw->aql.kernarg_address, capture, csize, calign);
     __global size_t *implicit = (__global size_t *)((__global char *)aw->aql.kernarg_address + align_up(csize, sizeof(size_t)));
-    implicit[0] = r.globalWorkOffset[0];
-    implicit[1] = r.globalWorkOffset[1];
-    implicit[2] = r.globalWorkOffset[2];
-    implicit[3] = (size_t)get_printf_ptr();
-    implicit[4] = (size_t)get_vqueue();
-    implicit[5] = (size_t)aw;
+    if (__oclc_ABI_version < 500) {
+        implicit[0] = r.globalWorkOffset[0];
+        implicit[1] = r.globalWorkOffset[1];
+        implicit[2] = r.globalWorkOffset[2];
+        implicit[3] = (size_t)get_printf_ptr();
+        implicit[4] = (size_t)get_vqueue();
+        implicit[5] = (size_t)aw;
+    } else {
+        implicit[0] = ((size_t)((uint)r.globalWorkSize[0] / (ushort)r.localWorkSize[0])) |
+                      ((size_t)((uint)r.globalWorkSize[1] / (ushort)r.localWorkSize[1]) << 32);
+        implicit[1] = ((size_t)((uint)r.globalWorkSize[2] / (ushort)r.localWorkSize[2])) |
+                      ((size_t)(ushort)r.localWorkSize[0] << 32) |
+                      ((size_t)(ushort)r.localWorkSize[1] << 48);
+        implicit[2] = ((size_t)(ushort)r.localWorkSize[2]) |
+                      ((size_t)((uint)r.globalWorkSize[0] % (ushort)r.localWorkSize[0]) << 16) |
+                      ((size_t)((uint)r.globalWorkSize[1] % (ushort)r.localWorkSize[1]) << 32) |
+                      ((size_t)((uint)r.globalWorkSize[2] % (ushort)r.localWorkSize[2]) << 48);
+        implicit[5] = r.globalWorkOffset[0];
+        implicit[6] = r.globalWorkOffset[1];
+        implicit[7] = r.globalWorkOffset[2];
+        implicit[8] = (size_t)(ushort)r.workDimension;
+        implicit[9] = (size_t)get_printf_ptr();
+        implicit[13] = (size_t)get_vqueue();
+        implicit[14] = (size_t)aw;
+        implicit[24] = get_bases();
+        implicit[25] = get_hsa_queue();
+    }
 
     const __global struct rtinfo *rti = (const __global struct rtinfo *)block;
 
@@ -336,12 +378,33 @@ __enqueue_kernel_varargs(queue_t q, kernel_enqueue_flags_t f, const ndrange_t r,
 
     __global size_t *implicit = (__global size_t *)((__global char *)aw->aql.kernarg_address +
             align_up(align_up(csize, sizeof(uint)) + nl*sizeof(uint), sizeof(size_t)));
-    implicit[0] = r.globalWorkOffset[0];
-    implicit[1] = r.globalWorkOffset[1];
-    implicit[2] = r.globalWorkOffset[2];
-    implicit[3] = (size_t)get_printf_ptr();
-    implicit[4] = (size_t)get_vqueue();
-    implicit[5] = (size_t)aw;
+    if (__oclc_ABI_version < 500) {
+        implicit[0] = r.globalWorkOffset[0];
+        implicit[1] = r.globalWorkOffset[1];
+        implicit[2] = r.globalWorkOffset[2];
+        implicit[3] = (size_t)get_printf_ptr();
+        implicit[4] = (size_t)get_vqueue();
+        implicit[5] = (size_t)aw;
+    } else {
+        implicit[0] = ((size_t)((uint)r.globalWorkSize[0] / (ushort)r.localWorkSize[0])) |
+                      ((size_t)((uint)r.globalWorkSize[1] / (ushort)r.localWorkSize[1]) << 32);
+        implicit[1] = ((size_t)((uint)r.globalWorkSize[2] / (ushort)r.localWorkSize[2])) |
+                      ((size_t)(ushort)r.localWorkSize[0] << 32) |
+                      ((size_t)(ushort)r.localWorkSize[1] << 48);
+        implicit[2] = ((size_t)(ushort)r.localWorkSize[2]) |
+                      ((size_t)((uint)r.globalWorkSize[0] % (ushort)r.localWorkSize[0]) << 16) |
+                      ((size_t)((uint)r.globalWorkSize[1] % (ushort)r.localWorkSize[1]) << 32) |
+                      ((size_t)((uint)r.globalWorkSize[2] % (ushort)r.localWorkSize[2]) << 48);
+        implicit[5] = r.globalWorkOffset[0];
+        implicit[6] = r.globalWorkOffset[1];
+        implicit[7] = r.globalWorkOffset[2];
+        implicit[8] = (size_t)(ushort)r.workDimension;
+        implicit[9] = (size_t)get_printf_ptr();
+        implicit[13] = (size_t)get_vqueue();
+        implicit[14] = (size_t)aw;
+        implicit[24] = get_bases();
+        implicit[25] = get_hsa_queue();
+    }
 
     __global AmdAqlWrap *me = get_aql_wrap();
 
@@ -424,12 +487,31 @@ __enqueue_kernel_events_varargs(queue_t q, kernel_enqueue_flags_t f, const ndran
 
     __global size_t *implicit = (__global size_t *)((__global char *)aw->aql.kernarg_address +
             align_up(align_up(csize, sizeof(uint)) + nl*sizeof(uint), sizeof(size_t)));
-    implicit[0] = r.globalWorkOffset[0];
-    implicit[1] = r.globalWorkOffset[1];
-    implicit[2] = r.globalWorkOffset[2];
-    implicit[3] = (size_t)get_printf_ptr();
-    implicit[4] = (size_t)get_vqueue();
-    implicit[5] = (size_t)aw;
+    if (__oclc_ABI_version < 500) {
+        implicit[0] = r.globalWorkOffset[0];
+        implicit[1] = r.globalWorkOffset[1];
+        implicit[2] = r.globalWorkOffset[2];
+        implicit[3] = (size_t)get_printf_ptr();
+        implicit[4] = (size_t)get_vqueue();
+        implicit[5] = (size_t)aw;
+    } else {
+        implicit[0] = ((size_t)((uint)r.globalWorkSize[0] / (ushort)r.localWorkSize[0])) |
+                      ((size_t)((uint)r.globalWorkSize[1] / (ushort)r.localWorkSize[1]) << 32);
+        implicit[1] = ((size_t)((uint)r.globalWorkSize[2] / (ushort)r.localWorkSize[2])) |
+                      ((size_t)(ushort)r.localWorkSize[0] << 32) |
+                      ((size_t)(ushort)r.localWorkSize[1] << 48);
+        implicit[2] = ((size_t)(ushort)r.localWorkSize[2]) |
+                      ((size_t)((uint)r.globalWorkSize[0] % (ushort)r.localWorkSize[0]) << 16) |
+                      ((size_t)((uint)r.globalWorkSize[1] % (ushort)r.localWorkSize[1]) << 32) |
+                      ((size_t)((uint)r.globalWorkSize[2] % (ushort)r.localWorkSize[2]) << 48);
+        implicit[5] = r.globalWorkOffset[0];
+        implicit[6] = r.globalWorkOffset[1];
+        implicit[7] = r.globalWorkOffset[2];
+        implicit[8] = (size_t)(ushort)r.workDimension;
+        implicit[9] = (size_t)get_printf_ptr();
+        implicit[13] = (size_t)get_vqueue();
+        implicit[14] = (size_t)aw;
+    }
 
     __global AmdAqlWrap *me = get_aql_wrap();
 

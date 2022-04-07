@@ -170,11 +170,6 @@ typedef struct heap_s {
 #endif
 } heap_t;
 
-// TODO: get the heap pointer from the language runtime
-static __global heap_t heap;
-#define HEAP_POINTER &heap
-
-
 // Inhibit control flow optimizations
 #define O0(X) X = o0(X)
 __attribute__((overloadable)) static int o0(int x) { int y; __asm__ volatile("; O0 %0" : "=v"(y) : "0"(x)); return y; }
@@ -190,8 +185,19 @@ __attribute__((overloadable)) static ulong o0(ulong x) { ulong y; __asm__ volati
 #define AFO(P, V, O) __opencl_atomic_fetch_or (P, V, O, memory_scope_device)
 #define ACE(P, E, V, O) __opencl_atomic_compare_exchange_strong(P, E, V, O, O, memory_scope_device)
 
+// get the heap pointer
+static __global heap_t *
+get_heap_ptr(void) {
+    if (__oclc_ABI_version < 500) {
+        static __global heap_t heap;
+        return &heap;
+    } else {
+        return (__global heap_t *)((__constant size_t *)__builtin_amdgcn_implicitarg_ptr())[12];
+    }
+}
+
 // realtime
-__attribute__((target("s-memrealtime")))static ulong
+__attribute__((target("s-memrealtime"))) static ulong
 realtime(void)
 {
     return __builtin_amdgcn_s_memrealtime();
@@ -382,7 +388,7 @@ non_slab_free(ulong addr)
     uint nactive = active_lane_count();
 
     if (aid == 0) {
-        __global heap_t *hp = HEAP_POINTER;
+        __global heap_t *hp = get_heap_ptr();
         AFS(&hp->num_nonslab_allocations, nactive, memory_order_relaxed);
     }
 #endif
@@ -404,7 +410,7 @@ __ockl_dm_dealloc(ulong addr)
     kind_t my_k = sptr->k;
     sid_t my_i = sptr->i;
 
-    __global heap_t *hp = HEAP_POINTER;
+    __global heap_t *hp = get_heap_ptr();
     int go = 1;
     do {
         o0(go);
@@ -446,7 +452,7 @@ non_slab_malloc(size_t sz)
         uint nactive = active_lane_count();
 
         if (aid == 0) {
-            __global heap_t *hp = HEAP_POINTER;
+            __global heap_t *hp = get_heap_ptr();
             AFA(&hp->num_nonslab_allocations, nactive, memory_order_relaxed);
         }
     }
@@ -898,7 +904,7 @@ slab_malloc(int sz)
 {
     kind_t my_k = size_to_kind(sz);
     __global void *ret = (__global void *)0;
-    __global heap_t *hp = HEAP_POINTER;
+    __global heap_t *hp = get_heap_ptr();
 
     int k_go = 1;
     do {
@@ -949,7 +955,7 @@ __ockl_dm_alloc(ulong sz)
 ulong
 __ockl_dm_nna(void)
 {
-    __global heap_t *hp = HEAP_POINTER;
+    __global heap_t *hp = get_heap_ptr();
     return AL(&hp->num_nonslab_allocations, memory_order_relaxed);
 }
 #endif

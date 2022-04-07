@@ -1,4 +1,5 @@
 
+#include "oclc.h"
 #include "device_amd_hsa.h"
 
 #pragma OPENCL EXTENSION cl_amd_media_ops2 : enable
@@ -85,26 +86,49 @@ typedef struct _AmdEvent {
 // XXX this needs to match workgroup/wg.h MAX_WAVES_PER_SIMD
 #define CL_DEVICE_MAX_WORK_GROUP_SIZE 256
 
-// ABI has 6 implicit trailing arguments:
-//  global_offset[3], printf_buf, default vqueue pointer, and self AqlWrap pointer
-#define NUM_IMPLICIT_ARGS 6
+// ABI has implicit trailing arguments
+#define NUM_IMPLICIT_ARGS (__oclc_ABI_version < 500 ? 7 : 32)
 
 static inline __global void *
 get_printf_ptr(void)
 {
-    return (__global void *)(((__constant size_t *)__builtin_amdgcn_implicitarg_ptr())[3]);
+    if (__oclc_ABI_version < 500) {
+        return (__global void *)(((__constant size_t *)__builtin_amdgcn_implicitarg_ptr())[3]);
+    } else {
+        return (__global void *)(((__constant size_t *)__builtin_amdgcn_implicitarg_ptr())[9]);
+    }
 }
 
 static inline __global AmdVQueueHeader *
 get_vqueue(void)
 {
-    return (__global AmdVQueueHeader *)(((__constant size_t *)__builtin_amdgcn_implicitarg_ptr())[4]);
+    if (__oclc_ABI_version < 500) {
+        return (__global AmdVQueueHeader *)(((__constant size_t *)__builtin_amdgcn_implicitarg_ptr())[4]);
+    } else {
+        return (__global AmdVQueueHeader *)(((__constant size_t *)__builtin_amdgcn_implicitarg_ptr())[13]);
+    }
 }
 
 static inline __global AmdAqlWrap *
 get_aql_wrap(void)
 {
-    return (__global AmdAqlWrap *)(((__constant size_t *)__builtin_amdgcn_implicitarg_ptr())[5]);
+    if (__oclc_ABI_version < 500) {
+        return (__global AmdAqlWrap *)(((__constant size_t *)__builtin_amdgcn_implicitarg_ptr())[5]);
+    } else {
+        return (__global AmdAqlWrap *)(((__constant size_t *)__builtin_amdgcn_implicitarg_ptr())[14]);
+    }
+}
+
+static inline size_t
+get_bases(void)
+{
+    return ((__constant size_t *)__builtin_amdgcn_implicitarg_ptr())[24];
+}
+
+static inline size_t
+get_hsa_queue(void)
+{
+    return ((__constant size_t *)__builtin_amdgcn_implicitarg_ptr())[25];
 }
 
 // reserve a slot in a bitmask controlled resource

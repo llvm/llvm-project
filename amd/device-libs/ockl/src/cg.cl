@@ -6,6 +6,7 @@
  *===------------------------------------------------------------------------*/
 
 #include "irif.h"
+#include "oclc.h"
 #include "ockl.h"
 
 #define AL(P) __opencl_atomic_load((__global atomic_uint *)P, memory_order_relaxed, memory_scope_all_svm_devices)
@@ -28,7 +29,11 @@ struct mg_info {
 static inline size_t
 get_mg_info_arg(void)
 {
-    return ((__constant size_t *)__builtin_amdgcn_implicitarg_ptr())[6];
+    if (__oclc_ABI_version < 500) {
+        return ((__constant size_t *)__builtin_amdgcn_implicitarg_ptr())[6];
+    } else {
+        return ((__constant size_t *)__builtin_amdgcn_implicitarg_ptr())[11];
+    }
 }
 
 static inline bool

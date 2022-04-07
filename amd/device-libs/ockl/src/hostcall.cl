@@ -5,6 +5,8 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
+#include "oclc.h"
+
 /** \brief Internal implementation of hostcall.
  *
  *  *** INTERNAL USE ONLY ***
@@ -42,12 +44,12 @@ __ockl_hostcall_preview(uint service_id,
                         ulong arg0, ulong arg1, ulong arg2, ulong arg3,
                         ulong arg4, ulong arg5, ulong arg6, ulong arg7)
 {
-    // Retrieve the buffer pointer passed as an implicit kernel
-    // argument. This is at offset 3, which is the same as the OpenCL
-    // printf buffer.
-    __constant size_t *argptr =
-        (__constant size_t *)__builtin_amdgcn_implicitarg_ptr();
-    void *buffer = (void *)argptr[3];
+    void *buffer;
+    if (__oclc_ABI_version < 500) {
+        buffer = (__global void *)((__constant size_t *)__builtin_amdgcn_implicitarg_ptr())[3];
+    } else {
+        buffer = (__global void *)((__constant size_t *)__builtin_amdgcn_implicitarg_ptr())[10];
+    }
 
     return __ockl_hostcall_internal(buffer, service_id, arg0, arg1, arg2, arg3,
                                     arg4, arg5, arg6, arg7);

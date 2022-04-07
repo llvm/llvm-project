@@ -5,6 +5,8 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
+#include "oclc.h"
+
 #ifndef NULL
 #define NULL 0
 #endif
@@ -15,7 +17,12 @@
 __global char *
 __printf_alloc(uint bytes)
 {
-    __global char *ptr = (__global char *)(((__constant size_t *)__builtin_amdgcn_implicitarg_ptr())[3]);
+    __global char *ptr;
+    if (__oclc_ABI_version < 500) {
+        ptr = (__global char *)((__constant size_t *)__builtin_amdgcn_implicitarg_ptr())[3];
+    } else {
+        ptr = (__global char *)((__constant size_t *)__builtin_amdgcn_implicitarg_ptr())[9];
+    }
 
     uint size = ((__global uint *)ptr)[1];
     uint offset = atomic_load_explicit((__global atomic_uint *)ptr, memory_order_relaxed, memory_scope_device);
