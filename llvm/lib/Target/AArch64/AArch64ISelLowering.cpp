@@ -4630,9 +4630,13 @@ unsigned getSignExtendedGatherOpcode(unsigned Opcode) {
 }
 
 bool getGatherScatterIndexIsExtended(SDValue Index) {
+  // Ignore non-pointer sized indices.
+  if (Index.getValueType() != MVT::nxv2i64)
+    return false;
+
   unsigned Opcode = Index.getOpcode();
   if (Opcode == ISD::SIGN_EXTEND_INREG)
-    return true;
+    return cast<VTSDNode>(Index.getOperand(1))->getVT() == MVT::nxv2i32;
 
   if (Opcode == ISD::AND) {
     SDValue Splat = Index.getOperand(1);
