@@ -399,14 +399,12 @@ define <vscale x 4 x i32> @masked_gather_nxv4i32_u8_offsets(i32* %base, <vscale 
   ret <vscale x 4 x i32> %data
 }
 
-; TODO: The generated code is wrong because we're replicating offset[31] across
-; offset[32:63] even though the IR has explicitly zero'd those bits.
 define <vscale x 4 x i32> @masked_gather_nxv4i32_u32s8_offsets(i32* %base, <vscale x 4 x i8> %offsets, <vscale x 4 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_gather_nxv4i32_u32s8_offsets:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    sxtb z0.s, p1/m, z0.s
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0, z0.s, sxtw #2]
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0, z0.s, uxtw #2]
 ; CHECK-NEXT:    ret
   %offsets.sext = sext <vscale x 4 x i8> %offsets to <vscale x 4 x i32>
   %offsets.sext.zext = zext <vscale x 4 x i32> %offsets.sext to <vscale x 4 x i64>
@@ -482,14 +480,12 @@ define void @masked_scatter_nxv4i32_u8_offsets(i32* %base, <vscale x 4 x i8> %of
   ret void
 }
 
-; TODO: The generated code is wrong because we're replicating offset[31] across
-; offset[32:63] even though the IR has explicitly zero'd those bits.
 define void @masked_scatter_nxv4i32_u32s8_offsets(i32* %base, <vscale x 4 x i8> %offsets, <vscale x 4 x i1> %mask, <vscale x 4 x i32> %data) #0 {
 ; CHECK-LABEL: masked_scatter_nxv4i32_u32s8_offsets:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    sxtb z0.s, p1/m, z0.s
-; CHECK-NEXT:    st1w { z1.s }, p0, [x0, z0.s, sxtw #2]
+; CHECK-NEXT:    st1w { z1.s }, p0, [x0, z0.s, uxtw #2]
 ; CHECK-NEXT:    ret
   %offsets.sext = sext <vscale x 4 x i8> %offsets to <vscale x 4 x i32>
   %offsets.sext.zext = zext <vscale x 4 x i32> %offsets.sext to <vscale x 4 x i64>
