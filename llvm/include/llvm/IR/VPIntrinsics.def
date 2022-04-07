@@ -54,6 +54,12 @@
 #define END_REGISTER_VP_SDNODE(VPSD)
 #endif
 
+// Helper macro to set up the mapping from VP intrinsic to ISD opcode.
+// Note: More than one VP intrinsic may map to one ISD opcode.
+#ifndef HELPER_MAP_VPID_TO_VPSD
+#define HELPER_MAP_VPID_TO_VPSD(VPID, VPSD)
+#endif
+
 // Helper macros for the common "1:1 - Intrinsic : SDNode" case.
 //
 // There is one VP intrinsic that maps directly to one SDNode that goes by the
@@ -70,7 +76,8 @@
 //             the SDNode is used.
 #define BEGIN_REGISTER_VP(VPID, MASKPOS, EVLPOS, VPSD, LEGALPOS)               \
   BEGIN_REGISTER_VP_INTRINSIC(VPID, MASKPOS, EVLPOS)                           \
-  BEGIN_REGISTER_VP_SDNODE(VPSD, LEGALPOS, VPID, MASKPOS, EVLPOS)
+  BEGIN_REGISTER_VP_SDNODE(VPSD, LEGALPOS, VPID, MASKPOS, EVLPOS)              \
+  HELPER_MAP_VPID_TO_VPSD(VPID, VPSD)
 
 #define END_REGISTER_VP(VPID, VPSD)                                            \
   END_REGISTER_VP_INTRINSIC(VPID)                                              \
@@ -301,8 +308,14 @@ HELPER_REGISTER_INT_CAST_VP(inttoptr, VP_INTTOPTR, IntToPtr)
 ///// } Type Casts
 
 ///// Comparisons {
+
+// VP_SETCC (ISel only)
+BEGIN_REGISTER_VP_SDNODE(VP_SETCC, 0, vp_setcc, 3, 4)
+END_REGISTER_VP_SDNODE(VP_SETCC)
+
 // llvm.vp.fcmp(x,y,cc,mask,vlen)
 BEGIN_REGISTER_VP_INTRINSIC(vp_fcmp, 3, 4)
+HELPER_MAP_VPID_TO_VPSD(vp_fcmp, VP_SETCC)
 VP_PROPERTY_FUNCTIONAL_OPC(FCmp)
 VP_PROPERTY_CMP(2, true)
 VP_PROPERTY_CONSTRAINEDFP(0, 1, experimental_constrained_fcmp)
@@ -310,13 +323,10 @@ END_REGISTER_VP_INTRINSIC(vp_fcmp)
 
 // llvm.vp.icmp(x,y,cc,mask,vlen)
 BEGIN_REGISTER_VP_INTRINSIC(vp_icmp, 3, 4)
+HELPER_MAP_VPID_TO_VPSD(vp_icmp, VP_SETCC)
 VP_PROPERTY_FUNCTIONAL_OPC(ICmp)
 VP_PROPERTY_CMP(2, false)
 END_REGISTER_VP_INTRINSIC(vp_icmp)
-
-// VP_SETCC (ISel only)
-BEGIN_REGISTER_VP_SDNODE(VP_SETCC, 0, vp_setcc, 3, 4)
-END_REGISTER_VP_SDNODE(VP_SETCC)
 
 ///// } Comparisons
 
@@ -325,6 +335,7 @@ END_REGISTER_VP_SDNODE(VP_SETCC)
 BEGIN_REGISTER_VP_INTRINSIC(vp_store, 2, 3)
 // chain = VP_STORE chain,val,base,offset,mask,evl
 BEGIN_REGISTER_VP_SDNODE(VP_STORE, 0, vp_store, 4, 5)
+HELPER_MAP_VPID_TO_VPSD(vp_store, VP_STORE)
 VP_PROPERTY_FUNCTIONAL_OPC(Store)
 VP_PROPERTY_FUNCTIONAL_INTRINSIC(masked_store)
 VP_PROPERTY_MEMOP(1, 0)
@@ -334,6 +345,7 @@ END_REGISTER_VP(vp_store, VP_STORE)
 BEGIN_REGISTER_VP_INTRINSIC(experimental_vp_strided_store, 3, 4)
 // chain = EXPERIMENTAL_VP_STRIDED_STORE chain,val,base,offset,stride,mask,evl
 BEGIN_REGISTER_VP_SDNODE(EXPERIMENTAL_VP_STRIDED_STORE, 0, experimental_vp_strided_store, 5, 6)
+HELPER_MAP_VPID_TO_VPSD(experimental_vp_strided_store, EXPERIMENTAL_VP_STRIDED_STORE)
 VP_PROPERTY_MEMOP(1, 0)
 END_REGISTER_VP(experimental_vp_strided_store, EXPERIMENTAL_VP_STRIDED_STORE)
 
@@ -341,6 +353,7 @@ END_REGISTER_VP(experimental_vp_strided_store, EXPERIMENTAL_VP_STRIDED_STORE)
 BEGIN_REGISTER_VP_INTRINSIC(vp_scatter, 2, 3)
 // chain = VP_SCATTER chain,val,base,indices,scale,mask,evl
 BEGIN_REGISTER_VP_SDNODE(VP_SCATTER, -1, vp_scatter, 5, 6)
+HELPER_MAP_VPID_TO_VPSD(vp_scatter, VP_SCATTER)
 VP_PROPERTY_FUNCTIONAL_INTRINSIC(masked_scatter)
 VP_PROPERTY_MEMOP(1, 0)
 END_REGISTER_VP(vp_scatter, VP_SCATTER)
@@ -349,6 +362,7 @@ END_REGISTER_VP(vp_scatter, VP_SCATTER)
 BEGIN_REGISTER_VP_INTRINSIC(vp_load, 1, 2)
 // val,chain = VP_LOAD chain,base,offset,mask,evl
 BEGIN_REGISTER_VP_SDNODE(VP_LOAD, -1, vp_load, 3, 4)
+HELPER_MAP_VPID_TO_VPSD(vp_load, VP_LOAD)
 VP_PROPERTY_FUNCTIONAL_OPC(Load)
 VP_PROPERTY_FUNCTIONAL_INTRINSIC(masked_load)
 VP_PROPERTY_MEMOP(0, None)
@@ -358,6 +372,7 @@ END_REGISTER_VP(vp_load, VP_LOAD)
 BEGIN_REGISTER_VP_INTRINSIC(experimental_vp_strided_load, 2, 3)
 // chain = EXPERIMENTAL_VP_STRIDED_LOAD chain,base,offset,stride,mask,evl
 BEGIN_REGISTER_VP_SDNODE(EXPERIMENTAL_VP_STRIDED_LOAD, -1, experimental_vp_strided_load, 4, 5)
+HELPER_MAP_VPID_TO_VPSD(experimental_vp_strided_load, EXPERIMENTAL_VP_STRIDED_LOAD)
 VP_PROPERTY_MEMOP(0, None)
 END_REGISTER_VP(experimental_vp_strided_load, EXPERIMENTAL_VP_STRIDED_LOAD)
 
@@ -365,6 +380,7 @@ END_REGISTER_VP(experimental_vp_strided_load, EXPERIMENTAL_VP_STRIDED_LOAD)
 BEGIN_REGISTER_VP_INTRINSIC(vp_gather, 1, 2)
 // val,chain = VP_GATHER chain,base,indices,scale,mask,evl
 BEGIN_REGISTER_VP_SDNODE(VP_GATHER, -1, vp_gather, 4, 5)
+HELPER_MAP_VPID_TO_VPSD(vp_gather, VP_GATHER)
 VP_PROPERTY_FUNCTIONAL_INTRINSIC(masked_gather)
 VP_PROPERTY_MEMOP(0, None)
 END_REGISTER_VP(vp_gather, VP_GATHER)
@@ -434,6 +450,8 @@ HELPER_REGISTER_REDUCTION_VP(vp_reduce_fmin, VP_REDUCE_FMIN,
 // sequential and reassociative. These manifest as the presence of 'reassoc'
 // fast-math flags in the IR and as two distinct ISD opcodes in the
 // SelectionDAG.
+// Note we by default map from the VP intrinsic to the SEQ ISD opcode, which
+// can then be relaxed to the non-SEQ ISD opcode if the 'reassoc' flag is set.
 #ifdef HELPER_REGISTER_REDUCTION_SEQ_VP
 #error                                                                         \
     "The internal helper macro HELPER_REGISTER_REDUCTION_SEQ_VP is already defined!"
@@ -444,6 +462,7 @@ HELPER_REGISTER_REDUCTION_VP(vp_reduce_fmin, VP_REDUCE_FMIN,
   VP_PROPERTY_REDUCTION(0, 1)                                                  \
   END_REGISTER_VP_SDNODE(VPSD)                                                 \
   BEGIN_REGISTER_VP_SDNODE(SEQ_VPSD, -1, VPID, 2, 3)                           \
+  HELPER_MAP_VPID_TO_VPSD(VPID, SEQ_VPSD)                                      \
   VP_PROPERTY_REDUCTION(0, 1)                                                  \
   END_REGISTER_VP_SDNODE(SEQ_VPSD)                                             \
   VP_PROPERTY_FUNCTIONAL_INTRINSIC(INTRIN)                                     \
@@ -490,6 +509,7 @@ END_REGISTER_VP(experimental_vp_splice, EXPERIMENTAL_VP_SPLICE)
 #undef END_REGISTER_VP
 #undef END_REGISTER_VP_INTRINSIC
 #undef END_REGISTER_VP_SDNODE
+#undef HELPER_MAP_VPID_TO_VPSD
 #undef VP_PROPERTY_BINARYOP
 #undef VP_PROPERTY_CASTOP
 #undef VP_PROPERTY_CMP
