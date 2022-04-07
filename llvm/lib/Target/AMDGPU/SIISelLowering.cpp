@@ -1516,25 +1516,23 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
 
   if (AddrSpace == AMDGPUAS::LOCAL_ADDRESS ||
       AddrSpace == AMDGPUAS::REGION_ADDRESS) {
+    // Check if alignment requirements for ds_read/write instructions are
+    // disabled.
+    if (!Subtarget->hasUnalignedDSAccessEnabled() && Alignment < Align(4))
+      return false;
+
     Align RequiredAlignment(PowerOf2Ceil(Size/8)); // Natural alignment.
     if (Subtarget->hasLDSMisalignedBug() && Size > 32 &&
         Alignment < RequiredAlignment)
       return false;
-
-    // Check if alignment requirements for ds_read/write instructions are
-    // disabled.
-    if (Subtarget->hasUnalignedDSAccessEnabled()) {
-      if (IsFast)
-        *IsFast = Alignment != Align(2);
-      return true;
-    }
 
     // Either, the alignment requirements are "enabled", or there is an
     // unaligned LDS access related hardware bug though alignment requirements
     // are "disabled". In either case, we need to check for proper alignment
     // requirements.
     //
-    if (Size == 64) {
+    switch (Size) {
+    case 64:
       // SI has a hardware bug in the LDS / GDS bounds checking: if the base
       // address is negative, then the instruction is incorrectly treated as
       // out-of-bounds even if base + offsets is in bounds. Split vectorized
@@ -1546,31 +1544,41 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
       // 8 byte accessing via ds_read/write_b64 require 8-byte alignment, but we
       // can do a 4 byte aligned, 8 byte access in a single operation using
       // ds_read2/write2_b32 with adjacent offsets.
-      bool AlignedBy4 = Alignment >= Align(4);
-      if (IsFast)
-        *IsFast = AlignedBy4;
+      RequiredAlignment = Align(4);
+      break;
+    case 96:
+      if (!Subtarget->hasDS96AndDS128())
+        return false;
 
-      return AlignedBy4;
-    }
-    if (Size == 96) {
       // 12 byte accessing via ds_read/write_b96 require 16-byte alignment on
       // gfx8 and older.
-      bool AlignedBy16 = Alignment >= Align(16);
-      if (IsFast)
-        *IsFast = AlignedBy16;
+      RequiredAlignment = Align(16);
+      break;
+    case 128:
+      if (!Subtarget->hasDS96AndDS128() || !Subtarget->useDS128())
+        return false;
 
-      return AlignedBy16;
-    }
-    if (Size == 128) {
       // 16 byte accessing via ds_read/write_b128 require 16-byte alignment on
       // gfx8 and older, but  we can do a 8 byte aligned, 16 byte access in a
       // single operation using ds_read2/write2_b64.
-      bool AlignedBy8 = Alignment >= Align(8);
-      if (IsFast)
-        *IsFast = AlignedBy8;
+      RequiredAlignment = Align(8);
+      break;
+    default:
+      if (Size > 32)
+        return false;
 
-      return AlignedBy8;
+      break;
     }
+
+    if (IsFast) {
+      // FIXME: Lie it is fast if +unaligned-access-mode is passed so that
+      // DS accesses get vectorized.
+      *IsFast = Alignment >= RequiredAlignment ||
+                Subtarget->hasUnalignedDSAccessEnabled();
+    }
+
+    return Alignment >= RequiredAlignment ||
+           Subtarget->hasUnalignedDSAccessEnabled();
   }
 
   if (AddrSpace == AMDGPUAS::PRIVATE_ADDRESS) {
@@ -1595,9 +1603,7 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
     return AlignedBy4;
   }
 
-  if (Subtarget->hasUnalignedBufferAccessEnabled() &&
-      !(AddrSpace == AMDGPUAS::LOCAL_ADDRESS ||
-        AddrSpace == AMDGPUAS::REGION_ADDRESS)) {
+  if (Subtarget->hasUnalignedBufferAccessEnabled()) {
     // If we have a uniform constant load, it still requires using a slow
     // buffer instruction if unaligned.
     if (IsFast) {
@@ -8519,27 +8525,15 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
       llvm_unreachable("unsupported private_element_size");
     }
   } else if (AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::REGION_ADDRESS) {
-    // Use ds_read_b128 or ds_read_b96 when possible.
-    if (Subtarget->hasDS96AndDS128() &&
-        ((Subtarget->useDS128() && MemVT.getStoreSize() == 16) ||
-         MemVT.getStoreSize() == 12) &&
-        allowsMisalignedMemoryAccessesImpl(MemVT.getSizeInBits(), AS,
-                                           Load->getAlign()))
+    bool Fast = false;
+    auto Flags = Load->getMemOperand()->getFlags();
+    if (allowsMisalignedMemoryAccessesImpl(MemVT.getSizeInBits(), AS,
+                                           Load->getAlign(), Flags, &Fast) &&
+        Fast)
       return SDValue();
 
-    if (NumElements > 2)
+    if (MemVT.isVector())
       return SplitVectorLoad(Op, DAG);
-
-    // SI has a hardware bug in the LDS / GDS bounds checking: if the base
-    // address is negative, then the instruction is incorrectly treated as
-    // out-of-bounds even if base + offsets is in bounds. Split vectorized
-    // loads here to avoid emitting ds_read2_b32. We may re-combine the
-    // load later in the SILoadStoreOptimizer.
-    if (Subtarget->getGeneration() == AMDGPUSubtarget::SOUTHERN_ISLANDS &&
-        NumElements == 2 && MemVT.getStoreSize() == 8 &&
-        Load->getAlignment() < 8) {
-      return SplitVectorLoad(Op, DAG);
-    }
   }
 
   if (!allowsMemoryAccessForAlignment(*DAG.getContext(), DAG.getDataLayout(),
@@ -9030,36 +9024,17 @@ SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
       llvm_unreachable("unsupported private_element_size");
     }
   } else if (AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::REGION_ADDRESS) {
-    // Use ds_write_b128 or ds_write_b96 when possible.
-    if (Subtarget->hasDS96AndDS128() &&
-        ((Subtarget->useDS128() && VT.getStoreSize() == 16) ||
-         (VT.getStoreSize() == 12)) &&
-        allowsMisalignedMemoryAccessesImpl(VT.getSizeInBits(), AS,
-                                           Store->getAlign()))
+    bool Fast = false;
+    auto Flags = Store->getMemOperand()->getFlags();
+    if (allowsMisalignedMemoryAccessesImpl(VT.getSizeInBits(), AS,
+                                           Store->getAlign(), Flags, &Fast) &&
+        Fast)
       return SDValue();
 
-    if (NumElements > 2)
+    if (VT.isVector())
       return SplitVectorStore(Op, DAG);
 
-    // SI has a hardware bug in the LDS / GDS bounds checking: if the base
-    // address is negative, then the instruction is incorrectly treated as
-    // out-of-bounds even if base + offsets is in bounds. Split vectorized
-    // stores here to avoid emitting ds_write2_b32. We may re-combine the
-    // store later in the SILoadStoreOptimizer.
-    if (!Subtarget->hasUsableDSOffset() &&
-        NumElements == 2 && VT.getStoreSize() == 8 &&
-        Store->getAlignment() < 8) {
-      return SplitVectorStore(Op, DAG);
-    }
-
-    if (!allowsMemoryAccessForAlignment(*DAG.getContext(), DAG.getDataLayout(),
-                                        VT, *Store->getMemOperand())) {
-      if (VT.isVector())
-        return SplitVectorStore(Op, DAG);
-      return expandUnalignedStore(Store, DAG);
-    }
-
-    return SDValue();
+    return expandUnalignedStore(Store, DAG);
   } else {
     llvm_unreachable("unhandled address space");
   }
