@@ -270,7 +270,7 @@ bool ReduceCrashingFunctions::TestFuncs(std::vector<Function *> &Funcs) {
     // First, remove aliases to functions we're about to purge.
     for (GlobalAlias &Alias : M->aliases()) {
       GlobalObject *Root = Alias.getAliaseeObject();
-      Function *F = dyn_cast_or_null<Function>(Root);
+      auto *F = dyn_cast<Function>(Root);
       if (F) {
         if (Functions.count(F))
           // We're keeping this function.
@@ -278,7 +278,7 @@ bool ReduceCrashingFunctions::TestFuncs(std::vector<Function *> &Funcs) {
       } else if (Root->isNullValue()) {
         // This referenced a globalalias that we've already replaced,
         // so we still need to replace this alias.
-      } else if (!F) {
+      } else {
         // Not a function, therefore not something we mess with.
         continue;
       }
