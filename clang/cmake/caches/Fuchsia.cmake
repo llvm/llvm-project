@@ -4,7 +4,7 @@ set(LLVM_TARGETS_TO_BUILD X86;ARM;AArch64;RISCV CACHE STRING "")
 
 set(PACKAGE_VENDOR Fuchsia CACHE STRING "")
 
-set(LLVM_ENABLE_PROJECTS "clang;clang-tools-extra;lld;llvm;polly" CACHE STRING "")
+set(LLVM_ENABLE_PROJECTS "bolt;clang;clang-tools-extra;lld;llvm;polly" CACHE STRING "")
 
 set(LLVM_ENABLE_DIA_SDK OFF CACHE BOOL "")
 set(LLVM_ENABLE_LIBXML2 OFF CACHE BOOL "")
