@@ -1,5 +1,5 @@
 // Output file should have no calls to error() with folding.
-// RUN: %clang_cc1 -triple i386-unknown-unknown -mllvm -inline-threshold=1024 -O3 -emit-llvm -o %t %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i386-unknown-unknown -mllvm -inline-threshold=1024 -O3 -emit-llvm -o %t %s
 // RUN: FileCheck %s < %t
 
 static unsigned pow(unsigned Base, unsigned Power) {

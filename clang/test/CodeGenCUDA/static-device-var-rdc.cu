@@ -1,19 +1,19 @@
 // REQUIRES: x86-registered-target
 // REQUIRES: amdgpu-registered-target
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device \
+// RUN: %clang_cc1 -no-opaque-pointers -triple amdgcn-amd-amdhsa -fcuda-is-device \
 // RUN:   -std=c++11 -fgpu-rdc -emit-llvm -o - -x hip %s | FileCheck \
 // RUN:   -check-prefixes=DEV,INT-DEV %s
 
-// RUN: %clang_cc1 -triple x86_64-gnu-linux \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-gnu-linux \
 // RUN:   -std=c++11 -fgpu-rdc -emit-llvm -o - -x hip %s | FileCheck \
 // RUN:   -check-prefixes=HOST,INT-HOST %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -cuid=abc \
+// RUN: %clang_cc1 -no-opaque-pointers -triple amdgcn-amd-amdhsa -fcuda-is-device -cuid=abc \
 // RUN:   -std=c++11 -fgpu-rdc -emit-llvm -o - -x hip %s > %t.dev
 // RUN: cat %t.dev | FileCheck -check-prefixes=DEV,EXT-DEV %s
 
-// RUN: %clang_cc1 -triple x86_64-gnu-linux -cuid=abc \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-gnu-linux -cuid=abc \
 // RUN:   -std=c++11 -fgpu-rdc -emit-llvm -o - -x hip %s > %t.host
 // RUN: cat %t.host | FileCheck -check-prefixes=HOST,EXT-HOST %s
 
@@ -24,19 +24,19 @@
 
 // Negative tests.
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device \
+// RUN: %clang_cc1 -no-opaque-pointers -triple amdgcn-amd-amdhsa -fcuda-is-device \
 // RUN:   -std=c++11 -fgpu-rdc -emit-llvm -o - -x hip %s | FileCheck \
 // RUN:   -check-prefix=DEV-NEG %s
 
-// RUN: %clang_cc1 -triple x86_64-gnu-linux \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-gnu-linux \
 // RUN:   -std=c++11 -fgpu-rdc -emit-llvm -o - -x hip %s | FileCheck \
 // RUN:   -check-prefix=HOST-NEG %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -cuid=abc \
+// RUN: %clang_cc1 -no-opaque-pointers -triple amdgcn-amd-amdhsa -fcuda-is-device -cuid=abc \
 // RUN:   -std=c++11 -fgpu-rdc -emit-llvm -o - -x hip %s > %t.dev
 // RUN: cat %t.dev | FileCheck -check-prefix=DEV-NEG %s
 
-// RUN: %clang_cc1 -triple x86_64-gnu-linux -cuid=abc \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-gnu-linux -cuid=abc \
 // RUN:   -std=c++11 -fgpu-rdc -emit-llvm -o - -x hip %s > %t.host
 // RUN: cat %t.host | FileCheck -check-prefix=HOST-NEG %s
 

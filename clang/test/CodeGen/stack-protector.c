@@ -1,13 +1,13 @@
-// RUN: %clang_cc1 -emit-llvm -o - %s -stack-protector 0 | FileCheck -check-prefix=DEF -check-prefix=NOSSP %s
-// RUN: %clang_cc1 -emit-llvm -o - %s -stack-protector 1 | FileCheck -check-prefix=DEF -check-prefix=SSP %s
-// RUN: %clang_cc1 -emit-llvm -o - %s -stack-protector 2 | FileCheck -check-prefix=DEF -check-prefix=SSPSTRONG %s
-// RUN: %clang_cc1 -emit-llvm -o - %s -stack-protector 3 | FileCheck -check-prefix=DEF -check-prefix=SSPREQ %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -o - %s -stack-protector 0 | FileCheck -check-prefix=DEF -check-prefix=NOSSP %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -o - %s -stack-protector 1 | FileCheck -check-prefix=DEF -check-prefix=SSP %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -o - %s -stack-protector 2 | FileCheck -check-prefix=DEF -check-prefix=SSPSTRONG %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -o - %s -stack-protector 3 | FileCheck -check-prefix=DEF -check-prefix=SSPREQ %s
 
-// RUN: %clang_cc1 -emit-llvm -o - %s -fsanitize=safe-stack | FileCheck -check-prefix=DEF -check-prefix=SAFESTACK-NOSSP %s
-// RUN: %clang_cc1 -emit-llvm -o - %s -fsanitize=safe-stack -stack-protector 0 | FileCheck -check-prefix=DEF -check-prefix=SAFESTACK-NOSSP %s
-// RUN: %clang_cc1 -emit-llvm -o - %s -fsanitize=safe-stack -stack-protector 1 | FileCheck -check-prefix=DEF -check-prefix=SAFESTACK-SSP %s
-// RUN: %clang_cc1 -emit-llvm -o - %s -fsanitize=safe-stack -stack-protector 2 | FileCheck -check-prefix=DEF -check-prefix=SAFESTACK-SSPSTRONG %s
-// RUN: %clang_cc1 -emit-llvm -o - %s -fsanitize=safe-stack -stack-protector 3 | FileCheck -check-prefix=DEF -check-prefix=SAFESTACK-SSPREQ %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -o - %s -fsanitize=safe-stack | FileCheck -check-prefix=DEF -check-prefix=SAFESTACK-NOSSP %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -o - %s -fsanitize=safe-stack -stack-protector 0 | FileCheck -check-prefix=DEF -check-prefix=SAFESTACK-NOSSP %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -o - %s -fsanitize=safe-stack -stack-protector 1 | FileCheck -check-prefix=DEF -check-prefix=SAFESTACK-SSP %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -o - %s -fsanitize=safe-stack -stack-protector 2 | FileCheck -check-prefix=DEF -check-prefix=SAFESTACK-SSPSTRONG %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -o - %s -fsanitize=safe-stack -stack-protector 3 | FileCheck -check-prefix=DEF -check-prefix=SAFESTACK-SSPREQ %s
 
 typedef __SIZE_TYPE__ size_t;
 

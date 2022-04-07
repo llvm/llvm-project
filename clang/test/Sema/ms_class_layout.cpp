@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm-only -triple i686-pc-win32 -fdump-record-layouts %s 2>/dev/null \
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm-only -triple i686-pc-win32 -fdump-record-layouts %s 2>/dev/null \
 // RUN:            | FileCheck %s --strict-whitespace
 
 #pragma pack(push, 8)

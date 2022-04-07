@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64 -emit-llvm -debug-info-kind=limited %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64 -emit-llvm -debug-info-kind=limited %s -o - | FileCheck %s
 
 #define _(x) (__builtin_preserve_access_index(x))
 

@@ -1,31 +1,31 @@
 // REQUIRES: powerpc-registered-target
-// RUN: %clang_cc1 -triple powerpc-unknown-freebsd \
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc-unknown-freebsd \
 // RUN:   -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-SVR4
-// RUN: %clang_cc1 -triple powerpcle-unknown-freebsd \
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpcle-unknown-freebsd \
 // RUN:   -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-SVR4
-// RUN: %clang_cc1 -triple powerpc-unknown-aix \
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc-unknown-aix \
 // RUN:   -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-AIX
-// RUN: %clang_cc1 -triple powerpc64-unknown-aix \
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc64-unknown-aix \
 // RUN:   -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-AIX
-// RUN: %clang_cc1 -triple powerpc-unknown-linux \
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc-unknown-linux \
 // RUN:   -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-AIX
-// RUN: %clang_cc1 -triple powerpc-unknown-linux -maix-struct-return \
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc-unknown-linux -maix-struct-return \
 // RUN:   -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-AIX
-// RUN: %clang_cc1 -triple powerpc-unknown-linux -msvr4-struct-return \
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc-unknown-linux -msvr4-struct-return \
 // RUN:   -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-SVR4
-// RUN: %clang_cc1 -triple powerpcle-unknown-linux \
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpcle-unknown-linux \
 // RUN:   -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-AIX
-// RUN: %clang_cc1 -triple powerpcle-unknown-linux -maix-struct-return \
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpcle-unknown-linux -maix-struct-return \
 // RUN:   -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-AIX
-// RUN: %clang_cc1 -triple powerpcle-unknown-linux -msvr4-struct-return \
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpcle-unknown-linux -msvr4-struct-return \
 // RUN:   -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-SVR4
-// RUN: %clang_cc1 -triple powerpc-unknown-netbsd \
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc-unknown-netbsd \
 // RUN:   -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-SVR4
-// RUN: %clang_cc1 -triple powerpc-unknown-openbsd \
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc-unknown-openbsd \
 // RUN:   -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-SVR4
-// RUN: %clang_cc1 -triple powerpc-unknown-openbsd -maix-struct-return \
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc-unknown-openbsd -maix-struct-return \
 // RUN:   -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-AIX
-// RUN: %clang_cc1 -triple powerpc-unknown-openbsd -msvr4-struct-return \
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc-unknown-openbsd -msvr4-struct-return \
 // RUN:   -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-SVR4
 
 typedef struct {

@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -S -emit-llvm -o - -O2 -disable-llvm-passes %s | FileCheck %s -check-prefixes=CHECK,O2
-// RUN: %clang_cc1 -S -emit-llvm -o - -O2 -disable-lifetime-markers %s \
+// RUN: %clang_cc1 -no-opaque-pointers -S -emit-llvm -o - -O2 -disable-llvm-passes %s | FileCheck %s -check-prefixes=CHECK,O2
+// RUN: %clang_cc1 -no-opaque-pointers -S -emit-llvm -o - -O2 -disable-lifetime-markers %s \
 // RUN:       | FileCheck %s -check-prefixes=CHECK,O0
-// RUN: %clang_cc1 -S -emit-llvm -o - -O0 %s | FileCheck %s -check-prefixes=CHECK,O0
+// RUN: %clang_cc1 -no-opaque-pointers -S -emit-llvm -o - -O0 %s | FileCheck %s -check-prefixes=CHECK,O0
 
 extern int bar(char *A, int n);
 

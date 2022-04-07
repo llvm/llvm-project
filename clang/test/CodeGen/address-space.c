@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm < %s | FileCheck -enable-var-scope -check-prefixes=CHECK,X86 %s
-// RUN: %clang_cc1 -triple amdgcn -emit-llvm < %s | FileCheck -enable-var-scope -check-prefixes=CHECK,AMDGCN %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin -emit-llvm < %s | FileCheck -enable-var-scope -check-prefixes=CHECK,X86 %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple amdgcn -emit-llvm < %s | FileCheck -enable-var-scope -check-prefixes=CHECK,AMDGCN %s
 
 // CHECK: @foo ={{.*}} addrspace(1) global
 int foo __attribute__((address_space(1)));

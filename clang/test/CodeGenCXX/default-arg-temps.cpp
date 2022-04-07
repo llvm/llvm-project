@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -emit-llvm %s -o - -triple=x86_64-apple-darwin9 | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -emit-llvm %s -o - -triple=x86_64-apple-darwin9 | FileCheck %s
 
 struct T {
   T();

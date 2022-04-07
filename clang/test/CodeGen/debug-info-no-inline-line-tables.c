@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-windows-msvc -debug-info-kind=limited \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-windows-msvc -debug-info-kind=limited \
 // RUN:   -gno-inline-line-tables -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang -gno-inline-line-tables -S -emit-llvm -o - %s | FileCheck %s \
 // RUN:   -check-prefix=INLINE-FLAG

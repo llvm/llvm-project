@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 %s -triple x86_64-pc-win32 -fms-extensions -emit-llvm -O1 -disable-llvm-passes -o - | FileCheck %s
-// RUN: %clang_cc1 %s -triple i686-pc-win32 -fms-extensions -emit-llvm -O1 -disable-llvm-passes -o - | FileCheck %s
-// RUN: %clang_cc1 %s -triple aarch64-windows -fms-extensions -emit-llvm -O1 -disable-llvm-passes -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple x86_64-pc-win32 -fms-extensions -emit-llvm -O1 -disable-llvm-passes -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple i686-pc-win32 -fms-extensions -emit-llvm -O1 -disable-llvm-passes -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple aarch64-windows -fms-extensions -emit-llvm -O1 -disable-llvm-passes -o - | FileCheck %s
 // NOTE: we're passing "-O1 -disable-llvm-passes" to avoid adding optnone and noinline everywhere.
 
 void abort(void) __attribute__((noreturn));

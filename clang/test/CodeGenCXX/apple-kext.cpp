@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fno-use-cxa-atexit -fapple-kext -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -fno-use-cxa-atexit -fapple-kext -emit-llvm -o - %s | FileCheck %s
 
 // CHECK: @_ZN5test01aE ={{.*}} global [[A:%.*]] zeroinitializer
 // CHECK: @llvm.global_ctors = appending global {{.*}} { i32 65535, void ()* [[CTOR0:@.*]], i8* null }

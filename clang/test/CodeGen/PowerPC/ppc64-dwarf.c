@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple powerpc64-unknown-aix -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -triple powerpc64-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,PPC64
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc64-unknown-aix -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc64-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,PPC64
 static unsigned char dwarf_reg_size_table[1024];
 
 int test(void) {

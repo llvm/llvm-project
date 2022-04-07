@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm %s -o - -triple=i386-pc-win32 -fms-extensions | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm %s -o - -triple=i386-pc-win32 -fms-extensions | FileCheck %s
 
 const int __declspec(dllexport) &Exported = 42;
 

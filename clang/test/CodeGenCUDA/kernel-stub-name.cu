@@ -1,19 +1,19 @@
 // RUN: echo "GPU binary would be here" > %t
 
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -emit-llvm %s \
 // RUN:     -fcuda-include-gpubinary %t -o - -x hip\
 // RUN:   | FileCheck -check-prefixes=CHECK,GNU %s
 
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -emit-llvm %s \
 // RUN:     -fcuda-include-gpubinary %t -o - -x hip\
 // RUN:   | FileCheck -check-prefix=NEG %s
 
-// RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -emit-llvm %s \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-pc-windows-msvc -emit-llvm %s \
 // RUN:     -aux-triple amdgcn-amd-amdhsa -fcuda-include-gpubinary \
 // RUN:     %t -o - -x hip\
 // RUN:   | FileCheck -check-prefixes=CHECK,MSVC %s
 
-// RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -emit-llvm %s \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-pc-windows-msvc -emit-llvm %s \
 // RUN:     -aux-triple amdgcn-amd-amdhsa -fcuda-include-gpubinary \
 // RUN:     %t -o - -x hip\
 // RUN:   | FileCheck -check-prefix=NEG %s

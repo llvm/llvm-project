@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -O0 -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -O0 -emit-llvm -o - -cl-std=clc++ | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple x86_64-unknown-linux-gnu -O0 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple x86_64-unknown-linux-gnu -O0 -emit-llvm -o - -cl-std=clc++ | FileCheck %s
 
 __attribute__((overloadable)) void read_image(read_only image1d_t img_ro);
 __attribute__((overloadable)) void read_image(write_only image1d_t img_wo);

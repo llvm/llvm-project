@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -o - %s | FileCheck %s --check-prefix=LINUX
-// RUN: %clang_cc1 -triple x86_64-windows-pc -fms-compatibility -emit-llvm -o - %s | FileCheck %s --check-prefix=WINDOWS
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -emit-llvm -o - %s | FileCheck %s --check-prefix=LINUX
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-windows-pc -fms-compatibility -emit-llvm -o - %s | FileCheck %s --check-prefix=WINDOWS
 
 struct OutOfLineDefs {
   int foo(int);

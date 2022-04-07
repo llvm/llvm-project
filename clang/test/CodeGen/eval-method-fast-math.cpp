@@ -1,17 +1,17 @@
-// RUN: %clang_cc1 -fexperimental-strict-floating-point  \
+// RUN: %clang_cc1 -no-opaque-pointers -fexperimental-strict-floating-point  \
 // RUN: -triple x86_64-linux-gnu -emit-llvm -o - %s  \
 // RUN: | FileCheck %s -check-prefixes=CHECK
 
-// RUN: %clang_cc1 -triple i386--linux -emit-llvm -o - %s \
+// RUN: %clang_cc1 -no-opaque-pointers -triple i386--linux -emit-llvm -o - %s \
 // RUN: | FileCheck %s -check-prefixes=CHECK-EXT
 
-// RUN: %clang_cc1 -fexperimental-strict-floating-point  \
+// RUN: %clang_cc1 -no-opaque-pointers -fexperimental-strict-floating-point  \
 // RUN: -mreassociate -freciprocal-math -ffp-contract=fast \
 // RUN: -ffast-math -triple x86_64-linux-gnu \
 // RUN: -emit-llvm -o - %s \
 // RUN: | FileCheck %s -check-prefixes=CHECK-FAST
 
-// RUN: %clang_cc1 -triple i386--linux -mreassociate -freciprocal-math \
+// RUN: %clang_cc1 -no-opaque-pointers -triple i386--linux -mreassociate -freciprocal-math \
 // RUN: -ffp-contract=fast -ffast-math -emit-llvm -o - %s \
 // RUN: | FileCheck %s -check-prefixes=CHECK-FAST
 

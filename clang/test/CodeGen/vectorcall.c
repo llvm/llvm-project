@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -emit-llvm %s -o - -ffreestanding -triple=i386-pc-win32       | FileCheck %s --check-prefix=X32
-// RUN: %clang_cc1 -emit-llvm %s -o - -ffreestanding -triple=x86_64-pc-win32     | FileCheck %s --check-prefix=X64
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm %s -o - -ffreestanding -triple=i386-pc-win32       | FileCheck %s --check-prefix=X32
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm %s -o - -ffreestanding -triple=x86_64-pc-win32     | FileCheck %s --check-prefix=X64
 
 void __vectorcall v1(int a, int b) {}
 // X32: define dso_local x86_vectorcallcc void @"\01v1@@8"(i32 inreg noundef %a, i32 inreg noundef %b)

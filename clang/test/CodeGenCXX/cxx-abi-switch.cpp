@@ -3,8 +3,8 @@
 // explicitly choose the generic itanium C++ ABI, we should not return "this" on
 // ctors/dtors.
 //
-// RUN: %clang_cc1 %s -emit-llvm -o - -triple=x86_64-unknown-fuchsia -fc++-abi=itanium | FileCheck %s
-// RUN: %clang_cc1 %s -emit-llvm -o - -triple=aarch64-unknown-fuchsia -fc++-abi=itanium | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -triple=x86_64-unknown-fuchsia -fc++-abi=itanium | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -triple=aarch64-unknown-fuchsia -fc++-abi=itanium | FileCheck %s
 
 class A {
 public:

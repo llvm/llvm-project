@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -emit-llvm -o - -triple x86_64-windows-msvc | FileCheck %s --check-prefix=WINDOWS
-// RUN: %clang_cc1 %s -emit-llvm -o - -triple x86_64-linux | FileCheck %s --check-prefix=LINUX
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -triple x86_64-windows-msvc | FileCheck %s --check-prefix=WINDOWS
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -triple x86_64-linux | FileCheck %s --check-prefix=LINUX
 
 // Make it possible to pass NULL through variadic functions on platforms where
 // NULL has an integer type that is more narrow than a pointer. On such

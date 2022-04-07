@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fexceptions -fcxx-exceptions %s -triple=x86_64-pc-linux-gnu -funwind-tables=2 -emit-llvm -o - -O1 -disable-llvm-passes | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -fexceptions -fcxx-exceptions %s -triple=x86_64-pc-linux-gnu -funwind-tables=2 -emit-llvm -o - -O1 -disable-llvm-passes | FileCheck %s
 
 // When generating the thunk for secondary, do not push terminate scopes for
 // either the varargs or non-varargs case. Related to PR44987.

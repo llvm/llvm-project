@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-enable-noundef-analysis -triple i386-unknown-unknown -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -triple i386-unknown-unknown -emit-llvm -o - %s | FileCheck %s
 
 void __attribute__((fastcall)) foo1(int &y);
 void bar1(int &y) {

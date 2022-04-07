@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple i386-unknown-unknown %s -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK,NULL-INVALID
-// RUN: %clang_cc1 -triple i386-unknown-unknown %s -emit-llvm -fno-delete-null-pointer-checks -o - | FileCheck %s -check-prefixes=CHECK,NULL-VALID
+// RUN: %clang_cc1 -no-opaque-pointers -triple i386-unknown-unknown %s -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK,NULL-INVALID
+// RUN: %clang_cc1 -no-opaque-pointers -triple i386-unknown-unknown %s -emit-llvm -fno-delete-null-pointer-checks -o - | FileCheck %s -check-prefixes=CHECK,NULL-VALID
 
 int b(char* x);
 

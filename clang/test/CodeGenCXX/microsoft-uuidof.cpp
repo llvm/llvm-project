@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -emit-llvm %s -o - -DDEFINE_GUID -triple=i386-pc-linux -fms-extensions | FileCheck %s --check-prefix=CHECK-DEFINE-GUID
-// RUN: %clang_cc1 -emit-llvm %s -o - -DDEFINE_GUID -DBRACKET_ATTRIB -triple=i386-pc-linux -fms-extensions | FileCheck %s --check-prefix=CHECK-DEFINE-GUID
-// RUN: %clang_cc1 -emit-llvm %s -o - -triple=i386-pc-linux -fms-extensions | FileCheck %s
-// RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-pc-linux -fms-extensions | FileCheck %s --check-prefix=CHECK-64
-// RUN: %clang_cc1 -emit-llvm %s -o - -DDEFINE_GUID -DWRONG_GUID -triple=i386-pc-linux -fms-extensions | FileCheck %s --check-prefix=CHECK-DEFINE-WRONG-GUID
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm %s -o - -DDEFINE_GUID -triple=i386-pc-linux -fms-extensions | FileCheck %s --check-prefix=CHECK-DEFINE-GUID
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm %s -o - -DDEFINE_GUID -DBRACKET_ATTRIB -triple=i386-pc-linux -fms-extensions | FileCheck %s --check-prefix=CHECK-DEFINE-GUID
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm %s -o - -triple=i386-pc-linux -fms-extensions | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm %s -o - -triple=x86_64-pc-linux -fms-extensions | FileCheck %s --check-prefix=CHECK-64
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm %s -o - -DDEFINE_GUID -DWRONG_GUID -triple=i386-pc-linux -fms-extensions | FileCheck %s --check-prefix=CHECK-DEFINE-WRONG-GUID
 
 #ifdef DEFINE_GUID
 struct _GUID {

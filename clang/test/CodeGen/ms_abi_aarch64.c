@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple aarch64-linux-gnu -emit-llvm < %s | FileCheck -check-prefixes=LINUX,COMMON %s
-// RUN: %clang_cc1 -triple aarch64-pc-win32 -emit-llvm < %s | FileCheck -check-prefixes=WIN64,COMMON %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple aarch64-linux-gnu -emit-llvm < %s | FileCheck -check-prefixes=LINUX,COMMON %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple aarch64-pc-win32 -emit-llvm < %s | FileCheck -check-prefixes=WIN64,COMMON %s
 
 struct small_odd {
   char a, b, c;

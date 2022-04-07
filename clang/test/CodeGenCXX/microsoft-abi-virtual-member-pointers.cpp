@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++11 -fno-rtti -emit-llvm -triple=i386-pc-win32 %s -o - | FileCheck %s --check-prefix=CHECK32
-// RUN: %clang_cc1 -std=c++11 -fno-rtti -emit-llvm -triple=x86_64-pc-win32 %s -o - | FileCheck %s --check-prefix=CHECK64
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -fno-rtti -emit-llvm -triple=i386-pc-win32 %s -o - | FileCheck %s --check-prefix=CHECK32
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -fno-rtti -emit-llvm -triple=x86_64-pc-win32 %s -o - | FileCheck %s --check-prefix=CHECK64
 
 struct S {
   int x, y, z;

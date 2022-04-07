@@ -1,48 +1,48 @@
-// RUN: %clang_cc1 -fxray-instrument -fxray-instrumentation-bundle=none -x c++ \
+// RUN: %clang_cc1 -no-opaque-pointers -fxray-instrument -fxray-instrumentation-bundle=none -x c++ \
 // RUN:     -std=c++11 -triple x86_64-unknown-unknown -emit-llvm -o - %s \
 // RUN:     | FileCheck --check-prefixes CHECK,NOFUNCTION,NOCUSTOM,NOTYPED %s
-// RUN: %clang_cc1 -fxray-instrument -fxray-instrumentation-bundle=function -x c++ \
+// RUN: %clang_cc1 -no-opaque-pointers -fxray-instrument -fxray-instrumentation-bundle=function -x c++ \
 // RUN:     -std=c++11 -triple x86_64-unknown-unknown -emit-llvm -o - %s \
 // RUN:     | FileCheck --check-prefixes CHECK,FUNCTION,NOCUSTOM,NOTYPED %s
-// RUN: %clang_cc1 -fxray-instrument \
+// RUN: %clang_cc1 -no-opaque-pointers -fxray-instrument \
 // RUN:     -fxray-instrumentation-bundle=custom -x c++ \
 // RUN:     -std=c++11 -triple x86_64-unknown-unknown -emit-llvm -o - %s \
 // RUN:     | FileCheck --check-prefixes CHECK,NOFUNCTION,CUSTOM,NOTYPED %s
-// RUN: %clang_cc1 -fxray-instrument \
+// RUN: %clang_cc1 -no-opaque-pointers -fxray-instrument \
 // RUN:     -fxray-instrumentation-bundle=typed -x c++ \
 // RUN:     -std=c++11 -triple x86_64-unknown-unknown -emit-llvm -o - %s \
 // RUN:     | FileCheck --check-prefixes CHECK,NOFUNCTION,NOCUSTOM,TYPED %s
-// RUN: %clang_cc1 -fxray-instrument \
+// RUN: %clang_cc1 -no-opaque-pointers -fxray-instrument \
 // RUN:     -fxray-instrumentation-bundle=custom,typed -x c++ \
 // RUN:     -std=c++11 -triple x86_64-unknown-unknown -emit-llvm -o - %s \
 // RUN:     | FileCheck --check-prefixes CHECK,NOFUNCTION,CUSTOM,TYPED %s
-// RUN: %clang_cc1 -fxray-instrument \
+// RUN: %clang_cc1 -no-opaque-pointers -fxray-instrument \
 // RUN:     -fxray-instrumentation-bundle=function,custom -x c++ \
 // RUN:     -std=c++11 -triple x86_64-unknown-unknown -emit-llvm -o - %s \
 // RUN:     | FileCheck --check-prefixes CHECK,FUNCTION,CUSTOM,NOTYPED %s
-// RUN: %clang_cc1 -fxray-instrument \
+// RUN: %clang_cc1 -no-opaque-pointers -fxray-instrument \
 // RUN:     -fxray-instrumentation-bundle=function,typed -x c++ \
 // RUN:     -std=c++11 -triple x86_64-unknown-unknown -emit-llvm -o - %s \
 // RUN:     | FileCheck --check-prefixes CHECK,FUNCTION,NOCUSTOM,TYPED %s
-// RUN: %clang_cc1 -fxray-instrument \
+// RUN: %clang_cc1 -no-opaque-pointers -fxray-instrument \
 // RUN:     -fxray-instrumentation-bundle=function,custom,typed -x c++ \
 // RUN:     -std=c++11 -triple x86_64-unknown-unknown -emit-llvm -o - %s \
 // RUN:     | FileCheck --check-prefixes CHECK,FUNCTION,CUSTOM,TYPED %s
-// RUN: %clang_cc1 -fxray-instrument \
+// RUN: %clang_cc1 -no-opaque-pointers -fxray-instrument \
 // RUN:     -fxray-instrumentation-bundle=function \
 // RUN:     -fxray-instrumentation-bundle=custom \
 // RUN:     -fxray-instrumentation-bundle=typed -x c++ \
 // RUN:     -std=c++11 -triple x86_64-unknown-unknown -emit-llvm -o - %s \
 // RUN:     | FileCheck --check-prefixes CHECK,FUNCTION,CUSTOM,TYPED %s
-// RUN: %clang_cc1 -fxray-instrument \
+// RUN: %clang_cc1 -no-opaque-pointers -fxray-instrument \
 // RUN:     -fxray-instrumentation-bundle=function-entry -x c++ \
 // RUN:     -std=c++11 -triple x86_64-unknown-unknown -emit-llvm -o - %s \
 // RUN:     | FileCheck --check-prefixes CHECK,NOCUSTOM,NOTYPED,SKIPEXIT %s
-// RUN: %clang_cc1 -fxray-instrument \
+// RUN: %clang_cc1 -no-opaque-pointers -fxray-instrument \
 // RUN:     -fxray-instrumentation-bundle=function-exit -x c++ \
 // RUN:     -std=c++11 -triple x86_64-unknown-unknown -emit-llvm -o - %s \
 // RUN:     | FileCheck --check-prefixes CHECK,NOCUSTOM,NOTYPED,SKIPENTRY %s
-// RUN: %clang_cc1 -fxray-instrument \
+// RUN: %clang_cc1 -no-opaque-pointers -fxray-instrument \
 // RUN:     -fxray-instrumentation-bundle=function-entry,function-exit -x c++ \
 // RUN:     -std=c++11 -triple x86_64-unknown-unknown -emit-llvm -o - %s \
 // RUN:     | FileCheck --check-prefixes CHECK,FUNCTION,NOCUSTOM,NOTYPED %s

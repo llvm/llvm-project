@@ -1,12 +1,12 @@
-// RUN: %clang_cc1 %s -triple x86_64-pc-win32 -fms-extensions -emit-llvm -o - \
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple x86_64-pc-win32 -fms-extensions -emit-llvm -o - \
 // RUN:         | FileCheck %s --check-prefix=CHECK --check-prefix=X64
-// RUN: %clang_cc1 %s -triple i686-pc-win32 -fms-extensions -emit-llvm -o - \
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple i686-pc-win32 -fms-extensions -emit-llvm -o - \
 // RUN:         | FileCheck %s --check-prefix=CHECK --check-prefix=X86
-// RUN: %clang_cc1 %s -triple aarch64-windows -fms-extensions -emit-llvm -o - \
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple aarch64-windows -fms-extensions -emit-llvm -o - \
 // RUN:         | FileCheck %s --check-prefixes=CHECK,ARM64
-// RUN: %clang_cc1 %s -triple i686-pc-windows-gnu -fms-extensions -emit-llvm -o - \
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple i686-pc-windows-gnu -fms-extensions -emit-llvm -o - \
 // RUN:         | FileCheck %s --check-prefix=X86-GNU
-// RUN: %clang_cc1 %s -triple x86_64-pc-windows-gnu -fms-extensions -emit-llvm -o - \
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple x86_64-pc-windows-gnu -fms-extensions -emit-llvm -o - \
 // RUN:         | FileCheck %s --check-prefix=X64-GNU
 
 void try_body(int numerator, int denominator, int *myres) {

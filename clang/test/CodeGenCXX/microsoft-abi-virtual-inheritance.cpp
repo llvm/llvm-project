@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 %s -fno-rtti -std=c++11 -Wno-inaccessible-base -triple=i386-pc-win32 -emit-llvm -o %t
+// RUN: %clang_cc1 -no-opaque-pointers %s -fno-rtti -std=c++11 -Wno-inaccessible-base -triple=i386-pc-win32 -emit-llvm -o %t
 // RUN: FileCheck %s < %t
 // RUN: FileCheck --check-prefix=CHECK2 %s < %t
 
 // For now, just make sure x86_64 doesn't crash.
-// RUN: %clang_cc1 %s -fno-rtti -std=c++11 -Wno-inaccessible-base -triple=x86_64-pc-win32 -emit-llvm -o %t
+// RUN: %clang_cc1 -no-opaque-pointers %s -fno-rtti -std=c++11 -Wno-inaccessible-base -triple=x86_64-pc-win32 -emit-llvm -o %t
 
 struct VBase {
   virtual ~VBase();

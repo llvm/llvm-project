@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -x objective-c++ -triple x86_64-apple-darwin10 -fobjc-runtime=macosx-10.7 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -x objective-c++ -triple x86_64-apple-darwin10 -fobjc-runtime=macosx-10.7 -emit-llvm -o - %s | FileCheck %s
 
 // Properly instantiate a non-dependent message expression which
 // requires a contextual conversion to ObjC pointer type.

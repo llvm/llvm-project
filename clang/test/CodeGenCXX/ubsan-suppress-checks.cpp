@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-apple-darwin10 -emit-llvm -o - %s -fsanitize=alignment | FileCheck %s --check-prefixes=CHECK,ALIGN
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-apple-darwin10 -emit-llvm -o - %s -fsanitize=null | FileCheck %s --check-prefixes=CHECK,NULL
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-apple-darwin10 -emit-llvm -o - %s -fsanitize=alignment,null -DCHECK_LAMBDA | FileCheck %s --check-prefixes=LAMBDA
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -triple x86_64-apple-darwin10 -emit-llvm -o - %s -fsanitize=alignment | FileCheck %s --check-prefixes=CHECK,ALIGN
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -triple x86_64-apple-darwin10 -emit-llvm -o - %s -fsanitize=null | FileCheck %s --check-prefixes=CHECK,NULL
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -triple x86_64-apple-darwin10 -emit-llvm -o - %s -fsanitize=alignment,null -DCHECK_LAMBDA | FileCheck %s --check-prefixes=LAMBDA
 
 // CHECK-LABEL: define{{.*}} void @_Z22load_non_null_pointersv
 void load_non_null_pointers() {

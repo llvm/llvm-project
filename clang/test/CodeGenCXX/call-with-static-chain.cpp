@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple i386-unknown-unknown -emit-llvm -o - %s | FileCheck -check-prefix=CHECK32 %s
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -o - %s | FileCheck -check-prefix=CHECK64 %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i386-unknown-unknown -emit-llvm -o - %s | FileCheck -check-prefix=CHECK32 %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown -emit-llvm -o - %s | FileCheck -check-prefix=CHECK64 %s
 
 struct A {
   long x, y;

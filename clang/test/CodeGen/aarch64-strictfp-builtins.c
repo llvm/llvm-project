@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -emit-llvm -ffp-exception-behavior=maytrap -fexperimental-strict-floating-point -o - -triple arm64-none-linux-gnu | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -ffp-exception-behavior=maytrap -fexperimental-strict-floating-point -o - -triple arm64-none-linux-gnu | FileCheck %s
 
 // Test that the constrained intrinsics are picking up the exception
 // metadata from the AST instead of the global default from the command line.

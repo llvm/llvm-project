@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -emit-llvm -triple i386-apple-darwin -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -triple i386-apple-darwin -o - | FileCheck %s
 extern void abort(void);
 extern void exit(int);
 struct T

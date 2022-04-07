@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -emit-llvm -o - %s | FileCheck %s
 
 // CHECK: @"_OBJC_$_PROTOCOL_METHOD_TYPES_P1" = internal global
 // CHECK: @[[PROTO_P1:"_OBJC_PROTOCOL_\$_P1"]] = weak hidden

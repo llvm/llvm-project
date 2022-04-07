@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 %s -fexceptions -exception-model=seh -emit-llvm -triple x86_64-w64-windows-gnu -o - | FileCheck %s --check-prefix=X64
-// RUN: %clang_cc1 %s -fexceptions -exception-model=dwarf -emit-llvm -triple i686-w64-windows-gnu -o - | FileCheck %s --check-prefix=X86
-// RUN: %clang_cc1 %s -fexceptions -emit-llvm -triple i686-w64-windows-gnu -o - | FileCheck %s --check-prefix=X86
+// RUN: %clang_cc1 -no-opaque-pointers %s -fexceptions -exception-model=seh -emit-llvm -triple x86_64-w64-windows-gnu -o - | FileCheck %s --check-prefix=X64
+// RUN: %clang_cc1 -no-opaque-pointers %s -fexceptions -exception-model=dwarf -emit-llvm -triple i686-w64-windows-gnu -o - | FileCheck %s --check-prefix=X86
+// RUN: %clang_cc1 -no-opaque-pointers %s -fexceptions -emit-llvm -triple i686-w64-windows-gnu -o - | FileCheck %s --check-prefix=X86
 
 extern "C" void foo();
 extern "C" void bar();

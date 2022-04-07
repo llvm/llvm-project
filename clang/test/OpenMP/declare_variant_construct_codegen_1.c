@@ -3,21 +3,21 @@
 #ifndef HEADER
 #define HEADER
 
-// RUN: %clang_cc1 -DCK1 -verify -fopenmp -triple x86_64-unknown-linux -emit-llvm %s -o - | FileCheck %s --check-prefix=CK1
-// RUN: %clang_cc1 -DCK1 -fopenmp -x c -triple x86_64-unknown-linux -emit-pch -o %t -fopenmp-version=45 %s
-// RUN: %clang_cc1 -DCK1 -fopenmp -x c -triple x86_64-unknown-linux -include-pch %t -verify %s -emit-llvm -o - -fopenmp-version=45 | FileCheck %s --check-prefix=CK1
-// RUN: %clang_cc1 -DCK1 -fopenmp -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -o - | FileCheck %s --check-prefix=CK1
-// RUN: %clang_cc1 -DCK1 -fopenmp -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm %s -o - | FileCheck %s --check-prefix=CK1
-// RUN: %clang_cc1 -DCK1 -fopenmp -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -emit-pch -o %t %s
-// RUN: %clang_cc1 -DCK1 -fopenmp -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CK1
+// RUN: %clang_cc1 -no-opaque-pointers -DCK1 -verify -fopenmp -triple x86_64-unknown-linux -emit-llvm %s -o - | FileCheck %s --check-prefix=CK1
+// RUN: %clang_cc1 -no-opaque-pointers -DCK1 -fopenmp -x c -triple x86_64-unknown-linux -emit-pch -o %t -fopenmp-version=45 %s
+// RUN: %clang_cc1 -no-opaque-pointers -DCK1 -fopenmp -x c -triple x86_64-unknown-linux -include-pch %t -verify %s -emit-llvm -o - -fopenmp-version=45 | FileCheck %s --check-prefix=CK1
+// RUN: %clang_cc1 -no-opaque-pointers -DCK1 -fopenmp -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -o - | FileCheck %s --check-prefix=CK1
+// RUN: %clang_cc1 -no-opaque-pointers -DCK1 -fopenmp -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm %s -o - | FileCheck %s --check-prefix=CK1
+// RUN: %clang_cc1 -no-opaque-pointers -DCK1 -fopenmp -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -emit-pch -o %t %s
+// RUN: %clang_cc1 -no-opaque-pointers -DCK1 -fopenmp -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CK1
 
-// RUN: %clang_cc1 -DCK1 -verify -fopenmp-simd -triple x86_64-unknown-linux -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
-// RUN: %clang_cc1 -DCK1 -fopenmp-simd -x c -triple x86_64-unknown-linux -emit-pch -o %t -fopenmp-version=45 %s
-// RUN: %clang_cc1 -DCK1 -fopenmp-simd -x c -triple x86_64-unknown-linux -include-pch %t -verify %s -emit-llvm -o - -fopenmp-version=45 | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
-// RUN: %clang_cc1 -DCK1 -fopenmp-simd -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
-// RUN: %clang_cc1 -DCK1 -fopenmp-simd -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
-// RUN: %clang_cc1 -DCK1 -fopenmp-simd -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -emit-pch -o %t %s
-// RUN: %clang_cc1 -DCK1 -fopenmp-simd -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
+// RUN: %clang_cc1 -no-opaque-pointers -DCK1 -verify -fopenmp-simd -triple x86_64-unknown-linux -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
+// RUN: %clang_cc1 -no-opaque-pointers -DCK1 -fopenmp-simd -x c -triple x86_64-unknown-linux -emit-pch -o %t -fopenmp-version=45 %s
+// RUN: %clang_cc1 -no-opaque-pointers -DCK1 -fopenmp-simd -x c -triple x86_64-unknown-linux -include-pch %t -verify %s -emit-llvm -o - -fopenmp-version=45 | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
+// RUN: %clang_cc1 -no-opaque-pointers -DCK1 -fopenmp-simd -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
+// RUN: %clang_cc1 -no-opaque-pointers -DCK1 -fopenmp-simd -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
+// RUN: %clang_cc1 -no-opaque-pointers -DCK1 -fopenmp-simd -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -emit-pch -o %t %s
+// RUN: %clang_cc1 -no-opaque-pointers -DCK1 -fopenmp-simd -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 
 #ifdef CK1
 
@@ -86,21 +86,21 @@ int test(void) {
 // CK1: call void @p_vxv
 #endif // CK1
 
-// RUN: %clang_cc1 -DCK2 -verify -fopenmp -triple x86_64-unknown-linux -emit-llvm %s -o - | FileCheck %s --check-prefix=CK2
-// RUN: %clang_cc1 -DCK2 -fopenmp -x c -triple x86_64-unknown-linux -emit-pch -o %t -fopenmp-version=45 %s
-// RUN: %clang_cc1 -DCK2 -fopenmp -x c -triple x86_64-unknown-linux -include-pch %t -verify %s -emit-llvm -o - -fopenmp-version=45 | FileCheck %s --check-prefix=CK2
-// RUN: %clang_cc1 -DCK2 -fopenmp -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -o - | FileCheck %s --check-prefix=CK2
-// RUN: %clang_cc1 -DCK2 -fopenmp -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm %s -o - | FileCheck %s --check-prefix=CK2
-// RUN: %clang_cc1 -DCK2 -fopenmp -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -emit-pch -o %t %s
-// RUN: %clang_cc1 -DCK2 -fopenmp -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CK2
+// RUN: %clang_cc1 -no-opaque-pointers -DCK2 -verify -fopenmp -triple x86_64-unknown-linux -emit-llvm %s -o - | FileCheck %s --check-prefix=CK2
+// RUN: %clang_cc1 -no-opaque-pointers -DCK2 -fopenmp -x c -triple x86_64-unknown-linux -emit-pch -o %t -fopenmp-version=45 %s
+// RUN: %clang_cc1 -no-opaque-pointers -DCK2 -fopenmp -x c -triple x86_64-unknown-linux -include-pch %t -verify %s -emit-llvm -o - -fopenmp-version=45 | FileCheck %s --check-prefix=CK2
+// RUN: %clang_cc1 -no-opaque-pointers -DCK2 -fopenmp -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -o - | FileCheck %s --check-prefix=CK2
+// RUN: %clang_cc1 -no-opaque-pointers -DCK2 -fopenmp -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm %s -o - | FileCheck %s --check-prefix=CK2
+// RUN: %clang_cc1 -no-opaque-pointers -DCK2 -fopenmp -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -emit-pch -o %t %s
+// RUN: %clang_cc1 -no-opaque-pointers -DCK2 -fopenmp -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CK2
 
-// RUN: %clang_cc1 -DCK2 -verify -fopenmp-simd -triple x86_64-unknown-linux -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
-// RUN: %clang_cc1 -DCK2 -fopenmp-simd -x c -triple x86_64-unknown-linux -emit-pch -o %t -fopenmp-version=45 %s
-// RUN: %clang_cc1 -DCK2 -fopenmp-simd -x c -triple x86_64-unknown-linux -include-pch %t -verify %s -emit-llvm -o - -fopenmp-version=45 | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
-// RUN: %clang_cc1 -DCK2 -fopenmp-simd -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
-// RUN: %clang_cc1 -DCK2 -fopenmp-simd -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
-// RUN: %clang_cc1 -DCK2 -fopenmp-simd -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -emit-pch -o %t %s
-// RUN: %clang_cc1 -DCK2 -fopenmp-simd -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
+// RUN: %clang_cc1 -no-opaque-pointers -DCK2 -verify -fopenmp-simd -triple x86_64-unknown-linux -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
+// RUN: %clang_cc1 -no-opaque-pointers -DCK2 -fopenmp-simd -x c -triple x86_64-unknown-linux -emit-pch -o %t -fopenmp-version=45 %s
+// RUN: %clang_cc1 -no-opaque-pointers -DCK2 -fopenmp-simd -x c -triple x86_64-unknown-linux -include-pch %t -verify %s -emit-llvm -o - -fopenmp-version=45 | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
+// RUN: %clang_cc1 -no-opaque-pointers -DCK2 -fopenmp-simd -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
+// RUN: %clang_cc1 -no-opaque-pointers -DCK2 -fopenmp-simd -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
+// RUN: %clang_cc1 -no-opaque-pointers -DCK2 -fopenmp-simd -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -emit-pch -o %t %s
+// RUN: %clang_cc1 -no-opaque-pointers -DCK2 -fopenmp-simd -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 
 #ifdef CK2
 
@@ -183,21 +183,21 @@ void test(int ***v1, int ***v2, int ***v3, int n) {
 
 #endif // CK2
 
-// RUN: %clang_cc1 -DCK3 -verify -fopenmp -triple x86_64-unknown-linux -emit-llvm %s -o - | FileCheck %s --check-prefix=CK3
-// RUN: %clang_cc1 -DCK3 -fopenmp -x c -triple x86_64-unknown-linux -emit-pch -o %t -fopenmp-version=45 %s
-// RUN: %clang_cc1 -DCK3 -fopenmp -x c -triple x86_64-unknown-linux -include-pch %t -verify %s -emit-llvm -o - -fopenmp-version=45 | FileCheck %s --check-prefix=CK3
-// RUN: %clang_cc1 -DCK3 -fopenmp -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -o - | FileCheck %s --check-prefix=CK3
-// RUN: %clang_cc1 -DCK3 -fopenmp -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm %s -o - | FileCheck %s --check-prefix=CK3
-// RUN: %clang_cc1 -DCK3 -fopenmp -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -emit-pch -o %t %s
-// RUN: %clang_cc1 -DCK3 -fopenmp -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CK3
+// RUN: %clang_cc1 -no-opaque-pointers -DCK3 -verify -fopenmp -triple x86_64-unknown-linux -emit-llvm %s -o - | FileCheck %s --check-prefix=CK3
+// RUN: %clang_cc1 -no-opaque-pointers -DCK3 -fopenmp -x c -triple x86_64-unknown-linux -emit-pch -o %t -fopenmp-version=45 %s
+// RUN: %clang_cc1 -no-opaque-pointers -DCK3 -fopenmp -x c -triple x86_64-unknown-linux -include-pch %t -verify %s -emit-llvm -o - -fopenmp-version=45 | FileCheck %s --check-prefix=CK3
+// RUN: %clang_cc1 -no-opaque-pointers -DCK3 -fopenmp -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -o - | FileCheck %s --check-prefix=CK3
+// RUN: %clang_cc1 -no-opaque-pointers -DCK3 -fopenmp -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm %s -o - | FileCheck %s --check-prefix=CK3
+// RUN: %clang_cc1 -no-opaque-pointers -DCK3 -fopenmp -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -emit-pch -o %t %s
+// RUN: %clang_cc1 -no-opaque-pointers -DCK3 -fopenmp -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CK3
 
-// RUN: %clang_cc1 -DCK3 -verify -fopenmp-simd -triple x86_64-unknown-linux -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
-// RUN: %clang_cc1 -DCK3 -fopenmp-simd -x c -triple x86_64-unknown-linux -emit-pch -o %t -fopenmp-version=45 %s
-// RUN: %clang_cc1 -DCK3 -fopenmp-simd -x c -triple x86_64-unknown-linux -include-pch %t -verify %s -emit-llvm -o - -fopenmp-version=45 | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
-// RUN: %clang_cc1 -DCK3 -fopenmp-simd -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
-// RUN: %clang_cc1 -DCK3 -fopenmp-simd -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
-// RUN: %clang_cc1 -DCK3 -fopenmp-simd -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -emit-pch -o %t %s
-// RUN: %clang_cc1 -DCK3 -fopenmp-simd -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
+// RUN: %clang_cc1 -no-opaque-pointers -DCK3 -verify -fopenmp-simd -triple x86_64-unknown-linux -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
+// RUN: %clang_cc1 -no-opaque-pointers -DCK3 -fopenmp-simd -x c -triple x86_64-unknown-linux -emit-pch -o %t -fopenmp-version=45 %s
+// RUN: %clang_cc1 -no-opaque-pointers -DCK3 -fopenmp-simd -x c -triple x86_64-unknown-linux -include-pch %t -verify %s -emit-llvm -o - -fopenmp-version=45 | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
+// RUN: %clang_cc1 -no-opaque-pointers -DCK3 -fopenmp-simd -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
+// RUN: %clang_cc1 -no-opaque-pointers -DCK3 -fopenmp-simd -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
+// RUN: %clang_cc1 -no-opaque-pointers -DCK3 -fopenmp-simd -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -emit-pch -o %t %s
+// RUN: %clang_cc1 -no-opaque-pointers -DCK3 -fopenmp-simd -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 
 #ifdef CK3
 
@@ -248,21 +248,21 @@ void test(void) {
 
 #endif // CK3
 
-// RUN: %clang_cc1 -DCK4 -verify -fopenmp -triple x86_64-unknown-linux -emit-llvm %s -o - | FileCheck %s --check-prefix=CK4
-// RUN: %clang_cc1 -DCK4 -fopenmp -x c -triple x86_64-unknown-linux -emit-pch -o %t -fopenmp-version=45 %s
-// RUN: %clang_cc1 -DCK4 -fopenmp -x c -triple x86_64-unknown-linux -include-pch %t -verify %s -emit-llvm -o - -fopenmp-version=45 | FileCheck %s --check-prefix=CK4
-// RUN: %clang_cc1 -DCK4 -fopenmp -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -o - | FileCheck %s --check-prefix=CK4
-// RUN: %clang_cc1 -DCK4 -fopenmp -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm %s -o - | FileCheck %s --check-prefix=CK4
-// RUN: %clang_cc1 -DCK4 -fopenmp -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -emit-pch -o %t %s
-// RUN: %clang_cc1 -DCK4 -fopenmp -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CK4
+// RUN: %clang_cc1 -no-opaque-pointers -DCK4 -verify -fopenmp -triple x86_64-unknown-linux -emit-llvm %s -o - | FileCheck %s --check-prefix=CK4
+// RUN: %clang_cc1 -no-opaque-pointers -DCK4 -fopenmp -x c -triple x86_64-unknown-linux -emit-pch -o %t -fopenmp-version=45 %s
+// RUN: %clang_cc1 -no-opaque-pointers -DCK4 -fopenmp -x c -triple x86_64-unknown-linux -include-pch %t -verify %s -emit-llvm -o - -fopenmp-version=45 | FileCheck %s --check-prefix=CK4
+// RUN: %clang_cc1 -no-opaque-pointers -DCK4 -fopenmp -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -o - | FileCheck %s --check-prefix=CK4
+// RUN: %clang_cc1 -no-opaque-pointers -DCK4 -fopenmp -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm %s -o - | FileCheck %s --check-prefix=CK4
+// RUN: %clang_cc1 -no-opaque-pointers -DCK4 -fopenmp -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -emit-pch -o %t %s
+// RUN: %clang_cc1 -no-opaque-pointers -DCK4 -fopenmp -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CK4
 
-// RUN: %clang_cc1 -DCK4 -verify -fopenmp-simd -triple x86_64-unknown-linux -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
-// RUN: %clang_cc1 -DCK4 -fopenmp-simd -x c -triple x86_64-unknown-linux -emit-pch -o %t -fopenmp-version=45 %s
-// RUN: %clang_cc1 -DCK4 -fopenmp-simd -x c -triple x86_64-unknown-linux -include-pch %t -verify %s -emit-llvm -o - -fopenmp-version=45 | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
-// RUN: %clang_cc1 -DCK4 -fopenmp-simd -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
-// RUN: %clang_cc1 -DCK4 -fopenmp-simd -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
-// RUN: %clang_cc1 -DCK4 -fopenmp-simd -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -emit-pch -o %t %s
-// RUN: %clang_cc1 -DCK4 -fopenmp-simd -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
+// RUN: %clang_cc1 -no-opaque-pointers -DCK4 -verify -fopenmp-simd -triple x86_64-unknown-linux -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
+// RUN: %clang_cc1 -no-opaque-pointers -DCK4 -fopenmp-simd -x c -triple x86_64-unknown-linux -emit-pch -o %t -fopenmp-version=45 %s
+// RUN: %clang_cc1 -no-opaque-pointers -DCK4 -fopenmp-simd -x c -triple x86_64-unknown-linux -include-pch %t -verify %s -emit-llvm -o - -fopenmp-version=45 | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
+// RUN: %clang_cc1 -no-opaque-pointers -DCK4 -fopenmp-simd -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
+// RUN: %clang_cc1 -no-opaque-pointers -DCK4 -fopenmp-simd -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
+// RUN: %clang_cc1 -no-opaque-pointers -DCK4 -fopenmp-simd -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -emit-pch -o %t %s
+// RUN: %clang_cc1 -no-opaque-pointers -DCK4 -fopenmp-simd -fopenmp-version=50 -x c -triple x86_64-unknown-linux -fopenmp-targets=amdgcn-amd-amdhsa -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 
 #ifdef CK4
 

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple=arm64-apple-ios7.0.0 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=arm64-apple-ios7.0.0 -emit-llvm -o - | FileCheck %s
 // rdar://12162905
 
 struct S {

@@ -1,6 +1,6 @@
 // Verifies lifetime of __gro local variable
 // Verify that coroutine promise and allocated memory are freed up on exception.
-// RUN: %clang_cc1 -std=c++1z -fcoroutines-ts -triple=x86_64-unknown-linux-gnu -emit-llvm -o - %s -disable-llvm-passes | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++1z -fcoroutines-ts -triple=x86_64-unknown-linux-gnu -emit-llvm -o - %s -disable-llvm-passes | FileCheck %s
 
 namespace std::experimental {
 template <typename... T> struct coroutine_traits;

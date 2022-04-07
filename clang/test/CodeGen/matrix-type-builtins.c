@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fenable-matrix -triple x86_64-apple-darwin %s -emit-llvm -disable-llvm-passes -o - | FileCheck --check-prefixes=COMMON,CHECK64 %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fenable-matrix -triple i386-apple-darwin %s -emit-llvm -disable-llvm-passes -o - | FileCheck --check-prefixes=COMMON,CHECK32 %s
+// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -fenable-matrix -triple x86_64-apple-darwin %s -emit-llvm -disable-llvm-passes -o - | FileCheck --check-prefixes=COMMON,CHECK64 %s
+// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -fenable-matrix -triple i386-apple-darwin %s -emit-llvm -disable-llvm-passes -o - | FileCheck --check-prefixes=COMMON,CHECK32 %s
 
 // Also check we do not crash when running some middle-end passes. Most
 // importantly this includes the IR verifier, to ensure we emit valid IR.
-// RUN: %clang_cc1 -fenable-matrix -emit-llvm -triple x86_64-apple-darwin %s -o %t
+// RUN: %clang_cc1 -no-opaque-pointers -fenable-matrix -emit-llvm -triple x86_64-apple-darwin %s -o %t
 
 // Tests for the matrix type builtins.
 

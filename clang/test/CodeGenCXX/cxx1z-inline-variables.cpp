@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++1z %s -emit-llvm -o - -triple x86_64-linux-gnu | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++1z %s -emit-llvm -o - -triple x86_64-linux-gnu | FileCheck %s
 
 struct Q {
   // CHECK: @_ZN1Q1kE = linkonce_odr constant i32 5, comdat

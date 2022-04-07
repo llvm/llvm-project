@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsanitize=nullability-return -emit-llvm %s -o - -triple x86_64-apple-macosx10.10.0 | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -fsanitize=nullability-return -emit-llvm %s -o - -triple x86_64-apple-macosx10.10.0 | FileCheck %s
 
 // CHECK: [[ATTR_LOC:@[0-9]+]] = {{.*}} global { {{.*}} i32 15, i32 38
 

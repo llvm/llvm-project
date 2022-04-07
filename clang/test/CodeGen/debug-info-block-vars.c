@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -x c -fblocks -debug-info-kind=standalone -emit-llvm -O0 \
+// RUN: %clang_cc1 -no-opaque-pointers -x c -fblocks -debug-info-kind=standalone -emit-llvm -O0 \
 // RUN:   -triple x86_64-apple-darwin -o - %s | FileCheck %s
-// RUN: %clang_cc1 -x c -fblocks -debug-info-kind=standalone -emit-llvm -O1 \
+// RUN: %clang_cc1 -no-opaque-pointers -x c -fblocks -debug-info-kind=standalone -emit-llvm -O1 \
 // RUN:   -triple x86_64-apple-darwin -o - %s \
 // RUN:   | FileCheck --check-prefix=CHECK-OPT %s
 

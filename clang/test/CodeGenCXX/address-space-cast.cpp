@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple=amdgcn-amd-amdhsa -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=amdgcn-amd-amdhsa -emit-llvm -o - | FileCheck %s
 
 #define __private__ __attribute__((address_space(5)))
 

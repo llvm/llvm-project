@@ -1,6 +1,6 @@
 // REQUIRES: powerpc-registered-target
-// RUN: %clang_cc1 -triple powerpc64-unknown-linux-gnu -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple powerpc64-ibm-aix-xcoff -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc64-unknown-linux-gnu -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc64-ibm-aix-xcoff -emit-llvm -o - %s | FileCheck %s
 
 #include <stdarg.h>
 

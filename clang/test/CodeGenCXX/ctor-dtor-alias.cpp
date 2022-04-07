@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 %s -triple i686-linux -emit-llvm -o - -mconstructor-aliases | FileCheck --check-prefix=NOOPT %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple i686-linux -emit-llvm -o - -mconstructor-aliases | FileCheck --check-prefix=NOOPT %s
 
-// RUN: %clang_cc1 %s -triple i686-linux -emit-llvm -o - -mconstructor-aliases -O1 -disable-llvm-passes > %t
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple i686-linux -emit-llvm -o - -mconstructor-aliases -O1 -disable-llvm-passes > %t
 // RUN: FileCheck --check-prefix=CHECK1 --input-file=%t %s
 // RUN: FileCheck --check-prefix=CHECK2 --input-file=%t %s
 // RUN: FileCheck --check-prefix=CHECK3 --input-file=%t %s
@@ -8,7 +8,7 @@
 // RUN: FileCheck --check-prefix=CHECK5 --input-file=%t %s
 // RUN: FileCheck --check-prefix=CHECK6 --input-file=%t %s
 
-// RUN: %clang_cc1 %s -triple i686-pc-windows-gnu -emit-llvm -o - -mconstructor-aliases -O1 -disable-llvm-passes | FileCheck --check-prefix=COFF %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple i686-pc-windows-gnu -emit-llvm -o - -mconstructor-aliases -O1 -disable-llvm-passes | FileCheck --check-prefix=COFF %s
 
 namespace test1 {
 // Test that we produce the appropriate comdats when creating aliases to

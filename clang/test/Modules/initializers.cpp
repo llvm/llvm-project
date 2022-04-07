@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -emit-llvm -DIMPORT=1 -fmodules %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-IMPORT,CHECK-NO-NS,CHECK-IMPORT-NO-NS --implicit-check-not=unused
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -emit-llvm -DIMPORT=1 -DNS -fmodules %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-IMPORT,CHECK-NS,CHECK-IMPORT-NS --implicit-check-not=unused
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -emit-llvm -DIMPORT=2 -fmodules %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-NO-NS --implicit-check-not=unused
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -emit-llvm -DIMPORT=2 -DNS -fmodules %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-NS --implicit-check-not=unused
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -emit-llvm -fmodules %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-NO-NS --implicit-check-not=unused
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -emit-llvm -DNS -fmodules %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-NS --implicit-check-not=unused
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -std=c++17 -emit-llvm -DIMPORT=1 -fmodules %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-IMPORT,CHECK-NO-NS,CHECK-IMPORT-NO-NS --implicit-check-not=unused
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -std=c++17 -emit-llvm -DIMPORT=1 -DNS -fmodules %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-IMPORT,CHECK-NS,CHECK-IMPORT-NS --implicit-check-not=unused
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -std=c++17 -emit-llvm -DIMPORT=2 -fmodules %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-NO-NS --implicit-check-not=unused
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -std=c++17 -emit-llvm -DIMPORT=2 -DNS -fmodules %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-NS --implicit-check-not=unused
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -std=c++17 -emit-llvm -fmodules %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-NO-NS --implicit-check-not=unused
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -std=c++17 -emit-llvm -DNS -fmodules %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-NS --implicit-check-not=unused
 
 // Check that we behave sensibly when importing a header containing strong and
 // weak, ordered and unordered global initializers.

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios11 -fobjc-arc -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple arm64-apple-ios11 -fobjc-arc -emit-llvm -o - %s | FileCheck %s
 
 @class I;
 

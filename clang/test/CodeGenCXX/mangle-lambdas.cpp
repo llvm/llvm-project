@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-apple-macosx10.7.0 -emit-llvm -o - %s -w | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -triple x86_64-apple-macosx10.7.0 -emit-llvm -o - %s -w | FileCheck %s
 
 // CHECK-LABEL: define linkonce_odr void @_Z11inline_funci
 inline void inline_func(int n) {

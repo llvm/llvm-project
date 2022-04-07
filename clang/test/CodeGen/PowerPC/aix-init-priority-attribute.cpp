@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple powerpc-ibm-aix-xcoff -x c++ -emit-llvm < %s | \
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc-ibm-aix-xcoff -x c++ -emit-llvm < %s | \
 // RUN:   FileCheck %s
-// RUN: %clang_cc1 -triple powerpc64-ibm-aix-xcoff -x c++ -emit-llvm < %s | \
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc64-ibm-aix-xcoff -x c++ -emit-llvm < %s | \
 // RUN:   FileCheck %s
 
 struct test {

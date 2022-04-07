@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fms-extensions -fno-threadsafe-statics -emit-llvm %s -o - -mconstructor-aliases -triple=i386-pc-win32 | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -fms-extensions -fno-threadsafe-statics -emit-llvm %s -o - -mconstructor-aliases -triple=i386-pc-win32 | FileCheck %s
 
 // CHECK: @llvm.global_ctors = appending global [5 x { i32, void ()*, i8* }] [
 // CHECK: { i32, void ()*, i8* } { i32 65535, void ()* @"??__Eselectany1@@YAXXZ", i8* getelementptr inbounds (%struct.S, %struct.S* @"?selectany1@@3US@@A", i32 0, i32 0) },

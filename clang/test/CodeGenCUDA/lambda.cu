@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -x hip -emit-llvm -std=c++11 %s -o - \
+// RUN: %clang_cc1 -no-opaque-pointers -x hip -emit-llvm -std=c++11 %s -o - \
 // RUN:   -triple x86_64-linux-gnu \
 // RUN:   | FileCheck -check-prefix=HOST %s
-// RUN: %clang_cc1 -x hip -emit-llvm -std=c++11 %s -o - \
+// RUN: %clang_cc1 -no-opaque-pointers -x hip -emit-llvm -std=c++11 %s -o - \
 // RUN:   -triple amdgcn-amd-amdhsa -fcuda-is-device \
 // RUN:   | FileCheck -check-prefix=DEV %s
 

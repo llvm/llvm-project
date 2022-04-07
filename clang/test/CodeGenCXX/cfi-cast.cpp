@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux -fvisibility hidden -std=c++11 -fsanitize=cfi-derived-cast -fsanitize-trap=cfi-derived-cast -emit-llvm -o - %s | FileCheck -check-prefix=CHECK-DCAST %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux -fvisibility hidden -std=c++11 -fsanitize=cfi-unrelated-cast -fsanitize-trap=cfi-unrelated-cast -emit-llvm -o - %s | FileCheck -check-prefix=CHECK-UCAST %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux -fvisibility hidden -std=c++11 -fsanitize=cfi-unrelated-cast,cfi-cast-strict -fsanitize-trap=cfi-unrelated-cast,cfi-cast-strict -emit-llvm -o - %s | FileCheck -check-prefix=CHECK-UCAST-STRICT %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux -fvisibility hidden -std=c++11 -fsanitize=cfi-derived-cast -fsanitize-trap=cfi-derived-cast -emit-llvm -o - %s | FileCheck -check-prefix=CHECK-DCAST %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux -fvisibility hidden -std=c++11 -fsanitize=cfi-unrelated-cast -fsanitize-trap=cfi-unrelated-cast -emit-llvm -o - %s | FileCheck -check-prefix=CHECK-UCAST %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux -fvisibility hidden -std=c++11 -fsanitize=cfi-unrelated-cast,cfi-cast-strict -fsanitize-trap=cfi-unrelated-cast,cfi-cast-strict -emit-llvm -o - %s | FileCheck -check-prefix=CHECK-UCAST-STRICT %s
 
 // In this test the main thing we are searching for is something like
 // 'metadata !"1B"' where "1B" is the mangled name of the class we are

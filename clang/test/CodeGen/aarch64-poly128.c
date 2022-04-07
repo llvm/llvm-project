@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon \
+// RUN: %clang_cc1 -no-opaque-pointers -triple arm64-none-linux-gnu -target-feature +neon \
 // RUN: -disable-O0-optnone -ffp-contract=fast -emit-llvm -o - %s | opt -S -mem2reg \
 // RUN:  | FileCheck %s
 

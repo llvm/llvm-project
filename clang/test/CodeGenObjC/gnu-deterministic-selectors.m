@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-freebsd -fobjc-runtime=gnustep-1.5 %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-unknown-freebsd -fobjc-runtime=gcc %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-freebsd -fobjc-runtime=gnustep-1.5 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-freebsd -fobjc-runtime=gcc %s -emit-llvm -o - | FileCheck %s
 
 // Check that these selectors are emitted in alphabetical order.
 // The order doesn't actually matter, only that it doesn't vary across runs.

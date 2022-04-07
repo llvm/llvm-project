@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -emit-llvm %s -std=c++11 -o - -fno-rtti \
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm %s -std=c++11 -o - -fno-rtti \
 // RUN:     -fprofile-instrument=clang -fcoverage-mapping -disable-llvm-passes \
 // RUN:     -triple=x86_64-windows-msvc | FileCheck %s --check-prefix=MSVC
-// RUN: %clang_cc1 -emit-llvm %s -std=c++11 -o - -fno-rtti \
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm %s -std=c++11 -o - -fno-rtti \
 // RUN:     -fprofile-instrument=clang -fcoverage-mapping -disable-llvm-passes \
 // RUN:     -triple=x86_64-linux-gnu | FileCheck %s --check-prefix=LINUX
 

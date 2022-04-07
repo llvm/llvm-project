@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fenable-matrix -triple x86_64-apple-darwin %s -emit-llvm -disable-llvm-passes -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -fenable-matrix -triple x86_64-apple-darwin %s -emit-llvm -disable-llvm-passes -o - | FileCheck %s
 
 #if !__has_extension(matrix_types)
 #error Expected extension 'matrix_types' to be enabled

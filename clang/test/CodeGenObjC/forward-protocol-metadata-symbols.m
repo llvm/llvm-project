@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fobjc-runtime=macosx-10.14 -emit-llvm -x objective-c %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -fobjc-runtime=macosx-10.14 -emit-llvm -x objective-c %s -o - | FileCheck %s
 // rdar://16203115
 
 @interface NSObject @end

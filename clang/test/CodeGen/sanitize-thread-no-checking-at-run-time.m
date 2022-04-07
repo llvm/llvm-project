@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -x objective-c++ -fblocks -emit-llvm -o - %s | FileCheck -check-prefix=WITHOUT %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -x objective-c++ -fblocks -emit-llvm -o - %s -fsanitize=thread | FileCheck -check-prefix=TSAN %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin -x objective-c++ -fblocks -emit-llvm -o - %s | FileCheck -check-prefix=WITHOUT %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin -x objective-c++ -fblocks -emit-llvm -o - %s -fsanitize=thread | FileCheck -check-prefix=TSAN %s
 
 // WITHOUT-NOT: "sanitize_thread_no_checking_at_run_time"
 

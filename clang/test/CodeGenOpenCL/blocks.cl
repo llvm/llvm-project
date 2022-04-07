@@ -1,11 +1,11 @@
-// RUN: %clang_cc1 %s -cl-std=CL2.0 -emit-llvm -o - -O0 -triple spir-unknown-unknown | FileCheck -check-prefixes=COMMON,SPIR %s
-// RUN: %clang_cc1 %s -cl-std=CL2.0 -emit-llvm -o - -O0 -triple amdgcn-amd-amdhsa | FileCheck -check-prefixes=COMMON,AMDGCN %s
-// RUN: %clang_cc1 %s -cl-std=CL2.0 -emit-llvm -o - -O0 -debug-info-kind=limited -triple spir-unknown-unknown | FileCheck -check-prefixes=CHECK-DEBUG %s
-// RUN: %clang_cc1 %s -cl-std=CL2.0 -emit-llvm -o - -O0 -debug-info-kind=limited -triple amdgcn-amd-amdhsa | FileCheck -check-prefixes=CHECK-DEBUG %s
-// RUN: %clang_cc1 %s -cl-std=CL3.0 -cl-ext=-all,+__opencl_c_device_enqueue,+__opencl_c_generic_address_space,+__opencl_c_program_scope_global_variables -emit-llvm -o - -O0 -triple spir-unknown-unknown | FileCheck -check-prefixes=COMMON,SPIR %s
-// RUN: %clang_cc1 %s -cl-std=CL3.0 -cl-ext=-all,+__opencl_c_device_enqueue,+__opencl_c_generic_address_space,+__opencl_c_program_scope_global_variables  -emit-llvm -o - -O0 -triple amdgcn-amd-amdhsa | FileCheck -check-prefixes=COMMON,AMDGCN %s
-// RUN: %clang_cc1 %s -cl-std=CL3.0 -cl-ext=-all,+__opencl_c_device_enqueue,+__opencl_c_generic_address_space,+__opencl_c_program_scope_global_variables  -emit-llvm -o - -O0 -debug-info-kind=limited -triple spir-unknown-unknown | FileCheck -check-prefixes=CHECK-DEBUG %s
-// RUN: %clang_cc1 %s -cl-std=CL3.0 -cl-ext=-all,+__opencl_c_device_enqueue,+__opencl_c_generic_address_space,+__opencl_c_program_scope_global_variables -emit-llvm -o - -O0 -debug-info-kind=limited -triple amdgcn-amd-amdhsa | FileCheck -check-prefixes=CHECK-DEBUG %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -cl-std=CL2.0 -emit-llvm -o - -O0 -triple spir-unknown-unknown | FileCheck -check-prefixes=COMMON,SPIR %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -cl-std=CL2.0 -emit-llvm -o - -O0 -triple amdgcn-amd-amdhsa | FileCheck -check-prefixes=COMMON,AMDGCN %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -cl-std=CL2.0 -emit-llvm -o - -O0 -debug-info-kind=limited -triple spir-unknown-unknown | FileCheck -check-prefixes=CHECK-DEBUG %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -cl-std=CL2.0 -emit-llvm -o - -O0 -debug-info-kind=limited -triple amdgcn-amd-amdhsa | FileCheck -check-prefixes=CHECK-DEBUG %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -cl-std=CL3.0 -cl-ext=-all,+__opencl_c_device_enqueue,+__opencl_c_generic_address_space,+__opencl_c_program_scope_global_variables -emit-llvm -o - -O0 -triple spir-unknown-unknown | FileCheck -check-prefixes=COMMON,SPIR %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -cl-std=CL3.0 -cl-ext=-all,+__opencl_c_device_enqueue,+__opencl_c_generic_address_space,+__opencl_c_program_scope_global_variables  -emit-llvm -o - -O0 -triple amdgcn-amd-amdhsa | FileCheck -check-prefixes=COMMON,AMDGCN %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -cl-std=CL3.0 -cl-ext=-all,+__opencl_c_device_enqueue,+__opencl_c_generic_address_space,+__opencl_c_program_scope_global_variables  -emit-llvm -o - -O0 -debug-info-kind=limited -triple spir-unknown-unknown | FileCheck -check-prefixes=CHECK-DEBUG %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -cl-std=CL3.0 -cl-ext=-all,+__opencl_c_device_enqueue,+__opencl_c_generic_address_space,+__opencl_c_program_scope_global_variables -emit-llvm -o - -O0 -debug-info-kind=limited -triple amdgcn-amd-amdhsa | FileCheck -check-prefixes=CHECK-DEBUG %s
 
 // SPIR: %struct.__opencl_block_literal_generic = type { i32, i32, i8 addrspace(4)* }
 // AMDGCN: %struct.__opencl_block_literal_generic = type { i32, i32, i8* }

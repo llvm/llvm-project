@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fno-rtti-data -O1 -disable-llvm-passes %s -emit-llvm -o - -triple x86_64-windows-msvc | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -fno-rtti-data -O1 -disable-llvm-passes %s -emit-llvm -o - -triple x86_64-windows-msvc | FileCheck %s
 
 // Even though Foo<int> has an extern template declaration, we have to emit our
 // own copy the vftable when emitting the available externally constructor.

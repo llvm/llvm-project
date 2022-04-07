@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -msoft-float -mfloat-abi soft -triple powerpc64le-unknown-linux-gnu -emit-llvm -o - %s | FileCheck -check-prefix=CHECK -check-prefix=CHECK-LE %s
-// RUN: %clang_cc1 -msoft-float -mfloat-abi soft -triple powerpc64-unknown-linux-gnu -emit-llvm -o - %s | FileCheck -check-prefix=CHECK -check-prefix=CHECK-BE %s
+// RUN: %clang_cc1 -no-opaque-pointers -msoft-float -mfloat-abi soft -triple powerpc64le-unknown-linux-gnu -emit-llvm -o - %s | FileCheck -check-prefix=CHECK -check-prefix=CHECK-LE %s
+// RUN: %clang_cc1 -no-opaque-pointers -msoft-float -mfloat-abi soft -triple powerpc64-unknown-linux-gnu -emit-llvm -o - %s | FileCheck -check-prefix=CHECK -check-prefix=CHECK-BE %s
 
 // Test float returns and params.
 

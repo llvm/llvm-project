@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -x c++ %s -O0 -triple=x86_64-apple-darwin -target-feature +avx2 -fmax-type-align=16 -emit-llvm -o - -Werror | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -x c++ %s -O0 -triple=x86_64-apple-darwin -target-feature +avx2 -fmax-type-align=16 -emit-llvm -o - -Werror | FileCheck %s
 // rdar://16254558
 
 typedef float AVX2Float __attribute__((__vector_size__(32)));

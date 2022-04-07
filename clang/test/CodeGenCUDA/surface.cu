@@ -1,9 +1,9 @@
 // REQUIRES: x86-registered-target
 // REQUIRES: nvptx-registered-target
 
-// RUN: %clang_cc1 -std=c++11 -fcuda-is-device -triple nvptx64-nvidia-cuda -emit-llvm -o - %s | FileCheck --check-prefix=DEVICE %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -fcuda-is-device -triple nvptx64-nvidia-cuda -emit-llvm -o - %s | FileCheck --check-prefix=DEVICE %s
 // RUN: echo "GPU binary would be here" > %t
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-linux-gnu -target-sdk-version=8.0 -fcuda-include-gpubinary %t -emit-llvm -o - %s | FileCheck --check-prefix=HOST %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -triple x86_64-unknown-linux-gnu -target-sdk-version=8.0 -fcuda-include-gpubinary %t -emit-llvm -o - %s | FileCheck --check-prefix=HOST %s
 
 struct surfaceReference {
   int desc;

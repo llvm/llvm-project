@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -triple=i386-apple-darwin10 -emit-llvm -o - | FileCheck %s -check-prefix=CHECK-32
-// RUN: %clang_cc1 %s -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s -check-prefix=CHECK-64
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=i386-apple-darwin10 -emit-llvm -o - | FileCheck %s -check-prefix=CHECK-32
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s -check-prefix=CHECK-64
 
 struct A {
   virtual void f();

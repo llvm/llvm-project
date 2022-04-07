@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -emit-llvm %s -o - -ffreestanding -triple=i386-pc-win32       | FileCheck %s --check-prefix=Win32
-// RUN: %clang_cc1 -emit-llvm %s -o - -ffreestanding -triple=x86_64-pc-win32     | FileCheck %s --check-prefix=Win64
-// RUN: %clang_cc1 -emit-llvm %s -o - -ffreestanding -triple=i386-pc-linux-gnu   | FileCheck %s --check-prefix=Lin32
-// RUN: %clang_cc1 -emit-llvm %s -o - -ffreestanding -triple=x86_64-pc-linux-gnu | FileCheck %s --check-prefix=Lin64
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm %s -o - -ffreestanding -triple=i386-pc-win32       | FileCheck %s --check-prefix=Win32
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm %s -o - -ffreestanding -triple=x86_64-pc-win32     | FileCheck %s --check-prefix=Win64
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm %s -o - -ffreestanding -triple=i386-pc-linux-gnu   | FileCheck %s --check-prefix=Lin32
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm %s -o - -ffreestanding -triple=x86_64-pc-linux-gnu | FileCheck %s --check-prefix=Lin64
 
 #include <xmmintrin.h>
 

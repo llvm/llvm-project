@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2a -fblocks %s -triple %itanium_abi_triple -emit-llvm -o %t.ll
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++2a -fblocks %s -triple %itanium_abi_triple -emit-llvm -o %t.ll
 // RUN: FileCheck --input-file %t.ll %s
 
 namespace test_func {

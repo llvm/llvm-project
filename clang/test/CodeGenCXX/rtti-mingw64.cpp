@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-windows-gnu %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-windows-gnu %s -emit-llvm -o - | FileCheck %s
 struct A { int a; };
 struct B : virtual A { int b; };
 B b;

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -w -fblocks -triple i386-pc-linux-gnu -target-cpu pentium4 -emit-llvm -o %t %s
+// RUN: %clang_cc1 -no-opaque-pointers -w -fblocks -triple i386-pc-linux-gnu -target-cpu pentium4 -emit-llvm -o %t %s
 // RUN: FileCheck < %t %s
 
 // CHECK-LABEL: define{{.*}} void @f56(

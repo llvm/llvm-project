@@ -1,13 +1,13 @@
-// RUN: %clang_cc1 -ffreestanding -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 \
+// RUN: %clang_cc1 -no-opaque-pointers -ffreestanding -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 \
 // RUN:         -triple i686--windows -Oz -emit-llvm %s -o - \
 // RUN:         | FileCheck %s -check-prefixes CHECK,CHECK-I386,CHECK-INTEL
-// RUN: %clang_cc1 -ffreestanding -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 \
+// RUN: %clang_cc1 -no-opaque-pointers -ffreestanding -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 \
 // RUN:         -triple thumbv7--windows -Oz -emit-llvm %s -o - \
 // RUN:         | FileCheck %s --check-prefixes CHECK,CHECK-ARM,CHECK-ARM-ARM64,CHECK-ARM-X64
-// RUN: %clang_cc1 -ffreestanding -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 \
+// RUN: %clang_cc1 -no-opaque-pointers -ffreestanding -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 \
 // RUN:         -triple x86_64--windows -Oz -emit-llvm -target-feature +cx16 %s -o - \
 // RUN:         | FileCheck %s --check-prefixes CHECK,CHECK-X64,CHECK-ARM-X64,CHECK-INTEL,CHECK-64
-// RUN: %clang_cc1 -ffreestanding -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 \
+// RUN: %clang_cc1 -no-opaque-pointers -ffreestanding -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 \
 // RUN:         -triple aarch64-windows -Oz -emit-llvm %s -o - \
 // RUN:         | FileCheck %s --check-prefixes CHECK-ARM-ARM64,CHECK-ARM-X64,CHECK-ARM64,CHECK-64
 

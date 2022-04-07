@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -emit-llvm -o - -triple amdgcn %s | FileCheck %s -check-prefix=AMDGCN
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -o - -triple amdgcn %s | FileCheck %s -check-prefix=AMDGCN
 
 void use(char *a);
 

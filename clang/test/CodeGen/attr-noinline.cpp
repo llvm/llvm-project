@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -S -emit-llvm %s -triple x86_64-unknown-linux-gnu -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -S -emit-llvm %s -triple x86_64-unknown-linux-gnu -o - | FileCheck %s
 
 bool bar();
 void f(bool, bool);

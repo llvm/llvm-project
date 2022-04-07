@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -verify -o /dev/null
-// RUN: %clang_cc1 %s -triple x86_64-apple-darwin -emit-llvm -fsanitize=objc-cast -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -verify -o /dev/null
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple x86_64-apple-darwin -emit-llvm -fsanitize=objc-cast -o - | FileCheck %s
 
 void p(const char*, ...);
 

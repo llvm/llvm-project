@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -fno-rtti -emit-llvm %s -o - -triple=i386-pc-win32 >%t 2>&1
+// RUN: %clang_cc1 -no-opaque-pointers -fno-rtti -emit-llvm %s -o - -triple=i386-pc-win32 >%t 2>&1
 // RUN: FileCheck --check-prefix=MANGLING %s < %t
 // RUN: FileCheck --check-prefix=XMANGLING %s < %t
 // RUN: FileCheck --check-prefix=CODEGEN %s < %t
-// RUN: %clang_cc1 -fno-rtti -emit-llvm %s -o - -triple=x86_64-pc-win32 2>&1 | FileCheck --check-prefix=MANGLING-X64 %s
+// RUN: %clang_cc1 -no-opaque-pointers -fno-rtti -emit-llvm %s -o - -triple=x86_64-pc-win32 2>&1 | FileCheck --check-prefix=MANGLING-X64 %s
 
 void foo(void *);
 

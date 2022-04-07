@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -emit-llvm -o %t %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -o %t %s
 // RUN: not grep __builtin %t
-// RUN: %clang_cc1 %s -emit-llvm -o - -triple x86_64-darwin-apple | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -triple x86_64-darwin-apple | FileCheck %s
 
 int printf(const char *, ...);
 

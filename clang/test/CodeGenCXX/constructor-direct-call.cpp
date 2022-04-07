@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple i686-pc-mingw32 -fms-extensions -Wmicrosoft %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK32 --check-prefix=CHECK
-// RUN: %clang_cc1 -triple x86_64-pc-windows-msvc19.11.0 -fms-extensions -Wmicrosoft %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK64 --check-prefix=CHECK
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-pc-mingw32 -fms-extensions -Wmicrosoft %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK32 --check-prefix=CHECK
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-pc-windows-msvc19.11.0 -fms-extensions -Wmicrosoft %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK64 --check-prefix=CHECK
 
 class Test1 {
 public:

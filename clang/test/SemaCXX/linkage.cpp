@@ -3,7 +3,7 @@
 // compared against the earlier cached value.  If we had a way of
 // testing linkage directly in Sema, that would be better.
 
-// RUN: %clang_cc1 -Werror -Wno-non-c-typedef-for-linkage -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -Werror -Wno-non-c-typedef-for-linkage -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck %s
 
 // CHECK: @_ZZN5test61A3fooEvE3bar = linkonce_odr global i32 0, align 4
 

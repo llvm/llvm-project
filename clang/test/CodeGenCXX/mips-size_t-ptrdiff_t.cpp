@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -x c++ -emit-llvm -triple=mips-unknown-linux-gnu < %s | FileCheck --check-prefix=O32 %s
-// RUN: %clang_cc1 -x c++ -emit-llvm -triple=mips64-unknown-linux-gnu -target-abi n32 < %s | FileCheck --check-prefix=N32 %s
-// RUN: %clang_cc1 -x c++ -emit-llvm -triple=mips64-unknown-linux-gnu -target-abi n64 < %s | FileCheck --check-prefix=N64 %s
+// RUN: %clang_cc1 -no-opaque-pointers -x c++ -emit-llvm -triple=mips-unknown-linux-gnu < %s | FileCheck --check-prefix=O32 %s
+// RUN: %clang_cc1 -no-opaque-pointers -x c++ -emit-llvm -triple=mips64-unknown-linux-gnu -target-abi n32 < %s | FileCheck --check-prefix=N32 %s
+// RUN: %clang_cc1 -no-opaque-pointers -x c++ -emit-llvm -triple=mips64-unknown-linux-gnu -target-abi n64 < %s | FileCheck --check-prefix=N64 %s
 
 // Test that the size_t is correct for the ABI. It's not sufficient to be the
 // correct size, it must be the same type for correct name mangling.

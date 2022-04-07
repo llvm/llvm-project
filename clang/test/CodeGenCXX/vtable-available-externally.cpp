@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 %s -I%S -triple=x86_64-apple-darwin10 -std=c++98 -emit-llvm -o %t
-// RUN: %clang_cc1 %s -I%S -triple=x86_64-apple-darwin10 -std=c++98 -O2 -disable-llvm-passes -emit-llvm -o %t.opt
-// RUN: %clang_cc1 %s -I%S -triple=x86_64-apple-darwin10 -std=c++98 -O2 -disable-llvm-passes -emit-llvm -o %t.vtable -fforce-emit-vtables -fstrict-vtable-pointers -mconstructor-aliases
+// RUN: %clang_cc1 -no-opaque-pointers %s -I%S -triple=x86_64-apple-darwin10 -std=c++98 -emit-llvm -o %t
+// RUN: %clang_cc1 -no-opaque-pointers %s -I%S -triple=x86_64-apple-darwin10 -std=c++98 -O2 -disable-llvm-passes -emit-llvm -o %t.opt
+// RUN: %clang_cc1 -no-opaque-pointers %s -I%S -triple=x86_64-apple-darwin10 -std=c++98 -O2 -disable-llvm-passes -emit-llvm -o %t.vtable -fforce-emit-vtables -fstrict-vtable-pointers -mconstructor-aliases
 // RUN: FileCheck -allow-deprecated-dag-overlap --check-prefix=CHECK-TEST1 %s < %t
 // RUN: FileCheck -allow-deprecated-dag-overlap --check-prefix=CHECK-TEST2 %s < %t
 // RUN: FileCheck -allow-deprecated-dag-overlap --check-prefix=CHECK-TEST5 %s < %t

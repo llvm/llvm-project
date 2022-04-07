@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -emit-llvm -o - -triple=armv5-unknown-freebsd -std=c11 | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -triple=armv5-unknown-freebsd -std=c11 | FileCheck %s
 
 // Test that we are generating atomicrmw instructions, rather than
 // compare-exchange loops for common atomic ops.  This makes a big difference

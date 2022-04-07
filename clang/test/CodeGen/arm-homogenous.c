@@ -1,10 +1,10 @@
 // REQUIRES: arm-registered-target
-// RUN: %clang_cc1 -triple armv7---eabi -target-abi aapcs -mfloat-abi hard -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple armv7---eabi -target-abi aapcs -mfloat-abi hard -emit-llvm %s -o - | FileCheck %s
 
-// RUN: %clang_cc1 -triple arm64-apple-darwin9 -target-abi darwinpcs \
+// RUN: %clang_cc1 -no-opaque-pointers -triple arm64-apple-darwin9 -target-abi darwinpcs \
 // RUN:  -ffreestanding -emit-llvm -w -o - %s | FileCheck -check-prefix=CHECK64 %s
 
-// RUN: %clang_cc1 -triple arm64-linux-gnu -ffreestanding -emit-llvm -w -o - %s \
+// RUN: %clang_cc1 -no-opaque-pointers -triple arm64-linux-gnu -ffreestanding -emit-llvm -w -o - %s \
 // RUN:   | FileCheck --check-prefix=CHECK64 %s
 typedef long long int64_t;
 typedef unsigned int uint32_t;

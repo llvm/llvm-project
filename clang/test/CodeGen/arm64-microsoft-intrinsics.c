@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple arm64-windows -fms-compatibility -emit-llvm -o - %s \
+// RUN: %clang_cc1 -no-opaque-pointers -triple arm64-windows -fms-compatibility -emit-llvm -o - %s \
 // RUN:    | FileCheck %s -check-prefix CHECK-MSVC
 
-// RUN: not %clang_cc1 -triple arm64-linux -Werror -S -o /dev/null %s 2>&1 \
+// RUN: not %clang_cc1 -no-opaque-pointers -triple arm64-linux -Werror -S -o /dev/null %s 2>&1 \
 // RUN:    | FileCheck %s -check-prefix CHECK-LINUX
 
 long test_InterlockedAdd(long volatile *Addend, long Value) {

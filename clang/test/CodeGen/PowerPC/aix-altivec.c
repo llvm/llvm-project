@@ -1,6 +1,6 @@
 // REQUIRES: powerpc-registered-target
-// RUN: %clang_cc1 -triple powerpc64-unknown-aix -target-feature +altivec -target-cpu pwr8 -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -triple powerpc-unknown-aix -target-feature +altivec -target-cpu pwr8 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc64-unknown-aix -target-feature +altivec -target-cpu pwr8 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc-unknown-aix -target-feature +altivec -target-cpu pwr8 -emit-llvm %s -o - | FileCheck %s
 vector float foo1(vector float x) { return x; }
 // CHECK:  define <4 x float> @foo1(<4 x float> noundef %x) [[ATTR:#[0-9]+]] {
 // CHECK:  entry:

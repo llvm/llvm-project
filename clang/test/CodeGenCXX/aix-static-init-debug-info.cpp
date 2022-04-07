@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -triple powerpc-ibm-aix-xcoff -emit-llvm -x c++ \
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc-ibm-aix-xcoff -emit-llvm -x c++ \
 // RUN:     -debug-info-kind=limited < %s | \
 // RUN:   FileCheck %s
 
-// RUN: %clang_cc1 -triple powerpc64-ibm-aix-xcoff -emit-llvm -x c++ \
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc64-ibm-aix-xcoff -emit-llvm -x c++ \
 // RUN:     -debug-info-kind=limited  < %s | \
 // RUN:   FileCheck %s
 

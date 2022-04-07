@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.7.0 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-macosx10.7.0 %s -emit-llvm -o - | FileCheck %s
 
 void t1(void) __attribute__((naked));
 

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -cl-std=CL2.0 -emit-llvm -o - -triple spir-unknown-unknown %s | FileCheck %s
-// RUN: %clang_cc1 -cl-std=CL3.0 -cl-ext=+__opencl_c_generic_address_space -emit-llvm -o - -triple spir-unknown-unknown %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -cl-std=CL2.0 -emit-llvm -o - -triple spir-unknown-unknown %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -cl-std=CL3.0 -cl-ext=+__opencl_c_generic_address_space -emit-llvm -o - -triple spir-unknown-unknown %s | FileCheck %s
 
 typedef short short4 __attribute__((ext_vector_type(4)));
 

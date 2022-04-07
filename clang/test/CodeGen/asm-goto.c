@@ -1,6 +1,6 @@
 // REQUIRES: x86-registered-target
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -O0 -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -triple i386-pc-linux-gnu -O0 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-pc-linux-gnu -O0 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i386-pc-linux-gnu -O0 -emit-llvm %s -o - | FileCheck %s
 
 int test1(int cond) {
   // CHECK-LABEL: define{{.*}} i32 @test1(

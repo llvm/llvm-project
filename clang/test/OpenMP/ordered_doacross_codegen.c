@@ -1,14 +1,14 @@
-// RUN: %clang_cc1 -verify -fopenmp -triple x86_64-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-NORMAL
-// RUN: %clang_cc1 -fopenmp -triple x86_64-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -triple x86_64-unknown-unknown -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,CHECK-NORMAL
+// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp -triple x86_64-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-NORMAL
+// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -triple x86_64-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -triple x86_64-unknown-unknown -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,CHECK-NORMAL
 
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-enable-irbuilder -triple x86_64-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-IRBUILDER
-// RUN: %clang_cc1 -fopenmp -fopenmp-enable-irbuilder -triple x86_64-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -fopenmp-enable-irbuilder -triple x86_64-unknown-unknown -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,CHECK-IRBUILDER
+// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp -fopenmp-enable-irbuilder -triple x86_64-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-IRBUILDER
+// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -fopenmp-enable-irbuilder -triple x86_64-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -fopenmp-enable-irbuilder -triple x86_64-unknown-unknown -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,CHECK-IRBUILDER
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -triple x86_64-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
-// RUN: %clang_cc1 -fopenmp-simd -triple x86_64-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp-simd -triple x86_64-unknown-unknown -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp-simd -triple x86_64-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -no-opaque-pointers -fopenmp-simd -triple x86_64-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -no-opaque-pointers -fopenmp-simd -triple x86_64-unknown-unknown -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 // expected-no-diagnostics
 

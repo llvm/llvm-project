@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin9 -fobjc-dispatch-method=non-legacy -fobjc-arc -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin9 -fobjc-dispatch-method=non-legacy -fobjc-arc -emit-llvm -o - %s | FileCheck %s
 
 // CHECK: %[[STRUCT_STRONG:.*]] = type { i8* }
 

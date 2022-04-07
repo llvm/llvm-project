@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -emit-llvm -O3 -fdeclspec \
+// RUN: %clang_cc1 -no-opaque-pointers -triple amdgcn-amd-amdhsa -emit-llvm -O3 -fdeclspec \
 // RUN:     -disable-llvm-passes -o - %s | FileCheck %s
 
 int get_x();

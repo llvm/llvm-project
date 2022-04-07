@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-gnu-linux -aux-triple amdgcn-amd-amdhsa \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-gnu-linux -aux-triple amdgcn-amd-amdhsa \
 // RUN:   -emit-llvm -o - -x hip %s | FileCheck -check-prefixes=CHECK,LNX %s
-// RUN: %clang_cc1 -triple x86_64-unknown-windows-msvc -aux-triple amdgcn-amd-amdhsa \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-windows-msvc -aux-triple amdgcn-amd-amdhsa \
 // RUN:   -emit-llvm -o - -x hip %s | FileCheck -check-prefixes=CHECK,MSVC %s
 
 #include "Inputs/cuda.h"

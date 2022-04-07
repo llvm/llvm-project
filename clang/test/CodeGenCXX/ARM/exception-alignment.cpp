@@ -1,8 +1,8 @@
 // Bug: https://bugs.llvm.org/show_bug.cgi?id=42668
 // REQUIRES: arm-registered-target
 
-// RUN: %clang_cc1 -triple armv8-arm-none-eabi -emit-llvm -target-cpu generic -Os -fcxx-exceptions -o - -x c++ %s | FileCheck --check-prefixes=CHECK,A8 %s
-// RUN: %clang_cc1 -triple armv8-unknown-linux-android -emit-llvm -target-cpu generic -Os -fcxx-exceptions -o - -x c++ %s | FileCheck --check-prefixes=CHECK,A16 %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple armv8-arm-none-eabi -emit-llvm -target-cpu generic -Os -fcxx-exceptions -o - -x c++ %s | FileCheck --check-prefixes=CHECK,A8 %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple armv8-unknown-linux-android -emit-llvm -target-cpu generic -Os -fcxx-exceptions -o - -x c++ %s | FileCheck --check-prefixes=CHECK,A16 %s
 
 // CHECK: [[E:%[A-z0-9]+]] = tail call i8* @__cxa_allocate_exception
 // CHECK-NEXT: [[BC:%[A-z0-9]+]] = bitcast i8* [[E]] to <2 x i64>*

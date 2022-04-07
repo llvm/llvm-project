@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple thumbv7k-apple-watchos2.0 -target-abi aapcs16 -target-cpu cortex-a7 %s -o - -emit-llvm | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple thumbv7k-apple-watchos2.0 -target-abi aapcs16 -target-cpu cortex-a7 %s -o - -emit-llvm | FileCheck %s
 
 // REQUIRES: aarch64-registered-target || arm-registered-target
 

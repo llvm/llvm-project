@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgcn-amd-amdhsa -target-cpu gfx90a \
+// RUN: %clang_cc1 -no-opaque-pointers -O0 -cl-std=CL2.0 -triple amdgcn-amd-amdhsa -target-cpu gfx90a \
 // RUN:   %s -S -emit-llvm -o - | FileCheck %s -check-prefix=CHECK
 
-// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgcn-amd-amdhsa -target-cpu gfx90a \
+// RUN: %clang_cc1 -no-opaque-pointers -O0 -cl-std=CL2.0 -triple amdgcn-amd-amdhsa -target-cpu gfx90a \
 // RUN:   -S -o - %s | FileCheck -check-prefix=GFX90A %s
 
 // REQUIRES: amdgpu-registered-target

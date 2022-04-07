@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fapple-kext -fno-rtti -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -fapple-kext -fno-rtti -emit-llvm -o - %s | FileCheck %s
 
 // CHECK: @_ZTV1A ={{.*}} unnamed_addr constant { [4 x i8*] } { [4 x i8*] [i8* null, i8* null, i8* bitcast (i8* (%struct.A*)* @_ZNK1A3abcEv to i8*), i8* null] }
 // CHECK: @_ZTV4Base ={{.*}} unnamed_addr constant { [4 x i8*] } { [4 x i8*] [i8* null, i8* null, i8* bitcast (i8* (%struct.Base*)* @_ZNK4Base3abcEv to i8*), i8* null] }

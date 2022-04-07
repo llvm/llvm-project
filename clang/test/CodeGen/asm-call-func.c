@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm %s -o - -triple x86_64-unknown-linux-gnu| FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm %s -o - -triple x86_64-unknown-linux-gnu| FileCheck %s
 
 void callee(void);
 void caller(void) {

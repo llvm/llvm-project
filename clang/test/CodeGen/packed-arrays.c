@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unk-unk -emit-llvm -Os -o %t %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unk-unk -emit-llvm -Os -o %t %s
 // RUN: FileCheck < %t %s
 
 struct s0 {

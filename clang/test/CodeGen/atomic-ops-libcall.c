@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 < %s -triple armv5e-none-linux-gnueabi -emit-llvm -O1 | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers < %s -triple armv5e-none-linux-gnueabi -emit-llvm -O1 | FileCheck %s
 
 // FIXME: This file should not be checking -O1 output.
 // Ie, it is testing many IR optimizer passes as part of front-end verification.

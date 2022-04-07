@@ -1,6 +1,6 @@
 // REQUIRES: sparc-registered-target
-// RUN: %clang_cc1 -triple sparc-unknown-unknown -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -triple sparc64-unknown-unknown -emit-llvm %s -o - | FileCheck -check-prefix CHECK-V9 %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple sparc-unknown-unknown -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple sparc64-unknown-unknown -emit-llvm %s -o - | FileCheck -check-prefix CHECK-V9 %s
 
 void test_eh_return_data_regno(void)
 {

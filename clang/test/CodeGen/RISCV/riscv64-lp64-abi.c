@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple riscv64 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple riscv64 -emit-llvm %s -o - | FileCheck %s
 
 // This file contains test cases that will have different output for lp64 vs
 // the other 64-bit ABIs.

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple armv7-apple-darwin10 -emit-llvm -o - %s | FileCheck -check-prefix=CHECK-ARM %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple armv7-apple-darwin10 -emit-llvm -o - %s | FileCheck -check-prefix=CHECK-ARM %s
 // rdar://7761305
 
 @interface I

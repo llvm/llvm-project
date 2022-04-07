@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple=i686-apple-darwin10 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=i686-apple-darwin10 -emit-llvm -o - | FileCheck %s
 
 struct Base {
   char a;

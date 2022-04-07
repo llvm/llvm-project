@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++11 -triple i386-unknown-unknown %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -std=c++11 -triple i386-unknown-unknown %s -emit-llvm -fsanitize=signed-integer-overflow -o - | FileCheck --check-prefix=SIO %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -triple i386-unknown-unknown %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -triple i386-unknown-unknown %s -emit-llvm -fsanitize=signed-integer-overflow -o - | FileCheck --check-prefix=SIO %s
 
 // CHECK: @[[ABC4:.*]] = {{.*}} constant [4 x i8] c"abc\00"
 // CHECK: @[[ABC15:.*]] = {{.*}} constant [15 x i8] c"abc\00\00\00\00

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -triple=x86_64-apple-darwin10 -fcxx-exceptions -fexceptions -emit-llvm -std=c++98 -o - | FileCheck -check-prefix=CHECK -check-prefix=CHECK98 %s
-// RUN: %clang_cc1 %s -triple=x86_64-apple-darwin10 -fcxx-exceptions -fexceptions -emit-llvm -std=c++11 -o - | FileCheck -check-prefix=CHECK -check-prefix=CHECK11 %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=x86_64-apple-darwin10 -fcxx-exceptions -fexceptions -emit-llvm -std=c++98 -o - | FileCheck -check-prefix=CHECK -check-prefix=CHECK98 %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=x86_64-apple-darwin10 -fcxx-exceptions -fexceptions -emit-llvm -std=c++11 -o - | FileCheck -check-prefix=CHECK -check-prefix=CHECK11 %s
 
 // Reduced from a crash on boost::interprocess's node_allocator_test.cpp.
 namespace test0 {

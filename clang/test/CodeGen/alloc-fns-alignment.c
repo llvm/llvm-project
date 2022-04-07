@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm < %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux-gnu -emit-llvm < %s | FileCheck %s
 
 // Note: this test originally asserted that malloc/calloc/realloc got alignment
 // attributes on their return pointer. However, that was reverted in

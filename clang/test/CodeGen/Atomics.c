@@ -1,6 +1,6 @@
 // Test frontend handling of __sync builtins.
 // Modified from a gcc testcase.
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin -emit-llvm %s -o - | FileCheck %s
 
 signed char sc;
 unsigned char uc;

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -emit-llvm -fms-extensions -triple=x86_64-pc-win32 -debug-info-kind=limited %s -o - -std=c++11 | FileCheck %s
-// RUN: %clang_cc1 -emit-llvm -fms-extensions -triple=x86_64-unknown-unknown -debug-info-kind=limited %s -o - -std=c++11 2>&1 | FileCheck %s --check-prefix=CHECK-ITANIUM
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -fms-extensions -triple=x86_64-pc-win32 -debug-info-kind=limited %s -o - -std=c++11 | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -fms-extensions -triple=x86_64-unknown-unknown -debug-info-kind=limited %s -o - -std=c++11 2>&1 | FileCheck %s --check-prefix=CHECK-ITANIUM
 
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "tmpl_guid2<GUID{12345678-1234-1234-1234-1234567890ab}>"
 // CHECK-SAME:             templateParams: [[TGI2ARGS:![0-9]*]]

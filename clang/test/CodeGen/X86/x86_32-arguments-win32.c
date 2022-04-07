@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -w -triple i386-pc-win32 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -w -triple i386-pc-win32 -emit-llvm -o - %s | FileCheck %s
 
 // CHECK-LABEL: define dso_local i64 @f1_1()
 // CHECK-LABEL: define dso_local void @f1_2(i32 %a0.0, i32 %a0.1)

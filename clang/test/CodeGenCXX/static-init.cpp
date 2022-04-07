@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -triple=x86_64-pc-linuxs -emit-llvm -std=c++98 -o - | FileCheck -check-prefix=CHECK -check-prefix=CHECK98 %s
-// RUN: %clang_cc1 %s -triple=x86_64-pc-linuxs -emit-llvm -std=c++11 -o - | FileCheck -check-prefix=CHECK -check-prefix=CHECK11 %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=x86_64-pc-linuxs -emit-llvm -std=c++98 -o - | FileCheck -check-prefix=CHECK -check-prefix=CHECK98 %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=x86_64-pc-linuxs -emit-llvm -std=c++11 -o - | FileCheck -check-prefix=CHECK -check-prefix=CHECK11 %s
 
 // CHECK: @_ZZ1hvE1i = internal global i32 0, align 4
 // CHECK: @base_req ={{.*}} global [4 x i8] c"foo\00", align 1

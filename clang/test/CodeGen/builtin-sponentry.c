@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple aarch64-windows-gnu -Oz -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple aarch64-windows-gnu -Oz -emit-llvm %s -o - | FileCheck %s
 
 void *test_sponentry(void) {
   return __builtin_sponentry();

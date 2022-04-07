@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i686-pc-linux-gnu %s -o - -emit-llvm -verify | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-pc-linux-gnu %s -o - -emit-llvm -verify | FileCheck %s
 // expected-no-diagnostics
 
 typedef __typeof(sizeof(int)) size_t;

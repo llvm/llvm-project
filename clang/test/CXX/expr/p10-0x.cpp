@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -triple x86_64-pc-linux-gnu %s -o - -std=c++11 | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple x86_64-pc-linux-gnu %s -o - -std=c++11 | FileCheck %s
 
 volatile int g1;
 struct S {

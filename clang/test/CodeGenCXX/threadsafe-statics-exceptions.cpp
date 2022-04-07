@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -o - -fcxx-exceptions -fexceptions -triple x86_64-apple-darwin10 %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -o - -fcxx-exceptions -fexceptions -triple x86_64-apple-darwin10 %s | FileCheck %s
 
 struct X {
   X();

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -S -emit-llvm -o - -triple=x86_64-linux-gnu %s | FileCheck %s -check-prefix=CHECK-YES
-// RUN: %clang_cc1 -S -emit-llvm -o - -fno-delete-null-pointer-checks -triple=x86_64-linux-gnu %s | FileCheck %s -check-prefix=CHECK-NO
+// RUN: %clang_cc1 -no-opaque-pointers -S -emit-llvm -o - -triple=x86_64-linux-gnu %s | FileCheck %s -check-prefix=CHECK-YES
+// RUN: %clang_cc1 -no-opaque-pointers -S -emit-llvm -o - -fno-delete-null-pointer-checks -triple=x86_64-linux-gnu %s | FileCheck %s -check-prefix=CHECK-NO
 
 struct Struct {
   int many;

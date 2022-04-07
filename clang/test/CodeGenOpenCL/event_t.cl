@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -emit-llvm -o - -O0 | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -O0 | FileCheck %s
 
 void foo(event_t evt);
 

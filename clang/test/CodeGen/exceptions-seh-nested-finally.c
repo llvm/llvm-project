@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 %s -triple x86_64-pc-win32 -fms-extensions -emit-llvm -o - \
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple x86_64-pc-win32 -fms-extensions -emit-llvm -o - \
 // RUN:         | FileCheck %s
-// RUN: %clang_cc1 %s -triple i686-pc-win32 -fms-extensions -emit-llvm -o - \
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple i686-pc-win32 -fms-extensions -emit-llvm -o - \
 // RUN:         | FileCheck %s
-// RUN: %clang_cc1 %s -triple aarch64-windows -fms-extensions -emit-llvm -o - \
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple aarch64-windows -fms-extensions -emit-llvm -o - \
 // RUN:         | FileCheck %s
 
 // Check that the first finally block passes the enclosing function's frame

@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios11 -fobjc-arc -fblocks -fobjc-runtime=ios-11.0 -emit-llvm -o - %s | FileCheck -check-prefix=ARM64 -check-prefix=COMMON %s
-// RUN: %clang_cc1 -triple thumbv7-apple-ios10 -fobjc-arc -fblocks -fobjc-runtime=ios-10.0 -emit-llvm -o - %s | FileCheck -check-prefix=COMMON %s
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.13 -fobjc-arc -fblocks -fobjc-runtime=macosx-10.13.0 -emit-llvm -o - %s | FileCheck -check-prefix=COMMON %s
-// RUN: %clang_cc1 -triple i386-apple-macosx10.13.0 -fobjc-arc -fblocks -fobjc-runtime=macosx-fragile-10.13.0 -emit-llvm -o - %s | FileCheck -check-prefix=COMMON %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple arm64-apple-ios11 -fobjc-arc -fblocks -fobjc-runtime=ios-11.0 -emit-llvm -o - %s | FileCheck -check-prefix=ARM64 -check-prefix=COMMON %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple thumbv7-apple-ios10 -fobjc-arc -fblocks -fobjc-runtime=ios-10.0 -emit-llvm -o - %s | FileCheck -check-prefix=COMMON %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-macosx10.13 -fobjc-arc -fblocks -fobjc-runtime=macosx-10.13.0 -emit-llvm -o - %s | FileCheck -check-prefix=COMMON %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i386-apple-macosx10.13.0 -fobjc-arc -fblocks -fobjc-runtime=macosx-fragile-10.13.0 -emit-llvm -o - %s | FileCheck -check-prefix=COMMON %s
 
 typedef void (^BlockTy)(void);
 

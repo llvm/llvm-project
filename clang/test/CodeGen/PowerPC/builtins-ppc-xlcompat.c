@@ -1,11 +1,11 @@
 // REQUIRES: powerpc-registered-target
-// RUN: %clang_cc1 -target-feature +altivec -target-feature +vsx \
+// RUN: %clang_cc1 -no-opaque-pointers -target-feature +altivec -target-feature +vsx \
 // RUN:   -triple powerpc64-unknown-linux-gnu -emit-llvm %s -o - \
 // RUN:   -D__XL_COMPAT_ALTIVEC__ -target-cpu pwr7 | FileCheck %s
-// RUN: %clang_cc1 -target-feature +altivec -target-feature +vsx \
+// RUN: %clang_cc1 -no-opaque-pointers -target-feature +altivec -target-feature +vsx \
 // RUN:   -triple powerpc64le-unknown-linux-gnu -emit-llvm %s -o - \
 // RUN:   -D__XL_COMPAT_ALTIVEC__ -target-cpu pwr8 | FileCheck %s
-// RUN: %clang_cc1 -target-feature +altivec -target-feature +vsx \
+// RUN: %clang_cc1 -no-opaque-pointers -target-feature +altivec -target-feature +vsx \
 // RUN:   -triple powerpc64le-unknown-linux-gnu -emit-llvm %s -o - \
 // RUN:   -U__XL_COMPAT_ALTIVEC__ -target-cpu pwr8 | FileCheck \
 // RUN:   --check-prefix=NOCOMPAT %s

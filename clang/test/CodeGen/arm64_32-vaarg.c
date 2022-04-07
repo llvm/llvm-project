@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64_32-apple-ios7.0 -target-abi darwinpcs -emit-llvm -o - -O1 -ffreestanding %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple arm64_32-apple-ios7.0 -target-abi darwinpcs -emit-llvm -o - -O1 -ffreestanding %s | FileCheck %s
 
 #include <stdarg.h>
 

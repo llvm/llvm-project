@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10 -emit-llvm -x objective-c %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-macosx10 -emit-llvm -x objective-c %s -o - | FileCheck %s
 
 // CHECK: define internal zeroext i1 @"\01-[A0 p]"(
 // CHECK:   %[[ATOMIC_LOAD:.*]] = load atomic i8, i8* %{{.*}} seq_cst, align 1

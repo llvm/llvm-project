@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++98 %s -triple x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-CXX98
-// RUN: %clang_cc1 -std=c++17 %s -triple x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-CXX17
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++98 %s -triple x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-CXX98
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++17 %s -triple x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-CXX17
 
 struct A {
   virtual ~A();

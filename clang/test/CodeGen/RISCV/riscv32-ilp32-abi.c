@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple riscv32 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple riscv32 -emit-llvm %s -o - | FileCheck %s
 
 // This file contains test cases that will have different output for ilp32 vs
 // the other 32-bit ABIs.

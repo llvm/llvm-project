@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i686-windows-pc -emit-llvm -o - -mconstructor-aliases -O1 -disable-llvm-passes %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-windows-pc -emit-llvm -o - -mconstructor-aliases -O1 -disable-llvm-passes %s | FileCheck %s
 
 struct Base { virtual ~Base(); };
 struct Derived : Base {

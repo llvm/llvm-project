@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -x c -triple x86_64-apple-darwin10 -w -emit-llvm -o - %s -fsanitize=pointer-overflow | FileCheck %s --check-prefixes=CHECK,CHECK-C
-// RUN: %clang_cc1 -x c++ -triple x86_64-apple-darwin10 -w -emit-llvm -o - %s -fsanitize=pointer-overflow | FileCheck %s --check-prefixes=CHECK,CHECK-CPP
+// RUN: %clang_cc1 -no-opaque-pointers -x c -triple x86_64-apple-darwin10 -w -emit-llvm -o - %s -fsanitize=pointer-overflow | FileCheck %s --check-prefixes=CHECK,CHECK-C
+// RUN: %clang_cc1 -no-opaque-pointers -x c++ -triple x86_64-apple-darwin10 -w -emit-llvm -o - %s -fsanitize=pointer-overflow | FileCheck %s --check-prefixes=CHECK,CHECK-CPP
 
 #ifdef __cplusplus
 extern "C" {

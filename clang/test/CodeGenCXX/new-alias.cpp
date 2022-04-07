@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -triple x86_64-linux-gnu -std=c++11 -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple x86_64-linux-gnu -std=c++11 -o - %s | FileCheck %s
 
 using size_t = decltype(sizeof(0));
 

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple i386-unknown-unknown -fobjc-runtime=macosx-fragile-10.5 -emit-llvm -o - %s | FileCheck -check-prefix=CHECK-X86-32 %s
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -fobjc-runtime=macosx-fragile-10.5 -emit-llvm -o - %s | FileCheck -check-prefix=CHECK-X86-64 %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i386-unknown-unknown -fobjc-runtime=macosx-fragile-10.5 -emit-llvm -o - %s | FileCheck -check-prefix=CHECK-X86-32 %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown -fobjc-runtime=macosx-fragile-10.5 -emit-llvm -o - %s | FileCheck -check-prefix=CHECK-X86-64 %s
 
 @interface A
 -(void) im0;

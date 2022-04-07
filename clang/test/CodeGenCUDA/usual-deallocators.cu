@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 %s --std=c++11 -triple nvptx-unknown-unknown -fcuda-is-device \
+// RUN: %clang_cc1 -no-opaque-pointers %s --std=c++11 -triple nvptx-unknown-unknown -fcuda-is-device \
 // RUN:   -emit-llvm -o - | FileCheck %s --check-prefixes=COMMON,DEVICE
-// RUN: %clang_cc1 %s --std=c++11 -triple nvptx-unknown-unknown \
+// RUN: %clang_cc1 -no-opaque-pointers %s --std=c++11 -triple nvptx-unknown-unknown \
 // RUN:   -emit-llvm -o - | FileCheck %s --check-prefixes=COMMON,HOST
-// RUN: %clang_cc1 %s --std=c++17 -triple nvptx-unknown-unknown -fcuda-is-device \
+// RUN: %clang_cc1 -no-opaque-pointers %s --std=c++17 -triple nvptx-unknown-unknown -fcuda-is-device \
 // RUN:   -emit-llvm -o - | FileCheck %s --check-prefixes=COMMON,DEVICE
-// RUN: %clang_cc1 %s --std=c++17 -triple nvptx-unknown-unknown \
+// RUN: %clang_cc1 -no-opaque-pointers %s --std=c++17 -triple nvptx-unknown-unknown \
 // RUN:   -emit-llvm -o - | FileCheck %s --check-prefixes=COMMON,HOST
 
 #include "Inputs/cuda.h"

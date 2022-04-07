@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -S -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple amdgcn-unknown-unknown -S -emit-llvm -o - %s | FileCheck %s
 // CHECK: define{{.*}} amdgpu_kernel void @test_call_kernel(i32 addrspace(1)* nocapture noundef writeonly align 4 %out)
 // CHECK: store i32 4, i32 addrspace(1)* %out, align 4
 

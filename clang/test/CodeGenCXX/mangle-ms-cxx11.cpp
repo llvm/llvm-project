@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -std=c++11 -fms-extensions -emit-llvm %s -o - -triple=i386-pc-win32 -fms-compatibility-version=19.00 | FileCheck %s --check-prefix=CHECK --check-prefix=MSVC2015
-// RUN: %clang_cc1 -std=c++11 -fms-extensions -emit-llvm %s -o - -triple=i386-pc-win32 -fms-compatibility-version=18.00 | FileCheck %s --check-prefix=CHECK --check-prefix=MSVC2013
-// RUN: %clang_cc1 -std=c++11 -fms-extensions -emit-llvm %s -o - -triple=i386-pc-win32 -gcodeview -debug-info-kind=limited | FileCheck %s --check-prefix=DBG
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -fms-extensions -emit-llvm %s -o - -triple=i386-pc-win32 -fms-compatibility-version=19.00 | FileCheck %s --check-prefix=CHECK --check-prefix=MSVC2015
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -fms-extensions -emit-llvm %s -o - -triple=i386-pc-win32 -fms-compatibility-version=18.00 | FileCheck %s --check-prefix=CHECK --check-prefix=MSVC2013
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -fms-extensions -emit-llvm %s -o - -triple=i386-pc-win32 -gcodeview -debug-info-kind=limited | FileCheck %s --check-prefix=DBG
 
 namespace FTypeWithQuals {
 template <typename T>

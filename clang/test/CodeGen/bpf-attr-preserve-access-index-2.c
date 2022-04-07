@@ -1,5 +1,5 @@
 // REQUIRES: bpf-registered-target
-// RUN: %clang_cc1 -triple bpf -emit-llvm -debug-info-kind=limited -disable-llvm-passes %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple bpf -emit-llvm -debug-info-kind=limited -disable-llvm-passes %s -o - | FileCheck %s
 
 #define __reloc__ __attribute__((preserve_access_index))
 

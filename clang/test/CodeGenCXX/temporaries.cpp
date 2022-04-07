@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-apple-darwin9 -std=c++11 | FileCheck %s -check-prefixes=CHECK,NULL-INVALID,CHECK-CXX11
-// RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-apple-darwin9 -std=c++17 | FileCheck %s -check-prefixes=CHECK,NULL-INVALID,CHECK-CXX17
-// RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-apple-darwin9 -std=c++11 -fno-delete-null-pointer-checks | FileCheck %s -check-prefixes=CHECK,NULL-VALID,CHECK-CXX11
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm %s -o - -triple=x86_64-apple-darwin9 -std=c++11 | FileCheck %s -check-prefixes=CHECK,NULL-INVALID,CHECK-CXX11
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm %s -o - -triple=x86_64-apple-darwin9 -std=c++17 | FileCheck %s -check-prefixes=CHECK,NULL-INVALID,CHECK-CXX17
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm %s -o - -triple=x86_64-apple-darwin9 -std=c++11 -fno-delete-null-pointer-checks | FileCheck %s -check-prefixes=CHECK,NULL-VALID,CHECK-CXX11
 
 namespace PR16263 {
   const unsigned int n = 1234;

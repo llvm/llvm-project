@@ -1,5 +1,5 @@
 // REQUIRES: powerpc-registered-target
-// RUN: %clang_cc1 -triple powerpc-unknown-linux-gnu -emit-llvm -o - %s -O2 -disable-llvm-passes | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc-unknown-linux-gnu -emit-llvm -o - %s -O2 -disable-llvm-passes | FileCheck %s
 
 int boolsize = sizeof(_Bool);
 // CHECK: boolsize ={{.*}} global i32 1, align 4

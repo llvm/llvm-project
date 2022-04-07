@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -std=gnu++98 -triple x86_64-apple-darwin10 -emit-llvm -fobjc-runtime-has-weak -fblocks -fobjc-arc -fexceptions -fobjc-arc-exceptions -o - %s | FileCheck -check-prefix CHECK %s
-// RUN: %clang_cc1 -std=gnu++98 -triple x86_64-apple-darwin10 -emit-llvm -fobjc-runtime-has-weak -fblocks -fobjc-arc -fexceptions -fobjc-arc-exceptions -O1 -o - %s | FileCheck -check-prefix CHECK-O1 %s
-// RUN: %clang_cc1 -std=gnu++98 -triple x86_64-apple-darwin10 -emit-llvm -fobjc-runtime-has-weak -fblocks -fobjc-arc -o - %s | FileCheck -check-prefix CHECK-NOEXCP %s
-// RUN: %clang_cc1 -std=gnu++98 -triple x86_64-apple-darwin10 -emit-llvm -fobjc-runtime-has-weak -fblocks -fobjc-arc -fexceptions -fobjc-arc-exceptions -fobjc-avoid-heapify-local-blocks -o - %s | FileCheck -check-prefix CHECK-NOHEAP %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=gnu++98 -triple x86_64-apple-darwin10 -emit-llvm -fobjc-runtime-has-weak -fblocks -fobjc-arc -fexceptions -fobjc-arc-exceptions -o - %s | FileCheck -check-prefix CHECK %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=gnu++98 -triple x86_64-apple-darwin10 -emit-llvm -fobjc-runtime-has-weak -fblocks -fobjc-arc -fexceptions -fobjc-arc-exceptions -O1 -o - %s | FileCheck -check-prefix CHECK-O1 %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=gnu++98 -triple x86_64-apple-darwin10 -emit-llvm -fobjc-runtime-has-weak -fblocks -fobjc-arc -o - %s | FileCheck -check-prefix CHECK-NOEXCP %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=gnu++98 -triple x86_64-apple-darwin10 -emit-llvm -fobjc-runtime-has-weak -fblocks -fobjc-arc -fexceptions -fobjc-arc-exceptions -fobjc-avoid-heapify-local-blocks -o - %s | FileCheck -check-prefix CHECK-NOHEAP %s
 
 // CHECK: [[A:.*]] = type { i64, [10 x i8*] }
 // CHECK: %[[STRUCT_BLOCK_DESCRIPTOR:.*]] = type { i64, i64 }

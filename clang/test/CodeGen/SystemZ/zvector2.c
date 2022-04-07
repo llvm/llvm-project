@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple s390x-linux-gnu -target-cpu z14 -fzvector \
+// RUN: %clang_cc1 -no-opaque-pointers -triple s390x-linux-gnu -target-cpu z14 -fzvector \
 // RUN:  -O -emit-llvm -o - -W -Wall -Werror %s | FileCheck %s
 
 volatile vector float ff, ff2;

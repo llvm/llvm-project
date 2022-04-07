@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -DSTRET -triple x86_64-pc-linux-gnu -fobjc-runtime=objfw -emit-llvm -o - %s | FileCheck -check-prefix=HASSTRET %s
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fobjc-runtime=gcc -emit-llvm -o - %s | FileCheck -check-prefix=NOSTRET %s
+// RUN: %clang_cc1 -no-opaque-pointers -DSTRET -triple x86_64-pc-linux-gnu -fobjc-runtime=objfw -emit-llvm -o - %s | FileCheck -check-prefix=HASSTRET %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-pc-linux-gnu -fobjc-runtime=gcc -emit-llvm -o - %s | FileCheck -check-prefix=NOSTRET %s
 
 // Test stret lookup
 

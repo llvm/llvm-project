@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -debug-info-kind=limited -Wno-strict-prototypes -o - %s | \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown -emit-llvm -debug-info-kind=limited -Wno-strict-prototypes -o - %s | \
 // RUN:   FileCheck %s -check-prefix=CHECK -check-prefix=SSE -check-prefix=NO-AVX512
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -debug-info-kind=limited -Wno-strict-prototypes -o - %s -target-feature +avx | \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown -emit-llvm -debug-info-kind=limited -Wno-strict-prototypes -o - %s -target-feature +avx | \
 // RUN:   FileCheck %s -check-prefix=CHECK -check-prefix=AVX -check-prefix=NO-AVX512
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -debug-info-kind=limited -Wno-strict-prototypes -o - %s -target-feature +avx512f | \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown -emit-llvm -debug-info-kind=limited -Wno-strict-prototypes -o - %s -target-feature +avx512f | \
 // RUN:   FileCheck %s -check-prefix=CHECK -check-prefix=AVX -check-prefix=AVX512
 #include <stdarg.h>
 

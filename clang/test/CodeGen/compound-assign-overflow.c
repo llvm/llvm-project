@@ -1,5 +1,5 @@
 // Verify proper type emitted for compound assignments
-// RUN: %clang_cc1 -ffreestanding -triple x86_64-apple-darwin10 -emit-llvm -o - %s  -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-recover=signed-integer-overflow,unsigned-integer-overflow | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -ffreestanding -triple x86_64-apple-darwin10 -emit-llvm -o - %s  -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-recover=signed-integer-overflow,unsigned-integer-overflow | FileCheck %s
 
 #include <stdint.h>
 

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple powerpc64le-unknown-linux-gnu -emit-llvm \
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc64le-unknown-linux-gnu -emit-llvm \
 // RUN:   -target-cpu pwr9 -target-feature +float128 -o - %s | FileCheck %s
 
 // Test homogeneous fp128 aggregate passing and returning.

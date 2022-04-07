@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple spir64-unknown-unknown -emit-llvm %s -o -| FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -O0 -cl-std=CL2.0 -triple spir64-unknown-unknown -emit-llvm %s -o -| FileCheck %s
 // expected-no-diagnostics
 
 typedef int (^block_t)(void);

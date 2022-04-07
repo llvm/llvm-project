@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i386-pc-linux-gnu -emit-llvm < %s| FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i386-pc-linux-gnu -emit-llvm < %s| FileCheck %s
 
 typedef __WCHAR_TYPE__ wchar_t;
 typedef __SIZE_TYPE__ size_t;

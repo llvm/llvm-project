@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fno-rtti -emit-llvm -triple=i386-pc-win32 %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -fno-rtti -emit-llvm -triple=i386-pc-win32 %s -o - | FileCheck %s
 
 // In each test case, we have two member pointers whose thunks have the same
 // vtable offset and same mangling, but their prototypes conflict.  The

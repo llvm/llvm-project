@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -I %S/Inputs -triple x86_64-apple-macosx -emit-llvm -fobjc-arc -O2 -disable-llvm-passes -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -I %S/Inputs -triple x86_64-apple-macosx -emit-llvm -fobjc-arc -O2 -disable-llvm-passes -o - %s | FileCheck %s
 
 #import "nsvalue-boxed-expressions-support.h"
 

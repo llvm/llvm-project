@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++11 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple %itanium_abi_triple -std=c++11 -emit-llvm -o - %s | FileCheck %s
 
 union PR23373 {
   PR23373(PR23373&) = default;

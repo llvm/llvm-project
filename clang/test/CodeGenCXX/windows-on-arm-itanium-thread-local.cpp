@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple thumbv7--windows-itanium -fdeclspec -fms-compatibility -fms-compatibility-version=19.0 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple thumbv7--windows-itanium -fdeclspec -fms-compatibility -fms-compatibility-version=19.0 -emit-llvm -o - %s | FileCheck %s
 
 void *g();
 thread_local static void *c = g();

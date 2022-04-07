@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i686-pc-win32 -fms-compatibility %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-pc-win32 -fms-compatibility %s -emit-llvm -o - | FileCheck %s
 
 #include <stddef.h>
 

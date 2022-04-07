@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -emit-llvm -o - -triple amdgcn--amdhsa %s | FileCheck --check-prefix=AMDGCN %s
-// RUN: %clang_cc1 -emit-llvm -o - -triple spir-unknown-unknown %s | FileCheck --check-prefix=SPIR %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -o - -triple amdgcn--amdhsa %s | FileCheck --check-prefix=AMDGCN %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -o - -triple spir-unknown-unknown %s | FileCheck --check-prefix=SPIR %s
 
 #ifdef __AMDGCN__
 

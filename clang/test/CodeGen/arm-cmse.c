@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple thumbv8m.base-none-eabi -O1 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple thumbv8m.base-none-eabi -O1 -emit-llvm %s -o - | FileCheck %s
 int test_cmse_TT(void *p){
   return __builtin_arm_cmse_TT(p);
   // CHECK: call i32 @llvm.arm.cmse.tt(i8* %{{.*}})

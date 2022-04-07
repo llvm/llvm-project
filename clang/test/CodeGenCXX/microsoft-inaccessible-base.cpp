@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fms-compatibility -triple x86_64-windows-msvc %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -fms-compatibility -triple x86_64-windows-msvc %s -emit-llvm -o - | FileCheck %s
 
 // Make sure we choose the *direct* base path when doing these conversions.
 

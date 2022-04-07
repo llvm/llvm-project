@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple i386-apple-darwin10 -emit-llvm -fblocks -fobjc-arc -fobjc-exceptions -fobjc-runtime=macosx-fragile-10.10 -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple i386-apple-darwin10 -emit-llvm -fblocks -fobjc-arc -fobjc-exceptions -fobjc-runtime=macosx-fragile-10.10 -o - %s | FileCheck %s -check-prefix=GLOBALS
+// RUN: %clang_cc1 -no-opaque-pointers -triple i386-apple-darwin10 -emit-llvm -fblocks -fobjc-arc -fobjc-exceptions -fobjc-runtime=macosx-fragile-10.10 -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i386-apple-darwin10 -emit-llvm -fblocks -fobjc-arc -fobjc-exceptions -fobjc-runtime=macosx-fragile-10.10 -o - %s | FileCheck %s -check-prefix=GLOBALS
 
 @class Opaque;
 

@@ -1,25 +1,25 @@
 // REQUIRES: nvptx-registered-target
-// RUN: %clang_cc1 -ffp-contract=off -triple nvptx-unknown-unknown -target-cpu sm_80 -target-feature +ptx70 \
+// RUN: %clang_cc1 -no-opaque-pointers -ffp-contract=off -triple nvptx-unknown-unknown -target-cpu sm_80 -target-feature +ptx70 \
 // RUN:            -fcuda-is-device -S -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX70_SM80 -check-prefix=LP32 %s
-// RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_80 -target-feature +ptx70 \
+// RUN: %clang_cc1 -no-opaque-pointers -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_80 -target-feature +ptx70 \
 // RUN:            -fcuda-is-device -S -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX70_SM80 -check-prefix=LP64 %s
-// RUN: %clang_cc1 -ffp-contract=off -triple nvptx-unknown-unknown -target-cpu sm_60 \
+// RUN: %clang_cc1 -no-opaque-pointers -ffp-contract=off -triple nvptx-unknown-unknown -target-cpu sm_60 \
 // RUN:            -fcuda-is-device -S -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=LP32 %s
-// RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_60 \
+// RUN: %clang_cc1 -no-opaque-pointers -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_60 \
 // RUN:            -fcuda-is-device -S -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=LP64 %s
-// RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_61 \
+// RUN: %clang_cc1 -no-opaque-pointers -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_61 \
 // RUN:            -fcuda-is-device -S -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=LP64 %s
-// RUN: %clang_cc1 -triple nvptx-unknown-unknown -target-cpu sm_53 \
+// RUN: %clang_cc1 -no-opaque-pointers -triple nvptx-unknown-unknown -target-cpu sm_53 \
 // RUN:   -DERROR_CHECK -fcuda-is-device -S -o /dev/null -x cuda -verify %s
-// RUN: %clang_cc1 -ffp-contract=off -triple nvptx-unknown-unknown -target-cpu sm_86 -target-feature +ptx72 \
+// RUN: %clang_cc1 -no-opaque-pointers -ffp-contract=off -triple nvptx-unknown-unknown -target-cpu sm_86 -target-feature +ptx72 \
 // RUN:            -fcuda-is-device -S -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX72_SM86 -check-prefix=LP32 %s
-// RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_86 -target-feature +ptx72 \
+// RUN: %clang_cc1 -no-opaque-pointers -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_86 -target-feature +ptx72 \
 // RUN:            -fcuda-is-device -S -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX72_SM86 -check-prefix=LP64 %s
 

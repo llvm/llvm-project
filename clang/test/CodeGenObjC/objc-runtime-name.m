@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i386-apple-macosx10.13.0 -fobjc-runtime=macosx-fragile-10.13.0 -fobjc-subscripting-legacy-runtime -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i386-apple-macosx10.13.0 -fobjc-runtime=macosx-fragile-10.13.0 -fobjc-subscripting-legacy-runtime -emit-llvm -o - %s | FileCheck %s
 
 // Check that the runtime name is emitted and used instead of the class
 // identifier.

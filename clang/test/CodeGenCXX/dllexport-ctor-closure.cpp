@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i686-windows-msvc -emit-llvm -std=c++14 \
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-windows-msvc -emit-llvm -std=c++14 \
 // RUN:    -fno-threadsafe-statics -fms-extensions -O1 -mconstructor-aliases \
 // RUN:    -disable-llvm-passes -o - %s -w -fms-compatibility-version=19.00 | \
 // RUN:    FileCheck %s

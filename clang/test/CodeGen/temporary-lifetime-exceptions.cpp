@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -fexceptions -fcxx-exceptions -std=c++11 -O1 -triple x86_64 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -fexceptions -fcxx-exceptions -std=c++11 -O1 -triple x86_64 -emit-llvm -o - | FileCheck %s
 
 // lifetime.end should be invoked even if the destructor doesn't run due to an
 // exception thrown from previous ctor call.

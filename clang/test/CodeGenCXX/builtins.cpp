@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple=x86_64-linux-gnu -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple=x86_64-linux-gnu -emit-llvm -o - %s | FileCheck %s
 
 // Builtins inside a namespace inside an extern "C" must be considered builtins.
 extern "C" {

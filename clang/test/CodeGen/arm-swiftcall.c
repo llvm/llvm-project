@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -no-enable-noundef-analysis -triple armv7-apple-darwin9 -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -triple armv7s-apple-ios9 -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -triple armv7k-apple-ios9 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -triple armv7-apple-darwin9 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -triple armv7s-apple-ios9 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -triple armv7k-apple-ios9 -emit-llvm -o - %s | FileCheck %s
 
 #define SWIFTCALL __attribute__((swiftcall))
 #define SWIFTASYNCCALL __attribute__((swiftasynccall))

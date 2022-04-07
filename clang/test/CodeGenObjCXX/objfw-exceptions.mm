@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -emit-llvm -fexceptions -fobjc-exceptions -fobjc-runtime=objfw -fcxx-exceptions -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-DWARF
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -emit-llvm -fexceptions -fobjc-exceptions -fobjc-runtime=objfw -fcxx-exceptions -exception-model=sjlj -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-SJLJ
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-pc-linux-gnu -emit-llvm -fexceptions -fobjc-exceptions -fobjc-runtime=objfw -fcxx-exceptions -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-DWARF
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-pc-linux-gnu -emit-llvm -fexceptions -fobjc-exceptions -fobjc-runtime=objfw -fcxx-exceptions -exception-model=sjlj -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-SJLJ
 
 @interface OCType @end
 void opaque();

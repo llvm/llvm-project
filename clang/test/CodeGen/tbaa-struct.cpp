@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -o - -O1 %s | \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin -emit-llvm -o - -O1 %s | \
 // RUN:     FileCheck -check-prefixes=CHECK,CHECK-OLD %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -new-struct-path-tbaa \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin -new-struct-path-tbaa \
 // RUN:     -emit-llvm -o - -O1 %s | \
 // RUN:     FileCheck -check-prefixes=CHECK,CHECK-NEW %s
 //

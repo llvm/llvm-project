@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -emit-llvm -fvisibility-inlines-hidden -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-pc-windows-msvc -emit-llvm -fvisibility-inlines-hidden -o - %s | FileCheck %s
 
 // We used to declare this hidden dllimport, which is contradictory.
 

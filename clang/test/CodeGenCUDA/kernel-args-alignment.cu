@@ -1,11 +1,11 @@
 // New CUDA kernel launch sequence does not require explicit specification of
 // size/offset for each argument, so only the old way is tested.
 //
-// RUN: %clang_cc1 --std=c++11 -triple x86_64-unknown-linux-gnu -emit-llvm \
+// RUN: %clang_cc1 -no-opaque-pointers --std=c++11 -triple x86_64-unknown-linux-gnu -emit-llvm \
 // RUN:    -target-sdk-version=8.0 -o - %s \
 // RUN:  | FileCheck -check-prefixes=HOST-OLD,CHECK %s
 
-// RUN: %clang_cc1 --std=c++11 -fcuda-is-device -triple nvptx64-nvidia-cuda \
+// RUN: %clang_cc1 -no-opaque-pointers --std=c++11 -fcuda-is-device -triple nvptx64-nvidia-cuda \
 // RUN:   -emit-llvm -o - %s | FileCheck -check-prefixes=DEVICE,CHECK %s
 
 #include "Inputs/cuda.h"

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -fenable-matrix -triple x86_64-apple-darwin %s -emit-llvm -disable-llvm-passes -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -fenable-matrix -triple x86_64-apple-darwin %s -emit-llvm -disable-llvm-passes -o - | FileCheck %s
 
 template <typename X>
 using matrix_4_4 = X __attribute__((matrix_type(4, 4)));

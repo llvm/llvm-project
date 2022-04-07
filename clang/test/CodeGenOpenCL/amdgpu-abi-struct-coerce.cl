@@ -1,6 +1,6 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -S -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple r600-unknown-unknown -S -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple amdgcn-unknown-unknown -S -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple r600-unknown-unknown -S -emit-llvm -o - %s | FileCheck %s
 
 typedef __attribute__(( ext_vector_type(2) )) char char2;
 typedef __attribute__(( ext_vector_type(3) )) char char3;

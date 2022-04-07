@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i386-pc-elfiamcu -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i386-pc-elfiamcu -emit-llvm %s -o - | FileCheck %s
 
 // Structure that is more than 8 byte.
 struct Big {

@@ -1,24 +1,24 @@
-// RUN: %clang_cc1 -std=c++98 -triple x86_64-linux-gnu -fenable-matrix -fclang-abi-compat=3.0 %s -emit-llvm -o - -Wno-c++11-extensions \
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++98 -triple x86_64-linux-gnu -fenable-matrix -fclang-abi-compat=3.0 %s -emit-llvm -o - -Wno-c++11-extensions \
 // RUN:     | FileCheck --check-prefixes=CHECK,PRE39,PRE5,PRE12 %s
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-linux-gnu -fenable-matrix -fclang-abi-compat=3.0 %s -emit-llvm -o - \
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++17 -triple x86_64-linux-gnu -fenable-matrix -fclang-abi-compat=3.0 %s -emit-llvm -o - \
 // RUN:     | FileCheck --check-prefixes=CHECK,PRE39,PRE5,PRE12 %s
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-linux-gnu -fenable-matrix -fclang-abi-compat=3.8 %s -emit-llvm -o - \
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++17 -triple x86_64-linux-gnu -fenable-matrix -fclang-abi-compat=3.8 %s -emit-llvm -o - \
 // RUN:     | FileCheck --check-prefixes=CHECK,PRE39,PRE5,PRE12 %s
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-linux-gnu -fenable-matrix -fclang-abi-compat=3.9 %s -emit-llvm -o - \
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++17 -triple x86_64-linux-gnu -fenable-matrix -fclang-abi-compat=3.9 %s -emit-llvm -o - \
 // RUN:     | FileCheck --check-prefixes=CHECK,V39,PRE5,PRE12 %s
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-linux-gnu -fenable-matrix -fclang-abi-compat=4.0 %s -emit-llvm -o - \
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++17 -triple x86_64-linux-gnu -fenable-matrix -fclang-abi-compat=4.0 %s -emit-llvm -o - \
 // RUN:     | FileCheck --check-prefixes=CHECK,V39,PRE5,PRE12 %s
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-linux-gnu -fenable-matrix -fclang-abi-compat=5 %s -emit-llvm -o - \
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++17 -triple x86_64-linux-gnu -fenable-matrix -fclang-abi-compat=5 %s -emit-llvm -o - \
 // RUN:     | FileCheck --check-prefixes=CHECK,V39,V5,PRE12,PRE12-CXX17 %s
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-linux-gnu -fenable-matrix -fclang-abi-compat=11 %s -emit-llvm -o - \
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++17 -triple x86_64-linux-gnu -fenable-matrix -fclang-abi-compat=11 %s -emit-llvm -o - \
 // RUN:     | FileCheck --check-prefixes=CHECK,V39,V5,PRE12,PRE12-CXX17 %s
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-linux-gnu -fenable-matrix -fclang-abi-compat=11 %s -emit-llvm -o - \
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++20 -triple x86_64-linux-gnu -fenable-matrix -fclang-abi-compat=11 %s -emit-llvm -o - \
 // RUN:     | FileCheck --check-prefixes=CHECK,V39,V5,PRE12,PRE12-CXX17,PRE12-CXX20,PRE13-CXX20 %s
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-linux-gnu -fenable-matrix -fclang-abi-compat=12 %s -emit-llvm -o - \
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++20 -triple x86_64-linux-gnu -fenable-matrix -fclang-abi-compat=12 %s -emit-llvm -o - \
 // RUN:     | FileCheck --check-prefixes=CHECK,V39,V5,V12,V12-CXX17,V12-CXX20,PRE13-CXX20 %s
-// RUN: %clang_cc1 -std=c++98 -triple x86_64-linux-gnu -fenable-matrix -fclang-abi-compat=latest %s -emit-llvm -o - -Wno-c++11-extensions \
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++98 -triple x86_64-linux-gnu -fenable-matrix -fclang-abi-compat=latest %s -emit-llvm -o - -Wno-c++11-extensions \
 // RUN:     | FileCheck --check-prefixes=CHECK,V39,V5,V12 %s
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-linux-gnu -fenable-matrix -fclang-abi-compat=latest %s -emit-llvm -o - \
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++20 -triple x86_64-linux-gnu -fenable-matrix -fclang-abi-compat=latest %s -emit-llvm -o - \
 // RUN:     | FileCheck --check-prefixes=CHECK,V39,V5,V12,V12-CXX17,V12-CXX20,V13-CXX20 %s
 
 typedef __attribute__((vector_size(8))) long long v1xi64;

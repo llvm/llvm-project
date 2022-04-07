@@ -1,31 +1,31 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
+// RUN: %clang_cc1 -no-opaque-pointers -include __clang_hip_runtime_wrapper.h \
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
 // RUN:   -internal-isystem %S/Inputs/include \
 // RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
 // RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -o - \
 // RUN:   -D__HIPCC_RTC__ | FileCheck -check-prefixes=CHECK,NOMALLOC %s
-// RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
+// RUN: %clang_cc1 -no-opaque-pointers -include __clang_hip_runtime_wrapper.h \
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
 // RUN:   -internal-isystem %S/Inputs/include \
 // RUN:   -include cmath \
 // RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
 // RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -o - \
 // RUN:   -D__HIPCC_RTC__ | FileCheck %s  -check-prefixes=AMD_BOOL_RETURN
-// RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
+// RUN: %clang_cc1 -no-opaque-pointers -include __clang_hip_runtime_wrapper.h \
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
 // RUN:   -internal-isystem %S/Inputs/include \
 // RUN:   -include cmath \
 // RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
 // RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -o - \
 // RUN:   -D__HIPCC_RTC__ -DUSE_ISNAN_WITH_INT_RETURN | FileCheck %s -check-prefixes=AMD_INT_RETURN
-// RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
+// RUN: %clang_cc1 -no-opaque-pointers -include __clang_hip_runtime_wrapper.h \
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
 // RUN:   -internal-isystem %S/Inputs/include \
 // RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
 // RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -o - \
 // RUN:   -D__HIPCC_RTC__ -std=c++14 | FileCheck -check-prefixes=CHECK,CXX14 %s
-// RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
+// RUN: %clang_cc1 -no-opaque-pointers -include __clang_hip_runtime_wrapper.h \
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
 // RUN:   -internal-isystem %S/Inputs/include \
 // RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \

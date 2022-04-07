@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -o - %s | FileCheck %s
 // CHECK: ModuleID
 // CHECK-NOT: zeroinitializer
 // CHECK-LABEL: define {{.*}}i8* @f

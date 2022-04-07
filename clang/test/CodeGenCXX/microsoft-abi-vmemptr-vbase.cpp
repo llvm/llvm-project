@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fno-rtti -emit-llvm -triple=i386-pc-win32 -fms-extensions -fms-compatibility -std=c++11 %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -fno-rtti -emit-llvm -triple=i386-pc-win32 -fms-extensions -fms-compatibility -std=c++11 %s -o - | FileCheck %s
 
 namespace PR23452 {
 struct A {

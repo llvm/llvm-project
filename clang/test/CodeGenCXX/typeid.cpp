@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -I%S %s -triple x86_64-apple-darwin10 -emit-llvm -fcxx-exceptions -fexceptions -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -I%S %s -triple x86_64-apple-darwin10 -emit-llvm -fcxx-exceptions -fexceptions -o - | FileCheck %s
 #include <typeinfo>
 
 namespace Test1 {

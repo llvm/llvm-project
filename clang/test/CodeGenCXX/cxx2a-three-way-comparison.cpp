@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++2a -emit-llvm %s -o - -triple %itanium_abi_triple | FileCheck %s --check-prefixes=CHECK,ITANIUM
-// RUN: %clang_cc1 -std=c++2a -emit-llvm %s -o - -triple x86_64-pc-win32 2>&1 | FileCheck %s --check-prefixes=CHECK,MSABI
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++2a -emit-llvm %s -o - -triple %itanium_abi_triple | FileCheck %s --check-prefixes=CHECK,ITANIUM
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++2a -emit-llvm %s -o - -triple x86_64-pc-win32 2>&1 | FileCheck %s --check-prefixes=CHECK,MSABI
 
 namespace std {
   struct strong_ordering {

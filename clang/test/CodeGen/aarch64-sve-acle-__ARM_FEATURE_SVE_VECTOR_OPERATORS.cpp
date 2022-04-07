@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -x c++ -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s -mvscale-min=1 -mvscale-max=1  | FileCheck %s -D#VBITS=128  --check-prefixes=CHECK,CHECK128
-// RUN: %clang_cc1 -x c++ -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s -mvscale-min=2 -mvscale-max=2  | FileCheck %s -D#VBITS=256  --check-prefixes=CHECK,CHECKWIDE
-// RUN: %clang_cc1 -x c++ -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s -mvscale-min=4 -mvscale-max=4  | FileCheck %s -D#VBITS=512  --check-prefixes=CHECK,CHECKWIDE
-// RUN: %clang_cc1 -x c++ -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s -mvscale-min=8 -mvscale-max=8 | FileCheck %s -D#VBITS=1024 --check-prefixes=CHECK,CHECKWIDE
-// RUN: %clang_cc1 -x c++ -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s -mvscale-min=16 -mvscale-max=16 | FileCheck %s -D#VBITS=2048 --check-prefixes=CHECK,CHECKWIDE
+// RUN: %clang_cc1 -no-opaque-pointers -x c++ -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s -mvscale-min=1 -mvscale-max=1  | FileCheck %s -D#VBITS=128  --check-prefixes=CHECK,CHECK128
+// RUN: %clang_cc1 -no-opaque-pointers -x c++ -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s -mvscale-min=2 -mvscale-max=2  | FileCheck %s -D#VBITS=256  --check-prefixes=CHECK,CHECKWIDE
+// RUN: %clang_cc1 -no-opaque-pointers -x c++ -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s -mvscale-min=4 -mvscale-max=4  | FileCheck %s -D#VBITS=512  --check-prefixes=CHECK,CHECKWIDE
+// RUN: %clang_cc1 -no-opaque-pointers -x c++ -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s -mvscale-min=8 -mvscale-max=8 | FileCheck %s -D#VBITS=1024 --check-prefixes=CHECK,CHECKWIDE
+// RUN: %clang_cc1 -no-opaque-pointers -x c++ -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s -mvscale-min=16 -mvscale-max=16 | FileCheck %s -D#VBITS=2048 --check-prefixes=CHECK,CHECKWIDE
 
 // REQUIRES: aarch64-registered-target
 

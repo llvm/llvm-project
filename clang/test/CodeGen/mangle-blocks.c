@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i386-apple-ios -fblocks -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i386-apple-ios -fblocks -emit-llvm -o - %s | FileCheck %s
 
 void __assert_rtn(const char *, const char *, int, const char *)
     __attribute__ (( noreturn ));

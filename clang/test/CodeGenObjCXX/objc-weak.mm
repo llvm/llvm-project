@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fblocks -fobjc-weak -fobjc-runtime-has-weak -std=c++11 -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -emit-llvm -fblocks -fobjc-weak -fobjc-runtime-has-weak -std=c++11 -o - %s | FileCheck %s
 
 struct A { __weak id x; };
 

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64_32-apple-ios7.0 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple arm64_32-apple-ios7.0 -emit-llvm -o - %s | FileCheck %s
 
 struct Foo {
   char a;

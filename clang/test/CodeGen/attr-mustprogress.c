@@ -1,22 +1,22 @@
-// RUN: %clang_cc1 -std=c89 -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=C99 %s
-// RUN: %clang_cc1 -std=c99 -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=C99 %s
-// RUN: %clang_cc1 -std=c11 -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=C11 %s
-// RUN: %clang_cc1 -std=c18 -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=C11 %s
-// RUN: %clang_cc1 -std=c2x -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=C11 %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c89 -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=C99 %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c99 -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=C99 %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c11 -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=C11 %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c18 -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=C11 %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c2x -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=C11 %s
 //
 // Check -ffinite-loops option in combination with various standard versions.
-// RUN: %clang_cc1 -std=c89 -ffinite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=FINITE %s
-// RUN: %clang_cc1 -std=c99 -ffinite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=FINITE %s
-// RUN: %clang_cc1 -std=c11 -ffinite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=FINITE %s
-// RUN: %clang_cc1 -std=c18 -ffinite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=FINITE %s
-// RUN: %clang_cc1 -std=c2x -ffinite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=FINITE %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c89 -ffinite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=FINITE %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c99 -ffinite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=FINITE %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c11 -ffinite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=FINITE %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c18 -ffinite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=FINITE %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c2x -ffinite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=FINITE %s
 //
 // Check -fno-finite-loops option in combination with various standard versions.
-// RUN: %clang_cc1 -std=c89 -fno-finite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=C99 %s
-// RUN: %clang_cc1 -std=c99 -fno-finite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=C99 %s
-// RUN: %clang_cc1 -std=c11 -fno-finite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=C99 %s
-// RUN: %clang_cc1 -std=c18 -fno-finite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=C99 %s
-// RUN: %clang_cc1 -std=c2x -fno-finite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=C99 %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c89 -fno-finite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=C99 %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c99 -fno-finite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=C99 %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c11 -fno-finite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=C99 %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c18 -fno-finite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=C99 %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c2x -fno-finite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=C99 %s
 
 int a = 0;
 int b = 0;

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios11 -fobjc-arc -fblocks -fobjc-runtime=ios-11.0 -fobjc-exceptions -fexceptions -debug-info-kind=line-tables-only -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple arm64-apple-ios11 -fobjc-arc -fblocks -fobjc-runtime=ios-11.0 -fobjc-exceptions -fexceptions -debug-info-kind=line-tables-only -emit-llvm -o - %s | FileCheck %s
 
 // CHECK: %[[STRUCT_STRONG:.*]] = type { i32, i8* }
 // CHECK: %[[STRUCT_WEAK:.*]] = type { i32, i8* }

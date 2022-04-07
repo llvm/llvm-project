@@ -1,7 +1,7 @@
 // REQUIRES: powerpc-registered-target
-// RUN: %clang_cc1 -triple powerpc64-unknown-linux-gnu \
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc64-unknown-linux-gnu \
 // RUN:   -emit-llvm %s -o - -target-cpu pwr7 | FileCheck %s
-// RUN: %clang_cc1 -triple powerpc64-unknown-aix \
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc64-unknown-aix \
 // RUN:   -emit-llvm %s -o - -target-cpu pwr7 | FileCheck %s
 
 extern double a;

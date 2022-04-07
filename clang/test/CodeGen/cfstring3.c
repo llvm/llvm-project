@@ -1,20 +1,20 @@
 // REQUIRES: arm-registered-target,x86-registered-target
 
-// RUN: %clang_cc1 -triple thumbv7-windows -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-COFF
-// RUN: %clang_cc1 -triple i686-windows -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-COFF
-// RUN: %clang_cc1 -triple x86_64-windows -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-COFF
+// RUN: %clang_cc1 -no-opaque-pointers -triple thumbv7-windows -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-COFF
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-windows -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-COFF
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-windows -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-COFF
 
-// RUN: %clang_cc1 -triple armv7-elf -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-ELF -check-prefix CHECK-ELF32
-// RUN: %clang_cc1 -triple i686-elf -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-ELF -check-prefix CHECK-ELF32
-// RUN: %clang_cc1 -triple x86_64-elf -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-ELF -check-prefix CHECK-ELF64
+// RUN: %clang_cc1 -no-opaque-pointers -triple armv7-elf -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-ELF -check-prefix CHECK-ELF32
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-elf -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-ELF -check-prefix CHECK-ELF32
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-elf -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-ELF -check-prefix CHECK-ELF64
 
-// RUN: %clang_cc1 -triple armv7-macho -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-MACHO -check-prefix CHECK-MACHO32
-// RUN: %clang_cc1 -triple i386-apple-macosx -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-MACHO -check-prefix CHECK-MACHO32
-// RUN: %clang_cc1 -triple x86_64-macho -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-MACHO -check-prefix CHECK-MACHO64
+// RUN: %clang_cc1 -no-opaque-pointers -triple armv7-macho -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-MACHO -check-prefix CHECK-MACHO32
+// RUN: %clang_cc1 -no-opaque-pointers -triple i386-apple-macosx -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-MACHO -check-prefix CHECK-MACHO32
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-macho -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-MACHO -check-prefix CHECK-MACHO64
 
-// RUN: %clang_cc1 -triple thumbv7-windows -S %s -o - | FileCheck %s -check-prefix CHECK-ASM-COFF
-// RUN: %clang_cc1 -triple thumbv7-elf -S %s -o - | FileCheck %s -check-prefix CHECK-ASM-ELF
-// RUN: %clang_cc1 -triple thumbv7-macho -S %s -o - | FileCheck %s -check-prefix CHECK-ASM-MACHO
+// RUN: %clang_cc1 -no-opaque-pointers -triple thumbv7-windows -S %s -o - | FileCheck %s -check-prefix CHECK-ASM-COFF
+// RUN: %clang_cc1 -no-opaque-pointers -triple thumbv7-elf -S %s -o - | FileCheck %s -check-prefix CHECK-ASM-ELF
+// RUN: %clang_cc1 -no-opaque-pointers -triple thumbv7-macho -S %s -o - | FileCheck %s -check-prefix CHECK-ASM-MACHO
 
 typedef struct __CFString *CFStringRef;
 const CFStringRef one = (CFStringRef)__builtin___CFStringMakeConstantString("one");

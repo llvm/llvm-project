@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 %s -std=c++1y -triple=i686-pc-win32 -fms-compatibility-version=19.25 -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 %s -std=c++1y -triple=i686-pc-win32 -fms-compatibility-version=19.20 -emit-llvm -o - | FileCheck %s -check-prefix=CHECK-LEGACY
-// RUN: %clang_cc1 %s -std=c++1y -triple=i686-pc-win32 -fms-compatibility-version=19.25 -ftls-model=local-dynamic -emit-llvm -o - | FileCheck %s -check-prefix=CHECK-LD
+// RUN: %clang_cc1 -no-opaque-pointers %s -std=c++1y -triple=i686-pc-win32 -fms-compatibility-version=19.25 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -std=c++1y -triple=i686-pc-win32 -fms-compatibility-version=19.20 -emit-llvm -o - | FileCheck %s -check-prefix=CHECK-LEGACY
+// RUN: %clang_cc1 -no-opaque-pointers %s -std=c++1y -triple=i686-pc-win32 -fms-compatibility-version=19.25 -ftls-model=local-dynamic -emit-llvm -o - | FileCheck %s -check-prefix=CHECK-LD
 
 struct A {
   A();

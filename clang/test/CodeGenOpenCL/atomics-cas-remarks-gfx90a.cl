@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 %s -cl-std=CL2.0 -O0 -triple=amdgcn-amd-amdhsa -target-cpu gfx90a \
+// RUN: %clang_cc1 -no-opaque-pointers %s -cl-std=CL2.0 -O0 -triple=amdgcn-amd-amdhsa -target-cpu gfx90a \
 // RUN:     -Rpass=atomic-expand -S -o - 2>&1 | \
 // RUN:     FileCheck %s --check-prefix=REMARK
 
-// RUN: %clang_cc1 %s -cl-std=CL2.0 -O0 -triple=amdgcn-amd-amdhsa -target-cpu gfx90a \
+// RUN: %clang_cc1 -no-opaque-pointers %s -cl-std=CL2.0 -O0 -triple=amdgcn-amd-amdhsa -target-cpu gfx90a \
 // RUN:     -Rpass=atomic-expand -S -emit-llvm -o - 2>&1 | \
 // RUN:     FileCheck %s --check-prefix=GFX90A-CAS
 

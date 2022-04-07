@@ -1,4 +1,4 @@
-// RUN: %clang_cc1  %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers  %s -emit-llvm -o - | FileCheck %s
 
 void *test1(void) {
   // CHECK: call i8* @llvm.returnaddress

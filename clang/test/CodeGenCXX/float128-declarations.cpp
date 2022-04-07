@@ -1,22 +1,22 @@
-// RUN: %clang_cc1 -emit-llvm -triple powerpc64-unknown-unknown \
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple powerpc64-unknown-unknown \
 // RUN:   -target-feature +float128 -std=c++11 %s -o - | FileCheck %s
-// RUN: %clang_cc1 -emit-llvm -triple powerpc64le-unknown-unknown \
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple powerpc64le-unknown-unknown \
 // RUN:   -target-feature +float128 -std=c++11 %s -o - | FileCheck %s
-// RUN: %clang_cc1 -emit-llvm -triple i386-unknown-linux-gnu -std=c++11 \
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple i386-unknown-linux-gnu -std=c++11 \
 // RUN:   %s -o - | FileCheck %s -check-prefix=CHECK-X86
-// RUN: %clang_cc1 -emit-llvm -triple x86_64-unknown-linux-gnu -std=c++11 \
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple x86_64-unknown-linux-gnu -std=c++11 \
 // RUN:   %s -o - | FileCheck %s -check-prefix=CHECK-X86
-// RUN: %clang_cc1 -emit-llvm -triple i686-pc-openbsd -std=c++11 \
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple i686-pc-openbsd -std=c++11 \
 // RUN:   %s -o - | FileCheck %s -check-prefix=CHECK-X86
-// RUN: %clang_cc1 -emit-llvm -triple amd64-pc-openbsd -std=c++11 \
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple amd64-pc-openbsd -std=c++11 \
 // RUN:   %s -o - | FileCheck %s -check-prefix=CHECK-X86
-// RUN: %clang_cc1 -emit-llvm -triple i386-pc-solaris2.11 -std=c++11 \
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple i386-pc-solaris2.11 -std=c++11 \
 // RUN:   %s -o - | FileCheck %s -check-prefix=CHECK-X86
-// RUN: %clang_cc1 -emit-llvm -triple x86_64-pc-solaris2.11 -std=c++11 \
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple x86_64-pc-solaris2.11 -std=c++11 \
 // RUN:   %s -o - | FileCheck %s -check-prefix=CHECK-X86
-// RUN: %clang_cc1 -emit-llvm -triple i586-pc-haiku -std=c++11 \
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple i586-pc-haiku -std=c++11 \
 // RUN:   %s -o - | FileCheck %s -check-prefix=CHECK-X86
-// RUN: %clang_cc1 -emit-llvm -triple x86_64-unknown-haiku -std=c++11 \
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple x86_64-unknown-haiku -std=c++11 \
 // RUN:   %s -o - | FileCheck %s -check-prefix=CHECK-X86
 //
 /*  Various contexts where type __float128 can appear. The different check

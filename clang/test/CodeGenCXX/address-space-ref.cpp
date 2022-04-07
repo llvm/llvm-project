@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -std=c++11 -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK,NULL-INVALID
-// RUN: %clang_cc1 %s -std=c++11 -triple=x86_64-apple-darwin10 -fno-delete-null-pointer-checks -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK,NULL-VALID
+// RUN: %clang_cc1 -no-opaque-pointers %s -std=c++11 -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK,NULL-INVALID
+// RUN: %clang_cc1 -no-opaque-pointers %s -std=c++11 -triple=x86_64-apple-darwin10 -fno-delete-null-pointer-checks -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK,NULL-VALID
 
 // For a reference to a complete type, output the dereferenceable attribute (in
 // any address space).

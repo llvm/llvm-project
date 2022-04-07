@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -emit-llvm -o - -fms-extensions -triple i686-pc-win32 | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -fms-extensions -triple i686-pc-win32 | FileCheck %s
 
 // CHECK-LABEL: define dso_local void @test_alloca(
 void capture(void *);

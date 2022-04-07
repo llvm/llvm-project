@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple armv7-apple-darwin10 -emit-llvm -fblocks -fobjc-arc -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple arm64-apple-ios -emit-llvm -fblocks -fobjc-arc -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple armv7-apple-darwin10 -emit-llvm -fblocks -fobjc-arc -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple arm64-apple-ios -emit-llvm -fblocks -fobjc-arc -o - %s | FileCheck %s
 
 // <rdar://12438598>: use an autorelease marker on ARM64.
 

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fenable-matrix -triple x86_64-apple-darwin %s -emit-llvm -disable-llvm-passes -o - -std=c++17 | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -fenable-matrix -triple x86_64-apple-darwin %s -emit-llvm -disable-llvm-passes -o - -std=c++17 | FileCheck %s
 
 // Tests for the matrix type builtins.
 

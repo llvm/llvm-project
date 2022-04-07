@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple sparc-unknown-unknown -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple sparc-unknown-unknown -emit-llvm -o - %s | FileCheck %s
 
 // Ensure that we pass proper alignment to llvm in the call
 // instruction. The proper alignment for the type is sometimes known

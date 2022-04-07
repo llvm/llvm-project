@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++17 -emit-llvm %s -triple x86_64-windows-msvc -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++17 -emit-llvm %s -triple x86_64-windows-msvc -o - | FileCheck %s
 
 // Make sure virtual base base destructors get referenced and emitted if
 // necessary when the complete ("vbase") destructor is emitted. In this case,

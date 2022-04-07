@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -emit-llvm -triple=x86_64-pc-win32 -fms-compatibility %s -o - | FileCheck %s
-// RUN: %clang_cc1 -triple=x86_64-pc-win32 -fms-compatibility -emit-pch -o %t %s
-// RUN: %clang_cc1 -emit-llvm -triple=x86_64-pc-win32 -fms-compatibility -include-pch %t -verify %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple=x86_64-pc-win32 -fms-compatibility %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple=x86_64-pc-win32 -fms-compatibility -emit-pch -o %t %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple=x86_64-pc-win32 -fms-compatibility -include-pch %t -verify %s -o - | FileCheck %s
 // expected-no-diagnostics
 
 #ifndef HEADER

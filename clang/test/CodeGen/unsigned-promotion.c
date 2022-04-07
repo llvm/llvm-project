@@ -1,9 +1,9 @@
 // Check -fsanitize=signed-integer-overflow and
 // -fsanitize=unsigned-integer-overflow with promoted unsigned types
 //
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -o - %s \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -emit-llvm -o - %s \
 // RUN:   -fsanitize=signed-integer-overflow | FileCheck %s --check-prefix=CHECKS
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -o - %s \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -emit-llvm -o - %s \
 // RUN:   -fsanitize=unsigned-integer-overflow | FileCheck %s --check-prefix=CHECKU
 
 unsigned short si, sj, sk;

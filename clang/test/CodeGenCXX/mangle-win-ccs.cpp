@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -emit-llvm -triple i686-windows-gnu -o - | FileCheck %s
-// RUN: %clang_cc1 %s -emit-llvm -triple i686-windows-itanium -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -triple i686-windows-gnu -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -triple i686-windows-itanium -o - | FileCheck %s
 
 // GCC 5.1 began mangling these Windows calling conventions into function
 // types, since they can be used for overloading. They've always been mangled

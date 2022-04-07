@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64-none-linux-gnu -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple arm64-none-linux-gnu -emit-llvm -o - %s | FileCheck %s
 
 // The only part clang really deals with is the lvalue/rvalue
 // distinction on constraints. It's sufficient to emit llvm and make

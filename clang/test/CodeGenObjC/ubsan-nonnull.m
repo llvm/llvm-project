@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -x objective-c -emit-llvm -triple x86_64-apple-macosx10.10.0 -fsanitize=nonnull-attribute %s -o - -w | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -x objective-c -emit-llvm -triple x86_64-apple-macosx10.10.0 -fsanitize=nonnull-attribute %s -o - -w | FileCheck %s
 
 @interface A
 

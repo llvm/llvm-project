@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple i386-unknown-unknown -Wno-strict-prototypes -emit-llvm -o - -verify | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple i386-unknown-unknown -Wno-strict-prototypes -emit-llvm -o - -verify | FileCheck %s
 
 int g();
 

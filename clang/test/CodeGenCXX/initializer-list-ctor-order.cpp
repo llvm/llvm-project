@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++11 %s -emit-llvm -o - -triple i686-linux-gnu | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-ITANIUM
-// RUN: %clang_cc1 -std=c++11 %s -emit-llvm -o - -triple i686-windows   | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-MS
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 %s -emit-llvm -o - -triple i686-linux-gnu | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-ITANIUM
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 %s -emit-llvm -o - -triple i686-windows   | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-MS
 
 extern "C" {
 int f();

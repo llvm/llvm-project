@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -x objective-c -fobjc-arc -emit-pch -o %t %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -x objective-c -fobjc-arc -include-pch %t -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -x objective-c -fobjc-arc -emit-pch -o %t %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -x objective-c -fobjc-arc -include-pch %t -emit-llvm -o - %s | FileCheck %s
 
 #ifndef HEADER
 #define HEADER

@@ -1,15 +1,15 @@
-// RUN: %clang_cc1 -std=c++11 -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck --check-prefixes=CHECK,LINUX,LINUX_AIX %s
-// RUN: %clang_cc1 -std=c++11 -emit-llvm %s -O2 -disable-llvm-passes -o - -triple x86_64-linux-gnu | FileCheck --check-prefixes=CHECK,LINUX,LINUX_AIX,CHECK-OPT %s
-// RUN: %clang_cc1 -std=c++11 -femulated-tls -emit-llvm %s -o - \
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck --check-prefixes=CHECK,LINUX,LINUX_AIX %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -emit-llvm %s -O2 -disable-llvm-passes -o - -triple x86_64-linux-gnu | FileCheck --check-prefixes=CHECK,LINUX,LINUX_AIX,CHECK-OPT %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -femulated-tls -emit-llvm %s -o - \
 // RUN:     -triple x86_64-linux-gnu 2>&1 | FileCheck --check-prefixes=CHECK,LINUX,LINUX_AIX %s
-// RUN: %clang_cc1 -std=c++11 -emit-llvm %s -o - -triple x86_64-apple-darwin12 | FileCheck --check-prefix=CHECK --check-prefix=DARWIN %s
-// RUN: %clang_cc1 -std=c++11 -emit-llvm %s -o - -triple powerpc64-unknown-aix-xcoff | FileCheck --check-prefixes=CHECK,AIX,LINUX_AIX %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -emit-llvm %s -o - -triple x86_64-apple-darwin12 | FileCheck --check-prefix=CHECK --check-prefix=DARWIN %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -emit-llvm %s -o - -triple powerpc64-unknown-aix-xcoff | FileCheck --check-prefixes=CHECK,AIX,LINUX_AIX %s
 
-// RUN: %clang_cc1 -std=c++11 -fno-use-cxa-atexit -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck --check-prefixes=CHECK,LINUX,LINUX_AIX %s
-// RUN: %clang_cc1 -std=c++11 -fno-use-cxa-atexit -emit-llvm %s -O2 -disable-llvm-passes -o - -triple x86_64-linux-gnu | FileCheck --check-prefixes=CHECK,LINUX,LINUX_AIX,CHECK-OPT %s
-// RUN: %clang_cc1 -std=c++11 -fno-use-cxa-atexit -femulated-tls -emit-llvm %s -o - \
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -fno-use-cxa-atexit -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck --check-prefixes=CHECK,LINUX,LINUX_AIX %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -fno-use-cxa-atexit -emit-llvm %s -O2 -disable-llvm-passes -o - -triple x86_64-linux-gnu | FileCheck --check-prefixes=CHECK,LINUX,LINUX_AIX,CHECK-OPT %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -fno-use-cxa-atexit -femulated-tls -emit-llvm %s -o - \
 // RUN:     -triple x86_64-linux-gnu 2>&1 | FileCheck --check-prefixes=CHECK,LINUX,LINUX_AIX %s
-// RUN: %clang_cc1 -std=c++11 -fno-use-cxa-atexit -emit-llvm %s -o - -triple x86_64-apple-darwin12 | FileCheck --check-prefix=CHECK --check-prefix=DARWIN %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -fno-use-cxa-atexit -emit-llvm %s -o - -triple x86_64-apple-darwin12 | FileCheck --check-prefix=CHECK --check-prefix=DARWIN %s
 
 int f();
 int g();

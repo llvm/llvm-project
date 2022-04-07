@@ -1,11 +1,11 @@
 // __cfi_check_fail codegen when not all CFI checkers are enabled.
-// RUN: %clang_cc1 -triple x86_64-unknown-linux -O0 -fsanitize-cfi-cross-dso \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux -O0 -fsanitize-cfi-cross-dso \
 // RUN:     -fsanitize=cfi-vcall \
 // RUN:     -emit-llvm -o - %s | FileCheck %s
 
 // Check that ignorelist does not affect generated code.
 // RUN: echo "src:*" > %t-all.ignorelist
-// RUN: %clang_cc1 -triple x86_64-unknown-linux -O0 -fsanitize-cfi-cross-dso \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux -O0 -fsanitize-cfi-cross-dso \
 // RUN:     -fsanitize=cfi-vcall -fsanitize-ignorelist=%t-all.ignorelist \
 // RUN:     -emit-llvm -o - %s | FileCheck %s
 

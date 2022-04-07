@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fexceptions -fcxx-exceptions -fms-extensions -fms-compatibility -fms-compatibility-version=19 -std=c++11 -emit-llvm %s -o - -triple=i386-pc-win32 | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -fexceptions -fcxx-exceptions -fms-extensions -fms-compatibility -fms-compatibility-version=19 -std=c++11 -emit-llvm %s -o - -triple=i386-pc-win32 | FileCheck %s
 // REQUIRES: asserts
 
 struct S {

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -std=c++11 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin -std=c++11 -emit-llvm -o - %s | FileCheck %s
 
 // Verify that the outer loop has the inner loop's access in its
 // llvm.loop.parallel_accesses property.

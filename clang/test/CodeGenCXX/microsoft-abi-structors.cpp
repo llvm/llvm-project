@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-enable-noundef-analysis -emit-llvm -fno-rtti %s -std=c++11 -o - -mconstructor-aliases -triple=i386-pc-win32 -fno-rtti > %t
+// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -emit-llvm -fno-rtti %s -std=c++11 -o - -mconstructor-aliases -triple=i386-pc-win32 -fno-rtti > %t
 // RUN: FileCheck %s < %t
 // vftables are emitted very late, so do another pass to try to keep the checks
 // in source order.
@@ -7,7 +7,7 @@
 // RUN: FileCheck --check-prefix DTORS3 %s < %t
 // RUN: FileCheck --check-prefix DTORS4 %s < %t
 //
-// RUN: %clang_cc1 -emit-llvm %s -o - -mconstructor-aliases -triple=x86_64-pc-win32 -fno-rtti -std=c++11 | FileCheck --check-prefix DTORS-X64 %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm %s -o - -mconstructor-aliases -triple=x86_64-pc-win32 -fno-rtti -std=c++11 | FileCheck --check-prefix DTORS-X64 %s
 
 namespace basic {
 

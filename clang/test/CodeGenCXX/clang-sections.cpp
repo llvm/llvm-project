@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -emit-llvm -triple arm-none-eabi -o - %s | FileCheck %s --check-prefixes=CHECK,ELF
-// RUN: %clang_cc1 -emit-llvm -triple arm64-apple-ios -o - %s | FileCheck %s --check-prefixes=CHECK,MACHO
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple arm-none-eabi -o - %s | FileCheck %s --check-prefixes=CHECK,ELF
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple arm64-apple-ios -o - %s | FileCheck %s --check-prefixes=CHECK,MACHO
 // Test that global variables, statics and functions are attached section-attributes
 // as per '#pragma clang section' directives.
 

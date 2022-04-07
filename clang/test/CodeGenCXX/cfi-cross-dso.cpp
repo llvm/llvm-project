@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -flto -triple x86_64-unknown-linux -fsanitize=cfi-vcall -fsanitize-cfi-cross-dso -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=ITANIUM %s
-// RUN: %clang_cc1 -flto -triple x86_64-pc-windows-msvc -fsanitize=cfi-vcall  -fsanitize-cfi-cross-dso -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=MS %s
+// RUN: %clang_cc1 -no-opaque-pointers -flto -triple x86_64-unknown-linux -fsanitize=cfi-vcall -fsanitize-cfi-cross-dso -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=ITANIUM %s
+// RUN: %clang_cc1 -no-opaque-pointers -flto -triple x86_64-pc-windows-msvc -fsanitize=cfi-vcall  -fsanitize-cfi-cross-dso -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=MS %s
 
 struct A {
   A();

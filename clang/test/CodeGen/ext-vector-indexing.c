@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown -emit-llvm %s -o - | FileCheck %s
 
 typedef __attribute__(( ext_vector_type(4) )) float float4;
 // CHECK: @test

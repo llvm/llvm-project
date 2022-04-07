@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 %s -emit-llvm -o - -triple x86_64-darwin-apple -fobjc-arc -O2 -disable-llvm-passes | FileCheck %s --check-prefixes=CHECK,CHECK-O2
-// RUN: %clang_cc1 %s -emit-llvm -o - -triple x86_64-darwin-apple -fobjc-arc -O0 | FileCheck %s --check-prefixes=CHECK,CHECK-O0
-// RUN: %clang_cc1 %s -emit-llvm -o - -triple x86_64-darwin-apple -O2 -disable-llvm-passes | FileCheck %s --check-prefix=CHECK-MRR
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -triple x86_64-darwin-apple -fobjc-arc -O2 -disable-llvm-passes | FileCheck %s --check-prefixes=CHECK,CHECK-O2
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -triple x86_64-darwin-apple -fobjc-arc -O0 | FileCheck %s --check-prefixes=CHECK,CHECK-O0
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -triple x86_64-darwin-apple -O2 -disable-llvm-passes | FileCheck %s --check-prefix=CHECK-MRR
 
 // Make sure we emit clang.arc.use before calling objc_release as part of the
 // cleanup. This way we make sure the object will not be released until the

@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 %s -emit-llvm -triple spir-unknown-unknown -o - -O0 | FileCheck %s
-// RUN: %clang_cc1 %s -cl-std=CL2.0 -emit-llvm -triple spir-unknown-unknown -o - -O0 | FileCheck %s
-// RUN: %clang_cc1 %s -cl-std=clc++ -emit-llvm -triple spir-unknown-unknown -o - -O0 | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -triple spir-unknown-unknown -o - -O0 | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -cl-std=CL2.0 -emit-llvm -triple spir-unknown-unknown -o - -O0 | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -cl-std=clc++ -emit-llvm -triple spir-unknown-unknown -o - -O0 | FileCheck %s
 //
 // This test covers 5 cases of sampler initialzation:
 //   1. function argument passing

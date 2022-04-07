@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple=i686-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,LINUX
-// RUN: %clang_cc1 -triple=i686-apple-darwin9 -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,DARWIN
+// RUN: %clang_cc1 -no-opaque-pointers -triple=i686-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,LINUX
+// RUN: %clang_cc1 -no-opaque-pointers -triple=i686-apple-darwin9 -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,DARWIN
 
 char *strerror(int) asm("alias");
 int x __asm("foo");

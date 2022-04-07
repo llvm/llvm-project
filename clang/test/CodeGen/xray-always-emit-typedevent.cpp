@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fxray-instrument -fxray-always-emit-typedevents -x c++ \
+// RUN: %clang_cc1 -no-opaque-pointers -fxray-instrument -fxray-always-emit-typedevents -x c++ \
 // RUN:     -std=c++11 -triple x86_64-unknown-unknown -emit-llvm -o - %s \
 // RUN:     | FileCheck %s
 

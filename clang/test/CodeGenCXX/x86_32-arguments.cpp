@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i386-apple-darwin9 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i386-apple-darwin9 -emit-llvm -o - %s | FileCheck %s
 
 // Non-trivial dtors, should both be passed indirectly.
 struct S {

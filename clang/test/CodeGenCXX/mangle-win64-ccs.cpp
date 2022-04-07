@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-windows-gnu -o - -emit-llvm %s | FileCheck %s -check-prefix CHECK-WIN
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -o - -emit-llvm %s | FileCheck %s -check-prefix CHECK-LIN
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-windows-gnu -o - -emit-llvm %s | FileCheck %s -check-prefix CHECK-WIN
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -o - -emit-llvm %s | FileCheck %s -check-prefix CHECK-LIN
 
 typedef __PTRDIFF_TYPE__ ptrdiff_t;
 template <typename FTy> ptrdiff_t func_as_int(FTy *fp) { return ptrdiff_t(fp); }

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm %s -o %t -triple=x86_64-apple-darwin10
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm %s -o %t -triple=x86_64-apple-darwin10
 // RUN: FileCheck < %t %s
 
 // Make sure this doesn't crash. We used to generate a byval here and wanted to

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -Wno-microsoft -fms-extensions -fno-rtti -std=c++11 -emit-llvm %s -o - -triple=i386-pc-win32 | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -Wno-microsoft -fms-extensions -fno-rtti -std=c++11 -emit-llvm %s -o - -triple=i386-pc-win32 | FileCheck %s
 
 template <typename T, int (T::*)() = nullptr>
 struct J {};

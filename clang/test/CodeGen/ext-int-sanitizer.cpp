@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-gnu-linux -fsanitize=array-bounds,enum,float-cast-overflow,integer-divide-by-zero,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation,implicit-integer-sign-change,unsigned-integer-overflow,signed-integer-overflow,shift-base,shift-exponent -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-gnu-linux -fsanitize=array-bounds,enum,float-cast-overflow,integer-divide-by-zero,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation,implicit-integer-sign-change,unsigned-integer-overflow,signed-integer-overflow,shift-base,shift-exponent -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s
 
 
 // CHECK: define{{.*}} void @_Z6BoundsRA10_KiDB15_

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple nvptx-unknown-unknown -S -o - %s -emit-llvm | FileCheck %s
-// RUN: %clang_cc1 -triple nvptx64-unknown-unknown -S -o - %s -emit-llvm | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple nvptx-unknown-unknown -S -o - %s -emit-llvm | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple nvptx64-unknown-unknown -S -o - %s -emit-llvm | FileCheck %s
 
 typedef struct float4_s {
   float x, y, z, w;

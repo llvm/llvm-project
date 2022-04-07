@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++11 -triple i686-windows-msvc -emit-llvm %s -o - | FileCheck %s --check-prefix=WINDOWS
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-windows-msvc -emit-llvm %s -o - | FileCheck %s --check-prefix=WINDOWS64
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -triple i686-windows-msvc -emit-llvm %s -o - | FileCheck %s --check-prefix=WINDOWS
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -triple x86_64-windows-msvc -emit-llvm %s -o - | FileCheck %s --check-prefix=WINDOWS64
 
 struct Foo {
   Foo();

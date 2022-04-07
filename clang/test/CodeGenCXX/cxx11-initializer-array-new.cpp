@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++11 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -std=c++11 %s -emit-llvm -o - | FileCheck %s
 
 // PR10878
 

@@ -4,12 +4,12 @@
 // Make sure we don't allow dynamic initialization for device
 // variables, but accept empty constructors allowed by CUDA.
 
-// RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -fcuda-is-device -std=c++11 \
+// RUN: %clang_cc1 -no-opaque-pointers -triple nvptx64-nvidia-cuda -fcuda-is-device -std=c++11 \
 // RUN:     -fno-threadsafe-statics -emit-llvm -o - %s | FileCheck -check-prefixes=DEVICE,NVPTX %s
-// RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -std=c++11 \
+// RUN: %clang_cc1 -no-opaque-pointers -triple nvptx64-nvidia-cuda -std=c++11 \
 // RUN:     -fno-threadsafe-statics -emit-llvm -o - %s | FileCheck -check-prefixes=HOST %s
 
-// RUN: %clang_cc1 -triple amdgcn -fcuda-is-device -std=c++11 \
+// RUN: %clang_cc1 -no-opaque-pointers -triple amdgcn -fcuda-is-device -std=c++11 \
 // RUN:     -fno-threadsafe-statics -emit-llvm -o - %s | FileCheck -check-prefixes=DEVICE,AMDGCN %s
 
 #ifdef __clang__

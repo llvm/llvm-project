@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.13.0 -fobjc-arc -fblocks -Wno-objc-root-class -O0 %s -S -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.13.0 -fobjc-arc -fblocks -Wno-objc-root-class -O0 -xobjective-c++ -std=c++11 %s -S -emit-llvm -o - | FileCheck %s --check-prefix CHECKXX
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-macosx10.13.0 -fobjc-arc -fblocks -Wno-objc-root-class -O0 %s -S -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-macosx10.13.0 -fobjc-arc -fblocks -Wno-objc-root-class -O0 -xobjective-c++ -std=c++11 %s -S -emit-llvm -o - | FileCheck %s --check-prefix CHECKXX
 
 #define EXT_RET __attribute__((objc_externally_retained))
 

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -o - -triple arm-none-linux-gnueabi %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -o - -triple arm-none-linux-gnueabi %s | FileCheck %s
 
 // CHECK: @_ZN1SIDhDhE1iE ={{.*}} global i32 3
 template <typename T, typename U> struct S { static int i; };

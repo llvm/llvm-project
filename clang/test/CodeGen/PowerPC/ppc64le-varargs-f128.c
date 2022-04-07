@@ -1,18 +1,18 @@
-// RUN: %clang_cc1 -triple powerpc64le-unknown-linux-gnu -emit-llvm \
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc64le-unknown-linux-gnu -emit-llvm \
 // RUN:   -target-cpu pwr9 -target-feature +float128 -mabi=ieeelongdouble \
 // RUN:   -o - %s | FileCheck %s -check-prefix=IEEE
-// RUN: %clang_cc1 -triple powerpc64le-unknown-linux-gnu -emit-llvm \
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc64le-unknown-linux-gnu -emit-llvm \
 // RUN:   -target-cpu pwr9 -target-feature +float128 \
 // RUN:   -o - %s | FileCheck %s -check-prefix=IBM
 
-// RUN: %clang_cc1 -triple ppc64le -emit-llvm-bc %s -target-cpu pwr9 \
+// RUN: %clang_cc1 -no-opaque-pointers -triple ppc64le -emit-llvm-bc %s -target-cpu pwr9 \
 // RUN:   -target-feature +float128 -mabi=ieeelongdouble -fopenmp \
 // RUN:   -fopenmp-targets=ppc64le -o %t-ppc-host.bc
-// RUN: %clang_cc1 -triple ppc64le -aux-triple ppc64le %s -target-cpu pwr9 \
+// RUN: %clang_cc1 -no-opaque-pointers -triple ppc64le -aux-triple ppc64le %s -target-cpu pwr9 \
 // RUN:   -target-feature +float128 -fopenmp -fopenmp-is-device -emit-llvm \
 // RUN:   -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s \
 // RUN:   -check-prefix=OMP-TARGET
-// RUN: %clang_cc1 -triple ppc64le %t-ppc-host.bc -emit-llvm -o - | FileCheck %s \
+// RUN: %clang_cc1 -no-opaque-pointers -triple ppc64le %t-ppc-host.bc -emit-llvm -o - | FileCheck %s \
 // RUN:   -check-prefix=OMP-HOST
 
 #include <stdarg.h>

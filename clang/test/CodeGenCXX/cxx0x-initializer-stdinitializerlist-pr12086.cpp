@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++11 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-STATIC-BL
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++11 -emit-llvm -o - %s -Dconstexpr= | FileCheck %s --check-prefix=CHECK-DYNAMIC-BL
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++11 -emit-llvm -o - %s -DUSE_END | FileCheck %s --check-prefix=CHECK-STATIC-BE
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++11 -emit-llvm -o - %s -DUSE_END -Dconstexpr= | FileCheck %s --check-prefix=CHECK-DYNAMIC-BE
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -std=c++11 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-STATIC-BL
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -std=c++11 -emit-llvm -o - %s -Dconstexpr= | FileCheck %s --check-prefix=CHECK-DYNAMIC-BL
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -std=c++11 -emit-llvm -o - %s -DUSE_END | FileCheck %s --check-prefix=CHECK-STATIC-BE
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -std=c++11 -emit-llvm -o - %s -DUSE_END -Dconstexpr= | FileCheck %s --check-prefix=CHECK-DYNAMIC-BE
 
 namespace std {
   typedef decltype(sizeof(int)) size_t;

@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -triple armv7a-none-eabi -target-feature +neon -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=AAPCS
-// RUN: %clang_cc1 -triple armv7a-none-gnueabi -target-feature +neon -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=AAPCS
-// RUN: %clang_cc1 -triple armv7a-none-freebsd -target-feature +neon -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=AAPCS
+// RUN: %clang_cc1 -no-opaque-pointers -triple armv7a-none-eabi -target-feature +neon -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=AAPCS
+// RUN: %clang_cc1 -no-opaque-pointers -triple armv7a-none-gnueabi -target-feature +neon -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=AAPCS
+// RUN: %clang_cc1 -no-opaque-pointers -triple armv7a-none-freebsd -target-feature +neon -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=AAPCS
 
-// RUN: %clang_cc1 -triple armv7a-apple-ios -target-feature +neon -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=DEFAULT
-// RUN: %clang_cc1 -triple armv7a-none-android -target-feature +neon -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=DEFAULT
-// RUN: %clang_cc1 -triple armv7a-none-androideabi -target-feature +neon -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=DEFAULT
+// RUN: %clang_cc1 -no-opaque-pointers -triple armv7a-apple-ios -target-feature +neon -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=DEFAULT
+// RUN: %clang_cc1 -no-opaque-pointers -triple armv7a-none-android -target-feature +neon -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=DEFAULT
+// RUN: %clang_cc1 -no-opaque-pointers -triple armv7a-none-androideabi -target-feature +neon -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=DEFAULT
 
 // REQUIRES: aarch64-registered-target || arm-registered-target
 

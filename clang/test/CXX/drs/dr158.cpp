@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple x86_64-linux -std=c++98 %s -O3 -disable-llvm-passes -pedantic-errors -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-linux -std=c++11 %s -O3 -disable-llvm-passes -pedantic-errors -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-linux -std=c++14 %s -O3 -disable-llvm-passes -pedantic-errors -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-linux -std=c++1z %s -O3 -disable-llvm-passes -pedantic-errors -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux -std=c++98 %s -O3 -disable-llvm-passes -pedantic-errors -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux -std=c++11 %s -O3 -disable-llvm-passes -pedantic-errors -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux -std=c++14 %s -O3 -disable-llvm-passes -pedantic-errors -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux -std=c++1z %s -O3 -disable-llvm-passes -pedantic-errors -emit-llvm -o - | FileCheck %s
 
 // dr158: yes
 

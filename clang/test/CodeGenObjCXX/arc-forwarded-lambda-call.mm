@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.12.0 -emit-llvm -disable-llvm-passes -O3 -fblocks -fobjc-arc -fobjc-runtime-has-weak -std=c++11 -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-macosx10.12.0 -emit-llvm -disable-llvm-passes -O3 -fblocks -fobjc-arc -fobjc-runtime-has-weak -std=c++11 -o - %s | FileCheck %s
 
 void test0(id x) {
   extern void test0_helper(id (^)(void));

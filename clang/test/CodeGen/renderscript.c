@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 %s -triple=renderscript32-none-linux-gnueabi -emit-llvm -o - -Werror | FileCheck %s -check-prefix=CHECK-RS32
-// RUN: %clang_cc1 %s -triple=renderscript64-none-linux-android -emit-llvm -o - -Werror | FileCheck %s -check-prefix=CHECK-RS64
-// RUN: %clang_cc1 %s -triple=armv7-none-linux-gnueabi -emit-llvm -o - -Werror | FileCheck %s -check-prefix=CHECK-ARM
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=renderscript32-none-linux-gnueabi -emit-llvm -o - -Werror | FileCheck %s -check-prefix=CHECK-RS32
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=renderscript64-none-linux-android -emit-llvm -o - -Werror | FileCheck %s -check-prefix=CHECK-RS64
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=armv7-none-linux-gnueabi -emit-llvm -o - -Werror | FileCheck %s -check-prefix=CHECK-ARM
 
 // Ensure that the bitcode has the correct triple
 // CHECK-RS32: target triple = "armv7-none-linux-gnueabi"

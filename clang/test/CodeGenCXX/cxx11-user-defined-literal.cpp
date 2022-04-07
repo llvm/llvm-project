@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck %s
 
 struct S { S(); ~S(); S(const S &); void operator()(int); };
 using size_t = decltype(sizeof(int));

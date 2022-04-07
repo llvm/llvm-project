@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -triple i686-pc-win32 -fms-extensions -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple i686-pc-win32 -fms-extensions -o - %s | FileCheck %s
 
 extern "C" {
 

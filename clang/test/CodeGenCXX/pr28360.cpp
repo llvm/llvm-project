@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -emit-llvm -o - -triple i686-pc-win32 | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -triple i686-pc-win32 | FileCheck %s
 struct A {
   void Foo();
   void Foo(int);

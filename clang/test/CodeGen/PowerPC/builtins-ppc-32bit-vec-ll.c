@@ -1,5 +1,5 @@
 // REQUIRES: powerpc-registered-target
-// RUN: %clang_cc1 -target-feature +altivec -target-feature +power8-vector \
+// RUN: %clang_cc1 -no-opaque-pointers -target-feature +altivec -target-feature +power8-vector \
 // RUN:   -triple powerpc-unknown-unknown -emit-llvm %s -o - | FileCheck %s
 
 #include <altivec.h>

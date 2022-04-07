@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -emit-llvm < %s| FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-pc-linux-gnu -emit-llvm < %s| FileCheck %s
 
 // Test that we have the structure definition, the gep offsets, the name of the
 // global, the bit grab, and the icmp correct.

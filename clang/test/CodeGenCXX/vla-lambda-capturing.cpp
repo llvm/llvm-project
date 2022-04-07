@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 %s -std=c++11 -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 %s -std=c++11 -emit-pch -o %t
-// RUN: %clang_cc1 %s -std=c++11 -include-pch %t -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -std=c++11 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -std=c++11 -emit-pch -o %t
+// RUN: %clang_cc1 -no-opaque-pointers %s -std=c++11 -include-pch %t -emit-llvm -o - | FileCheck %s
 
 #ifndef HEADER
 #define HEADER

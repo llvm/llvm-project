@@ -2,7 +2,7 @@
 // Verifies that parameter copies are destroyed
 // Vefifies that parameter copies are used in the body of the coroutine
 // Verifies that parameter copies are used to construct the promise type, if that type has a matching constructor
-// RUN: %clang_cc1 -std=c++20 -triple=x86_64-unknown-linux-gnu -emit-llvm -o - %s -disable-llvm-passes -fexceptions | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++20 -triple=x86_64-unknown-linux-gnu -emit-llvm -o - %s -disable-llvm-passes -fexceptions | FileCheck %s
 
 namespace std {
 template <typename... T> struct coroutine_traits;

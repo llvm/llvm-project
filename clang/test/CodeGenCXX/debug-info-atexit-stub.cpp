@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm %s -triple x86_64-windows-msvc -gcodeview -debug-info-kind=limited -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm %s -triple x86_64-windows-msvc -gcodeview -debug-info-kind=limited -o - | FileCheck %s
 
 struct a {
   ~a();

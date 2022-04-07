@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -std=c++98 %s -triple armv7-none-eabi -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -std=c++11 %s -triple armv7-none-eabi -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -std=c++1z %s -triple armv7-none-eabi -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++98 %s -triple armv7-none-eabi -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 %s -triple armv7-none-eabi -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++1z %s -triple armv7-none-eabi -emit-llvm -o - | FileCheck %s
 
 struct A {
   virtual void f();

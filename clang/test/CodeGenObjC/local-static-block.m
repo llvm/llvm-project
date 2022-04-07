@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fblocks -triple x86_64-apple-darwin -fobjc-runtime=macosx-fragile-10.5 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -fblocks -triple x86_64-apple-darwin -fobjc-runtime=macosx-fragile-10.5 -emit-llvm -o - %s | FileCheck %s
 // rdar: // 8390455
 
 // CHECK: @ArrayRecurs = internal global

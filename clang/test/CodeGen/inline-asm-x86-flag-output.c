@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -O2 -emit-llvm %s -o - -triple x86_64-unknown-linux-gnu | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -O2 -emit-llvm %s -o - -triple x86_64-unknown-linux-gnu | FileCheck %s
 
 int test_cca(long nr, volatile long *addr) {
   //CHECK-LABEL: @test_cca

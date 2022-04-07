@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple armv7l-unknown-linux-gnueabihf -emit-llvm -O1 -disable-llvm-passes -std=c++03 %s -o - | FileCheck %s --implicit-check-not=llvm.lifetime
+// RUN: %clang_cc1 -no-opaque-pointers -triple armv7l-unknown-linux-gnueabihf -emit-llvm -O1 -disable-llvm-passes -std=c++03 %s -o - | FileCheck %s --implicit-check-not=llvm.lifetime
 
 class S {
   char *ptr;

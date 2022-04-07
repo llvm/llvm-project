@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -triple x86_64-apple-darwin10 -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple x86_64-apple-darwin10 -o - %s | FileCheck %s
 
 // PR6024
 extern int i;

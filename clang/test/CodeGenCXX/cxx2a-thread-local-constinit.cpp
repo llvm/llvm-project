@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++2a %s -emit-llvm -o - | FileCheck --check-prefix=CHECK --check-prefix=LINUX %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin12  -std=c++2a %s -emit-llvm -o - | FileCheck --check-prefix=CHECK --check-prefix=DARWIN %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -std=c++2a %s -emit-llvm -o - | FileCheck --check-prefix=CHECK --check-prefix=LINUX %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin12  -std=c++2a %s -emit-llvm -o - | FileCheck --check-prefix=CHECK --check-prefix=DARWIN %s
 
 // Check variable definitions/declarations. Note that on Darwin, typically the
 // variable's symbol is marked internal, and only the _ZTW function is

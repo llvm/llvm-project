@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple powerpc64-linux -fexceptions -fcxx-exceptions -fignore-exceptions -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple powerpc64-linux -fexceptions -fcxx-exceptions -fignore-exceptions -emit-llvm -o - | FileCheck %s
 
 struct A {
   ~A(){}

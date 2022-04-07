@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fobjc-arc -emit-llvm -triple x86_64-apple-darwin -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -fobjc-arc -emit-llvm -triple x86_64-apple-darwin -o - %s | FileCheck %s
 
 @interface NSMutableArray
 - (id)objectAtIndexedSubscript:(int)index;

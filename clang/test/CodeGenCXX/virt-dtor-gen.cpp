@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -o - -triple %itanium_abi_triple -emit-llvm %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -o - -triple %itanium_abi_triple -emit-llvm %s | FileCheck %s
 // PR5483
 
 // Make sure we generate all three forms of the destructor when it is virtual.

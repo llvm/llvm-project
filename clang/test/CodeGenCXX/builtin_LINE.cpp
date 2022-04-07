@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++1z -fblocks %s -triple x86_64-unknown-unknown -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++1z -fblocks %s -triple x86_64-unknown-unknown -emit-llvm -o - | FileCheck %s
 
 extern "C" int sink;
 extern "C" const volatile void* volatile ptr_sink = nullptr;

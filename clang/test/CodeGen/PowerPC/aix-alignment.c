@@ -1,7 +1,7 @@
 // REQUIRES: powerpc-registered-target
-// RUN: %clang_cc1 -triple powerpc-unknown-aix -emit-llvm -o - %s | \
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc-unknown-aix -emit-llvm -o - %s | \
 // RUN:   FileCheck %s --check-prefixes=AIX,AIX32
-// RUN: %clang_cc1 -triple powerpc64-unknown-aix -emit-llvm -o - %s | \
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc64-unknown-aix -emit-llvm -o - %s | \
 // RUN:   FileCheck %s --check-prefixes=AIX,AIX64
 
 // AIX: @d = global double 0.000000e+00, align 8

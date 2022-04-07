@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -triple wasm32-unknown-unknown %s -emit-llvm -o - \
+// RUN: %clang_cc1 -no-opaque-pointers -triple wasm32-unknown-unknown %s -emit-llvm -o - \
 // RUN:   | FileCheck %s -check-prefix=WEBASSEMBLY32
-// RUN: %clang_cc1 -triple wasm64-unknown-unknown %s -emit-llvm -o - \
+// RUN: %clang_cc1 -no-opaque-pointers -triple wasm64-unknown-unknown %s -emit-llvm -o - \
 // RUN:   | FileCheck %s -check-prefix=WEBASSEMBLY64
-// RUN: %clang_cc1 -triple wasm32-unknown-unknown %s -target-abi experimental-mv -emit-llvm -o - \
+// RUN: %clang_cc1 -no-opaque-pointers -triple wasm32-unknown-unknown %s -target-abi experimental-mv -emit-llvm -o - \
 // RUN:   | FileCheck %s -check-prefix=EXPERIMENTAL-MV
 
 // Basic argument/attribute and return tests for WebAssembly

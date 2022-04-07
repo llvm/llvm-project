@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-cpu tonga -S -emit-llvm -O0 -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-cpu tonga -S -emit-llvm -O0 -o - %s | FileCheck %s
 
 // Make sure using numbered address spaces doesn't trigger crashes when a
 // builtin has an address space parameter.

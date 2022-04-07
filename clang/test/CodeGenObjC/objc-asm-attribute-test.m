@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -triple x86_64-apple-darwin %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple x86_64-apple-darwin %s -o - | FileCheck %s
 // rdar://16462586
 
 __attribute__((objc_runtime_name("MySecretNamespace.Protocol")))

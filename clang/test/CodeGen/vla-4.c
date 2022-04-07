@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i386-unknown-unknown %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i386-unknown-unknown %s -emit-llvm -o - | FileCheck %s
 
 int f(void);
 int h(void);

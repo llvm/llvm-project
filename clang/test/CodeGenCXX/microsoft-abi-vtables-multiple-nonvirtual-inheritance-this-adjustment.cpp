@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -fno-rtti -triple=i386-pc-win32 -emit-llvm -o %t.ll -fdump-vtable-layouts >%t
+// RUN: %clang_cc1 -no-opaque-pointers %s -fno-rtti -triple=i386-pc-win32 -emit-llvm -o %t.ll -fdump-vtable-layouts >%t
 // RUN: FileCheck %s < %t
 // RUN: FileCheck --check-prefix=BITCODE %s < %t.ll
 

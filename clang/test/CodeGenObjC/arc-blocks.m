@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fblocks -fobjc-arc -fobjc-runtime-has-weak -O2 -disable-llvm-passes -o - %s | FileCheck -check-prefix=CHECK -check-prefix=CHECK-HEAP -check-prefix=CHECK-COMMON %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fblocks -fobjc-arc -fobjc-runtime-has-weak -O2 -disable-llvm-passes -fobjc-avoid-heapify-local-blocks -o - %s | FileCheck -check-prefix=CHECK -check-prefix=CHECK-NOHEAP -check-prefix=CHECK-COMMON %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fblocks -fobjc-arc -fobjc-runtime-has-weak -o - %s | FileCheck -check-prefix=CHECK-UNOPT -check-prefix=CHECK-COMMON %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -emit-llvm -fblocks -fobjc-arc -fobjc-runtime-has-weak -O2 -disable-llvm-passes -o - %s | FileCheck -check-prefix=CHECK -check-prefix=CHECK-HEAP -check-prefix=CHECK-COMMON %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -emit-llvm -fblocks -fobjc-arc -fobjc-runtime-has-weak -O2 -disable-llvm-passes -fobjc-avoid-heapify-local-blocks -o - %s | FileCheck -check-prefix=CHECK -check-prefix=CHECK-NOHEAP -check-prefix=CHECK-COMMON %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -emit-llvm -fblocks -fobjc-arc -fobjc-runtime-has-weak -o - %s | FileCheck -check-prefix=CHECK-UNOPT -check-prefix=CHECK-COMMON %s
 
 // CHECK-COMMON: %[[STRUCT_BLOCK_DESCRIPTOR:.*]] = type { i64, i64 }
 // CHECK-COMMON: @[[BLOCK_DESCRIPTOR_TMP44:.*]] = linkonce_odr hidden unnamed_addr constant { i64, i64, i8*, i8*, i8*, i64 } { i64 0, i64 40, i8* bitcast (void (i8*, i8*)* @__copy_helper_block_8_32s to i8*), i8* bitcast (void (i8*)* @__destroy_helper_block_8_32s to i8*), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i64 256 }, align 8

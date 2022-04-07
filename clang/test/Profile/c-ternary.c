@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.11.0 -x c %s -o - -emit-llvm -fprofile-instrument=clang | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-macosx10.11.0 -x c %s -o - -emit-llvm -fprofile-instrument=clang | FileCheck %s
 
 // PR32019: Clang can lower some ternary operator expressions to select
 // instructions. Make sure we only increment the profile counter for the

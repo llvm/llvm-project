@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 %s -fno-rtti -triple=i386-pc-win32 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -fno-rtti -triple=i386-pc-win32 -emit-llvm -o - | FileCheck %s
 
 // For now, just make sure x86_64 doesn't crash.
-// RUN: %clang_cc1 %s -fno-rtti -triple=x86_64-pc-win32 -emit-llvm -o %t
+// RUN: %clang_cc1 -no-opaque-pointers %s -fno-rtti -triple=x86_64-pc-win32 -emit-llvm -o %t
 
 struct A {
   virtual void f();

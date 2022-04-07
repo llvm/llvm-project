@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux -O0 -fsanitize-cfi-cross-dso \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux -O0 -fsanitize-cfi-cross-dso \
 // RUN:     -fsanitize=cfi-icall,cfi-nvcall,cfi-vcall,cfi-unrelated-cast,cfi-derived-cast \
 // RUN:     -fsanitize-trap=cfi-icall,cfi-nvcall -fsanitize-recover=cfi-vcall,cfi-unrelated-cast \
 // RUN:     -emit-llvm -o - %s | FileCheck %s

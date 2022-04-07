@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -ffreestanding -Wall -pedantic -triple x86_64-unknown-unknown -target-feature +movdiri -target-feature +movdir64b %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,X86_64
-// RUN: %clang_cc1 -ffreestanding -Wall -pedantic -triple i386-unknown-unknown -target-feature +movdiri -target-feature +movdir64b %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK
+// RUN: %clang_cc1 -no-opaque-pointers -ffreestanding -Wall -pedantic -triple x86_64-unknown-unknown -target-feature +movdiri -target-feature +movdir64b %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,X86_64
+// RUN: %clang_cc1 -no-opaque-pointers -ffreestanding -Wall -pedantic -triple i386-unknown-unknown -target-feature +movdiri -target-feature +movdir64b %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK
 
 #include <immintrin.h>
 #include <stdint.h>

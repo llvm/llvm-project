@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++14 -fcoroutines-ts -triple=x86_64-pc-windows-msvc18.0.0 -emit-llvm -o - %s -fexceptions -fcxx-exceptions -disable-llvm-passes | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++14 -fcoroutines-ts -triple=x86_64-pc-windows-msvc18.0.0 -emit-llvm -o - %s -fexceptions -fcxx-exceptions -disable-llvm-passes | FileCheck %s
 // -triple=x86_64-unknown-linux-gnu
 
 #include "Inputs/coroutine-exp-namespace.h"

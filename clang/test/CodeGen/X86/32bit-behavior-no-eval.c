@@ -1,15 +1,15 @@
 // SSE
-// RUN: %clang_cc1  \
+// RUN: %clang_cc1 -no-opaque-pointers  \
 // RUN: -triple i386-pc-windows -target-cpu pentium4 -target-feature +sse \
 // RUN: -emit-llvm -o - %s | FileCheck -check-prefix=CHECK %s
 
 // NO SSE
-// RUN: %clang_cc1  \
+// RUN: %clang_cc1 -no-opaque-pointers  \
 // RUN: -triple i386-pc-windows -target-cpu pentium4 -target-feature -sse \
 // RUN: -emit-llvm -o - %s | FileCheck -check-prefix=CHECK %s
 
 // NO SSE Fast Math
-// RUN: %clang_cc1  \
+// RUN: %clang_cc1 -no-opaque-pointers  \
 // RUN: -triple i386-pc-windows -target-cpu pentium4 -target-feature -sse \
 // RUN: -ffast-math -emit-llvm -o - %s | FileCheck -check-prefix=CHECK-FM %s
 

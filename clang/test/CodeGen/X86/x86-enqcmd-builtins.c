@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -ffreestanding -triple i386-unknown-unknown -target-feature +enqcmd -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 %s -ffreestanding -triple x86_64-unknown-unknown -target-feature +enqcmd -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -ffreestanding -triple i386-unknown-unknown -target-feature +enqcmd -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -ffreestanding -triple x86_64-unknown-unknown -target-feature +enqcmd -emit-llvm -o - | FileCheck %s
 
 #include <immintrin.h>
 

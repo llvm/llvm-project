@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple powerpc64le-linux-gnu -emit-llvm -o - %s \
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc64le-linux-gnu -emit-llvm -o - %s \
 // RUN:   -mabi=ieeelongdouble | FileCheck --check-prefix=IEEE128 %s
-// RUN: %clang_cc1 -triple powerpc64le-linux-gnu -emit-llvm -o - %s \
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc64le-linux-gnu -emit-llvm -o - %s \
 // RUN:   | FileCheck --check-prefix=PPC128 %s
 
 long double x;

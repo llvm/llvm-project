@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fcuda-is-device -triple amdgcn-amd-amdhsa -target-cpu gfx906 \
+// RUN: %clang_cc1 -no-opaque-pointers -fcuda-is-device -triple amdgcn-amd-amdhsa -target-cpu gfx906 \
 // RUN:   -emit-llvm -o - %s | FileCheck %s
 
 #include "Inputs/cuda.h"

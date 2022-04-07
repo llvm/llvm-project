@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -emit-llvm -triple i686-windows-msvc -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -triple i686-windows-msvc -o - | FileCheck %s
 
 // Statement allow the user to exit the evaluation scope of a CallExpr without
 // executing the call. Check that clang generates reasonable IR for that case.

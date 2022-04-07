@@ -1,11 +1,11 @@
-// RUN: %clang_cc1 -triple x86_64-gnu-linux -x c++ -S -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-INTEL
-// RUN: %clang_cc1 -triple aarch64-gnu-linux -x c++ -S -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-AARCH
-// RUN: %clang_cc1 -triple x86_64-gnu-linux -x c++ -S -emit-llvm -fsanitize-memory-param-retval %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-INTEL
-// RUN: %clang_cc1 -triple aarch64-gnu-linux -x c++ -S -emit-llvm -fsanitize-memory-param-retval %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-AARCH
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-gnu-linux -x c++ -S -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-INTEL
+// RUN: %clang_cc1 -no-opaque-pointers -triple aarch64-gnu-linux -x c++ -S -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-AARCH
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-gnu-linux -x c++ -S -emit-llvm -fsanitize-memory-param-retval %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-INTEL
+// RUN: %clang_cc1 -no-opaque-pointers -triple aarch64-gnu-linux -x c++ -S -emit-llvm -fsanitize-memory-param-retval %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-AARCH
 
 // no-sanitize-memory-param-retval does NOT conflict with enable-noundef-analysis
-// RUN: %clang_cc1 -triple x86_64-gnu-linux -x c++ -S -emit-llvm -fno-sanitize-memory-param-retval %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-INTEL
-// RUN: %clang_cc1 -triple x86_64-gnu-linux -x c++ -S -emit-llvm -fno-sanitize-memory-param-retval %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-INTEL
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-gnu-linux -x c++ -S -emit-llvm -fno-sanitize-memory-param-retval %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-INTEL
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-gnu-linux -x c++ -S -emit-llvm -fno-sanitize-memory-param-retval %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-INTEL
 
 //************ Passing structs by value
 // TODO: No structs may currently be marked noundef

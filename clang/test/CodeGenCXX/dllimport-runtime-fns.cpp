@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -fms-extensions -fms-compatibility-version=19.20 -triple x86_64-windows-msvc -fexceptions -fcxx-exceptions -emit-llvm -o - %s | FileCheck %s --check-prefix=MSVC
-// RUN: %clang_cc1 -fms-extensions -fms-compatibility-version=19.20 -triple aarch64-windows-msvc -fexceptions -fcxx-exceptions -emit-llvm -o - %s | FileCheck %s --check-prefix=MSVC
-// RUN: %clang_cc1 -triple x86_64-windows-itanium -fexceptions -fcxx-exceptions -emit-llvm -o - %s | FileCheck %s --check-prefix=ITANIUM
-// RUN: %clang_cc1 -triple aarch64-windows-gnu -fexceptions -fcxx-exceptions -emit-llvm -o - %s | FileCheck %s --check-prefix=GNU
+// RUN: %clang_cc1 -no-opaque-pointers -fms-extensions -fms-compatibility-version=19.20 -triple x86_64-windows-msvc -fexceptions -fcxx-exceptions -emit-llvm -o - %s | FileCheck %s --check-prefix=MSVC
+// RUN: %clang_cc1 -no-opaque-pointers -fms-extensions -fms-compatibility-version=19.20 -triple aarch64-windows-msvc -fexceptions -fcxx-exceptions -emit-llvm -o - %s | FileCheck %s --check-prefix=MSVC
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-windows-itanium -fexceptions -fcxx-exceptions -emit-llvm -o - %s | FileCheck %s --check-prefix=ITANIUM
+// RUN: %clang_cc1 -no-opaque-pointers -triple aarch64-windows-gnu -fexceptions -fcxx-exceptions -emit-llvm -o - %s | FileCheck %s --check-prefix=GNU
 
 void foo1() { throw 1; }
 // _CxxThrowException should not be marked dllimport.

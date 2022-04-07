@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -o - %s | FileCheck %s
 // END.
 # 1 "t.c"
 # 1 "<built-in>"

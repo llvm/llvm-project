@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.7.0 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-macosx10.7.0 %s -emit-llvm -o - | FileCheck %s
 
 // CHECK: %{{[a-z0-9]+}} = notail call i32 @callee0(i32 noundef %
 // CHECK: %{{[a-z0-9]+}} = notail call i32 @callee1(i32 noundef %

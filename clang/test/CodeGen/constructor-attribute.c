@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=WITHOUTATEXIT %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -fregister-global-dtors-with-atexit -debug-info-kind=line-tables-only -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=CXAATEXIT --check-prefix=WITHATEXIT %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -fno-use-cxa-atexit -fregister-global-dtors-with-atexit -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=ATEXIT --check-prefix=WITHATEXIT %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=WITHOUTATEXIT %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin -fregister-global-dtors-with-atexit -debug-info-kind=line-tables-only -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=CXAATEXIT --check-prefix=WITHATEXIT %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin -fno-use-cxa-atexit -fregister-global-dtors-with-atexit -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=ATEXIT --check-prefix=WITHATEXIT %s
 
 // WITHOUTATEXIT: global_ctors{{.*}}@A{{.*}}@C
 // WITHOUTATEXIT: @llvm.global_dtors = appending global [5 x { i32, void ()*, i8* }]{{.*}}@B{{.*}}@E{{.*}}@F{{.*}}@G{{.*}}@D

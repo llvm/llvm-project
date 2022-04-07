@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios11 -std=c++11 -fobjc-arc  -fobjc-weak -fobjc-runtime-has-weak -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple arm64-apple-ios11 -std=c++11 -fobjc-arc  -fobjc-weak -fobjc-runtime-has-weak -fclang-abi-compat=4.0 -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple arm64-apple-ios11 -std=c++11 -fobjc-arc  -fobjc-weak -fobjc-runtime-has-weak -emit-llvm -o - -DTRIVIALABI %s | FileCheck %s
-// RUN: %clang_cc1 -triple arm64-apple-ios11 -std=c++11 -fobjc-arc  -fobjc-weak -fobjc-runtime-has-weak -fclang-abi-compat=4.0 -emit-llvm -o - -DTRIVIALABI %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple arm64-apple-ios11 -std=c++11 -fobjc-arc  -fobjc-weak -fobjc-runtime-has-weak -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple arm64-apple-ios11 -std=c++11 -fobjc-arc  -fobjc-weak -fobjc-runtime-has-weak -fclang-abi-compat=4.0 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple arm64-apple-ios11 -std=c++11 -fobjc-arc  -fobjc-weak -fobjc-runtime-has-weak -emit-llvm -o - -DTRIVIALABI %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple arm64-apple-ios11 -std=c++11 -fobjc-arc  -fobjc-weak -fobjc-runtime-has-weak -fclang-abi-compat=4.0 -emit-llvm -o - -DTRIVIALABI %s | FileCheck %s
 
 // Check that structs consisting solely of __strong or __weak pointer fields are
 // destructed in the callee function and structs consisting solely of __strong

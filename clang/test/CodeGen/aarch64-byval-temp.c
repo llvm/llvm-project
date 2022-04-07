@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -emit-llvm -triple arm64-- -o - %s -O0 | FileCheck %s --check-prefix=CHECK-O0
-// RUN: %clang_cc1 -emit-llvm -disable-llvm-optzns -triple arm64-- -o - %s -O3 | FileCheck %s --check-prefix=CHECK-O3
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple arm64-- -o - %s -O0 | FileCheck %s --check-prefix=CHECK-O0
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -disable-llvm-optzns -triple arm64-- -o - %s -O3 | FileCheck %s --check-prefix=CHECK-O3
 
 struct large {
     void* pointers[8];

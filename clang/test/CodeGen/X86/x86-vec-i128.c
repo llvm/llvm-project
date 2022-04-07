@@ -1,23 +1,23 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu %s -target-feature +sse2 -S -emit-llvm -o - | FileCheck %s --check-prefixes=CLANG10ABI128,MEM256ALIGN32,MEM512ALIGN64
-// RUN: %clang_cc1 -triple x86_64-netbsd %s -target-feature +sse2 -S -emit-llvm -o - | FileCheck %s --check-prefixes=CLANG10ABI128,MEM256ALIGN32,MEM512ALIGN64
-// RUN: %clang_cc1 -triple x86_64-apple-darwin %s -target-feature +sse2 -S -emit-llvm -o - | FileCheck %s --check-prefixes=CLANG9ABI128,MEM256ALIGN16,MEM512ALIGN16
-// RUN: %clang_cc1 -triple x86_64-scei-ps4 %s -target-feature +sse2 -S -emit-llvm -o - | FileCheck %s --check-prefixes=CLANG9ABI128,MEM256ALIGN32,MEM512ALIGN64
-// RUN: %clang_cc1 -triple x86_64-unknown-freebsd10.0 %s -target-feature +sse2 -S -emit-llvm -o - | FileCheck %s --check-prefixes=CLANG9ABI128,MEM256ALIGN32,MEM512ALIGN64
-// RUN: %clang_cc1 -triple x86_64-linux-gnu %s -target-feature +sse2 -S -emit-llvm -o - -fclang-abi-compat=9 | FileCheck %s --check-prefixes=CLANG9ABI128,MEM256ALIGN32,MEM512ALIGN64
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu %s -target-feature +sse2 -S -emit-llvm -o - | FileCheck %s --check-prefixes=CLANG10ABI128,MEM256ALIGN32,MEM512ALIGN64
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-netbsd %s -target-feature +sse2 -S -emit-llvm -o - | FileCheck %s --check-prefixes=CLANG10ABI128,MEM256ALIGN32,MEM512ALIGN64
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin %s -target-feature +sse2 -S -emit-llvm -o - | FileCheck %s --check-prefixes=CLANG9ABI128,MEM256ALIGN16,MEM512ALIGN16
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-scei-ps4 %s -target-feature +sse2 -S -emit-llvm -o - | FileCheck %s --check-prefixes=CLANG9ABI128,MEM256ALIGN32,MEM512ALIGN64
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-freebsd10.0 %s -target-feature +sse2 -S -emit-llvm -o - | FileCheck %s --check-prefixes=CLANG9ABI128,MEM256ALIGN32,MEM512ALIGN64
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu %s -target-feature +sse2 -S -emit-llvm -o - -fclang-abi-compat=9 | FileCheck %s --check-prefixes=CLANG9ABI128,MEM256ALIGN32,MEM512ALIGN64
 
-// RUN: %clang_cc1 -triple x86_64-linux-gnu %s -target-feature +avx -S -emit-llvm -o - | FileCheck %s --check-prefixes=CLANG10ABI128,CLANG10ABI256,MEM512ALIGN64
-// RUN: %clang_cc1 -triple x86_64-netbsd %s -target-feature +avx -S -emit-llvm -o - | FileCheck %s --check-prefixes=CLANG10ABI128,CLANG10ABI256,MEM512ALIGN64
-// RUN: %clang_cc1 -triple x86_64-apple-darwin %s -target-feature +avx -S -emit-llvm -o - | FileCheck %s --check-prefixes=CLANG9ABI128,CLANG9ABI256,MEM512ALIGN32
-// RUN: %clang_cc1 -triple x86_64-scei-ps4 %s -target-feature +avx -S -emit-llvm -o - | FileCheck %s --check-prefixes=CLANG9ABI128,CLANG9ABI256,MEM512ALIGN64
-// RUN: %clang_cc1 -triple x86_64-unknown-freebsd10.0 %s -target-feature +avx -S -emit-llvm -o - | FileCheck %s --check-prefixes=CLANG9ABI128,CLANG9ABI256,MEM512ALIGN64
-// RUN: %clang_cc1 -triple x86_64-linux-gnu %s -target-feature +avx -S -emit-llvm -o - -fclang-abi-compat=9 | FileCheck %s --check-prefixes=CLANG9ABI128,CLANG9ABI256,MEM512ALIGN64
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu %s -target-feature +avx -S -emit-llvm -o - | FileCheck %s --check-prefixes=CLANG10ABI128,CLANG10ABI256,MEM512ALIGN64
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-netbsd %s -target-feature +avx -S -emit-llvm -o - | FileCheck %s --check-prefixes=CLANG10ABI128,CLANG10ABI256,MEM512ALIGN64
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin %s -target-feature +avx -S -emit-llvm -o - | FileCheck %s --check-prefixes=CLANG9ABI128,CLANG9ABI256,MEM512ALIGN32
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-scei-ps4 %s -target-feature +avx -S -emit-llvm -o - | FileCheck %s --check-prefixes=CLANG9ABI128,CLANG9ABI256,MEM512ALIGN64
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-freebsd10.0 %s -target-feature +avx -S -emit-llvm -o - | FileCheck %s --check-prefixes=CLANG9ABI128,CLANG9ABI256,MEM512ALIGN64
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu %s -target-feature +avx -S -emit-llvm -o - -fclang-abi-compat=9 | FileCheck %s --check-prefixes=CLANG9ABI128,CLANG9ABI256,MEM512ALIGN64
 
-// RUN: %clang_cc1 -triple x86_64-linux-gnu %s -target-feature +avx512f -S -emit-llvm -o - | FileCheck %s --check-prefixes=CLANG10ABI128,CLANG10ABI256,CLANG10ABI512
-// RUN: %clang_cc1 -triple x86_64-netbsd %s -target-feature +avx512f -S -emit-llvm -o - | FileCheck %s --check-prefixes=CLANG10ABI128,CLANG10ABI256,CLANG10ABI512
-// RUN: %clang_cc1 -triple x86_64-apple-darwin %s -target-feature +avx512f -S -emit-llvm -o - | FileCheck %s --check-prefixes=CLANG9ABI128,CLANG9ABI256,CLANG9ABI512
-// RUN: %clang_cc1 -triple x86_64-scei-ps4 %s -target-feature +avx512f -S -emit-llvm -o - | FileCheck %s --check-prefixes=CLANG9ABI128,CLANG9ABI256,CLANG9ABI512
-// RUN: %clang_cc1 -triple x86_64-unknown-freebsd10.0 %s -target-feature +avx512f -S -emit-llvm -o - | FileCheck %s --check-prefixes=CLANG9ABI128,CLANG9ABI256,CLANG9ABI512
-// RUN: %clang_cc1 -triple x86_64-linux-gnu %s -target-feature +avx512f -S -emit-llvm -o - -fclang-abi-compat=9 | FileCheck %s --check-prefixes=CLANG9ABI128,CLANG9ABI256,CLANG9ABI512
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu %s -target-feature +avx512f -S -emit-llvm -o - | FileCheck %s --check-prefixes=CLANG10ABI128,CLANG10ABI256,CLANG10ABI512
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-netbsd %s -target-feature +avx512f -S -emit-llvm -o - | FileCheck %s --check-prefixes=CLANG10ABI128,CLANG10ABI256,CLANG10ABI512
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin %s -target-feature +avx512f -S -emit-llvm -o - | FileCheck %s --check-prefixes=CLANG9ABI128,CLANG9ABI256,CLANG9ABI512
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-scei-ps4 %s -target-feature +avx512f -S -emit-llvm -o - | FileCheck %s --check-prefixes=CLANG9ABI128,CLANG9ABI256,CLANG9ABI512
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-freebsd10.0 %s -target-feature +avx512f -S -emit-llvm -o - | FileCheck %s --check-prefixes=CLANG9ABI128,CLANG9ABI256,CLANG9ABI512
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu %s -target-feature +avx512f -S -emit-llvm -o - -fclang-abi-compat=9 | FileCheck %s --check-prefixes=CLANG9ABI128,CLANG9ABI256,CLANG9ABI512
 
 typedef unsigned long long v16u64 __attribute__((vector_size(16)));
 typedef unsigned __int128 v16u128 __attribute__((vector_size(16)));

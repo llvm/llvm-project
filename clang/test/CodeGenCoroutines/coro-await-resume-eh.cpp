@@ -3,7 +3,7 @@
 // executing the handler specified by the promise type's 'unhandled_exception'
 // member function.
 //
-// RUN: %clang_cc1 -std=c++20 \
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++20 \
 // RUN:   -triple=x86_64-unknown-linux-gnu -emit-llvm -o - %s \
 // RUN:   -fexceptions -fcxx-exceptions -disable-llvm-passes \
 // RUN:   | FileCheck %s

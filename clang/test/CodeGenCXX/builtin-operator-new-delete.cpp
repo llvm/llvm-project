@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown %s  \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown %s  \
 // RUN:     -faligned-allocation -fsized-deallocation -emit-llvm -o - \
 // RUN:    | FileCheck %s
 

@@ -1,8 +1,8 @@
 // REQUIRES: powerpc-registered-target
-// RUN: %clang_cc1 -target-feature +vsx \
+// RUN: %clang_cc1 -no-opaque-pointers -target-feature +vsx \
 // RUN:   -target-cpu pwr10 -triple powerpc64-unknown-unknown -emit-llvm %s \
 // RUN:   -o - | FileCheck %s -check-prefixes=CHECK-BE,CHECK
-// RUN: %clang_cc1 -target-feature +vsx \
+// RUN: %clang_cc1 -no-opaque-pointers -target-feature +vsx \
 // RUN:   -target-cpu pwr10 -triple powerpc64le-unknown-unknown -emit-llvm %s \
 // RUN:   -o - | FileCheck %s -check-prefixes=CHECK-LE,CHECK
 

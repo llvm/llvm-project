@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple avr -target-cpu atmega328 -emit-llvm %s -o - \
+// RUN: %clang_cc1 -no-opaque-pointers -triple avr -target-cpu atmega328 -emit-llvm %s -o - \
 // RUN:     | FileCheck %s --check-prefix=AVR
-// RUN: %clang_cc1 -triple avr -target-cpu attiny40 -emit-llvm %s -o - \
+// RUN: %clang_cc1 -no-opaque-pointers -triple avr -target-cpu attiny40 -emit-llvm %s -o - \
 // RUN:     | FileCheck %s --check-prefix=TINY
 
 // Structure that is more than 8 bytes.

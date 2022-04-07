@@ -1,5 +1,5 @@
 // REQUIRES: ve-registered-target
-// RUN: %clang_cc1 -triple ve-linux-gnu -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple ve-linux-gnu -emit-llvm -o - %s | FileCheck %s
 
 void r(long v) {
   long b;

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -triple=x86_64-apple-darwin10 -emit-llvm -o - -fcxx-exceptions -fexceptions -std=c++03 | FileCheck %s -check-prefixes=CHECK,CHECKv03
-// RUN: %clang_cc1 %s -triple=x86_64-apple-darwin10 -emit-llvm -o - -fcxx-exceptions -fexceptions -std=c++11 | FileCheck %s -check-prefixes=CHECK,CHECKv11
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=x86_64-apple-darwin10 -emit-llvm -o - -fcxx-exceptions -fexceptions -std=c++03 | FileCheck %s -check-prefixes=CHECK,CHECKv03
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=x86_64-apple-darwin10 -emit-llvm -o - -fcxx-exceptions -fexceptions -std=c++11 | FileCheck %s -check-prefixes=CHECK,CHECKv11
 
 // Test IR generation for partial destruction of aggregates.
 

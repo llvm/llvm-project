@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple x86_64-apple-darwin -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple x86_64-apple-darwin -emit-llvm -o - | FileCheck %s
 // Exercise various use cases for local asm "register variables".
 
 int foo(void) {

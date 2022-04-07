@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple=armv7-apple-darwin10 -emit-llvm -o - -fexceptions -fcxx-exceptions | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=armv7-apple-darwin10 -emit-llvm -o - -fexceptions -fcxx-exceptions | FileCheck %s
 
 // Check that we annotate all compiler-synthesized runtime calls and
 // functions with the actual ABI-determined CC.  This usually doesn't

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fms-extensions -emit-llvm -triple x86_64-linux-gnu -o - %s | FileCheck %s --check-prefixes=CHECK
-// RUN: %clang_cc1 -fms-extensions -emit-llvm -triple x86_64-windows-msvc -o - %s | FileCheck %s --check-prefixes=WIN
+// RUN: %clang_cc1 -no-opaque-pointers -fms-extensions -emit-llvm -triple x86_64-linux-gnu -o - %s | FileCheck %s --check-prefixes=CHECK
+// RUN: %clang_cc1 -no-opaque-pointers -fms-extensions -emit-llvm -triple x86_64-windows-msvc -o - %s | FileCheck %s --check-prefixes=WIN
 
 // CHECK-LABEL: define {{.*}}void @_Z2f0PU10ptr32_sptri
 // WIN-LABEL: define {{.*}}void @"?f0@@YAXPAH@Z"

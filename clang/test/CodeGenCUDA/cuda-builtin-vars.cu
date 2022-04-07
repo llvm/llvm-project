@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 "-triple" "nvptx-nvidia-cuda" -emit-llvm -fcuda-is-device -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers "-triple" "nvptx-nvidia-cuda" -emit-llvm -fcuda-is-device -o - %s | FileCheck %s
 
 #include "__clang_cuda_builtin_vars.h"
 

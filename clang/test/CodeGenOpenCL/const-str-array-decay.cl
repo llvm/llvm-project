@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -emit-llvm -o - -ffake-address-space-map | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -ffake-address-space-map | FileCheck %s
 
 int test_func(constant char* foo);
 

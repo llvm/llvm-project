@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -I%S -triple=x86_64-apple-darwin10 -fstrict-vtable-pointers -std=c++11 -disable-llvm-passes -O2 -emit-llvm -o %t.ll
+// RUN: %clang_cc1 -no-opaque-pointers %s -I%S -triple=x86_64-apple-darwin10 -fstrict-vtable-pointers -std=c++11 -disable-llvm-passes -O2 -emit-llvm -o %t.ll
 // RUN: FileCheck --check-prefix=CHECK-CTORS %s < %t.ll
 // RUN: FileCheck --check-prefix=CHECK-NEW %s < %t.ll
 // RUN: FileCheck --check-prefix=CHECK-DTORS %s < %t.ll
