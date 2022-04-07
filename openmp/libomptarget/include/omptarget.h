@@ -226,7 +226,7 @@ void *llvm_omp_target_alloc_host(size_t size, int device_num);
 void *llvm_omp_target_alloc_shared(size_t size, int device_num);
 
 /// Dummy target so we have a symbol for generating host fallback.
-void *llvm_omp_get_dynamic_shared();
+void *llvm_omp_target_dynamic_shared_alloc();
 
 /// add the clauses of the requires directives in a given file
 void __tgt_register_requires(int64_t flags);

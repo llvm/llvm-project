@@ -1006,9 +1006,9 @@ LIBOMPTARGET_SHARED_MEMORY_SIZE
 """""""""""""""""""""""""""""""
 
 This environment variable sets the amount of dynamic shared memory in bytes used
-by the kernel once it is launched. A pointer to the dynamic memory buffer can
-currently only be accessed using the ``__kmpc_get_dynamic_shared`` device
-runtime call.
+by the kernel once it is launched. A pointer to the dynamic memory buffer can be
+accessed using the ``llvm_omp_target_dynamic_shared_alloc`` function. An example
+is shown in :ref:`libomptarget_dynamic_shared`.
 
 .. toctree::
    :hidden:
@@ -1103,6 +1103,40 @@ LLVM/OpenMP Target Device Runtime (``libomptarget-ARCH-SUBARCH.bc``)
 The target device runtime is an LLVM bitcode library that implements OpenMP
 runtime functions on the target device. It is linked with the device code's LLVM
 IR during compilation.
+
+.. _libomptarget_dynamic_shared:
+
+Dynamic Shared Memory
+^^^^^^^^^^^^^^^^^^^^^
+
+The target device runtime contains a pointer to the dynamic shared memory
+buffer. This pointer can be obtained using the
+``llvm_omp_target_dynamic_shared_alloc`` extension. If this function is called
+from the host it will simply return a null pointer. In order to use this buffer
+the kernel must be launched with an adequate amount of dynamic shared memory
+allocated. Currently this is done using the ``LIBOMPTARGET_SHARED_MEMORY_SIZE``
+environment variable. An example is given below.
+
+.. code-block:: c++
+
+    void foo() {
+      int x;
+    #pragma omp target parallel map(from : x)
+      {
+        int *buf = llvm_omp_target_dynamic_shared_alloc();
+    #pragma omp barrier
+        if (omp_get_thread_num() == 0)
+          *buf = 1;
+    #pragma omp barrier
+        if (omp_get_thread_num() == 1)
+          x = *buf;
+      }
+    }
+
+.. code-block:: console
+
+    $ clang++ -fopenmp -fopenmp-targets=nvptx64 shared.c
+    $ env LIBOMPTARGET_SHARED_MEMORY_SIZE=256 ./shared
 
 .. _libomptarget_device_debugging:
 

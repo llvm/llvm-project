@@ -218,7 +218,6 @@
       parameter(omp_pteam_mem_alloc=7)
       integer(kind=omp_allocator_handle_kind)omp_thread_mem_alloc
       parameter(omp_thread_mem_alloc=8)
-      ! Preview of target memory support
       integer(omp_allocator_handle_kind)llvm_omp_target_host_mem_alloc
       parameter(llvm_omp_target_host_mem_alloc=100)
       integer(omp_allocator_handle_kind)llvm_omp_target_shared_mem_alloc
@@ -236,7 +235,6 @@
       parameter(omp_high_bw_mem_space=3)
       integer(kind=omp_memspace_handle_kind)omp_low_lat_mem_space
       parameter(omp_low_lat_mem_space=4)
-      ! Preview of target memory support
       integer(omp_memspace_handle_kind)llvm_omp_target_host_mem_space
       parameter(llvm_omp_target_host_mem_space=100)
       integer(omp_memspace_handle_kind)llvm_omp_target_shared_mem_space
