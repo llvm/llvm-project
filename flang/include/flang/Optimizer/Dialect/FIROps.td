@@ -253,7 +253,7 @@ def fir_FreeMemOp : fir_Op<"freemem", [MemoryEffects<[MemFree]>]> {
   let assemblyFormat = "$heapref attr-dict `:` qualified(type($heapref))";
 }
 
-def fir_LoadOp : fir_OneResultOp<"load"> {
+def fir_LoadOp : fir_OneResultOp<"load", [MemoryEffects<[MemRead]>]> {
   let summary = "load a value from a memory reference";
   let description = [{
     Load a value from a memory reference into an ssa-value (virtual register).
@@ -320,7 +320,7 @@ def fir_CharConvertOp : fir_Op<"char_convert", []> {
   let hasVerifier = 1;
 }
 
-def fir_StoreOp : fir_Op<"store", []> {
+def fir_StoreOp : fir_Op<"store", [MemoryEffects<[MemWrite]>]> {
   let summary = "store an SSA-value to a memory location";
 
   let description = [{
