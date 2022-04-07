@@ -265,3 +265,48 @@ func @use_before_def() {
   }
   return
 } 
+
+/// This test is checking that CSE is removing duplicated read op that follow
+/// other.
+// CHECK-LABEL: @remove_direct_duplicated_read_op
+func @remove_direct_duplicated_read_op() -> i32 {
+  // CHECK-NEXT: %[[READ_VALUE:.*]] = "test.op_with_memread"() : () -> i32
+  %0 = "test.op_with_memread"() : () -> (i32)
+  %1 = "test.op_with_memread"() : () -> (i32)
+  // CHECK-NEXT: %{{.*}} = arith.addi %[[READ_VALUE]], %[[READ_VALUE]] : i32
+  %2 = arith.addi %0, %1 : i32
+  return %2 : i32
+}
+
+/// This test is checking that CSE is removing duplicated read op that follow
+/// other.
+// CHECK-LABEL: @remove_multiple_duplicated_read_op
+func @remove_multiple_duplicated_read_op() -> i64 {
+  // CHECK: %[[READ_VALUE:.*]] = "test.op_with_memread"() : () -> i64
+  %0 = "test.op_with_memread"() : () -> (i64)
+  %1 = "test.op_with_memread"() : () -> (i64)
+  // CHECK-NEXT: %{{.*}} = arith.addi %{{.*}}, %[[READ_VALUE]] : i64
+  %2 = arith.addi %0, %1 : i64
+  %3 = "test.op_with_memread"() : () -> (i64)
+  // CHECK-NEXT: %{{.*}} = arith.addi %{{.*}}, %{{.*}} : i64
+  %4 = arith.addi %2, %3 : i64
+  %5 = "test.op_with_memread"() : () -> (i64)
+  // CHECK-NEXT: %{{.*}} = arith.addi %{{.*}}, %{{.*}} : i64
+  %6 = arith.addi %4, %5 : i64
+  // CHECK-NEXT: return %{{.*}} : i64
+  return %6 : i64
+}
+
+/// This test is checking that CSE is not removing duplicated read op that
+/// have write op in between.
+// CHECK-LABEL: @dont_remove_duplicated_read_op_with_sideeffecting
+func @dont_remove_duplicated_read_op_with_sideeffecting() -> i32 {
+  // CHECK-NEXT: %[[READ_VALUE0:.*]] = "test.op_with_memread"() : () -> i32
+  %0 = "test.op_with_memread"() : () -> (i32)
+  "test.op_with_memwrite"() : () -> ()
+  // CHECK: %[[READ_VALUE1:.*]] = "test.op_with_memread"() : () -> i32
+  %1 = "test.op_with_memread"() : () -> (i32)
+  // CHECK-NEXT: %{{.*}} = arith.addi %[[READ_VALUE0]], %[[READ_VALUE1]] : i32
+  %2 = arith.addi %0, %1 : i32
+  return %2 : i32
+}
