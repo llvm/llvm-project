@@ -16,7 +16,6 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/Transforms/Scalar.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "loweratomic"
