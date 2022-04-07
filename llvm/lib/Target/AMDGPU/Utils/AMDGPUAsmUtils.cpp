@@ -11,6 +11,27 @@
 
 namespace llvm {
 namespace AMDGPU {
+
+namespace DepCtr {
+
+// NOLINTBEGIN
+const CustomOperandVal DepCtrInfo[] = {
+  // Name               max dflt offset width  constraint
+  {{"depctr_hold_cnt"},  1,   1,    7,    1,   isGFX10_BEncoding},
+  {{"depctr_sa_sdst"},   1,   1,    0,    1},
+  {{"depctr_va_vdst"},  15,  15,   12,    4},
+  {{"depctr_va_sdst"},   7,   7,    9,    3},
+  {{"depctr_va_ssrc"},   1,   1,    8,    1},
+  {{"depctr_va_vcc"},    1,   1,    1,    1},
+  {{"depctr_vm_vsrc"},   7,   7,    2,    3},
+};
+// NOLINTEND
+
+const int DEP_CTR_SIZE =
+    static_cast<int>(sizeof(DepCtrInfo) / sizeof(CustomOperandVal));
+
+} // namespace DepCtr
+
 namespace SendMsg {
 
 // Disable lint checking for this block since it makes the table unreadable.

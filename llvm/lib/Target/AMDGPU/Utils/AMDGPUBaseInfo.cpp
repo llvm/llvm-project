@@ -1092,6 +1092,120 @@ static int getOprIdx(int Id, const CustomOperand<T> OpInfo[], int OpInfoSize,
 }
 
 //===----------------------------------------------------------------------===//
+// Custom Operand Values
+//===----------------------------------------------------------------------===//
+
+static unsigned getDefaultCustomOperandEncoding(const CustomOperandVal *Opr,
+                                                int Size,
+                                                const MCSubtargetInfo &STI) {
+  unsigned Enc = 0;
+  for (int Idx = 0; Idx < Size; ++Idx) {
+    const auto &Op = Opr[Idx];
+    if (Op.isSupported(STI))
+      Enc |= Op.encode(Op.Default);
+  }
+  return Enc;
+}
+
+static bool isSymbolicCustomOperandEncoding(const CustomOperandVal *Opr,
+                                            int Size, unsigned Code,
+                                            bool &HasNonDefaultVal,
+                                            const MCSubtargetInfo &STI) {
+  unsigned UsedOprMask = 0;
+  HasNonDefaultVal = false;
+  for (int Idx = 0; Idx < Size; ++Idx) {
+    const auto &Op = Opr[Idx];
+    if (!Op.isSupported(STI))
+      continue;
+    UsedOprMask |= Op.getMask();
+    unsigned Val = Op.decode(Code);
+    if (!Op.isValid(Val))
+      return false;
+    HasNonDefaultVal |= (Val != Op.Default);
+  }
+  return (Code & ~UsedOprMask) == 0;
+}
+
+static bool decodeCustomOperand(const CustomOperandVal *Opr, int Size,
+                                unsigned Code, int &Idx, StringRef &Name,
+                                unsigned &Val, bool &IsDefault,
+                                const MCSubtargetInfo &STI) {
+  while (Idx < Size) {
+    const auto &Op = Opr[Idx++];
+    if (Op.isSupported(STI)) {
+      Name = Op.Name;
+      Val = Op.decode(Code);
+      IsDefault = (Val == Op.Default);
+      return true;
+    }
+  }
+
+  return false;
+}
+
+static int encodeCustomOperandVal(const CustomOperandVal &Op,
+                                  int64_t InputVal) {
+  if (InputVal < 0 || InputVal > Op.Max)
+    return OPR_VAL_INVALID;
+  return Op.encode(InputVal);
+}
+
+static int encodeCustomOperand(const CustomOperandVal *Opr, int Size,
+                               const StringRef Name, int64_t InputVal,
+                               unsigned &UsedOprMask,
+                               const MCSubtargetInfo &STI) {
+  int InvalidId = OPR_ID_UNKNOWN;
+  for (int Idx = 0; Idx < Size; ++Idx) {
+    const auto &Op = Opr[Idx];
+    if (Op.Name == Name) {
+      if (!Op.isSupported(STI)) {
+        InvalidId = OPR_ID_UNSUPPORTED;
+        continue;
+      }
+      auto OprMask = Op.getMask();
+      if (OprMask & UsedOprMask)
+        return OPR_ID_DUPLICATE;
+      UsedOprMask |= OprMask;
+      return encodeCustomOperandVal(Op, InputVal);
+    }
+  }
+  return InvalidId;
+}
+
+//===----------------------------------------------------------------------===//
+// DepCtr
+//===----------------------------------------------------------------------===//
+
+namespace DepCtr {
+
+int getDefaultDepCtrEncoding(const MCSubtargetInfo &STI) {
+  static int Default = -1;
+  if (Default == -1)
+    Default = getDefaultCustomOperandEncoding(DepCtrInfo, DEP_CTR_SIZE, STI);
+  return Default;
+}
+
+bool isSymbolicDepCtrEncoding(unsigned Code, bool &HasNonDefaultVal,
+                              const MCSubtargetInfo &STI) {
+  return isSymbolicCustomOperandEncoding(DepCtrInfo, DEP_CTR_SIZE, Code,
+                                         HasNonDefaultVal, STI);
+}
+
+bool decodeDepCtr(unsigned Code, int &Id, StringRef &Name, unsigned &Val,
+                  bool &IsDefault, const MCSubtargetInfo &STI) {
+  return decodeCustomOperand(DepCtrInfo, DEP_CTR_SIZE, Code, Id, Name, Val,
+                             IsDefault, STI);
+}
+
+int encodeDepCtr(const StringRef Name, int64_t Val, unsigned &UsedOprMask,
+                 const MCSubtargetInfo &STI) {
+  return encodeCustomOperand(DepCtrInfo, DEP_CTR_SIZE, Name, Val, UsedOprMask,
+                             STI);
+}
+
+} // namespace DepCtr
+
+//===----------------------------------------------------------------------===//
 // hwreg
 //===----------------------------------------------------------------------===//
 

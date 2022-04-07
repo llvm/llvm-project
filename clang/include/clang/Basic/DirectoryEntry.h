@@ -32,7 +32,11 @@ template <class RefTy> class MapEntryOptionalStorage;
 /// Cached information about one directory (either on disk or in
 /// the virtual file system).
 class DirectoryEntry {
+  DirectoryEntry() = default;
+  DirectoryEntry(const DirectoryEntry &) = delete;
+  DirectoryEntry &operator=(const DirectoryEntry &) = delete;
   friend class FileManager;
+  friend class FileEntryTestHelper;
 
   // FIXME: We should not be storing a directory entry name here.
   StringRef Name; // Name of the directory.
