@@ -3666,9 +3666,12 @@ HexagonTargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
              : AtomicExpansionKind::None;
 }
 
-bool HexagonTargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
+TargetLowering::AtomicExpansionKind
+HexagonTargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
   // Do not expand loads and stores that don't exceed 64 bits.
-  return SI->getValueOperand()->getType()->getPrimitiveSizeInBits() > 64;
+  return SI->getValueOperand()->getType()->getPrimitiveSizeInBits() > 64
+             ? AtomicExpansionKind::Expand
+             : AtomicExpansionKind::None;
 }
 
 TargetLowering::AtomicExpansionKind
