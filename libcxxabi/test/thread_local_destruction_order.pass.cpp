@@ -9,9 +9,6 @@
 // UNSUPPORTED: c++03
 // UNSUPPORTED: libcxxabi-no-threads
 
-// TODO: Investigate this failure
-// XFAIL: target=arm64-apple-{{.+}}
-
 #include <cassert>
 #include <thread>
 

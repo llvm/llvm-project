@@ -905,8 +905,7 @@ static inline unsigned getUnconditionalBrDisp(int Opc) {
     Scale = 2;
     break;
   default:
-    assert(0);
-    break;
+    llvm_unreachable("");
   }
 
   unsigned MaxOffs = ((1 << (Bits - 1)) - 1) * Scale;
