@@ -893,7 +893,8 @@ Status Debugger::SetInputString(const char *data) {
     return result;
   }
 
-  write(fds[WRITE], data, size);
+  int r = write(fds[WRITE], data, size);
+  (void)r;
   // Close the write end of the pipe, so that the command interpreter will exit
   // when it consumes all the data.
   llvm::sys::Process::SafelyCloseFileDescriptor(fds[WRITE]);
