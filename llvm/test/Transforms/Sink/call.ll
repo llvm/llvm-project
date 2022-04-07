@@ -4,11 +4,11 @@
 declare i32 @f_load_global() nounwind willreturn readonly
 declare i32 @f_load_global_throwable() willreturn readonly
 declare i32 @f_load_global_may_not_return() nounwind readonly
-declare i32 @f_load_arg(i32*) nounwind readonly argmemonly
-declare void @f_store_global(i32) nounwind
-declare void @f_store_arg(i32*) nounwind argmemonly
-declare void @f_readonly_arg(i32* readonly, i32*) nounwind argmemonly
-declare i32 @f_readnone(i32) nounwind readnone
+declare i32 @f_load_arg(i32*) nounwind willreturn readonly argmemonly
+declare void @f_store_global(i32) nounwind willreturn
+declare void @f_store_arg(i32*) nounwind willreturn argmemonly
+declare void @f_readonly_arg(i32* readonly, i32*) nounwind willreturn argmemonly
+declare i32 @f_readnone(i32) nounwind willreturn readnone
 
 @A = external global i32
 @B = external global i32
@@ -51,9 +51,9 @@ false:
 
 define i32 @test_may_not_return_no_stores(i1 %z) {
 ; CHECK-LABEL: @test_may_not_return_no_stores(
+; CHECK-NEXT:    [[L:%.*]] = call i32 @f_load_global_may_not_return()
 ; CHECK-NEXT:    br i1 [[Z:%.*]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       true:
-; CHECK-NEXT:    [[L:%.*]] = call i32 @f_load_global_may_not_return()
 ; CHECK-NEXT:    ret i32 [[L]]
 ; CHECK:       false:
 ; CHECK-NEXT:    ret i32 0
