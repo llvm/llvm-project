@@ -739,13 +739,13 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     break;
   }
   case Instruction::SRem: {
-    ConstantInt *Rem;
-    if (match(I->getOperand(1), m_ConstantInt(Rem))) {
+    const APInt *Rem;
+    if (match(I->getOperand(1), m_APInt(Rem))) {
       // X % -1 demands all the bits because we don't want to introduce
       // INT_MIN % -1 (== undef) by accident.
-      if (Rem->isMinusOne())
+      if (Rem->isAllOnes())
         break;
-      APInt RA = Rem->getValue().abs();
+      APInt RA = Rem->abs();
       if (RA.isPowerOf2()) {
         if (DemandedMask.ult(RA))    // srem won't affect demanded bits
           return I->getOperand(0);
