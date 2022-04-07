@@ -121,4 +121,7 @@
  * in non assert builds */
 #define LLVM_UNREACHABLE_OPTIMIZE 1
 
+/* Define to 1 if you have the DIA SDK installed, and to 0 if you don't. */
+#define LLVM_ENABLE_DIA_SDK 0
+
 #endif
