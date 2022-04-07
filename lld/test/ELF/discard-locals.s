@@ -6,27 +6,24 @@
 
 ## --gc-sections can discard symbols relative to GCed sections (including STT_SECTION).
 # RUN: ld.lld --discard-locals --gc-sections %t.o -o %tlocal.gc
-# RUN: llvm-readelf -s %tlocal.gc | FileCheck --check-prefixes=DISCARD-LOCALS,DISCARD-LOCALS-GC %s
+# RUN: llvm-readelf -s %tlocal.gc | FileCheck --check-prefix=DISCARD-LOCALS %s
 
 # RUN: ld.lld --discard-all %t.o -o %tall
 # RUN: llvm-readelf -s %tall | FileCheck --check-prefix=DISCARD-ALL %s
 
 # RUN: ld.lld --discard-all --gc-sections %t.o -o %tall.gc
-# RUN: llvm-readelf -s %tall.gc | FileCheck --check-prefixes=DISCARD-ALL,DISCARD-ALL-GC %s
+# RUN: llvm-readelf -s %tall.gc | FileCheck --check-prefix=DISCARD-ALL %s
 
 ## --discard-locals removes local symbols which start with ".L"
 # DISCARD-LOCALS:    0: {{0+}} 0 NOTYPE  LOCAL  DEFAULT UND
-# DISCARD-LOCALS-GC-NEXT:        NOTYPE  LOCAL  DEFAULT [[#]] .Lused
-# DISCARD-LOCALS-NEXT:           NOTYPE  LOCAL  DEFAULT [[#]] used
-# DISCARD-LOCALS-NEXT:           NOTYPE  LOCAL  DEFAULT [[#]] unused
-# DISCARD-LOCALS-NOGC-NEXT:      NOTYPE  LOCAL  DEFAULT [[#]] unused_gc
-# DISCARD-LOCALS-NEXT:           NOTYPE  GLOBAL DEFAULT [[#]] _start
+# DISCARD-LOCALS-NEXT:           NOTYPE  LOCAL  DEFAULT {{.*}} used
+# DISCARD-LOCALS-NEXT:           NOTYPE  LOCAL  DEFAULT {{.*}} unused
+# DISCARD-LOCALS-NOGC-NEXT:      NOTYPE  LOCAL  DEFAULT {{.*}} unused_gc
+# DISCARD-LOCALS-NEXT:           NOTYPE  GLOBAL DEFAULT {{.*}} _start
 
 ## --discard-all removes all regular local symbols.
 # DISCARD-ALL:       0: {{0+}} 0 NOTYPE  LOCAL  DEFAULT UND
-# DISCARD-ALL-GC-NEXT:           NOTYPE  LOCAL  DEFAULT [[#]] .Lused
-# DISCARD-ALL-GC-NEXT:           NOTYPE  LOCAL  DEFAULT [[#]] used
-# DISCARD-ALL-NEXT:              NOTYPE  GLOBAL DEFAULT [[#]] _start
+# DISCARD-ALL-NEXT:              NOTYPE  GLOBAL DEFAULT {{.*}} _start
 
 .globl _start
 _start:
