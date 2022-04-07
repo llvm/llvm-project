@@ -839,6 +839,22 @@ multiclass VPatWidenBinaryFPVL_VV_VF_WV_WF<SDNode op, string instruction_name> {
   defm : VPatWidenBinaryFPVL_WV_WF<op, riscv_fpextend_vl_oneuse, instruction_name>;
 }
 
+multiclass VPatNarrowShiftSplatExt_WX<SDNode op, PatFrags extop, string instruction_name> {
+  foreach vti = AllWidenableIntVectors in {
+    def : Pat<
+      (vti.Vti.Vector
+        (riscv_trunc_vector_vl
+          (op (vti.Wti.Vector vti.Wti.RegClass:$rs2),
+              (vti.Wti.Vector (extop (vti.Vti.Vector (SplatPat GPR:$rs1)),
+                                     (vti.Vti.Mask true_mask), VLOpFrag)),
+          (vti.Wti.Mask true_mask), VLOpFrag),
+        (vti.Vti.Mask true_mask), VLOpFrag)),
+      (!cast<Instruction>(instruction_name#"_WX_"#vti.Vti.LMul.MX)
+        vti.Wti.RegClass:$rs2, GPR:$rs1,
+        vti.Vti.AVL, vti.Vti.Log2SEW)>;
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Patterns.
 //===----------------------------------------------------------------------===//
@@ -931,6 +947,8 @@ foreach vtiTowti = AllWidenableIntVectors in {
                              true_mask, VLOpFrag)), true_mask, VLOpFrag)),
             (!cast<Instruction>("PseudoVNSRA_WX_"#vti.LMul.MX)
                 wti.RegClass:$rs1, GPR:$rs2, GPR:$vl, vti.Log2SEW)>;
+  defm :  VPatNarrowShiftSplatExt_WX<riscv_sra_vl, riscv_sext_vl_oneuse, "PseudoVNSRA">;
+  defm :  VPatNarrowShiftSplatExt_WX<riscv_sra_vl, riscv_zext_vl_oneuse, "PseudoVNSRA">;
   def : Pat<(vti.Vector
              (riscv_trunc_vector_vl
               (wti.Vector
@@ -938,7 +956,6 @@ foreach vtiTowti = AllWidenableIntVectors in {
                              true_mask, VLOpFrag)), true_mask, VLOpFrag)),
             (!cast<Instruction>("PseudoVNSRA_WI_"#vti.LMul.MX)
                 wti.RegClass:$rs1, uimm5:$rs2, GPR:$vl, vti.Log2SEW)>;
-
   def : Pat<(vti.Vector
              (riscv_trunc_vector_vl
               (wti.Vector
@@ -946,6 +963,8 @@ foreach vtiTowti = AllWidenableIntVectors in {
                              true_mask, VLOpFrag)), true_mask, VLOpFrag)),
             (!cast<Instruction>("PseudoVNSRL_WX_"#vti.LMul.MX)
                 wti.RegClass:$rs1, GPR:$rs2, GPR:$vl, vti.Log2SEW)>;
+  defm :  VPatNarrowShiftSplatExt_WX<riscv_srl_vl, riscv_sext_vl_oneuse, "PseudoVNSRL">;
+  defm :  VPatNarrowShiftSplatExt_WX<riscv_srl_vl, riscv_zext_vl_oneuse, "PseudoVNSRL">;
   def : Pat<(vti.Vector
              (riscv_trunc_vector_vl
               (wti.Vector

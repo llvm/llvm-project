@@ -47,6 +47,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Transforms/Utils/LowerAtomic.h"
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -77,6 +78,7 @@ private:
   bool expandAtomicLoadToLL(LoadInst *LI);
   bool expandAtomicLoadToCmpXchg(LoadInst *LI);
   StoreInst *convertAtomicStoreToIntegerType(StoreInst *SI);
+  bool tryExpandAtomicStore(StoreInst *SI);
   void expandAtomicStore(StoreInst *SI);
   bool tryExpandAtomicRMW(AtomicRMWInst *AI);
   AtomicRMWInst *convertAtomicXchgToIntegerType(AtomicRMWInst *RMWI);
@@ -271,10 +273,8 @@ bool AtomicExpand::runOnFunction(Function &F) {
         MadeChange = true;
       }
 
-      if (TLI->shouldExpandAtomicStoreInIR(SI)) {
-        expandAtomicStore(SI);
+      if (tryExpandAtomicStore(SI))
         MadeChange = true;
-      }
     } else if (RMWI) {
       // There are two different ways of expanding RMW instructions:
       // - into a load if it is idempotent
@@ -413,8 +413,26 @@ bool AtomicExpand::tryExpandAtomicLoad(LoadInst *LI) {
     return expandAtomicLoadToLL(LI);
   case TargetLoweringBase::AtomicExpansionKind::CmpXChg:
     return expandAtomicLoadToCmpXchg(LI);
+  case TargetLoweringBase::AtomicExpansionKind::NotAtomic:
+    LI->setAtomic(AtomicOrdering::NotAtomic);
+    return true;
   default:
     llvm_unreachable("Unhandled case in tryExpandAtomicLoad");
+  }
+}
+
+bool AtomicExpand::tryExpandAtomicStore(StoreInst *SI) {
+  switch (TLI->shouldExpandAtomicStoreInIR(SI)) {
+  case TargetLoweringBase::AtomicExpansionKind::None:
+    return false;
+  case TargetLoweringBase::AtomicExpansionKind::Expand:
+    expandAtomicStore(SI);
+    return true;
+  case TargetLoweringBase::AtomicExpansionKind::NotAtomic:
+    SI->setAtomic(AtomicOrdering::NotAtomic);
+    return true;
+  default:
+    llvm_unreachable("Unhandled case in tryExpandAtomicStore");
   }
 }
 
@@ -624,6 +642,8 @@ bool AtomicExpand::tryExpandAtomicRMW(AtomicRMWInst *AI) {
     TLI->emitBitTestAtomicRMWIntrinsic(AI);
     return true;
   }
+  case TargetLoweringBase::AtomicExpansionKind::NotAtomic:
+    return lowerAtomicRMWInst(AI);
   default:
     llvm_unreachable("Unhandled case in tryExpandAtomicRMW");
   }
@@ -1525,6 +1545,8 @@ bool AtomicExpand::tryExpandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
   case TargetLoweringBase::AtomicExpansionKind::MaskedIntrinsic:
     expandAtomicCmpXchgToMaskedIntrinsic(CI);
     return true;
+  case TargetLoweringBase::AtomicExpansionKind::NotAtomic:
+    return lowerAtomicCmpXchgInst(CI);
   }
 }
 

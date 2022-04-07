@@ -37,6 +37,7 @@ add_clang_library(clangDaemonTweaks OBJECT
   clangdSupport
   clangFormat
   clangLex
+  clangSema
   clangToolingCore
   clangToolingRefactoring
   clangToolingSyntax
