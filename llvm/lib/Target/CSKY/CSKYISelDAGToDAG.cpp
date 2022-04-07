@@ -43,6 +43,7 @@ public:
   void Select(SDNode *N) override;
   bool selectAddCarry(SDNode *N);
   bool selectSubCarry(SDNode *N);
+  bool selectBITCAST_TO_LOHI(SDNode *N);
   bool selectInlineAsm(SDNode *N);
 
   SDNode *createGPRPairNode(EVT VT, SDValue V0, SDValue V1);
@@ -93,6 +94,9 @@ void CSKYDAGToDAGISel::Select(SDNode *N) {
     IsSelected = true;
     break;
   }
+  case CSKYISD::BITCAST_TO_LOHI:
+    IsSelected = selectBITCAST_TO_LOHI(N);
+    break;
   case ISD::INLINEASM:
   case ISD::INLINEASM_BR:
     IsSelected = selectInlineAsm(N);
@@ -264,6 +268,24 @@ bool CSKYDAGToDAGISel::selectInlineAsm(SDNode *N) {
                                 AsmNodeOperands);
   New->setNodeId(-1);
   ReplaceNode(N, New.getNode());
+  return true;
+}
+
+bool CSKYDAGToDAGISel::selectBITCAST_TO_LOHI(SDNode *N) {
+  SDLoc Dl(N);
+  auto VT = N->getValueType(0);
+  auto V = N->getOperand(0);
+
+  if (!Subtarget->hasFPUv2DoubleFloat())
+    return false;
+
+  SDValue V1 = SDValue(CurDAG->getMachineNode(CSKY::FMFVRL_D, Dl, VT, V), 0);
+  SDValue V2 = SDValue(CurDAG->getMachineNode(CSKY::FMFVRH_D, Dl, VT, V), 0);
+
+  ReplaceUses(SDValue(N, 0), V1);
+  ReplaceUses(SDValue(N, 1), V2);
+  CurDAG->RemoveDeadNode(N);
+
   return true;
 }
 
