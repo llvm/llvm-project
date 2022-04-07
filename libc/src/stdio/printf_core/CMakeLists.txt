@@ -17,7 +17,7 @@ add_object_library(
     libc.src.__support.ctype_utils
     libc.src.__support.str_to_integer
     libc.src.__support.CPP.bit
-
+    libc.src.string.memory_utils.memset_implementation
 )
 
 add_header_library(
