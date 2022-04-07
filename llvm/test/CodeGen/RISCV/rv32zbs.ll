@@ -324,8 +324,8 @@ define i64 @bext_i64(i64 %a, i64 %b) nounwind {
 define i32 @bexti_i32(i32 %a) nounwind {
 ; RV32I-LABEL: bexti_i32:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    srli a0, a0, 5
-; RV32I-NEXT:    andi a0, a0, 1
+; RV32I-NEXT:    slli a0, a0, 26
+; RV32I-NEXT:    srli a0, a0, 31
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBS-LABEL: bexti_i32:
@@ -340,8 +340,8 @@ define i32 @bexti_i32(i32 %a) nounwind {
 define i64 @bexti_i64(i64 %a) nounwind {
 ; RV32I-LABEL: bexti_i64:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    srli a0, a0, 5
-; RV32I-NEXT:    andi a0, a0, 1
+; RV32I-NEXT:    slli a0, a0, 26
+; RV32I-NEXT:    srli a0, a0, 31
 ; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    ret
 ;

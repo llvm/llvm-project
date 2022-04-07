@@ -409,8 +409,8 @@ define i64 @bext_i64_no_mask(i64 %a, i64 %b) nounwind {
 define signext i32 @bexti_i32(i32 signext %a) nounwind {
 ; RV64I-LABEL: bexti_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    srli a0, a0, 5
-; RV64I-NEXT:    andi a0, a0, 1
+; RV64I-NEXT:    slli a0, a0, 58
+; RV64I-NEXT:    srli a0, a0, 63
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBS-LABEL: bexti_i32:
@@ -425,8 +425,8 @@ define signext i32 @bexti_i32(i32 signext %a) nounwind {
 define i64 @bexti_i64(i64 %a) nounwind {
 ; RV64I-LABEL: bexti_i64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    srli a0, a0, 5
-; RV64I-NEXT:    andi a0, a0, 1
+; RV64I-NEXT:    slli a0, a0, 58
+; RV64I-NEXT:    srli a0, a0, 63
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBS-LABEL: bexti_i64:

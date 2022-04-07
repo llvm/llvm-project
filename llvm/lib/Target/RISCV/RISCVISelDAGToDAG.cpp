@@ -776,11 +776,13 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
         }
 
         // (srli (slli x, c3-c2), c3).
-        // Skip it in order to select sraiw.
+        // Skip if we could use (zext.w (sraiw X, C2)).
         bool Skip = Subtarget->hasStdExtZba() && C3 == 32 &&
                     X.getOpcode() == ISD::SIGN_EXTEND_INREG &&
                     cast<VTSDNode>(X.getOperand(1))->getVT() == MVT::i32;
-        if (OneUseOrZExtW && !IsCANDI && !Skip) {
+        // Also Skip if we can use bexti.
+        Skip |= Subtarget->hasStdExtZbs() && C3 == XLen - 1;
+        if (OneUseOrZExtW && !Skip) {
           SDNode *SLLI = CurDAG->getMachineNode(
               RISCV::SLLI, DL, XLenVT, X,
               CurDAG->getTargetConstant(C3 - C2, DL, XLenVT));
