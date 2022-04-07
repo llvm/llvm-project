@@ -57,7 +57,7 @@
 #include "Plugins/SymbolFile/NativePDB/SymbolFileNativePDB.h"
 
 #if defined(_WIN32)
-#include "llvm/Config/config.h"
+#include "llvm/Config/llvm-config.h"
 #endif
 
 using namespace lldb;
