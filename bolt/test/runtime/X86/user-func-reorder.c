@@ -27,7 +27,7 @@ int main(int argc, char **argv) {
 /*
 REQUIRES: system-linux,bolt-runtime
 
-RUN: %clang %cflags %s -o %t.exe -Wl,-q
+RUN: %clang %cflags -no-pie %s -o %t.exe -Wl,-q
 
 RUN: llvm-bolt %t.exe -relocs=1 -lite -reorder-functions=user \
 RUN:   -hugify -function-order=%p/Inputs/user_func_order.txt -o %t

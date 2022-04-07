@@ -8,7 +8,7 @@
 # RUN:   --split-dwarf-file=debug-fission-simple.dwo \
 # RUN:   %p/Inputs/debug-fission-simple.s \
 # RUN:   -o %t.o
-# RUN: %clangxx %cxxflags -g \
+# RUN: %clangxx %cxxflags -no-pie -g \
 # RUN:   -Wl,--gc-sections,-q,-nostdlib \
 # RUN:   -Wl,--undefined=_Z6_startv \
 # RUN:   -nostartfiles \

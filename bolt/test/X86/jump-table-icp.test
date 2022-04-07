@@ -2,7 +2,7 @@ RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown \
 RUN:   %p/Inputs/jump_table_icp.s -o %t.o
 RUN: link_fdata %p/Inputs/jump_table_icp.s %t.o %t.fdata 
 RUN: llvm-strip --strip-unneeded %t.o
-RUN: %clang %cflags %t.o -o %t.exe -Wl,-q
+RUN: %clang %cflags -no-pie %t.o -o %t.exe -Wl,-q
 
 RUN: (llvm-bolt %t.exe -data %t.fdata -o %t -relocs \
 RUN:   -reorder-blocks=cache -split-functions=3 -split-all-cold \
