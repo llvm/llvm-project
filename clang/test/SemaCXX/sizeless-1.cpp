@@ -210,13 +210,8 @@ void func(int sel) {
   __real init_int8; // expected-error {{invalid type 'svint8_t'}}
   __imag init_int8; // expected-error {{invalid type 'svint8_t'}}
 
-  local_int8 << init_int8; // expected-error {{invalid operands to binary expression}}
-  local_int8 >> init_int8; // expected-error {{invalid operands to binary expression}}
   local_int8 &&init_int8;  // expected-error {{invalid operands to binary expression}} expected-error {{not contextually convertible}}
   local_int8 || init_int8; // expected-error {{invalid operands to binary expression}} expected-error {{not contextually convertible}}
-
-  local_int8 <<= init_int8; // expected-error {{invalid operands to binary expression}}
-  local_int8 >>= init_int8; // expected-error {{invalid operands to binary expression}}
 
   local_int8 + 0;  // expected-error {{invalid operands to binary expression}}
   local_int8 - 0;  // expected-error {{invalid operands to binary expression}}
@@ -226,8 +221,6 @@ void func(int sel) {
   local_int8 & 0;  // expected-error {{invalid operands to binary expression}}
   local_int8 | 0;  // expected-error {{invalid operands to binary expression}}
   local_int8 ^ 0;  // expected-error {{invalid operands to binary expression}}
-  local_int8 << 0; // expected-error {{invalid operands to binary expression}}
-  local_int8 >> 0; // expected-error {{invalid operands to binary expression}}
   local_int8 < 0;  // expected-error {{invalid operands to binary expression}}
   local_int8 <= 0; // expected-error {{invalid operands to binary expression}}
   local_int8 == 0; // expected-error {{invalid operands to binary expression}}
