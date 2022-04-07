@@ -374,6 +374,46 @@ define <vscale x 2 x i64> @masked_gather_nxv2i64_null_with__vec_plus_imm_offsets
   ret <vscale x 2 x i64> %data
 }
 
+; TODO: The generated code is wrong because we've lost the sign extension which
+; defines bits offsets[8:31].
+define <vscale x 4 x i32> @masked_gather_nxv4i32_s8_offsets(i32* %base, <vscale x 4 x i8> %offsets, <vscale x 4 x i1> %mask) #0 {
+; CHECK-LABEL: masked_gather_nxv4i32_s8_offsets:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0, z0.s, sxtw #2]
+; CHECK-NEXT:    ret
+  %offsets.sext = sext <vscale x 4 x i8> %offsets to <vscale x 4 x i32>
+  %ptrs = getelementptr i32, i32* %base, <vscale x 4 x i32> %offsets.sext
+  %data = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32(<vscale x 4 x i32*> %ptrs, i32 4, <vscale x 4 x i1> %mask, <vscale x 4 x i32> undef)
+  ret <vscale x 4 x i32> %data
+}
+
+define <vscale x 4 x i32> @masked_gather_nxv4i32_u8_offsets(i32* %base, <vscale x 4 x i8> %offsets, <vscale x 4 x i1> %mask) #0 {
+; CHECK-LABEL: masked_gather_nxv4i32_u8_offsets:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    and z0.s, z0.s, #0xff
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0, z0.s, uxtw #2]
+; CHECK-NEXT:    ret
+  %offsets.zext = zext <vscale x 4 x i8> %offsets to <vscale x 4 x i32>
+  %ptrs = getelementptr i32, i32* %base, <vscale x 4 x i32> %offsets.zext
+  %data = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32(<vscale x 4 x i32*> %ptrs, i32 4, <vscale x 4 x i1> %mask, <vscale x 4 x i32> undef)
+  ret <vscale x 4 x i32> %data
+}
+
+; TODO: The generated code is wrong because we've lost the sign extension which
+; defines bits offsets[8:31] and we're also replicating offset[31] across
+; offset[32:63] even though the IR has explicitly zero'd those bits.
+define <vscale x 4 x i32> @masked_gather_nxv4i32_u32s8_offsets(i32* %base, <vscale x 4 x i8> %offsets, <vscale x 4 x i1> %mask) #0 {
+; CHECK-LABEL: masked_gather_nxv4i32_u32s8_offsets:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0, z0.s, sxtw #2]
+; CHECK-NEXT:    ret
+  %offsets.sext = sext <vscale x 4 x i8> %offsets to <vscale x 4 x i32>
+  %offsets.sext.zext = zext <vscale x 4 x i32> %offsets.sext to <vscale x 4 x i64>
+  %ptrs = getelementptr i32, i32* %base, <vscale x 4 x i64> %offsets.sext.zext
+  %data = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32(<vscale x 4 x i32*> %ptrs, i32 4, <vscale x 4 x i1> %mask, <vscale x 4 x i32> undef)
+  ret <vscale x 4 x i32> %data
+}
+
 define void @masked_scatter_nxv2i64_const_with_vec_offsets(<vscale x 2 x i64> %vector_offsets, <vscale x 2 x i1> %pg, <vscale x 2 x i64> %data) #0 {
 ; CHECK-LABEL: masked_scatter_nxv2i64_const_with_vec_offsets:
 ; CHECK:       // %bb.0:
@@ -416,15 +456,57 @@ define void @masked_scatter_nxv2i64_null_with__vec_plus_imm_offsets(<vscale x 2 
   ret void
 }
 
+; TODO: The generated code is wrong because we've lost the sign extension which
+; defines bits offsets[8:31].
+define void @masked_scatter_nxv4i32_s8_offsets(i32* %base, <vscale x 4 x i8> %offsets, <vscale x 4 x i1> %mask, <vscale x 4 x i32> %data) #0 {
+; CHECK-LABEL: masked_scatter_nxv4i32_s8_offsets:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    st1w { z1.s }, p0, [x0, z0.s, sxtw #2]
+; CHECK-NEXT:    ret
+  %offsets.sext = sext <vscale x 4 x i8> %offsets to <vscale x 4 x i32>
+  %ptrs = getelementptr i32, i32* %base, <vscale x 4 x i32> %offsets.sext
+  call void @llvm.masked.scatter.nxv4i32(<vscale x 4 x i32> %data, <vscale x 4 x i32*> %ptrs, i32 4, <vscale x 4 x i1> %mask)
+  ret void
+}
+
+define void @masked_scatter_nxv4i32_u8_offsets(i32* %base, <vscale x 4 x i8> %offsets, <vscale x 4 x i1> %mask, <vscale x 4 x i32> %data) #0 {
+; CHECK-LABEL: masked_scatter_nxv4i32_u8_offsets:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    and z0.s, z0.s, #0xff
+; CHECK-NEXT:    st1w { z1.s }, p0, [x0, z0.s, uxtw #2]
+; CHECK-NEXT:    ret
+  %offsets.zext = zext <vscale x 4 x i8> %offsets to <vscale x 4 x i32>
+  %ptrs = getelementptr i32, i32* %base, <vscale x 4 x i32> %offsets.zext
+  call void @llvm.masked.scatter.nxv4i32(<vscale x 4 x i32> %data, <vscale x 4 x i32*> %ptrs, i32 4, <vscale x 4 x i1> %mask)
+  ret void
+}
+
+; TODO: The generated code is wrong because we've lost the sign extension which
+; defines bits offsets[8:31] and we're also replicating offset[31] across
+; offset[32:63] even though the IR has explicitly zero'd those bits.
+define void @masked_scatter_nxv4i32_u32s8_offsets(i32* %base, <vscale x 4 x i8> %offsets, <vscale x 4 x i1> %mask, <vscale x 4 x i32> %data) #0 {
+; CHECK-LABEL: masked_scatter_nxv4i32_u32s8_offsets:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    st1w { z1.s }, p0, [x0, z0.s, sxtw #2]
+; CHECK-NEXT:    ret
+  %offsets.sext = sext <vscale x 4 x i8> %offsets to <vscale x 4 x i32>
+  %offsets.sext.zext = zext <vscale x 4 x i32> %offsets.sext to <vscale x 4 x i64>
+  %ptrs = getelementptr i32, i32* %base, <vscale x 4 x i64> %offsets.sext.zext
+  call void @llvm.masked.scatter.nxv4i32(<vscale x 4 x i32> %data, <vscale x 4 x i32*> %ptrs, i32 4, <vscale x 4 x i1> %mask)
+  ret void
+}
+
 attributes #0 = { "target-features"="+sve" vscale_range(1, 16) }
 
-declare <vscale x 4 x i8> @llvm.masked.gather.nxv4i8(<vscale x 4 x i8*>, i32, <vscale x 4 x i1>, <vscale x 4 x i8>)
 declare <vscale x 2 x i64> @llvm.masked.gather.nxv2i64(<vscale x 2 x i64*>, i32, <vscale x 2 x i1>, <vscale x 2 x i64>)
+declare <vscale x 4 x i8> @llvm.masked.gather.nxv4i8(<vscale x 4 x i8*>, i32, <vscale x 4 x i1>, <vscale x 4 x i8>)
+declare <vscale x 4 x i32> @llvm.masked.gather.nxv4i32(<vscale x 4 x i32*>, i32, <vscale x 4 x i1>, <vscale x 4 x i32>)
 declare <vscale x 4 x float> @llvm.masked.gather.nxv4f32(<vscale x 4 x float*>, i32, <vscale x 4 x i1>, <vscale x 4 x float>)
 
+declare void @llvm.masked.scatter.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i64*>, i32, <vscale x 2 x i1>)
 declare void @llvm.masked.scatter.nxv4i8(<vscale x 4 x i8>, <vscale x 4 x i8*>, i32, <vscale x 4 x i1>)
 declare void @llvm.masked.scatter.nxv4i16(<vscale x 4 x i16>, <vscale x 4 x i16*>, i32, <vscale x 4 x i1>)
-declare void @llvm.masked.scatter.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i64*>, i32, <vscale x 2 x i1>)
+declare void @llvm.masked.scatter.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i32*>, i32, <vscale x 4 x i1>)
 declare void @llvm.masked.scatter.nxv4f16(<vscale x 4 x half>, <vscale x 4 x half*>, i32, <vscale x 4 x i1>)
 
 declare <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
