@@ -1,0 +1,8 @@
+// This test checks that the binary with relaxed ADRP+LDR instructions is
+// processed normally with BOLT and the ADR instruction address is recognized
+// normally.
+
+RUN: yaml2obj %p/Inputs/skip-got-rel.yaml &> %t.exe
+RUN: llvm-bolt %t.exe -o /dev/null -print-cfg -print-only=_start | FileCheck %s
+
+CHECK: adr	x0, foo2
