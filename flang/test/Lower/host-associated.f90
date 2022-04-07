@@ -569,12 +569,12 @@ end subroutine test_proc_dummy_other
 ! CHECK-SAME:                       %[[VAL_0:.*]]: !fir.ref<!fir.char<1,40>>,
 ! CHECK-SAME:                       %[[VAL_1:.*]]: index,
 ! CHECK-SAME:                       %[[VAL_2:.*]]: tuple<!fir.boxproc<() -> ()>, i64> {fir.char_proc}) -> !fir.boxchar<1> {
-! CHECK:         %[[VAL_3:.*]] = arith.constant 40 : index
-! CHECK:         %[[VAL_4:.*]] = arith.constant 12 : index
-! CHECK:         %[[VAL_5:.*]] = arith.constant false
-! CHECK:         %[[VAL_6:.*]] = arith.constant 1 : index
-! CHECK:         %[[VAL_7:.*]] = arith.constant 32 : i8
-! CHECK:         %[[VAL_8:.*]] = arith.constant 0 : index
+! CHECK-DAG:     %[[VAL_3:.*]] = arith.constant 40 : index
+! CHECK-DAG:     %[[VAL_4:.*]] = arith.constant 12 : index
+! CHECK-DAG:     %[[VAL_5:.*]] = arith.constant false
+! CHECK-DAG:     %[[VAL_6:.*]] = arith.constant 1 : index
+! CHECK-DAG:     %[[VAL_7:.*]] = arith.constant 32 : i8
+! CHECK-DAG:     %[[VAL_8:.*]] = arith.constant 0 : index
 ! CHECK:         %[[VAL_9:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.char<1,40>>) -> !fir.ref<!fir.char<1,?>>
 ! CHECK:         %[[VAL_10:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,12>>
 ! CHECK:         %[[VAL_11:.*]] = fir.extract_value %[[VAL_2]], [0 : index] : (tuple<!fir.boxproc<() -> ()>, i64>) -> !fir.boxproc<() -> ()>

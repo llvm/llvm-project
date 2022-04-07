@@ -27,8 +27,8 @@ func @pad_non_zero_sizes(%input: tensor<?x?x8xf32>, %low0: index, %high1: index)
   return %0 : tensor<?x?x8xf32>
 }
 
-// CHECK: %[[F0:.+]] = arith.constant 0.000000e+00 : f32
-// CHECK: %[[C0:.+]] = arith.constant 0 : index
+// CHECK-DAG: %[[F0:.+]] = arith.constant 0.000000e+00 : f32
+// CHECK-DAG: %[[C0:.+]] = arith.constant 0 : index
 // CHECK: %[[EQ0:.+]] = arith.cmpi eq, %[[LOW0]], %[[C0]] : index
 // CHECK: %[[EQ1:.+]] = arith.cmpi eq, %[[HIGH1]], %[[C0]] : index
 // CHECK: %[[AND:.+]] = arith.andi %[[EQ0]], %[[EQ1]] : i1
