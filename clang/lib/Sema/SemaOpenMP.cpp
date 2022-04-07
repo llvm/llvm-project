@@ -6431,6 +6431,7 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
       case OMPC_use_device_ptr:
       case OMPC_use_device_addr:
       case OMPC_is_device_ptr:
+      case OMPC_has_device_addr:
       case OMPC_nontemporal:
       case OMPC_order:
       case OMPC_destroy:
@@ -15959,6 +15960,7 @@ OMPClause *Sema::ActOnOpenMPSimpleClause(
   case OMPC_use_device_ptr:
   case OMPC_use_device_addr:
   case OMPC_is_device_ptr:
+  case OMPC_has_device_addr:
   case OMPC_unified_address:
   case OMPC_unified_shared_memory:
   case OMPC_reverse_offload:
@@ -16264,6 +16266,7 @@ OMPClause *Sema::ActOnOpenMPSingleExprWithArgClause(
   case OMPC_use_device_ptr:
   case OMPC_use_device_addr:
   case OMPC_is_device_ptr:
+  case OMPC_has_device_addr:
   case OMPC_unified_address:
   case OMPC_unified_shared_memory:
   case OMPC_reverse_offload:
@@ -16523,6 +16526,7 @@ OMPClause *Sema::ActOnOpenMPClause(OpenMPClauseKind Kind,
   case OMPC_use_device_ptr:
   case OMPC_use_device_addr:
   case OMPC_is_device_ptr:
+  case OMPC_has_device_addr:
   case OMPC_atomic_default_mem_order:
   case OMPC_device_type:
   case OMPC_match:
@@ -17013,6 +17017,9 @@ OMPClause *Sema::ActOnOpenMPVarListClause(
     break;
   case OMPC_is_device_ptr:
     Res = ActOnOpenMPIsDevicePtrClause(VarList, Locs);
+    break;
+  case OMPC_has_device_addr:
+    Res = ActOnOpenMPHasDeviceAddrClause(VarList, Locs);
     break;
   case OMPC_allocate:
     Res = ActOnOpenMPAllocateClause(DepModOrTailExpr, VarList, StartLoc,
@@ -22424,6 +22431,88 @@ OMPClause *Sema::ActOnOpenMPIsDevicePtrClause(ArrayRef<Expr *> VarList,
   return OMPIsDevicePtrClause::Create(Context, Locs, MVLI.ProcessedVarList,
                                       MVLI.VarBaseDeclarations,
                                       MVLI.VarComponents);
+}
+
+OMPClause *Sema::ActOnOpenMPHasDeviceAddrClause(ArrayRef<Expr *> VarList,
+                                                const OMPVarListLocTy &Locs) {
+  MappableVarListInfo MVLI(VarList);
+  for (Expr *RefExpr : VarList) {
+    assert(RefExpr && "NULL expr in OpenMP has_device_addr clause.");
+    SourceLocation ELoc;
+    SourceRange ERange;
+    Expr *SimpleRefExpr = RefExpr;
+    auto Res = getPrivateItem(*this, SimpleRefExpr, ELoc, ERange,
+                              /*AllowArraySection=*/true);
+    if (Res.second) {
+      // It will be analyzed later.
+      MVLI.ProcessedVarList.push_back(RefExpr);
+    }
+    ValueDecl *D = Res.first;
+    if (!D)
+      continue;
+
+    // Check if the declaration in the clause does not show up in any data
+    // sharing attribute.
+    DSAStackTy::DSAVarData DVar = DSAStack->getTopDSA(D, /*FromParent=*/false);
+    if (isOpenMPPrivate(DVar.CKind)) {
+      Diag(ELoc, diag::err_omp_variable_in_given_clause_and_dsa)
+          << getOpenMPClauseName(DVar.CKind)
+          << getOpenMPClauseName(OMPC_has_device_addr)
+          << getOpenMPDirectiveName(DSAStack->getCurrentDirective());
+      reportOriginalDsa(*this, DSAStack, D, DVar);
+      continue;
+    }
+
+    const Expr *ConflictExpr;
+    if (DSAStack->checkMappableExprComponentListsForDecl(
+            D, /*CurrentRegionOnly=*/true,
+            [&ConflictExpr](
+                OMPClauseMappableExprCommon::MappableExprComponentListRef R,
+                OpenMPClauseKind) -> bool {
+              ConflictExpr = R.front().getAssociatedExpression();
+              return true;
+            })) {
+      Diag(ELoc, diag::err_omp_map_shared_storage) << RefExpr->getSourceRange();
+      Diag(ConflictExpr->getExprLoc(), diag::note_used_here)
+          << ConflictExpr->getSourceRange();
+      continue;
+    }
+
+    // Store the components in the stack so that they can be used to check
+    // against other clauses later on.
+    OMPClauseMappableExprCommon::MappableComponent MC(
+        SimpleRefExpr, D, /*IsNonContiguous=*/false);
+    DSAStack->addMappableExpressionComponents(
+        D, MC, /*WhereFoundClauseKind=*/OMPC_has_device_addr);
+
+    // Record the expression we've just processed.
+    auto *VD = dyn_cast<VarDecl>(D);
+    if (!VD && !CurContext->isDependentContext()) {
+      DeclRefExpr *Ref =
+          buildCapture(*this, D, SimpleRefExpr, /*WithInit=*/true);
+      assert(Ref && "has_device_addr capture failed");
+      MVLI.ProcessedVarList.push_back(Ref);
+    } else
+      MVLI.ProcessedVarList.push_back(RefExpr->IgnoreParens());
+
+    // Create a mappable component for the list item. List items in this clause
+    // only need a component. We use a null declaration to signal fields in
+    // 'this'.
+    assert((isa<DeclRefExpr>(SimpleRefExpr) ||
+            isa<CXXThisExpr>(cast<MemberExpr>(SimpleRefExpr)->getBase())) &&
+           "Unexpected device pointer expression!");
+    MVLI.VarBaseDeclarations.push_back(
+        isa<DeclRefExpr>(SimpleRefExpr) ? D : nullptr);
+    MVLI.VarComponents.resize(MVLI.VarComponents.size() + 1);
+    MVLI.VarComponents.back().push_back(MC);
+  }
+
+  if (MVLI.ProcessedVarList.empty())
+    return nullptr;
+
+  return OMPHasDeviceAddrClause::Create(Context, Locs, MVLI.ProcessedVarList,
+                                        MVLI.VarBaseDeclarations,
+                                        MVLI.VarComponents);
 }
 
 OMPClause *Sema::ActOnOpenMPAllocateClause(
