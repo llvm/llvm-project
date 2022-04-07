@@ -30,7 +30,7 @@ mlir_tablegen(LLVMConversionEnumsFromLLVM.inc -gen-enum-from-llvmir-conversions)
 add_public_tablegen_target(MLIRLLVMConversionsIncGen)
 
 add_mlir_dialect(NVVMOps nvvm)
-add_mlir_doc(NVVMOps NVVMDialect Dialects/ -gen-dialect-doc)
+add_mlir_doc(NVVMOps NVVMDialect Dialects/ -gen-dialect-doc -dialect=nvvm)
 set(LLVM_TARGET_DEFINITIONS NVVMOps.td)
 mlir_tablegen(NVVMConversions.inc -gen-llvmir-conversions)
 mlir_tablegen(NVVMOpsEnums.h.inc -gen-enum-decls)
@@ -42,7 +42,7 @@ mlir_tablegen(NVVMOpsAttributes.cpp.inc -gen-attrdef-defs -attrdefs-dialect=nvvm
 add_public_tablegen_target(MLIRNVVMConversionsIncGen)
 
 add_mlir_dialect(ROCDLOps rocdl)
-add_mlir_doc(ROCDLOps ROCDLDialect Dialects/ -gen-dialect-doc)
+add_mlir_doc(ROCDLOps ROCDLDialect Dialects/ -gen-dialect-doc -dialect=rocdl)
 set(LLVM_TARGET_DEFINITIONS ROCDLOps.td)
 mlir_tablegen(ROCDLConversions.inc -gen-llvmir-conversions)
 add_public_tablegen_target(MLIRROCDLConversionsIncGen)
