@@ -179,6 +179,10 @@ struct t12 {
   t11<LocalEnum, LocalEnum1> v1;
 };
 
+template<decltype(ns::AnonEnum1)>
+void f10() {
+}
+
 int main() {
   struct { } A;
   auto L = []{};
@@ -327,6 +331,7 @@ int main() {
   f1<decltype(fcc)>();
   int fnrt() __attribute__((noreturn));
   f1<decltype(fnrt)>();
+  f10<ns::AnonEnum1>();
 }
 void t8::mem() {
   struct t7 { };
