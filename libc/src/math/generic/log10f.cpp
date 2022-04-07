@@ -170,7 +170,7 @@ LLVM_LIBC_FUNCTION(float, log10f, (float x)) {
   double d = static_cast<float>(xbits) - static_cast<float>(f);
   d *= ONE_OVER_F[f_index];
 
-  double extra_factor = fputil::fma(m, LOG10_2, LOG10_F[f_index]);
+  double extra_factor = fputil::multiply_add(m, LOG10_2, LOG10_F[f_index]);
 
   double r = fputil::polyeval(d, extra_factor, 0x1.bcb7b1526e4c5p-2,
                               -0x1.bcb7b1518a5e9p-3, 0x1.287a72a6f716p-3,

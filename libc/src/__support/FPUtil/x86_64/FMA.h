@@ -15,6 +15,10 @@
 #error "Invalid include"
 #endif
 
+#if !defined(LIBC_TARGET_HAS_FMA)
+#error "FMA instructions are not supported"
+#endif
+
 #include "src/__support/CPP/TypeTraits.h"
 #include <immintrin.h>
 

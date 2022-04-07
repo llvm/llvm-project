@@ -1,0 +1,41 @@
+//===-- Common header for multiply-add implementations ----------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_MULTIPLY_ADD_H
+#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_MULTIPLY_ADD_H
+
+#include "src/__support/architectures.h"
+
+namespace __llvm_libc {
+namespace fputil {
+
+// Implement a simple wrapper for multiply-add operation:
+//   multiply_add(x, y, z) = x*y + z
+// which uses FMA instructions to speed up if available.
+
+template <typename T> static inline T multiply_add(T x, T y, T z) {
+  return x * y + z;
+}
+
+#if defined(LIBC_TARGET_HAS_FMA)
+// FMA instructions are available.
+#include "FMA.h"
+
+template <> inline float multiply_add<float>(float x, float y, float z) {
+  return fma(x, y, z);
+}
+
+template <> inline double multiply_add<double>(double x, double y, double z) {
+  return fma(x, y, z);
+}
+#endif // LIBC_TARGET_HAS_FMA
+
+} // namespace fputil
+} // namespace __llvm_libc
+
+#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_MULTIPLY_ADD_H

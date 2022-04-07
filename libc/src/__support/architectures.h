@@ -37,7 +37,15 @@
 #define LLVM_LIBC_ARCH_ANY_ARM
 #endif
 
-#if defined(LLVM_LIBC_ARCH_X86_64)
+#if defined(LLVM_LIBC_ARCH_AARCH64)
+#define LIBC_TARGET_HAS_FMA
+#elif defined(LLVM_LIBC_ARCH_X86_64)
+#if (defined(__AVX2__) || defined(__FMA__))
+#define LIBC_TARGET_HAS_FMA
+#endif
+#endif
+
+#if (defined(LLVM_LIBC_ARCH_X86_64) && defined(LIBC_TARGET_HAS_FMA))
 #define INLINE_FMA __attribute__((target("fma")))
 #else
 #define INLINE_FMA

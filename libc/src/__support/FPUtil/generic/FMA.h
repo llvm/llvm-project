@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_GENERIC_FMA_H
 
 #include "src/__support/CPP/TypeTraits.h"
+#include "src/__support/FPUtil/FPBits.h"
 
 namespace __llvm_libc {
 namespace fputil {
