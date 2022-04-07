@@ -335,12 +335,11 @@ void SignalHandlerCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void SignalHandlerCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto *SignalCall = Result.Nodes.getNodeAs<CallExpr>("register_call");
   const auto *HandlerDecl =
       Result.Nodes.getNodeAs<FunctionDecl>("handler_decl");
   const auto *HandlerExpr = Result.Nodes.getNodeAs<DeclRefExpr>("handler_expr");
-  assert(SignalCall && HandlerDecl && HandlerExpr &&
-         "All of these should exist in a match here.");
+  assert(Result.Nodes.getNodeAs<CallExpr>("register_call") && HandlerDecl &&
+         HandlerExpr && "All of these should exist in a match here.");
 
   if (CG.size() <= 1) {
     // Call graph must be populated with the entire TU at the beginning.
