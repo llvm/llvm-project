@@ -12,7 +12,7 @@
 // The behavior of std::random_device changed on Apple platforms with
 // https://llvm.org/D116045.
 // XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx{{11|12}}
+// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx{{11.0|12.0}}
 
 // UNSUPPORTED: libcpp-has-no-random-device
 

@@ -116,98 +116,91 @@ include "LoongArchInstrFormats.td"
 // Instruction Class Templates
 //===----------------------------------------------------------------------===//
 class ALU_3R<bits<17> op, string opstr>
-    : Fmt3R<op, (outs GPR:$rd), (ins GPR:$rj, GPR:$rk),
-            !strconcat(opstr, "\t$rd, $rj, $rk")>;
+    : Fmt3R<op, (outs GPR:$rd), (ins GPR:$rj, GPR:$rk), opstr, "$rd, $rj, $rk">;
 class ALU_2R<bits<22> op, string opstr>
-    : Fmt2R<op, (outs GPR:$rd), (ins GPR:$rj),
-            !strconcat(opstr, "\t$rd, $rj")>;
+    : Fmt2R<op, (outs GPR:$rd), (ins GPR:$rj), opstr, "$rd, $rj">;
 
 class ALU_3RI2<bits<15> op, string opstr, Operand ImmOpnd>
-    : Fmt3RI2<op, (outs GPR:$rd), (ins GPR:$rj, GPR:$rk, ImmOpnd:$imm2),
-              !strconcat(opstr, "\t$rd, $rj, $rk, $imm2")>;
+    : Fmt3RI2<op, (outs GPR:$rd), (ins GPR:$rj, GPR:$rk, ImmOpnd:$imm2), opstr,
+              "$rd, $rj, $rk, $imm2">;
 class ALU_3RI3<bits<14> op, string opstr, Operand ImmOpnd>
-    : Fmt3RI3<op, (outs GPR:$rd), (ins GPR:$rj, GPR:$rk, ImmOpnd:$imm3),
-              !strconcat(opstr, "\t$rd, $rj, $rk, $imm3")>;
+    : Fmt3RI3<op, (outs GPR:$rd), (ins GPR:$rj, GPR:$rk, ImmOpnd:$imm3), opstr,
+              "$rd, $rj, $rk, $imm3">;
 class ALU_2RI5<bits<17> op, string opstr, Operand ImmOpnd>
-    : Fmt2RI5<op, (outs GPR:$rd), (ins GPR:$rj, ImmOpnd:$imm5),
-              !strconcat(opstr, "\t$rd, $rj, $imm5")>;
+    : Fmt2RI5<op, (outs GPR:$rd), (ins GPR:$rj, ImmOpnd:$imm5), opstr,
+              "$rd, $rj, $imm5">;
 class ALU_2RI6<bits<16> op, string opstr, Operand ImmOpnd>
-    : Fmt2RI6<op, (outs GPR:$rd), (ins GPR:$rj, ImmOpnd:$imm6),
-              !strconcat(opstr, "\t$rd, $rj, $imm6")>;
+    : Fmt2RI6<op, (outs GPR:$rd), (ins GPR:$rj, ImmOpnd:$imm6), opstr,
+              "$rd, $rj, $imm6">;
 class ALU_2RI12<bits<10> op, string opstr, Operand ImmOpnd>
-    : Fmt2RI12<op, (outs GPR:$rd), (ins GPR:$rj, ImmOpnd:$imm12),
-               !strconcat(opstr, "\t$rd, $rj, $imm12")>;
+    : Fmt2RI12<op, (outs GPR:$rd), (ins GPR:$rj, ImmOpnd:$imm12), opstr,
+               "$rd, $rj, $imm12">;
 class ALU_2RI16<bits<6> op, string opstr, Operand ImmOpnd>
-    : Fmt2RI16<op, (outs GPR:$rd), (ins GPR:$rj, ImmOpnd:$imm16),
-               !strconcat(opstr, "\t$rd, $rj, $imm16")>;
+    : Fmt2RI16<op, (outs GPR:$rd), (ins GPR:$rj, ImmOpnd:$imm16), opstr,
+               "$rd, $rj, $imm16">;
 class ALU_1RI20<bits<7> op, string opstr, Operand ImmOpnd>
-    : Fmt1RI20<op, (outs GPR:$rd), (ins ImmOpnd:$imm20),
-               !strconcat(opstr, "\t$rd, $imm20")>;
+    : Fmt1RI20<op, (outs GPR:$rd), (ins ImmOpnd:$imm20), opstr, "$rd, $imm20">;
 
 class MISC_I15<bits<17> op, string opstr>
-    : FmtI15<op, (outs), (ins uimm15:$imm15), !strconcat(opstr, "\t$imm15")>;
+    : FmtI15<op, (outs), (ins uimm15:$imm15), opstr, "$imm15">;
 
 class RDTIME_2R<bits<22> op, string opstr>
-    : Fmt2R<op, (outs GPR:$rd, GPR:$rj), (ins),
-                 !strconcat(opstr, "\t$rd, $rj")>;
+    : Fmt2R<op, (outs GPR:$rd, GPR:$rj), (ins), opstr, "$rd, $rj">;
 
 class BrCC_2RI16<bits<6> op, string opstr>
-    : Fmt2RI16<op, (outs), (ins GPR:$rj, GPR:$rd, simm16_lsl2:$imm16),
-               !strconcat(opstr, "\t$rj, $rd, $imm16")> {
+    : Fmt2RI16<op, (outs), (ins GPR:$rj, GPR:$rd, simm16_lsl2:$imm16), opstr,
+               "$rj, $rd, $imm16"> {
   let isBranch = 1;
   let isTerminator = 1;
 }
 class BrCCZ_1RI21<bits<6> op, string opstr>
-    : Fmt1RI21<op, (outs), (ins GPR:$rj, simm21_lsl2:$imm21),
-               !strconcat(opstr, "\t$rj, $imm21")> {
+    : Fmt1RI21<op, (outs), (ins GPR:$rj, simm21_lsl2:$imm21), opstr,
+               "$rj, $imm21"> {
   let isBranch = 1;
   let isTerminator = 1;
 }
 class Br_I26<bits<6> op, string opstr>
-    : FmtI26<op, (outs), (ins simm26_lsl2:$imm26),
-             !strconcat(opstr, "\t$imm26")> {
+    : FmtI26<op, (outs), (ins simm26_lsl2:$imm26), opstr, "$imm26"> {
   let isBranch = 1;
   let isTerminator = 1;
 }
 
 let mayLoad = 1 in {
 class LOAD_3R<bits<17> op, string opstr>
-    : Fmt3R<op, (outs GPR:$rd), (ins GPR:$rj, GPR:$rk),
-            !strconcat(opstr, "\t$rd, $rj, $rk")>;
+    : Fmt3R<op, (outs GPR:$rd), (ins GPR:$rj, GPR:$rk), opstr, "$rd, $rj, $rk">;
 class LOAD_2RI12<bits<10> op, string opstr>
-    : Fmt2RI12<op, (outs GPR:$rd), (ins GPR:$rj, simm12:$imm12),
-               !strconcat(opstr, "\t$rd, $rj, $imm12")>;
+    : Fmt2RI12<op, (outs GPR:$rd), (ins GPR:$rj, simm12:$imm12), opstr,
+               "$rd, $rj, $imm12">;
 class LOAD_2RI14<bits<8> op, string opstr>
-    : Fmt2RI14<op, (outs GPR:$rd), (ins GPR:$rj, simm14_lsl2:$imm14),
-               !strconcat(opstr, "\t$rd, $rj, $imm14")>;
+    : Fmt2RI14<op, (outs GPR:$rd), (ins GPR:$rj, simm14_lsl2:$imm14), opstr,
+               "$rd, $rj, $imm14">;
 } // mayLoad = 1
 
 let mayStore = 1 in {
 class STORE_3R<bits<17> op, string opstr>
-    : Fmt3R<op, (outs), (ins GPR:$rd, GPR:$rj, GPR:$rk),
-            !strconcat(opstr, "\t$rd, $rj, $rk")>;
+    : Fmt3R<op, (outs), (ins GPR:$rd, GPR:$rj, GPR:$rk), opstr,
+            "$rd, $rj, $rk">;
 class STORE_2RI12<bits<10> op, string opstr>
-    : Fmt2RI12<op, (outs), (ins GPR:$rd, GPR:$rj, simm12:$imm12),
-               !strconcat(opstr, "\t$rd, $rj, $imm12")>;
+    : Fmt2RI12<op, (outs), (ins GPR:$rd, GPR:$rj, simm12:$imm12), opstr,
+               "$rd, $rj, $imm12">;
 class STORE_2RI14<bits<8> op, string opstr>
-    : Fmt2RI14<op, (outs), (ins GPR:$rd, GPR:$rj, simm14_lsl2:$imm14),
-               !strconcat(opstr, "\t$rd, $rj, $imm14")>;
+    : Fmt2RI14<op, (outs), (ins GPR:$rd, GPR:$rj, simm14_lsl2:$imm14), opstr,
+               "$rd, $rj, $imm14">;
 } // mayStore = 1
 
 let mayLoad = 1, mayStore = 1 in
 class AM_3R<bits<17> op, string opstr>
-    : Fmt3R<op, (outs GPR:$rd), (ins GPR:$rk, GPR:$rj),
-            !strconcat(opstr, "\t$rd, $rk, $rj")>;
+    : Fmt3R<op, (outs GPR:$rd), (ins GPR:$rk, GPR:$rj), opstr, "$rd, $rk, $rj">;
 
 let mayLoad = 1 in
 class LLBase<bits<8> op, string opstr>
-    : Fmt2RI14<op, (outs GPR:$rd), (ins GPR:$rj, simm14_lsl2:$imm14),
-               !strconcat(opstr, "\t$rd, $rj, $imm14")>;
+    : Fmt2RI14<op, (outs GPR:$rd), (ins GPR:$rj, simm14_lsl2:$imm14), opstr,
+               "$rd, $rj, $imm14">;
 
 let mayStore = 1, Constraints = "$rd = $dst" in
 class SCBase<bits<8> op, string opstr>
     : Fmt2RI14<op, (outs GPR:$dst), (ins GPR:$rd, GPR:$rj, simm14_lsl2:$imm14),
-               !strconcat(opstr, "\t$rd, $rj, $imm14")>;
+               opstr, "$rd, $rj, $imm14">;
 
 //===----------------------------------------------------------------------===//
 // Instructions
@@ -268,11 +261,11 @@ def BITREV_W  : ALU_2R<0b0000000000000000010100, "bitrev.w">;
 let Constraints = "$rd = $dst" in {
 def BSTRINS_W  : FmtBSTR_W<0b000000000110, (outs GPR:$dst),
                            (ins GPR:$rd, GPR:$rj, uimm5:$msbw, uimm5:$lsbw),
-                           "bstrins.w\t$rd, $rj, $msbw, $lsbw">;
+                           "bstrins.w", "$rd, $rj, $msbw, $lsbw">;
 }
 def BSTRPICK_W : FmtBSTR_W<0b000000000111, (outs GPR:$rd),
                            (ins GPR:$rj, uimm5:$msbw, uimm5:$lsbw),
-                           "bstrpick.w\t$rd, $rj, $msbw, $lsbw">;
+                           "bstrpick.w", "$rd, $rj, $msbw, $lsbw">;
 def MASKEQZ : ALU_3R<0b00000000000100110, "maskeqz">;
 def MASKNEZ : ALU_3R<0b00000000000100111, "masknez">;
 
@@ -288,10 +281,10 @@ def BNEZ : BrCCZ_1RI21<0b010001, "bnez">;
 def B : Br_I26<0b010100, "b">;
 
 let isCall = 1 in
-def BL : FmtI26<0b010101, (outs), (ins simm26_lsl2:$imm26), "bl\t$imm26">;
+def BL : FmtI26<0b010101, (outs), (ins simm26_lsl2:$imm26), "bl", "$imm26">;
 def JIRL : Fmt2RI16<0b010011, (outs GPR:$rd),
-                    (ins GPR:$rj, simm16_lsl2:$imm16),
-                    "jirl\t$rd, $rj, $imm16">;
+                    (ins GPR:$rj, simm16_lsl2:$imm16), "jirl",
+                    "$rd, $rj, $imm16">;
 
 // Common Memory Access Instructions
 def LD_B  : LOAD_2RI12<0b0010100000, "ld.b">;
@@ -302,8 +295,8 @@ def LD_HU : LOAD_2RI12<0b0010101001, "ld.hu">;
 def ST_B : STORE_2RI12<0b0010100100, "st.b">;
 def ST_H : STORE_2RI12<0b0010100101, "st.h">;
 def ST_W : STORE_2RI12<0b0010100110, "st.w">;
-def PRELD : FmtPRELD<(outs), (ins uimm5:$imm5, GPR:$rj, simm12:$imm12),
-                     "preld\t$imm5, $rj, $imm12">;
+def PRELD : FmtPRELD<(outs), (ins uimm5:$imm5, GPR:$rj, simm12:$imm12), "preld",
+                     "$imm5, $rj, $imm12">;
 
 // Atomic Memory Access Instructions
 def LL_W : LLBase<0b00100000, "ll.w">;
@@ -333,8 +326,8 @@ def ALSL_WU : ALU_3RI2<0b000000000000011, "alsl.wu", uimm2_plus1>;
 def ALSL_D  : ALU_3RI2<0b000000000010110, "alsl.d", uimm2_plus1>;
 let Constraints = "$rd = $dst" in {
 def LU32I_D : Fmt1RI20<0b0001011, (outs GPR:$dst),
-                       (ins GPR:$rd, simm20:$imm20),
-                       "lu32i.d\t$rd, $imm20">;
+                       (ins GPR:$rd, simm20:$imm20), "lu32i.d",
+                       "$rd, $imm20">;
 }
 def LU52I_D : ALU_2RI12<0b0000001100, "lu52i.d", simm12>;
 def PCADDU18I : ALU_1RI20<0b0001111, "pcaddu18i", simm20>;
@@ -374,11 +367,11 @@ def BITREV_D  : ALU_2R<0b0000000000000000010101, "bitrev.d">;
 let Constraints = "$rd = $dst" in {
 def BSTRINS_D  : FmtBSTR_D<0b0000000010, (outs GPR:$dst),
                            (ins GPR:$rd, GPR:$rj, uimm6:$msbd, uimm6:$lsbd),
-                           "bstrins.d\t$rd, $rj, $msbd, $lsbd">;
+                           "bstrins.d", "$rd, $rj, $msbd, $lsbd">;
 }
 def BSTRPICK_D : FmtBSTR_D<0b0000000011, (outs GPR:$rd),
                            (ins GPR:$rj, uimm6:$msbd, uimm6:$lsbd),
-                           "bstrpick.d\t$rd, $rj, $msbd, $lsbd">;
+                           "bstrpick.d", "$rd, $rj, $msbd, $lsbd">;
 
 // Common Memory Access Instructions for 64-bits
 def LD_WU : LOAD_2RI12<0b0010101010, "ld.wu">;
@@ -398,8 +391,8 @@ def LDPTR_W : LOAD_2RI14<0b00100100, "ldptr.w">;
 def LDPTR_D : LOAD_2RI14<0b00100110, "ldptr.d">;
 def STPTR_W : STORE_2RI14<0b00100101, "stptr.w">;
 def STPTR_D : STORE_2RI14<0b00100111, "stptr.d">;
-def PRELDX : FmtPRELDX<(outs), (ins uimm5:$imm5, GPR:$rj, GPR:$rk),
-                       "preldx\t$imm5, $rj, $rk">;
+def PRELDX : FmtPRELDX<(outs), (ins uimm5:$imm5, GPR:$rj, GPR:$rk), "preldx",
+                       "$imm5, $rj, $rk">;
 
 // Bound Check Memory Access Instructions
 def LDGT_B : LOAD_3R<0b00111000011110000, "ldgt.b">;
@@ -471,9 +464,9 @@ def CRCC_W_D_W : ALU_3R<0b00000000001001111, "crcc.w.d.w">;
 
 // Other Miscellaneous Instructions for 64-bits
 def ASRTLE_D : FmtASRT<0b00000000000000010, (outs), (ins GPR:$rj, GPR:$rk),
-                       "asrtle.d\t$rj, $rk">;
+                       "asrtle.d", "$rj, $rk">;
 def ASRTGT_D : FmtASRT<0b00000000000000011, (outs), (ins GPR:$rj, GPR:$rk),
-                       "asrtgt.d\t$rj, $rk">;
+                       "asrtgt.d", "$rj, $rk">;
 def RDTIME_D : RDTIME_2R<0b0000000000000000011010, "rdtime.d">;
 } // Predicates = [IsLA64]
 

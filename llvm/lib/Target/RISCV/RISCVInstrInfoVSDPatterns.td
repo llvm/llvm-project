@@ -24,10 +24,6 @@
 def rvv_vnot : PatFrag<(ops node:$in),
                        (xor node:$in, (riscv_vmset_vl (XLenVT srcvalue)))>;
 
-class SwapHelper<dag Prefix, dag A, dag B, dag Suffix, bit swap> {
-   dag Value = !con(Prefix, !if(swap, B, A), !if(swap, A, B), Suffix);
-}
-
 multiclass VPatUSLoadStoreSDNode<ValueType type,
                                  int log2sew,
                                  LMULInfo vlmul,
@@ -174,67 +170,70 @@ multiclass VPatBinaryFPSDNode_R_VF<SDNode vop, string instruction_name> {
                            fvti.AVL, fvti.Log2SEW)>;
 }
 
-multiclass VPatIntegerSetCCSDNode_VV<CondCode cc,
-                                     string instruction_name,
-                                     bit swap = 0> {
+multiclass VPatIntegerSetCCSDNode_VV<string instruction_name,
+                                     CondCode cc> {
   foreach vti = AllIntegerVectors in {
     defvar instruction = !cast<Instruction>(instruction_name#"_VV_"#vti.LMul.MX);
     def : Pat<(vti.Mask (setcc (vti.Vector vti.RegClass:$rs1),
                                (vti.Vector vti.RegClass:$rs2), cc)),
-              SwapHelper<(instruction),
-                         (instruction vti.RegClass:$rs1),
-                         (instruction vti.RegClass:$rs2),
-                         (instruction vti.AVL, vti.Log2SEW),
-                         swap>.Value>;
+              (instruction vti.RegClass:$rs1, vti.RegClass:$rs2, vti.AVL,
+              vti.Log2SEW)>;
   }
 }
 
-multiclass VPatIntegerSetCCSDNode_XI<CondCode cc,
+multiclass VPatIntegerSetCCSDNode_VV_Swappable<string instruction_name,
+                                               CondCode cc, CondCode invcc>
+    : VPatIntegerSetCCSDNode_VV<instruction_name, cc> {
+  foreach vti = AllIntegerVectors in {
+    defvar instruction = !cast<Instruction>(instruction_name#"_VV_"#vti.LMul.MX);
+    def : Pat<(vti.Mask (setcc (vti.Vector vti.RegClass:$rs2),
+                               (vti.Vector vti.RegClass:$rs1), invcc)),
+              (instruction vti.RegClass:$rs1, vti.RegClass:$rs2, vti.AVL,
+              vti.Log2SEW)>;
+  }
+}
+
+multiclass VPatIntegerSetCCSDNode_XI<
                                      string instruction_name,
+                                     CondCode cc,
                                      string kind,
                                      ComplexPattern SplatPatKind,
-                                     DAGOperand xop_kind,
-                                     bit swap = 0> {
+                                     DAGOperand xop_kind> {
   foreach vti = AllIntegerVectors in {
     defvar instruction = !cast<Instruction>(instruction_name#_#kind#_#vti.LMul.MX);
     def : Pat<(vti.Mask (setcc (vti.Vector vti.RegClass:$rs1),
                                (vti.Vector (SplatPatKind xop_kind:$rs2)), cc)),
-              SwapHelper<(instruction),
-                         (instruction vti.RegClass:$rs1),
-                         (instruction xop_kind:$rs2),
-                         (instruction vti.AVL, vti.Log2SEW),
-                         swap>.Value>;
+              (instruction vti.RegClass:$rs1, xop_kind:$rs2, vti.AVL, vti.Log2SEW)>;
   }
 }
 
-multiclass VPatIntegerSetCCSDNode_VV_VX_VI<CondCode cc,
-                                           string instruction_name,
-                                           bit swap = 0> {
-  defm : VPatIntegerSetCCSDNode_VV<cc, instruction_name, swap>;
-  defm : VPatIntegerSetCCSDNode_XI<cc, instruction_name, "VX",
-                                   SplatPat, GPR, swap>;
-  defm : VPatIntegerSetCCSDNode_XI<cc, instruction_name, "VI",
-                                   SplatPat_simm5, simm5, swap>;
+multiclass VPatIntegerSetCCSDNode_XI_Swappable<string instruction_name,
+                                               CondCode cc, CondCode invcc,
+                                               string kind,
+                                               ComplexPattern SplatPatKind,
+                                               DAGOperand xop_kind>
+    : VPatIntegerSetCCSDNode_XI<instruction_name, cc, kind, SplatPatKind,
+                                xop_kind> {
+  foreach vti = AllIntegerVectors in {
+    defvar instruction = !cast<Instruction>(instruction_name#_#kind#_#vti.LMul.MX);
+    def : Pat<(vti.Mask (setcc (vti.Vector vti.RegClass:$rs1),
+                               (vti.Vector (SplatPatKind xop_kind:$rs2)), cc)),
+              (instruction vti.RegClass:$rs1, xop_kind:$rs2, vti.AVL, vti.Log2SEW)>;
+    def : Pat<(vti.Mask (setcc (vti.Vector (SplatPatKind xop_kind:$rs2)),
+                               (vti.Vector vti.RegClass:$rs1), invcc)),
+              (instruction vti.RegClass:$rs1, xop_kind:$rs2, vti.AVL, vti.Log2SEW)>;
+  }
 }
 
-multiclass VPatIntegerSetCCSDNode_VV_VX<CondCode cc,
-                                        string instruction_name,
-                                        bit swap = 0> {
-  defm : VPatIntegerSetCCSDNode_VV<cc, instruction_name, swap>;
-  defm : VPatIntegerSetCCSDNode_XI<cc, instruction_name, "VX",
-                                   SplatPat, GPR, swap>;
-}
+multiclass VPatIntegerSetCCSDNode_VX_Swappable<string instruction_name,
+                                               CondCode cc, CondCode invcc>
+    : VPatIntegerSetCCSDNode_XI_Swappable<instruction_name, cc, invcc, "VX",
+                                          SplatPat, GPR>;
 
-multiclass VPatIntegerSetCCSDNode_VX_VI<CondCode cc,
-                                        string instruction_name,
-                                        bit swap = 0> {
-  defm : VPatIntegerSetCCSDNode_XI<cc, instruction_name, "VX",
-                                   SplatPat, GPR, swap>;
-  defm : VPatIntegerSetCCSDNode_XI<cc, instruction_name, "VI",
-                                   SplatPat_simm5, simm5, swap>;
-}
+multiclass VPatIntegerSetCCSDNode_VI<string instruction_name, CondCode cc>
+    : VPatIntegerSetCCSDNode_XI<instruction_name, cc, "VI", SplatPat_simm5, simm5>;
 
-multiclass VPatIntegerSetCCSDNode_VIPlus1<CondCode cc, string instruction_name,
+multiclass VPatIntegerSetCCSDNode_VIPlus1<string instruction_name, CondCode cc,
                                           ComplexPattern splatpat_kind> {
   foreach vti = AllIntegerVectors in {
     defvar instruction = !cast<Instruction>(instruction_name#"_VI_"#vti.LMul.MX);
@@ -613,29 +612,38 @@ foreach vti = AllIntegerVectors in {
 }
 
 // 12.8. Vector Integer Comparison Instructions
-defm : VPatIntegerSetCCSDNode_VV_VX_VI<SETEQ,  "PseudoVMSEQ">;
-defm : VPatIntegerSetCCSDNode_VV_VX_VI<SETNE,  "PseudoVMSNE">;
+defm : VPatIntegerSetCCSDNode_VV<"PseudoVMSEQ", SETEQ>;
+defm : VPatIntegerSetCCSDNode_VV<"PseudoVMSNE", SETNE>;
 
-defm : VPatIntegerSetCCSDNode_VV_VX<SETLT,  "PseudoVMSLT">;
-defm : VPatIntegerSetCCSDNode_VV_VX<SETULT, "PseudoVMSLTU">;
-defm : VPatIntegerSetCCSDNode_VIPlus1<SETLT, "PseudoVMSLE",
+defm : VPatIntegerSetCCSDNode_VV_Swappable<"PseudoVMSLT",  SETLT, SETGT>;
+defm : VPatIntegerSetCCSDNode_VV_Swappable<"PseudoVMSLTU", SETULT, SETUGT>;
+defm : VPatIntegerSetCCSDNode_VV_Swappable<"PseudoVMSLE",  SETLE,  SETGE>;
+defm : VPatIntegerSetCCSDNode_VV_Swappable<"PseudoVMSLEU", SETULE, SETUGE>;
+
+defm : VPatIntegerSetCCSDNode_VX_Swappable<"PseudoVMSEQ",  SETEQ,  SETEQ>;
+defm : VPatIntegerSetCCSDNode_VX_Swappable<"PseudoVMSNE",  SETNE,  SETNE>;
+defm : VPatIntegerSetCCSDNode_VX_Swappable<"PseudoVMSLT",  SETLT,  SETGT>;
+defm : VPatIntegerSetCCSDNode_VX_Swappable<"PseudoVMSLTU", SETULT, SETUGT>;
+defm : VPatIntegerSetCCSDNode_VX_Swappable<"PseudoVMSLE",  SETLE,  SETGE>;
+defm : VPatIntegerSetCCSDNode_VX_Swappable<"PseudoVMSLEU", SETULE, SETUGE>;
+defm : VPatIntegerSetCCSDNode_VX_Swappable<"PseudoVMSGT",  SETGT,  SETLT>;
+defm : VPatIntegerSetCCSDNode_VX_Swappable<"PseudoVMSGTU", SETUGT, SETULT>;
+// There is no VMSGE(U)_VX instruction
+
+defm : VPatIntegerSetCCSDNode_VI<"PseudoVMSEQ",  SETEQ>;
+defm : VPatIntegerSetCCSDNode_VI<"PseudoVMSNE",  SETNE>;
+defm : VPatIntegerSetCCSDNode_VI<"PseudoVMSLE",  SETLE>;
+defm : VPatIntegerSetCCSDNode_VI<"PseudoVMSLEU", SETULE>;
+defm : VPatIntegerSetCCSDNode_VI<"PseudoVMSGT",  SETGT>;
+defm : VPatIntegerSetCCSDNode_VI<"PseudoVMSGTU", SETUGT>;
+
+defm : VPatIntegerSetCCSDNode_VIPlus1<"PseudoVMSLE", SETLT,
                                       SplatPat_simm5_plus1_nonzero>;
-defm : VPatIntegerSetCCSDNode_VIPlus1<SETULT, "PseudoVMSLEU",
+defm : VPatIntegerSetCCSDNode_VIPlus1<"PseudoVMSLEU", SETULT,
                                       SplatPat_simm5_plus1_nonzero>;
-
-defm : VPatIntegerSetCCSDNode_VV<SETGT,  "PseudoVMSLT", /*swap*/1>;
-defm : VPatIntegerSetCCSDNode_VV<SETUGT, "PseudoVMSLTU", /*swap*/1>;
-defm : VPatIntegerSetCCSDNode_VX_VI<SETGT,  "PseudoVMSGT">;
-defm : VPatIntegerSetCCSDNode_VX_VI<SETUGT, "PseudoVMSGTU">;
-
-defm : VPatIntegerSetCCSDNode_VV_VX_VI<SETLE,  "PseudoVMSLE">;
-defm : VPatIntegerSetCCSDNode_VV_VX_VI<SETULE, "PseudoVMSLEU">;
-
-defm : VPatIntegerSetCCSDNode_VV<SETGE,  "PseudoVMSLE", /*swap*/1>;
-defm : VPatIntegerSetCCSDNode_VV<SETUGE, "PseudoVMSLEU", /*swap*/1>;
-defm : VPatIntegerSetCCSDNode_VIPlus1<SETGE, "PseudoVMSGT",
+defm : VPatIntegerSetCCSDNode_VIPlus1<"PseudoVMSGT", SETGE,
                                       SplatPat_simm5_plus1>;
-defm : VPatIntegerSetCCSDNode_VIPlus1<SETUGE, "PseudoVMSGTU",
+defm : VPatIntegerSetCCSDNode_VIPlus1<"PseudoVMSGTU", SETUGE,
                                       SplatPat_simm5_plus1_nonzero>;
 
 // 12.9. Vector Integer Min/Max Instructions

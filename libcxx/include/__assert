@@ -38,16 +38,14 @@
     (__builtin_expect(static_cast<bool>(expression), 1) ?                           \
       (void)0 :                                                                     \
       ::std::__libcpp_assertion_handler(__FILE__, __LINE__, #expression, message))
+#elif !defined(_LIBCPP_ASSERTIONS_DISABLE_ASSUME) && __has_builtin(__builtin_assume)
+# define _LIBCPP_ASSERT(expression, message)                                        \
+    (_LIBCPP_DIAGNOSTIC_PUSH                                                        \
+    _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wassume")                                    \
+    __builtin_assume(static_cast<bool>(expression))                                 \
+    _LIBCPP_DIAGNOSTIC_POP)
 #else
-# if __has_builtin(__builtin_assume)
-#   define _LIBCPP_ASSERT(expression, message)                                      \
-      (_LIBCPP_DIAGNOSTIC_PUSH                                                      \
-      _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wassume")                                  \
-      __builtin_assume(static_cast<bool>(expression))                               \
-      _LIBCPP_DIAGNOSTIC_POP)
-# else
-#   define _LIBCPP_ASSERT(expression, message) ((void)0)
-# endif
+# define _LIBCPP_ASSERT(expression, message) ((void)0)
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD

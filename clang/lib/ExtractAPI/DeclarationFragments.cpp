@@ -21,7 +21,7 @@ using namespace llvm;
 
 DeclarationFragments &DeclarationFragments::appendSpace() {
   if (!Fragments.empty()) {
-    Fragment Last = Fragments.back();
+    Fragment &Last = Fragments.back();
     if (Last.Kind == FragmentKind::Text) {
       // Merge the extra space into the last fragment if the last fragment is
       // also text.
@@ -390,7 +390,7 @@ DeclarationFragmentsBuilder::getFragmentsForParam(const ParmVarDecl *Param) {
   if (Param->isObjCMethodParameter())
     Fragments.append("(", DeclarationFragments::FragmentKind::Text)
         .append(std::move(TypeFragments))
-        .append(")", DeclarationFragments::FragmentKind::Text);
+        .append(") ", DeclarationFragments::FragmentKind::Text);
   else
     Fragments.append(std::move(TypeFragments)).appendSpace();
 
@@ -593,20 +593,21 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForObjCMethod(
 
   // For Objective-C methods that take arguments, build the selector slots.
   for (unsigned i = 0, end = Method->param_size(); i != end; ++i) {
-    Fragments.appendSpace()
-        .append(Selector.getNameForSlot(i),
-                // The first slot is the name of the method, record as an
-                // identifier, otherwise as exteranl parameters.
-                i == 0 ? DeclarationFragments::FragmentKind::Identifier
-                       : DeclarationFragments::FragmentKind::ExternalParam)
-        .append(":", DeclarationFragments::FragmentKind::Text);
+    // Objective-C method selector parts are considered as identifiers instead
+    // of "external parameters" as in Swift. This is because Objective-C method
+    // symbols are referenced with the entire selector, instead of just the
+    // method name in Swift.
+    SmallString<32> ParamID(Selector.getNameForSlot(i));
+    ParamID.append(":");
+    Fragments.appendSpace().append(
+        ParamID, DeclarationFragments::FragmentKind::Identifier);
 
     // Build the internal parameter.
     const ParmVarDecl *Param = Method->getParamDecl(i);
     Fragments.append(getFragmentsForParam(Param));
   }
 
-  return Fragments;
+  return Fragments.append(";", DeclarationFragments::FragmentKind::Text);
 }
 
 DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForObjCProperty(
