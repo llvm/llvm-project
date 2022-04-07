@@ -4389,8 +4389,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   bool IsDeviceOffloadAction = !(JA.isDeviceOffloading(Action::OFK_None) ||
                                  JA.isDeviceOffloading(Action::OFK_Host));
   bool IsHostOffloadingAction =
-      JA.isHostOffloading(Action::OFK_OpenMP) &&
-      !Args.hasArg(options::OPT_fno_openmp_new_driver);
+      (JA.isHostOffloading(Action::OFK_OpenMP) &&
+       Args.hasFlag(options::OPT_fopenmp_new_driver,
+                    options::OPT_no_offload_new_driver, true)) ||
+      Args.hasFlag(options::OPT_offload_new_driver,
+                   options::OPT_no_offload_new_driver, false);
   bool IsUsingLTO = D.isUsingLTO(IsDeviceOffloadAction);
   auto LTOMode = D.getLTOMode(IsDeviceOffloadAction);
 
@@ -4686,7 +4689,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       // Only AMDGPU supports device-side LTO.
       if (IsDeviceOffloadAction &&
           !Args.hasFlag(options::OPT_fopenmp_new_driver,
-                        options::OPT_fno_openmp_new_driver, true) &&
+                        options::OPT_no_offload_new_driver, true) &&
+          !Args.hasFlag(options::OPT_offload_new_driver,
+                        options::OPT_no_offload_new_driver, false) &&
           !Triple.isAMDGPU()) {
         D.Diag(diag::err_drv_unsupported_opt_for_target)
             << Args.getLastArg(options::OPT_foffload_lto,

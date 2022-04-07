@@ -3976,16 +3976,18 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
   // Builder to be used to build offloading actions.
   OffloadingActionBuilder OffloadBuilder(C, Args, Inputs);
 
+  bool UseNewOffloadingDriver =
+      (C.isOffloadingHostKind(Action::OFK_OpenMP) &&
+       Args.hasFlag(options::OPT_fopenmp_new_driver,
+                    options::OPT_no_offload_new_driver, true)) ||
+      Args.hasFlag(options::OPT_offload_new_driver,
+                   options::OPT_no_offload_new_driver, false);
+
   // Construct the actions to perform.
   HeaderModulePrecompileJobAction *HeaderModuleAction = nullptr;
   ExtractAPIJobAction *ExtractAPIAction = nullptr;
   ActionList LinkerInputs;
   ActionList MergerInputs;
-
-  bool UseNewOffloadingDriver =
-      C.isOffloadingHostKind(Action::OFK_OpenMP) &&
-      Args.hasFlag(options::OPT_fopenmp_new_driver,
-                   options::OPT_fno_openmp_new_driver, true);
 
   for (auto &I : Inputs) {
     types::ID InputType = I.first;
@@ -4114,8 +4116,7 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     // Check if this Linker Job should emit a static library.
     if (ShouldEmitStaticLibrary(Args)) {
       LA = C.MakeAction<StaticLibJobAction>(LinkerInputs, types::TY_Image);
-    } else if (UseNewOffloadingDriver &&
-               C.getActiveOffloadKinds() != Action::OFK_None) {
+    } else if (UseNewOffloadingDriver) {
       LA = C.MakeAction<LinkerWrapperJobAction>(LinkerInputs, types::TY_Image);
       LA->propagateHostOffloadInfo(C.getActiveOffloadKinds(),
                                    /*BoundArch=*/nullptr);
