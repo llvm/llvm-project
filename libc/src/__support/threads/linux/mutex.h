@@ -11,6 +11,7 @@
 
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/OSUtil/syscall.h" // For syscall functions.
+#include "src/__support/threads/linux/futex_word.h"
 #include "src/__support/threads/mutex_common.h"
 
 #include <linux/futex.h>
@@ -26,8 +27,6 @@ struct Mutex {
 
   void *owner;
   unsigned long long lock_count;
-
-  using FutexWordType = unsigned int;
 
   cpp::Atomic<FutexWordType> futex_word;
 

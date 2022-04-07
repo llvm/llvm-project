@@ -73,3 +73,9 @@ add_header_library(
   HDRS
     blockstore.h
 )
+
+add_header_library(
+  error
+  HDRS
+    error.h
+)
