@@ -347,6 +347,22 @@ def SizedRegionOp : TEST_Op<"sized_region_op", []> {
   let regions = (region SizedRegion<2>:$my_region, SizedRegion<1>);
 }
 
+def VariadicRegionInferredTypesOp : TEST_Op<"variadic_region_inferred",
+                                            [InferTypeOpInterface]> {
+  let regions = (region VariadicRegion<AnyRegion>:$bodies);
+  let results = (outs Variadic<AnyType>);
+
+  let extraClassDeclaration = [{
+    static mlir::LogicalResult inferReturnTypes(mlir::MLIRContext *context,
+          llvm::Optional<::mlir::Location> location, mlir::ValueRange operands,
+          mlir::DictionaryAttr attributes, mlir::RegionRange regions,
+          llvm::SmallVectorImpl<mlir::Type> &inferredReturnTypes) {
+      inferredReturnTypes.assign({mlir::IntegerType::get(context, 16)});
+      return mlir::success();
+    }
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // NoTerminator Operation
 //===----------------------------------------------------------------------===//
