@@ -107,3 +107,14 @@ int sw4(int a) {
 // CHECK-NEXT:         cir.return %6 : i32
 // CHECK-NEXT:       }
 // CHECK-NEXT:       ]
+
+void sw5(int a) {
+  switch (a) {
+  case 1:;
+  }
+}
+
+// CHECK: func @sw5
+// CHECK: cir.switch (%1 : i32) [
+// CHECK-NEXT:   case (equal, 1 : i32)  {
+// CHECK-NEXT:     cir.yield fallthrough
