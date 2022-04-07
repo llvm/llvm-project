@@ -464,8 +464,8 @@ multiclass VPatIntegerSetCCVL_VV<VTypeInfo vti, string instruction_name,
 
 // Inherits from VPatIntegerSetCCVL_VV and adds a pattern with operands swapped.
 multiclass VPatIntegerSetCCVL_VV_Swappable<VTypeInfo vti, string instruction_name,
-                                           CondCode cc, CondCode invcc> :
-  VPatIntegerSetCCVL_VV<vti, instruction_name, cc> {
+                                           CondCode cc, CondCode invcc>
+    : VPatIntegerSetCCVL_VV<vti, instruction_name, cc> {
   def : Pat<(vti.Mask (riscv_setcc_vl (vti.Vector vti.RegClass:$rs2),
                                       vti.RegClass:$rs1, invcc,
                                       (vti.Mask V0),
