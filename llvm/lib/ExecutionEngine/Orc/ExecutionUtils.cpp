@@ -62,7 +62,7 @@ CtorDtorIterator::Element CtorDtorIterator::operator*() const {
       break;
     } else if (ConstantExpr *CE = dyn_cast_or_null<ConstantExpr>(FuncC)) {
       if (CE->isCast())
-        FuncC = dyn_cast_or_null<ConstantExpr>(CE->getOperand(0));
+        FuncC = CE->getOperand(0);
       else
         break;
     } else {
