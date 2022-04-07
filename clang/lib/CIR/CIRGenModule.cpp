@@ -1488,10 +1488,12 @@ mlir::LogicalResult CIRGenModule::buildSwitchStmt(const SwitchStmt &S) {
       return;
 
     SmallVector<mlir::Block *, 4> eraseBlocks;
+    unsigned numBlocks = r.getBlocks().size();
     for (auto &block : r.getBlocks()) {
       // Already cleanup after return operations, which might create
       // empty blocks if emitted as last stmt.
-      if (block.empty() && block.hasNoPredecessors() && block.hasNoSuccessors())
+      if (numBlocks != 1 && block.empty() && block.hasNoPredecessors() &&
+          block.hasNoSuccessors())
         eraseBlocks.push_back(&block);
 
       if (block.empty() ||
