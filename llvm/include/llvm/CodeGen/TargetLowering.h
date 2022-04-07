@@ -257,6 +257,10 @@ public:
     BitTestIntrinsic, // Use a target-specific intrinsic for special bit
                       // operations; used by X86.
     Expand,           // Generic expansion in terms of other atomic operations.
+
+    // Rewrite to a non-atomic form for use in a known non-preemptible
+    // environment.
+    NotAtomic
   };
 
   /// Enum that specifies when a multiplication should be expanded.
