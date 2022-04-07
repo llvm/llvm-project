@@ -734,8 +734,8 @@ let Predicates= [iHasE2] in {
 
 let Predicates = [iHas2E3] in {
   def MVCV32 : R_Z_1<0x1, 0x10, "mvcv32">;
-  def CLRF32 : R_Z_2<0xB, 0x1, "clrf32", []>;
-  def CLRT32 : R_Z_2<0xB, 0x2, "clrt32", []>;
+  def CLRF32 : R_Z_2<0xB, 0x1, "clrf32">;
+  def CLRT32 : R_Z_2<0xB, 0x2, "clrt32">;
 }
 
 //===----------------------------------------------------------------------===//

@@ -18,8 +18,6 @@
 namespace llvm {
 
 class CSKYMachineFunctionInfo : public MachineFunctionInfo {
-  MachineFunction &MF;
-
   Register GlobalBaseReg = 0;
   bool SpillsCR = false;
 
@@ -33,7 +31,7 @@ class CSKYMachineFunctionInfo : public MachineFunctionInfo {
   unsigned PICLabelUId = 0;
 
 public:
-  CSKYMachineFunctionInfo(MachineFunction &MF) : MF(MF) {}
+  CSKYMachineFunctionInfo(MachineFunction &) {}
 
   Register getGlobalBaseReg() const { return GlobalBaseReg; }
   void setGlobalBaseReg(Register Reg) { GlobalBaseReg = Reg; }

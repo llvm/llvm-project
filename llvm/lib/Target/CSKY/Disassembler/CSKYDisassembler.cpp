@@ -33,7 +33,6 @@ typedef MCDisassembler::DecodeStatus DecodeStatus;
 namespace {
 class CSKYDisassembler : public MCDisassembler {
   std::unique_ptr<MCInstrInfo const> const MCII;
-  mutable bool inDataRegion = false;
   mutable StringRef symbolName;
 
   DecodeStatus handleCROperand(MCInst &Instr) const;
@@ -166,6 +165,8 @@ static DecodeStatus DecodeFPR64RegisterClass(MCInst &Inst, uint64_t RegNo,
   return MCDisassembler::Success;
 }
 
+// TODO
+LLVM_ATTRIBUTE_UNUSED
 static DecodeStatus DecodesFPR128RegisterClass(MCInst &Inst, uint64_t RegNo,
                                                uint64_t Address,
                                                const MCDisassembler *Decoder) {
@@ -196,6 +197,8 @@ static DecodeStatus DecodemGPRRegisterClass(MCInst &Inst, uint64_t RegNo,
   return MCDisassembler::Success;
 }
 
+// TODO
+LLVM_ATTRIBUTE_UNUSED
 static DecodeStatus DecodeGPRSPRegisterClass(MCInst &Inst, uint64_t RegNo,
                                              uint64_t Address,
                                              const MCDisassembler *Decoder) {
