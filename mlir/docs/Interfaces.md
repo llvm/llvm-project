@@ -37,7 +37,7 @@ utilities for registering an interface with a dialect so that it can be
 referenced later. Once the interface has been defined, dialects can override it
 using dialect-specific information. The interfaces defined by a dialect are
 registered via `addInterfaces<>`, a similar mechanism to Attributes, Operations,
-Types, etc
+Types, etc.
 
 ```c++
 /// Define a base inlining interface class to allow for dialects to opt-in to
@@ -86,7 +86,7 @@ if (DialectInlinerInterface *interface = dyn_cast<DialectInlinerInterface>(diale
 #### DialectInterfaceCollection
 
 An additional utility is provided via `DialectInterfaceCollection`. This class
-allows for collecting all of the dialects that have registered a given interface
+allows collecting all of the dialects that have registered a given interface
 within an instance of the `MLIRContext`. This can be useful to hide and optimize
 the lookup of a registered dialect interface.
 
@@ -394,8 +394,8 @@ comprised of the following components:
         accessed with full name qualification.
 *   Extra Shared Class Declarations (Optional: `extraSharedClassDeclaration`)
     -   Additional C++ code that is injected into the declarations of both the
-        interface and trait class. This allows for defining methods and more
-        that are exposed on both the interface and trait class, e.g. to inject
+        interface and the trait class. This allows for defining methods and more
+        that are exposed on both the interface and the trait class, e.g. to inject
         utilties on both the interface and the derived entity implementing the
         interface (e.g. attribute, operation, etc.).
     -   In non-static methods, `$_attr`/`$_op`/`$_type`
@@ -617,7 +617,7 @@ def MyInterface : OpInterface<"MyInterface"> {
 }
 
 // Operation interfaces can optionally be wrapped inside
-// DeclareOpInterfaceMethods. This would result in autogenerating declarations
+// `DeclareOpInterfaceMethods`. This would result in autogenerating declarations
 // for members `foo`, `bar` and `fooStatic`. Methods with bodies are not
 // declared inside the op declaration but instead handled by the op interface
 // trait directly.

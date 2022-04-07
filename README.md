@@ -1,6 +1,6 @@
 # The LLVM Compiler Infrastructure
 
-This directory and its sub-directories contain source code for LLVM,
+This directory and its sub-directories contain the source code for LLVM,
 a toolkit for the construction of highly optimized compilers,
 optimizers, and run-time environments.
 
@@ -33,7 +33,7 @@ the [LLD linker](https://lld.llvm.org), and more.
 
 ### Getting the Source Code and Building LLVM
 
-The LLVM Getting Started documentation may be out of date.  The [Clang
+The LLVM Getting Started documentation may be out of date. The [Clang
 Getting Started](http://clang.llvm.org/get_started.html) page might have more
 accurate information.
 
@@ -101,7 +101,7 @@ This is an example work-flow and configuration to get and build the LLVM source:
           LLVM sub-projects generate their own ``check-<project>`` target.
 
         * Running a serial build will be **slow**. To improve speed, try running a
-          parallel build.  That's done by default in Ninja; for ``make``, use the option
+          parallel build. That's done by default in Ninja; for ``make``, use the option
           ``-j NNN``, where ``NNN`` is the number of parallel jobs to run.
           In most cases, you get the best performance if you specify the number of CPU threads you have.
           On some Unix systems, you can specify this with ``-j$(nproc)``.

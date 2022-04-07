@@ -33,7 +33,7 @@ that no longer exist.
 
 ### Why build a new language instead of improving TableGen DRR?
 
-Note: The section assumes familiarity with
+Note: This section assumes familiarity with
 [TDRR](https://mlir.llvm.org/docs/DeclarativeRewrites/), please refer the
 relevant documentation before continuing.
 
