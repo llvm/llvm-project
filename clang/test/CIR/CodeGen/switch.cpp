@@ -89,7 +89,7 @@ int sw4(int a) {
   return 0;
 }
 
-// CHECK: func @sw4(
+// CHECK: func @sw4
 // CHECK:       cir.switch (%4 : i32) [
 // CHECK-NEXT:       case (equal, 42 : i32)  {
 // CHECK-NEXT:         cir.scope {
@@ -103,16 +103,7 @@ int sw4(int a) {
 // CHECK-NEXT:       case (default)  {
 // CHECK-NEXT:         %5 = cir.cst(2 : i32) : i32
 // CHECK-NEXT:         cir.store %5, %1 : i32, cir.ptr <i32>
-// CHECK-NEXT:         cir.br ^bb1
-// CHECK-NEXT:       ^bb1:
 // CHECK-NEXT:         %6 = cir.load %1 : cir.ptr <i32>, i32
 // CHECK-NEXT:         cir.return %6 : i32
 // CHECK-NEXT:       }
 // CHECK-NEXT:       ]
-// CHECK-NEXT:     }
-// CHECK-NEXT:     %2 = cir.cst(0 : i32) : i32
-// CHECK-NEXT:     cir.store %2, %1 : i32, cir.ptr <i32>
-// CHECK-NEXT:     %3 = cir.load %1 : cir.ptr <i32>, i32
-// CHECK-NEXT:     cir.return %3 : i32
-// CHECK-NEXT:   }
-// CHECK-NEXT: }
