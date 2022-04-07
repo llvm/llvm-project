@@ -2544,19 +2544,19 @@ void InnerLoopVectorizer::widenIntOrFpInduction(
     Type *ScalarTy = IntegerType::get(ScalarIV->getContext(),
                                       Step->getType()->getScalarSizeInBits());
 
-    Instruction::BinaryOps IncOp = ID.getInductionOpcode();
-    if (IncOp == Instruction::BinaryOpsEnd)
-      IncOp = Instruction::Add;
     for (unsigned Part = 0; Part < UF; ++Part) {
       Value *StartIdx = ConstantInt::get(ScalarTy, Part);
-      Instruction::BinaryOps MulOp = Instruction::Mul;
+      Value *EntryPart;
       if (Step->getType()->isFloatingPointTy()) {
         StartIdx = Builder.CreateUIToFP(StartIdx, Step->getType());
-        MulOp = Instruction::FMul;
+        Value *MulOp = Builder.CreateFMul(StartIdx, Step);
+        EntryPart = Builder.CreateBinOp(ID.getInductionOpcode(), ScalarIV,
+                                        MulOp, "induction");
+      } else {
+        EntryPart = Builder.CreateAdd(
+            ScalarIV, Builder.CreateMul(StartIdx, Step), "induction");
+        EntryPart->dump();
       }
-
-      Value *Mul = Builder.CreateBinOp(MulOp, StartIdx, Step);
-      Value *EntryPart = Builder.CreateBinOp(IncOp, ScalarIV, Mul, "induction");
       State.set(Def, EntryPart, Part);
       if (Trunc) {
         assert(!Step->getType()->isFloatingPointTy() &&

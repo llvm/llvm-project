@@ -15,9 +15,9 @@ define void @test_nonconst_start_and_step(i32* %dst, i32 %start, i32 %step, i64 
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 [[TMP2]], [[NEG_STEP]]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i32 %start, [[TMP3]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul i32 0, [[NEG_STEP]]
-; CHECK-NEXT:    [[INDUCTION:%.*]] = sub i32 [[OFFSET_IDX]], [[TMP4]]
+; CHECK-NEXT:    [[INDUCTION:%.*]] = add i32 [[OFFSET_IDX]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i32 1, [[NEG_STEP]]
-; CHECK-NEXT:    [[INDUCTION2:%.*]] = sub i32 [[OFFSET_IDX]], [[TMP5]]
+; CHECK-NEXT:    [[INDUCTION2:%.*]] = add i32 [[OFFSET_IDX]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub nsw i32 [[INDUCTION]], %step
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub nsw i32 [[INDUCTION2]], %step
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, i32* [[DST:%.*]], i64 [[INDUCTION3]]
