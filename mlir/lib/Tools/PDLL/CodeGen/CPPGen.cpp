@@ -184,9 +184,9 @@ void CodeGen::generateConstraintOrRewrite(StringRef name, bool isConstraint,
         .Case([&](ast::ValueRangeType) { return "::mlir::ValueRange"; });
   };
   os << "static " << (isConstraint ? "::mlir::LogicalResult " : "void ") << name
-     << "PDLFn(::llvm::ArrayRef<::mlir::PDLValue> values, "
-        "::mlir::PatternRewriter &rewriter"
-     << (isConstraint ? "" : ", ::mlir::PDLResultList &results") << ") {\n";
+     << "PDLFn(::mlir::PatternRewriter &rewriter, "
+     << (isConstraint ? "" : "::mlir::PDLResultList &results, ")
+     << "::llvm::ArrayRef<::mlir::PDLValue> values) {\n";
 
   const char *argumentInitStr = R"(
   {0} {1} = {{};

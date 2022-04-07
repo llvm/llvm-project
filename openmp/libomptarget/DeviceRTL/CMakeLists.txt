@@ -225,16 +225,19 @@ function(compileDeviceRTLLibrary target_cpu target_name)
   add_custom_command(TARGET ${bclib_target_name} POST_BUILD
                     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name}
                     ${LIBOMPTARGET_LIBRARY_DIR})
+  add_dependencies("omptarget.devicertl.${target_name}" "${bclib_target_name}")
 
   # Install bitcode library under the lib destination folder.
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name} DESTINATION "${OPENMP_INSTALL_LIBDIR}")
 endfunction()
 
 # Generate a Bitcode library for all the compute capabilities the user requested
+add_custom_target(omptarget.devicertl.nvptx)
 foreach(sm ${nvptx_sm_list})
   compileDeviceRTLLibrary(sm_${sm} nvptx -target nvptx64-nvidia-cuda -Xclang -target-feature -Xclang +ptx61 "-D__CUDA_ARCH__=${sm}0")
 endforeach()
 
+add_custom_target(omptarget.devicertl.amdgpu)
 foreach(mcpu ${amdgpu_mcpus})
   compileDeviceRTLLibrary(${mcpu} amdgpu -target amdgcn-amd-amdhsa -D__AMDGCN__ -nogpulib)
 endforeach()

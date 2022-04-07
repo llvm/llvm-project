@@ -30421,7 +30421,8 @@ bool X86TargetLowering::needsCmpXchgNb(Type *MemType) const {
   return false;
 }
 
-bool X86TargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
+TargetLoweringBase::AtomicExpansionKind
+X86TargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
   Type *MemType = SI->getValueOperand()->getType();
 
   bool NoImplicitFloatOps =
@@ -30429,9 +30430,10 @@ bool X86TargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
   if (MemType->getPrimitiveSizeInBits() == 64 && !Subtarget.is64Bit() &&
       !Subtarget.useSoftFloat() && !NoImplicitFloatOps &&
       (Subtarget.hasSSE1() || Subtarget.hasX87()))
-    return false;
+    return AtomicExpansionKind::None;
 
-  return needsCmpXchgNb(MemType);
+  return needsCmpXchgNb(MemType) ? AtomicExpansionKind::Expand
+                                 : AtomicExpansionKind::None;
 }
 
 // Note: this turns large loads into lock cmpxchg8b/16b.

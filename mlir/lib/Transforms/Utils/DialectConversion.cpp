@@ -1673,8 +1673,8 @@ void ConversionPatternRewriter::cancelRootUpdate(Operation *op) {
 }
 
 LogicalResult ConversionPatternRewriter::notifyMatchFailure(
-    Operation *op, function_ref<void(Diagnostic &)> reasonCallback) {
-  return impl->notifyMatchFailure(op->getLoc(), reasonCallback);
+    Location loc, function_ref<void(Diagnostic &)> reasonCallback) {
+  return impl->notifyMatchFailure(loc, reasonCallback);
 }
 
 detail::ConversionPatternRewriterImpl &ConversionPatternRewriter::getImpl() {

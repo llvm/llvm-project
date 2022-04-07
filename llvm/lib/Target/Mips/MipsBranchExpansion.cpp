@@ -36,7 +36,8 @@
 ///
 /// Regarding compact branch hazard prevention:
 ///
-/// Hazards handled: forbidden slots for MIPSR6, FPU slots for MIPS3 and below.
+/// Hazards handled: forbidden slots for MIPSR6, FPU slots for MIPS3 and below,
+/// load delay slots for MIPS1.
 ///
 /// A forbidden slot hazard occurs when a compact branch instruction is executed
 /// and the adjacent instruction in memory is a control transfer instruction
@@ -164,6 +165,7 @@ private:
   bool handleSlot(Pred Predicate, Safe SafeInSlot);
   bool handleForbiddenSlot();
   bool handleFPUDelaySlot();
+  bool handleLoadDelaySlot();
   bool handlePossibleLongBranch();
 
   const MipsSubtarget *STI;
@@ -762,7 +764,6 @@ bool MipsBranchExpansion::handleSlot(Pred Predicate, Safe SafeInSlot) {
       }
 
       if (LastInstInFunction || !SafeInSlot(*IInSlot, *I)) {
-
         MachineBasicBlock::instr_iterator Iit = I->getIterator();
         if (std::next(Iit) == FI->end() ||
             std::next(Iit)->getOpcode() != Mips::NOP) {
@@ -799,6 +800,18 @@ bool MipsBranchExpansion::handleFPUDelaySlot() {
                     [this](auto &IInSlot, auto &I) -> bool {
                       return TII->SafeInFPUDelaySlot(IInSlot, I);
                     });
+}
+
+bool MipsBranchExpansion::handleLoadDelaySlot() {
+  // Load delay slot hazards are only for MIPS1.
+  if (STI->hasMips2())
+    return false;
+
+  return handleSlot(
+      [this](auto &I) -> bool { return TII->HasLoadDelaySlot(I); },
+      [this](auto &IInSlot, auto &I) -> bool {
+        return TII->SafeInLoadDelaySlot(IInSlot, I);
+      });
 }
 
 bool MipsBranchExpansion::handlePossibleLongBranch() {
@@ -877,19 +890,21 @@ bool MipsBranchExpansion::runOnMachineFunction(MachineFunction &MF) {
   MFp = &MF;
 
   ForceLongBranchFirstPass = ForceLongBranch;
-  // Run these two at least once
+  // Run these at least once.
   bool longBranchChanged = handlePossibleLongBranch();
   bool forbiddenSlotChanged = handleForbiddenSlot();
   bool fpuDelaySlotChanged = handleFPUDelaySlot();
+  bool loadDelaySlotChanged = handleLoadDelaySlot();
 
-  bool Changed =
-      longBranchChanged || forbiddenSlotChanged || fpuDelaySlotChanged;
+  bool Changed = longBranchChanged || forbiddenSlotChanged ||
+                 fpuDelaySlotChanged || loadDelaySlotChanged;
 
-  // Then run them alternatively while there are changes
+  // Then run them alternatively while there are changes.
   while (forbiddenSlotChanged) {
     longBranchChanged = handlePossibleLongBranch();
     fpuDelaySlotChanged = handleFPUDelaySlot();
-    if (!longBranchChanged && !fpuDelaySlotChanged)
+    loadDelaySlotChanged = handleLoadDelaySlot();
+    if (!longBranchChanged && !fpuDelaySlotChanged && !loadDelaySlotChanged)
       break;
     forbiddenSlotChanged = handleForbiddenSlot();
   }
