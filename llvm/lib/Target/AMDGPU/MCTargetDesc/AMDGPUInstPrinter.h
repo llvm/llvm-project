@@ -234,6 +234,8 @@ protected:
                     raw_ostream &O);
   void printWaitFlag(const MCInst *MI, unsigned OpNo,
                      const MCSubtargetInfo &STI, raw_ostream &O);
+  void printDepCtr(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
+                   raw_ostream &O);
   void printHwreg(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                   raw_ostream &O);
   void printEndpgm(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,

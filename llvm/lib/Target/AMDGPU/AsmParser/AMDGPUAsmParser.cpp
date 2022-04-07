@@ -818,6 +818,7 @@ public:
   }
 
   bool isSWaitCnt() const;
+  bool isDepCtr() const;
   bool isHwreg() const;
   bool isSendMsg() const;
   bool isSwizzle() const;
@@ -1543,6 +1544,11 @@ public:
 
   bool parseCnt(int64_t &IntVal);
   OperandMatchResultTy parseSWaitCntOps(OperandVector &Operands);
+
+  bool parseDepCtr(int64_t &IntVal, unsigned &Mask);
+  void depCtrError(SMLoc Loc, int ErrorId, StringRef DepCtrName);
+  OperandMatchResultTy parseDepCtrOps(OperandVector &Operands);
+
   OperandMatchResultTy parseHwreg(OperandVector &Operands);
 
 private:
@@ -6332,6 +6338,91 @@ bool
 AMDGPUOperand::isSWaitCnt() const {
   return isImm();
 }
+
+//===----------------------------------------------------------------------===//
+// DepCtr
+//===----------------------------------------------------------------------===//
+
+void AMDGPUAsmParser::depCtrError(SMLoc Loc, int ErrorId,
+                                  StringRef DepCtrName) {
+  switch (ErrorId) {
+  case OPR_ID_UNKNOWN:
+    Error(Loc, Twine("invalid counter name ", DepCtrName));
+    return;
+  case OPR_ID_UNSUPPORTED:
+    Error(Loc, Twine(DepCtrName, " is not supported on this GPU"));
+    return;
+  case OPR_ID_DUPLICATE:
+    Error(Loc, Twine("duplicate counter name ", DepCtrName));
+    return;
+  case OPR_VAL_INVALID:
+    Error(Loc, Twine("invalid value for ", DepCtrName));
+    return;
+  default:
+    assert(false);
+  }
+}
+
+bool AMDGPUAsmParser::parseDepCtr(int64_t &DepCtr, unsigned &UsedOprMask) {
+
+  using namespace llvm::AMDGPU::DepCtr;
+
+  SMLoc DepCtrLoc = getLoc();
+  StringRef DepCtrName = getTokenStr();
+
+  if (!skipToken(AsmToken::Identifier, "expected a counter name") ||
+      !skipToken(AsmToken::LParen, "expected a left parenthesis"))
+    return false;
+
+  int64_t ExprVal;
+  if (!parseExpr(ExprVal))
+    return false;
+
+  unsigned PrevOprMask = UsedOprMask;
+  int CntVal = encodeDepCtr(DepCtrName, ExprVal, UsedOprMask, getSTI());
+
+  if (CntVal < 0) {
+    depCtrError(DepCtrLoc, CntVal, DepCtrName);
+    return false;
+  }
+
+  if (!skipToken(AsmToken::RParen, "expected a closing parenthesis"))
+    return false;
+
+  if (trySkipToken(AsmToken::Amp) || trySkipToken(AsmToken::Comma)) {
+    if (isToken(AsmToken::EndOfStatement)) {
+      Error(getLoc(), "expected a counter name");
+      return false;
+    }
+  }
+
+  unsigned CntValMask = PrevOprMask ^ UsedOprMask;
+  DepCtr = (DepCtr & ~CntValMask) | CntVal;
+  return true;
+}
+
+OperandMatchResultTy AMDGPUAsmParser::parseDepCtrOps(OperandVector &Operands) {
+  using namespace llvm::AMDGPU::DepCtr;
+
+  int64_t DepCtr = getDefaultDepCtrEncoding(getSTI());
+  SMLoc Loc = getLoc();
+
+  if (isToken(AsmToken::Identifier) && peekToken().is(AsmToken::LParen)) {
+    unsigned UsedOprMask = 0;
+    while (!isToken(AsmToken::EndOfStatement)) {
+      if (!parseDepCtr(DepCtr, UsedOprMask))
+        return MatchOperand_ParseFail;
+    }
+  } else {
+    if (!parseExpr(DepCtr))
+      return MatchOperand_ParseFail;
+  }
+
+  Operands.push_back(AMDGPUOperand::CreateImm(this, DepCtr, Loc));
+  return MatchOperand_Success;
+}
+
+bool AMDGPUOperand::isDepCtr() const { return isS16Imm(); }
 
 //===----------------------------------------------------------------------===//
 // hwreg

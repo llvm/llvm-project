@@ -1343,7 +1343,7 @@ let SubtargetPredicate = isGFX10Plus in {
       let fixed_imm = 1;
     }
   def S_WAITCNT_DEPCTR :
-    SOPP_Pseudo <"s_waitcnt_depctr" , (ins s16imm:$simm16), "$simm16">;
+    SOPP_Pseudo <"s_waitcnt_depctr" , (ins DepCtrImm:$simm16), "$simm16">;
 
   let hasSideEffects = 0, Uses = [MODE], Defs = [MODE] in {
     def S_ROUND_MODE :
