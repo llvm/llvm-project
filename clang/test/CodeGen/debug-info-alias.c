@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited %s -target x86_64-unknown-linux-gnu -o - | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited %s -triple x86_64-unknown-linux-gnu -o - | FileCheck %s
 
 // CHECK-DAG: [[ENTITY1:![0-9]+]] = distinct !DIGlobalVariable(name: "aliased_global"
 // CHECK-DAG: [[ENTITY2:![0-9]+]] = distinct !DIGlobalVariable(name: "aliased_global_2"
