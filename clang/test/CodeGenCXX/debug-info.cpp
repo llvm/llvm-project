@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-none-linux-gnu -emit-llvm -debug-info-kind=limited %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=BOTH
-// RUN: %clang_cc1 -triple i686-pc-windows-msvc -emit-llvm -debug-info-kind=limited %s -o - | FileCheck %s --check-prefix=MSVC --check-prefix=BOTH
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-none-linux-gnu -emit-llvm -debug-info-kind=limited %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=BOTH
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-pc-windows-msvc -emit-llvm -debug-info-kind=limited %s -o - | FileCheck %s --check-prefix=MSVC --check-prefix=BOTH
 
 // CHECK: @_ZN6pr96081xE ={{.*}} global [3 x i8]* null, align 8, !dbg [[X:![0-9]+]]
 

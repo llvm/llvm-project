@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -w -triple i686-pc-win32 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -w -triple i686-pc-win32 -emit-llvm -o - %s | FileCheck %s
 
 // PR44395
 // MSVC passes up to three vectors in registers, and the rest indirectly. Check

@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -ffreestanding -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 \
+// RUN: %clang_cc1 -no-opaque-pointers -ffreestanding -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 \
 // RUN:         -Werror -triple i686-windows-msvc -emit-llvm %s -o - | FileCheck %s --check-prefix=X86
-// RUN: %clang_cc1 -ffreestanding -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 \
+// RUN: %clang_cc1 -no-opaque-pointers -ffreestanding -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 \
 // RUN:         -Werror -triple x86_64-windows-msvc -emit-llvm %s -o - | FileCheck %s --check-prefix=X64
 
 // intrin.h needs size_t, but -ffreestanding prevents us from getting it from

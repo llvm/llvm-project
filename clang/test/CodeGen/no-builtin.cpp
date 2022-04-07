@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -S -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -S -emit-llvm -o - %s | FileCheck %s
 // UNSUPPORTED: ppc64be
 
 // CHECK-LABEL: define{{.*}} void @foo_no_mempcy() #0

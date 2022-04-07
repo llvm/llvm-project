@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple powerpc64-unknown-linux-gnu -emit-llvm -x c++ \
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc64-unknown-linux-gnu -emit-llvm -x c++ \
 // RUN:   -o - %s | FileCheck %s -check-prefix=CHECK-BE
-// RUN: %clang_cc1 -triple powerpc64le-unknown-linux-gnu -emit-llvm -x c++ \
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc64le-unknown-linux-gnu -emit-llvm -x c++ \
 // RUN:   -o - %s | FileCheck %s -check-prefix=CHECK-LE
 
 class agg_float_class { float a; };

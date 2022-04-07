@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++14 -triple x86_64-unknown-unknown %s -emit-llvm -o - | FileCheck %s
 
 typedef __typeof__(sizeof(0)) size_t;
 

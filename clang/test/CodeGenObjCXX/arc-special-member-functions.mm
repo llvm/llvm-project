@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -fobjc-arc -fblocks -triple x86_64-apple-darwin10.0.0 -fobjc-runtime-has-weak -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -fobjc-arc -fblocks -triple x86_64-apple-darwin10.0.0 -fobjc-runtime-has-weak -emit-llvm -o - %s | FileCheck %s
 
 struct ObjCMember {
   id member;

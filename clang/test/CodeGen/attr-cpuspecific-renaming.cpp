@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -o - -debug-info-kind=constructor -dwarf-version=4 -debugger-tuning=gdb %s | FileCheck %s --check-prefixes=CHECK,LIN
-// RUN: %clang_cc1 -triple x86_64-windows-pc -emit-llvm -o - -debug-info-kind=constructor -dwarf-version=4 -debugger-tuning=gdb %s | FileCheck %s --check-prefixes=CHECK,WIN
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -emit-llvm -o - -debug-info-kind=constructor -dwarf-version=4 -debugger-tuning=gdb %s | FileCheck %s --check-prefixes=CHECK,LIN
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-windows-pc -emit-llvm -o - -debug-info-kind=constructor -dwarf-version=4 -debugger-tuning=gdb %s | FileCheck %s --check-prefixes=CHECK,WIN
 
 // LIN: @[[S1_NAME:.+]].ifunc = weak_odr ifunc void (%struct.S1*), void (%struct.S1*)* ()* @[[S1_NAME]].resolver
 // LIN: @[[S2_NAME:.+]].ifunc = weak_odr ifunc void (%struct.S2*), void (%struct.S2*)* ()* @[[S2_NAME]].resolver

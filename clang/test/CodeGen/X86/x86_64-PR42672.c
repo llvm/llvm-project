@@ -1,11 +1,11 @@
-// RUN: %clang_cc1 -triple=x86_64-unknown-linux-gnu -DSTRUCT -emit-llvm %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-STRUCT
-// RUN: %clang_cc1 -triple=x86_64-unknown-linux-gnu -USTRUCT -emit-llvm %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-NOSTRUCT
-// RUN: not %clang_cc1 -triple=x86_64-unknown-linux-gnu -DIMPOSSIBLE_ODD -emit-llvm %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-IMPOSSIBLE_ODD
-// RUN: not %clang_cc1 -triple=x86_64-unknown-linux-gnu -DIMPOSSIBLE_BIG -emit-llvm %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-IMPOSSIBLE_BIG
-// RUN: %clang_cc1 -triple=x86_64-unknown-linux-gnu -DPOSSIBLE_X -emit-llvm %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-X
-// RUN: not %clang_cc1 -triple=x86_64-unknown-linux-gnu -DIMPOSSIBLE_X -emit-llvm %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-IMPOSSIBLE_X
-// RUN: not %clang_cc1 -triple=x86_64-unknown-linux-gnu -DIMPOSSIBLE_9BYTES -emit-llvm %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-IMPOSSIBLE_9BYTES
-// RUN: not %clang_cc1 -triple=x86_64-unknown-linux-gnu -DIMPOSSIBLE_9BYTES_V2 -emit-llvm %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-IMPOSSIBLE_9BYTES_V2
+// RUN: %clang_cc1 -no-opaque-pointers -triple=x86_64-unknown-linux-gnu -DSTRUCT -emit-llvm %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-STRUCT
+// RUN: %clang_cc1 -no-opaque-pointers -triple=x86_64-unknown-linux-gnu -USTRUCT -emit-llvm %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-NOSTRUCT
+// RUN: not %clang_cc1 -no-opaque-pointers -triple=x86_64-unknown-linux-gnu -DIMPOSSIBLE_ODD -emit-llvm %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-IMPOSSIBLE_ODD
+// RUN: not %clang_cc1 -no-opaque-pointers -triple=x86_64-unknown-linux-gnu -DIMPOSSIBLE_BIG -emit-llvm %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-IMPOSSIBLE_BIG
+// RUN: %clang_cc1 -no-opaque-pointers -triple=x86_64-unknown-linux-gnu -DPOSSIBLE_X -emit-llvm %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-X
+// RUN: not %clang_cc1 -no-opaque-pointers -triple=x86_64-unknown-linux-gnu -DIMPOSSIBLE_X -emit-llvm %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-IMPOSSIBLE_X
+// RUN: not %clang_cc1 -no-opaque-pointers -triple=x86_64-unknown-linux-gnu -DIMPOSSIBLE_9BYTES -emit-llvm %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-IMPOSSIBLE_9BYTES
+// RUN: not %clang_cc1 -no-opaque-pointers -triple=x86_64-unknown-linux-gnu -DIMPOSSIBLE_9BYTES_V2 -emit-llvm %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-IMPOSSIBLE_9BYTES_V2
 
 // Make sure Clang doesn't treat |lockval| as asm input.
 void _raw_spin_lock(void) {

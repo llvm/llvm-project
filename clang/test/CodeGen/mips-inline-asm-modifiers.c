@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple mipsel-unknown-linux -o - -emit-llvm %s \
+// RUN: %clang_cc1 -no-opaque-pointers -triple mipsel-unknown-linux -o - -emit-llvm %s \
 // RUN: | FileCheck %s
 
 // This checks that the frontend will accept inline asm operand modifiers

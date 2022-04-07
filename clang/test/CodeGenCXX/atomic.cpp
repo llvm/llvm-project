@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -emit-llvm -o - -triple=i686-apple-darwin9 | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -triple=i686-apple-darwin9 | FileCheck %s
 
 namespace PR11411 {
   template<typename _Tp> struct Ptr {

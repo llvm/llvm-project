@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple powerpc64le-unknown-linux-gnu -emit-llvm \
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc64le-unknown-linux-gnu -emit-llvm \
 // RUN:   -o - %s | FileCheck %s
 
 int A;

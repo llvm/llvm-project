@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -emit-llvm -triple=wasm32-unknown-unknown -target-feature +atomics -target-feature +bulk-memory -o - %s \
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple=wasm32-unknown-unknown -target-feature +atomics -target-feature +bulk-memory -o - %s \
 // RUN:   | FileCheck %s -check-prefix=WEBASSEMBLY32
-// RUN: %clang_cc1 -emit-llvm -triple=wasm64-unknown-unknown -target-feature +atomics -target-feature +bulk-memory -o - %s \
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple=wasm64-unknown-unknown -target-feature +atomics -target-feature +bulk-memory -o - %s \
 // RUN:   | FileCheck %s -check-prefix=WEBASSEMBLY64
 
 // Test that we don't create common blocks.
@@ -53,9 +53,9 @@ A theA;
 // WEBASSEMBLY64: define internal void @_GLOBAL__sub_I_static_init_wasm.cpp() #3 {
 // WEBASSEMBLY64: call void @__cxx_global_var_init()
 
-// RUN: %clang_cc1 -emit-llvm -triple=wasm32-unknown-unknown -target-feature +bulk-memory -o - %s \
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple=wasm32-unknown-unknown -target-feature +bulk-memory -o - %s \
 // RUN:   | FileCheck %s -check-prefix=NOATOMICS
-// RUN: %clang_cc1 -emit-llvm -triple=wasm64-unknown-unknown -target-feature +bulk-memory -o - %s \
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple=wasm64-unknown-unknown -target-feature +bulk-memory -o - %s \
 // RUN:   | FileCheck %s -check-prefix=NOATOMICS
 
 // NOATOMICS-LABEL: @_Z1gv()
@@ -67,9 +67,9 @@ A theA;
 // NOATOMICS:       [[END]]:
 // NOATOMICS-NEXT:  ret void
 
-// RUN: %clang_cc1 -emit-llvm -triple=wasm32-unknown-unknown -target-feature +atomics -o - %s \
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple=wasm32-unknown-unknown -target-feature +atomics -o - %s \
 // RUN:   | FileCheck %s -check-prefix=NOBULKMEM
-// RUN: %clang_cc1 -emit-llvm -triple=wasm64-unknown-unknown -target-feature +atomics -o - %s \
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple=wasm64-unknown-unknown -target-feature +atomics -o - %s \
 // RUN:   | FileCheck %s -check-prefix=NOBULKMEM
 
 // NOBULKMEM-LABEL: @_Z1gv()

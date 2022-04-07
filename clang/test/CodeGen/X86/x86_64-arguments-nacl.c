@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-nacl -emit-llvm -o - %s| FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-nacl -emit-llvm -o - %s| FileCheck %s
 #include <stdarg.h>
 // Test for x86-64 structure representation (instead of pnacl representation),
 // in particular for unions. Also crib a few tests from x86 Linux.

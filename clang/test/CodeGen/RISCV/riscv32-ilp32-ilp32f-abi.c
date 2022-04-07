@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple riscv32 -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -triple riscv32 -target-feature +f -target-abi ilp32f -emit-llvm %s -o - \
+// RUN: %clang_cc1 -no-opaque-pointers -triple riscv32 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple riscv32 -target-feature +f -target-abi ilp32f -emit-llvm %s -o - \
 // RUN:     | FileCheck %s
 
 // This file contains test cases that will have the same output for the ilp32

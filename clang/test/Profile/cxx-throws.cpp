@@ -3,12 +3,12 @@
 // FIXME: Don't seek bb labels, like "if.else"
 // REQUIRES: asserts
 
-// RUN: %clang_cc1 %s -o - -emit-llvm -fprofile-instrument=clang -fexceptions -fcxx-exceptions -triple %itanium_abi_triple | FileCheck -check-prefix=PGOGEN %s
-// RUN: %clang_cc1 %s -o - -emit-llvm -fprofile-instrument=clang -fexceptions -fcxx-exceptions -triple %itanium_abi_triple | FileCheck -check-prefix=PGOGEN-EXC %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -o - -emit-llvm -fprofile-instrument=clang -fexceptions -fcxx-exceptions -triple %itanium_abi_triple | FileCheck -check-prefix=PGOGEN %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -o - -emit-llvm -fprofile-instrument=clang -fexceptions -fcxx-exceptions -triple %itanium_abi_triple | FileCheck -check-prefix=PGOGEN-EXC %s
 
 // RUN: llvm-profdata merge %S/Inputs/cxx-throws.proftext -o %t.profdata
-// RUN: %clang_cc1 %s -o - -emit-llvm -fprofile-instrument-use-path=%t.profdata -fexceptions -fcxx-exceptions -triple %itanium_abi_triple | FileCheck -check-prefix=PGOUSE %s
-// RUN: %clang_cc1 %s -o - -emit-llvm -fprofile-instrument-use-path=%t.profdata -fexceptions -fcxx-exceptions -triple %itanium_abi_triple | FileCheck -check-prefix=PGOUSE-EXC %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -o - -emit-llvm -fprofile-instrument-use-path=%t.profdata -fexceptions -fcxx-exceptions -triple %itanium_abi_triple | FileCheck -check-prefix=PGOUSE %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -o - -emit-llvm -fprofile-instrument-use-path=%t.profdata -fexceptions -fcxx-exceptions -triple %itanium_abi_triple | FileCheck -check-prefix=PGOUSE-EXC %s
 
 // PGOGEN: @[[THC:__profc__Z6throwsv]] = {{(private|internal)}} global [9 x i64] zeroinitializer
 // PGOGEN-EXC: @[[THC:__profc__Z6throwsv]] = {{(private|internal)}} global [9 x i64] zeroinitializer

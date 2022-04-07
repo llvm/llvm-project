@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -Wall -Werror -triple thumbv8-linux-gnueabi -fno-signed-char -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -Wall -Werror -triple arm64-apple-ios7.0 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-ARM64
+// RUN: %clang_cc1 -no-opaque-pointers -Wall -Werror -triple thumbv8-linux-gnueabi -fno-signed-char -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -Wall -Werror -triple arm64-apple-ios7.0 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-ARM64
 
 bool b;
 

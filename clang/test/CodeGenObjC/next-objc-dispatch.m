@@ -1,16 +1,16 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin9 -fobjc-runtime=macosx-fragile-10.5 -emit-llvm -o - %s \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin9 -fobjc-runtime=macosx-fragile-10.5 -emit-llvm -o - %s \
 // RUN:   -fobjc-dispatch-method=legacy | \
 // RUN:   FileCheck -check-prefix CHECK-FRAGILE_LEGACY %s
 //
-// RUN: %clang_cc1 -triple x86_64-apple-darwin9 -emit-llvm -o - %s    \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin9 -emit-llvm -o - %s    \
 // RUN:   -fobjc-dispatch-method=legacy | \
 // RUN:   FileCheck -check-prefix CHECK-NONFRAGILE_LEGACY %s
 //
-// RUN: %clang_cc1 -triple x86_64-apple-darwin9 -emit-llvm -o - %s    \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin9 -emit-llvm -o - %s    \
 // RUN:   -fobjc-dispatch-method=non-legacy | \
 // RUN:   FileCheck -check-prefix CHECK-NONFRAGILE_NONLEGACY %s
 //
-// RUN: %clang_cc1 -triple x86_64-apple-darwin9 -emit-llvm -o - %s    \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin9 -emit-llvm -o - %s    \
 // RUN:   -fobjc-dispatch-method=mixed | \
 // RUN:   FileCheck -check-prefix CHECK-NONFRAGILE_MIXED %s
 //

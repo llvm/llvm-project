@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fblocks -triple x86_64-apple-darwin9 %s -emit-llvm -o - | FileCheck %s -check-prefix=X64
-// RUN: %clang_cc1 -fblocks -triple i686-apple-darwin9 %s -emit-llvm -o - | FileCheck %s -check-prefix=X32
+// RUN: %clang_cc1 -no-opaque-pointers -fblocks -triple x86_64-apple-darwin9 %s -emit-llvm -o - | FileCheck %s -check-prefix=X64
+// RUN: %clang_cc1 -no-opaque-pointers -fblocks -triple i686-apple-darwin9 %s -emit-llvm -o - | FileCheck %s -check-prefix=X32
 
 // X64: @.str = private unnamed_addr constant [6 x i8] c"v8@?0\00" 
 // X64: @__block_literal_global = internal constant {{.*}} { i8** @_NSConcreteGlobalBlock, i32 1342177280,

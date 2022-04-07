@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i686-pc-win32 -fms-extensions -emit-llvm -O1 -disable-llvm-passes %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-pc-win32 -fms-extensions -emit-llvm -O1 -disable-llvm-passes %s -o - | FileCheck %s
 
 class __declspec(dllimport) A {
   virtual void m_fn1();

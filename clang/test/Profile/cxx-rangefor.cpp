@@ -1,10 +1,10 @@
 // Tests for instrumentation of C++11 range-for
 
-// RUN: %clang_cc1 -x c++ %s -triple %itanium_abi_triple -main-file-name cxx-rangefor.cpp -std=c++11 -o - -emit-llvm -fprofile-instrument=clang > %tgen
+// RUN: %clang_cc1 -no-opaque-pointers -x c++ %s -triple %itanium_abi_triple -main-file-name cxx-rangefor.cpp -std=c++11 -o - -emit-llvm -fprofile-instrument=clang > %tgen
 // RUN: FileCheck --input-file=%tgen -check-prefix=CHECK -check-prefix=PGOGEN %s
 
 // RUN: llvm-profdata merge %S/Inputs/cxx-rangefor.proftext -o %t.profdata
-// RUN: %clang_cc1 -x c++ %s -triple %itanium_abi_triple -main-file-name cxx-rangefor.cpp -std=c++11 -o - -emit-llvm -fprofile-instrument-use-path=%t.profdata > %tuse
+// RUN: %clang_cc1 -no-opaque-pointers -x c++ %s -triple %itanium_abi_triple -main-file-name cxx-rangefor.cpp -std=c++11 -o - -emit-llvm -fprofile-instrument-use-path=%t.profdata > %tuse
 // RUN: FileCheck --input-file=%tuse -check-prefix=CHECK -check-prefix=PGOUSE %s
 
 // PGOGEN: @[[RFC:__profc__Z9range_forv]] = {{(private|internal)}} global [5 x i64] zeroinitializer

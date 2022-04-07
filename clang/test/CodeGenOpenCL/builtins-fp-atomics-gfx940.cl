@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgcn-amd-amdhsa -target-cpu gfx940 \
+// RUN: %clang_cc1 -no-opaque-pointers -O0 -cl-std=CL2.0 -triple amdgcn-amd-amdhsa -target-cpu gfx940 \
 // RUN:   %s -S -emit-llvm -o - | FileCheck %s
 
-// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgcn-amd-amdhsa -target-cpu gfx940 \
+// RUN: %clang_cc1 -no-opaque-pointers -O0 -cl-std=CL2.0 -triple amdgcn-amd-amdhsa -target-cpu gfx940 \
 // RUN:   -S -o - %s | FileCheck -check-prefix=GFX940 %s
 
 // REQUIRES: amdgpu-registered-target

@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=NEWABI
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown -fclang-abi-compat=4.0 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=OLDABI
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-scei-ps4 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=OLDABI
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-windows-msvc -emit-llvm -o - %s -fms-compatibility -fms-compatibility-version=18 | FileCheck %s -check-prefix=WIN64 -check-prefix=WIN64-18
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-windows-msvc -emit-llvm -o - %s -fms-compatibility -fms-compatibility-version=19 | FileCheck %s -check-prefix=WIN64 -check-prefix=WIN64-19
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -triple x86_64-unknown-unknown -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=NEWABI
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -triple x86_64-unknown-unknown -fclang-abi-compat=4.0 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=OLDABI
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -triple x86_64-scei-ps4 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=OLDABI
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -triple x86_64-windows-msvc -emit-llvm -o - %s -fms-compatibility -fms-compatibility-version=18 | FileCheck %s -check-prefix=WIN64 -check-prefix=WIN64-18
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -triple x86_64-windows-msvc -emit-llvm -o - %s -fms-compatibility -fms-compatibility-version=19 | FileCheck %s -check-prefix=WIN64 -check-prefix=WIN64-19
 
 namespace trivial {
 // Trivial structs should be passed directly.

@@ -1,6 +1,6 @@
 // Check the layout of the vtable for a normal class.
 
-// RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -O1 -S -o - -emit-llvm -fhalf-no-semantic-interposition | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=aarch64-unknown-fuchsia -O1 -S -o - -emit-llvm -fhalf-no-semantic-interposition | FileCheck %s
 
 // We should be emitting comdats for each of the virtual function RTTI proxies
 // CHECK: $_ZTI1A.rtti_proxy = comdat any

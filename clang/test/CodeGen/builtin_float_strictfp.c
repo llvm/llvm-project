@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -emit-llvm -triple x86_64-windows-pc -ffp-exception-behavior=maytrap -o - %s | FileCheck %s --check-prefixes=CHECK,FP16
-// RUN: %clang_cc1 -emit-llvm -triple ppc64-be -ffp-exception-behavior=maytrap -o - %s | FileCheck %s --check-prefixes=CHECK,NOFP16
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple x86_64-windows-pc -ffp-exception-behavior=maytrap -o - %s | FileCheck %s --check-prefixes=CHECK,FP16
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple ppc64-be -ffp-exception-behavior=maytrap -o - %s | FileCheck %s --check-prefixes=CHECK,NOFP16
 
 // test to ensure that these builtins don't do the variadic promotion of float->double.
 

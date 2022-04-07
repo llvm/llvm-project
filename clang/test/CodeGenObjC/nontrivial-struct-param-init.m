@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i386-apple-watchos6.0-simulator -emit-llvm -fblocks -fobjc-arc -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i386-apple-watchos6.0-simulator -emit-llvm -fblocks -fobjc-arc -o - %s | FileCheck %s
 
 // CHECK: %[[STRUCT_S:.*]] = type { i8* }
 

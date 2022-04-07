@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -triple i386-unknown-unknown -emit-llvm -O1 -relaxed-aliasing -fstrict-enums -std=c++11 -o - | FileCheck %s
-// RUN: %clang_cc1 %s -triple i386-unknown-unknown -emit-llvm -O1 -relaxed-aliasing -std=c++11 -o - | FileCheck --check-prefix=NO-STRICT-ENUMS %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple i386-unknown-unknown -emit-llvm -O1 -relaxed-aliasing -fstrict-enums -std=c++11 -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple i386-unknown-unknown -emit-llvm -O1 -relaxed-aliasing -std=c++11 -o - | FileCheck --check-prefix=NO-STRICT-ENUMS %s
 
 bool f(bool *x) {
   return *x;

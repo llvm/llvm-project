@@ -1,15 +1,15 @@
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.11 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,CHECK_LINK_OPT %s
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.11 -emit-llvm -o - -D USE_BUILTIN %s | FileCheck --check-prefixes=CHECK,CHECK_LINK_OPT %s
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.11 -emit-llvm -o - -D DEF_CF %s | FileCheck --check-prefixes=CHECK_CF,CHECK_LINK_OPT %s
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.12 -emit-llvm -o - %s | FileCheck --check-prefix=CHECK_NO_GUARD %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux -emit-llvm -o - %s | FileCheck --check-prefix=CHECK_NO_GUARD %s
-// RUN: %clang_cc1 -triple x86_64-apple-macos10.15 -DCHECK_OS="macos 10.15.1" -emit-llvm -o - %s | FileCheck --check-prefix=CHECK_NO_GUARD %s
-// RUN: %clang_cc1 -triple arm64-apple-ios13.0 -DCHECK_OS="ios 14" -emit-llvm -o - %s | FileCheck --check-prefix=CHECK_NO_GUARD %s
-// RUN: %clang_cc1 -triple arm64-apple-tvos13.0 -DCHECK_OS="tvos 14" -emit-llvm -o - %s | FileCheck --check-prefix=CHECK_NO_GUARD %s
-// RUN: %clang_cc1 -triple arm64-apple-watchos6.0 -DCHECK_OS="watchos 7" -emit-llvm -o - %s | FileCheck --check-prefix=CHECK_NO_GUARD %s
-// RUN: %clang_cc1 -triple arm64-apple-ios12.0 -DCHECK_OS="ios 13" -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,CHECK_LINK_OPT %s
-// RUN: %clang_cc1 -triple arm64-apple-tvos12.0 -DCHECK_OS="tvos 13" -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,CHECK_LINK_OPT %s
-// RUN: %clang_cc1 -triple arm64-apple-watchos5.0 -DCHECK_OS="watchos 6" -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,CHECK_LINK_OPT %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-macosx10.11 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,CHECK_LINK_OPT %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-macosx10.11 -emit-llvm -o - -D USE_BUILTIN %s | FileCheck --check-prefixes=CHECK,CHECK_LINK_OPT %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-macosx10.11 -emit-llvm -o - -D DEF_CF %s | FileCheck --check-prefixes=CHECK_CF,CHECK_LINK_OPT %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-macosx10.12 -emit-llvm -o - %s | FileCheck --check-prefix=CHECK_NO_GUARD %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux -emit-llvm -o - %s | FileCheck --check-prefix=CHECK_NO_GUARD %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-macos10.15 -DCHECK_OS="macos 10.15.1" -emit-llvm -o - %s | FileCheck --check-prefix=CHECK_NO_GUARD %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple arm64-apple-ios13.0 -DCHECK_OS="ios 14" -emit-llvm -o - %s | FileCheck --check-prefix=CHECK_NO_GUARD %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple arm64-apple-tvos13.0 -DCHECK_OS="tvos 14" -emit-llvm -o - %s | FileCheck --check-prefix=CHECK_NO_GUARD %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple arm64-apple-watchos6.0 -DCHECK_OS="watchos 7" -emit-llvm -o - %s | FileCheck --check-prefix=CHECK_NO_GUARD %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple arm64-apple-ios12.0 -DCHECK_OS="ios 13" -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,CHECK_LINK_OPT %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple arm64-apple-tvos12.0 -DCHECK_OS="tvos 13" -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,CHECK_LINK_OPT %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple arm64-apple-watchos5.0 -DCHECK_OS="watchos 6" -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,CHECK_LINK_OPT %s
 
 #ifdef DEF_CF
 struct CFBundle;

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple  powerpc64le-unknown-unknown -std=c++11 -fopenmp -fexceptions -fcxx-exceptions -O0 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple  powerpc64le-unknown-unknown -std=c++11 -fopenmp -fexceptions -fcxx-exceptions -O0 -emit-llvm %s -o - | FileCheck %s
 
 // Check that regions that install a terminate scope in the exception stack can
 // correctly generate complex arithmetic.

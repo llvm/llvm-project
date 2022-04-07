@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple hexagon-unknown-elf -O2 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple hexagon-unknown-elf -O2 -emit-llvm -o - | FileCheck %s
 
 typedef union __attribute__((aligned(4))) {
   unsigned short uh[2];

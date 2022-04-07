@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -x objective-c -triple=x86_64-apple-darwin9 -emit-llvm -o - < %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -x objective-c -triple=x86_64-apple-darwin9 -emit-llvm -o - < %s | FileCheck %s
 
 // CHECK-DAG: @[[complex_int:.*]] = private unnamed_addr constant [3 x i8] c"ji\00", align 1
 // CHECK-DAG: @a ={{.*}} global i8* getelementptr inbounds ([3 x i8], [3 x i8]* @[[complex_int]], i32 0, i32 0), align 8

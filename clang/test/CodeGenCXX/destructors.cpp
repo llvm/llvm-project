@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 %s -triple x86_64-apple-darwin10 -emit-llvm -o - -mconstructor-aliases -fcxx-exceptions -fexceptions -O1 -disable-llvm-passes -std=c++03 > %t
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple x86_64-apple-darwin10 -emit-llvm -o - -mconstructor-aliases -fcxx-exceptions -fexceptions -O1 -disable-llvm-passes -std=c++03 > %t
 // RUN: FileCheck --check-prefix=CHECK1 --input-file=%t %s
 // RUN: FileCheck --check-prefix=CHECK2 --input-file=%t %s
 // RUN: FileCheck --check-prefix=CHECK3 --input-file=%t %s
 // RUN: FileCheck --check-prefixes=CHECK4,CHECK4v03 --input-file=%t %s
 // RUN: FileCheck --check-prefixes=CHECK5,CHECK5v03 --input-file=%t %s
-// RUN: %clang_cc1 %s -triple x86_64-apple-darwin10 -emit-llvm -o - -mconstructor-aliases -fcxx-exceptions -fexceptions -O1 -disable-llvm-passes -std=c++11 > %t2
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple x86_64-apple-darwin10 -emit-llvm -o - -mconstructor-aliases -fcxx-exceptions -fexceptions -O1 -disable-llvm-passes -std=c++11 > %t2
 // RUN: FileCheck --check-prefix=CHECK1    --input-file=%t2 %s
 // RUN: FileCheck --check-prefix=CHECK2v11 --input-file=%t2 %s
 // RUN: FileCheck --check-prefix=CHECK3    --input-file=%t2 %s

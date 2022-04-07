@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify -triple x86_64-pc-windows-msvc19.22.27905 -emit-llvm -o - -fopenmp %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -verify -triple x86_64-pc-windows-msvc19.22.27905 -emit-llvm -o - -fopenmp %s | FileCheck %s
 // expected-no-diagnostics
 
 // CHECK: [[C_VAR_VAL:@.+]] = private unnamed_addr constant <{ i8, [26 x i8] }> <{ i8 1, [26 x i8] zeroinitializer }>,

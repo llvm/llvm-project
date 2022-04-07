@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fblocks -triple arm64-apple-darwin %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -fblocks -triple arm64-apple-darwin %s -emit-llvm -o - | FileCheck %s
 // rdar://12416433
 
 struct stret { int x[100]; };

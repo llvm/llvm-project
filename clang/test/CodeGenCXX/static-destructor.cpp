@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 %s -triple=x86_64-pc-linux -emit-llvm -o - | FileCheck --check-prefix=X86 %s
-// RUN: %clang_cc1 %s -triple=wasm32 -emit-llvm -o - | FileCheck --check-prefix=WASM %s
-// RUN: %clang_cc1 %s -triple=armv7-apple-darwin9 -emit-llvm -o - | FileCheck --check-prefix=ARM %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=x86_64-pc-linux -emit-llvm -o - | FileCheck --check-prefix=X86 %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=wasm32 -emit-llvm -o - | FileCheck --check-prefix=WASM %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=armv7-apple-darwin9 -emit-llvm -o - | FileCheck --check-prefix=ARM %s
 
 // Test that destructors are not passed directly to __cxa_atexit when their
 // signatures do not match the type of its first argument.

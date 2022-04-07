@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fblocks -triple i386-pc-windows-msvc %s -emit-llvm -o - -fblocks | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -fblocks -triple i386-pc-windows-msvc %s -emit-llvm -o - -fblocks | FileCheck %s
 
 
 int (^x)(void) = ^() { return 21; };

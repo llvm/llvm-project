@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple %itanium_abi_triple -std=c++20 -emit-llvm -O2 -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple %itanium_abi_triple -std=c++20 -emit-llvm -O2 -o - | FileCheck %s
 
 // p0388 conversions to unbounded array
 // dcl.init.list/3

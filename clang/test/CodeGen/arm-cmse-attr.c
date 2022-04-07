@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -triple thumbv8m.base-none-eabi -O1 -emit-llvm %s -o - 2>&1 | \
+// RUN: %clang_cc1 -no-opaque-pointers -triple thumbv8m.base-none-eabi -O1 -emit-llvm %s -o - 2>&1 | \
 // RUN: FileCheck %s --check-prefix=CHECK-NOSE --check-prefix=CHECK
-// RUN: %clang_cc1 -triple thumbebv8m.base-none-eabi -O1 -emit-llvm %s -o - 2>&1 | \
+// RUN: %clang_cc1 -no-opaque-pointers -triple thumbebv8m.base-none-eabi -O1 -emit-llvm %s -o - 2>&1 | \
 // RUN: FileCheck %s --check-prefix=CHECK-NOSE --check-prefix=CHECK
-// RUN: %clang_cc1 -triple thumbv8m.base-none-eabi -mcmse -O1 -emit-llvm %s -o - 2>&1 | \
+// RUN: %clang_cc1 -no-opaque-pointers -triple thumbv8m.base-none-eabi -mcmse -O1 -emit-llvm %s -o - 2>&1 | \
 // RUN: FileCheck %s --check-prefix=CHECK-SE --check-prefix=CHECK
-// RUN: %clang_cc1 -triple thumbebv8m.base-none-eabi -mcmse -O1 -emit-llvm %s -o - 2>&1 | \
+// RUN: %clang_cc1 -no-opaque-pointers -triple thumbebv8m.base-none-eabi -mcmse -O1 -emit-llvm %s -o - 2>&1 | \
 // RUN: FileCheck %s --check-prefix=CHECK-SE --check-prefix=CHECK
 
 typedef void (*callback_t)(void) __attribute__((cmse_nonsecure_call));

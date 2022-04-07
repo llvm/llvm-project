@@ -1,6 +1,6 @@
 // Check that the alloc_size attribute is propagated to the call instruction
 // for both direct and indirect calls
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm %s -o - 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin -emit-llvm %s -o - 2>&1 | FileCheck %s
 
 #define NULL ((void *)0)
 
