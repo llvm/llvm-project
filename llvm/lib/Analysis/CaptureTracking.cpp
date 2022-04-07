@@ -162,8 +162,9 @@ namespace {
   // escape are not in a cycle.
   struct EarliestCaptures : public CaptureTracker {
 
-    EarliestCaptures(bool ReturnCaptures, Function &F, const DominatorTree &DT)
-        : DT(DT), ReturnCaptures(ReturnCaptures), F(F) {}
+    EarliestCaptures(bool ReturnCaptures, Function &F, const DominatorTree &DT,
+                     const SmallPtrSetImpl<const Value *> &EphValues)
+        : EphValues(EphValues), DT(DT), ReturnCaptures(ReturnCaptures), F(F) {}
 
     void tooManyUses() override {
       Captured = true;
@@ -173,6 +174,9 @@ namespace {
     bool captured(const Use *U) override {
       Instruction *I = cast<Instruction>(U->getUser());
       if (isa<ReturnInst>(I) && !ReturnCaptures)
+        return false;
+
+      if (EphValues.contains(I))
         return false;
 
       if (!EarliestCapture) {
@@ -200,6 +204,8 @@ namespace {
       // captures.
       return false;
     }
+
+    const SmallPtrSetImpl<const Value *> &EphValues;
 
     Instruction *EarliestCapture = nullptr;
 
@@ -284,14 +290,16 @@ bool llvm::PointerMayBeCapturedBefore(const Value *V, bool ReturnCaptures,
   return CB.Captured;
 }
 
-Instruction *llvm::FindEarliestCapture(const Value *V, Function &F,
-                                       bool ReturnCaptures, bool StoreCaptures,
-                                       const DominatorTree &DT,
-                                       unsigned MaxUsesToExplore) {
+Instruction *
+llvm::FindEarliestCapture(const Value *V, Function &F, bool ReturnCaptures,
+                          bool StoreCaptures, const DominatorTree &DT,
+
+                          const SmallPtrSetImpl<const Value *> &EphValues,
+                          unsigned MaxUsesToExplore) {
   assert(!isa<GlobalValue>(V) &&
          "It doesn't make sense to ask whether a global is captured.");
 
-  EarliestCaptures CB(ReturnCaptures, F, DT);
+  EarliestCaptures CB(ReturnCaptures, F, DT, EphValues);
   PointerMayBeCaptured(V, &CB, MaxUsesToExplore);
   if (CB.Captured)
     ++NumCapturedBefore;
