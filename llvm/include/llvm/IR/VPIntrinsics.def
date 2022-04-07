@@ -302,11 +302,11 @@ HELPER_REGISTER_INT_CAST_VP(inttoptr, VP_INTTOPTR, IntToPtr)
 
 ///// Comparisons {
 // llvm.vp.fcmp(x,y,cc,mask,vlen)
-BEGIN_REGISTER_VP(vp_fcmp, 3, 4, VP_FCMP, -1)
+BEGIN_REGISTER_VP_INTRINSIC(vp_fcmp, 3, 4)
 VP_PROPERTY_FUNCTIONAL_OPC(FCmp)
 VP_PROPERTY_CMP(2, true)
 VP_PROPERTY_CONSTRAINEDFP(0, 1, experimental_constrained_fcmp)
-END_REGISTER_VP(vp_fcmp, VP_FCMP)
+END_REGISTER_VP_INTRINSIC(vp_fcmp)
 
 // llvm.vp.icmp(x,y,cc,mask,vlen)
 BEGIN_REGISTER_VP_INTRINSIC(vp_icmp, 3, 4)
@@ -315,7 +315,7 @@ VP_PROPERTY_CMP(2, false)
 END_REGISTER_VP_INTRINSIC(vp_icmp)
 
 // VP_SETCC (ISel only)
-BEGIN_REGISTER_VP_SDNODE(VP_SETCC, -1, vp_setcc, 3, 4)
+BEGIN_REGISTER_VP_SDNODE(VP_SETCC, 0, vp_setcc, 3, 4)
 END_REGISTER_VP_SDNODE(VP_SETCC)
 
 ///// } Comparisons
