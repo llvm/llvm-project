@@ -27,7 +27,7 @@
 // C-CSKY-LINUX-MULTI: "-L{{.*}}/Inputs/multilib_csky_linux_sdk/lib/gcc/csky-linux-gnuabiv2/6.3.0/../../..{{/|\\\\}}..{{/|\\\\}}csky-linux-gnuabiv2/libc/lib"
 // C-CSKY-LINUX-MULTI: "-L{{.*}}/Inputs/multilib_csky_linux_sdk/lib/gcc/csky-linux-gnuabiv2/6.3.0/../../..{{/|\\\\}}..{{/|\\\\}}csky-linux-gnuabiv2/libc/usr/lib"
 
-// RUN: %clang %s -### -no-canonical-prefixes -fuse-ld=ld -target csky-unknown-linux-gnu --rtlib=platform -march=ck860v \
+// RUN: %clang %s -### -no-canonical-prefixes -fuse-ld=ld -fno-pic -no-pie --target=csky-unknown-linux-gnu --rtlib=platform -march=ck860v \
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_csky_linux_sdk 2>&1 | FileCheck -check-prefix=C-CSKY-LINUX-CK860V %s
 
 // C-CSKY-LINUX-CK860V: "{{.*}}/Inputs/multilib_csky_linux_sdk/lib/gcc/csky-linux-gnuabiv2/6.3.0/../../..{{/|\\\\}}..{{/|\\\\}}csky-linux-gnuabiv2/bin{{/|\\\\}}ld"
