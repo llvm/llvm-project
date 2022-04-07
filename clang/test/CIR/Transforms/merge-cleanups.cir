@@ -1,0 +1,98 @@
+// RUN: cir-tool %s -cir-merge-cleanups -o %t.out.cir
+// RUN: FileCheck --input-file=%t.out.cir %s
+// XFAIL: *
+
+module  {
+  func.func @sw1(%arg0: i32, %arg1: i32) {
+    %0 = cir.alloca i32, cir.ptr <i32>, ["a", paraminit] {alignment = 4 : i64}
+    %1 = cir.alloca i32, cir.ptr <i32>, ["c", paraminit] {alignment = 4 : i64}
+    cir.store %arg0, %0 : i32, cir.ptr <i32>
+    cir.store %arg1, %1 : i32, cir.ptr <i32>
+    cir.scope {
+      %2 = cir.alloca i32, cir.ptr <i32>, ["b", cinit] {alignment = 4 : i64}
+      %3 = cir.cst(1 : i32) : i32
+      cir.store %3, %2 : i32, cir.ptr <i32>
+      %4 = cir.load %0 : cir.ptr <i32>, i32
+      cir.switch (%4 : i32) [
+      case (equal, 0 : i32)  {
+        %5 = cir.load %2 : cir.ptr <i32>, i32
+        %6 = cir.cst(1 : i32) : i32
+        %7 = cir.binop(add, %5, %6) : i32
+        cir.store %7, %2 : i32, cir.ptr <i32>
+        cir.br ^bb1
+      ^bb1:  // pred: ^bb0
+        cir.return
+      },
+      case (equal, 1 : i32)  {
+        cir.scope {
+          cir.scope {
+            %5 = cir.load %1 : cir.ptr <i32>, i32
+            %6 = cir.cst(3 : i32) : i32
+            %7 = cir.cmp(eq, %5, %6) : i32, !cir.bool
+            cir.if %7 {
+              cir.br ^bb1
+            ^bb1:  // pred: ^bb0
+              cir.return
+            }
+          }
+          cir.yield break
+        }
+        cir.yield fallthrough
+      },
+      case (equal, 2 : i32)  {
+        cir.scope {
+          %5 = cir.alloca i32, cir.ptr <i32>, ["yolo", cinit] {alignment = 4 : i64}
+          %6 = cir.load %2 : cir.ptr <i32>, i32
+          %7 = cir.cst(1 : i32) : i32
+          %8 = cir.binop(add, %6, %7) : i32
+          cir.store %8, %2 : i32, cir.ptr <i32>
+          %9 = cir.cst(100 : i32) : i32
+          cir.store %9, %5 : i32, cir.ptr <i32>
+          cir.br ^bb1
+        ^bb1:  // pred: ^bb0
+          cir.return
+        }
+        cir.yield fallthrough
+      }
+      ]
+    }
+    cir.return
+  }
+}
+
+// CHECK: cir.switch (%4 : i32) [
+// CHECK-NEXT:   case (equal, 0 : i32)  {
+// CHECK-NEXT:     %5 = cir.load %2 : cir.ptr <i32>, i32
+// CHECK-NEXT:     %6 = cir.cst(1 : i32) : i32
+// CHECK-NEXT:     %7 = cir.binop(add, %5, %6) : i32
+// CHECK-NEXT:     cir.store %7, %2 : i32, cir.ptr <i32>
+// CHECK-NEXT:     cir.return
+// CHECK-NEXT:   },
+// CHECK-NEXT:   case (equal, 1 : i32)  {
+// CHECK-NEXT:     cir.scope {
+// CHECK-NEXT:       cir.scope {
+// CHECK-NEXT:         %5 = cir.load %1 : cir.ptr <i32>, i32
+// CHECK-NEXT:         %6 = cir.cst(3 : i32) : i32
+// CHECK-NEXT:         %7 = cir.cmp(eq, %5, %6) : i32, !cir.bool
+// CHECK-NEXT:         cir.if %7 {
+// CHECK-NEXT:           cir.return
+// CHECK-NEXT:         }
+// CHECK-NEXT:       }
+// CHECK-NEXT:       cir.yield break
+// CHECK-NEXT:     }
+// CHECK-NEXT:     cir.yield fallthrough
+// CHECK-NEXT:   },
+// CHECK-NEXT:   case (equal, 2 : i32)  {
+// CHECK-NEXT:     cir.scope {
+// CHECK-NEXT:       %5 = cir.alloca i32, cir.ptr <i32>, ["yolo", cinit] {alignment = 4 : i64}
+// CHECK-NEXT:       %6 = cir.load %2 : cir.ptr <i32>, i32
+// CHECK-NEXT:       %7 = cir.cst(1 : i32) : i32
+// CHECK-NEXT:       %8 = cir.binop(add, %6, %7) : i32
+// CHECK-NEXT:       cir.store %8, %2 : i32, cir.ptr <i32>
+// CHECK-NEXT:       %9 = cir.cst(100 : i32) : i32
+// CHECK-NEXT:       cir.store %9, %5 : i32, cir.ptr <i32>
+// CHECK-NEXT:       cir.return
+// CHECK-NEXT:     }
+// CHECK-NEXT:     cir.yield fallthrough
+// CHECK-NEXT:   }
+// CHECK-NEXT: ]
