@@ -141,6 +141,8 @@ public:
     static SBError
     InitializeWithErrorHandling();
 
+    static void PrintStackTraceOnError();
+
     static void
     Terminate();
 

@@ -92,6 +92,8 @@ public:
 
   static lldb::SBError InitializeWithErrorHandling();
 
+  static void PrintStackTraceOnError();
+
   static void Terminate();
 
   // Deprecated, use the one that takes a source_init_files bool.

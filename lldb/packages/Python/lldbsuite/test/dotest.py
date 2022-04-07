@@ -880,6 +880,7 @@ def run_suite():
 
     import lldb
     lldb.SBDebugger.Initialize()
+    lldb.SBDebugger.PrintStackTraceOnError()
 
     checkLibcxxSupport()
     checkLibstdcxxSupport()
