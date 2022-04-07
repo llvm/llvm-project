@@ -1212,7 +1212,7 @@ def ProcessorFeatures {
     [TuningMacroFusion,
      TuningFastVariablePerLaneShuffle];
   list<SubtargetFeature> ZN3Tuning =
-    !listconcat(ZNTuning, ZN3AdditionalTuning);
+    !listconcat(ZN2Tuning, ZN3AdditionalTuning);
   list<SubtargetFeature> ZN3Features =
     !listconcat(ZN2Features, ZN3AdditionalFeatures);
 }
