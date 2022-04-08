@@ -125,23 +125,17 @@ private:
 // InterfaceMap
 //===----------------------------------------------------------------------===//
 
-/// Utility to filter a given sequence of types base upon a predicate.
-template <bool>
-struct FilterTypeT {
-  template <class E>
-  using type = std::tuple<E>;
-};
-template <>
-struct FilterTypeT<false> {
-  template <class E>
-  using type = std::tuple<>;
-};
-template <template <class> class Pred, class... Es>
-struct FilterTypes {
-  using type = decltype(std::tuple_cat(
-      std::declval<
-          typename FilterTypeT<Pred<Es>::value>::template type<Es>>()...));
-};
+/// Template utility that computes the number of elements within `T` that
+/// satisfy the given predicate.
+template <template <class> class Pred, size_t N, typename... Ts>
+struct count_if_t_impl : public std::integral_constant<size_t, N> {};
+template <template <class> class Pred, size_t N, typename T, typename... Us>
+struct count_if_t_impl<Pred, N, T, Us...>
+    : public std::integral_constant<
+          size_t,
+          count_if_t_impl<Pred, N + (Pred<T>::value ? 1 : 0), Us...>::value> {};
+template <template <class> class Pred, typename... Ts>
+using count_if_t = count_if_t_impl<Pred, 0, Ts...>;
 
 namespace {
 /// Type trait indicating whether all template arguments are
@@ -171,8 +165,7 @@ class InterfaceMap {
   template <typename T>
   using detect_get_interface_id = llvm::is_detected<has_get_interface_id, T>;
   template <typename... Types>
-  using num_interface_types = typename std::tuple_size<
-      typename FilterTypes<detect_get_interface_id, Types...>::type>;
+  using num_interface_types_t = count_if_t<detect_get_interface_id, Types...>;
 
 public:
   InterfaceMap(InterfaceMap &&) = default;
@@ -192,20 +185,17 @@ public:
   /// types, not all of the types need to be interfaces. The provided types that
   /// do not represent interfaces are not added to the interface map.
   template <typename... Types>
-  static std::enable_if_t<num_interface_types<Types...>::value != 0,
-                          InterfaceMap>
-  get() {
-    // Filter the provided types for those that are interfaces.
-    using FilteredTupleType =
-        typename FilterTypes<detect_get_interface_id, Types...>::type;
-    return getImpl((FilteredTupleType *)nullptr);
-  }
+  static InterfaceMap get() {
+    // TODO: Use constexpr if here in C++17.
+    constexpr size_t numInterfaces = num_interface_types_t<Types...>::value;
+    if (numInterfaces == 0)
+      return InterfaceMap();
 
-  template <typename... Types>
-  static std::enable_if_t<num_interface_types<Types...>::value == 0,
-                          InterfaceMap>
-  get() {
-    return InterfaceMap();
+    std::array<std::pair<TypeID, void *>, numInterfaces> elements;
+    std::pair<TypeID, void *> *elementIt = elements.data();
+    (void)std::initializer_list<int>{
+        0, (addModelAndUpdateIterator<Types>(elementIt), 0)...};
+    return InterfaceMap(elements);
   }
 
   /// Returns an instance of the concept object for the given interface if it
@@ -235,21 +225,28 @@ public:
   }
 
 private:
+  InterfaceMap() = default;
+
+  /// Assign the interface model of the type to the given opaque element
+  /// iterator and increment it.
+  template <typename T>
+  static inline std::enable_if_t<detect_get_interface_id<T>::value>
+  addModelAndUpdateIterator(std::pair<TypeID, void *> *&elementIt) {
+    *elementIt = {T::getInterfaceID(), new (malloc(sizeof(typename T::ModelT)))
+                                           typename T::ModelT()};
+    ++elementIt;
+  }
+  /// Overload when `T` isn't an interface.
+  template <typename T>
+  static inline std::enable_if_t<!detect_get_interface_id<T>::value>
+  addModelAndUpdateIterator(std::pair<TypeID, void *> *&) {}
+
+  /// Insert the given set of interface models into the interface map.
+  void insert(ArrayRef<std::pair<TypeID, void *>> elements);
+
   /// Compare two TypeID instances by comparing the underlying pointer.
   static bool compare(TypeID lhs, TypeID rhs) {
     return lhs.getAsOpaquePointer() < rhs.getAsOpaquePointer();
-  }
-
-  InterfaceMap() = default;
-
-  void insert(ArrayRef<std::pair<TypeID, void *>> elements);
-
-  template <typename... Ts>
-  static InterfaceMap getImpl(std::tuple<Ts...> *) {
-    std::pair<TypeID, void *> elements[] = {std::make_pair(
-        Ts::getInterfaceID(),
-        new (malloc(sizeof(typename Ts::ModelT))) typename Ts::ModelT())...};
-    return InterfaceMap(elements);
   }
 
   /// Returns an instance of the concept object for the given interface id if it
