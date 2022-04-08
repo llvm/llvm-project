@@ -174,7 +174,6 @@ set(GENERIC_SOURCES
   udivmoddi4.c
   udivmodsi4.c
   udivmodti4.c
-  udivmodei5.c
   udivsi3.c
   udivti3.c
   umoddi3.c

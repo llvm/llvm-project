@@ -65,9 +65,6 @@ set(ALL_BUILTIN_SUPPORTED_ARCH
   ${RISCV32} ${RISCV64} ${SPARC} ${SPARCV9}
   ${WASM32} ${WASM64} ${VE})
 
-set(ALL_BITINT_SUPPORTED_ARCH
-  ${ALL_BUILTIN_SUPPORTED_ARCH})
-
 include(CompilerRTUtils)
 include(CompilerRTDarwinUtils)
 
@@ -198,7 +195,6 @@ if(APPLE)
   endforeach()
 
   list_intersect(BUILTIN_SUPPORTED_ARCH ALL_BUILTIN_SUPPORTED_ARCH COMPILER_RT_SUPPORTED_ARCH)
-  list_intersect(BITINT_SUPPORTED_ARCH ALL_BITINT_SUPPORTED_ARCH COMPILER_RT_SUPPORTED_ARCH)
 
 else()
   # If we're not building the builtins standalone, just rely on the  tests in
@@ -210,8 +206,6 @@ else()
   # Architectures supported by compiler-rt libraries.
   filter_available_targets(BUILTIN_SUPPORTED_ARCH
     ${ALL_BUILTIN_SUPPORTED_ARCH})
-  filter_available_targets(BITINT_SUPPORTED_ARCH
-    ${ALL_BITINT_SUPPORTED_ARCH})
 endif()
 
 message(STATUS "Builtin supported architectures: ${BUILTIN_SUPPORTED_ARCH}")
