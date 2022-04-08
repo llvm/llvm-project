@@ -8,7 +8,6 @@ import sys
 
 from mlir import ir
 from mlir import runtime as rt
-from mlir import execution_engine
 
 from mlir.dialects import sparse_tensor as st
 from mlir.dialects import builtin
@@ -69,17 +68,14 @@ func @main(%ad: tensor<3x4xf64>, %b: tensor<4x2xf64>, %c: tensor<3x2xf64>) -> te
 """
 
 
-def build_compile_and_run_SpMM(attr: st.EncodingAttr, support_lib: str,
-                               compiler):
+def build_compile_and_run_SpMM(attr: st.EncodingAttr, compiler):
   # Build.
   module = build_SpMM(attr)
   func = str(module.operation.regions[0].blocks[0].operations[0].operation)
   module = ir.Module.parse(func + boilerplate(attr))
 
   # Compile.
-  compiler(module)
-  engine = execution_engine.ExecutionEngine(
-      module, opt_level=0, shared_libs=[support_lib])
+  engine = compiler.compile_and_jit(module)
 
   # Set up numpy input and buffer for output.
   a = np.array(
@@ -140,13 +136,14 @@ def main():
         ir.AffineMap.get_permutation([1, 0])
     ]
     bitwidths = [0]
+    compiler = sparse_compiler.SparseCompiler(
+        options=opt, opt_level=0, shared_libs=[support_lib])
     for level in levels:
       for ordering in orderings:
         for pwidth in bitwidths:
           for iwidth in bitwidths:
             attr = st.EncodingAttr.get(level, ordering, pwidth, iwidth)
-            compiler = sparse_compiler.SparseCompiler(options=opt)
-            build_compile_and_run_SpMM(attr, support_lib, compiler)
+            build_compile_and_run_SpMM(attr, compiler)
             count = count + 1
     # CHECK: Passed 8 tests
     print('Passed ', count, 'tests')
