@@ -4,6 +4,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 ; Make sure we are preserving debug info in the vectorized code.
 
+; CHECK-LABEL: define i32 @f(
 ; CHECK: for.body.lr.ph
 ; CHECK:   min.iters.check = icmp ult i64 {{.*}}, 2, !dbg !{{[0-9]+}}
 ; CHECK: vector.body
@@ -18,10 +19,6 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK:   call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> %{{.*}}), !dbg ![[BR_LOC:[0-9]+]]
 ; CHECK: for.body
 ; CHECK: br i1{{.*}}, label %for.body,{{.*}}, !dbg ![[BR_LOC]],
-; CHECK: ![[LOC2]] = !DILocation(line: 3
-; CHECK: ![[BR_LOC]] = !DILocation(line: 5,
-; CHECK: ![[LOC1]] = !DILocation(line: 6
-
 
 define i32 @f(i32* nocapture %a, i32* %b, i32 %size) !dbg !4 {
 entry:
@@ -60,6 +57,53 @@ for.end:                                          ; preds = %entry, %for.cond.fo
   ret i32 %sum.0.lcssa, !dbg !26
 }
 
+define i32 @test_debug_loc_on_branch_in_loop(i32* noalias %src, i32* noalias %dst) {
+; CHECK-LABEL: define i32 @test_debug_loc_on_branch_in_loop(
+; CHECK-LABEL: vector.body:
+; CHECK:        [[LOAD:%.+]] = load <2 x i32>, <2 x i32>* {{.+}}, align 4
+; CHECK-NEXT:   [[CMP:%.+]] = icmp eq <2 x i32> [[LOAD]], <i32 10, i32 10>
+; CHECK-NEXT:   [[XOR:%.+]] = xor <2 x i1> [[CMP:%.+]], <i1 true, i1 true>, !dbg [[LOC3:!.+]]
+; CHECK-NEXT:   [[EXT:%.+]] = extractelement <2 x i1> [[XOR]], i32 0, !dbg [[LOC3]]
+; CHECK-NEXT:   br i1 [[EXT]], label %pred.store.if, label %pred.store.continue
+; CHECK-NOT:  !dbg
+; CHECK-EMPTY:
+; CHECK-NEXT: pred.store.if:
+; CHECK-NEXT:   [[GEP:%.+]] = getelementptr inbounds i32, i32* %dst, i64 {{.+}}, !dbg [[LOC3]]
+; CHECK-NEXT:   store i32 0, i32* [[GEP]], align 4, !dbg [[LOC3]]
+; CHECK-NEXT:   br label %pred.store.continue
+; CHECK-NOT:  !dbg
+; CHECK-EMPTY:
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %gep.src = getelementptr inbounds i32, i32* %src, i64 %iv
+  %l = load i32, i32* %gep.src, align 4
+  %cmp = icmp eq i32 %l, 10
+  br i1 %cmp, label %loop.latch, label %if.then, !dbg !28
+
+if.then:
+  %gep.dst = getelementptr inbounds i32, i32* %dst, i64 %iv
+  store i32 0, i32* %gep.dst, align 4
+  br label %loop.latch
+
+loop.latch:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond.not, label %exit, label %loop.header
+
+exit:
+  ret i32 0
+}
+
+; CHECK: ![[LOC2]] = !DILocation(line: 3
+; CHECK: ![[BR_LOC]] = !DILocation(line: 5,
+; CHECK: ![[LOC1]] = !DILocation(line: 6
+; CHECK: [[LOC3]] = !DILocation(line: 137
+
+
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 declare void @llvm.dbg.value(metadata, metadata, metadata)
@@ -91,3 +135,6 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !22 = !DILocation(line: 6, scope: !17)
 !26 = !DILocation(line: 7, scope: !4)
 !27 = !{i32 1, !"Debug Info Version", i32 3}
+!28 = !DILocation(line: 137, column: 44, scope: !29)
+!29 = distinct !DILexicalBlock(scope: !30, file: !5, line: 137, column: 2)
+!30 = distinct !DISubprogram(name: "Place", scope: !5, file: !5, line: 135, scopeLine: 135, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
