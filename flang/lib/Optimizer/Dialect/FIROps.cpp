@@ -566,9 +566,11 @@ mlir::LogicalResult ArrayModifyOp::verify() {
 //===----------------------------------------------------------------------===//
 
 mlir::OpFoldResult fir::BoxAddrOp::fold(llvm::ArrayRef<mlir::Attribute> opnds) {
-  if (auto v = getVal().getDefiningOp()) {
-    if (auto box = dyn_cast<fir::EmboxOp>(v))
-      return box.getMemref();
+  if (auto *v = getVal().getDefiningOp()) {
+    if (auto box = dyn_cast<fir::EmboxOp>(v)) {
+      if (!box.getSlice()) // Fold only if not sliced
+        return box.getMemref();
+    }
     if (auto box = dyn_cast<fir::EmboxCharOp>(v))
       return box.getMemref();
   }
