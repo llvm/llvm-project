@@ -106,20 +106,27 @@ lldb::TraceCursorUP TraceIntelPT::GetCursor(Thread &thread) {
 }
 
 void TraceIntelPT::DumpTraceInfo(Thread &thread, Stream &s, bool verbose) {
-  Optional<size_t> raw_size = GetRawTraceSize(thread);
+  lldb::tid_t tid = thread.GetID();
   s.Format("\nthread #{0}: tid = {1}", thread.GetIndexID(), thread.GetID());
-  if (!raw_size) {
+  if (!IsTraced(tid)) {
     s << ", not traced\n";
     return;
   }
   s << "\n";
+
+  Expected<size_t> raw_size = GetRawTraceSize(thread);
+  if (!raw_size) {
+    s.Format("  {0}\n", toString(raw_size.takeError()));
+    return;
+  }
+
   DecodedThreadSP decoded_trace_sp = Decode(thread);
   size_t insn_len = decoded_trace_sp->GetInstructionsCount();
   size_t mem_used = decoded_trace_sp->CalculateApproximateMemoryUsage();
 
   s.Format("  Total number of instructions: {0}\n", insn_len);
 
-  s.PutCString("\n  Memory usage:\n");
+  s << "\n  Memory usage:\n";
   s.Format("    Raw trace size: {0} KiB\n", *raw_size / 1024);
   s.Format(
       "    Total approximate memory usage (excluding raw trace): {0:2} KiB\n",
@@ -129,15 +136,13 @@ void TraceIntelPT::DumpTraceInfo(Thread &thread, Stream &s, bool verbose) {
              "{0:2} bytes\n",
              (double)mem_used / insn_len);
 
-  s.PutCString("\n  Timing:\n");
-  GetTimer()
-      .ForThread(thread.GetID())
-      .ForEachTimedTask(
-          [&](const std::string &name, std::chrono::milliseconds duration) {
-            s.Format("    {0}: {1:2}s\n", name, duration.count() / 1000.0);
-          });
+  s << "\n  Timing:\n";
+  GetTimer().ForThread(tid).ForEachTimedTask(
+      [&](const std::string &name, std::chrono::milliseconds duration) {
+        s.Format("    {0}: {1:2}s\n", name, duration.count() / 1000.0);
+      });
 
-  s.PutCString("\n  Errors:\n");
+  s << "\n  Errors:\n";
   const DecodedThread::LibiptErrors &tsc_errors =
       decoded_trace_sp->GetTscErrors();
   s.Format("    Number of TSC decoding errors: {0}\n", tsc_errors.total_count);
@@ -147,11 +152,16 @@ void TraceIntelPT::DumpTraceInfo(Thread &thread, Stream &s, bool verbose) {
   }
 }
 
-Optional<size_t> TraceIntelPT::GetRawTraceSize(Thread &thread) {
-  if (IsTraced(thread.GetID()))
-    return Decode(thread)->GetRawTraceSize();
-  else
-    return None;
+llvm::Expected<size_t> TraceIntelPT::GetRawTraceSize(Thread &thread) {
+  size_t size;
+  auto callback = [&](llvm::ArrayRef<uint8_t> data) {
+    size = data.size();
+    return Error::success();
+  };
+  if (Error err = OnThreadBufferRead(thread.GetID(), callback))
+    return std::move(err);
+
+  return size;
 }
 
 Expected<pt_cpu> TraceIntelPT::GetCPUInfoForLiveProcess() {

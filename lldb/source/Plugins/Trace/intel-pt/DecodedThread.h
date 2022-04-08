@@ -175,15 +175,6 @@ public:
   /// Get a new cursor for the decoded thread.
   lldb::TraceCursorUP GetCursor();
 
-  /// Set the size in bytes of the corresponding Intel PT raw trace.
-  void SetRawTraceSize(size_t size);
-
-  /// Get the size in bytes of the corresponding Intel PT raw trace.
-  ///
-  /// \return
-  ///   The size of the trace, or \b llvm::None if not available.
-  llvm::Optional<size_t> GetRawTraceSize() const;
-
   /// Return the number of TSC decoding errors that happened. A TSC error
   /// is not a fatal error and doesn't create gaps in the trace. Instead
   /// we only keep track of them as a statistic.

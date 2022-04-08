@@ -73,7 +73,7 @@ public:
 
   void DumpTraceInfo(Thread &thread, Stream &s, bool verbose) override;
 
-  llvm::Optional<size_t> GetRawTraceSize(Thread &thread);
+  llvm::Expected<size_t> GetRawTraceSize(Thread &thread);
 
   void DoRefreshLiveProcessState(
       llvm::Expected<TraceGetStateResponse> state) override;
