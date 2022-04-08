@@ -151,36 +151,58 @@ LookupResult DeviceTy::lookupMapping(HDTTMapAccessorTy &HDTTMap,
     return lr;
 
   auto upper = HDTTMap->upper_bound(hp);
-  // check the left bin
-  if (upper != HDTTMap->begin()) {
-    lr.Entry = std::prev(upper)->HDTT;
-    auto &HT = *lr.Entry;
-    // Is it contained?
-    lr.Flags.IsContained = hp >= HT.HstPtrBegin && hp < HT.HstPtrEnd &&
-                           (hp + Size) <= HT.HstPtrEnd;
-    // Does it extend beyond the mapped region?
-    lr.Flags.ExtendsAfter = hp < HT.HstPtrEnd && (hp + Size) > HT.HstPtrEnd;
-  }
 
-  // check the right bin
-  if (!(lr.Flags.IsContained || lr.Flags.ExtendsAfter) &&
-      upper != HDTTMap->end()) {
-    lr.Entry = upper->HDTT;
-    auto &HT = *lr.Entry;
-    // Does it extend into an already mapped region?
-    lr.Flags.ExtendsBefore =
-        hp < HT.HstPtrBegin && (hp + Size) > HT.HstPtrBegin;
-    // Does it extend beyond the mapped region?
-    lr.Flags.ExtendsAfter = hp < HT.HstPtrEnd && (hp + Size) > HT.HstPtrEnd;
-  }
+  if (Size == 0) {
+    // specification v5.1 Pointer Initialization for Device Data Environments
+    // upper_bound satisfies
+    //   std::prev(upper)->HDTT.HstPtrBegin <= hp < upper->HDTT.HstPtrBegin
+    if (upper != HDTTMap->begin()) {
+      lr.Entry = std::prev(upper)->HDTT;
+      auto &HT = *lr.Entry;
+      // the left side of extended address range is satisified.
+      // hp >= HT.HstPtrBegin || hp >= HT.HstPtrBase
+      lr.Flags.IsContained = hp < HT.HstPtrEnd || hp < HT.HstPtrBase;
+    }
 
-  if (lr.Flags.ExtendsBefore) {
-    DP("WARNING: Pointer is not mapped but section extends into already "
-       "mapped data\n");
-  }
-  if (lr.Flags.ExtendsAfter) {
-    DP("WARNING: Pointer is already mapped but section extends beyond mapped "
-       "region\n");
+    if (!lr.Flags.IsContained && upper != HDTTMap->end()) {
+      lr.Entry = upper->HDTT;
+      auto &HT = *lr.Entry;
+      // the right side of extended address range is satisified.
+      // hp < HT.HstPtrEnd || hp < HT.HstPtrBase
+      lr.Flags.IsContained = hp >= HT.HstPtrBase;
+    }
+  } else {
+    // check the left bin
+    if (upper != HDTTMap->begin()) {
+      lr.Entry = std::prev(upper)->HDTT;
+      auto &HT = *lr.Entry;
+      // Is it contained?
+      lr.Flags.IsContained = hp >= HT.HstPtrBegin && hp < HT.HstPtrEnd &&
+                             (hp + Size) <= HT.HstPtrEnd;
+      // Does it extend beyond the mapped region?
+      lr.Flags.ExtendsAfter = hp < HT.HstPtrEnd && (hp + Size) > HT.HstPtrEnd;
+    }
+
+    // check the right bin
+    if (!(lr.Flags.IsContained || lr.Flags.ExtendsAfter) &&
+        upper != HDTTMap->end()) {
+      lr.Entry = upper->HDTT;
+      auto &HT = *lr.Entry;
+      // Does it extend into an already mapped region?
+      lr.Flags.ExtendsBefore =
+          hp < HT.HstPtrBegin && (hp + Size) > HT.HstPtrBegin;
+      // Does it extend beyond the mapped region?
+      lr.Flags.ExtendsAfter = hp < HT.HstPtrEnd && (hp + Size) > HT.HstPtrEnd;
+    }
+
+    if (lr.Flags.ExtendsBefore) {
+      DP("WARNING: Pointer is not mapped but section extends into already "
+         "mapped data\n");
+    }
+    if (lr.Flags.ExtendsAfter) {
+      DP("WARNING: Pointer is already mapped but section extends beyond mapped "
+         "region\n");
+    }
   }
 
   return lr;
@@ -275,10 +297,10 @@ TargetPointerResultTy DeviceTy::getTargetPointer(
                     HstPtrName))
                 .first->HDTT;
     INFO(OMP_INFOTYPE_MAPPING_CHANGED, DeviceID,
-         "Creating new map entry with "
-         "HstPtrBegin=" DPxMOD ", TgtPtrBegin=" DPxMOD ", Size=%ld, "
+         "Creating new map entry with HstPtrBase= " DPxMOD
+         ", HstPtrBegin=" DPxMOD ", TgtPtrBegin=" DPxMOD ", Size=%ld, "
          "DynRefCount=%s, HoldRefCount=%s, Name=%s\n",
-         DPxPTR(HstPtrBegin), DPxPTR(Ptr), Size,
+         DPxPTR(HstPtrBase), DPxPTR(HstPtrBegin), DPxPTR(Ptr), Size,
          Entry->dynRefCountToStr().c_str(), Entry->holdRefCountToStr().c_str(),
          (HstPtrName) ? getNameFromMapping(HstPtrName).c_str() : "unknown");
     TargetPointer = (void *)Ptr;
