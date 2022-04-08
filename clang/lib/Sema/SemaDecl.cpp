@@ -14271,7 +14271,7 @@ void Sema::ActOnFinishKNRParamDeclarations(Scope *S, Declarator &D,
 Decl *
 Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Declarator &D,
                               MultiTemplateParamsArg TemplateParameterLists,
-                              SkipBodyInfo *SkipBody) {
+                              SkipBodyInfo *SkipBody, FnBodyKind BodyKind) {
   assert(getCurFunctionDecl() == nullptr && "Function parsing confused");
   assert(D.isFunctionDeclarator() && "Not a function declarator!");
   Scope *ParentScope = FnBodyScope->getParent();
@@ -14290,7 +14290,7 @@ Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Declarator &D,
 
   D.setFunctionDefinitionKind(FunctionDefinitionKind::Definition);
   Decl *DP = HandleDeclarator(ParentScope, D, TemplateParameterLists);
-  Decl *Dcl = ActOnStartOfFunctionDef(FnBodyScope, DP, SkipBody);
+  Decl *Dcl = ActOnStartOfFunctionDef(FnBodyScope, DP, SkipBody, BodyKind);
 
   if (!Bases.empty())
     ActOnFinishedFunctionDefinitionInOpenMPDeclareVariantScope(Dcl, Bases);
@@ -14466,7 +14466,8 @@ static void RebuildLambdaScopeInfo(CXXMethodDecl *CallOperator,
 }
 
 Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
-                                    SkipBodyInfo *SkipBody) {
+                                    SkipBodyInfo *SkipBody,
+                                    FnBodyKind BodyKind) {
   if (!D) {
     // Parsing the function declaration failed in some way. Push on a fake scope
     // anyway so we can try to parse the function body.
@@ -14555,11 +14556,11 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
     }
   }
 
-  // The return type of a function definition must be complete
-  // (C99 6.9.1p3, C++ [dcl.fct]p6).
+  // The return type of a function definition must be complete (C99 6.9.1p3),
+  // unless the function is deleted (C++ specifc, C++ [dcl.fct.def.general]p2)
   QualType ResultType = FD->getReturnType();
   if (!ResultType->isDependentType() && !ResultType->isVoidType() &&
-      !FD->isInvalidDecl() &&
+      !FD->isInvalidDecl() && BodyKind != FnBodyKind::Delete &&
       RequireCompleteType(FD->getLocation(), ResultType,
                           diag::err_func_def_incomplete_result))
     FD->setInvalidDecl();
@@ -14568,8 +14569,9 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
     PushDeclContext(FnBodyScope, FD);
 
   // Check the validity of our function parameters
-  CheckParmsForFunctionDef(FD->parameters(),
-                           /*CheckParameterNames=*/true);
+  if (BodyKind != FnBodyKind::Delete)
+    CheckParmsForFunctionDef(FD->parameters(),
+                             /*CheckParameterNames=*/true);
 
   // Add non-parameter declarations already in the function to the current
   // scope.

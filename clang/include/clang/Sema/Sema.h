@@ -2895,6 +2895,18 @@ public:
   void ActOnDocumentableDecl(Decl *D);
   void ActOnDocumentableDecls(ArrayRef<Decl *> Group);
 
+  enum class FnBodyKind {
+    /// C++ [dcl.fct.def.general]p1
+    /// function-body:
+    ///   ctor-initializer[opt] compound-statement
+    ///   function-try-block
+    Other,
+    ///   = default ;
+    Default,
+    ///   = delete ;
+    Delete
+  };
+
   void ActOnFinishKNRParamDeclarations(Scope *S, Declarator &D,
                                        SourceLocation LocAfterDecls);
   void CheckForFunctionRedefinition(
@@ -2902,9 +2914,12 @@ public:
       SkipBodyInfo *SkipBody = nullptr);
   Decl *ActOnStartOfFunctionDef(Scope *S, Declarator &D,
                                 MultiTemplateParamsArg TemplateParamLists,
-                                SkipBodyInfo *SkipBody = nullptr);
+                                SkipBodyInfo *SkipBody = nullptr,
+                                FnBodyKind BodyKind = FnBodyKind::Other);
   Decl *ActOnStartOfFunctionDef(Scope *S, Decl *D,
-                                SkipBodyInfo *SkipBody = nullptr);
+                                SkipBodyInfo *SkipBody = nullptr,
+                                FnBodyKind BodyKind = FnBodyKind::Other);
+  void SetFunctionBodyKind(Decl *D, SourceLocation Loc, FnBodyKind BodyKind);
   void ActOnStartTrailingRequiresClause(Scope *S, Declarator &D);
   ExprResult ActOnFinishTrailingRequiresClause(ExprResult ConstraintExpr);
   ExprResult ActOnRequiresClause(ExprResult ConstraintExpr);
