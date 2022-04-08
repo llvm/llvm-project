@@ -123,6 +123,96 @@ __sort5(_ForwardIterator __x1, _ForwardIterator __x2, _ForwardIterator __x3,
     return __r;
 }
 
+template <class _Tp>
+struct __is_simple_comparator : false_type {};
+template <class _Tp>
+struct __is_simple_comparator<__less<_Tp>&> : true_type {};
+template <class _Tp>
+struct __is_simple_comparator<less<_Tp>&> : true_type {};
+template <class _Tp>
+struct __is_simple_comparator<greater<_Tp>&> : true_type {};
+
+template <class _Compare, class _Iter, class _Tp = typename iterator_traits<_Iter>::value_type>
+using __use_branchless_sort =
+    integral_constant<bool, __is_cpp17_contiguous_iterator<_Iter>::value && sizeof(_Tp) <= sizeof(void*) &&
+                                is_arithmetic<_Tp>::value && __is_simple_comparator<_Compare>::value>;
+
+// Ensures that __c(*__x, *__y) is true by swapping *__x and *__y if necessary.
+template <class _Compare, class _RandomAccessIterator>
+inline _LIBCPP_HIDE_FROM_ABI void __cond_swap(_RandomAccessIterator __x, _RandomAccessIterator __y, _Compare __c) {
+  using value_type = typename iterator_traits<_RandomAccessIterator>::value_type;
+  bool __r = __c(*__x, *__y);
+  value_type __tmp = __r ? *__x : *__y;
+  *__y = __r ? *__y : *__x;
+  *__x = __tmp;
+}
+
+// Ensures that *__x, *__y and *__z are ordered according to the comparator __c,
+// under the assumption that *__y and *__z are already ordered.
+template <class _Compare, class _RandomAccessIterator>
+inline _LIBCPP_HIDE_FROM_ABI void __partially_sorted_swap(_RandomAccessIterator __x, _RandomAccessIterator __y,
+                                                          _RandomAccessIterator __z, _Compare __c) {
+  using value_type = typename iterator_traits<_RandomAccessIterator>::value_type;
+  bool __r = __c(*__z, *__x);
+  value_type __tmp = __r ? *__z : *__x;
+  *__z = __r ? *__x : *__z;
+  __r = __c(__tmp, *__y);
+  *__x = __r ? *__x : *__y;
+  *__y = __r ? *__y : __tmp;
+}
+
+template <class _Compare, class _RandomAccessIterator>
+inline _LIBCPP_HIDE_FROM_ABI __enable_if_t<__use_branchless_sort<_Compare, _RandomAccessIterator>::value, void>
+__sort3_maybe_branchless(_RandomAccessIterator __x1, _RandomAccessIterator __x2, _RandomAccessIterator __x3,
+                         _Compare __c) {
+  _VSTD::__cond_swap<_Compare>(__x2, __x3, __c);
+  _VSTD::__partially_sorted_swap<_Compare>(__x1, __x2, __x3, __c);
+}
+
+template <class _Compare, class _RandomAccessIterator>
+inline _LIBCPP_HIDE_FROM_ABI __enable_if_t<!__use_branchless_sort<_Compare, _RandomAccessIterator>::value, void>
+__sort3_maybe_branchless(_RandomAccessIterator __x1, _RandomAccessIterator __x2, _RandomAccessIterator __x3,
+                         _Compare __c) {
+  _VSTD::__sort3<_Compare>(__x1, __x2, __x3, __c);
+}
+
+template <class _Compare, class _RandomAccessIterator>
+inline _LIBCPP_HIDE_FROM_ABI __enable_if_t<__use_branchless_sort<_Compare, _RandomAccessIterator>::value, void>
+__sort4_maybe_branchless(_RandomAccessIterator __x1, _RandomAccessIterator __x2, _RandomAccessIterator __x3,
+                         _RandomAccessIterator __x4, _Compare __c) {
+  _VSTD::__cond_swap<_Compare>(__x1, __x3, __c);
+  _VSTD::__cond_swap<_Compare>(__x2, __x4, __c);
+  _VSTD::__cond_swap<_Compare>(__x1, __x2, __c);
+  _VSTD::__cond_swap<_Compare>(__x3, __x4, __c);
+  _VSTD::__cond_swap<_Compare>(__x2, __x3, __c);
+}
+
+template <class _Compare, class _RandomAccessIterator>
+inline _LIBCPP_HIDE_FROM_ABI __enable_if_t<!__use_branchless_sort<_Compare, _RandomAccessIterator>::value, void>
+__sort4_maybe_branchless(_RandomAccessIterator __x1, _RandomAccessIterator __x2, _RandomAccessIterator __x3,
+                         _RandomAccessIterator __x4, _Compare __c) {
+  _VSTD::__sort4<_Compare>(__x1, __x2, __x3, __x4, __c);
+}
+
+template <class _Compare, class _RandomAccessIterator>
+inline _LIBCPP_HIDE_FROM_ABI __enable_if_t<__use_branchless_sort<_Compare, _RandomAccessIterator>::value, void>
+__sort5_maybe_branchless(_RandomAccessIterator __x1, _RandomAccessIterator __x2, _RandomAccessIterator __x3,
+                         _RandomAccessIterator __x4, _RandomAccessIterator __x5, _Compare __c) {
+  _VSTD::__cond_swap<_Compare>(__x1, __x2, __c);
+  _VSTD::__cond_swap<_Compare>(__x4, __x5, __c);
+  _VSTD::__partially_sorted_swap<_Compare>(__x3, __x4, __x5, __c);
+  _VSTD::__cond_swap<_Compare>(__x2, __x5, __c);
+  _VSTD::__partially_sorted_swap<_Compare>(__x1, __x3, __x4, __c);
+  _VSTD::__partially_sorted_swap<_Compare>(__x2, __x3, __x4, __c);
+}
+
+template <class _Compare, class _RandomAccessIterator>
+inline _LIBCPP_HIDE_FROM_ABI __enable_if_t<!__use_branchless_sort<_Compare, _RandomAccessIterator>::value, void>
+__sort5_maybe_branchless(_RandomAccessIterator __x1, _RandomAccessIterator __x2, _RandomAccessIterator __x3,
+                         _RandomAccessIterator __x4, _RandomAccessIterator __x5, _Compare __c) {
+  _VSTD::__sort5<_Compare>(__x1, __x2, __x3, __x4, __x5, __c);
+}
+
 // Assumes size > 0
 template <class _Compare, class _BidirectionalIterator>
 _LIBCPP_CONSTEXPR_AFTER_CXX11 void
@@ -163,7 +253,7 @@ __insertion_sort_3(_RandomAccessIterator __first, _RandomAccessIterator __last, 
     typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
     typedef typename iterator_traits<_RandomAccessIterator>::value_type value_type;
     _RandomAccessIterator __j = __first+difference_type(2);
-    _VSTD::__sort3<_Compare>(__first, __first+difference_type(1), __j, __comp);
+    _VSTD::__sort3_maybe_branchless<_Compare>(__first, __first + difference_type(1), __j, __comp);
     for (_RandomAccessIterator __i = __j+difference_type(1); __i != __last; ++__i)
     {
         if (__comp(*__i, *__j))
@@ -197,18 +287,20 @@ __insertion_sort_incomplete(_RandomAccessIterator __first, _RandomAccessIterator
             swap(*__first, *__last);
         return true;
     case 3:
-        _VSTD::__sort3<_Compare>(__first, __first+difference_type(1), --__last, __comp);
-        return true;
+      _VSTD::__sort3_maybe_branchless<_Compare>(__first, __first + difference_type(1), --__last, __comp);
+      return true;
     case 4:
-        _VSTD::__sort4<_Compare>(__first, __first+difference_type(1), __first+difference_type(2), --__last, __comp);
-        return true;
+      _VSTD::__sort4_maybe_branchless<_Compare>(__first, __first + difference_type(1), __first + difference_type(2),
+                                                --__last, __comp);
+      return true;
     case 5:
-        _VSTD::__sort5<_Compare>(__first, __first+difference_type(1), __first+difference_type(2), __first+difference_type(3), --__last, __comp);
-        return true;
+      _VSTD::__sort5_maybe_branchless<_Compare>(__first, __first + difference_type(1), __first + difference_type(2),
+                                                __first + difference_type(3), --__last, __comp);
+      return true;
     }
     typedef typename iterator_traits<_RandomAccessIterator>::value_type value_type;
     _RandomAccessIterator __j = __first+difference_type(2);
-    _VSTD::__sort3<_Compare>(__first, __first+difference_type(1), __j, __comp);
+    _VSTD::__sort3_maybe_branchless<_Compare>(__first, __first + difference_type(1), __j, __comp);
     const unsigned __limit = 8;
     unsigned __count = 0;
     for (_RandomAccessIterator __i = __j+difference_type(1); __i != __last; ++__i)
@@ -290,14 +382,16 @@ __introsort(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compar
                 swap(*__first, *__last);
             return;
         case 3:
-            _VSTD::__sort3<_Compare>(__first, __first+difference_type(1), --__last, __comp);
-            return;
+          _VSTD::__sort3_maybe_branchless<_Compare>(__first, __first + difference_type(1), --__last, __comp);
+          return;
         case 4:
-            _VSTD::__sort4<_Compare>(__first, __first+difference_type(1), __first+difference_type(2), --__last, __comp);
-            return;
+          _VSTD::__sort4_maybe_branchless<_Compare>(__first, __first + difference_type(1), __first + difference_type(2),
+                                                    --__last, __comp);
+          return;
         case 5:
-            _VSTD::__sort5<_Compare>(__first, __first+difference_type(1), __first+difference_type(2), __first+difference_type(3), --__last, __comp);
-            return;
+          _VSTD::__sort5_maybe_branchless<_Compare>(__first, __first + difference_type(1), __first + difference_type(2),
+                                                    __first + difference_type(3), --__last, __comp);
+          return;
         }
         if (__len <= __limit)
         {
