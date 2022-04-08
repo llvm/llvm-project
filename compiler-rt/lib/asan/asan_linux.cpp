@@ -131,30 +131,24 @@ static int FindFirstDSOCallback(struct dl_phdr_info *info, size_t size,
   VReport(2, "info->dlpi_name = %s\tinfo->dlpi_addr = %p\n", info->dlpi_name,
           (void *)info->dlpi_addr);
 
-  // Continue until the first dynamic library is found
-  if (!info->dlpi_name || info->dlpi_name[0] == 0)
-    return 0;
+  const char **name = (const char **)data;
 
-  // Ignore vDSO
-  if (internal_strncmp(info->dlpi_name, "linux-", sizeof("linux-") - 1) == 0)
-    return 0;
-
-#if SANITIZER_FREEBSD || SANITIZER_NETBSD
   // Ignore first entry (the main program)
-  char **p = (char **)data;
-  if (!(*p)) {
-    *p = (char *)-1;
+  if (!*name) {
+    *name = "";
     return 0;
   }
-#endif
 
-#if SANITIZER_SOLARIS
-  // Ignore executable on Solaris
-  if (info->dlpi_addr == 0)
+#    if SANITIZER_LINUX
+  // Ignore vDSO. glibc versions earlier than 2.15 (and some patched
+  // by distributors) return an empty name for the vDSO entry, so
+  // detect this as well.
+  if (!info->dlpi_name[0] ||
+      internal_strncmp(info->dlpi_name, "linux-", sizeof("linux-") - 1) == 0)
     return 0;
-#endif
+#    endif
 
-  *(const char **)data = info->dlpi_name;
+  *name = info->dlpi_name;
   return 1;
 }
 
@@ -175,7 +169,7 @@ void AsanCheckDynamicRTPrereqs() {
   // Ensure that dynamic RT is the first DSO in the list
   const char *first_dso_name = nullptr;
   dl_iterate_phdr(FindFirstDSOCallback, &first_dso_name);
-  if (first_dso_name && !IsDynamicRTName(first_dso_name)) {
+  if (first_dso_name && first_dso_name[0] && !IsDynamicRTName(first_dso_name)) {
     Report("ASan runtime does not come first in initial library list; "
            "you should either link runtime to your application or "
            "manually preload it with LD_PRELOAD.\n");
