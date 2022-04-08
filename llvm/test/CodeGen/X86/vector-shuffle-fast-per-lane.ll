@@ -4,8 +4,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+avx2,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=FAST
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+avx512f,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=FAST
 ;
-; RUN: llc < %s -mtriple=x86_64-unknown -mcpu=znver1 | FileCheck %s --check-prefixes=SLOW
-; RUN: llc < %s -mtriple=x86_64-unknown -mcpu=znver2 | FileCheck %s --check-prefixes=SLOW
+; RUN: llc < %s -mtriple=x86_64-unknown -mcpu=znver1 | FileCheck %s --check-prefixes=FAST
+; RUN: llc < %s -mtriple=x86_64-unknown -mcpu=znver2 | FileCheck %s --check-prefixes=FAST
 ; RUN: llc < %s -mtriple=x86_64-unknown -mcpu=znver3 | FileCheck %s --check-prefixes=FAST
 ; RUN: llc < %s -mtriple=x86_64-unknown -mcpu=haswell | FileCheck %s --check-prefixes=FAST
 ; RUN: llc < %s -mtriple=x86_64-unknown -mcpu=skx | FileCheck %s --check-prefixes=FAST
