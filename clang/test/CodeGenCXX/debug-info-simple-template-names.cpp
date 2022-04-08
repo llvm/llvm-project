@@ -31,6 +31,10 @@ struct t4 {
 };
   
 t4 v1;
+enum { UnnamedEnum1 };
+template<decltype(UnnamedEnum1)>
+void f4() {
+}
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "t3<(anonymous namespace)::LocalEnum, ((anonymous namespace)::LocalEnum)0>"
 void f() {
   // Basic examples of simplifiable/rebuildable names
@@ -122,4 +126,7 @@ void f() {
   int fnrt() __attribute__((noreturn));
   f1<decltype(fnrt)>();
   // CHECK: !DISubprogram(name: "f1<int () __attribute__((noreturn))>",
+  
+  f4<UnnamedEnum1>();
+  // CHECK: !DISubprogram(name: "f4<((unnamed enum at {{.*}}))0>"
 }
