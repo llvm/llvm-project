@@ -70,8 +70,7 @@ define i32 @test_debug_loc_on_branch_in_loop(i32* noalias %src, i32* noalias %ds
 ; CHECK-NEXT: pred.store.if:
 ; CHECK-NEXT:   [[GEP:%.+]] = getelementptr inbounds i32, i32* %dst, i64 {{.+}}, !dbg [[LOC3]]
 ; CHECK-NEXT:   store i32 0, i32* [[GEP]], align 4, !dbg [[LOC3]]
-; CHECK-NEXT:   br label %pred.store.continue
-; CHECK-NOT:  !dbg
+; CHECK-NEXT:   br label %pred.store.continue, !dbg [[LOC3]]
 ; CHECK-EMPTY:
 ;
 entry:
