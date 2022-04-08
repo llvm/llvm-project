@@ -20,6 +20,8 @@
 #include "clang/AST/ParentMapContext.h"
 #include "clang/AST/RawCommentList.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/ExtractAPI/API.h"
 #include "clang/ExtractAPI/AvailabilityInfo.h"
@@ -31,11 +33,15 @@
 #include "clang/Frontend/FrontendOptions.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/PPCallbacks.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
+#include <memory>
+#include <utility>
 
 using namespace clang;
 using namespace extractapi;
@@ -49,12 +55,44 @@ StringRef getTypedefName(const TagDecl *Decl) {
   return {};
 }
 
+struct LocationFileChecker {
+  bool isLocationInKnownFile(SourceLocation Loc) {
+    // If the loc refers to a macro expansion we need to first get the file
+    // location of the expansion.
+    auto FileLoc = SM.getFileLoc(Loc);
+    FileID FID = SM.getFileID(FileLoc);
+    if (FID.isInvalid())
+      return false;
+
+    const auto *File = SM.getFileEntryForID(FID);
+    if (!File)
+      return false;
+
+    if (KnownFileEntries.count(File))
+      return true;
+
+    return false;
+  }
+
+  LocationFileChecker(const SourceManager &SM,
+                      const std::vector<std::string> &KnownFiles)
+      : SM(SM) {
+    for (const auto &KnownFilePath : KnownFiles)
+      if (auto FileEntry = SM.getFileManager().getFile(KnownFilePath))
+        KnownFileEntries.insert(*FileEntry);
+  }
+
+private:
+  const SourceManager &SM;
+  llvm::DenseSet<const FileEntry *> KnownFileEntries;
+};
+
 /// The RecursiveASTVisitor to traverse symbol declarations and collect API
 /// information.
 class ExtractAPIVisitor : public RecursiveASTVisitor<ExtractAPIVisitor> {
 public:
-  ExtractAPIVisitor(ASTContext &Context, APISet &API)
-      : Context(Context), API(API) {}
+  ExtractAPIVisitor(ASTContext &Context, LocationFileChecker &LCF, APISet &API)
+      : Context(Context), API(API), LCF(LCF) {}
 
   const APISet &getAPI() const { return API; }
 
@@ -74,6 +112,9 @@ public:
     // If this is a template but not specialization or instantiation, skip.
     if (Decl->getASTContext().getTemplateOrSpecializationInfo(Decl) &&
         Decl->getTemplateSpecializationKind() == TSK_Undeclared)
+      return true;
+
+    if (!LCF.isLocationInKnownFile(Decl->getLocation()))
       return true;
 
     // Collect symbol information.
@@ -133,6 +174,9 @@ public:
       return true;
     }
 
+    if (!LCF.isLocationInKnownFile(Decl->getLocation()))
+      return true;
+
     // Collect symbol information.
     StringRef Name = Decl->getName();
     StringRef USR = API.recordUSR(Decl);
@@ -165,6 +209,9 @@ public:
 
     // Skip forward declaration.
     if (!Decl->isThisDeclarationADefinition())
+      return true;
+
+    if (!LCF.isLocationInKnownFile(Decl->getLocation()))
       return true;
 
     // Collect symbol information.
@@ -204,6 +251,9 @@ public:
     if (isa<CXXRecordDecl>(Decl))
       return true;
 
+    if (!LCF.isLocationInKnownFile(Decl->getLocation()))
+      return true;
+
     // Collect symbol information.
     StringRef Name = Decl->getName();
     if (Name.empty())
@@ -235,6 +285,9 @@ public:
   bool VisitObjCInterfaceDecl(const ObjCInterfaceDecl *Decl) {
     // Skip forward declaration for classes (@class)
     if (!Decl->isThisDeclarationADefinition())
+      return true;
+
+    if (!LCF.isLocationInKnownFile(Decl->getLocation()))
       return true;
 
     // Collect symbol information.
@@ -281,6 +334,9 @@ public:
     if (!Decl->isThisDeclarationADefinition())
       return true;
 
+    if (!LCF.isLocationInKnownFile(Decl->getLocation()))
+      return true;
+
     // Collect symbol information.
     StringRef Name = Decl->getName();
     StringRef USR = API.recordUSR(Decl);
@@ -314,6 +370,9 @@ public:
       return true;
 
     if (!Decl->isDefinedOutsideFunctionOrMethod())
+      return true;
+
+    if (!LCF.isLocationInKnownFile(Decl->getLocation()))
       return true;
 
     PresumedLoc Loc =
@@ -569,12 +628,14 @@ private:
 
   ASTContext &Context;
   APISet &API;
+  LocationFileChecker &LCF;
 };
 
 class ExtractAPIConsumer : public ASTConsumer {
 public:
-  ExtractAPIConsumer(ASTContext &Context, APISet &API)
-      : Visitor(Context, API) {}
+  ExtractAPIConsumer(ASTContext &Context,
+                     std::unique_ptr<LocationFileChecker> LCF, APISet &API)
+      : Visitor(Context, *LCF, API), LCF(std::move(LCF)) {}
 
   void HandleTranslationUnit(ASTContext &Context) override {
     // Use ExtractAPIVisitor to traverse symbol declarations in the context.
@@ -583,11 +644,13 @@ public:
 
 private:
   ExtractAPIVisitor Visitor;
+  std::unique_ptr<LocationFileChecker> LCF;
 };
 
 class MacroCallback : public PPCallbacks {
 public:
-  MacroCallback(const SourceManager &SM, APISet &API) : SM(SM), API(API) {}
+  MacroCallback(const SourceManager &SM, LocationFileChecker &LCF, APISet &API)
+      : SM(SM), LCF(LCF), API(API) {}
 
   void MacroDefined(const Token &MacroNameToken,
                     const MacroDirective *MD) override {
@@ -627,6 +690,9 @@ public:
       if (PM.MD->getMacroInfo()->isUsedForHeaderGuard())
         continue;
 
+      if (!LCF.isLocationInKnownFile(PM.MacroNameToken.getLocation()))
+        continue;
+
       StringRef Name = PM.MacroNameToken.getIdentifierInfo()->getName();
       PresumedLoc Loc = SM.getPresumedLoc(PM.MacroNameToken.getLocation());
       StringRef USR =
@@ -651,6 +717,7 @@ private:
   };
 
   const SourceManager &SM;
+  LocationFileChecker &LCF;
   APISet &API;
   llvm::SmallVector<PendingMacro> PendingMacros;
 };
@@ -671,11 +738,15 @@ ExtractAPIAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
       CI.getTarget().getTriple(),
       CI.getFrontendOpts().Inputs.back().getKind().getLanguage());
 
+  auto LCF = std::make_unique<LocationFileChecker>(CI.getSourceManager(),
+                                                   KnownInputFiles);
+
   // Register preprocessor callbacks that will add macro definitions to API.
   CI.getPreprocessor().addPPCallbacks(
-      std::make_unique<MacroCallback>(CI.getSourceManager(), *API));
+      std::make_unique<MacroCallback>(CI.getSourceManager(), *LCF, *API));
 
-  return std::make_unique<ExtractAPIConsumer>(CI.getASTContext(), *API);
+  return std::make_unique<ExtractAPIConsumer>(CI.getASTContext(),
+                                              std::move(LCF), *API);
 }
 
 bool ExtractAPIAction::PrepareToExecuteAction(CompilerInstance &CI) {
@@ -695,6 +766,8 @@ bool ExtractAPIAction::PrepareToExecuteAction(CompilerInstance &CI) {
     HeaderContents += " \"";
     HeaderContents += FIF.getFile();
     HeaderContents += "\"\n";
+
+    KnownInputFiles.emplace_back(FIF.getFile());
   }
 
   Buffer = llvm::MemoryBuffer::getMemBufferCopy(HeaderContents,
