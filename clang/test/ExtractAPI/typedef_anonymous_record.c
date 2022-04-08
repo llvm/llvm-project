@@ -85,6 +85,12 @@ typedef MyStructStruct MyStructStructStruct;
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "MyStruct"
+          }
+        ],
         "title": "MyStruct"
       },
       "pathComponents": [
@@ -132,6 +138,12 @@ typedef MyStructStruct MyStructStructStruct;
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "MyStructStruct"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -186,6 +198,12 @@ typedef MyStructStruct MyStructStructStruct;
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "MyStructStructStruct"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
