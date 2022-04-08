@@ -5183,11 +5183,9 @@ void CodeGenModule::EmitAliasDefinition(GlobalDecl GD) {
   SetCommonAttributes(GD, GA);
 
   // Emit global alias debug information.
-  if (const auto *VD = dyn_cast<VarDecl>(D)) {
-    if (CGDebugInfo *DI = getModuleDebugInfo()) {
+  if (isa<VarDecl>(D))
+    if (CGDebugInfo *DI = getModuleDebugInfo())
       DI->EmitGlobalAlias(cast<llvm::GlobalValue>(GA->getAliasee()), GD);
-    }
-  }
 }
 
 void CodeGenModule::emitIFuncDefinition(GlobalDecl GD) {

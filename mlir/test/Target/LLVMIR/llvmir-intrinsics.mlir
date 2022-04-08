@@ -518,6 +518,7 @@ llvm.func @stack_restore(%arg0: !llvm.ptr<i8>) {
 // CHECK-LABEL: @vector_predication_intrinsics
 llvm.func @vector_predication_intrinsics(%A: vector<8xi32>, %B: vector<8xi32>,
                                          %C: vector<8xf32>, %D: vector<8xf32>,
+                                         %i: i32, %f: f32,
                                          %mask: vector<8xi1>, %evl: i32) {
   // CHECK: call <8 x i32> @llvm.vp.add.v8i32
   "llvm.intr.vp.add" (%A, %B, %mask, %evl) :
@@ -574,6 +575,55 @@ llvm.func @vector_predication_intrinsics(%A: vector<8xi32>, %B: vector<8xi32>,
   // CHECK: call <8 x float> @llvm.vp.frem.v8f32
   "llvm.intr.vp.frem" (%C, %D, %mask, %evl) :
          (vector<8xf32>, vector<8xf32>, vector<8xi1>, i32) -> vector<8xf32>
+  // CHECK: call <8 x float> @llvm.vp.fneg.v8f32
+  "llvm.intr.vp.fneg" (%C, %mask, %evl) :
+         (vector<8xf32>, vector<8xi1>, i32) -> vector<8xf32>
+  // CHECK: call <8 x float> @llvm.vp.fma.v8f32
+  "llvm.intr.vp.fma" (%C, %D, %D, %mask, %evl) :
+         (vector<8xf32>, vector<8xf32>, vector<8xf32>, vector<8xi1>, i32) -> vector<8xf32>
+
+  // CHECK: call i32 @llvm.vp.reduce.add.v8i32
+  "llvm.intr.vp.reduce.add" (%i, %A, %mask, %evl) :
+         (i32, vector<8xi32>, vector<8xi1>, i32) -> i32
+  // CHECK: call i32 @llvm.vp.reduce.mul.v8i32
+  "llvm.intr.vp.reduce.mul" (%i, %A, %mask, %evl) :
+         (i32, vector<8xi32>, vector<8xi1>, i32) -> i32
+  // CHECK: call i32 @llvm.vp.reduce.and.v8i32
+  "llvm.intr.vp.reduce.and" (%i, %A, %mask, %evl) :
+         (i32, vector<8xi32>, vector<8xi1>, i32) -> i32
+  // CHECK: call i32 @llvm.vp.reduce.or.v8i32
+  "llvm.intr.vp.reduce.or" (%i, %A, %mask, %evl) :
+         (i32, vector<8xi32>, vector<8xi1>, i32) -> i32
+  // CHECK: call i32 @llvm.vp.reduce.xor.v8i32
+  "llvm.intr.vp.reduce.xor" (%i, %A, %mask, %evl) :
+         (i32, vector<8xi32>, vector<8xi1>, i32) -> i32
+  // CHECK: call i32 @llvm.vp.reduce.smax.v8i32
+  "llvm.intr.vp.reduce.smax" (%i, %A, %mask, %evl) :
+         (i32, vector<8xi32>, vector<8xi1>, i32) -> i32
+  // CHECK: call i32 @llvm.vp.reduce.smin.v8i32
+  "llvm.intr.vp.reduce.smin" (%i, %A, %mask, %evl) :
+         (i32, vector<8xi32>, vector<8xi1>, i32) -> i32
+  // CHECK: call i32 @llvm.vp.reduce.umax.v8i32
+  "llvm.intr.vp.reduce.umax" (%i, %A, %mask, %evl) :
+         (i32, vector<8xi32>, vector<8xi1>, i32) -> i32
+  // CHECK: call i32 @llvm.vp.reduce.umin.v8i32
+  "llvm.intr.vp.reduce.umin" (%i, %A, %mask, %evl) :
+         (i32, vector<8xi32>, vector<8xi1>, i32) -> i32
+
+  // CHECK: call float @llvm.vp.reduce.fadd.v8f32
+  "llvm.intr.vp.reduce.fadd" (%f, %C, %mask, %evl) :
+         (f32, vector<8xf32>, vector<8xi1>, i32) -> f32
+  // CHECK: call float @llvm.vp.reduce.fmul.v8f32
+  "llvm.intr.vp.reduce.fmul" (%f, %C, %mask, %evl) :
+         (f32, vector<8xf32>, vector<8xi1>, i32) -> f32
+  // CHECK: call float @llvm.vp.reduce.fmax.v8f32
+  "llvm.intr.vp.reduce.fmax" (%f, %C, %mask, %evl) :
+         (f32, vector<8xf32>, vector<8xi1>, i32) -> f32
+  // CHECK: call float @llvm.vp.reduce.fmin.v8f32
+  "llvm.intr.vp.reduce.fmin" (%f, %C, %mask, %evl) :
+         (f32, vector<8xf32>, vector<8xi1>, i32) -> f32
+
+
   llvm.return
 }
 
@@ -650,3 +700,18 @@ llvm.func @vector_predication_intrinsics(%A: vector<8xi32>, %B: vector<8xi32>,
 // CHECK-DAG: declare <8 x float> @llvm.vp.fmul.v8f32(<8 x float>, <8 x float>, <8 x i1>, i32) #0
 // CHECK-DAG: declare <8 x float> @llvm.vp.fdiv.v8f32(<8 x float>, <8 x float>, <8 x i1>, i32) #0
 // CHECK-DAG: declare <8 x float> @llvm.vp.frem.v8f32(<8 x float>, <8 x float>, <8 x i1>, i32) #0
+// CHECK-DAG: declare <8 x float> @llvm.vp.fneg.v8f32(<8 x float>, <8 x i1>, i32) #0
+// CHECK-DAG: declare <8 x float> @llvm.vp.fma.v8f32(<8 x float>, <8 x float>, <8 x float>, <8 x i1>, i32) #0
+// CHECK-DAG: declare i32 @llvm.vp.reduce.add.v8i32(i32, <8 x i32>, <8 x i1>, i32) #0
+// CHECK-DAG: declare i32 @llvm.vp.reduce.mul.v8i32(i32, <8 x i32>, <8 x i1>, i32) #0
+// CHECK-DAG: declare i32 @llvm.vp.reduce.and.v8i32(i32, <8 x i32>, <8 x i1>, i32) #0
+// CHECK-DAG: declare i32 @llvm.vp.reduce.or.v8i32(i32, <8 x i32>, <8 x i1>, i32) #0
+// CHECK-DAG: declare i32 @llvm.vp.reduce.xor.v8i32(i32, <8 x i32>, <8 x i1>, i32) #0
+// CHECK-DAG: declare i32 @llvm.vp.reduce.smax.v8i32(i32, <8 x i32>, <8 x i1>, i32) #0
+// CHECK-DAG: declare i32 @llvm.vp.reduce.smin.v8i32(i32, <8 x i32>, <8 x i1>, i32) #0
+// CHECK-DAG: declare i32 @llvm.vp.reduce.umax.v8i32(i32, <8 x i32>, <8 x i1>, i32) #0
+// CHECK-DAG: declare i32 @llvm.vp.reduce.umin.v8i32(i32, <8 x i32>, <8 x i1>, i32) #0
+// CHECK-DAG: declare float @llvm.vp.reduce.fadd.v8f32(float, <8 x float>, <8 x i1>, i32) #0
+// CHECK-DAG: declare float @llvm.vp.reduce.fmul.v8f32(float, <8 x float>, <8 x i1>, i32) #0
+// CHECK-DAG: declare float @llvm.vp.reduce.fmax.v8f32(float, <8 x float>, <8 x i1>, i32) #0
+// CHECK-DAG: declare float @llvm.vp.reduce.fmin.v8f32(float, <8 x float>, <8 x i1>, i32) #0
