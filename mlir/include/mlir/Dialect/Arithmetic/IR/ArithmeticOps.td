@@ -585,6 +585,7 @@ def Arith_NegFOp : Arith_FloatUnaryOp<"negf"> {
     %x = arith.negf %y : tensor<4x?xf8>
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//

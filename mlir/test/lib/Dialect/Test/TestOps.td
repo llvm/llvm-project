@@ -642,6 +642,17 @@ def TestProducingBranchOp : TEST_Op<"producing_br",
   let successors = (successor AnySuccessor:$first,AnySuccessor:$second);
 }
 
+// Produces an error value on the error path
+def TestInternalBranchOp : TEST_Op<"internal_br",
+	[DeclareOpInterfaceMethods<BranchOpInterface>, Terminator,
+	 AttrSizedOperandSegments]> {
+
+  let arguments = (ins Variadic<AnyType>:$successOperands,
+                       Variadic<AnyType>:$errorOperands);
+
+  let successors = (successor AnySuccessor:$successPath, AnySuccessor:$errorPath);
+}
+
 def AttrSizedOperandOp : TEST_Op<"attr_sized_operands",
                                  [AttrSizedOperandSegments]> {
   let arguments = (ins

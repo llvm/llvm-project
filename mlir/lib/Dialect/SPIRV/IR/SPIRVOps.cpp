@@ -1515,21 +1515,20 @@ LogicalResult spirv::BitcastOp::verify() {
 // spv.BranchOp
 //===----------------------------------------------------------------------===//
 
-Optional<MutableOperandRange>
-spirv::BranchOp::getMutableSuccessorOperands(unsigned index) {
+SuccessorOperands spirv::BranchOp::getSuccessorOperands(unsigned index) {
   assert(index == 0 && "invalid successor index");
-  return targetOperandsMutable();
+  return SuccessorOperands(0, targetOperandsMutable());
 }
 
 //===----------------------------------------------------------------------===//
 // spv.BranchConditionalOp
 //===----------------------------------------------------------------------===//
 
-Optional<MutableOperandRange>
-spirv::BranchConditionalOp::getMutableSuccessorOperands(unsigned index) {
+SuccessorOperands
+spirv::BranchConditionalOp::getSuccessorOperands(unsigned index) {
   assert(index < 2 && "invalid successor index");
-  return index == kTrueIndex ? trueTargetOperandsMutable()
-                             : falseTargetOperandsMutable();
+  return SuccessorOperands(index == kTrueIndex ? trueTargetOperandsMutable()
+                                               : falseTargetOperandsMutable());
 }
 
 ParseResult spirv::BranchConditionalOp::parse(OpAsmParser &parser,

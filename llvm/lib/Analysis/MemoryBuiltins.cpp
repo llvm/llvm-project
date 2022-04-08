@@ -17,6 +17,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/TargetFolder.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/Utils/Local.h"
@@ -153,7 +154,6 @@ static const std::pair<LibFunc, AllocFnsTy> AllocationFnData[] = {
     {LibFunc_strndup,                           {StrDupLike,       2,  1, -1, -1, MallocFamily::Malloc}},
     {LibFunc_dunder_strndup,                    {StrDupLike,       2,  1, -1, -1, MallocFamily::Malloc}},
     {LibFunc___kmpc_alloc_shared,               {MallocLike,       1,  0, -1, -1, MallocFamily::KmpcAllocShared}},
-    // TODO: Handle "int posix_memalign(void **, size_t, size_t)"
 };
 // clang-format on
 
@@ -569,11 +569,21 @@ Value *llvm::lowerObjectSizeCall(IntrinsicInst *ObjectSize,
                                  const DataLayout &DL,
                                  const TargetLibraryInfo *TLI,
                                  bool MustSucceed) {
+  return lowerObjectSizeCall(ObjectSize, DL, TLI, /*AAResults=*/nullptr,
+                             MustSucceed);
+}
+
+Value *llvm::lowerObjectSizeCall(IntrinsicInst *ObjectSize,
+                                 const DataLayout &DL,
+                                 const TargetLibraryInfo *TLI, AAResults *AA,
+                                 bool MustSucceed) {
   assert(ObjectSize->getIntrinsicID() == Intrinsic::objectsize &&
          "ObjectSize must be a call to llvm.objectsize!");
 
   bool MaxVal = cast<ConstantInt>(ObjectSize->getArgOperand(1))->isZero();
   ObjectSizeOpts EvalOptions;
+  EvalOptions.AA = AA;
+
   // Unless we have to fold this to something, try to be as accurate as
   // possible.
   if (MustSucceed)
@@ -803,9 +813,130 @@ SizeOffsetType ObjectSizeOffsetVisitor::visitIntToPtrInst(IntToPtrInst&) {
   return unknown();
 }
 
-SizeOffsetType ObjectSizeOffsetVisitor::visitLoadInst(LoadInst&) {
-  ++ObjectVisitorLoad;
-  return unknown();
+SizeOffsetType ObjectSizeOffsetVisitor::findLoadSizeOffset(
+    LoadInst &Load, BasicBlock &BB, BasicBlock::iterator From,
+    SmallDenseMap<BasicBlock *, SizeOffsetType, 8> &VisitedBlocks,
+    unsigned &ScannedInstCount) {
+  constexpr unsigned MaxInstsToScan = 128;
+
+  auto Where = VisitedBlocks.find(&BB);
+  if (Where != VisitedBlocks.end())
+    return Where->second;
+
+  auto Unknown = [this, &BB, &VisitedBlocks]() {
+    return VisitedBlocks[&BB] = unknown();
+  };
+  auto Known = [this, &BB, &VisitedBlocks](SizeOffsetType SO) {
+    return VisitedBlocks[&BB] = SO;
+  };
+
+  do {
+    Instruction &I = *From;
+
+    if (I.isDebugOrPseudoInst())
+      continue;
+
+    if (++ScannedInstCount > MaxInstsToScan)
+      return Unknown();
+
+    if (!I.mayWriteToMemory())
+      continue;
+
+    if (auto *SI = dyn_cast<StoreInst>(&I)) {
+      AliasResult AR =
+          Options.AA->alias(SI->getPointerOperand(), Load.getPointerOperand());
+      switch ((AliasResult::Kind)AR) {
+      case AliasResult::NoAlias:
+        continue;
+      case AliasResult::MustAlias:
+        if (SI->getValueOperand()->getType()->isPointerTy())
+          return Known(compute(SI->getValueOperand()));
+        else
+          return Unknown(); // No handling of non-pointer values by `compute`.
+      default:
+        return Unknown();
+      }
+    }
+
+    if (auto *CB = dyn_cast<CallBase>(&I)) {
+      Function *Callee = CB->getCalledFunction();
+      // Bail out on indirect call.
+      if (!Callee)
+        return Unknown();
+
+      LibFunc TLIFn;
+      if (!TLI || !TLI->getLibFunc(*CB->getCalledFunction(), TLIFn) ||
+          !TLI->has(TLIFn))
+        return Unknown();
+
+      // TODO: There's probably more interesting case to support here.
+      if (TLIFn != LibFunc_posix_memalign)
+        return Unknown();
+
+      AliasResult AR =
+          Options.AA->alias(CB->getOperand(0), Load.getPointerOperand());
+      switch ((AliasResult::Kind)AR) {
+      case AliasResult::NoAlias:
+        continue;
+      case AliasResult::MustAlias:
+        break;
+      default:
+        return Unknown();
+      }
+
+      // Is the error status of posix_memalign correctly checked? If not it
+      // would be incorrect to assume it succeeds and load doesn't see the
+      // previous value.
+      Optional<bool> Checked = isImpliedByDomCondition(
+          ICmpInst::ICMP_EQ, CB, ConstantInt::get(CB->getType(), 0), &Load, DL);
+      if (!Checked || !*Checked)
+        return Unknown();
+
+      Value *Size = CB->getOperand(2);
+      auto *C = dyn_cast<ConstantInt>(Size);
+      if (!C)
+        return Unknown();
+
+      return Known({C->getValue(), APInt(C->getValue().getBitWidth(), 0)});
+    }
+
+    return Unknown();
+  } while (From-- != BB.begin());
+
+  SmallVector<SizeOffsetType> PredecessorSizeOffsets;
+  for (auto *PredBB : predecessors(&BB)) {
+    PredecessorSizeOffsets.push_back(findLoadSizeOffset(
+        Load, *PredBB, BasicBlock::iterator(PredBB->getTerminator()),
+        VisitedBlocks, ScannedInstCount));
+    if (!bothKnown(PredecessorSizeOffsets.back()))
+      return Unknown();
+  }
+
+  if (PredecessorSizeOffsets.empty())
+    return Unknown();
+
+  return Known(std::accumulate(PredecessorSizeOffsets.begin() + 1,
+                               PredecessorSizeOffsets.end(),
+                               PredecessorSizeOffsets.front(),
+                               [this](SizeOffsetType LHS, SizeOffsetType RHS) {
+                                 return combineSizeOffset(LHS, RHS);
+                               }));
+}
+
+SizeOffsetType ObjectSizeOffsetVisitor::visitLoadInst(LoadInst &LI) {
+  if (!Options.AA) {
+    ++ObjectVisitorLoad;
+    return unknown();
+  }
+
+  SmallDenseMap<BasicBlock *, SizeOffsetType, 8> VisitedBlocks;
+  unsigned ScannedInstCount = 0;
+  SizeOffsetType SO =
+      findLoadSizeOffset(LI, *LI.getParent(), BasicBlock::iterator(LI),
+                         VisitedBlocks, ScannedInstCount);
+  if (!bothKnown(SO))
+    ++ObjectVisitorLoad;
+  return SO;
 }
 
 SizeOffsetType ObjectSizeOffsetVisitor::combineSizeOffset(SizeOffsetType LHS,
@@ -1010,7 +1141,7 @@ SizeOffsetEvalType ObjectSizeOffsetEvaluator::visitIntToPtrInst(IntToPtrInst&) {
   return unknown();
 }
 
-SizeOffsetEvalType ObjectSizeOffsetEvaluator::visitLoadInst(LoadInst&) {
+SizeOffsetEvalType ObjectSizeOffsetEvaluator::visitLoadInst(LoadInst &LI) {
   return unknown();
 }
 
