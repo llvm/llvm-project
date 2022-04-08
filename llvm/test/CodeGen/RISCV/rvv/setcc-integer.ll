@@ -30,8 +30,7 @@ define <vscale x 8 x i1> @icmp_eq_xv_nxv8i8(<vscale x 8 x i8> %va, i8 %b) {
 ; CHECK-LABEL: icmp_eq_xv_nxv8i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, mu
-; CHECK-NEXT:    vmv.v.x v9, a0
-; CHECK-NEXT:    vmseq.vv v0, v9, v8
+; CHECK-NEXT:    vmseq.vx v0, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i8> poison, i8 %b, i32 0
   %splat = shufflevector <vscale x 8 x i8> %head, <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
@@ -101,8 +100,7 @@ define <vscale x 8 x i1> @icmp_ne_xv_nxv8i8(<vscale x 8 x i8> %va, i8 %b) {
 ; CHECK-LABEL: icmp_ne_xv_nxv8i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, mu
-; CHECK-NEXT:    vmv.v.x v9, a0
-; CHECK-NEXT:    vmsne.vv v0, v9, v8
+; CHECK-NEXT:    vmsne.vx v0, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i8> poison, i8 %b, i32 0
   %splat = shufflevector <vscale x 8 x i8> %head, <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
@@ -148,8 +146,7 @@ define <vscale x 8 x i1> @icmp_ugt_xv_nxv8i8(<vscale x 8 x i8> %va, i8 %b) {
 ; CHECK-LABEL: icmp_ugt_xv_nxv8i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, mu
-; CHECK-NEXT:    vmv.v.x v9, a0
-; CHECK-NEXT:    vmsltu.vv v0, v8, v9
+; CHECK-NEXT:    vmsltu.vx v0, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i8> poison, i8 %b, i32 0
   %splat = shufflevector <vscale x 8 x i8> %head, <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
@@ -196,8 +193,7 @@ define <vscale x 8 x i1> @icmp_uge_xv_nxv8i8(<vscale x 8 x i8> %va, i8 %b) {
 ; CHECK-LABEL: icmp_uge_xv_nxv8i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, mu
-; CHECK-NEXT:    vmv.v.x v9, a0
-; CHECK-NEXT:    vmsleu.vv v0, v8, v9
+; CHECK-NEXT:    vmsleu.vx v0, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i8> poison, i8 %b, i32 0
   %splat = shufflevector <vscale x 8 x i8> %head, <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
@@ -330,8 +326,7 @@ define <vscale x 8 x i1> @icmp_ult_xv_nxv8i8(<vscale x 8 x i8> %va, i8 %b) {
 ; CHECK-LABEL: icmp_ult_xv_nxv8i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, mu
-; CHECK-NEXT:    vmv.v.x v9, a0
-; CHECK-NEXT:    vmsltu.vv v0, v9, v8
+; CHECK-NEXT:    vmsgtu.vx v0, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i8> poison, i8 %b, i32 0
   %splat = shufflevector <vscale x 8 x i8> %head, <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
@@ -499,8 +494,7 @@ define <vscale x 8 x i1> @icmp_sgt_xv_nxv8i8(<vscale x 8 x i8> %va, i8 %b) {
 ; CHECK-LABEL: icmp_sgt_xv_nxv8i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, mu
-; CHECK-NEXT:    vmv.v.x v9, a0
-; CHECK-NEXT:    vmslt.vv v0, v8, v9
+; CHECK-NEXT:    vmslt.vx v0, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i8> poison, i8 %b, i32 0
   %splat = shufflevector <vscale x 8 x i8> %head, <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
@@ -547,8 +541,7 @@ define <vscale x 8 x i1> @icmp_sge_xv_nxv8i8(<vscale x 8 x i8> %va, i8 %b) {
 ; CHECK-LABEL: icmp_sge_xv_nxv8i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, mu
-; CHECK-NEXT:    vmv.v.x v9, a0
-; CHECK-NEXT:    vmsle.vv v0, v8, v9
+; CHECK-NEXT:    vmsle.vx v0, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i8> poison, i8 %b, i32 0
   %splat = shufflevector <vscale x 8 x i8> %head, <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
@@ -643,8 +636,7 @@ define <vscale x 8 x i1> @icmp_slt_xv_nxv8i8(<vscale x 8 x i8> %va, i8 %b) {
 ; CHECK-LABEL: icmp_slt_xv_nxv8i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, mu
-; CHECK-NEXT:    vmv.v.x v9, a0
-; CHECK-NEXT:    vmslt.vv v0, v9, v8
+; CHECK-NEXT:    vmsgt.vx v0, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i8> poison, i8 %b, i32 0
   %splat = shufflevector <vscale x 8 x i8> %head, <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
@@ -786,8 +778,7 @@ define <vscale x 8 x i1> @icmp_eq_xv_nxv8i16(<vscale x 8 x i16> %va, i16 %b) {
 ; CHECK-LABEL: icmp_eq_xv_nxv8i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, mu
-; CHECK-NEXT:    vmv.v.x v10, a0
-; CHECK-NEXT:    vmseq.vv v0, v10, v8
+; CHECK-NEXT:    vmseq.vx v0, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i16> poison, i16 %b, i32 0
   %splat = shufflevector <vscale x 8 x i16> %head, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
@@ -857,8 +848,7 @@ define <vscale x 8 x i1> @icmp_ne_xv_nxv8i16(<vscale x 8 x i16> %va, i16 %b) {
 ; CHECK-LABEL: icmp_ne_xv_nxv8i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, mu
-; CHECK-NEXT:    vmv.v.x v10, a0
-; CHECK-NEXT:    vmsne.vv v0, v10, v8
+; CHECK-NEXT:    vmsne.vx v0, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i16> poison, i16 %b, i32 0
   %splat = shufflevector <vscale x 8 x i16> %head, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
@@ -904,8 +894,7 @@ define <vscale x 8 x i1> @icmp_ugt_xv_nxv8i16(<vscale x 8 x i16> %va, i16 %b) {
 ; CHECK-LABEL: icmp_ugt_xv_nxv8i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, mu
-; CHECK-NEXT:    vmv.v.x v10, a0
-; CHECK-NEXT:    vmsltu.vv v0, v8, v10
+; CHECK-NEXT:    vmsltu.vx v0, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i16> poison, i16 %b, i32 0
   %splat = shufflevector <vscale x 8 x i16> %head, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
@@ -952,8 +941,7 @@ define <vscale x 8 x i1> @icmp_uge_xv_nxv8i16(<vscale x 8 x i16> %va, i16 %b) {
 ; CHECK-LABEL: icmp_uge_xv_nxv8i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, mu
-; CHECK-NEXT:    vmv.v.x v10, a0
-; CHECK-NEXT:    vmsleu.vv v0, v8, v10
+; CHECK-NEXT:    vmsleu.vx v0, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i16> poison, i16 %b, i32 0
   %splat = shufflevector <vscale x 8 x i16> %head, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
@@ -1072,8 +1060,7 @@ define <vscale x 8 x i1> @icmp_ult_xv_nxv8i16(<vscale x 8 x i16> %va, i16 %b) {
 ; CHECK-LABEL: icmp_ult_xv_nxv8i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, mu
-; CHECK-NEXT:    vmv.v.x v10, a0
-; CHECK-NEXT:    vmsltu.vv v0, v10, v8
+; CHECK-NEXT:    vmsgtu.vx v0, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i16> poison, i16 %b, i32 0
   %splat = shufflevector <vscale x 8 x i16> %head, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
@@ -1227,8 +1214,7 @@ define <vscale x 8 x i1> @icmp_sgt_xv_nxv8i16(<vscale x 8 x i16> %va, i16 %b) {
 ; CHECK-LABEL: icmp_sgt_xv_nxv8i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, mu
-; CHECK-NEXT:    vmv.v.x v10, a0
-; CHECK-NEXT:    vmslt.vv v0, v8, v10
+; CHECK-NEXT:    vmslt.vx v0, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i16> poison, i16 %b, i32 0
   %splat = shufflevector <vscale x 8 x i16> %head, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
@@ -1275,8 +1261,7 @@ define <vscale x 8 x i1> @icmp_sge_xv_nxv8i16(<vscale x 8 x i16> %va, i16 %b) {
 ; CHECK-LABEL: icmp_sge_xv_nxv8i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, mu
-; CHECK-NEXT:    vmv.v.x v10, a0
-; CHECK-NEXT:    vmsle.vv v0, v8, v10
+; CHECK-NEXT:    vmsle.vx v0, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i16> poison, i16 %b, i32 0
   %splat = shufflevector <vscale x 8 x i16> %head, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
@@ -1371,8 +1356,7 @@ define <vscale x 8 x i1> @icmp_slt_xv_nxv8i16(<vscale x 8 x i16> %va, i16 %b) {
 ; CHECK-LABEL: icmp_slt_xv_nxv8i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, mu
-; CHECK-NEXT:    vmv.v.x v10, a0
-; CHECK-NEXT:    vmslt.vv v0, v10, v8
+; CHECK-NEXT:    vmsgt.vx v0, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i16> poison, i16 %b, i32 0
   %splat = shufflevector <vscale x 8 x i16> %head, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
@@ -1514,8 +1498,7 @@ define <vscale x 8 x i1> @icmp_eq_xv_nxv8i32(<vscale x 8 x i32> %va, i32 %b) {
 ; CHECK-LABEL: icmp_eq_xv_nxv8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, mu
-; CHECK-NEXT:    vmv.v.x v12, a0
-; CHECK-NEXT:    vmseq.vv v0, v12, v8
+; CHECK-NEXT:    vmseq.vx v0, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i32> poison, i32 %b, i32 0
   %splat = shufflevector <vscale x 8 x i32> %head, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
@@ -1585,8 +1568,7 @@ define <vscale x 8 x i1> @icmp_ne_xv_nxv8i32(<vscale x 8 x i32> %va, i32 %b) {
 ; CHECK-LABEL: icmp_ne_xv_nxv8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, mu
-; CHECK-NEXT:    vmv.v.x v12, a0
-; CHECK-NEXT:    vmsne.vv v0, v12, v8
+; CHECK-NEXT:    vmsne.vx v0, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i32> poison, i32 %b, i32 0
   %splat = shufflevector <vscale x 8 x i32> %head, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
@@ -1632,8 +1614,7 @@ define <vscale x 8 x i1> @icmp_ugt_xv_nxv8i32(<vscale x 8 x i32> %va, i32 %b) {
 ; CHECK-LABEL: icmp_ugt_xv_nxv8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, mu
-; CHECK-NEXT:    vmv.v.x v12, a0
-; CHECK-NEXT:    vmsltu.vv v0, v8, v12
+; CHECK-NEXT:    vmsltu.vx v0, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i32> poison, i32 %b, i32 0
   %splat = shufflevector <vscale x 8 x i32> %head, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
@@ -1680,8 +1661,7 @@ define <vscale x 8 x i1> @icmp_uge_xv_nxv8i32(<vscale x 8 x i32> %va, i32 %b) {
 ; CHECK-LABEL: icmp_uge_xv_nxv8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, mu
-; CHECK-NEXT:    vmv.v.x v12, a0
-; CHECK-NEXT:    vmsleu.vv v0, v8, v12
+; CHECK-NEXT:    vmsleu.vx v0, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i32> poison, i32 %b, i32 0
   %splat = shufflevector <vscale x 8 x i32> %head, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
@@ -1800,8 +1780,7 @@ define <vscale x 8 x i1> @icmp_ult_xv_nxv8i32(<vscale x 8 x i32> %va, i32 %b) {
 ; CHECK-LABEL: icmp_ult_xv_nxv8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, mu
-; CHECK-NEXT:    vmv.v.x v12, a0
-; CHECK-NEXT:    vmsltu.vv v0, v12, v8
+; CHECK-NEXT:    vmsgtu.vx v0, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i32> poison, i32 %b, i32 0
   %splat = shufflevector <vscale x 8 x i32> %head, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
@@ -1955,8 +1934,7 @@ define <vscale x 8 x i1> @icmp_sgt_xv_nxv8i32(<vscale x 8 x i32> %va, i32 %b) {
 ; CHECK-LABEL: icmp_sgt_xv_nxv8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, mu
-; CHECK-NEXT:    vmv.v.x v12, a0
-; CHECK-NEXT:    vmslt.vv v0, v8, v12
+; CHECK-NEXT:    vmslt.vx v0, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i32> poison, i32 %b, i32 0
   %splat = shufflevector <vscale x 8 x i32> %head, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
@@ -2003,8 +1981,7 @@ define <vscale x 8 x i1> @icmp_sge_xv_nxv8i32(<vscale x 8 x i32> %va, i32 %b) {
 ; CHECK-LABEL: icmp_sge_xv_nxv8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, mu
-; CHECK-NEXT:    vmv.v.x v12, a0
-; CHECK-NEXT:    vmsle.vv v0, v8, v12
+; CHECK-NEXT:    vmsle.vx v0, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i32> poison, i32 %b, i32 0
   %splat = shufflevector <vscale x 8 x i32> %head, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
@@ -2099,8 +2076,7 @@ define <vscale x 8 x i1> @icmp_slt_xv_nxv8i32(<vscale x 8 x i32> %va, i32 %b) {
 ; CHECK-LABEL: icmp_slt_xv_nxv8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, mu
-; CHECK-NEXT:    vmv.v.x v12, a0
-; CHECK-NEXT:    vmslt.vv v0, v12, v8
+; CHECK-NEXT:    vmsgt.vx v0, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i32> poison, i32 %b, i32 0
   %splat = shufflevector <vscale x 8 x i32> %head, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
@@ -2268,8 +2244,7 @@ define <vscale x 8 x i1> @icmp_eq_xv_nxv8i64(<vscale x 8 x i64> %va, i64 %b) {
 ; RV64-LABEL: icmp_eq_xv_nxv8i64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, mu
-; RV64-NEXT:    vmv.v.x v16, a0
-; RV64-NEXT:    vmseq.vv v0, v16, v8
+; RV64-NEXT:    vmseq.vx v0, v8, a0
 ; RV64-NEXT:    ret
   %head = insertelement <vscale x 8 x i64> poison, i64 %b, i32 0
   %splat = shufflevector <vscale x 8 x i64> %head, <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
@@ -2365,8 +2340,7 @@ define <vscale x 8 x i1> @icmp_ne_xv_nxv8i64(<vscale x 8 x i64> %va, i64 %b) {
 ; RV64-LABEL: icmp_ne_xv_nxv8i64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, mu
-; RV64-NEXT:    vmv.v.x v16, a0
-; RV64-NEXT:    vmsne.vv v0, v16, v8
+; RV64-NEXT:    vmsne.vx v0, v8, a0
 ; RV64-NEXT:    ret
   %head = insertelement <vscale x 8 x i64> poison, i64 %b, i32 0
   %splat = shufflevector <vscale x 8 x i64> %head, <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
@@ -2438,8 +2412,7 @@ define <vscale x 8 x i1> @icmp_ugt_xv_nxv8i64(<vscale x 8 x i64> %va, i64 %b) {
 ; RV64-LABEL: icmp_ugt_xv_nxv8i64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, mu
-; RV64-NEXT:    vmv.v.x v16, a0
-; RV64-NEXT:    vmsltu.vv v0, v8, v16
+; RV64-NEXT:    vmsltu.vx v0, v8, a0
 ; RV64-NEXT:    ret
   %head = insertelement <vscale x 8 x i64> poison, i64 %b, i32 0
   %splat = shufflevector <vscale x 8 x i64> %head, <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
@@ -2512,8 +2485,7 @@ define <vscale x 8 x i1> @icmp_uge_xv_nxv8i64(<vscale x 8 x i64> %va, i64 %b) {
 ; RV64-LABEL: icmp_uge_xv_nxv8i64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, mu
-; RV64-NEXT:    vmv.v.x v16, a0
-; RV64-NEXT:    vmsleu.vv v0, v8, v16
+; RV64-NEXT:    vmsleu.vx v0, v8, a0
 ; RV64-NEXT:    ret
   %head = insertelement <vscale x 8 x i64> poison, i64 %b, i32 0
   %splat = shufflevector <vscale x 8 x i64> %head, <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
@@ -2658,8 +2630,7 @@ define <vscale x 8 x i1> @icmp_ult_xv_nxv8i64(<vscale x 8 x i64> %va, i64 %b) {
 ; RV64-LABEL: icmp_ult_xv_nxv8i64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, mu
-; RV64-NEXT:    vmv.v.x v16, a0
-; RV64-NEXT:    vmsltu.vv v0, v16, v8
+; RV64-NEXT:    vmsgtu.vx v0, v8, a0
 ; RV64-NEXT:    ret
   %head = insertelement <vscale x 8 x i64> poison, i64 %b, i32 0
   %splat = shufflevector <vscale x 8 x i64> %head, <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
@@ -2865,8 +2836,7 @@ define <vscale x 8 x i1> @icmp_sgt_xv_nxv8i64(<vscale x 8 x i64> %va, i64 %b) {
 ; RV64-LABEL: icmp_sgt_xv_nxv8i64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, mu
-; RV64-NEXT:    vmv.v.x v16, a0
-; RV64-NEXT:    vmslt.vv v0, v8, v16
+; RV64-NEXT:    vmslt.vx v0, v8, a0
 ; RV64-NEXT:    ret
   %head = insertelement <vscale x 8 x i64> poison, i64 %b, i32 0
   %splat = shufflevector <vscale x 8 x i64> %head, <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
@@ -2939,8 +2909,7 @@ define <vscale x 8 x i1> @icmp_sge_xv_nxv8i64(<vscale x 8 x i64> %va, i64 %b) {
 ; RV64-LABEL: icmp_sge_xv_nxv8i64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, mu
-; RV64-NEXT:    vmv.v.x v16, a0
-; RV64-NEXT:    vmsle.vv v0, v8, v16
+; RV64-NEXT:    vmsle.vx v0, v8, a0
 ; RV64-NEXT:    ret
   %head = insertelement <vscale x 8 x i64> poison, i64 %b, i32 0
   %splat = shufflevector <vscale x 8 x i64> %head, <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
@@ -3061,8 +3030,7 @@ define <vscale x 8 x i1> @icmp_slt_xv_nxv8i64(<vscale x 8 x i64> %va, i64 %b) {
 ; RV64-LABEL: icmp_slt_xv_nxv8i64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, mu
-; RV64-NEXT:    vmv.v.x v16, a0
-; RV64-NEXT:    vmslt.vv v0, v16, v8
+; RV64-NEXT:    vmsgt.vx v0, v8, a0
 ; RV64-NEXT:    ret
   %head = insertelement <vscale x 8 x i64> poison, i64 %b, i32 0
   %splat = shufflevector <vscale x 8 x i64> %head, <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer

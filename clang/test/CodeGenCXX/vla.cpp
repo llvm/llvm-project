@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-apple-darwin %s -emit-llvm -o - | FileCheck -check-prefixes=X64,CHECK %s
-// RUN: %clang_cc1 -std=c++11 -triple amdgcn %s -emit-llvm -o - | FileCheck -check-prefixes=AMDGCN,CHECK %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -triple x86_64-apple-darwin %s -emit-llvm -o - | FileCheck -check-prefixes=X64,CHECK %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -triple amdgcn %s -emit-llvm -o - | FileCheck -check-prefixes=AMDGCN,CHECK %s
 
 template<typename T>
 struct S {

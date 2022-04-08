@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -w -triple i386-pc-elfiamcu -mfloat-abi soft -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -w -triple i386-pc-elfiamcu -mfloat-abi soft -emit-llvm -o - %s | FileCheck %s
 
 // CHECK-LABEL: define{{.*}} void @ints(i32 noundef %a, i32 noundef %b, i32 noundef %c, i32 noundef %d)
 void ints(int a, int b, int c, int d) {}

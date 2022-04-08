@@ -1,11 +1,11 @@
-// RUN: %clang_cc1 -std=c++2a -fexceptions -emit-llvm %s -triple x86_64-linux-gnu -o - | FileCheck %s --check-prefixes=CHECK,CHECK-ITANIUM,CHECK-64BIT
-// RUN: %clang_cc1 -std=c++2a -fexceptions -emit-llvm %s -triple x86_64-windows -o - | FileCheck %s --check-prefixes=CHECK,CHECK-MSABI,CHECK-MSABI64,CHECK-64BIT
-// RUN: %clang_cc1 -std=c++2a -fexceptions -emit-llvm %s -triple i386-windows -o - | FileCheck %s --check-prefixes=CHECK,CHECK-MSABI,CHECK-MSABI32,CHECK-32BIT
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++2a -fexceptions -emit-llvm %s -triple x86_64-linux-gnu -o - | FileCheck %s --check-prefixes=CHECK,CHECK-ITANIUM,CHECK-64BIT
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++2a -fexceptions -emit-llvm %s -triple x86_64-windows -o - | FileCheck %s --check-prefixes=CHECK,CHECK-MSABI,CHECK-MSABI64,CHECK-64BIT
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++2a -fexceptions -emit-llvm %s -triple i386-windows -o - | FileCheck %s --check-prefixes=CHECK,CHECK-MSABI,CHECK-MSABI32,CHECK-32BIT
 
 // PR46908: ensure the IR passes the verifier with optimizations enabled.
-// RUN: %clang_cc1 -std=c++2a -fexceptions -emit-llvm-only %s -triple x86_64-linux-gnu -O2
-// RUN: %clang_cc1 -std=c++2a -fexceptions -emit-llvm-only %s -triple x86_64-windows -O2
-// RUN: %clang_cc1 -std=c++2a -fexceptions -emit-llvm-only %s -triple i386-windows -O2
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++2a -fexceptions -emit-llvm-only %s -triple x86_64-linux-gnu -O2
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++2a -fexceptions -emit-llvm-only %s -triple x86_64-windows -O2
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++2a -fexceptions -emit-llvm-only %s -triple i386-windows -O2
 
 namespace std {
   using size_t = decltype(sizeof(0));

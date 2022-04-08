@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fobjc-gc -emit-llvm -triple x86_64-apple-darwin10.0.0 -fobjc-runtime=macosx-fragile-10.5 -o - %s | FileCheck %s -check-prefix=CHECK-OBJ
-// RUN: %clang_cc1 -x c++    -emit-llvm -triple x86_64-apple-darwin10.0.0                                    -o - %s | FileCheck %s -check-prefix=CHECK-CPP
+// RUN: %clang_cc1 -no-opaque-pointers -fobjc-gc -emit-llvm -triple x86_64-apple-darwin10.0.0 -fobjc-runtime=macosx-fragile-10.5 -o - %s | FileCheck %s -check-prefix=CHECK-OBJ
+// RUN: %clang_cc1 -no-opaque-pointers -x c++    -emit-llvm -triple x86_64-apple-darwin10.0.0                                    -o - %s | FileCheck %s -check-prefix=CHECK-CPP
 #ifdef __OBJC__
 struct A { 
   A &operator=(const A&);

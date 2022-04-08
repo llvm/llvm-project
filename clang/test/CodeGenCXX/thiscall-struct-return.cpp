@@ -1,7 +1,7 @@
 // For MSVC ABI compatibility, all structures returned by value using the
 // thiscall calling convention must use the hidden parameter.
 //
-// RUN: %clang_cc1 -triple i386-PC-Win32 %s -fms-compatibility -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i386-PC-Win32 %s -fms-compatibility -emit-llvm -o - | FileCheck %s
 
 // This structure would normally be returned via EAX
 struct S {

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-apple-darwin9 | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm %s -o - -triple=x86_64-apple-darwin9 | FileCheck %s
 
 // Check mangling of Vtables, VTTs, and construction vtables that
 // involve standard substitutions.

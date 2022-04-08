@@ -116,8 +116,7 @@ static cl::opt<uint32_t> MaxNumUsesTraversed(
 
 // Experimental option to allow imprecision in LICM in pathological cases, in
 // exchange for faster compile. This is to be removed if MemorySSA starts to
-// address the same issue. This flag applies only when LICM uses MemorySSA
-// instead on AliasSetTracker. LICM calls MemorySSAWalker's
+// address the same issue. LICM calls MemorySSAWalker's
 // getClobberingMemoryAccess, up to the value of the Cap, getting perfect
 // accuracy. Afterwards, LICM will call into MemorySSA's getDefiningAccess,
 // which may not be precise, since optimizeUses is capped. The result is
@@ -156,14 +155,11 @@ static bool isSafeToExecuteUnconditionally(
     const Loop *CurLoop, const LoopSafetyInfo *SafetyInfo,
     OptimizationRemarkEmitter *ORE, const Instruction *CtxI,
     bool AllowSpeculation);
-static bool pointerInvalidatedByLoop(MemoryLocation MemLoc,
-                                     AliasSetTracker *CurAST, Loop *CurLoop,
-                                     AAResults *AA);
-static bool pointerInvalidatedByLoopWithMSSA(MemorySSA *MSSA, MemoryUse *MU,
-                                             Loop *CurLoop, Instruction &I,
-                                             SinkAndHoistLICMFlags &Flags);
-static bool pointerInvalidatedByBlockWithMSSA(BasicBlock &BB, MemorySSA &MSSA,
-                                              MemoryUse &MU);
+static bool pointerInvalidatedByLoop(MemorySSA *MSSA, MemoryUse *MU,
+                                     Loop *CurLoop, Instruction &I,
+                                     SinkAndHoistLICMFlags &Flags);
+static bool pointerInvalidatedByBlock(BasicBlock &BB, MemorySSA &MSSA,
+                                      MemoryUse &MU);
 static Instruction *cloneInstructionInExitBlock(
     Instruction &I, BasicBlock &ExitBlock, PHINode &PN, const LoopInfo *LI,
     const LoopSafetyInfo *SafetyInfo, MemorySSAUpdater *MSSAU);
@@ -580,8 +576,7 @@ bool llvm::sinkRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
       if (!I.mayHaveSideEffects() &&
           isNotUsedOrFreeInLoop(I, LoopNestMode ? OutermostLoop : CurLoop,
                                 SafetyInfo, TTI, FreeInLoop, LoopNestMode) &&
-          canSinkOrHoistInst(I, AA, DT, CurLoop, /*CurAST*/nullptr, MSSAU, true,
-                             &Flags, ORE)) {
+          canSinkOrHoistInst(I, AA, DT, CurLoop, MSSAU, true, &Flags, ORE)) {
         if (sink(I, LI, DT, BFI, CurLoop, SafetyInfo, MSSAU, ORE)) {
           if (!FreeInLoop) {
             ++II;
@@ -904,8 +899,7 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
       // and we have accurately duplicated the control flow from the loop header
       // to that block.
       if (CurLoop->hasLoopInvariantOperands(&I) &&
-          canSinkOrHoistInst(I, AA, DT, CurLoop, /*CurAST*/ nullptr, MSSAU,
-                             true, &Flags, ORE) &&
+          canSinkOrHoistInst(I, AA, DT, CurLoop, MSSAU, true, &Flags, ORE) &&
           isSafeToExecuteUnconditionally(
               I, DT, TLI, CurLoop, SafetyInfo, ORE,
               CurLoop->getLoopPreheader()->getTerminator(), AllowSpeculation)) {
@@ -1114,23 +1108,12 @@ bool isHoistableAndSinkableInst(Instruction &I) {
           isa<ShuffleVectorInst>(I) || isa<ExtractValueInst>(I) ||
           isa<InsertValueInst>(I) || isa<FreezeInst>(I));
 }
-/// Return true if all of the alias sets within this AST are known not to
-/// contain a Mod, or if MSSA knows there are no MemoryDefs in the loop.
-bool isReadOnly(AliasSetTracker *CurAST, const MemorySSAUpdater *MSSAU,
-                const Loop *L) {
-  if (CurAST) {
-    for (AliasSet &AS : *CurAST) {
-      if (!AS.isForwardingAliasSet() && AS.isMod()) {
-        return false;
-      }
-    }
-    return true;
-  } else { /*MSSAU*/
-    for (auto *BB : L->getBlocks())
-      if (MSSAU->getMemorySSA()->getBlockDefs(BB))
-        return false;
-    return true;
-  }
+/// Return true if MSSA knows there are no MemoryDefs in the loop.
+bool isReadOnly(const MemorySSAUpdater *MSSAU, const Loop *L) {
+  for (auto *BB : L->getBlocks())
+    if (MSSAU->getMemorySSA()->getBlockDefs(BB))
+      return false;
+  return true;
 }
 
 /// Return true if I is the only Instruction with a MemoryAccess in L.
@@ -1152,13 +1135,11 @@ bool isOnlyMemoryAccess(const Instruction *I, const Loop *L,
 }
 
 bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
-                              Loop *CurLoop, AliasSetTracker *CurAST,
-                              MemorySSAUpdater *MSSAU,
+                              Loop *CurLoop, MemorySSAUpdater *MSSAU,
                               bool TargetExecutesOncePerLoop,
                               SinkAndHoistLICMFlags *Flags,
                               OptimizationRemarkEmitter *ORE) {
-  assert(((CurAST != nullptr) ^ (MSSAU != nullptr)) &&
-         "Either AliasSetTracker or MemorySSA should be initialized.");
+  assert(MSSAU && "MemorySSA should be initialized.");
 
   // If we don't understand the instruction, bail early.
   if (!isHoistableAndSinkableInst(I))
@@ -1187,13 +1168,8 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
     if (isLoadInvariantInLoop(LI, DT, CurLoop))
       return true;
 
-    bool Invalidated;
-    if (CurAST)
-      Invalidated = pointerInvalidatedByLoop(MemoryLocation::get(LI), CurAST,
-                                             CurLoop, AA);
-    else
-      Invalidated = pointerInvalidatedByLoopWithMSSA(
-          MSSA, cast<MemoryUse>(MSSA->getMemoryAccess(LI)), CurLoop, I, *Flags);
+    bool Invalidated = pointerInvalidatedByLoop(
+        MSSA, cast<MemoryUse>(MSSA->getMemoryAccess(LI)), CurLoop, I, *Flags);
     // Check loop-invariant address because this may also be a sinkable load
     // whose address is not necessarily loop-invariant.
     if (ORE && Invalidated && CurLoop->isLoopInvariant(LI->getPointerOperand()))
@@ -1241,24 +1217,17 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
       if (AAResults::onlyAccessesArgPointees(Behavior)) {
         // TODO: expand to writeable arguments
         for (Value *Op : CI->args())
-          if (Op->getType()->isPointerTy()) {
-            bool Invalidated;
-            if (CurAST)
-              Invalidated = pointerInvalidatedByLoop(
-                  MemoryLocation::getBeforeOrAfter(Op), CurAST, CurLoop, AA);
-            else
-              Invalidated = pointerInvalidatedByLoopWithMSSA(
+          if (Op->getType()->isPointerTy() &&
+              pointerInvalidatedByLoop(
                   MSSA, cast<MemoryUse>(MSSA->getMemoryAccess(CI)), CurLoop, I,
-                  *Flags);
-            if (Invalidated)
-              return false;
-          }
+                  *Flags))
+            return false;
         return true;
       }
 
       // If this call only reads from memory and there are no writes to memory
       // in the loop, we can hoist or sink the call as appropriate.
-      if (isReadOnly(CurAST, MSSAU, CurLoop))
+      if (isReadOnly(MSSAU, CurLoop))
         return true;
     }
 
@@ -1269,21 +1238,7 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
   } else if (auto *FI = dyn_cast<FenceInst>(&I)) {
     // Fences alias (most) everything to provide ordering.  For the moment,
     // just give up if there are any other memory operations in the loop.
-    if (CurAST) {
-      auto Begin = CurAST->begin();
-      assert(Begin != CurAST->end() && "must contain FI");
-      if (std::next(Begin) != CurAST->end())
-        // constant memory for instance, TODO: handle better
-        return false;
-      auto *UniqueI = Begin->getUniqueInstruction();
-      if (!UniqueI)
-        // other memory op, give up
-        return false;
-      (void)FI; // suppress unused variable warning
-      assert(UniqueI == FI && "AS must contain FI");
-      return true;
-    } else // MSSAU
-      return isOnlyMemoryAccess(FI, CurLoop, MSSAU);
+    return isOnlyMemoryAccess(FI, CurLoop, MSSAU);
   } else if (auto *SI = dyn_cast<StoreInst>(&I)) {
     if (!SI->isUnordered())
       return false; // Don't sink/hoist volatile or ordered atomic store!
@@ -1293,68 +1248,54 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
     // load store promotion instead.  TODO: We can extend this to cases where
     // there is exactly one write to the location and that write dominates an
     // arbitrary number of reads in the loop.
-    if (CurAST) {
-      auto &AS = CurAST->getAliasSetFor(MemoryLocation::get(SI));
-
-      if (AS.isRef() || !AS.isMustAlias())
-        // Quick exit test, handled by the full path below as well.
-        return false;
-      auto *UniqueI = AS.getUniqueInstruction();
-      if (!UniqueI)
-        // other memory op, give up
-        return false;
-      assert(UniqueI == SI && "AS must contain SI");
+    if (isOnlyMemoryAccess(SI, CurLoop, MSSAU))
       return true;
-    } else { // MSSAU
-      if (isOnlyMemoryAccess(SI, CurLoop, MSSAU))
-        return true;
-      // If there are more accesses than the Promotion cap or no "quota" to
-      // check clobber, then give up as we're not walking a list that long.
-      if (Flags->tooManyMemoryAccesses() || Flags->tooManyClobberingCalls())
-        return false;
-      // If there are interfering Uses (i.e. their defining access is in the
-      // loop), or ordered loads (stored as Defs!), don't move this store.
-      // Could do better here, but this is conservatively correct.
-      // TODO: Cache set of Uses on the first walk in runOnLoop, update when
-      // moving accesses. Can also extend to dominating uses.
-      auto *SIMD = MSSA->getMemoryAccess(SI);
-      for (auto *BB : CurLoop->getBlocks())
-        if (auto *Accesses = MSSA->getBlockAccesses(BB)) {
-          for (const auto &MA : *Accesses)
-            if (const auto *MU = dyn_cast<MemoryUse>(&MA)) {
-              auto *MD = MU->getDefiningAccess();
-              if (!MSSA->isLiveOnEntryDef(MD) &&
-                  CurLoop->contains(MD->getBlock()))
-                return false;
-              // Disable hoisting past potentially interfering loads. Optimized
-              // Uses may point to an access outside the loop, as getClobbering
-              // checks the previous iteration when walking the backedge.
-              // FIXME: More precise: no Uses that alias SI.
-              if (!Flags->getIsSink() && !MSSA->dominates(SIMD, MU))
-                return false;
-            } else if (const auto *MD = dyn_cast<MemoryDef>(&MA)) {
-              if (auto *LI = dyn_cast<LoadInst>(MD->getMemoryInst())) {
-                (void)LI; // Silence warning.
-                assert(!LI->isUnordered() && "Expected unordered load");
-                return false;
-              }
-              // Any call, while it may not be clobbering SI, it may be a use.
-              if (auto *CI = dyn_cast<CallInst>(MD->getMemoryInst())) {
-                // Check if the call may read from the memory location written
-                // to by SI. Check CI's attributes and arguments; the number of
-                // such checks performed is limited above by NoOfMemAccTooLarge.
-                ModRefInfo MRI = AA->getModRefInfo(CI, MemoryLocation::get(SI));
-                if (isModOrRefSet(MRI))
-                  return false;
-              }
+    // If there are more accesses than the Promotion cap or no "quota" to
+    // check clobber, then give up as we're not walking a list that long.
+    if (Flags->tooManyMemoryAccesses() || Flags->tooManyClobberingCalls())
+      return false;
+    // If there are interfering Uses (i.e. their defining access is in the
+    // loop), or ordered loads (stored as Defs!), don't move this store.
+    // Could do better here, but this is conservatively correct.
+    // TODO: Cache set of Uses on the first walk in runOnLoop, update when
+    // moving accesses. Can also extend to dominating uses.
+    auto *SIMD = MSSA->getMemoryAccess(SI);
+    for (auto *BB : CurLoop->getBlocks())
+      if (auto *Accesses = MSSA->getBlockAccesses(BB)) {
+        for (const auto &MA : *Accesses)
+          if (const auto *MU = dyn_cast<MemoryUse>(&MA)) {
+            auto *MD = MU->getDefiningAccess();
+            if (!MSSA->isLiveOnEntryDef(MD) &&
+                CurLoop->contains(MD->getBlock()))
+              return false;
+            // Disable hoisting past potentially interfering loads. Optimized
+            // Uses may point to an access outside the loop, as getClobbering
+            // checks the previous iteration when walking the backedge.
+            // FIXME: More precise: no Uses that alias SI.
+            if (!Flags->getIsSink() && !MSSA->dominates(SIMD, MU))
+              return false;
+          } else if (const auto *MD = dyn_cast<MemoryDef>(&MA)) {
+            if (auto *LI = dyn_cast<LoadInst>(MD->getMemoryInst())) {
+              (void)LI; // Silence warning.
+              assert(!LI->isUnordered() && "Expected unordered load");
+              return false;
             }
-        }
-      auto *Source = MSSA->getSkipSelfWalker()->getClobberingMemoryAccess(SI);
-      Flags->incrementClobberingCalls();
-      // If there are no clobbering Defs in the loop, store is safe to hoist.
-      return MSSA->isLiveOnEntryDef(Source) ||
-             !CurLoop->contains(Source->getBlock());
-    }
+            // Any call, while it may not be clobbering SI, it may be a use.
+            if (auto *CI = dyn_cast<CallInst>(MD->getMemoryInst())) {
+              // Check if the call may read from the memory location written
+              // to by SI. Check CI's attributes and arguments; the number of
+              // such checks performed is limited above by NoOfMemAccTooLarge.
+              ModRefInfo MRI = AA->getModRefInfo(CI, MemoryLocation::get(SI));
+              if (isModOrRefSet(MRI))
+                return false;
+            }
+          }
+      }
+    auto *Source = MSSA->getSkipSelfWalker()->getClobberingMemoryAccess(SI);
+    Flags->incrementClobberingCalls();
+    // If there are no clobbering Defs in the loop, store is safe to hoist.
+    return MSSA->isLiveOnEntryDef(Source) ||
+           !CurLoop->contains(Source->getBlock());
   }
 
   assert(!I.mayReadOrWriteMemory() && "unhandled aliasing");
@@ -2314,15 +2255,9 @@ collectPromotionCandidates(MemorySSA *MSSA, AliasAnalysis *AA, Loop *L) {
   return Result;
 }
 
-static bool pointerInvalidatedByLoop(MemoryLocation MemLoc,
-                                     AliasSetTracker *CurAST, Loop *CurLoop,
-                                     AAResults *AA) {
-  return CurAST->getAliasSetFor(MemLoc).isMod();
-}
-
-bool pointerInvalidatedByLoopWithMSSA(MemorySSA *MSSA, MemoryUse *MU,
-                                      Loop *CurLoop, Instruction &I,
-                                      SinkAndHoistLICMFlags &Flags) {
+static bool pointerInvalidatedByLoop(MemorySSA *MSSA, MemoryUse *MU,
+                                     Loop *CurLoop, Instruction &I,
+                                     SinkAndHoistLICMFlags &Flags) {
   // For hoisting, use the walker to determine safety
   if (!Flags.getIsSink()) {
     MemoryAccess *Source;
@@ -2357,17 +2292,16 @@ bool pointerInvalidatedByLoopWithMSSA(MemorySSA *MSSA, MemoryUse *MU,
   if (Flags.tooManyMemoryAccesses())
     return true;
   for (auto *BB : CurLoop->getBlocks())
-    if (pointerInvalidatedByBlockWithMSSA(*BB, *MSSA, *MU))
+    if (pointerInvalidatedByBlock(*BB, *MSSA, *MU))
       return true;
   // When sinking, the source block may not be part of the loop so check it.
   if (!CurLoop->contains(&I))
-    return pointerInvalidatedByBlockWithMSSA(*I.getParent(), *MSSA, *MU);
+    return pointerInvalidatedByBlock(*I.getParent(), *MSSA, *MU);
 
   return false;
 }
 
-bool pointerInvalidatedByBlockWithMSSA(BasicBlock &BB, MemorySSA &MSSA,
-                                       MemoryUse &MU) {
+bool pointerInvalidatedByBlock(BasicBlock &BB, MemorySSA &MSSA, MemoryUse &MU) {
   if (const auto *Accesses = MSSA.getBlockDefs(&BB))
     for (const auto &MA : *Accesses)
       if (const auto *MD = dyn_cast<MemoryDef>(&MA))

@@ -8,7 +8,7 @@
 ///      treated as VARARGS (in order to place arguments in both registers and
 ///      memory locations in the back end)
 
-// RUN: %clang_cc1 -triple ve-linux-gnu -emit-llvm -Wno-strict-prototypes %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple ve-linux-gnu -emit-llvm -Wno-strict-prototypes %s -o - | FileCheck %s
 
 // CHECK-LABEL: define{{.*}} signext i8 @fun_si8(i8 noundef signext %a, i8 noundef signext %b) #0 {
 char fun_si8(char a, char b) {

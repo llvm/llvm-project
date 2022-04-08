@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 %s -triple=i686-pc-win32 -fms-extensions -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 %s -triple=x86_64-pc-win32 -fms-extensions -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 %s -triple=i686-pc-windows-msvc -fms-extensions -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 %s -triple=x86_64-pc-windows-msvc  -fms-extensions -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=i686-pc-win32 -fms-extensions -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=x86_64-pc-win32 -fms-extensions -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=i686-pc-windows-msvc -fms-extensions -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=x86_64-pc-windows-msvc  -fms-extensions -emit-llvm -o - | FileCheck %s
 
 struct S {
   S();

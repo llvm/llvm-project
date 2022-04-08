@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fblocks -fobjc-arc -fobjc-runtime-has-weak -triple x86_64-apple-darwin -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -fblocks -fobjc-arc -fobjc-runtime-has-weak -triple x86_64-apple-darwin -emit-llvm %s -o - | FileCheck %s
 
 // rdar://12759433
 @class NSString;

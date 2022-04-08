@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -fobjc-arc -triple x86_64-apple-darwin10 %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -fobjc-arc -triple x86_64-apple-darwin10 %s -o - | FileCheck %s
 
 __attribute__((objc_root_class))
 @interface Root

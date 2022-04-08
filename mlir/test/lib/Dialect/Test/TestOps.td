@@ -347,6 +347,22 @@ def SizedRegionOp : TEST_Op<"sized_region_op", []> {
   let regions = (region SizedRegion<2>:$my_region, SizedRegion<1>);
 }
 
+def VariadicRegionInferredTypesOp : TEST_Op<"variadic_region_inferred",
+                                            [InferTypeOpInterface]> {
+  let regions = (region VariadicRegion<AnyRegion>:$bodies);
+  let results = (outs Variadic<AnyType>);
+
+  let extraClassDeclaration = [{
+    static mlir::LogicalResult inferReturnTypes(mlir::MLIRContext *context,
+          llvm::Optional<::mlir::Location> location, mlir::ValueRange operands,
+          mlir::DictionaryAttr attributes, mlir::RegionRange regions,
+          llvm::SmallVectorImpl<mlir::Type> &inferredReturnTypes) {
+      inferredReturnTypes.assign({mlir::IntegerType::get(context, 16)});
+      return mlir::success();
+    }
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // NoTerminator Operation
 //===----------------------------------------------------------------------===//
@@ -624,6 +640,17 @@ def TestProducingBranchOp : TEST_Op<"producing_br",
                        Variadic<AnyType>:$secondOperands);
   let results = (outs I32:$dummy);
   let successors = (successor AnySuccessor:$first,AnySuccessor:$second);
+}
+
+// Produces an error value on the error path
+def TestInternalBranchOp : TEST_Op<"internal_br",
+	[DeclareOpInterfaceMethods<BranchOpInterface>, Terminator,
+	 AttrSizedOperandSegments]> {
+
+  let arguments = (ins Variadic<AnyType>:$successOperands,
+                       Variadic<AnyType>:$errorOperands);
+
+  let successors = (successor AnySuccessor:$successPath, AnySuccessor:$errorPath);
 }
 
 def AttrSizedOperandOp : TEST_Op<"attr_sized_operands",
@@ -2760,5 +2787,13 @@ def TestEffectsOpA : TEST_Op<"op_with_effects_a"> {
 
 def TestEffectsOpB : TEST_Op<"op_with_effects_b",
     [MemoryEffects<[MemWrite<TestResource>]>]>;
+
+def TestEffectsRead : TEST_Op<"op_with_memread",
+    [MemoryEffects<[MemRead]>]> {
+  let results = (outs AnyInteger);
+}
+
+def TestEffectsWrite : TEST_Op<"op_with_memwrite",
+    [MemoryEffects<[MemWrite]>]>;
 
 #endif // TEST_OPS

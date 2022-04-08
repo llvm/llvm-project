@@ -1,19 +1,19 @@
-// RUN: %clang_cc1 -triple i686-unknown-linux-gnu -fexceptions -fcxx-exceptions -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-GNU
-// RUN: %clang_cc1 -triple i686-unknown-linux-gnu -fexceptions -exception-model=dwarf -fcxx-exceptions -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-GNU-DWARF
-// RUN: %clang_cc1 -triple i686-unknown-linux-gnu -fexceptions -exception-model=seh -fcxx-exceptions -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-GNU-SEH
-// RUN: %clang_cc1 -triple i686-unknown-linux-gnu -fexceptions -exception-model=sjlj -fcxx-exceptions -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-GNU-SJLJ
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-unknown-linux-gnu -fexceptions -fcxx-exceptions -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-GNU
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-unknown-linux-gnu -fexceptions -exception-model=dwarf -fcxx-exceptions -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-GNU-DWARF
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-unknown-linux-gnu -fexceptions -exception-model=seh -fcxx-exceptions -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-GNU-SEH
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-unknown-linux-gnu -fexceptions -exception-model=sjlj -fcxx-exceptions -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-GNU-SJLJ
 
-// RUN: %clang_cc1 -triple i686-unknown-windows-msvc -fexceptions -fcxx-exceptions -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-WIN
-// RUN: %clang_cc1 -triple i686-unknown-windows-msvc -D __SEH_EXCEPTIONS__ -fms-extensions -fexceptions -fcxx-exceptions -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-WIN-SEH-X86
-// RUN: %clang_cc1 -triple x86_64-unknown-windows-msvc -D __SEH_EXCEPTIONS__ -fms-extensions -fexceptions -fcxx-exceptions -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-WIN-SEH-X64
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-unknown-windows-msvc -fexceptions -fcxx-exceptions -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-WIN
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-unknown-windows-msvc -D __SEH_EXCEPTIONS__ -fms-extensions -fexceptions -fcxx-exceptions -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-WIN-SEH-X86
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-windows-msvc -D __SEH_EXCEPTIONS__ -fms-extensions -fexceptions -fcxx-exceptions -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-WIN-SEH-X64
 
-// RUN: %clang_cc1 -triple i686-unknown-windows-gnu -fexceptions -fcxx-exceptions -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-GNU
-// RUN: %clang_cc1 -triple i686-unknown-windows-gnu -fexceptions -exception-model=dwarf -fcxx-exceptions -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-GNU-DWARF
-// RUN: %clang_cc1 -triple i686-unknown-windows-gnu -fexceptions -exception-model=seh -fcxx-exceptions -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-GNU-SEH
-// RUN: %clang_cc1 -triple i686-unknown-windows-gnu -fexceptions -exception-model=sjlj -fcxx-exceptions -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-GNU-SJLJ
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-unknown-windows-gnu -fexceptions -fcxx-exceptions -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-GNU
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-unknown-windows-gnu -fexceptions -exception-model=dwarf -fcxx-exceptions -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-GNU-DWARF
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-unknown-windows-gnu -fexceptions -exception-model=seh -fcxx-exceptions -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-GNU-SEH
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-unknown-windows-gnu -fexceptions -exception-model=sjlj -fcxx-exceptions -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-GNU-SJLJ
 
-// RUN: %clang_cc1 -triple powerpc-unknown-aix-xcoff -fexceptions -fcxx-exceptions -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-AIX
-// RUN: %clang_cc1 -triple powerpc64-unknown-aix-xcoff -fexceptions -fcxx-exceptions -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-AIX
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc-unknown-aix-xcoff -fexceptions -fcxx-exceptions -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-AIX
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc64-unknown-aix-xcoff -fexceptions -fcxx-exceptions -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-AIX
 
 extern void g();
 

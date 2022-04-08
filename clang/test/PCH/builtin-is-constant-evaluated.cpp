@@ -1,14 +1,14 @@
-// RUN: %clang_cc1 -std=c++98 -Wno-constant-evaluated -triple x86_64-linux -include %s -verify %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -std=c++98 -Wno-constant-evaluated -triple x86_64-linux -emit-pch %s -o %t
-// RUN: %clang_cc1 -std=c++98 -Wno-constant-evaluated -triple x86_64-linux -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++98 -Wno-constant-evaluated -triple x86_64-linux -include %s -verify %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++98 -Wno-constant-evaluated -triple x86_64-linux -emit-pch %s -o %t
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++98 -Wno-constant-evaluated -triple x86_64-linux -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
 
-// RUN: %clang_cc1 -std=c++11 -Wno-constant-evaluated -triple x86_64-linux -include %s -verify %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,CXX11
-// RUN: %clang_cc1 -std=c++11 -Wno-constant-evaluated -triple x86_64-linux -emit-pch %s -o %t-cxx11
-// RUN: %clang_cc1 -std=c++11 -Wno-constant-evaluated -triple x86_64-linux -include-pch %t-cxx11 -verify %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,CXX11
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -Wno-constant-evaluated -triple x86_64-linux -include %s -verify %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,CXX11
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -Wno-constant-evaluated -triple x86_64-linux -emit-pch %s -o %t-cxx11
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -Wno-constant-evaluated -triple x86_64-linux -include-pch %t-cxx11 -verify %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,CXX11
 
-// RUN: %clang_cc1 -std=c++20 -Wno-constant-evaluated -triple x86_64-linux -include %s -verify %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,CXX11
-// RUN: %clang_cc1 -std=c++20 -Wno-constant-evaluated -triple x86_64-linux -emit-pch %s -o %t-cxx11
-// RUN: %clang_cc1 -std=c++20 -Wno-constant-evaluated -triple x86_64-linux -include-pch %t-cxx11 -verify %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,CXX11
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++20 -Wno-constant-evaluated -triple x86_64-linux -include %s -verify %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,CXX11
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++20 -Wno-constant-evaluated -triple x86_64-linux -emit-pch %s -o %t-cxx11
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++20 -Wno-constant-evaluated -triple x86_64-linux -include-pch %t-cxx11 -verify %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,CXX11
 
 // expected-no-diagnostics
 

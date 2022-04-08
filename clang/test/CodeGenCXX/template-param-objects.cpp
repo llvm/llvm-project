@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++20 %s -emit-llvm -o - | FileCheck %s --check-prefixes=ITANIUM,CHECK
-// RUN: %clang_cc1 -triple x86_64-windows -std=c++20 %s -emit-llvm -o - | FileCheck %s --check-prefixes=MSABI,CHECK
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -std=c++20 %s -emit-llvm -o - | FileCheck %s --check-prefixes=ITANIUM,CHECK
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-windows -std=c++20 %s -emit-llvm -o - | FileCheck %s --check-prefixes=MSABI,CHECK
 
 struct S { char buf[32]; };
 template<S s> constexpr const char *begin() { return s.buf; }

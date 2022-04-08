@@ -1,13 +1,13 @@
-// RUN: %clang_cc1 -triple arm-linux-gnueabi -emit-llvm %s -o - | FileCheck %s -check-prefix=ARM
-// RUN: %clang_cc1 -triple powerpc-linux-gnu -emit-llvm %s -o - | FileCheck %s -check-prefix=PPC32
-// RUN: %clang_cc1 -triple powerpc64-linux-gnu -emit-llvm %s -o - | FileCheck %s -check-prefix=PPC64
-// RUN: %clang_cc1 -triple mipsel-linux-gnu -emit-llvm %s -o - | FileCheck %s -check-prefix=MIPS32
-// RUN: %clang_cc1 -triple mipsisa32r6el-linux-gnu -emit-llvm %s -o - | FileCheck %s -check-prefix=MIPS32
-// RUN: %clang_cc1 -triple mips64el-linux-gnu -emit-llvm %s -o - | FileCheck %s -check-prefix=MIPS64
-// RUN: %clang_cc1 -triple mips64el-linux-gnuabi64 -emit-llvm %s -o - | FileCheck %s -check-prefix=MIPS64
-// RUN: %clang_cc1 -triple mipsisa64r6el-linux-gnuabi64 -emit-llvm %s -o - | FileCheck %s -check-prefix=MIPS64
-// RUN: %clang_cc1 -triple sparc-unknown-eabi -emit-llvm %s -o - | FileCheck %s -check-prefix=SPARCV8 -check-prefix=SPARC
-// RUN: %clang_cc1 -triple sparcv9-unknown-eabi -emit-llvm %s -o - | FileCheck %s -check-prefix=SPARCV9 -check-prefix=SPARC
+// RUN: %clang_cc1 -no-opaque-pointers -triple arm-linux-gnueabi -emit-llvm %s -o - | FileCheck %s -check-prefix=ARM
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc-linux-gnu -emit-llvm %s -o - | FileCheck %s -check-prefix=PPC32
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc64-linux-gnu -emit-llvm %s -o - | FileCheck %s -check-prefix=PPC64
+// RUN: %clang_cc1 -no-opaque-pointers -triple mipsel-linux-gnu -emit-llvm %s -o - | FileCheck %s -check-prefix=MIPS32
+// RUN: %clang_cc1 -no-opaque-pointers -triple mipsisa32r6el-linux-gnu -emit-llvm %s -o - | FileCheck %s -check-prefix=MIPS32
+// RUN: %clang_cc1 -no-opaque-pointers -triple mips64el-linux-gnu -emit-llvm %s -o - | FileCheck %s -check-prefix=MIPS64
+// RUN: %clang_cc1 -no-opaque-pointers -triple mips64el-linux-gnuabi64 -emit-llvm %s -o - | FileCheck %s -check-prefix=MIPS64
+// RUN: %clang_cc1 -no-opaque-pointers -triple mipsisa64r6el-linux-gnuabi64 -emit-llvm %s -o - | FileCheck %s -check-prefix=MIPS64
+// RUN: %clang_cc1 -no-opaque-pointers -triple sparc-unknown-eabi -emit-llvm %s -o - | FileCheck %s -check-prefix=SPARCV8 -check-prefix=SPARC
+// RUN: %clang_cc1 -no-opaque-pointers -triple sparcv9-unknown-eabi -emit-llvm %s -o - | FileCheck %s -check-prefix=SPARCV9 -check-prefix=SPARC
 
 unsigned char c1, c2;
 unsigned short s1, s2;

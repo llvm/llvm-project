@@ -4,7 +4,7 @@
 
 // Ensure that a distributed backend invocation of ThinLTO lowers the type test
 // as expected.
-// RUN: %clang_cc1 -flto=thin -flto-unit -triple x86_64-unknown-linux -fwhole-program-vtables -emit-llvm-bc -o %t.o %s
+// RUN: %clang_cc1 -no-opaque-pointers -flto=thin -flto-unit -triple x86_64-unknown-linux -fwhole-program-vtables -emit-llvm-bc -o %t.o %s
 // RUN: llvm-dis %t.o -o - | FileCheck --check-prefix=TT %s
 // RUN: llvm-lto -thinlto -o %t2 %t.o
 // RUN: %clang -target x86_64-unknown-linux -O2 -o %t3.o -x ir %t.o -c -fthinlto-index=%t2.thinlto.bc -save-temps=obj

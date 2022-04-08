@@ -17,6 +17,10 @@ if(COMPILER_RT_BUILD_BUILTINS)
   add_subdirectory(builtins)
 endif()
 
+if(COMPILER_RT_BUILD_BITINT)
+  add_subdirectory(bitint)
+endif()
+
 if(COMPILER_RT_BUILD_CRT)
   add_subdirectory(crt)
 endif()

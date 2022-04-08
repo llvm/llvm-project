@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -O0 -cl-std=CL1.2 -triple amdgcn---amdgizcl -emit-llvm %s -o - | FileCheck -check-prefixes=CHECK,CL12 %s
-// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgcn---amdgizcl -emit-llvm %s -o - | FileCheck -check-prefixes=CHECK,CL20 %s
+// RUN: %clang_cc1 -no-opaque-pointers -O0 -cl-std=CL1.2 -triple amdgcn---amdgizcl -emit-llvm %s -o - | FileCheck -check-prefixes=CHECK,CL12 %s
+// RUN: %clang_cc1 -no-opaque-pointers -O0 -cl-std=CL2.0 -triple amdgcn---amdgizcl -emit-llvm %s -o - | FileCheck -check-prefixes=CHECK,CL20 %s
 
 // CL12-LABEL: define{{.*}} void @func1(i32 addrspace(5)* noundef %x)
 // CL20-LABEL: define{{.*}} void @func1(i32* noundef %x)

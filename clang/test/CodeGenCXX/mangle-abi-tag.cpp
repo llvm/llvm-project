@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 %s -emit-llvm -triple %itanium_abi_triple -std=c++11 -o - | FileCheck %s
-// RUN: %clang_cc1 %s -emit-llvm -triple i686-linux-gnu -std=c++11 -o - | FileCheck %s
-// RUN: %clang_cc1 %s -emit-llvm -triple x86_64-linux-gnu -std=c++11 -o - | FileCheck %s
-// RUN: %clang_cc1 %s -emit-llvm -triple powerpc64le-unknown-linux-gnu -std=c++11 -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -triple %itanium_abi_triple -std=c++11 -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -triple i686-linux-gnu -std=c++11 -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -triple x86_64-linux-gnu -std=c++11 -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -triple powerpc64le-unknown-linux-gnu -std=c++11 -o - | FileCheck %s
 
 struct __attribute__((abi_tag("A", "B"))) A { };
 

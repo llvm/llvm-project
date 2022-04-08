@@ -142,15 +142,11 @@
         },
         {
           "kind": "text",
-          "spelling": ")"
+          "spelling": ") "
         },
         {
           "kind": "identifier",
-          "spelling": "getWithProperty"
-        },
-        {
-          "kind": "text",
-          "spelling": ":"
+          "spelling": "getWithProperty:"
         },
         {
           "kind": "text",
@@ -163,11 +159,15 @@
         },
         {
           "kind": "text",
-          "spelling": ")"
+          "spelling": ") "
         },
         {
           "kind": "internalParam",
           "spelling": "Property"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {
@@ -244,7 +244,7 @@
         },
         {
           "kind": "text",
-          "spelling": ")"
+          "spelling": ") "
         },
         {
           "kind": "typeIdentifier",
@@ -398,11 +398,15 @@
         },
         {
           "kind": "text",
-          "spelling": ")"
+          "spelling": ") "
         },
         {
           "kind": "identifier",
           "spelling": "getIvar"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {

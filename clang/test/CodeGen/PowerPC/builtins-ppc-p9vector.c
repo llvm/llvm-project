@@ -1,17 +1,17 @@
 // REQUIRES: powerpc-registered-target
-// RUN: %clang_cc1 -target-feature +altivec -target-feature +power9-vector \
+// RUN: %clang_cc1 -no-opaque-pointers -target-feature +altivec -target-feature +power9-vector \
 // RUN:   -triple powerpc64-unknown-unknown -emit-llvm %s \
 // RUN:   -flax-vector-conversions=integer \
 // RUN:   -o - | FileCheck %s -check-prefix=CHECK-BE
 
-// RUN: %clang_cc1 -target-feature +altivec -target-feature +power9-vector \
+// RUN: %clang_cc1 -no-opaque-pointers -target-feature +altivec -target-feature +power9-vector \
 // RUN:   -triple powerpc64le-unknown-unknown -emit-llvm %s \
 // RUN:   -flax-vector-conversions=integer \
 // RUN:   -o - | FileCheck %s
 
 // FIXME: This last test is intended to fail if the default is changed to
 // -flax-vector-conversions=none and <altivec.h> isn't fixed first.
-// RUN: %clang_cc1 -target-feature +altivec -target-feature +power9-vector \
+// RUN: %clang_cc1 -no-opaque-pointers -target-feature +altivec -target-feature +power9-vector \
 // RUN:   -triple powerpc64-unknown-unknown -emit-llvm %s \
 // RUN:   -o - | FileCheck %s -check-prefix=CHECK-BE
 

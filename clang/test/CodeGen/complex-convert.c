@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -o - %s | FileCheck %s
 
 // Test conversions between complex integer types and standard integer
 // types.  Tests binary operator conversion and assignment conversion

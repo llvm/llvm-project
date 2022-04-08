@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -emit-llvm -o - -triple=armv7-apple-ios -std=c11 | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -triple=armv7-apple-ios -std=c11 | FileCheck %s
 
 // There isn't really anything special about iOS; it just happens to
 // only deploy on processors with native atomics support, so it's a good

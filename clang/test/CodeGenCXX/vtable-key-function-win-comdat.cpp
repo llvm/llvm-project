@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple=x86_64-pc-windows-gnu -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=x86_64-pc-windows-gnu -emit-llvm -o - | FileCheck %s
 
 namespace std { class type_info; }
 extern void use(const std::type_info &rtti);

@@ -1,6 +1,6 @@
 // Member pointer to virtual function.
 
-// RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -O3 -S -o - -emit-llvm | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=aarch64-unknown-fuchsia -O3 -S -o - -emit-llvm | FileCheck %s
 
 // CHECK:      define{{.*}} void @_Z4funcP1AMS_FvvE(%class.A* noundef %a, [2 x i64] %fn.coerce) local_unnamed_addr
 // CHECK-NEXT: entry:

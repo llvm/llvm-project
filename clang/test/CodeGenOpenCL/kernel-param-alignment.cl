@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -cl-std=CL1.2 -emit-llvm -triple x86_64-unknown-unknown -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -cl-std=CL1.2 -emit-llvm -triple x86_64-unknown-unknown -o - | FileCheck %s
 
 // Test that pointer arguments to kernels are assumed to be ABI aligned.
 

@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -std=c++11     %s -o - | FileCheck -allow-deprecated-dag-overlap -check-prefix=CHECK-LIN -check-prefix=CHECK-LIN64 %s
-// RUN: %clang_cc1 -triple i386-linux-gnu -emit-llvm -std=c++11     %s -o -   | FileCheck -allow-deprecated-dag-overlap -check-prefix=CHECK-LIN -check-prefix=CHECK-LIN32 %s
-// RUN: %clang_cc1 -triple x86_64-windows-msvc -emit-llvm -std=c++11  %s -o - -DWIN_TEST | FileCheck -allow-deprecated-dag-overlap -check-prefix=CHECK-WIN64 %s
-// RUN: %clang_cc1 -triple i386-windows-msvc -emit-llvm -std=c++11  %s -o - -DWIN_TEST   | FileCheck -allow-deprecated-dag-overlap -check-prefix=CHECK-WIN32 %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -emit-llvm -std=c++11     %s -o - | FileCheck -allow-deprecated-dag-overlap -check-prefix=CHECK-LIN -check-prefix=CHECK-LIN64 %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i386-linux-gnu -emit-llvm -std=c++11     %s -o -   | FileCheck -allow-deprecated-dag-overlap -check-prefix=CHECK-LIN -check-prefix=CHECK-LIN32 %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-windows-msvc -emit-llvm -std=c++11  %s -o - -DWIN_TEST | FileCheck -allow-deprecated-dag-overlap -check-prefix=CHECK-WIN64 %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i386-windows-msvc -emit-llvm -std=c++11  %s -o - -DWIN_TEST   | FileCheck -allow-deprecated-dag-overlap -check-prefix=CHECK-WIN32 %s
 
 int __regcall foo(int i);
 

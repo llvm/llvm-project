@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -O3 -disable-llvm-passes -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -emit-llvm -O3 -disable-llvm-passes -o - %s | FileCheck %s
 
 // Test that can call `__builtin_constant_p` with instances of different
 // Objective-C classes.

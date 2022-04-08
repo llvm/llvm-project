@@ -116,6 +116,45 @@ define i1 @ord_one_xor_f32(float %w, float %x, float %y, float %z) {
   ret i1 %r
 }
 
+; PR51068
+define i1 @une_oeq_xor_f32(float %w, float %x, float %y, float %z) {
+; SSE2-LABEL: une_oeq_xor_f32:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    cmpeqps %xmm3, %xmm2
+; SSE2-NEXT:    cmpneqps %xmm1, %xmm0
+; SSE2-NEXT:    xorps %xmm2, %xmm0
+; SSE2-NEXT:    movd %xmm0, %eax
+; SSE2-NEXT:    # kill: def $al killed $al killed $eax
+; SSE2-NEXT:    retq
+;
+; AVX1-LABEL: une_oeq_xor_f32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vcmpeqps %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vcmpneqps %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vxorps %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vmovd %xmm0, %eax
+; AVX1-NEXT:    # kill: def $al killed $al killed $eax
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: une_oeq_xor_f32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    # kill: def $xmm3 killed $xmm3 def $zmm3
+; AVX512-NEXT:    # kill: def $xmm2 killed $xmm2 def $zmm2
+; AVX512-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
+; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512-NEXT:    vcmpeqps %zmm3, %zmm2, %k0
+; AVX512-NEXT:    vcmpneqps %zmm1, %zmm0, %k1
+; AVX512-NEXT:    kxorw %k0, %k1, %k0
+; AVX512-NEXT:    kmovw %k0, %eax
+; AVX512-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+  %f1 = fcmp une float %w, %x
+  %f2 = fcmp oeq float %y, %z
+  %r = xor i1 %f1, %f2
+  ret i1 %r
+}
+
 define i1 @une_ugt_and_f64(double %w, double %x, double %y, double %z) {
 ; SSE2-LABEL: une_ugt_and_f64:
 ; SSE2:       # %bb.0:

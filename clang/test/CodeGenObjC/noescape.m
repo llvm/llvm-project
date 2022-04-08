@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -fblocks -emit-llvm -o - %s | FileCheck -check-prefix CHECK -check-prefix CHECK-NOARC %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -fblocks -emit-llvm -fobjc-arc -o - %s | FileCheck -check-prefix CHECK -check-prefix CHECK-ARC %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin -fblocks -emit-llvm -o - %s | FileCheck -check-prefix CHECK -check-prefix CHECK-NOARC %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin -fblocks -emit-llvm -fobjc-arc -o - %s | FileCheck -check-prefix CHECK -check-prefix CHECK-ARC %s
 
 typedef void (^BlockTy)(void);
 

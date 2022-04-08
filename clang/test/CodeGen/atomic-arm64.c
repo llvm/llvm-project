@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -emit-llvm -o - -triple=arm64-apple-ios7 | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -triple=arm64-apple-ios7 | FileCheck %s
 
 // Memory ordering values.
 enum {

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -emit-llvm -w -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple x86_64-unknown-linux-gnu -emit-llvm -w -o - | FileCheck %s
 
 struct S {
   enum { FOO = 42 };

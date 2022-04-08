@@ -1,12 +1,12 @@
-// RUN: %clang_cc1 -fsanitize=address -emit-llvm -o - -triple x86_64-linux %s | FileCheck %s --check-prefixes=CHECK,INDICATOR0,GLOB_VAR,ALIAS0
-// RUN: %clang_cc1 -fsanitize=address -fsanitize-address-use-odr-indicator -emit-llvm -o - -triple x86_64-linux %s | FileCheck %s --check-prefixes=CHECK,INDICATOR1,GLOB_ALIAS_INDICATOR,ALIAS1
-// RUN: %clang_cc1 -fsanitize=address -fno-sanitize-address-use-odr-indicator -emit-llvm -o - -triple x86_64-linux %s | FileCheck %s --check-prefixes=CHECK,INDICATOR0,GLOB_VAR,ALIAS0
-// RUN: %clang_cc1 -fsanitize=address -fno-sanitize-address-use-odr-indicator -fsanitize-address-use-odr-indicator -emit-llvm -o - -triple x86_64-linux %s | FileCheck %s --check-prefixes=CHECK,INDICATOR1,GLOB_ALIAS_INDICATOR,ALIAS1
-// RUN: %clang_cc1 -fsanitize=address -fsanitize-address-use-odr-indicator -fno-sanitize-address-use-odr-indicator -emit-llvm -o - -triple x86_64-linux %s | FileCheck %s --check-prefixes=CHECK,INDICATOR0,GLOB_VAR,ALIAS0
+// RUN: %clang_cc1 -no-opaque-pointers -fsanitize=address -emit-llvm -o - -triple x86_64-linux %s | FileCheck %s --check-prefixes=CHECK,INDICATOR0,GLOB_VAR,ALIAS0
+// RUN: %clang_cc1 -no-opaque-pointers -fsanitize=address -fsanitize-address-use-odr-indicator -emit-llvm -o - -triple x86_64-linux %s | FileCheck %s --check-prefixes=CHECK,INDICATOR1,GLOB_ALIAS_INDICATOR,ALIAS1
+// RUN: %clang_cc1 -no-opaque-pointers -fsanitize=address -fno-sanitize-address-use-odr-indicator -emit-llvm -o - -triple x86_64-linux %s | FileCheck %s --check-prefixes=CHECK,INDICATOR0,GLOB_VAR,ALIAS0
+// RUN: %clang_cc1 -no-opaque-pointers -fsanitize=address -fno-sanitize-address-use-odr-indicator -fsanitize-address-use-odr-indicator -emit-llvm -o - -triple x86_64-linux %s | FileCheck %s --check-prefixes=CHECK,INDICATOR1,GLOB_ALIAS_INDICATOR,ALIAS1
+// RUN: %clang_cc1 -no-opaque-pointers -fsanitize=address -fsanitize-address-use-odr-indicator -fno-sanitize-address-use-odr-indicator -emit-llvm -o - -triple x86_64-linux %s | FileCheck %s --check-prefixes=CHECK,INDICATOR0,GLOB_VAR,ALIAS0
 
 // No alias on Windows but indicators should work.
-// RUN: %clang_cc1 -fsanitize=address -emit-llvm -o - -triple x86_64-windows-msvc %s | FileCheck %s --check-prefixes=CHECK,GLOB_VAR,ALIAS0
-// RUN: %clang_cc1 -fsanitize=address -fsanitize-address-use-odr-indicator -emit-llvm -o - -triple x86_64-windows-msvc %s | FileCheck %s --check-prefixes=CHECK,INDICATOR1,GLOB_VAR_INDICATOR,ALIAS0
+// RUN: %clang_cc1 -no-opaque-pointers -fsanitize=address -emit-llvm -o - -triple x86_64-windows-msvc %s | FileCheck %s --check-prefixes=CHECK,GLOB_VAR,ALIAS0
+// RUN: %clang_cc1 -no-opaque-pointers -fsanitize=address -fsanitize-address-use-odr-indicator -emit-llvm -o - -triple x86_64-windows-msvc %s | FileCheck %s --check-prefixes=CHECK,INDICATOR1,GLOB_VAR_INDICATOR,ALIAS0
 
 int global;
 

@@ -10,7 +10,7 @@
 
 // We flag uses of the assertion handler in older dylibs at compile-time to avoid runtime
 // failures when back-deploying.
-// UNSUPPORTED: use_system_cxx_lib && target={{.+}}-apple-macosx{{10.9|10.10|10.11|10.12|10.13|10.14|10.15|11|12}}
+// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx{{10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0|12.0}}
 
 // The system-provided <uchar.h> seems to be broken on AIX, which trips up this test.
 // XFAIL: LIBCXX-AIX-FIXME

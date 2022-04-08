@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -ffake-address-space-map -emit-llvm -o - | FileCheck -check-prefix=FAKE %s
-// RUN: %clang_cc1 %s -triple amdgcn-amd-amdhsa -emit-llvm -o - | FileCheck -check-prefix=AMDGCN %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -ffake-address-space-map -emit-llvm -o - | FileCheck -check-prefix=FAKE %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple amdgcn-amd-amdhsa -emit-llvm -o - | FileCheck -check-prefix=AMDGCN %s
 
 typedef struct {
     int i;

@@ -325,13 +325,13 @@ bool CallBase::isReturnNonNull() const {
   return false;
 }
 
-Value *CallBase::getReturnedArgOperand() const {
+Value *CallBase::getArgOperandWithAttribute(Attribute::AttrKind Kind) const {
   unsigned Index;
 
-  if (Attrs.hasAttrSomewhere(Attribute::Returned, &Index))
+  if (Attrs.hasAttrSomewhere(Kind, &Index))
     return getArgOperand(Index - AttributeList::FirstArgIndex);
   if (const Function *F = getCalledFunction())
-    if (F->getAttributes().hasAttrSomewhere(Attribute::Returned, &Index))
+    if (F->getAttributes().hasAttrSomewhere(Kind, &Index))
       return getArgOperand(Index - AttributeList::FirstArgIndex);
 
   return nullptr;

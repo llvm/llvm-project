@@ -1,6 +1,6 @@
 // REQUIRES: arm-registered-target
-// RUN: %clang_cc1 -triple armv7-apple-darwin9 -target-feature +neon -target-abi apcs-gnu -emit-llvm -w -o - %s | FileCheck -check-prefix=APCS-GNU %s
-// RUN: %clang_cc1 -triple armv7-apple-darwin9 -target-feature +neon -target-abi aapcs -emit-llvm -w -o - %s | FileCheck -check-prefix=AAPCS %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple armv7-apple-darwin9 -target-feature +neon -target-abi apcs-gnu -emit-llvm -w -o - %s | FileCheck -check-prefix=APCS-GNU %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple armv7-apple-darwin9 -target-feature +neon -target-abi aapcs -emit-llvm -w -o - %s | FileCheck -check-prefix=AAPCS %s
 
 // APCS-GNU-LABEL: define{{.*}} signext i8 @f0()
 // AAPCS-LABEL: define{{.*}} arm_aapcscc signext i8 @f0()

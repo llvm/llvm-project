@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-pc-linux -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -o - %s | \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-pc-linux -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin -emit-llvm -o - %s | \
 // RUN: FileCheck --check-prefix=MACHO %s
 
 // CHECK: @_ZN5test11A1aE ={{.*}} constant i32 10, align 4

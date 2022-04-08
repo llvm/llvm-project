@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple spir -emit-llvm -O0 -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple spir -emit-llvm -O0 -o - | FileCheck %s
 
 struct B {
   int mb;
