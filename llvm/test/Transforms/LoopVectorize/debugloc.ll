@@ -108,8 +108,8 @@ define i32 @test_different_debug_loc_on_replicate_recipe(i32* noalias %src, i32*
 ; CHECK-NOT:  !dbg
 ; CHECK-EMPTY:
 ; CHECK-NEXT: pred.store.if:
-; CHECK-NEXT:   [[GEP:%.+]] = getelementptr inbounds i32, i32* %dst, i64 {{.+}}, !dbg [[LOC4]]
-; CHECK-NEXT:   store i32 0, i32* [[GEP]], align 4, !dbg [[LOC4]]
+; CHECK-NEXT:   [[GEP:%.+]] = getelementptr inbounds i32, i32* %dst, i64 {{.+}}, !dbg [[LOC5:!.+]]
+; CHECK-NEXT:   store i32 0, i32* [[GEP]], align 4, !dbg [[LOC5]]
 ; CHECK-NEXT:   br label %pred.store.continue, !dbg [[LOC4]]
 ; CHECK-EMPTY:
 ;
@@ -142,6 +142,7 @@ exit:
 ; CHECK: ![[LOC1]] = !DILocation(line: 6
 ; CHECK: [[LOC3]] = !DILocation(line: 137
 ; CHECK: [[LOC4]] = !DILocation(line: 210
+; CHECK: [[LOC5]] = !DILocation(line: 320
 
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
