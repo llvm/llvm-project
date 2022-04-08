@@ -174,4 +174,94 @@ TEST_F(MemTransferLowerTest, VecMemCpyKnownLength) {
 
   MPM.run(*M, MAM);
 }
+
+TEST_F(MemTransferLowerTest, AtomicMemCpyKnownLength) {
+  ParseAssembly("declare void "
+                "@llvm.memcpy.element.unordered.atomic.p0i32.p0i32.i64(i32*, "
+                "i32 *, i64, i32)\n"
+                "define void @foo(i32* %dst, i32* %src, i64 %n) optsize {\n"
+                "entry:\n"
+                "  %is_not_equal = icmp ne i32* %dst, %src\n"
+                "  br i1 %is_not_equal, label %memcpy, label %exit\n"
+                "memcpy:\n"
+                "  call void "
+                "@llvm.memcpy.element.unordered.atomic.p0i32.p0i32.i64(i32* "
+                "%dst, i32* %src, "
+                "i64 1024, i32 4)\n"
+                "  br label %exit\n"
+                "exit:\n"
+                "  ret void\n"
+                "}\n");
+
+  FunctionPassManager FPM;
+  FPM.addPass(ForwardingPass(
+      [=](Function &F, FunctionAnalysisManager &FAM) -> PreservedAnalyses {
+        TargetTransformInfo TTI(M->getDataLayout());
+        auto *MemCpyBB = getBasicBlockByName(F, "memcpy");
+        Instruction *Inst = &MemCpyBB->front();
+        assert(isa<AtomicMemCpyInst>(Inst) &&
+               "Expecting llvm.memcpy.p0i8.i64 instructon");
+        AtomicMemCpyInst *MemCpyI = cast<AtomicMemCpyInst>(Inst);
+        auto &SE = FAM.getResult<ScalarEvolutionAnalysis>(F);
+        expandAtomicMemCpyAsLoop(MemCpyI, TTI, &SE);
+        auto *CopyLoopBB = getBasicBlockByName(F, "load-store-loop");
+        Instruction *LoadInst =
+            getInstructionByOpcode(*CopyLoopBB, Instruction::Load, 1);
+        EXPECT_TRUE(LoadInst->isAtomic());
+        EXPECT_NE(LoadInst->getMetadata(LLVMContext::MD_alias_scope), nullptr);
+        Instruction *StoreInst =
+            getInstructionByOpcode(*CopyLoopBB, Instruction::Store, 1);
+        EXPECT_TRUE(StoreInst->isAtomic());
+        EXPECT_NE(StoreInst->getMetadata(LLVMContext::MD_noalias), nullptr);
+        return PreservedAnalyses::none();
+      }));
+  MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+
+  MPM.run(*M, MAM);
+}
+
+TEST_F(MemTransferLowerTest, AtomicMemCpyUnKnownLength) {
+  ParseAssembly("declare void "
+                "@llvm.memcpy.element.unordered.atomic.p0i32.p0i32.i64(i32*, "
+                "i32 *, i64, i32)\n"
+                "define void @foo(i32* %dst, i32* %src, i64 %n) optsize {\n"
+                "entry:\n"
+                "  %is_not_equal = icmp ne i32* %dst, %src\n"
+                "  br i1 %is_not_equal, label %memcpy, label %exit\n"
+                "memcpy:\n"
+                "  call void "
+                "@llvm.memcpy.element.unordered.atomic.p0i32.p0i32.i64(i32* "
+                "%dst, i32* %src, "
+                "i64 %n, i32 4)\n"
+                "  br label %exit\n"
+                "exit:\n"
+                "  ret void\n"
+                "}\n");
+
+  FunctionPassManager FPM;
+  FPM.addPass(ForwardingPass(
+      [=](Function &F, FunctionAnalysisManager &FAM) -> PreservedAnalyses {
+        TargetTransformInfo TTI(M->getDataLayout());
+        auto *MemCpyBB = getBasicBlockByName(F, "memcpy");
+        Instruction *Inst = &MemCpyBB->front();
+        assert(isa<AtomicMemCpyInst>(Inst) &&
+               "Expecting llvm.memcpy.p0i8.i64 instructon");
+        AtomicMemCpyInst *MemCpyI = cast<AtomicMemCpyInst>(Inst);
+        auto &SE = FAM.getResult<ScalarEvolutionAnalysis>(F);
+        expandAtomicMemCpyAsLoop(MemCpyI, TTI, &SE);
+        auto *CopyLoopBB = getBasicBlockByName(F, "loop-memcpy-expansion");
+        Instruction *LoadInst =
+            getInstructionByOpcode(*CopyLoopBB, Instruction::Load, 1);
+        EXPECT_TRUE(LoadInst->isAtomic());
+        EXPECT_NE(LoadInst->getMetadata(LLVMContext::MD_alias_scope), nullptr);
+        Instruction *StoreInst =
+            getInstructionByOpcode(*CopyLoopBB, Instruction::Store, 1);
+        EXPECT_TRUE(StoreInst->isAtomic());
+        EXPECT_NE(StoreInst->getMetadata(LLVMContext::MD_noalias), nullptr);
+        return PreservedAnalyses::none();
+      }));
+  MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+
+  MPM.run(*M, MAM);
+}
 } // namespace
