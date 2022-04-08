@@ -5207,15 +5207,16 @@ SimplifyFSubInst(Value *Op0, Value *Op1, FastMathFlags FMF,
         (FMF.noSignedZeros() || CannotBeNegativeZero(Op0, Q.TLI)))
       return Op0;
 
-  if (!isDefaultFPEnvironment(ExBehavior, Rounding))
-    return nullptr;
-
   // fsub -0.0, (fsub -0.0, X) ==> X
   // fsub -0.0, (fneg X) ==> X
   Value *X;
-  if (match(Op0, m_NegZeroFP()) &&
-      match(Op1, m_FNeg(m_Value(X))))
-    return X;
+  if (canIgnoreSNaN(ExBehavior, FMF))
+    if (match(Op0, m_NegZeroFP()) &&
+        match(Op1, m_FNeg(m_Value(X))))
+      return X;
+
+  if (!isDefaultFPEnvironment(ExBehavior, Rounding))
+    return nullptr;
 
   // fsub 0.0, (fsub 0.0, X) ==> X if signed zeros are ignored.
   // fsub 0.0, (fneg X) ==> X if signed zeros are ignored.
