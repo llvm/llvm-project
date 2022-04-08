@@ -4537,7 +4537,8 @@ struct Row {
     if (parent)
       parent->DrawTreeForChild(window, this, 0);
 
-    if (might_have_children) {
+    if (might_have_children &&
+        (!calculated_children || !GetChildren().empty())) {
       // It we can get UTF8 characters to work we should try to use the
       // "symbol" UTF8 string below
       //            const char *symbol = "";
@@ -5824,9 +5825,11 @@ protected:
         ++m_num_rows;
       }
 
-      auto &children = row.GetChildren();
-      if (row.expanded && !children.empty()) {
-        DisplayRows(window, children, options);
+      if (row.expanded) {
+        auto &children = row.GetChildren();
+        if (!children.empty()) {
+          DisplayRows(window, children, options);
+        }
       }
     }
   }
@@ -5847,11 +5850,13 @@ protected:
         return &row;
       else {
         --row_index;
-        auto &children = row.GetChildren();
-        if (row.expanded && !children.empty()) {
-          Row *result = GetRowForRowIndexImpl(children, row_index);
-          if (result)
-            return result;
+        if (row.expanded) {
+          auto &children = row.GetChildren();
+          if (!children.empty()) {
+            Row *result = GetRowForRowIndexImpl(children, row_index);
+            if (result)
+              return result;
+          }
         }
       }
     }
