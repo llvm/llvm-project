@@ -302,12 +302,15 @@ static MachineInstr *
 findInstrBackwards(MachineInstr &Origin,
                    std::function<bool(MachineInstr *)> Pred,
                    ArrayRef<MCRegister> NonModifiableRegs,
-                   const SIRegisterInfo *TRI, unsigned MaxInstructions = 5) {
+                   const SIRegisterInfo *TRI, unsigned MaxInstructions = 20) {
   MachineBasicBlock::reverse_iterator A = Origin.getReverseIterator(),
                                       E = Origin.getParent()->rend();
   unsigned CurrentIteration = 0;
 
   for (++A; CurrentIteration < MaxInstructions && A != E; ++A) {
+    if (A->isDebugInstr())
+      continue;
+    
     if (Pred(&*A))
       return &*A;
 
@@ -315,7 +318,7 @@ findInstrBackwards(MachineInstr &Origin,
       if (A->modifiesRegister(Reg, TRI))
         return nullptr;
     }
-
+    
     ++CurrentIteration;
   }
 
