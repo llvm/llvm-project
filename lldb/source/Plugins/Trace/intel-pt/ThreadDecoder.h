@@ -1,4 +1,4 @@
-//===-- IntelPTDecoder.h --======--------------------------------*- C++ -*-===//
+//===-- ThreadDecoder.h --======---------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_DECODER_H
-#define LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_DECODER_H
+#ifndef LLDB_SOURCE_PLUGINS_TRACE_THREAD_DECODER_H
+#define LLDB_SOURCE_PLUGINS_TRACE_THREAD_DECODER_H
 
 #include "intel-pt.h"
 
@@ -84,4 +84,4 @@ private:
 } // namespace trace_intel_pt
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_DECODER_H
+#endif // LLDB_SOURCE_PLUGINS_TRACE_THREAD_DECODER_H

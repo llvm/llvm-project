@@ -9,7 +9,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_TRACECURSORINTELPT_H
 #define LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_TRACECURSORINTELPT_H
 
-#include "IntelPTDecoder.h"
+#include "ThreadDecoder.h"
 #include "TraceIntelPTSessionFileParser.h"
 
 namespace lldb_private {
