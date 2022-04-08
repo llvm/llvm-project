@@ -56,10 +56,10 @@ template <typename Unused = void> double GetCpuTime(fallback_implementation) {
   return -1.0;
 }
 
-#if defined CLOCK_THREAD_CPUTIME_ID
-#define CLOCKID CLOCK_THREAD_CPUTIME_ID
-#elif defined CLOCK_PROCESS_CPUTIME_ID
+#if defined CLOCK_PROCESS_CPUTIME_ID
 #define CLOCKID CLOCK_PROCESS_CPUTIME_ID
+#elif defined CLOCK_THREAD_CPUTIME_ID
+#define CLOCKID CLOCK_THREAD_CPUTIME_ID
 #elif defined CLOCK_MONOTONIC
 #define CLOCKID CLOCK_MONOTONIC
 #else
