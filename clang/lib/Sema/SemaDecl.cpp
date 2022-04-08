@@ -24,6 +24,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/NonTrivialTypeVisitor.h"
+#include "clang/AST/Randstruct.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/PartialDiagnostic.h"
@@ -17843,6 +17844,18 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
 
     // Handle attributes before checking the layout.
     ProcessDeclAttributeList(S, Record, Attrs);
+
+    // Maybe randomize the field order.
+    if (!getLangOpts().CPlusPlus && Record->hasAttr<RandomizeLayoutAttr>() &&
+        !Record->isUnion() && !getLangOpts().RandstructSeed.empty() &&
+        !Record->isRandomized()) {
+      SmallVector<Decl *, 32> OrigFieldOrdering(Record->fields());
+      SmallVector<Decl *, 32> NewFieldOrdering;
+      if (randstruct::randomizeStructureLayout(
+              Context, Record->getNameAsString(), OrigFieldOrdering,
+              NewFieldOrdering))
+        Record->reorderFields(NewFieldOrdering);
+    }
 
     // We may have deferred checking for a deleted destructor. Check now.
     if (CXXRecord) {

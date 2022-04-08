@@ -1641,6 +1641,9 @@ def fsanitize_address_outline_instrumentation : Flag<["-"], "fsanitize-address-o
 def fno_sanitize_address_outline_instrumentation : Flag<["-"], "fno-sanitize-address-outline-instrumentation">,
                                                    Group<f_clang_Group>,
                                                    HelpText<"Use default code inlining logic for the address sanitizer">;
+def fsanitize_memtag_mode_EQ : Joined<["-"], "fsanitize-memtag-mode=">,
+                                        Group<f_clang_Group>,
+                                        HelpText<"Set default MTE mode to 'sync' (default) or 'async'">;
 def fsanitize_hwaddress_experimental_aliasing
   : Flag<["-"], "fsanitize-hwaddress-experimental-aliasing">,
     Group<f_clang_Group>,
@@ -2119,6 +2122,12 @@ defm merge_all_constants : BoolFOption<"merge-all-constants",
 def fmessage_length_EQ : Joined<["-"], "fmessage-length=">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Format message diagnostics so that they fit within N columns">,
   MarshallingInfoInt<DiagnosticOpts<"MessageLength">>;
+def frandomize_layout_seed_EQ : Joined<["-"], "frandomize-layout-seed=">,
+  MetaVarName<"<seed>">, Group<f_clang_Group>, Flags<[CC1Option]>,
+  HelpText<"The seed used by the randomize structure layout feature">;
+def frandomize_layout_seed_file_EQ : Joined<["-"], "frandomize-layout-seed-file=">,
+  MetaVarName<"<file>">, Group<f_clang_Group>, Flags<[CC1Option]>,
+  HelpText<"File holding the seed used by the randomize structure layout feature">;
 def fms_compatibility : Flag<["-"], "fms-compatibility">, Group<f_Group>, Flags<[CC1Option, CoreOption]>,
   HelpText<"Enable full Microsoft Visual C++ compatibility">,
   MarshallingInfoFlag<LangOpts<"MSVCCompat">>;
