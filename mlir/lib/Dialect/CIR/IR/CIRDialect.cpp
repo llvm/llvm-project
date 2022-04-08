@@ -546,7 +546,7 @@ parseSwitchOp(OpAsmParser &parser,
     // FIXME: since a few names can't be used as enum (default) we declared
     // them in CIROps.td capitalized, but we really wanna use lower case on
     // clang IR asm form.
-    if (parser.parseOptionalKeyword(&attrStr, {"default", "equal"})) {
+    if (parser.parseOptionalKeyword(&attrStr, {"default", "equal", "anyof"})) {
       ::mlir::StringAttr attrVal;
       ::mlir::OptionalParseResult parseResult = parser.parseOptionalAttribute(
           attrVal, parser.getBuilder().getNoneType(), "kind", attrStorage);
@@ -560,7 +560,7 @@ parseSwitchOp(OpAsmParser &parser,
     if (attrStr.empty()) {
       return parser.emitError(
           loc, "expected string or keyword containing one of the following "
-               "enum values for attribute 'kind' [default, equal]");
+               "enum values for attribute 'kind' [default, equal, anyof]");
     }
 
     std::string attrString = attrStr.str();
@@ -574,24 +574,49 @@ parseSwitchOp(OpAsmParser &parser,
     auto kindAttr = ::mlir::cir::CaseOpKindAttr::get(
         parser.getBuilder().getContext(), attrOptional.value());
 
-    if (parser.parseOptionalComma().failed() &&
-        kindAttr.getValue() == cir::CaseOpKind::Default) {
+    // `,` value or `,` [values,...]
+    SmallVector<mlir::Attribute, 4> caseEltValueListAttr;
+    mlir::ArrayAttr caseValueList;
+
+    switch (kindAttr.getValue()) {
+    case cir::CaseOpKind::Equal: {
+      if (parser.parseComma().failed())
+        return mlir::failure();
+      int64_t val = 0;
+      if (parser.parseInteger(val).failed())
+        return ::mlir::failure();
+      caseEltValueListAttr.push_back(mlir::IntegerAttr::get(intCondType, val));
+      break;
+    }
+    case cir::CaseOpKind::Anyof: {
+      if (parser.parseComma().failed())
+        return mlir::failure();
+      if (parser.parseLSquare().failed())
+        return mlir::failure();
+      auto result = parser.parseCommaSeparatedList([&]() {
+        int64_t val = 0;
+        if (parser.parseInteger(val).failed())
+          return ::mlir::failure();
+        caseEltValueListAttr.push_back(
+            mlir::IntegerAttr::get(intCondType, val));
+        return ::mlir::success();
+      });
+      if (result.failed())
+        return mlir::failure();
+      if (parser.parseRSquare().failed())
+        return mlir::failure();
+      break;
+    }
+    case cir::CaseOpKind::Default: {
       if (parser.parseRParen().failed())
         return parser.emitError(parser.getCurrentLocation(), "expected ')'");
       cases.push_back(cir::CaseAttr::get(
           parser.getContext(), parser.getBuilder().getArrayAttr({}), kindAttr));
       return parseAndCheckRegion();
     }
+    }
 
-    // `,` value comes next (in the future perhaps a list?)
-    int64_t val = 0;
-    if (parser.parseInteger(val).failed())
-      return ::mlir::failure();
-
-    SmallVector<mlir::Attribute, 4> caseEltValueListAttr;
-    caseEltValueListAttr.push_back(mlir::IntegerAttr::get(intCondType, val));
-    auto caseValueList = parser.getBuilder().getArrayAttr(caseEltValueListAttr);
-
+    caseValueList = parser.getBuilder().getArrayAttr(caseEltValueListAttr);
     cases.push_back(
         cir::CaseAttr::get(parser.getContext(), caseValueList, kindAttr));
     if (succeeded(parser.parseOptionalColon())) {
@@ -650,7 +675,8 @@ void printSwitchOp(OpAsmPrinter &p, SwitchOp op,
 
     auto attr = casesAttr[idx].cast<CaseAttr>();
     auto kind = attr.getKind().getValue();
-    assert((kind == CaseOpKind::Default || kind == CaseOpKind::Equal) &&
+    assert((kind == CaseOpKind::Default || kind == CaseOpKind::Equal ||
+            kind == CaseOpKind::Anyof) &&
            "unknown case");
 
     // Case kind
@@ -665,6 +691,17 @@ void printSwitchOp(OpAsmPrinter &p, SwitchOp op,
     case cir::CaseOpKind::Equal: {
       p << ", ";
       p.printStrippedAttrOrType(attr.getValue()[0]);
+      break;
+    }
+    case cir::CaseOpKind::Anyof: {
+      p << ", [";
+      llvm::interleaveComma(attr.getValue(), p, [&](const Attribute &a) {
+        p.printAttributeWithoutType(a);
+      });
+      p << "] : ";
+      auto typedAttr = attr.getValue()[0].dyn_cast<TypedAttr>();
+      assert(typedAttr && "this should never not have a type!");
+      p.printType(typedAttr.getType());
       break;
     }
     case cir::CaseOpKind::Default:
