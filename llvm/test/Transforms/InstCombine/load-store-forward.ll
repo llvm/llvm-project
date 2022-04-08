@@ -289,3 +289,25 @@ entry:
   %2 = load <vscale x 4 x i8>, <vscale x 4 x i8>* %1, align 16
   ret <vscale x 4 x i8> %2
 }
+
+define i8 @load_i8_store_i1(i1* %a) {
+; CHECK-LABEL: @load_i8_store_i1(
+; CHECK-NEXT:    store i1 true, i1* [[A:%.*]], align 1
+; CHECK-NEXT:    ret i8 -1
+;
+  store i1 true, i1* %a
+  %a.i8 = bitcast i1* %a to i8*
+  %v = load i8, i8* %a.i8
+  ret i8 %v
+}
+
+define i1 @load_i1_store_i8(i8* %a) {
+; CHECK-LABEL: @load_i1_store_i8(
+; CHECK-NEXT:    store i8 1, i8* [[A:%.*]], align 1
+; CHECK-NEXT:    ret i1 true
+;
+  store i8 1, i8* %a
+  %a.i1 = bitcast i8* %a to i1*
+  %v = load i1, i1* %a.i1
+  ret i1 %v
+}
