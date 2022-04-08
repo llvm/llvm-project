@@ -67,12 +67,13 @@ public:
     SmallVector<Value, 4> newOperands(op->operand_begin(), op->operand_end());
     for (int succIdx = 0, succEnd = op->getBlock()->getNumSuccessors();
          succIdx < succEnd; ++succIdx) {
-      auto successorOperands = op.getSuccessorOperands(succIdx);
-      if (!successorOperands || successorOperands->empty())
+      OperandRange forwardedOperands =
+          op.getSuccessorOperands(succIdx).getForwardedOperands();
+      if (forwardedOperands.empty())
         continue;
 
-      for (int idx = successorOperands->getBeginOperandIndex(),
-               eidx = idx + successorOperands->size();
+      for (int idx = forwardedOperands.getBeginOperandIndex(),
+               eidx = idx + forwardedOperands.size();
            idx < eidx; ++idx) {
         if (!shouldConvertBranchOperand || shouldConvertBranchOperand(op, idx))
           newOperands[idx] = operands[idx];
@@ -121,8 +122,8 @@ bool mlir::isLegalForBranchOpInterfaceTypeConversionPattern(
   if (auto branchOp = dyn_cast<BranchOpInterface>(op)) {
     for (int p = 0, e = op->getBlock()->getNumSuccessors(); p < e; ++p) {
       auto successorOperands = branchOp.getSuccessorOperands(p);
-      if (successorOperands.hasValue() &&
-          !converter.isLegal(successorOperands.getValue().getTypes()))
+      if (!converter.isLegal(
+              successorOperands.getForwardedOperands().getTypes()))
         return false;
     }
     return true;

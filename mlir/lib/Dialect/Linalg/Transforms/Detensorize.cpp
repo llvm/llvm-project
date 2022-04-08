@@ -223,12 +223,12 @@ struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
           auto blockOperands =
               terminator.getSuccessorOperands(pred.getSuccessorIndex());
 
-          if (!blockOperands || blockOperands->empty())
+          if (blockOperands.empty() ||
+              blockOperands.isOperandProduced(blockArgumentElem.getArgNumber()))
             continue;
 
           detensorableBranchOps[terminator].insert(
-              blockOperands->getBeginOperandIndex() +
-              blockArgumentElem.getArgNumber());
+              blockOperands.getOperandIndex(blockArgumentElem.getArgNumber()));
         }
       }
 
@@ -343,14 +343,15 @@ struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
             auto ownerBlockOperands =
                 predTerminator.getSuccessorOperands(pred.getSuccessorIndex());
 
-            if (!ownerBlockOperands || ownerBlockOperands->empty())
+            if (ownerBlockOperands.empty() ||
+                ownerBlockOperands.isOperandProduced(
+                    currentItemBlockArgument.getArgNumber()))
               continue;
 
             // For each predecessor, add the value it passes to that argument to
             // workList to find out how it's computed.
             workList.push_back(
-                ownerBlockOperands
-                    .getValue()[currentItemBlockArgument.getArgNumber()]);
+                ownerBlockOperands[currentItemBlockArgument.getArgNumber()]);
           }
 
           continue;
@@ -418,18 +419,16 @@ struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
           auto blockOperands =
               terminator.getSuccessorOperands(pred.getSuccessorIndex());
 
-          if (!blockOperands || blockOperands->empty())
+          if (blockOperands.empty() ||
+              blockOperands.isOperandProduced(blockArg.getArgNumber()))
             continue;
 
           Operation *definingOp =
-              terminator
-                  ->getOperand(blockOperands->getBeginOperandIndex() +
-                               blockArg.getArgNumber())
-                  .getDefiningOp();
+              blockOperands[blockArg.getArgNumber()].getDefiningOp();
 
           // If the operand is defined by a GenericOp that will not be
           // detensored, then do not detensor the corresponding block argument.
-          if (dyn_cast_or_null<GenericOp>(definingOp) &&
+          if (isa_and_nonnull<GenericOp>(definingOp) &&
               opsToDetensor.count(definingOp) == 0) {
             blockArgsToRemove.insert(blockArg);
             break;

@@ -36,25 +36,34 @@ def BranchOpInterface : OpInterface<"BranchOpInterface"> {
 
   let methods = [
     InterfaceMethod<[{
-        Returns a mutable range of operands that correspond to the arguments of
-        successor at the given index. Returns None if the operands to the
-        successor are non-materialized values, i.e. they are internal to the
-        operation.
+        Returns the operands that correspond to the arguments of the successor
+        at the given index. It consists of a number of operands that are
+        internally produced by the operation, followed by a range of operands
+        that are forwarded. An example operation making use of produced
+        operands would be:
+
+        ```mlir
+        invoke %function(%0)
+            label ^success ^error(%1 : i32)
+
+        ^error(%e: !error, %arg0: i32):
+            ...
+        ```
+
+        The operand that would map to the `^error`s `%e` operand is produced
+        by the `invoke` operation, while `%1` is a forwarded operand that maps
+        to `%arg0` in the successor.
+
+        Produced operands always map to the first few block arguments of the
+        successor, followed by the forwarded operands. Mapping them in any
+        other order is not supported by the interface.
+
+        By having the forwarded operands last allows users of the interface
+        to append more forwarded operands to the branch operation without
+        interfering with other successor operands.
       }],
-      "::mlir::Optional<::mlir::MutableOperandRange>", "getMutableSuccessorOperands",
+      "::mlir::SuccessorOperands", "getSuccessorOperands",
       (ins "unsigned":$index)
-    >,
-    InterfaceMethod<[{
-        Returns a range of operands that correspond to the arguments of
-        successor at the given index. Returns None if the operands to the
-        successor are non-materialized values, i.e. they are internal to the
-        operation.
-      }],
-      "::mlir::Optional<::mlir::OperandRange>", "getSuccessorOperands",
-      (ins "unsigned":$index), [{}], [{
-        auto operands = $_op.getMutableSuccessorOperands(index);
-        return operands ? ::mlir::Optional<::mlir::OperandRange>(*operands) : ::llvm::None;
-      }]
     >,
     InterfaceMethod<[{
         Returns the `BlockArgument` corresponding to operand `operandIndex` in
@@ -94,7 +103,7 @@ def BranchOpInterface : OpInterface<"BranchOpInterface"> {
   let verify = [{
     auto concreteOp = ::mlir::cast<ConcreteOp>($_op);
     for (unsigned i = 0, e = $_op->getNumSuccessors(); i != e; ++i) {
-      ::mlir::Optional<OperandRange> operands = concreteOp.getSuccessorOperands(i);
+      ::mlir::SuccessorOperands operands = concreteOp.getSuccessorOperands(i);
       if (::mlir::failed(::mlir::detail::verifyBranchSuccessorOperands($_op, i, operands)))
         return ::mlir::failure();
     }

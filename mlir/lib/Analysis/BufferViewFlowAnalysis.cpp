@@ -70,10 +70,10 @@ void BufferViewFlowAnalysis::build(Operation *op) {
       // Query the branch op interface to get the successor operands.
       auto successorOperands =
           branchInterface.getSuccessorOperands(it.getIndex());
-      if (!successorOperands.hasValue())
-        continue;
       // Build the actual mapping of values to their immediate dependencies.
-      registerDependencies(successorOperands.getValue(), (*it)->getArguments());
+      registerDependencies(successorOperands.getForwardedOperands(),
+                           (*it)->getArguments().drop_front(
+                               successorOperands.getProducedOperandCount()));
     }
   });
 

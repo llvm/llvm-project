@@ -186,10 +186,9 @@ void BranchOp::setDest(Block *block) { return setSuccessor(block); }
 
 void BranchOp::eraseOperand(unsigned index) { (*this)->eraseOperand(index); }
 
-Optional<MutableOperandRange>
-BranchOp::getMutableSuccessorOperands(unsigned index) {
+SuccessorOperands BranchOp::getSuccessorOperands(unsigned index) {
   assert(index == 0 && "invalid successor index");
-  return getDestOperandsMutable();
+  return SuccessorOperands(getDestOperandsMutable());
 }
 
 Block *BranchOp::getSuccessorForOperands(ArrayRef<Attribute>) {
@@ -437,11 +436,10 @@ void CondBranchOp::getCanonicalizationPatterns(RewritePatternSet &results,
               CondBranchTruthPropagation>(context);
 }
 
-Optional<MutableOperandRange>
-CondBranchOp::getMutableSuccessorOperands(unsigned index) {
+SuccessorOperands CondBranchOp::getSuccessorOperands(unsigned index) {
   assert(index < getNumSuccessors() && "invalid successor index");
-  return index == trueIndex ? getTrueDestOperandsMutable()
-                            : getFalseDestOperandsMutable();
+  return SuccessorOperands(index == trueIndex ? getTrueDestOperandsMutable()
+                                              : getFalseDestOperandsMutable());
 }
 
 Block *CondBranchOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
@@ -575,11 +573,10 @@ LogicalResult SwitchOp::verify() {
   return success();
 }
 
-Optional<MutableOperandRange>
-SwitchOp::getMutableSuccessorOperands(unsigned index) {
+SuccessorOperands SwitchOp::getSuccessorOperands(unsigned index) {
   assert(index < getNumSuccessors() && "invalid successor index");
-  return index == 0 ? getDefaultOperandsMutable()
-                    : getCaseOperandsMutable(index - 1);
+  return SuccessorOperands(index == 0 ? getDefaultOperandsMutable()
+                                      : getCaseOperandsMutable(index - 1));
 }
 
 Block *SwitchOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
