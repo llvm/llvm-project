@@ -462,7 +462,7 @@ private:
       bool IsAngled, CharSourceRange FilenameRange, const FileEntry *File,
       StringRef SearchPath, StringRef RelativePath, const Module *Imported,
       SrcMgr::CharacteristicKind FileType) override {
-    if (HashLoc.isFileID() && File && File->isValid())
+    if (HashLoc.isFileID() && File)
       addInclude(HashLoc, File);
   }
 };
