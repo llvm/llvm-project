@@ -196,6 +196,54 @@ cc_library(
     ],
 )
 
+fma_common_hdrs = [
+    "src/__support/FPUtil/FMA.h",
+    "src/__support/FPUtil/generic/FMA.h",
+]
+
+fma_hdrs = selects.with_or({
+    "//conditions:default": fma_common_hdrs,
+    PLATFORM_CPU_X86_64: fma_common_hdrs + [
+        "src/__support/FPUtil/x86_64/FMA.h",
+    ],
+    PLATFORM_CPU_ARM64: fma_common_hdrs + [
+        "src/__support/FPUtil/aarch64/FMA.h",
+    ],
+})
+
+cc_library(
+    name = "__support_fputil_fma",
+    hdrs = fma_hdrs,
+    deps = [
+        ":__support_common",
+        ":__support_cpp_bit",
+        ":__support_cpp_type_traits",
+        ":__support_fputil",
+        ":libc_root",
+    ],
+)
+
+cc_library(
+    name = "__support_fputil_multiply_add",
+    hdrs = [
+        "src/__support/FPUtil/multiply_add.h",
+    ],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_fma",
+    ],
+)
+
+cc_library(
+    name = "__support_fputil_polyeval",
+    hdrs = [
+        "src/__support/FPUtil/PolyEval.h",
+    ],
+    deps = [
+        ":__support_fputil_multiply_add",
+    ],
+)
+
 ################################ fenv targets ################################
 
 libc_function(
