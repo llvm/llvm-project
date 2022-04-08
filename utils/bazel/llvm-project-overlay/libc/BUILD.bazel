@@ -36,13 +36,13 @@ cc_library(
 
 cc_library(
     name = "__support_cpp_array",
-    hdrs = ["src/__support/CPP/Array.h",],
+    hdrs = ["src/__support/CPP/Array.h"],
     deps = [":libc_root"],
 )
 
 cc_library(
     name = "__support_cpp_array_ref",
-    hdrs = ["src/__support/CPP/ArrayRef.h",],
+    hdrs = ["src/__support/CPP/ArrayRef.h"],
     deps = [
         ":__support_cpp_array",
         ":__support_cpp_type_traits",
@@ -52,31 +52,31 @@ cc_library(
 
 cc_library(
     name = "__support_cpp_bit",
-    hdrs = ["src/__support/CPP/Bit.h",],
+    hdrs = ["src/__support/CPP/Bit.h"],
     deps = [":libc_root"],
 )
 
 cc_library(
     name = "__support_cpp_bitset",
-    hdrs = ["src/__support/CPP/Bitset.h",],
+    hdrs = ["src/__support/CPP/Bitset.h"],
     deps = [":libc_root"],
 )
 
 cc_library(
     name = "__support_cpp_functional",
-    hdrs = ["src/__support/CPP/Functional.h",],
+    hdrs = ["src/__support/CPP/Functional.h"],
     deps = [":libc_root"],
 )
 
 cc_library(
     name = "__support_cpp_limits",
-    hdrs = ["src/__support/CPP/Limits.h",],
+    hdrs = ["src/__support/CPP/Limits.h"],
     deps = [":libc_root"],
 )
 
 cc_library(
     name = "__support_cpp_string_view",
-    hdrs = ["src/__support/CPP/StringView.h",],
+    hdrs = ["src/__support/CPP/StringView.h"],
     deps = [":libc_root"],
 )
 
@@ -90,7 +90,7 @@ cc_library(
 
 cc_library(
     name = "__support_cpp_utility",
-    hdrs = ["src/__support/CPP/Utility.h",],
+    hdrs = ["src/__support/CPP/Utility.h"],
     deps = [
         ":__support_cpp_type_traits",
         ":libc_root",
@@ -99,13 +99,13 @@ cc_library(
 
 cc_library(
     name = "__support_cpp_vector",
-    hdrs = ["src/__support/CPP/vector.h",],
+    hdrs = ["src/__support/CPP/vector.h"],
     deps = [":libc_root"],
 )
 
 cc_library(
     name = "__support_cpp_atomic",
-    hdrs = ["src/__support/CPP/atomic.h",],
+    hdrs = ["src/__support/CPP/atomic.h"],
     deps = [
         ":__support_cpp_type_traits",
         ":libc_root",
@@ -201,19 +201,17 @@ fma_common_hdrs = [
     "src/__support/FPUtil/generic/FMA.h",
 ]
 
-fma_hdrs = selects.with_or({
-    "//conditions:default": fma_common_hdrs,
-    PLATFORM_CPU_X86_64: fma_common_hdrs + [
-        "src/__support/FPUtil/x86_64/FMA.h",
-    ],
-    PLATFORM_CPU_ARM64: fma_common_hdrs + [
-        "src/__support/FPUtil/aarch64/FMA.h",
-    ],
-})
+fma_platform_hdrs = [
+    "src/__support/FPUtil/x86_64/FMA.h",
+    "src/__support/FPUtil/aarch64/FMA.h",
+]
 
 cc_library(
     name = "__support_fputil_fma",
-    hdrs = fma_hdrs,
+    hdrs = fma_common_hdrs,
+    # These are conditionally included and will #error out if the platform
+    # doesn't support FMA, so they can't be compiled on their own.
+    textual_hdrs = fma_platform_hdrs,
     deps = [
         ":__support_common",
         ":__support_cpp_bit",
