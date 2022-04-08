@@ -358,7 +358,7 @@ func @bar(
   // %r0#0 requires a copy because we have no idea what the function is doing.
 //  CHECK-DAG:   %[[alloc:.*]] = memref.alloc
 //  CHECK-DAG:   %[[casted:.*]] = memref.cast %[[alloc]]
-//      CHECK:   memref.copy %[[B]], %[[alloc]]
+//  CHECK-DAG:   memref.copy %[[B]], %[[alloc]]
 // CHECK-NEXT:   call @some_external_func(%[[casted]]) : (memref<?xf32, #[[$DYN_1D_MAP]]>) -> ()
   call @some_external_func(%r0#0) : (tensor<?xf32>) -> ()
 
@@ -475,15 +475,15 @@ func @entry(%A : tensor<?xf32> {linalg.buffer_layout = affine_map<(i)[s0, s1] ->
 // conflict. However, inside `entry`, the writes do cause a conflict because
 // %A, %B and %C are not inplaceable. This test case shows that this kind of
 // conflict detection has a "transitive" nature.
-//      CHECK: %[[ALLOC_C:.*]] = memref.alloc
-//      CHECK: %[[CASTED_C:.*]] = memref.cast %[[ALLOC_C]]
-//      CHECK: %[[ALLOC_B:.*]] = memref.alloc
-//      CHECK: %[[CASTED_B:.*]] = memref.cast %[[ALLOC_B]]
-//      CHECK: %[[ALLOC_A:.*]] = memref.alloc
-//      CHECK: memref.copy %[[A]], %[[ALLOC_A]]
-//      CHECK: memref.copy %[[B]], %[[ALLOC_B]]
-//      CHECK: memref.copy %[[C]], %[[ALLOC_C]]
-//      CHECK: %[[CASTED_A:.*]] = memref.cast %[[ALLOC_A]]
+//  CHECK-DAG: %[[ALLOC_C:.*]] = memref.alloc
+//  CHECK-DAG: %[[CASTED_C:.*]] = memref.cast %[[ALLOC_C]]
+//  CHECK-DAG: %[[ALLOC_B:.*]] = memref.alloc
+//  CHECK-DAG: %[[CASTED_B:.*]] = memref.cast %[[ALLOC_B]]
+//  CHECK-DAG: %[[ALLOC_A:.*]] = memref.alloc
+//  CHECK-DAG: %[[CASTED_A:.*]] = memref.cast %[[ALLOC_A]]
+//  CHECK-DAG: memref.copy %[[A]], %[[ALLOC_A]]
+//  CHECK-DAG: memref.copy %[[B]], %[[ALLOC_B]]
+//  CHECK-DAG: memref.copy %[[C]], %[[ALLOC_C]]
 // CHECK-NEXT: call @callee(%[[CASTED_A]], %[[CASTED_B]], %[[CASTED_C]])
   call @callee(%A, %B, %C) : (tensor<?xf32>, tensor<?xf32>, tensor<?xf32>) -> ()
   return
@@ -539,8 +539,8 @@ func @equivalent_func_arg_2(%t0: tensor<?xf32> {linalg.inplaceable = true},
   // CHECK: scf.for {{.*}} {
   %1 = scf.for %iv = %c0 to %c10 step %c1 iter_args(%t1 = %t0) -> (tensor<?xf32>) {
     // CHECK: %[[alloc:.*]] = memref.alloc
-    // CHECK: %[[casted:.*]] = memref.cast %[[alloc]]
-    // CHECK: memref.copy %[[arg0]], %[[alloc]]
+    // CHECK-DAG: %[[casted:.*]] = memref.cast %[[alloc]]
+    // CHECK-DAG: memref.copy %[[arg0]], %[[alloc]]
     // CHECK: call @inner_func_2(%[[casted]])
     // CHECK: memref.dealloc %[[alloc]]
     // CHECK-NOT: scf.yield

@@ -466,7 +466,6 @@ FailureOr<Value> BufferizationState::createAlloc(OpBuilder &b, Location loc,
 
   // Compute allocation memref type.
   assert(shapedValue.getType().isa<ShapedType>());
-  MemRefType memRefType = shapedValue.getType().dyn_cast<MemRefType>();
   SmallVector<Value> dynShape;
   MemRefType allocMemRefType =
       getAllocationTypeAndShape(b, loc, shapedValue, dynShape);
@@ -485,17 +484,7 @@ FailureOr<Value> BufferizationState::createAlloc(OpBuilder &b, Location loc,
   }
 
   // Create the buffer allocation.
-  Value alloc =
-      createBufferAllocation(b, loc, allocMemRefType, dynShape, skipDealloc);
-
-  // Insert a cast if a different type was requested.
-  if (memRefType && memRefType != allocMemRefType) {
-    assert(memref::CastOp::areCastCompatible(allocMemRefType, memRefType) &&
-           "createAlloc: cast incompatible");
-    alloc = b.create<memref::CastOp>(loc, memRefType, alloc);
-  }
-
-  return alloc;
+  return createBufferAllocation(b, loc, allocMemRefType, dynShape, skipDealloc);
 }
 
 /// Create a memory copy between two memref buffers.

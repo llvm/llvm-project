@@ -29,10 +29,9 @@ func @return_tensor(%A : tensor<?xf32>, %v : vector<4xf32>) -> (tensor<?xf32>) {
   // CHECK: %[[A_memref:.*]] = bufferization.to_memref %[[A]]
   // CHECK: %[[dim:.*]] = tensor.dim %[[A]]
   // CHECK: %[[alloc:.*]] = memref.alloc(%[[dim]])
-  // CHECK: %[[casted:.*]] = memref.cast %[[alloc]]
   // CHECK: memref.copy %[[A_memref]], %[[alloc]]
   // CHECK: vector.transfer_write %{{.*}}, %[[alloc]]
-  // CHECK: %[[res_tensor:.*]] = bufferization.to_tensor %[[casted]]
+  // CHECK: %[[res_tensor:.*]] = bufferization.to_tensor %[[alloc]]
   %0 = vector.transfer_write %v, %A[%c0] : vector<4xf32>, tensor<?xf32>
 
   // CHECK: memref.dealloc %[[alloc]]
