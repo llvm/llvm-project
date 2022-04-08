@@ -1334,34 +1334,72 @@ class I32EnumAttrCase<string sym, int val, string str = sym>
 class I64EnumAttrCase<string sym, int val, string str = sym>
     : IntEnumAttrCaseBase<I64, sym, str, val>;
 
-// A bit enum case stored with 32-bit IntegerAttr. `val` here is *not* the
-// ordinal number of the bit that is set. It is the 32-bit integer with only
-// one bit set.
-class BitEnumAttrCase<string sym, int val, string str = sym>
-    : EnumAttrCaseInfo<sym, val, str>,
-      SignlessIntegerAttrBase<I32, "case " #str>;
+// A bit enum case stored with an IntegerAttr. `val` here is *not* the ordinal
+// number of a bit that is set. It is an integer value with bits set to match
+// the case.
+class BitEnumAttrCaseBase<I intType, string sym, int val, string str = sym> :
+    EnumAttrCaseInfo<sym, val, str>,
+    SignlessIntegerAttrBase<intType, "case " #str>;
 
-// The special bit enum case for no bits set (i.e. value = 0).
-class BitEnumAttrCaseNone<string sym, string str = sym>
-    : BitEnumAttrCase<sym, 0, str>;
+// A bit enum case stored with a 32-bit IntegerAttr. `val` here is *not* the
+// ordinal number of a bit that is set. It is a 32-bit integer value with bits
+// set to match the case. 
+class I32BitEnumAttrCase<string sym, int val, string str = sym>
+    : BitEnumAttrCaseBase<I32, sym, val, str>;
 
-// The bit enum case for a single bit, specified by the bit position.
-// The pos argument refers to the index of the bit, and is currently
-// limited to be in the range [0, 31].
-class BitEnumAttrCaseBit<string sym, int pos, string str = sym>
-    : BitEnumAttrCase<sym, !shl(1, pos), str> {
-  assert !and(!ge(pos, 0), !le(pos, 31)),
-      "bit position must be between 0 and 31";
+// A bit enum case stored with a 64-bit IntegerAttr. `val` here is *not* the
+// ordinal number of a bit that is set. It is a 64-bit integer value with bits
+// bits set to match the case.
+class I64BitEnumAttrCase<string sym, int val, string str = sym>
+    : BitEnumAttrCaseBase<I64, sym, val, str>;
+
+// The special bit enum case for I32 with no bits set (i.e. value = 0).
+class I32BitEnumAttrCaseNone<string sym, string str = sym>
+    : I32BitEnumAttrCase<sym, 0, str>;
+
+// The special bit enum case for I64 with no bits set (i.e. value = 0).
+class I64BitEnumAttrCaseNone<string sym, string str = sym>
+    : I64BitEnumAttrCase<sym, 0, str>;
+
+// A bit enum case for a single bit, specified by a bit position.
+// The pos argument refers to the index of the bit, and is limited
+// to be in the range [0, bitwidth).
+class BitEnumAttrCaseBit<I intType, string sym, int pos, string str = sym>
+    : BitEnumAttrCaseBase<intType, sym, !shl(1, pos), str> {
+  assert !and(!ge(pos, 0), !lt(pos, intType.bitwidth)),
+      "bit position larger than underlying storage";
 }
 
-// A bit enum case for a group/list of previously declared single bits,
-// providing a convenient alias for that group.
-class BitEnumAttrCaseGroup<string sym, list<BitEnumAttrCaseBit> cases,
-                           string str = sym>
-    : BitEnumAttrCase<
-          sym, !foldl(0, cases, value, bitcase, !or(value, bitcase.value)),
-          str> {
-}
+// A bit enum case for a single bit in a 32-bit enum, specified by the
+// bit position.
+class I32BitEnumAttrCaseBit<string sym, int pos, string str = sym>
+    : BitEnumAttrCaseBit<I32, sym, pos, str>;
+
+// A bit enum case for a single bit in a 64-bit enum, specified by the
+// bit position.
+class I64BitEnumAttrCaseBit<string sym, int pos, string str = sym>
+    : BitEnumAttrCaseBit<I64, sym, pos, str>;
+
+
+// A bit enum case for a group/list of previously declared cases, providing
+// a convenient alias for that group.
+class BitEnumAttrCaseGroup<I intType, string sym,
+                           list<BitEnumAttrCaseBase> cases, string str = sym>
+    : BitEnumAttrCaseBase<intType, sym,
+          !foldl(0, cases, value, bitcase, !or(value, bitcase.value)),
+          str>;
+
+// A 32-bit enum case for a group/list of previously declared cases, providing
+// a convenient alias for that group.
+class I32BitEnumAttrCaseGroup<string sym, list<BitEnumAttrCaseBase> cases,
+                              string str = sym>
+    : BitEnumAttrCaseGroup<I32, sym, cases, str>;
+
+// A 64-bit enum case for a group/list of previously declared cases, providing
+// a convenient alias for that group.
+class I64BitEnumAttrCaseGroup<string sym, list<BitEnumAttrCaseBase> cases,
+                              string str = sym>
+    : BitEnumAttrCaseGroup<I64, sym, cases, str>;
 
 // Additional information for an enum attribute.
 class EnumAttrInfo<
@@ -1481,16 +1519,17 @@ class I64EnumAttr<string name, string summary, list<I64EnumAttrCase> cases> :
   let underlyingType = "uint64_t";
 }
 
-// A bit enum stored with 32-bit IntegerAttr.
+// A bit enum stored with an IntegerAttr.
 //
 // Op attributes of this kind are stored as IntegerAttr. Extra verification will
 // be generated on the integer to make sure only allowed bits are set. Besides,
 // helper methods are generated to parse a string separated with a specified
 // delimiter to a symbol and vice versa.
-class BitEnumAttrBase<list<BitEnumAttrCase> cases, string summary> :
-    SignlessIntegerAttrBase<I32, summary> {
+class BitEnumAttrBase<I intType, list<BitEnumAttrCaseBase> cases,
+                      string summary>
+    : SignlessIntegerAttrBase<intType, summary> {
   let predicate = And<[
-    I32Attr.predicate,
+    SignlessIntegerAttrBase<intType, summary>.predicate,
     // Make sure we don't have unknown bit set.
     CPred<"!($_self.cast<::mlir::IntegerAttr>().getValue().getZExtValue() & (~("
           # !interleave(!foreach(case, cases, case.value # "u"), "|") #
@@ -1498,10 +1537,9 @@ class BitEnumAttrBase<list<BitEnumAttrCase> cases, string summary> :
   ]>;
 }
 
-class BitEnumAttr<string name, string summary, list<BitEnumAttrCase> cases> :
-    EnumAttrInfo<name, cases, BitEnumAttrBase<cases, summary>> {
-  let underlyingType = "uint32_t";
-
+class BitEnumAttr<I intType, string name, string summary,
+                  list<BitEnumAttrCaseBase> cases>
+    : EnumAttrInfo<name, cases, BitEnumAttrBase<intType, cases, summary>> {
   // Determine "valid" bits from enum cases for error checking
   int validBits = !foldl(0, cases, value, bitcase, !or(value, bitcase.value));
 
@@ -1511,6 +1549,18 @@ class BitEnumAttr<string name, string summary, list<BitEnumAttrCase> cases> :
 
   // The delimiter used to separate bit enum cases in strings.
   string separator = "|";
+}
+
+class I32BitEnumAttr<string name, string summary,
+                     list<BitEnumAttrCaseBase> cases>
+    : BitEnumAttr<I32, name, summary, cases> {
+  let underlyingType = "uint32_t";
+}
+
+class I64BitEnumAttr<string name, string summary,
+                     list<BitEnumAttrCaseBase> cases>
+    : BitEnumAttr<I64, name, summary, cases> {
+  let underlyingType = "uint64_t";
 }
 
 //===----------------------------------------------------------------------===//
