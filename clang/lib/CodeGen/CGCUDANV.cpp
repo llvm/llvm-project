@@ -287,7 +287,7 @@ std::string CGNVCUDARuntime::getDeviceSideName(const NamedDecl *ND) {
     SmallString<256> Buffer;
     llvm::raw_svector_ostream Out(Buffer);
     Out << DeviceSideName;
-    CGM.printPostfixForExternalizedStaticVar(Out);
+    CGM.printPostfixForExternalizedDecl(Out, ND);
     DeviceSideName = std::string(Out.str());
   }
   return DeviceSideName;

@@ -12263,14 +12263,16 @@ bool ASTContext::mayExternalizeStaticVar(const Decl *D) const {
                              (D->hasAttr<CUDAConstantAttr>() &&
                               !D->getAttr<CUDAConstantAttr>()->isImplicit());
   // CUDA/HIP: static managed variables need to be externalized since it is
-  // a declaration in IR, therefore cannot have internal linkage.
-  return IsStaticVar &&
-         (D->hasAttr<HIPManagedAttr>() || IsExplicitDeviceVar);
+  // a declaration in IR, therefore cannot have internal linkage. Kernels in
+  // anonymous name space needs to be externalized to avoid duplicate symbols.
+  return (IsStaticVar &&
+          (D->hasAttr<HIPManagedAttr>() || IsExplicitDeviceVar)) ||
+         (D->hasAttr<CUDAGlobalAttr>() && D->isInAnonymousNamespace());
 }
 
 bool ASTContext::shouldExternalizeStaticVar(const Decl *D) const {
   return mayExternalizeStaticVar(D) &&
-         (D->hasAttr<HIPManagedAttr>() ||
+         (D->hasAttr<HIPManagedAttr>() || D->hasAttr<CUDAGlobalAttr>() ||
           CUDADeviceVarODRUsedByHost.count(cast<VarDecl>(D)));
 }
 
