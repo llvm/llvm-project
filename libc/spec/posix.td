@@ -20,6 +20,13 @@ def POSIX : StandardSpec<"POSIX"> {
   NamedType ModeTType = NamedType<"mode_t">;
   NamedType OffTType = NamedType<"off_t">;
   NamedType SSizeTType = NamedType<"ssize_t">;
+
+  NamedType PThreadAttrTType = NamedType<"pthread_attr_t">;
+  PtrType PThreadAttrTPtr = PtrType<PThreadAttrTType>;
+  RestrictedPtrType RestrictedPThreadAttrTPtr = RestrictedPtrType<PThreadAttrTType>;
+  ConstType ConstPThreadAttrTPtr = ConstType<PThreadAttrTPtr>;
+  ConstType ConstRestrictedPThreadAttrTPtr = ConstType<RestrictedPThreadAttrTPtr>;
+
   NamedType PThreadMutexAttrTType = NamedType<"pthread_mutexattr_t">;
   PtrType PThreadMutexAttrTPtr = PtrType<PThreadMutexAttrTType>;
   RestrictedPtrType RestrictedPThreadMutexAttrTPtr = RestrictedPtrType<PThreadMutexAttrTType>;
@@ -379,9 +386,59 @@ def POSIX : StandardSpec<"POSIX"> {
   HeaderSpec PThread = HeaderSpec<
     "pthread.h",
     [], // Macros
-    [PThreadMutexAttrTType], // Types
+    [PThreadAttrTType, PThreadMutexAttrTType], // Types
     [], // Enumerations
     [
+      FunctionSpec<
+          "pthread_attr_init",
+          RetValSpec<IntType>,
+          [ArgSpec<PThreadAttrTPtr>]
+      >,
+      FunctionSpec<
+          "pthread_attr_destroy",
+          RetValSpec<IntType>,
+          [ArgSpec<PThreadAttrTPtr>]
+      >,
+      FunctionSpec<
+          "pthread_attr_getdetachstate",
+          RetValSpec<IntType>,
+          [ArgSpec<ConstPThreadAttrTPtr>, ArgSpec<IntPtr>]
+      >,
+      FunctionSpec<
+          "pthread_attr_setdetachstate",
+          RetValSpec<IntType>,
+          [ArgSpec<PThreadAttrTPtr>, ArgSpec<IntType>]
+      >,
+      FunctionSpec<
+          "pthread_attr_getguardsize",
+          RetValSpec<IntType>,
+          [ArgSpec<ConstRestrictedPThreadAttrTPtr>, ArgSpec<RestrictedSizeTPtr>]
+      >,
+      FunctionSpec<
+          "pthread_attr_setguardsize",
+          RetValSpec<IntType>,
+          [ArgSpec<PThreadAttrTPtr>, ArgSpec<SizeTType>]
+      >,
+      FunctionSpec<
+          "pthread_attr_getstacksize",
+          RetValSpec<IntType>,
+          [ArgSpec<ConstRestrictedPThreadAttrTPtr>, ArgSpec<RestrictedSizeTPtr>]
+      >,
+      FunctionSpec<
+          "pthread_attr_setstacksize",
+          RetValSpec<IntType>,
+          [ArgSpec<PThreadAttrTPtr>, ArgSpec<SizeTType>]
+      >,
+      FunctionSpec<
+          "pthread_attr_getstack",
+          RetValSpec<IntType>,
+          [ArgSpec<ConstRestrictedPThreadAttrTPtr>, ArgSpec<RestrictedVoidPtrPtr>, ArgSpec<RestrictedSizeTPtr>]
+      >,
+      FunctionSpec<
+          "pthread_attr_setstack",
+          RetValSpec<IntType>,
+          [ArgSpec<PThreadAttrTPtr>, ArgSpec<VoidPtr>, ArgSpec<SizeTType>]
+      >,
       FunctionSpec<
           "pthread_mutexattr_init",
           RetValSpec<IntType>,
