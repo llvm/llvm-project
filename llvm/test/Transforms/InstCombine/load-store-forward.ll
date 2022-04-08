@@ -293,7 +293,9 @@ entry:
 define i8 @load_i8_store_i1(i1* %a) {
 ; CHECK-LABEL: @load_i8_store_i1(
 ; CHECK-NEXT:    store i1 true, i1* [[A:%.*]], align 1
-; CHECK-NEXT:    ret i8 -1
+; CHECK-NEXT:    [[A_I8:%.*]] = bitcast i1* [[A]] to i8*
+; CHECK-NEXT:    [[V:%.*]] = load i8, i8* [[A_I8]], align 1
+; CHECK-NEXT:    ret i8 [[V]]
 ;
   store i1 true, i1* %a
   %a.i8 = bitcast i1* %a to i8*
