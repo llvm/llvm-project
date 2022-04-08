@@ -909,7 +909,7 @@ public:
 
   /// Returns the value at the given index.
   Value operator[](unsigned index) const {
-    return static_cast<OperandRange>(*this)[index];
+    return operator OperandRange()[index];
   }
 
 private:
