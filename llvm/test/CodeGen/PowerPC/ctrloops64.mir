@@ -12,16 +12,16 @@ body:             |
   bb.0.entry:
 
     %0:g8rc = LI8 2048
-    ; CHECK: MTCTR8
+    ; CHECK: MTCTR8loop
     ; CHECK: BDNZ8
     ; CHECK-NOT: ADDI8
     ; CHECK-NOT: CMPLDI
     ; CHECK-NOT: BC
-    MTCTR8Pseudo killed %0:g8rc, implicit-def dead $ctr8
+    MTCTR8loop killed %0:g8rc, implicit-def dead $ctr8
 
   bb.1:
 
-    %1:crbitrc = DecreaseCTR8Pseudo 1, implicit-def dead $ctr8, implicit $ctr8
+    %1:crbitrc = DecreaseCTR8loop 1, implicit-def dead $ctr8, implicit $ctr8
     BC killed %1:crbitrc, %bb.1
     B %bb.2
 
@@ -37,17 +37,17 @@ body:             |
   bb.0.entry:
 
     %0:g8rc = LI8 2048
-    ; CHECK-NOT: MTCTR8
+    ; CHECK-NOT: MTCTR8loop
     ; CHECK-NOT: BDNZ8
     ; CHECK: ADDI8
     ; CHECK: CMPLDI
     ; CHECK: BC
-    MTCTR8Pseudo killed %0:g8rc, implicit-def dead $ctr8
+    MTCTR8loop killed %0:g8rc, implicit-def dead $ctr8
 
   bb.1:
 
     INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def early-clobber $ctr8
-    %1:crbitrc = DecreaseCTR8Pseudo 1, implicit-def dead $ctr8, implicit $ctr8
+    %1:crbitrc = DecreaseCTR8loop 1, implicit-def dead $ctr8, implicit $ctr8
     BC killed %1:crbitrc, %bb.1
     B %bb.2
 
@@ -63,17 +63,17 @@ body:             |
   bb.0.entry:
 
     %0:g8rc = LI8 2048
-    ; CHECK-NOT: MTCTR8
+    ; CHECK-NOT: MTCTR8loop
     ; CHECK-NOT: BDNZ8
     ; CHECK: ADDI8
     ; CHECK: CMPLDI
     ; CHECK: BC
-    MTCTR8Pseudo killed %0:g8rc, implicit-def dead $ctr8
+    MTCTR8loop killed %0:g8rc, implicit-def dead $ctr8
 
   bb.1:
 
     %1:g8rc = MFCTR8 implicit $ctr8
-    %2:crbitrc = DecreaseCTR8Pseudo 1, implicit-def dead $ctr8, implicit $ctr8
+    %2:crbitrc = DecreaseCTR8loop 1, implicit-def dead $ctr8, implicit $ctr8
     BC killed %2:crbitrc, %bb.1
     B %bb.2
 
@@ -94,12 +94,12 @@ body:             |
     ; CHECK: ADDI8
     ; CHECK: CMPLDI
     ; CHECK: BC
-    MTCTR8Pseudo killed %0:g8rc, implicit-def dead $ctr8
+    MTCTR8loop killed %0:g8rc, implicit-def dead $ctr8
     BL8 @test_fail_use_in_loop, csr_ppc64, implicit-def dead $lr8, implicit $rm
 
   bb.1:
 
-    %1:crbitrc = DecreaseCTR8Pseudo 1, implicit-def dead $ctr8, implicit $ctr8
+    %1:crbitrc = DecreaseCTR8loop 1, implicit-def dead $ctr8, implicit $ctr8
     BC killed %1:crbitrc, %bb.1
     B %bb.2
 
@@ -121,11 +121,11 @@ body:             |
     ; CHECK-NOT: ADDI8
     ; CHECK-NOT: CMPLDI
     ; CHECK-NOT: BC
-    MTCTR8Pseudo killed %0:g8rc, implicit-def dead $ctr8
+    MTCTR8loop killed %0:g8rc, implicit-def dead $ctr8
 
   bb.1:
 
-    %1:crbitrc = DecreaseCTR8Pseudo 1, implicit-def dead $ctr8, implicit $ctr8
+    %1:crbitrc = DecreaseCTR8loop 1, implicit-def dead $ctr8, implicit $ctr8
     BC killed %1:crbitrc, %bb.1
     B %bb.2
 
@@ -146,12 +146,12 @@ body:             |
     ; CHECK: ADDI8
     ; CHECK: CMPLDI
     ; CHECK: BC
-    MTCTR8Pseudo killed %0:g8rc, implicit-def dead $ctr8
+    MTCTR8loop killed %0:g8rc, implicit-def dead $ctr8
 
   bb.1:
 
     BL8 @test_fail_use_in_loop, csr_ppc64, implicit-def dead $lr8, implicit $rm
-    %1:crbitrc = DecreaseCTR8Pseudo 1, implicit-def dead $ctr8, implicit $ctr8
+    %1:crbitrc = DecreaseCTR8loop 1, implicit-def dead $ctr8, implicit $ctr8
     BC killed %1:crbitrc, %bb.1
     B %bb.2
 
@@ -176,12 +176,12 @@ body:             |
     renamable %1:crrc = CMPLD killed renamable $x3, killed renamable $x4
     renamable %2:crbitrc = COPY %1.sub_gt
     MTLR8 %0:g8rc, implicit-def $lr8
-    MTCTR8Pseudo killed %0:g8rc, implicit-def dead $ctr8
+    MTCTR8loop killed %0:g8rc, implicit-def dead $ctr8
 
   bb.1:
 
     BCLRL renamable %2, implicit $lr, implicit $rm
-    %3:crbitrc = DecreaseCTR8Pseudo 1, implicit-def dead $ctr8, implicit $ctr8
+    %3:crbitrc = DecreaseCTR8loop 1, implicit-def dead $ctr8, implicit $ctr8
     BC killed %3:crbitrc, %bb.1
     B %bb.2
 
@@ -198,16 +198,16 @@ body:             |
     liveins: $ctr8
 
     %0:g8rc = LI8 2048
-    ; CHECK-NOT: MTCTR8
+    ; CHECK-NOT: MTCTR8loop
     ; CHECK-NOT: BDNZ8
     ; CHECK: ADDI8
     ; CHECK: CMPLDI
     ; CHECK: BC
-    MTCTR8Pseudo killed %0:g8rc, implicit-def dead $ctr8
+    MTCTR8loop killed %0:g8rc, implicit-def dead $ctr8
 
   bb.1:
 
-    %1:crbitrc = DecreaseCTR8Pseudo 1, implicit-def dead $ctr8, implicit $ctr8
+    %1:crbitrc = DecreaseCTR8loop 1, implicit-def dead $ctr8, implicit $ctr8
     BC killed %1:crbitrc, %bb.1
     B %bb.2
 
@@ -224,16 +224,16 @@ body:             |
 
     INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def early-clobber $ctr8
     %0:g8rc = LI8 2048
-    ; CHECK-NOT: MTCTR8
+    ; CHECK-NOT: MTCTR8loop
     ; CHECK-NOT: BDNZ8
     ; CHECK: ADDI8
     ; CHECK: CMPLDI
     ; CHECK: BC
-    MTCTR8Pseudo killed %0:g8rc, implicit-def dead $ctr8
+    MTCTR8loop killed %0:g8rc, implicit-def dead $ctr8
 
   bb.1:
 
-    %1:crbitrc = DecreaseCTR8Pseudo 1, implicit-def dead $ctr8, implicit $ctr8
+    %1:crbitrc = DecreaseCTR8loop 1, implicit-def dead $ctr8, implicit $ctr8
     BC killed %1:crbitrc, %bb.1
     B %bb.2
 
@@ -250,16 +250,16 @@ body:             |
 
     %0:g8rc = MFCTR8 implicit $ctr8
     %1:g8rc = LI8 2048
-    ; CHECK: MTCTR8
+    ; CHECK: MTCTR8loop
     ; CHECK: BDNZ8
     ; CHECK-NOT: ADDI8
     ; CHECK-NOT: CMPLDI
     ; CHECK-NOT: BC
-    MTCTR8Pseudo killed %1:g8rc, implicit-def dead $ctr8
+    MTCTR8loop killed %1:g8rc, implicit-def dead $ctr8
 
   bb.1:
 
-    %2:crbitrc = DecreaseCTR8Pseudo 1, implicit-def dead $ctr8, implicit $ctr8
+    %2:crbitrc = DecreaseCTR8loop 1, implicit-def dead $ctr8, implicit $ctr8
     BC killed %2:crbitrc, %bb.1
     B %bb.2
 
@@ -275,17 +275,17 @@ body:             |
   bb.0.entry:
 
     %0:g8rc = LI8 2048
-    ; CHECK-NOT: MTCTR8
+    ; CHECK-NOT: MTCTR8loop
     ; CHECK-NOT: BDNZ8
     ; CHECK: ADDI8
     ; CHECK: CMPLDI
     ; CHECK: BC
-    MTCTR8Pseudo killed %0:g8rc, implicit-def dead $ctr8
+    MTCTR8loop killed %0:g8rc, implicit-def dead $ctr8
     %1:g8rc = MFCTR8 implicit $ctr8
 
   bb.1:
 
-    %2:crbitrc = DecreaseCTR8Pseudo 1, implicit-def dead $ctr8, implicit $ctr8
+    %2:crbitrc = DecreaseCTR8loop 1, implicit-def dead $ctr8, implicit $ctr8
     BC killed %2:crbitrc, %bb.1
     B %bb.2
 
@@ -301,17 +301,17 @@ body:             |
   bb.0.entry:
 
     %0:g8rc = LI8 2048
-    ; CHECK-NOT: MTCTR8
+    ; CHECK-NOT: MTCTR8loop
     ; CHECK-NOT: BDNZ8
     ; CHECK: ADDI8
     ; CHECK: CMPLDI
     ; CHECK: BC
-    MTCTR8Pseudo killed %0:g8rc, implicit-def dead $ctr8
+    MTCTR8loop killed %0:g8rc, implicit-def dead $ctr8
     INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def early-clobber $ctr8
 
   bb.1:
 
-    %2:crbitrc = DecreaseCTR8Pseudo 1, implicit-def dead $ctr8, implicit $ctr8
+    %2:crbitrc = DecreaseCTR8loop 1, implicit-def dead $ctr8, implicit $ctr8
     BC killed %2:crbitrc, %bb.1
     B %bb.2
 
@@ -327,16 +327,16 @@ body:             |
   bb.0.entry:
 
     %0:g8rc = LI8 2048
-    ; CHECK: MTCTR8
+    ; CHECK: MTCTR8loop
     ; CHECK: BDNZ8
     ; CHECK-NOT: ADDI8
     ; CHECK-NOT: CMPLDI
     ; CHECK-NOT: BC
-    MTCTR8Pseudo killed %0:g8rc, implicit-def dead $ctr8
+    MTCTR8loop killed %0:g8rc, implicit-def dead $ctr8
 
   bb.1:
 
-    %2:crbitrc = DecreaseCTR8Pseudo 1, implicit-def dead $ctr8, implicit $ctr8
+    %2:crbitrc = DecreaseCTR8loop 1, implicit-def dead $ctr8, implicit $ctr8
     BC killed %2:crbitrc, %bb.1
     B %bb.2
 

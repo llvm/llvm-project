@@ -417,6 +417,7 @@ namespace {
 private:
     bool trySETCC(SDNode *N);
     bool tryFoldSWTestBRCC(SDNode *N);
+    bool trySelectLoopCountIntrinsic(SDNode *N);
     bool tryAsSingleRLDICL(SDNode *N);
     bool tryAsSingleRLDICR(SDNode *N);
     bool tryAsSingleRLWINM(SDNode *N);
@@ -4718,6 +4719,59 @@ bool PPCDAGToDAGISel::tryFoldSWTestBRCC(SDNode *N) {
   return false;
 }
 
+bool PPCDAGToDAGISel::trySelectLoopCountIntrinsic(SDNode *N) {
+  // Sometimes the promoted value of the intrinsic is ANDed by some non-zero
+  // value, for example when crbits is disabled. If so, select the
+  // loop_decrement intrinsics now.
+  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(1))->get();
+  SDValue LHS = N->getOperand(2), RHS = N->getOperand(3);
+
+  if (LHS.getOpcode() != ISD::AND || !isa<ConstantSDNode>(LHS.getOperand(1)) ||
+      isNullConstant(LHS.getOperand(1)))
+    return false;
+
+  if (LHS.getOperand(0).getOpcode() != ISD::INTRINSIC_W_CHAIN ||
+      cast<ConstantSDNode>(LHS.getOperand(0).getOperand(1))->getZExtValue() !=
+          Intrinsic::loop_decrement)
+    return false;
+
+  if (!isa<ConstantSDNode>(RHS))
+    return false;
+
+  assert((CC == ISD::SETEQ || CC == ISD::SETNE) &&
+         "Counter decrement comparison is not EQ or NE");
+
+  SDValue OldDecrement = LHS.getOperand(0);
+  assert(OldDecrement.hasOneUse() && "loop decrement has more than one use!");
+
+  SDLoc DecrementLoc(OldDecrement);
+  SDValue ChainInput = OldDecrement.getOperand(0);
+  SDValue DecrementOps[] = {Subtarget->isPPC64() ? getI64Imm(1, DecrementLoc)
+                                                 : getI32Imm(1, DecrementLoc)};
+  unsigned DecrementOpcode =
+      Subtarget->isPPC64() ? PPC::DecreaseCTR8loop : PPC::DecreaseCTRloop;
+  SDNode *NewDecrement = CurDAG->getMachineNode(DecrementOpcode, DecrementLoc,
+                                                MVT::i1, DecrementOps);
+
+  unsigned Val = cast<ConstantSDNode>(RHS)->getZExtValue();
+  bool IsBranchOnTrue = (CC == ISD::SETEQ && Val) || (CC == ISD::SETNE && !Val);
+  unsigned Opcode = IsBranchOnTrue ? PPC::BC : PPC::BCn;
+
+  ReplaceUses(LHS.getValue(0), LHS.getOperand(1));
+  CurDAG->RemoveDeadNode(LHS.getNode());
+
+  // Mark the old loop_decrement intrinsic as dead.
+  ReplaceUses(OldDecrement.getValue(1), ChainInput);
+  CurDAG->RemoveDeadNode(OldDecrement.getNode());
+
+  SDValue Chain = CurDAG->getNode(ISD::TokenFactor, SDLoc(N), MVT::Other,
+                                  ChainInput, N->getOperand(0));
+
+  CurDAG->SelectNodeTo(N, Opcode, MVT::Other, SDValue(NewDecrement, 0),
+                       N->getOperand(4), Chain);
+  return true;
+}
+
 bool PPCDAGToDAGISel::tryAsSingleRLWINM(SDNode *N) {
   assert(N->getOpcode() == ISD::AND && "ISD::AND SDNode expected");
   unsigned Imm;
@@ -5738,6 +5792,8 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
   }
   case ISD::BR_CC: {
     if (tryFoldSWTestBRCC(N))
+      return;
+    if (trySelectLoopCountIntrinsic(N))
       return;
     ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(1))->get();
     unsigned PCC =

@@ -4,11 +4,11 @@
 ; RUN:       >/dev/null | FileCheck %s
 define dso_local void @sha512() #0 {
 ;CHECK: prolog:
-;CHECK:        %18:g8rc = ADD8 %24:g8rc, %23:g8rc
+;CHECK:        %{{[0-9]+}}:g8rc = ADD8 %{{[0-9]+}}:g8rc, %{{[0-9]+}}:g8rc
 ;CHECK: epilog:
-;CHECK:        %28:g8rc_and_g8rc_nox0 = PHI %6:g8rc_and_g8rc_nox0, %bb.3, %22:g8rc_and_g8rc_nox0, %bb.4
-;CHECK-NEXT:   %29:g8rc = PHI %12:g8rc, %bb.3, %16:g8rc, %bb.4
-;CHECK-NEXT:   %30:g8rc = PHI %15:g8rc, %bb.3, %19:g8rc, %bb.4
+;CHECK:        %{{[0-9]+}}:g8rc_and_g8rc_nox0 = PHI %{{[0-9]+}}:g8rc_and_g8rc_nox0, %bb.3, %{{[0-9]+}}:g8rc_and_g8rc_nox0, %bb.4
+;CHECK-NEXT:   %{{[0-9]+}}:g8rc = PHI %{{[0-9]+}}:g8rc, %bb.3, %{{[0-9]+}}:g8rc, %bb.4
+;CHECK-NEXT:   %{{[0-9]+}}:g8rc = PHI %{{[0-9]+}}:g8rc, %bb.3, %{{[0-9]+}}:g8rc, %bb.4
   br label %1
 
 1:                                                ; preds = %1, %0
