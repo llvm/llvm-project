@@ -43,9 +43,9 @@ void foo(void*);
 #endif
 
 // Expect no diagnostics for an empty parameter list.
-void bar();
+void bar(); // expected-warning {{a function declaration without a prototype is deprecated in all versions of C}}
 
-void bar()
+void bar() // expected-warning {{a function declaration without a prototype is deprecated in all versions of C}}
 {
   // declaring a function pointer is an error
   void (*fptr)(int);

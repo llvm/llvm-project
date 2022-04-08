@@ -11,7 +11,7 @@
 
 typedef struct {int a;} ndrange_t;
 // Diagnostic tests for different overloads of enqueue_kernel from Table 6.13.17.1 of OpenCL 2.0 Spec.
-kernel void enqueue_kernel_tests() {
+kernel void enqueue_kernel_tests(void) {
   queue_t default_queue;
   unsigned flags = 0;
   QUALS ndrange_t ndrange;
@@ -169,7 +169,7 @@ kernel void enqueue_kernel_tests() {
 }
 
 // Diagnostic tests for get_kernel_work_group_size and allowed block parameter types in dynamic parallelism.
-kernel void work_group_size_tests() {
+kernel void work_group_size_tests(void) {
   void (^const block_A)(void) = ^{
     return;
   };
@@ -223,16 +223,22 @@ kernel void work_group_size_tests() {
 kernel void foo(global unsigned int *buf)
 {
   ndrange_t n;
-  buf[0] = get_kernel_max_sub_group_size_for_ndrange(n, ^(){});
+  // FIXME: this should be diagnosed as a block instead of a function, but
+  // block literals don't track the ^ as part of their declarator.
+  buf[0] = get_kernel_max_sub_group_size_for_ndrange(n, ^(){}); // expected-warning {{a function declaration without a prototype is deprecated in all versions of C}}
   buf[0] = get_kernel_max_sub_group_size_for_ndrange(0, ^(){}); // expected-error{{illegal call to 'get_kernel_max_sub_group_size_for_ndrange', expected 'ndrange_t' argument type}}
+                                                                // expected-warning@-1 {{a function declaration without a prototype is deprecated in all versions of C}}
   buf[0] = get_kernel_max_sub_group_size_for_ndrange(n, 1); // expected-error{{illegal call to 'get_kernel_max_sub_group_size_for_ndrange', expected block argument type}}
 }
 
 kernel void bar(global unsigned int *buf)
 {
   __private ndrange_t n;
-  buf[0] = get_kernel_sub_group_count_for_ndrange(n, ^(){});
+  // FIXME: this should be diagnosed as a block instead of a function, but
+  // block literals don't track the ^ as part of their declarator.
+  buf[0] = get_kernel_sub_group_count_for_ndrange(n, ^(){}); // expected-warning {{a function declaration without a prototype is deprecated in all versions of C}}
   buf[0] = get_kernel_sub_group_count_for_ndrange(0, ^(){}); // expected-error{{illegal call to 'get_kernel_sub_group_count_for_ndrange', expected 'ndrange_t' argument type}}
+                                                             // expected-warning@-1 {{a function declaration without a prototype is deprecated in all versions of C}}
   buf[0] = get_kernel_sub_group_count_for_ndrange(n, 1); // expected-error{{illegal call to 'get_kernel_sub_group_count_for_ndrange', expected block argument type}}
 }
 
@@ -241,12 +247,18 @@ kernel void bar(global unsigned int *buf)
 kernel void foo1(global unsigned int *buf)
 {
   ndrange_t n;
+  // FIXME: this should be diagnosed as a block instead of a function, but
+  // block literals don't track the ^ as part of their declarator.
   buf[0] = get_kernel_max_sub_group_size_for_ndrange(n, ^(){}); // expected-error {{use of declaration 'get_kernel_max_sub_group_size_for_ndrange' requires cl_khr_subgroups or __opencl_c_subgroups support}}
+                                                                // expected-warning@-1 {{a function declaration without a prototype is deprecated in all versions of C}}
 }
 
 kernel void bar1(global unsigned int *buf)
 {
   ndrange_t n;
+  // FIXME: this should be diagnosed as a block instead of a function, but
+  // block literals don't track the ^ as part of their declarator.
   buf[0] = get_kernel_sub_group_count_for_ndrange(n, ^(){}); // expected-error {{use of declaration 'get_kernel_sub_group_count_for_ndrange' requires cl_khr_subgroups or __opencl_c_subgroups support}}
+                                                             // expected-warning@-1 {{a function declaration without a prototype is deprecated in all versions of C}}
 }
 #endif // ifdef cl_khr_subgroups

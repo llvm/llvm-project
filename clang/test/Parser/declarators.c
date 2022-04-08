@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 %s -fsyntax-only -verify -pedantic
+// RUN: %clang_cc1 %s -fsyntax-only -verify -pedantic -std=c99
 
 extern int a1[];
 
-void f0();
+void f0(); /* expected-warning {{a function declaration without a prototype is deprecated in all versions of C}} */
 void f1(int [*]);
 void f2(int [const *]);
 void f3(int [volatile const*]);
@@ -27,11 +27,12 @@ void test2(int *P, int A) {
 }
 
 typedef int atype;
-void test3(x, 
+void test3(x,            /* expected-warning {{a function declaration without a prototype is deprecated in all versions of C and is not supported in C2x}} */
            atype         /* expected-error {{unexpected type name 'atype': expected identifier}} */
           ) int x, atype; {}
 
-void test4(x, x) int x; {} /* expected-error {{redefinition of parameter 'x'}} */
+void test4(x, x) int x; {} // expected-error {{redefinition of parameter 'x'}} \
+                           // expected-warning {{a function declaration without a prototype is deprecated in all versions of C and is not supported in C2x}}
 
 
 // PR3031
@@ -43,7 +44,9 @@ int (test5), ;  // expected-error {{expected identifier or '('}}
 
 foo_t *d;      // expected-error {{unknown type name 'foo_t'}}
 foo_t a;   // expected-error {{unknown type name 'foo_t'}}
-int test6() { return a; }  // a should be declared.
+int test6() { /* expected-warning {{a function declaration without a prototype is deprecated in all versions of C}} */
+  return a; // a should be declared.
+}
 
 // Use of tagged type without tag. rdar://6783347
 struct xyz { int y; };
@@ -51,13 +54,13 @@ enum myenum { ASDFAS };
 xyz b;         // expected-error {{must use 'struct' tag to refer to type 'xyz'}}
 myenum c;      // expected-error {{must use 'enum' tag to refer to type 'myenum'}}
 
-float *test7() {
+float *test7(void) {
   // We should recover 'b' by parsing it with a valid type of "struct xyz", which
   // allows us to diagnose other bad things done with y, such as this.
   return &b.y;   // expected-warning {{incompatible pointer types returning 'int *' from a function with result type 'float *'}}
 }
 
-struct xyz test8() { return a; }  // a should be be marked invalid, no diag.
+struct xyz test8(void) { return a; }  // a should be be marked invalid, no diag.
 
 
 // Verify that implicit int still works.
@@ -78,7 +81,7 @@ struct test10 { int a; } static test10x;
 struct test11 { int a; } const test11x;
 
 // PR6216
-void test12() {
+void test12(void) {
   (void)__builtin_offsetof(struct { char c; int i; }, i);
 }
 
@@ -91,21 +94,23 @@ struct X<foo::int> { }; // expected-error{{expected identifier or '('}}
 
 // PR7617 - error recovery on missing ;.
 
-void test14()  // expected-error {{expected ';' after top level declarator}}
+void test14(void)  // expected-error {{expected ';' after top level declarator}}
 
-void test14a();
+void test14a(void);
 void *test14b = (void*)test14a; // Make sure test14a didn't get skipped.
 
 // rdar://problem/8358508
-long struct X { int x; } test15(); // expected-error {{'long struct' is invalid}}
+long struct X { int x; } test15(void); // expected-error {{'long struct' is invalid}}
 
-void test16(i) int i j; { } // expected-error {{expected ';' at end of declaration}}
-void test17(i, j) int i, j k; { } // expected-error {{expected ';' at end of declaration}}
-void knrNoSemi(i) int i { } // expected-error {{expected ';' at end of declaration}}
-
+void test16(i) int i j; { } // expected-error {{expected ';' at end of declaration}} \
+                            // expected-warning {{a function declaration without a prototype is deprecated in all versions of C and is not supported in C2x}}
+void test17(i, j) int i, j k; { } // expected-error {{expected ';' at end of declaration}} \
+                                  // expected-warning {{a function declaration without a prototype is deprecated in all versions of C and is not supported in C2x}}
+void knrNoSemi(i) int i { } // expected-error {{expected ';' at end of declaration}} \
+                            // expected-warning {{a function declaration without a prototype is deprecated in all versions of C and is not supported in C2x}}
 
 // PR12595
-void test18() {
+void test18(void) {
   int x = 4+(5-12));  // expected-error {{extraneous ')' before ';'}}
 }
 

@@ -1,12 +1,11 @@
-// RUN: %clang_cc1 %s -o %t -emit-llvm -verify
-// expected-no-diagnostics
+// RUN: %clang_cc1 %s -o %t -emit-llvm -verify -std=c89
 // PR4289
 
 struct funcptr {
   int (*func)();
 };
 
-static int func(f)
+static int func(f) // expected-warning {{a function declaration without a prototype is deprecated in all versions of C and is not supported in C2x}}
   void *f;
 {
   return 0;

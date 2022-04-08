@@ -2,7 +2,6 @@
 
 // RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wno-objc-root-class %s
 // REQUIRES: LP64
-
 @class NSObject;
 
 NONNULL_ATTR
@@ -23,7 +22,7 @@ __attribute__((nonnull(1,3)));
 extern void func4 (void (^block1)(), void (^block2)()) __attribute__((nonnull(1)))
 __attribute__((nonnull(2)));
 
-void func6();
+void func6(); // expected-warning {{a function declaration without a prototype is deprecated in all versions of C and is not supported in C2x}}
 void func7();
 
 void
@@ -63,7 +62,7 @@ typedef union {
 __attribute__((nonnull))
 void _dispatch_queue_push_list(dispatch_object_t _head); // no warning
 
-void func6(dispatch_object_t _head) {
+void func6(dispatch_object_t _head) { // expected-warning {{a function declaration without a prototype is deprecated in all versions of C and is not supported in C2x}}
   _dispatch_queue_push_list(0); // expected-warning {{null passed to a callee that requires a non-null argument}}
   _dispatch_queue_push_list(_head._do);  // no warning
 }

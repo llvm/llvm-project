@@ -3879,39 +3879,118 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD,
 
   // C: Function types need to be compatible, not identical. This handles
   // duplicate function decls like "void f(int); void f(enum X);" properly.
-  if (!getLangOpts().CPlusPlus &&
-      Context.typesAreCompatible(OldQType, NewQType)) {
-    const FunctionType *OldFuncType = OldQType->getAs<FunctionType>();
-    const FunctionType *NewFuncType = NewQType->getAs<FunctionType>();
-    const FunctionProtoType *OldProto = nullptr;
-    if (MergeTypeWithOld && isa<FunctionNoProtoType>(NewFuncType) &&
-        (OldProto = dyn_cast<FunctionProtoType>(OldFuncType))) {
-      // The old declaration provided a function prototype, but the
-      // new declaration does not. Merge in the prototype.
-      assert(!OldProto->hasExceptionSpec() && "Exception spec in C");
-      SmallVector<QualType, 16> ParamTypes(OldProto->param_types());
-      NewQType =
-          Context.getFunctionType(NewFuncType->getReturnType(), ParamTypes,
-                                  OldProto->getExtProtoInfo());
-      New->setType(NewQType);
-      New->setHasInheritedPrototype();
-
-      // Synthesize parameters with the same types.
-      SmallVector<ParmVarDecl*, 16> Params;
-      for (const auto &ParamType : OldProto->param_types()) {
-        ParmVarDecl *Param = ParmVarDecl::Create(Context, New, SourceLocation(),
-                                                 SourceLocation(), nullptr,
-                                                 ParamType, /*TInfo=*/nullptr,
-                                                 SC_None, nullptr);
-        Param->setScopeInfo(0, Params.size());
-        Param->setImplicit();
-        Params.push_back(Param);
+  if (!getLangOpts().CPlusPlus) {
+    // If we are merging two functions where only one of them has a prototype,
+    // we may have enough information to decide to issue a diagnostic that the
+    // function without a protoype will change behavior in C2x. This handles
+    // cases like:
+    //   void i(); void i(int j);
+    //   void i(int j); void i();
+    //   void i(); void i(int j) {}
+    // See ActOnFinishFunctionBody() for other cases of the behavior change
+    // diagnostic. See GetFullTypeForDeclarator() for handling of a function
+    // type without a prototype.
+    if (New->hasWrittenPrototype() != Old->hasWrittenPrototype() &&
+        !New->isImplicit() && !Old->isImplicit()) {
+      const FunctionDecl *WithProto, *WithoutProto;
+      if (New->hasWrittenPrototype()) {
+        WithProto = New;
+        WithoutProto = Old;
+      } else {
+        WithProto = Old;
+        WithoutProto = New;
       }
 
-      New->setParams(Params);
+      if (WithProto->getNumParams() != 0) {
+        // The function definition has parameters, so this will change
+        // behavior in C2x.
+        //
+        // If we already warned about about the function without a prototype
+        // being deprecated, add a note that it also changes behavior. If we
+        // didn't warn about it being deprecated (because the diagnostic is
+        // not enabled), warn now that it is deprecated and changes behavior.
+        bool AddNote = false;
+        if (Diags.isIgnored(diag::warn_strict_prototypes,
+                            WithoutProto->getLocation())) {
+          if (WithoutProto->getBuiltinID() == 0 &&
+              !WithoutProto->isImplicit() &&
+              SourceMgr.isBeforeInTranslationUnit(WithoutProto->getLocation(),
+                                                  WithProto->getLocation())) {
+            PartialDiagnostic PD =
+                PDiag(diag::warn_non_prototype_changes_behavior);
+            if (TypeSourceInfo *TSI = WithoutProto->getTypeSourceInfo()) {
+              if (auto FTL = TSI->getTypeLoc().getAs<FunctionNoProtoTypeLoc>())
+                PD << FixItHint::CreateInsertion(FTL.getRParenLoc(), "void");
+            }
+            Diag(WithoutProto->getLocation(), PD);
+          }
+        } else {
+          AddNote = true;
+        }
+
+        // Because the function with a prototype has parameters but a previous
+        // declaration had none, the function with the prototype will also
+        // change behavior in C2x.
+        if (WithProto->getBuiltinID() == 0 && !WithProto->isImplicit()) {
+          if (SourceMgr.isBeforeInTranslationUnit(
+                  WithProto->getLocation(), WithoutProto->getLocation())) {
+            // If the function with the prototype comes before the function
+            // without the prototype, we only want to diagnose the one without
+            // the prototype.
+            Diag(WithoutProto->getLocation(),
+                 diag::warn_non_prototype_changes_behavior);
+          } else {
+            // Otherwise, diagnose the one with the prototype, and potentially
+            // attach a note to the one without a prototype if needed.
+            Diag(WithProto->getLocation(),
+                 diag::warn_non_prototype_changes_behavior);
+            if (AddNote && WithoutProto->getBuiltinID() == 0)
+              Diag(WithoutProto->getLocation(),
+                   diag::note_func_decl_changes_behavior);
+          }
+        } else if (AddNote && WithoutProto->getBuiltinID() == 0 &&
+                   !WithoutProto->isImplicit()) {
+          // If we were supposed to add a note but the function with a
+          // prototype is a builtin or was implicitly declared, which means we
+          // have nothing to attach the note to, so we issue a warning instead.
+          Diag(WithoutProto->getLocation(),
+               diag::warn_non_prototype_changes_behavior);
+        }
+      }
     }
 
-    return MergeCompatibleFunctionDecls(New, Old, S, MergeTypeWithOld);
+    if (Context.typesAreCompatible(OldQType, NewQType)) {
+      const FunctionType *OldFuncType = OldQType->getAs<FunctionType>();
+      const FunctionType *NewFuncType = NewQType->getAs<FunctionType>();
+      const FunctionProtoType *OldProto = nullptr;
+      if (MergeTypeWithOld && isa<FunctionNoProtoType>(NewFuncType) &&
+          (OldProto = dyn_cast<FunctionProtoType>(OldFuncType))) {
+        // The old declaration provided a function prototype, but the
+        // new declaration does not. Merge in the prototype.
+        assert(!OldProto->hasExceptionSpec() && "Exception spec in C");
+        SmallVector<QualType, 16> ParamTypes(OldProto->param_types());
+        NewQType =
+            Context.getFunctionType(NewFuncType->getReturnType(), ParamTypes,
+                                    OldProto->getExtProtoInfo());
+        New->setType(NewQType);
+        New->setHasInheritedPrototype();
+
+        // Synthesize parameters with the same types.
+        SmallVector<ParmVarDecl *, 16> Params;
+        for (const auto &ParamType : OldProto->param_types()) {
+          ParmVarDecl *Param = ParmVarDecl::Create(
+              Context, New, SourceLocation(), SourceLocation(), nullptr,
+              ParamType, /*TInfo=*/nullptr, SC_None, nullptr);
+          Param->setScopeInfo(0, Params.size());
+          Param->setImplicit();
+          Params.push_back(Param);
+        }
+
+        New->setParams(Params);
+      }
+
+      return MergeCompatibleFunctionDecls(New, Old, S, MergeTypeWithOld);
+    }
   }
 
   // Check if the function types are compatible when pointer size address
@@ -14838,18 +14917,63 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
                       ? FixItHint::CreateInsertion(findBeginLoc(), "static ")
                       : FixItHint{});
         }
+      }
 
-        // GNU warning -Wstrict-prototypes
-        //   Warn if K&R function is defined without a previous declaration.
-        //   This warning is issued only if the definition itself does not
-        //   provide a prototype. Only K&R definitions do not provide a
-        //   prototype.
-        if (!FD->hasWrittenPrototype()) {
-          TypeSourceInfo *TI = FD->getTypeSourceInfo();
-          TypeLoc TL = TI->getTypeLoc();
-          FunctionTypeLoc FTL = TL.getAsAdjusted<FunctionTypeLoc>();
-          Diag(FTL.getLParenLoc(), diag::warn_strict_prototypes) << 2;
+      // If the function being defined does not have a prototype, then we may
+      // need to diagnose it as changing behavior in C2x because we now know
+      // whether the function accepts arguments or not. This only handles the
+      // case where the definition has no prototype but does have parameters
+      // and either there is no previous potential prototype, or the previous
+      // potential prototype also has no actual prototype. This handles cases
+      // like:
+      //   void f(); void f(a) int a; {}
+      //   void g(a) int a; {}
+      // See MergeFunctionDecl() for other cases of the behavior change
+      // diagnostic. See GetFullTypeForDeclarator() for handling of a function
+      // type without a prototype.
+      if (!FD->hasWrittenPrototype() && FD->getNumParams() != 0 &&
+          (!PossiblePrototype || (!PossiblePrototype->hasWrittenPrototype() &&
+                                  !PossiblePrototype->isImplicit()))) {
+        // The function definition has parameters, so this will change behavior
+        // in C2x. If there is a possible prototype, it comes before the
+        // function definition.
+        // FIXME: The declaration may have already been diagnosed as being
+        // deprecated in GetFullTypeForDeclarator() if it had no arguments, but
+        // there's no way to test for the "changes behavior" condition in
+        // SemaType.cpp when forming the declaration's function type. So, we do
+        // this awkward dance instead.
+        //
+        // If we have a possible prototype and it declares a function with a
+        // prototype, we don't want to diagnose it; if we have a possible
+        // prototype and it has no prototype, it may have already been
+        // diagnosed in SemaType.cpp as deprecated depending on whether
+        // -Wstrict-prototypes is enabled. If we already warned about it being
+        // deprecated, add a note that it also changes behavior. If we didn't
+        // warn about it being deprecated (because the diagnostic is not
+        // enabled), warn now that it is deprecated and changes behavior.
+        bool AddNote = false;
+        if (PossiblePrototype) {
+          if (Diags.isIgnored(diag::warn_strict_prototypes,
+                              PossiblePrototype->getLocation())) {
+
+            PartialDiagnostic PD =
+                PDiag(diag::warn_non_prototype_changes_behavior);
+            if (TypeSourceInfo *TSI = PossiblePrototype->getTypeSourceInfo()) {
+              if (auto FTL = TSI->getTypeLoc().getAs<FunctionNoProtoTypeLoc>())
+                PD << FixItHint::CreateInsertion(FTL.getRParenLoc(), "void");
+            }
+            Diag(PossiblePrototype->getLocation(), PD);
+          } else {
+            AddNote = true;
+          }
         }
+
+        // Because this function definition has no prototype and it has
+        // parameters, it will definitely change behavior in C2x.
+        Diag(FD->getLocation(), diag::warn_non_prototype_changes_behavior);
+        if (AddNote)
+          Diag(PossiblePrototype->getLocation(),
+               diag::note_func_decl_changes_behavior);
       }
 
       // Warn on CPUDispatch with an actual body.

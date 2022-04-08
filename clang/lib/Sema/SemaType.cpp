@@ -5548,15 +5548,16 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
            diag::warn_noderef_on_non_pointer_or_array);
 
   // GNU warning -Wstrict-prototypes
-  //   Warn if a function declaration is without a prototype.
+  //   Warn if a function declaration or definition is without a prototype.
   //   This warning is issued for all kinds of unprototyped function
   //   declarations (i.e. function type typedef, function pointer etc.)
   //   C99 6.7.5.3p14:
   //   The empty list in a function declarator that is not part of a definition
   //   of that function specifies that no information about the number or types
   //   of the parameters is supplied.
-  if (!LangOpts.CPlusPlus &&
-      D.getFunctionDefinitionKind() == FunctionDefinitionKind::Declaration) {
+  // See ActOnFinishFunctionBody() and MergeFunctionDecl() for handling of
+  // function declarations whose behavior changes in C2x.
+  if (!LangOpts.CPlusPlus) {
     bool IsBlock = false;
     for (const DeclaratorChunk &DeclType : D.type_objects()) {
       switch (DeclType.Kind) {

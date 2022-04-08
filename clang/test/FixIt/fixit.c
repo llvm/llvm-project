@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -pedantic -Wunused-label -verify -x c %s
+// RUN: %clang_cc1 -pedantic -Wunused-label -Wno-deprecated-non-prototype -verify -x c %s
 // RUN: cp %s %t
 // RUN: not %clang_cc1 -pedantic -Wunused-label -fixit -x c %t
-// RUN: %clang_cc1 -pedantic -Wunused-label -Werror -x c %t
+// RUN: %clang_cc1 -pedantic -Wunused-label -Wno-deprecated-non-prototype -Werror -x c %t
 // RUN: grep -v CHECK %t | FileCheck %t
 
 /* This is a test of the various code modification hints that are
