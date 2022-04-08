@@ -376,7 +376,14 @@ public:
     Builder.SetInsertPoint(BB);
     Builder.CreateCondBr(NewCtrlPointCallInst, ExitBB, ContBB);
 
-    // Generate new control point logic.
+#ifndef NDEBUG
+    // Our pass runs after LLVM normally does its verify pass. In debug builds
+    // we run it again to check that our pass is generating valid IR.
+    if (verifyModule(M, &errs())) {
+      Context.emitError("Control point pass generated invalid IR!");
+      return false;
+    }
+#endif
     return true;
   }
 };
