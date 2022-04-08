@@ -587,11 +587,13 @@ parseSwitchOp(OpAsmParser &parser,
     int64_t val = 0;
     if (parser.parseInteger(val).failed())
       return ::mlir::failure();
+
+    SmallVector<mlir::Attribute, 4> caseEltValueListAttr;
+    caseEltValueListAttr.push_back(mlir::IntegerAttr::get(intCondType, val));
+    auto caseValueList = parser.getBuilder().getArrayAttr(caseEltValueListAttr);
+
     cases.push_back(
-        cir::CaseAttr::get(parser.getContext(),
-                           parser.getBuilder().getArrayAttr(
-                               {mlir::IntegerAttr::get(intCondType, val)}),
-                           kindAttr));
+        cir::CaseAttr::get(parser.getContext(), caseValueList, kindAttr));
     if (succeeded(parser.parseOptionalColon())) {
       Type caseIntTy;
       if (parser.parseType(caseIntTy).failed())
@@ -659,9 +661,14 @@ void printSwitchOp(OpAsmPrinter &p, SwitchOp op,
     p << caseValueStr;
 
     // Case value
-    if (kind != cir::CaseOpKind::Default) {
+    switch (kind) {
+    case cir::CaseOpKind::Equal: {
       p << ", ";
-      p.printStrippedAttrOrType(attr.getValue());
+      p.printStrippedAttrOrType(attr.getValue()[0]);
+      break;
+    }
+    case cir::CaseOpKind::Default:
+      break;
     }
 
     p << ") ";

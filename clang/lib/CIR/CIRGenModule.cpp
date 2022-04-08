@@ -1358,10 +1358,14 @@ mlir::LogicalResult CIRGenModule::buildCaseStmt(const CaseStmt &S,
          "case ranges not implemented");
   auto res = mlir::success();
 
+  SmallVector<mlir::Attribute, 4> caseEltValueListAttr;
   auto intVal = S.getLHS()->EvaluateKnownConstInt(getASTContext());
+  caseEltValueListAttr.push_back(mlir::IntegerAttr::get(condType, intVal));
+  auto caseValueList = builder.getArrayAttr(caseEltValueListAttr);
+
   auto *ctx = builder.getContext();
   caseEntry = mlir::cir::CaseAttr::get(
-      ctx, builder.getArrayAttr({}),
+      ctx, caseValueList,
       CaseOpKindAttr::get(ctx, mlir::cir::CaseOpKind::Equal));
   {
     mlir::OpBuilder::InsertionGuard guardCase(builder);

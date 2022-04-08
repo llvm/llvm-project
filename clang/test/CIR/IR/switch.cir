@@ -1,5 +1,4 @@
 // RUN: cir-tool %s | FileCheck %s
-// XFAIL: *
 
 func.func @s0() {
   %1 = cir.cst(2 : i32) : i32
