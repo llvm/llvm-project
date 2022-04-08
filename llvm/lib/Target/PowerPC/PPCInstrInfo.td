@@ -2549,6 +2549,13 @@ def MTCTRloop : XFXForm_7_ext<31, 467, 9, (outs), (ins gprc:$rS),
                 PPC970_DGroup_First, PPC970_Unit_FXU;
 }
 
+let hasSideEffects = 1, Defs = [CTR] in
+def MTCTRPseudo : PPCEmitTimePseudo<(outs), (ins gprc:$rS), "#MTCTRPseudo", []>;
+
+let hasSideEffects = 1, Uses = [CTR], Defs = [CTR] in
+def DecreaseCTRPseudo : PPCEmitTimePseudo<(outs crbitrc:$rT), (ins i32imm:$stride),
+                                          "#DecreaseCTRPseudo", []>;
+
 let hasSideEffects = 0 in {
 let Defs = [LR] in {
 def MTLR  : XFXForm_7_ext<31, 467, 8, (outs), (ins gprc:$rS),

@@ -580,6 +580,14 @@ def MTCTR8loop : XFXForm_7_ext<31, 467, 9, (outs), (ins g8rc:$rS),
                  PPC970_DGroup_First, PPC970_Unit_FXU;
 }
 
+
+let hasSideEffects = 1, Defs = [CTR8] in
+def MTCTR8Pseudo : PPCEmitTimePseudo<(outs), (ins g8rc:$rS), "#MTCTR8Pseudo", []>;
+
+let hasSideEffects = 1, Uses = [CTR8], Defs = [CTR8] in
+def DecreaseCTR8Pseudo : PPCEmitTimePseudo<(outs crbitrc:$rT), (ins i64imm:$stride),
+                                          "#DecreaseCTR8Pseudo", []>;
+
 let Pattern = [(set i64:$rT, readcyclecounter)] in
 def MFTB8 : XFXForm_1_ext<31, 339, 268, (outs g8rc:$rT), (ins),
                           "mfspr $rT, 268", IIC_SprMFTB>,
