@@ -45,7 +45,10 @@ FEATURE(leak_sanitizer,
 FEATURE(hwaddress_sanitizer,
         LangOpts.Sanitize.hasOneOf(SanitizerKind::HWAddress |
                                    SanitizerKind::KernelHWAddress))
-FEATURE(memtag_sanitizer, LangOpts.Sanitize.has(SanitizerKind::MemTag))
+FEATURE(memtag_stack,
+        LangOpts.Sanitize.has(SanitizerKind::MemtagStack))
+FEATURE(memtag_heap,
+        LangOpts.Sanitize.has(SanitizerKind::MemtagHeap))
 FEATURE(xray_instrument, LangOpts.XRayInstrument)
 FEATURE(undefined_behavior_sanitizer,
         LangOpts.Sanitize.hasOneOf(SanitizerKind::Undefined))
