@@ -68,6 +68,10 @@ ast_matchers::internal::Matcher<Expr> supportedContainerTypesMatcher() {
       "::std::unordered_map", "::std::array", "::std::deque")));
 }
 
+AST_MATCHER(Expr, hasSideEffects) {
+  return Node.HasSideEffects(Finder->getASTContext());
+}
+
 } // namespace
 
 InefficientVectorOperationCheck::InefficientVectorOperationCheck(
@@ -145,7 +149,10 @@ void InefficientVectorOperationCheck::addMatcher(
   // FIXME: Support more complex range-expressions.
   Finder->addMatcher(
       cxxForRangeStmt(
-          hasRangeInit(declRefExpr(supportedContainerTypesMatcher())),
+          hasRangeInit(
+              anyOf(declRefExpr(supportedContainerTypesMatcher()),
+                    memberExpr(hasObjectExpression(unless(hasSideEffects())),
+                               supportedContainerTypesMatcher()))),
           HasInterestingLoopBody, InInterestingCompoundStmt)
           .bind(RangeLoopName),
       this);
