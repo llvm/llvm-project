@@ -483,8 +483,7 @@ def err_drv_ropi_incompatible_with_cxx : Error<
   "ROPI is not compatible with c++">;
 
 def err_stack_tagging_requires_hardware_feature : Error<
-  "'-fsanitize=memtag-stack' requires hardware support (+memtag). For Armv8 or "
-  "Armv9, try compiling with -march=armv8a+memtag or -march=armv9a+memtag">;
+  "'-fsanitize=memtag' requires hardware support (+memtag)">;
 
 def err_cmse_pi_are_incompatible : Error<
   "cmse is not compatible with %select{RWPI|ROPI}0">;

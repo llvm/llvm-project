@@ -56,9 +56,7 @@ SANITIZER("hwaddress", HWAddress)
 SANITIZER("kernel-hwaddress", KernelHWAddress)
 
 // A variant of AddressSanitizer using AArch64 MTE extension.
-SANITIZER("memtag-stack", MemtagStack)
-SANITIZER("memtag-heap", MemtagHeap)
-SANITIZER_GROUP("memtag", MemTag, MemtagStack | MemtagHeap)
+SANITIZER("memtag", MemTag)
 
 // MemorySanitizer
 SANITIZER("memory", Memory)

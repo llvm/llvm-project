@@ -1641,9 +1641,6 @@ def fsanitize_address_outline_instrumentation : Flag<["-"], "fsanitize-address-o
 def fno_sanitize_address_outline_instrumentation : Flag<["-"], "fno-sanitize-address-outline-instrumentation">,
                                                    Group<f_clang_Group>,
                                                    HelpText<"Use default code inlining logic for the address sanitizer">;
-def fsanitize_memtag_mode_EQ : Joined<["-"], "fsanitize-memtag-mode=">,
-                                        Group<f_clang_Group>,
-                                        HelpText<"Set default MTE mode to 'sync' (default) or 'async'">;
 def fsanitize_hwaddress_experimental_aliasing
   : Flag<["-"], "fsanitize-hwaddress-experimental-aliasing">,
     Group<f_clang_Group>,
