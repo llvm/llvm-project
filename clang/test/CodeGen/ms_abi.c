@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-freebsd10.0 -emit-llvm < %s | FileCheck -check-prefix=FREEBSD %s
-// RUN: %clang_cc1 -triple x86_64-pc-win32 -emit-llvm < %s | FileCheck -check-prefix=WIN64 %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-freebsd10.0 -emit-llvm < %s | FileCheck -check-prefix=FREEBSD %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-pc-win32 -emit-llvm < %s | FileCheck -check-prefix=WIN64 %s
 
 struct foo {
   int x;

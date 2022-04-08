@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -o - -emit-llvm -triple x86_64-linux-pc %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -o - -emit-llvm -triple x86_64-linux-pc %s | FileCheck %s
 int(&&intu_rvref)[] {1,2,3,4};
 // CHECK: @_ZGR10intu_rvref_ = internal global [4 x i32] [i32 1, i32 2, i32 3, i32 4]
 // CHECK: @intu_rvref ={{.*}} constant [4 x i32]* @_ZGR10intu_rvref_

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -debug-info-kind=standalone -triple %itanium_abi_triple %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -debug-info-kind=standalone -triple %itanium_abi_triple %s -o - | FileCheck %s
 
 // CHECK: call void @llvm.dbg.declare(metadata %struct.A* %{{[0-9]+}}, metadata !{{[0-9]+}}, metadata !DIExpression())
 // CHECK: call void @llvm.dbg.declare(metadata %struct.A* %{{[0-9]+}}, metadata !{{[0-9]+}}, metadata !DIExpression(DW_OP_plus_uconst, {{[0-9]+}}))

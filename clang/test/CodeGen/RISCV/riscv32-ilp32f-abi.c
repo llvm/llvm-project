@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple riscv32 -target-feature +f -target-abi ilp32f -emit-llvm %s -o - \
+// RUN: %clang_cc1 -no-opaque-pointers -triple riscv32 -target-feature +f -target-abi ilp32f -emit-llvm %s -o - \
 // RUN:     | FileCheck %s
 
 #include <stdint.h>

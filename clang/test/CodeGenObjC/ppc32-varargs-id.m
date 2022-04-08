@@ -1,5 +1,5 @@
 // REQUIRES: powerpc-registered-target
-// RUN: %clang_cc1 -triple powerpc-unknown-openbsd -fblocks -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc-unknown-openbsd -fblocks -emit-llvm -o - %s | FileCheck %s
 
 #include <stdarg.h>
 

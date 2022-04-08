@@ -1,5 +1,5 @@
 // REQUIRES: riscv-registered-target
-// RUN: %clang_cc1 -std=c++11 -triple riscv64 -target-feature +v \
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -triple riscv64 -target-feature +v \
 // RUN:   -O1 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s
 
 #include <riscv_vector.h>

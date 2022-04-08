@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple sparcv9-unknown-unknown -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple sparcv9-unknown-unknown -emit-llvm %s -o - | FileCheck %s
 
 struct pod {
   int a, b;

@@ -1,16 +1,16 @@
 RUN: rm -rf %t
 REQUIRES: x86-registered-target
 
-RUN: %clang_cc1 -triple=x86_64-linux-gnu -fmodules-codegen -x c++ -fmodules -emit-module -fmodule-name=foo %S/Inputs/codegen-opt/foo.modulemap -o %t/foo.pcm
-RUN: %clang_cc1 -triple=x86_64-linux-gnu -fmodules-codegen -x c++ -fmodules -emit-module -fmodule-name=bar %S/Inputs/codegen-opt/bar.modulemap -o %t/bar.pcm -fmodule-file=%t/foo.pcm
+RUN: %clang_cc1 -no-opaque-pointers -triple=x86_64-linux-gnu -fmodules-codegen -x c++ -fmodules -emit-module -fmodule-name=foo %S/Inputs/codegen-opt/foo.modulemap -o %t/foo.pcm
+RUN: %clang_cc1 -no-opaque-pointers -triple=x86_64-linux-gnu -fmodules-codegen -x c++ -fmodules -emit-module -fmodule-name=bar %S/Inputs/codegen-opt/bar.modulemap -o %t/bar.pcm -fmodule-file=%t/foo.pcm
 
-RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -o - %t/foo.pcm | FileCheck --check-prefix=FOO %s
-RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -o - %t/bar.pcm -fmodule-file=%t/foo.pcm | FileCheck --check-prefix=BAR-CMN --check-prefix=BAR %s
-RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -o - -fmodules -fmodule-file=%t/foo.pcm -fmodule-file=%t/bar.pcm %S/Inputs/codegen-opt/use.cpp | FileCheck --check-prefix=USE-CMN --check-prefix=USE %s
+RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -emit-llvm -o - %t/foo.pcm | FileCheck --check-prefix=FOO %s
+RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -emit-llvm -o - %t/bar.pcm -fmodule-file=%t/foo.pcm | FileCheck --check-prefix=BAR-CMN --check-prefix=BAR %s
+RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -emit-llvm -o - -fmodules -fmodule-file=%t/foo.pcm -fmodule-file=%t/bar.pcm %S/Inputs/codegen-opt/use.cpp | FileCheck --check-prefix=USE-CMN --check-prefix=USE %s
 
-RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -o - -O2 -disable-llvm-passes %t/foo.pcm | FileCheck --check-prefix=FOO %s
-RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -o - -O2 -disable-llvm-passes %t/bar.pcm -fmodule-file=%t/foo.pcm | FileCheck --check-prefix=BAR-CMN --check-prefix=BAR-OPT %s
-RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -o - -O2 -disable-llvm-passes -fmodules -fmodule-file=%t/foo.pcm -fmodule-file=%t/bar.pcm %S/Inputs/codegen-opt/use.cpp | FileCheck --check-prefix=USE-CMN --check-prefix=USE-OPT %s
+RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -emit-llvm -o - -O2 -disable-llvm-passes %t/foo.pcm | FileCheck --check-prefix=FOO %s
+RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -emit-llvm -o - -O2 -disable-llvm-passes %t/bar.pcm -fmodule-file=%t/foo.pcm | FileCheck --check-prefix=BAR-CMN --check-prefix=BAR-OPT %s
+RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -emit-llvm -o - -O2 -disable-llvm-passes -fmodules -fmodule-file=%t/foo.pcm -fmodule-file=%t/bar.pcm %S/Inputs/codegen-opt/use.cpp | FileCheck --check-prefix=USE-CMN --check-prefix=USE-OPT %s
 
 FOO-NOT: comdat
 FOO: $_Z3foov = comdat any

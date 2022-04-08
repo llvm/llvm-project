@@ -25,6 +25,7 @@
 #include <ranges>
 
 #include "almost_satisfies_types.h"
+#include "boolean_testable.h"
 #include "test_iterators.h"
 
 struct Predicate {
@@ -221,6 +222,20 @@ constexpr bool test() {
       std::array<int, 0> a = {};
       auto ret = std::ranges::find_if(a, [](int) { return true; });
       assert(ret == a.begin());
+    }
+  }
+
+  {
+    // check that the implicit conversion to bool works
+    {
+      int a[] = {1, 2, 3, 4};
+      auto ret = std::ranges::find_if(a, a + 4, [](const int& i) { return BooleanTestable{i == 3}; });
+      assert(ret == a + 2);
+    }
+    {
+      int a[] = {1, 2, 3, 4};
+      auto ret = std::ranges::find_if(a, [](const int& b) { return BooleanTestable{b == 3}; });
+      assert(ret == a + 2);
     }
   }
 

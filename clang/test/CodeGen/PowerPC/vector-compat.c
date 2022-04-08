@@ -1,11 +1,11 @@
-// RUN: not %clang_cc1 -target-feature +altivec -target-feature +vsx \
+// RUN: not %clang_cc1 -no-opaque-pointers -target-feature +altivec -target-feature +vsx \
 // RUN:   -faltivec-src-compat=mixed -triple powerpc-unknown-unknown -S -emit-llvm %s -o - 2>&1 | FileCheck %s --check-prefix=ERROR
-// RUN: %clang_cc1 -target-feature +altivec -target-feature +vsx \
+// RUN: %clang_cc1 -no-opaque-pointers -target-feature +altivec -target-feature +vsx \
 // RUN:   -faltivec-src-compat=gcc -triple powerpc-unknown-unknown -S -emit-llvm %s -o - | FileCheck %s
-// RUN: not %clang_cc1 -target-feature +altivec -target-feature +vsx \
+// RUN: not %clang_cc1 -no-opaque-pointers -target-feature +altivec -target-feature +vsx \
 // RUN:   -faltivec-src-compat=xl -triple powerpc-unknown-unknown -S -emit-llvm %s -o - 2>&1 | FileCheck %s --check-prefix=ERROR
-// RUN: %clang -mcpu=pwr8 -faltivec-src-compat=gcc --target=powerpc-unknown-unknown -S -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang -mcpu=pwr9 -faltivec-src-compat=gcc --target=powerpc-unknown-unknown -S -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang -Xclang -no-opaque-pointers -mcpu=pwr8 -faltivec-src-compat=gcc --target=powerpc-unknown-unknown -S -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang -Xclang -no-opaque-pointers -mcpu=pwr9 -faltivec-src-compat=gcc --target=powerpc-unknown-unknown -S -emit-llvm %s -o - | FileCheck %s
 
 // CHECK-LABEL: @ui8(
 // CHECK:         [[A_ADDR:%.*]] = alloca <16 x i8>, align 16

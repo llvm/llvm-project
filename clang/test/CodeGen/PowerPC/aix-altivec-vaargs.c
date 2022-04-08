@@ -1,6 +1,6 @@
 // REQUIRES: powerpc-registered-target
-// RUN: %clang_cc1 -triple powerpc-unknown-aix -emit-llvm -target-feature +altivec -target-cpu pwr7 -o - %s | FileCheck %s --check-prefixes=CHECK,AIX32
-// RUN: %clang_cc1 -triple powerpc64-unknown-aix -emit-llvm -target-feature +altivec -target-cpu pwr7 -o - %s | FileCheck %s --check-prefixes=CHECK,AIX64
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc-unknown-aix -emit-llvm -target-feature +altivec -target-cpu pwr7 -o - %s | FileCheck %s --check-prefixes=CHECK,AIX32
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc64-unknown-aix -emit-llvm -target-feature +altivec -target-cpu pwr7 -o - %s | FileCheck %s --check-prefixes=CHECK,AIX64
 
 vector double vector_varargs(int count, ...) {
   __builtin_va_list arg_list;

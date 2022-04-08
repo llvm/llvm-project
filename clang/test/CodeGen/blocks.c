@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i386-unknown-unknown %s -emit-llvm -Wno-strict-prototypes -o - -fblocks | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i386-unknown-unknown %s -emit-llvm -Wno-strict-prototypes -o - -fblocks | FileCheck %s
 
 // CHECK: %[[STRUCT_BLOCK_DESCRIPTOR:.*]] = type { i32, i32 }
 

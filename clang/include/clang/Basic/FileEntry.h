@@ -65,7 +65,6 @@ public:
   }
   DirectoryEntryRef getDir() const { return *ME->second->Dir; }
 
-  inline bool isValid() const;
   inline off_t getSize() const;
   inline unsigned getUID() const;
   inline const llvm::sys::fs::UniqueID &getUniqueID() const;
@@ -330,6 +329,10 @@ static_assert(
 /// descriptor for the file.
 class FileEntry {
   friend class FileManager;
+  friend class FileEntryTestHelper;
+  FileEntry();
+  FileEntry(const FileEntry &) = delete;
+  FileEntry &operator=(const FileEntry &) = delete;
 
   std::string RealPathName;   // Real path to the file; could be empty.
   off_t Size = 0;             // File size in bytes.
@@ -338,7 +341,6 @@ class FileEntry {
   llvm::sys::fs::UniqueID UniqueID;
   unsigned UID = 0; // A unique (small) ID for the file.
   bool IsNamedPipe = false;
-  bool IsValid = false; // Is this \c FileEntry initialized and valid?
 
   /// The open file, if it is owned by the \p FileEntry.
   mutable std::unique_ptr<llvm::vfs::File> File;
@@ -355,17 +357,11 @@ class FileEntry {
   Optional<FileEntryRef> LastRef;
 
 public:
-  FileEntry();
   ~FileEntry();
-
-  FileEntry(const FileEntry &) = delete;
-  FileEntry &operator=(const FileEntry &) = delete;
-
   StringRef getName() const { return LastRef->getName(); }
   FileEntryRef getLastRef() const { return *LastRef; }
 
   StringRef tryGetRealPathName() const { return RealPathName; }
-  bool isValid() const { return IsValid; }
   off_t getSize() const { return Size; }
   unsigned getUID() const { return UID; }
   const llvm::sys::fs::UniqueID &getUniqueID() const { return UniqueID; }
@@ -380,8 +376,6 @@ public:
 
   void closeFile() const;
 };
-
-bool FileEntryRef::isValid() const { return getFileEntry().isValid(); }
 
 off_t FileEntryRef::getSize() const { return getFileEntry().getSize(); }
 

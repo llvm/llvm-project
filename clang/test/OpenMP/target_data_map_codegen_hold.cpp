@@ -5,14 +5,14 @@
 
 // powerpc64le-ibm-linux-gnu
 
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-extensions \
+// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp -fopenmp-extensions \
 // RUN:     -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ \
 // RUN:     -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | \
 // RUN:   FileCheck %s --check-prefixes=CHECK-PPC64LE
-// RUN: %clang_cc1 -fopenmp -fopenmp-extensions \
+// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -fopenmp-extensions \
 // RUN:     -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 \
 // RUN:     -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -fopenmp-extensions \
+// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -fopenmp-extensions \
 // RUN:     -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ \
 // RUN:     -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t \
 // RUN:     -verify %s -emit-llvm -o - | \
@@ -20,14 +20,14 @@
 
 // i386-pc-linux-gnu
 
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-extensions \
+// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp -fopenmp-extensions \
 // RUN:     -fopenmp-targets=i386-pc-linux-gnu -x c++ \
 // RUN:     -triple i386-unknown-unknown -emit-llvm %s -o - | \
 // RUN:   FileCheck %s --check-prefixes=CHECK-I386
-// RUN: %clang_cc1 -fopenmp -fopenmp-extensions \
+// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -fopenmp-extensions \
 // RUN:     -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 \
 // RUN:     -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -fopenmp-extensions \
+// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -fopenmp-extensions \
 // RUN:     -fopenmp-targets=i386-pc-linux-gnu -x c++ \
 // RUN:     -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s \
 // RUN:     -emit-llvm -o - | \

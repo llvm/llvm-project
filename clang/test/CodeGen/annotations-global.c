@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 %s -emit-llvm -o %t1
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o %t1
 // RUN: FileCheck --check-prefix=FOO %s < %t1
 // RUN: FileCheck --check-prefix=A %s < %t1
 // RUN: FileCheck --check-prefix=BAR %s < %t1
 // RUN: FileCheck --check-prefix=FOOS %s < %t1
 // RUN: FileCheck --check-prefix=ADDRSPACE %s < %t1
-// RUN: %clang_cc1 %s -triple r600 -emit-llvm -o - | FileCheck %s --check-prefix AS1-GLOBALS
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple r600 -emit-llvm -o - | FileCheck %s --check-prefix AS1-GLOBALS
 // END.
 
 static __attribute((annotate("sfoo_0"))) __attribute((annotate("sfoo_1"))) char sfoo;

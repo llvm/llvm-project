@@ -308,12 +308,6 @@ write_cmake_config("config") {
     values += [ "LLVM_ENABLE_TERMINFO=" ]
   }
 
-  if (llvm_enable_dia_sdk) {
-    values += [ "LLVM_ENABLE_DIA_SDK=1" ]
-  } else {
-    values += [ "LLVM_ENABLE_DIA_SDK=" ]
-  }
-
   if (llvm_enable_libxml2) {
     values += [ "LLVM_ENABLE_LIBXML2=1" ]
   } else {
@@ -375,6 +369,12 @@ write_cmake_config("llvm-config") {
     values += [ "LLVM_HAVE_LIBXAR=1" ]
   } else {
     values += [ "LLVM_HAVE_LIBXAR=" ]
+  }
+
+  if (llvm_enable_dia_sdk) {
+    values += [ "LLVM_ENABLE_DIA_SDK=1" ]
+  } else {
+    values += [ "LLVM_ENABLE_DIA_SDK=" ]
   }
 
   if (llvm_enable_threads) {

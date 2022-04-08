@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++1z -triple x86_64-linux-gnu -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++1z -triple x86_64-linux-gnu -emit-llvm -o - %s | FileCheck %s
 
 namespace std {
   using size_t = decltype(sizeof(0));

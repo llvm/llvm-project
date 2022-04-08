@@ -131,11 +131,15 @@
         },
         {
           "kind": "text",
-          "spelling": ")"
+          "spelling": ") "
         },
         {
           "kind": "identifier",
           "spelling": "InstanceMethod"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {
@@ -185,11 +189,15 @@
         },
         {
           "kind": "text",
-          "spelling": ")"
+          "spelling": ") "
         },
         {
           "kind": "identifier",
           "spelling": "ClassMethod"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {
@@ -266,7 +274,7 @@
         },
         {
           "kind": "text",
-          "spelling": ")"
+          "spelling": ") "
         },
         {
           "kind": "typeIdentifier",

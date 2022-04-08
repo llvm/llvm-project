@@ -479,6 +479,7 @@ std::string NewFunction::renderDeclaration(FunctionDeclKind K,
         llvm::formatv("{0} {\n{1}\n}\n", Declaration, getFuncBody(SM)));
     break;
   }
+  llvm_unreachable("Unsupported FunctionDeclKind enum");
 }
 
 std::string NewFunction::getFuncBody(const SourceManager &SM) const {

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -O1 -ffixed-point %s -emit-llvm -o - | FileCheck %s  -check-prefixes=CHECK
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin -O1 -ffixed-point %s -emit-llvm -o - | FileCheck %s  -check-prefixes=CHECK
 //
 // Check that we generate correct TBAA metadata for fixed-point types.
 

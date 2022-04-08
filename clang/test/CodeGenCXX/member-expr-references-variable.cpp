@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 %s -triple x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 %s -triple x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s
 
 struct Agg { const char * x; const char * y; constexpr Agg() : x(0), y(0) {} };
 

@@ -244,9 +244,9 @@ func @transfer_read_progressive(%A : memref<?x?xf32>, %base: index) -> vector<3x
   // CHECK:     }
   // CHECK:     %[[cst:.*]] = memref.load %[[alloc]][] : memref<vector<3x15xf32>>
 
-  // FULL-UNROLL: %[[C7:.*]] = arith.constant 7.000000e+00 : f32
-  // FULL-UNROLL: %[[VEC0:.*]] = arith.constant dense<7.000000e+00> : vector<3x15xf32>
-  // FULL-UNROLL: %[[C0:.*]] = arith.constant 0 : index
+  // FULL-UNROLL-DAG: %[[C7:.*]] = arith.constant 7.000000e+00 : f32
+  // FULL-UNROLL-DAG: %[[VEC0:.*]] = arith.constant dense<7.000000e+00> : vector<3x15xf32>
+  // FULL-UNROLL-DAG: %[[C0:.*]] = arith.constant 0 : index
   // FULL-UNROLL: %[[DIM:.*]] = memref.dim %[[A]], %[[C0]] : memref<?x?xf32>
   // FULL-UNROLL: cmpi sgt, %[[DIM]], %[[base]] : index
   // FULL-UNROLL: %[[VEC1:.*]] = scf.if %{{.*}} -> (vector<3x15xf32>) {

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple thumbv7s-apple-darwin -target-abi apcs-gnu\
+// RUN: %clang_cc1 -no-opaque-pointers -triple thumbv7s-apple-darwin -target-abi apcs-gnu\
 // RUN:  -target-cpu swift -fallow-half-arguments-and-returns \
 // RUN:  -target-feature +fullfp16 -ffreestanding \
 // RUN:  -flax-vector-conversions=none \

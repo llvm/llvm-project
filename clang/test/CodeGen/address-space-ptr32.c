@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-windows-msvc -fms-extensions -emit-llvm < %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-windows-msvc -fms-extensions -emit-llvm < %s | FileCheck %s
 
 int foo(void) {
   int (*__ptr32 a)(int);

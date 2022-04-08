@@ -1,14 +1,14 @@
-// RUN: %clang_cc1 -triple i686 %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64 %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -triple arm %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -triple mips %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -triple mipsel %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -triple powerpc %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -triple powerpc64 %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -triple s390x %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -triple sparc %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -triple sparcv9 %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -triple thumb %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple arm %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple mips %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple mipsel %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc64 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple s390x %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple sparc %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple sparcv9 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple thumb %s -emit-llvm -o - | FileCheck %s
 
 int mout0;
 int min1;

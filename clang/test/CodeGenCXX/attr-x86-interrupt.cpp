@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu %s -emit-llvm -o - | FileCheck %s --check-prefix=X86_64_LINUX
-// RUN: %clang_cc1 -triple i386-unknown-linux-gnu %s -emit-llvm -o - | FileCheck %s --check-prefix=X86_LINUX
-// RUN: %clang_cc1 -triple x86_64-pc-win32 %s -emit-llvm -o - | FileCheck %s --check-prefix=X86_64_WIN
-// RUN: %clang_cc1 -triple i386-pc-win32 %s -emit-llvm -o - | FileCheck %s --check-prefix=X86_WIN
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnux32 %s -emit-llvm -o - | FileCheck %s --check-prefix=X86_64_LINUX
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux-gnu %s -emit-llvm -o - | FileCheck %s --check-prefix=X86_64_LINUX
+// RUN: %clang_cc1 -no-opaque-pointers -triple i386-unknown-linux-gnu %s -emit-llvm -o - | FileCheck %s --check-prefix=X86_LINUX
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-pc-win32 %s -emit-llvm -o - | FileCheck %s --check-prefix=X86_64_WIN
+// RUN: %clang_cc1 -no-opaque-pointers -triple i386-pc-win32 %s -emit-llvm -o - | FileCheck %s --check-prefix=X86_WIN
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux-gnux32 %s -emit-llvm -o - | FileCheck %s --check-prefix=X86_64_LINUX
 
 #ifdef __x86_64__
 typedef __UINT64_TYPE__ uword;

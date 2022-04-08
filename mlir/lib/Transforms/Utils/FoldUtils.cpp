@@ -75,8 +75,14 @@ LogicalResult OperationFolder::tryToFold(
 
   // If this is a unique'd constant, return failure as we know that it has
   // already been folded.
-  if (referencedDialects.count(op))
+  if (isFolderOwnedConstant(op)) {
+    // Check to see if we should rehoist, i.e. if a non-constant operation was
+    // inserted before this one.
+    Block *opBlock = op->getBlock();
+    if (&opBlock->front() != op && !isFolderOwnedConstant(op->getPrevNode()))
+      op->moveBefore(&opBlock->front());
     return failure();
+  }
 
   // Try to fold the operation.
   SmallVector<Value, 8> results;
@@ -102,6 +108,59 @@ LogicalResult OperationFolder::tryToFold(
     op->getResult(i).replaceAllUsesWith(results[i]);
   op->erase();
   return success();
+}
+
+bool OperationFolder::insertKnownConstant(Operation *op, Attribute constValue) {
+  Block *opBlock = op->getBlock();
+
+  // If this is a constant we unique'd, we don't need to insert, but we can
+  // check to see if we should rehoist it.
+  if (isFolderOwnedConstant(op)) {
+    if (&opBlock->front() != op && !isFolderOwnedConstant(op->getPrevNode()))
+      op->moveBefore(&opBlock->front());
+    return true;
+  }
+
+  // Get the constant value of the op if necessary.
+  if (!constValue) {
+    matchPattern(op, m_Constant(&constValue));
+    assert(constValue && "expected `op` to be a constant");
+  } else {
+    // Ensure that the provided constant was actually correct.
+#ifndef NDEBUG
+    Attribute expectedValue;
+    matchPattern(op, m_Constant(&expectedValue));
+    assert(
+        expectedValue == constValue &&
+        "provided constant value was not the expected value of the constant");
+#endif
+  }
+
+  // Check for an existing constant operation for the attribute value.
+  Region *insertRegion = getInsertionRegion(interfaces, opBlock);
+  auto &uniquedConstants = foldScopes[insertRegion];
+  Operation *&folderConstOp = uniquedConstants[std::make_tuple(
+      op->getDialect(), constValue, *op->result_type_begin())];
+
+  // If there is an existing constant, replace `op`.
+  if (folderConstOp) {
+    op->replaceAllUsesWith(folderConstOp);
+    op->erase();
+    return false;
+  }
+
+  // Otherwise, we insert `op`. If `op` is in the insertion block and is either
+  // already at the front of the block, or the previous operation is already a
+  // constant we unique'd (i.e. one we inserted), then we don't need to do
+  // anything. Otherwise, we move the constant to the insertion block.
+  Block *insertBlock = &insertRegion->front();
+  if (opBlock != insertBlock || (&insertBlock->front() != op &&
+                                 !isFolderOwnedConstant(op->getPrevNode())))
+    op->moveBefore(&insertBlock->front());
+
+  folderConstOp = op;
+  referencedDialects[op].push_back(op->getDialect());
+  return true;
 }
 
 /// Notifies that the given constant `op` should be remove from this
@@ -156,19 +215,30 @@ Value OperationFolder::getOrCreateConstant(OpBuilder &builder, Dialect *dialect,
   return constOp ? constOp->getResult(0) : Value();
 }
 
+bool OperationFolder::isFolderOwnedConstant(Operation *op) const {
+  return referencedDialects.count(op);
+}
+
 /// Tries to perform folding on the given `op`. If successful, populates
 /// `results` with the results of the folding.
 LogicalResult OperationFolder::tryToFold(
     OpBuilder &builder, Operation *op, SmallVectorImpl<Value> &results,
     function_ref<void(Operation *)> processGeneratedConstants) {
   SmallVector<Attribute, 8> operandConstants;
-  SmallVector<OpFoldResult, 8> foldResults;
 
   // If this is a commutative operation, move constants to be trailing operands.
+  bool updatedOpOperands = false;
   if (op->getNumOperands() >= 2 && op->hasTrait<OpTrait::IsCommutative>()) {
-    std::stable_partition(
-        op->getOpOperands().begin(), op->getOpOperands().end(),
-        [&](OpOperand &o) { return !matchPattern(o.get(), m_Constant()); });
+    auto isNonConstant = [&](OpOperand &o) {
+      return !matchPattern(o.get(), m_Constant());
+    };
+    auto *firstConstantIt =
+        llvm::find_if_not(op->getOpOperands(), isNonConstant);
+    auto *newConstantIt = std::stable_partition(
+        firstConstantIt, op->getOpOperands().end(), isNonConstant);
+
+    // Remember if we actually moved anything.
+    updatedOpOperands = firstConstantIt != newConstantIt;
   }
 
   // Check to see if any operands to the operation is constant and whether
@@ -177,10 +247,21 @@ LogicalResult OperationFolder::tryToFold(
   for (unsigned i = 0, e = op->getNumOperands(); i != e; ++i)
     matchPattern(op->getOperand(i), m_Constant(&operandConstants[i]));
 
-  // Attempt to constant fold the operation.
-  if (failed(op->fold(operandConstants, foldResults)))
-    return failure();
+  // Attempt to constant fold the operation. If we failed, check to see if we at
+  // least updated the operands of the operation. We treat this as an in-place
+  // fold.
+  SmallVector<OpFoldResult, 8> foldResults;
+  if (failed(op->fold(operandConstants, foldResults)) ||
+      failed(processFoldResults(builder, op, results, foldResults,
+                                processGeneratedConstants)))
+    return success(updatedOpOperands);
+  return success();
+}
 
+LogicalResult OperationFolder::processFoldResults(
+    OpBuilder &builder, Operation *op, SmallVectorImpl<Value> &results,
+    ArrayRef<OpFoldResult> foldResults,
+    function_ref<void(Operation *)> processGeneratedConstants) {
   // Check to see if the operation was just updated in place.
   if (foldResults.empty())
     return success();
@@ -204,8 +285,10 @@ LogicalResult OperationFolder::tryToFold(
 
     // Check if the result was an SSA value.
     if (auto repl = foldResults[i].dyn_cast<Value>()) {
-      if (repl.getType() != op->getResult(i).getType())
+      if (repl.getType() != op->getResult(i).getType()) {
+        results.clear();
         return failure();
+      }
       results.emplace_back(repl);
       continue;
     }
@@ -233,6 +316,7 @@ LogicalResult OperationFolder::tryToFold(
       notifyRemoval(&op);
       op.erase();
     }
+    results.clear();
     return failure();
   }
 

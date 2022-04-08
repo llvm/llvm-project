@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -x c -ffreestanding %s -triple=x86_64-unknown-unknown -emit-llvm -o - -Wall -Werror | FileCheck %s
-// RUN: %clang_cc1 -x c -ffreestanding %s -triple=i386-unknown-unknown -emit-llvm -o - -Wall -Werror | FileCheck %s
-// RUN: %clang_cc1 -x c++ -std=c++11 -ffreestanding %s -triple=x86_64-unknown-unknown -emit-llvm -o - -Wall -Werror | FileCheck %s
-// RUN: %clang_cc1 -x c++ -std=c++11 -ffreestanding %s -triple=i386-unknown-unknown -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -x c -ffreestanding %s -triple=x86_64-unknown-unknown -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -x c -ffreestanding %s -triple=i386-unknown-unknown -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -x c++ -std=c++11 -ffreestanding %s -triple=x86_64-unknown-unknown -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -x c++ -std=c++11 -ffreestanding %s -triple=i386-unknown-unknown -emit-llvm -o - -Wall -Werror | FileCheck %s
 
 #include <x86intrin.h>
 

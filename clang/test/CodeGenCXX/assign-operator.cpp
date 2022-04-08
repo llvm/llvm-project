@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple x86_64-apple-darwin10 -emit-llvm -o - -std=c++11 |FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple x86_64-apple-darwin10 -emit-llvm -o - -std=c++11 |FileCheck %s
 
 class x {
 public: int operator=(int);

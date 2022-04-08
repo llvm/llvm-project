@@ -482,6 +482,26 @@ public:
   void printLeft(OutputBuffer &OB) const override { OB += Name; }
 };
 
+class BitIntType final : public Node {
+  const Node *Size;
+  bool Signed;
+
+public:
+  BitIntType(const Node *Size_, bool Signed_)
+      : Node(KBitIntType), Size(Size_), Signed(Signed_) {}
+
+  template <typename Fn> void match(Fn F) const { F(Size, Signed); }
+
+  void printLeft(OutputBuffer &OB) const override {
+    if (!Signed)
+      OB += "unsigned ";
+    OB += "_BitInt";
+    OB.printOpen();
+    Size->printAsOperand(OB);
+    OB.printClose();
+  }
+};
+
 class ElaboratedTypeSpefType : public Node {
   StringView Kind;
   Node *Child;
@@ -3923,6 +3943,22 @@ Node *AbstractManglingParser<Derived, Alloc>::parseType() {
       if (!consumeIf('_'))
         return nullptr;
       return make<BinaryFPType>(DimensionNumber);
+    }
+    //                ::= DB <number> _                             # C23 signed _BitInt(N)
+    //                ::= DB <instantiation-dependent expression> _ # C23 signed _BitInt(N)
+    //                ::= DU <number> _                             # C23 unsigned _BitInt(N)
+    //                ::= DU <instantiation-dependent expression> _ # C23 unsigned _BitInt(N)
+    case 'B':
+    case 'U': {
+      bool Signed = look(1) == 'B';
+      First += 2;
+      Node *Size = std::isdigit(look()) ? make<NameType>(parseNumber())
+                                        : getDerived().parseExpr();
+      if (!Size)
+        return nullptr;
+      if (!consumeIf('_'))
+        return nullptr;
+      return make<BitIntType>(Size, Signed);
     }
     //                ::= Di   # char32_t
     case 'i':

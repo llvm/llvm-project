@@ -1,12 +1,12 @@
-// RUN: %clang_cc1 -fobjc-runtime=macosx-10.10.0 -emit-llvm -o - %s -fno-objc-convert-messages-to-runtime-calls -fobjc-exceptions -fexceptions | FileCheck %s --check-prefix=MSGS
-// RUN: %clang_cc1 -fobjc-runtime=macosx-10.10.0 -emit-llvm -o - %s -fobjc-exceptions -fexceptions | FileCheck %s --check-prefix=CALLS
-// RUN: %clang_cc1 -fobjc-runtime=macosx-10.9.0 -emit-llvm -o - %s -fobjc-exceptions -fexceptions | FileCheck %s --check-prefix=MSGS
-// RUN: %clang_cc1 -fobjc-runtime=macosx-fragile-10.10.0 -emit-llvm -o - %s -fobjc-exceptions -fexceptions | FileCheck %s --check-prefix=MSGS
-// RUN: %clang_cc1 -fobjc-runtime=ios-8.0 -emit-llvm -o - %s -fobjc-exceptions -fexceptions | FileCheck %s --check-prefix=CALLS
-// RUN: %clang_cc1 -fobjc-runtime=ios-7.0 -emit-llvm -o - %s -fobjc-exceptions -fexceptions | FileCheck %s --check-prefix=MSGS
+// RUN: %clang_cc1 -no-opaque-pointers -fobjc-runtime=macosx-10.10.0 -emit-llvm -o - %s -fno-objc-convert-messages-to-runtime-calls -fobjc-exceptions -fexceptions | FileCheck %s --check-prefix=MSGS
+// RUN: %clang_cc1 -no-opaque-pointers -fobjc-runtime=macosx-10.10.0 -emit-llvm -o - %s -fobjc-exceptions -fexceptions | FileCheck %s --check-prefix=CALLS
+// RUN: %clang_cc1 -no-opaque-pointers -fobjc-runtime=macosx-10.9.0 -emit-llvm -o - %s -fobjc-exceptions -fexceptions | FileCheck %s --check-prefix=MSGS
+// RUN: %clang_cc1 -no-opaque-pointers -fobjc-runtime=macosx-fragile-10.10.0 -emit-llvm -o - %s -fobjc-exceptions -fexceptions | FileCheck %s --check-prefix=MSGS
+// RUN: %clang_cc1 -no-opaque-pointers -fobjc-runtime=ios-8.0 -emit-llvm -o - %s -fobjc-exceptions -fexceptions | FileCheck %s --check-prefix=CALLS
+// RUN: %clang_cc1 -no-opaque-pointers -fobjc-runtime=ios-7.0 -emit-llvm -o - %s -fobjc-exceptions -fexceptions | FileCheck %s --check-prefix=MSGS
 // Note: This line below is for tvos for which the driver passes through to use the ios9.0 runtime.
-// RUN: %clang_cc1 -fobjc-runtime=ios-9.0 -emit-llvm -o - %s -fobjc-exceptions -fexceptions | FileCheck %s --check-prefix=CALLS
-// RUN: %clang_cc1 -fobjc-runtime=watchos-2.0 -emit-llvm -o - %s -fobjc-exceptions -fexceptions | FileCheck %s --check-prefix=CALLS
+// RUN: %clang_cc1 -no-opaque-pointers -fobjc-runtime=ios-9.0 -emit-llvm -o - %s -fobjc-exceptions -fexceptions | FileCheck %s --check-prefix=CALLS
+// RUN: %clang_cc1 -no-opaque-pointers -fobjc-runtime=watchos-2.0 -emit-llvm -o - %s -fobjc-exceptions -fexceptions | FileCheck %s --check-prefix=CALLS
 
 #define nil (id)0
 

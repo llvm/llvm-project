@@ -610,6 +610,8 @@ public:
 
   bool IsInteractive();
 
+  bool IOHandlerInterrupt(IOHandler &io_handler) override;
+
 protected:
   friend class Debugger;
 
@@ -622,8 +624,6 @@ protected:
       return ConstString("quit\n");
     return ConstString();
   }
-
-  bool IOHandlerInterrupt(IOHandler &io_handler) override;
 
   void GetProcessOutput();
 

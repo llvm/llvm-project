@@ -1,11 +1,11 @@
 // REQUIRES: powerpc-registered-target
-// RUN: not %clang_cc1 -triple=powerpc-unknown-aix -emit-llvm %s -o - 2>&1 |\
+// RUN: not %clang_cc1 -no-opaque-pointers -triple=powerpc-unknown-aix -emit-llvm %s -o - 2>&1 |\
 // RUN: FileCheck %s --check-prefix=CHECK32-ERROR
-// RUN: %clang_cc1 -O2 -triple=powerpc64-unknown-aix -emit-llvm %s -o - | \
+// RUN: %clang_cc1 -no-opaque-pointers -O2 -triple=powerpc64-unknown-aix -emit-llvm %s -o - | \
 // RUN: FileCheck %s --check-prefix=CHECK64
-// RUN: %clang_cc1 -O2 -triple=powerpc64le-unknown-linux-gnu -emit-llvm %s \
+// RUN: %clang_cc1 -no-opaque-pointers -O2 -triple=powerpc64le-unknown-linux-gnu -emit-llvm %s \
 // RUN:  -o - | FileCheck %s --check-prefix=CHECK64
-// RUN: %clang_cc1 -O2 -triple=powerpc64-unknown-linux-gnu -emit-llvm %s \
+// RUN: %clang_cc1 -no-opaque-pointers -O2 -triple=powerpc64-unknown-linux-gnu -emit-llvm %s \
 // RUN:  -o - | FileCheck %s --check-prefix=CHECK64
 
 long test_ldarx(volatile long* a) {

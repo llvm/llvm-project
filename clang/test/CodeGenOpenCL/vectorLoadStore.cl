@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -cl-std=CL2.0 -triple "spir-unknown-unknown" %s -emit-llvm -O0 -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -cl-std=CL2.0 -triple "spir-unknown-unknown" %s -emit-llvm -O0 -o - | FileCheck %s
 
 typedef char char2 __attribute((ext_vector_type(2)));
 typedef char char3 __attribute((ext_vector_type(3)));

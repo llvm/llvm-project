@@ -1,7 +1,7 @@
 // RUN: %clangxx -g -DCRT_SHARED -c %s -fPIC -o %tshared.o
 // RUN: %clangxx -g -c %s -fPIC -o %t.o
 // RUN: %clangxx -g -shared -o %t.so -nostdlib %crti %crtbegin %tshared.o %libstdcxx -lc -lm %libgcc %crtend %crtn
-// RUN: %clangxx -g -o %t -nostdlib %crt1 %crti %crtbegin %t.o %libstdcxx -lc -lm %libgcc %t.so %crtend %crtn
+// RUN: %clangxx -g -o %t -fno-pic -no-pie -nostdlib %crt1 %crti %crtbegin %t.o %libstdcxx -lc -lm %libgcc %t.so %crtend %crtn
 // RUN: %run %t 2>&1 | FileCheck %s
 
 // UNSUPPORTED: arm, aarch64

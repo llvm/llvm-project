@@ -128,7 +128,7 @@ Dialects must be loaded in the MLIRContext before entities from these dialects
 (operations, types, attributes, ...) can be created. Dialects must also be
 loaded before starting the execution of a multi-threaded pass pipeline. To this
 end, a pass that may create an entity from a dialect that isn't guaranteed to
-already ne loaded must express this by overriding the `getDependentDialects()`
+already be loaded must express this by overriding the `getDependentDialects()`
 method and declare this list of Dialects explicitly.
 
 ### Initialization
@@ -818,7 +818,7 @@ string corresponding to the operation type that the pass operates on. The class
 contains the following fields:
 
 *   `summary`
-    -   A short one line summary of the pass, used as the description when
+    -   A short one-line summary of the pass, used as the description when
         registering the pass.
 *   `description`
     -   A longer, more detailed description of the pass. This is used when
@@ -847,7 +847,7 @@ class takes the following template parameters:
 *   default value
     -   The default option value.
 *   description
-    -   A one line description of the option.
+    -   A one-line description of the option.
 *   additional option flags
     -   A string containing any additional options necessary to construct the
         option.
@@ -870,7 +870,7 @@ The `ListOption` class takes the following fields:
 *   element type
     -   The C++ type of the list element.
 *   description
-    -   A one line description of the option.
+    -   A one-line description of the option.
 *   additional option flags
     -   A string containing any additional options necessary to construct the
         option.
@@ -894,7 +894,7 @@ template parameters:
 *   display name
     -   The name used when displaying the statistic.
 *   description
-    -   A one line description of the statistic.
+    -   A one-line description of the statistic.
 
 ```tablegen
 def MyPass : Pass<"my-pass"> {
@@ -938,7 +938,7 @@ PassInstrumentation instances may be registered directly with a
 Instrumentations added to the PassManager are run in a stack like fashion, i.e.
 the last instrumentation to execute a `runBefore*` hook will be the first to
 execute the respective `runAfter*` hook. The hooks of a `PassInstrumentation`
-class are guaranteed to be executed in a thread safe fashion, so additional
+class are guaranteed to be executed in a thread-safe fashion, so additional
 synchronization is not necessary. Below in an example instrumentation that
 counts the number of times the `DominanceInfo` analysis is computed:
 
