@@ -136,6 +136,10 @@
         {
           "kind": "identifier",
           "spelling": "InstanceMethod"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {
@@ -190,6 +194,10 @@
         {
           "kind": "identifier",
           "spelling": "ClassMethod"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {
