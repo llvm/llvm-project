@@ -212,9 +212,9 @@ void SBDebugger::PrintStackTraceOnError() {
   LLDB_INSTRUMENT();
 
   llvm::EnablePrettyStackTrace();
-  // We don't have a meaningful argv[0] to use, so use "SBDebugger" as a
-  // substitute.
-  llvm::sys::PrintStackTraceOnErrorSignal("SBDebugger");
+  static std::string executable =
+      llvm::sys::fs::getMainExecutable(nullptr, nullptr);
+  llvm::sys::PrintStackTraceOnErrorSignal(executable);
 }
 
 void SBDebugger::Terminate() {
