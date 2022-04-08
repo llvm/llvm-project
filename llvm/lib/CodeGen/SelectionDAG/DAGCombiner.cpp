@@ -10446,12 +10446,12 @@ bool refineIndexType(SDValue &Index, ISD::MemIndexType &IndexType,
   if (Index.getOpcode() == ISD::ZERO_EXTEND) {
     SDValue Op = Index.getOperand(0);
     if (TLI.shouldRemoveExtendFromGSIndex(Op.getValueType())) {
-      IndexType = ISD::getUnsignedIndexType(IndexType);
+      IndexType = ISD::UNSIGNED_SCALED;
       Index = Op;
       return true;
     }
     if (ISD::isIndexTypeSigned(IndexType)) {
-      IndexType = ISD::getUnsignedIndexType(IndexType);
+      IndexType = ISD::UNSIGNED_SCALED;
       return true;
     }
   }
