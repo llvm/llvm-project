@@ -649,8 +649,9 @@ private:
 
 class MacroCallback : public PPCallbacks {
 public:
-  MacroCallback(const SourceManager &SM, LocationFileChecker &LCF, APISet &API)
-      : SM(SM), LCF(LCF), API(API) {}
+  MacroCallback(const SourceManager &SM, LocationFileChecker &LCF, APISet &API,
+                Preprocessor &PP)
+      : SM(SM), LCF(LCF), API(API), PP(PP) {}
 
   void MacroDefined(const Token &MacroNameToken,
                     const MacroDirective *MD) override {
@@ -677,9 +678,9 @@ public:
     if (!Undef)
       return;
 
-    llvm::erase_if(PendingMacros, [&MD](const PendingMacro &PM) {
-      return MD.getMacroInfo()->getDefinitionLoc() ==
-             PM.MD->getMacroInfo()->getDefinitionLoc();
+    llvm::erase_if(PendingMacros, [&MD, this](const PendingMacro &PM) {
+      return MD.getMacroInfo()->isIdenticalTo(*PM.MD->getMacroInfo(), PP,
+                                              /*Syntactically*/ false);
     });
   }
 
@@ -719,6 +720,7 @@ private:
   const SourceManager &SM;
   LocationFileChecker &LCF;
   APISet &API;
+  Preprocessor &PP;
   llvm::SmallVector<PendingMacro> PendingMacros;
 };
 
@@ -741,9 +743,8 @@ ExtractAPIAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   auto LCF = std::make_unique<LocationFileChecker>(CI.getSourceManager(),
                                                    KnownInputFiles);
 
-  // Register preprocessor callbacks that will add macro definitions to API.
-  CI.getPreprocessor().addPPCallbacks(
-      std::make_unique<MacroCallback>(CI.getSourceManager(), *LCF, *API));
+  CI.getPreprocessor().addPPCallbacks(std::make_unique<MacroCallback>(
+      CI.getSourceManager(), *LCF, *API, CI.getPreprocessor()));
 
   return std::make_unique<ExtractAPIConsumer>(CI.getASTContext(),
                                               std::move(LCF), *API);
