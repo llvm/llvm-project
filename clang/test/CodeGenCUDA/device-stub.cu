@@ -257,8 +257,8 @@ void hostfunc(void) { kernelfunc<<<1, 1>>>(1, 1, 1); }
 // CUDANORDC-NEXT: call void @__[[PREFIX]]_register_globals
 // HIP-NEXT: call void @__[[PREFIX]]_register_globals
 // * In separate mode we also register a destructor.
-// CUDANORDC-NEXT: call i32 @atexit(void (i8*)* @__[[PREFIX]]_module_dtor)
-// HIP-NEXT: call i32 @atexit(void (i8*)* @__[[PREFIX]]_module_dtor)
+// CUDANORDC-NEXT: call i32 @atexit(void ()* @__[[PREFIX]]_module_dtor)
+// HIP-NEXT: call i32 @atexit(void ()* @__[[PREFIX]]_module_dtor)
 
 // With relocatable device code we call __[[PREFIX]]RegisterLinkedBinary%NVModuleID%
 // CUDARDC: call{{.*}}__[[PREFIX]]RegisterLinkedBinary[[MODULE_ID]](
