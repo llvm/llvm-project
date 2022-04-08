@@ -21,7 +21,7 @@ using namespace llvm;
 
 DeclarationFragments &DeclarationFragments::appendSpace() {
   if (!Fragments.empty()) {
-    Fragment Last = Fragments.back();
+    Fragment &Last = Fragments.back();
     if (Last.Kind == FragmentKind::Text) {
       // Merge the extra space into the last fragment if the last fragment is
       // also text.
@@ -390,7 +390,7 @@ DeclarationFragmentsBuilder::getFragmentsForParam(const ParmVarDecl *Param) {
   if (Param->isObjCMethodParameter())
     Fragments.append("(", DeclarationFragments::FragmentKind::Text)
         .append(std::move(TypeFragments))
-        .append(")", DeclarationFragments::FragmentKind::Text);
+        .append(") ", DeclarationFragments::FragmentKind::Text);
   else
     Fragments.append(std::move(TypeFragments)).appendSpace();
 
