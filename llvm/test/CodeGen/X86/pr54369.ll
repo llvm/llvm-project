@@ -18,4 +18,22 @@ define i64 @adder(i64 %lhs, i64 %rhs) {
 	ret i64 %errorval
 }
 
+@a = global i32 0, align 4
+
+define i64 @adder_constexpr(i64 %lhs, i64 %rhs) {
+; CHECK-LABEL: adder_constexpr:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addq %rsi, %rdi
+; CHECK-NEXT:    seto %al
+; CHECK-NEXT:    movq a@GOTPCREL(%rip), %rax
+; CHECK-NEXT:    addq $5, %rax
+; CHECK-NEXT:    movl $148, %ecx
+; CHECK-NEXT:    cmovoq %rcx, %rax
+; CHECK-NEXT:    retq
+  %res = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %lhs, i64 %rhs)
+  %errorbit = extractvalue { i64, i1 } %res, 1
+  %errorval = select i1 %errorbit, i64 148, i64 add (i64 ptrtoint (i32* @a to i64), i64 5)
+  ret i64 %errorval
+}
+
 declare { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %a, i64 %b)
