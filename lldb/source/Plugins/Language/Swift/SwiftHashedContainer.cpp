@@ -459,9 +459,8 @@ NativeHashedStorageHandler::NativeHashedStorageHandler(
       std::vector<TypeSystemSwift::TupleElement> tuple_elements{
           {g_key, key_type}, {g_value, value_type}};
       m_element_type = type_system->CreateTupleType(tuple_elements);
-      Status error;
       if (auto result = runtime->GetMemberVariableOffset(
-              m_element_type, nativeStorage_sp.get(), "1", &error))
+              m_element_type, nativeStorage_sp.get(), "1"))
         m_key_stride_padded = *result;
       else if (auto element_stride = m_element_type.GetByteStride(m_process))
         m_key_stride_padded = *element_stride - m_value_stride;
