@@ -74,6 +74,7 @@ static_library("LLVMRISCVCodeGen") {
     "RISCVInstructionSelector.cpp",
     "RISCVLegalizerInfo.cpp",
     "RISCVMCInstLower.cpp",
+    "RISCVMachineFunctionInfo.cpp",
     "RISCVMergeBaseOffset.cpp",
     "RISCVRedundantCopyElimination.cpp",
     "RISCVRegisterBankInfo.cpp",
