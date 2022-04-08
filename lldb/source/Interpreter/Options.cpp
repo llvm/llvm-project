@@ -20,6 +20,7 @@
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/StreamString.h"
+#include "llvm/ADT/STLExtras.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -540,63 +541,49 @@ void Options::GenerateOptionUsage(Stream &strm, CommandObject *cmd,
     //   -short <argument> ( --long_name <argument> )
     //   help text
 
-    // This variable is used to keep track of which options' info we've printed
-    // out, because some options can be in more than one usage level, but we
-    // only want to print the long form of its information once.
-
-    std::multimap<int, uint32_t> options_seen;
     strm.IndentMore(5);
 
-    // Put the unique command options in a vector & sort it, so we can output
-    // them alphabetically (by short_option) when writing out detailed help for
-    // each option.
+    // Put the command options in a sorted container, so we can output
+    // them alphabetically by short_option.
+    std::multimap<int, uint32_t> options_ordered;
+    for (auto def : llvm::enumerate(opt_defs))
+      options_ordered.insert(
+          std::make_pair(def.value().short_option, def.index()));
 
-    i = 0;
-    for (auto &def : opt_defs)
-      options_seen.insert(std::make_pair(def.short_option, i++));
-
-    // Go through the unique'd and alphabetically sorted vector of options,
-    // find the table entry for each option and write out the detailed help
-    // information for that option.
+    // Go through each option, find the table entry and write out the detailed
+    // help information for that option.
 
     bool first_option_printed = false;
 
-    for (auto pos : options_seen) {
-      i = pos.second;
-      // Print out the help information for this option.
-
+    for (auto pos : options_ordered) {
       // Put a newline separation between arguments
       if (first_option_printed)
         strm.EOL();
       else
         first_option_printed = true;
 
-      CommandArgumentType arg_type = opt_defs[i].argument_type;
-
-      StreamString arg_name_str;
-      arg_name_str.Printf("<%s>", CommandObject::GetArgumentName(arg_type));
+      OptionDefinition opt_def = opt_defs[pos.second];
 
       strm.Indent();
-      if (opt_defs[i].short_option && opt_defs[i].HasShortOption()) {
-        PrintOption(opt_defs[i], eDisplayShortOption, nullptr, nullptr, false,
+      if (opt_def.short_option && opt_def.HasShortOption()) {
+        PrintOption(opt_def, eDisplayShortOption, nullptr, nullptr, false,
                     strm);
-        PrintOption(opt_defs[i], eDisplayLongOption, " ( ", " )", false, strm);
+        PrintOption(opt_def, eDisplayLongOption, " ( ", " )", false, strm);
       } else {
         // Short option is not printable, just print long option
-        PrintOption(opt_defs[i], eDisplayLongOption, nullptr, nullptr, false,
-                    strm);
+        PrintOption(opt_def, eDisplayLongOption, nullptr, nullptr, false, strm);
       }
       strm.EOL();
 
       strm.IndentMore(5);
 
-      if (opt_defs[i].usage_text)
-        OutputFormattedUsageText(strm, opt_defs[i], screen_width);
-      if (!opt_defs[i].enum_values.empty()) {
+      if (opt_def.usage_text)
+        OutputFormattedUsageText(strm, opt_def, screen_width);
+      if (!opt_def.enum_values.empty()) {
         strm.Indent();
         strm.Printf("Values: ");
         bool is_first = true;
-        for (const auto &enum_value : opt_defs[i].enum_values) {
+        for (const auto &enum_value : opt_def.enum_values) {
           if (is_first) {
             strm.Printf("%s", enum_value.string_value);
             is_first = false;
