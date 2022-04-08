@@ -100,6 +100,11 @@ void VirtualUnwinder::unwindLinear(UnwindState &State, uint64_t Repeat) {
   InstructionPointer &IP = State.InstPtr;
   uint64_t Target = State.getCurrentLBRTarget();
   uint64_t End = IP.Address;
+  if (Target > End) {
+    // Skip unwinding the rest of LBR trace when a bogus range is seen.
+    State.setInvalid();
+    return;
+  }
   if (Binary->usePseudoProbes()) {
     // We don't need to top frame probe since it should be extracted
     // from the range.
@@ -303,19 +308,28 @@ bool VirtualUnwinder::unwind(const PerfSample *Sample, uint64_t Repeat) {
       // extra frame when processing the return paired with this call.
       unwindCall(State);
     } else if (isReturnState(State)) {
-      // Unwind returns - check whether the IP is indeed at a return instruction
+      // Unwind returns - check whether the IP is indeed at a return
+      // instruction
       unwindReturn(State);
-    } else {
+    } else if (isValidState(State)) {
       // Unwind branches
-      // For regular intra function branches, we only need to record branch with
-      // context. For an artificial branch cross function boundaries, we got an
-      // issue with returning to external code. Take the two LBR enties for
-      // example: [foo:8(RETURN), ext:1] [ext:3(CALL), bar:1] After perf reader,
-      // we only get[foo:8(RETURN), bar:1], unwinder will be confused like foo
-      // return to bar. Here we detect and treat this case as BRANCH instead of
-      // RETURN which only update the source address.
+      // For regular intra function branches, we only need to record branch
+      // with context. For an artificial branch cross function boundaries, we
+      // got an issue with returning to external code. Take the two LBR enties
+      // for example: [foo:8(RETURN), ext:1] [ext:3(CALL), bar:1] After perf
+      // reader, we only get[foo:8(RETURN), bar:1], unwinder will be confused
+      // like foo return to bar. Here we detect and treat this case as BRANCH
+      // instead of RETURN which only update the source address.
       unwindBranch(State);
+    } else {
+      // Skip unwinding the rest of LBR trace. Reset the stack and update the
+      // state so that the rest of the trace can still be processed as if they
+      // do not have stack samples.
+      State.clearCallStack();
+      State.InstPtr.update(State.getCurrentLBRSource());
+      State.pushFrame(State.InstPtr.Address);
     }
+
     State.advanceLBR();
     // Record `branch` with calling context after unwinding.
     recordBranchCount(Branch, State, Repeat);
@@ -720,7 +734,9 @@ void HybridPerfReader::parseSample(TraceStream &TraceIt, uint64_t Count) {
   //          ... 0x4005c8/0x4005dc/P/-/-/0    # LBR Entries
   //
   std::shared_ptr<PerfSample> Sample = std::make_shared<PerfSample>();
-
+#ifndef NDEBUG
+  Sample->Linenum = TraceIt.getLineNumber();
+#endif
   // Parsing call stack and populate into PerfSample.CallStack
   if (!extractCallstack(TraceIt, Sample->CallStack)) {
     // Skip the next LBR line matched current call stack
@@ -915,8 +931,10 @@ void PerfScriptReader::computeCounterFromLBR(const PerfSample *Sample,
     // If this not the first LBR, update the range count between TO of current
     // LBR and FROM of next LBR.
     uint64_t StartOffset = TargetOffset;
-    if (EndOffeset != 0)
-      Counter.recordRangeCount(StartOffset, EndOffeset, Repeat);
+    if (EndOffeset != 0) {
+      if (StartOffset <= EndOffeset)
+        Counter.recordRangeCount(StartOffset, EndOffeset, Repeat);
+    }
     EndOffeset = SourceOffset;
   }
 }
@@ -1161,41 +1179,55 @@ void PerfScriptReader::warnInvalidRange() {
   const char *RangeCrossFuncMsg =
       "Fall through range should not cross function boundaries, likely due to "
       "profile and binary mismatch.";
+  const char *BogusRangeMsg = "Range start is after range end.";
 
+  uint64_t TotalRangeNum = 0;
   uint64_t InstNotBoundary = 0;
   uint64_t UnmatchedRange = 0;
   uint64_t RangeCrossFunc = 0;
+  uint64_t BogusRange = 0;
 
   for (auto &I : Ranges) {
     uint64_t StartOffset = I.first.first;
     uint64_t EndOffset = I.first.second;
+    TotalRangeNum += I.second;
 
     if (!Binary->offsetIsCode(StartOffset) ||
         !Binary->offsetIsTransfer(EndOffset)) {
-      InstNotBoundary++;
+      InstNotBoundary += I.second;
       WarnInvalidRange(StartOffset, EndOffset, EndNotBoundaryMsg);
     }
 
     auto *FRange = Binary->findFuncRangeForOffset(StartOffset);
     if (!FRange) {
-      UnmatchedRange++;
+      UnmatchedRange += I.second;
       WarnInvalidRange(StartOffset, EndOffset, DanglingRangeMsg);
       continue;
     }
 
     if (EndOffset >= FRange->EndOffset) {
-      RangeCrossFunc++;
+      RangeCrossFunc += I.second;
       WarnInvalidRange(StartOffset, EndOffset, RangeCrossFuncMsg);
+    }
+
+    if (StartOffset > EndOffset) {
+      BogusRange += I.second;
+      WarnInvalidRange(StartOffset, EndOffset, BogusRangeMsg);
     }
   }
 
-  uint64_t TotalRangeNum = Ranges.size();
-  emitWarningSummary(InstNotBoundary, TotalRangeNum,
-                     "of profiled ranges are not on instruction boundary.");
-  emitWarningSummary(UnmatchedRange, TotalRangeNum,
-                     "of profiled ranges do not belong to any functions.");
-  emitWarningSummary(RangeCrossFunc, TotalRangeNum,
-                     "of profiled ranges do cross function boundaries.");
+  emitWarningSummary(
+      InstNotBoundary, TotalRangeNum,
+      "of samples are from ranges that are not on instruction boundary.");
+  emitWarningSummary(
+      UnmatchedRange, TotalRangeNum,
+      "of samples are from ranges that do not belong to any functions.");
+  emitWarningSummary(
+      RangeCrossFunc, TotalRangeNum,
+      "of samples are from ranges that do cross function boundaries.");
+  emitWarningSummary(
+      BogusRange, TotalRangeNum,
+      "of samples are from ranges that have range start after range end.");
 }
 
 void PerfScriptReader::parsePerfTraces() {
