@@ -411,7 +411,22 @@ struct ForOpInterface
                                           *yieldedAlloc, state.getOptions());
           (void)copyStatus;
           assert(succeeded(copyStatus) && "could not create memcpy");
-          return *yieldedAlloc;
+
+          if (yieldedVal.getType() == yieldedAlloc->getType())
+            return *yieldedAlloc;
+
+          // The iter_arg memref type has a layout map. Cast the new buffer to
+          // the same type.
+          // TODO: In case the iter_arg has a layout map that is not the fully
+          // dynamic one, we cannot cast the new buffer. In that case, the
+          // iter_arg must be changed to the fully dynamic layout map. (And then
+          // the new buffer can be casted.)
+          assert(memref::CastOp::areCastCompatible(yieldedAlloc->getType(),
+                                                   yieldedVal.getType()) &&
+                 "scf.for op bufferization: cast incompatible");
+          Value casted = rewriter.create<memref::CastOp>(
+              val.getLoc(), yieldedVal.getType(), *yieldedAlloc);
+          return casted;
         });
     yieldOp.getResultsMutable().assign(yieldValues);
 

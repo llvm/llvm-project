@@ -1679,7 +1679,13 @@ bool Sema::CheckRedeclarationExported(NamedDecl *New, NamedDecl *Old) {
 
   assert(IsNewExported);
 
-  Diag(New->getLocation(), diag::err_redeclaration_non_exported) << New;
+  auto Lk = Old->getFormalLinkage();
+  int S = 0;
+  if (Lk == Linkage::InternalLinkage)
+    S = 1;
+  else if (Lk == Linkage::ModuleLinkage)
+    S = 2;
+  Diag(New->getLocation(), diag::err_redeclaration_non_exported) << New << S;
   Diag(Old->getLocation(), diag::note_previous_declaration);
   return true;
 }

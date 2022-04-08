@@ -7853,8 +7853,8 @@ def err_invalid_declarator_scope : Error<"cannot define or redeclare %0 here "
 def err_export_non_namespace_scope_name : Error<
   "cannot export %0 as it is not at namespace scope">;
 def err_redeclaration_non_exported : Error <
-  "cannot export redeclaration %0 here since the previous declaration is not "
-  "exported">;
+  "cannot export redeclaration %0 here since the previous declaration "
+  "%select{is not exported|has internal linkage|has module linkage}1">;
 def err_invalid_declarator_global_scope : Error<
   "definition or redeclaration of %0 cannot name the global scope">;
 def err_invalid_declarator_in_function : Error<
@@ -11071,6 +11071,8 @@ def ext_export_no_name_block : ExtWarn<
 def ext_export_no_names : ExtWarn<
   "ISO C++20 does not permit a declaration that does not introduce any names "
   "to be exported">, InGroup<ExportUnnamed>;
+def introduces_no_names : Error<
+  "declaration does not introduce any names to be exported">;
 def note_export : Note<"export block begins here">;
 def err_export_no_name : Error<
   "%select{empty|static_assert|asm}0 declaration cannot be exported">;
@@ -11082,7 +11084,8 @@ def err_export_within_export : Error<
 def err_export_internal : Error<
   "declaration of %0 with internal linkage cannot be exported">;
 def err_export_using_internal : Error<
-  "using declaration referring to %0 with internal linkage cannot be exported">;
+  "using declaration referring to %1 with %select{internal|module|unknown}0 "
+  "linkage cannot be exported">;
 def err_export_not_in_module_interface : Error<
   "export declaration can only be used within a module interface unit"
   "%select{ after the module declaration|}0">;
