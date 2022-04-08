@@ -107,8 +107,8 @@ public:
   unsigned getOperandIndex(unsigned blockArgumentIndex) const {
     assert(!isOperandProduced(blockArgumentIndex) &&
            "can't map operand produced by the operation");
-    return static_cast<mlir::OperandRange>(forwardedOperands)
-               .getBeginOperandIndex() +
+    OperandRange operands = forwardedOperands;
+    return operands.getBeginOperandIndex() +
            (blockArgumentIndex - producedOperandCount);
   }
 

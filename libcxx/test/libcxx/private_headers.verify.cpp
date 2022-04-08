@@ -421,6 +421,8 @@ END-SCRIPT
 #include <__thread/poll_with_backoff.h> // expected-error@*:* {{use of private header from outside its module: '__thread/poll_with_backoff.h'}}
 #include <__thread/timed_backoff_policy.h> // expected-error@*:* {{use of private header from outside its module: '__thread/timed_backoff_policy.h'}}
 #include <__tuple> // expected-error@*:* {{use of private header from outside its module: '__tuple'}}
+#include <__type_traits/integral_constant.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/integral_constant.h'}}
+#include <__type_traits/is_callable.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/is_callable.h'}}
 #include <__utility/as_const.h> // expected-error@*:* {{use of private header from outside its module: '__utility/as_const.h'}}
 #include <__utility/auto_cast.h> // expected-error@*:* {{use of private header from outside its module: '__utility/auto_cast.h'}}
 #include <__utility/cmp.h> // expected-error@*:* {{use of private header from outside its module: '__utility/cmp.h'}}

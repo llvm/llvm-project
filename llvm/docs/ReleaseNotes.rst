@@ -45,7 +45,7 @@ Non-comprehensive list of changes in this release
 * ...
 
 Update on required toolchains to build LLVM
--------------------
+-------------------------------------------
 
 With LLVM 15.x we will raise the version requirements of the toolchain used
 to build LLVM. The new requirements are as follows:
