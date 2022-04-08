@@ -1166,3 +1166,14 @@ func @nofoldShrs2() -> i64 {
   %r = arith.shrsi %c1, %cm32 : i64
   return %r : i64
 }
+
+// -----
+
+// CHECK-LABEL: @test_negf(
+// CHECK: %[[res:.+]] = arith.constant -2.0
+// CHECK: return %[[res]]
+func @test_negf() -> (f32) {
+  %c = arith.constant 2.0 : f32
+  %0 = arith.negf %c : f32
+  return %0: f32
+}
