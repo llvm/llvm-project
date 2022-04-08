@@ -740,9 +740,9 @@ void GCNScheduleDAGMILive::collectRematerializableInstructions(
     if (HighRPLiveIns.find(Reg) == HighRPLiveIns.end())
       continue;
 
-    MachineInstr *Def = MRI.getOneDef(Reg)->getParent();
-    if (!Def || Def->getOperand(0).getSubReg() != 0 ||
-        !isTriviallyReMaterializable(*Def, AA))
+    MachineOperand *Op = MRI.getOneDef(Reg);
+    MachineInstr *Def = Op->getParent();
+    if (Op->getSubReg() != 0 || !isTriviallyReMaterializable(*Def, AA))
       continue;
 
     MachineInstr *UseI = &*MRI.use_instr_nodbg_begin(Reg);

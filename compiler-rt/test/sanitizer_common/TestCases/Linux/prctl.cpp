@@ -5,6 +5,18 @@
 #include <stdint.h>
 #include <sys/prctl.h>
 
+#ifndef PR_SCHED_CORE
+#  define PR_SCHED_CORE 62
+#endif
+
+#ifndef PR_SCHED_CORE_CREATE
+#  define PR_SCHED_CORE_CREATE 1
+#endif
+
+#ifndef PR_SCHED_CORE_GET
+#  define PR_SCHED_CORE_GET 0
+#endif
+
 int main() {
 
   int res;

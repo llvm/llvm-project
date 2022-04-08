@@ -969,8 +969,14 @@ Error IndexedInstrProfReader::readHeader() {
         endian::byte_swap<uint64_t, little>(Header->MemProfOffset);
 
     const unsigned char *Ptr = Start + MemProfOffset;
-    // The value returned from Generator.Emit.
-    const uint64_t TableOffset =
+    // The value returned from RecordTableGenerator.Emit.
+    const uint64_t RecordTableOffset =
+        support::endian::readNext<uint64_t, little, unaligned>(Ptr);
+    // The offset in the stream right before invoking FrameTableGenerator.Emit.
+    const uint64_t FramePayloadOffset =
+        support::endian::readNext<uint64_t, little, unaligned>(Ptr);
+    // The value returned from FrameTableGenerator.Emit.
+    const uint64_t FrameTableOffset =
         support::endian::readNext<uint64_t, little, unaligned>(Ptr);
 
     // Read the schema.
@@ -980,10 +986,16 @@ Error IndexedInstrProfReader::readHeader() {
     Schema = SchemaOr.get();
 
     // Now initialize the table reader with a pointer into data buffer.
-    MemProfTable.reset(MemProfHashTable::Create(
-        /*Buckets=*/Start + TableOffset,
+    MemProfRecordTable.reset(MemProfRecordHashTable::Create(
+        /*Buckets=*/Start + RecordTableOffset,
         /*Payload=*/Ptr,
-        /*Base=*/Start, memprof::MemProfRecordLookupTrait(Schema)));
+        /*Base=*/Start, memprof::RecordLookupTrait(Schema)));
+
+    // Initialize the frame table reader with the payload and bucket offsets.
+    MemProfFrameTable.reset(MemProfFrameHashTable::Create(
+        /*Buckets=*/Start + FrameTableOffset,
+        /*Payload=*/Start + FramePayloadOffset,
+        /*Base=*/Start, memprof::FrameLookupTrait()));
   }
 
   // Load the remapping table now if requested.
@@ -1030,18 +1042,41 @@ IndexedInstrProfReader::getInstrProfRecord(StringRef FuncName,
   return error(instrprof_error::hash_mismatch);
 }
 
-Expected<ArrayRef<memprof::MemProfRecord>>
+Expected<memprof::MemProfRecord>
 IndexedInstrProfReader::getMemProfRecord(const uint64_t FuncNameHash) {
   // TODO: Add memprof specific errors.
-  if (MemProfTable == nullptr)
+  if (MemProfRecordTable == nullptr)
     return make_error<InstrProfError>(instrprof_error::invalid_prof,
                                       "no memprof data available in profile");
-  auto Iter = MemProfTable->find(FuncNameHash);
-  if (Iter == MemProfTable->end())
+  auto Iter = MemProfRecordTable->find(FuncNameHash);
+  if (Iter == MemProfRecordTable->end())
     return make_error<InstrProfError>(instrprof_error::hash_mismatch,
                                       "memprof record not found for hash " +
                                           Twine(FuncNameHash));
-  return *Iter;
+
+  // Setup a callback to convert from frame ids to frame using the on-disk
+  // FrameData hash table.
+  memprof::FrameId LastUnmappedFrameId = 0;
+  bool HasFrameMappingError = false;
+  auto IdToFrameCallback = [&](const memprof::FrameId Id) {
+    auto FrIter = MemProfFrameTable->find(Id);
+    if (FrIter == MemProfFrameTable->end()) {
+      LastUnmappedFrameId = Id;
+      HasFrameMappingError = true;
+      return memprof::Frame(0, 0, 0, false);
+    }
+    return *FrIter;
+  };
+
+  memprof::MemProfRecord Record(*Iter, IdToFrameCallback);
+
+  // Check that all frame ids were successfully converted to frames.
+  if (HasFrameMappingError) {
+    return make_error<InstrProfError>(instrprof_error::hash_mismatch,
+                                      "memprof frame not found for frame id " +
+                                          Twine(LastUnmappedFrameId));
+  }
+  return Record;
 }
 
 Error IndexedInstrProfReader::getFunctionCounts(StringRef FuncName,

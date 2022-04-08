@@ -14,6 +14,7 @@
 #include "clang/ExtractAPI/Serialization/SymbolGraphSerializer.h"
 #include "clang/Basic/Version.h"
 #include "clang/ExtractAPI/API.h"
+#include "clang/ExtractAPI/DeclarationFragments.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VersionTuple.h"
@@ -331,6 +332,12 @@ Object serializeNames(const APIRecord &Record) {
   Names["title"] = Record.Name;
   serializeArray(Names, "subHeading",
                  serializeDeclarationFragments(Record.SubHeading));
+  DeclarationFragments NavigatorFragments;
+  NavigatorFragments.append(Record.Name,
+                            DeclarationFragments::FragmentKind::Identifier,
+                            /*PreciseIdentifier*/ "");
+  serializeArray(Names, "navigator",
+                 serializeDeclarationFragments(NavigatorFragments));
 
   return Names;
 }

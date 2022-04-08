@@ -122,7 +122,6 @@ constexpr Legality IsLegalBranchTarget(const parser::Statement<A> &) {
       std::is_same_v<A, parser::CriticalStmt> ||
       std::is_same_v<A, parser::EndCriticalStmt> ||
       std::is_same_v<A, parser::ForallConstructStmt> ||
-      std::is_same_v<A, parser::ForallStmt> ||
       std::is_same_v<A, parser::WhereConstructStmt> ||
       std::is_same_v<A, parser::EndFunctionStmt> ||
       std::is_same_v<A, parser::EndMpSubprogramStmt> ||
@@ -230,7 +229,7 @@ public:
         parser::BlockStmt, parser::ChangeTeamStmt, parser::CriticalStmt,
         parser::IfThenStmt, parser::NonLabelDoStmt, parser::SelectCaseStmt,
         parser::SelectRankStmt, parser::SelectTypeStmt,
-        parser::WhereConstructStmt>;
+        parser::ForallConstructStmt, parser::WhereConstructStmt>;
     using LabeledConstructEndStmts = std::tuple<parser::EndAssociateStmt,
         parser::EndBlockStmt, parser::EndChangeTeamStmt,
         parser::EndCriticalStmt, parser::EndDoStmt, parser::EndForallStmt,

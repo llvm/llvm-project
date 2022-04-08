@@ -85,6 +85,12 @@
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "Protocol"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -142,6 +148,12 @@
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "AnotherProtocol"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
