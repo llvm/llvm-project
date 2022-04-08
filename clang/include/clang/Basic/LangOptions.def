@@ -7,7 +7,11 @@
 //===----------------------------------------------------------------------===//
 //
 // This file defines the language options. Users of this file must
-// define the LANGOPT macro to make use of this information.
+// define the LANGOPT macro to make use of this information. The arguments to
+// the macro are:
+//   LANGOPT(Name, Bits, DefaultValue, Description)
+// Note that the DefaultValue must be a constant value (literal or enumeration);
+// it cannot depend on the value of another language option.
 //
 // Optionally, the user may also define:
 //
@@ -107,7 +111,7 @@ LANGOPT(Trigraphs         , 1, 0,"trigraphs")
 LANGOPT(LineComment       , 1, 0, "'//' comments")
 LANGOPT(Bool              , 1, 0, "bool, true, and false keywords")
 LANGOPT(Half              , 1, 0, "half keyword")
-LANGOPT(WChar             , 1, CPlusPlus, "wchar_t keyword")
+LANGOPT(WChar             , 1, 0, "wchar_t keyword")
 LANGOPT(Char8             , 1, 0, "char8_t keyword")
 LANGOPT(IEEE128           , 1, 0, "__ieee128 keyword")
 LANGOPT(DeclSpecKeyword   , 1, 0, "__declspec keyword")
@@ -116,9 +120,9 @@ BENIGN_LANGOPT(AsmPreprocessor, 1, 0, "preprocessor in asm mode")
 LANGOPT(GNUMode           , 1, 1, "GNU extensions")
 LANGOPT(GNUKeywords       , 1, 1, "GNU keywords")
 VALUE_LANGOPT(GNUCVersion , 32, 0, "GNU C compatibility version")
-BENIGN_LANGOPT(ImplicitInt, 1, !C99 && !CPlusPlus, "C89 implicit 'int'")
+BENIGN_LANGOPT(ImplicitInt, 1, 0, "C89 implicit 'int'")
 LANGOPT(Digraphs          , 1, 0, "digraphs")
-BENIGN_LANGOPT(HexFloats  , 1, C99, "C99 hexadecimal float constants")
+BENIGN_LANGOPT(HexFloats  , 1, 0, "C99 hexadecimal float constants")
 LANGOPT(CXXOperatorNames  , 1, 0, "C++ operator name keywords")
 LANGOPT(AppleKext         , 1, 0, "Apple kext support")
 BENIGN_LANGOPT(PascalStrings, 1, 0, "Pascal string support")
