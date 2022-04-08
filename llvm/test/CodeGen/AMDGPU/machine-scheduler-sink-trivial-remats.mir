@@ -5951,3 +5951,113 @@ body:             |
     S_NOP 0, implicit %22
     S_ENDPGM 0
 ...
+---
+name:            test_occ_9_crash_inline_asm
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  ; GFX908-LABEL: name: test_occ_9_crash_inline_asm
+  ; GFX908: bb.0:
+  ; GFX908-NEXT:   successors: %bb.1(0x80000000)
+  ; GFX908-NEXT: {{  $}}
+  ; GFX908-NEXT:   %0:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   %1:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   %2:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 2, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   %3:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 3, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   %4:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 4, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   %5:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 5, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   %6:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 6, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   %7:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 7, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   %8:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 8, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   %9:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 9, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   %10:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 10, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   %11:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 11, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   %12:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 12, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   %13:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 13, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   %14:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 14, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   %15:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 15, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   %16:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 16, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   %17:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 17, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   %18:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 18, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   %19:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 19, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   %20:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 20, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   %21:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 21, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   INLINEASM &"v_or_b32 $0, 0, $1", 32 /* isconvergent attdialect */, 327690 /* regdef:SReg_1_with_sub0 */, def %22, 327689 /* reguse:SReg_1_with_sub0 */, %4
+  ; GFX908-NEXT: {{  $}}
+  ; GFX908-NEXT: bb.1:
+  ; GFX908-NEXT:   successors: %bb.2(0x80000000)
+  ; GFX908-NEXT: {{  $}}
+  ; GFX908-NEXT:   %24:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 24, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   S_NOP 0, implicit %24
+  ; GFX908-NEXT: {{  $}}
+  ; GFX908-NEXT: bb.2:
+  ; GFX908-NEXT:   %23:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 23, implicit $exec, implicit $mode
+  ; GFX908-NEXT:   S_NOP 0, implicit %23
+  ; GFX908-NEXT:   S_NOP 0, implicit %0, implicit %1
+  ; GFX908-NEXT:   S_NOP 0, implicit %2, implicit %3
+  ; GFX908-NEXT:   S_NOP 0, implicit %4, implicit %5
+  ; GFX908-NEXT:   S_NOP 0, implicit %6, implicit %7
+  ; GFX908-NEXT:   S_NOP 0, implicit %8, implicit %9
+  ; GFX908-NEXT:   S_NOP 0, implicit %10, implicit %11
+  ; GFX908-NEXT:   S_NOP 0, implicit %12, implicit %13
+  ; GFX908-NEXT:   S_NOP 0, implicit %14, implicit %15
+  ; GFX908-NEXT:   S_NOP 0, implicit %16, implicit %17
+  ; GFX908-NEXT:   S_NOP 0, implicit %18, implicit %19
+  ; GFX908-NEXT:   S_NOP 0, implicit %20, implicit %21
+  ; GFX908-NEXT:   S_NOP 0, implicit %22
+  ; GFX908-NEXT:   S_ENDPGM 0
+  bb.0:
+    successors: %bb.1
+
+    %0:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode, implicit-def $m0
+    %1:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode, implicit-def $m0
+    %2:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 2, implicit $exec, implicit $mode, implicit-def $m0
+    %3:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 3, implicit $exec, implicit $mode, implicit-def $m0
+    %4:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 4, implicit $exec, implicit $mode, implicit-def $m0
+    %5:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 5, implicit $exec, implicit $mode, implicit-def $m0
+    %6:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 6, implicit $exec, implicit $mode, implicit-def $m0
+    %7:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 7, implicit $exec, implicit $mode, implicit-def $m0
+    %8:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 8, implicit $exec, implicit $mode, implicit-def $m0
+    %9:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 9, implicit $exec, implicit $mode, implicit-def $m0
+    %10:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 10, implicit $exec, implicit $mode, implicit-def $m0
+    %11:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 11, implicit $exec, implicit $mode, implicit-def $m0
+    %12:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 12, implicit $exec, implicit $mode, implicit-def $m0
+    %13:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 13, implicit $exec, implicit $mode, implicit-def $m0
+    %14:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 14, implicit $exec, implicit $mode, implicit-def $m0
+    %15:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 15, implicit $exec, implicit $mode, implicit-def $m0
+    %16:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 16, implicit $exec, implicit $mode, implicit-def $m0
+    %17:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 17, implicit $exec, implicit $mode, implicit-def $m0
+    %18:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 18, implicit $exec, implicit $mode, implicit-def $m0
+    %19:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 19, implicit $exec, implicit $mode, implicit-def $m0
+    %20:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 20, implicit $exec, implicit $mode, implicit-def $m0
+    %21:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 21, implicit $exec, implicit $mode, implicit-def $m0
+    INLINEASM &"v_or_b32 $0, 0, $1", 32, 327690, def %22:vgpr_32, 327689, %4
+    %23:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 23, implicit $exec, implicit $mode
+
+  bb.1:
+  ; predecessors: %bb.0
+    successors: %bb.2
+
+    %24:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 24, implicit $exec, implicit $mode, implicit-def $m0
+    S_NOP 0, implicit %24
+
+  bb.2:
+  ; predcessors: %bb.1
+
+    S_NOP 0, implicit %23
+    S_NOP 0, implicit %0, implicit %1
+    S_NOP 0, implicit %2, implicit %3
+    S_NOP 0, implicit %4, implicit %5
+    S_NOP 0, implicit %6, implicit %7
+    S_NOP 0, implicit %8, implicit %9
+    S_NOP 0, implicit %10, implicit %11
+    S_NOP 0, implicit %12, implicit %13
+    S_NOP 0, implicit %14, implicit %15
+    S_NOP 0, implicit %16, implicit %17
+    S_NOP 0, implicit %18, implicit %19
+    S_NOP 0, implicit %20, implicit %21
+    S_NOP 0, implicit %22
+    S_ENDPGM 0
+...
+
