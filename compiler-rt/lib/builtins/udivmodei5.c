@@ -31,7 +31,7 @@ static const su_int WORD_MSB = (su_int)1 << (WORD_SIZE_IN_BITS - 1);
 #if _YUGA_LITTLE_ENDIAN
 #define WORD_IDX(X, words) (X)
 #else
-#define WORD_IDX(X) ((words) - (X))
+#define WORD_IDX(X, words) ((words) - (X))
 #endif
 
 static bool has_msb_set(su_int a) { return (a & WORD_MSB) != 0; }
