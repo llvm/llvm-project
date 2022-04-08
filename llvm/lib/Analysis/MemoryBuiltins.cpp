@@ -826,7 +826,7 @@ SizeOffsetType ObjectSizeOffsetVisitor::findLoadSizeOffset(
   auto Unknown = [this, &BB, &VisitedBlocks]() {
     return VisitedBlocks[&BB] = unknown();
   };
-  auto Known = [this, &BB, &VisitedBlocks](SizeOffsetType SO) {
+  auto Known = [&BB, &VisitedBlocks](SizeOffsetType SO) {
     return VisitedBlocks[&BB] = SO;
   };
 
