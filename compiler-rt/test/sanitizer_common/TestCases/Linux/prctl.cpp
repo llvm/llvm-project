@@ -13,6 +13,10 @@
 #  define PR_SCHED_CORE_CREATE 1
 #endif
 
+#ifndef PR_SCHED_CORE_GET
+#  define PR_SCHED_CORE_GET 0
+#endif
+
 int main() {
 
   int res;
