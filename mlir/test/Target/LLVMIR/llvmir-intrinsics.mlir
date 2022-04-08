@@ -519,6 +519,8 @@ llvm.func @stack_restore(%arg0: !llvm.ptr<i8>) {
 llvm.func @vector_predication_intrinsics(%A: vector<8xi32>, %B: vector<8xi32>,
                                          %C: vector<8xf32>, %D: vector<8xf32>,
                                          %i: i32, %f: f32,
+                                         %iptr : !llvm.ptr<i32>,
+                                         %fptr : !llvm.ptr<f32>,
                                          %mask: vector<8xi1>, %evl: i32) {
   // CHECK: call <8 x i32> @llvm.vp.add.v8i32
   "llvm.intr.vp.add" (%A, %B, %mask, %evl) :
@@ -623,6 +625,25 @@ llvm.func @vector_predication_intrinsics(%A: vector<8xi32>, %B: vector<8xi32>,
   "llvm.intr.vp.reduce.fmin" (%f, %C, %mask, %evl) :
          (f32, vector<8xf32>, vector<8xi1>, i32) -> f32
 
+  // CHECK: call <8 x i32> @llvm.vp.select.v8i32
+  "llvm.intr.vp.select" (%mask, %A, %B, %evl) :
+         (vector<8xi1>, vector<8xi32>, vector<8xi32>, i32) -> vector<8xi32>
+  // CHECK: call <8 x i32> @llvm.vp.merge.v8i32
+  "llvm.intr.vp.merge" (%mask, %A, %B, %evl) :
+         (vector<8xi1>, vector<8xi32>, vector<8xi32>, i32) -> vector<8xi32>
+
+  // CHECK: call void @llvm.vp.store.v8i32.p0i32
+  "llvm.intr.vp.store" (%A, %iptr, %mask, %evl) : 
+         (vector<8xi32>, !llvm.ptr<i32>, vector<8xi1>, i32) -> ()
+  // CHECK: call <8 x i32> @llvm.vp.load.v8i32.p0i32
+  "llvm.intr.vp.load" (%iptr, %mask, %evl) :
+         (!llvm.ptr<i32>, vector<8xi1>, i32) -> vector<8xi32>
+  // CHECK: call void @llvm.experimental.vp.strided.store.v8i32.p0i32.i32
+  "llvm.intr.experimental.vp.strided.store" (%A, %iptr, %i, %mask, %evl) : 
+         (vector<8xi32>, !llvm.ptr<i32>, i32, vector<8xi1>, i32) -> ()
+  // CHECK: call <8 x i32> @llvm.experimental.vp.strided.load.v8i32.p0i32.i32
+  "llvm.intr.experimental.vp.strided.load" (%iptr, %i, %mask, %evl) :
+         (!llvm.ptr<i32>, i32, vector<8xi1>, i32) -> vector<8xi32>
 
   llvm.return
 }
@@ -715,3 +736,7 @@ llvm.func @vector_predication_intrinsics(%A: vector<8xi32>, %B: vector<8xi32>,
 // CHECK-DAG: declare float @llvm.vp.reduce.fmul.v8f32(float, <8 x float>, <8 x i1>, i32) #0
 // CHECK-DAG: declare float @llvm.vp.reduce.fmax.v8f32(float, <8 x float>, <8 x i1>, i32) #0
 // CHECK-DAG: declare float @llvm.vp.reduce.fmin.v8f32(float, <8 x float>, <8 x i1>, i32) #0
+// CHECK-DAG: declare <8 x i32> @llvm.vp.select.v8i32(<8 x i1>, <8 x i32>, <8 x i32>, i32) #12
+// CHECK-DAG: declare <8 x i32> @llvm.vp.merge.v8i32(<8 x i1>, <8 x i32>, <8 x i32>, i32) #12
+// CHECK-DAG: declare void @llvm.experimental.vp.strided.store.v8i32.p0i32.i32(<8 x i32>, i32* nocapture, i32, <8 x i1>, i32) #4
+// CHECK-DAG: declare <8 x i32> @llvm.experimental.vp.strided.load.v8i32.p0i32.i32(i32* nocapture, i32, <8 x i1>, i32) #3

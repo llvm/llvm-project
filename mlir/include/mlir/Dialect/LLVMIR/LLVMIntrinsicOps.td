@@ -444,6 +444,11 @@ class LLVM_VPReductionI<string mnem> : LLVM_VPReductionBase<mnem, AnyInteger>;
 
 class LLVM_VPReductionF<string mnem> : LLVM_VPReductionBase<mnem, AnyFloat>;
 
+class LLVM_VPSelectBase<string mnem>
+    : LLVM_OneResultIntrOp<"vp." # mnem, [], [1], [NoSideEffect]>,
+      Arguments<(ins LLVM_VectorOf<I1>:$cond, LLVM_AnyVector:$true_val,
+                     LLVM_AnyVector:$false_val, I32:$evl)>;
+
 // Integer Binary
 def LLVM_VPAddOp  : LLVM_VPBinaryI<"add">;
 def LLVM_VPSubOp  : LLVM_VPBinaryI<"sub">;
@@ -488,5 +493,31 @@ def LLVM_VPReduceFAddOp : LLVM_VPReductionF<"fadd">;
 def LLVM_VPReduceFMulOp : LLVM_VPReductionF<"fmul">;
 def LLVM_VPReduceFMaxOp : LLVM_VPReductionF<"fmax">;
 def LLVM_VPReduceFMinOp : LLVM_VPReductionF<"fmin">;
+
+def LLVM_VPSelectMinOp : LLVM_VPSelectBase<"select">;
+def LLVM_VPMergeMinOp  : LLVM_VPSelectBase<"merge">;
+
+// Load/store
+def LLVM_VPLoadOp
+    : LLVM_OneResultIntrOp<"vp.load", [0], [0], []>,
+      Arguments<(ins LLVM_AnyPointer:$ptr,
+                     LLVM_VectorOf<I1>:$mask, I32:$evl)>;
+
+def LLVM_VPStoreOp
+    : LLVM_ZeroResultIntrOp<"vp.store", [0, 1], []>,
+      Arguments<(ins LLVM_AnyVector:$val,
+                     LLVM_AnyPointer:$ptr,
+                     LLVM_VectorOf<I1>:$mask, I32:$evl)>;
+
+// Strided load/store
+def LLVM_VPStridedLoadOp
+    : LLVM_OneResultIntrOp<"experimental.vp.strided.load", [0], [0, 1], []>,
+      Arguments<(ins LLVM_AnyPointer:$ptr, AnyInteger:$stride,
+                     LLVM_VectorOf<I1>:$mask, I32:$evl)>;
+
+def LLVM_VPStridedStoreOp
+    : LLVM_ZeroResultIntrOp<"experimental.vp.strided.store",[0, 1, 2], []>,
+      Arguments<(ins LLVM_AnyVector:$val, LLVM_AnyPointer:$ptr,
+                     AnyInteger:$stride, LLVM_VectorOf<I1>:$mask, I32:$evl)>;
 
 #endif // LLVM_INTRINSIC_OPS
