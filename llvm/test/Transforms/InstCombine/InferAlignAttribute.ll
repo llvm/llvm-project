@@ -26,12 +26,10 @@ entry:
   ret i8* %call
 }
 
-; BUG: we shouldn't narrow this alignment since we already had a stronger
-; constraint, but we do.
 define i8* @dont_narrow_align_from_allocalign() {
 ; CHECK-LABEL: @dont_narrow_align_from_allocalign(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = tail call align 8 i8* @my_aligned_alloc(i32 noundef 320, i32 noundef 8)
+; CHECK-NEXT:    [[CALL:%.*]] = tail call align 16 i8* @my_aligned_alloc(i32 noundef 320, i32 noundef 8)
 ; CHECK-NEXT:    ret i8* [[CALL]]
 ;
 entry:

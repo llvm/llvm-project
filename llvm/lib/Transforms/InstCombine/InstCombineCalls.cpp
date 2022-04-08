@@ -2912,9 +2912,12 @@ void InstCombinerImpl::annotateAnyAllocSite(CallBase &Call, const TargetLibraryI
   if (AlignOpC && AlignOpC->getValue().ult(llvm::Value::MaximumAlignment)) {
     uint64_t AlignmentVal = AlignOpC->getZExtValue();
     if (llvm::isPowerOf2_64(AlignmentVal)) {
-      Call.removeRetAttr(Attribute::Alignment);
-      Call.addRetAttr(Attribute::getWithAlignment(Call.getContext(),
-                                                  Align(AlignmentVal)));
+      Align ExistingAlign = Call.getRetAlign().valueOrOne();
+      Align NewAlign = Align(AlignmentVal);
+      if (NewAlign > ExistingAlign) {
+        Call.addRetAttr(
+            Attribute::getWithAlignment(Call.getContext(), NewAlign));
+      }
     }
   }
 }
