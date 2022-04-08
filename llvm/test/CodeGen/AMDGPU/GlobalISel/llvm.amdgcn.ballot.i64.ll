@@ -2,6 +2,7 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -global-isel -verify-machineinstrs < %s | FileCheck %s
 
 declare i64 @llvm.amdgcn.ballot.i64(i1)
+declare i64 @llvm.ctpop.i64(i64)
 
 ; Test ballot(0)
 
@@ -71,4 +72,17 @@ define amdgpu_cs i64 @compare_floats(float %x, float %y) {
   %cmp = fcmp ogt float %x, %y
   %ballot = call i64 @llvm.amdgcn.ballot.i64(i1 %cmp)
   ret i64 %ballot
+}
+
+define amdgpu_cs i64 @ctpop_of_ballot(float %x, float %y) {
+; CHECK-LABEL: ctpop_of_ballot:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc, v0, v1
+; CHECK-NEXT:    s_bcnt1_i32_b64 s0, vcc
+; CHECK-NEXT:    s_mov_b32 s1, 0
+; CHECK-NEXT:    ; return to shader part epilog
+  %cmp = fcmp ogt float %x, %y
+  %ballot = call i64 @llvm.amdgcn.ballot.i64(i1 %cmp)
+  %bcnt = call i64 @llvm.ctpop.i64(i64 %ballot)
+  ret i64 %bcnt
 }
