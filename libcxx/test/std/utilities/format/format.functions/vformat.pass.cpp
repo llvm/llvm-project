@@ -9,6 +9,8 @@
 // UNSUPPORTED: libcpp-has-no-incomplete-format
 // TODO FMT Evaluate gcc-11 status
 // UNSUPPORTED: gcc-11
+// TODO FMT Investigate AppleClang ICE
+// UNSUPPORTED: apple-clang-13
 
 // <format>
 
@@ -21,10 +23,12 @@
 
 #include "test_macros.h"
 #include "format_tests.h"
+#include "string_literal.h"
 
-auto test = []<class CharT, class... Args>(std::basic_string_view<CharT> expected, std::basic_string_view<CharT> fmt,
-                                           const Args&... args) {
-  std::basic_string<CharT> out = std::vformat(fmt, std::make_format_args<context_t<CharT>>(args...));
+auto test = []<string_literal fmt, class CharT, class... Args>(std::basic_string_view<CharT> expected,
+                                                               const Args&... args) constexpr {
+  std::basic_string<CharT> out =
+      std::vformat(fmt.template sv<CharT>(), std::make_format_args<context_t<CharT>>(args...));
   assert(out == expected);
 };
 

@@ -3263,6 +3263,8 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
   Opts.GNUCVersion = 0;
   Opts.HexFloats = Std.hasHexFloats();
   Opts.ImplicitInt = Std.hasImplicitInt();
+  Opts.WChar = Std.isCPlusPlus();
+  Opts.Digraphs = Std.hasDigraphs();
 
   Opts.HLSL = IK.getLanguage() == Language::HLSL;
 

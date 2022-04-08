@@ -280,8 +280,10 @@ VPBasicBlock::createEmptyBasicBlock(VPTransformState::CFGState &CFG) {
     if (isa<UnreachableInst>(PredBBTerminator)) {
       assert(PredVPSuccessors.size() == 1 &&
              "Predecessor ending w/o branch must have single successor.");
+      DebugLoc DL = PredBBTerminator->getDebugLoc();
       PredBBTerminator->eraseFromParent();
-      BranchInst::Create(NewBB, PredBB);
+      auto *Br = BranchInst::Create(NewBB, PredBB);
+      Br->setDebugLoc(DL);
     } else {
       assert(PredVPSuccessors.size() == 2 &&
              "Predecessor ending with branch must have two successors.");
