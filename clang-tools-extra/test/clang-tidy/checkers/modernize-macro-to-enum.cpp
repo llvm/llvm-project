@@ -208,6 +208,10 @@ inline void used_ifndef() {}
 #define IFNDEF3 3
 #endif
 
+// Sometimes an argument to ifdef can be classified as a keyword token.
+#ifdef __restrict
+#endif
+
 // These macros do not expand to integral constants.
 #define HELLO "Hello, "
 #define WORLD "World"
