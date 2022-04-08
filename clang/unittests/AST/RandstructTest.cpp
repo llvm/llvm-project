@@ -38,25 +38,17 @@ using field_names = std::vector<std::string>;
 
 namespace {
 
-std::unique_ptr<ASTUnit> makeAST(const std::string &SourceCode,
-                                 bool ExpectErr = false) {
+std::unique_ptr<ASTUnit> makeAST(const std::string &SourceCode) {
   std::vector<std::string> Args = getCommandLineArgsForTesting(Lang_C99);
   Args.push_back("-frandomize-layout-seed=1234567890abcdef");
 
   IgnoringDiagConsumer IgnoringConsumer = IgnoringDiagConsumer();
 
-  std::unique_ptr<ASTUnit> AST = tooling::buildASTFromCodeWithArgs(
+  return tooling::buildASTFromCodeWithArgs(
       SourceCode, Args, "input.c", "clang-tool",
       std::make_shared<PCHContainerOperations>(),
       tooling::getClangStripDependencyFileAdjuster(),
       tooling::FileContentMappings(), &IgnoringConsumer);
-
-  if (ExpectErr)
-    EXPECT_TRUE(AST->getDiagnostics().hasErrorOccurred());
-  else
-    EXPECT_FALSE(AST->getDiagnostics().hasErrorOccurred());
-
-  return AST;
 }
 
 RecordDecl *getRecordDeclFromAST(const ASTContext &C, const std::string &Name) {
@@ -104,11 +96,11 @@ namespace ast_matchers {
 TEST(RANDSTRUCT_TEST_SUITE_TEST, CanDetermineIfSubsequenceExists) {
   const field_names Seq = {"a", "b", "c", "d"};
 
-  ASSERT_TRUE(isSubsequence(Seq, {"b", "c"}));
-  ASSERT_TRUE(isSubsequence(Seq, {"a", "b", "c", "d"}));
-  ASSERT_TRUE(isSubsequence(Seq, {"b", "c", "d"}));
-  ASSERT_TRUE(isSubsequence(Seq, {"a"}));
-  ASSERT_FALSE(isSubsequence(Seq, {"a", "d"}));
+  EXPECT_TRUE(isSubsequence(Seq, {"b", "c"}));
+  EXPECT_TRUE(isSubsequence(Seq, {"a", "b", "c", "d"}));
+  EXPECT_TRUE(isSubsequence(Seq, {"b", "c", "d"}));
+  EXPECT_TRUE(isSubsequence(Seq, {"a"}));
+  EXPECT_FALSE(isSubsequence(Seq, {"a", "d"}));
 }
 
 #define RANDSTRUCT_TEST StructureLayoutRandomization
@@ -123,12 +115,14 @@ TEST(RANDSTRUCT_TEST, UnmarkedStruct) {
     };
   )c");
 
+  EXPECT_FALSE(AST->getDiagnostics().hasErrorOccurred());
+
   const RecordDecl *RD = getRecordDeclFromAST(AST->getASTContext(), "test");
   const field_names Expected = {"bacon", "lettuce", "tomato", "mayonnaise"};
 
-  ASSERT_FALSE(RD->hasAttr<RandomizeLayoutAttr>());
-  ASSERT_FALSE(RD->isRandomized());
-  ASSERT_EQ(Expected, getFieldNamesFromRecord(RD));
+  EXPECT_FALSE(RD->hasAttr<RandomizeLayoutAttr>());
+  EXPECT_FALSE(RD->isRandomized());
+  EXPECT_EQ(Expected, getFieldNamesFromRecord(RD));
 }
 
 TEST(RANDSTRUCT_TEST, MarkedNoRandomize) {
@@ -141,12 +135,14 @@ TEST(RANDSTRUCT_TEST, MarkedNoRandomize) {
     } __attribute__((no_randomize_layout));
   )c");
 
+  EXPECT_FALSE(AST->getDiagnostics().hasErrorOccurred());
+
   const RecordDecl *RD = getRecordDeclFromAST(AST->getASTContext(), "test");
   const field_names Expected = {"bacon", "lettuce", "tomato", "mayonnaise"};
 
-  ASSERT_TRUE(RD->hasAttr<NoRandomizeLayoutAttr>());
-  ASSERT_FALSE(RD->isRandomized());
-  ASSERT_EQ(Expected, getFieldNamesFromRecord(RD));
+  EXPECT_TRUE(RD->hasAttr<NoRandomizeLayoutAttr>());
+  EXPECT_FALSE(RD->isRandomized());
+  EXPECT_EQ(Expected, getFieldNamesFromRecord(RD));
 }
 
 TEST(RANDSTRUCT_TEST, MarkedRandomize) {
@@ -159,16 +155,20 @@ TEST(RANDSTRUCT_TEST, MarkedRandomize) {
     } __attribute__((randomize_layout));
   )c");
 
+  EXPECT_FALSE(AST->getDiagnostics().hasErrorOccurred());
+
   const RecordDecl *RD = getRecordDeclFromAST(AST->getASTContext(), "test");
-#ifdef _WIN32
+#ifdef WIN64
+  const field_names Expected = { "lettuce", "mayonnaise", "bacon", "tomato" };
+#elif defined(_WIN32)
   const field_names Expected = {"lettuce", "bacon", "mayonnaise", "tomato"};
 #else
   const field_names Expected = {"mayonnaise", "bacon", "tomato", "lettuce"};
 #endif
 
-  ASSERT_TRUE(RD->hasAttr<RandomizeLayoutAttr>());
-  ASSERT_TRUE(RD->isRandomized());
-  ASSERT_EQ(Expected, getFieldNamesFromRecord(RD));
+  EXPECT_TRUE(RD->hasAttr<RandomizeLayoutAttr>());
+  EXPECT_TRUE(RD->isRandomized());
+  EXPECT_EQ(Expected, getFieldNamesFromRecord(RD));
 }
 
 TEST(RANDSTRUCT_TEST, MismatchedAttrsDeclVsDef) {
@@ -181,6 +181,8 @@ TEST(RANDSTRUCT_TEST, MismatchedAttrsDeclVsDef) {
         float mayonnaise;
     } __attribute__((no_randomize_layout));
   )c");
+
+  EXPECT_FALSE(AST->getDiagnostics().hasErrorOccurred());
 
   DiagnosticsEngine &Diags = AST->getDiagnostics();
 
@@ -199,7 +201,9 @@ TEST(RANDSTRUCT_TEST, MismatchedAttrsRandomizeVsNoRandomize) {
         long long tomato;
         float mayonnaise;
     } __attribute__((randomize_layout)) __attribute__((no_randomize_layout));
-  )c", true);
+  )c");
+
+  EXPECT_TRUE(AST->getDiagnostics().hasErrorOccurred());
 
   DiagnosticsEngine &Diags = AST->getDiagnostics();
 
@@ -217,7 +221,9 @@ TEST(RANDSTRUCT_TEST, MismatchedAttrsNoRandomizeVsRandomize) {
         long long tomato;
         float mayonnaise;
     } __attribute__((no_randomize_layout)) __attribute__((randomize_layout));
-  )c", true);
+  )c");
+
+  EXPECT_TRUE(AST->getDiagnostics().hasErrorOccurred());
 
   DiagnosticsEngine &Diags = AST->getDiagnostics();
 
@@ -239,6 +245,8 @@ TEST(RANDSTRUCT_TEST, CheckAdjacentBitfieldsRemainAdjacentAfterRandomization) {
     } __attribute__((randomize_layout));
   )c");
 
+  EXPECT_FALSE(AST->getDiagnostics().hasErrorOccurred());
+
   const RecordDecl *RD = getRecordDeclFromAST(AST->getASTContext(), "test");
 
 #ifdef _WIN32
@@ -249,8 +257,8 @@ TEST(RANDSTRUCT_TEST, CheckAdjacentBitfieldsRemainAdjacentAfterRandomization) {
   const field_names Subseq = {"x", "y", "z"};
   const field_names Actual = getFieldNamesFromRecord(RD);
 
-  ASSERT_TRUE(isSubsequence(Actual, Subseq));
-  ASSERT_EQ(Expected, Actual);
+  EXPECT_TRUE(isSubsequence(Actual, Subseq));
+  EXPECT_EQ(Expected, Actual);
 }
 
 TEST(RANDSTRUCT_TEST, CheckVariableLengthArrayMemberRemainsAtEndOfStructure) {
@@ -263,6 +271,8 @@ TEST(RANDSTRUCT_TEST, CheckVariableLengthArrayMemberRemainsAtEndOfStructure) {
     } __attribute__((randomize_layout));
   )c");
 
+  EXPECT_FALSE(AST->getDiagnostics().hasErrorOccurred());
+
   const RecordDecl *RD = getRecordDeclFromAST(AST->getASTContext(), "test");
 #ifdef _WIN32
   const field_names Expected = {"b", "a", "c", "name"};
@@ -270,7 +280,7 @@ TEST(RANDSTRUCT_TEST, CheckVariableLengthArrayMemberRemainsAtEndOfStructure) {
   const field_names Expected = {"b", "c", "a", "name"};
 #endif
 
-  ASSERT_EQ(Expected, getFieldNamesFromRecord(RD));
+  EXPECT_EQ(Expected, getFieldNamesFromRecord(RD));
 }
 
 TEST(RANDSTRUCT_TEST, RandstructDoesNotOverrideThePackedAttr) {
@@ -295,6 +305,8 @@ TEST(RANDSTRUCT_TEST, RandstructDoesNotOverrideThePackedAttr) {
     } __attribute__((packed, randomize_layout));
   )c");
 
+  EXPECT_FALSE(AST->getDiagnostics().hasErrorOccurred());
+
   // FIXME (?): calling getASTRecordLayout is probably a necessary evil so that
   // Clang's RecordBuilders can actually flesh out the information like
   // alignment, etc.
@@ -309,8 +321,8 @@ TEST(RANDSTRUCT_TEST, RandstructDoesNotOverrideThePackedAttr) {
     const field_names Expected = {"c", "a", "d", "b"};
 #endif
 
-    ASSERT_EQ(19, Layout->getSize().getQuantity());
-    ASSERT_EQ(Expected, getFieldNamesFromRecord(RD));
+    EXPECT_EQ(19, Layout->getSize().getQuantity());
+    EXPECT_EQ(Expected, getFieldNamesFromRecord(RD));
   }
 
   {
@@ -324,8 +336,8 @@ TEST(RANDSTRUCT_TEST, RandstructDoesNotOverrideThePackedAttr) {
     const field_names Expected = {"c", "a", "b"};
 #endif
 
-    ASSERT_EQ(10, Layout->getSize().getQuantity());
-    ASSERT_EQ(Expected, getFieldNamesFromRecord(RD));
+    EXPECT_EQ(10, Layout->getSize().getQuantity());
+    EXPECT_EQ(Expected, getFieldNamesFromRecord(RD));
   }
 
   {
@@ -335,8 +347,8 @@ TEST(RANDSTRUCT_TEST, RandstructDoesNotOverrideThePackedAttr) {
         &AST->getASTContext().getASTRecordLayout(RD);
     const field_names Expected = {"b", "c", "a"};
 
-    ASSERT_EQ(9, Layout->getSize().getQuantity());
-    ASSERT_EQ(Expected, getFieldNamesFromRecord(RD));
+    EXPECT_EQ(9, Layout->getSize().getQuantity());
+    EXPECT_EQ(Expected, getFieldNamesFromRecord(RD));
   }
 }
 
@@ -349,6 +361,8 @@ TEST(RANDSTRUCT_TEST, ZeroWidthBitfieldsSeparateAllocationUnits) {
     } __attribute__((randomize_layout));
   )c");
 
+  EXPECT_FALSE(AST->getDiagnostics().hasErrorOccurred());
+
   const RecordDecl *RD =
       getRecordDeclFromAST(AST->getASTContext(), "test_struct");
 #ifdef _WIN32
@@ -357,7 +371,7 @@ TEST(RANDSTRUCT_TEST, ZeroWidthBitfieldsSeparateAllocationUnits) {
   const field_names Expected = {"", "a", "b"};
 #endif
 
-  ASSERT_EQ(Expected, getFieldNamesFromRecord(RD));
+  EXPECT_EQ(Expected, getFieldNamesFromRecord(RD));
 }
 
 TEST(RANDSTRUCT_TEST, RandstructDoesNotRandomizeUnionFieldOrder) {
@@ -372,12 +386,14 @@ TEST(RANDSTRUCT_TEST, RandstructDoesNotRandomizeUnionFieldOrder) {
     } __attribute__((randomize_layout));
   )c");
 
+  EXPECT_FALSE(AST->getDiagnostics().hasErrorOccurred());
+
   const RecordDecl *RD =
       getRecordDeclFromAST(AST->getASTContext(), "test_union");
   const field_names Expected = {"a", "b", "c", "d", "e", "f"};
 
-  ASSERT_FALSE(RD->isRandomized());
-  ASSERT_EQ(Expected, getFieldNamesFromRecord(RD));
+  EXPECT_FALSE(RD->isRandomized());
+  EXPECT_EQ(Expected, getFieldNamesFromRecord(RD));
 }
 
 TEST(RANDSTRUCT_TEST, AnonymousStructsAndUnionsRetainFieldOrder) {
@@ -411,6 +427,8 @@ TEST(RANDSTRUCT_TEST, AnonymousStructsAndUnionsRetainFieldOrder) {
     } __attribute__((randomize_layout));
   )c");
 
+  EXPECT_FALSE(AST->getDiagnostics().hasErrorOccurred());
+
   const RecordDecl *RD =
       getRecordDeclFromAST(AST->getASTContext(), "test_struct");
 #ifdef _WIN32
@@ -419,7 +437,7 @@ TEST(RANDSTRUCT_TEST, AnonymousStructsAndUnionsRetainFieldOrder) {
   const field_names Expected = {"f", "a", "l", "", "", "s", "r"};
 #endif
 
-  ASSERT_EQ(Expected, getFieldNamesFromRecord(RD));
+  EXPECT_EQ(Expected, getFieldNamesFromRecord(RD));
 
   bool AnonStructTested = false;
   bool AnonUnionTested = false;
@@ -431,12 +449,12 @@ TEST(RANDSTRUCT_TEST, AnonymousStructsAndUnionsRetainFieldOrder) {
           if (RD->isUnion()) {
             const field_names Expected = {"m", "n", "o", "p", "q"};
 
-            ASSERT_EQ(Expected, getFieldNamesFromRecord(RD));
+            EXPECT_EQ(Expected, getFieldNamesFromRecord(RD));
             AnonUnionTested = true;
           } else {
             const field_names Expected = {"g", "h", "i", "j", "k"};
 
-            ASSERT_EQ(Expected, getFieldNamesFromRecord(RD));
+            EXPECT_EQ(Expected, getFieldNamesFromRecord(RD));
             AnonStructTested = true;
           }
         } else if (RD->isStruct()) {
@@ -445,13 +463,13 @@ TEST(RANDSTRUCT_TEST, AnonymousStructsAndUnionsRetainFieldOrder) {
 #else
           const field_names Expected = {"d", "e", "f", "c", "b"};
 #endif
-          ASSERT_EQ(Expected, getFieldNamesFromRecord(RD));
+          EXPECT_EQ(Expected, getFieldNamesFromRecord(RD));
         }
       }
     }
 
-  ASSERT_TRUE(AnonStructTested);
-  ASSERT_TRUE(AnonUnionTested);
+  EXPECT_TRUE(AnonStructTested);
+  EXPECT_TRUE(AnonUnionTested);
 }
 
 } // namespace ast_matchers
