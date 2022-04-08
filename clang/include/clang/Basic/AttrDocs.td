@@ -6379,3 +6379,35 @@ dictate the thread id. Total number of threads executed is ``X * Y * Z``.
 The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/sm5-attributes-numthreads
   }];
 }
+
+def ClangRandomizeLayoutDocs : Documentation {
+  let Category = DocCatDecl;
+  let Heading = "randomize_layout, no_randomize_layout";
+  let Content = [{
+The attribute ``randomize_layout``, when attached to a C structure, selects it
+for structure layout field randomization; a compile-time hardening technique. A
+"seed" value, is specified via the ``-frandomize-layout-seed=`` command line flag.
+For example:
+
+.. code-block:: bash
+
+  SEED=`od -A n -t x8 -N 32 /dev/urandom | tr -d ' \n'`
+  make ... CFLAGS="-frandomize-layout-seed=$SEED" ...
+
+You can also supply the seed in a file with ``-frandomize-layout-seed-file=``.
+For example:
+
+.. code-block:: bash
+
+  od -A n -t x8 -N 32 /dev/urandom | tr -d ' \n' > /tmp/seed_file.txt
+  make ... CFLAGS="-frandomize-layout-seed-file=/tmp/seed_file.txt" ...
+
+The randomization is deterministic based for a given seed, so the entire
+program should be compiled with the same seed, but keep the seed safe
+otherwise.
+
+The attribute ``no_randomize_layout``, when attached to a C structure,
+instructs the compiler that this structure should not have its field layout
+randomized.
+  }];
+}

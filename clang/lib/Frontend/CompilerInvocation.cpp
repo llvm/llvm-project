@@ -94,6 +94,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstring>
+#include <fstream>
 #include <memory>
 #include <string>
 #include <tuple>
@@ -3685,6 +3686,9 @@ void CompilerInvocation::GenerateLangArgs(const LangOptions &Opts,
 
   for (const auto &MP : Opts.MacroPrefixMap)
     GenerateArg(Args, OPT_fmacro_prefix_map_EQ, MP.first + "=" + MP.second, SA);
+
+  if (!Opts.RandstructSeed.empty())
+    GenerateArg(Args, OPT_frandomize_layout_seed_EQ, Opts.RandstructSeed, SA);
 }
 
 bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
@@ -4236,6 +4240,19 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     if (StringRef(A->getValue()).getAsInteger(10, VScaleMin) || VScaleMin == 0)
       Diags.Report(diag::err_cc1_unbounded_vscale_min);
   }
+
+  if (const Arg *A = Args.getLastArg(OPT_frandomize_layout_seed_file_EQ)) {
+    std::ifstream SeedFile(A->getValue(0));
+
+    if (!SeedFile.is_open())
+      Diags.Report(diag::err_drv_cannot_open_randomize_layout_seed_file)
+          << A->getValue(0);
+
+    std::getline(SeedFile, Opts.RandstructSeed);
+  }
+
+  if (const Arg *A = Args.getLastArg(OPT_frandomize_layout_seed_EQ))
+    Opts.RandstructSeed = A->getValue(0);
 
   return Diags.getNumErrors() == NumErrorsBefore;
 }

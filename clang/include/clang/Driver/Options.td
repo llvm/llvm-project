@@ -2122,6 +2122,12 @@ defm merge_all_constants : BoolFOption<"merge-all-constants",
 def fmessage_length_EQ : Joined<["-"], "fmessage-length=">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Format message diagnostics so that they fit within N columns">,
   MarshallingInfoInt<DiagnosticOpts<"MessageLength">>;
+def frandomize_layout_seed_EQ : Joined<["-"], "frandomize-layout-seed=">,
+  MetaVarName<"<seed>">, Group<f_clang_Group>, Flags<[CC1Option]>,
+  HelpText<"The seed used by the randomize structure layout feature">;
+def frandomize_layout_seed_file_EQ : Joined<["-"], "frandomize-layout-seed-file=">,
+  MetaVarName<"<file>">, Group<f_clang_Group>, Flags<[CC1Option]>,
+  HelpText<"File holding the seed used by the randomize structure layout feature">;
 def fms_compatibility : Flag<["-"], "fms-compatibility">, Group<f_Group>, Flags<[CC1Option, CoreOption]>,
   HelpText<"Enable full Microsoft Visual C++ compatibility">,
   MarshallingInfoFlag<LangOpts<"MSVCCompat">>;
