@@ -103,15 +103,15 @@ TEST(CrashRecoveryTest, DumpStackCleanup) {
 }
 
 TEST(CrashRecoveryTest, LimitedStackTrace) {
+  // FIXME: Handle "Depth" parameter in PrintStackTrace() function
+  // to print stack trace upto a specified Depth.
+  if (Triple(sys::getProcessTriple()).isOSWindows())
+    GTEST_SKIP();
   std::string Res;
   llvm::raw_string_ostream RawStream(Res);
   PrintStackTrace(RawStream, 1);
   std::string Str = RawStream.str();
-  // FIXME: Handle "Depth" parameter in PrintStackTrace() function
-  // to print stack trace upto a specified Depth.
-  if (!Triple(sys::getProcessTriple()).isOSWindows()) {
-    EXPECT_EQ(std::string::npos, Str.find("#1"));
-  }
+  EXPECT_EQ(std::string::npos, Str.find("#1"));
 }
 
 #ifdef _WIN32
