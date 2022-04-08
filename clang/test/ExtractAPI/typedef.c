@@ -84,6 +84,12 @@ typedef int MyInt;
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "MyInt"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",

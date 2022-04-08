@@ -105,6 +105,12 @@
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "Interface"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -158,6 +164,12 @@
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "InstanceMethod"
+          }
+        ],
         "subHeading": [
           {
             "kind": "text",
@@ -216,6 +228,12 @@
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "ClassMethod"
+          }
+        ],
         "subHeading": [
           {
             "kind": "text",
@@ -302,6 +320,12 @@
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "Property"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",

@@ -120,6 +120,12 @@ struct Color {
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "Color"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -165,6 +171,12 @@ struct Color {
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "Red"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -211,6 +223,12 @@ struct Color {
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "Green"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -257,6 +275,12 @@ struct Color {
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "Blue"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -320,6 +344,12 @@ struct Color {
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "Alpha"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",

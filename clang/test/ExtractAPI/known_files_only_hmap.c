@@ -103,6 +103,12 @@ struct Foo { int a; };
         "uri": "file://INPUT_DIR/subdir/subdir1/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "num"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -148,6 +154,12 @@ struct Foo { int a; };
         "uri": "file://INPUT_DIR/subdir/subdir2/known_file.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "known_num"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",

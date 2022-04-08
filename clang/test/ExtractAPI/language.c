@@ -88,6 +88,12 @@ char objc;
         "uri": "file://INPUT_DIR/c.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "c"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -162,6 +168,12 @@ char objc;
         "uri": "file://INPUT_DIR/objc.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "objc"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",

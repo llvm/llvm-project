@@ -86,6 +86,12 @@ char unavailable __attribute__((unavailable));
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "num"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -365,6 +371,12 @@ char unavailable __attribute__((unavailable));
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "add"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",

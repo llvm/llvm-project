@@ -86,6 +86,12 @@ typedef MyIntInt MyIntIntInt;
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "MyInt"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -140,6 +146,12 @@ typedef MyIntInt MyIntIntInt;
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "MyIntInt"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -194,6 +206,12 @@ typedef MyIntInt MyIntIntInt;
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "MyIntIntInt"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",

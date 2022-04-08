@@ -161,6 +161,12 @@ enum Direction : unsigned char {
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "Vehicle"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -197,6 +203,12 @@ enum Direction : unsigned char {
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "Bicycle"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -234,6 +246,12 @@ enum Direction : unsigned char {
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "Car"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -288,6 +306,12 @@ enum Direction : unsigned char {
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "Train"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -325,6 +349,12 @@ enum Direction : unsigned char {
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "Ship"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -362,6 +392,12 @@ enum Direction : unsigned char {
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "Airplane"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -416,6 +452,12 @@ enum Direction : unsigned char {
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "Direction"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -452,6 +494,12 @@ enum Direction : unsigned char {
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "North"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -489,6 +537,12 @@ enum Direction : unsigned char {
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "East"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -526,6 +580,12 @@ enum Direction : unsigned char {
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "South"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -563,6 +623,12 @@ enum Direction : unsigned char {
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "West"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",

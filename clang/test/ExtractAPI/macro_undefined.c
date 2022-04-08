@@ -95,6 +95,12 @@ FUNC_GEN(bar, const int *, unsigned);
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "foo"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -241,6 +247,12 @@ FUNC_GEN(bar, const int *, unsigned);
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "bar"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -285,6 +297,12 @@ FUNC_GEN(bar, const int *, unsigned);
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "HELLO"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",

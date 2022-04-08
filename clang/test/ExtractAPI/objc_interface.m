@@ -19,6 +19,7 @@
 @interface Super <Protocol>
 @property(readonly, getter=getProperty) unsigned Property;
 + (id)getWithProperty:(unsigned) Property;
+- (void)setProperty:(unsigned) Property andOtherThing: (unsigned) Thing;
 @end
 
 @interface Derived : Super {
@@ -56,6 +57,11 @@
     {
       "kind": "memberOf",
       "source": "c:objc(cs)Super(cm)getWithProperty:",
+      "target": "c:objc(cs)Super"
+    },
+    {
+      "kind": "memberOf",
+      "source": "c:objc(cs)Super(im)setProperty:andOtherThing:",
       "target": "c:objc(cs)Super"
     },
     {
@@ -117,6 +123,12 @@
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "Super"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -186,6 +198,12 @@
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "getWithProperty:"
+          }
+        ],
         "subHeading": [
           {
             "kind": "text",
@@ -201,6 +219,112 @@
       "pathComponents": [
         "Super",
         "getWithProperty:"
+      ]
+    },
+    {
+      "accessLevel": "public",
+      "declarationFragments": [
+        {
+          "kind": "text",
+          "spelling": "- ("
+        },
+        {
+          "kind": "typeIdentifier",
+          "preciseIdentifier": "c:v",
+          "spelling": "void"
+        },
+        {
+          "kind": "text",
+          "spelling": ") "
+        },
+        {
+          "kind": "identifier",
+          "spelling": "setProperty:"
+        },
+        {
+          "kind": "text",
+          "spelling": "("
+        },
+        {
+          "kind": "typeIdentifier",
+          "preciseIdentifier": "c:i",
+          "spelling": "unsigned int"
+        },
+        {
+          "kind": "text",
+          "spelling": ") "
+        },
+        {
+          "kind": "internalParam",
+          "spelling": "Property"
+        },
+        {
+          "kind": "text",
+          "spelling": " "
+        },
+        {
+          "kind": "identifier",
+          "spelling": "andOtherThing:"
+        },
+        {
+          "kind": "text",
+          "spelling": "("
+        },
+        {
+          "kind": "typeIdentifier",
+          "preciseIdentifier": "c:i",
+          "spelling": "unsigned int"
+        },
+        {
+          "kind": "text",
+          "spelling": ") "
+        },
+        {
+          "kind": "internalParam",
+          "spelling": "Thing"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
+        }
+      ],
+      "identifier": {
+        "interfaceLanguage": "objective-c",
+        "precise": "c:objc(cs)Super(im)setProperty:andOtherThing:"
+      },
+      "kind": {
+        "displayName": "Instance Method",
+        "identifier": "objective-c.method"
+      },
+      "location": {
+        "position": {
+          "character": 1,
+          "line": 6
+        },
+        "uri": "file://INPUT_DIR/input.h"
+      },
+      "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "setProperty:andOtherThing:"
+          }
+        ],
+        "subHeading": [
+          {
+            "kind": "text",
+            "spelling": "- "
+          },
+          {
+            "kind": "identifier",
+            "spelling": "setProperty:andOtherThing:"
+          }
+        ],
+        "title": "setProperty:andOtherThing:"
+      },
+      "pathComponents": [
+        "Super",
+        "setProperty:andOtherThing:"
       ]
     },
     {
@@ -272,6 +396,12 @@
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "Property"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -321,11 +451,17 @@
       "location": {
         "position": {
           "character": 12,
-          "line": 8
+          "line": 9
         },
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "Derived"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -366,11 +502,17 @@
       "location": {
         "position": {
           "character": 8,
-          "line": 9
+          "line": 10
         },
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "Ivar"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -420,11 +562,17 @@
       "location": {
         "position": {
           "character": 1,
-          "line": 11
+          "line": 12
         },
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "getIvar"
+          }
+        ],
         "subHeading": [
           {
             "kind": "text",

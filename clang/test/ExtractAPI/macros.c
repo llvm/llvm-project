@@ -80,6 +80,12 @@
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "HELLO"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -124,6 +130,12 @@
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "WORLD"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -180,6 +192,12 @@
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "MACRO_FUN"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -252,6 +270,12 @@
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "FUN"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -308,6 +332,12 @@
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "FUNC99"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -364,6 +394,12 @@
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "FUNGNU"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
