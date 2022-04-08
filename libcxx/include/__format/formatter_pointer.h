@@ -46,10 +46,12 @@ public:
     // but that code isn't public. Making that code public requires some
     // refactoring.
     // TODO FMT Remove code duplication.
-    char __buffer[2 + 2 * sizeof(uintptr_t)];
+    constexpr size_t __max_hex_digits = 2 * sizeof(uintptr_t);
+    char __buffer[2 + __max_hex_digits];
     __buffer[0] = '0';
     __buffer[1] = 'x';
-    char* __last = __to_buffer(__buffer + 2, _VSTD::end(__buffer), reinterpret_cast<uintptr_t>(__ptr), 16);
+    char* __last =
+        __to_buffer(__buffer + 2, _VSTD::end(__buffer), reinterpret_cast<uintptr_t>(__ptr), __max_hex_digits);
 
     unsigned __size = __last - __buffer;
     if (__size >= this->__width)
