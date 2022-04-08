@@ -34,22 +34,30 @@ std::string s;
 std::wstring ws;
 #endif
 
+static_assert(std::is_nothrow_destructible<std::string>::value, "");
+static_assert(std::is_nothrow_destructible<
+                std::basic_string<char, std::char_traits<char>, test_allocator<char>>>::value, "");
+LIBCPP_STATIC_ASSERT(!std::is_nothrow_destructible<
+                     std::basic_string<char, std::char_traits<char>, throwing_alloc<char>>>::value, "");
+
+bool test() {
+  test_allocator_statistics alloc_stats;
+  {
+    std::basic_string<char, std::char_traits<char>, test_allocator<char>> str2((test_allocator<char>(&alloc_stats)));
+    str2 = "long long string so no SSO";
+    assert(alloc_stats.alloc_count == 1);
+  }
+  assert(alloc_stats.alloc_count == 0);
+
+  return true;
+}
+
 int main(int, char**)
 {
-    {
-        typedef std::string C;
-        static_assert(std::is_nothrow_destructible<C>::value, "");
-    }
-    {
-        typedef std::basic_string<char, std::char_traits<char>, test_allocator<char>> C;
-        static_assert(std::is_nothrow_destructible<C>::value, "");
-    }
-#if defined(_LIBCPP_VERSION)
-    {
-        typedef std::basic_string<char, std::char_traits<char>, throwing_alloc<char>> C;
-        static_assert(!std::is_nothrow_destructible<C>::value, "");
-    }
-#endif // _LIBCPP_VERSION
+  test();
+#if TEST_STD_VER > 17
+  // static_assert(test());
+#endif
 
   return 0;
 }
