@@ -44,3 +44,23 @@ subroutine omp_single_nowait(x)
   !OMPDialect: omp.terminator
   !$omp end parallel
 end subroutine omp_single_nowait
+
+!===============================================================================
+! Single construct with allocate
+!===============================================================================
+
+!FIRDialect-LABEL: func @_QPsingle_allocate
+subroutine single_allocate()
+  use omp_lib
+  integer :: x
+  !OMPDialect: omp.parallel {
+  !$omp parallel
+  !OMPDialect: omp.single allocate(%{{.+}} : i32 -> %{{.+}} : !fir.ref<i32>) {
+  !$omp single allocate(omp_high_bw_mem_alloc: x) private(x)
+  !FIRDialect: arith.addi
+  x = x + 12
+  !OMPDialect: omp.terminator
+  !$omp end single
+  !OMPDialect: omp.terminator
+  !$omp end parallel
+end subroutine single_allocate

@@ -179,75 +179,79 @@ genOMP(Fortran::lower::AbstractConverter &converter,
   auto currentLocation = converter.getCurrentLocation();
   Fortran::lower::StatementContext stmtCtx;
   llvm::ArrayRef<mlir::Type> argTy;
-  if (blockDirective.v == llvm::omp::OMPD_parallel) {
+  mlir::Value ifClauseOperand, numThreadsClauseOperand;
+  mlir::omp::ClauseProcBindKindAttr procBindKindAttr;
+  SmallVector<Value> allocateOperands, allocatorOperands;
+  mlir::UnitAttr nowaitAttr;
 
-    mlir::Value ifClauseOperand, numThreadsClauseOperand;
-    Attribute procBindClauseOperand;
-
-    const auto &parallelOpClauseList =
-        std::get<Fortran::parser::OmpClauseList>(beginBlockDirective.t);
-    for (const auto &clause : parallelOpClauseList.v) {
-      if (const auto &ifClause =
-              std::get_if<Fortran::parser::OmpClause::If>(&clause.u)) {
-        auto &expr =
-            std::get<Fortran::parser::ScalarLogicalExpr>(ifClause->v.t);
-        ifClauseOperand = fir::getBase(converter.genExprValue(
-            *Fortran::semantics::GetExpr(expr), stmtCtx));
-      } else if (const auto &numThreadsClause =
-                     std::get_if<Fortran::parser::OmpClause::NumThreads>(
-                         &clause.u)) {
-        // OMPIRBuilder expects `NUM_THREAD` clause as a `Value`.
-        numThreadsClauseOperand = fir::getBase(converter.genExprValue(
-            *Fortran::semantics::GetExpr(numThreadsClause->v), stmtCtx));
+  for (const auto &clause :
+       std::get<Fortran::parser::OmpClauseList>(beginBlockDirective.t).v) {
+    if (const auto &ifClause =
+            std::get_if<Fortran::parser::OmpClause::If>(&clause.u)) {
+      auto &expr = std::get<Fortran::parser::ScalarLogicalExpr>(ifClause->v.t);
+      ifClauseOperand = fir::getBase(
+          converter.genExprValue(*Fortran::semantics::GetExpr(expr), stmtCtx));
+    } else if (const auto &numThreadsClause =
+                   std::get_if<Fortran::parser::OmpClause::NumThreads>(
+                       &clause.u)) {
+      // OMPIRBuilder expects `NUM_THREAD` clause as a `Value`.
+      numThreadsClauseOperand = fir::getBase(converter.genExprValue(
+          *Fortran::semantics::GetExpr(numThreadsClause->v), stmtCtx));
+    } else if (const auto &procBindClause =
+                   std::get_if<Fortran::parser::OmpClause::ProcBind>(
+                       &clause.u)) {
+      omp::ClauseProcBindKind pbKind;
+      switch (procBindClause->v.v) {
+      case Fortran::parser::OmpProcBindClause::Type::Master:
+        pbKind = omp::ClauseProcBindKind::Master;
+        break;
+      case Fortran::parser::OmpProcBindClause::Type::Close:
+        pbKind = omp::ClauseProcBindKind::Close;
+        break;
+      case Fortran::parser::OmpProcBindClause::Type::Spread:
+        pbKind = omp::ClauseProcBindKind::Spread;
+        break;
+      case Fortran::parser::OmpProcBindClause::Type::Primary:
+        pbKind = omp::ClauseProcBindKind::Primary;
+        break;
       }
-      // TODO: Handle private, firstprivate, shared and copyin
+      procBindKindAttr =
+          omp::ClauseProcBindKindAttr::get(firOpBuilder.getContext(), pbKind);
+    } else if (const auto &allocateClause =
+                   std::get_if<Fortran::parser::OmpClause::Allocate>(
+                       &clause.u)) {
+      genAllocateClause(converter, allocateClause->v, allocatorOperands,
+                        allocateOperands);
+    } else if (const auto &privateClause =
+                   std::get_if<Fortran::parser::OmpClause::Private>(
+                       &clause.u)) {
+      // TODO: Handle private. This cannot be a hard TODO because testing for
+      // allocate clause requires private variables.
+    } else {
+      TODO(currentLocation, "OpenMP Block construct clauses");
     }
+  }
+
+  for (const auto &clause :
+       std::get<Fortran::parser::OmpClauseList>(endBlockDirective.t).v) {
+    if (std::get_if<Fortran::parser::OmpClause::Nowait>(&clause.u))
+      nowaitAttr = firOpBuilder.getUnitAttr();
+  }
+
+  if (blockDirective.v == llvm::omp::OMPD_parallel) {
     // Create and insert the operation.
     auto parallelOp = firOpBuilder.create<mlir::omp::ParallelOp>(
         currentLocation, argTy, ifClauseOperand, numThreadsClauseOperand,
-        /*allocate_vars=*/ValueRange(), /*allocators_vars=*/ValueRange(),
-        /*reduction_vars=*/ValueRange(), /*reductions=*/nullptr,
-        procBindClauseOperand.dyn_cast_or_null<omp::ClauseProcBindKindAttr>());
-    // Handle attribute based clauses.
-    for (const auto &clause : parallelOpClauseList.v) {
-      // TODO: Handle default clause
-      if (const auto &procBindClause =
-              std::get_if<Fortran::parser::OmpClause::ProcBind>(&clause.u)) {
-        const auto &ompProcBindClause{procBindClause->v};
-        omp::ClauseProcBindKind pbKind;
-        switch (ompProcBindClause.v) {
-        case Fortran::parser::OmpProcBindClause::Type::Master:
-          pbKind = omp::ClauseProcBindKind::Master;
-          break;
-        case Fortran::parser::OmpProcBindClause::Type::Close:
-          pbKind = omp::ClauseProcBindKind::Close;
-          break;
-        case Fortran::parser::OmpProcBindClause::Type::Spread:
-          pbKind = omp::ClauseProcBindKind::Spread;
-          break;
-        }
-        parallelOp.proc_bind_valAttr(omp::ClauseProcBindKindAttr::get(
-            firOpBuilder.getContext(), pbKind));
-      }
-    }
+        allocateOperands, allocatorOperands, /*reduction_vars=*/ValueRange(),
+        /*reductions=*/nullptr, procBindKindAttr);
     createBodyOfOp<omp::ParallelOp>(parallelOp, firOpBuilder, currentLocation);
   } else if (blockDirective.v == llvm::omp::OMPD_master) {
     auto masterOp =
         firOpBuilder.create<mlir::omp::MasterOp>(currentLocation, argTy);
     createBodyOfOp<omp::MasterOp>(masterOp, firOpBuilder, currentLocation);
-
-    // Single Construct
   } else if (blockDirective.v == llvm::omp::OMPD_single) {
-    mlir::UnitAttr nowaitAttr;
-    for (const auto &clause :
-         std::get<Fortran::parser::OmpClauseList>(endBlockDirective.t).v) {
-      if (std::get_if<Fortran::parser::OmpClause::Nowait>(&clause.u))
-        nowaitAttr = firOpBuilder.getUnitAttr();
-      // TODO: Handle allocate clause (D122302)
-    }
     auto singleOp = firOpBuilder.create<mlir::omp::SingleOp>(
-        currentLocation, /*allocate_vars=*/ValueRange(),
-        /*allocators_vars=*/ValueRange(), nowaitAttr);
+        currentLocation, allocateOperands, allocatorOperands, nowaitAttr);
     createBodyOfOp(singleOp, firOpBuilder, currentLocation);
   }
 }
