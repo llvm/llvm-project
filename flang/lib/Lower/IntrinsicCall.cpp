@@ -729,7 +729,7 @@ static constexpr IntrinsicHandler handlers[]{
      /*isElemental=*/false},
     {"exit",
      &I::genExit,
-     {{{"status", asValue}}},
+     {{{"status", asValue, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"exponent", &I::genExponent},
     {"floor", &I::genFloor},
