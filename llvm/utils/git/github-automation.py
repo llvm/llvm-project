@@ -185,7 +185,7 @@ class ReleaseWorkflow:
 
         push_url = self.push_url
         print('Pushing to {} {}'.format(push_url, branch_name))
-        local_repo.git.push(push_url, 'HEAD:{}'.format(branch_name))
+        local_repo.git.push(push_url, 'HEAD:{}'.format(branch_name), force=True)
 
         self.issue_notify_branch()
         self.issue_remove_cherry_pick_failed_label()
