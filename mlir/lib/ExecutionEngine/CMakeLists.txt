@@ -52,6 +52,7 @@ add_mlir_library(MLIRExecutionEngine
   TransformUtils
   nativecodegen
   IPO
+  Passes
   ${LLVM_JIT_LISTENER_LIB}
 
   LINK_LIBS PUBLIC
