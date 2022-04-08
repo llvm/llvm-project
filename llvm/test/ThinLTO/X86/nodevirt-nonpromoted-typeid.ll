@@ -16,15 +16,8 @@
 ; DIS-NOT: typeIdInfo
 ; DIS-NOT: typeidMetadata
 
-; Legacy PM, Index based WPD
+; Index based WPD
 ; RUN: llvm-lto2 run %t2.o -save-temps -pass-remarks=. \
-; RUN:   -o %t3 \
-; RUN:   -r=%t2.o,test,plx \
-; RUN:   -r=%t2.o,_ZN1D1mEi,
-; RUN: llvm-dis %t3.1.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR
-
-; New PM, Index based WPD
-; RUN: llvm-lto2 run %t2.o -save-temps -use-new-pm -pass-remarks=. \
 ; RUN:   -o %t3 \
 ; RUN:   -r=%t2.o,test,plx \
 ; RUN:   -r=%t2.o,_ZN1D1mEi,

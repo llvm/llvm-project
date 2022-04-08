@@ -225,9 +225,6 @@ public:
     OptLevel = (NewOptLevel > 3) ? 3 : NewOptLevel;
   }
 
-  /// Enable or disable the new pass manager.
-  void setUseNewPM(unsigned Enabled) { UseNewPM = Enabled; }
-
   /// Enable or disable debug output for the new pass manager.
   void setDebugPassManager(unsigned Enabled) { DebugPassManager = Enabled; }
 

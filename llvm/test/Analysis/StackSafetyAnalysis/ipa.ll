@@ -90,13 +90,6 @@
 ; RUN: llvm-lto2 run %t.summ0.bc %t.summ1.bc -o %t.lto -stack-safety-run -thinlto-distributed-indexes -thinlto-threads 1 -O0 $(cat %t.res.txt)
 ; RUN: (cat %t.ids.txt ; llvm-dis %t.summ1.bc.thinlto.bc -o -) | FileCheck --check-prefixes=INDEX %s
 
-; RUN: llvm-lto2 run %t.summ0.bc %t.summ1.bc -o %t-newpm.lto -use-new-pm -stack-safety-print -stack-safety-run -save-temps -thinlto-threads 1 -O0 \
-; RUN:  $(cat %t.res.txt) \
-; RUN:    2>&1 | FileCheck %s --check-prefixes=CHECK,GLOBAL,LTO
-
-; RUN: llvm-lto2 run %t.summ0.bc %t.summ1.bc -o %t-newpm.lto -stack-safety-run -thinlto-distributed-indexes -thinlto-threads 1 -O0 $(cat %t.res.txt)
-; RUN: (cat %t.ids.txt ; llvm-dis %t.summ1.bc.thinlto.bc -o -) | FileCheck --check-prefixes=INDEX %s
-
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux"
 

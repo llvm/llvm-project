@@ -2,7 +2,7 @@
 
 ; Try the default pipeline and check is BasicAA is invoked.
 ; RUN: llvm-lto2 run %t1.bc -o %t.o -r %t1.bc,patatino,px -debug-pass-manager \
-; RUN:  -use-new-pm 2>&1 | FileCheck %s --check-prefix=DEFAULT
+; RUN:  2>&1 | FileCheck %s --check-prefix=DEFAULT
 ; DEFAULT: Running analysis: BasicAA on patatino
 
 ; Try a custom pipeline
@@ -13,7 +13,7 @@
 
 ; Try the new pass manager LTO default pipeline (make sure the option
 ; is accepted).
-; RUN: llvm-lto2 run %t1.bc -o %t.o -use-new-pm -r %t1.bc,patatino,px
+; RUN: llvm-lto2 run %t1.bc -o %t.o -r %t1.bc,patatino,px
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

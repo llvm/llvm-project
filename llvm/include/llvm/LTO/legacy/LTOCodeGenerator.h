@@ -184,7 +184,7 @@ struct LTOCodeGenerator {
 
   void setDisableVerify(bool Value) { Config.DisableVerify = Value; }
 
-  void setUseNewPM(bool Value) { Config.UseNewPM = Value; }
+  void setDebugPassManager(bool Enabled) { Config.DebugPassManager = Enabled; }
 
   void setDiagnosticHandler(lto_diagnostic_handler_t, void *);
 

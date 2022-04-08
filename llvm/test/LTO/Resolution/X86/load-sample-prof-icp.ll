@@ -6,10 +6,6 @@
 ; RUN:   -r %t.bc,test,px -r %t.bc,bar,px -r %t.bc,externfunc,x \
 ; RUN:   -lto-sample-profile-file=%S/Inputs/load-sample-prof-icp.prof
 ; RUN: llvm-dis %t.out.1.4.opt.bc -o - | FileCheck %s
-; RUN: llvm-lto2 run -o %t.out %t.bc -save-temps \
-; RUN:   -r %t.bc,test,px -r %t.bc,bar,px -r %t.bc,externfunc,x -use-new-pm \
-; RUN:   -lto-sample-profile-file=%S/Inputs/load-sample-prof-icp.prof
-; RUN: llvm-dis %t.out.1.4.opt.bc -o - | FileCheck %s
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
