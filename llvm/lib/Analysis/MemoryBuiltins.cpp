@@ -492,7 +492,7 @@ Optional<StringRef> llvm::getAllocationFamily(const Value *I,
                                               const TargetLibraryInfo *TLI) {
   bool IsNoBuiltin;
   const Function *Callee = getCalledFunction(I, IsNoBuiltin);
-  if (Callee == nullptr)
+  if (Callee == nullptr || IsNoBuiltin)
     return None;
   LibFunc TLIFn;
   if (!TLI || !TLI->getLibFunc(*Callee, TLIFn) || !TLI->has(TLIFn))
