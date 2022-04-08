@@ -589,7 +589,6 @@ LLDBMemoryReader::resolveRemoteAddressFromSymbolObjectFile(
 }
 
 bool LLDBMemoryReader::readMetadataFromFileCacheEnabled() const {
-  return true;
   auto &triple = m_process.GetTarget().GetArchitecture().GetTriple();
 
   // 32 doesn't have a flag bit we can reliably use, so reading from filecache
