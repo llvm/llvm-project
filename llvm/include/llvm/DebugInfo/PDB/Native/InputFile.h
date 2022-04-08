@@ -158,32 +158,32 @@ getModuleDebugStream(PDBFile &File, StringRef &ModuleName, uint32_t Index);
 Expected<ModuleDebugStreamRef> getModuleDebugStream(PDBFile &File,
                                                     uint32_t Index);
 
-bool shouldDumpSymbolGroup(uint32_t Idx, const SymbolGroup &Group);
+bool shouldDumpSymbolGroup(uint32_t Idx, const SymbolGroup &Group,
+                           const FilterOptions &Filters);
 
 // TODO: Change these callbacks to be function_refs (de-templatify them).
 template <typename CallbackT>
-Error iterateOneModule(InputFile &File, const Optional<PrintScope> &HeaderScope,
+Error iterateOneModule(InputFile &File, const PrintScope &HeaderScope,
                        const SymbolGroup &SG, uint32_t Modi,
                        CallbackT Callback) {
-  if (HeaderScope) {
-    HeaderScope->P.formatLine(
-        "Mod {0:4} | `{1}`: ",
-        fmt_align(Modi, AlignStyle::Right, HeaderScope->LabelWidth), SG.name());
-  }
+  HeaderScope.P.formatLine(
+      "Mod {0:4} | `{1}`: ",
+      fmt_align(Modi, AlignStyle::Right, HeaderScope.LabelWidth), SG.name());
 
   AutoIndent Indent(HeaderScope);
   return Callback(Modi, SG);
 }
 
 template <typename CallbackT>
-Error iterateSymbolGroups(InputFile &Input,
-                          const Optional<PrintScope> &HeaderScope,
+Error iterateSymbolGroups(InputFile &Input, const PrintScope &HeaderScope,
                           CallbackT Callback) {
   AutoIndent Indent(HeaderScope);
 
-  if (llvm::pdb::Filters.DumpModi > 0) {
-    assert(llvm::pdb::Filters.DumpModi == 1);
-    uint32_t Modi = llvm::pdb::Filters.DumpModi;
+  FilterOptions Filters = HeaderScope.P.getFilters();
+  uint32_t Modi = Filters.DumpModi;
+
+  if (Modi > 0) {
+    assert(Modi == 1);
     SymbolGroup SG(&Input, Modi);
     return iterateOneModule(Input, withLabelWidth(HeaderScope, NumDigits(Modi)),
                             SG, Modi, Callback);
@@ -192,7 +192,7 @@ Error iterateSymbolGroups(InputFile &Input,
   uint32_t I = 0;
 
   for (const auto &SG : Input.symbol_groups()) {
-    if (shouldDumpSymbolGroup(I, SG))
+    if (shouldDumpSymbolGroup(I, SG, Filters))
       if (auto Err =
               iterateOneModule(Input, withLabelWidth(HeaderScope, NumDigits(I)),
                                SG, I, Callback))
@@ -205,7 +205,7 @@ Error iterateSymbolGroups(InputFile &Input,
 
 template <typename SubsectionT>
 Error iterateModuleSubsections(
-    InputFile &File, const Optional<PrintScope> &HeaderScope,
+    InputFile &File, const PrintScope &HeaderScope,
     llvm::function_ref<Error(uint32_t, const SymbolGroup &, SubsectionT &)>
         Callback) {
 

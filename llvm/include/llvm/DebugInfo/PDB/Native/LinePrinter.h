@@ -40,17 +40,16 @@ class MSFStreamLayout;
 } // namespace msf
 namespace pdb {
 
-extern FilterOptions Filters;
-
 class ClassLayout;
 class PDBFile;
+class SymbolGroup;
 
 class LinePrinter {
   friend class WithColor;
 
 public:
   LinePrinter(int Indent, bool UseColor, raw_ostream &Stream,
-              FilterOptions &Filters);
+              const FilterOptions &Filters);
 
   void Indent(uint32_t Amount = 0);
   void Unindent(uint32_t Amount = 0);
@@ -87,6 +86,8 @@ public:
   bool IsSymbolExcluded(llvm::StringRef SymbolName);
   bool IsCompilandExcluded(llvm::StringRef CompilandName);
 
+  const FilterOptions &getFilters() const { return Filters; }
+
 private:
   template <typename Iter>
   void SetFilters(std::list<Regex> &List, Iter Begin, Iter End) {
@@ -99,6 +100,7 @@ private:
   int IndentSpaces;
   int CurrentIndent;
   bool UseColor;
+  const FilterOptions &Filters;
 
   std::list<Regex> ExcludeCompilandFilters;
   std::list<Regex> ExcludeTypeFilters;
@@ -120,11 +122,8 @@ struct PrintScope {
   uint32_t LabelWidth = 0;
 };
 
-inline Optional<PrintScope> withLabelWidth(const Optional<PrintScope> &Scope,
-                                           uint32_t W) {
-  if (!Scope)
-    return None;
-  return PrintScope{*Scope, W};
+inline PrintScope withLabelWidth(const PrintScope &Scope, uint32_t W) {
+  return PrintScope{Scope, W};
 }
 
 struct AutoIndent {
@@ -132,11 +131,9 @@ struct AutoIndent {
       : L(&L), Amount(Amount) {
     L.Indent(Amount);
   }
-  explicit AutoIndent(const Optional<PrintScope> &Scope) {
-    if (Scope.hasValue()) {
-      L = &Scope->P;
-      Amount = Scope->IndentLevel;
-    }
+  explicit AutoIndent(const PrintScope &Scope) {
+    L = &Scope.P;
+    Amount = Scope.IndentLevel;
   }
   ~AutoIndent() {
     if (L)

@@ -552,10 +552,7 @@ Error DumpOutputStyle::dumpSymbolStats() {
 
   StatCollection SymStats;
   StatCollection ChunkStats;
-
-  Optional<PrintScope> Scope;
-  if (File.isPdb())
-    Scope.emplace(P, 2);
+  PrintScope Scope(P, 2);
 
   if (Error Err = iterateSymbolGroups(
           File, Scope, [&](uint32_t Modi, const SymbolGroup &SG) -> Error {

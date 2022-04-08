@@ -30,10 +30,6 @@ using namespace llvm;
 using namespace llvm::msf;
 using namespace llvm::pdb;
 
-// TODO: Move this Filters state inside the LinePrinter class and pass it by
-// reference to the iterate* functions.
-FilterOptions llvm::pdb::Filters;
-
 namespace {
 bool IsItemExcluded(llvm::StringRef Item,
                     std::list<llvm::Regex> &IncludeFilters,
@@ -58,9 +54,9 @@ bool IsItemExcluded(llvm::StringRef Item,
 using namespace llvm;
 
 LinePrinter::LinePrinter(int Indent, bool UseColor, llvm::raw_ostream &Stream,
-                         FilterOptions &Filters)
-    : OS(Stream), IndentSpaces(Indent), CurrentIndent(0), UseColor(UseColor) {
-  llvm::pdb::Filters = Filters;
+                         const FilterOptions &Filters)
+    : OS(Stream), IndentSpaces(Indent), CurrentIndent(0), UseColor(UseColor),
+      Filters(Filters) {
   SetFilters(ExcludeTypeFilters, Filters.ExcludeTypes.begin(),
              Filters.ExcludeTypes.end());
   SetFilters(ExcludeSymbolFilters, Filters.ExcludeSymbols.begin(),
