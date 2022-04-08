@@ -1516,10 +1516,14 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
 
   if (AddrSpace == AMDGPUAS::LOCAL_ADDRESS ||
       AddrSpace == AMDGPUAS::REGION_ADDRESS) {
+    Align RequiredAlignment(PowerOf2Ceil(Size/8)); // Natural alignment.
+    if (Subtarget->hasLDSMisalignedBug() && Size > 32 &&
+        Alignment < RequiredAlignment)
+      return false;
+
     // Check if alignment requirements for ds_read/write instructions are
     // disabled.
-    if (Subtarget->hasUnalignedDSAccessEnabled() &&
-        !Subtarget->hasLDSMisalignedBug()) {
+    if (Subtarget->hasUnalignedDSAccessEnabled()) {
       if (IsFast)
         *IsFast = Alignment != Align(2);
       return true;
