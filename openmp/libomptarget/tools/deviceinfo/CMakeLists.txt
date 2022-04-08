@@ -19,5 +19,4 @@ llvm_update_compile_flags(llvm-omp-device-info)
 target_link_libraries(llvm-omp-device-info PRIVATE
   omp
   omptarget
-  ${LIBOMPTARGET_TESTED_PLUGINS}
 )
