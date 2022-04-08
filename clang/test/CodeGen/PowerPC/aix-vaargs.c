@@ -1,7 +1,7 @@
 // REQUIRES: powerpc-registered-target
 // REQUIRES: asserts
-// RUN: %clang_cc1 -triple powerpc-unknown-aix -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AIX32
-// RUN: %clang_cc1 -triple powerpc64-unknown-aix -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AIX64
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc-unknown-aix -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AIX32
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc64-unknown-aix -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AIX64
 
 struct x {
   double b;

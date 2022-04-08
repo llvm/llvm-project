@@ -342,7 +342,6 @@ FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
   UFE->UniqueID = Status.getUniqueID();
   UFE->IsNamedPipe = Status.getType() == llvm::sys::fs::file_type::fifo_file;
   UFE->File = std::move(F);
-  UFE->IsValid = true;
 
   if (UFE->File) {
     if (auto PathName = UFE->File->getName())
@@ -453,7 +452,6 @@ FileEntryRef FileManager::getVirtualFileRef(StringRef Filename, off_t Size,
   UFE->ModTime = ModificationTime;
   UFE->Dir     = &DirInfo->getDirEntry();
   UFE->UID     = NextFileUID++;
-  UFE->IsValid = true;
   UFE->File.reset();
   return FileEntryRef(NamedFileEnt);
 }
@@ -483,7 +481,6 @@ llvm::Optional<FileEntryRef> FileManager::getBypassFile(FileEntryRef VF) {
   BFE->Dir = VF.getFileEntry().Dir;
   BFE->ModTime = llvm::sys::toTimeT(Status.getLastModificationTime());
   BFE->UID = NextFileUID++;
-  BFE->IsValid = true;
 
   // Save the entry in the bypass table and return.
   return FileEntryRef(*Insertion.first);

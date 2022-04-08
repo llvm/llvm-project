@@ -165,7 +165,6 @@ TEST_F(FileManagerTest, getFileReturnsValidFileEntryForExistingRealFile) {
 
   auto file = manager.getFile("/tmp/test");
   ASSERT_TRUE(file);
-  ASSERT_TRUE((*file)->isValid());
   EXPECT_EQ("/tmp/test", (*file)->getName());
 
   const DirectoryEntry *dir = (*file)->getDir();
@@ -190,7 +189,6 @@ TEST_F(FileManagerTest, getFileReturnsValidFileEntryForExistingVirtualFile) {
   manager.getVirtualFile("virtual/dir/bar.h", 100, 0);
   auto file = manager.getFile("virtual/dir/bar.h");
   ASSERT_TRUE(file);
-  ASSERT_TRUE((*file)->isValid());
   EXPECT_EQ("virtual/dir/bar.h", (*file)->getName());
 
   const DirectoryEntry *dir = (*file)->getDir();
@@ -212,9 +210,7 @@ TEST_F(FileManagerTest, getFileReturnsDifferentFileEntriesForDifferentFiles) {
   auto fileFoo = manager.getFile("foo.cpp");
   auto fileBar = manager.getFile("bar.cpp");
   ASSERT_TRUE(fileFoo);
-  ASSERT_TRUE((*fileFoo)->isValid());
   ASSERT_TRUE(fileBar);
-  ASSERT_TRUE((*fileBar)->isValid());
   EXPECT_NE(*fileFoo, *fileBar);
 }
 
@@ -341,9 +337,6 @@ TEST_F(FileManagerTest, getFileReturnsSameFileEntryForAliasedVirtualFiles) {
   statCache->InjectFile("abc/bar.cpp", 42);
   manager.setStatCache(std::move(statCache));
 
-  ASSERT_TRUE(manager.getVirtualFile("abc/foo.cpp", 100, 0)->isValid());
-  ASSERT_TRUE(manager.getVirtualFile("abc/bar.cpp", 200, 0)->isValid());
-
   auto f1 = manager.getFile("abc/foo.cpp");
   auto f2 = manager.getFile("abc/bar.cpp");
 
@@ -418,14 +411,12 @@ TEST_F(FileManagerTest, getVirtualFileWithDifferentName) {
   // Inject the virtual file:
   const FileEntry *file1 = manager.getVirtualFile("c:\\tmp\\test", 123, 1);
   ASSERT_TRUE(file1 != nullptr);
-  ASSERT_TRUE(file1->isValid());
   EXPECT_EQ(43U, file1->getUniqueID().getFile());
   EXPECT_EQ(123, file1->getSize());
 
   // Lookup the virtual file with a different name:
   auto file2 = manager.getFile("c:/tmp/test", 100, 1);
   ASSERT_TRUE(file2);
-  ASSERT_TRUE((*file2)->isValid());
   // Check that it's the same UFE:
   EXPECT_EQ(file1, *file2);
   EXPECT_EQ(43U, (*file2)->getUniqueID().getFile());
@@ -487,7 +478,6 @@ TEST_F(FileManagerTest, getVirtualFileFillsRealPathName) {
   // Check for real path.
   const FileEntry *file = Manager.getVirtualFile("/tmp/test", 123, 1);
   ASSERT_TRUE(file != nullptr);
-  ASSERT_TRUE(file->isValid());
   SmallString<64> ExpectedResult = CustomWorkingDir;
 
   llvm::sys::path::append(ExpectedResult, "tmp", "test");
@@ -515,7 +505,6 @@ TEST_F(FileManagerTest, getFileDontOpenRealPath) {
   // Check for real path.
   auto file = Manager.getFile("/tmp/test", /*OpenFile=*/false);
   ASSERT_TRUE(file);
-  ASSERT_TRUE((*file)->isValid());
   SmallString<64> ExpectedResult = CustomWorkingDir;
 
   llvm::sys::path::append(ExpectedResult, "tmp", "test");
@@ -548,7 +537,6 @@ TEST_F(FileManagerTest, getBypassFile) {
   const FileEntry *File = Manager.getVirtualFile("/tmp/test", /*Size=*/10, 0);
   ASSERT_TRUE(File);
   const FileEntry &FE = *File;
-  EXPECT_TRUE(FE.isValid());
   EXPECT_EQ(FE.getSize(), 10);
 
   // Calling a second time should not affect the UID or size.
@@ -564,7 +552,6 @@ TEST_F(FileManagerTest, getBypassFile) {
   llvm::Optional<FileEntryRef> BypassRef =
       Manager.getBypassFile(File->getLastRef());
   ASSERT_TRUE(BypassRef);
-  EXPECT_TRUE(BypassRef->isValid());
   EXPECT_EQ("/tmp/test", BypassRef->getName());
 
   // Check that it's different in the right ways.

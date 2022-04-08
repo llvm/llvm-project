@@ -2,10 +2,10 @@
 # RUN: llvm-mc -filetype=obj %s -o %t.obj -triple x86_64-windows-msvc
 # RUN: lld-link -entry:main -nodefaultlib %t.obj -out:%t.exe -pdb:%t.pdb -debug
 # RUN: llvm-symbolizer --obj=%t.exe --relative-address \
-# RUN:   0x1014 0x1018 0x101c 0x1023 0x1024 \
+# RUN:   0x1014 0x1015 0x1018 0x1019 0x101c 0x101d 0x1023 0x1024 \
 # RUN:   0x1037 0x103A 0x104B 0x104E | FileCheck %s
 
-# Compiled from this cpp code, with modifications to add extra inline line and 
+# Compiled from this cpp code, with modifications to add extra inline line and
 # file changes:
 # clang -cc1 -triple x86_64-windows-msvc -gcodeview -S test.cpp
 #
@@ -54,6 +54,11 @@ main:                                   # @main
 # CHECK-NEXT: C:\src\test.cpp:6:0
 # CHECK-NEXT: main
 # CHECK-NEXT: C:\src\test.cpp:10:11
+
+# CHECK: inlinee_1
+# CHECK-NEXT: C:\src\test.cpp:6:0
+# CHECK-NEXT: main
+# CHECK-NEXT: C:\src\test.cpp:10:11
 	movl	16(%rsp), %eax
 
 # Add a line change here.
@@ -63,10 +68,22 @@ main:                                   # @main
 # CHECK-NEXT: C:\src\test.cpp:7:0
 # CHECK-NEXT: main
 # CHECK-NEXT: C:\src\test.cpp:10:11
+
+# CHECK: inlinee_1
+# CHECK-NEXT: C:\src\test.cpp:7:0
+# CHECK-NEXT: main
+# CHECK-NEXT: C:\src\test.cpp:10:11
 	movl	%eax, 20(%rsp)
 .Ltmp1:
 	.cv_inline_site_id 2 within 1 inlined_at 1 6 10
 	.cv_loc	2 1 2 10                        # test.cpp:2:10
+
+# CHECK: inlinee_2
+# CHECK-NEXT: C:\src\test.cpp:2:0
+# CHECK-NEXT: inlinee_1
+# CHECK-NEXT: C:\src\test.cpp:6:0
+# CHECK-NEXT: main
+# CHECK-NEXT: C:\src\test.cpp:10:11
 
 # CHECK: inlinee_2
 # CHECK-NEXT: C:\src\test.cpp:2:0

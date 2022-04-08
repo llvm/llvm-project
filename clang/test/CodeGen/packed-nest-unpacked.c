@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple x86_64-apple-macosx10.7.2 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple x86_64-apple-macosx10.7.2 -emit-llvm -o - | FileCheck %s
 
 struct X { int x[6]; };
 struct Y { char x[13]; struct X y; } __attribute((packed));

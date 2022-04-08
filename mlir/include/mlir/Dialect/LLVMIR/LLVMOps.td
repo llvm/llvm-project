@@ -21,16 +21,16 @@ include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
-def FMFnnan     : BitEnumAttrCaseBit<"nnan", 0>;
-def FMFninf     : BitEnumAttrCaseBit<"ninf", 1>;
-def FMFnsz      : BitEnumAttrCaseBit<"nsz", 2>;
-def FMFarcp     : BitEnumAttrCaseBit<"arcp", 3>;
-def FMFcontract : BitEnumAttrCaseBit<"contract", 4>;
-def FMFafn      : BitEnumAttrCaseBit<"afn", 5>;
-def FMFreassoc  : BitEnumAttrCaseBit<"reassoc", 6>;
-def FMFfast     : BitEnumAttrCaseBit<"fast", 7>;
+def FMFnnan     : I32BitEnumAttrCaseBit<"nnan", 0>;
+def FMFninf     : I32BitEnumAttrCaseBit<"ninf", 1>;
+def FMFnsz      : I32BitEnumAttrCaseBit<"nsz", 2>;
+def FMFarcp     : I32BitEnumAttrCaseBit<"arcp", 3>;
+def FMFcontract : I32BitEnumAttrCaseBit<"contract", 4>;
+def FMFafn      : I32BitEnumAttrCaseBit<"afn", 5>;
+def FMFreassoc  : I32BitEnumAttrCaseBit<"reassoc", 6>;
+def FMFfast     : I32BitEnumAttrCaseBit<"fast", 7>;
 
-def FastmathFlags_DoNotUse : BitEnumAttr<
+def FastmathFlags : I32BitEnumAttr<
     "FastmathFlags",
     "LLVM fastmath flags",
     [FMFnnan, FMFninf, FMFnsz, FMFarcp, FMFcontract, FMFafn, FMFreassoc, FMFfast
@@ -1948,7 +1948,28 @@ def LLVM_VPFMulOp : LLVM_VPBinaryF<"fmul">;
 def LLVM_VPFDivOp : LLVM_VPBinaryF<"fdiv">;
 def LLVM_VPFRemOp : LLVM_VPBinaryF<"frem">;
 
+// Float Unary
+def LLVM_VPFNegOp : LLVM_VPUnaryF<"fneg">;
 
+// Float Ternary
+def LLVM_VPFmaOp  : LLVM_VPTernaryF<"fma">;
+
+// Integer Reduction
+def LLVM_VPReduceAddOp  : LLVM_VPReductionI<"add">;
+def LLVM_VPReduceMulOp  : LLVM_VPReductionI<"mul">;
+def LLVM_VPReduceAndOp  : LLVM_VPReductionI<"and">;
+def LLVM_VPReduceOrOp   : LLVM_VPReductionI<"or">;
+def LLVM_VPReduceXorOp  : LLVM_VPReductionI<"xor">;
+def LLVM_VPReduceSMaxOp : LLVM_VPReductionI<"smax">;
+def LLVM_VPReduceSMinOp : LLVM_VPReductionI<"smin">;
+def LLVM_VPReduceUMaxOp : LLVM_VPReductionI<"umax">;
+def LLVM_VPReduceUMinOp : LLVM_VPReductionI<"umin">;
+
+// Float Reduction
+def LLVM_VPReduceFAddOp : LLVM_VPReductionF<"fadd">;
+def LLVM_VPReduceFMulOp : LLVM_VPReductionF<"fmul">;
+def LLVM_VPReduceFMaxOp : LLVM_VPReductionF<"fmax">;
+def LLVM_VPReduceFMinOp : LLVM_VPReductionF<"fmin">;
 
 
 #endif // LLVMIR_OPS

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -triple %itanium_abi_triple -emit-llvm %s -o %t -debug-info-kind=limited
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -triple %itanium_abi_triple -emit-llvm %s -o %t -debug-info-kind=limited
 // RUN: FileCheck %s -input-file=%t -check-prefix=CHECK-1
 // RUN: FileCheck %s -input-file=%t -check-prefix=CHECK-2
 // RUN: FileCheck %s -input-file=%t -check-prefix=CHECK-3

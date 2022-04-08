@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -emit-llvm -o - -triple=i386-pc-win32 2>/dev/null %s | FileCheck %s
-// RUN: %clang_cc1 -emit-llvm -o - -triple=x86_64-pc-win32 2>/dev/null %s | FileCheck --check-prefix=X64 %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -o - -triple=i386-pc-win32 2>/dev/null %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -o - -triple=x86_64-pc-win32 2>/dev/null %s | FileCheck --check-prefix=X64 %s
 
 struct N {};
 struct M : private N {};

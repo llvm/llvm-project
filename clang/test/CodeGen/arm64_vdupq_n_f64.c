@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios7 -target-feature +neon -ffreestanding -fallow-half-arguments-and-returns -S -o - -disable-O0-optnone -emit-llvm %s | opt -S -mem2reg | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple arm64-apple-ios7 -target-feature +neon -ffreestanding -fallow-half-arguments-and-returns -S -o - -disable-O0-optnone -emit-llvm %s | opt -S -mem2reg | FileCheck %s
 
 // REQUIRES: aarch64-registered-target || arm-registered-target
 

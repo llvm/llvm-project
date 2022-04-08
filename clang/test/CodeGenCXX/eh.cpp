@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -triple x86_64-apple-macosx10.13.99 -std=c++11 -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=UNALIGNED %s
-// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -triple x86_64-apple-macosx10.14 -std=c++11 -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=ALIGNED %s
+// RUN: %clang_cc1 -no-opaque-pointers -fcxx-exceptions -fexceptions -triple x86_64-apple-macosx10.13.99 -std=c++11 -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=UNALIGNED %s
+// RUN: %clang_cc1 -no-opaque-pointers -fcxx-exceptions -fexceptions -triple x86_64-apple-macosx10.14 -std=c++11 -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=ALIGNED %s
 
 struct test1_D {
   double d;

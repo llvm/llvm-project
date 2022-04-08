@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 %s -cl-std=cl2.0 -emit-llvm -o - -triple spir-unknown-unknown | FileCheck %s
-// RUN: %clang_cc1 %s -cl-std=cl1.2 -emit-llvm -o - -triple spir-unknown-unknown | FileCheck %s
-// RUN: %clang_cc1 %s -cl-std=cl1.1 -emit-llvm -o - -triple spir-unknown-unknown | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -cl-std=cl2.0 -emit-llvm -o - -triple spir-unknown-unknown | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -cl-std=cl1.2 -emit-llvm -o - -triple spir-unknown-unknown | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -cl-std=cl1.1 -emit-llvm -o - -triple spir-unknown-unknown | FileCheck %s
 
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
 

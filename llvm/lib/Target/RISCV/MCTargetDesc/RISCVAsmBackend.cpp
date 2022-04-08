@@ -583,10 +583,11 @@ void RISCVAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
 bool RISCVAsmBackend::shouldInsertExtraNopBytesForCodeAlign(
     const MCAlignFragment &AF, unsigned &Size) {
   // Calculate Nops Size only when linker relaxation enabled.
-  if (!STI.getFeatureBits()[RISCV::FeatureRelax])
+  const MCSubtargetInfo *STI = AF.getSubtargetInfo();
+  if (!STI->getFeatureBits()[RISCV::FeatureRelax])
     return false;
 
-  bool HasStdExtC = STI.getFeatureBits()[RISCV::FeatureStdExtC];
+  bool HasStdExtC = STI->getFeatureBits()[RISCV::FeatureStdExtC];
   unsigned MinNopLen = HasStdExtC ? 2 : 4;
 
   if (AF.getAlignment() <= MinNopLen) {
@@ -606,7 +607,8 @@ bool RISCVAsmBackend::shouldInsertFixupForCodeAlign(MCAssembler &Asm,
                                                     const MCAsmLayout &Layout,
                                                     MCAlignFragment &AF) {
   // Insert the fixup only when linker relaxation enabled.
-  if (!STI.getFeatureBits()[RISCV::FeatureRelax])
+  const MCSubtargetInfo *STI = AF.getSubtargetInfo();
+  if (!STI->getFeatureBits()[RISCV::FeatureRelax])
     return false;
 
   // Calculate total Nops we need to insert. If there are none to insert

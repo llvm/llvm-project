@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple "i686-unknown-unknown"   -emit-llvm -x c %s -o - -O3 | FileCheck %s
-// RUN: %clang_cc1 -triple "x86_64-unknown-unknown" -emit-llvm -x c %s -o - -O3 | FileCheck %s
-// RUN: %clang_cc1 -triple "x86_64-mingw32"         -emit-llvm -x c %s -o - -O3 | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple "i686-unknown-unknown"   -emit-llvm -x c %s -o - -O3 | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple "x86_64-unknown-unknown" -emit-llvm -x c %s -o - -O3 | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple "x86_64-mingw32"         -emit-llvm -x c %s -o - -O3 | FileCheck %s
 
 unsigned char test_addcb(unsigned char x, unsigned char y,
                          unsigned char carryin, unsigned char *z) {

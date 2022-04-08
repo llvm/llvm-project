@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -x hip -std=c++11 -triple amdgcn -fcuda-is-device -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -x hip -std=c++11 -triple amdgcn -fcuda-is-device -emit-llvm %s -o - | FileCheck %s
 #include "Inputs/cuda.h"
 
 // CHECK-LABEL: @_Z24atomic32_op_singlethreadPiii

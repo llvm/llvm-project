@@ -198,3 +198,21 @@ func @recheck_executable_edge(%cond0: i1) -> (i1, i1) {
   // CHECK: return %[[X]], %[[Y]]
   return %x, %y : i1, i1
 }
+
+// CHECK-LABEL: func @simple_produced_operand
+func @simple_produced_operand() -> (i32, i32) {
+  // CHECK: %[[ONE:.*]] = arith.constant 1
+  %1 = arith.constant 1 : i32
+  "test.internal_br"(%1) [^bb1, ^bb2] {
+    operand_segment_sizes = dense<[0, 1]> : vector<2 x i32>
+  } : (i32) -> ()
+
+^bb1:
+  cf.br ^bb2(%1, %1 : i32, i32)
+
+^bb2(%arg1 : i32, %arg2 : i32):
+  // CHECK: ^bb2(%[[ARG:.*]]: i32, %{{.*}}: i32):
+  // CHECK: return %[[ARG]], %[[ONE]] : i32, i32
+
+  return %arg1, %arg2 : i32, i32
+}

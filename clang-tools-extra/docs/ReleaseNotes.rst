@@ -139,6 +139,12 @@ Changes in existing checks
 
 - Fixed a crash in :doc:`bugprone-sizeof-expression <clang-tidy/checks/bugprone-sizeof-expression>` when
   `sizeof(...)` is compared agains a `__int128_t`.
+  
+- Improved :doc:`cppcoreguidelines-prefer-member-initializer
+  <clang-tidy/checks/cppcoreguidelines-prefer-member-initializer>` check.
+
+  Fixed an issue when there was already an initializer in the constructor and
+  the check would try to create another initializer for the same member.
 
 Removed checks
 ^^^^^^^^^^^^^^

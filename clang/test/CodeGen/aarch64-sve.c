@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve \
+// RUN: %clang_cc1 -no-opaque-pointers -triple aarch64-none-linux-gnu -target-feature +sve \
 // RUN:  -emit-llvm -o - %s 2>&1 | FileCheck %s -check-prefix=CHECK
 
 // CHECK: @ptr ={{.*}} global <vscale x 16 x i8>* null, align 8

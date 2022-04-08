@@ -14,10 +14,33 @@
 #define LLVM_LIB_TARGET_RISCV_RISCVMACHINEFUNCTIONINFO_H
 
 #include "RISCVSubtarget.h"
+#include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 
 namespace llvm {
+
+class RISCVMachineFunctionInfo;
+
+namespace yaml {
+struct RISCVMachineFunctionInfo final : public yaml::MachineFunctionInfo {
+  int VarArgsFrameIndex;
+  int VarArgsSaveSize;
+
+  RISCVMachineFunctionInfo() = default;
+  RISCVMachineFunctionInfo(const llvm::RISCVMachineFunctionInfo &MFI);
+
+  void mappingImpl(yaml::IO &YamlIO) override;
+  ~RISCVMachineFunctionInfo() = default;
+};
+
+template <> struct MappingTraits<RISCVMachineFunctionInfo> {
+  static void mapping(IO &YamlIO, RISCVMachineFunctionInfo &MFI) {
+    YamlIO.mapOptional("varArgsFrameIndex", MFI.VarArgsFrameIndex);
+    YamlIO.mapOptional("varArgsSaveSize", MFI.VarArgsSaveSize);
+  }
+};
+} // end namespace yaml
 
 /// RISCVMachineFunctionInfo - This class is derived from MachineFunctionInfo
 /// and contains private RISCV-specific information for each MachineFunction.
@@ -74,6 +97,8 @@ public:
 
   unsigned getCalleeSavedStackSize() const { return CalleeSavedStackSize; }
   void setCalleeSavedStackSize(unsigned Size) { CalleeSavedStackSize = Size; }
+
+  void initializeBaseYamlFields(const yaml::RISCVMachineFunctionInfo &YamlMFI);
 };
 
 } // end namespace llvm

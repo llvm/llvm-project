@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -debug-info-kind=standalone -std=c++11 -triple x86_64-darwin -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -debug-info-kind=standalone -std=c++11 -triple x86_64-darwin -emit-llvm -o - %s | FileCheck %s
 
 struct A {
   A(int, ...);

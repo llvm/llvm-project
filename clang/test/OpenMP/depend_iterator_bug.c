@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify -fopenmp -triple x86_64-unknown-linux-gnu \
+// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp -triple x86_64-unknown-linux-gnu \
 // RUN:   -disable-llvm-passes -emit-llvm %s -o - | FileCheck %s
 
 // expected-no-diagnostics

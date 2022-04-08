@@ -103,6 +103,8 @@ END-SCRIPT
 #include <__algorithm/pop_heap.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/pop_heap.h'}}
 #include <__algorithm/prev_permutation.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/prev_permutation.h'}}
 #include <__algorithm/push_heap.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/push_heap.h'}}
+#include <__algorithm/ranges_count.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_count.h'}}
+#include <__algorithm/ranges_count_if.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_count_if.h'}}
 #include <__algorithm/ranges_find.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_find.h'}}
 #include <__algorithm/ranges_find_if.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_find_if.h'}}
 #include <__algorithm/ranges_find_if_not.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_find_if_not.h'}}

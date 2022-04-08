@@ -1,5 +1,5 @@
 // REQUIRES: mips-registered-target
-// RUN: %clang_cc1 -triple mips-linux-gnu -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple mips-linux-gnu -emit-llvm -o - %s | FileCheck %s
 
 int data;
 

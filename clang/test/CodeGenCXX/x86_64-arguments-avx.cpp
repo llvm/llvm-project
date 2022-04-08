@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -o - %s -target-feature +avx | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown -emit-llvm -o - %s -target-feature +avx | FileCheck %s
 
 namespace test1 {
 typedef double __m256d __attribute__((__vector_size__(32)));

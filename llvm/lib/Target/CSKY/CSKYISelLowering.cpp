@@ -1021,6 +1021,12 @@ CSKYTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Unexpected instr type to insert");
+  case CSKY::FSELS:
+  case CSKY::FSELD:
+    if (Subtarget.hasE2())
+      return emitSelectPseudo(MI, BB, CSKY::BT32);
+    else
+      return emitSelectPseudo(MI, BB, CSKY::BT16);
   case CSKY::ISEL32:
     return emitSelectPseudo(MI, BB, CSKY::BT32);
   case CSKY::ISEL16:

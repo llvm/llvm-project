@@ -1,11 +1,11 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fcoroutines-ts \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux-gnu -emit-llvm -fcoroutines-ts \
 // RUN:   -fexperimental-new-pass-manager -O0 %s -o - | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fcoroutines-ts \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux-gnu -emit-llvm -fcoroutines-ts \
 // RUN:   -fexperimental-new-pass-manager -fno-inline -O0 %s -o - | FileCheck %s
 
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fcoroutines-ts \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux-gnu -emit-llvm -fcoroutines-ts \
 // RUN:   -O0 %s -o - | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fcoroutines-ts \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux-gnu -emit-llvm -fcoroutines-ts \
 // RUN:   -fno-inline -O0 %s -o - | FileCheck %s
 
 namespace std {

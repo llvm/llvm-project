@@ -4745,28 +4745,32 @@ public:
   /// method accepts vectors as its arguments.
   SDValue expandVectorSplice(SDNode *Node, SelectionDAG &DAG) const;
 
-  /// Legalize a SETCC with given LHS and RHS and condition code CC on the
-  /// current target.
+  /// Legalize a SETCC or VP_SETCC with given LHS and RHS and condition code CC
+  /// on the current target. A VP_SETCC will additionally be given a Mask
+  /// and/or EVL not equal to SDValue().
   ///
   /// If the SETCC has been legalized using AND / OR, then the legalized node
   /// will be stored in LHS. RHS and CC will be set to SDValue(). NeedInvert
-  /// will be set to false.
+  /// will be set to false. This will also hold if the VP_SETCC has been
+  /// legalized using VP_AND / VP_OR.
   ///
-  /// If the SETCC has been legalized by using getSetCCSwappedOperands(),
-  /// then the values of LHS and RHS will be swapped, CC will be set to the
-  /// new condition, and NeedInvert will be set to false.
+  /// If the SETCC / VP_SETCC has been legalized by using
+  /// getSetCCSwappedOperands(), then the values of LHS and RHS will be
+  /// swapped, CC will be set to the new condition, and NeedInvert will be set
+  /// to false.
   ///
-  /// If the SETCC has been legalized using the inverse condcode, then LHS and
-  /// RHS will be unchanged, CC will set to the inverted condcode, and
-  /// NeedInvert will be set to true. The caller must invert the result of the
-  /// SETCC with SelectionDAG::getLogicalNOT() or take equivalent action to swap
-  /// the effect of a true/false result.
+  /// If the SETCC / VP_SETCC has been legalized using the inverse condcode,
+  /// then LHS and RHS will be unchanged, CC will set to the inverted condcode,
+  /// and NeedInvert will be set to true. The caller must invert the result of
+  /// the SETCC with SelectionDAG::getLogicalNOT() or take equivalent action to
+  /// swap the effect of a true/false result.
   ///
-  /// \returns true if the SetCC has been legalized, false if it hasn't.
+  /// \returns true if the SETCC / VP_SETCC has been legalized, false if it
+  /// hasn't.
   bool LegalizeSetCCCondCode(SelectionDAG &DAG, EVT VT, SDValue &LHS,
-                             SDValue &RHS, SDValue &CC, bool &NeedInvert,
-                             const SDLoc &dl, SDValue &Chain,
-                             bool IsSignaling = false) const;
+                             SDValue &RHS, SDValue &CC, SDValue Mask,
+                             SDValue EVL, bool &NeedInvert, const SDLoc &dl,
+                             SDValue &Chain, bool IsSignaling = false) const;
 
   //===--------------------------------------------------------------------===//
   // Instruction Emitting Hooks

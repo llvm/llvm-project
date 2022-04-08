@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -Wno-return-type -Wno-unused-value -emit-llvm %s -w -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -Wno-return-type -Wno-unused-value -emit-llvm %s -w -o - | FileCheck %s
 
 // CHECK: @i = {{(dso_local )?}}global [[INT:i[0-9]+]] 0
 volatile int i, j, k;

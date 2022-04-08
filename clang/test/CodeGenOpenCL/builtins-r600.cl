@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple r600-unknown-unknown -target-cpu cypress -S -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple r600-unknown-unknown -target-cpu cypress -S -emit-llvm -o - %s | FileCheck %s
 
 // CHECK-LABEL: @test_recipsqrt_ieee_f32
 // CHECK: call float @llvm.r600.recipsqrt.ieee.f32

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.8.0 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-macosx10.8.0 -emit-llvm -o - %s | FileCheck %s
 
 void *memcpy(void *restrict s1, const void *restrict s2, unsigned long n);
 

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -Wno-unused-value -triple i686-linux-gnu -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -Wno-unused-value -triple i686-linux-gnu -emit-llvm -o - %s | FileCheck %s
 // rdar: //8540501
 extern "C" int printf(...);
 extern "C" void abort();

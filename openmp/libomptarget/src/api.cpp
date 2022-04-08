@@ -53,6 +53,7 @@ EXTERN void *llvm_omp_target_alloc_shared(size_t size, int device_num) {
   return targetAllocExplicit(size, device_num, TARGET_ALLOC_SHARED, __func__);
 }
 
+EXTERN void *llvm_omp_target_dynamic_shared_alloc() { return nullptr; }
 EXTERN void *llvm_omp_get_dynamic_shared() { return nullptr; }
 
 EXTERN void omp_target_free(void *device_ptr, int device_num) {

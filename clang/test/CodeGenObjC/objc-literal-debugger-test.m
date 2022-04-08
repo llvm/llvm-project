@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fdebugger-objc-literal -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fdebugger-objc-literal -emit-llvm -o - %s -DINCLUDE_INTERFACES=1 | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -fdebugger-objc-literal -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -fdebugger-objc-literal -emit-llvm -o - %s -DINCLUDE_INTERFACES=1 | FileCheck %s
 
 // We need two different RUN lines here because the first time a class/method is absent,
 // it will be added for -fdebugger-objc-literal.

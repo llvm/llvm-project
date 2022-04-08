@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fms-extensions -triple i686-pc-windows-msvc %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -fms-extensions -triple i686-pc-windows-msvc %s -emit-llvm -o - | FileCheck %s
 
 struct A {
   virtual void __fastcall f(int a, int b);

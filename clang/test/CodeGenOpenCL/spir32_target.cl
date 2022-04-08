@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple "spir-unknown-unknown" -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple "spir-unknown-unknown" -emit-llvm -o - | FileCheck %s
 
 // CHECK: target triple = "spir-unknown-unknown"
 

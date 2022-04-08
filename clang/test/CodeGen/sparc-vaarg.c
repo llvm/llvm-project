@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple sparc -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple sparc -emit-llvm -o - %s | FileCheck %s
 #include <stdarg.h>
 
 // CHECK-LABEL: define{{.*}} i32 @get_int

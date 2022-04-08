@@ -45,6 +45,16 @@ public:
             function_ref<void(Operation *)> preReplaceAction = nullptr,
             bool *inPlaceUpdate = nullptr);
 
+  /// Tries to fold a pre-existing constant operation. `constValue` represents
+  /// the value of the constant, and can be optionally passed if the value is
+  /// already known (e.g. if the constant was discovered by m_Constant). This is
+  /// purely an optimization opportunity for callers that already know the value
+  /// of the constant. Returns false if an existing constant for `op` already
+  /// exists in the folder, in which case `op` is replaced and erased.
+  /// Otherwise, returns true and `op` is inserted into the folder (and
+  /// hoisted if necessary).
+  bool insertKnownConstant(Operation *op, Attribute constValue = {});
+
   /// Notifies that the given constant `op` should be remove from this
   /// OperationFolder's internal bookkeeping.
   ///
@@ -114,11 +124,23 @@ private:
   using ConstantMap =
       DenseMap<std::tuple<Dialect *, Attribute, Type>, Operation *>;
 
+  /// Returns true if the given operation is an already folded constant that is
+  /// owned by this folder.
+  bool isFolderOwnedConstant(Operation *op) const;
+
   /// Tries to perform folding on the given `op`. If successful, populates
   /// `results` with the results of the folding.
   LogicalResult tryToFold(
       OpBuilder &builder, Operation *op, SmallVectorImpl<Value> &results,
       function_ref<void(Operation *)> processGeneratedConstants = nullptr);
+
+  /// Try to process a set of fold results, generating constants as necessary.
+  /// Populates `results` on success, otherwise leaves it unchanged.
+  LogicalResult
+  processFoldResults(OpBuilder &builder, Operation *op,
+                     SmallVectorImpl<Value> &results,
+                     ArrayRef<OpFoldResult> foldResults,
+                     function_ref<void(Operation *)> processGeneratedConstants);
 
   /// Try to get or create a new constant entry. On success this returns the
   /// constant operation, nullptr otherwise.

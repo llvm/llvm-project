@@ -1,6 +1,6 @@
 // Tests for instrumentation of C++17 statement initializers
 
-// RUN: %clang_cc1 -x c++ %s -triple %itanium_abi_triple -main-file-name cxx-stmt-initializers.cpp -std=c++1z -o - -emit-llvm -fprofile-instrument=clang > %tgen
+// RUN: %clang_cc1 -no-opaque-pointers -x c++ %s -triple %itanium_abi_triple -main-file-name cxx-stmt-initializers.cpp -std=c++1z -o - -emit-llvm -fprofile-instrument=clang > %tgen
 // RUN: FileCheck --input-file=%tgen -check-prefix=CHECK -check-prefix=PGOGEN %s
 
 // PGOGEN: @[[SIC:__profc__Z11switch_initv]] = {{(private|internal)}} global [3 x i64] zeroinitializer

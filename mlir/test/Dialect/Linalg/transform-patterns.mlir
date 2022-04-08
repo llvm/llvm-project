@@ -301,7 +301,7 @@ func @aligned_promote_fill(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>) {
   return
 }
 // CHECK-LABEL: func @aligned_promote_fill
-// CHECK:	  %[[cf:.*]] = arith.constant {{.*}} : f32
+// CHECK:	  %[[cf:.*]] = arith.constant 1.{{.*}} : f32
 // CHECK:         %[[s0:.*]] = memref.subview {{.*}}: memref<?x?xf32, #map{{.*}}> to memref<?x?xf32, #map{{.*}}>
 // CHECK:         %[[a0:.*]] = memref.alloc() {alignment = 32 : i64} : memref<32000000xi8>
 // CHECK:         %[[v0:.*]] = memref.view %[[a0]]{{.*}} : memref<32000000xi8> to memref<?x?xf32>
