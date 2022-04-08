@@ -145,6 +145,7 @@ TEST(RANDSTRUCT_TEST, MarkedNoRandomize) {
   EXPECT_EQ(Expected, getFieldNamesFromRecord(RD));
 }
 
+#ifndef _WIN32
 TEST(RANDSTRUCT_TEST, MarkedRandomize) {
   const std::unique_ptr<ASTUnit> AST = makeAST(R"c(
     struct test {
@@ -158,9 +159,7 @@ TEST(RANDSTRUCT_TEST, MarkedRandomize) {
   EXPECT_FALSE(AST->getDiagnostics().hasErrorOccurred());
 
   const RecordDecl *RD = getRecordDeclFromAST(AST->getASTContext(), "test");
-#ifdef WIN64
-  const field_names Expected = { "lettuce", "mayonnaise", "bacon", "tomato" };
-#elif defined(_WIN32)
+#ifdef _WIN32
   const field_names Expected = {"lettuce", "bacon", "mayonnaise", "tomato"};
 #else
   const field_names Expected = {"mayonnaise", "bacon", "tomato", "lettuce"};
@@ -170,6 +169,7 @@ TEST(RANDSTRUCT_TEST, MarkedRandomize) {
   EXPECT_TRUE(RD->isRandomized());
   EXPECT_EQ(Expected, getFieldNamesFromRecord(RD));
 }
+#endif
 
 TEST(RANDSTRUCT_TEST, MismatchedAttrsDeclVsDef) {
   const std::unique_ptr<ASTUnit> AST = makeAST(R"c(
