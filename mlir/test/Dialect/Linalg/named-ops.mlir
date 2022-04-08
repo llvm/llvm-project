@@ -260,6 +260,40 @@ func @pooling_nhwc_sum(%input: memref<1x4x4x1xf32>, %fake: memref<3x3xf32>, %out
 
 // -----
 
+// CHECK-LABEL: func @pooling_nchw_sum_tensor
+// CHECK:         %{{.+}} = linalg.pooling_nchw_sum
+// CHECK-SAME:      dilations = dense<1> : tensor<2xi64>
+// CHECK-SAME:      strides = dense<1> : tensor<2xi64>
+// CHECK-SAME:      ins(%{{.+}}, %{{.+}} : tensor<1x1x4x4xf32>, tensor<3x3xf32>)
+// CHECK-SAME:      outs(%{{.+}} : tensor<1x1x2x2xf32>) -> tensor<1x1x2x2xf32>
+func @pooling_nchw_sum_tensor(%input: tensor<1x1x4x4xf32>) -> tensor<1x1x2x2xf32> {
+  %fake = linalg.init_tensor [3, 3] : tensor<3x3xf32>
+  %init = linalg.init_tensor [1, 1, 2, 2] : tensor<1x1x2x2xf32>
+  %cst = arith.constant 0.000000e+00 : f32
+  %fill = linalg.fill ins(%cst : f32) outs(%init : tensor<1x1x2x2xf32>) -> tensor<1x1x2x2xf32>
+  %res = linalg.pooling_nchw_sum {dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>}
+    ins(%input, %fake: tensor<1x1x4x4xf32>, tensor<3x3xf32>)
+    outs(%fill: tensor<1x1x2x2xf32>) -> tensor<1x1x2x2xf32>
+  return %res : tensor<1x1x2x2xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @pooling_nchw_sum
+// CHECK:         linalg.pooling_nchw_sum
+// CHECK-SAME:      dilations = dense<1> : tensor<2xi64>
+// CHECK-SAME:      strides = dense<1> : tensor<2xi64>
+// CHECK-SAME:      ins(%{{.+}}, %{{.+}} : memref<1x1x4x4xf32>, memref<3x3xf32>)
+// CHECK-SAME:      outs(%{{.+}} : memref<1x1x2x2xf32>)
+func @pooling_nchw_sum(%input: memref<1x1x4x4xf32>, %fake: memref<3x3xf32>, %output: memref<1x1x2x2xf32>) {
+  linalg.pooling_nchw_sum {dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>}
+    ins(%input, %fake: memref<1x1x4x4xf32>, memref<3x3xf32>)
+    outs(%output: memref<1x1x2x2xf32>)
+  return
+}
+
+// -----
+
 // CHECK-LABEL: func @pooling_nhwc_max_tensor
 // CHECK:         %{{.+}} = linalg.pooling_nhwc_max
 // CHECK-SAME:      dilations = dense<1> : tensor<2xi64>
