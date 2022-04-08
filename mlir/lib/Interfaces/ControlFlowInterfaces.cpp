@@ -18,6 +18,14 @@ using namespace mlir;
 
 #include "mlir/Interfaces/ControlFlowInterfaces.cpp.inc"
 
+SuccessorOperands::SuccessorOperands(MutableOperandRange forwardedOperands)
+    : producedOperandCount(0), forwardedOperands(forwardedOperands) {}
+
+SuccessorOperands::SuccessorOperands(unsigned int producedOperandCount,
+                                     MutableOperandRange forwardedOperands)
+    : producedOperandCount(producedOperandCount),
+      forwardedOperands(std::move(forwardedOperands)) {}
+
 //===----------------------------------------------------------------------===//
 // BranchOpInterface
 //===----------------------------------------------------------------------===//
@@ -26,32 +34,31 @@ using namespace mlir;
 /// successor if 'operandIndex' is within the range of 'operands', or None if
 /// `operandIndex` isn't a successor operand index.
 Optional<BlockArgument>
-detail::getBranchSuccessorArgument(Optional<OperandRange> operands,
+detail::getBranchSuccessorArgument(const SuccessorOperands &operands,
                                    unsigned operandIndex, Block *successor) {
+  OperandRange forwardedOperands = operands.getForwardedOperands();
   // Check that the operands are valid.
-  if (!operands || operands->empty())
+  if (forwardedOperands.empty())
     return llvm::None;
 
   // Check to ensure that this operand is within the range.
-  unsigned operandsStart = operands->getBeginOperandIndex();
+  unsigned operandsStart = forwardedOperands.getBeginOperandIndex();
   if (operandIndex < operandsStart ||
-      operandIndex >= (operandsStart + operands->size()))
+      operandIndex >= (operandsStart + forwardedOperands.size()))
     return llvm::None;
 
   // Index the successor.
-  unsigned argIndex = operandIndex - operandsStart;
+  unsigned argIndex =
+      operands.getProducedOperandCount() + operandIndex - operandsStart;
   return successor->getArgument(argIndex);
 }
 
 /// Verify that the given operands match those of the given successor block.
 LogicalResult
 detail::verifyBranchSuccessorOperands(Operation *op, unsigned succNo,
-                                      Optional<OperandRange> operands) {
-  if (!operands)
-    return success();
-
+                                      const SuccessorOperands &operands) {
   // Check the count.
-  unsigned operandCount = operands->size();
+  unsigned operandCount = operands.size();
   Block *destBB = op->getSuccessor(succNo);
   if (operandCount != destBB->getNumArguments())
     return op->emitError() << "branch has " << operandCount
@@ -60,10 +67,10 @@ detail::verifyBranchSuccessorOperands(Operation *op, unsigned succNo,
                            << destBB->getNumArguments();
 
   // Check the types.
-  auto operandIt = operands->begin();
-  for (unsigned i = 0; i != operandCount; ++i, ++operandIt) {
+  for (unsigned i = operands.getProducedOperandCount(); i != operandCount;
+       ++i) {
     if (!cast<BranchOpInterface>(op).areTypesCompatible(
-            (*operandIt).getType(), destBB->getArgument(i).getType()))
+            operands[i].getType(), destBB->getArgument(i).getType()))
       return op->emitError() << "type mismatch for bb argument #" << i
                              << " of successor #" << succNo;
   }

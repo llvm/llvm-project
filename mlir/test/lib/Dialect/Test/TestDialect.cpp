@@ -335,22 +335,31 @@ TestDialect::getOperationPrinter(Operation *op) const {
 // TestBranchOp
 //===----------------------------------------------------------------------===//
 
-Optional<MutableOperandRange>
-TestBranchOp::getMutableSuccessorOperands(unsigned index) {
+SuccessorOperands TestBranchOp::getSuccessorOperands(unsigned index) {
   assert(index == 0 && "invalid successor index");
-  return getTargetOperandsMutable();
+  return SuccessorOperands(getTargetOperandsMutable());
 }
 
 //===----------------------------------------------------------------------===//
 // TestProducingBranchOp
 //===----------------------------------------------------------------------===//
 
-Optional<MutableOperandRange>
-TestProducingBranchOp::getMutableSuccessorOperands(unsigned index) {
+SuccessorOperands TestProducingBranchOp::getSuccessorOperands(unsigned index) {
   assert(index <= 1 && "invalid successor index");
   if (index == 1)
-    return getFirstOperandsMutable();
-  return getSecondOperandsMutable();
+    return SuccessorOperands(getFirstOperandsMutable());
+  return SuccessorOperands(getSecondOperandsMutable());
+}
+
+//===----------------------------------------------------------------------===//
+// TestProducingBranchOp
+//===----------------------------------------------------------------------===//
+
+SuccessorOperands TestInternalBranchOp::getSuccessorOperands(unsigned index) {
+  assert(index <= 1 && "invalid successor index");
+  if (index == 0)
+    return SuccessorOperands(0, getSuccessOperandsMutable());
+  return SuccessorOperands(1, getErrorOperandsMutable());
 }
 
 //===----------------------------------------------------------------------===//

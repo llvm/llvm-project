@@ -4948,6 +4948,16 @@ RValue CodeGenFunction::EmitSimpleCallExpr(const CallExpr *E,
   return EmitCall(E->getCallee()->getType(), Callee, E, ReturnValue);
 }
 
+// Detect the unusual situation where an inline version is shadowed by a
+// non-inline version. In that case we should pick the external one
+// everywhere. That's GCC behavior too.
+static bool OnlyHasInlineBuiltinDeclaration(const FunctionDecl *FD) {
+  for (const FunctionDecl *PD = FD; PD; PD = PD->getPreviousDecl())
+    if (!PD->isInlineBuiltinDeclaration())
+      return false;
+  return true;
+}
+
 static CGCallee EmitDirectCallee(CodeGenFunction &CGF, GlobalDecl GD) {
   const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
 
@@ -4955,8 +4965,8 @@ static CGCallee EmitDirectCallee(CodeGenFunction &CGF, GlobalDecl GD) {
     std::string FDInlineName = (FD->getName() + ".inline").str();
     // When directing calling an inline builtin, call it through it's mangled
     // name to make it clear it's not the actual builtin.
-    if (FD->isInlineBuiltinDeclaration() &&
-        CGF.CurFn->getName() != FDInlineName) {
+    if (CGF.CurFn->getName() != FDInlineName &&
+        OnlyHasInlineBuiltinDeclaration(FD)) {
       llvm::Constant *CalleePtr = EmitFunctionDeclPointer(CGF.CGM, GD);
       llvm::Function *Fn = llvm::cast<llvm::Function>(CalleePtr);
       llvm::Module *M = Fn->getParent();
