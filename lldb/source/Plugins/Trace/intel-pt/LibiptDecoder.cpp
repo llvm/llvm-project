@@ -255,7 +255,7 @@ using PtInsnDecoderUP =
 static Expected<PtInsnDecoderUP>
 CreateInstructionDecoder(DecodedThread &decoded_thread,
                          TraceIntelPT &trace_intel_pt,
-                         MutableArrayRef<uint8_t> buffer) {
+                         ArrayRef<uint8_t> buffer) {
   Expected<pt_cpu> cpu_info = trace_intel_pt.GetCPUInfo();
   if (!cpu_info)
     return cpu_info.takeError();
@@ -268,8 +268,10 @@ CreateInstructionDecoder(DecodedThread &decoded_thread,
   if (IsLibiptError(status = pt_cpu_errata(&config.errata, &config.cpu)))
     return make_error<IntelPTError>(status);
 
-  config.begin = buffer.data();
-  config.end = buffer.data() + buffer.size();
+  // The libipt library does not modify the trace buffer, hence the
+  // following casts are safe.
+  config.begin = const_cast<uint8_t *>(buffer.data());
+  config.end = const_cast<uint8_t *>(buffer.data() + buffer.size());
 
   pt_insn_decoder *decoder_ptr = pt_insn_alloc_decoder(&config);
   if (!decoder_ptr)
@@ -285,9 +287,11 @@ CreateInstructionDecoder(DecodedThread &decoded_thread,
   return decoder_up;
 }
 
-void lldb_private::trace_intel_pt::DecodeTrace(
-    DecodedThread &decoded_thread, TraceIntelPT &trace_intel_pt,
-    MutableArrayRef<uint8_t> buffer) {
+void lldb_private::trace_intel_pt::DecodeTrace(DecodedThread &decoded_thread,
+                                               TraceIntelPT &trace_intel_pt,
+                                               ArrayRef<uint8_t> buffer) {
+  decoded_thread.SetRawTraceSize(buffer.size());
+
   Expected<PtInsnDecoderUP> decoder_up =
       CreateInstructionDecoder(decoded_thread, trace_intel_pt, buffer);
   if (!decoder_up)

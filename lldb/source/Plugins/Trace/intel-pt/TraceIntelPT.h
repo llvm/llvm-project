@@ -137,8 +137,9 @@ public:
                     StructuredData::ObjectSP configuration =
                         StructuredData::ObjectSP()) override;
 
-  /// Get the thread buffer content for a live thread
-  llvm::Expected<std::vector<uint8_t>> GetLiveThreadBuffer(lldb::tid_t tid);
+  /// See \a Trace::OnThreadBinaryDataRead().
+  llvm::Error OnThreadBufferRead(lldb::tid_t tid,
+                                 OnBinaryDataReadCallback callback);
 
   llvm::Expected<pt_cpu> GetCPUInfo();
 

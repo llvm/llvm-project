@@ -19,12 +19,15 @@
 namespace lldb_private {
 namespace trace_intel_pt {
 
-/// Base class that handles the decoding of a thread and caches the result.
+/// Class that handles the decoding of a thread and caches the result.
 class ThreadDecoder {
 public:
-  virtual ~ThreadDecoder() = default;
-
-  ThreadDecoder() = default;
+  /// \param[in] thread_sp
+  ///     The thread whose trace buffer will be decoded.
+  ///
+  /// \param[in] trace
+  ///     The main Trace object who owns this decoder and its data.
+  ThreadDecoder(const lldb::ThreadSP &thread_sp, TraceIntelPT &trace);
 
   /// Decode the thread and store the result internally, to avoid
   /// recomputations.
@@ -36,49 +39,12 @@ public:
   ThreadDecoder(const ThreadDecoder &other) = delete;
   ThreadDecoder &operator=(const ThreadDecoder &other) = delete;
 
-protected:
-  /// Decode the thread.
-  ///
-  /// \return
-  ///     A \a DecodedThread instance.
-  virtual DecodedThreadSP DoDecode() = 0;
-
-  llvm::Optional<DecodedThreadSP> m_decoded_thread;
-};
-
-/// Decoder implementation for \a lldb_private::ThreadPostMortemTrace, which are
-/// non-live processes that come trace session files.
-class PostMortemThreadDecoder : public ThreadDecoder {
-public:
-  /// \param[in] trace_thread
-  ///     The thread whose trace file will be decoded.
-  ///
-  /// \param[in] trace
-  ///     The main Trace object who owns this decoder and its data.
-  PostMortemThreadDecoder(const lldb::ThreadPostMortemTraceSP &trace_thread,
-                          TraceIntelPT &trace);
-
 private:
-  DecodedThreadSP DoDecode() override;
-
-  lldb::ThreadPostMortemTraceSP m_trace_thread;
-  TraceIntelPT &m_trace;
-};
-
-class LiveThreadDecoder : public ThreadDecoder {
-public:
-  /// \param[in] thread
-  ///     The thread whose traces will be decoded.
-  ///
-  /// \param[in] trace
-  ///     The main Trace object who owns this decoder and its data.
-  LiveThreadDecoder(Thread &thread, TraceIntelPT &trace);
-
-private:
-  DecodedThreadSP DoDecode() override;
+  DecodedThreadSP DoDecode();
 
   lldb::ThreadSP m_thread_sp;
   TraceIntelPT &m_trace;
+  llvm::Optional<DecodedThreadSP> m_decoded_thread;
 };
 
 } // namespace trace_intel_pt

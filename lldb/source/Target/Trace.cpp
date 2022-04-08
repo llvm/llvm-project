@@ -215,3 +215,64 @@ uint32_t Trace::GetStopID() {
   RefreshLiveProcessState();
   return m_stop_id;
 }
+
+llvm::Expected<FileSpec>
+Trace::GetPostMortemThreadDataFile(lldb::tid_t tid, llvm::StringRef kind) {
+  auto NotFoundError = [&]() {
+    return createStringError(
+        inconvertibleErrorCode(),
+        formatv("The thread with tid={0} doesn't have the tracing data {1}",
+                tid, kind));
+  };
+
+  auto it = m_postmortem_thread_data.find(tid);
+  if (it == m_postmortem_thread_data.end())
+    return NotFoundError();
+
+  std::unordered_map<std::string, FileSpec> &data_kind_to_file_spec_map =
+      it->second;
+  auto it2 = data_kind_to_file_spec_map.find(kind.str());
+  if (it2 == data_kind_to_file_spec_map.end())
+    return NotFoundError();
+  return it2->second;
+}
+
+void Trace::SetPostMortemThreadDataFile(lldb::tid_t tid, llvm::StringRef kind,
+                                        FileSpec file_spec) {
+  m_postmortem_thread_data[tid][kind.str()] = file_spec;
+}
+
+llvm::Error
+Trace::OnLiveThreadBinaryDataRead(lldb::tid_t tid, llvm::StringRef kind,
+                                  OnBinaryDataReadCallback callback) {
+  Expected<std::vector<uint8_t>> data = GetLiveThreadBinaryData(tid, kind);
+  if (!data)
+    return data.takeError();
+  return callback(*data);
+}
+
+llvm::Error
+Trace::OnPostMortemThreadBinaryDataRead(lldb::tid_t tid, llvm::StringRef kind,
+                                        OnBinaryDataReadCallback callback) {
+  Expected<FileSpec> file = GetPostMortemThreadDataFile(tid, kind);
+  if (!file)
+    return file.takeError();
+  ErrorOr<std::unique_ptr<MemoryBuffer>> trace_or_error =
+      MemoryBuffer::getFile(file->GetPath());
+  if (std::error_code err = trace_or_error.getError())
+    return errorCodeToError(err);
+
+  MemoryBuffer &data = **trace_or_error;
+  ArrayRef<uint8_t> array_ref(
+      reinterpret_cast<const uint8_t *>(data.getBufferStart()),
+      data.getBufferSize());
+  return callback(array_ref);
+}
+
+llvm::Error Trace::OnThreadBinaryDataRead(lldb::tid_t tid, llvm::StringRef kind,
+                                          OnBinaryDataReadCallback callback) {
+  if (m_live_process)
+    return OnLiveThreadBinaryDataRead(tid, kind, callback);
+  else
+    return OnPostMortemThreadBinaryDataRead(tid, kind, callback);
+}
