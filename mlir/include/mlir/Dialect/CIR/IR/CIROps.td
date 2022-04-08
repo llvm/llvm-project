@@ -563,11 +563,12 @@ def CmpOp : CIR_Op<"cmp", [Pure, SameTypeOperands]> {
 // because "default" is a C++ reserved keyword and can't show up in a enum.
 def CaseOpKind_DT : I32EnumAttrCase<"Default", 1>;
 def CaseOpKind_EQ : I32EnumAttrCase<"Equal", 2>;
+def CaseOpKind_AO : I32EnumAttrCase<"Anyof", 3>;
 
 def CaseOpKind : I32EnumAttr<
     "CaseOpKind",
     "case kind",
-    [CaseOpKind_DT, CaseOpKind_EQ]> {
+    [CaseOpKind_DT, CaseOpKind_EQ, CaseOpKind_AO]> {
   let cppNamespace = "::mlir::cir";
 }
 
@@ -600,13 +601,16 @@ def SwitchOp : CIR_Op<"switch",
     is an integral condition value.
 
     A variadic list of "case" attribute operands and regions track the possible
-    control flow within `cir.switch`. Each "case" first operand is either
-    "equal" (meaning equality comparision against the condition) and "default"
-    for any other value. An optional second operand denotes the actual value,
-    its type should match the condition and can be optionally present.
+    control flow within `cir.switch`. Each "case" first operand could be:
+    - "equal": equality check against the condition.
+    - "anyof": equals to any of the values in a following list.
+    - "default": any other value.
 
-    Each region contains only one block and must be explicitly terminated with
-    a cir.yield operation.
+    An optional second operand denotes the actual value (or list of).
+    Types value(s) should match the condition and among themselves (in the list
+    case).
+
+    Each case region must be explicitly terminated with a cir.yield operation.
 
     Examples:
 
@@ -616,6 +620,10 @@ def SwitchOp : CIR_Op<"switch",
         ...
         cir.yield break
       },
+      case (anyof, [1, 2, 3] : i32) {
+        ...
+        cir.return ...
+      }
       case (default) {
         ...
         cir.yield fallthrough
