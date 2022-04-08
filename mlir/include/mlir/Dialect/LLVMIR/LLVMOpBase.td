@@ -375,4 +375,28 @@ class LLVM_VPBinaryI<string mnem> : LLVM_VPBinaryBase<mnem, AnyInteger>;
 
 class LLVM_VPBinaryF<string mnem> : LLVM_VPBinaryBase<mnem, AnyFloat>;
 
+class LLVM_VPUnaryBase<string mnem, Type element>
+    : LLVM_OneResultIntrOp<"vp." # mnem, [0], [], [NoSideEffect]>,
+      Arguments<(ins LLVM_VectorOf<element>:$op,
+                     LLVM_VectorOf<I1>:$mask, I32:$evl)>;
+
+class LLVM_VPUnaryF<string mnem> : LLVM_VPUnaryBase<mnem, AnyFloat>;
+
+class LLVM_VPTernaryBase<string mnem, Type element>
+    : LLVM_OneResultIntrOp<"vp." # mnem, [0], [], [NoSideEffect]>,
+      Arguments<(ins LLVM_VectorOf<element>:$op1, LLVM_VectorOf<element>:$op2,
+                     LLVM_VectorOf<element>:$op3, LLVM_VectorOf<I1>:$mask,
+                     I32:$evl)>;
+
+class LLVM_VPTernaryF<string mnem> : LLVM_VPTernaryBase<mnem, AnyFloat>;
+
+class LLVM_VPReductionBase<string mnem, Type element>
+    : LLVM_OneResultIntrOp<"vp.reduce." # mnem, [], [1], [NoSideEffect]>,
+      Arguments<(ins element:$satrt_value, LLVM_VectorOf<element>:$val,
+                     LLVM_VectorOf<I1>:$mask, I32:$evl)>;
+
+class LLVM_VPReductionI<string mnem> : LLVM_VPReductionBase<mnem, AnyInteger>;
+
+class LLVM_VPReductionF<string mnem> : LLVM_VPReductionBase<mnem, AnyFloat>;
+
 #endif  // LLVMIR_OP_BASE
