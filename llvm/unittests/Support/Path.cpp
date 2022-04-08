@@ -484,12 +484,12 @@ TEST(Support, HomeDirectory) {
 #endif
   // Do not try to test it if we don't know what to expect.
   // On Windows we use something better than env vars.
-  if (!expected.empty()) {
-    SmallString<128> HomeDir;
-    auto status = path::home_directory(HomeDir);
-    EXPECT_TRUE(status);
-    EXPECT_EQ(expected, HomeDir);
-  }
+  if (expected.empty())
+    GTEST_SKIP();
+  SmallString<128> HomeDir;
+  auto status = path::home_directory(HomeDir);
+  EXPECT_TRUE(status);
+  EXPECT_EQ(expected, HomeDir);
 }
 
 // Apple has their own solution for this.
@@ -564,21 +564,21 @@ TEST(Support, ConfigDirectory) {
 TEST(Support, ConfigDirectory) {
   std::string Expected = getEnvWin(L"LOCALAPPDATA");
   // Do not try to test it if we don't know what to expect.
-  if (!Expected.empty()) {
-    SmallString<128> CacheDir;
-    EXPECT_TRUE(path::user_config_directory(CacheDir));
-    EXPECT_EQ(Expected, CacheDir);
-  }
+  if (Expected.empty())
+    GTEST_SKIP();
+  SmallString<128> CacheDir;
+  EXPECT_TRUE(path::user_config_directory(CacheDir));
+  EXPECT_EQ(Expected, CacheDir);
 }
 
 TEST(Support, CacheDirectory) {
   std::string Expected = getEnvWin(L"LOCALAPPDATA");
   // Do not try to test it if we don't know what to expect.
-  if (!Expected.empty()) {
-    SmallString<128> CacheDir;
-    EXPECT_TRUE(path::cache_directory(CacheDir));
-    EXPECT_EQ(Expected, CacheDir);
-  }
+  if (Expected.empty())
+    GTEST_SKIP();
+  SmallString<128> CacheDir;
+  EXPECT_TRUE(path::cache_directory(CacheDir));
+  EXPECT_EQ(Expected, CacheDir);
 }
 #endif
 

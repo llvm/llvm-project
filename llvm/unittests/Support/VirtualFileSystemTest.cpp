@@ -2143,7 +2143,7 @@ TEST_F(VFSFromYAMLTest, DirectoryIteration) {
 TEST_F(VFSFromYAMLTest, DirectoryIterationSameDirMultipleEntries) {
   // https://llvm.org/bugs/show_bug.cgi?id=27725
   if (!supportsSameDirMultipleYAMLEntries())
-    return;
+    GTEST_SKIP();
 
   IntrusiveRefCntPtr<DummyFileSystem> Lower(new DummyFileSystem());
   Lower->addDirectory("//root/zab");
