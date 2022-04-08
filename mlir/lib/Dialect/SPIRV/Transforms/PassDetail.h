@@ -9,6 +9,7 @@
 #ifndef DIALECT_SPIRV_TRANSFORMS_PASSDETAIL_H_
 #define DIALECT_SPIRV_TRANSFORMS_PASSDETAIL_H_
 
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {

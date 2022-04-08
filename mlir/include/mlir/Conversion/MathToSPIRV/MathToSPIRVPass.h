@@ -16,6 +16,7 @@
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
+class ModuleOp;
 
 /// Creates a pass to convert Math ops to SPIR-V ops.
 std::unique_ptr<OperationPass<ModuleOp>> createConvertMathToSPIRVPass();

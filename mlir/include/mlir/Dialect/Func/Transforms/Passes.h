@@ -14,6 +14,7 @@
 #ifndef MLIR_DIALECT_FUNC_TRANSFORMS_PASSES_H
 #define MLIR_DIALECT_FUNC_TRANSFORMS_PASSES_H
 
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {

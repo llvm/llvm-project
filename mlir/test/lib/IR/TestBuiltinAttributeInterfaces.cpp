@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestAttributes.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/Support/FormatVariadic.h"
 

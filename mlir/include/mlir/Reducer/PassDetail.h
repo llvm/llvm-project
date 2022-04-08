@@ -9,6 +9,7 @@
 #ifndef MLIR_REDUCER_PASSDETAIL_H
 #define MLIR_REDUCER_PASSDETAIL_H
 
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {

@@ -18,6 +18,8 @@
 namespace mlir {
 
 class AffineDialect;
+class ModuleOp;
+
 namespace func {
 class FuncDialect;
 } // namespace func
