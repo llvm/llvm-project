@@ -147,57 +147,27 @@ private:
 
 } // namespace
 
-char *llvm::rustDemangle(const char *MangledName, char *Buf, size_t *N,
-                         int *Status) {
-  if (MangledName == nullptr || (Buf != nullptr && N == nullptr)) {
-    if (Status != nullptr)
-      *Status = demangle_invalid_args;
+char *llvm::rustDemangle(const char *MangledName) {
+  if (MangledName == nullptr)
     return nullptr;
-  }
 
   // Return early if mangled name doesn't look like a Rust symbol.
   StringView Mangled(MangledName);
-  if (!Mangled.startsWith("_R")) {
-    if (Status != nullptr)
-      *Status = demangle_invalid_mangled_name;
+  if (!Mangled.startsWith("_R"))
     return nullptr;
-  }
 
   Demangler D;
-  if (!initializeOutputBuffer(nullptr, nullptr, D.Output, 1024)) {
-    if (Status != nullptr)
-      *Status = demangle_memory_alloc_failure;
+  if (!initializeOutputBuffer(nullptr, nullptr, D.Output, 1024))
     return nullptr;
-  }
 
   if (!D.demangle(Mangled)) {
-    if (Status != nullptr)
-      *Status = demangle_invalid_mangled_name;
     std::free(D.Output.getBuffer());
     return nullptr;
   }
 
   D.Output += '\0';
-  char *Demangled = D.Output.getBuffer();
-  size_t DemangledLen = D.Output.getCurrentPosition();
 
-  if (Buf != nullptr) {
-    if (DemangledLen <= *N) {
-      std::memcpy(Buf, Demangled, DemangledLen);
-      std::free(Demangled);
-      Demangled = Buf;
-    } else {
-      std::free(Buf);
-    }
-  }
-
-  if (N != nullptr)
-    *N = DemangledLen;
-
-  if (Status != nullptr)
-    *Status = demangle_success;
-
-  return Demangled;
+  return D.Output.getBuffer();
 }
 
 Demangler::Demangler(size_t MaxRecursionLevel)
