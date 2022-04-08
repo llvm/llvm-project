@@ -31,6 +31,7 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   void checkRegion(Region &region);
 
   void checkIf(IfOp op);
+  void checkSwitch(SwitchOp op);
   void checkAlloca(AllocaOp op);
   void checkStore(StoreOp op);
   void checkLoad(LoadOp op);
@@ -339,6 +340,68 @@ void LifetimeCheckPass::joinPmaps(SmallVectorImpl<PMapType> &pmaps) {
   }
 }
 
+void LifetimeCheckPass::checkSwitch(SwitchOp switchOp) {
+  // 2.4.7. A switch(cond) is treated as if it were an equivalent series of
+  // non-nested if statements with single evaluation of cond; for example:
+  //
+  //    switch (a) {
+  //      case 1:/*1*/
+  //      case 2:/*2*/ break;
+  //      default:/*3*/
+  //    }
+  //
+  // is treated as:
+  //
+  //    if (auto& a=a; a==1) {/*1*/}
+  //    else if (a==1 || a==2) {/*2*/}
+  //    else {/*3*/}.
+  //
+  // See checkIf for additional explanations.
+  SmallVector<PMapType, 2> pmapOps;
+
+  // If there are no regions, pmap is the same.
+  if (switchOp.getRegions().empty())
+    return;
+
+  auto isCaseFallthroughTerminated = [&](Region &r) {
+    assert(r.getBlocks().size() == 1 && "cannot yet handle branches");
+    Block &block = r.back();
+    assert(!block.empty() && "case regions cannot be empty");
+
+    // FIXME: do something special about return terminated?
+    YieldOp y = dyn_cast<YieldOp>(block.back());
+    if (!y)
+      return false;
+    if (y.isFallthrough())
+      return true;
+    return false;
+  };
+
+  auto regions = switchOp.getRegions();
+  for (unsigned regionCurrent = 0, regionPastEnd = regions.size();
+       regionCurrent != regionPastEnd; ++regionCurrent) {
+    // Intentional pmap copy, basis to start new path.
+    PMapType locaCasePmap = getPmap();
+    PmapGuard pmapGuard{*this, &locaCasePmap};
+
+    // At any given point, fallbacks (if not empty) will increase the
+    // number of control-flow possibilities. For each region ending up
+    // with a fallback, keep computing the pmap until we hit a region
+    // that has a non-fallback terminator for the region.
+    unsigned idx = regionCurrent;
+    while (idx < regionPastEnd && isCaseFallthroughTerminated(regions[idx])) {
+      // Note that for 'if' regions we use checkRegionWithScope, since
+      // there are lexical scopes associated with each region, this is
+      // not the case for switch's.
+      checkRegion(regions[idx]);
+      idx++;
+    }
+    pmapOps.push_back(locaCasePmap);
+  }
+
+  joinPmaps(pmapOps);
+}
+
 void LifetimeCheckPass::checkIf(IfOp ifOp) {
   // Both then and else create their own lexical scopes, take that into account
   // while checking then/else.
@@ -500,7 +563,7 @@ void LifetimeCheckPass::checkOperation(Operation *op) {
     //
     // No need to create a new pmap when entering a new scope since it
     // doesn't cause control flow to diverge (as it does in presence
-    // of cir::IfOp).
+    // of cir::IfOp or cir::SwitchOp).
     //
     // Also note that for dangling pointers coming from if init stmts
     // should be caught just fine, given that a ScopeOp embraces a IfOp.
@@ -515,6 +578,8 @@ void LifetimeCheckPass::checkOperation(Operation *op) {
     return checkFunc(op);
   if (auto ifOp = dyn_cast<IfOp>(op))
     return checkIf(ifOp);
+  if (auto switchOp = dyn_cast<SwitchOp>(op))
+    return checkSwitch(switchOp);
   if (auto allocaOp = dyn_cast<AllocaOp>(op))
     return checkAlloca(allocaOp);
   if (auto storeOp = dyn_cast<StoreOp>(op))
