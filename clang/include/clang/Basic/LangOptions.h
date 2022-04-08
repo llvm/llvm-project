@@ -450,6 +450,20 @@ public:
 
   LangOptions();
 
+  /// Set language defaults for the given input language and
+  /// language standard in the given LangOptions object.
+  ///
+  /// \param Opts - The LangOptions object to set up.
+  /// \param Lang - The input language.
+  /// \param T - The target triple.
+  /// \param Includes - If the language requires extra headers to be implicitly
+  ///                   included, they will be appended to this list.
+  /// \param LangStd - The input language standard.
+  static void
+  setLangDefaults(LangOptions &Opts, Language Lang, const llvm::Triple &T,
+                  std::vector<std::string> &Includes,
+                  LangStandard::Kind LangStd = LangStandard::lang_unspecified);
+
   // Define accessors/mutators for language options of enumeration type.
 #define LANGOPT(Name, Bits, Default, Description)
 #define ENUM_LANGOPT(Name, Type, Bits, Default, Description) \
