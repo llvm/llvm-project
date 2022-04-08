@@ -149,14 +149,13 @@ static void collectUnderlyingAddressValues(BlockArgument arg, unsigned maxDepth,
 
       // Try to get the operand passed for this argument.
       unsigned index = it.getSuccessorIndex();
-      Optional<OperandRange> operands = branch.getSuccessorOperands(index);
-      if (!operands) {
+      Value operand = branch.getSuccessorOperands(index)[argNumber];
+      if (!operand) {
         // We can't analyze the control flow, so bail out early.
         output.push_back(arg);
         return;
       }
-      collectUnderlyingAddressValues((*operands)[argNumber], maxDepth, visited,
-                                     output);
+      collectUnderlyingAddressValues(operand, maxDepth, visited, output);
     }
     return;
   }
