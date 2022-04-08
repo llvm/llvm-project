@@ -92,7 +92,7 @@ def make_absolute(f, directory):
 def get_tidy_invocation(f, clang_tidy_binary, checks, tmpdir, build_path,
                         header_filter, allow_enabling_alpha_checkers,
                         extra_arg, extra_arg_before, quiet, config_file_path,
-                        config, line_filter, use_color):
+                        config, line_filter, use_color, plugins):
   """Gets a command line for clang-tidy."""
   start = [clang_tidy_binary]
   if allow_enabling_alpha_checkers:
@@ -126,6 +126,8 @@ def get_tidy_invocation(f, clang_tidy_binary, checks, tmpdir, build_path,
       start.append('--config-file=' + config_file_path)
   elif config:
       start.append('-config=' + config)
+  for plugin in plugins:
+      start.append('-load=' + plugin)
   start.append(f)
   return start
 
@@ -196,7 +198,8 @@ def run_tidy(args, clang_tidy_binary, tmpdir, build_path, queue, lock,
                                      args.allow_enabling_alpha_checkers,
                                      args.extra_arg, args.extra_arg_before,
                                      args.quiet, args.config_file, args.config,
-                                     args.line_filter, args.use_color)
+                                     args.line_filter, args.use_color,
+                                     args.plugins)
 
     proc = subprocess.Popen(invocation, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output, err = proc.communicate()
@@ -280,6 +283,9 @@ def main():
                       'command line.')
   parser.add_argument('-quiet', action='store_true',
                       help='Run clang-tidy in quiet mode')
+  parser.add_argument('-load', dest='plugins',
+                      action='append', default=[],
+                      help='Load the specified plugin in clang-tidy.')
   args = parser.parse_args()
 
   db_path = 'compile_commands.json'
@@ -306,7 +312,8 @@ def main():
                                      args.allow_enabling_alpha_checkers,
                                      args.extra_arg, args.extra_arg_before,
                                      args.quiet, args.config_file, args.config,
-                                     args.line_filter, args.use_color)
+                                     args.line_filter, args.use_color,
+                                     args.plugins)
     invocation.append('-list-checks')
     invocation.append('-')
     if args.quiet:
