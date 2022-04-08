@@ -614,21 +614,6 @@ struct __can_be_converted_to_string_view : public _BoolConstant<
      !is_convertible<const _Tp&, const _CharT*>::value
     > {};
 
-#ifdef _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
-
-template <class _CharT, size_t = sizeof(_CharT)>
-struct __padding
-{
-    unsigned char __xx[sizeof(_CharT)-1];
-};
-
-template <class _CharT>
-struct __padding<_CharT, 1>
-{
-};
-
-#endif // _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
-
 #ifndef _LIBCPP_HAS_NO_CHAR8_T
 typedef basic_string<char8_t> u8string;
 #endif
@@ -702,11 +687,8 @@ private:
     struct __short
     {
         value_type __data_[__min_cap];
-        struct
-            : __padding<value_type>
-        {
-            unsigned char __size_;
-        };
+        unsigned char __padding[sizeof(value_type) - 1];
+        unsigned char __size_;
     };
 
 #else
