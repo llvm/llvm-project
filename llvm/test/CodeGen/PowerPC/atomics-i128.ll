@@ -5,6 +5,22 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-unknown -mcpu=pwr7 \
 ; RUN:   -ppc-asm-full-reg-names -ppc-quadword-atomics \
 ; RUN:   -ppc-track-subreg-liveness < %s | FileCheck --check-prefix=PWR7 %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 \
+; RUN:   -ppc-asm-full-reg-names -ppc-track-subreg-liveness < %s | FileCheck \
+; RUN:   --check-prefix=LE-PWR8 %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-freebsd -mcpu=pwr8 \
+; RUN:   -ppc-asm-full-reg-names -ppc-track-subreg-liveness < %s | FileCheck \
+; RUN:   --check-prefix=LE-PWR8 %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-aix -mcpu=pwr8 \
+; RUN:   -ppc-asm-full-reg-names -ppc-track-subreg-liveness < %s | FileCheck \
+; RUN:   --check-prefix=AIX64-PWR8 %s
+
+; On 32-bit PPC platform, 16-byte lock free atomic instructions are not available,
+; it's expected not to generate inlined lock-free code on such platforms, even arch level
+; is pwr8+ and `-ppc-quadword-atomics` is on.
+; RUN: llc -verify-machineinstrs -mtriple=powerpc-unknown-unknown -mcpu=pwr8 \
+; RUN:   -ppc-quadword-atomics -ppc-asm-full-reg-names -ppc-track-subreg-liveness < %s \
+; RUN: | FileCheck --check-prefix=PPC-PWR8 %s
 
 
 define i128 @swap(i128* %a, i128 %x) {
@@ -39,6 +55,62 @@ define i128 @swap(i128* %a, i128 %x) {
 ; PWR7-NEXT:    ld r0, 16(r1)
 ; PWR7-NEXT:    mtlr r0
 ; PWR7-NEXT:    blr
+;
+; LE-PWR8-LABEL: swap:
+; LE-PWR8:       # %bb.0: # %entry
+; LE-PWR8-NEXT:    sync
+; LE-PWR8-NEXT:  .LBB0_1: # %entry
+; LE-PWR8-NEXT:    #
+; LE-PWR8-NEXT:    lqarx r6, 0, r3
+; LE-PWR8-NEXT:    mr r9, r4
+; LE-PWR8-NEXT:    mr r8, r5
+; LE-PWR8-NEXT:    stqcx. r8, 0, r3
+; LE-PWR8-NEXT:    bne cr0, .LBB0_1
+; LE-PWR8-NEXT:  # %bb.2: # %entry
+; LE-PWR8-NEXT:    lwsync
+; LE-PWR8-NEXT:    mr r3, r7
+; LE-PWR8-NEXT:    mr r4, r6
+; LE-PWR8-NEXT:    blr
+;
+; AIX64-PWR8-LABEL: swap:
+; AIX64-PWR8:       # %bb.0: # %entry
+; AIX64-PWR8-NEXT:    mflr r0
+; AIX64-PWR8-NEXT:    std r0, 16(r1)
+; AIX64-PWR8-NEXT:    stdu r1, -112(r1)
+; AIX64-PWR8-NEXT:    sync
+; AIX64-PWR8-NEXT:    bl .__sync_lock_test_and_set_16[PR]
+; AIX64-PWR8-NEXT:    nop
+; AIX64-PWR8-NEXT:    lwsync
+; AIX64-PWR8-NEXT:    addi r1, r1, 112
+; AIX64-PWR8-NEXT:    ld r0, 16(r1)
+; AIX64-PWR8-NEXT:    mtlr r0
+; AIX64-PWR8-NEXT:    blr
+;
+; PPC-PWR8-LABEL: swap:
+; PPC-PWR8:       # %bb.0: # %entry
+; PPC-PWR8-NEXT:    mflr r0
+; PPC-PWR8-NEXT:    stw r0, 4(r1)
+; PPC-PWR8-NEXT:    stwu r1, -48(r1)
+; PPC-PWR8-NEXT:    .cfi_def_cfa_offset 48
+; PPC-PWR8-NEXT:    .cfi_offset lr, 4
+; PPC-PWR8-NEXT:    mr r4, r3
+; PPC-PWR8-NEXT:    stw r7, 40(r1)
+; PPC-PWR8-NEXT:    stw r6, 36(r1)
+; PPC-PWR8-NEXT:    addi r6, r1, 16
+; PPC-PWR8-NEXT:    li r3, 16
+; PPC-PWR8-NEXT:    li r7, 5
+; PPC-PWR8-NEXT:    stw r5, 32(r1)
+; PPC-PWR8-NEXT:    addi r5, r1, 32
+; PPC-PWR8-NEXT:    stw r8, 44(r1)
+; PPC-PWR8-NEXT:    bl __atomic_exchange
+; PPC-PWR8-NEXT:    lwz r6, 28(r1)
+; PPC-PWR8-NEXT:    lwz r5, 24(r1)
+; PPC-PWR8-NEXT:    lwz r4, 20(r1)
+; PPC-PWR8-NEXT:    lwz r3, 16(r1)
+; PPC-PWR8-NEXT:    lwz r0, 52(r1)
+; PPC-PWR8-NEXT:    addi r1, r1, 48
+; PPC-PWR8-NEXT:    mtlr r0
+; PPC-PWR8-NEXT:    blr
 entry:
   %0 = atomicrmw xchg i128* %a, i128 %x seq_cst, align 16
   ret i128 %0
@@ -76,6 +148,109 @@ define i128 @add(i128* %a, i128 %x) {
 ; PWR7-NEXT:    ld r0, 16(r1)
 ; PWR7-NEXT:    mtlr r0
 ; PWR7-NEXT:    blr
+;
+; LE-PWR8-LABEL: add:
+; LE-PWR8:       # %bb.0: # %entry
+; LE-PWR8-NEXT:    sync
+; LE-PWR8-NEXT:  .LBB1_1: # %entry
+; LE-PWR8-NEXT:    #
+; LE-PWR8-NEXT:    lqarx r6, 0, r3
+; LE-PWR8-NEXT:    addc r9, r4, r7
+; LE-PWR8-NEXT:    adde r8, r5, r6
+; LE-PWR8-NEXT:    stqcx. r8, 0, r3
+; LE-PWR8-NEXT:    bne cr0, .LBB1_1
+; LE-PWR8-NEXT:  # %bb.2: # %entry
+; LE-PWR8-NEXT:    lwsync
+; LE-PWR8-NEXT:    mr r3, r7
+; LE-PWR8-NEXT:    mr r4, r6
+; LE-PWR8-NEXT:    blr
+;
+; AIX64-PWR8-LABEL: add:
+; AIX64-PWR8:       # %bb.0: # %entry
+; AIX64-PWR8-NEXT:    mflr r0
+; AIX64-PWR8-NEXT:    std r0, 16(r1)
+; AIX64-PWR8-NEXT:    stdu r1, -112(r1)
+; AIX64-PWR8-NEXT:    sync
+; AIX64-PWR8-NEXT:    bl .__sync_fetch_and_add_16[PR]
+; AIX64-PWR8-NEXT:    nop
+; AIX64-PWR8-NEXT:    lwsync
+; AIX64-PWR8-NEXT:    addi r1, r1, 112
+; AIX64-PWR8-NEXT:    ld r0, 16(r1)
+; AIX64-PWR8-NEXT:    mtlr r0
+; AIX64-PWR8-NEXT:    blr
+;
+; PPC-PWR8-LABEL: add:
+; PPC-PWR8:       # %bb.0: # %entry
+; PPC-PWR8-NEXT:    mflr r0
+; PPC-PWR8-NEXT:    stw r0, 4(r1)
+; PPC-PWR8-NEXT:    stwu r1, -80(r1)
+; PPC-PWR8-NEXT:    .cfi_def_cfa_offset 80
+; PPC-PWR8-NEXT:    .cfi_offset lr, 4
+; PPC-PWR8-NEXT:    .cfi_offset r24, -32
+; PPC-PWR8-NEXT:    .cfi_offset r25, -28
+; PPC-PWR8-NEXT:    .cfi_offset r26, -24
+; PPC-PWR8-NEXT:    .cfi_offset r27, -20
+; PPC-PWR8-NEXT:    .cfi_offset r28, -16
+; PPC-PWR8-NEXT:    .cfi_offset r29, -12
+; PPC-PWR8-NEXT:    .cfi_offset r30, -8
+; PPC-PWR8-NEXT:    stw r26, 56(r1) # 4-byte Folded Spill
+; PPC-PWR8-NEXT:    stw r27, 60(r1) # 4-byte Folded Spill
+; PPC-PWR8-NEXT:    mr r27, r5
+; PPC-PWR8-NEXT:    mr r26, r3
+; PPC-PWR8-NEXT:    lwz r5, 8(r3)
+; PPC-PWR8-NEXT:    lwz r4, 4(r3)
+; PPC-PWR8-NEXT:    stw r28, 64(r1) # 4-byte Folded Spill
+; PPC-PWR8-NEXT:    mr r28, r6
+; PPC-PWR8-NEXT:    lwz r6, 12(r3)
+; PPC-PWR8-NEXT:    lwz r3, 0(r3)
+; PPC-PWR8-NEXT:    stw r24, 48(r1) # 4-byte Folded Spill
+; PPC-PWR8-NEXT:    addi r24, r1, 16
+; PPC-PWR8-NEXT:    stw r25, 52(r1) # 4-byte Folded Spill
+; PPC-PWR8-NEXT:    stw r29, 68(r1) # 4-byte Folded Spill
+; PPC-PWR8-NEXT:    mr r29, r7
+; PPC-PWR8-NEXT:    addi r25, r1, 32
+; PPC-PWR8-NEXT:    stw r30, 72(r1) # 4-byte Folded Spill
+; PPC-PWR8-NEXT:    mr r30, r8
+; PPC-PWR8-NEXT:    .p2align 4
+; PPC-PWR8-NEXT:  .LBB1_1: # %atomicrmw.start
+; PPC-PWR8-NEXT:    #
+; PPC-PWR8-NEXT:    addc r7, r6, r30
+; PPC-PWR8-NEXT:    stw r4, 36(r1)
+; PPC-PWR8-NEXT:    stw r3, 32(r1)
+; PPC-PWR8-NEXT:    adde r8, r5, r29
+; PPC-PWR8-NEXT:    stw r5, 40(r1)
+; PPC-PWR8-NEXT:    stw r6, 44(r1)
+; PPC-PWR8-NEXT:    mr r5, r25
+; PPC-PWR8-NEXT:    adde r4, r4, r28
+; PPC-PWR8-NEXT:    stw r7, 28(r1)
+; PPC-PWR8-NEXT:    stw r8, 24(r1)
+; PPC-PWR8-NEXT:    mr r6, r24
+; PPC-PWR8-NEXT:    adde r3, r3, r27
+; PPC-PWR8-NEXT:    stw r4, 20(r1)
+; PPC-PWR8-NEXT:    mr r4, r26
+; PPC-PWR8-NEXT:    li r7, 5
+; PPC-PWR8-NEXT:    stw r3, 16(r1)
+; PPC-PWR8-NEXT:    li r3, 16
+; PPC-PWR8-NEXT:    li r8, 5
+; PPC-PWR8-NEXT:    bl __atomic_compare_exchange
+; PPC-PWR8-NEXT:    cmplwi r3, 0
+; PPC-PWR8-NEXT:    lwz r6, 44(r1)
+; PPC-PWR8-NEXT:    lwz r5, 40(r1)
+; PPC-PWR8-NEXT:    lwz r4, 36(r1)
+; PPC-PWR8-NEXT:    lwz r3, 32(r1)
+; PPC-PWR8-NEXT:    beq cr0, .LBB1_1
+; PPC-PWR8-NEXT:  # %bb.2: # %atomicrmw.end
+; PPC-PWR8-NEXT:    lwz r30, 72(r1) # 4-byte Folded Reload
+; PPC-PWR8-NEXT:    lwz r29, 68(r1) # 4-byte Folded Reload
+; PPC-PWR8-NEXT:    lwz r28, 64(r1) # 4-byte Folded Reload
+; PPC-PWR8-NEXT:    lwz r27, 60(r1) # 4-byte Folded Reload
+; PPC-PWR8-NEXT:    lwz r26, 56(r1) # 4-byte Folded Reload
+; PPC-PWR8-NEXT:    lwz r25, 52(r1) # 4-byte Folded Reload
+; PPC-PWR8-NEXT:    lwz r24, 48(r1) # 4-byte Folded Reload
+; PPC-PWR8-NEXT:    lwz r0, 84(r1)
+; PPC-PWR8-NEXT:    addi r1, r1, 80
+; PPC-PWR8-NEXT:    mtlr r0
+; PPC-PWR8-NEXT:    blr
 entry:
   %0 = atomicrmw add i128* %a, i128 %x seq_cst, align 16
   ret i128 %0
@@ -113,6 +288,109 @@ define i128 @sub(i128* %a, i128 %x) {
 ; PWR7-NEXT:    ld r0, 16(r1)
 ; PWR7-NEXT:    mtlr r0
 ; PWR7-NEXT:    blr
+;
+; LE-PWR8-LABEL: sub:
+; LE-PWR8:       # %bb.0: # %entry
+; LE-PWR8-NEXT:    sync
+; LE-PWR8-NEXT:  .LBB2_1: # %entry
+; LE-PWR8-NEXT:    #
+; LE-PWR8-NEXT:    lqarx r6, 0, r3
+; LE-PWR8-NEXT:    subc r9, r7, r4
+; LE-PWR8-NEXT:    subfe r8, r5, r6
+; LE-PWR8-NEXT:    stqcx. r8, 0, r3
+; LE-PWR8-NEXT:    bne cr0, .LBB2_1
+; LE-PWR8-NEXT:  # %bb.2: # %entry
+; LE-PWR8-NEXT:    lwsync
+; LE-PWR8-NEXT:    mr r3, r7
+; LE-PWR8-NEXT:    mr r4, r6
+; LE-PWR8-NEXT:    blr
+;
+; AIX64-PWR8-LABEL: sub:
+; AIX64-PWR8:       # %bb.0: # %entry
+; AIX64-PWR8-NEXT:    mflr r0
+; AIX64-PWR8-NEXT:    std r0, 16(r1)
+; AIX64-PWR8-NEXT:    stdu r1, -112(r1)
+; AIX64-PWR8-NEXT:    sync
+; AIX64-PWR8-NEXT:    bl .__sync_fetch_and_sub_16[PR]
+; AIX64-PWR8-NEXT:    nop
+; AIX64-PWR8-NEXT:    lwsync
+; AIX64-PWR8-NEXT:    addi r1, r1, 112
+; AIX64-PWR8-NEXT:    ld r0, 16(r1)
+; AIX64-PWR8-NEXT:    mtlr r0
+; AIX64-PWR8-NEXT:    blr
+;
+; PPC-PWR8-LABEL: sub:
+; PPC-PWR8:       # %bb.0: # %entry
+; PPC-PWR8-NEXT:    mflr r0
+; PPC-PWR8-NEXT:    stw r0, 4(r1)
+; PPC-PWR8-NEXT:    stwu r1, -80(r1)
+; PPC-PWR8-NEXT:    .cfi_def_cfa_offset 80
+; PPC-PWR8-NEXT:    .cfi_offset lr, 4
+; PPC-PWR8-NEXT:    .cfi_offset r24, -32
+; PPC-PWR8-NEXT:    .cfi_offset r25, -28
+; PPC-PWR8-NEXT:    .cfi_offset r26, -24
+; PPC-PWR8-NEXT:    .cfi_offset r27, -20
+; PPC-PWR8-NEXT:    .cfi_offset r28, -16
+; PPC-PWR8-NEXT:    .cfi_offset r29, -12
+; PPC-PWR8-NEXT:    .cfi_offset r30, -8
+; PPC-PWR8-NEXT:    stw r26, 56(r1) # 4-byte Folded Spill
+; PPC-PWR8-NEXT:    stw r27, 60(r1) # 4-byte Folded Spill
+; PPC-PWR8-NEXT:    mr r27, r5
+; PPC-PWR8-NEXT:    mr r26, r3
+; PPC-PWR8-NEXT:    lwz r5, 8(r3)
+; PPC-PWR8-NEXT:    lwz r4, 4(r3)
+; PPC-PWR8-NEXT:    stw r28, 64(r1) # 4-byte Folded Spill
+; PPC-PWR8-NEXT:    mr r28, r6
+; PPC-PWR8-NEXT:    lwz r6, 12(r3)
+; PPC-PWR8-NEXT:    lwz r3, 0(r3)
+; PPC-PWR8-NEXT:    stw r24, 48(r1) # 4-byte Folded Spill
+; PPC-PWR8-NEXT:    addi r24, r1, 16
+; PPC-PWR8-NEXT:    stw r25, 52(r1) # 4-byte Folded Spill
+; PPC-PWR8-NEXT:    stw r29, 68(r1) # 4-byte Folded Spill
+; PPC-PWR8-NEXT:    mr r29, r7
+; PPC-PWR8-NEXT:    addi r25, r1, 32
+; PPC-PWR8-NEXT:    stw r30, 72(r1) # 4-byte Folded Spill
+; PPC-PWR8-NEXT:    mr r30, r8
+; PPC-PWR8-NEXT:    .p2align 4
+; PPC-PWR8-NEXT:  .LBB2_1: # %atomicrmw.start
+; PPC-PWR8-NEXT:    #
+; PPC-PWR8-NEXT:    subc r7, r6, r30
+; PPC-PWR8-NEXT:    stw r4, 36(r1)
+; PPC-PWR8-NEXT:    stw r3, 32(r1)
+; PPC-PWR8-NEXT:    subfe r8, r29, r5
+; PPC-PWR8-NEXT:    stw r5, 40(r1)
+; PPC-PWR8-NEXT:    stw r6, 44(r1)
+; PPC-PWR8-NEXT:    mr r5, r25
+; PPC-PWR8-NEXT:    subfe r4, r28, r4
+; PPC-PWR8-NEXT:    stw r7, 28(r1)
+; PPC-PWR8-NEXT:    stw r8, 24(r1)
+; PPC-PWR8-NEXT:    mr r6, r24
+; PPC-PWR8-NEXT:    subfe r3, r27, r3
+; PPC-PWR8-NEXT:    stw r4, 20(r1)
+; PPC-PWR8-NEXT:    mr r4, r26
+; PPC-PWR8-NEXT:    li r7, 5
+; PPC-PWR8-NEXT:    stw r3, 16(r1)
+; PPC-PWR8-NEXT:    li r3, 16
+; PPC-PWR8-NEXT:    li r8, 5
+; PPC-PWR8-NEXT:    bl __atomic_compare_exchange
+; PPC-PWR8-NEXT:    cmplwi r3, 0
+; PPC-PWR8-NEXT:    lwz r6, 44(r1)
+; PPC-PWR8-NEXT:    lwz r5, 40(r1)
+; PPC-PWR8-NEXT:    lwz r4, 36(r1)
+; PPC-PWR8-NEXT:    lwz r3, 32(r1)
+; PPC-PWR8-NEXT:    beq cr0, .LBB2_1
+; PPC-PWR8-NEXT:  # %bb.2: # %atomicrmw.end
+; PPC-PWR8-NEXT:    lwz r30, 72(r1) # 4-byte Folded Reload
+; PPC-PWR8-NEXT:    lwz r29, 68(r1) # 4-byte Folded Reload
+; PPC-PWR8-NEXT:    lwz r28, 64(r1) # 4-byte Folded Reload
+; PPC-PWR8-NEXT:    lwz r27, 60(r1) # 4-byte Folded Reload
+; PPC-PWR8-NEXT:    lwz r26, 56(r1) # 4-byte Folded Reload
+; PPC-PWR8-NEXT:    lwz r25, 52(r1) # 4-byte Folded Reload
+; PPC-PWR8-NEXT:    lwz r24, 48(r1) # 4-byte Folded Reload
+; PPC-PWR8-NEXT:    lwz r0, 84(r1)
+; PPC-PWR8-NEXT:    addi r1, r1, 80
+; PPC-PWR8-NEXT:    mtlr r0
+; PPC-PWR8-NEXT:    blr
 entry:
   %0 = atomicrmw sub i128* %a, i128 %x seq_cst, align 16
   ret i128 %0
@@ -150,6 +428,109 @@ define i128 @and(i128* %a, i128 %x) {
 ; PWR7-NEXT:    ld r0, 16(r1)
 ; PWR7-NEXT:    mtlr r0
 ; PWR7-NEXT:    blr
+;
+; LE-PWR8-LABEL: and:
+; LE-PWR8:       # %bb.0: # %entry
+; LE-PWR8-NEXT:    sync
+; LE-PWR8-NEXT:  .LBB3_1: # %entry
+; LE-PWR8-NEXT:    #
+; LE-PWR8-NEXT:    lqarx r6, 0, r3
+; LE-PWR8-NEXT:    and r9, r4, r7
+; LE-PWR8-NEXT:    and r8, r5, r6
+; LE-PWR8-NEXT:    stqcx. r8, 0, r3
+; LE-PWR8-NEXT:    bne cr0, .LBB3_1
+; LE-PWR8-NEXT:  # %bb.2: # %entry
+; LE-PWR8-NEXT:    lwsync
+; LE-PWR8-NEXT:    mr r3, r7
+; LE-PWR8-NEXT:    mr r4, r6
+; LE-PWR8-NEXT:    blr
+;
+; AIX64-PWR8-LABEL: and:
+; AIX64-PWR8:       # %bb.0: # %entry
+; AIX64-PWR8-NEXT:    mflr r0
+; AIX64-PWR8-NEXT:    std r0, 16(r1)
+; AIX64-PWR8-NEXT:    stdu r1, -112(r1)
+; AIX64-PWR8-NEXT:    sync
+; AIX64-PWR8-NEXT:    bl .__sync_fetch_and_and_16[PR]
+; AIX64-PWR8-NEXT:    nop
+; AIX64-PWR8-NEXT:    lwsync
+; AIX64-PWR8-NEXT:    addi r1, r1, 112
+; AIX64-PWR8-NEXT:    ld r0, 16(r1)
+; AIX64-PWR8-NEXT:    mtlr r0
+; AIX64-PWR8-NEXT:    blr
+;
+; PPC-PWR8-LABEL: and:
+; PPC-PWR8:       # %bb.0: # %entry
+; PPC-PWR8-NEXT:    mflr r0
+; PPC-PWR8-NEXT:    stw r0, 4(r1)
+; PPC-PWR8-NEXT:    stwu r1, -80(r1)
+; PPC-PWR8-NEXT:    .cfi_def_cfa_offset 80
+; PPC-PWR8-NEXT:    .cfi_offset lr, 4
+; PPC-PWR8-NEXT:    .cfi_offset r24, -32
+; PPC-PWR8-NEXT:    .cfi_offset r25, -28
+; PPC-PWR8-NEXT:    .cfi_offset r26, -24
+; PPC-PWR8-NEXT:    .cfi_offset r27, -20
+; PPC-PWR8-NEXT:    .cfi_offset r28, -16
+; PPC-PWR8-NEXT:    .cfi_offset r29, -12
+; PPC-PWR8-NEXT:    .cfi_offset r30, -8
+; PPC-PWR8-NEXT:    stw r26, 56(r1) # 4-byte Folded Spill
+; PPC-PWR8-NEXT:    stw r27, 60(r1) # 4-byte Folded Spill
+; PPC-PWR8-NEXT:    mr r27, r5
+; PPC-PWR8-NEXT:    mr r26, r3
+; PPC-PWR8-NEXT:    lwz r5, 8(r3)
+; PPC-PWR8-NEXT:    lwz r4, 4(r3)
+; PPC-PWR8-NEXT:    stw r28, 64(r1) # 4-byte Folded Spill
+; PPC-PWR8-NEXT:    mr r28, r6
+; PPC-PWR8-NEXT:    lwz r6, 12(r3)
+; PPC-PWR8-NEXT:    lwz r3, 0(r3)
+; PPC-PWR8-NEXT:    stw r24, 48(r1) # 4-byte Folded Spill
+; PPC-PWR8-NEXT:    addi r24, r1, 16
+; PPC-PWR8-NEXT:    stw r25, 52(r1) # 4-byte Folded Spill
+; PPC-PWR8-NEXT:    stw r29, 68(r1) # 4-byte Folded Spill
+; PPC-PWR8-NEXT:    mr r29, r7
+; PPC-PWR8-NEXT:    addi r25, r1, 32
+; PPC-PWR8-NEXT:    stw r30, 72(r1) # 4-byte Folded Spill
+; PPC-PWR8-NEXT:    mr r30, r8
+; PPC-PWR8-NEXT:    .p2align 4
+; PPC-PWR8-NEXT:  .LBB3_1: # %atomicrmw.start
+; PPC-PWR8-NEXT:    #
+; PPC-PWR8-NEXT:    stw r3, 32(r1)
+; PPC-PWR8-NEXT:    stw r4, 36(r1)
+; PPC-PWR8-NEXT:    and r7, r5, r29
+; PPC-PWR8-NEXT:    and r8, r6, r30
+; PPC-PWR8-NEXT:    and r3, r3, r27
+; PPC-PWR8-NEXT:    and r4, r4, r28
+; PPC-PWR8-NEXT:    stw r5, 40(r1)
+; PPC-PWR8-NEXT:    stw r6, 44(r1)
+; PPC-PWR8-NEXT:    mr r5, r25
+; PPC-PWR8-NEXT:    mr r6, r24
+; PPC-PWR8-NEXT:    stw r8, 28(r1)
+; PPC-PWR8-NEXT:    stw r7, 24(r1)
+; PPC-PWR8-NEXT:    li r7, 5
+; PPC-PWR8-NEXT:    li r8, 5
+; PPC-PWR8-NEXT:    stw r4, 20(r1)
+; PPC-PWR8-NEXT:    stw r3, 16(r1)
+; PPC-PWR8-NEXT:    li r3, 16
+; PPC-PWR8-NEXT:    mr r4, r26
+; PPC-PWR8-NEXT:    bl __atomic_compare_exchange
+; PPC-PWR8-NEXT:    cmplwi r3, 0
+; PPC-PWR8-NEXT:    lwz r6, 44(r1)
+; PPC-PWR8-NEXT:    lwz r5, 40(r1)
+; PPC-PWR8-NEXT:    lwz r4, 36(r1)
+; PPC-PWR8-NEXT:    lwz r3, 32(r1)
+; PPC-PWR8-NEXT:    beq cr0, .LBB3_1
+; PPC-PWR8-NEXT:  # %bb.2: # %atomicrmw.end
+; PPC-PWR8-NEXT:    lwz r30, 72(r1) # 4-byte Folded Reload
+; PPC-PWR8-NEXT:    lwz r29, 68(r1) # 4-byte Folded Reload
+; PPC-PWR8-NEXT:    lwz r28, 64(r1) # 4-byte Folded Reload
+; PPC-PWR8-NEXT:    lwz r27, 60(r1) # 4-byte Folded Reload
+; PPC-PWR8-NEXT:    lwz r26, 56(r1) # 4-byte Folded Reload
+; PPC-PWR8-NEXT:    lwz r25, 52(r1) # 4-byte Folded Reload
+; PPC-PWR8-NEXT:    lwz r24, 48(r1) # 4-byte Folded Reload
+; PPC-PWR8-NEXT:    lwz r0, 84(r1)
+; PPC-PWR8-NEXT:    addi r1, r1, 80
+; PPC-PWR8-NEXT:    mtlr r0
+; PPC-PWR8-NEXT:    blr
 entry:
   %0 = atomicrmw and i128* %a, i128 %x seq_cst, align 16
   ret i128 %0
@@ -187,6 +568,109 @@ define i128 @or(i128* %a, i128 %x) {
 ; PWR7-NEXT:    ld r0, 16(r1)
 ; PWR7-NEXT:    mtlr r0
 ; PWR7-NEXT:    blr
+;
+; LE-PWR8-LABEL: or:
+; LE-PWR8:       # %bb.0: # %entry
+; LE-PWR8-NEXT:    sync
+; LE-PWR8-NEXT:  .LBB4_1: # %entry
+; LE-PWR8-NEXT:    #
+; LE-PWR8-NEXT:    lqarx r6, 0, r3
+; LE-PWR8-NEXT:    or r9, r4, r7
+; LE-PWR8-NEXT:    or r8, r5, r6
+; LE-PWR8-NEXT:    stqcx. r8, 0, r3
+; LE-PWR8-NEXT:    bne cr0, .LBB4_1
+; LE-PWR8-NEXT:  # %bb.2: # %entry
+; LE-PWR8-NEXT:    lwsync
+; LE-PWR8-NEXT:    mr r3, r7
+; LE-PWR8-NEXT:    mr r4, r6
+; LE-PWR8-NEXT:    blr
+;
+; AIX64-PWR8-LABEL: or:
+; AIX64-PWR8:       # %bb.0: # %entry
+; AIX64-PWR8-NEXT:    mflr r0
+; AIX64-PWR8-NEXT:    std r0, 16(r1)
+; AIX64-PWR8-NEXT:    stdu r1, -112(r1)
+; AIX64-PWR8-NEXT:    sync
+; AIX64-PWR8-NEXT:    bl .__sync_fetch_and_or_16[PR]
+; AIX64-PWR8-NEXT:    nop
+; AIX64-PWR8-NEXT:    lwsync
+; AIX64-PWR8-NEXT:    addi r1, r1, 112
+; AIX64-PWR8-NEXT:    ld r0, 16(r1)
+; AIX64-PWR8-NEXT:    mtlr r0
+; AIX64-PWR8-NEXT:    blr
+;
+; PPC-PWR8-LABEL: or:
+; PPC-PWR8:       # %bb.0: # %entry
+; PPC-PWR8-NEXT:    mflr r0
+; PPC-PWR8-NEXT:    stw r0, 4(r1)
+; PPC-PWR8-NEXT:    stwu r1, -80(r1)
+; PPC-PWR8-NEXT:    .cfi_def_cfa_offset 80
+; PPC-PWR8-NEXT:    .cfi_offset lr, 4
+; PPC-PWR8-NEXT:    .cfi_offset r24, -32
+; PPC-PWR8-NEXT:    .cfi_offset r25, -28
+; PPC-PWR8-NEXT:    .cfi_offset r26, -24
+; PPC-PWR8-NEXT:    .cfi_offset r27, -20
+; PPC-PWR8-NEXT:    .cfi_offset r28, -16
+; PPC-PWR8-NEXT:    .cfi_offset r29, -12
+; PPC-PWR8-NEXT:    .cfi_offset r30, -8
+; PPC-PWR8-NEXT:    stw r26, 56(r1) # 4-byte Folded Spill
+; PPC-PWR8-NEXT:    stw r27, 60(r1) # 4-byte Folded Spill
+; PPC-PWR8-NEXT:    mr r27, r5
+; PPC-PWR8-NEXT:    mr r26, r3
+; PPC-PWR8-NEXT:    lwz r5, 8(r3)
+; PPC-PWR8-NEXT:    lwz r4, 4(r3)
+; PPC-PWR8-NEXT:    stw r28, 64(r1) # 4-byte Folded Spill
+; PPC-PWR8-NEXT:    mr r28, r6
+; PPC-PWR8-NEXT:    lwz r6, 12(r3)
+; PPC-PWR8-NEXT:    lwz r3, 0(r3)
+; PPC-PWR8-NEXT:    stw r24, 48(r1) # 4-byte Folded Spill
+; PPC-PWR8-NEXT:    addi r24, r1, 16
+; PPC-PWR8-NEXT:    stw r25, 52(r1) # 4-byte Folded Spill
+; PPC-PWR8-NEXT:    stw r29, 68(r1) # 4-byte Folded Spill
+; PPC-PWR8-NEXT:    mr r29, r7
+; PPC-PWR8-NEXT:    addi r25, r1, 32
+; PPC-PWR8-NEXT:    stw r30, 72(r1) # 4-byte Folded Spill
+; PPC-PWR8-NEXT:    mr r30, r8
+; PPC-PWR8-NEXT:    .p2align 4
+; PPC-PWR8-NEXT:  .LBB4_1: # %atomicrmw.start
+; PPC-PWR8-NEXT:    #
+; PPC-PWR8-NEXT:    stw r3, 32(r1)
+; PPC-PWR8-NEXT:    stw r4, 36(r1)
+; PPC-PWR8-NEXT:    or r7, r5, r29
+; PPC-PWR8-NEXT:    or r8, r6, r30
+; PPC-PWR8-NEXT:    or r3, r3, r27
+; PPC-PWR8-NEXT:    or r4, r4, r28
+; PPC-PWR8-NEXT:    stw r5, 40(r1)
+; PPC-PWR8-NEXT:    stw r6, 44(r1)
+; PPC-PWR8-NEXT:    mr r5, r25
+; PPC-PWR8-NEXT:    mr r6, r24
+; PPC-PWR8-NEXT:    stw r8, 28(r1)
+; PPC-PWR8-NEXT:    stw r7, 24(r1)
+; PPC-PWR8-NEXT:    li r7, 5
+; PPC-PWR8-NEXT:    li r8, 5
+; PPC-PWR8-NEXT:    stw r4, 20(r1)
+; PPC-PWR8-NEXT:    stw r3, 16(r1)
+; PPC-PWR8-NEXT:    li r3, 16
+; PPC-PWR8-NEXT:    mr r4, r26
+; PPC-PWR8-NEXT:    bl __atomic_compare_exchange
+; PPC-PWR8-NEXT:    cmplwi r3, 0
+; PPC-PWR8-NEXT:    lwz r6, 44(r1)
+; PPC-PWR8-NEXT:    lwz r5, 40(r1)
+; PPC-PWR8-NEXT:    lwz r4, 36(r1)
+; PPC-PWR8-NEXT:    lwz r3, 32(r1)
+; PPC-PWR8-NEXT:    beq cr0, .LBB4_1
+; PPC-PWR8-NEXT:  # %bb.2: # %atomicrmw.end
+; PPC-PWR8-NEXT:    lwz r30, 72(r1) # 4-byte Folded Reload
+; PPC-PWR8-NEXT:    lwz r29, 68(r1) # 4-byte Folded Reload
+; PPC-PWR8-NEXT:    lwz r28, 64(r1) # 4-byte Folded Reload
+; PPC-PWR8-NEXT:    lwz r27, 60(r1) # 4-byte Folded Reload
+; PPC-PWR8-NEXT:    lwz r26, 56(r1) # 4-byte Folded Reload
+; PPC-PWR8-NEXT:    lwz r25, 52(r1) # 4-byte Folded Reload
+; PPC-PWR8-NEXT:    lwz r24, 48(r1) # 4-byte Folded Reload
+; PPC-PWR8-NEXT:    lwz r0, 84(r1)
+; PPC-PWR8-NEXT:    addi r1, r1, 80
+; PPC-PWR8-NEXT:    mtlr r0
+; PPC-PWR8-NEXT:    blr
 entry:
   %0 = atomicrmw or i128* %a, i128 %x seq_cst, align 16
   ret i128 %0
@@ -224,6 +708,109 @@ define i128 @xor(i128* %a, i128 %x) {
 ; PWR7-NEXT:    ld r0, 16(r1)
 ; PWR7-NEXT:    mtlr r0
 ; PWR7-NEXT:    blr
+;
+; LE-PWR8-LABEL: xor:
+; LE-PWR8:       # %bb.0: # %entry
+; LE-PWR8-NEXT:    sync
+; LE-PWR8-NEXT:  .LBB5_1: # %entry
+; LE-PWR8-NEXT:    #
+; LE-PWR8-NEXT:    lqarx r6, 0, r3
+; LE-PWR8-NEXT:    xor r9, r4, r7
+; LE-PWR8-NEXT:    xor r8, r5, r6
+; LE-PWR8-NEXT:    stqcx. r8, 0, r3
+; LE-PWR8-NEXT:    bne cr0, .LBB5_1
+; LE-PWR8-NEXT:  # %bb.2: # %entry
+; LE-PWR8-NEXT:    lwsync
+; LE-PWR8-NEXT:    mr r3, r7
+; LE-PWR8-NEXT:    mr r4, r6
+; LE-PWR8-NEXT:    blr
+;
+; AIX64-PWR8-LABEL: xor:
+; AIX64-PWR8:       # %bb.0: # %entry
+; AIX64-PWR8-NEXT:    mflr r0
+; AIX64-PWR8-NEXT:    std r0, 16(r1)
+; AIX64-PWR8-NEXT:    stdu r1, -112(r1)
+; AIX64-PWR8-NEXT:    sync
+; AIX64-PWR8-NEXT:    bl .__sync_fetch_and_xor_16[PR]
+; AIX64-PWR8-NEXT:    nop
+; AIX64-PWR8-NEXT:    lwsync
+; AIX64-PWR8-NEXT:    addi r1, r1, 112
+; AIX64-PWR8-NEXT:    ld r0, 16(r1)
+; AIX64-PWR8-NEXT:    mtlr r0
+; AIX64-PWR8-NEXT:    blr
+;
+; PPC-PWR8-LABEL: xor:
+; PPC-PWR8:       # %bb.0: # %entry
+; PPC-PWR8-NEXT:    mflr r0
+; PPC-PWR8-NEXT:    stw r0, 4(r1)
+; PPC-PWR8-NEXT:    stwu r1, -80(r1)
+; PPC-PWR8-NEXT:    .cfi_def_cfa_offset 80
+; PPC-PWR8-NEXT:    .cfi_offset lr, 4
+; PPC-PWR8-NEXT:    .cfi_offset r24, -32
+; PPC-PWR8-NEXT:    .cfi_offset r25, -28
+; PPC-PWR8-NEXT:    .cfi_offset r26, -24
+; PPC-PWR8-NEXT:    .cfi_offset r27, -20
+; PPC-PWR8-NEXT:    .cfi_offset r28, -16
+; PPC-PWR8-NEXT:    .cfi_offset r29, -12
+; PPC-PWR8-NEXT:    .cfi_offset r30, -8
+; PPC-PWR8-NEXT:    stw r26, 56(r1) # 4-byte Folded Spill
+; PPC-PWR8-NEXT:    stw r27, 60(r1) # 4-byte Folded Spill
+; PPC-PWR8-NEXT:    mr r27, r5
+; PPC-PWR8-NEXT:    mr r26, r3
+; PPC-PWR8-NEXT:    lwz r5, 8(r3)
+; PPC-PWR8-NEXT:    lwz r4, 4(r3)
+; PPC-PWR8-NEXT:    stw r28, 64(r1) # 4-byte Folded Spill
+; PPC-PWR8-NEXT:    mr r28, r6
+; PPC-PWR8-NEXT:    lwz r6, 12(r3)
+; PPC-PWR8-NEXT:    lwz r3, 0(r3)
+; PPC-PWR8-NEXT:    stw r24, 48(r1) # 4-byte Folded Spill
+; PPC-PWR8-NEXT:    addi r24, r1, 16
+; PPC-PWR8-NEXT:    stw r25, 52(r1) # 4-byte Folded Spill
+; PPC-PWR8-NEXT:    stw r29, 68(r1) # 4-byte Folded Spill
+; PPC-PWR8-NEXT:    mr r29, r7
+; PPC-PWR8-NEXT:    addi r25, r1, 32
+; PPC-PWR8-NEXT:    stw r30, 72(r1) # 4-byte Folded Spill
+; PPC-PWR8-NEXT:    mr r30, r8
+; PPC-PWR8-NEXT:    .p2align 4
+; PPC-PWR8-NEXT:  .LBB5_1: # %atomicrmw.start
+; PPC-PWR8-NEXT:    #
+; PPC-PWR8-NEXT:    stw r3, 32(r1)
+; PPC-PWR8-NEXT:    stw r4, 36(r1)
+; PPC-PWR8-NEXT:    xor r7, r5, r29
+; PPC-PWR8-NEXT:    xor r8, r6, r30
+; PPC-PWR8-NEXT:    xor r3, r3, r27
+; PPC-PWR8-NEXT:    xor r4, r4, r28
+; PPC-PWR8-NEXT:    stw r5, 40(r1)
+; PPC-PWR8-NEXT:    stw r6, 44(r1)
+; PPC-PWR8-NEXT:    mr r5, r25
+; PPC-PWR8-NEXT:    mr r6, r24
+; PPC-PWR8-NEXT:    stw r8, 28(r1)
+; PPC-PWR8-NEXT:    stw r7, 24(r1)
+; PPC-PWR8-NEXT:    li r7, 5
+; PPC-PWR8-NEXT:    li r8, 5
+; PPC-PWR8-NEXT:    stw r4, 20(r1)
+; PPC-PWR8-NEXT:    stw r3, 16(r1)
+; PPC-PWR8-NEXT:    li r3, 16
+; PPC-PWR8-NEXT:    mr r4, r26
+; PPC-PWR8-NEXT:    bl __atomic_compare_exchange
+; PPC-PWR8-NEXT:    cmplwi r3, 0
+; PPC-PWR8-NEXT:    lwz r6, 44(r1)
+; PPC-PWR8-NEXT:    lwz r5, 40(r1)
+; PPC-PWR8-NEXT:    lwz r4, 36(r1)
+; PPC-PWR8-NEXT:    lwz r3, 32(r1)
+; PPC-PWR8-NEXT:    beq cr0, .LBB5_1
+; PPC-PWR8-NEXT:  # %bb.2: # %atomicrmw.end
+; PPC-PWR8-NEXT:    lwz r30, 72(r1) # 4-byte Folded Reload
+; PPC-PWR8-NEXT:    lwz r29, 68(r1) # 4-byte Folded Reload
+; PPC-PWR8-NEXT:    lwz r28, 64(r1) # 4-byte Folded Reload
+; PPC-PWR8-NEXT:    lwz r27, 60(r1) # 4-byte Folded Reload
+; PPC-PWR8-NEXT:    lwz r26, 56(r1) # 4-byte Folded Reload
+; PPC-PWR8-NEXT:    lwz r25, 52(r1) # 4-byte Folded Reload
+; PPC-PWR8-NEXT:    lwz r24, 48(r1) # 4-byte Folded Reload
+; PPC-PWR8-NEXT:    lwz r0, 84(r1)
+; PPC-PWR8-NEXT:    addi r1, r1, 80
+; PPC-PWR8-NEXT:    mtlr r0
+; PPC-PWR8-NEXT:    blr
 entry:
   %0 = atomicrmw xor i128* %a, i128 %x seq_cst, align 16
   ret i128 %0
@@ -261,6 +848,109 @@ define i128 @nand(i128* %a, i128 %x) {
 ; PWR7-NEXT:    ld r0, 16(r1)
 ; PWR7-NEXT:    mtlr r0
 ; PWR7-NEXT:    blr
+;
+; LE-PWR8-LABEL: nand:
+; LE-PWR8:       # %bb.0: # %entry
+; LE-PWR8-NEXT:    sync
+; LE-PWR8-NEXT:  .LBB6_1: # %entry
+; LE-PWR8-NEXT:    #
+; LE-PWR8-NEXT:    lqarx r6, 0, r3
+; LE-PWR8-NEXT:    nand r9, r4, r7
+; LE-PWR8-NEXT:    nand r8, r5, r6
+; LE-PWR8-NEXT:    stqcx. r8, 0, r3
+; LE-PWR8-NEXT:    bne cr0, .LBB6_1
+; LE-PWR8-NEXT:  # %bb.2: # %entry
+; LE-PWR8-NEXT:    lwsync
+; LE-PWR8-NEXT:    mr r3, r7
+; LE-PWR8-NEXT:    mr r4, r6
+; LE-PWR8-NEXT:    blr
+;
+; AIX64-PWR8-LABEL: nand:
+; AIX64-PWR8:       # %bb.0: # %entry
+; AIX64-PWR8-NEXT:    mflr r0
+; AIX64-PWR8-NEXT:    std r0, 16(r1)
+; AIX64-PWR8-NEXT:    stdu r1, -112(r1)
+; AIX64-PWR8-NEXT:    sync
+; AIX64-PWR8-NEXT:    bl .__sync_fetch_and_nand_16[PR]
+; AIX64-PWR8-NEXT:    nop
+; AIX64-PWR8-NEXT:    lwsync
+; AIX64-PWR8-NEXT:    addi r1, r1, 112
+; AIX64-PWR8-NEXT:    ld r0, 16(r1)
+; AIX64-PWR8-NEXT:    mtlr r0
+; AIX64-PWR8-NEXT:    blr
+;
+; PPC-PWR8-LABEL: nand:
+; PPC-PWR8:       # %bb.0: # %entry
+; PPC-PWR8-NEXT:    mflr r0
+; PPC-PWR8-NEXT:    stw r0, 4(r1)
+; PPC-PWR8-NEXT:    stwu r1, -80(r1)
+; PPC-PWR8-NEXT:    .cfi_def_cfa_offset 80
+; PPC-PWR8-NEXT:    .cfi_offset lr, 4
+; PPC-PWR8-NEXT:    .cfi_offset r24, -32
+; PPC-PWR8-NEXT:    .cfi_offset r25, -28
+; PPC-PWR8-NEXT:    .cfi_offset r26, -24
+; PPC-PWR8-NEXT:    .cfi_offset r27, -20
+; PPC-PWR8-NEXT:    .cfi_offset r28, -16
+; PPC-PWR8-NEXT:    .cfi_offset r29, -12
+; PPC-PWR8-NEXT:    .cfi_offset r30, -8
+; PPC-PWR8-NEXT:    stw r26, 56(r1) # 4-byte Folded Spill
+; PPC-PWR8-NEXT:    stw r27, 60(r1) # 4-byte Folded Spill
+; PPC-PWR8-NEXT:    mr r27, r5
+; PPC-PWR8-NEXT:    mr r26, r3
+; PPC-PWR8-NEXT:    lwz r5, 8(r3)
+; PPC-PWR8-NEXT:    lwz r4, 4(r3)
+; PPC-PWR8-NEXT:    stw r28, 64(r1) # 4-byte Folded Spill
+; PPC-PWR8-NEXT:    mr r28, r6
+; PPC-PWR8-NEXT:    lwz r6, 12(r3)
+; PPC-PWR8-NEXT:    lwz r3, 0(r3)
+; PPC-PWR8-NEXT:    stw r24, 48(r1) # 4-byte Folded Spill
+; PPC-PWR8-NEXT:    addi r24, r1, 16
+; PPC-PWR8-NEXT:    stw r25, 52(r1) # 4-byte Folded Spill
+; PPC-PWR8-NEXT:    stw r29, 68(r1) # 4-byte Folded Spill
+; PPC-PWR8-NEXT:    mr r29, r7
+; PPC-PWR8-NEXT:    addi r25, r1, 32
+; PPC-PWR8-NEXT:    stw r30, 72(r1) # 4-byte Folded Spill
+; PPC-PWR8-NEXT:    mr r30, r8
+; PPC-PWR8-NEXT:    .p2align 4
+; PPC-PWR8-NEXT:  .LBB6_1: # %atomicrmw.start
+; PPC-PWR8-NEXT:    #
+; PPC-PWR8-NEXT:    stw r3, 32(r1)
+; PPC-PWR8-NEXT:    stw r4, 36(r1)
+; PPC-PWR8-NEXT:    nand r7, r5, r29
+; PPC-PWR8-NEXT:    nand r8, r6, r30
+; PPC-PWR8-NEXT:    nand r3, r3, r27
+; PPC-PWR8-NEXT:    nand r4, r4, r28
+; PPC-PWR8-NEXT:    stw r5, 40(r1)
+; PPC-PWR8-NEXT:    stw r6, 44(r1)
+; PPC-PWR8-NEXT:    mr r5, r25
+; PPC-PWR8-NEXT:    mr r6, r24
+; PPC-PWR8-NEXT:    stw r8, 28(r1)
+; PPC-PWR8-NEXT:    stw r7, 24(r1)
+; PPC-PWR8-NEXT:    li r7, 5
+; PPC-PWR8-NEXT:    li r8, 5
+; PPC-PWR8-NEXT:    stw r4, 20(r1)
+; PPC-PWR8-NEXT:    stw r3, 16(r1)
+; PPC-PWR8-NEXT:    li r3, 16
+; PPC-PWR8-NEXT:    mr r4, r26
+; PPC-PWR8-NEXT:    bl __atomic_compare_exchange
+; PPC-PWR8-NEXT:    cmplwi r3, 0
+; PPC-PWR8-NEXT:    lwz r6, 44(r1)
+; PPC-PWR8-NEXT:    lwz r5, 40(r1)
+; PPC-PWR8-NEXT:    lwz r4, 36(r1)
+; PPC-PWR8-NEXT:    lwz r3, 32(r1)
+; PPC-PWR8-NEXT:    beq cr0, .LBB6_1
+; PPC-PWR8-NEXT:  # %bb.2: # %atomicrmw.end
+; PPC-PWR8-NEXT:    lwz r30, 72(r1) # 4-byte Folded Reload
+; PPC-PWR8-NEXT:    lwz r29, 68(r1) # 4-byte Folded Reload
+; PPC-PWR8-NEXT:    lwz r28, 64(r1) # 4-byte Folded Reload
+; PPC-PWR8-NEXT:    lwz r27, 60(r1) # 4-byte Folded Reload
+; PPC-PWR8-NEXT:    lwz r26, 56(r1) # 4-byte Folded Reload
+; PPC-PWR8-NEXT:    lwz r25, 52(r1) # 4-byte Folded Reload
+; PPC-PWR8-NEXT:    lwz r24, 48(r1) # 4-byte Folded Reload
+; PPC-PWR8-NEXT:    lwz r0, 84(r1)
+; PPC-PWR8-NEXT:    addi r1, r1, 80
+; PPC-PWR8-NEXT:    mtlr r0
+; PPC-PWR8-NEXT:    blr
 entry:
   %0 = atomicrmw nand i128* %a, i128 %x seq_cst, align 16
   ret i128 %0
@@ -306,6 +996,76 @@ define i128 @cas_weak_acquire_acquire(i128* %a, i128 %cmp, i128 %new) {
 ; PWR7-NEXT:    ld r0, 16(r1)
 ; PWR7-NEXT:    mtlr r0
 ; PWR7-NEXT:    blr
+;
+; LE-PWR8-LABEL: cas_weak_acquire_acquire:
+; LE-PWR8:       # %bb.0: # %entry
+; LE-PWR8-NEXT:  .LBB7_1: # %entry
+; LE-PWR8-NEXT:    #
+; LE-PWR8-NEXT:    lqarx r8, 0, r3
+; LE-PWR8-NEXT:    xor r11, r9, r4
+; LE-PWR8-NEXT:    xor r10, r8, r5
+; LE-PWR8-NEXT:    or. r11, r11, r10
+; LE-PWR8-NEXT:    bne cr0, .LBB7_3
+; LE-PWR8-NEXT:  # %bb.2: # %entry
+; LE-PWR8-NEXT:    #
+; LE-PWR8-NEXT:    mr r11, r6
+; LE-PWR8-NEXT:    mr r10, r7
+; LE-PWR8-NEXT:    stqcx. r10, 0, r3
+; LE-PWR8-NEXT:    bne cr0, .LBB7_1
+; LE-PWR8-NEXT:    b .LBB7_4
+; LE-PWR8-NEXT:  .LBB7_3: # %entry
+; LE-PWR8-NEXT:    stqcx. r8, 0, r3
+; LE-PWR8-NEXT:  .LBB7_4: # %entry
+; LE-PWR8-NEXT:    lwsync
+; LE-PWR8-NEXT:    mr r3, r9
+; LE-PWR8-NEXT:    mr r4, r8
+; LE-PWR8-NEXT:    blr
+;
+; AIX64-PWR8-LABEL: cas_weak_acquire_acquire:
+; AIX64-PWR8:       # %bb.0: # %entry
+; AIX64-PWR8-NEXT:    mflr r0
+; AIX64-PWR8-NEXT:    std r0, 16(r1)
+; AIX64-PWR8-NEXT:    stdu r1, -112(r1)
+; AIX64-PWR8-NEXT:    bl .__sync_val_compare_and_swap_16[PR]
+; AIX64-PWR8-NEXT:    nop
+; AIX64-PWR8-NEXT:    lwsync
+; AIX64-PWR8-NEXT:    addi r1, r1, 112
+; AIX64-PWR8-NEXT:    ld r0, 16(r1)
+; AIX64-PWR8-NEXT:    mtlr r0
+; AIX64-PWR8-NEXT:    blr
+;
+; PPC-PWR8-LABEL: cas_weak_acquire_acquire:
+; PPC-PWR8:       # %bb.0: # %entry
+; PPC-PWR8-NEXT:    mflr r0
+; PPC-PWR8-NEXT:    stw r0, 4(r1)
+; PPC-PWR8-NEXT:    stwu r1, -48(r1)
+; PPC-PWR8-NEXT:    .cfi_def_cfa_offset 48
+; PPC-PWR8-NEXT:    .cfi_offset lr, 4
+; PPC-PWR8-NEXT:    mr r4, r3
+; PPC-PWR8-NEXT:    lwz r3, 56(r1)
+; PPC-PWR8-NEXT:    lwz r11, 60(r1)
+; PPC-PWR8-NEXT:    stw r8, 44(r1)
+; PPC-PWR8-NEXT:    stw r7, 40(r1)
+; PPC-PWR8-NEXT:    li r7, 2
+; PPC-PWR8-NEXT:    li r8, 2
+; PPC-PWR8-NEXT:    stw r6, 36(r1)
+; PPC-PWR8-NEXT:    stw r5, 32(r1)
+; PPC-PWR8-NEXT:    addi r5, r1, 32
+; PPC-PWR8-NEXT:    addi r6, r1, 16
+; PPC-PWR8-NEXT:    stw r3, 24(r1)
+; PPC-PWR8-NEXT:    li r3, 16
+; PPC-PWR8-NEXT:    stw r11, 28(r1)
+; PPC-PWR8-NEXT:    stw r10, 20(r1)
+; PPC-PWR8-NEXT:    stw r9, 16(r1)
+; PPC-PWR8-NEXT:    bl __atomic_compare_exchange
+; PPC-PWR8-NEXT:    lwz r6, 44(r1)
+; PPC-PWR8-NEXT:    lwz r5, 40(r1)
+; PPC-PWR8-NEXT:    lwz r4, 36(r1)
+; PPC-PWR8-NEXT:    lwz r3, 32(r1)
+; PPC-PWR8-NEXT:    lwz r0, 52(r1)
+; PPC-PWR8-NEXT:    addi r1, r1, 48
+; PPC-PWR8-NEXT:    mtlr r0
+; PPC-PWR8-NEXT:    blr
 entry:
   %0 = cmpxchg weak i128* %a, i128 %cmp, i128 %new acquire acquire
   %1 = extractvalue { i128, i1 } %0, 0
@@ -351,6 +1111,76 @@ define i128 @cas_weak_release_monotonic(i128* %a, i128 %cmp, i128 %new) {
 ; PWR7-NEXT:    ld r0, 16(r1)
 ; PWR7-NEXT:    mtlr r0
 ; PWR7-NEXT:    blr
+;
+; LE-PWR8-LABEL: cas_weak_release_monotonic:
+; LE-PWR8:       # %bb.0: # %entry
+; LE-PWR8-NEXT:    lwsync
+; LE-PWR8-NEXT:  .LBB8_1: # %entry
+; LE-PWR8-NEXT:    #
+; LE-PWR8-NEXT:    lqarx r8, 0, r3
+; LE-PWR8-NEXT:    xor r11, r9, r4
+; LE-PWR8-NEXT:    xor r10, r8, r5
+; LE-PWR8-NEXT:    or. r11, r11, r10
+; LE-PWR8-NEXT:    bne cr0, .LBB8_3
+; LE-PWR8-NEXT:  # %bb.2: # %entry
+; LE-PWR8-NEXT:    #
+; LE-PWR8-NEXT:    mr r11, r6
+; LE-PWR8-NEXT:    mr r10, r7
+; LE-PWR8-NEXT:    stqcx. r10, 0, r3
+; LE-PWR8-NEXT:    bne cr0, .LBB8_1
+; LE-PWR8-NEXT:    b .LBB8_4
+; LE-PWR8-NEXT:  .LBB8_3: # %entry
+; LE-PWR8-NEXT:    stqcx. r8, 0, r3
+; LE-PWR8-NEXT:  .LBB8_4: # %entry
+; LE-PWR8-NEXT:    mr r3, r9
+; LE-PWR8-NEXT:    mr r4, r8
+; LE-PWR8-NEXT:    blr
+;
+; AIX64-PWR8-LABEL: cas_weak_release_monotonic:
+; AIX64-PWR8:       # %bb.0: # %entry
+; AIX64-PWR8-NEXT:    mflr r0
+; AIX64-PWR8-NEXT:    std r0, 16(r1)
+; AIX64-PWR8-NEXT:    stdu r1, -112(r1)
+; AIX64-PWR8-NEXT:    lwsync
+; AIX64-PWR8-NEXT:    bl .__sync_val_compare_and_swap_16[PR]
+; AIX64-PWR8-NEXT:    nop
+; AIX64-PWR8-NEXT:    addi r1, r1, 112
+; AIX64-PWR8-NEXT:    ld r0, 16(r1)
+; AIX64-PWR8-NEXT:    mtlr r0
+; AIX64-PWR8-NEXT:    blr
+;
+; PPC-PWR8-LABEL: cas_weak_release_monotonic:
+; PPC-PWR8:       # %bb.0: # %entry
+; PPC-PWR8-NEXT:    mflr r0
+; PPC-PWR8-NEXT:    stw r0, 4(r1)
+; PPC-PWR8-NEXT:    stwu r1, -48(r1)
+; PPC-PWR8-NEXT:    .cfi_def_cfa_offset 48
+; PPC-PWR8-NEXT:    .cfi_offset lr, 4
+; PPC-PWR8-NEXT:    mr r4, r3
+; PPC-PWR8-NEXT:    lwz r3, 56(r1)
+; PPC-PWR8-NEXT:    lwz r11, 60(r1)
+; PPC-PWR8-NEXT:    stw r8, 44(r1)
+; PPC-PWR8-NEXT:    stw r7, 40(r1)
+; PPC-PWR8-NEXT:    li r7, 3
+; PPC-PWR8-NEXT:    li r8, 0
+; PPC-PWR8-NEXT:    stw r6, 36(r1)
+; PPC-PWR8-NEXT:    stw r5, 32(r1)
+; PPC-PWR8-NEXT:    addi r5, r1, 32
+; PPC-PWR8-NEXT:    addi r6, r1, 16
+; PPC-PWR8-NEXT:    stw r3, 24(r1)
+; PPC-PWR8-NEXT:    li r3, 16
+; PPC-PWR8-NEXT:    stw r11, 28(r1)
+; PPC-PWR8-NEXT:    stw r10, 20(r1)
+; PPC-PWR8-NEXT:    stw r9, 16(r1)
+; PPC-PWR8-NEXT:    bl __atomic_compare_exchange
+; PPC-PWR8-NEXT:    lwz r6, 44(r1)
+; PPC-PWR8-NEXT:    lwz r5, 40(r1)
+; PPC-PWR8-NEXT:    lwz r4, 36(r1)
+; PPC-PWR8-NEXT:    lwz r3, 32(r1)
+; PPC-PWR8-NEXT:    lwz r0, 52(r1)
+; PPC-PWR8-NEXT:    addi r1, r1, 48
+; PPC-PWR8-NEXT:    mtlr r0
+; PPC-PWR8-NEXT:    blr
 entry:
   %0 = cmpxchg weak i128* %a, i128 %cmp, i128 %new release monotonic
   %1 = extractvalue { i128, i1 } %0, 0
@@ -398,6 +1228,78 @@ define i128 @cas_sc_sc(i128* %a, i128 %cmp, i128 %new) {
 ; PWR7-NEXT:    ld r0, 16(r1)
 ; PWR7-NEXT:    mtlr r0
 ; PWR7-NEXT:    blr
+;
+; LE-PWR8-LABEL: cas_sc_sc:
+; LE-PWR8:       # %bb.0: # %entry
+; LE-PWR8-NEXT:    sync
+; LE-PWR8-NEXT:  .LBB9_1: # %entry
+; LE-PWR8-NEXT:    #
+; LE-PWR8-NEXT:    lqarx r8, 0, r3
+; LE-PWR8-NEXT:    xor r11, r9, r4
+; LE-PWR8-NEXT:    xor r10, r8, r5
+; LE-PWR8-NEXT:    or. r11, r11, r10
+; LE-PWR8-NEXT:    bne cr0, .LBB9_3
+; LE-PWR8-NEXT:  # %bb.2: # %entry
+; LE-PWR8-NEXT:    #
+; LE-PWR8-NEXT:    mr r11, r6
+; LE-PWR8-NEXT:    mr r10, r7
+; LE-PWR8-NEXT:    stqcx. r10, 0, r3
+; LE-PWR8-NEXT:    bne cr0, .LBB9_1
+; LE-PWR8-NEXT:    b .LBB9_4
+; LE-PWR8-NEXT:  .LBB9_3: # %entry
+; LE-PWR8-NEXT:    stqcx. r8, 0, r3
+; LE-PWR8-NEXT:  .LBB9_4: # %entry
+; LE-PWR8-NEXT:    lwsync
+; LE-PWR8-NEXT:    mr r3, r9
+; LE-PWR8-NEXT:    mr r4, r8
+; LE-PWR8-NEXT:    blr
+;
+; AIX64-PWR8-LABEL: cas_sc_sc:
+; AIX64-PWR8:       # %bb.0: # %entry
+; AIX64-PWR8-NEXT:    mflr r0
+; AIX64-PWR8-NEXT:    std r0, 16(r1)
+; AIX64-PWR8-NEXT:    stdu r1, -112(r1)
+; AIX64-PWR8-NEXT:    sync
+; AIX64-PWR8-NEXT:    bl .__sync_val_compare_and_swap_16[PR]
+; AIX64-PWR8-NEXT:    nop
+; AIX64-PWR8-NEXT:    lwsync
+; AIX64-PWR8-NEXT:    addi r1, r1, 112
+; AIX64-PWR8-NEXT:    ld r0, 16(r1)
+; AIX64-PWR8-NEXT:    mtlr r0
+; AIX64-PWR8-NEXT:    blr
+;
+; PPC-PWR8-LABEL: cas_sc_sc:
+; PPC-PWR8:       # %bb.0: # %entry
+; PPC-PWR8-NEXT:    mflr r0
+; PPC-PWR8-NEXT:    stw r0, 4(r1)
+; PPC-PWR8-NEXT:    stwu r1, -48(r1)
+; PPC-PWR8-NEXT:    .cfi_def_cfa_offset 48
+; PPC-PWR8-NEXT:    .cfi_offset lr, 4
+; PPC-PWR8-NEXT:    mr r4, r3
+; PPC-PWR8-NEXT:    lwz r3, 56(r1)
+; PPC-PWR8-NEXT:    lwz r11, 60(r1)
+; PPC-PWR8-NEXT:    stw r8, 44(r1)
+; PPC-PWR8-NEXT:    stw r7, 40(r1)
+; PPC-PWR8-NEXT:    li r7, 5
+; PPC-PWR8-NEXT:    li r8, 5
+; PPC-PWR8-NEXT:    stw r6, 36(r1)
+; PPC-PWR8-NEXT:    stw r5, 32(r1)
+; PPC-PWR8-NEXT:    addi r5, r1, 32
+; PPC-PWR8-NEXT:    addi r6, r1, 16
+; PPC-PWR8-NEXT:    stw r3, 24(r1)
+; PPC-PWR8-NEXT:    li r3, 16
+; PPC-PWR8-NEXT:    stw r11, 28(r1)
+; PPC-PWR8-NEXT:    stw r10, 20(r1)
+; PPC-PWR8-NEXT:    stw r9, 16(r1)
+; PPC-PWR8-NEXT:    bl __atomic_compare_exchange
+; PPC-PWR8-NEXT:    lwz r6, 44(r1)
+; PPC-PWR8-NEXT:    lwz r5, 40(r1)
+; PPC-PWR8-NEXT:    lwz r4, 36(r1)
+; PPC-PWR8-NEXT:    lwz r3, 32(r1)
+; PPC-PWR8-NEXT:    lwz r0, 52(r1)
+; PPC-PWR8-NEXT:    addi r1, r1, 48
+; PPC-PWR8-NEXT:    mtlr r0
+; PPC-PWR8-NEXT:    blr
 entry:
   %0 = cmpxchg i128* %a, i128 %cmp, i128 %new seq_cst seq_cst
   %1 = extractvalue { i128, i1 } %0, 0
@@ -445,6 +1347,78 @@ define i128 @cas_acqrel_acquire(i128* %a, i128 %cmp, i128 %new) {
 ; PWR7-NEXT:    ld r0, 16(r1)
 ; PWR7-NEXT:    mtlr r0
 ; PWR7-NEXT:    blr
+;
+; LE-PWR8-LABEL: cas_acqrel_acquire:
+; LE-PWR8:       # %bb.0: # %entry
+; LE-PWR8-NEXT:    lwsync
+; LE-PWR8-NEXT:  .LBB10_1: # %entry
+; LE-PWR8-NEXT:    #
+; LE-PWR8-NEXT:    lqarx r8, 0, r3
+; LE-PWR8-NEXT:    xor r11, r9, r4
+; LE-PWR8-NEXT:    xor r10, r8, r5
+; LE-PWR8-NEXT:    or. r11, r11, r10
+; LE-PWR8-NEXT:    bne cr0, .LBB10_3
+; LE-PWR8-NEXT:  # %bb.2: # %entry
+; LE-PWR8-NEXT:    #
+; LE-PWR8-NEXT:    mr r11, r6
+; LE-PWR8-NEXT:    mr r10, r7
+; LE-PWR8-NEXT:    stqcx. r10, 0, r3
+; LE-PWR8-NEXT:    bne cr0, .LBB10_1
+; LE-PWR8-NEXT:    b .LBB10_4
+; LE-PWR8-NEXT:  .LBB10_3: # %entry
+; LE-PWR8-NEXT:    stqcx. r8, 0, r3
+; LE-PWR8-NEXT:  .LBB10_4: # %entry
+; LE-PWR8-NEXT:    lwsync
+; LE-PWR8-NEXT:    mr r3, r9
+; LE-PWR8-NEXT:    mr r4, r8
+; LE-PWR8-NEXT:    blr
+;
+; AIX64-PWR8-LABEL: cas_acqrel_acquire:
+; AIX64-PWR8:       # %bb.0: # %entry
+; AIX64-PWR8-NEXT:    mflr r0
+; AIX64-PWR8-NEXT:    std r0, 16(r1)
+; AIX64-PWR8-NEXT:    stdu r1, -112(r1)
+; AIX64-PWR8-NEXT:    lwsync
+; AIX64-PWR8-NEXT:    bl .__sync_val_compare_and_swap_16[PR]
+; AIX64-PWR8-NEXT:    nop
+; AIX64-PWR8-NEXT:    lwsync
+; AIX64-PWR8-NEXT:    addi r1, r1, 112
+; AIX64-PWR8-NEXT:    ld r0, 16(r1)
+; AIX64-PWR8-NEXT:    mtlr r0
+; AIX64-PWR8-NEXT:    blr
+;
+; PPC-PWR8-LABEL: cas_acqrel_acquire:
+; PPC-PWR8:       # %bb.0: # %entry
+; PPC-PWR8-NEXT:    mflr r0
+; PPC-PWR8-NEXT:    stw r0, 4(r1)
+; PPC-PWR8-NEXT:    stwu r1, -48(r1)
+; PPC-PWR8-NEXT:    .cfi_def_cfa_offset 48
+; PPC-PWR8-NEXT:    .cfi_offset lr, 4
+; PPC-PWR8-NEXT:    mr r4, r3
+; PPC-PWR8-NEXT:    lwz r3, 56(r1)
+; PPC-PWR8-NEXT:    lwz r11, 60(r1)
+; PPC-PWR8-NEXT:    stw r8, 44(r1)
+; PPC-PWR8-NEXT:    stw r7, 40(r1)
+; PPC-PWR8-NEXT:    li r7, 4
+; PPC-PWR8-NEXT:    li r8, 2
+; PPC-PWR8-NEXT:    stw r6, 36(r1)
+; PPC-PWR8-NEXT:    stw r5, 32(r1)
+; PPC-PWR8-NEXT:    addi r5, r1, 32
+; PPC-PWR8-NEXT:    addi r6, r1, 16
+; PPC-PWR8-NEXT:    stw r3, 24(r1)
+; PPC-PWR8-NEXT:    li r3, 16
+; PPC-PWR8-NEXT:    stw r11, 28(r1)
+; PPC-PWR8-NEXT:    stw r10, 20(r1)
+; PPC-PWR8-NEXT:    stw r9, 16(r1)
+; PPC-PWR8-NEXT:    bl __atomic_compare_exchange
+; PPC-PWR8-NEXT:    lwz r6, 44(r1)
+; PPC-PWR8-NEXT:    lwz r5, 40(r1)
+; PPC-PWR8-NEXT:    lwz r4, 36(r1)
+; PPC-PWR8-NEXT:    lwz r3, 32(r1)
+; PPC-PWR8-NEXT:    lwz r0, 52(r1)
+; PPC-PWR8-NEXT:    addi r1, r1, 48
+; PPC-PWR8-NEXT:    mtlr r0
+; PPC-PWR8-NEXT:    blr
 entry:
   %0 = cmpxchg i128* %a, i128 %cmp, i128 %new acq_rel acquire
   %1 = extractvalue { i128, i1 } %0, 0
@@ -508,6 +1482,88 @@ define i1 @cas_acqrel_acquire_check_succ(i128* %a, i128 %cmp, i128 %new) {
 ; PWR7-NEXT:    ld r0, 16(r1)
 ; PWR7-NEXT:    mtlr r0
 ; PWR7-NEXT:    blr
+;
+; LE-PWR8-LABEL: cas_acqrel_acquire_check_succ:
+; LE-PWR8:       # %bb.0: # %entry
+; LE-PWR8-NEXT:    lwsync
+; LE-PWR8-NEXT:  .LBB11_1: # %entry
+; LE-PWR8-NEXT:    #
+; LE-PWR8-NEXT:    lqarx r8, 0, r3
+; LE-PWR8-NEXT:    xor r11, r9, r4
+; LE-PWR8-NEXT:    xor r10, r8, r5
+; LE-PWR8-NEXT:    or. r11, r11, r10
+; LE-PWR8-NEXT:    bne cr0, .LBB11_3
+; LE-PWR8-NEXT:  # %bb.2: # %entry
+; LE-PWR8-NEXT:    #
+; LE-PWR8-NEXT:    mr r11, r6
+; LE-PWR8-NEXT:    mr r10, r7
+; LE-PWR8-NEXT:    stqcx. r10, 0, r3
+; LE-PWR8-NEXT:    bne cr0, .LBB11_1
+; LE-PWR8-NEXT:    b .LBB11_4
+; LE-PWR8-NEXT:  .LBB11_3: # %entry
+; LE-PWR8-NEXT:    stqcx. r8, 0, r3
+; LE-PWR8-NEXT:  .LBB11_4: # %entry
+; LE-PWR8-NEXT:    lwsync
+; LE-PWR8-NEXT:    xor r3, r5, r8
+; LE-PWR8-NEXT:    xor r4, r4, r9
+; LE-PWR8-NEXT:    or r3, r4, r3
+; LE-PWR8-NEXT:    cntlzd r3, r3
+; LE-PWR8-NEXT:    rldicl r3, r3, 58, 63
+; LE-PWR8-NEXT:    blr
+;
+; AIX64-PWR8-LABEL: cas_acqrel_acquire_check_succ:
+; AIX64-PWR8:       # %bb.0: # %entry
+; AIX64-PWR8-NEXT:    mflr r0
+; AIX64-PWR8-NEXT:    std r0, 16(r1)
+; AIX64-PWR8-NEXT:    stdu r1, -128(r1)
+; AIX64-PWR8-NEXT:    std r30, 112(r1) # 8-byte Folded Spill
+; AIX64-PWR8-NEXT:    std r31, 120(r1) # 8-byte Folded Spill
+; AIX64-PWR8-NEXT:    mr r31, r5
+; AIX64-PWR8-NEXT:    mr r30, r4
+; AIX64-PWR8-NEXT:    lwsync
+; AIX64-PWR8-NEXT:    bl .__sync_val_compare_and_swap_16[PR]
+; AIX64-PWR8-NEXT:    nop
+; AIX64-PWR8-NEXT:    xor r3, r3, r30
+; AIX64-PWR8-NEXT:    xor r4, r4, r31
+; AIX64-PWR8-NEXT:    lwsync
+; AIX64-PWR8-NEXT:    or r3, r4, r3
+; AIX64-PWR8-NEXT:    ld r31, 120(r1) # 8-byte Folded Reload
+; AIX64-PWR8-NEXT:    ld r30, 112(r1) # 8-byte Folded Reload
+; AIX64-PWR8-NEXT:    cntlzd r3, r3
+; AIX64-PWR8-NEXT:    rldicl r3, r3, 58, 63
+; AIX64-PWR8-NEXT:    addi r1, r1, 128
+; AIX64-PWR8-NEXT:    ld r0, 16(r1)
+; AIX64-PWR8-NEXT:    mtlr r0
+; AIX64-PWR8-NEXT:    blr
+;
+; PPC-PWR8-LABEL: cas_acqrel_acquire_check_succ:
+; PPC-PWR8:       # %bb.0: # %entry
+; PPC-PWR8-NEXT:    mflr r0
+; PPC-PWR8-NEXT:    stw r0, 4(r1)
+; PPC-PWR8-NEXT:    stwu r1, -48(r1)
+; PPC-PWR8-NEXT:    .cfi_def_cfa_offset 48
+; PPC-PWR8-NEXT:    .cfi_offset lr, 4
+; PPC-PWR8-NEXT:    mr r4, r3
+; PPC-PWR8-NEXT:    lwz r3, 56(r1)
+; PPC-PWR8-NEXT:    lwz r11, 60(r1)
+; PPC-PWR8-NEXT:    stw r8, 44(r1)
+; PPC-PWR8-NEXT:    stw r7, 40(r1)
+; PPC-PWR8-NEXT:    li r7, 4
+; PPC-PWR8-NEXT:    li r8, 2
+; PPC-PWR8-NEXT:    stw r6, 36(r1)
+; PPC-PWR8-NEXT:    stw r5, 32(r1)
+; PPC-PWR8-NEXT:    addi r5, r1, 32
+; PPC-PWR8-NEXT:    addi r6, r1, 16
+; PPC-PWR8-NEXT:    stw r3, 24(r1)
+; PPC-PWR8-NEXT:    li r3, 16
+; PPC-PWR8-NEXT:    stw r11, 28(r1)
+; PPC-PWR8-NEXT:    stw r10, 20(r1)
+; PPC-PWR8-NEXT:    stw r9, 16(r1)
+; PPC-PWR8-NEXT:    bl __atomic_compare_exchange
+; PPC-PWR8-NEXT:    lwz r0, 52(r1)
+; PPC-PWR8-NEXT:    addi r1, r1, 48
+; PPC-PWR8-NEXT:    mtlr r0
+; PPC-PWR8-NEXT:    blr
 entry:
   %0 = cmpxchg i128* %a, i128 %cmp, i128 %new acq_rel acquire
   %1 = extractvalue { i128, i1 } %0, 1
