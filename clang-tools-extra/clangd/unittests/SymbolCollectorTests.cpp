@@ -1014,10 +1014,21 @@ TEST_F(SymbolCollectorTest, SpelledReferences) {
       )cpp",
       "Foo::Foo" /// constructor.
     },
+    { // Unclean identifiers
+      R"cpp(
+        struct Foo {};
+      )cpp",
+      R"cpp(
+        $spelled[[Fo\
+o]] f{};
+      )cpp",
+      "Foo",
+    },
   };
   CollectorOpts.RefFilter = RefKind::All;
   CollectorOpts.RefsInHeaders = false;
   for (const auto& T : TestCases) {
+    SCOPED_TRACE(T.Header + "\n---\n" + T.Main);
     Annotations Header(T.Header);
     Annotations Main(T.Main);
     // Reset the file system.
@@ -1040,10 +1051,14 @@ TEST_F(SymbolCollectorTest, SpelledReferences) {
     }
     const auto SpelledRefs = std::move(SpelledSlabBuilder).build(),
                ImplicitRefs = std::move(ImplicitSlabBuilder).build();
-    EXPECT_THAT(SpelledRefs,
-                Contains(Pair(TargetID, haveRanges(SpelledRanges))));
-    EXPECT_THAT(ImplicitRefs,
-                Contains(Pair(TargetID, haveRanges(ImplicitRanges))));
+    EXPECT_EQ(SpelledRanges.empty(), SpelledRefs.empty());
+    EXPECT_EQ(ImplicitRanges.empty(), ImplicitRefs.empty());
+    if (!SpelledRanges.empty())
+      EXPECT_THAT(SpelledRefs,
+                  Contains(Pair(TargetID, haveRanges(SpelledRanges))));
+    if (!ImplicitRanges.empty())
+      EXPECT_THAT(ImplicitRefs,
+                  Contains(Pair(TargetID, haveRanges(ImplicitRanges))));
   }
 }
 
