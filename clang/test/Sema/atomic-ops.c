@@ -9,7 +9,7 @@
 // RUN:   -target-cpu pwr7
 // RUN: %clang_cc1 %s -verify -fgnuc-version=4.2.1 -ffreestanding \
 // RUN:   -fsyntax-only -triple=powerpc64le-linux-gnu -std=c11 \
-// RUN:   -target-cpu pwr8
+// RUN:   -target-cpu pwr8 -DPPC64_PWR8
 
 // Basic parsing/Sema tests for __c11_atomic_*
 
@@ -47,7 +47,11 @@ _Static_assert(__c11_atomic_is_lock_free(2), "");
 _Static_assert(__c11_atomic_is_lock_free(3), ""); // expected-error {{not an integral constant expression}}
 _Static_assert(__c11_atomic_is_lock_free(4), "");
 _Static_assert(__c11_atomic_is_lock_free(8), "");
+#ifndef PPC64_PWR8
 _Static_assert(__c11_atomic_is_lock_free(16), ""); // expected-error {{not an integral constant expression}}
+#else
+_Static_assert(__c11_atomic_is_lock_free(16), ""); // expected-no-error
+#endif
 _Static_assert(__c11_atomic_is_lock_free(17), ""); // expected-error {{not an integral constant expression}}
 
 _Static_assert(__atomic_is_lock_free(1, 0), "");
@@ -55,15 +59,23 @@ _Static_assert(__atomic_is_lock_free(2, 0), "");
 _Static_assert(__atomic_is_lock_free(3, 0), ""); // expected-error {{not an integral constant expression}}
 _Static_assert(__atomic_is_lock_free(4, 0), "");
 _Static_assert(__atomic_is_lock_free(8, 0), "");
+#ifndef PPC64_PWR8
 _Static_assert(__atomic_is_lock_free(16, 0), ""); // expected-error {{not an integral constant expression}}
+#else
+_Static_assert(__atomic_is_lock_free(16, 0), ""); // expected-no-error
+#endif
 _Static_assert(__atomic_is_lock_free(17, 0), ""); // expected-error {{not an integral constant expression}}
 
 _Static_assert(atomic_is_lock_free((atomic_char*)0), "");
 _Static_assert(atomic_is_lock_free((atomic_short*)0), "");
 _Static_assert(atomic_is_lock_free((atomic_int*)0), "");
 _Static_assert(atomic_is_lock_free((atomic_long*)0), "");
+#ifndef PPC64_PWR8
 // noi128-error@+1 {{__int128 is not supported on this target}}
 _Static_assert(atomic_is_lock_free((_Atomic(__int128)*)0), ""); // expected-error {{not an integral constant expression}}
+#else
+_Static_assert(atomic_is_lock_free((_Atomic(__int128)*)0), ""); // expected-no-error
+#endif
 _Static_assert(atomic_is_lock_free(0 + (atomic_char*)0), "");
 
 char i8;
@@ -88,7 +100,11 @@ _Static_assert(__atomic_always_lock_free(2, 0), "");
 _Static_assert(!__atomic_always_lock_free(3, 0), "");
 _Static_assert(__atomic_always_lock_free(4, 0), "");
 _Static_assert(__atomic_always_lock_free(8, 0), "");
+#ifndef PPC64_PWR8
 _Static_assert(!__atomic_always_lock_free(16, 0), "");
+#else
+_Static_assert(__atomic_always_lock_free(16, 0), "");
+#endif
 _Static_assert(!__atomic_always_lock_free(17, 0), "");
 
 _Static_assert(__atomic_always_lock_free(1, incomplete), "");
