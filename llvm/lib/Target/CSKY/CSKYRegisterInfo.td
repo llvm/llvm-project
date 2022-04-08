@@ -193,9 +193,9 @@ def FPR32 : RegisterClass<"CSKY", [f32], 32,
 def sFPR32 : RegisterClass<"CSKY", [f32], 32,
                          (add (sequence "F%u_32", 0, 15))>;
 
-def FPR64 : RegisterClass<"CSKY", [f64], 64,
+def FPR64 : RegisterClass<"CSKY", [f64], 32,
                          (add (sequence "F%u_64", 0, 31))>;
-def sFPR64 : RegisterClass<"CSKY", [f64], 64,
+def sFPR64 : RegisterClass<"CSKY", [f64], 32,
                          (add (sequence "F%u_64", 0, 15))>;
 
 def sFPR64_V : RegisterClass<"CSKY", [v2f32], 32, (add sFPR64)>;
