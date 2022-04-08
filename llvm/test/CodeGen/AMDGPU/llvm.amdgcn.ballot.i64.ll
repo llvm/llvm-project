@@ -74,23 +74,15 @@ define amdgpu_cs i64 @compare_floats(float %x, float %y) {
   ret i64 %ballot
 }
 
-define amdgpu_cs float @ctpop_of_ballot(i32 %x, i32 %y) {
+define amdgpu_cs i64 @ctpop_of_ballot(float %x, float %y) {
 ; CHECK-LABEL: ctpop_of_ballot:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    v_cmp_gt_u32_e32 vcc, v0, v1
-
-; TODO: This should use a scalar s_bcnt1 instruction.
-; NOTE: The final mul is cruft to prevent a "bad VGPR to SGPR copy" error
-
-; CHECK-NEXT:    v_bcnt_u32_b32 v1, vcc_lo, 0
-; CHECK-NEXT:    v_bcnt_u32_b32 v1, vcc_hi, v1 
-; CHECK-NEXT:    v_mul_lo_u32 v0, v0, v1
+; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc, v0, v1
+; CHECK-NEXT:    s_bcnt1_i32_b64 s0, vcc
+; CHECK-NEXT:    s_mov_b32 s1, 0
 ; CHECK-NEXT:    ; return to shader part epilog
-  %cmp = icmp ugt i32 %x, %y
+  %cmp = fcmp ogt float %x, %y
   %ballot = call i64 @llvm.amdgcn.ballot.i64(i1 %cmp)
   %bcnt = call i64 @llvm.ctpop.i64(i64 %ballot)
-  %bcnt.32 = trunc i64 %bcnt to i32
-  %r.i = mul i32 %x, %bcnt.32
-  %r = bitcast i32 %r.i to float
-  ret float %r
+  ret i64 %bcnt
 }
