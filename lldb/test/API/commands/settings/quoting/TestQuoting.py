@@ -50,16 +50,17 @@ class SettingsCommandTestCase(TestBase):
         to stdout. Compare the stdout with args_out."""
 
         filename = SettingsCommandTestCase.output_file_name
+        outfile = self.getBuildArtifact(filename)
 
         if lldb.remote_platform:
-            outfile = lldb.remote_platform.GetWorkingDirectory() + filename
+            outfile_arg = os.path.join(lldb.remote_platform.GetWorkingDirectory(), filename)
         else:
-            outfile = self.getBuildArtifact(filename)
+            outfile_arg = outfile
 
-        self.runCmd("process launch -- %s %s" % (outfile, args_in))
+        self.runCmd("process launch -- %s %s" % (outfile_arg, args_in))
 
         if lldb.remote_platform:
-            src_file_spec = lldb.SBFileSpec(outfile, False)
+            src_file_spec = lldb.SBFileSpec(outfile_arg, False)
             dst_file_spec = lldb.SBFileSpec(outfile, True)
             lldb.remote_platform.Get(src_file_spec, dst_file_spec)
 
@@ -67,5 +68,4 @@ class SettingsCommandTestCase(TestBase):
             output = f.read()
 
         self.RemoveTempFile(outfile)
-
         self.assertEqual(output, args_out)
