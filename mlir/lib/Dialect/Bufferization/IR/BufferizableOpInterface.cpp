@@ -247,12 +247,12 @@ Value mlir::bufferization::lookupBuffer(RewriterBase &rewriter, Value tensor,
                                                     tensor);
 }
 
-/// Return the result buffer (memref) for a given OpResult (tensor). Allocate
+/// Return the buffer (memref) for a given OpOperand (tensor). Allocate
 /// a new buffer and copy over data from the existing buffer if out-of-place
-/// bufferization is necessary.
+/// bufferization was decided.
 FailureOr<Value>
 BufferizationState::getBuffer(RewriterBase &rewriter, OpOperand &opOperand,
-                              bool forceInPlace,
+                              Optional<ForceInPlacability> overrideInPlace,
                               Optional<Operation *> customCopyInsertionPoint) {
   const BufferizationOptions &options = analysisState.getOptions();
   OpBuilder::InsertionGuard guard(rewriter);
@@ -263,7 +263,11 @@ BufferizationState::getBuffer(RewriterBase &rewriter, OpOperand &opOperand,
   Value operand = opOperand.get();
   Value operandBuffer = lookupBuffer(rewriter, operand, options);
 
-  if (forceInPlace || analysisState.isInPlace(opOperand))
+  // Can `operandBuffer` be used directly or do we need a copy?
+  bool inplace =
+      overrideInPlace != FORCE_OUT_OF_PLACE &&
+      (overrideInPlace == FORCE_INPLACE || analysisState.isInPlace(opOperand));
+  if (inplace)
     return operandBuffer;
 
   // Bufferizing out-of-place: Allocate a new buffer.
@@ -315,6 +319,18 @@ BufferizationState::getBuffer(RewriterBase &rewriter, OpOperand &opOperand,
     return failure();
 
   return resultBuffer;
+}
+
+/// Return the buffer type for a given OpOperand (tensor) after bufferization.
+BaseMemRefType BufferizationState::getBufferType(OpOperand &opOperand) const {
+  Value tensor = opOperand.get();
+  auto tensorType = tensor.getType().dyn_cast<TensorType>();
+  assert(tensorType && "unexpected non-tensor type");
+
+  if (auto toTensorOp = tensor.getDefiningOp<bufferization::ToTensorOp>())
+    return toTensorOp.memref().getType().cast<BaseMemRefType>();
+
+  return getMemRefType(tensorType, getOptions());
 }
 
 void bufferization::replaceOpWithBufferizedValues(RewriterBase &rewriter,
