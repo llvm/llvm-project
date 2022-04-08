@@ -427,6 +427,8 @@ public:
 /// BufferizationState provides helper functions for performing bufferization
 /// rewrites and handling memref buffers.
 struct BufferizationState {
+  enum ForceInPlacability { FORCE_INPLACE, FORCE_OUT_OF_PLACE };
+
   BufferizationState(const AnalysisState &analysisState)
       : analysisState(analysisState) {}
 
@@ -448,10 +450,18 @@ struct BufferizationState {
   /// Return the buffer (memref) for a given OpOperand (tensor). Allocate
   /// a new buffer and copy over data from the existing buffer if out-of-place
   /// bufferization was decided.
+  ///
+  /// Whether a buffer is in-place or out-of-place is queried from the analysis
+  /// state. Some analyses may always conservatively opt for out-of-place
+  /// bufferization. Inplacability decisions can be overridden with the optional
+  /// `overrideInPlace` parameter.
   FailureOr<Value>
   getBuffer(RewriterBase &rewriter, OpOperand &opOperand,
-            bool forceInPlace = false,
+            Optional<ForceInPlacability> overrideInPlace = None,
             Optional<Operation *> customCopyInsertionPoint = None);
+
+  /// Return the buffer type for a given OpOperand (tensor) after bufferization.
+  BaseMemRefType getBufferType(OpOperand &opOperand) const;
 
   /// Return a reference to the BufferizationOptions.
   const BufferizationOptions &getOptions() const {

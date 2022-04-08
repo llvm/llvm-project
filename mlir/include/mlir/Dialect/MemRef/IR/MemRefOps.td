@@ -1295,7 +1295,14 @@ def MemRef_ExpandShapeOp : MemRef_ReassociativeReshapeOp<"expand_shape"> {
                "ArrayRef<ReassociationIndices>":$reassociation)>
   ];
 
-  let extraClassDeclaration = commonExtraClassDeclaration;
+  let extraClassDeclaration = commonExtraClassDeclaration # [{
+    /// Return `true` if this source MemRef type is guaranteed to be collapsible
+    /// according to the given reassociation indices. In the presence of dynamic
+    /// strides this is usually not the case.
+    static bool isGuaranteedCollapsible(
+        MemRefType srcType, ArrayRef<ReassociationIndices> reassociation);
+  }];
+
   let hasVerifier = 1;
 }
 
