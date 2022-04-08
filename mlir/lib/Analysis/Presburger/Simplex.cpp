@@ -10,6 +10,7 @@
 #include "mlir/Analysis/Presburger/Matrix.h"
 #include "mlir/Support/MathExtras.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/Support/Compiler.h"
 
 using namespace mlir;
 using namespace presburger;
@@ -17,6 +18,18 @@ using namespace presburger;
 using Direction = Simplex::Direction;
 
 const int nullIndex = std::numeric_limits<int>::max();
+
+// Return a + scale*b;
+LLVM_ATTRIBUTE_UNUSED
+static SmallVector<int64_t, 8>
+scaleAndAddForAssert(ArrayRef<int64_t> a, int64_t scale, ArrayRef<int64_t> b) {
+  assert(a.size() == b.size());
+  SmallVector<int64_t, 8> res;
+  res.reserve(a.size());
+  for (unsigned i = 0, e = a.size(); i < e; ++i)
+    res.push_back(a[i] + scale * b[i]);
+  return res;
+}
 
 SimplexBase::SimplexBase(unsigned nVar, bool mustUseBigM, unsigned symbolOffset,
                          unsigned nSymbol)
@@ -1717,17 +1730,6 @@ private:
   SmallVector<unsigned, 8> snapshotStack;
 };
 
-// Return a + scale*b;
-static SmallVector<int64_t, 8> scaleAndAdd(ArrayRef<int64_t> a, int64_t scale,
-                                           ArrayRef<int64_t> b) {
-  assert(a.size() == b.size());
-  SmallVector<int64_t, 8> res;
-  res.reserve(a.size());
-  for (unsigned i = 0, e = a.size(); i < e; ++i)
-    res.push_back(a[i] + scale * b[i]);
-  return res;
-}
-
 /// Reduce the basis to try and find a direction in which the polytope is
 /// "thin". This only works for bounded polytopes.
 ///
@@ -1845,11 +1847,11 @@ void Simplex::reduceBasis(Matrix &basis, unsigned level) {
       // computed value of u is really the minimizer.
 
       // Check the value at u - 1.
-      assert(gbrSimplex.computeWidth(scaleAndAdd(
+      assert(gbrSimplex.computeWidth(scaleAndAddForAssert(
                  basis.getRow(i + 1), -1, basis.getRow(i))) >= widthI[j] &&
              "Computed u value does not minimize the width!");
       // Check the value at u + 1.
-      assert(gbrSimplex.computeWidth(scaleAndAdd(
+      assert(gbrSimplex.computeWidth(scaleAndAddForAssert(
                  basis.getRow(i + 1), +1, basis.getRow(i))) >= widthI[j] &&
              "Computed u value does not minimize the width!");
 
