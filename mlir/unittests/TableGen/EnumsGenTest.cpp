@@ -79,6 +79,8 @@ TEST(EnumsGenTest, GeneratedSymbolToStringFnForBitEnum) {
   EXPECT_EQ(
       stringifyBitEnumWithNone(BitEnumWithNone::Bit0 | BitEnumWithNone::Bit3),
       "Bit0|Bit3");
+  EXPECT_EQ(2u, static_cast<uint64_t>(BitEnum64_Test::Bit1));
+  EXPECT_EQ(144115188075855872u, static_cast<uint64_t>(BitEnum64_Test::Bit57));
 }
 
 TEST(EnumsGenTest, GeneratedStringToSymbolForBitEnum) {
