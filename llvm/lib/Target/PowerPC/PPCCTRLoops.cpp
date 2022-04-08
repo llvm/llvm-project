@@ -7,21 +7,21 @@
 //===----------------------------------------------------------------------===//
 //
 // This pass generates machine instructions for the CTR loops related pseudos:
-// 1: MTCTRPseudo/DecreaseCTRPseudo
-// 2: MTCTR8Pseudo/DecreaseCTR8Pseudo
+// 1: MTCTRloop/DecreaseCTRloop
+// 2: MTCTR8loop/DecreaseCTR8loop
 //
 // If a CTR loop can be generated:
-// 1: MTCTRPseudo/MTCTR8Pseudo will be converted to "mtctr"
-// 2: DecreaseCTRPseudo/DecreaseCTR8Pseudo will be converted to "bdnz/bdz" and
+// 1: MTCTRloop/MTCTR8loop will be converted to "mtctr"
+// 2: DecreaseCTRloop/DecreaseCTR8loop will be converted to "bdnz/bdz" and
 //    its user branch instruction can be deleted.
 //
 // If a CTR loop can not be generated due to clobber of CTR:
-// 1: MTCTRPseudo/MTCTR8Pseudo can be deleted.
-// 2: DecreaseCTRPseudo/DecreaseCTR8Pseudo will be converted to "addi -1" and
+// 1: MTCTRloop/MTCTR8loop can be deleted.
+// 2: DecreaseCTRloop/DecreaseCTR8loop will be converted to "addi -1" and
 //    a "cmplwi/cmpldi".
 //
 // This pass runs just before register allocation, because we don't want
-// register allocator to allocate register for DecreaseCTRPseudo if a CTR can be
+// register allocator to allocate register for DecreaseCTRloop if a CTR can be
 // generated or if a CTR loop can not be generated, we don't have any condition
 // register for the new added "cmplwi/cmpldi".
 //
@@ -148,8 +148,8 @@ bool PPCCTRLoops::processLoop(MachineLoop *ML) {
     return true;
 
   auto IsLoopStart = [](MachineInstr &MI) {
-    return MI.getOpcode() == PPC::MTCTRPseudo ||
-           MI.getOpcode() == PPC::MTCTR8Pseudo;
+    return MI.getOpcode() == PPC::MTCTRloop ||
+           MI.getOpcode() == PPC::MTCTR8loop;
   };
 
   auto SearchForStart =
@@ -166,7 +166,7 @@ bool PPCCTRLoops::processLoop(MachineLoop *ML) {
   bool InvalidCTRLoop = false;
 
   MachineBasicBlock *Preheader = ML->getLoopPreheader();
-  // If there is no preheader for this loop, there must be no MTCTRPseudo
+  // If there is no preheader for this loop, there must be no MTCTRloop
   // either.
   if (!Preheader)
     return false;
@@ -205,8 +205,8 @@ bool PPCCTRLoops::processLoop(MachineLoop *ML) {
   // normal loop.
   for (auto *MBB : reverse(ML->getBlocks())) {
     for (auto &MI : *MBB) {
-      if (MI.getOpcode() == PPC::DecreaseCTRPseudo ||
-          MI.getOpcode() == PPC::DecreaseCTR8Pseudo)
+      if (MI.getOpcode() == PPC::DecreaseCTRloop ||
+          MI.getOpcode() == PPC::DecreaseCTR8loop)
         Dec = &MI;
       else if (!InvalidCTRLoop)
         // If any instruction clobber CTR, then we can not generate a CTR loop.
@@ -341,18 +341,11 @@ void PPCCTRLoops::expandCTRLoops(MachineLoop *ML, MachineInstr *Start,
     llvm_unreachable("Unhandled branch user for DecreaseCTRloop.");
   }
 
-  unsigned MTCTROpcode = Is64Bit ? PPC::MTCTR8 : PPC::MTCTR;
-
-  // Generate "mtctr" in the loop preheader.
-  BuildMI(*Preheader, Start, Start->getDebugLoc(), TII->get(MTCTROpcode))
-      .addReg(Start->getOperand(0).getReg());
-
   // Generate "bdnz/bdz" in the exiting block just before the terminator.
   BuildMI(*Exiting, &*BrInstr, BrInstr->getDebugLoc(), TII->get(Opcode))
       .addMBB(BrInstr->getOperand(1).getMBB());
 
   // Remove the pseudo instructions.
-  Start->eraseFromParent();
   BrInstr->eraseFromParent();
   Dec->eraseFromParent();
 }
