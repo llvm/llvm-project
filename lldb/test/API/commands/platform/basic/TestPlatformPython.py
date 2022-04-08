@@ -82,6 +82,7 @@ class PlatformPythonTestCase(TestBase):
 
     @add_test_categories(['pyapi'])
     @no_debug_info_test
+    @skipIfRemote
     def test_shell_interpreter(self):
         """ Test a shell with a custom interpreter """
         platform = self.dbg.GetSelectedPlatform()
