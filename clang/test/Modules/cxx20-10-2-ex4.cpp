@@ -1,6 +1,6 @@
 // Based on C++20 10.2 example 4.
 
-// RUN: %clang_cc1 -std=c++20 -emit-module-interface %s -verify -o M.pcm
+// RUN: %clang_cc1 -std=c++20 -emit-module-interface %s -verify -o %t
 
 export module M;
 
