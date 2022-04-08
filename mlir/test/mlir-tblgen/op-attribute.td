@@ -65,29 +65,40 @@ def AOp : NS_Op<"a_op", []> {
 // ---
 
 // DEF:      ::mlir::LogicalResult AOpAdaptor::verify
-// DEF:      auto tblgen_aAttr = odsAttrs.get("aAttr");
-// DEF-NEXT: if (!tblgen_aAttr)
-// DEF-NEXT:   return emitError(loc, "'test.a_op' op ""requires attribute 'aAttr'");
+// DEF:      ::mlir::Attribute tblgen_aAttr;
+// DEF-NEXT: while (true) {
+// DEF-NEXT:   if (namedAttrIt == namedAttrRange.end())
+// DEF-NEXT:     return emitError(loc, "'test.a_op' op ""requires attribute 'aAttr'");
+// DEF-NEXT:   if (namedAttrIt->getName() == AOp::aAttrAttrName(*odsOpName)) {
+// DEF-NEXT:     tblgen_aAttr = namedAttrIt->getValue();
+// DEF-NEXT:     break;
+// DEF:      ::mlir::Attribute tblgen_bAttr;
+// DEF-NEXT: ::mlir::Attribute tblgen_cAttr;
+// DEF-NEXT: while (true) {
+// DEF-NEXT:   if (namedAttrIt == namedAttrRange.end())
+// DEF-NEXT:     break;
+// DEF:        if (namedAttrIt->getName() == AOp::bAttrAttrName(*odsOpName))
+// DEF-NEXT:     tblgen_bAttr = namedAttrIt->getValue();
+// DEF:        if (namedAttrIt->getName() == AOp::cAttrAttrName(*odsOpName))
+// DEF-NEXT:     tblgen_cAttr = namedAttrIt->getValue();
 // DEF:      if (tblgen_aAttr && !((some-condition)))
 // DEF-NEXT:   return emitError(loc, "'test.a_op' op ""attribute 'aAttr' failed to satisfy constraint: some attribute kind");
-// DEF:      auto tblgen_bAttr = odsAttrs.get("bAttr");
-// DEF-NEXT: if (tblgen_bAttr && !((some-condition)))
+// DEF:      if (tblgen_bAttr && !((some-condition)))
 // DEF-NEXT:   return emitError(loc, "'test.a_op' op ""attribute 'bAttr' failed to satisfy constraint: some attribute kind");
-// DEF:      auto tblgen_cAttr = odsAttrs.get("cAttr");
-// DEF-NEXT: if (tblgen_cAttr && !((some-condition)))
+// DEF:      if (tblgen_cAttr && !((some-condition)))
 // DEF-NEXT:   return emitError(loc, "'test.a_op' op ""attribute 'cAttr' failed to satisfy constraint: some attribute kind");
 
 // Test getter methods
 // ---
 
 // DEF:      some-attr-kind AOp::aAttrAttr()
-// DEF-NEXT:   (*this)->getAttr(aAttrAttrName()).cast<some-attr-kind>()
+// DEF-NEXT:   ::mlir::impl::getAttrFromSortedRange((*this)->getAttrs().begin() + 0, (*this)->getAttrs().end() - 0, aAttrAttrName()).cast<some-attr-kind>()
 // DEF:      some-return-type AOp::aAttr() {
 // DEF-NEXT:   auto attr = aAttrAttr()
 // DEF-NEXT:   return attr.some-convert-from-storage();
 
 // DEF:      some-attr-kind AOp::bAttrAttr()
-// DEF-NEXT:   return (*this)->getAttr(bAttrAttrName()).dyn_cast_or_null<some-attr-kind>()
+// DEF-NEXT:   ::mlir::impl::getAttrFromSortedRange((*this)->getAttrs().begin() + 1, (*this)->getAttrs().end() - 0, bAttrAttrName()).dyn_cast_or_null<some-attr-kind>()
 // DEF:      some-return-type AOp::bAttr() {
 // DEF-NEXT:   auto attr = bAttrAttr();
 // DEF-NEXT:   if (!attr)
@@ -95,7 +106,7 @@ def AOp : NS_Op<"a_op", []> {
 // DEF-NEXT:   return attr.some-convert-from-storage();
 
 // DEF:      some-attr-kind AOp::cAttrAttr()
-// DEF-NEXT:   return (*this)->getAttr(cAttrAttrName()).dyn_cast_or_null<some-attr-kind>()
+// DEF-NEXT:   ::mlir::impl::getAttrFromSortedRange((*this)->getAttrs().begin() + 1, (*this)->getAttrs().end() - 0, cAttrAttrName()).dyn_cast_or_null<some-attr-kind>()
 // DEF:      ::llvm::Optional<some-return-type> AOp::cAttr() {
 // DEF-NEXT:   auto attr = cAttrAttr()
 // DEF-NEXT:   return attr ? ::llvm::Optional<some-return-type>(attr.some-convert-from-storage()) : (::llvm::None);
@@ -179,29 +190,29 @@ def AgetOp : Op<Test2_Dialect, "a_get_op", []> {
 // ---
 
 // DEF:      ::mlir::LogicalResult AgetOpAdaptor::verify
-// DEF:      auto tblgen_aAttr = odsAttrs.get("aAttr");
-// DEF-NEXT: if (!tblgen_aAttr)
-// DEF-NEXT.   return emitError(loc, "'test2.a_get_op' op ""requires attribute 'aAttr'");
+// DEF:      ::mlir::Attribute tblgen_aAttr;
+// DEF-NEXT: while (true)
+// DEF:      ::mlir::Attribute tblgen_bAttr;
+// DEF-NEXT: ::mlir::Attribute tblgen_cAttr;
+// DEF-NEXT: while (true)
 // DEF:      if (tblgen_aAttr && !((some-condition)))
 // DEF-NEXT:   return emitError(loc, "'test2.a_get_op' op ""attribute 'aAttr' failed to satisfy constraint: some attribute kind");
-// DEF:      auto tblgen_bAttr = odsAttrs.get("bAttr");
-// DEF-NEXT: if (tblgen_bAttr && !((some-condition)))
+// DEF:      if (tblgen_bAttr && !((some-condition)))
 // DEF-NEXT:   return emitError(loc, "'test2.a_get_op' op ""attribute 'bAttr' failed to satisfy constraint: some attribute kind");
-// DEF:      auto tblgen_cAttr = odsAttrs.get("cAttr");
-// DEF-NEXT: if (tblgen_cAttr && !((some-condition)))
+// DEF:      if (tblgen_cAttr && !((some-condition)))
 // DEF-NEXT:   return emitError(loc, "'test2.a_get_op' op ""attribute 'cAttr' failed to satisfy constraint: some attribute kind");
 
 // Test getter methods
 // ---
 
 // DEF:      some-attr-kind AgetOp::getAAttrAttr()
-// DEF-NEXT:   (*this)->getAttr(getAAttrAttrName()).cast<some-attr-kind>()
+// DEF-NEXT:   ::mlir::impl::getAttrFromSortedRange({{.*}}).cast<some-attr-kind>()
 // DEF:      some-return-type AgetOp::getAAttr() {
 // DEF-NEXT:   auto attr = getAAttrAttr()
 // DEF-NEXT:   return attr.some-convert-from-storage();
 
 // DEF:      some-attr-kind AgetOp::getBAttrAttr()
-// DEF-NEXT:   return (*this)->getAttr(getBAttrAttrName()).dyn_cast_or_null<some-attr-kind>()
+// DEF-NEXT:   return ::mlir::impl::getAttrFromSortedRange({{.*}}).dyn_cast_or_null<some-attr-kind>()
 // DEF:      some-return-type AgetOp::getBAttr() {
 // DEF-NEXT:   auto attr = getBAttrAttr();
 // DEF-NEXT:   if (!attr)
@@ -209,7 +220,7 @@ def AgetOp : Op<Test2_Dialect, "a_get_op", []> {
 // DEF-NEXT:   return attr.some-convert-from-storage();
 
 // DEF:      some-attr-kind AgetOp::getCAttrAttr()
-// DEF-NEXT:   return (*this)->getAttr(getCAttrAttrName()).dyn_cast_or_null<some-attr-kind>()
+// DEF-NEXT:   return ::mlir::impl::getAttrFromSortedRange({{.*}}).dyn_cast_or_null<some-attr-kind>()
 // DEF:      ::llvm::Optional<some-return-type> AgetOp::getCAttr() {
 // DEF-NEXT:   auto attr = getCAttrAttr()
 // DEF-NEXT:   return attr ? ::llvm::Optional<some-return-type>(attr.some-convert-from-storage()) : (::llvm::None);
