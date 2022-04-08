@@ -23398,7 +23398,7 @@ bool X86TargetLowering::isFsqrtCheap(SDValue Op, SelectionDAG &DAG) const {
     return true;
 
   // We never want to use both SQRT and RSQRT instructions for the same input.
-  if (DAG.getNodeIfExists(X86ISD::FRSQRT, DAG.getVTList(VT), Op))
+  if (DAG.doesNodeExist(X86ISD::FRSQRT, DAG.getVTList(VT), Op))
     return false;
 
   if (VT.isVector())
