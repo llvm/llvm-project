@@ -239,6 +239,8 @@ private:
   llvm::Optional<size_t> m_raw_trace_size;
   /// All occurrences of libipt errors when decoding TSCs.
   LibiptErrors m_tsc_errors;
+  /// Total amount of time spent decoding.
+  std::chrono::milliseconds m_total_decoding_time{0};
 };
 
 using DecodedThreadSP = std::shared_ptr<DecodedThread>;
