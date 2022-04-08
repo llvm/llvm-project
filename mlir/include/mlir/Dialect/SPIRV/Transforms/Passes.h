@@ -16,6 +16,9 @@
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
+
+class ModuleOp;
+
 namespace spirv {
 
 class ModuleOp;
