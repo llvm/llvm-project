@@ -57,7 +57,7 @@ class ObjCDataFormatterKVO(ObjCDataFormatterTestCase):
                 ' 21 key/value pairs'
             ])
 
-        lldbutil.run_break_set_by_regexp(self, 'setAtoms')
+        lldbutil.run_break_set_by_symbol(self, '-[Molecule setAtoms:]')
 
         self.runCmd("continue")
         self.expect("frame variable _cmd", substrs=['setAtoms:'])
