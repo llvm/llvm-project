@@ -2,6 +2,7 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 < %s | FileCheck %s
 
 declare i32 @llvm.amdgcn.ballot.i32(i1)
+declare i32 @llvm.ctpop.i32(i32)
 
 ; Test ballot(0)
 
@@ -68,4 +69,23 @@ define amdgpu_cs i32 @compare_floats(float %x, float %y) {
   %cmp = fcmp ogt float %x, %y
   %ballot = call i32 @llvm.amdgcn.ballot.i32(i1 %cmp)
   ret i32 %ballot
+}
+
+define amdgpu_cs float @ctpop_of_ballot(i32 %x, i32 %y) {
+; CHECK-LABEL: ctpop_of_ballot:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    v_cmp_gt_u32_e32 vcc_lo, v0, v1
+
+; TODO: This should use a scalar s_bcnt1 instruction.
+; NOTE: The final mul is cruft to prevent a "bad VGPR to SGPR copy" error
+
+; CHECK-NEXT:    v_bcnt_u32_b32 v1, vcc_lo, 0
+; CHECK-NEXT:    v_mul_lo_u32 v0, v0, v1
+; CHECK-NEXT:    ; return to shader part epilog
+  %cmp = icmp ugt i32 %x, %y
+  %ballot = call i32 @llvm.amdgcn.ballot.i32(i1 %cmp)
+  %bcnt = call i32 @llvm.ctpop.i32(i32 %ballot)
+  %r.i = mul i32 %x, %bcnt
+  %r = bitcast i32 %r.i to float
+  ret float %r
 }
