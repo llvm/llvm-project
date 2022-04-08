@@ -14,4 +14,6 @@ add_libc_unittest(
     libc.src.stdio.fwrite
 )
 
+add_subdirectory(printf_core)
+
 add_subdirectory(testdata)
