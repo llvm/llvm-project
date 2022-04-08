@@ -69,6 +69,45 @@ Attribute constFoldBinaryOp(ArrayRef<Attribute> operands,
   }
   return {};
 }
+
+/// Performs constant folding `calculate` with element-wise behavior on the one
+/// attributes in `operands` and returns the result if possible.
+template <class AttrElementT,
+          class ElementValueT = typename AttrElementT::ValueType,
+          class CalculationT = function_ref<ElementValueT(ElementValueT)>>
+Attribute constFoldUnaryOp(ArrayRef<Attribute> operands,
+                           const CalculationT &&calculate) {
+  assert(operands.size() == 1 && "unary op takes one operands");
+  if (!operands[0])
+    return {};
+
+  if (operands[0].isa<AttrElementT>()) {
+    auto op = operands[0].cast<AttrElementT>();
+
+    return AttrElementT::get(op.getType(), calculate(op.getValue()));
+  }
+  if (operands[0].isa<SplatElementsAttr>()) {
+    // Both operands are splats so we can avoid expanding the values out and
+    // just fold based on the splat value.
+    auto op = operands[0].cast<SplatElementsAttr>();
+
+    auto elementResult = calculate(op.getSplatValue<ElementValueT>());
+    return DenseElementsAttr::get(op.getType(), elementResult);
+  } else if (operands[0].isa<ElementsAttr>()) {
+    // Operands are ElementsAttr-derived; perform an element-wise fold by
+    // expanding the values.
+    auto op = operands[0].cast<ElementsAttr>();
+
+    auto opIt = op.value_begin<ElementValueT>();
+    SmallVector<ElementValueT> elementResults;
+    elementResults.reserve(op.getNumElements());
+    for (size_t i = 0, e = op.getNumElements(); i < e; ++i, ++opIt)
+      elementResults.push_back(calculate(*opIt));
+    return DenseElementsAttr::get(op.getType(), elementResults);
+  }
+  return {};
+}
+
 } // namespace mlir
 
 #endif // MLIR_DIALECT_COMMONFOLDERS_H
