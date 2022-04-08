@@ -1,6 +1,7 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
 
 #include "int_lib.h"
+#include <inttypes.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -52,12 +53,12 @@ int test__udivmodei5(du_int a, du_int b, du_int expected_q, du_int expected_r,
     for(unsigned i= words - 1; i >= sizeof(q); --i) {
 #endif
         if (quo_scratch[i] != 0) {
-            printf("error in __udivmodei5: %llX / %llX = %llX, R = %llX, expected quo_scratch[%d] == 0\n",
+            printf("error in __udivmodei5: %" PRIX64 " / %" PRIX64 " = %" PRIX64 ", R = %" PRIX64 ", expected quo_scratch[%d] == 0\n",
                a, b, q, r, i);
             return 1;
         }
         if (rem_scratch[i] != 0) {
-            printf("error in __udivmodei5: %llX / %llX = %llX, R = %llX, expected rem_scratch[%d] == 0\n",
+            printf("error in __udivmodei5: %" PRIX64 " / %" PRIX64 " = %" PRIX64 ", R = %" PRIX64 ", expected rem_scratch[%d] == 0\n",
                a, b, q, r, i);
             return 1;
 
@@ -65,7 +66,7 @@ int test__udivmodei5(du_int a, du_int b, du_int expected_q, du_int expected_r,
     }
 
     if (q != expected_q || r != expected_r)
-        printf("error in __udivmodei5: %llX / %llX = %llX, R = %llX, expected %llX, %llX\n",
+        printf("error in __udivmodei5: %" PRIX64 " / %" PRIX64 " = %" PRIX64 ", R = %" PRIX64 ", expected %" PRIX64 ", %" PRIX64 "\n",
                a, b, q, r, expected_q, expected_r);
     return !(q == expected_q && r == expected_r);
 }
