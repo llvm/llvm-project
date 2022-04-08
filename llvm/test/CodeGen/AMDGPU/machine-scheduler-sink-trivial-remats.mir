@@ -432,7 +432,6 @@ body:             |
     S_NOP 0, implicit %20, implicit %21
     S_ENDPGM 0
 ...
-# TODO: Handle multiple blocks
 ---
 name:            test_occ_9_two_block_high_rp
 tracksRegLiveness: true
@@ -466,19 +465,18 @@ body:             |
   ; GFX908-NEXT:   %20:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 20, implicit $exec, implicit $mode, implicit-def $m0
   ; GFX908-NEXT:   %21:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 21, implicit $exec, implicit $mode, implicit-def $m0
   ; GFX908-NEXT:   %22:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 22, implicit $exec, implicit $mode, implicit-def $m0
-  ; GFX908-NEXT:   %23:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 23, implicit $exec, implicit $mode
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.1:
   ; GFX908-NEXT:   successors: %bb.2(0x80000000)
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT:   %24:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 24, implicit $exec, implicit $mode, implicit-def $m0
   ; GFX908-NEXT:   S_NOP 0, implicit %24
+  ; GFX908-NEXT:   %23:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 23, implicit $exec, implicit $mode
   ; GFX908-NEXT:   S_NOP 0, implicit %23
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.2:
   ; GFX908-NEXT:   successors: %bb.3(0x80000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   %25:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 25, implicit $exec, implicit $mode
   ; GFX908-NEXT:   S_NOP 0
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
@@ -486,6 +484,7 @@ body:             |
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT:   %26:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 26, implicit $exec, implicit $mode, implicit-def $m0
   ; GFX908-NEXT:   S_NOP 0, implicit %26
+  ; GFX908-NEXT:   %25:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 25, implicit $exec, implicit $mode
   ; GFX908-NEXT:   S_NOP 0, implicit %25
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.4:
@@ -570,7 +569,6 @@ body:             |
     S_NOP 0, implicit %22
     S_ENDPGM 0
 ...
-# TODO: Handle multiple blocks
 ---
 name:            test_occ_9_two_block_high_rp_minimum_sinking
 tracksRegLiveness: true
@@ -603,7 +601,6 @@ body:             |
   ; GFX908-NEXT:   %19:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 19, implicit $exec, implicit $mode, implicit-def $m0
   ; GFX908-NEXT:   %20:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 20, implicit $exec, implicit $mode, implicit-def $m0
   ; GFX908-NEXT:   %21:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 21, implicit $exec, implicit $mode, implicit-def $m0
-  ; GFX908-NEXT:   %22:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 22, implicit $exec, implicit $mode
   ; GFX908-NEXT:   %23:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 23, implicit $exec, implicit $mode
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.1:
@@ -611,12 +608,12 @@ body:             |
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT:   %24:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 24, implicit $exec, implicit $mode, implicit-def $m0
   ; GFX908-NEXT:   S_NOP 0, implicit %24
+  ; GFX908-NEXT:   %22:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 22, implicit $exec, implicit $mode
   ; GFX908-NEXT:   S_NOP 0, implicit %23, implicit %22
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.2:
   ; GFX908-NEXT:   successors: %bb.3(0x80000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   %25:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 25, implicit $exec, implicit $mode
   ; GFX908-NEXT:   %26:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 26, implicit $exec, implicit $mode
   ; GFX908-NEXT:   S_NOP 0
   ; GFX908-NEXT: {{  $}}
@@ -625,6 +622,7 @@ body:             |
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT:   %27:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 27, implicit $exec, implicit $mode, implicit-def $m0
   ; GFX908-NEXT:   S_NOP 0, implicit %27
+  ; GFX908-NEXT:   %25:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 25, implicit $exec, implicit $mode
   ; GFX908-NEXT:   S_NOP 0, implicit %25, implicit %26
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.4:
