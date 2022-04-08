@@ -97,10 +97,51 @@ exit:
   ret i32 0
 }
 
+define i32 @test_different_debug_loc_on_replicate_recipe(i32* noalias %src, i32* noalias %dst) {
+; CHECK-LABEL: define i32 @test_different_debug_loc_on_replicate_recipe(
+; CHECK-LABEL: vector.body:
+; CHECK:        [[LOAD:%.+]] = load <2 x i32>, <2 x i32>* {{.+}}, align 4
+; CHECK-NEXT:   [[CMP:%.+]] = icmp eq <2 x i32> [[LOAD]], <i32 10, i32 10>
+; CHECK-NEXT:   [[XOR:%.+]] = xor <2 x i1> [[CMP:%.+]], <i1 true, i1 true>, !dbg [[LOC4:!.+]]
+; CHECK-NEXT:   [[EXT:%.+]] = extractelement <2 x i1> [[XOR]], i32 0, !dbg [[LOC4]]
+; CHECK-NEXT:   br i1 [[EXT]], label %pred.store.if, label %pred.store.continue
+; CHECK-NOT:  !dbg
+; CHECK-EMPTY:
+; CHECK-NEXT: pred.store.if:
+; CHECK-NEXT:   [[GEP:%.+]] = getelementptr inbounds i32, i32* %dst, i64 {{.+}}, !dbg [[LOC4]]
+; CHECK-NEXT:   store i32 0, i32* [[GEP]], align 4, !dbg [[LOC4]]
+; CHECK-NEXT:   br label %pred.store.continue, !dbg [[LOC4]]
+; CHECK-EMPTY:
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %gep.src = getelementptr inbounds i32, i32* %src, i64 %iv
+  %l = load i32, i32* %gep.src, align 4
+  %cmp = icmp eq i32 %l, 10
+  br i1 %cmp, label %loop.latch, label %if.then, !dbg !33
+
+if.then:
+  %gep.dst = getelementptr inbounds i32, i32* %dst, i64 %iv, !dbg !34
+  store i32 0, i32* %gep.dst, align 4
+  br label %loop.latch
+
+loop.latch:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond.not, label %exit, label %loop.header
+
+exit:
+  ret i32 0
+}
+
 ; CHECK: ![[LOC2]] = !DILocation(line: 3
 ; CHECK: ![[BR_LOC]] = !DILocation(line: 5,
 ; CHECK: ![[LOC1]] = !DILocation(line: 6
 ; CHECK: [[LOC3]] = !DILocation(line: 137
+; CHECK: [[LOC4]] = !DILocation(line: 210
 
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
@@ -137,3 +178,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !28 = !DILocation(line: 137, column: 44, scope: !29)
 !29 = distinct !DILexicalBlock(scope: !30, file: !5, line: 137, column: 2)
 !30 = distinct !DISubprogram(name: "Place", scope: !5, file: !5, line: 135, scopeLine: 135, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+!31 = distinct !DISubprogram(name: "Place", scope: !5, file: !5, line: 135, scopeLine: 135, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+!32 = distinct !DILexicalBlock(scope: !31, file: !5, line: 137, column: 2)
+!33 = !DILocation(line: 210, column: 44, scope: !32)
+!34 = !DILocation(line: 320, column: 44, scope: !32)
