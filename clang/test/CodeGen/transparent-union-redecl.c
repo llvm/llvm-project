@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -Werror -triple i386-linux -Wno-strict-prototypes -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -Werror -triple i386-linux -Wno-strict-prototypes -emit-llvm -o - %s | FileCheck %s
 
 // Test that different order of declarations is acceptable and that
 // implementing different redeclarations is acceptable.

@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -funknown-anytype -emit-llvm -o %t %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -funknown-anytype -emit-llvm -o %t %s
 // RUN: FileCheck -check-prefix COMMON %s < %t
 // RUN: FileCheck -check-prefix X86_64 %s < %t
-// RUN: %clang_cc1 -triple i386-apple-darwin10 -funknown-anytype -emit-llvm -o %t %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i386-apple-darwin10 -funknown-anytype -emit-llvm -o %t %s
 // RUN: FileCheck -check-prefix COMMON %s < %t
 // RUN: FileCheck -check-prefix I386 %s < %t
 

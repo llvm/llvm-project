@@ -1,4 +1,4 @@
-// RUN:  %clang_cc1 -triple aarch64_be-linux-gnu -ffreestanding -emit-llvm -O0 -o - %s | FileCheck %s
+// RUN:  %clang_cc1 -no-opaque-pointers -triple aarch64_be-linux-gnu -ffreestanding -emit-llvm -O0 -o - %s | FileCheck %s
 
 #include <stdarg.h>
 

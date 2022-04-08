@@ -1,6 +1,6 @@
-// RUN: not llvm-mc -arch=amdgcn %s 2>&1 | FileCheck --check-prefixes=GCN,PREGFX11,SICI --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck --check-prefixes=GCN,PREGFX11,SICI --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=fiji %s 2>&1 | FileCheck --check-prefixes=GCN,PREGFX11,VI --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn %s 2>&1 | FileCheck --check-prefixes=GCN,PREGFX11,SICI,SICIVI --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck --check-prefixes=GCN,PREGFX11,SICI,SICIVI --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=fiji %s 2>&1 | FileCheck --check-prefixes=GCN,PREGFX11,VI,SICIVI --implicit-check-not=error: %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 %s 2>&1 | FileCheck --check-prefixes=GCN,PREGFX11,GFX10 --implicit-check-not=error: %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1100 %s 2>&1 | FileCheck --check-prefixes=GCN,GFX11 --implicit-check-not=error: %s
 
@@ -244,6 +244,188 @@ s_waitcnt x
 
 s_waitcnt vmcnt(0
 // GCN: error: expected a closing parenthesis
+
+//===----------------------------------------------------------------------===//
+// s_waitcnt_depctr.
+//===----------------------------------------------------------------------===//
+
+s_waitcnt_depctr 65536
+// GFX10: error: invalid operand for instruction
+// GFX11: error: invalid operand for instruction
+// SICIVI: error: instruction not supported on this GPU
+
+s_waitcnt_depctr -32769
+// GFX10: error: invalid operand for instruction
+// GFX11: error: invalid operand for instruction
+// SICIVI: error: instruction not supported on this GPU
+
+s_waitcnt_depctr depctr_hold_cnt(0)
+// GFX10: error: depctr_hold_cnt is not supported on this GPU
+// SICIVI: error: instruction not supported on this GPU
+
+s_waitcnt_depctr depctr_sa_sdst(-1)
+// GFX10: error: invalid value for depctr_sa_sdst
+// GFX11: error: invalid value for depctr_sa_sdst
+// SICIVI: error: instruction not supported on this GPU
+
+s_waitcnt_depctr depctr_va_vdst(-1)
+// GFX10: error: invalid value for depctr_va_vdst
+// GFX11: error: invalid value for depctr_va_vdst
+// SICIVI: error: instruction not supported on this GPU
+
+s_waitcnt_depctr depctr_va_sdst(-1)
+// GFX10: error: invalid value for depctr_va_sdst
+// GFX11: error: invalid value for depctr_va_sdst
+// SICIVI: error: instruction not supported on this GPU
+
+s_waitcnt_depctr depctr_va_ssrc(-1)
+// GFX10: error: invalid value for depctr_va_ssrc
+// GFX11: error: invalid value for depctr_va_ssrc
+// SICIVI: error: instruction not supported on this GPU
+
+s_waitcnt_depctr depctr_va_vcc(-1)
+// GFX10: error: invalid value for depctr_va_vcc
+// GFX11: error: invalid value for depctr_va_vcc
+// SICIVI: error: instruction not supported on this GPU
+
+s_waitcnt_depctr depctr_vm_vsrc(-1)
+// GFX10: error: invalid value for depctr_vm_vsrc
+// GFX11: error: invalid value for depctr_vm_vsrc
+// SICIVI: error: instruction not supported on this GPU
+
+s_waitcnt_depctr depctr_sa_sdst(2)
+// GFX10: error: invalid value for depctr_sa_sdst
+// GFX11: error: invalid value for depctr_sa_sdst
+// SICIVI: error: instruction not supported on this GPU
+
+s_waitcnt_depctr depctr_va_vdst(16)
+// GFX10: error: invalid value for depctr_va_vdst
+// GFX11: error: invalid value for depctr_va_vdst
+// SICIVI: error: instruction not supported on this GPU
+
+s_waitcnt_depctr depctr_va_sdst(8)
+// GFX10: error: invalid value for depctr_va_sdst
+// GFX11: error: invalid value for depctr_va_sdst
+// SICIVI: error: instruction not supported on this GPU
+
+s_waitcnt_depctr depctr_va_ssrc(2)
+// GFX10: error: invalid value for depctr_va_ssrc
+// GFX11: error: invalid value for depctr_va_ssrc
+// SICIVI: error: instruction not supported on this GPU
+
+s_waitcnt_depctr depctr_va_vcc(2)
+// GFX10: error: invalid value for depctr_va_vcc
+// GFX11: error: invalid value for depctr_va_vcc
+// SICIVI: error: instruction not supported on this GPU
+
+s_waitcnt_depctr depctr_vm_vsrc(8)
+// GFX10: error: invalid value for depctr_vm_vsrc
+// GFX11: error: invalid value for depctr_vm_vsrc
+// SICIVI: error: instruction not supported on this GPU
+
+s_waitcnt_depctr depctr_vm_(8)
+// GFX10: error: invalid counter name depctr_vm_
+// GFX11: error: invalid counter name depctr_vm_
+// SICIVI: error: instruction not supported on this GPU
+
+s_waitcnt_depctr depctr_sa_sdst(0) depctr_sa_sdst(0)
+// GFX10: error: duplicate counter name depctr_sa_sdst
+// GFX11: error: duplicate counter name depctr_sa_sdst
+// SICIVI: error: instruction not supported on this GPU
+
+s_waitcnt_depctr depctr_va_vdst(0) depctr_va_vdst(0)
+// GFX10: error: duplicate counter name depctr_va_vdst
+// GFX11: error: duplicate counter name depctr_va_vdst
+// SICIVI: error: instruction not supported on this GPU
+
+s_waitcnt_depctr depctr_va_sdst(0) depctr_va_sdst(0)
+// GFX10: error: duplicate counter name depctr_va_sdst
+// GFX11: error: duplicate counter name depctr_va_sdst
+// SICIVI: error: instruction not supported on this GPU
+
+s_waitcnt_depctr depctr_va_ssrc(0) depctr_va_ssrc(0)
+// GFX10: error: duplicate counter name depctr_va_ssrc
+// GFX11: error: duplicate counter name depctr_va_ssrc
+// SICIVI: error: instruction not supported on this GPU
+
+s_waitcnt_depctr depctr_va_vcc(0) depctr_va_vcc(0)
+// GFX10: error: duplicate counter name depctr_va_vcc
+// GFX11: error: duplicate counter name depctr_va_vcc
+// SICIVI: error: instruction not supported on this GPU
+
+s_waitcnt_depctr depctr_vm_vsrc(0) depctr_vm_vsrc(0)
+// GFX10: error: duplicate counter name depctr_vm_vsrc
+// GFX11: error: duplicate counter name depctr_vm_vsrc
+// SICIVI: error: instruction not supported on this GPU
+
+s_waitcnt_depctr depctr_sa_sdst(0) depctr_va_sdst(0) depctr_sa_sdst(0)
+// GFX10: error: duplicate counter name depctr_sa_sdst
+// GFX11: error: duplicate counter name depctr_sa_sdst
+// SICIVI: error: instruction not supported on this GPU
+
+s_waitcnt_depctr depctr_va_ssrc(0) depctr_va_sdst(0) depctr_va_ssrc(0)
+// GFX10: error: duplicate counter name depctr_va_ssrc
+// GFX11: error: duplicate counter name depctr_va_ssrc
+// SICIVI: error: instruction not supported on this GPU
+
+s_waitcnt_depctr depctr_va_vcc(0) depctr_va_vcc(0) depctr_va_sdst(0)
+// GFX10: error: duplicate counter name depctr_va_vcc
+// GFX11: error: duplicate counter name depctr_va_vcc
+// SICIVI: error: instruction not supported on this GPU
+
+s_waitcnt_depctr depctr_vm_vsrc(0) depctr_vm_vsrc(0) depctr_va_sdst(0)
+// GFX10: error: duplicate counter name depctr_vm_vsrc
+// GFX11: error: duplicate counter name depctr_vm_vsrc
+// SICIVI: error: instruction not supported on this GPU
+
+s_waitcnt_depctr depctr_va_sdst(0) depctr_vm_vsrc 0)
+// GFX10: error: expected a left parenthesis
+// GFX11: error: expected a left parenthesis
+// SICIVI: error: instruction not supported on this GPU
+
+s_waitcnt_depctr depctr_va_sdst(0) 0depctr_vm_vsrc(0)
+// GFX10: error: expected a counter name
+// GFX11: error: expected a counter name
+// SICIVI: error: instruction not supported on this GPU
+
+s_waitcnt_depctr depctr_va_sdst(0) depctr_vm_vsrc(x)
+// GFX10: error: expected absolute expression
+// GFX11: error: expected absolute expression
+// SICIVI: error: instruction not supported on this GPU
+
+s_waitcnt_depctr depctr_va_sdst(0) depctr_vm_vsrc(0; & depctr_va_sdst(0)
+// GFX10: error: expected a closing parenthesis
+// GFX11: error: expected a closing parenthesis
+// SICIVI: error: instruction not supported on this GPU
+
+s_waitcnt_depctr depctr_vm_vsrc 0) depctr_vm_vsrc(0) depctr_va_sdst(0)
+// GFX10: error: expected absolute expression
+// GFX11: error: expected absolute expression
+// SICIVI: error: instruction not supported on this GPU
+
+s_waitcnt_depctr depctr_vm_vsrc(0) ,
+// GFX10: error: expected a counter name
+// GFX11: error: expected a counter name
+// SICIVI: error: instruction not supported on this GPU
+
+s_waitcnt_depctr depctr_vm_vsrc(0) , &
+// GFX10: error: expected a counter name
+// GFX11: error: expected a counter name
+// SICIVI: error: instruction not supported on this GPU
+
+s_waitcnt_depctr depctr_vm_vsrc(0) &
+// GFX10: error: expected a counter name
+// GFX11: error: expected a counter name
+// SICIVI: error: instruction not supported on this GPU
+
+s_waitcnt_depctr depctr_vm_vsrc(0) & &
+// GFX10: error: expected a counter name
+// GFX11: error: expected a counter name
+// SICIVI: error: instruction not supported on this GPU
+
+//===----------------------------------------------------------------------===//
+// s_branch.
+//===----------------------------------------------------------------------===//
 
 s_branch 0x80000000ffff
 // GCN: error: expected a 16-bit signed jump offset

@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -triple mips-unknown-linux -o - -emit-llvm %s | FileCheck %s -check-prefixes=ALL,O32 -enable-var-scope
-// RUN: %clang_cc1 -triple mipsel-unknown-linux -o - -emit-llvm %s | FileCheck %s -check-prefixes=ALL,O32 -enable-var-scope
-// RUN: %clang_cc1 -triple mips64-unknown-linux -o - -emit-llvm  -target-abi n32 %s | FileCheck %s -check-prefixes=ALL,N32,NEW -enable-var-scope
-// RUN: %clang_cc1 -triple mips64-unknown-linux -o - -emit-llvm  -target-abi n32 %s | FileCheck %s -check-prefixes=ALL,N32,NEW -enable-var-scope
-// RUN: %clang_cc1 -triple mips64-unknown-linux -o - -emit-llvm %s | FileCheck %s -check-prefixes=ALL,N64,NEW -enable-var-scope
-// RUN: %clang_cc1 -triple mips64el-unknown-linux -o - -emit-llvm %s | FileCheck %s -check-prefixes=ALL,N64,NEW -enable-var-scope
+// RUN: %clang_cc1 -no-opaque-pointers -triple mips-unknown-linux -o - -emit-llvm %s | FileCheck %s -check-prefixes=ALL,O32 -enable-var-scope
+// RUN: %clang_cc1 -no-opaque-pointers -triple mipsel-unknown-linux -o - -emit-llvm %s | FileCheck %s -check-prefixes=ALL,O32 -enable-var-scope
+// RUN: %clang_cc1 -no-opaque-pointers -triple mips64-unknown-linux -o - -emit-llvm  -target-abi n32 %s | FileCheck %s -check-prefixes=ALL,N32,NEW -enable-var-scope
+// RUN: %clang_cc1 -no-opaque-pointers -triple mips64-unknown-linux -o - -emit-llvm  -target-abi n32 %s | FileCheck %s -check-prefixes=ALL,N32,NEW -enable-var-scope
+// RUN: %clang_cc1 -no-opaque-pointers -triple mips64-unknown-linux -o - -emit-llvm %s | FileCheck %s -check-prefixes=ALL,N64,NEW -enable-var-scope
+// RUN: %clang_cc1 -no-opaque-pointers -triple mips64el-unknown-linux -o - -emit-llvm %s | FileCheck %s -check-prefixes=ALL,N64,NEW -enable-var-scope
 
 #include <stdarg.h>
 

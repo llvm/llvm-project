@@ -461,6 +461,12 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::VPID: {                                                            \
     EVT LegalizeVT = LEGALPOS < 0 ? Node->getValueType(-(1 + LEGALPOS))        \
                                   : Node->getOperand(LEGALPOS).getValueType(); \
+    if (ISD::VPID == ISD::VP_SETCC) {                                          \
+      ISD::CondCode CCCode = cast<CondCodeSDNode>(Node->getOperand(2))->get(); \
+      Action = TLI.getCondCodeAction(CCCode, LegalizeVT.getSimpleVT());        \
+      if (Action != TargetLowering::Legal)                                     \
+        break;                                                                 \
+    }                                                                          \
     Action = TLI.getOperationAction(Node->getOpcode(), LegalizeVT);            \
   } break;
 #include "llvm/IR/VPIntrinsics.def"
@@ -744,6 +750,7 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     ExpandFSUB(Node, Results);
     return;
   case ISD::SETCC:
+  case ISD::VP_SETCC:
     ExpandSETCC(Node, Results);
     return;
   case ISD::ABS:
@@ -1417,6 +1424,7 @@ void VectorLegalizer::ExpandFSUB(SDNode *Node,
 void VectorLegalizer::ExpandSETCC(SDNode *Node,
                                   SmallVectorImpl<SDValue> &Results) {
   bool NeedInvert = false;
+  bool IsVP = Node->getOpcode() == ISD::VP_SETCC;
   SDLoc dl(Node);
   MVT OpVT = Node->getOperand(0).getSimpleValueType();
   ISD::CondCode CCCode = cast<CondCodeSDNode>(Node->getOperand(2))->get();
@@ -1430,20 +1438,36 @@ void VectorLegalizer::ExpandSETCC(SDNode *Node,
   SDValue LHS = Node->getOperand(0);
   SDValue RHS = Node->getOperand(1);
   SDValue CC = Node->getOperand(2);
-  bool Legalized = TLI.LegalizeSetCCCondCode(DAG, Node->getValueType(0), LHS,
-                                             RHS, CC, NeedInvert, dl, Chain);
+  SDValue Mask, EVL;
+  if (IsVP) {
+    Mask = Node->getOperand(3);
+    EVL = Node->getOperand(4);
+  }
+
+  bool Legalized =
+      TLI.LegalizeSetCCCondCode(DAG, Node->getValueType(0), LHS, RHS, CC, Mask,
+                                EVL, NeedInvert, dl, Chain);
 
   if (Legalized) {
     // If we expanded the SETCC by swapping LHS and RHS, or by inverting the
     // condition code, create a new SETCC node.
-    if (CC.getNode())
-      LHS = DAG.getNode(ISD::SETCC, dl, Node->getValueType(0), LHS, RHS, CC,
-                        Node->getFlags());
+    if (CC.getNode()) {
+      if (!IsVP)
+        LHS = DAG.getNode(ISD::SETCC, dl, Node->getValueType(0), LHS, RHS, CC,
+                          Node->getFlags());
+      else
+        LHS = DAG.getNode(ISD::VP_SETCC, dl, Node->getValueType(0),
+                          {LHS, RHS, CC, Mask, EVL}, Node->getFlags());
+    }
 
     // If we expanded the SETCC by inverting the condition code, then wrap
     // the existing SETCC in a NOT to restore the intended condition.
-    if (NeedInvert)
-      LHS = DAG.getLogicalNOT(dl, LHS, LHS->getValueType(0));
+    if (NeedInvert) {
+      if (!IsVP)
+        LHS = DAG.getLogicalNOT(dl, LHS, LHS->getValueType(0));
+      else
+        LHS = DAG.getVPLogicalNOT(dl, LHS, Mask, EVL, LHS->getValueType(0));
+    }
   } else {
     // Otherwise, SETCC for the given comparison type must be completely
     // illegal; expand it into a SELECT_CC.

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i686-unknown-windows-msvc -fobjc-runtime=ios-6.0 -fobjc-arc \
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-unknown-windows-msvc -fobjc-runtime=ios-6.0 -fobjc-arc \
 // RUN:   -fexceptions -fcxx-exceptions -emit-llvm -o - %s | FileCheck %s
 
 id f();

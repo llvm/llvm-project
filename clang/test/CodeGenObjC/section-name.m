@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple thumbv7--windows-itanium -fdeclspec -fobjc-runtime=ios -emit-llvm -o - %s -Wno-objc-root-class | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple thumbv7--windows-itanium -fdeclspec -fobjc-runtime=ios -emit-llvm -o - %s -Wno-objc-root-class | FileCheck %s
 
 @protocol Protocol
 - (void) protocol_method;

@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -x cl -O0 -cl-std=CL2.0 -emit-llvm -triple x86_64-unknown-linux-gnu %s -o - | FileCheck %s --check-prefix=X86
-// RUN: %clang_cc1 -x cl -O0 -cl-std=CL2.0 -emit-llvm -triple spir-unknown-unknown %s -o - | FileCheck %s --check-prefix=SPIR
-// RUN: %clang_cc1 -x cl -O0 -cl-std=CL2.0 -emit-llvm -triple spir64-unknown-unknown %s -o - | FileCheck %s --check-prefix=SPIR64
-// RUN: %clang_cc1 -x cl -O0 -cl-std=CL2.0 -emit-llvm -triple amdgcn-amd-amdhsa %s -o - | FileCheck %s --check-prefix=AMDGCN
+// RUN: %clang_cc1 -no-opaque-pointers -x cl -O0 -cl-std=CL2.0 -emit-llvm -triple x86_64-unknown-linux-gnu %s -o - | FileCheck %s --check-prefix=X86
+// RUN: %clang_cc1 -no-opaque-pointers -x cl -O0 -cl-std=CL2.0 -emit-llvm -triple spir-unknown-unknown %s -o - | FileCheck %s --check-prefix=SPIR
+// RUN: %clang_cc1 -no-opaque-pointers -x cl -O0 -cl-std=CL2.0 -emit-llvm -triple spir64-unknown-unknown %s -o - | FileCheck %s --check-prefix=SPIR64
+// RUN: %clang_cc1 -no-opaque-pointers -x cl -O0 -cl-std=CL2.0 -emit-llvm -triple amdgcn-amd-amdhsa %s -o - | FileCheck %s --check-prefix=AMDGCN
 __kernel void testPipe( pipe int test )
 {
     int s = sizeof(test);

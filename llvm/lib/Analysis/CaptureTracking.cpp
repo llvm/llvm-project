@@ -16,6 +16,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/CaptureTracking.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -74,8 +75,10 @@ bool CaptureTracker::isDereferenceableOrNull(Value *O, const DataLayout &DL) {
 
 namespace {
   struct SimpleCaptureTracker : public CaptureTracker {
-    explicit SimpleCaptureTracker(bool ReturnCaptures)
-        : ReturnCaptures(ReturnCaptures) {}
+    explicit SimpleCaptureTracker(
+
+        const SmallPtrSetImpl<const Value *> &EphValues, bool ReturnCaptures)
+        : EphValues(EphValues), ReturnCaptures(ReturnCaptures) {}
 
     void tooManyUses() override { Captured = true; }
 
@@ -83,9 +86,14 @@ namespace {
       if (isa<ReturnInst>(U->getUser()) && !ReturnCaptures)
         return false;
 
+      if (EphValues.contains(U->getUser()))
+        return false;
+
       Captured = true;
       return true;
     }
+
+    const SmallPtrSetImpl<const Value *> &EphValues;
 
     bool ReturnCaptures;
 
@@ -212,8 +220,18 @@ namespace {
 /// counts as capturing it or not.  The boolean StoreCaptures specified whether
 /// storing the value (or part of it) into memory anywhere automatically
 /// counts as capturing it or not.
-bool llvm::PointerMayBeCaptured(const Value *V,
-                                bool ReturnCaptures, bool StoreCaptures,
+bool llvm::PointerMayBeCaptured(const Value *V, bool ReturnCaptures,
+                                bool StoreCaptures, unsigned MaxUsesToExplore) {
+  SmallPtrSet<const Value *, 1> Empty;
+  return PointerMayBeCaptured(V, ReturnCaptures, StoreCaptures, Empty,
+                              MaxUsesToExplore);
+}
+
+/// Variant of the above function which accepts a set of Values that are
+/// ephemeral and cannot cause pointers to escape.
+bool llvm::PointerMayBeCaptured(const Value *V, bool ReturnCaptures,
+                                bool StoreCaptures,
+                                const SmallPtrSetImpl<const Value *> &EphValues,
                                 unsigned MaxUsesToExplore) {
   assert(!isa<GlobalValue>(V) &&
          "It doesn't make sense to ask whether a global is captured.");
@@ -224,7 +242,7 @@ bool llvm::PointerMayBeCaptured(const Value *V,
   // take advantage of this.
   (void)StoreCaptures;
 
-  SimpleCaptureTracker SCT(ReturnCaptures);
+  SimpleCaptureTracker SCT(EphValues, ReturnCaptures);
   PointerMayBeCaptured(V, &SCT, MaxUsesToExplore);
   if (SCT.Captured)
     ++NumCaptured;

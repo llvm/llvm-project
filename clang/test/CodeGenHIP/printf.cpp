@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -emit-llvm -fcuda-is-device \
+// RUN: %clang_cc1 -no-opaque-pointers -triple amdgcn-amd-amdhsa -x hip -emit-llvm -fcuda-is-device \
 // RUN:   -o - %s | FileCheck --enable-var-scope %s
 
 #define __device__ __attribute__((device))

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple nvptx-unknown-unknown -emit-llvm -O0 -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple nvptx-unknown-unknown -emit-llvm -O0 -o - | FileCheck %s
 
 void device_function() {
 }

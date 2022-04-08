@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin12 -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin12 -emit-llvm -std=c++98 -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin12 -emit-llvm -std=c++11 -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin12 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin12 -emit-llvm -std=c++98 -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin12 -emit-llvm -std=c++11 -o - %s | FileCheck %s
 
 class A { protected: virtual ~A() {} };
 class B { protected: virtual ~B() {} };

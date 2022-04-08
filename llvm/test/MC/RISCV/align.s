@@ -112,3 +112,11 @@ data1:
 # C-EXT-RELAX-RELOC-NOT: R_RISCV_ALIGN
 data2:
 	.word 9
+# Check that the initial alignment is properly handled when using .option to
+# disable the C extension. This used to crash.
+# C-EXT-RELAX-INST:      <.text2>:
+# C-EXT-RELAX-INST-NEXT: add a0, a0, a1
+	.section .text2, "x"
+	.option norvc
+	.balign 4
+	add	a0, a0, a1

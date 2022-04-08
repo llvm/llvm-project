@@ -1,5 +1,5 @@
 // REQUIRES: asserts
-// RUN: %clang_cc1 -x objective-c -emit-llvm -triple x86_64-apple-macosx10.10.0 -fsanitize=nullability-return,returns-nonnull-attribute,nullability-arg,nonnull-attribute %s -o - -w | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -x objective-c -emit-llvm -triple x86_64-apple-macosx10.10.0 -fsanitize=nullability-return,returns-nonnull-attribute,nullability-arg,nonnull-attribute %s -o - -w | FileCheck %s
 
 // If both the annotation and the attribute are present, prefer the attribute,
 // since it actually affects IRGen.

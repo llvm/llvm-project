@@ -972,6 +972,21 @@ template <class LP> void Writer::createOutputSections() {
 void Writer::finalizeAddresses() {
   TimeTraceScope timeScope("Finalize addresses");
   uint64_t pageSize = target->getPageSize();
+
+  // We could parallelize this loop, but local benchmarking indicates it is
+  // faster to do it all in the main thread.
+  for (OutputSegment *seg : outputSegments) {
+    if (seg == linkEditSegment)
+      continue;
+    for (OutputSection *osec : seg->getSections()) {
+      if (!osec->isNeeded())
+        continue;
+      // Other kinds of OutputSections have already been finalized.
+      if (auto concatOsec = dyn_cast<ConcatOutputSection>(osec))
+          concatOsec->finalizeContents();
+    }
+  }
+
   // Ensure that segments (and the sections they contain) are allocated
   // addresses in ascending order, which dyld requires.
   //

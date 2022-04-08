@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -dwarf-version=2 -debug-info-kind=limited -fblocks -o - -x objective-c %s| FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -dwarf-version=2 -debug-info-kind=limited -fblocks -o - -x objective-c %s| FileCheck %s
 // This code triggered a bug where a dbg.declare intrinsic ended up with the
 // wrong parent and subsequently failed the Verifier.
 void baz(id b);

@@ -1,7 +1,7 @@
 // REQUIRES: powerpc-registered-target
-// RUN: %clang_cc1 -triple powerpc-unknown-aix -target-feature +altivec \
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc-unknown-aix -target-feature +altivec \
 // RUN:   -emit-llvm -o - %s | FileCheck --check-prefix=AIX32 %s
-// RUN: %clang_cc1 -triple powerpc64-unknown-aix -target-feature +altivec \
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc64-unknown-aix -target-feature +altivec \
 // RUN:   -emit-llvm -o - %s | FileCheck --check-prefix=AIX64 %s
 
 typedef struct {

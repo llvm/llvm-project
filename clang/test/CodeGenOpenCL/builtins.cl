@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -finclude-default-header -fdeclare-opencl-builtins -cl-std=clc++ -fblocks -O0 -emit-llvm -o - -triple "spir-unknown-unknown" | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -finclude-default-header -fdeclare-opencl-builtins -cl-std=clc++ -fblocks -O0 -emit-llvm -o - -triple "spir-unknown-unknown" | FileCheck %s
 
 void testBranchingOnEnqueueKernel(queue_t default_queue, unsigned flags, ndrange_t ndrange) {
     // Ensure `enqueue_kernel` can be branched upon.

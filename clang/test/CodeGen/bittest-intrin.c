@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fms-extensions -triple x86_64-windows-msvc %s -emit-llvm -o - | FileCheck %s --check-prefix=X64
-// RUN: %clang_cc1 -fms-extensions -triple thumbv7-windows-msvc %s -emit-llvm -o - | FileCheck %s --check-prefix=ARM
-// RUN: %clang_cc1 -fms-extensions -triple aarch64-windows-msvc %s -emit-llvm -o - | FileCheck %s --check-prefix=ARM
+// RUN: %clang_cc1 -no-opaque-pointers -fms-extensions -triple x86_64-windows-msvc %s -emit-llvm -o - | FileCheck %s --check-prefix=X64
+// RUN: %clang_cc1 -no-opaque-pointers -fms-extensions -triple thumbv7-windows-msvc %s -emit-llvm -o - | FileCheck %s --check-prefix=ARM
+// RUN: %clang_cc1 -no-opaque-pointers -fms-extensions -triple aarch64-windows-msvc %s -emit-llvm -o - | FileCheck %s --check-prefix=ARM
 
 volatile unsigned char sink = 0;
 void test32(long *base, long idx) {

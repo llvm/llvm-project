@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arc-unknown-unknown %s -emit-llvm -o - \
+// RUN: %clang_cc1 -no-opaque-pointers -triple arc-unknown-unknown %s -emit-llvm -o - \
 // RUN:   | FileCheck %s
 
 // Basic argument tests for ARC.

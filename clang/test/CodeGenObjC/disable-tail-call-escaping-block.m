@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -fblocks -fno-escaping-block-tail-calls -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin -fblocks -fno-escaping-block-tail-calls -emit-llvm -o - %s | FileCheck %s
 
 // CHECK-LABEL: define{{.*}} void @test(
 // CHECK: store i8* bitcast (void (i8*)* @[[TEST_BLOCK_INVOKE0:.*]] to i8*)

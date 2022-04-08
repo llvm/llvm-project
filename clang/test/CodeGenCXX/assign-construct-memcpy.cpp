@@ -1,5 +1,5 @@
-/// RUN: %clang_cc1 -triple x86_64-apple-darwin12 -emit-llvm -o - -std=c++11 %s -DPOD | FileCheck %s -check-prefix=CHECK-POD
-// RUN: %clang_cc1 -triple x86_64-apple-darwin12 -emit-llvm -o - -std=c++11 %s | FileCheck %s -check-prefix=CHECK-NONPOD
+/// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin12 -emit-llvm -o - -std=c++11 %s -DPOD | FileCheck %s -check-prefix=CHECK-POD
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin12 -emit-llvm -o - -std=c++11 %s | FileCheck %s -check-prefix=CHECK-NONPOD
 
 // Declare the reserved placement operators.
 typedef __typeof__(sizeof(0)) size_t;

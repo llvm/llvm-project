@@ -1,5 +1,5 @@
 // REQUIRES: x86-registered-target
-// RUN: %clang_cc1 -triple x86_64-unknown-linux -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux -emit-llvm %s -o - | FileCheck %s
 
 // CHECK-LABEL: define{{.*}} void @test_memcpy_inline_0(i8* noundef %dst, i8* noundef %src)
 void test_memcpy_inline_0(void *dst, const void *src) {

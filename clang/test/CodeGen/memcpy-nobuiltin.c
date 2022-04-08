@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -S -emit-llvm -o- %s -isystem %S -DWITH_DECL | FileCheck --check-prefix=CHECK-WITH-DECL %s
-// RUN: %clang_cc1 -verify -S -emit-llvm -o- %s -isystem %S -UWITH_DECL | FileCheck --check-prefix=CHECK-NO-DECL %s
-// RUN: %clang_cc1 -verify -S -emit-llvm -o- %s -isystem %S -disable-llvm-passes -DWITH_SELF_REFERENCE_DECL | FileCheck --check-prefix=CHECK-SELF-REF-DECL %s
+// RUN: %clang_cc1 -no-opaque-pointers -verify -S -emit-llvm -o- %s -isystem %S -DWITH_DECL | FileCheck --check-prefix=CHECK-WITH-DECL %s
+// RUN: %clang_cc1 -no-opaque-pointers -verify -S -emit-llvm -o- %s -isystem %S -UWITH_DECL | FileCheck --check-prefix=CHECK-NO-DECL %s
+// RUN: %clang_cc1 -no-opaque-pointers -verify -S -emit-llvm -o- %s -isystem %S -disable-llvm-passes -DWITH_SELF_REFERENCE_DECL | FileCheck --check-prefix=CHECK-SELF-REF-DECL %s
 //
 // CHECK-WITH-DECL-NOT: @llvm.memcpy
 // CHECK-NO-DECL: @llvm.memcpy

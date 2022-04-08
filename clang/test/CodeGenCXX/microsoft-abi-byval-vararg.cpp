@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -Wno-non-pod-varargs -emit-llvm %s -o - -triple=i686-pc-win32 -mconstructor-aliases -fno-rtti | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -Wno-non-pod-varargs -emit-llvm %s -o - -triple=i686-pc-win32 -mconstructor-aliases -fno-rtti | FileCheck %s
 
 #include <stdarg.h>
 

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-MRC
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fobjc-arc -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-ARC
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-MRC
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -emit-llvm -fobjc-arc -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-ARC
 
 __attribute__((objc_root_class))
 @interface Root

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-darwin -std=c++11 -fobjc-arc -emit-llvm -o - %s | FileCheck %s --implicit-check-not "call\ "
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-darwin -std=c++11 -fobjc-arc -emit-llvm -o - %s | FileCheck %s --implicit-check-not "call\ "
 // rdar://problem/45805151
 
 struct Strong {

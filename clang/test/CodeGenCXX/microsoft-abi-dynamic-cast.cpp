@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -O1 -o - -fexceptions -triple=i386-pc-win32 %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -O1 -o - -fexceptions -triple=i386-pc-win32 %s | FileCheck %s
 
 struct S { char a; };
 struct V { virtual void f(); };

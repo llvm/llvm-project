@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -emit-llvm -triple %itanium_abi_triple -o - %s | FileCheck %s --check-prefixes=CHECK,CHECKNOOCL
-// RUN: %clang_cc1 -emit-llvm -triple x86_64-windows-msvc -o - %s | FileCheck %s --check-prefixes=WIN,WINNOOCL
-// RUN: %clang_cc1 -cl-std=clc++ -emit-llvm -triple %itanium_abi_triple -o - %s | FileCheck %s --check-prefixes=CHECK,CHECKOCL
-// RUN: %clang_cc1 -cl-std=clc++ -emit-llvm -triple x86_64-windows-msvc -o - %s | FileCheck %s --check-prefixes=WIN,WINOCL
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple %itanium_abi_triple -o - %s | FileCheck %s --check-prefixes=CHECK,CHECKNOOCL
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple x86_64-windows-msvc -o - %s | FileCheck %s --check-prefixes=WIN,WINNOOCL
+// RUN: %clang_cc1 -no-opaque-pointers -cl-std=clc++ -emit-llvm -triple %itanium_abi_triple -o - %s | FileCheck %s --check-prefixes=CHECK,CHECKOCL
+// RUN: %clang_cc1 -no-opaque-pointers -cl-std=clc++ -emit-llvm -triple x86_64-windows-msvc -o - %s | FileCheck %s --check-prefixes=WIN,WINOCL
 
 // CHECKNOOCL-LABEL: define {{.*}}void @_Z2f0Pc
 // WINNOOCL-LABEL: define {{.*}}void @"?f0@@YAXPEAD@Z"

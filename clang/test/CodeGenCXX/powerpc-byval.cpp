@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm %s -o - -triple=powerpc-unknown-linux | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm %s -o - -triple=powerpc-unknown-linux | FileCheck %s
 
 struct S {
   S();

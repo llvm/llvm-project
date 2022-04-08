@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-windows-gnu -emit-llvm -o - %s \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-windows-gnu -emit-llvm -o - %s \
 // RUN:    | FileCheck %s --check-prefix=GNU64
-// RUN: %clang_cc1 -triple x86_64-windows-msvc -emit-llvm -o - %s \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-windows-msvc -emit-llvm -o - %s \
 // RUN:    | FileCheck %s --check-prefix=MSC64
 
 typedef int int128_t __attribute__((mode(TI)));
