@@ -466,9 +466,13 @@ public:
         !isSwiftAsyncContext(MF, Reg))
       return false;
 
-    // Emit a variable location using an entry value expression.
-    DIExpression *NewExpr =
-        DIExpression::prepend(Prop.DIExpr, DIExpression::EntryValue);
+    // Emit a variable location using an entry value expression. We only add the
+    // entry value expression if our expression is not yet an entry value.
+    const DIExpression *NewExpr = Prop.DIExpr;
+    if (!NewExpr->isEntryValue())
+      NewExpr =
+        DIExpression::prepend(NewExpr, DIExpression::EntryValue);
+
     MachineOperand MO = MachineOperand::CreateReg(Reg, false);
 
     PendingDbgValues.push_back(emitMOLoc(MO, Var, {NewExpr, Prop.Indirect}));

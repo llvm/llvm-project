@@ -732,13 +732,6 @@ static bool Evaluate_DW_OP_entry_value(std::vector<Value> &stack,
     return false;
   }
 
-  Function *parent_func =
-      parent_frame->GetSymbolContext(eSymbolContextFunction).function;
-  if (!parent_func) {
-    LLDB_LOG(log, "Evaluate_DW_OP_entry_value: no parent function");
-    return false;
-  }
-
   // 2. Find the call edge in the parent function responsible for creating the
   //    current activation.
   Function *current_func =
@@ -752,6 +745,7 @@ static bool Evaluate_DW_OP_entry_value(std::vector<Value> &stack,
   ModuleList &modlist = target.GetImages();
   ExecutionContext parent_exe_ctx = *exe_ctx;
   parent_exe_ctx.SetFrameSP(parent_frame);
+  Function *parent_func = nullptr;
 #ifdef LLDB_ENABLE_SWIFT
   // Swift async function arguments are represented relative to a
   // DW_OP_entry_value that fetches the async context register. This
@@ -761,6 +755,14 @@ static bool Evaluate_DW_OP_entry_value(std::vector<Value> &stack,
   auto fn_name = current_func->GetMangled().GetMangledName().GetStringRef();
   if (!SwiftLanguageRuntime::IsAnySwiftAsyncFunctionSymbol(fn_name)) {
 #endif
+
+  parent_func =
+    parent_frame->GetSymbolContext(eSymbolContextFunction).function;
+  if (!parent_func) {
+    LLDB_LOG(log, "Evaluate_DW_OP_entry_value: no parent function");
+    return false;
+  }
+
   if (!parent_frame->IsArtificial()) {
     // If the parent frame is not artificial, the current activation may be
     // produced by an ambiguous tail call. In this case, refuse to proceed.
@@ -846,7 +848,8 @@ static bool Evaluate_DW_OP_entry_value(std::vector<Value> &stack,
   }
   llvm::Optional<DWARFExpression> subexpr;
   if (!matched_param) {
-    subexpr.emplace(parent_func->CalculateSymbolContextModule(),
+    auto *ctx_func = parent_func ? parent_func : current_func;
+    subexpr.emplace(ctx_func->CalculateSymbolContextModule(),
                     DataExtractor(opcodes, subexpr_offset, subexpr_len),
                     dwarf_cu);
   }
