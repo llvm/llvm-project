@@ -19,13 +19,14 @@ body:             |
 
     ; CHECK-LABEL: name: eq
     ; CHECK: liveins: $w0, $w1
-    ; CHECK: [[COPY:%[0-9]+]]:gpr32sp = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
-    ; CHECK: [[COPY2:%[0-9]+]]:gpr32 = COPY $wzr
-    ; CHECK: [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[COPY]], 0, 0, implicit-def $nzcv
-    ; CHECK: [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[COPY2]], [[COPY1]], 0, implicit $nzcv
-    ; CHECK: $w0 = COPY [[CSELWr]]
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32sp = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32 = COPY $wzr
+    ; CHECK-NEXT: [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[COPY]], 0, 0, implicit-def $nzcv
+    ; CHECK-NEXT: [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[COPY2]], [[COPY1]], 0, implicit $nzcv
+    ; CHECK-NEXT: $w0 = COPY [[CSELWr]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr(s32) = COPY $w0
     %1:gpr(s32) = COPY $w1
     %2:gpr(s32) = G_CONSTANT i32 0
@@ -48,13 +49,14 @@ body:             |
 
     ; CHECK-LABEL: name: using_fcmp
     ; CHECK: liveins: $s0, $w0, $w1
-    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w1
-    ; CHECK: [[COPY1:%[0-9]+]]:fpr32 = COPY $s0
-    ; CHECK: [[COPY2:%[0-9]+]]:gpr32 = COPY $wzr
-    ; CHECK: FCMPSri [[COPY1]], implicit-def $nzcv
-    ; CHECK: [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[COPY2]], [[COPY]], 0, implicit $nzcv
-    ; CHECK: $w0 = COPY [[CSELWr]]
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w1
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr32 = COPY $s0
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32 = COPY $wzr
+    ; CHECK-NEXT: FCMPSri [[COPY1]], implicit-def $nzcv
+    ; CHECK-NEXT: [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[COPY2]], [[COPY]], 0, implicit $nzcv
+    ; CHECK-NEXT: $w0 = COPY [[CSELWr]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %1:gpr(s32) = COPY $w1
     %2:fpr(s32) = COPY $s0
     %3:fpr(s32) = G_FCONSTANT float 0.000000e+00
@@ -78,11 +80,12 @@ body:             |
 
     ; CHECK-LABEL: name: csinc
     ; CHECK: liveins: $w0, $w1
-    ; CHECK: [[COPY:%[0-9]+]]:gpr32common = COPY $w0
-    ; CHECK: [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[COPY]], 1, 0, implicit-def $nzcv
-    ; CHECK: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr [[COPY]], $wzr, 0, implicit $nzcv
-    ; CHECK: $w0 = COPY [[CSINCWr]]
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32common = COPY $w0
+    ; CHECK-NEXT: [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[COPY]], 1, 0, implicit-def $nzcv
+    ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr [[COPY]], $wzr, 0, implicit $nzcv
+    ; CHECK-NEXT: $w0 = COPY [[CSINCWr]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr(s32) = COPY $w0
     %1:gpr(s32) = COPY $w1
     %2:gpr(s32) = G_CONSTANT i32 1

@@ -13,13 +13,15 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: fold_zext
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
-  ; CHECK:   liveins: $x0
-  ; CHECK:   %copy:gpr32 = COPY $w0
-  ; CHECK:   TBNZW %copy, 3, %bb.1
-  ; CHECK:   B %bb.0
-  ; CHECK: bb.1:
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $x0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %copy:gpr32 = COPY $w0
+  ; CHECK-NEXT:   TBNZW %copy, 3, %bb.1
+  ; CHECK-NEXT:   B %bb.0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   RET_ReallyLR
   bb.0:
     successors: %bb.0, %bb.1
     liveins: $x0
@@ -44,13 +46,15 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: fold_anyext
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
-  ; CHECK:   liveins: $x0
-  ; CHECK:   %copy:gpr32 = COPY $w0
-  ; CHECK:   TBNZW %copy, 3, %bb.1
-  ; CHECK:   B %bb.0
-  ; CHECK: bb.1:
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $x0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %copy:gpr32 = COPY $w0
+  ; CHECK-NEXT:   TBNZW %copy, 3, %bb.1
+  ; CHECK-NEXT:   B %bb.0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   RET_ReallyLR
   bb.0:
     successors: %bb.0, %bb.1
     liveins: $x0
@@ -75,15 +79,17 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: fold_multiple
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
-  ; CHECK:   liveins: $h0
-  ; CHECK:   [[SUBREG_TO_REG:%[0-9]+]]:fpr32 = SUBREG_TO_REG 0, $h0, %subreg.hsub
-  ; CHECK:   %copy:gpr32all = COPY [[SUBREG_TO_REG]]
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr32 = COPY %copy
-  ; CHECK:   TBNZW [[COPY]], 3, %bb.1
-  ; CHECK:   B %bb.0
-  ; CHECK: bb.1:
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $h0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:fpr32 = SUBREG_TO_REG 0, $h0, %subreg.hsub
+  ; CHECK-NEXT:   %copy:gpr32all = COPY [[SUBREG_TO_REG]]
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY %copy
+  ; CHECK-NEXT:   TBNZW [[COPY]], 3, %bb.1
+  ; CHECK-NEXT:   B %bb.0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   RET_ReallyLR
   bb.0:
     successors: %bb.0, %bb.1
     liveins: $h0
@@ -109,18 +115,20 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: dont_fold_more_than_one_use
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
-  ; CHECK:   liveins: $x0
-  ; CHECK:   %copy:gpr32 = COPY $w0
-  ; CHECK:   [[ORRWrs:%[0-9]+]]:gpr32 = ORRWrs $wzr, %copy, 0
-  ; CHECK:   %zext:gpr64 = SUBREG_TO_REG 0, [[ORRWrs]], %subreg.sub_32
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr32all = COPY %zext.sub_32
-  ; CHECK:   [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]]
-  ; CHECK:   TBNZW [[COPY1]], 3, %bb.1
-  ; CHECK:   B %bb.0
-  ; CHECK: bb.1:
-  ; CHECK:   $x0 = COPY %zext
-  ; CHECK:   RET_ReallyLR implicit $x0
+  ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $x0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %copy:gpr32 = COPY $w0
+  ; CHECK-NEXT:   [[ORRWrs:%[0-9]+]]:gpr32 = ORRWrs $wzr, %copy, 0
+  ; CHECK-NEXT:   %zext:gpr64 = SUBREG_TO_REG 0, [[ORRWrs]], %subreg.sub_32
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32all = COPY %zext.sub_32
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]]
+  ; CHECK-NEXT:   TBNZW [[COPY1]], 3, %bb.1
+  ; CHECK-NEXT:   B %bb.0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   $x0 = COPY %zext
+  ; CHECK-NEXT:   RET_ReallyLR implicit $x0
   bb.0:
     successors: %bb.0, %bb.1
     liveins: $x0

@@ -13,12 +13,13 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: test_anyext_1
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 1
-    ; CHECK: [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[COPY]](p0) :: (load (s8))
-    ; CHECK: [[AND:%[0-9]+]]:_(s8) = G_AND [[LOAD]], [[C]]
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[AND]](s8)
-    ; CHECK: $w0 = COPY [[ANYEXT]](s32)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 1
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[COPY]](p0) :: (load (s8))
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s8) = G_AND [[LOAD]], [[C]]
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[AND]](s8)
+    ; CHECK-NEXT: $w0 = COPY [[ANYEXT]](s32)
     %0:_(p0) = COPY $x0
     %1:_(s8) = G_CONSTANT i8 1
     %2:_(s8) = G_LOAD %0 :: (load (s8))
@@ -35,10 +36,11 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: test_anyext_s16
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[ZEXTLOAD:%[0-9]+]]:_(s16) = G_ZEXTLOAD [[COPY]](p0) :: (load (s8))
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ZEXTLOAD]](s16)
-    ; CHECK: $w0 = COPY [[ANYEXT]](s32)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s16) = G_ZEXTLOAD [[COPY]](p0) :: (load (s8))
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ZEXTLOAD]](s16)
+    ; CHECK-NEXT: $w0 = COPY [[ANYEXT]](s32)
     %0:_(p0) = COPY $x0
     %1:_(s16) = G_CONSTANT i16 255
     %2:_(s16) = G_LOAD %0 :: (load (s8))
@@ -55,9 +57,10 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: test_anyext_s32
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p0) :: (load (s8))
-    ; CHECK: $w0 = COPY [[ZEXTLOAD]](s32)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p0) :: (load (s8))
+    ; CHECK-NEXT: $w0 = COPY [[ZEXTLOAD]](s32)
     %0:_(p0) = COPY $x0
     %1:_(s32) = G_CONSTANT i32 255
     %2:_(s32) = G_LOAD %0 :: (load (s8))
@@ -73,9 +76,10 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: test_load_s32
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p0) :: (load (s8), align 4)
-    ; CHECK: $w0 = COPY [[ZEXTLOAD]](s32)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p0) :: (load (s8), align 4)
+    ; CHECK-NEXT: $w0 = COPY [[ZEXTLOAD]](s32)
     %0:_(p0) = COPY $x0
     %1:_(s32) = G_CONSTANT i32 255
     %2:_(s32) = G_LOAD %0 :: (load (s32))
@@ -83,6 +87,26 @@ body:             |
     $w0 = COPY %3
 ...
 
+---
+name:            test_load_s32_atomic
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: name: test_load_s32_atomic
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load seq_cst (s32))
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[LOAD]], [[C]]
+    ; CHECK-NEXT: $w0 = COPY [[AND]](s32)
+    %0:_(p0) = COPY $x0
+    %1:_(s32) = G_CONSTANT i32 255
+    %2:_(s32) = G_LOAD %0 :: (load seq_cst (s32))
+    %3:_(s32) = G_AND %2, %1
+    $w0 = COPY %3
+...
 
 ---
 name:            test_load_mask_size_equals_dst_size
@@ -96,11 +120,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_load_mask_size_equals_dst_size
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
-    ; CHECK: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s32))
-    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[LOAD]], [[C]]
-    ; CHECK: $w0 = COPY [[AND]](s32)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s32))
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[LOAD]], [[C]]
+    ; CHECK-NEXT: $w0 = COPY [[AND]](s32)
     %0:_(p0) = COPY $x0
     %1:_(s32) = G_CONSTANT i32 4294967295
     %2:_(s32) = G_LOAD %0 :: (load (s32))
@@ -116,9 +141,10 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: test_zext
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p0) :: (load (s8), align 2)
-    ; CHECK: $w0 = COPY [[ZEXTLOAD]](s32)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p0) :: (load (s8), align 2)
+    ; CHECK-NEXT: $w0 = COPY [[ZEXTLOAD]](s32)
     %0:_(p0) = COPY $x0
     %1:_(s32) = G_CONSTANT i32 255
     %2:_(s32) = G_ZEXTLOAD %0 :: (load (s16))
@@ -138,11 +164,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_zext_mask_larger_memsize
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; CHECK: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p0) :: (load (s8))
-    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[ZEXTLOAD]], [[C]]
-    ; CHECK: $w0 = COPY [[AND]](s32)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p0) :: (load (s8))
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[ZEXTLOAD]], [[C]]
+    ; CHECK-NEXT: $w0 = COPY [[AND]](s32)
     %0:_(p0) = COPY $x0
     %1:_(s32) = G_CONSTANT i32 65535
     %2:_(s32) = G_ZEXTLOAD %0 :: (load (s8))
@@ -158,9 +185,10 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: test_sext
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p0) :: (load (s8), align 2)
-    ; CHECK: $w0 = COPY [[ZEXTLOAD]](s32)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p0) :: (load (s8), align 2)
+    ; CHECK-NEXT: $w0 = COPY [[ZEXTLOAD]](s32)
     %0:_(p0) = COPY $x0
     %1:_(s32) = G_CONSTANT i32 255
     %2:_(s32) = G_SEXTLOAD %0 :: (load (s16))
@@ -176,11 +204,12 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: test_sext_mask_larger_memsize
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; CHECK: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load (s8))
-    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[SEXTLOAD]], [[C]]
-    ; CHECK: $w0 = COPY [[AND]](s32)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load (s8))
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[SEXTLOAD]], [[C]]
+    ; CHECK-NEXT: $w0 = COPY [[AND]](s32)
     %0:_(p0) = COPY $x0
     %1:_(s32) = G_CONSTANT i32 65535
     %2:_(s32) = G_SEXTLOAD %0 :: (load (s8))
@@ -196,12 +225,13 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: test_non_pow2_memtype
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[C:%[0-9]+]]:_(s24) = G_CONSTANT i24 7
-    ; CHECK: [[LOAD:%[0-9]+]]:_(s24) = G_LOAD [[COPY]](p0) :: (load (s24), align 4)
-    ; CHECK: [[AND:%[0-9]+]]:_(s24) = G_AND [[LOAD]], [[C]]
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[AND]](s24)
-    ; CHECK: $w0 = COPY [[ANYEXT]](s32)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s24) = G_CONSTANT i24 7
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s24) = G_LOAD [[COPY]](p0) :: (load (s24), align 4)
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s24) = G_AND [[LOAD]], [[C]]
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[AND]](s24)
+    ; CHECK-NEXT: $w0 = COPY [[ANYEXT]](s32)
     %0:_(p0) = COPY $x0
     %1:_(s24) = G_CONSTANT i24 7
     %2:_(s24) = G_LOAD %0 :: (load (s24))
@@ -219,11 +249,12 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: test_no_mask
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 510
-    ; CHECK: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s8))
-    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[LOAD]], [[C]]
-    ; CHECK: $w0 = COPY [[AND]](s32)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 510
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s8))
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[LOAD]], [[C]]
+    ; CHECK-NEXT: $w0 = COPY [[AND]](s32)
     %0:_(p0) = COPY $x0
     %1:_(s32) = G_CONSTANT i32 510
     %2:_(s32) = G_LOAD %0 :: (load (s8))
@@ -239,11 +270,12 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: test_volatile
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; CHECK: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (volatile load (s8))
-    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[LOAD]], [[C]]
-    ; CHECK: $w0 = COPY [[AND]](s32)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (volatile load (s8))
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[LOAD]], [[C]]
+    ; CHECK-NEXT: $w0 = COPY [[AND]](s32)
     %0:_(p0) = COPY $x0
     %1:_(s32) = G_CONSTANT i32 255
     %2:_(s32) = G_LOAD %0 :: (volatile load (s8))

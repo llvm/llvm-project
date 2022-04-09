@@ -14,13 +14,14 @@ body:             |
 
     ; CHECK-LABEL: name: smin_s32
     ; CHECK: liveins: $w0, $w1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(slt), [[COPY]](s32), [[COPY1]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[ICMP]](s32)
-    ; CHECK: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[TRUNC]](s1), [[COPY]], [[COPY1]]
-    ; CHECK: $w0 = COPY [[SELECT]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(slt), [[COPY]](s32), [[COPY1]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[ICMP]](s32)
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[TRUNC]](s1), [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $w0 = COPY [[SELECT]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(s32) = COPY $w0
     %1:_(s32) = COPY $w1
     %2:_(s32) = G_SMIN %0, %1
@@ -41,13 +42,14 @@ body:             |
 
     ; CHECK-LABEL: name: smin_s64
     ; CHECK: liveins: $x0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(slt), [[COPY]](s64), [[COPY1]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[ICMP]](s32)
-    ; CHECK: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[TRUNC]](s1), [[COPY]], [[COPY1]]
-    ; CHECK: $x0 = COPY [[SELECT]](s64)
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(slt), [[COPY]](s64), [[COPY1]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[ICMP]](s32)
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[TRUNC]](s1), [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $x0 = COPY [[SELECT]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:_(s64) = COPY $x0
     %1:_(s64) = COPY $x1
     %2:_(s64) = G_SMIN %0, %1
@@ -68,13 +70,14 @@ body:             |
 
     ; CHECK-LABEL: name: smax_s32
     ; CHECK: liveins: $w0, $w1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(sgt), [[COPY]](s32), [[COPY1]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[ICMP]](s32)
-    ; CHECK: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[TRUNC]](s1), [[COPY]], [[COPY1]]
-    ; CHECK: $w0 = COPY [[SELECT]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(sgt), [[COPY]](s32), [[COPY1]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[ICMP]](s32)
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[TRUNC]](s1), [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $w0 = COPY [[SELECT]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(s32) = COPY $w0
     %1:_(s32) = COPY $w1
     %2:_(s32) = G_SMAX %0, %1
@@ -95,13 +98,14 @@ body:             |
 
     ; CHECK-LABEL: name: smax_s64
     ; CHECK: liveins: $x0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(sgt), [[COPY]](s64), [[COPY1]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[ICMP]](s32)
-    ; CHECK: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[TRUNC]](s1), [[COPY]], [[COPY1]]
-    ; CHECK: $x0 = COPY [[SELECT]](s64)
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(sgt), [[COPY]](s64), [[COPY1]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[ICMP]](s32)
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[TRUNC]](s1), [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $x0 = COPY [[SELECT]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:_(s64) = COPY $x0
     %1:_(s64) = COPY $x1
     %2:_(s64) = G_SMAX %0, %1
@@ -124,13 +128,14 @@ body:             |
 
     ; CHECK-LABEL: name: umin_s32
     ; CHECK: liveins: $w0, $w1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[COPY]](s32), [[COPY1]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[ICMP]](s32)
-    ; CHECK: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[TRUNC]](s1), [[COPY]], [[COPY1]]
-    ; CHECK: $w0 = COPY [[SELECT]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[COPY]](s32), [[COPY1]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[ICMP]](s32)
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[TRUNC]](s1), [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $w0 = COPY [[SELECT]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(s32) = COPY $w0
     %1:_(s32) = COPY $w1
     %2:_(s32) = G_UMIN %0, %1
@@ -151,13 +156,14 @@ body:             |
 
     ; CHECK-LABEL: name: umin_s64
     ; CHECK: liveins: $x0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[COPY]](s64), [[COPY1]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[ICMP]](s32)
-    ; CHECK: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[TRUNC]](s1), [[COPY]], [[COPY1]]
-    ; CHECK: $x0 = COPY [[SELECT]](s64)
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[COPY]](s64), [[COPY1]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[ICMP]](s32)
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[TRUNC]](s1), [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $x0 = COPY [[SELECT]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:_(s64) = COPY $x0
     %1:_(s64) = COPY $x1
     %2:_(s64) = G_UMIN %0, %1
@@ -178,13 +184,14 @@ body:             |
 
     ; CHECK-LABEL: name: umax_s32
     ; CHECK: liveins: $w0, $w1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ugt), [[COPY]](s32), [[COPY1]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[ICMP]](s32)
-    ; CHECK: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[TRUNC]](s1), [[COPY]], [[COPY1]]
-    ; CHECK: $w0 = COPY [[SELECT]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ugt), [[COPY]](s32), [[COPY1]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[ICMP]](s32)
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[TRUNC]](s1), [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $w0 = COPY [[SELECT]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(s32) = COPY $w0
     %1:_(s32) = COPY $w1
     %2:_(s32) = G_UMAX %0, %1
@@ -205,13 +212,14 @@ body:             |
 
     ; CHECK-LABEL: name: umax_s64
     ; CHECK: liveins: $x0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ugt), [[COPY]](s64), [[COPY1]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[ICMP]](s32)
-    ; CHECK: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[TRUNC]](s1), [[COPY]], [[COPY1]]
-    ; CHECK: $x0 = COPY [[SELECT]](s64)
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ugt), [[COPY]](s64), [[COPY1]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[ICMP]](s32)
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[TRUNC]](s1), [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $x0 = COPY [[SELECT]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:_(s64) = COPY $x0
     %1:_(s64) = COPY $x1
     %2:_(s64) = G_UMAX %0, %1

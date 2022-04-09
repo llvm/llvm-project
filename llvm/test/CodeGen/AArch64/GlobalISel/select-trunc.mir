@@ -26,8 +26,8 @@ body:             |
 
     ; CHECK-LABEL: name: trunc_s32_s64
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr32sp = COPY [[COPY]].sub_32
-    ; CHECK: $w0 = COPY [[COPY1]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32sp = COPY [[COPY]].sub_32
+    ; CHECK-NEXT: $w0 = COPY [[COPY1]]
     %0(s64) = COPY $x0
     %1(s32) = G_TRUNC %0
     $w0 = COPY %1(s32)
@@ -48,9 +48,9 @@ body:             |
 
     ; CHECK-LABEL: name: trunc_s8_s64
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]].sub_32
-    ; CHECK: [[COPY2:%[0-9]+]]:gpr32all = COPY [[COPY1]]
-    ; CHECK: $w0 = COPY [[COPY2]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]].sub_32
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32all = COPY [[COPY1]]
+    ; CHECK-NEXT: $w0 = COPY [[COPY2]]
     %0(s64) = COPY $x0
     %1(s8) = G_TRUNC %0
     %2:gpr(s32) = G_ANYEXT %1
@@ -72,8 +72,8 @@ body:             |
 
     ; CHECK-LABEL: name: trunc_s1_s32
     ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr32all = COPY [[COPY]]
-    ; CHECK: $w0 = COPY [[COPY1]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32all = COPY [[COPY]]
+    ; CHECK-NEXT: $w0 = COPY [[COPY1]]
     %0(s32) = COPY $w0
     %1(s1) = G_TRUNC %0
     %2:gpr(s32) = G_ANYEXT %1
@@ -94,8 +94,8 @@ body:             |
 
     ; CHECK-LABEL: name: trunc_s64_s128
     ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:fpr64 = COPY [[COPY]].dsub
-    ; CHECK: $x0 = COPY [[COPY1]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY [[COPY]].dsub
+    ; CHECK-NEXT: $x0 = COPY [[COPY1]]
     %0(s128) = COPY $q0
     %1(s64) = G_TRUNC %0
     $x0 = COPY %1(s64)
@@ -115,8 +115,8 @@ body:             |
 
     ; CHECK-LABEL: name: trunc_s32_s128
     ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:fpr32 = COPY [[COPY]].ssub
-    ; CHECK: $w0 = COPY [[COPY1]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr32 = COPY [[COPY]].ssub
+    ; CHECK-NEXT: $w0 = COPY [[COPY1]]
     %0(s128) = COPY $q0
     %1(s32) = G_TRUNC %0
     $w0 = COPY %1(s32)

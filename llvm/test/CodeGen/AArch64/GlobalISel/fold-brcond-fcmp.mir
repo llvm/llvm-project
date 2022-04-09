@@ -15,19 +15,22 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: oeq
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x50000000), %bb.2(0x30000000)
-  ; CHECK:   liveins: $s0, $s1, $w0, $w1
-  ; CHECK:   %cmp_lhs:fpr32 = COPY $s0
-  ; CHECK:   %cmp_rhs:fpr32 = COPY $s1
-  ; CHECK:   FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
-  ; CHECK:   Bcc 0, %bb.2, implicit $nzcv
-  ; CHECK:   B %bb.1
-  ; CHECK: bb.1:
-  ; CHECK:   $s0 = COPY %cmp_lhs
-  ; CHECK:   RET_ReallyLR implicit $s0
-  ; CHECK: bb.2:
-  ; CHECK:   $s1 = COPY %cmp_rhs
-  ; CHECK:   RET_ReallyLR implicit $s1
+  ; CHECK-NEXT:   successors: %bb.1(0x50000000), %bb.2(0x30000000)
+  ; CHECK-NEXT:   liveins: $s0, $s1, $w0, $w1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %cmp_lhs:fpr32 = COPY $s0
+  ; CHECK-NEXT:   %cmp_rhs:fpr32 = COPY $s1
+  ; CHECK-NEXT:   FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
+  ; CHECK-NEXT:   Bcc 0, %bb.2, implicit $nzcv
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   $s0 = COPY %cmp_lhs
+  ; CHECK-NEXT:   RET_ReallyLR implicit $s0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   $s1 = COPY %cmp_rhs
+  ; CHECK-NEXT:   RET_ReallyLR implicit $s1
   bb.0:
     successors: %bb.1(0x50000000), %bb.2(0x30000000)
     liveins: $s0, $s1, $w0, $w1
@@ -54,19 +57,22 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: ogt
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x50000000), %bb.2(0x30000000)
-  ; CHECK:   liveins: $s0, $s1, $w0, $w1
-  ; CHECK:   %cmp_lhs:fpr32 = COPY $s0
-  ; CHECK:   %cmp_rhs:fpr32 = COPY $s1
-  ; CHECK:   FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
-  ; CHECK:   Bcc 12, %bb.2, implicit $nzcv
-  ; CHECK:   B %bb.1
-  ; CHECK: bb.1:
-  ; CHECK:   $s0 = COPY %cmp_lhs
-  ; CHECK:   RET_ReallyLR implicit $s0
-  ; CHECK: bb.2:
-  ; CHECK:   $s1 = COPY %cmp_rhs
-  ; CHECK:   RET_ReallyLR implicit $s1
+  ; CHECK-NEXT:   successors: %bb.1(0x50000000), %bb.2(0x30000000)
+  ; CHECK-NEXT:   liveins: $s0, $s1, $w0, $w1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %cmp_lhs:fpr32 = COPY $s0
+  ; CHECK-NEXT:   %cmp_rhs:fpr32 = COPY $s1
+  ; CHECK-NEXT:   FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
+  ; CHECK-NEXT:   Bcc 12, %bb.2, implicit $nzcv
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   $s0 = COPY %cmp_lhs
+  ; CHECK-NEXT:   RET_ReallyLR implicit $s0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   $s1 = COPY %cmp_rhs
+  ; CHECK-NEXT:   RET_ReallyLR implicit $s1
   bb.0:
     successors: %bb.1(0x50000000), %bb.2(0x30000000)
     liveins: $s0, $s1, $w0, $w1
@@ -93,19 +99,22 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: oge
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x50000000), %bb.2(0x30000000)
-  ; CHECK:   liveins: $s0, $s1, $w0, $w1
-  ; CHECK:   %cmp_lhs:fpr32 = COPY $s0
-  ; CHECK:   %cmp_rhs:fpr32 = COPY $s1
-  ; CHECK:   FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
-  ; CHECK:   Bcc 10, %bb.2, implicit $nzcv
-  ; CHECK:   B %bb.1
-  ; CHECK: bb.1:
-  ; CHECK:   $s0 = COPY %cmp_lhs
-  ; CHECK:   RET_ReallyLR implicit $s0
-  ; CHECK: bb.2:
-  ; CHECK:   $s1 = COPY %cmp_rhs
-  ; CHECK:   RET_ReallyLR implicit $s1
+  ; CHECK-NEXT:   successors: %bb.1(0x50000000), %bb.2(0x30000000)
+  ; CHECK-NEXT:   liveins: $s0, $s1, $w0, $w1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %cmp_lhs:fpr32 = COPY $s0
+  ; CHECK-NEXT:   %cmp_rhs:fpr32 = COPY $s1
+  ; CHECK-NEXT:   FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
+  ; CHECK-NEXT:   Bcc 10, %bb.2, implicit $nzcv
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   $s0 = COPY %cmp_lhs
+  ; CHECK-NEXT:   RET_ReallyLR implicit $s0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   $s1 = COPY %cmp_rhs
+  ; CHECK-NEXT:   RET_ReallyLR implicit $s1
   bb.0:
     successors: %bb.1(0x50000000), %bb.2(0x30000000)
     liveins: $s0, $s1, $w0, $w1
@@ -132,19 +141,22 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: olt
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x50000000), %bb.2(0x30000000)
-  ; CHECK:   liveins: $s0, $s1, $w0, $w1
-  ; CHECK:   %cmp_lhs:fpr32 = COPY $s0
-  ; CHECK:   %cmp_rhs:fpr32 = COPY $s1
-  ; CHECK:   FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
-  ; CHECK:   Bcc 4, %bb.2, implicit $nzcv
-  ; CHECK:   B %bb.1
-  ; CHECK: bb.1:
-  ; CHECK:   $s0 = COPY %cmp_lhs
-  ; CHECK:   RET_ReallyLR implicit $s0
-  ; CHECK: bb.2:
-  ; CHECK:   $s1 = COPY %cmp_rhs
-  ; CHECK:   RET_ReallyLR implicit $s1
+  ; CHECK-NEXT:   successors: %bb.1(0x50000000), %bb.2(0x30000000)
+  ; CHECK-NEXT:   liveins: $s0, $s1, $w0, $w1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %cmp_lhs:fpr32 = COPY $s0
+  ; CHECK-NEXT:   %cmp_rhs:fpr32 = COPY $s1
+  ; CHECK-NEXT:   FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
+  ; CHECK-NEXT:   Bcc 4, %bb.2, implicit $nzcv
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   $s0 = COPY %cmp_lhs
+  ; CHECK-NEXT:   RET_ReallyLR implicit $s0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   $s1 = COPY %cmp_rhs
+  ; CHECK-NEXT:   RET_ReallyLR implicit $s1
   bb.0:
     successors: %bb.1(0x50000000), %bb.2(0x30000000)
     liveins: $s0, $s1, $w0, $w1
@@ -171,19 +183,22 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: ole
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x50000000), %bb.2(0x30000000)
-  ; CHECK:   liveins: $s0, $s1, $w0, $w1
-  ; CHECK:   %cmp_lhs:fpr32 = COPY $s0
-  ; CHECK:   %cmp_rhs:fpr32 = COPY $s1
-  ; CHECK:   FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
-  ; CHECK:   Bcc 9, %bb.2, implicit $nzcv
-  ; CHECK:   B %bb.1
-  ; CHECK: bb.1:
-  ; CHECK:   $s0 = COPY %cmp_lhs
-  ; CHECK:   RET_ReallyLR implicit $s0
-  ; CHECK: bb.2:
-  ; CHECK:   $s1 = COPY %cmp_rhs
-  ; CHECK:   RET_ReallyLR implicit $s1
+  ; CHECK-NEXT:   successors: %bb.1(0x50000000), %bb.2(0x30000000)
+  ; CHECK-NEXT:   liveins: $s0, $s1, $w0, $w1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %cmp_lhs:fpr32 = COPY $s0
+  ; CHECK-NEXT:   %cmp_rhs:fpr32 = COPY $s1
+  ; CHECK-NEXT:   FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
+  ; CHECK-NEXT:   Bcc 9, %bb.2, implicit $nzcv
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   $s0 = COPY %cmp_lhs
+  ; CHECK-NEXT:   RET_ReallyLR implicit $s0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   $s1 = COPY %cmp_rhs
+  ; CHECK-NEXT:   RET_ReallyLR implicit $s1
   bb.0:
     successors: %bb.1(0x50000000), %bb.2(0x30000000)
     liveins: $s0, $s1, $w0, $w1
@@ -210,20 +225,23 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: one
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x50000000), %bb.2(0x30000000)
-  ; CHECK:   liveins: $s0, $s1, $w0, $w1
-  ; CHECK:   %cmp_lhs:fpr32 = COPY $s0
-  ; CHECK:   %cmp_rhs:fpr32 = COPY $s1
-  ; CHECK:   FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
-  ; CHECK:   Bcc 4, %bb.2, implicit $nzcv
-  ; CHECK:   Bcc 12, %bb.2, implicit $nzcv
-  ; CHECK:   B %bb.1
-  ; CHECK: bb.1:
-  ; CHECK:   $s0 = COPY %cmp_lhs
-  ; CHECK:   RET_ReallyLR implicit $s0
-  ; CHECK: bb.2:
-  ; CHECK:   $s1 = COPY %cmp_rhs
-  ; CHECK:   RET_ReallyLR implicit $s1
+  ; CHECK-NEXT:   successors: %bb.1(0x50000000), %bb.2(0x30000000)
+  ; CHECK-NEXT:   liveins: $s0, $s1, $w0, $w1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %cmp_lhs:fpr32 = COPY $s0
+  ; CHECK-NEXT:   %cmp_rhs:fpr32 = COPY $s1
+  ; CHECK-NEXT:   FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
+  ; CHECK-NEXT:   Bcc 4, %bb.2, implicit $nzcv
+  ; CHECK-NEXT:   Bcc 12, %bb.2, implicit $nzcv
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   $s0 = COPY %cmp_lhs
+  ; CHECK-NEXT:   RET_ReallyLR implicit $s0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   $s1 = COPY %cmp_rhs
+  ; CHECK-NEXT:   RET_ReallyLR implicit $s1
   bb.0:
     successors: %bb.1(0x50000000), %bb.2(0x30000000)
     liveins: $s0, $s1, $w0, $w1
@@ -250,19 +268,22 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: ord
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x50000000), %bb.2(0x30000000)
-  ; CHECK:   liveins: $s0, $s1, $w0, $w1
-  ; CHECK:   %cmp_lhs:fpr32 = COPY $s0
-  ; CHECK:   %cmp_rhs:fpr32 = COPY $s1
-  ; CHECK:   FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
-  ; CHECK:   Bcc 7, %bb.2, implicit $nzcv
-  ; CHECK:   B %bb.1
-  ; CHECK: bb.1:
-  ; CHECK:   $s0 = COPY %cmp_lhs
-  ; CHECK:   RET_ReallyLR implicit $s0
-  ; CHECK: bb.2:
-  ; CHECK:   $s1 = COPY %cmp_rhs
-  ; CHECK:   RET_ReallyLR implicit $s1
+  ; CHECK-NEXT:   successors: %bb.1(0x50000000), %bb.2(0x30000000)
+  ; CHECK-NEXT:   liveins: $s0, $s1, $w0, $w1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %cmp_lhs:fpr32 = COPY $s0
+  ; CHECK-NEXT:   %cmp_rhs:fpr32 = COPY $s1
+  ; CHECK-NEXT:   FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
+  ; CHECK-NEXT:   Bcc 7, %bb.2, implicit $nzcv
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   $s0 = COPY %cmp_lhs
+  ; CHECK-NEXT:   RET_ReallyLR implicit $s0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   $s1 = COPY %cmp_rhs
+  ; CHECK-NEXT:   RET_ReallyLR implicit $s1
   bb.0:
     successors: %bb.1(0x50000000), %bb.2(0x30000000)
     liveins: $s0, $s1, $w0, $w1
@@ -289,19 +310,22 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: uno
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x50000000), %bb.2(0x30000000)
-  ; CHECK:   liveins: $s0, $s1, $w0, $w1
-  ; CHECK:   %cmp_lhs:fpr32 = COPY $s0
-  ; CHECK:   %cmp_rhs:fpr32 = COPY $s1
-  ; CHECK:   FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
-  ; CHECK:   Bcc 6, %bb.2, implicit $nzcv
-  ; CHECK:   B %bb.1
-  ; CHECK: bb.1:
-  ; CHECK:   $s0 = COPY %cmp_lhs
-  ; CHECK:   RET_ReallyLR implicit $s0
-  ; CHECK: bb.2:
-  ; CHECK:   $s1 = COPY %cmp_rhs
-  ; CHECK:   RET_ReallyLR implicit $s1
+  ; CHECK-NEXT:   successors: %bb.1(0x50000000), %bb.2(0x30000000)
+  ; CHECK-NEXT:   liveins: $s0, $s1, $w0, $w1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %cmp_lhs:fpr32 = COPY $s0
+  ; CHECK-NEXT:   %cmp_rhs:fpr32 = COPY $s1
+  ; CHECK-NEXT:   FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
+  ; CHECK-NEXT:   Bcc 6, %bb.2, implicit $nzcv
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   $s0 = COPY %cmp_lhs
+  ; CHECK-NEXT:   RET_ReallyLR implicit $s0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   $s1 = COPY %cmp_rhs
+  ; CHECK-NEXT:   RET_ReallyLR implicit $s1
   bb.0:
     successors: %bb.1(0x50000000), %bb.2(0x30000000)
     liveins: $s0, $s1, $w0, $w1
@@ -328,20 +352,23 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: ueq
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x50000000), %bb.2(0x30000000)
-  ; CHECK:   liveins: $s0, $s1, $w0, $w1
-  ; CHECK:   %cmp_lhs:fpr32 = COPY $s0
-  ; CHECK:   %cmp_rhs:fpr32 = COPY $s1
-  ; CHECK:   FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
-  ; CHECK:   Bcc 0, %bb.2, implicit $nzcv
-  ; CHECK:   Bcc 6, %bb.2, implicit $nzcv
-  ; CHECK:   B %bb.1
-  ; CHECK: bb.1:
-  ; CHECK:   $s0 = COPY %cmp_lhs
-  ; CHECK:   RET_ReallyLR implicit $s0
-  ; CHECK: bb.2:
-  ; CHECK:   $s1 = COPY %cmp_rhs
-  ; CHECK:   RET_ReallyLR implicit $s1
+  ; CHECK-NEXT:   successors: %bb.1(0x50000000), %bb.2(0x30000000)
+  ; CHECK-NEXT:   liveins: $s0, $s1, $w0, $w1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %cmp_lhs:fpr32 = COPY $s0
+  ; CHECK-NEXT:   %cmp_rhs:fpr32 = COPY $s1
+  ; CHECK-NEXT:   FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
+  ; CHECK-NEXT:   Bcc 0, %bb.2, implicit $nzcv
+  ; CHECK-NEXT:   Bcc 6, %bb.2, implicit $nzcv
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   $s0 = COPY %cmp_lhs
+  ; CHECK-NEXT:   RET_ReallyLR implicit $s0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   $s1 = COPY %cmp_rhs
+  ; CHECK-NEXT:   RET_ReallyLR implicit $s1
   bb.0:
     successors: %bb.1(0x50000000), %bb.2(0x30000000)
     liveins: $s0, $s1, $w0, $w1
@@ -368,19 +395,22 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: ugt
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x50000000), %bb.2(0x30000000)
-  ; CHECK:   liveins: $s0, $s1, $w0, $w1
-  ; CHECK:   %cmp_lhs:fpr32 = COPY $s0
-  ; CHECK:   %cmp_rhs:fpr32 = COPY $s1
-  ; CHECK:   FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
-  ; CHECK:   Bcc 8, %bb.2, implicit $nzcv
-  ; CHECK:   B %bb.1
-  ; CHECK: bb.1:
-  ; CHECK:   $s0 = COPY %cmp_lhs
-  ; CHECK:   RET_ReallyLR implicit $s0
-  ; CHECK: bb.2:
-  ; CHECK:   $s1 = COPY %cmp_rhs
-  ; CHECK:   RET_ReallyLR implicit $s1
+  ; CHECK-NEXT:   successors: %bb.1(0x50000000), %bb.2(0x30000000)
+  ; CHECK-NEXT:   liveins: $s0, $s1, $w0, $w1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %cmp_lhs:fpr32 = COPY $s0
+  ; CHECK-NEXT:   %cmp_rhs:fpr32 = COPY $s1
+  ; CHECK-NEXT:   FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
+  ; CHECK-NEXT:   Bcc 8, %bb.2, implicit $nzcv
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   $s0 = COPY %cmp_lhs
+  ; CHECK-NEXT:   RET_ReallyLR implicit $s0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   $s1 = COPY %cmp_rhs
+  ; CHECK-NEXT:   RET_ReallyLR implicit $s1
   bb.0:
     successors: %bb.1(0x50000000), %bb.2(0x30000000)
     liveins: $s0, $s1, $w0, $w1
@@ -407,19 +437,22 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: uge
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x50000000), %bb.2(0x30000000)
-  ; CHECK:   liveins: $s0, $s1, $w0, $w1
-  ; CHECK:   %cmp_lhs:fpr32 = COPY $s0
-  ; CHECK:   %cmp_rhs:fpr32 = COPY $s1
-  ; CHECK:   FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
-  ; CHECK:   Bcc 5, %bb.2, implicit $nzcv
-  ; CHECK:   B %bb.1
-  ; CHECK: bb.1:
-  ; CHECK:   $s0 = COPY %cmp_lhs
-  ; CHECK:   RET_ReallyLR implicit $s0
-  ; CHECK: bb.2:
-  ; CHECK:   $s1 = COPY %cmp_rhs
-  ; CHECK:   RET_ReallyLR implicit $s1
+  ; CHECK-NEXT:   successors: %bb.1(0x50000000), %bb.2(0x30000000)
+  ; CHECK-NEXT:   liveins: $s0, $s1, $w0, $w1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %cmp_lhs:fpr32 = COPY $s0
+  ; CHECK-NEXT:   %cmp_rhs:fpr32 = COPY $s1
+  ; CHECK-NEXT:   FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
+  ; CHECK-NEXT:   Bcc 5, %bb.2, implicit $nzcv
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   $s0 = COPY %cmp_lhs
+  ; CHECK-NEXT:   RET_ReallyLR implicit $s0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   $s1 = COPY %cmp_rhs
+  ; CHECK-NEXT:   RET_ReallyLR implicit $s1
   bb.0:
     successors: %bb.1(0x50000000), %bb.2(0x30000000)
     liveins: $s0, $s1, $w0, $w1
@@ -446,19 +479,22 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: ult
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x50000000), %bb.2(0x30000000)
-  ; CHECK:   liveins: $s0, $s1, $w0, $w1
-  ; CHECK:   %cmp_lhs:fpr32 = COPY $s0
-  ; CHECK:   %cmp_rhs:fpr32 = COPY $s1
-  ; CHECK:   FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
-  ; CHECK:   Bcc 11, %bb.2, implicit $nzcv
-  ; CHECK:   B %bb.1
-  ; CHECK: bb.1:
-  ; CHECK:   $s0 = COPY %cmp_lhs
-  ; CHECK:   RET_ReallyLR implicit $s0
-  ; CHECK: bb.2:
-  ; CHECK:   $s1 = COPY %cmp_rhs
-  ; CHECK:   RET_ReallyLR implicit $s1
+  ; CHECK-NEXT:   successors: %bb.1(0x50000000), %bb.2(0x30000000)
+  ; CHECK-NEXT:   liveins: $s0, $s1, $w0, $w1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %cmp_lhs:fpr32 = COPY $s0
+  ; CHECK-NEXT:   %cmp_rhs:fpr32 = COPY $s1
+  ; CHECK-NEXT:   FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
+  ; CHECK-NEXT:   Bcc 11, %bb.2, implicit $nzcv
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   $s0 = COPY %cmp_lhs
+  ; CHECK-NEXT:   RET_ReallyLR implicit $s0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   $s1 = COPY %cmp_rhs
+  ; CHECK-NEXT:   RET_ReallyLR implicit $s1
   bb.0:
     successors: %bb.1(0x50000000), %bb.2(0x30000000)
     liveins: $s0, $s1, $w0, $w1
@@ -485,19 +521,22 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: ule
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x50000000), %bb.2(0x30000000)
-  ; CHECK:   liveins: $s0, $s1, $w0, $w1
-  ; CHECK:   %cmp_lhs:fpr32 = COPY $s0
-  ; CHECK:   %cmp_rhs:fpr32 = COPY $s1
-  ; CHECK:   FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
-  ; CHECK:   Bcc 13, %bb.2, implicit $nzcv
-  ; CHECK:   B %bb.1
-  ; CHECK: bb.1:
-  ; CHECK:   $s0 = COPY %cmp_lhs
-  ; CHECK:   RET_ReallyLR implicit $s0
-  ; CHECK: bb.2:
-  ; CHECK:   $s1 = COPY %cmp_rhs
-  ; CHECK:   RET_ReallyLR implicit $s1
+  ; CHECK-NEXT:   successors: %bb.1(0x50000000), %bb.2(0x30000000)
+  ; CHECK-NEXT:   liveins: $s0, $s1, $w0, $w1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %cmp_lhs:fpr32 = COPY $s0
+  ; CHECK-NEXT:   %cmp_rhs:fpr32 = COPY $s1
+  ; CHECK-NEXT:   FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
+  ; CHECK-NEXT:   Bcc 13, %bb.2, implicit $nzcv
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   $s0 = COPY %cmp_lhs
+  ; CHECK-NEXT:   RET_ReallyLR implicit $s0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   $s1 = COPY %cmp_rhs
+  ; CHECK-NEXT:   RET_ReallyLR implicit $s1
   bb.0:
     successors: %bb.1(0x50000000), %bb.2(0x30000000)
     liveins: $s0, $s1, $w0, $w1
@@ -524,19 +563,22 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: une
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x50000000), %bb.2(0x30000000)
-  ; CHECK:   liveins: $s0, $s1, $w0, $w1
-  ; CHECK:   %cmp_lhs:fpr32 = COPY $s0
-  ; CHECK:   %cmp_rhs:fpr32 = COPY $s1
-  ; CHECK:   FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
-  ; CHECK:   Bcc 1, %bb.2, implicit $nzcv
-  ; CHECK:   B %bb.1
-  ; CHECK: bb.1:
-  ; CHECK:   $s0 = COPY %cmp_lhs
-  ; CHECK:   RET_ReallyLR implicit $s0
-  ; CHECK: bb.2:
-  ; CHECK:   $s1 = COPY %cmp_rhs
-  ; CHECK:   RET_ReallyLR implicit $s1
+  ; CHECK-NEXT:   successors: %bb.1(0x50000000), %bb.2(0x30000000)
+  ; CHECK-NEXT:   liveins: $s0, $s1, $w0, $w1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %cmp_lhs:fpr32 = COPY $s0
+  ; CHECK-NEXT:   %cmp_rhs:fpr32 = COPY $s1
+  ; CHECK-NEXT:   FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
+  ; CHECK-NEXT:   Bcc 1, %bb.2, implicit $nzcv
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   $s0 = COPY %cmp_lhs
+  ; CHECK-NEXT:   RET_ReallyLR implicit $s0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   $s1 = COPY %cmp_rhs
+  ; CHECK-NEXT:   RET_ReallyLR implicit $s1
   bb.0:
     successors: %bb.1(0x50000000), %bb.2(0x30000000)
     liveins: $s0, $s1, $w0, $w1

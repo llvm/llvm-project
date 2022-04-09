@@ -5,41 +5,43 @@ name:            test_simple
 body:             |
   ; CHECK-LABEL: name: test_simple
   ; CHECK: bb.0.entry:
-  ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-  ; CHECK:   [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY]](s64)
-  ; CHECK:   [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-  ; CHECK:   [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[COPY]](s64)
-  ; CHECK:   [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[INTTOPTR]](p0)
-  ; CHECK:   $x0 = COPY [[PTRTOINT]](s64)
-  ; CHECK:   G_BRCOND [[TRUNC]](s1), %bb.1
-  ; CHECK: bb.1:
-  ; CHECK:   [[TRUNC2:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-  ; CHECK:   [[TRUNC3:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-  ; CHECK:   [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[TRUNC]](s1), [[TRUNC2]], [[TRUNC3]]
-  ; CHECK:   $w0 = COPY [[SELECT]](s32)
-  ; CHECK:   [[TRUNC4:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-  ; CHECK:   [[TRUNC5:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-  ; CHECK:   [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[TRUNC]](s1), [[TRUNC4]], [[TRUNC5]]
-  ; CHECK:   $w0 = COPY [[SELECT1]](s32)
-  ; CHECK:   [[TRUNC6:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-  ; CHECK:   [[TRUNC7:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-  ; CHECK:   [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[TRUNC]](s1), [[TRUNC6]], [[TRUNC7]]
-  ; CHECK:   $w0 = COPY [[SELECT2]](s32)
-  ; CHECK:   [[SELECT3:%[0-9]+]]:_(s32) = G_SELECT [[TRUNC]](s1), [[TRUNC1]], [[TRUNC1]]
-  ; CHECK:   [[SELECT4:%[0-9]+]]:_(s64) = G_SELECT [[TRUNC]](s1), [[COPY]], [[COPY]]
-  ; CHECK:   $x0 = COPY [[SELECT4]](s64)
-  ; CHECK:   [[BITCAST:%[0-9]+]]:_(<2 x s32>) = G_BITCAST [[COPY]](s64)
-  ; CHECK:   [[BITCAST1:%[0-9]+]]:_(s64) = G_BITCAST [[BITCAST]](<2 x s32>)
-  ; CHECK:   $x0 = COPY [[BITCAST1]](s64)
-  ; CHECK:   [[BITCAST2:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[SELECT3]](s32)
-  ; CHECK:   $w0 = COPY [[BITCAST2]](<2 x s16>)
-  ; CHECK:   [[BITCAST3:%[0-9]+]]:_(<4 x s8>) = G_BITCAST [[TRUNC1]](s32)
-  ; CHECK:   [[BITCAST4:%[0-9]+]]:_(s32) = G_BITCAST [[BITCAST3]](<4 x s8>)
-  ; CHECK:   $w0 = COPY [[BITCAST4]](s32)
-  ; CHECK:   [[BITCAST5:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[TRUNC1]](s32)
-  ; CHECK:   [[BITCAST6:%[0-9]+]]:_(s32) = G_BITCAST [[BITCAST5]](<2 x s16>)
-  ; CHECK:   $w0 = COPY [[BITCAST6]](s32)
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY]](s64)
+  ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
+  ; CHECK-NEXT:   [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[COPY]](s64)
+  ; CHECK-NEXT:   [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[INTTOPTR]](p0)
+  ; CHECK-NEXT:   $x0 = COPY [[PTRTOINT]](s64)
+  ; CHECK-NEXT:   G_BRCOND [[TRUNC]](s1), %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   [[TRUNC2:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
+  ; CHECK-NEXT:   [[TRUNC3:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
+  ; CHECK-NEXT:   [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[TRUNC]](s1), [[TRUNC2]], [[TRUNC3]]
+  ; CHECK-NEXT:   $w0 = COPY [[SELECT]](s32)
+  ; CHECK-NEXT:   [[TRUNC4:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
+  ; CHECK-NEXT:   [[TRUNC5:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
+  ; CHECK-NEXT:   [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[TRUNC]](s1), [[TRUNC4]], [[TRUNC5]]
+  ; CHECK-NEXT:   $w0 = COPY [[SELECT1]](s32)
+  ; CHECK-NEXT:   [[TRUNC6:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
+  ; CHECK-NEXT:   [[TRUNC7:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
+  ; CHECK-NEXT:   [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[TRUNC]](s1), [[TRUNC6]], [[TRUNC7]]
+  ; CHECK-NEXT:   $w0 = COPY [[SELECT2]](s32)
+  ; CHECK-NEXT:   [[SELECT3:%[0-9]+]]:_(s32) = G_SELECT [[TRUNC]](s1), [[TRUNC1]], [[TRUNC1]]
+  ; CHECK-NEXT:   [[SELECT4:%[0-9]+]]:_(s64) = G_SELECT [[TRUNC]](s1), [[COPY]], [[COPY]]
+  ; CHECK-NEXT:   $x0 = COPY [[SELECT4]](s64)
+  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s32>) = G_BITCAST [[COPY]](s64)
+  ; CHECK-NEXT:   [[BITCAST1:%[0-9]+]]:_(s64) = G_BITCAST [[BITCAST]](<2 x s32>)
+  ; CHECK-NEXT:   $x0 = COPY [[BITCAST1]](s64)
+  ; CHECK-NEXT:   [[BITCAST2:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[SELECT3]](s32)
+  ; CHECK-NEXT:   $w0 = COPY [[BITCAST2]](<2 x s16>)
+  ; CHECK-NEXT:   [[BITCAST3:%[0-9]+]]:_(<4 x s8>) = G_BITCAST [[TRUNC1]](s32)
+  ; CHECK-NEXT:   [[BITCAST4:%[0-9]+]]:_(s32) = G_BITCAST [[BITCAST3]](<4 x s8>)
+  ; CHECK-NEXT:   $w0 = COPY [[BITCAST4]](s32)
+  ; CHECK-NEXT:   [[BITCAST5:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[TRUNC1]](s32)
+  ; CHECK-NEXT:   [[BITCAST6:%[0-9]+]]:_(s32) = G_BITCAST [[BITCAST5]](<2 x s16>)
+  ; CHECK-NEXT:   $w0 = COPY [[BITCAST6]](s32)
   bb.0.entry:
     successors: %bb.1(0x80000000)
 
@@ -87,11 +89,11 @@ body:             |
 
     ; CHECK-LABEL: name: bitcast128
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
-    ; CHECK: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY]](s64), [[COPY1]](s64)
-    ; CHECK: [[BITCAST:%[0-9]+]]:_(<2 x s64>) = G_BITCAST [[MV]](s128)
-    ; CHECK: $q0 = COPY [[BITCAST]](<2 x s64>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY]](s64), [[COPY1]](s64)
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x s64>) = G_BITCAST [[MV]](s128)
+    ; CHECK-NEXT: $q0 = COPY [[BITCAST]](<2 x s64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(s64) = COPY $x0
     %1:_(s64) = COPY $x1
     %3:_(s128) = G_MERGE_VALUES %0(s64), %1(s64)
@@ -108,8 +110,8 @@ body:             |
 
     ; CHECK-LABEL: name: testExtOfCopyOfTrunc
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: $x0 = COPY [[COPY]](s64)
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: $x0 = COPY [[COPY]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:_(s64) = COPY $x0
     %1:_(s1) = G_TRUNC %0(s64)
     %2:_(s1) = COPY %1(s1)
@@ -126,8 +128,8 @@ body:             |
 
     ; CHECK-LABEL: name: testExtOf2CopyOfTrunc
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: $x0 = COPY [[COPY]](s64)
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: $x0 = COPY [[COPY]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:_(s64) = COPY $x0
     %1:_(s1) = G_TRUNC %0(s64)
     %2:_(s1) = COPY %1(s1)

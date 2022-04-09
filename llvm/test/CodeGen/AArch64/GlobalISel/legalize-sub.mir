@@ -7,13 +7,13 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_scalar_sub_big
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
-    ; CHECK: [[USUBO:%[0-9]+]]:_(s64), [[USUBO1:%[0-9]+]]:_(s1) = G_USUBO [[COPY]], [[COPY2]]
-    ; CHECK: [[USUBE:%[0-9]+]]:_(s64), [[USUBE1:%[0-9]+]]:_(s1) = G_USUBE [[COPY1]], [[COPY3]], [[USUBO1]]
-    ; CHECK: $x0 = COPY [[USUBO]](s64)
-    ; CHECK: $x1 = COPY [[USUBE]](s64)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
+    ; CHECK-NEXT: [[USUBO:%[0-9]+]]:_(s64), [[USUBO1:%[0-9]+]]:_(s1) = G_USUBO [[COPY]], [[COPY2]]
+    ; CHECK-NEXT: [[USUBE:%[0-9]+]]:_(s64), [[USUBE1:%[0-9]+]]:_(s1) = G_USUBE [[COPY1]], [[COPY3]], [[USUBO1]]
+    ; CHECK-NEXT: $x0 = COPY [[USUBO]](s64)
+    ; CHECK-NEXT: $x1 = COPY [[USUBE]](s64)
     %0:_(s64) = COPY $x0
     %1:_(s64) = COPY $x1
     %2:_(s64) = COPY $x2
@@ -32,15 +32,15 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_scalar_sub_big_nonpow2
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
-    ; CHECK: [[USUBO:%[0-9]+]]:_(s64), [[USUBO1:%[0-9]+]]:_(s1) = G_USUBO [[COPY]], [[COPY1]]
-    ; CHECK: [[USUBE:%[0-9]+]]:_(s64), [[USUBE1:%[0-9]+]]:_(s1) = G_USUBE [[COPY1]], [[COPY2]], [[USUBO1]]
-    ; CHECK: [[USUBE2:%[0-9]+]]:_(s64), [[USUBE3:%[0-9]+]]:_(s1) = G_USUBE [[COPY2]], [[COPY3]], [[USUBE1]]
-    ; CHECK: $x0 = COPY [[USUBO]](s64)
-    ; CHECK: $x1 = COPY [[USUBE]](s64)
-    ; CHECK: $x2 = COPY [[USUBE2]](s64)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
+    ; CHECK-NEXT: [[USUBO:%[0-9]+]]:_(s64), [[USUBO1:%[0-9]+]]:_(s1) = G_USUBO [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: [[USUBE:%[0-9]+]]:_(s64), [[USUBE1:%[0-9]+]]:_(s1) = G_USUBE [[COPY1]], [[COPY2]], [[USUBO1]]
+    ; CHECK-NEXT: [[USUBE2:%[0-9]+]]:_(s64), [[USUBE3:%[0-9]+]]:_(s1) = G_USUBE [[COPY2]], [[COPY3]], [[USUBE1]]
+    ; CHECK-NEXT: $x0 = COPY [[USUBO]](s64)
+    ; CHECK-NEXT: $x1 = COPY [[USUBE]](s64)
+    ; CHECK-NEXT: $x2 = COPY [[USUBE2]](s64)
     %0:_(s64) = COPY $x0
     %1:_(s64) = COPY $x1
     %2:_(s64) = COPY $x2
@@ -60,12 +60,12 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_scalar_sub_small
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
-    ; CHECK: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[TRUNC]], [[TRUNC1]]
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[SUB]](s32)
-    ; CHECK: $x0 = COPY [[ANYEXT]](s64)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
+    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[TRUNC]], [[TRUNC1]]
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[SUB]](s32)
+    ; CHECK-NEXT: $x0 = COPY [[ANYEXT]](s64)
     %0:_(s64) = COPY $x0
     %1:_(s64) = COPY $x1
     %2:_(s8) = G_TRUNC %0(s64)
