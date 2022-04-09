@@ -2401,3 +2401,39 @@ define i64 @li_rori_3() {
 ; RV64IZBS-NEXT:    ret
   ret i64 -2281701377
 }
+
+; This used to assert when compiled with Zba.
+define i64 @PR54812() {
+; RV32I-LABEL: PR54812:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a0, 521599
+; RV32I-NEXT:    li a1, -1
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: PR54812:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a0, 1048447
+; RV64I-NEXT:    addiw a0, a0, 1407
+; RV64I-NEXT:    slli a0, a0, 12
+; RV64I-NEXT:    ret
+;
+; RV64IZBA-LABEL: PR54812:
+; RV64IZBA:       # %bb.0:
+; RV64IZBA-NEXT:    lui a0, 872917
+; RV64IZBA-NEXT:    sh1add a0, a0, a0
+; RV64IZBA-NEXT:    ret
+;
+; RV64IZBB-LABEL: PR54812:
+; RV64IZBB:       # %bb.0:
+; RV64IZBB-NEXT:    lui a0, 1048447
+; RV64IZBB-NEXT:    addiw a0, a0, 1407
+; RV64IZBB-NEXT:    slli a0, a0, 12
+; RV64IZBB-NEXT:    ret
+;
+; RV64IZBS-LABEL: PR54812:
+; RV64IZBS:       # %bb.0:
+; RV64IZBS-NEXT:    lui a0, 1045887
+; RV64IZBS-NEXT:    bclri a0, a0, 31
+; RV64IZBS-NEXT:    ret
+  ret i64 -2158497792;
+}
