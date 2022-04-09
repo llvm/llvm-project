@@ -206,7 +206,7 @@ SafeReturn lld::safeLldMain(int argc, const char **argv,
 // process destruction.
 static unsigned inTestVerbosity() {
   unsigned v = 0;
-  StringRef(getenv("LLD_IN_TEST")).getAsInteger(10, v);
+  StringRef(getenv("LINK_IN_TEST")).getAsInteger(10, v);
   return v;
 }
 
