@@ -1322,7 +1322,6 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   }
 
   if (shouldInlineQuadwordAtomics()) {
-    setMaxAtomicSizeInBitsSupported(128);
     setOperationAction(ISD::ATOMIC_LOAD, MVT::i128, Custom);
     setOperationAction(ISD::ATOMIC_STORE, MVT::i128, Custom);
     setOperationAction(ISD::INTRINSIC_VOID, MVT::i128, Custom);
@@ -1347,6 +1346,10 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
   if (!isPPC64)
     setMaxAtomicSizeInBitsSupported(32);
+  else if (shouldInlineQuadwordAtomics())
+    setMaxAtomicSizeInBitsSupported(128);
+  else
+    setMaxAtomicSizeInBitsSupported(64);
 
   setStackPointerRegisterToSaveRestore(isPPC64 ? PPC::X1 : PPC::R1);
 
