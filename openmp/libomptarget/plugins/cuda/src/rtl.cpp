@@ -1734,7 +1734,10 @@ int32_t __tgt_rtl_wait_event(int32_t device_id, void *event_ptr,
   assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
   assert(async_info_ptr && "async_info_ptr is nullptr");
   assert(event_ptr && "event is nullptr");
-  // NOTE: We might not need to set context for event sync.
+  // If we don't have a queue we need to set the context.
+  if (!async_info_ptr->Queue &&
+      DeviceRTL.setContext(device_id) != OFFLOAD_SUCCESS)
+    return OFFLOAD_FAIL;
   return DeviceRTL.waitEvent(device_id, async_info_ptr, event_ptr);
 }
 
