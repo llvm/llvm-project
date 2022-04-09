@@ -149,7 +149,7 @@ enum ProcessorFeatures {
 // Check motivated by bug reports for OpenSSL crashing on CPUs without CPUID
 // support. Consequently, for i386, the presence of CPUID is checked first
 // via the corresponding eflags bit.
-static bool isCpuIdSupported() {
+static bool isCpuIdSupported(void) {
 #if defined(__GNUC__) || defined(__clang__)
 #if defined(__i386__)
   int __cpuid_supported;
