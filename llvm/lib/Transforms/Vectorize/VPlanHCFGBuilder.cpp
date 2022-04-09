@@ -264,6 +264,7 @@ VPRegionBlock *PlainCFGBuilder::buildPlainCFG() {
   }
   // Create empty VPBB for Loop H so that we can link PH->H.
   VPBlockBase *HeaderVPBB = getOrCreateVPBB(TheLoop->getHeader());
+  HeaderVPBB->setName("vector.body");
   // Preheader's predecessors will be set during the loop RPO traversal below.
   PreheaderVPBB->setOneSuccessor(HeaderVPBB);
 

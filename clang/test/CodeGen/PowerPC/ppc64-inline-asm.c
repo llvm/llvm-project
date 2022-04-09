@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple powerpc64-unknown-linux-gnu -O2 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc64-unknown-linux-gnu -O2 -emit-llvm -o - %s | FileCheck %s
 
 _Bool test_wc_i1(_Bool b1, _Bool b2) {
   _Bool o;

@@ -129,7 +129,7 @@ struct function_traits<ReturnType (ClassType::*)(Args...) const, false> {
 /// Overload for class function types.
 template <typename ClassType, typename ReturnType, typename... Args>
 struct function_traits<ReturnType (ClassType::*)(Args...), false>
-    : function_traits<ReturnType (ClassType::*)(Args...) const> {};
+    : public function_traits<ReturnType (ClassType::*)(Args...) const> {};
 /// Overload for non-class function types.
 template <typename ReturnType, typename... Args>
 struct function_traits<ReturnType (*)(Args...), false> {
@@ -143,6 +143,9 @@ struct function_traits<ReturnType (*)(Args...), false> {
   template <size_t i>
   using arg_t = typename std::tuple_element<i, std::tuple<Args...>>::type;
 };
+template <typename ReturnType, typename... Args>
+struct function_traits<ReturnType (*const)(Args...), false>
+    : public function_traits<ReturnType (*)(Args...)> {};
 /// Overload for non-class function type references.
 template <typename ReturnType, typename... Args>
 struct function_traits<ReturnType (&)(Args...), false>
@@ -202,6 +205,17 @@ struct FirstIndexOfType<T, T, Us...> : std::integral_constant<size_t, 0> {};
 /// TypeAtIndex<I, Ts...> is the type at index I in Ts.
 template <size_t I, typename... Ts>
 using TypeAtIndex = std::tuple_element_t<I, std::tuple<Ts...>>;
+
+/// Helper which adds two underlying types of enumeration type.
+/// Implicit conversion to a common type is accepted.
+template <typename EnumTy1, typename EnumTy2,
+          typename UT1 = std::enable_if_t<std::is_enum<EnumTy1>::value,
+                                          std::underlying_type_t<EnumTy1>>,
+          typename UT2 = std::enable_if_t<std::is_enum<EnumTy2>::value,
+                                          std::underlying_type_t<EnumTy2>>>
+constexpr auto addEnumValues(EnumTy1 LHS, EnumTy2 RHS) {
+  return static_cast<UT1>(LHS) + static_cast<UT2>(RHS);
+}
 
 //===----------------------------------------------------------------------===//
 //     Extra additions to <iterator>

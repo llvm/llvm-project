@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i686-windows-msvc -fms-extensions -emit-llvm -std=c++1y -O0 -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-windows-msvc -fms-extensions -emit-llvm -std=c++1y -O0 -o - %s | FileCheck %s
 struct Base {};
 
 // __declspec(dllexport) causes us to export the implicit constructor.

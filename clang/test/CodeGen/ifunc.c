@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple i386-unknown-linux-gnu -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple i386-unknown-linux-gnu -O2 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i386-unknown-linux-gnu -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i386-unknown-linux-gnu -O2 -emit-llvm -o - %s | FileCheck %s
 
 int foo(int) __attribute__ ((ifunc("foo_ifunc")));
 

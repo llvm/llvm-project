@@ -53,9 +53,10 @@ char objc;
       "vendor": "apple"
     }
   },
-  "relationhips": [],
+  "relationships": [],
   "symbols": [
     {
+      "accessLevel": "public",
       "declarationFragments": [
         {
           "kind": "typeIdentifier",
@@ -80,11 +81,19 @@ char objc;
         "identifier": "c.var"
       },
       "location": {
-        "character": 6,
-        "line": 1,
+        "position": {
+          "character": 6,
+          "line": 1
+        },
         "uri": "file://INPUT_DIR/c.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "c"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -92,7 +101,10 @@ char objc;
           }
         ],
         "title": "c"
-      }
+      },
+      "pathComponents": [
+        "c"
+      ]
     }
   ]
 }
@@ -121,9 +133,10 @@ char objc;
       "vendor": "apple"
     }
   },
-  "relationhips": [],
+  "relationships": [],
   "symbols": [
     {
+      "accessLevel": "public",
       "declarationFragments": [
         {
           "kind": "typeIdentifier",
@@ -148,11 +161,19 @@ char objc;
         "identifier": "objective-c.var"
       },
       "location": {
-        "character": 6,
-        "line": 1,
+        "position": {
+          "character": 6,
+          "line": 1
+        },
         "uri": "file://INPUT_DIR/objc.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "objc"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -160,7 +181,10 @@ char objc;
           }
         ],
         "title": "objc"
-      }
+      },
+      "pathComponents": [
+        "objc"
+      ]
     }
   ]
 }

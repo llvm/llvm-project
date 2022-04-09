@@ -1445,7 +1445,7 @@ void CommandInterpreter::GetHelp(CommandReturnObject &result,
     result.AppendMessage("Current user-defined container commands:");
     result.AppendMessage("");
     max_len = FindLongestCommandWord(m_user_mw_dict);
-    for (pos = m_user_dict.begin(); pos != m_user_mw_dict.end(); ++pos) {
+    for (pos = m_user_mw_dict.begin(); pos != m_user_mw_dict.end(); ++pos) {
       OutputFormattedHelpText(result.GetOutputStream(), pos->first, "--",
                               pos->second->GetHelp(), max_len);
     }

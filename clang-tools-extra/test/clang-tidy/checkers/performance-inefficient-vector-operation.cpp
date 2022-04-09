@@ -44,7 +44,7 @@ class vector {
   void reserve(size_t n);
   void resize(size_t n);
 
-  size_t size();
+  size_t size() const;
   const_reference operator[] (size_type) const;
   reference operator[] (size_type);
 
@@ -357,5 +357,33 @@ void f(std::vector<int>& t) {
     for (int i = 0; i < 5; i++) {
       foo.add_z();
     }
+  }
+}
+
+struct StructWithFieldContainer {
+  std::vector<int> Numbers;
+  std::vector<int> getNumbers() const {
+    std::vector<int> Result;
+    // CHECK-FIXES: Result.reserve(Numbers.size());
+    for (auto Number : Numbers) {
+      Result.push_back(Number);
+      // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: 'push_back' is called
+    }
+    return Result;
+  }
+};
+
+StructWithFieldContainer getStructWithField();
+
+void foo(const StructWithFieldContainer &Src) {
+  std::vector<int> A;
+  // CHECK-FIXES: A.reserve(Src.Numbers.size());
+  for (auto Number : Src.Numbers) {
+    A.push_back(Number);
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: 'push_back' is called
+  }
+  std::vector<int> B;
+  for (auto Number : getStructWithField().Numbers) {
+    B.push_back(Number);
   }
 }

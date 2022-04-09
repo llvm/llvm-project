@@ -387,8 +387,7 @@ static void emitOneV5FileEntry(MCStreamer *MCOS, const MCDwarfFile &DwarfFile,
   if (EmitMD5) {
     const MD5::MD5Result &Cksum = *DwarfFile.Checksum;
     MCOS->emitBinaryData(
-        StringRef(reinterpret_cast<const char *>(Cksum.Bytes.data()),
-                  Cksum.Bytes.size()));
+        StringRef(reinterpret_cast<const char *>(Cksum.data()), Cksum.size()));
   }
   if (HasSource) {
     if (LineStr)

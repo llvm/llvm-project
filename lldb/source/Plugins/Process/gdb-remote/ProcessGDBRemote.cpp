@@ -1671,7 +1671,7 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
 
       for (const auto &pair : expedited_register_map) {
         StringExtractor reg_value_extractor(pair.second);
-        DataBufferSP buffer_sp(new DataBufferHeap(
+        WritableDataBufferSP buffer_sp(new DataBufferHeap(
             reg_value_extractor.GetStringRef().size() / 2, 0));
         reg_value_extractor.GetHexBytes(buffer_sp->GetData(), '\xcc');
         uint32_t lldb_regnum =
@@ -2050,7 +2050,8 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
                   bytes.SetFilePos(0);
 
                   const size_t byte_size = bytes.GetStringRef().size() / 2;
-                  DataBufferSP data_buffer_sp(new DataBufferHeap(byte_size, 0));
+                  WritableDataBufferSP data_buffer_sp(
+                      new DataBufferHeap(byte_size, 0));
                   const size_t bytes_copied =
                       bytes.GetHexBytes(data_buffer_sp->GetData(), 0);
                   if (bytes_copied == byte_size)
@@ -2212,7 +2213,8 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
           if (!addr_str.getAsInteger(0, mem_cache_addr)) {
             StringExtractor bytes(bytes_str);
             const size_t byte_size = bytes.GetBytesLeft() / 2;
-            DataBufferSP data_buffer_sp(new DataBufferHeap(byte_size, 0));
+            WritableDataBufferSP data_buffer_sp(
+                new DataBufferHeap(byte_size, 0));
             const size_t bytes_copied =
                 bytes.GetHexBytes(data_buffer_sp->GetData(), 0);
             if (bytes_copied == byte_size)

@@ -652,7 +652,8 @@ unsigned AMDGPUSubtarget::getImplicitArgNumBytes(const Function &F) const {
     return 16;
 
   // Assume all implicit inputs are used by default
-  return AMDGPU::getIntegerAttribute(F, "amdgpu-implicitarg-num-bytes", 56);
+  unsigned NBytes = (AMDGPU::getAmdhsaCodeObjectVersion() >= 5) ? 256 : 56;
+  return AMDGPU::getIntegerAttribute(F, "amdgpu-implicitarg-num-bytes", NBytes);
 }
 
 uint64_t AMDGPUSubtarget::getExplicitKernArgSize(const Function &F,

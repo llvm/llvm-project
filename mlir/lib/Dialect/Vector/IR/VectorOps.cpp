@@ -950,7 +950,12 @@ OpFoldResult vector::ExtractElementOp::fold(ArrayRef<Attribute> operands) {
 
   Attribute src = operands[0];
   Attribute pos = operands[1];
-  if (!src || !pos)
+
+  // Fold extractelement (splat X) -> X.
+  if (auto splat = getVector().getDefiningOp<vector::SplatOp>())
+    return splat.getInput();
+
+  if (!pos || !src)
     return {};
 
   auto srcElements = src.cast<DenseElementsAttr>().getValues<Attribute>();
@@ -1496,6 +1501,7 @@ public:
     Operation *defOp = extractOp.getVector().getDefiningOp();
     if (!defOp || !isa<vector::BroadcastOp, SplatOp>(defOp))
       return failure();
+
     Value source = defOp->getOperand(0);
     if (extractOp.getType() == source.getType())
       return failure();
@@ -1504,10 +1510,10 @@ public:
     };
     unsigned broadcastSrcRank = getRank(source.getType());
     unsigned extractResultRank = getRank(extractOp.getType());
-    // We only consider the case where the rank of the source is smaller than
-    // the rank of the extract dst. The other cases are handled in the folding
-    // patterns.
-    if (extractResultRank <= broadcastSrcRank)
+    // We only consider the case where the rank of the source is less than or
+    // equal to the rank of the extract dst. The other cases are handled in the
+    // folding patterns.
+    if (extractResultRank < broadcastSrcRank)
       return failure();
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
         extractOp, extractOp.getType(), source);
@@ -1788,8 +1794,8 @@ ShuffleOp::inferReturnTypes(MLIRContext *, Optional<Location>,
   return success();
 }
 
-static bool isStepIndexArray(ArrayAttr idxArr, int64_t begin, int64_t width) {
-  int64_t expected = begin;
+static bool isStepIndexArray(ArrayAttr idxArr, uint64_t begin, size_t width) {
+  uint64_t expected = begin;
   return idxArr.size() == width &&
          llvm::all_of(idxArr.getAsValueRange<IntegerAttr>(),
                       [&expected](auto attr) {

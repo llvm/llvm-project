@@ -137,7 +137,7 @@ public:
     EmitMappingSymbol("$d");
     MCELFStreamer::emitValueImpl(Value, Size, Loc);
   }
-  void reset() {
+  void reset() override {
     MappingSymbolCounter = 0;
     State = EMS_None;
     MCELFStreamer::reset();

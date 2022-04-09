@@ -10,6 +10,7 @@
 #define DIALECT_FUNC_TRANSFORMS_PASSDETAIL_H_
 
 #include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {

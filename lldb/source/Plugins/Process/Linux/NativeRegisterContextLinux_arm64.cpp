@@ -449,7 +449,7 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
 }
 
 Status NativeRegisterContextLinux_arm64::ReadAllRegisterValues(
-    lldb::DataBufferSP &data_sp) {
+    lldb::WritableDataBufferSP &data_sp) {
   // AArch64 register data must contain GPRs, either FPR or SVE registers
   // and optional MTE register. Pointer Authentication (PAC) registers are
   // read-only and will be skiped.
@@ -524,7 +524,7 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
     return error;
   }
 
-  uint8_t *src = data_sp->GetBytes();
+  const uint8_t *src = data_sp->GetBytes();
   if (src == nullptr) {
     error.SetErrorStringWithFormat("NativeRegisterContextLinux_arm64::%s "
                                    "DataBuffer::GetBytes() returned a null "

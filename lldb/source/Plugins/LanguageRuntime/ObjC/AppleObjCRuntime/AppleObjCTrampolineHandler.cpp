@@ -343,7 +343,7 @@ void AppleObjCTrampolineHandler::AppleObjCVTables::VTableRegion::SetUpRegion() {
   // Ingest the whole descriptor array:
   const lldb::addr_t desc_ptr = m_header_addr + header_size;
   const size_t desc_array_size = num_descriptors * descriptor_size;
-  DataBufferSP data_sp(new DataBufferHeap(desc_array_size, '\0'));
+  WritableDataBufferSP data_sp(new DataBufferHeap(desc_array_size, '\0'));
   uint8_t *dst = (uint8_t *)data_sp->GetBytes();
 
   DataExtractor desc_extractor(dst, desc_array_size, process_sp->GetByteOrder(),

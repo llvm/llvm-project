@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -O0 -fenable-matrix -triple x86_64-apple-darwin %s -emit-llvm -disable-llvm-passes -o - -std=c++11 | FileCheck %s
-// RUN: %clang_cc1 -O1 -fenable-matrix -triple x86_64-apple-darwin %s -emit-llvm -disable-llvm-passes -o - -std=c++11 | FileCheck --check-prefixes=CHECK,OPT %s
+// RUN: %clang_cc1 -no-opaque-pointers -O0 -fenable-matrix -triple x86_64-apple-darwin %s -emit-llvm -disable-llvm-passes -o - -std=c++11 | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -O1 -fenable-matrix -triple x86_64-apple-darwin %s -emit-llvm -disable-llvm-passes -o - -std=c++11 | FileCheck --check-prefixes=CHECK,OPT %s
 
 typedef double dx5x5_t __attribute__((matrix_type(5, 5)));
 using fx2x3_t = float __attribute__((matrix_type(2, 3)));

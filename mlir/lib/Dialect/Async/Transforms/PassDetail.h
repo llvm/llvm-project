@@ -9,6 +9,7 @@
 #ifndef DIALECT_ASYNC_TRANSFORMS_PASSDETAIL_H_
 #define DIALECT_ASYNC_TRANSFORMS_PASSDETAIL_H_
 
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/Pass/Pass.h"
 

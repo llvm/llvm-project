@@ -10,6 +10,7 @@
 #include "AMDGPU.h"
 #include "Arch/AArch64.h"
 #include "Arch/ARM.h"
+#include "Arch/CSKY.h"
 #include "Arch/M68k.h"
 #include "Arch/Mips.h"
 #include "Arch/PPC.h"
@@ -383,6 +384,9 @@ static void getTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   case llvm::Triple::ve:
     ve::getVETargetFeatures(D, Args, Features);
     break;
+  case llvm::Triple::csky:
+    csky::getCSKYTargetFeatures(D, Triple, Args, CmdArgs, Features);
+    break;
   }
 
   for (auto Feature : unifyTargetFeatures(Features)) {
@@ -547,6 +551,7 @@ static bool useFramePointerForTargetByDefault(const ArgList &Args,
   case llvm::Triple::riscv64:
   case llvm::Triple::amdgcn:
   case llvm::Triple::r600:
+  case llvm::Triple::csky:
     return !areOptimizationsEnabled(Args);
   default:
     break;
@@ -5925,6 +5930,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (MessageLength != 0)
     CmdArgs.push_back(
         Args.MakeArgString("-fmessage-length=" + Twine(MessageLength)));
+
+  if (Arg *A = Args.getLastArg(options::OPT_frandomize_layout_seed_EQ))
+    CmdArgs.push_back(
+        Args.MakeArgString("-frandomize-layout-seed=" + Twine(A->getValue(0))));
+
+  if (Arg *A = Args.getLastArg(options::OPT_frandomize_layout_seed_file_EQ))
+    CmdArgs.push_back(Args.MakeArgString("-frandomize-layout-seed-file=" +
+                                         Twine(A->getValue(0))));
 
   // -fvisibility= and -fvisibility-ms-compat are of a piece.
   if (const Arg *A = Args.getLastArg(options::OPT_fvisibility_EQ,

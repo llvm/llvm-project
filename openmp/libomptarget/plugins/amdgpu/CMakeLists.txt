@@ -77,6 +77,7 @@ add_library(omptarget.rtl.amdgpu SHARED
       src/ompt_callback.cpp
       ${LIBOMPTARGET_EXTRA_SOURCE}
       )
+add_dependencies(omptarget.rtl.amdgpu omptarget.devicertl.amdgpu)
 
 # Install plugin under the lib destination folder.
 # When we build for debug, OPENMP_LIBDIR_SUFFIX get set to -debug
@@ -131,5 +132,7 @@ if (${amdgpu_arch_result})
 else()
   # Report to the parent scope that we are building a plugin for amdgpu
   set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS} amdgcn-amd-amdhsa amdgcn-amd-amdhsa-newDriver" PARENT_SCOPE)
+  list(APPEND LIBOMPTARGET_TESTED_PLUGINS "omptarget.rtl.amdgpu")
+  set(LIBOMPTARGET_TESTED_PLUGINS "${LIBOMPTARGET_TESTED_PLUGINS}" PARENT_SCOPE)
 endif()
 

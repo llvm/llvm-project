@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/Transforms/Passes.h"
 
 using namespace mlir;

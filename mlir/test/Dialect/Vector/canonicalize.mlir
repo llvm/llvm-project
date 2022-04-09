@@ -566,6 +566,18 @@ func @fold_extract_broadcast(%a : f32) -> vector<4xf32> {
 
 // -----
 
+// CHECK-LABEL: fold_extract_broadcast
+//  CHECK-SAME:   %[[A:.*]]: vector<1xf32>
+//       CHECK:   %[[R:.*]] = vector.broadcast %[[A]] : vector<1xf32> to vector<8xf32>
+//       CHECK:   return %[[R]] : vector<8xf32>
+func @fold_extract_broadcast(%a : vector<1xf32>) -> vector<8xf32> {
+  %b = vector.broadcast %a : vector<1xf32> to vector<1x8xf32>
+  %r = vector.extract %b[0] : vector<1x8xf32>
+  return %r : vector<8xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @fold_extract_shapecast
 //  CHECK-SAME: (%[[A0:.*]]: vector<5x1x3x2xf32>, %[[A1:.*]]: vector<8x4x2xf32>
 //       CHECK:   %[[R0:.*]] = vector.extract %[[A0]][1, 0, 1, 1] : vector<5x1x3x2xf32>
@@ -1393,6 +1405,16 @@ func @insert_element_fold() -> vector<4xi32> {
 //       CHECK:   return %[[C]]
 func @extract_element_fold() -> i32 {
   %v = arith.constant dense<[1, 3, 5, 7]> : vector<4xi32>
+  %i = arith.constant 2 : i32
+  %1 = vector.extractelement %v[%i : i32] : vector<4xi32>
+  return %1 : i32
+}
+
+// CHECK-LABEL: func @extract_element_splat_fold
+//  CHECK-SAME: (%[[ARG:.+]]: i32)
+//       CHECK:   return %[[ARG]]
+func @extract_element_splat_fold(%a : i32) -> i32 {
+  %v = vector.splat %a : vector<4xi32>
   %i = arith.constant 2 : i32
   %1 = vector.extractelement %v[%i : i32] : vector<4xi32>
   return %1 : i32

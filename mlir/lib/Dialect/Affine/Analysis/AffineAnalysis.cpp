@@ -29,6 +29,7 @@
 #define DEBUG_TYPE "affine-analysis"
 
 using namespace mlir;
+using namespace presburger;
 
 /// Get the value that is being reduced by `pos`-th reduction in the loop if
 /// such a reduction can be performed by affine parallel loops. This assumes
@@ -445,12 +446,10 @@ static void computeDirectionVector(
   dependenceComponents->resize(numCommonLoops);
   for (unsigned j = 0; j < numCommonLoops; ++j) {
     (*dependenceComponents)[j].op = commonLoops[j].getOperation();
-    auto lbConst =
-        dependenceDomain->getConstantBound(FlatAffineConstraints::LB, j);
+    auto lbConst = dependenceDomain->getConstantBound(IntegerPolyhedron::LB, j);
     (*dependenceComponents)[j].lb =
         lbConst.getValueOr(std::numeric_limits<int64_t>::min());
-    auto ubConst =
-        dependenceDomain->getConstantBound(FlatAffineConstraints::UB, j);
+    auto ubConst = dependenceDomain->getConstantBound(IntegerPolyhedron::UB, j);
     (*dependenceComponents)[j].ub =
         ubConst.getValueOr(std::numeric_limits<int64_t>::max());
   }

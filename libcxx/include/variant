@@ -547,7 +547,7 @@ private:
     template <class _Fp, class... _Vs>
     inline _LIBCPP_INLINE_VISIBILITY
     static constexpr decltype(auto) __dispatch(_Fp __f, _Vs... __vs) {
-        return _VSTD::__invoke_constexpr(
+        return _VSTD::__invoke(
             static_cast<_Fp>(__f),
             __access::__base::__get_alt<_Is>(static_cast<_Vs>(__vs))...);
     }
@@ -667,8 +667,8 @@ private:
       __std_visit_exhaustive_visitor_check<
           _Visitor,
           decltype((_VSTD::forward<_Alts>(__alts).__value))...>();
-      return _VSTD::__invoke_constexpr(_VSTD::forward<_Visitor>(__visitor),
-                                _VSTD::forward<_Alts>(__alts).__value...);
+      return _VSTD::__invoke(_VSTD::forward<_Visitor>(__visitor),
+                             _VSTD::forward<_Alts>(__alts).__value...);
     }
     _Visitor&& __visitor;
   };
@@ -683,12 +683,12 @@ private:
           _Visitor,
           decltype((_VSTD::forward<_Alts>(__alts).__value))...>();
       if constexpr (is_void_v<_Rp>) {
-        _VSTD::__invoke_constexpr(_VSTD::forward<_Visitor>(__visitor),
-                                  _VSTD::forward<_Alts>(__alts).__value...);
+        _VSTD::__invoke(_VSTD::forward<_Visitor>(__visitor),
+                        _VSTD::forward<_Alts>(__alts).__value...);
       }
       else {
-        return _VSTD::__invoke_constexpr(_VSTD::forward<_Visitor>(__visitor),
-                                         _VSTD::forward<_Alts>(__alts).__value...);
+        return _VSTD::__invoke(_VSTD::forward<_Visitor>(__visitor),
+                               _VSTD::forward<_Alts>(__alts).__value...);
       }
     }
 

@@ -681,10 +681,13 @@ void ForwardDataFlowSolver::visitBlockArgument(Block *block, int i) {
     // Try to get the operand forwarded by the predecessor. If we can't reason
     // about the terminator of the predecessor, mark as having reached a
     // fixpoint.
-    Optional<OperandRange> branchOperands;
-    if (auto branch = dyn_cast<BranchOpInterface>(pred->getTerminator()))
-      branchOperands = branch.getSuccessorOperands(it.getSuccessorIndex());
-    if (!branchOperands) {
+    auto branch = dyn_cast<BranchOpInterface>(pred->getTerminator());
+    if (!branch) {
+      updatedLattice |= argLattice.markPessimisticFixpoint();
+      break;
+    }
+    Value operand = branch.getSuccessorOperands(it.getSuccessorIndex())[i];
+    if (!operand) {
       updatedLattice |= argLattice.markPessimisticFixpoint();
       break;
     }
@@ -692,7 +695,7 @@ void ForwardDataFlowSolver::visitBlockArgument(Block *block, int i) {
     // If the operand hasn't been resolved, it is uninitialized and can merge
     // with anything.
     AbstractLatticeElement *operandLattice =
-        analysis.lookupLatticeElement((*branchOperands)[i]);
+        analysis.lookupLatticeElement(operand);
     if (!operandLattice)
       continue;
 

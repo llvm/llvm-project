@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -fms-extensions -triple x86_64-windows-msvc -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -fms-extensions -triple x86_64-windows-msvc -emit-llvm -o - | FileCheck %s
 
 template <typename> struct MessageT { };
 extern template struct MessageT<int>;

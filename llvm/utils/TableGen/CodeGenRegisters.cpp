@@ -1814,6 +1814,7 @@ void CodeGenRegBank::computeRegUnitWeights() {
   unsigned NumIters = 0;
   for (bool Changed = true; Changed; ++NumIters) {
     assert(NumIters <= NumNativeRegUnits && "Runaway register unit weights");
+    (void) NumIters;
     Changed = false;
     for (auto &Reg : Registers) {
       CodeGenRegister::RegUnitList NormalUnits;

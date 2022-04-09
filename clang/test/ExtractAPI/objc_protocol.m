@@ -45,7 +45,7 @@
       "vendor": "apple"
     }
   },
-  "relationhips": [
+  "relationships": [
     {
       "kind": "conformsTo",
       "source": "c:objc(pl)AnotherProtocol",
@@ -54,6 +54,7 @@
   ],
   "symbols": [
     {
+      "accessLevel": "public",
       "declarationFragments": [
         {
           "kind": "keyword",
@@ -77,11 +78,19 @@
         "identifier": "objective-c.protocol"
       },
       "location": {
-        "character": 11,
-        "line": 1,
+        "position": {
+          "character": 11,
+          "line": 1
+        },
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "Protocol"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -89,9 +98,13 @@
           }
         ],
         "title": "Protocol"
-      }
+      },
+      "pathComponents": [
+        "Protocol"
+      ]
     },
     {
+      "accessLevel": "public",
       "declarationFragments": [
         {
           "kind": "keyword",
@@ -128,11 +141,19 @@
         "identifier": "objective-c.protocol"
       },
       "location": {
-        "character": 11,
-        "line": 4,
+        "position": {
+          "character": 11,
+          "line": 4
+        },
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "AnotherProtocol"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -140,7 +161,10 @@
           }
         ],
         "title": "AnotherProtocol"
-      }
+      },
+      "pathComponents": [
+        "AnotherProtocol"
+      ]
     }
   ]
 }

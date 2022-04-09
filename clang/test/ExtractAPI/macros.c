@@ -46,9 +46,10 @@
       "vendor": "apple"
     }
   },
-  "relationhips": [],
+  "relationships": [],
   "symbols": [
     {
+      "accessLevel": "public",
       "declarationFragments": [
         {
           "kind": "keyword",
@@ -72,11 +73,19 @@
         "identifier": "objective-c.macro"
       },
       "location": {
-        "character": 9,
-        "line": 1,
+        "position": {
+          "character": 9,
+          "line": 1
+        },
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "HELLO"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -84,9 +93,13 @@
           }
         ],
         "title": "HELLO"
-      }
+      },
+      "pathComponents": [
+        "HELLO"
+      ]
     },
     {
+      "accessLevel": "public",
       "declarationFragments": [
         {
           "kind": "keyword",
@@ -110,11 +123,19 @@
         "identifier": "objective-c.macro"
       },
       "location": {
-        "character": 9,
-        "line": 2,
+        "position": {
+          "character": 9,
+          "line": 2
+        },
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "WORLD"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -122,9 +143,13 @@
           }
         ],
         "title": "WORLD"
-      }
+      },
+      "pathComponents": [
+        "WORLD"
+      ]
     },
     {
+      "accessLevel": "public",
       "declarationFragments": [
         {
           "kind": "keyword",
@@ -160,11 +185,19 @@
         "identifier": "objective-c.macro"
       },
       "location": {
-        "character": 9,
-        "line": 3,
+        "position": {
+          "character": 9,
+          "line": 3
+        },
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "MACRO_FUN"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -172,9 +205,13 @@
           }
         ],
         "title": "MACRO_FUN"
-      }
+      },
+      "pathComponents": [
+        "MACRO_FUN"
+      ]
     },
     {
+      "accessLevel": "public",
       "declarationFragments": [
         {
           "kind": "keyword",
@@ -226,11 +263,19 @@
         "identifier": "objective-c.macro"
       },
       "location": {
-        "character": 9,
-        "line": 4,
+        "position": {
+          "character": 9,
+          "line": 4
+        },
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "FUN"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -238,9 +283,13 @@
           }
         ],
         "title": "FUN"
-      }
+      },
+      "pathComponents": [
+        "FUN"
+      ]
     },
     {
+      "accessLevel": "public",
       "declarationFragments": [
         {
           "kind": "keyword",
@@ -276,11 +325,19 @@
         "identifier": "objective-c.macro"
       },
       "location": {
-        "character": 9,
-        "line": 5,
+        "position": {
+          "character": 9,
+          "line": 5
+        },
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "FUNC99"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -288,9 +345,13 @@
           }
         ],
         "title": "FUNC99"
-      }
+      },
+      "pathComponents": [
+        "FUNC99"
+      ]
     },
     {
+      "accessLevel": "public",
       "declarationFragments": [
         {
           "kind": "keyword",
@@ -326,11 +387,19 @@
         "identifier": "objective-c.macro"
       },
       "location": {
-        "character": 9,
-        "line": 6,
+        "position": {
+          "character": 9,
+          "line": 6
+        },
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "FUNGNU"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -338,7 +407,10 @@
           }
         ],
         "title": "FUNGNU"
-      }
+      },
+      "pathComponents": [
+        "FUNGNU"
+      ]
     }
   ]
 }

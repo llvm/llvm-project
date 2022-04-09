@@ -24,7 +24,6 @@ class StringRef;
 class AnalysisUsage;
 class TargetTransformInfo;
 class AAResults;
-class AliasSetTracker;
 class BasicBlock;
 class BlockFrequencyInfo;
 class ICFLoopSafetyInfo;
@@ -148,7 +147,7 @@ protected:
 /// this function is called by \p sinkRegionForLoopNest.
 bool sinkRegion(DomTreeNode *, AAResults *, LoopInfo *, DominatorTree *,
                 BlockFrequencyInfo *, TargetLibraryInfo *,
-                TargetTransformInfo *, Loop *CurLoop, MemorySSAUpdater *,
+                TargetTransformInfo *, Loop *CurLoop, MemorySSAUpdater &,
                 ICFLoopSafetyInfo *, SinkAndHoistLICMFlags &,
                 OptimizationRemarkEmitter *, Loop *OutermostLoop = nullptr);
 
@@ -157,7 +156,7 @@ bool sinkRegion(DomTreeNode *, AAResults *, LoopInfo *, DominatorTree *,
 bool sinkRegionForLoopNest(DomTreeNode *, AAResults *, LoopInfo *,
                            DominatorTree *, BlockFrequencyInfo *,
                            TargetLibraryInfo *, TargetTransformInfo *, Loop *,
-                           MemorySSAUpdater *, ICFLoopSafetyInfo *,
+                           MemorySSAUpdater &, ICFLoopSafetyInfo *,
                            SinkAndHoistLICMFlags &,
                            OptimizationRemarkEmitter *);
 
@@ -173,7 +172,7 @@ bool sinkRegionForLoopNest(DomTreeNode *, AAResults *, LoopInfo *,
 /// guaranteed to execute in the loop, but are safe to speculatively execute.
 bool hoistRegion(DomTreeNode *, AAResults *, LoopInfo *, DominatorTree *,
                  BlockFrequencyInfo *, TargetLibraryInfo *, Loop *,
-                 MemorySSAUpdater *, ScalarEvolution *, ICFLoopSafetyInfo *,
+                 MemorySSAUpdater &, ScalarEvolution *, ICFLoopSafetyInfo *,
                  SinkAndHoistLICMFlags &, OptimizationRemarkEmitter *, bool,
                  bool AllowSpeculation);
 
@@ -211,7 +210,7 @@ bool promoteLoopAccessesToScalars(
     const SmallSetVector<Value *, 8> &, SmallVectorImpl<BasicBlock *> &,
     SmallVectorImpl<Instruction *> &, SmallVectorImpl<MemoryAccess *> &,
     PredIteratorCache &, LoopInfo *, DominatorTree *, const TargetLibraryInfo *,
-    Loop *, MemorySSAUpdater *, ICFLoopSafetyInfo *,
+    Loop *, MemorySSAUpdater &, ICFLoopSafetyInfo *,
     OptimizationRemarkEmitter *, bool AllowSpeculation);
 
 /// Does a BFS from a given node to all of its children inside a given loop.
@@ -345,9 +344,9 @@ void getLoopAnalysisUsage(AnalysisUsage &AU);
 /// true when moving out of loop and not true when moving into loops.
 /// If \p ORE is set use it to emit optimization remarks.
 bool canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
-                        Loop *CurLoop, AliasSetTracker *CurAST,
-                        MemorySSAUpdater *MSSAU, bool TargetExecutesOncePerLoop,
-                        SinkAndHoistLICMFlags *LICMFlags = nullptr,
+                        Loop *CurLoop, MemorySSAUpdater &MSSAU,
+                        bool TargetExecutesOncePerLoop,
+                        SinkAndHoistLICMFlags &LICMFlags,
                         OptimizationRemarkEmitter *ORE = nullptr);
 
 /// Returns the comparison predicate used when expanding a min/max reduction.

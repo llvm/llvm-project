@@ -3712,7 +3712,7 @@ static uint8_t getAbiVersion() {
     return 0;
   }
 
-  if (config->emachine == EM_AMDGPU) {
+  if (config->emachine == EM_AMDGPU && !objectFiles.empty()) {
     uint8_t ver = objectFiles[0]->abiVersion;
     for (InputFile *file : makeArrayRef(objectFiles).slice(1))
       if (file->abiVersion != ver)

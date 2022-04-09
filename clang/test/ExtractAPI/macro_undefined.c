@@ -47,9 +47,10 @@ FUNC_GEN(bar, const int *, unsigned);
       "vendor": "apple"
     }
   },
-  "relationhips": [],
+  "relationships": [],
   "symbols": [
     {
+      "accessLevel": "public",
       "declarationFragments": [
         {
           "kind": "typeIdentifier",
@@ -69,6 +70,15 @@ FUNC_GEN(bar, const int *, unsigned);
           "spelling": "()"
         }
       ],
+      "functionSignature": {
+        "returns": [
+          {
+            "kind": "typeIdentifier",
+            "preciseIdentifier": "c:v",
+            "spelling": "void"
+          }
+        ]
+      },
       "identifier": {
         "interfaceLanguage": "objective-c",
         "precise": "c:@F@foo"
@@ -78,11 +88,19 @@ FUNC_GEN(bar, const int *, unsigned);
         "identifier": "objective-c.func"
       },
       "location": {
-        "character": 1,
-        "line": 3,
+        "position": {
+          "character": 1,
+          "line": 3
+        },
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "foo"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -91,17 +109,12 @@ FUNC_GEN(bar, const int *, unsigned);
         ],
         "title": "foo"
       },
-      "parameters": {
-        "returns": [
-          {
-            "kind": "typeIdentifier",
-            "preciseIdentifier": "c:v",
-            "spelling": "void"
-          }
-        ]
-      }
+      "pathComponents": [
+        "foo"
+      ]
     },
     {
+      "accessLevel": "public",
       "declarationFragments": [
         {
           "kind": "typeIdentifier",
@@ -135,7 +148,7 @@ FUNC_GEN(bar, const int *, unsigned);
         },
         {
           "kind": "text",
-          "spelling": " *"
+          "spelling": " * "
         },
         {
           "kind": "internalParam",
@@ -163,29 +176,7 @@ FUNC_GEN(bar, const int *, unsigned);
           "spelling": ")"
         }
       ],
-      "identifier": {
-        "interfaceLanguage": "objective-c",
-        "precise": "c:@F@bar"
-      },
-      "kind": {
-        "displayName": "Function",
-        "identifier": "objective-c.func"
-      },
-      "location": {
-        "character": 1,
-        "line": 4,
-        "uri": "file://INPUT_DIR/input.h"
-      },
-      "names": {
-        "subHeading": [
-          {
-            "kind": "identifier",
-            "spelling": "bar"
-          }
-        ],
-        "title": "bar"
-      },
-      "parameters": {
+      "functionSignature": {
         "parameters": [
           {
             "declarationFragments": [
@@ -204,7 +195,7 @@ FUNC_GEN(bar, const int *, unsigned);
               },
               {
                 "kind": "text",
-                "spelling": " *"
+                "spelling": " * "
               },
               {
                 "kind": "internalParam",
@@ -239,9 +230,43 @@ FUNC_GEN(bar, const int *, unsigned);
             "spelling": "void"
           }
         ]
-      }
+      },
+      "identifier": {
+        "interfaceLanguage": "objective-c",
+        "precise": "c:@F@bar"
+      },
+      "kind": {
+        "displayName": "Function",
+        "identifier": "objective-c.func"
+      },
+      "location": {
+        "position": {
+          "character": 1,
+          "line": 4
+        },
+        "uri": "file://INPUT_DIR/input.h"
+      },
+      "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "bar"
+          }
+        ],
+        "subHeading": [
+          {
+            "kind": "identifier",
+            "spelling": "bar"
+          }
+        ],
+        "title": "bar"
+      },
+      "pathComponents": [
+        "bar"
+      ]
     },
     {
+      "accessLevel": "public",
       "declarationFragments": [
         {
           "kind": "keyword",
@@ -265,11 +290,19 @@ FUNC_GEN(bar, const int *, unsigned);
         "identifier": "objective-c.macro"
       },
       "location": {
-        "character": 9,
-        "line": 1,
+        "position": {
+          "character": 9,
+          "line": 1
+        },
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "HELLO"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -277,7 +310,10 @@ FUNC_GEN(bar, const int *, unsigned);
           }
         ],
         "title": "HELLO"
-      }
+      },
+      "pathComponents": [
+        "HELLO"
+      ]
     }
   ]
 }

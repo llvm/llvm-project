@@ -3308,7 +3308,7 @@ WRAPPER_CLASS(PauseStmt, std::optional<StopCode>);
 
 // 2.5 proc-bind-clause -> PROC_BIND (MASTER | CLOSE | SPREAD)
 struct OmpProcBindClause {
-  ENUM_CLASS(Type, Close, Master, Spread)
+  ENUM_CLASS(Type, Close, Master, Spread, Primary)
   WRAPPER_CLASS_BOILERPLATE(OmpProcBindClause, Type);
 };
 

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -triple spir-unknown-unknown -emit-llvm -O0 -o - | FileCheck %s
-// RUN: %clang_cc1 %s -triple spir-unknown-unknown -emit-llvm -O0 -o - | FileCheck %s --check-prefix=CHECK-DEFINITIONS
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple spir-unknown-unknown -emit-llvm -O0 -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple spir-unknown-unknown -emit-llvm -O0 -o - | FileCheck %s --check-prefix=CHECK-DEFINITIONS
 
 // This test ensures the proper address spaces and address space cast are used
 // for constructors, member functions and destructors.

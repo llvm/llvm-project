@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple arm64-darwin -enable-noundef-analysis -emit-llvm -o - %s | FileCheck %s -check-prefix ENABLED
-// RUN: %clang_cc1 -triple arm64-darwin -no-enable-noundef-analysis -emit-llvm -o - %s | FileCheck %s -check-prefix DISABLED
+// RUN: %clang_cc1 -no-opaque-pointers -triple arm64-darwin -enable-noundef-analysis -emit-llvm -o - %s | FileCheck %s -check-prefix ENABLED
+// RUN: %clang_cc1 -no-opaque-pointers -triple arm64-darwin -no-enable-noundef-analysis -emit-llvm -o - %s | FileCheck %s -check-prefix DISABLED
 
 union u1 {
   int val;

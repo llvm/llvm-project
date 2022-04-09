@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -emit-llvm -o - -triple=i386-pc-win32 -std=c++11 %s -fcxx-exceptions -fms-extensions | FileCheck %s
-// RUN: %clang_cc1 -emit-llvm -o - -triple=i386-pc-win32 -std=c++11 %s -fcxx-exceptions -fms-extensions -DSTD | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -o - -triple=i386-pc-win32 -std=c++11 %s -fcxx-exceptions -fms-extensions | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -o - -triple=i386-pc-win32 -std=c++11 %s -fcxx-exceptions -fms-extensions -DSTD | FileCheck %s
 
 // CHECK-DAG: @"??_R0?AUY@@@8" = linkonce_odr global %rtti.TypeDescriptor7 { i8** @"??_7type_info@@6B@", i8* null, [8 x i8] c".?AUY@@\00" }, comdat
 // CHECK-DAG: @"_CT??_R0?AUY@@@8??0Y@@QAE@ABU0@@Z8" = linkonce_odr unnamed_addr constant %eh.CatchableType { i32 4, i8* bitcast (%rtti.TypeDescriptor7* @"??_R0?AUY@@@8" to i8*), i32 0, i32 -1, i32 0, i32 8, i8* bitcast (%struct.Y* (%struct.Y*, %struct.Y*, i32)* @"??0Y@@QAE@ABU0@@Z" to i8*) }, section ".xdata", comdat

@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -std=c++11 -triple i686-unknown-windows-msvc -fobjc-runtime=gnustep -fobjc-arc -Wno-objc-root-class -emit-llvm -o - %s | FileCheck -check-prefixes CHECK,CHECK-GNUSTEP %s
-// RUN: %clang_cc1 -std=c++11 -triple i686-unknown-windows-msvc -fobjc-runtime=macosx -fobjc-arc -Wno-objc-root-class -emit-llvm -o - %s | FileCheck -check-prefixes CHECK,CHECK-DARWIN %s
-// RUN: %clang_cc1 -std=c++11 -triple i686-unknown-windows-msvc -fobjc-runtime=ios -fobjc-arc -Wno-objc-root-class -emit-llvm -o - %s | FileCheck -check-prefixes CHECK,CHECK-DARWIN %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -triple i686-unknown-windows-msvc -fobjc-runtime=gnustep -fobjc-arc -Wno-objc-root-class -emit-llvm -o - %s | FileCheck -check-prefixes CHECK,CHECK-GNUSTEP %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -triple i686-unknown-windows-msvc -fobjc-runtime=macosx -fobjc-arc -Wno-objc-root-class -emit-llvm -o - %s | FileCheck -check-prefixes CHECK,CHECK-DARWIN %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -triple i686-unknown-windows-msvc -fobjc-runtime=ios -fobjc-arc -Wno-objc-root-class -emit-llvm -o - %s | FileCheck -check-prefixes CHECK,CHECK-DARWIN %s
 
 // non trivially copyable, forces inalloca
 struct S {

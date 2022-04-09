@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -o - %s | \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown -emit-llvm -o - %s | \
 // RUN:   FileCheck %s
 
 // This test validates that the inreg branch generation for __builtin_va_arg 

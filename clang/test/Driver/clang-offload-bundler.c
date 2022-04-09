@@ -425,13 +425,13 @@
 //
 // Create few code object bundles and archive them to create an input archive
 // RUN: clang-offload-bundler -type=o -targets=host-%itanium_abi_triple,openmp-amdgcn-amd-amdhsa-gfx906,openmp-amdgcn-amd-amdhsa--gfx908 -input=%t.o -input=%t.tgt1 -input=%t.tgt2 -output=%t.simple.bundle
-// RUN: clang-offload-bundler -type=o -targets=host-%itanium_abi_triple,openmp-amdgcn-amd-amdhsa--gfx906:sramecc+:xnack+,openmp-amdgcn-amd-amdhsa--gfx908:sramecc+:xnack+ -input=%t.o -input=%t.tgt1 -input=%t.tgt1 -output=%t.targetID1.bundle
-// RUN: clang-offload-bundler -type=o -targets=host-%itanium_abi_triple,openmp-amdgcn-amd-amdhsa--gfx906:sramecc+:xnack-,openmp-amdgcn-amd-amdhsa--gfx908:sramecc+:xnack- -input=%t.o -input=%t.tgt1 -input=%t.tgt1 -output=%t.targetID2.bundle
-// RUN: clang-offload-bundler -type=o -targets=host-%itanium_abi_triple,openmp-amdgcn-amd-amdhsa--gfx906:xnack-,openmp-amdgcn-amd-amdhsa--gfx908:xnack- -input=%t.o -input=%t.tgt1 -input=%t.tgt1 -output=%t.targetID3.bundle
-// RUN: clang-offload-bundler -type=o -targets=host-%itanium_abi_triple,hip-amdgcn-amd-amdhsa--gfx906:xnack-,hip-amdgcn-amd-amdhsa--gfx908:xnack- -input=%t.o -input=%t.tgt1 -input=%t.tgt1 -output=%t.targetID4.bundle
+// RUN: clang-offload-bundler -type=o -targets=host-%itanium_abi_triple,openmp-amdgcn-amd-amdhsa--gfx906:sramecc+:xnack+,openmp-amdgcn-amd-amdhsa--gfx908:sramecc+:xnack+ -inputs=%t.o,%t.tgt1,%t.tgt1 -outputs=%t.targetID1.bundle
+// RUN: clang-offload-bundler -type=o -targets=host-%itanium_abi_triple,openmp-amdgcn-amd-amdhsa--gfx906:sramecc+:xnack-,openmp-amdgcn-amd-amdhsa--gfx908:sramecc+:xnack- -inputs=%t.o,%t.tgt1,%t.tgt1 -outputs=%t.targetID2.bundle
+// RUN: clang-offload-bundler -type=o -targets=host-%itanium_abi_triple,openmp-amdgcn-amd-amdhsa--gfx906:xnack-,openmp-amdgcn-amd-amdhsa--gfx908:xnack- -inputs=%t.o,%t.tgt1,%t.tgt1 -outputs=%t.targetID3.bundle
+// RUN: clang-offload-bundler -type=o -targets=host-%itanium_abi_triple,hip-amdgcn-amd-amdhsa--gfx906:xnack-,hip-amdgcn-amd-amdhsa--gfx908:xnack- -inputs=%t.o,%t.tgt1,%t.tgt1 -outputs=%t.targetID4.bundle
 // RUN: llvm-ar cr %t.input-archive.a %t.simple.bundle %t.targetID1.bundle %t.targetID2.bundle %t.targetID3.bundle %t.targetID4.bundle
 
-// RUN: clang-offload-bundler -unbundle -type=a -targets=openmp-amdgcn-amd-amdhsa--gfx906,openmp-amdgcn-amd-amdhsa--gfx908 -input=%t.input-archive.a -output=%t-archive-gfx906-simple.a -output=%t-archive-gfx908-simple.a
+// RUN: clang-offload-bundler -unbundle -type=a -targets=openmp-amdgcn-amd-amdhsa--gfx906,openmp-amdgcn-amd-amdhsa--gfx908 -inputs=%t.input-archive.a -outputs=%t-archive-gfx906-simple.a,%t-archive-gfx908-simple.a
 // RUN: llvm-ar t %t-archive-gfx906-simple.a | FileCheck %s -check-prefix=GFX906
 // GFX906: simple-openmp-amdgcn-amd-amdhsa-gfx906
 // RUN: llvm-ar t %t-archive-gfx908-simple.a | FileCheck %s -check-prefix=GFX908

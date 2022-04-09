@@ -66,6 +66,8 @@ set(files
   __algorithm/pop_heap.h
   __algorithm/prev_permutation.h
   __algorithm/push_heap.h
+  __algorithm/ranges_count.h
+  __algorithm/ranges_count_if.h
   __algorithm/ranges_find.h
   __algorithm/ranges_find_if.h
   __algorithm/ranges_find_if_not.h
@@ -122,12 +124,23 @@ set(files
   __charconv/to_chars_result.h
   __chrono/calendar.h
   __chrono/convert_to_timespec.h
+  __chrono/day.h
   __chrono/duration.h
   __chrono/file_clock.h
+  __chrono/hh_mm_ss.h
   __chrono/high_resolution_clock.h
+  __chrono/literals.h
+  __chrono/month.h
+  __chrono/month_weekday.h
+  __chrono/monthday.h
   __chrono/steady_clock.h
   __chrono/system_clock.h
   __chrono/time_point.h
+  __chrono/weekday.h
+  __chrono/year.h
+  __chrono/year_month.h
+  __chrono/year_month_day.h
+  __chrono/year_month_weekday.h
   __compare/common_comparison_category.h
   __compare/compare_partial_order_fallback.h
   __compare/compare_strong_order_fallback.h
@@ -398,6 +411,8 @@ set(files
   __threading_support
   __tree
   __tuple
+  __type_traits/integral_constant.h
+  __type_traits/is_callable.h
   __undef_macros
   __utility/as_const.h
   __utility/auto_cast.h

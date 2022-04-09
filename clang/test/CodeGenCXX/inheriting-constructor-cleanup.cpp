@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-darwin -std=c++11 -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-darwin -std=c++11 -fcxx-exceptions -fexceptions -emit-llvm -o - %s | FileCheck %s --check-prefix=EXCEPTIONS
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-darwin -std=c++11 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-darwin -std=c++11 -fcxx-exceptions -fexceptions -emit-llvm -o - %s | FileCheck %s --check-prefix=EXCEPTIONS
 
 // PR36748
 // rdar://problem/45805151

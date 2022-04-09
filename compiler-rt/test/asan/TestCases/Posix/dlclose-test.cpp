@@ -9,10 +9,10 @@
 // are globals.
 // 6. BOOM
 
-// This sublte test assumes that after a foo.so is dlclose-d
-// we can mmap the region of memory that has been occupied by the library.
-// It works on x86 Linux, but not necessary anywhere else.
-// REQUIRES: x86-target-arch
+// This subtle test assumes that after a foo.so is dlclose-d
+// we can mmap the region of memory that was occupied by the library.
+// This test works on x86 and Darwin, but not confirmed working anywhere else.
+// REQUIRES: x86-target-arch || darwin
 
 // RUN: %clangxx_asan -O0 -DSHARED_LIB %s -fPIC -shared -o %t-so.so
 // RUN: %clangxx_asan -O0 %s %libdl -o %t && %run %t 2>&1 | FileCheck %s

@@ -1,12 +1,12 @@
 // REQUIRES: xcore-registered-target
-// RUN: %clang_cc1 -triple xcore -verify %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple xcore -verify %s
 _Static_assert(sizeof(long long) == 8, "sizeof long long is wrong");
 _Static_assert(_Alignof(long long) == 4, "alignof long long is wrong");
 
 _Static_assert(sizeof(double) == 8, "sizeof double is wrong");
 _Static_assert(_Alignof(double) == 4, "alignof double is wrong");
 
-// RUN: %clang_cc1 -triple xcore-unknown-unknown -fno-signed-char -fno-common -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple xcore-unknown-unknown -fno-signed-char -fno-common -emit-llvm -o - %s | FileCheck %s
 
 // CHECK: target triple = "xcore-unknown-unknown"
 

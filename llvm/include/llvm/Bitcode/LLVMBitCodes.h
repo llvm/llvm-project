@@ -17,7 +17,10 @@
 #ifndef LLVM_BITCODE_LLVMBITCODES_H
 #define LLVM_BITCODE_LLVMBITCODES_H
 
-#include "llvm/Bitstream/BitCodes.h"
+// This is the only file included, and it, in turn, is a leaf header.
+// This allows external tools to dump the AST of this file and analyze it for
+// changes without needing to fully or partially build LLVM itself.
+#include "llvm/Bitstream/BitCodeEnums.h"
 
 namespace llvm {
 namespace bitc {

@@ -30,27 +30,32 @@ defvar LA32 = DefaultMode;
 def LA64 : HwMode<"+64bit">;
 
 // Single Precision floating point
-def FeatureBasicF : SubtargetFeature<"f", "HasBasicF", "true",
-                                     "'F' (Single-Precision Floating-Point)">;
-def HasBasicF : Predicate<"Subtarget->hasBasicF()">,
-                AssemblerPredicate<(all_of FeatureBasicF),
-                                   "'F' (Single-Precision Floating-Point)">;
+def FeatureBasicF
+    : SubtargetFeature<"f", "HasBasicF", "true",
+                       "'F' (Single-Precision Floating-Point)">;
+def HasBasicF
+    : Predicate<"Subtarget->hasBasicF()">,
+      AssemblerPredicate<(all_of FeatureBasicF),
+                         "'F' (Single-Precision Floating-Point)">;
 
 // Double Precision floating point
-def FeatureBasicD : SubtargetFeature<"d", "HasBasicD", "true",
-                                     "'D' (Double-Precision Floating-Point)",
-                                     [FeatureBasicF]>;
-def HasBasicD : Predicate<"Subtarget->hasBasicD()">,
-                AssemblerPredicate<(all_of FeatureBasicD),
-                                   "'D' (Double-Precision Floating-Point)">;
+def FeatureBasicD
+    : SubtargetFeature<"d", "HasBasicD", "true",
+                       "'D' (Double-Precision Floating-Point)",
+                       [FeatureBasicF]>;
+def HasBasicD
+    : Predicate<"Subtarget->hasBasicD()">,
+      AssemblerPredicate<(all_of FeatureBasicD),
+                         "'D' (Double-Precision Floating-Point)">;
 
 // Loongson SIMD eXtension (LSX)
 def FeatureExtLSX
     : SubtargetFeature<"lsx", "HasExtLSX", "true",
                        "'LSX' (Loongson SIMD Extension)", [FeatureBasicD]>;
-def HasExtLSX : Predicate<"Subtarget->hasExtLSX()">,
-                AssemblerPredicate<(all_of FeatureExtLSX),
-                                   "'LSX' (Loongson SIMD Extension)">;
+def HasExtLSX
+    : Predicate<"Subtarget->hasExtLSX()">,
+      AssemblerPredicate<(all_of FeatureExtLSX),
+                         "'LSX' (Loongson SIMD Extension)">;
 
 // Loongson Advanced SIMD eXtension (LASX)
 def FeatureExtLASX
@@ -66,9 +71,10 @@ def HasExtLASX
 def FeatureExtLVZ
     : SubtargetFeature<"lvz", "HasExtLVZ", "true",
                        "'LVZ' (Loongson Virtualization Extension)">;
-def HasExtLVZ : Predicate<"Subtarget->hasExtLVZ()">,
-                AssemblerPredicate<(all_of FeatureExtLVZ),
-                                   "'LVZ' (Loongson Virtualization Extension)">;
+def HasExtLVZ
+    : Predicate<"Subtarget->hasExtLVZ()">,
+      AssemblerPredicate<(all_of FeatureExtLVZ),
+                         "'LVZ' (Loongson Virtualization Extension)">;
 
 // Loongson Binary Translation (LBT)
 def FeatureExtLBT

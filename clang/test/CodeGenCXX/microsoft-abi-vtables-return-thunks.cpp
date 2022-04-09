@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fno-rtti %s -emit-llvm -o %t -triple=i386-pc-win32 -fdump-vtable-layouts 2>&1 | FileCheck --check-prefix=VFTABLES %s
+// RUN: %clang_cc1 -no-opaque-pointers -fno-rtti %s -emit-llvm -o %t -triple=i386-pc-win32 -fdump-vtable-layouts 2>&1 | FileCheck --check-prefix=VFTABLES %s
 // RUN: FileCheck --check-prefix=GLOBALS %s < %t
 // RUN: FileCheck --check-prefix=CODEGEN %s < %t
 

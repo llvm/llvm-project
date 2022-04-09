@@ -491,14 +491,18 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VP_REDUCE_OR,   ISD::VP_REDUCE_XOR,  ISD::VP_REDUCE_SMAX,
         ISD::VP_REDUCE_SMIN, ISD::VP_REDUCE_UMAX, ISD::VP_REDUCE_UMIN,
         ISD::VP_MERGE,       ISD::VP_SELECT,      ISD::VP_FPTOSI,
-        ISD::VP_FPTOUI};
+        ISD::VP_FPTOUI,      ISD::VP_SETCC,       ISD::VP_SEXT,
+        ISD::VP_ZEXT};
 
     static const unsigned FloatingPointVPOps[] = {
-        ISD::VP_FADD,        ISD::VP_FSUB,        ISD::VP_FMUL,
-        ISD::VP_FDIV,        ISD::VP_FNEG,        ISD::VP_FMA,
-        ISD::VP_REDUCE_FADD, ISD::VP_REDUCE_SEQ_FADD, ISD::VP_REDUCE_FMIN,
-        ISD::VP_REDUCE_FMAX, ISD::VP_MERGE,       ISD::VP_SELECT,
-        ISD::VP_SITOFP,      ISD::VP_UITOFP};
+        ISD::VP_FADD,        ISD::VP_FSUB,
+        ISD::VP_FMUL,        ISD::VP_FDIV,
+        ISD::VP_FNEG,        ISD::VP_FMA,
+        ISD::VP_REDUCE_FADD, ISD::VP_REDUCE_SEQ_FADD,
+        ISD::VP_REDUCE_FMIN, ISD::VP_REDUCE_FMAX,
+        ISD::VP_MERGE,       ISD::VP_SELECT,
+        ISD::VP_SITOFP,      ISD::VP_UITOFP,
+        ISD::VP_SETCC};
 
     if (!Subtarget.is64Bit()) {
       // We must custom-lower certain vXi64 operations on RV32 due to the vector
@@ -572,6 +576,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setLoadExtAction(ISD::SEXTLOAD, OtherVT, VT, Expand);
         setLoadExtAction(ISD::ZEXTLOAD, OtherVT, VT, Expand);
       }
+
+      setOperationAction(ISD::VP_FPTOSI, VT, Custom);
+      setOperationAction(ISD::VP_FPTOUI, VT, Custom);
     }
 
     for (MVT VT : IntVecVTs) {
@@ -851,6 +858,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
           setOperationAction(ISD::VP_FPTOSI, VT, Custom);
           setOperationAction(ISD::VP_FPTOUI, VT, Custom);
+          setOperationAction(ISD::VP_SETCC, VT, Custom);
           continue;
         }
 
@@ -3686,6 +3694,13 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerVPOp(Op, DAG, RISCVISD::FNEG_VL);
   case ISD::VP_FMA:
     return lowerVPOp(Op, DAG, RISCVISD::FMA_VL);
+  case ISD::VP_SEXT:
+  case ISD::VP_ZEXT:
+    if (Op.getOperand(0).getSimpleValueType().getVectorElementType() == MVT::i1)
+      return lowerVPExtMaskOp(Op, DAG);
+    return lowerVPOp(Op, DAG,
+                     Op.getOpcode() == ISD::VP_SEXT ? RISCVISD::VSEXT_VL
+                                                    : RISCVISD::VZEXT_VL);
   case ISD::VP_FPTOSI:
     return lowerVPFPIntConvOp(Op, DAG, RISCVISD::FP_TO_SINT_VL);
   case ISD::VP_FPTOUI:
@@ -3694,6 +3709,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerVPFPIntConvOp(Op, DAG, RISCVISD::SINT_TO_FP_VL);
   case ISD::VP_UITOFP:
     return lowerVPFPIntConvOp(Op, DAG, RISCVISD::UINT_TO_FP_VL);
+  case ISD::VP_SETCC:
+    return lowerVPOp(Op, DAG, RISCVISD::SETCC_VL);
   }
 }
 
@@ -6128,6 +6145,39 @@ SDValue RISCVTargetLowering::lowerVPOp(SDValue Op, SelectionDAG &DAG,
   return convertFromScalableVector(VT, VPOp, DAG, Subtarget);
 }
 
+SDValue RISCVTargetLowering::lowerVPExtMaskOp(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  MVT VT = Op.getSimpleValueType();
+
+  SDValue Src = Op.getOperand(0);
+  // NOTE: Mask is dropped.
+  SDValue VL = Op.getOperand(2);
+
+  MVT ContainerVT = VT;
+  if (VT.isFixedLengthVector()) {
+    ContainerVT = getContainerForFixedLengthVector(VT);
+    MVT SrcVT = MVT::getVectorVT(MVT::i1, ContainerVT.getVectorElementCount());
+    Src = convertToScalableVector(SrcVT, Src, DAG, Subtarget);
+  }
+
+  MVT XLenVT = Subtarget.getXLenVT();
+  SDValue Zero = DAG.getConstant(0, DL, XLenVT);
+  SDValue ZeroSplat = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, ContainerVT,
+                                  DAG.getUNDEF(ContainerVT), Zero, VL);
+
+  SDValue SplatValue =
+      DAG.getConstant(Op.getOpcode() == ISD::VP_ZEXT ? 1 : -1, DL, XLenVT);
+  SDValue Splat = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, ContainerVT,
+                              DAG.getUNDEF(ContainerVT), SplatValue, VL);
+
+  SDValue Result = DAG.getNode(RISCVISD::VSELECT_VL, DL, ContainerVT, Src,
+                               Splat, ZeroSplat, VL);
+  if (!VT.isFixedLengthVector())
+    return Result;
+  return convertFromScalableVector(VT, Result, DAG, Subtarget);
+}
+
 // Lower Floating-Point/Integer Type-Convert VP SDNodes
 SDValue RISCVTargetLowering::lowerVPFPIntConvOp(SDValue Op, SelectionDAG &DAG,
                                                 unsigned RISCVISDOpc) const {
@@ -6177,10 +6227,10 @@ SDValue RISCVTargetLowering::lowerVPFPIntConvOp(SDValue Op, SelectionDAG &DAG,
         // Widen before converting.
         MVT IntVT = MVT::getVectorVT(MVT::getIntegerVT(DstEltSize / 2),
                                      DstVT.getVectorElementCount());
-        Src = DAG.getNode(RISCVISDExtOpc, DL, IntVT, {Src, Mask, VL});
+        Src = DAG.getNode(RISCVISDExtOpc, DL, IntVT, Src, Mask, VL);
       }
 
-      Result = DAG.getNode(RISCVISDOpc, DL, DstVT, {Src, Mask, VL});
+      Result = DAG.getNode(RISCVISDOpc, DL, DstVT, Src, Mask, VL);
     } else {
       assert(SrcVT.isFloatingPoint() && DstVT.isInteger() &&
              "Wrong input/output vector types");
@@ -6190,11 +6240,11 @@ SDValue RISCVTargetLowering::lowerVPFPIntConvOp(SDValue Op, SelectionDAG &DAG,
         assert(SrcVT.getVectorElementType() == MVT::f16 && "Unexpected type!");
         MVT InterimFVT =
             MVT::getVectorVT(MVT::f32, DstVT.getVectorElementCount());
-        Src = DAG.getNode(RISCVISD::FP_EXTEND_VL, DL, InterimFVT,
-                          {Src, Mask, VL});
+        Src =
+            DAG.getNode(RISCVISD::FP_EXTEND_VL, DL, InterimFVT, Src, Mask, VL);
       }
 
-      Result = DAG.getNode(RISCVISDOpc, DL, DstVT, {Src, Mask, VL});
+      Result = DAG.getNode(RISCVISDOpc, DL, DstVT, Src, Mask, VL);
     }
   } else { // Narrowing + Conversion
     if (SrcVT.isInteger()) {
@@ -6209,11 +6259,11 @@ SDValue RISCVTargetLowering::lowerVPFPIntConvOp(SDValue Op, SelectionDAG &DAG,
         InterimFVT = MVT::getVectorVT(MVT::f32, DstVT.getVectorElementCount());
       }
 
-      Result = DAG.getNode(RISCVISDOpc, DL, InterimFVT, {Src, Mask, VL});
+      Result = DAG.getNode(RISCVISDOpc, DL, InterimFVT, Src, Mask, VL);
 
       if (InterimFVT != DstVT) {
         Src = Result;
-        Result = DAG.getNode(RISCVISD::FP_ROUND_VL, DL, DstVT, {Src, Mask, VL});
+        Result = DAG.getNode(RISCVISD::FP_ROUND_VL, DL, DstVT, Src, Mask, VL);
       }
     } else {
       assert(SrcVT.isFloatingPoint() && DstVT.isInteger() &&
@@ -6221,21 +6271,36 @@ SDValue RISCVTargetLowering::lowerVPFPIntConvOp(SDValue Op, SelectionDAG &DAG,
       // First do a narrowing conversion to an integer half the size, then
       // truncate if needed.
 
-      // TODO: Handle mask vectors
-      assert(DstVT.getVectorElementType() != MVT::i1 &&
-             "Don't know how to handle masks yet!");
-      MVT InterimIVT = MVT::getVectorVT(MVT::getIntegerVT(SrcEltSize / 2),
+      if (DstEltSize == 1) {
+        // First convert to the same size integer, then convert to mask using
+        // setcc.
+        assert(SrcEltSize >= 16 && "Unexpected FP type!");
+        MVT InterimIVT = MVT::getVectorVT(MVT::getIntegerVT(SrcEltSize),
+                                          DstVT.getVectorElementCount());
+        Result = DAG.getNode(RISCVISDOpc, DL, InterimIVT, Src, Mask, VL);
+
+        // Compare the integer result to 0. The integer should be 0 or 1/-1,
+        // otherwise the conversion was undefined.
+        MVT XLenVT = Subtarget.getXLenVT();
+        SDValue SplatZero = DAG.getConstant(0, DL, XLenVT);
+        SplatZero = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, InterimIVT,
+                                DAG.getUNDEF(InterimIVT), SplatZero);
+        Result = DAG.getNode(RISCVISD::SETCC_VL, DL, DstVT, Result, SplatZero,
+                             DAG.getCondCode(ISD::SETNE), Mask, VL);
+      } else {
+        MVT InterimIVT = MVT::getVectorVT(MVT::getIntegerVT(SrcEltSize / 2),
+                                          DstVT.getVectorElementCount());
+
+        Result = DAG.getNode(RISCVISDOpc, DL, InterimIVT, Src, Mask, VL);
+
+        while (InterimIVT != DstVT) {
+          SrcEltSize /= 2;
+          Src = Result;
+          InterimIVT = MVT::getVectorVT(MVT::getIntegerVT(SrcEltSize / 2),
                                         DstVT.getVectorElementCount());
-
-      Result = DAG.getNode(RISCVISDOpc, DL, InterimIVT, {Src, Mask, VL});
-
-      while (InterimIVT != DstVT) {
-        SrcEltSize /= 2;
-        Src = Result;
-        InterimIVT = MVT::getVectorVT(MVT::getIntegerVT(SrcEltSize / 2),
-                                      DstVT.getVectorElementCount());
-        Result = DAG.getNode(RISCVISD::TRUNCATE_VECTOR_VL, DL, InterimIVT,
-                             {Src, Mask, VL});
+          Result = DAG.getNode(RISCVISD::TRUNCATE_VECTOR_VL, DL, InterimIVT,
+                               Src, Mask, VL);
+        }
       }
     }
   }

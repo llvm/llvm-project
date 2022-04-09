@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++11 -emit-llvm %s -o - -triple=i386-pc-win32 -mconstructor-aliases -fexceptions -fcxx-exceptions -fno-rtti | FileCheck -check-prefix WIN32 -check-prefix WIN32-O0 %s
-// RUN: %clang_cc1 -std=c++11 -emit-llvm -O3 -disable-llvm-passes %s -o - -triple=i386-pc-win32 -mconstructor-aliases -fexceptions -fcxx-exceptions -fno-rtti | FileCheck -check-prefix WIN32 -check-prefix WIN32-O3 -check-prefix WIN32-LIFETIME %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -emit-llvm %s -o - -triple=i386-pc-win32 -mconstructor-aliases -fexceptions -fcxx-exceptions -fno-rtti | FileCheck -check-prefix WIN32 -check-prefix WIN32-O0 %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -emit-llvm -O3 -disable-llvm-passes %s -o - -triple=i386-pc-win32 -mconstructor-aliases -fexceptions -fcxx-exceptions -fno-rtti | FileCheck -check-prefix WIN32 -check-prefix WIN32-O3 -check-prefix WIN32-LIFETIME %s
 
 struct A {
   A();

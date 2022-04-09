@@ -1,4 +1,4 @@
-// RUN: %clang -S -emit-llvm -target x86_64-unknown_unknown -g %s -o - -std=c++20 | FileCheck %s
+// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target x86_64-unknown_unknown -g %s -o - -std=c++20 | FileCheck %s
 
 // CHECK: @tci = dso_local global %"struct.TC<unsigned int, 2, &glb, &foo::e, &foo::f, &foo::g, 1, 2, 3>::nested" zeroinitializer, align 1, !dbg [[TCI:![0-9]+]]
 // CHECK: @tcn = dso_local global %struct.TC zeroinitializer, align 1, !dbg [[TCN:![0-9]+]]

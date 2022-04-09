@@ -121,6 +121,7 @@ unsigned CSKYELFObjectWriter::getRelocType(MCContext &Ctx,
         return ELF::R_CKCORE_ADDR32;
       }
     }
+    return ELF::R_CKCORE_NONE;
   case FK_Data_8:
     Ctx.reportError(Fixup.getLoc(), "8-byte data relocations not supported");
     return ELF::R_CKCORE_NONE;

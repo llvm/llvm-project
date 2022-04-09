@@ -51,61 +51,6 @@ private:
   lldb::addr_t m_address;
 };
 
-/// \class IntelPTInstruction
-/// An instruction obtained from decoding a trace. It is either an actual
-/// instruction or an error indicating a gap in the trace.
-///
-/// Gaps in the trace can come in a few flavors:
-///   - tracing gaps (e.g. tracing was paused and then resumed)
-///   - tracing errors (e.g. buffer overflow)
-///   - decoding errors (e.g. some memory region couldn't be decoded)
-/// As mentioned, any gap is represented as an error in this class.
-class IntelPTInstruction {
-public:
-  IntelPTInstruction(const pt_insn &pt_insn)
-      : m_pt_insn(pt_insn), m_is_error(false) {}
-
-  /// Error constructor
-  IntelPTInstruction();
-
-  /// Check if this object represents an error (i.e. a gap).
-  ///
-  /// \return
-  ///     Whether this object represents an error.
-  bool IsError() const;
-
-  /// \return
-  ///     The instruction pointer address, or \a LLDB_INVALID_ADDRESS if it is
-  ///     an error.
-  lldb::addr_t GetLoadAddress() const;
-
-  /// Get the size in bytes of an instance of this class
-  static size_t GetMemoryUsage();
-
-  /// Get the \a lldb::TraceInstructionControlFlowType categories of the
-  /// instruction.
-  ///
-  /// \param[in] next_load_address
-  ///     The address of the next instruction in the trace or \b
-  ///     LLDB_INVALID_ADDRESS if not available.
-  ///
-  /// \return
-  ///     The control flow categories, or \b 0 if the instruction is an error.
-  lldb::TraceInstructionControlFlowType
-  GetControlFlowType(lldb::addr_t next_load_address) const;
-
-  IntelPTInstruction(IntelPTInstruction &&other) = default;
-
-private:
-  IntelPTInstruction(const IntelPTInstruction &other) = delete;
-  const IntelPTInstruction &operator=(const IntelPTInstruction &other) = delete;
-
-  // When adding new members to this class, make sure to update
-  // IntelPTInstruction::GetMemoryUsage() if needed.
-  pt_insn m_pt_insn;
-  bool m_is_error;
-};
-
 /// \class DecodedThread
 /// Class holding the instructions and function call hierarchy obtained from
 /// decoding a trace, as well as a position cursor used when reverse debugging
@@ -126,13 +71,13 @@ public:
   class TscRange {
   public:
     /// Check if this TSC range includes the given instruction index.
-    bool InRange(size_t insn_index);
+    bool InRange(size_t insn_index) const;
 
     /// Get the next range chronologically.
-    llvm::Optional<TscRange> Next();
+    llvm::Optional<TscRange> Next() const;
 
     /// Get the previous range chronologically.
-    llvm::Optional<TscRange> Prev();
+    llvm::Optional<TscRange> Prev() const;
 
     /// Get the TSC value.
     size_t GetTsc() const;
@@ -178,21 +123,44 @@ public:
   /// Append a decoding error (i.e. an instruction that failed to be decoded).
   void AppendError(llvm::Error &&error);
 
-  /// Get the instructions from the decoded trace. Some of them might indicate
-  /// errors (i.e. gaps) in the trace. For an instruction error, you can access
-  /// its underlying error message with the \a GetErrorByInstructionIndex()
-  /// method.
+  /// Append a decoding error with a corresponding TSC.
+  void AppendError(llvm::Error &&error, uint64_t tsc);
+
+  /// Get the total number of instruction pointers from the decoded trace.
+  /// This will include instructions that indicate errors (or gaps) in the
+  /// trace. For an instruction error, you can access its underlying error
+  /// message with the \a GetErrorByInstructionIndex() method.
+  size_t GetInstructionsCount() const;
+
+  /// \return
+  ///     The load address of the instruction at the given index, or \a
+  ///     LLDB_INVALID_ADDRESS if it is an error.
+  lldb::addr_t GetInstructionLoadAddress(size_t insn_index) const;
+
+  /// Get the \a lldb::TraceInstructionControlFlowType categories of the
+  /// instruction.
   ///
   /// \return
-  ///   The instructions of the trace.
-  llvm::ArrayRef<IntelPTInstruction> GetInstructions() const;
+  ///     The control flow categories, or \b 0 if the instruction is an error.
+  lldb::TraceInstructionControlFlowType
+  GetInstructionControlFlowType(size_t insn_index) const;
 
   /// Construct the TSC range that covers the given instruction index.
   /// This operation is O(logn) and should be used sparingly.
   /// If the trace was collected with TSC support, all the instructions of
   /// the trace will have associated TSCs. This means that this method will
   /// only return \b llvm::None if there are no TSCs whatsoever in the trace.
-  llvm::Optional<TscRange> CalculateTscRange(size_t insn_index) const;
+  ///
+  /// \param[in] insn_index
+  ///   The instruction index in question.
+  ///
+  /// \param[in] hint_range
+  ///   An optional range that might include the given index or might be a
+  ///   neighbor of it. It might help speed it traversals of the trace with
+  ///   short jumps.
+  llvm::Optional<TscRange> CalculateTscRange(
+      size_t insn_index,
+      const llvm::Optional<DecodedThread::TscRange> &hint_range) const;
 
   /// Check if an instruction given by its index is an error.
   bool IsInstructionAnError(size_t insn_idx) const;
@@ -203,17 +171,6 @@ public:
   ///   The error message of \b nullptr if the given index
   ///   points to a valid instruction.
   const char *GetErrorByInstructionIndex(size_t ins_idx);
-
-  /// Append a decoding error with a corresponding TSC.
-  void AppendError(llvm::Error &&error, uint64_t TSC);
-
-  /// Record an error decoding a TSC timestamp.
-  ///
-  /// See \a GetTscErrors() for more documentation.
-  ///
-  /// \param[in] libipt_error_code
-  ///   An error returned by the libipt library.
-  void RecordTscError(int libipt_error_code);
 
   /// Get a new cursor for the decoded thread.
   lldb::TraceCursorUP GetCursor();
@@ -235,6 +192,14 @@ public:
   ///   The number of TSC decoding errors.
   const LibiptErrors &GetTscErrors() const;
 
+  /// Record an error decoding a TSC timestamp.
+  ///
+  /// See \a GetTscErrors() for more documentation.
+  ///
+  /// \param[in] libipt_error_code
+  ///   An error returned by the libipt library.
+  void RecordTscError(int libipt_error_code);
+
   /// The approximate size in bytes used by this instance,
   /// including all the already decoded instructions.
   size_t CalculateApproximateMemoryUsage() const;
@@ -251,7 +216,12 @@ private:
   lldb::ThreadSP m_thread_sp;
   /// The low level storage of all instruction addresses. Each instruction has
   /// an index in this vector and it will be used in other parts of the code.
-  std::vector<IntelPTInstruction> m_instructions;
+  std::vector<lldb::addr_t> m_instruction_ips;
+  /// The size in bytes of each instruction.
+  std::vector<uint8_t> m_instruction_sizes;
+  /// The libipt instruction class for each instruction.
+  std::vector<pt_insn_class> m_instruction_classes;
+
   /// This map contains the TSCs of the decoded instructions. It maps
   /// `instruction index -> TSC`, where `instruction index` is the first index
   /// at which the mapped TSC appears. We use this representation because TSCs

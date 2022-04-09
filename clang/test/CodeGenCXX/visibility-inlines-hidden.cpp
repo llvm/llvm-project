@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i386-unknown-unknown -std=c++11 -fvisibility-inlines-hidden -emit-llvm -o - %s -O2 -disable-llvm-passes | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i386-unknown-unknown -std=c++11 -fvisibility-inlines-hidden -emit-llvm -o - %s -O2 -disable-llvm-passes | FileCheck %s
 
 // The trickery with optimization in the run line is to get IR
 // generation to emit available_externally function bodies, but not

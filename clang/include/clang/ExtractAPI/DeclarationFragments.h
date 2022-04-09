@@ -204,6 +204,11 @@ public:
   /// Build DeclarationFragments for a struct record declaration RecordDecl.
   static DeclarationFragments getFragmentsForStruct(const RecordDecl *);
 
+  /// Build DeclarationFragments for an Objective-C category declaration
+  /// ObjCCategoryDecl.
+  static DeclarationFragments
+  getFragmentsForObjCCategory(const ObjCCategoryDecl *);
+
   /// Build DeclarationFragments for an Objective-C interface declaration
   /// ObjCInterfaceDecl.
   static DeclarationFragments
@@ -229,6 +234,10 @@ public:
   /// \param MD the associated MacroDirective.
   static DeclarationFragments getFragmentsForMacro(StringRef Name,
                                                    const MacroDirective *MD);
+
+  /// Build DeclarationFragments for a typedef \p TypedefNameDecl.
+  static DeclarationFragments
+  getFragmentsForTypedef(const TypedefNameDecl *Decl);
 
   /// Build sub-heading fragments for a NamedDecl.
   static DeclarationFragments getSubHeading(const NamedDecl *);

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple spirv64 -x hip -emit-llvm -fcuda-is-device \
+// RUN: %clang_cc1 -no-opaque-pointers -triple spirv64 -x hip -emit-llvm -fcuda-is-device \
 // RUN:   -o - %s | FileCheck %s
 
 #define __global__ __attribute__((global))

@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -triple=x86_64-apple-darwin10 -emit-llvm -fexceptions %s -o - |FileCheck %s
-// RUN: %clang_cc1 -triple=x86_64-apple-darwin10 -emit-llvm %s -o - |FileCheck -check-prefix CHECK-NOEXC %s
-// RUN: %clang_cc1 -triple=x86_64-apple-darwin10 -emit-llvm -mframe-pointer=non-leaf %s -o - \
+// RUN: %clang_cc1 -no-opaque-pointers -triple=x86_64-apple-darwin10 -emit-llvm -fexceptions %s -o - |FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple=x86_64-apple-darwin10 -emit-llvm %s -o - |FileCheck -check-prefix CHECK-NOEXC %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple=x86_64-apple-darwin10 -emit-llvm -mframe-pointer=non-leaf %s -o - \
 // RUN:   | FileCheck -check-prefix CHECK-FP %s
-// RUN: %clang_cc1 -triple=x86_64-apple-darwin10 -emit-llvm %s -o - -fno-builtin \
+// RUN: %clang_cc1 -no-opaque-pointers -triple=x86_64-apple-darwin10 -emit-llvm %s -o - -fno-builtin \
 // RUN:   | FileCheck -check-prefix CHECK-NOBUILTIN %s
 
 struct A {

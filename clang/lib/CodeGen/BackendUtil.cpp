@@ -164,6 +164,16 @@ class EmitAssemblyHelper {
                           std::unique_ptr<raw_pwrite_stream> &OS,
                           std::unique_ptr<llvm::ToolOutputFile> &DwoOS);
 
+  /// Check whether we should emit a module summary for regular LTO.
+  /// The module summary should be emitted by default for regular LTO
+  /// except for ld64 targets.
+  ///
+  /// \return True if the module summary should be emitted.
+  bool shouldEmitRegularLTOSummary() const {
+    return CodeGenOpts.PrepareForLTO && !CodeGenOpts.DisableLLVMPasses &&
+           TargetTriple.getVendor() != llvm::Triple::Apple;
+  }
+
 public:
   EmitAssemblyHelper(DiagnosticsEngine &_Diags,
                      const HeaderSearchOptions &HeaderSearchOpts,
@@ -1054,9 +1064,7 @@ void EmitAssemblyHelper::EmitAssemblyWithLegacyPassManager(
     } else {
       // Emit a module summary by default for Regular LTO except for ld64
       // targets
-      bool EmitLTOSummary =
-          (CodeGenOpts.PrepareForLTO && !CodeGenOpts.DisableLLVMPasses &&
-           TargetTriple.getVendor() != llvm::Triple::Apple);
+      bool EmitLTOSummary = shouldEmitRegularLTOSummary();
       if (EmitLTOSummary) {
         if (!TheModule->getModuleFlag("ThinLTO"))
           TheModule->addModuleFlag(Module::Error, "ThinLTO", uint32_t(0));
@@ -1064,7 +1072,6 @@ void EmitAssemblyHelper::EmitAssemblyWithLegacyPassManager(
           TheModule->addModuleFlag(Module::Error, "EnableSplitLTOUnit",
                                    uint32_t(1));
       }
-
       PerModulePasses.add(createBitcodeWriterPass(
           *OS, CodeGenOpts.EmitLLVMUseLists, EmitLTOSummary));
     }
@@ -1470,9 +1477,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     } else {
       // Emit a module summary by default for Regular LTO except for ld64
       // targets
-      bool EmitLTOSummary =
-          (CodeGenOpts.PrepareForLTO && !CodeGenOpts.DisableLLVMPasses &&
-           TargetTriple.getVendor() != llvm::Triple::Apple);
+      bool EmitLTOSummary = shouldEmitRegularLTOSummary();
       if (EmitLTOSummary) {
         if (!TheModule->getModuleFlag("ThinLTO"))
           TheModule->addModuleFlag(Module::Error, "ThinLTO", uint32_t(0));

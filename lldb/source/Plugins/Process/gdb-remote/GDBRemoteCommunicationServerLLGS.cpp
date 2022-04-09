@@ -3053,7 +3053,7 @@ GDBRemoteCommunicationServerLLGS::Handle_QSaveRegisterState(
   NativeRegisterContext& reg_context = thread->GetRegisterContext();
 
   // Save registers to a buffer.
-  DataBufferSP register_data_sp;
+  WritableDataBufferSP register_data_sp;
   Status error = reg_context.ReadAllRegisterValues(register_data_sp);
   if (error.Fail()) {
     LLDB_LOG(log, "pid {0} failed to save all register values: {1}",

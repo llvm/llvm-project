@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -target-cpu core2 %s -S -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -triple i686-linux-gnu -target-cpu core2 %s -S -emit-llvm -o - | FileCheck -check-prefix=CHECK32 %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -target-cpu core2 %s -S -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-linux-gnu -target-cpu core2 %s -S -emit-llvm -o - | FileCheck -check-prefix=CHECK32 %s
 
 long double testinc(_Atomic long double *addr) {
   // CHECK-LABEL: @testinc

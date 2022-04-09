@@ -5,6 +5,7 @@
 // CHECK-DAG: #[[$MAP2:.*]] = affine_map<(d0, d1, d2, d3)[s0] -> (d0 * 140 + d1 * 20 + d2 * 5 + d3 + s0)>
 // CHECK-DAG: #[[$MAP3:.*]] = affine_map<(d0) -> (d0 + 1)>
 // CHECK-DAG: #[[$MAP4:.*]] = affine_map<() -> (1)>
+// CHECK-DAG: #[[$MAP5:.*]] = affine_map<(d0, d1) -> (d0 * 2 + d1)>
 
 // CHECK-LABEL:   func @dim(
 // CHECK-SAME:              %[[TENSOR:.*]]: tensor<f32>,
@@ -182,9 +183,9 @@ func @tensor.from_elements_3d(%f0 : f32) -> tensor<3x2x2xf32> {
 // CHECK-LABEL:   func @tensor.generate(
 // CHECK-SAME:                                       %[[ARG:.*]]: tensor<*xf32>,
 // CHECK-SAME:                                       %[[DYNAMIC_EXTENT:.*]]: index) -> tensor<?xindex> {
-// CHECK:           %[[CASTED:.*]] = bufferization.to_memref %[[ARG]] : memref<*xf32>
 // CHECK-DAG:       %[[C0:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[C1:.*]] = arith.constant 1 : index
+// CHECK:           %[[CASTED:.*]] = bufferization.to_memref %[[ARG]] : memref<*xf32>
 // CHECK:           %[[MEMREF:.*]] = memref.alloc(%[[DYNAMIC_EXTENT]]) {{.*}} : memref<?xindex>
 // CHECK:           scf.parallel (%[[I:.*]]) = (%[[C0]]) to (%[[DYNAMIC_EXTENT]]) step (%[[C1]]) {
 // CHECK:             %[[ELEM:.*]] = memref.dim %[[CASTED]], %[[I]] : memref<*xf32>
@@ -337,6 +338,17 @@ func @tensor.expand_shape_of_slice(
   return %1 : tensor<?x7x2x5xf32>
 }
 
+// CHECK-LABEL: func @tensor.expand_shape_of_slice2(
+//  CHECK-SAME:     %[[t1:.*]]: tensor<1x2xf32>
+func @tensor.expand_shape_of_slice2(%t1: tensor<1x2xf32>) -> tensor<1xf32> {
+  // CHECK: memref.subview {{.*}} : memref<1x2xf32> to memref<1x1xf32, #[[$MAP5]]>
+  %0 = tensor.extract_slice %t1[0, 0][1, 1][1, 1] : tensor<1x2xf32> to tensor<1x1xf32>
+  // CHECK: memref.collapse_shape %{{.*}} [
+  // CHECK-SAME: [0, 1]] : memref<1x1xf32, #[[$MAP5]]> into memref<1xf32>
+  %1 = tensor.collapse_shape %0 [[0, 1]] : tensor<1x1xf32> into tensor<1xf32>
+  return %1 : tensor<1xf32>
+}
+
 // CHECK-LABEL: func @tensor.collapse_shape(
 //  CHECK-SAME:     %[[t1:.*]]: tensor<2x?x?xf32>
 func @tensor.collapse_shape(%t1: tensor<2x?x?xf32>) -> tensor<?x?xf32> {
@@ -371,4 +383,21 @@ func @tensor.collapse_shape_of_slice(%arg0: tensor<2xi32>) -> tensor<i32> {
   // CHECK: memref.collapse_shape %{{.*}} [] : memref<1xi32, #[[$MAP3]]> into memref<i32, #[[$MAP4]]>
   %1 = tensor.collapse_shape %0 [] : tensor<1xi32> into tensor<i32>
   return %1 : tensor<i32>
+}
+
+// CHECK-LABEL: func @tensor.collapse_shape_of_slice2(
+func @tensor.collapse_shape_of_slice2(
+    %arg0: tensor<?x?x?x?xi64>, %o1: index, %o2: index, %o3: index, %o4: index)
+    -> tensor<87x63648xi64> {
+  // CHECK: %[[subview:.*]] = memref.subview %{{.*}} : memref<?x?x?x?xi64> to memref<87x78x68x12xi64, #{{.*}}>
+  %0 = tensor.extract_slice %arg0[%o1, %o2, %o3, %o4] [87, 78, 68, 12] [1, 1, 1, 1] : tensor<?x?x?x?xi64> to tensor<87x78x68x12xi64>
+
+  // This memref may not be collapsible, so the buffer must be copied to get rid
+  // of the layout map.
+  // CHECK: %[[alloc:.*]] = memref.alloc() {{.*}} : memref<87x78x68x12xi64>
+  // CHECK: memref.copy %[[subview]], %[[alloc]]
+  // CHECK: memref.collapse_shape %[[alloc]] [
+  // CHECK-SAME: [0], [1, 2, 3]] : memref<87x78x68x12xi64> into memref<87x63648xi64>
+  %1 = tensor.collapse_shape %0 [[0], [1, 2, 3]] : tensor<87x78x68x12xi64> into tensor<87x63648xi64>
+  return %1 : tensor<87x63648xi64>
 }

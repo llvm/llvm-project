@@ -462,6 +462,13 @@ std::string tools::getCPUName(const Driver &D, const ArgList &Args,
 
     return TargetCPUName;
   }
+  case llvm::Triple::csky:
+    if (const Arg *A = Args.getLastArg(options::OPT_mcpu_EQ))
+      return A->getValue();
+    else if (const Arg *A = Args.getLastArg(options::OPT_march_EQ))
+      return A->getValue();
+    else
+      return "ck810";
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
     if (const Arg *A = Args.getLastArg(options::OPT_mcpu_EQ))
@@ -1074,6 +1081,19 @@ bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
 
   if (SanArgs.hasCrossDsoCfi() && !AddExportDynamic)
     CmdArgs.push_back("--export-dynamic-symbol=__cfi_check");
+
+  if (SanArgs.hasMemTag()) {
+    if (!TC.getTriple().isAndroid()) {
+      TC.getDriver().Diag(diag::err_drv_unsupported_opt_for_target)
+          << "-fsanitize=memtag*" << TC.getTriple().str();
+    }
+    CmdArgs.push_back(
+        Args.MakeArgString("--android-memtag-mode=" + SanArgs.getMemtagMode()));
+    if (SanArgs.hasMemtagHeap())
+      CmdArgs.push_back("--android-memtag-heap");
+    if (SanArgs.hasMemtagStack())
+      CmdArgs.push_back("--android-memtag-stack");
+  }
 
   return !StaticRuntimes.empty() || !NonWholeStaticRuntimes.empty();
 }

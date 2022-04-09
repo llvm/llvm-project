@@ -655,7 +655,7 @@ class R_Z_1<bits<6> sop, bits<5> pcode, string op>
 
 // Format< OP[6] | RZ[5] | 00000[5] | SOP[6] | PCODE[5] | 00000[5] >
 // Instructions:(2) clrf32, clrt32
-class R_Z_2<bits<6> sop, bits<5> pcode, string op, list<dag> pattern>
+class R_Z_2<bits<6> sop, bits<5> pcode, string op>
     : CSKY32Inst<AddrModeNone, 0x31, (outs GPR:$rz),
     (ins CARRY:$ca, GPR:$false), !strconcat(op, "\t$rz"), []> {
   bits<5> rz;

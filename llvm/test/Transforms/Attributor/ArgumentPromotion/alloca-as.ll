@@ -27,12 +27,12 @@ define i32 @bar(i32 %arg) {
 ; IS__TUNIT_NPM-NEXT:    ret i32 [[CALL]]
 ;
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@bar
-; IS__CGSCC_NPM-SAME: (i32 returned [[ARG:%.*]]) {
+; IS__CGSCC_NPM-SAME: (i32 [[ARG:%.*]]) {
 ; IS__CGSCC_NPM-NEXT:  entry:
 ; IS__CGSCC_NPM-NEXT:    [[STACK:%.*]] = alloca i32, align 4
 ; IS__CGSCC_NPM-NEXT:    store i32 [[ARG]], i32* [[STACK]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[CALL:%.*]] = call i32 @foo(i32 [[ARG]])
-; IS__CGSCC_NPM-NEXT:    ret i32 [[ARG]]
+; IS__CGSCC_NPM-NEXT:    ret i32 [[CALL]]
 ;
 entry:
   %stack = alloca i32

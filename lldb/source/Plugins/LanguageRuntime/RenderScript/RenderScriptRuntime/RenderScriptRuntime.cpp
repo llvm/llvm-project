@@ -2442,7 +2442,7 @@ bool RenderScriptRuntime::LoadAllocation(Stream &strm, const uint32_t alloc_id,
   auto data_sp = FileSystem::Instance().CreateDataBuffer(file.GetPath());
 
   // Cast start of buffer to FileHeader and use pointer to read metadata
-  void *file_buf = data_sp->GetBytes();
+  const void *file_buf = data_sp->GetBytes();
   if (file_buf == nullptr ||
       data_sp->GetByteSize() < (sizeof(AllocationDetails::FileHeader) +
                                 sizeof(AllocationDetails::ElementHeader))) {
@@ -2451,7 +2451,7 @@ bool RenderScriptRuntime::LoadAllocation(Stream &strm, const uint32_t alloc_id,
     return false;
   }
   const AllocationDetails::FileHeader *file_header =
-      static_cast<AllocationDetails::FileHeader *>(file_buf);
+      static_cast<const AllocationDetails::FileHeader *>(file_buf);
 
   // Check file starts with ascii characters "RSAD"
   if (memcmp(file_header->ident, "RSAD", 4)) {
@@ -2463,8 +2463,9 @@ bool RenderScriptRuntime::LoadAllocation(Stream &strm, const uint32_t alloc_id,
 
   // Look at the type of the root element in the header
   AllocationDetails::ElementHeader root_el_hdr;
-  memcpy(&root_el_hdr, static_cast<uint8_t *>(file_buf) +
-                           sizeof(AllocationDetails::FileHeader),
+  memcpy(&root_el_hdr,
+         static_cast<const uint8_t *>(file_buf) +
+             sizeof(AllocationDetails::FileHeader),
          sizeof(AllocationDetails::ElementHeader));
 
   LLDB_LOGF(log, "%s - header type %" PRIu32 ", element size %" PRIu32,
@@ -2515,7 +2516,7 @@ bool RenderScriptRuntime::LoadAllocation(Stream &strm, const uint32_t alloc_id,
   }
 
   // Advance buffer past header
-  file_buf = static_cast<uint8_t *>(file_buf) + file_header->hdr_size;
+  file_buf = static_cast<const uint8_t *>(file_buf) + file_header->hdr_size;
 
   // Calculate size of allocation data in file
   size_t size = data_sp->GetByteSize() - file_header->hdr_size;

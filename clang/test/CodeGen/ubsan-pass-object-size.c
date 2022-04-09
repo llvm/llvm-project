@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -emit-llvm -w -triple x86_64-apple-darwin10 -fsanitize=array-bounds -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -w -triple x86_64-apple-darwin10 -fsanitize=array-bounds -o - | FileCheck %s
 
 // CHECK-LABEL: define{{.*}} i32 @foo(
 int foo(int *const p __attribute__((pass_object_size(0))), int n) {

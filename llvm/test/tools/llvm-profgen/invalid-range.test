@@ -1,0 +1,68 @@
+; In the perfscript input, the consecutive branch pairs 0x2017bf/0x201760 and 0x2017d8/0x2017e3 form an invalid execution range [0x2017e3, 0x2017bf].
+; We are testing only the invalid range is dropped to avoid bogus instruction ranges. All other ranges and all branch samples should be kept.
+;
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/invalid-range.perfscript --binary=%S/Inputs/noinline-cs-pseudoprobe.perfbin --output=%t1 --skip-symbolization --ignore-stack-samples --use-offset=0
+; RUN: FileCheck %s --input-file %t1 --check-prefix=NOCS
+
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/invalid-range.perfscript --binary=%S/Inputs/noinline-cs-pseudoprobe.perfbin --output=%t2 --skip-symbolization --use-offset=0
+; RUN: FileCheck %s --input-file %t2 --check-prefix=CS
+
+
+; NOCS:      4
+; NOCS-NEXT: 201760-20177f:2
+; NOCS-NEXT: 20179e-2017bf:1
+; NOCS-NEXT: 2017c4-2017cf:1
+; NOCS-NEXT: 2017c4-2017d8:1
+; NOCS-NEXT: 4
+; NOCS-NEXT: 20177f->2017c4:2
+; NOCS-NEXT: 2017bf->201760:2
+; NOCS-NEXT: 2017cf->20179e:2
+; NOCS-NEXT: 2017d8->2017e3:1
+
+
+; CS:      []
+; CS-NEXT:  3
+; CS-NEXT:  201760-20177f:1
+; CS-NEXT:  20179e-2017bf:1
+; CS-NEXT:  2017c4-2017d8:1
+; CS-NEXT:  4
+; CS-NEXT:  20177f->2017c4:1
+; CS-NEXT:  2017bf->201760:1
+; CS-NEXT:  2017cf->20179e:1
+; CS-NEXT:  2017d8->2017e3:1
+; CS-NEXT: [0x7f4]
+; CS-NEXT:  1
+; CS-NEXT:  2017c4-2017cf:1
+; CS-NEXT:  2
+; CS-NEXT:  2017bf->201760:1
+; CS-NEXT:  2017cf->20179e:1
+; CS-NEXT: [0x7f4 @ 0x7bf]
+; CS-NEXT:  1
+; CS-NEXT:  201760-20177f:1
+; CS-NEXT:  1
+; CS-NEXT:  20177f->2017c4:1
+
+; clang -O3 -fexperimental-new-pass-manager -fuse-ld=lld -fpseudo-probe-for-profiling
+; -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -Xclang -mdisable-tail-calls
+; -g test.c  -o a.out
+
+#include <stdio.h>
+
+int bar(int x, int y) {
+  if (x % 3) {
+    return x - y;
+  }
+  return x + y;
+}
+
+void foo() {
+  int s, i = 0;
+  while (i++ < 4000 * 4000)
+    if (i % 91) s = bar(i, s); else s += 30;
+  printf("sum is %d\n", s);
+}
+
+int main() {
+  foo();
+  return 0;
+}

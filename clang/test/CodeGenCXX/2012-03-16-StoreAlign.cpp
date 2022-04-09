@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -o - -triple x86_64-apple-darwin %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -o - -triple x86_64-apple-darwin %s | FileCheck %s
 // <rdar://problem/11043589>
 
 struct Length {

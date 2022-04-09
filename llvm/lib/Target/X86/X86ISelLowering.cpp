@@ -9503,7 +9503,8 @@ static SDValue lowerBuildVectorAsBroadcast(BuildVectorSDNode *BVOp,
     // For size optimization, also splat v2f64 and v2i64, and for size opt
     // with AVX2, also splat i8 and i16.
     // With pattern matching, the VBROADCAST node may become a VMOVDDUP.
-    if (ScalarSize == 32 || (IsGE256 && ScalarSize == 64) ||
+    if (ScalarSize == 32 ||
+        (ScalarSize == 64 && (IsGE256 || Subtarget.hasVLX())) ||
         (ScalarSize == 16 && Subtarget.hasFP16() && CVT.isFloatingPoint()) ||
         (OptForSize && (ScalarSize == 64 || Subtarget.hasAVX2()))) {
       const Constant *C = nullptr;
@@ -23397,7 +23398,7 @@ bool X86TargetLowering::isFsqrtCheap(SDValue Op, SelectionDAG &DAG) const {
     return true;
 
   // We never want to use both SQRT and RSQRT instructions for the same input.
-  if (DAG.getNodeIfExists(X86ISD::FRSQRT, DAG.getVTList(VT), Op))
+  if (DAG.doesNodeExist(X86ISD::FRSQRT, DAG.getVTList(VT), Op))
     return false;
 
   if (VT.isVector())
@@ -24698,6 +24699,8 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   // (select (x != 0), -1, y) -> ~(sign_bit (x - 1)) | y
   // (select (and (x , 0x1) == 0), y, (z ^ y) ) -> (-(and (x , 0x1)) & z ) ^ y
   // (select (and (x , 0x1) == 0), y, (z | y) ) -> (-(and (x , 0x1)) & z ) | y
+  // (select (x > 0), x, 0) -> (~(x >> (size_in_bits(x)-1))) & x
+  // (select (x < 0), x, 0) -> ((x >> (size_in_bits(x)-1))) & x
   if (Cond.getOpcode() == X86ISD::SETCC &&
       Cond.getOperand(1).getOpcode() == X86ISD::CMP &&
       isNullConstant(Cond.getOperand(1).getOperand(1))) {
@@ -24778,6 +24781,22 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
         SDValue And = DAG.getNode(ISD::AND, DL, VT, Mask, Src1); // Mask & z
         return DAG.getNode(Op2.getOpcode(), DL, VT, And, Src2);  // And Op y
       }
+    } else if ((VT == MVT::i32 || VT == MVT::i64) && isNullConstant(Op2) &&
+               Cmp.getNode()->hasOneUse() && (CmpOp0 == Op1) &&
+               ((CondCode == X86::COND_S) ||                    // smin(x, 0)
+                (CondCode == X86::COND_G && hasAndNot(Op1)))) { // smax(x, 0)
+      // (select (x < 0), x, 0) -> ((x >> (size_in_bits(x)-1))) & x
+      //
+      // If the comparison is testing for a positive value, we have to invert
+      // the sign bit mask, so only do that transform if the target has a
+      // bitwise 'and not' instruction (the invert is free).
+      // (select (x > 0), x, 0) -> (~(x >> (size_in_bits(x)-1))) & x
+      unsigned ShCt = VT.getSizeInBits() - 1;
+      SDValue ShiftAmt = DAG.getConstant(ShCt, DL, VT);
+      SDValue Shift = DAG.getNode(ISD::SRA, DL, VT, Op1, ShiftAmt);
+      if (CondCode == X86::COND_G)
+        Shift = DAG.getNOT(DL, Shift, VT);
+      return DAG.getNode(ISD::AND, DL, VT, Shift, Op1);
     }
   }
 
@@ -30420,7 +30439,8 @@ bool X86TargetLowering::needsCmpXchgNb(Type *MemType) const {
   return false;
 }
 
-bool X86TargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
+TargetLoweringBase::AtomicExpansionKind
+X86TargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
   Type *MemType = SI->getValueOperand()->getType();
 
   bool NoImplicitFloatOps =
@@ -30428,9 +30448,10 @@ bool X86TargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
   if (MemType->getPrimitiveSizeInBits() == 64 && !Subtarget.is64Bit() &&
       !Subtarget.useSoftFloat() && !NoImplicitFloatOps &&
       (Subtarget.hasSSE1() || Subtarget.hasX87()))
-    return false;
+    return AtomicExpansionKind::None;
 
-  return needsCmpXchgNb(MemType);
+  return needsCmpXchgNb(MemType) ? AtomicExpansionKind::Expand
+                                 : AtomicExpansionKind::None;
 }
 
 // Note: this turns large loads into lock cmpxchg8b/16b.
@@ -47606,8 +47627,7 @@ static SDValue combineLogicBlendIntoPBLENDV(SDNode *N, SelectionDAG &DAG,
 //   into:
 //   srl(ctlz x), log2(bitsize(x))
 // Input pattern is checked by caller.
-static SDValue lowerX86CmpEqZeroToCtlzSrl(SDValue Op, EVT ExtTy,
-                                          SelectionDAG &DAG) {
+static SDValue lowerX86CmpEqZeroToCtlzSrl(SDValue Op, SelectionDAG &DAG) {
   SDValue Cmp = Op.getOperand(1);
   EVT VT = Cmp.getOperand(0).getValueType();
   unsigned Log2b = Log2_32(VT.getSizeInBits());
@@ -47618,7 +47638,7 @@ static SDValue lowerX86CmpEqZeroToCtlzSrl(SDValue Op, EVT ExtTy,
   SDValue Trunc = DAG.getZExtOrTrunc(Clz, dl, MVT::i32);
   SDValue Scc = DAG.getNode(ISD::SRL, dl, MVT::i32, Trunc,
                             DAG.getConstant(Log2b, dl, MVT::i8));
-  return DAG.getZExtOrTrunc(Scc, dl, ExtTy);
+  return Scc;
 }
 
 // Try to transform:
@@ -47678,11 +47698,10 @@ static SDValue combineOrCmpEqZeroToCtlzSrl(SDNode *N, SelectionDAG &DAG,
   // or(srl(ctlz),srl(ctlz)).
   // The dag combiner can then fold it into:
   // srl(or(ctlz, ctlz)).
-  EVT VT = OR->getValueType(0);
-  SDValue NewLHS = lowerX86CmpEqZeroToCtlzSrl(LHS, VT, DAG);
+  SDValue NewLHS = lowerX86CmpEqZeroToCtlzSrl(LHS, DAG);
   SDValue Ret, NewRHS;
-  if (NewLHS && (NewRHS = lowerX86CmpEqZeroToCtlzSrl(RHS, VT, DAG)))
-    Ret = DAG.getNode(ISD::OR, SDLoc(OR), VT, NewLHS, NewRHS);
+  if (NewLHS && (NewRHS = lowerX86CmpEqZeroToCtlzSrl(RHS, DAG)))
+    Ret = DAG.getNode(ISD::OR, SDLoc(OR), MVT::i32, NewLHS, NewRHS);
 
   if (!Ret)
     return SDValue();
@@ -47695,16 +47714,13 @@ static SDValue combineOrCmpEqZeroToCtlzSrl(SDNode *N, SelectionDAG &DAG,
     // Swap rhs with lhs to match or(setcc(eq, cmp, 0), or).
     if (RHS->getOpcode() == ISD::OR)
       std::swap(LHS, RHS);
-    NewRHS = lowerX86CmpEqZeroToCtlzSrl(RHS, VT, DAG);
+    NewRHS = lowerX86CmpEqZeroToCtlzSrl(RHS, DAG);
     if (!NewRHS)
       return SDValue();
-    Ret = DAG.getNode(ISD::OR, SDLoc(OR), VT, Ret, NewRHS);
+    Ret = DAG.getNode(ISD::OR, SDLoc(OR), MVT::i32, Ret, NewRHS);
   }
 
-  if (Ret)
-    Ret = DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), N->getValueType(0), Ret);
-
-  return Ret;
+  return DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), N->getValueType(0), Ret);
 }
 
 static SDValue foldMaskedMergeImpl(SDValue And0_L, SDValue And0_R,

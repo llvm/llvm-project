@@ -1,11 +1,11 @@
-// RUN: %clang_cc1 -triple x86_64-linux-android -emit-llvm -O -o - %s \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-android -emit-llvm -O -o - %s \
 // RUN:    | FileCheck %s --check-prefix=ANDROID --check-prefix=CHECK
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -O -o - %s \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -emit-llvm -O -o - %s \
 // RUN:    | FileCheck %s --check-prefix=GNU --check-prefix=CHECK
-// RUN: %clang_cc1 -triple x86_64 -emit-llvm -O -o - %s \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64 -emit-llvm -O -o - %s \
 // RUN:    | FileCheck %s --check-prefix=GNU --check-prefix=CHECK
 // NaCl is an example of a target for which long double is the same as double.
-// RUN: %clang_cc1 -triple x86_64-nacl -emit-llvm -O -o - %s \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-nacl -emit-llvm -O -o - %s \
 // RUN:    | FileCheck %s --check-prefix=NACL --check-prefix=CHECK
 
 // Android uses fp128 for long double but other x86_64 targets use x86_fp80.

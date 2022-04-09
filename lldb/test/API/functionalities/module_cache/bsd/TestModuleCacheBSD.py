@@ -41,6 +41,25 @@ class ModuleCacheTestcaseBSD(TestBase):
     @skipUnlessDarwin
     def test(self):
         """
+            This test has been modified to make sure .o files that don't have
+            UUIDs are not cached after discovering build systems that play with
+            modification times of .o files that the modification times are not
+            unique enough to ensure the .o file within the .a file are the right
+            files as this was causing older cache files to be accepted for new
+            updated .o files.
+
+            ELF .o files do calculate a UUID from the contents of the file,
+            which is expensive, but no one loads .o files into a debug sessions
+            when using ELF files. Mach-o .o files do not have UUID values and do
+            no calculate one as they _are_ used during debug sessions when no
+            dSYM file is generated. If we can find a way to uniquely and cheaply
+            create UUID values for mach-o .o files in the future, this test will
+            be updated to test this functionality. This test will now make sure
+            there are no cache entries for any .o files in BSD archives.
+
+            The old test case description is below in case we enable caching for
+            .o files again:
+
             Test module cache functionality for bsd archive object files.
 
             This will test that if we enable the module cache, we have a
@@ -76,10 +95,20 @@ class ModuleCacheTestcaseBSD(TestBase):
         main_module.GetNumSymbols()
         a_o_cache_files = self.get_module_cache_files("libfoo.a(a.o)")
         b_o_cache_files = self.get_module_cache_files("libfoo.a(b.o)")
+
+
         # We expect the directory for a.o to have two cache directories:
         # - 1 for the a.o with a earlier mod time
         # - 1 for the a.o that was renamed from c.o that should be 2 seconds older
-        self.assertEqual(len(a_o_cache_files), 2,
-                "make sure there are two files in the module cache directory (%s) for libfoo.a(a.o)" % (self.cache_dir))
-        self.assertEqual(len(b_o_cache_files), 1,
-                "make sure there are two files in the module cache directory (%s) for libfoo.a(b.o)" % (self.cache_dir))
+        # self.assertEqual(len(a_o_cache_files), 2,
+        #         "make sure there are two files in the module cache directory (%s) for libfoo.a(a.o)" % (self.cache_dir))
+        # self.assertEqual(len(b_o_cache_files), 1,
+        #         "make sure there are two files in the module cache directory (%s) for libfoo.a(b.o)" % (self.cache_dir))
+
+        # We are no longer caching .o files in the lldb index cache. If we ever
+        # re-enable this functionality, we can uncomment out the above lines of
+        # code.
+        self.assertEqual(len(a_o_cache_files), 0,
+                "make sure there are no files in the module cache directory (%s) for libfoo.a(a.o)" % (self.cache_dir))
+        self.assertEqual(len(b_o_cache_files), 0,
+                "make sure there are no files in the module cache directory (%s) for libfoo.a(b.o)" % (self.cache_dir))

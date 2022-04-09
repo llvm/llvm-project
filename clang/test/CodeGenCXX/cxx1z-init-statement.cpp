@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++1z -triple x86_64-apple-macosx10.7.0 -emit-llvm -o - %s -w | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++1z -triple x86_64-apple-macosx10.7.0 -emit-llvm -o - %s -w | FileCheck %s
 
 typedef int T;
 void f() {

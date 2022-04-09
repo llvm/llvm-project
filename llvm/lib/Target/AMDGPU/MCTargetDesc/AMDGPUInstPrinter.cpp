@@ -1438,6 +1438,33 @@ void AMDGPUInstPrinter::printWaitFlag(const MCInst *MI, unsigned OpNo,
   }
 }
 
+void AMDGPUInstPrinter::printDepCtr(const MCInst *MI, unsigned OpNo,
+                                    const MCSubtargetInfo &STI,
+                                    raw_ostream &O) {
+  using namespace llvm::AMDGPU::DepCtr;
+
+  uint64_t Imm16 = MI->getOperand(OpNo).getImm() & 0xffff;
+
+  bool HasNonDefaultVal = false;
+  if (isSymbolicDepCtrEncoding(Imm16, HasNonDefaultVal, STI)) {
+    int Id = 0;
+    StringRef Name;
+    unsigned Val;
+    bool IsDefault;
+    bool NeedSpace = false;
+    while (decodeDepCtr(Imm16, Id, Name, Val, IsDefault, STI)) {
+      if (!IsDefault || !HasNonDefaultVal) {
+        if (NeedSpace)
+          O << ' ';
+        O << Name << '(' << Val << ')';
+        NeedSpace = true;
+      }
+    }
+  } else {
+    O << formatHex(Imm16);
+  }
+}
+
 void AMDGPUInstPrinter::printHwreg(const MCInst *MI, unsigned OpNo,
                                    const MCSubtargetInfo &STI, raw_ostream &O) {
   unsigned Id;

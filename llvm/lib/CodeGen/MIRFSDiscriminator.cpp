@@ -135,6 +135,7 @@ bool MIRAddFSDiscriminators::runOnMachineFunction(MachineFunction &MF) {
   if (Changed) {
     createFSDiscriminatorVariable(MF.getFunction().getParent());
     LLVM_DEBUG(dbgs() << "Num of FS Discriminators: " << NumNewD << "\n");
+    (void) NumNewD;
   }
 
   return Changed;

@@ -84,23 +84,23 @@ define [2 x i64] @f4() {
 define i64 @f5() {
 ; CHECK-LABEL: f5:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, x2+2097144
-; CHECK-NEXT:    ldr x0, [x8, :lo12:x2+2097144]
+; CHECK-NEXT:    adrp x8, x2+1048568
+; CHECK-NEXT:    ldr x0, [x8, :lo12:x2+1048568]
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: f5:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    adrp x8, x2+2097144
-; GISEL-NEXT:    ldr x0, [x8, :lo12:x2+2097144]
+; GISEL-NEXT:    adrp x8, x2+1048568
+; GISEL-NEXT:    ldr x0, [x8, :lo12:x2+1048568]
 ; GISEL-NEXT:    ret
-  %l = load i64, i64* getelementptr ([16777216 x i64], [16777216 x i64]* @x2, i64 0, i64 262143)
+  %l = load i64, i64* getelementptr ([16777216 x i64], [16777216 x i64]* @x2, i64 0, i64 131071)
   ret i64 %l
 }
 
 define i64 @f6() {
 ; CHECK-LABEL: f6:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #2097152
+; CHECK-NEXT:    mov w8, #1048576
 ; CHECK-NEXT:    adrp x9, x2
 ; CHECK-NEXT:    add x9, x9, :lo12:x2
 ; CHECK-NEXT:    ldr x0, [x9, x8]
@@ -108,12 +108,12 @@ define i64 @f6() {
 ;
 ; GISEL-LABEL: f6:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    mov w8, #2097152
+; GISEL-NEXT:    mov w8, #1048576
 ; GISEL-NEXT:    adrp x9, x2
 ; GISEL-NEXT:    add x9, x9, :lo12:x2
 ; GISEL-NEXT:    ldr x0, [x9, x8]
 ; GISEL-NEXT:    ret
-  %l = load i64, i64* getelementptr ([16777216 x i64], [16777216 x i64]* @x2, i64 0, i64 262144)
+  %l = load i64, i64* getelementptr ([16777216 x i64], [16777216 x i64]* @x2, i64 0, i64 131072)
   ret i64 %l
 }
 

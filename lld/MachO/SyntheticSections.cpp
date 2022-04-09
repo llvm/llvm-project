@@ -898,10 +898,21 @@ void SymtabSection::emitStabs() {
     if (auto *defined = dyn_cast<Defined>(sym)) {
       if (defined->isAbsolute())
         continue;
+
+      // Constant-folded symbols go in the executable's symbol table, but don't
+      // get a stabs entry.
+      if (defined->wasIdenticalCodeFolded)
+        continue;
+
       InputSection *isec = defined->isec;
       ObjFile *file = dyn_cast_or_null<ObjFile>(isec->getFile());
       if (!file || !file->compileUnit)
         continue;
+
+      // All symbols that set includeInSymtab to false are synthetic symbols.
+      // Those have `file` set to nullptr and were already skipped due to that.
+      assert(defined->includeInSymtab);
+
       symbolsNeedingStabs.push_back(defined);
     }
   }
@@ -1202,7 +1213,7 @@ void CodeSignatureSection::writeHashes(uint8_t *buf) const {
                     std::min(codeEnd - code, static_cast<ssize_t>(blockSize)));
     SHA256 hasher;
     hasher.update(block);
-    StringRef hash = hasher.final();
+    std::array<uint8_t, 32> hash = hasher.final();
     assert(hash.size() == hashSize);
     memcpy(hashes, hash.data(), hashSize);
     code += blockSize;
@@ -1430,7 +1441,7 @@ void DeduplicatedCStringSection::finalizeContents() {
       assert(it != stringOffsetMap.end());
       StringOffset &offsetInfo = it->second;
       if (offsetInfo.outSecOff == UINT64_MAX) {
-        offsetInfo.outSecOff = alignTo(size, 1 << offsetInfo.trailingZeros);
+        offsetInfo.outSecOff = alignTo(size, 1ULL << offsetInfo.trailingZeros);
         size = offsetInfo.outSecOff + s.size();
       }
       isec->pieces[i].outSecOff = offsetInfo.outSecOff;

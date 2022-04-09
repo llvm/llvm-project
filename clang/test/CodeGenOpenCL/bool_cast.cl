@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -emit-llvm -o - -O0 | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple x86_64-unknown-linux-gnu -emit-llvm -o - -O0 | FileCheck %s
 
 typedef unsigned char uchar4 __attribute((ext_vector_type(4)));
 typedef unsigned int int4 __attribute((ext_vector_type(4)));

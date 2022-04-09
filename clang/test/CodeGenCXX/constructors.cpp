@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 %s -emit-llvm -o - | FileCheck %s --implicit-check-not=should_not_appear_in_output --check-prefixes=CHECK,NULL-INVALID
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 %s -emit-llvm -fno-delete-null-pointer-checks -o - | FileCheck %s --implicit-check-not=should_not_appear_in_output --check-prefixes=CHECK,NULL-VALID
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 %s -emit-llvm -o - | FileCheck %s --implicit-check-not=should_not_appear_in_output --check-prefixes=CHECK,NULL-INVALID
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 %s -emit-llvm -fno-delete-null-pointer-checks -o - | FileCheck %s --implicit-check-not=should_not_appear_in_output --check-prefixes=CHECK,NULL-VALID
 
 struct Member { int x; Member(); Member(int); Member(const Member &); };
 struct VBase { int x; VBase(); VBase(int); VBase(const VBase &); };

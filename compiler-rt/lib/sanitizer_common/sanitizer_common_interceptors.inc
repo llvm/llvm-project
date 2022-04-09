@@ -1365,12 +1365,16 @@ INTERCEPTOR(int, prctl, int option, unsigned long arg2, unsigned long arg3,
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, prctl, option, arg2, arg3, arg4, arg5);
   static const int PR_SET_NAME = 15;
+  static const int PR_SCHED_CORE = 62;
+  static const int PR_SCHED_CORE_GET = 0;
   int res = REAL(prctl(option, arg2, arg3, arg4, arg5));
   if (option == PR_SET_NAME) {
     char buff[16];
     internal_strncpy(buff, (char *)arg2, 15);
     buff[15] = 0;
     COMMON_INTERCEPTOR_SET_THREAD_NAME(ctx, buff);
+  } else if (res != -1 && option == PR_SCHED_CORE && arg2 == PR_SCHED_CORE_GET) {
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, (u64*)(arg5), sizeof(u64));
   }
   return res;
 }
@@ -2491,6 +2495,34 @@ INTERCEPTOR(int, glob64, const char *pattern, int flags,
 #else  // SANITIZER_INTERCEPT_GLOB64
 #define INIT_GLOB64
 #endif  // SANITIZER_INTERCEPT_GLOB64
+
+#if SANITIZER_INTERCEPT___B64_TO
+INTERCEPTOR(int, __b64_ntop, unsigned char const *src, SIZE_T srclength,
+            char *target, SIZE_T targsize) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, __b64_ntop, src, srclength, target, targsize);
+  COMMON_INTERCEPTOR_READ_RANGE(ctx, src, srclength);
+  int res = REAL(__b64_ntop)(src, srclength, target, targsize);
+  if (res >= 0)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, target, res + 1);
+  return res;
+}
+INTERCEPTOR(int, __b64_pton, char const *src, char *target, SIZE_T targsize) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, __b64_pton, src, target, targsize);
+  COMMON_INTERCEPTOR_READ_RANGE(ctx, src, internal_strlen(src) + 1);
+  int res = REAL(__b64_pton)(src, target, targsize);
+  if (res >= 0)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, target, res);
+  return res;
+}
+#  define INIT___B64_TO                    \
+    COMMON_INTERCEPT_FUNCTION(__b64_ntop); \
+    COMMON_INTERCEPT_FUNCTION(__b64_pton);
+#else  // SANITIZER_INTERCEPT___B64_TO
+#define INIT___B64_TO
+#endif  // SANITIZER_INTERCEPT___B64_TO
+
 
 #if SANITIZER_INTERCEPT_POSIX_SPAWN
 
@@ -10392,6 +10424,7 @@ static void InitializeCommonInterceptors() {
   INIT_TIME;
   INIT_GLOB;
   INIT_GLOB64;
+  INIT___B64_TO;
   INIT_POSIX_SPAWN;
   INIT_WAIT;
   INIT_WAIT4;

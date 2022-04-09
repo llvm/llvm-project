@@ -95,6 +95,10 @@ std::string lld::toString(const InputFile *f) {
   return (f->archiveName + "(" + path::filename(f->getName()) + ")").str();
 }
 
+std::string lld::toString(const Section &sec) {
+  return (toString(sec.file) + ":(" + sec.name + ")").str();
+}
+
 SetVector<InputFile *> macho::inputFiles;
 std::unique_ptr<TarWriter> macho::tar;
 int InputFile::idCount = 0;
@@ -296,22 +300,22 @@ void ObjFile::parseSections(ArrayRef<SectionHeader> sectionHeaders) {
         StringRef(sec.sectname, strnlen(sec.sectname, sizeof(sec.sectname)));
     StringRef segname =
         StringRef(sec.segname, strnlen(sec.segname, sizeof(sec.segname)));
-    ArrayRef<uint8_t> data = {isZeroFill(sec.flags) ? nullptr
-                                                    : buf + sec.offset,
-                              static_cast<size_t>(sec.size)};
     sections.push_back(make<Section>(this, segname, name, sec.flags, sec.addr));
     if (sec.align >= 32) {
       error("alignment " + std::to_string(sec.align) + " of section " + name +
             " is too large");
       continue;
     }
-    const Section &section = *sections.back();
+    Section &section = *sections.back();
     uint32_t align = 1 << sec.align;
+    ArrayRef<uint8_t> data = {isZeroFill(sec.flags) ? nullptr
+                                                    : buf + sec.offset,
+                              static_cast<size_t>(sec.size)};
 
     auto splitRecords = [&](int recordSize) -> void {
       if (data.empty())
         return;
-      Subsections &subsections = sections.back()->subsections;
+      Subsections &subsections = section.subsections;
       subsections.reserve(data.size() / recordSize);
       for (uint64_t off = 0; off < data.size(); off += recordSize) {
         auto *isec = make<ConcatInputSection>(
@@ -336,11 +340,11 @@ void ObjFile::parseSections(ArrayRef<SectionHeader> sectionHeaders) {
       } else {
         isec = make<WordLiteralInputSection>(section, data, align);
       }
-      sections.back()->subsections.push_back({0, isec});
+      section.subsections.push_back({0, isec});
     } else if (auto recordSize = getRecordSize(segname, name)) {
       splitRecords(*recordSize);
       if (name == section_names::compactUnwind)
-        compactUnwindSection = sections.back();
+        compactUnwindSection = &section;
     } else if (segname == segment_names::llvm) {
       if (config->callGraphProfileSort && name == section_names::cgProfile)
         checkError(parseCallGraph(data, callGraph));
@@ -359,7 +363,7 @@ void ObjFile::parseSections(ArrayRef<SectionHeader> sectionHeaders) {
         // parsing their relocations unnecessarily.
         debugSections.push_back(isec);
       } else {
-        sections.back()->subsections.push_back({0, isec});
+        section.subsections.push_back({0, isec});
       }
     }
   }
@@ -383,6 +387,20 @@ static InputSection *findContainingSubsection(const Section &section,
       [](uint64_t value, Subsection subsec) { return value < subsec.offset; }));
   *offset -= it->offset;
   return it->isec;
+}
+
+// Find a symbol at offset `off` within `isec`.
+static Defined *findSymbolAtOffset(const ConcatInputSection *isec,
+                                   uint64_t off) {
+  auto it = llvm::lower_bound(isec->symbols, off, [](Defined *d, uint64_t off) {
+    return d->value < off;
+  });
+  // The offset should point at the exact address of a symbol (with no addend.)
+  if (it == isec->symbols.end() || (*it)->value != off) {
+    assert(isec->wasCoalesced);
+    return nullptr;
+  }
+  return *it;
 }
 
 template <class SectionHeader>
@@ -710,8 +728,7 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
     Subsections &subsections = sections[i]->subsections;
     if (subsections.empty())
       continue;
-    InputSection *lastIsec = subsections.back().isec;
-    if (lastIsec->getName() == section_names::ehFrame) {
+    if (sections[i]->name == section_names::ehFrame) {
       // __TEXT,__eh_frame only has symbols and SUBTRACTOR relocs when ld64 -r
       // adds local "EH_Frame1" and "func.eh". Ignore them because they have
       // gone unused by Mac OS since Snow Leopard (10.6), vintage 2009.
@@ -724,7 +741,7 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
     // Record-based sections have already been split into subsections during
     // parseSections(), so we simply need to match Symbols to the corresponding
     // subsection here.
-    if (getRecordSize(lastIsec->getSegName(), lastIsec->getName())) {
+    if (getRecordSize(sections[i]->segname, sections[i]->name)) {
       for (size_t j = 0; j < symbolIndices.size(); ++j) {
         uint32_t symIndex = symbolIndices[j];
         const NList &sym = nList[symIndex];
@@ -733,7 +750,7 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
         InputSection *isec =
             findContainingSubsection(*sections[i], &symbolOffset);
         if (symbolOffset != 0) {
-          error(toString(lastIsec) + ":  symbol " + name +
+          error(toString(*sections[i]) + ":  symbol " + name +
                 " at misaligned offset");
           continue;
         }
@@ -1002,17 +1019,12 @@ void ObjFile::registerCompactUnwind() {
       // The functionAddress relocations are typically section relocations.
       // However, unwind info operates on a per-symbol basis, so we search for
       // the function symbol here.
-      auto symIt = llvm::lower_bound(
-          referentIsec->symbols, add,
-          [](Defined *d, uint64_t add) { return d->value < add; });
-      // The relocation should point at the exact address of a symbol (with no
-      // addend).
-      if (symIt == referentIsec->symbols.end() || (*symIt)->value != add) {
-        assert(referentIsec->wasCoalesced);
+      Defined *d = findSymbolAtOffset(referentIsec, add);
+      if (!d) {
         ++it;
         continue;
       }
-      (*symIt)->unwindEntry = isec;
+      d->unwindEntry = isec;
       // Since we've sliced away the functionAddress, we should remove the
       // corresponding relocation too. Given that clang emits relocations in
       // reverse order of address, this relocation should be at the end of the

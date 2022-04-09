@@ -100,7 +100,10 @@ TEST(CanonicalIncludesTest, Precedence) {
   // We added a mapping from some/path to <path>.
   ASSERT_EQ("<path>", CI.mapHeader(File));
   // We should have a path from 'bits/stl_vector.h' to '<vector>'.
-  auto STLVectorFile = addFile(*InMemFS, Files, testPath("bits/stl_vector.h"));
+  // FIXME: The Standrad Library map in CanonicalIncludes expects forward
+  // slashes and Windows would use backward slashes instead, so the headers are
+  // not matched appropriately.
+  auto STLVectorFile = addFile(*InMemFS, Files, "bits/stl_vector.h");
   ASSERT_EQ("<vector>", CI.mapHeader(STLVectorFile));
 }
 

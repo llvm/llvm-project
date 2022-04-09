@@ -22,11 +22,13 @@ source_set("tweaks") {
     "ExpandMacro.cpp",
     "ExtractFunction.cpp",
     "ExtractVariable.cpp",
+    "MemberwiseConstructor.cpp",
     "ObjCLocalizeStringLiteral.cpp",
     "ObjCMemberwiseInitializer.cpp",
     "PopulateSwitch.cpp",
     "RawStringLiteral.cpp",
     "RemoveUsingNamespace.cpp",
+    "SpecialMembers.cpp",
     "SwapIfBranches.cpp",
   ]
 }

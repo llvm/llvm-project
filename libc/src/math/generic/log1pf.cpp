@@ -66,7 +66,7 @@ INLINE_FMA static inline float log(double x) {
   double d = static_cast<double>(xbits) - static_cast<double>(f);
   d *= ONE_OVER_F[f_index];
 
-  double extra_factor = fputil::fma(m, LOG_2, LOG_F[f_index]);
+  double extra_factor = fputil::multiply_add(m, LOG_2, LOG_F[f_index]);
 
   double r = fputil::polyeval(d, extra_factor, 0x1.fffffffffffacp-1,
                               -0x1.fffffffef9cb2p-2, 0x1.5555513bc679ap-2,
@@ -161,7 +161,7 @@ LLVM_LIBC_FUNCTION(float, log1pf, (float x)) {
   // > fpminimax(log(1 + x)/x, 5, [|D...|], [-2^-8; 2^-8]);
   r = fputil::polyeval(xd, -0x1p-1, 0x1.5555555515551p-2, -0x1.ffffffff82bdap-3,
                        0x1.999b33348d3aep-3, -0x1.5556cae3adcc3p-3);
-  return static_cast<float>(fputil::fma(r, xd * xd, xd));
+  return static_cast<float>(fputil::multiply_add(r, xd * xd, xd));
 }
 
 } // namespace __llvm_libc

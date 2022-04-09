@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -cl-std=CL1.2 -emit-llvm -triple x86_64-unknown-unknown -o - | FileCheck %s
-// RUN: %clang_cc1 %s -cl-std=CL1.2 -emit-llvm -triple amdgcn-unknown-unknown -o - | FileCheck -check-prefixes=AMDGCN %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -cl-std=CL1.2 -emit-llvm -triple x86_64-unknown-unknown -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -cl-std=CL1.2 -emit-llvm -triple amdgcn-unknown-unknown -o - | FileCheck -check-prefixes=AMDGCN %s
 // Test that the kernels always use the SPIR calling convention
 // to have unambiguous mapping of arguments to feasibly implement
 // clSetKernelArg().

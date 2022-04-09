@@ -82,6 +82,8 @@ void ConcatInputSection::foldIdentical(ConcatInputSection *copy) {
   copy->live = false;
   copy->wasCoalesced = true;
   copy->replacement = this;
+  for (auto &copySym : copy->symbols)
+    copySym->wasIdenticalCodeFolded = true;
 
   // Merge the sorted vectors of symbols together.
   auto it = symbols.begin();

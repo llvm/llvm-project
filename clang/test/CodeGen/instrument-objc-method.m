@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -S -triple x86_64-apple-darwin10 -debug-info-kind=standalone -emit-llvm -o - %s -finstrument-functions | FileCheck %s
-// RUN: %clang_cc1 -S -triple x86_64-apple-darwin10 -debug-info-kind=standalone -emit-llvm -o - %s -finstrument-function-entry-bare | FileCheck -check-prefix=BARE %s
+// RUN: %clang_cc1 -no-opaque-pointers -S -triple x86_64-apple-darwin10 -debug-info-kind=standalone -emit-llvm -o - %s -finstrument-functions | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -S -triple x86_64-apple-darwin10 -debug-info-kind=standalone -emit-llvm -o - %s -finstrument-function-entry-bare | FileCheck -check-prefix=BARE %s
 
 @interface ObjCClass
 @end

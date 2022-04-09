@@ -6,20 +6,27 @@
 //
 //===----------------------------------------------------------------------===/
 
-#if !defined(_WIN32)
+#if defined(_WIN32)
+#include <fcntl.h>
+#include <io.h>
+#else
 #include <unistd.h>
 #endif
 
 #include "OutputRedirector.h"
+#include "llvm/ADT/StringRef.h"
 
 using namespace llvm;
 
 namespace lldb_vscode {
 
 Error RedirectFd(int fd, std::function<void(llvm::StringRef)> callback) {
-#if !defined(_WIN32)
   int new_fd[2];
+#if defined(_WIN32)
+  if (_pipe(new_fd, 4096, O_TEXT) == -1) {
+#else
   if (pipe(new_fd) == -1) {
+#endif
     int error = errno;
     return createStringError(inconvertibleErrorCode(),
                              "Couldn't create new pipe for fd %d. %s", fd,
@@ -45,11 +52,10 @@ Error RedirectFd(int fd, std::function<void(llvm::StringRef)> callback) {
           continue;
         break;
       }
-      callback(StringRef(buffer, bytes_count).str());
+      callback(StringRef(buffer, bytes_count));
     }
   });
   t.detach();
-#endif
   return Error::success();
 }
 

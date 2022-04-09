@@ -514,7 +514,7 @@ body:             |
 # CHECK-LABEL: name: test15_undef_op
 # CHECK: bb.0:
 # CHECK-NEXT: liveins: $x0, $x1, $x8
-# CHECK:       undef renamable $x10, $x11 = LDPXi renamable $x0, 0 :: (load (s64))
+# CHECK:       renamable $x10, $x11 = LDPXi renamable $x0, 0 :: (load (s64))
 # CHECK-NEXT:  renamable $x9 = LDRXui renamable $x0, 1 :: (load (s64))
 # CHECK-NEXT:  STRXui renamable $x9, renamable $x0, 100 :: (store (s64), align 4)
 # CHECK-NEXT:  renamable $x10 = ADDXrr $x10, $x10
@@ -535,7 +535,7 @@ machineFunctionInfo: {}
 body:             |
   bb.0:
     liveins: $x0, $x1, $x8
-    renamable undef $x10, renamable $x9 = LDPXi renamable $x0, 0 :: (load (s64))
+    renamable $x10, renamable $x9 = LDPXi renamable $x0, 0 :: (load (s64))
     STRXui renamable killed $x9, renamable $x0, 11 :: (store (s64), align 4)
     renamable $x9 = LDRXui renamable $x0, 1 :: (load (s64))
     STRXui renamable $x9, renamable $x0, 100 :: (store (s64), align 4)

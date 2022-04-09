@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -triple powerpc64-unknown-aix -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-NOLDBL128
-// RUN: %clang_cc1 -triple powerpc-unknown-aix -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-NOLDBL128
-// RUN: %clang_cc1 -triple powerpc64-unknown-linux -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-LDBL128
-// RUN: %clang_cc1 -triple ppc64le-unknown-linux -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-LDBL128
-// RUN: %clang_cc1 -triple powerpc-unknown-linux -emit-llvm %s -o - | FileCheck %s --check-prefix=PPC32LNX
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc64-unknown-aix -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-NOLDBL128
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc-unknown-aix -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-NOLDBL128
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc64-unknown-linux -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-LDBL128
+// RUN: %clang_cc1 -no-opaque-pointers -triple ppc64le-unknown-linux -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-LDBL128
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc-unknown-linux -emit-llvm %s -o - | FileCheck %s --check-prefix=PPC32LNX
 
 _Complex float foo1(_Complex float x) {
   return x;

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++2a %s -emit-llvm -o - -triple x86_64-linux-gnu | FileCheck %s
-// RUN: %clang_cc1 -std=c++2a %s -emit-llvm -o - -triple x86_64-linux-gnu -O2 -disable-llvm-passes | FileCheck %s --check-prefix=CHECK-OPT
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++2a %s -emit-llvm -o - -triple x86_64-linux-gnu | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++2a %s -emit-llvm -o - -triple x86_64-linux-gnu -O2 -disable-llvm-passes | FileCheck %s --check-prefix=CHECK-OPT
 
 struct A { ~A(); int n; char c[3]; };
 struct B { [[no_unique_address]] A a; char k; };

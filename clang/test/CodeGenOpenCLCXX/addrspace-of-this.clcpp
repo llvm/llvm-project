@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 %s -triple spir-unknown-unknown -emit-llvm -pedantic -verify -O0 -o - -DDECL | FileCheck %s --check-prefixes="COMMON,EXPL"
-// RUN: %clang_cc1 %s -triple spir-unknown-unknown -emit-llvm -pedantic -verify -O0 -o - -DDECL -DUSE_DEFLT | FileCheck %s --check-prefixes="COMMON,IMPL"
-// RUN: %clang_cc1 %s -triple spir-unknown-unknown -emit-llvm -pedantic -verify -O0 -o - | FileCheck %s --check-prefixes="COMMON,IMPL"
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple spir-unknown-unknown -emit-llvm -pedantic -verify -O0 -o - -DDECL | FileCheck %s --check-prefixes="COMMON,EXPL"
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple spir-unknown-unknown -emit-llvm -pedantic -verify -O0 -o - -DDECL -DUSE_DEFLT | FileCheck %s --check-prefixes="COMMON,IMPL"
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple spir-unknown-unknown -emit-llvm -pedantic -verify -O0 -o - | FileCheck %s --check-prefixes="COMMON,IMPL"
 // expected-no-diagnostics
 
 // Test that the 'this' pointer is in the __generic address space.

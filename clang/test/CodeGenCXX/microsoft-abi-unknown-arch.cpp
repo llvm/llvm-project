@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm %s -o - -triple=ppc64-windows-msvc | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm %s -o - -triple=ppc64-windows-msvc | FileCheck %s
 
 // The purpose of this test is to see that we do something reasonable for
 // architectures where we haven't checked what MSVC does.

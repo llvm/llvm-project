@@ -1,59 +1,59 @@
 // REQUIRES: x86-registered-target
-// RUN: %clang_cc1 -triple=x86_64 %s -emit-llvm -o - \
+// RUN: %clang_cc1 -no-opaque-pointers -triple=x86_64 %s -emit-llvm -o - \
 // RUN:| FileCheck --check-prefixes CHECK,CHECK-DEFAULT  %s
 
-// RUN: %clang_cc1 -triple=x86_64 -ffp-contract=off %s -emit-llvm -o - \
+// RUN: %clang_cc1 -no-opaque-pointers -triple=x86_64 -ffp-contract=off %s -emit-llvm -o - \
 // RUN:| FileCheck --check-prefixes CHECK,CHECK-DEFAULT  %s
 
-// RUN: %clang_cc1 -triple=x86_64 -ffp-contract=on %s -emit-llvm -o - \
+// RUN: %clang_cc1 -no-opaque-pointers -triple=x86_64 -ffp-contract=on %s -emit-llvm -o - \
 // RUN:| FileCheck --check-prefixes CHECK,CHECK-ON  %s
 
-// RUN: %clang_cc1 -triple=x86_64 -ffp-contract=fast %s -emit-llvm -o - \
+// RUN: %clang_cc1 -no-opaque-pointers -triple=x86_64 -ffp-contract=fast %s -emit-llvm -o - \
 // RUN:| FileCheck --check-prefixes CHECK,CHECK-CONTRACTFAST  %s
 
-// RUN: %clang_cc1 -triple=x86_64 -ffast-math %s -emit-llvm -o - \
+// RUN: %clang_cc1 -no-opaque-pointers -triple=x86_64 -ffast-math %s -emit-llvm -o - \
 // RUN:| FileCheck --check-prefixes CHECK,CHECK-CONTRACTOFF %s
 
-// RUN: %clang_cc1 -triple=x86_64 -ffast-math -ffp-contract=off %s -emit-llvm \
+// RUN: %clang_cc1 -no-opaque-pointers -triple=x86_64 -ffast-math -ffp-contract=off %s -emit-llvm \
 // RUN: -o - | FileCheck --check-prefixes CHECK,CHECK-CONTRACTOFF %s
 
-// RUN: %clang_cc1 -triple=x86_64 -ffast-math -ffp-contract=on %s -emit-llvm \
+// RUN: %clang_cc1 -no-opaque-pointers -triple=x86_64 -ffast-math -ffp-contract=on %s -emit-llvm \
 // RUN: -o - | FileCheck --check-prefixes CHECK,CHECK-ONFAST %s
 
-// RUN: %clang_cc1 -triple=x86_64 -ffast-math -ffp-contract=fast %s -emit-llvm \
+// RUN: %clang_cc1 -no-opaque-pointers -triple=x86_64 -ffast-math -ffp-contract=fast %s -emit-llvm \
 // RUN:  -o - | FileCheck --check-prefixes CHECK,CHECK-FASTFAST %s
 
-// RUN: %clang_cc1 -triple=x86_64 -ffp-contract=fast -ffast-math  %s \
+// RUN: %clang_cc1 -no-opaque-pointers -triple=x86_64 -ffp-contract=fast -ffast-math  %s \
 // RUN: -emit-llvm \
 // RUN:  -o - | FileCheck --check-prefixes CHECK,CHECK-FASTFAST %s
 
-// RUN: %clang_cc1 -triple=x86_64 -ffp-contract=off -fmath-errno \
+// RUN: %clang_cc1 -no-opaque-pointers -triple=x86_64 -ffp-contract=off -fmath-errno \
 // RUN: -fno-rounding-math %s -emit-llvm -o - \
 // RUN:  -o - | FileCheck --check-prefixes CHECK,CHECK-NOFAST %s
 
-// RUN: %clang -S -emit-llvm -fno-fast-math %s -o - \
+// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -fno-fast-math %s -o - \
 // RUN: | FileCheck %s --check-prefixes=CHECK,CHECK-FPC-ON
 
-// RUN: %clang -S -emit-llvm -ffp-contract=fast -fno-fast-math \
+// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -ffp-contract=fast -fno-fast-math \
 // RUN: %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-FPC-ON
 
-// RUN: %clang -S -emit-llvm -ffp-contract=on -fno-fast-math \
+// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -ffp-contract=on -fno-fast-math \
 // RUN: %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-FPC-ON
 
-// RUN: %clang -S -emit-llvm -ffp-contract=off -fno-fast-math \
+// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -ffp-contract=off -fno-fast-math \
 // RUN: %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-FPC-OFF
 
-// RUN: %clang -S -emit-llvm -ffp-model=fast -fno-fast-math \
+// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -ffp-model=fast -fno-fast-math \
 // RUN: %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-FPC-ON
 
-// RUN: %clang -S -emit-llvm -ffp-model=precise -fno-fast-math \
+// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -ffp-model=precise -fno-fast-math \
 // RUN: %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-FPC-ON
 
-// RUN: %clang -S -emit-llvm -ffp-model=strict -fno-fast-math \
+// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -ffp-model=strict -fno-fast-math \
 // RUN: -target x86_64 %s -o - | FileCheck %s \
 // RUN: --check-prefixes=CHECK,CHECK-FPSC-OFF
 
-// RUN: %clang -S -emit-llvm -ffast-math -fno-fast-math \
+// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -ffast-math -fno-fast-math \
 // RUN: %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-FPC-ON
 
 float mymuladd(float x, float y, float z) {

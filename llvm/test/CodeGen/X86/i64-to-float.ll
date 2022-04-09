@@ -366,16 +366,16 @@ define <2 x double> @clamp_sitofp_2i64_2f64(<2 x i64> %a) nounwind {
 ;
 ; X64-AVX512F-LABEL: clamp_sitofp_2i64_2f64:
 ; X64-AVX512F:       # %bb.0:
-; X64-AVX512F-NEXT:    vpmaxsq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; X64-AVX512F-NEXT:    vpminsq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-AVX512F-NEXT:    vpmaxsq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; X64-AVX512F-NEXT:    vpminsq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
 ; X64-AVX512F-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; X64-AVX512F-NEXT:    vcvtdq2pd %xmm0, %xmm0
 ; X64-AVX512F-NEXT:    retq
 ;
 ; X64-AVX512DQ-LABEL: clamp_sitofp_2i64_2f64:
 ; X64-AVX512DQ:       # %bb.0:
-; X64-AVX512DQ-NEXT:    vpmaxsq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; X64-AVX512DQ-NEXT:    vpminsq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-AVX512DQ-NEXT:    vpmaxsq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; X64-AVX512DQ-NEXT:    vpminsq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
 ; X64-AVX512DQ-NEXT:    vcvtqq2pd %xmm0, %xmm0
 ; X64-AVX512DQ-NEXT:    retq
   %clo = icmp slt <2 x i64> %a, <i64 -255, i64 -255>

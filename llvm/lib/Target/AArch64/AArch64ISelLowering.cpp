@@ -1230,7 +1230,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setLoadExtAction(Op, MVT::nxv2i64, MVT::nxv2i16, Legal);
       setLoadExtAction(Op, MVT::nxv2i64, MVT::nxv2i32, Legal);
       setLoadExtAction(Op, MVT::nxv4i32, MVT::nxv4i8, Legal);
-      setLoadExtAction(Op, MVT::nxv2i32, MVT::nxv2i16, Legal);
       setLoadExtAction(Op, MVT::nxv4i32, MVT::nxv4i16, Legal);
       setLoadExtAction(Op, MVT::nxv8i16, MVT::nxv8i8, Legal);
     }
@@ -10205,10 +10204,7 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
     unsigned PFTableIndex = PFIndexes[0] * 9 * 9 * 9 + PFIndexes[1] * 9 * 9 +
                             PFIndexes[2] * 9 + PFIndexes[3];
     unsigned PFEntry = PerfectShuffleTable[PFTableIndex];
-    unsigned Cost = (PFEntry >> 30);
-
-    if (Cost <= 4)
-      return GeneratePerfectShuffle(PFEntry, V1, V2, DAG, dl);
+    return GeneratePerfectShuffle(PFEntry, V1, V2, DAG, dl);
   }
 
   return GenerateTBL(Op, ShuffleMask, DAG);
@@ -14510,6 +14506,22 @@ static bool hasPairwiseAdd(unsigned Opcode, EVT VT, bool FullFP16) {
 static SDValue getPTest(SelectionDAG &DAG, EVT VT, SDValue Pg, SDValue Op,
                         AArch64CC::CondCode Cond);
 
+static bool isPredicateCCSettingOp(SDValue N) {
+  if ((N.getOpcode() == ISD::SETCC) ||
+      (N.getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
+       (N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilege ||
+        N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilegt ||
+        N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilehi ||
+        N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilehs ||
+        N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilele ||
+        N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilelo ||
+        N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilels ||
+        N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilelt)))
+    return true;
+
+  return false;
+}
+
 // Materialize : i1 = extract_vector_elt t37, Constant:i64<0>
 // ... into: "ptrue p, all" + PTEST
 static SDValue
@@ -14521,22 +14533,22 @@ performFirstTrueTestVectorCombine(SDNode *N,
   if (!Subtarget->hasSVE() || DCI.isBeforeLegalize())
     return SDValue();
 
-  SDValue SetCC = N->getOperand(0);
-  EVT VT = SetCC.getValueType();
+  SDValue N0 = N->getOperand(0);
+  EVT VT = N0.getValueType();
 
-  if (!VT.isScalableVector() || VT.getVectorElementType() != MVT::i1)
+  if (!VT.isScalableVector() || VT.getVectorElementType() != MVT::i1 ||
+      !isNullConstant(N->getOperand(1)))
     return SDValue();
 
   // Restricted the DAG combine to only cases where we're extracting from a
-  // flag-setting operation
-  auto *Idx = dyn_cast<ConstantSDNode>(N->getOperand(1));
-  if (!Idx || !Idx->isZero() || SetCC.getOpcode() != ISD::SETCC)
+  // flag-setting operation.
+  if (!isPredicateCCSettingOp(N0))
     return SDValue();
 
   // Extracts of lane 0 for SVE can be expressed as PTEST(Op, FIRST) ? 1 : 0
   SelectionDAG &DAG = DCI.DAG;
   SDValue Pg = getPTrue(DAG, SDLoc(N), VT, AArch64SVEPredPattern::all);
-  return getPTest(DAG, N->getValueType(0), Pg, SetCC, AArch64CC::FIRST_ACTIVE);
+  return getPTest(DAG, N->getValueType(0), Pg, N0, AArch64CC::FIRST_ACTIVE);
 }
 
 // Materialize : Idx = (add (mul vscale, NumEls), -1)
@@ -14551,15 +14563,15 @@ performLastTrueTestVectorCombine(SDNode *N,
   if (!Subtarget->hasSVE() || DCI.isBeforeLegalize())
     return SDValue();
 
-  SDValue SetCC = N->getOperand(0);
-  EVT OpVT = SetCC.getValueType();
+  SDValue N0 = N->getOperand(0);
+  EVT OpVT = N0.getValueType();
 
   if (!OpVT.isScalableVector() || OpVT.getVectorElementType() != MVT::i1)
     return SDValue();
 
   // Idx == (add (mul vscale, NumEls), -1)
   SDValue Idx = N->getOperand(1);
-  if (Idx.getOpcode() != ISD::ADD)
+  if (Idx.getOpcode() != ISD::ADD || !isAllOnesConstant(Idx.getOperand(1)))
     return SDValue();
 
   SDValue VS = Idx.getOperand(0);
@@ -14570,16 +14582,10 @@ performLastTrueTestVectorCombine(SDNode *N,
   if (VS.getConstantOperandVal(0) != NumEls)
     return SDValue();
 
-  // Restricted the DAG combine to only cases where we're extracting from a
-  // flag-setting operation
-  auto *CI = dyn_cast<ConstantSDNode>(Idx.getOperand(1));
-  if (!CI || !CI->isAllOnes() || SetCC.getOpcode() != ISD::SETCC)
-    return SDValue();
-
   // Extracts of lane EC-1 for SVE can be expressed as PTEST(Op, LAST) ? 1 : 0
   SelectionDAG &DAG = DCI.DAG;
   SDValue Pg = getPTrue(DAG, SDLoc(N), OpVT, AArch64SVEPredPattern::all);
-  return getPTest(DAG, N->getValueType(0), Pg, SetCC, AArch64CC::LAST_ACTIVE);
+  return getPTest(DAG, N->getValueType(0), Pg, N0, AArch64CC::LAST_ACTIVE);
 }
 
 static SDValue
@@ -17920,13 +17926,14 @@ static SDValue performGlobalAddressCombine(SDNode *N, SelectionDAG &DAG,
 
   // Check whether folding this offset is legal. It must not go out of bounds of
   // the referenced object to avoid violating the code model, and must be
-  // smaller than 2^21 because this is the largest offset expressible in all
-  // object formats.
+  // smaller than 2^20 because this is the largest offset expressible in all
+  // object formats. (The IMAGE_REL_ARM64_PAGEBASE_REL21 relocation in COFF
+  // stores an immediate signed 21 bit offset.)
   //
   // This check also prevents us from folding negative offsets, which will end
   // up being treated in the same way as large positive ones. They could also
   // cause code model violations, and aren't really common enough to matter.
-  if (Offset >= (1 << 21))
+  if (Offset >= (1 << 20))
     return SDValue();
 
   const GlobalValue *GV = GN->getGlobal();
@@ -19359,12 +19366,12 @@ bool AArch64TargetLowering::shouldInsertFencesForAtomic(
 // Loads and stores less than 128-bits are already atomic; ones above that
 // are doomed anyway, so defer to the default libcall and blame the OS when
 // things go wrong.
-bool AArch64TargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
+TargetLoweringBase::AtomicExpansionKind
+AArch64TargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
   unsigned Size = SI->getValueOperand()->getType()->getPrimitiveSizeInBits();
-  if (Size != 128)
-    return false;
-
-  return !isOpSuitableForLDPSTP(SI);
+  if (Size != 128 || isOpSuitableForLDPSTP(SI))
+    return AtomicExpansionKind::None;
+  return AtomicExpansionKind::Expand;
 }
 
 // Loads and stores less than 128-bits are already atomic; ones above that

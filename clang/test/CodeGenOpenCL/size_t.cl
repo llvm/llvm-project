@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 %s -cl-std=CL2.0 -finclude-default-header -fdeclare-opencl-builtins -emit-llvm -O0 -triple spir-unknown-unknown -o - | FileCheck --check-prefix=SZ32 %s
-// RUN: %clang_cc1 %s -cl-std=CL2.0 -finclude-default-header -fdeclare-opencl-builtins -emit-llvm -O0 -triple spir64-unknown-unknown -o - | FileCheck --check-prefix=SZ64 --check-prefix=SZ64ONLY %s
-// RUN: %clang_cc1 %s -cl-std=CL2.0 -finclude-default-header -fdeclare-opencl-builtins -emit-llvm -O0 -triple amdgcn -o - | FileCheck --check-prefix=SZ64 --check-prefix=AMDGCN %s
-// RUN: %clang_cc1 %s -cl-std=CL2.0 -finclude-default-header -fdeclare-opencl-builtins -emit-llvm -O0 -triple amdgcn---opencl -o - | FileCheck --check-prefix=SZ64 --check-prefix=AMDGCN %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -cl-std=CL2.0 -finclude-default-header -fdeclare-opencl-builtins -emit-llvm -O0 -triple spir-unknown-unknown -o - | FileCheck --check-prefix=SZ32 %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -cl-std=CL2.0 -finclude-default-header -fdeclare-opencl-builtins -emit-llvm -O0 -triple spir64-unknown-unknown -o - | FileCheck --check-prefix=SZ64 --check-prefix=SZ64ONLY %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -cl-std=CL2.0 -finclude-default-header -fdeclare-opencl-builtins -emit-llvm -O0 -triple amdgcn -o - | FileCheck --check-prefix=SZ64 --check-prefix=AMDGCN %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -cl-std=CL2.0 -finclude-default-header -fdeclare-opencl-builtins -emit-llvm -O0 -triple amdgcn---opencl -o - | FileCheck --check-prefix=SZ64 --check-prefix=AMDGCN %s
 
 //SZ32: define{{.*}} i32 @test_ptrtoint_private(i8* noundef %x)
 //SZ32: ptrtoint i8* %{{.*}} to i32

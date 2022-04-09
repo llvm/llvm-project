@@ -127,6 +127,10 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`performance-inefficient-vector-operation 
+  <clang-tidy/checks/performance-inefficient-vector-operation>` to work when
+  the vector is a member of a structure.
+
 - Fixed a false positive in :doc:`readability-non-const-parameter
   <clang-tidy/checks/readability-non-const-parameter>` when the parameter is referenced by an lvalue
 
@@ -139,6 +143,12 @@ Changes in existing checks
 
 - Fixed a crash in :doc:`bugprone-sizeof-expression <clang-tidy/checks/bugprone-sizeof-expression>` when
   `sizeof(...)` is compared agains a `__int128_t`.
+  
+- Improved :doc:`cppcoreguidelines-prefer-member-initializer
+  <clang-tidy/checks/cppcoreguidelines-prefer-member-initializer>` check.
+
+  Fixed an issue when there was already an initializer in the constructor and
+  the check would try to create another initializer for the same member.
 
 Removed checks
 ^^^^^^^^^^^^^^

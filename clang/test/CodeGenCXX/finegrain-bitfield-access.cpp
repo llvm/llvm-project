@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -ffine-grained-bitfield-accesses \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -ffine-grained-bitfield-accesses \
 // RUN:   -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -ffine-grained-bitfield-accesses \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -ffine-grained-bitfield-accesses \
 // RUN:   -emit-llvm -fsanitize=address -o - %s | FileCheck %s --check-prefix=SANITIZE
 // Check -fsplit-bitfields will be ignored since sanitizer is enabled.
 

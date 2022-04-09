@@ -1373,13 +1373,16 @@ void OpEmitter::genUseOperandAsResultTypeCollectiveParamBuilder() {
 }
 
 void OpEmitter::genInferredTypeCollectiveParamBuilder() {
-  // TODO: Expand to support regions.
   SmallVector<MethodParameter> paramList;
   paramList.emplace_back("::mlir::OpBuilder &", "odsBuilder");
   paramList.emplace_back("::mlir::OperationState &", builderOpState);
   paramList.emplace_back("::mlir::ValueRange", "operands");
+  StringRef attributesDefaultValue = op.getNumVariadicRegions() ? "" : "{}";
   paramList.emplace_back("::llvm::ArrayRef<::mlir::NamedAttribute>",
-                         "attributes", "{}");
+                         "attributes", attributesDefaultValue);
+  if (op.getNumVariadicRegions())
+    paramList.emplace_back("unsigned", "numRegions");
+
   auto *m = opClass.addStaticMethod("void", "build", std::move(paramList));
   // If the builder is redundant, skip generating the method
   if (!m)

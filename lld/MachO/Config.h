@@ -107,7 +107,6 @@ struct Configuration {
   bool implicitDylibs = false;
   bool isPic = false;
   bool headerPadMaxInstallNames = false;
-  bool ltoNewPassManager = LLVM_ENABLE_NEW_PASS_MANAGER;
   bool markDeadStrippableDylib = false;
   bool printDylibSearch = false;
   bool printEachFile = false;

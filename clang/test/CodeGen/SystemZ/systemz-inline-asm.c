@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple s390x-linux-gnu -O2 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple s390x-linux-gnu -O2 -emit-llvm -o - %s | FileCheck %s
 
 unsigned int gi;
 unsigned long gl;

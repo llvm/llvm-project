@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 %s -emit-llvm -o - -triple=x86_64-apple-macosx10.9.0 | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -triple=x86_64-apple-macosx10.9.0 | FileCheck %s
 // REQUIRES: x86-registered-target
 // Also test serialization of atomic operations here, to avoid duplicating the
 // test.
-// RUN: %clang_cc1 %s -emit-pch -o %t -triple=x86_64-apple-macosx10.9.0
-// RUN: %clang_cc1 %s -include-pch %t -triple=x86_64-apple-macosx10.9.0 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-pch -o %t -triple=x86_64-apple-macosx10.9.0
+// RUN: %clang_cc1 -no-opaque-pointers %s -include-pch %t -triple=x86_64-apple-macosx10.9.0 -emit-llvm -o - | FileCheck %s
 #ifndef ALREADY_INCLUDED
 #define ALREADY_INCLUDED
 
