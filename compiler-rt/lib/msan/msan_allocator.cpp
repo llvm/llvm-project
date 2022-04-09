@@ -194,16 +194,19 @@ static void *MsanAllocate(StackTrace *stack, uptr size, uptr alignment,
       __msan_set_origin(allocated, size, o.raw_id());
     }
   }
-  UnpoisonParam(2);
-  RunMallocHooks(allocated, size);
+  if (!IsInSymbolizerOrUnwider()) {
+    UnpoisonParam(2);
+    RunMallocHooks(allocated, size);
+  }
   return allocated;
 }
 
 void MsanDeallocate(StackTrace *stack, void *p) {
   CHECK(p);
-  UnpoisonParam(1);
-  RunFreeHooks(p);
-
+  if (!IsInSymbolizerOrUnwider()) {
+    UnpoisonParam(1);
+    RunFreeHooks(p);
+  }
   Metadata *meta = reinterpret_cast<Metadata *>(allocator.GetMetaData(p));
   uptr size = meta->requested_size;
   meta->requested_size = 0;
