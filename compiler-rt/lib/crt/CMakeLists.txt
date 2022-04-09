@@ -35,7 +35,7 @@ if(COMPILER_RT_HAS_CRT)
 
   include(CheckSectionExists)
   check_section_exists(".init_array" COMPILER_RT_HAS_INITFINI_ARRAY
-    SOURCE "volatile int x;\n__attribute__((constructor)) void f() {x = 0;}\nint main() { return 0; }\n")
+    SOURCE "volatile int x;\n__attribute__((constructor)) void f(void) {x = 0;}\nint main(void) { return 0; }\n")
 
   append_list_if(COMPILER_RT_HAS_STD_C11_FLAG -std=c11 CRT_CFLAGS)
   append_list_if(COMPILER_RT_HAS_INITFINI_ARRAY -DCRT_HAS_INITFINI_ARRAY CRT_CFLAGS)

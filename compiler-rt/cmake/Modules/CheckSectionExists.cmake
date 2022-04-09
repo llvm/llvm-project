@@ -1,7 +1,7 @@
 function(check_section_exists section output)
   cmake_parse_arguments(ARG "" "" "SOURCE;FLAGS" ${ARGN})
   if(NOT ARG_SOURCE)
-    set(ARG_SOURCE "int main() { return 0; }\n")
+    set(ARG_SOURCE "int main(void) { return 0; }\n")
   endif()
 
   string(RANDOM TARGET_NAME)
