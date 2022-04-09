@@ -128,6 +128,13 @@ static DecodeStatus decodeFMUL2RdRr(MCInst &Inst, unsigned Insn,
                                     uint64_t Address,
                                     const MCDisassembler *Decoder);
 
+static DecodeStatus decodeMemri(MCInst &Inst, unsigned Insn, uint64_t Address,
+                                const MCDisassembler *Decoder);
+
+static DecodeStatus decodeLoadStore(MCInst &Inst, unsigned Insn,
+                                    uint64_t Address,
+                                    const MCDisassembler *Decoder);
+
 #include "AVRGenDisassemblerTables.inc"
 
 static DecodeStatus decodeFIOARr(MCInst &Inst, unsigned Insn, uint64_t Address,
@@ -247,6 +254,49 @@ static DecodeStatus decodeFMUL2RdRr(MCInst &Inst, unsigned Insn,
       MCDisassembler::Fail)
     return MCDisassembler::Fail;
   return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeMemri(MCInst &Inst, unsigned Insn, uint64_t Address,
+                                const MCDisassembler *Decoder) {
+  // As in the EncoderMethod `AVRMCCodeEmitter::encodeMemri`, the memory
+  // address is encoded into 7-bit, in which bits 0-5 are the immediate offset,
+  // and the bit-6 is the pointer register bit (Z=0, Y=1).
+  if (Insn > 127)
+    return MCDisassembler::Fail;
+
+  // Append the base register operand.
+  Inst.addOperand(
+      MCOperand::createReg((Insn & 0x40) ? AVR::R29R28 : AVR::R31R30));
+  // Append the immediate offset operand.
+  Inst.addOperand(MCOperand::createImm(Insn & 0x3f));
+
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeLoadStore(MCInst &Inst, unsigned Insn,
+                                    uint64_t Address,
+                                    const MCDisassembler *Decoder) {
+  // Decode LDD/STD with offset less than 8.
+  if ((Insn & 0xf000) == 0x8000) {
+    unsigned RegVal = GPRDecoderTable[(Insn >> 4) & 0x1f];
+    unsigned RegBase = (Insn & 0x8) ? AVR::R29R28 : AVR::R31R30;
+    unsigned Offset = Insn & 7; // We need not consider offset > 7.
+    if ((Insn & 0x200) == 0) { // Decode LDD.
+      Inst.setOpcode(AVR::LDDRdPtrQ);
+      Inst.addOperand(MCOperand::createReg(RegVal));
+      Inst.addOperand(MCOperand::createReg(RegBase));
+      Inst.addOperand(MCOperand::createImm(Offset));
+    } else { // Decode STD.
+      Inst.setOpcode(AVR::STDPtrQRr);
+      Inst.addOperand(MCOperand::createReg(RegBase));
+      Inst.addOperand(MCOperand::createImm(Offset));
+      Inst.addOperand(MCOperand::createReg(RegVal));
+    }
+    return MCDisassembler::Success;
+  }
+
+  // TODO: Decode ST/LD with postinc/predec properly.
+  return MCDisassembler::Fail;
 }
 
 static DecodeStatus readInstruction16(ArrayRef<uint8_t> Bytes, uint64_t Address,
