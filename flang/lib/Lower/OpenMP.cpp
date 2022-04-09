@@ -222,9 +222,7 @@ genOMP(Fortran::lower::AbstractConverter &converter,
                        &clause.u)) {
       genAllocateClause(converter, allocateClause->v, allocatorOperands,
                         allocateOperands);
-    } else if (const auto &privateClause =
-                   std::get_if<Fortran::parser::OmpClause::Private>(
-                       &clause.u)) {
+    } else if (std::get_if<Fortran::parser::OmpClause::Private>(&clause.u)) {
       // TODO: Handle private. This cannot be a hard TODO because testing for
       // allocate clause requires private variables.
     } else {
