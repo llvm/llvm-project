@@ -117,3 +117,46 @@ void sw5(int a) {
 // CHECK: cir.switch (%1 : i32) [
 // CHECK-NEXT:   case (equal, 1 : i32)  {
 // CHECK-NEXT:     cir.yield fallthrough
+
+void sw6(int a) {
+  switch (a) {
+  case 0:
+  case 1:
+  case 2:
+    break;
+  case 3:
+  case 4:
+  case 5:
+    break;
+  }
+}
+
+// CHECK: func @sw6
+// CHECK: cir.switch (%1 : i32) [
+// CHECK-NEXT: case (anyof, [0, 1, 2] : i32)  {
+// CHECK-NEXT:   cir.yield break
+// CHECK-NEXT: },
+// CHECK-NEXT: case (anyof, [3, 4, 5] : i32)  {
+// CHECK-NEXT:   cir.yield break
+// CHECK-NEXT: }
+
+void sw7(int a) {
+  switch (a) {
+  case 0:
+  case 1:
+  case 2:
+    int x;
+  case 3:
+  case 4:
+  case 5:
+    break;
+  }
+}
+
+// CHECK: func @sw7
+// CHECK: case (anyof, [0, 1, 2] : i32)  {
+// CHECK-NEXT:   cir.yield fallthrough
+// CHECK-NEXT: },
+// CHECK-NEXT: case (anyof, [3, 4, 5] : i32)  {
+// CHECK-NEXT:   cir.yield break
+// CHECK-NEXT: }
