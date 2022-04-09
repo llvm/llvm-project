@@ -2079,7 +2079,11 @@ private:
     __compressed_pair<size_type, __storage_allocator> __cap_alloc_;
 public:
     typedef __bit_reference<vector>                  reference;
+#ifdef _LIBCPP_ABI_BITSET_VECTOR_BOOL_CONST_SUBSCRIPT_RETURN_BOOL
+    using const_reference = bool;
+#else
     typedef __bit_const_reference<vector>            const_reference;
+#endif
 private:
     _LIBCPP_INLINE_VISIBILITY
     size_type& __cap() _NOEXCEPT
@@ -2276,7 +2280,6 @@ public:
 
     iterator insert(const_iterator __position, const value_type& __x);
     iterator insert(const_iterator __position, size_type __n, const value_type& __x);
-    iterator insert(const_iterator __position, size_type __n, const_reference __x);
     template <class _InputIterator>
         typename enable_if
         <
@@ -2365,8 +2368,10 @@ private:
     reference __make_ref(size_type __pos) _NOEXCEPT
         {return reference(__begin_ + __pos / __bits_per_word, __storage_type(1) << __pos % __bits_per_word);}
     _LIBCPP_INLINE_VISIBILITY
-    const_reference __make_ref(size_type __pos) const _NOEXCEPT
-        {return const_reference(__begin_ + __pos / __bits_per_word, __storage_type(1) << __pos % __bits_per_word);}
+    const_reference __make_ref(size_type __pos) const _NOEXCEPT {
+        return __bit_const_reference<vector>(__begin_ + __pos / __bits_per_word,
+                                             __storage_type(1) << __pos % __bits_per_word);
+    }
     _LIBCPP_INLINE_VISIBILITY
     iterator __make_iter(size_type __pos) _NOEXCEPT
         {return iterator(__begin_ + __pos / __bits_per_word, static_cast<unsigned>(__pos % __bits_per_word));}

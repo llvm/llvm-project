@@ -42,6 +42,7 @@ void test_index() {
             assert(r == false);
             assert(v1.test(N/2) == false);
         }
+        ASSERT_SAME_TYPE(decltype(v1[0]), typename std::bitset<N>::reference);
     }
 }
 
@@ -55,6 +56,12 @@ int main(int, char**) {
     test_index<64>();
     test_index<65>();
     test_index<1000>();
+
+    std::bitset<1> set;
+    set[0] = false;
+    auto b = set[0];
+    set[0] = true;
+    assert(b);
 
     return 0;
 }

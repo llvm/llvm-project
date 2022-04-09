@@ -715,9 +715,12 @@ public:
     bitset& flip(size_t __pos);
 
     // element access:
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-                              const_reference operator[](size_t __p) const {return base::__make_ref(__p);}
-    _LIBCPP_INLINE_VISIBILITY       reference operator[](size_t __p)       {return base::__make_ref(__p);}
+#ifdef _LIBCPP_ABI_BITSET_VECTOR_BOOL_CONST_SUBSCRIPT_RETURN_BOOL
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR            bool operator[](size_t __p) const {return base::__make_ref(__p);}
+#else
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR const_reference operator[](size_t __p) const {return base::__make_ref(__p);}
+#endif
+    _LIBCPP_HIDE_FROM_ABI                         reference operator[](size_t __p)       {return base::__make_ref(__p);}
     _LIBCPP_INLINE_VISIBILITY
     unsigned long to_ulong() const;
     _LIBCPP_INLINE_VISIBILITY

@@ -114,6 +114,8 @@
 #  define _LIBCPP_ABI_DO_NOT_EXPORT_BASIC_STRING_COMMON
 // Remove vector base class
 #  define _LIBCPP_ABI_DO_NOT_EXPORT_VECTOR_BASE_COMMON
+// According to the Standard, `bitset::operator[] const` returns bool
+#  define _LIBCPP_ABI_BITSET_VECTOR_BOOL_CONST_SUBSCRIPT_RETURN_BOOL
 #elif _LIBCPP_ABI_VERSION == 1
 #  if !defined(_LIBCPP_OBJECT_FORMAT_COFF)
 // Enable compiling copies of now inline methods into the dylib to support
