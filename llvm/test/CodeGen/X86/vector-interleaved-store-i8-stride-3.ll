@@ -186,7 +186,7 @@ define void @store_i8_stride3_vf8(<8 x i8>* %in.vecptr0, <8 x i8>* %in.vecptr1, 
 ; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm1 = ymm0[0,8],zero,ymm0[1,9],zero,ymm0[2,10],zero,ymm0[3,11],zero,ymm0[4,12],zero,ymm0[5],zero,ymm0[21],zero,zero,ymm0[22],zero,zero,ymm0[23],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[2,3,0,1]
-; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = zero,zero,ymm0[0],zero,zero,ymm0[1],zero,zero,ymm0[2],zero,zero,ymm0[3],zero,zero,ymm0[4],zero,ymm0[29],zero,ymm0[22,30],zero,ymm0[23,31],zero,ymm0[u,u,u,u,u,u,u,u]
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = zero,zero,ymm0[0],zero,zero,ymm0[1],zero,zero,ymm0[2],zero,zero,ymm0[3],zero,zero,ymm0[4],zero,ymm0[29],zero,ymm0[22,30],zero,ymm0[23,31],zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vpor %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vmovq %xmm1, 16(%rcx)
@@ -201,7 +201,7 @@ define void @store_i8_stride3_vf8(<8 x i8>* %in.vecptr0, <8 x i8>* %in.vecptr1, 
 ; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX512-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
 ; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX512-NEXT:    vpshufb {{.*#+}} ymm1 = ymm0[0,8],zero,ymm0[1,9],zero,ymm0[2,10],zero,ymm0[3,11],zero,ymm0[4,12],zero,ymm0[5],zero,ymm0[21],zero,zero,ymm0[22],zero,zero,ymm0[23,u,u,u,u,u,u,u,u]
+; AVX512-NEXT:    vpshufb {{.*#+}} ymm1 = ymm0[0,8],zero,ymm0[1,9],zero,ymm0[2,10],zero,ymm0[3,11],zero,ymm0[4,12],zero,ymm0[5],zero,ymm0[21],zero,zero,ymm0[22],zero,zero,ymm0[23],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX512-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[2,3,0,1]
 ; AVX512-NEXT:    vpshufb {{.*#+}} ymm0 = zero,zero,ymm0[0],zero,zero,ymm0[1],zero,zero,ymm0[2],zero,zero,ymm0[3],zero,zero,ymm0[4],zero,ymm0[29],zero,ymm0[22,30],zero,ymm0[23,31],zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX512-NEXT:    vpor %ymm1, %ymm0, %ymm0
