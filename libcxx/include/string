@@ -528,6 +528,7 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len ); // C++1
 #include <__format/enable_insertable.h>
 #include <__ios/fpos.h>
 #include <__iterator/wrap_iter.h>
+#include <__memory/allocate_at_least.h>
 #include <__utility/auto_cast.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
@@ -1623,11 +1624,11 @@ private:
                 else
                 {
                     allocator_type __a = __str.__alloc();
-                    pointer __p = __alloc_traits::allocate(__a, __str.__get_long_cap());
+                    auto __allocation = std::__allocate_at_least(__a, __str.__get_long_cap());
                     __clear_and_shrink();
                     __alloc() = _VSTD::move(__a);
-                    __set_long_pointer(__p);
-                    __set_long_cap(__str.__get_long_cap());
+                    __set_long_pointer(__allocation.ptr);
+                    __set_long_cap(__allocation.count);
                     __set_long_size(__str.size());
                 }
             }
@@ -1841,10 +1842,10 @@ void basic_string<_CharT, _Traits, _Allocator>::__init(const value_type* __s,
     }
     else
     {
-        size_type __cap = __recommend(__reserve);
-        __p = __alloc_traits::allocate(__alloc(), __cap+1);
+        auto __allocation = std::__allocate_at_least(__alloc(), __recommend(__reserve) + 1);
+        __p = __allocation.ptr;
         __set_long_pointer(__p);
-        __set_long_cap(__cap+1);
+        __set_long_cap(__allocation.count);
         __set_long_size(__sz);
     }
     traits_type::copy(_VSTD::__to_address(__p), __s, __sz);
@@ -1865,10 +1866,10 @@ basic_string<_CharT, _Traits, _Allocator>::__init(const value_type* __s, size_ty
     }
     else
     {
-        size_type __cap = __recommend(__sz);
-        __p = __alloc_traits::allocate(__alloc(), __cap+1);
+        auto __allocation = std::__allocate_at_least(__alloc(), __recommend(__sz) + 1);
+        __p = __allocation.ptr;
         __set_long_pointer(__p);
-        __set_long_cap(__cap+1);
+        __set_long_cap(__allocation.count);
         __set_long_size(__sz);
     }
     traits_type::copy(_VSTD::__to_address(__p), __s, __sz);
@@ -1940,10 +1941,10 @@ void basic_string<_CharT, _Traits, _Allocator>::__init_copy_ctor_external(
   } else {
     if (__sz > max_size())
       __throw_length_error();
-    size_t __cap = __recommend(__sz);
-    __p = __alloc_traits::allocate(__alloc(), __cap + 1);
+    auto __allocation = std::__allocate_at_least(__alloc(), __recommend(__sz) + 1);
+    __p = __allocation.ptr;
     __set_long_pointer(__p);
-    __set_long_cap(__cap + 1);
+    __set_long_cap(__allocation.count);
     __set_long_size(__sz);
   }
   traits_type::copy(_VSTD::__to_address(__p), __s, __sz + 1);
@@ -2004,10 +2005,10 @@ basic_string<_CharT, _Traits, _Allocator>::__init(size_type __n, value_type __c)
     }
     else
     {
-        size_type __cap = __recommend(__n);
-        __p = __alloc_traits::allocate(__alloc(), __cap+1);
+        auto __allocation = std::__allocate_at_least(__alloc(), __recommend(__n) + 1);
+        __p = __allocation.ptr;
         __set_long_pointer(__p);
-        __set_long_cap(__cap+1);
+        __set_long_cap(__allocation.count);
         __set_long_size(__n);
     }
     traits_type::assign(_VSTD::__to_address(__p), __n, __c);
@@ -2135,10 +2136,10 @@ basic_string<_CharT, _Traits, _Allocator>::__init(_ForwardIterator __first, _For
     }
     else
     {
-        size_type __cap = __recommend(__sz);
-        __p = __alloc_traits::allocate(__alloc(), __cap+1);
+        auto __allocation = std::__allocate_at_least(__alloc(), __recommend(__sz) + 1);
+        __p = __allocation.ptr;
         __set_long_pointer(__p);
-        __set_long_cap(__cap+1);
+        __set_long_cap(__allocation.count);
         __set_long_size(__sz);
     }
 
@@ -2230,7 +2231,8 @@ basic_string<_CharT, _Traits, _Allocator>::__grow_by_and_replace
     size_type __cap = __old_cap < __ms / 2 - __alignment ?
                           __recommend(_VSTD::max(__old_cap + __delta_cap, 2 * __old_cap)) :
                           __ms - 1;
-    pointer __p = __alloc_traits::allocate(__alloc(), __cap+1);
+    auto __allocation = std::__allocate_at_least(__alloc(), __cap + 1);
+    pointer __p = __allocation.ptr;
     __invalidate_all_iterators();
     if (__n_copy != 0)
         traits_type::copy(_VSTD::__to_address(__p),
@@ -2244,7 +2246,7 @@ basic_string<_CharT, _Traits, _Allocator>::__grow_by_and_replace
     if (__old_cap+1 != __min_cap)
         __alloc_traits::deallocate(__alloc(), __old_p, __old_cap+1);
     __set_long_pointer(__p);
-    __set_long_cap(__cap+1);
+    __set_long_cap(__allocation.count);
     __old_sz = __n_copy + __n_add + __sec_cp_sz;
     __set_long_size(__old_sz);
     traits_type::assign(__p[__old_sz], value_type());
@@ -2262,7 +2264,8 @@ basic_string<_CharT, _Traits, _Allocator>::__grow_by(size_type __old_cap, size_t
     size_type __cap = __old_cap < __ms / 2 - __alignment ?
                           __recommend(_VSTD::max(__old_cap + __delta_cap, 2 * __old_cap)) :
                           __ms - 1;
-    pointer __p = __alloc_traits::allocate(__alloc(), __cap+1);
+    auto __allocation = std::__allocate_at_least(__alloc(), __cap + 1);
+    pointer __p = __allocation.ptr;
     __invalidate_all_iterators();
     if (__n_copy != 0)
         traits_type::copy(_VSTD::__to_address(__p),
@@ -2275,7 +2278,7 @@ basic_string<_CharT, _Traits, _Allocator>::__grow_by(size_type __old_cap, size_t
     if (__old_cap+1 != __min_cap)
         __alloc_traits::deallocate(__alloc(), __old_p, __old_cap+1);
     __set_long_pointer(__p);
-    __set_long_cap(__cap+1);
+    __set_long_cap(__allocation.count);
 }
 
 // assign
@@ -3257,15 +3260,20 @@ basic_string<_CharT, _Traits, _Allocator>::__shrink_or_extend(size_type __target
     }
     else
     {
-        if (__target_capacity > __cap)
-            __new_data = __alloc_traits::allocate(__alloc(), __target_capacity+1);
+        if (__target_capacity > __cap) {
+            auto __allocation = std::__allocate_at_least(__alloc(), __target_capacity + 1);
+            __new_data = __allocation.ptr;
+            __target_capacity = __allocation.count - 1;
+        }
         else
         {
         #ifndef _LIBCPP_NO_EXCEPTIONS
             try
             {
         #endif // _LIBCPP_NO_EXCEPTIONS
-                __new_data = __alloc_traits::allocate(__alloc(), __target_capacity+1);
+                auto __allocation = std::__allocate_at_least(__alloc(), __target_capacity + 1);
+                __new_data = __allocation.ptr;
+                __target_capacity = __allocation.count - 1;
         #ifndef _LIBCPP_NO_EXCEPTIONS
             }
             catch (...)

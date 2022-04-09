@@ -286,6 +286,7 @@ set(files
   __locale
   __mbstate_t.h
   __memory/addressof.h
+  __memory/allocate_at_least.h
   __memory/allocation_guard.h
   __memory/allocator.h
   __memory/allocator_arg_t.h

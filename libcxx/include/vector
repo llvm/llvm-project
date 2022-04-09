@@ -287,6 +287,7 @@ erase_if(vector<T, Allocator>& c, Predicate pred);    // C++20
 #include <__functional/hash.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/wrap_iter.h>
+#include <__memory/allocate_at_least.h>
 #include <__split_buffer>
 #include <__utility/forward.h>
 #include <__utility/move.h>
@@ -673,7 +674,25 @@ private:
 
     _LIBCPP_INLINE_VISIBILITY void __invalidate_all_iterators();
     _LIBCPP_INLINE_VISIBILITY void __invalidate_iterators_past(pointer __new_last);
-    void __vallocate(size_type __n);
+
+
+    //  Allocate space for __n objects
+    //  throws length_error if __n > max_size()
+    //  throws (probably bad_alloc) if memory run out
+    //  Precondition:  __begin_ == __end_ == __end_cap() == 0
+    //  Precondition:  __n > 0
+    //  Postcondition:  capacity() >= __n
+    //  Postcondition:  size() == 0
+    _LIBCPP_HIDE_FROM_ABI void __vallocate(size_type __n) {
+        if (__n > max_size())
+            __throw_length_error();
+        auto __allocation = std::__allocate_at_least(__alloc(), __n);
+        __begin_ = __allocation.ptr;
+        __end_ = __allocation.ptr;
+        __end_cap() = __begin_ + __allocation.count;
+        __annotate_new(0);
+    }
+
     void __vdeallocate() _NOEXCEPT;
     _LIBCPP_INLINE_VISIBILITY size_type __recommend(size_type __new_size) const;
     void __construct_at_end(size_type __n);
@@ -924,24 +943,6 @@ vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer<value_type, a
     __annotate_new(size());
     __invalidate_all_iterators();
     return __r;
-}
-
-//  Allocate space for __n objects
-//  throws length_error if __n > max_size()
-//  throws (probably bad_alloc) if memory run out
-//  Precondition:  __begin_ == __end_ == __end_cap() == 0
-//  Precondition:  __n > 0
-//  Postcondition:  capacity() == __n
-//  Postcondition:  size() == 0
-template <class _Tp, class _Allocator>
-void
-vector<_Tp, _Allocator>::__vallocate(size_type __n)
-{
-    if (__n > max_size())
-        this->__throw_length_error();
-    this->__begin_ = this->__end_ = __alloc_traits::allocate(this->__alloc(), __n);
-    this->__end_cap() = this->__begin_ + __n;
-    __annotate_new(0);
 }
 
 template <class _Tp, class _Allocator>
@@ -2329,8 +2330,23 @@ private:
         _VSTD::__throw_out_of_range("vector");
     }
 
+    //  Allocate space for __n objects
+    //  throws length_error if __n > max_size()
+    //  throws (probably bad_alloc) if memory run out
+    //  Precondition:  __begin_ == __end_ == __cap() == 0
+    //  Precondition:  __n > 0
+    //  Postcondition:  capacity() >= __n
+    //  Postcondition:  size() == 0
     _LIBCPP_INLINE_VISIBILITY void __invalidate_all_iterators();
-    void __vallocate(size_type __n);
+    _LIBCPP_HIDE_FROM_ABI void __vallocate(size_type __n) {
+        if (__n > max_size())
+            __throw_length_error();
+        auto __allocation = std::__allocate_at_least(__alloc(), __external_cap_to_internal(__n));
+        __begin_ = __allocation.ptr;
+        __size_ = 0;
+        __cap() = __allocation.count;
+    }
+
     void __vdeallocate() _NOEXCEPT;
     _LIBCPP_INLINE_VISIBILITY
     static size_type __align_it(size_type __new_size) _NOEXCEPT
@@ -2414,25 +2430,6 @@ inline _LIBCPP_INLINE_VISIBILITY
 void
 vector<bool, _Allocator>::__invalidate_all_iterators()
 {
-}
-
-//  Allocate space for __n objects
-//  throws length_error if __n > max_size()
-//  throws (probably bad_alloc) if memory run out
-//  Precondition:  __begin_ == __end_ == __cap() == 0
-//  Precondition:  __n > 0
-//  Postcondition:  capacity() == __n
-//  Postcondition:  size() == 0
-template <class _Allocator>
-void
-vector<bool, _Allocator>::__vallocate(size_type __n)
-{
-    if (__n > max_size())
-        this->__throw_length_error();
-    __n = __external_cap_to_internal(__n);
-    this->__begin_ = __storage_traits::allocate(this->__alloc(), __n);
-    this->__size_ = 0;
-    this->__cap() = __n;
 }
 
 template <class _Allocator>
