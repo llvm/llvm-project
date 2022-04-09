@@ -3957,18 +3957,3 @@ def HLSLNumThreads: InheritableAttr {
   let LangOpts = [HLSL];
   let Documentation = [NumThreadsDocs];
 }
-
-def RandomizeLayout : InheritableAttr {
-  let Spellings = [GCC<"randomize_layout">];
-  let Subjects = SubjectList<[Record]>;
-  let Documentation = [ClangRandomizeLayoutDocs];
-  let LangOpts = [COnly];
-}
-
-def NoRandomizeLayout : InheritableAttr {
-  let Spellings = [GCC<"no_randomize_layout">];
-  let Subjects = SubjectList<[Record]>;
-  let Documentation = [ClangRandomizeLayoutDocs];
-  let LangOpts = [COnly];
-}
-def : MutualExclusions<[RandomizeLayout, NoRandomizeLayout]>;

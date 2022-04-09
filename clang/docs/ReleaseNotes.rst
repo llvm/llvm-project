@@ -54,20 +54,6 @@ Major New Features
   There is an analogous ``zero_call_used_regs`` attribute to allow for finer
   control of this feature.
 
-- Clang now supports randomizing structure layout in C. This feature is a
-  compile-time hardening technique, making it more difficult for an attacker to
-  retrieve data from structures. Specify randomization with the
-  ``randomize_layout`` attribute. The corresponding ``no_randomize_layout``
-  attribute can be used to turn the feature off.
-
-  A seed value is required to enable randomization, and is deterministic based
-  on a seed value. Use the ``-frandomize-layout-seed=`` or
-  ``-frandomize-layout-seed-file=`` flags.
-
-  .. note::
-
-      Randomizing structure layout is a C-only feature.
-
 Bug Fixes
 ------------------
 - ``CXXNewExpr::getArraySize()`` previously returned a ``llvm::Optional``
