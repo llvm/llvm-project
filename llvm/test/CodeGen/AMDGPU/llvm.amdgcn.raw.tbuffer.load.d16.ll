@@ -34,7 +34,7 @@ main_body:
 
 ; PREGFX10-PACKED: tbuffer_load_format_d16_xyz v{{\[}}{{[0-9]+}}:[[HI:[0-9]+]]{{\]}}, off, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_DATA_FORMAT_10_11_11,BUF_NUM_FORMAT_SNORM]
 ; GFX10PLUS-PACKED: tbuffer_load_{{format_d16|d16_format}}_xyz v{{\[}}{{[0-9]+}}:[[HI:[0-9]+]]{{\]}}, off, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_FMT_32_FLOAT]
-; PACKED: v_mov_b32_e32 v{{[0-9]+}}, v[[HI]]
+; PACKED: v_mov_b{{16|32}}_e32 v{{[0-9]+(\.(l|h))?}}, v[[HI]]{{(\.(l,h))?}}
 define amdgpu_ps half @tbuffer_load_d16_xyz(<4 x i32> inreg %rsrc) {
 main_body:
   %data = call <3 x half> @llvm.amdgcn.raw.tbuffer.load.v3f16(<4 x i32> %rsrc, i32 0, i32 0, i32 22, i32 0)

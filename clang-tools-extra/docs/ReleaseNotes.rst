@@ -127,6 +127,10 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`performance-inefficient-vector-operation 
+  <clang-tidy/checks/performance-inefficient-vector-operation>` to work when
+  the vector is a member of a structure.
+
 - Fixed a false positive in :doc:`readability-non-const-parameter
   <clang-tidy/checks/readability-non-const-parameter>` when the parameter is referenced by an lvalue
 

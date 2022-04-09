@@ -799,8 +799,8 @@ declare i64 @llvm.fshl.i64(i64, i64, i64)
 define i64 @fshl_i64(i64 %a, i64 %b, i64 %c) nounwind {
 ; RV32I-LABEL: fshl_i64:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    srli a5, a4, 5
-; RV32I-NEXT:    andi a6, a5, 1
+; RV32I-NEXT:    slli a5, a4, 26
+; RV32I-NEXT:    srli a6, a5, 31
 ; RV32I-NEXT:    mv a5, a3
 ; RV32I-NEXT:    bnez a6, .LBB36_2
 ; RV32I-NEXT:  # %bb.1:
@@ -828,8 +828,8 @@ define i64 @fshl_i64(i64 %a, i64 %b, i64 %c) nounwind {
 ;
 ; RV32ZBT-LABEL: fshl_i64:
 ; RV32ZBT:       # %bb.0:
-; RV32ZBT-NEXT:    srli a5, a4, 5
-; RV32ZBT-NEXT:    andi a5, a5, 1
+; RV32ZBT-NEXT:    slli a5, a4, 26
+; RV32ZBT-NEXT:    srli a5, a5, 31
 ; RV32ZBT-NEXT:    cmov a2, a5, a2, a3
 ; RV32ZBT-NEXT:    cmov a3, a5, a3, a0
 ; RV32ZBT-NEXT:    andi a4, a4, 31

@@ -308,16 +308,16 @@ func @insert_slice_fun_not_inplace(
 
 // CHECK-DAG: #[[$map_1d_dyn:.*]] = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
 
-// CHECK-LABEL: func @scf_for_yield_only
-//  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, #[[$map_1d_dyn]]>
+// CHECK-LABEL: func @scf_for_yield_only(
+//  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, #[[$map_1d_dyn]]>,
 //  CHECK-SAME:   %[[t:[a-zA-Z0-9]*]]: memref<?xf32, #[[$map_1d_dyn]]>
+//  CHECK-SAME:   ) -> memref<?xf32> {
 func @scf_for_yield_only(%A : tensor<?xf32> {linalg.inplaceable = false},
                          %B : tensor<?xf32> {linalg.inplaceable = true},
                          %lb : index, %ub : index, %step : index)
   -> (tensor<?xf32>, tensor<?xf32>)
 {
   //     CHECK:   %[[ALLOC_FOR_A:.*]] = memref.alloc
-  //     CHECK:   %[[CASTED:.*]] = memref.cast %[[ALLOC_FOR_A]]
   //     CHECK:   memref.copy %[[A]], %[[ALLOC_FOR_A]]
 
   // The first scf.for remains but just turns into dead code.
@@ -330,7 +330,7 @@ func @scf_for_yield_only(%A : tensor<?xf32> {linalg.inplaceable = false},
     scf.yield %t : tensor<?xf32>
   }
 
-  //     CHECK:   return %[[CASTED]] : memref<?xf32, #[[$map_1d_dyn]]>
+  //     CHECK:   return %[[ALLOC_FOR_A]] : memref<?xf32>
   // CHECK-NOT:   dealloc
   return %r0, %r1: tensor<?xf32>, tensor<?xf32>
 }
@@ -373,7 +373,6 @@ func @scf_for_with_tensor.insert_slice(
   -> (tensor<?xf32>, tensor<?xf32>)
 {
   //     CHECK:   %[[ALLOC_FOR_A:.*]] = memref.alloc
-  //     CHECK:   %[[CASTED:.*]] = memref.cast %[[ALLOC_FOR_A]]
   //     CHECK:   memref.copy %[[A]], %[[ALLOC_FOR_A]]
 
   //     CHECK: %[[svA:.*]] = memref.subview %[[ALLOC_FOR_A]][0] [4] [1]
@@ -396,7 +395,7 @@ func @scf_for_with_tensor.insert_slice(
     scf.yield %ttA, %ttB : tensor<?xf32>, tensor<?xf32>
   }
 
-  //     CHECK:  return %[[CASTED]] : memref<?xf32, #[[$map_1d_dyn]]>
+  //     CHECK:  return %[[ALLOC_FOR_A]] : memref<?xf32>
   return %r0#0, %r0#1: tensor<?xf32>, tensor<?xf32>
 }
 
@@ -418,7 +417,6 @@ func @execute_region_with_conflict(%t1 : tensor<?xf32> {linalg.inplaceable = "tr
   // memref.store is left over.
 
   // CHECK: %[[alloc:.*]] = memref.alloc
-  // CHECK: %[[casted:.*]] = memref.cast %[[alloc]]
   // CHECK: memref.copy %[[m1]], %[[alloc]]
   // CHECK: memref.store %{{.*}}, %[[alloc]][%{{.*}}]
   %0, %1, %2 = scf.execute_region -> (f32, tensor<?xf32>, f32) {
@@ -426,6 +424,7 @@ func @execute_region_with_conflict(%t1 : tensor<?xf32> {linalg.inplaceable = "tr
     scf.yield %f1, %t2, %f1 : f32, tensor<?xf32>, f32
   }
 
+  // CHECK: %[[casted:.*]] = memref.cast %[[alloc]]
   // CHECK: %[[load:.*]] = memref.load %[[m1]]
   %3 = tensor.extract %t1[%idx] : tensor<?xf32>
 
@@ -783,8 +782,8 @@ func @write_after_select_read_one(
   %idx = arith.constant 0 : index
 
   // CHECK: %[[alloc:.*]] = memref.alloc
-  // CHECK: %[[casted:.*]] = memref.cast %[[alloc]]
-  // CHECK: memref.copy %[[t1]], %[[alloc]]
+  // CHECK-DAG: %[[casted:.*]] = memref.cast %[[alloc]]
+  // CHECK-DAG: memref.copy %[[t1]], %[[alloc]]
   // CHECK: %[[select:.*]] = arith.select %{{.*}}, %[[casted]], %[[t2]]
   %s = arith.select %c, %t1, %t2 : tensor<?xf32>
 
@@ -859,13 +858,11 @@ func @scf_execute_region_yield_non_equivalent(%i: index, %j: index) -> f32 {
 // CHECK-LABEL: func @scf_for_yield_non_equivalent(
 //  CHECK-SAME:     %[[t:.*]]: memref<?xf32
 //       CHECK:   %[[alloc:.*]] = memref.alloc(%{{.*}})
-//       CHECK:   %[[casted:.*]] = memref.cast %[[alloc]]
-//       CHECK:   %[[for:.*]] = scf.for {{.*}} iter_args(%[[iter:.*]] = %[[casted]])
+//       CHECK:   %[[for:.*]] = scf.for {{.*}} iter_args(%[[iter:.*]] = %[[alloc]])
 //       CHECK:     memref.dealloc %[[iter]]
 //       CHECK:     %[[alloc2:.*]] = memref.alloc(%{{.*}})
 //       CHECK:     memref.copy %[[t]], %[[alloc2]]
-//       CHECK:     %[[casted2:.*]] = memref.cast %[[alloc2]]
-//       CHECK:     scf.yield %[[casted2]]
+//       CHECK:     scf.yield %[[alloc2]]
 //       CHECK:   return %[[for]]
 func @scf_for_yield_non_equivalent(
     %t: tensor<?xf32>, %lb : index, %ub : index, %step : index) -> tensor<?xf32> {

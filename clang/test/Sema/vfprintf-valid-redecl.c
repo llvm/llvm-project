@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -fsyntax-only -pedantic -verify
-// RUN: %clang_cc1 %s -fsyntax-only -pedantic -verify -DPREDECLARE
+// RUN: %clang_cc1 %s -fsyntax-only -pedantic -verify -std=c99
+// RUN: %clang_cc1 %s -fsyntax-only -pedantic -verify -DPREDECLARE -std=c99
 
 #ifdef PREDECLARE
 // PR16344
@@ -12,7 +12,7 @@ int vfprintf(void) { return 0; } // expected-warning {{requires inclusion of the
 // PR4290
 // The following declaration is compatible with vfprintf, so we shouldn't
 // reject.
-int vfprintf();
+int vfprintf(); // expected-warning {{a function declaration without a prototype is deprecated in all versions of C}}
 #ifndef PREDECLARE
 // expected-warning@-2 {{requires inclusion of the header <stdio.h>}}
 #endif

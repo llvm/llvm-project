@@ -292,14 +292,14 @@ define <4 x half> @v_constained_fsub_v4f16_fpexcept_strict(<4 x half> %x, <4 x h
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_lshrrev_b32_e32 v4, 16, v3
-; GFX11-NEXT:    v_lshrrev_b32_e32 v5, 16, v1
+; GFX11-NEXT:    v_lshrrev_b32_e32 v4, 16, v1
+; GFX11-NEXT:    v_lshrrev_b32_e32 v5, 16, v3
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v6, 16, v2
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v7, 16, v0
 ; GFX11-NEXT:    v_sub_f16_e32 v0, v0, v2
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0xffff
 ; GFX11-NEXT:    v_sub_f16_e32 v1, v1, v3
-; GFX11-NEXT:    v_sub_f16_e32 v3, v5, v4
+; GFX11-NEXT:    v_sub_f16_e32 v3, v4, v5
 ; GFX11-NEXT:    v_sub_f16_e32 v4, v7, v6
 ; GFX11-NEXT:    v_and_b32_e32 v0, v2, v0
 ; GFX11-NEXT:    v_and_b32_e32 v1, v2, v1
@@ -366,10 +366,12 @@ define amdgpu_ps <2 x half> @s_constained_fsub_v2f16_fpexcept_strict(<2 x half> 
 ;
 ; GFX11-LABEL: s_constained_fsub_v2f16_fpexcept_strict:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_sub_f16_e64 v0, s2, s3
-; GFX11-NEXT:    s_lshr_b32 s0, s3, 16
-; GFX11-NEXT:    s_lshr_b32 s1, s2, 16
-; GFX11-NEXT:    v_sub_f16_e64 v1, s1, s0
+; GFX11-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
+; GFX11-NEXT:    s_lshr_b32 s0, s2, 16
+; GFX11-NEXT:    s_lshr_b32 s1, s3, 16
+; GFX11-NEXT:    v_dual_mov_b32 v2, s0 :: v_dual_mov_b32 v3, s1
+; GFX11-NEXT:    v_sub_f16_e32 v0, v0, v1
+; GFX11-NEXT:    v_sub_f16_e32 v1, v2, v3
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
 ; GFX11-NEXT:    ; return to shader part epilog

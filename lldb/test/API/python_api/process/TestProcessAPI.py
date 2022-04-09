@@ -320,6 +320,7 @@ class ProcessAPITestCase(TestBase):
             print("Number of supported hardware watchpoints: %d" % num)
 
     @no_debug_info_test
+    @skipIfRemote
     def test_get_process_info(self):
         """Test SBProcess::GetProcessInfo() API with a locally launched process."""
         self.build()

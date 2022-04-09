@@ -7321,15 +7321,11 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
 
 static unsigned getISDForVPIntrinsic(const VPIntrinsic &VPIntrin) {
   Optional<unsigned> ResOPC;
-  auto IID = VPIntrin.getIntrinsicID();
-  // vp.fcmp and vp.icmp are handled specially
-  if (IID == Intrinsic::vp_fcmp || IID == Intrinsic::vp_icmp)
-    return ISD::VP_SETCC;
-
-  switch (IID) {
-#define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...) case Intrinsic::VPID:
-#define BEGIN_REGISTER_VP_SDNODE(VPSD, ...) ResOPC = ISD::VPSD;
-#define END_REGISTER_VP_INTRINSIC(VPID) break;
+  switch (VPIntrin.getIntrinsicID()) {
+#define HELPER_MAP_VPID_TO_VPSD(VPID, VPSD)                                    \
+  case Intrinsic::VPID:                                                        \
+    ResOPC = ISD::VPSD;                                                        \
+    break;
 #include "llvm/IR/VPIntrinsics.def"
   }
 

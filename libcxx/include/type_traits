@@ -419,6 +419,9 @@ namespace std
 
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
+#include <__type_traits/integral_constant.h>
+#include <__type_traits/is_callable.h>
+#include <__utility/declval.h>
 #include <cstddef>
 #include <version>
 
@@ -432,28 +435,6 @@ template <class _T1, class _T2> struct _LIBCPP_TEMPLATE_VIS pair;
 template <class _Tp> class _LIBCPP_TEMPLATE_VIS reference_wrapper;
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS hash;
 
-template <class _Tp, _Tp __v>
-struct _LIBCPP_TEMPLATE_VIS integral_constant
-{
-  static _LIBCPP_CONSTEXPR const _Tp      value = __v;
-  typedef _Tp               value_type;
-  typedef integral_constant type;
-  _LIBCPP_INLINE_VISIBILITY
-  _LIBCPP_CONSTEXPR operator value_type() const _NOEXCEPT {return value;}
-#if _LIBCPP_STD_VER > 11
-  _LIBCPP_INLINE_VISIBILITY
-  constexpr value_type operator ()() const _NOEXCEPT {return value;}
-#endif
-};
-
-template <class _Tp, _Tp __v>
-_LIBCPP_CONSTEXPR const _Tp integral_constant<_Tp, __v>::value;
-
-#if _LIBCPP_STD_VER > 14
-template <bool __b>
-using bool_constant = integral_constant<bool, __b>;
-#endif
-
 template <bool, class _Tp = void> struct _LIBCPP_TEMPLATE_VIS enable_if {};
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS enable_if<true, _Tp> {typedef _Tp type;};
 
@@ -462,12 +443,6 @@ template <bool _Bp, class _Tp = void> using __enable_if_t _LIBCPP_NODEBUG = type
 #if _LIBCPP_STD_VER > 11
 template <bool _Bp, class _Tp = void> using enable_if_t = typename enable_if<_Bp, _Tp>::type;
 #endif
-
-typedef integral_constant<bool, true>  true_type;
-typedef integral_constant<bool, false> false_type;
-
-template <bool _Val>
-using _BoolConstant _LIBCPP_NODEBUG = integral_constant<bool, _Val>;
 
 template <bool> struct _MetaBase;
 template <>
@@ -1257,17 +1232,6 @@ template <class _Tp> struct _LIBCPP_TEMPLATE_VIS add_rvalue_reference
 #if _LIBCPP_STD_VER > 11
 template <class _Tp> using add_rvalue_reference_t = typename add_rvalue_reference<_Tp>::type;
 #endif
-
-// Suppress deprecation notice for volatile-qualified return type resulting
-// from volatile-qualified types _Tp.
-_LIBCPP_SUPPRESS_DEPRECATED_PUSH
-template <class _Tp> _Tp&& __declval(int);
-template <class _Tp> _Tp   __declval(long);
-_LIBCPP_SUPPRESS_DEPRECATED_POP
-
-template <class _Tp>
-decltype(__declval<_Tp>(0))
-declval() _NOEXCEPT;
 
 template <class _Tp>
 struct __unconstref {

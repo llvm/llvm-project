@@ -1118,7 +1118,8 @@ def : GCNPat <
 
 } // End OtherPredicates = [isGFX8Plus]
 
-let OtherPredicates = [isGFX8Plus] in {
+let OtherPredicates = [isGFX8Plus, NotHasTrue16BitInsts] in {
+
 def : GCNPat<
   (i32 (anyext i16:$src)),
   (COPY $src)
@@ -1141,7 +1142,31 @@ def : GCNPat <
   (EXTRACT_SUBREG $src, sub0)
 >;
 
-} // End OtherPredicates = [isGFX8Plus]
+} // End OtherPredicates = [isGFX8Plus, NotHasTrue16BitInsts]
+
+let OtherPredicates = [HasTrue16BitInsts] in {
+
+def : GCNPat<
+  (i32 (anyext i16:$src)),
+  (REG_SEQUENCE VGPR_32, $src, lo16, (i16 (IMPLICIT_DEF)), hi16)
+>;
+
+def : GCNPat<
+  (i64 (anyext i16:$src)),
+  (REG_SEQUENCE VReg_64, $src, lo16, (i16 (IMPLICIT_DEF)), hi16, (i32 (IMPLICIT_DEF)), sub1)
+>;
+
+def : GCNPat<
+  (i16 (trunc i32:$src)),
+  (EXTRACT_SUBREG $src, lo16)
+>;
+
+def : GCNPat <
+  (i16 (trunc i64:$src)),
+  (EXTRACT_SUBREG $src, lo16)
+>;
+
+} // End OtherPredicates = [HasTrue16BitInsts]
 
 //===----------------------------------------------------------------------===//
 // GFX9

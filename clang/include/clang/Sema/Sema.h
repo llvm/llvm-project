@@ -11541,6 +11541,9 @@ public:
   /// Called on well-formed 'is_device_ptr' clause.
   OMPClause *ActOnOpenMPIsDevicePtrClause(ArrayRef<Expr *> VarList,
                                           const OMPVarListLocTy &Locs);
+  /// Called on well-formed 'has_device_addr' clause.
+  OMPClause *ActOnOpenMPHasDeviceAddrClause(ArrayRef<Expr *> VarList,
+                                            const OMPVarListLocTy &Locs);
   /// Called on well-formed 'nontemporal' clause.
   OMPClause *ActOnOpenMPNontemporalClause(ArrayRef<Expr *> VarList,
                                           SourceLocation StartLoc,
