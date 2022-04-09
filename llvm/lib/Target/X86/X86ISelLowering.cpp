@@ -18721,6 +18721,20 @@ static SDValue lowerV64I8Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
                                           Zeroable, Subtarget, DAG))
     return Blend;
 
+  if (!is128BitLaneCrossingShuffleMask(MVT::v64i8, Mask)) {
+    // Use PALIGNR+Permute if possible - permute might become PSHUFB but the
+    // PALIGNR will be cheaper than the second PSHUFB+OR.
+    if (SDValue V = lowerShuffleAsByteRotateAndPermute(DL, MVT::v64i8, V1, V2,
+                                                       Mask, Subtarget, DAG))
+      return V;
+
+    // If we can't directly blend but can use PSHUFB, that will be better as it
+    // can both shuffle and set up the inefficient blend.
+    bool V1InUse, V2InUse;
+    return lowerShuffleAsBlendOfPSHUFBs(DL, MVT::v64i8, V1, V2, Mask, Zeroable,
+                                        DAG, V1InUse, V2InUse);
+  }
+
   // Try to simplify this by merging 128-bit lanes to enable a lane-based
   // shuffle.
   if (!V2.isUndef())
