@@ -97,6 +97,7 @@ class PlatformCommandTestCase(TestBase):
                     "error: timed out waiting for shell command to complete"])
 
     @no_debug_info_test
+    @skipIfRemote
     def test_host_shell_interpreter(self):
         """ Test the host platform shell with a different interpreter """
         self.build()

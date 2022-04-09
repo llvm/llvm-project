@@ -956,6 +956,9 @@ module std [system] {
     header "type_traits"
     export functional.__functional.unwrap_ref
     export *
+
+    module integral_constant { private header "__type_traits/integral_constant.h" }
+    module is_callable       { private header "__type_traits/is_callable.h" }
   }
   module typeindex {
     header "typeindex"

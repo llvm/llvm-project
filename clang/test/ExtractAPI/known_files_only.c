@@ -84,6 +84,12 @@ struct Foo { int a; };
         "uri": "file://INPUT_DIR/input1.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "num"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -Wdocumentation -Wmissing-prototypes -verify %s
-// RUN: %clang_cc1 -fsyntax-only -Wdocumentation -Wmissing-prototypes -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -fsyntax-only -Wdocumentation -Wmissing-prototypes -Wno-deprecated-non-prototype -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wdocumentation -Wmissing-prototypes -Wno-deprecated-non-prototype -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
 
 int f(); // expected-note{{this declaration is not a prototype; add parameter declarations to make it one}}
 // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:{{.*}}-[[@LINE-1]]:{{.*}}}:"{{.*}}"

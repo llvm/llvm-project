@@ -1254,7 +1254,8 @@ unsigned SIInstrInfo::getMovOpcode(const TargetRegisterClass *DstRC) const {
     return AMDGPU::COPY;
   if (RI.getRegSizeInBits(*DstRC) == 16) {
     // Assume hi bits are unneeded
-    return AMDGPU::V_MOV_B16_e32;
+    // Only _e64 true16 instructions are legal before RA
+    return AMDGPU::V_MOV_B16_e64;
   } else if (RI.getRegSizeInBits(*DstRC) == 32) {
     return RI.isSGPRClass(DstRC) ? AMDGPU::S_MOV_B32 : AMDGPU::V_MOV_B32_e32;
   } else if (RI.getRegSizeInBits(*DstRC) == 64 && RI.isSGPRClass(DstRC)) {

@@ -2,17 +2,17 @@
 
 export module p3;
 
-namespace A { int ns_mem; }
+namespace A { int ns_mem; } // expected-note 2{{target}}
 
 // An exported declaration shall declare at least one name.
 export; // expected-error {{empty declaration cannot be exported}}
 export static_assert(true); // expected-error {{static_assert declaration cannot be exported}}
-export using namespace A; // expected-error {{ISO C++20 does not permit using directive to be exported}}
+export using namespace A;   // expected-error {{ISO C++20 does not permit using directive to be exported}}
 
 export { // expected-note 3{{export block begins here}}
   ; // expected-error {{ISO C++20 does not permit an empty declaration to appear in an export block}}
   static_assert(true); // expected-error {{ISO C++20 does not permit a static_assert declaration to appear in an export block}}
-  using namespace A; // expected-error {{ISO C++20 does not permit using directive to be exported}}
+  using namespace A;   // expected-error {{ISO C++20 does not permit using directive to be exported}}
 }
 
 export struct {}; // expected-error {{must be class member}} expected-error {{GNU extension}} expected-error {{does not declare anything}}
@@ -26,9 +26,9 @@ export typedef int; // expected-error {{typedef requires a name}}
 export static union {}; // expected-error {{does not declare anything}}
 export asm(""); // expected-error {{asm declaration cannot be exported}}
 export namespace B = A;
-export using A::ns_mem;
+export using A::ns_mem; // expected-error {{using declaration referring to 'ns_mem' with module linkage cannot be exported}}
 namespace A {
-  export using A::ns_mem;
+  export using A::ns_mem; // expected-error {{using declaration referring to 'ns_mem' with module linkage cannot be exported}}
 }
 export using Int = int;
 export extern "C++" {} // expected-error {{ISO C++20 does not permit a declaration that does not introduce any names to be exported}}

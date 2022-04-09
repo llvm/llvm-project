@@ -19,6 +19,7 @@ class TestSkinnyCorefile(TestBase):
     @skipIfOutOfTreeDebugserver  # newer debugserver required for these qMemoryRegionInfo types
     @skipIf(debug_info=no_match(["dsym"]), bugnumber="This test is looking explicitly for a dSYM")
     @skipUnlessDarwin
+    @skipIfRemote
     def test_lc_note(self):
         self.build()
         self.aout_exe = self.getBuildArtifact("a.out")
