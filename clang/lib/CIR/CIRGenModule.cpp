@@ -1358,19 +1358,31 @@ mlir::LogicalResult CIRGenModule::buildCaseStmt(const CaseStmt &S,
          "case ranges not implemented");
   auto res = mlir::success();
 
+  const CaseStmt *caseStmt = &S;
   SmallVector<mlir::Attribute, 4> caseEltValueListAttr;
-  auto intVal = S.getLHS()->EvaluateKnownConstInt(getASTContext());
-  caseEltValueListAttr.push_back(mlir::IntegerAttr::get(condType, intVal));
+  // Fold cascading cases whenever possible to simplify codegen a bit.
+  while (true) {
+    auto intVal = caseStmt->getLHS()->EvaluateKnownConstInt(getASTContext());
+    caseEltValueListAttr.push_back(mlir::IntegerAttr::get(condType, intVal));
+    if (isa<CaseStmt>(caseStmt->getSubStmt()))
+      caseStmt = dyn_cast_or_null<CaseStmt>(caseStmt->getSubStmt());
+    else
+      break;
+  }
+
   auto caseValueList = builder.getArrayAttr(caseEltValueListAttr);
 
   auto *ctx = builder.getContext();
   caseEntry = mlir::cir::CaseAttr::get(
       ctx, caseValueList,
-      CaseOpKindAttr::get(ctx, mlir::cir::CaseOpKind::Equal));
+      CaseOpKindAttr::get(ctx, caseEltValueListAttr.size() > 1
+                                   ? mlir::cir::CaseOpKind::Anyof
+                                   : mlir::cir::CaseOpKind::Equal));
   {
     mlir::OpBuilder::InsertionGuard guardCase(builder);
-    res = buildStmt(S.getSubStmt(),
-                    /*useCurrentScope=*/!isa<CompoundStmt>(S.getSubStmt()));
+    res = buildStmt(
+        caseStmt->getSubStmt(),
+        /*useCurrentScope=*/!isa<CompoundStmt>(caseStmt->getSubStmt()));
   }
 
   // TODO: likelihood
@@ -1424,14 +1436,7 @@ mlir::LogicalResult CIRGenModule::buildSwitchStmt(const SwitchStmt &S) {
               continue;
             }
 
-            // FIXME: add support for empty case fallthrough
             auto *caseStmt = dyn_cast<CaseStmt>(c);
-            if (caseStmt) {
-              const CaseStmt *nestedCase =
-                  dyn_cast<CaseStmt>(caseStmt->getSubStmt());
-              assert(!nestedCase && "empty case fallthrough NYI");
-            }
-
             CaseAttr caseAttr;
             {
               mlir::OpBuilder::InsertionGuard guardCase(builder);
