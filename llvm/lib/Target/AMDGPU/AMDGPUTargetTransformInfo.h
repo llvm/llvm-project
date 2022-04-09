@@ -68,7 +68,6 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
   bool IsGraphics;
   bool HasFP32Denormals;
   bool HasFP64FP16Denormals;
-  unsigned MaxVGPRs;
 
   static const FeatureBitset InlineFeatureIgnoreList;
 
@@ -113,8 +112,6 @@ public:
     return TTI::PSK_FastHardware;
   }
 
-  unsigned getHardwareNumberOfRegisters(bool Vector) const;
-  unsigned getNumberOfRegisters(bool Vector) const;
   unsigned getNumberOfRegisters(unsigned RCID) const;
   TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind Vector) const;
   unsigned getMinVectorRegisterBitWidth() const;
