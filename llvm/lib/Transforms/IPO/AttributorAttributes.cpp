@@ -160,7 +160,7 @@ PIPE_OPERATOR(AAMemoryLocation)
 PIPE_OPERATOR(AAValueConstantRange)
 PIPE_OPERATOR(AAPrivatizablePtr)
 PIPE_OPERATOR(AAUndefinedBehavior)
-PIPE_OPERATOR(AAPotentialValues)
+PIPE_OPERATOR(AAPotentialConstantValues)
 PIPE_OPERATOR(AANoUndef)
 PIPE_OPERATOR(AACallEdges)
 PIPE_OPERATOR(AAFunctionReachability)
@@ -5531,7 +5531,7 @@ struct AAValueSimplifyImpl : AAValueSimplify {
   bool askSimplifiedValueForOtherAAs(Attributor &A) {
     if (askSimplifiedValueFor<AAValueConstantRange>(A))
       return true;
-    if (askSimplifiedValueFor<AAPotentialValues>(A))
+    if (askSimplifiedValueFor<AAPotentialConstantValues>(A))
       return true;
     return false;
   }
@@ -8890,18 +8890,18 @@ struct AAValueConstantRangeCallSiteArgument : AAValueConstantRangeFloating {
 /// ------------------ Potential Values Attribute -------------------------
 
 namespace {
-struct AAPotentialValuesImpl : AAPotentialValues {
+struct AAPotentialConstantValuesImpl : AAPotentialConstantValues {
   using StateType = PotentialConstantIntValuesState;
 
-  AAPotentialValuesImpl(const IRPosition &IRP, Attributor &A)
-      : AAPotentialValues(IRP, A) {}
+  AAPotentialConstantValuesImpl(const IRPosition &IRP, Attributor &A)
+      : AAPotentialConstantValues(IRP, A) {}
 
   /// See AbstractAttribute::initialize(..).
   void initialize(Attributor &A) override {
     if (A.hasSimplificationCallback(getIRPosition()))
       indicatePessimisticFixpoint();
     else
-      AAPotentialValues::initialize(A);
+      AAPotentialConstantValues::initialize(A);
   }
 
   /// See AbstractAttribute::getAsStr().
@@ -8918,13 +8918,14 @@ struct AAPotentialValuesImpl : AAPotentialValues {
   }
 };
 
-struct AAPotentialValuesArgument final
-    : AAArgumentFromCallSiteArguments<AAPotentialValues, AAPotentialValuesImpl,
+struct AAPotentialConstantValuesArgument final
+    : AAArgumentFromCallSiteArguments<AAPotentialConstantValues,
+                                      AAPotentialConstantValuesImpl,
                                       PotentialConstantIntValuesState> {
-  using Base =
-      AAArgumentFromCallSiteArguments<AAPotentialValues, AAPotentialValuesImpl,
-                                      PotentialConstantIntValuesState>;
-  AAPotentialValuesArgument(const IRPosition &IRP, Attributor &A)
+  using Base = AAArgumentFromCallSiteArguments<AAPotentialConstantValues,
+                                               AAPotentialConstantValuesImpl,
+                                               PotentialConstantIntValuesState>;
+  AAPotentialConstantValuesArgument(const IRPosition &IRP, Attributor &A)
       : Base(IRP, A) {}
 
   /// See AbstractAttribute::initialize(..).
@@ -8942,11 +8943,12 @@ struct AAPotentialValuesArgument final
   }
 };
 
-struct AAPotentialValuesReturned
-    : AAReturnedFromReturnedValues<AAPotentialValues, AAPotentialValuesImpl> {
-  using Base =
-      AAReturnedFromReturnedValues<AAPotentialValues, AAPotentialValuesImpl>;
-  AAPotentialValuesReturned(const IRPosition &IRP, Attributor &A)
+struct AAPotentialConstantValuesReturned
+    : AAReturnedFromReturnedValues<AAPotentialConstantValues,
+                                   AAPotentialConstantValuesImpl> {
+  using Base = AAReturnedFromReturnedValues<AAPotentialConstantValues,
+                                            AAPotentialConstantValuesImpl>;
+  AAPotentialConstantValuesReturned(const IRPosition &IRP, Attributor &A)
       : Base(IRP, A) {}
 
   /// See AbstractAttribute::trackStatistics()
@@ -8955,13 +8957,13 @@ struct AAPotentialValuesReturned
   }
 };
 
-struct AAPotentialValuesFloating : AAPotentialValuesImpl {
-  AAPotentialValuesFloating(const IRPosition &IRP, Attributor &A)
-      : AAPotentialValuesImpl(IRP, A) {}
+struct AAPotentialConstantValuesFloating : AAPotentialConstantValuesImpl {
+  AAPotentialConstantValuesFloating(const IRPosition &IRP, Attributor &A)
+      : AAPotentialConstantValuesImpl(IRP, A) {}
 
   /// See AbstractAttribute::initialize(..).
   void initialize(Attributor &A) override {
-    AAPotentialValuesImpl::initialize(A);
+    AAPotentialConstantValuesImpl::initialize(A);
     if (isAtFixpoint())
       return;
 
@@ -8987,7 +8989,7 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
 
     indicatePessimisticFixpoint();
 
-    LLVM_DEBUG(dbgs() << "[AAPotentialValues] We give up: "
+    LLVM_DEBUG(dbgs() << "[AAPotentialConstantValues] We give up: "
                       << getAssociatedValue() << "\n");
   }
 
@@ -9113,13 +9115,13 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
     if (!LHS->getType()->isIntegerTy() || !RHS->getType()->isIntegerTy())
       return indicatePessimisticFixpoint();
 
-    auto &LHSAA = A.getAAFor<AAPotentialValues>(*this, IRPosition::value(*LHS),
-                                                DepClassTy::REQUIRED);
+    auto &LHSAA = A.getAAFor<AAPotentialConstantValues>(
+        *this, IRPosition::value(*LHS), DepClassTy::REQUIRED);
     if (!LHSAA.isValidState())
       return indicatePessimisticFixpoint();
 
-    auto &RHSAA = A.getAAFor<AAPotentialValues>(*this, IRPosition::value(*RHS),
-                                                DepClassTy::REQUIRED);
+    auto &RHSAA = A.getAAFor<AAPotentialConstantValues>(
+        *this, IRPosition::value(*RHS), DepClassTy::REQUIRED);
     if (!RHSAA.isValidState())
       return indicatePessimisticFixpoint();
 
@@ -9206,16 +9208,16 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
     else if (C.hasValue() && *C && (*C)->isZeroValue())
       OnlyRight = true;
 
-    const AAPotentialValues *LHSAA = nullptr, *RHSAA = nullptr;
+    const AAPotentialConstantValues *LHSAA = nullptr, *RHSAA = nullptr;
     if (!OnlyRight) {
-      LHSAA = &A.getAAFor<AAPotentialValues>(*this, IRPosition::value(*LHS),
-                                             DepClassTy::REQUIRED);
+      LHSAA = &A.getAAFor<AAPotentialConstantValues>(
+          *this, IRPosition::value(*LHS), DepClassTy::REQUIRED);
       if (!LHSAA->isValidState())
         return indicatePessimisticFixpoint();
     }
     if (!OnlyLeft) {
-      RHSAA = &A.getAAFor<AAPotentialValues>(*this, IRPosition::value(*RHS),
-                                             DepClassTy::REQUIRED);
+      RHSAA = &A.getAAFor<AAPotentialConstantValues>(
+          *this, IRPosition::value(*RHS), DepClassTy::REQUIRED);
       if (!RHSAA->isValidState())
         return indicatePessimisticFixpoint();
     }
@@ -9259,8 +9261,8 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
       return indicatePessimisticFixpoint();
     Src = *SimplifiedSrc;
 
-    auto &SrcAA = A.getAAFor<AAPotentialValues>(*this, IRPosition::value(*Src),
-                                                DepClassTy::REQUIRED);
+    auto &SrcAA = A.getAAFor<AAPotentialConstantValues>(
+        *this, IRPosition::value(*Src), DepClassTy::REQUIRED);
     if (!SrcAA.isValidState())
       return indicatePessimisticFixpoint();
     const DenseSet<APInt> &SrcAAPVS = SrcAA.getAssumedSet();
@@ -9304,13 +9306,13 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
     if (!LHS->getType()->isIntegerTy() || !RHS->getType()->isIntegerTy())
       return indicatePessimisticFixpoint();
 
-    auto &LHSAA = A.getAAFor<AAPotentialValues>(*this, IRPosition::value(*LHS),
-                                                DepClassTy::REQUIRED);
+    auto &LHSAA = A.getAAFor<AAPotentialConstantValues>(
+        *this, IRPosition::value(*LHS), DepClassTy::REQUIRED);
     if (!LHSAA.isValidState())
       return indicatePessimisticFixpoint();
 
-    auto &RHSAA = A.getAAFor<AAPotentialValues>(*this, IRPosition::value(*RHS),
-                                                DepClassTy::REQUIRED);
+    auto &RHSAA = A.getAAFor<AAPotentialConstantValues>(
+        *this, IRPosition::value(*RHS), DepClassTy::REQUIRED);
     if (!RHSAA.isValidState())
       return indicatePessimisticFixpoint();
 
@@ -9360,7 +9362,7 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
         return indicatePessimisticFixpoint();
       IncomingValue = *SimplifiedIncomingValue;
 
-      auto &PotentialValuesAA = A.getAAFor<AAPotentialValues>(
+      auto &PotentialValuesAA = A.getAAFor<AAPotentialConstantValues>(
           *this, IRPosition::value(*IncomingValue), DepClassTy::REQUIRED);
       if (!PotentialValuesAA.isValidState())
         return indicatePessimisticFixpoint();
@@ -9402,14 +9404,15 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
   }
 };
 
-struct AAPotentialValuesFunction : AAPotentialValuesImpl {
-  AAPotentialValuesFunction(const IRPosition &IRP, Attributor &A)
-      : AAPotentialValuesImpl(IRP, A) {}
+struct AAPotentialConstantValuesFunction : AAPotentialConstantValuesImpl {
+  AAPotentialConstantValuesFunction(const IRPosition &IRP, Attributor &A)
+      : AAPotentialConstantValuesImpl(IRP, A) {}
 
   /// See AbstractAttribute::initialize(...).
   ChangeStatus updateImpl(Attributor &A) override {
-    llvm_unreachable("AAPotentialValues(Function|CallSite)::updateImpl will "
-                     "not be called");
+    llvm_unreachable(
+        "AAPotentialConstantValues(Function|CallSite)::updateImpl will "
+        "not be called");
   }
 
   /// See AbstractAttribute::trackStatistics()
@@ -9418,9 +9421,9 @@ struct AAPotentialValuesFunction : AAPotentialValuesImpl {
   }
 };
 
-struct AAPotentialValuesCallSite : AAPotentialValuesFunction {
-  AAPotentialValuesCallSite(const IRPosition &IRP, Attributor &A)
-      : AAPotentialValuesFunction(IRP, A) {}
+struct AAPotentialConstantValuesCallSite : AAPotentialConstantValuesFunction {
+  AAPotentialConstantValuesCallSite(const IRPosition &IRP, Attributor &A)
+      : AAPotentialConstantValuesFunction(IRP, A) {}
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
@@ -9428,11 +9431,13 @@ struct AAPotentialValuesCallSite : AAPotentialValuesFunction {
   }
 };
 
-struct AAPotentialValuesCallSiteReturned
-    : AACallSiteReturnedFromReturned<AAPotentialValues, AAPotentialValuesImpl> {
-  AAPotentialValuesCallSiteReturned(const IRPosition &IRP, Attributor &A)
-      : AACallSiteReturnedFromReturned<AAPotentialValues,
-                                       AAPotentialValuesImpl>(IRP, A) {}
+struct AAPotentialConstantValuesCallSiteReturned
+    : AACallSiteReturnedFromReturned<AAPotentialConstantValues,
+                                     AAPotentialConstantValuesImpl> {
+  AAPotentialConstantValuesCallSiteReturned(const IRPosition &IRP,
+                                            Attributor &A)
+      : AACallSiteReturnedFromReturned<AAPotentialConstantValues,
+                                       AAPotentialConstantValuesImpl>(IRP, A) {}
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
@@ -9440,13 +9445,15 @@ struct AAPotentialValuesCallSiteReturned
   }
 };
 
-struct AAPotentialValuesCallSiteArgument : AAPotentialValuesFloating {
-  AAPotentialValuesCallSiteArgument(const IRPosition &IRP, Attributor &A)
-      : AAPotentialValuesFloating(IRP, A) {}
+struct AAPotentialConstantValuesCallSiteArgument
+    : AAPotentialConstantValuesFloating {
+  AAPotentialConstantValuesCallSiteArgument(const IRPosition &IRP,
+                                            Attributor &A)
+      : AAPotentialConstantValuesFloating(IRP, A) {}
 
   /// See AbstractAttribute::initialize(..).
   void initialize(Attributor &A) override {
-    AAPotentialValuesImpl::initialize(A);
+    AAPotentialConstantValuesImpl::initialize(A);
     if (isAtFixpoint())
       return;
 
@@ -9469,8 +9476,8 @@ struct AAPotentialValuesCallSiteArgument : AAPotentialValuesFloating {
   ChangeStatus updateImpl(Attributor &A) override {
     Value &V = getAssociatedValue();
     auto AssumedBefore = getAssumed();
-    auto &AA = A.getAAFor<AAPotentialValues>(*this, IRPosition::value(V),
-                                             DepClassTy::REQUIRED);
+    auto &AA = A.getAAFor<AAPotentialConstantValues>(
+        *this, IRPosition::value(V), DepClassTy::REQUIRED);
     const auto &S = AA.getAssumed();
     unionAssumed(S);
     return AssumedBefore == getAssumed() ? ChangeStatus::UNCHANGED
@@ -10221,7 +10228,7 @@ const char AAPrivatizablePtr::ID = 0;
 const char AAMemoryBehavior::ID = 0;
 const char AAMemoryLocation::ID = 0;
 const char AAValueConstantRange::ID = 0;
-const char AAPotentialValues::ID = 0;
+const char AAPotentialConstantValues::ID = 0;
 const char AANoUndef::ID = 0;
 const char AACallEdges::ID = 0;
 const char AAFunctionReachability::ID = 0;
@@ -10339,7 +10346,7 @@ CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAAlign)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAInstanceInfo)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoCapture)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAValueConstantRange)
-CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAPotentialValues)
+CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAPotentialConstantValues)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoUndef)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAPointerInfo)
 

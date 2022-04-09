@@ -4292,7 +4292,7 @@ struct AAValueConstantRange
 /// contains every possible value (i.e. we cannot in any way limit the value
 /// that the target position can take). That never happens naturally, we only
 /// force it. As for the conditions under which we force it, see
-/// AAPotentialValues.
+/// AAPotentialConstantValues.
 template <typename MemberTy, typename KeyInfo = DenseMapInfo<MemberTy>>
 struct PotentialValuesState : AbstractState {
   using SetTy = DenseSet<MemberTy, KeyInfo>;
@@ -4479,10 +4479,10 @@ raw_ostream &operator<<(raw_ostream &OS,
 ///      operator we do not currently handle).
 ///
 /// TODO: Support values other than constant integers.
-struct AAPotentialValues
+struct AAPotentialConstantValues
     : public StateWrapper<PotentialConstantIntValuesState, AbstractAttribute> {
   using Base = StateWrapper<PotentialConstantIntValuesState, AbstractAttribute>;
-  AAPotentialValues(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+  AAPotentialConstantValues(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
 
   /// See AbstractAttribute::getState(...).
   PotentialConstantIntValuesState &getState() override { return *this; }
@@ -4491,8 +4491,8 @@ struct AAPotentialValues
   }
 
   /// Create an abstract attribute view for the position \p IRP.
-  static AAPotentialValues &createForPosition(const IRPosition &IRP,
-                                              Attributor &A);
+  static AAPotentialConstantValues &createForPosition(const IRPosition &IRP,
+                                                      Attributor &A);
 
   /// Return assumed constant for the associated value
   Optional<ConstantInt *>
@@ -4514,13 +4514,15 @@ struct AAPotentialValues
   }
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AAPotentialValues"; }
+  const std::string getName() const override {
+    return "AAPotentialConstantValues";
+  }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
 
   /// This function should return true if the type of the \p AA is
-  /// AAPotentialValues
+  /// AAPotentialConstantValues
   static bool classof(const AbstractAttribute *AA) {
     return (AA->getIdAddr() == &ID);
   }
