@@ -98,6 +98,16 @@ struct allocator_traits
     static allocator_type select_on_container_copy_construction(const allocator_type& a); // constexpr in C++20
 };
 
+template<class Pointer>
+struct allocation_result {
+    Pointer ptr;
+    size_t count;
+}; // since C++23
+
+template<class Allocator>
+[[nodiscard]] constexpr allocation_result<typename allocator_traits<Allocator>::pointer>
+    allocate_at_least(Allocator& a, size_t n); // since C++23
+
 template <>
 class allocator<void> // removed in C++20
 {
@@ -827,6 +837,7 @@ void* align(size_t alignment, size_t size, void*& ptr, size_t& space);
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <__memory/addressof.h>
+#include <__memory/allocate_at_least.h>
 #include <__memory/allocation_guard.h>
 #include <__memory/allocator.h>
 #include <__memory/allocator_arg_t.h>

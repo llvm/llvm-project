@@ -11,7 +11,7 @@
 "`P2212R2 <https://wg21.link/P2212R2>`__","LWG","Relax Requirements for time_point::clock","February 2021","",""
 "`P2259R1 <https://wg21.link/P2259R1>`__","LWG","Repairing input range adaptors and counted_iterator","February 2021","",""
 "","","","","",""
-"`P0401R6 <https://wg21.link/P0401R6>`__","LWG","Providing size feedback in the Allocator interface","June 2021","",""
+"`P0401R6 <https://wg21.link/P0401R6>`__","LWG","Providing size feedback in the Allocator interface","June 2021","|Complete|","15.0"
 "`P0448R4 <https://wg21.link/P0448R4>`__","LWG","A strstream replacement using span<charT> as buffer","June 2021","",""
 "`P1132R8 <https://wg21.link/P1132R8>`__","LWG","out_ptr - a scalable output pointer abstraction","June 2021","",""
 "`P1328R1 <https://wg21.link/P1328R1>`__","LWG","Making std::type_info::operator== constexpr","June 2021","",""
