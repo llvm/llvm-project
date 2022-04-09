@@ -184,6 +184,8 @@ def : GINodeEquiv<G_STORE, st> { let CheckMMOIsNonAtomic = true; }
 def : GINodeEquiv<G_LOAD, atomic_load> {
   let CheckMMOIsNonAtomic = false;
   let CheckMMOIsAtomic = true;
+  let IfSignExtend = G_SEXTLOAD;
+  let IfZeroExtend = G_ZEXTLOAD;
 }
 
 // Operands are swapped for atomic_store vs. regular store

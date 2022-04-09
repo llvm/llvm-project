@@ -3785,10 +3785,12 @@ GlobalISelEmitter::getEquivNode(Record &Equiv, const TreePatternNode *N) const {
 
   for (const TreePredicateCall &Call : N->getPredicateCalls()) {
     const TreePredicateFn &Predicate = Call.Fn;
-    if (!Equiv.isValueUnset("IfSignExtend") && Predicate.isLoad() &&
+    if (!Equiv.isValueUnset("IfSignExtend") &&
+        (Predicate.isLoad() || Predicate.isAtomic()) &&
         Predicate.isSignExtLoad())
       return &Target.getInstruction(Equiv.getValueAsDef("IfSignExtend"));
-    if (!Equiv.isValueUnset("IfZeroExtend") && Predicate.isLoad() &&
+    if (!Equiv.isValueUnset("IfZeroExtend") &&
+        (Predicate.isLoad() || Predicate.isAtomic()) &&
         Predicate.isZeroExtLoad())
       return &Target.getInstruction(Equiv.getValueAsDef("IfZeroExtend"));
   }

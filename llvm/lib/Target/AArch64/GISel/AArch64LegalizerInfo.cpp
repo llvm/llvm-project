@@ -260,8 +260,15 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .maxScalarIf(typeInSet(1, {s64, p0}), 0, s32)
       .maxScalarIf(typeInSet(1, {s128}), 0, s64);
 
-  getActionDefinitionsBuilder({G_SEXTLOAD, G_ZEXTLOAD})
-      .lowerIf(atomicOrderingAtLeastOrStrongerThan(0, AtomicOrdering::Unordered))
+
+  for (unsigned Op : {G_SEXTLOAD, G_ZEXTLOAD}) {
+    auto &Actions =  getActionDefinitionsBuilder(Op);
+
+    if (Op == G_SEXTLOAD)
+      Actions.lowerIf(atomicOrderingAtLeastOrStrongerThan(0, AtomicOrdering::Unordered));
+
+    // Atomics have zero extending behavior.
+    Actions
       .legalForTypesWithMemDesc({{s32, p0, s8, 8},
                                  {s32, p0, s16, 8},
                                  {s32, p0, s32, 8},
@@ -278,6 +285,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .unsupportedIfMemSizeNotPow2()
       // Lower anything left over into G_*EXT and G_LOAD
       .lower();
+  }
 
   auto IsPtrVecPred = [=](const LegalityQuery &Query) {
     const LLT &ValTy = Query.Types[0];
