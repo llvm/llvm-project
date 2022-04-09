@@ -526,13 +526,6 @@ public:
 
   ArrayRef<SGPRSpillVGPR> getSGPRSpillVGPRs() const { return SpillVGPRs; }
 
-  void setSGPRSpillVGPRs(Register NewVGPR, Optional<int> newFI, int Index) {
-    SpillVGPRs[Index].VGPR = NewVGPR;
-    SpillVGPRs[Index].FI = newFI;
-  }
-
-  bool removeVGPRForSGPRSpill(Register ReservedVGPR, MachineFunction &MF);
-
   ArrayRef<MCPhysReg> getAGPRSpillVGPRs() const {
     return SpillAGPR;
   }

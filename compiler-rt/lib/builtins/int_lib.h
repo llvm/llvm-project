@@ -110,29 +110,6 @@ COMPILER_RT_ABI su_int __udivsi3(su_int n, su_int d);
 
 COMPILER_RT_ABI su_int __udivmodsi4(su_int a, su_int b, su_int *rem);
 COMPILER_RT_ABI du_int __udivmoddi4(du_int a, du_int b, du_int *rem);
-
-/// Computes the unsigned division of a / b for two large integers
-/// composed of n significant words.
-/// Writes the quotient to quo and the remainder to rem.
-///
-/// \param quo The quotient represented by n words. Must be non-null.
-/// \param rem The remainder represented by n words. Must be non-null.
-/// \param a The dividend represented by n + 1 words. Must be non-null.
-/// \param b The divisor represented by n words. Must be non-null.
-
-/// \note The word order is in host endianness.
-/// \note Might modify a and b.
-/// \note The storage of 'a' needs to hold n + 1 elements because some
-///       implementations need extra scratch space in the most significant word.
-///       The value of that word is ignored.
-COMPILER_RT_ABI void __udivmodei5(su_int *quo, su_int *rem, su_int *a,
-                                  su_int *b, unsigned int n);
-
-/// Computes the signed division of a / b.
-/// See __udivmodei5 for details.
-COMPILER_RT_ABI void __divmodei5(su_int *quo, su_int *rem, su_int *a, su_int *b,
-                                 unsigned int words);
-
 #ifdef CRT_HAS_128BIT
 COMPILER_RT_ABI int __clzti2(ti_int a);
 COMPILER_RT_ABI tu_int __udivmodti4(tu_int a, tu_int b, tu_int *rem);

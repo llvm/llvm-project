@@ -923,7 +923,7 @@ def : Builtin<"write_mem_fence", [Void, MemFenceFlags]>;
 // OpenCL v3.0 s6.15.10 - Address Space Qualifier Functions.
 // to_global, to_local, to_private are declared in Builtins.def.
 
-let MinVersion = CL20 in {
+let Extension = FuncExtOpenCLCGenericAddressSpace in {
   // The OpenCL 3.0 specification defines these with a "gentype" argument indicating any builtin
   // type or user-defined type, which cannot be represented currently.  Hence we slightly diverge
   // by providing only the following overloads with a void pointer.

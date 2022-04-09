@@ -205,9 +205,8 @@ define <3 x half> @v_constained_fadd_v3f16_fpexcept_strict(<3 x half> %x, <3 x h
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_mov_b16_e32 v1.h, v3.l
+; GFX11-NEXT:    v_add_f16_e32 v1.l, v1.l, v3.l
 ; GFX11-NEXT:    v_pk_add_f16 v0, v0, v2
-; GFX11-NEXT:    v_add_f16_e32 v1.l, v1.l, v1.h
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val = call <3 x half> @llvm.experimental.constrained.fadd.v3f16(<3 x half> %x, <3 x half> %y, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret <3 x half> %val
@@ -257,26 +256,19 @@ define <4 x half> @v_constained_fadd_v4f16_fpexcept_strict(<4 x half> %x, <4 x h
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v4, 16, v3
-; GFX11-NEXT:    v_lshrrev_b32_e32 v5, 16, v1
-; GFX11-NEXT:    v_lshrrev_b32_e32 v6, 16, v2
-; GFX11-NEXT:    v_lshrrev_b32_e32 v7, 16, v0
-; GFX11-NEXT:    v_mov_b16_e32 v0.h, v2.l
-; GFX11-NEXT:    v_mov_b16_e32 v1.h, v3.l
-; GFX11-NEXT:    v_mov_b16_e32 v2.l, v5.l
+; GFX11-NEXT:    v_lshrrev_b32_e32 v5, 16, v2
+; GFX11-NEXT:    v_add_f16_e32 v2.l, v0.l, v2.l
+; GFX11-NEXT:    v_lshrrev_b32_e32 v6, 16, v0
+; GFX11-NEXT:    v_add_f16_e32 v0.l, v1.l, v3.l
+; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
 ; GFX11-NEXT:    v_mov_b32_e32 v3, 0xffff
-; GFX11-NEXT:    v_mov_b16_e32 v2.h, v7.l
-; GFX11-NEXT:    v_add_f16_e32 v0.l, v0.l, v0.h
-; GFX11-NEXT:    v_mov_b16_e32 v0.h, v6.l
-; GFX11-NEXT:    v_add_f16_e32 v1.l, v1.l, v1.h
-; GFX11-NEXT:    v_mov_b16_e32 v1.h, v4.l
-; GFX11-NEXT:    v_mov_b16_e32 v4.l, v0.l
-; GFX11-NEXT:    v_add_f16_e32 v0.l, v2.h, v0.h
-; GFX11-NEXT:    v_mov_b16_e32 v5.l, v1.l
-; GFX11-NEXT:    v_add_f16_e32 v0.h, v2.l, v1.h
-; GFX11-NEXT:    v_and_b32_e32 v1, v3, v4
-; GFX11-NEXT:    v_mov_b16_e32 v2.l, v0.l
+; GFX11-NEXT:    v_add_f16_e32 v0.h, v6.l, v5.l
+; GFX11-NEXT:    v_mov_b16_e32 v5.l, v0.l
+; GFX11-NEXT:    v_add_f16_e32 v0.l, v1.l, v4.l
+; GFX11-NEXT:    v_and_b32_e32 v1, v3, v2
+; GFX11-NEXT:    v_mov_b16_e32 v2.l, v0.h
 ; GFX11-NEXT:    v_and_b32_e32 v3, v3, v5
-; GFX11-NEXT:    v_mov_b16_e32 v4.l, v0.h
+; GFX11-NEXT:    v_mov_b16_e32 v4.l, v0.l
 ; GFX11-NEXT:    v_lshl_or_b32 v0, v2, 16, v1
 ; GFX11-NEXT:    v_lshl_or_b32 v1, v4, 16, v3
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]

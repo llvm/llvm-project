@@ -22,7 +22,6 @@ define void @f2() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call noalias i8* @_Znwm(i64 32)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt i8* [[TMP1]], @global
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP2]])
-; CHECK-NEXT:    store i8 0, i8* [[TMP1]], align 1
 ; CHECK-NEXT:    call void @quux(i8* @global)
 ; CHECK-NEXT:    ret void
 ;

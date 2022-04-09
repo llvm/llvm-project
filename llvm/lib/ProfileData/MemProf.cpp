@@ -8,16 +8,17 @@
 namespace llvm {
 namespace memprof {
 
-void MemProfRecord::serialize(const MemProfSchema &Schema, raw_ostream &OS) {
+void IndexedMemProfRecord::serialize(const MemProfSchema &Schema,
+                                     raw_ostream &OS) {
   using namespace support;
 
   endian::Writer LE(OS, little);
 
   LE.write<uint64_t>(AllocSites.size());
-  for (const AllocationInfo &N : AllocSites) {
+  for (const IndexedAllocationInfo &N : AllocSites) {
     LE.write<uint64_t>(N.CallStack.size());
-    for (const Frame &F : N.CallStack)
-      F.serialize(OS);
+    for (const FrameId &Id : N.CallStack)
+      LE.write<FrameId>(Id);
     N.Info.serialize(Schema, OS);
   }
 
@@ -25,27 +26,27 @@ void MemProfRecord::serialize(const MemProfSchema &Schema, raw_ostream &OS) {
   LE.write<uint64_t>(CallSites.size());
   for (const auto &Frames : CallSites) {
     LE.write<uint64_t>(Frames.size());
-    for (const Frame &F : Frames)
-      F.serialize(OS);
+    for (const FrameId &Id : Frames)
+      LE.write<FrameId>(Id);
   }
 }
 
-MemProfRecord MemProfRecord::deserialize(const MemProfSchema &Schema,
-                                         const unsigned char *Ptr) {
+IndexedMemProfRecord
+IndexedMemProfRecord::deserialize(const MemProfSchema &Schema,
+                                  const unsigned char *Ptr) {
   using namespace support;
 
-  MemProfRecord Record;
+  IndexedMemProfRecord Record;
 
   // Read the meminfo nodes.
   const uint64_t NumNodes = endian::readNext<uint64_t, little, unaligned>(Ptr);
   for (uint64_t I = 0; I < NumNodes; I++) {
-    MemProfRecord::AllocationInfo Node;
+    IndexedAllocationInfo Node;
     const uint64_t NumFrames =
         endian::readNext<uint64_t, little, unaligned>(Ptr);
     for (uint64_t J = 0; J < NumFrames; J++) {
-      const auto F = MemProfRecord::Frame::deserialize(Ptr);
-      Ptr += MemProfRecord::Frame::serializedSize();
-      Node.CallStack.push_back(F);
+      const FrameId Id = endian::readNext<FrameId, little, unaligned>(Ptr);
+      Node.CallStack.push_back(Id);
     }
     Node.Info.deserialize(Schema, Ptr);
     Ptr += PortableMemInfoBlock::serializedSize();
@@ -57,11 +58,11 @@ MemProfRecord MemProfRecord::deserialize(const MemProfSchema &Schema,
   for (uint64_t J = 0; J < NumCtxs; J++) {
     const uint64_t NumFrames =
         endian::readNext<uint64_t, little, unaligned>(Ptr);
-    llvm::SmallVector<Frame> Frames;
+    llvm::SmallVector<FrameId> Frames;
+    Frames.reserve(NumFrames);
     for (uint64_t K = 0; K < NumFrames; K++) {
-      const auto F = MemProfRecord::Frame::deserialize(Ptr);
-      Ptr += MemProfRecord::Frame::serializedSize();
-      Frames.push_back(F);
+      const FrameId Id = endian::readNext<FrameId, little, unaligned>(Ptr);
+      Frames.push_back(Id);
     }
     Record.CallSites.push_back(Frames);
   }
@@ -69,7 +70,7 @@ MemProfRecord MemProfRecord::deserialize(const MemProfSchema &Schema,
   return Record;
 }
 
-GlobalValue::GUID MemProfRecord::getGUID(const StringRef FunctionName) {
+GlobalValue::GUID IndexedMemProfRecord::getGUID(const StringRef FunctionName) {
   const auto Pos = FunctionName.find(".llvm.");
 
   // We use the function guid which we expect to be a uint64_t. At

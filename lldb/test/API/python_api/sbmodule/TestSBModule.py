@@ -21,6 +21,7 @@ class SBModuleAPICase(TestBase):
             os.kill(self.background_pid, signal.SIGKILL)
 
     @skipUnlessDarwin
+    @skipIfRemote
     def test_module_is_file_backed(self):
         """Test the SBModule::IsFileBacked() method"""
         self.build()

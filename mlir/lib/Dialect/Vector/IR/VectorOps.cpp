@@ -950,7 +950,12 @@ OpFoldResult vector::ExtractElementOp::fold(ArrayRef<Attribute> operands) {
 
   Attribute src = operands[0];
   Attribute pos = operands[1];
-  if (!src || !pos)
+
+  // Fold extractelement (splat X) -> X.
+  if (auto splat = getVector().getDefiningOp<vector::SplatOp>())
+    return splat.getInput();
+
+  if (!pos || !src)
     return {};
 
   auto srcElements = src.cast<DenseElementsAttr>().getValues<Attribute>();
