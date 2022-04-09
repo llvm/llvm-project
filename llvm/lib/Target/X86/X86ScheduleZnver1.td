@@ -189,15 +189,6 @@ defm : ZnWriteResPair<WriteALU,   [ZnALU], 1>;
 defm : ZnWriteResPair<WriteADC,   [ZnALU], 1>;
 
 defm : ZnWriteResPair<WriteIMul8,     [ZnALU1, ZnMultiplier], 4>;
-//defm : ZnWriteResPair<WriteIMul16,    [ZnALU1, ZnMultiplier], 4>;
-//defm : ZnWriteResPair<WriteIMul16Imm, [ZnALU1, ZnMultiplier], 4>;
-//defm : ZnWriteResPair<WriteIMul16Reg, [ZnALU1, ZnMultiplier], 4>;
-//defm : ZnWriteResPair<WriteIMul32,    [ZnALU1, ZnMultiplier], 4>;
-//defm : ZnWriteResPair<WriteIMul32Imm, [ZnALU1, ZnMultiplier], 4>;
-//defm : ZnWriteResPair<WriteIMul32Reg, [ZnALU1, ZnMultiplier], 4>;
-//defm : ZnWriteResPair<WriteIMul64,    [ZnALU1, ZnMultiplier], 4, [1,1], 2>;
-//defm : ZnWriteResPair<WriteIMul64Imm, [ZnALU1, ZnMultiplier], 4, [1,1], 2>;
-//defm : ZnWriteResPair<WriteIMul64Reg, [ZnALU1, ZnMultiplier], 4, [1,1], 2>;
 
 defm : X86WriteRes<WriteBSWAP32, [ZnALU], 1, [4], 1>;
 defm : X86WriteRes<WriteBSWAP64, [ZnALU], 1, [4], 1>;
@@ -227,8 +218,6 @@ defm : X86WriteRes<WriteBitTest,         [ZnALU], 1, [1], 1>;
 defm : X86WriteRes<WriteBitTestImmLd,    [ZnALU,ZnAGU], 5, [1,1], 2>;
 defm : X86WriteRes<WriteBitTestRegLd,    [ZnALU,ZnAGU], 5, [1,1], 2>;
 defm : X86WriteRes<WriteBitTestSet,      [ZnALU], 2, [1], 2>;
-//defm : X86WriteRes<WriteBitTestSetImmLd, [ZnALU,ZnAGU], 5, [1,1], 2>;
-//defm : X86WriteRes<WriteBitTestSetRegLd, [ZnALU,ZnAGU], 5, [1,1], 2>;
 
 // Bit counts.
 defm : ZnWriteResPair<WriteBSF, [ZnALU], 3>;
@@ -240,9 +229,8 @@ defm : ZnWriteResPair<WritePOPCNT,         [ZnALU], 1>;
 // Treat misc copies as a move.
 def : InstRW<[WriteMove], (instrs COPY)>;
 
-// BMI1 BEXTR/BLS, BMI2 BZHI
+// BMI1 BEXTR, BMI2 BZHI
 defm : ZnWriteResPair<WriteBEXTR, [ZnALU], 1>;
-//defm : ZnWriteResPair<WriteBLS,   [ZnALU], 2>;
 defm : ZnWriteResPair<WriteBZHI,  [ZnALU], 1>;
 
 // IDIV
@@ -271,13 +259,13 @@ defm : X86WriteRes<WriteFLoadX,        [ZnAGU], 8, [1], 1>;
 defm : X86WriteRes<WriteFLoadY,        [ZnAGU], 8, [1], 1>;
 defm : X86WriteRes<WriteFMaskedLoad,   [ZnAGU,ZnFPU01], 8, [1,1], 1>;
 defm : X86WriteRes<WriteFMaskedLoadY,  [ZnAGU,ZnFPU01], 8, [1,2], 2>;
+
 defm : X86WriteRes<WriteFStore,        [ZnAGU], 1, [1], 1>;
 defm : X86WriteRes<WriteFStoreX,       [ZnAGU], 1, [1], 1>;
 defm : X86WriteRes<WriteFStoreY,       [ZnAGU], 1, [1], 1>;
 defm : X86WriteRes<WriteFStoreNT,      [ZnAGU,ZnFPU2], 8, [1,1], 1>;
 defm : X86WriteRes<WriteFStoreNTX,     [ZnAGU], 1, [1], 1>;
 defm : X86WriteRes<WriteFStoreNTY,     [ZnAGU], 1, [1], 1>;
-
 defm : X86WriteRes<WriteFMaskedStore32,  [ZnAGU,ZnFPU01], 4, [1,1], 1>;
 defm : X86WriteRes<WriteFMaskedStore32Y, [ZnAGU,ZnFPU01], 5, [1,2], 2>;
 defm : X86WriteRes<WriteFMaskedStore64,  [ZnAGU,ZnFPU01], 4, [1,1], 1>;
@@ -623,15 +611,14 @@ def ZnWriteMul16 : SchedWriteRes<[ZnALU1, ZnMultiplier]> {
 def : SchedAlias<WriteIMul16, ZnWriteMul16>;
 def : SchedAlias<WriteIMul16Imm, ZnWriteMul16>; // TODO: is this right?
 def : SchedAlias<WriteIMul16Reg, ZnWriteMul16>; // TODO: is this right?
-def : SchedAlias<WriteIMul16ImmLd, ZnWriteMul16>; // TODO: this is definitely wrong but matches what the instregex did.
-def : SchedAlias<WriteIMul16RegLd, ZnWriteMul16>; // TODO: this is definitely wrong but matches what the instregex did.
 
 // m16.
 def ZnWriteMul16Ld : SchedWriteRes<[ZnAGU, ZnALU1, ZnMultiplier]> {
   let Latency = 8;
 }
 def : SchedAlias<WriteIMul16Ld, ZnWriteMul16Ld>;
-
+def : SchedAlias<WriteIMul16ImmLd, ZnWriteMul16>; // TODO: this is definitely wrong but matches what the instregex did.
+def : SchedAlias<WriteIMul16RegLd, ZnWriteMul16>; // TODO: this is definitely wrong but matches what the instregex did.
 // r32.
 def ZnWriteMul32 : SchedWriteRes<[ZnALU1, ZnMultiplier]> {
   let Latency = 3;
@@ -639,14 +626,14 @@ def ZnWriteMul32 : SchedWriteRes<[ZnALU1, ZnMultiplier]> {
 def : SchedAlias<WriteIMul32, ZnWriteMul32>;
 def : SchedAlias<WriteIMul32Imm, ZnWriteMul32>; // TODO: is this right?
 def : SchedAlias<WriteIMul32Reg, ZnWriteMul32>; // TODO: is this right?
-def : SchedAlias<WriteIMul32ImmLd, ZnWriteMul32>; // TODO: this is definitely wrong but matches what the instregex did.
-def : SchedAlias<WriteIMul32RegLd, ZnWriteMul32>; // TODO: this is definitely wrong but matches what the instregex did.
 
 // m32.
 def ZnWriteMul32Ld : SchedWriteRes<[ZnAGU, ZnALU1, ZnMultiplier]> {
   let Latency = 8;
 }
 def : SchedAlias<WriteIMul32Ld, ZnWriteMul32Ld>;
+def : SchedAlias<WriteIMul32ImmLd, ZnWriteMul32>; // TODO: this is definitely wrong but matches what the instregex did.
+def : SchedAlias<WriteIMul32RegLd, ZnWriteMul32>; // TODO: this is definitely wrong but matches what the instregex did.
 
 // r64.
 def ZnWriteMul64 : SchedWriteRes<[ZnALU1, ZnMultiplier]> {
@@ -656,8 +643,6 @@ def ZnWriteMul64 : SchedWriteRes<[ZnALU1, ZnMultiplier]> {
 def : SchedAlias<WriteIMul64, ZnWriteMul64>;
 def : SchedAlias<WriteIMul64Imm, ZnWriteMul64>; // TODO: is this right?
 def : SchedAlias<WriteIMul64Reg, ZnWriteMul64>; // TODO: is this right?
-def : SchedAlias<WriteIMul64ImmLd, ZnWriteMul64>; // TODO: this is definitely wrong but matches what the instregex did.
-def : SchedAlias<WriteIMul64RegLd, ZnWriteMul64>; // TODO: this is definitely wrong but matches what the instregex did.
 
 // m64.
 def ZnWriteMul64Ld : SchedWriteRes<[ZnAGU, ZnALU1, ZnMultiplier]> {
@@ -665,6 +650,8 @@ def ZnWriteMul64Ld : SchedWriteRes<[ZnAGU, ZnALU1, ZnMultiplier]> {
   let NumMicroOps = 2;
 }
 def : SchedAlias<WriteIMul64Ld, ZnWriteMul64Ld>;
+def : SchedAlias<WriteIMul64ImmLd, ZnWriteMul64>; // TODO: this is definitely wrong but matches what the instregex did.
+def : SchedAlias<WriteIMul64RegLd, ZnWriteMul64>; // TODO: this is definitely wrong but matches what the instregex did.
 
 // MULX
 // Numbers are based on the AMD SOG for Family 17h - Instruction Latencies.
