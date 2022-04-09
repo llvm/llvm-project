@@ -37,7 +37,7 @@
 /* This variable is an external reference to symbol defined by the compiler. */
 COMPILER_RT_VISIBILITY extern intptr_t INSTR_PROF_PROFILE_COUNTER_BIAS_VAR;
 
-COMPILER_RT_VISIBILITY unsigned lprofProfileDumped() {
+COMPILER_RT_VISIBILITY unsigned lprofProfileDumped(void) {
   return 1;
 }
 COMPILER_RT_VISIBILITY void lprofSetProfileDumped(unsigned Value) {}

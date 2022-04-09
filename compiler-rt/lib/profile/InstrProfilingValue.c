@@ -39,7 +39,7 @@ COMPILER_RT_VISIBILITY ValueProfNode
 COMPILER_RT_VISIBILITY uint32_t VPMaxNumValsPerSite =
     INSTR_PROF_DEFAULT_NUM_VAL_PER_SITE;
 
-COMPILER_RT_VISIBILITY void lprofSetupValueProfiler() {
+COMPILER_RT_VISIBILITY void lprofSetupValueProfiler(void) {
   const char *Str = 0;
   Str = getenv("LLVM_VP_MAX_NUM_VALS_PER_SITE");
   if (Str && Str[0]) {
@@ -353,6 +353,6 @@ static VPDataReaderType TheVPDataReader = {
     getFirstValueProfRecord,          getNumValueDataForSiteWrapper,
     getValueProfDataSizeWrapper,      getNextNValueData};
 
-COMPILER_RT_VISIBILITY VPDataReaderType *lprofGetVPDataReader() {
+COMPILER_RT_VISIBILITY VPDataReaderType *lprofGetVPDataReader(void) {
   return &TheVPDataReader;
 }
