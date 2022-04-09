@@ -306,15 +306,11 @@ public:
   MCRegister getReturnAddressReg(const MachineFunction &MF) const;
 
   const TargetRegisterClass *
-  getRegClassForSizeOnBank(unsigned Size,
-                           const RegisterBank &Bank,
-                           const MachineRegisterInfo &MRI) const;
+  getRegClassForSizeOnBank(unsigned Size, const RegisterBank &Bank) const;
 
   const TargetRegisterClass *
-  getRegClassForTypeOnBank(LLT Ty,
-                           const RegisterBank &Bank,
-                           const MachineRegisterInfo &MRI) const {
-    return getRegClassForSizeOnBank(Ty.getSizeInBits(), Bank, MRI);
+  getRegClassForTypeOnBank(LLT Ty, const RegisterBank &Bank) const {
+    return getRegClassForSizeOnBank(Ty.getSizeInBits(), Bank);
   }
 
   const TargetRegisterClass *
