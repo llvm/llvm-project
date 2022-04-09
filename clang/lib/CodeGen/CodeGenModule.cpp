@@ -579,6 +579,30 @@ void CodeGenModule::Release() {
     }
   }
 
+  // Emit a global array containing all external kernels or device variables
+  // used by host functions and mark it as used for CUDA/HIP. This is necessary
+  // to get kernels or device variables in archives linked in even if these
+  // kernels or device variables are only used in host functions.
+  if (!Context.CUDAExternalDeviceDeclODRUsedByHost.empty()) {
+    SmallVector<llvm::Constant *, 8> UsedArray;
+    for (auto D : Context.CUDAExternalDeviceDeclODRUsedByHost) {
+      GlobalDecl GD;
+      if (auto *FD = dyn_cast<FunctionDecl>(D))
+        GD = GlobalDecl(FD, KernelReferenceKind::Kernel);
+      else
+        GD = GlobalDecl(D);
+      UsedArray.push_back(llvm::ConstantExpr::getPointerBitCastOrAddrSpaceCast(
+          GetAddrOfGlobal(GD), Int8PtrTy));
+    }
+
+    llvm::ArrayType *ATy = llvm::ArrayType::get(Int8PtrTy, UsedArray.size());
+
+    auto *GV = new llvm::GlobalVariable(
+        getModule(), ATy, false, llvm::GlobalValue::AppendingLinkage,
+        llvm::ConstantArray::get(ATy, UsedArray), "gpu.used.external");
+    addCompilerUsedGlobal(GV);
+  }
+
   emitLLVMUsed();
   if (SanStats)
     SanStats->finish();

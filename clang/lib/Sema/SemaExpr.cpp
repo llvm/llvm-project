@@ -17908,8 +17908,7 @@ MarkVarDeclODRUsed(VarDecl *Var, SourceLocation Loc, Sema &SemaRef,
       }
     } else if (VarTarget == Sema::CVT_Device &&
                (UserTarget == Sema::CFT_Host ||
-                UserTarget == Sema::CFT_HostDevice) &&
-               !Var->hasExternalStorage()) {
+                UserTarget == Sema::CFT_HostDevice)) {
       // Record a CUDA/HIP device side variable if it is ODR-used
       // by host code. This is done conservatively, when the variable is
       // referenced in any of the following contexts:
@@ -17920,7 +17919,10 @@ MarkVarDeclODRUsed(VarDecl *Var, SourceLocation Loc, Sema &SemaRef,
       // be visible in the device compilation for the compiler to be able to
       // emit template variables instantiated by host code only and to
       // externalize the static device side variable ODR-used by host code.
-      SemaRef.getASTContext().CUDADeviceVarODRUsedByHost.insert(Var);
+      if (!Var->hasExternalStorage())
+        SemaRef.getASTContext().CUDADeviceVarODRUsedByHost.insert(Var);
+      else if (SemaRef.LangOpts.GPURelocatableDeviceCode)
+        SemaRef.getASTContext().CUDAExternalDeviceDeclODRUsedByHost.insert(Var);
     }
   }
 

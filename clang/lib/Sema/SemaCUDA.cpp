@@ -819,8 +819,13 @@ bool Sema::CheckCUDACall(SourceLocation Loc, FunctionDecl *Callee) {
     }
   }();
 
-  if (DiagKind == SemaDiagnosticBuilder::K_Nop)
+  if (DiagKind == SemaDiagnosticBuilder::K_Nop) {
+    // For -fgpu-rdc, keep track of external kernels used by host functions.
+    if (LangOpts.CUDAIsDevice && LangOpts.GPURelocatableDeviceCode &&
+        Callee->hasAttr<CUDAGlobalAttr>() && !Callee->isDefined())
+      getASTContext().CUDAExternalDeviceDeclODRUsedByHost.insert(Callee);
     return true;
+  }
 
   // Avoid emitting this error twice for the same location.  Using a hashtable
   // like this is unfortunate, but because we must continue parsing as normal
