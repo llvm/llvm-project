@@ -4263,7 +4263,6 @@ bool TargetProperties::GetSwiftCreateModuleContextsInParallel() const {
     return true;
 }
 
-
 bool TargetProperties::GetSwiftReadMetadataFromFileCache() const {
   const Property *exp_property = m_collection_sp->GetPropertyAtIndex(
       nullptr, false, ePropertyExperimental);
@@ -4296,6 +4295,18 @@ bool TargetProperties::GetSwiftReadMetadataFromDSYM() const {
   if (exp_values)
     return exp_values->GetPropertyAtIndexAsBoolean(
         nullptr, ePropertySwiftReadMetadataFromDSYM, true);
+
+  return true;
+}
+
+bool TargetProperties::GetSwiftDiscoverImplicitSearchPaths() const {
+  const Property *exp_property = m_collection_sp->GetPropertyAtIndex(
+      nullptr, false, ePropertyExperimental);
+  OptionValueProperties *exp_values =
+      exp_property->GetValue()->GetAsProperties();
+  if (exp_values)
+    return exp_values->GetPropertyAtIndexAsBoolean(
+        nullptr, ePropertySwiftDiscoverImplicitSearchPaths, true);
 
   return true;
 }

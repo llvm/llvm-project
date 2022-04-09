@@ -1961,7 +1961,8 @@ static SwiftASTContext *GetModuleSwiftASTContext(Module &module) {
 /// its module SwiftASTContext to Target.
 static void
 ProcessModule(ModuleSP module_sp, std::string m_description,
-              bool use_all_compiler_flags, Target &target, llvm::Triple triple,
+              bool discover_implicit_search_paths, bool use_all_compiler_flags,
+              Target &target, llvm::Triple triple,
               std::vector<std::string> &module_search_paths,
               std::vector<std::pair<std::string, bool>> &framework_search_paths,
               std::vector<std::string> &extra_clang_args) {
@@ -2113,13 +2114,20 @@ ProcessModule(ModuleSP module_sp, std::string m_description,
       return;
 
     SwiftASTContext *ast_context = ts->GetSwiftASTContext();
-    if (ast_context && !ast_context->HasErrors()) {
-      if (use_all_compiler_flags ||
-          target.GetExecutableModulePointer() == module_sp.get()) {
-        const auto &opts = ast_context->GetSearchPathOptions();
-        for (const auto &fwsp : opts.getFrameworkSearchPaths())
-          framework_search_paths.push_back({fwsp.Path, fwsp.IsSystem});
-      }
+    if (!ast_context || ast_context->HasErrors())
+      return;
+
+    if (discover_implicit_search_paths) {
+      const auto &opts = ast_context->GetSearchPathOptions();
+      for (const auto &isp : opts.getImportSearchPaths())
+        module_search_paths.push_back(isp);
+    }
+
+    if (use_all_compiler_flags ||
+        target.GetExecutableModulePointer() == module_sp.get()) {
+      const auto &opts = ast_context->GetSearchPathOptions();
+      for (const auto &fwsp : opts.getFrameworkSearchPaths())
+        framework_search_paths.push_back({fwsp.Path, fwsp.IsSystem});
     }
   }
 }
@@ -2304,6 +2312,10 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
   std::string resource_dir = swift_ast_sp->GetResourceDir(triple);
   ConfigureResourceDirs(swift_ast_sp->GetCompilerInvocation(),
                         FileSpec(resource_dir), triple);
+  const bool discover_implicit_search_paths =
+      target.GetSwiftDiscoverImplicitSearchPaths();
+  if (discover_implicit_search_paths)
+    warmup_astcontexts();
 
   const bool use_all_compiler_flags =
       !got_serialized_options || target.GetUseAllCompilerFlags();
@@ -2311,8 +2323,9 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
   for (size_t mi = 0; mi != num_images; ++mi) {
     std::vector<std::string> extra_clang_args;
     ProcessModule(target.GetImages().GetModuleAtIndex(mi), m_description,
-                  use_all_compiler_flags, target, triple, module_search_paths,
-                  framework_search_paths, extra_clang_args);
+                  discover_implicit_search_paths, use_all_compiler_flags,
+                  target, triple, module_search_paths, framework_search_paths,
+                  extra_clang_args);
     swift_ast_sp->AddExtraClangArgs(extra_clang_args);
   }
 
@@ -4889,6 +4902,8 @@ void SwiftASTContextForExpressions::ModulesDidLoad(ModuleList &module_list) {
   if (!target_sp)
     return;
 
+  bool discover_implicit_search_paths =
+      target_sp->GetSwiftDiscoverImplicitSearchPaths();
   bool use_all_compiler_flags = target_sp->GetUseAllCompilerFlags();
   unsigned num_images = module_list.GetSize();
   for (size_t mi = 0; mi != num_images; ++mi) {
@@ -4896,8 +4911,9 @@ void SwiftASTContextForExpressions::ModulesDidLoad(ModuleList &module_list) {
     std::vector<std::pair<std::string, bool>> framework_search_paths;
     std::vector<std::string> extra_clang_args;
     lldb::ModuleSP module_sp = module_list.GetModuleAtIndex(mi);
-    ProcessModule(module_sp, m_description, use_all_compiler_flags, *target_sp,
-                  GetTriple(), module_search_paths, framework_search_paths,
+    ProcessModule(module_sp, m_description, discover_implicit_search_paths,
+                  use_all_compiler_flags, *target_sp, GetTriple(),
+                  module_search_paths, framework_search_paths,
                   extra_clang_args);
     // If the use-all-compiler-flags setting is enabled, the expression
     // context is supposed to merge all search paths from all dylibs.

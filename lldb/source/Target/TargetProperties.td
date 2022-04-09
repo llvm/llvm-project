@@ -16,6 +16,9 @@ let Definition = "target_experimental" in {
   def SwiftReadMetadataFromDSYM: Property<"swift-read-metadata-from-dsym", "Boolean">,
     DefaultFalse,
     Desc<"Read Swift reflection metadata from the dsym instead of the process when possible">;
+  def SwiftDiscoverImplicitSearchPaths: Property<"swift-discover-implicit-search-paths", "Boolean">,
+    DefaultTrue,
+    Desc<"Discover implicit search paths from all implicitly imported Swift modules and make them available to the expression context. A Swift module built with -serialize-debugging-options can contain additional search paths which are discovered as the module is imported. This optiondoes an eager import of all modules first to make sure all implicit search paths are availableto the expression evaluator. If the build system registers all Swift modules with the linker (Darwin: via -add_ast_path, Other platforms: -module-wrap), turning this on is not necessary.">;
 }
 
 let Definition = "target" in {

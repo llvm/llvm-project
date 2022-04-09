@@ -177,6 +177,8 @@ public:
   
   bool GetSwiftReadMetadataFromDSYM() const;
 
+  bool GetSwiftDiscoverImplicitSearchPaths() const;
+
   bool GetSwiftAutoImportFrameworks() const;
 
   bool GetEnableAutoImportClangModules() const;
