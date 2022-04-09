@@ -36,9 +36,7 @@ using namespace clang::randstruct;
 
 using field_names = std::vector<std::string>;
 
-namespace {
-
-std::unique_ptr<ASTUnit> makeAST(const std::string &SourceCode) {
+static std::unique_ptr<ASTUnit> makeAST(const std::string &SourceCode) {
   std::vector<std::string> Args = getCommandLineArgsForTesting(Lang_C99);
   Args.push_back("-frandomize-layout-seed=1234567890abcdef");
 
@@ -51,13 +49,14 @@ std::unique_ptr<ASTUnit> makeAST(const std::string &SourceCode) {
       tooling::FileContentMappings(), &IgnoringConsumer);
 }
 
-RecordDecl *getRecordDeclFromAST(const ASTContext &C, const std::string &Name) {
+static RecordDecl *getRecordDeclFromAST(const ASTContext &C,
+                                        const std::string &Name) {
   RecordDecl *RD = FirstDeclMatcher<RecordDecl>().match(
       C.getTranslationUnitDecl(), recordDecl(hasName(Name)));
   return RD;
 }
 
-std::vector<std::string> getFieldNamesFromRecord(const RecordDecl *RD) {
+static std::vector<std::string> getFieldNamesFromRecord(const RecordDecl *RD) {
   std::vector<std::string> Fields;
 
   Fields.reserve(8);
@@ -67,7 +66,7 @@ std::vector<std::string> getFieldNamesFromRecord(const RecordDecl *RD) {
   return Fields;
 }
 
-bool isSubsequence(const field_names &Seq, const field_names &Subseq) {
+static bool isSubsequence(const field_names &Seq, const field_names &Subseq) {
   unsigned SeqLen = Seq.size();
   unsigned SubLen = Subseq.size();
 
@@ -85,8 +84,6 @@ bool isSubsequence(const field_names &Seq, const field_names &Subseq) {
 
   return IsSubseq;
 }
-
-} // end anonymous namespace
 
 namespace clang {
 namespace ast_matchers {
