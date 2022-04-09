@@ -419,6 +419,9 @@ namespace std
 
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
+#include <__type_traits/integral_constant.h>
+#include <__type_traits/is_callable.h>
+#include <__utility/declval.h>
 #include <cstddef>
 #include <version>
 
@@ -432,28 +435,6 @@ template <class _T1, class _T2> struct _LIBCPP_TEMPLATE_VIS pair;
 template <class _Tp> class _LIBCPP_TEMPLATE_VIS reference_wrapper;
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS hash;
 
-template <class _Tp, _Tp __v>
-struct _LIBCPP_TEMPLATE_VIS integral_constant
-{
-  static _LIBCPP_CONSTEXPR const _Tp      value = __v;
-  typedef _Tp               value_type;
-  typedef integral_constant type;
-  _LIBCPP_INLINE_VISIBILITY
-  _LIBCPP_CONSTEXPR operator value_type() const _NOEXCEPT {return value;}
-#if _LIBCPP_STD_VER > 11
-  _LIBCPP_INLINE_VISIBILITY
-  constexpr value_type operator ()() const _NOEXCEPT {return value;}
-#endif
-};
-
-template <class _Tp, _Tp __v>
-_LIBCPP_CONSTEXPR const _Tp integral_constant<_Tp, __v>::value;
-
-#if _LIBCPP_STD_VER > 14
-template <bool __b>
-using bool_constant = integral_constant<bool, __b>;
-#endif
-
 template <bool, class _Tp = void> struct _LIBCPP_TEMPLATE_VIS enable_if {};
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS enable_if<true, _Tp> {typedef _Tp type;};
 
@@ -462,12 +443,6 @@ template <bool _Bp, class _Tp = void> using __enable_if_t _LIBCPP_NODEBUG = type
 #if _LIBCPP_STD_VER > 11
 template <bool _Bp, class _Tp = void> using enable_if_t = typename enable_if<_Bp, _Tp>::type;
 #endif
-
-typedef integral_constant<bool, true>  true_type;
-typedef integral_constant<bool, false> false_type;
-
-template <bool _Val>
-using _BoolConstant _LIBCPP_NODEBUG = integral_constant<bool, _Val>;
 
 template <bool> struct _MetaBase;
 template <>
@@ -1257,17 +1232,6 @@ template <class _Tp> struct _LIBCPP_TEMPLATE_VIS add_rvalue_reference
 #if _LIBCPP_STD_VER > 11
 template <class _Tp> using add_rvalue_reference_t = typename add_rvalue_reference<_Tp>::type;
 #endif
-
-// Suppress deprecation notice for volatile-qualified return type resulting
-// from volatile-qualified types _Tp.
-_LIBCPP_SUPPRESS_DEPRECATED_PUSH
-template <class _Tp> _Tp&& __declval(int);
-template <class _Tp> _Tp   __declval(long);
-_LIBCPP_SUPPRESS_DEPRECATED_POP
-
-template <class _Tp>
-decltype(__declval<_Tp>(0))
-declval() _NOEXCEPT;
 
 template <class _Tp>
 struct __unconstref {
@@ -3460,25 +3424,13 @@ using __enable_if_bullet6 = typename enable_if
 template <class ..._Args>
 auto __invoke(__any, _Args&& ...__args) -> __nat;
 
-template <class ..._Args>
-auto __invoke_constexpr(__any, _Args&& ...__args) -> __nat;
-
 // bullets 1, 2 and 3
 
 template <class _Fp, class _A0, class ..._Args,
           class = __enable_if_bullet1<_Fp, _A0>>
 inline _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_CONSTEXPR_AFTER_CXX17 auto
+constexpr auto
 __invoke(_Fp&& __f, _A0&& __a0, _Args&& ...__args)
-    noexcept(noexcept((static_cast<_A0&&>(__a0).*__f)(static_cast<_Args&&>(__args)...)))
-    -> decltype(      (static_cast<_A0&&>(__a0).*__f)(static_cast<_Args&&>(__args)...))
-    { return          (static_cast<_A0&&>(__a0).*__f)(static_cast<_Args&&>(__args)...); }
-
-template <class _Fp, class _A0, class ..._Args,
-          class = __enable_if_bullet1<_Fp, _A0>>
-inline _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_CONSTEXPR auto
-__invoke_constexpr(_Fp&& __f, _A0&& __a0, _Args&& ...__args)
     noexcept(noexcept((static_cast<_A0&&>(__a0).*__f)(static_cast<_Args&&>(__args)...)))
     -> decltype(      (static_cast<_A0&&>(__a0).*__f)(static_cast<_Args&&>(__args)...))
     { return          (static_cast<_A0&&>(__a0).*__f)(static_cast<_Args&&>(__args)...); }
@@ -3486,17 +3438,8 @@ __invoke_constexpr(_Fp&& __f, _A0&& __a0, _Args&& ...__args)
 template <class _Fp, class _A0, class ..._Args,
           class = __enable_if_bullet2<_Fp, _A0>>
 inline _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_CONSTEXPR_AFTER_CXX17 auto
+constexpr auto
 __invoke(_Fp&& __f, _A0&& __a0, _Args&& ...__args)
-    noexcept(noexcept((__a0.get().*__f)(static_cast<_Args&&>(__args)...)))
-    -> decltype(      (__a0.get().*__f)(static_cast<_Args&&>(__args)...))
-    { return          (__a0.get().*__f)(static_cast<_Args&&>(__args)...); }
-
-template <class _Fp, class _A0, class ..._Args,
-          class = __enable_if_bullet2<_Fp, _A0>>
-inline _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_CONSTEXPR auto
-__invoke_constexpr(_Fp&& __f, _A0&& __a0, _Args&& ...__args)
     noexcept(noexcept((__a0.get().*__f)(static_cast<_Args&&>(__args)...)))
     -> decltype(      (__a0.get().*__f)(static_cast<_Args&&>(__args)...))
     { return          (__a0.get().*__f)(static_cast<_Args&&>(__args)...); }
@@ -3504,17 +3447,8 @@ __invoke_constexpr(_Fp&& __f, _A0&& __a0, _Args&& ...__args)
 template <class _Fp, class _A0, class ..._Args,
           class = __enable_if_bullet3<_Fp, _A0>>
 inline _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_CONSTEXPR_AFTER_CXX17 auto
+constexpr auto
 __invoke(_Fp&& __f, _A0&& __a0, _Args&& ...__args)
-    noexcept(noexcept(((*static_cast<_A0&&>(__a0)).*__f)(static_cast<_Args&&>(__args)...)))
-    -> decltype(      ((*static_cast<_A0&&>(__a0)).*__f)(static_cast<_Args&&>(__args)...))
-    { return          ((*static_cast<_A0&&>(__a0)).*__f)(static_cast<_Args&&>(__args)...); }
-
-template <class _Fp, class _A0, class ..._Args,
-          class = __enable_if_bullet3<_Fp, _A0>>
-inline _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_CONSTEXPR auto
-__invoke_constexpr(_Fp&& __f, _A0&& __a0, _Args&& ...__args)
     noexcept(noexcept(((*static_cast<_A0&&>(__a0)).*__f)(static_cast<_Args&&>(__args)...)))
     -> decltype(      ((*static_cast<_A0&&>(__a0)).*__f)(static_cast<_Args&&>(__args)...))
     { return          ((*static_cast<_A0&&>(__a0)).*__f)(static_cast<_Args&&>(__args)...); }
@@ -3524,17 +3458,8 @@ __invoke_constexpr(_Fp&& __f, _A0&& __a0, _Args&& ...__args)
 template <class _Fp, class _A0,
           class = __enable_if_bullet4<_Fp, _A0>>
 inline _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_CONSTEXPR_AFTER_CXX17 auto
+constexpr auto
 __invoke(_Fp&& __f, _A0&& __a0)
-    noexcept(noexcept(static_cast<_A0&&>(__a0).*__f))
-    -> decltype(      static_cast<_A0&&>(__a0).*__f)
-    { return          static_cast<_A0&&>(__a0).*__f; }
-
-template <class _Fp, class _A0,
-          class = __enable_if_bullet4<_Fp, _A0>>
-inline _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_CONSTEXPR auto
-__invoke_constexpr(_Fp&& __f, _A0&& __a0)
     noexcept(noexcept(static_cast<_A0&&>(__a0).*__f))
     -> decltype(      static_cast<_A0&&>(__a0).*__f)
     { return          static_cast<_A0&&>(__a0).*__f; }
@@ -3542,17 +3467,8 @@ __invoke_constexpr(_Fp&& __f, _A0&& __a0)
 template <class _Fp, class _A0,
           class = __enable_if_bullet5<_Fp, _A0>>
 inline _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_CONSTEXPR_AFTER_CXX17 auto
+constexpr auto
 __invoke(_Fp&& __f, _A0&& __a0)
-    noexcept(noexcept(__a0.get().*__f))
-    -> decltype(      __a0.get().*__f)
-    { return          __a0.get().*__f; }
-
-template <class _Fp, class _A0,
-          class = __enable_if_bullet5<_Fp, _A0>>
-inline _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_CONSTEXPR auto
-__invoke_constexpr(_Fp&& __f, _A0&& __a0)
     noexcept(noexcept(__a0.get().*__f))
     -> decltype(      __a0.get().*__f)
     { return          __a0.get().*__f; }
@@ -3560,17 +3476,8 @@ __invoke_constexpr(_Fp&& __f, _A0&& __a0)
 template <class _Fp, class _A0,
           class = __enable_if_bullet6<_Fp, _A0>>
 inline _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_CONSTEXPR_AFTER_CXX17 auto
+constexpr auto
 __invoke(_Fp&& __f, _A0&& __a0)
-    noexcept(noexcept((*static_cast<_A0&&>(__a0)).*__f))
-    -> decltype(      (*static_cast<_A0&&>(__a0)).*__f)
-    { return          (*static_cast<_A0&&>(__a0)).*__f; }
-
-template <class _Fp, class _A0,
-          class = __enable_if_bullet6<_Fp, _A0>>
-inline _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_CONSTEXPR auto
-__invoke_constexpr(_Fp&& __f, _A0&& __a0)
     noexcept(noexcept((*static_cast<_A0&&>(__a0)).*__f))
     -> decltype(      (*static_cast<_A0&&>(__a0)).*__f)
     { return          (*static_cast<_A0&&>(__a0)).*__f; }
@@ -3579,16 +3486,8 @@ __invoke_constexpr(_Fp&& __f, _A0&& __a0)
 
 template <class _Fp, class ..._Args>
 inline _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_CONSTEXPR_AFTER_CXX17 auto
+constexpr auto
 __invoke(_Fp&& __f, _Args&& ...__args)
-    noexcept(noexcept(static_cast<_Fp&&>(__f)(static_cast<_Args&&>(__args)...)))
-    -> decltype(      static_cast<_Fp&&>(__f)(static_cast<_Args&&>(__args)...))
-    { return          static_cast<_Fp&&>(__f)(static_cast<_Args&&>(__args)...); }
-
-template <class _Fp, class ..._Args>
-inline _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_CONSTEXPR auto
-__invoke_constexpr(_Fp&& __f, _Args&& ...__args)
     noexcept(noexcept(static_cast<_Fp&&>(__f)(static_cast<_Args&&>(__args)...)))
     -> decltype(      static_cast<_Fp&&>(__f)(static_cast<_Args&&>(__args)...))
     { return          static_cast<_Fp&&>(__f)(static_cast<_Args&&>(__args)...); }

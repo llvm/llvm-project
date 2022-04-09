@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 %s -emit-llvm -o - -ffreestanding -ffake-address-space-map -triple=i686-apple-darwin9 | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -ffreestanding -ffake-address-space-map -triple=i686-apple-darwin9 | FileCheck %s
 // REQUIRES: x86-registered-target
 
 // Also test serialization of atomic operations here, to avoid duplicating the
 // test.
-// RUN: %clang_cc1 %s -emit-pch -o %t -ffreestanding -ffake-address-space-map -triple=i686-apple-darwin9
-// RUN: %clang_cc1 %s -include-pch %t -ffreestanding -ffake-address-space-map -triple=i686-apple-darwin9 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-pch -o %t -ffreestanding -ffake-address-space-map -triple=i686-apple-darwin9
+// RUN: %clang_cc1 -no-opaque-pointers %s -include-pch %t -ffreestanding -ffake-address-space-map -triple=i686-apple-darwin9 -emit-llvm -o - | FileCheck %s
 #ifndef ALREADY_INCLUDED
 #define ALREADY_INCLUDED
 

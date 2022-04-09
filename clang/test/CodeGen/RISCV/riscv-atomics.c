@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -triple riscv32 -O1 -emit-llvm %s -o - \
+// RUN: %clang_cc1 -no-opaque-pointers -triple riscv32 -O1 -emit-llvm %s -o - \
 // RUN:   | FileCheck %s -check-prefix=RV32I
-// RUN: %clang_cc1 -triple riscv32 -target-feature +a -O1 -emit-llvm %s -o - \
+// RUN: %clang_cc1 -no-opaque-pointers -triple riscv32 -target-feature +a -O1 -emit-llvm %s -o - \
 // RUN:   | FileCheck %s -check-prefix=RV32IA
-// RUN: %clang_cc1 -triple riscv64 -O1 -emit-llvm %s -o - \
+// RUN: %clang_cc1 -no-opaque-pointers -triple riscv64 -O1 -emit-llvm %s -o - \
 // RUN:   | FileCheck %s -check-prefix=RV64I
-// RUN: %clang_cc1 -triple riscv64 -target-feature +a -O1 -emit-llvm %s -o - \
+// RUN: %clang_cc1 -no-opaque-pointers -triple riscv64 -target-feature +a -O1 -emit-llvm %s -o - \
 // RUN:   | FileCheck %s -check-prefix=RV64IA
 
 // This test demonstrates that MaxAtomicInlineWidth is set appropriately when

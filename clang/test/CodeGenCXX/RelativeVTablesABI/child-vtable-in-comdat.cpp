@@ -1,7 +1,7 @@
 // Cross comdat example
 // Child VTable is in a comdat section.
 
-// RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -O1 -S -o - -emit-llvm | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=aarch64-unknown-fuchsia -O1 -S -o - -emit-llvm | FileCheck %s
 
 // A comdat is emitted for B but not A
 // CHECK-DAG: $_ZTV1B = comdat any

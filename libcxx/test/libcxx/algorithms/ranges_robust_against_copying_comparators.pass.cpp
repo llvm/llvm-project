@@ -99,8 +99,8 @@ constexpr bool all_the_algorithms()
     //(void)std::ranges::binary_search(first, last, value, Less(&copies)); assert(copies == 0);
     //(void)std::ranges::binary_search(a, value, Less(&copies)); assert(copies == 0);
     //(void)std::ranges::clamp(value, value, value, Less(&copies)); assert(copies == 0);
-    //(void)std::ranges::count_if(first, last, UnaryTrue(&copies)); assert(copies == 0);
-    //(void)std::ranges::count_if(a, UnaryTrue(&copies)); assert(copies == 0);
+    (void)std::ranges::count_if(first, last, UnaryTrue(&copies)); assert(copies == 0);
+    (void)std::ranges::count_if(a, UnaryTrue(&copies)); assert(copies == 0);
     //(void)std::ranges::copy_if(first, last, first2, UnaryTrue(&copies)); assert(copies == 0);
     //(void)std::ranges::copy_if(a, first2, UnaryTrue(&copies)); assert(copies == 0);
 #if TEST_STD_VER > 20

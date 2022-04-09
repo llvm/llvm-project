@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-windows-gnu -mconstructor-aliases %s -S -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-windows-gnu -mconstructor-aliases %s -S -emit-llvm -o - | FileCheck %s
 
 // This test assumes that the C1 constructor will be aliased to the C2
 // constructor, and the D1 destructor to the D2. It then checks that the aliases

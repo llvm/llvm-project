@@ -192,7 +192,7 @@ public:
                                  const Twine &Suffix = "");
 
 private:
-  void annotateAnyAllocSite(CallBase &Call, const TargetLibraryInfo *TLI);
+  bool annotateAnyAllocSite(CallBase &Call, const TargetLibraryInfo *TLI);
   bool isDesirableIntType(unsigned BitWidth) const;
   bool shouldChangeType(unsigned FromBitWidth, unsigned ToBitWidth) const;
   bool shouldChangeType(Type *From, Type *To) const;
@@ -622,7 +622,8 @@ public:
   /// other operand, try to fold the binary operator into the select arguments.
   /// This also works for Cast instructions, which obviously do not have a
   /// second operand.
-  Instruction *FoldOpIntoSelect(Instruction &Op, SelectInst *SI);
+  Instruction *FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
+                                bool FoldWithMultiUse = false);
 
   /// This is a convenience wrapper function for the above two functions.
   Instruction *foldBinOpIntoSelectOrPhi(BinaryOperator &I);

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 < %s -cl-std=CL2.0 -triple spir64 -emit-llvm | FileCheck -check-prefix=SPIR %s
-// RUN: %clang_cc1 < %s -cl-std=CL2.0 -triple armv5e-none-linux-gnueabi -emit-llvm | FileCheck -check-prefix=ARM %s
+// RUN: %clang_cc1 -no-opaque-pointers < %s -cl-std=CL2.0 -triple spir64 -emit-llvm | FileCheck -check-prefix=SPIR %s
+// RUN: %clang_cc1 -no-opaque-pointers < %s -cl-std=CL2.0 -triple armv5e-none-linux-gnueabi -emit-llvm | FileCheck -check-prefix=ARM %s
 typedef enum memory_order {
   memory_order_relaxed = __ATOMIC_RELAXED,
   memory_order_acquire = __ATOMIC_ACQUIRE,

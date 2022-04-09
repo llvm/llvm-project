@@ -23,25 +23,31 @@ def Case10: I32EnumAttrCase<"Case10", 10>;
 
 def I32Enum: I32EnumAttr<"I32Enum", "A test enum", [Case5, Case10]>;
 
-def NoBits : BitEnumAttrCaseNone<"None">;
-def Bit0 : BitEnumAttrCaseBit<"Bit0", 0>;
-def Bit1 : BitEnumAttrCaseBit<"Bit1", 1>;
-def Bit2 : BitEnumAttrCaseBit<"Bit2", 2>;
-def Bit3 : BitEnumAttrCaseBit<"Bit3", 3>;
-def Bit4 : BitEnumAttrCaseBit<"Bit4", 4>;
-def Bit5 : BitEnumAttrCaseBit<"Bit5", 5>;
+def NoBits : I32BitEnumAttrCaseNone<"None">;
+def Bit0 : I32BitEnumAttrCaseBit<"Bit0", 0>;
+def Bit1 : I32BitEnumAttrCaseBit<"Bit1", 1>;
+def Bit2 : I32BitEnumAttrCaseBit<"Bit2", 2>;
+def Bit3 : I32BitEnumAttrCaseBit<"Bit3", 3>;
+def Bit4 : I32BitEnumAttrCaseBit<"Bit4", 4>;
+def Bit5 : I32BitEnumAttrCaseBit<"Bit5", 5>;
 
-def BitEnumWithNone : BitEnumAttr<"BitEnumWithNone", "A test enum",
-                                  [NoBits, Bit0, Bit3]>;
+def BitEnumWithNone : I32BitEnumAttr<"BitEnumWithNone", "A test enum",
+                                     [NoBits, Bit0, Bit3]>;
 
-def BitEnumWithoutNone : BitEnumAttr<"BitEnumWithoutNone", "A test enum",
-                                     [Bit0, Bit3]>;
+def BitEnumWithoutNone : I32BitEnumAttr<"BitEnumWithoutNone", "A test enum",
+                                        [Bit0, Bit3]>;
 
-def Bits0To3 : BitEnumAttrCaseGroup<"Bits0To3",
-                                    [Bit0, Bit1, Bit2, Bit3]>;
+def Bits0To3 : I32BitEnumAttrCaseGroup<"Bits0To3",
+                                       [Bit0, Bit1, Bit2, Bit3]>;
 
-def BitEnumWithGroup : BitEnumAttr<"BitEnumWithGroup", "A test enum",
-                                   [Bit0, Bit1, Bit2, Bit3, Bit4, Bits0To3]>;
+def BitEnumWithGroup : I32BitEnumAttr<"BitEnumWithGroup", "A test enum",
+                                      [Bit0, Bit1, Bit2, Bit3, Bit4, Bits0To3]>;
+
+def BitEnum64_None : I64BitEnumAttrCaseNone<"None">;
+def BitEnum64_57   : I64BitEnumAttrCaseBit<"Bit57", 57>;
+def BitEnum64_1    : I64BitEnumAttrCaseBit<"Bit1", 1>;
+def BitEnum64_Test : I64BitEnumAttr<"BitEnum64_Test", "A 64-bit test enum",
+                                    [BitEnum64_None, BitEnum64_1, BitEnum64_57]>;
 
 def PrettyIntEnumCase1: I32EnumAttrCase<"Case1", 1, "case_one">;
 def PrettyIntEnumCase2: I32EnumAttrCase<"Case2", 2, "case_two">;

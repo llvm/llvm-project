@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-linux -emit-llvm -fsanitize=null %s -o - | FileCheck %s --check-prefix=CHECK-NULL --check-prefix=ITANIUM
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-windows -emit-llvm -fsanitize=null %s -o - | FileCheck %s --check-prefix=CHECK-NULL --check-prefix=MSABI
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-linux -emit-llvm -fsanitize=null,vptr %s -o - | FileCheck %s --check-prefix=CHECK-VPTR --check-prefix=ITANIUM
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-windows -emit-llvm -fsanitize=null,vptr %s -o - | FileCheck %s --check-prefix=CHECK-VPTR --check-prefix=MSABI  --check-prefix=CHECK-VPTR-MS
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -triple x86_64-unknown-linux -emit-llvm -fsanitize=null %s -o - | FileCheck %s --check-prefix=CHECK-NULL --check-prefix=ITANIUM
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -triple x86_64-windows -emit-llvm -fsanitize=null %s -o - | FileCheck %s --check-prefix=CHECK-NULL --check-prefix=MSABI
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -triple x86_64-unknown-linux -emit-llvm -fsanitize=null,vptr %s -o - | FileCheck %s --check-prefix=CHECK-VPTR --check-prefix=ITANIUM
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -triple x86_64-windows -emit-llvm -fsanitize=null,vptr %s -o - | FileCheck %s --check-prefix=CHECK-VPTR --check-prefix=MSABI  --check-prefix=CHECK-VPTR-MS
 struct T {
   virtual ~T() {}
   virtual int v() { return 1; }

@@ -1,6 +1,6 @@
 # Verifies that the extraction of DWARF line number information is correct.
 
-RUN: %clangxx %S/Inputs/linenumber.cpp -g -o %t
+RUN: %clangxx %cxxflags %S/Inputs/linenumber.cpp -g -o %t
 RUN: llvm-bolt %t -o /dev/null -print-reordered -update-debug-sections \
 RUN:   -print-debug-info -reorder-blocks=reverse -sequential-disassembly 2>&1 \
 RUN: | FileCheck %s

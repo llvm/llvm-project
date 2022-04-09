@@ -1,20 +1,20 @@
-// RUN: %clang_cc1 -no-enable-noundef-analysis -triple s390x-linux-gnu \
+// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -triple s390x-linux-gnu \
 // RUN:   -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -triple s390x-linux-gnu -target-feature +vector \
+// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -triple s390x-linux-gnu -target-feature +vector \
 // RUN:   -emit-llvm -o - %s | FileCheck --check-prefix=CHECK-VECTOR %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -triple s390x-linux-gnu -target-cpu z13 \
+// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -triple s390x-linux-gnu -target-cpu z13 \
 // RUN:   -emit-llvm -o - %s | FileCheck --check-prefix=CHECK-VECTOR %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -triple s390x-linux-gnu -target-cpu arch11 \
+// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -triple s390x-linux-gnu -target-cpu arch11 \
 // RUN:   -emit-llvm -o - %s | FileCheck --check-prefix=CHECK-VECTOR %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -triple s390x-linux-gnu -target-cpu z14 \
+// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -triple s390x-linux-gnu -target-cpu z14 \
 // RUN:   -emit-llvm -o - %s | FileCheck --check-prefix=CHECK-VECTOR %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -triple s390x-linux-gnu -target-cpu arch12 \
+// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -triple s390x-linux-gnu -target-cpu arch12 \
 // RUN:   -emit-llvm -o - %s | FileCheck --check-prefix=CHECK-VECTOR %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -triple s390x-linux-gnu -target-cpu z15 \
+// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -triple s390x-linux-gnu -target-cpu z15 \
 // RUN:   -emit-llvm -o - %s | FileCheck --check-prefix=CHECK-VECTOR %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -triple s390x-linux-gnu -target-cpu arch13 \
+// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -triple s390x-linux-gnu -target-cpu arch13 \
 // RUN:   -emit-llvm -o - %s | FileCheck --check-prefix=CHECK-VECTOR %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -triple s390x-linux-gnu -target-cpu arch14 \
+// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -triple s390x-linux-gnu -target-cpu arch14 \
 // RUN:   -emit-llvm -o - %s | FileCheck --check-prefix=CHECK-VECTOR %s
 
 // Vector types

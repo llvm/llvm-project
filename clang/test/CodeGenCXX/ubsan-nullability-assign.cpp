@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -x c++ -triple x86_64-apple-darwin10 -emit-llvm -o - %s -fsanitize=nullability-assign | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -x c++ -triple x86_64-apple-darwin10 -emit-llvm -o - %s -fsanitize=nullability-assign | FileCheck %s
 
 struct S1 {
   int *_Nonnull p;

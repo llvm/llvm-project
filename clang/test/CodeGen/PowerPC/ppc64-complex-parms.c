@@ -1,6 +1,6 @@
 // REQUIRES: powerpc-registered-target
-// RUN: %clang_cc1 -triple powerpc64-unknown-linux-gnu -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -target-feature +float128 -DTEST_F128 -triple \
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc64-unknown-linux-gnu -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -target-feature +float128 -DTEST_F128 -triple \
 // RUN:   powerpc64le-unknown-linux-gnu -emit-llvm -o - %s | FileCheck %s \
 // RUN:   --check-prefix CHECK-F128
 

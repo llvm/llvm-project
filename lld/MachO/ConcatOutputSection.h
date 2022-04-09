@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLD_MACHO_MERGED_OUTPUT_SECTION_H
-#define LLD_MACHO_MERGED_OUTPUT_SECTION_H
+#ifndef LLD_MACHO_CONCAT_OUTPUT_SECTION_H
+#define LLD_MACHO_CONCAT_OUTPUT_SECTION_H
 
 #include "InputSection.h"
 #include "OutputSection.h"
@@ -24,7 +24,7 @@ class Defined;
 // files that are labeled with the same segment and section name. This class
 // contains all such sections and writes the data from each section sequentially
 // in the final binary.
-class ConcatOutputSection final : public OutputSection {
+class ConcatOutputSection : public OutputSection {
 public:
   explicit ConcatOutputSection(StringRef name)
       : OutputSection(ConcatKind, name) {}
@@ -37,15 +37,14 @@ public:
   uint64_t getSize() const override { return size; }
   uint64_t getFileSize() const override { return fileSize; }
 
+  // Assign values to InputSection::outSecOff. In contrast to TextOutputSection,
+  // which does this in its implementation of `finalize()`, we can do this
+  // without `finalize()`'s sequential guarantees detailed in the block comment
+  // of `OutputSection::finalize()`.
+  virtual void finalizeContents();
+
   void addInput(ConcatInputSection *input);
-  void finalize() override;
-  bool needsThunks() const;
-  uint64_t estimateStubsInRangeVA(size_t callIdx) const;
-
   void writeTo(uint8_t *buf) const override;
-
-  std::vector<ConcatInputSection *> inputs;
-  std::vector<ConcatInputSection *> thunks;
 
   static bool classof(const OutputSection *sec) {
     return sec->kind() == ConcatKind;
@@ -53,11 +52,31 @@ public:
 
   static ConcatOutputSection *getOrCreateForInput(const InputSection *);
 
-private:
-  void finalizeFlags(InputSection *input);
+  std::vector<ConcatInputSection *> inputs;
 
+protected:
   size_t size = 0;
   uint64_t fileSize = 0;
+  void finalizeOne(ConcatInputSection *);
+
+private:
+  void finalizeFlags(InputSection *input);
+};
+
+// ConcatOutputSections that contain code (text) require special handling to
+// support thunk insertion.
+class TextOutputSection : public ConcatOutputSection {
+public:
+  explicit TextOutputSection(StringRef name) : ConcatOutputSection(name) {}
+  void finalizeContents() override {}
+  void finalize() override;
+  bool needsThunks() const;
+  void writeTo(uint8_t *buf) const override;
+
+private:
+  uint64_t estimateStubsInRangeVA(size_t callIdx) const;
+
+  std::vector<ConcatInputSection *> thunks;
 };
 
 // We maintain one ThunkInfo per real function.

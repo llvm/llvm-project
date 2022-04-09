@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -std=c++11 -emit-llvm -o - -triple=x86_64-linux-gnu | FileCheck %s
-// RUN: %clang_cc1 %s -std=c++11 -emit-llvm -o - -triple=x86_64-linux-gnu -target-cpu core2 | FileCheck %s --check-prefix=CORE2
+// RUN: %clang_cc1 -no-opaque-pointers %s -std=c++11 -emit-llvm -o - -triple=x86_64-linux-gnu | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -std=c++11 -emit-llvm -o - -triple=x86_64-linux-gnu -target-cpu core2 | FileCheck %s --check-prefix=CORE2
 // Check the atomic code generation for cpu targets w/wo cx16 support.
 
 struct alignas(8) AM8 {

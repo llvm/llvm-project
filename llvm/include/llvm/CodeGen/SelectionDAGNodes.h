@@ -615,11 +615,11 @@ private:
   SDNodeFlags Flags;
 
 public:
-  /// Unique and persistent id per SDNode in the DAG.
-  /// Used for debug printing.
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+  /// Unique and persistent id per SDNode in the DAG. Used for debug printing.
+  /// We do not place that under `#if LLVM_ENABLE_ABI_BREAKING_CHECKS`
+  /// intentionally because it adds unneeded complexity without noticeable
+  /// benefits (see discussion with @thakis in D120714).
   uint16_t PersistentId;
-#endif
 
   //===--------------------------------------------------------------------===//
   //  Accessors
@@ -1222,9 +1222,7 @@ public:
     : SDNode(ISD::HANDLENODE, 0, DebugLoc(), getSDVTList(MVT::Other)) {
     // HandleSDNodes are never inserted into the DAG, so they won't be
     // auto-numbered. Use ID 65535 as a sentinel.
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
     PersistentId = 0xffff;
-#endif
 
     // Manually set up the operand list. This node type is special in that it's
     // always stack allocated and SelectionDAG does not manage its operands.

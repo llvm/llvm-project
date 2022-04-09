@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple wasm32-unknown-unknown -o - -emit-llvm %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple wasm32-unknown-unknown -o - -emit-llvm %s | FileCheck %s
 
 #include <stdarg.h>
 

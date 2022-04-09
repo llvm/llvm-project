@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple %itanium_abi_triple -emit-llvm %s -o - | FileCheck %s
 
 template <class T> struct A { A(); };
 struct B { A<int> x; };

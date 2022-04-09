@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -std=c++11 -Wno-uninitialized -fno-rtti -emit-llvm %s -o - -triple=i386-pc-win32 -fms-extensions | FileCheck -allow-deprecated-dag-overlap %s
-// RUN: %clang_cc1 -std=c++11 -Wno-uninitialized -fno-rtti -emit-llvm %s -o - -triple=x86_64-pc-win32 -fms-extensions | FileCheck %s -check-prefix=X64
-// RUN: %clang_cc1 -std=c++11 -Wno-uninitialized -fno-rtti -emit-llvm %s -o - -triple=i386-pc-win32 -DINCOMPLETE_VIRTUAL -fms-extensions -verify
-// RUN: %clang_cc1 -std=c++11 -Wno-uninitialized -fno-rtti -emit-llvm %s -o - -triple=i386-pc-win32 -DINCOMPLETE_VIRTUAL -DMEMFUN -fms-extensions -verify
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -Wno-uninitialized -fno-rtti -emit-llvm %s -o - -triple=i386-pc-win32 -fms-extensions | FileCheck -allow-deprecated-dag-overlap %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -Wno-uninitialized -fno-rtti -emit-llvm %s -o - -triple=x86_64-pc-win32 -fms-extensions | FileCheck %s -check-prefix=X64
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -Wno-uninitialized -fno-rtti -emit-llvm %s -o - -triple=i386-pc-win32 -DINCOMPLETE_VIRTUAL -fms-extensions -verify
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -Wno-uninitialized -fno-rtti -emit-llvm %s -o - -triple=i386-pc-win32 -DINCOMPLETE_VIRTUAL -DMEMFUN -fms-extensions -verify
 
 namespace pr37399 {
 template <typename T>

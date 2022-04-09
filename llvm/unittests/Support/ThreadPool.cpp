@@ -83,7 +83,7 @@ protected:
 #define CHECK_UNSUPPORTED()                                                    \
   do {                                                                         \
     if (isUnsupportedOSOrEnvironment())                                        \
-      return;                                                                  \
+      GTEST_SKIP();                                                            \
   } while (0);
 
 TEST_F(ThreadPoolTest, AsyncBarrier) {
@@ -263,7 +263,7 @@ TEST_F(ThreadPoolTest, AffinityMask) {
 
   // Skip this test if less than 4 threads are available.
   if (llvm::hardware_concurrency().compute_thread_count() < 4)
-    return;
+    GTEST_SKIP();
 
   using namespace llvm::sys;
   if (getenv("LLVM_THREADPOOL_AFFINITYMASK")) {
@@ -275,7 +275,7 @@ TEST_F(ThreadPoolTest, AffinityMask) {
                         [](auto &T) { return T.getData().front() < 16UL; }) &&
            "Threads ran on more CPUs than expected! The affinity mask does not "
            "seem to work.");
-    return;
+    GTEST_SKIP();
   }
   std::string Executable =
       sys::fs::getMainExecutable(TestMainArgv0, &ThreadPoolTestStringArg1);

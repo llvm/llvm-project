@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu %s -o - -emit-llvm -O1 \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux-gnu %s -o - -emit-llvm -O1 \
 // RUN:     -fexceptions -fcxx-exceptions -mllvm -simplifycfg-sink-common=false | FileCheck %s
 //
 // We should emit lifetime.ends for these temporaries in both the 'exception'

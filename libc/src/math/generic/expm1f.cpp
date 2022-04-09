@@ -83,7 +83,7 @@ LLVM_LIBC_FUNCTION(float, expm1f, (float x)) {
       //   = x otherwise.
       // To simplify the rounding decision and make it more efficient, we use
       //   fma(x, x, x) ~ x + x^2 instead.
-      return fputil::fma(x, x, x);
+      return fputil::multiply_add(x, x, x);
     }
 
     // 2^-25 <= |x| < 2^-4
@@ -96,7 +96,7 @@ LLVM_LIBC_FUNCTION(float, expm1f, (float x)) {
         fputil::polyeval(xd, 0x1p-1, 0x1.55555555557ddp-3, 0x1.55555555552fap-5,
                          0x1.111110fcd58b7p-7, 0x1.6c16c1717660bp-10,
                          0x1.a0241f0006d62p-13, 0x1.a01e3f8d3c06p-16);
-    return static_cast<float>(fputil::fma(r, xsq, xd));
+    return static_cast<float>(fputil::multiply_add(r, xsq, xd));
   }
 
   // For -18 < x < 89, to compute expm1(x), we perform the following range
@@ -132,7 +132,7 @@ LLVM_LIBC_FUNCTION(float, expm1f, (float x)) {
   double exp_lo =
       fputil::polyeval(xd, 0x1.0p0, 0x1.ffffffffff777p-1, 0x1.000000000071cp-1,
                        0x1.555566668e5e7p-3, 0x1.55555555ef243p-5);
-  return static_cast<float>(fputil::fma(exp_hi_mid, exp_lo, -1.0));
+  return static_cast<float>(fputil::multiply_add(exp_hi_mid, exp_lo, -1.0));
 }
 
 } // namespace __llvm_libc

@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple arm64-unknown-linux -disable-O0-optnone -emit-llvm -o - %s | opt -S -mem2reg | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-LINUX
-// RUN: %clang_cc1 -triple aarch64-windows -disable-O0-optnone -S -emit-llvm -o - %s | opt -S -mem2reg | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-WIN
-// RUN: %clang_cc1 -triple arm64_32-apple-ios13 -disable-O0-optnone -emit-llvm -o - %s | opt -S -mem2reg | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple arm64-unknown-linux -disable-O0-optnone -emit-llvm -o - %s | opt -S -mem2reg | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-LINUX
+// RUN: %clang_cc1 -no-opaque-pointers -triple aarch64-windows -disable-O0-optnone -S -emit-llvm -o - %s | opt -S -mem2reg | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-WIN
+// RUN: %clang_cc1 -no-opaque-pointers -triple arm64_32-apple-ios13 -disable-O0-optnone -emit-llvm -o - %s | opt -S -mem2reg | FileCheck %s
 #include <stdint.h>
 
 void f0(void *a, void *b) {

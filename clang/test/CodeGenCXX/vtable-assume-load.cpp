@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -triple x86_64-apple-darwin10 -emit-llvm -o %t.ll -O1 -disable-llvm-passes -fms-extensions -fstrict-vtable-pointers
-// RUN: %clang_cc1 %s -triple i686-pc-win32 -emit-llvm -o %t.ms.ll -O1 -disable-llvm-passes -fms-extensions -fstrict-vtable-pointers
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple x86_64-apple-darwin10 -emit-llvm -o %t.ll -O1 -disable-llvm-passes -fms-extensions -fstrict-vtable-pointers
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple i686-pc-win32 -emit-llvm -o %t.ms.ll -O1 -disable-llvm-passes -fms-extensions -fstrict-vtable-pointers
 // FIXME: Assume load should not require -fstrict-vtable-pointers
 
 // RUN: FileCheck --check-prefix=CHECK1 --input-file=%t.ll %s

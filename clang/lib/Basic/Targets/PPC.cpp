@@ -81,6 +81,8 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       IsISA3_0 = true;
     } else if (Feature == "+isa-v31-instructions") {
       IsISA3_1 = true;
+    } else if (Feature == "+quadword-atomics") {
+      HasQuadwordAtomics = true;
     }
     // TODO: Finish this list and add an assert that we've handled them
     // all.
@@ -550,6 +552,12 @@ bool PPCTargetInfo::initFeatureMap(
   Features["isa-v30-instructions"] =
       llvm::StringSwitch<bool>(CPU).Case("pwr9", true).Default(false);
 
+  Features["quadword-atomics"] =
+      getTriple().isArch64Bit() && llvm::StringSwitch<bool>(CPU)
+                                       .Case("pwr9", true)
+                                       .Case("pwr8", true)
+                                       .Default(false);
+
   // Power10 includes all the same features as Power9 plus any features specific
   // to the Power10 core.
   if (CPU == "pwr10" || CPU == "power10") {
@@ -660,6 +668,7 @@ bool PPCTargetInfo::hasFeature(StringRef Feature) const {
       .Case("isa-v207-instructions", IsISA2_07)
       .Case("isa-v30-instructions", IsISA3_0)
       .Case("isa-v31-instructions", IsISA3_1)
+      .Case("quadword-atomics", HasQuadwordAtomics)
       .Default(false);
 }
 

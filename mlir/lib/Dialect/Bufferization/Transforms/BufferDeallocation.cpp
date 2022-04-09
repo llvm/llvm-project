@@ -325,25 +325,20 @@ private:
       // argument.
       Operation *terminator = (*it)->getTerminator();
       auto branchInterface = cast<BranchOpInterface>(terminator);
+      SuccessorOperands operands =
+          branchInterface.getSuccessorOperands(it.getSuccessorIndex());
+
       // Query the associated source value.
-      Value sourceValue =
-          branchInterface.getSuccessorOperands(it.getSuccessorIndex())
-              .getValue()[blockArg.getArgNumber()];
-      // Wire new clone and successor operand.
-      auto mutableOperands =
-          branchInterface.getMutableSuccessorOperands(it.getSuccessorIndex());
-      if (!mutableOperands) {
-        terminator->emitError() << "terminators with immutable successor "
-                                   "operands are not supported";
-        continue;
+      Value sourceValue = operands[blockArg.getArgNumber()];
+      if (!sourceValue) {
+        return failure();
       }
+      // Wire new clone and successor operand.
       // Create a new clone at the current location of the terminator.
       auto clone = introduceCloneBuffers(sourceValue, terminator);
       if (failed(clone))
         return failure();
-      mutableOperands.getValue()
-          .slice(blockArg.getArgNumber(), 1)
-          .assign(*clone);
+      operands.slice(blockArg.getArgNumber(), 1).assign(*clone);
     }
 
     // Check whether the block argument has implicitly defined predecessors via

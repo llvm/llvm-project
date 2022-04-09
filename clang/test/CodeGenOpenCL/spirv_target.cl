@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -triple "spirv32-unknown-unknown" -verify -emit-llvm -o - | FileCheck %s -check-prefix=SPIRV32
-// RUN: %clang_cc1 %s -triple "spirv64-unknown-unknown" -verify -emit-llvm -o - | FileCheck %s -check-prefix=SPIRV64
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple "spirv32-unknown-unknown" -verify -emit-llvm -o - | FileCheck %s -check-prefix=SPIRV32
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple "spirv64-unknown-unknown" -verify -emit-llvm -o - | FileCheck %s -check-prefix=SPIRV64
 
 // SPIRV32: target triple = "spirv32-unknown-unknown"
 // SPIRV64: target triple = "spirv64-unknown-unknown"

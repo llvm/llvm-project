@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -mconstructor-aliases -fms-extensions %s -emit-llvm -o - -triple x86_64-windows-msvc | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -mconstructor-aliases -fms-extensions %s -emit-llvm -o - -triple x86_64-windows-msvc | FileCheck %s
 
 namespace test1 {
 struct A { ~A(); };

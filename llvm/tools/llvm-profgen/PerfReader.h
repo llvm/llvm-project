@@ -197,7 +197,10 @@ struct PerfSample {
   }
 
 #ifndef NDEBUG
+  uint64_t Linenum = 0;
+
   void print() const {
+    dbgs() << "Line " << Linenum << "\n";
     dbgs() << "LBR stack\n";
     printLBRStack(LBRStack);
     dbgs() << "Call stack\n";
@@ -255,6 +258,9 @@ struct UnwindState {
   const SmallVector<LBREntry, 16> &LBRStack;
   // Used to iterate the address range
   InstructionPointer InstPtr;
+  // Indicate whether unwinding is currently in a bad state which requires to
+  // skip all subsequent unwinding.
+  bool Invalid = false;
   UnwindState(const PerfSample *Sample, const ProfiledBinary *Binary)
       : Binary(Binary), LBRStack(Sample->LBRStack),
         InstPtr(Binary, Sample->CallStack.front()) {
@@ -284,6 +290,7 @@ struct UnwindState {
            "IP should align with context leaf");
   }
 
+  void setInvalid() { Invalid = true; }
   bool hasNextLBR() const { return LBRIndex < LBRStack.size(); }
   uint64_t getCurrentLBRSource() const { return LBRStack[LBRIndex].Source; }
   uint64_t getCurrentLBRTarget() const { return LBRStack[LBRIndex].Target; }
@@ -476,10 +483,14 @@ private:
   bool isCallState(UnwindState &State) const {
     // The tail call frame is always missing here in stack sample, we will
     // use a specific tail call tracker to infer it.
-    return Binary->addressIsCall(State.getCurrentLBRSource());
+    return isValidState(State) &&
+           Binary->addressIsCall(State.getCurrentLBRSource());
   }
 
   bool isReturnState(UnwindState &State) const {
+    if (!isValidState(State))
+      return false;
+
     // Simply check addressIsReturn, as ret is always reliable, both for
     // regular call and tail call.
     if (!Binary->addressIsReturn(State.getCurrentLBRSource()))
@@ -496,6 +507,8 @@ private:
         Binary->getCallAddrFromFrameAddr(State.getCurrentLBRTarget());
     return (CallAddr != 0);
   }
+
+  bool isValidState(UnwindState &State) const { return !State.Invalid; }
 
   void unwindCall(UnwindState &State);
   void unwindLinear(UnwindState &State, uint64_t Repeat);

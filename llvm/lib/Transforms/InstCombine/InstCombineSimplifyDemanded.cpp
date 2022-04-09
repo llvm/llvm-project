@@ -563,6 +563,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
                                                     DemandedMask, Known))
             return R;
 
+      // TODO: If we only want bits that already match the signbit then we don't
+      // need to shift.
+
       uint64_t ShiftAmt = SA->getLimitedValue(BitWidth-1);
       APInt DemandedMaskIn(DemandedMask.lshr(ShiftAmt));
 
@@ -615,6 +618,19 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     const APInt *SA;
     if (match(I->getOperand(1), m_APInt(SA))) {
       uint64_t ShiftAmt = SA->getLimitedValue(BitWidth-1);
+
+      // If we are just demanding the shifted sign bit and below, then this can
+      // be treated as an ASHR in disguise.
+      if (DemandedMask.countLeadingZeros() >= ShiftAmt) {
+        // If we only want bits that already match the signbit then we don't
+        // need to shift.
+        unsigned NumHiDemandedBits =
+            BitWidth - DemandedMask.countTrailingZeros();
+        unsigned SignBits =
+            ComputeNumSignBits(I->getOperand(0), Depth + 1, CxtI);
+        if (SignBits >= NumHiDemandedBits)
+          return I->getOperand(0);
+      }
 
       // Unsigned shift right.
       APInt DemandedMaskIn(DemandedMask.shl(ShiftAmt));
@@ -723,13 +739,13 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     break;
   }
   case Instruction::SRem: {
-    ConstantInt *Rem;
-    if (match(I->getOperand(1), m_ConstantInt(Rem))) {
+    const APInt *Rem;
+    if (match(I->getOperand(1), m_APInt(Rem))) {
       // X % -1 demands all the bits because we don't want to introduce
       // INT_MIN % -1 (== undef) by accident.
-      if (Rem->isMinusOne())
+      if (Rem->isAllOnes())
         break;
-      APInt RA = Rem->getValue().abs();
+      APInt RA = Rem->abs();
       if (RA.isPowerOf2()) {
         if (DemandedMask.ult(RA))    // srem won't affect demanded bits
           return I->getOperand(0);

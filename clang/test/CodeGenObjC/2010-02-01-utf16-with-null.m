@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i686-apple-darwin -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-apple-darwin -emit-llvm %s -o - | FileCheck %s
 // rdar://7589850
 
 // CHECK: @.str = private unnamed_addr constant [9 x i16] [i16 103, i16 111, i16 111, i16 100, i16 0, i16 98, i16 121, i16 101, i16 0], section "__TEXT,__ustring", align 2

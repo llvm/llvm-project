@@ -907,6 +907,11 @@ public:
   /// elements attribute, which contains the sizes of the sub ranges.
   MutableOperandRangeRange split(NamedAttribute segmentSizes) const;
 
+  /// Returns the value at the given index.
+  Value operator[](unsigned index) const {
+    return operator OperandRange()[index];
+  }
+
 private:
   /// Update the length of this range to the one provided.
   void updateLength(unsigned newLength);

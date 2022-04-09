@@ -19474,8 +19474,9 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
     // EXTRACT_VECTOR_ELT may widen the extracted vector.
     SDValue InOp = VecOp.getOperand(0);
     if (InOp.getValueType() != ScalarVT) {
-      assert(InOp.getValueType().isInteger() && ScalarVT.isInteger());
-      return DAG.getSExtOrTrunc(InOp, DL, ScalarVT);
+      assert(InOp.getValueType().isInteger() && ScalarVT.isInteger() &&
+             InOp.getValueType().bitsGT(ScalarVT));
+      return DAG.getNode(ISD::TRUNCATE, DL, ScalarVT, InOp);
     }
     return InOp;
   }
@@ -22693,6 +22694,11 @@ SDValue DAGCombiner::visitINSERT_SUBVECTOR(SDNode *N) {
   if (N0.isUndef() && N1.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
       N1.getOperand(1) == N2 && N1.getOperand(0).getValueType() == VT)
     return N1.getOperand(0);
+
+  // Simplify scalar inserts into an undef vector:
+  // insert_subvector undef, (splat X), N2 -> splat X
+  if (N0.isUndef() && N1.getOpcode() == ISD::SPLAT_VECTOR)
+    return DAG.getNode(ISD::SPLAT_VECTOR, SDLoc(N), VT, N1.getOperand(0));
 
   // If we are inserting a bitcast value into an undef, with the same
   // number of elements, just use the bitcast input of the extract.

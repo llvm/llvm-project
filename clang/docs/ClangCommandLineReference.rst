@@ -2093,10 +2093,6 @@ Emit OpenMP code only for SIMD-based constructs.
 
 Enable debugging in the OpenMP offloading device RTL
 
-.. option:: -fopenmp-target-new-runtime, -fno-openmp-target-new-runtime
-
-Use the new bitcode library for OpenMP offloading
-
 .. option:: -fopenmp-offload-mandatory
 
 Indicate that offloading to the device is mandatory and do not generate host-fallback code.

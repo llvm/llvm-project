@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fenable-matrix -triple x86_64-apple-darwin %s -emit-llvm -disable-llvm-passes -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -fenable-matrix -triple x86_64-apple-darwin %s -emit-llvm -disable-llvm-passes -o - | FileCheck %s
 
 typedef char cx5x5 __attribute__((matrix_type(5, 5)));
 typedef int ix5x5 __attribute__((matrix_type(5, 5)));

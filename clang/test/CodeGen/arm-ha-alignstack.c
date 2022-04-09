@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple armv7-eabi                                    -emit-llvm %s -o - | \
+// RUN: %clang_cc1 -no-opaque-pointers -triple armv7-eabi                                    -emit-llvm %s -o - | \
 // RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-SOFT
-// RUN: %clang_cc1 -triple armv7-eabi -target-abi aapcs -mfloat-abi hard -emit-llvm %s -o - | \
+// RUN: %clang_cc1 -no-opaque-pointers -triple armv7-eabi -target-abi aapcs -mfloat-abi hard -emit-llvm %s -o - | \
 // RUN:    FileCheck %s --check-prefixes=CHECK,CHECK-HARD
 // REQUIRES: arm-registered-target
 

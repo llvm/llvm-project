@@ -3,10 +3,10 @@
 
 // REQUIRES: x86_64-linux
 
-// RUN: %clang_cc1 -debug-info-kind=constructor -x c -verify -triple x86_64-pc-linux-gnu -fopenmp -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -debug-info-kind=line-directives-only -x c -verify -triple x86_64-pc-linux-gnu -fopenmp -emit-llvm %s -o - | FileCheck %s --check-prefix=NEG
-// RUN: %clang_cc1 -debug-info-kind=line-tables-only -x c -verify -triple x86_64-pc-linux-gnu -fopenmp -emit-llvm %s -o - | FileCheck %s --check-prefix=NEG
-// RUN: %clang_cc1 -debug-info-kind=limited -x c -verify -triple x86_64-pc-linux-gnu -fopenmp -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -debug-info-kind=constructor -x c -verify -triple x86_64-pc-linux-gnu -fopenmp -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -debug-info-kind=line-directives-only -x c -verify -triple x86_64-pc-linux-gnu -fopenmp -emit-llvm %s -o - | FileCheck %s --check-prefix=NEG
+// RUN: %clang_cc1 -no-opaque-pointers -debug-info-kind=line-tables-only -x c -verify -triple x86_64-pc-linux-gnu -fopenmp -emit-llvm %s -o - | FileCheck %s --check-prefix=NEG
+// RUN: %clang_cc1 -no-opaque-pointers -debug-info-kind=limited -x c -verify -triple x86_64-pc-linux-gnu -fopenmp -emit-llvm %s -o - | FileCheck %s
 // expected-no-diagnostics
 
 // CHECK: define internal i32 @.omp_task_entry.

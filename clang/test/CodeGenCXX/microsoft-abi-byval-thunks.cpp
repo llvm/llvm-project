@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -fno-rtti -triple=i686-pc-win32 -emit-llvm -o - | FileCheck --check-prefix=CHECK32 %s
-// RUN: %clang_cc1 %s -fno-rtti -triple=x86_64-pc-win32 -emit-llvm -o - | FileCheck --check-prefix=CHECK64 %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -fno-rtti -triple=i686-pc-win32 -emit-llvm -o - | FileCheck --check-prefix=CHECK32 %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -fno-rtti -triple=x86_64-pc-win32 -emit-llvm -o - | FileCheck --check-prefix=CHECK64 %s
 
 namespace byval_thunk {
 struct Agg {

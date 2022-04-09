@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++11 -emit-llvm -o - -triple x86_64-linux-gnu %s | FileCheck %s --check-prefixes=CHECK,CHECK-CXX11
-// RUN: %clang_cc1 -std=c++2a -emit-llvm -o - -triple x86_64-linux-gnu %s | FileCheck %s --check-prefixes=CHECK,CHECK-CXX2A
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -emit-llvm -o - -triple x86_64-linux-gnu %s | FileCheck %s --check-prefixes=CHECK,CHECK-CXX11
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++2a -emit-llvm -o - -triple x86_64-linux-gnu %s | FileCheck %s --check-prefixes=CHECK,CHECK-CXX2A
 
 // CHECK-DAG: @__const._Z1fi.a = private unnamed_addr constant {{.*}} { i32 1, [2 x i32] [i32 2, i32 3], [3 x i32] [i32 4, i32 5, i32 6] }
 // CHECK-CXX11-DAG: @_ZN7PR422765State1mE.const = private unnamed_addr constant [2 x { i64, i64 }] [{ {{.*}} @_ZN7PR422765State2f1Ev {{.*}}, i64 0 }, { {{.*}} @_ZN7PR422765State2f2Ev {{.*}}, i64 0 }]

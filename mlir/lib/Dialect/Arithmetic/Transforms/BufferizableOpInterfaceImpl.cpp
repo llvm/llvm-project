@@ -129,6 +129,7 @@ struct SelectOpInterface
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           BufferizationState &state) const {
     auto selectOp = cast<arith::SelectOp>(op);
+    Location loc = selectOp.getLoc();
 
     // `getBuffer` introduces copies if an OpOperand bufferizes out-of-place.
     // TODO: It would be more efficient to copy the result of the `select` op
@@ -139,6 +140,26 @@ struct SelectOpInterface
         *state.getBuffer(rewriter, selectOp->getOpOperand(1) /*true_value*/);
     Value falseBuffer =
         *state.getBuffer(rewriter, selectOp->getOpOperand(2) /*false_value*/);
+
+    // The "true" and the "false" operands must have the same type. If the
+    // buffers have different types, they differ only in their layout map. Cast
+    // both of them to the most dynamic MemRef type.
+    if (trueBuffer.getType() != falseBuffer.getType()) {
+      auto trueType = trueBuffer.getType().cast<MemRefType>();
+      auto tensorType = selectOp.getTrueValue().getType().cast<TensorType>();
+      int64_t dynamicOffset = ShapedType::kDynamicStrideOrOffset;
+      SmallVector<int64_t> dynamicStrides(tensorType.getRank(),
+                                          ShapedType::kDynamicStrideOrOffset);
+      AffineMap stridedLayout = makeStridedLinearLayoutMap(
+          dynamicStrides, dynamicOffset, op->getContext());
+      BaseMemRefType castedType = bufferization::getMemRefType(
+          tensorType, state.getOptions(), AffineMapAttr::get(stridedLayout),
+          trueType.getMemorySpace());
+      trueBuffer = rewriter.create<memref::CastOp>(loc, castedType, trueBuffer);
+      falseBuffer =
+          rewriter.create<memref::CastOp>(loc, castedType, falseBuffer);
+    }
+
     replaceOpWithNewBufferizedOp<arith::SelectOp>(
         rewriter, op, selectOp.getCondition(), trueBuffer, falseBuffer);
     return success();

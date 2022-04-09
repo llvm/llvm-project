@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -fblocks -triple x86_64-apple-darwin -std=c++11 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -fblocks -triple x86_64-apple-darwin -std=c++11 -emit-llvm -o - | FileCheck %s
 // REQUIRES: x86-registered-target
 
 // CHECK: @b ={{.*}} global i32 0,

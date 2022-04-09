@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-windows-msvc %s -emit-llvm -fexceptions -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-windows-msvc %s -emit-llvm -fexceptions -o - | FileCheck %s
 
 // PR41065: As background, when constructing a complete object, virtual bases
 // are constructed first. If an exception is thrown while constructing a

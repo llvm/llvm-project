@@ -16,6 +16,7 @@
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
+class ModuleOp;
 
 std::unique_ptr<Pass> createAsyncParallelForPass();
 

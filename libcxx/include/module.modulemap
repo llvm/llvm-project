@@ -294,6 +294,8 @@ module std [system] {
       module pop_heap                 { private header "__algorithm/pop_heap.h" }
       module prev_permutation         { private header "__algorithm/prev_permutation.h" }
       module push_heap                { private header "__algorithm/push_heap.h" }
+      module ranges_count             { private header "__algorithm/ranges_count.h" }
+      module ranges_count_if          { private header "__algorithm/ranges_count_if.h" }
       module ranges_find              { private header "__algorithm/ranges_find.h" }
       module ranges_find_if           { private header "__algorithm/ranges_find_if.h" }
       module ranges_find_if_not       { private header "__algorithm/ranges_find_if_not.h" }
@@ -391,12 +393,23 @@ module std [system] {
     module __chrono {
       module calendar              { private header "__chrono/calendar.h" }
       module convert_to_timespec   { private header "__chrono/convert_to_timespec.h" }
+      module day                   { private header "__chrono/day.h" }
       module duration              { private header "__chrono/duration.h" }
       module file_clock            { private header "__chrono/file_clock.h" }
+      module hh_mm_ss              { private header "__chrono/hh_mm_ss.h" }
       module high_resolution_clock { private header "__chrono/high_resolution_clock.h" }
+      module literals              { private header "__chrono/literals.h" }
+      module month                 { private header "__chrono/month.h" }
+      module month_weekday         { private header "__chrono/month_weekday.h" }
+      module monthday              { private header "__chrono/monthday.h" }
       module steady_clock          { private header "__chrono/steady_clock.h" }
       module system_clock          { private header "__chrono/system_clock.h" }
       module time_point            { private header "__chrono/time_point.h" }
+      module weekday               { private header "__chrono/weekday.h" }
+      module year                  { private header "__chrono/year.h" }
+      module year_month            { private header "__chrono/year_month.h" }
+      module year_month_day        { private header "__chrono/year_month_day.h" }
+      module year_month_weekday    { private header "__chrono/year_month_weekday.h" }
     }
   }
   module codecvt {
@@ -515,6 +528,7 @@ module std [system] {
 
     module __format {
       module buffer                   { private header "__format/buffer.h" }
+      module enable_insertable        { private header "__format/enable_insertable.h" }
       module format_arg               { private header "__format/format_arg.h" }
       module format_args              { private header "__format/format_args.h" }
       module format_context {
@@ -694,6 +708,7 @@ module std [system] {
 
     module __memory {
       module addressof                       { private header "__memory/addressof.h" }
+      module allocate_at_least               { private header "__memory/allocate_at_least.h" }
       module allocation_guard                { private header "__memory/allocation_guard.h" }
       module allocator                       { private header "__memory/allocator.h" }
       module allocator_arg_t                 { private header "__memory/allocator_arg_t.h" }
@@ -943,6 +958,9 @@ module std [system] {
     header "type_traits"
     export functional.__functional.unwrap_ref
     export *
+
+    module integral_constant { private header "__type_traits/integral_constant.h" }
+    module is_callable       { private header "__type_traits/is_callable.h" }
   }
   module typeindex {
     header "typeindex"

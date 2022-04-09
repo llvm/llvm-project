@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -emit-llvm -o - -fblocks -triple x86_64-apple-darwin10 | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -fblocks -triple x86_64-apple-darwin10 | FileCheck %s
 
 // CHECK: [[AGG:%.*]] = type { i32 }
 typedef struct { int v; } Agg;

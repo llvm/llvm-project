@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple=x86_64-linux-gnu -emit-llvm -fstrict-vtable-pointers -o - %s \
+// RUN: %clang_cc1 -no-opaque-pointers -triple=x86_64-linux-gnu -emit-llvm -fstrict-vtable-pointers -o - %s \
 // RUN: | FileCheck --check-prefixes=CHECK,CHECK-STRICT %s
-// RUN: %clang_cc1 -triple=x86_64-linux-gnu -emit-llvm -o - %s \
+// RUN: %clang_cc1 -no-opaque-pointers -triple=x86_64-linux-gnu -emit-llvm -o - %s \
 // RUN: | FileCheck --check-prefixes=CHECK,CHECK-NONSTRICT %s
 
 //===----------------------------------------------------------------------===//

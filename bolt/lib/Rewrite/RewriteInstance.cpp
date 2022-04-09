@@ -3108,6 +3108,10 @@ void RewriteInstance::emitAndLink() {
   emitBinaryContext(*Streamer, *BC, getOrgSecPrefix());
 
   Streamer->Finish();
+  if (Streamer->getContext().hadError()) {
+    errs() << "BOLT-ERROR: Emission failed.\n";
+    exit(1);
+  }
 
   //////////////////////////////////////////////////////////////////////////////
   // Assign addresses to new sections.
@@ -3137,7 +3141,7 @@ void RewriteInstance::emitAndLink() {
 
   RTDyld->finalizeWithMemoryManagerLocking();
   if (RTDyld->hasError()) {
-    outs() << "BOLT-ERROR: RTDyld failed: " << RTDyld->getErrorString() << "\n";
+    errs() << "BOLT-ERROR: RTDyld failed: " << RTDyld->getErrorString() << "\n";
     exit(1);
   }
 

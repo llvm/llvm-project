@@ -57,6 +57,8 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/PrettyStackTrace.h"
+#include "llvm/Support/Signals.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -204,6 +206,15 @@ lldb::SBError SBDebugger::InitializeWithErrorHandling() {
     error.SetError(Status(std::move(e)));
   }
   return error;
+}
+
+void SBDebugger::PrintStackTraceOnError() {
+  LLDB_INSTRUMENT();
+
+  llvm::EnablePrettyStackTrace();
+  static std::string executable =
+      llvm::sys::fs::getMainExecutable(nullptr, nullptr);
+  llvm::sys::PrintStackTraceOnErrorSignal(executable);
 }
 
 void SBDebugger::Terminate() {

@@ -1,10 +1,10 @@
-// RUN: %clang_analyze_cc1 %s -std=c++14 \
+// RUN: %clang_analyze_cc1 %s -std=c++17 \
 // RUN:   -verify=expected,tracking \
 // RUN:   -analyzer-config track-conditions=true \
 // RUN:   -analyzer-output=text \
 // RUN:   -analyzer-checker=core
 
-// RUN: not %clang_analyze_cc1 -std=c++14 -verify %s \
+// RUN: not %clang_analyze_cc1 -std=c++17 -verify %s \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-config track-conditions=false \
 // RUN:   -analyzer-config track-conditions-debug=true \
@@ -14,14 +14,14 @@
 // CHECK-INVALID-DEBUG-SAME:        'track-conditions-debug', that expects
 // CHECK-INVALID-DEBUG-SAME:        'track-conditions' to also be enabled
 //
-// RUN: %clang_analyze_cc1 %s -std=c++14 \
+// RUN: %clang_analyze_cc1 %s -std=c++17 \
 // RUN:   -verify=expected,tracking,debug \
 // RUN:   -analyzer-config track-conditions=true \
 // RUN:   -analyzer-config track-conditions-debug=true \
 // RUN:   -analyzer-output=text \
 // RUN:   -analyzer-checker=core
 
-// RUN: %clang_analyze_cc1 %s -std=c++14 -verify \
+// RUN: %clang_analyze_cc1 %s -std=c++17 -verify \
 // RUN:   -analyzer-output=text \
 // RUN:   -analyzer-config track-conditions=false \
 // RUN:   -analyzer-checker=core
@@ -149,14 +149,13 @@ void test() {
   int *x = 0; // expected-note-re{{{{^}}'x' initialized to a null pointer value{{$}}}}
 
   if (ConvertsToBool())
-    // debug-note-re@-1{{{{^}}Tracking condition 'ConvertsToBool()'{{$}}}}
-    // expected-note-re@-2{{{{^}}Assuming the condition is true{{$}}}}
-    // expected-note-re@-3{{{{^}}Taking true branch{{$}}}}
+    // expected-note-re@-1{{{{^}}Assuming the condition is true{{$}}}}
+    // expected-note-re@-2{{{{^}}Taking true branch{{$}}}}
     *x = 5; // expected-warning{{Dereference of null pointer}}
             // expected-note@-1{{Dereference of null pointer}}
 }
 
-} // end of namespace variable_declaration_in_condition
+} // namespace conversion_to_bool
 
 namespace note_from_different_but_not_nested_stackframe {
 
@@ -186,14 +185,13 @@ bool coin();
 int *getIntPtr();
 
 void storeValue(int **i) {
-  *i = getIntPtr(); // tracking-note-re{{{{^}}Value assigned to 'i', which participates in a condition later{{$}}}}
+  *i = getIntPtr();
 }
 
 int *conjurePointer() {
   int *i;
-  storeValue(&i); // tracking-note-re{{{{^}}Calling 'storeValue'{{$}}}}
-                  // tracking-note-re@-1{{{{^}}Returning from 'storeValue'{{$}}}}
-  return i; // tracking-note-re{{{{^}}Returning pointer (loaded from 'i'), which participates in a condition later{{$}}}}
+  storeValue(&i);
+  return i;
 }
 
 void f(int *ptr) {
@@ -201,11 +199,8 @@ void f(int *ptr) {
            // expected-note-re@-1{{{{^}}Taking false branch{{$}}}}
     ;
   if (!conjurePointer())
-    // tracking-note-re@-1{{{{^}}Calling 'conjurePointer'{{$}}}}
-    // tracking-note-re@-2{{{{^}}Returning from 'conjurePointer'{{$}}}}
-    // debug-note-re@-3{{{{^}}Tracking condition '!conjurePointer()'{{$}}}}
-    // expected-note-re@-4{{{{^}}Assuming the condition is true{{$}}}}
-    // expected-note-re@-5{{{{^}}Taking true branch{{$}}}}
+    // expected-note-re@-1{{{{^}}Assuming the condition is true{{$}}}}
+    // expected-note-re@-2{{{{^}}Taking true branch{{$}}}}
     *ptr = 5; // expected-warning{{Dereference of null pointer}}
               // expected-note@-1{{Dereference of null pointer}}
 }
@@ -226,9 +221,8 @@ void f(int *ptr) {
            // expected-note-re@-1{{{{^}}Taking false branch{{$}}}}
     ;
   if (!conjurePointer())
-    // debug-note-re@-1{{{{^}}Tracking condition '!conjurePointer()'{{$}}}}
-    // expected-note-re@-2{{{{^}}Assuming the condition is true{{$}}}}
-    // expected-note-re@-3{{{{^}}Taking true branch{{$}}}}
+    // expected-note-re@-1{{{{^}}Assuming the condition is true{{$}}}}
+    // expected-note-re@-2{{{{^}}Taking true branch{{$}}}}
     *ptr = 5; // expected-warning{{Dereference of null pointer}}
               // expected-note@-1{{Dereference of null pointer}}
 }
@@ -246,9 +240,8 @@ void f() {
   int *x = 0; // expected-note-re{{{{^}}'x' initialized to a null pointer value{{$}}}}
 
   if (cast(conjure()))
-    // debug-note-re@-1{{{{^}}Tracking condition 'cast(conjure())'{{$}}}}
-    // expected-note-re@-2{{{{^}}Assuming the condition is false{{$}}}}
-    // expected-note-re@-3{{{{^}}Taking false branch{{$}}}}
+    // expected-note-re@-1{{{{^}}Assuming the condition is false{{$}}}}
+    // expected-note-re@-2{{{{^}}Taking false branch{{$}}}}
     return;
   *x = 5; // expected-warning{{Dereference of null pointer}}
           // expected-note@-1{{Dereference of null pointer}}
@@ -266,9 +259,8 @@ void i(int *ptr) {
            // expected-note-re@-1{{{{^}}Taking false branch{{$}}}}
     ;
   if (!flipCoin())
-    // debug-note-re@-1{{{{^}}Tracking condition '!flipCoin()'{{$}}}}
-    // expected-note-re@-2{{{{^}}Assuming the condition is true{{$}}}}
-    // expected-note-re@-3{{{{^}}Taking true branch{{$}}}}
+    // expected-note-re@-1{{{{^}}Assuming the condition is true{{$}}}}
+    // expected-note-re@-2{{{{^}}Taking true branch{{$}}}}
     *ptr = 5; // expected-warning{{Dereference of null pointer}}
               // expected-note@-1{{Dereference of null pointer}}
 }
@@ -278,11 +270,9 @@ namespace important_returning_value_note {
 bool coin();
 
 bool flipCoin() {
-  if (coin()) // tracking-note-re{{{{^}}Assuming the condition is false{{$}}}}
-              // tracking-note-re@-1{{{{^}}Taking false branch{{$}}}}
-              // debug-note-re@-2{{{{^}}Tracking condition 'coin()'{{$}}}}
+  if (coin())
     return true;
-  return coin(); // tracking-note-re{{{{^}}Returning value, which participates in a condition later{{$}}}}
+  return coin();
 }
 
 void i(int *ptr) {
@@ -290,11 +280,8 @@ void i(int *ptr) {
            // expected-note-re@-1{{{{^}}Taking false branch{{$}}}}
     ;
   if (!flipCoin())
-    // tracking-note-re@-1{{{{^}}Calling 'flipCoin'{{$}}}}
-    // tracking-note-re@-2{{{{^}}Returning from 'flipCoin'{{$}}}}
-    // debug-note-re@-3{{{{^}}Tracking condition '!flipCoin()'{{$}}}}
-    // expected-note-re@-4{{{{^}}Assuming the condition is true{{$}}}}
-    // expected-note-re@-5{{{{^}}Taking true branch{{$}}}}
+    // expected-note-re@-1{{{{^}}Assuming the condition is true{{$}}}}
+    // expected-note-re@-2{{{{^}}Taking true branch{{$}}}}
     *ptr = 5; // expected-warning{{Dereference of null pointer}}
               // expected-note@-1{{Dereference of null pointer}}
 }
@@ -302,29 +289,32 @@ void i(int *ptr) {
 
 namespace important_returning_value_note_in_linear_function {
 bool coin();
+int flag;
 
 struct super_complicated_template_hackery {
   static constexpr bool value = false;
 };
 
-bool flipCoin() {
+void flipCoin() {
   if (super_complicated_template_hackery::value)
     // tracking-note-re@-1{{{{^}}'value' is false{{$}}}}
     // tracking-note-re@-2{{{{^}}Taking false branch{{$}}}}
-    return true;
-  return coin(); // tracking-note-re{{{{^}}Returning value, which participates in a condition later{{$}}}}
+    return;
+  flag = false; // tracking-note-re{{{{^}}The value 0 is assigned to 'flag', which participates in a condition later{{$}}}}
 }
 
 void i(int *ptr) {
+  flag = true;
   if (ptr) // expected-note-re{{{{^}}Assuming 'ptr' is null{{$}}}}
            // expected-note-re@-1{{{{^}}Taking false branch{{$}}}}
     ;
-  if (!flipCoin())
-    // tracking-note-re@-1{{{{^}}Calling 'flipCoin'{{$}}}}
-    // tracking-note-re@-2{{{{^}}Returning from 'flipCoin'{{$}}}}
-    // debug-note-re@-3{{{{^}}Tracking condition '!flipCoin()'{{$}}}}
-    // expected-note-re@-4{{{{^}}Assuming the condition is true{{$}}}}
-    // expected-note-re@-5{{{{^}}Taking true branch{{$}}}}
+  flipCoin();
+  // tracking-note-re@-1{{{{^}}Calling 'flipCoin'{{$}}}}
+  // tracking-note-re@-2{{{{^}}Returning from 'flipCoin'{{$}}}}
+  if (!flag)
+    // debug-note-re@-1{{{{^}}Tracking condition '!flag'{{$}}}}
+    // expected-note-re@-2{{{{^}}'flag' is 0{{$}}}}
+    // expected-note-re@-3{{{{^}}Taking true branch{{$}}}}
     *ptr = 5; // expected-warning{{Dereference of null pointer}}
               // expected-note@-1{{Dereference of null pointer}}
 }
@@ -1000,3 +990,87 @@ void f(int *x) {
 }
 
 } // end of namespace only_track_the_evaluated_condition
+
+namespace operator_call_in_condition_point {
+
+struct Error {
+  explicit operator bool() {
+    return true;
+  }
+};
+
+Error couldFail();
+
+void f(int *x) {
+  x = nullptr;              // expected-note {{Null pointer value stored to 'x'}}
+  if (auto e = couldFail()) // expected-note {{Taking true branch}}
+    *x = 5;                 // expected-warning {{Dereference of null pointer (loaded from variable 'x') [core.NullDereference]}}
+                            // expected-note@-1 {{Dereference}}
+}
+
+} // namespace operator_call_in_condition_point
+
+namespace cxx17_ifinit__operator_call_in_condition_point {
+
+struct Error {
+  explicit operator bool() {
+    return true;
+  }
+};
+
+Error couldFail();
+
+void f(int *x) {
+  x = nullptr;              // expected-note {{Null pointer value stored to 'x'}}
+  if (auto e = couldFail(); e) // expected-note {{Taking true branch}}
+    *x = 5;                 // expected-warning {{Dereference of null pointer (loaded from variable 'x') [core.NullDereference]}}
+                            // expected-note@-1 {{Dereference}}
+}
+
+} // namespace cxx17_ifinit__operator_call_in_condition_point
+
+namespace funcion_call_in_condition_point {
+
+int alwaysTrue() {
+  return true;
+}
+
+void f(int *x) {
+  x = nullptr;      // expected-note {{Null pointer value stored to 'x'}}
+  if (alwaysTrue()) // expected-note {{Taking true branch}}
+    *x = 5;         // expected-warning {{Dereference of null pointer (loaded from variable 'x') [core.NullDereference]}}
+                    // expected-note@-1 {{Dereference}}
+}
+
+} // namespace funcion_call_in_condition_point
+
+namespace funcion_call_negated_in_condition_point {
+
+int alwaysFalse() {
+  return false;
+}
+
+void f(int *x) {
+  x = nullptr;        // expected-note {{Null pointer value stored to 'x'}}
+  if (!alwaysFalse()) // expected-note {{Taking true branch}}
+    *x = 5;           // expected-warning {{Dereference of null pointer (loaded from variable 'x') [core.NullDereference]}}
+                      // expected-note@-1 {{Dereference}}
+}
+
+} // namespace funcion_call_negated_in_condition_point
+
+namespace funcion_call_part_of_logical_expr_in_condition_point {
+
+int alwaysFalse() {
+  return false;
+}
+
+void f(int *x) {
+  x = nullptr;        // expected-note {{Null pointer value stored to 'x'}}
+  if (!alwaysFalse() && true) // expected-note {{Taking true branch}}
+                              // expected-note@-1 {{Left side of '&&' is true}}
+    *x = 5;           // expected-warning {{Dereference of null pointer (loaded from variable 'x') [core.NullDereference]}}
+                      // expected-note@-1 {{Dereference}}
+}
+
+} // namespace funcion_call_part_of_logical_expr_in_condition_point

@@ -110,7 +110,7 @@ define void @vf4(<4 x i16>* %in.vecptr0, <4 x i16>* %in.vecptr1, <4 x i16>* %in.
 ; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm1 = ymm0[0,1,8,9],zero,zero,ymm0[2,3,10,11],zero,zero,ymm0[4,5,12,13,20,21],zero,zero,zero,zero,ymm0[22,23],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[2,3,0,1]
-; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = zero,zero,zero,zero,ymm0[0,1],zero,zero,zero,zero,ymm0[2,3],zero,zero,zero,zero,zero,zero,ymm0[22,23,30,31],zero,zero,ymm0[u,u,u,u,u,u,u,u]
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = zero,zero,zero,zero,ymm0[0,1],zero,zero,zero,zero,ymm0[2,3],zero,zero,zero,zero,zero,zero,ymm0[22,23,30,31],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vpor %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vmovq %xmm1, 16(%rcx)

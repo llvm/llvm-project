@@ -404,8 +404,8 @@ static void emitUnderlyingToSymFnForBitEnum(const Record &enumDef,
     if (auto val = enumerant.getValue())
       values.push_back(std::string(formatv("{0}u", val)));
   }
-  os << formatv("  if (value & ~({0})) return llvm::None;\n",
-                llvm::join(values, " | "));
+  os << formatv("  if (value & ~static_cast<{0}>({1})) return llvm::None;\n",
+                underlyingType, llvm::join(values, " | "));
   os << formatv("  return static_cast<{0}>(value);\n", enumName);
   os << "}\n";
 }

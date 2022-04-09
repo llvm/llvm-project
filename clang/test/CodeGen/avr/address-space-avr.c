@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple avr -target-cpu atmega2560 -emit-llvm < %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple avr -target-cpu atmega2560 -emit-llvm < %s | FileCheck %s
 
 // CHECK: @var0 {{.*}} addrspace(1) constant [3 x i16]
 // CHECK: @f3var0 {{.*}} addrspace(4) constant [3 x i16]

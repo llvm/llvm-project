@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -std=c++11 -fblocks -fms-extensions %s -triple=x86_64-windows-msvc -emit-llvm \
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -fblocks -fms-extensions %s -triple=x86_64-windows-msvc -emit-llvm \
 // RUN:         -o - -mconstructor-aliases -fcxx-exceptions -fexceptions | \
 // RUN:         FileCheck %s --check-prefix=CHECK --check-prefix=CXXEH
-// RUN: %clang_cc1 -std=c++11 -fblocks -fms-extensions %s -triple=x86_64-windows-msvc -emit-llvm \
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -fblocks -fms-extensions %s -triple=x86_64-windows-msvc -emit-llvm \
 // RUN:         -o - -mconstructor-aliases -O1 -disable-llvm-passes | \
 // RUN:         FileCheck %s --check-prefix=CHECK --check-prefix=NOCXX
 

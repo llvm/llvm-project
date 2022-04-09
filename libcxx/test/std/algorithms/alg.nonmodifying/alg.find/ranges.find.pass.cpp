@@ -25,6 +25,7 @@
 #include <ranges>
 
 #include "almost_satisfies_types.h"
+#include "boolean_testable.h"
 #include "test_iterators.h"
 
 struct NotEqualityComparable {};
@@ -244,6 +245,20 @@ constexpr bool test() {
       std::array<int, 0> a = {};
       auto ret = std::ranges::find(a, 1);
       assert(ret == a.begin());
+    }
+  }
+
+  {
+    // check that the implicit conversion to bool works
+    {
+      StrictComparable<int> a[] = {1, 2, 3, 4};
+      auto ret = std::ranges::find(a, a + 4, StrictComparable<int>{2});
+      assert(ret == a + 1);
+    }
+    {
+      StrictComparable<int> a[] = {1, 2, 3, 4};
+      auto ret = std::ranges::find(a, StrictComparable<int>{2});
+      assert(ret == a + 1);
     }
   }
 

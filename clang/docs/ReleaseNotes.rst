@@ -54,6 +54,20 @@ Major New Features
   There is an analogous ``zero_call_used_regs`` attribute to allow for finer
   control of this feature.
 
+- Clang now supports randomizing structure layout in C. This feature is a
+  compile-time hardening technique, making it more difficult for an attacker to
+  retrieve data from structures. Specify randomization with the
+  ``randomize_layout`` attribute. The corresponding ``no_randomize_layout``
+  attribute can be used to turn the feature off.
+
+  A seed value is required to enable randomization, and is deterministic based
+  on a seed value. Use the ``-frandomize-layout-seed=`` or
+  ``-frandomize-layout-seed-file=`` flags.
+
+  .. note::
+
+      Randomizing structure layout is a C-only feature.
+
 Bug Fixes
 ------------------
 - ``CXXNewExpr::getArraySize()`` previously returned a ``llvm::Optional``
@@ -115,6 +129,15 @@ Improvements to Clang's diagnostics
 - ``-Wunused-variable`` no longer warn for references extending the lifetime
   of temporaries with side effects. This fixes `Issue 54489
   <https://github.com/llvm/llvm-project/issues/54489>`_.
+- Modified the behavior of ``-Wstrict-prototypes`` and added a new, related
+  diagnostic ``-Wdeprecated-non-prototype``. The strict prototypes warning will
+  now only diagnose deprecated declarations and definitions of functions
+  without a prototype where the behavior in C2x will remain correct. This
+  diagnostic remains off by default but is now enabled via ``-pedantic`` due to
+  it being a deprecation warning. ``-Wdeprecated-non-prototype`` will diagnose
+  cases where the deprecated declarations or definitions of a function without
+  a prototype will change behavior in C2x. This diagnostic is grouped under the
+  ``-Wstrict-prototypes`` warning group, but is enabled by default.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -201,6 +224,13 @@ C++20 Feature Support
 
 - Implemented `__builtin_source_location()` which enables library support for std::source_location.
 
+- The mangling scheme for C++20 modules has incompatibly changed. The
+  initial mangling was discovered not to be reversible, and the weak
+  ownership design decision did not give the backwards compatibility
+  that was hoped for. C++20 since added ``extern "C++"`` semantics
+  that can be used for such compatibility. The demangler now demangles
+  symbols with named module attachment.
+
 C++2b Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -271,6 +301,12 @@ Internal API Changes
 
 Build System Changes
 --------------------
+
+* CMake ``-DCLANG_DEFAULT_PIE_ON_LINUX=ON`` is now the default. This is used by
+  linux-gnu systems to decide whether ``-fPIE -pie`` is the default (instead of
+  ``-fno-pic -no-pie``). This matches GCC installations on many Linux distros.
+  Note: linux-android and linux-musl always default to ``-fPIE -pie``, ignoring
+  this variable. ``-DCLANG_DEFAULT_PIE_ON_LINUX`` may be removed in the future.
 
 AST Matchers
 ------------

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Rewrite/PatternApplicator.h"
 #include "mlir/Transforms/FoldUtils.h"
@@ -76,7 +77,7 @@ protected:
 
   /// PatternRewriter hook for notifying match failure reasons.
   LogicalResult
-  notifyMatchFailure(Operation *op,
+  notifyMatchFailure(Location loc,
                      function_ref<void(Diagnostic &)> reasonCallback) override;
 
   /// The low-level pattern applicator.
@@ -140,8 +141,18 @@ bool GreedyPatternRewriteDriver::simplify(MutableArrayRef<Region> regions) {
 
     if (!config.useTopDownTraversal) {
       // Add operations to the worklist in postorder.
-      for (auto &region : regions)
-        region.walk([this](Operation *op) { addToWorklist(op); });
+      for (auto &region : regions) {
+        region.walk([this](Operation *op) {
+          // If we aren't processing top-down, check for existing constants when
+          // populating the worklist. This avoids accidentally reversing the
+          // constant order during processing.
+          Attribute constValue;
+          if (matchPattern(op, m_Constant(&constValue)))
+            if (!folder.insertKnownConstant(op, constValue))
+              return;
+          addToWorklist(op);
+        });
+      }
     } else {
       // Add all nested operations to the worklist in preorder.
       for (auto &region : regions)
@@ -348,9 +359,9 @@ void GreedyPatternRewriteDriver::eraseOp(Operation *op) {
 }
 
 LogicalResult GreedyPatternRewriteDriver::notifyMatchFailure(
-    Operation *op, function_ref<void(Diagnostic &)> reasonCallback) {
+    Location loc, function_ref<void(Diagnostic &)> reasonCallback) {
   LLVM_DEBUG({
-    Diagnostic diag(op->getLoc(), DiagnosticSeverity::Remark);
+    Diagnostic diag(loc, DiagnosticSeverity::Remark);
     reasonCallback(diag);
     logger.startLine() << "** Failure : " << diag.str() << "\n";
   });

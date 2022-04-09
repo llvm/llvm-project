@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 %s -triple=thumbv7k-apple-watchos -emit-llvm -o - -target-abi aapcs16 | FileCheck %s
-// RUN: %clang_cc1 %s -triple=thumbv7k-apple-watchos -emit-llvm -o - -target-abi aapcs16 | FileCheck -check-prefix=CHECK-GLOBALS %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=thumbv7k-apple-watchos -emit-llvm -o - -target-abi aapcs16 | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=thumbv7k-apple-watchos -emit-llvm -o - -target-abi aapcs16 | FileCheck -check-prefix=CHECK-GLOBALS %s
 
-// RUN: %clang_cc1 %s -triple=arm64_32-apple-ios -emit-llvm -o - -target-abi darwinpcs | FileCheck %s
-// RUN: %clang_cc1 %s -triple=arm64_32-apple-ios -emit-llvm -o - -target-abi darwinpcs | FileCheck -check-prefix=CHECK-GLOBALS %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=arm64_32-apple-ios -emit-llvm -o - -target-abi darwinpcs | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=arm64_32-apple-ios -emit-llvm -o - -target-abi darwinpcs | FileCheck -check-prefix=CHECK-GLOBALS %s
 
 // __cxa_guard_acquire argument is 64-bit
 // rdar://11540122

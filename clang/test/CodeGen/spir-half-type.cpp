@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -O0 -triple spir -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -O0 -triple spir64 -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -O0 -triple spir -fexperimental-new-pass-manager -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -O0 -triple spir64 -fexperimental-new-pass-manager -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -O0 -triple spir -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -O0 -triple spir64 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -O0 -triple spir -fexperimental-new-pass-manager -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -O0 -triple spir64 -fexperimental-new-pass-manager -emit-llvm %s -o - | FileCheck %s
 
 // This file tests that using the _Float16 type with the spir target will not
 // use the llvm intrinsics but instead will use the half arithmetic

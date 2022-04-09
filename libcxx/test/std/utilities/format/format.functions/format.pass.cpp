@@ -9,6 +9,8 @@
 // UNSUPPORTED: libcpp-has-no-incomplete-format
 // TODO FMT Evaluate gcc-11 status
 // UNSUPPORTED: gcc-11
+// TODO FMT Investigate AppleClang ICE
+// UNSUPPORTED: apple-clang-13
 
 // Note this formatter shows additional information when tests are failing.
 // This aids the development. Since other formatters fail in the same fashion
@@ -27,19 +29,21 @@
 
 #include "test_macros.h"
 #include "format_tests.h"
+#include "string_literal.h"
 
 #ifndef TEST_HAS_NO_LOCALIZATION
 #  include <iostream>
+#  include <type_traits>
 #endif
 
-auto test = []<class CharT, class... Args>(std::basic_string_view<CharT> expected, std::basic_string_view<CharT> fmt,
-                                           const Args&... args) {
-  std::basic_string<CharT> out = std::format(fmt, args...);
+auto test = []<string_literal fmt, class CharT, class... Args>(std::basic_string_view<CharT> expected,
+                                                               const Args&... args) constexpr {
+  std::basic_string<CharT> out = std::format(fmt.template sv<CharT>(), args...);
 #ifndef TEST_HAS_NO_LOCALIZATION
   if constexpr (std::same_as<CharT, char>)
     if (out != expected)
-      std::cerr << "\nFormat string   " << fmt << "\nExpected output " << expected << "\nActual output   " << out
-                << '\n';
+      std::cerr << "\nFormat string   " << fmt.template sv<char>() << "\nExpected output " << expected
+                << "\nActual output   " << out << '\n';
 #endif
   assert(out == expected);
 };

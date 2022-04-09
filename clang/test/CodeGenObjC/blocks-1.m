@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -emit-llvm -o - -fobjc-gc -fblocks -triple i386-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5 | FileCheck %s --check-prefix=CHECK --check-prefix=OBJC
-// RUN: %clang_cc1 -x objective-c++ %s -emit-llvm -o - -fobjc-gc -fblocks -triple i386-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5 | FileCheck %s --check-prefix=CHECK --check-prefix=OBJCXX
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -fobjc-gc -fblocks -triple i386-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5 | FileCheck %s --check-prefix=CHECK --check-prefix=OBJC
+// RUN: %clang_cc1 -no-opaque-pointers -x objective-c++ %s -emit-llvm -o - -fobjc-gc -fblocks -triple i386-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5 | FileCheck %s --check-prefix=CHECK --check-prefix=OBJCXX
 
 // OBJC-LABEL: define{{.*}} void @test1(
 // OBJCXX-LABEL: define{{.*}} void @_Z5test1P12NSDictionary(

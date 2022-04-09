@@ -66,7 +66,7 @@
 ; };
 ; ref_templ_non_tu_simple v3;
 ; 
-; // Modify templ_non_tu<bool>'s name to be mangled ('_STN' name '|' args)
+; // Modify templ_non_tu<bool>'s name to be mangled ('_STN|' name '|' args)
 ; template <>
 ; struct templ_non_tu<bool> {
 ;   virtual void f1();
@@ -117,7 +117,7 @@
 ; CHECK: DW_AT_name {{.*}}"ref_templ_non_tu"
 ; CHECK: DW_TAG_structure_type
 ; CHECK-NOT: DW_TAG
-; CHECK: DW_AT_name {{.*}}"_STNtempl_non_tu|<int>"
+; CHECK: DW_AT_name {{.*}}"_STN|templ_non_tu|<int>"
 
 ; CHECK: DW_TAG_structure_type
 ; CHECK-NOT: DW_TAG
@@ -134,7 +134,7 @@
 ; CHECK: DW_AT_name {{.*}}"ref_templ_non_tu_mangled"
 ; CHECK: DW_TAG_structure_type
 ; CHECK-NOT: DW_TAG
-; CHECK: DW_AT_name      ("_STNtempl_non_tu|<bool>")
+; CHECK: DW_AT_name      ("_STN|templ_non_tu|<bool>")
 ; CHECK-NOT: DW_TAG
 ; CHECK: DW_TAG_template_type_parameter
 ; CHECK-NEXT: DW_AT_type    {{.*}}"bool"
@@ -244,7 +244,7 @@ attributes #1 = { nofree nosync nounwind readnone speculatable willreturn }
 !15 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "ref_templ_non_tu", file: !3, line: 30, size: 64, flags: DIFlagTypePassByReference | DIFlagNonTrivial, elements: !16, identifier: "_ZTS16ref_templ_non_tu")
 !16 = !{!17}
 !17 = !DIDerivedType(tag: DW_TAG_member, name: "v1", scope: !15, file: !3, line: 31, baseType: !18, size: 64)
-!18 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "_STNtempl_non_tu|<int>", file: !3, line: 26, size: 64, flags: DIFlagTypePassByReference | DIFlagNonTrivial, elements: !19, vtableHolder: !18, templateParams: !30)
+!18 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "_STN|templ_non_tu|<int>", file: !3, line: 26, size: 64, flags: DIFlagTypePassByReference | DIFlagNonTrivial, elements: !19, vtableHolder: !18, templateParams: !30)
 !19 = !{!20, !26}
 !20 = !DIDerivedType(tag: DW_TAG_member, name: "_vptr$templ_non_tu", scope: !3, file: !3, baseType: !21, size: 64, flags: DIFlagArtificial)
 !21 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !22, size: 64)
@@ -277,7 +277,7 @@ attributes #1 = { nofree nosync nounwind readnone speculatable willreturn }
 !48 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "ref_templ_non_tu_mangled", file: !3, line: 53, size: 64, flags: DIFlagTypePassByReference | DIFlagNonTrivial, elements: !49, identifier: "_ZTS24ref_templ_non_tu_mangled")
 !49 = !{!50}
 !50 = !DIDerivedType(tag: DW_TAG_member, name: "v1", scope: !48, file: !3, line: 54, baseType: !51, size: 64)
-!51 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "_STNtempl_non_tu|<bool>", file: !3, line: 49, size: 64, flags: DIFlagTypePassByReference | DIFlagNonTrivial, elements: !52, vtableHolder: !51, templateParams: !57)
+!51 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "_STN|templ_non_tu|<bool>", file: !3, line: 49, size: 64, flags: DIFlagTypePassByReference | DIFlagNonTrivial, elements: !52, vtableHolder: !51, templateParams: !57)
 !52 = !{!20, !53}
 !53 = !DISubprogram(name: "f1", linkageName: "_ZN12templ_non_tuIbE2f1Ev", scope: !51, file: !3, line: 50, type: !54, scopeLine: 50, containingType: !51, virtualIndex: 0, flags: DIFlagPrototyped, spFlags: DISPFlagVirtual)
 !54 = !DISubroutineType(types: !55)

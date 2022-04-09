@@ -784,7 +784,7 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     if (SanOpts.hasOneOf(SanitizerKind::HWAddress |
                          SanitizerKind::KernelHWAddress))
       Fn->addFnAttr(llvm::Attribute::SanitizeHWAddress);
-    if (SanOpts.has(SanitizerKind::MemTag))
+    if (SanOpts.has(SanitizerKind::MemtagStack))
       Fn->addFnAttr(llvm::Attribute::SanitizeMemTag);
     if (SanOpts.has(SanitizerKind::Thread))
       Fn->addFnAttr(llvm::Attribute::SanitizeThread);

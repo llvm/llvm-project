@@ -16,6 +16,7 @@
 #include <cstdint>
 
 #include "make_string.h"
+#include "string_literal.h"
 #include "test_macros.h"
 
 // In this file the following template types are used:
@@ -178,49 +179,49 @@ void format_test_string(T world, T universe, TestFunction check, ExceptionTest c
 
   // *** Valid input tests ***
   // Unsed argument is ignored. TODO FMT what does the Standard mandate?
-  check(SV("hello world"), SV("hello {}"), world, universe);
-  check(SV("hello world and universe"), SV("hello {} and {}"), world, universe);
-  check(SV("hello world"), SV("hello {0}"), world, universe);
-  check(SV("hello universe"), SV("hello {1}"), world, universe);
-  check(SV("hello universe and world"), SV("hello {1} and {0}"), world, universe);
+  check.template operator()<"hello {}">(SV("hello world"), world, universe);
+  check.template operator()<"hello {} and {}">(SV("hello world and universe"), world, universe);
+  check.template operator()<"hello {0}">(SV("hello world"), world, universe);
+  check.template operator()<"hello {1}">(SV("hello universe"), world, universe);
+  check.template operator()<"hello {1} and {0}">(SV("hello universe and world"), world, universe);
 
-  check(SV("hello world"), SV("hello {:_>}"), world);
-  check(SV("hello    world"), SV("hello {:>8}"), world);
-  check(SV("hello ___world"), SV("hello {:_>8}"), world);
-  check(SV("hello _world__"), SV("hello {:_^8}"), world);
-  check(SV("hello world___"), SV("hello {:_<8}"), world);
+  check.template operator()<"hello {:_>}">(SV("hello world"), world);
+  check.template operator()<"hello {:>8}">(SV("hello    world"), world);
+  check.template operator()<"hello {:_>8}">(SV("hello ___world"), world);
+  check.template operator()<"hello {:_^8}">(SV("hello _world__"), world);
+  check.template operator()<"hello {:_<8}">(SV("hello world___"), world);
 
-  check(SV("hello >>>world"), SV("hello {:>>8}"), world);
-  check(SV("hello <<<world"), SV("hello {:<>8}"), world);
-  check(SV("hello ^^^world"), SV("hello {:^>8}"), world);
+  check.template operator()<"hello {:>>8}">(SV("hello >>>world"), world);
+  check.template operator()<"hello {:<>8}">(SV("hello <<<world"), world);
+  check.template operator()<"hello {:^>8}">(SV("hello ^^^world"), world);
 
-  check(SV("hello $world"), SV("hello {:$>{}}"), world, 6);
-  check(SV("hello $world"), SV("hello {0:$>{1}}"), world, 6);
-  check(SV("hello $world"), SV("hello {1:$>{0}}"), 6, world);
+  check.template operator()<"hello {:$>{}}">(SV("hello $world"), world, 6);
+  check.template operator()<"hello {0:$>{1}}">(SV("hello $world"), world, 6);
+  check.template operator()<"hello {1:$>{0}}">(SV("hello $world"), 6, world);
 
-  check(SV("hello world"), SV("hello {:.5}"), world);
-  check(SV("hello unive"), SV("hello {:.5}"), universe);
+  check.template operator()<"hello {:.5}">(SV("hello world"), world);
+  check.template operator()<"hello {:.5}">(SV("hello unive"), universe);
 
-  check(SV("hello univer"), SV("hello {:.{}}"), universe, 6);
-  check(SV("hello univer"), SV("hello {0:.{1}}"), universe, 6);
-  check(SV("hello univer"), SV("hello {1:.{0}}"), 6, universe);
+  check.template operator()<"hello {:.{}}">(SV("hello univer"), universe, 6);
+  check.template operator()<"hello {0:.{1}}">(SV("hello univer"), universe, 6);
+  check.template operator()<"hello {1:.{0}}">(SV("hello univer"), 6, universe);
 
-  check(SV("hello %world%"), SV("hello {:%^7.7}"), world);
-  check(SV("hello univers"), SV("hello {:%^7.7}"), universe);
-  check(SV("hello %world%"), SV("hello {:%^{}.{}}"), world, 7, 7);
-  check(SV("hello %world%"), SV("hello {0:%^{1}.{2}}"), world, 7, 7);
-  check(SV("hello %world%"), SV("hello {0:%^{2}.{1}}"), world, 7, 7);
-  check(SV("hello %world%"), SV("hello {1:%^{0}.{2}}"), 7, world, 7);
+  check.template operator()<"hello {:%^7.7}">(SV("hello %world%"), world);
+  check.template operator()<"hello {:%^7.7}">(SV("hello univers"), universe);
+  check.template operator()<"hello {:%^{}.{}}">(SV("hello %world%"), world, 7, 7);
+  check.template operator()<"hello {0:%^{1}.{2}}">(SV("hello %world%"), world, 7, 7);
+  check.template operator()<"hello {0:%^{2}.{1}}">(SV("hello %world%"), world, 7, 7);
+  check.template operator()<"hello {1:%^{0}.{2}}">(SV("hello %world%"), 7, world, 7);
 
-  check(SV("hello world"), SV("hello {:_>s}"), world);
-  check(SV("hello $world"), SV("hello {:$>{}s}"), world, 6);
-  check(SV("hello world"), SV("hello {:.5s}"), world);
-  check(SV("hello univer"), SV("hello {:.{}s}"), universe, 6);
-  check(SV("hello %world%"), SV("hello {:%^7.7s}"), world);
+  check.template operator()<"hello {:_>s}">(SV("hello world"), world);
+  check.template operator()<"hello {:$>{}s}">(SV("hello $world"), world, 6);
+  check.template operator()<"hello {:.5s}">(SV("hello world"), world);
+  check.template operator()<"hello {:.{}s}">(SV("hello univer"), universe, 6);
+  check.template operator()<"hello {:%^7.7s}">(SV("hello %world%"), world);
 
-  check(SV("hello #####uni"), SV("hello {:#>8.3s}"), universe);
-  check(SV("hello ##uni###"), SV("hello {:#^8.3s}"), universe);
-  check(SV("hello uni#####"), SV("hello {:#<8.3s}"), universe);
+  check.template operator()<"hello {:#>8.3s}">(SV("hello #####uni"), universe);
+  check.template operator()<"hello {:#^8.3s}">(SV("hello ##uni###"), universe);
+  check.template operator()<"hello {:#<8.3s}">(SV("hello uni#####"), universe);
 
   // *** sign ***
   check_exception("The format-spec should consume the input or end with a '}'", SV("hello {:-}"), world);
@@ -262,9 +263,9 @@ void format_test_string(T world, T universe, TestFunction check, ExceptionTest c
 #endif
 
   // Precision 0 allowed, but not useful for string arguments.
-  check(SV("hello "), SV("hello {:.{}}"), world, 0);
+  check.template operator()<"hello {:.{}}">(SV("hello "), world, 0);
   // Precision may have leading zeros. Secondly tests the value is still base 10.
-  check(SV("hello 0123456789"), SV("hello {:.000010}"), STR("0123456789abcdef"));
+  check.template operator()<"hello {:.000010}">(SV("hello 0123456789"), STR("0123456789abcdef"));
   check_exception("A format-spec arg-id replacement shouldn't have a negative value", SV("hello {:.{}}"), world, -1);
   check_exception("A format-spec arg-id replacement exceeds the maximum supported value", SV("hello {:.{}}"), world,
                   ~0u);
@@ -291,36 +292,36 @@ void format_test_string_unicode(TestFunction check) {
   (void)check;
 #ifndef TEST_HAS_NO_UNICODE
   // ß requires one column
-  check(SV("aßc"), SV("{}"), STR("aßc"));
+  check.template operator()<"{}">(SV("aßc"), STR("aßc"));
 
-  check(SV("aßc"), SV("{:.3}"), STR("aßc"));
-  check(SV("aß"), SV("{:.2}"), STR("aßc"));
-  check(SV("a"), SV("{:.1}"), STR("aßc"));
+  check.template operator()<"{:.3}">(SV("aßc"), STR("aßc"));
+  check.template operator()<"{:.2}">(SV("aß"), STR("aßc"));
+  check.template operator()<"{:.1}">(SV("a"), STR("aßc"));
 
-  check(SV("aßc"), SV("{:3.3}"), STR("aßc"));
-  check(SV("aß"), SV("{:2.2}"), STR("aßc"));
-  check(SV("a"), SV("{:1.1}"), STR("aßc"));
+  check.template operator()<"{:3.3}">(SV("aßc"), STR("aßc"));
+  check.template operator()<"{:2.2}">(SV("aß"), STR("aßc"));
+  check.template operator()<"{:1.1}">(SV("a"), STR("aßc"));
 
-  check(SV("aßc---"), SV("{:-<6}"), STR("aßc"));
-  check(SV("-aßc--"), SV("{:-^6}"), STR("aßc"));
-  check(SV("---aßc"), SV("{:->6}"), STR("aßc"));
+  check.template operator()<"{:-<6}">(SV("aßc---"), STR("aßc"));
+  check.template operator()<"{:-^6}">(SV("-aßc--"), STR("aßc"));
+  check.template operator()<"{:->6}">(SV("---aßc"), STR("aßc"));
 
   // \u1000 requires two columns
-  check(SV("a\u1110c"), SV("{}"), STR("a\u1110c"));
+  check.template operator()<"{}">(SV("a\u1110c"), STR("a\u1110c"));
 
-  check(SV("a\u1100c"), SV("{:.4}"), STR("a\u1100c"));
-  check(SV("a\u1100"), SV("{:.3}"), STR("a\u1100c"));
-  check(SV("a"), SV("{:.2}"), STR("a\u1100c"));
-  check(SV("a"), SV("{:.1}"), STR("a\u1100c"));
+  check.template operator()<"{:.4}">(SV("a\u1100c"), STR("a\u1100c"));
+  check.template operator()<"{:.3}">(SV("a\u1100"), STR("a\u1100c"));
+  check.template operator()<"{:.2}">(SV("a"), STR("a\u1100c"));
+  check.template operator()<"{:.1}">(SV("a"), STR("a\u1100c"));
 
-  check(SV("a\u1100c"), SV("{:-<4.4}"), STR("a\u1100c"));
-  check(SV("a\u1100"), SV("{:-<3.3}"), STR("a\u1100c"));
-  check(SV("a-"), SV("{:-<2.2}"), STR("a\u1100c"));
-  check(SV("a"), SV("{:-<1.1}"), STR("a\u1100c"));
+  check.template operator()<"{:-<4.4}">(SV("a\u1100c"), STR("a\u1100c"));
+  check.template operator()<"{:-<3.3}">(SV("a\u1100"), STR("a\u1100c"));
+  check.template operator()<"{:-<2.2}">(SV("a-"), STR("a\u1100c"));
+  check.template operator()<"{:-<1.1}">(SV("a"), STR("a\u1100c"));
 
-  check(SV("a\u1110c---"), SV("{:-<7}"), STR("a\u1110c"));
-  check(SV("-a\u1110c--"), SV("{:-^7}"), STR("a\u1110c"));
-  check(SV("---a\u1110c"), SV("{:->7}"), STR("a\u1110c"));
+  check.template operator()<"{:-<7}">(SV("a\u1110c---"), STR("a\u1110c"));
+  check.template operator()<"{:-^7}">(SV("-a\u1110c--"), STR("a\u1110c"));
+  check.template operator()<"{:->7}">(SV("---a\u1110c"), STR("a\u1110c"));
 #endif // TEST_HAS_NO_UNICODE
 }
 
@@ -345,23 +346,23 @@ template <class CharT, class TestFunction, class ExceptionTest>
 void format_test_bool(TestFunction check, ExceptionTest check_exception) {
 
   // *** align-fill & width ***
-  check(SV("answer is 'true   '"), SV("answer is '{:7}'"), true);
-  check(SV("answer is '   true'"), SV("answer is '{:>7}'"), true);
-  check(SV("answer is 'true   '"), SV("answer is '{:<7}'"), true);
-  check(SV("answer is ' true  '"), SV("answer is '{:^7}'"), true);
+  check.template operator()<"answer is '{:7}'">(SV("answer is 'true   '"), true);
+  check.template operator()<"answer is '{:>7}'">(SV("answer is '   true'"), true);
+  check.template operator()<"answer is '{:<7}'">(SV("answer is 'true   '"), true);
+  check.template operator()<"answer is '{:^7}'">(SV("answer is ' true  '"), true);
 
-  check(SV("answer is 'false   '"), SV("answer is '{:8s}'"), false);
-  check(SV("answer is '   false'"), SV("answer is '{:>8s}'"), false);
-  check(SV("answer is 'false   '"), SV("answer is '{:<8s}'"), false);
-  check(SV("answer is ' false  '"), SV("answer is '{:^8s}'"), false);
+  check.template operator()<"answer is '{:8s}'">(SV("answer is 'false   '"), false);
+  check.template operator()<"answer is '{:>8s}'">(SV("answer is '   false'"), false);
+  check.template operator()<"answer is '{:<8s}'">(SV("answer is 'false   '"), false);
+  check.template operator()<"answer is '{:^8s}'">(SV("answer is ' false  '"), false);
 
-  check(SV("answer is '---true'"), SV("answer is '{:->7}'"), true);
-  check(SV("answer is 'true---'"), SV("answer is '{:-<7}'"), true);
-  check(SV("answer is '-true--'"), SV("answer is '{:-^7}'"), true);
+  check.template operator()<"answer is '{:->7}'">(SV("answer is '---true'"), true);
+  check.template operator()<"answer is '{:-<7}'">(SV("answer is 'true---'"), true);
+  check.template operator()<"answer is '{:-^7}'">(SV("answer is '-true--'"), true);
 
-  check(SV("answer is '---false'"), SV("answer is '{:->8s}'"), false);
-  check(SV("answer is 'false---'"), SV("answer is '{:-<8s}'"), false);
-  check(SV("answer is '-false--'"), SV("answer is '{:-^8s}'"), false);
+  check.template operator()<"answer is '{:->8s}'">(SV("answer is '---false'"), false);
+  check.template operator()<"answer is '{:-<8s}'">(SV("answer is 'false---'"), false);
+  check.template operator()<"answer is '{:-^8s}'">(SV("answer is '-false--'"), false);
 
   // *** Sign ***
   check_exception("A sign field isn't allowed in this format-spec", SV("{:-}"), true);
@@ -400,75 +401,75 @@ void format_test_bool(TestFunction check, ExceptionTest check_exception) {
 template <class CharT, class TestFunction, class ExceptionTest>
 void format_test_bool_as_integer(TestFunction check, ExceptionTest check_exception) {
   // *** align-fill & width ***
-  check(SV("answer is '1'"), SV("answer is '{:<1d}'"), true);
-  check(SV("answer is '1 '"), SV("answer is '{:<2d}'"), true);
-  check(SV("answer is '0 '"), SV("answer is '{:<2d}'"), false);
+  check.template operator()<"answer is '{:<1d}'">(SV("answer is '1'"), true);
+  check.template operator()<"answer is '{:<2d}'">(SV("answer is '1 '"), true);
+  check.template operator()<"answer is '{:<2d}'">(SV("answer is '0 '"), false);
 
-  check(SV("answer is '     1'"), SV("answer is '{:6d}'"), true);
-  check(SV("answer is '     1'"), SV("answer is '{:>6d}'"), true);
-  check(SV("answer is '1     '"), SV("answer is '{:<6d}'"), true);
-  check(SV("answer is '  1   '"), SV("answer is '{:^6d}'"), true);
+  check.template operator()<"answer is '{:6d}'">(SV("answer is '     1'"), true);
+  check.template operator()<"answer is '{:>6d}'">(SV("answer is '     1'"), true);
+  check.template operator()<"answer is '{:<6d}'">(SV("answer is '1     '"), true);
+  check.template operator()<"answer is '{:^6d}'">(SV("answer is '  1   '"), true);
 
-  check(SV("answer is '*****0'"), SV("answer is '{:*>6d}'"), false);
-  check(SV("answer is '0*****'"), SV("answer is '{:*<6d}'"), false);
-  check(SV("answer is '**0***'"), SV("answer is '{:*^6d}'"), false);
+  check.template operator()<"answer is '{:*>6d}'">(SV("answer is '*****0'"), false);
+  check.template operator()<"answer is '{:*<6d}'">(SV("answer is '0*****'"), false);
+  check.template operator()<"answer is '{:*^6d}'">(SV("answer is '**0***'"), false);
 
   // Test whether zero padding is ignored
-  check(SV("answer is '     1'"), SV("answer is '{:>06d}'"), true);
-  check(SV("answer is '1     '"), SV("answer is '{:<06d}'"), true);
-  check(SV("answer is '  1   '"), SV("answer is '{:^06d}'"), true);
+  check.template operator()<"answer is '{:>06d}'">(SV("answer is '     1'"), true);
+  check.template operator()<"answer is '{:<06d}'">(SV("answer is '1     '"), true);
+  check.template operator()<"answer is '{:^06d}'">(SV("answer is '  1   '"), true);
 
   // *** Sign ***
-  check(SV("answer is 1"), SV("answer is {:d}"), true);
-  check(SV("answer is 0"), SV("answer is {:-d}"), false);
-  check(SV("answer is +1"), SV("answer is {:+d}"), true);
-  check(SV("answer is  0"), SV("answer is {: d}"), false);
+  check.template operator()<"answer is {:d}">(SV("answer is 1"), true);
+  check.template operator()<"answer is {:-d}">(SV("answer is 0"), false);
+  check.template operator()<"answer is {:+d}">(SV("answer is +1"), true);
+  check.template operator()<"answer is {: d}">(SV("answer is  0"), false);
 
   // *** alternate form ***
-  check(SV("answer is +1"), SV("answer is {:+#d}"), true);
-  check(SV("answer is +1"), SV("answer is {:+b}"), true);
-  check(SV("answer is +0b1"), SV("answer is {:+#b}"), true);
-  check(SV("answer is +0B1"), SV("answer is {:+#B}"), true);
-  check(SV("answer is +1"), SV("answer is {:+o}"), true);
-  check(SV("answer is +01"), SV("answer is {:+#o}"), true);
-  check(SV("answer is +1"), SV("answer is {:+x}"), true);
-  check(SV("answer is +0x1"), SV("answer is {:+#x}"), true);
-  check(SV("answer is +1"), SV("answer is {:+X}"), true);
-  check(SV("answer is +0X1"), SV("answer is {:+#X}"), true);
+  check.template operator()<"answer is {:+#d}">(SV("answer is +1"), true);
+  check.template operator()<"answer is {:+b}">(SV("answer is +1"), true);
+  check.template operator()<"answer is {:+#b}">(SV("answer is +0b1"), true);
+  check.template operator()<"answer is {:+#B}">(SV("answer is +0B1"), true);
+  check.template operator()<"answer is {:+o}">(SV("answer is +1"), true);
+  check.template operator()<"answer is {:+#o}">(SV("answer is +01"), true);
+  check.template operator()<"answer is {:+x}">(SV("answer is +1"), true);
+  check.template operator()<"answer is {:+#x}">(SV("answer is +0x1"), true);
+  check.template operator()<"answer is {:+X}">(SV("answer is +1"), true);
+  check.template operator()<"answer is {:+#X}">(SV("answer is +0X1"), true);
 
-  check(SV("answer is 0"), SV("answer is {:#d}"), false);
-  check(SV("answer is 0"), SV("answer is {:b}"), false);
-  check(SV("answer is 0b0"), SV("answer is {:#b}"), false);
-  check(SV("answer is 0B0"), SV("answer is {:#B}"), false);
-  check(SV("answer is 0"), SV("answer is {:o}"), false);
-  check(SV("answer is 0"), SV("answer is {:#o}"), false);
-  check(SV("answer is 0"), SV("answer is {:x}"), false);
-  check(SV("answer is 0x0"), SV("answer is {:#x}"), false);
-  check(SV("answer is 0"), SV("answer is {:X}"), false);
-  check(SV("answer is 0X0"), SV("answer is {:#X}"), false);
+  check.template operator()<"answer is {:#d}">(SV("answer is 0"), false);
+  check.template operator()<"answer is {:b}">(SV("answer is 0"), false);
+  check.template operator()<"answer is {:#b}">(SV("answer is 0b0"), false);
+  check.template operator()<"answer is {:#B}">(SV("answer is 0B0"), false);
+  check.template operator()<"answer is {:o}">(SV("answer is 0"), false);
+  check.template operator()<"answer is {:#o}">(SV("answer is 0"), false);
+  check.template operator()<"answer is {:x}">(SV("answer is 0"), false);
+  check.template operator()<"answer is {:#x}">(SV("answer is 0x0"), false);
+  check.template operator()<"answer is {:X}">(SV("answer is 0"), false);
+  check.template operator()<"answer is {:#X}">(SV("answer is 0X0"), false);
 
   // *** zero-padding & width ***
-  check(SV("answer is +00000000001"), SV("answer is {:+#012d}"), true);
-  check(SV("answer is +00000000001"), SV("answer is {:+012b}"), true);
-  check(SV("answer is +0b000000001"), SV("answer is {:+#012b}"), true);
-  check(SV("answer is +0B000000001"), SV("answer is {:+#012B}"), true);
-  check(SV("answer is +00000000001"), SV("answer is {:+012o}"), true);
-  check(SV("answer is +00000000001"), SV("answer is {:+#012o}"), true);
-  check(SV("answer is +00000000001"), SV("answer is {:+012x}"), true);
-  check(SV("answer is +0x000000001"), SV("answer is {:+#012x}"), true);
-  check(SV("answer is +00000000001"), SV("answer is {:+012X}"), true);
-  check(SV("answer is +0X000000001"), SV("answer is {:+#012X}"), true);
+  check.template operator()<"answer is {:+#012d}">(SV("answer is +00000000001"), true);
+  check.template operator()<"answer is {:+012b}">(SV("answer is +00000000001"), true);
+  check.template operator()<"answer is {:+#012b}">(SV("answer is +0b000000001"), true);
+  check.template operator()<"answer is {:+#012B}">(SV("answer is +0B000000001"), true);
+  check.template operator()<"answer is {:+012o}">(SV("answer is +00000000001"), true);
+  check.template operator()<"answer is {:+#012o}">(SV("answer is +00000000001"), true);
+  check.template operator()<"answer is {:+012x}">(SV("answer is +00000000001"), true);
+  check.template operator()<"answer is {:+#012x}">(SV("answer is +0x000000001"), true);
+  check.template operator()<"answer is {:+012X}">(SV("answer is +00000000001"), true);
+  check.template operator()<"answer is {:+#012X}">(SV("answer is +0X000000001"), true);
 
-  check(SV("answer is 000000000000"), SV("answer is {:#012d}"), false);
-  check(SV("answer is 000000000000"), SV("answer is {:012b}"), false);
-  check(SV("answer is 0b0000000000"), SV("answer is {:#012b}"), false);
-  check(SV("answer is 0B0000000000"), SV("answer is {:#012B}"), false);
-  check(SV("answer is 000000000000"), SV("answer is {:012o}"), false);
-  check(SV("answer is 000000000000"), SV("answer is {:#012o}"), false);
-  check(SV("answer is 000000000000"), SV("answer is {:012x}"), false);
-  check(SV("answer is 0x0000000000"), SV("answer is {:#012x}"), false);
-  check(SV("answer is 000000000000"), SV("answer is {:012X}"), false);
-  check(SV("answer is 0X0000000000"), SV("answer is {:#012X}"), false);
+  check.template operator()<"answer is {:#012d}">(SV("answer is 000000000000"), false);
+  check.template operator()<"answer is {:012b}">(SV("answer is 000000000000"), false);
+  check.template operator()<"answer is {:#012b}">(SV("answer is 0b0000000000"), false);
+  check.template operator()<"answer is {:#012B}">(SV("answer is 0B0000000000"), false);
+  check.template operator()<"answer is {:012o}">(SV("answer is 000000000000"), false);
+  check.template operator()<"answer is {:#012o}">(SV("answer is 000000000000"), false);
+  check.template operator()<"answer is {:012x}">(SV("answer is 000000000000"), false);
+  check.template operator()<"answer is {:#012x}">(SV("answer is 0x0000000000"), false);
+  check.template operator()<"answer is {:012X}">(SV("answer is 000000000000"), false);
+  check.template operator()<"answer is {:#012X}">(SV("answer is 0X0000000000"), false);
 
   // *** precision ***
   check_exception("The format-spec should consume the input or end with a '}'", SV("{:.}"), true);
@@ -486,121 +487,121 @@ void format_test_bool_as_integer(TestFunction check, ExceptionTest check_excepti
 template <class I, class CharT, class TestFunction, class ExceptionTest>
 void format_test_integer_as_integer(TestFunction check, ExceptionTest check_exception) {
   // *** align-fill & width ***
-  check(SV("answer is '42'"), SV("answer is '{:<1}'"), I(42));
-  check(SV("answer is '42'"), SV("answer is '{:<2}'"), I(42));
-  check(SV("answer is '42 '"), SV("answer is '{:<3}'"), I(42));
+  check.template operator()<"answer is '{:<1}'">(SV("answer is '42'"), I(42));
+  check.template operator()<"answer is '{:<2}'">(SV("answer is '42'"), I(42));
+  check.template operator()<"answer is '{:<3}'">(SV("answer is '42 '"), I(42));
 
-  check(SV("answer is '     42'"), SV("answer is '{:7}'"), I(42));
-  check(SV("answer is '     42'"), SV("answer is '{:>7}'"), I(42));
-  check(SV("answer is '42     '"), SV("answer is '{:<7}'"), I(42));
-  check(SV("answer is '  42   '"), SV("answer is '{:^7}'"), I(42));
+  check.template operator()<"answer is '{:7}'">(SV("answer is '     42'"), I(42));
+  check.template operator()<"answer is '{:>7}'">(SV("answer is '     42'"), I(42));
+  check.template operator()<"answer is '{:<7}'">(SV("answer is '42     '"), I(42));
+  check.template operator()<"answer is '{:^7}'">(SV("answer is '  42   '"), I(42));
 
-  check(SV("answer is '*****42'"), SV("answer is '{:*>7}'"), I(42));
-  check(SV("answer is '42*****'"), SV("answer is '{:*<7}'"), I(42));
-  check(SV("answer is '**42***'"), SV("answer is '{:*^7}'"), I(42));
+  check.template operator()<"answer is '{:*>7}'">(SV("answer is '*****42'"), I(42));
+  check.template operator()<"answer is '{:*<7}'">(SV("answer is '42*****'"), I(42));
+  check.template operator()<"answer is '{:*^7}'">(SV("answer is '**42***'"), I(42));
 
   // Test whether zero padding is ignored
-  check(SV("answer is '     42'"), SV("answer is '{:>07}'"), I(42));
-  check(SV("answer is '42     '"), SV("answer is '{:<07}'"), I(42));
-  check(SV("answer is '  42   '"), SV("answer is '{:^07}'"), I(42));
+  check.template operator()<"answer is '{:>07}'">(SV("answer is '     42'"), I(42));
+  check.template operator()<"answer is '{:<07}'">(SV("answer is '42     '"), I(42));
+  check.template operator()<"answer is '{:^07}'">(SV("answer is '  42   '"), I(42));
 
   // *** Sign ***
   if constexpr (std::signed_integral<I>)
-    check(SV("answer is -42"), SV("answer is {}"), I(-42));
-  check(SV("answer is 0"), SV("answer is {}"), I(0));
-  check(SV("answer is 42"), SV("answer is {}"), I(42));
+    check.template operator()<"answer is {}">(SV("answer is -42"), I(-42));
+  check.template operator()<"answer is {}">(SV("answer is 0"), I(0));
+  check.template operator()<"answer is {}">(SV("answer is 42"), I(42));
 
   if constexpr (std::signed_integral<I>)
-    check(SV("answer is -42"), SV("answer is {:-}"), I(-42));
-  check(SV("answer is 0"), SV("answer is {:-}"), I(0));
-  check(SV("answer is 42"), SV("answer is {:-}"), I(42));
+    check.template operator()<"answer is {:-}">(SV("answer is -42"), I(-42));
+  check.template operator()<"answer is {:-}">(SV("answer is 0"), I(0));
+  check.template operator()<"answer is {:-}">(SV("answer is 42"), I(42));
 
   if constexpr (std::signed_integral<I>)
-    check(SV("answer is -42"), SV("answer is {:+}"), I(-42));
-  check(SV("answer is +0"), SV("answer is {:+}"), I(0));
-  check(SV("answer is +42"), SV("answer is {:+}"), I(42));
+    check.template operator()<"answer is {:+}">(SV("answer is -42"), I(-42));
+  check.template operator()<"answer is {:+}">(SV("answer is +0"), I(0));
+  check.template operator()<"answer is {:+}">(SV("answer is +42"), I(42));
 
   if constexpr (std::signed_integral<I>)
-    check(SV("answer is -42"), SV("answer is {: }"), I(-42));
-  check(SV("answer is  0"), SV("answer is {: }"), I(0));
-  check(SV("answer is  42"), SV("answer is {: }"), I(42));
+    check.template operator()<"answer is {: }">(SV("answer is -42"), I(-42));
+  check.template operator()<"answer is {: }">(SV("answer is  0"), I(0));
+  check.template operator()<"answer is {: }">(SV("answer is  42"), I(42));
 
   // *** alternate form ***
   if constexpr (std::signed_integral<I>) {
-    check(SV("answer is -42"), SV("answer is {:#}"), I(-42));
-    check(SV("answer is -42"), SV("answer is {:#d}"), I(-42));
-    check(SV("answer is -101010"), SV("answer is {:b}"), I(-42));
-    check(SV("answer is -0b101010"), SV("answer is {:#b}"), I(-42));
-    check(SV("answer is -0B101010"), SV("answer is {:#B}"), I(-42));
-    check(SV("answer is -52"), SV("answer is {:o}"), I(-42));
-    check(SV("answer is -052"), SV("answer is {:#o}"), I(-42));
-    check(SV("answer is -2a"), SV("answer is {:x}"), I(-42));
-    check(SV("answer is -0x2a"), SV("answer is {:#x}"), I(-42));
-    check(SV("answer is -2A"), SV("answer is {:X}"), I(-42));
-    check(SV("answer is -0X2A"), SV("answer is {:#X}"), I(-42));
+    check.template operator()<"answer is {:#}">(SV("answer is -42"), I(-42));
+    check.template operator()<"answer is {:#d}">(SV("answer is -42"), I(-42));
+    check.template operator()<"answer is {:b}">(SV("answer is -101010"), I(-42));
+    check.template operator()<"answer is {:#b}">(SV("answer is -0b101010"), I(-42));
+    check.template operator()<"answer is {:#B}">(SV("answer is -0B101010"), I(-42));
+    check.template operator()<"answer is {:o}">(SV("answer is -52"), I(-42));
+    check.template operator()<"answer is {:#o}">(SV("answer is -052"), I(-42));
+    check.template operator()<"answer is {:x}">(SV("answer is -2a"), I(-42));
+    check.template operator()<"answer is {:#x}">(SV("answer is -0x2a"), I(-42));
+    check.template operator()<"answer is {:X}">(SV("answer is -2A"), I(-42));
+    check.template operator()<"answer is {:#X}">(SV("answer is -0X2A"), I(-42));
   }
-  check(SV("answer is 0"), SV("answer is {:#}"), I(0));
-  check(SV("answer is 0"), SV("answer is {:#d}"), I(0));
-  check(SV("answer is 0"), SV("answer is {:b}"), I(0));
-  check(SV("answer is 0b0"), SV("answer is {:#b}"), I(0));
-  check(SV("answer is 0B0"), SV("answer is {:#B}"), I(0));
-  check(SV("answer is 0"), SV("answer is {:o}"), I(0));
-  check(SV("answer is 0"), SV("answer is {:#o}"), I(0));
-  check(SV("answer is 0"), SV("answer is {:x}"), I(0));
-  check(SV("answer is 0x0"), SV("answer is {:#x}"), I(0));
-  check(SV("answer is 0"), SV("answer is {:X}"), I(0));
-  check(SV("answer is 0X0"), SV("answer is {:#X}"), I(0));
+  check.template operator()<"answer is {:#}">(SV("answer is 0"), I(0));
+  check.template operator()<"answer is {:#d}">(SV("answer is 0"), I(0));
+  check.template operator()<"answer is {:b}">(SV("answer is 0"), I(0));
+  check.template operator()<"answer is {:#b}">(SV("answer is 0b0"), I(0));
+  check.template operator()<"answer is {:#B}">(SV("answer is 0B0"), I(0));
+  check.template operator()<"answer is {:o}">(SV("answer is 0"), I(0));
+  check.template operator()<"answer is {:#o}">(SV("answer is 0"), I(0));
+  check.template operator()<"answer is {:x}">(SV("answer is 0"), I(0));
+  check.template operator()<"answer is {:#x}">(SV("answer is 0x0"), I(0));
+  check.template operator()<"answer is {:X}">(SV("answer is 0"), I(0));
+  check.template operator()<"answer is {:#X}">(SV("answer is 0X0"), I(0));
 
-  check(SV("answer is +42"), SV("answer is {:+#}"), I(42));
-  check(SV("answer is +42"), SV("answer is {:+#d}"), I(42));
-  check(SV("answer is +101010"), SV("answer is {:+b}"), I(42));
-  check(SV("answer is +0b101010"), SV("answer is {:+#b}"), I(42));
-  check(SV("answer is +0B101010"), SV("answer is {:+#B}"), I(42));
-  check(SV("answer is +52"), SV("answer is {:+o}"), I(42));
-  check(SV("answer is +052"), SV("answer is {:+#o}"), I(42));
-  check(SV("answer is +2a"), SV("answer is {:+x}"), I(42));
-  check(SV("answer is +0x2a"), SV("answer is {:+#x}"), I(42));
-  check(SV("answer is +2A"), SV("answer is {:+X}"), I(42));
-  check(SV("answer is +0X2A"), SV("answer is {:+#X}"), I(42));
+  check.template operator()<"answer is {:+#}">(SV("answer is +42"), I(42));
+  check.template operator()<"answer is {:+#d}">(SV("answer is +42"), I(42));
+  check.template operator()<"answer is {:+b}">(SV("answer is +101010"), I(42));
+  check.template operator()<"answer is {:+#b}">(SV("answer is +0b101010"), I(42));
+  check.template operator()<"answer is {:+#B}">(SV("answer is +0B101010"), I(42));
+  check.template operator()<"answer is {:+o}">(SV("answer is +52"), I(42));
+  check.template operator()<"answer is {:+#o}">(SV("answer is +052"), I(42));
+  check.template operator()<"answer is {:+x}">(SV("answer is +2a"), I(42));
+  check.template operator()<"answer is {:+#x}">(SV("answer is +0x2a"), I(42));
+  check.template operator()<"answer is {:+X}">(SV("answer is +2A"), I(42));
+  check.template operator()<"answer is {:+#X}">(SV("answer is +0X2A"), I(42));
 
   // *** zero-padding & width ***
   if constexpr (std::signed_integral<I>) {
-    check(SV("answer is -00000000042"), SV("answer is {:#012}"), I(-42));
-    check(SV("answer is -00000000042"), SV("answer is {:#012d}"), I(-42));
-    check(SV("answer is -00000101010"), SV("answer is {:012b}"), I(-42));
-    check(SV("answer is -0b000101010"), SV("answer is {:#012b}"), I(-42));
-    check(SV("answer is -0B000101010"), SV("answer is {:#012B}"), I(-42));
-    check(SV("answer is -00000000052"), SV("answer is {:012o}"), I(-42));
-    check(SV("answer is -00000000052"), SV("answer is {:#012o}"), I(-42));
-    check(SV("answer is -0000000002a"), SV("answer is {:012x}"), I(-42));
-    check(SV("answer is -0x00000002a"), SV("answer is {:#012x}"), I(-42));
-    check(SV("answer is -0000000002A"), SV("answer is {:012X}"), I(-42));
-    check(SV("answer is -0X00000002A"), SV("answer is {:#012X}"), I(-42));
+    check.template operator()<"answer is {:#012}">(SV("answer is -00000000042"), I(-42));
+    check.template operator()<"answer is {:#012d}">(SV("answer is -00000000042"), I(-42));
+    check.template operator()<"answer is {:012b}">(SV("answer is -00000101010"), I(-42));
+    check.template operator()<"answer is {:#012b}">(SV("answer is -0b000101010"), I(-42));
+    check.template operator()<"answer is {:#012B}">(SV("answer is -0B000101010"), I(-42));
+    check.template operator()<"answer is {:012o}">(SV("answer is -00000000052"), I(-42));
+    check.template operator()<"answer is {:#012o}">(SV("answer is -00000000052"), I(-42));
+    check.template operator()<"answer is {:012x}">(SV("answer is -0000000002a"), I(-42));
+    check.template operator()<"answer is {:#012x}">(SV("answer is -0x00000002a"), I(-42));
+    check.template operator()<"answer is {:012X}">(SV("answer is -0000000002A"), I(-42));
+    check.template operator()<"answer is {:#012X}">(SV("answer is -0X00000002A"), I(-42));
   }
 
-  check(SV("answer is 000000000000"), SV("answer is {:#012}"), I(0));
-  check(SV("answer is 000000000000"), SV("answer is {:#012d}"), I(0));
-  check(SV("answer is 000000000000"), SV("answer is {:012b}"), I(0));
-  check(SV("answer is 0b0000000000"), SV("answer is {:#012b}"), I(0));
-  check(SV("answer is 0B0000000000"), SV("answer is {:#012B}"), I(0));
-  check(SV("answer is 000000000000"), SV("answer is {:012o}"), I(0));
-  check(SV("answer is 000000000000"), SV("answer is {:#012o}"), I(0));
-  check(SV("answer is 000000000000"), SV("answer is {:012x}"), I(0));
-  check(SV("answer is 0x0000000000"), SV("answer is {:#012x}"), I(0));
-  check(SV("answer is 000000000000"), SV("answer is {:012X}"), I(0));
-  check(SV("answer is 0X0000000000"), SV("answer is {:#012X}"), I(0));
+  check.template operator()<"answer is {:#012}">(SV("answer is 000000000000"), I(0));
+  check.template operator()<"answer is {:#012d}">(SV("answer is 000000000000"), I(0));
+  check.template operator()<"answer is {:012b}">(SV("answer is 000000000000"), I(0));
+  check.template operator()<"answer is {:#012b}">(SV("answer is 0b0000000000"), I(0));
+  check.template operator()<"answer is {:#012B}">(SV("answer is 0B0000000000"), I(0));
+  check.template operator()<"answer is {:012o}">(SV("answer is 000000000000"), I(0));
+  check.template operator()<"answer is {:#012o}">(SV("answer is 000000000000"), I(0));
+  check.template operator()<"answer is {:012x}">(SV("answer is 000000000000"), I(0));
+  check.template operator()<"answer is {:#012x}">(SV("answer is 0x0000000000"), I(0));
+  check.template operator()<"answer is {:012X}">(SV("answer is 000000000000"), I(0));
+  check.template operator()<"answer is {:#012X}">(SV("answer is 0X0000000000"), I(0));
 
-  check(SV("answer is +00000000042"), SV("answer is {:+#012}"), I(42));
-  check(SV("answer is +00000000042"), SV("answer is {:+#012d}"), I(42));
-  check(SV("answer is +00000101010"), SV("answer is {:+012b}"), I(42));
-  check(SV("answer is +0b000101010"), SV("answer is {:+#012b}"), I(42));
-  check(SV("answer is +0B000101010"), SV("answer is {:+#012B}"), I(42));
-  check(SV("answer is +00000000052"), SV("answer is {:+012o}"), I(42));
-  check(SV("answer is +00000000052"), SV("answer is {:+#012o}"), I(42));
-  check(SV("answer is +0000000002a"), SV("answer is {:+012x}"), I(42));
-  check(SV("answer is +0x00000002a"), SV("answer is {:+#012x}"), I(42));
-  check(SV("answer is +0000000002A"), SV("answer is {:+012X}"), I(42));
-  check(SV("answer is +0X00000002A"), SV("answer is {:+#012X}"), I(42));
+  check.template operator()<"answer is {:+#012}">(SV("answer is +00000000042"), I(42));
+  check.template operator()<"answer is {:+#012d}">(SV("answer is +00000000042"), I(42));
+  check.template operator()<"answer is {:+012b}">(SV("answer is +00000101010"), I(42));
+  check.template operator()<"answer is {:+#012b}">(SV("answer is +0b000101010"), I(42));
+  check.template operator()<"answer is {:+#012B}">(SV("answer is +0B000101010"), I(42));
+  check.template operator()<"answer is {:+012o}">(SV("answer is +00000000052"), I(42));
+  check.template operator()<"answer is {:+#012o}">(SV("answer is +00000000052"), I(42));
+  check.template operator()<"answer is {:+012x}">(SV("answer is +0000000002a"), I(42));
+  check.template operator()<"answer is {:+#012x}">(SV("answer is +0x00000002a"), I(42));
+  check.template operator()<"answer is {:+012X}">(SV("answer is +0000000002A"), I(42));
+  check.template operator()<"answer is {:+#012X}">(SV("answer is +0X00000002A"), I(42));
 
   // *** precision ***
   check_exception("The format-spec should consume the input or end with a '}'", SV("{:.}"), I(0));
@@ -618,17 +619,17 @@ void format_test_integer_as_integer(TestFunction check, ExceptionTest check_exce
 template <class I, class CharT, class TestFunction, class ExceptionTest>
 void format_test_integer_as_char(TestFunction check, ExceptionTest check_exception) {
   // *** align-fill & width ***
-  check(SV("answer is '*     '"), SV("answer is '{:6c}'"), I(42));
-  check(SV("answer is '     *'"), SV("answer is '{:>6c}'"), I(42));
-  check(SV("answer is '*     '"), SV("answer is '{:<6c}'"), I(42));
-  check(SV("answer is '  *   '"), SV("answer is '{:^6c}'"), I(42));
+  check.template operator()<"answer is '{:6c}'">(SV("answer is '*     '"), I(42));
+  check.template operator()<"answer is '{:>6c}'">(SV("answer is '     *'"), I(42));
+  check.template operator()<"answer is '{:<6c}'">(SV("answer is '*     '"), I(42));
+  check.template operator()<"answer is '{:^6c}'">(SV("answer is '  *   '"), I(42));
 
-  check(SV("answer is '-----*'"), SV("answer is '{:->6c}'"), I(42));
-  check(SV("answer is '*-----'"), SV("answer is '{:-<6c}'"), I(42));
-  check(SV("answer is '--*---'"), SV("answer is '{:-^6c}'"), I(42));
+  check.template operator()<"answer is '{:->6c}'">(SV("answer is '-----*'"), I(42));
+  check.template operator()<"answer is '{:-<6c}'">(SV("answer is '*-----'"), I(42));
+  check.template operator()<"answer is '{:-^6c}'">(SV("answer is '--*---'"), I(42));
 
   // *** Sign ***
-  check(SV("answer is *"), SV("answer is {:c}"), I(42));
+  check.template operator()<"answer is {:c}">(SV("answer is *"), I(42));
   check_exception("A sign field isn't allowed in this format-spec", SV("answer is {:-c}"), I(42));
   check_exception("A sign field isn't allowed in this format-spec", SV("answer is {:+c}"), I(42));
   check_exception("A sign field isn't allowed in this format-spec", SV("answer is {: c}"), I(42));
@@ -646,7 +647,7 @@ void format_test_integer_as_char(TestFunction check, ExceptionTest check_excepti
 
   // *** locale-specific form ***
   // Note it has no effect but it's allowed.
-  check(SV("answer is '*'"), SV("answer is '{:Lc}'"), I(42));
+  check.template operator()<"answer is '{:Lc}'">(SV("answer is '*'"), I(42));
 
   // *** type ***
   for (const auto& fmt : invalid_types<CharT>("bBcdoxX"))
@@ -686,47 +687,47 @@ void format_test_signed_integer(TestFunction check, ExceptionTest check_exceptio
   format_test_integer<__int128_t, CharT>(check, check_exception);
 #endif
   // *** check the minma and maxima ***
-  check(SV("-0b10000000"), SV("{:#b}"), std::numeric_limits<int8_t>::min());
-  check(SV("-0200"), SV("{:#o}"), std::numeric_limits<int8_t>::min());
-  check(SV("-128"), SV("{:#}"), std::numeric_limits<int8_t>::min());
-  check(SV("-0x80"), SV("{:#x}"), std::numeric_limits<int8_t>::min());
+  check.template operator()<"{:#b}">(SV("-0b10000000"), std::numeric_limits<int8_t>::min());
+  check.template operator()<"{:#o}">(SV("-0200"), std::numeric_limits<int8_t>::min());
+  check.template operator()<"{:#}">(SV("-128"), std::numeric_limits<int8_t>::min());
+  check.template operator()<"{:#x}">(SV("-0x80"), std::numeric_limits<int8_t>::min());
 
-  check(SV("-0b1000000000000000"), SV("{:#b}"), std::numeric_limits<int16_t>::min());
-  check(SV("-0100000"), SV("{:#o}"), std::numeric_limits<int16_t>::min());
-  check(SV("-32768"), SV("{:#}"), std::numeric_limits<int16_t>::min());
-  check(SV("-0x8000"), SV("{:#x}"), std::numeric_limits<int16_t>::min());
+  check.template operator()<"{:#b}">(SV("-0b1000000000000000"), std::numeric_limits<int16_t>::min());
+  check.template operator()<"{:#o}">(SV("-0100000"), std::numeric_limits<int16_t>::min());
+  check.template operator()<"{:#}">(SV("-32768"), std::numeric_limits<int16_t>::min());
+  check.template operator()<"{:#x}">(SV("-0x8000"), std::numeric_limits<int16_t>::min());
 
-  check(SV("-0b10000000000000000000000000000000"), SV("{:#b}"), std::numeric_limits<int32_t>::min());
-  check(SV("-020000000000"), SV("{:#o}"), std::numeric_limits<int32_t>::min());
-  check(SV("-2147483648"), SV("{:#}"), std::numeric_limits<int32_t>::min());
-  check(SV("-0x80000000"), SV("{:#x}"), std::numeric_limits<int32_t>::min());
+  check.template operator()<"{:#b}">(SV("-0b10000000000000000000000000000000"), std::numeric_limits<int32_t>::min());
+  check.template operator()<"{:#o}">(SV("-020000000000"), std::numeric_limits<int32_t>::min());
+  check.template operator()<"{:#}">(SV("-2147483648"), std::numeric_limits<int32_t>::min());
+  check.template operator()<"{:#x}">(SV("-0x80000000"), std::numeric_limits<int32_t>::min());
 
-  check(SV("-0b1000000000000000000000000000000000000000000000000000000000000000"), SV("{:#b}"),
-        std::numeric_limits<int64_t>::min());
-  check(SV("-01000000000000000000000"), SV("{:#o}"), std::numeric_limits<int64_t>::min());
-  check(SV("-9223372036854775808"), SV("{:#}"), std::numeric_limits<int64_t>::min());
-  check(SV("-0x8000000000000000"), SV("{:#x}"), std::numeric_limits<int64_t>::min());
+  check.template operator()<"{:#b}">(SV("-0b1000000000000000000000000000000000000000000000000000000000000000"),
+                                     std::numeric_limits<int64_t>::min());
+  check.template operator()<"{:#o}">(SV("-01000000000000000000000"), std::numeric_limits<int64_t>::min());
+  check.template operator()<"{:#}">(SV("-9223372036854775808"), std::numeric_limits<int64_t>::min());
+  check.template operator()<"{:#x}">(SV("-0x8000000000000000"), std::numeric_limits<int64_t>::min());
 
-  check(SV("0b1111111"), SV("{:#b}"), std::numeric_limits<int8_t>::max());
-  check(SV("0177"), SV("{:#o}"), std::numeric_limits<int8_t>::max());
-  check(SV("127"), SV("{:#}"), std::numeric_limits<int8_t>::max());
-  check(SV("0x7f"), SV("{:#x}"), std::numeric_limits<int8_t>::max());
+  check.template operator()<"{:#b}">(SV("0b1111111"), std::numeric_limits<int8_t>::max());
+  check.template operator()<"{:#o}">(SV("0177"), std::numeric_limits<int8_t>::max());
+  check.template operator()<"{:#}">(SV("127"), std::numeric_limits<int8_t>::max());
+  check.template operator()<"{:#x}">(SV("0x7f"), std::numeric_limits<int8_t>::max());
 
-  check(SV("0b111111111111111"), SV("{:#b}"), std::numeric_limits<int16_t>::max());
-  check(SV("077777"), SV("{:#o}"), std::numeric_limits<int16_t>::max());
-  check(SV("32767"), SV("{:#}"), std::numeric_limits<int16_t>::max());
-  check(SV("0x7fff"), SV("{:#x}"), std::numeric_limits<int16_t>::max());
+  check.template operator()<"{:#b}">(SV("0b111111111111111"), std::numeric_limits<int16_t>::max());
+  check.template operator()<"{:#o}">(SV("077777"), std::numeric_limits<int16_t>::max());
+  check.template operator()<"{:#}">(SV("32767"), std::numeric_limits<int16_t>::max());
+  check.template operator()<"{:#x}">(SV("0x7fff"), std::numeric_limits<int16_t>::max());
 
-  check(SV("0b1111111111111111111111111111111"), SV("{:#b}"), std::numeric_limits<int32_t>::max());
-  check(SV("017777777777"), SV("{:#o}"), std::numeric_limits<int32_t>::max());
-  check(SV("2147483647"), SV("{:#}"), std::numeric_limits<int32_t>::max());
-  check(SV("0x7fffffff"), SV("{:#x}"), std::numeric_limits<int32_t>::max());
+  check.template operator()<"{:#b}">(SV("0b1111111111111111111111111111111"), std::numeric_limits<int32_t>::max());
+  check.template operator()<"{:#o}">(SV("017777777777"), std::numeric_limits<int32_t>::max());
+  check.template operator()<"{:#}">(SV("2147483647"), std::numeric_limits<int32_t>::max());
+  check.template operator()<"{:#x}">(SV("0x7fffffff"), std::numeric_limits<int32_t>::max());
 
-  check(SV("0b111111111111111111111111111111111111111111111111111111111111111"), SV("{:#b}"),
-        std::numeric_limits<int64_t>::max());
-  check(SV("0777777777777777777777"), SV("{:#o}"), std::numeric_limits<int64_t>::max());
-  check(SV("9223372036854775807"), SV("{:#}"), std::numeric_limits<int64_t>::max());
-  check(SV("0x7fffffffffffffff"), SV("{:#x}"), std::numeric_limits<int64_t>::max());
+  check.template operator()<"{:#b}">(SV("0b111111111111111111111111111111111111111111111111111111111111111"),
+                                     std::numeric_limits<int64_t>::max());
+  check.template operator()<"{:#o}">(SV("0777777777777777777777"), std::numeric_limits<int64_t>::max());
+  check.template operator()<"{:#}">(SV("9223372036854775807"), std::numeric_limits<int64_t>::max());
+  check.template operator()<"{:#x}">(SV("0x7fffffffffffffff"), std::numeric_limits<int64_t>::max());
 
   // TODO FMT Add __int128_t test after implementing full range.
 }
@@ -742,26 +743,26 @@ void format_test_unsigned_integer(TestFunction check, ExceptionTest check_except
   format_test_integer<__uint128_t, CharT>(check, check_exception);
 #endif
   // *** test the maxima ***
-  check(SV("0b11111111"), SV("{:#b}"), std::numeric_limits<uint8_t>::max());
-  check(SV("0377"), SV("{:#o}"), std::numeric_limits<uint8_t>::max());
-  check(SV("255"), SV("{:#}"), std::numeric_limits<uint8_t>::max());
-  check(SV("0xff"), SV("{:#x}"), std::numeric_limits<uint8_t>::max());
+  check.template operator()<"{:#b}">(SV("0b11111111"), std::numeric_limits<uint8_t>::max());
+  check.template operator()<"{:#o}">(SV("0377"), std::numeric_limits<uint8_t>::max());
+  check.template operator()<"{:#}">(SV("255"), std::numeric_limits<uint8_t>::max());
+  check.template operator()<"{:#x}">(SV("0xff"), std::numeric_limits<uint8_t>::max());
 
-  check(SV("0b1111111111111111"), SV("{:#b}"), std::numeric_limits<uint16_t>::max());
-  check(SV("0177777"), SV("{:#o}"), std::numeric_limits<uint16_t>::max());
-  check(SV("65535"), SV("{:#}"), std::numeric_limits<uint16_t>::max());
-  check(SV("0xffff"), SV("{:#x}"), std::numeric_limits<uint16_t>::max());
+  check.template operator()<"{:#b}">(SV("0b1111111111111111"), std::numeric_limits<uint16_t>::max());
+  check.template operator()<"{:#o}">(SV("0177777"), std::numeric_limits<uint16_t>::max());
+  check.template operator()<"{:#}">(SV("65535"), std::numeric_limits<uint16_t>::max());
+  check.template operator()<"{:#x}">(SV("0xffff"), std::numeric_limits<uint16_t>::max());
 
-  check(SV("0b11111111111111111111111111111111"), SV("{:#b}"), std::numeric_limits<uint32_t>::max());
-  check(SV("037777777777"), SV("{:#o}"), std::numeric_limits<uint32_t>::max());
-  check(SV("4294967295"), SV("{:#}"), std::numeric_limits<uint32_t>::max());
-  check(SV("0xffffffff"), SV("{:#x}"), std::numeric_limits<uint32_t>::max());
+  check.template operator()<"{:#b}">(SV("0b11111111111111111111111111111111"), std::numeric_limits<uint32_t>::max());
+  check.template operator()<"{:#o}">(SV("037777777777"), std::numeric_limits<uint32_t>::max());
+  check.template operator()<"{:#}">(SV("4294967295"), std::numeric_limits<uint32_t>::max());
+  check.template operator()<"{:#x}">(SV("0xffffffff"), std::numeric_limits<uint32_t>::max());
 
-  check(SV("0b1111111111111111111111111111111111111111111111111111111111111111"), SV("{:#b}"),
-        std::numeric_limits<uint64_t>::max());
-  check(SV("01777777777777777777777"), SV("{:#o}"), std::numeric_limits<uint64_t>::max());
-  check(SV("18446744073709551615"), SV("{:#}"), std::numeric_limits<uint64_t>::max());
-  check(SV("0xffffffffffffffff"), SV("{:#x}"), std::numeric_limits<uint64_t>::max());
+  check.template operator()<"{:#b}">(SV("0b1111111111111111111111111111111111111111111111111111111111111111"),
+                                     std::numeric_limits<uint64_t>::max());
+  check.template operator()<"{:#o}">(SV("01777777777777777777777"), std::numeric_limits<uint64_t>::max());
+  check.template operator()<"{:#}">(SV("18446744073709551615"), std::numeric_limits<uint64_t>::max());
+  check.template operator()<"{:#x}">(SV("0xffffffffffffffff"), std::numeric_limits<uint64_t>::max());
 
   // TODO FMT Add __uint128_t test after implementing full range.
 }
@@ -771,23 +772,24 @@ void format_test_char(TestFunction check, ExceptionTest check_exception) {
 
   // ***** Char type *****
   // *** align-fill & width ***
-  check(SV("answer is '*     '"), SV("answer is '{:6}'"), CharT('*'));
-  check(SV("answer is '     *'"), SV("answer is '{:>6}'"), CharT('*'));
-  check(SV("answer is '*     '"), SV("answer is '{:<6}'"), CharT('*'));
-  check(SV("answer is '  *   '"), SV("answer is '{:^6}'"), CharT('*'));
+  check.template operator()<"answer is '{:6}'">(SV("answer is '*     '"), CharT('*'));
 
-  check(SV("answer is '*     '"), SV("answer is '{:6c}'"), CharT('*'));
-  check(SV("answer is '     *'"), SV("answer is '{:>6c}'"), CharT('*'));
-  check(SV("answer is '*     '"), SV("answer is '{:<6c}'"), CharT('*'));
-  check(SV("answer is '  *   '"), SV("answer is '{:^6c}'"), CharT('*'));
+  check.template operator()<"answer is '{:>6}'">(SV("answer is '     *'"), CharT('*'));
+  check.template operator()<"answer is '{:<6}'">(SV("answer is '*     '"), CharT('*'));
+  check.template operator()<"answer is '{:^6}'">(SV("answer is '  *   '"), CharT('*'));
 
-  check(SV("answer is '-----*'"), SV("answer is '{:->6}'"), CharT('*'));
-  check(SV("answer is '*-----'"), SV("answer is '{:-<6}'"), CharT('*'));
-  check(SV("answer is '--*---'"), SV("answer is '{:-^6}'"), CharT('*'));
+  check.template operator()<"answer is '{:6c}'">(SV("answer is '*     '"), CharT('*'));
+  check.template operator()<"answer is '{:>6c}'">(SV("answer is '     *'"), CharT('*'));
+  check.template operator()<"answer is '{:<6c}'">(SV("answer is '*     '"), CharT('*'));
+  check.template operator()<"answer is '{:^6c}'">(SV("answer is '  *   '"), CharT('*'));
 
-  check(SV("answer is '-----*'"), SV("answer is '{:->6c}'"), CharT('*'));
-  check(SV("answer is '*-----'"), SV("answer is '{:-<6c}'"), CharT('*'));
-  check(SV("answer is '--*---'"), SV("answer is '{:-^6c}'"), CharT('*'));
+  check.template operator()<"answer is '{:->6}'">(SV("answer is '-----*'"), CharT('*'));
+  check.template operator()<"answer is '{:-<6}'">(SV("answer is '*-----'"), CharT('*'));
+  check.template operator()<"answer is '{:-^6}'">(SV("answer is '--*---'"), CharT('*'));
+
+  check.template operator()<"answer is '{:->6c}'">(SV("answer is '-----*'"), CharT('*'));
+  check.template operator()<"answer is '{:-<6c}'">(SV("answer is '*-----'"), CharT('*'));
+  check.template operator()<"answer is '{:-^6c}'">(SV("answer is '--*---'"), CharT('*'));
 
   // *** Sign ***
   check_exception("A sign field isn't allowed in this format-spec", SV("{:-}"), CharT('*'));
@@ -817,8 +819,8 @@ void format_test_char(TestFunction check, ExceptionTest check_exception) {
 
   // *** locale-specific form ***
   // Note it has no effect but it's allowed.
-  check(SV("answer is '*'"), SV("answer is '{:L}'"), '*');
-  check(SV("answer is '*'"), SV("answer is '{:Lc}'"), '*');
+  check.template operator()<"answer is '{:L}'">(SV("answer is '*'"), '*');
+  check.template operator()<"answer is '{:Lc}'">(SV("answer is '*'"), '*');
 
   // *** type ***
   for (const auto& fmt : invalid_types<CharT>("bBcdoxX"))
@@ -828,55 +830,55 @@ void format_test_char(TestFunction check, ExceptionTest check_exception) {
 template <class CharT, class TestFunction, class ExceptionTest>
 void format_test_char_as_integer(TestFunction check, ExceptionTest check_exception) {
   // *** align-fill & width ***
-  check(SV("answer is '42'"), SV("answer is '{:<1d}'"), CharT('*'));
+  check.template operator()<"answer is '{:<1d}'">(SV("answer is '42'"), CharT('*'));
 
-  check(SV("answer is '42'"), SV("answer is '{:<2d}'"), CharT('*'));
-  check(SV("answer is '42 '"), SV("answer is '{:<3d}'"), CharT('*'));
+  check.template operator()<"answer is '{:<2d}'">(SV("answer is '42'"), CharT('*'));
+  check.template operator()<"answer is '{:<3d}'">(SV("answer is '42 '"), CharT('*'));
 
-  check(SV("answer is '     42'"), SV("answer is '{:7d}'"), CharT('*'));
-  check(SV("answer is '     42'"), SV("answer is '{:>7d}'"), CharT('*'));
-  check(SV("answer is '42     '"), SV("answer is '{:<7d}'"), CharT('*'));
-  check(SV("answer is '  42   '"), SV("answer is '{:^7d}'"), CharT('*'));
+  check.template operator()<"answer is '{:7d}'">(SV("answer is '     42'"), CharT('*'));
+  check.template operator()<"answer is '{:>7d}'">(SV("answer is '     42'"), CharT('*'));
+  check.template operator()<"answer is '{:<7d}'">(SV("answer is '42     '"), CharT('*'));
+  check.template operator()<"answer is '{:^7d}'">(SV("answer is '  42   '"), CharT('*'));
 
-  check(SV("answer is '*****42'"), SV("answer is '{:*>7d}'"), CharT('*'));
-  check(SV("answer is '42*****'"), SV("answer is '{:*<7d}'"), CharT('*'));
-  check(SV("answer is '**42***'"), SV("answer is '{:*^7d}'"), CharT('*'));
+  check.template operator()<"answer is '{:*>7d}'">(SV("answer is '*****42'"), CharT('*'));
+  check.template operator()<"answer is '{:*<7d}'">(SV("answer is '42*****'"), CharT('*'));
+  check.template operator()<"answer is '{:*^7d}'">(SV("answer is '**42***'"), CharT('*'));
 
   // Test whether zero padding is ignored
-  check(SV("answer is '     42'"), SV("answer is '{:>07d}'"), CharT('*'));
-  check(SV("answer is '42     '"), SV("answer is '{:<07d}'"), CharT('*'));
-  check(SV("answer is '  42   '"), SV("answer is '{:^07d}'"), CharT('*'));
+  check.template operator()<"answer is '{:>07d}'">(SV("answer is '     42'"), CharT('*'));
+  check.template operator()<"answer is '{:<07d}'">(SV("answer is '42     '"), CharT('*'));
+  check.template operator()<"answer is '{:^07d}'">(SV("answer is '  42   '"), CharT('*'));
 
   // *** Sign ***
-  check(SV("answer is 42"), SV("answer is {:d}"), CharT('*'));
-  check(SV("answer is 42"), SV("answer is {:-d}"), CharT('*'));
-  check(SV("answer is +42"), SV("answer is {:+d}"), CharT('*'));
-  check(SV("answer is  42"), SV("answer is {: d}"), CharT('*'));
+  check.template operator()<"answer is {:d}">(SV("answer is 42"), CharT('*'));
+  check.template operator()<"answer is {:-d}">(SV("answer is 42"), CharT('*'));
+  check.template operator()<"answer is {:+d}">(SV("answer is +42"), CharT('*'));
+  check.template operator()<"answer is {: d}">(SV("answer is  42"), CharT('*'));
 
   // *** alternate form ***
-  check(SV("answer is +42"), SV("answer is {:+#d}"), CharT('*'));
-  check(SV("answer is +101010"), SV("answer is {:+b}"), CharT('*'));
-  check(SV("answer is +0b101010"), SV("answer is {:+#b}"), CharT('*'));
-  check(SV("answer is +0B101010"), SV("answer is {:+#B}"), CharT('*'));
-  check(SV("answer is +52"), SV("answer is {:+o}"), CharT('*'));
-  check(SV("answer is +052"), SV("answer is {:+#o}"), CharT('*'));
-  check(SV("answer is +2a"), SV("answer is {:+x}"), CharT('*'));
-  check(SV("answer is +0x2a"), SV("answer is {:+#x}"), CharT('*'));
-  check(SV("answer is +2A"), SV("answer is {:+X}"), CharT('*'));
-  check(SV("answer is +0X2A"), SV("answer is {:+#X}"), CharT('*'));
+  check.template operator()<"answer is {:+#d}">(SV("answer is +42"), CharT('*'));
+  check.template operator()<"answer is {:+b}">(SV("answer is +101010"), CharT('*'));
+  check.template operator()<"answer is {:+#b}">(SV("answer is +0b101010"), CharT('*'));
+  check.template operator()<"answer is {:+#B}">(SV("answer is +0B101010"), CharT('*'));
+  check.template operator()<"answer is {:+o}">(SV("answer is +52"), CharT('*'));
+  check.template operator()<"answer is {:+#o}">(SV("answer is +052"), CharT('*'));
+  check.template operator()<"answer is {:+x}">(SV("answer is +2a"), CharT('*'));
+  check.template operator()<"answer is {:+#x}">(SV("answer is +0x2a"), CharT('*'));
+  check.template operator()<"answer is {:+X}">(SV("answer is +2A"), CharT('*'));
+  check.template operator()<"answer is {:+#X}">(SV("answer is +0X2A"), CharT('*'));
 
   // *** zero-padding & width ***
-  check(SV("answer is +00000000042"), SV("answer is {:+#012d}"), CharT('*'));
-  check(SV("answer is +00000101010"), SV("answer is {:+012b}"), CharT('*'));
-  check(SV("answer is +0b000101010"), SV("answer is {:+#012b}"), CharT('*'));
-  check(SV("answer is +0B000101010"), SV("answer is {:+#012B}"), CharT('*'));
-  check(SV("answer is +00000000052"), SV("answer is {:+012o}"), CharT('*'));
-  check(SV("answer is +00000000052"), SV("answer is {:+#012o}"), CharT('*'));
-  check(SV("answer is +0000000002a"), SV("answer is {:+012x}"), CharT('*'));
-  check(SV("answer is +0x00000002a"), SV("answer is {:+#012x}"), CharT('*'));
-  check(SV("answer is +0000000002A"), SV("answer is {:+012X}"), CharT('*'));
+  check.template operator()<"answer is {:+#012d}">(SV("answer is +00000000042"), CharT('*'));
+  check.template operator()<"answer is {:+012b}">(SV("answer is +00000101010"), CharT('*'));
+  check.template operator()<"answer is {:+#012b}">(SV("answer is +0b000101010"), CharT('*'));
+  check.template operator()<"answer is {:+#012B}">(SV("answer is +0B000101010"), CharT('*'));
+  check.template operator()<"answer is {:+012o}">(SV("answer is +00000000052"), CharT('*'));
+  check.template operator()<"answer is {:+#012o}">(SV("answer is +00000000052"), CharT('*'));
+  check.template operator()<"answer is {:+012x}">(SV("answer is +0000000002a"), CharT('*'));
+  check.template operator()<"answer is {:+#012x}">(SV("answer is +0x00000002a"), CharT('*'));
+  check.template operator()<"answer is {:+012X}">(SV("answer is +0000000002A"), CharT('*'));
 
-  check(SV("answer is +0X00000002A"), SV("answer is {:+#012X}"), CharT('*'));
+  check.template operator()<"answer is {:+#012X}">(SV("answer is +0X00000002A"), CharT('*'));
 
   // *** precision ***
   check_exception("The format-spec should consume the input or end with a '}'", SV("{:.d}"), CharT('*'));
@@ -898,116 +900,116 @@ void format_test_floating_point_hex_lower_case(TestFunction check) {
 
   // Test whether the hexadecimal letters are the proper case.
   // The precision is too large for float, so two tests are used.
-  check(SV("answer is '1.abcp+0'"), SV("answer is '{:a}'"), F(0x1.abcp+0));
-  check(SV("answer is '1.defp+0'"), SV("answer is '{:a}'"), F(0x1.defp+0));
+  check.template operator()<"answer is '{:a}'">(SV("answer is '1.abcp+0'"), F(0x1.abcp+0));
+  check.template operator()<"answer is '{:a}'">(SV("answer is '1.defp+0'"), F(0x1.defp+0));
 
   // *** align-fill & width ***
-  check(SV("answer is '   1p-2'"), SV("answer is '{:7a}'"), F(0.25));
-  check(SV("answer is '   1p-2'"), SV("answer is '{:>7a}'"), F(0.25));
-  check(SV("answer is '1p-2   '"), SV("answer is '{:<7a}'"), F(0.25));
-  check(SV("answer is ' 1p-2  '"), SV("answer is '{:^7a}'"), F(0.25));
+  check.template operator()<"answer is '{:7a}'">(SV("answer is '   1p-2'"), F(0.25));
+  check.template operator()<"answer is '{:>7a}'">(SV("answer is '   1p-2'"), F(0.25));
+  check.template operator()<"answer is '{:<7a}'">(SV("answer is '1p-2   '"), F(0.25));
+  check.template operator()<"answer is '{:^7a}'">(SV("answer is ' 1p-2  '"), F(0.25));
 
-  check(SV("answer is '---1p-3'"), SV("answer is '{:->7a}'"), F(125e-3));
-  check(SV("answer is '1p-3---'"), SV("answer is '{:-<7a}'"), F(125e-3));
-  check(SV("answer is '-1p-3--'"), SV("answer is '{:-^7a}'"), F(125e-3));
+  check.template operator()<"answer is '{:->7a}'">(SV("answer is '---1p-3'"), F(125e-3));
+  check.template operator()<"answer is '{:-<7a}'">(SV("answer is '1p-3---'"), F(125e-3));
+  check.template operator()<"answer is '{:-^7a}'">(SV("answer is '-1p-3--'"), F(125e-3));
 
-  check(SV("answer is '***inf'"), SV("answer is '{:*>6a}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is 'inf***'"), SV("answer is '{:*<6a}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '*inf**'"), SV("answer is '{:*^6a}'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:*>6a}'">(SV("answer is '***inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:*<6a}'">(SV("answer is 'inf***'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:*^6a}'">(SV("answer is '*inf**'"), std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '###-inf'"), SV("answer is '{:#>7a}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-inf###'"), SV("answer is '{:#<7a}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '#-inf##'"), SV("answer is '{:#^7a}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#>7a}'">(SV("answer is '###-inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#<7a}'">(SV("answer is '-inf###'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#^7a}'">(SV("answer is '#-inf##'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '^^^nan'"), SV("answer is '{:^>6a}'"), nan_pos);
-  check(SV("answer is 'nan^^^'"), SV("answer is '{:^<6a}'"), nan_pos);
-  check(SV("answer is '^nan^^'"), SV("answer is '{:^^6a}'"), nan_pos);
+  check.template operator()<"answer is '{:^>6a}'">(SV("answer is '^^^nan'"), nan_pos);
+  check.template operator()<"answer is '{:^<6a}'">(SV("answer is 'nan^^^'"), nan_pos);
+  check.template operator()<"answer is '{:^^6a}'">(SV("answer is '^nan^^'"), nan_pos);
 
-  check(SV("answer is '000-nan'"), SV("answer is '{:0>7a}'"), nan_neg);
-  check(SV("answer is '-nan000'"), SV("answer is '{:0<7a}'"), nan_neg);
-  check(SV("answer is '0-nan00'"), SV("answer is '{:0^7a}'"), nan_neg);
+  check.template operator()<"answer is '{:0>7a}'">(SV("answer is '000-nan'"), nan_neg);
+  check.template operator()<"answer is '{:0<7a}'">(SV("answer is '-nan000'"), nan_neg);
+  check.template operator()<"answer is '{:0^7a}'">(SV("answer is '0-nan00'"), nan_neg);
 
   // Test whether zero padding is ignored
-  check(SV("answer is '   1p-2'"), SV("answer is '{:>07a}'"), F(0.25));
-  check(SV("answer is '1p-2   '"), SV("answer is '{:<07a}'"), F(0.25));
-  check(SV("answer is ' 1p-2  '"), SV("answer is '{:^07a}'"), F(0.25));
+  check.template operator()<"answer is '{:>07a}'">(SV("answer is '   1p-2'"), F(0.25));
+  check.template operator()<"answer is '{:<07a}'">(SV("answer is '1p-2   '"), F(0.25));
+  check.template operator()<"answer is '{:^07a}'">(SV("answer is ' 1p-2  '"), F(0.25));
 
   // *** Sign ***
-  check(SV("answer is '0p+0'"), SV("answer is '{:a}'"), F(0));
-  check(SV("answer is '0p+0'"), SV("answer is '{:-a}'"), F(0));
-  check(SV("answer is '+0p+0'"), SV("answer is '{:+a}'"), F(0));
-  check(SV("answer is ' 0p+0'"), SV("answer is '{: a}'"), F(0));
+  check.template operator()<"answer is '{:a}'">(SV("answer is '0p+0'"), F(0));
+  check.template operator()<"answer is '{:-a}'">(SV("answer is '0p+0'"), F(0));
+  check.template operator()<"answer is '{:+a}'">(SV("answer is '+0p+0'"), F(0));
+  check.template operator()<"answer is '{: a}'">(SV("answer is ' 0p+0'"), F(0));
 
-  check(SV("answer is '-0p+0'"), SV("answer is '{:a}'"), F(-0.));
-  check(SV("answer is '-0p+0'"), SV("answer is '{:-a}'"), F(-0.));
-  check(SV("answer is '-0p+0'"), SV("answer is '{:+a}'"), F(-0.));
-  check(SV("answer is '-0p+0'"), SV("answer is '{: a}'"), F(-0.));
+  check.template operator()<"answer is '{:a}'">(SV("answer is '-0p+0'"), F(-0.));
+  check.template operator()<"answer is '{:-a}'">(SV("answer is '-0p+0'"), F(-0.));
+  check.template operator()<"answer is '{:+a}'">(SV("answer is '-0p+0'"), F(-0.));
+  check.template operator()<"answer is '{: a}'">(SV("answer is '-0p+0'"), F(-0.));
 
   // [format.string.std]/5 The sign option applies to floating-point infinity and NaN.
-  check(SV("answer is 'inf'"), SV("answer is '{:a}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is 'inf'"), SV("answer is '{:-a}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '+inf'"), SV("answer is '{:+a}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is ' inf'"), SV("answer is '{: a}'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:a}'">(SV("answer is 'inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-a}'">(SV("answer is 'inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+a}'">(SV("answer is '+inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: a}'">(SV("answer is ' inf'"), std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '-inf'"), SV("answer is '{:a}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-inf'"), SV("answer is '{:-a}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-inf'"), SV("answer is '{:+a}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-inf'"), SV("answer is '{: a}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:a}'">(SV("answer is '-inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-a}'">(SV("answer is '-inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+a}'">(SV("answer is '-inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: a}'">(SV("answer is '-inf'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is 'nan'"), SV("answer is '{:a}'"), nan_pos);
-  check(SV("answer is 'nan'"), SV("answer is '{:-a}'"), nan_pos);
-  check(SV("answer is '+nan'"), SV("answer is '{:+a}'"), nan_pos);
-  check(SV("answer is ' nan'"), SV("answer is '{: a}'"), nan_pos);
+  check.template operator()<"answer is '{:a}'">(SV("answer is 'nan'"), nan_pos);
+  check.template operator()<"answer is '{:-a}'">(SV("answer is 'nan'"), nan_pos);
+  check.template operator()<"answer is '{:+a}'">(SV("answer is '+nan'"), nan_pos);
+  check.template operator()<"answer is '{: a}'">(SV("answer is ' nan'"), nan_pos);
 
-  check(SV("answer is '-nan'"), SV("answer is '{:a}'"), nan_neg);
-  check(SV("answer is '-nan'"), SV("answer is '{:-a}'"), nan_neg);
-  check(SV("answer is '-nan'"), SV("answer is '{:+a}'"), nan_neg);
-  check(SV("answer is '-nan'"), SV("answer is '{: a}'"), nan_neg);
+  check.template operator()<"answer is '{:a}'">(SV("answer is '-nan'"), nan_neg);
+  check.template operator()<"answer is '{:-a}'">(SV("answer is '-nan'"), nan_neg);
+  check.template operator()<"answer is '{:+a}'">(SV("answer is '-nan'"), nan_neg);
+  check.template operator()<"answer is '{: a}'">(SV("answer is '-nan'"), nan_neg);
 
   // *** alternate form ***
   // When precision is zero there's no decimal point except when the alternate form is specified.
-  check(SV("answer is '0p+0'"), SV("answer is '{:a}'"), F(0));
-  check(SV("answer is '0.p+0'"), SV("answer is '{:#a}'"), F(0));
+  check.template operator()<"answer is '{:a}'">(SV("answer is '0p+0'"), F(0));
+  check.template operator()<"answer is '{:#a}'">(SV("answer is '0.p+0'"), F(0));
 
-  check(SV("answer is '1p+1'"), SV("answer is '{:.0a}'"), F(2.5));
-  check(SV("answer is '1.p+1'"), SV("answer is '{:#.0a}'"), F(2.5));
-  check(SV("answer is '1.4p+1'"), SV("answer is '{:#a}'"), F(2.5));
+  check.template operator()<"answer is '{:.0a}'">(SV("answer is '1p+1'"), F(2.5));
+  check.template operator()<"answer is '{:#.0a}'">(SV("answer is '1.p+1'"), F(2.5));
+  check.template operator()<"answer is '{:#a}'">(SV("answer is '1.4p+1'"), F(2.5));
 
-  check(SV("answer is 'inf'"), SV("answer is '{:#a}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '-inf'"), SV("answer is '{:#a}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#a}'">(SV("answer is 'inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#a}'">(SV("answer is '-inf'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is 'nan'"), SV("answer is '{:#a}'"), nan_pos);
-  check(SV("answer is '-nan'"), SV("answer is '{:#a}'"), nan_neg);
+  check.template operator()<"answer is '{:#a}'">(SV("answer is 'nan'"), nan_pos);
+  check.template operator()<"answer is '{:#a}'">(SV("answer is '-nan'"), nan_neg);
 
   // *** zero-padding & width ***
-  check(SV("answer is '1p-5'"), SV("answer is '{:04a}'"), 0.03125);
-  check(SV("answer is '+1p-5'"), SV("answer is '{:+05a}'"), 0.03125);
-  check(SV("answer is '+01p-5'"), SV("answer is '{:+06a}'"), 0.03125);
+  check.template operator()<"answer is '{:04a}'">(SV("answer is '1p-5'"), 0.03125);
+  check.template operator()<"answer is '{:+05a}'">(SV("answer is '+1p-5'"), 0.03125);
+  check.template operator()<"answer is '{:+06a}'">(SV("answer is '+01p-5'"), 0.03125);
 
-  check(SV("answer is '0001p-5'"), SV("answer is '{:07a}'"), 0.03125);
-  check(SV("answer is '0001p-5'"), SV("answer is '{:-07a}'"), 0.03125);
-  check(SV("answer is '+001p-5'"), SV("answer is '{:+07a}'"), 0.03125);
-  check(SV("answer is ' 001p-5'"), SV("answer is '{: 07a}'"), 0.03125);
+  check.template operator()<"answer is '{:07a}'">(SV("answer is '0001p-5'"), 0.03125);
+  check.template operator()<"answer is '{:-07a}'">(SV("answer is '0001p-5'"), 0.03125);
+  check.template operator()<"answer is '{:+07a}'">(SV("answer is '+001p-5'"), 0.03125);
+  check.template operator()<"answer is '{: 07a}'">(SV("answer is ' 001p-5'"), 0.03125);
 
-  check(SV("answer is '       inf'"), SV("answer is '{:010a}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '       inf'"), SV("answer is '{:-010a}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '      +inf'"), SV("answer is '{:+010a}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '       inf'"), SV("answer is '{: 010a}'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:010a}'">(SV("answer is '       inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-010a}'">(SV("answer is '       inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+010a}'">(SV("answer is '      +inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: 010a}'">(SV("answer is '       inf'"), std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '      -inf'"), SV("answer is '{:010a}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '      -inf'"), SV("answer is '{:-010a}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '      -inf'"), SV("answer is '{:+010a}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '      -inf'"), SV("answer is '{: 010a}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:010a}'">(SV("answer is '      -inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-010a}'">(SV("answer is '      -inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+010a}'">(SV("answer is '      -inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: 010a}'">(SV("answer is '      -inf'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '       nan'"), SV("answer is '{:010a}'"), nan_pos);
-  check(SV("answer is '       nan'"), SV("answer is '{:-010a}'"), nan_pos);
-  check(SV("answer is '      +nan'"), SV("answer is '{:+010a}'"), nan_pos);
-  check(SV("answer is '       nan'"), SV("answer is '{: 010a}'"), nan_pos);
+  check.template operator()<"answer is '{:010a}'">(SV("answer is '       nan'"), nan_pos);
+  check.template operator()<"answer is '{:-010a}'">(SV("answer is '       nan'"), nan_pos);
+  check.template operator()<"answer is '{:+010a}'">(SV("answer is '      +nan'"), nan_pos);
+  check.template operator()<"answer is '{: 010a}'">(SV("answer is '       nan'"), nan_pos);
 
-  check(SV("answer is '      -nan'"), SV("answer is '{:010a}'"), nan_neg);
-  check(SV("answer is '      -nan'"), SV("answer is '{:-010a}'"), nan_neg);
-  check(SV("answer is '      -nan'"), SV("answer is '{:+010a}'"), nan_neg);
-  check(SV("answer is '      -nan'"), SV("answer is '{: 010a}'"), nan_neg);
+  check.template operator()<"answer is '{:010a}'">(SV("answer is '      -nan'"), nan_neg);
+  check.template operator()<"answer is '{:-010a}'">(SV("answer is '      -nan'"), nan_neg);
+  check.template operator()<"answer is '{:+010a}'">(SV("answer is '      -nan'"), nan_neg);
+  check.template operator()<"answer is '{: 010a}'">(SV("answer is '      -nan'"), nan_neg);
 
   // *** precision ***
   // See format_test_floating_point_hex_lower_case_precision
@@ -1023,116 +1025,116 @@ void format_test_floating_point_hex_upper_case(TestFunction check) {
 
   // Test whether the hexadecimal letters are the proper case.
   // The precision is too large for float, so two tests are used.
-  check(SV("answer is '1.ABCP+0'"), SV("answer is '{:A}'"), F(0x1.abcp+0));
-  check(SV("answer is '1.DEFP+0'"), SV("answer is '{:A}'"), F(0x1.defp+0));
+  check.template operator()<"answer is '{:A}'">(SV("answer is '1.ABCP+0'"), F(0x1.abcp+0));
+  check.template operator()<"answer is '{:A}'">(SV("answer is '1.DEFP+0'"), F(0x1.defp+0));
 
   // *** align-fill & width ***
-  check(SV("answer is '   1P-2'"), SV("answer is '{:7A}'"), F(0.25));
-  check(SV("answer is '   1P-2'"), SV("answer is '{:>7A}'"), F(0.25));
-  check(SV("answer is '1P-2   '"), SV("answer is '{:<7A}'"), F(0.25));
-  check(SV("answer is ' 1P-2  '"), SV("answer is '{:^7A}'"), F(0.25));
+  check.template operator()<"answer is '{:7A}'">(SV("answer is '   1P-2'"), F(0.25));
+  check.template operator()<"answer is '{:>7A}'">(SV("answer is '   1P-2'"), F(0.25));
+  check.template operator()<"answer is '{:<7A}'">(SV("answer is '1P-2   '"), F(0.25));
+  check.template operator()<"answer is '{:^7A}'">(SV("answer is ' 1P-2  '"), F(0.25));
 
-  check(SV("answer is '---1P-3'"), SV("answer is '{:->7A}'"), F(125e-3));
-  check(SV("answer is '1P-3---'"), SV("answer is '{:-<7A}'"), F(125e-3));
-  check(SV("answer is '-1P-3--'"), SV("answer is '{:-^7A}'"), F(125e-3));
+  check.template operator()<"answer is '{:->7A}'">(SV("answer is '---1P-3'"), F(125e-3));
+  check.template operator()<"answer is '{:-<7A}'">(SV("answer is '1P-3---'"), F(125e-3));
+  check.template operator()<"answer is '{:-^7A}'">(SV("answer is '-1P-3--'"), F(125e-3));
 
-  check(SV("answer is '***INF'"), SV("answer is '{:*>6A}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is 'INF***'"), SV("answer is '{:*<6A}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '*INF**'"), SV("answer is '{:*^6A}'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:*>6A}'">(SV("answer is '***INF'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:*<6A}'">(SV("answer is 'INF***'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:*^6A}'">(SV("answer is '*INF**'"), std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '###-INF'"), SV("answer is '{:#>7A}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-INF###'"), SV("answer is '{:#<7A}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '#-INF##'"), SV("answer is '{:#^7A}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#>7A}'">(SV("answer is '###-INF'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#<7A}'">(SV("answer is '-INF###'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#^7A}'">(SV("answer is '#-INF##'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '^^^NAN'"), SV("answer is '{:^>6A}'"), nan_pos);
-  check(SV("answer is 'NAN^^^'"), SV("answer is '{:^<6A}'"), nan_pos);
-  check(SV("answer is '^NAN^^'"), SV("answer is '{:^^6A}'"), nan_pos);
+  check.template operator()<"answer is '{:^>6A}'">(SV("answer is '^^^NAN'"), nan_pos);
+  check.template operator()<"answer is '{:^<6A}'">(SV("answer is 'NAN^^^'"), nan_pos);
+  check.template operator()<"answer is '{:^^6A}'">(SV("answer is '^NAN^^'"), nan_pos);
 
-  check(SV("answer is '000-NAN'"), SV("answer is '{:0>7A}'"), nan_neg);
-  check(SV("answer is '-NAN000'"), SV("answer is '{:0<7A}'"), nan_neg);
-  check(SV("answer is '0-NAN00'"), SV("answer is '{:0^7A}'"), nan_neg);
+  check.template operator()<"answer is '{:0>7A}'">(SV("answer is '000-NAN'"), nan_neg);
+  check.template operator()<"answer is '{:0<7A}'">(SV("answer is '-NAN000'"), nan_neg);
+  check.template operator()<"answer is '{:0^7A}'">(SV("answer is '0-NAN00'"), nan_neg);
 
   // Test whether zero padding is ignored
-  check(SV("answer is '   1P-2'"), SV("answer is '{:>07A}'"), F(0.25));
-  check(SV("answer is '1P-2   '"), SV("answer is '{:<07A}'"), F(0.25));
-  check(SV("answer is ' 1P-2  '"), SV("answer is '{:^07A}'"), F(0.25));
+  check.template operator()<"answer is '{:>07A}'">(SV("answer is '   1P-2'"), F(0.25));
+  check.template operator()<"answer is '{:<07A}'">(SV("answer is '1P-2   '"), F(0.25));
+  check.template operator()<"answer is '{:^07A}'">(SV("answer is ' 1P-2  '"), F(0.25));
 
   // *** Sign ***
-  check(SV("answer is '0P+0'"), SV("answer is '{:A}'"), F(0));
-  check(SV("answer is '0P+0'"), SV("answer is '{:-A}'"), F(0));
-  check(SV("answer is '+0P+0'"), SV("answer is '{:+A}'"), F(0));
-  check(SV("answer is ' 0P+0'"), SV("answer is '{: A}'"), F(0));
+  check.template operator()<"answer is '{:A}'">(SV("answer is '0P+0'"), F(0));
+  check.template operator()<"answer is '{:-A}'">(SV("answer is '0P+0'"), F(0));
+  check.template operator()<"answer is '{:+A}'">(SV("answer is '+0P+0'"), F(0));
+  check.template operator()<"answer is '{: A}'">(SV("answer is ' 0P+0'"), F(0));
 
-  check(SV("answer is '-0P+0'"), SV("answer is '{:A}'"), F(-0.));
-  check(SV("answer is '-0P+0'"), SV("answer is '{:-A}'"), F(-0.));
-  check(SV("answer is '-0P+0'"), SV("answer is '{:+A}'"), F(-0.));
-  check(SV("answer is '-0P+0'"), SV("answer is '{: A}'"), F(-0.));
+  check.template operator()<"answer is '{:A}'">(SV("answer is '-0P+0'"), F(-0.));
+  check.template operator()<"answer is '{:-A}'">(SV("answer is '-0P+0'"), F(-0.));
+  check.template operator()<"answer is '{:+A}'">(SV("answer is '-0P+0'"), F(-0.));
+  check.template operator()<"answer is '{: A}'">(SV("answer is '-0P+0'"), F(-0.));
 
   // [format.string.std]/5 The sign option applies to floating-point infinity and NaN.
-  check(SV("answer is 'INF'"), SV("answer is '{:A}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is 'INF'"), SV("answer is '{:-A}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '+INF'"), SV("answer is '{:+A}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is ' INF'"), SV("answer is '{: A}'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:A}'">(SV("answer is 'INF'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-A}'">(SV("answer is 'INF'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+A}'">(SV("answer is '+INF'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: A}'">(SV("answer is ' INF'"), std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '-INF'"), SV("answer is '{:A}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-INF'"), SV("answer is '{:-A}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-INF'"), SV("answer is '{:+A}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-INF'"), SV("answer is '{: A}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:A}'">(SV("answer is '-INF'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-A}'">(SV("answer is '-INF'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+A}'">(SV("answer is '-INF'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: A}'">(SV("answer is '-INF'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is 'NAN'"), SV("answer is '{:A}'"), nan_pos);
-  check(SV("answer is 'NAN'"), SV("answer is '{:-A}'"), nan_pos);
-  check(SV("answer is '+NAN'"), SV("answer is '{:+A}'"), nan_pos);
-  check(SV("answer is ' NAN'"), SV("answer is '{: A}'"), nan_pos);
+  check.template operator()<"answer is '{:A}'">(SV("answer is 'NAN'"), nan_pos);
+  check.template operator()<"answer is '{:-A}'">(SV("answer is 'NAN'"), nan_pos);
+  check.template operator()<"answer is '{:+A}'">(SV("answer is '+NAN'"), nan_pos);
+  check.template operator()<"answer is '{: A}'">(SV("answer is ' NAN'"), nan_pos);
 
-  check(SV("answer is '-NAN'"), SV("answer is '{:A}'"), nan_neg);
-  check(SV("answer is '-NAN'"), SV("answer is '{:-A}'"), nan_neg);
-  check(SV("answer is '-NAN'"), SV("answer is '{:+A}'"), nan_neg);
-  check(SV("answer is '-NAN'"), SV("answer is '{: A}'"), nan_neg);
+  check.template operator()<"answer is '{:A}'">(SV("answer is '-NAN'"), nan_neg);
+  check.template operator()<"answer is '{:-A}'">(SV("answer is '-NAN'"), nan_neg);
+  check.template operator()<"answer is '{:+A}'">(SV("answer is '-NAN'"), nan_neg);
+  check.template operator()<"answer is '{: A}'">(SV("answer is '-NAN'"), nan_neg);
 
   // *** alternate form ***
   // When precision is zero there's no decimal point except when the alternate form is specified.
-  check(SV("answer is '0P+0'"), SV("answer is '{:A}'"), F(0));
-  check(SV("answer is '0.P+0'"), SV("answer is '{:#A}'"), F(0));
+  check.template operator()<"answer is '{:A}'">(SV("answer is '0P+0'"), F(0));
+  check.template operator()<"answer is '{:#A}'">(SV("answer is '0.P+0'"), F(0));
 
-  check(SV("answer is '1P+1'"), SV("answer is '{:.0A}'"), F(2.5));
-  check(SV("answer is '1.P+1'"), SV("answer is '{:#.0A}'"), F(2.5));
-  check(SV("answer is '1.4P+1'"), SV("answer is '{:#A}'"), F(2.5));
+  check.template operator()<"answer is '{:.0A}'">(SV("answer is '1P+1'"), F(2.5));
+  check.template operator()<"answer is '{:#.0A}'">(SV("answer is '1.P+1'"), F(2.5));
+  check.template operator()<"answer is '{:#A}'">(SV("answer is '1.4P+1'"), F(2.5));
 
-  check(SV("answer is 'INF'"), SV("answer is '{:#A}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '-INF'"), SV("answer is '{:#A}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#A}'">(SV("answer is 'INF'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#A}'">(SV("answer is '-INF'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is 'NAN'"), SV("answer is '{:#A}'"), nan_pos);
-  check(SV("answer is '-NAN'"), SV("answer is '{:#A}'"), nan_neg);
+  check.template operator()<"answer is '{:#A}'">(SV("answer is 'NAN'"), nan_pos);
+  check.template operator()<"answer is '{:#A}'">(SV("answer is '-NAN'"), nan_neg);
 
   // *** zero-padding & width ***
-  check(SV("answer is '1P-5'"), SV("answer is '{:04A}'"), 0.03125);
-  check(SV("answer is '+1P-5'"), SV("answer is '{:+05A}'"), 0.03125);
-  check(SV("answer is '+01P-5'"), SV("answer is '{:+06A}'"), 0.03125);
+  check.template operator()<"answer is '{:04A}'">(SV("answer is '1P-5'"), 0.03125);
+  check.template operator()<"answer is '{:+05A}'">(SV("answer is '+1P-5'"), 0.03125);
+  check.template operator()<"answer is '{:+06A}'">(SV("answer is '+01P-5'"), 0.03125);
 
-  check(SV("answer is '0001P-5'"), SV("answer is '{:07A}'"), 0.03125);
-  check(SV("answer is '0001P-5'"), SV("answer is '{:-07A}'"), 0.03125);
-  check(SV("answer is '+001P-5'"), SV("answer is '{:+07A}'"), 0.03125);
-  check(SV("answer is ' 001P-5'"), SV("answer is '{: 07A}'"), 0.03125);
+  check.template operator()<"answer is '{:07A}'">(SV("answer is '0001P-5'"), 0.03125);
+  check.template operator()<"answer is '{:-07A}'">(SV("answer is '0001P-5'"), 0.03125);
+  check.template operator()<"answer is '{:+07A}'">(SV("answer is '+001P-5'"), 0.03125);
+  check.template operator()<"answer is '{: 07A}'">(SV("answer is ' 001P-5'"), 0.03125);
 
-  check(SV("answer is '       INF'"), SV("answer is '{:010A}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '       INF'"), SV("answer is '{:-010A}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '      +INF'"), SV("answer is '{:+010A}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '       INF'"), SV("answer is '{: 010A}'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:010A}'">(SV("answer is '       INF'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-010A}'">(SV("answer is '       INF'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+010A}'">(SV("answer is '      +INF'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: 010A}'">(SV("answer is '       INF'"), std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '      -INF'"), SV("answer is '{:010A}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '      -INF'"), SV("answer is '{:-010A}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '      -INF'"), SV("answer is '{:+010A}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '      -INF'"), SV("answer is '{: 010A}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:010A}'">(SV("answer is '      -INF'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-010A}'">(SV("answer is '      -INF'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+010A}'">(SV("answer is '      -INF'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: 010A}'">(SV("answer is '      -INF'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '       NAN'"), SV("answer is '{:010A}'"), nan_pos);
-  check(SV("answer is '       NAN'"), SV("answer is '{:-010A}'"), nan_pos);
-  check(SV("answer is '      +NAN'"), SV("answer is '{:+010A}'"), nan_pos);
-  check(SV("answer is '       NAN'"), SV("answer is '{: 010A}'"), nan_pos);
+  check.template operator()<"answer is '{:010A}'">(SV("answer is '       NAN'"), nan_pos);
+  check.template operator()<"answer is '{:-010A}'">(SV("answer is '       NAN'"), nan_pos);
+  check.template operator()<"answer is '{:+010A}'">(SV("answer is '      +NAN'"), nan_pos);
+  check.template operator()<"answer is '{: 010A}'">(SV("answer is '       NAN'"), nan_pos);
 
-  check(SV("answer is '      -NAN'"), SV("answer is '{:010A}'"), nan_neg);
-  check(SV("answer is '      -NAN'"), SV("answer is '{:-010A}'"), nan_neg);
-  check(SV("answer is '      -NAN'"), SV("answer is '{:+010A}'"), nan_neg);
-  check(SV("answer is '      -NAN'"), SV("answer is '{: 010A}'"), nan_neg);
+  check.template operator()<"answer is '{:010A}'">(SV("answer is '      -NAN'"), nan_neg);
+  check.template operator()<"answer is '{:-010A}'">(SV("answer is '      -NAN'"), nan_neg);
+  check.template operator()<"answer is '{:+010A}'">(SV("answer is '      -NAN'"), nan_neg);
+  check.template operator()<"answer is '{: 010A}'">(SV("answer is '      -NAN'"), nan_neg);
 
   // *** precision ***
   // See format_test_floating_point_hex_upper_case_precision
@@ -1147,106 +1149,109 @@ void format_test_floating_point_hex_lower_case_precision(TestFunction check) {
   auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
 
   // *** align-fill & width ***
-  check(SV("answer is '   1.000000p-2'"), SV("answer is '{:14.6a}'"), F(0.25));
-  check(SV("answer is '   1.000000p-2'"), SV("answer is '{:>14.6a}'"), F(0.25));
-  check(SV("answer is '1.000000p-2   '"), SV("answer is '{:<14.6a}'"), F(0.25));
-  check(SV("answer is ' 1.000000p-2  '"), SV("answer is '{:^14.6a}'"), F(0.25));
+  check.template operator()<"answer is '{:14.6a}'">(SV("answer is '   1.000000p-2'"), F(0.25));
+  check.template operator()<"answer is '{:>14.6a}'">(SV("answer is '   1.000000p-2'"), F(0.25));
+  check.template operator()<"answer is '{:<14.6a}'">(SV("answer is '1.000000p-2   '"), F(0.25));
+  check.template operator()<"answer is '{:^14.6a}'">(SV("answer is ' 1.000000p-2  '"), F(0.25));
 
-  check(SV("answer is '---1.000000p-3'"), SV("answer is '{:->14.6a}'"), F(125e-3));
-  check(SV("answer is '1.000000p-3---'"), SV("answer is '{:-<14.6a}'"), F(125e-3));
-  check(SV("answer is '-1.000000p-3--'"), SV("answer is '{:-^14.6a}'"), F(125e-3));
+  check.template operator()<"answer is '{:->14.6a}'">(SV("answer is '---1.000000p-3'"), F(125e-3));
+  check.template operator()<"answer is '{:-<14.6a}'">(SV("answer is '1.000000p-3---'"), F(125e-3));
+  check.template operator()<"answer is '{:-^14.6a}'">(SV("answer is '-1.000000p-3--'"), F(125e-3));
 
-  check(SV("answer is '***inf'"), SV("answer is '{:*>6.6a}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is 'inf***'"), SV("answer is '{:*<6.6a}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '*inf**'"), SV("answer is '{:*^6.6a}'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:*>6.6a}'">(SV("answer is '***inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:*<6.6a}'">(SV("answer is 'inf***'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:*^6.6a}'">(SV("answer is '*inf**'"), std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '###-inf'"), SV("answer is '{:#>7.6a}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-inf###'"), SV("answer is '{:#<7.6a}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '#-inf##'"), SV("answer is '{:#^7.6a}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#>7.6a}'">(SV("answer is '###-inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#<7.6a}'">(SV("answer is '-inf###'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#^7.6a}'">(SV("answer is '#-inf##'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '^^^nan'"), SV("answer is '{:^>6.6a}'"), nan_pos);
-  check(SV("answer is 'nan^^^'"), SV("answer is '{:^<6.6a}'"), nan_pos);
-  check(SV("answer is '^nan^^'"), SV("answer is '{:^^6.6a}'"), nan_pos);
+  check.template operator()<"answer is '{:^>6.6a}'">(SV("answer is '^^^nan'"), nan_pos);
+  check.template operator()<"answer is '{:^<6.6a}'">(SV("answer is 'nan^^^'"), nan_pos);
+  check.template operator()<"answer is '{:^^6.6a}'">(SV("answer is '^nan^^'"), nan_pos);
 
-  check(SV("answer is '000-nan'"), SV("answer is '{:0>7.6a}'"), nan_neg);
-  check(SV("answer is '-nan000'"), SV("answer is '{:0<7.6a}'"), nan_neg);
-  check(SV("answer is '0-nan00'"), SV("answer is '{:0^7.6a}'"), nan_neg);
+  check.template operator()<"answer is '{:0>7.6a}'">(SV("answer is '000-nan'"), nan_neg);
+  check.template operator()<"answer is '{:0<7.6a}'">(SV("answer is '-nan000'"), nan_neg);
+  check.template operator()<"answer is '{:0^7.6a}'">(SV("answer is '0-nan00'"), nan_neg);
 
   // Test whether zero padding is ignored
-  check(SV("answer is '   1.000000p-2'"), SV("answer is '{:>014.6a}'"), F(0.25));
-  check(SV("answer is '1.000000p-2   '"), SV("answer is '{:<014.6a}'"), F(0.25));
-  check(SV("answer is ' 1.000000p-2  '"), SV("answer is '{:^014.6a}'"), F(0.25));
+  check.template operator()<"answer is '{:>014.6a}'">(SV("answer is '   1.000000p-2'"), F(0.25));
+  check.template operator()<"answer is '{:<014.6a}'">(SV("answer is '1.000000p-2   '"), F(0.25));
+  check.template operator()<"answer is '{:^014.6a}'">(SV("answer is ' 1.000000p-2  '"), F(0.25));
 
   // *** Sign ***
-  check(SV("answer is '0.000000p+0'"), SV("answer is '{:.6a}'"), F(0));
-  check(SV("answer is '0.000000p+0'"), SV("answer is '{:-.6a}'"), F(0));
-  check(SV("answer is '+0.000000p+0'"), SV("answer is '{:+.6a}'"), F(0));
-  check(SV("answer is ' 0.000000p+0'"), SV("answer is '{: .6a}'"), F(0));
+  check.template operator()<"answer is '{:.6a}'">(SV("answer is '0.000000p+0'"), F(0));
+  check.template operator()<"answer is '{:-.6a}'">(SV("answer is '0.000000p+0'"), F(0));
+  check.template operator()<"answer is '{:+.6a}'">(SV("answer is '+0.000000p+0'"), F(0));
+  check.template operator()<"answer is '{: .6a}'">(SV("answer is ' 0.000000p+0'"), F(0));
 
-  check(SV("answer is '-0.000000p+0'"), SV("answer is '{:.6a}'"), F(-0.));
-  check(SV("answer is '-0.000000p+0'"), SV("answer is '{:-.6a}'"), F(-0.));
-  check(SV("answer is '-0.000000p+0'"), SV("answer is '{:+.6a}'"), F(-0.));
-  check(SV("answer is '-0.000000p+0'"), SV("answer is '{: .6a}'"), F(-0.));
+  check.template operator()<"answer is '{:.6a}'">(SV("answer is '-0.000000p+0'"), F(-0.));
+  check.template operator()<"answer is '{:-.6a}'">(SV("answer is '-0.000000p+0'"), F(-0.));
+  check.template operator()<"answer is '{:+.6a}'">(SV("answer is '-0.000000p+0'"), F(-0.));
+  check.template operator()<"answer is '{: .6a}'">(SV("answer is '-0.000000p+0'"), F(-0.));
 
   // [format.string.std]/5 The sign option applies to floating-point infinity and NaN.
-  check(SV("answer is 'inf'"), SV("answer is '{:.6a}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is 'inf'"), SV("answer is '{:-.6a}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '+inf'"), SV("answer is '{:+.6a}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is ' inf'"), SV("answer is '{: .6a}'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:.6a}'">(SV("answer is 'inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-.6a}'">(SV("answer is 'inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+.6a}'">(SV("answer is '+inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: .6a}'">(SV("answer is ' inf'"), std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '-inf'"), SV("answer is '{:.6a}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-inf'"), SV("answer is '{:-.6a}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-inf'"), SV("answer is '{:+.6a}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-inf'"), SV("answer is '{: .6a}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:.6a}'">(SV("answer is '-inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-.6a}'">(SV("answer is '-inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+.6a}'">(SV("answer is '-inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: .6a}'">(SV("answer is '-inf'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is 'nan'"), SV("answer is '{:.6a}'"), nan_pos);
-  check(SV("answer is 'nan'"), SV("answer is '{:-.6a}'"), nan_pos);
-  check(SV("answer is '+nan'"), SV("answer is '{:+.6a}'"), nan_pos);
-  check(SV("answer is ' nan'"), SV("answer is '{: .6a}'"), nan_pos);
+  check.template operator()<"answer is '{:.6a}'">(SV("answer is 'nan'"), nan_pos);
+  check.template operator()<"answer is '{:-.6a}'">(SV("answer is 'nan'"), nan_pos);
+  check.template operator()<"answer is '{:+.6a}'">(SV("answer is '+nan'"), nan_pos);
+  check.template operator()<"answer is '{: .6a}'">(SV("answer is ' nan'"), nan_pos);
 
-  check(SV("answer is '-nan'"), SV("answer is '{:.6a}'"), nan_neg);
-  check(SV("answer is '-nan'"), SV("answer is '{:-.6a}'"), nan_neg);
-  check(SV("answer is '-nan'"), SV("answer is '{:+.6a}'"), nan_neg);
-  check(SV("answer is '-nan'"), SV("answer is '{: .6a}'"), nan_neg);
+  check.template operator()<"answer is '{:.6a}'">(SV("answer is '-nan'"), nan_neg);
+  check.template operator()<"answer is '{:-.6a}'">(SV("answer is '-nan'"), nan_neg);
+  check.template operator()<"answer is '{:+.6a}'">(SV("answer is '-nan'"), nan_neg);
+  check.template operator()<"answer is '{: .6a}'">(SV("answer is '-nan'"), nan_neg);
 
   // *** alternate form ***
-  check(SV("answer is '1.400000p+1'"), SV("answer is '{:#.6a}'"), F(2.5));
+  check.template operator()<"answer is '{:#.6a}'">(SV("answer is '1.400000p+1'"), F(2.5));
 
-  check(SV("answer is 'inf'"), SV("answer is '{:#.6a}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '-inf'"), SV("answer is '{:#.6a}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#.6a}'">(SV("answer is 'inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#.6a}'">(SV("answer is '-inf'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is 'nan'"), SV("answer is '{:#.6a}'"), nan_pos);
-  check(SV("answer is '-nan'"), SV("answer is '{:#.6a}'"), nan_neg);
+  check.template operator()<"answer is '{:#.6a}'">(SV("answer is 'nan'"), nan_pos);
+  check.template operator()<"answer is '{:#.6a}'">(SV("answer is '-nan'"), nan_neg);
 
   // *** zero-padding & width ***
-  check(SV("answer is '1.000000p-5'"), SV("answer is '{:011.6a}'"), 0.03125);
-  check(SV("answer is '+1.000000p-5'"), SV("answer is '{:+012.6a}'"), 0.03125);
-  check(SV("answer is '+01.000000p-5'"), SV("answer is '{:+013.6a}'"), 0.03125);
+  check.template operator()<"answer is '{:011.6a}'">(SV("answer is '1.000000p-5'"), 0.03125);
+  check.template operator()<"answer is '{:+012.6a}'">(SV("answer is '+1.000000p-5'"), 0.03125);
+  check.template operator()<"answer is '{:+013.6a}'">(SV("answer is '+01.000000p-5'"), 0.03125);
 
-  check(SV("answer is '0001.000000p-5'"), SV("answer is '{:014.6a}'"), 0.03125);
-  check(SV("answer is '0001.000000p-5'"), SV("answer is '{:-014.6a}'"), 0.03125);
-  check(SV("answer is '+001.000000p-5'"), SV("answer is '{:+014.6a}'"), 0.03125);
-  check(SV("answer is ' 001.000000p-5'"), SV("answer is '{: 014.6a}'"), 0.03125);
+  check.template operator()<"answer is '{:014.6a}'">(SV("answer is '0001.000000p-5'"), 0.03125);
+  check.template operator()<"answer is '{:-014.6a}'">(SV("answer is '0001.000000p-5'"), 0.03125);
+  check.template operator()<"answer is '{:+014.6a}'">(SV("answer is '+001.000000p-5'"), 0.03125);
+  check.template operator()<"answer is '{: 014.6a}'">(SV("answer is ' 001.000000p-5'"), 0.03125);
 
-  check(SV("answer is '       inf'"), SV("answer is '{:010.6a}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '       inf'"), SV("answer is '{:-010.6a}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '      +inf'"), SV("answer is '{:+010.6a}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '       inf'"), SV("answer is '{: 010.6a}'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:010.6a}'">(SV("answer is '       inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-010.6a}'">(SV("answer is '       inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+010.6a}'">(SV("answer is '      +inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: 010.6a}'">(SV("answer is '       inf'"), std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '      -inf'"), SV("answer is '{:010.6a}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '      -inf'"), SV("answer is '{:-010.6a}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '      -inf'"), SV("answer is '{:+010.6a}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '      -inf'"), SV("answer is '{: 010.6a}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:010.6a}'">(SV("answer is '      -inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-010.6a}'">(SV("answer is '      -inf'"),
+                                                      -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+010.6a}'">(SV("answer is '      -inf'"),
+                                                      -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: 010.6a}'">(SV("answer is '      -inf'"),
+                                                      -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '       nan'"), SV("answer is '{:010.6a}'"), nan_pos);
-  check(SV("answer is '       nan'"), SV("answer is '{:-010.6a}'"), nan_pos);
-  check(SV("answer is '      +nan'"), SV("answer is '{:+010.6a}'"), nan_pos);
-  check(SV("answer is '       nan'"), SV("answer is '{: 010.6a}'"), nan_pos);
+  check.template operator()<"answer is '{:010.6a}'">(SV("answer is '       nan'"), nan_pos);
+  check.template operator()<"answer is '{:-010.6a}'">(SV("answer is '       nan'"), nan_pos);
+  check.template operator()<"answer is '{:+010.6a}'">(SV("answer is '      +nan'"), nan_pos);
+  check.template operator()<"answer is '{: 010.6a}'">(SV("answer is '       nan'"), nan_pos);
 
-  check(SV("answer is '      -nan'"), SV("answer is '{:010.6a}'"), nan_neg);
-  check(SV("answer is '      -nan'"), SV("answer is '{:-010.6a}'"), nan_neg);
-  check(SV("answer is '      -nan'"), SV("answer is '{:+010.6a}'"), nan_neg);
-  check(SV("answer is '      -nan'"), SV("answer is '{: 010.6a}'"), nan_neg);
+  check.template operator()<"answer is '{:010.6a}'">(SV("answer is '      -nan'"), nan_neg);
+  check.template operator()<"answer is '{:-010.6a}'">(SV("answer is '      -nan'"), nan_neg);
+  check.template operator()<"answer is '{:+010.6a}'">(SV("answer is '      -nan'"), nan_neg);
+  check.template operator()<"answer is '{: 010.6a}'">(SV("answer is '      -nan'"), nan_neg);
 
   // *** locale-specific form ***
   // See locale-specific_form.pass.cpp
@@ -1258,106 +1263,109 @@ void format_test_floating_point_hex_upper_case_precision(TestFunction check) {
   auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
 
   // *** align-fill & width ***
-  check(SV("answer is '   1.000000P-2'"), SV("answer is '{:14.6A}'"), F(0.25));
-  check(SV("answer is '   1.000000P-2'"), SV("answer is '{:>14.6A}'"), F(0.25));
-  check(SV("answer is '1.000000P-2   '"), SV("answer is '{:<14.6A}'"), F(0.25));
-  check(SV("answer is ' 1.000000P-2  '"), SV("answer is '{:^14.6A}'"), F(0.25));
+  check.template operator()<"answer is '{:14.6A}'">(SV("answer is '   1.000000P-2'"), F(0.25));
+  check.template operator()<"answer is '{:>14.6A}'">(SV("answer is '   1.000000P-2'"), F(0.25));
+  check.template operator()<"answer is '{:<14.6A}'">(SV("answer is '1.000000P-2   '"), F(0.25));
+  check.template operator()<"answer is '{:^14.6A}'">(SV("answer is ' 1.000000P-2  '"), F(0.25));
 
-  check(SV("answer is '---1.000000P-3'"), SV("answer is '{:->14.6A}'"), F(125e-3));
-  check(SV("answer is '1.000000P-3---'"), SV("answer is '{:-<14.6A}'"), F(125e-3));
-  check(SV("answer is '-1.000000P-3--'"), SV("answer is '{:-^14.6A}'"), F(125e-3));
+  check.template operator()<"answer is '{:->14.6A}'">(SV("answer is '---1.000000P-3'"), F(125e-3));
+  check.template operator()<"answer is '{:-<14.6A}'">(SV("answer is '1.000000P-3---'"), F(125e-3));
+  check.template operator()<"answer is '{:-^14.6A}'">(SV("answer is '-1.000000P-3--'"), F(125e-3));
 
-  check(SV("answer is '***INF'"), SV("answer is '{:*>6.6A}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is 'INF***'"), SV("answer is '{:*<6.6A}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '*INF**'"), SV("answer is '{:*^6.6A}'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:*>6.6A}'">(SV("answer is '***INF'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:*<6.6A}'">(SV("answer is 'INF***'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:*^6.6A}'">(SV("answer is '*INF**'"), std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '###-INF'"), SV("answer is '{:#>7.6A}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-INF###'"), SV("answer is '{:#<7.6A}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '#-INF##'"), SV("answer is '{:#^7.6A}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#>7.6A}'">(SV("answer is '###-INF'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#<7.6A}'">(SV("answer is '-INF###'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#^7.6A}'">(SV("answer is '#-INF##'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '^^^NAN'"), SV("answer is '{:^>6.6A}'"), nan_pos);
-  check(SV("answer is 'NAN^^^'"), SV("answer is '{:^<6.6A}'"), nan_pos);
-  check(SV("answer is '^NAN^^'"), SV("answer is '{:^^6.6A}'"), nan_pos);
+  check.template operator()<"answer is '{:^>6.6A}'">(SV("answer is '^^^NAN'"), nan_pos);
+  check.template operator()<"answer is '{:^<6.6A}'">(SV("answer is 'NAN^^^'"), nan_pos);
+  check.template operator()<"answer is '{:^^6.6A}'">(SV("answer is '^NAN^^'"), nan_pos);
 
-  check(SV("answer is '000-NAN'"), SV("answer is '{:0>7.6A}'"), nan_neg);
-  check(SV("answer is '-NAN000'"), SV("answer is '{:0<7.6A}'"), nan_neg);
-  check(SV("answer is '0-NAN00'"), SV("answer is '{:0^7.6A}'"), nan_neg);
+  check.template operator()<"answer is '{:0>7.6A}'">(SV("answer is '000-NAN'"), nan_neg);
+  check.template operator()<"answer is '{:0<7.6A}'">(SV("answer is '-NAN000'"), nan_neg);
+  check.template operator()<"answer is '{:0^7.6A}'">(SV("answer is '0-NAN00'"), nan_neg);
 
   // Test whether zero padding is ignored
-  check(SV("answer is '   1.000000P-2'"), SV("answer is '{:>014.6A}'"), F(0.25));
-  check(SV("answer is '1.000000P-2   '"), SV("answer is '{:<014.6A}'"), F(0.25));
-  check(SV("answer is ' 1.000000P-2  '"), SV("answer is '{:^014.6A}'"), F(0.25));
+  check.template operator()<"answer is '{:>014.6A}'">(SV("answer is '   1.000000P-2'"), F(0.25));
+  check.template operator()<"answer is '{:<014.6A}'">(SV("answer is '1.000000P-2   '"), F(0.25));
+  check.template operator()<"answer is '{:^014.6A}'">(SV("answer is ' 1.000000P-2  '"), F(0.25));
 
   // *** Sign ***
-  check(SV("answer is '0.000000P+0'"), SV("answer is '{:.6A}'"), F(0));
-  check(SV("answer is '0.000000P+0'"), SV("answer is '{:-.6A}'"), F(0));
-  check(SV("answer is '+0.000000P+0'"), SV("answer is '{:+.6A}'"), F(0));
-  check(SV("answer is ' 0.000000P+0'"), SV("answer is '{: .6A}'"), F(0));
+  check.template operator()<"answer is '{:.6A}'">(SV("answer is '0.000000P+0'"), F(0));
+  check.template operator()<"answer is '{:-.6A}'">(SV("answer is '0.000000P+0'"), F(0));
+  check.template operator()<"answer is '{:+.6A}'">(SV("answer is '+0.000000P+0'"), F(0));
+  check.template operator()<"answer is '{: .6A}'">(SV("answer is ' 0.000000P+0'"), F(0));
 
-  check(SV("answer is '-0.000000P+0'"), SV("answer is '{:.6A}'"), F(-0.));
-  check(SV("answer is '-0.000000P+0'"), SV("answer is '{:-.6A}'"), F(-0.));
-  check(SV("answer is '-0.000000P+0'"), SV("answer is '{:+.6A}'"), F(-0.));
-  check(SV("answer is '-0.000000P+0'"), SV("answer is '{: .6A}'"), F(-0.));
+  check.template operator()<"answer is '{:.6A}'">(SV("answer is '-0.000000P+0'"), F(-0.));
+  check.template operator()<"answer is '{:-.6A}'">(SV("answer is '-0.000000P+0'"), F(-0.));
+  check.template operator()<"answer is '{:+.6A}'">(SV("answer is '-0.000000P+0'"), F(-0.));
+  check.template operator()<"answer is '{: .6A}'">(SV("answer is '-0.000000P+0'"), F(-0.));
 
   // [format.string.std]/5 The sign option applies to floating-point infinity and NaN.
-  check(SV("answer is 'INF'"), SV("answer is '{:.6A}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is 'INF'"), SV("answer is '{:-.6A}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '+INF'"), SV("answer is '{:+.6A}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is ' INF'"), SV("answer is '{: .6A}'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:.6A}'">(SV("answer is 'INF'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-.6A}'">(SV("answer is 'INF'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+.6A}'">(SV("answer is '+INF'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: .6A}'">(SV("answer is ' INF'"), std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '-INF'"), SV("answer is '{:.6A}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-INF'"), SV("answer is '{:-.6A}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-INF'"), SV("answer is '{:+.6A}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-INF'"), SV("answer is '{: .6A}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:.6A}'">(SV("answer is '-INF'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-.6A}'">(SV("answer is '-INF'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+.6A}'">(SV("answer is '-INF'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: .6A}'">(SV("answer is '-INF'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is 'NAN'"), SV("answer is '{:.6A}'"), nan_pos);
-  check(SV("answer is 'NAN'"), SV("answer is '{:-.6A}'"), nan_pos);
-  check(SV("answer is '+NAN'"), SV("answer is '{:+.6A}'"), nan_pos);
-  check(SV("answer is ' NAN'"), SV("answer is '{: .6A}'"), nan_pos);
+  check.template operator()<"answer is '{:.6A}'">(SV("answer is 'NAN'"), nan_pos);
+  check.template operator()<"answer is '{:-.6A}'">(SV("answer is 'NAN'"), nan_pos);
+  check.template operator()<"answer is '{:+.6A}'">(SV("answer is '+NAN'"), nan_pos);
+  check.template operator()<"answer is '{: .6A}'">(SV("answer is ' NAN'"), nan_pos);
 
-  check(SV("answer is '-NAN'"), SV("answer is '{:.6A}'"), nan_neg);
-  check(SV("answer is '-NAN'"), SV("answer is '{:-.6A}'"), nan_neg);
-  check(SV("answer is '-NAN'"), SV("answer is '{:+.6A}'"), nan_neg);
-  check(SV("answer is '-NAN'"), SV("answer is '{: .6A}'"), nan_neg);
+  check.template operator()<"answer is '{:.6A}'">(SV("answer is '-NAN'"), nan_neg);
+  check.template operator()<"answer is '{:-.6A}'">(SV("answer is '-NAN'"), nan_neg);
+  check.template operator()<"answer is '{:+.6A}'">(SV("answer is '-NAN'"), nan_neg);
+  check.template operator()<"answer is '{: .6A}'">(SV("answer is '-NAN'"), nan_neg);
 
   // *** alternate form ***
-  check(SV("answer is '1.400000P+1'"), SV("answer is '{:#.6A}'"), F(2.5));
+  check.template operator()<"answer is '{:#.6A}'">(SV("answer is '1.400000P+1'"), F(2.5));
 
-  check(SV("answer is 'INF'"), SV("answer is '{:#.6A}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '-INF'"), SV("answer is '{:#.6A}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#.6A}'">(SV("answer is 'INF'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#.6A}'">(SV("answer is '-INF'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is 'NAN'"), SV("answer is '{:#.6A}'"), nan_pos);
-  check(SV("answer is '-NAN'"), SV("answer is '{:#.6A}'"), nan_neg);
+  check.template operator()<"answer is '{:#.6A}'">(SV("answer is 'NAN'"), nan_pos);
+  check.template operator()<"answer is '{:#.6A}'">(SV("answer is '-NAN'"), nan_neg);
 
   // *** zero-padding & width ***
-  check(SV("answer is '1.000000P-5'"), SV("answer is '{:011.6A}'"), 0.03125);
-  check(SV("answer is '+1.000000P-5'"), SV("answer is '{:+012.6A}'"), 0.03125);
-  check(SV("answer is '+01.000000P-5'"), SV("answer is '{:+013.6A}'"), 0.03125);
+  check.template operator()<"answer is '{:011.6A}'">(SV("answer is '1.000000P-5'"), 0.03125);
+  check.template operator()<"answer is '{:+012.6A}'">(SV("answer is '+1.000000P-5'"), 0.03125);
+  check.template operator()<"answer is '{:+013.6A}'">(SV("answer is '+01.000000P-5'"), 0.03125);
 
-  check(SV("answer is '0001.000000P-5'"), SV("answer is '{:014.6A}'"), 0.03125);
-  check(SV("answer is '0001.000000P-5'"), SV("answer is '{:-014.6A}'"), 0.03125);
-  check(SV("answer is '+001.000000P-5'"), SV("answer is '{:+014.6A}'"), 0.03125);
-  check(SV("answer is ' 001.000000P-5'"), SV("answer is '{: 014.6A}'"), 0.03125);
+  check.template operator()<"answer is '{:014.6A}'">(SV("answer is '0001.000000P-5'"), 0.03125);
+  check.template operator()<"answer is '{:-014.6A}'">(SV("answer is '0001.000000P-5'"), 0.03125);
+  check.template operator()<"answer is '{:+014.6A}'">(SV("answer is '+001.000000P-5'"), 0.03125);
+  check.template operator()<"answer is '{: 014.6A}'">(SV("answer is ' 001.000000P-5'"), 0.03125);
 
-  check(SV("answer is '       INF'"), SV("answer is '{:010.6A}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '       INF'"), SV("answer is '{:-010.6A}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '      +INF'"), SV("answer is '{:+010.6A}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '       INF'"), SV("answer is '{: 010.6A}'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:010.6A}'">(SV("answer is '       INF'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-010.6A}'">(SV("answer is '       INF'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+010.6A}'">(SV("answer is '      +INF'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: 010.6A}'">(SV("answer is '       INF'"), std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '      -INF'"), SV("answer is '{:010.6A}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '      -INF'"), SV("answer is '{:-010.6A}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '      -INF'"), SV("answer is '{:+010.6A}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '      -INF'"), SV("answer is '{: 010.6A}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:010.6A}'">(SV("answer is '      -INF'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-010.6A}'">(SV("answer is '      -INF'"),
+                                                      -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+010.6A}'">(SV("answer is '      -INF'"),
+                                                      -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: 010.6A}'">(SV("answer is '      -INF'"),
+                                                      -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '       NAN'"), SV("answer is '{:010.6A}'"), nan_pos);
-  check(SV("answer is '       NAN'"), SV("answer is '{:-010.6A}'"), nan_pos);
-  check(SV("answer is '      +NAN'"), SV("answer is '{:+010.6A}'"), nan_pos);
-  check(SV("answer is '       NAN'"), SV("answer is '{: 010.6A}'"), nan_pos);
+  check.template operator()<"answer is '{:010.6A}'">(SV("answer is '       NAN'"), nan_pos);
+  check.template operator()<"answer is '{:-010.6A}'">(SV("answer is '       NAN'"), nan_pos);
+  check.template operator()<"answer is '{:+010.6A}'">(SV("answer is '      +NAN'"), nan_pos);
+  check.template operator()<"answer is '{: 010.6A}'">(SV("answer is '       NAN'"), nan_pos);
 
-  check(SV("answer is '      -NAN'"), SV("answer is '{:010.6A}'"), nan_neg);
-  check(SV("answer is '      -NAN'"), SV("answer is '{:-010.6A}'"), nan_neg);
-  check(SV("answer is '      -NAN'"), SV("answer is '{:+010.6A}'"), nan_neg);
-  check(SV("answer is '      -NAN'"), SV("answer is '{: 010.6A}'"), nan_neg);
+  check.template operator()<"answer is '{:010.6A}'">(SV("answer is '      -NAN'"), nan_neg);
+  check.template operator()<"answer is '{:-010.6A}'">(SV("answer is '      -NAN'"), nan_neg);
+  check.template operator()<"answer is '{:+010.6A}'">(SV("answer is '      -NAN'"), nan_neg);
+  check.template operator()<"answer is '{: 010.6A}'">(SV("answer is '      -NAN'"), nan_neg);
 
   // *** locale-specific form ***
   // See locale-specific_form.pass.cpp
@@ -1369,118 +1377,118 @@ void format_test_floating_point_scientific_lower_case(TestFunction check) {
   auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
 
   // *** align-fill & width ***
-  check(SV("answer is '   2.500000e-01'"), SV("answer is '{:15e}'"), F(0.25));
-  check(SV("answer is '   2.500000e-01'"), SV("answer is '{:>15e}'"), F(0.25));
-  check(SV("answer is '2.500000e-01   '"), SV("answer is '{:<15e}'"), F(0.25));
-  check(SV("answer is ' 2.500000e-01  '"), SV("answer is '{:^15e}'"), F(0.25));
+  check.template operator()<"answer is '{:15e}'">(SV("answer is '   2.500000e-01'"), F(0.25));
+  check.template operator()<"answer is '{:>15e}'">(SV("answer is '   2.500000e-01'"), F(0.25));
+  check.template operator()<"answer is '{:<15e}'">(SV("answer is '2.500000e-01   '"), F(0.25));
+  check.template operator()<"answer is '{:^15e}'">(SV("answer is ' 2.500000e-01  '"), F(0.25));
 
-  check(SV("answer is '---1.250000e-01'"), SV("answer is '{:->15e}'"), F(125e-3));
-  check(SV("answer is '1.250000e-01---'"), SV("answer is '{:-<15e}'"), F(125e-3));
-  check(SV("answer is '-1.250000e-01--'"), SV("answer is '{:-^15e}'"), F(125e-3));
+  check.template operator()<"answer is '{:->15e}'">(SV("answer is '---1.250000e-01'"), F(125e-3));
+  check.template operator()<"answer is '{:-<15e}'">(SV("answer is '1.250000e-01---'"), F(125e-3));
+  check.template operator()<"answer is '{:-^15e}'">(SV("answer is '-1.250000e-01--'"), F(125e-3));
 
-  check(SV("answer is '***inf'"), SV("answer is '{:*>6e}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is 'inf***'"), SV("answer is '{:*<6e}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '*inf**'"), SV("answer is '{:*^6e}'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:*>6e}'">(SV("answer is '***inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:*<6e}'">(SV("answer is 'inf***'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:*^6e}'">(SV("answer is '*inf**'"), std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '###-inf'"), SV("answer is '{:#>7e}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-inf###'"), SV("answer is '{:#<7e}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '#-inf##'"), SV("answer is '{:#^7e}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#>7e}'">(SV("answer is '###-inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#<7e}'">(SV("answer is '-inf###'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#^7e}'">(SV("answer is '#-inf##'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '^^^nan'"), SV("answer is '{:^>6e}'"), nan_pos);
-  check(SV("answer is 'nan^^^'"), SV("answer is '{:^<6e}'"), nan_pos);
-  check(SV("answer is '^nan^^'"), SV("answer is '{:^^6e}'"), nan_pos);
+  check.template operator()<"answer is '{:^>6e}'">(SV("answer is '^^^nan'"), nan_pos);
+  check.template operator()<"answer is '{:^<6e}'">(SV("answer is 'nan^^^'"), nan_pos);
+  check.template operator()<"answer is '{:^^6e}'">(SV("answer is '^nan^^'"), nan_pos);
 
-  check(SV("answer is '000-nan'"), SV("answer is '{:0>7e}'"), nan_neg);
-  check(SV("answer is '-nan000'"), SV("answer is '{:0<7e}'"), nan_neg);
-  check(SV("answer is '0-nan00'"), SV("answer is '{:0^7e}'"), nan_neg);
+  check.template operator()<"answer is '{:0>7e}'">(SV("answer is '000-nan'"), nan_neg);
+  check.template operator()<"answer is '{:0<7e}'">(SV("answer is '-nan000'"), nan_neg);
+  check.template operator()<"answer is '{:0^7e}'">(SV("answer is '0-nan00'"), nan_neg);
 
   // Test whether zero padding is ignored
-  check(SV("answer is '   2.500000e-01'"), SV("answer is '{:>015e}'"), F(0.25));
-  check(SV("answer is '2.500000e-01   '"), SV("answer is '{:<015e}'"), F(0.25));
-  check(SV("answer is ' 2.500000e-01  '"), SV("answer is '{:^015e}'"), F(0.25));
+  check.template operator()<"answer is '{:>015e}'">(SV("answer is '   2.500000e-01'"), F(0.25));
+  check.template operator()<"answer is '{:<015e}'">(SV("answer is '2.500000e-01   '"), F(0.25));
+  check.template operator()<"answer is '{:^015e}'">(SV("answer is ' 2.500000e-01  '"), F(0.25));
 
   // *** Sign ***
-  check(SV("answer is '0.000000e+00'"), SV("answer is '{:e}'"), F(0));
-  check(SV("answer is '0.000000e+00'"), SV("answer is '{:-e}'"), F(0));
-  check(SV("answer is '+0.000000e+00'"), SV("answer is '{:+e}'"), F(0));
-  check(SV("answer is ' 0.000000e+00'"), SV("answer is '{: e}'"), F(0));
+  check.template operator()<"answer is '{:e}'">(SV("answer is '0.000000e+00'"), F(0));
+  check.template operator()<"answer is '{:-e}'">(SV("answer is '0.000000e+00'"), F(0));
+  check.template operator()<"answer is '{:+e}'">(SV("answer is '+0.000000e+00'"), F(0));
+  check.template operator()<"answer is '{: e}'">(SV("answer is ' 0.000000e+00'"), F(0));
 
-  check(SV("answer is '-0.000000e+00'"), SV("answer is '{:e}'"), F(-0.));
-  check(SV("answer is '-0.000000e+00'"), SV("answer is '{:-e}'"), F(-0.));
-  check(SV("answer is '-0.000000e+00'"), SV("answer is '{:+e}'"), F(-0.));
-  check(SV("answer is '-0.000000e+00'"), SV("answer is '{: e}'"), F(-0.));
+  check.template operator()<"answer is '{:e}'">(SV("answer is '-0.000000e+00'"), F(-0.));
+  check.template operator()<"answer is '{:-e}'">(SV("answer is '-0.000000e+00'"), F(-0.));
+  check.template operator()<"answer is '{:+e}'">(SV("answer is '-0.000000e+00'"), F(-0.));
+  check.template operator()<"answer is '{: e}'">(SV("answer is '-0.000000e+00'"), F(-0.));
 
   // [format.string.std]/5 The sign option applies to floating-point infinity and NaN.
-  check(SV("answer is 'inf'"), SV("answer is '{:e}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is 'inf'"), SV("answer is '{:-e}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '+inf'"), SV("answer is '{:+e}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is ' inf'"), SV("answer is '{: e}'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:e}'">(SV("answer is 'inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-e}'">(SV("answer is 'inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+e}'">(SV("answer is '+inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: e}'">(SV("answer is ' inf'"), std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '-inf'"), SV("answer is '{:e}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-inf'"), SV("answer is '{:-e}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-inf'"), SV("answer is '{:+e}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-inf'"), SV("answer is '{: e}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:e}'">(SV("answer is '-inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-e}'">(SV("answer is '-inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+e}'">(SV("answer is '-inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: e}'">(SV("answer is '-inf'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is 'nan'"), SV("answer is '{:e}'"), nan_pos);
-  check(SV("answer is 'nan'"), SV("answer is '{:-e}'"), nan_pos);
-  check(SV("answer is '+nan'"), SV("answer is '{:+e}'"), nan_pos);
-  check(SV("answer is ' nan'"), SV("answer is '{: e}'"), nan_pos);
+  check.template operator()<"answer is '{:e}'">(SV("answer is 'nan'"), nan_pos);
+  check.template operator()<"answer is '{:-e}'">(SV("answer is 'nan'"), nan_pos);
+  check.template operator()<"answer is '{:+e}'">(SV("answer is '+nan'"), nan_pos);
+  check.template operator()<"answer is '{: e}'">(SV("answer is ' nan'"), nan_pos);
 
-  check(SV("answer is '-nan'"), SV("answer is '{:e}'"), nan_neg);
-  check(SV("answer is '-nan'"), SV("answer is '{:-e}'"), nan_neg);
-  check(SV("answer is '-nan'"), SV("answer is '{:+e}'"), nan_neg);
-  check(SV("answer is '-nan'"), SV("answer is '{: e}'"), nan_neg);
+  check.template operator()<"answer is '{:e}'">(SV("answer is '-nan'"), nan_neg);
+  check.template operator()<"answer is '{:-e}'">(SV("answer is '-nan'"), nan_neg);
+  check.template operator()<"answer is '{:+e}'">(SV("answer is '-nan'"), nan_neg);
+  check.template operator()<"answer is '{: e}'">(SV("answer is '-nan'"), nan_neg);
 
   // *** alternate form **
   // When precision is zero there's no decimal point except when the alternate form is specified.
-  check(SV("answer is '0e+00'"), SV("answer is '{:.0e}'"), F(0));
-  check(SV("answer is '0.e+00'"), SV("answer is '{:#.0e}'"), F(0));
+  check.template operator()<"answer is '{:.0e}'">(SV("answer is '0e+00'"), F(0));
+  check.template operator()<"answer is '{:#.0e}'">(SV("answer is '0.e+00'"), F(0));
 
-  check(SV("answer is '0.000000e+00'"), SV("answer is '{:#e}'"), F(0));
-  check(SV("answer is '2.500000e+00'"), SV("answer is '{:#e}'"), F(2.5));
+  check.template operator()<"answer is '{:#e}'">(SV("answer is '0.000000e+00'"), F(0));
+  check.template operator()<"answer is '{:#e}'">(SV("answer is '2.500000e+00'"), F(2.5));
 
-  check(SV("answer is 'inf'"), SV("answer is '{:#e}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '-inf'"), SV("answer is '{:#e}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#e}'">(SV("answer is 'inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#e}'">(SV("answer is '-inf'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is 'nan'"), SV("answer is '{:#e}'"), nan_pos);
-  check(SV("answer is '-nan'"), SV("answer is '{:#e}'"), nan_neg);
+  check.template operator()<"answer is '{:#e}'">(SV("answer is 'nan'"), nan_pos);
+  check.template operator()<"answer is '{:#e}'">(SV("answer is '-nan'"), nan_neg);
 
   // *** zero-padding & width ***
-  check(SV("answer is '3.125000e-02'"), SV("answer is '{:07e}'"), 0.03125);
-  check(SV("answer is '+3.125000e-02'"), SV("answer is '{:+07e}'"), 0.03125);
-  check(SV("answer is '+3.125000e-02'"), SV("answer is '{:+08e}'"), 0.03125);
-  check(SV("answer is '+3.125000e-02'"), SV("answer is '{:+09e}'"), 0.03125);
+  check.template operator()<"answer is '{:07e}'">(SV("answer is '3.125000e-02'"), 0.03125);
+  check.template operator()<"answer is '{:+07e}'">(SV("answer is '+3.125000e-02'"), 0.03125);
+  check.template operator()<"answer is '{:+08e}'">(SV("answer is '+3.125000e-02'"), 0.03125);
+  check.template operator()<"answer is '{:+09e}'">(SV("answer is '+3.125000e-02'"), 0.03125);
 
-  check(SV("answer is '003.125000e-02'"), SV("answer is '{:014e}'"), 0.03125);
-  check(SV("answer is '003.125000e-02'"), SV("answer is '{:-014e}'"), 0.03125);
-  check(SV("answer is '+03.125000e-02'"), SV("answer is '{:+014e}'"), 0.03125);
-  check(SV("answer is ' 03.125000e-02'"), SV("answer is '{: 014e}'"), 0.03125);
+  check.template operator()<"answer is '{:014e}'">(SV("answer is '003.125000e-02'"), 0.03125);
+  check.template operator()<"answer is '{:-014e}'">(SV("answer is '003.125000e-02'"), 0.03125);
+  check.template operator()<"answer is '{:+014e}'">(SV("answer is '+03.125000e-02'"), 0.03125);
+  check.template operator()<"answer is '{: 014e}'">(SV("answer is ' 03.125000e-02'"), 0.03125);
 
-  check(SV("answer is '       inf'"), SV("answer is '{:010e}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '       inf'"), SV("answer is '{:-010e}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '      +inf'"), SV("answer is '{:+010e}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '       inf'"), SV("answer is '{: 010e}'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:010e}'">(SV("answer is '       inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-010e}'">(SV("answer is '       inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+010e}'">(SV("answer is '      +inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: 010e}'">(SV("answer is '       inf'"), std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '      -inf'"), SV("answer is '{:010e}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '      -inf'"), SV("answer is '{:-010e}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '      -inf'"), SV("answer is '{:+010e}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '      -inf'"), SV("answer is '{: 010e}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:010e}'">(SV("answer is '      -inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-010e}'">(SV("answer is '      -inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+010e}'">(SV("answer is '      -inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: 010e}'">(SV("answer is '      -inf'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '       nan'"), SV("answer is '{:010e}'"), nan_pos);
-  check(SV("answer is '       nan'"), SV("answer is '{:-010e}'"), nan_pos);
-  check(SV("answer is '      +nan'"), SV("answer is '{:+010e}'"), nan_pos);
-  check(SV("answer is '       nan'"), SV("answer is '{: 010e}'"), nan_pos);
+  check.template operator()<"answer is '{:010e}'">(SV("answer is '       nan'"), nan_pos);
+  check.template operator()<"answer is '{:-010e}'">(SV("answer is '       nan'"), nan_pos);
+  check.template operator()<"answer is '{:+010e}'">(SV("answer is '      +nan'"), nan_pos);
+  check.template operator()<"answer is '{: 010e}'">(SV("answer is '       nan'"), nan_pos);
 
-  check(SV("answer is '      -nan'"), SV("answer is '{:010e}'"), nan_neg);
-  check(SV("answer is '      -nan'"), SV("answer is '{:-010e}'"), nan_neg);
-  check(SV("answer is '      -nan'"), SV("answer is '{:+010e}'"), nan_neg);
-  check(SV("answer is '      -nan'"), SV("answer is '{: 010e}'"), nan_neg);
+  check.template operator()<"answer is '{:010e}'">(SV("answer is '      -nan'"), nan_neg);
+  check.template operator()<"answer is '{:-010e}'">(SV("answer is '      -nan'"), nan_neg);
+  check.template operator()<"answer is '{:+010e}'">(SV("answer is '      -nan'"), nan_neg);
+  check.template operator()<"answer is '{: 010e}'">(SV("answer is '      -nan'"), nan_neg);
 
   // *** precision ***
-  check(SV("answer is '3e-02'"), SV("answer is '{:.0e}'"), 0.03125);
-  check(SV("answer is '3.1e-02'"), SV("answer is '{:.1e}'"), 0.03125);
-  check(SV("answer is '3.125e-02'"), SV("answer is '{:.3e}'"), 0.03125);
-  check(SV("answer is '3.1250000000e-02'"), SV("answer is '{:.10e}'"), 0.03125);
+  check.template operator()<"answer is '{:.0e}'">(SV("answer is '3e-02'"), 0.03125);
+  check.template operator()<"answer is '{:.1e}'">(SV("answer is '3.1e-02'"), 0.03125);
+  check.template operator()<"answer is '{:.3e}'">(SV("answer is '3.125e-02'"), 0.03125);
+  check.template operator()<"answer is '{:.10e}'">(SV("answer is '3.1250000000e-02'"), 0.03125);
 
   // *** locale-specific form ***
   // See locale-specific_form.pass.cpp
@@ -1492,118 +1500,118 @@ void format_test_floating_point_scientific_upper_case(TestFunction check) {
   auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
 
   // *** align-fill & width ***
-  check(SV("answer is '   2.500000E-01'"), SV("answer is '{:15E}'"), F(0.25));
-  check(SV("answer is '   2.500000E-01'"), SV("answer is '{:>15E}'"), F(0.25));
-  check(SV("answer is '2.500000E-01   '"), SV("answer is '{:<15E}'"), F(0.25));
-  check(SV("answer is ' 2.500000E-01  '"), SV("answer is '{:^15E}'"), F(0.25));
+  check.template operator()<"answer is '{:15E}'">(SV("answer is '   2.500000E-01'"), F(0.25));
+  check.template operator()<"answer is '{:>15E}'">(SV("answer is '   2.500000E-01'"), F(0.25));
+  check.template operator()<"answer is '{:<15E}'">(SV("answer is '2.500000E-01   '"), F(0.25));
+  check.template operator()<"answer is '{:^15E}'">(SV("answer is ' 2.500000E-01  '"), F(0.25));
 
-  check(SV("answer is '---1.250000E-01'"), SV("answer is '{:->15E}'"), F(125e-3));
-  check(SV("answer is '1.250000E-01---'"), SV("answer is '{:-<15E}'"), F(125e-3));
-  check(SV("answer is '-1.250000E-01--'"), SV("answer is '{:-^15E}'"), F(125e-3));
+  check.template operator()<"answer is '{:->15E}'">(SV("answer is '---1.250000E-01'"), F(125e-3));
+  check.template operator()<"answer is '{:-<15E}'">(SV("answer is '1.250000E-01---'"), F(125e-3));
+  check.template operator()<"answer is '{:-^15E}'">(SV("answer is '-1.250000E-01--'"), F(125e-3));
 
-  check(SV("answer is '***INF'"), SV("answer is '{:*>6E}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is 'INF***'"), SV("answer is '{:*<6E}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '*INF**'"), SV("answer is '{:*^6E}'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:*>6E}'">(SV("answer is '***INF'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:*<6E}'">(SV("answer is 'INF***'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:*^6E}'">(SV("answer is '*INF**'"), std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '###-INF'"), SV("answer is '{:#>7E}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-INF###'"), SV("answer is '{:#<7E}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '#-INF##'"), SV("answer is '{:#^7E}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#>7E}'">(SV("answer is '###-INF'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#<7E}'">(SV("answer is '-INF###'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#^7E}'">(SV("answer is '#-INF##'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '^^^NAN'"), SV("answer is '{:^>6E}'"), nan_pos);
-  check(SV("answer is 'NAN^^^'"), SV("answer is '{:^<6E}'"), nan_pos);
-  check(SV("answer is '^NAN^^'"), SV("answer is '{:^^6E}'"), nan_pos);
+  check.template operator()<"answer is '{:^>6E}'">(SV("answer is '^^^NAN'"), nan_pos);
+  check.template operator()<"answer is '{:^<6E}'">(SV("answer is 'NAN^^^'"), nan_pos);
+  check.template operator()<"answer is '{:^^6E}'">(SV("answer is '^NAN^^'"), nan_pos);
 
-  check(SV("answer is '000-NAN'"), SV("answer is '{:0>7E}'"), nan_neg);
-  check(SV("answer is '-NAN000'"), SV("answer is '{:0<7E}'"), nan_neg);
-  check(SV("answer is '0-NAN00'"), SV("answer is '{:0^7E}'"), nan_neg);
+  check.template operator()<"answer is '{:0>7E}'">(SV("answer is '000-NAN'"), nan_neg);
+  check.template operator()<"answer is '{:0<7E}'">(SV("answer is '-NAN000'"), nan_neg);
+  check.template operator()<"answer is '{:0^7E}'">(SV("answer is '0-NAN00'"), nan_neg);
 
   // Test whether zero padding is ignored
-  check(SV("answer is '   2.500000E-01'"), SV("answer is '{:>015E}'"), F(0.25));
-  check(SV("answer is '2.500000E-01   '"), SV("answer is '{:<015E}'"), F(0.25));
-  check(SV("answer is ' 2.500000E-01  '"), SV("answer is '{:^015E}'"), F(0.25));
+  check.template operator()<"answer is '{:>015E}'">(SV("answer is '   2.500000E-01'"), F(0.25));
+  check.template operator()<"answer is '{:<015E}'">(SV("answer is '2.500000E-01   '"), F(0.25));
+  check.template operator()<"answer is '{:^015E}'">(SV("answer is ' 2.500000E-01  '"), F(0.25));
 
   // *** Sign ***
-  check(SV("answer is '0.000000E+00'"), SV("answer is '{:E}'"), F(0));
-  check(SV("answer is '0.000000E+00'"), SV("answer is '{:-E}'"), F(0));
-  check(SV("answer is '+0.000000E+00'"), SV("answer is '{:+E}'"), F(0));
-  check(SV("answer is ' 0.000000E+00'"), SV("answer is '{: E}'"), F(0));
+  check.template operator()<"answer is '{:E}'">(SV("answer is '0.000000E+00'"), F(0));
+  check.template operator()<"answer is '{:-E}'">(SV("answer is '0.000000E+00'"), F(0));
+  check.template operator()<"answer is '{:+E}'">(SV("answer is '+0.000000E+00'"), F(0));
+  check.template operator()<"answer is '{: E}'">(SV("answer is ' 0.000000E+00'"), F(0));
 
-  check(SV("answer is '-0.000000E+00'"), SV("answer is '{:E}'"), F(-0.));
-  check(SV("answer is '-0.000000E+00'"), SV("answer is '{:-E}'"), F(-0.));
-  check(SV("answer is '-0.000000E+00'"), SV("answer is '{:+E}'"), F(-0.));
-  check(SV("answer is '-0.000000E+00'"), SV("answer is '{: E}'"), F(-0.));
+  check.template operator()<"answer is '{:E}'">(SV("answer is '-0.000000E+00'"), F(-0.));
+  check.template operator()<"answer is '{:-E}'">(SV("answer is '-0.000000E+00'"), F(-0.));
+  check.template operator()<"answer is '{:+E}'">(SV("answer is '-0.000000E+00'"), F(-0.));
+  check.template operator()<"answer is '{: E}'">(SV("answer is '-0.000000E+00'"), F(-0.));
 
   // [format.string.std]/5 The sign option applies to floating-point infinity and NaN.
-  check(SV("answer is 'INF'"), SV("answer is '{:E}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is 'INF'"), SV("answer is '{:-E}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '+INF'"), SV("answer is '{:+E}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is ' INF'"), SV("answer is '{: E}'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:E}'">(SV("answer is 'INF'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-E}'">(SV("answer is 'INF'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+E}'">(SV("answer is '+INF'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: E}'">(SV("answer is ' INF'"), std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '-INF'"), SV("answer is '{:E}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-INF'"), SV("answer is '{:-E}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-INF'"), SV("answer is '{:+E}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-INF'"), SV("answer is '{: E}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:E}'">(SV("answer is '-INF'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-E}'">(SV("answer is '-INF'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+E}'">(SV("answer is '-INF'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: E}'">(SV("answer is '-INF'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is 'NAN'"), SV("answer is '{:E}'"), nan_pos);
-  check(SV("answer is 'NAN'"), SV("answer is '{:-E}'"), nan_pos);
-  check(SV("answer is '+NAN'"), SV("answer is '{:+E}'"), nan_pos);
-  check(SV("answer is ' NAN'"), SV("answer is '{: E}'"), nan_pos);
+  check.template operator()<"answer is '{:E}'">(SV("answer is 'NAN'"), nan_pos);
+  check.template operator()<"answer is '{:-E}'">(SV("answer is 'NAN'"), nan_pos);
+  check.template operator()<"answer is '{:+E}'">(SV("answer is '+NAN'"), nan_pos);
+  check.template operator()<"answer is '{: E}'">(SV("answer is ' NAN'"), nan_pos);
 
-  check(SV("answer is '-NAN'"), SV("answer is '{:E}'"), nan_neg);
-  check(SV("answer is '-NAN'"), SV("answer is '{:-E}'"), nan_neg);
-  check(SV("answer is '-NAN'"), SV("answer is '{:+E}'"), nan_neg);
-  check(SV("answer is '-NAN'"), SV("answer is '{: E}'"), nan_neg);
+  check.template operator()<"answer is '{:E}'">(SV("answer is '-NAN'"), nan_neg);
+  check.template operator()<"answer is '{:-E}'">(SV("answer is '-NAN'"), nan_neg);
+  check.template operator()<"answer is '{:+E}'">(SV("answer is '-NAN'"), nan_neg);
+  check.template operator()<"answer is '{: E}'">(SV("answer is '-NAN'"), nan_neg);
 
   // *** alternate form **
   // When precision is zero there's no decimal point except when the alternate form is specified.
-  check(SV("answer is '0E+00'"), SV("answer is '{:.0E}'"), F(0));
-  check(SV("answer is '0.E+00'"), SV("answer is '{:#.0E}'"), F(0));
+  check.template operator()<"answer is '{:.0E}'">(SV("answer is '0E+00'"), F(0));
+  check.template operator()<"answer is '{:#.0E}'">(SV("answer is '0.E+00'"), F(0));
 
-  check(SV("answer is '0.000000E+00'"), SV("answer is '{:#E}'"), F(0));
-  check(SV("answer is '2.500000E+00'"), SV("answer is '{:#E}'"), F(2.5));
+  check.template operator()<"answer is '{:#E}'">(SV("answer is '0.000000E+00'"), F(0));
+  check.template operator()<"answer is '{:#E}'">(SV("answer is '2.500000E+00'"), F(2.5));
 
-  check(SV("answer is 'INF'"), SV("answer is '{:#E}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '-INF'"), SV("answer is '{:#E}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#E}'">(SV("answer is 'INF'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#E}'">(SV("answer is '-INF'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is 'NAN'"), SV("answer is '{:#E}'"), nan_pos);
-  check(SV("answer is '-NAN'"), SV("answer is '{:#E}'"), nan_neg);
+  check.template operator()<"answer is '{:#E}'">(SV("answer is 'NAN'"), nan_pos);
+  check.template operator()<"answer is '{:#E}'">(SV("answer is '-NAN'"), nan_neg);
 
   // *** zero-padding & width ***
-  check(SV("answer is '3.125000E-02'"), SV("answer is '{:07E}'"), 0.03125);
-  check(SV("answer is '+3.125000E-02'"), SV("answer is '{:+07E}'"), 0.03125);
-  check(SV("answer is '+3.125000E-02'"), SV("answer is '{:+08E}'"), 0.03125);
-  check(SV("answer is '+3.125000E-02'"), SV("answer is '{:+09E}'"), 0.03125);
+  check.template operator()<"answer is '{:07E}'">(SV("answer is '3.125000E-02'"), 0.03125);
+  check.template operator()<"answer is '{:+07E}'">(SV("answer is '+3.125000E-02'"), 0.03125);
+  check.template operator()<"answer is '{:+08E}'">(SV("answer is '+3.125000E-02'"), 0.03125);
+  check.template operator()<"answer is '{:+09E}'">(SV("answer is '+3.125000E-02'"), 0.03125);
 
-  check(SV("answer is '003.125000E-02'"), SV("answer is '{:014E}'"), 0.03125);
-  check(SV("answer is '003.125000E-02'"), SV("answer is '{:-014E}'"), 0.03125);
-  check(SV("answer is '+03.125000E-02'"), SV("answer is '{:+014E}'"), 0.03125);
-  check(SV("answer is ' 03.125000E-02'"), SV("answer is '{: 014E}'"), 0.03125);
+  check.template operator()<"answer is '{:014E}'">(SV("answer is '003.125000E-02'"), 0.03125);
+  check.template operator()<"answer is '{:-014E}'">(SV("answer is '003.125000E-02'"), 0.03125);
+  check.template operator()<"answer is '{:+014E}'">(SV("answer is '+03.125000E-02'"), 0.03125);
+  check.template operator()<"answer is '{: 014E}'">(SV("answer is ' 03.125000E-02'"), 0.03125);
 
-  check(SV("answer is '       INF'"), SV("answer is '{:010E}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '       INF'"), SV("answer is '{:-010E}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '      +INF'"), SV("answer is '{:+010E}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '       INF'"), SV("answer is '{: 010E}'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:010E}'">(SV("answer is '       INF'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-010E}'">(SV("answer is '       INF'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+010E}'">(SV("answer is '      +INF'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: 010E}'">(SV("answer is '       INF'"), std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '      -INF'"), SV("answer is '{:010E}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '      -INF'"), SV("answer is '{:-010E}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '      -INF'"), SV("answer is '{:+010E}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '      -INF'"), SV("answer is '{: 010E}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:010E}'">(SV("answer is '      -INF'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-010E}'">(SV("answer is '      -INF'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+010E}'">(SV("answer is '      -INF'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: 010E}'">(SV("answer is '      -INF'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '       NAN'"), SV("answer is '{:010E}'"), nan_pos);
-  check(SV("answer is '       NAN'"), SV("answer is '{:-010E}'"), nan_pos);
-  check(SV("answer is '      +NAN'"), SV("answer is '{:+010E}'"), nan_pos);
-  check(SV("answer is '       NAN'"), SV("answer is '{: 010E}'"), nan_pos);
+  check.template operator()<"answer is '{:010E}'">(SV("answer is '       NAN'"), nan_pos);
+  check.template operator()<"answer is '{:-010E}'">(SV("answer is '       NAN'"), nan_pos);
+  check.template operator()<"answer is '{:+010E}'">(SV("answer is '      +NAN'"), nan_pos);
+  check.template operator()<"answer is '{: 010E}'">(SV("answer is '       NAN'"), nan_pos);
 
-  check(SV("answer is '      -NAN'"), SV("answer is '{:010E}'"), nan_neg);
-  check(SV("answer is '      -NAN'"), SV("answer is '{:-010E}'"), nan_neg);
-  check(SV("answer is '      -NAN'"), SV("answer is '{:+010E}'"), nan_neg);
-  check(SV("answer is '      -NAN'"), SV("answer is '{: 010E}'"), nan_neg);
+  check.template operator()<"answer is '{:010E}'">(SV("answer is '      -NAN'"), nan_neg);
+  check.template operator()<"answer is '{:-010E}'">(SV("answer is '      -NAN'"), nan_neg);
+  check.template operator()<"answer is '{:+010E}'">(SV("answer is '      -NAN'"), nan_neg);
+  check.template operator()<"answer is '{: 010E}'">(SV("answer is '      -NAN'"), nan_neg);
 
   // *** precision ***
-  check(SV("answer is '3E-02'"), SV("answer is '{:.0E}'"), 0.03125);
-  check(SV("answer is '3.1E-02'"), SV("answer is '{:.1E}'"), 0.03125);
-  check(SV("answer is '3.125E-02'"), SV("answer is '{:.3E}'"), 0.03125);
-  check(SV("answer is '3.1250000000E-02'"), SV("answer is '{:.10E}'"), 0.03125);
+  check.template operator()<"answer is '{:.0E}'">(SV("answer is '3E-02'"), 0.03125);
+  check.template operator()<"answer is '{:.1E}'">(SV("answer is '3.1E-02'"), 0.03125);
+  check.template operator()<"answer is '{:.3E}'">(SV("answer is '3.125E-02'"), 0.03125);
+  check.template operator()<"answer is '{:.10E}'">(SV("answer is '3.1250000000E-02'"), 0.03125);
 
   // *** locale-specific form ***
   // See locale-specific_form.pass.cpp
@@ -1615,118 +1623,118 @@ void format_test_floating_point_fixed_lower_case(TestFunction check) {
   auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
 
   // *** align-fill & width ***
-  check(SV("answer is '   0.250000'"), SV("answer is '{:11f}'"), F(0.25));
-  check(SV("answer is '   0.250000'"), SV("answer is '{:>11f}'"), F(0.25));
-  check(SV("answer is '0.250000   '"), SV("answer is '{:<11f}'"), F(0.25));
-  check(SV("answer is ' 0.250000  '"), SV("answer is '{:^11f}'"), F(0.25));
+  check.template operator()<"answer is '{:11f}'">(SV("answer is '   0.250000'"), F(0.25));
+  check.template operator()<"answer is '{:>11f}'">(SV("answer is '   0.250000'"), F(0.25));
+  check.template operator()<"answer is '{:<11f}'">(SV("answer is '0.250000   '"), F(0.25));
+  check.template operator()<"answer is '{:^11f}'">(SV("answer is ' 0.250000  '"), F(0.25));
 
-  check(SV("answer is '---0.125000'"), SV("answer is '{:->11f}'"), F(125e-3));
-  check(SV("answer is '0.125000---'"), SV("answer is '{:-<11f}'"), F(125e-3));
-  check(SV("answer is '-0.125000--'"), SV("answer is '{:-^11f}'"), F(125e-3));
+  check.template operator()<"answer is '{:->11f}'">(SV("answer is '---0.125000'"), F(125e-3));
+  check.template operator()<"answer is '{:-<11f}'">(SV("answer is '0.125000---'"), F(125e-3));
+  check.template operator()<"answer is '{:-^11f}'">(SV("answer is '-0.125000--'"), F(125e-3));
 
-  check(SV("answer is '***inf'"), SV("answer is '{:*>6f}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is 'inf***'"), SV("answer is '{:*<6f}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '*inf**'"), SV("answer is '{:*^6f}'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:*>6f}'">(SV("answer is '***inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:*<6f}'">(SV("answer is 'inf***'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:*^6f}'">(SV("answer is '*inf**'"), std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '###-inf'"), SV("answer is '{:#>7f}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-inf###'"), SV("answer is '{:#<7f}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '#-inf##'"), SV("answer is '{:#^7f}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#>7f}'">(SV("answer is '###-inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#<7f}'">(SV("answer is '-inf###'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#^7f}'">(SV("answer is '#-inf##'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '^^^nan'"), SV("answer is '{:^>6f}'"), nan_pos);
-  check(SV("answer is 'nan^^^'"), SV("answer is '{:^<6f}'"), nan_pos);
-  check(SV("answer is '^nan^^'"), SV("answer is '{:^^6f}'"), nan_pos);
+  check.template operator()<"answer is '{:^>6f}'">(SV("answer is '^^^nan'"), nan_pos);
+  check.template operator()<"answer is '{:^<6f}'">(SV("answer is 'nan^^^'"), nan_pos);
+  check.template operator()<"answer is '{:^^6f}'">(SV("answer is '^nan^^'"), nan_pos);
 
-  check(SV("answer is '000-nan'"), SV("answer is '{:0>7f}'"), nan_neg);
-  check(SV("answer is '-nan000'"), SV("answer is '{:0<7f}'"), nan_neg);
-  check(SV("answer is '0-nan00'"), SV("answer is '{:0^7f}'"), nan_neg);
+  check.template operator()<"answer is '{:0>7f}'">(SV("answer is '000-nan'"), nan_neg);
+  check.template operator()<"answer is '{:0<7f}'">(SV("answer is '-nan000'"), nan_neg);
+  check.template operator()<"answer is '{:0^7f}'">(SV("answer is '0-nan00'"), nan_neg);
 
   // Test whether zero padding is ignored
-  check(SV("answer is '   0.250000'"), SV("answer is '{:>011f}'"), F(0.25));
-  check(SV("answer is '0.250000   '"), SV("answer is '{:<011f}'"), F(0.25));
-  check(SV("answer is ' 0.250000  '"), SV("answer is '{:^011f}'"), F(0.25));
+  check.template operator()<"answer is '{:>011f}'">(SV("answer is '   0.250000'"), F(0.25));
+  check.template operator()<"answer is '{:<011f}'">(SV("answer is '0.250000   '"), F(0.25));
+  check.template operator()<"answer is '{:^011f}'">(SV("answer is ' 0.250000  '"), F(0.25));
 
   // *** Sign ***
-  check(SV("answer is '0.000000'"), SV("answer is '{:f}'"), F(0));
-  check(SV("answer is '0.000000'"), SV("answer is '{:-f}'"), F(0));
-  check(SV("answer is '+0.000000'"), SV("answer is '{:+f}'"), F(0));
-  check(SV("answer is ' 0.000000'"), SV("answer is '{: f}'"), F(0));
+  check.template operator()<"answer is '{:f}'">(SV("answer is '0.000000'"), F(0));
+  check.template operator()<"answer is '{:-f}'">(SV("answer is '0.000000'"), F(0));
+  check.template operator()<"answer is '{:+f}'">(SV("answer is '+0.000000'"), F(0));
+  check.template operator()<"answer is '{: f}'">(SV("answer is ' 0.000000'"), F(0));
 
-  check(SV("answer is '-0.000000'"), SV("answer is '{:f}'"), F(-0.));
-  check(SV("answer is '-0.000000'"), SV("answer is '{:-f}'"), F(-0.));
-  check(SV("answer is '-0.000000'"), SV("answer is '{:+f}'"), F(-0.));
-  check(SV("answer is '-0.000000'"), SV("answer is '{: f}'"), F(-0.));
+  check.template operator()<"answer is '{:f}'">(SV("answer is '-0.000000'"), F(-0.));
+  check.template operator()<"answer is '{:-f}'">(SV("answer is '-0.000000'"), F(-0.));
+  check.template operator()<"answer is '{:+f}'">(SV("answer is '-0.000000'"), F(-0.));
+  check.template operator()<"answer is '{: f}'">(SV("answer is '-0.000000'"), F(-0.));
 
   // [format.string.std]/5 The sign option applies to floating-point infinity and NaN.
-  check(SV("answer is 'inf'"), SV("answer is '{:f}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is 'inf'"), SV("answer is '{:-f}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '+inf'"), SV("answer is '{:+f}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is ' inf'"), SV("answer is '{: f}'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:f}'">(SV("answer is 'inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-f}'">(SV("answer is 'inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+f}'">(SV("answer is '+inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: f}'">(SV("answer is ' inf'"), std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '-inf'"), SV("answer is '{:f}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-inf'"), SV("answer is '{:-f}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-inf'"), SV("answer is '{:+f}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-inf'"), SV("answer is '{: f}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:f}'">(SV("answer is '-inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-f}'">(SV("answer is '-inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+f}'">(SV("answer is '-inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: f}'">(SV("answer is '-inf'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is 'nan'"), SV("answer is '{:f}'"), nan_pos);
-  check(SV("answer is 'nan'"), SV("answer is '{:-f}'"), nan_pos);
-  check(SV("answer is '+nan'"), SV("answer is '{:+f}'"), nan_pos);
-  check(SV("answer is ' nan'"), SV("answer is '{: f}'"), nan_pos);
+  check.template operator()<"answer is '{:f}'">(SV("answer is 'nan'"), nan_pos);
+  check.template operator()<"answer is '{:-f}'">(SV("answer is 'nan'"), nan_pos);
+  check.template operator()<"answer is '{:+f}'">(SV("answer is '+nan'"), nan_pos);
+  check.template operator()<"answer is '{: f}'">(SV("answer is ' nan'"), nan_pos);
 
-  check(SV("answer is '-nan'"), SV("answer is '{:f}'"), nan_neg);
-  check(SV("answer is '-nan'"), SV("answer is '{:-f}'"), nan_neg);
-  check(SV("answer is '-nan'"), SV("answer is '{:+f}'"), nan_neg);
-  check(SV("answer is '-nan'"), SV("answer is '{: f}'"), nan_neg);
+  check.template operator()<"answer is '{:f}'">(SV("answer is '-nan'"), nan_neg);
+  check.template operator()<"answer is '{:-f}'">(SV("answer is '-nan'"), nan_neg);
+  check.template operator()<"answer is '{:+f}'">(SV("answer is '-nan'"), nan_neg);
+  check.template operator()<"answer is '{: f}'">(SV("answer is '-nan'"), nan_neg);
 
   // *** alternate form **
   // When precision is zero there's no decimal point except when the alternate form is specified.
-  check(SV("answer is '0'"), SV("answer is '{:.0f}'"), F(0));
-  check(SV("answer is '0.'"), SV("answer is '{:#.0f}'"), F(0));
+  check.template operator()<"answer is '{:.0f}'">(SV("answer is '0'"), F(0));
+  check.template operator()<"answer is '{:#.0f}'">(SV("answer is '0.'"), F(0));
 
-  check(SV("answer is '0.000000'"), SV("answer is '{:#f}'"), F(0));
-  check(SV("answer is '2.500000'"), SV("answer is '{:#f}'"), F(2.5));
+  check.template operator()<"answer is '{:#f}'">(SV("answer is '0.000000'"), F(0));
+  check.template operator()<"answer is '{:#f}'">(SV("answer is '2.500000'"), F(2.5));
 
-  check(SV("answer is 'inf'"), SV("answer is '{:#f}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '-inf'"), SV("answer is '{:#f}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#f}'">(SV("answer is 'inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#f}'">(SV("answer is '-inf'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is 'nan'"), SV("answer is '{:#f}'"), nan_pos);
-  check(SV("answer is '-nan'"), SV("answer is '{:#f}'"), nan_neg);
+  check.template operator()<"answer is '{:#f}'">(SV("answer is 'nan'"), nan_pos);
+  check.template operator()<"answer is '{:#f}'">(SV("answer is '-nan'"), nan_neg);
 
   // *** zero-padding & width ***
-  check(SV("answer is '0.031250'"), SV("answer is '{:07f}'"), 0.03125);
-  check(SV("answer is '+0.031250'"), SV("answer is '{:+07f}'"), 0.03125);
-  check(SV("answer is '+0.031250'"), SV("answer is '{:+08f}'"), 0.03125);
-  check(SV("answer is '+0.031250'"), SV("answer is '{:+09f}'"), 0.03125);
+  check.template operator()<"answer is '{:07f}'">(SV("answer is '0.031250'"), 0.03125);
+  check.template operator()<"answer is '{:+07f}'">(SV("answer is '+0.031250'"), 0.03125);
+  check.template operator()<"answer is '{:+08f}'">(SV("answer is '+0.031250'"), 0.03125);
+  check.template operator()<"answer is '{:+09f}'">(SV("answer is '+0.031250'"), 0.03125);
 
-  check(SV("answer is '000.031250'"), SV("answer is '{:010f}'"), 0.03125);
-  check(SV("answer is '000.031250'"), SV("answer is '{:-010f}'"), 0.03125);
-  check(SV("answer is '+00.031250'"), SV("answer is '{:+010f}'"), 0.03125);
-  check(SV("answer is ' 00.031250'"), SV("answer is '{: 010f}'"), 0.03125);
+  check.template operator()<"answer is '{:010f}'">(SV("answer is '000.031250'"), 0.03125);
+  check.template operator()<"answer is '{:-010f}'">(SV("answer is '000.031250'"), 0.03125);
+  check.template operator()<"answer is '{:+010f}'">(SV("answer is '+00.031250'"), 0.03125);
+  check.template operator()<"answer is '{: 010f}'">(SV("answer is ' 00.031250'"), 0.03125);
 
-  check(SV("answer is '       inf'"), SV("answer is '{:010f}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '       inf'"), SV("answer is '{:-010f}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '      +inf'"), SV("answer is '{:+010f}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '       inf'"), SV("answer is '{: 010f}'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:010f}'">(SV("answer is '       inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-010f}'">(SV("answer is '       inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+010f}'">(SV("answer is '      +inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: 010f}'">(SV("answer is '       inf'"), std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '      -inf'"), SV("answer is '{:010f}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '      -inf'"), SV("answer is '{:-010f}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '      -inf'"), SV("answer is '{:+010f}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '      -inf'"), SV("answer is '{: 010f}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:010f}'">(SV("answer is '      -inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-010f}'">(SV("answer is '      -inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+010f}'">(SV("answer is '      -inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: 010f}'">(SV("answer is '      -inf'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '       nan'"), SV("answer is '{:010f}'"), nan_pos);
-  check(SV("answer is '       nan'"), SV("answer is '{:-010f}'"), nan_pos);
-  check(SV("answer is '      +nan'"), SV("answer is '{:+010f}'"), nan_pos);
-  check(SV("answer is '       nan'"), SV("answer is '{: 010f}'"), nan_pos);
+  check.template operator()<"answer is '{:010f}'">(SV("answer is '       nan'"), nan_pos);
+  check.template operator()<"answer is '{:-010f}'">(SV("answer is '       nan'"), nan_pos);
+  check.template operator()<"answer is '{:+010f}'">(SV("answer is '      +nan'"), nan_pos);
+  check.template operator()<"answer is '{: 010f}'">(SV("answer is '       nan'"), nan_pos);
 
-  check(SV("answer is '      -nan'"), SV("answer is '{:010f}'"), nan_neg);
-  check(SV("answer is '      -nan'"), SV("answer is '{:-010f}'"), nan_neg);
-  check(SV("answer is '      -nan'"), SV("answer is '{:+010f}'"), nan_neg);
-  check(SV("answer is '      -nan'"), SV("answer is '{: 010f}'"), nan_neg);
+  check.template operator()<"answer is '{:010f}'">(SV("answer is '      -nan'"), nan_neg);
+  check.template operator()<"answer is '{:-010f}'">(SV("answer is '      -nan'"), nan_neg);
+  check.template operator()<"answer is '{:+010f}'">(SV("answer is '      -nan'"), nan_neg);
+  check.template operator()<"answer is '{: 010f}'">(SV("answer is '      -nan'"), nan_neg);
 
   // *** precision ***
-  check(SV("answer is '0'"), SV("answer is '{:.0f}'"), 0.03125);
-  check(SV("answer is '0.0'"), SV("answer is '{:.1f}'"), 0.03125);
-  check(SV("answer is '0.03125'"), SV("answer is '{:.5f}'"), 0.03125);
-  check(SV("answer is '0.0312500000'"), SV("answer is '{:.10f}'"), 0.03125);
+  check.template operator()<"answer is '{:.0f}'">(SV("answer is '0'"), 0.03125);
+  check.template operator()<"answer is '{:.1f}'">(SV("answer is '0.0'"), 0.03125);
+  check.template operator()<"answer is '{:.5f}'">(SV("answer is '0.03125'"), 0.03125);
+  check.template operator()<"answer is '{:.10f}'">(SV("answer is '0.0312500000'"), 0.03125);
 
   // *** locale-specific form ***
   // See locale-specific_form.pass.cpp
@@ -1738,118 +1746,118 @@ void format_test_floating_point_fixed_upper_case(TestFunction check) {
   auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
 
   // *** align-fill & width ***
-  check(SV("answer is '   0.250000'"), SV("answer is '{:11F}'"), F(0.25));
-  check(SV("answer is '   0.250000'"), SV("answer is '{:>11F}'"), F(0.25));
-  check(SV("answer is '0.250000   '"), SV("answer is '{:<11F}'"), F(0.25));
-  check(SV("answer is ' 0.250000  '"), SV("answer is '{:^11F}'"), F(0.25));
+  check.template operator()<"answer is '{:11F}'">(SV("answer is '   0.250000'"), F(0.25));
+  check.template operator()<"answer is '{:>11F}'">(SV("answer is '   0.250000'"), F(0.25));
+  check.template operator()<"answer is '{:<11F}'">(SV("answer is '0.250000   '"), F(0.25));
+  check.template operator()<"answer is '{:^11F}'">(SV("answer is ' 0.250000  '"), F(0.25));
 
-  check(SV("answer is '---0.125000'"), SV("answer is '{:->11F}'"), F(125e-3));
-  check(SV("answer is '0.125000---'"), SV("answer is '{:-<11F}'"), F(125e-3));
-  check(SV("answer is '-0.125000--'"), SV("answer is '{:-^11F}'"), F(125e-3));
+  check.template operator()<"answer is '{:->11F}'">(SV("answer is '---0.125000'"), F(125e-3));
+  check.template operator()<"answer is '{:-<11F}'">(SV("answer is '0.125000---'"), F(125e-3));
+  check.template operator()<"answer is '{:-^11F}'">(SV("answer is '-0.125000--'"), F(125e-3));
 
-  check(SV("answer is '***INF'"), SV("answer is '{:*>6F}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is 'INF***'"), SV("answer is '{:*<6F}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '*INF**'"), SV("answer is '{:*^6F}'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:*>6F}'">(SV("answer is '***INF'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:*<6F}'">(SV("answer is 'INF***'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:*^6F}'">(SV("answer is '*INF**'"), std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '###-INF'"), SV("answer is '{:#>7F}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-INF###'"), SV("answer is '{:#<7F}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '#-INF##'"), SV("answer is '{:#^7F}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#>7F}'">(SV("answer is '###-INF'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#<7F}'">(SV("answer is '-INF###'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#^7F}'">(SV("answer is '#-INF##'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '^^^NAN'"), SV("answer is '{:^>6F}'"), nan_pos);
-  check(SV("answer is 'NAN^^^'"), SV("answer is '{:^<6F}'"), nan_pos);
-  check(SV("answer is '^NAN^^'"), SV("answer is '{:^^6F}'"), nan_pos);
+  check.template operator()<"answer is '{:^>6F}'">(SV("answer is '^^^NAN'"), nan_pos);
+  check.template operator()<"answer is '{:^<6F}'">(SV("answer is 'NAN^^^'"), nan_pos);
+  check.template operator()<"answer is '{:^^6F}'">(SV("answer is '^NAN^^'"), nan_pos);
 
-  check(SV("answer is '000-NAN'"), SV("answer is '{:0>7F}'"), nan_neg);
-  check(SV("answer is '-NAN000'"), SV("answer is '{:0<7F}'"), nan_neg);
-  check(SV("answer is '0-NAN00'"), SV("answer is '{:0^7F}'"), nan_neg);
+  check.template operator()<"answer is '{:0>7F}'">(SV("answer is '000-NAN'"), nan_neg);
+  check.template operator()<"answer is '{:0<7F}'">(SV("answer is '-NAN000'"), nan_neg);
+  check.template operator()<"answer is '{:0^7F}'">(SV("answer is '0-NAN00'"), nan_neg);
 
   // Test whether zero padding is ignored
-  check(SV("answer is '   0.250000'"), SV("answer is '{:>011F}'"), F(0.25));
-  check(SV("answer is '0.250000   '"), SV("answer is '{:<011F}'"), F(0.25));
-  check(SV("answer is ' 0.250000  '"), SV("answer is '{:^011F}'"), F(0.25));
+  check.template operator()<"answer is '{:>011F}'">(SV("answer is '   0.250000'"), F(0.25));
+  check.template operator()<"answer is '{:<011F}'">(SV("answer is '0.250000   '"), F(0.25));
+  check.template operator()<"answer is '{:^011F}'">(SV("answer is ' 0.250000  '"), F(0.25));
 
   // *** Sign ***
-  check(SV("answer is '0.000000'"), SV("answer is '{:F}'"), F(0));
-  check(SV("answer is '0.000000'"), SV("answer is '{:-F}'"), F(0));
-  check(SV("answer is '+0.000000'"), SV("answer is '{:+F}'"), F(0));
-  check(SV("answer is ' 0.000000'"), SV("answer is '{: F}'"), F(0));
+  check.template operator()<"answer is '{:F}'">(SV("answer is '0.000000'"), F(0));
+  check.template operator()<"answer is '{:-F}'">(SV("answer is '0.000000'"), F(0));
+  check.template operator()<"answer is '{:+F}'">(SV("answer is '+0.000000'"), F(0));
+  check.template operator()<"answer is '{: F}'">(SV("answer is ' 0.000000'"), F(0));
 
-  check(SV("answer is '-0.000000'"), SV("answer is '{:F}'"), F(-0.));
-  check(SV("answer is '-0.000000'"), SV("answer is '{:-F}'"), F(-0.));
-  check(SV("answer is '-0.000000'"), SV("answer is '{:+F}'"), F(-0.));
-  check(SV("answer is '-0.000000'"), SV("answer is '{: F}'"), F(-0.));
+  check.template operator()<"answer is '{:F}'">(SV("answer is '-0.000000'"), F(-0.));
+  check.template operator()<"answer is '{:-F}'">(SV("answer is '-0.000000'"), F(-0.));
+  check.template operator()<"answer is '{:+F}'">(SV("answer is '-0.000000'"), F(-0.));
+  check.template operator()<"answer is '{: F}'">(SV("answer is '-0.000000'"), F(-0.));
 
   // [format.string.std]/5 The sign option applies to floating-point infinity and NaN.
-  check(SV("answer is 'INF'"), SV("answer is '{:F}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is 'INF'"), SV("answer is '{:-F}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '+INF'"), SV("answer is '{:+F}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is ' INF'"), SV("answer is '{: F}'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:F}'">(SV("answer is 'INF'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-F}'">(SV("answer is 'INF'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+F}'">(SV("answer is '+INF'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: F}'">(SV("answer is ' INF'"), std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '-INF'"), SV("answer is '{:F}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-INF'"), SV("answer is '{:-F}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-INF'"), SV("answer is '{:+F}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-INF'"), SV("answer is '{: F}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:F}'">(SV("answer is '-INF'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-F}'">(SV("answer is '-INF'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+F}'">(SV("answer is '-INF'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: F}'">(SV("answer is '-INF'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is 'NAN'"), SV("answer is '{:F}'"), nan_pos);
-  check(SV("answer is 'NAN'"), SV("answer is '{:-F}'"), nan_pos);
-  check(SV("answer is '+NAN'"), SV("answer is '{:+F}'"), nan_pos);
-  check(SV("answer is ' NAN'"), SV("answer is '{: F}'"), nan_pos);
+  check.template operator()<"answer is '{:F}'">(SV("answer is 'NAN'"), nan_pos);
+  check.template operator()<"answer is '{:-F}'">(SV("answer is 'NAN'"), nan_pos);
+  check.template operator()<"answer is '{:+F}'">(SV("answer is '+NAN'"), nan_pos);
+  check.template operator()<"answer is '{: F}'">(SV("answer is ' NAN'"), nan_pos);
 
-  check(SV("answer is '-NAN'"), SV("answer is '{:F}'"), nan_neg);
-  check(SV("answer is '-NAN'"), SV("answer is '{:-F}'"), nan_neg);
-  check(SV("answer is '-NAN'"), SV("answer is '{:+F}'"), nan_neg);
-  check(SV("answer is '-NAN'"), SV("answer is '{: F}'"), nan_neg);
+  check.template operator()<"answer is '{:F}'">(SV("answer is '-NAN'"), nan_neg);
+  check.template operator()<"answer is '{:-F}'">(SV("answer is '-NAN'"), nan_neg);
+  check.template operator()<"answer is '{:+F}'">(SV("answer is '-NAN'"), nan_neg);
+  check.template operator()<"answer is '{: F}'">(SV("answer is '-NAN'"), nan_neg);
 
   // *** alternate form **
   // When precision is zero there's no decimal point except when the alternate form is specified.
-  check(SV("answer is '0'"), SV("answer is '{:.0F}'"), F(0));
-  check(SV("answer is '0.'"), SV("answer is '{:#.0F}'"), F(0));
+  check.template operator()<"answer is '{:.0F}'">(SV("answer is '0'"), F(0));
+  check.template operator()<"answer is '{:#.0F}'">(SV("answer is '0.'"), F(0));
 
-  check(SV("answer is '0.000000'"), SV("answer is '{:#F}'"), F(0));
-  check(SV("answer is '2.500000'"), SV("answer is '{:#F}'"), F(2.5));
+  check.template operator()<"answer is '{:#F}'">(SV("answer is '0.000000'"), F(0));
+  check.template operator()<"answer is '{:#F}'">(SV("answer is '2.500000'"), F(2.5));
 
-  check(SV("answer is 'INF'"), SV("answer is '{:#F}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '-INF'"), SV("answer is '{:#F}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#F}'">(SV("answer is 'INF'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#F}'">(SV("answer is '-INF'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is 'NAN'"), SV("answer is '{:#F}'"), nan_pos);
-  check(SV("answer is '-NAN'"), SV("answer is '{:#F}'"), nan_neg);
+  check.template operator()<"answer is '{:#F}'">(SV("answer is 'NAN'"), nan_pos);
+  check.template operator()<"answer is '{:#F}'">(SV("answer is '-NAN'"), nan_neg);
 
   // *** zero-padding & width ***
-  check(SV("answer is '0.031250'"), SV("answer is '{:07F}'"), 0.03125);
-  check(SV("answer is '+0.031250'"), SV("answer is '{:+07F}'"), 0.03125);
-  check(SV("answer is '+0.031250'"), SV("answer is '{:+08F}'"), 0.03125);
-  check(SV("answer is '+0.031250'"), SV("answer is '{:+09F}'"), 0.03125);
+  check.template operator()<"answer is '{:07F}'">(SV("answer is '0.031250'"), 0.03125);
+  check.template operator()<"answer is '{:+07F}'">(SV("answer is '+0.031250'"), 0.03125);
+  check.template operator()<"answer is '{:+08F}'">(SV("answer is '+0.031250'"), 0.03125);
+  check.template operator()<"answer is '{:+09F}'">(SV("answer is '+0.031250'"), 0.03125);
 
-  check(SV("answer is '000.031250'"), SV("answer is '{:010F}'"), 0.03125);
-  check(SV("answer is '000.031250'"), SV("answer is '{:-010F}'"), 0.03125);
-  check(SV("answer is '+00.031250'"), SV("answer is '{:+010F}'"), 0.03125);
-  check(SV("answer is ' 00.031250'"), SV("answer is '{: 010F}'"), 0.03125);
+  check.template operator()<"answer is '{:010F}'">(SV("answer is '000.031250'"), 0.03125);
+  check.template operator()<"answer is '{:-010F}'">(SV("answer is '000.031250'"), 0.03125);
+  check.template operator()<"answer is '{:+010F}'">(SV("answer is '+00.031250'"), 0.03125);
+  check.template operator()<"answer is '{: 010F}'">(SV("answer is ' 00.031250'"), 0.03125);
 
-  check(SV("answer is '       INF'"), SV("answer is '{:010F}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '       INF'"), SV("answer is '{:-010F}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '      +INF'"), SV("answer is '{:+010F}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '       INF'"), SV("answer is '{: 010F}'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:010F}'">(SV("answer is '       INF'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-010F}'">(SV("answer is '       INF'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+010F}'">(SV("answer is '      +INF'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: 010F}'">(SV("answer is '       INF'"), std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '      -INF'"), SV("answer is '{:010F}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '      -INF'"), SV("answer is '{:-010F}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '      -INF'"), SV("answer is '{:+010F}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '      -INF'"), SV("answer is '{: 010F}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:010F}'">(SV("answer is '      -INF'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-010F}'">(SV("answer is '      -INF'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+010F}'">(SV("answer is '      -INF'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: 010F}'">(SV("answer is '      -INF'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '       NAN'"), SV("answer is '{:010F}'"), nan_pos);
-  check(SV("answer is '       NAN'"), SV("answer is '{:-010F}'"), nan_pos);
-  check(SV("answer is '      +NAN'"), SV("answer is '{:+010F}'"), nan_pos);
-  check(SV("answer is '       NAN'"), SV("answer is '{: 010F}'"), nan_pos);
+  check.template operator()<"answer is '{:010F}'">(SV("answer is '       NAN'"), nan_pos);
+  check.template operator()<"answer is '{:-010F}'">(SV("answer is '       NAN'"), nan_pos);
+  check.template operator()<"answer is '{:+010F}'">(SV("answer is '      +NAN'"), nan_pos);
+  check.template operator()<"answer is '{: 010F}'">(SV("answer is '       NAN'"), nan_pos);
 
-  check(SV("answer is '      -NAN'"), SV("answer is '{:010F}'"), nan_neg);
-  check(SV("answer is '      -NAN'"), SV("answer is '{:-010F}'"), nan_neg);
-  check(SV("answer is '      -NAN'"), SV("answer is '{:+010F}'"), nan_neg);
-  check(SV("answer is '      -NAN'"), SV("answer is '{: 010F}'"), nan_neg);
+  check.template operator()<"answer is '{:010F}'">(SV("answer is '      -NAN'"), nan_neg);
+  check.template operator()<"answer is '{:-010F}'">(SV("answer is '      -NAN'"), nan_neg);
+  check.template operator()<"answer is '{:+010F}'">(SV("answer is '      -NAN'"), nan_neg);
+  check.template operator()<"answer is '{: 010F}'">(SV("answer is '      -NAN'"), nan_neg);
 
   // *** precision ***
-  check(SV("answer is '0'"), SV("answer is '{:.0F}'"), 0.03125);
-  check(SV("answer is '0.0'"), SV("answer is '{:.1F}'"), 0.03125);
-  check(SV("answer is '0.03125'"), SV("answer is '{:.5F}'"), 0.03125);
-  check(SV("answer is '0.0312500000'"), SV("answer is '{:.10F}'"), 0.03125);
+  check.template operator()<"answer is '{:.0F}'">(SV("answer is '0'"), 0.03125);
+  check.template operator()<"answer is '{:.1F}'">(SV("answer is '0.0'"), 0.03125);
+  check.template operator()<"answer is '{:.5F}'">(SV("answer is '0.03125'"), 0.03125);
+  check.template operator()<"answer is '{:.10F}'">(SV("answer is '0.0312500000'"), 0.03125);
 
   // *** locale-specific form ***
   // See locale-specific_form.pass.cpp
@@ -1861,121 +1869,121 @@ void format_test_floating_point_general_lower_case(TestFunction check) {
   auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
 
   // *** align-fill & width ***
-  check(SV("answer is '   0.25'"), SV("answer is '{:7g}'"), F(0.25));
-  check(SV("answer is '   0.25'"), SV("answer is '{:>7g}'"), F(0.25));
-  check(SV("answer is '0.25   '"), SV("answer is '{:<7g}'"), F(0.25));
-  check(SV("answer is ' 0.25  '"), SV("answer is '{:^7g}'"), F(0.25));
+  check.template operator()<"answer is '{:7g}'">(SV("answer is '   0.25'"), F(0.25));
+  check.template operator()<"answer is '{:>7g}'">(SV("answer is '   0.25'"), F(0.25));
+  check.template operator()<"answer is '{:<7g}'">(SV("answer is '0.25   '"), F(0.25));
+  check.template operator()<"answer is '{:^7g}'">(SV("answer is ' 0.25  '"), F(0.25));
 
-  check(SV("answer is '---0.125'"), SV("answer is '{:->8g}'"), F(125e-3));
-  check(SV("answer is '0.125---'"), SV("answer is '{:-<8g}'"), F(125e-3));
-  check(SV("answer is '-0.125--'"), SV("answer is '{:-^8g}'"), F(125e-3));
+  check.template operator()<"answer is '{:->8g}'">(SV("answer is '---0.125'"), F(125e-3));
+  check.template operator()<"answer is '{:-<8g}'">(SV("answer is '0.125---'"), F(125e-3));
+  check.template operator()<"answer is '{:-^8g}'">(SV("answer is '-0.125--'"), F(125e-3));
 
-  check(SV("answer is '***inf'"), SV("answer is '{:*>6g}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is 'inf***'"), SV("answer is '{:*<6g}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '*inf**'"), SV("answer is '{:*^6g}'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:*>6g}'">(SV("answer is '***inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:*<6g}'">(SV("answer is 'inf***'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:*^6g}'">(SV("answer is '*inf**'"), std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '###-inf'"), SV("answer is '{:#>7g}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-inf###'"), SV("answer is '{:#<7g}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '#-inf##'"), SV("answer is '{:#^7g}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#>7g}'">(SV("answer is '###-inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#<7g}'">(SV("answer is '-inf###'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#^7g}'">(SV("answer is '#-inf##'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '^^^nan'"), SV("answer is '{:^>6g}'"), nan_pos);
-  check(SV("answer is 'nan^^^'"), SV("answer is '{:^<6g}'"), nan_pos);
-  check(SV("answer is '^nan^^'"), SV("answer is '{:^^6g}'"), nan_pos);
+  check.template operator()<"answer is '{:^>6g}'">(SV("answer is '^^^nan'"), nan_pos);
+  check.template operator()<"answer is '{:^<6g}'">(SV("answer is 'nan^^^'"), nan_pos);
+  check.template operator()<"answer is '{:^^6g}'">(SV("answer is '^nan^^'"), nan_pos);
 
-  check(SV("answer is '000-nan'"), SV("answer is '{:0>7g}'"), nan_neg);
-  check(SV("answer is '-nan000'"), SV("answer is '{:0<7g}'"), nan_neg);
-  check(SV("answer is '0-nan00'"), SV("answer is '{:0^7g}'"), nan_neg);
+  check.template operator()<"answer is '{:0>7g}'">(SV("answer is '000-nan'"), nan_neg);
+  check.template operator()<"answer is '{:0<7g}'">(SV("answer is '-nan000'"), nan_neg);
+  check.template operator()<"answer is '{:0^7g}'">(SV("answer is '0-nan00'"), nan_neg);
 
   // Test whether zero padding is ignored
-  check(SV("answer is '   0.25'"), SV("answer is '{:>07g}'"), F(0.25));
-  check(SV("answer is '0.25   '"), SV("answer is '{:<07g}'"), F(0.25));
-  check(SV("answer is ' 0.25  '"), SV("answer is '{:^07g}'"), F(0.25));
+  check.template operator()<"answer is '{:>07g}'">(SV("answer is '   0.25'"), F(0.25));
+  check.template operator()<"answer is '{:<07g}'">(SV("answer is '0.25   '"), F(0.25));
+  check.template operator()<"answer is '{:^07g}'">(SV("answer is ' 0.25  '"), F(0.25));
 
   // *** Sign ***
-  check(SV("answer is '0'"), SV("answer is '{:g}'"), F(0));
-  check(SV("answer is '0'"), SV("answer is '{:-g}'"), F(0));
-  check(SV("answer is '+0'"), SV("answer is '{:+g}'"), F(0));
-  check(SV("answer is ' 0'"), SV("answer is '{: g}'"), F(0));
+  check.template operator()<"answer is '{:g}'">(SV("answer is '0'"), F(0));
+  check.template operator()<"answer is '{:-g}'">(SV("answer is '0'"), F(0));
+  check.template operator()<"answer is '{:+g}'">(SV("answer is '+0'"), F(0));
+  check.template operator()<"answer is '{: g}'">(SV("answer is ' 0'"), F(0));
 
-  check(SV("answer is '-0'"), SV("answer is '{:g}'"), F(-0.));
-  check(SV("answer is '-0'"), SV("answer is '{:-g}'"), F(-0.));
-  check(SV("answer is '-0'"), SV("answer is '{:+g}'"), F(-0.));
-  check(SV("answer is '-0'"), SV("answer is '{: g}'"), F(-0.));
+  check.template operator()<"answer is '{:g}'">(SV("answer is '-0'"), F(-0.));
+  check.template operator()<"answer is '{:-g}'">(SV("answer is '-0'"), F(-0.));
+  check.template operator()<"answer is '{:+g}'">(SV("answer is '-0'"), F(-0.));
+  check.template operator()<"answer is '{: g}'">(SV("answer is '-0'"), F(-0.));
 
   // [format.string.std]/5 The sign option applies to floating-point infinity and NaN.
-  check(SV("answer is 'inf'"), SV("answer is '{:g}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is 'inf'"), SV("answer is '{:-g}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '+inf'"), SV("answer is '{:+g}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is ' inf'"), SV("answer is '{: g}'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:g}'">(SV("answer is 'inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-g}'">(SV("answer is 'inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+g}'">(SV("answer is '+inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: g}'">(SV("answer is ' inf'"), std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '-inf'"), SV("answer is '{:g}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-inf'"), SV("answer is '{:-g}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-inf'"), SV("answer is '{:+g}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-inf'"), SV("answer is '{: g}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:g}'">(SV("answer is '-inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-g}'">(SV("answer is '-inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+g}'">(SV("answer is '-inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: g}'">(SV("answer is '-inf'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is 'nan'"), SV("answer is '{:g}'"), nan_pos);
-  check(SV("answer is 'nan'"), SV("answer is '{:-g}'"), nan_pos);
-  check(SV("answer is '+nan'"), SV("answer is '{:+g}'"), nan_pos);
-  check(SV("answer is ' nan'"), SV("answer is '{: g}'"), nan_pos);
+  check.template operator()<"answer is '{:g}'">(SV("answer is 'nan'"), nan_pos);
+  check.template operator()<"answer is '{:-g}'">(SV("answer is 'nan'"), nan_pos);
+  check.template operator()<"answer is '{:+g}'">(SV("answer is '+nan'"), nan_pos);
+  check.template operator()<"answer is '{: g}'">(SV("answer is ' nan'"), nan_pos);
 
-  check(SV("answer is '-nan'"), SV("answer is '{:g}'"), nan_neg);
-  check(SV("answer is '-nan'"), SV("answer is '{:-g}'"), nan_neg);
-  check(SV("answer is '-nan'"), SV("answer is '{:+g}'"), nan_neg);
-  check(SV("answer is '-nan'"), SV("answer is '{: g}'"), nan_neg);
+  check.template operator()<"answer is '{:g}'">(SV("answer is '-nan'"), nan_neg);
+  check.template operator()<"answer is '{:-g}'">(SV("answer is '-nan'"), nan_neg);
+  check.template operator()<"answer is '{:+g}'">(SV("answer is '-nan'"), nan_neg);
+  check.template operator()<"answer is '{: g}'">(SV("answer is '-nan'"), nan_neg);
 
   // *** alternate form **
   // When precision is zero there's no decimal point except when the alternate form is specified.
-  check(SV("answer is '0'"), SV("answer is '{:.0g}'"), F(0));
-  check(SV("answer is '0.'"), SV("answer is '{:#.0g}'"), F(0));
+  check.template operator()<"answer is '{:.0g}'">(SV("answer is '0'"), F(0));
+  check.template operator()<"answer is '{:#.0g}'">(SV("answer is '0.'"), F(0));
 
-  check(SV("answer is '0.'"), SV("answer is '{:#g}'"), F(0));
-  check(SV("answer is '2.5'"), SV("answer is '{:#g}'"), F(2.5));
+  check.template operator()<"answer is '{:#g}'">(SV("answer is '0.'"), F(0));
+  check.template operator()<"answer is '{:#g}'">(SV("answer is '2.5'"), F(2.5));
 
-  check(SV("answer is 'inf'"), SV("answer is '{:#g}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '-inf'"), SV("answer is '{:#g}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#g}'">(SV("answer is 'inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#g}'">(SV("answer is '-inf'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is 'nan'"), SV("answer is '{:#g}'"), nan_pos);
-  check(SV("answer is '-nan'"), SV("answer is '{:#g}'"), nan_neg);
+  check.template operator()<"answer is '{:#g}'">(SV("answer is 'nan'"), nan_pos);
+  check.template operator()<"answer is '{:#g}'">(SV("answer is '-nan'"), nan_neg);
 
   // *** zero-padding & width ***
-  check(SV("answer is '0.03125'"), SV("answer is '{:06g}'"), 0.03125);
-  check(SV("answer is '+0.03125'"), SV("answer is '{:+06g}'"), 0.03125);
-  check(SV("answer is '+0.03125'"), SV("answer is '{:+07g}'"), 0.03125);
-  check(SV("answer is '+0.03125'"), SV("answer is '{:+08g}'"), 0.03125);
+  check.template operator()<"answer is '{:06g}'">(SV("answer is '0.03125'"), 0.03125);
+  check.template operator()<"answer is '{:+06g}'">(SV("answer is '+0.03125'"), 0.03125);
+  check.template operator()<"answer is '{:+07g}'">(SV("answer is '+0.03125'"), 0.03125);
+  check.template operator()<"answer is '{:+08g}'">(SV("answer is '+0.03125'"), 0.03125);
 
-  check(SV("answer is '000.03125'"), SV("answer is '{:09g}'"), 0.03125);
-  check(SV("answer is '000.03125'"), SV("answer is '{:-09g}'"), 0.03125);
-  check(SV("answer is '+00.03125'"), SV("answer is '{:+09g}'"), 0.03125);
-  check(SV("answer is ' 00.03125'"), SV("answer is '{: 09g}'"), 0.03125);
+  check.template operator()<"answer is '{:09g}'">(SV("answer is '000.03125'"), 0.03125);
+  check.template operator()<"answer is '{:-09g}'">(SV("answer is '000.03125'"), 0.03125);
+  check.template operator()<"answer is '{:+09g}'">(SV("answer is '+00.03125'"), 0.03125);
+  check.template operator()<"answer is '{: 09g}'">(SV("answer is ' 00.03125'"), 0.03125);
 
-  check(SV("answer is '       inf'"), SV("answer is '{:010g}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '       inf'"), SV("answer is '{:-010g}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '      +inf'"), SV("answer is '{:+010g}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '       inf'"), SV("answer is '{: 010g}'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:010g}'">(SV("answer is '       inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-010g}'">(SV("answer is '       inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+010g}'">(SV("answer is '      +inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: 010g}'">(SV("answer is '       inf'"), std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '      -inf'"), SV("answer is '{:010g}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '      -inf'"), SV("answer is '{:-010g}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '      -inf'"), SV("answer is '{:+010g}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '      -inf'"), SV("answer is '{: 010g}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:010g}'">(SV("answer is '      -inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-010g}'">(SV("answer is '      -inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+010g}'">(SV("answer is '      -inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: 010g}'">(SV("answer is '      -inf'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '       nan'"), SV("answer is '{:010g}'"), nan_pos);
-  check(SV("answer is '       nan'"), SV("answer is '{:-010g}'"), nan_pos);
-  check(SV("answer is '      +nan'"), SV("answer is '{:+010g}'"), nan_pos);
-  check(SV("answer is '       nan'"), SV("answer is '{: 010g}'"), nan_pos);
+  check.template operator()<"answer is '{:010g}'">(SV("answer is '       nan'"), nan_pos);
+  check.template operator()<"answer is '{:-010g}'">(SV("answer is '       nan'"), nan_pos);
+  check.template operator()<"answer is '{:+010g}'">(SV("answer is '      +nan'"), nan_pos);
+  check.template operator()<"answer is '{: 010g}'">(SV("answer is '       nan'"), nan_pos);
 
-  check(SV("answer is '      -nan'"), SV("answer is '{:010g}'"), nan_neg);
-  check(SV("answer is '      -nan'"), SV("answer is '{:-010g}'"), nan_neg);
-  check(SV("answer is '      -nan'"), SV("answer is '{:+010g}'"), nan_neg);
-  check(SV("answer is '      -nan'"), SV("answer is '{: 010g}'"), nan_neg);
+  check.template operator()<"answer is '{:010g}'">(SV("answer is '      -nan'"), nan_neg);
+  check.template operator()<"answer is '{:-010g}'">(SV("answer is '      -nan'"), nan_neg);
+  check.template operator()<"answer is '{:+010g}'">(SV("answer is '      -nan'"), nan_neg);
+  check.template operator()<"answer is '{: 010g}'">(SV("answer is '      -nan'"), nan_neg);
 
   // *** precision ***
-  check(SV("answer is '0.03'"), SV("answer is '{:.0g}'"), 0.03125);
-  check(SV("answer is '0.03'"), SV("answer is '{:.1g}'"), 0.03125);
-  check(SV("answer is '0.031'"), SV("answer is '{:.2g}'"), 0.03125);
-  check(SV("answer is '0.0312'"), SV("answer is '{:.3g}'"), 0.03125);
-  check(SV("answer is '0.03125'"), SV("answer is '{:.4g}'"), 0.03125);
-  check(SV("answer is '0.03125'"), SV("answer is '{:.5g}'"), 0.03125);
-  check(SV("answer is '0.03125'"), SV("answer is '{:.10g}'"), 0.03125);
+  check.template operator()<"answer is '{:.0g}'">(SV("answer is '0.03'"), 0.03125);
+  check.template operator()<"answer is '{:.1g}'">(SV("answer is '0.03'"), 0.03125);
+  check.template operator()<"answer is '{:.2g}'">(SV("answer is '0.031'"), 0.03125);
+  check.template operator()<"answer is '{:.3g}'">(SV("answer is '0.0312'"), 0.03125);
+  check.template operator()<"answer is '{:.4g}'">(SV("answer is '0.03125'"), 0.03125);
+  check.template operator()<"answer is '{:.5g}'">(SV("answer is '0.03125'"), 0.03125);
+  check.template operator()<"answer is '{:.10g}'">(SV("answer is '0.03125'"), 0.03125);
 
   // *** locale-specific form ***
   // See locale-specific_form.pass.cpp
@@ -1987,121 +1995,121 @@ void format_test_floating_point_general_upper_case(TestFunction check) {
   auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
 
   // *** align-fill & width ***
-  check(SV("answer is '   0.25'"), SV("answer is '{:7G}'"), F(0.25));
-  check(SV("answer is '   0.25'"), SV("answer is '{:>7G}'"), F(0.25));
-  check(SV("answer is '0.25   '"), SV("answer is '{:<7G}'"), F(0.25));
-  check(SV("answer is ' 0.25  '"), SV("answer is '{:^7G}'"), F(0.25));
+  check.template operator()<"answer is '{:7G}'">(SV("answer is '   0.25'"), F(0.25));
+  check.template operator()<"answer is '{:>7G}'">(SV("answer is '   0.25'"), F(0.25));
+  check.template operator()<"answer is '{:<7G}'">(SV("answer is '0.25   '"), F(0.25));
+  check.template operator()<"answer is '{:^7G}'">(SV("answer is ' 0.25  '"), F(0.25));
 
-  check(SV("answer is '---0.125'"), SV("answer is '{:->8G}'"), F(125e-3));
-  check(SV("answer is '0.125---'"), SV("answer is '{:-<8G}'"), F(125e-3));
-  check(SV("answer is '-0.125--'"), SV("answer is '{:-^8G}'"), F(125e-3));
+  check.template operator()<"answer is '{:->8G}'">(SV("answer is '---0.125'"), F(125e-3));
+  check.template operator()<"answer is '{:-<8G}'">(SV("answer is '0.125---'"), F(125e-3));
+  check.template operator()<"answer is '{:-^8G}'">(SV("answer is '-0.125--'"), F(125e-3));
 
-  check(SV("answer is '***INF'"), SV("answer is '{:*>6G}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is 'INF***'"), SV("answer is '{:*<6G}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '*INF**'"), SV("answer is '{:*^6G}'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:*>6G}'">(SV("answer is '***INF'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:*<6G}'">(SV("answer is 'INF***'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:*^6G}'">(SV("answer is '*INF**'"), std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '###-INF'"), SV("answer is '{:#>7G}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-INF###'"), SV("answer is '{:#<7G}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '#-INF##'"), SV("answer is '{:#^7G}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#>7G}'">(SV("answer is '###-INF'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#<7G}'">(SV("answer is '-INF###'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#^7G}'">(SV("answer is '#-INF##'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '^^^NAN'"), SV("answer is '{:^>6G}'"), nan_pos);
-  check(SV("answer is 'NAN^^^'"), SV("answer is '{:^<6G}'"), nan_pos);
-  check(SV("answer is '^NAN^^'"), SV("answer is '{:^^6G}'"), nan_pos);
+  check.template operator()<"answer is '{:^>6G}'">(SV("answer is '^^^NAN'"), nan_pos);
+  check.template operator()<"answer is '{:^<6G}'">(SV("answer is 'NAN^^^'"), nan_pos);
+  check.template operator()<"answer is '{:^^6G}'">(SV("answer is '^NAN^^'"), nan_pos);
 
-  check(SV("answer is '000-NAN'"), SV("answer is '{:0>7G}'"), nan_neg);
-  check(SV("answer is '-NAN000'"), SV("answer is '{:0<7G}'"), nan_neg);
-  check(SV("answer is '0-NAN00'"), SV("answer is '{:0^7G}'"), nan_neg);
+  check.template operator()<"answer is '{:0>7G}'">(SV("answer is '000-NAN'"), nan_neg);
+  check.template operator()<"answer is '{:0<7G}'">(SV("answer is '-NAN000'"), nan_neg);
+  check.template operator()<"answer is '{:0^7G}'">(SV("answer is '0-NAN00'"), nan_neg);
 
   // Test whether zero padding is ignored
-  check(SV("answer is '   0.25'"), SV("answer is '{:>07G}'"), F(0.25));
-  check(SV("answer is '0.25   '"), SV("answer is '{:<07G}'"), F(0.25));
-  check(SV("answer is ' 0.25  '"), SV("answer is '{:^07G}'"), F(0.25));
+  check.template operator()<"answer is '{:>07G}'">(SV("answer is '   0.25'"), F(0.25));
+  check.template operator()<"answer is '{:<07G}'">(SV("answer is '0.25   '"), F(0.25));
+  check.template operator()<"answer is '{:^07G}'">(SV("answer is ' 0.25  '"), F(0.25));
 
   // *** Sign ***
-  check(SV("answer is '0'"), SV("answer is '{:G}'"), F(0));
-  check(SV("answer is '0'"), SV("answer is '{:-G}'"), F(0));
-  check(SV("answer is '+0'"), SV("answer is '{:+G}'"), F(0));
-  check(SV("answer is ' 0'"), SV("answer is '{: G}'"), F(0));
+  check.template operator()<"answer is '{:G}'">(SV("answer is '0'"), F(0));
+  check.template operator()<"answer is '{:-G}'">(SV("answer is '0'"), F(0));
+  check.template operator()<"answer is '{:+G}'">(SV("answer is '+0'"), F(0));
+  check.template operator()<"answer is '{: G}'">(SV("answer is ' 0'"), F(0));
 
-  check(SV("answer is '-0'"), SV("answer is '{:G}'"), F(-0.));
-  check(SV("answer is '-0'"), SV("answer is '{:-G}'"), F(-0.));
-  check(SV("answer is '-0'"), SV("answer is '{:+G}'"), F(-0.));
-  check(SV("answer is '-0'"), SV("answer is '{: G}'"), F(-0.));
+  check.template operator()<"answer is '{:G}'">(SV("answer is '-0'"), F(-0.));
+  check.template operator()<"answer is '{:-G}'">(SV("answer is '-0'"), F(-0.));
+  check.template operator()<"answer is '{:+G}'">(SV("answer is '-0'"), F(-0.));
+  check.template operator()<"answer is '{: G}'">(SV("answer is '-0'"), F(-0.));
 
   // [format.string.std]/5 The sign option applies to floating-point infinity and NaN.
-  check(SV("answer is 'INF'"), SV("answer is '{:G}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is 'INF'"), SV("answer is '{:-G}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '+INF'"), SV("answer is '{:+G}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is ' INF'"), SV("answer is '{: G}'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:G}'">(SV("answer is 'INF'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-G}'">(SV("answer is 'INF'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+G}'">(SV("answer is '+INF'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: G}'">(SV("answer is ' INF'"), std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '-INF'"), SV("answer is '{:G}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-INF'"), SV("answer is '{:-G}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-INF'"), SV("answer is '{:+G}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-INF'"), SV("answer is '{: G}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:G}'">(SV("answer is '-INF'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-G}'">(SV("answer is '-INF'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+G}'">(SV("answer is '-INF'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: G}'">(SV("answer is '-INF'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is 'NAN'"), SV("answer is '{:G}'"), nan_pos);
-  check(SV("answer is 'NAN'"), SV("answer is '{:-G}'"), nan_pos);
-  check(SV("answer is '+NAN'"), SV("answer is '{:+G}'"), nan_pos);
-  check(SV("answer is ' NAN'"), SV("answer is '{: G}'"), nan_pos);
+  check.template operator()<"answer is '{:G}'">(SV("answer is 'NAN'"), nan_pos);
+  check.template operator()<"answer is '{:-G}'">(SV("answer is 'NAN'"), nan_pos);
+  check.template operator()<"answer is '{:+G}'">(SV("answer is '+NAN'"), nan_pos);
+  check.template operator()<"answer is '{: G}'">(SV("answer is ' NAN'"), nan_pos);
 
-  check(SV("answer is '-NAN'"), SV("answer is '{:G}'"), nan_neg);
-  check(SV("answer is '-NAN'"), SV("answer is '{:-G}'"), nan_neg);
-  check(SV("answer is '-NAN'"), SV("answer is '{:+G}'"), nan_neg);
-  check(SV("answer is '-NAN'"), SV("answer is '{: G}'"), nan_neg);
+  check.template operator()<"answer is '{:G}'">(SV("answer is '-NAN'"), nan_neg);
+  check.template operator()<"answer is '{:-G}'">(SV("answer is '-NAN'"), nan_neg);
+  check.template operator()<"answer is '{:+G}'">(SV("answer is '-NAN'"), nan_neg);
+  check.template operator()<"answer is '{: G}'">(SV("answer is '-NAN'"), nan_neg);
 
   // *** alternate form **
   // When precision is zero there's no decimal point except when the alternate form is specified.
-  check(SV("answer is '0'"), SV("answer is '{:.0G}'"), F(0));
-  check(SV("answer is '0.'"), SV("answer is '{:#.0G}'"), F(0));
+  check.template operator()<"answer is '{:.0G}'">(SV("answer is '0'"), F(0));
+  check.template operator()<"answer is '{:#.0G}'">(SV("answer is '0.'"), F(0));
 
-  check(SV("answer is '0.'"), SV("answer is '{:#G}'"), F(0));
-  check(SV("answer is '2.5'"), SV("answer is '{:#G}'"), F(2.5));
+  check.template operator()<"answer is '{:#G}'">(SV("answer is '0.'"), F(0));
+  check.template operator()<"answer is '{:#G}'">(SV("answer is '2.5'"), F(2.5));
 
-  check(SV("answer is 'INF'"), SV("answer is '{:#G}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '-INF'"), SV("answer is '{:#G}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#G}'">(SV("answer is 'INF'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#G}'">(SV("answer is '-INF'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is 'NAN'"), SV("answer is '{:#G}'"), nan_pos);
-  check(SV("answer is '-NAN'"), SV("answer is '{:#G}'"), nan_neg);
+  check.template operator()<"answer is '{:#G}'">(SV("answer is 'NAN'"), nan_pos);
+  check.template operator()<"answer is '{:#G}'">(SV("answer is '-NAN'"), nan_neg);
 
   // *** zero-padding & width ***
-  check(SV("answer is '0.03125'"), SV("answer is '{:06G}'"), 0.03125);
-  check(SV("answer is '+0.03125'"), SV("answer is '{:+06G}'"), 0.03125);
-  check(SV("answer is '+0.03125'"), SV("answer is '{:+07G}'"), 0.03125);
-  check(SV("answer is '+0.03125'"), SV("answer is '{:+08G}'"), 0.03125);
+  check.template operator()<"answer is '{:06G}'">(SV("answer is '0.03125'"), 0.03125);
+  check.template operator()<"answer is '{:+06G}'">(SV("answer is '+0.03125'"), 0.03125);
+  check.template operator()<"answer is '{:+07G}'">(SV("answer is '+0.03125'"), 0.03125);
+  check.template operator()<"answer is '{:+08G}'">(SV("answer is '+0.03125'"), 0.03125);
 
-  check(SV("answer is '000.03125'"), SV("answer is '{:09G}'"), 0.03125);
-  check(SV("answer is '000.03125'"), SV("answer is '{:-09G}'"), 0.03125);
-  check(SV("answer is '+00.03125'"), SV("answer is '{:+09G}'"), 0.03125);
-  check(SV("answer is ' 00.03125'"), SV("answer is '{: 09G}'"), 0.03125);
+  check.template operator()<"answer is '{:09G}'">(SV("answer is '000.03125'"), 0.03125);
+  check.template operator()<"answer is '{:-09G}'">(SV("answer is '000.03125'"), 0.03125);
+  check.template operator()<"answer is '{:+09G}'">(SV("answer is '+00.03125'"), 0.03125);
+  check.template operator()<"answer is '{: 09G}'">(SV("answer is ' 00.03125'"), 0.03125);
 
-  check(SV("answer is '       INF'"), SV("answer is '{:010G}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '       INF'"), SV("answer is '{:-010G}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '      +INF'"), SV("answer is '{:+010G}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '       INF'"), SV("answer is '{: 010G}'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:010G}'">(SV("answer is '       INF'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-010G}'">(SV("answer is '       INF'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+010G}'">(SV("answer is '      +INF'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: 010G}'">(SV("answer is '       INF'"), std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '      -INF'"), SV("answer is '{:010G}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '      -INF'"), SV("answer is '{:-010G}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '      -INF'"), SV("answer is '{:+010G}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '      -INF'"), SV("answer is '{: 010G}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:010G}'">(SV("answer is '      -INF'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-010G}'">(SV("answer is '      -INF'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+010G}'">(SV("answer is '      -INF'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: 010G}'">(SV("answer is '      -INF'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '       NAN'"), SV("answer is '{:010G}'"), nan_pos);
-  check(SV("answer is '       NAN'"), SV("answer is '{:-010G}'"), nan_pos);
-  check(SV("answer is '      +NAN'"), SV("answer is '{:+010G}'"), nan_pos);
-  check(SV("answer is '       NAN'"), SV("answer is '{: 010G}'"), nan_pos);
+  check.template operator()<"answer is '{:010G}'">(SV("answer is '       NAN'"), nan_pos);
+  check.template operator()<"answer is '{:-010G}'">(SV("answer is '       NAN'"), nan_pos);
+  check.template operator()<"answer is '{:+010G}'">(SV("answer is '      +NAN'"), nan_pos);
+  check.template operator()<"answer is '{: 010G}'">(SV("answer is '       NAN'"), nan_pos);
 
-  check(SV("answer is '      -NAN'"), SV("answer is '{:010G}'"), nan_neg);
-  check(SV("answer is '      -NAN'"), SV("answer is '{:-010G}'"), nan_neg);
-  check(SV("answer is '      -NAN'"), SV("answer is '{:+010G}'"), nan_neg);
-  check(SV("answer is '      -NAN'"), SV("answer is '{: 010G}'"), nan_neg);
+  check.template operator()<"answer is '{:010G}'">(SV("answer is '      -NAN'"), nan_neg);
+  check.template operator()<"answer is '{:-010G}'">(SV("answer is '      -NAN'"), nan_neg);
+  check.template operator()<"answer is '{:+010G}'">(SV("answer is '      -NAN'"), nan_neg);
+  check.template operator()<"answer is '{: 010G}'">(SV("answer is '      -NAN'"), nan_neg);
 
   // *** precision ***
-  check(SV("answer is '0.03'"), SV("answer is '{:.0G}'"), 0.03125);
-  check(SV("answer is '0.03'"), SV("answer is '{:.1G}'"), 0.03125);
-  check(SV("answer is '0.031'"), SV("answer is '{:.2G}'"), 0.03125);
-  check(SV("answer is '0.0312'"), SV("answer is '{:.3G}'"), 0.03125);
-  check(SV("answer is '0.03125'"), SV("answer is '{:.4G}'"), 0.03125);
-  check(SV("answer is '0.03125'"), SV("answer is '{:.5G}'"), 0.03125);
-  check(SV("answer is '0.03125'"), SV("answer is '{:.10G}'"), 0.03125);
+  check.template operator()<"answer is '{:.0G}'">(SV("answer is '0.03'"), 0.03125);
+  check.template operator()<"answer is '{:.1G}'">(SV("answer is '0.03'"), 0.03125);
+  check.template operator()<"answer is '{:.2G}'">(SV("answer is '0.031'"), 0.03125);
+  check.template operator()<"answer is '{:.3G}'">(SV("answer is '0.0312'"), 0.03125);
+  check.template operator()<"answer is '{:.4G}'">(SV("answer is '0.03125'"), 0.03125);
+  check.template operator()<"answer is '{:.5G}'">(SV("answer is '0.03125'"), 0.03125);
+  check.template operator()<"answer is '{:.10G}'">(SV("answer is '0.03125'"), 0.03125);
 
   // *** locale-specific form ***
   // See locale-specific_form.pass.cpp
@@ -2113,108 +2121,108 @@ void format_test_floating_point_default(TestFunction check) {
   auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
 
   // *** align-fill & width ***
-  check(SV("answer is '   0.25'"), SV("answer is '{:7}'"), F(0.25));
-  check(SV("answer is '   0.25'"), SV("answer is '{:>7}'"), F(0.25));
-  check(SV("answer is '0.25   '"), SV("answer is '{:<7}'"), F(0.25));
-  check(SV("answer is ' 0.25  '"), SV("answer is '{:^7}'"), F(0.25));
+  check.template operator()<"answer is '{:7}'">(SV("answer is '   0.25'"), F(0.25));
+  check.template operator()<"answer is '{:>7}'">(SV("answer is '   0.25'"), F(0.25));
+  check.template operator()<"answer is '{:<7}'">(SV("answer is '0.25   '"), F(0.25));
+  check.template operator()<"answer is '{:^7}'">(SV("answer is ' 0.25  '"), F(0.25));
 
-  check(SV("answer is '---0.125'"), SV("answer is '{:->8}'"), F(125e-3));
-  check(SV("answer is '0.125---'"), SV("answer is '{:-<8}'"), F(125e-3));
-  check(SV("answer is '-0.125--'"), SV("answer is '{:-^8}'"), F(125e-3));
+  check.template operator()<"answer is '{:->8}'">(SV("answer is '---0.125'"), F(125e-3));
+  check.template operator()<"answer is '{:-<8}'">(SV("answer is '0.125---'"), F(125e-3));
+  check.template operator()<"answer is '{:-^8}'">(SV("answer is '-0.125--'"), F(125e-3));
 
-  check(SV("answer is '***inf'"), SV("answer is '{:*>6}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is 'inf***'"), SV("answer is '{:*<6}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '*inf**'"), SV("answer is '{:*^6}'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:*>6}'">(SV("answer is '***inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:*<6}'">(SV("answer is 'inf***'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:*^6}'">(SV("answer is '*inf**'"), std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '###-inf'"), SV("answer is '{:#>7}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-inf###'"), SV("answer is '{:#<7}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '#-inf##'"), SV("answer is '{:#^7}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#>7}'">(SV("answer is '###-inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#<7}'">(SV("answer is '-inf###'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#^7}'">(SV("answer is '#-inf##'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '^^^nan'"), SV("answer is '{:^>6}'"), nan_pos);
-  check(SV("answer is 'nan^^^'"), SV("answer is '{:^<6}'"), nan_pos);
-  check(SV("answer is '^nan^^'"), SV("answer is '{:^^6}'"), nan_pos);
+  check.template operator()<"answer is '{:^>6}'">(SV("answer is '^^^nan'"), nan_pos);
+  check.template operator()<"answer is '{:^<6}'">(SV("answer is 'nan^^^'"), nan_pos);
+  check.template operator()<"answer is '{:^^6}'">(SV("answer is '^nan^^'"), nan_pos);
 
-  check(SV("answer is '000-nan'"), SV("answer is '{:0>7}'"), nan_neg);
-  check(SV("answer is '-nan000'"), SV("answer is '{:0<7}'"), nan_neg);
-  check(SV("answer is '0-nan00'"), SV("answer is '{:0^7}'"), nan_neg);
+  check.template operator()<"answer is '{:0>7}'">(SV("answer is '000-nan'"), nan_neg);
+  check.template operator()<"answer is '{:0<7}'">(SV("answer is '-nan000'"), nan_neg);
+  check.template operator()<"answer is '{:0^7}'">(SV("answer is '0-nan00'"), nan_neg);
 
   // Test whether zero padding is ignored
-  check(SV("answer is '   0.25'"), SV("answer is '{:>07}'"), F(0.25));
-  check(SV("answer is '0.25   '"), SV("answer is '{:<07}'"), F(0.25));
-  check(SV("answer is ' 0.25  '"), SV("answer is '{:^07}'"), F(0.25));
+  check.template operator()<"answer is '{:>07}'">(SV("answer is '   0.25'"), F(0.25));
+  check.template operator()<"answer is '{:<07}'">(SV("answer is '0.25   '"), F(0.25));
+  check.template operator()<"answer is '{:^07}'">(SV("answer is ' 0.25  '"), F(0.25));
 
   // *** Sign ***
-  check(SV("answer is '0'"), SV("answer is '{:}'"), F(0));
-  check(SV("answer is '0'"), SV("answer is '{:-}'"), F(0));
-  check(SV("answer is '+0'"), SV("answer is '{:+}'"), F(0));
-  check(SV("answer is ' 0'"), SV("answer is '{: }'"), F(0));
+  check.template operator()<"answer is '{:}'">(SV("answer is '0'"), F(0));
+  check.template operator()<"answer is '{:-}'">(SV("answer is '0'"), F(0));
+  check.template operator()<"answer is '{:+}'">(SV("answer is '+0'"), F(0));
+  check.template operator()<"answer is '{: }'">(SV("answer is ' 0'"), F(0));
 
-  check(SV("answer is '-0'"), SV("answer is '{:}'"), F(-0.));
-  check(SV("answer is '-0'"), SV("answer is '{:-}'"), F(-0.));
-  check(SV("answer is '-0'"), SV("answer is '{:+}'"), F(-0.));
-  check(SV("answer is '-0'"), SV("answer is '{: }'"), F(-0.));
+  check.template operator()<"answer is '{:}'">(SV("answer is '-0'"), F(-0.));
+  check.template operator()<"answer is '{:-}'">(SV("answer is '-0'"), F(-0.));
+  check.template operator()<"answer is '{:+}'">(SV("answer is '-0'"), F(-0.));
+  check.template operator()<"answer is '{: }'">(SV("answer is '-0'"), F(-0.));
 
   // [format.string.std]/5 The sign option applies to floating-point infinity and NaN.
-  check(SV("answer is 'inf'"), SV("answer is '{:}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is 'inf'"), SV("answer is '{:-}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '+inf'"), SV("answer is '{:+}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is ' inf'"), SV("answer is '{: }'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:}'">(SV("answer is 'inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-}'">(SV("answer is 'inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+}'">(SV("answer is '+inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: }'">(SV("answer is ' inf'"), std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '-inf'"), SV("answer is '{:}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-inf'"), SV("answer is '{:-}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-inf'"), SV("answer is '{:+}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-inf'"), SV("answer is '{: }'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:}'">(SV("answer is '-inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-}'">(SV("answer is '-inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+}'">(SV("answer is '-inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: }'">(SV("answer is '-inf'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is 'nan'"), SV("answer is '{:}'"), nan_pos);
-  check(SV("answer is 'nan'"), SV("answer is '{:-}'"), nan_pos);
-  check(SV("answer is '+nan'"), SV("answer is '{:+}'"), nan_pos);
-  check(SV("answer is ' nan'"), SV("answer is '{: }'"), nan_pos);
+  check.template operator()<"answer is '{:}'">(SV("answer is 'nan'"), nan_pos);
+  check.template operator()<"answer is '{:-}'">(SV("answer is 'nan'"), nan_pos);
+  check.template operator()<"answer is '{:+}'">(SV("answer is '+nan'"), nan_pos);
+  check.template operator()<"answer is '{: }'">(SV("answer is ' nan'"), nan_pos);
 
-  check(SV("answer is '-nan'"), SV("answer is '{:}'"), nan_neg);
-  check(SV("answer is '-nan'"), SV("answer is '{:-}'"), nan_neg);
-  check(SV("answer is '-nan'"), SV("answer is '{:+}'"), nan_neg);
-  check(SV("answer is '-nan'"), SV("answer is '{: }'"), nan_neg);
+  check.template operator()<"answer is '{:}'">(SV("answer is '-nan'"), nan_neg);
+  check.template operator()<"answer is '{:-}'">(SV("answer is '-nan'"), nan_neg);
+  check.template operator()<"answer is '{:+}'">(SV("answer is '-nan'"), nan_neg);
+  check.template operator()<"answer is '{: }'">(SV("answer is '-nan'"), nan_neg);
 
   // *** alternate form ***
-  check(SV("answer is '0.'"), SV("answer is '{:#}'"), F(0));
-  check(SV("answer is '2.5'"), SV("answer is '{:#}'"), F(2.5));
+  check.template operator()<"answer is '{:#}'">(SV("answer is '0.'"), F(0));
+  check.template operator()<"answer is '{:#}'">(SV("answer is '2.5'"), F(2.5));
 
-  check(SV("answer is 'inf'"), SV("answer is '{:#}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '-inf'"), SV("answer is '{:#}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#}'">(SV("answer is 'inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#}'">(SV("answer is '-inf'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is 'nan'"), SV("answer is '{:#}'"), nan_pos);
-  check(SV("answer is '-nan'"), SV("answer is '{:#}'"), nan_neg);
+  check.template operator()<"answer is '{:#}'">(SV("answer is 'nan'"), nan_pos);
+  check.template operator()<"answer is '{:#}'">(SV("answer is '-nan'"), nan_neg);
 
   // *** zero-padding & width ***
-  check(SV("answer is '0.03125'"), SV("answer is '{:07}'"), 0.03125);
-  check(SV("answer is '+0.03125'"), SV("answer is '{:+07}'"), 0.03125);
-  check(SV("answer is '+0.03125'"), SV("answer is '{:+08}'"), 0.03125);
-  check(SV("answer is '+00.03125'"), SV("answer is '{:+09}'"), 0.03125);
+  check.template operator()<"answer is '{:07}'">(SV("answer is '0.03125'"), 0.03125);
+  check.template operator()<"answer is '{:+07}'">(SV("answer is '+0.03125'"), 0.03125);
+  check.template operator()<"answer is '{:+08}'">(SV("answer is '+0.03125'"), 0.03125);
+  check.template operator()<"answer is '{:+09}'">(SV("answer is '+00.03125'"), 0.03125);
 
-  check(SV("answer is '0000.03125'"), SV("answer is '{:010}'"), 0.03125);
-  check(SV("answer is '0000.03125'"), SV("answer is '{:-010}'"), 0.03125);
-  check(SV("answer is '+000.03125'"), SV("answer is '{:+010}'"), 0.03125);
-  check(SV("answer is ' 000.03125'"), SV("answer is '{: 010}'"), 0.03125);
+  check.template operator()<"answer is '{:010}'">(SV("answer is '0000.03125'"), 0.03125);
+  check.template operator()<"answer is '{:-010}'">(SV("answer is '0000.03125'"), 0.03125);
+  check.template operator()<"answer is '{:+010}'">(SV("answer is '+000.03125'"), 0.03125);
+  check.template operator()<"answer is '{: 010}'">(SV("answer is ' 000.03125'"), 0.03125);
 
-  check(SV("answer is '       inf'"), SV("answer is '{:010}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '       inf'"), SV("answer is '{:-010}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '      +inf'"), SV("answer is '{:+010}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '       inf'"), SV("answer is '{: 010}'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:010}'">(SV("answer is '       inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-010}'">(SV("answer is '       inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+010}'">(SV("answer is '      +inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: 010}'">(SV("answer is '       inf'"), std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '      -inf'"), SV("answer is '{:010}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '      -inf'"), SV("answer is '{:-010}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '      -inf'"), SV("answer is '{:+010}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '      -inf'"), SV("answer is '{: 010}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:010}'">(SV("answer is '      -inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-010}'">(SV("answer is '      -inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+010}'">(SV("answer is '      -inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: 010}'">(SV("answer is '      -inf'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '       nan'"), SV("answer is '{:010}'"), nan_pos);
-  check(SV("answer is '       nan'"), SV("answer is '{:-010}'"), nan_pos);
-  check(SV("answer is '      +nan'"), SV("answer is '{:+010}'"), nan_pos);
-  check(SV("answer is '       nan'"), SV("answer is '{: 010}'"), nan_pos);
+  check.template operator()<"answer is '{:010}'">(SV("answer is '       nan'"), nan_pos);
+  check.template operator()<"answer is '{:-010}'">(SV("answer is '       nan'"), nan_pos);
+  check.template operator()<"answer is '{:+010}'">(SV("answer is '      +nan'"), nan_pos);
+  check.template operator()<"answer is '{: 010}'">(SV("answer is '       nan'"), nan_pos);
 
-  check(SV("answer is '      -nan'"), SV("answer is '{:010}'"), nan_neg);
-  check(SV("answer is '      -nan'"), SV("answer is '{:-010}'"), nan_neg);
-  check(SV("answer is '      -nan'"), SV("answer is '{:+010}'"), nan_neg);
-  check(SV("answer is '      -nan'"), SV("answer is '{: 010}'"), nan_neg);
+  check.template operator()<"answer is '{:010}'">(SV("answer is '      -nan'"), nan_neg);
+  check.template operator()<"answer is '{:-010}'">(SV("answer is '      -nan'"), nan_neg);
+  check.template operator()<"answer is '{:+010}'">(SV("answer is '      -nan'"), nan_neg);
+  check.template operator()<"answer is '{: 010}'">(SV("answer is '      -nan'"), nan_neg);
 
   // *** precision ***
   // See format_test_floating_point_default_precision
@@ -2230,121 +2238,121 @@ void format_test_floating_point_default_precision(TestFunction check) {
   auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
 
   // *** align-fill & width ***
-  check(SV("answer is '   0.25'"), SV("answer is '{:7.6}'"), F(0.25));
-  check(SV("answer is '   0.25'"), SV("answer is '{:>7.6}'"), F(0.25));
-  check(SV("answer is '0.25   '"), SV("answer is '{:<7.6}'"), F(0.25));
-  check(SV("answer is ' 0.25  '"), SV("answer is '{:^7.6}'"), F(0.25));
+  check.template operator()<"answer is '{:7.6}'">(SV("answer is '   0.25'"), F(0.25));
+  check.template operator()<"answer is '{:>7.6}'">(SV("answer is '   0.25'"), F(0.25));
+  check.template operator()<"answer is '{:<7.6}'">(SV("answer is '0.25   '"), F(0.25));
+  check.template operator()<"answer is '{:^7.6}'">(SV("answer is ' 0.25  '"), F(0.25));
 
-  check(SV("answer is '---0.125'"), SV("answer is '{:->8.6}'"), F(125e-3));
-  check(SV("answer is '0.125---'"), SV("answer is '{:-<8.6}'"), F(125e-3));
-  check(SV("answer is '-0.125--'"), SV("answer is '{:-^8.6}'"), F(125e-3));
+  check.template operator()<"answer is '{:->8.6}'">(SV("answer is '---0.125'"), F(125e-3));
+  check.template operator()<"answer is '{:-<8.6}'">(SV("answer is '0.125---'"), F(125e-3));
+  check.template operator()<"answer is '{:-^8.6}'">(SV("answer is '-0.125--'"), F(125e-3));
 
-  check(SV("answer is '***inf'"), SV("answer is '{:*>6.6}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is 'inf***'"), SV("answer is '{:*<6.6}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '*inf**'"), SV("answer is '{:*^6.6}'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:*>6.6}'">(SV("answer is '***inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:*<6.6}'">(SV("answer is 'inf***'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:*^6.6}'">(SV("answer is '*inf**'"), std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '###-inf'"), SV("answer is '{:#>7.6}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-inf###'"), SV("answer is '{:#<7.6}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '#-inf##'"), SV("answer is '{:#^7.6}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#>7.6}'">(SV("answer is '###-inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#<7.6}'">(SV("answer is '-inf###'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#^7.6}'">(SV("answer is '#-inf##'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '^^^nan'"), SV("answer is '{:^>6.6}'"), nan_pos);
-  check(SV("answer is 'nan^^^'"), SV("answer is '{:^<6.6}'"), nan_pos);
-  check(SV("answer is '^nan^^'"), SV("answer is '{:^^6.6}'"), nan_pos);
+  check.template operator()<"answer is '{:^>6.6}'">(SV("answer is '^^^nan'"), nan_pos);
+  check.template operator()<"answer is '{:^<6.6}'">(SV("answer is 'nan^^^'"), nan_pos);
+  check.template operator()<"answer is '{:^^6.6}'">(SV("answer is '^nan^^'"), nan_pos);
 
-  check(SV("answer is '000-nan'"), SV("answer is '{:0>7.6}'"), nan_neg);
-  check(SV("answer is '-nan000'"), SV("answer is '{:0<7.6}'"), nan_neg);
-  check(SV("answer is '0-nan00'"), SV("answer is '{:0^7.6}'"), nan_neg);
+  check.template operator()<"answer is '{:0>7.6}'">(SV("answer is '000-nan'"), nan_neg);
+  check.template operator()<"answer is '{:0<7.6}'">(SV("answer is '-nan000'"), nan_neg);
+  check.template operator()<"answer is '{:0^7.6}'">(SV("answer is '0-nan00'"), nan_neg);
 
   // Test whether zero padding is ignored
-  check(SV("answer is '   0.25'"), SV("answer is '{:>07.6}'"), F(0.25));
-  check(SV("answer is '0.25   '"), SV("answer is '{:<07.6}'"), F(0.25));
-  check(SV("answer is ' 0.25  '"), SV("answer is '{:^07.6}'"), F(0.25));
+  check.template operator()<"answer is '{:>07.6}'">(SV("answer is '   0.25'"), F(0.25));
+  check.template operator()<"answer is '{:<07.6}'">(SV("answer is '0.25   '"), F(0.25));
+  check.template operator()<"answer is '{:^07.6}'">(SV("answer is ' 0.25  '"), F(0.25));
 
   // *** Sign ***
-  check(SV("answer is '0'"), SV("answer is '{:.6}'"), F(0));
-  check(SV("answer is '0'"), SV("answer is '{:-.6}'"), F(0));
-  check(SV("answer is '+0'"), SV("answer is '{:+.6}'"), F(0));
-  check(SV("answer is ' 0'"), SV("answer is '{: .6}'"), F(0));
+  check.template operator()<"answer is '{:.6}'">(SV("answer is '0'"), F(0));
+  check.template operator()<"answer is '{:-.6}'">(SV("answer is '0'"), F(0));
+  check.template operator()<"answer is '{:+.6}'">(SV("answer is '+0'"), F(0));
+  check.template operator()<"answer is '{: .6}'">(SV("answer is ' 0'"), F(0));
 
-  check(SV("answer is '-0'"), SV("answer is '{:.6}'"), F(-0.));
-  check(SV("answer is '-0'"), SV("answer is '{:-.6}'"), F(-0.));
-  check(SV("answer is '-0'"), SV("answer is '{:+.6}'"), F(-0.));
-  check(SV("answer is '-0'"), SV("answer is '{: .6}'"), F(-0.));
+  check.template operator()<"answer is '{:.6}'">(SV("answer is '-0'"), F(-0.));
+  check.template operator()<"answer is '{:-.6}'">(SV("answer is '-0'"), F(-0.));
+  check.template operator()<"answer is '{:+.6}'">(SV("answer is '-0'"), F(-0.));
+  check.template operator()<"answer is '{: .6}'">(SV("answer is '-0'"), F(-0.));
 
   // [format.string.std]/5 The sign option applies to floating-point infinity and NaN.
-  check(SV("answer is 'inf'"), SV("answer is '{:.6}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is 'inf'"), SV("answer is '{:-.6}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '+inf'"), SV("answer is '{:+.6}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is ' inf'"), SV("answer is '{: .6}'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:.6}'">(SV("answer is 'inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-.6}'">(SV("answer is 'inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+.6}'">(SV("answer is '+inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: .6}'">(SV("answer is ' inf'"), std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '-inf'"), SV("answer is '{:.6}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-inf'"), SV("answer is '{:-.6}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-inf'"), SV("answer is '{:+.6}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '-inf'"), SV("answer is '{: .6}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:.6}'">(SV("answer is '-inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-.6}'">(SV("answer is '-inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+.6}'">(SV("answer is '-inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: .6}'">(SV("answer is '-inf'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is 'nan'"), SV("answer is '{:.6}'"), nan_pos);
-  check(SV("answer is 'nan'"), SV("answer is '{:-.6}'"), nan_pos);
-  check(SV("answer is '+nan'"), SV("answer is '{:+.6}'"), nan_pos);
-  check(SV("answer is ' nan'"), SV("answer is '{: .6}'"), nan_pos);
+  check.template operator()<"answer is '{:.6}'">(SV("answer is 'nan'"), nan_pos);
+  check.template operator()<"answer is '{:-.6}'">(SV("answer is 'nan'"), nan_pos);
+  check.template operator()<"answer is '{:+.6}'">(SV("answer is '+nan'"), nan_pos);
+  check.template operator()<"answer is '{: .6}'">(SV("answer is ' nan'"), nan_pos);
 
-  check(SV("answer is '-nan'"), SV("answer is '{:.6}'"), nan_neg);
-  check(SV("answer is '-nan'"), SV("answer is '{:-.6}'"), nan_neg);
-  check(SV("answer is '-nan'"), SV("answer is '{:+.6}'"), nan_neg);
-  check(SV("answer is '-nan'"), SV("answer is '{: .6}'"), nan_neg);
+  check.template operator()<"answer is '{:.6}'">(SV("answer is '-nan'"), nan_neg);
+  check.template operator()<"answer is '{:-.6}'">(SV("answer is '-nan'"), nan_neg);
+  check.template operator()<"answer is '{:+.6}'">(SV("answer is '-nan'"), nan_neg);
+  check.template operator()<"answer is '{: .6}'">(SV("answer is '-nan'"), nan_neg);
 
   // *** alternate form **
   // When precision is zero there's no decimal point except when the alternate form is specified.
-  check(SV("answer is '0'"), SV("answer is '{:.0}'"), F(0));
-  check(SV("answer is '0.'"), SV("answer is '{:#.0}'"), F(0));
+  check.template operator()<"answer is '{:.0}'">(SV("answer is '0'"), F(0));
+  check.template operator()<"answer is '{:#.0}'">(SV("answer is '0.'"), F(0));
 
-  check(SV("answer is '0.'"), SV("answer is '{:#.6}'"), F(0));
-  check(SV("answer is '2.5'"), SV("answer is '{:#.6}'"), F(2.5));
+  check.template operator()<"answer is '{:#.6}'">(SV("answer is '0.'"), F(0));
+  check.template operator()<"answer is '{:#.6}'">(SV("answer is '2.5'"), F(2.5));
 
-  check(SV("answer is 'inf'"), SV("answer is '{:#.6}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '-inf'"), SV("answer is '{:#.6}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#.6}'">(SV("answer is 'inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:#.6}'">(SV("answer is '-inf'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is 'nan'"), SV("answer is '{:#.6}'"), nan_pos);
-  check(SV("answer is '-nan'"), SV("answer is '{:#.6}'"), nan_neg);
+  check.template operator()<"answer is '{:#.6}'">(SV("answer is 'nan'"), nan_pos);
+  check.template operator()<"answer is '{:#.6}'">(SV("answer is '-nan'"), nan_neg);
 
   // *** zero-padding & width ***
-  check(SV("answer is '0.03125'"), SV("answer is '{:06.6}'"), 0.03125);
-  check(SV("answer is '+0.03125'"), SV("answer is '{:+06.6}'"), 0.03125);
-  check(SV("answer is '+0.03125'"), SV("answer is '{:+07.6}'"), 0.03125);
-  check(SV("answer is '+0.03125'"), SV("answer is '{:+08.6}'"), 0.03125);
+  check.template operator()<"answer is '{:06.6}'">(SV("answer is '0.03125'"), 0.03125);
+  check.template operator()<"answer is '{:+06.6}'">(SV("answer is '+0.03125'"), 0.03125);
+  check.template operator()<"answer is '{:+07.6}'">(SV("answer is '+0.03125'"), 0.03125);
+  check.template operator()<"answer is '{:+08.6}'">(SV("answer is '+0.03125'"), 0.03125);
 
-  check(SV("answer is '000.03125'"), SV("answer is '{:09.6}'"), 0.03125);
-  check(SV("answer is '000.03125'"), SV("answer is '{:-09.6}'"), 0.03125);
-  check(SV("answer is '+00.03125'"), SV("answer is '{:+09.6}'"), 0.03125);
-  check(SV("answer is ' 00.03125'"), SV("answer is '{: 09.6}'"), 0.03125);
+  check.template operator()<"answer is '{:09.6}'">(SV("answer is '000.03125'"), 0.03125);
+  check.template operator()<"answer is '{:-09.6}'">(SV("answer is '000.03125'"), 0.03125);
+  check.template operator()<"answer is '{:+09.6}'">(SV("answer is '+00.03125'"), 0.03125);
+  check.template operator()<"answer is '{: 09.6}'">(SV("answer is ' 00.03125'"), 0.03125);
 
-  check(SV("answer is '       inf'"), SV("answer is '{:010.6}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '       inf'"), SV("answer is '{:-010.6}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '      +inf'"), SV("answer is '{:+010.6}'"), std::numeric_limits<F>::infinity());
-  check(SV("answer is '       inf'"), SV("answer is '{: 010.6}'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:010.6}'">(SV("answer is '       inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-010.6}'">(SV("answer is '       inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+010.6}'">(SV("answer is '      +inf'"), std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: 010.6}'">(SV("answer is '       inf'"), std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '      -inf'"), SV("answer is '{:010.6}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '      -inf'"), SV("answer is '{:-010.6}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '      -inf'"), SV("answer is '{:+010.6}'"), -std::numeric_limits<F>::infinity());
-  check(SV("answer is '      -inf'"), SV("answer is '{: 010.6}'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:010.6}'">(SV("answer is '      -inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:-010.6}'">(SV("answer is '      -inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{:+010.6}'">(SV("answer is '      -inf'"), -std::numeric_limits<F>::infinity());
+  check.template operator()<"answer is '{: 010.6}'">(SV("answer is '      -inf'"), -std::numeric_limits<F>::infinity());
 
-  check(SV("answer is '       nan'"), SV("answer is '{:010.6}'"), nan_pos);
-  check(SV("answer is '       nan'"), SV("answer is '{:-010.6}'"), nan_pos);
-  check(SV("answer is '      +nan'"), SV("answer is '{:+010.6}'"), nan_pos);
-  check(SV("answer is '       nan'"), SV("answer is '{: 010.6}'"), nan_pos);
+  check.template operator()<"answer is '{:010.6}'">(SV("answer is '       nan'"), nan_pos);
+  check.template operator()<"answer is '{:-010.6}'">(SV("answer is '       nan'"), nan_pos);
+  check.template operator()<"answer is '{:+010.6}'">(SV("answer is '      +nan'"), nan_pos);
+  check.template operator()<"answer is '{: 010.6}'">(SV("answer is '       nan'"), nan_pos);
 
-  check(SV("answer is '      -nan'"), SV("answer is '{:010.6}'"), nan_neg);
-  check(SV("answer is '      -nan'"), SV("answer is '{:-010.6}'"), nan_neg);
-  check(SV("answer is '      -nan'"), SV("answer is '{:+010.6}'"), nan_neg);
-  check(SV("answer is '      -nan'"), SV("answer is '{: 010.6}'"), nan_neg);
+  check.template operator()<"answer is '{:010.6}'">(SV("answer is '      -nan'"), nan_neg);
+  check.template operator()<"answer is '{:-010.6}'">(SV("answer is '      -nan'"), nan_neg);
+  check.template operator()<"answer is '{:+010.6}'">(SV("answer is '      -nan'"), nan_neg);
+  check.template operator()<"answer is '{: 010.6}'">(SV("answer is '      -nan'"), nan_neg);
 
   // *** precision ***
-  check(SV("answer is '0.03'"), SV("answer is '{:.0}'"), 0.03125);
-  check(SV("answer is '0.03'"), SV("answer is '{:.1}'"), 0.03125);
-  check(SV("answer is '0.031'"), SV("answer is '{:.2}'"), 0.03125);
-  check(SV("answer is '0.0312'"), SV("answer is '{:.3}'"), 0.03125);
-  check(SV("answer is '0.03125'"), SV("answer is '{:.4}'"), 0.03125);
-  check(SV("answer is '0.03125'"), SV("answer is '{:.5}'"), 0.03125);
-  check(SV("answer is '0.03125'"), SV("answer is '{:.10}'"), 0.03125);
+  check.template operator()<"answer is '{:.0}'">(SV("answer is '0.03'"), 0.03125);
+  check.template operator()<"answer is '{:.1}'">(SV("answer is '0.03'"), 0.03125);
+  check.template operator()<"answer is '{:.2}'">(SV("answer is '0.031'"), 0.03125);
+  check.template operator()<"answer is '{:.3}'">(SV("answer is '0.0312'"), 0.03125);
+  check.template operator()<"answer is '{:.4}'">(SV("answer is '0.03125'"), 0.03125);
+  check.template operator()<"answer is '{:.5}'">(SV("answer is '0.03125'"), 0.03125);
+  check.template operator()<"answer is '{:.10}'">(SV("answer is '0.03125'"), 0.03125);
 
   // *** locale-specific form ***
   // See locale-specific_form.pass.cpp
@@ -2384,14 +2392,14 @@ void format_test_floating_point(TestFunction check, ExceptionTest check_exceptio
 template <class P, class CharT, class TestFunction, class ExceptionTest>
 void format_test_pointer(TestFunction check, ExceptionTest check_exception) {
   // *** align-fill & width ***
-  check(SV("answer is '   0x0'"), SV("answer is '{:6}'"), P(nullptr));
-  check(SV("answer is '   0x0'"), SV("answer is '{:>6}'"), P(nullptr));
-  check(SV("answer is '0x0   '"), SV("answer is '{:<6}'"), P(nullptr));
-  check(SV("answer is ' 0x0  '"), SV("answer is '{:^6}'"), P(nullptr));
+  check.template operator()<"answer is '{:6}'">(SV("answer is '   0x0'"), P(nullptr));
+  check.template operator()<"answer is '{:>6}'">(SV("answer is '   0x0'"), P(nullptr));
+  check.template operator()<"answer is '{:<6}'">(SV("answer is '0x0   '"), P(nullptr));
+  check.template operator()<"answer is '{:^6}'">(SV("answer is ' 0x0  '"), P(nullptr));
 
-  check(SV("answer is '---0x0'"), SV("answer is '{:->6}'"), P(nullptr));
-  check(SV("answer is '0x0---'"), SV("answer is '{:-<6}'"), P(nullptr));
-  check(SV("answer is '-0x0--'"), SV("answer is '{:-^6}'"), P(nullptr));
+  check.template operator()<"answer is '{:->6}'">(SV("answer is '---0x0'"), P(nullptr));
+  check.template operator()<"answer is '{:-<6}'">(SV("answer is '0x0---'"), P(nullptr));
+  check.template operator()<"answer is '{:-^6}'">(SV("answer is '-0x0--'"), P(nullptr));
 
   // *** Sign ***
   check_exception("The format-spec should consume the input or end with a '}'", SV("{:-}"), P(nullptr));
@@ -2418,20 +2426,20 @@ void format_test_pointer(TestFunction check, ExceptionTest check_exception) {
 template <class CharT, class TestFunction, class ExceptionTest>
 void format_test_handle(TestFunction check, ExceptionTest check_exception) {
   // *** Valid permuatations ***
-  check(SV("answer is '0xaaaa'"), SV("answer is '{}'"), status::foo);
-  check(SV("answer is '0xaaaa'"), SV("answer is '{:x}'"), status::foo);
-  check(SV("answer is '0XAAAA'"), SV("answer is '{:X}'"), status::foo);
-  check(SV("answer is 'foo'"), SV("answer is '{:s}'"), status::foo);
+  check.template operator()<"answer is '{}'">(SV("answer is '0xaaaa'"), status::foo);
+  check.template operator()<"answer is '{:x}'">(SV("answer is '0xaaaa'"), status::foo);
+  check.template operator()<"answer is '{:X}'">(SV("answer is '0XAAAA'"), status::foo);
+  check.template operator()<"answer is '{:s}'">(SV("answer is 'foo'"), status::foo);
 
-  check(SV("answer is '0x5555'"), SV("answer is '{}'"), status::bar);
-  check(SV("answer is '0x5555'"), SV("answer is '{:x}'"), status::bar);
-  check(SV("answer is '0X5555'"), SV("answer is '{:X}'"), status::bar);
-  check(SV("answer is 'bar'"), SV("answer is '{:s}'"), status::bar);
+  check.template operator()<"answer is '{}'">(SV("answer is '0x5555'"), status::bar);
+  check.template operator()<"answer is '{:x}'">(SV("answer is '0x5555'"), status::bar);
+  check.template operator()<"answer is '{:X}'">(SV("answer is '0X5555'"), status::bar);
+  check.template operator()<"answer is '{:s}'">(SV("answer is 'bar'"), status::bar);
 
-  check(SV("answer is '0xaa55'"), SV("answer is '{}'"), status::foobar);
-  check(SV("answer is '0xaa55'"), SV("answer is '{:x}'"), status::foobar);
-  check(SV("answer is '0XAA55'"), SV("answer is '{:X}'"), status::foobar);
-  check(SV("answer is 'foobar'"), SV("answer is '{:s}'"), status::foobar);
+  check.template operator()<"answer is '{}'">(SV("answer is '0xaa55'"), status::foobar);
+  check.template operator()<"answer is '{:x}'">(SV("answer is '0xaa55'"), status::foobar);
+  check.template operator()<"answer is '{:X}'">(SV("answer is '0XAA55'"), status::foobar);
+  check.template operator()<"answer is '{:s}'">(SV("answer is 'foobar'"), status::foobar);
 
   // *** type ***
   for (const auto& fmt : invalid_types<CharT>("xXs"))
@@ -2448,12 +2456,13 @@ void format_test_pointer(TestFunction check, ExceptionTest check_exception) {
 template <class CharT, class TestFunction, class ExceptionTest>
 void format_tests(TestFunction check, ExceptionTest check_exception) {
   // *** Test escaping  ***
-  check(SV("{"), SV("{{"));
-  check(SV("}"), SV("}}"));
+
+  check.template operator()<"{{">(SV("{"));
+  check.template operator()<"}}">(SV("}"));
 
   // *** Test argument ID ***
-  check(SV("hello false true"), SV("hello {0:} {1:}"), false, true);
-  check(SV("hello true false"), SV("hello {1:} {0:}"), false, true);
+  check.template operator()<"hello {0:} {1:}">(SV("hello false true"), false, true);
+  check.template operator()<"hello {1:} {0:}">(SV("hello true false"), false, true);
 
   // ** Test invalid format strings ***
   check_exception("The format string terminates at a '{'", SV("{"));
@@ -2471,8 +2480,8 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
 
   // *** Test char format argument ***
   // The `char` to `wchar_t` formatting is tested separately.
-  check(SV("hello 09azAZ!"), SV("hello {}{}{}{}{}{}{}"), CharT('0'), CharT('9'), CharT('a'), CharT('z'), CharT('A'),
-        CharT('Z'), CharT('!'));
+  check.template operator()<"hello {}{}{}{}{}{}{}">(SV("hello 09azAZ!"), CharT('0'), CharT('9'), CharT('a'), CharT('z'),
+                                                    CharT('A'), CharT('Z'), CharT('!'));
 
   format_test_char<CharT>(check, check_exception);
   format_test_char_as_integer<CharT>(check, check_exception);
@@ -2481,45 +2490,48 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
   {
     CharT buffer[] = {CharT('0'), CharT('9'), CharT('a'), CharT('z'), CharT('A'), CharT('Z'), CharT('!'), 0};
     CharT* data = buffer;
-    check(SV("hello 09azAZ!"), SV("hello {}"), data);
+    check.template operator()<"hello {}">(SV("hello 09azAZ!"), data);
   }
   {
     CharT buffer[] = {CharT('0'), CharT('9'), CharT('a'), CharT('z'), CharT('A'), CharT('Z'), CharT('!'), 0};
     const CharT* data = buffer;
-    check(SV("hello 09azAZ!"), SV("hello {}"), data);
+    check.template operator()<"hello {}">(SV("hello 09azAZ!"), data);
   }
   {
     std::basic_string<CharT> data = STR("world");
-    check(SV("hello world"), SV("hello {}"), data);
+    check.template operator()<"hello {}">(SV("hello world"), data);
   }
   {
     std::basic_string<CharT> buffer = STR("world");
     std::basic_string_view<CharT> data = buffer;
-    check(SV("hello world"), SV("hello {}"), data);
+    check.template operator()<"hello {}">(SV("hello world"), data);
   }
   format_string_tests<CharT>(check, check_exception);
 
   // *** Test Boolean format argument ***
-  check(SV("hello false true"), SV("hello {} {}"), false, true);
+  check.template operator()<"hello {} {}">(SV("hello false true"), false, true);
 
   format_test_bool<CharT>(check, check_exception);
   format_test_bool_as_integer<CharT>(check, check_exception);
 
   // *** Test signed integral format argument ***
-  check(SV("hello 42"), SV("hello {}"), static_cast<signed char>(42));
-  check(SV("hello 42"), SV("hello {}"), static_cast<short>(42));
-  check(SV("hello 42"), SV("hello {}"), static_cast<int>(42));
-  check(SV("hello 42"), SV("hello {}"), static_cast<long>(42));
-  check(SV("hello 42"), SV("hello {}"), static_cast<long long>(42));
+  check.template operator()<"hello {}">(SV("hello 42"), static_cast<signed char>(42));
+  check.template operator()<"hello {}">(SV("hello 42"), static_cast<short>(42));
+  check.template operator()<"hello {}">(SV("hello 42"), static_cast<int>(42));
+  check.template operator()<"hello {}">(SV("hello 42"), static_cast<long>(42));
+  check.template operator()<"hello {}">(SV("hello 42"), static_cast<long long>(42));
 #ifndef TEST_HAS_NO_INT128
-  check(SV("hello 42"), SV("hello {}"), static_cast<__int128_t>(42));
+  check.template operator()<"hello {}">(SV("hello 42"), static_cast<__int128_t>(42));
   {
     // Note 128-bit support is only partly implemented test the range
     // conditions here.
-    std::basic_string<CharT> min = std::format(STR("{}"), std::numeric_limits<long long>::min());
-    check(std::basic_string_view<CharT>(min), SV("{}"), static_cast<__int128_t>(std::numeric_limits<long long>::min()));
-    std::basic_string<CharT> max = std::format(STR("{}"), std::numeric_limits<long long>::max());
-    check(std::basic_string_view<CharT>(max), SV("{}"), static_cast<__int128_t>(std::numeric_limits<long long>::max()));
+    static constexpr auto fmt = string_literal("{}");
+    std::basic_string<CharT> min = std::format(fmt.sv<CharT>(), std::numeric_limits<long long>::min());
+    check.template operator()<"{}">(std::basic_string_view<CharT>(min),
+                                    static_cast<__int128_t>(std::numeric_limits<long long>::min()));
+    std::basic_string<CharT> max = std::format(fmt.sv<CharT>(), std::numeric_limits<long long>::max());
+    check.template operator()<"{}">(std::basic_string_view<CharT>(max),
+                                    static_cast<__int128_t>(std::numeric_limits<long long>::max()));
     check_exception("128-bit value is outside of implemented range", SV("{}"),
                     static_cast<__int128_t>(std::numeric_limits<long long>::min()) - 1);
     check_exception("128-bit value is outside of implemented range", SV("{}"),
@@ -2529,19 +2541,20 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
   format_test_signed_integer<CharT>(check, check_exception);
 
   // ** Test unsigned integral format argument ***
-  check(SV("hello 42"), SV("hello {}"), static_cast<unsigned char>(42));
-  check(SV("hello 42"), SV("hello {}"), static_cast<unsigned short>(42));
-  check(SV("hello 42"), SV("hello {}"), static_cast<unsigned>(42));
-  check(SV("hello 42"), SV("hello {}"), static_cast<unsigned long>(42));
-  check(SV("hello 42"), SV("hello {}"), static_cast<unsigned long long>(42));
+  check.template operator()<"hello {}">(SV("hello 42"), static_cast<unsigned char>(42));
+  check.template operator()<"hello {}">(SV("hello 42"), static_cast<unsigned short>(42));
+  check.template operator()<"hello {}">(SV("hello 42"), static_cast<unsigned>(42));
+  check.template operator()<"hello {}">(SV("hello 42"), static_cast<unsigned long>(42));
+  check.template operator()<"hello {}">(SV("hello 42"), static_cast<unsigned long long>(42));
 #ifndef TEST_HAS_NO_INT128
-  check(SV("hello 42"), SV("hello {}"), static_cast<__uint128_t>(42));
+  check.template operator()<"hello {}">(SV("hello 42"), static_cast<__uint128_t>(42));
   {
     // Note 128-bit support is only partly implemented test the range
     // conditions here.
-    std::basic_string<CharT> max = std::format(STR("{}"), std::numeric_limits<unsigned long long>::max());
-    check(std::basic_string_view<CharT>(max), SV("{}"),
-          static_cast<__uint128_t>(std::numeric_limits<unsigned long long>::max()));
+    static constexpr auto fmt = string_literal("{}");
+    std::basic_string<CharT> max = std::format(fmt.sv<CharT>(), std::numeric_limits<unsigned long long>::max());
+    check.template operator()<"{}">(std::basic_string_view<CharT>(max),
+                                    static_cast<__uint128_t>(std::numeric_limits<unsigned long long>::max()));
     check_exception("128-bit value is outside of implemented range", SV("{}"),
                     static_cast<__uint128_t>(std::numeric_limits<unsigned long long>::max()) + 1);
   }
@@ -2549,15 +2562,15 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
   format_test_unsigned_integer<CharT>(check, check_exception);
 
   // *** Test floating point format argument ***
-  check(SV("hello 42"), SV("hello {}"), static_cast<float>(42));
-  check(SV("hello 42"), SV("hello {}"), static_cast<double>(42));
-  check(SV("hello 42"), SV("hello {}"), static_cast<long double>(42));
+  check.template operator()<"hello {}">(SV("hello 42"), static_cast<float>(42));
+  check.template operator()<"hello {}">(SV("hello 42"), static_cast<double>(42));
+  check.template operator()<"hello {}">(SV("hello 42"), static_cast<long double>(42));
   format_test_floating_point<CharT>(check, check_exception);
 
   // *** Test pointer formater argument ***
-  check(SV("hello 0x0"), SV("hello {}"), nullptr);
-  check(SV("hello 0x42"), SV("hello {}"), reinterpret_cast<void*>(0x42));
-  check(SV("hello 0x42"), SV("hello {}"), reinterpret_cast<const void*>(0x42));
+  check.template operator()<"hello {}">(SV("hello 0x0"), nullptr);
+  check.template operator()<"hello {}">(SV("hello 0x42"), reinterpret_cast<void*>(0x42));
+  check.template operator()<"hello {}">(SV("hello 0x42"), reinterpret_cast<const void*>(0x42));
   format_test_pointer<CharT>(check, check_exception);
 
   // *** Test handle formatter argument ***
@@ -2568,7 +2581,7 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
 template <class TestFunction>
 void format_tests_char_to_wchar_t(TestFunction check) {
   using CharT = wchar_t;
-  check(SV("hello 09azA"), SV("hello {}{}{}{}{}"), '0', '9', 'a', 'z', 'A');
+  check.template operator()<"hello {}{}{}{}{}">(SV("hello 09azA"), '0', '9', 'a', 'z', 'A');
 }
 #endif
 

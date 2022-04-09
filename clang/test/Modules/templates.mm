@@ -1,6 +1,6 @@
 // RUN: rm -rf %t
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++11 -x objective-c++ -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -I %S/Inputs -verify %s -Wno-objc-root-class
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++11 -x objective-c++ -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -I %S/Inputs -emit-llvm %s -o - -Wno-objc-root-class | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -std=c++11 -x objective-c++ -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -I %S/Inputs -verify %s -Wno-objc-root-class
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -std=c++11 -x objective-c++ -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -I %S/Inputs -emit-llvm %s -o - -Wno-objc-root-class | FileCheck %s
 // expected-no-diagnostics
 // REQUIRES: x86-registered-target
 @import templates_left;

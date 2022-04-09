@@ -435,7 +435,7 @@ define <8 x i64> @splatvar_funnnel_v8i64(<8 x i64> %x, <8 x i64> %y, <8 x i64> %
 ;
 ; AVX512VL-LABEL: splatvar_funnnel_v8i64:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vmovdqa {{.*#+}} xmm3 = [63,63]
+; AVX512VL-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [63,63]
 ; AVX512VL-NEXT:    vpand %xmm3, %xmm2, %xmm4
 ; AVX512VL-NEXT:    vpsrlq %xmm4, %zmm1, %zmm1
 ; AVX512VL-NEXT:    vpandn %xmm3, %xmm2, %xmm2
@@ -464,7 +464,7 @@ define <8 x i64> @splatvar_funnnel_v8i64(<8 x i64> %x, <8 x i64> %y, <8 x i64> %
 ;
 ; AVX512VLBW-LABEL: splatvar_funnnel_v8i64:
 ; AVX512VLBW:       # %bb.0:
-; AVX512VLBW-NEXT:    vmovdqa {{.*#+}} xmm3 = [63,63]
+; AVX512VLBW-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [63,63]
 ; AVX512VLBW-NEXT:    vpand %xmm3, %xmm2, %xmm4
 ; AVX512VLBW-NEXT:    vpsrlq %xmm4, %zmm1, %zmm1
 ; AVX512VLBW-NEXT:    vpandn %xmm3, %xmm2, %xmm2

@@ -566,9 +566,11 @@ mlir::LogicalResult ArrayModifyOp::verify() {
 //===----------------------------------------------------------------------===//
 
 mlir::OpFoldResult fir::BoxAddrOp::fold(llvm::ArrayRef<mlir::Attribute> opnds) {
-  if (auto v = getVal().getDefiningOp()) {
-    if (auto box = dyn_cast<fir::EmboxOp>(v))
-      return box.getMemref();
+  if (auto *v = getVal().getDefiningOp()) {
+    if (auto box = dyn_cast<fir::EmboxOp>(v)) {
+      if (!box.getSlice()) // Fold only if not sliced
+        return box.getMemref();
+    }
     if (auto box = dyn_cast<fir::EmboxCharOp>(v))
       return box.getMemref();
   }
@@ -2401,10 +2403,9 @@ fir::SelectOp::getCompareOperands(llvm::ArrayRef<mlir::Value>, unsigned) {
   return {};
 }
 
-llvm::Optional<mlir::MutableOperandRange>
-fir::SelectOp::getMutableSuccessorOperands(unsigned oper) {
-  return ::getMutableSuccessorOperands(oper, getTargetArgsMutable(),
-                                       getTargetOffsetAttr());
+mlir::SuccessorOperands fir::SelectOp::getSuccessorOperands(unsigned oper) {
+  return mlir::SuccessorOperands(::getMutableSuccessorOperands(
+      oper, getTargetArgsMutable(), getTargetOffsetAttr()));
 }
 
 llvm::Optional<llvm::ArrayRef<mlir::Value>>
@@ -2462,10 +2463,9 @@ fir::SelectCaseOp::getCompareOperands(mlir::ValueRange operands,
   return {getSubOperands(cond, getSubOperands(1, operands, segments), a)};
 }
 
-llvm::Optional<mlir::MutableOperandRange>
-fir::SelectCaseOp::getMutableSuccessorOperands(unsigned oper) {
-  return ::getMutableSuccessorOperands(oper, getTargetArgsMutable(),
-                                       getTargetOffsetAttr());
+mlir::SuccessorOperands fir::SelectCaseOp::getSuccessorOperands(unsigned oper) {
+  return mlir::SuccessorOperands(::getMutableSuccessorOperands(
+      oper, getTargetArgsMutable(), getTargetOffsetAttr()));
 }
 
 llvm::Optional<llvm::ArrayRef<mlir::Value>>
@@ -2734,10 +2734,9 @@ fir::SelectRankOp::getCompareOperands(llvm::ArrayRef<mlir::Value>, unsigned) {
   return {};
 }
 
-llvm::Optional<mlir::MutableOperandRange>
-fir::SelectRankOp::getMutableSuccessorOperands(unsigned oper) {
-  return ::getMutableSuccessorOperands(oper, getTargetArgsMutable(),
-                                       getTargetOffsetAttr());
+mlir::SuccessorOperands fir::SelectRankOp::getSuccessorOperands(unsigned oper) {
+  return mlir::SuccessorOperands(::getMutableSuccessorOperands(
+      oper, getTargetArgsMutable(), getTargetOffsetAttr()));
 }
 
 llvm::Optional<llvm::ArrayRef<mlir::Value>>
@@ -2779,10 +2778,9 @@ fir::SelectTypeOp::getCompareOperands(llvm::ArrayRef<mlir::Value>, unsigned) {
   return {};
 }
 
-llvm::Optional<mlir::MutableOperandRange>
-fir::SelectTypeOp::getMutableSuccessorOperands(unsigned oper) {
-  return ::getMutableSuccessorOperands(oper, getTargetArgsMutable(),
-                                       getTargetOffsetAttr());
+mlir::SuccessorOperands fir::SelectTypeOp::getSuccessorOperands(unsigned oper) {
+  return mlir::SuccessorOperands(::getMutableSuccessorOperands(
+      oper, getTargetArgsMutable(), getTargetOffsetAttr()));
 }
 
 llvm::Optional<llvm::ArrayRef<mlir::Value>>

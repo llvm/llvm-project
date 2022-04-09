@@ -1,14 +1,14 @@
-// RUN: %clang_cc1 -no-enable-noundef-analysis -triple i686-windows-msvc   -fno-rtti -fno-threadsafe-statics -fms-extensions -emit-llvm -std=c++1y -O0 -o - %s -DMSABI -w | FileCheck --check-prefix=MSC --check-prefix=M32 %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -triple x86_64-windows-msvc -fno-rtti -fno-threadsafe-statics -fms-extensions -emit-llvm -std=c++1y -O0 -o - %s -DMSABI -w | FileCheck --check-prefix=MSC --check-prefix=M64 %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -triple i686-windows-gnu    -fno-rtti -fno-threadsafe-statics -fms-extensions -emit-llvm -std=c++1y -O0 -o - %s         -w | FileCheck --check-prefix=GNU --check-prefix=G32 %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -triple x86_64-windows-gnu  -fno-rtti -fno-threadsafe-statics -fms-extensions -emit-llvm -std=c++1y -O0 -o - %s         -w | FileCheck --check-prefix=GNU %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -triple i686-windows-msvc   -fno-rtti -fno-threadsafe-statics -fms-extensions -fms-compatibility-version=18.00 -emit-llvm -std=c++1y -O1 -disable-llvm-passes -o - %s -DMSABI -w | FileCheck --check-prefix=MO1 --check-prefix=M18 %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -triple i686-windows-msvc   -fno-rtti -fno-threadsafe-statics -fms-extensions -fms-compatibility-version=19.00 -emit-llvm -std=c++1y -O1 -disable-llvm-passes -o - %s -DMSABI -w | FileCheck --check-prefix=MO1 --check-prefix=M19 %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -triple i686-windows-gnu    -fno-rtti -fno-threadsafe-statics -fms-extensions -emit-llvm -std=c++1y -O1 -fno-experimental-new-pass-manager -o - %s         -w | FileCheck --check-prefix=GO1 %s
+// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -triple i686-windows-msvc   -fno-rtti -fno-threadsafe-statics -fms-extensions -emit-llvm -std=c++1y -O0 -o - %s -DMSABI -w | FileCheck --check-prefix=MSC --check-prefix=M32 %s
+// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -triple x86_64-windows-msvc -fno-rtti -fno-threadsafe-statics -fms-extensions -emit-llvm -std=c++1y -O0 -o - %s -DMSABI -w | FileCheck --check-prefix=MSC --check-prefix=M64 %s
+// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -triple i686-windows-gnu    -fno-rtti -fno-threadsafe-statics -fms-extensions -emit-llvm -std=c++1y -O0 -o - %s         -w | FileCheck --check-prefix=GNU --check-prefix=G32 %s
+// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -triple x86_64-windows-gnu  -fno-rtti -fno-threadsafe-statics -fms-extensions -emit-llvm -std=c++1y -O0 -o - %s         -w | FileCheck --check-prefix=GNU %s
+// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -triple i686-windows-msvc   -fno-rtti -fno-threadsafe-statics -fms-extensions -fms-compatibility-version=18.00 -emit-llvm -std=c++1y -O1 -disable-llvm-passes -o - %s -DMSABI -w | FileCheck --check-prefix=MO1 --check-prefix=M18 %s
+// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -triple i686-windows-msvc   -fno-rtti -fno-threadsafe-statics -fms-extensions -fms-compatibility-version=19.00 -emit-llvm -std=c++1y -O1 -disable-llvm-passes -o - %s -DMSABI -w | FileCheck --check-prefix=MO1 --check-prefix=M19 %s
+// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -triple i686-windows-gnu    -fno-rtti -fno-threadsafe-statics -fms-extensions -emit-llvm -std=c++1y -O1 -fno-experimental-new-pass-manager -o - %s         -w | FileCheck --check-prefix=GO1 %s
 
 // CHECK-NOT doesn't play nice with CHECK-DAG, so use separate run lines.
-// RUN: %clang_cc1 -no-enable-noundef-analysis -triple i686-windows-msvc   -fno-rtti -fno-threadsafe-statics -fms-extensions -emit-llvm -std=c++1y -O0 -o - %s -DMSABI -w | FileCheck --check-prefix=MSC2 %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -triple i686-windows-gnu    -fno-rtti -fno-threadsafe-statics -fms-extensions -emit-llvm -std=c++1y -O0 -o - %s         -w | FileCheck --check-prefix=GNU2 %s
+// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -triple i686-windows-msvc   -fno-rtti -fno-threadsafe-statics -fms-extensions -emit-llvm -std=c++1y -O0 -o - %s -DMSABI -w | FileCheck --check-prefix=MSC2 %s
+// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -triple i686-windows-gnu    -fno-rtti -fno-threadsafe-statics -fms-extensions -emit-llvm -std=c++1y -O0 -o - %s         -w | FileCheck --check-prefix=GNU2 %s
 
 // Helper structs to make templates more expressive.
 struct ImplicitInst_Imported {};

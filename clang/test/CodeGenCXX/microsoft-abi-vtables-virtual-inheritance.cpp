@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -fms-extensions -fno-rtti -emit-llvm -o %t.ll -fdump-vtable-layouts %s -triple=i386-pc-win32 >%t
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -fms-extensions -fno-rtti -emit-llvm -o %t.ll -fdump-vtable-layouts %s -triple=i386-pc-win32 >%t
 // RUN: FileCheck %s < %t
 // RUN: FileCheck --check-prefix=MANGLING %s < %t.ll
 

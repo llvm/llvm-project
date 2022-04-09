@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 %s -emit-llvm -o - -triple=x86_64-apple-darwin10 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-NOCOMPAT
-// RUN: %clang_cc1 %s -emit-llvm -o - -triple=x86_64-apple-darwin10 -fclang-abi-compat=6.0 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-V6COMPAT
-// RUN: %clang_cc1 %s -emit-llvm -o - -triple=x86_64-scei-ps4 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-V6COMPAT
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -triple=x86_64-apple-darwin10 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-NOCOMPAT
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -triple=x86_64-apple-darwin10 -fclang-abi-compat=6.0 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-V6COMPAT
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -triple=x86_64-scei-ps4 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-V6COMPAT
 
 extern int int_source();
 extern void int_sink(int x);

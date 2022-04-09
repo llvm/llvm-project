@@ -735,7 +735,7 @@ void CodeGenModule::Release() {
           LangOptions::SignReturnAddressScopeKind::None)
     getModule().addModuleFlag(llvm::Module::Override,
                               "sign-return-address-buildattr", 1);
-  if (LangOpts.Sanitize.has(SanitizerKind::MemTag))
+  if (LangOpts.Sanitize.has(SanitizerKind::MemtagStack))
     getModule().addModuleFlag(llvm::Module::Override,
                               "tag-stack-memory-buildattr", 1);
 
@@ -1500,6 +1500,16 @@ StringRef CodeGenModule::getBlockMangledName(GlobalDecl GD,
 
   auto Result = Manglings.insert(std::make_pair(Out.str(), BD));
   return Result.first->first();
+}
+
+const GlobalDecl CodeGenModule::getMangledNameDecl(StringRef Name) {
+  auto it = MangledDeclNames.begin();
+  while (it != MangledDeclNames.end()) {
+    if (it->second == Name)
+      return it->first;
+    it++;
+  }
+  return GlobalDecl();
 }
 
 llvm::GlobalValue *CodeGenModule::GetGlobalValue(StringRef Name) {
@@ -5171,6 +5181,11 @@ void CodeGenModule::EmitAliasDefinition(GlobalDecl GD) {
       setTLSMode(GA, *VD);
 
   SetCommonAttributes(GD, GA);
+
+  // Emit global alias debug information.
+  if (isa<VarDecl>(D))
+    if (CGDebugInfo *DI = getModuleDebugInfo())
+      DI->EmitGlobalAlias(cast<llvm::GlobalValue>(GA->getAliasee()), GD);
 }
 
 void CodeGenModule::emitIFuncDefinition(GlobalDecl GD) {

@@ -10204,10 +10204,7 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
     unsigned PFTableIndex = PFIndexes[0] * 9 * 9 * 9 + PFIndexes[1] * 9 * 9 +
                             PFIndexes[2] * 9 + PFIndexes[3];
     unsigned PFEntry = PerfectShuffleTable[PFTableIndex];
-    unsigned Cost = (PFEntry >> 30);
-
-    if (Cost <= 4)
-      return GeneratePerfectShuffle(PFEntry, V1, V2, DAG, dl);
+    return GeneratePerfectShuffle(PFEntry, V1, V2, DAG, dl);
   }
 
   return GenerateTBL(Op, ShuffleMask, DAG);
@@ -17929,13 +17926,14 @@ static SDValue performGlobalAddressCombine(SDNode *N, SelectionDAG &DAG,
 
   // Check whether folding this offset is legal. It must not go out of bounds of
   // the referenced object to avoid violating the code model, and must be
-  // smaller than 2^21 because this is the largest offset expressible in all
-  // object formats.
+  // smaller than 2^20 because this is the largest offset expressible in all
+  // object formats. (The IMAGE_REL_ARM64_PAGEBASE_REL21 relocation in COFF
+  // stores an immediate signed 21 bit offset.)
   //
   // This check also prevents us from folding negative offsets, which will end
   // up being treated in the same way as large positive ones. They could also
   // cause code model violations, and aren't really common enough to matter.
-  if (Offset >= (1 << 21))
+  if (Offset >= (1 << 20))
     return SDValue();
 
   const GlobalValue *GV = GN->getGlobal();
@@ -19368,12 +19366,12 @@ bool AArch64TargetLowering::shouldInsertFencesForAtomic(
 // Loads and stores less than 128-bits are already atomic; ones above that
 // are doomed anyway, so defer to the default libcall and blame the OS when
 // things go wrong.
-bool AArch64TargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
+TargetLoweringBase::AtomicExpansionKind
+AArch64TargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
   unsigned Size = SI->getValueOperand()->getType()->getPrimitiveSizeInBits();
-  if (Size != 128)
-    return false;
-
-  return !isOpSuitableForLDPSTP(SI);
+  if (Size != 128 || isOpSuitableForLDPSTP(SI))
+    return AtomicExpansionKind::None;
+  return AtomicExpansionKind::Expand;
 }
 
 // Loads and stores less than 128-bits are already atomic; ones above that

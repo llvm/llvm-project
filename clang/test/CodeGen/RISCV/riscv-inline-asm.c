@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple riscv32 -O2 -emit-llvm %s -o - \
+// RUN: %clang_cc1 -no-opaque-pointers -triple riscv32 -O2 -emit-llvm %s -o - \
 // RUN:     | FileCheck %s
-// RUN: %clang_cc1 -triple riscv64 -O2 -emit-llvm %s -o - \
+// RUN: %clang_cc1 -no-opaque-pointers -triple riscv64 -O2 -emit-llvm %s -o - \
 // RUN:     | FileCheck %s
 
 // Test RISC-V specific inline assembly constraints.

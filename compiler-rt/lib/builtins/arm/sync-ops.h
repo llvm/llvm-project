@@ -14,6 +14,14 @@
 
 #include "../assembly.h"
 
+#if __ARM_ARCH >= 7
+#define DMB dmb
+#elif __ARM_ARCH >= 6
+#define DMB mcr p15, #0, r0, c7, c10, #5
+#else
+#error DMB is only supported on ARMv6+
+#endif
+
 #define SYNC_OP_4(op)                                                          \
   .p2align 2;                                                                  \
   .syntax unified;                                                             \

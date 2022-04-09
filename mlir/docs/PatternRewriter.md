@@ -232,7 +232,7 @@ creation, as well as many useful attribute and type construction methods.
 ## Pattern Application
 
 After a set of patterns have been defined, they are collected and provided to a
-specific driver for application. A driver consists of several high levels parts:
+specific driver for application. A driver consists of several high level parts:
 
 *   Input `RewritePatternSet`
 

@@ -165,6 +165,8 @@ def err_drv_amdgpu_ieee_without_no_honor_nans : Error<
   "invalid argument '-mno-amdgpu-ieee' only allowed with relaxed NaN handling">;
 def err_drv_argument_not_allowed_with : Error<
   "invalid argument '%0' not allowed with '%1'">;
+def err_drv_cannot_open_randomize_layout_seed_file : Error<
+  "cannot read randomize layout seed file '%0'">;
 def err_drv_invalid_version_number : Error<
   "invalid version number in '%0'">;
 def err_drv_no_linker_llvm_support : Error<
@@ -481,7 +483,8 @@ def err_drv_ropi_incompatible_with_cxx : Error<
   "ROPI is not compatible with c++">;
 
 def err_stack_tagging_requires_hardware_feature : Error<
-  "'-fsanitize=memtag' requires hardware support (+memtag)">;
+  "'-fsanitize=memtag-stack' requires hardware support (+memtag). For Armv8 or "
+  "Armv9, try compiling with -march=armv8a+memtag or -march=armv9a+memtag">;
 
 def err_cmse_pi_are_incompatible : Error<
   "cmse is not compatible with %select{RWPI|ROPI}0">;

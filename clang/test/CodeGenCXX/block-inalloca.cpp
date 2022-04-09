@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i686-unknown-windows-msvc -fblocks -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-unknown-windows-msvc -fblocks -emit-llvm -o - %s | FileCheck %s
 
 struct S {
   S(const struct S &) {}

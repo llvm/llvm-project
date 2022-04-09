@@ -1,18 +1,18 @@
 // Sparc64 doesn't support musttail (yet), so it uses method cloning for
 // variadic thunks. Use it for testing.
-// RUN: %clang_cc1 %s -triple=sparc64-pc-linux-gnu -funwind-tables=2 -emit-llvm -o - \
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=sparc64-pc-linux-gnu -funwind-tables=2 -emit-llvm -o - \
 // RUN:     | FileCheck --check-prefixes=CHECK,CHECK-CLONE,CHECK-NONOPT %s
-// RUN: %clang_cc1 %s -triple=sparc64-pc-linux-gnu -debug-info-kind=standalone -dwarf-version=5 -funwind-tables=2 -emit-llvm -o - \
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=sparc64-pc-linux-gnu -debug-info-kind=standalone -dwarf-version=5 -funwind-tables=2 -emit-llvm -o - \
 // RUN:     | FileCheck --check-prefixes=CHECK,CHECK-CLONE,CHECK-NONOPT,CHECK-DBG %s
-// RUN: %clang_cc1 %s -triple=sparc64-pc-linux-gnu -funwind-tables=2 -emit-llvm -o - -O1 -disable-llvm-passes \
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=sparc64-pc-linux-gnu -funwind-tables=2 -emit-llvm -o - -O1 -disable-llvm-passes \
 // RUN:     | FileCheck --check-prefixes=CHECK,CHECK-CLONE,CHECK-OPT %s
 
 // Test x86_64, which uses musttail for variadic thunks.
-// RUN: %clang_cc1 %s -triple=x86_64-pc-linux-gnu -funwind-tables=2 -emit-llvm -o - -O1 -disable-llvm-passes \
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=x86_64-pc-linux-gnu -funwind-tables=2 -emit-llvm -o - -O1 -disable-llvm-passes \
 // RUN:     | FileCheck --check-prefixes=CHECK,CHECK-TAIL,CHECK-OPT %s
 
 // Finally, reuse these tests for the MS ABI.
-// RUN: %clang_cc1 %s -triple=x86_64-windows-msvc -funwind-tables=2 -emit-llvm -o - -O1 -disable-llvm-passes \
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=x86_64-windows-msvc -funwind-tables=2 -emit-llvm -o - -O1 -disable-llvm-passes \
 // RUN:     | FileCheck --check-prefixes=WIN64 %s
 
 
