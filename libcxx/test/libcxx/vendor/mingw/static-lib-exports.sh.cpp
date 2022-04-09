@@ -12,8 +12,3 @@
 // directives in MinGW builds.
 
 // RUN: llvm-readobj --coff-directives "%{lib}/libc++.a" | not grep -i "export:" > /dev/null
-
-// It's a known issue, that when building a shared library at the same time
-// as the static library, the generated static library does contain dllexport
-// directives.
-// XFAIL: windows-dll

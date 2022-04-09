@@ -136,8 +136,12 @@ endif()
 set(LIBCXXABI_LIBCXX_INCLUDES "" CACHE PATH
     "Specify path to libc++ includes.")
 
+set(LIBCXXABI_HERMETIC_STATIC_LIBRARY_DEFAULT OFF)
+if (WIN32)
+  set(LIBCXXABI_HERMETIC_STATIC_LIBRARY_DEFAULT ON)
+endif()
 option(LIBCXXABI_HERMETIC_STATIC_LIBRARY
-  "Do not export any symbols from the static library." OFF)
+  "Do not export any symbols from the static library." ${LIBCXXABI_HERMETIC_STATIC_LIBRARY_DEFAULT})
 
 set(LIBCXXABI_TEST_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/test/lit.site.cfg.in" CACHE STRING
   "The path to the Lit testing configuration to use when running the tests.
@@ -246,25 +250,6 @@ add_definitions(-D_LIBCXXABI_BUILDING_LIBRARY)
 # libcxxabi needs to, for various reasons, include the libcpp headers as if
 # it is being built as part of libcxx.
 add_definitions(-D_LIBCPP_BUILDING_LIBRARY)
-
-# Disable DLL annotations on Windows for static builds.
-if (WIN32 AND LIBCXXABI_ENABLE_STATIC AND NOT LIBCXXABI_ENABLE_SHARED)
-  # If LIBCXX_ENABLE_SHARED isn't set (by the user on the cmake command
-  # line or via a cache file), use its expected default value (enabled).
-  if ((LIBCXX_ENABLE_SHARED OR NOT DEFINED LIBCXX_ENABLE_SHARED) AND LIBCXX_ENABLE_STATIC_ABI_LIBRARY)
-    # Building libcxxabi statically, but intending for it to be statically
-    # linked into a shared libcxx; keep dllexport enabled within libcxxabi,
-    # as the symbols will need to be exported from libcxx.
-  else()
-    # Regular static build; disable dllexports.
-    add_definitions(-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS)
-    if (NOT LIBCXXABI_HERMETIC_STATIC_LIBRARY)
-      # TODO: Enable this warning message as soon as we're sure this is the solution.
-      # message(WARNING "Implicitly disabling dllexport on Win32 is not supported anymore. Please build with "
-      #                 "LIBCXXABI_HERMETIC_STATIC_LIBRARY=ON instead. This will become an error in LLVM 16.")
-    endif()
-  endif()
-endif()
 
 add_compile_flags_if_supported(-Werror=return-type)
 
