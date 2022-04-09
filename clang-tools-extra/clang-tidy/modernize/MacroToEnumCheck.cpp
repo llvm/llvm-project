@@ -92,6 +92,11 @@ static bool isIntegralConstant(const Token &Token) {
       Begin, End, [](char C) { return C == '.' || std::toupper(C) == 'E'; });
 }
 
+static StringRef getTokenName(const Token &Tok) {
+  return Tok.is(tok::raw_identifier) ? Tok.getRawIdentifier()
+                                     : Tok.getIdentifierInfo()->getName();
+}
+
 namespace {
 
 struct EnumMacro {
@@ -279,19 +284,11 @@ void MacroToEnumCallbacks::checkCondition(SourceRange Range) {
 }
 
 void MacroToEnumCallbacks::checkName(const Token &MacroNameTok) {
-  std::string Id;
-  if (MacroNameTok.is(tok::raw_identifier))
-    Id = MacroNameTok.getRawIdentifier().str();
-  else if (MacroNameTok.is(tok::identifier))
-    Id = MacroNameTok.getIdentifierInfo()->getName().str();
-  else {
-    assert(false && "Expected either an identifier or raw identifier token");
-    return;
-  }
+  StringRef Id = getTokenName(MacroNameTok);
 
   llvm::erase_if(Enums, [&Id](const MacroList &MacroList) {
     return llvm::any_of(MacroList, [&Id](const EnumMacro &Macro) {
-      return Macro.Name.getIdentifierInfo()->getName().str() == Id;
+      return getTokenName(Macro.Name) == Id;
     });
   });
 }
@@ -355,8 +352,7 @@ void MacroToEnumCallbacks::MacroUndefined(const Token &MacroNameTok,
                                           const MacroDefinition &MD,
                                           const MacroDirective *Undef) {
   auto MatchesToken = [&MacroNameTok](const EnumMacro &Macro) {
-    return Macro.Name.getIdentifierInfo()->getName() ==
-           MacroNameTok.getIdentifierInfo()->getName();
+    return getTokenName(Macro.Name) == getTokenName(MacroNameTok);
   };
 
   auto It = llvm::find_if(Enums, [MatchesToken](const MacroList &MacroList) {
@@ -432,8 +428,8 @@ void MacroToEnumCallbacks::EndOfMainFile() {
 
 void MacroToEnumCallbacks::warnMacroEnum(const EnumMacro &Macro) const {
   Check->diag(Macro.Directive->getLocation(),
-              "macro %0 defines an integral constant; prefer an enum instead")
-      << Macro.Name.getIdentifierInfo();
+              "macro '%0' defines an integral constant; prefer an enum instead")
+      << getTokenName(Macro.Name);
 }
 
 void MacroToEnumCallbacks::fixEnumMacro(const MacroList &MacroList) const {

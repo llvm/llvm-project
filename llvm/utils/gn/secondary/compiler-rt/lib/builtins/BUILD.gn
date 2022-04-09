@@ -152,7 +152,6 @@ static_library("builtins") {
     "ucmpti2.c",
     "udivdi3.c",
     "udivmoddi4.c",
-    "udivmodei5.c",
     "udivmodsi4.c",
     "udivmodti4.c",
     "udivsi3.c",

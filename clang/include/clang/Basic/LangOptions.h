@@ -445,9 +445,6 @@ public:
   /// The default stream kind used for HIP kernel launching.
   GPUDefaultStreamKind GPUDefaultStream;
 
-  /// The seed used by the randomize structure layout feature.
-  std::string RandstructSeed;
-
   LangOptions();
 
   // Define accessors/mutators for language options of enumeration type.

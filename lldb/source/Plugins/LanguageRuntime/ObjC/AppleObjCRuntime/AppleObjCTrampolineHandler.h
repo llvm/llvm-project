@@ -38,11 +38,11 @@ public:
   public:
     enum FixUpState { eFixUpNone, eFixUpFixed, eFixUpToFix };
 
-    const char *name;
-    bool stret_return;
-    bool is_super;
-    bool is_super2;
-    FixUpState fixedup;
+    const char *name = nullptr;
+    bool stret_return = false;
+    bool is_super = false;
+    bool is_super2 = false;
+    FixUpState fixedup = eFixUpNone;
   };
 
   lldb::addr_t SetupDispatchFunction(Thread &thread,
@@ -52,9 +52,19 @@ public:
                                                   const DispatchFunction &)>);
 
 private:
+  /// These hold the code for the function that finds the implementation of
+  /// an ObjC message send given the class & selector and the kind of dispatch.
+  /// There are two variants depending on whether the platform uses a separate
+  /// _stret passing convention (e.g. Intel) or not (e.g. ARM).  The difference
+  /// is only at the very end of the function, so the code is broken into the
+  /// common prefix and the suffix, which get composed appropriately before
+  /// the function gets compiled.
+  /// \{
   static const char *g_lookup_implementation_function_name;
+  static const char *g_lookup_implementation_function_common_code;
   static const char *g_lookup_implementation_with_stret_function_code;
   static const char *g_lookup_implementation_no_stret_function_code;
+  /// \}
 
   class AppleObjCVTables {
   public:
@@ -144,7 +154,7 @@ private:
   MsgsendMap m_opt_dispatch_map;
   lldb::ProcessWP m_process_wp;
   lldb::ModuleSP m_objc_module_sp;
-  const char *m_lookup_implementation_function_code;
+  std::string m_lookup_implementation_function_code;
   std::unique_ptr<UtilityFunction> m_impl_code;
   std::mutex m_impl_function_mutex;
   lldb::addr_t m_impl_fn_addr;

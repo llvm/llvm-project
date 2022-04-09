@@ -659,6 +659,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     } else {
       D.Diag(clang::diag::err_drv_invalid_value_with_suggestion)
           << "-fsanitize-memtag-mode=" << S << "{async, sync}";
+      MemtagMode = "sync";
     }
   }
 

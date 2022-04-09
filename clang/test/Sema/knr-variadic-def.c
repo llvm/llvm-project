@@ -1,12 +1,11 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -pedantic %s
-// expected-no-diagnostics
+// RUN: %clang_cc1 -fsyntax-only -verify -pedantic %s -std=c99
 // PR4287
 
 #include <stdarg.h>
 char *foo = "test";
 int test(char*,...);
 
-int test(fmt)
+int test(fmt) // expected-warning {{a function declaration without a prototype is deprecated in all versions of C and is not supported in C2x}}
         char*fmt;
 {
         va_list ap;
@@ -20,9 +19,9 @@ int test(fmt)
         return x;
 }
 
-void exit();
+void exit(); // expected-warning {{a function declaration without a prototype is deprecated in all versions of C}}
 
-int main(argc,argv)
+int main(argc,argv) // expected-warning {{a function declaration without a prototype is deprecated in all versions of C and is not supported in C2x}}
         int argc;char**argv;
 {
         exit(test("",foo));

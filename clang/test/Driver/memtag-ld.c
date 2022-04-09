@@ -11,8 +11,8 @@
 // RUN:   --check-prefixes=CHECK-SYNC,CHECK-HEAP,CHECK-NO-STACK
 
 // RUN: %clang -### --target=aarch64-linux-android -march=armv8+memtag \
-// RUN:   -fsanitize=memtag -fsanitize-memtag-mode=async %s 2>&1 | FileCheck %s \
-// RUN:   --check-prefixes=CHECK-ASYNC,CHECK-HEAP,CHECK-STACK
+// RUN:   -fsanitize=memtag -fsanitize-memtag-mode=async %s 2>&1 | \
+// RUN:   FileCheck %s --check-prefixes=CHECK-ASYNC,CHECK-HEAP,CHECK-STACK
 
 // RUN: %clang -### --target=aarch64-linux-android -march=armv8+memtag \
 // RUN:   -fsanitize=memtag-stack -fsanitize-memtag-mode=async %s 2>&1 \

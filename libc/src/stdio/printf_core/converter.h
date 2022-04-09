@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_STDIO_PRINTF_FILES_CONVERTER_H
-#define LLVM_LIBC_SRC_STDIO_PRINTF_FILES_CONVERTER_H
+#ifndef LLVM_LIBC_SRC_STDIO_PRINTF_CORE_CONVERTER_H
+#define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_CONVERTER_H
 
-#include "src/stdio/printf_files/core_structs.h"
-#include "src/stdio/printf_files/writer.h"
+#include "src/stdio/printf_core/core_structs.h"
+#include "src/stdio/printf_core/writer.h"
 
 #include <stddef.h>
 
@@ -32,4 +32,4 @@ public:
 } // namespace printf_core
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_STDIO_PRINTF_FILES_CONVERTER_H
+#endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_CONVERTER_H

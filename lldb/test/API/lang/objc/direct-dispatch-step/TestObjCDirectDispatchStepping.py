@@ -21,6 +21,7 @@ class TestObjCDirectDispatchStepping(TestBase):
         self.main_source = lldb.SBFileSpec("stepping-tests.m")
 
     @add_test_categories(['pyapi', 'basic_process'])
+    @expectedFailureAll(remote=True)
     def test_with_python_api(self):
         """Test stepping through the 'direct dispatch' optimized method calls."""
         self.build()
