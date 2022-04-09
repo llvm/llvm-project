@@ -188,9 +188,9 @@
   #ifdef __cplusplus
     extern "C" {
   #endif
-    extern  bool logAPIs();
-    extern  bool logUnwinding();
-    extern  bool logDWARF();
+    extern  bool logAPIs(void);
+    extern  bool logUnwinding(void);
+    extern  bool logDWARF(void);
   #ifdef __cplusplus
     }
   #endif
