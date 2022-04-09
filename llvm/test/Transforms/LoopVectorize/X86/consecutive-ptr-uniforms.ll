@@ -19,6 +19,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK-NOT:   LV: Found uniform instruction: %tmp3 = getelementptr inbounds %data, %data* %d, i64 0, i32 0, i64 %i
 ; CHECK-NOT:   LV: Found uniform instruction: %i = phi i64 [ %i.next, %for.body ], [ 0, %entry ]
 ; CHECK-NOT:   LV: Found uniform instruction: %i.next = add nuw nsw i64 %i, 5
+; CHECK:       define void @PR31671(
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x float> poison, float %x, i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x float> [[BROADCAST_SPLATINSERT]], <16 x float> poison, <16 x i32> zeroinitializer

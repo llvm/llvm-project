@@ -7,7 +7,17 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; Verify that -vplan-print-in-dot-format option works.
 
 define void @print_call_and_memory(i64 %n, float* noalias %y, float* noalias %x) nounwind uwtable {
-; CHECK:       subgraph cluster_N0 {
+; CHECK:      digraph VPlan {
+; CHECK-NEXT:  graph [labelloc=t, fontsize=30; label="Vectorization Plan\nInitial VPlan for VF=\{4\},UF\>=1"]
+; CHECK-NEXT:  node [shape=rect, fontname=Courier, fontsize=30]
+; CHECK-NEXT:  edge [fontname=Courier, fontsize=30]
+; CHECK-NEXT:  compound=true
+; CHECK-NEXT:  N0 [label =
+; CHECK-NEXT:    "vector.ph:\l" +
+; CHECK-NEXT:    "Successor(s): vector loop\l"
+; CHECK-NEXT:  ]
+; CHECK-NEXT:  N0 -> N1 [ label="" lhead=cluster_N2]
+; CHECK-NEXT:  subgraph cluster_N2 {
 ; CHECK-NEXT:    fontname=Courier
 ; CHECK-NEXT:    label="\<x1\> vector loop"
 ; CHECK-NEXT:    N1 [label =
