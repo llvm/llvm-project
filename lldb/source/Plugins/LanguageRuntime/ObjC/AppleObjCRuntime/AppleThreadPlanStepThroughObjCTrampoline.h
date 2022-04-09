@@ -24,7 +24,8 @@ class AppleThreadPlanStepThroughObjCTrampoline : public ThreadPlan {
 public:
   AppleThreadPlanStepThroughObjCTrampoline(
       Thread &thread, AppleObjCTrampolineHandler &trampoline_handler,
-      ValueList &values, lldb::addr_t isa_addr, lldb::addr_t sel_addr);
+      ValueList &values, lldb::addr_t isa_addr, lldb::addr_t sel_addr,
+      lldb::addr_t sel_str_addr, llvm::StringRef sel_str);
 
   ~AppleThreadPlanStepThroughObjCTrampoline() override;
 
@@ -70,6 +71,13 @@ private:
   FunctionCaller *m_impl_function; /// This is a pointer to a impl function that
                                    /// is owned by the client that pushes this
                                    /// plan.
+  lldb::addr_t m_sel_str_addr; /// If this is not LLDB_INVALID_ADDRESS then it
+                               /// is the address we wrote the selector string
+                               /// to.  We need to deallocate it when the
+                               /// function call is done.
+  std::string m_sel_str;       /// This is the string we wrote to memory - we
+                               /// use it for caching, but only if
+                               /// m_sel_str_addr is non-null.
 };
 
 class AppleThreadPlanStepThroughDirectDispatch: public ThreadPlanStepOut {

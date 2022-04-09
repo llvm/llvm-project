@@ -80,10 +80,11 @@ namespace llvm {
   // nullptr is returned. Note that the caller of the function has to ensure
   // that the instruction the result value is compared against is not in a
   // cycle.
-  Instruction *FindEarliestCapture(const Value *V, Function &F,
-                                   bool ReturnCaptures, bool StoreCaptures,
-                                   const DominatorTree &DT,
-                                   unsigned MaxUsesToExplore = 0);
+  Instruction *
+  FindEarliestCapture(const Value *V, Function &F, bool ReturnCaptures,
+                      bool StoreCaptures, const DominatorTree &DT,
+                      const SmallPtrSetImpl<const Value *> &EphValues,
+                      unsigned MaxUsesToExplore = 0);
 
   /// This callback is used in conjunction with PointerMayBeCaptured. In
   /// addition to the interface here, you'll need to provide your own getters

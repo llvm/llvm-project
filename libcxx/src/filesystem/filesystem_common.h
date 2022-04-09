@@ -49,11 +49,11 @@ _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wunused-function")
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wunused-function")
 
 #if defined(_LIBCPP_WIN32API)
-#define PS(x) (L##x)
-#define PATH_CSTR_FMT "\"%ls\""
+#  define PATHSTR(x) (L##x)
+#  define PATH_CSTR_FMT "\"%ls\""
 #else
-#define PS(x) (x)
-#define PATH_CSTR_FMT "\"%s\""
+#  define PATHSTR(x) (x)
+#  define PATH_CSTR_FMT "\"%s\""
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM

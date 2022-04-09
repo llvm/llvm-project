@@ -1641,6 +1641,9 @@ def fsanitize_address_outline_instrumentation : Flag<["-"], "fsanitize-address-o
 def fno_sanitize_address_outline_instrumentation : Flag<["-"], "fno-sanitize-address-outline-instrumentation">,
                                                    Group<f_clang_Group>,
                                                    HelpText<"Use default code inlining logic for the address sanitizer">;
+def fsanitize_memtag_mode_EQ : Joined<["-"], "fsanitize-memtag-mode=">,
+                                        Group<f_clang_Group>,
+                                        HelpText<"Set default MTE mode to 'sync' (default) or 'async'">;
 def fsanitize_hwaddress_experimental_aliasing
   : Flag<["-"], "fsanitize-hwaddress-experimental-aliasing">,
     Group<f_clang_Group>,
@@ -2504,10 +2507,10 @@ def fopenmp_offload_mandatory : Flag<["-"], "fopenmp-offload-mandatory">, Group<
   Flags<[CC1Option, NoArgumentUnused]>,
   HelpText<"Do not create a host fallback if offloading to the device fails.">,
   MarshallingInfoFlag<LangOpts<"OpenMPOffloadMandatory">>;
-defm openmp_target_new_runtime: BoolFOption<"openmp-target-new-runtime",
-  LangOpts<"OpenMPTargetNewRuntime">, DefaultTrue,
-  PosFlag<SetTrue, [CC1Option], "Use the new bitcode library for OpenMP offloading">,
-  NegFlag<SetFalse>>;
+def fopenmp_target_new_runtime : Flag<["-"], "fopenmp-target-new-runtime">,
+  Group<f_Group>, Flags<[CC1Option, HelpHidden]>;
+def fno_openmp_target_new_runtime : Flag<["-"], "fno-openmp-target-new-runtime">,
+  Group<f_Group>, Flags<[CC1Option, HelpHidden]>;
 defm openmp_optimistic_collapse : BoolFOption<"openmp-optimistic-collapse",
   LangOpts<"OpenMPOptimisticCollapse">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option]>, NegFlag<SetFalse>, BothFlags<[NoArgumentUnused, HelpHidden]>>;

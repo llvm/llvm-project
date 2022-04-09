@@ -735,7 +735,7 @@ void CodeGenModule::Release() {
           LangOptions::SignReturnAddressScopeKind::None)
     getModule().addModuleFlag(llvm::Module::Override,
                               "sign-return-address-buildattr", 1);
-  if (LangOpts.Sanitize.has(SanitizerKind::MemTag))
+  if (LangOpts.Sanitize.has(SanitizerKind::MemtagStack))
     getModule().addModuleFlag(llvm::Module::Override,
                               "tag-stack-memory-buildattr", 1);
 

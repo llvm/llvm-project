@@ -24,6 +24,7 @@ class BSDArchivesTestCase(TestBase):
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24527.  Makefile.rules doesn't know how to build static libs on Windows")
+    @expectedFailureAll(remote=True)
     def test(self):
         """Break inside a() and b() defined within libfoo.a."""
         self.build()

@@ -253,14 +253,31 @@ void InstrProfWriter::addRecord(StringRef Name, uint64_t Hash,
   Dest.sortValueData();
 }
 
-void InstrProfWriter::addRecord(const Function::GUID Id,
-                                const memprof::MemProfRecord &Record,
-                                function_ref<void(Error)> Warn) {
-  auto Result = MemProfData.insert({Id, Record});
-  if (!Result.second) {
-    memprof::MemProfRecord &Existing = Result.first->second;
-    Existing.merge(Record);
+void InstrProfWriter::addMemProfRecord(
+    const Function::GUID Id, const memprof::IndexedMemProfRecord &Record) {
+  auto Result = MemProfRecordData.insert({Id, Record});
+  // If we inserted a new record then we are done.
+  if (Result.second) {
+    return;
   }
+  memprof::IndexedMemProfRecord &Existing = Result.first->second;
+  Existing.merge(Record);
+}
+
+bool InstrProfWriter::addMemProfFrame(const memprof::FrameId Id,
+                                      const memprof::Frame &Frame,
+                                      function_ref<void(Error)> Warn) {
+  auto Result = MemProfFrameData.insert({Id, Frame});
+  // If a mapping already exists for the current frame id and it does not
+  // match the new mapping provided then reset the existing contents and bail
+  // out. We don't support the merging of memprof data whose Frame -> Id
+  // mapping across profiles is inconsistent.
+  if (!Result.second && Result.first->second != Frame) {
+    Warn(make_error<InstrProfError>(instrprof_error::malformed,
+                                    "frame to id mapping mismatch"));
+    return false;
+  }
+  return true;
 }
 
 void InstrProfWriter::mergeRecordsFromWriter(InstrProfWriter &&IPW,
@@ -269,8 +286,17 @@ void InstrProfWriter::mergeRecordsFromWriter(InstrProfWriter &&IPW,
     for (auto &Func : I.getValue())
       addRecord(I.getKey(), Func.first, std::move(Func.second), 1, Warn);
 
-  for (auto &I : IPW.MemProfData) {
-    addRecord(I.first, I.second, Warn);
+  MemProfFrameData.reserve(IPW.MemProfFrameData.size());
+  for (auto &I : IPW.MemProfFrameData) {
+    // If we weren't able to add the frame mappings then it doesn't make sense
+    // to try to merge the records from this profile.
+    if (!addMemProfFrame(I.first, I.second, Warn))
+      return;
+  }
+
+  MemProfRecordData.reserve(IPW.MemProfRecordData.size());
+  for (auto &I : IPW.MemProfRecordData) {
+    addMemProfRecord(I.first, I.second);
   }
 }
 
@@ -379,17 +405,22 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
 
   // Write the MemProf profile data if we have it. This includes a simple schema
   // with the format described below followed by the hashtable:
-  // uint64_t Offset = MemProfGenerator.Emit
+  // uint64_t RecordTableOffset = RecordTableGenerator.Emit
+  // uint64_t FramePayloadOffset = Stream offset before emitting the frame table
+  // uint64_t FrameTableOffset = FrameTableGenerator.Emit
   // uint64_t Num schema entries
   // uint64_t Schema entry 0
   // uint64_t Schema entry 1
   // ....
   // uint64_t Schema entry N - 1
-  // OnDiskChainedHashTable MemProfFunctionData
+  // OnDiskChainedHashTable MemProfRecordData
+  // OnDiskChainedHashTable MemProfFrameData
   uint64_t MemProfSectionStart = 0;
   if (static_cast<bool>(ProfileKind & InstrProfKind::MemProf)) {
     MemProfSectionStart = OS.tell();
-    OS.write(0ULL); // Reserve space for the offset.
+    OS.write(0ULL); // Reserve space for the memprof record table offset.
+    OS.write(0ULL); // Reserve space for the memprof frame payload offset.
+    OS.write(0ULL); // Reserve space for the memprof frame table offset.
 
     auto Schema = memprof::PortableMemInfoBlock::getSchema();
     OS.write(static_cast<uint64_t>(Schema.size()));
@@ -397,20 +428,36 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
       OS.write(static_cast<uint64_t>(Id));
     }
 
-    auto MemProfWriter = std::make_unique<memprof::MemProfRecordWriterTrait>();
-    MemProfWriter->Schema = &Schema;
-    OnDiskChainedHashTableGenerator<memprof::MemProfRecordWriterTrait>
-        MemProfGenerator;
-    for (auto &I : MemProfData) {
+    auto RecordWriter = std::make_unique<memprof::RecordWriterTrait>();
+    RecordWriter->Schema = &Schema;
+    OnDiskChainedHashTableGenerator<memprof::RecordWriterTrait>
+        RecordTableGenerator;
+    for (auto &I : MemProfRecordData) {
       // Insert the key (func hash) and value (memprof record).
-      MemProfGenerator.insert(I.first, I.second);
+      RecordTableGenerator.insert(I.first, I.second);
     }
 
-    uint64_t TableOffset = MemProfGenerator.Emit(OS.OS, *MemProfWriter);
+    uint64_t RecordTableOffset =
+        RecordTableGenerator.Emit(OS.OS, *RecordWriter);
+
+    uint64_t FramePayloadOffset = OS.tell();
+
+    auto FrameWriter = std::make_unique<memprof::FrameWriterTrait>();
+    OnDiskChainedHashTableGenerator<memprof::FrameWriterTrait>
+        FrameTableGenerator;
+    for (auto &I : MemProfFrameData) {
+      // Insert the key (frame id) and value (frame contents).
+      FrameTableGenerator.insert(I.first, I.second);
+    }
+
+    uint64_t FrameTableOffset = FrameTableGenerator.Emit(OS.OS, *FrameWriter);
+
     PatchItem PatchItems[] = {
-        {MemProfSectionStart, &TableOffset, 1},
+        {MemProfSectionStart, &RecordTableOffset, 1},
+        {MemProfSectionStart + sizeof(uint64_t), &FramePayloadOffset, 1},
+        {MemProfSectionStart + 2 * sizeof(uint64_t), &FrameTableOffset, 1},
     };
-    OS.patch(PatchItems, 1);
+    OS.patch(PatchItems, 3);
   }
 
   // Allocate space for data to be serialized out.

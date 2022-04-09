@@ -1812,10 +1812,12 @@ void ExpandShapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
 ///
 /// Note: All collapsed dims in a reassociation group must be contiguous. It is
 /// not possible to check this by inspecting a MemRefType in the general case.
-/// But it is assumed. If this is not the case, the behavior is undefined.
+/// If non-contiguity cannot be checked statically, the collapse is assumed to
+/// be valid (and thus accepted by this function) unless `strict = true`.
 static FailureOr<AffineMap>
 computeCollapsedLayoutMap(MemRefType srcType,
-                          ArrayRef<ReassociationIndices> reassociation) {
+                          ArrayRef<ReassociationIndices> reassociation,
+                          bool strict = false) {
   int64_t srcOffset;
   SmallVector<int64_t> srcStrides;
   auto srcShape = srcType.getShape();
@@ -1837,16 +1839,41 @@ computeCollapsedLayoutMap(MemRefType srcType,
     auto stride = Wrapper::stride(resultStrides[resultStrideIndex--]);
     for (int64_t idx : llvm::reverse(trailingReassocs)) {
       stride = stride * Wrapper::size(srcShape[idx]);
-      // Both are either static strides of the same value, or both are dynamic.
-      // The dynamic case is best effort atm : we can't check it statically.
-      // One exception to the dynamic check is when the srcShape is `1`, in
-      // which case it can never produce a non-contiguity.
-      if (stride != Wrapper::stride(srcStrides[idx - 1]) && srcShape[idx] != 1)
+
+      // Both source and result stride must have the same static value. In that
+      // case, we can be sure, that the dimensions are collapsible (because they
+      // are contiguous).
+      //
+      // One special case is when the srcShape is `1`, in which case it can
+      // never produce non-contiguity.
+      if (srcShape[idx] == 1)
+        continue;
+
+      // If `strict = false` (default during op verification), we accept cases
+      // where one or both strides are dynamic. This is best effort: We reject
+      // ops where obviously non-contiguous dims are collapsed, but accept ops
+      // where we cannot be sure statically. Such ops may fail at runtime. See
+      // the op documentation for details.
+      auto srcStride = Wrapper::stride(srcStrides[idx - 1]);
+      if (strict && (stride.saturated || srcStride.saturated))
+        return failure();
+
+      if (!stride.saturated && !srcStride.saturated && stride != srcStride)
         return failure();
     }
   }
   return makeStridedLinearLayoutMap(resultStrides, srcOffset,
                                     srcType.getContext());
+}
+
+bool ExpandShapeOp::isGuaranteedCollapsible(
+    MemRefType srcType, ArrayRef<ReassociationIndices> reassociation) {
+  // MemRefs with standard layout are always collapsible.
+  if (srcType.getLayout().isIdentity())
+    return true;
+
+  return succeeded(computeCollapsedLayoutMap(srcType, reassociation,
+                                             /*strict=*/true));
 }
 
 static MemRefType

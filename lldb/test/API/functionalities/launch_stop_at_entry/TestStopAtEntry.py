@@ -40,20 +40,24 @@ class TestStopAtEntry(TestBase):
         return None
 
     @skipUnlessDarwin
+    @skipIfRemote
     def test_stop_default_platform_sync(self):
         self.do_test_stop_at_entry(True, False)
 
     @skipUnlessDarwin
+    @skipIfRemote
     def test_stop_default_platform_async(self):
         self.do_test_stop_at_entry(False, False)
 
     @skipUnlessDarwin
+    @skipIfRemote
     @expectedFailureIfFn(no_debugserver)
     @expectedFailureIfFn(port_not_available)
     def test_stop_remote_platform_sync(self):
         self.do_test_stop_at_entry(True, True)
 
     @skipUnlessDarwin
+    @skipIfRemote
     @expectedFailureIfFn(no_debugserver)
     @expectedFailureIfFn(port_not_available)
     def test_stop_remote_platform_async(self):

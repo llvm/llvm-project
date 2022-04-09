@@ -44,7 +44,11 @@
 // directly jump to __libunwind_Registerts_x86/x86_64_jumpto instead of using
 // a regular function call to avoid pushing to CET shadow stack again.
 #if !defined(_LIBUNWIND_USE_CET)
-#define __unw_phase2_resume(cursor, fn) __unw_resume((cursor))
+#define __unw_phase2_resume(cursor, fn)                                        \
+  do {                                                                         \
+    (void)fn;                                                                  \
+    __unw_resume((cursor));                                                    \
+  } while (0)
 #elif defined(_LIBUNWIND_TARGET_I386)
 #define __unw_phase2_resume(cursor, fn)                                        \
   do {                                                                         \
