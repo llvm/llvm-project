@@ -11,8 +11,8 @@ define double @kernel(double addrspace(5)* %ptr, double %val) {
   %res = atomicrmw fadd double addrspace(5)* %ptr, double %val monotonic, align 8
   ret double %res
 ; CHECK:   %1 = load double, double addrspace(5)* %ptr, align 8
-; CHECK-NEXT:   %2 = fadd double %1, %val
-; CHECK-NEXT:   store double %2, double addrspace(5)* %ptr, align 8
+; CHECK-NEXT:   %new = fadd double %1, %val
+; CHECK-NEXT:   store double %new, double addrspace(5)* %ptr, align 8
 ; CHECK-NEXT:   ret double %1
 }
 

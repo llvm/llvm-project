@@ -200,6 +200,7 @@ set(files
   __filesystem/space_info.h
   __filesystem/u8path.h
   __format/buffer.h
+  __format/enable_insertable.h
   __format/format_arg.h
   __format/format_args.h
   __format/format_context.h
@@ -285,6 +286,7 @@ set(files
   __locale
   __mbstate_t.h
   __memory/addressof.h
+  __memory/allocate_at_least.h
   __memory/allocation_guard.h
   __memory/allocator.h
   __memory/allocator_arg_t.h

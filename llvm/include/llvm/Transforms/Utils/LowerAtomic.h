@@ -14,9 +14,11 @@
 #ifndef LLVM_TRANSFORMS_SCALAR_LOWERATOMIC_H
 #define LLVM_TRANSFORMS_SCALAR_LOWERATOMIC_H
 
+#include "llvm/IR/Instructions.h"
+
 namespace llvm {
-class AtomicCmpXchgInst;
-class AtomicRMWInst;
+
+class IRBuilderBase;
 
 /// Convert the given Cmpxchg into primitive load and compare.
 bool lowerAtomicCmpXchgInst(AtomicCmpXchgInst *CXI);
@@ -25,6 +27,11 @@ bool lowerAtomicCmpXchgInst(AtomicCmpXchgInst *CXI);
 /// assuming that doing so is legal. Return true if the lowering
 /// succeeds.
 bool lowerAtomicRMWInst(AtomicRMWInst *RMWI);
+
+/// Emit IR to implement the given atomicrmw operation on values in registers,
+/// returning the new value.
+Value *buildAtomicRMWValue(AtomicRMWInst::BinOp Op, IRBuilderBase &Builder,
+                           Value *Loaded, Value *Inc);
 }
 
 #endif // LLVM_TRANSFORMS_SCALAR_LOWERATOMIC_H

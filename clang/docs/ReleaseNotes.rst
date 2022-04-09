@@ -54,20 +54,6 @@ Major New Features
   There is an analogous ``zero_call_used_regs`` attribute to allow for finer
   control of this feature.
 
-- Clang now supports randomizing structure layout in C. This feature is a
-  compile-time hardening technique, making it more difficult for an attacker to
-  retrieve data from structures. Specify randomization with the
-  ``randomize_layout`` attribute. The corresponding ``no_randomize_layout``
-  attribute can be used to turn the feature off.
-
-  A seed value is required to enable randomization, and is deterministic based
-  on a seed value. Use the ``-frandomize-layout-seed=`` or
-  ``-frandomize-layout-seed-file=`` flags.
-
-  .. note::
-
-      Randomizing structure layout is a C-only feature.
-
 Bug Fixes
 ------------------
 - ``CXXNewExpr::getArraySize()`` previously returned a ``llvm::Optional``
@@ -301,6 +287,12 @@ Internal API Changes
 
 Build System Changes
 --------------------
+
+* CMake ``-DCLANG_DEFAULT_PIE_ON_LINUX=ON`` is now the default. This is used by
+  linux-gnu systems to decide whether ``-fPIE -pie`` is the default (instead of
+  ``-fno-pic -no-pie``). This matches GCC installations on many Linux distros.
+  Note: linux-android and linux-musl always default to ``-fPIE -pie``, ignoring
+  this variable. ``-DCLANG_DEFAULT_PIE_ON_LINUX`` may be removed in the future.
 
 AST Matchers
 ------------

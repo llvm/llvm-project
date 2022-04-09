@@ -22,6 +22,7 @@
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Target/LanguageRuntime.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-private.h"
 
 class CommandObjectObjC_ClassTable_Dump;
@@ -242,9 +243,17 @@ public:
 
   virtual bool HasReadObjCLibrary() = 0;
 
+  // These two methods actually use different caches.  The only time we'll
+  // cache a sel_str is if we found a "selector specific stub" for the selector
+  // and conversely we only add to the SEL cache if we saw a regular dispatch.
   lldb::addr_t LookupInMethodCache(lldb::addr_t class_addr, lldb::addr_t sel);
+  lldb::addr_t LookupInMethodCache(lldb::addr_t class_addr,
+                                   llvm::StringRef sel_str);
 
   void AddToMethodCache(lldb::addr_t class_addr, lldb::addr_t sel,
+                        lldb::addr_t impl_addr);
+
+  void AddToMethodCache(lldb::addr_t class_addr, llvm::StringRef sel_str,
                         lldb::addr_t impl_addr);
 
   TypeAndOrName LookupInClassNameCache(lldb::addr_t class_addr);
@@ -343,20 +352,22 @@ protected:
   }
 
 private:
-  // We keep a map of <Class,Selector>->Implementation so we don't have to call
-  // the resolver function over and over.
+  // We keep two maps of <Class,Selector>->Implementation so we don't have
+  // to call the resolver function over and over.
+  // The first comes from regular obj_msgSend type dispatch, and maps the
+  // class + uniqued SEL value to an implementation.
+  // The second comes from the "selector-specific stubs", which are always
+  // of the form _objc_msgSend$SelectorName, so we don't know the uniqued
+  // selector, only the string name.
 
   // FIXME: We need to watch for the loading of Protocols, and flush the cache
   // for any
   // class that we see so changed.
 
   struct ClassAndSel {
-    ClassAndSel() {
-      sel_addr = LLDB_INVALID_ADDRESS;
-      class_addr = LLDB_INVALID_ADDRESS;
-    }
+    ClassAndSel() = default;
 
-    ClassAndSel(lldb::addr_t in_sel_addr, lldb::addr_t in_class_addr)
+    ClassAndSel(lldb::addr_t in_class_addr, lldb::addr_t in_sel_addr)
         : class_addr(in_class_addr), sel_addr(in_sel_addr) {}
 
     bool operator==(const ClassAndSel &rhs) {
@@ -379,11 +390,35 @@ private:
       }
     }
 
-    lldb::addr_t class_addr;
-    lldb::addr_t sel_addr;
+    lldb::addr_t class_addr = LLDB_INVALID_ADDRESS;
+    lldb::addr_t sel_addr = LLDB_INVALID_ADDRESS;
+  };
+
+  struct ClassAndSelStr {
+    ClassAndSelStr() = default;
+
+    ClassAndSelStr(lldb::addr_t in_class_addr, llvm::StringRef in_sel_name)
+        : class_addr(in_class_addr), sel_name(in_sel_name) {}
+
+    bool operator==(const ClassAndSelStr &rhs) {
+      return class_addr == rhs.class_addr && sel_name == rhs.sel_name;
+    }
+
+    bool operator<(const ClassAndSelStr &rhs) const {
+      if (class_addr < rhs.class_addr)
+        return true;
+      else if (class_addr > rhs.class_addr)
+        return false;
+      else
+        return ConstString::Compare(sel_name, rhs.sel_name);
+    }
+
+    lldb::addr_t class_addr = LLDB_INVALID_ADDRESS;
+    ConstString sel_name;
   };
 
   typedef std::map<ClassAndSel, lldb::addr_t> MsgImplMap;
+  typedef std::map<ClassAndSelStr, lldb::addr_t> MsgImplStrMap;
   typedef std::map<ObjCISA, ClassDescriptorSP> ISAToDescriptorMap;
   typedef std::multimap<uint32_t, ObjCISA> HashToISAMap;
   typedef ISAToDescriptorMap::iterator ISAToDescriptorIterator;
@@ -391,6 +426,7 @@ private:
   typedef ThreadSafeDenseMap<void *, uint64_t> TypeSizeCache;
 
   MsgImplMap m_impl_cache;
+  MsgImplStrMap m_impl_str_cache;
   LazyBool m_has_new_literals_and_indexing;
   ISAToDescriptorMap m_isa_to_descriptor;
   HashToISAMap m_hash_to_isa_map;
