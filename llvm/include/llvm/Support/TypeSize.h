@@ -362,6 +362,11 @@ public:
         LinearPolySize::get(getKnownMinValue() / RHS, isScalable()));
   }
 
+  LeafTy multiplyCoefficientBy(ScalarTy RHS) const {
+    return static_cast<LeafTy>(
+        LinearPolySize::get(getKnownMinValue() * RHS, isScalable()));
+  }
+
   LeafTy coefficientNextPowerOf2() const {
     return static_cast<LeafTy>(LinearPolySize::get(
         static_cast<ScalarTy>(llvm::NextPowerOf2(getKnownMinValue())),
