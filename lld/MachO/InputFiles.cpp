@@ -1013,6 +1013,11 @@ void ObjFile::registerCompactUnwind() {
         referentIsec =
             cast<ConcatInputSection>(r.referent.dyn_cast<InputSection *>());
       }
+      // Unwind info lives in __DATA, and finalization of __TEXT will occur
+      // before finalization of __DATA. Moreover, the finalization of unwind
+      // info depends on the exact addresses that it references. So it is safe
+      // for compact unwind to reference addresses in __TEXT, but not addresses
+      // in any other segment.
       if (referentIsec->getSegName() != segment_names::text)
         error(isec->getLocation(r.offset) + " references section " +
               referentIsec->getName() + " which is not in segment __TEXT");

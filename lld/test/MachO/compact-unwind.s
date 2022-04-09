@@ -81,6 +81,7 @@
 .globl _my_personality, _exception0
 .text
 .p2align 2
+.no_dead_strip _foo
 _foo:
   .cfi_startproc
 ## This will generate a section relocation.
@@ -91,6 +92,7 @@ _foo:
   .cfi_endproc
 
 .p2align 2
+.no_dead_strip _bar
 _bar:
   .cfi_startproc
 ## Check that we dedup references to the same statically-linked personality.
@@ -100,13 +102,19 @@ _bar:
   ret
   .cfi_endproc
 
+.data
 .p2align 2
+## We put this personality in `__data` to test if we correctly handle
+## personality symbols whose output addresses occur after that of the
+## `__unwind_info` section.
 _my_personality:
   ret
 
 .section __TEXT,__gcc_except_tab
 _exception0:
   .space 1
+
+.subsections_via_symbols
 
 #--- main.s
 .globl _main, _quux, _my_personality, _exception1
