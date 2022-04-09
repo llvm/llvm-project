@@ -6994,7 +6994,7 @@ unsigned AArch64AsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
     // as a literal token.
     if (Op.isTokenEqual("za"))
       return Match_Success;
-    break;
+    return Match_InvalidOperand;
   }
   if (!Op.isImm())
     return Match_InvalidOperand;
