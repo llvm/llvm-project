@@ -1613,23 +1613,22 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
 
   // At O0 we want to fully disable inlining outside of cases marked with
   // 'alwaysinline' that are required for correctness.
-  Opts.setInlining((Opts.OptimizationLevel == 0)
-                       ? CodeGenOptions::OnlyAlwaysInlining
-                       : CodeGenOptions::NormalInlining);
-  // Explicit inlining flags can disable some or all inlining even at
-  // optimization levels above zero.
-  if (Arg *InlineArg = Args.getLastArg(
-          options::OPT_finline_functions, options::OPT_finline_hint_functions,
-          options::OPT_fno_inline_functions, options::OPT_fno_inline)) {
-    if (Opts.OptimizationLevel > 0) {
-      const Option &InlineOpt = InlineArg->getOption();
-      if (InlineOpt.matches(options::OPT_finline_functions))
-        Opts.setInlining(CodeGenOptions::NormalInlining);
-      else if (InlineOpt.matches(options::OPT_finline_hint_functions))
-        Opts.setInlining(CodeGenOptions::OnlyHintInlining);
-      else
-        Opts.setInlining(CodeGenOptions::OnlyAlwaysInlining);
-    }
+  if (Opts.OptimizationLevel == 0) {
+    Opts.setInlining(CodeGenOptions::OnlyAlwaysInlining);
+  } else if (const Arg *A = Args.getLastArg(options::OPT_finline_functions,
+                                            options::OPT_finline_hint_functions,
+                                            options::OPT_fno_inline_functions,
+                                            options::OPT_fno_inline)) {
+    // Explicit inlining flags can disable some or all inlining even at
+    // optimization levels above zero.
+    if (A->getOption().matches(options::OPT_finline_functions))
+      Opts.setInlining(CodeGenOptions::NormalInlining);
+    else if (A->getOption().matches(options::OPT_finline_hint_functions))
+      Opts.setInlining(CodeGenOptions::OnlyHintInlining);
+    else
+      Opts.setInlining(CodeGenOptions::OnlyAlwaysInlining);
+  } else {
+    Opts.setInlining(CodeGenOptions::NormalInlining);
   }
 
   // PIC defaults to -fno-direct-access-external-data while non-PIC defaults to
@@ -2124,11 +2123,9 @@ static bool parseShowColorsArgs(const ArgList &Args, bool DefaultColor) {
   } ShowColors = DefaultColor ? Colors_Auto : Colors_Off;
   for (auto *A : Args) {
     const Option &O = A->getOption();
-    if (O.matches(options::OPT_fcolor_diagnostics) ||
-        O.matches(options::OPT_fdiagnostics_color)) {
+    if (O.matches(options::OPT_fcolor_diagnostics)) {
       ShowColors = Colors_On;
-    } else if (O.matches(options::OPT_fno_color_diagnostics) ||
-               O.matches(options::OPT_fno_diagnostics_color)) {
+    } else if (O.matches(options::OPT_fno_color_diagnostics)) {
       ShowColors = Colors_Off;
     } else if (O.matches(options::OPT_fdiagnostics_color_EQ)) {
       StringRef Value(A->getValue());
