@@ -3954,20 +3954,13 @@ static void RenderDiagnosticsOptions(const Driver &D, const ArgList &Args,
   // re-parsed to construct this job; claim any possible color diagnostic here
   // to avoid warn_drv_unused_argument and diagnose bad
   // OPT_fdiagnostics_color_EQ values.
-  for (const Arg *A : Args) {
-    const Option &O = A->getOption();
-    if (!O.matches(options::OPT_fcolor_diagnostics) &&
-        !O.matches(options::OPT_fno_color_diagnostics) &&
-        !O.matches(options::OPT_fdiagnostics_color_EQ))
-      continue;
-
-    if (O.matches(options::OPT_fdiagnostics_color_EQ)) {
-      StringRef Value(A->getValue());
-      if (Value != "always" && Value != "never" && Value != "auto")
-        D.Diag(diag::err_drv_clang_unsupported)
-            << ("-fdiagnostics-color=" + Value).str();
-    }
-    A->claim();
+  Args.getLastArg(options::OPT_fcolor_diagnostics,
+                  options::OPT_fno_color_diagnostics);
+  if (const Arg *A = Args.getLastArg(options::OPT_fdiagnostics_color_EQ)) {
+    StringRef Value(A->getValue());
+    if (Value != "always" && Value != "never" && Value != "auto")
+      D.Diag(diag::err_drv_invalid_argument_to_option)
+          << Value << A->getOption().getName();
   }
 
   if (D.getDiags().getDiagnosticOptions().ShowColors)
