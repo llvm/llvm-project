@@ -387,13 +387,6 @@ RISCVGatherScatterLowering::determineBaseAndStride(GetElementPtrInst *GEP,
   Value *BasePtr =
       Builder.CreateGEP(SourceTy, Ops[0], makeArrayRef(Ops).drop_front());
 
-  // Cast the GEP to an i8*.
-  LLVMContext &Ctx = GEP->getContext();
-  Type *I8PtrTy =
-      Type::getInt8PtrTy(Ctx, GEP->getType()->getPointerAddressSpace());
-  if (BasePtr->getType() != I8PtrTy)
-    BasePtr = Builder.CreatePointerCast(BasePtr, I8PtrTy);
-
   // Final adjustments to stride should go in the start block.
   Builder.SetInsertPoint(
       BasePhi->getIncomingBlock(1 - IncrementingBlock)->getTerminator());
