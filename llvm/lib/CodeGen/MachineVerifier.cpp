@@ -1073,6 +1073,18 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
         if (ValTy.getSizeInBytes() < MMO.getSize())
           report("store memory size cannot exceed value size", MI);
       }
+
+      const AtomicOrdering Order = MMO.getSuccessOrdering();
+      if (Opc == TargetOpcode::G_STORE) {
+        if (Order == AtomicOrdering::Acquire ||
+            Order == AtomicOrdering::AcquireRelease)
+          report("atomic store cannot use acquire ordering", MI);
+
+      } else {
+        if (Order == AtomicOrdering::Release ||
+            Order == AtomicOrdering::AcquireRelease)
+          report("atomic load cannot use release ordering", MI);
+      }
     }
 
     break;
