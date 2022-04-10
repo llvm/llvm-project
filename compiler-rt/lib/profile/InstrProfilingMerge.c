@@ -20,7 +20,7 @@ COMPILER_RT_VISIBILITY
 void (*VPMergeHook)(ValueProfData *, __llvm_profile_data *);
 
 COMPILER_RT_VISIBILITY
-uint64_t lprofGetLoadModuleSignature() {
+uint64_t lprofGetLoadModuleSignature(void) {
   /* A very fast way to compute a module signature.  */
   uint64_t Version = __llvm_profile_get_version();
   uint64_t NumCounters = __llvm_profile_get_num_counters(

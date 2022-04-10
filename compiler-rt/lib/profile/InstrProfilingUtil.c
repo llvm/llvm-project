@@ -343,7 +343,7 @@ COMPILER_RT_VISIBILITY void lprofInstallSignalHandler(int sig,
 #endif
 }
 
-COMPILER_RT_VISIBILITY int lprofSuspendSigKill() {
+COMPILER_RT_VISIBILITY int lprofSuspendSigKill(void) {
 #if defined(__linux__)
   int PDeachSig = 0;
   /* Temporarily suspend getting SIGKILL upon exit of the parent process. */
@@ -361,7 +361,7 @@ COMPILER_RT_VISIBILITY int lprofSuspendSigKill() {
 #endif
 }
 
-COMPILER_RT_VISIBILITY void lprofRestoreSigKill() {
+COMPILER_RT_VISIBILITY void lprofRestoreSigKill(void) {
 #if defined(__linux__)
   prctl(PR_SET_PDEATHSIG, SIGKILL);
 #elif defined(__FreeBSD__)
