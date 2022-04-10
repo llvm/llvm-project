@@ -3957,9 +3957,7 @@ static void RenderDiagnosticsOptions(const Driver &D, const ArgList &Args,
   for (const Arg *A : Args) {
     const Option &O = A->getOption();
     if (!O.matches(options::OPT_fcolor_diagnostics) &&
-        !O.matches(options::OPT_fdiagnostics_color) &&
         !O.matches(options::OPT_fno_color_diagnostics) &&
-        !O.matches(options::OPT_fno_diagnostics_color) &&
         !O.matches(options::OPT_fdiagnostics_color_EQ))
       continue;
 

@@ -2123,11 +2123,9 @@ static bool parseShowColorsArgs(const ArgList &Args, bool DefaultColor) {
   } ShowColors = DefaultColor ? Colors_Auto : Colors_Off;
   for (auto *A : Args) {
     const Option &O = A->getOption();
-    if (O.matches(options::OPT_fcolor_diagnostics) ||
-        O.matches(options::OPT_fdiagnostics_color)) {
+    if (O.matches(options::OPT_fcolor_diagnostics)) {
       ShowColors = Colors_On;
-    } else if (O.matches(options::OPT_fno_color_diagnostics) ||
-               O.matches(options::OPT_fno_diagnostics_color)) {
+    } else if (O.matches(options::OPT_fno_color_diagnostics)) {
       ShowColors = Colors_Off;
     } else if (O.matches(options::OPT_fdiagnostics_color_EQ)) {
       StringRef Value(A->getValue());
