@@ -5,7 +5,7 @@
 
 @flags2 = internal global [8193 x i8] zeroinitializer, align 32		; <[8193 x i8]*> [#uses=1]
 
-define void @test(i32 %k, i32 %i) nounwind {
+define void @test(i32 %i) nounwind {
 entry:
 	%k_addr.012 = shl i32 %i, 1		; <i32> [#uses=1]
 	%tmp14 = icmp sgt i32 %k_addr.012, 8192		; <i1> [#uses=1]
