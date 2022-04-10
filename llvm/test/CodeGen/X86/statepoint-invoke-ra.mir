@@ -9,14 +9,14 @@
 # CHECK:     %8:gr64 = COPY $rdx
 # CHECK:     %7:gr32 = COPY $esi
 # CHECK:     %6:gr64 = COPY $rdi
-# CHECK:     %30:gr64 = MOV64rm $noreg, 1, $noreg, 0, $noreg :: (load (s64) from `i8 addrspace(1)* addrspace(1)* null`, addrspace 1)
+# CHECK:     %13:gr64 = MOV64rm $noreg, 1, $noreg, 0, $noreg :: (load (s64) from `i8 addrspace(1)* addrspace(1)* null`, addrspace 1)
 # CHECK:     undef %33.sub_32bit:gr64_nosp = MOV32rm $noreg, 1, $noreg, 0, $noreg :: (load (s32) from `i32 addrspace(1)* null`, addrspace 1)
 # CHECK:     %35:gr32 = MOV32rm %8, 1, $noreg, 96, $noreg :: (load (s32) from %ir.tmp4, addrspace 1)
 # CHECK:     %43:gr32 = MOV32rm %8, 1, $noreg, 160, $noreg :: (load (s32) from %ir.tmp6, addrspace 1)
-# CHECK:     %41:gr64 = MOV64rm undef %15:gr64, 1, $noreg, 0, $noreg :: (load (s64) from `i8 addrspace(1)* addrspace(1)* undef`, addrspace 1)
-# CHECK:     %38:gr32 = MOV32rm %8, 1, $noreg, 352, $noreg :: (load (s32) from %ir.tmp10, addrspace 1)
-# CHECK:     %31:gr64 = MOV64rm %6, 1, $noreg, 96, $noreg :: (load (s64) from %ir.tmp13, addrspace 1)
-# CHECK:     %32:gr64 = MOV64rm %6, 1, $noreg, 104, $noreg :: (load (s64) from %ir.tmp16, addrspace 1)
+# CHECK:     %38:gr64 = MOV64rm undef %15:gr64, 1, $noreg, 0, $noreg :: (load (s64) from `i8 addrspace(1)* addrspace(1)* undef`, addrspace 1)
+# CHECK:     %40:gr32 = MOV32rm %8, 1, $noreg, 352, $noreg :: (load (s32) from %ir.tmp10, addrspace 1)
+# CHECK:     %16:gr64 = MOV64rm %6, 1, $noreg, 96, $noreg :: (load (s64) from %ir.tmp13, addrspace 1)
+# CHECK:     %17:gr64 = MOV64rm %6, 1, $noreg, 104, $noreg :: (load (s64) from %ir.tmp16, addrspace 1)
 # CHECK:     %45:gr32 = LEA64_32r %33, 1, $noreg, -1, $noreg
 # CHECK:     MOV32mr %stack.1, 1, $noreg, 0, $noreg, %7 :: (store (s32) into %stack.1)
 # CHECK:     MOV32mr %stack.9, 1, $noreg, 0, $noreg, %45 :: (store (s32) into %stack.9)
@@ -26,23 +26,23 @@
 # CHECK:     MOV32mr %stack.3, 1, $noreg, 0, $noreg, %35 :: (store (s32) into %stack.3)
 # CHECK:     MOV32mr %stack.8, 1, $noreg, 0, $noreg, %43 :: (store (s32) into %stack.8)
 # CHECK:     MOV32mr %stack.4, 1, $noreg, 0, $noreg, %43 :: (store (s32) into %stack.4)
-# CHECK:     MOV32mr %stack.7, 1, $noreg, 0, $noreg, %38 :: (store (s32) into %stack.7)
-# CHECK:     MOV32mr %stack.5, 1, $noreg, 0, $noreg, %38 :: (store (s32) into %stack.5)
+# CHECK:     MOV32mr %stack.7, 1, $noreg, 0, $noreg, %40 :: (store (s32) into %stack.7)
+# CHECK:     MOV32mr %stack.5, 1, $noreg, 0, $noreg, %40 :: (store (s32) into %stack.5)
 # CHECK:     EH_LABEL <mcsymbol .Ltmp0>
 # CHECK:     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
 # CHECK:     $edi = MOV32r0 implicit-def dead $eflags
 # CHECK:     dead $esi = MOV32r0 implicit-def dead $eflags, implicit-def $rsi
 # CHECK:     $ecx = COPY %7
 # CHECK:     $r8d = MOV32r0 implicit-def dead $eflags
-# CHECK:     %40:gr64 = COPY %41
-# CHECK:     %32:gr64, %31:gr64, %30:gr64, %40:gr64 = STATEPOINT 1, 16, 5, undef %23:gr64, $edi, $rsi, undef $edx, $ecx, $r8d, 2, 0, 2, 0, 2, 11, 1, 4, %stack.0, 0, %30, 1, 4, %stack.1, 0, 1, 4, %stack.2, 0, 1, 4, %stack.3, 0, 1, 4, %stack.4, 0, 1, 4, %stack.2, 0, %40, 1, 4, %stack.5, 0, %31, %32, 2, 4, %32(tied-def 0), %31(tied-def 1), %30(tied-def 2), %40(tied-def 3), 2, 0, 2, 4, 0, 0, 1, 1, 2, 2, 3, 3, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def dead $eax :: (volatile load store (s32) on %stack.0), (volatile load store (s32) on %stack.1), (volatile load store (s32) on %stack.2), (volatile load store (s32) on %stack.3), (volatile load store (s32) on %stack.4), (volatile load store (s32) on %stack.5)
+# CHECK:     %37:gr64 = COPY %38
+# CHECK:     %17:gr64, %16:gr64, %13:gr64, %37:gr64 = STATEPOINT 1, 16, 5, undef %23:gr64, $edi, $rsi, undef $edx, $ecx, $r8d, 2, 0, 2, 0, 2, 11, 1, 4, %stack.0, 0, %13, 1, 4, %stack.1, 0, 1, 4, %stack.2, 0, 1, 4, %stack.3, 0, 1, 4, %stack.4, 0, 1, 4, %stack.2, 0, %37, 1, 4, %stack.5, 0, %16, %17, 2, 4, %17(tied-def 0), %16(tied-def 1), %13(tied-def 2), %37(tied-def 3), 2, 0, 2, 4, 0, 0, 1, 1, 2, 2, 3, 3, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def dead $eax :: (volatile load store (s32) on %stack.0), (volatile load store (s32) on %stack.1), (volatile load store (s32) on %stack.2), (volatile load store (s32) on %stack.3), (volatile load store (s32) on %stack.4), (volatile load store (s32) on %stack.5)
 # CHECK:     ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
 # CHECK:     EH_LABEL <mcsymbol .Ltmp1>
 # CHECK:     JMP_1 %bb.1
 # CHECK:   bb.1.bb21:
 # CHECK:     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
 # CHECK:     $edi = MOV32ri 10
-# CHECK:     dead %30:gr64, dead %31:gr64, dead %32:gr64 = STATEPOINT 2882400000, 0, 1, target-flags(x86-plt) @quux, $edi, 2, 0, 2, 2, 2, 10, 1, 4, %stack.9, 0, %30, %7, %33.sub_32bit, 1, 4, %stack.6, 0, 1, 4, %stack.8, 0, %33.sub_32bit, 1, 4, %stack.7, 0, %31, %32, 2, 3, %30(tied-def 0), %31(tied-def 1), %32(tied-def 2), 2, 0, 2, 3, 0, 0, 1, 1, 2, 2, csr_64, implicit-def $rsp, implicit-def $ssp :: (load (s32) from %stack.6), (load (s32) from %stack.7), (load (s32) from %stack.8), (load (s32) from %stack.9)
+# CHECK:     dead %13:gr64, dead %16:gr64, dead %17:gr64 = STATEPOINT 2882400000, 0, 1, target-flags(x86-plt) @quux, $edi, 2, 0, 2, 2, 2, 10, 1, 4, %stack.9, 0, %13, %7, %33.sub_32bit, 1, 4, %stack.6, 0, 1, 4, %stack.8, 0, %33.sub_32bit, 1, 4, %stack.7, 0, %16, %17, 2, 3, %13(tied-def 0), %16(tied-def 1), %17(tied-def 2), 2, 0, 2, 3, 0, 0, 1, 1, 2, 2, csr_64, implicit-def $rsp, implicit-def $ssp :: (load (s32) from %stack.6), (load (s32) from %stack.7), (load (s32) from %stack.8), (load (s32) from %stack.9)
 # CHECK:     ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
 # CHECK:     RET 0
 # CHECK:   bb.2.bb26 (landing-pad):
@@ -53,11 +53,11 @@
 # CHECK:     %36:gr32 = MOV32rm %stack.6, 1, $noreg, 0, $noreg :: (load (s32) from %stack.6)
 # CHECK:     MOV32mr %stack.2, 1, $noreg, 0, $noreg, %36 :: (store (s32) into %stack.2)
 # CHECK:     MOV32mr %stack.3, 1, $noreg, 0, $noreg, %33.sub_32bit :: (store (s32) into %stack.3)
-# CHECK:     %39:gr32 = MOV32rm %stack.7, 1, $noreg, 0, $noreg :: (load (s32) from %stack.7)
-# CHECK:     MOV32mr %stack.4, 1, $noreg, 0, $noreg, %39 :: (store (s32) into %stack.4)
+# CHECK:     %41:gr32 = MOV32rm %stack.7, 1, $noreg, 0, $noreg :: (load (s32) from %stack.7)
+# CHECK:     MOV32mr %stack.4, 1, $noreg, 0, $noreg, %41 :: (store (s32) into %stack.4)
 # CHECK:     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
 # CHECK:     $edi = MOV32ri -271
-# CHECK:     dead %40:gr64 = STATEPOINT 2882400000, 0, 1, target-flags(x86-plt) @quux, $edi, 2, 0, 2, 0, 2, 6, 1, 4, %stack.0, 0, 1, 4, %stack.1, 0, 1, 4, %stack.2, 0, 1, 4, %stack.3, 0, %40, 1, 4, %stack.4, 0, 2, 1, %40(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store (s32) on %stack.0), (volatile load store (s32) on %stack.1), (volatile load store (s32) on %stack.2), (volatile load store (s32) on %stack.3), (volatile load store (s32) on %stack.4)
+# CHECK:     dead %37:gr64 = STATEPOINT 2882400000, 0, 1, target-flags(x86-plt) @quux, $edi, 2, 0, 2, 0, 2, 6, 1, 4, %stack.0, 0, 1, 4, %stack.1, 0, 1, 4, %stack.2, 0, 1, 4, %stack.3, 0, %37, 1, 4, %stack.4, 0, 2, 1, %37(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store (s32) on %stack.0), (volatile load store (s32) on %stack.1), (volatile load store (s32) on %stack.2), (volatile load store (s32) on %stack.3), (volatile load store (s32) on %stack.4)
 # CHECK:     ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
 
 --- |
