@@ -29,5 +29,5 @@
 
 // RUN: %clang -### -target i686-unknown-linux-gnu -fno-integrated-as -gz=invalid -x assembler -c %s 2>&1 | FileCheck -check-prefix CHECK-OPT_GZ_EQ_INVALID %s
 // RUN: %clang -### -target i686-unknown-linux-gnu -fno-integrated-as -gz=invalid -c %s 2>&1 | FileCheck -check-prefix CHECK-OPT_GZ_EQ_INVALID %s
-// CHECK-OPT_GZ_EQ_INVALID: error: unsupported argument 'invalid' to option 'gz='
+// CHECK-OPT_GZ_EQ_INVALID: error: unsupported argument 'invalid' to option '-gz='
 

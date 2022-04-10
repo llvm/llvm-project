@@ -69,7 +69,7 @@
 // RUN: %clang -### -target armv7-windows-itanium --sysroot %S/Inputs/Windows/ARM/8.1 -B %S/Inputs/Windows/ARM/8.1/usr/bin -fuse-ld=lld-link2 -shared -o shared.dll -fsanitize=tsan -x c++ %s 2>&1 \
 // RUN:    | FileCheck %s --check-prefix CHECK-SANITIZE-TSAN
 
-// CHECK-SANITIZE-TSAN: error: unsupported argument 'tsan' to option 'fsanitize='
+// CHECK-SANITIZE-TSAN: error: unsupported argument 'tsan' to option '-fsanitize='
 // CHECK-SANITIZE-TSAN-NOT: "-fsanitize={{.*}}"
 
 // RUN: %clang -### -target armv7-windows-itanium -isystem-after "Windows Kits/10/Include/10.0.10586.0/ucrt" -isystem-after "Windows Kits/10/Include/10.0.10586.0/um" -isystem-after "Windows Kits/10/Include/10.0.10586.0/shared" -c %s -o /dev/null 2>&1 \

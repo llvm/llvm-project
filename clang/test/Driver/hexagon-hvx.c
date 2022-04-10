@@ -218,7 +218,7 @@
 
 // Invalid HVX length:
 
-// CHECK-HVX-BAD-LENGTH: error: unsupported argument '{{.*}}' to option 'mhvx-length='
+// CHECK-HVX-BAD-LENGTH: error: unsupported argument '{{.*}}' to option '-mhvx-length='
 
 // RUN: %clang -c %s -### -target hexagon-unknown-elf -mhvx -mhvx-length=B \
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-BAD-LENGTH %s

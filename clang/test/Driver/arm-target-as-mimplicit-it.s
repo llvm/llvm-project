@@ -47,5 +47,5 @@
 // NEVER-NOT: "-arm-implicit-it={{.*}}"
 // ARM: "-mllvm" "-arm-implicit-it=arm"
 // THUMB: "-mllvm" "-arm-implicit-it=thumb"
-// INVALID: error: unsupported argument '-mimplicit-it=foo' to option 'Wa,'
-// XINVALID: error: unsupported argument '-mimplicit-it=foo' to option 'Xassembler'
+// INVALID: error: unsupported argument '-mimplicit-it=foo' to option '-Wa,'
+// XINVALID: error: unsupported argument '-mimplicit-it=foo' to option '-Xassembler'

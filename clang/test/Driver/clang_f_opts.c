@@ -197,12 +197,12 @@
 // CHECK-ROUNDING-MATH-NOT: "-fno-rounding-math"
 // RUN: %clang -### -S %s 2>&1 | FileCheck -check-prefix=CHECK-ROUNDING-MATH-NOT %s
 // RUN: %clang -### -S -ffp-model=imprecise %s 2>&1 | FileCheck -check-prefix=CHECK-FPMODEL %s
-// CHECK-FPMODEL: unsupported argument 'imprecise' to option 'ffp-model='
+// CHECK-FPMODEL: unsupported argument 'imprecise' to option '-ffp-model='
 // RUN: %clang -### -S -ffp-model=precise %s 2>&1 | FileCheck -check-prefix=IGNORE %s
 // RUN: %clang -### -S -ffp-model=strict %s 2>&1 | FileCheck -check-prefix=IGNORE %s
 // RUN: %clang -### -S -ffp-model=fast %s 2>&1 | FileCheck -check-prefix=IGNORE %s
 // RUN: %clang -### -S -ffp-exception-behavior=trap %s 2>&1 | FileCheck -check-prefix=CHECK-FPEB %s
-// CHECK-FPEB: unsupported argument 'trap' to option 'ffp-exception-behavior='
+// CHECK-FPEB: unsupported argument 'trap' to option '-ffp-exception-behavior='
 // RUN: %clang -### -S -ffp-exception-behavior=maytrap %s 2>&1 | FileCheck -check-prefix=IGNORE %s
 // RUN: %clang -### -S -ffp-exception-behavior=ignore %s 2>&1 | FileCheck -check-prefix=IGNORE %s
 // RUN: %clang -### -S -ffp-exception-behavior=strict %s 2>&1 | FileCheck -check-prefix=IGNORE %s
@@ -393,7 +393,7 @@
 // CHECK-WARNING-DAG: optimization flag '-ftracer' is not supported
 // CHECK-WARNING-DAG: optimization flag '-funroll-all-loops' is not supported
 // CHECK-WARNING-DAG: optimization flag '-funswitch-loops' is not supported
-// CHECK-WARNING-DAG: unsupported argument '1' to option 'flto='
+// CHECK-WARNING-DAG: unsupported argument '1' to option '-flto='
 // CHECK-WARNING-DAG: optimization flag '-falign-labels' is not supported
 // CHECK-WARNING-DAG: optimization flag '-falign-labels=100' is not supported
 // CHECK-WARNING-DAG: optimization flag '-falign-loops' is not supported
