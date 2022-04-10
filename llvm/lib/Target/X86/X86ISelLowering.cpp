@@ -53770,18 +53770,21 @@ static SDValue combineExtractSubvector(SDNode *N, SelectionDAG &DAG,
         VT, SDLoc(N),
         InVec.getNode()->ops().slice(IdxVal, VT.getVectorNumElements()));
 
-  // If we are extracting from an insert into a zero vector, replace with a
-  // smaller insert into zero if we don't access less than the original
-  // subvector. Don't do this for i1 vectors.
+  // If we are extracting from an insert into a larger vector, replace with a
+  // smaller insert if we don't access less than the original subvector. Don't
+  // do this for i1 vectors.
+  // TODO: Relax the matching indices requirement?
   if (VT.getVectorElementType() != MVT::i1 &&
-      InVec.getOpcode() == ISD::INSERT_SUBVECTOR && IdxVal == 0 &&
-      InVec.hasOneUse() && isNullConstant(InVec.getOperand(2)) &&
-      ISD::isBuildVectorAllZeros(InVec.getOperand(0).getNode()) &&
+      InVec.getOpcode() == ISD::INSERT_SUBVECTOR && InVec.hasOneUse() &&
+      IdxVal == InVec.getConstantOperandVal(2) &&
       InVec.getOperand(1).getValueSizeInBits() <= SizeInBits) {
     SDLoc DL(N);
-    return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT,
-                       getZeroVector(VT, Subtarget, DAG, DL),
-                       InVec.getOperand(1), InVec.getOperand(2));
+    SDValue NewExt = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT,
+                                 InVec.getOperand(0), N->getOperand(1));
+    unsigned NewIdxVal = InVec.getConstantOperandVal(2) - IdxVal;
+    return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, NewExt,
+                       InVec.getOperand(1),
+                       DAG.getVectorIdxConstant(NewIdxVal, DL));
   }
 
   // If we're extracting an upper subvector from a broadcast we should just
