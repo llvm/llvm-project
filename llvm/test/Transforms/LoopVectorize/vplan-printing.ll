@@ -418,6 +418,7 @@ define void @print_expand_scev(i64 %y, i8* %ptr) {
 ; CHECK-NEXT: Live-in vp<%0> = vector-trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
+; CHECK-NEXT:   EMIT vp<[[EXP_SCEV:%.+]]> = EXPAND SCEV (1 + (%y /u 492802768830814060))<nuw><nsw>
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
@@ -426,7 +427,6 @@ define void @print_expand_scev(i64 %y, i8* %ptr) {
 ; CHECK-NEXT:     WIDEN-INDUCTION\l" +
 ; CHECK-NEXT:     "  %iv = phi %iv.next, 0\l" +
 ; CHECK-NEXT:     "  ir<%v2>
-; CHECK-NEXT:     EMIT vp<[[EXP_SCEV:%.+]]> = EXPAND SCEV (1 + (%y /u 492802768830814060))<nuw><nsw>
 ; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<0>, vp<[[EXP_SCEV]]>
 ; CHECK-NEXT:     WIDEN ir<%v3> = add ir<%v2>, ir<1>
 ; CHECK-NEXT:     REPLICATE ir<%gep> = getelementptr ir<%ptr>, vp<[[STEPS]]>

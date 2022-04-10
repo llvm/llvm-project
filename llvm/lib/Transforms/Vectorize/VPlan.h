@@ -1805,9 +1805,6 @@ public:
 };
 
 /// Recipe to expand a SCEV expression.
-/// TODO: Currently the recipe always expands the expression in the loop
-/// pre-header, but the recipe is currently placed in the header; place it in
-/// the pre-header once the latter is modeled in VPlan as a VPBasicBlock.
 class VPExpandSCEVRecipe : public VPRecipeBase, public VPValue {
   const SCEV *Expr;
   ScalarEvolution &SE;
