@@ -78,7 +78,7 @@ public:
     CK_C11LockChecker,
     CK_NumCheckKinds
   };
-  DefaultBool ChecksEnabled[CK_NumCheckKinds];
+  bool ChecksEnabled[CK_NumCheckKinds] = {false};
   CheckerNameRef CheckNames[CK_NumCheckKinds];
 
 private:
