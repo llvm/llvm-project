@@ -23,20 +23,20 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
-template <class _I1>
+template <class _InIter1>
 struct in_found_result {
-  _LIBCPP_NO_UNIQUE_ADDRESS _I1 in;
+  _LIBCPP_NO_UNIQUE_ADDRESS _InIter1 in;
   bool found;
 
-  template <class _I2>
-    requires convertible_to<const _I1&, _I2>
-  _LIBCPP_HIDE_FROM_ABI constexpr operator in_found_result<_I2>() const & {
+  template <class _InIter2>
+    requires convertible_to<const _InIter1&, _InIter2>
+  _LIBCPP_HIDE_FROM_ABI constexpr operator in_found_result<_InIter2>() const & {
     return {in, found};
   }
 
-  template <class _I2>
-    requires convertible_to<_I1, _I2>
-  _LIBCPP_HIDE_FROM_ABI constexpr operator in_found_result<_I2>() && {
+  template <class _InIter2>
+    requires convertible_to<_InIter1, _InIter2>
+  _LIBCPP_HIDE_FROM_ABI constexpr operator in_found_result<_InIter2>() && {
     return {std::move(in), found};
   }
 };

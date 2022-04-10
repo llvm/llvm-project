@@ -24,22 +24,22 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
 
-template <class _I1, class _I2>
+template <class _InIter1, class _InIter2>
 struct in_in_result {
-  _LIBCPP_NO_UNIQUE_ADDRESS _I1 in1;
-  _LIBCPP_NO_UNIQUE_ADDRESS _I2 in2;
+  _LIBCPP_NO_UNIQUE_ADDRESS _InIter1 in1;
+  _LIBCPP_NO_UNIQUE_ADDRESS _InIter2 in2;
 
-  template <class _II1, class _II2>
-    requires convertible_to<const _I1&, _II1> && convertible_to<const _I2&, _II2>
+  template <class _InIter3, class _InIter4>
+    requires convertible_to<const _InIter1&, _InIter3> && convertible_to<const _InIter2&, _InIter4>
    _LIBCPP_HIDE_FROM_ABI constexpr
-   operator in_in_result<_II1, _II2>() const & {
+   operator in_in_result<_InIter3, _InIter4>() const & {
     return {in1, in2};
   }
 
-  template <class _II1, class _II2>
-    requires convertible_to<_I1, _II1> && convertible_to<_I2, _II2>
+  template <class _InIter3, class _InIter4>
+    requires convertible_to<_InIter1, _InIter3> && convertible_to<_InIter2, _InIter4>
   _LIBCPP_HIDE_FROM_ABI constexpr
-  operator in_in_result<_II1, _II2>() && {
+  operator in_in_result<_InIter3, _InIter4>() && {
     return {std::move(in1), std::move(in2)};
   }
 };

@@ -23,20 +23,20 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 
 namespace ranges {
-template <class _Ip, class _Fp>
+template <class _InIter1, class _Func1>
 struct in_fun_result {
-  _LIBCPP_NO_UNIQUE_ADDRESS _Ip in;
-  _LIBCPP_NO_UNIQUE_ADDRESS _Fp fun;
+  _LIBCPP_NO_UNIQUE_ADDRESS _InIter1 in;
+  _LIBCPP_NO_UNIQUE_ADDRESS _Func1 fun;
 
-  template <class _I2, class _F2>
-    requires convertible_to<const _Ip&, _I2> && convertible_to<const _Fp&, _F2>
-  _LIBCPP_HIDE_FROM_ABI constexpr operator in_fun_result<_I2, _F2>() const & {
+  template <class _InIter2, class _Func2>
+    requires convertible_to<const _InIter1&, _InIter2> && convertible_to<const _Func1&, _Func2>
+  _LIBCPP_HIDE_FROM_ABI constexpr operator in_fun_result<_InIter2, _Func2>() const & {
     return {in, fun};
   }
 
-  template <class _I2, class _F2>
-    requires convertible_to<_Ip, _I2> && convertible_to<_Fp, _F2>
-  _LIBCPP_HIDE_FROM_ABI constexpr operator in_fun_result<_I2, _F2>() && {
+  template <class _InIter2, class _Func2>
+    requires convertible_to<_InIter1, _InIter2> && convertible_to<_Func1, _Func2>
+  _LIBCPP_HIDE_FROM_ABI constexpr operator in_fun_result<_InIter2, _Func2>() && {
     return {std::move(in), std::move(fun)};
   }
 };
