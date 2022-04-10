@@ -43960,6 +43960,13 @@ static SDValue combineLogicBlendIntoConditionalNegate(
   return DAG.getBitcast(VT, Res);
 }
 
+// Is this a PSHUFB or a OR(PSHUFB,PSHUFB) chain?
+static bool isPSHUFBOrChain(SDValue N) {
+  return N.getOpcode() == X86ISD::PSHUFB ||
+         (N.getOpcode() == ISD::OR && isPSHUFBOrChain(N.getOperand(0)) &&
+          isPSHUFBOrChain(N.getOperand(1)));
+}
+
 /// Do target-specific dag combines on SELECT and VSELECT nodes.
 static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
                              TargetLowering::DAGCombinerInfo &DCI,
@@ -44003,15 +44010,26 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
   // by forcing the unselected elements to zero.
   // TODO: Can we handle more shuffles with this?
   if (N->getOpcode() == ISD::VSELECT && CondVT.isVector() &&
-      LHS.getOpcode() == X86ISD::PSHUFB && RHS.getOpcode() == X86ISD::PSHUFB &&
+      isPSHUFBOrChain(LHS) && isPSHUFBOrChain(RHS) &&
       LHS.hasOneUse() && RHS.hasOneUse()) {
-    MVT SimpleVT = VT.getSimpleVT();
-    SmallVector<SDValue, 1> LHSOps, RHSOps;
-    SmallVector<int, 64> LHSMask, RHSMask, CondMask;
-    if (createShuffleMaskFromVSELECT(CondMask, Cond) &&
-        getTargetShuffleMask(LHS.getNode(), SimpleVT, true, LHSOps, LHSMask) &&
-        getTargetShuffleMask(RHS.getNode(), SimpleVT, true, RHSOps, RHSMask)) {
+    SmallVector<int, 64> CondMask;
+    if (createShuffleMaskFromVSELECT(CondMask, Cond)) {
+      MVT SimpleVT = VT.getSimpleVT();
       int NumElts = VT.getVectorNumElements();
+      SmallVector<SDValue, 1> LHSOps, RHSOps;
+      SmallVector<int, 64> LHSMask, RHSMask;
+      if (LHS.getOpcode() != X86ISD::PSHUFB ||
+          !getTargetShuffleMask(LHS.getNode(), SimpleVT, true, LHSOps, LHSMask)) {
+        LHSOps.assign({LHS});
+        LHSMask.resize(NumElts);
+        std::iota(LHSMask.begin(), LHSMask.end(), 0);
+      }
+      if (RHS.getOpcode() != X86ISD::PSHUFB ||
+          !getTargetShuffleMask(RHS.getNode(), SimpleVT, true, RHSOps, RHSMask)) {
+        RHSOps.assign({RHS});
+        RHSMask.resize(NumElts);
+        std::iota(RHSMask.begin(), RHSMask.end(), 0);
+      }
       for (int i = 0; i != NumElts; ++i) {
         // getConstVector sets negative shuffle mask values as undef, so ensure
         // we hardcode SM_SentinelZero values to zero (0x80).
