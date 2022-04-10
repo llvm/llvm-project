@@ -306,9 +306,9 @@ public:
   /// functions might free the memory.
   /// In optimistic mode, the checker assumes that all user-defined functions
   /// which might free a pointer are annotated.
-  DefaultBool ShouldIncludeOwnershipAnnotatedFunctions;
+  bool ShouldIncludeOwnershipAnnotatedFunctions = false;
 
-  DefaultBool ShouldRegisterNoOwnershipChangeVisitor;
+  bool ShouldRegisterNoOwnershipChangeVisitor = false;
 
   /// Many checkers are essentially built into this one, so enabling them will
   /// make MallocChecker perform additional modeling and reporting.
@@ -326,7 +326,7 @@ public:
 
   using LeakInfo = std::pair<const ExplodedNode *, const MemRegion *>;
 
-  DefaultBool ChecksEnabled[CK_NumCheckKinds];
+  bool ChecksEnabled[CK_NumCheckKinds] = {false};
   CheckerNameRef CheckNames[CK_NumCheckKinds];
 
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;

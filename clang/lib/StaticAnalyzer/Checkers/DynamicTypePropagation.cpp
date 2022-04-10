@@ -108,7 +108,7 @@ public:
   void checkPostObjCMessage(const ObjCMethodCall &M, CheckerContext &C) const;
 
   /// This value is set to true, when the Generics checker is turned on.
-  DefaultBool CheckGenerics;
+  bool CheckGenerics = false;
   CheckerNameRef GenericCheckName;
 };
 
