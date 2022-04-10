@@ -1474,9 +1474,8 @@ void VPExpandSCEVRecipe::execute(VPTransformState &State) {
   const DataLayout &DL = State.CFG.PrevBB->getModule()->getDataLayout();
   SCEVExpander Exp(SE, DL, "induction");
 
-  BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
-  Value *Res =
-      Exp.expandCodeFor(Expr, Expr->getType(), VectorPH->getTerminator());
+  Value *Res = Exp.expandCodeFor(Expr, Expr->getType(),
+                                 &*State.Builder.GetInsertPoint());
 
   for (unsigned Part = 0, UF = State.UF; Part < UF; ++Part)
     State.set(this, Res, Part);
