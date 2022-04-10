@@ -67,8 +67,9 @@ body:             |
     liveins: $r0
 
     ; CHECK: [[LD:%[0-9]+]]:_(s8) = G_LOAD %0(p0) :: (load (s8))
+    ; CHECK: [[ASSERTZ:%[0-9]+]]:_(s8) = G_ASSERT_ZEXT [[LD]], 1
     ; CHECK: [[ONE:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK: [[EXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LD]]
+    ; CHECK: [[EXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ASSERTZ]]
     ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[EXT]], [[ONE]]
     ; CHECK: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[AND]]
     ; CHECK: G_STORE [[TRUNC]](s8), {{%[0-9]+}}(p0) :: (store (s8))

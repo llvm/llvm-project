@@ -327,8 +327,14 @@ LegalityPredicate largerThan(unsigned TypeIdx0, unsigned TypeIdx1);
 /// index.
 LegalityPredicate smallerThan(unsigned TypeIdx0, unsigned TypeIdx1);
 
-/// True iff the specified MMO index has a size that is not a power of 2
+/// True iff the specified MMO index has a size (rounded to bytes) that is not a
+/// power of 2.
 LegalityPredicate memSizeInBytesNotPow2(unsigned MMOIdx);
+
+/// True iff the specified MMO index has a size that is not an even byte size,
+/// or that even byte size is not a power of 2.
+LegalityPredicate memSizeNotByteSizePow2(unsigned MMOIdx);
+
 /// True iff the specified type index is a vector whose element count is not a
 /// power of 2.
 LegalityPredicate numElementsNotPow2(unsigned TypeIdx);
@@ -800,9 +806,21 @@ public:
     return actionIf(LegalizeAction::Unsupported,
                     LegalityPredicates::memSizeInBytesNotPow2(0));
   }
+
+  /// Lower a memory operation if the memory size, rounded to bytes, is not a
+  /// power of 2. For example, this will not trigger for s1 or s7, but will for
+  /// s24.
   LegalizeRuleSet &lowerIfMemSizeNotPow2() {
     return actionIf(LegalizeAction::Lower,
                     LegalityPredicates::memSizeInBytesNotPow2(0));
+  }
+
+  /// Lower a memory operation if the memory access size is not a round power of
+  /// 2 byte size. This is stricter than lowerIfMemSizeNotPow2, and more likely
+  /// what you want (e.g. this will lower s1, s7 and s24).
+  LegalizeRuleSet &lowerIfMemSizeNotByteSizePow2() {
+    return actionIf(LegalizeAction::Lower,
+                    LegalityPredicates::memSizeNotByteSizePow2(0));
   }
 
   LegalizeRuleSet &customIf(LegalityPredicate Predicate) {
