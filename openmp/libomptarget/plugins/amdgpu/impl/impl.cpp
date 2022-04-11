@@ -24,8 +24,14 @@ bool already_locked(void *ptr, hsa_status_t *err_p, void **agentBaseAddress) {
   else
     already_locked = (info.type == HSA_EXT_POINTER_TYPE_LOCKED);
 
-  if (already_locked && agentBaseAddress != nullptr)
-    *agentBaseAddress = info.agentBaseAddress;
+  if (already_locked && agentBaseAddress != nullptr) {
+    // When user passes in a basePtr+offset we need to fix the
+    // locked pointer to include the offset: ROCr always returns
+    // the base locked address, not the shifted one.
+    *agentBaseAddress =
+        (void *)((uint64_t)info.agentBaseAddress + (uint64_t)ptr -
+                 (uint64_t)info.hostBaseAddress);
+  }
 
   if (err_p)
     *err_p = err;
