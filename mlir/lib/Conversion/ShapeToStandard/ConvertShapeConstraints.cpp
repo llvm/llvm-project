@@ -51,7 +51,7 @@ namespace {
 class ConvertShapeConstraints
     : public ConvertShapeConstraintsBase<ConvertShapeConstraints> {
   void runOnOperation() override {
-    auto func = getOperation();
+    auto *func = getOperation();
     auto *context = &getContext();
 
     RewritePatternSet patterns(context);
