@@ -9193,6 +9193,12 @@ Expected<TemplateName> ASTImporter::Import(TemplateName From) {
     return ToContext.getSubstTemplateTemplateParmPack(
         cast<TemplateTemplateParmDecl>(*ParamOrErr), *ArgPackOrErr);
   }
+  case TemplateName::UsingTemplate: {
+    auto UsingOrError = Import(From.getAsUsingShadowDecl());
+    if (!UsingOrError)
+      return UsingOrError.takeError();
+    return TemplateName(cast<UsingShadowDecl>(*UsingOrError));
+  }
   }
 
   llvm_unreachable("Invalid template name kind");

@@ -890,6 +890,18 @@ TEST_P(ImportDecl, ImportUsingDecl) {
              functionDecl(hasDescendant(usingDecl(hasName("bar")))));
 }
 
+TEST_P(ImportDecl, ImportUsingTemplate) {
+  MatchVerifier<Decl> Verifier;
+  testImport("namespace ns { template <typename T> struct S {}; }"
+             "template <template <typename> class T> class X {};"
+             "void declToImport() {"
+             "using ns::S;  X<S> xi; }",
+             Lang_CXX11, "", Lang_CXX11, Verifier,
+             functionDecl(
+                 hasDescendant(varDecl(hasTypeLoc(templateSpecializationTypeLoc(
+                     hasAnyTemplateArgumentLoc(templateArgumentLoc())))))));
+}
+
 TEST_P(ImportDecl, ImportUsingEnumDecl) {
   MatchVerifier<Decl> Verifier;
   testImport("namespace foo { enum bar { baz, toto, quux }; }"
