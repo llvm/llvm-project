@@ -2,8 +2,8 @@
 // RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-windows-msvc -fms-extensions -emit-llvm -std=c11 -O0 -o - %s | FileCheck --check-prefix=CHECK --check-prefix=MS %s
 // RUN: %clang_cc1 -no-opaque-pointers -triple i686-windows-gnu    -fms-extensions -emit-llvm -std=c11 -O0 -o - %s | FileCheck --check-prefix=CHECK --check-prefix=GNU %s
 // RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-windows-gnu  -fms-extensions -emit-llvm -std=c11 -O0 -o - %s | FileCheck --check-prefix=CHECK --check-prefix=GNU %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple i686-windows-msvc   -fms-extensions -emit-llvm -std=c11 -O1 -fno-experimental-new-pass-manager -o - %s | FileCheck --check-prefix=O1 --check-prefix=MO1 %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple i686-windows-gnu    -fms-extensions -emit-llvm -std=c11 -O1 -fno-experimental-new-pass-manager -o - %s | FileCheck --check-prefix=O1 --check-prefix=GO1 %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-windows-msvc   -fms-extensions -emit-llvm -std=c11 -O1 -fno-inline -o - %s | FileCheck --check-prefix=O1 --check-prefix=MO1 %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-windows-gnu    -fms-extensions -emit-llvm -std=c11 -O1 -fno-inline -o - %s | FileCheck --check-prefix=O1 --check-prefix=GO1 %s
 
 #define JOIN2(x, y) x##y
 #define JOIN(x, y) JOIN2(x, y)
@@ -82,17 +82,17 @@ void (*use_decl)(void) = &decl;
 
 // Import inline function.
 // MS-DAG: declare dllimport void @inlineFunc()
-// MO1-DAG: define available_externally dllimport void @inlineFunc()
+// MO1-DAG: declare dllimport void @inlineFunc()
 // GNU-DAG: declare dso_local void @inlineFunc()
-// GO1-DAG: define available_externally dso_local void @inlineFunc()
+// GO1-DAG: declare dso_local void @inlineFunc()
 __declspec(dllimport) inline void inlineFunc(void) {}
 USE(inlineFunc)
 
 // inline attributes
 // MS-DAG: declare dllimport void @noinline()
-// MO1-DAG: define available_externally dllimport void @noinline()
+// MO1-DAG: declare dllimport void @noinline()
 // GNU-DAG: declare dso_local void @noinline()
-// GO1-DAG: define available_externally dso_local void @noinline()
+// GO1-DAG: declare dso_local void @noinline()
 // CHECK-NOT: @alwaysInline()
 // O1-NOT: @alwaysInline()
 __declspec(dllimport) __attribute__((noinline)) inline void noinline(void) {}
