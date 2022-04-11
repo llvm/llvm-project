@@ -196,10 +196,9 @@ mlir::Value fir::FirOpBuilder::allocateLocal(
 
 /// Get the block for adding Allocas.
 mlir::Block *fir::FirOpBuilder::getAllocaBlock() {
-  // auto iface =
-  //     getRegion().getParentOfType<mlir::omp::OutlineableOpenMPOpInterface>();
-  // return iface ? iface.getAllocaBlock() : getEntryBlock();
-  return getEntryBlock();
+  auto iface =
+      getRegion().getParentOfType<mlir::omp::OutlineableOpenMPOpInterface>();
+  return iface ? iface.getAllocaBlock() : getEntryBlock();
 }
 
 /// Create a temporary variable on the stack. Anonymous temporaries have no
@@ -332,6 +331,14 @@ mlir::Value fir::FirOpBuilder::createConvert(mlir::Location loc,
     return create<fir::ConvertOp>(loc, toTy, val);
   }
   return val;
+}
+
+void fir::FirOpBuilder::createStoreWithConvert(mlir::Location loc,
+                                               mlir::Value val,
+                                               mlir::Value addr) {
+  mlir::Value cast =
+      createConvert(loc, fir::unwrapRefType(addr.getType()), val);
+  create<fir::StoreOp>(loc, cast, addr);
 }
 
 fir::StringLitOp fir::FirOpBuilder::createStringLitOp(mlir::Location loc,

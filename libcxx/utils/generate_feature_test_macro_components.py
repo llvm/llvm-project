@@ -74,7 +74,6 @@ feature_test_macros = [ add_version_header(x) for x in [
     "name": "__cpp_lib_allocate_at_least",
     "values": { "c++2b": 202106 },
     "headers": ["memory"],
-    "unimplemented": True,
   }, {
     "name": "__cpp_lib_allocator_traits_is_always_equal",
     "values": { "c++17": 201411 },

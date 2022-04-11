@@ -2,8 +2,8 @@
 
 ; CHECK-LABEL: vls_sve_and_64xi8:
 ; CHECK-NEXT:  adrp    x[[ONE:[0-9]+]], .LCPI0_0
-; CHECK-NEXT:  ptrue   p0.b, vl64
 ; CHECK-NEXT:  add     x[[TWO:[0-9]+]], x[[ONE]], :lo12:.LCPI0_0
+; CHECK-NEXT:  ptrue   p0.b, vl64
 ; CHECK-NEXT:  ld1b    { z0.b }, p0/z, [x0]
 ; CHECK-NEXT:  ld1b    { z1.b }, p0/z, [x[[TWO]]]
 ; CHECK-NEXT:  and     z0.d, z0.d, z1.d

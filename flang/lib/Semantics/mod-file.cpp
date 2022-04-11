@@ -322,7 +322,12 @@ void ModFileWriter::PutSymbol(
                  },
                  [](const HostAssocDetails &) {},
                  [](const MiscDetails &) {},
-                 [&](const auto &) { PutEntity(decls_, symbol); },
+                 [&](const auto &) {
+                   PutEntity(decls_, symbol);
+                   if (symbol.test(Symbol::Flag::OmpThreadprivate)) {
+                     decls_ << "!$omp threadprivate(" << symbol.name() << ")\n";
+                   }
+                 },
              },
       symbol.details());
 }
@@ -925,6 +930,7 @@ Scope *ModFileReader::Read(const SourceName &name,
   parser::Options options;
   options.isModuleFile = true;
   options.features.Enable(common::LanguageFeature::BackslashEscapes);
+  options.features.Enable(common::LanguageFeature::OpenMP);
   if (!isIntrinsic.value_or(false)) {
     options.searchDirectories = context_.searchDirectories();
     // If a directory is in both lists, the intrinsic module directory

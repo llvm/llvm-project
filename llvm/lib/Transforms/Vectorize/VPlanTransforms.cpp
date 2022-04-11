@@ -437,12 +437,9 @@ void VPlanTransforms::optimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
         IV->getStartValue(), Step, TruncI ? TruncI->getType() : nullptr);
 
     HeaderVPBB->insert(Steps, HeaderVPBB->getFirstNonPhi());
-    if (Step->getDef()) {
-      // TODO: Place the step in the preheader, once it is explicitly modeled in
-      // VPlan.
-      HeaderVPBB->insert(cast<VPRecipeBase>(Step->getDef()),
-                         HeaderVPBB->getFirstNonPhi());
-    }
+    if (Step->getDef())
+      Plan.getEntry()->getEntryBasicBlock()->appendRecipe(
+          cast<VPRecipeBase>(Step->getDef()));
 
     // If there are no vector users of IV, simply update all users to use Step
     // instead.

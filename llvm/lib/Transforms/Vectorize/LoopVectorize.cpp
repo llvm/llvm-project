@@ -3102,10 +3102,9 @@ void InnerLoopVectorizer::createVectorLoopSkeleton(StringRef Prefix) {
   BrInst->setDebugLoc(ScalarLatchTerm->getDebugLoc());
   ReplaceInstWithInst(LoopMiddleBlock->getTerminator(), BrInst);
 
-  SplitBlock(LoopVectorPreHeader, LoopVectorPreHeader->getTerminator(), DT, LI,
-             nullptr, Twine(Prefix) + "vector.body");
-
-  // Update dominator for loop exit.
+  // Update dominator for loop exit. During skeleton creation, only the vector
+  // pre-header and the middle block are created. The vector loop is entirely
+  // created during VPlan exection.
   if (!Cost->requiresScalarEpilogue(VF))
     // If there is an epilogue which must run, there's no edge from the
     // middle block to exit blocks  and thus no need to update the immediate
@@ -3244,7 +3243,7 @@ InnerLoopVectorizer::createVectorizedLoopSkeleton() {
   |/    |
   |     v
   |    [  ] \
-  |    [  ]_|   <-- vector loop.
+  |    [  ]_|   <-- vector loop (created during VPlan execution).
   |     |
   |     v
   \   -[ ]   <--- middle-block.
@@ -7600,10 +7599,11 @@ void LoopVectorizationPlanner::executePlan(ElementCount BestVF, unsigned BestUF,
 
   // Perform the actual loop transformation.
 
-  // 1. Create a new empty loop. Unlink the old loop and connect the new one.
+  // 1. Set up the skeleton for vectorization, including vector pre-header and
+  // middle block. The vector loop is created during VPlan execution.
   VPTransformState State{BestVF, BestUF, LI, DT, ILV.Builder, &ILV, &BestVPlan};
   Value *CanonicalIVStartValue;
-  std::tie(State.CFG.VectorPreHeader, CanonicalIVStartValue) =
+  std::tie(State.CFG.PrevBB, CanonicalIVStartValue) =
       ILV.createVectorizedLoopSkeleton();
   ILV.collectPoisonGeneratingRecipes(State);
 
@@ -8670,8 +8670,6 @@ static void addCanonicalIVRecipes(VPlan &Plan, Type *IdxTy, DebugLoc DL,
   auto *CanonicalIVPHI = new VPCanonicalIVPHIRecipe(StartV, DL);
   VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *Header = TopRegion->getEntryBasicBlock();
-  if (IsVPlanNative)
-    Header = cast<VPBasicBlock>(Header->getSingleSuccessor());
   Header->insert(CanonicalIVPHI, Header->begin());
 
   auto *CanonicalIVIncrement =
@@ -8681,10 +8679,8 @@ static void addCanonicalIVRecipes(VPlan &Plan, Type *IdxTy, DebugLoc DL,
   CanonicalIVPHI->addOperand(CanonicalIVIncrement);
 
   VPBasicBlock *EB = TopRegion->getExitBasicBlock();
-  if (IsVPlanNative) {
-    EB = cast<VPBasicBlock>(EB->getSinglePredecessor());
+  if (IsVPlanNative)
     EB->setCondBit(nullptr);
-  }
   EB->appendRecipe(CanonicalIVIncrement);
 
   auto *BranchOnCount =
@@ -8753,12 +8749,17 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
   // visit each basic block after having visited its predecessor basic blocks.
   // ---------------------------------------------------------------------------
 
-  // Create initial VPlan skeleton, with separate header and latch blocks.
-  VPBasicBlock *HeaderVPBB = new VPBasicBlock();
+  // Create initial VPlan skeleton, starting with a block for the pre-header,
+  // followed by a region for the vector loop. The skeleton vector loop region
+  // contains a header and latch block.
+  VPBasicBlock *Preheader = new VPBasicBlock("vector.ph");
+  auto Plan = std::make_unique<VPlan>(Preheader);
+
+  VPBasicBlock *HeaderVPBB = new VPBasicBlock("vector.body");
   VPBasicBlock *LatchVPBB = new VPBasicBlock("vector.latch");
   VPBlockUtils::insertBlockAfter(LatchVPBB, HeaderVPBB);
   auto *TopRegion = new VPRegionBlock(HeaderVPBB, LatchVPBB, "vector loop");
-  auto Plan = std::make_unique<VPlan>(TopRegion);
+  VPBlockUtils::insertBlockAfter(TopRegion, Preheader);
 
   Instruction *DLInst =
       getDebugLocFromInstOrOperands(Legal->getPrimaryInduction());
@@ -8777,7 +8778,8 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
     // Relevant instructions from basic block BB will be grouped into VPRecipe
     // ingredients and fill a new VPBasicBlock.
     unsigned VPBBsForBB = 0;
-    VPBB->setName(BB->getName());
+    if (VPBB != HeaderVPBB)
+      VPBB->setName(BB->getName());
     Builder.setInsertPoint(VPBB);
 
     // Introduce each ingredient into VPlan.
@@ -9064,6 +9066,31 @@ VPlanPtr LoopVectorizationPlanner::buildVPlan(VFRange &Range) {
       OrigLoop, Plan,
       [this](PHINode *P) { return Legal->getIntOrFpInductionDescriptor(P); },
       DeadInstructions, *PSE.getSE());
+
+  // Update plan to be compatible with the inner loop vectorizer for
+  // code-generation.
+  VPRegionBlock *LoopRegion = Plan->getVectorLoopRegion();
+  VPBasicBlock *Preheader = LoopRegion->getEntryBasicBlock();
+  VPBasicBlock *Exit = LoopRegion->getExitBasicBlock();
+  VPBlockBase *Latch = Exit->getSinglePredecessor();
+  VPBlockBase *Header = Preheader->getSingleSuccessor();
+
+  // 1. Move preheader block out of main vector loop.
+  Preheader->setParent(LoopRegion->getParent());
+  VPBlockUtils::disconnectBlocks(Preheader, Header);
+  VPBlockUtils::connectBlocks(Preheader, LoopRegion);
+  Plan->setEntry(Preheader);
+
+  // 2. Disconnect backedge and exit block.
+  VPBlockUtils::disconnectBlocks(Latch, Header);
+  VPBlockUtils::disconnectBlocks(Latch, Exit);
+
+  // 3. Update entry and exit of main vector loop region.
+  LoopRegion->setEntry(Header);
+  LoopRegion->setExit(Latch);
+
+  // 4. Remove exit block.
+  delete Exit;
 
   addCanonicalIVRecipes(*Plan, Legal->getWidestInductionType(), DebugLoc(),
                         true, true);
@@ -9442,13 +9469,14 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
 
   auto &DL = EntryVal->getModule()->getDataLayout();
 
+  BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
   // Generate code for the induction step. Note that induction steps are
   // required to be loop-invariant
   auto CreateStepValue = [&](const SCEV *Step) -> Value * {
     if (SE.isSCEVable(IV->getType())) {
       SCEVExpander Exp(SE, DL, "induction");
       return Exp.expandCodeFor(Step, Step->getType(),
-                               State.CFG.VectorPreHeader->getTerminator());
+                               VectorPH->getTerminator());
     }
     return cast<SCEVUnknown>(Step)->getValue();
   };
@@ -9466,7 +9494,7 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
 
   // Construct the initial value of the vector IV in the vector loop preheader
   auto CurrIP = Builder.saveIP();
-  Builder.SetInsertPoint(State.CFG.VectorPreHeader->getTerminator());
+  Builder.SetInsertPoint(VectorPH->getTerminator());
   if (isa<TruncInst>(EntryVal)) {
     assert(Start->getType()->isIntegerTy() &&
            "Truncation requires an integer type");
@@ -9530,13 +9558,13 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
   }
 
   LastInduction->setName("vec.ind.next");
-  VecInd->addIncoming(SteppedStart, State.CFG.VectorPreHeader);
+  VecInd->addIncoming(SteppedStart, VectorPH);
   // Add induction update using an incorrect block temporarily. The phi node
   // will be fixed after VPlan execution. Note that at this point the latch
   // block cannot be used, as it does not exist yet.
   // TODO: Model increment value in VPlan, by turning the recipe into a
   // multi-def and a subclass of VPHeaderPHIRecipe.
-  VecInd->addIncoming(LastInduction, State.CFG.VectorPreHeader);
+  VecInd->addIncoming(LastInduction, VectorPH);
 }
 
 void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
@@ -9591,7 +9619,9 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
   Type *ScStValueType = ScalarStartValue->getType();
   PHINode *NewPointerPhi =
       PHINode::Create(ScStValueType, 2, "pointer.phi", CanonicalIV);
-  NewPointerPhi->addIncoming(ScalarStartValue, State.CFG.VectorPreHeader);
+
+  BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
+  NewPointerPhi->addIncoming(ScalarStartValue, VectorPH);
 
   // A pointer induction, performed by using a gep
   const DataLayout &DL = NewPointerPhi->getModule()->getDataLayout();
@@ -9612,7 +9642,7 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
   // block cannot be used, as it does not exist yet.
   // TODO: Model increment value in VPlan, by turning the recipe into a
   // multi-def and a subclass of VPHeaderPHIRecipe.
-  NewPointerPhi->addIncoming(InductionGEP, State.CFG.VectorPreHeader);
+  NewPointerPhi->addIncoming(InductionGEP, VectorPH);
 
   // Create UF many actual address geps that use the pointer
   // phi as base and a vectorized version of the step value

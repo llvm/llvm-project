@@ -37,7 +37,7 @@ set(LINK_FLAGS
   ${COMPILER_RT_UNITTEST_LINK_FLAGS}
   ${SANITIZER_TEST_CXX_LIBRARIES}
   )
-list(APPEND LINK_FLAGS -pthread)
+list(APPEND LINK_FLAGS -pthread -no-pie)
 # Linking against libatomic is required with some compilers
 check_library_exists(atomic __atomic_load_8 "" COMPILER_RT_HAS_LIBATOMIC)
 if (COMPILER_RT_HAS_LIBATOMIC)
