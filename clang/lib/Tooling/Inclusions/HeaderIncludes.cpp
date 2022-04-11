@@ -169,13 +169,6 @@ unsigned getMaxHeaderInsertionOffset(StringRef FileName, StringRef Code,
       });
 }
 
-inline StringRef trimInclude(StringRef IncludeName) {
-  return IncludeName.trim("\"<>");
-}
-
-const char IncludeRegexPattern[] =
-    R"(^[\t\ ]*#[\t\ ]*(import|include)[^"<]*(["<][^">]*[">]))";
-
 // The filename of Path excluding extension.
 // Used to match implementation with headers, this differs from sys::path::stem:
 //  - in names with multiple dots (foo.cu.cc) it terminates at the *first*
@@ -274,8 +267,7 @@ HeaderIncludes::HeaderIncludes(StringRef FileName, StringRef Code,
       MaxInsertOffset(MinInsertOffset +
                       getMaxHeaderInsertionOffset(
                           FileName, Code.drop_front(MinInsertOffset), Style)),
-      Categories(Style, FileName),
-      IncludeRegex(llvm::Regex(IncludeRegexPattern)) {
+      Categories(Style, FileName), IncludeRegex(getCppIncludeRegex()) {
   // Add 0 for main header and INT_MAX for headers that are not in any
   // category.
   Priorities = {0, INT_MAX};
@@ -290,10 +282,11 @@ HeaderIncludes::HeaderIncludes(StringRef FileName, StringRef Code,
   for (auto Line : Lines) {
     NextLineOffset = std::min(Code.size(), Offset + Line.size() + 1);
     if (IncludeRegex.match(Line, &Matches)) {
+      StringRef IncludeName = tooling::getIncludeNameFromMatches(Matches);
       // If this is the last line without trailing newline, we need to make
       // sure we don't delete across the file boundary.
       addExistingInclude(
-          Include(Matches[2],
+          Include(IncludeName,
                   tooling::Range(
                       Offset, std::min(Line.size() + 1, Code.size() - Offset))),
           NextLineOffset);
@@ -401,6 +394,26 @@ tooling::Replacements HeaderIncludes::remove(llvm::StringRef IncludeName,
     }
   }
   return Result;
+}
+
+llvm::Regex getCppIncludeRegex() {
+  static const char CppIncludeRegexPattern[] =
+      R"(^[\t\ ]*[@#][\t\ ]*(import|include)([^"]*("[^"]+")|[^<]*(<[^>]+>)|[\t\ ]*([^;]+;)))";
+  return llvm::Regex(CppIncludeRegexPattern);
+}
+
+llvm::StringRef getIncludeNameFromMatches(
+    const llvm::SmallVectorImpl<llvm::StringRef> &Matches) {
+  for (auto Match : llvm::reverse(Matches)) {
+    if (!Match.empty())
+      return Match;
+  }
+  llvm_unreachable("No non-empty match group found in list of matches");
+  return llvm::StringRef();
+}
+
+llvm::StringRef trimInclude(llvm::StringRef IncludeName) {
+  return IncludeName.trim("\"<>;");
 }
 
 } // namespace tooling
