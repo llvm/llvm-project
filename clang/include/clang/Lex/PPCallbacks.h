@@ -107,7 +107,7 @@ public:
                                   StringRef FileName,
                                   bool IsAngled,
                                   CharSourceRange FilenameRange,
-                                  const FileEntry *File,
+                                  Optional<FileEntryRef> File,
                                   StringRef SearchPath,
                                   StringRef RelativePath,
                                   const Module *Imported,
@@ -428,9 +428,9 @@ public:
 
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
-                          CharSourceRange FilenameRange, const FileEntry *File,
-                          StringRef SearchPath, StringRef RelativePath,
-                          const Module *Imported,
+                          CharSourceRange FilenameRange,
+                          Optional<FileEntryRef> File, StringRef SearchPath,
+                          StringRef RelativePath, const Module *Imported,
                           SrcMgr::CharacteristicKind FileType) override {
     First->InclusionDirective(HashLoc, IncludeTok, FileName, IsAngled,
                               FilenameRange, File, SearchPath, RelativePath,

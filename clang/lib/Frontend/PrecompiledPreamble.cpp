@@ -99,13 +99,13 @@ public:
 
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
-                          CharSourceRange FilenameRange, const FileEntry *File,
-                          StringRef SearchPath, StringRef RelativePath,
-                          const Module *Imported,
+                          CharSourceRange FilenameRange,
+                          Optional<FileEntryRef> File, StringRef SearchPath,
+                          StringRef RelativePath, const Module *Imported,
                           SrcMgr::CharacteristicKind FileType) override {
-    // File is null if it wasn't found.
+    // File is None if it wasn't found.
     // (We have some false negatives if PP recovered e.g. <foo> -> "foo")
-    if (File != nullptr)
+    if (File)
       return;
 
     // If it's a rare absolute include, we know the full path already.

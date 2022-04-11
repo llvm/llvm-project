@@ -459,20 +459,22 @@ void CXIndexDataConsumer::enteredMainFile(const FileEntry *File) {
 
 void CXIndexDataConsumer::ppIncludedFile(SourceLocation hashLoc,
                                      StringRef filename,
-                                     const FileEntry *File,
+                                     Optional<FileEntryRef> File,
                                      bool isImport, bool isAngled,
                                      bool isModuleImport) {
   if (!CB.ppIncludedFile)
     return;
 
+  const FileEntry *FE = File ? &File->getFileEntry() : nullptr;
+
   ScratchAlloc SA(*this);
   CXIdxIncludedFileInfo Info = { getIndexLoc(hashLoc),
                                  SA.toCStr(filename),
                                  static_cast<CXFile>(
-                                   const_cast<FileEntry *>(File)),
+                                   const_cast<FileEntry *>(FE)),
                                  isImport, isAngled, isModuleImport };
   CXIdxClientFile idxFile = CB.ppIncludedFile(ClientData, &Info);
-  FileMap[File] = idxFile;
+  FileMap[FE] = idxFile;
 }
 
 void CXIndexDataConsumer::importedModule(const ImportDecl *ImportD) {

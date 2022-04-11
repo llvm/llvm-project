@@ -69,8 +69,9 @@ private:
   void InclusionDirective(SourceLocation DirectiveLoc,
                           const Token &IncludeToken, StringRef IncludedFilename,
                           bool IsAngled, CharSourceRange FilenameRange,
-                          const FileEntry *IncludedFile, StringRef SearchPath,
-                          StringRef RelativePath, const Module *Imported,
+                          Optional<FileEntryRef> IncludedFile,
+                          StringRef SearchPath, StringRef RelativePath,
+                          const Module *Imported,
                           SrcMgr::CharacteristicKind FileType) override;
 
   void EndOfMainFile() override;

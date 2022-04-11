@@ -35,7 +35,8 @@ public:
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           llvm::StringRef FileName, bool IsAngled,
                           CharSourceRange /*FilenameRange*/,
-                          const FileEntry *File, llvm::StringRef /*SearchPath*/,
+                          Optional<FileEntryRef> File,
+                          llvm::StringRef /*SearchPath*/,
                           llvm::StringRef /*RelativePath*/,
                           const clang::Module * /*Imported*/,
                           SrcMgr::CharacteristicKind FileKind) override {
@@ -51,7 +52,8 @@ public:
       auto &Inc = Out->MainFileIncludes.back();
       Inc.Written =
           (IsAngled ? "<" + FileName + ">" : "\"" + FileName + "\"").str();
-      Inc.Resolved = std::string(File ? File->tryGetRealPathName() : "");
+      Inc.Resolved =
+          std::string(File ? File->getFileEntry().tryGetRealPathName() : "");
       Inc.HashOffset = SM.getFileOffset(HashLoc);
       Inc.HashLine =
           SM.getLineNumber(SM.getFileID(HashLoc), Inc.HashOffset) - 1;
@@ -60,7 +62,7 @@ public:
       if (LastPragmaKeepInMainFileLine == Inc.HashLine)
         Inc.BehindPragmaKeep = true;
       if (File) {
-        IncludeStructure::HeaderID HID = Out->getOrCreateID(File);
+        IncludeStructure::HeaderID HID = Out->getOrCreateID(*File);
         Inc.HeaderID = static_cast<unsigned>(HID);
         if (IsAngled)
           if (auto StdlibHeader = tooling::stdlib::Header::named(Inc.Written)) {
@@ -74,15 +76,15 @@ public:
 
     // Record include graph (not just for main-file includes)
     if (File) {
-      auto *IncludingFileEntry = SM.getFileEntryForID(SM.getFileID(HashLoc));
+      auto IncludingFileEntry = SM.getFileEntryRefForID(SM.getFileID(HashLoc));
       if (!IncludingFileEntry) {
         assert(SM.getBufferName(HashLoc).startswith("<") &&
                "Expected #include location to be a file or <built-in>");
         // Treat as if included from the main file.
-        IncludingFileEntry = SM.getFileEntryForID(MainFID);
+        IncludingFileEntry = SM.getFileEntryRefForID(MainFID);
       }
-      auto IncludingID = Out->getOrCreateID(IncludingFileEntry),
-           IncludedID = Out->getOrCreateID(File);
+      auto IncludingID = Out->getOrCreateID(*IncludingFileEntry),
+           IncludedID = Out->getOrCreateID(*File);
       Out->IncludeChildren[IncludingID].push_back(IncludedID);
     }
   }
@@ -226,22 +228,22 @@ IncludeStructure::getID(const FileEntry *Entry) const {
 }
 
 IncludeStructure::HeaderID
-IncludeStructure::getOrCreateID(const FileEntry *Entry) {
+IncludeStructure::getOrCreateID(FileEntryRef Entry) {
   // Main file's FileEntry was not known at IncludeStructure creation time.
-  if (Entry == MainFileEntry) {
+  if (&Entry.getFileEntry() == MainFileEntry) {
     if (RealPathNames.front().empty())
       RealPathNames.front() = MainFileEntry->tryGetRealPathName().str();
     return MainFileID;
   }
   auto R = UIDToIndex.try_emplace(
-      Entry->getUniqueID(),
+      Entry.getUniqueID(),
       static_cast<IncludeStructure::HeaderID>(RealPathNames.size()));
   if (R.second)
     RealPathNames.emplace_back();
   IncludeStructure::HeaderID Result = R.first->getSecond();
   std::string &RealPathName = RealPathNames[static_cast<unsigned>(Result)];
   if (RealPathName.empty())
-    RealPathName = Entry->tryGetRealPathName().str();
+    RealPathName = Entry.getFileEntry().tryGetRealPathName().str();
   return Result;
 }
 

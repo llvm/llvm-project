@@ -19,6 +19,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -68,8 +69,8 @@ protected:
   IncludeStructure::HeaderID getID(StringRef Filename,
                                    IncludeStructure &Includes) {
     auto &SM = Clang->getSourceManager();
-    auto Entry = SM.getFileManager().getFile(Filename);
-    EXPECT_TRUE(Entry);
+    auto Entry = SM.getFileManager().getFileRef(Filename);
+    EXPECT_THAT_EXPECTED(Entry, llvm::Succeeded());
     return Includes.getOrCreateID(*Entry);
   }
 

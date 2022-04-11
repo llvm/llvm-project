@@ -29,9 +29,9 @@ class DependencyGraphCallback : public PPCallbacks {
   const Preprocessor *PP;
   std::string OutputFile;
   std::string SysRoot;
-  llvm::SetVector<const FileEntry *> AllFiles;
-  typedef llvm::DenseMap<const FileEntry *,
-                         SmallVector<const FileEntry *, 2> > DependencyMap;
+  llvm::SetVector<FileEntryRef> AllFiles;
+  using DependencyMap =
+      llvm::DenseMap<FileEntryRef, SmallVector<FileEntryRef, 2>>;
 
   DependencyMap Dependencies;
 
@@ -47,9 +47,9 @@ public:
 
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
-                          CharSourceRange FilenameRange, const FileEntry *File,
-                          StringRef SearchPath, StringRef RelativePath,
-                          const Module *Imported,
+                          CharSourceRange FilenameRange,
+                          Optional<FileEntryRef> File, StringRef SearchPath,
+                          StringRef RelativePath, const Module *Imported,
                           SrcMgr::CharacteristicKind FileType) override;
 
   void EndOfMainFile() override {
@@ -71,7 +71,7 @@ void DependencyGraphCallback::InclusionDirective(
     StringRef FileName,
     bool IsAngled,
     CharSourceRange FilenameRange,
-    const FileEntry *File,
+    Optional<FileEntryRef> File,
     StringRef SearchPath,
     StringRef RelativePath,
     const Module *Imported,
@@ -80,15 +80,15 @@ void DependencyGraphCallback::InclusionDirective(
     return;
 
   SourceManager &SM = PP->getSourceManager();
-  const FileEntry *FromFile
-    = SM.getFileEntryForID(SM.getFileID(SM.getExpansionLoc(HashLoc)));
+  Optional<FileEntryRef> FromFile =
+      SM.getFileEntryRefForID(SM.getFileID(SM.getExpansionLoc(HashLoc)));
   if (!FromFile)
     return;
 
-  Dependencies[FromFile].push_back(File);
+  Dependencies[*FromFile].push_back(*File);
 
-  AllFiles.insert(File);
-  AllFiles.insert(FromFile);
+  AllFiles.insert(*File);
+  AllFiles.insert(*FromFile);
 }
 
 raw_ostream &
@@ -115,7 +115,7 @@ void DependencyGraphCallback::OutputGraphFile() {
     OS.indent(2);
     writeNodeReference(OS, AllFiles[I]);
     OS << " [ shape=\"box\", label=\"";
-    StringRef FileName = AllFiles[I]->getName();
+    StringRef FileName = AllFiles[I].getName();
     if (FileName.startswith(SysRoot))
       FileName = FileName.substr(SysRoot.size());
 
