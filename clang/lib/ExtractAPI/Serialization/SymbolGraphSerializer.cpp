@@ -18,6 +18,7 @@
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VersionTuple.h"
+#include <type_traits>
 
 using namespace clang;
 using namespace clang::extractapi;
@@ -285,39 +286,6 @@ Optional<Array> serializeDeclarationFragments(const DeclarationFragments &DF) {
   return Fragments;
 }
 
-/// Serialize the function signature field of a function, as specified by the
-/// Symbol Graph format.
-///
-/// The Symbol Graph function signature property contains two arrays.
-///   - The \c returns array is the declaration fragments of the return type;
-///   - The \c parameters array contains names and declaration fragments of the
-///     parameters.
-///
-/// \returns \c None if \p FS is empty, or an \c Object containing the
-/// formatted function signature.
-Optional<Object> serializeFunctionSignature(const FunctionSignature &FS) {
-  if (FS.empty())
-    return None;
-
-  Object Signature;
-  serializeArray(Signature, "returns",
-                 serializeDeclarationFragments(FS.getReturnType()));
-
-  Array Parameters;
-  for (const auto &P : FS.getParameters()) {
-    Object Parameter;
-    Parameter["name"] = P.Name;
-    serializeArray(Parameter, "declarationFragments",
-                   serializeDeclarationFragments(P.Fragments));
-    Parameters.emplace_back(std::move(Parameter));
-  }
-
-  if (!Parameters.empty())
-    Signature["parameters"] = std::move(Parameters);
-
-  return Signature;
-}
-
 /// Serialize the \c names field of a symbol as specified by the Symbol Graph
 /// format.
 ///
@@ -354,23 +322,14 @@ Object serializeSymbolKind(const APIRecord &Record, Language Lang) {
 
   Object Kind;
   switch (Record.getKind()) {
-  case APIRecord::RK_Global: {
-    auto *GR = dyn_cast<GlobalRecord>(&Record);
-    switch (GR->GlobalKind) {
-    case GVKind::Function:
-      Kind["identifier"] = AddLangPrefix("func");
-      Kind["displayName"] = "Function";
-      break;
-    case GVKind::Variable:
-      Kind["identifier"] = AddLangPrefix("var");
-      Kind["displayName"] = "Global Variable";
-      break;
-    case GVKind::Unknown:
-      // Unknown global kind
-      break;
-    }
+  case APIRecord::RK_GlobalFunction:
+    Kind["identifier"] = AddLangPrefix("func");
+    Kind["displayName"] = "Function";
     break;
-  }
+  case APIRecord::RK_GlobalVariable:
+    Kind["identifier"] = AddLangPrefix("var");
+    Kind["displayName"] = "Global Variable";
+    break;
   case APIRecord::RK_EnumConstant:
     Kind["identifier"] = AddLangPrefix("enum.case");
     Kind["displayName"] = "Enumeration Case";
@@ -430,6 +389,55 @@ Object serializeSymbolKind(const APIRecord &Record, Language Lang) {
   return Kind;
 }
 
+template <typename RecordTy>
+Optional<Object> serializeFunctionSignatureMixinImpl(const RecordTy &Record,
+                                                     std::true_type) {
+  const auto &FS = Record.Signature;
+  if (FS.empty())
+    return None;
+
+  Object Signature;
+  serializeArray(Signature, "returns",
+                 serializeDeclarationFragments(FS.getReturnType()));
+
+  Array Parameters;
+  for (const auto &P : FS.getParameters()) {
+    Object Parameter;
+    Parameter["name"] = P.Name;
+    serializeArray(Parameter, "declarationFragments",
+                   serializeDeclarationFragments(P.Fragments));
+    Parameters.emplace_back(std::move(Parameter));
+  }
+
+  if (!Parameters.empty())
+    Signature["parameters"] = std::move(Parameters);
+
+  return Signature;
+}
+
+template <typename RecordTy>
+Optional<Object> serializeFunctionSignatureMixinImpl(const RecordTy &Record,
+                                                     std::false_type) {
+  return None;
+}
+
+/// Serialize the function signature field, as specified by the
+/// Symbol Graph format.
+///
+/// The Symbol Graph function signature property contains two arrays.
+///   - The \c returns array is the declaration fragments of the return type;
+///   - The \c parameters array contains names and declaration fragments of the
+///     parameters.
+///
+/// \returns \c None if \p FS is empty, or an \c Object containing the
+/// formatted function signature.
+template <typename RecordTy>
+void serializeFunctionSignatureMixin(Object &Paren, const RecordTy &Record) {
+  serializeObject(Paren, "functionSignature",
+                  serializeFunctionSignatureMixinImpl(
+                      Record, has_function_signature<RecordTy>()));
+}
+
 } // namespace
 
 void SymbolGraphSerializer::anchor() {}
@@ -462,8 +470,9 @@ bool SymbolGraphSerializer::shouldSkip(const APIRecord &Record) const {
   return false;
 }
 
+template <typename RecordTy>
 Optional<Object>
-SymbolGraphSerializer::serializeAPIRecord(const APIRecord &Record) const {
+SymbolGraphSerializer::serializeAPIRecord(const RecordTy &Record) const {
   if (shouldSkip(Record))
     return None;
 
@@ -484,6 +493,8 @@ SymbolGraphSerializer::serializeAPIRecord(const APIRecord &Record) const {
   // correctly here.
   Obj["accessLevel"] = "public";
   serializeArray(Obj, "pathComponents", Array(PathComponents));
+
+  serializeFunctionSignatureMixin(Obj, Record);
 
   return Obj;
 }
@@ -526,16 +537,24 @@ void SymbolGraphSerializer::serializeRelationship(RelationshipKind Kind,
   Relationships.emplace_back(std::move(Relationship));
 }
 
-void SymbolGraphSerializer::serializeGlobalRecord(const GlobalRecord &Record) {
+void SymbolGraphSerializer::serializeGlobalFunctionRecord(
+    const GlobalFunctionRecord &Record) {
   auto GlobalPathComponentGuard = makePathComponentGuard(Record.Name);
 
   auto Obj = serializeAPIRecord(Record);
   if (!Obj)
     return;
 
-  if (Record.GlobalKind == GVKind::Function)
-    serializeObject(*Obj, "functionSignature",
-                    serializeFunctionSignature(Record.Signature));
+  Symbols.emplace_back(std::move(*Obj));
+}
+
+void SymbolGraphSerializer::serializeGlobalVariableRecord(
+    const GlobalVariableRecord &Record) {
+  auto GlobalPathComponentGuard = makePathComponentGuard(Record.Name);
+
+  auto Obj = serializeAPIRecord(Record);
+  if (!Obj)
+    return;
 
   Symbols.emplace_back(std::move(*Obj));
 }
@@ -640,9 +659,12 @@ Object SymbolGraphSerializer::serialize() {
   serializeObject(Root, "metadata", serializeMetadata());
   serializeObject(Root, "module", serializeModule());
 
-  // Serialize global records in the API set.
-  for (const auto &Global : API.getGlobals())
-    serializeGlobalRecord(*Global.second);
+  // Serialize global variables in the API set.
+  for (const auto &GlobalVar : API.getGlobalVariables())
+    serializeGlobalVariableRecord(*GlobalVar.second);
+
+  for (const auto &GlobalFunction : API.getGlobalFunctions())
+    serializeGlobalFunctionRecord(*GlobalFunction.second);
 
   // Serialize enum records in the API set.
   for (const auto &Enum : API.getEnums())
