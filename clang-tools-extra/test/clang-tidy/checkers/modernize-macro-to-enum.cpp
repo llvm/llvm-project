@@ -137,6 +137,41 @@
 // CHECK-FIXES-NEXT: SUFFIX5 = +1ULL
 // CHECK-FIXES-NEXT: };
 
+// A limited form of constant expression is recognized: a parenthesized
+// literal or a parenthesized literal with the unary operators +, - or ~.
+#define PAREN1 (-1)
+#define PAREN2 (1)
+#define PAREN3 (+1)
+#define PAREN4 (~1)
+// CHECK-MESSAGES: :[[@LINE-4]]:1: warning: replace macro with enum
+// CHECK-MESSAGES: :[[@LINE-5]]:9: warning: macro 'PAREN1' defines an integral constant; prefer an enum instead
+// CHECK-MESSAGES: :[[@LINE-5]]:9: warning: macro 'PAREN2' defines an integral constant; prefer an enum instead
+// CHECK-MESSAGES: :[[@LINE-5]]:9: warning: macro 'PAREN3' defines an integral constant; prefer an enum instead
+// CHECK-MESSAGES: :[[@LINE-5]]:9: warning: macro 'PAREN4' defines an integral constant; prefer an enum instead
+// CHECK-FIXES: enum {
+// CHECK-FIXES-NEXT: PAREN1 = (-1),
+// CHECK-FIXES-NEXT: PAREN2 = (1),
+// CHECK-FIXES-NEXT: PAREN3 = (+1),
+// CHECK-FIXES-NEXT: PAREN4 = (~1)
+// CHECK-FIXES-NEXT: };
+
+// More complicated parenthesized expressions are excluded.
+// Expansions that are not surrounded by parentheses are excluded.
+// Nested matching parentheses are stripped.
+#define COMPLEX_PAREN1 (x+1)
+#define COMPLEX_PAREN2 (x+1
+#define COMPLEX_PAREN3 (())
+#define COMPLEX_PAREN4 ()
+#define COMPLEX_PAREN5 (+1)
+#define COMPLEX_PAREN6 ((+1))
+// CHECK-MESSAGES: :[[@LINE-2]]:1: warning: replace macro with enum
+// CHECK-MESSAGES: :[[@LINE-3]]:9: warning: macro 'COMPLEX_PAREN5' defines an integral constant; prefer an enum instead
+// CHECK-MESSAGES: :[[@LINE-3]]:9: warning: macro 'COMPLEX_PAREN6' defines an integral constant; prefer an enum instead
+// CHECK-FIXES: enum {
+// CHECK-FIXES-NEXT: COMPLEX_PAREN5 = (+1),
+// CHECK-FIXES-NEXT: COMPLEX_PAREN6 = ((+1))
+// CHECK-FIXES-NEXT: };
+
 // Macros appearing in conditional expressions can't be replaced
 // by enums.
 #define USE_FOO 1
