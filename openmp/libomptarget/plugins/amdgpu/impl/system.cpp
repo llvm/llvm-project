@@ -58,6 +58,7 @@ public:
     HiddenCompletionAction,
     HiddenMultiGridSyncArg,
     HiddenHostcallBuffer,
+    HiddenHeapV1,
     Unknown
   };
 
@@ -93,6 +94,7 @@ static const std::map<std::string, KernelArgMD::ValueKind> ArgValueKind = {
     {"hidden_multigrid_sync_arg",
      KernelArgMD::ValueKind::HiddenMultiGridSyncArg},
     {"hidden_hostcall_buffer", KernelArgMD::ValueKind::HiddenHostcallBuffer},
+    {"hidden_heap_v1", KernelArgMD::ValueKind::HiddenHeapV1}
 };
 
 namespace core {
@@ -154,6 +156,7 @@ static bool isImplicit(KernelArgMD::ValueKind value_kind) {
   case KernelArgMD::ValueKind::HiddenCompletionAction:
   case KernelArgMD::ValueKind::HiddenMultiGridSyncArg:
   case KernelArgMD::ValueKind::HiddenHostcallBuffer:
+  case KernelArgMD::ValueKind::HiddenHeapV1:
     return true;
   default:
     return false;
