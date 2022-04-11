@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown-gnu -emit-llvm -O1 -fexperimental-new-pass-manager -o - %s | FileCheck %s
+// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown-gnu -emit-llvm -O1 -o - %s | FileCheck %s
 
 template <class T> T test() {
   return T();

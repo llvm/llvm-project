@@ -96,7 +96,7 @@
 ; CHECK-COLD-CONTEXT-LENGTH-NEXT: 8: 0
 ; CHECK-COLD-CONTEXT-LENGTH-NEXT: !CFGChecksum: 563070469352221
 
-; clang -O3 -fexperimental-new-pass-manager -fuse-ld=lld -fpseudo-probe-for-profiling
+; clang -O3 -fuse-ld=lld -fpseudo-probe-for-profiling
 ; -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -Xclang -mdisable-tail-calls
 ; -g test.c  -o a.out
 

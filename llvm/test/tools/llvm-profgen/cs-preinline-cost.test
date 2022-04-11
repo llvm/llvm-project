@@ -18,7 +18,7 @@ CHECK-CSCOST-NEXT:   Inlined context profile for: main:7 @ _Z3fooi (callee size:
 CHECK-CSCOST-NEXT:   Inlined context profile for: main:8 @ _Z3fooi (callee size: 44, call count:544)
 
 ; binary is built with the source below using the following command line:
-;   clang -O3 -g -fpseudo-probe-for-profiling -fexperimental-new-pass-manager test.cpp
+;   clang -O3 -g -fpseudo-probe-for-profiling test.cpp
 ;
 ;#include <stdio.h>
 ;

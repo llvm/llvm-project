@@ -1,7 +1,7 @@
 // REQUIRES: x86-registered-target
-// RUN: %clang_cc1 -fexperimental-new-pass-manager -triple x86_64-unknown-unknown -S -finstrument-functions -O0 -o - -emit-llvm %s | FileCheck %s
-// RUN: %clang_cc1 -fexperimental-new-pass-manager -triple x86_64-unknown-unknown -S -finstrument-functions -O2 -o - -emit-llvm %s | FileCheck %s
-// RUN: %clang_cc1 -fexperimental-new-pass-manager -triple x86_64-unknown-unknown -S -finstrument-functions-after-inlining -O2 -o - -emit-llvm %s | FileCheck -check-prefix=NOINLINE %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -S -finstrument-functions -O0 -o - -emit-llvm %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -S -finstrument-functions -O2 -o - -emit-llvm %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -S -finstrument-functions-after-inlining -O2 -o - -emit-llvm %s | FileCheck -check-prefix=NOINLINE %s
 
 __attribute__((always_inline)) int leaf(int x) {
   return x;

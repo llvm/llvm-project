@@ -1,7 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64 -target-cpu x86-64 -S -O1 -funroll-loops -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK-ENABLE-UNROLL
 // RUN: %clang_cc1 -triple x86_64 -target-cpu x86-64 -S -O1 -fno-unroll-loops -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK-DISABLE-UNROLL
-// RUN: %clang_cc1 -triple x86_64 -target-cpu x86-64 -fexperimental-new-pass-manager -S -O1 -funroll-loops -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK-ENABLE-UNROLL
-// RUN: %clang_cc1 -triple x86_64 -target-cpu x86-64 -fexperimental-new-pass-manager -S -O1 -fno-unroll-loops -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK-DISABLE-UNROLL
 // REQUIRES: x86-registered-target
 
 // CHECK-ENABLE-UNROLL-LABEL: @for_test()

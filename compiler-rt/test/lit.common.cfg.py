@@ -573,8 +573,6 @@ if config.lto_supported:
     config.lto_flags += ["-flto=thin"]
   else:
     config.lto_flags += ["-flto"]
-  if config.use_newpm:
-    config.lto_flags += ["-fexperimental-new-pass-manager"]
 
 if config.have_rpc_xdr_h:
   config.available_features.add('sunrpc')

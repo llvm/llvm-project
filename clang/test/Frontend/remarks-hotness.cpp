@@ -2,14 +2,14 @@
 // RUN: %clang_cc1 -triple x86_64-linux %s -emit-llvm-only -O3 \
 // RUN:     -fprofile-sample-use=%S/Inputs/remarks-hotness.prof \
 // RUN:     -Rpass=inline -Rpass-analysis=inline -Rpass-missed=inline \
-// RUN:     -fexperimental-new-pass-manager -fdiagnostics-show-hotness 2>&1 \
+// RUN:     -fdiagnostics-show-hotness 2>&1 \
 // RUN:     | FileCheck -check-prefix=REMARKS %s
 
 // With auto hotness threshold, only print hot remarks.
 // RUN: %clang_cc1 -triple x86_64-linux %s -emit-llvm-only -O3 \
 // RUN:     -fprofile-sample-use=%S/Inputs/remarks-hotness.prof \
 // RUN:     -Rpass=inline -Rpass-analysis=inline -Rpass-missed=inline \
-// RUN:     -fexperimental-new-pass-manager -fdiagnostics-show-hotness \
+// RUN:     -fdiagnostics-show-hotness \
 // RUN:     -fdiagnostics-hotness-threshold=auto 2>&1 \
 // RUN:     | FileCheck -check-prefix=HOT_CALL %s
 

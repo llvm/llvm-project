@@ -16,37 +16,37 @@
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name \
 // RUN:     optimization-remark-with-hotness.c %s -emit-llvm-only \
 // RUN:     -fprofile-instrument-use-path=%t.profdata -Rpass=inline \
-// RUN:     -fexperimental-new-pass-manager -O1 \
+// RUN:     -O1 \
 // RUN:     -Rpass-analysis=inline -Rpass-missed=inline \
 // RUN:     -fdiagnostics-show-hotness -verify
 // The clang version of the previous test.
 // RUN: %clang -target x86_64-apple-macosx10.9 %s -c -emit-llvm -o /dev/null \
 // RUN:     -fprofile-instr-use=%t.profdata -Rpass=inline \
-// RUN:     -fexperimental-new-pass-manager -O1 \
+// RUN:     -O1 \
 // RUN:     -Rpass-analysis=inline -Rpass-missed=inline \
 // RUN:     -fdiagnostics-show-hotness -Xclang -verify
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name \
 // RUN:     optimization-remark-with-hotness.c %s -emit-llvm-only \
 // RUN:     -fprofile-sample-use=%t-sample.profdata -Rpass=inline \
-// RUN:     -fexperimental-new-pass-manager -O1 \
+// RUN:     -O1 \
 // RUN:     -Rpass-analysis=inline -Rpass-missed=inline \
 // RUN:     -fdiagnostics-show-hotness -fdiagnostics-hotness-threshold=10 \
 // RUN:     -verify
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name \
 // RUN:     optimization-remark-with-hotness.c %s -emit-llvm-only \
 // RUN:     -fprofile-instrument-use-path=%t.profdata -Rpass=inline \
-// RUN:     -fexperimental-new-pass-manager -O1 \
+// RUN:     -O1 \
 // RUN:     -Rpass-analysis=inline -Rpass-missed=inline \
 // RUN:     -fdiagnostics-show-hotness -fdiagnostics-hotness-threshold=10 -verify
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name \
 // RUN:     optimization-remark-with-hotness.c %s -emit-llvm-only \
 // RUN:     -fprofile-instrument-use-path=%t.profdata -Rpass=inline \
-// RUN:     -fexperimental-new-pass-manager -O1 \
+// RUN:     -O1 \
 // RUN:     -Rpass-analysis=inline 2>&1 | FileCheck -check-prefix=HOTNESS_OFF %s
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name \
 // RUN:     optimization-remark-with-hotness.c %s -emit-llvm-only \
 // RUN:     -fprofile-instrument-use-path=%t.profdata -Rpass=inline \
-// RUN:     -fexperimental-new-pass-manager -O1 \
+// RUN:     -O1 \
 // RUN:     -Rpass-analysis=inline -Rno-pass-with-hotness 2>&1 | FileCheck \
 // RUN:     -check-prefix=HOTNESS_OFF %s
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name \

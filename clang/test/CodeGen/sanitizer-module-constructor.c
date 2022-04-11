@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=address -emit-llvm -O3 -fdebug-pass-manager -fexperimental-new-pass-manager -o - %s 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=thread -emit-llvm -O3 -fdebug-pass-manager -fexperimental-new-pass-manager -o - %s 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=memory -emit-llvm -O3 -fdebug-pass-manager -fexperimental-new-pass-manager -o - %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=address -emit-llvm -O3 -fdebug-pass-manager -o - %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=thread -emit-llvm -O3 -fdebug-pass-manager -o - %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=memory -emit-llvm -O3 -fdebug-pass-manager -o - %s 2>&1 | FileCheck %s
 
 // This is regression test for PR42877
 

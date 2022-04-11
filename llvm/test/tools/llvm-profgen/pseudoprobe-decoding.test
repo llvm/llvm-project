@@ -86,7 +86,7 @@ PERF_RECORD_MMAP2 2854748/2854748: [0x400000(0x1000) @ 0 00:1d 123291722 526021]
 
 
 
-; clang -O3 -fexperimental-new-pass-manager -fuse-ld=lld -fpseudo-probe-for-profiling
+; clang -O3 -fuse-ld=lld -fpseudo-probe-for-profiling
 ; -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -Xclang -mdisable-tail-calls
 ; -g test.c  -o a.out
 
