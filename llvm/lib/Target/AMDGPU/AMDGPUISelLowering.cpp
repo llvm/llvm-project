@@ -846,6 +846,8 @@ bool AMDGPUTargetLowering::isSDNodeAlwaysUniform(const SDNode *N) const {
         AMDGPUAS::CONSTANT_ADDRESS_32BIT)
       return true;
     return false;
+  case AMDGPUISD::SETCC: // ballot-style instruction
+    return true;
   }
   return false;
 }
