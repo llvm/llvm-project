@@ -1,4 +1,6 @@
 ; RUN: llvm-mc -triple avr -mattr=sram -show-encoding < %s | FileCheck %s
+; RUN: llvm-mc -filetype=obj -triple avr -mattr=sram < %s \
+; RUN:     | llvm-objdump -d --mattr=sram - | FileCheck --check-prefix=INST %s
 
 
 foo:
@@ -71,3 +73,24 @@ foo:
 
 ; CHECK: ld r10, -Z                 ; encoding: [0xa2,0x90]
 ; CHECK: ld r2,  -Z                 ; encoding: [0x22,0x90]
+
+; INST: ld r10, X
+; INST: ld r17, X
+; INST: ldd r30, Y+0
+; INST: ldd r19, Y+0
+; INST: ldd r10, Z+0
+; INST: ldd r2,  Z+0
+
+; INST: ld r10, X+
+; INST: ld r17, X+
+; INST: ld r30, Y+
+; INST: ld r19, Y+
+; INST: ld r10, Z+
+; INST: ld r2,  Z+
+
+; INST: ld r10, -X
+; INST: ld r17, -X
+; INST: ld r30, -Y
+; INST: ld r19, -Y
+; INST: ld r10, -Z
+; INST: ld r2,  -Z
