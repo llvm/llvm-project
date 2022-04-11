@@ -125,9 +125,8 @@ define i32 @test_simplify10_inbounds(i32 %x) {
 
 define i32 @test_simplify10_no_inbounds(i32 %x) {
 ; CHECK-LABEL: @test_simplify10_no_inbounds(
-; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr [6 x i8], [6 x i8]* @hello, i32 0, i32 [[X:%.*]]
-; CHECK-NEXT:    [[HELLO_L:%.*]] = call i32 @strlen(i8* noundef nonnull dereferenceable(1) [[HELLO_P]])
-; CHECK-NEXT:    ret i32 [[HELLO_L]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 5, [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %hello_p = getelementptr [6 x i8], [6 x i8]* @hello, i32 0, i32 %x
   %hello_l = call i32 @strlen(i8* %hello_p)
