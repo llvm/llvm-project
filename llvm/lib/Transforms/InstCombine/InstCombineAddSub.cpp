@@ -2009,6 +2009,22 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
   }
 
   {
+    // sub(add(X,Y), s/umin(X,Y)) --> s/umax(X,Y)
+    // sub(add(X,Y), s/umax(X,Y)) --> s/umin(X,Y)
+    // TODO: generalize to sub(add(Z,Y),umin(X,Y)) --> add(Z,usub.sat(Y,X))?
+    if (auto *II = dyn_cast<MinMaxIntrinsic>(Op1)) {
+      Value *X = II->getLHS();
+      Value *Y = II->getRHS();
+      if (match(Op0, m_c_Add(m_Specific(X), m_Specific(Y))) &&
+          (Op0->hasOneUse() || Op1->hasOneUse())) {
+        Intrinsic::ID InvID = getInverseMinMaxIntrinsic(II->getIntrinsicID());
+        Value *InvMaxMin = Builder.CreateBinaryIntrinsic(InvID, X, Y);
+        return replaceInstUsesWith(I, InvMaxMin);
+      }
+    }
+  }
+
+  {
     // If we have a subtraction between some value and a select between
     // said value and something else, sink subtraction into select hands, i.e.:
     //   sub (select %Cond, %TrueVal, %FalseVal), %Op1
