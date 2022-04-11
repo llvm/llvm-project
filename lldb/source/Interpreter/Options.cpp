@@ -421,8 +421,6 @@ void Options::GenerateOptionUsage(Stream &strm, CommandObject *cmd,
 
   uint32_t num_option_sets = GetRequiredOptions().size();
 
-  uint32_t i;
-
   if (!only_print_args) {
     for (uint32_t opt_set = 0; opt_set < num_option_sets; ++opt_set) {
       uint32_t opt_set_mask;
@@ -441,77 +439,46 @@ void Options::GenerateOptionUsage(Stream &strm, CommandObject *cmd,
       // single string. If a command has "-a" "-b" and "-c", this will show up
       // as [-abc]
 
-      std::set<int> options;
-      std::set<int>::const_iterator options_pos, options_end;
-      for (auto &def : opt_defs) {
-        if (def.usage_mask & opt_set_mask && def.HasShortOption()) {
-          // Add current option to the end of out_stream.
+      // We use a set here so that they will be sorted.
+      std::set<int> required_options;
+      std::set<int> optional_options;
 
-          if (def.required && def.option_has_arg == OptionParser::eNoArgument) {
-            options.insert(def.short_option);
+      for (auto &def : opt_defs) {
+        if (def.usage_mask & opt_set_mask && def.HasShortOption() &&
+            def.option_has_arg == OptionParser::eNoArgument) {
+          if (def.required) {
+            required_options.insert(def.short_option);
+          } else {
+            optional_options.insert(def.short_option);
           }
         }
       }
 
-      if (!options.empty()) {
-        // We have some required options with no arguments
+      if (!required_options.empty()) {
         strm.PutCString(" -");
-        for (i = 0; i < 2; ++i)
-          for (options_pos = options.begin(), options_end = options.end();
-               options_pos != options_end; ++options_pos) {
-            if (i == 0 && ::islower(*options_pos))
-              continue;
-            if (i == 1 && ::isupper(*options_pos))
-              continue;
-            strm << (char)*options_pos;
-          }
+        for (int short_option : required_options)
+          strm.PutChar(short_option);
       }
 
-      options.clear();
-      for (auto &def : opt_defs) {
-        if (def.usage_mask & opt_set_mask && def.HasShortOption()) {
-          // Add current option to the end of out_stream.
-
-          if (!def.required &&
-              def.option_has_arg == OptionParser::eNoArgument) {
-            options.insert(def.short_option);
-          }
-        }
-      }
-
-      if (!options.empty()) {
-        // We have some required options with no arguments
+      if (!optional_options.empty()) {
         strm.PutCString(" [-");
-        for (i = 0; i < 2; ++i)
-          for (options_pos = options.begin(), options_end = options.end();
-               options_pos != options_end; ++options_pos) {
-            if (i == 0 && ::islower(*options_pos))
-              continue;
-            if (i == 1 && ::isupper(*options_pos))
-              continue;
-            strm << (char)*options_pos;
-          }
+        for (int short_option : optional_options)
+          strm.PutChar(short_option);
         strm.PutChar(']');
       }
 
       // First go through and print the required options (list them up front).
-
       for (auto &def : opt_defs) {
-        if (def.usage_mask & opt_set_mask && def.HasShortOption()) {
-          if (def.required && def.option_has_arg != OptionParser::eNoArgument)
-            PrintOption(def, eDisplayBestOption, " ", nullptr, true, strm);
-        }
+        if (def.usage_mask & opt_set_mask && def.HasShortOption() &&
+            def.required && def.option_has_arg != OptionParser::eNoArgument)
+          PrintOption(def, eDisplayBestOption, " ", nullptr, true, strm);
       }
 
       // Now go through again, and this time only print the optional options.
-
       for (auto &def : opt_defs) {
-        if (def.usage_mask & opt_set_mask) {
-          // Add current option to the end of out_stream.
-
-          if (!def.required && def.option_has_arg != OptionParser::eNoArgument)
-            PrintOption(def, eDisplayBestOption, " ", nullptr, true, strm);
-        }
+        if (def.usage_mask & opt_set_mask && !def.required &&
+            def.option_has_arg != OptionParser::eNoArgument)
+          PrintOption(def, eDisplayBestOption, " ", nullptr, true, strm);
       }
 
       if (args_str.GetSize() > 0) {
