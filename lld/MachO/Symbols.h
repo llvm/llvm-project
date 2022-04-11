@@ -117,9 +117,9 @@ class Defined : public Symbol {
 public:
   Defined(StringRefZ name, InputFile *file, InputSection *isec, uint64_t value,
           uint64_t size, bool isWeakDef, bool isExternal, bool isPrivateExtern,
-          bool isThumb, bool isReferencedDynamically, bool noDeadStrip,
-          bool canOverrideWeakDef = false, bool isWeakDefCanBeHidden = false,
-          bool interposable = false);
+          bool includeInSymtab, bool isThumb, bool isReferencedDynamically,
+          bool noDeadStrip, bool canOverrideWeakDef = false,
+          bool isWeakDefCanBeHidden = false, bool interposable = false);
 
   bool isWeakDef() const override { return weakDef; }
   bool isExternalWeakDef() const {

@@ -42,12 +42,12 @@ uint64_t Symbol::getTlvVA() const { return in.tlvPointers->getVA(gotIndex); }
 
 Defined::Defined(StringRefZ name, InputFile *file, InputSection *isec,
                  uint64_t value, uint64_t size, bool isWeakDef, bool isExternal,
-                 bool isPrivateExtern, bool isThumb,
+                 bool isPrivateExtern, bool includeInSymtab, bool isThumb,
                  bool isReferencedDynamically, bool noDeadStrip,
                  bool canOverrideWeakDef, bool isWeakDefCanBeHidden,
                  bool interposable)
     : Symbol(DefinedKind, name, file), overridesWeakDef(canOverrideWeakDef),
-      privateExtern(isPrivateExtern), includeInSymtab(true),
+      privateExtern(isPrivateExtern), includeInSymtab(includeInSymtab),
       wasIdenticalCodeFolded(false), thumb(isThumb),
       referencedDynamically(isReferencedDynamically), noDeadStrip(noDeadStrip),
       interposable(interposable), weakDefCanBeHidden(isWeakDefCanBeHidden),
