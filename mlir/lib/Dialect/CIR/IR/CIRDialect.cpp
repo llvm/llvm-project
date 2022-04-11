@@ -416,6 +416,10 @@ mlir::LogicalResult YieldOp::verify() {
   if (llvm::isa<SwitchOp>(getOperation()->getParentOp()))
     return mlir::success();
 
+  // FIXME: check for cir.yield continue
+  if (llvm::isa<LoopOp>(getOperation()->getParentOp()))
+    return mlir::success();
+
   assert((llvm::isa<IfOp, ScopeOp>(getOperation()->getParentOp())) &&
          "unknown parent op");
   if (isFallthrough())
@@ -763,6 +767,52 @@ void SwitchOp::build(
   result.addOperands({cond});
   switchBuilder(builder, result.location, result);
 }
+
+//===----------------------------------------------------------------------===//
+// LoopOp
+//===----------------------------------------------------------------------===//
+
+void LoopOp::build(OpBuilder &builder, OperationState &result,
+                   function_ref<void(OpBuilder &, Location)> condBuilder,
+                   function_ref<void(OpBuilder &, Location)> bodyBuilder,
+                   function_ref<void(OpBuilder &, Location)> stepBuilder) {
+  OpBuilder::InsertionGuard guard(builder);
+
+  Region *condRegion = result.addRegion();
+  builder.createBlock(condRegion);
+  condBuilder(builder, result.location);
+
+  Region *bodyRegion = result.addRegion();
+  builder.createBlock(bodyRegion);
+  bodyBuilder(builder, result.location);
+
+  Region *stepRegion = result.addRegion();
+  builder.createBlock(stepRegion);
+  stepBuilder(builder, result.location);
+}
+
+/// Given the region at `index`, or the parent operation if `index` is None,
+/// return the successor regions. These are the regions that may be selected
+/// during the flow of control. `operands` is a set of optional attributes
+/// that correspond to a constant value for each operand, or null if that
+/// operand is not a constant.
+void LoopOp::getSuccessorRegions(mlir::RegionBranchPoint point,
+                                 SmallVectorImpl<RegionSuccessor> &regions) {
+  // If any index all the underlying regions branch back to the parent
+  // operation.
+  if (!point.isParent()) {
+    regions.push_back(RegionSuccessor());
+    return;
+  }
+
+  // FIXME: we want to look at cond region for getting more accurate results
+  // if the other regions will get a chance to execute.
+  regions.push_back(RegionSuccessor(&this->getCond()));
+  regions.push_back(RegionSuccessor(&this->getBody()));
+  regions.push_back(RegionSuccessor(&this->getStep()));
+}
+
+llvm::SmallVector<Region *> LoopOp::getLoopRegions() { return {&getBody()}; }
 
 //===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
