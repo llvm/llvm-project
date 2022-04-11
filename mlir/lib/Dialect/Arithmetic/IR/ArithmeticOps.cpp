@@ -875,16 +875,20 @@ static bool checkWidthChangeCast(TypeRange inputs, TypeRange outputs) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::ExtUIOp::fold(ArrayRef<Attribute> operands) {
-  if (auto lhs = operands[0].dyn_cast_or_null<IntegerAttr>())
-    return IntegerAttr::get(
-        getType(), lhs.getValue().zext(getType().getIntOrFloatBitWidth()));
-
   if (auto lhs = getIn().getDefiningOp<ExtUIOp>()) {
     getInMutable().assign(lhs.getIn());
     return getResult();
   }
-
-  return {};
+  Type resType = getType();
+  unsigned bitWidth;
+  if (auto shapedType = resType.dyn_cast<ShapedType>())
+    bitWidth = shapedType.getElementTypeBitWidth();
+  else
+    bitWidth = resType.getIntOrFloatBitWidth();
+  return constFoldCastOp<IntegerAttr, IntegerAttr>(
+      operands, getType(), [bitWidth](const APInt &a, bool &castStatus) {
+        return a.zext(bitWidth);
+      });
 }
 
 bool arith::ExtUIOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
@@ -900,16 +904,20 @@ LogicalResult arith::ExtUIOp::verify() {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::ExtSIOp::fold(ArrayRef<Attribute> operands) {
-  if (auto lhs = operands[0].dyn_cast_or_null<IntegerAttr>())
-    return IntegerAttr::get(
-        getType(), lhs.getValue().sext(getType().getIntOrFloatBitWidth()));
-
   if (auto lhs = getIn().getDefiningOp<ExtSIOp>()) {
     getInMutable().assign(lhs.getIn());
     return getResult();
   }
-
-  return {};
+  Type resType = getType();
+  unsigned bitWidth;
+  if (auto shapedType = resType.dyn_cast<ShapedType>())
+    bitWidth = shapedType.getElementTypeBitWidth();
+  else
+    bitWidth = resType.getIntOrFloatBitWidth();
+  return constFoldCastOp<IntegerAttr, IntegerAttr>(
+      operands, getType(), [bitWidth](const APInt &a, bool &castStatus) {
+        return a.sext(bitWidth);
+      });
 }
 
 bool arith::ExtSIOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
@@ -954,15 +962,17 @@ OpFoldResult arith::TruncIOp::fold(ArrayRef<Attribute> operands) {
     return getResult();
   }
 
-  if (!operands[0])
-    return {};
+  Type resType = getType();
+  unsigned bitWidth;
+  if (auto shapedType = resType.dyn_cast<ShapedType>())
+    bitWidth = shapedType.getElementTypeBitWidth();
+  else
+    bitWidth = resType.getIntOrFloatBitWidth();
 
-  if (auto lhs = operands[0].dyn_cast<IntegerAttr>()) {
-    return IntegerAttr::get(
-        getType(), lhs.getValue().trunc(getType().getIntOrFloatBitWidth()));
-  }
-
-  return {};
+  return constFoldCastOp<IntegerAttr, IntegerAttr>(
+      operands, getType(), [bitWidth](const APInt &a, bool &castStatus) {
+        return a.trunc(bitWidth);
+      });
 }
 
 bool arith::TruncIOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
@@ -1048,15 +1058,21 @@ bool arith::UIToFPOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
 }
 
 OpFoldResult arith::UIToFPOp::fold(ArrayRef<Attribute> operands) {
-  if (auto lhs = operands[0].dyn_cast_or_null<IntegerAttr>()) {
-    const APInt &api = lhs.getValue();
-    FloatType floatTy = getType().cast<FloatType>();
-    APFloat apf(floatTy.getFloatSemantics(),
-                APInt::getZero(floatTy.getWidth()));
-    apf.convertFromAPInt(api, /*IsSigned=*/false, APFloat::rmNearestTiesToEven);
-    return FloatAttr::get(floatTy, apf);
-  }
-  return {};
+  Type resType = getType();
+  Type resEleType;
+  if (auto shapedType = resType.dyn_cast<ShapedType>())
+    resEleType = shapedType.getElementType();
+  else
+    resEleType = resType;
+  return constFoldCastOp<IntegerAttr, FloatAttr>(
+      operands, getType(), [&resEleType](const APInt &a, bool &castStatus) {
+        FloatType floatTy = resEleType.cast<FloatType>();
+        APFloat apf(floatTy.getFloatSemantics(),
+                    APInt::getZero(floatTy.getWidth()));
+        apf.convertFromAPInt(a, /*IsSigned=*/false,
+                             APFloat::rmNearestTiesToEven);
+        return apf;
+      });
 }
 
 //===----------------------------------------------------------------------===//
@@ -1068,15 +1084,21 @@ bool arith::SIToFPOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
 }
 
 OpFoldResult arith::SIToFPOp::fold(ArrayRef<Attribute> operands) {
-  if (auto lhs = operands[0].dyn_cast_or_null<IntegerAttr>()) {
-    const APInt &api = lhs.getValue();
-    FloatType floatTy = getType().cast<FloatType>();
-    APFloat apf(floatTy.getFloatSemantics(),
-                APInt::getZero(floatTy.getWidth()));
-    apf.convertFromAPInt(api, /*IsSigned=*/true, APFloat::rmNearestTiesToEven);
-    return FloatAttr::get(floatTy, apf);
-  }
-  return {};
+  Type resType = getType();
+  Type resEleType;
+  if (auto shapedType = resType.dyn_cast<ShapedType>())
+    resEleType = shapedType.getElementType();
+  else
+    resEleType = resType;
+  return constFoldCastOp<IntegerAttr, FloatAttr>(
+      operands, getType(), [&resEleType](const APInt &a, bool &castStatus) {
+        FloatType floatTy = resEleType.cast<FloatType>();
+        APFloat apf(floatTy.getFloatSemantics(),
+                    APInt::getZero(floatTy.getWidth()));
+        apf.convertFromAPInt(a, /*IsSigned=*/true,
+                             APFloat::rmNearestTiesToEven);
+        return apf;
+      });
 }
 //===----------------------------------------------------------------------===//
 // FPToUIOp
@@ -1087,21 +1109,21 @@ bool arith::FPToUIOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
 }
 
 OpFoldResult arith::FPToUIOp::fold(ArrayRef<Attribute> operands) {
-  if (auto lhs = operands[0].dyn_cast_or_null<FloatAttr>()) {
-    const APFloat &apf = lhs.getValue();
-    IntegerType intTy = getType().cast<IntegerType>();
-    bool ignored;
-    APSInt api(intTy.getWidth(), /*isUnsigned=*/true);
-    if (APFloat::opInvalidOp ==
-        apf.convertToInteger(api, APFloat::rmTowardZero, &ignored)) {
-      // Undefined behavior invoked - the destination type can't represent
-      // the input constant.
-      return {};
-    }
-    return IntegerAttr::get(getType(), api);
-  }
-
-  return {};
+  Type resType = getType();
+  Type resEleType;
+  if (auto shapedType = resType.dyn_cast<ShapedType>())
+    resEleType = shapedType.getElementType();
+  else
+    resEleType = resType;
+  return constFoldCastOp<FloatAttr, IntegerAttr>(
+      operands, getType(), [&resEleType](const APFloat &a, bool &castStatus) {
+        IntegerType intTy = resEleType.cast<IntegerType>();
+        bool ignored;
+        APSInt api(intTy.getWidth(), /*isUnsigned=*/true);
+        castStatus = APFloat::opInvalidOp !=
+                     a.convertToInteger(api, APFloat::rmTowardZero, &ignored);
+        return api;
+      });
 }
 
 //===----------------------------------------------------------------------===//
@@ -1113,21 +1135,21 @@ bool arith::FPToSIOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
 }
 
 OpFoldResult arith::FPToSIOp::fold(ArrayRef<Attribute> operands) {
-  if (auto lhs = operands[0].dyn_cast_or_null<FloatAttr>()) {
-    const APFloat &apf = lhs.getValue();
-    IntegerType intTy = getType().cast<IntegerType>();
-    bool ignored;
-    APSInt api(intTy.getWidth(), /*isUnsigned=*/false);
-    if (APFloat::opInvalidOp ==
-        apf.convertToInteger(api, APFloat::rmTowardZero, &ignored)) {
-      // Undefined behavior invoked - the destination type can't represent
-      // the input constant.
-      return {};
-    }
-    return IntegerAttr::get(getType(), api);
-  }
-
-  return {};
+  Type resType = getType();
+  Type resEleType;
+  if (auto shapedType = resType.dyn_cast<ShapedType>())
+    resEleType = shapedType.getElementType();
+  else
+    resEleType = resType;
+  return constFoldCastOp<FloatAttr, IntegerAttr>(
+      operands, getType(), [&resEleType](const APFloat &a, bool &castStatus) {
+        IntegerType intTy = resEleType.cast<IntegerType>();
+        bool ignored;
+        APSInt api(intTy.getWidth(), /*isUnsigned=*/false);
+        castStatus = APFloat::opInvalidOp !=
+                     a.convertToInteger(api, APFloat::rmTowardZero, &ignored);
+        return api;
+      });
 }
 
 //===----------------------------------------------------------------------===//
