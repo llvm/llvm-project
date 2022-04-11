@@ -882,3 +882,71 @@ entry:
   %16 = or i64 %15, %14
   ret i64 %16
 }
+
+define i64 @test_or_and_combine1(i64 %a) nounwind {
+; CHECK-LABEL: test_or_and_combine1:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    lsr x8, x0, #24
+; CHECK-NEXT:    lsr x9, x0, #8
+; CHECK-NEXT:    and x10, x9, #0xff000000000000
+; CHECK-NEXT:    bfi x10, x8, #32, #8
+; CHECK-NEXT:    and x8, x9, #0xff0000
+; CHECK-NEXT:    orr x0, x10, x8
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: test_or_and_combine1:
+; GISEL:       // %bb.0: // %entry
+; GISEL-NEXT:    lsr x8, x0, #8
+; GISEL-NEXT:    lsl x9, x0, #8
+; GISEL-NEXT:    and x10, x8, #0xff000000000000
+; GISEL-NEXT:    and x9, x9, #0xff00000000
+; GISEL-NEXT:    orr x9, x10, x9
+; GISEL-NEXT:    and x8, x8, #0xff0000
+; GISEL-NEXT:    orr x0, x9, x8
+; GISEL-NEXT:    ret
+entry:
+  %0 = lshr i64 %a, 8
+  %1 = and i64 %0, 71776119061217280
+  %2 = shl i64 %a, 8
+  %3 = and i64 %2, 1095216660480
+  %4 = or i64 %1, %3
+  %5 = and i64 %0, 16711680
+  %6 = or i64 %4, %5
+  ret i64 %6
+}
+
+define i64 @test_or_and_combine2(i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: test_or_and_combine2:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    lsr x8, x0, #8
+; CHECK-NEXT:    lsl x10, x0, #8
+; CHECK-NEXT:    and x9, x8, #0xff000000000000
+; CHECK-NEXT:    and x8, x8, #0xff0000
+; CHECK-NEXT:    orr x9, x9, x10
+; CHECK-NEXT:    and x10, x10, #0xff00000000
+; CHECK-NEXT:    orr x9, x9, x10
+; CHECK-NEXT:    orr x0, x9, x8
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: test_or_and_combine2:
+; GISEL:       // %bb.0: // %entry
+; GISEL-NEXT:    lsr x8, x0, #8
+; GISEL-NEXT:    lsl x10, x0, #8
+; GISEL-NEXT:    and x9, x8, #0xff000000000000
+; GISEL-NEXT:    and x8, x8, #0xff0000
+; GISEL-NEXT:    orr x9, x9, x10
+; GISEL-NEXT:    and x10, x10, #0xff00000000
+; GISEL-NEXT:    orr x9, x9, x10
+; GISEL-NEXT:    orr x0, x9, x8
+; GISEL-NEXT:    ret
+entry:
+  %0 = lshr i64 %a, 8
+  %1 = and i64 %0, 71776119061217280
+  %2 = shl i64 %a, 8
+  %3 = or i64 %1, %2
+  %4 = and i64 %2, 1095216660480
+  %5 = or i64 %3, %4
+  %6 = and i64 %0, 16711680
+  %7 = or i64 %5, %6
+  ret i64 %7
+}
