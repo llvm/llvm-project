@@ -457,10 +457,10 @@ define void @caller_in_memory() {
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    add x8, sp, #8
 ; CHECK-NEXT:    bl return_in_memory
-; CHECK-NEXT:    adrp x8, in_memory_store
 ; CHECK-NEXT:    ldur q0, [sp, #24]
-; CHECK-NEXT:    ldur q1, [sp, #8]
+; CHECK-NEXT:    adrp x8, in_memory_store
 ; CHECK-NEXT:    add x8, x8, :lo12:in_memory_store
+; CHECK-NEXT:    ldur q1, [sp, #8]
 ; CHECK-NEXT:    ldur q2, [sp, #56]
 ; CHECK-NEXT:    ldur q3, [sp, #40]
 ; CHECK-NEXT:    ldr d4, [sp, #72]
@@ -478,14 +478,14 @@ define void @caller_in_memory() {
 define void @callee_in_memory(%T_IN_MEMORY %a) {
 ; CHECK-LABEL: callee_in_memory:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, in_memory_store
 ; CHECK-NEXT:    ldr d0, [sp, #64]
-; CHECK-NEXT:    ldp q1, q2, [sp, #32]
+; CHECK-NEXT:    adrp x8, in_memory_store
 ; CHECK-NEXT:    add x8, x8, :lo12:in_memory_store
-; CHECK-NEXT:    str d0, [x8, #64]
 ; CHECK-NEXT:    ldr q3, [sp, #16]
-; CHECK-NEXT:    stp q1, q2, [x8, #32]
+; CHECK-NEXT:    ldp q1, q2, [sp, #32]
+; CHECK-NEXT:    str d0, [x8, #64]
 ; CHECK-NEXT:    ldr q0, [sp]
+; CHECK-NEXT:    stp q1, q2, [x8, #32]
 ; CHECK-NEXT:    stp q0, q3, [x8]
 ; CHECK-NEXT:    ret
   store %T_IN_MEMORY %a, %T_IN_MEMORY* @in_memory_store

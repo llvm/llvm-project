@@ -23,11 +23,11 @@ define dso_local void @run_test() local_unnamed_addr #0 {
 ; CHECK-NEXT:    .cfi_offset b14, -56
 ; CHECK-NEXT:    .cfi_offset b15, -64
 ; CHECK-NEXT:    movi v14.2d, #0000000000000000
-; CHECK-NEXT:    adrp x10, B+48
-; CHECK-NEXT:    adrp x11, A
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    mov x9, xzr
+; CHECK-NEXT:    adrp x10, B+48
 ; CHECK-NEXT:    add x10, x10, :lo12:B+48
+; CHECK-NEXT:    adrp x11, A
 ; CHECK-NEXT:    add x11, x11, :lo12:A
 ; CHECK-NEXT:    // implicit-def: $q2
 ; CHECK-NEXT:    // implicit-def: $q3
