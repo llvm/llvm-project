@@ -11,6 +11,9 @@ define void @print_call_and_memory(i64 %n, float* noalias %y, float* noalias %x)
 ; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-EMPTY:
+; CHECK-NEXT: vector.ph:
+; CHECK-NEXT: Successor(s): vector loop
+; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
@@ -50,6 +53,9 @@ define void @print_widen_gep_and_select(i64 %n, float* noalias %y, float* noalia
 ; CHECK-LABEL: Checking a loop in 'print_widen_gep_and_select'
 ; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT: vector.ph:
+; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT: vector.body:
@@ -96,6 +102,9 @@ define float @print_reduction(i64 %n, float* noalias %y) {
 ; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-EMPTY:
+; CHECK-NEXT: vector.ph:
+; CHECK-NEXT: Successor(s): vector loop
+; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
@@ -132,6 +141,9 @@ define void @print_replicate_predicated_phi(i64 %n, i64* %x) {
 ; CHECK-LABEL: Checking a loop in 'print_replicate_predicated_phi'
 ; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT: vector.ph:
+; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT: vector.body:
@@ -207,6 +219,9 @@ define void @print_interleave_groups(i32 %C, i32 %D) {
 ; CHECK:       VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-EMPTY:
+; CHECK-NEXT: vector.ph:
+; CHECK-NEXT: Successor(s): vector loop
+; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:  vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
@@ -267,6 +282,9 @@ define float @print_fmuladd_strict(float* %a, float* %b, i64 %n) {
 ; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-EMPTY:
+; CHECK-NEXT: vector.ph:
+; CHECK-NEXT: Successor(s): vector loop
+; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
@@ -306,6 +324,9 @@ define void @debug_loc_vpinstruction(i32* nocapture %asd, i32* nocapture %bsd) !
 ; CHECK-LABEL: Checking a loop in 'debug_loc_vpinstruction'
 ; CHECK:    VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT: vector.ph:
+; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:  vector.body:
@@ -396,13 +417,16 @@ define void @print_expand_scev(i64 %y, i8* %ptr) {
 ; CHECK: VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT: Live-in vp<%0> = vector-trip-count
 ; CHECK-EMPTY:
+; CHECK-NEXT: vector.ph:
+; CHECK-NEXT:   EMIT vp<[[EXP_SCEV:%.+]]> = EXPAND SCEV (1 + (%y /u 492802768830814060))<nuw><nsw>
+; CHECK-NEXT: Successor(s): vector loop
+; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:     WIDEN-INDUCTION\l" +
 ; CHECK-NEXT:     "  %iv = phi %iv.next, 0\l" +
 ; CHECK-NEXT:     "  ir<%v2>
-; CHECK-NEXT:     EMIT vp<[[EXP_SCEV:%.+]]> = EXPAND SCEV (1 + (%y /u 492802768830814060))<nuw><nsw>
 ; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<0>, vp<[[EXP_SCEV]]>
 ; CHECK-NEXT:     WIDEN ir<%v3> = add ir<%v2>, ir<1>
 ; CHECK-NEXT:     REPLICATE ir<%gep> = getelementptr ir<%ptr>, vp<[[STEPS]]>

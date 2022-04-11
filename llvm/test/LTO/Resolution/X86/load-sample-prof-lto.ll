@@ -2,14 +2,7 @@
 ;
 ; RUN: opt < %s -o %t.bc
 
-; Run the old pm LTO pipeline.
 ; RUN: llvm-lto2 run -o %t.out %t.bc -save-temps \
-; RUN:   -r %t.bc,foo,px -r %t.bc,bar,x \
-; RUN:   -lto-sample-profile-file=%S/Inputs/load-sample-prof.prof
-; RUN: llvm-dis %t.out.0.4.opt.bc -o - | FileCheck %s
-
-; Run the new pm LTO pipeline.
-; RUN: llvm-lto2 run -o %t.out %t.bc -save-temps -use-new-pm \
 ; RUN:   -r %t.bc,foo,px -r %t.bc,bar,x \
 ; RUN:   -lto-sample-profile-file=%S/Inputs/load-sample-prof.prof
 ; RUN: llvm-dis %t.out.0.4.opt.bc -o - | FileCheck %s

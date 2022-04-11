@@ -136,8 +136,8 @@ define void @example2(i32 %n, i32 %x) optsize {
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[TMP17]], label [[DOT_CRIT_EDGE:%.*]], label [[DOTLR_PH_PREHEADER:%.*]]
 ; CHECK:       .lr.ph.preheader:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH8:%.*]], label [[VECTOR_PH10:%.*]]
-; CHECK:       vector.ph10:
+; CHECK-NEXT:    br i1 false, label [[SCALAR_PH8:%.*]], label [[VECTOR_PH9:%.*]]
+; CHECK:       vector.ph9:
 ; CHECK-NEXT:    [[TMP18:%.*]] = add i32 [[N]], -1
 ; CHECK-NEXT:    [[TMP19:%.*]] = zext i32 [[TMP18]] to i64
 ; CHECK-NEXT:    [[N_RND_UP11:%.*]] = add nuw nsw i64 [[TMP19]], 4
@@ -145,8 +145,8 @@ define void @example2(i32 %n, i32 %x) optsize {
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT18:%.*]] = insertelement <4 x i64> poison, i64 [[TMP19]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT19:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT18]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY9:%.*]]
-; CHECK:       vector.body9:
-; CHECK-NEXT:    [[INDEX20:%.*]] = phi i64 [ 0, [[VECTOR_PH10]] ], [ [[INDEX_NEXT31:%.*]], [[PRED_STORE_CONTINUE30:%.*]] ]
+; CHECK:       vector.body19:
+; CHECK-NEXT:    [[INDEX20:%.*]] = phi i64 [ 0, [[VECTOR_PH9]] ], [ [[INDEX_NEXT31:%.*]], [[PRED_STORE_CONTINUE30:%.*]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[I_0_LCSSA]], [[INDEX20]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT21:%.*]] = insertelement <4 x i64> poison, i64 [[INDEX20]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT22:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT21]], <4 x i64> poison, <4 x i32> zeroinitializer

@@ -858,8 +858,7 @@ static bool checkExportedDecl(Sema &S, Decl *D, SourceLocation BlockStart) {
         // We don't allow an empty anonymous namespace (we don't allow decls
         // in them either, but that's handled in the recursion).
         diagExportedUnnamedDecl(S, UnnamedDeclKind::Namespace, D, BlockStart);
-      else
-        ; // We allow an empty named namespace decl.
+      // We allow an empty named namespace decl.
     } else if (DC->getRedeclContext()->isFileContext() && !isa<EnumDecl>(D))
       return checkExportedDeclContext(S, DC, BlockStart);
   }

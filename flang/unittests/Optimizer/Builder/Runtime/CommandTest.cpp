@@ -17,43 +17,51 @@ TEST_F(RuntimeCallTest, genCommandArgumentCountTest) {
       /*addLocArgs=*/false);
 }
 
-TEST_F(RuntimeCallTest, genGetCommandArgument) {
+TEST_F(RuntimeCallTest, genArgumentValue) {
   mlir::Location loc = firBuilder->getUnknownLoc();
   mlir::Type intTy = firBuilder->getDefaultIntegerType();
   mlir::Type charTy = fir::BoxType::get(firBuilder->getNoneType());
   mlir::Value number = firBuilder->create<fir::UndefOp>(loc, intTy);
   mlir::Value value = firBuilder->create<fir::UndefOp>(loc, charTy);
   mlir::Value errmsg = firBuilder->create<fir::UndefOp>(loc, charTy);
-  // genGetCommandArgument expects `length` and `status` to be memory references
-  mlir::Value length = firBuilder->create<fir::AllocaOp>(loc, intTy);
-  mlir::Value status = firBuilder->create<fir::AllocaOp>(loc, intTy);
-
-  fir::runtime::genGetCommandArgument(
-      *firBuilder, loc, number, value, length, status, errmsg);
-  checkCallOpFromResultBox(
-      value, "_FortranAArgumentValue", /*nbArgs=*/3, /*addLocArgs=*/false);
-  mlir::Block *block = firBuilder->getBlock();
-  EXPECT_TRUE(block) << "Failed to retrieve the block!";
-  checkBlockForCallOp(block, "_FortranAArgumentLength", /*nbArgs=*/1);
+  mlir::Value result =
+      fir::runtime::genArgumentValue(*firBuilder, loc, number, value, errmsg);
+  checkCallOp(result.getDefiningOp(), "_FortranAArgumentValue", /*nbArgs=*/3,
+      /*addLocArgs=*/false);
 }
 
-TEST_F(RuntimeCallTest, genGetEnvironmentVariable) {
+TEST_F(RuntimeCallTest, genArgumentLen) {
+  mlir::Location loc = firBuilder->getUnknownLoc();
+  mlir::Type intTy = firBuilder->getDefaultIntegerType();
+  mlir::Value number = firBuilder->create<fir::UndefOp>(loc, intTy);
+  mlir::Value result =
+      fir::runtime::genArgumentLength(*firBuilder, loc, number);
+  checkCallOp(result.getDefiningOp(), "_FortranAArgumentLength", /*nbArgs=*/1,
+      /*addLocArgs=*/false);
+}
+
+TEST_F(RuntimeCallTest, genEnvVariableValue) {
   mlir::Location loc = firBuilder->getUnknownLoc();
   mlir::Type intTy = firBuilder->getDefaultIntegerType();
   mlir::Type charTy = fir::BoxType::get(firBuilder->getNoneType());
-  mlir::Value number = firBuilder->create<fir::UndefOp>(loc, intTy);
+  mlir::Value name = firBuilder->create<fir::UndefOp>(loc, charTy);
   mlir::Value value = firBuilder->create<fir::UndefOp>(loc, charTy);
   mlir::Value trimName = firBuilder->create<fir::UndefOp>(loc, i1Ty);
   mlir::Value errmsg = firBuilder->create<fir::UndefOp>(loc, charTy);
-  // genGetCommandArgument expects `length` and `status` to be memory references
-  mlir::Value length = firBuilder->create<fir::AllocaOp>(loc, intTy);
-  mlir::Value status = firBuilder->create<fir::AllocaOp>(loc, intTy);
+  mlir::Value result = fir::runtime::genEnvVariableValue(
+      *firBuilder, loc, name, value, trimName, errmsg);
+  checkCallOp(result.getDefiningOp(), "_FortranAEnvVariableValue", /*nbArgs=*/4,
+      /*addLocArgs=*/true);
+}
 
-  fir::runtime::genGetEnvironmentVariable(
-      *firBuilder, loc, number, value, length, status, trimName, errmsg);
-  checkCallOpFromResultBox(
-      value, "_FortranAEnvVariableValue", /*nbArgs=*/6, /*addLocArgs=*/false);
-  mlir::Block *block = firBuilder->getBlock();
-  EXPECT_TRUE(block) << "Failed to retrieve the block!";
-  checkBlockForCallOp(block, "_FortranAEnvVariableLength", /*nbArgs=*/4);
+TEST_F(RuntimeCallTest, genEnvVariableLength) {
+  mlir::Location loc = firBuilder->getUnknownLoc();
+  mlir::Type intTy = firBuilder->getDefaultIntegerType();
+  mlir::Type charTy = fir::BoxType::get(firBuilder->getNoneType());
+  mlir::Value name = firBuilder->create<fir::UndefOp>(loc, charTy);
+  mlir::Value trimName = firBuilder->create<fir::UndefOp>(loc, i1Ty);
+  mlir::Value result =
+      fir::runtime::genEnvVariableLength(*firBuilder, loc, name, trimName);
+  checkCallOp(result.getDefiningOp(), "_FortranAEnvVariableLength",
+      /*nbArgs=*/2, /*addLocArgs=*/true);
 }
