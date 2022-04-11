@@ -1,0 +1,52 @@
+// RUN: cir-tool %s | FileCheck %s
+// XFAIL: *
+
+func @l0() {
+  %0 = cir.alloca i32, cir.ptr <i32>, ["x", cinit] {alignment = 4 : i64}
+  %1 = cir.cst(0 : i32) : i32
+  cir.store %1, %0 : i32, cir.ptr <i32>
+  cir.scope {
+    %2 = cir.alloca i32, cir.ptr <i32>, ["i", cinit] {alignment = 4 : i64}
+    %3 = cir.cst(0 : i32) : i32
+    cir.store %3, %2 : i32, cir.ptr <i32>
+    cir.loop(cond :  {
+      %4 = cir.load %2 : cir.ptr <i32>, i32
+      %5 = cir.cst(10 : i32) : i32
+      %6 = cir.cmp(lt, %4, %5) : i32, !cir.bool
+      cir.yield
+    }, step :  {
+      %4 = cir.load %2 : cir.ptr <i32>, i32
+      %5 = cir.cst(1 : i32) : i32
+      %6 = cir.binop(add, %4, %5) : i32
+      cir.store %6, %2 : i32, cir.ptr <i32>
+      cir.yield
+    })  {
+      %4 = cir.load %0 : cir.ptr <i32>, i32
+      %5 = cir.cst(1 : i32) : i32
+      %6 = cir.binop(add, %4, %5) : i32
+      cir.store %6, %0 : i32, cir.ptr <i32>
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+// CHECK: func @l0
+// CHECK: cir.loop(cond :  {
+// CHECK-NEXT:     %4 = cir.load %2 : cir.ptr <i32>, i32
+// CHECK-NEXT:     %5 = cir.cst(10 : i32) : i32
+// CHECK-NEXT:     %6 = cir.cmp(lt, %4, %5) : i32, !cir.bool
+// CHECK-NEXT:     cir.yield
+// CHECK-NEXT:   }, step :  {
+// CHECK-NEXT:     %4 = cir.load %2 : cir.ptr <i32>, i32
+// CHECK-NEXT:     %5 = cir.cst(1 : i32) : i32
+// CHECK-NEXT:     %6 = cir.binop(add, %4, %5) : i32
+// CHECK-NEXT:     cir.store %6, %2 : i32, cir.ptr <i32>
+// CHECK-NEXT:     cir.yield
+// CHECK-NEXT:   })  {
+// CHECK-NEXT:     %4 = cir.load %0 : cir.ptr <i32>, i32
+// CHECK-NEXT:     %5 = cir.cst(1 : i32) : i32
+// CHECK-NEXT:     %6 = cir.binop(add, %4, %5) : i32
+// CHECK-NEXT:     cir.store %6, %0 : i32, cir.ptr <i32>
+// CHECK-NEXT:     cir.yield
+// CHECK-NEXT: }
