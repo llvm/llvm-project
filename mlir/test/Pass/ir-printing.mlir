@@ -1,10 +1,10 @@
-// RUN: mlir-opt %s -mlir-disable-threading=true -pass-pipeline='func.func(cse,canonicalize)' -print-ir-before=cse  -o /dev/null 2>&1 | FileCheck -check-prefix=BEFORE %s
-// RUN: mlir-opt %s -mlir-disable-threading=true -pass-pipeline='func.func(cse,canonicalize)' -print-ir-before-all -o /dev/null 2>&1 | FileCheck -check-prefix=BEFORE_ALL %s
-// RUN: mlir-opt %s -mlir-disable-threading=true -pass-pipeline='func.func(cse,canonicalize)' -print-ir-after=cse -o /dev/null 2>&1 | FileCheck -check-prefix=AFTER %s
-// RUN: mlir-opt %s -mlir-disable-threading=true -pass-pipeline='func.func(cse,canonicalize)' -print-ir-after-all -o /dev/null 2>&1 | FileCheck -check-prefix=AFTER_ALL %s
-// RUN: mlir-opt %s -mlir-disable-threading=true -pass-pipeline='func.func(cse,canonicalize)' -print-ir-before=cse -print-ir-module-scope -o /dev/null 2>&1 | FileCheck -check-prefix=BEFORE_MODULE %s
-// RUN: mlir-opt %s -mlir-disable-threading=true -pass-pipeline='func.func(cse,cse)' -print-ir-after-all -print-ir-after-change -o /dev/null 2>&1 | FileCheck -check-prefix=AFTER_ALL_CHANGE %s
-// RUN: not mlir-opt %s -mlir-disable-threading=true -pass-pipeline='func.func(cse,test-pass-failure)' -print-ir-after-failure -o /dev/null 2>&1 | FileCheck -check-prefix=AFTER_FAILURE %s
+// RUN: mlir-opt %s -mlir-disable-threading=true -pass-pipeline='func.func(cse,canonicalize)' -mlir-print-ir-before=cse  -o /dev/null 2>&1 | FileCheck -check-prefix=BEFORE %s
+// RUN: mlir-opt %s -mlir-disable-threading=true -pass-pipeline='func.func(cse,canonicalize)' -mlir-print-ir-before-all -o /dev/null 2>&1 | FileCheck -check-prefix=BEFORE_ALL %s
+// RUN: mlir-opt %s -mlir-disable-threading=true -pass-pipeline='func.func(cse,canonicalize)' -mlir-print-ir-after=cse -o /dev/null 2>&1 | FileCheck -check-prefix=AFTER %s
+// RUN: mlir-opt %s -mlir-disable-threading=true -pass-pipeline='func.func(cse,canonicalize)' -mlir-print-ir-after-all -o /dev/null 2>&1 | FileCheck -check-prefix=AFTER_ALL %s
+// RUN: mlir-opt %s -mlir-disable-threading=true -pass-pipeline='func.func(cse,canonicalize)' -mlir-print-ir-before=cse -mlir-print-ir-module-scope -o /dev/null 2>&1 | FileCheck -check-prefix=BEFORE_MODULE %s
+// RUN: mlir-opt %s -mlir-disable-threading=true -pass-pipeline='func.func(cse,cse)' -mlir-print-ir-after-all -mlir-print-ir-after-change -o /dev/null 2>&1 | FileCheck -check-prefix=AFTER_ALL_CHANGE %s
+// RUN: not mlir-opt %s -mlir-disable-threading=true -pass-pipeline='func.func(cse,test-pass-failure)' -mlir-print-ir-after-failure -o /dev/null 2>&1 | FileCheck -check-prefix=AFTER_FAILURE %s
 
 func @foo() {
   %0 = arith.constant 0 : i32
