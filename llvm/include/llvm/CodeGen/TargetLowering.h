@@ -2683,6 +2683,10 @@ public:
     return false;
   }
 
+  /// Return true if this constant should be sign extended when promoting to
+  /// a larger type.
+  virtual bool signExtendConstant(const ConstantInt *C) const { return false; }
+
   /// Return true if sinking I's operands to the same basic block as I is
   /// profitable, e.g. because the operands can be folded into a target
   /// instruction during instruction selection. After calling the function

@@ -10652,6 +10652,7 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
 /// the end.
 void
 SelectionDAGBuilder::HandlePHINodesInSuccessorBlocks(const BasicBlock *LLVMBB) {
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   const Instruction *TI = LLVMBB->getTerminator();
 
   SmallPtrSet<MachineBasicBlock *, 4> SuccsHandled;
@@ -10689,10 +10690,12 @@ SelectionDAGBuilder::HandlePHINodesInSuccessorBlocks(const BasicBlock *LLVMBB) {
         unsigned &RegOut = ConstantsOut[C];
         if (RegOut == 0) {
           RegOut = FuncInfo.CreateRegs(C);
-          // We need to zero extend ConstantInt phi operands to match
+          // We need to zero/sign extend ConstantInt phi operands to match
           // assumptions in FunctionLoweringInfo::ComputePHILiveOutRegInfo.
-          ISD::NodeType ExtendType =
-              isa<ConstantInt>(PHIOp) ? ISD::ZERO_EXTEND : ISD::ANY_EXTEND;
+          ISD::NodeType ExtendType = ISD::ANY_EXTEND;
+          if (auto *CI = dyn_cast<ConstantInt>(C))
+            ExtendType = TLI.signExtendConstant(CI) ? ISD::SIGN_EXTEND
+                                                    : ISD::ZERO_EXTEND;
           CopyValueToVirtualRegister(C, RegOut, ExtendType);
         }
         Reg = RegOut;
@@ -10713,7 +10716,6 @@ SelectionDAGBuilder::HandlePHINodesInSuccessorBlocks(const BasicBlock *LLVMBB) {
       // Remember that this register needs to added to the machine PHI node as
       // the input for this MBB.
       SmallVector<EVT, 4> ValueVTs;
-      const TargetLowering &TLI = DAG.getTargetLoweringInfo();
       ComputeValueVTs(TLI, DAG.getDataLayout(), PN.getType(), ValueVTs);
       for (unsigned vti = 0, vte = ValueVTs.size(); vti != vte; ++vti) {
         EVT VT = ValueVTs[vti];
