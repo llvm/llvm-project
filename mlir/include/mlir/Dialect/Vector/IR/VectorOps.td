@@ -1177,7 +1177,8 @@ def Vector_TransferReadOp :
     memref<3x2x6x4x3xf32>, vector<1x1x4x3xf32>).
 
     The slice is further defined by a full-rank index within the MemRef/Tensor,
-    supplied as the operands `[1 .. 1 + rank(memref/tensor))`.
+    supplied as the operands `[1 .. 1 + rank(memref/tensor))` that defines the
+    starting point of the transfer (e.g. `%A[%i0, %i1, %i2]`).
 
     The permutation_map [attribute](../LangRef.md#attributes) is an
     [affine-map](Affine.md#affine-maps) which specifies the transposition on the
@@ -1196,18 +1197,15 @@ def Vector_TransferReadOp :
     specified to mask out elements. Such elements will be replaces with
     `padding`. Elements whose corresponding mask element is `0` are masked out.
 
-    An optional boolean array attribute is provided to specify which dimensions
-    of the transfer are guaranteed to be within bounds. The length of the array
-    must equal the rank of the vector type. Broadcast dimensions must always be
-    in-bounds. The absence of this optional `in_bounds` attribute signifies that
-    any dimension of the transfer (except for broadcasts) may be out-of-bounds.
-    A `vector.transfer_read` can be lowered to a simple load if all dimensions
-    are specified to be within bounds and no `mask` was specified.
-
-    Note that `in_bounds` is specified for result dimensions and not input
-    dimensions. The starting point of the transfer, i.e.,
-    `%A[%expr1, %expr2, %expr3, %expr4]` in the example below, is expected to
-    be in-bounds and as indices are increasing, accesses may run out-of-bounds.
+    An optional boolean array attribute `in_bounds` specifies for every vector
+    dimension if the transfer is guaranteed to be within the source bounds.
+    While the starting point of the transfer has to be in-bounds, accesses may
+    run out-of-bounds as indices increase. Broadcast dimensions must always be
+    in-bounds. If specified, the `in_bounds` array length has to be equal to the
+    vector rank. In absence of the attribute, accesses along all dimensions
+    (except for broadcasts) may run out-of-bounds. A `vector.transfer_read` can
+    be lowered to a simple load if all dimensions are specified to be within
+    bounds and no `mask` was specified.
 
     This operation is called 'read' by opposition to 'load' because the
     super-vector granularity is generally not representable with a single
@@ -1387,7 +1385,8 @@ def Vector_TransferWriteOp :
     new tensor of the same type.
 
     The slice is further defined by a full-rank index within the MemRef/Tensor,
-    supplied as the operands `[2 .. 2 + rank(memref/tensor))`.
+    supplied as the operands `[2 .. 2 + rank(memref/tensor))` that defines the
+    starting point of the transfer (e.g. `%A[%i0, %i1, %i2, %i3]`).
 
     The permutation_map [attribute](../LangRef.md#attributes) is an
     [affine-map](Affine.md#affine-maps) which specifies the transposition on the
@@ -1402,25 +1401,14 @@ def Vector_TransferWriteOp :
     specified to mask out elements. Elements whose corresponding mask element
     is `0` are masked out.
 
-    An optional boolean array attribute is provided to specify which dimensions
-    of the transfer are guaranteed to be within bounds. The absence of this
-    `in_bounds` attribute signifies that any dimension of the transfer may be
-    out-of-bounds. A `vector.transfer_write` can be lowered to a simple store
-    if all dimensions are specified to be within bounds and no `mask` was
-    specified.
-
-    An optional boolean array attribute is provided to specify which dimensions
-    of the transfer are guaranteed to be within bounds. The length of the array
-    must equal the rank of the vector type. The absence of this optional
-    `in_bounds` attribute signifies that any dimension of the transfer
-    may be out-of-bounds. A `vector.transfer_write` can be lowered to a simple
-    store if all dimensions are specified to be within bounds and no `mask` was
-    specified.
-
-    Note that `in_bounds` is specified for result dimensions and not input
-    dimensions. The starting point of the transfer, i.e.,
-    `%A[%expr1, %expr2, %expr3, %expr4]` in the example below, is expected to
-    be in-bounds and as indices are increasing, accesses may run out-of-bounds.
+    An optional boolean array attribute `in_bounds` specifies for every vector
+    dimension if the transfer is guaranteed to be within the source bounds.
+    While the starting point of the transfer has to be in-bounds, accesses may
+    run out-of-bounds as indices increase. If specified, the `in_bounds` array
+    length has to be equal to the vector rank. In absence of the attribute,
+    accesses along all dimensions may run out-of-bounds. A
+    `vector.transfer_write` can be lowered to a simple store if all dimensions
+    are specified to be within bounds and no `mask` was specified.
 
     This operation is called 'write' by opposition to 'store' because the
     super-vector granularity is generally not representable with a single
