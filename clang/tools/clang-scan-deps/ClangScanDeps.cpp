@@ -145,15 +145,15 @@ static llvm::cl::opt<ScanningOutputFormat> Format(
 // Build tools that want to put the PCM files in a different location should use
 // the C++ APIs instead, of which there are two flavors:
 //
-// 1. APIs that generate arguments with paths to modulemap and PCM files via
-//    callbacks provided by the client:
-//     * ModuleDeps::getCanonicalCommandLine(LookupPCMPath, LookupModuleDeps)
-//     * FullDependencies::getAdditionalArgs(LookupPCMPath, LookupModuleDeps)
+// 1. APIs that generate arguments with paths PCM files via a callback provided
+//    by the client:
+//     * ModuleDeps::getCanonicalCommandLine(LookupPCMPath)
+//     * FullDependencies::getCommandLine(LookupPCMPath)
 //
-// 2. APIs that don't generate arguments with paths to modulemap or PCM files
-//    and instead expect the client to append them manually after the fact:
+// 2. APIs that don't generate arguments with paths PCM files and instead expect
+//     the client to append them manually after the fact:
 //     * ModuleDeps::getCanonicalCommandLineWithoutModulePaths()
-//     * FullDependencies::getAdditionalArgsWithoutModulePaths()
+//     * FullDependencies::getCommandLineWithoutModulePaths()
 //
 static llvm::cl::opt<bool> GenerateModulesPathArgs(
     "generate-modules-path-args",
