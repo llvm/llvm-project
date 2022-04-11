@@ -217,7 +217,7 @@ Type emitc::OpaqueType::parse(AsmParser &parser) {
   std::string value;
   SMLoc loc = parser.getCurrentLocation();
   if (parser.parseOptionalString(&value) || value.empty()) {
-    parser.emitError(loc) << "expected non empty string";
+    parser.emitError(loc) << "expected non empty string in !emitc.opaque type";
     return Type();
   }
   if (parser.parseGreater())
