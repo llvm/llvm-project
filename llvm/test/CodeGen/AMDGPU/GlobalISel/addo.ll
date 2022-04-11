@@ -457,7 +457,6 @@ define amdgpu_ps i32 @s_uaddo_i32(i32 inreg %a, i32 inreg %b) {
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_add_u32 s0, s0, s1
 ; GFX7-NEXT:    s_cselect_b32 s1, 1, 0
-; GFX7-NEXT:    s_and_b32 s1, s1, 1
 ; GFX7-NEXT:    s_add_i32 s0, s0, s1
 ; GFX7-NEXT:    ; return to shader part epilog
 ;
@@ -465,7 +464,6 @@ define amdgpu_ps i32 @s_uaddo_i32(i32 inreg %a, i32 inreg %b) {
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_add_u32 s0, s0, s1
 ; GFX8-NEXT:    s_cselect_b32 s1, 1, 0
-; GFX8-NEXT:    s_and_b32 s1, s1, 1
 ; GFX8-NEXT:    s_add_i32 s0, s0, s1
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
@@ -473,7 +471,6 @@ define amdgpu_ps i32 @s_uaddo_i32(i32 inreg %a, i32 inreg %b) {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_add_u32 s0, s0, s1
 ; GFX9-NEXT:    s_cselect_b32 s1, 1, 0
-; GFX9-NEXT:    s_and_b32 s1, s1, 1
 ; GFX9-NEXT:    s_add_i32 s0, s0, s1
 ; GFX9-NEXT:    ; return to shader part epilog
   %uaddo = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %a, i32 %b)
@@ -488,9 +485,6 @@ define amdgpu_ps i64 @s_uaddo_i64(i64 inreg %a, i64 inreg %b) {
 ; GFX7-LABEL: s_uaddo_i64:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_add_u32 s0, s0, s2
-; GFX7-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX7-NEXT:    s_and_b32 s4, s4, 1
-; GFX7-NEXT:    s_cmp_lg_u32 s4, 0
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX7-NEXT:    s_addc_u32 s1, s1, s3
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s3
@@ -506,9 +500,6 @@ define amdgpu_ps i64 @s_uaddo_i64(i64 inreg %a, i64 inreg %b) {
 ; GFX8-LABEL: s_uaddo_i64:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_add_u32 s0, s0, s2
-; GFX8-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX8-NEXT:    s_and_b32 s4, s4, 1
-; GFX8-NEXT:    s_cmp_lg_u32 s4, 0
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX8-NEXT:    s_addc_u32 s1, s1, s3
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s3
@@ -524,9 +515,6 @@ define amdgpu_ps i64 @s_uaddo_i64(i64 inreg %a, i64 inreg %b) {
 ; GFX9-LABEL: s_uaddo_i64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_add_u32 s0, s0, s2
-; GFX9-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX9-NEXT:    s_and_b32 s4, s4, 1
-; GFX9-NEXT:    s_cmp_lg_u32 s4, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX9-NEXT:    s_addc_u32 s1, s1, s3
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s3
@@ -553,8 +541,6 @@ define amdgpu_ps <2 x i32> @s_uaddo_v2i32(<2 x i32> inreg %a, <2 x i32> inreg %b
 ; GFX7-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX7-NEXT:    s_add_u32 s1, s1, s3
 ; GFX7-NEXT:    s_cselect_b32 s3, 1, 0
-; GFX7-NEXT:    s_and_b32 s2, s2, 1
-; GFX7-NEXT:    s_and_b32 s3, s3, 1
 ; GFX7-NEXT:    s_add_i32 s0, s0, s2
 ; GFX7-NEXT:    s_add_i32 s1, s1, s3
 ; GFX7-NEXT:    ; return to shader part epilog
@@ -565,8 +551,6 @@ define amdgpu_ps <2 x i32> @s_uaddo_v2i32(<2 x i32> inreg %a, <2 x i32> inreg %b
 ; GFX8-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX8-NEXT:    s_add_u32 s1, s1, s3
 ; GFX8-NEXT:    s_cselect_b32 s3, 1, 0
-; GFX8-NEXT:    s_and_b32 s2, s2, 1
-; GFX8-NEXT:    s_and_b32 s3, s3, 1
 ; GFX8-NEXT:    s_add_i32 s0, s0, s2
 ; GFX8-NEXT:    s_add_i32 s1, s1, s3
 ; GFX8-NEXT:    ; return to shader part epilog
@@ -577,8 +561,6 @@ define amdgpu_ps <2 x i32> @s_uaddo_v2i32(<2 x i32> inreg %a, <2 x i32> inreg %b
 ; GFX9-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX9-NEXT:    s_add_u32 s1, s1, s3
 ; GFX9-NEXT:    s_cselect_b32 s3, 1, 0
-; GFX9-NEXT:    s_and_b32 s2, s2, 1
-; GFX9-NEXT:    s_and_b32 s3, s3, 1
 ; GFX9-NEXT:    s_add_i32 s0, s0, s2
 ; GFX9-NEXT:    s_add_i32 s1, s1, s3
 ; GFX9-NEXT:    ; return to shader part epilog
@@ -728,9 +710,6 @@ define amdgpu_ps i64 @s_saddo_i64(i64 inreg %a, i64 inreg %b) {
 ; GFX7-LABEL: s_saddo_i64:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_add_u32 s4, s0, s2
-; GFX7-NEXT:    s_cselect_b32 s5, 1, 0
-; GFX7-NEXT:    s_and_b32 s5, s5, 1
-; GFX7-NEXT:    s_cmp_lg_u32 s5, 0
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    s_addc_u32 s5, s1, s3
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s1
@@ -748,9 +727,6 @@ define amdgpu_ps i64 @s_saddo_i64(i64 inreg %a, i64 inreg %b) {
 ; GFX8-LABEL: s_saddo_i64:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_add_u32 s4, s0, s2
-; GFX8-NEXT:    s_cselect_b32 s5, 1, 0
-; GFX8-NEXT:    s_and_b32 s5, s5, 1
-; GFX8-NEXT:    s_cmp_lg_u32 s5, 0
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-NEXT:    s_addc_u32 s5, s1, s3
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s1
@@ -768,9 +744,6 @@ define amdgpu_ps i64 @s_saddo_i64(i64 inreg %a, i64 inreg %b) {
 ; GFX9-LABEL: s_saddo_i64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_add_u32 s4, s0, s2
-; GFX9-NEXT:    s_cselect_b32 s5, 1, 0
-; GFX9-NEXT:    s_and_b32 s5, s5, 1
-; GFX9-NEXT:    s_cmp_lg_u32 s5, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    s_addc_u32 s5, s1, s3
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s1
