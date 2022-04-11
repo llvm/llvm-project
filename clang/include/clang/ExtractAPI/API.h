@@ -50,13 +50,13 @@ namespace extractapi {
 /// \endcode
 using DocComment = std::vector<RawComment::CommentLine>;
 
-// Classes deriving from APIRecord need to have Name be the first constructor
+// Classes deriving from APIRecord need to have USR be the first constructor
 // argument. This is so that they are compatible with `addTopLevelRecord`
 // defined in API.cpp
 /// The base representation of an API record. Holds common symbol information.
 struct APIRecord {
-  StringRef Name;
   StringRef USR;
+  StringRef Name;
   PresumedLoc Location;
   AvailabilityInfo Availability;
   LinkageInfo Linkage;
@@ -101,11 +101,11 @@ public:
 
   APIRecord() = delete;
 
-  APIRecord(RecordKind Kind, StringRef Name, StringRef USR,
+  APIRecord(RecordKind Kind, StringRef USR, StringRef Name,
             PresumedLoc Location, const AvailabilityInfo &Availability,
             LinkageInfo Linkage, const DocComment &Comment,
             DeclarationFragments Declaration, DeclarationFragments SubHeading)
-      : Name(Name), USR(USR), Location(Location), Availability(Availability),
+      : USR(USR), Name(Name), Location(Location), Availability(Availability),
         Linkage(Linkage), Comment(Comment), Declaration(Declaration),
         SubHeading(SubHeading), Kind(Kind) {}
 
@@ -117,13 +117,13 @@ public:
 struct GlobalFunctionRecord : APIRecord {
   FunctionSignature Signature;
 
-  GlobalFunctionRecord(StringRef Name, StringRef USR, PresumedLoc Loc,
+  GlobalFunctionRecord(StringRef USR, StringRef Name, PresumedLoc Loc,
                        const AvailabilityInfo &Availability,
                        LinkageInfo Linkage, const DocComment &Comment,
                        DeclarationFragments Declaration,
                        DeclarationFragments SubHeading,
                        FunctionSignature Signature)
-      : APIRecord(RK_GlobalFunction, Name, USR, Loc, Availability, Linkage,
+      : APIRecord(RK_GlobalFunction, USR, Name, Loc, Availability, Linkage,
                   Comment, Declaration, SubHeading),
         Signature(Signature) {}
 
@@ -137,12 +137,12 @@ private:
 
 /// This holds information associated with global functions.
 struct GlobalVariableRecord : APIRecord {
-  GlobalVariableRecord(StringRef Name, StringRef USR, PresumedLoc Loc,
+  GlobalVariableRecord(StringRef USR, StringRef Name, PresumedLoc Loc,
                        const AvailabilityInfo &Availability,
                        LinkageInfo Linkage, const DocComment &Comment,
                        DeclarationFragments Declaration,
                        DeclarationFragments SubHeading)
-      : APIRecord(RK_GlobalVariable, Name, USR, Loc, Availability, Linkage,
+      : APIRecord(RK_GlobalVariable, USR, Name, Loc, Availability, Linkage,
                   Comment, Declaration, SubHeading) {}
 
   static bool classof(const APIRecord *Record) {
@@ -155,12 +155,12 @@ private:
 
 /// This holds information associated with enum constants.
 struct EnumConstantRecord : APIRecord {
-  EnumConstantRecord(StringRef Name, StringRef USR, PresumedLoc Loc,
+  EnumConstantRecord(StringRef USR, StringRef Name, PresumedLoc Loc,
                      const AvailabilityInfo &Availability,
                      const DocComment &Comment,
                      DeclarationFragments Declaration,
                      DeclarationFragments SubHeading)
-      : APIRecord(RK_EnumConstant, Name, USR, Loc, Availability,
+      : APIRecord(RK_EnumConstant, USR, Name, Loc, Availability,
                   LinkageInfo::none(), Comment, Declaration, SubHeading) {}
 
   static bool classof(const APIRecord *Record) {
@@ -175,10 +175,10 @@ private:
 struct EnumRecord : APIRecord {
   SmallVector<std::unique_ptr<EnumConstantRecord>> Constants;
 
-  EnumRecord(StringRef Name, StringRef USR, PresumedLoc Loc,
+  EnumRecord(StringRef USR, StringRef Name, PresumedLoc Loc,
              const AvailabilityInfo &Availability, const DocComment &Comment,
              DeclarationFragments Declaration, DeclarationFragments SubHeading)
-      : APIRecord(RK_Enum, Name, USR, Loc, Availability, LinkageInfo::none(),
+      : APIRecord(RK_Enum, USR, Name, Loc, Availability, LinkageInfo::none(),
                   Comment, Declaration, SubHeading) {}
 
   static bool classof(const APIRecord *Record) {
@@ -191,11 +191,11 @@ private:
 
 /// This holds information associated with struct fields.
 struct StructFieldRecord : APIRecord {
-  StructFieldRecord(StringRef Name, StringRef USR, PresumedLoc Loc,
+  StructFieldRecord(StringRef USR, StringRef Name, PresumedLoc Loc,
                     const AvailabilityInfo &Availability,
                     const DocComment &Comment, DeclarationFragments Declaration,
                     DeclarationFragments SubHeading)
-      : APIRecord(RK_StructField, Name, USR, Loc, Availability,
+      : APIRecord(RK_StructField, USR, Name, Loc, Availability,
                   LinkageInfo::none(), Comment, Declaration, SubHeading) {}
 
   static bool classof(const APIRecord *Record) {
@@ -210,11 +210,11 @@ private:
 struct StructRecord : APIRecord {
   SmallVector<std::unique_ptr<StructFieldRecord>> Fields;
 
-  StructRecord(StringRef Name, StringRef USR, PresumedLoc Loc,
+  StructRecord(StringRef USR, StringRef Name, PresumedLoc Loc,
                const AvailabilityInfo &Availability, const DocComment &Comment,
                DeclarationFragments Declaration,
                DeclarationFragments SubHeading)
-      : APIRecord(RK_Struct, Name, USR, Loc, Availability, LinkageInfo::none(),
+      : APIRecord(RK_Struct, USR, Name, Loc, Availability, LinkageInfo::none(),
                   Comment, Declaration, SubHeading) {}
 
   static bool classof(const APIRecord *Record) {
@@ -240,14 +240,14 @@ struct ObjCPropertyRecord : APIRecord {
   StringRef SetterName;
   bool IsOptional;
 
-  ObjCPropertyRecord(StringRef Name, StringRef USR, PresumedLoc Loc,
+  ObjCPropertyRecord(StringRef USR, StringRef Name, PresumedLoc Loc,
                      const AvailabilityInfo &Availability,
                      const DocComment &Comment,
                      DeclarationFragments Declaration,
                      DeclarationFragments SubHeading, AttributeKind Attributes,
                      StringRef GetterName, StringRef SetterName,
                      bool IsOptional)
-      : APIRecord(RK_ObjCProperty, Name, USR, Loc, Availability,
+      : APIRecord(RK_ObjCProperty, USR, Name, Loc, Availability,
                   LinkageInfo::none(), Comment, Declaration, SubHeading),
         Attributes(Attributes), GetterName(GetterName), SetterName(SetterName),
         IsOptional(IsOptional) {}
@@ -269,13 +269,13 @@ struct ObjCInstanceVariableRecord : APIRecord {
   using AccessControl = ObjCIvarDecl::AccessControl;
   AccessControl Access;
 
-  ObjCInstanceVariableRecord(StringRef Name, StringRef USR, PresumedLoc Loc,
+  ObjCInstanceVariableRecord(StringRef USR, StringRef Name, PresumedLoc Loc,
                              const AvailabilityInfo &Availability,
                              const DocComment &Comment,
                              DeclarationFragments Declaration,
                              DeclarationFragments SubHeading,
                              AccessControl Access)
-      : APIRecord(RK_ObjCIvar, Name, USR, Loc, Availability,
+      : APIRecord(RK_ObjCIvar, USR, Name, Loc, Availability,
                   LinkageInfo::none(), Comment, Declaration, SubHeading),
         Access(Access) {}
 
@@ -292,12 +292,12 @@ struct ObjCMethodRecord : APIRecord {
   FunctionSignature Signature;
   bool IsInstanceMethod;
 
-  ObjCMethodRecord(StringRef Name, StringRef USR, PresumedLoc Loc,
+  ObjCMethodRecord(StringRef USR, StringRef Name, PresumedLoc Loc,
                    const AvailabilityInfo &Availability,
                    const DocComment &Comment, DeclarationFragments Declaration,
                    DeclarationFragments SubHeading, FunctionSignature Signature,
                    bool IsInstanceMethod)
-      : APIRecord(RK_ObjCMethod, Name, USR, Loc, Availability,
+      : APIRecord(RK_ObjCMethod, USR, Name, Loc, Availability,
                   LinkageInfo::none(), Comment, Declaration, SubHeading),
         Signature(Signature), IsInstanceMethod(IsInstanceMethod) {}
 
@@ -340,12 +340,12 @@ struct ObjCContainerRecord : APIRecord {
 
   ObjCContainerRecord() = delete;
 
-  ObjCContainerRecord(RecordKind Kind, StringRef Name, StringRef USR,
+  ObjCContainerRecord(RecordKind Kind, StringRef USR, StringRef Name,
                       PresumedLoc Loc, const AvailabilityInfo &Availability,
                       LinkageInfo Linkage, const DocComment &Comment,
                       DeclarationFragments Declaration,
                       DeclarationFragments SubHeading)
-      : APIRecord(Kind, Name, USR, Loc, Availability, Linkage, Comment,
+      : APIRecord(Kind, USR, Name, Loc, Availability, Linkage, Comment,
                   Declaration, SubHeading) {}
 
   virtual ~ObjCContainerRecord() = 0;
@@ -355,12 +355,12 @@ struct ObjCContainerRecord : APIRecord {
 struct ObjCCategoryRecord : ObjCContainerRecord {
   SymbolReference Interface;
 
-  ObjCCategoryRecord(StringRef Name, StringRef USR, PresumedLoc Loc,
+  ObjCCategoryRecord(StringRef USR, StringRef Name, PresumedLoc Loc,
                      const AvailabilityInfo &Availability,
                      const DocComment &Comment,
                      DeclarationFragments Declaration,
                      DeclarationFragments SubHeading, SymbolReference Interface)
-      : ObjCContainerRecord(RK_ObjCCategory, Name, USR, Loc, Availability,
+      : ObjCContainerRecord(RK_ObjCCategory, USR, Name, Loc, Availability,
                             LinkageInfo::none(), Comment, Declaration,
                             SubHeading),
         Interface(Interface) {}
@@ -379,13 +379,13 @@ struct ObjCInterfaceRecord : ObjCContainerRecord {
   // ObjCCategoryRecord%s are stored in and owned by APISet.
   SmallVector<ObjCCategoryRecord *> Categories;
 
-  ObjCInterfaceRecord(StringRef Name, StringRef USR, PresumedLoc Loc,
+  ObjCInterfaceRecord(StringRef USR, StringRef Name, PresumedLoc Loc,
                       const AvailabilityInfo &Availability, LinkageInfo Linkage,
                       const DocComment &Comment,
                       DeclarationFragments Declaration,
                       DeclarationFragments SubHeading,
                       SymbolReference SuperClass)
-      : ObjCContainerRecord(RK_ObjCInterface, Name, USR, Loc, Availability,
+      : ObjCContainerRecord(RK_ObjCInterface, USR, Name, Loc, Availability,
                             Linkage, Comment, Declaration, SubHeading),
         SuperClass(SuperClass) {}
 
@@ -399,12 +399,12 @@ private:
 
 /// This holds information associated with Objective-C protocols.
 struct ObjCProtocolRecord : ObjCContainerRecord {
-  ObjCProtocolRecord(StringRef Name, StringRef USR, PresumedLoc Loc,
+  ObjCProtocolRecord(StringRef USR, StringRef Name, PresumedLoc Loc,
                      const AvailabilityInfo &Availability,
                      const DocComment &Comment,
                      DeclarationFragments Declaration,
                      DeclarationFragments SubHeading)
-      : ObjCContainerRecord(RK_ObjCProtocol, Name, USR, Loc, Availability,
+      : ObjCContainerRecord(RK_ObjCProtocol, USR, Name, Loc, Availability,
                             LinkageInfo::none(), Comment, Declaration,
                             SubHeading) {}
 
@@ -418,10 +418,10 @@ private:
 
 /// This holds information associated with macro definitions.
 struct MacroDefinitionRecord : APIRecord {
-  MacroDefinitionRecord(StringRef Name, StringRef USR, PresumedLoc Loc,
+  MacroDefinitionRecord(StringRef USR, StringRef Name, PresumedLoc Loc,
                         DeclarationFragments Declaration,
                         DeclarationFragments SubHeading)
-      : APIRecord(RK_MacroDefinition, Name, USR, Loc, AvailabilityInfo(),
+      : APIRecord(RK_MacroDefinition, USR, Name, Loc, AvailabilityInfo(),
                   LinkageInfo(), {}, Declaration, SubHeading) {}
 
   static bool classof(const APIRecord *Record) {
@@ -440,11 +440,11 @@ private:
 struct TypedefRecord : APIRecord {
   SymbolReference UnderlyingType;
 
-  TypedefRecord(StringRef Name, StringRef USR, PresumedLoc Loc,
+  TypedefRecord(StringRef USR, StringRef Name, PresumedLoc Loc,
                 const AvailabilityInfo &Availability, const DocComment &Comment,
                 DeclarationFragments Declaration,
                 DeclarationFragments SubHeading, SymbolReference UnderlyingType)
-      : APIRecord(RK_Typedef, Name, USR, Loc, Availability, LinkageInfo(),
+      : APIRecord(RK_Typedef, USR, Name, Loc, Availability, LinkageInfo(),
                   Comment, Declaration, SubHeading),
         UnderlyingType(UnderlyingType) {}
 
@@ -647,8 +647,7 @@ public:
                             DeclarationFragments SubHeading,
                             SymbolReference UnderlyingType);
 
-  /// A mapping type to store a set of APIRecord%s with the declaration name as
-  /// the key.
+  /// A mapping type to store a set of APIRecord%s with the USR as the key.
   template <typename RecordTy,
             typename =
                 std::enable_if_t<std::is_base_of<APIRecord, RecordTy>::value>>
