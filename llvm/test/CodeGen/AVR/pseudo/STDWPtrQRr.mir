@@ -1,4 +1,4 @@
-# RUN: llc -O0 -run-pass=avr-expand-pseudo  %s -o - | FileCheck %s
+# RUN: llc -O0 -run-pass=avr-expand-pseudo -verify-machineinstrs %s -o - | FileCheck %s
 
 --- |
   target triple = "avr--"
@@ -15,8 +15,52 @@ body: |
 
     ; CHECK-LABEL: test
 
-    ; CHECK:      STDPtrQRr $r29r28, 10, $r0
-    ; CHECK-NEXT: STDPtrQRr $r29r28, 11, $r1
+    ; Small displacement (<63):
+    ; CHECK:      STDPtrQRr $r29r28, 3, $r0
+    ; CHECK-NEXT: STDPtrQRr $r29r28, 4, $r1
+    STDWPtrQRr $r29r28, 3, $r1r0
 
-    STDWPtrQRr $r29r28, 10, $r1r0
+    ; Small displacement where the destination register is killed:
+    ; CHECK:      STDPtrQRr $r29r28, 3, $r0
+    ; CHECK-NEXT: STDPtrQRr killed $r29r28, 4, $r1
+    STDWPtrQRr killed $r29r28, 3, $r1r0
+
+    ; Small displacement where the source register is killed:
+    ; CHECK:      STDPtrQRr $r29r28, 3, killed $r0
+    ; CHECK-NEXT: STDPtrQRr $r29r28, 4, killed $r1
+    STDWPtrQRr $r29r28, 3, killed $r1r0
+
+    ; Small displacement, near the limit (=62):
+    ; CHECK:      STDPtrQRr $r29r28, 62, $r0
+    ; CHECK-NEXT: STDPtrQRr $r29r28, 63, $r1
+    STDWPtrQRr $r29r28, 62, $r1r0
+
+    ; Large displacement (>=63):
+    ; CHECK: PUSHRr $r28, implicit-def $sp, implicit $sp
+    ; CHECK-NEXT: PUSHRr $r29, implicit-def $sp, implicit $sp
+    ; CHECK-NEXT: $r28 = SUBIRdK killed $r28, 193, implicit-def $sreg
+    ; CHECK-NEXT: $r29 = SBCIRdK killed $r29, 255, implicit-def $sreg, implicit killed $sreg
+    ; CHECK-NEXT: STPtrRr $r29r28, $r0
+    ; CHECK-NEXT: STDPtrQRr $r29r28, 1, $r1
+    ; CHECK-NEXT: $r29 = POPRd implicit-def $sp, implicit $sp
+    ; CHECK-NEXT: $r28 = POPRd implicit-def $sp, implicit $sp
+    STDWPtrQRr $r29r28, 63, $r1r0
+
+    ; Large displacement where the destination register is killed:
+    ; CHECK: $r28 = SUBIRdK killed $r28, 193, implicit-def $sreg
+    ; CHECK-NEXT: $r29 = SBCIRdK killed $r29, 255, implicit-def $sreg, implicit killed $sreg
+    ; CHECK-NEXT: STPtrRr $r29r28, $r0
+    ; CHECK-NEXT: STDPtrQRr $r29r28, 1, $r1
+    STDWPtrQRr killed $r29r28, 63, $r1r0
+
+    ; Large displacement where the source register is killed:
+    ; CHECK: PUSHRr $r28, implicit-def $sp, implicit $sp
+    ; CHECK-NEXT: PUSHRr $r29, implicit-def $sp, implicit $sp
+    ; CHECK-NEXT: $r28 = SUBIRdK killed $r28, 193, implicit-def $sreg
+    ; CHECK-NEXT: $r29 = SBCIRdK killed $r29, 255, implicit-def $sreg, implicit killed $sreg
+    ; CHECK-NEXT: STPtrRr $r29r28, killed $r0
+    ; CHECK-NEXT: STDPtrQRr $r29r28, 1, killed $r1
+    ; CHECK-NEXT: $r29 = POPRd implicit-def $sp, implicit $sp
+    ; CHECK-NEXT: $r28 = POPRd implicit-def $sp, implicit $sp
+    STDWPtrQRr $r29r28, 63, killed $r1r0
 ...

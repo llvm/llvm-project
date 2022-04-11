@@ -1157,32 +1157,51 @@ bool AVRExpandPseudo::expand<AVR::STWPtrPdRr>(Block &MBB, BlockIt MBBI) {
 template <>
 bool AVRExpandPseudo::expand<AVR::STDWPtrQRr>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
-  Register SrcLoReg, SrcHiReg;
+
   Register DstReg = MI.getOperand(0).getReg();
-  Register SrcReg = MI.getOperand(2).getReg();
-  unsigned Imm = MI.getOperand(1).getImm();
   bool DstIsKill = MI.getOperand(0).isKill();
+  unsigned Imm = MI.getOperand(1).getImm();
+  Register SrcReg = MI.getOperand(2).getReg();
   bool SrcIsKill = MI.getOperand(2).isKill();
-  unsigned OpLo = AVR::STDPtrQRr;
-  unsigned OpHi = AVR::STDPtrQRr;
-  TRI->splitReg(SrcReg, SrcLoReg, SrcHiReg);
 
-  // Since we add 1 to the Imm value for the high byte below, and 63 is the
-  // highest Imm value allowed for the instruction, 62 is the limit here.
-  assert(Imm <= 62 && "Offset is out of range");
+  // STD's maximum displacement is 63, so larger stores have to be split into a
+  // set of operations
+  if (Imm >= 63) {
+    if (!DstIsKill) {
+      buildMI(MBB, MBBI, AVR::PUSHWRr).addReg(DstReg);
+    }
 
-  auto MIBLO = buildMI(MBB, MBBI, OpLo)
-                   .addReg(DstReg)
-                   .addImm(Imm)
-                   .addReg(SrcLoReg, getKillRegState(SrcIsKill));
+    buildMI(MBB, MBBI, AVR::SUBIWRdK)
+        .addReg(DstReg, RegState::Define)
+        .addReg(DstReg, RegState::Kill)
+        .addImm(-Imm);
 
-  auto MIBHI = buildMI(MBB, MBBI, OpHi)
-                   .addReg(DstReg, getKillRegState(DstIsKill))
-                   .addImm(Imm + 1)
-                   .addReg(SrcHiReg, getKillRegState(SrcIsKill));
+    buildMI(MBB, MBBI, AVR::STWPtrRr)
+        .addReg(DstReg, RegState::Kill)
+        .addReg(SrcReg, getKillRegState(SrcIsKill));
 
-  MIBLO.setMemRefs(MI.memoperands());
-  MIBHI.setMemRefs(MI.memoperands());
+    if (!DstIsKill) {
+      buildMI(MBB, MBBI, AVR::POPWRd).addDef(DstReg, RegState::Define);
+    }
+  } else {
+    unsigned OpLo = AVR::STDPtrQRr;
+    unsigned OpHi = AVR::STDPtrQRr;
+    Register SrcLoReg, SrcHiReg;
+    TRI->splitReg(SrcReg, SrcLoReg, SrcHiReg);
+
+    auto MIBLO = buildMI(MBB, MBBI, OpLo)
+                     .addReg(DstReg)
+                     .addImm(Imm)
+                     .addReg(SrcLoReg, getKillRegState(SrcIsKill));
+
+    auto MIBHI = buildMI(MBB, MBBI, OpHi)
+                     .addReg(DstReg, getKillRegState(DstIsKill))
+                     .addImm(Imm + 1)
+                     .addReg(SrcHiReg, getKillRegState(SrcIsKill));
+
+    MIBLO.setMemRefs(MI.memoperands());
+    MIBHI.setMemRefs(MI.memoperands());
+  }
 
   MI.eraseFromParent();
   return true;
