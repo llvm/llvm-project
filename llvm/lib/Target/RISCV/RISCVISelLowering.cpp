@@ -1218,6 +1218,10 @@ bool RISCVTargetLowering::isSExtCheaperThanZExt(EVT SrcVT, EVT DstVT) const {
   return Subtarget.is64Bit() && SrcVT == MVT::i32 && DstVT == MVT::i64;
 }
 
+bool RISCVTargetLowering::signExtendConstant(const ConstantInt *CI) const {
+  return Subtarget.is64Bit() && CI->getType()->isIntegerTy(32);
+}
+
 bool RISCVTargetLowering::isCheapToSpeculateCttz() const {
   return Subtarget.hasStdExtZbb();
 }
