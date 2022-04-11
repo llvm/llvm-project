@@ -27,9 +27,10 @@ std::vector<std::string>
 FullDependencies::getCommandLineWithoutModulePaths() const {
   std::vector<std::string> Args = OriginalCommandLine;
 
-  std::vector<std::string> AdditionalArgs =
-      getAdditionalArgsWithoutModulePaths();
-  Args.insert(Args.end(), AdditionalArgs.begin(), AdditionalArgs.end());
+  Args.push_back("-fno-implicit-modules");
+  Args.push_back("-fno-implicit-module-maps");
+  for (const PrebuiltModuleDep &PMD : PrebuiltModuleDeps)
+    Args.push_back("-fmodule-file=" + PMD.PCMFile);
 
   // This argument is unused in explicit compiles.
   llvm::erase_if(Args, [](const std::string &Arg) {
@@ -38,19 +39,6 @@ FullDependencies::getCommandLineWithoutModulePaths() const {
 
   // TODO: Filter out the remaining implicit modules leftovers
   // (e.g. "-fmodules-prune-interval=" or "-fmodules-prune-after=").
-
-  return Args;
-}
-
-std::vector<std::string>
-FullDependencies::getAdditionalArgsWithoutModulePaths() const {
-  std::vector<std::string> Args{
-      "-fno-implicit-modules",
-      "-fno-implicit-module-maps",
-  };
-
-  for (const PrebuiltModuleDep &PMD : PrebuiltModuleDeps)
-    Args.push_back("-fmodule-file=" + PMD.PCMFile);
 
   return Args;
 }

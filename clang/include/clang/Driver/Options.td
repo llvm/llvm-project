@@ -4880,22 +4880,6 @@ def emit_fir : Flag<["-"], "emit-fir">, Alias<emit_mlir>;
 } // let Flags = [FC1Option, FlangOnlyOption]
 
 //===----------------------------------------------------------------------===//
-// Option Options
-//===----------------------------------------------------------------------===//
-
-let Flags = [CC1Option, NoDriverOption] in {
-
-def remove_preceeding_explicit_module_build_incompatible_options :
-  Flag<["-"], "remove-preceeding-explicit-module-build-incompatible-options">,
-  HelpText<"Removes any arguments before this one that would be incompatible "
-           "with explicitly building a module. This includes things like -o "
-           "and input files. This option can be used to append arguments to "
-           "convert a build of a translation unit with implicit modules "
-           "into an explicit build of a specific module.">;
-
-} // let Flags = [CC1Option, NoDriverOption]
-
-//===----------------------------------------------------------------------===//
 // Target Options (cc1 + cc1as)
 //===----------------------------------------------------------------------===//
 
