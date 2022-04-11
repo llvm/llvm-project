@@ -602,59 +602,70 @@ Out:
 @glb = external global i8, align 1
 
 ; Test case for PR51248.
-define void @test_sink_store_only(i8 %var, i64 %start) writeonly {
+define void @test_sink_store_only() writeonly {
 ; CHECK-LABEL: @test_sink_store_only(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i8 [[VAR:%.*]], 3
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i8 [[DIV]], 0
 ; CHECK-NEXT:    [[GLB_PROMOTED:%.*]] = load i8, i8* @glb, align 1
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
-; CHECK-NEXT:    [[MERGE1:%.*]] = phi i8 [ [[GLB_PROMOTED]], [[ENTRY:%.*]] ], [ [[MERGE:%.*]], [[LOOP_LATCH:%.*]] ]
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[ADD:%.*]], [[LOOP_LATCH]] ]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[I]], 4
-; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_BODY:%.*]], label [[FOR_END:%.*]]
-; CHECK:       loop.body:
-; CHECK-NEXT:    br i1 [[CMP2]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
-; CHECK:       cond.true:
-; CHECK-NEXT:    br label [[LOOP_LATCH]]
-; CHECK:       cond.false:
-; CHECK-NEXT:    br label [[LOOP_LATCH]]
+; CHECK-NEXT:    [[DIV1:%.*]] = phi i8 [ [[GLB_PROMOTED]], [[ENTRY:%.*]] ], [ [[DIV:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i8 [ 0, [[ENTRY]] ], [ [[ADD:%.*]], [[LOOP_LATCH]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[I]], 4
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_LATCH]], label [[EXIT:%.*]]
 ; CHECK:       loop.latch:
-; CHECK-NEXT:    [[MERGE]] = phi i8 [ [[DIV]], [[COND_TRUE]] ], [ 0, [[COND_FALSE]] ]
-; CHECK-NEXT:    [[ADD]] = add i64 [[I]], 4
+; CHECK-NEXT:    [[DIV]] = sdiv i8 [[I]], 3
+; CHECK-NEXT:    [[ADD]] = add i8 [[I]], 4
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
-; CHECK:       for.end:
-; CHECK-NEXT:    [[MERGE1_LCSSA:%.*]] = phi i8 [ [[MERGE1]], [[LOOP_HEADER]] ]
-; CHECK-NEXT:    store i8 [[MERGE1_LCSSA]], i8* @glb, align 1
+; CHECK:       exit:
+; CHECK-NEXT:    [[DIV1_LCSSA:%.*]] = phi i8 [ [[DIV1]], [[LOOP_HEADER]] ]
+; CHECK-NEXT:    store i8 [[DIV1_LCSSA]], i8* @glb, align 1
 ; CHECK-NEXT:    ret void
 ;
 entry:
   br label %loop.header
 
 loop.header:
-  %i = phi i64 [ 0, %entry ], [ %add, %loop.latch ]
-  %cmp = icmp ult i64 %i, 4
-  br i1 %cmp, label %loop.body, label %for.end
-
-loop.body:
-  %div = sdiv i8 %var, 3
-  %cmp2 = icmp slt i8 %div, 0
-  br i1 %cmp2, label %cond.true, label %cond.false
-
-cond.true:
-  br label %loop.latch
-
-cond.false:
-  br label %loop.latch
+  %i = phi i8 [ 0, %entry ], [ %add, %loop.latch ]
+  %cmp = icmp ult i8 %i, 4
+  br i1 %cmp, label %loop.latch, label %exit
 
 loop.latch:
-  %merge = phi i8 [ %div, %cond.true ], [ 0, %cond.false ]
-  store i8 %merge, i8* @glb, align 1
-  %add = add i64 %i, 4
+  %div = sdiv i8 %i, 3
+  store i8 %div, i8* @glb, align 1
+  %add = add i8 %i, 4
   br label %loop.header
 
-for.end:
+exit:
+  ret void
+}
+
+define void @test_sink_store_only_no_phi_needed() writeonly {
+; CHECK-LABEL: @test_sink_store_only_no_phi_needed(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[ADD:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[I]], 4
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i8 [[I]], 3
+; CHECK-NEXT:    [[ADD]] = add i8 [[I]], 4
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[DIV_LCSSA:%.*]] = phi i8 [ [[DIV]], [[LOOP]] ]
+; CHECK-NEXT:    store i8 [[DIV_LCSSA]], i8* @glb, align 1
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi i8 [ 0, %entry ], [ %add, %loop ]
+  %cmp = icmp ult i8 %i, 4
+  %div = sdiv i8 %i, 3
+  store i8 %div, i8* @glb, align 1
+  %add = add i8 %i, 4
+  br i1 %cmp, label %loop, label %exit
+
+exit:
   ret void
 }
 
