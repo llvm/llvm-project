@@ -191,6 +191,10 @@ public:
 
     return 0;
   }
+  unsigned getELEN() const {
+    assert(hasVInstructions() && "Expected V extension");
+    return hasVInstructionsI64() ? 64 : 32;
+  }
   unsigned getMinVLen() const { return ZvlLen; }
   unsigned getMaxVLen() const { return 65536; }
   unsigned getRealMinVLen() const {
@@ -246,7 +250,6 @@ public:
   unsigned getMaxRVVVectorSizeInBits() const;
   unsigned getMinRVVVectorSizeInBits() const;
   unsigned getMaxLMULForFixedLengthVectors() const;
-  unsigned getMaxELENForFixedLengthVectors() const;
   bool useRVVForFixedLengthVectors() const;
 };
 } // End llvm namespace
