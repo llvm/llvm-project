@@ -53,8 +53,8 @@ define i128 @opt_setcc_lt_power_of_2(i128 %a) nounwind {
 ; X64-NEXT:    addq $1, %rax
 ; X64-NEXT:    adcq $0, %rdx
 ; X64-NEXT:    movq %rax, %rcx
+; X64-NEXT:    shrq $60, %rcx
 ; X64-NEXT:    orq %rdx, %rcx
-; X64-NEXT:    shrdq $60, %rdx, %rcx
 ; X64-NEXT:    jne .LBB0_1
 ; X64-NEXT:  # %bb.2: # %exit
 ; X64-NEXT:    retq
@@ -90,8 +90,8 @@ define i1 @opt_setcc_srl_eq_zero(i128 %a) nounwind {
 ;
 ; X64-LABEL: opt_setcc_srl_eq_zero:
 ; X64:       # %bb.0:
+; X64-NEXT:    shrq $17, %rdi
 ; X64-NEXT:    orq %rsi, %rdi
-; X64-NEXT:    shrdq $17, %rsi, %rdi
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
    %srl = lshr i128 %a, 17
@@ -119,8 +119,8 @@ define i1 @opt_setcc_srl_ne_zero(i128 %a) nounwind {
 ;
 ; X64-LABEL: opt_setcc_srl_ne_zero:
 ; X64:       # %bb.0:
+; X64-NEXT:    shrq $17, %rdi
 ; X64-NEXT:    orq %rsi, %rdi
-; X64-NEXT:    shrdq $17, %rsi, %rdi
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
    %srl = lshr i128 %a, 17
@@ -148,8 +148,8 @@ define i1 @opt_setcc_shl_eq_zero(i128 %a) nounwind {
 ;
 ; X64-LABEL: opt_setcc_shl_eq_zero:
 ; X64:       # %bb.0:
+; X64-NEXT:    shlq $17, %rsi
 ; X64-NEXT:    orq %rdi, %rsi
-; X64-NEXT:    shldq $17, %rdi, %rsi
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
    %shl = shl i128 %a, 17
@@ -177,8 +177,8 @@ define i1 @opt_setcc_shl_ne_zero(i128 %a) nounwind {
 ;
 ; X64-LABEL: opt_setcc_shl_ne_zero:
 ; X64:       # %bb.0:
+; X64-NEXT:    shlq $17, %rsi
 ; X64-NEXT:    orq %rdi, %rsi
-; X64-NEXT:    shldq $17, %rdi, %rsi
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
    %shl = shl i128 %a, 17
@@ -255,8 +255,8 @@ define i1 @opt_setcc_expanded_shl_correct_shifts(i64 %a, i64 %b) nounwind {
 ;
 ; X64-LABEL: opt_setcc_expanded_shl_correct_shifts:
 ; X64:       # %bb.0:
+; X64-NEXT:    shlq $17, %rdi
 ; X64-NEXT:    orq %rsi, %rdi
-; X64-NEXT:    shldq $17, %rsi, %rdi
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
   %shl.a = shl i64 %a, 17

@@ -3875,6 +3875,72 @@ static SDValue foldSetCCWithRotate(EVT VT, SDValue N0, SDValue N1,
   return SDValue();
 }
 
+static SDValue foldSetCCWithFunnelShift(EVT VT, SDValue N0, SDValue N1,
+                                        ISD::CondCode Cond, const SDLoc &dl,
+                                        SelectionDAG &DAG) {
+  // If we are testing for all-bits-clear, we might be able to do that with
+  // less shifting since bit-order does not matter.
+  if (Cond != ISD::SETEQ && Cond != ISD::SETNE)
+    return SDValue();
+
+  auto *C1 = isConstOrConstSplat(N1, /* AllowUndefs */ true);
+  if (!C1 || !C1->isZero())
+    return SDValue();
+
+  if (!N0.hasOneUse() ||
+      (N0.getOpcode() != ISD::FSHL && N0.getOpcode() != ISD::FSHR))
+    return SDValue();
+
+  unsigned BitWidth = N0.getScalarValueSizeInBits();
+  auto *ShAmtC = isConstOrConstSplat(N0.getOperand(2));
+  if (!ShAmtC || ShAmtC->getAPIntValue().uge(BitWidth))
+    return SDValue();
+
+  // Canonicalize fshr as fshl to reduce pattern-matching.
+  unsigned ShAmt = ShAmtC->getZExtValue();
+  if (N0.getOpcode() == ISD::FSHR)
+    ShAmt = BitWidth - ShAmt;
+
+  // Match an 'or' with a specific operand 'Other' in either commuted variant.
+  SDValue X, Y;
+  auto matchOr = [&X, &Y](SDValue Or, SDValue Other) {
+    if (Or.getOpcode() != ISD::OR || !Or.hasOneUse())
+      return false;
+    if (Or.getOperand(0) == Other) {
+      X = Or.getOperand(0);
+      Y = Or.getOperand(1);
+      return true;
+    }
+    if (Or.getOperand(1) == Other) {
+      X = Or.getOperand(1);
+      Y = Or.getOperand(0);
+      return true;
+    }
+    return false;
+  };
+
+  EVT OpVT = N0.getValueType();
+  EVT ShAmtVT = N0.getOperand(2).getValueType();
+  SDValue F0 = N0.getOperand(0);
+  SDValue F1 = N0.getOperand(1);
+  if (matchOr(F0, F1)) {
+    // fshl (or X, Y), X, C ==/!= 0 --> or (shl Y, C), X ==/!= 0
+    SDValue NewShAmt = DAG.getConstant(ShAmt, dl, ShAmtVT);
+    SDValue Shift = DAG.getNode(ISD::SHL, dl, OpVT, Y, NewShAmt);
+    SDValue NewOr = DAG.getNode(ISD::OR, dl, OpVT, Shift, X);
+    return DAG.getSetCC(dl, VT, NewOr, N1, Cond);
+  }
+  if (matchOr(F1, F0)) {
+    // fshl X, (or X, Y), C ==/!= 0 --> or (srl Y, BW-C), X ==/!= 0
+    SDValue NewShAmt = DAG.getConstant(BitWidth - ShAmt, dl, ShAmtVT);
+    SDValue Shift = DAG.getNode(ISD::SRL, dl, OpVT, Y, NewShAmt);
+    SDValue NewOr = DAG.getNode(ISD::OR, dl, OpVT, Shift, X);
+    return DAG.getSetCC(dl, VT, NewOr, N1, Cond);
+  }
+
+  return SDValue();
+}
+
 /// Try to simplify a setcc built with the specified operands and cc. If it is
 /// unable to simplify it, return a null SDValue.
 SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
@@ -3912,6 +3978,9 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
     return DAG.getSetCC(dl, VT, N1, N0, SwappedCC);
 
   if (SDValue V = foldSetCCWithRotate(VT, N0, N1, Cond, dl, DAG))
+    return V;
+
+  if (SDValue V = foldSetCCWithFunnelShift(VT, N0, N1, Cond, dl, DAG))
     return V;
 
   if (auto *N1C = isConstOrConstSplat(N1)) {
