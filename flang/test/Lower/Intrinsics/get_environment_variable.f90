@@ -46,7 +46,7 @@ subroutine name_and_length_only(name, length)
 ! CHECK-NEXT: %[[nameLength:.*]] = arith.constant 32 : index
 ! CHECK-NEXT: %[[nameBox:.*]] = fir.embox %0#0 typeparams %[[nameLength]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>
 ! CHECK-NEXT: %true = arith.constant true
-! CHECK-NEXT: %[[sourceFileString:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,[[sourceFileLength:.*]]>>
+! CHECK: %[[sourceFileString:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,[[sourceFileLength:.*]]>>
 ! CHECK-NEXT: %[[sourceLine:.*]] = arith.constant [[# @LINE - 7]] : i32
 ! CHECK-NEXT: %[[name:.*]] = fir.convert %[[nameBox]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
 ! CHECK-NEXT: %[[sourceFile:.*]] = fir.convert %[[sourceFileString]] : (!fir.ref<!fir.char<1,[[sourceFileLength]]>>) -> !fir.ref<i8>
@@ -54,7 +54,6 @@ subroutine name_and_length_only(name, length)
 ! CHECK-64-NEXT: %[[length:.*]] = fir.call @_FortranAEnvVariableLength(%[[name]], %true, %[[sourceFile]], %[[sourceLine]]) : (!fir.box<none>, i1, !fir.ref<i8>, i32) -> i64
 ! CHECK-32-NEXT: %[[length:.*]] = fir.convert %[[length64]] : (i64) -> i32
 ! CHECK-NEXT: fir.store %[[length]] to %[[lengthArg]] : !fir.ref<i[[DEFAULT_INTEGER_SIZE]]>
-! CHECK-NEXT: return
 end subroutine name_and_length_only
 
 ! CHECK-LABEL: func @_QPname_and_status_only(
@@ -67,8 +66,8 @@ subroutine name_and_status_only(name, status)
 ! CHECK: %[[nameUnbox:.*]]:2 = fir.unboxchar %[[nameArg]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK-NEXT: %[[nameLength:.*]] = arith.constant 32 : index
 ! CHECK-NEXT: %[[nameBox:.*]] = fir.embox %[[nameUnbox]]#0 typeparams %[[nameLength]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>
-! CHECK-NEXT: %[[value:.*]] = fir.absent !fir.box<none>
 ! CHECK-NEXT: %true = arith.constant true
+! CHECK-NEXT: %[[value:.*]] = fir.absent !fir.box<none>
 ! CHECK-NEXT: %[[errmsg:.*]] = fir.absent !fir.box<none>
 ! CHECK-NEXT: %[[sourceFileString:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,[[sourceFileLength:.*]]>>
 ! CHECK-NEXT: %[[sourceLine:.*]] = arith.constant [[# @LINE - 8]] : i32
@@ -76,9 +75,8 @@ subroutine name_and_status_only(name, status)
 ! CHECK-NEXT: %[[sourceFile:.*]] = fir.convert %[[sourceFileString]] : (!fir.ref<!fir.char<1,[[sourceFileLength]]>>) -> !fir.ref<i8>
 ! CHECK-32-NEXT: %[[status:.*]] = fir.call @_FortranAEnvVariableValue(%[[name]], %[[value]], %true, %[[errmsg]], %[[sourceFile]], %[[sourceLine]]) : (!fir.box<none>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 ! CHECK-64-NEXT: %[[status32:.*]] = fir.call @_FortranAEnvVariableValue(%[[name]], %[[value]], %true, %[[errmsg]], %[[sourceFile]], %[[sourceLine]]) : (!fir.box<none>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
-! CHECK-64-NEXT: %[[status:.*]] = fir.convert %[[status32]] : (i32) -> i64
-! CHECK-NEXT: fir.store %[[status]] to %[[statusArg]] : !fir.ref<i[[DEFAULT_INTEGER_SIZE]]>
-! CHECK-NEXT: return
+! CHECK-64: %[[status:.*]] = fir.convert %[[status32]] : (i32) -> i64
+! CHECK: fir.store %[[status]] to %[[statusArg]] : !fir.ref<i[[DEFAULT_INTEGER_SIZE]]>
 end subroutine name_and_status_only
 
 ! CHECK-LABEL: func @_QPname_and_trim_name_only(
@@ -104,9 +102,9 @@ subroutine name_and_errmsg_only(name, errmsg)
 ! CHECK-NEXT: %[[nameUnbox:.*]]:2 = fir.unboxchar %[[nameArg]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK-NEXT: %[[nameLength:.*]] = arith.constant 32 : index
 ! CHECK-NEXT: %[[nameBox:.*]] = fir.embox %[[nameUnbox]]#0 typeparams %[[nameLength]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>
-! CHECK-NEXT: %[[value:.*]] = fir.absent !fir.box<none>
-! CHECK-NEXT: %true = arith.constant true
 ! CHECK-NEXT: %[[errmsgBox:.*]] = fir.embox %[[errmsgUnbox]]#0 typeparams %c32 : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>
+! CHECK-NEXT: %true = arith.constant true
+! CHECK-NEXT: %[[value:.*]] = fir.absent !fir.box<none>
 ! CHECK-NEXT: %[[sourceFileString:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,[[sourceFileLength:.*]]>>
 ! CHECK-NEXT: %[[sourceLine:.*]] = arith.constant [[# @LINE - 10]] : i32
 ! CHECK-NEXT: %[[name:.*]] = fir.convert %[[nameBox]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
@@ -134,27 +132,33 @@ subroutine all_arguments(name, value, length, status, trim_name, errmsg)
 ! CHECK-NEXT: %[[nameLength:.*]] = arith.constant 32 : index
 ! CHECK-NEXT: %[[valueUnbox:.*]]:2 = fir.unboxchar %[[valueArg]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK-NEXT: %[[valueLength:.*]] = arith.constant 32 : index
-! CHECK-NEXT: %[[trimNameLoaded:.*]] = fir.load %[[trimNameArg]] : !fir.ref<!fir.logical<4>>
 ! CHECK-NEXT: %[[nameBoxed:.*]] = fir.embox %[[nameUnbox]]#0 typeparams %[[nameLength]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>
 ! CHECK-NEXT: %[[valueBoxed:.*]] = fir.embox %[[valueUnbox]]#0 typeparams %[[valueLength]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>
 ! CHECK-NEXT: %[[errmsgBoxed:.*]] = fir.embox %[[errmsgUnbox]]#0 typeparams %[[errmsgLength]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>
-! CHECK-NEXT: %[[sourceFileString:.*]] = fir.address_of(@_QQcl.[[fileString:.*]]) : !fir.ref<!fir.char<1,[[fileStringLength:.*]]>>
-! CHECK-NEXT: %[[sourceLine:.*]] = arith.constant [[# @LINE - 12]] : i32
+! CHECK:      %[[trimName:.*]] = fir.if %{{.*}} -> (i1) {
+! CHECK-NEXT:   %[[trimNameLoaded:.*]] = fir.load %[[trimNameArg]] : !fir.ref<!fir.logical<4>>
+! CHECK-NEXT:   %[[trimCast:.*]] = fir.convert %[[trimNameLoaded]] : (!fir.logical<4>) -> i1
+! CHECK-NEXT:   fir.result %[[trimCast]] : i1
+! CHECK-NEXT: } else {
+! CHECK-NEXT:   %[[trueVal:.*]] = arith.constant true
+! CHECK-NEXT:   fir.result %[[trueVal]] : i1
+! CHECK-NEXT: }
+! CHECK: %[[sourceFileString:.*]] = fir.address_of(@_QQcl.[[fileString:.*]]) : !fir.ref<!fir.char<1,[[fileStringLength:.*]]>>
+! CHECK-NEXT: %[[sourceLine:.*]] = arith.constant [[# @LINE - 19]] : i32
 ! CHECK-NEXT: %[[name:.*]] = fir.convert %[[nameBoxed]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
 ! CHECK-NEXT: %[[value:.*]] = fir.convert %[[valueBoxed]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
-! CHECK-NEXT: %[[trimName:.*]] = fir.convert %[[trimNameLoaded]] : (!fir.logical<4>) -> i1
 ! CHECK-NEXT: %[[errmsg:.*]] = fir.convert %[[errmsgBoxed]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
 ! CHECK-NEXT: %[[sourceFile:.*]] = fir.convert %[[sourceFileString]] : (!fir.ref<!fir.char<1,[[fileStringLength]]>>) -> !fir.ref<i8>
 ! CHECK-32-NEXT: %[[status:.*]] = fir.call @_FortranAEnvVariableValue(%[[name]], %[[value]], %[[trimName]], %[[errmsg]], %[[sourceFile]], %[[sourceLine]]) : (!fir.box<none>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 ! CHECK-64-NEXT: %[[status32:.*]] = fir.call @_FortranAEnvVariableValue(%[[name]], %[[value]], %[[trimName]], %[[errmsg]], %[[sourceFile]], %[[sourceLine]]) : (!fir.box<none>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
-! CHECK-64-NEXT: %[[status:.*]] = fir.convert %[[status32]] : (i32) -> i64
-! CHECK-NEXT: fir.store %[[status]] to %[[statusArg]] : !fir.ref<i[[DEFAULT_INTEGER_SIZE]]>
+! CHECK-64: %[[status:.*]] = fir.convert %[[status32]] : (i32) -> i64
+! CHECK: fir.store %[[status]] to %[[statusArg]] : !fir.ref<i[[DEFAULT_INTEGER_SIZE]]>
+! CHECK: %[[sourceFileString2:.*]] = fir.address_of(@_QQcl.[[fileString]]) : !fir.ref<!fir.char<1,[[fileStringLength]]>>
+! CHECK-NEXT: %[[sourceLine2:.*]] = arith.constant [[# @LINE - 29]] : i32
 ! CHECK-NEXT: %[[name:.*]] = fir.convert %[[nameBoxed]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
-! CHECK-NEXT: %[[trimName:.*]] = fir.convert %[[trimNameLoaded]] : (!fir.logical<4>) -> i1
-! CHECK-NEXT: %[[sourceFile:.*]] = fir.convert %[[sourceFileString]] : (!fir.ref<!fir.char<1,[[fileStringLength]]>>) -> !fir.ref<i8>
-! CHECK-32-NEXT: %[[result64:.*]] = fir.call @_FortranAEnvVariableLength(%[[name]], %[[trimName]], %[[sourceFile]], %[[sourceLine]]) : (!fir.box<none>, i1, !fir.ref<i8>, i32) -> i64
-! CHECK-64-NEXT: %[[result:.*]] = fir.call @_FortranAEnvVariableLength(%[[name]], %[[trimName]], %[[sourceFile]], %[[sourceLine]]) : (!fir.box<none>, i1, !fir.ref<i8>, i32) -> i64
-! CHECK-32-NEXT: %[[result:.*]] = fir.convert %[[result64]] : (i64) -> i32
+! CHECK-NEXT: %[[sourceFile2:.*]] = fir.convert %[[sourceFileString2]] : (!fir.ref<!fir.char<1,[[fileStringLength]]>>) -> !fir.ref<i8>
+! CHECK-32-NEXT: %[[result64:.*]] = fir.call @_FortranAEnvVariableLength(%[[name]], %[[trimName]], %[[sourceFile2]], %[[sourceLine2]]) : (!fir.box<none>, i1, !fir.ref<i8>, i32) -> i64
+! CHECK-64-NEXT: %[[result:.*]] = fir.call @_FortranAEnvVariableLength(%[[name]], %[[trimName]], %[[sourceFile2]], %[[sourceLine2]]) : (!fir.box<none>, i1, !fir.ref<i8>, i32) -> i64
+! CHECK-32: %[[result:.*]] = fir.convert %[[result64]] : (i64) -> i32
 ! CHECK-NEXT: fir.store %[[result]] to %[[lengthArg]] : !fir.ref<i[[DEFAULT_INTEGER_SIZE]]>
-! CHECK-NEXT: return
 end subroutine all_arguments

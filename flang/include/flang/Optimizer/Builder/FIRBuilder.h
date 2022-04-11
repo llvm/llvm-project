@@ -247,6 +247,11 @@ public:
   mlir::Value createConvert(mlir::Location loc, mlir::Type toTy,
                             mlir::Value val);
 
+  /// Create a fir.store of \p val into \p addr. A lazy conversion
+  /// of \p val to the element type of \p addr is created if needed.
+  void createStoreWithConvert(mlir::Location loc, mlir::Value val,
+                              mlir::Value addr);
+
   /// Create a new FuncOp. If the function may have already been created, use
   /// `addNamedFunction` instead.
   mlir::FuncOp createFunction(mlir::Location loc, llvm::StringRef name,

@@ -47,11 +47,11 @@ subroutine all_arguments(num, value, length, status, errmsg)
 ! CHECK-NEXT: %[[errmsgBuffer:.*]] = fir.convert %[[errmsgBoxed]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
 ! CHECK-32-NEXT: %[[statusResult:.*]] = fir.call @_FortranAArgumentValue(%[[numUnboxed]], %[[valueBuffer]], %[[errmsgBuffer]]) : (i32, !fir.box<none>, !fir.box<none>) -> i32
 ! CHECK-64-NEXT: %[[statusResult32:.*]] = fir.call @_FortranAArgumentValue(%[[numCast]], %[[valueBuffer]], %[[errmsgBuffer]]) : (i32, !fir.box<none>, !fir.box<none>) -> i32
-! CHECK-64-NEXT: %[[statusResult:.*]] = fir.convert %[[statusResult32]] : (i32) -> i64
-! CHECK-NEXT: fir.store %[[statusResult]] to %[[status]] : !fir.ref<i[[DEFAULT_INTEGER_SIZE]]>
-! CHECK-64-NEXT: %[[numCast:.*]] = fir.convert %[[numUnboxed]] : (i64) -> i32
-! CHECK-32-NEXT: %[[lengthResult64:.*]] = fir.call @_FortranAArgumentLength(%[[numUnboxed]]) : (i32) -> i64
-! CHECK-64-NEXT: %[[lengthResult:.*]] = fir.call @_FortranAArgumentLength(%[[numCast]]) : (i32) -> i64
+! CHECK-64: %[[statusResult:.*]] = fir.convert %[[statusResult32]] : (i32) -> i64
+! CHECK: fir.store %[[statusResult]] to %[[status]] : !fir.ref<i[[DEFAULT_INTEGER_SIZE]]>
+! CHECK-64: %[[numCast:.*]] = fir.convert %[[numUnboxed]] : (i64) -> i32
+! CHECK-32: %[[lengthResult64:.*]] = fir.call @_FortranAArgumentLength(%[[numUnboxed]]) : (i32) -> i64
+! CHECK-64: %[[lengthResult:.*]] = fir.call @_FortranAArgumentLength(%[[numCast]]) : (i32) -> i64
 ! CHECK-32-NEXT: %[[lengthResult:.*]] = fir.convert %[[lengthResult64]] : (i64) -> i32
 ! CHECK-NEXT: fir.store %[[lengthResult]] to %[[length]] : !fir.ref<i[[DEFAULT_INTEGER_SIZE]]>
 end subroutine all_arguments
@@ -63,12 +63,11 @@ subroutine number_and_length_only(num, length)
     call get_command_argument(num, LENGTH=length)
 ! CHECK-NOT: fir.call @_FortranAArgumentValue
 ! CHECK: %[[numLoaded:.*]] = fir.load %[[num]] : !fir.ref<i[[DEFAULT_INTEGER_SIZE]]>
-! CHECK-64-NEXT: %[[numCast:.*]] = fir.convert %[[numLoaded]] : (i64) -> i32
-! CHECK-32-NEXT: %[[result64:.*]] = fir.call @_FortranAArgumentLength(%[[numLoaded]]) : (i32) -> i64
-! CHECK-64-NEXT: %[[result:.*]] = fir.call @_FortranAArgumentLength(%[[numCast]]) : (i32) -> i64
+! CHECK-64: %[[numCast:.*]] = fir.convert %[[numLoaded]] : (i64) -> i32
+! CHECK-32: %[[result64:.*]] = fir.call @_FortranAArgumentLength(%[[numLoaded]]) : (i32) -> i64
+! CHECK-64: %[[result:.*]] = fir.call @_FortranAArgumentLength(%[[numCast]]) : (i32) -> i64
 ! CHECK-32-NEXT: %[[result:.*]] = fir.convert %[[result64]] : (i64) -> i32
 ! CHECK-NEXT: fir.store %[[result]] to %[[length]] : !fir.ref<i[[DEFAULT_INTEGER_SIZE]]>
-! CHECK-NEXT: return
 end subroutine number_and_length_only
 
 ! CHECK-LABEL: func @_QPnumber_and_status_only(
@@ -79,11 +78,11 @@ subroutine number_and_status_only(num, status)
 ! CHECK: %[[numLoaded:.*]] = fir.load %[[num]] : !fir.ref<i[[DEFAULT_INTEGER_SIZE]]>
 ! CHECK-NEXT: %[[value:.*]] = fir.absent !fir.box<none>
 ! CHECK-NEXT: %[[errmsg:.*]] = fir.absent !fir.box<none>
-! CHECK-64-NEXT: %[[numCast:.*]] = fir.convert %[[numLoaded]] : (i64) -> i32
+! CHECK-64: %[[numCast:.*]] = fir.convert %[[numLoaded]] : (i64) -> i32
 ! CHECK-32-NEXT: %[[result:.*]] = fir.call @_FortranAArgumentValue(%[[numLoaded]], %[[value]], %[[errmsg]]) : (i32, !fir.box<none>, !fir.box<none>) -> i32
 ! CHECK-64-NEXT: %[[result32:.*]] = fir.call @_FortranAArgumentValue(%[[numCast]], %[[value]], %[[errmsg]]) : (i32, !fir.box<none>, !fir.box<none>) -> i32
-! CHECK-64-NEXT: %[[result:.*]] = fir.convert %[[result32]] : (i32) -> i64
-! CHECK-32-NEXT: fir.store %[[result]] to %[[status]] : !fir.ref<i[[DEFAULT_INTEGER_SIZE]]>
+! CHECK-64: %[[result:.*]] = fir.convert %[[result32]] : (i32) -> i64
+! CHECK-32: fir.store %[[result]] to %[[status]] : !fir.ref<i[[DEFAULT_INTEGER_SIZE]]>
 ! CHECK-NOT: fir.call @_FortranAArgumentLength
 end subroutine number_and_status_only
 
@@ -96,9 +95,9 @@ subroutine number_and_errmsg_only(num, errmsg)
 ! CHECK: %[[errmsgUnboxed:.*]]:2 = fir.unboxchar %[[errmsg]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK-NEXT: %[[errmsgLength:.*]] = arith.constant 32 : index
 ! CHECK-NEXT: %[[numUnboxed:.*]] = fir.load %[[num]] : !fir.ref<i[[DEFAULT_INTEGER_SIZE]]>
-! CHECK-NEXT: %[[value:.*]] = fir.absent !fir.box<none>
 ! CHECK-NEXT: %[[errmsgBoxed:.*]] = fir.embox %[[errmsgUnboxed]]#0 typeparams %[[errmsgLength]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>
-! CHECK-64-NEXT: %[[numCast:.*]] = fir.convert %[[numUnboxed]] : (i64) -> i32
+! CHECK-NEXT: %[[value:.*]] = fir.absent !fir.box<none>
+! CHECK-64: %[[numCast:.*]] = fir.convert %[[numUnboxed]] : (i64) -> i32
 ! CHECK-NEXT: %[[errmsg:.*]] = fir.convert %[[errmsgBoxed]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
 ! CHECK-32-NEXT: %{{[0-9]+}} = fir.call @_FortranAArgumentValue(%[[numUnboxed]], %[[value]], %[[errmsg]]) : (i32, !fir.box<none>, !fir.box<none>) -> i32
 ! CHECK-64-NEXT: %{{[0-9]+}} = fir.call @_FortranAArgumentValue(%[[numCast]], %[[value]], %[[errmsg]]) : (i32, !fir.box<none>, !fir.box<none>) -> i32
