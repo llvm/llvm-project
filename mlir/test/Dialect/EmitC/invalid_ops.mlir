@@ -93,3 +93,11 @@ func.func @var_attribute_return_type_2() {
     %c0 = "emitc.variable"(){value = "nullptr" : !emitc.ptr<i64>} : () -> !emitc.ptr<i32>
     return
 }
+
+// -----
+
+func.func @cast_tensor(%arg : tensor<f32>) {
+    // expected-error @+1 {{'emitc.cast' op operand type 'tensor<f32>' and result type 'tensor<f32>' are cast incompatible}}
+    %1 = emitc.cast %arg: tensor<f32> to tensor<f32>
+    return
+}
