@@ -56,10 +56,9 @@ define void @baz(i8* %arg) !dbg !6 {
 ; CHECK-NEXT:    lsl x8, x0, #4
 ; CHECK-NEXT:    .loc 1 0 0 is_stmt 0 // tmp.ll:0:0
 ; CHECK-NEXT:    adrp x9, global+202752
+; CHECK-NEXT:    add x9, x9, :lo12:global+202752
 ; CHECK-NEXT:    .loc 1 4 1 // tmp.ll:4:1
 ; CHECK-NEXT:    and x8, x8, #0x1ff0
-; CHECK-NEXT:    .loc 1 0 0 // tmp.ll:0:0
-; CHECK-NEXT:    add x9, x9, :lo12:global+202752
 ; CHECK-NEXT:    .loc 1 5 1 is_stmt 1 // tmp.ll:5:1
 ; CHECK-NEXT:    str xzr, [x9, x8]
 ; CHECK-NEXT:    .loc 1 6 1 // tmp.ll:6:1

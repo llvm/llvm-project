@@ -71,8 +71,8 @@ define [2 x i64] @f4() {
 ;
 ; GISEL-LABEL: f4:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    adrp x9, x2+8
 ; GISEL-NEXT:    adrp x8, x2+8
+; GISEL-NEXT:    adrp x9, x2+8
 ; GISEL-NEXT:    add x9, x9, :lo12:x2+8
 ; GISEL-NEXT:    ldr x0, [x8, :lo12:x2+8]
 ; GISEL-NEXT:    ldr x1, [x9, #8]

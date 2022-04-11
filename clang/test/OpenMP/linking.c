@@ -58,12 +58,12 @@
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -fopenmp=lib -target i386-unknown-linux \
 // RUN:   | FileCheck --check-prefix=CHECK-LIB-LD-32 %s
-// CHECK-LIB-LD-32: error: unsupported argument 'lib' to option 'fopenmp='
+// CHECK-LIB-LD-32: error: unsupported argument 'lib' to option '-fopenmp='
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -fopenmp=lib -target x86_64-unknown-linux \
 // RUN:   | FileCheck --check-prefix=CHECK-LIB-LD-64 %s
-// CHECK-LIB-LD-64: error: unsupported argument 'lib' to option 'fopenmp='
+// CHECK-LIB-LD-64: error: unsupported argument 'lib' to option '-fopenmp='
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -fopenmp -fopenmp=libgomp -target i386-unknown-linux \

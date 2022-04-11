@@ -742,6 +742,27 @@ define <16 x i8> @combine_pshufb_pshufb_or_pshufb(<16 x i8> %a0) {
   ret <16 x i8> %4
 }
 
+define <16 x i8> @combine_and_pshufb_or_pshufb(<16 x i8> %a0, <16 x i8> %a1) {
+; SSE-LABEL: combine_and_pshufb_or_pshufb:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pshufb {{.*#+}} xmm0 = zero,zero,zero,xmm0[15],zero,xmm0[1],zero,xmm0[14],zero,xmm0[2],zero,xmm0[13],zero,xmm0[3],zero,zero
+; SSE-NEXT:    pshufb {{.*#+}} xmm1 = xmm1[7],zero,xmm1[0],zero,xmm1[8],zero,xmm1[1],zero,xmm1[9],zero,xmm1[10],zero,xmm1[7],zero,xmm1[7],zero
+; SSE-NEXT:    por %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_and_pshufb_or_pshufb:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = zero,zero,zero,xmm0[15],zero,xmm0[1],zero,xmm0[14],zero,xmm0[2],zero,xmm0[13],zero,xmm0[3],zero,zero
+; AVX-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[7],zero,xmm1[0],zero,xmm1[8],zero,xmm1[1],zero,xmm1[9],zero,xmm1[10],zero,xmm1[7],zero,xmm1[7],zero
+; AVX-NEXT:    vpor %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    retq
+  %1 = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %a0, <16 x i8> <i8 -1, i8 -1, i8 -1, i8 15, i8 -1, i8 1, i8 -1, i8 14, i8 -1, i8 2, i8 -1, i8 13, i8 -1, i8 3, i8 -1, i8 -1>)
+  %2 = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %a1, <16 x i8> <i8 7, i8 -1, i8 0, i8 -1, i8 8, i8 -1, i8 1, i8 -1, i8 9, i8 -1, i8 10, i8 -1, i8 7, i8 -1, i8 7, i8 -1>)
+  %3 = or <16 x i8> %1, %2
+  %4 = and <16 x i8> %3, <i8 -1, i8 0, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+  ret <16 x i8> %4
+}
+
 define <16 x i8> @constant_fold_pshufb() {
 ; SSE-LABEL: constant_fold_pshufb:
 ; SSE:       # %bb.0:

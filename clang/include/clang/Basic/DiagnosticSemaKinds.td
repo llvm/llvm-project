@@ -11588,5 +11588,7 @@ def err_hlsl_numthreads_argument_oor : Error<"argument '%select{X|Y|Z}0' to numt
 def err_hlsl_numthreads_invalid : Error<"total number of threads cannot exceed %0">;
 def err_hlsl_attribute_param_mismatch : Error<"%0 attribute parameters do not match the previous declaration">;
 
+// Layout randomization warning.
+def err_cast_from_randomized_struct : Error<
+  "casting from randomized structure pointer type %0 to %1">;
 } // end of sema component.
-

@@ -3129,6 +3129,23 @@ void CastOperation::CheckCStyleCast() {
     Self.Diag(OpRange.getBegin(), diag::warn_cast_function_type)
         << SrcType << DestType << OpRange;
 
+  if (isa<PointerType>(SrcType) && isa<PointerType>(DestType)) {
+    QualType SrcTy = cast<PointerType>(SrcType)->getPointeeType();
+    QualType DestTy = cast<PointerType>(DestType)->getPointeeType();
+
+    const RecordDecl *SrcRD = SrcTy->getAsRecordDecl();
+    const RecordDecl *DestRD = DestTy->getAsRecordDecl();
+
+    if (SrcRD && DestRD && SrcRD->hasAttr<RandomizeLayoutAttr>() &&
+        SrcRD != DestRD) {
+      // The struct we are casting the pointer from was randomized.
+      Self.Diag(OpRange.getBegin(), diag::err_cast_from_randomized_struct)
+          << SrcType << DestType;
+      SrcExpr = ExprError();
+      return;
+    }
+  }
+
   DiagnoseCastOfObjCSEL(Self, SrcExpr, DestType);
   DiagnoseCallingConvCast(Self, SrcExpr, DestType, OpRange);
   DiagnoseBadFunctionCast(Self, SrcExpr, DestType);
