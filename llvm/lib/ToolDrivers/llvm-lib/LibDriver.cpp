@@ -229,10 +229,11 @@ static void appendFile(std::vector<NewArchiveMember> &Members,
         (Magic == file_magic::coff_object) ? getCOFFFileMachine(MB)
                                            : getBitcodeFileMachine(MB);
     if (!MaybeFileMachine) {
-      handleAllErrors(MaybeFileMachine.takeError(), [&](const ErrorInfoBase &EIB) {
-        llvm::errs() << MB.getBufferIdentifier() << ": " << EIB.message()
-                     << "\n";
-      });
+      handleAllErrors(MaybeFileMachine.takeError(),
+                      [&](const ErrorInfoBase &EIB) {
+                        llvm::errs() << MB.getBufferIdentifier() << ": "
+                                     << EIB.message() << "\n";
+                      });
       exit(1);
     }
     COFF::MachineTypes FileMachine = *MaybeFileMachine;
@@ -291,10 +292,25 @@ int llvm::libDriverMain(ArrayRef<const char *> ArgsArr) {
     return 0;
   }
 
+  // Parse /ignore:
+  llvm::StringSet<> IgnoredWarnings;
+  for (auto *Arg : Args.filtered(OPT_ignore))
+    IgnoredWarnings.insert(Arg->getValue());
+
   // If no input files and not told otherwise, silently do nothing to match
   // lib.exe
-  if (!Args.hasArgNoClaim(OPT_INPUT) && !Args.hasArg(OPT_llvmlibempty))
+  if (!Args.hasArgNoClaim(OPT_INPUT) && !Args.hasArg(OPT_llvmlibempty)) {
+    if (!IgnoredWarnings.contains("emptyoutput")) {
+      llvm::errs() << "warning: no input files, not writing output file\n";
+      llvm::errs() << "         pass /llvmlibempty to write empty .lib file,\n";
+      llvm::errs() << "         pass /ignore:emptyoutput to suppress warning\n";
+      if (Args.hasFlag(OPT_WX, OPT_WX_no, false)) {
+        llvm::errs() << "treating warning as error due to /WX\n";
+        return 1;
+      }
+    }
     return 0;
+  }
 
   if (Args.hasArg(OPT_lst)) {
     doList(Args);

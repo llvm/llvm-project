@@ -3955,13 +3955,17 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
   if (SDValue Fold = DAG.FoldSetCC(VT, N0, N1, Cond, dl))
     return Fold;
 
+  bool N0ConstOrSplat =
+      isConstOrConstSplat(N0, /*AllowUndefs*/ false, /*AllowTruncate*/ true);
+  bool N1ConstOrSplat =
+      isConstOrConstSplat(N1, /*AllowUndefs*/ false, /*AllowTruncate*/ true);
+
   // Ensure that the constant occurs on the RHS and fold constant comparisons.
   // TODO: Handle non-splat vector constants. All undef causes trouble.
   // FIXME: We can't yet fold constant scalable vector splats, so avoid an
   // infinite loop here when we encounter one.
   ISD::CondCode SwappedCC = ISD::getSetCCSwappedOperands(Cond);
-  if (isConstOrConstSplat(N0) &&
-      (!OpVT.isScalableVector() || !isConstOrConstSplat(N1)) &&
+  if (N0ConstOrSplat && (!OpVT.isScalableVector() || !N1ConstOrSplat) &&
       (DCI.isBeforeLegalizeOps() ||
        isCondCodeLegal(SwappedCC, N0.getSimpleValueType())))
     return DAG.getSetCC(dl, VT, N1, N0, SwappedCC);
@@ -3970,7 +3974,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
   // -- but in reverse order -- then try to commute the operands of this setcc
   // to match. A matching pair of setcc (cmp) and sub may be combined into 1
   // instruction on some targets.
-  if (!isConstOrConstSplat(N0) && !isConstOrConstSplat(N1) &&
+  if (!N0ConstOrSplat && !N1ConstOrSplat &&
       (DCI.isBeforeLegalizeOps() ||
        isCondCodeLegal(SwappedCC, N0.getSimpleValueType())) &&
       DAG.doesNodeExist(ISD::SUB, DAG.getVTList(OpVT), {N1, N0}) &&

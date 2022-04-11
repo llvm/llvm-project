@@ -198,8 +198,8 @@ public:
         DeclarationFragmentsBuilder::getFunctionSignature(Decl);
 
     // Add the function record to the API set.
-    API.addFunction(Name, USR, Loc, Availability, Linkage, Comment, Declaration,
-                    SubHeading, Signature);
+    API.addGlobalFunction(Name, USR, Loc, Availability, Linkage, Comment,
+                          Declaration, SubHeading, Signature);
     return true;
   }
 
