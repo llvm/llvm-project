@@ -65,25 +65,31 @@ void populateSparseTensorRewriting(RewritePatternSet &patterns);
 /// Function type which is used to control when to stop fusion. It is expected
 /// that OpOperand is not modified in the callback. The OpOperand is not marked
 /// as const to allow callers to use non-const methods.
-using ControlElementwiseOpsFusionFn =
+using ControlFusionFn =
     std::function<bool(const OpResult &producer, OpOperand &consumer)>;
+
+/// Patterns for fusing linalg operation on tensors.
+
+/// Pattern to fuse `linalg.generic` -> `linalg.generic` operations
+/// when both operations are fusable elementwise operations.
+void populateElementwiseOpsFusionPatterns(
+    RewritePatternSet &patterns,
+    const ControlFusionFn &controlElementwiseOpFusion);
 
 /// Patterns to fold an expanding (collapsing) tensor_reshape operation with its
 /// producer (consumer) generic operation by expanding the dimensionality of the
 /// loop in the generic op.
 void populateFoldReshapeOpsByExpansionPatterns(
-    RewritePatternSet &patterns,
-    const ControlElementwiseOpsFusionFn &controlFoldingReshapes =
-        skipUnitDimReshape);
+    RewritePatternSet &patterns, const ControlFusionFn &controlFoldingReshapes);
 
 /// Patterns to fold an expanding tensor.expand_shape operation with its
 /// producer generic operation by collapsing the dimensions of the generic op.
 void populateFoldReshapeOpsByCollapsingPatterns(
-    RewritePatternSet &patterns,
-    const ControlElementwiseOpsFusionFn &controlFoldingReshapes =
-        [](const OpResult & /*producer*/, OpOperand & /*consumer*/) {
-          return true;
-        });
+    RewritePatternSet &patterns, const ControlFusionFn &controlFoldingReshapes);
+
+/// Patterns to constant fold Linalg operations.
+void populateConstantFoldLinalgOperations(RewritePatternSet &patterns,
+                                          const ControlFusionFn &controlFn);
 
 /// Patterns to fold a collapsing (expanding) tensor_reshape operation with its
 /// producer (consumer) generic operation by linearizing the indexing map used
@@ -121,39 +127,6 @@ void populateInlineConstantOperandsPatterns(RewritePatternSet &patterns);
 
 /// Patterns that are used to bubble up extract slice op above linalg op.
 void populateBubbleUpExtractSliceOpPatterns(RewritePatternSet &patterns);
-
-/// Options that control fusion of elementwise operations.
-struct LinalgElementwiseFusionOptions {
-  /// Enable fusion of reshapes into the shape with elementwise operations. By
-  /// default it is disabled for unit dimensions reshape.
-  ControlElementwiseOpsFusionFn controlFoldingReshapesFn = skipUnitDimReshape;
-
-  LinalgElementwiseFusionOptions &
-  setControlFoldingReshapes(ControlElementwiseOpsFusionFn fun) {
-    controlFoldingReshapesFn = std::move(fun);
-    return *this;
-  }
-
-  /// Function to allow the caller to control when to stop fusion. Once a
-  /// producer is deemed fusable with the consumer (structurally), this callback
-  /// can be used to abort the fusion based on non-structural constraints. This
-  /// is the hook for cost models to control the amount of fusion done.
-  ControlElementwiseOpsFusionFn controlElementwiseOpsFusionFn =
-      [](const OpResult & /*producer */, OpOperand & /*consumer */) {
-        return true;
-      };
-
-  LinalgElementwiseFusionOptions &
-  setControlElementwiseOpsFusionFn(ControlElementwiseOpsFusionFn fun) {
-    controlElementwiseOpsFusionFn = std::move(fun);
-    return *this;
-  }
-};
-
-/// Patterns for fusing linalg operation on tensors.
-void populateElementwiseOpsFusionPatterns(
-    RewritePatternSet &patterns,
-    LinalgElementwiseFusionOptions options = LinalgElementwiseFusionOptions());
 
 /// Patterns to push reshape op towards the end of the graph in order to expose
 /// more fusion opportunities.
