@@ -305,6 +305,8 @@ public:
 
   bool GetShowProgress() const;
 
+  bool SetShowProgress(bool show_progress);
+
   llvm::StringRef GetShowProgressAnsiPrefix() const;
 
   llvm::StringRef GetShowProgressAnsiSuffix() const;
