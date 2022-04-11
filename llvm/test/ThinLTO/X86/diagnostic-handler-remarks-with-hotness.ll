@@ -5,7 +5,6 @@
 ; with -lto-pass-remarks-with-hotness.
 
 ; RUN: llvm-lto -thinlto-action=run \
-; RUN:          -use-new-pm=false \
 ; RUN:          -lto-pass-remarks-output=%t.yaml \
 ; RUN:          -lto-pass-remarks-with-hotness \
 ; RUN:          -exported-symbol _func2 \
@@ -17,6 +16,7 @@
 
 ; Verify that bar is imported 'and' inlined into 'foo'
 ; RUN: cat %t.yaml.thin.0.yaml | FileCheck %s -check-prefix=YAML1
+; YAML1:      --- !Passed
 ; YAML1:      --- !Passed
 ; YAML1-NEXT: Pass:            inline
 ; YAML1-NEXT: Name:            Inlined
@@ -32,7 +32,7 @@
 ; YAML1-NEXT:   - String:          '(cost='
 ; YAML1-NEXT:   - Cost:            '-30'
 ; YAML1-NEXT:   - String:          ', threshold='
-; YAML1-NEXT:   - Threshold:       '337'
+; YAML1-NEXT:   - Threshold:       '375'
 ; YAML1-NEXT:   - String:          ')'
 ; YAML1-NEXT: ...
 
@@ -53,7 +53,7 @@
 ; YAML2-NEXT:   - String:          '(cost='
 ; YAML2-NEXT:   - Cost:            '-30'
 ; YAML2-NEXT:   - String:          ', threshold='
-; YAML2-NEXT:   - Threshold:       '337'
+; YAML2-NEXT:   - Threshold:       '375'
 ; YAML2-NEXT:   - String:          ')'
 ; YAML2-NEXT: ...
 
