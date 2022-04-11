@@ -73,6 +73,12 @@ void MultiplexASTDeserializationListener::ModuleRead(
     Listener->ModuleRead(ID, Mod);
 }
 
+void MultiplexASTDeserializationListener::ModuleImportRead(
+    serialization::SubmoduleID ID, SourceLocation ImportLoc) {
+  for (auto &Listener : Listeners)
+    Listener->ModuleImportRead(ID, ImportLoc);
+}
+
 // This ASTMutationListener forwards its notifications to a set of
 // child listeners.
 class MultiplexASTMutationListener : public ASTMutationListener {
