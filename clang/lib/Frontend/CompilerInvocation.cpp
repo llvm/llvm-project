@@ -543,11 +543,6 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
           << A->getSpelling() << T.getTriple();
   }
 
-  if (!CodeGenOpts.ProfileRemappingFile.empty() && CodeGenOpts.LegacyPassManager)
-    Diags.Report(diag::err_drv_argument_only_allowed_with)
-        << Args.getLastArg(OPT_fprofile_remapping_file_EQ)->getAsString(Args)
-        << "-fno-legacy-pass-manager";
-
   return Diags.getNumErrors() == NumErrorsBefore;
 }
 
@@ -1731,10 +1726,6 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
 
     // -ftime-report= is only for new pass manager.
     if (A->getOption().getID() == OPT_ftime_report_EQ) {
-      if (Opts.LegacyPassManager)
-        Diags.Report(diag::err_drv_argument_only_allowed_with)
-            << A->getAsString(Args) << "-fno-legacy-pass-manager";
-
       StringRef Val = A->getValue();
       if (Val == "per-pass")
         Opts.TimePassesPerRun = false;
