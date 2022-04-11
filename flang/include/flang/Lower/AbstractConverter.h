@@ -92,6 +92,13 @@ public:
   /// Get the code defined by a label
   virtual pft::Evaluation *lookupLabel(pft::Label label) = 0;
 
+  /// For a given symbol which is host-associated, create a clone using
+  /// parameters from the host-associated symbol.
+  virtual bool
+  createHostAssociateVarClone(const Fortran::semantics::Symbol &sym) = 0;
+
+  virtual void copyHostAssociateVar(const Fortran::semantics::Symbol &sym) = 0;
+
   //===--------------------------------------------------------------------===//
   // Expressions
   //===--------------------------------------------------------------------===//
