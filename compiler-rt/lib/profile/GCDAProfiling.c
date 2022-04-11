@@ -83,7 +83,7 @@ static HANDLE mmap_handle = NULL;
 #endif
 static int fd = -1;
 
-typedef void (*fn_ptr)();
+typedef void (*fn_ptr)(void);
 
 typedef void* dynamic_object_id;
 // The address of this variable identifies a given dynamic object.
@@ -183,7 +183,7 @@ static void write_64bit_value(uint64_t i) {
   write_32bit_value(hi);
 }
 
-static uint32_t read_32bit_value() {
+static uint32_t read_32bit_value(void) {
   uint32_t val;
 
   if (new_file)
@@ -194,7 +194,7 @@ static uint32_t read_32bit_value() {
   return val;
 }
 
-static uint64_t read_64bit_value() {
+static uint64_t read_64bit_value(void) {
   // GCOV uses a lo-/hi-word format even on big-endian systems.
   // See also GCOVBuffer::readInt64 in LLVM.
   uint32_t lo = read_32bit_value();
@@ -218,7 +218,7 @@ static char *mangle_filename(const char *orig_filename) {
   return new_filename;
 }
 
-static int map_file() {
+static int map_file(void) {
   fseek(output_file, 0L, SEEK_END);
   file_size = ftell(output_file);
 
@@ -262,7 +262,7 @@ static int map_file() {
   return 0;
 }
 
-static void unmap_file() {
+static void unmap_file(void) {
 #if defined(_WIN32)
   if (!FlushViewOfFile(write_buffer, file_size)) {
     fprintf(stderr, "profiling: %s: cannot flush mapped view: %lu\n", filename,
@@ -449,7 +449,7 @@ void llvm_gcda_emit_arcs(uint32_t num_counters, uint64_t *counters) {
 }
 
 COMPILER_RT_VISIBILITY
-void llvm_gcda_summary_info() {
+void llvm_gcda_summary_info(void) {
   uint32_t runs = 1;
   static uint32_t run_counted = 0; // We only want to increase the run count once.
   uint32_t val = 0;
@@ -513,7 +513,7 @@ void llvm_gcda_summary_info() {
 }
 
 COMPILER_RT_VISIBILITY
-void llvm_gcda_end_file() {
+void llvm_gcda_end_file(void) {
   /* Write out EOF record. */
   if (output_file) {
     write_bytes("\0\0\0\0\0\0\0\0", 8);

@@ -61,11 +61,9 @@ static bool parseShowColorsArgs(
 
   for (auto *a : args) {
     const llvm::opt::Option &O = a->getOption();
-    if (O.matches(clang::driver::options::OPT_fcolor_diagnostics) ||
-        O.matches(clang::driver::options::OPT_fdiagnostics_color)) {
+    if (O.matches(clang::driver::options::OPT_fcolor_diagnostics)) {
       ShowColors = Colors_On;
-    } else if (O.matches(clang::driver::options::OPT_fno_color_diagnostics) ||
-        O.matches(clang::driver::options::OPT_fno_diagnostics_color)) {
+    } else if (O.matches(clang::driver::options::OPT_fno_color_diagnostics)) {
       ShowColors = Colors_Off;
     } else if (O.matches(clang::driver::options::OPT_fdiagnostics_color_EQ)) {
       llvm::StringRef value(a->getValue());

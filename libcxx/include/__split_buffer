@@ -319,7 +319,13 @@ template <class _Tp, class _Allocator>
 __split_buffer<_Tp, _Allocator>::__split_buffer(size_type __cap, size_type __start, __alloc_rr& __a)
     : __end_cap_(nullptr, __a)
 {
-    __first_ = __cap != 0 ? __alloc_traits::allocate(__alloc(), __cap) : nullptr;
+    if (__cap == 0) {
+        __first_ = nullptr;
+    } else {
+        auto __allocation = std::__allocate_at_least(__alloc(), __cap);
+        __first_ = __allocation.ptr;
+        __cap = __allocation.count;
+    }
     __begin_ = __end_ = __first_ + __start;
     __end_cap() = __first_ + __cap;
 }
@@ -385,10 +391,10 @@ __split_buffer<_Tp, _Allocator>::__split_buffer(__split_buffer&& __c, const __al
     }
     else
     {
-        size_type __cap = __c.size();
-        __first_ = __alloc_traits::allocate(__alloc(), __cap);
+        auto __allocation = std::__allocate_at_least(__alloc(), __c.size());
+        __first_ = __allocation.ptr;
         __begin_ = __end_ = __first_;
-        __end_cap() = __first_ + __cap;
+        __end_cap() = __first_ + __allocation.count;
         typedef move_iterator<iterator> _Ip;
         __construct_at_end(_Ip(__c.begin()), _Ip(__c.end()));
     }

@@ -231,18 +231,18 @@ static int mmapForContinuousMode(uint64_t CurrentFileOffset, FILE *File) {
 }
 #endif
 
-static int isProfileMergeRequested() { return ProfileMergeRequested; }
+static int isProfileMergeRequested(void) { return ProfileMergeRequested; }
 static void setProfileMergeRequested(int EnableMerge) {
   ProfileMergeRequested = EnableMerge;
 }
 
 static FILE *ProfileFile = NULL;
-static FILE *getProfileFile() { return ProfileFile; }
+static FILE *getProfileFile(void) { return ProfileFile; }
 static void setProfileFile(FILE *File) { ProfileFile = File; }
 
-static int getCurFilenameLength();
+static int getCurFilenameLength(void);
 static const char *getCurFilename(char *FilenameBuf, int ForceUseBuf);
-static unsigned doMerging() {
+static unsigned doMerging(void) {
   return lprofCurFilename.MergePoolSize || isProfileMergeRequested();
 }
 
@@ -303,7 +303,7 @@ lprofCreateBufferIOInternal(void *File, uint32_t BufferSz) {
   return IO;
 }
 
-static void setupIOBuffer() {
+static void setupIOBuffer(void) {
   const char *BufferSzStr = 0;
   BufferSzStr = getenv("LLVM_VP_BUFFER_SIZE");
   if (BufferSzStr && BufferSzStr[0]) {
@@ -822,7 +822,7 @@ static void parseAndSetFilename(const char *FilenamePat,
  * filename with PID and hostname substitutions. */
 /* The length to hold uint64_t followed by 3 digits pool id including '_' */
 #define SIGLEN 24
-static int getCurFilenameLength() {
+static int getCurFilenameLength(void) {
   int Len;
   if (!lprofCurFilename.FilenamePat || !lprofCurFilename.FilenamePat[0])
     return 0;

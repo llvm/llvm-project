@@ -551,8 +551,8 @@ static Error loadNewSectionData(StringRef ArgValue, StringRef OptionName,
   return Error::success();
 }
 
-// ParseObjcopyOptions returns the config and sets the input arguments. If a
-// help flag is set then ParseObjcopyOptions will print the help messege and
+// parseObjcopyOptions returns the config and sets the input arguments. If a
+// help flag is set then parseObjcopyOptions will print the help messege and
 // exit.
 Expected<DriverConfig>
 objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
@@ -1013,8 +1013,8 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
   return std::move(DC);
 }
 
-// ParseInstallNameToolOptions returns the config and sets the input arguments.
-// If a help flag is set then ParseInstallNameToolOptions will print the help
+// parseInstallNameToolOptions returns the config and sets the input arguments.
+// If a help flag is set then parseInstallNameToolOptions will print the help
 // messege and exit.
 Expected<DriverConfig>
 objcopy::parseInstallNameToolOptions(ArrayRef<const char *> ArgsArr) {
@@ -1211,8 +1211,8 @@ objcopy::parseBitcodeStripOptions(ArrayRef<const char *> ArgsArr,
   return std::move(DC);
 }
 
-// ParseStripOptions returns the config and sets the input arguments. If a
-// help flag is set then ParseStripOptions will print the help messege and
+// parseStripOptions returns the config and sets the input arguments. If a
+// help flag is set then parseStripOptions will print the help messege and
 // exit.
 Expected<DriverConfig>
 objcopy::parseStripOptions(ArrayRef<const char *> RawArgsArr,

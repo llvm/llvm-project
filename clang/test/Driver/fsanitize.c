@@ -84,7 +84,7 @@
 // CHECK-BOUNDS: "-fsanitize={{((array-bounds|local-bounds),?){2}"}}
 
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=all %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-FSANITIZE-ALL
-// CHECK-FSANITIZE-ALL: error: unsupported argument 'all' to option 'fsanitize='
+// CHECK-FSANITIZE-ALL: error: unsupported argument 'all' to option '-fsanitize='
 
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=address,undefined -fno-sanitize=all -fsanitize=thread %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-FNO-SANITIZE-ALL
 // CHECK-FNO-SANITIZE-ALL: "-fsanitize=thread"
@@ -366,16 +366,16 @@
 // CHECK-RECOVER-ASAN: "-fsanitize-recover=address"
 
 // RUN: %clang -target x86_64-linux-gnu %s -fsanitize=undefined -fsanitize-recover=foobar,object-size,unreachable -### 2>&1 | FileCheck %s --check-prefix=CHECK-DIAG-RECOVER
-// CHECK-DIAG-RECOVER: unsupported argument 'foobar' to option 'fsanitize-recover='
-// CHECK-DIAG-RECOVER: unsupported argument 'unreachable' to option 'fsanitize-recover='
+// CHECK-DIAG-RECOVER: unsupported argument 'foobar' to option '-fsanitize-recover='
+// CHECK-DIAG-RECOVER: unsupported argument 'unreachable' to option '-fsanitize-recover='
 
 // RUN: %clang -target x86_64-linux-gnu %s -fsanitize=undefined -fsanitize-recover -fno-sanitize-recover -### 2>&1 | FileCheck %s --check-prefix=CHECK-DEPRECATED-RECOVER
 // CHECK-DEPRECATED-RECOVER-NOT: is deprecated
 
 // RUN: %clang -target x86_64-linux-gnu %s -fsanitize=kernel-address -fno-sanitize-recover=kernel-address -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-RECOVER-KASAN
 // RUN: %clang -target x86_64-linux-gnu %s -fsanitize=kernel-hwaddress -fno-sanitize-recover=kernel-hwaddress -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-RECOVER-KHWASAN
-// CHECK-NO-RECOVER-KASAN: unsupported argument 'kernel-address' to option 'fno-sanitize-recover='
-// CHECK-NO-RECOVER-KHWASAN: unsupported argument 'kernel-hwaddress' to option 'fno-sanitize-recover='
+// CHECK-NO-RECOVER-KASAN: unsupported argument 'kernel-address' to option '-fno-sanitize-recover='
+// CHECK-NO-RECOVER-KHWASAN: unsupported argument 'kernel-hwaddress' to option '-fno-sanitize-recover='
 
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANL
 // CHECK-SANL: "-fsanitize=leak"
@@ -440,8 +440,8 @@
 // CHECK-ASAN: "-fno-assume-sane-operator-new"
 
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=zzz %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DIAG1
-// CHECK-DIAG1: unsupported argument 'zzz' to option 'fsanitize='
-// CHECK-DIAG1-NOT: unsupported argument 'zzz' to option 'fsanitize='
+// CHECK-DIAG1: unsupported argument 'zzz' to option '-fsanitize='
+// CHECK-DIAG1-NOT: unsupported argument 'zzz' to option '-fsanitize='
 
 // RUN: %clang -target x86_64-apple-darwin10 -fsanitize=memory %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-MSAN-DARWIN
 // CHECK-MSAN-DARWIN: unsupported option '-fsanitize=memory' for target 'x86_64-apple-darwin10'
@@ -605,10 +605,10 @@
 // CHECK-CFI-ICALL-MIPS: unsupported option '-fsanitize=cfi-icall' for target 'mips-unknown-linux'
 
 // RUN: %clang -target x86_64-linux-gnu -fsanitize-trap=address -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ASAN-TRAP
-// CHECK-ASAN-TRAP: error: unsupported argument 'address' to option '-fsanitize-trap'
+// CHECK-ASAN-TRAP: error: unsupported argument 'address' to option '-fsanitize-trap='
 
 // RUN: %clang -target x86_64-linux-gnu -fsanitize-trap=hwaddress -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-HWASAN-TRAP
-// CHECK-HWASAN-TRAP: error: unsupported argument 'hwaddress' to option '-fsanitize-trap'
+// CHECK-HWASAN-TRAP: error: unsupported argument 'hwaddress' to option '-fsanitize-trap='
 
 // RUN: %clang -target x86_64-apple-darwin10 -mmacosx-version-min=10.7 -flto -fsanitize=cfi-vcall -fno-sanitize-trap=cfi -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOTRAP-OLD-MACOS
 // CHECK-CFI-NOTRAP-OLD-MACOS: error: unsupported option '-fno-sanitize-trap=cfi-vcall' for target 'x86_64-apple-darwin10'

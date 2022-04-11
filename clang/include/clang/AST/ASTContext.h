@@ -3289,11 +3289,11 @@ public:
   /// Return a new OMPTraitInfo object owned by this context.
   OMPTraitInfo &getNewOMPTraitInfo();
 
-  /// Whether a C++ static variable may be externalized.
-  bool mayExternalizeStaticVar(const Decl *D) const;
+  /// Whether a C++ static variable or CUDA/HIP kernel may be externalized.
+  bool mayExternalize(const Decl *D) const;
 
-  /// Whether a C++ static variable should be externalized.
-  bool shouldExternalizeStaticVar(const Decl *D) const;
+  /// Whether a C++ static variable or CUDA/HIP kernel should be externalized.
+  bool shouldExternalize(const Decl *D) const;
 
   StringRef getCUIDHash() const;
 

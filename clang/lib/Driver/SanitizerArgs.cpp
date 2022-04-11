@@ -234,7 +234,7 @@ static SanitizerMask parseSanitizeTrapArgs(const Driver &D,
         SanitizerSet S;
         S.Mask = InvalidValues;
         D.Diag(diag::err_drv_unsupported_option_argument)
-            << "-fsanitize-trap" << toString(S);
+            << Arg->getOption().getName() << toString(S);
       }
       TrappingKinds |= expandSanitizerGroups(Add) & ~TrapRemove;
     } else if (Arg->getOption().matches(options::OPT_fno_sanitize_trap_EQ)) {
