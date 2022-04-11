@@ -406,7 +406,7 @@ define i32 @ashr_lowmask_use(i32 %x) {
 ; CHECK-LABEL: @ashr_lowmask_use(
 ; CHECK-NEXT:    [[A:%.*]] = ashr i32 [[X:%.*]], 1
 ; CHECK-NEXT:    call void @use32(i32 [[A]])
-; CHECK-NEXT:    [[R:%.*]] = and i32 [[A]], 2147483647
+; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[X]], 1
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = ashr i32 %x, 1
@@ -419,7 +419,7 @@ define <2 x i8> @ashr_lowmask_use_splat(<2 x i8> %x, <2 x i8>* %p) {
 ; CHECK-LABEL: @ashr_lowmask_use_splat(
 ; CHECK-NEXT:    [[A:%.*]] = ashr <2 x i8> [[X:%.*]], <i8 7, i8 7>
 ; CHECK-NEXT:    store <2 x i8> [[A]], <2 x i8>* [[P:%.*]], align 2
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[A]], <i8 1, i8 1>
+; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i8> [[X]], <i8 7, i8 7>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %a = ashr <2 x i8> %x, <i8 7, i8 7>
@@ -427,6 +427,8 @@ define <2 x i8> @ashr_lowmask_use_splat(<2 x i8> %x, <2 x i8>* %p) {
   %r = and <2 x i8> %a, <i8 1, i8 1>
   ret <2 x i8> %r
 }
+
+; negative test - must keep all low bits
 
 define i32 @ashr_not_lowmask1_use(i32 %x) {
 ; CHECK-LABEL: @ashr_not_lowmask1_use(
@@ -441,6 +443,8 @@ define i32 @ashr_not_lowmask1_use(i32 %x) {
   ret i32 %r
 }
 
+; negative test - must keep all low bits
+
 define i32 @ashr_not_lowmask2_use(i32 %x) {
 ; CHECK-LABEL: @ashr_not_lowmask2_use(
 ; CHECK-NEXT:    [[A:%.*]] = ashr i32 [[X:%.*]], 24
@@ -453,6 +457,8 @@ define i32 @ashr_not_lowmask2_use(i32 %x) {
   %r = and i32 %a, 127
   ret i32 %r
 }
+
+; negative test - must keep only low bits
 
 define i32 @ashr_not_lowmask3_use(i32 %x) {
 ; CHECK-LABEL: @ashr_not_lowmask3_use(
@@ -1231,14 +1237,14 @@ define i32 @lowmask_sext_in_reg(i32 %x) {
   ret i32 %and
 }
 
-; Negative test - mismatched shift amounts
+; Mismatched shift amounts, but the mask op can be replaced by a shift.
 
 define i32 @lowmask_not_sext_in_reg(i32 %x) {
 ; CHECK-LABEL: @lowmask_not_sext_in_reg(
 ; CHECK-NEXT:    [[L:%.*]] = shl i32 [[X:%.*]], 19
 ; CHECK-NEXT:    [[R:%.*]] = ashr i32 [[L]], 20
 ; CHECK-NEXT:    call void @use32(i32 [[R]])
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[R]], 4095
+; CHECK-NEXT:    [[AND:%.*]] = lshr i32 [[L]], 20
 ; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %l = shl i32 %x, 19

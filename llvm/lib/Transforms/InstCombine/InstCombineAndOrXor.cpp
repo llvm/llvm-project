@@ -1968,6 +1968,12 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
       }
     }
 
+    // If this 'and' clears the sign-bits added by ashr, replace with lshr:
+    // and (ashr X, ShiftC), C --> lshr X, ShiftC
+    if (match(Op0, m_AShr(m_Value(X), m_APInt(ShiftC))) && ShiftC->ult(Width) &&
+        C->isMask(Width - ShiftC->getZExtValue()))
+      return BinaryOperator::CreateLShr(X, ConstantInt::get(Ty, *ShiftC));
+
     const APInt *AddC;
     if (match(Op0, m_Add(m_Value(X), m_APInt(AddC)))) {
       // If we add zeros to every bit below a mask, the add has no effect:
