@@ -70,9 +70,8 @@ typedef struct {
   CXStringSet *ModuleDeps;
 
   /**
-   * The canonical command-line to build this module, excluding arguments
-   * containing modules-related paths: "-fmodule-file=", "-o",
-   * "-fmodule-map-file=".
+   * The canonical command line to build this module, excluding arguments
+   * containing modules-related paths: "-fmodule-file=", "-o".
    */
   CXStringSet *BuildArguments;
 } CXModuleDependency;
@@ -195,9 +194,7 @@ typedef void CXModuleDiscoveredCallback(void *Context,
  * Returns the list of file dependencies for a particular compiler invocation.
  *
  * \param argc the number of compiler invocation arguments (including argv[0]).
- * \param argv the compiler invocation arguments (including argv[0]).
- *             the invocation may be a -cc1 clang invocation or a driver
- *             invocation.
+ * \param argv the compiler driver invocation arguments (including argv[0]).
  * \param WorkingDirectory the directory in which the invocation runs.
  * \param MDC a callback that is called whenever a new module is discovered.
  *            This may receive the same module on different workers. This should
