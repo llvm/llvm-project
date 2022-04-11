@@ -5,13 +5,11 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+v,+d,+zfh,+experimental-zvfh -verify-machineinstrs \
 ; RUN:     -riscv-v-vector-bits-min=128 -target-abi=lp64d < %s \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK,RV64
-; RUN: llc -mtriple=riscv32 -mattr=+v,+d,+zfh,+experimental-zvfh -verify-machineinstrs \
-; RUN:     -riscv-v-vector-bits-min=128 \
-; RUN:     -riscv-v-fixed-length-vector-elen-max=32 -target-abi=ilp32d < %s \
+; RUN: llc -mtriple=riscv32 -mattr=+zve32f,+d,+zfh,+experimental-zvfh -verify-machineinstrs \
+; RUN:     -riscv-v-vector-bits-min=128 -target-abi=ilp32d < %s \
 ; RUN:     | FileCheck %s --check-prefixes=ELEN32,RV32ELEN32
-; RUN: llc -mtriple=riscv64 -mattr=+v,+d,+zfh,+experimental-zvfh -verify-machineinstrs \
-; RUN:     -riscv-v-vector-bits-min=128 \
-; RUN:     -riscv-v-fixed-length-vector-elen-max=32 -target-abi=lp64d < %s \
+; RUN: llc -mtriple=riscv64 -mattr=+zve32f,+d,+zfh,+experimental-zvfh -verify-machineinstrs \
+; RUN:     -riscv-v-vector-bits-min=128 -target-abi=lp64d < %s \
 ; RUN:     | FileCheck %s --check-prefixes=ELEN32,RV64ELEN32
 
 define <32 x i1> @bitcast_v4i8_v32i1(<4 x i8> %a, <32 x i1> %b) {
