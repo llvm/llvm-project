@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <__config>
+#ifdef _LIBCPP_DEPRECATED_ABI_LEGACY_LIBRARY_DEFINITIONS_FOR_INLINE_FUNCTIONS
+#   define _LIBCPP_SHARED_PTR_DEFINE_LEGACY_INLINE_FUNCTIONS
+#endif
+
 #include <memory>
 
 #ifndef _LIBCPP_HAS_NO_THREADS
@@ -38,7 +43,7 @@ __shared_weak_count::~__shared_weak_count()
 {
 }
 
-#if defined(_LIBCPP_DEPRECATED_ABI_LEGACY_LIBRARY_DEFINITIONS_FOR_INLINE_FUNCTIONS)
+#if defined(_LIBCPP_SHARED_PTR_DEFINE_LEGACY_INLINE_FUNCTIONS)
 void
 __shared_count::__add_shared() noexcept
 {
@@ -75,7 +80,7 @@ __shared_weak_count::__release_shared() noexcept
         __release_weak();
 }
 
-#endif // _LIBCPP_DEPRECATED_ABI_LEGACY_LIBRARY_DEFINITIONS_FOR_INLINE_FUNCTIONS
+#endif // _LIBCPP_SHARED_PTR_DEFINE_LEGACY_INLINE_FUNCTIONS
 
 void
 __shared_weak_count::__release_weak() noexcept
