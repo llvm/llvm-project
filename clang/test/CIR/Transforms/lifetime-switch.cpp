@@ -34,3 +34,15 @@ void s2(int b) {
   }        // expected-note {{pointee 'x' invalidated at end of scope}}
   *p = 42; // expected-warning {{use of invalid pointer 'p'}}
 }
+
+void s3(int b) {
+  int *p = nullptr; // expected-note {{invalidated here}}
+  switch (int x = 0; b) {
+  case 1:
+    p = &x;
+  case 2:
+    *p = 42; // expected-warning {{use of invalid pointer 'p'}}
+    break;
+  }        // expected-note {{pointee 'x' invalidated at end of scope}}
+  *p = 42; // expected-warning {{use of invalid pointer 'p'}}
+}

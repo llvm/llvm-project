@@ -389,11 +389,13 @@ void LifetimeCheckPass::checkSwitch(SwitchOp switchOp) {
     // with a fallback, keep computing the pmap until we hit a region
     // that has a non-fallback terminator for the region.
     unsigned idx = regionCurrent;
-    while (idx < regionPastEnd && isCaseFallthroughTerminated(regions[idx])) {
+    while (idx < regionPastEnd) {
       // Note that for 'if' regions we use checkRegionWithScope, since
       // there are lexical scopes associated with each region, this is
       // not the case for switch's.
       checkRegion(regions[idx]);
+      if (!isCaseFallthroughTerminated(regions[idx]))
+        break;
       idx++;
     }
     pmapOps.push_back(locaCasePmap);
