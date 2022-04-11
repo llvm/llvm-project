@@ -204,7 +204,7 @@ public:
 
 #if defined(_LIBCPP_BUILDING_LIBRARY) && \
     defined(_LIBCPP_DEPRECATED_ABI_LEGACY_LIBRARY_DEFINITIONS_FOR_INLINE_FUNCTIONS)
-    error_category() _NOEXCEPT;
+    error_category() noexcept;
 #else
     _LIBCPP_INLINE_VISIBILITY
     _LIBCPP_CONSTEXPR_AFTER_CXX11 error_category() _NOEXCEPT = default;
