@@ -2446,17 +2446,11 @@
 #   error "__cpp_lib_associative_heterogeneous_erasure should not be defined before c++2b"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_assume_aligned
-#     error "__cpp_lib_assume_aligned should be defined in c++20"
-#   endif
-#   if __cpp_lib_assume_aligned != 201811L
-#     error "__cpp_lib_assume_aligned should have the value 201811L in c++20"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_assume_aligned
-#     error "__cpp_lib_assume_aligned should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_assume_aligned
+#   error "__cpp_lib_assume_aligned should be defined in c++20"
+# endif
+# if __cpp_lib_assume_aligned != 201811L
+#   error "__cpp_lib_assume_aligned should have the value 201811L in c++20"
 # endif
 
 # ifndef __cpp_lib_atomic_flag_test
@@ -3669,17 +3663,11 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_assume_aligned
-#     error "__cpp_lib_assume_aligned should be defined in c++2b"
-#   endif
-#   if __cpp_lib_assume_aligned != 201811L
-#     error "__cpp_lib_assume_aligned should have the value 201811L in c++2b"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_assume_aligned
-#     error "__cpp_lib_assume_aligned should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_assume_aligned
+#   error "__cpp_lib_assume_aligned should be defined in c++2b"
+# endif
+# if __cpp_lib_assume_aligned != 201811L
+#   error "__cpp_lib_assume_aligned should have the value 201811L in c++2b"
 # endif
 
 # ifndef __cpp_lib_atomic_flag_test
