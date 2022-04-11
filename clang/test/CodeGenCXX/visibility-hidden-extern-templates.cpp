@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -O1 -fno-experimental-new-pass-manager -triple %itanium_abi_triple -emit-llvm -o - -fvisibility hidden %s | FileCheck %s
+// RUN: %clang_cc1 -O1 -disable-llvm-passes -triple %itanium_abi_triple -emit-llvm -o - -fvisibility hidden %s | FileCheck %s
 
 template<typename T>
 struct X {

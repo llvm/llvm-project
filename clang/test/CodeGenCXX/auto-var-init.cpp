@@ -1,10 +1,8 @@
 // RUN: %clang_cc1 -no-opaque-pointers -std=c++14 -triple x86_64-unknown-unknown -fblocks %s -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK,CHECK-O0
 // RUN: %clang_cc1 -no-opaque-pointers -std=c++14 -triple x86_64-unknown-unknown -fblocks -ftrivial-auto-var-init=pattern %s -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK-O0,PATTERN,PATTERN-O0
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++14 -triple x86_64-unknown-unknown -fblocks -ftrivial-auto-var-init=pattern %s -O1 -fno-experimental-new-pass-manager -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK-O1,PATTERN,PATTERN-O1,PATTERN-O1-LEGACY
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++14 -triple x86_64-unknown-unknown -fblocks -ftrivial-auto-var-init=pattern %s -O1 -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK-O1,PATTERN,PATTERN-O1,PATTERN-O1-NEWPM
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++14 -triple x86_64-unknown-unknown -fblocks -ftrivial-auto-var-init=pattern %s -O1 -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK-O1,PATTERN,PATTERN-O1
 // RUN: %clang_cc1 -no-opaque-pointers -std=c++14 -triple x86_64-unknown-unknown -fblocks -ftrivial-auto-var-init=zero %s -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK-O0,ZERO,ZERO-O0
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++14 -triple x86_64-unknown-unknown -fblocks -ftrivial-auto-var-init=zero %s -O1 -fno-experimental-new-pass-manager -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK-O1,ZERO,ZERO-O1,ZERO-O1-LEGACY
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++14 -triple x86_64-unknown-unknown -fblocks -ftrivial-auto-var-init=zero %s -O1 -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK-O1,ZERO,ZERO-O1,ZERO-O1-NEWPM
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++14 -triple x86_64-unknown-unknown -fblocks -ftrivial-auto-var-init=zero %s -O1 -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK-O1,ZERO,ZERO-O1
 // RUN: %clang_cc1 -no-opaque-pointers -std=c++14 -triple i386-unknown-unknown -fblocks -ftrivial-auto-var-init=pattern %s -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK-O0,PATTERN,PATTERN-O0
 
 #pragma clang diagnostic ignored "-Winaccessible-base"
@@ -667,8 +665,7 @@ TEST_UNINIT(smallpartinit, smallpartinit);
 // PATTERN-O1: store i8 42, {{.*}} align 1
 // ZERO-LABEL: @test_smallpartinit_uninit()
 // ZERO-O0: call void @llvm.memset{{.*}}, i8 0,{{.+}}), !annotation [[AUTO_INIT]]
-// ZERO-O1-LEGACY: store i16 0, i16* %uninit, align 2, !annotation [[AUTO_INIT]]
-// ZERO-O1-NEWPM: store i16 0, i16* %uninit, align 2, !annotation [[AUTO_INIT]]
+// ZERO-O1: store i16 0, i16* %uninit, align 2, !annotation [[AUTO_INIT]]
 
 TEST_BRACES(smallpartinit, smallpartinit);
 // CHECK-LABEL: @test_smallpartinit_braces()
@@ -748,14 +745,12 @@ TEST_UNINIT(paddednullinit, paddednullinit);
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%uninit)
 // PATTERN-LABEL: @test_paddednullinit_uninit()
 // PATTERN-O0: call void @llvm.memcpy{{.*}} @__const.test_paddednullinit_uninit.uninit{{.+}}), !annotation [[AUTO_INIT]]
-// PATTERN-O1-LEGACY: store i64 [[I64]], i64* %uninit, align 8, !annotation [[AUTO_INIT]]
-// PATTERN-O1-NEWPM: store i64 [[I64]], i64* %uninit, align 8, !annotation [[AUTO_INIT]]
+// PATTERN-O1: store i64 [[I64]], i64* %uninit, align 8, !annotation [[AUTO_INIT]]
 // ZERO-LABEL: @test_paddednullinit_uninit()
 // ZERO-O0: call void @llvm.memset{{.*}}, i8 0, {{.*}}, !annotation [[AUTO_INIT]]
-// ZERO-O1-LEGACY: store i64 0, i64* %uninit, align 8, !annotation [[AUTO_INIT]]
-// ZERO-O1-NEWPM: store i64 0, i64* %uninit, align 8
+// ZERO-O1: store i64 0, i64* %uninit, align 8
 // FIXME: !annotation dropped by optimizations
-// ZERO-O1-NEWPM-NOT: !annotation
+// ZERO-O1-NOT: !annotation
 // ZERO: ret
 
 
@@ -1402,9 +1397,8 @@ TEST_UNINIT(base, base);
 // PATTERN-O0: call void @llvm.memcpy{{.*}} @__const.test_base_uninit.uninit{{.+}}), !annotation [[AUTO_INIT]]
 // ZERO-LABEL: @test_base_uninit()
 // ZERO-O0: call void @llvm.memset{{.*}}, i8 0,{{.+}}), !annotation [[AUTO_INIT]]
-// ZERO-O1-LEGACY: store i64 0, {{.*}} align 8
-// ZERO-O1-NEWPM: store i32 (...)** bitcast (i8** getelementptr inbounds ({ [4 x i8*] }, { [4 x i8*] }* @_ZTV4base, i64 0, inrange i32 0, i64 2) to i32 (...)**), {{.*}}, align 8
-// ZERO-O1-NOT-NEWPM: !annotation
+// ZERO-O1: store i32 (...)** bitcast (i8** getelementptr inbounds ({ [4 x i8*] }, { [4 x i8*] }* @_ZTV4base, i64 0, inrange i32 0, i64 2) to i32 (...)**), {{.*}}, align 8
+// ZERO-O1-NOT: !annotation
 
 TEST_BRACES(base, base);
 // CHECK-LABEL: @test_base_braces()
@@ -1425,7 +1419,7 @@ TEST_UNINIT(derived, derived);
 // ZERO-LABEL: @test_derived_uninit()
 // ZERO-O0: call void @llvm.memset{{.*}}, i8 0, {{.+}}), !annotation [[AUTO_INIT]]
 // ZERO-O1: store i64 0, {{.*}} align 8, !annotation [[AUTO_INIT]]
-// ZERO-O1-NEWPM: store i32 (...)** bitcast (i8** getelementptr inbounds ({ [4 x i8*] }, { [4 x i8*] }* @_ZTV7derived, i64 0, inrange i32 0, i64 2) to i32 (...)**), {{.*}} align 8
+// ZERO-O1: store i32 (...)** bitcast (i8** getelementptr inbounds ({ [4 x i8*] }, { [4 x i8*] }* @_ZTV7derived, i64 0, inrange i32 0, i64 2) to i32 (...)**), {{.*}} align 8
 
 TEST_BRACES(derived, derived);
 // CHECK-LABEL: @test_derived_braces()
@@ -1445,8 +1439,7 @@ TEST_UNINIT(virtualderived, virtualderived);
 // PATTERN-O0: call void @llvm.memcpy{{.*}} @__const.test_virtualderived_uninit.uninit{{.+}}), !annotation [[AUTO_INIT]]
 // ZERO-LABEL: @test_virtualderived_uninit()
 // ZERO-O0: call void @llvm.memset{{.*}}, i8 0, {{.+}}), !annotation [[AUTO_INIT]]
-// ZERO-O1-LEGACY: call void @llvm.memset{{.*}}, i8 0, {{.+}}), !annotation [[AUTO_INIT]]
-// ZERO-O1-NEWPM: call void @llvm.memset{{.*}}, i8 0, {{.+}}), !annotation [[AUTO_INIT]]
+// ZERO-O1: call void @llvm.memset{{.*}}, i8 0, {{.+}}), !annotation [[AUTO_INIT]]
 
 TEST_BRACES(virtualderived, virtualderived);
 // CHECK-LABEL: @test_virtualderived_braces()
