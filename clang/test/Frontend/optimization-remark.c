@@ -16,16 +16,16 @@
 // RUN: %clang_cc1 %s -Rpass=inline -Rno-pass -emit-llvm -o - 2>&1 | FileCheck %s --check-prefix=CHECK-NO-REMARKS
 // RUN: %clang_cc1 %s -Rpass=inline -Rno-everything -emit-llvm -o - 2>&1 | FileCheck %s --check-prefix=CHECK-NO-REMARKS
 // RUN: %clang_cc1 %s -Rpass=inline -fno-experimental-new-pass-manager -Rno-everything -Reverything -emit-llvm -o - 2>&1 | FileCheck %s --check-prefix=CHECK-REMARKS
-// RUN: %clang_cc1 %s -Rpass -Rno-pass -round-trip-args -fexperimental-new-pass-manager -mllvm -mandatory-inlining-first=false -O1 -emit-llvm -o - 2>&1 | FileCheck %s --check-prefix=CHECK-NO-REMARKS
+// RUN: %clang_cc1 %s -Rpass -Rno-pass -round-trip-args -mllvm -mandatory-inlining-first=false -O1 -emit-llvm -o - 2>&1 | FileCheck %s --check-prefix=CHECK-NO-REMARKS
 //
 // The inliner for the new PM does not seem to be enabled at O0, but we still
 // get the same remarks with at least O1.
-// RUN: %clang_cc1 %s -Rpass=inline -fexperimental-new-pass-manager -O1 -emit-llvm -o - 2>&1 | FileCheck %s --check-prefix=CHECK-REMARKS
-// RUN: %clang_cc1 %s -Rpass=inline -fexperimental-new-pass-manager -O1 -Rno-everything -Reverything -emit-llvm -o -  2>&1 | FileCheck %s --check-prefix=CHECK-REMARKS
+// RUN: %clang_cc1 %s -Rpass=inline -O1 -emit-llvm -o - 2>&1 | FileCheck %s --check-prefix=CHECK-REMARKS
+// RUN: %clang_cc1 %s -Rpass=inline -O1 -Rno-everything -Reverything -emit-llvm -o -  2>&1 | FileCheck %s --check-prefix=CHECK-REMARKS
 //
 // Check that -w doesn't disable remarks.
 // RUN: %clang_cc1 %s -Rpass=inline -fno-experimental-new-pass-manager -w -emit-llvm -o - 2>&1 | FileCheck %s --check-prefix=CHECK-REMARKS
-// RUN: %clang_cc1 %s -Rpass=inline -fexperimental-new-pass-manager -O1 -w -emit-llvm -o - 2>&1 | FileCheck %s --check-prefix=CHECK-REMARKS
+// RUN: %clang_cc1 %s -Rpass=inline -O1 -w -emit-llvm -o - 2>&1 | FileCheck %s --check-prefix=CHECK-REMARKS
 //
 // -Reverything implies -Rpass=.*.
 // RUN: %clang_cc1 %s -Reverything -emit-llvm -o - 2>&1 | FileCheck %s --check-prefix=CHECK-REMARKS

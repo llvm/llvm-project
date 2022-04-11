@@ -10,12 +10,12 @@
 ; RUN:   -r=%t.o,main,px
 
 ; RUN: %clang -target x86_64-grtev4-linux-gnu \
-; RUN:   -O2 -fexperimental-new-pass-manager -Xclang -fdebug-pass-manager \
+; RUN:   -O2 -Xclang -fdebug-pass-manager \
 ; RUN:   -c -fthinlto-index=%t.o.thinlto.bc \
 ; RUN:   -o %t.native.o -x ir %t.o 2>&1 | FileCheck -check-prefix=CHECK-O %s --dump-input=fail
 
 ; RUN: %clang -target x86_64-grtev4-linux-gnu \
-; RUN:   -O3 -fexperimental-new-pass-manager -Xclang -fdebug-pass-manager \
+; RUN:   -O3 -Xclang -fdebug-pass-manager \
 ; RUN:   -c -fthinlto-index=%t.o.thinlto.bc \
 ; RUN:   -o %t.native.o -x ir %t.o 2>&1 | FileCheck -check-prefixes=CHECK-O,CHECK-O3 %s --dump-input=fail
 
