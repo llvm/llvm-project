@@ -2251,8 +2251,10 @@ void MCAsmStreamer::AddEncodingComment(const MCInst &Inst,
     MCFixup &F = Fixups[i];
     const MCFixupKindInfo &Info =
         getAssembler().getBackend().getFixupKindInfo(F.getKind());
-    OS << "  fixup " << char('A' + i) << " - " << "offset: " << F.getOffset()
-       << ", value: " << *F.getValue() << ", kind: " << Info.Name << "\n";
+    OS << "  fixup " << char('A' + i) << " - "
+       << "offset: " << F.getOffset() << ", value: ";
+    F.getValue()->print(OS, MAI);
+    OS << ", kind: " << Info.Name << "\n";
   }
 }
 

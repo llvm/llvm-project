@@ -75,8 +75,9 @@ void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI, bool InParens) const {
     const MCSymbol &Sym = SRE.getSymbol();
     // Parenthesize names that start with $ so that they don't look like
     // absolute names.
-    bool UseParens =
-        !InParens && !Sym.getName().empty() && Sym.getName()[0] == '$';
+    bool UseParens = MAI && MAI->useParensForDollarSignNames() && !InParens &&
+                     !Sym.getName().empty() && Sym.getName()[0] == '$';
+
     if (UseParens) {
       OS << '(';
       Sym.print(OS, MAI);
