@@ -8,7 +8,6 @@
 
 #include "PS4CPU.h"
 #include "CommonArgs.h"
-#include "FreeBSD.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
@@ -23,8 +22,18 @@ using namespace clang::driver;
 using namespace clang;
 using namespace llvm::opt;
 
+// Helper to paste bits of an option together and return a saved string.
+static const char *makeArgString(const ArgList &Args, const char *Prefix,
+                                 const char *Base, const char *Suffix) {
+  // Basically "Prefix + Base + Suffix" all converted to Twine then saved.
+  return Args.MakeArgString(Twine(StringRef(Prefix), Base) + Suffix);
+}
+
 void tools::PS4cpu::addProfileRTArgs(const ToolChain &TC, const ArgList &Args,
                                      ArgStringList &CmdArgs) {
+  assert(TC.getTriple().isPS());
+  auto &PSTC = static_cast<const toolchains::PS4PS5Base &>(TC);
+
   if ((Args.hasFlag(options::OPT_fprofile_arcs, options::OPT_fno_profile_arcs,
                     false) ||
        Args.hasFlag(options::OPT_fprofile_generate,
@@ -41,7 +50,8 @@ void tools::PS4cpu::addProfileRTArgs(const ToolChain &TC, const ArgList &Args,
                     options::OPT_fno_profile_generate, false) ||
        Args.hasArg(options::OPT_fcreate_profile) ||
        Args.hasArg(options::OPT_coverage)))
-    CmdArgs.push_back("--dependent-lib=libclang_rt.profile-x86_64.a");
+    CmdArgs.push_back(makeArgString(
+        Args, "--dependent-lib=", PSTC.getProfileRTLibName(), ""));
 }
 
 void tools::PS4cpu::Assemble::ConstructJob(Compilation &C, const JobAction &JA,
@@ -49,6 +59,7 @@ void tools::PS4cpu::Assemble::ConstructJob(Compilation &C, const JobAction &JA,
                                            const InputInfoList &Inputs,
                                            const ArgList &Args,
                                            const char *LinkingOutput) const {
+  auto &TC = static_cast<const toolchains::PS4PS5Base &>(getToolChain());
   claimNoWarnArgs(Args);
   ArgStringList CmdArgs;
 
@@ -62,31 +73,32 @@ void tools::PS4cpu::Assemble::ConstructJob(Compilation &C, const JobAction &JA,
   assert(Input.isFilename() && "Invalid input.");
   CmdArgs.push_back(Input.getFilename());
 
-  const char *Exec =
-      Args.MakeArgString(getToolChain().GetProgramPath("orbis-as"));
+  std::string AsName = TC.qualifyPSCmdName("as");
+  const char *Exec = Args.MakeArgString(TC.GetProgramPath(AsName.c_str()));
   C.addCommand(std::make_unique<Command>(JA, *this,
                                          ResponseFileSupport::AtFileUTF8(),
                                          Exec, CmdArgs, Inputs, Output));
 }
 
-static void AddPS4SanitizerArgs(const ToolChain &TC, const ArgList &Args,
-                                ArgStringList &CmdArgs) {
-  const SanitizerArgs &SanArgs = TC.getSanitizerArgs(Args);
-  if (SanArgs.needsUbsanRt()) {
-    CmdArgs.push_back("-lSceDbgUBSanitizer_stub_weak");
-  }
-  if (SanArgs.needsAsanRt()) {
-    CmdArgs.push_back("-lSceDbgAddressSanitizer_stub_weak");
-  }
-}
-
 void tools::PS4cpu::addSanitizerArgs(const ToolChain &TC, const ArgList &Args,
                                      ArgStringList &CmdArgs) {
-  const SanitizerArgs &SanArgs = TC.getSanitizerArgs(Args);
+  assert(TC.getTriple().isPS());
+  auto &PSTC = static_cast<const toolchains::PS4PS5Base &>(TC);
+  PSTC.addSanitizerArgs(Args, CmdArgs, "--dependent-lib=lib", ".a");
+}
+
+void toolchains::PS4CPU::addSanitizerArgs(const ArgList &Args,
+                                          ArgStringList &CmdArgs,
+                                          const char *Prefix,
+                                          const char *Suffix) const {
+  auto arg = [&](const char *Name) -> const char * {
+    return makeArgString(Args, Prefix, Name, Suffix);
+  };
+  const SanitizerArgs &SanArgs = getSanitizerArgs(Args);
   if (SanArgs.needsUbsanRt())
-    CmdArgs.push_back("--dependent-lib=libSceDbgUBSanitizer_stub_weak.a");
+    CmdArgs.push_back(arg("SceDbgUBSanitizer_stub_weak"));
   if (SanArgs.needsAsanRt())
-    CmdArgs.push_back("--dependent-lib=libSceDbgAddressSanitizer_stub_weak.a");
+    CmdArgs.push_back(arg("SceDbgAddressSanitizer_stub_weak"));
 }
 
 void tools::PS4cpu::Link::ConstructJob(Compilation &C, const JobAction &JA,
@@ -94,9 +106,8 @@ void tools::PS4cpu::Link::ConstructJob(Compilation &C, const JobAction &JA,
                                        const InputInfoList &Inputs,
                                        const ArgList &Args,
                                        const char *LinkingOutput) const {
-  const toolchains::PS4CPU &ToolChain =
-      static_cast<const toolchains::PS4CPU &>(getToolChain());
-  const Driver &D = ToolChain.getDriver();
+  auto &TC = static_cast<const toolchains::PS4PS5Base &>(getToolChain());
+  const Driver &D = TC.getDriver();
   ArgStringList CmdArgs;
 
   // Silence warning for "clang -g foo.o -o foo"
@@ -126,7 +137,7 @@ void tools::PS4cpu::Link::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs))
-    AddPS4SanitizerArgs(ToolChain, Args, CmdArgs);
+    TC.addSanitizerArgs(Args, CmdArgs, "-l", "");
 
   Args.AddAllArgs(CmdArgs, options::OPT_L);
   Args.AddAllArgs(CmdArgs, options::OPT_T_Group);
@@ -138,7 +149,7 @@ void tools::PS4cpu::Link::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_Z_Xlinker__no_demangle))
     CmdArgs.push_back("--no-demangle");
 
-  AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
+  AddLinkerInputs(TC, Inputs, Args, CmdArgs, JA);
 
   if (Args.hasArg(options::OPT_pthread)) {
     CmdArgs.push_back("-lpthread");
@@ -146,88 +157,86 @@ void tools::PS4cpu::Link::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Args.hasArg(options::OPT_fuse_ld_EQ)) {
     D.Diag(diag::err_drv_unsupported_opt_for_target)
-        << "-fuse-ld" << getToolChain().getTriple().str();
+        << "-fuse-ld" << TC.getTriple().str();
   }
 
-  const char *Exec = Args.MakeArgString(ToolChain.GetProgramPath("orbis-ld"));
+  std::string LdName = TC.qualifyPSCmdName(TC.getLinkerBaseName());
+  const char *Exec = Args.MakeArgString(TC.GetProgramPath(LdName.c_str()));
 
   C.addCommand(std::make_unique<Command>(JA, *this,
                                          ResponseFileSupport::AtFileUTF8(),
                                          Exec, CmdArgs, Inputs, Output));
 }
 
-toolchains::PS4CPU::PS4CPU(const Driver &D, const llvm::Triple &Triple,
-                           const ArgList &Args)
+toolchains::PS4PS5Base::PS4PS5Base(const Driver &D, const llvm::Triple &Triple,
+                                   const ArgList &Args, StringRef Platform,
+                                   const char *EnvVar)
     : Generic_ELF(D, Triple, Args) {
   if (Args.hasArg(clang::driver::options::OPT_static))
-    D.Diag(clang::diag::err_drv_unsupported_opt_for_target) << "-static"
-                                                            << "PS4";
+    D.Diag(clang::diag::err_drv_unsupported_opt_for_target)
+        << "-static" << Platform;
 
-  // Determine where to find the PS4 libraries. We use SCE_ORBIS_SDK_DIR
+  // Determine where to find the PS4/PS5 libraries. We use the EnvVar
   // if it exists; otherwise use the driver's installation path, which
   // should be <SDK_DIR>/host_tools/bin.
 
-  SmallString<512> PS4SDKDir;
-  if (const char *EnvValue = getenv("SCE_ORBIS_SDK_DIR")) {
+  SmallString<512> SDKDir;
+  if (const char *EnvValue = getenv(EnvVar)) {
     if (!llvm::sys::fs::exists(EnvValue))
-      getDriver().Diag(clang::diag::warn_drv_ps4_sdk_dir) << EnvValue;
-    PS4SDKDir = EnvValue;
+      D.Diag(clang::diag::warn_drv_ps_sdk_dir) << EnvVar << EnvValue;
+    SDKDir = EnvValue;
   } else {
-    PS4SDKDir = getDriver().Dir;
-    llvm::sys::path::append(PS4SDKDir, "/../../");
+    SDKDir = D.Dir;
+    llvm::sys::path::append(SDKDir, "/../../");
   }
 
-  // By default, the driver won't report a warning if it can't find
-  // PS4's include or lib directories. This behavior could be changed if
+  // By default, the driver won't report a warning if it can't find the
+  // SDK include or lib directories. This behavior could be changed if
   // -Weverything or -Winvalid-or-nonexistent-directory options are passed.
   // If -isysroot was passed, use that as the SDK base path.
   std::string PrefixDir;
   if (const Arg *A = Args.getLastArg(options::OPT_isysroot)) {
     PrefixDir = A->getValue();
     if (!llvm::sys::fs::exists(PrefixDir))
-      getDriver().Diag(clang::diag::warn_missing_sysroot) << PrefixDir;
+      D.Diag(clang::diag::warn_missing_sysroot) << PrefixDir;
   } else
-    PrefixDir = std::string(PS4SDKDir.str());
+    PrefixDir = std::string(SDKDir.str());
 
-  SmallString<512> PS4SDKIncludeDir(PrefixDir);
-  llvm::sys::path::append(PS4SDKIncludeDir, "target/include");
+  SmallString<512> SDKIncludeDir(PrefixDir);
+  llvm::sys::path::append(SDKIncludeDir, "target/include");
   if (!Args.hasArg(options::OPT_nostdinc) &&
       !Args.hasArg(options::OPT_nostdlibinc) &&
       !Args.hasArg(options::OPT_isysroot) &&
       !Args.hasArg(options::OPT__sysroot_EQ) &&
-      !llvm::sys::fs::exists(PS4SDKIncludeDir)) {
-    getDriver().Diag(clang::diag::warn_drv_unable_to_find_directory_expected)
-        << "PS4 system headers" << PS4SDKIncludeDir;
+      !llvm::sys::fs::exists(SDKIncludeDir)) {
+    D.Diag(clang::diag::warn_drv_unable_to_find_directory_expected)
+        << Twine(Platform, " system headers").str() << SDKIncludeDir;
   }
 
-  SmallString<512> PS4SDKLibDir(PS4SDKDir);
-  llvm::sys::path::append(PS4SDKLibDir, "target/lib");
+  SmallString<512> SDKLibDir(SDKDir);
+  llvm::sys::path::append(SDKLibDir, "target/lib");
   if (!Args.hasArg(options::OPT_nostdlib) &&
       !Args.hasArg(options::OPT_nodefaultlibs) &&
       !Args.hasArg(options::OPT__sysroot_EQ) && !Args.hasArg(options::OPT_E) &&
       !Args.hasArg(options::OPT_c) && !Args.hasArg(options::OPT_S) &&
       !Args.hasArg(options::OPT_emit_ast) &&
-      !llvm::sys::fs::exists(PS4SDKLibDir)) {
-    getDriver().Diag(clang::diag::warn_drv_unable_to_find_directory_expected)
-        << "PS4 system libraries" << PS4SDKLibDir;
+      !llvm::sys::fs::exists(SDKLibDir)) {
+    D.Diag(clang::diag::warn_drv_unable_to_find_directory_expected)
+        << Twine(Platform, " system libraries").str() << SDKLibDir;
     return;
   }
-  getFilePaths().push_back(std::string(PS4SDKLibDir.str()));
+  getFilePaths().push_back(std::string(SDKLibDir.str()));
 }
 
-Tool *toolchains::PS4CPU::buildAssembler() const {
+Tool *toolchains::PS4PS5Base::buildAssembler() const {
   return new tools::PS4cpu::Assemble(*this);
 }
 
-Tool *toolchains::PS4CPU::buildLinker() const {
+Tool *toolchains::PS4PS5Base::buildLinker() const {
   return new tools::PS4cpu::Link(*this);
 }
 
-bool toolchains::PS4CPU::isPICDefault() const { return true; }
-
-bool toolchains::PS4CPU::HasNativeLLVMSupport() const { return true; }
-
-SanitizerMask toolchains::PS4CPU::getSupportedSanitizers() const {
+SanitizerMask toolchains::PS4PS5Base::getSupportedSanitizers() const {
   SanitizerMask Res = ToolChain::getSupportedSanitizers();
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
@@ -236,10 +245,10 @@ SanitizerMask toolchains::PS4CPU::getSupportedSanitizers() const {
   return Res;
 }
 
-void toolchains::PS4CPU::addClangTargetOptions(
+void toolchains::PS4PS5Base::addClangTargetOptions(
     const ArgList &DriverArgs, ArgStringList &CC1Args,
     Action::OffloadKind DeviceOffloadingKind) const {
-  // PS4 does not use init arrays.
+  // PS4/PS5 do not use init arrays.
   if (DriverArgs.hasArg(options::OPT_fuse_init_array)) {
     Arg *A = DriverArgs.getLastArg(options::OPT_fuse_init_array);
     getDriver().Diag(clang::diag::err_drv_unsupported_opt_for_target)
@@ -280,3 +289,8 @@ void toolchains::PS4CPU::addClangTargetOptions(
       CC1Args.push_back("-fvisibility-externs-nodllstorageclass=default");
   }
 }
+
+// PS4 toolchain.
+toolchains::PS4CPU::PS4CPU(const Driver &D, const llvm::Triple &Triple,
+                           const llvm::opt::ArgList &Args)
+    : PS4PS5Base(D, Triple, Args, "PS4", "SCE_ORBIS_SDK_DIR") {}

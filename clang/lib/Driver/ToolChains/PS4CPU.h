@@ -55,10 +55,12 @@ public:
 
 namespace toolchains {
 
-class LLVM_LIBRARY_VISIBILITY PS4CPU : public Generic_ELF {
+// Common Toolchain base class for PS4 and PS5.
+class LLVM_LIBRARY_VISIBILITY PS4PS5Base : public Generic_ELF {
 public:
-  PS4CPU(const Driver &D, const llvm::Triple &Triple,
-         const llvm::opt::ArgList &Args);
+  PS4PS5Base(const Driver &D, const llvm::Triple &Triple,
+             const llvm::opt::ArgList &Args, StringRef Platform,
+             const char *EnvVar);
 
   // No support for finding a C++ standard library yet.
   void addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
@@ -70,24 +72,19 @@ public:
 
   bool IsMathErrnoDefault() const override { return false; }
   bool IsObjCNonFragileABIDefault() const override { return true; }
-  bool HasNativeLLVMSupport() const override;
-  bool isPICDefault() const override;
+  bool HasNativeLLVMSupport() const override { return true; }
+  bool isPICDefault() const override { return true; }
 
   LangOptions::StackProtectorMode
   GetDefaultStackProtectorLevel(bool KernelOrKext) const override {
     return LangOptions::SSPStrong;
   }
 
-  unsigned GetDefaultDwarfVersion() const override { return 4; }
   llvm::DebuggerKind getDefaultDebuggerTuning() const override {
     return llvm::DebuggerKind::SCE;
   }
 
   SanitizerMask getSupportedSanitizers() const override;
-
-  // PS4 toolchain uses legacy thin LTO API, which is not
-  // capable of unit splitting.
-  bool canSplitThinLTOUnit() const override { return false; }
 
   void addClangTargetOptions(
       const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
@@ -102,9 +99,42 @@ public:
 
   bool useRelaxRelocations() const override { return true; }
 
+  // Helper methods for PS4/PS5.
+  virtual const char *getLinkerBaseName() const = 0;
+  virtual std::string qualifyPSCmdName(StringRef CmdName) const = 0;
+  virtual void addSanitizerArgs(const llvm::opt::ArgList &Args,
+                                llvm::opt::ArgStringList &CmdArgs,
+                                const char *Prefix,
+                                const char *Suffic) const = 0;
+  virtual const char *getProfileRTLibName() const = 0;
+
 protected:
   Tool *buildAssembler() const override;
   Tool *buildLinker() const override;
+};
+
+// PS4-specific Toolchain class.
+class LLVM_LIBRARY_VISIBILITY PS4CPU : public PS4PS5Base {
+public:
+  PS4CPU(const Driver &D, const llvm::Triple &Triple,
+         const llvm::opt::ArgList &Args);
+
+  unsigned GetDefaultDwarfVersion() const override { return 4; }
+
+  // PS4 toolchain uses legacy thin LTO API, which is not
+  // capable of unit splitt.
+  bool canSplitThinLTOUnit() const override { return false; }
+
+  const char *getLinkerBaseName() const override { return "ld"; }
+  std::string qualifyPSCmdName(StringRef CmdName) const override {
+    return Twine("orbis-", CmdName).str();
+  }
+  void addSanitizerArgs(const llvm::opt::ArgList &Args,
+                        llvm::opt::ArgStringList &CmdArgs, const char *Prefix,
+                        const char *Suffix) const override;
+  const char *getProfileRTLibName() const override {
+    return "libclang_rt.profile-x86_64.a";
+  }
 };
 
 } // end namespace toolchains

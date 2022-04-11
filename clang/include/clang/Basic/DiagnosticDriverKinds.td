@@ -539,8 +539,8 @@ def warn_drv_ps4_force_pic : Warning<
   "option '%0' was ignored by the PS4 toolchain, using '-fPIC'">,
   InGroup<OptionIgnored>;
 
-def warn_drv_ps4_sdk_dir : Warning<
-  "environment variable SCE_ORBIS_SDK_DIR is set, but points to invalid or nonexistent directory '%0'">,
+def warn_drv_ps_sdk_dir : Warning<
+  "environment variable '%0' is set, but points to invalid or nonexistent directory '%1'">,
   InGroup<InvalidOrNonExistentDirectory>;
 
 def err_drv_defsym_invalid_format : Error<"defsym must be of the form: sym=value: %0">;
