@@ -1252,6 +1252,95 @@ func @pad_nofold_static_zero(%arg0: tensor<?x?x?xf32>, %pad_value: f32) -> tenso
 
 // -----
 
+// CHECK-LABEL: func @fold_orthogonal_pad_chains(
+//  CHECK-SAME:   %[[ARG0:.*]]: tensor<64x64xf32>,
+//  CHECK-SAME:   %[[SZ0:.*]]: index, %[[SZ1:.*]]: index, %[[PW0:.*]]: index, %[[PW1:.*]]: index
+func.func @fold_orthogonal_pad_chains(%arg0: tensor<64x64xf32>,
+                                      %sz0 : index, %sz1 : index,
+                                      %pw0 : index, %pw1 : index) -> tensor<8x4xf32> {
+  //       CHECK:   %[[T0:.*]] = tensor.extract_slice %[[ARG0]]
+  //  CHECK-SAME:                     [16, 4] [%[[SZ0]], %[[SZ1]]]
+  //       CHECK:   %[[PAD:.*]] = tensor.pad %[[T0]] nofold
+  //  CHECK-SAME:                     high[%[[PW0]], %[[PW1]]]
+  //       CHECK:   return %[[PAD]]
+  %pad_value = arith.constant 0.0 : f32
+  %0 = tensor.extract_slice %arg0[16, 0] [%sz0, 64] [1, 1] : tensor<64x64xf32> to tensor<?x64xf32>
+  %1 = tensor.pad %0 low[0, 0] high[%pw0, 0] {
+    ^bb0(%arg1: index, %arg2: index):
+      tensor.yield %pad_value : f32
+    } : tensor<?x64xf32> to tensor<8x64xf32>
+  %2 = tensor.extract_slice %1[0, 4] [8, %sz1] [1, 1] : tensor<8x64xf32> to tensor<8x?xf32>
+  %3 = tensor.pad %2 nofold low[0, 0] high[0, %pw1] {
+    ^bb0(%arg1: index, %arg2: index):
+      tensor.yield %pad_value : f32
+    } : tensor<8x?xf32> to tensor<8x4xf32>
+  func.return %3 : tensor<8x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @dont_fold_pad_chains(
+//  CHECK-SAME:   %[[ARG0:.*]]: tensor<64x64xf32>,
+//  CHECK-SAME:   %[[SZ0:.*]]: index, %[[SZ1:.*]]: index, %[[PW0:.*]]: index, %[[PW1:.*]]: index
+func.func @dont_fold_pad_chains(%arg0: tensor<64x64xf32>,
+                                %sz0 : index, %sz1 : index,
+                                %pw0 : index, %pw1 : index) -> (tensor<8x4xf32>, tensor<4x64xf32>, tensor<8x4xf32>, tensor<6x4xf32>) {
+  //       CHECK:   %[[T0:.*]] = tensor.extract_slice %[[ARG0]]
+  //       CHECK:   %[[T1:.*]] = tensor.pad %[[T0]]
+  %pad_value = arith.constant 0.0 : f32
+  %0 = tensor.extract_slice %arg0[16, 0] [%sz0, 64] [1, 1] : tensor<64x64xf32> to tensor<?x64xf32>
+  %1 = tensor.pad %0 low[0, 0] high[%pw0, 0] {
+    ^bb0(%arg1: index, %arg2: index):
+      tensor.yield %pad_value : f32
+    } : tensor<?x64xf32> to tensor<8x64xf32>
+
+  // Don't fold if the padding values are different.
+  //       CHECK:   %[[T2:.*]] = tensor.extract_slice %[[T1]]
+  //  CHECK-SAME:                     [0, 4] [8, %[[SZ1]]]
+  //       CHECK:   %[[PAD0:.*]] = tensor.pad %[[T2]]
+  %different_value = arith.constant 1.0 : f32
+  %2 = tensor.extract_slice %1[0, 4] [8, %sz1] [1, 1] : tensor<8x64xf32> to tensor<8x?xf32>
+  %3 = tensor.pad %2 nofold low[0, 0] high[0, %pw1] {
+    ^bb0(%arg1: index, %arg2: index):
+      tensor.yield %different_value : f32
+    } : tensor<8x?xf32> to tensor<8x4xf32>
+
+  // Don't fold if the pad ops have common padding dimensions.
+  //       CHECK:   %[[T3:.*]] = tensor.extract_slice %[[T1]]
+  //  CHECK-SAME:                     [4, 0] [%[[SZ1]], 64]
+  //       CHECK:   %[[PAD1:.*]] = tensor.pad %[[T3]]
+  %4 = tensor.extract_slice %1[4, 0] [%sz1, 64] [1, 1] : tensor<8x64xf32> to tensor<?x64xf32>
+  %5 = tensor.pad %4 nofold low[0, 0] high[%pw1, 0] {
+    ^bb0(%arg1: index, %arg2: index):
+      tensor.yield %pad_value : f32
+    } : tensor<?x64xf32> to tensor<4x64xf32>
+
+  // Don't fold if padded source tensor dimension is accessed at an offset.
+  //       CHECK:   %[[T4:.*]] = tensor.extract_slice %[[T1]]
+  //  CHECK-SAME:                     [%[[SZ0]], 4] [8, %[[SZ1]]
+  //       CHECK:   %[[PAD2:.*]] = tensor.pad %[[T4]]
+  %6 = tensor.extract_slice %1[%sz0, 4] [8, %sz1] [1, 1] : tensor<8x64xf32> to tensor<8x?xf32>
+  %7 = tensor.pad %6 nofold low[0, 0] high[0, %pw1] {
+    ^bb0(%arg1: index, %arg2: index):
+      tensor.yield %pad_value : f32
+    } : tensor<8x?xf32> to tensor<8x4xf32>
+
+  // Don't fold if a padded source tensor dimension is sliced.
+  //       CHECK:   %[[T5:.*]] = tensor.extract_slice %[[T1]]
+  //  CHECK-SAME:                     [0, 4] [6, %[[SZ1]]
+  //       CHECK:   %[[PAD3:.*]] = tensor.pad %[[T5]]
+  %8 = tensor.extract_slice %1[0, 4] [6, %sz1] [1, 1] : tensor<8x64xf32> to tensor<6x?xf32>
+  %9 = tensor.pad %8 nofold low[0, 0] high[0, %pw1] {
+    ^bb0(%arg1: index, %arg2: index):
+      tensor.yield %pad_value : f32
+    } : tensor<6x?xf32> to tensor<6x4xf32>
+
+  //       CHECK:   return %[[PAD0]], %[[PAD1]], %[[PAD2]], %[[PAD3]]
+  func.return %3, %5, %7, %9 : tensor<8x4xf32>, tensor<4x64xf32>, tensor<8x4xf32>, tensor<6x4xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @fold_collapse_shape_from_elements
 func @fold_collapse_shape_from_elements(%arg0: i32) -> tensor<i32> {
   // CHECK: %[[FROM:.+]] = tensor.from_elements %arg0 : tensor<i32>

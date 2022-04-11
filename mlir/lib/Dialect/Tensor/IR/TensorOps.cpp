@@ -1858,6 +1858,18 @@ void PadOp::build(OpBuilder &b, OperationState &result, Type resultType,
   result.addAttributes(attrs);
 }
 
+llvm::SmallBitVector PadOp::getPaddedDims() {
+  llvm::SmallBitVector paddedDims(getSourceType().getRank());
+  auto extractPaddedDims = [&](ArrayRef<OpFoldResult> paddingWidths) {
+    for (const auto &en : enumerate(paddingWidths))
+      if (getConstantIntValue(en.value()) != static_cast<int64_t>(0))
+        paddedDims.set(en.index());
+  };
+  extractPaddedDims(getMixedLowPad());
+  extractPaddedDims(getMixedHighPad());
+  return paddedDims;
+}
+
 namespace {
 // Folds tensor.pad when padding is static zeros and the attribute
 // doesn't request otherwise.
@@ -1940,13 +1952,169 @@ struct FoldTargetTensorCast : public OpRewritePattern<PadOp> {
     return success();
   }
 };
+
+/// Fold chains of tensor::ExtractSliceOp, tensor::PadOp pairs that pad
+/// different dimensions. The pattern applies if the following preconditions
+/// hold:
+///   1) the tensor::ExtractSliceOps are not rank-reducing,
+///   2) the tensor::ExtractSliceOps have only unit-strides,
+///   3) the tensor::PadOps perform only high-padding,
+///   4) the tensor::PadOps have the same constant padding value,
+///   5) the tensor::PadOps do not have common padding dimensions,
+///   6) one tensor::ExtractSliceOp, tensor::PadOp pair has zero-padding and
+///      zero-offset for every dimension.
+///   7) the tensor::ExtractSliceOp sizes match the source tensor sizes for the
+///      padded source dimensions.
+///
+/// Example:
+///
+/// ```mlir
+///   %0 = tensor.extract_slice %input[16, 0] [%sz0, 64] [1, 1]
+///       : tensor<64x64xf32> to tensor<?x64xf32>
+///   %1 = tensor.pad %0 low[0, 0] high[%pw0, 0] { ...
+///     } : tensor<?x64xf32> to tensor<8x64xf32>
+///   %2 = tensor.extract_slice %1[0, 4] [8, %sz1] [1, 1]
+///        : tensor<8x64xf32> to tensor<8x?xf32>
+///   %res = tensor.pad %2 nofold low[0, 0] high[0, %pw1] { ...
+///     } : tensor<8x?xf32> to tensor<8x4xf32>
+/// ```
+///
+/// folds into:
+///
+/// ```mlir
+///   %0 = tensor.extract_slice %input[16, 4] [%sz0, %sz1] [1, 1]
+///        : tensor<64x64xf32> to tensor<?x?xf32>
+///   %res = tensor.pad %0 nofold low[0, 0] high[%pw0, %pw1] { ...
+///     } : tensor<?x?xf32> to tensor<8x4xf32>
+/// ```
+struct FoldOrthogonalPaddings : public OpRewritePattern<PadOp> {
+  using OpRewritePattern<PadOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(PadOp padOp,
+                                PatternRewriter &rewriter) const override {
+    auto innerSliceOp = padOp.source().getDefiningOp<ExtractSliceOp>();
+    if (!innerSliceOp)
+      return failure();
+    auto outerPadOp = innerSliceOp.source().getDefiningOp<PadOp>();
+    if (!outerPadOp || outerPadOp.nofold())
+      return failure();
+    auto outerSliceOp = outerPadOp.source().getDefiningOp<ExtractSliceOp>();
+    if (!outerSliceOp)
+      return failure();
+
+    // 1) Fail if the chain is rank-reducing.
+    int64_t rank = padOp.getSourceType().getRank();
+    if (outerSliceOp.getSourceType().getRank() != rank) {
+      return rewriter.notifyMatchFailure(padOp,
+                                         "cannot fold rank-reducing chain");
+    }
+
+    // 2) Fail if the tensor::ExtractSliceOps have non-unit strides.
+    if (!innerSliceOp.hasUnitStride() || !outerSliceOp.hasUnitStride()) {
+      return rewriter.notifyMatchFailure(
+          padOp, "cannot fold non-unit stride ExtractSliceOps");
+    }
+
+    // 3) Fail if the tensor::PadOps have non-zero low padding.
+    if (!padOp.hasZeroLowPad() || !outerPadOp.hasZeroLowPad()) {
+      return rewriter.notifyMatchFailure(padOp,
+                                         "cannot fold PadOps with low padding");
+    }
+
+    // 4) Fail if the tensor::PadOps padding values do not match.
+    Attribute innerAttr, outerAttr;
+    Value innerValue = padOp.getConstantPaddingValue();
+    Value outerValue = outerPadOp.getConstantPaddingValue();
+    if (!innerValue || !outerValue ||
+        !matchPattern(innerValue, m_Constant(&innerAttr)) ||
+        !matchPattern(outerValue, m_Constant(&outerAttr)) ||
+        innerAttr != outerAttr) {
+      return rewriter.notifyMatchFailure(
+          padOp, "cannot fold PadOps with different padding values");
+    }
+
+    // 5) Fail if a dimension is padded by both tensor::PadOps.
+    llvm::SmallBitVector innerDims = padOp.getPaddedDims();
+    llvm::SmallBitVector outerDims = outerPadOp.getPaddedDims();
+    if (innerDims.anyCommon(outerDims)) {
+      return rewriter.notifyMatchFailure(
+          padOp, "cannot fold PadOps with common padding dimensions");
+    }
+
+    // 6) Combine the offsets of the two tensor::ExtractSliceOps. Find the
+    // zero-offset and zero-padding tensor::ExtractSliceOp, tensor::PadOp pair
+    // for every dimension, and use the offset the other pair. Fail if no
+    // zero-offset and zero-padding tensor::ExtractSliceOp, tensor::PadOp pair
+    // exists.
+    SmallVector<OpFoldResult> newOffsets(rank, rewriter.getIndexAttr(0));
+    for (auto &en : enumerate(newOffsets)) {
+      OpFoldResult innerOffset = innerSliceOp.getMixedOffsets()[en.index()];
+      OpFoldResult outerOffset = outerSliceOp.getMixedOffsets()[en.index()];
+      if (!innerDims.test(en.index()) &&
+          (getConstantIntValue(innerOffset) == static_cast<int64_t>(0))) {
+        en.value() = outerOffset;
+        continue;
+      }
+      if (!outerDims.test(en.index()) &&
+          (getConstantIntValue(outerOffset) == static_cast<int64_t>(0))) {
+        en.value() = innerOffset;
+        continue;
+      }
+      return rewriter.notifyMatchFailure(
+          padOp, "cannot find zero-offset and zero-padding pair");
+    }
+
+    // 7) Combine the sizes of the two tensor::ExtractSliceOps. Take the size of
+    // the outer tensor::ExtractSliceOp for the dimensions padded by the outer
+    // tensor::PadOp and fail if the size of the inner tensor::ExtractSliceOp
+    // does not match the size of the padded dimension. Otherwise, take the size
+    // of the inner tensor::ExtractSliceOp.
+    SmallVector<OpFoldResult> newSizes = innerSliceOp.getMixedSizes();
+    for (auto &en : enumerate(newSizes)) {
+      if (!outerDims.test(en.index()))
+        continue;
+      OpFoldResult sliceSize = innerSliceOp.getMixedSizes()[en.index()];
+      int64_t sourceSize = innerSliceOp.getSourceType().getShape()[en.index()];
+      assert(!ShapedType::isDynamic(sourceSize) &&
+             "expected padded dimension to have a static size");
+      if (getConstantIntValue(sliceSize) != sourceSize) {
+        return rewriter.notifyMatchFailure(
+            padOp, "cannot fold since the inner ExtractSliceOp size does not "
+                   "match the size of the outer padding");
+      }
+      en.value() = outerSliceOp.getMixedSizes()[en.index()];
+    }
+
+    // Combine the high paddings of the two tensor::PadOps.
+    SmallVector<OpFoldResult> newHighPad(rank, rewriter.getIndexAttr(0));
+    for (auto &en : enumerate(newHighPad)) {
+      if (innerDims.test(en.index()))
+        newHighPad[en.index()] = padOp.getMixedHighPad()[en.index()];
+      if (outerDims.test(en.index()))
+        newHighPad[en.index()] = outerPadOp.getMixedHighPad()[en.index()];
+    }
+
+    // Create a new tensor::ExtractSliceOp, tensor::PadOp pair that performs the
+    // two paddings in one step.
+    auto newSliceOp = rewriter.create<ExtractSliceOp>(
+        padOp.getLoc(), outerSliceOp.source(), newOffsets, newSizes,
+        innerSliceOp.getMixedStrides());
+    auto newPadOp = rewriter.create<PadOp>(
+        padOp.getLoc(), padOp.getResultType(), newSliceOp.getResult(),
+        padOp.getMixedLowPad(), newHighPad, padOp.nofold());
+    rewriter.inlineRegionBefore(padOp.getRegion(), newPadOp.getRegion(),
+                                newPadOp.getRegion().begin());
+    rewriter.replaceOp(padOp, newPadOp.getResult());
+    return success();
+  }
+};
+
 } // namespace
 
 void PadOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                         MLIRContext *context) {
-  results
-      .add<FoldStaticZeroPadding, FoldSourceTensorCast, FoldTargetTensorCast>(
-          context);
+  results.add<FoldStaticZeroPadding, FoldSourceTensorCast, FoldTargetTensorCast,
+              FoldOrthogonalPaddings>(context);
 }
 
 /// Return the padding value of the PadOp if it constant. In this context,
