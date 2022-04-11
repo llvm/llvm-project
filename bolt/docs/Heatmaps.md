@@ -20,8 +20,10 @@ or if you want to monitor the existing process(es):
 $ perf record -e cycles:u -j any,u [-p PID|-a] -- sleep <interval>
 ```
 
-Note that at the moment running with LBR (`-j any,u` or `-b`) is
-a requirement.
+Running with LBR (`-j any,u` or `-b`) is recommended. Heatmaps can be generated
+from basic events by using the llvm-bolt-heatmap option `-nl` (no LBR) but
+such heatmaps do not have the coverage provided by LBR and may only be useful
+for finding event hotspots at larger code block granularities.
 
 Once the run is complete, and `perf.data` is generated, run llvm-bolt-heatmap:
 
