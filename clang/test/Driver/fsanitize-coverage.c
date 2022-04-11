@@ -54,7 +54,7 @@
 // CHECK-MASK-NOT: -fsanitize-coverage-
 
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=address -fsanitize-coverage=foobar %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-INVALID-VALUE
-// CHECK-INVALID-VALUE: error: unsupported argument 'foobar' to option 'fsanitize-coverage='
+// CHECK-INVALID-VALUE: error: unsupported argument 'foobar' to option '-fsanitize-coverage='
 
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=address -fsanitize-coverage=func -fsanitize-coverage=edge %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-INCOMPATIBLE
 // CHECK-INCOMPATIBLE: error: invalid argument '-fsanitize-coverage=func' not allowed with '-fsanitize-coverage=edge'

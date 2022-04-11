@@ -11,6 +11,7 @@
 #define _LIBCPP___MEMORY_ALLOCATOR_H
 
 #include <__config>
+#include <__memory/allocate_at_least.h>
 #include <__memory/allocator_traits.h>
 #include <__utility/forward.h>
 #include <cstddef>
@@ -106,6 +107,13 @@ public:
         }
     }
 
+#if _LIBCPP_STD_VER > 20
+    [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr
+    allocation_result<_Tp*> allocate_at_least(size_t __n) {
+        return {allocate(__n), __n};
+    }
+#endif
+
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
     void deallocate(_Tp* __p, size_t __n) _NOEXCEPT {
         if (__libcpp_is_constant_evaluated()) {
@@ -187,6 +195,13 @@ public:
             return static_cast<const _Tp*>(_VSTD::__libcpp_allocate(__n * sizeof(_Tp), _LIBCPP_ALIGNOF(_Tp)));
         }
     }
+
+#if _LIBCPP_STD_VER > 20
+    [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr
+    allocation_result<const _Tp*> allocate_at_least(size_t __n) {
+        return {allocate(__n), __n};
+    }
+#endif
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
     void deallocate(const _Tp* __p, size_t __n) {

@@ -24,7 +24,7 @@
 // CHECK-F5: "-target-feature" "+hwmultf5"
 
 // RUN: %clang  -### -target msp430 %s -mhwmult=rrr 2>&1 | FileCheck --check-prefix=INVL-ARG %s
-// INVL-ARG: error: unsupported argument 'rrr' to option '-mhwmult=rrr'
+// INVL-ARG: error: unsupported argument 'rrr' to option '-mhwmult='
 
 // RUN: %clang  -### -target msp430 %s -mhwmult=auto 2>&1 | FileCheck --check-prefix=WRN-NODEV %s
 // WRN-NODEV: warning: no MCU device specified, but '-mhwmult' is set to 'auto',

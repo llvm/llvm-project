@@ -28,7 +28,7 @@ extern fp __CTOR_LIST_END__[];
 
 extern void __cxa_finalize(void *) __attribute__((weak));
 
-static void __attribute__((used)) __do_init() {
+static void __attribute__((used)) __do_init(void) {
   static _Bool __initialized;
   if (__builtin_expect(__initialized, 0))
     return;
@@ -79,7 +79,7 @@ static fp __DTOR_LIST__[]
 extern fp __DTOR_LIST_END__[];
 #endif
 
-static void __attribute__((used)) __do_fini() {
+static void __attribute__((used)) __do_fini(void) {
   static _Bool __finalized;
   if (__builtin_expect(__finalized, 0))
     return;

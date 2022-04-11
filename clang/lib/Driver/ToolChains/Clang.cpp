@@ -3954,22 +3954,13 @@ static void RenderDiagnosticsOptions(const Driver &D, const ArgList &Args,
   // re-parsed to construct this job; claim any possible color diagnostic here
   // to avoid warn_drv_unused_argument and diagnose bad
   // OPT_fdiagnostics_color_EQ values.
-  for (const Arg *A : Args) {
-    const Option &O = A->getOption();
-    if (!O.matches(options::OPT_fcolor_diagnostics) &&
-        !O.matches(options::OPT_fdiagnostics_color) &&
-        !O.matches(options::OPT_fno_color_diagnostics) &&
-        !O.matches(options::OPT_fno_diagnostics_color) &&
-        !O.matches(options::OPT_fdiagnostics_color_EQ))
-      continue;
-
-    if (O.matches(options::OPT_fdiagnostics_color_EQ)) {
-      StringRef Value(A->getValue());
-      if (Value != "always" && Value != "never" && Value != "auto")
-        D.Diag(diag::err_drv_clang_unsupported)
-            << ("-fdiagnostics-color=" + Value).str();
-    }
-    A->claim();
+  Args.getLastArg(options::OPT_fcolor_diagnostics,
+                  options::OPT_fno_color_diagnostics);
+  if (const Arg *A = Args.getLastArg(options::OPT_fdiagnostics_color_EQ)) {
+    StringRef Value(A->getValue());
+    if (Value != "always" && Value != "never" && Value != "auto")
+      D.Diag(diag::err_drv_invalid_argument_to_option)
+          << Value << A->getOption().getName();
   }
 
   if (D.getDiags().getDiagnosticOptions().ShowColors)
@@ -5907,6 +5898,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(
         Args.MakeArgString("-fmessage-length=" + Twine(MessageLength)));
 
+  if (Arg *A = Args.getLastArg(options::OPT_frandomize_layout_seed_EQ))
+    CmdArgs.push_back(
+        Args.MakeArgString("-frandomize-layout-seed=" + Twine(A->getValue(0))));
+
+  if (Arg *A = Args.getLastArg(options::OPT_frandomize_layout_seed_file_EQ))
+    CmdArgs.push_back(Args.MakeArgString("-frandomize-layout-seed-file=" +
+                                         Twine(A->getValue(0))));
+
   // -fvisibility= and -fvisibility-ms-compat are of a piece.
   if (const Arg *A = Args.getLastArg(options::OPT_fvisibility_EQ,
                                      options::OPT_fvisibility_ms_compat)) {
@@ -6501,12 +6500,15 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                    false))
     CmdArgs.push_back("-fgnu89-inline");
 
-  if (Args.hasArg(options::OPT_fno_inline))
-    CmdArgs.push_back("-fno-inline");
-
-  Args.AddLastArg(CmdArgs, options::OPT_finline_functions,
-                  options::OPT_finline_hint_functions,
-                  options::OPT_fno_inline_functions);
+  const Arg *InlineArg = Args.getLastArg(options::OPT_finline_functions,
+                                         options::OPT_finline_hint_functions,
+                                         options::OPT_fno_inline_functions);
+  if (Arg *A = Args.getLastArg(options::OPT_finline, options::OPT_fno_inline)) {
+    if (A->getOption().matches(options::OPT_fno_inline))
+      A->render(Args, CmdArgs);
+  } else if (InlineArg) {
+    InlineArg->render(Args, CmdArgs);
+  }
 
   // FIXME: Find a better way to determine whether the language has modules
   // support by default, or just assume that all languages do.

@@ -33,7 +33,7 @@
 ; Type Id on _ZTV1D should have been promoted
 ; NOENABLESPLITFLAG-DAG: typeidCompatibleVTable: (name: "1.{{.*}}", summary: ((offset: 16, [[D]])))
 
-; Legacy PM, Index based WPD
+; Index based WPD
 ; RUN: llvm-lto2 run %t2.o -save-temps -pass-remarks=. \
 ; RUN:   -whole-program-visibility \
 ; RUN:   -o %t3 \
@@ -62,46 +62,8 @@
 ; RUN:   -r=%t2.o,_ZTV1C,px \
 ; RUN:   -r=%t2.o,_ZTV1D,px 2>&1 | FileCheck %s --check-prefix=SKIP
 
-; New PM, Index based WPD
-; RUN: llvm-lto2 run %t2.o -save-temps -use-new-pm -pass-remarks=. \
-; RUN:   -whole-program-visibility \
-; RUN:   -o %t3 \
-; RUN:   -r=%t2.o,test,px \
-; RUN:   -r=%t2.o,_ZN1A1nEi,p \
-; RUN:   -r=%t2.o,_ZN1B1fEi,p \
-; RUN:   -r=%t2.o,_ZN1C1fEi,p \
-; RUN:   -r=%t2.o,_ZN1D1mEi,p \
-; RUN:   -r=%t2.o,_ZTV1B,px \
-; RUN:   -r=%t2.o,_ZTV1C,px \
-; RUN:   -r=%t2.o,_ZTV1D,px 2>&1 | FileCheck %s --check-prefix=REMARK
-; RUN: llvm-dis %t3.1.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR
-
-; Legacy PM
 ; FIXME: Fix machine verifier issues and remove -verify-machineinstrs=0. PR39436.
 ; RUN: llvm-lto2 run %t.o -save-temps -pass-remarks=. \
-; RUN:   -whole-program-visibility \
-; RUN:   -verify-machineinstrs=0 \
-; RUN:   -o %t3 \
-; RUN:   -r=%t.o,test,px \
-; RUN:   -r=%t.o,_ZN1A1nEi,p \
-; RUN:   -r=%t.o,_ZN1B1fEi,p \
-; RUN:   -r=%t.o,_ZN1C1fEi,p \
-; RUN:   -r=%t.o,_ZN1D1mEi,p \
-; RUN:   -r=%t.o,_ZTV1B, \
-; RUN:   -r=%t.o,_ZTV1C, \
-; RUN:   -r=%t.o,_ZTV1D, \
-; RUN:   -r=%t.o,_ZN1A1nEi, \
-; RUN:   -r=%t.o,_ZN1B1fEi, \
-; RUN:   -r=%t.o,_ZN1C1fEi, \
-; RUN:   -r=%t.o,_ZN1D1mEi, \
-; RUN:   -r=%t.o,_ZTV1B,px \
-; RUN:   -r=%t.o,_ZTV1C,px \
-; RUN:   -r=%t.o,_ZTV1D,px 2>&1 | FileCheck %s --check-prefix=REMARK --dump-input=fail
-; RUN: llvm-dis %t3.1.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR
-
-; New PM
-; FIXME: Fix machine verifier issues and remove -verify-machineinstrs=0. PR39436.
-; RUN: llvm-lto2 run %t.o -save-temps -use-new-pm -pass-remarks=. \
 ; RUN:   -whole-program-visibility \
 ; RUN:   -verify-machineinstrs=0 \
 ; RUN:   -o %t3 \

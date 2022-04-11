@@ -12,4 +12,4 @@
 
 // RUN: not %clang %s -c -fprofile-update=unknown 2>&1 | FileCheck %s --check-prefix=ERROR
 
-// ERROR: error: unsupported argument 'unknown' to option 'fprofile-update='
+// ERROR: error: unsupported argument 'unknown' to option '-fprofile-update='

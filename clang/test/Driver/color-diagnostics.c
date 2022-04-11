@@ -29,7 +29,7 @@
 
 // RUN: %clang -fdiagnostics-color=foo -### -c %s 2>&1 \
 // RUN:     | FileCheck --check-prefix=CHECK-DCE_FOO %s
-// CHECK-DCE_FOO: error: the clang compiler does not support '-fdiagnostics-color=foo'
+// CHECK-DCE_FOO: error: invalid argument 'foo' to -fdiagnostics-color=
 
 // Check that the last flag wins.
 // RUN: %clang -fno-color-diagnostics -fdiagnostics-color -### -c %s 2>&1 \
