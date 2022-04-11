@@ -243,7 +243,7 @@ void TemplateName::print(raw_ostream &OS, const PrintingPolicy &Policy,
       QTN->getQualifier()->print(OS, Policy);
     if (QTN->hasTemplateKeyword())
       OS << "template ";
-    OS << *QTN->getDecl();
+    OS << *QTN->getTemplateDecl();
   } else if (DependentTemplateName *DTN = getAsDependentTemplateName()) {
     if (Qual == Qualified::AsWritten && DTN->getQualifier())
       DTN->getQualifier()->print(OS, Policy);

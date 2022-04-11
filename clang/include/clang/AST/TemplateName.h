@@ -415,10 +415,6 @@ public:
   /// keyword.
   bool hasTemplateKeyword() const { return Qualifier.getInt(); }
 
-  /// The template declaration that this qualified name refers
-  /// to.
-  TemplateDecl *getDecl() const { return Template; }
-
   /// The template declaration to which this qualified name
   /// refers.
   TemplateDecl *getTemplateDecl() const { return Template; }
