@@ -139,7 +139,7 @@ private:
 ///
 /// Support is provided to compare equality of two such functions as well as
 /// finding the value of the function at a point.
-class PWMAFunction : public PresburgerSpace {
+class PWMAFunction : private PresburgerSpace {
 public:
   PWMAFunction(const PresburgerSpace &space, unsigned numOutputs)
       : PresburgerSpace(space), numOutputs(numOutputs) {
