@@ -399,6 +399,17 @@ define i32 @mul_splat_fold_no_nuw(i32 %x) {
   ret i32 %t
 }
 
+; Negative test (but simplifies before we reach the mul_splat transform)- need more than 2 bits
+
+define i2 @mul_splat_fold_too_narrow(i2 %x) {
+; CHECK-LABEL: @mul_splat_fold_too_narrow(
+; CHECK-NEXT:    ret i2 [[X:%.*]]
+;
+  %m = mul nuw i2 %x, 2
+  %t = lshr i2 %m, 1
+  ret i2 %t
+}
+
 define i32 @negative_and_odd(i32 %x) {
 ; CHECK-LABEL: @negative_and_odd(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 31
