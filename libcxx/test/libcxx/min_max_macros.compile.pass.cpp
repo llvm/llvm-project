@@ -259,6 +259,10 @@ TEST_MACROS();
 #endif
 #include <stack>
 TEST_MACROS();
+#if __cplusplus > 202002L && !defined(_LIBCPP_HAS_NO_THREADS)
+#   include <stdatomic.h>
+TEST_MACROS();
+#endif
 #include <stdbool.h>
 TEST_MACROS();
 #include <stddef.h>

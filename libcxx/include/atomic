@@ -542,7 +542,7 @@ template <class T>
 # error <atomic> is not implemented
 #endif
 #ifdef kill_dependency
-# error C++ standard library is incompatible with <stdatomic.h>
+# error <atomic> is incompatible with <stdatomic.h> before C++23. Please compile with -std=c++23.
 #endif
 
 #define _LIBCPP_CHECK_STORE_MEMORY_ORDER(__m) \
