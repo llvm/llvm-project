@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -Werror -Wno-atomic-alignment -triple powerpc64le-linux-gnu \
+// RUN: %clang_cc1 -no-opaque-pointers -Werror -Wno-atomic-alignment -triple powerpc64le-linux-gnu \
 // RUN:   -target-cpu pwr8 -emit-llvm -o - %s | FileCheck %s --check-prefix=PPC64-PWR8
-// RUN: %clang_cc1 -Werror -Wno-atomic-alignment -triple powerpc64le-linux-gnu \
+// RUN: %clang_cc1 -no-opaque-pointers -Werror -Wno-atomic-alignment -triple powerpc64le-linux-gnu \
 // RUN:   -emit-llvm -o - %s | FileCheck %s --check-prefix=PPC64
-// RUN: %clang_cc1 -Werror -Wno-atomic-alignment -triple powerpc64-unknown-aix \
+// RUN: %clang_cc1 -no-opaque-pointers -Werror -Wno-atomic-alignment -triple powerpc64-unknown-aix \
 // RUN:   -target-cpu pwr7 -emit-llvm -o - %s | FileCheck %s --check-prefix=PPC64
 
 typedef struct {
