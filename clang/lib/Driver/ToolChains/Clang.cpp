@@ -3359,9 +3359,8 @@ static void RenderSCPOptions(const ToolChain &TC, const ArgList &Args,
       !EffectiveTriple.isPPC64())
     return;
 
-  if (Args.hasFlag(options::OPT_fstack_clash_protection,
-                   options::OPT_fno_stack_clash_protection, false))
-    CmdArgs.push_back("-fstack-clash-protection");
+  Args.addOptInFlag(CmdArgs, options::OPT_fstack_clash_protection,
+                    options::OPT_fno_stack_clash_protection);
 }
 
 static void RenderTrivialAutoVarInitOptions(const Driver &D,
@@ -3607,9 +3606,8 @@ static void RenderModulesOptions(Compilation &C, const Driver &D,
     CmdArgs.push_back("-fimplicit-module-maps");
 
   // -fmodules-decluse checks that modules used are declared so (off by default)
-  if (Args.hasFlag(options::OPT_fmodules_decluse,
-                   options::OPT_fno_modules_decluse, false))
-    CmdArgs.push_back("-fmodules-decluse");
+  Args.addOptInFlag(CmdArgs, options::OPT_fmodules_decluse,
+                    options::OPT_fno_modules_decluse);
 
   // -fmodules-strict-decluse is like -fmodule-decluse, but also checks that
   // all #included headers are part of modules.
@@ -3908,15 +3906,10 @@ static void RenderDiagnosticsOptions(const Driver &D, const ArgList &Args,
                     options::OPT_fno_caret_diagnostics, CaretDefault))
     CmdArgs.push_back("-fno-caret-diagnostics");
 
-  // -fdiagnostics-fixit-info is default, only pass non-default.
-  if (!Args.hasFlag(options::OPT_fdiagnostics_fixit_info,
-                    options::OPT_fno_diagnostics_fixit_info, true))
-    CmdArgs.push_back("-fno-diagnostics-fixit-info");
-
-  // Enable -fdiagnostics-show-option by default.
-  if (!Args.hasFlag(options::OPT_fdiagnostics_show_option,
-                    options::OPT_fno_diagnostics_show_option, true))
-    CmdArgs.push_back("-fno-diagnostics-show-option");
+  Args.addOptOutFlag(CmdArgs, options::OPT_fdiagnostics_fixit_info,
+                     options::OPT_fno_diagnostics_fixit_info);
+  Args.addOptOutFlag(CmdArgs, options::OPT_fdiagnostics_show_option,
+                     options::OPT_fno_diagnostics_show_option);
 
   if (const Arg *A =
           Args.getLastArg(options::OPT_fdiagnostics_show_category_EQ)) {
@@ -3924,9 +3917,8 @@ static void RenderDiagnosticsOptions(const Driver &D, const ArgList &Args,
     CmdArgs.push_back(A->getValue());
   }
 
-  if (Args.hasFlag(options::OPT_fdiagnostics_show_hotness,
-                   options::OPT_fno_diagnostics_show_hotness, false))
-    CmdArgs.push_back("-fdiagnostics-show-hotness");
+  Args.addOptInFlag(CmdArgs, options::OPT_fdiagnostics_show_hotness,
+                    options::OPT_fno_diagnostics_show_hotness);
 
   if (const Arg *A =
           Args.getLastArg(options::OPT_fdiagnostics_hotness_threshold_EQ)) {
@@ -5066,17 +5058,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     A->claim();
   }
 
-  if (!Args.hasFlag(options::OPT_fjump_tables, options::OPT_fno_jump_tables,
-                    true))
-    CmdArgs.push_back("-fno-jump-tables");
-
-  if (Args.hasFlag(options::OPT_fprofile_sample_accurate,
-                   options::OPT_fno_profile_sample_accurate, false))
-    CmdArgs.push_back("-fprofile-sample-accurate");
-
-  if (!Args.hasFlag(options::OPT_fpreserve_as_comments,
-                    options::OPT_fno_preserve_as_comments, true))
-    CmdArgs.push_back("-fno-preserve-as-comments");
+  Args.addOptOutFlag(CmdArgs, options::OPT_fjump_tables,
+                     options::OPT_fno_jump_tables);
+  Args.addOptInFlag(CmdArgs, options::OPT_fprofile_sample_accurate,
+                    options::OPT_fno_profile_sample_accurate);
+  Args.addOptOutFlag(CmdArgs, options::OPT_fpreserve_as_comments,
+                     options::OPT_fno_preserve_as_comments);
 
   if (Arg *A = Args.getLastArg(options::OPT_mregparm_EQ)) {
     CmdArgs.push_back("-mregparm");
@@ -5136,9 +5123,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   assert(FPKeepKindStr && "unknown FramePointerKind");
   CmdArgs.push_back(FPKeepKindStr);
 
-  if (!Args.hasFlag(options::OPT_fzero_initialized_in_bss,
-                    options::OPT_fno_zero_initialized_in_bss, true))
-    CmdArgs.push_back("-fno-zero-initialized-in-bss");
+  Args.addOptOutFlag(CmdArgs, options::OPT_fzero_initialized_in_bss,
+                     options::OPT_fno_zero_initialized_in_bss);
 
   bool OFastEnabled = isOptimizationLevelFast(Args);
   // If -Ofast is the optimization level, then -fstrict-aliasing should be
@@ -5154,29 +5140,21 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (!Args.hasFlag(options::OPT_fstruct_path_tbaa,
                     options::OPT_fno_struct_path_tbaa, true))
     CmdArgs.push_back("-no-struct-path-tbaa");
-  if (Args.hasFlag(options::OPT_fstrict_enums, options::OPT_fno_strict_enums,
-                   false))
-    CmdArgs.push_back("-fstrict-enums");
-  if (!Args.hasFlag(options::OPT_fstrict_return, options::OPT_fno_strict_return,
-                    true))
-    CmdArgs.push_back("-fno-strict-return");
-  if (Args.hasFlag(options::OPT_fallow_editor_placeholders,
-                   options::OPT_fno_allow_editor_placeholders, false))
-    CmdArgs.push_back("-fallow-editor-placeholders");
-  if (Args.hasFlag(options::OPT_fstrict_vtable_pointers,
-                   options::OPT_fno_strict_vtable_pointers,
-                   false))
-    CmdArgs.push_back("-fstrict-vtable-pointers");
-  if (Args.hasFlag(options::OPT_fforce_emit_vtables,
-                   options::OPT_fno_force_emit_vtables,
-                   false))
-    CmdArgs.push_back("-fforce-emit-vtables");
+  Args.addOptInFlag(CmdArgs, options::OPT_fstrict_enums,
+                    options::OPT_fno_strict_enums);
+  Args.addOptOutFlag(CmdArgs, options::OPT_fstrict_return,
+                     options::OPT_fno_strict_return);
+  Args.addOptInFlag(CmdArgs, options::OPT_fallow_editor_placeholders,
+                    options::OPT_fno_allow_editor_placeholders);
+  Args.addOptInFlag(CmdArgs, options::OPT_fstrict_vtable_pointers,
+                    options::OPT_fno_strict_vtable_pointers);
+  Args.addOptInFlag(CmdArgs, options::OPT_fforce_emit_vtables,
+                    options::OPT_fno_force_emit_vtables);
   if (!Args.hasFlag(options::OPT_foptimize_sibling_calls,
                     options::OPT_fno_optimize_sibling_calls, true))
     CmdArgs.push_back("-mdisable-tail-calls");
-  if (Args.hasFlag(options::OPT_fno_escaping_block_tail_calls,
-                   options::OPT_fescaping_block_tail_calls, false))
-    CmdArgs.push_back("-fno-escaping-block-tail-calls");
+  Args.addOptOutFlag(CmdArgs, options::OPT_fescaping_block_tail_calls,
+                     options::OPT_fno_escaping_block_tail_calls);
 
   Args.AddLastArg(CmdArgs, options::OPT_ffine_grained_bitfield_accesses,
                   options::OPT_fno_fine_grained_bitfield_accesses);

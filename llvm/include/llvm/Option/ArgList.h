@@ -307,6 +307,16 @@ public:
   bool hasFlag(OptSpecifier Pos, OptSpecifier PosAlias, OptSpecifier Neg,
                bool Default) const;
 
+  /// Given an option Pos and its negative form Neg, render the option if Pos is
+  /// present.
+  void addOptInFlag(ArgStringList &Output, OptSpecifier Pos,
+                    OptSpecifier Neg) const;
+  /// Render the option if Neg is present.
+  void addOptOutFlag(ArgStringList &Output, OptSpecifier Pos,
+                     OptSpecifier Neg) const {
+    addOptInFlag(Output, Neg, Pos);
+  }
+
   /// Render only the last argument match \p Id0, if present.
   template<typename ...OptSpecifiers>
   void AddLastArg(ArgStringList &Output, OptSpecifiers ...Ids) const {
