@@ -801,6 +801,8 @@ void MetadataStreamerV3::emitHiddenKernelArgs(const MachineFunction &MF,
   auto &DL = M->getDataLayout();
   auto Int64Ty = Type::getInt64Ty(Func.getContext());
 
+  Offset = alignTo(Offset, ST.getAlignmentForImplicitArgPtr());
+
   if (HiddenArgNumBytes >= 8)
     emitKernelArg(DL, Int64Ty, Align(8), "hidden_global_offset_x", Offset,
                   Args);
@@ -973,6 +975,11 @@ void MetadataStreamerV5::emitHiddenKernelArgs(const MachineFunction &MF,
                                               msgpack::ArrayDocNode Args) {
   auto &Func = MF.getFunction();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+
+  // No implicit kernel argument is used.
+  if (ST.getImplicitArgNumBytes(Func) == 0)
+    return;
+
   const Module *M = Func.getParent();
   auto &DL = M->getDataLayout();
   const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
@@ -981,6 +988,7 @@ void MetadataStreamerV5::emitHiddenKernelArgs(const MachineFunction &MF,
   auto Int32Ty = Type::getInt32Ty(Func.getContext());
   auto Int16Ty = Type::getInt16Ty(Func.getContext());
 
+  Offset = alignTo(Offset, ST.getAlignmentForImplicitArgPtr());
   emitKernelArg(DL, Int32Ty, Align(4), "hidden_block_count_x", Offset, Args);
   emitKernelArg(DL, Int32Ty, Align(4), "hidden_block_count_y", Offset, Args);
   emitKernelArg(DL, Int32Ty, Align(4), "hidden_block_count_z", Offset, Args);

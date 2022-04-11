@@ -24,8 +24,8 @@ define amdgpu_kernel void @addrspacecast_requires_queue_ptr(i32 addrspace(5)* %p
 }
 
 ; CHECK: - .args:
-; CHECK:             .value_kind:     hidden_multigrid_sync_arg
-; PRE-GFX9:          .offset:         200
+; PRE-GFX9:          .value_kind:     hidden_multigrid_sync_arg
+; PRE-GFX9-NEXT:          .offset:         200
 ; PRE-GFX9-NEXT:     .size:           4
 ; PRE-GFX9-NEXT:     .value_kind:     hidden_private_base
 ; PRE-GFX9-NEXT:     .offset:         204
@@ -44,8 +44,8 @@ define amdgpu_kernel void @is_shared_requires_queue_ptr(i8* %ptr) {
 }
 
 ; CHECK: - .args:
-; CHECK:             .value_kind:     hidden_multigrid_sync_arg
-; PRE-GFX9:          .offset:         200
+; PRE-GFX9:             .value_kind:     hidden_multigrid_sync_arg
+; PRE-GFX9-NEXT:          .offset:         200
 ; PRE-GFX9-NEXT:     .size:           4
 ; PRE-GFX9-NEXT:     .value_kind:     hidden_private_base
 ; PRE-GFX9-NEXT:     .offset:         204
@@ -64,8 +64,8 @@ define amdgpu_kernel void @is_private_requires_queue_ptr(i8* %ptr) {
 }
 
 ; CHECK: - .args:
-; CHECK:             .value_kind:     hidden_multigrid_sync_arg
-; PRE-GFX9:          .offset:         192
+; PRE-GFX9:             .value_kind:     hidden_multigrid_sync_arg
+; PRE-GFX9-NEXT:          .offset:         192
 ; PRE-GFX9-NEXT:     .size:           4
 ; PRE-GFX9-NEXT:     .value_kind:     hidden_private_base
 ; PRE-GFX9-NEXT:     .offset:         196
