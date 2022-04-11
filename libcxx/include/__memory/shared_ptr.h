@@ -164,8 +164,8 @@ public:
 
 #if defined(_LIBCPP_BUILDING_LIBRARY) && \
     defined(_LIBCPP_DEPRECATED_ABI_LEGACY_LIBRARY_DEFINITIONS_FOR_INLINE_FUNCTIONS)
-    void __add_shared() _NOEXCEPT;
-    bool __release_shared() _NOEXCEPT;
+    void __add_shared() noexcept;
+    bool __release_shared() noexcept;
 #else
     _LIBCPP_INLINE_VISIBILITY
     void __add_shared() _NOEXCEPT {
@@ -202,9 +202,9 @@ protected:
 public:
 #if defined(_LIBCPP_BUILDING_LIBRARY) && \
     defined(_LIBCPP_DEPRECATED_ABI_LEGACY_LIBRARY_DEFINITIONS_FOR_INLINE_FUNCTIONS)
-    void __add_shared() _NOEXCEPT;
-    void __add_weak() _NOEXCEPT;
-    void __release_shared() _NOEXCEPT;
+    void __add_shared() noexcept;
+    void __add_weak() noexcept;
+    void __release_shared() noexcept;
 #else
     _LIBCPP_INLINE_VISIBILITY
     void __add_shared() _NOEXCEPT {
