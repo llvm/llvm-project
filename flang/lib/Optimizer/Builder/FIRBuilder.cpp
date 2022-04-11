@@ -196,10 +196,9 @@ mlir::Value fir::FirOpBuilder::allocateLocal(
 
 /// Get the block for adding Allocas.
 mlir::Block *fir::FirOpBuilder::getAllocaBlock() {
-  // auto iface =
-  //     getRegion().getParentOfType<mlir::omp::OutlineableOpenMPOpInterface>();
-  // return iface ? iface.getAllocaBlock() : getEntryBlock();
-  return getEntryBlock();
+  auto iface =
+      getRegion().getParentOfType<mlir::omp::OutlineableOpenMPOpInterface>();
+  return iface ? iface.getAllocaBlock() : getEntryBlock();
 }
 
 /// Create a temporary variable on the stack. Anonymous temporaries have no
