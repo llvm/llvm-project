@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -triple i686-windows-msvc -fms-compatibility   -emit-llvm -std=c++1y -O0 -o - %s -DMSABI | FileCheck --check-prefix=MSC --check-prefix=M32 %s
-// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -triple x86_64-windows-msvc -fms-compatibility -emit-llvm -std=c++1y -O0 -o - %s -DMSABI | FileCheck --check-prefix=MSC --check-prefix=M64 %s
-// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -triple i686-windows-gnu                       -emit-llvm -std=c++1y -O0 -o - %s         | FileCheck --check-prefix=GNU --check-prefix=G32 %s
-// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -triple x86_64-windows-gnu                     -emit-llvm -std=c++1y -O0 -o - %s         | FileCheck --check-prefix=GNU --check-prefix=G64 %s
-// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -triple i686-windows-msvc -fms-compatibility   -emit-llvm -std=c++1y -O1 -fno-experimental-new-pass-manager -o - %s -DMSABI | FileCheck --check-prefix=MO1 %s
-// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -triple i686-windows-gnu                       -emit-llvm -std=c++1y -O1 -fno-experimental-new-pass-manager -o - %s         | FileCheck --check-prefix=GO1 %s
+// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -disable-llvm-passes -triple i686-windows-msvc -fms-compatibility   -emit-llvm -std=c++1y -O0 -o - %s -DMSABI | FileCheck --check-prefix=MSC --check-prefix=M32 %s
+// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -disable-llvm-passes -triple x86_64-windows-msvc -fms-compatibility -emit-llvm -std=c++1y -O0 -o - %s -DMSABI | FileCheck --check-prefix=MSC --check-prefix=M64 %s
+// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -disable-llvm-passes -triple i686-windows-gnu                       -emit-llvm -std=c++1y -O0 -o - %s         | FileCheck --check-prefix=GNU --check-prefix=G32 %s
+// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -disable-llvm-passes -triple x86_64-windows-gnu                     -emit-llvm -std=c++1y -O0 -o - %s         | FileCheck --check-prefix=GNU --check-prefix=G64 %s
+// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -disable-llvm-passes -triple i686-windows-msvc -fms-compatibility   -emit-llvm -std=c++1y -O1 -o - %s -DMSABI | FileCheck --check-prefix=MO1 %s
+// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -disable-llvm-passes -triple i686-windows-gnu                       -emit-llvm -std=c++1y -O1 -o - %s         | FileCheck --check-prefix=GO1 %s
 
 // Helper structs to make templates more expressive.
 struct ImplicitInst_Imported {};

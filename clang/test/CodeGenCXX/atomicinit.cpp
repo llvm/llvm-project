@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -O1 -fno-experimental-new-pass-manager -o - -triple=i686-apple-darwin9 -std=c++11 | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -fno-inline-functions %s -emit-llvm -O1 -o - -triple=i686-apple-darwin9 -std=c++11 | FileCheck %s
 
 // CHECK-DAG: @PR22043 ={{.*}} local_unnamed_addr global i32 0, align 4
 typedef _Atomic(int) AtomicInt;
