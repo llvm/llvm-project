@@ -605,9 +605,10 @@ Out:
 define void @test_sink_store_only() writeonly {
 ; CHECK-LABEL: @test_sink_store_only(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[GLB_PROMOTED:%.*]] = load i8, i8* @glb, align 1
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
-; CHECK-NEXT:    [[DIV1:%.*]] = phi i8 [ undef, [[ENTRY:%.*]] ], [ [[DIV:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[DIV1:%.*]] = phi i8 [ [[GLB_PROMOTED]], [[ENTRY:%.*]] ], [ [[DIV:%.*]], [[LOOP_LATCH:%.*]] ]
 ; CHECK-NEXT:    [[I:%.*]] = phi i8 [ 0, [[ENTRY]] ], [ [[ADD:%.*]], [[LOOP_LATCH]] ]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[I]], 4
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_LATCH]], label [[EXIT:%.*]]

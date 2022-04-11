@@ -2156,24 +2156,21 @@ bool llvm::promoteLoopAccessesToScalars(
 
   // Set up the preheader to have a definition of the value.  It is the live-out
   // value from the preheader that uses in the loop will use.
-  LoadInst *PreheaderLoad = nullptr;
-  if (FoundLoadToPromote) {
-    PreheaderLoad =
-        new LoadInst(AccessTy, SomePtr, SomePtr->getName() + ".promoted",
-                     Preheader->getTerminator());
-    if (SawUnorderedAtomic)
-      PreheaderLoad->setOrdering(AtomicOrdering::Unordered);
-    PreheaderLoad->setAlignment(Alignment);
-    PreheaderLoad->setDebugLoc(DebugLoc());
-    if (AATags)
-      PreheaderLoad->setAAMetadata(AATags);
+  LoadInst *PreheaderLoad = new LoadInst(
+      AccessTy, SomePtr, SomePtr->getName() + ".promoted",
+      Preheader->getTerminator());
+  if (SawUnorderedAtomic)
+    PreheaderLoad->setOrdering(AtomicOrdering::Unordered);
+  PreheaderLoad->setAlignment(Alignment);
+  PreheaderLoad->setDebugLoc(DebugLoc());
+  if (AATags)
+    PreheaderLoad->setAAMetadata(AATags);
+  SSA.AddAvailableValue(Preheader, PreheaderLoad);
 
-    MemoryAccess *PreheaderLoadMemoryAccess = MSSAU.createMemoryAccessInBB(
-        PreheaderLoad, nullptr, PreheaderLoad->getParent(), MemorySSA::End);
-    MemoryUse *NewMemUse = cast<MemoryUse>(PreheaderLoadMemoryAccess);
-    MSSAU.insertUse(NewMemUse, /*RenameUses=*/true);
-    SSA.AddAvailableValue(Preheader, PreheaderLoad);
-  }
+  MemoryAccess *PreheaderLoadMemoryAccess = MSSAU.createMemoryAccessInBB(
+      PreheaderLoad, nullptr, PreheaderLoad->getParent(), MemorySSA::End);
+  MemoryUse *NewMemUse = cast<MemoryUse>(PreheaderLoadMemoryAccess);
+  MSSAU.insertUse(NewMemUse, /*RenameUses=*/true);
 
   if (VerifyMemorySSA)
     MSSAU.getMemorySSA()->verifyMemorySSA();
@@ -2184,7 +2181,7 @@ bool llvm::promoteLoopAccessesToScalars(
   if (VerifyMemorySSA)
     MSSAU.getMemorySSA()->verifyMemorySSA();
   // If the SSAUpdater didn't use the load in the preheader, just zap it now.
-  if (PreheaderLoad && PreheaderLoad->use_empty())
+  if (PreheaderLoad->use_empty())
     eraseInstruction(*PreheaderLoad, *SafetyInfo, MSSAU);
 
   return true;
