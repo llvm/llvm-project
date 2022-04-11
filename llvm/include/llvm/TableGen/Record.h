@@ -1716,8 +1716,8 @@ public:
   StringRef getValueAsString(StringRef FieldName) const;
 
   /// This method looks up the specified field and returns
-  /// its value as a string, throwing an exception if the field if the value is
-  /// not a string and llvm::Optional() if the field does not exist.
+  /// its value as a string, throwing an exception if the value is not a string
+  /// and llvm::Optional() if the field does not exist.
   llvm::Optional<StringRef> getValueAsOptionalString(StringRef FieldName) const;
 
   /// This method looks up the specified field and returns
