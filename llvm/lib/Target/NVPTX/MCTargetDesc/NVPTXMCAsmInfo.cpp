@@ -54,4 +54,8 @@ NVPTXMCAsmInfo::NVPTXMCAsmInfo(const Triple &TheTriple,
   GlobalDirective = "\t// .globl\t";
 
   UseIntegratedAssembler = false;
+
+  // Avoid using parens for identifiers starting with $ - ptxas does
+  // not expect them.
+  UseParensForDollarSignNames = false;
 }
