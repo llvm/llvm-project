@@ -1972,3 +1972,24 @@ TEST_F(AMDGPUGISelMITest, TestKnownBitsAssertAlign) {
   CheckBits(30, Copies.size() - 2);
   CheckBits(5, Copies.size() - 1);
 }
+
+TEST_F(AArch64GISelMITest, TestKnownBitsUADDO) {
+  StringRef MIRString = R"(
+   %ptr:_(p0) = G_IMPLICIT_DEF
+   %ld0:_(s32) = G_LOAD %ptr(p0) :: (load (s16))
+   %ld1:_(s32) = G_LOAD %ptr(p0) :: (load (s16))
+
+   %add:_(s32), %overflow:_(s32) = G_UADDO %ld0, %ld1
+   %copy_overflow:_(s32) = COPY %overflow
+)";
+
+  setUp(MIRString);
+  if (!TM)
+    return;
+
+  Register CopyOverflow = Copies[Copies.size() - 1];
+  GISelKnownBits Info(*MF);
+  KnownBits Res = Info.getKnownBits(CopyOverflow);
+  EXPECT_EQ(0u, Res.One.getZExtValue());
+  EXPECT_EQ(31u, Res.Zero.countLeadingOnes());
+}

@@ -31,9 +31,6 @@ define amdgpu_cs i64 @abs_sgpr_i64(i64 inreg %arg) {
 ; GFX:       ; %bb.0:
 ; GFX-NEXT:    s_ashr_i32 s2, s1, 31
 ; GFX-NEXT:    s_add_u32 s0, s0, s2
-; GFX-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX-NEXT:    s_and_b32 s4, s4, 1
-; GFX-NEXT:    s_cmp_lg_u32 s4, 0
 ; GFX-NEXT:    s_mov_b32 s3, s2
 ; GFX-NEXT:    s_addc_u32 s1, s1, s2
 ; GFX-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]

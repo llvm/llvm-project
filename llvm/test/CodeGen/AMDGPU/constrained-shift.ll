@@ -283,14 +283,8 @@ define amdgpu_ps i64 @s_csh_64_0(i64 inreg %a, i64 inreg %b) {
 ; GISEL-NEXT:    s_lshr_b64 s[6:7], s[0:1], s2
 ; GISEL-NEXT:    s_ashr_i64 s[0:1], s[0:1], s2
 ; GISEL-NEXT:    s_add_u32 s2, s4, s6
-; GISEL-NEXT:    s_cselect_b32 s3, 1, 0
-; GISEL-NEXT:    s_and_b32 s3, s3, 1
-; GISEL-NEXT:    s_cmp_lg_u32 s3, 0
 ; GISEL-NEXT:    s_addc_u32 s3, s5, s7
 ; GISEL-NEXT:    s_add_u32 s0, s2, s0
-; GISEL-NEXT:    s_cselect_b32 s2, 1, 0
-; GISEL-NEXT:    s_and_b32 s2, s2, 1
-; GISEL-NEXT:    s_cmp_lg_u32 s2, 0
 ; GISEL-NEXT:    s_addc_u32 s1, s3, s1
 ; GISEL-NEXT:    ; return to shader part epilog
   %and = and i64 %b, 63
@@ -322,14 +316,8 @@ define amdgpu_ps i64 @s_csh_64_1(i64 inreg %a, i64 inreg %b) {
 ; GISEL-NEXT:    s_lshr_b64 s[6:7], s[0:1], s2
 ; GISEL-NEXT:    s_ashr_i64 s[0:1], s[0:1], s2
 ; GISEL-NEXT:    s_add_u32 s2, s4, s6
-; GISEL-NEXT:    s_cselect_b32 s3, 1, 0
-; GISEL-NEXT:    s_and_b32 s3, s3, 1
-; GISEL-NEXT:    s_cmp_lg_u32 s3, 0
 ; GISEL-NEXT:    s_addc_u32 s3, s5, s7
 ; GISEL-NEXT:    s_add_u32 s0, s2, s0
-; GISEL-NEXT:    s_cselect_b32 s2, 1, 0
-; GISEL-NEXT:    s_and_b32 s2, s2, 1
-; GISEL-NEXT:    s_cmp_lg_u32 s2, 0
 ; GISEL-NEXT:    s_addc_u32 s1, s3, s1
 ; GISEL-NEXT:    ; return to shader part epilog
   %and = and i64 %b, 255

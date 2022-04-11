@@ -190,9 +190,6 @@ define amdgpu_ps <2 x i64> @scalar_xnor_i64_mul_use(i64 inreg %a, i64 inreg %b) 
 ; GCN-NEXT:    s_xor_b64 s[2:3], s[0:1], s[2:3]
 ; GCN-NEXT:    s_not_b64 s[4:5], s[2:3]
 ; GCN-NEXT:    s_add_u32 s2, s2, s0
-; GCN-NEXT:    s_cselect_b32 s0, 1, 0
-; GCN-NEXT:    s_and_b32 s0, s0, 1
-; GCN-NEXT:    s_cmp_lg_u32 s0, 0
 ; GCN-NEXT:    s_addc_u32 s3, s3, s1
 ; GCN-NEXT:    s_mov_b32 s0, s4
 ; GCN-NEXT:    s_mov_b32 s1, s5
@@ -203,11 +200,8 @@ define amdgpu_ps <2 x i64> @scalar_xnor_i64_mul_use(i64 inreg %a, i64 inreg %b) 
 ; GFX10-NEXT:    s_xor_b64 s[2:3], s[0:1], s[2:3]
 ; GFX10-NEXT:    s_not_b64 s[4:5], s[2:3]
 ; GFX10-NEXT:    s_add_u32 s2, s2, s0
-; GFX10-NEXT:    s_cselect_b32 s0, 1, 0
-; GFX10-NEXT:    s_and_b32 s0, s0, 1
-; GFX10-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX10-NEXT:    s_mov_b32 s0, s4
 ; GFX10-NEXT:    s_addc_u32 s3, s3, s1
+; GFX10-NEXT:    s_mov_b32 s0, s4
 ; GFX10-NEXT:    s_mov_b32 s1, s5
 ; GFX10-NEXT:    ; return to shader part epilog
   %xor = xor i64 %a, %b
