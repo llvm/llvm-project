@@ -1670,11 +1670,11 @@ public:
     SuperClasses.push_back(std::make_pair(R, Range));
   }
 
-  /// If there are any field references that refer to fields
-  /// that have been filled in, we can propagate the values now.
+  /// If there are any field references that refer to fields that have been
+  /// filled in, we can propagate the values now.
   ///
-  /// This is a final resolve: any error messages, e.g. due to undefined
-  /// !cast references, are generated now.
+  /// This is a final resolve: any error messages, e.g. due to undefined !cast
+  /// references, are generated now.
   void resolveReferences(Init *NewName = nullptr);
 
   /// Apply the resolver to the name of the record as well as to the
@@ -1698,11 +1698,11 @@ public:
   // High-level methods useful to tablegen back-ends
   //
 
-  ///Return the source location for the named field.
+  /// Return the source location for the named field.
   SMLoc getFieldLoc(StringRef FieldName) const;
 
-  /// Return the initializer for a value with the specified name,
-  /// or throw an exception if the field does not exist.
+  /// Return the initializer for a value with the specified name, or throw an
+  /// exception if the field does not exist.
   Init *getValueInit(StringRef FieldName) const;
 
   /// Return true if the named field is unset.
@@ -1710,70 +1710,69 @@ public:
     return isa<UnsetInit>(getValueInit(FieldName));
   }
 
-  /// This method looks up the specified field and returns
-  /// its value as a string, throwing an exception if the field does not exist
-  /// or if the value is not a string.
+  /// This method looks up the specified field and returns its value as a
+  /// string, throwing an exception if the field does not exist or if the value
+  /// is not a string.
   StringRef getValueAsString(StringRef FieldName) const;
 
-  /// This method looks up the specified field and returns
-  /// its value as a string, throwing an exception if the value is not a string
-  /// and llvm::Optional() if the field does not exist.
+  /// This method looks up the specified field and returns its value as a
+  /// string, throwing an exception if the value is not a string and
+  /// llvm::Optional() if the field does not exist.
   llvm::Optional<StringRef> getValueAsOptionalString(StringRef FieldName) const;
 
-  /// This method looks up the specified field and returns
-  /// its value as a BitsInit, throwing an exception if the field does not exist
-  /// or if the value is not the right type.
+  /// This method looks up the specified field and returns its value as a
+  /// BitsInit, throwing an exception if the field does not exist or if the
+  /// value is not the right type.
   BitsInit *getValueAsBitsInit(StringRef FieldName) const;
 
-  /// This method looks up the specified field and returns
-  /// its value as a ListInit, throwing an exception if the field does not exist
-  /// or if the value is not the right type.
+  /// This method looks up the specified field and returns its value as a
+  /// ListInit, throwing an exception if the field does not exist or if the
+  /// value is not the right type.
   ListInit *getValueAsListInit(StringRef FieldName) const;
 
-  /// This method looks up the specified field and
-  /// returns its value as a vector of records, throwing an exception if the
-  /// field does not exist or if the value is not the right type.
+  /// This method looks up the specified field and returns its value as a
+  /// vector of records, throwing an exception if the field does not exist or
+  /// if the value is not the right type.
   std::vector<Record*> getValueAsListOfDefs(StringRef FieldName) const;
 
-  /// This method looks up the specified field and
-  /// returns its value as a vector of integers, throwing an exception if the
-  /// field does not exist or if the value is not the right type.
+  /// This method looks up the specified field and returns its value as a
+  /// vector of integers, throwing an exception if the field does not exist or
+  /// if the value is not the right type.
   std::vector<int64_t> getValueAsListOfInts(StringRef FieldName) const;
 
-  /// This method looks up the specified field and
-  /// returns its value as a vector of strings, throwing an exception if the
-  /// field does not exist or if the value is not the right type.
+  /// This method looks up the specified field and returns its value as a
+  /// vector of strings, throwing an exception if the field does not exist or
+  /// if the value is not the right type.
   std::vector<StringRef> getValueAsListOfStrings(StringRef FieldName) const;
 
-  /// This method looks up the specified field and returns its
-  /// value as a Record, throwing an exception if the field does not exist or if
-  /// the value is not the right type.
+  /// This method looks up the specified field and returns its value as a
+  /// Record, throwing an exception if the field does not exist or if the value
+  /// is not the right type.
   Record *getValueAsDef(StringRef FieldName) const;
 
   /// This method looks up the specified field and returns its value as a
-  /// Record, returning null if the field exists but is "uninitialized"
-  /// (i.e. set to `?`), and throwing an exception if the field does not
-  /// exist or if its value is not the right type.
+  /// Record, returning null if the field exists but is "uninitialized" (i.e.
+  /// set to `?`), and throwing an exception if the field does not exist or if
+  /// its value is not the right type.
   Record *getValueAsOptionalDef(StringRef FieldName) const;
 
-  /// This method looks up the specified field and returns its
-  /// value as a bit, throwing an exception if the field does not exist or if
-  /// the value is not the right type.
+  /// This method looks up the specified field and returns its value as a bit,
+  /// throwing an exception if the field does not exist or if the value is not
+  /// the right type.
   bool getValueAsBit(StringRef FieldName) const;
 
-  /// This method looks up the specified field and
-  /// returns its value as a bit. If the field is unset, sets Unset to true and
-  /// returns false.
+  /// This method looks up the specified field and returns its value as a bit.
+  /// If the field is unset, sets Unset to true and returns false.
   bool getValueAsBitOrUnset(StringRef FieldName, bool &Unset) const;
 
-  /// This method looks up the specified field and returns its
-  /// value as an int64_t, throwing an exception if the field does not exist or
-  /// if the value is not the right type.
+  /// This method looks up the specified field and returns its value as an
+  /// int64_t, throwing an exception if the field does not exist or if the
+  /// value is not the right type.
   int64_t getValueAsInt(StringRef FieldName) const;
 
-  /// This method looks up the specified field and returns its
-  /// value as an Dag, throwing an exception if the field does not exist or if
-  /// the value is not the right type.
+  /// This method looks up the specified field and returns its value as an Dag,
+  /// throwing an exception if the field does not exist or if the value is not
+  /// the right type.
   DagInit *getValueAsDag(StringRef FieldName) const;
 };
 
