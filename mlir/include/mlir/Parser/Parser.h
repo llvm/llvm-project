@@ -204,26 +204,6 @@ inline OwningOpRef<ContainerOpT> parseSourceString(llvm::StringRef sourceStr,
       &block, context, sourceFileLoc);
 }
 
-/// TODO: These methods are deprecated in favor of the above template versions.
-/// They should be removed when usages have been updated.
-[[deprecated("use parseSourceFile<ModuleOp>")]] inline OwningOpRef<ModuleOp>
-parseSourceFile(const llvm::SourceMgr &sourceMgr, MLIRContext *context) {
-  return parseSourceFile<ModuleOp>(sourceMgr, context);
-}
-[[deprecated("use parseSourceFile<ModuleOp>")]] inline OwningOpRef<ModuleOp>
-parseSourceFile(llvm::StringRef filename, MLIRContext *context) {
-  return parseSourceFile<ModuleOp>(filename, context);
-}
-[[deprecated("use parseSourceFile<ModuleOp>")]] inline OwningOpRef<ModuleOp>
-parseSourceFile(llvm::StringRef filename, llvm::SourceMgr &sourceMgr,
-                MLIRContext *context) {
-  return parseSourceFile<ModuleOp>(filename, sourceMgr, context);
-}
-[[deprecated("use parseSourceString<ModuleOp>")]] inline OwningOpRef<ModuleOp>
-parseSourceString(llvm::StringRef moduleStr, MLIRContext *context) {
-  return parseSourceString<ModuleOp>(moduleStr, context);
-}
-
 /// This parses a single MLIR attribute to an MLIR context if it was valid.  If
 /// not, an error message is emitted through a new SourceMgrDiagnosticHandler
 /// constructed from a new SourceMgr with a single a MemoryBuffer wrapping
