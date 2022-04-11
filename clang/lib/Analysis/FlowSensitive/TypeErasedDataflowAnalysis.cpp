@@ -32,6 +32,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 
 namespace clang {
 namespace dataflow {
@@ -106,10 +107,24 @@ private:
     if (Env.getValue(Cond, SkipPast::None) == nullptr)
       transfer(StmtToEnv, Cond, Env);
 
+    // FIXME: The flow condition must be an r-value, so `SkipPast::None` should
+    // suffice.
     auto *Val =
         cast_or_null<BoolValue>(Env.getValue(Cond, SkipPast::Reference));
-    if (Val == nullptr)
-      return;
+    // Value merging depends on flow conditions from different environments
+    // being mutually exclusive -- that is, they cannot both be true in their
+    // entirety (even if they may share some clauses). So, we need *some* value
+    // for the condition expression, even if just an atom.
+    if (Val == nullptr) {
+      // FIXME: Consider introducing a helper for this get-or-create pattern.
+      auto *Loc = Env.getStorageLocation(Cond, SkipPast::None);
+      if (Loc == nullptr) {
+        Loc = &Env.createStorageLocation(Cond);
+        Env.setStorageLocation(Cond, *Loc);
+      }
+      Val = &Env.makeAtomicBoolValue();
+      Env.setValue(*Loc, *Val);
+    }
 
     // The condition must be inverted for the successor that encompasses the
     // "else" branch, if such exists.
