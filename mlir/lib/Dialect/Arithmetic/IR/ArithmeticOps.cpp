@@ -761,14 +761,9 @@ OpFoldResult MinUIOp::fold(ArrayRef<Attribute> operands) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::MulFOp::fold(ArrayRef<Attribute> operands) {
-  APFloat floatValue(0.0f), inverseValue(0.0f);
   // mulf(x, 1) -> x
   if (matchPattern(getRhs(), m_OneFloat()))
     return getLhs();
-
-  // mulf(1, x) -> x
-  if (matchPattern(getLhs(), m_OneFloat()))
-    return getRhs();
 
   return constFoldBinaryOp<FloatAttr>(
       operands, [](const APFloat &a, const APFloat &b) { return a * b; });
@@ -779,7 +774,6 @@ OpFoldResult arith::MulFOp::fold(ArrayRef<Attribute> operands) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::DivFOp::fold(ArrayRef<Attribute> operands) {
-  APFloat floatValue(0.0f), inverseValue(0.0f);
   // divf(x, 1) -> x
   if (matchPattern(getRhs(), m_OneFloat()))
     return getLhs();
