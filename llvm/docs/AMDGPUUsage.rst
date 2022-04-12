@@ -947,6 +947,9 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                              version implementation. If this attribute is absent, then the
                                              amdgpu-no-implicitarg-ptr is also removed.
 
+     "amdgpu-no-multigrid-sync-arg"          Similar to amdgpu-no-implicitarg-ptr, except specific to the implicit
+                                             kernel argument that holds the multigrid synchronization pointer. If this
+                                             attribute is absent, then the amdgpu-no-implicitarg-ptr is also removed.
      ======================================= ==========================================================
 
 .. _amdgpu-elf-code-object:
