@@ -2600,6 +2600,17 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
   if (Kind == TTI::SK_Broadcast || Kind == TTI::SK_Transpose ||
       Kind == TTI::SK_Select || Kind == TTI::SK_PermuteSingleSrc ||
       Kind == TTI::SK_Reverse) {
+
+    // Check for broadcast loads.
+    if (Kind == TTI::SK_Broadcast) {
+      bool IsLoad = !Args.empty() && llvm::all_of(Args, [](const Value *V) {
+        return isa<LoadInst>(V);
+      });
+      if (IsLoad && isLegalBroadcastLoad(Tp->getElementType(),
+                                         LT.second.getVectorElementCount()))
+        return 0; // broadcast is handled by ld1r
+    }
+
     static const CostTblEntry ShuffleTbl[] = {
       // Broadcast shuffle kinds can be performed with 'dup'.
       { TTI::SK_Broadcast, MVT::v8i8,  1 },
