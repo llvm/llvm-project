@@ -21,7 +21,6 @@ public:
   CSKYToolChain(const Driver &D, const llvm::Triple &Triple,
                 const llvm::opt::ArgList &Args);
 
-  bool IsIntegratedAssemblerDefault() const override { return true; }
   void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                              llvm::opt::ArgStringList &CC1Args,
                              Action::OffloadKind) const override;
