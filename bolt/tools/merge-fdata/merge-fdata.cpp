@@ -239,6 +239,7 @@ void mergeLegacyProfiles(const cl::list<std::string> &Filenames) {
   errs() << "Using legacy profile format.\n";
   bool BoltedCollection = false;
   bool First = true;
+  StringMap<uint64_t> Entries;
   for (const std::string &Filename : Filenames) {
     if (isYAML(Filename))
       report_error(Filename, "cannot mix YAML and legacy formats");
@@ -265,9 +266,25 @@ void mergeLegacyProfiles(const cl::list<std::string> &Filenames) {
             "cannot mix profile collected in BOLT and non-BOLT deployments");
     }
 
-    outs() << Buf;
+    SmallVector<StringRef, 10> Lines;
+    SplitString(Buf, Lines, "\n");
+    for (StringRef Line : Lines) {
+      size_t Pos = Line.rfind(" ");
+      if (Pos == StringRef::npos)
+        report_error(Filename, "Malformed / corrupted profile");
+      StringRef Signature = Line.substr(0, Pos);
+      uint64_t Count;
+      if (Line.substr(Pos + 1, Line.size() - Pos).getAsInteger(10, Count))
+        report_error(Filename, "Malformed / corrupted profile counter");
+      Count += Entries.lookup(Signature);
+      Entries.insert_or_assign(Signature, Count);
+    }
     First = false;
   }
+
+  for (const auto &Entry : Entries)
+    outs() << Entry.getKey() << " " << Entry.getValue() << "\n";
+
   errs() << "Profile from " << Filenames.size() << " files merged.\n";
 }
 
