@@ -317,6 +317,8 @@ public:
   void VisitTagType(const TagType *T);
   void VisitTemplateTypeParmType(const TemplateTypeParmType *T);
   void VisitAutoType(const AutoType *T);
+  void VisitDeducedTemplateSpecializationType(
+      const DeducedTemplateSpecializationType *T);
   void VisitTemplateSpecializationType(const TemplateSpecializationType *T);
   void VisitInjectedClassNameType(const InjectedClassNameType *T);
   void VisitObjCInterfaceType(const ObjCInterfaceType *T);

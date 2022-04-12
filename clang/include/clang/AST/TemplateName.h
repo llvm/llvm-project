@@ -25,6 +25,7 @@
 namespace clang {
 
 class ASTContext;
+class Decl;
 class DependentTemplateName;
 class IdentifierInfo;
 class NamedDecl;
@@ -39,6 +40,7 @@ class SubstTemplateTemplateParmStorage;
 class TemplateArgument;
 class TemplateDecl;
 class TemplateTemplateParmDecl;
+class UsingShadowDecl;
 
 /// Implementation class used to describe either a set of overloaded
 /// template names or an already-substituted template template parameter pack.
@@ -188,8 +190,12 @@ public:
 /// specifier in the typedef. "apply" is a nested template, and can
 /// only be understood in the context of
 class TemplateName {
+  // NameDecl is either a TemplateDecl or a UsingShadowDecl depending on the
+  // NameKind.
+  // !! There is no free low bits in 32-bit builds to discriminate more than 4
+  // pointer types in PointerUnion.
   using StorageType =
-      llvm::PointerUnion<TemplateDecl *, UncommonTemplateNameStorage *,
+      llvm::PointerUnion<Decl *, UncommonTemplateNameStorage *,
                          QualifiedTemplateName *, DependentTemplateName *>;
 
   StorageType Storage;
@@ -224,7 +230,11 @@ public:
     /// A template template parameter pack that has been substituted for
     /// a template template argument pack, but has not yet been expanded into
     /// individual arguments.
-    SubstTemplateTemplateParmPack
+    SubstTemplateTemplateParmPack,
+
+    /// A template name that refers to a template declaration found through a
+    /// specific using shadow declaration.
+    UsingTemplate,
   };
 
   TemplateName() = default;
@@ -235,6 +245,7 @@ public:
   explicit TemplateName(SubstTemplateTemplateParmPackStorage *Storage);
   explicit TemplateName(QualifiedTemplateName *Qual);
   explicit TemplateName(DependentTemplateName *Dep);
+  explicit TemplateName(UsingShadowDecl *Using);
 
   /// Determine whether this template name is NULL.
   bool isNull() const;
@@ -286,6 +297,10 @@ public:
   /// Retrieve the underlying dependent template name
   /// structure, if any.
   DependentTemplateName *getAsDependentTemplateName() const;
+
+  /// Retrieve the using shadow declaration through which the underlying
+  /// template declaration is introduced, if any.
+  UsingShadowDecl *getAsUsingShadowDecl() const;
 
   TemplateName getUnderlying() const;
 
