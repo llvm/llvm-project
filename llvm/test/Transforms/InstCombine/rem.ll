@@ -742,8 +742,8 @@ define i1 @test28(i32 %A) {
 
 define i1 @positive_and_odd_eq(i32 %A) {
 ; CHECK-LABEL: @positive_and_odd_eq(
-; CHECK-NEXT:    [[B:%.*]] = and i32 [[A:%.*]], -2147483647
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[B]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], -2147483647
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[TMP1]], 1
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %B = srem i32 %A, 2
@@ -764,8 +764,8 @@ define i1 @negative_and_odd_eq(i32 %A) {
 
 define i1 @positive_and_odd_ne(i32 %A) {
 ; CHECK-LABEL: @positive_and_odd_ne(
-; CHECK-NEXT:    [[B:%.*]] = and i32 [[A:%.*]], -2147483647
-; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[B]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], -2147483647
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[TMP1]], 1
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %B = srem i32 %A, 2
@@ -807,13 +807,11 @@ define i32 @srem_constant_dividend_select_of_constants_divisor(i1 %b) {
   ret i32 %r
 }
 
-; TODO: srem should still be replaced by select.
-
 define i32 @srem_constant_dividend_select_of_constants_divisor_use(i1 %b) {
 ; CHECK-LABEL: @srem_constant_dividend_select_of_constants_divisor_use(
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 12, i32 -3
 ; CHECK-NEXT:    call void @use(i32 [[S]])
-; CHECK-NEXT:    [[R:%.*]] = srem i32 42, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[B]], i32 6, i32 0
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %s = select i1 %b, i32 12, i32 -3
@@ -915,13 +913,11 @@ define i32 @urem_constant_dividend_select_of_constants_divisor(i1 %b) {
   ret i32 %r
 }
 
-; TODO: urem should still be replaced by select.
-
 define i32 @urem_constant_dividend_select_of_constants_divisor_use(i1 %b) {
 ; CHECK-LABEL: @urem_constant_dividend_select_of_constants_divisor_use(
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 12, i32 -3
 ; CHECK-NEXT:    call void @use(i32 [[S]])
-; CHECK-NEXT:    [[R:%.*]] = urem i32 42, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[B]], i32 6, i32 42
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %s = select i1 %b, i32 12, i32 -3
