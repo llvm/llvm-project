@@ -5302,8 +5302,8 @@ bool SwiftASTContext::GetProtocolTypeInfo(const CompilerType &type,
     }
 
     unsigned num_witness_tables = 0;
-    for (auto protoTy : layout.getProtocols()) {
-      if (!protoTy->getDecl()->isObjC())
+    for (auto protoDecl : layout.getProtocols()) {
+      if (!protoDecl->isObjC())
         num_witness_tables++;
     }
 
@@ -6492,8 +6492,7 @@ GetExistentialTypeChild(swift::ASTContext *swift_ast_ctx, CompilerType type,
   swift::ExistentialLayout layout = swift_can_type.getExistentialLayout();
 
   std::string name;
-  for (auto protoType : layout.getProtocols()) {
-    auto proto = protoType->getDecl();
+  for (auto proto : layout.getProtocols()) {
     if (proto->isObjC())
       continue;
 
