@@ -140,6 +140,21 @@ unsigned getAmdhsaCodeObjectVersion() {
   return AmdhsaCodeObjectVersion;
 }
 
+unsigned getMultigridSyncArgImplicitArgPosition() {
+  switch (AmdhsaCodeObjectVersion) {
+  case 2:
+  case 3:
+  case 4:
+    return 48;
+  case 5:
+    return AMDGPU::ImplicitArg::MULTIGRID_SYNC_ARG_OFFSET;
+  default:
+    llvm_unreachable("Unexpected code object version");
+    return 0;
+  }
+}
+
+
 // FIXME: All such magic numbers about the ABI should be in a
 // central TD file.
 unsigned getHostcallImplicitArgPosition() {
