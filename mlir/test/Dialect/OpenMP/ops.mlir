@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s | mlir-opt | FileCheck %s
+// RUN: mlir-opt -split-input-file %s | mlir-opt | FileCheck %s
 
 func @omp_barrier() -> () {
   // CHECK: omp.barrier
@@ -896,3 +896,29 @@ func @omp_single_allocate_nowait(%data_var: memref<i32>) {
   }
   return
 }
+
+// -----
+
+func @omp_threadprivate() {
+  %0 = arith.constant 1 : i32
+  %1 = arith.constant 2 : i32
+  %2 = arith.constant 3 : i32
+
+  // CHECK: [[ARG0:%.*]] = llvm.mlir.addressof @_QFsubEx : !llvm.ptr<i32>
+  // CHECK: {{.*}} = omp.threadprivate [[ARG0]] : !llvm.ptr<i32> -> !llvm.ptr<i32>
+  %3 = llvm.mlir.addressof @_QFsubEx : !llvm.ptr<i32>
+  %4 = omp.threadprivate %3 : !llvm.ptr<i32> -> !llvm.ptr<i32>
+  llvm.store %0, %4 : !llvm.ptr<i32>
+
+  // CHECK:  omp.parallel
+  // CHECK:    {{.*}} = omp.threadprivate [[ARG0]] : !llvm.ptr<i32> -> !llvm.ptr<i32>
+  omp.parallel  {
+    %5 = omp.threadprivate %3 : !llvm.ptr<i32> -> !llvm.ptr<i32>
+    llvm.store %1, %5 : !llvm.ptr<i32>
+    omp.terminator
+  }
+  llvm.store %2, %4 : !llvm.ptr<i32>
+  return
+}
+
+llvm.mlir.global internal @_QFsubEx() : i32

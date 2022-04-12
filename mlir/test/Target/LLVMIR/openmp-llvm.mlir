@@ -2050,3 +2050,43 @@ llvm.func @single_nowait(%x: i32, %y: i32, %zaddr: !llvm.ptr<i32>) {
   // CHECK: ret void
   llvm.return
 }
+
+// -----
+
+// CHECK: @_QFsubEx = internal global i32 undef
+// CHECK: @_QFsubEx.cache = common global i8** null
+
+// CHECK-LABEL: @omp_threadprivate
+llvm.func @omp_threadprivate() {
+// CHECK:  [[THREAD:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB:[0-9]+]])
+// CHECK:  [[TMP1:%.*]] = call i8* @__kmpc_threadprivate_cached(%struct.ident_t* @[[GLOB]], i32 [[THREAD]], i8* bitcast (i32* @_QFsubEx to i8*), i64 4, i8*** @_QFsubEx.cache)
+// CHECK:  [[TMP2:%.*]] = bitcast i8* [[TMP1]] to i32*
+// CHECK:  store i32 1, i32* [[TMP2]], align 4
+// CHECK:  store i32 3, i32* [[TMP2]], align 4
+
+// CHECK-LABEL: omp.par.region{{.*}}
+// CHECK:  [[THREAD2:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB2:[0-9]+]])
+// CHECK:  [[TMP3:%.*]] = call i8* @__kmpc_threadprivate_cached(%struct.ident_t* @[[GLOB2]], i32 [[THREAD2]], i8* bitcast (i32* @_QFsubEx to i8*), i64 4, i8*** @_QFsubEx.cache)
+// CHECK:  [[TMP4:%.*]] = bitcast i8* [[TMP3]] to i32*
+// CHECK:  store i32 2, i32* [[TMP4]], align 4
+
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  %1 = llvm.mlir.constant(2 : i32) : i32
+  %2 = llvm.mlir.constant(3 : i32) : i32
+
+  %3 = llvm.mlir.addressof @_QFsubEx : !llvm.ptr<i32>
+  %4 = omp.threadprivate %3 : !llvm.ptr<i32> -> !llvm.ptr<i32>
+
+  llvm.store %0, %4 : !llvm.ptr<i32>
+
+  omp.parallel  {
+    %5 = omp.threadprivate %3 : !llvm.ptr<i32> -> !llvm.ptr<i32>
+    llvm.store %1, %5 : !llvm.ptr<i32>
+    omp.terminator
+  }
+
+  llvm.store %2, %4 : !llvm.ptr<i32>
+  llvm.return
+}
+
+llvm.mlir.global internal @_QFsubEx() : i32

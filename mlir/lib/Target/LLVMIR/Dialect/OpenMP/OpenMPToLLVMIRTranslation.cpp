@@ -1319,6 +1319,40 @@ convertOmpReductionOp(omp::ReductionOp reductionOp,
   return success();
 }
 
+/// Converts an OpenMP Threadprivate operation into LLVM IR using
+/// OpenMPIRBuilder.
+static LogicalResult
+convertOmpThreadprivate(Operation &opInst, llvm::IRBuilderBase &builder,
+                        LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
+  auto threadprivateOp = cast<omp::ThreadprivateOp>(opInst);
+
+  Value symAddr = threadprivateOp.sym_addr();
+  auto symOp = symAddr.getDefiningOp();
+  if (!isa<LLVM::AddressOfOp>(symOp))
+    return opInst.emitError("Addressing symbol not found");
+  LLVM::AddressOfOp addressOfOp = dyn_cast<LLVM::AddressOfOp>(symOp);
+
+  LLVM::GlobalOp global = addressOfOp.getGlobal();
+  llvm::GlobalValue *globalValue = moduleTranslation.lookupGlobal(global);
+  llvm::Value *data =
+      builder.CreateBitCast(globalValue, builder.getInt8PtrTy());
+  llvm::Type *type = globalValue->getValueType();
+  llvm::TypeSize typeSize =
+      builder.GetInsertBlock()->getModule()->getDataLayout().getTypeStoreSize(
+          type);
+  llvm::ConstantInt *size = builder.getInt64(typeSize.getFixedSize());
+  llvm::StringRef suffix = llvm::StringRef(".cache", 6);
+  llvm::Twine cacheName = Twine(global.getSymName()).concat(suffix);
+  // Emit runtime function and bitcast its type (i8*) to real data type.
+  llvm::Value *callInst =
+      moduleTranslation.getOpenMPBuilder()->createCachedThreadPrivate(
+          ompLoc, data, size, cacheName);
+  llvm::Value *result = builder.CreateBitCast(callInst, globalValue->getType());
+  moduleTranslation.mapValue(opInst.getResult(0), result);
+  return success();
+}
+
 namespace {
 
 /// Implementation of the dialect interface that converts operations belonging
@@ -1423,6 +1457,9 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
         // ignored for lowering. The OpenMP IRBuilder will create unique
         // name for critical section names.
         return success();
+      })
+      .Case([&](omp::ThreadprivateOp) {
+        return convertOmpThreadprivate(*op, builder, moduleTranslation);
       })
       .Default([&](Operation *inst) {
         return inst->emitError("unsupported OpenMP operation: ")
