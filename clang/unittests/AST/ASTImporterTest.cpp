@@ -6634,6 +6634,15 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportFormatAttr) {
   EXPECT_EQ(FromAttr->getType()->getName(), ToAttr->getType()->getName());
 }
 
+TEST_P(ImportAttributes, ImportEnableIf) {
+  EnableIfAttr *FromAttr, *ToAttr;
+  importAttr<FunctionDecl>(
+      "void test(int A) __attribute__((enable_if(A == 1, \"message\")));",
+      FromAttr, ToAttr);
+  checkImported(FromAttr->getCond(), ToAttr->getCond());
+  EXPECT_EQ(FromAttr->getMessage(), ToAttr->getMessage());
+}
+
 TEST_P(ImportAttributes, ImportGuardedVar) {
   GuardedVarAttr *FromAttr, *ToAttr;
   importAttr<VarDecl>("int test __attribute__((guarded_var));", FromAttr,
