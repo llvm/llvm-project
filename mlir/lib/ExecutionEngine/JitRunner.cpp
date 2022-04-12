@@ -205,7 +205,8 @@ static Error compileAndExecute(Options &options, ModuleOp module,
 
   mlir::ExecutionEngineOptions engineOptions;
   engineOptions.llvmModuleBuilder = config.llvmModuleBuilder;
-  engineOptions.transformer = config.transformer;
+  if (config.transformer)
+    engineOptions.transformer = config.transformer;
   engineOptions.jitCodeGenOptLevel = jitCodeGenOptLevel;
   engineOptions.sharedLibPaths = executionEngineLibs;
   engineOptions.enableObjectCache = true;
