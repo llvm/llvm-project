@@ -57,10 +57,6 @@ struct Options {
 
   llvm::cl::OptionCategory optFlags{"opt-like flags"};
 
-  // CLI list of pass information
-  llvm::cl::list<const llvm::PassInfo *, bool, llvm::PassNameParser> llvmPasses{
-      llvm::cl::desc("LLVM optimizing passes to run"), llvm::cl::cat(optFlags)};
-
   // CLI variables for -On options.
   llvm::cl::opt<bool> optO0{"O0",
                             llvm::cl::desc("Run opt passes and codegen at O0"),
@@ -322,27 +318,6 @@ int mlir::JitRunnerMain(int argc, char **argv, const DialectRegistry &registry,
   Optional<unsigned> optLevel = getCommandLineOptLevel(options);
   SmallVector<std::reference_wrapper<llvm::cl::opt<bool>>, 4> optFlags{
       options.optO0, options.optO1, options.optO2, options.optO3};
-  unsigned optCLIPosition = 0;
-  // Determine if there is an optimization flag present, and its CLI position
-  // (optCLIPosition).
-  for (unsigned j = 0; j < 4; ++j) {
-    auto &flag = optFlags[j].get();
-    if (flag) {
-      optCLIPosition = flag.getPosition();
-      break;
-    }
-  }
-  // Generate vector of pass information, plus the index at which we should
-  // insert any optimization passes in that vector (optPosition).
-  SmallVector<const llvm::PassInfo *, 4> passes;
-  unsigned optPosition = 0;
-  for (unsigned i = 0, e = options.llvmPasses.size(); i < e; ++i) {
-    passes.push_back(options.llvmPasses[i]);
-    if (optCLIPosition < options.llvmPasses.getPosition(i)) {
-      optPosition = i;
-      optCLIPosition = UINT_MAX; // To ensure we never insert again
-    }
-  }
 
   MLIRContext context(registry);
 
@@ -367,11 +342,11 @@ int mlir::JitRunnerMain(int argc, char **argv, const DialectRegistry &registry,
     return EXIT_FAILURE;
   }
 
-  auto transformer = mlir::makeLLVMPassesTransformer(
-      passes, optLevel, /*targetMachine=*/tmOrError->get(), optPosition);
-
   CompileAndExecuteConfig compileAndExecuteConfig;
-  compileAndExecuteConfig.transformer = transformer;
+  if (optLevel) {
+    compileAndExecuteConfig.transformer = mlir::makeOptimizingTransformer(
+        *optLevel, /*sizeLevel=*/0, /*targetMachine=*/tmOrError->get());
+  }
   compileAndExecuteConfig.llvmModuleBuilder = config.llvmModuleBuilder;
   compileAndExecuteConfig.runtimeSymbolMap = config.runtimesymbolMap;
 
