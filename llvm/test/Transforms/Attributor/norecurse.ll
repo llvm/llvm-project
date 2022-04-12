@@ -110,11 +110,17 @@ define void @m() norecurse {
 }
 
 define internal i32 @called_by_norecurse_indirectly() {
-; CHECK: Function Attrs: norecurse nosync readnone
-; CHECK-LABEL: define {{[^@]+}}@called_by_norecurse_indirectly
-; CHECK-SAME: () #[[ATTR6]] {
-; CHECK-NEXT:    [[A:%.*]] = call i32 @k()
-; CHECK-NEXT:    ret i32 [[A]]
+; IS__TUNIT____: Function Attrs: norecurse nosync readnone
+; IS__TUNIT____-LABEL: define {{[^@]+}}@called_by_norecurse_indirectly
+; IS__TUNIT____-SAME: () #[[ATTR6]] {
+; IS__TUNIT____-NEXT:    [[A:%.*]] = call i32 @k()
+; IS__TUNIT____-NEXT:    ret i32 [[A]]
+;
+; IS__CGSCC____: Function Attrs: nosync readnone
+; IS__CGSCC____-LABEL: define {{[^@]+}}@called_by_norecurse_indirectly
+; IS__CGSCC____-SAME: () #[[ATTR2]] {
+; IS__CGSCC____-NEXT:    [[A:%.*]] = call i32 @k()
+; IS__CGSCC____-NEXT:    ret i32 [[A]]
 ;
   %a = call i32 @k()
   ret i32 %a

@@ -1343,9 +1343,12 @@ struct Attributor {
     // For now we ignore naked and optnone functions.
     bool Invalidate = Allowed && !Allowed->count(&AAType::ID);
     const Function *FnScope = IRP.getAnchorScope();
-    if (FnScope)
-      Invalidate |= FnScope->hasFnAttribute(Attribute::Naked) ||
-                    FnScope->hasFnAttribute(Attribute::OptimizeNone);
+    if (FnScope) {
+      Invalidate |=
+          FnScope->hasFnAttribute(Attribute::Naked) ||
+          FnScope->hasFnAttribute(Attribute::OptimizeNone) ||
+          (!isModulePass() && !getInfoCache().isInModuleSlice(*FnScope));
+    }
 
     // Avoid too many nested initializations to prevent a stack overflow.
     Invalidate |= InitializationChainLength > MaxInitializationChainLength;
@@ -1368,10 +1371,8 @@ struct Attributor {
     // Initialize and update is allowed for code outside of the current function
     // set, but only if it is part of module slice we are allowed to look at.
     if (FnScope && !Functions.count(const_cast<Function *>(FnScope))) {
-      if (!getInfoCache().isInModuleSlice(*FnScope)) {
-        AA.getState().indicatePessimisticFixpoint();
-        return AA;
-      }
+      AA.getState().indicatePessimisticFixpoint();
+      return AA;
     }
 
     // If this is queried in the manifest stage, we force the AA to indicate

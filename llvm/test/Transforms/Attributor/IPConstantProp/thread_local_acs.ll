@@ -52,7 +52,7 @@ define dso_local void @caller() {
 ;
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@caller() {
 ; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    call void @broker(i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) @gtl, i32 (i32*, i32*)* noundef nonnull @callee, i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) @gsh)
+; IS__CGSCC____-NEXT:    call void @broker(i32* nofree noundef nonnull readonly align 4 dereferenceable(4) @gtl, i32 (i32*, i32*)* noundef nonnull @callee, i32* nofree noundef nonnull readonly align 4 dereferenceable(4) @gsh)
 ; IS__CGSCC____-NEXT:    ret void
 ;
 entry:
