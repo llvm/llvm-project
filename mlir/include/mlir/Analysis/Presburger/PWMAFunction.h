@@ -52,8 +52,7 @@ public:
   using IntegerPolyhedron::getNumIds;
   using IntegerPolyhedron::getNumLocalIds;
   using IntegerPolyhedron::getNumSymbolIds;
-  using PresburgerSpace::isSpaceCompatible;
-  using PresburgerSpace::isSpaceEqual;
+  using IntegerPolyhedron::getSpace;
 
   MultiAffineFunction(const IntegerPolyhedron &domain, const Matrix &output)
       : IntegerPolyhedron(domain), output(output) {}
@@ -139,14 +138,18 @@ private:
 ///
 /// Support is provided to compare equality of two such functions as well as
 /// finding the value of the function at a point.
-class PWMAFunction : private PresburgerSpace {
+class PWMAFunction {
 public:
   PWMAFunction(const PresburgerSpace &space, unsigned numOutputs)
-      : PresburgerSpace(space), numOutputs(numOutputs) {
-    assert(getNumDomainIds() == 0 && "Set type space should zero domain ids.");
-    assert(getNumLocalIds() == 0 && "PWMAFunction cannot have local ids.");
+      : space(space), numOutputs(numOutputs) {
+    assert(space.getNumDomainIds() == 0 &&
+           "Set type space should have zero domain ids.");
+    assert(space.getNumLocalIds() == 0 &&
+           "PWMAFunction cannot have local ids.");
     assert(numOutputs >= 1 && "The function must output something!");
   }
+
+  const PresburgerSpace &getSpace() const { return space; }
 
   void addPiece(const MultiAffineFunction &piece);
   void addPiece(const IntegerPolyhedron &domain, const Matrix &output);
@@ -154,7 +157,7 @@ public:
   const MultiAffineFunction &getPiece(unsigned i) const { return pieces[i]; }
   unsigned getNumPieces() const { return pieces.size(); }
   unsigned getNumOutputs() const { return numOutputs; }
-  unsigned getNumInputs() const { return getNumIds(); }
+  unsigned getNumInputs() const { return space.getNumIds(); }
   MultiAffineFunction &getPiece(unsigned i) { return pieces[i]; }
 
   /// Return the domain of this piece-wise MultiAffineFunction. This is the
@@ -179,6 +182,8 @@ public:
   void dump() const;
 
 private:
+  PresburgerSpace space;
+
   /// The list of pieces in this piece-wise MultiAffineFunction.
   SmallVector<MultiAffineFunction, 4> pieces;
 

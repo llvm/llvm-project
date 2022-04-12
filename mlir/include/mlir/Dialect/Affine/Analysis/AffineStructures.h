@@ -43,9 +43,10 @@ public:
                              unsigned numReservedCols, unsigned numDims,
                              unsigned numSymbols, unsigned numLocals,
                              ArrayRef<Optional<Value>> valArgs = {})
-      : IntegerPolyhedron(
-            numReservedInequalities, numReservedEqualities, numReservedCols,
-            PresburgerSpace::getSetSpace(numDims, numSymbols, numLocals)) {
+      : IntegerPolyhedron(numReservedInequalities, numReservedEqualities,
+                          numReservedCols,
+                          presburger::PresburgerSpace::getSetSpace(
+                              numDims, numSymbols, numLocals)) {
     assert(numReservedCols >= getNumIds() + 1);
     assert(valArgs.empty() || valArgs.size() == getNumIds());
     values.reserve(numReservedCols);

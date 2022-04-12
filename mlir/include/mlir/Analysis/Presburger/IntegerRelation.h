@@ -24,8 +24,9 @@
 namespace mlir {
 namespace presburger {
 
-/// An IntegerRelation is a PresburgerSpace subject to affine constraints.
-/// Affine constraints can be inequalities or equalities in the form:
+/// An IntegerRelation represents the set of points from a PresburgerSpace that
+/// satisfy a list of affine constraints. Affine constraints can be inequalities
+/// or equalities in the form:
 ///
 /// Inequality: c_0*x_0 + c_1*x_1 + .... + c_{n-1}*x_{n-1} + c_n >= 0
 /// Equality  : c_0*x_0 + c_1*x_1 + .... + c_{n-1}*x_{n-1} + c_n == 0
@@ -42,7 +43,7 @@ namespace presburger {
 ///
 /// Since IntegerRelation makes a distinction between dimensions, IdKind::Range
 /// and IdKind::Domain should be used to refer to dimension identifiers.
-class IntegerRelation : public PresburgerSpace {
+class IntegerRelation {
 public:
   /// All derived classes of IntegerRelation.
   enum class Kind {
@@ -58,11 +59,11 @@ public:
   IntegerRelation(unsigned numReservedInequalities,
                   unsigned numReservedEqualities, unsigned numReservedCols,
                   const PresburgerSpace &space)
-      : PresburgerSpace(space),
-        equalities(0, getNumIds() + 1, numReservedEqualities, numReservedCols),
-        inequalities(0, getNumIds() + 1, numReservedInequalities,
+      : space(space), equalities(0, space.getNumIds() + 1,
+                                 numReservedEqualities, numReservedCols),
+        inequalities(0, space.getNumIds() + 1, numReservedInequalities,
                      numReservedCols) {
-    assert(numReservedCols >= getNumIds() + 1);
+    assert(numReservedCols >= space.getNumIds() + 1);
   }
 
   /// Constructs a relation with the specified number of dimensions and symbols.
@@ -70,6 +71,8 @@ public:
       : IntegerRelation(/*numReservedInequalities=*/0,
                         /*numReservedEqualities=*/0,
                         /*numReservedCols=*/space.getNumIds() + 1, space) {}
+
+  virtual ~IntegerRelation() = default;
 
   /// Return a system with no constraints, i.e., one which is satisfied by all
   /// points.
@@ -84,6 +87,16 @@ public:
 
   // Clones this object.
   std::unique_ptr<IntegerRelation> clone() const;
+
+  /// Returns a reference to the underlying space.
+  const PresburgerSpace &getSpace() const { return space; }
+
+  /// Returns a copy of the space without locals.
+  PresburgerSpace getSpaceWithoutLocals() const {
+    return PresburgerSpace::getRelationSpace(space.getNumDomainIds(),
+                                             space.getNumRangeIds(),
+                                             space.getNumSymbolIds());
+  }
 
   /// Appends constraints from `other` into `this`. This is equivalent to an
   /// intersection with no simplification of any sort attempted.
@@ -117,8 +130,19 @@ public:
     return getNumInequalities() + getNumEqualities();
   }
 
+  unsigned getNumDomainIds() const { return space.getNumDomainIds(); }
+  unsigned getNumRangeIds() const { return space.getNumRangeIds(); }
+  unsigned getNumSymbolIds() const { return space.getNumSymbolIds(); }
+  unsigned getNumLocalIds() const { return space.getNumLocalIds(); }
+
+  unsigned getNumDimIds() const { return space.getNumDimIds(); }
+  unsigned getNumDimAndSymbolIds() const {
+    return space.getNumDimAndSymbolIds();
+  }
+  unsigned getNumIds() const { return space.getNumIds(); }
+
   /// Returns the number of columns in the constraint system.
-  inline unsigned getNumCols() const { return getNumIds() + 1; }
+  inline unsigned getNumCols() const { return space.getNumIds() + 1; }
 
   inline unsigned getNumEqualities() const { return equalities.getNumRows(); }
 
@@ -141,6 +165,27 @@ public:
   inline ArrayRef<int64_t> getInequality(unsigned idx) const {
     return inequalities.getRow(idx);
   }
+
+  /// Get the number of ids of the specified kind.
+  unsigned getNumIdKind(IdKind kind) const { return space.getNumIdKind(kind); };
+
+  /// Return the index at which the specified kind of id starts.
+  unsigned getIdKindOffset(IdKind kind) const {
+    return space.getIdKindOffset(kind);
+  };
+
+  /// Return the index at Which the specified kind of id ends.
+  unsigned getIdKindEnd(IdKind kind) const { return space.getIdKindEnd(kind); };
+
+  /// Get the number of elements of the specified kind in the range
+  /// [idStart, idLimit).
+  unsigned getIdKindOverlap(IdKind kind, unsigned idStart,
+                            unsigned idLimit) const {
+    return space.getIdKindOverlap(kind, idStart, idLimit);
+  };
+
+  /// Return the IdKind of the id at the specified position.
+  IdKind getIdKindAt(unsigned pos) const { return space.getIdKindAt(pos); };
 
   /// The struct CountsSnapshot stores the count of each IdKind, and also of
   /// each constraint type. getCounts() returns a CountsSnapshot object
@@ -171,7 +216,7 @@ public:
   /// corresponding to the added identifiers are initialized to zero. Return the
   /// absolute column position (i.e., not relative to the kind of identifier)
   /// of the first added identifier.
-  unsigned insertId(IdKind kind, unsigned pos, unsigned num = 1) override;
+  virtual unsigned insertId(IdKind kind, unsigned pos, unsigned num = 1);
 
   /// Append `num` identifiers of the specified kind after the last identifier.
   /// of that kind. Return the position of the first appended column relative to
@@ -193,7 +238,7 @@ public:
   /// within the specified range) from the system. The specified location is
   /// relative to the first identifier of the specified kind.
   void removeId(IdKind kind, unsigned pos);
-  void removeIdRange(IdKind kind, unsigned idStart, unsigned idLimit) override;
+  virtual void removeIdRange(IdKind kind, unsigned idStart, unsigned idLimit);
 
   /// Removes the specified identifier from the system.
   void removeId(unsigned pos);
@@ -432,6 +477,14 @@ public:
   /// match.
   void mergeLocalIds(IntegerRelation &other);
 
+  /// Changes the partition between dimensions and symbols. Depending on the new
+  /// symbol count, either a chunk of dimensional identifiers immediately before
+  /// the split become symbols, or some of the symbols immediately after the
+  /// split become dimensions.
+  void setDimSymbolSeparation(unsigned newSymbolCount) {
+    space.setDimSymbolSeparation(newSymbolCount);
+  }
+
   void print(raw_ostream &os) const;
   void dump() const;
 
@@ -512,7 +565,10 @@ protected:
   /// arrays as needed.
   void removeIdRange(unsigned idStart, unsigned idLimit);
 
-  using PresburgerSpace::truncateIdKind;
+  /// Truncate the ids of the specified kind to the specified number by dropping
+  /// some ids at the end. `num` must be less than the current number.
+  void truncateIdKind(IdKind kind, unsigned num);
+
   /// Truncate the ids to the number in the space of the specified
   /// CountsSnapshot.
   void truncateIdKind(IdKind kind, const CountsSnapshot &counts);
@@ -529,6 +585,8 @@ protected:
   // constraints. This is conservatively set low and can be raised if needed.
   constexpr static unsigned kExplosionFactor = 32;
 
+  PresburgerSpace space;
+
   /// Coefficients of affine equalities (in == 0 form).
   Matrix equalities;
 
@@ -537,9 +595,10 @@ protected:
 };
 
 struct SymbolicLexMin;
-/// An IntegerPolyhedron is a PresburgerSpace subject to affine
-/// constraints. Affine constraints can be inequalities or equalities in the
-/// form:
+
+/// An IntegerPolyhedron represents the set of points from a PresburgerSpace
+/// that satisfy a list of affine constraints. Affine constraints can be
+/// inequalities or equalities in the form:
 ///
 /// Inequality: c_0*x_0 + c_1*x_1 + .... + c_{n-1}*x_{n-1} + c_n >= 0
 /// Equality  : c_0*x_0 + c_1*x_1 + .... + c_{n-1}*x_{n-1} + c_n == 0
