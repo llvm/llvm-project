@@ -324,6 +324,7 @@ int64_t presburger::normalizeRange(MutableArrayRef<int64_t> range) {
 }
 
 void presburger::normalizeDiv(MutableArrayRef<int64_t> num, int64_t &denom) {
+  assert(denom > 0 && "denom must be positive!");
   int64_t gcd = llvm::greatestCommonDivisor(gcdRange(num), denom);
   for (int64_t &coeff : num)
     coeff /= gcd;
