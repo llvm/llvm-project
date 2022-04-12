@@ -7919,6 +7919,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArithmeticDialect",
+        ":CommonFolders",
         ":IR",
         ":MathBaseIncGen",
         ":MathOpsIncGen",
