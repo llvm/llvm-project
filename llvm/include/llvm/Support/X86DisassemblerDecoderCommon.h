@@ -120,8 +120,6 @@ enum attributeBits {
   ENUM_ENTRY(IC_VEX_XS,             2,  "requires VEX and the XS prefix")      \
   ENUM_ENTRY(IC_VEX_XD,             2,  "requires VEX and the XD prefix")      \
   ENUM_ENTRY(IC_VEX_OPSIZE,         2,  "requires VEX and the OpSize prefix")  \
-  ENUM_ENTRY(IC_64BIT_VEX_OPSIZE,        4, "requires 64-bit mode and VEX")         \
-  ENUM_ENTRY(IC_64BIT_VEX_OPSIZE_ADSIZE, 5, "requires 64-bit mode, VEX, and AdSize")\
   ENUM_ENTRY(IC_VEX_W,              3,  "requires VEX and the W prefix")       \
   ENUM_ENTRY(IC_VEX_W_XS,           4,  "requires VEX, W, and XS prefix")      \
   ENUM_ENTRY(IC_VEX_W_XD,           4,  "requires VEX, W, and XD prefix")      \
