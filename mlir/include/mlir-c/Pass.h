@@ -71,7 +71,7 @@ mlirPassManagerGetAsOpPassManager(MlirPassManager passManager);
 MLIR_CAPI_EXPORTED MlirLogicalResult
 mlirPassManagerRun(MlirPassManager passManager, MlirModule module);
 
-/// Enable print-ir-after-all.
+/// Enable mlir-print-ir-after-all.
 MLIR_CAPI_EXPORTED void
 mlirPassManagerEnableIRPrinting(MlirPassManager passManager);
 

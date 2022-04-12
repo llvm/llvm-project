@@ -399,13 +399,13 @@ define <8 x i32> @combine_vec_shl_zext_lshr1(<8 x i16> %x) {
 }
 
 ; fold (shl (sr[la] exact X,  C1), C2) -> (shl X, (C2-C1)) if C1 <= C2
-define <4 x i32> @combine_vec_shl_ge_ashr_extact0(<4 x i32> %x) {
-; SSE-LABEL: combine_vec_shl_ge_ashr_extact0:
+define <4 x i32> @combine_vec_shl_ge_ashr_exact0(<4 x i32> %x) {
+; SSE-LABEL: combine_vec_shl_ge_ashr_exact0:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pslld $2, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: combine_vec_shl_ge_ashr_extact0:
+; AVX-LABEL: combine_vec_shl_ge_ashr_exact0:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpslld $2, %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -414,8 +414,8 @@ define <4 x i32> @combine_vec_shl_ge_ashr_extact0(<4 x i32> %x) {
   ret <4 x i32> %2
 }
 
-define <4 x i32> @combine_vec_shl_ge_ashr_extact1(<4 x i32> %x) {
-; SSE2-LABEL: combine_vec_shl_ge_ashr_extact1:
+define <4 x i32> @combine_vec_shl_ge_ashr_exact1(<4 x i32> %x) {
+; SSE2-LABEL: combine_vec_shl_ge_ashr_exact1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; SSE2-NEXT:    psrad $3, %xmm1
@@ -433,7 +433,7 @@ define <4 x i32> @combine_vec_shl_ge_ashr_extact1(<4 x i32> %x) {
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; SSE2-NEXT:    retq
 ;
-; SSE41-LABEL: combine_vec_shl_ge_ashr_extact1:
+; SSE41-LABEL: combine_vec_shl_ge_ashr_exact1:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa %xmm0, %xmm1
 ; SSE41-NEXT:    psrad $8, %xmm1
@@ -448,7 +448,7 @@ define <4 x i32> @combine_vec_shl_ge_ashr_extact1(<4 x i32> %x) {
 ; SSE41-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE41-NEXT:    retq
 ;
-; AVX-LABEL: combine_vec_shl_ge_ashr_extact1:
+; AVX-LABEL: combine_vec_shl_ge_ashr_exact1:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpsravd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    vpsllvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
@@ -459,8 +459,8 @@ define <4 x i32> @combine_vec_shl_ge_ashr_extact1(<4 x i32> %x) {
 }
 
 ; fold (shl (sr[la] exact SEL(X,Y),  C1), C2) -> (shl SEL(X,Y), (C2-C1)) if C1 <= C2
-define i32 @combine_shl_ge_sel_ashr_extact0(i32 %x, i32 %y, i32 %z) {
-; CHECK-LABEL: combine_shl_ge_sel_ashr_extact0:
+define i32 @combine_shl_ge_sel_ashr_exact0(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: combine_shl_ge_sel_ashr_exact0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    testl %edx, %edx
@@ -476,13 +476,13 @@ define i32 @combine_shl_ge_sel_ashr_extact0(i32 %x, i32 %y, i32 %z) {
 }
 
 ; fold (shl (sr[la] exact X,  C1), C2) -> (sr[la] X, (C2-C1)) if C1  > C2
-define <4 x i32> @combine_vec_shl_lt_ashr_extact0(<4 x i32> %x) {
-; SSE-LABEL: combine_vec_shl_lt_ashr_extact0:
+define <4 x i32> @combine_vec_shl_lt_ashr_exact0(<4 x i32> %x) {
+; SSE-LABEL: combine_vec_shl_lt_ashr_exact0:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    psrad $2, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: combine_vec_shl_lt_ashr_extact0:
+; AVX-LABEL: combine_vec_shl_lt_ashr_exact0:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpsrad $2, %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -491,8 +491,8 @@ define <4 x i32> @combine_vec_shl_lt_ashr_extact0(<4 x i32> %x) {
   ret <4 x i32> %2
 }
 
-define <4 x i32> @combine_vec_shl_lt_ashr_extact1(<4 x i32> %x) {
-; SSE2-LABEL: combine_vec_shl_lt_ashr_extact1:
+define <4 x i32> @combine_vec_shl_lt_ashr_exact1(<4 x i32> %x) {
+; SSE2-LABEL: combine_vec_shl_lt_ashr_exact1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; SSE2-NEXT:    psrad $5, %xmm1
@@ -510,7 +510,7 @@ define <4 x i32> @combine_vec_shl_lt_ashr_extact1(<4 x i32> %x) {
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; SSE2-NEXT:    retq
 ;
-; SSE41-LABEL: combine_vec_shl_lt_ashr_extact1:
+; SSE41-LABEL: combine_vec_shl_lt_ashr_exact1:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa %xmm0, %xmm1
 ; SSE41-NEXT:    psrad $8, %xmm1
@@ -525,7 +525,7 @@ define <4 x i32> @combine_vec_shl_lt_ashr_extact1(<4 x i32> %x) {
 ; SSE41-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE41-NEXT:    retq
 ;
-; AVX-LABEL: combine_vec_shl_lt_ashr_extact1:
+; AVX-LABEL: combine_vec_shl_lt_ashr_exact1:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpsravd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    vpsllvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
