@@ -33,6 +33,7 @@ enum TestLanguage {
 };
 
 std::vector<std::string> getCommandLineArgsForTesting(TestLanguage Lang);
+std::vector<std::string> getCC1ArgsForTesting(TestLanguage Lang);
 
 StringRef getFilenameForTesting(TestLanguage Lang);
 
