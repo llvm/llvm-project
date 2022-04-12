@@ -646,6 +646,71 @@ define i32 @select_or_icmp_bad(i32 %x, i32 %y, i32 %z) {
   ret i32 %C
 }
 
+define i32 @select_lshr_icmp_const(i32 %x) {
+; CHECK-LABEL: @select_lshr_icmp_const(
+; CHECK-NEXT:    [[A:%.*]] = icmp ugt i32 %x, 31
+; CHECK-NEXT:    [[B:%.*]] = lshr i32 %x, 5
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[B]], i32 0
+; CHECK-NEXT:    ret i32 [[C]]
+;
+  %A = icmp ugt i32 %x, 31
+  %B = lshr i32 %x, 5
+  %C = select i1 %A, i32 %B, i32 0
+  ret i32 %C
+}
+
+define i32 @select_lshr_icmp_const_reordered(i32 %x) {
+; CHECK-LABEL: @select_lshr_icmp_const_reordered(
+; CHECK-NEXT:    [[A:%.*]] = icmp ult i32 %x, 32
+; CHECK-NEXT:    [[B:%.*]] = lshr i32 %x, 5
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 0, i32 [[B]]
+; CHECK-NEXT:    ret i32 [[C]]
+;
+  %A = icmp ult i32 %x, 32
+  %B = lshr i32 %x, 5
+  %C = select i1 %A, i32 0, i32 %B
+  ret i32 %C
+}
+
+define i32 @select_exact_lshr_icmp_const(i32 %x) {
+; CHECK-LABEL: @select_exact_lshr_icmp_const(
+; CHECK-NEXT:    [[A:%.*]] = icmp ugt i32 %x, 31
+; CHECK-NEXT:    [[B:%.*]] = lshr exact i32 %x, 5
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[B]], i32 0
+; CHECK-NEXT:    ret i32 [[C]]
+;
+  %A = icmp ugt i32 %x, 31
+  %B = lshr exact i32 %x, 5
+  %C = select i1 %A, i32 %B, i32 0
+  ret i32 %C
+}
+
+define i32 @select_lshr_icmp_const_large_exact_range(i32 %x) {
+; CHECK-LABEL: @select_lshr_icmp_const_large_exact_range(
+; CHECK-NEXT:    [[A:%.*]] = icmp ugt i32 %x, 63
+; CHECK-NEXT:    [[B:%.*]] = lshr i32 %x, 5
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[B]], i32 0
+; CHECK-NEXT:    ret i32 [[C]]
+;
+  %A = icmp ugt i32 %x, 63
+  %B = lshr i32 %x, 5
+  %C = select i1 %A, i32 %B, i32 0
+  ret i32 %C
+}
+
+define i32 @select_lshr_icmp_const_different_values(i32 %x, i32 %y) {
+; CHECK-LABEL: @select_lshr_icmp_const_different_values(
+; CHECK-NEXT:    [[A:%.*]] = icmp ugt i32 %x, 31
+; CHECK-NEXT:    [[B:%.*]] = lshr i32 %y, 5
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[B]], i32 0
+; CHECK-NEXT:    ret i32 [[C]]
+;
+  %A = icmp ugt i32 %x, 31
+  %B = lshr i32 %y, 5
+  %C = select i1 %A, i32 %B, i32 0
+  ret i32 %C
+}
+
 ; Invalid identity constant for FP op
 define float @select_fadd_fcmp_bad(float %x, float %y, float %z) {
 ; CHECK-LABEL: @select_fadd_fcmp_bad(
