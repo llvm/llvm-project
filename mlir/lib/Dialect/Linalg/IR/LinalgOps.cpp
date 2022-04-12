@@ -1718,7 +1718,7 @@ static void populateMap(LinalgOp linalgOp, ArrayRef<OpOperand *> operands,
     // Get the `sourceShape` of the `sourceType`. If the operand is a result of
     // `tensor.cast` operation and source of the cast operation has a static
     // shape, then assign it to the `sourceShape`.
-    auto parentOp = src.getDefiningOp();
+    auto *parentOp = src.getDefiningOp();
     ArrayRef<int64_t> sourceShape = sourceType.getShape();
     if (parentOp) {
       if (auto castOp = dyn_cast<tensor::CastOp>(parentOp)) {
