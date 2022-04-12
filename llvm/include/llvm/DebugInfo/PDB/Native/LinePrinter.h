@@ -31,6 +31,7 @@ struct FilterOptions {
   uint32_t PaddingThreshold;
   uint32_t SizeThreshold;
   uint32_t DumpModi;
+  uint32_t NumOccurrences;
   bool JustMyCode;
 };
 
