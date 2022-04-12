@@ -1,3 +1,103 @@
+add_entrypoint_object(
+  pthread_attr_init
+  SRCS
+    pthread_attr_init.cpp
+  HDRS
+    pthread_attr_init.h
+  DEPENDS
+    libc.include.pthread
+)
+
+add_entrypoint_object(
+  pthread_attr_destroy
+  SRCS
+    pthread_attr_destroy.cpp
+  HDRS
+    pthread_attr_destroy.h
+  DEPENDS
+    libc.include.pthread
+)
+
+add_entrypoint_object(
+  pthread_attr_getdetachstate
+  SRCS
+    pthread_attr_getdetachstate.cpp
+  HDRS
+    pthread_attr_getdetachstate.h
+  DEPENDS
+    libc.include.pthread
+)
+
+add_entrypoint_object(
+  pthread_attr_setdetachstate
+  SRCS
+    pthread_attr_setdetachstate.cpp
+  HDRS
+    pthread_attr_setdetachstate.h
+  DEPENDS
+    libc.include.pthread
+)
+
+add_entrypoint_object(
+  pthread_attr_getguardsize
+  SRCS
+    pthread_attr_getguardsize.cpp
+  HDRS
+    pthread_attr_getguardsize.h
+  DEPENDS
+    libc.include.pthread
+)
+
+add_entrypoint_object(
+  pthread_attr_setguardsize
+  SRCS
+    pthread_attr_setguardsize.cpp
+  HDRS
+    pthread_attr_setguardsize.h
+  DEPENDS
+    libc.include.pthread
+)
+
+add_entrypoint_object(
+  pthread_attr_getstacksize
+  SRCS
+    pthread_attr_getstacksize.cpp
+  HDRS
+    pthread_attr_getstacksize.h
+  DEPENDS
+    libc.include.pthread
+)
+
+add_entrypoint_object(
+  pthread_attr_setstacksize
+  SRCS
+    pthread_attr_setstacksize.cpp
+  HDRS
+    pthread_attr_setstacksize.h
+  DEPENDS
+    libc.include.pthread
+)
+
+add_entrypoint_object(
+  pthread_attr_getstack
+  SRCS
+    pthread_attr_getstack.cpp
+  HDRS
+    pthread_attr_getstack.h
+  DEPENDS
+    libc.include.pthread
+)
+
+add_entrypoint_object(
+  pthread_attr_setstack
+  SRCS
+    pthread_attr_setstack.cpp
+  HDRS
+    pthread_attr_setstack.h
+  DEPENDS
+    libc.include.pthread
+)
+
 add_header_library(
   pthread_mutexattr
   HDRS

@@ -156,27 +156,9 @@ unsigned SimplexBase::addRow(ArrayRef<int64_t> coeffs, bool makeRestricted) {
           nRowCoeff * tableau(nRow - 1, col) + idxRowCoeff * tableau(pos, col);
   }
 
-  normalizeRow(nRow - 1);
+  tableau.normalizeRow(nRow - 1);
   // Push to undo log along with the index of the new constraint.
   return con.size() - 1;
-}
-
-/// Normalize the row by removing factors that are common between the
-/// denominator and all the numerator coefficients.
-void SimplexBase::normalizeRow(unsigned row) {
-  int64_t gcd = 0;
-  for (unsigned col = 0; col < nCol; ++col) {
-    gcd = llvm::greatestCommonDivisor(gcd, std::abs(tableau(row, col)));
-    // If the gcd becomes 1 then the row is already normalized.
-    if (gcd == 1)
-      return;
-  }
-
-  // Note that the gcd can never become zero since the first element of the row,
-  // the denominator, is non-zero.
-  assert(gcd != 0);
-  for (unsigned col = 0; col < nCol; ++col)
-    tableau(row, col) /= gcd;
 }
 
 namespace {
@@ -349,6 +331,14 @@ SymbolicLexSimplex::getSymbolicSampleNumerator(unsigned row) const {
   return sample;
 }
 
+SmallVector<int64_t, 8>
+SymbolicLexSimplex::getSymbolicSampleIneq(unsigned row) const {
+  SmallVector<int64_t, 8> sample = getSymbolicSampleNumerator(row);
+  // The inequality is equivalent to the GCD-normalized one.
+  normalizeRange(sample);
+  return sample;
+}
+
 void LexSimplexBase::appendSymbol() {
   appendVariable();
   swapColumns(3 + nSymbol, nCol - 1);
@@ -404,14 +394,16 @@ LogicalResult SymbolicLexSimplex::addSymbolicCut(unsigned row) {
 
   // Add the division variable `q` described above to the symbol domain.
   // q = ((-c%d) + sum_i (-a_i%d)s_i)/d.
-  SmallVector<int64_t, 8> domainDivCoeffs;
-  domainDivCoeffs.reserve(nSymbol + 1);
+  SmallVector<int64_t, 8> divCoeffs;
+  divCoeffs.reserve(nSymbol + 1);
+  int64_t divDenom = d;
   for (unsigned col = 3; col < 3 + nSymbol; ++col)
-    domainDivCoeffs.push_back(mod(-tableau(row, col), d)); // (-a_i%d)s_i
-  domainDivCoeffs.push_back(mod(-tableau(row, 1), d));     // -c%d.
+    divCoeffs.push_back(mod(-tableau(row, col), divDenom)); // (-a_i%d)s_i
+  divCoeffs.push_back(mod(-tableau(row, 1), divDenom));     // -c%d.
 
-  domainSimplex.addDivisionVariable(domainDivCoeffs, d);
-  domainPoly.addLocalFloorDiv(domainDivCoeffs, d);
+  normalizeDiv(divCoeffs, divDenom);
+  domainSimplex.addDivisionVariable(divCoeffs, divDenom);
+  domainPoly.addLocalFloorDiv(divCoeffs, divDenom);
 
   // Update `this` to account for the additional symbol we just added.
   appendSymbol();
@@ -476,7 +468,7 @@ Optional<unsigned> SymbolicLexSimplex::maybeGetAlwaysViolatedRow() {
   for (unsigned row = 0; row < nRow; ++row) {
     if (tableau(row, 2) > 0)
       continue;
-    if (domainSimplex.isSeparateInequality(getSymbolicSampleNumerator(row))) {
+    if (domainSimplex.isSeparateInequality(getSymbolicSampleIneq(row))) {
       // Sample numerator always takes negative values in the symbol domain.
       return row;
     }
@@ -552,7 +544,7 @@ SymbolicLexMin SymbolicLexSimplex::computeSymbolicIntegerLexMin() {
         assert(tableau(splitRow, 2) == 0 &&
                "Non-branching pivots should have been handled already!");
 
-        symbolicSample = getSymbolicSampleNumerator(splitRow);
+        symbolicSample = getSymbolicSampleIneq(splitRow);
         if (domainSimplex.isRedundantInequality(symbolicSample))
           continue;
 
@@ -630,7 +622,8 @@ SymbolicLexMin SymbolicLexSimplex::computeSymbolicIntegerLexMin() {
       assert(u.orientation == Orientation::Row &&
              "The split row should have been returned to row orientation!");
       SmallVector<int64_t, 8> splitIneq =
-          getComplementIneq(getSymbolicSampleNumerator(u.pos));
+          getComplementIneq(getSymbolicSampleIneq(u.pos));
+      normalizeRange(splitIneq);
       if (moveRowUnknownToColumn(u.pos).failed()) {
         // The unknown can't be made non-negative; return.
         --level;
@@ -935,7 +928,7 @@ void SimplexBase::pivot(unsigned pivotRow, unsigned pivotCol) {
       tableau(pivotRow, col) = -tableau(pivotRow, col);
     }
   }
-  normalizeRow(pivotRow);
+  tableau.normalizeRow(pivotRow);
 
   for (unsigned row = 0; row < nRow; ++row) {
     if (row == pivotRow)
@@ -951,7 +944,7 @@ void SimplexBase::pivot(unsigned pivotRow, unsigned pivotCol) {
                         tableau(row, pivotCol) * tableau(pivotRow, j);
     }
     tableau(row, pivotCol) *= tableau(pivotRow, pivotCol);
-    normalizeRow(row);
+    tableau.normalizeRow(row);
   }
 }
 

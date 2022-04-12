@@ -42,7 +42,7 @@
 ; CS-NEXT:  1
 ; CS-NEXT:  20177f->2017c4:1
 
-; clang -O3 -fexperimental-new-pass-manager -fuse-ld=lld -fpseudo-probe-for-profiling
+; clang -O3 -fuse-ld=lld -fpseudo-probe-for-profiling
 ; -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -Xclang -mdisable-tail-calls
 ; -g test.c  -o a.out
 

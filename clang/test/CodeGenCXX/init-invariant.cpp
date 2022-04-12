@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple i686-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK-O0
-// RUN: %clang_cc1 -no-opaque-pointers -triple i686-linux-gnu -emit-llvm %s -O1 -fno-experimental-new-pass-manager -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-linux-gnu -emit-llvm %s -disable-llvm-passes -o - | FileCheck %s --check-prefix=CHECK-O0
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-linux-gnu -emit-llvm %s -O1 -disable-llvm-passes -o - | FileCheck %s
 
 // Check that we add an llvm.invariant.start.p0i8 to mark when a global becomes
 // read-only. If globalopt can fold the initializer, it will then mark the

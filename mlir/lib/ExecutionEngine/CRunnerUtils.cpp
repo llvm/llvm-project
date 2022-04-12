@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/ExecutionEngine/CRunnerUtils.h"
+#include "mlir/ExecutionEngine/Msan.h"
 
 #ifndef _WIN32
 #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
@@ -51,6 +52,8 @@ memrefCopy(int64_t elemSize, UnrankedMemRefType<char> *srcArg,
   DynamicMemRefType<char> dst(*dstArg);
 
   int64_t rank = src.rank;
+  MLIR_MSAN_MEMORY_IS_INITIALIZED(src.sizes, rank * sizeof(int64_t));
+
   // Handle empty shapes -> nothing to copy.
   for (int rankp = 0; rankp < rank; ++rankp)
     if (src.sizes[rankp] == 0)

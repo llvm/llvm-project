@@ -860,7 +860,6 @@ std::unique_ptr<lto::LTO> createLTO(
   // TODO: Handle index-only thin-LTO
   Backend =
       lto::createInProcessThinBackend(llvm::heavyweight_hardware_concurrency());
-  Conf.UseDefaultPipeline = true;
 
   Conf.CPU = Arch.str();
   Conf.Options = codegen::InitTargetOptionsFromCodeGenFlags(TheTriple);
@@ -868,6 +867,8 @@ std::unique_ptr<lto::LTO> createLTO(
   Conf.MAttrs = getTargetFeatures(TheTriple);
   Conf.CGOptLevel = getCGOptLevel(OptLevel[1] - '0');
   Conf.OptLevel = OptLevel[1] - '0';
+  if (Conf.OptLevel > 0)
+    Conf.UseDefaultPipeline = true;
   Conf.DefaultTriple = TheTriple.getTriple();
   Conf.DiagHandler = diagnosticHandler;
 

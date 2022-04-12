@@ -12,6 +12,7 @@
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/TargetParser.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <string>
 
@@ -1448,14 +1449,20 @@ TEST(TargetParserTest, testAArch64Extension) {
 
 TEST(TargetParserTest, AArch64ExtensionFeatures) {
   std::vector<uint64_t> Extensions = {
-      AArch64::AEK_CRC,         AArch64::AEK_CRYPTO,  AArch64::AEK_FP,
-      AArch64::AEK_SIMD,        AArch64::AEK_FP16,    AArch64::AEK_PROFILE,
-      AArch64::AEK_RAS,         AArch64::AEK_LSE,     AArch64::AEK_RDM,
-      AArch64::AEK_DOTPROD,     AArch64::AEK_SVE,     AArch64::AEK_SVE2,
-      AArch64::AEK_SVE2AES,     AArch64::AEK_SVE2SM4, AArch64::AEK_SVE2SHA3,
-      AArch64::AEK_SVE2BITPERM, AArch64::AEK_RCPC,    AArch64::AEK_FP16FML,
-      AArch64::AEK_SME,         AArch64::AEK_SMEF64,  AArch64::AEK_SMEI64,
-      AArch64::AEK_PERFMON};
+      AArch64::AEK_CRC,     AArch64::AEK_LSE,      AArch64::AEK_RDM,
+      AArch64::AEK_CRYPTO,  AArch64::AEK_SM4,      AArch64::AEK_SHA3,
+      AArch64::AEK_SHA2,    AArch64::AEK_AES,      AArch64::AEK_DOTPROD,
+      AArch64::AEK_FP,      AArch64::AEK_SIMD,     AArch64::AEK_FP16,
+      AArch64::AEK_FP16FML, AArch64::AEK_PROFILE,  AArch64::AEK_RAS,
+      AArch64::AEK_SVE,     AArch64::AEK_SVE2,     AArch64::AEK_SVE2AES,
+      AArch64::AEK_SVE2SM4, AArch64::AEK_SVE2SHA3, AArch64::AEK_SVE2BITPERM,
+      AArch64::AEK_RCPC,    AArch64::AEK_RAND,     AArch64::AEK_MTE,
+      AArch64::AEK_SSBS,    AArch64::AEK_SB,       AArch64::AEK_PREDRES,
+      AArch64::AEK_BF16,    AArch64::AEK_I8MM,     AArch64::AEK_F32MM,
+      AArch64::AEK_F64MM,   AArch64::AEK_TME,      AArch64::AEK_LS64,
+      AArch64::AEK_BRBE,    AArch64::AEK_PAUTH,    AArch64::AEK_FLAGM,
+      AArch64::AEK_SME,     AArch64::AEK_SMEF64,   AArch64::AEK_SMEI64,
+      AArch64::AEK_HBC,     AArch64::AEK_MOPS,     AArch64::AEK_PERFMON};
 
   std::vector<StringRef> Features;
 
@@ -1463,34 +1470,65 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   for (auto Ext : Extensions)
     ExtVal |= Ext;
 
+  // INVALID and NONE have no feature names.
   EXPECT_FALSE(AArch64::getExtensionFeatures(AArch64::AEK_INVALID, Features));
+  EXPECT_TRUE(!Features.size());
+  // We return True here because NONE is a valid choice.
+  EXPECT_TRUE(AArch64::getExtensionFeatures(AArch64::AEK_NONE, Features));
   EXPECT_TRUE(!Features.size());
 
   AArch64::getExtensionFeatures(ExtVal, Features);
   EXPECT_EQ(Extensions.size(), Features.size());
 
   EXPECT_TRUE(llvm::is_contained(Features, "+crc"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+lse"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+rdm"));
   EXPECT_TRUE(llvm::is_contained(Features, "+crypto"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sm4"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sha3"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sha2"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+aes"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+dotprod"));
   EXPECT_TRUE(llvm::is_contained(Features, "+fp-armv8"));
   EXPECT_TRUE(llvm::is_contained(Features, "+neon"));
   EXPECT_TRUE(llvm::is_contained(Features, "+fullfp16"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+fp16fml"));
   EXPECT_TRUE(llvm::is_contained(Features, "+spe"));
   EXPECT_TRUE(llvm::is_contained(Features, "+ras"));
-  EXPECT_TRUE(llvm::is_contained(Features, "+lse"));
-  EXPECT_TRUE(llvm::is_contained(Features, "+rdm"));
-  EXPECT_TRUE(llvm::is_contained(Features, "+dotprod"));
-  EXPECT_TRUE(llvm::is_contained(Features, "+rcpc"));
-  EXPECT_TRUE(llvm::is_contained(Features, "+fp16fml"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2-aes"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2-sm4"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2-sha3"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2-bitperm"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+rcpc"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+rand"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+mte"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+ssbs"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sb"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+predres"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+bf16"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+i8mm"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+f32mm"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+f64mm"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+tme"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+ls64"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+brbe"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+pauth"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+flagm"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sme"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sme-f64"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sme-i64"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+hbc"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+mops"));
   EXPECT_TRUE(llvm::is_contained(Features, "+perfmon"));
+
+  // Assuming we listed every extension above, this should produce the same
+  // result. (note that AEK_NONE doesn't have a name so it won't be in the
+  // result despite its bit being set)
+  std::vector<StringRef> AllFeatures;
+  EXPECT_TRUE(AArch64::getExtensionFeatures(-1, AllFeatures));
+  EXPECT_THAT(Features, ::testing::ContainerEq(AllFeatures));
 }
 
 TEST(TargetParserTest, AArch64ArchFeatures) {

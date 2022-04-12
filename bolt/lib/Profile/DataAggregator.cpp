@@ -1296,37 +1296,55 @@ std::error_code DataAggregator::printLBRHeatMap() {
   uint64_t NumTotalSamples = 0;
 
   while (hasData()) {
-    ErrorOr<PerfBranchSample> SampleRes = parseBranchSample();
-    if (std::error_code EC = SampleRes.getError()) {
-      if (EC == errc::no_such_process)
-        continue;
-      return EC;
-    }
-
-    PerfBranchSample &Sample = SampleRes.get();
-
-    // LBRs are stored in reverse execution order. NextLBR refers to the next
-    // executed branch record.
-    const LBREntry *NextLBR = nullptr;
-    for (const LBREntry &LBR : Sample.LBR) {
-      if (NextLBR) {
-        // Record fall-through trace.
-        const uint64_t TraceFrom = LBR.To;
-        const uint64_t TraceTo = NextLBR->From;
-        ++FallthroughLBRs[Trace(TraceFrom, TraceTo)].InternCount;
+    if (opts::BasicAggregation) {
+      ErrorOr<PerfBasicSample> SampleRes = parseBasicSample();
+      if (std::error_code EC = SampleRes.getError()) {
+        if (EC == errc::no_such_process)
+          continue;
+        return EC;
       }
-      NextLBR = &LBR;
+      PerfBasicSample &Sample = SampleRes.get();
+      HM.registerAddress(Sample.PC);
+      NumTotalSamples++;
+    } else {
+      ErrorOr<PerfBranchSample> SampleRes = parseBranchSample();
+      if (std::error_code EC = SampleRes.getError()) {
+        if (EC == errc::no_such_process)
+          continue;
+        return EC;
+      }
+
+      PerfBranchSample &Sample = SampleRes.get();
+
+      // LBRs are stored in reverse execution order. NextLBR refers to the next
+      // executed branch record.
+      const LBREntry *NextLBR = nullptr;
+      for (const LBREntry &LBR : Sample.LBR) {
+        if (NextLBR) {
+          // Record fall-through trace.
+          const uint64_t TraceFrom = LBR.To;
+          const uint64_t TraceTo = NextLBR->From;
+          ++FallthroughLBRs[Trace(TraceFrom, TraceTo)].InternCount;
+        }
+        NextLBR = &LBR;
+      }
+      if (!Sample.LBR.empty()) {
+        HM.registerAddress(Sample.LBR.front().To);
+        HM.registerAddress(Sample.LBR.back().From);
+      }
+      NumTotalSamples += Sample.LBR.size();
     }
-    if (!Sample.LBR.empty()) {
-      HM.registerAddress(Sample.LBR.front().To);
-      HM.registerAddress(Sample.LBR.back().From);
-    }
-    NumTotalSamples += Sample.LBR.size();
   }
 
   if (!NumTotalSamples) {
-    errs() << "HEATMAP-ERROR: no LBR traces detected in profile. "
-              "Cannot build heatmap.\n";
+    if (!opts::BasicAggregation) {
+      errs() << "HEATMAP-ERROR: no LBR traces detected in profile. "
+                "Cannot build heatmap. Use -nl for building heatmap from "
+                "basic events.\n";
+    } else {
+      errs() << "HEATMAP-ERROR: no samples detected in profile. "
+                "Cannot build heatmap.";
+    }
     exit(1);
   }
 

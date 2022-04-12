@@ -1165,11 +1165,11 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
 
     // Look for a "splat" mul pattern - it replicates bits across each half of
     // a value, so a right shift is just a mask of the low bits:
-    // lshr i32 (mul nuw X, Pow2+1), 16 --> and X, Pow2-1
+    // lshr i[2N] (mul nuw X, (2^N)+1), N --> and iN X, (2^N)-1
     // TODO: Generalize to allow more than just half-width shifts?
     const APInt *MulC;
     if (match(Op0, m_NUWMul(m_Value(X), m_APInt(MulC))) &&
-        ShAmtC * 2 == BitWidth && (*MulC - 1).isPowerOf2() &&
+        BitWidth > 2 && ShAmtC * 2 == BitWidth && (*MulC - 1).isPowerOf2() &&
         MulC->logBase2() == ShAmtC)
       return BinaryOperator::CreateAnd(X, ConstantInt::get(Ty, *MulC - 2));
 
