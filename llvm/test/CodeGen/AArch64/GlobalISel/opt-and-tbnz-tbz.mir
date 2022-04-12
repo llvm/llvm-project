@@ -16,12 +16,14 @@ regBankSelected: true
 body:             |
   ; CHECK-LABEL: name: tbnzx_and
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-  ; CHECK:   TBNZX [[COPY]], 33, %bb.1
-  ; CHECK:   B %bb.0
-  ; CHECK: bb.1:
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+  ; CHECK-NEXT:   TBNZX [[COPY]], 33, %bb.1
+  ; CHECK-NEXT:   B %bb.0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   RET_ReallyLR
   bb.0:
     successors: %bb.0, %bb.1
     liveins: $x0
@@ -46,13 +48,15 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: tbzx_and
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
-  ; CHECK:   liveins: $x0
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-  ; CHECK:   TBZX [[COPY]], 33, %bb.1
-  ; CHECK:   B %bb.0
-  ; CHECK: bb.1:
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $x0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+  ; CHECK-NEXT:   TBZX [[COPY]], 33, %bb.1
+  ; CHECK-NEXT:   B %bb.0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   RET_ReallyLR
   bb.0:
     successors: %bb.0, %bb.1
     liveins: $x0
@@ -77,13 +81,15 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: tbnzw_and
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
-  ; CHECK:   liveins: $w0
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-  ; CHECK:   TBNZW [[COPY]], 0, %bb.1
-  ; CHECK:   B %bb.0
-  ; CHECK: bb.1:
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $w0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+  ; CHECK-NEXT:   TBNZW [[COPY]], 0, %bb.1
+  ; CHECK-NEXT:   B %bb.0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   RET_ReallyLR
   bb.0:
     successors: %bb.0, %bb.1
     liveins: $w0
@@ -108,13 +114,15 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: tbzw_and
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
-  ; CHECK:   liveins: $w0
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-  ; CHECK:   TBZW [[COPY]], 0, %bb.1
-  ; CHECK:   B %bb.0
-  ; CHECK: bb.1:
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $w0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+  ; CHECK-NEXT:   TBZW [[COPY]], 0, %bb.1
+  ; CHECK-NEXT:   B %bb.0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   RET_ReallyLR
   bb.0:
     successors: %bb.0, %bb.1
     liveins: $w0
@@ -139,14 +147,16 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: dont_fold_and_lt
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
-  ; CHECK:   liveins: $w0
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-  ; CHECK:   [[ANDSWri:%[0-9]+]]:gpr32 = ANDSWri [[COPY]], 0, implicit-def $nzcv
-  ; CHECK:   Bcc 11, %bb.1, implicit $nzcv
-  ; CHECK:   B %bb.0
-  ; CHECK: bb.1:
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $w0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+  ; CHECK-NEXT:   [[ANDSWri:%[0-9]+]]:gpr32 = ANDSWri [[COPY]], 0, implicit-def $nzcv
+  ; CHECK-NEXT:   Bcc 11, %bb.1, implicit $nzcv
+  ; CHECK-NEXT:   B %bb.0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   RET_ReallyLR
   bb.0:
     successors: %bb.0, %bb.1
     liveins: $w0
@@ -171,14 +181,16 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: dont_fold_and_gt
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
-  ; CHECK:   liveins: $w0
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-  ; CHECK:   [[ANDSWri:%[0-9]+]]:gpr32 = ANDSWri [[COPY]], 0, implicit-def $nzcv
-  ; CHECK:   Bcc 12, %bb.1, implicit $nzcv
-  ; CHECK:   B %bb.0
-  ; CHECK: bb.1:
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $w0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+  ; CHECK-NEXT:   [[ANDSWri:%[0-9]+]]:gpr32 = ANDSWri [[COPY]], 0, implicit-def $nzcv
+  ; CHECK-NEXT:   Bcc 12, %bb.1, implicit $nzcv
+  ; CHECK-NEXT:   B %bb.0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   RET_ReallyLR
   bb.0:
     successors: %bb.0, %bb.1
     liveins: $w0
@@ -202,13 +214,15 @@ regBankSelected: true
 body:             |
   ; CHECK-LABEL: name: dont_fold_and_not_power_of_2
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-  ; CHECK:   [[ANDXri:%[0-9]+]]:gpr64common = ANDXri [[COPY]], 4098
-  ; CHECK:   CBNZX [[ANDXri]], %bb.1
-  ; CHECK:   B %bb.0
-  ; CHECK: bb.1:
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+  ; CHECK-NEXT:   [[ANDXri:%[0-9]+]]:gpr64common = ANDXri [[COPY]], 4098
+  ; CHECK-NEXT:   CBNZX [[ANDXri]], %bb.1
+  ; CHECK-NEXT:   B %bb.0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   RET_ReallyLR
   bb.0:
     successors: %bb.0, %bb.1
     liveins: $x0
@@ -232,14 +246,16 @@ regBankSelected: true
 body:             |
   ; CHECK-LABEL: name: dont_fold_cmp_not_0
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-  ; CHECK:   [[ANDXri:%[0-9]+]]:gpr64sp = ANDXri [[COPY]], 8064
-  ; CHECK:   [[SUBSXri:%[0-9]+]]:gpr64 = SUBSXri [[ANDXri]], 4, 0, implicit-def $nzcv
-  ; CHECK:   Bcc 1, %bb.1, implicit $nzcv
-  ; CHECK:   B %bb.0
-  ; CHECK: bb.1:
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+  ; CHECK-NEXT:   [[ANDXri:%[0-9]+]]:gpr64sp = ANDXri [[COPY]], 8064
+  ; CHECK-NEXT:   [[SUBSXri:%[0-9]+]]:gpr64 = SUBSXri [[ANDXri]], 4, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   Bcc 1, %bb.1, implicit $nzcv
+  ; CHECK-NEXT:   B %bb.0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   RET_ReallyLR
   bb.0:
     successors: %bb.0, %bb.1
     liveins: $x0

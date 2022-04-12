@@ -9,14 +9,17 @@ liveins:
 body:             |
   ; CHECK-LABEL: name: condbr_of_not
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-  ; CHECK:   [[LDRBBui:%[0-9]+]]:gpr32 = LDRBBui [[COPY]], 0 :: (load (s8))
-  ; CHECK:   TBZW [[LDRBBui]], 0, %bb.2
-  ; CHECK: bb.1:
-  ; CHECK:   RET_ReallyLR
-  ; CHECK: bb.2:
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+  ; CHECK-NEXT:   [[LDRBBui:%[0-9]+]]:gpr32 = LDRBBui [[COPY]], 0 :: (load (s8))
+  ; CHECK-NEXT:   TBZW [[LDRBBui]], 0, %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   RET_ReallyLR
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   RET_ReallyLR
   bb.1:
     successors: %bb.2, %bb.3
     liveins: $x0
@@ -45,14 +48,17 @@ liveins:
 body:             |
   ; CHECK-LABEL: name: condbr_of_not_64
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-  ; CHECK:   [[LDRBBui:%[0-9]+]]:gpr32 = LDRBBui [[COPY]], 0 :: (load (s8))
-  ; CHECK:   TBZW [[LDRBBui]], 0, %bb.2
-  ; CHECK: bb.1:
-  ; CHECK:   RET_ReallyLR
-  ; CHECK: bb.2:
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+  ; CHECK-NEXT:   [[LDRBBui:%[0-9]+]]:gpr32 = LDRBBui [[COPY]], 0 :: (load (s8))
+  ; CHECK-NEXT:   TBZW [[LDRBBui]], 0, %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   RET_ReallyLR
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   RET_ReallyLR
   ; TB(N)ZX has no encoding if the bit being tested is < 32, so we should get
   ; TBZW here.
   ;
@@ -82,13 +88,16 @@ regBankSelected: true
 body:             |
   ; CHECK-LABEL: name: condbr_of_and
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK:   %lhs:gpr32 = COPY $w0
-  ; CHECK:   TBNZW %lhs, 0, %bb.2
-  ; CHECK: bb.1:
-  ; CHECK:   RET_ReallyLR
-  ; CHECK: bb.2:
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %lhs:gpr32 = COPY $w0
+  ; CHECK-NEXT:   TBNZW %lhs, 0, %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   RET_ReallyLR
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   RET_ReallyLR
   bb.1:
     successors: %bb.2, %bb.3
     liveins: $w0
@@ -112,15 +121,18 @@ regBankSelected: true
 body:             |
   ; CHECK-LABEL: name: condbr_of_and_no_cst
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK:   %lhs:gpr32 = COPY $w0
-  ; CHECK:   %rhs:gpr32 = COPY $w1
-  ; CHECK:   %op:gpr32 = ANDWrr %lhs, %rhs
-  ; CHECK:   TBNZW %op, 0, %bb.2
-  ; CHECK: bb.1:
-  ; CHECK:   RET_ReallyLR
-  ; CHECK: bb.2:
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %lhs:gpr32 = COPY $w0
+  ; CHECK-NEXT:   %rhs:gpr32 = COPY $w1
+  ; CHECK-NEXT:   %op:gpr32 = ANDWrr %lhs, %rhs
+  ; CHECK-NEXT:   TBNZW %op, 0, %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   RET_ReallyLR
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   RET_ReallyLR
   bb.1:
     successors: %bb.2, %bb.3
     liveins: $w0, $w1
@@ -144,14 +156,17 @@ regBankSelected: true
 body:             |
   ; CHECK-LABEL: name: condbr_of_shl
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK:   %lhs:gpr32 = COPY $w0
-  ; CHECK:   %op:gpr32 = UBFMWri %lhs, 31, 30
-  ; CHECK:   TBNZW %op, 0, %bb.2
-  ; CHECK: bb.1:
-  ; CHECK:   RET_ReallyLR
-  ; CHECK: bb.2:
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %lhs:gpr32 = COPY $w0
+  ; CHECK-NEXT:   %op:gpr32 = UBFMWri %lhs, 31, 30
+  ; CHECK-NEXT:   TBNZW %op, 0, %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   RET_ReallyLR
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   RET_ReallyLR
   ; We won't ever fold this, because
   ; bit = 0
   ; bit - constant < 0, which isn't valid for tbz/tbnz.
@@ -179,13 +194,16 @@ regBankSelected: true
 body:             |
   ; CHECK-LABEL: name: condbr_of_ashr
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK:   %lhs:gpr32 = COPY $w0
-  ; CHECK:   TBNZW %lhs, 1, %bb.2
-  ; CHECK: bb.1:
-  ; CHECK:   RET_ReallyLR
-  ; CHECK: bb.2:
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %lhs:gpr32 = COPY $w0
+  ; CHECK-NEXT:   TBNZW %lhs, 1, %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   RET_ReallyLR
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   RET_ReallyLR
   ; We can fold ashr, because we can have
   ;
   ; (tbz (ashr x, c), 0) where 0 + c > # bits in x.
@@ -213,13 +231,16 @@ regBankSelected: true
 body:             |
   ; CHECK-LABEL: name: tbnzx
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK:   %lhs:gpr64 = COPY $x0
-  ; CHECK:   TBNZX %lhs, 63, %bb.2
-  ; CHECK: bb.1:
-  ; CHECK:   RET_ReallyLR
-  ; CHECK: bb.2:
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %lhs:gpr64 = COPY $x0
+  ; CHECK-NEXT:   TBNZX %lhs, 63, %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   RET_ReallyLR
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   RET_ReallyLR
   bb.1:
     successors: %bb.2, %bb.3
     liveins: $x0
