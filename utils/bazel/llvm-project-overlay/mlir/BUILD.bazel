@@ -5835,6 +5835,7 @@ cc_library(
         "//llvm:Core",
         "//llvm:Coroutines",
         "//llvm:IPO",
+        "//llvm:Passes",
         "//llvm:Support",
         "//llvm:Target",
         "//llvm:common_transforms",
