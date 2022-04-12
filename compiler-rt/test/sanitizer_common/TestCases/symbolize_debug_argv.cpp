@@ -3,7 +3,7 @@
 #include <sanitizer/common_interface_defs.h>
 
 int main(int argc, char **argv) {
-  // CHECK: Launching Symbolizer process: {{.+}}
+  // CHECK: {{(Launching Symbolizer process: .+)|(Using internal symbolizer)}}
   __sanitizer_print_stack_trace();
   return 0;
 }
