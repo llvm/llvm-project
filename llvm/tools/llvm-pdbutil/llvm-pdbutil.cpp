@@ -1527,8 +1527,15 @@ int main(int Argc, const char **Argv) {
   opts::Filters.PaddingThreshold = opts::pretty::PaddingThreshold;
   opts::Filters.SizeThreshold = opts::pretty::SizeThreshold;
   opts::Filters.JustMyCode = opts::dump::JustMyCode;
-  if (opts::dump::DumpModi.getNumOccurrences())
+  if (opts::dump::DumpModi.getNumOccurrences() > 0) {
+    if (opts::dump::DumpModi.getNumOccurrences() != 1) {
+      errs() << "argument '-modi' specified more than once.\n";
+      errs().flush();
+      exit(1);
+    }
+    opts::Filters.NumOccurrences = opts::dump::DumpModi.getNumOccurrences();
     opts::Filters.DumpModi = opts::dump::DumpModi;
+  }
 
   if (opts::PdbToYamlSubcommand) {
     pdb2Yaml(opts::pdb2yaml::InputFilename.front());

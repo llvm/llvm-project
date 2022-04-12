@@ -180,10 +180,8 @@ Error iterateSymbolGroups(InputFile &Input, const PrintScope &HeaderScope,
   AutoIndent Indent(HeaderScope);
 
   FilterOptions Filters = HeaderScope.P.getFilters();
-  uint32_t Modi = Filters.DumpModi;
-
-  if (Modi > 0) {
-    assert(Modi == 1);
+  if (Filters.NumOccurrences) {
+    uint32_t Modi = Filters.DumpModi;
     SymbolGroup SG(&Input, Modi);
     return iterateOneModule(Input, withLabelWidth(HeaderScope, NumDigits(Modi)),
                             SG, Modi, Callback);
