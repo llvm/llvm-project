@@ -1530,20 +1530,57 @@ mlir::LogicalResult CIRGenModule::buildSwitchStmt(const SwitchStmt &S) {
 }
 
 mlir::LogicalResult CIRGenModule::buildForStmt(const ForStmt &S) {
+  mlir::cir::LoopOp loopOp;
+
   // TODO: pass in array of attributes.
-
-  auto res = mlir::success();
-
   auto forStmtBuilder = [&]() -> mlir::LogicalResult {
     auto forRes = mlir::success();
     // Evaluate the first part before the loop.
     if (S.getInit())
-      forRes = buildStmt(S.getInit(), /*useCurrentScope=*/true);
+      if (buildStmt(S.getInit(), /*useCurrentScope=*/true).failed())
+        return mlir::failure();
 
+    loopOp = builder.create<LoopOp>(
+        getLoc(S.getSourceRange()),
+        /*condBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          // TODO: branch weigths, likelyhood, profile counter, etc.
+          mlir::Value condVal;
+          if (S.getCond()) {
+            // If the for statement has a condition scope,
+            // emit the local variable declaration.
+            if (S.getConditionVariable())
+              buildDecl(*S.getConditionVariable());
+            // C99 6.8.5p2/p4: The first substatement is executed if the
+            // expression compares unequal to 0. The condition must be a
+            // scalar type.
+            condVal = evaluateExprAsBool(S.getCond());
+          } else {
+            condVal = b.create<mlir::cir::ConstantOp>(
+                loc, mlir::cir::BoolType::get(b.getContext()),
+                b.getBoolAttr(true));
+          }
+          b.create<YieldOp>(loc, condVal);
+        },
+        /*bodyBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          // FIXME: in C we need to open a new scope here. Do we also need it
+          // for C++ in case it's a compound statement?
+          if (buildStmt(S.getBody(), /*useCurrentScope=*/true).failed())
+            forRes = mlir::failure();
+          builder.create<YieldOp>(loc);
+        },
+        /*stepBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          if (S.getInc())
+            if (buildStmt(S.getInc(), /*useCurrentScope=*/true).failed())
+              forRes = mlir::failure();
+          builder.create<YieldOp>(loc);
+        });
     return forRes;
   };
 
-  // The switch scope contains the full source range for SwitchStmt.
+  auto res = mlir::success();
   auto scopeLoc = getLoc(S.getSourceRange());
   builder.create<mlir::cir::ScopeOp>(
       scopeLoc, mlir::TypeRange(), /*scopeBuilder=*/
@@ -1560,123 +1597,34 @@ mlir::LogicalResult CIRGenModule::buildForStmt(const ForStmt &S) {
   if (res.failed())
     return res;
 
-  assert(0 && "unimplemented");
+  // Add terminating yield on loop body region in case there are not
+  // other terminators used.
+  // FIXME: unify this with terminateCaseRegion.
+  auto terminateLoopBody = [&](mlir::Region &r, mlir::Location loc) {
+    if (r.empty())
+      return;
 
-  //  JumpDest LoopExit = getJumpDestInCurrentScope("for.end");
+    SmallVector<mlir::Block *, 4> eraseBlocks;
+    unsigned numBlocks = r.getBlocks().size();
+    for (auto &block : r.getBlocks()) {
+      // Already cleanup after return operations, which might create
+      // empty blocks if emitted as last stmt.
+      if (numBlocks != 1 && block.empty() && block.hasNoPredecessors() &&
+          block.hasNoSuccessors())
+        eraseBlocks.push_back(&block);
 
-  // LexicalScope ForScope(*this, S.getSourceRange());
+      if (block.empty() ||
+          !block.back().hasTrait<mlir::OpTrait::IsTerminator>()) {
+        mlir::OpBuilder::InsertionGuard guardCase(builder);
+        builder.setInsertionPointToEnd(&block);
+        builder.create<YieldOp>(loc);
+      }
+    }
 
-  // // Evaluate the first part before the loop.
-  // if (S.getInit())
-  //   EmitStmt(S.getInit());
-
-  // // Start the loop with a block that tests the condition.
-  // // If there's an increment, the continue scope will be overwritten
-  // // later.
-  // JumpDest CondDest = getJumpDestInCurrentScope("for.cond");
-  // llvm::BasicBlock *CondBlock = CondDest.getBlock();
-  // EmitBlock(CondBlock);
-
-  // Expr::EvalResult Result;
-  // bool CondIsConstInt =
-  //     !S.getCond() || S.getCond()->EvaluateAsInt(Result, getContext());
-
-  // const SourceRange &R = S.getSourceRange();
-  // LoopStack.push(CondBlock, CGM.getContext(), CGM.getCodeGenOpts(), ForAttrs,
-  //                SourceLocToDebugLoc(R.getBegin()),
-  //                SourceLocToDebugLoc(R.getEnd()),
-  //                checkIfLoopMustProgress(CondIsConstInt));
-
-  // // Create a cleanup scope for the condition variable cleanups.
-  // LexicalScope ConditionScope(*this, S.getSourceRange());
-
-  // // If the for loop doesn't have an increment we can just use the condition
-  // as
-  // // the continue block. Otherwise, if there is no condition variable, we can
-  // // form the continue block now. If there is a condition variable, we can't
-  // // form the continue block until after we've emitted the condition, because
-  // // the condition is in scope in the increment, but Sema's jump diagnostics
-  // // ensure that there are no continues from the condition variable that jump
-  // // to the loop increment.
-  // JumpDest Continue;
-  // if (!S.getInc())
-  //   Continue = CondDest;
-  // else if (!S.getConditionVariable())
-  //   Continue = getJumpDestInCurrentScope("for.inc");
-  // BreakContinueStack.push_back(BreakContinue(LoopExit, Continue));
-
-  // if (S.getCond()) {
-  //   // If the for statement has a condition scope, emit the local variable
-  //   // declaration.
-  //   if (S.getConditionVariable()) {
-  //     EmitDecl(*S.getConditionVariable());
-
-  //     // We have entered the condition variable's scope, so we're now able to
-  //     // jump to the continue block.
-  //     Continue = S.getInc() ? getJumpDestInCurrentScope("for.inc") :
-  //     CondDest; BreakContinueStack.back().ContinueBlock = Continue;
-  //   }
-
-  //   llvm::BasicBlock *ExitBlock = LoopExit.getBlock();
-  //   // If there are any cleanups between here and the loop-exit scope,
-  //   // create a block to stage a loop exit along.
-  //   if (ForScope.requiresCleanups())
-  //     ExitBlock = createBasicBlock("for.cond.cleanup");
-
-  //   // As long as the condition is true, iterate the loop.
-  //   llvm::BasicBlock *ForBody = createBasicBlock("for.body");
-
-  //   // C99 6.8.5p2/p4: The first substatement is executed if the expression
-  //   // compares unequal to 0.  The condition must be a scalar type.
-  //   llvm::Value *BoolCondVal = EvaluateExprAsBool(S.getCond());
-  //   llvm::MDNode *Weights =
-  //       createProfileWeightsForLoop(S.getCond(),
-  //       getProfileCount(S.getBody()));
-  //   if (!Weights && CGM.getCodeGenOpts().OptimizationLevel)
-  //     BoolCondVal = emitCondLikelihoodViaExpectIntrinsic(
-  //         BoolCondVal, Stmt::getLikelihood(S.getBody()));
-
-  //   Builder.CreateCondBr(BoolCondVal, ForBody, ExitBlock, Weights);
-
-  //   if (ExitBlock != LoopExit.getBlock()) {
-  //     EmitBlock(ExitBlock);
-  //     EmitBranchThroughCleanup(LoopExit);
-  //   }
-
-  //   EmitBlock(ForBody);
-  // } else {
-  //   // Treat it as a non-zero constant.  Don't even create a new block for
-  //   the
-  //   // body, just fall into it.
-  // }
-  // incrementProfileCounter(&S);
-
-  // {
-  //   // Create a separate cleanup scope for the body, in case it is not
-  //   // a compound statement.
-  //   RunCleanupsScope BodyScope(*this);
-  //   EmitStmt(S.getBody());
-  // }
-
-  // // If there is an increment, emit it next.
-  // if (S.getInc()) {
-  //   EmitBlock(Continue.getBlock());
-  //   EmitStmt(S.getInc());
-  // }
-
-  // BreakContinueStack.pop_back();
-
-  // ConditionScope.ForceCleanup();
-
-  // EmitStopPoint(&S);
-  // EmitBranch(CondBlock);
-
-  // ForScope.ForceCleanup();
-
-  // LoopStack.pop();
-
-  // // Emit the fall-through block.
-  // EmitBlock(LoopExit.getBlock(), true);
+    for (auto *b : eraseBlocks)
+      b->erase();
+  };
+  terminateLoopBody(loopOp.getBody(), getLoc(S.getEndLoc()));
 
   return mlir::success();
 }
@@ -2095,6 +2043,7 @@ mlir::FuncOp CIRGenModule::buildFunction(const FunctionDecl *FD) {
     assert(builder.getInsertionBlock() && "Should be valid");
   }
 
+  function.dump();
   if (mlir::failed(function.verifyBody()))
     return nullptr;
   theModule.push_back(function);

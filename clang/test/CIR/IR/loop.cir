@@ -1,7 +1,7 @@
 // RUN: cir-tool %s | FileCheck %s
 // XFAIL: *
 
-func @l0() {
+func.func @l0() {
   %0 = cir.alloca i32, cir.ptr <i32>, ["x", cinit] {alignment = 4 : i64}
   %1 = cir.cst(0 : i32) : i32
   cir.store %1, %0 : i32, cir.ptr <i32>
