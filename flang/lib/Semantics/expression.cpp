@@ -1067,7 +1067,8 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::StructureComponent &sc) {
     }
   } else if (auto *details{sym->detailsIf<semantics::MiscDetails>()}) {
     // special part-ref: %re, %im, %kind, %len
-    // Type errors are detected and reported in semantics.
+    // Type errors on the base of %re/%im/%len are detected and
+    // reported in name resolution.
     using MiscKind = semantics::MiscDetails::Kind;
     MiscKind kind{details->kind()};
     if (kind == MiscKind::ComplexPartRe || kind == MiscKind::ComplexPartIm) {
@@ -1088,7 +1089,6 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::StructureComponent &sc) {
       }
     } else if (kind == MiscKind::KindParamInquiry ||
         kind == MiscKind::LenParamInquiry) {
-      // Convert x%KIND -> intrinsic KIND(x), x%LEN -> intrinsic LEN(x)
       ActualArgument arg{std::move(*base)};
       SetArgSourceLocation(arg, name);
       return MakeFunctionRef(name, ActualArguments{std::move(arg)});
