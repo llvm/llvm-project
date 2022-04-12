@@ -2251,7 +2251,7 @@ kmp_int32 __kmpc_omp_taskyield(ident_t *loc_ref, kmp_int32 gtid, int end_part) {
 Flags for special info per task reduction item.
 */
 typedef struct kmp_taskred_flags {
-  /*! 1 - use lazy alloc/init (e.g. big objects, #tasks < #threads) */
+  /*! 1 - use lazy alloc/init (e.g. big objects, num tasks < num threads) */
   unsigned lazy_priv : 1;
   unsigned reserved31 : 31;
 } kmp_taskred_flags_t;
@@ -5092,7 +5092,7 @@ void __kmpc_taskloop(ident_t *loc, int gtid, kmp_task_t *task, int if_val,
 @param nogroup   Flag, 1 if nogroup clause specified, 0 otherwise
 @param sched     Schedule specified 0/1/2 for none/grainsize/num_tasks
 @param grainsize Schedule value if specified
-@param modifer   Modifier 'strict' for sched, 1 if present, 0 otherwise
+@param modifier  Modifier 'strict' for sched, 1 if present, 0 otherwise
 @param task_dup  Tasks duplication routine
 
 Execute the taskloop construct.
