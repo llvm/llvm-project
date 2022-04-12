@@ -1037,6 +1037,41 @@ TEST_F(AArch64GISelMITest, WidenSSUBE) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
+TEST_F(AArch64GISelMITest, WidenUMULOCondition) {
+  setUp();
+  if (!TM)
+    return;
+
+  // Declare your legalization info
+  DefineLegalizerInfo(A, {
+    getActionDefinitionsBuilder(G_ADD).legalFor({{s16, s16}});
+  });
+
+  LLT s32 = LLT::scalar(32);
+  LLT s64 = LLT::scalar(64);
+
+  auto UMulo =
+    B.buildInstr(TargetOpcode::G_UMULO, {s64, LLT::scalar(1)},
+                 {Copies[0], Copies[1]});
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+
+  B.setInstrAndDebugLoc(*UMulo);
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.widenScalar(*UMulo, 1, s32));
+
+  auto CheckStr = R"(
+  CHECK: [[COPY0:%[0-9]+]]:_(s64) = COPY
+  CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY
+  CHECK: [[ADD:%[0-9]+]]:_(s64), [[OVERFLOW:%[0-9]+]]:_(s32) = G_UMULO [[COPY0]]:_, [[COPY1]]:_
+  CHECK: {{[0-9]+}}:_(s1) = G_TRUNC [[OVERFLOW]]
+  )";
+
+  // Check
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
 TEST_F(AArch64GISelMITest, NarrowUADDO) {
   setUp();
   if (!TM)

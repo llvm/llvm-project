@@ -1988,8 +1988,12 @@ LegalizerHelper::widenScalarAddSubShlSat(MachineInstr &MI, unsigned TypeIdx,
 LegalizerHelper::LegalizeResult
 LegalizerHelper::widenScalarMulo(MachineInstr &MI, unsigned TypeIdx,
                                  LLT WideTy) {
-  if (TypeIdx == 1)
-    return UnableToLegalize;
+  if (TypeIdx == 1) {
+    Observer.changingInstr(MI);
+    widenScalarDst(MI, WideTy, 1);
+    Observer.changedInstr(MI);
+    return Legalized;
+  }
 
   bool IsSigned = MI.getOpcode() == TargetOpcode::G_SMULO;
   Register Result = MI.getOperand(0).getReg();
