@@ -6,7 +6,7 @@
 // RUN: printf "BasedOnStyle: google\nIndentWidth: 5\n" > %t/.clang-format
 // RUN: clang-format -style=file -assume-filename=%t/foo.cpp < %s | FileCheck -strict-whitespace -check-prefix=CHECK5 %s
 // RUN: printf "\n" > %t/.clang-format
-// RUN: not clang-format -style=file -fallback-style=webkit -assume-filename=%t/foo.cpp < %s 2>&1 | FileCheck -strict-whitespace -check-prefix=CHECK6 %s
+// RUN: clang-format -style=file -fallback-style=webkit -assume-filename=%t/foo.cpp < %s 2>&1 | FileCheck -strict-whitespace -check-prefix=CHECK6 %s
 // RUN: rm %t/.clang-format
 // RUN: printf "BasedOnStyle: google\nIndentWidth: 6\n" > %t/_clang-format
 // RUN: clang-format -style=file -assume-filename=%t/foo.cpp < %s | FileCheck -strict-whitespace -check-prefix=CHECK7 %s
