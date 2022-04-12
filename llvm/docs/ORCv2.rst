@@ -277,6 +277,8 @@ Many of ORC's top-level APIs are visible in the example above:
   allow clients to add uncompiled program representations supported by those
   compilers to JITDylibs.
 
+- *ResourceTrackers* allow you to remove code.
+
 Several other important APIs are used explicitly. JIT clients need not be aware
 of them, but Layer authors will use them:
 
@@ -456,7 +458,7 @@ If JITDylib ``JD`` contains definitions for symbols ``foo_body`` and
                   }));
 
 A full example of how to use lazyReexports with the LLJIT class can be found at
-``llvm_project/llvm/examples/LLJITExamples/LLJITWithLazyReexports``.
+``llvm/examples/OrcV2Examples/LLJITWithLazyReexports``.
 
 Supporting Custom Compilers
 ===========================
@@ -522,9 +524,8 @@ to be aware of:
 
        auto Sym = ES.lookup({&JD1, &JD2}, ES.intern("_main"));
 
-  6. Module removal is not yet supported. There is no equivalent of the
-     layer concept removeModule/removeObject methods. Work on resource tracking
-     and removal in ORCv2 is ongoing.
+  6. The removeModule/removeObject methods are replaced by ``ResourceTracker``s.
+     See the subsection `How to remove code`_.
 
 For code examples and suggestions of how to use the ORCv2 APIs, please see
 the section `How-tos`_.
@@ -579,16 +580,37 @@ calling the ``ExecutionSession::createJITDylib`` method with a unique name:
 The JITDylib is owned by the ``ExecutionEngine`` instance and will be freed
 when it is destroyed.
 
-How to remove a JITDylib
-------------------------
-JITDylibs can be removed completely by calling  ``ExecutionSession::removeJITDylib``.
-Calling that function will close the give JITDylib and clear all the resources held for
-it. No code can be added to a closed JITDylib.
+How to remove code
+------------------
 
-Please note that closing a JITDylib won't update any pointers, you are responsible for
-ensuring that any code/data contained in the JITDylib is no longer in use.
+To remove an individual module from a JITDylib it must first be added using an
+explicit ``ResourceTracker``. The module can then be removed by calling
+``ResourceTracker::remove``:
 
-Also You can use a custom resource tracker to remove individual modules from a JITDylib.
+  .. code-block:: c++
+
+    auto &JD = ... ;
+    auto M = ... ;
+
+    auto RT = JD.createResourceTracker();
+    Layer.add(RT, std::move(M)); // Add M to JD, tracking resources with RT
+
+    RT.remove(); // Remove M from JD.
+
+Modules added directly to a JITDylib will be tracked by that JITDylib's default
+resource tracker.
+
+All code can be removed from a JITDylib by calling ``JITDylib::clear``. This
+leaves the cleared JITDylib in an empty but usable state.
+
+JITDylibs can be removed by calling ``ExecutionSession::removeJITDylib``. This
+clears the JITDylib and then puts it into a defunct state. No further operations
+can be performed on the JITDylib, and it will be destroyed as soon as the last
+handle to it is released.
+
+An example of how to use the resource management APIs can be found at
+``llvm/examples/OrcV2Examples/LLJITRemovableCode``.
+
 
 How to add the support for custom program representation
 --------------------------------------------------------
