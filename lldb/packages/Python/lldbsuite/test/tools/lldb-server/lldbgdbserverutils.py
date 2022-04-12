@@ -866,7 +866,7 @@ def _handle_output_packet_string(packet_contents):
 
 class Server(object):
 
-    _GDB_REMOTE_PACKET_REGEX = re.compile(br'^\$([^\#]*)#[0-9a-fA-F]{2}')
+    _GDB_REMOTE_PACKET_REGEX = re.compile(br'^[\$%]([^\#]*)#[0-9a-fA-F]{2}')
 
     class ChecksumMismatch(Exception):
         pass
