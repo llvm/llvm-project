@@ -14,14 +14,15 @@ body:             |
 
     ; CHECK-LABEL: name: ssubo_s32
     ; CHECK: liveins: $w0, $w1, $x2
-    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
-    ; CHECK: [[SUBSWrr:%[0-9]+]]:gpr32 = SUBSWrr [[COPY]], [[COPY1]], implicit-def $nzcv
-    ; CHECK: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 7, implicit $nzcv
-    ; CHECK: [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[CSINCWr]], 0, 0
-    ; CHECK: [[UBFMWri1:%[0-9]+]]:gpr32 = UBFMWri [[UBFMWri]], 0, 7
-    ; CHECK: $w0 = COPY [[UBFMWri1]]
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
+    ; CHECK-NEXT: [[SUBSWrr:%[0-9]+]]:gpr32 = SUBSWrr [[COPY]], [[COPY1]], implicit-def $nzcv
+    ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 7, implicit $nzcv
+    ; CHECK-NEXT: [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[CSINCWr]], 0, 0
+    ; CHECK-NEXT: [[UBFMWri1:%[0-9]+]]:gpr32 = UBFMWri [[UBFMWri]], 0, 7
+    ; CHECK-NEXT: $w0 = COPY [[UBFMWri1]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr(s32) = COPY $w0
     %1:gpr(s32) = COPY $w1
     %3:gpr(s32), %4:gpr(s1) = G_SSUBO %0, %1
@@ -43,14 +44,15 @@ body:             |
 
     ; CHECK-LABEL: name: ssubo_s64
     ; CHECK: liveins: $x0, $x1, $x2
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK: [[SUBSXrr:%[0-9]+]]:gpr64 = SUBSXrr [[COPY]], [[COPY1]], implicit-def $nzcv
-    ; CHECK: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 7, implicit $nzcv
-    ; CHECK: [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[CSINCWr]], 0, 0
-    ; CHECK: [[UBFMWri1:%[0-9]+]]:gpr32 = UBFMWri [[UBFMWri]], 0, 7
-    ; CHECK: $w0 = COPY [[UBFMWri1]]
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
+    ; CHECK-NEXT: [[SUBSXrr:%[0-9]+]]:gpr64 = SUBSXrr [[COPY]], [[COPY1]], implicit-def $nzcv
+    ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 7, implicit $nzcv
+    ; CHECK-NEXT: [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[CSINCWr]], 0, 0
+    ; CHECK-NEXT: [[UBFMWri1:%[0-9]+]]:gpr32 = UBFMWri [[UBFMWri]], 0, 7
+    ; CHECK-NEXT: $w0 = COPY [[UBFMWri1]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr(s64) = COPY $x0
     %1:gpr(s64) = COPY $x1
     %3:gpr(s64), %4:gpr(s1) = G_SSUBO %0, %1
@@ -73,11 +75,12 @@ body:             |
     ;
     ; CHECK-LABEL: name: ssubo_s32_imm
     ; CHECK: liveins: $w0, $w1, $x2
-    ; CHECK: %copy:gpr32sp = COPY $w0
-    ; CHECK: %add:gpr32 = SUBSWri %copy, 16, 0, implicit-def $nzcv
-    ; CHECK: %overflow:gpr32 = CSINCWr $wzr, $wzr, 7, implicit $nzcv
-    ; CHECK: $w0 = COPY %add
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:gpr32sp = COPY $w0
+    ; CHECK-NEXT: %add:gpr32 = SUBSWri %copy, 16, 0, implicit-def $nzcv
+    ; CHECK-NEXT: %overflow:gpr32 = CSINCWr $wzr, $wzr, 7, implicit $nzcv
+    ; CHECK-NEXT: $w0 = COPY %add
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %copy:gpr(s32) = COPY $w0
     %constant:gpr(s32) = G_CONSTANT i32 16
     %add:gpr(s32), %overflow:gpr(s1) = G_SSUBO %copy, %constant
@@ -98,12 +101,13 @@ body:             |
     ;
     ; CHECK-LABEL: name: ssubo_s32_shifted
     ; CHECK: liveins: $w0, $w1, $x2
-    ; CHECK: %copy1:gpr32 = COPY $w0
-    ; CHECK: %copy2:gpr32 = COPY $w1
-    ; CHECK: %add:gpr32 = SUBSWrs %copy1, %copy2, 16, implicit-def $nzcv
-    ; CHECK: %overflow:gpr32 = CSINCWr $wzr, $wzr, 7, implicit $nzcv
-    ; CHECK: $w0 = COPY %add
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy1:gpr32 = COPY $w0
+    ; CHECK-NEXT: %copy2:gpr32 = COPY $w1
+    ; CHECK-NEXT: %add:gpr32 = SUBSWrs %copy1, %copy2, 16, implicit-def $nzcv
+    ; CHECK-NEXT: %overflow:gpr32 = CSINCWr $wzr, $wzr, 7, implicit $nzcv
+    ; CHECK-NEXT: $w0 = COPY %add
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %copy1:gpr(s32) = COPY $w0
     %copy2:gpr(s32) = COPY $w1
     %constant:gpr(s32) = G_CONSTANT i32 16
@@ -126,11 +130,12 @@ body:             |
     ;
     ; CHECK-LABEL: name: ssubo_s32_neg_imm
     ; CHECK: liveins: $w0, $w1, $x2
-    ; CHECK: %copy:gpr32sp = COPY $w0
-    ; CHECK: %add:gpr32 = ADDSWri %copy, 16, 0, implicit-def $nzcv
-    ; CHECK: %overflow:gpr32 = CSINCWr $wzr, $wzr, 7, implicit $nzcv
-    ; CHECK: $w0 = COPY %add
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:gpr32sp = COPY $w0
+    ; CHECK-NEXT: %add:gpr32 = ADDSWri %copy, 16, 0, implicit-def $nzcv
+    ; CHECK-NEXT: %overflow:gpr32 = CSINCWr $wzr, $wzr, 7, implicit $nzcv
+    ; CHECK-NEXT: $w0 = COPY %add
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %copy:gpr(s32) = COPY $w0
     %constant:gpr(s32) = G_CONSTANT i32 -16
     %add:gpr(s32), %overflow:gpr(s1) = G_SSUBO %copy, %constant
@@ -150,12 +155,13 @@ body:             |
     ; Check that we get ADDSXrx.
     ; CHECK-LABEL: name: ssubo_arith_extended
     ; CHECK: liveins: $w0, $x0
-    ; CHECK: %reg0:gpr64sp = COPY $x0
-    ; CHECK: %reg1:gpr32 = COPY $w0
-    ; CHECK: %add:gpr64 = SUBSXrx %reg0, %reg1, 18, implicit-def $nzcv
-    ; CHECK: %flags:gpr32 = CSINCWr $wzr, $wzr, 7, implicit $nzcv
-    ; CHECK: $x0 = COPY %add
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %reg0:gpr64sp = COPY $x0
+    ; CHECK-NEXT: %reg1:gpr32 = COPY $w0
+    ; CHECK-NEXT: %add:gpr64 = SUBSXrx %reg0, %reg1, 18, implicit-def $nzcv
+    ; CHECK-NEXT: %flags:gpr32 = CSINCWr $wzr, $wzr, 7, implicit $nzcv
+    ; CHECK-NEXT: $x0 = COPY %add
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %reg0:gpr(s64) = COPY $x0
     %reg1:gpr(s32) = COPY $w0
     %ext:gpr(s64) = G_ZEXT %reg1(s32)

@@ -1070,9 +1070,8 @@ SDValue DAGCombiner::reassociateOpsCommutative(unsigned Opc, const SDLoc &DL,
     if (TLI.isReassocProfitable(DAG, N0, N1)) {
       // Reassociate: (op (op x, c1), y) -> (op (op x, y), c1)
       //              iff (op x, c1) has one use
-      if (SDValue OpNode = DAG.getNode(Opc, SDLoc(N0), VT, N00, N1))
-        return DAG.getNode(Opc, DL, VT, OpNode, N01);
-      return SDValue();
+      SDValue OpNode = DAG.getNode(Opc, SDLoc(N0), VT, N00, N1);
+      return DAG.getNode(Opc, DL, VT, OpNode, N01);
     }
   }
 

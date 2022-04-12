@@ -27,7 +27,7 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: inttoptr_p0_s64
     ; CHECK: [[COPY:%[0-9]+]]:gpr64all = COPY $x0
-    ; CHECK: $x0 = COPY [[COPY]]
+    ; CHECK-NEXT: $x0 = COPY [[COPY]]
     %0(s64) = COPY $x0
     %1(p0) = G_INTTOPTR %0
     $x0 = COPY %1(p0)
@@ -46,7 +46,7 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: ptrtoint_s64_p0
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: $x0 = COPY [[COPY]]
+    ; CHECK-NEXT: $x0 = COPY [[COPY]]
     %0(p0) = COPY $x0
     %1(s64) = G_PTRTOINT %0
     $x0 = COPY %1(s64)
@@ -65,8 +65,8 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: ptrtoint_s32_p0
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]].sub_32
-    ; CHECK: $w0 = COPY [[COPY1]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]].sub_32
+    ; CHECK-NEXT: $w0 = COPY [[COPY1]]
     %0(p0) = COPY $x0
     %1(s32) = G_PTRTOINT %0
     $w0 = COPY %1(s32)
@@ -85,9 +85,9 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: ptrtoint_s16_p0
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]].sub_32
-    ; CHECK: [[COPY2:%[0-9]+]]:gpr32all = COPY [[COPY1]]
-    ; CHECK: $w0 = COPY [[COPY2]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]].sub_32
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32all = COPY [[COPY1]]
+    ; CHECK-NEXT: $w0 = COPY [[COPY2]]
     %0(p0) = COPY $x0
     %1(s16) = G_PTRTOINT %0
     %2:gpr(s32) = G_ANYEXT %1
@@ -107,9 +107,9 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: ptrtoint_s8_p0
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]].sub_32
-    ; CHECK: [[COPY2:%[0-9]+]]:gpr32all = COPY [[COPY1]]
-    ; CHECK: $w0 = COPY [[COPY2]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]].sub_32
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32all = COPY [[COPY1]]
+    ; CHECK-NEXT: $w0 = COPY [[COPY2]]
     %0(p0) = COPY $x0
     %1(s8) = G_PTRTOINT %0
     %2:gpr(s32) = G_ANYEXT %1
@@ -129,9 +129,9 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: ptrtoint_s1_p0
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]].sub_32
-    ; CHECK: [[COPY2:%[0-9]+]]:gpr32all = COPY [[COPY1]]
-    ; CHECK: $w0 = COPY [[COPY2]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]].sub_32
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32all = COPY [[COPY1]]
+    ; CHECK-NEXT: $w0 = COPY [[COPY2]]
     %0(p0) = COPY $x0
     %1(s1) = G_PTRTOINT %0
     %2:gpr(s32) = G_ANYEXT %1
@@ -148,10 +148,11 @@ body:             |
     liveins: $q0, $x0
     ; CHECK-LABEL: name: inttoptr_v2p0_v2s64
     ; CHECK: liveins: $q0, $x0
-    ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:fpr64 = COPY [[COPY]].dsub
-    ; CHECK: $x0 = COPY [[COPY1]]
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY [[COPY]].dsub
+    ; CHECK-NEXT: $x0 = COPY [[COPY1]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %1:fpr(<2 x s64>) = COPY $q0
     %2:fpr(<2 x p0>) = G_INTTOPTR %1(<2 x s64>)
     %4:gpr(s64) = G_CONSTANT i64 0
@@ -170,9 +171,10 @@ body:             |
     liveins: $q0
     ; CHECK-LABEL: name: ptrtoint_v2s64_v2p0
     ; CHECK: liveins: $q0
-    ; CHECK: %ptr:fpr128 = COPY $q0
-    ; CHECK: $q0 = COPY %ptr
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:fpr128 = COPY $q0
+    ; CHECK-NEXT: $q0 = COPY %ptr
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %ptr:fpr(<2 x p0>) = COPY $q0
     %int:fpr(<2 x s64>) = G_PTRTOINT %ptr(<2 x p0>)
     $q0 = COPY %int(<2 x s64>)

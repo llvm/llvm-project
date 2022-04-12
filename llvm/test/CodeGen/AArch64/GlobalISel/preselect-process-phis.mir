@@ -13,24 +13,29 @@ machineFunctionInfo: {}
 body:             |
   ; CHECK-LABEL: name: test_loop_phi_fpr_to_gpr
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   [[DEF:%[0-9]+]]:gpr32 = IMPLICIT_DEF
-  ; CHECK:   [[DEF1:%[0-9]+]]:gpr64common = IMPLICIT_DEF
-  ; CHECK:   [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 2143289344
-  ; CHECK:   [[COPY:%[0-9]+]]:fpr32 = COPY [[MOVi32imm]]
-  ; CHECK: bb.1:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   [[DEF2:%[0-9]+]]:gpr32 = IMPLICIT_DEF
-  ; CHECK:   [[ANDSWri:%[0-9]+]]:gpr32 = ANDSWri [[DEF]], 0, implicit-def $nzcv
-  ; CHECK:   [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[DEF2]], [[DEF2]], 1, implicit $nzcv
-  ; CHECK: bb.2:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   [[PHI:%[0-9]+]]:gpr32 = PHI [[CSELWr]], %bb.1, %8, %bb.2
-  ; CHECK:   [[FCVTHSr:%[0-9]+]]:fpr16 = FCVTHSr [[COPY]]
-  ; CHECK:   [[SUBREG_TO_REG:%[0-9]+]]:fpr32 = SUBREG_TO_REG 0, [[FCVTHSr]], %subreg.hsub
-  ; CHECK:   [[COPY1:%[0-9]+]]:gpr32all = COPY [[SUBREG_TO_REG]]
-  ; CHECK:   STRHHui [[PHI]], [[DEF1]], 0 :: (store (s16) into `half* undef`)
-  ; CHECK:   B %bb.2
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:gpr32 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:gpr64common = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 2143289344
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:fpr32 = COPY [[MOVi32imm]]
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:gpr32 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[ANDSWri:%[0-9]+]]:gpr32 = ANDSWri [[DEF]], 0, implicit-def $nzcv
+  ; CHECK-NEXT:   [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[DEF2]], [[DEF2]], 1, implicit $nzcv
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gpr32 = PHI [[CSELWr]], %bb.1, %8, %bb.2
+  ; CHECK-NEXT:   [[FCVTHSr:%[0-9]+]]:fpr16 = FCVTHSr [[COPY]]
+  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:fpr32 = SUBREG_TO_REG 0, [[FCVTHSr]], %subreg.hsub
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr32all = COPY [[SUBREG_TO_REG]]
+  ; CHECK-NEXT:   STRHHui [[PHI]], [[DEF1]], 0 :: (store (s16) into `half* undef`)
+  ; CHECK-NEXT:   B %bb.2
   bb.0:
     successors: %bb.1(0x80000000)
 
@@ -67,24 +72,29 @@ machineFunctionInfo: {}
 body:             |
   ; CHECK-LABEL: name: test_loop_phi_gpr_to_fpr
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   [[DEF:%[0-9]+]]:gpr32 = IMPLICIT_DEF
-  ; CHECK:   [[DEF1:%[0-9]+]]:gpr64common = IMPLICIT_DEF
-  ; CHECK:   [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 2143289344
-  ; CHECK:   [[COPY:%[0-9]+]]:fpr32 = COPY [[MOVi32imm]]
-  ; CHECK: bb.1:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   [[DEF2:%[0-9]+]]:gpr32 = IMPLICIT_DEF
-  ; CHECK:   [[ANDSWri:%[0-9]+]]:gpr32 = ANDSWri [[DEF]], 0, implicit-def $nzcv
-  ; CHECK:   [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[DEF2]], [[DEF2]], 1, implicit $nzcv
-  ; CHECK:   [[COPY1:%[0-9]+]]:fpr32 = COPY [[CSELWr]]
-  ; CHECK:   [[COPY2:%[0-9]+]]:fpr16 = COPY [[COPY1]].hsub
-  ; CHECK: bb.2:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   [[PHI:%[0-9]+]]:fpr16 = PHI %7, %bb.2, [[COPY2]], %bb.1
-  ; CHECK:   [[FCVTHSr:%[0-9]+]]:fpr16 = FCVTHSr [[COPY]]
-  ; CHECK:   STRHui [[PHI]], [[DEF1]], 0 :: (store (s16) into `half* undef`)
-  ; CHECK:   B %bb.2
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:gpr32 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:gpr64common = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 2143289344
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:fpr32 = COPY [[MOVi32imm]]
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:gpr32 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[ANDSWri:%[0-9]+]]:gpr32 = ANDSWri [[DEF]], 0, implicit-def $nzcv
+  ; CHECK-NEXT:   [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[DEF2]], [[DEF2]], 1, implicit $nzcv
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:fpr32 = COPY [[CSELWr]]
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:fpr16 = COPY [[COPY1]].hsub
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:fpr16 = PHI %7, %bb.2, [[COPY2]], %bb.1
+  ; CHECK-NEXT:   [[FCVTHSr:%[0-9]+]]:fpr16 = FCVTHSr [[COPY]]
+  ; CHECK-NEXT:   STRHui [[PHI]], [[DEF1]], 0 :: (store (s16) into `half* undef`)
+  ; CHECK-NEXT:   B %bb.2
   bb.0:
     successors: %bb.1(0x80000000)
 
@@ -115,50 +125,60 @@ legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
 body:             |
+  ; CHECK-LABEL: name: multiple_phis
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.5(0x40000000)
+  ; CHECK-NEXT:   liveins: $w0, $w1, $x2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %ptr:gpr64sp = COPY $x2
+  ; CHECK-NEXT:   %cond_1:gpr32 = IMPLICIT_DEF
+  ; CHECK-NEXT:   %gpr_1:gpr32 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:fpr32 = COPY %gpr_1
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:fpr16 = COPY [[COPY]].hsub
+  ; CHECK-NEXT:   TBNZW %cond_1, 0, %bb.5
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %cond_2:gpr32 = IMPLICIT_DEF
+  ; CHECK-NEXT:   TBNZW %cond_2, 0, %bb.3
+  ; CHECK-NEXT:   B %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors: %bb.4(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %gpr_2:gpr32 = IMPLICIT_DEF
+  ; CHECK-NEXT:   B %bb.4
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   successors: %bb.4(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %fpr:fpr16 = IMPLICIT_DEF
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.4:
+  ; CHECK-NEXT:   successors: %bb.5(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %fp_phi:fpr16 = PHI %fpr, %bb.3, [[COPY1]], %bb.2
+  ; CHECK-NEXT:   %gp_phi1:gpr32 = PHI %gpr_1, %bb.3, %gpr_2, %bb.2
+  ; CHECK-NEXT:   %gp_phi2:gpr32 = PHI %gpr_1, %bb.3, %gpr_2, %bb.2
+  ; CHECK-NEXT:   %gp_phi3:gpr32 = PHI %gpr_1, %bb.3, %gpr_2, %bb.2
+  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:fpr32 = SUBREG_TO_REG 0, %fp_phi, %subreg.hsub
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr32all = COPY [[SUBREG_TO_REG]]
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.5:
+  ; CHECK-NEXT:   %use_fp_phi:gpr32 = PHI %gpr_1, %bb.0, [[COPY2]], %bb.4
+  ; CHECK-NEXT:   %use_gp_phi1:gpr32 = PHI %gpr_1, %bb.0, %gp_phi1, %bb.4
+  ; CHECK-NEXT:   %use_gp_phi2:gpr32 = PHI %gpr_1, %bb.0, %gp_phi2, %bb.4
+  ; CHECK-NEXT:   %use_gp_phi3:gpr32 = PHI %gpr_1, %bb.0, %gp_phi3, %bb.4
+  ; CHECK-NEXT:   STRHHui %use_fp_phi, %ptr, 0 :: (store (s16))
+  ; CHECK-NEXT:   STRHHui %use_gp_phi1, %ptr, 0 :: (store (s16))
+  ; CHECK-NEXT:   STRHHui %use_gp_phi2, %ptr, 0 :: (store (s16))
+  ; CHECK-NEXT:   STRHHui %use_gp_phi3, %ptr, 0 :: (store (s16))
+  ; CHECK-NEXT:   RET_ReallyLR
 
   ; The copy we insert in bb.4 should appear after all the phi instructions.
 
-  ; CHECK-LABEL: name: multiple_phis
-  ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x40000000), %bb.5(0x40000000)
-  ; CHECK:   liveins: $w0, $w1, $x2
-  ; CHECK:   %ptr:gpr64sp = COPY $x2
-  ; CHECK:   %cond_1:gpr32 = IMPLICIT_DEF
-  ; CHECK:   %gpr_1:gpr32 = IMPLICIT_DEF
-  ; CHECK:   [[COPY:%[0-9]+]]:fpr32 = COPY %gpr_1
-  ; CHECK:   [[COPY1:%[0-9]+]]:fpr16 = COPY [[COPY]].hsub
-  ; CHECK:   TBNZW %cond_1, 0, %bb.5
-  ; CHECK:   B %bb.1
-  ; CHECK: bb.1:
-  ; CHECK:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
-  ; CHECK:   %cond_2:gpr32 = IMPLICIT_DEF
-  ; CHECK:   TBNZW %cond_2, 0, %bb.3
-  ; CHECK:   B %bb.2
-  ; CHECK: bb.2:
-  ; CHECK:   successors: %bb.4(0x80000000)
-  ; CHECK:   %gpr_2:gpr32 = IMPLICIT_DEF
-  ; CHECK:   B %bb.4
-  ; CHECK: bb.3:
-  ; CHECK:   successors: %bb.4(0x80000000)
-  ; CHECK:   %fpr:fpr16 = IMPLICIT_DEF
-  ; CHECK: bb.4:
-  ; CHECK:   successors: %bb.5(0x80000000)
-  ; CHECK:   %fp_phi:fpr16 = PHI %fpr, %bb.3, [[COPY1]], %bb.2
-  ; CHECK:   %gp_phi1:gpr32 = PHI %gpr_1, %bb.3, %gpr_2, %bb.2
-  ; CHECK:   %gp_phi2:gpr32 = PHI %gpr_1, %bb.3, %gpr_2, %bb.2
-  ; CHECK:   %gp_phi3:gpr32 = PHI %gpr_1, %bb.3, %gpr_2, %bb.2
-  ; CHECK:   [[SUBREG_TO_REG:%[0-9]+]]:fpr32 = SUBREG_TO_REG 0, %fp_phi, %subreg.hsub
-  ; CHECK:   [[COPY2:%[0-9]+]]:gpr32all = COPY [[SUBREG_TO_REG]]
-  ; CHECK: bb.5:
-  ; CHECK:   %use_fp_phi:gpr32 = PHI %gpr_1, %bb.0, [[COPY2]], %bb.4
-  ; CHECK:   %use_gp_phi1:gpr32 = PHI %gpr_1, %bb.0, %gp_phi1, %bb.4
-  ; CHECK:   %use_gp_phi2:gpr32 = PHI %gpr_1, %bb.0, %gp_phi2, %bb.4
-  ; CHECK:   %use_gp_phi3:gpr32 = PHI %gpr_1, %bb.0, %gp_phi3, %bb.4
-  ; CHECK:   STRHHui %use_fp_phi, %ptr, 0 :: (store (s16))
-  ; CHECK:   STRHHui %use_gp_phi1, %ptr, 0 :: (store (s16))
-  ; CHECK:   STRHHui %use_gp_phi2, %ptr, 0 :: (store (s16))
-  ; CHECK:   STRHHui %use_gp_phi3, %ptr, 0 :: (store (s16))
-  ; CHECK:   RET_ReallyLR
   bb.1:
     successors: %bb.2, %bb.6
     liveins: $w0, $w1, $x2
