@@ -65,6 +65,57 @@ body:             |
 
 ...
 ---
+name:            test_srem_1
+body:             |
+  bb.0.entry:
+    ; CHECK-LABEL: name: test_srem_1
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[TRUNC]], 1
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
+    ; CHECK-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s32) = G_SEXT_INREG [[TRUNC1]], 1
+    ; CHECK-NEXT: [[SDIV:%[0-9]+]]:_(s32) = G_SDIV [[SEXT_INREG]], [[SEXT_INREG1]]
+    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[SDIV]], [[SEXT_INREG1]]
+    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[SEXT_INREG]], [[MUL]]
+    ; CHECK-NEXT: $w0 = COPY [[SUB]](s32)
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = COPY $x1
+    %2:_(s1) = G_TRUNC %0(s64)
+    %3:_(s1) = G_TRUNC %1(s64)
+    %4:_(s1) = G_SREM %2, %3
+    %5:_(s32) = G_ANYEXT %4(s1)
+    $w0 = COPY %5(s32)
+
+...
+
+---
+name:            test_urem_1
+body:             |
+  bb.0.entry:
+    ; CHECK-LABEL: name: test_urem_1
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[TRUNC]], [[C]]
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
+    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[TRUNC1]], [[C]]
+    ; CHECK-NEXT: [[UDIV:%[0-9]+]]:_(s32) = G_UDIV [[AND]], [[AND1]]
+    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[UDIV]], [[AND1]]
+    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[AND]], [[MUL]]
+    ; CHECK-NEXT: $w0 = COPY [[SUB]](s32)
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = COPY $x1
+    %2:_(s1) = G_TRUNC %0(s64)
+    %3:_(s1) = G_TRUNC %1(s64)
+    %4:_(s1) = G_UREM %2, %3
+    %5:_(s32) = G_ANYEXT %4(s1)
+    $w0 = COPY %5(s32)
+
+...
+
+---
 name:            test_frem
 body:             |
   bb.0.entry:
