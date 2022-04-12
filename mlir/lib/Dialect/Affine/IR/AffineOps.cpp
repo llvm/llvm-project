@@ -1689,7 +1689,7 @@ struct AffineForEmptyLoopFolder : public OpRewritePattern<AffineForOp> {
     bool iterArgsNotInOrder = false;
     for (unsigned i = 0, e = yieldOp->getNumOperands(); i < e; ++i) {
       Value val = yieldOp.getOperand(i);
-      auto iterArgIt = llvm::find(iterArgs, val);
+      auto *iterArgIt = llvm::find(iterArgs, val);
       if (iterArgIt == iterArgs.end()) {
         // `val` is defined outside of the loop.
         assert(forOp.isDefinedOutsideOfLoop(val) &&
@@ -1726,9 +1726,7 @@ void AffineForOp::getCanonicalizationPatterns(RewritePatternSet &results,
 /// Returns true if the affine.for has zero iterations in trivial cases.
 static bool hasTrivialZeroTripCount(AffineForOp op) {
   Optional<uint64_t> tripCount = getTrivialConstantTripCount(op);
-  if (tripCount.hasValue() && tripCount.getValue() == 0)
-    return true;
-  return false;
+  return tripCount.hasValue() && tripCount.getValue() == 0;
 }
 
 LogicalResult AffineForOp::fold(ArrayRef<Attribute> operands,

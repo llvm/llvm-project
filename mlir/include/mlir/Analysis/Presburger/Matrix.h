@@ -124,10 +124,10 @@ public:
 
   /// Divide the first `nCols` of the specified row by their GCD.
   /// Returns the GCD of the first `nCols` of the specified row.
-  uint64_t normalizeRow(unsigned row, unsigned nCols);
+  int64_t normalizeRow(unsigned row, unsigned nCols);
   /// Divide the columns of the specified row by their GCD.
   /// Returns the GCD of the columns of the specified row.
-  uint64_t normalizeRow(unsigned row);
+  int64_t normalizeRow(unsigned row);
 
   /// The given vector is interpreted as a row vector v. Post-multiply v with
   /// this matrix, say M, and return vM.

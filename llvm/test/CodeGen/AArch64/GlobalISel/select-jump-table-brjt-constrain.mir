@@ -22,29 +22,34 @@ jumpTable:
 body:             |
   ; CHECK-LABEL: name: check_constrain
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
-  ; CHECK:   [[DEF:%[0-9]+]]:gpr64common = IMPLICIT_DEF
-  ; CHECK:   [[LDRBBui:%[0-9]+]]:gpr32 = LDRBBui [[DEF]], 0 :: (load (s8))
-  ; CHECK:   [[SUBREG_TO_REG:%[0-9]+]]:gpr64common = SUBREG_TO_REG 0, [[LDRBBui]], %subreg.sub_32
-  ; CHECK:   [[SUBSXri:%[0-9]+]]:gpr64 = SUBSXri [[SUBREG_TO_REG]], 8, 0, implicit-def $nzcv
-  ; CHECK:   Bcc 8, %bb.3, implicit $nzcv
-  ; CHECK: bb.1:
-  ; CHECK:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
-  ; CHECK:   [[MOVaddrJT:%[0-9]+]]:gpr64common = MOVaddrJT target-flags(aarch64-page) %jump-table.0, target-flags(aarch64-pageoff, aarch64-nc) %jump-table.0
-  ; CHECK:   early-clobber %6:gpr64, early-clobber %7:gpr64sp = JumpTableDest32 [[MOVaddrJT]], [[SUBREG_TO_REG]], %jump-table.0
-  ; CHECK:   BR %6
-  ; CHECK: bb.2:
-  ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   B %bb.3
-  ; CHECK: bb.3:
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:gpr64common = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[LDRBBui:%[0-9]+]]:gpr32 = LDRBBui [[DEF]], 0 :: (load (s8))
+  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gpr64common = SUBREG_TO_REG 0, [[LDRBBui]], %subreg.sub_32
+  ; CHECK-NEXT:   [[SUBSXri:%[0-9]+]]:gpr64 = SUBSXri [[SUBREG_TO_REG]], 8, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   Bcc 8, %bb.3, implicit $nzcv
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[MOVaddrJT:%[0-9]+]]:gpr64common = MOVaddrJT target-flags(aarch64-page) %jump-table.0, target-flags(aarch64-pageoff, aarch64-nc) %jump-table.0
+  ; CHECK-NEXT:   early-clobber %5:gpr64, early-clobber %6:gpr64sp = JumpTableDest32 [[MOVaddrJT]], [[SUBREG_TO_REG]], %jump-table.0
+  ; CHECK-NEXT:   BR %5
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   B %bb.3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   RET_ReallyLR
   bb.1:
     %1:gpr(p0) = G_IMPLICIT_DEF
     %5:gpr(s64) = G_ZEXTLOAD %1(p0) :: (load (s8))
     %7:gpr(s64) = G_CONSTANT i64 8
     %16:gpr(s32) = G_ICMP intpred(ugt), %5(s64), %7
-    %8:gpr(s1) = G_TRUNC %16(s32)
-    G_BRCOND %8(s1), %bb.4
+    G_BRCOND %16, %bb.4
 
   bb.2:
     successors: %bb.3, %bb.4

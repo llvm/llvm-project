@@ -113,6 +113,10 @@ Bug Fixes
   This fixes Issue `Issue 54462 <https://github.com/llvm/llvm-project/issues/54462>`_.
 - Statement expressions are now disabled in default arguments in general.
   This fixes Issue `Issue 53488 <https://github.com/llvm/llvm-project/issues/53488>`_.
+- According to `CWG 1394 <https://wg21.link/cwg1394>`_ and 
+  `C++20 [dcl.fct.def.general]p2 <https://timsong-cpp.github.io/cppwp/n4868/dcl.fct.def#general-2.sentence-3>`_,
+  Clang should not diagnose incomplete types in function definitions if the function body is "= delete;".
+  This fixes Issue `Issue 52802 <https://github.com/llvm/llvm-project/issues/52802>`_.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

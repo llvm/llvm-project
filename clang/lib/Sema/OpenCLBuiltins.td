@@ -104,6 +104,7 @@ def FuncExtKhrMipmapImageWrites          : FunctionExtension<"cl_khr_mipmap_imag
 def FuncExtKhrGlMsaaSharing              : FunctionExtension<"cl_khr_gl_msaa_sharing">;
 def FuncExtKhrGlMsaaSharingReadWrite     : FunctionExtension<"cl_khr_gl_msaa_sharing __opencl_c_read_write_images">;
 
+def FuncExtOpenCLCDeviceEnqueue          : FunctionExtension<"__opencl_c_device_enqueue">;
 def FuncExtOpenCLCGenericAddressSpace    : FunctionExtension<"__opencl_c_generic_address_space">;
 def FuncExtOpenCLCNamedAddressSpaceBuiltins : FunctionExtension<"__opencl_c_named_address_space_builtins">;
 def FuncExtOpenCLCPipes                  : FunctionExtension<"__opencl_c_pipes">;
@@ -1454,7 +1455,7 @@ let Extension = FuncExtOpenCLCPipes in {
 // Defined in Builtins.def
 
 // --- Table 33 ---
-let MinVersion = CL20 in {
+let Extension = FuncExtOpenCLCDeviceEnqueue in {
   def : Builtin<"enqueue_marker",
       [Int, Queue, UInt, PointerType<ConstType<ClkEvent>, GenericAS>, PointerType<ClkEvent, GenericAS>]>;
 

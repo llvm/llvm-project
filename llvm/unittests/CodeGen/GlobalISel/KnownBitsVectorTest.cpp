@@ -1527,3 +1527,24 @@ TEST_F(AArch64GISelMITest, TestKnownBitsVectorAssertZext) {
   EXPECT_EQ(0u, Res.One.getZExtValue());
   EXPECT_EQ(0xFFFFFFFFFFFFFFF8u, Res.Zero.getZExtValue());
 }
+
+TEST_F(AArch64GISelMITest, TestNumSignBitsUAddoOverflow) {
+  StringRef MIRString = R"(
+   %copy_x0:_(s64) = COPY $x0
+   %copy_x1:_(s64) = COPY $x1
+   %x0_x1:_(<2 x s64>) = G_BUILD_VECTOR %copy_x0, %copy_x1
+   %uaddo:_(<2 x s64>), %overflow:_(<2 x s32>) = G_UADDO %x0_x1, %x0_x1
+   %result:_(<2 x s32>) = COPY %overflow
+)";
+
+  setUp(MIRString);
+  if (!TM)
+    return;
+
+  Register CopyOverflow = Copies[Copies.size() - 1];
+
+  GISelKnownBits Info(*MF);
+
+  // Assert sign-extension from vector boolean
+  EXPECT_EQ(32u, Info.computeNumSignBits(CopyOverflow));
+}

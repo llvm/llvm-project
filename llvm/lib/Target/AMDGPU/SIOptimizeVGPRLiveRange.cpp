@@ -344,9 +344,13 @@ void SIOptimizeVGPRLiveRange::collectWaterfallCandidateRegisters(
     }
     if (MBB == LoopEnd)
       break;
-    assert(MBB->pred_size() == 1 ||
-           (MBB == LoopHeader && MBB->pred_size() == 2));
-    assert(MBB->succ_size() == 1);
+
+    if ((MBB != LoopHeader && MBB->pred_size() != 1) ||
+        (MBB == LoopHeader && MBB->pred_size() != 2) || MBB->succ_size() != 1) {
+      LLVM_DEBUG(dbgs() << "Unexpected edges in CFG, ignoring loop\n");
+      return;
+    }
+
     MBB = *MBB->succ_begin();
   }
 
