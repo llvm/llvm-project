@@ -4127,4 +4127,51 @@ TEST_F(AArch64GISelMITest, narrowScalarShiftByConstant) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
+TEST_F(AArch64GISelMITest, MoreElementsSelect) {
+  setUp();
+  if (!TM)
+    return;
+
+  LLT s1 = LLT::scalar(1);
+  LLT s64 = LLT::scalar(64);
+  LLT v2s1 = LLT::fixed_vector(2, 1);
+  LLT v2s32 = LLT::fixed_vector(2, 32);
+
+  LegalizerInfo LI;
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, LI, Observer, B);
+
+  B.setInsertPt(*EntryMBB, EntryMBB->end());
+
+  auto Val0 = B.buildBitcast(v2s32, Copies[0]);
+  auto Val1 = B.buildBitcast(v2s32, Copies[1]);
+
+  // Build select of vectors with scalar condition.
+  auto Zero = B.buildConstant(s64, 0);
+  auto Cond = B.buildICmp(CmpInst::ICMP_EQ, s1, Copies[2], Zero);
+  auto Select = B.buildSelect(v2s32, Cond, Val0, Val1);
+
+  // Splat the condition into a vector select
+  B.setInstr(*Select);
+
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::UnableToLegalize,
+            Helper.moreElementsVector(*Select, 1, LLT::fixed_vector(3, 1)));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.moreElementsVector(*Select, 1, v2s1));
+
+  auto CheckStr = R"(
+  CHECK: [[BITCAST0:%[0-9]+]]:_(<2 x s32>) = G_BITCAST
+  CHECK: [[BITCAST1:%[0-9]+]]:_(<2 x s32>) = G_BITCAST
+  CHECK: [[ZERO0:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  CHECK: [[CMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), %{{[0-9]+}}:_(s64), [[ZERO0]]
+  CHECK: [[IMPDEF:%[0-9]+]]:_(<2 x s1>) = G_IMPLICIT_DEF
+  CHECK: [[ZERO1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  CHECK: [[INSERT:%[0-9]+]]:_(<2 x s1>) = G_INSERT_VECTOR_ELT [[IMPDEF]]:_, [[CMP]]:_(s1), [[ZERO1]]
+  CHECK: [[SHUFFLE:%[0-9]+]]:_(<2 x s1>) = G_SHUFFLE_VECTOR [[INSERT]]:_(<2 x s1>), [[IMPDEF]]:_, shufflemask(0, 0)
+  CHECK: [[SELECT:%[0-9]+]]:_(<2 x s32>) = G_SELECT [[SHUFFLE]]:_(<2 x s1>), [[BITCAST0]]:_, [[BITCAST1]]:_
+  )";
+
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
 } // namespace
