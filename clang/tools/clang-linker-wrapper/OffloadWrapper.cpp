@@ -257,12 +257,17 @@ void createUnregisterFunction(Module &M, GlobalVariable *BinDesc) {
 
 } // namespace
 
-Error wrapBinaries(Module &M, ArrayRef<ArrayRef<char>> Images) {
+Error wrapOpenMPBinaries(Module &M, ArrayRef<ArrayRef<char>> Images) {
   GlobalVariable *Desc = createBinDesc(M, Images);
   if (!Desc)
     return createStringError(inconvertibleErrorCode(),
                              "No binary descriptors created.");
   createRegisterFunction(M, Desc);
   createUnregisterFunction(M, Desc);
+  return Error::success();
+}
+
+llvm::Error wrapCudaBinary(llvm::Module &M, llvm::ArrayRef<char> Images) {
+  // TODO: Implement this.
   return Error::success();
 }
