@@ -10,6 +10,7 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Debug.h"
+#include <queue>
 
 using namespace mlir;
 
@@ -26,75 +27,88 @@ using namespace mlir;
 // LoopLike Utilities
 //===----------------------------------------------------------------------===//
 
-// Checks whether the given op can be hoisted by checking that
-// - the op and any of its contained operations do not depend on SSA values
-//   defined inside of the loop (by means of calling definedOutside).
-// - the op has no side-effects. If sideEffecting is Never, sideeffects of this
-//   op and its nested ops are ignored.
-static bool canBeHoisted(Operation *op,
-                         function_ref<bool(Value)> definedOutside) {
-  // Check that dependencies are defined outside of loop.
-  if (!llvm::all_of(op->getOperands(), definedOutside))
-    return false;
-  // Check whether this op is side-effect free. If we already know that there
-  // can be no side-effects because the surrounding op has claimed so, we can
-  // (and have to) skip this step.
+/// Returns true if the given operation is side-effect free as are all of its
+/// nested operations.
+///
+/// TODO: There is a duplicate function in ControlFlowSink. Move
+/// `moveLoopInvariantCode` to TransformUtils and then factor out this function.
+static bool isSideEffectFree(Operation *op) {
   if (auto memInterface = dyn_cast<MemoryEffectOpInterface>(op)) {
+    // If the op has side-effects, it cannot be moved.
     if (!memInterface.hasNoEffect())
       return false;
-    // If the operation doesn't have side effects and it doesn't recursively
-    // have side effects, it can always be hoisted.
+    // If the op does not have recursive side effects, then it can be moved.
     if (!op->hasTrait<OpTrait::HasRecursiveSideEffects>())
       return true;
-
-    // Otherwise, if the operation doesn't provide the memory effect interface
-    // and it doesn't have recursive side effects we treat it conservatively as
-    // side-effecting.
   } else if (!op->hasTrait<OpTrait::HasRecursiveSideEffects>()) {
+    // Otherwise, if the op does not implement the memory effect interface and
+    // it does not have recursive side effects, then it cannot be known that the
+    // op is moveable.
     return false;
   }
 
-  // Recurse into the regions for this op and check whether the contained ops
-  // can be hoisted.
-  for (auto &region : op->getRegions()) {
-    for (auto &block : region) {
-      for (auto &innerOp : block)
-        if (!canBeHoisted(&innerOp, definedOutside))
-          return false;
-    }
-  }
+  // Recurse into the regions and ensure that all nested ops can also be moved.
+  for (Region &region : op->getRegions())
+    for (Operation &op : region.getOps())
+      if (!isSideEffectFree(&op))
+        return false;
   return true;
 }
 
+/// Checks whether the given op can be hoisted by checking that
+/// - the op and none of its contained operations depend on values inside of the
+///   loop (by means of calling definedOutside).
+/// - the op has no side-effects.
+static bool canBeHoisted(Operation *op,
+                         function_ref<bool(Value)> definedOutside) {
+  if (!isSideEffectFree(op))
+    return false;
+
+  // Do not move terminators.
+  if (op->hasTrait<OpTrait::IsTerminator>())
+    return false;
+
+  // Walk the nested operations and check that all used values are either
+  // defined outside of the loop or in a nested region, but not at the level of
+  // the loop body.
+  auto walkFn = [&](Operation *child) {
+    for (Value operand : child->getOperands()) {
+      // Ignore values defined in a nested region.
+      if (op->isAncestor(operand.getParentRegion()->getParentOp()))
+        continue;
+      if (!definedOutside(operand))
+        return WalkResult::interrupt();
+    }
+    return WalkResult::advance();
+  };
+  return !op->walk(walkFn).wasInterrupted();
+}
+
 void mlir::moveLoopInvariantCode(LoopLikeOpInterface looplike) {
-  auto &loopBody = looplike.getLoopBody();
+  Region *loopBody = &looplike.getLoopBody();
 
-  // We use two collections here as we need to preserve the order for insertion
-  // and this is easiest.
-  SmallPtrSet<Operation *, 8> willBeMovedSet;
-  SmallVector<Operation *, 8> opsToMove;
+  std::queue<Operation *> worklist;
+  // Add top-level operations in the loop body to the worklist.
+  for (Operation &op : loopBody->getOps())
+    worklist.push(&op);
 
-  // Helper to check whether an operation is loop invariant wrt. SSA properties.
-  auto isDefinedOutsideOfBody = [&](Value value) {
-    auto *definingOp = value.getDefiningOp();
-    return (definingOp && !!willBeMovedSet.count(definingOp)) ||
-           looplike.isDefinedOutsideOfLoop(value);
+  auto definedOutside = [&](Value value) {
+    return looplike.isDefinedOutsideOfLoop(value);
   };
 
-  // Do not use walk here, as we do not want to go into nested regions and hoist
-  // operations from there. These regions might have semantics unknown to this
-  // rewriting. If the nested regions are loops, they will have been processed.
-  for (auto &block : loopBody) {
-    for (auto &op : block.without_terminator()) {
-      if (canBeHoisted(&op, isDefinedOutsideOfBody)) {
-        opsToMove.push_back(&op);
-        willBeMovedSet.insert(&op);
-      }
-    }
-  }
+  while (!worklist.empty()) {
+    Operation *op = worklist.front();
+    worklist.pop();
+    // Skip ops that have already been moved. Check if the op can be hoisted.
+    if (op->getParentRegion() != loopBody || !canBeHoisted(op, definedOutside))
+      continue;
 
-  // For all instructions that we found to be invariant, move outside of the
-  // loop.
-  for (Operation *op : opsToMove)
     looplike.moveOutOfLoop(op);
+
+    // Since the op has been moved, we need to check its users within the
+    // top-level of the loop body.
+    for (Operation *user : op->getUsers())
+      if (user->getParentRegion() == loopBody)
+        worklist.push(user);
+  }
 }
