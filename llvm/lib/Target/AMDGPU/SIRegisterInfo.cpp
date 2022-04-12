@@ -2902,8 +2902,7 @@ MCRegister SIRegisterInfo::getReturnAddressReg(const MachineFunction &MF) const 
 
 const TargetRegisterClass *
 SIRegisterInfo::getRegClassForSizeOnBank(unsigned Size,
-                                         const RegisterBank &RB,
-                                         const MachineRegisterInfo &MRI) const {
+                                         const RegisterBank &RB) const {
   switch (RB.getID()) {
   case AMDGPU::VGPRRegBankID:
     return getVGPRClassForBitWidth(std::max(32u, Size));
@@ -2925,7 +2924,7 @@ SIRegisterInfo::getConstrainedRegClassForOperand(const MachineOperand &MO,
                                          const MachineRegisterInfo &MRI) const {
   const RegClassOrRegBank &RCOrRB = MRI.getRegClassOrRegBank(MO.getReg());
   if (const RegisterBank *RB = RCOrRB.dyn_cast<const RegisterBank*>())
-    return getRegClassForTypeOnBank(MRI.getType(MO.getReg()), *RB, MRI);
+    return getRegClassForTypeOnBank(MRI.getType(MO.getReg()), *RB);
 
   if (const auto *RC = RCOrRB.dyn_cast<const TargetRegisterClass *>())
     return getAllocatableClass(RC);
