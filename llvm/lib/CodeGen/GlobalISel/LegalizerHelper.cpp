@@ -4910,10 +4910,26 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
     moreElementsVectorDst(MI, MoreTy, 0);
     Observer.changedInstr(MI);
     return Legalized;
-  case TargetOpcode::G_SELECT:
-    if (TypeIdx != 0)
-      return UnableToLegalize;
-    if (MRI.getType(MI.getOperand(1).getReg()).isVector())
+  case TargetOpcode::G_SELECT: {
+    Register DstReg = MI.getOperand(0).getReg();
+    Register CondReg = MI.getOperand(1).getReg();
+    LLT DstTy = MRI.getType(DstReg);
+    LLT CondTy = MRI.getType(CondReg);
+    if (TypeIdx == 1) {
+      if (!CondTy.isScalar() ||
+          DstTy.getElementCount() != MoreTy.getElementCount())
+        return UnableToLegalize;
+
+      // This is turning a scalar select of vectors into a vector
+      // select. Broadcast the select condition.
+      auto ShufSplat = MIRBuilder.buildShuffleSplat(MoreTy, CondReg);
+      Observer.changingInstr(MI);
+      MI.getOperand(1).setReg(ShufSplat.getReg(0));
+      Observer.changedInstr(MI);
+      return Legalized;
+    }
+
+    if (CondTy.isVector())
       return UnableToLegalize;
 
     Observer.changingInstr(MI);
@@ -4922,6 +4938,7 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
     moreElementsVectorDst(MI, MoreTy, 0);
     Observer.changedInstr(MI);
     return Legalized;
+  }
   case TargetOpcode::G_UNMERGE_VALUES:
     return UnableToLegalize;
   case TargetOpcode::G_PHI:
