@@ -585,6 +585,34 @@ def store_align16_local_m0 : PatFrag <(ops node:$value, node:$ptr),
   let IsTruncStore = 0;
 }
 
+let PredicateCode = [{return cast<MemSDNode>(N)->getAlignment() < 4;}],
+    GISelPredicateCode = [{return (*MI.memoperands_begin())->getAlign() < 4;}],
+    AddressSpaces = [ AddrSpaces.Local ] in {
+def load_align_less_than_4_local : PatFrag<(ops node:$ptr),
+                                           (load_local node:$ptr)> {
+  let IsLoad = 1;
+  let IsNonExtLoad = 1;
+}
+
+def load_align_less_than_4_local_m0 : PatFrag<(ops node:$ptr),
+                                              (load_local_m0 node:$ptr)> {
+  let IsLoad = 1;
+  let IsNonExtLoad = 1;
+}
+
+def store_align_less_than_4_local : PatFrag <(ops node:$value, node:$ptr),
+                                             (store_local node:$value, node:$ptr)> {
+  let IsStore = 1;
+  let IsTruncStore = 0;
+}
+
+def store_align_less_than_4_local_m0 : PatFrag <(ops node:$value, node:$ptr),
+                                                (store_local_m0 node:$value, node:$ptr)> {
+  let IsStore = 1;
+  let IsTruncStore = 0;
+}
+}
+
 let AddressSpaces = StoreAddress_local.AddrSpaces in {
 
 def atomic_store_local_8_m0 : PatFrag <
