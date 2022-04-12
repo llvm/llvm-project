@@ -45,23 +45,23 @@ private:
   Triple TargetTriple;
 
 protected:
-  bool GCN3Encoding;
-  bool Has16BitInsts;
-  bool HasMadMixInsts;
-  bool HasMadMacF32Insts;
-  bool HasDsSrc2Insts;
-  bool HasSDWA;
-  bool HasVOP3PInsts;
-  bool HasMulI24;
-  bool HasMulU24;
-  bool HasSMulHi;
-  bool HasInv2PiInlineImm;
-  bool HasFminFmaxLegacy;
-  bool EnablePromoteAlloca;
-  bool HasTrigReducedRange;
-  unsigned MaxWavesPerEU;
-  unsigned LocalMemorySize;
-  char WavefrontSizeLog2;
+  bool GCN3Encoding = false;
+  bool Has16BitInsts = false;
+  bool HasMadMixInsts = false;
+  bool HasMadMacF32Insts = false;
+  bool HasDsSrc2Insts = false;
+  bool HasSDWA = false;
+  bool HasVOP3PInsts = false;
+  bool HasMulI24 = true;
+  bool HasMulU24 = true;
+  bool HasSMulHi = false;
+  bool HasInv2PiInlineImm = false;
+  bool HasFminFmaxLegacy = true;
+  bool EnablePromoteAlloca = false;
+  bool HasTrigReducedRange = false;
+  unsigned MaxWavesPerEU = 10;
+  unsigned LocalMemorySize = 0;
+  char WavefrontSizeLog2 = 0;
 
 public:
   AMDGPUSubtarget(const Triple &TT);
