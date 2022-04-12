@@ -267,6 +267,7 @@ static Optional<const char *> GetCodeName(unsigned CodeID, unsigned BlockID,
       STRINGIFY_CODE(FUNC_CODE, INST_STOREATOMIC)
       STRINGIFY_CODE(FUNC_CODE, INST_CMPXCHG)
       STRINGIFY_CODE(FUNC_CODE, INST_CALLBR)
+      STRINGIFY_CODE(FUNC_CODE, BLOCKADDR_USERS)
     }
   case bitc::VALUE_SYMTAB_BLOCK_ID:
     switch (CodeID) {
