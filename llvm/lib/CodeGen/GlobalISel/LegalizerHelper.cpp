@@ -1870,9 +1870,6 @@ LegalizerHelper::widenScalarInsert(MachineInstr &MI, unsigned TypeIdx,
 LegalizerHelper::LegalizeResult
 LegalizerHelper::widenScalarAddSubOverflow(MachineInstr &MI, unsigned TypeIdx,
                                            LLT WideTy) {
-  if (TypeIdx == 1)
-    return UnableToLegalize; // TODO
-
   unsigned Opcode;
   unsigned ExtOpcode;
   Optional<Register> CarryIn = None;
@@ -1915,6 +1912,18 @@ LegalizerHelper::widenScalarAddSubOverflow(MachineInstr &MI, unsigned TypeIdx,
     ExtOpcode = TargetOpcode::G_ZEXT;
     CarryIn = MI.getOperand(4).getReg();
     break;
+  }
+
+  if (TypeIdx == 1) {
+    unsigned BoolExtOp = MIRBuilder.getBoolExtOp(WideTy.isVector(), false);
+
+    Observer.changingInstr(MI);
+    widenScalarDst(MI, WideTy, 1);
+    if (CarryIn)
+      widenScalarSrc(MI, WideTy, 4, BoolExtOp);
+
+    Observer.changedInstr(MI);
+    return Legalized;
   }
 
   auto LHSExt = MIRBuilder.buildInstr(ExtOpcode, {WideTy}, {MI.getOperand(2)});
