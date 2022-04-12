@@ -1553,6 +1553,18 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
       // 12 byte accessing via ds_read/write_b96 require 16-byte alignment on
       // gfx8 and older.
       RequiredAlignment = Align(16);
+
+      if (Subtarget->hasUnalignedDSAccessEnabled()) {
+        // Naturally aligned access is fastest. However, also report it is Fast
+        // if memory is aligned less than DWORD. A narrow load or store will be
+        // be equally slow as a single ds_read_b96/ds_write_b96, but there will
+        // be more of them, so overall we will pay less penalty issuing a single
+        // instruction.
+        if (IsFast)
+          *IsFast = Alignment >= RequiredAlignment || Alignment < Align(4);
+        return true;
+      }
+
       break;
     case 128:
       if (!Subtarget->hasDS96AndDS128() || !Subtarget->useDS128())

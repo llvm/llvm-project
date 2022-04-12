@@ -566,23 +566,11 @@ define amdgpu_kernel void @ds12align4(<3 x i32> addrspace(3)* %in, <3 x i32> add
 ; ALIGNED-NEXT:    s_waitcnt lgkmcnt(1)
 ; ALIGNED-NEXT:    ds_write_b32 v3, v2 offset:8
 ; ALIGNED-NEXT:    s_endpgm
-;
-; UNALIGNED-LABEL: ds12align4:
-; UNALIGNED:       ; %bb.0:
-; UNALIGNED-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; UNALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
-; UNALIGNED-NEXT:    v_mov_b32_e32 v0, s0
-; UNALIGNED-NEXT:    ds_read_b96 v[0:2], v0
-; UNALIGNED-NEXT:    v_mov_b32_e32 v3, s1
-; UNALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
-; UNALIGNED-NEXT:    ds_write_b96 v3, v[0:2]
-; UNALIGNED-NEXT:    s_endpgm
   %val = load <3 x i32>, <3 x i32> addrspace(3)* %in, align 4
   store <3 x i32> %val, <3 x i32> addrspace(3)* %out, align 4
   ret void
 }
 
-; TODO: Why does the ALIGNED-SDAG code use ds_write_b64 but not ds_read_b64?
 define amdgpu_kernel void @ds12align8(<3 x i32> addrspace(3)* %in, <3 x i32> addrspace(3)* %out) {
 ; ALIGNED-SDAG-LABEL: ds12align8:
 ; ALIGNED-SDAG:       ; %bb.0:
@@ -611,17 +599,6 @@ define amdgpu_kernel void @ds12align8(<3 x i32> addrspace(3)* %in, <3 x i32> add
 ; ALIGNED-GISEL-NEXT:    s_waitcnt lgkmcnt(1)
 ; ALIGNED-GISEL-NEXT:    ds_write_b32 v3, v2 offset:8
 ; ALIGNED-GISEL-NEXT:    s_endpgm
-;
-; UNALIGNED-LABEL: ds12align8:
-; UNALIGNED:       ; %bb.0:
-; UNALIGNED-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; UNALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
-; UNALIGNED-NEXT:    v_mov_b32_e32 v0, s0
-; UNALIGNED-NEXT:    ds_read_b96 v[0:2], v0
-; UNALIGNED-NEXT:    v_mov_b32_e32 v3, s1
-; UNALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
-; UNALIGNED-NEXT:    ds_write_b96 v3, v[0:2]
-; UNALIGNED-NEXT:    s_endpgm
   %val = load <3 x i32>, <3 x i32> addrspace(3)* %in, align 8
   store <3 x i32> %val, <3 x i32> addrspace(3)* %out, align 8
   ret void
