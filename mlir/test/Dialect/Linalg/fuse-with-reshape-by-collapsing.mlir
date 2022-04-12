@@ -399,3 +399,128 @@ func @zero_D_test(%arg0: tensor<f32>) -> tensor<1xf32> {
 //      CHECK:   %[[GENERIC:.+]] = linalg.generic
 // CHECK-SAME:       ins(%[[EXPAND]] :
 //      CHECK:   return %[[GENERIC]]
+
+// -----
+
+#map0 = affine_map<(d0, d1, d2, d3) -> (d1, d0, d2, d3)>
+#map1 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
+func @fuse_only_one_reassociation(%arg0 : tensor<?x?xf32>, %arg1 : tensor<4x?x?x8xf32>) -> tensor<4x?x?x8xf32> {
+  %0 = tensor.expand_shape %arg0 [[0, 1], [2, 3]] : tensor<?x?xf32> into tensor<?x4x?x8xf32>
+  %1 = linalg.generic {
+      indexing_maps = [#map0, #map1, #map1],
+      iterator_types = ["parallel", "parallel", "parallel", "parallel"]}
+      ins(%0, %arg1 : tensor<?x4x?x8xf32>, tensor<4x?x?x8xf32>)
+      outs(%arg1 : tensor<4x?x?x8xf32>) {
+    ^bb0(%b0: f32, %b1 : f32, %b2 : f32):
+      %2 = arith.addf %b0, %b1 : f32
+      linalg.yield %2 : f32
+    } -> tensor<4x?x?x8xf32>
+  return %1 : tensor<4x?x?x8xf32>
+}
+//  CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0, d1, d2) -> (d1, d0, d2)>
+//  CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+//      CHECK: func @fuse_only_one_reassociation(
+// CHECK-SAME:     %[[ARG0:.+]]: tensor<?x?xf32>
+// CHECK-SAME:     %[[ARG1:.+]]: tensor<4x?x?x8xf32>
+//  CHECK-DAG:   %[[EXPAND_ARG0:.+]] = tensor.expand_shape %[[ARG0]] {{\[}}[0, 1], [2, 3]{{\]}}
+//  CHECK-DAG:   %[[COLLAPSE_ARG0:.+]] = tensor.collapse_shape %[[EXPAND_ARG0]] {{\[}}[0], [1], [2, 3]{{\]}}
+//  CHECK-DAG:   %[[COLLAPSE_ARG1_0:.+]] = tensor.collapse_shape %[[ARG1]] {{\[}}[0], [1], [2, 3]{{\]}}
+//  CHECK-DAG:   %[[COLLAPSE_ARG1_1:.+]] = tensor.collapse_shape %[[ARG1]] {{\[}}[0], [1], [2, 3]{{\]}}
+//      CHECK:   %[[GENERIC:.+]] = linalg.generic
+// CHECK-SAME:       indexing_maps = [#[[MAP0]], #[[MAP1]], #[[MAP1]]]
+// CHECK-SAME:       iterator_types = ["parallel", "parallel", "parallel"]
+// CHECK-SAME:       ins(%[[COLLAPSE_ARG0]], %[[COLLAPSE_ARG1_0]] :
+// CHECK-SAME:       outs(%[[COLLAPSE_ARG1_1]] :
+//      CHECK:   %[[EXPAND_GENERIC:.+]] = tensor.expand_shape %[[GENERIC]] {{\[}}[0], [1], [2, 3]{{\]}}
+//      CHECK:   return %[[EXPAND_GENERIC]]
+
+// -----
+
+#map0 = affine_map<(d0, d1, d2, d3) -> (d0, d2, d3, d1)>
+#map1 = affine_map<(d0, d1, d2, d3) -> (d3, d1, d0, d2)>
+func @fold_non_consecutive_dims(%arg0 : tensor<?x?xi32>) -> tensor<?x8x?x4xi32> {
+  %c0 = arith.constant 0 : index
+  %c2 = arith.constant 2 : index
+  %0 = tensor.expand_shape %arg0 [[0, 1], [2, 3]] : tensor<?x?xi32> into tensor<?x4x?x8xi32>
+  %d0 = tensor.dim %0, %c0 : tensor<?x4x?x8xi32>
+  %d1 = tensor.dim %0, %c2 : tensor<?x4x?x8xi32>
+  %init = linalg.init_tensor [%d1, 8, %d0, 4] : tensor<?x8x?x4xi32>
+  %1 = linalg.generic {
+      indexing_maps = [#map0, #map1],
+      iterator_types = ["parallel", "parallel", "parallel", "parallel"]}
+      ins(%0 : tensor<?x4x?x8xi32>) outs(%init : tensor<?x8x?x4xi32>) {
+    ^bb0(%b0 : i32, %b1 : i32):
+      %2 = linalg.index 0 : index
+      %3 = linalg.index 1 : index
+      %4 = linalg.index 2 : index
+      %5 = linalg.index 3 : index
+      %6 = arith.addi %2, %3 : index
+      %7 = arith.addi %6, %4 : index
+      %8 = arith.addi %7, %5 : index
+      %9 = arith.index_cast %8 : index to i32
+      linalg.yield %9: i32
+    } -> tensor<?x8x?x4xi32>
+  return %1 : tensor<?x8x?x4xi32>
+}
+//  CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0, d1) -> (d0, d1)>
+//  CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0, d1) -> (d1, d0)>
+//      CHECK: func @fold_non_consecutive_dims(
+// CHECK-SAME:     %[[ARG0:.+]]: tensor<?x?xi32>)
+//  CHECK-DAG:   %[[C4:.+]] = arith.constant 4 : index
+//  CHECK-DAG:   %[[C8:.+]] = arith.constant 8 : index
+//      CHECK:   %[[INIT:.+]] = linalg.init_tensor
+//      CHECK:   %[[COLLAPSE_INIT:.+]] = tensor.collapse_shape %[[INIT]] {{\[}}[0, 1], [2, 3]{{\]}}
+//      CHECK:   %[[GENERIC:.+]] = linalg.generic
+// CHECK-SAME:       indexing_maps = [#[[MAP0]], #[[MAP1]]]
+// CHECK-SAME:       iterator_types = ["parallel", "parallel"]
+// CHECK-SAME:       ins(%[[ARG0]] :
+// CHECK-SAME:       outs(%[[COLLAPSE_INIT]] :
+// CHECK-NEXT:   ^bb{{[0-9]}}
+//      CHECK:       %[[ID0:.+]] = linalg.index 0
+//  CHECK-DAG:       %[[T0:.+]] = arith.remui %[[ID0]], %[[C4]]
+//  CHECK-DAG:       %[[T1:.+]] = arith.divui %[[ID0]], %[[C4]]
+//      CHECK:       %[[ID1:.+]] = linalg.index 1
+//  CHECK-DAG:       %[[T2:.+]] = arith.remui %[[ID1]], %[[C8]]
+//  CHECK-DAG:       %[[T3:.+]] = arith.divui %[[ID1]], %[[C8]]
+//  CHECK-DAG:       %[[T4:.+]] = arith.addi %[[T1]], %[[T2]]
+//  CHECK-DAG:       %[[T5:.+]] = arith.addi %[[T4]], %[[T0]]
+//  CHECK-DAG:       %[[T6:.+]] = arith.addi %[[T5]], %[[T3]]
+//  CHECK-DAG:       %[[T7:.+]] = arith.index_cast %[[T6]]
+//      CHECK:       linalg.yield %[[T7]]
+//      CHECK:   %[[EXPAND_GENERIC:.+]] = tensor.expand_shape %[[GENERIC]] {{\[}}[0, 1], [2, 3]{{\]}}
+//      CHECK:   return %[[EXPAND_GENERIC]]
+
+// -----
+
+// None of the folded iteration space dims are contiguous reduction dimensions.
+// So no change in the code.
+#map0 = affine_map<(d0, d1, d2, d3) -> (d0, d2, d3, d1)>
+#map1 = affine_map<(d0, d1, d2, d3) -> ()>
+func @no_fold_non_consecutive_reduction_dims(%arg0 : tensor<?x?xi32>) -> tensor<i32> {
+  %c0 = arith.constant 0 : index
+  %c2 = arith.constant 2 : index
+  %0 = tensor.expand_shape %arg0 [[0, 1], [2, 3]] : tensor<?x?xi32> into tensor<?x4x?x8xi32>
+  %init = linalg.init_tensor [] : tensor<i32>
+  %1 = linalg.generic {
+      indexing_maps = [#map0, #map1],
+      iterator_types = ["reduction", "reduction", "reduction", "reduction"]}
+      ins(%0 : tensor<?x4x?x8xi32>) outs(%init : tensor<i32>) {
+    ^bb0(%b0 : i32, %b1 : i32):
+      %2 = linalg.index 0 : index
+      %3 = linalg.index 1 : index
+      %4 = linalg.index 2 : index
+      %5 = linalg.index 3 : index
+      %6 = arith.addi %2, %3 : index
+      %7 = arith.addi %6, %4 : index
+      %8 = arith.addi %7, %5 : index
+      %9 = arith.index_cast %8 : index to i32
+      linalg.yield %9: i32
+    } -> tensor<i32>
+  return %1 : tensor<i32>
+}
+//      CHECK: func @no_fold_non_consecutive_reduction_dims(
+// CHECK-SAME:   %[[ARG0:.+]]: tensor<?x?xi32>)
+//      CHECK:   %[[EXPAND_ARG0:.+]] = tensor.expand_shape %[[ARG0]] {{\[}}[0, 1], [2, 3]{{\]}}
+//      CHECK:   %[[GENERIC:.+]] = linalg.generic
+// CHECK-SAME:       ins(%[[EXPAND_ARG0]] :
+//      CHECK:   return %[[GENERIC]]
