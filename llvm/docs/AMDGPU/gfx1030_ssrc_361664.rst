@@ -5,13 +5,13 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx1030_sdst_2e4c2a:
+.. _amdgpu_synid_gfx1030_ssrc_361664:
 
-sdst
+ssrc
 ====
 
-Instruction output.
+Instruction input.
 
 *Size:* 1 dword.
 
-*Operands:* :ref:`s<amdgpu_synid_s>`, :ref:`vcc<amdgpu_synid_vcc>`, :ref:`ttmp<amdgpu_synid_ttmp>`
+*Operands:* :ref:`s<amdgpu_synid_s>`, :ref:`vcc<amdgpu_synid_vcc>`, :ref:`ttmp<amdgpu_synid_ttmp>`, :ref:`null<amdgpu_synid_null>`, :ref:`m0<amdgpu_synid_m0>`, :ref:`iconst<amdgpu_synid_iconst>`

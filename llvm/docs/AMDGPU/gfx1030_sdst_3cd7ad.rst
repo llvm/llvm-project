@@ -5,13 +5,13 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx1030_ssrc_48e8e7:
+.. _amdgpu_synid_gfx1030_sdst_3cd7ad:
 
-ssrc
+sdst
 ====
 
-Instruction input.
+Instruction output.
 
-*Size:* 1 dword.
+*Size:* 1 dword if wavefront size is 32, otherwise 2 dwords.
 
-*Operands:* :ref:`s<amdgpu_synid_s>`, :ref:`vcc<amdgpu_synid_vcc>`, :ref:`ttmp<amdgpu_synid_ttmp>`, :ref:`m0<amdgpu_synid_m0>`, :ref:`iconst<amdgpu_synid_iconst>`
+*Operands:* :ref:`s<amdgpu_synid_s>`, :ref:`vcc<amdgpu_synid_vcc>`, :ref:`ttmp<amdgpu_synid_ttmp>`, :ref:`null<amdgpu_synid_null>`
