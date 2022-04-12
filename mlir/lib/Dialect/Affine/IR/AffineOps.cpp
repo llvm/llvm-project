@@ -1726,9 +1726,7 @@ void AffineForOp::getCanonicalizationPatterns(RewritePatternSet &results,
 /// Returns true if the affine.for has zero iterations in trivial cases.
 static bool hasTrivialZeroTripCount(AffineForOp op) {
   Optional<uint64_t> tripCount = getTrivialConstantTripCount(op);
-  if (tripCount.hasValue() && tripCount.getValue() == 0)
-    return true;
-  return false;
+  return tripCount.hasValue() && tripCount.getValue() == 0;
 }
 
 LogicalResult AffineForOp::fold(ArrayRef<Attribute> operands,
