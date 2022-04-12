@@ -494,8 +494,8 @@ infrastructure as
 [`llvm::Statistic`](http://llvm.org/docs/ProgrammersManual.html#the-statistic-class-stats-option)
 and thus have similar usage constraints. Collected statistics can be dumped by
 the [pass manager](#pass-manager) programmatically via
-`PassManager::enableStatistics`; or via `-pass-statistics` and
-`-pass-statistics-display` on the command line.
+`PassManager::enableStatistics`; or via `-mlir-pass-statistics` and
+`-mlir-pass-statistics-display` on the command line.
 
 An example is shown below:
 
@@ -534,7 +534,7 @@ A pipeline view that models the structure of the pass manager, this is the
 default view:
 
 ```shell
-$ mlir-opt -pass-pipeline='func.func(my-pass,my-pass)' foo.mlir -pass-statistics
+$ mlir-opt -pass-pipeline='func.func(my-pass,my-pass)' foo.mlir -mlir-pass-statistics
 
 ===-------------------------------------------------------------------------===
                          ... Pass statistics report ...
@@ -553,7 +553,7 @@ A list view that aggregates the statistics of all instances of a specific pass
 together:
 
 ```shell
-$ mlir-opt -pass-pipeline='func.func(my-pass, my-pass)' foo.mlir -pass-statistics -pass-statistics-display=list
+$ mlir-opt -pass-pipeline='func.func(my-pass, my-pass)' foo.mlir -mlir-pass-statistics -mlir-pass-statistics-display=list
 
 ===-------------------------------------------------------------------------===
                          ... Pass statistics report ...
@@ -1082,13 +1082,13 @@ instrumentation can be added directly to the PassManager via the
 `enableIRPrinting` method. `mlir-opt` provides a few useful flags for utilizing
 this instrumentation:
 
-*   `print-ir-before=(comma-separated-pass-list)`
+*   `mlir-print-ir-before=(comma-separated-pass-list)`
     *   Print the IR before each of the passes provided within the pass list.
-*   `print-ir-before-all`
+*   `mlir-print-ir-before-all`
     *   Print the IR before every pass in the pipeline.
 
 ```shell
-$ mlir-opt foo.mlir -pass-pipeline='func.func(cse)' -print-ir-before=cse
+$ mlir-opt foo.mlir -pass-pipeline='func.func(cse)' -mlir-print-ir-before=cse
 
 *** IR Dump Before CSE ***
 func @simple_constant() -> (i32, i32) {
@@ -1098,13 +1098,13 @@ func @simple_constant() -> (i32, i32) {
 }
 ```
 
-*   `print-ir-after=(comma-separated-pass-list)`
+*   `mlir-print-ir-after=(comma-separated-pass-list)`
     *   Print the IR after each of the passes provided within the pass list.
-*   `print-ir-after-all`
+*   `mlir-print-ir-after-all`
     *   Print the IR after every pass in the pipeline.
 
 ```shell
-$ mlir-opt foo.mlir -pass-pipeline='func.func(cse)' -print-ir-after=cse
+$ mlir-opt foo.mlir -pass-pipeline='func.func(cse)' -mlir-print-ir-after=cse
 
 *** IR Dump After CSE ***
 func @simple_constant() -> (i32, i32) {
@@ -1113,7 +1113,7 @@ func @simple_constant() -> (i32, i32) {
 }
 ```
 
-*   `print-ir-after-change`
+*   `mlir-print-ir-after-change`
     *   Only print the IR after a pass if the pass mutated the IR. This helps to
         reduce the number of IR dumps for "uninteresting" passes.
     *   Note: Changes are detected by comparing a hash of the operation before
@@ -1121,11 +1121,11 @@ func @simple_constant() -> (i32, i32) {
         the IR, and in some rare cases may result in false-positives depending
         on the collision rate of the hash algorithm used.
     *   Note: This option should be used in unison with one of the other
-        'print-ir-after' options above, as this option alone does not enable
+        'mlir-print-ir-after' options above, as this option alone does not enable
         printing.
 
 ```shell
-$ mlir-opt foo.mlir -pass-pipeline='func.func(cse,cse)' -print-ir-after=cse -print-ir-after-change
+$ mlir-opt foo.mlir -pass-pipeline='func.func(cse,cse)' -mlir-print-ir-after=cse -mlir-print-ir-after-change
 
 *** IR Dump After CSE ***
 func @simple_constant() -> (i32, i32) {
@@ -1134,13 +1134,13 @@ func @simple_constant() -> (i32, i32) {
 }
 ```
 
-*   `print-ir-after-failure`
+*   `mlir-print-ir-after-failure`
     *   Only print IR after a pass failure.
-    *   This option should *not* be used with the other `print-ir-after` flags
+    *   This option should *not* be used with the other `mlir-print-ir-after` flags
         above.
 
 ```shell
-$ mlir-opt foo.mlir -pass-pipeline='func.func(cse,bad-pass)' -print-ir-failure
+$ mlir-opt foo.mlir -pass-pipeline='func.func(cse,bad-pass)' -mlir-print-ir-after-failure
 
 *** IR Dump After BadPass Failed ***
 func @simple_constant() -> (i32, i32) {
@@ -1149,14 +1149,14 @@ func @simple_constant() -> (i32, i32) {
 }
 ```
 
-*   `print-ir-module-scope`
+*   `mlir-print-ir-module-scope`
     *   Always print the top-level module operation, regardless of pass type or
         operation nesting level.
     *   Note: Printing at module scope should only be used when multi-threading
         is disabled(`-mlir-disable-threading`)
 
 ```shell
-$ mlir-opt foo.mlir -mlir-disable-threading -pass-pipeline='func.func(cse)' -print-ir-after=cse -print-ir-module-scope
+$ mlir-opt foo.mlir -mlir-disable-threading -pass-pipeline='func.func(cse)' -mlir-print-ir-after=cse -mlir-print-ir-module-scope
 
 *** IR Dump After CSE ***  ('func.func' operation: @bar)
 func @bar(%arg0: f32, %arg1: f32) -> f32 {
@@ -1186,7 +1186,7 @@ The [pass manager](#pass-manager) in MLIR contains a builtin mechanism to
 generate reproducibles in the event of a crash, or a
 [pass failure](#pass-failure). This functionality can be enabled via
 `PassManager::enableCrashReproducerGeneration` or via the command line flag
-`pass-pipeline-crash-reproducer`. In either case, an argument is provided that
+`mlir-pass-pipeline-crash-reproducer`. In either case, an argument is provided that
 corresponds to the output `.mlir` file name that the reproducible should be
 written to. The reproducible contains the configuration of the pass manager that
 was executing, as well as the initial IR before any passes were run. A potential
@@ -1214,7 +1214,7 @@ to its stream.
 
 An additional flag may be passed to
 `PassManager::enableCrashReproducerGeneration`, and specified via
-`pass-pipeline-local-reproducer` on the command line, that signals that the pass
+`mlir-pass-pipeline-local-reproducer` on the command line, that signals that the pass
 manager should attempt to generate a "local" reproducer. This will attempt to
 generate a reproducer containing IR right before the pass that fails. This is
 useful for situations where the crash is known to be within a specific pass, or

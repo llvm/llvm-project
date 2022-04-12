@@ -39,6 +39,7 @@ class SubstTemplateTemplateParmStorage;
 class TemplateArgument;
 class TemplateDecl;
 class TemplateTemplateParmDecl;
+class UsingShadowDecl;
 
 /// Implementation class used to describe either a set of overloaded
 /// template names or an already-substituted template template parameter pack.
@@ -190,7 +191,8 @@ public:
 class TemplateName {
   using StorageType =
       llvm::PointerUnion<TemplateDecl *, UncommonTemplateNameStorage *,
-                         QualifiedTemplateName *, DependentTemplateName *>;
+                         QualifiedTemplateName *, DependentTemplateName *,
+                         UsingShadowDecl *>;
 
   StorageType Storage;
 
@@ -224,7 +226,11 @@ public:
     /// A template template parameter pack that has been substituted for
     /// a template template argument pack, but has not yet been expanded into
     /// individual arguments.
-    SubstTemplateTemplateParmPack
+    SubstTemplateTemplateParmPack,
+
+    /// A template name that refers to a template declaration found through a
+    /// specific using shadow declaration.
+    UsingTemplate,
   };
 
   TemplateName() = default;
@@ -235,6 +241,7 @@ public:
   explicit TemplateName(SubstTemplateTemplateParmPackStorage *Storage);
   explicit TemplateName(QualifiedTemplateName *Qual);
   explicit TemplateName(DependentTemplateName *Dep);
+  explicit TemplateName(UsingShadowDecl *Using);
 
   /// Determine whether this template name is NULL.
   bool isNull() const;
@@ -286,6 +293,13 @@ public:
   /// Retrieve the underlying dependent template name
   /// structure, if any.
   DependentTemplateName *getAsDependentTemplateName() const;
+
+  /// Retrieve the using shadow declaration through which the underlying
+  /// template declaration is introduced.
+  ///
+  /// The underlying template declaration is not stored in the template name, it
+  /// can be retrieved via the using shadow declaration.
+  UsingShadowDecl *getAsUsingShadowDecl() const;
 
   TemplateName getUnderlying() const;
 
