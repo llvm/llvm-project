@@ -40,6 +40,7 @@ unittest("ASTTests") {
     "SourceLocationTest.cpp",
     "StmtPrinterTest.cpp",
     "StructuralEquivalenceTest.cpp",
+    "TemplateNameTest.cpp",
     "TypePrinterTest.cpp",
   ]
 }
