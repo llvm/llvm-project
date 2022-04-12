@@ -1,9 +1,9 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t
-// RUN: sed -e "s@INPUT_DIR@%/t@g" %t/reference.output.json.in >> \
-// RUN: %t/reference.output.json
-// RUN: sed -e "s@INPUT_DIR@%/t@g" %t/known_files_only.hmap.json.in >> \
-// RUN: %t/known_files_only.hmap.json
+// RUN: sed -e "s@INPUT_DIR@%{/t:regex_replacement}@g" \
+// RUN: %t/reference.output.json.in >> %t/reference.output.json
+// RUN: sed -e "s@INPUT_DIR@%{/t:regex_replacement}@g" \
+// RUN: %t/known_files_only.hmap.json.in >> %t/known_files_only.hmap.json
 // RUN: %hmaptool write %t/known_files_only.hmap.json %t/known_files_only.hmap
 // RUN: %clang -extract-api --product-name=KnownFilesOnlyHmap -target arm64-apple-macosx \
 // RUN: -I%t/known_files_only.hmap -I%t/subdir %t/subdir/subdir1/input.h \
